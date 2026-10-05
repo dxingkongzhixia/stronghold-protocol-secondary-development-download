@@ -71,7 +71,11 @@ describe('module type icons (local-client art, optional)', () => {
       if (!url) { missing.push(t); continue; }
       assert.ok(existsSync(path.join(ROOT, 'public', url)), `${t} → ${url} exists`);
     }
-    assert.deepEqual(missing, [], 'every module type has an official icon');
+    // A client of another region/version can lack a module type the CN data has (the JP client ships INC-X but not
+    // INC-Y): the UI keeps its lettered tile for it (see the header), so a missing type is not a failure. Guard
+    // instead against a broken/empty extraction: the client's own icons must cover the large majority of the types.
+    assert.ok(missing.length / types.size < 0.1,
+      `module type icons cover ${types.size - missing.length}/${types.size} (missing: ${missing.join(', ')})`);
   });
 
   test('干员调配 module tile: official icon when listed, lettered tile when the manifest or the entry is missing', async () => {

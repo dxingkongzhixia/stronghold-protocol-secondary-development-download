@@ -60,9 +60,11 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { ERR, MAX_SEATS, ROOM_CODE_LEN, modeIdFor } from '../shared/constants.js';
 import { checkLoadout } from '../shared/protocol.js';
-import { encode, isDroppable, isErrCode, sendRaw, sendSession } from './net.js';
+import { CLOSE, encode, isDroppable, isErrCode, presenceOnline, sendRaw, sendSession } from './net.js';
 import { getData as defaultGetData, lookup } from './data.js';
 import { Match as DefaultMatch } from './match/Match.js';
+import { Matchmaker } from './matchmaker.js';
+import { BootGate } from './bootgate.js';
 
 /** Room code alphabet: uppercase letters without I and O (and no digits, so no 0/1). */
 export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -75,6 +77,8 @@ export const LOBBY_DEFAULTS = Object.freeze({
   maxMatchesPerAddr: 8,   // matches started from one client network that may run at once (0 = unlimited)
   resyncMinGapMs: 1000,   // heavy resyncs (match state / result replay) per session at most this often on repeated hellos
   soloReconnectWindowMs: null, // a dropped solo run stays resumable this long (null = data singleReconnectTime, 24 h)
+  bootSlots: 1,           // boot art preloads that may run at once (server/bootgate.js; 0/1 = one client at a time)
+  bootHoldMs: 180_000,    // a slot is freed this long after a claim with no release (a tab that never finished)
 });
 
 /** Official `singleReconnectTime` (s) when the data lacks it (constData, research 01 §1). */
@@ -128,6 +132,9 @@ export class Room {
     this.matchKey = null;
     this.createdAt = now;
     this.disposed = false;
+    /** Listed in the lobby's 公开同盟 directory (server/admin.js buildPublicSnapshot). Solo and 野排 (auto) rooms are
+     *  never listed whatever this says; `create` sets it from the room.create `public` flag. */
+    this.public = true;
   }
 
   /** @param {string} playerId @returns {Seat | null} */
@@ -151,6 +158,11 @@ export class Room {
       mode: this.mode,
       difficulty: this.difficulty,
       inMatch: !!this.match,
+      // 野排 (auto-matched) vs a hand-made / 同盟密钥 room: the client keeps them apart (e.g. only key rooms go into
+      // the "最近同盟" list, and only auto rooms disband after a match) — docs/MATCHMAKING.md.
+      auto: !!this.auto,
+      // whether this 同盟 room is listed in the lobby's 公开同盟 directory (the room screen shows a 公开/仅密钥 badge)
+      public: !!this.public,
       seats: this.seats.map((s) => (s
         ? { seat: s.seat, playerId: s.playerId, name: s.name, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left }
         : null)),
@@ -171,7 +183,7 @@ export class Lobby {
    *   options?: Partial<typeof LOBBY_DEFAULTS>,
    * }} opts
    */
-  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, options = {} }) {
+  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, options = {}, auth = null, matchmaker = null }) {
     this.registry = registry;
     this.log = log;
     this.MatchClass = MatchClass;
@@ -179,14 +191,29 @@ export class Lobby {
     this.now = now;
     this.seedFn = seedFn || (() => randomInt(2 ** 32));
     this.opts = { ...LOBBY_DEFAULTS, ...options };
+    /** @type {import('./auth.js').AuthService | null} accounts (野排 requires a bound one; null = guests only) */
+    this.auth = auth;
+    /** @type {import('./net.js').Network | null} set by index.js; lets the lobby close a socket the net way (kick) */
+    this.network = null;
     /** @type {Map<string, Room>} */
     this.rooms = new Map();
+    /** Boot art preload gate (server/bootgate.js): at most `bootSlots` cold preloads at once. */
+    this.bootGate = new BootGate({ maxConcurrent: this.opts.bootSlots, holdMs: this.opts.bootHoldMs, now });
     /** @type {Map<string, NodeJS.Timeout>} lobby grace timers by playerId */
     this.graceTimers = new Map();
     /** @type {Map<string, NodeJS.Timeout>} deferred (coalesced) resyncs by playerId */
     this.resyncTimers = new Map();
     /** per-network limit warnings: at most one log line per 10 s (the rest are counted) */
     this.limitLog = { at: -Infinity, suppressed: 0 };
+    /**
+     * 野排 shared pool (server/matchmaker.js): matching sessions become a ready co-op room (createMatchedRoom).
+     * @type {import('./matchmaker.js').Matchmaker}
+     */
+    this.mm = matchmaker || new Matchmaker({
+      now, log,
+      onMatch: (sessions, info) => this.createMatchedRoom(sessions, info),
+      onState: (session, state) => { if (session?.connected) sendSession(session, { t: 'mm.state', ...state }); },
+    });
   }
 
   /** @param {string} code @returns {Room | null} */
@@ -197,11 +224,15 @@ export class Lobby {
     let matches = 0;
     let humans = 0;
     let bots = 0;
+    let online = 0;
+    // authoritative presence (server/net.js presenceOnline): live sockets + logged-in sessions inside their 5-min grace
+    const now = this.now();
+    for (const s of this.registry.all()) if (presenceOnline(s, now)) online++;
     for (const r of this.rooms.values()) {
       if (r.match) matches++;
       for (const s of r.seats) if (s && !s.left) (s.isBot ? bots++ : humans++);
     }
-    return { rooms: this.rooms.size, matches, humans, bots };
+    return { rooms: this.rooms.size, matches, humans, bots, online };
   }
 
   // ---------------------------------------------------------------------------------------------------
@@ -213,7 +244,22 @@ export class Lobby {
    * @param {import('./net.js').Session} session
    * @param {{ resumed: boolean, repeat: boolean }} info
    */
-  onHello(session, { resumed, repeat }) {
+  onHello(session, { resumed, repeat, accountToken } = {}) {
+    // the client's stored account session (docs/MATCHMAKING.md): rebind the session to that account and confirm it.
+    if (accountToken && this.auth) {
+      const acc = this.auth.resolve(accountToken);
+      if (acc) {
+        session.accountId = acc.id;
+        session.accountToken = accountToken;
+        session.name = acc.name;
+        this.kickOtherSessions(session, acc.id);
+        sendSession(session, { t: 'auth.ok', account: acc, token: accountToken });
+      } else if (session.accountToken) {
+        session.accountId = null;
+        session.accountToken = null;
+        sendSession(session, { t: 'auth.error', code: 'SESSION_EXPIRED' });
+      }
+    }
     if (!resumed && !repeat) return;
     const room = this.roomOf(session);
     if (!room) {
@@ -259,6 +305,15 @@ export class Lobby {
       case 'room.removeBot': return this.removeBot(session, msg);
       case 'room.start': return this.start(session);
       case 'room.loadout': return this.loadout(session, msg);
+      // accounts & 野排 (docs/MATCHMAKING.md)
+      case 'auth.register': return this.register(session, msg);
+      case 'auth.login': return this.login(session, msg);
+      case 'auth.logout': return this.logout(session);
+      case 'mm.join': return this.mmJoin(session, msg);
+      case 'mm.cancel': return this.mmCancel(session);
+      // boot art preload gate (server/bootgate.js): one client downloads at a time, the rest wait their turn
+      case 'boot.claim': return this.bootClaim(session);
+      case 'boot.release': return this.bootRelease(session);
       default:
         if (typeof msg.t === 'string' && msg.t.startsWith('g.')) return this.routeGame(session, msg);
         return fail(ERR.BAD_MSG, `unhandled type ${String(msg.t).slice(0, 32)}`);
@@ -267,6 +322,8 @@ export class Lobby {
 
   /** The session's socket closed. @param {import('./net.js').Session} session */
   onDisconnect(session) {
+    this.mm.leave(session.playerId);
+    this.bootRelease(session); // never let a closed tab hold the preload slot
     this.clearResync(session.playerId); // the next resume resyncs immediately
     const room = this.roomOf(session);
     // a solo run may be resumed within singleReconnectTime (24 h); everything else keeps the registry's window
@@ -281,6 +338,8 @@ export class Lobby {
 
   /** The session's reconnect window elapsed (already removed from the registry). */
   onExpire(session) {
+    this.mm.leave(session.playerId);
+    this.bootRelease(session);
     session.notice = null;
     session.pendingResult = null;
     this.clearResync(session.playerId);
@@ -295,6 +354,7 @@ export class Lobby {
    * @param {string} [reason]
    */
   shutdown(reason = 'shutdown') {
+    this.mm.dispose();
     for (const room of [...this.rooms.values()]) this.disposeRoom(room, reason);
     for (const t of this.graceTimers.values()) clearTimeout(t);
     this.graceTimers.clear();
@@ -306,7 +366,7 @@ export class Lobby {
   // room.* handlers
   // ---------------------------------------------------------------------------------------------------
 
-  create(session, { mode, difficulty }) {
+  create(session, { mode, difficulty, public: isPublic }) {
     const cur = this.roomOf(session);
     if (cur && cur.match) return fail(ERR.ROOM_STARTED, 'leave your running match first');
     if (this.rooms.size >= this.opts.maxRooms) return fail(ERR.INTERNAL, 'too many rooms');
@@ -322,8 +382,11 @@ export class Lobby {
     const code = this.genCode();
     if (!code) return fail(ERR.INTERNAL, 'no room code available');
     if (cur) this.removeMember(cur, session.playerId);
+    this.mm.leave(session.playerId); // creating a room leaves the 野排 shared pool (you can't be in both)
     const room = new Room(code, mode, difficulty, this.now());
     room.ownerKey = key;
+    // 公开同盟 opt-out: only a hand-made co-op room can be listed, and only when the creator left it public.
+    room.public = mode === 'coop' && isPublic !== false;
     room.seats[0] = this.humanSeat(0, session);
     room.hostId = session.playerId;
     this.rooms.set(code, room);
@@ -347,6 +410,7 @@ export class Lobby {
     const idx = room.freeSeat();
     if (idx < 0) return fail(ERR.ROOM_FULL);
     if (cur) this.removeMember(cur, session.playerId);
+    this.mm.leave(session.playerId); // joining a room leaves the 野排 shared pool
     room.seats[idx] = this.humanSeat(idx, session);
     session.roomCode = room.code;
     session.notice = null;
@@ -357,6 +421,7 @@ export class Lobby {
   }
 
   leave(session) {
+    this.mm.leave(session.playerId); // defensive: leaving never keeps a 野排 queue slot
     const room = this.roomOf(session);
     if (!room) return fail(ERR.NOT_IN_ROOM);
     this.removeMember(room, session.playerId);
@@ -472,6 +537,142 @@ export class Lobby {
   }
 
   // ---------------------------------------------------------------------------------------------------
+  // Accounts & 野排 (docs/MATCHMAKING.md)
+  // ---------------------------------------------------------------------------------------------------
+
+  register(session, { name, password }) {
+    if (!this.auth) return fail(ERR.INTERNAL, 'accounts disabled');
+    const r = this.auth.register(name, password);
+    if (r.error) return fail(r.error);
+    this.bindAccount(session, r.account, r.token);
+    return OK;
+  }
+
+  login(session, { name, password }) {
+    if (!this.auth) return fail(ERR.INTERNAL, 'accounts disabled');
+    const r = this.auth.login(name, password);
+    if (r.error) return fail(r.error);
+    this.bindAccount(session, r.account, r.token);
+    return OK;
+  }
+
+  /** Client 「退出登录」: unbind the account from this live session and invalidate its token (frees the single-session slot). */
+  logout(session) {
+    const token = session.accountToken;
+    session.accountId = null;
+    session.accountToken = null;
+    if (token && this.auth) this.auth.logout(token);
+    return OK;
+  }
+
+  /**
+   * One live session per account: any OTHER session already bound to this account is unbound and its socket closed
+   * (the client shows「该身份已在其他页面登录」). Logging in elsewhere therefore kicks the previous device.
+   */
+  kickOtherSessions(session, accountId) {
+    for (const other of this.registry.all()) {
+      if (other === session || other.accountId !== accountId) continue;
+      other.accountId = null;
+      other.accountToken = null;
+      // Close through the Network (sets conn.closing) so an in-flight `hello` cannot rebind this session and kick us
+      // back; it also fires onDisconnect now, so the old device immediately leaves the 野排 pool / its room.
+      if (this.network) this.network.closeSession(other, CLOSE.REPLACED, 'account logged in elsewhere');
+      else if (other.ws) { try { other.ws.close(CLOSE.REPLACED, 'account logged in elsewhere'); } catch { /* ignore */ } }
+    }
+  }
+
+  /** Bind a session to an account and tell it (auth.ok); the display name follows the account. */
+  bindAccount(session, account, token) {
+    session.accountId = account.id;
+    session.accountToken = token;
+    session.name = account.name;
+    this.kickOtherSessions(session, account.id);
+    sendSession(session, { t: 'auth.ok', account, token });
+    const room = this.roomOf(session);
+    if (room) {
+      const seat = room.seatOf(session.playerId);
+      if (seat && seat.name !== account.name && !room.match) { seat.name = account.name; this.broadcastState(room); }
+    }
+  }
+
+  /** 野排: enter the difficulty-bucketed shared pool (a bound account is required). */
+  mmJoin(session, { difficulty }) {
+    if (!this.auth || !session.accountId) return fail(ERR.AUTH_REQUIRED);
+    if (this.mm.byKey.has(session.playerId)) return fail(ERR.IN_QUEUE);
+    const cur = this.roomOf(session);
+    if (cur && cur.match) return fail(ERR.ROOM_STARTED, 'leave your running match first');
+    if (cur) this.removeMember(cur, session.playerId);
+    return this.mm.join({ key: session.playerId, session, difficulty });
+  }
+
+  mmCancel(session) {
+    const r = this.mm.cancel(session.playerId);
+    if (r.ok) sendSession(session, { t: 'mm.state', queued: false });
+    return r;
+  }
+
+  /**
+   * A 野排 group from the matchmaker: build a ready co-op room (humans in queue order), fill every other seat with AI
+   * and start at once (no ready step). A queued session that dropped is replaced by AI too.
+   * @param {import('./net.js').Session[]} sessions
+   * @param {{ difficulty: string, ai: number }} info
+   */
+  createMatchedRoom(sessions, { difficulty }) {
+    // The matchmaker already removed this group from the pool, so a bail-out here must not leave the players with a
+    // stuck queue overlay: explicitly tell every connected member queued:false.
+    const bail = (why) => {
+      this.log.warn(`[lobby] 野排 group dropped: ${why}`);
+      for (const s of sessions) if (s && s.connected) sendSession(s, { t: 'mm.state', queued: false });
+    };
+    if (this.rooms.size >= this.opts.maxRooms) return bail('too many rooms');
+    const code = this.genCode();
+    if (!code) return bail('no room code');
+    // Same per-network running-match quota as room.start(): a 野排 group must not bypass it (anti-abuse).
+    const key = (sessions.find((s) => s && s.connected) || sessions[0] || {}).limitKey || null;
+    if (key && this.opts.maxMatchesPerAddr > 0 && this.countRooms((r) => !!r.match && r.matchKey === key) >= this.opts.maxMatchesPerAddr) {
+      return bail('match limit reached for this network');
+    }
+    const room = new Room(code, 'coop', difficulty, this.now());
+    room.auto = true; // 野排: auto-matched — server/admin.js uses this to tell 野排游玩 from a hand-made 同盟游玩
+    room.public = false; // matched rooms start immediately and are never key-joinable → keep them out of 公开同盟
+    this.rooms.set(code, room);
+    let idx = 0;
+    let humans = 0;
+    for (const session of sessions) {
+      if (idx >= MAX_SEATS) break;
+      if (session && session.connected && !session.roomCode) {
+        const st = this.humanSeat(idx, session);
+        st.ready = true;
+        room.seats[idx] = st;
+        session.roomCode = code;
+        session.notice = null;
+        session.pendingResult = null;
+        if (!room.ownerKey) room.ownerKey = session.limitKey || null;
+        humans++;
+      }
+      idx++;
+    }
+    for (let i = 0; i < MAX_SEATS; i++) if (!room.seats[i]) room.seats[i] = this.makeBot(room, i);
+    const host = room.seats.find((s) => s && !s.isBot);
+    if (!host) { this.disposeRoom(room, 'empty'); return; }
+    room.hostId = host.playerId;
+    this.log.info(`[lobby] ${code} 野排 (${difficulty}) ${humans} 玩家 + ${MAX_SEATS - humans} AI`);
+    this.broadcastState(room);
+    // If the match refuses to start, don't leave a zombie auto room: tear it down (members get room.closed).
+    const started = this.startMatch(room, room.ownerKey);
+    if (started && started.error) this.disposeRoom(room, 'start-failed');
+  }
+
+  /** A fresh AI seat (an unused BOT_NAMES name and an `ai_` playerId). */
+  makeBot(room, idx) {
+    const used = new Set(room.seats.filter((s) => s && s.isBot).map((s) => s.name));
+    const name = BOT_NAMES.find((n) => !used.has(n)) || `AI·${idx + 1}`;
+    let playerId;
+    do playerId = 'ai_' + randomBytes(4).toString('hex'); while (room.seatOf(playerId));
+    return { seat: idx, playerId, name, isBot: true, ready: true, connected: true, left: false };
+  }
+
+  // ---------------------------------------------------------------------------------------------------
   // Match wiring
   // ---------------------------------------------------------------------------------------------------
 
@@ -545,6 +746,9 @@ export class Lobby {
     const host = room.hostId ? room.seatOf(room.hostId) : null;
     if (!host || host.isBot || host.left) this.migrateHost(room);
     if (room.activeHumans().length === 0) this.disposeRoom(room, 'empty');
+    // 野排 (auto) parties are transient: disband the room when the match ends, so players are dropped back to the
+    // lobby and must re-queue — nobody stays grouped with the same random strangers (docs/MATCHMAKING.md).
+    else if (room.auto) this.disposeRoom(room, 'matched-end');
     else this.broadcastState(room);
   }
 
@@ -747,6 +951,7 @@ export class Lobby {
     const session = this.registry.byId(playerId);
     if (session && session.roomCode === room.code) session.roomCode = null;
     this.clearGrace(playerId);
+    this.clearResync(playerId); // a deferred resync must not fire later against whatever room the player joins next
     this.dropReplay(room, playerId);
     const seat = room.seatOf(playerId);
     if (!seat || seat.isBot || seat.left || room.disposed) return;
@@ -809,17 +1014,25 @@ export class Lobby {
     room.match = null;
     room.matchCtx = null;
     room.matchKey = null;
-    room.replay = null;
     for (const s of room.seats) {
       if (!s || s.isBot) continue;
       this.clearGrace(s.playerId);
+      this.clearResync(s.playerId);
       const session = this.registry.byId(s.playerId);
       if (!session || session.roomCode !== room.code) continue;
       session.roomCode = null;
       if (s.left || reason === 'empty') continue;
-      if (session.connected) sendSession(session, { t: 'room.closed', reason });
-      else session.notice = reason;
+      if (session.connected) {
+        sendSession(session, { t: 'room.closed', reason });
+      } else {
+        // Offline member: deliver room.closed on resume AND, when the match just ended, the result replay — a 野排 room
+        // is torn down right after the result, so without this the player would never see the settlement.
+        session.notice = reason;
+        const frames = this.replayFor(room, s.playerId);
+        if (frames) session.pendingResult = frames;
+      }
     }
+    room.replay = null; // after the loop: replayFor() above still needs it
     if (ctx) this.disposeMatchCtx(ctx);
     this.log.info(`[lobby] ${room.code} disposed (${reason})`);
   }
@@ -850,6 +1063,38 @@ export class Lobby {
     if (room.disposed) return;
     const data = encode(room.toState());
     for (const session of this.memberSessions(room)) sendRaw(session.ws, data);
+  }
+
+  // ---- boot art preload gate (server/bootgate.js, docs/MATCHMAKING.md) -----------------------------------------
+  // A first-time visitor pulls ~140 MB (art + boot video); on the 20 Mbps uplink a few simultaneous arrivals saturate
+  // it and spike everyone's latency. `bootSlots` (default 1) players preload at a time; the rest are told their place
+  // and wait, then are pushed `boot.state { granted: true }`.
+
+  /** @param {import('./net.js').Session} session */
+  bootClaim(session) {
+    const { granted, position } = this.bootGate.claim(session.playerId);
+    this.pushBootState(session, granted, position);
+    if (!granted) this.drainBoot(); // a sweep may have freed a slot for someone who is not asking again
+    return OK;
+  }
+
+  /** @param {import('./net.js').Session} session */
+  bootRelease(session) {
+    if (this.bootGate.release(session.playerId)) this.drainBoot();
+    return OK;
+  }
+
+  /** Hand free slots to the next waiters and tell each one. */
+  drainBoot() {
+    for (const playerId of this.bootGate.drain()) {
+      const s = this.registry.byId(playerId);
+      if (s) this.pushBootState(s, true, 0);
+    }
+  }
+
+  /** @param {import('./net.js').Session} session @param {boolean} granted @param {number} position */
+  pushBootState(session, granted, position) {
+    if (session.connected) sendSession(session, { t: 'boot.state', granted, position });
   }
 
   sendState(room, session) {

@@ -611,6 +611,11 @@ export const SPINE_IDLE_GRACE_MS = 15000;
 export const SPINE_EVICT_DELAY_MS = 1000;
 /** Nothing referenced (and no scene holding the cache) for this long = no scene on screen (lobby / room): the idle skeletons may all go. */
 export const SPINE_QUIET_DELAY_MS = 3000;
+/**
+ * Cap on the number of cached image elements (avatars/portraits/icons/UI). Unlike the Spine cache, images used to grow
+ * without bound for the whole session; a small LRU keeps long sessions flat. In-flight loads are never evicted.
+ */
+export const IMAGE_CACHE_MAX = 800;
 /** Waits (ms) before the manifest is fetched again within one `ready()` after a transient failure (like data.js). */
 export const MANIFEST_RETRY_MS = Object.freeze([600, 2000]);
 /** Waits (ms) before the store tries again by itself after a `ready()` whose fetches all failed transiently. */
@@ -652,7 +657,8 @@ export function createAssets(options) {
   let manifest = isObj(opts.manifest) ? opts.manifest : null;
   let readyPromise = manifest ? Promise.resolve(manifest) : null;
   const loadImage = opts.loadImage || loadImageElement;
-  const images = new Map(); // url → { promise, value }
+  const images = new Map(); // url → { promise, value, done } (insertion order = LRU order)
+  const imageMax = Number.isFinite(opts.imageMax) ? Math.max(0, Math.floor(opts.imageMax)) : IMAGE_CACHE_MAX;
   const retryDelays = Array.isArray(opts.retryDelays) ? opts.retryDelays : MANIFEST_RETRY_MS;
   const backoff = Array.isArray(opts.backoff) ? opts.backoff : MANIFEST_BACKOFF_MS;
   const wait = opts.wait || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
@@ -752,19 +758,31 @@ export function createAssets(options) {
     now: opts.spineNow,
   });
 
-  /** Image element (cached; failures resolve to null). */
+  /** Evict least-recently-used *finished* images over the cap (in-flight loads are never dropped). */
+  function trimImages() {
+    if (!(imageMax > 0)) return;
+    for (const [k, en] of images) {
+      if (images.size <= imageMax) break;
+      if (en.done) images.delete(k);
+    }
+  }
+
+  /** Image element (cached LRU; failures resolve to null). */
   function image(u) {
     const s = str(u);
     if (!s) return Promise.resolve(null);
     let e = images.get(s);
-    if (!e) {
-      e = { value: null, done: false, promise: null };
-      e.promise = Promise.resolve().then(() => loadImage(s)).then(
-        (img) => { e.value = img; e.done = true; return img; },
-        () => { e.done = true; return null; },
-      );
-      images.set(s, e);
+    if (e) {
+      images.delete(s); images.set(s, e); // LRU touch: move to the recent end
+      return e.promise;
     }
+    e = { value: null, done: false, promise: null };
+    e.promise = Promise.resolve().then(() => loadImage(s)).then(
+      (img) => { e.value = img; e.done = true; trimImages(); return img; },
+      () => { e.done = true; trimImages(); return null; },
+    );
+    images.set(s, e);
+    trimImages();
     return e.promise;
   }
 

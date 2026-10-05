@@ -76,6 +76,10 @@ export const emptyMatch = () => ({ public: null, private: null, field: null, res
 export const initialState = Object.freeze({
   connection: { status: 'idle', ping: null, attempt: 0, retryAt: 0, lastError: null, everOnline: false },
   me: { playerId: null, name: '', token: null },
+  // account (docs/MATCHMAKING.md): { id, name } once logged in; error = the last auth.error code
+  auth: { account: null, error: null },
+  // 野排 queue state (server mm.state): queued + progress; null difficulty = not queueing
+  mm: { queued: false, difficulty: null, waiting: 0, need: 4, elapsedMs: 0, deadlineMs: 0 },
   session: { entered: false },
   room: null,
   match: emptyMatch(),

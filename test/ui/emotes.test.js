@@ -210,7 +210,10 @@ print(json.dumps({
   });
 
   const manifest = tryJson('data/local-assets.json');
-  test('the extracted manifest lists all 36 pictures under their picId', { skip: !manifest && 'no data/local-assets.json' }, () => {
+  // A foreign/partial client may not have every emoticon theme (the JP client ships 3 of the 6): the CN-completeness
+  // assertions below only run on a full extraction; the UI falls back to the mirror copy / text otherwise.
+  const FULL_EMOTES = !!manifest && EMOTE_THEMES.every((t) => manifest.groups?.[`emoticon/${t.dir}`]);
+  test('the extracted manifest lists all 36 pictures under their picId', { skip: !manifest ? 'no data/local-assets.json' : (!FULL_EMOTES ? 'partial/foreign client (not all emoticon themes extracted)' : false) }, () => {
     for (const e of EMOTE_CATALOG) {
       const entry = manifest.groups[emoteArtGroup(e.id)]?.[e.picId];
       assert.ok(entry, `${e.id} → ${e.picId}`);
@@ -225,7 +228,7 @@ print(json.dumps({
     for (const n of ['emoji_bubble_bkg', 'emoji_bkg', 'emoji_cell_bkg', 'emoji_btn', 'emoji_btn_disable']) assert.ok(manifest.groups['ui/battle']?.[n], n);
   });
 
-  test('the listed pictures exist on disk', { skip: (!manifest || !existsSync(path.join(ROOT, 'public/assets/local/emoticon'))) && 'no extracted art' }, () => {
+  test('the listed pictures exist on disk', { skip: !manifest ? 'no data/local-assets.json' : (!FULL_EMOTES ? 'partial/foreign client (not all emoticon themes extracted)' : (!existsSync(path.join(ROOT, 'public/assets/local/emoticon')) && 'no extracted art')) }, () => {
     for (const e of EMOTE_CATALOG) {
       const file = path.join(ROOT, 'public', emoteArtPath(e.id));
       assert.ok(existsSync(file), file);

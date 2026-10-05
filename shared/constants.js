@@ -8,6 +8,17 @@ export const APP_VERSION = '0.1.2';
 export const MAX_SEATS = 4;
 export const ROOM_CODE_LEN = 4;
 export const NAME_MAX_LEN = 12;
+// account credentials (server/auth.js): the registered display name / password limits
+export const AUTH_NAME_MIN = 2;
+export const AUTH_NAME_MAX = NAME_MAX_LEN; // 博士代号 = 账号名: the same limit as the hello nickname (no truncation)
+export const AUTH_PASS_MIN = 6;
+export const AUTH_PASS_MAX = 128;
+// matchmaking (server/matchmaker.js): the shared pool of 野排 (搜寻队友)
+export const MM_WINDOW_MS = 30_000;   // one pool window; < 4 gathered by then ⇒ AI fills the alliance
+export const MM_SEATS = 4;
+// presence (server/net.js presenceOnline): a LOGGED-IN session stays "online" this long after its socket drops (a
+// reload / brief blip), then goes offline. Guests (no account) go offline the moment their socket closes.
+export const PRESENCE_GRACE_MS = 5 * 60 * 1000;
 
 export const DIFFICULTIES = ['FUNNY', 'NORMAL', 'HARD', 'ABYSS'];
 export const DIFFICULTY_NAMES = { FUNNY: '标准模拟', NORMAL: '险境模拟', HARD: '绝境模拟', ABYSS: '终极模拟' };
@@ -133,6 +144,14 @@ export const ERR = Object.freeze({
   ALREADY: 'ALREADY',
   TEMP_NOT_EMPTY: 'TEMP_NOT_EMPTY',
   ELIMINATED: 'ELIMINATED',
+  AUTH_REQUIRED: 'AUTH_REQUIRED',     // 野排 requires a logged-in account
+  BAD_NAME: 'BAD_NAME',               // registration name length / characters
+  BAD_PASSWORD: 'BAD_PASSWORD',       // too short / too long
+  NAME_TAKEN: 'NAME_TAKEN',           // the display name is already registered
+  BAD_CREDENTIALS: 'BAD_CREDENTIALS', // wrong name or password
+  SESSION_EXPIRED: 'SESSION_EXPIRED', // the stored account session is gone
+  IN_QUEUE: 'IN_QUEUE',               // already queueing for a 野排 match
+  NOT_QUEUED: 'NOT_QUEUED',
   INTERNAL: 'INTERNAL',
 });
 
@@ -142,6 +161,9 @@ export const ERR_TEXT = {
   WRONG_PHASE: '当前阶段无法进行该操作', NO_FUNDS: '资金不足', HAND_FULL: '整备区已满', BOARD_FULL: '已达到部署上限',
   BAD_TILE: '无法部署在该位置', BAD_TARGET: '无效的目标', SOLD_OUT: '已售出', MAX_LEVEL: '调度中心已达最高等级',
   NOT_YOUR_TURN: '尚未轮到你', ALREADY: '已完成该操作', TEMP_NOT_EMPTY: '临时整备区不为空', ELIMINATED: '你已被淘汰',
+  AUTH_REQUIRED: '搜寻队友需要先登录账号', BAD_NAME: '代号需 2–12 个字符', BAD_PASSWORD: '密码至少 6 位',
+  NAME_TAKEN: '该代号已被使用', BAD_CREDENTIALS: '代号或密码错误', SESSION_EXPIRED: '登录已过期，请重新登录',
+  IN_QUEUE: '你已在搜寻队列中', NOT_QUEUED: '你不在搜寻队列中',
   INTERNAL: '服务器内部错误',
 };
 

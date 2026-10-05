@@ -226,11 +226,11 @@ describe('static http server', () => {
     const gzEtag = (await httpReq(srv.port, '/js/app.js', { headers: { 'accept-encoding': 'gzip' } })).headers.etag;
     assert.notEqual(gzEtag, etag, 'gzip variant has its own ETag');
 
-    // unversioned art/fonts/vendor: cached for a day (files can be rewritten in place by the asset tools)
+    // unversioned art/fonts/vendor: cached for a week (files can be rewritten in place, but the boot preloads ~104 MB)
     const asset = await httpReq(srv.port, '/assets/img/a.png');
-    assert.equal(asset.headers['cache-control'], 'public, max-age=86400');
+    assert.equal(asset.headers['cache-control'], 'public, max-age=604800');
     const font = await httpReq(srv.port, '/fonts/f.woff2');
-    assert.equal(font.headers['cache-control'], 'public, max-age=86400');
+    assert.equal(font.headers['cache-control'], 'public, max-age=604800');
     const assetV = await httpReq(srv.port, '/assets/img/a.png?v=abc');
     assert.match(assetV.headers['cache-control'], /immutable/);
     const assetRoot = await httpReq(srv.port, '/assets');
@@ -978,6 +978,62 @@ describe('websocket lobby', () => {
     assert.ok(h.rooms >= 1);
     assert.ok(h.sockets >= 1);
     assert.ok(h.sessions >= 1);
+  });
+
+  // 公开同盟 (docs/MATCHMAKING.md): a hand-made 同盟 room is listed in /online/api `openRooms` only when the creator
+  // left it public; solo / 野排 / private rooms stay hidden, and a non-bool `public` is a protocol error.
+  test('room.create public flag: /online/api openRooms lists only public, hand-made, joinable 同盟 rooms', async () => {
+    const createOne = async (name, msg) => {
+      const c = await pool.player(name);
+      const r = await c.request({ t: 'room.create', ...msg });
+      assert.equal(r.t, 'ok', JSON.stringify(r));
+      const st = await c.waitFor('room.state', (s) => s.code && s.hostId === c.id);
+      return st;
+    };
+    const pub = await createOne('PubHost', { mode: 'coop', difficulty: 'NORMAL', public: true });
+    const priv = await createOne('PrivHost', { mode: 'coop', difficulty: 'NORMAL', public: false });
+    const solo = await createOne('SoloHost', { mode: 'solo', difficulty: 'FUNNY', public: true });
+    const dflt = await createOne('DefHost', { mode: 'coop', difficulty: 'HARD' }); // no flag ⇒ public (old clients)
+
+    assert.equal(pub.public, true);
+    assert.equal(priv.public, false);
+    assert.equal(solo.public, false); // solo is never listed whatever the flag says
+    assert.equal(dflt.public, true);
+
+    const r = await httpReq(srv.port, '/online/api');
+    const codes = JSON.parse(r.body.toString()).openRooms.map((x) => x.code);
+    assert.ok(codes.includes(pub.code), `openRooms has the public room: ${codes}`);
+    assert.ok(codes.includes(dflt.code), `openRooms has the default room: ${codes}`);
+    assert.ok(!codes.includes(priv.code), `a private room stays hidden: ${codes}`);
+    assert.ok(!codes.includes(solo.code), `a solo room stays hidden: ${codes}`);
+
+    const bad = await pool.player('BadHost');
+    await expectError(bad, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL', public: 'yes' }, ERR.BAD_MSG);
+  });
+
+  // boot gate (server/bootgate.js, docs/MATCHMAKING.md): only `bootSlots` clients preload the boot payload at once;
+  // the rest queue and are promoted when the holder releases — or, if it never does, when it disconnects.
+  test('boot gate: one preload slot; the queue is promoted on release and on disconnect', async () => {
+    const a = await pool.player('BootA');
+    const b = await pool.player('BootB');
+    const c = await pool.player('BootC');
+
+    await expectOk(a, { t: 'boot.claim' });
+    await a.waitFor('boot.state', (m) => m.granted === true);
+
+    await expectOk(b, { t: 'boot.claim' });
+    assert.equal((await b.waitFor('boot.state', (m) => m.granted === false)).position, 1, 'B is one place behind A');
+
+    await expectOk(c, { t: 'boot.claim' });
+    assert.equal((await c.waitFor('boot.state', (m) => m.granted === false)).position, 2, 'C is two places behind');
+
+    await expectOk(a, { t: 'boot.release' });
+    await b.waitFor('boot.state', (m) => m.granted === true); // B takes the freed slot
+
+    await b.terminate(); // B's tab closes mid-download → C is promoted (onDisconnect releases the slot)
+    await c.waitFor('boot.state', (m) => m.granted === true);
+
+    await expectOk(c, { t: 'boot.release' });
   });
 });
 

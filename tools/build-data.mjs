@@ -36,6 +36,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Grid, DEPLOY_REFUSED_TILES } from '../server/sim/grid.js';
 import { bandBondIds } from '../shared/bandBonds.js';
+import { FORMS } from '../shared/forms.js';
 
 // ===== CLI & IO ==================================================================================
 
@@ -1807,6 +1808,30 @@ function enemyAttackAnim(manifest, spineId) {
   return hit != null ? { clip: a.loop, dur, hit } : { clip: a.loop, dur };
 }
 
+/**
+ * Per-form attack clip timing for enemies drawn with another clip set (shared/forms.js FORMS) → enemies.json
+ * `formAttackAnim` { [form]: { clip, dur, hit } }: server/sim/ai.js attackStand picks the current `e.form`'s entry over
+ * the base `attackAnim`, so a form-changer stands for the clip the client actually plays (the base clip used to be
+ * shorter and it walked during its form's attack). Resolved from the same committed data/assets.json; a form whose
+ * roles carry no attack clip is skipped.
+ */
+function enemyFormAttackAnims(manifest, spineId) {
+  const forms = FORMS[spineId];
+  const sp = manifest?.enemies?.[spineId]?.spine;
+  if (!forms || !sp) return null;
+  const out = {};
+  for (const [form, f] of Object.entries(forms)) {
+    const loop = f?.roles?.attack && typeof f.roles.attack.loop === 'string' ? f.roles.attack.loop : null;
+    if (!loop) continue;
+    const dur = sp.animations?.[loop];
+    if (!(typeof dur === 'number' && dur > 0)) continue;
+    const h = sp.hits?.[loop];
+    const hit = Array.isArray(h) && Number.isFinite(h[0]) ? Math.min(dur, Math.max(0, h[0])) : null;
+    out[form] = hit != null ? { clip: loop, dur, hit } : { clip: loop, dur };
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 /** The handbook's 「不停止移动」 attack (“十字路口”量产型's 四向攻击) → enemies.json `attackMoves`: it never stops to attack. */
 const attacksOnTheMove = (abilities) => abilities.some((a) => a.text.includes('不停止移动'));
 
@@ -1900,7 +1925,9 @@ function buildEnemies(ctx) {
     const descRaw = mv(data.description);
     const hitArea = HIT_AREAS[mv(data.prefabKey) || key] || null;
     const modelScale = MODEL_SCALE_BY_PREFAB.get(mv(data.prefabKey) || key) ?? null;
-    const attackAnim = enemyAttackAnim(ctx.manifest, mv(data.prefabKey) || key);
+    const spineId = mv(data.prefabKey) || key;
+    const attackAnim = enemyAttackAnim(ctx.manifest, spineId);
+    const formAttackAnim = enemyFormAttackAnims(ctx.manifest, spineId);
     out[key] = {
       key, name, level: wantLevel, rank: mv(data.levelType, 'NORMAL'), handbookIndex: hb?.enemyIndex || null,
       desc: stripRich(descRaw), descRaw: richRaw(descRaw),
@@ -1924,6 +1951,7 @@ function buildEnemies(ctx) {
       ...(STATIC_BODIES.has(key) ? { staticBody: true } : {}),
       ...(modelScale != null && modelScale !== 1 ? { modelScale } : {}),
       ...(attackAnim ? { attackAnim } : {}),
+      ...(formAttackAnim ? { formAttackAnim } : {}),
       ...(attacksOnTheMove(abilities) ? { attackMoves: true } : {}),
     };
   }

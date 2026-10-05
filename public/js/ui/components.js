@@ -74,6 +74,10 @@ export const ICONS = {
   collapse: { d: 'M8 3h2v7H3V8h5zm6 0h2v5h5v2h-7zM3 14h7v7H8v-5H3zm11 0h7v2h-5v5h-2z' },
   rotate: { d: 'M7 2h8a2 2 0 0 1 2 2v7h-2V4H7v16h4v2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 12h5a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2zm0 2v4h5v-4z', eo: true },
   book: { d: 'M2 4h7.5A3.5 3.5 0 0 1 12 5.1 3.5 3.5 0 0 1 14.5 4H22v16h-7.5a1.5 1.5 0 0 0-1.5 1.5h-2A1.5 1.5 0 0 0 9.5 20H2zm2 2v12h5.5c.5 0 1 .1 1.5.3V7.5A1.5 1.5 0 0 0 9.5 6zm10.5 0A1.5 1.5 0 0 0 13 7.5v10.8c.5-.2 1-.3 1.5-.3H20V6z', eo: true },
+  gear: { d: 'M19.4 13a7.8 7.8 0 0 0 .06-1 7.8 7.8 0 0 0-.06-1l2-1.55a.48.48 0 0 0 .12-.62l-1.9-3.28a.48.48 0 0 0-.58-.22l-2.36.95a7.3 7.3 0 0 0-1.73-1L14.6 3.4a.48.48 0 0 0-.48-.4h-3.8a.48.48 0 0 0-.48.4l-.35 2.53c-.62.26-1.2.6-1.73 1l-2.36-.95a.48.48 0 0 0-.58.22L2.92 9.48a.48.48 0 0 0 .12.62l2 1.55a7.8 7.8 0 0 0 0 2l-2 1.55a.48.48 0 0 0-.12.62l1.9 3.28c.12.22.38.3.58.22l2.36-.95c.53.4 1.11.74 1.73 1l.35 2.53c.05.24.24.4.48.4h3.8c.24 0 .43-.16.48-.4l.35-2.53c.62-.26 1.2-.6 1.73-1l2.36.95c.2.08.46 0 .58-.22l1.9-3.28a.48.48 0 0 0-.12-.62zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z', eo: true },
+  // password reveal (TextField): an open eye, and the same eye with a diagonal slash when hidden
+  eye: { d: 'M12 5C6.5 5 2.4 9.3 1.1 12c1.3 2.7 5.4 7 10.9 7s9.6-4.3 10.9-7C21.6 9.3 17.5 5 12 5zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', eo: true },
+  eyeOff: { d: 'M12 5C6.5 5 2.4 9.3 1.1 12c1.3 2.7 5.4 7 10.9 7s9.6-4.3 10.9-7C21.6 9.3 17.5 5 12 5zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM2.2 4 4 2.2 21.8 20 20 21.8z', eo: true },
 };
 
 /**
@@ -794,7 +798,7 @@ export function DifficultyTag({ difficulty, size = 'md', class: cls, code }) {
  *   placeholder?: string, maxLength?: number, transform?: (v: string) => string, autoFocus?: boolean,
  *   disabled?: boolean, size?: 'md'|'lg'|'code', icon?: string, class?: string, inputRef?: any, name?: string }} props
  */
-export function TextField({ label, micro, value, onInput, onEnter, placeholder, maxLength, transform, autoFocus, disabled, size = 'md', icon, class: cls, inputRef, name, hint, invalid }) {
+export function TextField({ label, micro, value, onInput, onEnter, placeholder, maxLength, transform, autoFocus, disabled, size = 'md', icon, class: cls, inputRef, name, hint, invalid, type = 'text' }) {
   const localRef = useRef(null);
   const ref = inputRef || localRef;
   const composing = useRef(false);
@@ -810,16 +814,20 @@ export function TextField({ label, micro, value, onInput, onEnter, placeholder, 
     onInput?.(v);
   };
   const id = useMemo(() => `tf-${Math.random().toString(36).slice(2, 8)}`, []);
+  const isPassword = type === 'password';
+  const [reveal, setReveal] = useState(false);
   return html`<label class=${cx('field', `field--${size}`, disabled && 'is-disabled', invalid && 'is-invalid', cls)} for=${id}>
     ${label || micro ? html`<span class="field__label">${label}${micro ? html`<span class="micro">${micro}</span>` : null}</span>` : null}
     <span class="field__box brackets">
       ${icon ? html`<${Icon} name=${icon} class="field__icon" />` : null}
-      <input id=${id} ref=${ref} class="field__input" name=${name} value=${value} placeholder=${placeholder}
+      <input id=${id} ref=${ref} class="field__input" name=${name} type=${isPassword && reveal ? 'text' : type} value=${value} placeholder=${placeholder}
         maxLength=${maxLength} disabled=${disabled} autocomplete="off" spellcheck=${false}
         onInput=${handle}
         oncompositionstart=${() => { composing.current = true; }}
         oncompositionend=${(e) => { composing.current = false; handle(e); }}
         onKeyDown=${(e) => { if (e.key === 'Enter' && !e.isComposing && !composing.current) onEnter?.(e); }} />
+      ${isPassword ? html`<button type="button" class="field__reveal" tabindex="-1" aria-label=${reveal ? '隐藏密码' : '显示密码'}
+        onClick=${(e) => { e.preventDefault(); setReveal((v) => !v); }}><${Icon} name=${reveal ? 'eyeOff' : 'eye'} /><//>` : null}
     </span>
     ${hint ? html`<span class="field__hint">${hint}</span>` : null}
   </label>`;

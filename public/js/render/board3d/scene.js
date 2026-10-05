@@ -135,9 +135,11 @@ export class BoardScene {
     this.scene.fog = new T.Fog(LIGHTING.fog.color, LIGHTING.fog.near, LIGHTING.fog.far);
     this.camera = new T.PerspectiveCamera(40, 16 / 9, 0.5, 120);
     this.focus = focusUniforms(T);
+    this.envRT = null;
     if (opts.environment !== false) {
       try {
         this.envMap = environmentMap(T, R);
+        this.envRT = this.envMap?.__rt || null;
         if (this.envMap) {
           this.scene.environment = this.envMap;
           this.scene.environmentIntensity = LIGHTING.env;
@@ -431,16 +433,19 @@ export class BoardScene {
   _fitShadow(board) {
     const k = this.key;
     const b = board.bounds;
-    const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+    // An empty stage (no tile classified `drawn`) leaves bounds at ±Infinity; that would make the shadow box NaN and
+    // poison the whole light-space transform. Fall back to a fixed box centred on the origin.
+    const finite = Number.isFinite(b.x0) && Number.isFinite(b.x1) && Number.isFinite(b.y0) && Number.isFinite(b.y1);
+    const cx = finite ? (b.x0 + b.x1) / 2 : 0, cy = finite ? (b.y0 + b.y1) / 2 : 0;
     const d = LIGHTING.key.dir;
-    const len = Math.hypot(d[0], d[1], d[2]);
+    const len = Math.hypot(d[0], d[1], d[2]) || 1;
     const dist = 30;
     k.position.set(cx + (d[0] / len) * dist, cy + (d[1] / len) * dist, (d[2] / len) * dist);
     k.target.position.set(cx, cy, 0);
     k.target.updateMatrixWorld();
     const cam = k.shadow.camera;
     // light-space box covering the island and its shadow on the background plane
-    const half = Math.max(b.x1 - b.x0, b.y1 - b.y0) / 2 + 9;
+    const half = (finite ? Math.max(b.x1 - b.x0, b.y1 - b.y0) : 30) / 2 + 9;
     cam.left = -half; cam.right = half; cam.top = half; cam.bottom = -half;
     cam.near = 1; cam.far = dist + 30;
     cam.updateProjectionMatrix();
@@ -570,6 +575,8 @@ export class BoardScene {
     for (const m of Object.values(this.mat)) m?.dispose?.();
     for (const t of Object.values(this.tex)) t?.dispose?.();
     this.envMap?.dispose?.();
+    this.envRT?.dispose?.(); // the PMREM render target's framebuffer/depth buffer (not freed by the texture's dispose)
+    this.envRT = null;
     this.canvas.removeEventListener?.('webglcontextlost', this._onLost);
     try { this.renderer.dispose(); } catch { /* ignore */ }
     try { this.renderer.forceContextLoss?.(); } catch { /* ignore */ }

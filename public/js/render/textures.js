@@ -1079,7 +1079,10 @@ const DIAMOND_MAX = 160;       // ≈ 16 MB of 160×160 canvases at most (plus t
 export function diamondTexture(key, img, color, o = {}) {
   const k = `${key}|${img ? 1 : 0}|${color}|${o.golden ? 1 : 0}`;
   let tex = _diamonds.get(k);
-  if (tex) { _diamonds.delete(k); _diamonds.set(k, tex); return tex; }
+  // A cache hit must be a LIVE texture: the renderer's texture GC destroys a texture once it has been unbound (idle) for
+  // a while, so returning a stale cached one would hand a later sprite a destroyed texture (blank). Rebuild it instead.
+  if (tex && !tex.destroyed && !tex.baseTexture?.destroyed) { _diamonds.delete(k); _diamonds.set(k, tex); return tex; }
+  if (tex) _diamonds.delete(k);
   const P = PIXI();
   const S = DIAMOND_PX, h = S / 2;
   const canvas = makeCanvas(S, S);
@@ -1157,7 +1160,9 @@ const _items = new Map();
 export function itemTexture(key, img, color) {
   const k = `${key}|${img ? 1 : 0}|${color}`;
   let tex = _items.get(k);
-  if (tex) return tex;
+  // Same as diamondTexture: a cached texture may have been destroyed by the renderer's GC while idle — rebuild it.
+  if (tex && !tex.destroyed && !tex.baseTexture?.destroyed) return tex;
+  if (tex) _items.delete(k);
   const P = PIXI();
   const S = 128;
   const canvas = makeCanvas(S, S);

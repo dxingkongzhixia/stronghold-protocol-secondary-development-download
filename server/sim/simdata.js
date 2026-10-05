@@ -233,6 +233,14 @@ function normAttackAnim(a) {
   return { dur, hit: a.hit != null && Number.isFinite(hit) ? Math.min(dur, Math.max(0, hit)) : null };
 }
 
+/** data/enemies.json `formAttackAnim` → { [form]: { dur, hit } } via normAttackAnim (bad entries dropped), or null. */
+function normFormAttackAnim(m) {
+  if (!m || typeof m !== 'object') return null;
+  const out = {};
+  for (const [form, a] of Object.entries(m)) { const n = normAttackAnim(a); if (n) out[form] = n; }
+  return Object.keys(out).length ? out : null;
+}
+
 /** Normalise an enemy record (research 05 shape or data/enemies.json shape) into an EnemyDef. */
 export function normalizeEnemy(key, e) {
   const st = e.stats ?? e;
@@ -271,6 +279,7 @@ export function normalizeEnemy(key, e) {
     hitArea: normHitArea(e.hitArea),   // huge units only (body.js); null = a point
     staticBody: !!e.staticBody,        // 静态刚体: pushes / pulls never move it (Battle._displaceable)
     attackAnim: normAttackAnim(e.attackAnim),   // its attack clip { dur, hit } (ai.js attackStand); null = none known
+    formAttackAnim: normFormAttackAnim(e.formAttackAnim),  // per-form attack clip { [form]: { dur, hit } } (attackStand while e.form is set)
     attackMoves: !!e.attackMoves,      // 「不停止移动」: never stops to attack (ai.js attackStand)
     tags: e.tags ?? [],
     abilities: e.abilities ?? [],

@@ -44,6 +44,9 @@ import { Lobby } from './lobby.js';
 import { getData, loadData } from './data.js';
 import { PROTOCOL_VERSION, APP_VERSION } from '../shared/constants.js';
 import { MEDIA_PREFIX, AUDIO_EXTS } from '../shared/media.js';
+import { openDb } from './db.mjs';
+import { AuthService } from './auth.js';
+import { ADMIN_HTML, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
 
 /** Repository root. */
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -114,7 +117,7 @@ const GZIP_CACHE_MAX_FILE = 8 << 20;      // larger files are gzip-streamed on t
 const GZIP_CACHE_MAX_TOTAL = 96 << 20;
 // Asset URLs carry no content hash yet, and tools/fetch-assets.mjs / tools/vendor.mjs can rewrite files in
 // place (atlas + png + skel must stay consistent), so "long" is one day; revalidation after that is a cheap 304.
-const LONG_CACHE = 'public, max-age=86400';          // 1 day
+const LONG_CACHE = 'public, max-age=604800';         // 7 days (art/fonts/vendor rarely change; the boot preloads ~104 MB)
 const IMMUTABLE_CACHE = 'public, max-age=31536000, immutable';
 const LONG_CACHE_DIRS = ['assets', 'fonts', 'vendor']; // first path segment under public/
 const MAX_URL_LENGTH = 4096;
@@ -339,6 +342,20 @@ function splitUrl(url) {
   const q = u.indexOf('?');
   const hashless = (s) => { const h = s.indexOf('#'); return h >= 0 ? s.slice(0, h) : s; };
   return q >= 0 ? { rawPath: hashless(u.slice(0, q)), query: hashless(u.slice(q + 1)) } : { rawPath: hashless(u), query: '' };
+}
+
+/** One cookie's value from a Cookie header (tiny parser, no dependency). */
+function cookieValue(header, name) {
+  if (typeof header !== 'string' || !header) return '';
+  for (const part of header.split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    if (part.slice(0, i).trim() === name) {
+      const v = part.slice(i + 1).trim();
+      try { return decodeURIComponent(v); } catch { return v; }
+    }
+  }
+  return '';
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -629,12 +646,21 @@ export async function startServer(opts = {}) {
   }
   if (netOptions.trustProxy == null) netOptions.trustProxy = parseTrustProxy(process.env.TRUST_PROXY);
   const registry = new SessionRegistry({ reconnectWindowMs: netOptions.reconnectWindowMs ?? NET_DEFAULTS.reconnectWindowMs });
+  // Accounts & 野排 (docs/MATCHMAKING.md). The SQLite file lives OUTSIDE the served data/ dir (var/, git-ignored).
+  // Enabled only when asked — the real server (main) or a test injecting auth/db — so unit tests stay file-free; a
+  // null auth runs the guests-only flow exactly as before.
+  const accounts = opts.accounts === true || !!opts.auth || !!opts.db;
+  const db = accounts ? (opts.db || openDb(opts.dbFile || process.env.SP_DB || path.join(ROOT, 'var', 'accounts.db'))) : null;
+  const auth = accounts ? (opts.auth || new AuthService({ db })) : null;
+  // Operations page (server/admin.js): enabled with accounts; the token file is `var/admin-token.txt`.
+  const admin = auth ? { token: opts.adminToken || loadAdminToken(ROOT) } : null;
   const lobbyOptions = {};
   for (const k of ['lobbyGraceMs', 'maxRooms', 'maxRoomsPerAddr', 'maxMatchesPerAddr', 'resyncMinGapMs', 'soloReconnectWindowMs']) {
     if (opts[k] != null) lobbyOptions[k] = opts[k];
   }
-  const lobby = new Lobby({ registry, log, MatchClass: opts.MatchClass, getData: () => data, seedFn: opts.seedFn, options: lobbyOptions });
+  const lobby = new Lobby({ registry, log, auth, MatchClass: opts.MatchClass, getData: () => data, seedFn: opts.seedFn, options: lobbyOptions });
   const network = new Network({ registry, handler: lobby, log, options: netOptions });
+  lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
   const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, log });
   const startedAt = Date.now();
   // The tag is per process (see buildTag): read the browser runtime once, here, not on every /healthz.
@@ -649,6 +675,10 @@ export async function startServer(opts = {}) {
       sendError(req, res, 500, '服务器内部错误 · Internal error');
     });
   });
+  // Disable Nagle for every socket: small frames (WebSocket intents, room/match state) otherwise wait out the
+  // Nagle/delayed-ACK window (~40 ms) before they leave, which shows up directly in the lobby's ping. Large asset
+  // downloads are unaffected. The app's own frames are tiny and latency-sensitive, so noDelay is a net win.
+  server.on('connection', (socket) => { try { socket.setNoDelay(true); } catch { /* ignore */ } });
 
   async function handleRequest(req, res) {
     const url = req.url || '/';
@@ -668,6 +698,31 @@ export async function startServer(opts = {}) {
         build: buildTag(),
         sockets: network.connectionCount, sessions: registry.size, ...lobby.stats(),
       });
+      return;
+    }
+    // Public online status (server/admin.js buildPublicSnapshot): the in-game 在线 overlay polls this. Token-free.
+    if (parts.rawPath === '/online/api') {
+      sendJson(req, res, 200, buildPublicSnapshot({ registry, lobby, matchmaker: lobby.mm }));
+      return;
+    }
+    // Operations page (server/admin.js): /admin (HTML) + /admin/api/state (JSON), both token-gated.
+    if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state') {
+      if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
+      const queryToken = new URLSearchParams(parts.query).get('token');
+      const provided = queryToken || req.headers['x-admin-token'] || cookieValue(req.headers.cookie, 'sp_admin') || '';
+      if (!tokenMatches(provided, admin.token)) {
+        sendError(req, res, 403, '需要管理令牌 · Admin token required', '令牌见 var/admin-token.txt（或启动日志的 Admin 链接）');
+        return;
+      }
+      // Remember a valid ?token= in a cookie for 30 days, so plain /admin links (the lobby's 在线 badge) work.
+      if (queryToken) res.setHeader('Set-Cookie', `sp_admin=${encodeURIComponent(admin.token)}; HttpOnly; SameSite=Strict; Path=/admin; Max-Age=2592000`);
+      if (parts.rawPath === '/admin/api/state') {
+        sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth }));
+        return;
+      }
+      const body = Buffer.from(ADMIN_HTML);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
+      res.end(req.method === 'HEAD' ? undefined : body);
       return;
     }
     await serveStatic(req, res, parts.rawPath, parts.query);
@@ -733,11 +788,13 @@ export async function startServer(opts = {}) {
         setTimeout(() => { server.closeAllConnections?.(); }, 500).unref();
       });
       try { wss.close(); } catch { /* ignore */ }
+      try { db?.close?.(); } catch (e) { log.error('[shutdown] db', e); }
     })();
     return closing;
   }
 
-  return { port: actualPort, host, url, server, wss, lobby, network, registry, close };
+  const adminUrl = admin ? `${url}/admin?token=${admin.token}` : null;
+  return { port: actualPort, host, url, server, wss, lobby, network, registry, db, auth, adminUrl, close };
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -758,7 +815,7 @@ async function main() {
   process.on('uncaughtException', (e) => console.error('[process] uncaught exception', e));
   let srv;
   try {
-    srv = await startServer();
+    srv = await startServer({ accounts: true });
   } catch (e) {
     if (e && e.code === 'EADDRINUSE') console.error(`端口已被占用 / port in use: ${e.port ?? process.env.PORT ?? 3000}. Try PORT=3001 npm start`);
     else console.error('[boot] failed to start', e);
@@ -769,6 +826,7 @@ async function main() {
   if (srv.host === '0.0.0.0' || srv.host === '::') {
     for (const u of lanUrls(srv.port)) console.log(`  LAN:     ${u}`);
   }
+  if (srv.adminUrl) console.log(`  Admin:   ${srv.adminUrl}`);
   console.log('  Internet: cloudflared tunnel --url ' + `http://localhost:${srv.port}` + '\n');
 
   let stopping = false;

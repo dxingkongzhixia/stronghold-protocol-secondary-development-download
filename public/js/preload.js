@@ -1,0 +1,94 @@
+// preload.js — boot-time art preloading (docs/ASSETS.md).
+//
+// Warm the browser's HTTP cache for the SMALL image set the lobby / shop / team / loadout UI draws, so entering a
+// screen does not pop images in. Heavy art (Spine models, operator portraits, audio, the 3D board) still loads on
+// demand: preloading every image in the manifest is ~155 MB (portraits alone ~30 MB, UI ~39 MB), which on the server's
+// uplink would make first entry wait a minute. Scopes:
+//   'icons' (default) — operator avatars + enemy / token / item / skill / band / bond / prof icons (~26 MB, ~10 s at 20 Mbps)
+//   'ui'              — the above + UI sprites (~+39 MB)
+//   'all'             — the above + operator portraits (~+30 MB)
+//
+// Pure at import time (no DOM): `collectArtUrls` is unit-testable in Node; only `preloadImages` touches `Image`.
+
+/**
+ * Optional boot background video (a distraction while the first-load preload runs). `null` disables it. Two kinds:
+ *   { kind: 'file', src: '/assets/loading/boot.mp4' } — a self-hosted clip shown muted / looped / autoplay, with NO
+ *                                                        controls (not seekable, not draggable — pure background)
+ *   { kind: 'bilibili', bvid: 'BV…', page: 1 }        — embeds the Bilibili player (needs internet; interactive)
+ */
+export const BOOT_VIDEO = { kind: 'file', src: '/assets/loading/boot.mp4?v=2' }; // bump `?v=` when the file changes: it is served immutable for a year
+
+const IMG_RE = /\.(png|webp|jpg|jpeg|gif|avif)$/i;
+
+/** An image URL from the manifest (spine atlases/PNGs excluded). Bare filenames that are not real URLs are ignored. */
+export function isArtImage(u) {
+  if (typeof u !== 'string' || !u) return false;
+  const s = u.split('?')[0];
+  return s.startsWith('/assets/') && IMG_RE.test(s) && !/\/spine\//.test(s);
+}
+
+/**
+ * The image URLs to preload for a boot preloader.
+ * @param {any} manifest data/assets.json
+ * @param {'icons'|'ui'|'all'} [scope]
+ * @returns {string[]} de-duplicated URLs
+ */
+export function collectArtUrls(manifest, scope = 'icons') {
+  const m = manifest && typeof manifest === 'object' ? manifest : {};
+  const out = new Set();
+  const walk = (node) => {
+    if (typeof node === 'string') { if (isArtImage(node)) out.add(node); return; }
+    if (Array.isArray(node)) { for (const x of node) walk(x); return; }
+    if (node && typeof node === 'object') for (const v of Object.values(node)) walk(v);
+  };
+  // operator avatars (small) — portraits are big, only in 'all'
+  for (const r of Object.values(m.chars || {})) { if (isArtImage(r.avatar)) out.add(r.avatar); if (isArtImage(r.avatarE2)) out.add(r.avatarE2); }
+  // icon sets
+  for (const top of ['enemies', 'tokens', 'items', 'skills', 'bands', 'bonds', 'prof']) {
+    for (const r of Object.values(m[top] || {})) walk(r);
+  }
+  if (scope === 'ui' || scope === 'all') for (const v of Object.values(m.ui || {})) { if (isArtImage(v)) out.add(v); }
+  if (scope === 'all') for (const r of Object.values(m.chars || {})) { if (isArtImage(r.portrait)) out.add(r.portrait); if (isArtImage(r.portraitE2)) out.add(r.portraitE2); }
+  return [...out];
+}
+
+/**
+ * Preload images through `new Image()` (a cache hit fires onload at once). A failed image counts as done, so progress
+ * always completes. Returns `{ promise, cancel }`; `cancel` stops launching new loads (in-flight ones finish).
+ * @param {string[]} urls
+ * @param {{ concurrency?: number, onProgress?: (done: number, total: number) => void }} [opts]
+ * @returns {{ promise: Promise<{ done: number, total: number, aborted: boolean }>, cancel: () => void }}
+ */
+export function preloadImages(urls, { concurrency = 8, onProgress } = {}) {
+  const list = Array.isArray(urls) ? urls : [];
+  const total = list.length;
+  let cancelled = false;
+  let done = 0;
+  let next = 0;
+  let active = 0;
+  let resolveFn = () => {};
+  const promise = new Promise((res) => { resolveFn = res; });
+  const settle = () => { if ((cancelled || next >= total) && active === 0) resolveFn({ done, total, aborted: cancelled }); };
+  const launch = () => {
+    while (!cancelled && active < concurrency && next < total) {
+      const url = list[next++];
+      active++;
+      const img = new Image();
+      const onEnd = () => {
+        img.onload = img.onerror = null;
+        active--;
+        done++;
+        try { onProgress?.(done, total); } catch { /* ignore */ }
+        launch();
+        settle();
+      };
+      img.onload = onEnd;
+      img.onerror = onEnd;
+      try { img.src = url; } catch { onEnd(); }
+    }
+    settle();
+  };
+  if (!total) { resolveFn({ done: 0, total: 0, aborted: false }); return { promise, cancel() {} }; }
+  launch();
+  return { promise, cancel: () => { cancelled = true; settle(); } };
+}

@@ -131,7 +131,9 @@ describe('extracted board-scene files (when a local client was extracted)', { sk
     // external shader references resolve through the shaders/*.ab bundles (they were all null before)
     for (const k of ['MT_autochess', 'MT_autochess_Transparent', 'MT_autochess_common']) assert.equal(mats[k].shader, 'Torappu/Scene/StandardDirectional', k);
     const sand = JSON.parse(readFileSync(onDisk(manifest.groups['map/autochesssand'].materials.path), 'utf8'));
-    for (const [k, m] of Object.entries(sand)) assert.match(m.shader || '', /^Torappu\/Scene\/(StandardRealtimeShadow|StylizedWater)$/, k);
+    // a foreign client (or one that did not download the shader bundles) may leave the shader unresolved (''): the
+    // renderer falls back to a default material, so an empty shader is tolerated; a resolved one must match.
+    for (const [k, m] of Object.entries(sand)) assert.ok(!m.shader || /^Torappu\/Scene\/(StandardRealtimeShadow|StylizedWater)$/.test(m.shader), k);
     for (const m of Object.values(mats)) for (const t of Object.values(m.textures)) assert.ok(g[t.texture], `${t.texture} extracted`);
   });
 

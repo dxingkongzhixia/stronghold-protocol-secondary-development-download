@@ -9,10 +9,12 @@
 
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, modeIdFor } from '../../../shared/constants.js';
-import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, doctorNo } from '../ui/components.js';
+import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, Tabs, doctorNo } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { GuideButton } from '../ui/guide.js';
 import { LoadoutButton } from './loadout.js';
+import { SettingsButton } from '../ui/settings.js';
+import { AccountDialog } from '../ui/account.js';
 import { net, identity } from '../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref } from '../store.js';
 import { getConfig, getMode, getStage, useData } from '../data.js';
@@ -215,6 +217,10 @@ function DifficultyCard({ roomMode, difficulty, selected, onSelect }) {
 export function LobbyScreen() {
   const me = useStore((s) => s.me, shallowEqual);
   const conn = useStore((s) => s.connection, shallowEqual);
+  const auth = useStore((s) => s.auth, shallowEqual);
+  const mm = useStore((s) => s.mm, shallowEqual);
+  const [showAccount, setShowAccount] = useState(false);
+  const [showOnline, setShowOnline] = useState(false);
   useData('config');
   const [roomMode, setRoomMode] = useState(() => (loadPref('lobby.mode', 'coop') === 'solo' ? 'solo' : 'coop'));
   const [difficulty, setDifficulty] = useState(() => {
@@ -223,6 +229,8 @@ export function LobbyScreen() {
   });
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(null);
+  // 公开同盟 (lobby 03 → server /online/api `openRooms`): whether a new 同盟 room is listed publicly. Persisted.
+  const [isPublic, setIsPublic] = useState(() => loadPref('lobby.public', true) !== false);
   const [recent] = useState(recentRooms);
   const alive = useRef(true);
   const inFlight = useRef(false); // synchronous guard against double clicks (state updates are async)
@@ -233,6 +241,7 @@ export function LobbyScreen() {
 
   const pickMode = (m) => { setRoomMode(m); savePref('lobby.mode', m); };
   const pickDifficulty = (d) => { setDifficulty(d); savePref('lobby.difficulty', d); };
+  const pickPublic = (v) => { const b = v === 'public'; setIsPublic(b); savePref('lobby.public', b); };
 
   const run = async (kind, fn) => {
     if (inFlight.current) return;
@@ -244,15 +253,25 @@ export function LobbyScreen() {
       if (alive.current) setBusy(null);
     }
   };
-  const create = () => run('create', () => net.request('room.create', { mode: roomMode, difficulty }));
+  const create = () => run('create', () => net.request('room.create', { mode: roomMode, difficulty, public: isPublic }));
+  // 野排 (docs/MATCHMAKING.md): enter the difficulty-bucketed shared pool (a logged-in account is required).
+  const mmJoin = () => run('mm', () => net.request('mm.join', { difficulty }));
+  const mmCancel = () => {
+    // Optimistic: clear locally so a failed / slow cancel can never leave the overlay stuck (a real mm.state re-syncs).
+    store.patch('mm', { queued: false, difficulty: null });
+    net.request('mm.cancel').catch(() => {});
+  };
   const join = (c = code) => {
     const k = normalizeCode(c);
     if (!CODE_RE.test(k)) { toast(`同盟密钥为 ${ROOM_CODE_LEN} 位字母或数字`, 'warn'); return; }
     run('join', () => net.request('room.join', { code: k }));
   };
   const backToTitle = () => {
+    // Leaving the lobby must not leave the 野排 queue behind: the socket stays open, so without this the server
+    // would keep this session in the shared pool (and could match it into a room the player never sees).
+    if (mm.queued) mmCancel();
     identity.setEntered(false);
-    store.set((s) => ({ session: { ...s.session, entered: false } }));
+    store.set((s) => ({ session: { ...s.session, entered: false }, mm: { ...s.mm, queued: false, difficulty: null } }));
   };
 
   return html`<div class="screen lobby-screen">
@@ -260,6 +279,7 @@ export function LobbyScreen() {
       <div class="topbar__left">
         <${Button} variant="ghost" size="sm" icon="chevronLeft" onClick=${backToTitle} title="返回标题">返回<//>
         <${PingPill} ms=${conn.ping} online=${online} />
+        <${OnlineBadge} onOpen=${() => setShowOnline(true)} />
       </div>
       <div class="topbar__center">
         <${MicroLabel} tone="mint">SIMULATION PROTOCOL SELECT<//>
@@ -268,10 +288,13 @@ export function LobbyScreen() {
       <div class="topbar__right">
         <${GuideButton} class="lobby-guide" variant="secondary" />
         <${LoadoutButton} from="lobby" size="sm" class="lobby-loadout" />
+        ${auth?.account ? null : html`<${Button} variant="secondary" size="sm" icon="user" class="lobby-account"
+          onClick=${() => setShowAccount(true)}>登录 / 注册<//>`}
+        <${SettingsButton} class="lobby-set" variant="secondary" size="sm" />
         <div class="me-chip">
           <${AvatarFrame} size="sm" name=${me.name} seat=${0} self=${true} />
           <div class="me-chip__text">
-            <span class="me-chip__name">${me.name || '博士'}</span>
+            <span class="me-chip__name">${me.name || '博士'}${auth?.account ? null : html`<em class="me-chip__guest">游客</em>`}</span>
             <${MicroLabel}>${me.playerId != null ? `DOCTOR #${doctorNo(me.playerId)}` : 'DOCTOR'}<//>
           </div>
         </div>
@@ -297,6 +320,7 @@ export function LobbyScreen() {
               ${recent.map((c) => html`<button key=${c} type="button" class="code-chip num" onClick=${() => { setCode(c); join(c); }}>${c}</button>`)}`
               : html`<span class="t-dim">向同伴索取 ${ROOM_CODE_LEN} 位同盟密钥，或直接打开邀请链接</span>`}
           </div>
+          <${PublicAlliances} onPick=${(c) => { setCode(c); join(c); }} />
         <//>
         <${TipsPanel} />
       </section>
@@ -307,6 +331,11 @@ export function LobbyScreen() {
           ${DIFFICULTIES.map((d) => html`<${DifficultyCard} key=${d} roomMode=${roomMode} difficulty=${d} selected=${difficulty === d} onSelect=${pickDifficulty} />`)}
         </div>
         <div class="create-box">
+          ${roomMode === 'coop' ? html`<div class="create-vis">
+            <span class="create-vis__label">房间可见性<${MicroLabel}>VISIBILITY<//></span>
+            <${Tabs} size="sm" value=${isPublic ? 'public' : 'private'} onChange=${pickPublic}
+              items=${[{ id: 'public', label: '公开' }, { id: 'private', label: '不公开' }]} />
+          </div>` : null}
           <${Tooltip} block=${true} text=${online ? null : '正在连接服务器…'}>
             <${Button} variant="primary" size="xl" block=${true} iconRight="chevrons" loading=${busy === 'create'} disabled=${!online} onClick=${create}>
               ${roomMode === 'solo' ? '开始独立模拟' : '创建同盟'}
@@ -314,11 +343,145 @@ export function LobbyScreen() {
           <//>
           <div class="create-box__hint">
             ${online
-              ? html`<span>${roomMode === 'solo' ? '创建后即可开始模拟' : '创建后可邀请好友或添加 AI 队友'}</span>`
+              ? html`<span>${roomMode === 'solo' ? '创建后即可开始模拟'
+                : isPublic ? '公开：其他博士可在大厅「公开同盟」直接加入'
+                : '不公开：仅凭同盟密钥加入'}</span>`
               : html`<${Spinner} size="sm" label="CONNECTING" />`}
           </div>
         </div>
+        ${roomMode === 'coop' ? html`<div class="mm-box">
+          <${Button} variant="primary" size="xl" block=${true} icon="search" disabled=${!online || !auth.account}
+            onClick=${mmJoin} title=${auth.account ? '' : '需要先登录账号'}>搜寻队友（野排）<//>
+          <div class="mm-box__hint">${auth.account ? '进入共享池，最多 30 秒凑齐 4 人，不足由 AI 补位' : '需先在标题页登录 / 注册账号'}</div>
+        </div>` : null}
       </section>
+    </div>
+    ${mm.queued ? html`<${MmOverlay} mm=${mm} onCancel=${mmCancel} />` : null}
+    ${showAccount ? html`<${AccountDialog} defaultName=${me.name} onClose=${() => setShowAccount(false)} />` : null}
+    ${showOnline ? html`<${OnlineOverlay} onClose=${() => setShowOnline(false)} />` : null}
+  </div>`;
+}
+
+/**
+ * Public joinable 同盟 rooms (server `/online/api` → `openRooms`): up to 3 keys, polled async every 4 s. Clicking a
+ * key fills the code field and joins — the same public, token-free endpoint the 在线 overlay uses (docs/MATCHMAKING.md).
+ */
+function PublicAlliances({ onPick }) {
+  const [rooms, setRooms] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const r = await fetch('/online/api', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (alive) setRooms(Array.isArray(j.openRooms) ? j.openRooms : []);
+      } catch { /* keep the last list */ }
+    };
+    tick();
+    const h = setInterval(tick, 4000);
+    return () => { alive = false; clearInterval(h); };
+  }, []);
+  const list = (rooms || []).slice(0, 3);
+  if (!list.length) return null;
+  return html`<div class="join-foot">
+    <span class="t-lo">公开同盟</span>
+    ${list.map((r) => html`<button key=${r.code} type="button" class="code-chip num"
+      title=${`${r.difficultyName || ''} · ${r.humans}/${MAX_SEATS}${r.host ? ' · ' + r.host : ''}`}
+      onClick=${() => onPick(r.code)}>${r.code}</button>`)}
+  </div>`;
+}
+
+/**
+ * The 野排 queue overlay: how long we have waited, how many are in the bucket, and the cancel button. It refreshes on
+ * each `mm.state` push (~1 Hz, main.js wireNet → store.mm).
+ */
+function MmOverlay({ mm, onCancel }) {
+  const left = Math.max(0, Math.ceil(((mm.deadlineMs || 0) - Date.now()) / 1000));
+  return html`<div class="mm-overlay" role="status">
+    <div class="mm-overlay__card brackets">
+      <${Spinner} size="sm" label="SEARCHING" />
+      <div class="mm-overlay__title">正在搜寻队友…</div>
+      <div class="mm-overlay__row"><span>难度</span><b>${DIFFICULTY_NAMES[mm.difficulty] || mm.difficulty || '-'}</b></div>
+      <div class="mm-overlay__row"><span>已等待</span><b>${Math.floor((mm.elapsedMs || 0) / 1000)} s</b></div>
+      <div class="mm-overlay__row"><span>当前人数</span><b>${mm.waiting} / ${mm.need}</b></div>
+      <div class="mm-overlay__hint">${left > 0 ? `约 ${left} s 后由 AI 补位开局` : '正在组队…'}</div>
+      <${Button} variant="secondary" onClick=${onCancel}>取消搜寻<//>
+    </div>
+  </div>`;
+}
+
+/**
+ * The server's online-player count (Lobby.stats().online, served by /healthz — server data, not a client guess).
+ * Clicking opens the in-game online overlay (`onOpen`).
+ */
+function OnlineBadge({ onOpen }) {
+  const [n, setN] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const r = await fetch('/healthz', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (alive && Number.isFinite(j.online)) setN(j.online);
+      } catch { /* offline: keep the last value */ }
+    };
+    tick();
+    const h = setInterval(tick, 15000);
+    return () => { alive = false; clearInterval(h); };
+  }, []);
+  return html`<button type="button" class="online-badge" title="查看在线玩家" onClick=${onOpen}>
+    <${Icon} name="users" /><span>在线</span><b class="num">${n == null ? '—' : n}</b>
+  </button>`;
+}
+
+/** Status key → label + tone (mirrors server/admin.js STATUS). */
+const ONLINE_STATUS = {
+  online: { label: '在线', c: 'mint' }, room: { label: '组队中', c: 'ice' }, queue: { label: '野排排队', c: 'amber' },
+  mmplay: { label: '野排游玩', c: 'amber' }, alliance: { label: '同盟游玩', c: 'violet' }, solo: { label: '单人游玩', c: 'mint' },
+  offline: { label: '离线', c: 'dim' },
+};
+
+/**
+ * The in-game online-players overlay: server data via /online/api (token-free), refreshed every 4 s. Opened from the
+ * 在线 badge — no separate page. Styled with the game's own components (docs/MATCHMAKING.md §8).
+ */
+function OnlineOverlay({ onClose }) {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const r = await fetch('/online/api', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (alive) setData(j);
+      } catch { /* keep the last snapshot */ }
+    };
+    tick();
+    const h = setInterval(tick, 4000);
+    return () => { alive = false; clearInterval(h); };
+  }, []);
+  const list = (data && data.online) || [];
+  const st = (s) => ONLINE_STATUS[s] || { label: s, c: 'dim' };
+  return html`<div class="online-modal" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div class="online-modal__card brackets">
+      <div class="online-modal__head">
+        <div class="online-modal__title"><${MicroLabel} tone="mint">ONLINE DOCTORS<//>
+          <h2>在线玩家<span class="num">${data ? data.counts.online : '—'}</span></h2></div>
+        <button type="button" class="online-modal__close" onClick=${onClose} aria-label="关闭"><${Icon} name="close" /><//>
+      </div>
+      <div class="online-modal__meta"><span><i class="online-dot"></i>实时</span><span>游客 ${data ? data.counts.guests : '—'}</span><span>每 4 秒刷新</span></div>
+      <div class="online-modal__list">
+        ${list.length ? list.map((p, i) => html`<div class="online-row" key=${`${p.name}-${i}`}>
+          <${AvatarFrame} size="sm" name=${p.name} seat=${i} offline=${p.status === 'offline'} />
+          <span class="online-row__name">${p.name}</span>
+          ${p.guest ? html`<span class="online-row__tag">游客</span>` : html`<span class="online-row__tag is-acc">已登录</span>`}
+          <span class=${`online-row__status is-${st(p.status).c}`}>${st(p.status).label}</span>
+          <span class="online-row__room num">${p.roomCode || '—'}</span>
+        </div>`) : html`<div class="online-modal__empty">${data ? '暂无在线玩家' : '加载中…'}</div>`}
+      </div>
     </div>
   </div>`;
 }

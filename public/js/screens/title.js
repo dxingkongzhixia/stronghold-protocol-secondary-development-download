@@ -8,15 +8,35 @@
 // entry/loading illustration names) it is layered under the CSS art; otherwise the screen is
 // pure CSS/SVG (radar, ridgelines, glow), so it never issues a request that can 404.
 
-import { useMemo, useState } from '../../vendor/hooks.module.js';
+import { useEffect, useMemo, useState } from '../../vendor/hooks.module.js';
 import { NAME_MAX_LEN, APP_VERSION } from '../../../shared/constants.js';
 import { html, Button, Icon, MicroLabel, TextField, PingPill } from '../ui/components.js';
 import { GuideButton } from '../ui/guide.js';
 import { toast } from '../ui/toasts.js';
-import { net, identity } from '../net.js';
+import { AccountForm, AccountWho } from '../ui/account.js';
+import { net, identity, randomGuestName } from '../net.js';
 import { store, useStore, shallowEqual } from '../store.js';
 import { data, useData } from '../data.js';
 import { FullscreenButton, detectFeatures } from '../ui/device.js';
+
+/**
+ * The title's account section (docs/MATCHMAKING.md): the 博士代号 field above IS the account name, so this only adds
+ * a collapsible 登录 / 注册 form (ui/account.js). A logged-in player sees the account + 退出 instead.
+ * @param {{ name: string }} props the shared callsign / account name from the title field above
+ */
+function AccountBox({ name }) {
+  const auth = useStore((s) => s.auth, shallowEqual);
+  const [open, setOpen] = useState(false);
+  if (auth?.account) {
+    return html`<div class="title-account is-on"><${AccountWho} account=${auth.account} /></div>`;
+  }
+  return html`<div class=${`title-account${open ? ' is-open' : ''}`}>
+    <button type="button" class="title-account__toggle" aria-expanded=${open} onClick=${() => setOpen((v) => !v)}>
+      <${Icon} name="key" /><span>账号登录 / 注册</span><span class="title-account__caret">${open ? '收起' : '展开'}</span>
+    </button>
+    ${open ? html`<div class="title-account__panel"><${AccountForm} name=${name} /></div>` : null}
+  </div>`;
+}
 
 // Same character classes as server/net.js sanitizeName (control, zero-width, bidi, BOM), so a name
 // the client accepts is never rejected by the server's hello validation.
@@ -182,7 +202,11 @@ const STATUS_TEXT = {
 export function TitleScreen() {
   const conn = useStore((s) => s.connection, shallowEqual);
   const pendingJoin = useStore((s) => s.ui.pendingJoin);
-  const [name, setName] = useState(() => store.get().me.name || identity.loadName() || '');
+  const auth = useStore((s) => s.auth, shallowEqual);
+  // Prefill only a previously entered callsign — never the provisional hello name (which is a placeholder).
+  const [name, setName] = useState(() => identity.loadName() || '');
+  // 博士代号 = the account name: keep the field in sync once logged in (and fill it after a login).
+  useEffect(() => { if (auth?.account?.name) setName(auth.account.name); }, [auth?.account?.id]);
   const assetsSettled = useData('assets');
   const assets = data.get('assets');
   const backdrop = findUiAsset(assets, BACKDROP_KEYS);
@@ -199,8 +223,12 @@ export function TitleScreen() {
 
   const valid = isValidName(name);
   const start = () => {
-    if (!valid) { toast('请输入博士代号', 'warn'); return; }
-    enterSession(name);
+    const acct = store.get().auth?.account;
+    if (acct) { enterSession(acct.name); return; }
+    // 游客进入: an empty 博士代号 is allowed — generate a random 游客 callsign so nobody has to type one.
+    let n = sanitizeName(name);
+    if (!n) { n = randomGuestName(); setName(n); toast(`已随机生成游客代号「${n}」`, 'info'); }
+    enterSession(n);
   };
 
   const online = conn.status === 'online' || conn.status === 'connected';
@@ -250,9 +278,13 @@ export function TitleScreen() {
           <span>收到同盟邀请</span><b class="num">${pendingJoin}</b><span class="t-lo">· 输入代号后将自动加入</span>
         </div>` : null}
         <${TextField} label="博士代号" micro="CALLSIGN" size="lg" icon="user" value=${name} maxLength=${NAME_MAX_LEN}
-          placeholder="输入你的代号（最多 ${NAME_MAX_LEN} 字）" autoFocus=${!touchUi}
+          placeholder="输入代号 · 可留空" autoFocus=${!touchUi} disabled=${!!auth?.account}
           onInput=${setName} onEnter=${start} />
-        <${Button} variant="primary" size="xl" block=${true} iconRight="chevrons" disabled=${!valid} onClick=${start}>开始<//>
+        <${Button} variant="primary" size="xl" block=${true} iconRight="chevrons" onClick=${start}>
+          ${auth?.account || valid ? '进入作战' : '游客进入'}
+        <//>
+        ${!auth?.account && !valid ? html`<div class="title-guest-hint">未填写代号 · 将以随机「游客XXXX」身份进入</div>` : null}
+        <${AccountBox} name=${name} />
         <div class="title-conn">
           <span class=${`status-dot ${dotClass}`}></span>
           <span>${STATUS_TEXT[conn.status] || conn.status}</span>

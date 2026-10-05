@@ -32,7 +32,8 @@ import { html, UiHosts, Button, MicroLabel, closeAllDialogs } from './ui/compone
 import { ConnectionBanner } from './ui/connBanner.js';
 import { ToastHost, toast, toastError, describeError } from './ui/toasts.js';
 import { net, identity, NetError } from './net.js';
-import { store, useStore, emptyMatch, selectRoute, sessionResetNotice } from './store.js';
+import { store, useStore, emptyMatch, selectRoute, sessionResetNotice, loadPref, savePref } from './store.js';
+import { BOOT_VIDEO, collectArtUrls, preloadImages } from './preload.js';
 import { data } from './data.js';
 import { GAME_FILES } from './ui/gameComponents.js';
 import { TitleScreen, sanitizeName } from './screens/title.js';
@@ -78,6 +79,8 @@ let matchAt = 0;
 let restoreTimer = null;
 let joinTimer = null;
 let joinInFlight = false;
+/** Boot art preload gate state, pushed by the server (bootgate.js): `granted` when our download slot is free. */
+const bootGate = { granted: false, position: 0, supported: true };
 
 function clearPendingJoin() {
   store.patch('ui', { pendingJoin: null });
@@ -141,6 +144,12 @@ function onWelcome(msg) {
   store.set({ me: { playerId: msg.playerId ?? null, name, token: typeof msg.token === 'string' ? msg.token : null } });
   welcomeAt = Date.now();
 
+  // A reconnect (`resumed`) or a brand-new server session means the 野排 queue slot is gone server-side
+  // (onDisconnect → Matchmaker.leave): clear a stale "搜寻队友" overlay instead of leaving it stuck forever.
+  if (msg.resumed === true || (prevId != null && prevId !== msg.playerId)) {
+    store.patch('mm', { queued: false, difficulty: null, waiting: 0, elapsedMs: 0, deadlineMs: 0 });
+  }
+
   if (prevId != null && prevId !== msg.playerId) {
     // A brand-new server session (the server restarted — crashed / killed, so no room.closed arrived — or this session
     // expired on it): whatever we showed before is gone — back to the lobby cleanly and say why.
@@ -166,6 +175,8 @@ function onWelcome(msg) {
 function onRoomState(msg) {
   const room = payload(msg);
   roomStateAt = Date.now();
+  // A room.state means a room/match took over: leave the 野排 queue UI (a matched group gets one at once).
+  if (store.get().mm?.queued) store.patch('mm', { queued: false, difficulty: null });
   const myId = store.get().me.playerId;
   const seats = Array.isArray(room.seats) ? room.seats : [];
   if (myId != null && seats.length && !seats.some((s) => s && s.playerId === myId)) {
@@ -178,7 +189,9 @@ function onRoomState(msg) {
   // A (new) match starts: forget the previous match's state so stale results never show.
   if (room.inMatch && !(prevRoom && prevRoom.inMatch && prevRoom.code === room.code)) store.set({ match: emptyMatch() });
   store.set({ room });
-  if (room.mode === 'coop' && typeof room.code === 'string') rememberRoom(room.code);
+  // Only hand-made / 同盟密钥 rooms are remembered for re-joining; a 野排 (auto) room is transient and its code is
+  // not an alliance key the player ever shared.
+  if (room.mode === 'coop' && !room.auto && typeof room.code === 'string') rememberRoom(room.code);
   maybeFinishRestore();
 }
 
@@ -201,10 +214,44 @@ function wireNet() {
   net.on('clock', (c) => store.set({ clock: { offset: c.offset, rtt: c.rtt, synced: c.synced } }));
   net.on('welcome', onWelcome);
   net.on('helloError', (err) => toastError(err));
-  net.on('replaced', () => toast('该身份已在其他页面登录，本页已断开', 'warn', { ttl: 6000 }));
+  net.on('replaced', () => {
+    // This tab/socket was kicked (another tab, or the account logged in on another device): drop the stale badge.
+    // The shared localStorage authToken is left alone — the replacing tab may legitimately own it.
+    store.patch('auth', { account: null });
+    toast('该身份已在其他页面登录，本页已断开', 'warn', { ttl: 6000 });
+  });
   net.on('unhandledError', (err) => toastError(err));
+  // accounts (docs/MATCHMAKING.md): auth.ok binds the account and persists the session token for the next hello
+  net.on('auth.ok', (msg) => {
+    if (typeof msg.token === 'string' && msg.token) savePref('authToken', msg.token);
+    const acc = msg.account;
+    if (acc && Number.isFinite(acc.id)) {
+      store.patch('auth', { account: { id: acc.id, name: String(acc.name || '') }, error: null });
+      // 博士代号 = the account name: the server renamed the session, so follow it locally too.
+      if (acc.name) store.patch('me', { name: String(acc.name) });
+    }
+  });
+  net.on('auth.error', (msg) => {
+    const code = typeof msg.code === 'string' ? msg.code : 'INTERNAL';
+    if (code === 'SESSION_EXPIRED') { savePref('authToken', null); net.setAccountToken(null); }
+    store.patch('auth', { account: null, error: code });
+  });
+  // 野排 queue progress (mm.state ~1 Hz; queued:false on cancel)
+  net.on('mm.state', (msg) => store.patch('mm', {
+    queued: !!msg.queued, difficulty: msg.difficulty ?? null, waiting: Number(msg.waiting) || 0,
+    need: Number(msg.need) || 4, elapsedMs: Number(msg.elapsedMs) || 0, deadlineMs: Number(msg.deadlineMs) || 0,
+  }));
+  // boot art preload gate (server/bootgate.js): the answer to boot.claim — granted, or the place in the queue
+  net.on('boot.state', (msg) => { bootGate.granted = !!msg.granted; bootGate.position = Number(msg.position) || 0; });
   net.on('room.state', onRoomState);
   net.on('room.closed', (msg) => {
+    if (msg.reason === 'matched-end') {
+      // 野排: the auto party disbands when the match ends. Drop the room but keep the result on screen — the route
+      // stays on the game's settle view, whose button then reads 返回大厅 (no room).
+      store.set({ room: null });
+      toast('野排对局结束，队伍已解散', 'info');
+      return;
+    }
     backToLobby();
     toast(CLOSE_REASON[msg.reason] || (typeof msg.reason === 'string' && msg.reason.length < 60 ? `同盟已关闭：${msg.reason}` : '同盟已关闭'), 'warn');
   });
@@ -309,10 +356,153 @@ function installGlobalErrorHandlers() {
   });
 }
 
+/**
+ * Mount the optional boot background video (js/preload.js BOOT_VIDEO): a distraction while the first load runs.
+ * @returns {() => void} stop() — halts playback and frees the decoder. Call it when the boot screen goes away: a
+ *   detached <video> holds its buffer/decoder, and the gesture listener below keeps it alive, so without this the first
+ *   click after the boot would re-start the (now unmuted) video behind the game — stutter + it talks over the BGM.
+ */
+function mountBootVideo() {
+  const box = document.getElementById('boot-video');
+  const boot = document.getElementById('boot');
+  if (!box || !boot || !BOOT_VIDEO) return () => {};
+  let stop = () => {};
+  try {
+    if (BOOT_VIDEO.kind === 'bilibili') {
+      const f = document.createElement('iframe');
+      f.className = 'boot__frame';
+      f.setAttribute('allowfullscreen', 'true');
+      f.setAttribute('frameborder', '0');
+      f.setAttribute('scrolling', 'no');
+      f.src = `//player.bilibili.com/player.html?bvid=${encodeURIComponent(BOOT_VIDEO.bvid)}&page=${BOOT_VIDEO.page || 1}&autoplay=1&danmaku=0&high_quality=1`;
+      box.appendChild(f);
+      stop = () => { try { f.src = 'about:blank'; f.remove(); } catch { /* ignore */ } };
+    } else if (BOOT_VIDEO.kind === 'file' && BOOT_VIDEO.src) {
+      const v = document.createElement('video');
+      v.className = 'boot__frame';
+      v.src = BOOT_VIDEO.src;
+      // Background only: looped + autoplay + NO controls (not seekable, not draggable, no PiP). Browsers refuse sound
+      // until the user interacts with the page, so it starts muted and unmutes on the first pointer/键 gesture — no
+      // visible control; a dim hint tells the player to tap/click.
+      v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.controls = false;
+      v.setAttribute('playsinline', '');
+      v.setAttribute('muted', '');
+      v.setAttribute('disablepictureinpicture', '');
+      v.setAttribute('controlslist', 'nodownload noplaybackrate noremoteplayback nofullscreen');
+      box.appendChild(v);
+      try { v.play?.().catch(() => {}); } catch { /* autoplay may be blocked; the frame still shows */ }
+      const sound = document.getElementById('boot-sound');
+      if (sound) sound.hidden = false;
+      let done = false; // set by stop(): after the boot the gesture must never revive the retired video
+      const unlock = () => {
+        if (done) return;
+        try { v.muted = false; v.play?.().catch(() => {}); } catch { /* ignore */ }
+        if (sound) sound.hidden = true;
+      };
+      window.addEventListener('pointerdown', unlock, { once: true, capture: true });
+      window.addEventListener('keydown', unlock, { once: true, capture: true });
+      stop = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('pointerdown', unlock, { capture: true });
+        window.removeEventListener('keydown', unlock, { capture: true });
+        // pause + drop the source so the video decoder is released and it can no longer make any sound
+        try { v.pause(); v.removeAttribute('src'); v.load(); v.remove(); } catch { /* ignore */ }
+      };
+    } else {
+      return () => {};
+    }
+    box.hidden = false;
+    boot.classList.add('has-video');
+  } catch { /* no video is fine */ }
+  return stop;
+}
+
+/**
+ * True when the art is already in the browser's HTTP cache. A cached image decodes in a few ms; from the network it
+ * cannot beat a round trip — so a fast probe means a returning visitor, who must NOT queue behind a first-time
+ * downloader at the boot gate (server/bootgate.js). ~0.35 s covers a warm cache with margin.
+ * @param {string[]} urls
+ * @returns {Promise<boolean>}
+ */
+function artLikelyCached(urls) {
+  const picks = [urls[0], urls[(urls.length / 2) | 0], urls[urls.length - 1]].filter(Boolean);
+  if (!picks.length) return Promise.resolve(false);
+  const t0 = performance.now();
+  return Promise.all(picks.map((u) => new Promise((res) => {
+    const img = new Image();
+    img.onload = img.onerror = () => res();
+    img.src = u;
+  }))).then(() => performance.now() - t0 < 350);
+}
+
+/**
+ * Ask the server for a boot-preload slot (server/bootgate.js) and wait until it is granted. Never blocks the boot
+ * forever: a server that does not know `boot.claim`, or one that is unreachable, just means "no gate".
+ * @returns {Promise<boolean>} true when a slot is held (the caller must release it), false to proceed ungated
+ */
+async function acquireBootSlot() {
+  let misses = 0;
+  for (let i = 0; i < 300; i++) {
+    try {
+      await net.request('boot.claim', {});
+      misses = 0;
+    } catch (err) {
+      if (err && err.code === 'BAD_MSG') { bootGate.supported = false; return false; } // server predates the gate
+      if (++misses >= 15) return false;                                               // no server for ~30 s → don't block
+    }
+    if (bootGate.granted) return true;
+    await new Promise((res) => setTimeout(res, 2000));
+  }
+  return false;
+}
+
+/**
+ * Boot-time art preload (docs/ASSETS.md): warm the HTTP cache for the image set the UI draws, so entering a screen does
+ * not pop images in. Runs while fonts load and the socket connects; skippable and capped so a slow link is never stuck.
+ * Scope 'all' = every manifest image (~104 MB, ~1 min at 20 Mbps) — the user asked for a full preload before the title.
+ */
+async function preloadArt() {
+  const bar = document.getElementById('boot-bar');
+  const fill = document.getElementById('boot-bar-fill');
+  const sub = document.getElementById('boot-sub');
+  if (!bar || !fill) return;
+  let manifest = data.get('assets');
+  if (!manifest) { try { await data.load('assets'); } catch { /* ignore */ } manifest = data.get('assets'); }
+  const urls = collectArtUrls(manifest, 'all');
+  if (!urls.length) return;
+  bar.hidden = false;
+  if (sub) { sub.hidden = false; sub.textContent = `正在加载美术资源 0 / ${urls.length}`; }
+  // Boot gate (server/bootgate.js, docs/MATCHMAKING.md): the first-time payload is ~140 MB and the VPS uplink is only
+  // 20 Mbps, so a few simultaneous arrivals saturate it and spike everyone's ping. Only a COLD load queues — a
+  // returning visitor whose images are already cached skips the gate entirely.
+  let holding = false;
+  if (bootGate.supported && !(await artLikelyCached(urls))) {
+    if (sub) { sub.hidden = false; sub.textContent = '正在申请资源下载通道…'; }
+    holding = await acquireBootSlot();
+  }
+  // No skip and no cap: the gate is "everything loaded" — the title only appears once every image is in.
+  const pre = preloadImages(urls, {
+    concurrency: 8,
+    onProgress: (d, t) => {
+      fill.style.width = `${Math.round((d / t) * 100)}%`;
+      if (sub) sub.textContent = `正在加载美术资源 ${d} / ${t}`;
+    },
+  });
+  try { await pre.promise; } finally {
+    if (holding) net.request('boot.release', {}).catch(() => {});
+    bar.hidden = true;
+    if (sub) sub.hidden = true;
+  }
+}
+
 async function boot() {
   installGlobalErrorHandlers();
   // touch / hover / fullscreen classes, zoom-gesture blocking, rotation re-layout (ui/device.js, css/devices.css)
   installDeviceSupport();
+  // Optional boot background video (js/preload.js BOOT_VIDEO) — plays while the preload runs. stopBootVideo() (below,
+  // at teardown) halts it and frees the decoder, so it can never keep decoding / making noise behind the game.
+  const stopBootVideo = mountBootVideo();
   // A page restored from the back/forward cache has a dead socket and a stale token choice: start over.
   window.addEventListener('pageshow', (ev) => { if (ev.persisted) location.reload(); });
   // Pick this tab's reconnect token (asks other live tabs; ≤150 ms) while fonts load.
@@ -338,18 +528,23 @@ async function boot() {
   // Optional local-client art manifest (emotes, tutorial pages, official UI sprites; DESIGN §13).
   data.load('local').catch(() => {});
 
+  net.setAccountToken(loadPref('authToken', null)); // restore the stored account session before the hello
   const connectWhenReady = identityReady.then(() => {
     if (entered) net.setName(savedName);
-    else net.connect();
+    // On the title we still open a session (hello) so the 登录 / 注册 box works before 开始: the server requires a
+    // session for auth.*. The provisional name is a placeholder, replaced when the player enters or logs in.
+    else net.setName(savedName || '博士');
   });
-  await Promise.all([waitForFonts(1200), connectWhenReady]);
+  await Promise.all([waitForFonts(1200), connectWhenReady, preloadArt()]);
   const root = document.getElementById('app');
   render(html`<${App} />`, root);
 
   const splash = document.getElementById('boot');
   if (splash) {
     splash.classList.add('is-done');
-    setTimeout(() => splash.remove(), 300);
+    setTimeout(() => { splash.remove(); stopBootVideo(); }, 300);
+  } else {
+    stopBootVideo();
   }
   globalThis.__SP__ = { store, net, data, version: 1 };
   // A page keeps the modules it imported at load time for its whole lifetime, so a deploy cannot reach an open tab

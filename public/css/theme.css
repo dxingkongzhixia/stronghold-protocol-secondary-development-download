@@ -299,7 +299,15 @@ h1, h2, h3, h4, p { margin: 0; }
   transition: opacity 250ms ease;
 }
 .boot.is-done { opacity: 0; pointer-events: none; }
-.boot__inner { display: grid; justify-items: center; gap: .18rem; }
+/* optional boot background video (js/preload.js BOOT_VIDEO) sits behind the loader; a scrim keeps the text readable */
+.boot__video { position: absolute; inset: 0; overflow: hidden; background: #000; }
+.boot__frame { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
+.boot.has-video::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 42%, rgba(4, 8, 7, .28), rgba(4, 8, 7, .78)); }
+.boot.has-video .boot__hex, .boot.has-video .boot__text { display: none; }
+/* the video is the visual; slide the loader (bar + count) a bit below centre like a title-screen footer */
+.boot.has-video .boot__inner { transform: translateY(2rem); }
+.boot__inner { position: relative; z-index: 2; display: grid; justify-items: center; gap: .18rem; }
 .boot__hex {
   width: .64rem;
   height: .64rem;
@@ -309,6 +317,13 @@ h1, h2, h3, h4, p { margin: 0; }
   background: linear-gradient(135deg, transparent 45%, rgba(78, 216, 175, .35) 50%, transparent 55%);
 }
 .boot__text { font-family: var(--font-display); font-size: .13rem; letter-spacing: .4em; color: var(--mint-700); }
+.boot__bar { width: min(8rem, 72vw); height: 3px; border-radius: 999px; background: rgba(120, 220, 190, .16); overflow: hidden; }
+.boot__bar i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, var(--mint-700), var(--mint-400)); transition: width .2s ease; }
+.boot__sub { font-size: .14rem; letter-spacing: .06em; color: var(--text-lo); }
+.boot__sound { font-size: .13rem; letter-spacing: .04em; color: var(--text-dim); opacity: .8; }
+.boot__skip { margin-top: .02rem; padding: .04rem .18rem; background: none; border: 1px solid var(--line-2); border-radius: .06rem;
+  color: var(--text-lo); font: inherit; font-size: .15rem; cursor: pointer; }
+.boot__skip:hover { color: var(--mint-400); border-color: var(--mint-400); }
 .boot__err { max-width: 6rem; text-align: center; color: var(--text-lo); font-size: .16rem; }
 @keyframes boot-spin { to { transform: rotate(360deg); } }
 

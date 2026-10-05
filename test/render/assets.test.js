@@ -509,6 +509,25 @@ describe('createAssets store', () => {
     assert.equal(await a.image(null), null);
   });
 
+  test('image cache is a bounded LRU (evicts the least recently used, reloads on demand)', async () => {
+    const loads = [];
+    const a = createAssets({ manifest: M, imageMax: 2, loadImage: async (u) => { loads.push(u); return { src: u }; } });
+    await a.image('/a.png');
+    await a.image('/b.png');
+    await a.image('/c.png'); // cap 2 ⇒ /a (oldest) is evicted
+    assert.equal(a.imageNow('/a.png'), null, 'oldest evicted');
+    assert.equal(a.imageNow('/b.png').src, '/b.png');
+    assert.equal(a.imageNow('/c.png').src, '/c.png');
+    await a.image('/b.png'); // touch /b ⇒ /c becomes the least recently used
+    await a.image('/d.png');
+    assert.equal(a.imageNow('/c.png'), null, 'least recently used evicted');
+    assert.equal(a.imageNow('/b.png').src, '/b.png');
+    assert.equal(a.imageNow('/d.png').src, '/d.png');
+    assert.equal(loads.filter((u) => u === '/a.png').length, 1);
+    await a.image('/a.png'); // evicted entries reload
+    assert.equal(loads.filter((u) => u === '/a.png').length, 2);
+  });
+
   test('spine acquire/release through the store with an injected loader', async () => {
     const a = createAssets({ manifest: M, loadSpine: async (e) => ({ animations: [], from: e.skel }), unloadSpine: () => {}, spineMax: 1 });
     const e = a.spineEntry('char_002_amiya');

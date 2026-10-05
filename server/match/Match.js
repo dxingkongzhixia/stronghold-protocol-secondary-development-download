@@ -3044,6 +3044,7 @@ export class Match {
     this._stopClientCombat();
     this.cancel(this._phaseTimer);
     this.cancel(this._turnTimer);
+    this.cancel(this._pubTimer); // throttled-public timer lives outside _timers; cancel it so it can't fire post-finish
     for (const h of this._timers) { try { this.sched.clearTimeout(h); } catch { /* ignore */ } }
     this._timers.clear();
     this.phase = PHASE.RESULT;

@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { EMOTES, EMOTE_CATALOG, emoteArtPath, emoteArtGroup, emoteInfo } from '../../shared/constants.js';
+import { EMOTES, EMOTE_CATALOG, EMOTE_THEMES, emoteArtPath, emoteArtGroup, emoteInfo } from '../../shared/constants.js';
 import { GUIDE_PAGES } from '../../tools/assets/plan.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -79,7 +79,13 @@ describe('local-client art fallbacks', () => {
     assert.equal(tierChipUrl(1), null);
   });
 
-  test('the real manifest (when extracted) lists all 36 emotes and all 19 guide pages', { skip: !safeRead() && 'no data/local-assets.json' }, () => {
+  test('the real manifest (when extracted) lists all 36 emotes and all 19 guide pages', { skip: (() => {
+    const raw = safeRead();
+    if (!raw) return 'no data/local-assets.json';
+    // a foreign/partial client may not have every emoticon theme (the JP client ships 3 of the 6): only check completeness
+    // on a full extraction; the UI falls back to the mirror copy / text otherwise.
+    try { return EMOTE_THEMES.every((t) => JSON.parse(raw).groups?.[`emoticon/${t.dir}`]) ? false : 'partial/foreign client (not all emoticon themes extracted)'; } catch { return false; }
+  })() }, () => {
     const real = JSON.parse(safeRead());
     for (const id of EMOTES) {
       const entry = real.groups[emoteArtGroup(id)]?.[emoteInfo(id).picId];

@@ -136,105 +136,10 @@ export const ALIAS_TINT = Object.freeze({ enemy_1305_mhslim: 0xffc48a, enemy_130
  */
 export const EL_BAR = Object.freeze({ icon: 0.15, min: 8, max: 15, enemy: 0.8, gap: 1, pulse: 0.45, pulseHz: 1.5 });
 
-/**
- * Enemy modes drawn with another clip set of the same skeleton (the `form` of a sim fx — shared/protocol.js fxForm —
- * → UnitView.setForm), per Spine id; the mode's roles override the manifest's (data/assets.json anims), `change` plays
- * once first:
- * - 掠海漂移体 (PRTS: 受晕眩/沉睡/冻结影响后进入爬行模式 — for good) crawls on its *_02 clips after 'Change';
- * - 暴鸰 flies on its bomb-less *_2 clips once its one bomb left (the official prefab's mode S1: Move→Move_2, Idle→Idle_2,
- *   Die→Die_2; user feedback after 0.1.0, D4: the bomb used to stay under the drone — no change clip, the drop is its
- *   Attack clip);
- * - 转译基底·α (user report after 0.1.0, #5): its 2 s change clip A_Die_B / _C / _D, then 寻仇者 B_*, 幽灵 C_* (no attack
- *   clip: it never attacks) or 特战术师 D_* — its manifest roles are the original form's A_Idle / A_Move;
- * - 深池逐火战士 / 精锐战士 / 护卫 (#8): knocked out → 'Die' (the 1 s 重生), the 余烬 on Idle_2 / Move_2 and its death on
- *   Die_2 (also while 'Revive' plays: the ember can still be beaten); standing up again → 'Revive', then the warrior's
- *   manifest clips;
- * - 假想敌：再生: knocked out → A_Die, the 傀儡 on B_Idle / B_Move / B_Die; back → B_Revive, then the A_* manifest clips;
- *   (both: the stand-up clip (`end`) is timed from the 'ember' fx's `dur` to end as the husk stands up — the 'revive'
- *   fx then only lands in the manifest clips);
- * - the leaders' 重生 (sim reborn(): forms 'reborn' → 'form2'): 锏 Revive1, Revive2 held, Revive3, then B_*; 扎罗 A_revive_1 /
- *   _2 / _3, then B_* (its double-hit attack); “复仇者” Revive_Begin / _Loop / _End; 杰斯顿 C1_Die (its 4 s 重生), then
- *   C2_* — their manifests mix the forms (锏 / 扎罗 died on B_Die from the A model, the look of report #5). The closing
- *   clip (`end`) is timed from the 重生's `dur` (the 'telegraph' fx) to end with it, so the second form walks and
- *   attacks on its own clips at once (a view that missed the timing — built mid-重生 — skips the closing clip);
- * - 守墓石像 (forms 'stone' → 'fly'): the statue on Sleep [ASSUMED by name], then the flyer's *_2 clips.
- * - the 傀儡师 operators' <替身> (sim professions.js installDollkeeper: form 'doll' from the start of the switch to it
- *   until the switch back starts, GitHub issue #44): the skeletons draw it on their *_B clips (their own slots — the
- *   本体's are hidden). 归溟幽灵鲨: Start_B fades it in (the 1 s switch), Idle_B (it never attacks), Die_B breaks it
- *   apart over its last second (`end`, timed from the 'substitute' fx's `dur`), the 本体 comes back on Start_2 (`leave`:
- *   played when the form ends); knocked out as the 替身 it collapses on Die_B_2 and stays down so. 风丸: Start_B, then
- *   Idle_B / Attack_B (her 替身 attacks), Die_B; the 本体 comes back on Start. Facing UP: 归溟幽灵鲨's Back skeleton has
- *   only Idle_B and Start_2, 风丸's Start_B, Idle_B and Attack_B — the clips a Back skeleton lacks are skipped; neither has
- *   the 替身's death clip, so a 替身 knocked out lies on the Front model like every knocked-out operator facing UP
- *   (_wantsBack). The sim resets the form right after the 'die' event; the form it died in (`_dieForm`) gives the model
- *   built for the knock-out — and one rebuilt while it is down — the 替身's death clip; it stands up as the 本体.
- * A kind without a clip set of this skeleton (barriers, charges, …) changes nothing. 吉兆飞鳞's 晕眩模式 is its Stun clip.
- */
-const loop = (name, via = null) => Object.freeze(via ? { begin: null, loop: name, end: null, via } : { begin: null, loop: name, end: null });
-const clipSet = (idle, move, die, attack = null) => Object.freeze({
-  idle, deploy: idle, die, move: loop(move),
-  attack: attack ? loop(attack, 'attackAny') : null,
-  skill: attack ? Object.freeze({ begin: null, loop: attack, end: null, via: 'attack', index: 0, idle: null }) : null,
-});
-const EMBER = Object.freeze({
-  husk: Object.freeze({ change: 'Die', end: 'Revive', next: 'revived', roles: clipSet('Idle_2', 'Move_2', 'Die_2') }),
-  revived: Object.freeze({ change: null, roles: Object.freeze({}) }),
-});
-/** A 重生 held on `hold` (also while the sim reports the rebirth's stun) after `begin`, closing on `end` as the 重生 ends,
- *  then the second form. */
-const rebirth = (begin, hold, end, form2 = Object.freeze({})) => Object.freeze({
-  reborn: Object.freeze({ change: begin, end, next: 'form2', roles: Object.freeze({ idle: hold, deploy: hold, move: loop(hold), stun: loop(hold), attack: null, skill: null }) }),
-  form2: Object.freeze({ change: null, roles: form2 }),
-});
-const STATUE = Object.freeze({
-  stone: Object.freeze({ change: null, roles: Object.freeze({ idle: 'Sleep', deploy: 'Sleep', move: loop('Sleep'), stun: loop('Sleep'), attack: null, skill: null }) }),
-  fly: Object.freeze({ change: null, roles: clipSet('Idle_2', 'Move_2', 'Die_2', 'Attack_2') }),
-});
-const JAKILL2 = clipSet('C2_Idle', 'C2_Move', 'C2_Die', 'C2_Attack');
-/** A 傀儡师's 替身 roles: idle `idle`, death `die`, attack `attack` (null: none), no skill clip of its own. */
-const dollRoles = (idle, die, attack = null) => Object.freeze({
-  idle, deploy: idle, die, attack: attack ? Object.freeze({ begin: null, loop: attack, end: null }) : null, attackDown: null, skill: null,
-});
-export const FORMS = Object.freeze({
-  char_1023_ghost2: Object.freeze({
-    doll: Object.freeze({ change: 'Start_B', end: 'Die_B', leave: 'Start_2', roles: dollRoles('Idle_B', 'Die_B_2') }),
-  }),
-  char_4016_kazema: Object.freeze({
-    doll: Object.freeze({ change: 'Start_B', leave: 'Start', roles: dollRoles('Idle_B', 'Die_B', 'Attack_B') }),
-  }),
-  enemy_1040_bombd: Object.freeze({
-    bombed: Object.freeze({
-      roles: Object.freeze({
-        idle: 'Idle_2', deploy: 'Idle_2', die: 'Die_2',
-        move: Object.freeze({ begin: 'Move_Begin_2', loop: 'Move_Loop_2', end: 'Move_End_2' }),
-      }),
-    }),
-  }),
-  enemy_2025_syufo: Object.freeze({
-    crawl: Object.freeze({ change: 'Change', roles: clipSet('Idle_02', 'Move_02', 'Die_02', 'Attack_02') }),
-  }),
-  enemy_10081_mpplai: Object.freeze({
-    translator_fuchou: Object.freeze({ change: 'A_Die_B', roles: clipSet('B_Idle', 'B_Move', 'B_Die', 'B_Attack') }),
-    translator_youling: Object.freeze({ change: 'A_Die_C', roles: clipSet('C_Idle', 'C_Move', 'C_Die') }),
-    translator_shushi: Object.freeze({ change: 'A_Die_D', roles: clipSet('D_Idle', 'D_Move', 'D_Die', 'D_Attack') }),
-  }),
-  enemy_1288_duskls: EMBER,
-  enemy_1288_duskls_2: EMBER,
-  enemy_1292_duskld: EMBER,
-  enemy_9010_acpupp: Object.freeze({
-    husk: Object.freeze({ change: 'A_Die', end: 'B_Revive', next: 'revived', roles: clipSet('B_Idle', 'B_Move', 'B_Die') }),
-    revived: Object.freeze({ change: null, roles: Object.freeze({}) }),
-  }),
-  enemy_1525_blkswb: rebirth('Revive1', 'Revive2', 'Revive3', clipSet('B_Idle', 'B_Move', 'B_Die', 'B_Attack')),
-  enemy_1535_wlfmster: rebirth('A_revive_1', 'A_revive_2', 'A_revive_3', clipSet('B_Idle', 'B_Move', 'B_Die', 'B_Attack')),
-  enemy_1539_reid: rebirth('Revive_Begin', 'Revive_Loop', 'Revive_End'),
-  enemy_1516_jakill: Object.freeze({
-    reborn: Object.freeze({ change: 'C1_Die', roles: JAKILL2 }),
-    form2: Object.freeze({ change: null, roles: JAKILL2 }),
-  }),
-  enemy_1172_dugago: STATUE,
-  enemy_1172_dugago_2: STATUE,
-});
+// Model forms (another clip set of the same skeleton): the catalogue lives in shared/forms.js, shared with
+// tools/build-data.mjs so the sim can stand an enemy for its own form’s attack clip. Re-exported for importers.
+import { FORMS } from '../../../shared/forms.js';
+export { FORMS };
 
 /**
  * Keep `obj` in the right layer: the surface container of block row round(y) when it lies on a raised top at
@@ -324,7 +229,6 @@ export class UnitView {
     this._elBar = null;           // { root, disc, bg, fill } sprites of the element gauge row, built on first use
     this._downRing = null;        // { disc, track, arc, text } sprites, built on first use
     this.alpha = 1; this.fadeIn = this.prep ? 1 : 0;
-    this.lunge = 0; this.lungeDir = { x: 1, y: 0 };
     this.flash = 0;
     this.bob = Math.random() * Math.PI * 2;
     this.hovered = false; this.dimmed = false; this.lift = 0;
@@ -460,8 +364,9 @@ export class UnitView {
       try {
         actor = new SpineActor(data, entry);
         actor.setSkillIndex(this.info.skillIndex);
-        // enemies play their attack clip once per attack, then walk on (GitHub #58: the sim stands them for that clip)
-        actor.clipPerAttack = this.isEnemy;
+        // every unit plays its attack clip once per attack at the clip's own speed, then its resting clip (GitHub #58
+        // for enemies; the same for operators, so a swing never loops/stretches across attacks — the official look)
+        actor.clipPerAttack = true;
       } catch (err) {
         console.warn('[render] spine build failed', id, err?.message || err);
         this._releaseEntry(entry);
@@ -727,11 +632,6 @@ export class UnitView {
       const dx = target.x - this.x;
       if (Math.abs(dx) > 0.1) this.visFacing = dx < 0 ? -1 : 1;
     }
-    if (target) {
-      const dx = target.x - this.x, dy = target.y - this.y, len = Math.hypot(dx, dy) || 1;
-      this.lungeDir.x = dx / len; this.lungeDir.y = dy / len;
-    }
-    this.lunge = 1;
     if (this.actor) this.actor.attack(this.atkInterval, once); // game seconds: the actor's clock runs in game time
     if (this.imp) this.imp.dirty = true;
   }
@@ -876,17 +776,20 @@ export class UnitView {
     if (this.dimmed) alpha *= 0.35;
     this.alpha = alpha;
 
-    // body placement
-    const lungeK = this.lunge > 0 ? Math.sin(this.lunge * Math.PI) * 0.12 : 0;
-    this.lunge = Math.max(0, this.lunge - dt * 5);
-    const lx = this.lungeDir.x * lungeK, ly = this.lungeDir.y * lungeK;
-    let bx = p.x, by = p.y;
-    if (lungeK) { const q = cam.project(this.x + lx, this.y + ly, this.z + this.hover + this.lift, LG_P); bx = q.x; by = q.y; }
+    // body placement (no code-driven attack lunge: the chibi swings in place like the official battle view; a step
+    // of the clip itself, if any, comes from the animation — not from here)
+    const bx = p.x, by = p.y;
     this.root.position.set(bx, by);
     this.root.alpha = alpha;
     this.root.zIndex = unitDepthKey(cam, this.x, this.y, this.lift);
-    // off-screen: nothing to animate or draw (bounds / hit-testing still follow `screen`)
-    if (this._cull(bx, by, s, dt)) return;
+    // off-screen: nothing to animate or draw (bounds / hit-testing still follow `screen`). Keep the timed effects
+    // decaying so panning back does not replay an old hit flash / boss shake or a stale HP ghost.
+    if (this._cull(bx, by, s, dt)) {
+      this.flash = Math.max(0, this.flash - dt * 6);
+      this.shake = Math.max(0, this.shake - dt);
+      this.ghostHp = this.ghostHp < this.hp ? this.hp : Math.max(this.hp, this.ghostHp - this.maxHp * dt * 0.9);
+      return;
+    }
     const flip = this.isEnemy ? (ENEMY_MODEL_FACES_LEFT ? -this.visFacing : this.visFacing) : this.visFacing;
 
     // shadow (on a raised top it is drawn with that block row, else in the shadow layer under everything)
@@ -1364,7 +1267,6 @@ export class UnitView {
 const SH_P = { x: 0, y: 0, s: 0, depth: 0 };
 const FA_P = { x: 0, y: 0, s: 0, depth: 0 };
 const FA_C = { x: 0, y: 0, s: 0, depth: 0 };
-const LG_P = { x: 0, y: 0, s: 0, depth: 0 };
 const ICON_TMP = [];
 
 /**

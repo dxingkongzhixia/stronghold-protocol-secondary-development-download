@@ -130,14 +130,17 @@ function SeatCard({ seat, index, room, facts, myId, busy, onAddBot, onRemoveBot 
   </article>`;
 }
 
-function InviteBox({ code }) {
+function InviteBox({ code, public: isPublic }) {
   const copy = async (what) => {
     const ok = await copyText(what === 'code' ? code : inviteLink(code));
     if (ok) toast(what === 'code' ? `已复制同盟密钥 ${code}` : '已复制邀请链接', 'success');
     else toast('复制失败，请手动复制', 'warn');
   };
+  const pub = isPublic !== false;
   return html`<div class="invite brackets">
-    <div class="invite__label"><${Icon} name="key" /><span>同盟密钥</span><${MicroLabel}>ALLIANCE KEY<//></div>
+    <div class="invite__label"><${Icon} name="key" /><span>同盟密钥</span><${MicroLabel}>ALLIANCE KEY<//>
+      <span class=${`invite__vis${pub ? ' is-public' : ''}`}
+        title=${pub ? '其他博士可在大厅「公开同盟」直接加入' : '不会出现在公开列表，仅凭密钥加入'}>${pub ? '公开' : '仅密钥'}</span></div>
     <div class="invite__code num selectable" aria-label=${`同盟密钥 ${code}`}>${[...String(code)].map((ch, i) => html`<span key=${i}>${ch}</span>`)}</div>
     <div class="invite__btns">
       <${Button} size="sm" icon="copy" onClick=${() => copy('code')}>复制密钥<//>
@@ -241,11 +244,13 @@ export function RoomScreen() {
         <${GuideButton} class="room-guide" variant="secondary" />
       </div>
       <div class="topbar__center">
-        <${MicroLabel} tone="mint">${coop ? 'ALLIANCE LOBBY' : 'SOLO SIMULATION'}<//>
-        <h1 class="topbar__title">${coop ? '同盟模拟' : '独立模拟'}<span class="topbar__sep"></span><${DifficultyTag} difficulty=${room.difficulty} size="lg" /></h1>
+        <${MicroLabel} tone="mint">${coop ? (room.auto ? 'ALLIANCE MATCH' : 'ALLIANCE LOBBY') : 'SOLO SIMULATION'}<//>
+        <h1 class="topbar__title">${coop ? (room.auto ? '野排模拟' : '同盟模拟') : '独立模拟'}<span class="topbar__sep"></span><${DifficultyTag} difficulty=${room.difficulty} size="lg" /></h1>
       </div>
       <div class="topbar__right">
-        ${coop ? html`<${InviteBox} code=${room.code} />` : html`<div class="solo-note"><${MicroLabel}>SINGLE OPERATOR<//><span>仅限 1 名博士</span></div>`}
+        ${!coop ? html`<div class="solo-note"><${MicroLabel}>SINGLE OPERATOR<//><span>仅限 1 名博士</span></div>`
+          : room.auto ? html`<div class="solo-note mm-note"><${MicroLabel} tone="mint">MATCHED TEAM<//><span>野排队伍 · 对局结束后自动解散</span></div>`
+          : html`<${InviteBox} code=${room.code} public=${room.public} />`}
       </div>
     </header>
 

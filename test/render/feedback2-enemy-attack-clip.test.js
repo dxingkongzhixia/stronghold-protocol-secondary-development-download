@@ -2,7 +2,7 @@
 // attack at the clip's own speed (faster only when the attacks come quicker than the clip) and then its resting clip —
 // Move while the sim walks it again (server/sim/ai.js attackStand stands it for exactly that clip). It used to stretch
 // the clip over the whole attack interval and loop it for 1.4 intervals, so a ranged enemy seemed to slide while it
-// attacked. Operators keep the clip looping over their attack rhythm. Headless fake PIXI (test/render/fakepixi.js).
+// attacked. Operators now play one clip per attack too (the official look). Headless fake PIXI (test/render/fakepixi.js).
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -71,16 +71,70 @@ test('an enemy attacking quicker than its clip plays it faster, one clip per att
   assert.equal(a.current, 'Move', 'the rest of the clip at 2×: 0.23 s');
 });
 
-test('an operator keeps its attack loop stretched over the attack rhythm (unchanged)', () => {
-  const a = actor(JSHOOT, false);
-  a.attack(2.7);
-  assert.equal(track(a).loop, true);
-  assert.ok(Math.abs(track(a).timeScale - 1 / 2.7) < 1e-9);
-  run(a, 2);
-  assert.equal(a.current, 'Attack', 'still in attack mode 2 s later (1.4 × the interval)');
+test('a 盟约-boosted attack speed (interval far below the clip) speeds the clip up to keep pace — one clip per attack, never cut in half', () => {
+  const a = actor(JSHOOT, true);
+  a.attack(0.25);                                    // Attack clip 1.0 s, interval 0.25 s → 4× (the ceiling)
+  assert.equal(track(a).loop, false, 'one clip per attack');
+  assert.equal(track(a).timeScale, 4, 'sped up to finish in step with the boosted attack speed');
+  const b = actor(JSHOOT, true);
+  b.attack(0.4);                                     // 1.0 / 0.4 = 2.5×
+  assert.ok(Math.abs(track(b).timeScale - 2.5) < 1e-9);
 });
 
-test('UnitView: enemy models play a clip per attack, operator models do not', async () => {
+test('a slow operator (attack interval outlasts the clip) plays the clip once at its own speed, then rests — no stretching', () => {
+  const a = actor(JSHOOT, false);
+  a.attack(2.7);                                     // Attack clip 1.0 s, interval 2.7 s: used to slow the clip to 0.37 and loop 3.8 s
+  assert.equal(track(a).loop, false, 'one clip per attack');
+  assert.equal(track(a).timeScale, 1, 'its own speed (no slow-motion slide)');
+  run(a, 0.5);
+  assert.equal(a.current, 'Move', 'back to the resting clip right after the strike');
+});
+
+test('a fast operator (attack interval shorter than its clip) keeps the looping attack', () => {
+  const a = actor(JSHOOT, false);
+  a.attack(0.5);                                     // clip 1.0 s > interval 0.5 s: sped up, still looping (unchanged)
+  assert.equal(track(a).loop, true);
+  assert.ok(Math.abs(track(a).timeScale - 2) < 1e-9);
+});
+
+test("a duration skill's sustained loop (via !== 'attack') is not restarted by an attack (初雪 / 薄绿 float)", () => {
+  const entry = {
+    anims: {
+      idle: 'Idle', move: { begin: null, loop: 'Move', end: null },
+      attack: { begin: null, loop: 'Attack', end: null },
+      skill: { begin: 'Skill_Begin', loop: 'Skill_Loop', end: 'Skill_End', via: null, idle: null },
+    },
+    animations: { Idle: 1, Move: 1, Attack: 1, Skill_Begin: 0.2, Skill_Loop: 2, Skill_End: 0.3 },
+  };
+  const a = new SpineActor({ animations: Object.keys(entry.animations).map((name) => ({ name })) }, entry);
+  a.setBase('idle');
+  a.setSkill(true);
+  assert.ok(a._sustainedSkill(), 'recognised as a sustained skill loop');
+  run(a, 0.25);
+  const cur = a.current;
+  a.attack(1);                                   // an attack while the skill holds its floating stance
+  assert.equal(a.current, cur, 'the attack did not replace the sustained skill clip');
+  assert.equal(a.windUp(1, 0.3), false, 'no per-attack wind-up while the skill loop holds');
+});
+
+test("a skill with a bare loop and no begin/idle (野鬃 S2: the push IS its attack clip) is played per attack, not skipped", () => {
+  const entry = {
+    anims: {
+      idle: 'Idle', move: null,
+      attack: { begin: null, loop: 'Attack', end: null },
+      skill: { begin: null, loop: 'Skill_2', end: null, via: null, idle: null },
+    },
+    animations: { Idle: 1, Attack: 1, Skill_2: 1.2 },
+  };
+  const a = new SpineActor({ animations: Object.keys(entry.animations).map((name) => ({ name })) }, entry);
+  a.setBase('idle');
+  a.setSkill(true);
+  assert.equal(a._sustainedSkill(), false, 'no begin/idle → not a sustained stance');
+  a.attack(1);
+  assert.equal(a.current, 'Skill_2', 'the attack plays the skill loop (the push animation)');
+});
+
+test('UnitView: every model plays a clip per attack (enemy and operator)', async () => {
   const entry = entryOf(JSHOOT);
   const store = { picture: () => null, image: async () => null, spineEntry: () => entry, spine: { acquire: async () => dataOf(entry), release() {} } };
   const cam = () => presetCamera('normal', { width: 1280, height: 720 });
@@ -98,5 +152,5 @@ test('UnitView: enemy models play a clip per attack, operator models do not', as
   assert.equal(e.actor.current, 'Attack');
   assert.equal(e.actor.spine.state.tracks[0].loop, false);
   const o = await make('ally');
-  assert.equal(o.actor.clipPerAttack, false);
+  assert.equal(o.actor.clipPerAttack, true, 'operators play one clip per attack too');
 });

@@ -1,7 +1,7 @@
 // Normative message catalogue (DESIGN §8). Used by server (validation) and client (building requests).
 // Every client→server message is `{ t, rid?, ...fields }`. Unknown `t` or invalid fields ⇒ ERR.BAD_MSG.
 
-import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO } from './constants.js';
+import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO, AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX } from './constants.js';
 
 // ---- tiny validators -------------------------------------------------------
 const isInt = (v, lo = -Infinity, hi = Infinity) => Number.isInteger(v) && v >= lo && v <= hi;
@@ -236,9 +236,13 @@ const target = (v) => {
 /** @type {Record<string, Record<string, (v:any)=>boolean> & { $optional?: string[] }>} */
 export const C2S = {
   // session & lobby
-  hello: { name: (v) => isStr(v, NAME_MAX_LEN) && v.trim().length > 0, token: (v) => v == null || isStr(v, 64), version: (v) => v == null || isInt(v, 0, 1e6), $optional: ['token', 'version'] },
+  // `token`: the anonymous reconnect token (mid-match resume). `accountToken`: the persistent account session
+  // (server/auth.js) — when it resolves, the session is bound to that account (野排 requires it).
+  hello: { name: (v) => isStr(v, NAME_MAX_LEN) && v.trim().length > 0, token: (v) => v == null || isStr(v, 64), version: (v) => v == null || isInt(v, 0, 1e6), accountToken: (v) => v == null || isStr(v, 128), $optional: ['token', 'version', 'accountToken'] },
   ping: { c: (v) => typeof v === 'number' && Number.isFinite(v) },
-  'room.create': { mode: (v) => v === 'solo' || v === 'coop', difficulty: (v) => DIFFICULTIES.includes(v) },
+  // public: list a hand-made 同盟 room in the lobby's 公开同盟 directory (server/admin.js buildPublicSnapshot →
+  // /online/api.openRooms). Absent ⇒ public. Solo / 野排 (auto) rooms are never listed regardless.
+  'room.create': { mode: (v) => v === 'solo' || v === 'coop', difficulty: (v) => DIFFICULTIES.includes(v), public: isBool, $optional: ['public'] },
   'room.join': { code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v) },
   'room.leave': {},
   'room.ready': { ready: isBool },
@@ -248,6 +252,19 @@ export const C2S = {
   'room.start': {},
   // operator loadout (DESIGN §16): stored per session/seat; accepted until the match leaves INFO_CHECK
   'room.loadout': { entries: isLoadoutEntries },
+
+  // accounts (server/auth.js; docs/MATCHMAKING.md): 野排 requires one. Both answer with auth.ok { account, token }
+  'auth.register': { name: (v) => isStr(v, AUTH_NAME_MAX) && v.trim().length >= AUTH_NAME_MIN, password: (v) => isStr(v, AUTH_PASS_MAX) && v.length >= AUTH_PASS_MIN },
+  'auth.login': { name: (v) => isStr(v, AUTH_NAME_MAX) && v.trim().length >= AUTH_NAME_MIN, password: (v) => isStr(v, AUTH_PASS_MAX) && v.length >= AUTH_PASS_MIN },
+  'auth.logout': {},
+  // 野排 shared pool: mm.join { difficulty } enqueues (bucketed by difficulty), mm.cancel removes
+  'mm.join': { difficulty: (v) => DIFFICULTIES.includes(v) },
+  'mm.cancel': {},
+  // boot gate (server/bootgate.js, docs/MATCHMAKING.md): serialise the boot art preload so simultaneous first-time
+  // visitors don't saturate the server's uplink. boot.claim asks for a slot (the answer is pushed as boot.state),
+  // boot.release hands it back once the preload is done.
+  'boot.claim': {},
+  'boot.release': {},
 
   // match
   'g.infoReady': {},
@@ -299,6 +316,11 @@ export const C2S = {
 export const S2C = [
   'welcome', 'ok', 'error', 'pong',
   'room.state', 'room.closed',
+  // accounts & matchmaking: auth.ok { account: { id, name }, token } · auth.error { code } ·
+  // mm.state { queued, difficulty, waiting, need, elapsedMs, deadlineMs } (pushed ~1 Hz while queueing)
+  'auth.ok', 'auth.error', 'mm.state',
+  // boot gate: boot.state { granted, position } — pushed while waiting for / when granted a boot-preload slot
+  'boot.state',
   'm.public', 'm.private', 'm.field', 'm.toast', 'm.ticker', 'm.emote', 'm.result',
   // m.unitStats { seq, round, units: [unitStatsEntry] } — the answer to g.unitStats (the requester only)
   'm.unitStats',

@@ -885,6 +885,8 @@ function MatchScreen() {
   const lookups = useMemo(() => ({ getChess: gd.chess, getToken: gd.token, getItem: gd.item,
     chessRecord: (rec) => chessLoadout(rec, live.current.priv?.loadout ?? null, gd.chess)?.record }), [gd.ready]);
   const heldRef = useRef(new Map());                     // uid → { row, col, t } committed placements awaiting m.private
+  const faceTimers = useRef(new Set());                  // pending commitFacing release timers (cleared on unmount)
+  useEffect(() => () => { for (const t of faceTimers.current) clearTimeout(t); faceTimers.current.clear(); }, []);
   const releaseHold = useCallback((uid) => {
     heldRef.current.delete(uid);
     holdPiece(view, uid, null);
@@ -919,7 +921,11 @@ function MatchScreen() {
       return;
     }
     // accepted: the piece stays on the tile until m.private shows it there (or a short grace passes)
-    setTimeout(() => { if (heldRef.current.has(f.uid)) releaseHold(f.uid); }, 1500);
+    const timer = setTimeout(() => {
+      faceTimers.current.delete(timer);
+      if (heldRef.current.has(f.uid)) releaseHold(f.uid);
+    }, 1500);
+    faceTimers.current.add(timer);
   }, [view, releaseHold]);
   // m.private caught up with a committed placement → stop holding it; a summon stack of several copies (凯瑟琳's 2
   // devices, user playtest #6) stays in the hand and one copy — another piece — lands on the tile: release it too

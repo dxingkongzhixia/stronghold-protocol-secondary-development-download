@@ -704,7 +704,9 @@ export function createBattleRunner(deps) {
       // never drop an unreported authoritative result (the round already moved on: the server has its own)
       if (e.authoritative && !e.resultSent && !e.battle.finished) { try { e.battle.forceEnd('forced'); } catch { /* ignore */ } }
     }
-    entries.clear();
+    // Keep finished battles whose b.result is still undelivered (the socket lost it): redeliver() must be able to
+    // resend them when the session is back — the module's own contract (deliver()/redeliver()).
+    for (const [key, e] of [...entries]) if (e.delivery !== 'undelivered') entries.delete(key);
     cur = null;
     lastPool = null;
     if (rafH != null) { caf(rafH); rafH = null; }

@@ -44,6 +44,8 @@ export function rowLp(p, pub, self = null, { uniteLocal = null, cap = 10 } = {})
   if ((pub?.phase !== PHASE.COMBAT && pub?.phase !== PHASE.UNITE) || p?.alive === false) return { lp: pubLp, pending: 0, unite: false, left: null };
   const lp = self && Number.isFinite(self.lp) ? self.lp : pubLp;
   const leaker = pub.phase === PHASE.UNITE && Array.isArray(pub.unite?.leakers) && pub.unite.leakers.includes(p.playerId);
+  // The local 联防 replica, when on screen, is authoritative: a key absent from it means that leaker was fully struck
+  // down (0), NOT "unknown → fall back to m.public" (playtest6-unite pins this).
   const local = !self && leaker && uniteLocal && typeof uniteLocal === 'object' ? uniteRemaining(uniteLocal[p.playerId] ?? 0, null) : null;
   const rawLeft = pub.phase !== PHASE.UNITE ? null : self ? self.left : local != null ? local : p.uniteLeft;
   const left = Number.isFinite(rawLeft) && rawLeft >= 0 ? Math.trunc(rawLeft) : null;

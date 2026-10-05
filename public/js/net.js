@@ -34,6 +34,13 @@ import { validateC2S } from '../../shared/protocol.js';
 
 export const REQUEST_TIMEOUT_MS = 8000;
 export const HELLO_TIMEOUT_MS = 8000;
+
+/**
+ * A random guest callsign (「游客」+ 4 digits) used when a player enters without typing a name. It carries the
+ * 游客 note in the name itself (docs/MATCHMAKING.md §8).
+ * @returns {string}
+ */
+export function randomGuestName() { return `游客${Math.floor(1000 + Math.random() * 9000)}`; }
 export const PING_INTERVAL_MS = 4000;
 export const DEAD_AFTER_MS = 15000;
 export const BACKOFF = Object.freeze({ base: 500, factor: 2, max: 10000, jitter: 0.2 });
@@ -134,6 +141,7 @@ export class Net {
     this.status = 'idle';
     this.ws = null;
     this.name = null;          // desired player name (hello is sent when set)
+    this.accountToken = null;  // persistent account session (docs/MATCHMAKING.md); sent in hello, set from auth.ok
     this.helloName = null;     // name we sent in the hello that got the last welcome
     this.serverName = null;    // name as normalised by the server
     this.playerId = null;
@@ -365,6 +373,7 @@ export class Net {
     let token = null;
     try { token = this.getToken(); } catch { token = null; }
     if (typeof token === 'string' && token.length > 0 && token.length <= 64) msg.token = token;
+    if (typeof this.accountToken === 'string' && this.accountToken.length > 0 && this.accountToken.length <= 128) msg.accountToken = this.accountToken;
     this._helloRid = rid;
     this._helloSentName = this.name;
     if (this.status !== 'handshaking') this._setStatus('handshaking');
@@ -471,6 +480,18 @@ export class Net {
     return this._sendRaw(msg);
   }
 
+  // ---- accounts & 野排 (docs/MATCHMAKING.md) -----------------------------------------------------
+
+  /** @returns {Promise<any>} the auth.ok reply; `net.accountToken` is set from it automatically. */
+  authRegister(name, password) { return this.request('auth.register', { name, password }); }
+  authLogin(name, password) { return this.request('auth.login', { name, password }); }
+  /** Enter the 野排 shared pool for a difficulty (a logged-in account is required server-side). */
+  mmJoin(difficulty) { return this.request('mm.join', { difficulty }); }
+  /** Leave the pool. */
+  mmCancel() { return this.request('mm.cancel'); }
+  /** Restore a stored account session (called at boot before connect). */
+  setAccountToken(token) { this.accountToken = typeof token === 'string' && token ? token : null; }
+
   _sendRaw(obj) {
     const ws = this.ws;
     if (!ws || ws.readyState !== WS_OPEN) return false;
@@ -530,6 +551,8 @@ export class Net {
     const { t } = msg;
     const rid = msg.rid;
     const isHelloError = t === 'error' && rid != null && rid === this._helloRid;
+    // Keep the account session from an auth.ok (a reply to auth.login/register OR a push on hello with accountToken).
+    if (t === 'auth.ok' && msg && typeof msg.token === 'string') this.accountToken = msg.token;
 
     if (t === 'welcome') {
       this._onWelcome(msg);

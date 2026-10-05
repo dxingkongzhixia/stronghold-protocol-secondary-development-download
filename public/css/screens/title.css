@@ -242,6 +242,29 @@
 .title-invite b { font-size: .2rem; letter-spacing: .2em; color: #ffd08a; }
 .title-conn { display: flex; align-items: center; justify-content: center; gap: .1rem; min-height: .32rem; font-size: .14rem; color: var(--text-lo); }
 .title-conn .ping { height: .26rem; font-size: .15rem; }
+.title-conn .title-gpu { max-width: 3.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .85; }
+
+/* guest hint under the primary button when no callsign is typed (docs/MATCHMAKING.md) */
+.title-guest-hint { text-align: center; font-size: .13rem; color: var(--text-lo); opacity: .8; letter-spacing: .02em; }
+
+/* account box (docs/MATCHMAKING.md): 博士代号 IS the account name; this only adds a password + 登录/注册 */
+.title-account { display: flex; flex-direction: column; gap: .06rem; margin-top: .06rem; width: 100%; }
+.title-account.is-on { flex-direction: row; align-items: center; justify-content: center; gap: .12rem; font-size: .15rem; color: var(--text-lo); }
+.title-account__who { display: inline-flex; align-items: center; gap: .05rem; }
+.title-account__who b { color: var(--mint-400); }
+.title-account__toggle { display: inline-flex; align-items: center; justify-content: center; gap: .06rem; width: 100%; padding: .06rem .1rem;
+  background: none; border: 0; border-top: 1px solid rgba(120, 220, 190, .18); color: var(--text-lo); font: inherit; font-size: .15rem; cursor: pointer; }
+.title-account__toggle:hover { color: var(--mint-400); }
+.title-account__caret { font-size: .13rem; opacity: .6; }
+.title-account__panel { display: flex; flex-direction: column; gap: .08rem; padding: .1rem .12rem;
+  border: 1px solid rgba(120, 220, 190, .22); background: rgba(8, 16, 14, .66); }
+.title-account__tabs { display: flex; gap: .06rem; justify-content: center; }
+.title-account__tabs button { background: none; border: 0; color: var(--text-lo); font: inherit; font-size: .15rem; padding: .02rem .12rem; cursor: pointer; opacity: .7; }
+.title-account__tabs button.is-on { color: var(--mint-400); opacity: 1; box-shadow: inset 0 -1px 0 var(--mint-400); }
+.title-account__fields { display: flex; gap: .06rem; align-items: stretch; }
+.title-account__fields .field { flex: 1 1 auto; min-width: 0; }
+.title-account__err { text-align: center; font-size: .14rem; color: #ff7a5c; }
+.title-account__hint { text-align: center; font-size: .13rem; color: var(--text-lo); opacity: .75; }
 
 .title-foot {
   position: absolute;

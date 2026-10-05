@@ -840,7 +840,8 @@ export class Battle {
     this.units.push(e);
     this.enemies.push(e);
     this._ev(['spawn', unitInfo(e)]);
-    if (this._hooks.deploy) this.emit('deploy', { unit: e, initial: false });
+    // Do NOT emit the ally 'deploy' hook for enemies — that event means "an operator was deployed" (enemies have
+    // 'enemySpawn'). Every current handler guards on side/ownership, so this is a latent category-error fix.
     if (this._hooks.enemySpawn) this.emit('enemySpawn', { enemy: e });
     return e;
   }
@@ -1064,8 +1065,12 @@ export class Battle {
       const occ = this._occ[r * COLS + c];
       if (occ && occ.alive && occ !== u) continue;
       if (this.downOn(r, c, u)) continue;
+      const paid = Math.min(ps.dp, cost);
       ps.dp = Math.max(0, ps.dp - cost);
-      this._deploy(u, { initial: false, tile: r === u.homeR && c === u.homeC ? null : [r, c] });
+      // Refund if the deploy is refused (an edge divergence between the pre-checks above and `_deploy`'s own guards).
+      if (!this._deploy(u, { initial: false, tile: r === u.homeR && c === u.homeC ? null : [r, c] })) {
+        ps.dp = Math.min(this.flags.dpMax, ps.dp + paid);
+      }
     }
   }
 
@@ -1536,10 +1541,17 @@ export class Battle {
   enemiesInKeys(keys, attacker, profile) {
     const out = [];
     if (!keys) return out;
+    let seen = null; // only a huge enemy (hitArea) can sit in several tile buckets: dedupe it via a Set, not out.includes
     for (let i = 0; i < keys.length; i++) {
       const b = this._eb[keys[i]];
       if (!b || !b.length) continue;
-      for (const e of b) if (e.alive && (!e.hitArea || !out.includes(e)) && canTargetEnemy(attacker, e, profile)) out.push(e);
+      for (const e of b) {
+        if (!e.alive) continue;
+        if (e.hitArea && seen && seen.has(e)) continue;
+        if (!canTargetEnemy(attacker, e, profile)) continue;
+        out.push(e);
+        if (e.hitArea) { if (!seen) seen = new Set(); seen.add(e); }
+      }
     }
     return out;
   }

@@ -19,6 +19,9 @@
 }
 .invite__label { grid-column: 1 / -1; display: flex; align-items: center; gap: .07rem; font-size: .14rem; color: var(--text-lo); }
 .invite__label .icon { width: .16rem; height: .16rem; color: var(--mint-500); }
+/* 公开同盟 badge: whether this 同盟 room is listed in the lobby directory (docs/MATCHMAKING.md) */
+.invite__vis { margin-left: auto; padding: .02rem .09rem; font-size: .12rem; letter-spacing: .06em; color: var(--text-lo); border: 1px solid var(--line-2); }
+.invite__vis.is-public { color: var(--mint-500); border-color: var(--mint-a35); }
 .invite__code { display: flex; gap: .06rem; }
 .invite__code span {
   display: grid;

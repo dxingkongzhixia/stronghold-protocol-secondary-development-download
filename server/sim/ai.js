@@ -594,17 +594,15 @@ function advanceRoute(b, e, dt, R, standing = false) {
  * plays for its attacks and its strike frame (tools/build-data.mjs, from the asset manifest) —, `hit` of it before
  * the strike (the wind-up, while a target is in range) and the rest after it, both shortened when the attacks come
  * quicker than the clip (it then plays faster: render/spine.js, the same rule) — no source gives a length. An enemy in
- * another form (掠海漂移体's crawl, 转译基底's forms, 杰斯顿's second form) stands for its base clip [ASSUMED]; known
- * mismatches: 扎罗's second form stands 1.433 s (A_Attack) though its B_Attack lasts 2.0 s (2.5 s interval: ~0.4 s of
- * walking during the recovery), 转译基底's 特战术师 stands 2.0 s (B_Attack) though its D_Attack lasts 1.667 s — a per-form
- * clip needs the client's FORMS mapping (render/units.js) in shared data.
+ * another form (掠海漂移体's crawl, 转译基底's forms, 杰斯顿's second form) stands for THAT form's clip when the data
+ * carries it (`formAttackAnim`, built from the shared FORMS catalogue), else its base clip (a foreign/older data file).
  * Returns the wind-up and rest (s) into `out`: an enemy with no attack clip known stands ATTACK_PAUSE after the strike
  * (the old rule), a 「不停止移动」 one (`attackMoves`: data or content) never stops.
  */
 export function attackStand(e, out = { wind: 0, rest: 0 }) {
   out.wind = 0; out.rest = 0;
   if (e.profile?.attackMoves ?? e.def?.attackMoves) return out;
-  const a = e.def?.attackAnim;
+  const a = (e.form && e.def?.formAttackAnim?.[e.form]) || e.def?.attackAnim;
   if (!a || !(a.dur > 0)) { out.rest = ATTACK_PAUSE; return out; }
   const iv = e.s.interval;
   const speed = iv > 0 && iv < a.dur ? a.dur / iv : 1;

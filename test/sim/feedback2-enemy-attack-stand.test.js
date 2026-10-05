@@ -58,6 +58,33 @@ test('data: every enemy with a real attack clip carries it as attackAnim (the cl
   assert.deepEqual(enemies.enemy_1168_dumage.attackAnim, { clip: 'Attack', dur: 1.2, hit: 0.633 });
 });
 
+test('data: an enemy drawn in another clip set carries its per-form attack clip as formAttackAnim (shared/forms.js)', () => {
+  const enemies = readJson('data/enemies.json'), assets = readJson('data/assets.json');
+  const check = (key, form, clip) => {
+    const sp = assets.enemies[enemies[key].spine || key].spine;
+    const a = enemies[key].formAttackAnim?.[form];
+    assert.ok(a, `${key}.${form}`);
+    assert.equal(a.clip, clip, `${key}.${form}.clip`);
+    assert.equal(a.dur, sp.animations[clip], `${key}.${form}.dur`);
+    const h = sp.hits?.[clip];
+    if (Array.isArray(h) && h.length) assert.equal(a.hit, h[0], `${key}.${form}.hit`);
+  };
+  check('enemy_10081_mpplai', 'translator_fuchou', 'B_Attack');   // 转译基底·α 寻仇者
+  check('enemy_10081_mpplai', 'translator_shushi', 'D_Attack');   // its 特战术师 (the one the report named)
+  check('enemy_2025_syufo', 'crawl', 'Attack_02');                // 掠海漂移体 爬行模式
+  check('enemy_1516_jakill', 'form2', 'C2_Attack');              // 杰斯顿 second form
+  assert.equal(enemies.enemy_10081_mpplai.formAttackAnim.translator_youling, undefined, '幽灵 has no attack clip');
+  assert.equal(enemies.enemy_1019_jshoot.formAttackAnim, undefined, 'a plain enemy carries none');
+});
+
+test("attackStand uses the current form's clip over the base clip, and falls back when the form is unknown", () => {
+  const base = { def: { attackAnim: { dur: 1, hit: 0.5 } }, s: { interval: 4 }, profile: {} };
+  assert.deepEqual(attackStand(base), { wind: 0.5, rest: 0.5 });
+  const formed = { ...base, form: 'crawl', def: { ...base.def, formAttackAnim: { crawl: { dur: 2, hit: 1 } } } };
+  assert.deepEqual(attackStand(formed), { wind: 1, rest: 1 }, "the form's 2 s clip, not the 1 s base");
+  assert.deepEqual(attackStand({ ...formed, form: 'nope' }), { wind: 0.5, rest: 0.5 }, 'unknown form → base clip');
+});
+
 test('隐形弩手 with an operator in range stands for its 1.0 s Attack clip at every attack (0.533 s wind-up + 0.467 s), then walks', () => {
   const h = makeBattle({ units: [{ chessId: 'chess_char_3_01_a', row: 10, col: 6, dir: 'RIGHT' }], enemies: [{ key: 'enemy_1019_jshoot', time: 0, route: 0 }],
     seed: 3, timeLimit: 40, autoFinish: false, hooks: ['attack'] });

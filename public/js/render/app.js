@@ -405,8 +405,11 @@ export async function createFieldView(host, options = {}) {
   try { if (document.fonts?.load) await withTimeout(Promise.all([document.fonts.load('700 40px Bender'), document.fonts.load('700 40px Oxanium')]), 1500); } catch { /* ignore */ }
 
   const size = () => ({ width: Math.max(1, host.clientWidth || 1), height: Math.max(1, host.clientHeight || 1) });
-  const dpr = () => Math.min(globalThis.devicePixelRatio || 1, QUALITY_RES[settings.quality] || 2);
-  const boardDpr = () => Math.min(globalThis.devicePixelRatio || 1, BOARD_RES[settings.quality] || 2);
+  // Adaptive render scale (adaptLoad): under sustained load the RENDER RESOLUTION drops to hold the frame rate — and
+  // so the animations stay smooth — instead of only raising the unit refresh interval (which read as stutter).
+  let renderScale = 1;
+  const dpr = () => Math.min(globalThis.devicePixelRatio || 1, (QUALITY_RES[settings.quality] || 2) * renderScale);
+  const boardDpr = () => Math.min(globalThis.devicePixelRatio || 1, (BOARD_RES[settings.quality] || 2) * renderScale);
   const s0 = size();
   const app = new P.Application({
     // MSAA only where it pays: dense (DPR ≥ 1.5) screens are sharp enough without it and it would cost 4× the fill
@@ -424,6 +427,17 @@ export async function createFieldView(host, options = {}) {
   canvas.style.position = 'relative';
   canvas.style.zIndex = '1';
   host.appendChild(canvas);
+
+  // Performance readout (dev): `?stats=1` → a small overlay to screenshot when the game looks choppy (fps / CPU /
+  // render ms, the crowd refresh interval, the adaptive render scale and the estimated game rate).
+  let statsEl = null;
+  try {
+    if (new URLSearchParams(globalThis.location?.search || '').has('stats')) {
+      statsEl = document.createElement('div');
+      statsEl.className = 'field-stats';
+      host.appendChild(statsEl);
+    }
+  } catch { statsEl = null; }
 
   // ---- layers ---------------------------------------------------------------------------------------------
   const stage = app.stage;
@@ -1618,8 +1632,18 @@ export async function createFieldView(host, options = {}) {
     const busy = views.size + penViews.size > 8;
     if (frameMs > 19.5 && busy) { slowFor += dtRaw; fastFor = 0; }
     else if (frameMs < 17.6) { fastFor += dtRaw; slowFor = 0; }
+    const prev = loadLevel;
     if (slowFor > 1 && loadLevel < 3) { loadLevel++; slowFor = 0; fastFor = 0; impInterval = pickImpostorInterval(); }
     else if (loadLevel > 0 && (fastFor > 6 * loadLevel || !busy && fastFor > 2)) { loadLevel--; fastFor = 0; impInterval = pickImpostorInterval(); }
+    if (loadLevel !== prev) applyLoadScale();
+  }
+  // Prefer a lower render resolution over a lower animation rate (1 → 0.82 → 0.68 → 0.55 at load levels 0–3): it frees
+  // the GPU (fill-bound at DPR ≥ 1.5) so the frame rate recovers and the crowd never needs to animate at 10–20 Hz.
+  function applyLoadScale() {
+    const s = [1, 0.82, 0.68, 0.55][loadLevel] || 1;
+    if (s === renderScale) return;
+    renderScale = s;
+    try { resize(); } catch { /* resize is best-effort within a frame */ }
   }
   // Crowded fields render skeletons through staggered RenderTexture impostors (units.js): the interval grows with
   // the number of Spine units so the per-frame vertex work stays roughly constant (hysteresis: re-evaluated
@@ -1636,10 +1660,10 @@ export async function createFieldView(host, options = {}) {
     let n = 0;
     for (const v of views.values()) if (v.actor && v.spineReady) n++;
     const q = settings.quality;
-    const base = (q === 'low' ? 12 : q === 'medium' ? 26 : 44) / (1 + loadLevel);
+    const base = (q === 'low' ? 14 : q === 'medium' ? 30 : 56) / (1 + loadLevel);
     if (n <= base) return 0;
-    // a struggling device (load level ≥ 2) may refresh a big crowd more rarely (10 Hz at worst)
-    return Math.min(loadLevel >= 2 ? 6 : 4, Math.max(2, Math.ceil(n / (base * 0.75))));
+    // a crowd refreshes every 2–3 frames at worst (≥20 Hz): the old cap of 6 (10 Hz) read as stutter
+    return Math.min(3, Math.max(2, Math.ceil(n / (base * 0.75))));
   }
   function frame() {
     if (destroyed) return;
@@ -1704,6 +1728,10 @@ export async function createFieldView(host, options = {}) {
       impostors.flush();
     } catch (err) {
       if (!frame.warned) { frame.warned = true; console.error('[render] frame failed', err); }
+    }
+    if (statsEl && frameNo % 15 === 0) {
+      statsEl.textContent = `FPS ${fps.toFixed(0)}  ${frameMs.toFixed(1)}ms  cpu ${cpuMs.toFixed(1)}  gpu ${renderMs.toFixed(1)}\n`
+        + `imp ${impInterval}  scale ${renderScale.toFixed(2)}  rate ${interp.rate.toFixed(2)}  units ${views.size}  ${board3d ? '3D' : '2D'}${culledCount ? `  cull ${culledCount}` : ''}`;
     }
   }
   app.ticker.add(frame);

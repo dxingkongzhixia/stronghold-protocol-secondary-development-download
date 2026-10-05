@@ -38,7 +38,7 @@
 import { randomBytes } from 'node:crypto';
 import { isIP } from 'node:net';
 import { C2S, validateC2S } from '../shared/protocol.js';
-import { ERR, ERR_TEXT, NAME_MAX_LEN, PROTOCOL_VERSION } from '../shared/constants.js';
+import { ERR, ERR_TEXT, NAME_MAX_LEN, PRESENCE_GRACE_MS, PROTOCOL_VERSION } from '../shared/constants.js';
 
 /** Tunables (all overridable through the Network / SessionRegistry constructors). */
 export const NET_DEFAULTS = Object.freeze({
@@ -62,7 +62,9 @@ export const NET_DEFAULTS = Object.freeze({
  * Intents that also draw from the per-connection heavy bucket: g.watch (its reply is a large state resend, m.field) and
  * room.loadout (a ≤ 160-entry map validated against the game data; the client debounces its edits).
  */
-export const HEAVY_TYPES = new Set(['g.watch', 'room.loadout']);
+// Rate-limited to the tighter heavy bucket (heavyPerSec/heavyBurst): resend-heavy intents, and auth.* whose
+// scryptSync would otherwise let one socket burn the event loop (login spam = a DoS).
+export const HEAVY_TYPES = new Set(['g.watch', 'room.loadout', 'auth.register', 'auth.login', 'auth.logout']);
 
 /** Close codes (see header). */
 export const CLOSE = Object.freeze({ REPLACED: 4001, HELLO_TIMEOUT: 4002, POLICY: 1008, SHUTDOWN: 1001 });
@@ -114,11 +116,27 @@ export class Session {
      * window). A solo run keeps its session resumable for the official `singleReconnectTime` (24 h) — see lobby.js.
      */
     this.resumeWindowMs = null;
+    /** @type {number | null} account id from server/auth.js (null = guest; 野排 requires one) */
+    this.accountId = null;
+    /** @type {string | null} the account session token this session is bound to (server/auth.js) */
+    this.accountToken = null;
   }
 }
 
 /** Random 128-bit hex token. */
 export const newToken = () => randomBytes(16).toString('hex');
+
+/**
+ * Presence: is this session counted as "online" right now? True while its socket is live. A LOGGED-IN session (bound
+ * to an account) also stays present for PRESENCE_GRACE_MS after its socket drops — a reload or brief network blip does
+ * not flip it offline — and only then goes offline. A guest (no account) is online only while connected.
+ * @param {Session | null | undefined} session @param {number} [now]
+ */
+export function presenceOnline(session, now = Date.now()) {
+  if (!session) return false;
+  if (session.connected) return true;
+  return session.accountId != null && Number.isFinite(session.disconnectedAt) && now - session.disconnectedAt <= PRESENCE_GRACE_MS;
+}
 
 /** Registry of sessions by playerId and by token; purges sessions disconnected longer than the window. */
 export class SessionRegistry {
@@ -656,7 +674,7 @@ export class Network {
     if (validRid(rid)) welcome.rid = rid;
     this.reply(conn, welcome);
     try {
-      this.handler.onHello?.(session, { resumed, repeat });
+      this.handler.onHello?.(session, { resumed, repeat, accountToken: typeof msg.accountToken === 'string' ? msg.accountToken : null });
     } catch (e) {
       this.log.error('[net] onHello crashed', e);
     }
@@ -671,6 +689,25 @@ export class Network {
     } else {
       try { oldWs.close(CLOSE.REPLACED, 'session replaced'); } catch { /* ignore */ }
     }
+  }
+
+  /**
+   * Server-initiated close of a session's socket (account logged in elsewhere, admin kick, …). Unlike a bare
+   * `session.ws.close()`, this goes through the Connection so `conn.closing` is set: frames already in flight from
+   * that socket are ignored, so a late `hello` cannot rebind the session we just kicked. Fires `onDisconnect` once.
+   * @param {Session | null | undefined} session
+   * @param {number} [code] @param {string} [reason]
+   */
+  closeSession(session, code = CLOSE.REPLACED, reason = 'session closed') {
+    if (!session) return;
+    const ws = session.ws;
+    session.ws = null;
+    session.connected = false;
+    session.disconnectedAt = this.now();
+    const conn = ws ? this.conns.get(ws) : null;
+    if (conn) { conn.session = null; conn.close(code, reason); }
+    else if (ws) { try { ws.close(code, reason); } catch { /* ignore */ } }
+    try { this.handler.onDisconnect?.(session); } catch (e) { this.log.error('[net] onDisconnect crashed', e); }
   }
 
   /** @param {Connection} conn */

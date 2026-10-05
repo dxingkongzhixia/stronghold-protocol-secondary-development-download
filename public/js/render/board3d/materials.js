@@ -355,6 +355,9 @@ export function environmentMap(THREE, renderer) {
   const rt = pm.fromEquirectangular(tex);
   pm.dispose();
   tex.dispose();
+  // The PMREM result lives in a WebGLRenderTarget whose framebuffer/depth renderbuffer must be disposed alongside the
+  // texture (three.js only frees them on the RT's own dispose). Stash it so BoardScene can dispose both.
+  rt.texture.__rt = rt;
   return rt.texture;
 }
 

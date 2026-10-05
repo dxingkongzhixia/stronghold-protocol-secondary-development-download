@@ -5,14 +5,20 @@
 .lobby-body {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr); /* the single row fills the scroll area so the columns can shrink inside it */
   gap: .5rem;
   width: 100%;
   max-width: 19.2rem;
   margin: 0 auto;
-  padding: .36rem .6rem .4rem;
-  align-content: start;
+  padding: .3rem .6rem .5rem;
 }
-.lobby-left, .lobby-right { display: flex; flex-direction: column; min-width: 0; }
+.lobby-left, .lobby-right { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.lobby-left { overflow-y: auto; }
+/* The difficulty list shrinks (and scrolls) *before* the two action buttons, so 搜寻队友（野排）is never pushed off
+   screen on a short window; on a tall window nothing grows (no gap between the cards and the buttons). */
+.lobby-right .diff-list { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+.lobby-right .diff-list > * { flex: 0 0 auto; } /* scroll the cards, never squish them */
+.lobby-right .create-box, .lobby-right .mm-box { flex: 0 0 auto; }
 
 /* ---- mode cards ------------------------------------------------------------------------------------ */
 .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: .24rem; margin-bottom: .34rem; }
@@ -232,9 +238,63 @@
 .diff-card.is-selected .diff-card__bar { opacity: 1; box-shadow: 0 0 .14rem var(--d-color); }
 .diff-card.is-selected .diff-card__check { color: var(--d-color); }
 .diff-card.is-selected .diff-card__check .icon { background: var(--d-color); border-color: var(--d-color); color: #150a04; transform: rotate(-8deg); }
+
+/* the main screen's GPU line (topbar left): small, dim, never wrapping */
+.lobby-gpu { display: inline-flex; align-items: center; max-width: 3.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .14rem; letter-spacing: .01em; color: #6f7d78; }
+
+/* 野排 (docs/MATCHMAKING.md): the search card + the queue overlay */
+.mm-box { margin-top: .12rem; display: flex; flex-direction: column; gap: .06rem; }
+.mm-box__hint { text-align: center; font-size: .13rem; color: var(--text-lo); opacity: .8; }
+
+/* server online-player count in the topbar (data from /healthz); clicking opens /admin */
+.online-badge { display: inline-flex; align-items: center; gap: .05rem; padding: 0 .12rem; height: .38rem;
+  background: rgba(78, 216, 175, .08); border: 1px solid rgba(78, 216, 175, .32); border-radius: 999px;
+  color: var(--mint-400); font: inherit; font-size: .15rem; cursor: pointer; white-space: nowrap; }
+.online-badge:hover { background: rgba(78, 216, 175, .16); border-color: var(--mint-400); }
+.online-badge .icon { width: .18rem; height: .18rem; }
+.online-badge b { font-variant-numeric: tabular-nums; }
+
+/* in-game online-players overlay (server data via /online/api; opened from the 在线 badge) */
+.online-modal { position: absolute; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; background: rgba(4, 8, 7, .72); }
+.online-modal__card { display: flex; flex-direction: column; width: min(7.4rem, 92vw); max-height: 82vh; padding: .24rem .28rem;
+  background: linear-gradient(180deg, #0e1513, #0a100e); border: 1px solid rgba(120, 220, 190, .32); box-shadow: 0 18px 60px rgba(0, 0, 0, .55); }
+.online-modal__head { display: flex; align-items: flex-start; justify-content: space-between; gap: .2rem; }
+.online-modal__title h2 { margin: .04rem 0 0; font-size: .3rem; display: flex; align-items: baseline; gap: .12rem; }
+.online-modal__title h2 .num { font-size: .34rem; color: var(--mint-400); font-variant-numeric: tabular-nums; }
+.online-modal__close { flex: none; width: .44rem; height: .44rem; display: grid; place-items: center; background: none; border: 1px solid var(--line-2); border-radius: .08rem; color: var(--text-lo); cursor: pointer; }
+.online-modal__close:hover { color: var(--mint-400); border-color: var(--mint-400); }
+.online-modal__close .icon { width: .22rem; height: .22rem; }
+.online-modal__meta { display: flex; gap: .26rem; align-items: center; margin: .14rem 0 .18rem; font-size: .15rem; color: var(--text-lo); }
+.online-dot { display: inline-block; width: .08rem; height: .08rem; border-radius: 50%; background: var(--mint-400); box-shadow: 0 0 .1rem var(--mint-400); margin-right: .06rem; }
+.online-modal__list { display: flex; flex-direction: column; gap: .04rem; overflow-y: auto; min-height: 0; }
+.online-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: .14rem;
+  padding: .1rem .12rem; border: 1px solid var(--line); background: rgba(0, 0, 0, .25); }
+.online-row__name { font-weight: 700; font-size: .19rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.online-row__tag { font-size: .13rem; color: #ffd089; border: 1px solid currentColor; border-radius: .04rem; padding: 0 .06rem; }
+.online-row__tag.is-acc { color: var(--mint-400); }
+.online-row__status { font-size: .14rem; padding: .02rem .1rem; border: 1px solid currentColor; border-radius: 999px; }
+.online-row__status.is-mint { color: var(--mint-400); }
+.online-row__status.is-ice { color: #5cc8ff; }
+.online-row__status.is-amber { color: #ffd089; }
+.online-row__status.is-violet { color: #b28cff; }
+.online-row__status.is-dim { color: var(--text-dim); }
+.online-row__room { color: var(--text-lo); font-size: .15rem; }
+.online-modal__empty { text-align: center; color: var(--text-dim); padding: .4rem; font-size: .16rem; }
+.mm-overlay { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(4, 8, 7, .72); }
+.mm-overlay__card { display: flex; flex-direction: column; gap: .1rem; align-items: center; min-width: 3.6rem; padding: .22rem .26rem;
+  background: var(--panel-bg, #101614); border: 1px solid rgba(120, 220, 190, .35); }
+.mm-overlay__title { font-size: .22rem; color: var(--mint-400); letter-spacing: .04em; }
+.mm-overlay__row { display: flex; justify-content: space-between; width: 100%; gap: 1.2rem; font-size: .17rem; color: var(--text-lo); }
+.mm-overlay__row b { color: var(--text-hi, #e8f5ef); }
+.mm-overlay__hint { font-size: .14rem; color: var(--text-lo); opacity: .85; }
 .diff-card.is-selected .diff-card__check span { opacity: 1; }
 
 /* ---- create ------------------------------------------------------------------------------------------ */
 .create-box { margin-top: .3rem; display: flex; flex-direction: column; gap: .12rem; }
 .create-box .btn--xl { height: .92rem; font-size: .32rem; letter-spacing: .3em; }
 .create-box__hint { display: flex; align-items: center; justify-content: center; min-height: .3rem; font-size: .14rem; color: var(--text-lo); }
+/* 房间可见性: 公开 lists the 同盟 in the lobby's 公开同盟 directory; 不公开 is 密钥-only (docs/MATCHMAKING.md) */
+.create-vis { display: flex; align-items: center; justify-content: space-between; gap: .12rem; }
+.create-vis__label { display: inline-flex; align-items: baseline; gap: .08rem; font-size: .15rem; color: var(--text-lo); }
+.create-vis .tabs { flex: 0 0 auto; border-bottom: 0; }
