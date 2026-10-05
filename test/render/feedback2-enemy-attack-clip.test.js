@@ -97,7 +97,7 @@ test('a fast operator (attack interval shorter than its clip) keeps the looping 
   assert.ok(Math.abs(track(a).timeScale - 2) < 1e-9);
 });
 
-test("a duration skill's sustained loop (via !== 'attack') is not restarted by an attack (初雪 / 薄绿 float)", () => {
+test("a duration skill's sustained loop (via !== 'attack') keeps playing through an attack (初雪 / 薄绿 float)", () => {
   const entry = {
     anims: {
       idle: 'Idle', move: { begin: null, loop: 'Move', end: null },
@@ -111,9 +111,8 @@ test("a duration skill's sustained loop (via !== 'attack') is not restarted by a
   a.setSkill(true);
   assert.ok(a._sustainedSkill(), 'recognised as a sustained skill loop');
   run(a, 0.25);
-  const cur = a.current;
   a.attack(1);                                   // an attack while the skill holds its floating stance
-  assert.equal(a.current, cur, 'the attack did not replace the sustained skill clip');
+  assert.equal(a.current, 'Skill_Loop', 'the floating stance (the skill loop) is what plays — not Idle or Attack');
   assert.equal(a.windUp(1, 0.3), false, 'no per-attack wind-up while the skill loop holds');
 });
 

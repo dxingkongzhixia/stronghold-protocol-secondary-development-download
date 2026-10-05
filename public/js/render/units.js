@@ -243,6 +243,7 @@ export class UnitView {
     this._elBar = null;           // { root, disc, bg, fill } sprites of the element gauge row, built on first use
     this._downRing = null;        // { disc, track, arc, text } sprites, built on first use
     this.alpha = 1; this.fadeIn = this.prep ? 1 : 0;
+    this.lunge = 0; this.lungeDir = { x: 1, y: 0 };
     this.flash = 0;
     this.bob = Math.random() * Math.PI * 2;
     this.hovered = false; this.dimmed = false; this.lift = 0;
@@ -656,6 +657,11 @@ export class UnitView {
       const dx = target.x - this.x;
       if (Math.abs(dx) > 0.1) this.visFacing = dx < 0 ? -1 : 1;
     }
+    if (target) {
+      const dx = target.x - this.x, dy = target.y - this.y, len = Math.hypot(dx, dy) || 1;
+      this.lungeDir.x = dx / len; this.lungeDir.y = dy / len;
+    }
+    this.lunge = 1;
     if (this.actor) this.actor.attack(this.atkInterval, once); // game seconds: the actor's clock runs in game time
     if (this.imp) this.imp.dirty = true;
   }
@@ -1301,6 +1307,7 @@ export class UnitView {
 const SH_P = { x: 0, y: 0, s: 0, depth: 0 };
 const FA_P = { x: 0, y: 0, s: 0, depth: 0 };
 const FA_C = { x: 0, y: 0, s: 0, depth: 0 };
+const LG_P = { x: 0, y: 0, s: 0, depth: 0 };
 const ICON_TMP = [];
 
 /**

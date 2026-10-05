@@ -93,9 +93,7 @@ export class SpineActor {
       const orig = typeof sp.createGraphics === 'function' ? sp.createGraphics.bind(sp) : null;
       if (orig) sp.createGraphics = (slot, att) => { const g = orig(slot, att); if (!this.clipOn && slot.clippingContainer) { slot.clippingContainer.mask = null; g.renderable = false; } return g; };
     }
-    // transition lengths are in CLIP seconds, which run at the battle rate (2× real): a 0.25 s mix is ~0.12 s real —
-    // 0.15 s read as a hard cut under the forced 2× speed, which looked stiff next to the official chibi flow.
-    try { this.spine.stateData.defaultMix = 0.25; } catch { /* ignore */ }
+    try { this.spine.stateData.defaultMix = 0.12; } catch { /* ignore */ }
     this.base = 'idle';
     this.mode = 'base';           // base | attack | skillBegin | deploy | die | stun | change
     this.endClip = null;          // setForm's closing clip, played as a change clip once the clock reaches endAt,
@@ -173,7 +171,7 @@ export class SpineActor {
     if (this.mode !== 'change') this.stunWanted = this.mode === 'stun';
     this.frozen = false;
     this.mode = 'change';
-    this._play(clip, false, { mix: 0.15 });
+    this._play(clip, false, { mix: 0.08 });
     this.changeUntil = this.clock + this.dur(clip);
   }
 
@@ -191,13 +189,6 @@ export class SpineActor {
   }
 
   _baseName() {
-    // A sustained skill owns the resting animation: keep its loop across stun recovery and move/idle changes instead
-    // of falling back to Idle. Without this, a stun mid-skill recovers into Idle while `_sustainedSkill()` stays true,
-    // which also suppresses every attack clip for the rest of the skill (the unit just stands there).
-    if (this._sustainedSkill()) {
-      const sk = this.roles.skill;
-      if (sk && this.has(sk.loop)) return sk.loop;
-    }
     if (this.base === 'move') {
       const mv = this.roles.move;
       if (mv && this.has(mv.loop)) return mv.loop;
@@ -263,33 +254,23 @@ export class SpineActor {
    */
   windUp(interval, lead, once = false) {
     if (this.dead || this.mode === 'stun' || this.mode === 'die' || this.mode === 'change' || !(lead >= 0)) return false;
-    if (this._sustainedSkill()) return false;   // the skill's own loop is already playing; no per-attack wind-up
     const clip = this._attackClip();
     if (!clip) return false;
+    const single = once || this.clipPerAttack;
+    // in rhythm: attack() re-phases; a clip-per-attack actor starts each attack's clip anew unless already wound up for it
+    if (this.mode === 'attack' && this.current === clip.loop && (!this.clipPerAttack || once || this.wound)) return false;
     const loopDur = this.dur(clip.loop);
     // a one-off cast plays at the clip's own speed (one loop per clip length), whatever the attack rhythm
     const iv = once ? loopDur : clampN(Number.isFinite(interval) && interval > 0 ? interval : this.interval, 0.08, 8);
     const hit = this._hitTime(clip.loop, loopDur);
-    // An operator whose attack interval outlasts its attack clip (a slow attacker) plays the clip ONCE at its own speed
-    // and returns to its resting state, instead of stretching one swing over the whole interval — the stretch read as a
-    // slow slide (feedback). Enemies already play one clip per attack (clipPerAttack); faster-than-clip attackers keep the loop.
-    const slowOp = !once && !this.clipPerAttack && loopDur < iv;
-    const single = once || this.clipPerAttack || slowOp;
-    // in rhythm: attack() re-phases; a clip-per-attack actor starts each attack's clip anew unless already wound up for it
-    if (this.mode === 'attack' && this.current === clip.loop && (!(this.clipPerAttack || slowOp) || once || this.wound)) return false;
-    let tsW, startW;
-    if (slowOp) { tsW = 1; startW = Math.max(0, hit - lead); }
-    else {
-      // clip per attack: its own speed, sped up only when the attacks come quicker than the clip
-      const plan = windUpPlan(loopDur, hit, this.clipPerAttack && !once ? Math.min(iv, loopDur) : iv, lead);
-      tsW = plan.tsWind; startW = plan.start; this.windTs = plan.ts;
-    }
-    if (!(hit > 0) || lead * tsW > hit + 1e-6) return false;
+    // clip per attack: its own speed, sped up only when the attacks come quicker than the clip
+    const plan = windUpPlan(loopDur, hit, this.clipPerAttack && !once ? Math.min(iv, loopDur) : iv, lead);
+    if (!(hit > 0) || lead * plan.ts > hit + 1e-6) return false;
     if (!once) this.interval = iv;
     this.mode = 'attack';
-    if (slowOp) this.windTs = tsW;
-    this.attackUntil = this.clock + lead + (single ? Math.max(0, loopDur - hit) / tsW : Math.max(0.45, iv * 1.4));
-    this._play(clip.loop, !single, { timeScale: tsW, start: startW, mix: 0.2 });
+    this.attackUntil = this.clock + lead + (single ? Math.max(0, loopDur - hit) / plan.ts : Math.max(0.45, iv * 1.4));
+    this._play(clip.loop, !single, { timeScale: plan.tsWind, start: plan.start, mix: 0.06 });
+    this.windTs = plan.ts;
     this.windUntil = this.clock + lead;
     this.wound = true;
     return true;
@@ -301,19 +282,16 @@ export class SpineActor {
    */
   attack(interval, once = false) {
     if (this.dead || this.mode === 'stun' || this.mode === 'die' || this.mode === 'change') return;   // a form change plays out
-    if (this._sustainedSkill()) return;   // a duration skill's own loop (a floating stance) keeps playing — do not restart it
     if (!once) this.interval = clampN(Number.isFinite(interval) && interval > 0 ? interval : this.interval, 0.08, 8);
     const clip = this._attackClip();
     if (!clip) return;
     const loopDur = this.dur(clip.loop);
     const per = this.clipPerAttack && !once;
-    // a slow operator (interval outlasts the clip): one clip at its own speed, then the resting state (no stretching)
-    const slowOp = !once && !this.clipPerAttack && loopDur < this.interval;
+    // a slow operator (its attack interval outlasts the clip) plays the clip ONCE at its own speed, then goes back to
+    // its resting state — stretching one swing over the whole interval read as a slow-motion slide (feedback)
+    const slowOp = !once && !per && loopDur < this.interval;
     const single = once || per || slowOp;
-    // clip per attack: its own speed (ts 1), faster only when the attacks come quicker than the clip; a slow operator keeps ts 1
-    // one clip per attack, its own speed, sped up only when the attacks come quicker than the clip (a 盟约-boosted
-    // attack speed): never slower than 1× (the slow-motion slide). `min(interval, loopDur)` = the pace the clip must
-    // finish in; the 4× ceiling only bites on extreme attack speed.
+    // clip per attack: its own speed (ts 1), faster only when the attacks come quicker than the clip
     const ts = once || slowOp ? 1 : per ? clampN(loopDur / Math.min(this.interval, loopDur), 1, 4) : clampN(loopDur / this.interval, 0.35, 4);
     const hit = this._hitTime(clip.loop, loopDur);
     // (a clip-per-attack actor still playing the previous attack's clip was not wound up for this one)
@@ -325,7 +303,7 @@ export class SpineActor {
     if (!wasAttacking) {
       // not wound up (no look-ahead, e.g. a batch that arrived late): the sim already resolved the hit, so show
       // the strike frame now
-      this._play(clip.loop, !single, { timeScale: ts, start: hit, mix: 0.2 });
+      this._play(clip.loop, !single, { timeScale: ts, start: hit, mix: 0.06 });
     } else if (single) {
       const e = this.spine.state.tracks[0];
       if (e) e.timeScale = ts;
@@ -343,15 +321,13 @@ export class SpineActor {
   }
 
   /**
-   * A duration skill whose visual is the skill's OWN sustained loop (via !== 'attack': 初雪/薄绿's floating stance):
-   * it plays continuously for the whole skill; the per-attack clip must not restart/interrupt it (a buff-only skill
-   * loop and a skill driven through the normal attack clip are not sustained — the operator still attacks normally).
+   * A duration skill whose visual is the skill's OWN sustained loop (初雪/薄绿's floating stance): it has a begin or an
+   * idle clip and is not driven through the attack clip, so its loop holds for the whole skill. The per-attack
+   * behaviour stays upstream's (v0.1.3, community report #23): `_attackClip` returns this loop, `windUp` bails when the
+   * loop has no attack frame, and a skill with its own idle attacks with the loop and rests in that idle.
    */
   _sustainedSkill() {
     const sk = this.roles.skill;
-    // Only a skill that starts its OWN sustained loop counts: a `begin` clip (初雪/薄绿: Skill_Start → queued Skill_Loop)
-    // or a Skill_Idle stance (setSkill plays it). A skill with just a bare `loop` and no begin/idle (野鬃 S2: its
-    // Skill_2 IS the attack animation — the push) is played per attack, so it must NOT be skipped.
     return !!(this.skillOn && sk && sk.via !== 'attack' && (this.has(sk.begin) || this.has(sk.idle))
       && this.has(sk.loop) && !this._skillIsBuffOnly());
   }
@@ -401,7 +377,7 @@ export class SpineActor {
     if (on && sk) {
       if (this.has(sk.begin)) {
         this.mode = 'skillBegin';
-        this._play(sk.begin, false, { mix: 0.15 });
+        this._play(sk.begin, false, { mix: 0.08 });
         this.skillBeginUntil = this.clock + this.dur(sk.begin);
         // then the skill's own idle until an attack plays its loop (community report #23); without one, the loop
         const next = this._skillIdle() || (this.has(sk.loop) ? sk.loop : null);
@@ -410,7 +386,7 @@ export class SpineActor {
     } else if (!on && sk) {
       if (this.has(sk.end)) {
         this.mode = 'skillEnd';
-        this._play(sk.end, false, { mix: 0.15 });
+        this._play(sk.end, false, { mix: 0.08 });
         this.skillEndUntil = this.clock + this.dur(sk.end);
       } else {
         this.mode = 'base';
