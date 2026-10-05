@@ -3,9 +3,16 @@
 export const PROTOCOL_VERSION = 1;
 /** Release version shown to players (title screen, server banner, /healthz). Kept equal to package.json "version"
  * (test/version.test.js); PROTOCOL_VERSION above is the separate wire-format number. */
-export const APP_VERSION = '0.1.2';
+export const APP_VERSION = '0.1.3';
 
 export const MAX_SEATS = 4;
+/**
+ * Spectator seats of a co-op room (community report #26, owner's decision 2026-10-04) — a remake feature: the official
+ * room has 1–4 players and no spectator seat (there only eliminated players and 联防 bystanders watch, research 09 §3.1).
+ * A spectator never counts as a player, may not act, and watches like an eliminated player (server/lobby.js spectate,
+ * server/match/Match.js addSpectator).
+ */
+export const MAX_SPECTATORS = 2;
 export const ROOM_CODE_LEN = 4;
 export const NAME_MAX_LEN = 12;
 // account credentials (server/auth.js): the registered display name / password limits
@@ -152,6 +159,7 @@ export const ERR = Object.freeze({
   SESSION_EXPIRED: 'SESSION_EXPIRED', // the stored account session is gone
   IN_QUEUE: 'IN_QUEUE',               // already queueing for a 野排 match
   NOT_QUEUED: 'NOT_QUEUED',
+  SPECTATOR: 'SPECTATOR',         // a spectator seat only watches (MAX_SPECTATORS)
   INTERNAL: 'INTERNAL',
 });
 
@@ -164,6 +172,7 @@ export const ERR_TEXT = {
   AUTH_REQUIRED: '搜寻队友需要先登录账号', BAD_NAME: '代号需 2–12 个字符', BAD_PASSWORD: '密码至少 6 位',
   NAME_TAKEN: '该代号已被使用', BAD_CREDENTIALS: '代号或密码错误', SESSION_EXPIRED: '登录已过期，请重新登录',
   IN_QUEUE: '你已在搜寻队列中', NOT_QUEUED: '你不在搜寻队列中',
+  SPECTATOR: '观战中无法进行该操作',
   INTERNAL: '服务器内部错误',
 };
 
