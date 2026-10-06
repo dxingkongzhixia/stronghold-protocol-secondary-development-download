@@ -238,6 +238,37 @@ describe('static import graph resolves', () => {
       assert.doesNotMatch(src, /from\s+['"]node:/, `${path.relative(ROOT, file)} imports a node: module`);
     }
   });
+  // The other direction (a module CALLING a shared helper it never imported) — the class of bug behind the lobby
+  // crash: the 公开同盟/正在模拟 tooltips called `roleLabel(...)` while the file imported only `roleName`, so the
+  // lobby threw `roleLabel is not defined` whenever a public room existed. Exported functions of the two shared
+  // helper homes (shared/constants.js, ui/components.js) must be imported (or declared locally) wherever they run.
+  test('client modules call no shared helper they did not import', () => {
+    const exportedFns = [];
+    for (const file of [path.join(ROOT, 'shared', 'constants.js'), path.join(PUBLIC, 'js', 'ui', 'components.js')]) {
+      const src = readFileSync(file, 'utf8');
+      for (const m of src.matchAll(/export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/g)) exportedFns.push(m[1]);
+      // helpers exported as arrow / function consts (roleLabel, roman, secondsLeft …)
+      for (const m of src.matchAll(/export\s+const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\()/g)) exportedFns.push(m[1]);
+    }
+    const bad = [];
+    for (const file of JS_FILES) {
+      const src = readFileSync(file, 'utf8');
+      const imported = new Set();
+      for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from/g)) {
+        for (const part of m[1].split(',')) {
+          const name = part.trim().split(/\s+as\s+/)[0].trim();
+          if (/^[A-Za-z_$][\w$]*$/.test(name)) imported.add(name);
+        }
+      }
+      const local = new Set();
+      for (const m of src.matchAll(/(?:^|\n)\s*(?:export\s+)?(?:async\s+)?(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)/g)) local.add(m[1]);
+      for (const name of exportedFns) {
+        if (imported.has(name) || local.has(name)) continue;
+        if (new RegExp(`\\b${name}\\s*\\(`).test(src)) bad.push(`${path.relative(ROOT, file)} calls ${name}()`);
+      }
+    }
+    assert.deepEqual(bad, []);
+  });
 });
 
 // ---- unit: store ------------------------------------------------------------------------------------------
