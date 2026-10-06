@@ -251,8 +251,8 @@ function wireNet() {
     const text = typeof msg.text === 'string' ? msg.text.trim() : '';
     if (!text) return;
     const sign = typeof msg.sign === 'string' && msg.sign ? msg.sign : null;
+    // one presentation only: the dismissable banner (ui/notice.js). A toast on top of it showed the same notice twice.
     store.patch('notice', { id: msg.id ?? null, text, sign, at: Number(msg.at) || Date.now() });
-    toast(`通知：${text}${sign ? `（—— ${sign}）` : ''}`, 'info', { ttl: 10000 });
   });
   net.on('room.state', onRoomState);
   net.on('room.closed', (msg) => {
