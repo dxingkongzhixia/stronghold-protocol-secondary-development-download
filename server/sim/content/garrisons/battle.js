@@ -275,6 +275,39 @@ const INSTALLERS = {
     });
   },
 
+  /**
+   * 结城理's 特质 (custom, CUSTOM_CHESS): every <替身>↔<本体> switch adds `bond_add_count_swap` layers to
+   * `bond_id_swap`; being knocked out ('killed') adds `bond_add_count_dead` to the separate `bond_id_dead` list.
+   * The official act1autochess_gar_event_selfdead uses ONE bond list and ONE amount for both events; this trait
+   * needs them apart (拉特兰+2 且 不屈+2 on a switch, only 不屈+1 on a knock-out).
+   */
+  act1autochess_gar_event_dollswap_self(battle, list) {
+    const gain = (it, bondStr, n) => {
+      const bonds = ids(bondStr);
+      if (!(n > 0) || !bonds.length) return;
+      const added = S.gainLayers(battle, {
+        playerId: it.unit.ownerId, bonds, n, requireActive: true, source: it.unit, reason: 'garrison', cap: Infinity, capKey: it.capKey,
+      });
+      if (added > 0) S.fxOn(battle, 'garrison', it.unit, `gar:${it.gid}`, it.key, { n: added });
+    };
+    const m = byUnit(list);
+    battle.on('death', ({ unit, reason }) => {
+      if (reason !== 'killed') return;
+      const arr = m.get(unit);
+      if (arr) for (const it of arr) gain(it, it.bbStr.bond_id_dead, S.num(it.bb.bond_add_count_dead, 0));
+    });
+    for (const it of list) it.doll = false;
+    battle.on('tick', () => {
+      for (const it of list) {
+        const u = it.unit;
+        const doll = !!(u.trait && u.trait.doll);
+        if (doll === it.doll) continue;
+        it.doll = doll;
+        if (u.alive && u.deployed) gain(it, it.bbStr.bond_id_swap, S.num(it.bb.bond_add_count_swap, 0));
+      }
+    });
+  },
+
   act1autochess_gar_event_consume_ammo(battle, list) {
     battle.on('ammoUsed', ({ unit }) => {
       if (!unit) return;

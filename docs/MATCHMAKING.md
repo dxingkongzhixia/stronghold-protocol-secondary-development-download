@@ -563,3 +563,17 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 结果：全量 `node --test` **exit=0**（3768 项 / 0 失败）。
 - **两处引擎补充**（原先「未建模」的两条）：`units.js`/`damage.js`/`buffs.js` 加了**命中率降低**（攻击者一次独立未命中判定，触发同样的 `dodge` 事件）；kit 用 `battle.grid.isLow` 实现了**周围四格有高台时攻速+6**。三条针对性测试加在 `test/content/kits_alt_t3.test.js`。
 - **给后续新增干员的通用流程见 [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md)**（§2 自造干员表、§3 kit 与引擎、§4 美术与语音、§5 计数与测试、§6 上线）。
+
+## 24. 自造干员：结城理（2026-10-06）
+
+> 需求：新增干员**结城理**（方舟 × P3R 联动，6★ 特种·**傀儡师 `dollkeeper`**），盟约 **拉特兰 + 不屈**，特质「**持续叠加**」：每转换一次替身 → 拉特兰+2 且 不屈+2；被击倒 → 不屈+1；**S3 可转换两次替身，两次都被击倒才算被击倒**；其余取自官方。
+
+- **数据**（`CUSTOM_CHESS`）：`char_4217_makoto`，3 阶，普通 E2L1 / 精锐 E2L60 + PUM-Y「彼此的声音」；盟约 `lateranoShip` + `indomShip`（她官方 `subPower` 正是拉特兰）；名册 113 → **114**。
+- **特质**：新处理器 **`act1autochess_gar_event_dollswap_self`**（`server/sim/content/garrisons/battle.js`）。官方的 `..._selfdead` 只有**一个** bond 列表 + **一个**数额；这个把两种事件拆开：`bond_id_swap`+`bond_add_count_swap`（切换替身）/ `bond_id_dead`+`bond_add_count_dead`（被击倒）。清单 `garrison_custom_char_4217_makoto_a/_b`。
+- **双替身**：`server/sim/professions.js` 的傀儡师扩展 `profile.dollLives`——替身被击倒时若还有名额就切到**下一个替身**（`nextDoll()`，`unit.trait.dollNo` 记第几个），只有**最后一个**被击倒才算她倒下（`addBuff` 同键原地替换，不能 `removeBuff`——那会触发 `onRemove: leave` 把她切回本体）。S3 的 kit 设 `dollLives: 1`。
+- **kit**（`kits/tier3.js`）：天赋「不羁之力」（替身形态 ATK+80% / HP+35% / 攻击间隔 +0.4，切进替身时对范围内敌人停顿 8s）、「S.E.E.S.队长」（替身结束时的真伤总攻击）；技能 俄耳甫斯 S1（≤50% 血友方转治疗）/ 塔纳托斯 S2（至多 4 目标 + 35% 恐惧 + 血线斩杀）/ **S3（默认，多目标弱点 + 攻速，双替身）**。
+- **美术**：`07-assets.json` + `fetch-assets --asset-source=mirror`（头像 / 立绘 / 技能图 / 脊柱 / 子职业图标）。
+- **语音**：社区语音包（`ArknightsAssets2@voice`、`isHarryh/Ark-Voice`）都还没收录她 → 改从 **PRTS** 取：`https://torappu.prts.wiki/assets/audio/voice/char_4217_makoto/cn_0NN.mp3`（**文件名小写**），14 条战斗语音（**CN**；她没有日语语音）。方法已写进 `docs/NEW-OPERATOR.md` §4。
+- 顺带修正：`tools/assets/manifest.mjs` —— 某干员**所有**语音槽都取不到时整条不下发（不再留 `{select:[],place:[]}` 空壳）。
+- 同步更新的计数/断言：`data.test.js`（270 / 114 / 分阶 / 战役键 44）、`{ui,match,sim}/loadout`、`match/pool`（+ 池概率容差 0.01→0.03，自定义干员会改 copy-weighted 占比）、`content/kits_alt_t3`、`content/garrisons_battle`（新增她的测试组）、`sim/playtest6-combat`（替身形态释放阻挡是合法的）、`match/bot-smarter`（拟态物质断言改成「最高阶的一对」这条规则）。
+- 结果：全量 `node --test` **exit=0**。

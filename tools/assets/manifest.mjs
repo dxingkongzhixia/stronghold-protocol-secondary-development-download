@@ -125,6 +125,16 @@ export function resolveTemplate(template, { root, spine, sourceOf = () => undefi
   };
   const isContainer = (v) => v && typeof v === 'object' && !isLeaf(v) && !isModelRef(v) && !isLiteral(v);
   const value = walk(template, '');
+  // An operator whose every voice line failed to download keeps NO entry at all (rather than one with empty arrays):
+  // the client never requests a voice it has none of, and a half-empty entry made the manifest claim one
+  // (docs-consistency: every listed operator must carry every battle slot).
+  const vmap = value && value.audio && value.audio.voice;
+  if (vmap && typeof vmap === 'object') {
+    for (const [id, slots] of Object.entries(vmap)) {
+      const empty = !slots || Object.values(slots).every((x) => x === undefined || (Array.isArray(x) && !x.length));
+      if (empty) delete vmap[id];
+    }
+  }
   return { value, misses, fallbacks, files };
 }
 

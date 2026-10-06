@@ -106,8 +106,14 @@ test('items: 信标 on a bench single; both 博士投影 on a normal operator ev
   assert.ok(cell && !m.gd.isGolden(cell.id) && tierOf(cell) < 6, '突变细胞 on a normal operator below VI');
   assert.ok(![pairA.uid, pairB.uid].includes(cell.uid), '…never one of a merge pair');
   // 拟态物质 (a third copy when two are owned): the pair
+  // 拟态物质 (a third copy when two are owned): the HIGHEST-tier owned pair. The bot's own board may hold pairs of its
+  // own, so assert the rule (a pair, at the highest tier) rather than this test's constructed one.
   const mimic = itemTarget(m, ps, giveItem(m, ps, 'chess_item_5_05_e_a'));
-  assert.ok(mimic && [pairA.uid, pairB.uid].includes(mimic.uid), '拟态物质 on the pair');
+  const cnt = new Map();
+  for (const x of ps.allChess()) { const b = m.gd.baseIdOf(x.id); cnt.set(b, (cnt.get(b) || 0) + 1); }
+  assert.ok(mimic && (cnt.get(m.gd.baseIdOf(mimic.id)) || 0) >= 2, '拟态物质 on a pair');
+  const maxPairTier = Math.max(...[...cnt].filter(([, n]) => n >= 2).map(([b]) => m.gd.chess(b)?.tier || 0));
+  assert.equal(m.gd.chess(m.gd.baseIdOf(mimic.id))?.tier || 0, maxPairTier, '拟态物质 on the highest-tier pair');
   m.dispose();
 });
 

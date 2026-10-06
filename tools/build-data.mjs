@@ -320,6 +320,29 @@ const CUSTOM_CHESS = [
       ],
     },
   },
+  {
+    charId: 'char_4217_makoto',
+    baseId: 'chess_char_4217_makoto_a',
+    goldenId: 'chess_char_4217_makoto_b',
+    tier: 3,
+    identifier: 910,
+    shopLevelSortId: 98,
+    defaultSkillIndex: 2,                        // 开辟明日的剑刃 (S3)
+    defaultUniEquipId: 'uniequip_002_makoto',    // PUM-Y「彼此的声音」
+    bonds: ['lateranoShip', 'indomShip'],        // 拉特兰 / 不屈
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+    garrison: {
+      desc: '【拉特兰】【不屈】每转换一次替身，层数+2；自身被击倒时，【不屈】层数+1',
+      blackboard: [
+        { key: 'key', valueStr: 'act1autochess_gar_event_dollswap_self' },
+        { key: 'bond_id_swap', valueStr: 'lateranoShip,indomShip' },
+        { key: 'bond_id_dead', valueStr: 'indomShip' },
+        { key: 'bond_add_count_swap', value: 2 },
+        { key: 'bond_add_count_dead', value: 1 },
+      ],
+    },
+  },
 ];
 
 /** Merge CUSTOM_CHESS into the official season tables (idempotent). */
@@ -332,8 +355,8 @@ function applyCustomChess(act, charTable) {
   for (const c of CUSTOM_CHESS) {
     if (!charTable?.[c.charId]) { warn(`custom chess ${c.baseId}: char ${c.charId} missing from character_table`); continue; }
     const pair = [
-      { chessId: c.baseId, isGolden: false, st: c.normal, gid: 'garrison_custom_ascln_a' },
-      { chessId: c.goldenId, isGolden: true, st: c.golden, gid: 'garrison_custom_ascln_b' },
+      { chessId: c.baseId, isGolden: false, st: c.normal, gid: `garrison_custom_${c.charId}_a` },
+      { chessId: c.goldenId, isGolden: true, st: c.golden, gid: `garrison_custom_${c.charId}_b` },
     ];
     for (const { chessId, isGolden, st, gid } of pair) {
       act.charChessDataDict[chessId] = {
@@ -3240,7 +3263,7 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  if (visible.length !== 113) err(`expected 113 visible non-DIY chess, got ${visible.length}`);
+  if (visible.length !== 114) err(`expected 114 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);

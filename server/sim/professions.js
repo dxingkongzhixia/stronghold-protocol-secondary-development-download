@@ -173,6 +173,9 @@ export const DOLL_SWITCH = 1;
 const DOLL_SWITCH_IMMUNE = new Set(['stun', 'freeze', 'sleep']);
 
 const installDollkeeper = (battle, unit) => {
+  // 结城理 S3's SECOND <替身> form (俄耳甫斯): `dollLives` extra forms before a knock-out (profile.dollLives, the kit).
+  unit.trait.dollLives = Math.max(0, Math.floor(unit.profile?.dollLives ?? 0));
+  unit.trait.dollNo = 0;
   // the 替身's max HP comes from the unit's own 替身 token (风丸 纸偶) for its selected skill / module (DESIGN §16); a
   // dollkeeper without one (归溟幽灵鲨) must not borrow another operator's token stats: its own max HP (header)
   const dollHpMul = () => {
@@ -208,6 +211,7 @@ const installDollkeeper = (battle, unit) => {
   const leave = () => {
     if (!unit.trait.doll) return;
     unit.trait.doll = false;
+    unit.trait.dollNo = 0;
     unit.form = null;
     if (!unit.alive || !unit.deployed) return;
     startSwitch();
@@ -219,6 +223,7 @@ const installDollkeeper = (battle, unit) => {
   const enter = () => {
     if (unit.trait.doll || !unit.alive || !unit.deployed) return false;
     unit.trait.doll = true;
+    unit.trait.dollNo = 1;
     startSwitch();
     const dur = DOLL_SWITCH + (unit.profile.dollDuration ?? 20);
     const mul = dollHpMul();
@@ -239,10 +244,34 @@ const installDollkeeper = (battle, unit) => {
     if (battle.hasHook('dollSwap')) battle.emit('dollSwap', { unit, form: 'doll' });
     return true;
   };
+  /**
+   * A lethal hit on the <替身> of a dollkeeper that keeps MORE than one (结城理 S3: 塔纳托斯 then 俄耳甫斯,
+   * profile.dollLives): switch to the next <替身> form instead of being knocked out — only the LAST one's knock-out is
+   * hers. `unit.trait.dollNo` counts the forms (1, 2 …) so the kit can tell them apart. The `trait:substitute` buff is
+   * REPLACED in place (addBuff, same key): removing it would fire its `onRemove: leave` and switch her back.
+   */
+  const nextDoll = () => {
+    if (!(unit.trait.dollLives > 0)) return false;
+    unit.trait.dollLives -= 1;
+    unit.trait.dollNo = (unit.trait.dollNo ?? 1) + 1;
+    startSwitch();
+    const dur = DOLL_SWITCH + (unit.profile.dollDuration ?? 20);
+    const mul = dollHpMul();
+    battle.addBuff(unit, {
+      key: 'trait:substitute', duration: dur, visible: true, onExpire: leave, onRemove: leave,
+      mods: { blockCnt: -99, ...(mul !== 1 ? { hpMul: mul } : null) },
+      flags: { noSp: true, ...(unit.profile.dollNoAttack ? { disarm: true, silence: true } : null) },
+    });
+    unit.markDirty();
+    unit.hp = unit.s.maxHp;
+    battle.fx('substitute', at({ form: 'doll', dur }));
+    if (battle.hasHook('dollSwap')) battle.emit('dollSwap', { unit, form: 'doll' });
+    return true;
+  };
   battle.on('fatal', (ctx) => {
     if (ctx.unit !== unit || ctx.prevented) return;
     if (unit.trait.dollSwitching) { ctx.prevented = true; return; } // 不死 while switching (a 流失 ignores 无敌)
-    if (unit.trait.doll) return;                                   // the 替身 is knocked out
+    if (unit.trait.doll) { ctx.prevented = nextDoll(); return; }   // a 替身: the next form, else her knock-out
     ctx.prevented = enter();
   }, { owner: unit, priority: -100 });
   battle.on('dollSwitch', (ctx) => { if (ctx.unit === unit && !ctx.done) ctx.done = enter(); }, { owner: unit });

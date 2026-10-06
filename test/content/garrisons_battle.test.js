@@ -173,6 +173,33 @@ test('selfdead (幽灵鲨 46 / 砾 75 / 归溟幽灵鲨 40): per knock-out; 归�
   checkInvariants(h.b);
 });
 
+test('dollswap_self (结城理, custom): a <替身> ⇄ <本体> swap gives 拉特兰+2 且 不屈+2; a knock-out gives 不屈+1 only', () => {
+  for (const gid of idsOfKey('act1autochess_gar_event_dollswap_self')) {
+    const bb = GR(gid).bb;
+    const swap = num(bb.bond_add_count_swap), dead = num(bb.bond_add_count_dead);
+    assert.ok(swap > 0 && dead > 0, `${gid}: both amounts`);
+    // a knock-out: only the 不屈 list (the 拉特兰 one is untouched)
+    const ko = battle({ units: [{ id: 'op', g: [gid], row: 10, col: 4 }], bonds: { lateranoShip: B(0), indomShip: B(0) } });
+    const u0 = ko.unit('op');
+    ko.b.dealDamage(null, u0, { amount: 1e9, type: 'true' });
+    ko.step(1);
+    assert.equal(u0.alive, false, `${gid}: the operator is gone`);
+    assert.deepEqual(gains(ko), { indomShip: dead }, `${gid}: 不屈 on a knock-out, 拉特兰 untouched`);
+    // a dollkeeper: the switch to the <替身> gives BOTH lists, and the switch back gives them again
+    const h = battle({ units: [{ id: 'doll', g: [gid], row: 11, col: 4, o: { profession: 'SPECIAL', subProfessionId: 'dollkeeper' } }], bonds: { lateranoShip: B(0), indomShip: B(0) } });
+    const g = h.unit('doll');
+    h.b.dealDamage(null, g, { amount: 1e9, type: 'true' });
+    h.step(1);
+    assert.ok(g.alive && g.trait.doll, `${gid}: substitute`);
+    assert.deepEqual(gains(h), { lateranoShip: swap, indomShip: swap }, `${gid}: body → 替身`);
+    h.run(21);
+    assert.ok(g.alive && !g.trait.doll, `${gid}: swapped back`);
+    assert.deepEqual(gains(h), { lateranoShip: swap * 2, indomShip: swap * 2 }, `${gid}: 替身 → body`);
+    cover(gid);
+    checkInvariants(h.b);
+  }
+});
+
 test('consume_ammo (莫斯提马 22 x-5 / 圣约送葬人 23+55 / 蕾缪安 24 row of 3): per consume_count ammo, per-id caps', () => {
   for (const gid of idsOfKey('act1autochess_gar_event_consume_ammo')) {
     const g = GR(gid);

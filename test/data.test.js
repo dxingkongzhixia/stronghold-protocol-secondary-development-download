@@ -74,12 +74,12 @@ test('numbers: every stats/bb/enemyScale object holds only finite numbers (no nu
   assert.deepEqual(bad.slice(0, 10), [], `${bad.length} bad numeric fields`);
 });
 
-test('chess: 268 records, 113 visible non-DIY (16/17/20/22/19/19 per tier)', () => {
-  assert.equal(Object.keys(chess).length, 268);
-  assert.equal(visible.length, 113);
+test('chess: 270 records, 114 visible non-DIY (16/17/21/22/19/19 per tier)', () => {
+  assert.equal(Object.keys(chess).length, 270);
+  assert.equal(visible.length, 114);
   const perTier = {};
   for (const c of visible) perTier[c.tier] = (perTier[c.tier] || 0) + 1;
-  assert.deepEqual(perTier, { 1: 16, 2: 17, 3: 20, 4: 22, 5: 19, 6: 19 });
+  assert.deepEqual(perTier, { 1: 16, 2: 17, 3: 21, 4: 22, 5: 19, 6: 19 });
   assert.equal(normalChess.filter((c) => c.isDiy).length, 4);
   assert.equal(normalChess.filter((c) => c.isHidden).length, 17);
 });
@@ -154,7 +154,7 @@ test('bonds: 23 bonds with valid members, thresholds and effects', () => {
 
 test('garrisons: all referenced exist; 43 distinct effect keys', () => {
   const keys = new Set(Object.values(garrisons).map((g) => g.effectKey));
-  assert.equal(keys.size, 43);
+  assert.equal(keys.size, 44);
   for (const g of Object.values(garrisons)) {
     assert.ok(typeof g.eventType === 'string' && typeof g.desc === 'string', g.garrisonId);
     for (const o of g.owners) assert.ok(chess[o], `${g.garrisonId}: owner ${o}`);

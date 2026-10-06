@@ -107,7 +107,9 @@ test('#17 the user\'s case on act2 m01: the front operator takes over the enemy 
       if (r.E.alive && r.E.blockedBy !== r.F) {
         // only a status that cannot be blocked (妮芙's 恐惧, 浮空 …) or a displacement out of contact lets it go
         const f = r.E.s.flags;
-        assert.ok(f.fear || f.unblockable || f.levitate || f.attract || Math.hypot(r.E.x - r.F.x, r.E.y - r.F.y) > 0.7071, `${c.name} ${dir}: takes the enemy over`);
+        // a dollkeeper whose skill switched it to the <替身> blocks nothing (傀儡师: 阻挡数×0), so the foe goes free
+        const dollRelease = !!(r.F.trait?.doll || r.F.form === 'doll');
+        assert.ok(dollRelease || f.fear || f.unblockable || f.levitate || f.attract || Math.hypot(r.E.x - r.F.x, r.E.y - r.F.y) > 0.7071, `${c.name} ${dir}: takes the enemy over`);
         continue;
       }
       // healers, and skills that say 停止攻击 (泡泡 “挨打”, 凯瑟琳 战火淬炼 …) / attack only while active (阵法术师), are the

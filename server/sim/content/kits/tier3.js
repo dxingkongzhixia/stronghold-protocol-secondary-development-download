@@ -1909,6 +1909,139 @@ const KITS = {
     };
     return kit;
   },
+
+  // ---- 3_4217 结城理 · 傀儡师 (custom: tools/build-data.mjs CUSTOM_CHESS). The <替身> machinery is the dollkeeper
+  //      profession's (professions.js installDollkeeper): a lethal hit switches to a persona for 20 s. 不羁之力: while
+  //      the persona is out ATK +atk, maxHP +max_hp_t1 and the attack interval +base_attack_time seconds, and switching
+  //      TO a persona 停顿s (sluggish) the enemies in its range for `sluggish` s. S.E.E.S.队长: when the persona ends a
+  //      总攻击 deals atk_scale × ATK true damage to the enemies around every S.E.E.S. member. The skills pick the
+  //      persona and switch at once (`dollSwitch`): 俄耳甫斯 S1 (max_target arts, or heals a ≤ 50 % ally instead),
+  //      塔纳托斯 S2 (max_target arts, prob fear, and an execute below kill_atk_scale × ATK) and 塔纳托斯 S3 (default;
+  //      attack_speed +talent@attack_speed, max_target arts weakness hits, and a SECOND persona — 俄耳甫斯, +block_cnt /
+  //      heals — kept past the first one's knock-out: `dollLives`). The persona's attack rides the skill window, so the
+  //      spec lasts the persona's duration (the official skill ends the same frame; a sim-side simplification).
+  chess_char_4217_makoto_a: (bb, chess, def) => {
+    const d = defOf(chess, def);
+    const t0 = talentBb(d, 0), t1 = talentBb(d, 1);
+    const sid = selectedId(chess, d);
+    const dollDur = 20;   // the dollkeeper trait's <替身> window (professions.js dollDuration default; her trait bb has none)
+    const pRange = copyGrid(d.skill?.rangeGrid);
+    const scale = num(bb['attack@atk_scale'], 1);
+    const maxT = Math.max(1, Math.floor(num(bb['attack@max_target'], 1)));
+    const fear = num(bb['attack@fear'], 0), prob = num(bb['attack@prob'], 0), killScale = num(bb['attack@kill_atk_scale'], 0);
+    const healScale = num(bb['attack@heal_scale'], 0), maxHeal = Math.max(1, Math.floor(num(bb['attack@max_target_heal'], 1)));
+    const blockAdd = Math.floor(num(bb['attack@block_cnt'], 0));
+    const healRatio = num(bb['attack@hp_ratio'], 0);
+    const dollNo = () => Math.max(0, Math.floor(unit?.trait?.dollNo ?? 0));
+    // S1 俄耳甫斯: an attack heals instead when a ≤ 50 % friendly stands in range (its `onAttack` replaces the hit)
+    const healInstead = (battle, unit, ctx) => {
+      if (!(healScale > 0)) return false;
+      const hurt = battle.alliesInRadius(unit.x, unit.y, 3, null).filter((a) => a !== unit && a.alive && a.hp < a.s.maxHp * 0.5);
+      if (!hurt.length) return false;
+      hurt.sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp);
+      if (ctx) ctx.noAmmo = true;
+      battle.heal(unit, hurt[0], unit.s.atk * healScale, { tags: ['skill'] });
+      return true;
+    };
+    // S2 塔纳托斯: an in-range FEARED enemy below kill_atk_scale × ATK is executed (an aura, 0.1 s poll — PRTS 备注)
+    const execute = (battle, unit) => battle.every(0.1, () => {
+      if (!alive(unit) || unit.trait?.dollNo !== 1) return;
+      for (const e of battle.enemiesInKeys(unit.rangeKeys, unit, { canHitFly: true })) {
+        if (!e.alive || !e.findBuff('fear')) continue;
+        if (e.hp <= unit.s.atk * killScale) battle.dealDamage(unit, e, { amount: 9999999, type: 'true', canDodge: false, sourceless: true, tags: ['execute'] });
+      }
+    }, { owner: unit });
+    const kit = {
+      skill: {
+        kind: 'duration', duration: dollDur,
+        mods: { atkPct: num(bb.atk), aspd: num(t0.attack_speed) },
+        attack: { dmgType: 'arts', atkScale: scale, maxTargets: maxT },
+        onStart({ battle, unit }) { battle.after(0, () => { if (alive(unit) && !unit.trait.doll) battle.emit('dollSwitch', { unit }); }, { owner: unit }); },
+      },
+      skills: altSkills(chess, d, bb, {
+        skchr_makoto_1: (s) => ({
+          kind: 'duration', duration: dollDur,
+          attack: { dmgType: 'arts', atkScale: num(s.bb['attack@atk_scale'], 1) },
+          onStart({ battle, unit }) { battle.after(0, () => { if (alive(unit) && !unit.trait.doll) battle.emit('dollSwitch', { unit }); }, { owner: unit }); },
+        }),
+        skchr_makoto_2: (s) => ({
+          kind: 'duration', duration: dollDur,
+          attack: {
+            dmgType: 'arts', atkScale: num(s.bb['attack@atk_scale'], 1), maxTargets: Math.max(1, Math.floor(num(s.bb['attack@max_target'], 1))),
+            onEachHit({ battle, unit: u, target }) {
+              const p = num(s.bb['attack@prob'], 0), f = num(s.bb['attack@fear'], 0);
+              if (p > 0 && f > 0 && target?.alive && target.side === 'enemy' && battle.rng() < p) battle.applyStatus(target, 'fear', { duration: f, source: u });
+            },
+          },
+          onStart({ battle, unit }) { battle.after(0, () => { if (alive(unit) && !unit.trait.doll) battle.emit('dollSwitch', { unit }); }, { owner: unit }); },
+        }),
+      }),
+      talents: [
+        // 不羁之力: the persona's stat line; the 停顿 lands on the switch TO it (not between personas)
+        { install(battle, unit) {
+          battle.on('dollSwap', (ctx) => {
+            if (ctx.unit !== unit || ctx.form !== 'doll') return;
+            const keys = pRange ? gridKeys(pRange, unit) : unit.rangeKeys;
+            const sl = num(t0.sluggish, 0);
+            if (!(sl > 0)) return;
+            for (const e of battle.enemiesInKeys(keys, unit, { canHitFly: true })) battle.applyStatus(e, 'sluggish', { duration: sl, source: unit });
+            fx(battle, 'aoe', unit, { radius: 2.5, skill: 'makoto_sluggish' });
+          }, { owner: unit });
+          let on = null;
+          battle.every(0.25, () => {
+            const want = !!(unit.trait && unit.trait.doll);
+            if (want === on && (!want || unit.findBuff('makoto:doll'))) return;
+            on = want;
+            if (want) {
+              battle.addBuff(unit, { key: 'makoto:doll', mods: { atkPct: num(t0.atk), hpPct: num(t0.max_hp_t1), batPct: batMod(num(t0.base_attack_time), chess) }, tags: ['trait'] });
+            } else battle.removeBuff(unit, 'makoto:doll');
+          }, { owner: unit });
+        } },
+        // S.E.E.S.队长: 替身状态结束 ⇒ 总攻击 around every S.E.E.S. member (her `atk_scale` × ATK true damage)
+        { install(battle, unit) {
+          battle.on('dollSwap', (ctx) => {
+            if (ctx.unit !== unit || ctx.form !== null) return;
+            const dmg = num(t1.atk_scale, 0);
+            if (!(dmg > 0) || !alive(unit)) return;
+            const members = battle.allyUnits.filter((a) => a.kind === 'op' && a.alive && a.deployed && /^(char_4217|char_4218|char_4219|char_4220)_/.test(a.def?.charId || ''));
+            const seen = new Set();
+            for (const m of (members.length ? members : [unit])) {
+              for (const e of battle.foesInRadius(m.x, m.y, 3)) {
+                if (!e.alive || seen.has(e)) continue;
+                seen.add(e);
+                battle.dealDamage(unit, e, { amount: unit.s.atk * dmg, type: 'true', canDodge: false, tags: ['talent', 'sees'] });
+                fx(battle, 'strike', e, { src: unit.id, skill: 'sees_allout' });
+              }
+            }
+          }, { owner: unit });
+        } },
+      ],
+      // runs under EVERY selected skill: S1's heal-instead, S2's execute, S3's second persona (+block / heal)
+      install(battle, unit) {
+        if (sid === 'skchr_makoto_1') {
+          battle.on('beforeAttack', (ctx) => { if (ctx.unit === unit) healInstead(battle, unit, ctx); }, { owner: unit });
+        }
+        if (sid === 'skchr_makoto_2' && killScale > 0) execute(battle, unit);
+        if (blockAdd > 0) {
+          battle.every(0.25, () => {
+            const want = !!(unit.trait && unit.trait.dollNo >= 2);
+            if (want && !unit.findBuff('makoto:orpheus')) battle.addBuff(unit, { key: 'makoto:orpheus', mods: { blockCnt: blockAdd }, tags: ['skill'] });
+            else if (!want && unit.findBuff('makoto:orpheus')) battle.removeBuff(unit, 'makoto:orpheus');
+          }, { owner: unit });
+        }
+        if (healRatio > 0) {
+          battle.on('damaged', (ctx) => {
+            if (ctx.source !== unit || !ctx.dmg?.isAttack || ctx.target?.side !== 'enemy' || !ctx.target.alive) return;
+            if (unit.trait?.dollNo < 2 || !alive(unit)) return;
+            battle.heal(unit, unit, unit.s.maxHp * healRatio, { self: true, tags: ['skill'] });
+          }, { owner: unit });
+        }
+        void maxHeal;
+      },
+    };
+    if (sid === 'skchr_makoto_3') kit.trait = { dollLives: 1 };   // the SECOND persona (俄耳甫斯) past the first knock-out
+    return kit;
+  },
 };
 
 export default KITS;
