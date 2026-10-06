@@ -1954,17 +1954,22 @@ const KITS = {
       skill: {
         kind: 'duration', duration: dollDur,
         mods: { atkPct: num(bb.atk), aspd: num(t0.attack_speed) },
+        // the skill's own range (official `x-1` for all three): without it the unit fought on its BASE range, so the
+        // reach changed as the skill / personas came and went (player report)
+        targeting: { rangeGrid: pRange },
         attack: { dmgType: 'arts', atkScale: scale, maxTargets: maxT },
         onStart({ battle, unit }) { battle.after(0, () => { if (alive(unit) && !unit.trait.doll) battle.emit('dollSwitch', { unit }); }, { owner: unit }); },
       },
       skills: altSkills(chess, d, bb, {
         skchr_makoto_1: (s) => ({
           kind: 'duration', duration: dollDur,
+          targeting: { rangeGrid: pRange },
           attack: { dmgType: 'arts', atkScale: num(s.bb['attack@atk_scale'], 1) },
           onStart({ battle, unit }) { battle.after(0, () => { if (alive(unit) && !unit.trait.doll) battle.emit('dollSwitch', { unit }); }, { owner: unit }); },
         }),
         skchr_makoto_2: (s) => ({
           kind: 'duration', duration: dollDur,
+          targeting: { rangeGrid: pRange },
           attack: {
             dmgType: 'arts', atkScale: num(s.bb['attack@atk_scale'], 1), maxTargets: Math.max(1, Math.floor(num(s.bb['attack@max_target'], 1))),
             onEachHit({ battle, unit: u, target }) {
@@ -2021,20 +2026,30 @@ const KITS = {
           battle.on('beforeAttack', (ctx) => { if (ctx.unit === unit) healInstead(battle, unit, ctx); }, { owner: unit });
         }
         if (sid === 'skchr_makoto_2' && killScale > 0) execute(battle, unit);
-        if (blockAdd > 0) {
-          battle.every(0.25, () => {
+        // S3's SECOND persona 俄耳甫斯 is a SUPPORT form (PRTS 开辟明日的剑刃): while it is out (dollNo >= 2) 结城理
+        // does not attack (`disarm` — the official persona heals instead of hitting), blocks +attack@block_cnt, gives
+        // the friendly operators around it attack@prob physical AND arts dodge, and heals up to attack@max_target_heal
+        // of them for atk × attack@heal_scale every second. Everything follows the persona window itself.
+        if (blockAdd > 0 || prob > 0 || healScale > 0) {
+          let healAcc = 0;   // the per-second heal tick (the aura itself refreshes every 0.5 s)
+          battle.every(0.5, () => {
             const want = !!(unit.trait && unit.trait.dollNo >= 2);
-            if (want && !unit.findBuff('makoto:orpheus')) battle.addBuff(unit, { key: 'makoto:orpheus', mods: { blockCnt: blockAdd }, tags: ['skill'] });
-            else if (!want && unit.findBuff('makoto:orpheus')) battle.removeBuff(unit, 'makoto:orpheus');
+            if (want && !unit.findBuff('makoto:orpheus')) {
+              battle.addBuff(unit, { key: 'makoto:orpheus', mods: { blockCnt: blockAdd }, flags: { disarm: true }, tags: ['skill'] });
+            } else if (!want && unit.findBuff('makoto:orpheus')) battle.removeBuff(unit, 'makoto:orpheus');
+            if (!want) return;
+            const around = battle.alliesInRadius(unit.x, unit.y, 3, null).filter((a) => a !== unit && a.alive);
+            if (prob > 0) for (const a of around) battle.addBuff(a, { key: 'makoto:orpheusDodge', duration: 0.6, refresh: 'replace', mods: { dodgePhys: prob, dodgeArts: prob }, tags: ['skill'] });
+            const hurt = around.filter((a) => a.hp < a.s.maxHp).sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp);
+            healAcc += 0.5;
+            if (healAcc >= 1 && healScale > 0 && hurt.length) {
+              healAcc = 0;
+              for (const a of hurt.slice(0, Math.max(1, Math.floor(num(bb['attack@max_target_heal'], 1))))) battle.heal(unit, a, unit.s.atk * healScale, { tags: ['skill'] });
+            }
           }, { owner: unit });
         }
-        if (healRatio > 0) {
-          battle.on('damaged', (ctx) => {
-            if (ctx.source !== unit || !ctx.dmg?.isAttack || ctx.target?.side !== 'enemy' || !ctx.target.alive) return;
-            if (unit.trait?.dollNo < 2 || !alive(unit)) return;
-            battle.heal(unit, unit, unit.s.maxHp * healRatio, { self: true, tags: ['skill'] });
-          }, { owner: unit });
-        }
+        // (the old after-attack `attack@hp_ratio` heal was removed: his data has no hp_ratio, and 俄耳甫斯 no longer
+        //  attacks — the per-second aura heal above is the official behaviour)
       },
     };
     if (sid === 'skchr_makoto_3') kit.trait = { dollForm: 'doll3', dollForm2: 'doll3b', dollLives: 1 };   // the SECOND persona (俄耳甫斯, its own clip set) past the first knock-out

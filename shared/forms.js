@@ -61,7 +61,11 @@ const STATUE = Object.freeze({
 const JAKILL2 = clipSet('C2_Idle', 'C2_Move', 'C2_Die', 'C2_Attack');
 /** A 傀儡师's 替身 roles: idle `idle`, death `die`, attack `attack` (null: none), no skill clip of its own. */
 const dollRoles = (idle, die, attack = null) => Object.freeze({
-  idle, deploy: idle, die, attack: attack ? Object.freeze({ begin: null, loop: attack, end: null }) : null, attackDown: null, skill: null,
+  idle, deploy: idle, die,
+  // `via: 'attackAny'` like clipSet's attacks: the clip is driven per attack (a swing every attack interval), not as a
+  // skill-style loop — without it a 替身's attack clip restarts/fights the attack timer and looks jerky
+  attack: attack ? Object.freeze({ begin: null, loop: attack, end: null, via: 'attackAny' }) : null,
+  attackDown: null, skill: null,
 });
 export const FORMS = Object.freeze({
   char_1023_ghost2: Object.freeze({

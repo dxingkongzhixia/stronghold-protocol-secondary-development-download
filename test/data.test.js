@@ -74,12 +74,12 @@ test('numbers: every stats/bb/enemyScale object holds only finite numbers (no nu
   assert.deepEqual(bad.slice(0, 10), [], `${bad.length} bad numeric fields`);
 });
 
-test('chess: 272 records, 115 visible non-DIY (16/17/22/22/19/19 per tier)', () => {
-  assert.equal(Object.keys(chess).length, 272);
-  assert.equal(visible.length, 115);
+test('chess: 274 records, 116 visible non-DIY (16/17/22/22/19/20 per tier)', () => {
+  assert.equal(Object.keys(chess).length, 274);
+  assert.equal(visible.length, 116);
   const perTier = {};
   for (const c of visible) perTier[c.tier] = (perTier[c.tier] || 0) + 1;
-  assert.deepEqual(perTier, { 1: 16, 2: 17, 3: 22, 4: 22, 5: 19, 6: 19 });
+  assert.deepEqual(perTier, { 1: 16, 2: 17, 3: 22, 4: 22, 5: 19, 6: 20 });
   assert.equal(normalChess.filter((c) => c.isDiy).length, 4);
   assert.equal(normalChess.filter((c) => c.isHidden).length, 17);
 });
@@ -419,11 +419,14 @@ test('chess/tokens: talent tokens resolve and every token variant says where it 
   // Placeable (hand) tokens = the manually deployable summons (PRTS 卫戍协议/帮助 §战斗部署; user playtest #6): shop
   // state DEFAULT or no shop-state entry (凯瑟琳's device), never HIDDEN, made by some owner loadout (talent or skill) —
   // 赫默's 医疗探机 and 巫恋's 诅咒娃娃 included (in battle they wait on their tile for the skill).
+  // Exception: 望's 棋子 are granted AND deployed AUTOMATICALLY by his kit — never hand cards, so placeable is false
+  // although a talent/skill makes them.
+  const AUTO_ONLY = new Set(['token_10064_wang_stone1']);
   const makes = (list) => list.includes('talent') || list.includes('skill');
   for (const t of Object.values(tokens)) {
     if (t.kind !== 'summon') continue;
     const made = Object.values(t.variants).some((v) => makes(v.sources) || Object.values(v.bySkill || {}).some((b) => makes(b.sources)));
-    assert.equal(t.placeable, t.displayType !== 'HIDDEN' && made, `${t.tokenId} (${t.name}): placeable`);
+    assert.equal(t.placeable, t.displayType !== 'HIDDEN' && made && !AUTO_ONLY.has(t.tokenId), `${t.tokenId} (${t.name}): placeable`);
   }
   assert.deepEqual(Object.values(tokens).filter((t) => t.placeable).map((t) => t.name).sort(),
     ['医疗探机', '诅咒娃娃', '斯卡蒂的海嗣', '流形', '狼群', '爬行号·防护单元', '“一会儿见！”'].sort());
@@ -565,7 +568,8 @@ test('tokens: owner loadout variants (bySkill per non-default owner skill, byMod
         assert.ok(Array.isArray(b.sources) && b.sources.every((x) => allowed.has(x)), `${t.tokenId}@${owner}: bySkill sources`);
         assert.ok(b.count === null || isInt(b.count), `${t.tokenId}@${owner}: bySkill count`);
       }
-      const mods = o.isGolden && o.module?.active ? [...o.modules.filter((m) => !m.isDefault).map((m) => m.uniEquipId), 'none'] : [];
+      // the token carries a variant per selectable owner module; 'none' is a choice only while a default module is equipped
+      const mods = o.isGolden ? [...o.modules.filter((m) => !m.isDefault).map((m) => m.uniEquipId), ...(o.module?.active ? ['none'] : [])] : [];
       assert.deepEqual(Object.keys(v.byModule || {}), mods, `${t.tokenId}@${owner}: byModule keys`);
       for (const b of Object.values(v.byModule || {})) assert.ok(b.stats && b.trait && Array.isArray(b.talents), `${t.tokenId}@${owner}: byModule shape`);
     }

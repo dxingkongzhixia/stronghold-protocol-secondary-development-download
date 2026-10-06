@@ -373,6 +373,33 @@ const CUSTOM_CHESS = [
       },
     ],
   },
+  {
+    // 望 (2026 春节限定, 6★ 特种·陷阱师 traper): his 棋子 pieces are a NEW mechanic — deployable traps that LINK to
+    // activate each other and trigger when an enemy steps on an activated one (docs/MATCHMAKING.md §30). The piece is
+    // injected as `token_10064_wang_stone1` by applyCustomChess; the engine side lives in professions.js / tokens.js.
+    charId: 'char_2027_wang',
+    baseId: 'chess_char_2027_wang_a',
+    goldenId: 'chess_char_2027_wang_b',
+    tier: 6,                                     // 6 阶
+    identifier: 930,
+    shopLevelSortId: 96,
+    defaultSkillIndex: 2,                        // 天下劫 (S3)
+    defaultUniEquipId: null,                     // no module for now
+    bonds: ['yanShip', 'arcaneShip', 'emptyShip'],   // 炎 / 奥术 / 协防干员
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+    garrison: {
+      eventTypeDesc: '作战能力',
+      desc: '【炎】【奥术】每叠加3层，自身与召唤物攻击力+1%',
+      blackboard: [
+        { key: 'key', valueStr: 'act1autochess_gar_eff_attrByBond' },
+        { key: 'divide_num', value: 3 },
+        { key: 'bond_id', valueStr: 'yanShip,arcaneShip' },
+        { key: 'atk', value: 0.01 },
+      ],
+    },
+    tokenIds: ['token_10064_wang_stone1'],
+  },
 ];
 
 /** Merge CUSTOM_CHESS into the official season tables (idempotent). */
@@ -1309,6 +1336,11 @@ function buildTokens(ctx, chess, tokenOwners, enemies) {
       variants,
       assets: { avatar: tokenId, spine: tokenId },
     };
+    // 望's 棋子 (docs/MATCHMAKING.md §30): in-game it is placeable on ANY tile (全部位) and hits air (可对空); the
+    // mode's own table says MELEE / no-air, so correct the two fields here. `placeable: false` — the pieces are NOT
+    // hand cards: 望's kit grants them and deploys them AUTOMATICALLY in battle (the web port cannot place mid-battle),
+    // so the match must not also send 6 piece cards to the hand (pure automatic, owner's call).
+    if (tokenId === 'token_10064_wang_stone1') Object.assign(out[tokenId], { position: 'ALL', canHitFly: true, placeable: false });
   }
 
   // 炎佑 (yanShip 6-member summon) — allied flying unit built from its enemy template.
@@ -3302,7 +3334,7 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  if (visible.length !== 115) err(`expected 115 visible non-DIY chess, got ${visible.length}`);
+  if (visible.length !== 116) err(`expected 116 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);

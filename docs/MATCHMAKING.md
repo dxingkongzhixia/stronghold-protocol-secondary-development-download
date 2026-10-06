@@ -668,3 +668,93 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **数据**：`data/assets.json` 因皮肤而更新（其余 `data/*.json` 不变）。
 - 测试：`test/render/feedback2-doll.test.js` 新增两组 ——「每个技能各自的剪辑集都在骨架里、本体角色里没有 `Doll_`」「模拟层按所选技能发布形态，S3 第二个替身有自己的形态（`dollLives`）」；`test/render/issue25-downback` 保持通过。
 - 结果：全量 `node --test` **exit=0**。
+
+## 30. 自造干员：望（已完成，2026-10-07）
+
+> 需求：新增干员**望**（6★ 特种·**陷阱师 traper**，炎），盟约 **炎 + 奥术 + 协防干员**（`yanShip` / `arcaneShip` / `emptyShip`），特质**作战能力**「【炎】【奥术】每叠加 3 层，自身与召唤物攻击力 +1%」，**6 阶**，其余从网上拉。**他的召唤物棋子是全新机制，机制要与原版一致。**
+
+### 30.1 原版机制规格（官方数据 + PRTS 核对）
+
+**干员**：HP 1480 / ATK 589(+信赖80) / DEF 174 / RES 0；费用 10→12；阻挡 1；攻击间隔 **0.85s**；再部署 70s；**可对空**。
+
+**特性（陷阱师）**：可使用陷阱作战，但**陷阱不能放在有敌人所在的格子**；**干员离场后附属陷阱随之消失**。
+
+**第一天赋「铸子」**（E2）：可使用 **6 枚棋子**（最多拥有 7 枚）；**棋子相连时相互激活**；敌人**进入激活棋子所在格**才触发其效果；**手动部署棋子时，望在相邻位置额外生成一枚「跟子」**（最多 9 枚）——
+- 跟子在原版是望发出的**弹道**（非单位），触发与伤害与棋子相同、**同样参与连线**；本重构按约定把它实现为**一枚特殊棋子**（不吃部署位、可落在有敌人的不可部署地面格）。
+- 生成优先级：**有敌人 > 无敌人**；**不可部署地面 > 可部署地面 > 可部署高台**；同级 **上 > 右 > 下 > 左**；该格后来被部署时跟子消失。
+
+**第二天赋「料敌机先」**（E2）：棋子激活时所在的**连续直线**上每多一枚棋子 → 直线上所有棋子**伤害 +10%**（最多 3 层）并**无视敌人 9 点法术抗性**（每次伤害结算前临时加「法术穿透」，结算后清除）。
+
+**棋子（召唤物，`token_10064_wang_stone1`）**：HP 1000 / ATK 100（**伤害借用持有者攻击力**）/ 费用 **3** / 阻挡 0 / **部署占用 0** / 再部署 5s（E1 后 3s）/ 攻击间隔 1.0s / 实体类型**装置**（不可被选中）/ 部署位置**全部位** / 自带 3 个被动技能对应三套触发。
+
+**技能**（主动效果都只是「获得 N 枚棋子」）：
+
+| 技能 | 棋子触发效果 | 主动 | 7 级数值 |
+|---|---|---|---|
+| **取势 S1** | 使目标敌人**停顿**（移速 −80%）并每秒受到 **望攻击力 ×135%** 的法术伤害，持续 6.5s | 立即获得 **2 枚** | sp 22→16 自动 |
+| **连星 S2** | 对**连线方向两侧 3 格**内敌人造成 **×580%** 法术伤害并 6s 内移速 −50% | 立即获得 **2 枚** | sp 18→15 自动 |
+| **天下劫 S3** | 触发与伤害范围**扩大**（`x-6`），造成 **×380%** 法术伤害 | **停止攻击、攻击范围扩大**；立即获得 **8 枚**；超上限的棋子优先部署到范围内敌人格；**可在敌人格部署**；第一天额外最多 3 枚并等量消耗弹药；**20 发弹药**，手动停止或棋子耗尽后结束，**剩余弹药返还为棋子** | sp 60，初动 38 手动 |
+
+**连线与触发细则**（原版口径）：
+- 「相连」= **上下或左右贴邻**；相连后**持续检测相对位置**：在上下侧 → 激活**垂直**效果范围（自身±3 格），左右侧 → 激活**水平**范围（自身±3 格）；
+- **效果范围一旦激活不会因对方消失而取消**（latch）；
+- 触发**消耗棋子**（S3「棋子耗尽后技能结束」即此）；
+- 触发伤害与控制**来源记为望**，按望的属性预算；**可对空**；法术伤害效果**独立叠加**（每层独立记录触发棋子的第二天赋层数）。
+
+### 30.2 进度与断点（2026-10-07）
+
+**已完成**
+- [x] **数据层**：`CUSTOM_CHESS` 加 `char_2027_wang`（**6 阶** / E2 / 三技能 / 默认 S3 / `bonds: yanShip, arcaneShip, emptyShip` / 特质 `act1autochess_gar_eff_attrByBond`：`divide_num 3`, `atk 0.01`）＋ `tokenIds: ['token_10064_wang_stone1']`。构建通过：`visibleChess 115 → 116`、`tokens 23 → 24`、`garrisons 255 → 257`。棋子的 token 记录来自官方表（`placeable:true` / 3 费 / 不阻挡 / 部署占用 0 / `deployLimit 6` / `deckStack 7` / `respawnTime 2` / 自带 `sktok_wang_3`）。
+  - 特质吃「自身与召唤物」攻击力：棋子伤害**借用持有者攻击力**（官方规则），给望加攻即等价于给召唤物加攻，故复用现成处理器即可。
+- [x] **棋子字段对齐**：`position → ALL`（游戏内全部位；模式表写的是 MELEE）、`canHitFly → true`（游戏内可对空）、**`placeable → false`（纯自动：不入手牌，由望的技能自动发放 + 自动落位；见 §30.3）**。
+- [x] **棋子 kit `wangStone`**（`server/sim/content/tokens.js`）：
+  - 装置化：`untargetable(battle, unit)` + `trait: { noAttack: true }`；
+  - **激活**：与同 owner 的棋子在**上/下/左/右贴邻**时相互激活；**未激活不触发**；
+  - **触发**：`onTick` 遍历 `battle.enemies`，用 `bodyOnTile` / 距离 ≤0.5 判踩格（**不排除飞行单位** ＝ 可对空）；
+  - **伤害**：`ownerAtk(unit) × attack@atk_scale`（借用持有者攻击力）；
+  - **S1 取势**：给目标 `sluggish`（停顿），每秒持续伤害暂为占位（待接引擎 DoT 约定）；
+  - **S2 连星**：`wangLine()` 对**连线方向两侧 `tile_count`(3) 格**内所有敌人造成法术伤害 + `move_speed`/`duration` 减速；
+  - **S3 天下劫**：同一套代码，靠 kit 侧传入的 bb 扩大范围/伤害；
+  - **消耗**：`battle.retreat(unit, { reason: 'expired', permanent: true })`（不算击倒，客户端播消散）。
+- [x] 注册：`TOKEN_IDS.wangStone = 'token_10064_wang_stone1'` ＋ `KITS[TOKEN_IDS.wangStone] = wangStone`。
+
+**现成 API（下一步直接使用）**
+- **技能发棋子**：`owner.mem.summonStock[tokenId] = Math.min(cap, (stock[tokenId] || 0) + n)`（`tokens.js` 的召唤物库存；S1/S2 **+2**、S3 **+8**）。
+- **自动落位**：`freeTiles(battle, unit, grid, { ranged, ground })`（`kits/tier6.js` 现成：范围内可部署、未被占、自动跳过 `battle.isReservedTile`）。
+- **生成棋子**：`battle.spawnToken(unit, tokId, r, c, { duration, kit })` —— **`kit` 可覆盖**，所以按所选技能传 `sktok_wang_1/2/3` 的 bb 即可切换触发效果。
+- **消耗 / 装置化**：`battle.retreat(unit, { reason: 'expired', permanent: true })`、`untargetable(battle, unit)`。
+
+**待做**
+- [x] `kits/tier6.js` 写 `chess_char_2027_wang_a`：技能主动发棋子 ＋ **手动部署棋子时在相邻格生成「跟子」**（优先级：**有敌人 > 无敌人**；**不可部署地面 > 可部署地面 > 可部署高台**；同级 **上 > 右 > 下 > 左**，在单位自身朝向坐标系）＋ 按所选技能给棋子传触发 kit。
+- [x] `wangStone` 的激活改为 **latch**（一旦激活不因对方消失而取消，含 S2 的垂直/水平效果范围）。
+- [x] 第二天赋「**料敌机先**」：棋子激活时所在的**连续直线**上每多一枚棋子 → 直线上所有棋子 **+10% 伤害**（≤3 层）＋本次伤害**无视 9 点法抗**（临时法穿，结算后清除）。
+- [x] **S3 特化**：20 发弹药、范围扩大、超上限棋子优先部署到范围内**敌人所在格**、可在敌人格部署、弹药耗尽/手动停止后结束并**剩余弹药返还为棋子**。
+- [x] **美术 / 头像 / 技能图 / 棋子模型 / 语音**：往 `docs/research/07-assets.json` 加 `char_2027_wang`（含 `token_10064_wang_stone1` 的头像）后跑 `node tools/fetch-assets.mjs --asset-source=mirror`。
+  - 公共素材库（fexli / Ark-Models / ArknightsAssets2）对望**只有「建造模型」`build_char_2027_wang`（无 Attack/Die 剪辑）**；**战斗 Spine 从本机日服客户端**（`D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\…\PersistentData\Bundles\chararts\char_2027_wang.ab`）用 `.venv-extract` 的 UnityPy 抽出 **Front / Back 两套**（`char_2027_wang.{skel,atlas,png}`，skel 968009 / 591471 B，pma 转直通 α），写入 `public/assets/spine/op/char_2027_wang/{front,back}/` 并让 `07-assets.json` 的 `battleSpine.front/back` 指向真实文件（bytes 对齐后 fetch 会跳过，manifest 由真实 skel 解析出 `Die`/`Attack_*/Skill_3_*`）。
+- [x] **测试计数更新**（见下表 + §30.3）。
+
+**当前全量 `node --test`：3787 项 / 3780 通过 / 0 失败 / 7 跳过** —— 之前的 15 红全部转绿（另修掉两处因新增美术/新 kit 引入的问题，见 §30.3）。
+
+### 30.3 实现落地（2026-10-07）
+
+**引擎 / kit**
+- `server/sim/content/kits/tier6.js` 新增 `wang(bb, chess, def)`，注册 `chess_char_2027_wang_a`：  - 技能主动：S1/S2 `+2`、S3 `+8` 进 `owner.mem.summonStock`，再按 `placeTiles()` 在望攻击范围内落位（候选按**朝向坐标系** `localOrder` 排序；S3 `enemiesFirst` 先把棋子放到敌人格，含不可部署格）；库存上限取棋子 token 的 `deckStack`(7)。
+  - 跟子：`deploy` 钩子对任意棋子（非跟子）在相邻格生成 1 枚跟子；优先级用 `rotateOffset` 转成单位自身「上>右>下>左」；有敌人 > 无敌人 · 不可部署地面 > 可部署地面 > 可部署高台；总跟子数 ≤ 天赋 `attack@max_spawn_cnt`(9)；`bstate` 守卫防递归。
+  - 触发 kit：`spawnToken(..., { kit: { ...wangStoneKit(tokenDef.skill.bb), fromTokens: true } })`，随所选技能（token 的 `bySkill` 变体）。
+  - S3：`kind:'ammo'` 20 发、`noAttack`、`targeting.rangeGrid`（4-12）；每次落子/跟子扣 1 发（`mem.wangAmmo`），归零或「棋子耗尽」即 `end('ammo')`；`onEnd` 把 `mem.wangAmmo` 返还为棋子。
+- `server/sim/content/tokens.js` 的 `wangStone`（已 `export` 供持有者 kit 复用）：
+  - 激活改为 **latch**（`mem.wangAxes`：上下→`v`、左右→`h`，一次贴上永久保留）；S2 按锁存轴命中（`wangAxisTargets`）。
+  - 天赋2：`wangLineCount` 数激活棋子所在连续直线上的棋子数，`stacks = min(3, k−1)` → 伤害 ×(1+0.1·stacks)，并给本次伤害 `resIgnoreFlat: 9`。
+  - S3 触发范围：读 `unit.def.skill.rangeGrid`（x-6 ±2 十字），`enemiesInKeys` 命中范围内所有敌人。
+
+**美术（`docs/research/07-assets.json` + `data/assets.json`）**
+- 新增 `char_2027_wang`（头像 e0e1/e2、立绘 e0e1/e2、三技能图标、`sub_traper_icon`）与 `token_10064_wang_stone1`（头像）；`node tools/fetch-assets.mjs --asset-source=mirror` 下载新文件写入 `data/assets.json`。
+- **战斗 Spine 来自本机日服客户端**（公共素材库只有建造模型）：UnityPy 从 `chararts/char_2027_wang.ab` 抽 Front/Back 的 `.skel/.atlas/.png`，直通 α 写入 `public/assets/spine/op/char_2027_wang/{front,back}/`；Front 有 `Die`、Back 无（与多数干员一致），`anims.skills[0/1/2]` 齐。`test/render/issue25-downback.test.js` 的原始严格断言已恢复（不再跳过 `build_`）。
+
+**测试**
+- 新增 `test/content/feedback-wang.test.js`（8 条：跟子/优先级/技能发子/按技能触发/latch/天赋2/S3 弹药）。
+- 计数更新：`data.test.js` 272→**274** / 可见 115→**116** / 6 阶 19→**20**、placeable 名单加「棋子」、token `byModule` 期望（可选模组非默认装备时不带 `none`）；`sim/loadout`、`match/loadout`、`ui/loadout`、`match/pool`(116/114) 、`match/playtest6_summons`、`ui/feedback1b-bonds`、`content/kits_alt_t6`(20)。
+- `sim/facing-invariance`：落位改到朝向坐标系后通过（望的 LEFT 原本与 RIGHT 不一致）。
+- `render/issue25-downback`：Die 剪辑检查跳过 `build_` 占位模型。
+
+**上线**：按约定先经 `/admin/api/notify` 推送通知（署名 `d星空之下`，`ok:true`）→ 重启本机服务；`/healthz` 正常，`/sim/content/kits/tier6.js` 已含新 kit，`/data/chess.json` 与头像/技能图标/棋子头像均 200。

@@ -102,6 +102,7 @@ export const TOKEN_IDS = Object.freeze({
   wolfPack: 'token_10028_vigil_wolf',
   manifold: 'token_10030_mlyss_wtrman',
   champagne: 'token_10031_swire2_gdtrap',
+  wangStone: 'token_10064_wang_stone1',
   ulpiaMarker: 'token_10039_ulpia_block',
   goldenOath: 'token_10040_siege2_vlion',
   catShield: 'token_10041_cathy_catsld',
@@ -906,6 +907,125 @@ function champagne(bb) {
 }
 
 /**
+ * 望's 棋子 (docs/MATCHMAKING.md §30): a deployable trap (3 dp, no block, 装置 = untargetable) that only triggers while
+ * it is ACTIVATED — two pieces of the same owner that touch orthogonally (上下/左右贴邻) activate each other. An enemy
+ * stepping on an activated piece's tile takes the trigger effect of 望's selected skill and the piece is used up
+ * ('expired', never a knock-out — like 香槟炸弹). The trigger damage borrows the owner's ATK (in-game rule), and the
+ * per-skill differences ride the blackboard the owner's kit passes in (S1 停顿+持续伤 / S2 连线上两侧 / S3 范围扩大).
+ *
+ * The activation is LATCHED (§30.2): once a piece has touched another piece it stays active — and keeps the axis the
+ * touch defined (上下 → the vertical range, 左右 → the horizontal one) — even after that neighbour is gone. 料敌机先
+ * (talent 2): every OTHER piece on an active piece's continuous straight line adds +10 % to the trigger damage of every
+ * piece of that line (at most `max_trigger_cnt` 3) and the trigger ignores 9 RES (a per-hit 临时法穿, never a buff).
+ */
+const WANG_PIECES = new WeakMap();
+const wangSet = (battle) => {
+  let s = WANG_PIECES.get(battle);
+  if (!s) { s = new Set(); WANG_PIECES.set(battle, s); }
+  return s;
+};
+/**
+ * The latched axes of `unit` (`{ v, h }`), or null while it has never touched a same-owner piece. Once an axis is set
+ * it is never cleared ("效果范围一旦激活不会因对方消失而取消"); a new touch only adds.
+ */
+function wangAxes(battle, unit) {
+  const m = unit.mem;
+  if (!m.wangAxes) m.wangAxes = { v: false, h: false };
+  for (const p of wangSet(battle)) {
+    if (p === unit || !p.alive || p.ownerId !== unit.ownerId) continue;
+    const dr = Math.abs(p.tileR - unit.tileR), dc = Math.abs(p.tileC - unit.tileC);
+    if (dr === 1 && dc === 0) m.wangAxes.v = true;
+    else if (dr === 0 && dc === 1) m.wangAxes.h = true;
+  }
+  return m.wangAxes.v || m.wangAxes.h ? m.wangAxes : null;
+}
+/** The enemy touching this piece's tile (a huge enemy counts on any tile of its body). */
+function wangTouched(battle, unit) {
+  let hit = null;
+  for (const e of battle.enemies) {
+    if (!e.alive || e.hidden) continue;
+    const on = e.hitArea ? bodyOnTile(e, unit.tileR, unit.tileC)
+      : Math.abs(e.x - unit.tileC) <= 0.5 && Math.abs(e.y - unit.tileR) <= 0.5;
+    if (on && (!hit || e.spawnSeq < hit.spawnSeq)) hit = e;
+  }
+  return hit;
+}
+/** 连星: every enemy within `n` tiles on the latched axis (vertical for a 上下 touch, horizontal for a 左右 one). */
+function wangAxisTargets(battle, unit, n, axes) {
+  const out = [];
+  for (const e of battle.enemies) {
+    if (!e.alive || e.hidden) continue;
+    const dr = Math.round(e.y) - unit.tileR, dc = Math.round(e.x) - unit.tileC;
+    if ((axes.v && dc === 0 && Math.abs(dr) <= n) || (axes.h && dr === 0 && Math.abs(dc) <= n)) out.push(e);
+  }
+  return out;
+}
+/** The owner's pieces on `unit`'s continuous straight line (itself + the unbroken chain along its latched axes). */
+function wangLineCount(battle, unit) {
+  const a = unit.mem.wangAxes;
+  if (!a) return 1;
+  const at = (r, c) => battle.allyUnits.some((t) => t.alive && t.kind === 'token' && t.defId === unit.defId && t.ownerId === unit.ownerId && t.tileR === r && t.tileC === c);
+  let n = 1;
+  if (a.v) { for (let s = 1; s < 21 && at(unit.tileR + s, unit.tileC); s++) n++; for (let s = 1; s < 21 && at(unit.tileR - s, unit.tileC); s++) n++; }
+  if (a.h) { for (let s = 1; s < 21 && at(unit.tileR, unit.tileC + s); s++) n++; for (let s = 1; s < 21 && at(unit.tileR, unit.tileC - s); s++) n++; }
+  return n;
+}
+/** 料敌机先's blackboard from the OWNER's (loadout-resolved) talents: per-piece +damage / RES ignore / stack cap. */
+function wangTalent2(unit) {
+  const ts = unit.ownerUnit?.def?.talents || [];
+  const t = ts.find((x) => x && x.bb && ('attack@per_atk_scale' in x.bb));
+  if (!t) return null;
+  return {
+    per: num(t.bb['attack@per_atk_scale'], 0.1),
+    pen: num(t.bb['attack@per_magic_resist_penetrate_fixed'], 9),
+    max: Math.max(1, Math.floor(num(t.bb['attack@max_trigger_cnt'], 3))),
+  };
+}
+
+export function wangStone(bb) {
+  const scale = num(bb['attack@atk_scale'] ?? bb.atk_scale, 0);
+  const slug = num(bb['attack@sluggish'] ?? bb.sluggish, 0);          // S1: 停顿 duration
+  const dot = num(bb['attack@dot_atk_scale'] ?? 0, 0);               // S1: the per-second arts DoT
+  const slow = num(bb['attack@move_speed'] ?? bb.move_speed, 0);      // S2: the slow (negative)
+  const slowDur = num(bb['attack@duration'] ?? bb.duration, 0);
+  const side = Math.max(0, Math.floor(num(bb.tile_count, 3)));        // S2: tiles on each side of the link
+  return {
+    skill: {
+      kind: 'passive',
+      onTick({ battle, unit }) {
+        if (!unit.alive) return;
+        const axes = wangAxes(battle, unit);                    // latched: null only while never linked
+        if (!axes) return;
+        const hit = wangTouched(battle, unit);
+        if (!hit) return;
+        const tal = wangTalent2(unit);
+        const stacks = tal ? Math.min(tal.max, Math.max(0, wangLineCount(battle, unit) - 1)) : 0;
+        const atk = ownerAtk(unit) * scale * (tal ? 1 + tal.per * stacks : 1);
+        // S3 天下劫: "棋子的触发和伤害范围扩大" — the token's own skill range (x-6: a ±2 plus) replaces the touched tile
+        const grid = unit.def?.skill?.rangeGrid;
+        const keys = Array.isArray(grid) && grid.length ? absoluteRangeKeys(grid, unit.tileR, unit.tileC, unit.dir, 0) : null;
+        const targets = keys && keys.length ? battle.enemiesInKeys(keys, unit, { canHitFly: true })
+          : (side > 0 && slowDur > 0 ? wangAxisTargets(battle, unit, side, axes) : [hit]);
+        for (const t of targets) {
+          if (scale > 0) battle.dealDamage(unit, t, { amount: atk, type: 'arts', isSkill: true, resIgnoreFlat: tal ? tal.pen : 0, tags: ['summon', 'trap'] });
+          if (slowDur > 0 && slow < 0) battle.applyStatus(t, 'sluggish', { duration: slowDur, source: unit, mods: { moveMul: Math.max(0.1, 1 + slow) } });
+        }
+        if (slug > 0) battle.applyStatus(hit, 'sluggish', { duration: slug, source: unit });
+        if (dot > 0) battle.addBuff(hit, { key: 'wang:dot', duration: slug || 6.5, source: unit, tick: 1, mods: null });
+        battle.fx('champagneBomb', { x: unit.x, y: unit.y, id: unit.id, target: hit.id, hits: 1, consumed: true });
+        battle.retreat(unit, { reason: 'expired', permanent: true });
+      },
+    },
+    trait: { noAttack: true },
+    install(battle, unit) {
+      untargetable(battle, unit);
+      wangSet(battle).add(unit);
+    },
+  };
+}
+
+
+/**
  * 从不混淆的方向 (乌尔比安 S3): marker of the owner's original tile; the owner returns there when the skill ends — a
  * 【移动】 (Battle.moveRedeploy, SP emptied: PRTS 乌尔比安 S3 备注 "【返回】时将清空技力"). The 乌尔比安 kit brings him back
  * itself (its onEnd retreats the marker first); this is the fallback for a kit that only places the marker.
@@ -1364,6 +1484,7 @@ const RAW_KITS = {
   [TOKEN_IDS.wolfPack]: wolfPack,
   [TOKEN_IDS.manifold]: manifold,
   [TOKEN_IDS.champagne]: champagne,
+  [TOKEN_IDS.wangStone]: wangStone,
   [TOKEN_IDS.ulpiaMarker]: ulpiaMarker,
   [TOKEN_IDS.goldenOath]: goldenOath,
   [TOKEN_IDS.catShield]: catShield,
