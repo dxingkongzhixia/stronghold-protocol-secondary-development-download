@@ -645,3 +645,26 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
     `curl -s -X POST "http://127.0.0.1:3000/admin/api/notify?token=$(cat var/admin-token.txt)" -H 'Content-Type: application/json' -d '{"text":"服务器将在 5 分钟后重启更新，请尽快结束当前对局","sign":"d星空之下"}'`
 - 测试：`test/admin.test.js`（令牌 / 方法 / 空内容拦截、默认只发已登录、`scope:'all'` 含游客、`sys.notice` 帧内容、历史顺序与人数）。
 - 结果：全量 `node --test` **exit=0**。
+
+## 29. 结城理〈替身〉动画（2026-10-07）
+
+> 报告：**结城理转换替身时一直坐地上，动画不对**。
+
+- **根因一（本体被错认）**：`tools/assets/anim-roles.mjs` 解析**本体**动画角色时，把骨架里的 **`Doll_*`（替身专用）剪辑**也算进了候选 —— 他的骨架没有本体 `Die`，于是 `die` 被解析成 `Doll_Skill_1_Die`（替身倒地那一帧），一换替身就停在那姿势（「坐地上」）。
+  - **修法**：解析本体角色时**排除 `Doll_*`**；本体没有 `Die` 时回退到 **`SwitchOut`**（傀儡师「本体换出去」那一幕，也正是它倒下的样子）—— `test/render/issue25-downback` 要求每个干员 Front 都有倒地剪辑，这条回退同时满足它。
+- **根因二（替身形态没有条目）**：`shared/forms.js` 的 `FORMS` 只有官方两位傀儡师（归溟幽灵鲨 / 风丸），**没有结城理** → 替身形态一直画的是本体动画。
+  - **修法**：给他的骨架补 4 套形态（他的替身剪辑**按技能分套**）：
+
+    | 形态 | 用于 | 换入 | 待机 | 攻击 | 结束（form 结束 / 阵亡） |
+    |---|---|---|---|---|---|
+    | `doll` | 极速送达 S1 | `Doll_Skill_1_SwitchIn` | `…_1_Idle` | `…_1_Attack` | `…_1_Die` |
+    | `doll2` | 重力自定义 S2 | `…_2_SwitchIn` | `…_2_Loop` | —（不攻击） | `…_2_Die` |
+    | `doll3` | 酸橙的心事 S3 第一替身（塔纳托斯） | `…_3_P1_SwitchIn` | `…_3_P1_Idle` | `…_3_P1_Attack_A` | `…_3_P1toP2_ChangeEnd`（它**没有阵亡剪辑**，被打就变成 P2） |
+    | `doll3b` | S3 第二替身（俄耳甫斯） | `…_3_P1toP2_ChangeEnd` | `…_3_P2_Loop` | —（不攻击） | `…_3_P2_Die` |
+
+- **按技能 / 阶段发布形态**：模拟层 `installDollkeeper` 原来把形态写死 `unit.form = 'doll'`。现在新增 `dollForm()`：读 `unit.profile.dollForm` / `dollForm2`（由**技能 kit 的 `trait`** 声明 —— `kits/tier3.js`：S1 → `doll`、S2 → `doll2`、S3 → `doll3` + `dollForm2: 'doll3b'` 与 `dollLives: 1`），并在**每一次切换**（`enter()` / `nextDoll()`）写入 `unit.form` 与该形态的 `fx('substitute', { form })`，所以替身出现的那一帧就是「该技能的替身」。官方傀儡师不声明这两个字段 → 仍走 `doll`（她们的 `*_B` 套），行为不变。
+- **换成时装（皮肤）**：结城理的**战斗模型**改用官方时装 **`char_4217_makoto@p3r`**（Persona 3 Reload 联动皮，镜像目录 `char_4217_makoto_p3r_1`），不再使用原版模型 —— `docs/research/07-assets.json` 的 `battleSpine`（front / back × skel / atlas / png）指向该皮肤，再用 `node tools/fetch-assets.mjs --asset-source=mirror` 下载并重建 `data/assets.json`（现在指向 `/assets/spine/op/char_4217_makoto/front/char_4217_makoto_p3r_1.skel`）。**皮肤骨架的动画名与原版完全一致（含全部 `Doll_Skill_*`）**，所以上面 4 套替身形态无需任何改动。
+  - 头像 / 立绘暂未换：现有镜像（fexli / yuanyan）里没有这套皮肤的 avatar / portrait（只有战斗模型），UI 里的小头像与立绘仍是原版；要换需要另找可用图源。
+- **数据**：`data/assets.json` 因皮肤而更新（其余 `data/*.json` 不变）。
+- 测试：`test/render/feedback2-doll.test.js` 新增两组 ——「每个技能各自的剪辑集都在骨架里、本体角色里没有 `Doll_`」「模拟层按所选技能发布形态，S3 第二个替身有自己的形态（`dollLives`）」；`test/render/issue25-downback` 保持通过。
+- 结果：全量 `node --test` **exit=0**。

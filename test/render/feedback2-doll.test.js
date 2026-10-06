@@ -20,6 +20,7 @@ import { STATUS_KEYS } from '../../public/js/render/textures.js';
 import { spineEntry, hasBackSpine } from '../../public/js/assets.js';
 import { fxForm } from '../../shared/protocol.js';
 import { makeBattle, enemyRec } from '../helpers/battleHarness.js';
+import { getData } from '../../server/data.js';
 import { unitInfo } from '../../server/sim/snapshot.js';
 import { DOLL_SWITCH } from '../../server/sim/professions.js';
 
@@ -294,4 +295,63 @@ test('the official skeleton: *_B clips are the 替身, Die_B ends gone, Die_B_2 
   assert.equal(drawn('Die_B', 1).doll, 0, 'Die_B: gone at its end');
   assert.ok(drawn('Die_B_2', 1).doll > 30, 'Die_B_2: still there, collapsed');
   assert.equal(drawn('Start_2', 0).body, 0, 'Start_2: the 本体 fades in');
+});
+
+// 结城理 (custom): his skeleton carries a <替身> clip set PER SKILL (Doll_Skill_1_* / _2_* / _3_P1_*) plus the
+// transformed second one (_3_P2_*). His kit names them (trait.dollForm / dollForm2, kits/tier3.js) and professions.js
+// publishes the form per switch (fx 'substitute' { form }), so the view enters exactly the selected skill's doll — and
+// S3's 俄耳甫斯 once the first one is knocked out (dollLives). Player report: the doll drew the 本体's clips.
+describe('结城理\'s <替身> (FORMS doll / doll2 / doll3 / doll3b)', () => {
+  const MAK = 'char_4217_makoto';
+  const D = getData({ log: { warn() {}, error() {}, info() {} } });
+  const battle = (skillIndex) => {
+    const rec = D.chess['chess_char_4217_makoto_a'];
+    const h = makeBattle({
+      defs: { chess: { [rec.id]: rec } },
+      units: [{ chessId: rec.id, row: 10, col: 4, dir: 'RIGHT', skillIndex }],
+      enemies: [{ key: 'e_dummy', count: 1, interval: 0, pos: [10, 7] }],
+      autoFinish: false, timeLimit: 60,
+    });
+    h.step(1);
+    return h;
+  };
+
+  test('each skill has its own clip set in the skeleton; the base roles use no Doll_ clip', () => {
+    const front = assets.chars[MAK].spine.front.animations;
+    for (const [form, names] of Object.entries({
+      doll: ['Doll_Skill_1_SwitchIn', 'Doll_Skill_1_Idle', 'Doll_Skill_1_Attack', 'Doll_Skill_1_Die'],
+      doll2: ['Doll_Skill_2_SwitchIn', 'Doll_Skill_2_Loop', 'Doll_Skill_2_Die'],
+      doll3: ['Doll_Skill_3_P1_SwitchIn', 'Doll_Skill_3_P1_Idle', 'Doll_Skill_3_P1_Attack_A', 'Doll_Skill_3_P1toP2_ChangeEnd'],
+      doll3b: ['Doll_Skill_3_P1toP2_ChangeEnd', 'Doll_Skill_3_P2_Loop', 'Doll_Skill_3_P2_Die'],
+    })) {
+      const f = FORMS[MAK] && FORMS[MAK][form];
+      assert.ok(f, `FORMS.${MAK}.${form} exists`);
+      for (const n of [f.change, f.end, f.leave, f.roles.idle, f.roles.die].filter((x) => x != null)) assert.ok(n in front, `${form}: ${n} in the skeleton`);
+      for (const n of names) assert.ok(n in front, `${form}: ${n}`);
+      // the S1 / S3-P1 dolls attack; the S2 / S3-P2 ones never do (their sets have no Attack clip)
+      if (form === 'doll' || form === 'doll3') assert.ok(f.roles.attack && f.roles.attack.loop in front, `${form}: the 替身 attacks`);
+      else assert.equal(f.roles.attack, null, `${form}: the 替身 never attacks`);
+      assert.equal(f.leave, 'Start', `${form}: the 本体 comes back`);
+    }
+    assert.ok(!/Doll_/.test(JSON.stringify(assets.chars[MAK].spine.front.anims)), 'no Doll_ clip in the base roles');
+    assert.equal(assets.chars[MAK].spine.front.anims.die, 'SwitchOut', 'the 本体 "falls" by switching out');
+  });
+
+  test('the sim publishes the selected skill\'s form; S3\'s second <替身> gets its own', () => {
+    for (const [idx, form, form2] of [[0, 'doll', 'doll'], [1, 'doll2', 'doll2'], [2, 'doll3', 'doll3b']]) {
+      const h = battle(idx);
+      const u = h.unit('chess_char_4217_makoto_a');
+      assert.ok(u, `S${idx + 1}: the operator is on the field`);
+      h.b.dealDamage(null, u, { amount: 1e9, type: 'true' });
+      h.run(2);
+      assert.ok(u.alive && u.trait.doll, `S${idx + 1}: switched to the <替身>`);
+      assert.equal(u.form, form, `S${idx + 1}: the doll form`);
+      assert.equal(u.trait.dollNo, 1);
+      if (form === form2) continue;
+      h.b.dealDamage(null, u, { amount: 1e9, type: 'true' });
+      h.run(2);
+      assert.ok(u.alive && u.trait.dollNo === 2, 'S3: the second <替身> instead of a knock-out');
+      assert.equal(u.form, form2, 'S3: the transformed doll form');
+    }
+  });
 });

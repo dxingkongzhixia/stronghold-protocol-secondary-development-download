@@ -2037,7 +2037,9 @@ const KITS = {
         }
       },
     };
-    if (sid === 'skchr_makoto_3') kit.trait = { dollLives: 1 };   // the SECOND persona (俄耳甫斯) past the first knock-out
+    if (sid === 'skchr_makoto_3') kit.trait = { dollForm: 'doll3', dollForm2: 'doll3b', dollLives: 1 };   // the SECOND persona (俄耳甫斯, its own clip set) past the first knock-out
+    else if (sid === 'skchr_makoto_2') kit.trait = { dollForm: 'doll2' };                                // S2's <替身> (a looping doll that never attacks)
+    else kit.trait = { dollForm: 'doll' };                                                               // S1's <替身>
     return kit;
   },
 

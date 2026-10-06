@@ -17542,35 +17542,35 @@
    "battleSpine": {
     "front": {
      "skel": {
-      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto/Front/char_4217_makoto.skel",
-      "bytes": 1750749
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto_p3r_1/Front/char_4217_makoto_p3r_1.skel",
+      "bytes": 2377459,
+      "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_4217_makoto/char_4217_makoto_p3r_1/Front/char_4217_makoto_p3r_1.skel"
      },
      "atlas": {
-      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto/Front/char_4217_makoto.atlas",
-      "bytes": 31730
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto_p3r_1/Front/char_4217_makoto_p3r_1.atlas",
+      "bytes": 5121
      },
      "png": {
-      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto/Front/char_4217_makoto.png",
-      "bytes": 574549
-     },
-     "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_4217_makoto/char_4217_makoto/Front/char_4217_makoto.skel"
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto_p3r_1/Front/char_4217_makoto_p3r_1.png",
+      "bytes": 653049
+     }
     },
     "back": {
      "skel": {
-      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto/Back/char_4217_makoto.skel",
-      "bytes": 391068
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto_p3r_1/Back/char_4217_makoto_p3r_1.skel",
+      "bytes": 679650,
+      "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_4217_makoto/char_4217_makoto_p3r_1/Back/char_4217_makoto_p3r_1.skel"
      },
      "atlas": {
-      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto/Back/char_4217_makoto.atlas",
-      "bytes": 21137
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto_p3r_1/Back/char_4217_makoto_p3r_1.atlas",
+      "bytes": 3791
      },
      "png": {
-      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto/Back/char_4217_makoto.png",
-      "bytes": 457507
-     },
-     "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_4217_makoto/char_4217_makoto/Back/char_4217_makoto.skel"
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4217_makoto/char_4217_makoto_p3r_1/Back/char_4217_makoto_p3r_1.png",
+      "bytes": 572130
+     }
     },
-    "note": null
+    "note": "p3r skin (char_4217_makoto@p3r#1): the in-game model, not the default look (operator request)"
    },
    "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_dollkeeper_icon.png"
   },

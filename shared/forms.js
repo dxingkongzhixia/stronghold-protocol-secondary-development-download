@@ -70,16 +70,38 @@ export const FORMS = Object.freeze({
   char_4016_kazema: Object.freeze({
     doll: Object.freeze({ change: 'Start_B', leave: 'Start', roles: dollRoles('Idle_B', 'Die_B', 'Attack_B') }),
   }),
-  // 结城理 (custom): his skeleton's 替身 clips are the per-skill Doll_Skill_* set (no *_B naming). His default skill is
-  // S3, whose P1 doll has the complete set (Idle / Attack_A / Die / Stun / SwitchIn / SwitchOut) — S1 and S2 share it
-  // until the sim publishes the skill / phase-specific form (a later refinement: S3's second <替身> uses P2_Loop /
-  // P1toP2_Change*).
+  // 结城理 (custom): his skeleton's 替身 clips are the per-skill Doll_Skill_* set (no *_B naming). His kit names the
+  // form of the selected skill through `trait.dollForm` / `dollForm2` (S3's second <替身>, 俄耳甫斯) — professions.js
+  // reads them per switch, so the view enters exactly the skill's doll.
   char_4217_makoto: Object.freeze({
+    // 极速送达 S1: the complete base doll (idle / attack / die / switch)
     doll: Object.freeze({
-      change: 'Doll_Skill_3_P1_SwitchIn',
-      end: 'Doll_Skill_3_P1_Die',
+      change: 'Doll_Skill_1_SwitchIn',
+      end: 'Doll_Skill_1_Die',
       leave: 'Start',
-      roles: dollRoles('Doll_Skill_3_P1_Idle', 'Doll_Skill_3_P1_Die', 'Doll_Skill_3_P1_Attack_A'),
+      roles: dollRoles('Doll_Skill_1_Idle', 'Doll_Skill_1_Die', 'Doll_Skill_1_Attack'),
+    }),
+    // 重力自定义 S2: a looping doll that never attacks (the set has no Idle / Attack clip)
+    doll2: Object.freeze({
+      change: 'Doll_Skill_2_SwitchIn',
+      end: 'Doll_Skill_2_Die',
+      leave: 'Start',
+      roles: dollRoles('Doll_Skill_2_Loop', 'Doll_Skill_2_Die'),
+    }),
+    // 酸橙的心事 S3, first <替身> (塔纳托斯): the complete P1 set — it has no death clip of its own, it TRANSFORMS
+    // (P1toP2_ChangeEnd), which is what the sim does when it is knocked out (dollLives)
+    doll3: Object.freeze({
+      change: 'Doll_Skill_3_P1_SwitchIn',
+      end: 'Doll_Skill_3_P1toP2_ChangeEnd',
+      leave: 'Start',
+      roles: dollRoles('Doll_Skill_3_P1_Idle', 'Doll_Skill_3_P1toP2_ChangeEnd', 'Doll_Skill_3_P1_Attack_A'),
+    }),
+    // S3's second <替身> (俄耳甫斯): transformed out of P1 (P1toP2_ChangeEnd lands in the P2 loop), never attacks
+    doll3b: Object.freeze({
+      change: 'Doll_Skill_3_P1toP2_ChangeEnd',
+      end: 'Doll_Skill_3_P2_Die',
+      leave: 'Start',
+      roles: dollRoles('Doll_Skill_3_P2_Loop', 'Doll_Skill_3_P2_Die'),
     }),
   }),
   enemy_1040_bombd: Object.freeze({

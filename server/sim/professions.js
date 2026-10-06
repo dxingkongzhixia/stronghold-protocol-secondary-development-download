@@ -184,6 +184,17 @@ const installDollkeeper = (battle, unit) => {
     return tok && tok.stats.maxHp > 0 ? Math.max(0.05, tok.stats.maxHp / Math.max(1, unit.base.maxHp)) : 1;
   };
   const at = (extra) => ({ x: unit.x, y: unit.y, id: unit.id, ...extra });
+  /**
+   * The model form of the CURRENT <替身> (shared/forms.js FORMS): a kit may name one per form through its trait —
+   * 结城理's skeleton carries a doll set per skill (S1 Doll_Skill_1_*, S2 Doll_Skill_2_*, S3 Doll_Skill_3_P1_*) and a
+   * transformed second one (俄耳甫斯, Doll_Skill_3_P2_*). Every other 傀儡师 stays on 'doll' (their *_B set).
+   */
+  const dollForm = () => {
+    const p = unit.profile || {};
+    const first = typeof p.dollForm === 'string' && p.dollForm ? p.dollForm : 'doll';
+    const next = typeof p.dollForm2 === 'string' && p.dollForm2 ? p.dollForm2 : first;
+    return (unit.trait.dollNo ?? 1) > 1 ? next : first;
+  };
   // a switch animation: "切换动画开始时会清除自身一切Buff" (header: the running skill and the statuses), then 1 s of 不死
   // (the fatal hook below) 无敌 阻回 禁疗 孤立 强制缴械 and 眩晕 / 冻结 / 睡眠 immunity (beforeStatus below). "切换途中重设自身
   // 生命至最大值": the HP is set to the max at the start (enter / leave) and again when the switch ends, so she always
@@ -234,14 +245,14 @@ const installDollkeeper = (battle, unit) => {
       flags: { noSp: true, ...(unit.profile.dollNoAttack ? { disarm: true, silence: true } : null) },
     });
     battle.releaseBlocked(unit);
-    unit.form = 'doll';
+    unit.form = dollForm();
     unit.markDirty();
     unit.hp = unit.s.maxHp;
     // `dur`: until the switch back (the client times the 替身's closing clip with it)
-    battle.fx('substitute', at({ form: 'doll', dur }));
+    battle.fx('substitute', at({ form: unit.form, dur }));
     // `dollSwap` { unit, form }: a switch started — to the 替身 ('doll') or back to the 本体 (null); not fired when she is
     // knocked out as the 替身 (不屈 rolls on both switches: PRTS 盟约记录 "切换<替身>与<本体>时")
-    if (battle.hasHook('dollSwap')) battle.emit('dollSwap', { unit, form: 'doll' });
+    if (battle.hasHook('dollSwap')) battle.emit('dollSwap', { unit, form: unit.form });
     return true;
   };
   /**
@@ -264,8 +275,9 @@ const installDollkeeper = (battle, unit) => {
     });
     unit.markDirty();
     unit.hp = unit.s.maxHp;
-    battle.fx('substitute', at({ form: 'doll', dur }));
-    if (battle.hasHook('dollSwap')) battle.emit('dollSwap', { unit, form: 'doll' });
+    unit.form = dollForm();          // the NEXT <替身> (结城理 S3: 塔纳托斯 → 俄耳甫斯, its own clip set)
+    battle.fx('substitute', at({ form: unit.form, dur }));
+    if (battle.hasHook('dollSwap')) battle.emit('dollSwap', { unit, form: unit.form });
     return true;
   };
   battle.on('fatal', (ctx) => {
