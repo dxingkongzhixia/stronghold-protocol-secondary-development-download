@@ -20,6 +20,12 @@ export const AUTH_NAME_MIN = 2;
 export const AUTH_NAME_MAX = NAME_MAX_LEN; // 博士代号 = 账号名: the same limit as the hello nickname (no truncation)
 export const AUTH_PASS_MIN = 6;
 export const AUTH_PASS_MAX = 128;
+// account roles (accounts.role, server/auth.js): a small label shown next to the name everywhere it appears — the
+// lobby chip, the 在线 overlay, room seats, the in-game players (HUD / team panel / result), /online/api and the
+// admin page. `null` = an ordinary account. Assigned with `node tools/role.mjs <代号> <admin|dev>`.
+export const ROLES = Object.freeze({ admin: '管理员', dev: '开发者' });
+/** The label of a role, or null for null/unknown values (an unknown role is simply not shown). */
+export const roleLabel = (role) => (typeof role === 'string' && ROLES[role]) || null;
 // matchmaking (server/matchmaker.js): the shared pool of 野排 (搜寻队友)
 export const MM_WINDOW_MS = 30_000;   // one pool window; < 4 gathered by then ⇒ AI fills the alliance
 export const MM_SEATS = 4;

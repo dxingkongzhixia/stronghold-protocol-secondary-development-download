@@ -66,7 +66,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from '../../vendor/hooks.module.js';
 import { PHASE, GEO } from '../../../shared/constants.js';
 import { fxForm } from '../../../shared/protocol.js';
-import { html, Spinner, PhaseBanner, Icon, Button, MicroLabel, confirmDialog, closeAllDialogs, useTicker } from '../ui/components.js';
+import { html, Spinner, PhaseBanner, Icon, Button, MicroLabel, confirmDialog, closeAllDialogs, useTicker, RoleTag } from '../ui/components.js';
 import { useGameData, GIcon } from '../ui/gameComponents.js';
 import { useFieldView } from '../ui/fieldHost.js';
 import { TopBar, liveLp, ownLeaks, uniteRemaining, tempInfo, tempReadyReason } from '../ui/hud.js';
@@ -145,7 +145,7 @@ function SpecDock({ room, pub, myId, spectator, canRelease, panel = false }) {
     <div class="specdock__body">
       ${spectators.length
         ? spectators.map((s) => html`<div class="specdock__row" key=${s.playerId}>
-            <span class=${`specdock__who${s.playerId === myId ? ' is-me' : ''}`}>${s.name || '博士'}${s.playerId === myId ? html`<span class="seat__you">你</span>` : null}</span>
+            <span class=${`specdock__who${s.playerId === myId ? ' is-me' : ''}`}>${s.name || '博士'}<${RoleTag} role=${s.role} />${s.playerId === myId ? html`<span class="seat__you">你</span>` : null}</span>
           </div>`)
         : html`<div class="specdock__empty t-dim">暂无其他观战者</div>`}
       ${spectator && ais.length ? html`<div class="specdock__act">

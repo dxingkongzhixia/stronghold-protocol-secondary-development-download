@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, MAX_SEATS, MAX_SPECTATORS } from '../../../shared/constants.js';
 import {
-  html, Button, Icon, MicroLabel, PingPill, AvatarFrame, DifficultyTag, DifficultyIcon, Tooltip, confirmDialog, doctorNo,
+  html, Button, Icon, MicroLabel, PingPill, AvatarFrame, DifficultyTag, DifficultyIcon, Tooltip, confirmDialog, doctorNo, RoleTag,
 } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { copyText } from '../ui/clipboard.js';
@@ -118,7 +118,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, onAddBot, onRemoveBot,
       ${seat.isBot ? html`<span class="seat__bot-label"><${Icon} name="robot" />AI 队友</span>` : null}
     </div>
     <div class="seat__who">
-      <span class="seat__name">${seat.name || '博士'}</span>
+      <span class="seat__name">${seat.name || '博士'}<${RoleTag} role=${seat.role} /></span>
       ${isMe ? html`<span class="seat__you">你</span>` : null}
     </div>
     <${MicroLabel}>${seat.isBot ? 'AUTONOMOUS UNIT' : `DOCTOR #${doctorNo(seat.playerId)}`}<//>
@@ -155,7 +155,7 @@ function SpectatorDock({ facts, myId, busy, onRemove, onSit, onTakeOver, onRelea
       ${facts.spectators.length
         ? facts.spectators.map((s) => html`<div class="specdock__row" key=${s.playerId}>
             <span class=${`specdock__who${s.playerId === myId ? ' is-me' : ''}${s.connected === false ? ' is-offline' : ''}`}>
-              ${s.connected === false ? html`<${Icon} name="wifiOff" />` : null}${s.name || '博士'}${s.playerId === myId ? html`<span class="seat__you">你</span>` : null}
+              ${s.connected === false ? html`<${Icon} name="wifiOff" />` : null}${s.name || '博士'}<${RoleTag} role=${s.role} />${s.playerId === myId ? html`<span class="seat__you">你</span>` : null}
             </span>
             ${facts.isHost ? html`<${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `rs${s.playerId}`}
               onClick=${() => onRemove(s.playerId)} aria-label=${`移出观战者 ${s.name || ''}`} title="移出该观战者" />` : null}

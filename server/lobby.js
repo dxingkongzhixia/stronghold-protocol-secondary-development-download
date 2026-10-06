@@ -118,7 +118,7 @@ const fail = (code, detail) => (detail ? { error: code, detail } : { error: code
 const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
 
 /**
- * @typedef {{ seat: number, playerId: string, name: string, isBot: boolean, ready: boolean,
+ * @typedef {{ seat: number, playerId: string, name: string, role?: string|null, isBot: boolean, ready: boolean,
  *             connected: boolean, left: boolean, loadout?: Record<string, { skill: number, module: string|null }> | null }} Seat
  */
 
@@ -140,7 +140,7 @@ export class Room {
     this.hostId = null;
     /** @type {(Seat | null)[]} */
     this.seats = new Array(MAX_SEATS).fill(null);
-    /** @type {{ playerId: string, name: string, connected: boolean }[]} spectator seats, ≤ MAX_SPECTATORS (header) */
+    /** @type {{ playerId: string, name: string, role?: string|null, connected: boolean }[]} spectator seats, ≤ MAX_SPECTATORS (header) */
     this.spectators = [];
     /** @type {any} running Match instance */
     this.match = null;
@@ -195,9 +195,9 @@ export class Room {
       // whether this 同盟 room is listed in the lobby's 公开同盟 directory (the room screen shows a 公开/仅密钥 badge)
       public: !!this.public,
       seats: this.seats.map((s) => (s
-        ? { seat: s.seat, playerId: s.playerId, name: s.name, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left, fromAi: !!s.fromAi }
+        ? { seat: s.seat, playerId: s.playerId, name: s.name, role: s.role ?? null, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left, fromAi: !!s.fromAi }
         : null)),
-      spectators: this.spectators.map((s) => ({ playerId: s.playerId, name: s.name, connected: s.connected })),
+      spectators: this.spectators.map((s) => ({ playerId: s.playerId, name: s.name, role: s.role ?? null, connected: s.connected })),
     };
   }
 }
@@ -286,11 +286,13 @@ export class Lobby {
         session.accountId = acc.id;
         session.accountToken = accountToken;
         session.name = acc.name;
+        session.role = acc.role ?? null;
         this.kickOtherSessions(session, acc.id);
         sendSession(session, { t: 'auth.ok', account: acc, token: accountToken });
       } else if (session.accountToken) {
         session.accountId = null;
         session.accountToken = null;
+        session.role = null;
         sendSession(session, { t: 'auth.error', code: 'SESSION_EXPIRED' });
       }
     }
@@ -316,7 +318,11 @@ export class Lobby {
     // live socket) answers the requester alone, so hello spam cannot amplify into room-wide traffic.
     let changed = !seat.connected;
     seat.connected = true;
-    if (!room.match && seat.name !== session.name) { seat.name = session.name; changed = true; }
+    if (!room.match && (seat.name !== session.name || (seat.role ?? null) !== (session.role ?? null))) {
+      seat.name = session.name;
+      seat.role = session.role ?? null;
+      changed = true;
+    }
     if (!room.hostId) { this.migrateHost(room); changed = true; }
     if (changed) this.broadcastState(room);
     else this.sendState(room, session);
@@ -493,7 +499,7 @@ export class Lobby {
     if (room.mode === 'solo') return fail(ERR.ROOM_FULL, 'solo room');
     if (room.spectators.length >= MAX_SPECTATORS) return fail(ERR.ROOM_FULL, 'no free spectator seat');
     if (cur) this.removeMember(cur, session.playerId);
-    room.spectators.push({ playerId: session.playerId, name: session.name, connected: session.connected });
+    room.spectators.push({ playerId: session.playerId, name: session.name, role: session.role ?? null, connected: session.connected });
     session.roomCode = room.code;
     session.notice = null;
     session.pendingResult = null;
@@ -516,7 +522,7 @@ export class Lobby {
     const ai = room.seats[seat];
     if (!ai || ai.left || !ai.isBot) return fail(ERR.BAD_TARGET, 'that seat is not an AI');
     if (room.activeHumans().length >= MAX_SEATS) return fail(ERR.ROOM_FULL, 'no free player seat');
-    if (room.match && this.callMatch(room, 'takeOver', session.playerId, seat, session.name) !== true) {
+    if (room.match && this.callMatch(room, 'takeOver', session.playerId, seat, session.name, session.role ?? null) !== true) {
       return fail(ERR.BAD_TARGET, 'takeover refused');
     }
     this.freeSpectatorSeat(room, session.playerId);   // it was watching; it plays now
@@ -524,6 +530,7 @@ export class Lobby {
     if (s) {
       s.playerId = session.playerId;
       s.name = session.name;
+      s.role = session.role ?? null;
       s.isBot = false;
       s.connected = true;
       s.ready = true;                                 // a running match never waits on a ready flag
@@ -556,12 +563,13 @@ export class Lobby {
     const wasHost = room.hostId === session.playerId;
     seat.playerId = bot.playerId;
     seat.name = bot.name;
+    seat.role = null;
     seat.isBot = true;
     seat.connected = true;
     seat.ready = true;
     seat.fromAi = false;
     delete seat.loadout;
-    room.spectators.push({ playerId: session.playerId, name: session.name, connected: session.connected });
+    room.spectators.push({ playerId: session.playerId, name: session.name, role: session.role ?? null, connected: session.connected });
     if (wasHost) {
       this.migrateHost(room);
       if (!room.hostId) room.hostId = session.playerId;   // still in the room (watching) → keep the controls theirs
@@ -631,7 +639,7 @@ export class Lobby {
     const name = BOT_NAMES.find((n) => !used.has(n)) || `AI·${idx + 1}`;
     let playerId;
     do playerId = 'ai_' + randomBytes(4).toString('hex'); while (room.seatOf(playerId));
-    room.seats[idx] = { seat: idx, playerId, name, isBot: true, ready: true, connected: true, left: false };
+    room.seats[idx] = { seat: idx, playerId, name, role: null, isBot: true, ready: true, connected: true, left: false };
     this.broadcastState(room);
     return OK;
   }
@@ -748,7 +756,12 @@ export class Lobby {
     const token = session.accountToken;
     session.accountId = null;
     session.accountToken = null;
+    session.role = null;
     if (token && this.auth) this.auth.logout(token);
+    // the display name stays (that is the existing behaviour); a room seat drops the role badge with it
+    const room = this.roomOf(session);
+    const seat = room ? (room.seatOf(session.playerId) || room.spectatorOf(session.playerId)) : null;
+    if (seat && seat.role && !room.match) { seat.role = null; this.broadcastState(room); }
     return OK;
   }
 
@@ -761,6 +774,7 @@ export class Lobby {
       if (other === session || other.accountId !== accountId) continue;
       other.accountId = null;
       other.accountToken = null;
+      other.role = null;
       // Close through the Network (sets conn.closing) so an in-flight `hello` cannot rebind this session and kick us
       // back; it also fires onDisconnect now, so the old device immediately leaves the 野排 pool / its room.
       if (this.network) this.network.closeSession(other, CLOSE.REPLACED, 'account logged in elsewhere');
@@ -768,17 +782,22 @@ export class Lobby {
     }
   }
 
-  /** Bind a session to an account and tell it (auth.ok); the display name follows the account. */
+  /** Bind a session to an account and tell it (auth.ok); the display name (and role badge) follow the account. */
   bindAccount(session, account, token) {
     session.accountId = account.id;
     session.accountToken = token;
     session.name = account.name;
+    session.role = account.role ?? null;
     this.kickOtherSessions(session, account.id);
     sendSession(session, { t: 'auth.ok', account, token });
     const room = this.roomOf(session);
     if (room) {
       const seat = room.seatOf(session.playerId);
-      if (seat && seat.name !== account.name && !room.match) { seat.name = account.name; this.broadcastState(room); }
+      if (seat && !room.match && (seat.name !== account.name || (seat.role ?? null) !== (account.role ?? null))) {
+        seat.name = account.name;
+        seat.role = account.role ?? null;
+        this.broadcastState(room);
+      }
     }
   }
 
@@ -856,7 +875,7 @@ export class Lobby {
     const name = BOT_NAMES.find((n) => !used.has(n)) || `AI·${idx + 1}`;
     let playerId;
     do playerId = 'ai_' + randomBytes(4).toString('hex'); while (room.seatOf(playerId));
-    return { seat: idx, playerId, name, isBot: true, ready: true, connected: true, left: false };
+    return { seat: idx, playerId, name, role: null, isBot: true, ready: true, connected: true, left: false };
   }
 
   // ---------------------------------------------------------------------------------------------------
@@ -868,7 +887,7 @@ export class Lobby {
     const host = room.seatOf(room.hostId);
     if (host) host.ready = true;
     const seats = room.seats.filter(Boolean).map((s) => ({
-      seat: s.seat, playerId: s.playerId, name: s.name, isBot: s.isBot, connected: s.connected,
+      seat: s.seat, playerId: s.playerId, name: s.name, role: s.role ?? null, isBot: s.isBot, connected: s.connected,
       // DESIGN §16: the human's checked operator loadout (bots fight with the defaults)
       loadout: s.isBot ? null : s.loadout || null,
     }));
@@ -1130,7 +1149,7 @@ export class Lobby {
   /** @returns {Seat} */
   humanSeat(idx, session) {
     return {
-      seat: idx, playerId: session.playerId, name: session.name, isBot: false, ready: false, connected: session.connected, left: false,
+      seat: idx, playerId: session.playerId, name: session.name, role: session.role ?? null, isBot: false, ready: false, connected: session.connected, left: false,
       loadout: session.loadout || null,
     };
   }

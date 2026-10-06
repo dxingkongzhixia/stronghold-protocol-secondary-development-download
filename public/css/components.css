@@ -935,6 +935,12 @@
 /* guest tag (docs/MATCHMAKING.md): shown when no account is bound */
 .me-chip__guest { display: inline-block; margin-left: .07rem; padding: 0 .07rem; font-size: .12rem; font-style: normal; font-weight: 500;
   vertical-align: middle; color: #ffd089; border: 1px solid rgba(255, 208, 137, .5); border-radius: 2px; }
+/* account role (shared/constants.js ROLES): 管理员 / 开发者, shown next to a player name on every screen */
+.role-tag { display: inline-block; margin-left: .06rem; padding: 0 .07rem; font-size: .12rem; font-style: normal; font-weight: 700;
+  vertical-align: middle; line-height: 1.45; color: #0b1520; background: var(--gold, #ffc600); border-radius: 3px; }
+.role-tag--md { font-size: .13rem; padding: 0 .09rem; }
+.role-tag--lg { font-size: .15rem; padding: .01rem .11rem; }
+.role-tag--dev { color: #06121c; background: #a9c3d8; }
 
 /* account form / dialog (docs/MATCHMAKING.md): shared by the title panel and the in-game modal */
 .account-form { display: flex; flex-direction: column; gap: .08rem; }

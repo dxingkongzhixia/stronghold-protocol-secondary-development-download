@@ -1737,6 +1737,7 @@ export function normalizeResult(res, pub) {
       playerId: p.playerId,
       seat: int(p.seat, int(pp.seat, 0)),
       name: p.name || pp.name || '博士',
+      role: typeof p.role === 'string' ? p.role : (typeof pp.role === 'string' ? pp.role : null),
       isBot: !!(p.isBot ?? pp.isBot),
       alive,
       lp: teamLp != null ? (alive === false ? 0 : Math.max(0, teamLp)) : ownLp,

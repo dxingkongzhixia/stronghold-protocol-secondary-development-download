@@ -121,6 +121,8 @@ export class Session {
     this.accountId = null;
     /** @type {string | null} the account session token this session is bound to (server/auth.js) */
     this.accountToken = null;
+    /** @type {string | null} account role (shared/constants.js ROLES; null = ordinary) — shown next to the name */
+    this.role = null;
   }
 }
 

@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from '../../vendor/hooks.module.js';
 import { AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX } from '../../../shared/constants.js';
-import { html, Button, Icon, TextField } from './components.js';
+import { html, Button, Icon, TextField, RoleTag } from './components.js';
 import { toast } from './toasts.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, savePref } from '../store.js';
@@ -91,7 +91,7 @@ export function AccountForm({ name, onDone }) {
 /** The logged-in summary + 退出 (shared by the title panel and the dialog). */
 export function AccountWho({ account }) {
   return html`<div class="account-who">
-    <span class="account-who__line"><${Icon} name="user" />已登录 · <b>${account.name}</b></span>
+    <span class="account-who__line"><${Icon} name="user" />已登录 · <b>${account.name}</b><${RoleTag} role=${account.role} /></span>
     <${Button} variant="secondary" onClick=${logoutAccount}>退出登录<//>
   </div>`;
 }

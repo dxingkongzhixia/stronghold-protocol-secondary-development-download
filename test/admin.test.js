@@ -78,6 +78,21 @@ test('buildSnapshot counts accounts, guests and statuses', () => {
   assert.ok(!('pass_hash' in snap.accounts[0]), 'never expose the hash');
 });
 
+test('account roles (ROLES) ride through both snapshots', () => {
+  const auth = new AuthService({ db: openMemoryDb() });
+  const a = auth.register('Admin', 'secret1');
+  assert.equal(auth.setRole('Admin', 'admin').account.role, 'admin');
+  const registry = new SessionRegistry({ now: () => 0 });
+  const s = registry.create('Admin');
+  s.connected = true; s.accountId = a.account.id; s.role = 'admin';
+  const lobby = { getRoom: () => null, rooms: new Map(), mm: null };
+  const mm = { byKey: new Map(), stats: () => ({ queued: 0, buckets: 0 }) };
+  const snap = buildSnapshot({ registry, lobby, matchmaker: mm, auth, now: 0 });
+  assert.equal(snap.accounts.find((x) => x.name === 'Admin').role, 'admin');
+  assert.equal(snap.online.find((x) => x.name === 'Admin').role, 'admin');
+  assert.equal(buildPublicSnapshot({ registry, lobby, matchmaker: null, now: 0 }).online[0].role, 'admin');
+});
+
 // 公开同盟 (docs/MATCHMAKING.md): /online/api `openRooms` lists joinable hand-made co-op rooms that the creator left
 // public; private / solo / 野排(auto) / started / full rooms stay hidden.
 test('buildPublicSnapshot.openRooms lists only public, joinable, hand-made 同盟 rooms', () => {
@@ -102,7 +117,7 @@ test('buildPublicSnapshot.openRooms lists only public, joinable, hand-made 同�
   }));
   const snap = buildPublicSnapshot({ registry: { all: () => [] }, lobby: { rooms }, matchmaker: null, now: 0 });
   assert.deepEqual(snap.openRooms.map((x) => x.code), ['PUB', 'BOT'], 'only public joinable hand-made co-op rooms, humans desc');
-  assert.deepEqual(snap.openRooms[0], { code: 'PUB', difficulty: 'NORMAL', difficultyName: '险境模拟', host: 'Host', humans: 1 });
+  assert.deepEqual(snap.openRooms[0], { code: 'PUB', difficulty: 'NORMAL', difficultyName: '险境模拟', host: 'Host', hostRole: null, humans: 1 });
   assert.equal(snap.openRooms[1].humans, 1, 'bots are not counted as humans');
 });
 

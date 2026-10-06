@@ -60,6 +60,7 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, now = Date.no
   const online = sessions.filter((s) => presenceOnline(s, now)).map((s) => ({
     playerId: s.playerId,
     name: s.name,
+    role: s.role ?? null,
     accountId: s.accountId ?? null,
     status: statusOf(s, { lobby, matchmaker: mm, now }),
     roomCode: s.roomCode ?? null,
@@ -75,6 +76,7 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, now = Date.no
       createdAt: a.created_at ?? null,
       lastLogin: a.last_login ?? null,
       banned: !!a.banned,
+      role: a.role ?? null,
       status: statusOf(s, { lobby, matchmaker: mm, now }),
       playerId: s ? s.playerId : null,
       roomCode: s ? s.roomCode : null,
@@ -126,6 +128,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
   const mm = matchmaker || (lobby && lobby.mm) || null;
   const online = [...registry.all()].filter((s) => presenceOnline(s, now)).map((s) => ({
     name: s.name,
+    role: s.role ?? null,
     guest: s.accountId == null,
     status: statusOf(s, { lobby, matchmaker: mm, now }),
     roomCode: s.roomCode ?? null,
@@ -139,6 +142,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       difficulty: r.difficulty,
       difficultyName: DIFFICULTY_NAMES[r.difficulty] || r.difficulty,
       host: (r.seatOf(r.hostId) || {}).name || null,
+      hostRole: (r.seatOf(r.hostId) || {}).role ?? null,
       humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
     }))
     .sort((a, b) => b.humans - a.humans)
@@ -152,6 +156,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       difficulty: r.difficulty,
       difficultyName: DIFFICULTY_NAMES[r.difficulty] || r.difficulty,
       host: (r.seatOf(r.hostId) || {}).name || null,
+      hostRole: (r.seatOf(r.hostId) || {}).role ?? null,
       humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
       bots: r.seats.filter((x) => x && !x.left && x.isBot).length,
       auto: !!r.auto,
@@ -241,6 +246,9 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
 .pill{display:inline-block;padding:1px 9px;border-radius:7px;font-size:11.5px;border:1px solid var(--line2);color:var(--dim)}
 .pill.yes{color:var(--mint);border-color:rgba(78,216,175,.42);background:rgba(78,216,175,.08)}
 .pill.guest{color:#ffd089;border-color:rgba(255,208,137,.4);background:rgba(255,208,137,.08)}
+/* account role (shared/constants.js ROLES): 管理员 / 开发者, assigned with tools/role.mjs */
+.roletag{display:inline-block;padding:1px 8px;font-size:11px;font-weight:600;color:#ffd089;
+  border:1px solid rgba(255,208,137,.5);border-radius:99px;background:rgba(255,208,137,.08)}
 </style></head><body>
 <div class="wrap">
   <header class="topbar">
@@ -261,7 +269,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
   <section class="panel">
     <h2>注册账号<em id="acctCount"></em></h2>
     <div class="tablewrap"><table>
-      <thead><tr><th>ID</th><th>代号</th><th>状态</th><th>房间</th><th>playerId</th><th>注册时间</th><th>最后登录</th></tr></thead>
+      <thead><tr><th>ID</th><th>代号</th><th>身份</th><th>状态</th><th>房间</th><th>playerId</th><th>注册时间</th><th>最后登录</th></tr></thead>
       <tbody id="accountsBody"></tbody>
     </table></div>
   </section>
@@ -287,6 +295,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
   var token = new URLSearchParams(location.search).get('token') || '';
   var COLORS = { offline:'#8a8f8c', online:'#4ed8af', room:'#5cc8ff', queue:'#ffd089', mmplay:'#ffa94d', alliance:'#b28cff', solo:'#7bd88f' };
   var LABELS = { offline:'离线', online:'在线', room:'组队中', queue:'野排排队', mmplay:'野排游玩', alliance:'同盟游玩', solo:'单人游玩' };
+  var ROLE_LABELS = { admin:'管理员', dev:'开发者' };
   var CARDS = [
     ['accounts','注册账号','#4ed8af'],['connected','当前在线','#4ed8af'],['guests','游客在线','#ffd089'],
     ['offline','离线','#8a8f8c'],['queue','野排排队','#ffd089'],['mmplay','野排游玩','#ffa94d'],
@@ -295,6 +304,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
   function el(id) { return document.getElementById(id); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (ch) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[ch]; }); }
   function badge(s) { var c = COLORS[s] || '#aaaaaa'; return '<span class="badge" style="color:' + c + ';border-color:' + c + '55;background:' + c + '14"><i></i>' + (LABELS[s] || s) + '</span>'; }
+  function rolePill(r) { var l = ROLE_LABELS[r]; return l ? '<span class="roletag">' + l + '</span>' : ''; }
   function ts(v) { if (!v) return '—'; try { return new Date(v).toLocaleString('zh-CN'); } catch (e) { return '—'; } }
   function cell(html, cls) { return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' + html + '</td>'; }
   function row(cells) { return '<tr>' + cells.join('') + '</tr>'; }
@@ -307,12 +317,12 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
     el('onlineCount').textContent = d.online.length + ' 个';
     el('roomCount').textContent = d.rooms.length + ' 个';
     el('accountsBody').innerHTML = d.accounts.map(function (a) {
-      return row([cell(a.id, 'mono'), cell(esc(a.name)), cell(badge(a.status)),
+      return row([cell(a.id, 'mono'), cell(esc(a.name)), cell(rolePill(a.role) || '—'), cell(badge(a.status)),
         cell(a.roomCode ? esc(a.roomCode) : '—', 'mono'), cell(a.playerId ? esc(a.playerId) : '—', 'mono'),
         cell(ts(a.createdAt)), cell(ts(a.lastLogin))]);
-    }).join('') || '<tr><td colspan="7" class="empty">暂无注册账号</td></tr>';
+    }).join('') || '<tr><td colspan="8" class="empty">暂无注册账号</td></tr>';
     el('onlineBody').innerHTML = d.online.map(function (s) {
-      return row([cell(esc(s.name)),
+      return row([cell(esc(s.name) + rolePill(s.role)),
         cell(s.accountId == null ? '<span class="pill guest">游客</span>' : '<span class="mono">#' + s.accountId + '</span>'),
         cell(badge(s.status)), cell(s.roomCode ? esc(s.roomCode) : '—', 'mono'),
         cell(s.addr ? esc(s.addr) : '—', 'mono'), cell(ts(s.lastSeen))]);

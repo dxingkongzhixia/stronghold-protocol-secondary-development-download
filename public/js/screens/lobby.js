@@ -10,8 +10,8 @@
 // plays 战场#01, 险境 draws one of 8, 绝境 / 终极 one of 7 (m01 excluded).
 
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, ERR, modeIdFor } from '../../../shared/constants.js';
-import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, Tabs, doctorNo } from '../ui/components.js';
+import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, ERR, modeIdFor, roleLabel } from '../../../shared/constants.js';
+import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, Tabs, doctorNo, RoleTag } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { GuideButton } from '../ui/guide.js';
 import { LoadoutButton } from './loadout.js';
@@ -331,7 +331,7 @@ export function LobbyScreen() {
         <div class="me-chip">
           <${AvatarFrame} size="sm" name=${me.name} seat=${0} self=${true} />
           <div class="me-chip__text">
-            <span class="me-chip__name">${me.name || '博士'}${auth?.account ? null : html`<em class="me-chip__guest">游客</em>`}</span>
+            <span class="me-chip__name">${me.name || '博士'}<${RoleTag} role=${auth?.account?.role} />${auth?.account ? null : html`<em class="me-chip__guest">游客</em>`}</span>
             <${MicroLabel}>${me.playerId != null ? `DOCTOR #${doctorNo(me.playerId)}` : 'DOCTOR'}<//>
           </div>
         </div>
@@ -432,7 +432,7 @@ function PublicAlliances({ onJoin, onSpectate }) {
     rows.push(html`<div class="join-foot" key="open">
       <span class="t-lo">公开同盟</span>
       ${open.map((r) => html`<button key=${r.code} type="button" class="code-chip num"
-        title=${`${r.difficultyName || ''} · ${r.humans}/${MAX_SEATS}${r.host ? ' · ' + r.host : ''} —— 点击加入`}
+        title=${`${r.difficultyName || ''} · ${r.humans}/${MAX_SEATS}${r.host ? ` · ${r.host}${roleLabel(r.hostRole) ? `（${roleLabel(r.hostRole)}）` : ''}` : ''} —— 点击加入`}
         onClick=${() => onJoin(r.code)}>${r.code}</button>`)}
     </div>`);
   }
@@ -440,7 +440,7 @@ function PublicAlliances({ onJoin, onSpectate }) {
     rows.push(html`<div class="join-foot" key="play">
       <span class="t-lo">正在模拟</span>
       ${play.map((r) => html`<button key=${r.code} type="button" class="code-chip num is-live"
-        title=${`${r.difficultyName || ''} · ${r.humans} 人${r.bots ? ` + ${r.bots} AI` : ''}${r.host ? ' · ' + r.host : ''} —— 点击观战`}
+        title=${`${r.difficultyName || ''} · ${r.humans} 人${r.bots ? ` + ${r.bots} AI` : ''}${r.host ? ` · ${r.host}${roleLabel(r.hostRole) ? `（${roleLabel(r.hostRole)}）` : ''}` : ''} —— 点击观战`}
         onClick=${() => onSpectate(r.code)}>${r.code}</button>`)}
     </div>`);
   }
@@ -531,7 +531,7 @@ function OnlineOverlay({ onClose }) {
       <div class="online-modal__list">
         ${list.length ? list.map((p, i) => html`<div class="online-row" key=${`${p.name}-${i}`}>
           <${AvatarFrame} size="sm" name=${p.name} seat=${i} offline=${p.status === 'offline'} />
-          <span class="online-row__name">${p.name}</span>
+          <span class="online-row__name">${p.name}<${RoleTag} role=${p.role} /></span>
           ${p.guest ? html`<span class="online-row__tag">游客</span>` : html`<span class="online-row__tag is-acc">已登录</span>`}
           <span class=${`online-row__status is-${st(p.status).c}`}>${st(p.status).label}</span>
           <span class="online-row__room num">${p.roomCode || '—'}</span>

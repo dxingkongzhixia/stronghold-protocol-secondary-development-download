@@ -594,3 +594,21 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **美术 / 语音**：镜像全有（社区语音包也收录了）→ `fetch-assets` 自动补齐；她 S3 的**起飞点 token**（`token_10071_aglna2_agairp`）按项目惯例是可放置召唤物 → 用现成的 `inert()` 注册为**标记**（模型缺 → 客户端回退）。
 - 同步更新：`data.test.js`（272 / 115 / 分阶 / 战役键 45 / token 列表）、`{ui,match,sim}/loadout`、`match/pool`、`content/kits_alt_t3`、`content/garrisons_battle`（她的测试组）、`content/tokens_devices`、`match/playtest6_summons`。
 - 结果：全量 `node --test` **绿**（`match/realtime` 那条实时联机集成测试在满载下偶发超时，单独重跑即过，与本次改动无关）。
+
+## 26. 账号身份标注：管理员（2026-10-06）
+
+> 需求：账号 **d星空之下**（id 38）要在**所有地方**显示成「**管理员**」标注。
+
+- **账号标记**：`accounts` 表新增 `role TEXT` 列（`server/db.mjs` schema **v2**：老库 `ALTER TABLE ... ADD COLUMN role` 就地升级，`PRAGMA user_version` 2；`null` = 普通账号）。标签文本在 `shared/constants.js` 的 `ROLES = { admin: '管理员', dev: '开发者' }`，取值统一走 `roleLabel(role)`（未知值/空 = 不显示），服务端与客户端共用。
+- **赋值（可给任何账号加）**：`node tools/role.mjs list` 看全部；`node tools/role.mjs <代号> admin|dev|off` 赋/清（代号大小写不敏感，与登录一致）。库默认 `var/accounts.db`，`SP_DB` 可覆盖。**本机与线上都已把 `d星空之下` 设为 `admin`**。
+- **传播链路**（一个字段 `role`，跟着名字走，服务端权威）：
+  - `publicAccount` → `auth.ok.account.role` → 客户端 `store.auth.account.role`（自己）；
+  - `Session.role`（`server/net.js`）：`bindAccount` / `onHello`（解析 accountToken 时）赋值，`logout` 清空，`kickOtherSessions` 连带清；
+  - 房间：`room.state.seats[].role` / `spectators[].role`（`Room.toState`；入座、重连、登录改名时同步，`room.takeOver` 带入、`room.releaseSeat` 交还 AI 时清）；
+  - 对局内：`m.public.players[].role`（`PlayerState.role`，`Match` / `StubMatch` 都在），结算 `m.result.players[].role`；
+  - `/online/api`：`online[].role`，以及 `openRooms/playRooms[].hostRole`（房主）；
+  - 管理页 `/admin`：`accounts[].role` / `online[].role`，账号表新增「身份」列。
+- **显示**：新组件 `<RoleTag role=…>`（`public/js/ui/components.js`，样式在 `css/components.css` 的 `.role-tag`；管理员金色底、开发者蓝灰底；`null`/未知什么都不渲染）。已挂到：**大厅**右上角自己的名字与账号浮层、`在线玩家` 浮层每行、`公开同盟 / 正在模拟` 的悬浮提示、**房间**座位与观战席、**对局内**（观战席、队伍面板、策略决策顺序、复核等待的队友进度、特殊选择的决策顺序）、**结算**卡片、**标题页/大厅账号面板**（`AccountWho`）、**管理页**账号表。
+- **不用重启即生效**：角色存在账号上，服务器在**该账号下次登录 / hello** 时取到（`Session` 的旧值随登录刷新）；管理页的账号列表则是每次请求现读。
+- 测试：`test/auth.test.js`（setRole 赋值 / 清除 / 未知角色 / 无此账号、`resolve` 带 role）、`test/admin.test.js`（两个快照带 role、`hostRole`），以及既有断言里 `publicAccount` 的形状。
+- 结果：全量 `node --test` **绿**。

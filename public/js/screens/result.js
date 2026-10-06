@@ -12,7 +12,7 @@
 //                          activatedLayers?, lpLost?, perfectRounds? } }] }
 
 import { useEffect } from '../../vendor/hooks.module.js';
-import { html, Button, Icon, MicroLabel, DifficultyTag } from '../ui/components.js';
+import { html, Button, Icon, MicroLabel, DifficultyTag, RoleTag } from '../ui/components.js';
 import { useGameData, Img, UnitThumb, BandIcon, PlayerAvatar, BondGlyph, LpTower, Sprite } from '../ui/gameComponents.js';
 import { normalizeResult, fmtNum } from '../ui/gameLogic.js';
 import { enemyIconUrl, titleIconUrl, uiUrl } from '../ui/assetUrls.js';
@@ -41,7 +41,7 @@ function PlayerCard({ p, myId, titles, best, solo = false }) {
     <header class="rcard__head">
       <${PlayerAvatar} player=${p} self=${p.playerId === myId} />
       <div class="rcard__who">
-        <b class="rcard__name">${p.name}${p.isBot ? html`<span class="rcard__ai">AI</span>` : null}${p.playerId === myId ? html`<span class="rcard__you">你</span>` : null}</b>
+        <b class="rcard__name">${p.name}<${RoleTag} role=${p.role} />${p.isBot ? html`<span class="rcard__ai">AI</span>` : null}${p.playerId === myId ? html`<span class="rcard__you">你</span>` : null}</b>
         <span class="rcard__band">${band ? html`<${BandIcon} bandId=${band.bandId} size="xs" />${band.name}` : '—'}</span>
       </div>
       <div class="rcard__mid">

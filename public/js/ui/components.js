@@ -14,7 +14,7 @@
 import { h, Fragment } from '../../vendor/preact.module.js';
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from '../../vendor/hooks.module.js';
 import htm from '../../vendor/htm.module.js';
-import { DIFFICULTY_NAMES, DIFFICULTY_COLORS } from '../../../shared/constants.js';
+import { DIFFICULTY_NAMES, DIFFICULTY_COLORS, roleLabel } from '../../../shared/constants.js';
 import { serverNow } from '../store.js';
 import { data, useData, localAsset } from '../data.js';
 import { uiUrl } from './assetUrls.js';
@@ -700,6 +700,20 @@ export function AvatarFrame({ name = '', src, size = 'md', seat = 0, host, bot, 
     ${self ? html`<span class="avatar__badge avatar__badge--self" title="你"><${Icon} name="user" /></span>` : null}
     ${bot && !empty ? html`<span class="avatar__tag">AI</span>` : null}
   </div>`;
+}
+
+// ---- RoleTag ------------------------------------------------------------------------------------
+
+/**
+ * The account-role label shown next to a player name (shared/constants.js ROLES: 管理员 / 开发者). A bound account
+ * carries its role through every payload — the lobby chip, the 在线 overlay, room seats, the match's players, /online —
+ * so this is the one place that turns it into a tag. Null/unknown roles render nothing.
+ * @param {{ role?: string|null, size?: 'sm'|'md'|'lg', title?: string, class?: string }} props
+ */
+export function RoleTag({ role, size = 'md', title, class: cls }) {
+  const label = roleLabel(role);
+  if (!label) return null;
+  return html`<span class=${cx('role-tag', `role-tag--${size}`, `role-tag--${role}`, cls)} title=${title || `${label}账号`}>${label}</span>`;
 }
 
 // ---- PhaseBanner -------------------------------------------------------------------------------

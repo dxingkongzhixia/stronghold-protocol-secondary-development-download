@@ -226,7 +226,8 @@ function wireNet() {
     if (typeof msg.token === 'string' && msg.token) savePref('authToken', msg.token);
     const acc = msg.account;
     if (acc && Number.isFinite(acc.id)) {
-      store.patch('auth', { account: { id: acc.id, name: String(acc.name || '') }, error: null });
+      // role: shared/constants.js ROLES (null = ordinary) — a 管理员 / 开发者 tag rides next to the name everywhere
+      store.patch('auth', { account: { id: acc.id, name: String(acc.name || ''), role: typeof acc.role === 'string' ? acc.role : null }, error: null });
       // 博士代号 = the account name: the server renamed the session, so follow it locally too.
       if (acc.name) store.patch('me', { name: String(acc.name) });
     }

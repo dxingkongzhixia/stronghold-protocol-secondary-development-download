@@ -543,7 +543,7 @@ describe('websocket lobby', () => {
     assert.equal(st.difficulty, 'HARD');
     assert.equal(st.inMatch, false);
     assert.equal(st.seats.length, MAX_SEATS);
-    assert.deepEqual(st.seats[0], { seat: 0, playerId: host.id, name: 'Host', isBot: false, ready: false, connected: true, fromAi: false });
+    assert.deepEqual(st.seats[0], { seat: 0, playerId: host.id, name: 'Host', role: null, isBot: false, ready: false, connected: true, fromAi: false });
     assert.deepEqual(st.seats.slice(1), [null, null, null]);
 
     const guest = await pool.player('Guest');
@@ -616,7 +616,7 @@ describe('websocket lobby', () => {
     const s1 = await pool.player('Watcher1');
     await expectOk(s1, { t: 'room.spectate', code: st.code.toLowerCase() });
     const v1 = await s1.waitFor('room.state', (s) => s.spectators.some((x) => x.playerId === s1.id));
-    assert.deepEqual(v1.spectators, [{ playerId: s1.id, name: 'Watcher1', connected: true }]);
+    assert.deepEqual(v1.spectators, [{ playerId: s1.id, name: 'Watcher1', role: null, connected: true }]);
     assert.ok(!v1.seats.some((x) => x && x.playerId === s1.id), 'never in a player seat');
     await host.waitFor('room.state', (s) => s.spectators.length === 1);
     await expectOk(s1, { t: 'room.spectate', code: st.code }); // idempotent
@@ -710,7 +710,7 @@ describe('websocket lobby', () => {
     const w = await back.hello('Late', late.token);
     assert.equal(w.resumed, true);
     const rs = await back.waitFor('room.state');
-    assert.deepEqual(rs.spectators.find((x) => x.playerId === late.id), { playerId: late.id, name: 'Late', connected: true });
+    assert.deepEqual(rs.spectators.find((x) => x.playerId === late.id), { playerId: late.id, name: 'Late', role: null, connected: true });
     await expectError(back, { t: 'g.infoReady' }, ERR.SPECTATOR);
     // the match ends: the spectators see the result (a broadcast) and stay in the room, which returns to its lobby
     await expectOk(host, { t: 'g.infoReady' });
@@ -877,7 +877,7 @@ describe('websocket lobby', () => {
     assert.equal(w.token, guest.token);
     const restored = await back.waitFor('room.state');
     assert.equal(restored.code, st.code);
-    assert.deepEqual(seatOf(restored, guest.id), { seat: 1, playerId: guest.id, name: 'Guest2', isBot: false, ready: true, connected: true, fromAi: false });
+    assert.deepEqual(seatOf(restored, guest.id), { seat: 1, playerId: guest.id, name: 'Guest2', role: null, isBot: false, ready: true, connected: true, fromAi: false });
     await host.waitFor('room.state', (s) => seatOf(s, guest.id)?.connected === true);
 
     // an unknown token just creates a new identity

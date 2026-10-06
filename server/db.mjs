@@ -10,7 +10,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 /**
  * `node:sqlite` is experimental and prints an ExperimentalWarning on import; suppress just that one (it is expected).
@@ -34,6 +34,7 @@ export const DatabaseSync = sqlite.DatabaseSync;
 function migrate(db) {
   const row = db.prepare('PRAGMA user_version').get();
   const v = Number(row?.user_version || 0);
+  if (v >= SCHEMA_VERSION) return;
   if (v < 1) {
     db.exec(`
       CREATE TABLE accounts (
@@ -54,7 +55,13 @@ function migrate(db) {
       CREATE INDEX idx_sessions_account ON sessions(account_id);
       CREATE INDEX idx_sessions_expires ON sessions(expires_at);
     `);
-    db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+    db.exec('PRAGMA user_version = 1');
+  }
+  if (v < 2) {
+    // The account role (shared/constants.js ROLES, server/auth.js): NULL for every account that predates it, and for
+    // every ordinary account. `node tools/role.mjs` assigns one; it is shown next to the name in every screen.
+    db.exec('ALTER TABLE accounts ADD COLUMN role TEXT');
+    db.exec('PRAGMA user_version = 2');
   }
 }
 

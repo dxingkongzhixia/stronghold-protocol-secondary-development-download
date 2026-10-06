@@ -103,7 +103,7 @@ export class StubMatch {
       ? modeCfg.lastRound
       : (this.modeId === 'mode_single_funny' ? 9 : 14);
     this.infoCheckMs = Math.min(MAX_TIMER_MS, posNum(config.timers && config.timers.infoCheck, DEFAULT_INFO_CHECK_S) * 1000);
-    /** @type {Map<string, {seat:number, playerId:string, name:string, isBot:boolean, connected:boolean, left:boolean, ready:boolean, lastEmoteAt:number}>} */
+    /** @type {Map<string, {seat:number, playerId:string, name:string, role?:string|null, isBot:boolean, connected:boolean, left:boolean, ready:boolean, lastEmoteAt:number}>} */
     this.players = new Map();
     for (const s of opts.seats) {
       this.players.set(s.playerId, { ...s, left: false, ready: !!s.isBot, lastEmoteAt: -Infinity });
@@ -183,13 +183,14 @@ export class StubMatch {
    * match never has more than MAX_SEATS players.
    * @param {string} humanId @param {number} seat @param {string} [name] @returns {boolean}
    */
-  takeOver(humanId, seat, name) {
+  takeOver(humanId, seat, name, role) {
     if (this.disposed || this.ended || this.players.has(humanId)) return false;
     const p = [...this.players.values()].find((x) => x.seat === seat && x.isBot);
     if (!p) return false;
     this.players.delete(p.playerId);
     p.playerId = humanId;
     if (name) p.name = name;
+    p.role = role ?? null;
     p.isBot = false;
     p.connected = true;
     p.ready = true;
@@ -212,6 +213,7 @@ export class StubMatch {
     this.players.delete(humanId);
     p.playerId = aiId;
     if (aiName) p.name = aiName;
+    p.role = null;
     p.isBot = true;
     p.connected = true;
     p.ready = true;
@@ -242,7 +244,7 @@ export class StubMatch {
     const summary = {
       stub: true, victory: false, roundsPassed: 0, modeId: this.modeId, difficulty: this.difficulty, seed: this.seed,
       reason: deadlinePassed ? 'timeout' : 'confirmed',
-      players: [...this.players.values()].map((p) => ({ playerId: p.playerId, seat: p.seat, name: p.name, isBot: p.isBot, lp: 0, title: null })),
+      players: [...this.players.values()].map((p) => ({ playerId: p.playerId, seat: p.seat, name: p.name, role: p.role ?? null, isBot: p.isBot, lp: 0, title: null })),
     };
     if (humansLeft) {
       this.broadcastFn(this.publicView());
@@ -268,7 +270,7 @@ export class StubMatch {
       bannedChess: [],
       bossId: null,
       players: [...this.players.values()].map((p) => ({
-        playerId: p.playerId, seat: p.seat, name: p.name, isBot: p.isBot, connected: p.isBot || (p.connected && !p.left),
+        playerId: p.playerId, seat: p.seat, name: p.name, role: p.role ?? null, isBot: p.isBot, connected: p.isBot || (p.connected && !p.left),
         alive: true, lp: 0, bandId: null, shopLevel: 1, boardCount: 0, ready: p.ready, bonds: [], fieldId: null,
         status: p.left ? 'left' : p.ready ? 'ready' : 'deciding',
       })),

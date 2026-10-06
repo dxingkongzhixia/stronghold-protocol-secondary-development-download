@@ -35,7 +35,7 @@ test('register / duplicate names (case-insensitive) / login / sessions', () => {
   const r = auth.register('Hero', 'secret1');
   assert.equal(r.error, undefined);
   assert.ok(r.account.id > 0 && typeof r.token === 'string' && r.token.length >= 32);
-  assert.deepEqual(auth.resolve(r.token), { id: r.account.id, name: 'Hero' });
+  assert.deepEqual(auth.resolve(r.token), { id: r.account.id, name: 'Hero', role: null });
 
   assert.equal(auth.register('Hero', 'other12').error, 'NAME_TAKEN');
   assert.equal(auth.register('hero', 'other12').error, 'NAME_TAKEN', 'names are unique case-insensitively');
@@ -47,7 +47,7 @@ test('register / duplicate names (case-insensitive) / login / sessions', () => {
   const l = auth.login('HERO', 'secret1');
   assert.equal(l.account.id, r.account.id);
   assert.notEqual(l.token, r.token, 'a new session token per login');
-  assert.deepEqual(auth.resolve(l.token), { id: r.account.id, name: 'Hero' });
+  assert.deepEqual(auth.resolve(l.token), { id: r.account.id, name: 'Hero', role: null });
 
   auth.logout(l.token);
   assert.equal(auth.resolve(l.token), null, 'logged out');
@@ -59,12 +59,25 @@ test('register / duplicate names (case-insensitive) / login / sessions', () => {
 test('login rotates the account session: the older token is invalidated', () => {
   const auth = new AuthService({ db: openMemoryDb(), now: () => 0 });
   const r = auth.register('Solo', 'secret1');
-  assert.deepEqual(auth.resolve(r.token), { id: r.account.id, name: 'Solo' });
+  assert.deepEqual(auth.resolve(r.token), { id: r.account.id, name: 'Solo', role: null });
   const l = auth.login('Solo', 'secret1');
   assert.equal(auth.resolve(r.token), null, 'the older token no longer resolves');
-  assert.deepEqual(auth.resolve(l.token), { id: r.account.id, name: 'Solo' });
+  assert.deepEqual(auth.resolve(l.token), { id: r.account.id, name: 'Solo', role: null });
   // logging in again rotates once more
   const l2 = auth.login('solo', 'secret1');
   assert.equal(auth.resolve(l.token), null);
   assert.ok(auth.resolve(l2.token));
+});
+
+test('account roles (shared/constants.js ROLES): setRole assigns / clears, case-insensitively', () => {
+  const auth = new AuthService({ db: openMemoryDb(), now: () => 0 });
+  const r = auth.register('Admin', 'secret1');
+  assert.equal(auth.listAccounts()[0].role, null, 'a fresh account is ordinary');
+  assert.deepEqual(auth.setRole('admin', 'admin'), { account: { id: r.account.id, name: 'Admin', role: 'admin' } });
+  assert.deepEqual(auth.resolve(r.token), { id: r.account.id, name: 'Admin', role: 'admin' }, 'the bound session follows the account');
+  assert.equal(auth.listAccounts()[0].role, 'admin');
+  assert.equal(auth.setRole('Admin', 'dev').account.role, 'dev');
+  assert.equal(auth.setRole('ADMIN', null).account.role, null, 'cleared back to an ordinary account');
+  assert.equal(auth.setRole('Admin', 'nope').error, 'BAD_ROLE');
+  assert.equal(auth.setRole('Nobody', 'admin').error, 'NO_ACCOUNT');
 });

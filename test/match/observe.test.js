@@ -22,7 +22,7 @@ test('observeTarget: prep, own battle running / over, boss pairs, eliminated pla
   assert.deepEqual(observeTarget(players[1], combat(true), 'a', { ownDone: true }), { fieldId: 'n:b' }, 'the local battle already ended');
   assert.deepEqual(observeTarget(players[1], combat(false), 'a'), { fieldId: 'n:b' });
   assert.deepEqual(observeTarget(players[0], combat(false), 'a', { observing: true }), { back: true });
-  assert.deepEqual(teammateProgress(combat(false), 'a'), [{ playerId: 'b', name: 'B', isBot: false, killed: 3, total: 8, done: false }]);
+  assert.deepEqual(teammateProgress(combat(false), 'a'), [{ playerId: 'b', name: 'B', role: null, isBot: false, killed: 3, total: 8, done: false }]);
   const fa = pubOf('FINAL_ASSAULT', [
     { fieldId: 'b1', kind: 'boss', players: ['a', 'b'], live: true },
     { fieldId: 'b2', kind: 'boss', players: ['d'], live: true },

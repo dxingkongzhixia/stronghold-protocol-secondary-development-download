@@ -189,7 +189,7 @@ test('co-op spectator over websockets: watches the real match like an eliminated
   const back = await watcher('Spec', s.token);
   assert.equal(back.id, s.id);
   const rs = await back.waitFor('room.state');
-  assert.deepEqual(rs.spectators, [{ playerId: s.id, name: 'Spec', connected: true }]);
+  assert.deepEqual(rs.spectators, [{ playerId: s.id, name: 'Spec', role: null, connected: true }]);
   await back.waitFor('m.public');
   await a.waitFor('m.public', (p) => p.phase === 'PREP' && p.round === 2, 15000);
   for (const c of [s, back]) {

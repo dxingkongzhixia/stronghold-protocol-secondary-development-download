@@ -5,7 +5,7 @@
 // carrying `accountToken` rebinds the session to that account. 野排 (mm.join) requires a bound account.
 
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX } from '../shared/constants.js';
+import { AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX, ROLES } from '../shared/constants.js';
 
 /** scrypt parameters (cost is stored in the hash string, so it can be raised later without breaking old hashes). */
 const SCRYPT = Object.freeze({ N: 16384, r: 8, p: 1, keylen: 64 });
@@ -58,8 +58,8 @@ export function passwordError(pw) {
   return pw.length >= AUTH_PASS_MIN && pw.length <= AUTH_PASS_MAX ? null : 'BAD_PASSWORD';
 }
 
-/** The account fields sent to the client (never the hash). */
-export const publicAccount = (row) => ({ id: row.id, name: row.name });
+/** The account fields sent to the client (never the hash). `role` is a shared/constants.js ROLES key, or null. */
+export const publicAccount = (row) => ({ id: row.id, name: row.name, role: row.role ?? null });
 
 /**
  * Accounts + sessions over the SQLite connection from server/db.mjs. All methods are synchronous (the statements are
@@ -81,12 +81,29 @@ export class AuthService {
       delSession: db.prepare('DELETE FROM sessions WHERE token = ?'),
       delByAccount: db.prepare('DELETE FROM sessions WHERE account_id = ?'),
       purge: db.prepare('DELETE FROM sessions WHERE expires_at < ?'),
-      list: db.prepare('SELECT id, name, created_at, last_login, banned FROM accounts ORDER BY id'),
+      list: db.prepare('SELECT id, name, created_at, last_login, banned, role FROM accounts ORDER BY id'),
+      setRole: db.prepare('UPDATE accounts SET role = ? WHERE id = ?'),
     };
   }
 
   /** Every account, without the password hash (the /admin account table). */
   listAccounts() { return this.q.list.all(); }
+
+  /**
+   * Assign (or clear, with `null`) an account's role — shared/constants.js ROLES. The name is looked up like login
+   * (case-insensitively). Used by `tools/role.mjs`.
+   * @param {string} rawName @param {string|null} role
+   * @returns {{ account: { id:number, name:string, role:string|null } } | { error: string }}
+   */
+  setRole(rawName, role) {
+    const name = cleanName(rawName);
+    const row = name ? this.q.byNameLower.get(name.toLowerCase()) : null;
+    if (!row) return { error: 'NO_ACCOUNT' };
+    const next = role == null || role === '' ? null : String(role);
+    if (next != null && !Object.prototype.hasOwnProperty.call(ROLES, next)) return { error: 'BAD_ROLE' };
+    this.q.setRole.run(next, row.id);
+    return { account: publicAccount(this.q.byId.get(row.id)) };
+  }
 
   /** @returns {{ account: {id:number,name:string}, token: string } | { error: string }} */
   register(rawName, password) {

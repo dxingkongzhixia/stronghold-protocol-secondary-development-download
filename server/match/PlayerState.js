@@ -97,6 +97,8 @@ export class PlayerState {
     this.playerId = seat.playerId;
     this.seat = seat.seat;
     this.name = seat.name;
+    /** shared/constants.js ROLES key of the bound account (null = ordinary / bot) — rides along in the player view */
+    this.role = seat.role ?? null;
     this.isBot = !!seat.isBot;
     this.connected = this.isBot ? true : !!seat.connected;
     this.left = false;
