@@ -432,7 +432,7 @@ function PublicAlliances({ onJoin, onSpectate }) {
     rows.push(html`<div class="join-foot" key="open">
       <span class="t-lo">公开同盟</span>
       ${open.map((r) => html`<button key=${r.code} type="button" class="code-chip num"
-        title=${`${r.difficultyName || ''} · ${r.humans}/${MAX_SEATS}${r.host ? ` · ${r.host}${roleLabel(r.hostRole) ? `（${roleLabel(r.hostRole)}）` : ''}` : ''} —— 点击加入`}
+        title=${`${r.difficultyName || ''} · ${r.humans}/${MAX_SEATS}${r.host ? ` · ${r.host}${roleName(r.hostRole) ? `（${roleName(r.hostRole)}）` : ''}` : ''} —— 点击加入`}
         onClick=${() => onJoin(r.code)}>${r.code}</button>`)}
     </div>`);
   }
@@ -440,7 +440,7 @@ function PublicAlliances({ onJoin, onSpectate }) {
     rows.push(html`<div class="join-foot" key="play">
       <span class="t-lo">正在模拟</span>
       ${play.map((r) => html`<button key=${r.code} type="button" class="code-chip num is-live"
-        title=${`${r.difficultyName || ''} · ${r.humans} 人${r.bots ? ` + ${r.bots} AI` : ''}${r.host ? ` · ${r.host}${roleLabel(r.hostRole) ? `（${roleLabel(r.hostRole)}）` : ''}` : ''} —— 点击观战`}
+        title=${`${r.difficultyName || ''} · ${r.humans} 人${r.bots ? ` + ${r.bots} AI` : ''}${r.host ? ` · ${r.host}${roleName(r.hostRole) ? `（${roleName(r.hostRole)}）` : ''}` : ''} —— 点击观战`}
         onClick=${() => onSpectate(r.code)}>${r.code}</button>`)}
     </div>`);
   }
