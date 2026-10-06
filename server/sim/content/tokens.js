@@ -996,22 +996,24 @@ export function wangStone(bb) {
         if (!unit.alive) return;
         const axes = wangAxes(battle, unit);                    // latched: null only while never linked
         if (!axes) return;
+        // S3 天下劫: "棋子的【触发】和伤害范围扩大" — with a token skill range the TRIGGER is the range too (an enemy
+        // entering it sets the piece off, not only one standing on its exact tile). S1/S2 trigger on the touched tile.
+        const grid = unit.def?.skill?.rangeGrid;
+        const keys = Array.isArray(grid) && grid.length ? absoluteRangeKeys(grid, unit.tileR, unit.tileC, unit.dir, 0) : null;
+        const inRange = keys && keys.length ? battle.enemiesInKeys(keys, unit, { canHitFly: true }) : null;
         const hit = wangTouched(battle, unit);
-        if (!hit) return;
+        if (!hit && !(inRange && inRange.length)) return;
         const tal = wangTalent2(unit);
         const stacks = tal ? Math.min(tal.max, Math.max(0, wangLineCount(battle, unit) - 1)) : 0;
         const atk = ownerAtk(unit) * scale * (tal ? 1 + tal.per * stacks : 1);
-        // S3 天下劫: "棋子的触发和伤害范围扩大" — the token's own skill range (x-6: a ±2 plus) replaces the touched tile
-        const grid = unit.def?.skill?.rangeGrid;
-        const keys = Array.isArray(grid) && grid.length ? absoluteRangeKeys(grid, unit.tileR, unit.tileC, unit.dir, 0) : null;
-        const targets = keys && keys.length ? battle.enemiesInKeys(keys, unit, { canHitFly: true })
+        const targets = inRange && inRange.length ? inRange
           : (side > 0 && slowDur > 0 ? wangAxisTargets(battle, unit, side, axes) : [hit]);
         for (const t of targets) {
           if (scale > 0) battle.dealDamage(unit, t, { amount: atk, type: 'arts', isSkill: true, resIgnoreFlat: tal ? tal.pen : 0, tags: ['summon', 'trap'] });
           if (slowDur > 0 && slow < 0) battle.applyStatus(t, 'sluggish', { duration: slowDur, source: unit, mods: { moveMul: Math.max(0.1, 1 + slow) } });
         }
-        if (slug > 0) battle.applyStatus(hit, 'sluggish', { duration: slug, source: unit });
-        if (dot > 0) battle.addBuff(hit, { key: 'wang:dot', duration: slug || 6.5, source: unit, tick: 1, mods: null });
+        if (hit && slug > 0) battle.applyStatus(hit, 'sluggish', { duration: slug, source: unit });
+        if (hit && dot > 0) battle.addBuff(hit, { key: 'wang:dot', duration: slug || 6.5, source: unit, tick: 1, mods: null });
         battle.fx('champagneBomb', { x: unit.x, y: unit.y, id: unit.id, target: hit.id, hits: 1, consumed: true });
         battle.retreat(unit, { reason: 'expired', permanent: true });
       },
