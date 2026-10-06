@@ -245,7 +245,12 @@ function resolveDie(names, find, form) {
  * @returns {Roles}
  */
 export function resolveRoles(animationNames, opts = {}) {
-  const names = Array.isArray(animationNames) ? animationNames.filter((n) => typeof n === 'string' && n.length) : [];
+  // A 傀儡师's <替身> clips (Doll_*, e.g. 结城理's Doll_Skill_1_Die) belong to the 替身 FORM (shared/forms.js FORMS),
+  // never to the base manifest roles: without this the `die` role picked Doll_Skill_1_Die, so a knock-out collapsed the
+  // operator into the 替身's pose while it was still the 本体 (player report: 转换替身时一直坐地上).
+  const names = Array.isArray(animationNames)
+    ? animationNames.filter((n) => typeof n === 'string' && n.length && !/^Doll_/i.test(n))
+    : [];
   const find = makeFinder(names);
   const durations = opts.durations && typeof opts.durations === 'object' ? opts.durations : null;
   const idle = resolveIdle(names, find, durations);
@@ -268,7 +273,9 @@ export function resolveRoles(animationNames, opts = {}) {
     attack,
     attackDown,
     skill: skills[String(indices[0])] ?? null,
-    die: resolveDie(names, find, form),
+    // A 傀儡师's 本体 has no Die clip of its own: it "falls" by switching out (结城理's base `SwitchOut`), so a
+    // knock-out still has a pose to hold — test/render/issue25-downback asserts every operator Front carries one.
+    die: resolveDie(names, find, form) ?? find('SwitchOut'),
     move: resolveMove(names, find, form),
     stun: resolveStun(find),
   };

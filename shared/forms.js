@@ -70,6 +70,18 @@ export const FORMS = Object.freeze({
   char_4016_kazema: Object.freeze({
     doll: Object.freeze({ change: 'Start_B', leave: 'Start', roles: dollRoles('Idle_B', 'Die_B', 'Attack_B') }),
   }),
+  // 结城理 (custom): his skeleton's 替身 clips are the per-skill Doll_Skill_* set (no *_B naming). His default skill is
+  // S3, whose P1 doll has the complete set (Idle / Attack_A / Die / Stun / SwitchIn / SwitchOut) — S1 and S2 share it
+  // until the sim publishes the skill / phase-specific form (a later refinement: S3's second <替身> uses P2_Loop /
+  // P1toP2_Change*).
+  char_4217_makoto: Object.freeze({
+    doll: Object.freeze({
+      change: 'Doll_Skill_3_P1_SwitchIn',
+      end: 'Doll_Skill_3_P1_Die',
+      leave: 'Start',
+      roles: dollRoles('Doll_Skill_3_P1_Idle', 'Doll_Skill_3_P1_Die', 'Doll_Skill_3_P1_Attack_A'),
+    }),
+  }),
   enemy_1040_bombd: Object.freeze({
     bombed: Object.freeze({
       roles: Object.freeze({
