@@ -74,12 +74,12 @@ test('numbers: every stats/bb/enemyScale object holds only finite numbers (no nu
   assert.deepEqual(bad.slice(0, 10), [], `${bad.length} bad numeric fields`);
 });
 
-test('chess: 274 records, 116 visible non-DIY (16/17/22/22/19/20 per tier)', () => {
-  assert.equal(Object.keys(chess).length, 274);
-  assert.equal(visible.length, 116);
+test('chess: 276 records, 117 visible non-DIY (16/17/23/22/19/20 per tier)', () => {
+  assert.equal(Object.keys(chess).length, 276);
+  assert.equal(visible.length, 117);
   const perTier = {};
   for (const c of visible) perTier[c.tier] = (perTier[c.tier] || 0) + 1;
-  assert.deepEqual(perTier, { 1: 16, 2: 17, 3: 22, 4: 22, 5: 19, 6: 20 });
+  assert.deepEqual(perTier, { 1: 16, 2: 17, 3: 23, 4: 22, 5: 19, 6: 20 });
   assert.equal(normalChess.filter((c) => c.isDiy).length, 4);
   assert.equal(normalChess.filter((c) => c.isHidden).length, 17);
 });

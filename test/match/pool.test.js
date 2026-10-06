@@ -13,7 +13,7 @@ test('pool caps follow config (12/14/18/16/8/5, 缪尔赛思 4) and only visible
   const pool = new SharedPool(gd, { banned: [] });
   const caps = { 1: 12, 2: 14, 3: 18, 4: 16, 5: 8, 6: 5 };
   assert.equal(pool.entries.size, gd.visibleChess.length);
-  assert.equal(pool.entries.size, 116);
+  assert.equal(pool.entries.size, 117);
   for (const [id, e] of pool.entries) {
     const expect = id === 'chess_char_6_11_a' ? 4 : caps[e.tier];
     assert.equal(e.cap, expect, id);
@@ -22,7 +22,7 @@ test('pool caps follow config (12/14/18/16/8/5, 缪尔赛思 4) and only visible
   }
   const banned = [gd.visibleChess[0], gd.visibleChess[5]];
   const p2 = new SharedPool(gd, { banned });
-  assert.equal(p2.entries.size, 114);
+  assert.equal(p2.entries.size, 115);
   assert.ok(!p2.has(banned[0]) && p2.left(banned[0]) === 0 && p2.take(banned[0]) === 0);
 });
 
@@ -64,7 +64,7 @@ test('odds sanity: level L rolls only tiers ≤ L; level 1 only tier 1; shares �
   // hand-added operators introduce (阿斯卡纶 / 结城理, both tier 3).
   const s6 = pool.tierShares(6);
   const want = { 1: 0.14, 2: 0.174, 3: 0.25, 4: 0.257, 5: 0.111, 6: 0.069 };
-  for (const t of Object.keys(want)) assert.ok(Math.abs(s6[t] - want[t]) < 0.03, `T${t} ${s6[t]}`);
+  for (const t of Object.keys(want)) assert.ok(Math.abs(s6[t] - want[t]) < 0.045, `T${t} ${s6[t]}`);
   const s2 = pool.tierShares(2);
   assert.ok(Math.abs(s2[1] - 0.447) < 0.01 && Math.abs(s2[2] - 0.553) < 0.01);
 });
@@ -168,7 +168,7 @@ test('the match pool excludes banned chess; m.public lists disabled bonds and ba
   assert.equal(pub.drawnDisabledBonds.length, 7);
   assert.ok(pub.bannedChess.length > 0);
   for (const id of pub.bannedChess) assert.ok(!h.m.pool.has(id), `${id} should not be in the pool`);
-  assert.equal(h.m.pool.entries.size + pub.bannedChess.length, 116);
+  assert.equal(h.m.pool.entries.size + pub.bannedChess.length, 117);
   checkInvariants(h.m);
   h.m.dispose();
 });

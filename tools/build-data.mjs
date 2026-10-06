@@ -402,7 +402,7 @@ const CUSTOM_CHESS = [
   },
   {
     // 澄闪 (docs/MATCHMAKING.md §31, custom): 6★ 术师·驭械术师 funnel, not in the season's roster. 3 阶; 整备能力
-    // 「购买费用为1」 rides the existing SERVER_CHESS_PRICE handler (`price` = the discount off the tier price: 3 → 1).
+    // 「购买价格为1」 rides the existing SERVER_CHESS_PRICE handler (`price` = the discount off the tier price: 3 → 1).
     charId: 'char_377_gdglow',
     baseId: 'chess_char_377_gdglow_a',
     goldenId: 'chess_char_377_gdglow_b',
@@ -415,11 +415,15 @@ const CUSTOM_CHESS = [
     normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
     golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
     garrison: {
+      // 整备能力 is a prep/shop trait, NOT an IN_BATTLE buff: like 至简 (garrison_13_a, eventType SERVER_PRICE,
+      // effectType SERVER_CHESS_PRICE, bb { price: 2 }, no battle rune). eventType must be SERVER_PRICE or the
+      // onPrice dispatcher (effectsMeta _garrisonHooks → GARRISON_HOOK) never runs it.
+      eventType: 'SERVER_PRICE',
+      effectType: 'SERVER_CHESS_PRICE',
       eventTypeDesc: '整备能力',
-      desc: '购买费用为1',
+      desc: '购买价格为1',   // the official wording (至简 / 红豆 use exactly this; the effect text is 购买价格为N)
       blackboard: [
-        { key: 'key', valueStr: 'SERVER_CHESS_PRICE' },
-        { key: 'price', value: 2 },
+        { key: 'price', value: 2 },   // the discount off the tier price: 3 → 1
       ],
     },
   },
@@ -454,12 +458,16 @@ function applyCustomChess(act, charTable) {
       act.chessNormalIdLookupDict[chessId] = c.baseId;
       garrisonDefs.forEach((g, i) => {
         const etDesc = g.eventTypeDesc ?? '作战能力';
+        const eventType = g.eventType ?? 'IN_BATTLE';
         const bondTrait = etDesc === '持续叠加';
         act.garrisonDataDict[gids[i]] = {
           garrisonDesc: g.desc,
-          eventType: 'IN_BATTLE', eventTypeDesc: etDesc,
-          eventTypeIcon: bondTrait ? 'icon_bond' : 'icon_battle', eventTypeSmallIcon: bondTrait ? 's_icon_bond' : 's_icon_battle',
-          effectType: bondTrait ? 'ADD_BOND' : 'GAIN_BUFF', charLevel: 0, battleRuneKey: 'env_gbuff_new_with_verify',
+          eventType, eventTypeDesc: etDesc,
+          eventTypeIcon: g.eventTypeIcon ?? (bondTrait ? 'icon_bond' : 'icon_battle'),
+          eventTypeSmallIcon: g.eventTypeSmallIcon ?? (bondTrait ? 's_icon_bond' : 's_icon_battle'),
+          effectType: g.effectType ?? (bondTrait ? 'ADD_BOND' : 'GAIN_BUFF'), charLevel: 0,
+          // only an IN_BATTLE trait carries a battle rune (a SERVER_PRICE 整备能力 does not; official garrison_13_a: null)
+          battleRuneKey: eventType === 'IN_BATTLE' ? 'env_gbuff_new_with_verify' : null,
           blackboard: g.blackboard.map((b) => ({ key: b.key, value: b.value ?? 0, valueStr: b.valueStr ?? null })),
           description: g.desc,
         };

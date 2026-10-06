@@ -2074,7 +2074,7 @@ const KITS = {
     return {
       // S3 澄净闪耀 (default): whole-field range, her own attack stops (the drones carry it), +2 drones, sluggish on hit
       skill: {
-        kind: 'duration', duration: -1,
+        kind: 'duration', duration: num(d.skill && d.skill.duration, 30),   // 澄净闪耀: the official 30s
         mods: { atkPct: num(bb.atk) },
         targeting: { rangeGrid: rGrid },
         attack: { maxTargets: drones(null), ...(stunOnHit(null) || null) },
@@ -2089,9 +2089,9 @@ const KITS = {
           attack: { maxTargets: drones(s.bb), ...(stunOnHit(s.bb) || null) },
         }),
         skchr_gdglow_2: (s) => ({
-          // 持续无限: no kit in this repo uses a -1 duration (the sim never marks such a skill active); a very long
-          // finite window behaves as the official "持续时间无限"
-          kind: 'duration', duration: 9999,
+          // 电流翻涌 持续无限: the sim's `duration` kind ends a skill whose duration is <= 0 on the next tick; `toggle`
+          // is how the repo expresses "runs until switched off" (timeLeft stays Infinity) — see skills.js:453
+          kind: 'toggle',
           mods: { atkPct: num(s.bb.atk) },
           targeting: { rangeGrid: copyGrid(s.rangeGrid) },
           attack: { maxTargets: drones(s.bb), ...(stunOnHit(s.bb) || null) },

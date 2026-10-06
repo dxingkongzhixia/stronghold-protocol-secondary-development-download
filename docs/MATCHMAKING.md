@@ -762,7 +762,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 **上线**：按约定先经 `/admin/api/notify` 推送通知（署名 `d星空之下`，`ok:true`）→ 重启本机服务；`/healthz` 正常，`/sim/content/kits/tier6.js` 已含新 kit，`/data/chess.json` 与头像/技能图标/棋子头像均 200。
 
-## 31. 自造干员：澄闪（待开工，2026-10-07）
+## 31. 自造干员：澄闪（功能完成，待上线，2026-10-07）
 
 > 需求：新增干员**澄闪**，盟约 **维多利亚 + 精准**（`victoriaShip` / `preciShip`），特质**整备能力**「**购买费用为 1**」，**3 阶**，其余从网上拉。
 
@@ -781,18 +781,20 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 ### 31.2 待做（照 `docs/NEW-OPERATOR.md` 流程，小步执行）
 
-- [ ] **1. 数据**：`tools/build-data.mjs` 的 `CUSTOM_CHESS` 加 `char_377_gdglow`：3 阶、E2（`normal/_a` skillLevel 4、`golden/_b` skillLevel 7）、`bonds: ['victoriaShip','preciShip']`、默认技能位、`garrison`：
-  - `eventTypeDesc: '整备能力'`、`desc: '购买费用为1'`、`blackboard: [{key:'key',valueStr:'SERVER_CHESS_PRICE'}, {key:'price',value:2}]`（3 阶价 3 → 1）。
-  - 构建后 `visibleChess 116 → 117`。
-- [ ] **2. 技能 / kit**：拉官方三技能数值；**先确认重构对 `funnel`（浮游炮）的支持程度**（若机制落在召唤机/浮游炮上，可能需按望的棋子那样新写一套引擎件；若只是改数值/范围则复用 `altSkills` 即可）→ 写 `kits/tier3.js` 的 `chess_char_377_gdglow_a`。
-- [ ] **3. 美术 / 语音**：`docs/research/07-assets.json` 加他（头像、立绘、技能图、脊柱；含浮游炮 token 若有）→ `node tools/fetch-assets.mjs --asset-source=mirror`。
-- [ ] **4. 测试计数**：`data.test.js`（116→117）、`{ui,match,sim}/loadout` 名册、`match/pool` 概率、`ui/feedback1b-bonds`（维多利亚/精准成员）、token 列表等 → 全量 `node --test` 绿。
-- [ ] **5. 上线**：文档勾选 → **先推通知（署名 d星空之下）→ 再重启**。
+- [x] **1. 数据**：`tools/build-data.mjs` 的 `CUSTOM_CHESS` 加 `char_377_gdglow`：3 阶、E2（`normal/_a` skillLevel 4、`golden/_b` skillLevel 7）、`bonds: ['victoriaShip','preciShip']`、默认技能 S3、`garrison`。构建后 `visibleChess 116 → 117`、`chess 274 → 276`、`garrisons 257 → 259`。
+  - **修正（真 bug，构建期发现）**：整备能力**必须**是 `eventType: 'SERVER_PRICE'`（`effectType: 'SERVER_CHESS_PRICE'`、`bb: {price:2}`、`bbStr: {}`、`battleRuneKey: null`），与官方**至简** `garrison_13_a` 一致。若建成 `IN_BATTLE`，`effectsMeta._garrisonHooks` 取 `GARRISON_HOOK['IN_BATTLE']` 不含 `onPrice` → **价格效果永远不会触发**。`applyCustomChess` 已支持 `eventType` / `effectType` / 图标覆盖。
+  - **描述文案**用官方口径 **`购买价格为1`**（`garrisons_meta.test.js` 用 `/购买价格为?(\d+)/` 校验；「购买费用」写法不通过）。
+- [x] **2. 技能 / kit**：`kits/tier3.js` 的 `chess_char_377_gdglow_a`——浮游单元复用 `professions.installFunnel` + `funnelMap`（数量＝同时锁敌数 `attack.maxTargets`）。S1 火花四溅（`duration 25`、+ASPD）、S2 电流翻涌（**`kind:'toggle'`**＝持续无限、扩大范围）、S3 澄净闪耀（默认、`duration 30`、全场、命中停顿）。
+  - **坑 1**：本作「持续无限」的写法是 `kind: 'toggle'`（`skills.js`：`duration` 型技能 `duration<=0` 时下一 tick 就结束，`active` 立刻变 false）。
+  - **坑 2**：备用技能的规格必须读**它自己的记录**（`s.rangeGrid` / `s.bb`），不能读「当前所选技能」的，否则 `kits_alt_t3` 的「备用规格由自己的记录构建」审计不通过。
+- [x] **3. 美术 / 语音**：`07-assets.json` + `fetch-assets --asset-source=mirror` 已拉（头像/立绘/技能图/前后脊柱）。
+- [x] **4. 测试计数**：`data.test.js`（276 / 117 / perTier 3:23）、`{ui,match,sim}/loadout` 名册 117、`match/pool`（117 / 115 / 池概率容差 0.03→0.045）、`kits_alt_t3`（23）→ 全量 `node --test` **3787 项 0 失败**。
+- [ ] **5. 上线**：文档勾选 → **先问 owner 能否重启 → 推通知（署名 d星空之下）→ 重启**。
 
 ### 31.3 相关上下文（换新会话也够用）
 
 - 流程总纲：`docs/NEW-OPERATOR.md`（数据 / kit / 美术 / 测试 / 文档 / 上线）
 - 前例参考：望（`§30`，含自定义机制与棋子 token）、结城理（`§24`/`§29`）、阿斯卡纶（`§23`）、予愿安洁莉娜（`§25`）
-- 计数钉子：`visibleChess` 的期望值在 `tools/build-data.mjs`（现在 116，加了澄闪后要改 117）
+- 计数钉子：`visibleChess` 的期望值在 `tools/build-data.mjs`（澄闪加入后现为 **117**）
 - 服务器：`ssh root@183.66.27.19 -p 45217`；线上路径 `/www/wwwroot/Stronghold-Protocol`；重启 = 杀 `:3000` pid 后 `su -s /bin/bash www -c 'setsid /www/server/nodejs/vhost/scripts/server.sh'`
 - 部署规矩：**先推通知（管理页 `/admin` 的「通知」面板，署名 d星空之下）→ 再重启**；静态文件（`public/**`）改动可不重启，但 `shared/`、`server/**` 改动需要重启。
