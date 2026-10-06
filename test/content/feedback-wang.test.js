@@ -133,7 +133,6 @@ test('望 S3 天下劫: ammo 20, no normal attack, expanded range; the cast gran
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
     units: [{ chessId: WANG, row: 10, col: 4, uid: 1 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 }],
-    enemies: [{ key: 'e', pos: [10, 8] }],
     autoFinish: false, timeLimit: 30, hooks: ['ammoUsed', 'attack'], captureNoisy: true,
   });
   h.step();
@@ -156,6 +155,33 @@ test('望 S3 天下劫: ammo 20, no normal attack, expanded range; the cast gran
   h.step();
   assert.equal(w.skill.active, false);
   assert.ok(total() >= before, '剩余弹药返还为棋子');
+  checkInvariants(h.b);
+});
+
+test('望 S3 天下劫: a consumed piece is refilled while bullets last ("有空地就不断下棋子"); the skill ends when they run out', REAL, () => {
+  const h = makeBattle({
+    defs: { enemies: { e: still('e') } },
+    units: [{ chessId: WANG, row: 10, col: 4, uid: 1 }],
+    autoFinish: false, timeLimit: 60, captureNoisy: true, hooks: ['damaged', 'ammoUsed'],
+  });
+  h.step();
+  const w = h.unit(WANG);
+  w.skill.sp = w.skill.spCost;
+  assert.ok(w.skill.activate('test', { free: true }));
+  h.step();
+  assert.ok(living(h).length >= 1, 'the cast deployed pieces');
+  const left = () => Math.floor(Number(w.skill.ammoLeft) || 0);
+  // an enemy on a piece detonates it (and every other piece its expanded range reaches); the field is refilled from the
+  // bullets until none are left
+  for (let i = 0; i < 40 && w.skill.active; i++) {
+    const p = living(h)[0];
+    if (!p) break;
+    h.spawn('e', { pos: [p.tileR, p.tileC] });
+    h.run(0.3);
+  }
+  assert.equal(left(), 0, 'the bullets ran out');
+  assert.equal(w.skill.active, false, '弹药耗尽后技能结束');
+  assert.ok(living(h).length <= 6, 'never more pieces than the piece deploy limit (铸子 可以使用6枚棋子)');
   checkInvariants(h.b);
 });
 

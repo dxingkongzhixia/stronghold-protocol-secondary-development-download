@@ -202,7 +202,10 @@ const installDollkeeper = (battle, unit) => {
   // devour mark on her) used to leave her the 替身's 20 s at 1 HP (community report #2)
   const startSwitch = () => {
     const sk = unit.skill;
-    if (sk && sk.active && sk.kind !== 'passive') sk.end('substitute');
+    // 切换动画开始时会清除自身一切Buff (the running skill too). A kit whose persona IS the skill's effect (结城理:
+    // 主动立即切换为<替身>, the skill window is the persona's window) opts out with profile.dollKeepSkill, so the
+    // skill and its skill bar survive the switch.
+    if (sk && sk.active && sk.kind !== 'passive' && !unit.profile?.dollKeepSkill) sk.end('substitute');
     for (const b of unit.buffs.slice()) if (b.status) battle.removeBuff(unit, b);
     unit.trait.dollSwitching = true;
     const done = () => { unit.trait.dollSwitching = false; };

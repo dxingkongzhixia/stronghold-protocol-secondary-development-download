@@ -3483,6 +3483,23 @@ function wang(bb, chess, def) {
         if (u.mem.wangFollow) return;
         spawnFollow(battle, unit, u);
       }, { owner: unit });
+      // S3 天下劫 "有空地就不断下棋子": while the skill runs, the field is continuously refilled — every free tile of the
+      // expanded range takes a piece (铺满 or 弹药耗尽, whichever comes first) as pieces explode. Bounded by the piece's
+      // own per-owner deploy limit (铸子 "可以使用6枚棋子"), or a placement would just withdraw the oldest piece and burn
+      // a bullet for nothing. Runs on a short interval so one tick never spawns the whole budget at once.
+      battle.every(0.25, () => {
+        if (!s3Active(unit)) return;
+        const lim = Math.max(1, Math.floor(num(battle.tokenDef?.(tok, unit)?.stats?.deployLimit, 6)));
+        const mine = () => battle.allyUnits.filter((t) => t.alive && t.kind === 'token' && t.defId === tok && t.ownerUnit === unit);
+        for (const [r, c] of placeTiles(battle, unit, { enemiesFirst: true })) {
+          if (Math.floor(num(unit.skill?.ammoLeft, 0)) <= 0) break;
+          const held = mine();
+          if (held.length >= lim) break;
+          if (held.some((t) => t.tileR === r && t.tileC === c) || battle.unitAt?.(r, c)?.alive) continue;
+          const p = battle.spawnToken(unit, tok, r, c, { kit: triggerKit(battle, unit) });
+          if (p) spendAmmo(battle, unit);
+        }
+      }, { owner: unit });
       // S3 "棋子耗尽后技能结束": no piece left on the field and none in stock while it runs
       battle.every(0.5, () => {
         if (!s3Active(unit)) return;

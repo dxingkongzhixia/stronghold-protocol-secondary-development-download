@@ -245,14 +245,17 @@ function wireNet() {
   }));
   // boot art preload gate (server/bootgate.js): the answer to boot.claim — granted, or the place in the queue
   net.on('boot.state', (msg) => { bootGate.granted = !!msg.granted; bootGate.position = Number(msg.position) || 0; });
-  // operator notice (the admin page's 通知; server/lobby.js broadcastNotice): a dismissable strip + a toast. Usually a
-  // deploy / restart heads-up signed `d星空之下`.
+  // operator notice (the admin page's 通知; server/lobby.js broadcastNotice): ONE dismissable strip (ui/notice.js). Usually a
+  // deploy / restart heads-up signed `d星空之下`. Presented once: a toast on top of the banner showed the same notice twice,
+  // and the same push delivered twice to one page (two live sessions) must not re-announce it either.
   net.on('sys.notice', (msg) => {
     const text = typeof msg.text === 'string' ? msg.text.trim() : '';
     if (!text) return;
     const sign = typeof msg.sign === 'string' && msg.sign ? msg.sign : null;
-    // one presentation only: the dismissable banner (ui/notice.js). A toast on top of it showed the same notice twice.
-    store.patch('notice', { id: msg.id ?? null, text, sign, at: Number(msg.at) || Date.now() });
+    const id = msg.id ?? null;
+    const cur = store.get().notice;
+    if (id && cur && cur.id === id) return;   // the same notice, already on screen
+    store.patch('notice', { id, text, sign, at: Number(msg.at) || Date.now() });
   });
   net.on('room.state', onRoomState);
   net.on('room.closed', (msg) => {
