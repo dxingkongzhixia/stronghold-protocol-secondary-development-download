@@ -510,3 +510,39 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 ### 20.4 测试
 - 新增 `test/lobby.test.js`「all humans dropping mid-match disposes the room after the grace; a live party keeps the dropped seat」：① 真人断线但还有另一个在线真人 → 房间保留、席位 `connected=false`；② 全体离线 → grace 后房间销毁、观战者收到 `{empty}` 且 `room.leave` 报 `NOT_IN_ROOM`。
 - `server/lobby.js` 文件头注释同步。
+
+## 21. 合并上游 18 个提交（2026-10-06）
+
+- 上游 `sganggs/Stronghold-Protocol` 的 `origin/master` 从 `763e224` 前进到 **`19a8908`**（**18 个提交 / 91 个文件 / +4765 −317**），版本仍 `0.1.3`。
+- 合并流程（`_merge-scratch`，分支 `ours`）：
+  1. **先完整同步**工作项目当前状态（工作项目**无 `.git`**，`ours` 此前停在 10-05；比对出 25 个已跟踪文件与之不同，全部拷入并提交）。
+  2. `git merge origin/master` → **只有 5 个文件 / 6 处冲突**，全部解掉，**我们的改动全部保留**：
+     - `public/css/screens/game.css`：我们的盟约条**居中+上移** × 上游 #149 **可折叠盟约条** → 保留我们的定位 + 上游的 `flex/gap` 与折叠按钮规则。**（#149 随后已回退，见 §22）**
+     - `public/js/screens/game.js`：import 列表 → 并入上游 `fieldTile` / `ownerBandId` / `bondPopupPlace`。
+     - `public/js/ui/gameLogic.js`：`DEFAULT_SETTINGS` → 采用上游（新增 **`voice`** 音量，默认改为 .6/.8/.8）。
+     - `public/js/screens/room.js`（2 处）：#103 邀请语 → `InviteBox` 同时支持我们的 `public` 与上游 `name/difficulty`。
+     - `public/js/screens/title.js`：#183 标题页设置按钮 → 保留我们的账号同步 + 上游 `settingsOpen`。
+  3. 备份：`D:\DOTK\_optim-backup-20261006-merge-18commits`（76 个被覆盖文件）；合并提交 `ours = 0466d35`（其父 `61c5960` = 我们的状态）。
+  4. 把差异（91 文件）应用回工作项目 → 全量 `node --test` **仅 `test/assets.test.js` 失败**（见下）。
+- **带入的上游新功能**：#183 标题页设置按钮、#24 资源 gh-proxy 镜像、#185 特殊地形格自解释 / 活性源石、#134 漏怪警报音、#186 3D 棋盘 WebP、#73 干员战斗语音、#109/#160 技能时间窗（部署即计时 / 无 Begin·Idle 片段）、#103 邀请链接带邀请语、#72 回合 BGM（无畏者 / 骑士之日）、#129 观战队友手牌·装备·策略·效果、#110 联防腐蚀 BGM、#66 灵巧阵亡光环 / 隐藏层盟约、#150 观战手持物品不再停画 等（**#149 盟约条可折叠已弃用，见 §22**）。
+- **资源（已补齐，见 `docs/ASSETS.md` §本地客户端来源）**：合并后 `data/assets.json` 新增约 **1690 个文件**（120 名干员语音、BGM、音效、`enemy_5601_entlec` 图标）。补齐方式：
+  - **语音（1680 条）**：用**本地日服客户端**抽 —— 新工具 **`tools/local-extract/extract-voice.py`**（UnityPy 解 `voice/<干员>.ab` 的 AudioClip → ffmpeg 转 mp3 → 写回清单槽位，**无需改清单**）；默认取日服默认语言 `voice`（日语），`--voice-dir …\voice_cn` 可换 CN。
+  - **BGM / SFX（6 个）**：本机直连 `raw.githubusercontent`/`jsDelivr` 被墙，但 `fetch-assets` 加 **`--asset-source=mirror`**（#24 的 gh-proxy 镜像）就能下 → `node tools/fetch-assets.mjs --asset-source=mirror`。
+  - `enemies.enemy_5601_entlec.icon` 两边都没有 → 清单已省略该项，客户端用回退。
+  - 结果：全量 `node --test` **exit=0**。
+
+## 22. 不采纳的上游改动（合并黑名单，2026-10-06）
+
+> 合并上游时**一律跳过**下列改动：即便上游再次提交/更新它们，也保持本仓库现状——冲突时**以我们为准**，必要时合并后再 `git revert`。
+
+| 上游 | 内容 | 为什么不采纳 | 我们保留的行为 |
+|---|---|---|---|
+| **#149**（commit `ede8e7e`，issue #142「盟约条可折叠 / The bond bar can be folded」） | 盟约条加「收起／展开盟约」折叠按钮：收起时隐藏整个列表并关掉由它打开的浮层，只留一个 44×44 的恢复按钮 | **收起/展开很突兀**（用户 2026-10-06 反馈），不想为手机让位牺牲观感 | 盟约条**常驻**、居中，没有折叠按钮 |
+
+**回退内容**（#149 的痕迹已全部清除，`grep -r "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip"` 无命中）：
+- `public/js/screens/game.js`：删掉 `bondsCollapsed` state、`.bonds-toggle` 按钮、`#match-bond-strip` 包裹 div → 还原为直接渲染 `<BondStrip>`。
+- `public/css/screens/game.css`：`.gm__bonds` 去掉上游的 `align-items:flex-start; gap`（保留我们的 `display:flex; justify-content:center`）；删掉 `.gm__bond-list` 与 `.bonds-toggle*` 规则。
+- `docs/DESIGN.md` / `docs/PLAYING.md`：删掉 #149 的两段说明。
+- `test/ui/bond-collapse.e2e.test.js`：删除（该 E2E 专测折叠）。
+
+**下次合并怎么自查**：`git log -S bondsCollapsed -- public/js/screens/game.js` 能看出上游是否又把它加回来；一旦 `.gm__bonds` 相关块冲突，取我们的版本。

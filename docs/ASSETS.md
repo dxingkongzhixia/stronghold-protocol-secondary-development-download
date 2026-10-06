@@ -353,6 +353,32 @@ The 2026-09-27 verification pass also checked:
 - **Browser:** headless Chrome loads and animates all 529 Spine models with the vendored PixiJS 7.4.2 and pixi-spine 4.0.6, with no console errors. Chrome's font sanitizer also accepts the three WOFF2 files.
 - **Official data:** 771 provenance checks against the official data (`activity_table`, `skill_table`, `models_data.json`) all match: avatars, portraits, E2 art, bond, band and item icons, and enemy skeleton files.
 
+## 本地客户端来源（owner 提供，2026-10-06）
+
+主人本地装了官方客户端，缺的**美术**资源可直接从它抽（不用镜像）：
+
+- **路径**：`D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP`（**日服**）；Unity 资源根 =
+  **`…\Arknights_JP\Arknights_Data\StreamingAssets\AB\Windows`**（热更内容另在 `Arknights_Data\PersistentData\Bundles\`）。
+- **美术**：`tools/local-extract/extract.py` 直接指到该根即可：
+  ```
+  .venv-extract\Scripts\python.exe tools\local-extract\extract.py ^
+    --game "D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\Arknights_Data\StreamingAssets\AB\Windows" [--only <subdir 前缀>]
+  ```
+  （自动棋地图 / 自动棋 UI 切图 / 表情 / 说明页 / 投射物 / 若干 Spine / 3D 棋盘网格·材质·特效 / 派生 PBR / WebP / 敌人 Spine；写出到 `public/assets/local/**` 并更新 `data/local-assets.json`。）
+  相关：`tools/local-extract/enemy_scales.py` 读模型缩放；`node tools/setup.mjs --local` 把本地抽取一并接入。
+- **语音**：本地客户端每个干员一个包 `audio/sound_beta_2/<lang>/<干员>.ab`（`<lang>`＝客户端默认语言 `voice`，另有 `voice_cn` / `voice_en`），内含该干员所有语音片段（`CN_019`…，**编号是 CN 行号，与语言无关**）。用 `tools/local-extract/extract-voice.py` 按清单把要的片段抽出来转 mp3 写回（**无需改清单**）：
+  ```
+  .venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py ^
+    --voice-dir "D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\Arknights_Data\PersistentData\Bundles\audio\sound_beta_2\voice"
+  ```
+  2026-10-06 用它从**日服默认语言**补了 **1680 条**语音（120 干员，~78 MB）。`voice`＝日服默认（日语）；想补 CN 就把 `--voice-dir` 指到 `…\sound_beta_2\voice_cn`。`--print-jobs` 只看要写什么。
+- **BGM / SFX**：`extract.py` / `extract-voice.py` 都不管；本地这个日服客户端也**没有**上游新增的 `m_bat_kazimierz2_*` / `m_bat_corrosion_*` / `b_ui_alarmenter`。→ 走镜像（见下），或以后有更新的客户端再抽。
+- ✅ **远程镜像其实能用**：本机直连 `raw.githubusercontent` / `jsDelivr` 被墙，但 `fetch-assets` 带 **`--asset-source=mirror`**（#24 的 gh-proxy 镜像）就正常：
+  ```
+  node tools\fetch-assets.mjs --asset-source=mirror
+  ```
+  2026-10-06 用它补齐了 BGM/音效。（`--asset-source` 也可用 `SP_ASSET_SOURCE` 环境变量；不带 flag 时先试原始源、失败再提示。）
+
 ## Licensing and credits
 
 The project's code is GPL-3.0-or-later (`LICENSE`); none of the items below is covered by it. Details: `NOTICE.md` (scope, non-commercial terms) and `THIRD-PARTY-NOTICES.md` (libraries, fonts, licence texts).

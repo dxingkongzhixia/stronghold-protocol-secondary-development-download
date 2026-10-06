@@ -77,6 +77,10 @@ cd D:\DOTK\Stronghold-Protocol; node --test
 .\server-start.cmd                                   # 或: $env:SP_VERIFY='sample'; node server/index.js
 # 账号库
 sqlite3 var/accounts.db                              # 表: accounts / sessions
+# 资源：本地客户端抽美术 + 抽语音；远程镜像走 gh-proxy
+.venv-extract\Scripts\python.exe tools\local-extract\extract.py --game "D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\Arknights_Data\StreamingAssets\AB\Windows"
+.venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py   # 本地客户端补干员语音（默认日服 voice，可 --voice-dir 指 voice_cn）
+node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-proxy 镜像（BGM/SFX 等）
 ```
 
 ## 7. 备份 / 回滚
