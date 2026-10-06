@@ -142,7 +142,12 @@ node --test
 
 ## 6. 上线
 
-1. 部署改动的源码/数据（`data/*.json`、`server/**`、`tools/**`、`docs/**`）+ 新资源（`public/assets/**` 新增文件）。
+1. 部署改动的源码/数据（`data/*.json`、`server/**`、`tools/**`、`docs/**`）+ 新资源。
+   - ⚠️ **静态资源要按「整类目录」上传，不要只挑几个文件**：`public/assets/skill/`（**技能图标**）、
+     `public/assets/char/avatar|portrait/`、`public/assets/spine/op/<charId>/`、`public/assets/prof/sub/`、
+     `public/assets/audio/sfx/player/`、`public/assets/audio/voice/`。漏传的典型症状：详情页技能行只剩
+     `S1/S2/S3` 文字（缺技能图标）、立绘空白、音效静音。
+   - 一次到位的做法：`tar -czf` 时直接带上 `data server public/js public/assets/...` 需要的目录，或整树同步（`fullsync`）。
 2. **重启服务**：`server/**` 改了必须重启；只改 `public/**`（前端）不用。
 3. 校验：`curl -s /data/chess.json | grep <baseId>`、新资源各一条 HTTP 200。
 4. 提交到 `_merge-scratch` 的 `ours` 分支（工作项目无 `.git`；用 `sync-scratch.ps1` / `apply-sync.ps1` 同步），

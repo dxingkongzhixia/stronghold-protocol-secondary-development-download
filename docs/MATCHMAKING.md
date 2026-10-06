@@ -787,7 +787,12 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - [x] **2. 技能 / kit**：`kits/tier3.js` 的 `chess_char_377_gdglow_a`——浮游单元复用 `professions.installFunnel` + `funnelMap`（数量＝同时锁敌数 `attack.maxTargets`）。S1 火花四溅（`duration 25`、+ASPD）、S2 电流翻涌（**`kind:'toggle'`**＝持续无限、扩大范围）、S3 澄净闪耀（默认、`duration 30`、全场、命中停顿）。
   - **坑 1**：本作「持续无限」的写法是 `kind: 'toggle'`（`skills.js`：`duration` 型技能 `duration<=0` 时下一 tick 就结束，`active` 立刻变 false）。
   - **坑 2**：备用技能的规格必须读**它自己的记录**（`s.rangeGrid` / `s.bb`），不能读「当前所选技能」的，否则 `kits_alt_t3` 的「备用规格由自己的记录构建」审计不通过。
-- [x] **3. 美术 / 语音**：`07-assets.json` + `fetch-assets --asset-source=mirror` 已拉（头像/立绘/技能图/前后脊柱）。
+- [x] **3. 美术 / 语音**：`07-assets.json` + `fetch-assets --asset-source=mirror` 已拉。**上线时必须一并上传**（否则 UI 会缺图标）：
+  - `public/assets/skill/skchr_gdglow_{1,2,3}.png`（**技能图标**——漏了它加载/详情页的技能行就只剩 `S1/S2/S3` 文字）
+  - `public/assets/char/avatar/char_377_gdglow{,_2}.png`、`public/assets/char/portrait/char_377_gdglow_{1,2}.png`
+  - `public/assets/spine/op/char_377_gdglow/{front,back}/char_377_gdglow.{skel,atlas,png}`（脊柱）
+  - `public/assets/prof/sub/funnel.png`（子职业图标）、`public/assets/audio/sfx/player/{p_atk/p_atk_funnel_cast_n.mp3,p_imp/p_imp_funnel_n.mp3}`（浮游单元音效）
+  - 静态资源**不需要重启**，但**必须上传**；漏传后补传即可，玩家 `Ctrl+Shift+R` 刷新。
 - [x] **4. 测试计数**：`data.test.js`（276 / 117 / perTier 3:23）、`{ui,match,sim}/loadout` 名册 117、`match/pool`（117 / 115 / 池概率容差 0.03→0.045）、`kits_alt_t3`（23）→ 全量 `node --test` **3787 项 0 失败**。
 - [x] **5. 上线**：已上线（2026-10-07）。先问 owner → 推通知（署名 d星空之下，`sent:2`）→ 重启 → 校验：`healthz` ok（build `d0fb2cbe8bd0`）、`chess_char_377_gdglow_a` tier 3 / `victoriaShip`+`preciShip`、garrison `SERVER_PRICE`+`SERVER_CHESS_PRICE`+`bb.price 2`+desc「购买价格为1」、头像/脊柱 200。随本次一起上线的还有：望棋子崩溃修复、望 S3「补子」（按 `deployLimit` 封顶）、结城理技能窗口/技能条 + 对空、公告按 id 幂等。
 
