@@ -137,6 +137,10 @@ export class Unit {
       taunt: (Number.isFinite(b.tauntLevel) ? b.tauntLevel : 0) + a('taunt') + (flags.taunt === true ? 1 : 0),
       dodgePhys: clamp(a('dodgePhys'), 0, 1),
       dodgeArts: clamp(a('dodgeArts'), 0, 1),
+      // 命中率降低 (阿斯卡纶 S3's "物理/法术命中率-N%"): the ATTACKER's own miss chance, independent of the target's dodge
+      // (damage.js, PRTS 闪避/命中率降低 互不影响). A debuff on an enemy sets these; every other unit leaves them 0.
+      hitRatePhys: clamp(a('hitRatePhys'), 0, 1),
+      hitRateArts: clamp(a('hitRateArts'), 0, 1),
       defIgnoreFlat: a('defIgnoreFlat'),
       defIgnorePct: clamp(a('defIgnorePct'), 0, 1),
       resIgnoreFlat: a('resIgnoreFlat'),

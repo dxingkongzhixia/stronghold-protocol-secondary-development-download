@@ -560,4 +560,6 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **资源**：`docs/research/07-assets.json` 加她的头像/立绘/技能图/脊柱/子职业图标；`fetch-assets --asset-source=mirror` 下载到 `public/assets/**`；语音用 `tools/local-extract/extract-voice.py --only char_4132_ascln --ffmpeg <ffmpeg>` **从本地日服客户端抽日语**（14 条，覆盖 fetch-assets 下到的 CN 版）。
 - **构建**：`tools/build-data.mjs` 新增 **`SP_GAMEDATA_BASE`** 环境变量（官方表走 gh-proxy）；`node tools/build-data.mjs` 重建 `data/`。
 - 同步更新的计数断言：`test/data.test.js`（268 / 113 / 分阶）、`test/{ui,match,sim}/loadout.test.js`、`test/match/pool.test.js`、`test/content/kits_alt_t3.test.js`。
-- 结果：全量 `node --test` **exit=0**（3765 项 / 0 失败）。
+- 结果：全量 `node --test` **exit=0**（3768 项 / 0 失败）。
+- **两处引擎补充**（原先「未建模」的两条）：`units.js`/`damage.js`/`buffs.js` 加了**命中率降低**（攻击者一次独立未命中判定，触发同样的 `dodge` 事件）；kit 用 `battle.grid.isLow` 实现了**周围四格有高台时攻速+6**。三条针对性测试加在 `test/content/kits_alt_t3.test.js`。
+- **给后续新增干员的通用流程见 [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md)**（§2 自造干员表、§3 kit 与引擎、§4 美术与语音、§5 计数与测试、§6 上线）。

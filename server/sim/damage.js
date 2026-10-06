@@ -242,6 +242,17 @@ export function dealDamage(battle, source, target, dmgIn) {
       return 0;
     }
   }
+  // 命中率降低 (阿斯卡纶 S3: "使攻击范围内的地面敌人物理与法术命中率-N%"): an independent miss roll on the ATTACKER —
+  // PRTS 「闪避与命中率降低相互独立」, so it is a second roll, not added to the dodge chance. It fires the same
+  // `dodge` fx / event as a miss (the target "did not take the hit"; S3's own heal listens for it).
+  if (dmg.canDodge && (type === 'phys' || type === 'arts') && source && source.s && !dmg.sourceless) {
+    const hr = type === 'phys' ? source.s.hitRatePhys : source.s.hitRateArts;
+    if (hr > 0 && battle.rng() < hr) {
+      battle.fx('dodge', { x: target.x, y: target.y, id: target.id });
+      if (battle._hooks.dodge) battle.emit('dodge', { source, target, dmg });
+      return 0;
+    }
+  }
   // 频次 units (flags hitCount / hitCountArts): every damage instance removes exactly 1 HP (maxHp = hits needed);
   // hitCountArts ignores physical instances. The instance keeps its own DamageInfo, so `damaged` handlers still
   // recognise their own (tagged) damage — never re-create such a loss with a fresh loseHp.

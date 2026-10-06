@@ -1798,10 +1798,11 @@ const KITS = {
   // ---- 3_4132 阿斯卡纶 · 伏击客 (custom: tools/build-data.mjs CUSTOM_CHESS) — every attack hits all enemies in range
   //      and the 50 % phys / arts dodge with taunt −1 come from the 'stalker' profession profile (professions.js
   //      installStalker). 死亡拘审: each attack stacks 减速 + an arts DoT (atk_ratio × the operator's current ATK each
-  //      interval, ≤ max_stack_cnt); 噬光残影: ASPD +attack_speed (the 高台 +attack_speed_add is not modelled). 追袭 S1
-  //      (charges): next attack ×atk_scale, twice; 恩赐 S2: ATK +atk, ground enemies hit are slowed and one dying
-  //      spreads a 死亡拘审 stack; 降临 S3 (default): its own wider range, ATK +atk, shorter attack interval,
-  //      taunt +taunt_level, and a dodge / miss heals attack@hp_ratio of max HP.
+  //      interval, ≤ max_stack_cnt); 噬光残影: ASPD +attack_speed, +attack_speed_add while a 高台 is orthogonally
+  //      adjacent. 追袭 S1 (charges): next attack ×atk_scale, twice; 恩赐 S2: ATK +atk, ground enemies hit are slowed
+  //      and one dying spreads a 死亡拘审 stack; 降临 S3 (default): its own wider range, ATK +atk, shorter attack
+  //      interval, taunt +taunt_level, −N% 物理/法术命中率 on the ground enemies in range, and a dodge / miss heals
+  //      attack@hp_ratio of max HP.
   chess_char_4132_ascln_a: (bb, chess, def) => {
     const d = defOf(chess, def);
     const t0 = talentBb(d, 0), t1 = talentBb(d, 1);
@@ -1810,6 +1811,7 @@ const KITS = {
     const t0slow = num(t0.move_speed, -0.18), t0dot = num(t0.atk_ratio, 0.1);
     const DECREE = (u) => `ascln:decree:${u.id}`;
     const GIFT = (u) => `ascln:gift:${u.id}`;
+    const SHADOW_HIGH = 'talent:ascln_shadow_high';
     /** One 死亡拘审 stack (≤ maxStack) on `target`: 减速 + an arts DoT of t0dot × the operator's CURRENT ATK. */
     const decree = (battle, unit, target) => {
       if (!target || !target.alive || target.side !== 'enemy') return;
@@ -1854,17 +1856,43 @@ const KITS = {
             decree(battle, unit, ctx.target);
           }, { owner: unit });
         } },
-        // 噬光残影 (talent 2): ASPD +attack_speed
+        // 噬光残影 (talent 2): ASPD +attack_speed; +attack_speed_add while a 高台 (a HIGH tile, `grid.isLow` false)
+        // stands among the 4 orthogonally adjacent tiles — re-checked as she deploys and as the board changes
         { install(battle, unit) {
           if (num(t1.attack_speed) > 0) battle.addBuff(unit, { key: 'talent:ascln_shadow', mods: { aspd: num(t1.attack_speed) }, persist: true, allowDead: true });
+          const add = num(t1.attack_speed_add);
+          if (!(add > 0)) return;
+          let on = null;
+          battle.every(0.5, () => {
+            if (!alive(unit)) return;
+            const want = [[unit.tileR + 1, unit.tileC], [unit.tileR - 1, unit.tileC], [unit.tileR, unit.tileC + 1], [unit.tileR, unit.tileC - 1]]
+              .some(([r, c]) => !battle.grid.isLow(r, c));
+            if (want === on && (!want || unit.findBuff(SHADOW_HIGH))) return;
+            on = want;
+            if (want) battle.addBuff(unit, { key: SHADOW_HIGH, mods: { aspd: add }, persist: true, allowDead: true });
+            else battle.removeBuff(unit, SHADOW_HIGH);
+          }, { owner: unit });
         } },
       ],
-      // runs under EVERY selected skill: the S3 dodge / miss heal and the S2 on-kill spread
+      // runs under EVERY selected skill: the S3 accuracy aura + dodge / miss heal and the S2 on-kill spread
       install(battle, unit) {
         const hpRatio = num(bb['attack@hp_ratio']);      // the SELECTED skill's bb: only S3 has it
+        const hitPhys = Math.abs(num(bb['attack@damage_hitrate_physical']));
+        const hitArts = Math.abs(num(bb['attack@damage_hitrate_magical'], -hitPhys));
         if (hpRatio > 0) {
           battle.on('dodge', (c) => {
             if (c.target === unit && unit.alive && unit.mem?.asclnLevi) battle.heal(unit, unit, unit.s.maxHp * hpRatio, { self: true, tags: ['skill'] });
+          }, { owner: unit });
+        }
+        // 降临 S3: ground enemies inside her range get -N% 物理/法术命中率 while the skill runs (an independent miss
+        // roll on the enemy, damage.js) — refreshed at the tick, so it lapses when the skill ends or she falls
+        if (hitPhys > 0 || hitArts > 0) {
+          battle.every(0.5, () => {
+            if (!alive(unit) || !unit.mem?.asclnLevi) return;
+            for (const e of battle.enemiesInKeys(unit.rangeKeys, unit, { canHitFly: true })) {
+              if (e.isFlying) continue;
+              battle.addBuff(e, { key: `ascln:levi:${unit.id}`, duration: 0.6, refresh: 'replace', source: unit, mods: { hitRatePhys: hitPhys, hitRateArts: hitArts } });
+            }
           }, { owner: unit });
         }
         const r = num(bb.range_radius);                  // only S2 has it

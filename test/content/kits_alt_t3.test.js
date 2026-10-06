@@ -975,3 +975,65 @@ test('忍冬 精锐 module SOL-Y: stats only (the initial deployment is free), n
   assert.ok(h.b.getPlayer('p1').dp >= dp0, 'no DP spent or refunded');
   done(h);
 });
+
+// ---------------------------------------------------------------------------------------------------------------
+// 3_4132 阿斯卡纶 (custom: tools/build-data.mjs CUSTOM_CHESS)
+
+test('3_4132 阿斯卡纶 噬光残影: ASPD +attack_speed, +attack_speed_add while a 高台 is orthogonally adjacent', () => {
+  const id = 'chess_char_4132_ascln_a';
+  const t1 = TB(id, 1);   // attack_speed 8, attack_speed_add 6
+  // flatStage row 10 is '##hrrrrrrrfrrrrrrrf##': (10,2) is a 高台 (h); (10,3)..(10,8) are ground roads
+  const near = makeBattle({ timeLimit: 1, units: [{ chessId: id, row: 10, col: 3 }] });
+  const un = near.unit(id);
+  near.run(1);
+  assert.equal(un.s.aspd, 100 + t1.attack_speed + t1.attack_speed_add, 'a 高台 is adjacent');
+  assert.ok(un.findBuff('talent:ascln_shadow_high'));
+  const away = makeBattle({ timeLimit: 1, units: [{ chessId: id, row: 10, col: 7 }] });
+  const ua = away.unit(id);
+  away.run(1);
+  assert.equal(ua.s.aspd, 100 + t1.attack_speed, 'no 高台 around');
+  assert.equal(ua.findBuff('talent:ascln_shadow_high'), null);
+});
+
+test('3_4132 阿斯卡纶 降临 S3: ground enemies in range take -N% 物理/法术命中率 while it runs', () => {
+  const id = 'chess_char_4132_ascln_a';
+  const bb = ds.getChess(id).skill.bb;   // default = S3
+  const ph = Math.abs(bb['attack@damage_hitrate_physical']), ar = Math.abs(bb['attack@damage_hitrate_magical']);
+  assert.ok(ph > 0 && ar > 0);
+  const h = makeBattle({
+    defs: { enemies: { enemy_d: enemyRec({ key: 'enemy_d', hp: 1e7, speed: 0, def: 0, res: 0, atk: 10, bat: 2 }) } },
+    timeLimit: 120, units: [{ chessId: id, row: 10, col: 6 }], enemies: [{ key: 'enemy_d', pos: [10, 8] }],
+  });
+  const u = h.unit(id);
+  h.step();
+  const e = h.enemies()[0];
+  assert.ok(e, 'enemy spawned');
+  fill(u);
+  assert.ok(h.runUntil(() => u.skill.active, 5), 'S3 on');
+  h.run(1);
+  assert.equal(e.s.hitRatePhys, ph);
+  assert.equal(e.s.hitRateArts, ar);
+  h.runUntil(() => !u.skill.active, 60);
+  h.run(1);
+  assert.equal(e.s.hitRatePhys, 0, 'lapses with the skill');
+  done(h);
+});
+
+test('命中率降低: an enemy with hitRatePhys misses on its own roll, with no dodge on the target (damage.js)', () => {
+  const misses = (accuracyDown) => {
+    const h = makeBattle({
+      defs: { enemies: { enemy_d: enemyRec({ key: 'enemy_d', hp: 5e4, speed: 1, def: 0, res: 0, atk: 5, bat: 1 }) } },
+      hooks: ['dodge'], timeLimit: 30, seed: 7, autoFinish: false,
+      units: [{ chessId: 'chess_char_3_05_a', row: 9, col: 8 }], enemies: [{ key: 'enemy_d', pos: [9, 10] }],
+    });
+    h.step();
+    const e = h.enemies()[0];
+    assert.ok(e, 'enemy spawned');
+    if (accuracyDown) h.b.addBuff(e, { key: 'test:hitrate', mods: { hitRatePhys: 0.5 }, duration: 60 });
+    h.run(25);
+    return h.hooksOf('dodge').filter((c) => c.source === e && c.target?.side === 'ally').length;
+  };
+  // 斯卡蒂 has 0 dodge: without an accuracy reduction an attack can never miss
+  assert.equal(misses(false), 0);
+  assert.ok(misses(true) > 0, 'hitRatePhys 0.5 ⇒ the enemy misses');
+});
