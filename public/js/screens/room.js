@@ -139,18 +139,44 @@ function SeatCard({ seat, index, room, facts, myId, busy, onAddBot, onRemoveBot,
   </article>`;
 }
 
-/** 观战席: the room's spectators (host: ✕ frees a seat), and 入座 for a spectator while a player seat is free. */
-function SpectatorBar({ facts, myId, busy, onRemove, onSit }) {
-  if (!facts.spectators.length) return null;
-  return html`<section class="specbar" aria-label="观战席">
-    <span class="specbar__label"><${Icon} name="eye" />观战席<b class="num">${facts.spectators.length}</b><span class="num t-dim">/${MAX_SPECTATORS}</span></span>
-    ${facts.spectators.map((s) => html`<span key=${s.playerId} class=${`specbar__who${s.playerId === myId ? ' is-me' : ''}${s.connected === false ? ' is-offline' : ''}`}>
-      ${s.connected === false ? html`<${Icon} name="wifiOff" />` : null}${s.name || '博士'}${s.playerId === myId ? html`<span class="seat__you">你</span>` : null}
-      ${facts.isHost ? html`<${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `rs${s.playerId}`}
-        onClick=${() => onRemove(s.playerId)} aria-label=${`移出观战者 ${s.name || ''}`} title="移出该观战者" />` : null}
-    </span>`)}
-    ${facts.spectating && facts.emptySeats > 0 ? html`<${Button} size="sm" icon="user" loading=${busy === 'sit'} onClick=${onSit}>入座<//>` : null}
-  </section>`;
+/**
+ * 观战席 (remake feature; room.spectate / room.removeSpectator, plus 夺舍): a compact dropdown, not a strip — the seats'
+ * names (the host's ✕ frees one), 入座 for a spectator while a player seat is free, and 夺舍 AI 队友 for a spectator
+ * (room.takeOver: the AI's board, gold and loadout become theirs — players stay ≤ MAX_SEATS).
+ */
+function SpectatorDock({ facts, myId, busy, onRemove, onSit, onTakeOver, onRelease }) {
+  const ais = facts.seats.filter((s) => s && s.isBot);
+  const mine = facts.seats.find((s) => s && s.playerId === myId);
+  const mineFromAi = !!(mine && mine.fromAi);        // we took an AI over → we may hand it back (room.releaseSeat)
+  if (!facts.spectators.length && !facts.spectating && !mineFromAi) return null;
+  return html`<details class="specdock">
+    <summary class="specdock__sum"><${Icon} name="eye" />观战席 <b class="num">${facts.spectators.length}</b><span class="num t-dim">/${MAX_SPECTATORS}</span></summary>
+    <div class="specdock__body">
+      ${facts.spectators.length
+        ? facts.spectators.map((s) => html`<div class="specdock__row" key=${s.playerId}>
+            <span class=${`specdock__who${s.playerId === myId ? ' is-me' : ''}${s.connected === false ? ' is-offline' : ''}`}>
+              ${s.connected === false ? html`<${Icon} name="wifiOff" />` : null}${s.name || '博士'}${s.playerId === myId ? html`<span class="seat__you">你</span>` : null}
+            </span>
+            ${facts.isHost ? html`<${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `rs${s.playerId}`}
+              onClick=${() => onRemove(s.playerId)} aria-label=${`移出观战者 ${s.name || ''}`} title="移出该观战者" />` : null}
+          </div>`)
+        : html`<div class="specdock__empty t-dim">暂无观战者</div>`}
+      ${facts.spectating && facts.emptySeats > 0 ? html`<div class="specdock__act">
+        <${Button} size="sm" icon="user" loading=${busy === 'sit'} onClick=${onSit}>入座（空位）<//>
+      </div>` : null}
+      ${facts.spectating && ais.length ? html`<div class="specdock__act">
+        <span class="t-lo">夺舍 AI 队友</span>
+        <div class="specdock__ais">
+          ${ais.map((s) => html`<${Button} key=${s.seat} size="sm" variant="secondary" icon="robot" loading=${busy === `to${s.seat}`}
+            onClick=${() => onTakeOver(s.seat)}>P${s.seat + 1}<//>`)}
+        </div>
+      </div>` : null}
+      ${mineFromAi ? html`<div class="specdock__act">
+        <${Button} size="sm" variant="secondary" icon="eye" loading=${busy === 'release'}
+          onClick=${onRelease}>退出夺舍（回到观战席）<//>
+      </div>` : null}
+    </div>
+  </details>`;
 }
 
 function InviteBox({ code, public: isPublic }) {
@@ -228,6 +254,10 @@ export function RoomScreen() {
     if (ok) run(`kick${seat}`, () => net.request('room.kick', { seat, playerId }));
   };
   const setDifficulty = (difficulty) => run('diff', () => net.request('room.setDifficulty', { difficulty }));
+  // 夺舍 AI (room.takeOver): a spectator takes over a bot's seat — its board, gold and loadout become ours
+  const takeOver = (seat) => run(`to${seat}`, () => net.request('room.takeOver', { seat }));
+  // ...and back out of it (room.releaseSeat): the seat becomes a fresh AI, we return to the spectator seats
+  const releaseSeat = () => run('release', () => net.request('room.releaseSeat', {}));
   // spectator seats: the host frees one; a spectator takes a free player seat with room.join of this room
   const removeSpectator = (playerId) => run(`rs${playerId}`, () => net.request('room.removeSpectator', { playerId }));
   const sit = () => run('sit', () => net.request('room.join', { code: room.code }));
@@ -303,7 +333,7 @@ export function RoomScreen() {
         </ul>
       </aside>`}
     </main>
-    <${SpectatorBar} facts=${facts} myId=${me.playerId} busy=${busy} onRemove=${removeSpectator} onSit=${sit} />
+    <${SpectatorDock} facts=${facts} myId=${me.playerId} busy=${busy} onRemove=${removeSpectator} onSit=${sit} onTakeOver=${takeOver} onRelease=${releaseSeat} />
 
     <footer class="room-bar">
       <div class="room-bar__left">

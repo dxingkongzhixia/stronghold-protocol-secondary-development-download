@@ -211,34 +211,31 @@
 .solo-brief li::before { content: ''; display: inline-block; width: .06rem; height: .06rem; margin: 0 .12rem .02rem 0; background: var(--mint-600); transform: rotate(45deg); vertical-align: middle; }
 .solo-brief b { color: var(--text-hi); }
 
-/* ---- spectator seats (观战席, community report #26) -------------------------------------------------------------- */
-.specbar {
-  flex: none;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: .14rem;
-  padding: 0 .6rem .16rem;
-  font-size: .15rem;
-  color: var(--text-lo);
+/* ---- spectator seats (观战席 + 夺舍 AI, community report #26) ------------------------------------------------------ */
+/* A compact dropdown (not a strip): one small row that opens upward into an overlay, so it costs almost no space. */
+.specdock { flex: none; position: relative; align-self: flex-end; margin: 0 .4rem .08rem; font-size: .15rem; color: var(--text-lo); }
+.specdock__sum {
+  display: inline-flex; align-items: center; gap: .07rem; cursor: pointer; list-style: none; user-select: none;
+  min-height: .38rem; padding: 0 .16rem; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .5);
+  color: var(--text-md); font-weight: 700;
 }
-.specbar__label { display: flex; align-items: baseline; gap: .06rem; font-weight: 700; color: var(--text-md); }
-.specbar__label .icon { width: .18rem; height: .18rem; align-self: center; color: var(--mint-500); }
-.specbar__label b { color: var(--mint-400); }
-.specbar__who {
-  display: inline-flex;
-  align-items: center;
-  gap: .06rem;
-  min-height: .36rem;
-  padding: 0 .14rem;
-  border: 1px solid var(--line-2);
-  background: rgba(0, 0, 0, .32);
-  color: var(--text-hi);
+.specdock__sum::-webkit-details-marker { display: none; }
+.specdock__sum .icon { width: .18rem; height: .18rem; color: var(--mint-500); }
+.specdock__sum b { color: var(--mint-400); }
+.specdock[open] .specdock__sum { border-color: var(--mint-600); }
+.specdock__body {
+  position: absolute; right: 0; bottom: calc(100% + .08rem); min-width: 3.1rem; max-width: 4.8rem;
+  display: flex; flex-direction: column; gap: .08rem; padding: .14rem;
+  border: 1px solid var(--line-2); background: rgba(6, 10, 9, .97); box-shadow: 0 .12rem .4rem rgba(0, 0, 0, .6);
 }
-.specbar__who.is-me { border-color: var(--mint-600); }
-.specbar__who.is-offline { color: var(--text-dim); }
-.specbar__who > .icon { width: .16rem; height: .16rem; }
+.specdock__row { display: flex; align-items: center; justify-content: space-between; gap: .1rem; }
+.specdock__who { display: inline-flex; align-items: center; gap: .06rem; color: var(--text-hi); }
+.specdock__who.is-me { color: var(--mint-400); }
+.specdock__who.is-offline { color: var(--text-dim); }
+.specdock__who > .icon { width: .16rem; height: .16rem; }
+.specdock__empty { font-size: .14rem; }
+.specdock__act { display: flex; flex-direction: column; gap: .07rem; padding-top: .07rem; border-top: 1px solid var(--line); }
+.specdock__ais { display: flex; flex-wrap: wrap; gap: .07rem; }
 
 /* ---- bottom bar ----------------------------------------------------------------------------------------- */
 .room-bar {

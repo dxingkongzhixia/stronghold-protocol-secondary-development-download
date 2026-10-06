@@ -278,3 +278,53 @@
   font-size: .13rem;
   color: var(--text-dim);
 }
+
+/* 「反馈群」 pill (bottom-left) + its QR card popover + server note */
+.title-group-wrap {
+  position: absolute;
+  z-index: 3;
+  left: .44rem;
+  bottom: .56rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .07rem;
+}
+.title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: .07rem;
+  padding: .08rem .16rem;
+  background: rgba(8, 16, 14, .74);
+  border: 1px solid rgba(120, 220, 190, .28);
+  color: var(--text-md);
+  font: inherit;
+  font-size: .14rem;
+  cursor: pointer;
+  transition: border-color .15s var(--ease-out), color .15s var(--ease-out), background .15s var(--ease-out);
+}
+.title-group:hover { border-color: var(--mint-400); color: var(--mint-400); background: rgba(16, 40, 34, .8); }
+.title-group .icon { width: .18rem; height: .18rem; color: var(--mint-400); flex: none; }
+.title-group b { color: var(--mint-400); font-size: .15rem; letter-spacing: .05em; }
+.title-group span { color: var(--text-lo); }
+.title-group-note { font-size: .12rem; color: var(--text-dim); }
+.title-group-card {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + .12rem);
+  width: 3.0rem;
+  padding: .18rem .2rem .2rem;
+  background: rgba(10, 20, 17, .96);
+  border: 1px solid rgba(120, 220, 190, .4);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .08rem;
+}
+.title-group-card__title { margin: 0; font-size: .28rem; color: var(--text-hi); letter-spacing: .06em; }
+.title-group-qr { width: 2.48rem; height: 2.48rem; background: #e8f8f2; }
+.title-group-card__num { background: none; border: 0; color: var(--text-md); font: inherit; font-size: .17rem; cursor: pointer; }
+.title-group-card__num:hover { color: var(--mint-400); }
+.title-group-card__num b { color: var(--mint-400); }
+.title-group-card__hint { margin: 0; font-size: .13rem; color: var(--text-lo); }

@@ -90,6 +90,7 @@ export function BondStrip({ bonds, layersDisabled = false, onOpen, openId = null
  *   mode never activates this bond (gameLogic modeOffBonds — 标准's 10 inactive bonds): 本局禁用 instead of 未激活, with a
  *   note, no 在场 count and no 当前效果 block (its numbers would promise an effect the mode never gives; the bond text stays).
  *   `entry.harmony` (the server's bond views: the +1 调和 added to `count`): 在场 n（含调和 +1） and the 调和 row
+ *   A press outside the popup closes it — see the game screen's outside-press effect (screens/game.js).
  */
 export function BondPopup({ bondId, entry, priv, banned = [], onClose, onMember, place = null, over = false, beside = null, owner = null, off = false }) {
   const b = data.lookup('bonds', bondId);
@@ -101,6 +102,10 @@ export function BondPopup({ bondId, entry, priv, banned = [], onClose, onMember,
   const active = !off && (entry ? !!entry.active : tier > 0);
   const getChess = (id) => data.lookup('chess', id);
   const members = bondMembers(b, priv, banned, getChess, (id) => data.lookup('items', id));
+  // operators the match bans (gameLogic bondMembers `banned` — the match's bannedChess) are not listed: the popup
+  // shows the bond's AVAILABLE operators only (user request 2026-10-06), with a note for the hidden ones
+  const shown = members.filter((mb) => !mb.banned);
+  const hiddenCount = members.length - shown.length;
   const countsHand = entry?.countsHand ?? b.countsHand;
   const next = nextThreshold(count, th);
   const hasNow = !off && !!(b.effectDescRaw || b.effectDesc);
@@ -139,22 +144,22 @@ export function BondPopup({ bondId, entry, priv, banned = [], onClose, onMember,
       <${RichText} as="p" text=${b.descRaw || b.desc} class="bpop__desc" />
     </section>
     <section class="bpop__sec">
-      <h4>成员 <small>${memberHeadCount(members, countsHand)}/${members.length}</small></h4>
+      <h4>成员 <small>${memberHeadCount(shown, countsHand)}/${shown.length}</small></h4>
       ${harmony ? (harmonyBy.length
         ? html`<button type="button" class="bpop__harmony" data-harmony=${harmony} title=${harmonyText} onClick=${() => onMember?.(harmonyBy[0].id, null)}>
           <${BondGlyph} bondId=${HARMONY_BOND} /><b>${harmonyName} +${harmony}</b><span>${harmonyText}</span></button>`
         : html`<div class="bpop__harmony" role="note" data-harmony=${harmony} title=${harmonyText}>
           <${BondGlyph} bondId=${HARMONY_BOND} /><b>${harmonyName} +${harmony}</b><span>${harmonyText}</span></div>`) : null}
       <div class="bpop__members">
-        ${members.map((mb) => html`<button key=${mb.id} type="button" class=${cx('bpop__member', mb.onBoard && 'is-on', mb.owned && !mb.onBoard && 'is-owned', mb.banned && 'is-banned', mb.granted && 'is-granted')}
+        ${shown.map((mb) => html`<button key=${mb.id} type="button" class=${cx('bpop__member', mb.onBoard && 'is-on', mb.owned && !mb.onBoard && 'is-owned', mb.granted && 'is-granted')}
             onClick=${() => onMember?.(mb.id, mb.granted && Array.isArray(mb.items) ? mb.items : null)} data-granted=${mb.granted ? '1' : null}
-            title=${`${mb.name}${mb.granted ? '（变形同构体：视为本盟约成员）' : ''}${mb.banned ? '（本局禁用）' : mb.onBoard ? '（在场）' : mb.owned ? '（整备区）' : ''}`}>
-          <${UnitThumb} kind="chess" id=${mb.id} size="sm" dim=${!mb.owned || mb.banned} />
+            title=${`${mb.name}${mb.granted ? '（变形同构体：视为本盟约成员）' : mb.onBoard ? '（在场）' : mb.owned ? '（整备区）' : ''}`}>
+          <${UnitThumb} kind="chess" id=${mb.id} size="sm" dim=${!mb.owned} />
           <span class="bpop__mname">${mb.name}</span>
-          ${mb.banned ? html`<span class="bpop__ban"><${Icon} name="close" /></span>` : null}
           ${mb.granted ? html`<span class="bpop__iso" aria-hidden="true">同构</span>` : null}
         </button>`)}
       </div>
+      ${hiddenCount ? html`<p class="bpop__hidden" role="note">另有 <b class="num">${hiddenCount}</b> 名成员本局禁用，未列出</p>` : null}
     </section>
   </div>`;
 }

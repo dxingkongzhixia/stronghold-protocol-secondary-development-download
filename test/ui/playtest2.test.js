@@ -100,10 +100,11 @@ describe('8: the detail card never covers the selected unit\'s underframe', () =
     const uf = { left: 47 + R * 7.1, right: 47 + R * 9, top: 150, bottom: 260 };
     assert.equal(panelSide(uf, z), 'left', 'viewport frame: looks clear');
     assert.equal(panelSide(uf, s), 'right', 'HUD frame: the card would cover it');
-    // bond popup candidates shift the same way
-    const ufB = { left: 47 + R * 2.4, right: 47 + R * 3.4, top: 150, bottom: 260 };
-    assert.equal(bondPopupPlace(ufB, { width: hud.width, height: hud.height }, R, null), 'right');
-    assert.equal(bondPopupPlace(ufB, hud, R, null), 'right');
+    // bond popup candidates shift the same way: the centred 'left' popup sits at the frame centre, so the HUD's left
+    // inset (47 px) moves it right by 23.5 px — a unit under its viewport-frame edge is covered there but clear here
+    const ufB = { left: (hud.width - R * 5.4) / 2, right: (hud.width - R * 5.4) / 2 + R * 0.4, top: 150, bottom: 260 };
+    assert.equal(bondPopupPlace(ufB, { width: hud.width, height: hud.height }, R, null), 'right', 'viewport frame: the centred popup covers it');
+    assert.equal(bondPopupPlace(ufB, hud, R, null), 'left', 'HUD frame: the popup shifts with the inset and clears it');
     assert.equal(bondPopupPlace({ left: R * 2.35, right: R * 2.5, top: 150, bottom: 260 }, hud, R, null), 'left', 'left of the inset-shifted popup');
   });
 
@@ -155,7 +156,7 @@ describe('8: the detail card never covers the selected unit\'s underframe', () =
 describe('8 / 9: the bond popup opened from the card keeps clear of the underframe (and of the card if it can)', () => {
   const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   const rectOf = (place, W, H, R) => {
-    const left = place === 'left' ? R * BPOP.left : place === 'beside' ? R * BPOP.beside
+    const left = place === 'left' ? (W - R * BPOP.width) / 2 : place === 'beside' ? R * BPOP.beside
       : place === 'besideR' ? W - R * (BPOP.besideR + BPOP.width) : W - R * (BPOP.right + BPOP.width);
     return { left, right: left + R * BPOP.width, top: R * BPOP.top, bottom: H - R * BPOP.bottomGap };
   };
@@ -165,9 +166,10 @@ describe('8 / 9: the bond popup opened from the card keeps clear of the underfra
     assert.equal(bondPopupPlace(null, vp, 100, 'left'), 'beside');
     assert.equal(bondPopupPlace(null, vp, 100, 'right'), 'besideR');
     // the playtest screenshot: a bench unit on the left, card docked right, underframe at x 560–840 — both the place
-    // left of the card and the left place cover it: the popup goes over the card
+    // beside the card and the centred 'left' place cover it: the popup goes over the card
     assert.equal(bondPopupPlace({ left: 560, right: 840, top: 400, bottom: 700 }, vp, 100, 'right'), 'right');
-    assert.equal(bondPopupPlace({ left: 900, right: 1100, top: 400, bottom: 700 }, vp, 100, 'right'), 'left');
+    // between the centred 'left' popup [690,1230] and the besideR one [788,1328]: only 'right' [1290,1830] is free
+    assert.equal(bondPopupPlace({ left: 900, right: 1100, top: 400, bottom: 700 }, vp, 100, 'right'), 'right');
     assert.equal(bondPopupPlace({ left: 300, right: 500, top: 400, bottom: 700 }, vp, 100, 'right'), 'besideR');
     assert.equal(bondPopupPlace({ left: 800, right: 1000, top: 400, bottom: 700 }, vp, 100, 'left'), 'right');
     assert.equal(bondPopupPlace({ left: 0, right: 1920, top: 400, bottom: 700 }, vp, 100, 'left'), 'beside', 'all covered: the first');

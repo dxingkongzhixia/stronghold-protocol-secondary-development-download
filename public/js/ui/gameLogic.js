@@ -1758,14 +1758,15 @@ export const PANEL_RIGHT_BOTTOM = 1.02;
 export const PANEL_RIGHT_BOTTOM_SHOP = 3.78;
 
 /** Bond popup geometry (rem; keep in sync with css/screens/game-panels.css .bpop / .bpop--*). */
-export const BPOP = Object.freeze({ width: 5.4, top: 2.1, bottomGap: 0.3, left: 2.3, beside: 7.32, besideR: 5.92, right: 0.9 });
+export const BPOP = Object.freeze({ width: 5.4, top: 2.1, bottomGap: 0.3, beside: 7.32, besideR: 5.92, right: 0.9 });
 
 /**
  * Where the bond popup opens (css .bpop--<place>) so it neither hides the open detail card nor covers the selected
  * unit's underframe (user playtest #2 items 8 / 9): next to the card first ('beside' the left card, 'besideR' left of
- * the right card), else the free side of the screen ('left' at 2.3rem / 'right' against the right edge), else over the
- * card it was opened from; without a card the popup's usual place is 'left'. When every candidate covers the
- * underframe the first one is kept (the underframe is drawn above the popup, css z-index).
+ * the right card), else the free side of the screen ('left' = centred horizontally under the centred bond strip,
+ * 'right' against the right edge), else over the card it was opened from; without a card the popup's usual place is
+ * 'left'. When every candidate covers the underframe the first one is kept (the underframe is drawn above the popup,
+ * css z-index).
  * @param {{ left: number, right: number, top: number, bottom: number }|null} uf underframe rect (client px) or null
  * @param {{ width: number, height: number, left?: number, top?: number }} vp the HUD layer's box (see panelSlots)
  * @param {number} rem root font size (px)
@@ -1781,7 +1782,7 @@ export function bondPopupPlace(uf, vp, rem, card = null) {
   const top = Y + R * BPOP.top;
   const bottom = Y + Math.max(R * BPOP.top + R, H - R * BPOP.bottomGap);
   const rectOf = (p) => {
-    const left = X + (p === 'left' ? R * BPOP.left : p === 'beside' ? R * BPOP.beside
+    const left = X + (p === 'left' ? (W - R * BPOP.width) / 2 : p === 'beside' ? R * BPOP.beside
       : p === 'besideR' ? W - R * (BPOP.besideR + BPOP.width) : W - R * (BPOP.right + BPOP.width));
     return { left, right: left + R * BPOP.width, top, bottom };
   };

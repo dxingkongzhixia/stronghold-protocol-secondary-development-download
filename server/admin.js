@@ -143,7 +143,22 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
     }))
     .sort((a, b) => b.humans - a.humans)
     .slice(0, 12);
-  return { now, counts, openRooms, online };
+  // Rooms whose match is already running (the lobby's 正在模拟 row → enter as a spectator): 野排 first, then rooms with
+  // an AI seat to 夺舍, then the fullest — at most 4.
+  const playRooms = [...lobby.rooms.values()]
+    .filter((r) => r.mode === 'coop' && r.match)
+    .map((r) => ({
+      code: r.code,
+      difficulty: r.difficulty,
+      difficultyName: DIFFICULTY_NAMES[r.difficulty] || r.difficulty,
+      host: (r.seatOf(r.hostId) || {}).name || null,
+      humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
+      bots: r.seats.filter((x) => x && !x.left && x.isBot).length,
+      auto: !!r.auto,
+    }))
+    .sort((a, b) => (b.auto - a.auto) || ((b.bots > 0) - (a.bots > 0)) || (b.humans - a.humans))
+    .slice(0, 4);
+  return { now, counts, openRooms, playRooms, online };
 }
 
 /**

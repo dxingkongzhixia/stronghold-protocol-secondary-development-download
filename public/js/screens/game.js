@@ -95,7 +95,7 @@ import {
   phaseMode, phaseBanner, isCombatPhase, showDeadPill, isBossPhase, placementContext, canPlace, boardTargets, dropIntent,
   snapHud, activeBubbles, shortcutFor, shortcutBlocked, closesOnFieldPress, phaseTotalSeconds, homeFieldId, ownFieldId, normalizeSp, sortedPlayers,
   countdownState, shopBlockReason, stageOverrides, effectiveStage, watchTarget, dropFailureReason,
-  previewEnemyKey, prepCamera, prepCameraFor, foldCamera, deployFieldOf, panelSide, panelSlots, bondPopupPlace, chessLoadout, unitLoadout,
+  previewEnemyKey, prepCamera, prepCameraFor, foldCamera, deployFieldOf, panelSide, panelSlots, chessLoadout, unitLoadout,
   mergeTarget, modeOffBonds, readyFundsPrompt,
 } from '../ui/gameLogic.js';
 import { toast } from '../ui/toasts.js';
@@ -123,12 +123,56 @@ const STATE_EV = new Set(['spawn', 'die', 'deploy', 'status', 'skill']);
 const keepEarly = (e) => Array.isArray(e) && (STATE_EV.has(e[0]) || fxForm(e) !== undefined);
 
 /** Router for the in-match screens. */
+/**
+ * 观战席 while WATCHING a running match: a compact dropdown (almost no layout space) listing the other spectators and
+ * 夺舍 AI 队友 (room.takeOver — the AI's board, gold and loadout become ours; players stay ≤ MAX_SEATS).
+ */
+function SpecDock({ room, pub, myId, spectator, canRelease, panel = false }) {
+  const spectators = Array.isArray(room?.spectators) ? room.spectators : [];
+  const ais = Array.isArray(pub?.players) ? pub.players.filter((p) => p && p.isBot) : [];
+  const [busy, setBusy] = useState(null);
+  const takeOver = (seat) => {
+    setBusy(seat);
+    net.request('room.takeOver', { seat }).catch((e) => toast(e?.msg || '夺舍失败', 'warn')).finally(() => setBusy(null));
+  };
+  const release = () => {
+    setBusy('release');
+    net.request('room.releaseSeat', {}).catch((e) => toast(e?.msg || '退出夺舍失败', 'warn')).finally(() => setBusy(null));
+  };
+  return html`<details class=${`specdock ${panel ? 'specdock--panel' : 'specdock--ingame'}`}>
+    <summary class="specdock__sum"><${Icon} name="eye" />观战席 <b class="num">${spectators.length}</b></summary>
+    <div class="specdock__body">
+      ${spectators.length
+        ? spectators.map((s) => html`<div class="specdock__row" key=${s.playerId}>
+            <span class=${`specdock__who${s.playerId === myId ? ' is-me' : ''}`}>${s.name || '博士'}${s.playerId === myId ? html`<span class="seat__you">你</span>` : null}</span>
+          </div>`)
+        : html`<div class="specdock__empty t-dim">暂无其他观战者</div>`}
+      ${spectator && ais.length ? html`<div class="specdock__act">
+        <span class="t-lo">夺舍 AI 队友</span>
+        <div class="specdock__ais">
+          ${ais.map((p) => html`<${Button} key=${p.seat} size="sm" variant="secondary" icon="robot" loading=${busy === p.seat}
+            onClick=${() => takeOver(p.seat)} title=${`接管 ${p.name || 'AI'} 的阵容与资金`}>P${p.seat + 1}<//>`)}
+        </div>
+      </div>` : null}
+      ${canRelease ? html`<div class="specdock__act">
+        <${Button} size="sm" variant="secondary" icon="eye" loading=${busy === 'release'} onClick=${release}>退出夺舍（回到观战席）<//>
+      </div>` : null}
+    </div>
+  </details>`;
+}
+
 export function GameScreen() {
   const pub = useStore((s) => s.match.public);
   const hasResult = useStore((s) => !!s.match.result);
   const ended = useStore((s) => !!s.room && !s.room.inMatch && !!s.match.public);
   const away = useStore((s) => s.away, Object.is, awayStore);
   const autoplay = useStore((s) => !!(Array.isArray(s.match.public?.players) && s.match.public.players.find((p) => p && p.playerId === s.me.playerId)?.autoplay));
+  // 观战席: shown in EVERY phase (the briefing / draft screens are their own components), so a spectator can 夺舍 AI
+  const room = useStore((s) => s.room);
+  const myId = useStore((s) => s.me.playerId);
+  const spectator = useStore((s) => isSpectating(s.room, s.me.playerId));
+  const mySeat = Array.isArray(room?.seats) ? room.seats.find((s) => s && s.playerId === myId) : null;
+  const tookOver = !!(mySeat && mySeat.fromAi);   // we took an AI over → the dock also offers 退出夺舍
   const gd = useGameData();
   if (!pub || !gd.ready) {
     return html`<div class="screen gload">
@@ -142,7 +186,11 @@ export function GameScreen() {
   else if (mode === 'briefing') body = html`<${BriefingScreen} />`;
   else if (mode === 'draft') body = html`<${BandDraftScreen} />`;
   else body = html`<${MatchScreen} />`;
+  // In the match view MatchScreen renders the dock itself, right under the team panel; on the briefing / 盟约 draft
+  // screens (neither has a team panel) it floats bottom-right instead.
+  const matchView = !hasResult && mode !== 'result' && mode !== 'briefing' && mode !== 'draft';
   return html`${body}
+    ${!matchView && (spectator || tookOver) ? html`<${SpecDock} room=${room} pub=${pub} myId=${myId} spectator=${spectator} canRelease=${tookOver} />` : null}
     ${(away || autoplay) && !hasResult && mode !== 'result' && !ended ? html`<${AwayOverlay} />` : null}
     ${ended && !hasResult && mode !== 'result' ? html`<${MatchEnded} />` : null}`;
 }
@@ -188,7 +236,10 @@ function MatchScreen() {
   const conn = useStore((s) => s.connection, shallowEqual);
   const emotes = useStore((s) => s.emotes);
   const roomSolo = useStore((s) => s.room?.mode === 'solo');
+  const room = useStore((s) => s.room);                       // 观战席: the spectators live on the room
   const spectator = useStore((s) => isSpectating(s.room, s.me.playerId));
+  const mySeat = Array.isArray(room?.seats) ? room.seats.find((s) => s && s.playerId === myId) : null;
+  const tookOver = !!(mySeat && mySeat.fromAi);   // took an AI over → offer 退出夺舍 under the team panel
   const gd = useGameData();
 
   const hostRef = useRef(null);
@@ -915,6 +966,26 @@ function MatchScreen() {
     return () => host.removeEventListener('pointerdown', onDown, true);
   }, []);
 
+  // a press anywhere outside the floating panels closes them (user request: 点其他位置收起)
+  //   * the detail card — the field handler above only reaches presses inside the field host and only piece / unit cards,
+  //     so a card opened from a shop card / bond member / the drawer stayed up until its ✕. The underframe / facing
+  //     wheel (their buttons must act, not deselect), the bond popup and the modals keep it open.
+  //   * the bond popup — the strip's own discs and the detail card are kept open so their chips still toggle / switch it.
+  //   * the 本局信息 / 敌方情报 drawer (.edrawer) — its two 🔍 toggle buttons in the top bar (.gtop__iconbtn) keep their
+  //     own open / close toggle.
+  useEffect(() => {
+    if (!detail && !bondOpen && !drawer) return undefined;
+    const onDown = (e) => {
+      const t = e.target;
+      const el = t instanceof Element ? t : null;
+      if (bondOpen && !el?.closest('.bpop, .bstrip, .dpanel')) setBondOpen(null);
+      if (detail && !el?.closest('.dpanel, .bpop, .uframe, .fwheel, .modal, .guide, .spov')) { setDetail(null); setSel(null); }
+      if (drawer && !el?.closest('.edrawer, .gtop__iconbtn')) setDrawer(null);
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  }, [detail, bondOpen, drawer]);
+
   // ---- direction step (research 09 §1.2) and the selected piece's underframe ------------------------------------
   // DESIGN §16: previews show the range the unit fights with under the player's loadout (an elite's module grid)
   const lookups = useMemo(() => ({ getChess: gd.chess, getToken: gd.token, getItem: gd.item,
@@ -1200,12 +1271,9 @@ function MatchScreen() {
     }
     return 'left';
   })();
-  // the bond popup: next to the card, never over the selected unit's underframe when a place is free (bondPopupPlace)
-  const bpPlace = (() => {
-    if (!bondOpen) return 'left';
-    const { rem, vp } = panelFrame();
-    return bondPopupPlace(ufShown ? underframeRect(ufGeo, rem) : null, vp, rem, resolved ? dSide : null);
-  })();
+  // the bond popup stays centred (base .bpop, css/screens/game-panels.css): it no longer docks beside the detail card,
+  // which made it jump when a card opened or changed side (user request 2026-10-06: 保持居中不动)
+
   // the player's own operators (and the shop / bond member cards) show the loadout's skill / module (DESIGN §16);
   // a teammate's unit (前往查看 in prep, 联防 / 最终攻势 fields, an observed battle) shows ITS owner's choice, carried by
   // the unit (UnitInfo skillIndex / moduleId: the sim's, or Match.prepFieldMeta's) — never the viewer's loadout
@@ -1248,9 +1316,12 @@ function MatchScreen() {
           owner=${strip.name} onOpen=${(id) => openBond(id, strip.ownerId, 'strip')} />
       </div>
 
-      <${TeamPanel} pub=${pub} myId=${myId} watching=${watchingNow} bubbles=${bubbles} onWatch=${watchPlayer} cap=${gd.config?.lpCapPerRound ?? 10} uniteLocal=${uniteLocal}
-        self=${Number.isFinite(priv?.lp) ? { lp: priv.lp, pending: liveLpNow.pending, unite: liveLpNow.unite, left: liveLpNow.left } : null}
-        observe=${cc ? { canObserve: (p) => observeTarget(p, pub, myId, { observing: watchingOther, ownDone: localDone }), observing: watchingOther, onBack: backHome } : null} />
+      <div class="gm__teamcol">
+        <${TeamPanel} pub=${pub} myId=${myId} watching=${watchingNow} bubbles=${bubbles} onWatch=${watchPlayer} cap=${gd.config?.lpCapPerRound ?? 10} uniteLocal=${uniteLocal}
+          self=${Number.isFinite(priv?.lp) ? { lp: priv.lp, pending: liveLpNow.pending, unite: liveLpNow.unite, left: liveLpNow.left } : null}
+          observe=${cc ? { canObserve: (p) => observeTarget(p, pub, myId, { observing: watchingOther, ownDone: localDone }), observing: watchingOther, onBack: backHome } : null} />
+        ${(spectator || tookOver) ? html`<${SpecDock} room=${room} pub=${pub} myId=${myId} spectator=${spectator} canRelease=${tookOver} panel=${true} />` : null}
+      </div>
 
       <div class="gm__effects"><${EffectsList} effects=${priv?.effects} /></div>
 
@@ -1293,7 +1364,6 @@ function MatchScreen() {
 
       ${bondPop ? html`<${BondPopup} bondId=${bondPop.bondId} entry=${bondPop.entry} priv=${bondPop.priv} banned=${pub?.bannedChess || []} owner=${bondPop.name}
         off=${offBonds.has(bondPop.bondId)}
-        place=${bpPlace} over=${!!resolved && bpPlace === dSide}
         onClose=${() => setBondOpen(null)} onMember=${(id, items) => setDetail({ kind: 'chess', id, owner: bondPop.ownerId, items: items || null })} />` : null}
 
       ${resolved ? html`<${DetailPanel} detail=${resolved} snapHp=${snapHp} onClose=${() => { setDetail(null); setSel(null); }}

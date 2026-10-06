@@ -10,7 +10,7 @@
 // plays 战场#01, 险境 draws one of 8, 绝境 / 终极 one of 7 (m01 excluded).
 
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, modeIdFor } from '../../../shared/constants.js';
+import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, ERR, modeIdFor } from '../../../shared/constants.js';
 import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, Tabs, doctorNo } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { GuideButton } from '../ui/guide.js';
@@ -356,12 +356,9 @@ export function LobbyScreen() {
             <//>
           </div>
           <div class="join-foot">
-            ${recent.length ? html`<span class="t-lo">最近的同盟</span>
-              ${recent.map((c) => html`<button key=${c} type="button" class="code-chip num" title="填入密钥（不会直接加入）"
-                onClick=${() => setCode(c)}>${c}</button>`)}`
-              : html`<span class="t-dim">向同伴索取 ${ROOM_CODE_LEN} 位同盟密钥，或直接打开邀请链接</span>`}
+            <span class="t-dim">向同伴索取 ${ROOM_CODE_LEN} 位同盟密钥，或直接打开邀请链接</span>
           </div>
-          <${PublicAlliances} onPick=${(c) => { setCode(c); join(c); }} />
+          <${PublicAlliances} onJoin=${(c) => { setCode(c); join(c); }} onSpectate=${(c) => { setCode(c); spectate(c); }} />
         <//>
         <${TipsPanel} />
       </section>
@@ -404,11 +401,13 @@ export function LobbyScreen() {
 }
 
 /**
- * Public joinable 同盟 rooms (server `/online/api` → `openRooms`): up to 3 keys, polled async every 4 s. Clicking a
- * key fills the code field and joins — the same public, token-free endpoint the 在线 overlay uses (docs/MATCHMAKING.md).
+ * Live 同盟 directory (server `/online/api`, polled async every 4 s):
+ *   · `openRooms` — a hand-made room still in its lobby with a free seat → clicking joins the 同盟.
+ *   · `playRooms` — a co-op room whose match is ALREADY RUNNING (up to 4) → clicking enters as a spectator (观战).
+ * The same public, token-free endpoint the 在线 overlay uses (docs/MATCHMAKING.md).
  */
-function PublicAlliances({ onPick }) {
-  const [rooms, setRooms] = useState(null);
+function PublicAlliances({ onJoin, onSpectate }) {
+  const [data, setData] = useState(null);
   useEffect(() => {
     let alive = true;
     const tick = async () => {
@@ -416,21 +415,36 @@ function PublicAlliances({ onPick }) {
         const r = await fetch('/online/api', { cache: 'no-store' });
         if (!r.ok) return;
         const j = await r.json();
-        if (alive) setRooms(Array.isArray(j.openRooms) ? j.openRooms : []);
+        if (alive) setData({
+          open: Array.isArray(j.openRooms) ? j.openRooms : [],
+          play: Array.isArray(j.playRooms) ? j.playRooms : [],
+        });
       } catch { /* keep the last list */ }
     };
     tick();
     const h = setInterval(tick, 4000);
     return () => { alive = false; clearInterval(h); };
   }, []);
-  const list = (rooms || []).slice(0, 3);
-  if (!list.length) return null;
-  return html`<div class="join-foot">
-    <span class="t-lo">公开同盟</span>
-    ${list.map((r) => html`<button key=${r.code} type="button" class="code-chip num"
-      title=${`${r.difficultyName || ''} · ${r.humans}/${MAX_SEATS}${r.host ? ' · ' + r.host : ''}`}
-      onClick=${() => onPick(r.code)}>${r.code}</button>`)}
-  </div>`;
+  const open = (data?.open || []).slice(0, 3);
+  const play = (data?.play || []).slice(0, 4);
+  const rows = [];
+  if (open.length) {
+    rows.push(html`<div class="join-foot" key="open">
+      <span class="t-lo">公开同盟</span>
+      ${open.map((r) => html`<button key=${r.code} type="button" class="code-chip num"
+        title=${`${r.difficultyName || ''} · ${r.humans}/${MAX_SEATS}${r.host ? ' · ' + r.host : ''} —— 点击加入`}
+        onClick=${() => onJoin(r.code)}>${r.code}</button>`)}
+    </div>`);
+  }
+  if (play.length) {
+    rows.push(html`<div class="join-foot" key="play">
+      <span class="t-lo">正在模拟</span>
+      ${play.map((r) => html`<button key=${r.code} type="button" class="code-chip num is-live"
+        title=${`${r.difficultyName || ''} · ${r.humans} 人${r.bots ? ` + ${r.bots} AI` : ''}${r.host ? ' · ' + r.host : ''} —— 点击观战`}
+        onClick=${() => onSpectate(r.code)}>${r.code}</button>`)}
+    </div>`);
+  }
+  return rows.length ? rows : null;
 }
 
 /**

@@ -46,6 +46,12 @@
 // onLeave(playerId)         The human quit permanently (g.leave, room.leave, or the 10-minute reconnect
 //                           window expired). They will never return under this playerId in this match;
 //                           treat as quit (AI takes over / eliminated per DESIGN). No onDisconnect follows.
+// takeOver(humanId, seat, name) → boolean   A spectator takes over a BOT seat (server/lobby.js room.takeOver): the bot's
+//                           state becomes the human's. Re-key everything named by the old playerId and resend the new
+//                           player its m.public / m.private. A bot seat only trades its AI for a human, so the match
+//                           never has more than MAX_SEATS players. true when it happened.
+// releaseSeat(humanId, aiId, aiName) → boolean   The mirror (room.releaseSeat): the seat becomes a fresh AI again (same
+//                           board / gold) and the human returns to a spectator seat, watching the match continue.
 // dispose()                 Stop every timer/interval and release resources. Idempotent. After dispose the
 //                           platform ignores send/broadcast/onEnd from this instance.
 //
@@ -170,6 +176,49 @@ export class StubMatch {
     if (this.ended) return;
     this.broadcastFn(this.publicView());
     this.maybeFinish(false);
+  }
+
+  /**
+   * A spectator takes over a BOT seat (server/lobby.js `room.takeOver`): the bot's state becomes the human's, so the
+   * match never has more than MAX_SEATS players.
+   * @param {string} humanId @param {number} seat @param {string} [name] @returns {boolean}
+   */
+  takeOver(humanId, seat, name) {
+    if (this.disposed || this.ended || this.players.has(humanId)) return false;
+    const p = [...this.players.values()].find((x) => x.seat === seat && x.isBot);
+    if (!p) return false;
+    this.players.delete(p.playerId);
+    p.playerId = humanId;
+    if (name) p.name = name;
+    p.isBot = false;
+    p.connected = true;
+    p.ready = true;
+    this.players.set(humanId, p);
+    this.sendFn(humanId, this.publicView());
+    this.sendFn(humanId, this.privateView(p));
+    if (!this.ended) this.broadcastFn(this.publicView());
+    return true;
+  }
+
+  /**
+   * A player who took an AI over hands the seat back (server/lobby.js `room.releaseSeat`) — the mirror of takeOver: the
+   * seat becomes a fresh AI and the human goes back to watching.
+   * @param {string} humanId @param {string} aiId @param {string} [aiName] @returns {boolean}
+   */
+  releaseSeat(humanId, aiId, aiName) {
+    if (this.disposed || this.players.has(aiId)) return false;
+    const p = this.players.get(humanId);
+    if (!p || p.isBot) return false;
+    this.players.delete(humanId);
+    p.playerId = aiId;
+    if (aiName) p.name = aiName;
+    p.isBot = true;
+    p.connected = true;
+    p.ready = true;
+    this.players.set(aiId, p);
+    this.sendFn(humanId, this.publicView());
+    if (!this.ended) this.broadcastFn(this.publicView());
+    return true;
   }
 
   dispose() {

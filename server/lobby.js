@@ -23,6 +23,10 @@
 //   * Disconnect in LOBBY: the seat shows connected=false and is freed after `lobbyGraceMs` (60 s); a
 //     session that comes back after that gets `room.closed {reason:'timeout'}`.
 //     Disconnect in a match: the seat is kept and match.onDisconnect(playerId) is called.
+//   * Abandoned coop rooms: when a drop / leave / grace leaves NO CONNECTED human, the remaining disconnected seats
+//     are departures too and the last one disposes the room (`empty`) after the lobby grace — bots (and their
+//     server-taken-over fields) never keep a room alive. A solo run keeps its seat for the 24 h resume instead.
+//     (A party that still has a connected human keeps the dropped seat for the reconnect window.)
 //   * Reconnect: `hello` with a known token (reconnect window, 10 min, see net.js) rebinds the session;
 //     the lobby then broadcasts room.state and, in a match, calls match.onReconnect(playerId).
 //     Solo runs (下半: "休整期及机变阶段没有时间限制…24小时内随时返回", research 01 §1 / 06 §17): a session that drops
@@ -75,7 +79,9 @@
 //     never handed to the match); anything else → SPECTATOR (▸ emotes too). Host: room.removeSpectator { playerId } any
 //     time → room.closed {kicked} to it. A spectator in a LOBBY room may take a free player seat with room.join of the same
 //     code; a player never switches to spectating in place (ALREADY). Disconnect / grace / reconnect / expiry work as for
-//     a player seat (the seat is kept and given back on resume).
+//     a player seat (the seat is kept and given back on resume) EXCEPT that a dropped spectator's seat is freed by the
+//     lobby grace even while the match runs — holding it for the whole 10-minute reconnect window locked one of the two
+//     seats and shut later watchers out ("进不了房间", 2026-10-06).
 
 import { randomBytes, randomInt } from 'node:crypto';
 import { ERR, MAX_SEATS, MAX_SPECTATORS, ROOM_CODE_LEN, modeIdFor } from '../shared/constants.js';
@@ -189,7 +195,7 @@ export class Room {
       // whether this 同盟 room is listed in the lobby's 公开同盟 directory (the room screen shows a 公开/仅密钥 badge)
       public: !!this.public,
       seats: this.seats.map((s) => (s
-        ? { seat: s.seat, playerId: s.playerId, name: s.name, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left }
+        ? { seat: s.seat, playerId: s.playerId, name: s.name, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left, fromAi: !!s.fromAi }
         : null)),
       spectators: this.spectators.map((s) => ({ playerId: s.playerId, name: s.name, connected: s.connected })),
     };
@@ -346,6 +352,8 @@ export class Lobby {
       case 'boot.release': return this.bootRelease(session);
       case 'room.spectate': return this.spectate(session, msg);
       case 'room.removeSpectator': return this.removeSpectator(session, msg);
+      case 'room.takeOver': return this.takeOver(session, msg);
+      case 'room.releaseSeat': return this.releaseSeat(session);
       default:
         if (typeof msg.t === 'string' && msg.t.startsWith('g.')) return this.routeGame(session, msg);
         return fail(ERR.BAD_MSG, `unhandled type ${String(msg.t).slice(0, 32)}`);
@@ -364,8 +372,13 @@ export class Lobby {
     const player = room.seatOf(session.playerId);
     const seat = player || room.spectatorOf(session.playerId);
     seat.connected = false;
-    // a spectator's seat is kept like a player's (nothing to tell the match: it plays no field)
-    if (room.match) { if (player) this.callMatch(room, 'onDisconnect', session.playerId); } else this.startGrace(room, seat);
+    // a spectator is only a watcher: it gets the same grace / reconnect as a player, but its seat is freed by that
+    // grace even while the match runs — holding it for the whole registry window (10 min) would lock one of the
+    // MAX_SPECTATORS (2) seats and shut later watchers out (the reported "进不了房间").
+    if (player && room.match) this.callMatch(room, 'onDisconnect', session.playerId);
+    // arm the lobby grace for every drop: a spectator's seat frees mid-match, and a human's frees when the whole party
+    // is abandoned (no connected human left) — a live party and a solo run keep their seats (startGrace's guard).
+    this.startGrace(room, seat);
     this.broadcastState(room);
   }
 
@@ -486,6 +499,76 @@ export class Lobby {
     session.pendingResult = null;
     this.broadcastState(room);
     if (room.match) this.callMatch(room, 'addSpectator', session.playerId);
+    return OK;
+  }
+
+  /**
+   * room.takeOver { seat } (a spectator, docs/MATCHMAKING.md): the spectator takes over a BOT seat of the room it is
+   * watching — the AI's board, gold and loadout become the human's. In the room's lobby the seat is swapped directly; in
+   * a RUNNING match the match re-keys the bot's state to the human (Match.takeOver) and resends it the player view.
+   * Players stay ≤ MAX_SEATS — only an AI seat can be taken (an empty seat is room.join).
+   */
+  takeOver(session, { seat }) {
+    const room = this.roomOf(session);
+    if (!room) return fail(ERR.NOT_IN_ROOM);
+    if (room.mode === 'solo') return fail(ERR.BAD_TARGET, 'solo room');
+    if (!room.spectatorOf(session.playerId)) return fail(ERR.SPECTATOR, 'only a spectator may take over an AI');
+    const ai = room.seats[seat];
+    if (!ai || ai.left || !ai.isBot) return fail(ERR.BAD_TARGET, 'that seat is not an AI');
+    if (room.activeHumans().length >= MAX_SEATS) return fail(ERR.ROOM_FULL, 'no free player seat');
+    if (room.match && this.callMatch(room, 'takeOver', session.playerId, seat, session.name) !== true) {
+      return fail(ERR.BAD_TARGET, 'takeover refused');
+    }
+    this.freeSpectatorSeat(room, session.playerId);   // it was watching; it plays now
+    const s = room.seats[seat];
+    if (s) {
+      s.playerId = session.playerId;
+      s.name = session.name;
+      s.isBot = false;
+      s.connected = true;
+      s.ready = true;                                 // a running match never waits on a ready flag
+      s.fromAi = true;                                // room.releaseSeat may hand it back to an AI
+    }
+    session.roomCode = room.code;
+    session.notice = null;
+    session.pendingResult = null;
+    this.broadcastState(room);
+    this.log.info(`[lobby] ${room.code} ${session.name} took over seat ${seat}`);
+    return OK;
+  }
+
+  /**
+   * room.releaseSeat (a human who took an AI over, docs/MATCHMAKING.md): hand the seat back to a fresh AI and return to a
+   * spectator seat — the reverse of room.takeOver. The AI carries on with the board, gold and loadout the human had.
+   */
+  releaseSeat(session) {
+    const room = this.roomOf(session);
+    if (!room) return fail(ERR.NOT_IN_ROOM);
+    if (room.mode === 'solo') return fail(ERR.BAD_TARGET, 'solo room');
+    const seat = room.seatOf(session.playerId);
+    if (!seat || seat.isBot) return fail(ERR.NOT_IN_ROOM);
+    if (!seat.fromAi) return fail(ERR.BAD_TARGET, 'this seat was not taken over from an AI');
+    if (room.spectators.length >= MAX_SPECTATORS) return fail(ERR.ROOM_FULL, 'no free spectator seat');
+    const bot = this.makeBot(room, seat.seat);
+    if (room.match && this.callMatch(room, 'releaseSeat', session.playerId, bot.playerId, bot.name) !== true) {
+      return fail(ERR.BAD_TARGET, 'release refused');
+    }
+    const wasHost = room.hostId === session.playerId;
+    seat.playerId = bot.playerId;
+    seat.name = bot.name;
+    seat.isBot = true;
+    seat.connected = true;
+    seat.ready = true;
+    seat.fromAi = false;
+    delete seat.loadout;
+    room.spectators.push({ playerId: session.playerId, name: session.name, connected: session.connected });
+    if (wasHost) {
+      this.migrateHost(room);
+      if (!room.hostId) room.hostId = session.playerId;   // still in the room (watching) → keep the controls theirs
+    }
+    session.roomCode = room.code;
+    this.broadcastState(room);
+    this.log.info(`[lobby] ${room.code} ${session.name} released seat ${seat.seat} back to an AI`);
     return OK;
   }
 
@@ -1076,6 +1159,13 @@ export class Lobby {
     }
     if (room.disposed) return; // onLeave may have ended the match and emptied the room
     if (room.hostId === playerId) this.migrateHost(room);
+    // the party is abandoned (no CONNECTED human left): a coop room does not linger on disconnected seats — every
+    // remaining disconnected seat is a departure too, and the last one disposes the room (bots never keep it alive).
+    // A solo run keeps its seat for the official 24 h resume.
+    if (room.mode !== 'solo' && !room.activeHumans().some((s) => s.connected)) {
+      for (const s of [...room.activeHumans()]) this.removeMember(room, s.playerId);
+    }
+    if (room.disposed) return;
     if (room.activeHumans().length === 0) this.disposeRoom(room, 'empty');
     else this.broadcastState(room);
   }
@@ -1106,9 +1196,17 @@ export class Lobby {
   startGrace(room, seat) {
     const playerId = seat.playerId;
     this.clearGrace(playerId);
+    const spectator = !room.seatOf(playerId) && !!room.spectatorOf(playerId);
     const t = setTimeout(() => {
       this.graceTimers.delete(playerId);
-      if (room.disposed || room.match) return;
+      if (room.disposed) return;
+      // During a match a PLAYER's seat belongs to the match (normally kept for the reconnect window) — except when the
+      // whole party is gone: with no connected human left the match already runs on server-taken-over AI, so the seat
+      // is freed and the room disposed. A solo run keeps its seat for the official 24 h resume instead.
+      if (room.match && !spectator) {
+        if (room.mode === 'solo') return;
+        if (room.activeHumans().some((s) => s.connected)) return;
+      }
       const s = room.seatOf(playerId) || room.spectatorOf(playerId);
       if (!s || s.connected) return;
       const session = this.registry.byId(playerId);

@@ -344,6 +344,21 @@ describe('§20.15 the strip and the popup say whose bonds they show', () => {
     const own = BondPopup({ bondId: id, entry: bond(id, 2, 5, 1), priv: PRIV, onClose() {} });
     assert.ok(![...walk(own)].some((x) => hasClass(x, 'bpop__owner')));
   });
+
+  test('banned operators are not listed: only the available members, with a hidden note', () => {
+    const id = ids[0];
+    const rec = data.lookup('bonds', id);
+    const bannedId = (rec.visibleMembers && rec.visibleMembers[0]) || rec.members[0];
+    const rows = (opts) => [...walk(BondPopup({ bondId: id, entry: bond(id, 2, 5, 1), priv: { board: [], hand: [], temp: [] }, onClose() {}, ...opts }))];
+    const all = rows({ banned: [] }).filter((x) => hasClass(x, 'bpop__member'));
+    const filtered = rows({ banned: [bannedId] });
+    const shown = filtered.filter((x) => hasClass(x, 'bpop__member'));
+    assert.equal(shown.length, all.length - 1, 'the banned operator row is dropped');
+    assert.ok(!filtered.some((x) => hasClass(x, 'bpop__ban')), 'no banned badge is drawn');
+    const note = filtered.find((x) => hasClass(x, 'bpop__hidden'));
+    assert.ok(note, 'the hidden note is shown');
+    assert.match(textOf(note), /1\s*名成员本局禁用/);
+  });
 });
 
 test('§20.15 wiring: the game screen feeds the strip, the popup and the detail card from screenStrip (no viewer data for a teammate)', () => {

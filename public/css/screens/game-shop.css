@@ -25,16 +25,16 @@
 .shopbar__remain b { color: var(--mint-400); font-size: .2rem; margin-left: .04rem; }
 .toolbtn {
   --tb: var(--ice);
-  display: flex; align-items: center; gap: .08rem; height: .48rem; padding: 0 .14rem 0 .08rem;
-  background: rgba(8, 11, 10, .9); border: 2px solid var(--tb); color: var(--tb); font-size: .19rem; font-weight: 700; letter-spacing: .1em;
+  display: flex; align-items: center; justify-content: center; gap: .08rem; height: .56rem; min-width: 1.5rem; padding: 0 .2rem 0 .1rem;
+  background: rgba(8, 11, 10, .9); border: 2px solid var(--tb); color: var(--tb); font-size: .21rem; font-weight: 700; letter-spacing: .1em;
   box-shadow: 0 .04rem .14rem rgba(0, 0, 0, .45);
   transition: background var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
 }
 .toolbtn:hover:not(:disabled) { background: rgba(8, 11, 10, .9); background: color-mix(in srgb, var(--tb) 16%, rgba(8, 11, 10, .9)); box-shadow: 0 0 .18rem transparent; box-shadow: 0 0 .18rem color-mix(in srgb, var(--tb) 40%, transparent); }
 .toolbtn:active:not(:disabled) { transform: translateY(1px); }
 .toolbtn:disabled { --tb: var(--line-3); color: var(--text-dim); cursor: not-allowed; }
-.toolbtn__img { width: .34rem; height: .34rem; object-fit: contain; }
-.toolbtn .icon { width: .24rem; height: .24rem; }
+.toolbtn__img { width: .4rem; height: .4rem; object-fit: contain; }
+.toolbtn .icon { width: .28rem; height: .28rem; }
 .toolbtn--amber { --tb: var(--amber); }
 .toolbtn--ice.is-on { background: var(--ice); color: #0b1822; }
 .toolbtn--ice.is-on kbd { color: #28435a; border-color: #5d88aa; }
@@ -60,7 +60,7 @@
 
 /* ---- level card ---- */
 .lvcard {
-  position: relative; width: 1.24rem; height: 2.24rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .12rem;
+  position: relative; width: 1.92rem; height: 2.24rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .12rem;
   padding: .2rem .1rem .1rem; background: linear-gradient(180deg, #5fe0b9, #36b690); border: 0; color: var(--text-on-mint);
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - .14rem), calc(100% - .14rem) 100%, 0 100%);
   transition: filter var(--t-fast), transform var(--t-fast);
@@ -87,11 +87,17 @@
 .scard-wrap { display: flex; }
 .scard {
   --tc: var(--tier-1);
-  position: relative; width: 1.56rem; height: 2.24rem; padding: 0; overflow: hidden; text-align: left;
+  position: relative; width: 1.92rem; height: 2.24rem; padding: 0; overflow: hidden; text-align: left;
   display: flex; flex-direction: column; justify-content: flex-end;
   background: #151a18; border: 1px solid rgba(78, 216, 175, .35);
+  border: 1px solid color-mix(in srgb, var(--tc) 55%, rgba(78, 216, 175, .35));
+  box-shadow: 0 .05rem .14rem rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .06);
   transition: transform var(--t-fast) var(--ease-out), border-color var(--t-fast), box-shadow var(--t-fast);
 }
+/* rarity accent along the top edge (official operator cards carry the tier colour) */
+.scard::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: .07rem; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--tc) 28%, var(--tc) 72%, transparent);
+  box-shadow: 0 0 .12rem var(--tc); opacity: .9; }
 .scard--t1 { --tc: var(--tier-1); } .scard--t2 { --tc: var(--tier-2); } .scard--t3 { --tc: var(--tier-3); }
 .scard--t4 { --tc: var(--tier-4); } .scard--t5 { --tc: var(--tier-5); } .scard--t6 { --tc: var(--tier-6); }
 .scard__bg { position: absolute; inset: 0;
@@ -151,16 +157,16 @@
 .scard__soldtxt { display: flex; flex-direction: column; align-items: center; gap: .02rem; font-size: .16rem; color: var(--text-dim); }
 
 /* ---- funds card ---- */
-.funds { width: 1.18rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .08rem; padding: .06rem; border-left: 1px solid var(--line); }
+.funds { width: 1.92rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .08rem; padding: .06rem; border-left: 1px solid var(--line); }
 .funds__hex {
-  position: relative; width: 1rem; height: .9rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: linear-gradient(180deg, #2b2410, #16120a); color: var(--gold);
+  position: relative; width: 1.16rem; height: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #3a3013, #1a1408); color: var(--gold);
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
 }
 .funds__hex::before { content: ''; position: absolute; inset: 2px; clip-path: inherit; border: 0; background: transparent; box-shadow: inset 0 0 0 2px var(--gold); }
-.funds__coin { width: .34rem; height: .34rem; fill: var(--gold); filter: drop-shadow(0 0 .06rem rgba(255, 198, 0, .6)); }
-.funds__num { font-size: .36rem; line-height: 1; font-weight: 700; color: #fff; }
-.funds__label { font-size: .14rem; color: var(--text-lo); letter-spacing: .1em; }
+.funds__coin { width: .42rem; height: .42rem; fill: var(--gold); filter: drop-shadow(0 0 .08rem rgba(255, 198, 0, .85)); }
+.funds__num { font-size: .5rem; line-height: 1; font-weight: 900; color: var(--gold-2); text-shadow: 0 0 .14rem rgba(255, 198, 0, .7); }
+.funds__label { font-size: .15rem; color: var(--gold-2); letter-spacing: .14em; }
 .funds__collapse { display: flex; align-items: center; gap: .04rem; font-size: .15rem; background: none; border: 1px solid var(--line-2); color: var(--text-lo); padding: .02rem .1rem; }
 .funds__collapse .icon { width: .14rem; height: .14rem; }
 .funds__collapse:hover { color: var(--text-hi); border-color: var(--line-3); }

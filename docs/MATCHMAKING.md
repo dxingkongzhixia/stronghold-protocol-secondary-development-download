@@ -190,13 +190,13 @@
 | `public/js/screens/room.js` | 野排房不再显示「同盟密钥」，改「野排队伍 · 对局结束后自动解散」；「同盟密钥」框显示 **公开 / 仅密钥** 徽标（`room.public`） |
 | `public/js/screens/game.js` | `commitFacing` 定时器随卸载清理 |
 | `public/js/battle/runner.js` | `clear()` 保留未送达的 `b.result`（可重发） |
-| `public/js/render/spine.js` | 持续技能被眩晕/冰冻后仍回到技能循环（`_baseName`） |
+| `public/js/render/spine.js` | 转场 mix 调优（`defaultMix` 0.12→0.25、`_play` mix 0.15）；慢攻速干员 `slowOp`（一击一次、不拖成慢动作）；`_sustainedSkill()` 语义标记（**原有守卫已按上游 v0.1.3 #23 撤除**，见 §15.2） |
 | `public/js/render/units.js` | 被裁剪单位仍衰减闪光/抖动/血条残影 |
 | `public/js/render/board3d/scene.js` `materials.js` | PMREM render target 随场景销毁；`_fitShadow` 空包围盒兜底 |
 | `public/js/render/textures.js` | 缓存命中必须是**存活**纹理（被 GC 销毁的会重建） |
 | `public/js/ui/account.js` | **新增**：`AccountForm`/`AccountWho`/`AccountDialog`；`logoutAccount` 通知服务端解绑 |
 | `public/js/ui/components.js` | `TextField` 支持 `type`；新增 `eye`/`eyeOff`，「眼睛」切换明文/密文 |
-| `public/js/preload.js` | **新增**：启动预加载（`collectArtUrls` 分 scope / `preloadImages` 并发+取消）+ `BOOT_VIDEO` 启动视频配置；`main.js` 在**进标题前**加载**全部美术图片**（scope `all` ≈1910 张 / 104MB），带进度条 / 跳过 / 180s 兜底 |
+| `public/js/preload.js` | **新增**：启动预加载（`collectArtUrls` 分 scope / `preloadImages` 并发+取消）+ `BOOT_VIDEO` 启动视频配置（现为自托管 `/assets/loading/boot.mp4?v=2`）；`main.js` 在**进标题前**加载**全部美术图片**（scope `all` ≈1910 张 / 104 MB），**带进度条、无跳过、无超时**（必须全部加载完才进标题）；见 §14 |
 | `public/index.html` `public/css/theme.css` | `#boot` 启动页新增**进度条 + 背景视频 + 音提示**（现为自托管 `public/assets/loading/boot.mp4`，可用 `BOOT_VIDEO` 切回 Bilibili iframe）；`.boot__sound` 提示点击开声 |
 | `public/js/main.js` | **启动视频生命周期**：静音自动播 → 首次点击/按键 `unlock` 开声音；标题出现时 `stopBootVideo()` **暂停 + 清 `src` + `load()` + 移除**并摘掉手势监听。**否则**：被摘下的 `<video>` 仍占着解码器，且手势闭包把它一直留活，**启动后第一次点击会把它重新播起来（还开了声音）→ 后台持续解码 1080p → 卡顿、并盖住 BGM（"音乐老是没"）** |
 | `public/js/main.js` | **启动预加载排队**（§14）：`boot.state` 接线 + `artLikelyCached`（缓存探测）+ `acquireBootSlot`（`boot.claim` 轮询等待）+ 下完 `boot.release`；返回访客跳过排队 |
@@ -266,3 +266,247 @@
 **仍未做（建议，按收益排序）**：`preload scope 'all'（104.1 MB）→ 'ui'（74.6 MB）` 省 ~30 MB/人（立绘改为进屏按需加载）；或把 `public/assets` 迁到对象存储 / CDN，彻底脱离这 20 Mbps 上行。
 
 **配置**：`LOBBY_DEFAULTS.bootSlots`（默认 1）、`bootHoldMs`（默认 180000）在 `server/lobby.js`，可由 `startServer({ options })` 覆盖。
+
+## 15. 合并上游 v0.1.3（2026-10-05）
+
+上游 `sganggs/Stronghold-Protocol` 在 `bdb0765` 之后推进了 **69 个提交 / 172 个文件**（`v0.1.3`：主要是玩法与平衡修复，外加联机/界面改进）。合并方式：用 `git worktree` 把「我们当前的状态」提交成 `ours` 分支，再 `git merge origin/master`，**在临时目录里解完冲突、跑绿全量测试，才拷回本项目**。
+
+- 我们改了 65 个文件、上游改了 172 个，**重叠 25 个** → git 自动合掉 15 个，**手动解 10 个**：
+
+  | 冲突文件 | 处理 |
+  |---|---|
+  | `data/assets.json` | 取上游（生成物，`tools/fetch-assets.mjs` 产出） |
+  | `shared/constants.js` | **并集**：我们的账号/野排错误码 + 上游 `SPECTATOR` |
+  | `public/js/main.js` | **并集**：store import 同时带 `loadPref/savePref` 与上游 `isSpectating`，保留我们的 `preload.js` |
+  | `public/js/ui/components.js` | 保留我们的 `gear`/`eye`/`eyeOff`（上游的 `eye` 是重复键） |
+  | `public/js/screens/lobby.js` | **并集**：我们的 `Tabs` + 上游 `MAX_SPECTATORS` |
+  | `public/js/screens/room.js` | **并集**：上游 `SpectatorBar` + 我们的 `InviteBox({ code, public: isPublic })` |
+  | `server/net.js` | **并集** `HEAVY_TYPES`：我们的 `auth.*` + 上游 `room.spectate` |
+  | `server/lobby.js` | **4 处全并集**：`online`＋`spectators`、dispatch 里 `auth/mm/boot`＋`room.spectate`、`disposeRoom` 里观战通知＋我们的 `replay` |
+  | `public/js/render/units.js` | 见 §15.1（补齐上游的整套攻击前冲） |
+  | `public/js/render/spine.js` | 见 §15.2（与上游 #23 对撞，以上游为准） |
+
+- **合并后跑绿**：`node --test` → **3664 项 / 3650 通过 / 0 失败 / 14 跳过**（合并前 3541 项；上游带来 +123 项测试）。
+
+### 15.1 攻击前冲（GitHub #61，上游 `41739be`）
+`public/js/render/units.js` 的 `update()`：
+
+```js
+// 修前：所有单位都冲
+const lungeK = this.lunge > 0 ? Math.sin(this.lunge * Math.PI) * 0.12 : 0;
+// 修后：Spine 模型已显示就不冲（#61）
+const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(this.lunge * Math.PI) * 0.12 : 0;
+```
+
+- `onAttack` 置 `this.lunge = 1`，`update` 里 `lunge -= dt*5` → `sin(lunge·π)·0.12` 是 **0.2 s、峰值 0.12 格** 的正弦鼓包。
+- 用途：**钻石形头像**（Spine 未就绪）没有攻击动画，靠它代替；**Spine 模型**自带攻击动作，冲一下就变成「每发远程攻击把模型推歪」（#61）。
+- 实测（1600×900 正常相机，1 格 ≈ 134.5 px）：钻石峰值 **16.53 px**，Spine **全程 0 px**。
+- 同一次提交还修了弹道：从**手**发射、瞄**胸口**（`fx.js SHOT_HEIGHT = { launch: 0.45, aim: 0.5 }`），不再是腰→腰。
+- ⚠️ 我们之前是**把整套前冲删掉**（所有单位都不冲）。若更喜欢「全都不冲」，改一行即可（`lungeK` 直接置 0）。
+
+### 15.2 持续技能（初雪/薄绿浮空）与上游 #23 的对撞
+- 上游 v0.1.3 新增「**技能自带 idle**」：有自带 idle 的技能用 loop 攻击、攻击间隙回 idle；没有 idle 的技能行为不变（社区 #23）。
+- 我们此前的 `_sustainedSkill()` 守卫（持续技能被攻击不打断）与该设计**在同样的角色数据上要求相反行为，无法并存**。
+- **取舍：以上游为准**。保留我们的 `slowOp`（慢攻速干员不拖成慢动作）与转场 `mix` 调优；`_sustainedSkill()` 方法保留（测试用）但去掉守卫；把原来那条测试改为断言真实保证（"持续技能期间攻击保持 `Skill_Loop`，不回 Idle/Attack"——上游设计里技能期间的待机动画本来就是技能 loop，所以浮空视觉仍成立）。
+- ⚠️ 这两处（前冲、浮空）**建议进游戏实机验一下手感**。
+
+**回滚**：`D:\DOTK\_optim-backup-20261005-merge-v013\` 内 `ours-pre-merge-f2d1fee.tar.gz`（合并前）与 `merged-7af3867.tar.gz`（合并后）各一份完整源码快照；临时合并目录 `D:\DOTK\_merge-scratch`（含 git 历史）。
+
+## 16. 本项目全部改动总览（相对上游 v0.1.3，2026-10-05）
+
+> 一句话：**在官方上游 v0.1.3 之上，本项目加了「账号体系 + 野排匹配 + 公开同盟 + 在线状态 + 启动体验 + 带宽治理」，并保留了一批战斗/渲染审计修复。** 代码与上游同源，合并与取舍见 §15。
+
+### 16.1 账号与会话
+- 存储用**内置 `node:sqlite`**（`server/db.mjs`，库在 `var/accounts.db`，`PRAGMA user_version` 迁移）；密码 **scrypt** 加盐、`timingSafeEqual` 比较（`server/auth.js`）。
+- **代号 = 账号名**：大小写不敏感唯一、2–12 字；标题页折叠登录/注册；**空代号点进入 → 随机游客代号**；密码框「眼睛」明文切换。
+- 会话 TTL 30 天；重连用 `hello.accountToken` 恢复。
+- **单账号单会话**：登录轮换 token + 踢掉旧 socket（`kickOtherSessions`，关闭码 4001）。
+- `auth.logout` 服务端解绑（不是只清本地）。
+
+### 16.2 野排（自动匹配，`server/matchmaker.js`）
+- 共享池**按难度分桶**、**30 s 窗口**、满 4 人**立即开局**、不足由 **AI 补位**；`mm.state` 进度 ~1 Hz。
+- **需登录**；排队浮层 `MmOverlay`，取消 / 断线即退池。
+- **退池**：取消 / 离开大厅 / 建房 / 进房 / 断线 / 过期一律退池；成组失败也补发 `queued:false`（不留幽灵）。
+- 野排房 `room.auto`：**对局结束即解散**、不显示同盟密钥、不进「最近同盟」。
+
+### 16.3 同盟（手建房）
+- 建房可选 **公开 / 不公开**（`room.create.public`，缺省公开；单人房恒 false）。
+- **公开同盟列表**：`/online/api.openRooms`，客户端 4 s 轮询、最多 3 个、点击即填密钥并加入。
+- 房间屏「同盟密钥」框显示 **公开 / 仅密钥** 徽标。
+- 与上游 v0.1.3 的**房主踢人**、**观战位**共存（合并时逐行并集，见 §15）。
+
+### 16.4 在线状态 / 管理页
+- `presenceOnline()`：**游客断线即时离线**；**登录用户断线保留 5 分钟**（`PRESENCE_GRACE_MS`）。
+- 大厅「在线 N」徽标 + 游戏内 `OnlineOverlay`（免令牌 `/online/api`，4 s）。
+- `/admin` 只读页（令牌 + 30 天 cookie）：注册账号 / 在线会话 / 房间三张表 + `SP_VERIFY` 抽检计数。
+
+### 16.5 启动体验与带宽（详见 §14）
+- **启动页**：进度条 + **自托管背景视频**（点击开声、无控件、不可拖动）+ **无跳过、无超时**（必须全部加载完才进标题）。
+- **视频生命周期**：标题出现即 `stopBootVideo()`（暂停 + 清 `src` + `load()` + 移除并摘监听）——否则被摘下的 `<video>` 仍占解码器、且手势闭包把它留活，**启动后第一次点击会把它重新播起来（还出声）→ 后台解码 1080p → 卡顿并盖住 BGM**。
+- **视频压小**：1920×1080/2.68 Mbps（36.9 MB）→ 1280×720/836 kbps（**12.1 MB**）；URL 走 `?v=2` 破 7 天强缓存。
+- **预加载排队闸门** `server/bootgate.js`：一次只放 `bootSlots`（默认 1）个客户端预加载；已缓存的返回访客**不排队**；断线/过期立即释放。
+- 静态资源 7 天强缓存（`/assets|fonts|vendor`）；`socket.setNoDelay(true)`。
+
+### 16.6 保留的战斗 / 渲染审计修复
+- `public/js/battle/runner.js`：`clear()` 保留未送达的 `b.result`（可重发）。
+- `public/js/screens/game.js`：`commitFacing` 定时器随卸载清理。
+- `public/js/render/board3d/{scene,materials}.js`：PMREM render target 随场景销毁；`_fitShadow` 空包围盒兜底。
+- `public/js/render/textures.js`：缓存命中必须是**存活**纹理。
+- `public/js/render/units.js`：被裁剪单位仍衰减闪光/抖动/血条残影。
+- `public/js/render/spine.js`：转场 mix 调优；慢攻速干员 `slowOp`。
+- `server/match/Match.js`：`finish()` 取消 `_pubTimer`。
+- `server/sim/Battle.js`：敌人不再收到友军 `deploy` 钩子；部署被拒**退 DP**。
+- ⚠️ 与上游冲突的两处已按上游为准：**攻击前冲**（上游 #61 版，§15.1）与**浮空技能**（上游 #23 版，§15.2）。
+
+### 16.7 环境开关
+| 项 | 值 | 说明 |
+|---|---|---|
+| `SP_VERIFY` | `sample`（Windows `server-start.cmd` 设定） | 服务端抽检复算客户端战斗结果 |
+| `LOBBY_DEFAULTS.bootSlots` | `1` | 启动预加载并发闸门（`server/lobby.js`） |
+| `LOBBY_DEFAULTS.bootHoldMs` | `180000` | 闸门无释放时的兜底回收 |
+
+**当前线上**：`http://183.66.27.19:20522`，`app 0.1.3`（上游 v0.1.3 + 上述全部改动），`build` 见 `/healthz`。备份与回滚见 §15 末尾。
+
+## 17. 观战与「夺舍 AI」（2026-10-05）
+
+上游 v0.1.3 自带的观战入口（「加入同盟」旁边的 `观战` 按钮）体验不好，按需求改掉：
+
+### 17.1 入口：从「正在模拟」列表进入（`/online/api` → `playRooms`）
+- `server/admin.js` 的 `buildPublicSnapshot` 新增 **`playRooms`**：**正在打**（`r.match` 存在）的 coop 房间，字段 `{ code, difficultyName, host, humans, bots, auto }`；**排序 = 野排优先 → 有 AI 席位优先 → 人多优先**，**最多 4 个**。
+- 大厅「加入同盟」面板下方两行（`public/js/screens/lobby.js` 的 `PublicAlliances`，4 s 轮询）：
+  - **公开同盟**（`openRooms`）→ 点击**加入**；
+  - **正在模拟**（`playRooms`）→ 点击**观战**（`room.spectate`）。
+- 原来的本地「最近的同盟」行已移除（它的位置就是上面的「正在模拟」）。
+- 🐞 顺带修掉一个崩溃：`screens/lobby.js` 用了 `ERR.*` 却没 import `ERR` → 点「观战」报 `ERR is not defined`。
+
+### 17.2 观战席：紧凑下拉，不占地方
+- `public/js/screens/room.js`：原 `SpectatorBar`（一整条）改为 **`SpectatorDock`** —— 一个 `<details>` 小下拉，摘要行只写「观战席 n/2」，展开后是观战者名单（房主可 ✕ 移出）、有空位时的**入座**、以及**夺舍 AI 队友**。
+- `public/js/screens/game.js`：观战**正在进行的对局**时，右下角浮一个同样的紧凑下拉 `SpecDock`（`position: fixed`），列出其他观战者 + **夺舍 AI**。它挂在 `GameScreen`（**路由层**）而不是战斗主体上，所以**确认信息 / 选盟约 / 战斗**各个阶段都能看到并夺舍。
+- 样式在 `public/css/screens/room.css`（`.specdock*`）与 `public/css/screens/game.css`（`.specdock--ingame`）。
+
+### 17.3 夺舍 AI（`room.takeOver`）
+- 协议：`room.takeOver { seat }`（C2S）。
+- `server/lobby.js` 的 `takeOver(session, { seat })`：只允许**观战者**夺舍**AI 席位**（空位请走 `room.join`），并保证**游玩者 ≤ MAX_SEATS**。
+  - 房间**未开局**：直接把该 AI 席位换成本人；
+  - 对局**进行中**：`Match.takeOver(humanId, seat, name)`。
+- `server/match/Match.js` 的 `takeOver`：把该 AI 的**整个 `PlayerState`** 交给人 —— 同一席位 / 棋盘 / 资金 / 调配 —— 并把**所有按 playerId 索引的结构重写**（`players`、`spectators`、`watchers`、`fields[].players`、`draft.order|picks|skipsLeft`、`sp.order|picks|taken`、`f.result.perPlayer` …），随后 `_resync(ps)` 给新玩家发 `m.public` + 他自己的 `m.private`（战斗中还补 `m.field`）。这样他之后发的 `g.*`（带自己的 playerId）会自然路由到那个席位。
+- `server/match/StubMatch.js` 同步实现该接口，并写进文件头的**平台契约**注释。
+- 测试：`test/lobby.test.js` 增加「spectator takes over an AI seat — in the lobby and while the match runs」。
+
+**约束**：AI 席位只能把 AI 换成真人，所以**游玩者永远 ≤ 4**。
+
+### 17.4 退出夺舍（`room.releaseSeat`）
+- 协议：`room.releaseSeat {}`（C2S）。**只对"夺舍来的席位"有效**（`room.state` 的席位带 `fromAi: true`）。
+- 行为：把席位交还给一台**新的 AI**（沿用你那时的棋盘 / 资金 / 调配），本人**回到观战席**继续看 —— `room.takeOver` 的反操作。
+- `Match.releaseSeat(humanId, aiId, aiName)`：把 `PlayerState` 反向改写成 `ai_…`（`isBot = true`），再跑一遍重写，然后把本人注册成观战者并 `_resync`（发公开视图）。
+- 重写逻辑抽成 **`Match._rekeyPlayer(from, to)`**，夺舍 / 退出夺舍共用（`players`/`spectators`/`watchers`/`fields[].players`/`draft.*`/`sp.*`/`f.result.perPlayer`）。
+- 房主若退出夺舍：先 `migrateHost`；若场上已无人持有席位，则**保留本人为房主**（人还在房里，控制权不变）。
+- 客户端：`SpectatorDock`（房间屏）与 `SpecDock`（战斗界面）在「**你自己的席位 `fromAi`**」时显示 **退出夺舍（回到观战席）**；战斗界面那个下拉此时也会为"夺舍者"显示（此前只在观战时显示）。
+- `test/lobby.test.js`：夺舍用例补上「退回观战席」与「普通玩家不能退（`BAD_TARGET`）」。
+
+## 18. 界面打磨：反馈群、盟约居中、点其他位置收起（2026-10-06）
+
+本轮是**纯客户端 UI/UX** 改动（**无协议 / 服务端变化**），按实机手感与用户反馈调整。
+
+### 18.1 标题页「反馈群」入口（`screens/title.js` / `css/screens/title.css`）
+- 左下角新增 **`FeedbackGroup`**：药丸「反馈群 816461825」→ 点击展开**二维码卡片**（群号 `816461825`；二维码 `/assets/ui/feedback-qr.png` 由进群链接生成，560px），卡片内有「QQ群 816461825」按钮（**点击复制群号**）与说明「使用手机 QQ 扫码加入同盟」。
+- 药丸下方一行小字「**服务器为个人免费服务器 · 容量较小**」（对齐参考服务器的「服务器交流群」样式：药丸 + 二维码浮出卡 + 备注）。
+- **点卡片 / 药丸以外任意位置收起**（见 §18.4）。
+
+### 18.2 盟约条居中 + 上移（`css/screens/game.css`）
+- `.gm__bonds` 由偏左定位改为 **`left:0; right:0; justify-content:center`** —— 盟约条在**任意宽度下都整条横向居中**（`fieldHost.js` 注释里的「盟约条底边」随之下移，单位图标不再和它错位）。
+- `top` 由 **1.36rem → 1.08rem → .80rem**（2026-10-06，用户反馈「盟约图标上移些，不要遮挡干员」）：16:9 下官方取景把战场后排顶边贴着盟约条，干员立绘头肩会顶进条里；上移后尽量贴近顶栏（顶栏内容底边 ≈.66rem）。
+- `HUD_REM.bondStripBottom` **仍为 2.16rem**：prep 相机的 HUD 余量不跟着减小，于是相对新条底（≈1.58rem）多留约 0.58rem，专门给后排干员立绘的头顶让位。
+
+### 18.3 盟约详情弹窗居中（`css/screens/game-panels.css` + `ui/gameLogic.js`）
+- `.bpop` 基准位置改为 **`left:50%; transform:translateX(-50%)`**（与居中的盟约条对应）；`beside` / `besideR` / `right` 三种停靠位补 `transform:none` 还原各自定位。
+- `gameLogic.bondPopupPlace()`（`BPOP` 常量）里 `rectOf('left')` 用**居中后**的左边界，弹窗「不遮挡选中单位底盘 / 详情卡」的落点逻辑随之更新（`game.js` 的 `bpPlace`）。
+  - ⚠️ **后被 §18.6 取代**：用户要求弹窗「恒居中不动」，`game.js` 不再调用 `bondPopupPlace`（不再停靠），helper 与本节描述仅作历史 / 单测保留。
+- ⚠️ 部署后**若线上看不到效果先 `Ctrl+Shift+R` 强刷**：浏览器会缓存旧的 `game-panels.css`（`/css` 虽 `no-cache`，实测仍可能命中旧样式）。
+
+### 18.4 点其他位置收起（`screens/game.js`、`screens/title.js`）
+- **盟约详情弹窗 + 干员详情卡**：在 `GameScreen`（`public/js/screens/game.js`）加一个 `window` `pointerdown`（capture），按「点在其他面板之外就收起」处理两个浮层（**不放在 `BondPopup` 里**：单测直接调 `BondPopup(props)` 检查 vnode 树，组件里加 hooks 会崩 —— 见 `test/ui/watch-bonds.test.js`）：
+  - **盟约弹窗**：点在 `.bpop` / `.bstrip` / `.dpanel` 之外 → `setBondOpen(null)`（**排除盟约条的盘**保留它自己的开/关切换、**排除详情卡**让其盟约标签仍可切换）。
+  - **干员详情卡**：点在 `.dpanel` / `.bpop` / `.uframe` / `.fwheel` / `.modal` / `.guide` / `.spov` 之外 → `setDetail(null)` + `setSel(null)`（与点 ✕ 一致）。原来**只有点棋盘**才关，且挂在 field host 上的 `pointerdown` 用 `closesOnFieldPress` **只认 `piece` / `unit`** 两种卡 —— 从**商店卡 / 盟约成员 / 敌方情报**开的 `chess` / `item` / `enemy` 卡会一直留到点 ✕。排除 **`.uframe`**（单位操作底盘「撤退 / 出售 / 销毁」的按钮不能被误关掉）、**`.fwheel`**（朝向轮盘）、各类弹窗 / 玩法说明 / 机变决策。
+- **标题页反馈群卡片**（`public/js/screens/title.js` 的 `FeedbackGroup`）：点 `.title-group-wrap` 以外收起（药丸本体仍是开/关）。
+
+### 18.5 涉及文件
+| 文件 | 改动 |
+|---|---|
+| `public/js/screens/title.js` | `FeedbackGroup`：反馈群药丸 + 二维码卡 + 复制群号；点外部收起 |
+| `public/css/screens/title.css` | `.title-group-wrap` / `.title-group` / `.title-group-card` / `.title-group-qr` / `.title-group-note` |
+| `public/assets/ui/feedback-qr.png` | **新增**：反馈群二维码（560px） |
+| `public/css/screens/game.css` | `.gm__bonds` 横向居中 |
+| `public/css/screens/game-panels.css` | `.bpop` 居中 + `--beside/--besideR/--right` 还原 `transform` |
+| `public/js/ui/gameLogic.js` | `bondPopupPlace` 用居中后的左边距（`BPOP.left` 移除，`rectOf('left')` → `(W − R·width)/2`） |
+| `public/js/screens/game.js` | 干员详情卡 + 盟约弹窗「点外部收起」（`window` capture 监听） |
+| `test/ui/playtest2.test.js` / `playtest5-ui.test.js` | 断言跟上居中后的几何（`rectOf('left')`、`.gm__bonds` 居中） |
+
+### 18.6 续：抽屉点外部收起、盟约框固定居中、购买卡变宽、顶栏变扁（2026-10-06）
+- **本局信息 / 敌方情报抽屉点外部收起**（`public/js/screens/game.js`）：把 `drawer`（`.edrawer`）也纳入 §18.4 的 `window` capture 监听——点在 `.edrawer` / `.gtop__iconbtn`（顶栏那两颗 🔍）之外即 `setDrawer(null)`；那两颗按钮保留自己的开 / 关。
+- **盟约框固定居中**（`public/js/screens/game.js`）：之前 `bondPopupPlace` 按详情卡所在侧把弹窗停靠到 `beside / besideR / right`，一打开或切换干员详情就跳位置。现在**不再传 `place` / `over`**，弹窗恒用基础 `.bpop`（`left:50%; translateX(-50%)`）居中不动。（`gameLogic` 的 `bondPopupPlace` / `BPOP` 与 `.bpop--beside*` 规则保留，当前不再被界面调用——单测仍覆盖它。）
+- **购买界面卡片变宽 + 同宽**（`public/css/screens/game-shop.css`）：`.scard` 宽 **1.56 → 1.92rem**，LEVEL 卡 `.lvcard` **1.24 → 1.92rem**，资金卡 `.funds` **1.18 → 1.92rem**——三者等宽；同时上面的 **冻结 / 刷新** `.toolbtn` 调大（min-width 1.5rem、高 .48→**.56rem**、图标放大）。
+- **资金更醒目**（`public/css/screens/game-shop.css`）：六边形 1×.9 → **1.16×1rem**，金币 .34 → **.42rem**，数字 .36 → **.5rem / 900 / 金色发光**，「目前资金」标签改金色。
+- **顶栏变扁**（`public/css/screens/game.css`）：`.gtop__center` 高 **0.78 → 0.52rem**、`.gtop` 顶部内边距 .2→.12rem；同时缩小内部件——阶段胶囊 `.capsule` .5→.42rem（图标 .36→.30、字号 .21→.18）、`.gtop__iconbtn` .46→.40rem、`.roundbox__num` .44→.38rem（字号 .32→.26）、`.lp--lg` .34→.28rem、`.readybtn` .56→.46rem。整条顶栏明显变扁。
+- **盟约条再上移**：`.gm__bonds` top 1.08 → **.80rem**，紧贴变扁后的顶栏下方。
+- 涉及文件：`public/js/screens/game.js`、`public/css/screens/game.css`、`public/css/screens/game-shop.css`。测试：`test/ui/playtest5-ui.test.js`（`.scard` 宽）、`test/ui/playtest2.test.js`（盟约框几何不变）。
+
+### 18.7 盟约详情成员列表只列可用干员（2026-10-06）
+- `public/js/ui/bondStrip.js` 的 `BondPopup`：`成员` 列表**过滤掉本局禁用的干员**（`bondMembers` 的 `banned`）——用户反馈「被禁用的干员小 ✕ 不够明显，索性不显示，只列本局可用的」。
+  - `成员 N/M` 的计数改成**可用成员**；`UnitThumb` 不再画 `is-banned`/红 ✕ 徽标。
+  - 若有隐藏，列表下方加一行 `.bpop__hidden`「另有 N 名成员本局禁用，未列出」（`public/css/screens/game-panels.css`）。
+- 测试：`test/ui/watch-bonds.test.js` 新增「banned operators are not listed: only the available members, with a hidden note」。
+
+### 18.8 官方质感打磨（2026-10-06，用户「太简陋了，对齐官方」）
+范围：选中单位操作框 / 底部购买栏 / 顶部 HUD（用户选定）。功能不动，只做美术质感。
+- **选中单位操作框**（`css/screens/game-panels.css` + `js/ui/underframe.js`）：撤退/出售/销毁的八角面板改成径向渐变 + 内高光 + 双层描边 + 更重投影；四角 chevron 加粗 + 薄荷发光；菱形底衬加深；标签改成**深色胶囊 + 键位胶囊**（`.uframe__key`，由原来的 `撤退[Q]` / `出售[X]` 拆出，官方 `pc_key_holder` 观感）；价格 hex 放大到 `.28rem`。
+- **底部购买栏**（`game-shop.css`）：干员卡加**稀有度描边**（`border-color: color-mix(in srgb, var(--tc) …)`，带回退行）+ **顶部稀有度色条**（`.scard::before`）+ 立体投影。
+- **顶部 HUD**（`game.css`）：`.gtop__center` 描边改薄荷 + 内高光 + 底部薄荷强调线（`.gtop__center::before`；角标仍由 `.brackets::after` 画）。
+- 验证：自带浏览器实机看顶栏/购买栏，另建临时预览页目检操作框（已删）；全量 `node --test` 通过。
+  - 顺带把 `test/lobby.test.js` 的确定性 fuzz 加了一个**确定性种子**（先跑一局到 INFO_CHECK 并 `g.infoReady`），避免它因真实计时/房间销毁规则偶发失败。
+
+### 18.9 盟约成员「在场 / 已拥有 / 未拥有」三态更明显（2026-10-06）
+用户反馈：盟约详情成员列表里「激活（在场）vs 未激活（未拥有）」看不太出来。
+- `public/css/screens/game-panels.css` 的 `.bpop__member`：
+  - **在场**（`is-on`）：**薄荷实框 + 薄荷底色 + 内/外发光 + 左上角薄荷三角角标**，名字薄荷加粗。
+  - **已拥有未上场**（`is-owned`，整备区 / 手牌）：白描边 + 白名字（无薄荷）。
+  - **未拥有**：整格 `opacity: .6` + 缩略图本就 `grayscale`，名字用最暗色——可用干员因此格外突出。
+  - 修了一个顺序 bug：原来 `is-owned` 的白色名字写在 `is-on` 之后，把在场成员的薄荷名覆盖了；现在 `is-on` 名字规则在后、优先生效。
+
+## 19. 观战席断线释放（2026-10-06，修「进不了房间」）
+
+### 19.1 症状
+大厅「正在模拟」点某房间的 **观战** → `房间已满`（服务端 `room.spectate` → `ROOM_FULL` / `no free spectator seat`），但 `/online/api` 里该房间只有玩家在线、没有观战者在线。
+
+### 19.2 原因
+观战席（`MAX_SPECTATORS = 2`）按「像玩家席位一样保留、重连还给」实现：大厅里断线看 `lobbyGraceMs`（60 s）释放；但对局进行中断线的观战者，`server/lobby.js` 的 `onDisconnect` **既不起 grace、也不通知 match**（`if (room.match) { if (player) … } else startGrace(…)`），席位要等 registry 的 **reconnect 窗口（10 分钟）** 过期、`onExpire → removeMember` 才释放。两个断线的观战者就把 2 个席位锁住 10 分钟，后面的人一直进不来。
+
+### 19.3 修复（`server/lobby.js`，纯服务端）
+- `onDisconnect`：**观战者**（非玩家席位）断线时也起 grace（`startGrace`）；对局进行中只对**玩家**保留原逻辑（`callMatch('onDisconnect')`）。
+- `startGrace`：判断该席位是不是观战者（`!room.seatOf(id) && room.spectatorOf(id)`）；观战者的 grace **即使 `room.match` 存在也照常触发**（玩家的 grace 依旧让 match 管）。
+- 于是观战者断线后 **`lobbyGraceMs`（60 s）** 释放席位，重连（远快于 60 s）仍拿回席位。
+- 未采用「满员时挤掉断线观战者」的即时方案：它会让 `test/lobby.test.js` 的确定性 fuzz（`g.infoReady` 至少要成功一次）不再命中。
+
+### 19.4 测试
+- 新增 `test/lobby.test.js`「a dropped spectator is freed while the match runs too」：对局进行中 2 名观战、第 3 人被拒 → 断线一个 → grace 后席位释放 → 第 3 人进得来。
+- 既有「spectators during a match … reconnect gets the seat back」仍通过（重连远快于 grace）。
+- `docs/DESIGN.md` §观战席「Reconnect」段同步改写；`server/lobby.js` 文件头注释同步。
+
+## 20. 弃局房间销毁（2026-10-06，修「真人全退出了房间还在」）
+
+### 20.1 症状
+真人建房 → 加 AI → 开局 → 真人**关标签页 / 断线**后，房间不销毁：队伍面板里 P1 仍是那个（已离线的）真人、其余是 AI，观战者能一直看，`/online/api` 的「正在模拟」里也一直挂着。
+
+### 20.2 原因
+`Room.activeHumans()` 只排除 `isBot` / `left` 的席位，**断线的真人**（`left=false`）仍算「活着」。对局中断线的席位按设计保留到 registry 的 **reconnect 窗口（10 分钟）**（旧 `onDisconnect` 对局中不起 grace），于是「0 个在线真人」的房间被一个断线席位吊着最多 10 分钟。
+（显式 `room.leave` 本来就是对的：`seat.left=true` → `activeHumans` 归零 → 立即销毁。实测：`leave` 修复前就销毁 ✓，`terminate` 断线修复前不销毁 ✗。）
+
+### 20.3 修复（`server/lobby.js`，纯服务端）
+- `onDisconnect`：**任何**掉线都起 lobby grace（旧代码对局中不起）——观战者照旧在对局中也释放；**真人**只有到「房间已没有任何在线真人」时才会被 grace 真正移除（有活人的派对仍保留席位）。
+- `startGrace`：对局中的**玩家** grace 允许触发，前提是 `room.activeHumans()` 里**没有 `connected` 的真人**（且 `mode !== 'solo'`，solo 的 24h 重连不受影响）。
+- `removeMember`：处理完当前离场后若**已无在线真人**，把剩下的断线席位也一并按离场处理——最后一个负责 `disposeRoom('empty')`（覆盖「A 断线 + 之后 B 离开」）。
+- 结论：**一个合作房间只在还有在线真人时存在**；真人全离线 / 离开后，最多一个 `lobbyGraceMs`（60 s）宽限即销毁，观战者收到 `room.closed {empty}`。solo 房间不适用（保留 `singleReconnectTime` = 24 h）。
+
+### 20.4 测试
+- 新增 `test/lobby.test.js`「all humans dropping mid-match disposes the room after the grace; a live party keeps the dropped seat」：① 真人断线但还有另一个在线真人 → 房间保留、席位 `connected=false`；② 全体离线 → grace 后房间销毁、观战者收到 `{empty}` 且 `room.leave` 报 `NOT_IN_ROOM`。
+- `server/lobby.js` 文件头注释同步。

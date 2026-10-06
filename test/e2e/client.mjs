@@ -226,7 +226,7 @@ export class Client {
     await this.page.waitForSelector('.title-login input', { timeout: 20000 });
     await this.click('.title-login input');
     await this.page.keyboard.type(name);
-    await this.click('.title-login button', '开始');
+    await this.click('.title-login button', '进入');
     await this.page.waitForSelector('.lobby-screen', { timeout: 20000 });
   }
 

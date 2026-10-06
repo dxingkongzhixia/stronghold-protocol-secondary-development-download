@@ -117,15 +117,17 @@ describe('9: the prep camera keeps the bench clear of the shop bar on phones in 
   test('HUD_REM mirrors the CSS it measures (bond strip bottom, shop bar top, the notched-phone rule)', () => {
     const game = read('public/css/screens/game.css');
     const shop = read('public/css/screens/game-shop.css');
-    // bond strip: top 1.36rem + a .52rem disc and its name line → measured 2.14–2.15rem in Chrome; 2.16rem kept
-    assert.match(game, /\.gm__bonds \{ position: absolute; left: 1\.56rem; top: 1\.36rem;/);
+    // bond strip: centred (left: 0; right: 0; justify-content: centre) and moved up to top .80rem (2026-10-06, so it
+    // clears the top board row's operators). bondStripBottom stays 2.16rem — the band keeps ~0.28rem more than the
+    // strip's real bottom (≈1.58rem) as headroom for unit sprites above the back row.
+    assert.match(game, /\.gm__bonds \{ position: absolute; left: 0; right: 0; top: \.80rem;/);
     assert.match(game, /\.bslot \.bond \{ --disc: \.52rem; \}/);
     assert.equal(HUD_REM.bondStripBottom, 2.16);
     // shop bar: bottom .2rem + row padding .1rem × 2 + 2.24rem cards (level / operator / item) + 2 px + 1 px borders
     assert.match(shop, /\.shopbar \{\n {2}position: absolute; right: \.26rem; bottom: \.2rem;/);
     assert.match(shop, /\.shopbar__row \{\n {2}position: relative; display: flex; align-items: stretch; gap: \.08rem; padding: \.1rem;\n[^}]*border: 1px solid var\(--line-2\); border-top: 2px solid var\(--mint-700\);/);
-    assert.match(shop, /\.lvcard \{\n {2}position: relative; width: 1\.24rem; height: 2\.24rem;/);
-    assert.match(shop, /\.scard \{\n {2}--tc: var\(--tier-1\);\n {2}position: relative; width: 1\.56rem; height: 2\.24rem;/);
+    assert.match(shop, /\.lvcard \{\n {2}position: relative; width: 1\.92rem; height: 2\.24rem;/);
+    assert.match(shop, /\.scard \{\n {2}--tc: var\(--tier-1\);\n {2}position: relative; width: 1\.92rem; height: 2\.24rem;/);
     assert.equal(HUD_REM.shopBarTop, 0.2 + 0.1 * 2 + 2.24);
     assert.equal(HUD_REM.shopBarBorderPx, 3);
     // the bar stays on the viewport's bottom edge on a notched phone (DESIGN §18.1): no bottom inset to add

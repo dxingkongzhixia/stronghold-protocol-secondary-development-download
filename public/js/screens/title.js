@@ -13,6 +13,7 @@ import { NAME_MAX_LEN, APP_VERSION } from '../../../shared/constants.js';
 import { html, Button, Icon, MicroLabel, TextField, PingPill } from '../ui/components.js';
 import { GuideButton } from '../ui/guide.js';
 import { toast } from '../ui/toasts.js';
+import { copyText } from '../ui/clipboard.js';
 import { AccountForm, AccountWho } from '../ui/account.js';
 import { net, identity, randomGuestName } from '../net.js';
 import { store, useStore, shallowEqual } from '../store.js';
@@ -193,6 +194,45 @@ function Ridges() {
   </svg>`;
 }
 
+/** QQ 反馈群 群号（点击复制）。 */
+const FEEDBACK_GROUP = '816461825';
+
+/** Bottom-left 「反馈群」 pill: clicking opens a card with the QQ group QR code. */
+function FeedbackGroup() {
+  const [open, setOpen] = useState(false);
+  // a press outside the card / pill closes it (the pill keeps its own toggle)
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      const t = e.target;
+      if (t instanceof Element && t.closest('.title-group-wrap')) return;
+      setOpen(false);
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  }, [open]);
+  const copy = async (e) => {
+    if (e) e.stopPropagation();
+    const ok = await copyText(FEEDBACK_GROUP);
+    toast(ok ? `已复制反馈群群号 ${FEEDBACK_GROUP}` : `反馈群：${FEEDBACK_GROUP}`, ok ? 'success' : 'info');
+  };
+  return html`<div class="title-group-wrap">
+    ${open ? html`<div class="title-group-card">
+      <${MicroLabel} tone="mint">ALLIANCE COMMUNICATION<//>
+      <h3 class="title-group-card__title">反馈群</h3>
+      <img class="title-group-qr" src="/assets/ui/feedback-qr.png" alt="反馈群二维码" draggable=${false} />
+      <button type="button" class="title-group-card__num" onClick=${copy} title="点击复制群号">QQ群 <b class="num">${FEEDBACK_GROUP}</b></button>
+      <p class="title-group-card__hint">使用手机 QQ 扫码加入同盟</p>
+    </div>` : null}
+    <button type="button" class="title-group" onClick=${() => setOpen((v) => !v)} title="点击查看反馈群二维码">
+      <${Icon} name="users" />
+      <span>反馈群</span>
+      <b class="num">${FEEDBACK_GROUP}</b>
+    </button>
+    <span class="title-group-note">服务器为个人免费服务器 · 容量较小</span>
+  </div>`;
+}
+
 const STATUS_TEXT = {
   idle: '准备连接', connecting: '正在连接服务器', connected: '已连接服务器', handshaking: '正在验证身份',
   online: '已连接服务器', reconnecting: '连接中断，正在重连', closed: '连接已关闭',
@@ -299,5 +339,6 @@ export function TitleScreen() {
       <span>非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有</span>
       <${MicroLabel}>v${APP_VERSION} · WEB SIMULATION<//>
     </footer>
+    <${FeedbackGroup} />
   </div>`;
 }

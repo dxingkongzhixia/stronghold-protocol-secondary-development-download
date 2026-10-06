@@ -251,6 +251,10 @@ export const C2S = {
   'room.setDifficulty': { difficulty: (v) => DIFFICULTIES.includes(v) },
   'room.addBot': {},
   'room.removeBot': { seat: (v) => isInt(v, 0, MAX_SEATS - 1) },
+  // a SPECTATOR takes over a bot's seat (docs/MATCHMAKING.md): the AI's state becomes the human's (players stay ≤ MAX_SEATS)
+  'room.takeOver': { seat: (v) => isInt(v, 0, MAX_SEATS - 1) },
+  // ...and hands it back: the seat becomes a fresh AI again and the human returns to a spectator seat
+  'room.releaseSeat': {},
   // the host removes another human before the match (server/lobby.js kick; community report #17); playerId = the one the
   // host confirmed — a seat that changed hands meanwhile is refused
   'room.kick': { seat: (v) => isInt(v, 0, MAX_SEATS - 1), playerId: isId },

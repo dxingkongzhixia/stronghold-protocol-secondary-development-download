@@ -25,7 +25,7 @@
 .gtop {
   position: absolute; left: 0; right: 0; top: 0;
   display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start;
-  padding: .2rem .3rem 0 .26rem; gap: .2rem; pointer-events: none;
+  padding: .12rem .3rem 0 .26rem; gap: .2rem; pointer-events: none;
 }
 .gtop > * { pointer-events: auto; }
 .gtop__left { display: flex; align-items: center; gap: .16rem; }
@@ -34,16 +34,19 @@
 .gtop__center {
   --bk-c: var(--mint-700);
   display: flex; align-items: center; gap: .18rem;
-  height: .78rem; padding: 0 .24rem 0 .14rem; margin-top: .02rem;
-  background: linear-gradient(180deg, rgba(10, 14, 12, .92), rgba(10, 14, 12, .78));
-  border: 1px solid var(--line);
-  box-shadow: 0 .08rem .28rem rgba(0, 0, 0, .45);
+  height: .52rem; padding: 0 .24rem 0 .14rem; margin-top: .02rem;
+  background: linear-gradient(180deg, rgba(14, 19, 17, .95), rgba(9, 13, 11, .86));
+  border: 1px solid rgba(78, 216, 175, .3);
+  box-shadow: 0 .08rem .28rem rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .06);
   position: relative;
 }
+/* a mint accent line along the bottom (the corner brackets come from .brackets::after) */
+.gtop__center::before { content: ''; position: absolute; left: .14rem; right: .14rem; bottom: -1px; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--mint-500) 30%, var(--mint-500) 70%, transparent); opacity: .6; }
 /* the two official 🔍 buttons (ui/hud.js CheckBtn): btn_check_player (mint, left) and btn_check_enemy (amber, right);
    sprites are 35×29 (plain) / 61×29 (with chevrons) → .555rem / .967rem × .46rem */
 .gtop__iconbtn {
-  display: flex; align-items: center; justify-content: center; gap: .04rem; min-width: .46rem; height: .46rem; padding: 0 .1rem;
+  display: flex; align-items: center; justify-content: center; gap: .04rem; min-width: .46rem; height: .40rem; padding: 0 .1rem;
   background: rgba(78, 216, 175, .06); border: 2px solid var(--mint-600); border-radius: .06rem; color: #fff;
   font-family: var(--font-num); font-weight: 700;
   transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), filter var(--t-fast), opacity var(--t-fast);
@@ -97,22 +100,22 @@
 .roundbox { display: flex; align-items: center; gap: .08rem; }
 .roundbox__label { font-size: .16rem; color: var(--text-lo); letter-spacing: .08em; }
 .roundbox__num {
-  min-width: .54rem; height: .44rem; display: grid; place-items: center; padding: 0 .08rem;
-  background: #eef3f1; color: #0b0f0d; font-size: .32rem; font-weight: 700; line-height: 1;
+  min-width: .48rem; height: .38rem; display: grid; place-items: center; padding: 0 .08rem;
+  background: #eef3f1; color: #0b0f0d; font-size: .26rem; font-weight: 700; line-height: 1;
   clip-path: polygon(.06rem 0, 100% 0, 100% calc(100% - .06rem), calc(100% - .06rem) 100%, 0 100%, 0 .06rem);
 }
 
 /* phase capsule */
 .capsule {
   --cap: var(--mint-500);
-  display: flex; align-items: center; gap: .1rem; height: .5rem; min-width: 2.2rem; padding: 0 .22rem 0 .12rem;
-  border: 2px solid var(--cap); border-radius: .25rem;
+  display: flex; align-items: center; gap: .1rem; height: .42rem; min-width: 2.2rem; padding: 0 .22rem 0 .12rem;
+  border: 2px solid var(--cap); border-radius: .21rem;
   background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .25)); background: linear-gradient(90deg, color-mix(in srgb, var(--cap) 16%, transparent), rgba(0, 0, 0, .25));
   box-shadow: inset 0 0 .14rem transparent, 0 0 .16rem transparent; box-shadow: inset 0 0 .14rem color-mix(in srgb, var(--cap) 30%, transparent), 0 0 .16rem color-mix(in srgb, var(--cap) 25%, transparent);
   white-space: nowrap;
 }
-.capsule__icon { width: .36rem; height: .36rem; object-fit: contain; color: var(--cap); flex: none; }
-.capsule__label { font-size: .21rem; font-weight: 700; letter-spacing: .12em; color: var(--text-hi); }
+.capsule__icon { width: .30rem; height: .30rem; object-fit: contain; color: var(--cap); flex: none; }
+.capsule__label { font-size: .18rem; font-weight: 700; letter-spacing: .1em; color: var(--text-hi); }
 .capsule__kills { font-size: .26rem; color: var(--text-lo); letter-spacing: .04em; }
 .capsule__kills b { color: #fff; font-size: .3rem; }
 .capsule__tag { font-size: .14rem; padding: .01rem .08rem; background: var(--orange); color: #1a0800; font-weight: 700; letter-spacing: .1em; }
@@ -144,8 +147,8 @@
 .lp b { font-weight: 700; line-height: 1; }
 .lp--sm { font-size: .19rem; }
 .lp--md { font-size: .24rem; }
-.lp--lg { font-size: .34rem; }
-.lp--lg .lp__icon { width: .42rem; height: .42rem; }
+.lp--lg { font-size: .28rem; }
+.lp--lg .lp__icon { width: .34rem; height: .34rem; }
 .lp--danger { color: var(--red-premium); }
 .lp--danger .lp__icon { filter: hue-rotate(-140deg) saturate(2.4) brightness(.95); }
 .lp--team { color: var(--mint-glow); }
@@ -181,10 +184,10 @@
 .enemybtn[aria-disabled="true"] { cursor: not-allowed; }
 /* official sprites: the picture is the whole button */
 .gtop__iconbtn.has-sprite, .enemybtn.has-sprite {
-  width: .555rem; min-width: 0; height: .46rem; padding: 0; border: 0; border-radius: 0; box-shadow: none;
+  width: .48rem; min-width: 0; height: .40rem; padding: 0; border: 0; border-radius: 0; box-shadow: none;
   background: var(--chk-sprite) center / 100% 100% no-repeat;
 }
-.gtop__iconbtn.has-sprite.is-wide, .enemybtn.has-sprite.is-wide { width: .967rem; }
+.gtop__iconbtn.has-sprite.is-wide, .enemybtn.has-sprite.is-wide { width: .84rem; }
 .gtop__iconbtn.has-sprite:hover, .enemybtn.has-sprite:hover:not(.is-grey) { background: var(--chk-sprite) center / 100% 100% no-repeat; filter: brightness(1.2); box-shadow: none; }
 .gtop__iconbtn.has-sprite.is-on { background: var(--chk-sprite) center / 100% 100% no-repeat; }
 
@@ -200,9 +203,9 @@
 .readywrap__why .icon { width: .16rem; height: .16rem; color: #ff6a55; flex: none; }
 .readywrap__why b { color: #ff8a78; font-size: .16rem; }
 .readybtn {
-  display: flex; align-items: center; gap: .12rem; height: .56rem; padding: 0 .16rem 0 .12rem; min-width: 2.3rem;
+  display: flex; align-items: center; gap: .12rem; height: .46rem; padding: 0 .16rem 0 .12rem; min-width: 2.3rem;
   background: rgba(10, 14, 12, .9); border: 2px solid var(--mint-500); color: var(--text-hi);
-  font-size: .22rem; font-weight: 700; letter-spacing: .14em;
+  font-size: .2rem; font-weight: 700; letter-spacing: .14em;
   box-shadow: 0 0 .18rem rgba(23, 249, 183, .15);
   transition: background var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
 }
@@ -220,7 +223,7 @@
 .readybtn.is-busy { opacity: .7; }
 
 /* ---- bond strip ---------------------------------------------------------------------------------------- */
-.gm__bonds { position: absolute; left: 1.56rem; top: 1.36rem; right: 5.2rem; pointer-events: none; }
+.gm__bonds { position: absolute; left: 0; right: 0; top: .80rem; display: flex; justify-content: center; pointer-events: none; }
 /* Only the bond discs (and the +N chip) take the pointer: the strip's box spans the width under the top bar, where the
    top board row's units stand (row 12 at 16:9 / 21:9 / 720p / phones, the boss field's row 5 in a boss prep) — it used
    to swallow the taps and drags on them (review of user playtest #2 item 8: every own unit reachable). */
@@ -599,9 +602,7 @@
 .gm--combat .ff-badge { display: none; }
 
 /* ---- small screens (1280×720 → root ≈ 66px) ------------------------------------------------------------------------ */
-@media (max-aspect-ratio: 16/10) {
-  .gm__bonds { right: 4.6rem; }
-}
+/* (the bond strip is centred at every width — see .gm__bonds above) */
 
 /* fallback view: enemy preview pen (setCamera('pen')) */
 .ff-board--pen .ff-pen__enemy { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; }
@@ -629,3 +630,13 @@
 .pauseov__plate h2 { font-size: .5rem; font-weight: 900; letter-spacing: .3em; color: #fff; text-shadow: 0 0 .2rem rgba(0, 0, 0, .8); }
 .pauseov__note { font-size: .17rem; color: var(--text-md); text-shadow: 0 1px 2px #000; }
 .pauseov__btns { display: flex; gap: .2rem; }
+
+/* ---- 观战席 while watching a running match (ui + room.takeOver 夺舍 AI) -------------------------------------------- */
+/* A compact floating dropdown at the bottom-right: almost no layout space; opens upward into an overlay. */
+.specdock--ingame { position: fixed; right: .32rem; bottom: .32rem; margin: 0; z-index: 40; align-self: auto; }
+/* Under the team list: the panel and the dock share one absolutely-placed column (game.css .team is absolute), so the
+   dock sits right under P1–P4 and its menu opens downward. */
+.gm__teamcol { position: absolute; left: .22rem; top: 2.36rem; display: flex; flex-direction: column; gap: .14rem; pointer-events: none; z-index: 6; }
+.gm__teamcol .team { position: static; left: auto; top: auto; }
+.specdock--panel { align-self: flex-start; margin: 0; pointer-events: auto; }
+.specdock--panel .specdock__body { left: 0; right: auto; top: calc(100% + .08rem); bottom: auto; }

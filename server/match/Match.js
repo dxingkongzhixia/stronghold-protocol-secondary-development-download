@@ -508,6 +508,94 @@ export class Match {
     if (this.spectators.delete(playerId)) this.watchers.delete(playerId);
   }
 
+  /**
+   * A spectator takes over a BOT seat (room.takeOver, docs/MATCHMAKING.md). The bot's whole PlayerState becomes the
+   * human's — same seat, board, gold, loadout — and every structure naming the old playerId is re-keyed, so the human's
+   * own later `g.*` intents (which carry their own playerId) route to that seat. A bot seat only ever trades its AI for
+   * a human, so the match never has more than MAX_SEATS players.
+   * @param {string} humanId @param {number} seat @param {string} [name] @returns {boolean} whether it happened
+   */
+  takeOver(humanId, seat, name) {
+    if (this.disposed || this.ended) return false;
+    if (typeof humanId !== 'string' || this.players.has(humanId)) return false;
+    const ps = [...this.players.values()].find((p) => p.seat === seat && p.isBot);
+    if (!ps) return false;
+    const old = ps.playerId;
+
+    this.players.delete(old);
+    ps.playerId = humanId;
+    if (name) ps.name = name;
+    ps.isBot = false;
+    ps.connected = true;
+    ps.autoplay = false;
+    ps.infoReady = true;                              // the match is already past the briefing check
+    this.players.set(humanId, ps);
+    this.spectators.delete(humanId);                  // it was watching; now it plays
+    this.watchers.delete(humanId);
+
+    this._rekeyPlayer(old, humanId);
+
+    this.guard(() => this._resync(ps));               // the new player gets m.public + its own m.private + the battle
+    this.markPrivate(ps);
+    this.markPublic();
+    return true;
+  }
+
+  /**
+   * A player who TOOK OVER an AI hands the seat back (room.releaseSeat, docs/MATCHMAKING.md) — the mirror of takeOver: the
+   * PlayerState becomes an AI again (same seat, board, gold, loadout) and the human returns to a spectator seat, watching
+   * the match continue.
+   * @param {string} humanId @param {string} aiId @param {string} [aiName] @returns {boolean} whether it happened
+   */
+  releaseSeat(humanId, aiId, aiName) {
+    if (this.disposed) return false;
+    const ps = this.players.get(humanId);
+    if (!ps || ps.isBot) return false;
+    if (typeof aiId !== 'string' || !aiId || this.players.has(aiId)) return false;
+
+    this.players.delete(humanId);
+    ps.playerId = aiId;
+    if (aiName) ps.name = aiName;
+    ps.isBot = true;
+    ps.connected = true;
+    ps.autoplay = false;
+    ps.infoReady = true;
+    this.players.set(aiId, ps);
+    this.watchers.delete(humanId);
+    this._rekeyPlayer(humanId, aiId);
+
+    const s = this._spectator(humanId);               // back to watching
+    if (s) this.guard(() => this._resync(s));
+    this.markPublic();
+    return true;
+  }
+
+  /**
+   * Every structure of the match that names a player, re-keyed from `from` to `to` (takeOver / releaseSeat). The
+   * PlayerState itself and the `players` Map are the caller's job; this covers the rest.
+   */
+  _rekeyPlayer(from, to) {
+    const swapKey = (o) => { if (o && Object.hasOwn(o, from)) { o[to] = o[from]; delete o[from]; } };
+    const swapArr = (a) => { if (Array.isArray(a)) for (let i = 0; i < a.length; i++) if (a[i] === from) a[i] = to; };
+    const swapVal = (o) => { if (o) { for (const k of Object.keys(o)) if (o[k] === from) o[k] = to; } };
+    if (this.watchers.has(from)) { this.watchers.set(to, this.watchers.get(from)); this.watchers.delete(from); }
+    for (const f of this.fields) {
+      swapArr(f.players);
+      if (f.result) swapKey(f.result.perPlayer);
+      if (f.progress) swapKey(f.progress.perPlayer);
+    }
+    for (const d of [this.draft, this.sp]) {
+      if (!d || typeof d !== 'object') continue;
+      swapArr(d.order);
+      swapKey(d.picks);
+      swapKey(d.skipsLeft);
+      swapVal(d.taken);
+      if (d.focus instanceof Map && d.focus.has(from)) { d.focus.set(to, d.focus.get(from)); d.focus.delete(from); }
+    }
+    this.order = [...this.players.values()].sort((a, b) => a.seat - b.seat);
+    this.loneHuman = this.order.filter((p) => !p.isBot).length === 1;
+  }
+
   /** The stand-in of a spectator seat, created once (null for a player's id or a bad id). */
   _spectator(playerId) {
     if (typeof playerId !== 'string' || !playerId || this.players.has(playerId)) return null;

@@ -241,7 +241,7 @@
 
 /* ---- bond popup ---- */
 .bpop {
-  position: absolute; left: 2.3rem; top: 2.1rem; width: 5.4rem; max-height: calc(100% - 2.4rem); z-index: 8; overflow: auto;
+  position: absolute; left: 50%; transform: translateX(-50%); top: 2.1rem; width: 5.4rem; max-height: calc(100% - 2.4rem); z-index: 8; overflow: auto;
   display: flex; flex-direction: column; gap: .12rem; padding: .2rem .22rem;
   background: rgba(11, 15, 13, .97); border: 1px solid var(--line-2); box-shadow: 0 .14rem .4rem rgba(0, 0, 0, .65);
   animation: pop-in var(--t-med) var(--ease-out);
@@ -249,9 +249,9 @@
 /* placement (gameLogic bondPopupPlace / BPOP — keep in sync): beside the left-docked detail card, left of the
    right-docked one, against the right edge, or over the card it was opened from — never over the selected unit's
    underframe when a place is free */
-.bpop--beside { left: 7.32rem; z-index: 10; }
-.bpop--besideR { left: auto; right: 5.92rem; z-index: 10; }
-.bpop--right { left: auto; right: .9rem; z-index: 10; }
+.bpop--beside { left: 7.32rem; transform: none; z-index: 10; }
+.bpop--besideR { left: auto; right: 5.92rem; transform: none; z-index: 10; }
+.bpop--right { left: auto; right: .9rem; transform: none; z-index: 10; }
 .bpop.is-over { z-index: 10; background: rgb(11, 15, 13); }
 .bpop__close { position: absolute; right: .08rem; top: .08rem; width: .36rem; height: .36rem; display: grid; place-items: center; background: none; border: 1px solid var(--line-2); color: var(--text-lo); }
 .bpop__close .icon { width: .18rem; height: .18rem; }
@@ -280,12 +280,28 @@
 .bpop__sec--now { padding: .1rem .12rem; background: rgba(78, 216, 175, .06); border-left: 3px solid var(--mint-500); }
 .bpop__desc { font-size: .15rem; line-height: 1.7; color: var(--text-md); }
 .bpop__members { display: grid; grid-template-columns: repeat(5, 1fr); gap: .08rem; }
-.bpop__member { position: relative; display: flex; flex-direction: column; align-items: center; gap: .03rem; padding: .04rem 0; background: none; border: 1px solid transparent; }
-.bpop__member:hover { border-color: var(--line-2); background: rgba(255, 255, 255, .03); }
-.bpop__member.is-on .uthumb__art { border-color: var(--mint-400); box-shadow: 0 0 .1rem rgba(23, 249, 183, .45); }
+/* banned members are not listed (js/ui/bondStrip.js): the popup shows the bond's available operators only, with this
+   note for the hidden ones */
+.bpop__hidden { margin: .06rem 0 0; font-size: .13rem; color: var(--text-lo); }
+.bpop__hidden b { color: var(--text-md); }
+.bpop__member { position: relative; display: flex; flex-direction: column; align-items: center; gap: .03rem; padding: .05rem .02rem .04rem;
+  background: rgba(255, 255, 255, .02); border: 1px solid rgba(255, 255, 255, .08); }
+.bpop__member:hover { border-color: var(--line-3); background: rgba(255, 255, 255, .06); }
+/* 在场 (the operator is in play — it counts for the bond): a solid mint frame, a tinted plate, a glow and a corner tick */
+.bpop__member.is-on { border-color: var(--mint-500); background: rgba(23, 249, 183, .12);
+  box-shadow: inset 0 0 .14rem rgba(23, 249, 183, .22), 0 0 .12rem rgba(23, 249, 183, .3); }
+.bpop__member.is-on .uthumb__art { border-color: var(--mint-400); box-shadow: 0 0 .14rem rgba(23, 249, 183, .65); }
+.bpop__member.is-on::before { content: ''; position: absolute; left: 0; top: 0; width: .14rem; height: .14rem; pointer-events: none;
+  background: var(--mint-400); clip-path: polygon(0 0, 100% 0, 0 100%); }
 .bpop__mname { font-size: .12rem; color: var(--text-lo); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bpop__member.is-on .bpop__mname { color: var(--mint-400); }
+/* owned but not in play (整备区 / 手牌): bright neutral thumbnail and name, no mint */
 .bpop__member.is-owned .bpop__mname { color: var(--text-hi); }
+/* in play wins over owned (both apply to an on-board own operator) */
+.bpop__member.is-on .bpop__mname { color: var(--mint-400); font-weight: 700; }
+/* not owned at all: clearly greyed out and faint so the available ones stand out */
+.bpop__member:not(.is-on):not(.is-owned) { opacity: .6; }
+.bpop__member:not(.is-on):not(.is-owned) .uthumb__art { border-color: rgba(255, 255, 255, .12); }
+.bpop__member:not(.is-on):not(.is-owned) .bpop__mname { color: var(--text-dim); }
 .bpop__ban { position: absolute; top: .02rem; right: .1rem; width: .2rem; height: .2rem; display: grid; place-items: center; background: var(--red); color: #fff; border-radius: 50%; }
 .bpop__ban .icon { width: .14rem; height: .14rem; }
 /* a member through 变形同构体 (the item pairing, not the operator's own bond): a gold 同构 tag on the portrait */
@@ -558,11 +574,11 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .gm__hud > .uframe { position: absolute; transform: translate(-50%, -50%); pointer-events: none; z-index: 12; }
 .uframe__dia { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; animation: uframe-in 180ms var(--ease-out); }
 @keyframes uframe-in { from { opacity: 0; transform: scale(.85); } }
-.uframe__outer { fill: rgba(78, 216, 175, .05); stroke: rgba(255, 255, 255, .88); stroke-width: 1.6px; stroke-dasharray: 7 5; vector-effect: non-scaling-stroke; }
-.uframe__corner { fill: none; stroke: var(--mint-400); stroke-width: 2.4px; vector-effect: non-scaling-stroke; }
+.uframe__outer { fill: rgba(6, 10, 9, .22); stroke: rgba(255, 255, 255, .92); stroke-width: 1.8px; stroke-dasharray: 8 6; vector-effect: non-scaling-stroke; }
+.uframe__corner { fill: none; stroke: var(--mint-400); stroke-width: 3px; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 .04rem rgba(23, 249, 183, .7)); }
 .uframe__btn {
-  position: absolute; pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: .02rem;
-  padding: 0; background: none; border: 0; color: #fff; cursor: pointer; filter: drop-shadow(0 .03rem .06rem rgba(0, 0, 0, .8));
+  position: absolute; pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: .03rem;
+  padding: 0; background: none; border: 0; color: #fff; cursor: pointer; filter: drop-shadow(0 .04rem .08rem rgba(0, 0, 0, .85));
   animation: uframe-in 200ms var(--ease-out);
 }
 .uframe__btn:disabled { opacity: .5; cursor: default; }
@@ -570,26 +586,36 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .uframe__btn--sell, .uframe__btn--destroy { left: 75%; top: 25%; transform: translate(-20%, -90%); }
 /* the octagon plate every button stands on (the official util_btn plates are octagons) */
 .uframe__glyph, .uframe__plate {
-  width: .56rem; height: .56rem; padding: .08rem; box-sizing: border-box;
+  width: .56rem; height: .56rem; padding: .07rem; box-sizing: border-box;
   clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
 }
-.uframe__glyph { background: var(--red); fill: #fff; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22); }
+.uframe__glyph { fill: #fff; background: radial-gradient(circle at 50% 26%, #ff7a5d 0%, #e32e15 58%, #a81606 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .32), inset 0 .05rem .12rem rgba(255, 255, 255, .28); }
 /* coloured plates: tone colour through the official sprite's shape (mask), dark backing through its glyph cut-out */
-.uframe__plate { --uf-tone: linear-gradient(180deg, #ffd06a 0%, #f6a329 55%, #d9820c 100%); --uf-ink: #1d1400;
-  position: relative; display: grid; place-items: center; padding: 0; background: var(--uf-ink); }
-.uframe__plate--destroy { --uf-tone: linear-gradient(180deg, #ff6a4f 0%, #e73118 60%, #b8200d 100%); --uf-ink: #230703; }
+.uframe__plate { --uf-tone: linear-gradient(180deg, #ffe08a 0%, #f6a329 52%, #c9760a 100%); --uf-ink: #1d1400;
+  position: relative; display: grid; place-items: center; padding: 0; background: var(--uf-ink);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .3), inset 0 .05rem .12rem rgba(255, 255, 255, .32); }
+.uframe__plate--destroy { --uf-tone: linear-gradient(180deg, #ff7a5d 0%, #e32e15 58%, #a81606 100%); --uf-ink: #230703; }
 .uframe__plate.has-mask::after {
   content: ''; position: absolute; inset: 0; background: var(--uf-tone);
   -webkit-mask: var(--uf-mask) center / 100% 100% no-repeat; mask: var(--uf-mask) center / 100% 100% no-repeat;
 }
 .uframe__plate.is-glyph { background: var(--uf-tone); }
-.uframe__pglyph { width: 64%; height: 64%; color: var(--uf-ink); }
-.uframe__btn:hover:not(:disabled) .uframe__glyph { background: #ff4a2b; }
-.uframe__btn:hover:not(:disabled) .uframe__plate { filter: brightness(1.12) drop-shadow(0 0 .08rem rgba(255, 198, 90, .7)); }
-.uframe__btn--destroy:hover:not(:disabled) .uframe__plate { filter: brightness(1.12) drop-shadow(0 0 .08rem rgba(255, 90, 60, .7)); }
-.uframe__label { font-size: .14rem; font-weight: 700; letter-spacing: .12em; white-space: nowrap; padding: 0 .06rem; background: rgba(8, 11, 10, .82); text-shadow: 0 1px 2px #000; }
+.uframe__pglyph { width: 62%; height: 62%; color: var(--uf-ink); }
+.uframe__btn:hover:not(:disabled) .uframe__glyph { background: radial-gradient(circle at 50% 26%, #ff8f74 0%, #ff4020 60%, #c01c08 100%); }
+.uframe__btn:hover:not(:disabled) .uframe__plate { filter: brightness(1.12) drop-shadow(0 0 .1rem rgba(255, 198, 90, .8)); }
+.uframe__btn--destroy:hover:not(:disabled) .uframe__plate { filter: brightness(1.12) drop-shadow(0 0 .1rem rgba(255, 90, 60, .8)); }
+/* the label: a dark pill with a thin rim and a keycap for the shortcut (official pc_key_holder) */
+.uframe__label { display: inline-flex; align-items: center; gap: .04rem; margin-top: -.02rem;
+  font-size: .14rem; font-weight: 700; letter-spacing: .08em; white-space: nowrap; padding: .015rem .07rem .02rem;
+  color: #eef3ef; background: linear-gradient(180deg, rgba(18, 24, 21, .95), rgba(8, 11, 10, .95));
+  border: 1px solid rgba(255, 255, 255, .24); border-radius: .04rem; text-shadow: 0 1px 2px #000;
+  box-shadow: 0 .03rem .08rem rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .06); }
+.uframe__key { font-family: var(--font-num); font-size: .11rem; line-height: 1; padding: .02rem .04rem;
+  border: 1px solid rgba(255, 255, 255, .3); border-bottom-width: 2px; border-radius: .03rem; background: rgba(255, 255, 255, .1); color: var(--text-hi); }
 .uframe__btn--sell .uframe__label { color: #ffd98a; }
-.uframe__price { position: absolute; right: -.12rem; top: -.06rem; --hex-h: .24rem; }
+.uframe__btn--sell .uframe__key { border-color: rgba(255, 217, 138, .5); }
+.uframe__price { position: absolute; right: -.14rem; top: -.08rem; --hex-h: .28rem; filter: drop-shadow(0 .02rem .04rem rgba(0, 0, 0, .7)); }
 
 /* ---- equip-replace dialog (js/ui/equipReplace.js; official equip_replace_* sprites via --eqr-* when installed) ---- */
 .eqr-host { display: contents; }

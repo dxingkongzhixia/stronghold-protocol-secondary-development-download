@@ -41,10 +41,12 @@ export function hudPadding(kind, size) {
 
 /**
  * HUD geometry (rem) the prep cameras keep clear (they mirror the CSS; test/ui/playtest5-ui.test.js checks the rules):
- * the bond strip's bottom edge (css/screens/game.css .gm__bonds top 1.36rem + a .bslot: disc .52rem + name ≈
- * 2.15rem measured) and the shop bar's top edge above the viewport's bottom (css/screens/game-shop.css .shopbar
- * bottom .2rem + .shopbar__row padding .1rem ×2 + card height 2.24rem, plus its 2 px + 1 px borders). The shop bar
- * sits on the viewport's bottom edge even on a notched phone (css/devices.css, DESIGN §18.1).
+ * the bond strip's band under the top bar. The strip itself sits at css/screens/game.css .gm__bonds top 1.08rem (moved
+ * up 2026-10-06 so it no longer covers the top board row's operators: .52rem disc + name → bottom ≈ 1.88rem); the band
+ * kept clear stays 2.16rem, i.e. ~0.28rem MORE than the strip's real bottom, so a unit sprite's head above the back
+ * row is still below the HUD. Then the shop bar's top edge above the viewport's bottom (css/screens/game-shop.css
+ * .shopbar bottom .2rem + .shopbar__row padding .1rem ×2 + card height 2.24rem, plus its 2 px + 1 px borders). The shop
+ * bar sits on the viewport's bottom edge even on a notched phone (css/devices.css, DESIGN §18.1).
  * The folded shop (public issue #5): the tab's top edge (.shopbar-tab bottom .2rem + padding .08rem ×2 + its .44rem
  * button, plus its 2 px + 1 px borders; it sits inside the HUD layer, above the bottom safe-area inset) and the corner
  * buttons' top edge (css/screens/game.css .gm__corner bottom .24rem + a .56rem row — the fallback when the corner
