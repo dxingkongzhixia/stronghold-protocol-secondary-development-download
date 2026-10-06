@@ -306,7 +306,7 @@ const CUSTOM_CHESS = [
     identifier: 900,
     shopLevelSortId: 99,
     defaultSkillIndex: 2,                        // 降临 (S3) — the usual pick among the tier-3 6★
-    defaultUniEquipId: 'uniequip_002_ascln',     // AMB-X「无形，无情」
+    defaultUniEquipId: 'uniequip_003_ascln',     // AMB-Y「阿斯卡纶的眼睛」(the default module; was AMB-X)
     bonds: ['skillfulShip', 'deputShip'],        // 灵巧 / 助力
     normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
     golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
@@ -410,7 +410,7 @@ const CUSTOM_CHESS = [
     identifier: 940,
     shopLevelSortId: 95,
     defaultSkillIndex: 2,
-    defaultUniEquipId: null,
+    defaultUniEquipId: 'uniequip_003_gdglow',     // FUN-Y 梦想终将实现 (the default module)
     bonds: ['victoriaShip', 'preciShip'],        // 维多利亚 / 精准
     normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
     golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
