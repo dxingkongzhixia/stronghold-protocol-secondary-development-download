@@ -17,6 +17,6 @@ export function NoticeBanner() {
       <span class="notice-banner__msg">${notice.text}</span>
       ${notice.sign ? html`<span class="notice-banner__sign">—— ${notice.sign}</span>` : null}
     </div>
-    <${Button} size="sm" variant="secondary" onClick=${() => store.patch('notice', null)}>知道了<//>
+    <${Button} size="sm" variant="secondary" onClick=${() => store.set({ notice: null })}>知道了<//>
   </div>`;
 }
