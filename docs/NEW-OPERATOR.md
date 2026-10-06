@@ -87,6 +87,14 @@ garrison 里给 `bbStr.bond_id`（逗号分隔多个）即可，**不用写码**
 - **高台条件**（`周围四格有高台时…`）：`battle.grid.isLow(r, c)`（`tile.height === 'LOW'`）判高台
   （`!isLow` = 高台，与 `unit.ground` 同一套）。kit 用 `battle.every(0.5, …)` 每 0.5s 重算并挂/摘 buff
   （部署、换位、装置升降都会变）。
+- **强制变地面**（`缚地`，把飞行敌人打下来）：`buffs.js` 的 `FLAG_KEYS` + 状态表加 `grounded`
+  （`grounded: { flags: { grounded: true } }`），并让 `units.js` 的 `get isFlying()` **优先**判断它
+  （`if (this.s.flags.grounded) return false;`）——目标立刻按地面单位参与选择/阻挡。kit 用 `applyStatus(e, 'grounded', …)`。
+- **一个干员多条特质**：`CUSTOM_CHESS` 的 `garrisons: [{ id, desc, blackboard }, …]`（每条一个 effectKey）；
+  只有一条时仍可写单数的 `garrison: {…}`。
+- **被动的范围扩张**：若自造干员的某个**被动**技能文本含「攻击范围扩大」，`shared/loadoutRecord.js` 的
+  `attackRangeGrid` 需要认它（否则卡面/落点轮盘与实际部署范围不一致）。现规则：`/被动效果：攻击范围扩大/`
+  或 `skillType === 'PASSIVE' && /攻击范围扩大/`。
 
 ## 4. 美术与语音
 

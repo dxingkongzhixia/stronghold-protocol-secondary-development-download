@@ -1929,10 +1929,9 @@ const KITS = {
     const scale = num(bb['attack@atk_scale'], 1);
     const maxT = Math.max(1, Math.floor(num(bb['attack@max_target'], 1)));
     const fear = num(bb['attack@fear'], 0), prob = num(bb['attack@prob'], 0), killScale = num(bb['attack@kill_atk_scale'], 0);
-    const healScale = num(bb['attack@heal_scale'], 0), maxHeal = Math.max(1, Math.floor(num(bb['attack@max_target_heal'], 1)));
+    const healScale = num(bb['attack@heal_scale'], 0);
     const blockAdd = Math.floor(num(bb['attack@block_cnt'], 0));
     const healRatio = num(bb['attack@hp_ratio'], 0);
-    const dollNo = () => Math.max(0, Math.floor(unit?.trait?.dollNo ?? 0));
     // S1 俄耳甫斯: an attack heals instead when a ≤ 50 % friendly stands in range (its `onAttack` replaces the hit)
     const healInstead = (battle, unit, ctx) => {
       if (!(healScale > 0)) return false;
@@ -2036,10 +2035,105 @@ const KITS = {
             battle.heal(unit, unit, unit.s.maxHp * healRatio, { self: true, tags: ['skill'] });
           }, { owner: unit });
         }
-        void maxHeal;
       },
     };
     if (sid === 'skchr_makoto_3') kit.trait = { dollLives: 1 };   // the SECOND persona (俄耳甫斯) past the first knock-out
+    return kit;
+  },
+
+  // ---- 3_1015 予愿安洁莉娜 · 巡空者 (custom: tools/build-data.mjs CUSTOM_CHESS) — 起飞 (`liftoff`: blocks flying
+  //      enemies only, ground ones walk on; professions.js `skywalker` grants blockFly, the LIFTOFF flags the state).
+  //      飘浮大地之上: every attack deals extra arts damage (atk_scale_lo, atk_scale_hi against a light enemy) and, while
+  //      airborne, the enemies in range are 失重 (the `weightless` status + massFlat −1, exactly like 安洁莉娜's own).
+  //      天穹间的舞步: every AIRBORNE friendly operator gets +atk% ATK and, while blocking, a max-HP-ratio regen.
+  //      极速送达 S1 is a passive takeoff; 重力自定义 S2 takes off, 浮空s (levitate) the ground enemies in range, 缚地s
+  //      (the `grounded` status) the flying ones and turns arts over max_target; 酸橙的心事 S3 (default) takes off with
+  //      AMMO, hits max_target enemies at atk_scale as physical plus one flying enemy, and slows the flying ones.
+  chess_char_1015_aglna2_a: (bb, chess, def) => {
+    const d = defOf(chess, def);
+    const t0 = talentBb(d, 0), t1 = talentBb(d, 1);
+    const sid = selectedId(chess, d);
+    const rGrid = copyGrid(d.skill?.rangeGrid);
+    const LIFT = { blockFly: true, liftoff: true };
+    const takeOff = ({ battle, unit }) => { battle.releaseBlocked(unit); fx(battle, 'takeoff', unit, {}); };
+    const land = ({ battle, unit }) => { battle.releaseBlocked(unit); };
+    const lo = num(t0.atk_scale_lo), hi = num(t0.atk_scale_hi, num(t0.atk_scale_lo)), lightMass = num(t0.mass_level, 3);
+    const levitateDur = num(bb.buff_duration_levitate, 0), slowFly = num(bb.move_speed, 0);
+    const maxT = Math.max(1, Math.floor(num(bb['attack@max_target'], 1)));
+    const kit = {
+      // S3 酸橙的心事 (default): ammo, physical over max_target + one flying, and a ground-fire shield
+      skill: {
+        kind: 'ammo', ammo: Math.max(1, Math.floor(num(bb['attack@trigger_time'], 1))),
+        mods: { atkPct: num(bb.atk), dmgTakenMul: Math.max(0, 1 - num(bb.damage_resistance, 0)) },
+        targeting: { rangeGrid: rGrid },
+        flags: LIFT,
+        attack: { atkScale: num(bb['attack@atk_scale'], 1), maxTargets: maxT, dmgType: 'phys' },
+        onStart: takeOff, onEnd: land,
+      },
+      skills: altSkills(chess, d, bb, {
+        // 极速送达 (S1): a passive takeoff for its own duration (ON_DEPLOY)
+        skchr_aglna2_1: (s) => ({
+          kind: 'duration', duration: num(s.duration, 60), activateOnDeploy: true,
+          mods: { atkPct: num(s.bb.atk) }, targeting: { rangeGrid: copyGrid(s.rangeGrid) }, flags: LIFT,
+          attack: { maxTargets: Math.max(1, Math.floor(num(s.bb['attack@max_target'], 1))) },
+          onStart: takeOff, onEnd: land,
+        }),
+        // 重力自定义 (S2): take off, levitate the ground enemies in range, arts over max_target
+        skchr_aglna2_2: (s) => ({
+          kind: 'duration', duration: num(s.duration, 22),
+          mods: { atkPct: num(s.bb.atk), batPct: batMod(num(s.bb.base_attack_time), chess) },
+          targeting: { rangeGrid: copyGrid(s.rangeGrid) }, flags: LIFT,
+          attack: { dmgType: 'arts', maxTargets: Math.max(1, Math.floor(num(s.bb['attack@max_target'], 1))) },
+          onStart({ battle, unit }) {
+            takeOff({ battle, unit });
+            const durL = num(s.bb.buff_duration_levitate, 12), durG = num(s.bb.buff_duration_ground_bound, num(s.duration, 22)) || durL;
+            for (const e of battle.enemiesInKeys(unit.rangeKeys, unit, { canHitFly: true })) {
+              // a FLYING enemy is 缚地 (the `grounded` status: Unit.isFlying turns false, ground rules apply); a ground
+              // one is 浮空 (levitate). PRTS: "使掠过的攻击范围内的地面敌人浮空…、飞行敌人缚地…"
+              if (e.isFlying) { if (durG > 0) battle.applyStatus(e, 'grounded', { duration: durG, source: unit }); }
+              else if (durL > 0) battle.applyStatus(e, 'levitate', { duration: durL, source: unit });
+            }
+          },
+          onEnd: land,
+        }),
+      }),
+      // 飘浮大地之上: the extra arts on every attack (the light-enemy variant needs the target's current mass)
+      trait: { afterHit: (battle, unit, target) => {
+        if (!target || !target.alive || !(lo > 0 || hi > 0)) return;
+        const light = (target.s?.massLevel ?? 0) <= lightMass;
+        const scale = light ? hi : lo;
+        if (scale > 0) battle.dealDamage(unit, target, { amount: unit.s.atk * scale, type: 'arts', tags: ['talent'] });
+      } },
+      talents: [
+        // the airborne 失重 aura + the S3 flying-enemy slow (both while the takeoff skill runs)
+        { install(battle, unit) {
+          battle.every(0.5, () => {
+            if (!alive(unit) || !unit.s.flags.liftoff) return;
+            const left = Math.max(0.6, num(unit.skill?.timeLeft, 1));
+            for (const e of battle.enemiesInKeys(unit.rangeKeys, unit, { canHitFly: true })) {
+              // 飘浮大地之上 (T1): while airborne every enemy in range is 失重 (`weightless` + massFlat −1, like 安洁莉娜)
+              battle.addBuff(e, { key: 'aglna2:weightless', status: 'weightless', visible: true, duration: left, data: { src: unit }, mods: { massFlat: -1 } });
+              // 酸橙的心事 (S3): the FLYING enemies in range are slowed on top of it (no `status`: a plain debuff)
+              if (sid === 'skchr_aglna2_3' && e.isFlying && slowFly < 0) battle.addBuff(e, { key: 'aglna2:slow', duration: 0.6, refresh: 'replace', source: unit, mods: { moveMul: Math.max(0.05, 1 + slowFly) } });
+            }
+          }, { owner: unit });
+        } },
+        // 天穹间的舞步: every airborne friendly operator +atk% ATK, and a max-HP-ratio regen while it blocks
+        { install(battle, unit) {
+          const atk = num(t1.atk), regen = num(t1.hp_recovery_per_sec_by_max_hp_ratio);
+          if (!(atk > 0) && !(regen > 0)) return;
+          battle.every(0.5, () => {
+            for (const a of battle.allyUnits) {
+              if (a.kind !== 'op' || !a.alive || !a.deployed || !a.s?.flags.liftoff) continue;
+              const mods = {};
+              if (atk > 0) mods.atkPct = atk;
+              if (regen > 0 && a.blocking?.length) mods.hpRegenRatio = regen;
+              if (Object.keys(mods).length) battle.addBuff(a, { key: 'aglna2:sky', duration: 0.6, refresh: 'replace', source: unit, mods });
+            }
+          }, { owner: unit });
+        } },
+      ],
+    };
     return kit;
   },
 };

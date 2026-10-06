@@ -333,6 +333,7 @@ const CUSTOM_CHESS = [
     normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
     golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
     garrison: {
+      eventTypeDesc: '持续叠加',
       desc: '【拉特兰】【不屈】每转换一次替身，层数+2；自身被击倒时，【不屈】层数+1',
       blackboard: [
         { key: 'key', valueStr: 'act1autochess_gar_event_dollswap_self' },
@@ -342,6 +343,35 @@ const CUSTOM_CHESS = [
         { key: 'bond_add_count_dead', value: 1 },
       ],
     },
+  },
+  {
+    charId: 'char_1015_aglna2',
+    baseId: 'chess_char_1015_aglna2_a',
+    goldenId: 'chess_char_1015_aglna2_b',
+    tier: 3,
+    identifier: 920,
+    shopLevelSortId: 97,
+    defaultSkillIndex: 2,                        // 酸橙的心事 (S3)
+    defaultUniEquipId: null,                     // she has no modules
+    bonds: ['siracusaShip', 'swiftShip', 'skillfulShip'],   // 叙拉古 / 迅捷 / 灵巧
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },   // like 蒂比: no ADVANCED module, but the elite record keeps the (empty) choice list
+    garrisons: [
+      {
+        id: 'garrison_custom_char_1015_aglna2',
+        eventTypeDesc: '持续叠加',
+        desc: '攻击范围内每有3名敌方单位处于缚地、浮空或恐惧状态：【叙拉古】层数+2，【迅捷】【灵巧】层数+1\n每消耗8发子弹：【迅捷】【灵巧】层数+1',
+        blackboard: [
+          { key: 'key', valueStr: 'act1autochess_gar_event_airweight_fear_ammo' },
+          { key: 'bond_id', valueStr: 'siracusaShip' },
+          { key: 'bond_id_2', valueStr: 'swiftShip,skillfulShip' },
+          { key: 'check_count', value: 3 },
+          { key: 'bond_add_count', value: 2 },
+          { key: 'bond_add_count_2', value: 1 },
+          { key: 'consume_count', value: 8 },
+        ],
+      },
+    ],
   },
 ];
 
@@ -354,27 +384,36 @@ function applyCustomChess(act, charTable) {
   act.garrisonDataDict ||= {};
   for (const c of CUSTOM_CHESS) {
     if (!charTable?.[c.charId]) { warn(`custom chess ${c.baseId}: char ${c.charId} missing from character_table`); continue; }
+    // one or more 特质 (a chess may carry several: each is its own record with its own effectKey)
+    const garrisonDefs = Array.isArray(c.garrisons) ? c.garrisons
+      : (c.garrison ? [{ id: `garrison_custom_${c.charId}`, ...c.garrison }] : []);
+    const gidsFor = (suffix) => garrisonDefs.map((g) => `${g.id}_${suffix}`);
     const pair = [
-      { chessId: c.baseId, isGolden: false, st: c.normal, gid: `garrison_custom_${c.charId}_a` },
-      { chessId: c.goldenId, isGolden: true, st: c.golden, gid: `garrison_custom_${c.charId}_b` },
+      { chessId: c.baseId, isGolden: false, st: c.normal, gids: gidsFor('a') },
+      { chessId: c.goldenId, isGolden: true, st: c.golden, gids: gidsFor('b') },
     ];
-    for (const { chessId, isGolden, st, gid } of pair) {
+    for (const { chessId, isGolden, st, gids } of pair) {
       act.charChessDataDict[chessId] = {
         chessId, identifier: c.identifier + (isGolden ? 1 : 0), isGolden,
         status: { evolvePhase: st.evolvePhase, charLevel: st.charLevel, skillLevel: st.skillLevel, favorPoint: 0, equipLevel: st.equipLevel },
         upgradeChessId: isGolden ? null : c.goldenId,
         upgradeNum: isGolden ? 0 : 3,
         bondIds: [...c.bonds],
-        garrisonIds: [gid],
+        garrisonIds: gids,
       };
       act.chessNormalIdLookupDict[chessId] = c.baseId;
-      act.garrisonDataDict[gid] = {
-        garrisonDesc: c.garrison.desc,
-        eventType: 'IN_BATTLE', eventTypeDesc: '作战能力', eventTypeIcon: 'icon_battle', eventTypeSmallIcon: 's_icon_battle',
-        effectType: 'GAIN_BUFF', charLevel: 0, battleRuneKey: 'env_gbuff_new_with_verify',
-        blackboard: c.garrison.blackboard.map((b) => ({ key: b.key, value: b.value ?? 0, valueStr: b.valueStr ?? null })),
-        description: c.garrison.desc,
-      };
+      garrisonDefs.forEach((g, i) => {
+        const etDesc = g.eventTypeDesc ?? '作战能力';
+        const bondTrait = etDesc === '持续叠加';
+        act.garrisonDataDict[gids[i]] = {
+          garrisonDesc: g.desc,
+          eventType: 'IN_BATTLE', eventTypeDesc: etDesc,
+          eventTypeIcon: bondTrait ? 'icon_bond' : 'icon_battle', eventTypeSmallIcon: bondTrait ? 's_icon_bond' : 's_icon_battle',
+          effectType: bondTrait ? 'ADD_BOND' : 'GAIN_BUFF', charLevel: 0, battleRuneKey: 'env_gbuff_new_with_verify',
+          blackboard: g.blackboard.map((b) => ({ key: b.key, value: b.value ?? 0, valueStr: b.valueStr ?? null })),
+          description: g.desc,
+        };
+      });
     }
     act.charShopChessDatas[c.baseId] = {
       chessId: c.baseId, goldenChessId: c.goldenId, chessLevel: c.tier, shopLevelSortId: c.shopLevelSortId,
@@ -3263,7 +3302,7 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  if (visible.length !== 114) err(`expected 114 visible non-DIY chess, got ${visible.length}`);
+  if (visible.length !== 115) err(`expected 115 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);

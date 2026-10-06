@@ -577,3 +577,20 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 顺带修正：`tools/assets/manifest.mjs` —— 某干员**所有**语音槽都取不到时整条不下发（不再留 `{select:[],place:[]}` 空壳）。
 - 同步更新的计数/断言：`data.test.js`（270 / 114 / 分阶 / 战役键 44）、`{ui,match,sim}/loadout`、`match/pool`（+ 池概率容差 0.01→0.03，自定义干员会改 copy-weighted 占比）、`content/kits_alt_t3`、`content/garrisons_battle`（新增她的测试组）、`sim/playtest6-combat`（替身形态释放阻挡是合法的）、`match/bot-smarter`（拟态物质断言改成「最高阶的一对」这条规则）。
 - 结果：全量 `node --test` **exit=0**。
+
+## 25. 自造干员：予愿安洁莉娜（2026-10-06）
+
+> 需求：新增干员**予愿安洁莉娜**（6★ 特种·**巡空者 `skywalker`**），盟约 **叙拉古 + 迅捷 + 灵巧**，特质「**持续叠加**」（**一条**，两个触发）：攻击范围内每有 **3** 名敌方单位处于**缚地 / 浮空 / 恐惧**状态 → 叙拉古+2、迅捷+1、灵巧+1；每消耗 **8** 发子弹 → 迅捷+1、灵巧+1。
+
+- **数据**（`CUSTOM_CHESS`）：`char_1015_aglna2`，3 阶，E2L1 / E2L60（**没有模组**，但像蒂比那样保留空的模组选择列表 `equipLevel:1` + `modules: []`）；盟约 `siracusaShip`+`swiftShip`+`skillfulShip`；名册 114 → **115**。
+- **`applyCustomChess` 扩展**：一个干员可带**多条特质**（`garrisons: [...]`，每条一个 effectKey），且特质类别（作战能力 / 持续叠加）与图标按特质区分。
+- **特质（一条，两个触发）**：新处理器 **`act1autochess_gar_event_airweight_fear_ammo`**（`server/sim/content/garrisons/battle.js`）：
+  - 每 0.25s 数一次**自身攻击范围内**处于 `grounded`/`levitate`/`fear` 状态的敌人，`floor(数量 / check_count)` 每上一个台阶 → `bond_id`（叙拉古）+2、`bond_id_2`（迅捷/灵巧）+1；
+  - 监听 `ammoUsed`：**自身**每消耗 `consume_count`（8）发 → `bond_id_2` +1。
+  清单 `garrison_custom_char_1015_aglna2_a/_b`（`eventTypeDesc: 持续叠加`，两段文本换行分隔，详情面板一行）。
+- **缚地（真的建模）**：引擎新增旗标 / 状态 **`grounded`**（`buffs.js` 的 `FLAG_KEYS` + 状态表），`Unit.isFlying`（`units.js`）**优先读它** → 被缚地的**飞行敌人变地面单位**（地面规则：可被地面干员阻挡、不再算空中）。她的 **S2 重力自定义**按官方文本执行：范围内**地面敌人 → 浮空**（`levitate`），**飞行敌人 → 缚地**（`grounded`）。
+- **kit**（`kits/tier3.js`）：巡空者起飞（`liftoff` + `blockFly`，只挡飞行敌人）；天赋「飘浮大地之上」（每次攻击附带法术伤害，轻敌更高 + 起飞时范围内敌人 **失重**）、「天穹间的舞步」（起飞友方 +13% 攻击、阻挡时每秒回 8% 生命）；技能 **极速送达 S1**（被动、部署即起飞、范围扩大）、**重力自定义 S2**（起飞 + 浮空/缚地 + 法术 5 目标）、**酸橙的心事 S3**（默认：弹药 33 发 + 4 目标 + 减速飞行敌人 + 对空庇护）。
+- **卡面范围规则**（`shared/loadoutRecord.js`）：细化成**有原则的规则**——「**被动**技能且文本含『攻击范围扩大』」才算进**部署时**的范围（引星棘刺 S3、她的 S1），「**开技才加宽**」的技能卡面仍用基础范围（野鬃 S2）。两条范围审计（`feedback1e-range` / `feedback1e-skillrange`）由此不再冲突。
+- **美术 / 语音**：镜像全有（社区语音包也收录了）→ `fetch-assets` 自动补齐；她 S3 的**起飞点 token**（`token_10071_aglna2_agairp`）按项目惯例是可放置召唤物 → 用现成的 `inert()` 注册为**标记**（模型缺 → 客户端回退）。
+- 同步更新：`data.test.js`（272 / 115 / 分阶 / 战役键 45 / token 列表）、`{ui,match,sim}/loadout`、`match/pool`、`content/kits_alt_t3`、`content/garrisons_battle`（她的测试组）、`content/tokens_devices`、`match/playtest6_summons`。
+- 结果：全量 `node --test` **绿**（`match/realtime` 那条实时联机集成测试在满载下偶发超时，单独重跑即过，与本次改动无关）。

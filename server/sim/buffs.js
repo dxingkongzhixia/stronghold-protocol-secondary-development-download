@@ -43,6 +43,8 @@ export const FLAG_KEYS = Object.freeze([
   // 自缚 (the unit's own immobility: 守墓石像's 转换模式, the 自缚 leaders) beside its `noMove` — 束缚 sets noMove too, and
   // only 自缚 makes a unit "不视为可达目标" for 余 S2's teleport (PRTS 余 S2 备注)
   'selfBound', 'healFree', 'stealthOff',
+  // 缚地 (予愿安洁莉娜): a flying enemy is forced onto the ground — `Unit.isFlying` reads this first
+  'grounded',
 ]);
 
 /**
@@ -91,6 +93,8 @@ export const STATUS = Object.freeze({
   // 浮空: 变为空中单位 (Unit.isFlying)，无法移动、攻击及使用技能; 对重量大于3的单位持续时间减半; the state holds 不可阻挡 +
   // 失衡免疫 (noDisplace: "不会被位移影响", PRTS 异常效果)
   levitate: { flags: { levitate: true, stun: true, unblockable: true, noDisplace: true }, immune: 'levitate' },
+  // 缚地 (予愿安洁莉娜): a flying enemy is forced onto the ground — `Unit.isFlying` reads this flag first
+  grounded: { flags: { grounded: true } },
   // 麻痹: value = stacks (default 1, max 3); each stack cancels one enemy normal attack; lasts until consumed; honours
   // 麻痹免疫 (enemy_database palsyImmune, e.g. 假想敌：铳 — PRTS 元素: a 神经 burst gives 麻痹 only "若单位不具有麻痹免疫")
   palsy: { palsy: true, immune: 'palsy' },

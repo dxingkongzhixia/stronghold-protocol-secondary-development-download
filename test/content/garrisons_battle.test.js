@@ -200,6 +200,38 @@ test('dollswap_self (结城理, custom): a <替身> ⇄ <本体> swap gives 拉�
   }
 });
 
+test('airweight_fear_ammo (予愿安洁莉娜, custom): every 3 enemies in 缚地/浮空/恐惧 pay 叙拉古+2/迅捷+1/灵巧+1, and every 8 ammo 迅捷+1/灵巧+1', () => {
+  for (const gid of idsOfKey('act1autochess_gar_event_airweight_fear_ammo')) {
+    const bb = GR(gid).bb;
+    const h = battle({
+      units: [{ id: 'op', g: [gid], row: 10, col: 4, o: { subProfessionId: 'skywalker' } }],
+      bonds: { siracusaShip: B(0), swiftShip: B(0), skillfulShip: B(0) },
+      enemies: [{ key: 'e_dummy', count: 3, interval: 0, pos: [10, 5] }],
+    });
+    h.run(1);
+    assert.deepEqual(gains(h), {}, `${gid}: nothing without the statuses`);
+    for (const e of h.b.enemies) h.b.addBuff(e, { key: 'test:lev', status: 'levitate', duration: 30, flags: { levitate: true } });
+    h.run(1);
+    const g = gains(h);
+    assert.equal(g.siracusaShip, num(bb.bond_add_count), `${gid}: 叙拉古`);
+    assert.equal(g.swiftShip, num(bb.bond_add_count_2), `${gid}: 迅捷`);
+    assert.equal(g.skillfulShip, num(bb.bond_add_count_2), `${gid}: 灵巧`);
+    // 每消耗N发子弹: the operator's own ammo (8 here)
+    const per = Math.max(1, num(bb.consume_count, 8));
+    const u = h.unit('op');
+    const g0 = { ...gains(h) };
+    for (let i = 0; i < per - 1; i++) h.b.emit('ammoUsed', { unit: u });
+    assert.deepEqual(gains(h), g0, `${gid}: ${per - 1} ammo pays nothing`);
+    h.b.emit('ammoUsed', { unit: u });
+    const g1 = gains(h);
+    assert.equal(g1.swiftShip - g0.swiftShip, num(bb.bond_add_count_2), `${gid}: 迅捷 on ${per} ammo`);
+    assert.equal(g1.skillfulShip - g0.skillfulShip, num(bb.bond_add_count_2), `${gid}: 灵巧 on ${per} ammo`);
+    assert.equal(g1.siracusaShip, g0.siracusaShip, `${gid}: 叙拉古 untouched by ammo`);
+    cover(gid);
+    checkInvariants(h.b);
+  }
+});
+
 test('consume_ammo (莫斯提马 22 x-5 / 圣约送葬人 23+55 / 蕾缪安 24 row of 3): per consume_count ammo, per-id caps', () => {
   for (const gid of idsOfKey('act1autochess_gar_event_consume_ammo')) {
     const g = GR(gid);

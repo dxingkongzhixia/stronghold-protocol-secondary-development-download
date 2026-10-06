@@ -186,6 +186,7 @@ export class Unit {
    * ba.levitate "变为空中单位"). Movement and pathing read `motion`, never this.
    */
   get isFlying() {
+    if (this.s.flags.grounded) return false;   // 缚地: a flying enemy forced to the ground (予愿安洁莉娜 S2/S3)
     if (this.motion === 'FLY') return true;
     if (this.side !== 'enemy') return false;
     const f = this.s.flags;

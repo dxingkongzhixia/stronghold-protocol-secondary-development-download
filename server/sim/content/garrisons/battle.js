@@ -308,6 +308,54 @@ const INSTALLERS = {
     });
   },
 
+  /**
+   * 予愿安洁莉娜's 特质 (custom), both paragraphs in one effect:
+   *  - every `check_count` enemies in the operator's RANGE in 缚地 (`grounded`), 浮空 (`levitate`) or 恐惧 (`fear`) pays
+   *    `bond_add_count` to `bond_id` and `bond_add_count_2` to `bond_id_2` — on each floor(present / check_count) step,
+   *    so a growing crowd keeps paying and the counter re-arms when it shrinks;
+   *  - every `consume_count` AMMO the operator itself spends pays `bond_add_count_2` to `bond_id_2`.
+   */
+  act1autochess_gar_event_airweight_fear_ammo(battle, list) {
+    const gain = (it, bondStr, n) => {
+      const bonds = ids(bondStr);
+      if (!(n > 0) || !bonds.length) return;
+      const added = S.gainLayers(battle, {
+        playerId: it.unit.ownerId, bonds, n, requireActive: true, source: it.unit, reason: 'garrison', cap: Infinity, capKey: it.capKey,
+      });
+      if (added > 0) S.fxOn(battle, 'garrison', it.unit, `gar:${it.gid}`, it.key, { n: added });
+    };
+    // 每消耗N发子弹 (only the operator's own ammo: the default `ammoScope`)
+    battle.on('ammoUsed', ({ unit }) => {
+      if (!unit) return;
+      for (const it of list) {
+        if (unit !== it.unit) continue;
+        const per = Math.max(1, S.num(it.bb.consume_count, 8));
+        it.ammo = (it.ammo ?? 0) + 1;
+        if (it.ammo % per === 0) gain(it, it.bbStr.bond_id_2, S.num(it.bb.bond_add_count_2, 0));
+      }
+    });
+    battle.every(0.25, () => {
+      for (const it of list) {
+        const u = it.unit;
+        if (!S.onField(u)) { it.airPairs = 0; continue; }
+        const per = Math.max(1, S.num(it.bb.check_count, 2));
+        let cnt = 0;
+        for (const e of battle.enemies) {
+          if (!e.alive || e.hidden || !e.s || !S.inRange(u, e)) continue;
+          if (e.buffs.some((b) => b.status === 'grounded' || b.status === 'levitate' || b.status === 'fear')) cnt++;
+        }
+        const pairs = Math.floor(cnt / per);
+        const seen = it.airPairs ?? 0;
+        if (pairs > seen) {
+          it.airPairs = pairs;
+          const times = pairs - seen;
+          gain(it, it.bbStr.bond_id, S.num(it.bb.bond_add_count, 0) * times);
+          gain(it, it.bbStr.bond_id_2, S.num(it.bb.bond_add_count_2, 0) * times);
+        } else if (pairs < seen) it.airPairs = pairs;
+      }
+    });
+  },
+
   act1autochess_gar_event_consume_ammo(battle, list) {
     battle.on('ammoUsed', ({ unit }) => {
       if (!unit) return;

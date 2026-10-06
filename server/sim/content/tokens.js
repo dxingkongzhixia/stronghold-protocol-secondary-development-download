@@ -110,6 +110,7 @@ export const TOKEN_IDS = Object.freeze({
   eagle2: 'token_10057_svash2_eagle2',
   eagle3: 'token_10057_svash2_eagle3',
   iceTarget: 'token_10058_sbell2_icetgt',
+  agairp: 'token_10071_aglna2_agairp',
   yanyou: 'enemy_9012_acloon',
   reserveMedic: 'char_605_cmedic',
   touch: 'char_613_acmedc',
@@ -1371,6 +1372,8 @@ const RAW_KITS = {
   [TOKEN_IDS.eagle2]: inert({ hideFromEnemies: true }),
   [TOKEN_IDS.eagle3]: inert({ hideFromEnemies: true }),
   [TOKEN_IDS.iceTarget]: inert(),
+  // 予愿安洁莉娜 S3's 起飞点 marker (PRTS "起飞点留下了橘子"): a waypoint, not a fighter
+  [TOKEN_IDS.agairp]: inert(),
   [TOKEN_IDS.yanyou]: yanyouKit,
   [TOKEN_IDS.reserveMedic]: reserveMedicKit,
   [TOKEN_IDS.touch]: touchKit,

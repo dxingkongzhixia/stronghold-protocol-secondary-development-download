@@ -74,12 +74,12 @@ test('numbers: every stats/bb/enemyScale object holds only finite numbers (no nu
   assert.deepEqual(bad.slice(0, 10), [], `${bad.length} bad numeric fields`);
 });
 
-test('chess: 270 records, 114 visible non-DIY (16/17/21/22/19/19 per tier)', () => {
-  assert.equal(Object.keys(chess).length, 270);
-  assert.equal(visible.length, 114);
+test('chess: 272 records, 115 visible non-DIY (16/17/22/22/19/19 per tier)', () => {
+  assert.equal(Object.keys(chess).length, 272);
+  assert.equal(visible.length, 115);
   const perTier = {};
   for (const c of visible) perTier[c.tier] = (perTier[c.tier] || 0) + 1;
-  assert.deepEqual(perTier, { 1: 16, 2: 17, 3: 21, 4: 22, 5: 19, 6: 19 });
+  assert.deepEqual(perTier, { 1: 16, 2: 17, 3: 22, 4: 22, 5: 19, 6: 19 });
   assert.equal(normalChess.filter((c) => c.isDiy).length, 4);
   assert.equal(normalChess.filter((c) => c.isHidden).length, 17);
 });
@@ -152,9 +152,9 @@ test('bonds: 23 bonds with valid members, thresholds and effects', () => {
   for (const c of normalChess) for (const b of c.bonds) assert.ok(bonds[b].members.includes(c.chessId), `${c.chessId} not in ${b}.members`);
 });
 
-test('garrisons: all referenced exist; 43 distinct effect keys', () => {
+test('garrisons: all referenced exist; 45 distinct effect keys', () => {
   const keys = new Set(Object.values(garrisons).map((g) => g.effectKey));
-  assert.equal(keys.size, 44);
+  assert.equal(keys.size, 45);
   for (const g of Object.values(garrisons)) {
     assert.ok(typeof g.eventType === 'string' && typeof g.desc === 'string', g.garrisonId);
     for (const o of g.owners) assert.ok(chess[o], `${g.garrisonId}: owner ${o}`);
@@ -426,7 +426,7 @@ test('chess/tokens: talent tokens resolve and every token variant says where it 
     assert.equal(t.placeable, t.displayType !== 'HIDDEN' && made, `${t.tokenId} (${t.name}): placeable`);
   }
   assert.deepEqual(Object.values(tokens).filter((t) => t.placeable).map((t) => t.name).sort(),
-    ['医疗探机', '诅咒娃娃', '斯卡蒂的海嗣', '流形', '狼群', '爬行号·防护单元'].sort());
+    ['医疗探机', '诅咒娃娃', '斯卡蒂的海嗣', '流形', '狼群', '爬行号·防护单元', '“一会儿见！”'].sort());
   assert.equal(tokens.enemy_9012_acloon.stats.deployLimit, tokens.enemy_9012_acloon.deployLimit);
 });
 

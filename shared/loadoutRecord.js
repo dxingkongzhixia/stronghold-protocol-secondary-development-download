@@ -118,7 +118,12 @@ export function attackRangeGrid(rec) {
   let g = Array.isArray(rec.rangeGrid) ? rec.rangeGrid : null;
   const sk = rec.skill;
   const m = rec.module;
-  if (sk && Array.isArray(sk.rangeGrid) && sk.rangeGrid.length && /被动效果：攻击范围扩大/.test(String(sk.desc ?? ''))) {
+  // The card / overlay / wheel show the range the unit is DEPLOYED with: a skill that only widens on cast keeps the
+  // base grid (野鬃 S2), while a PASSIVE skill that says 攻击范围扩大 is part of the deployment state (引星棘刺 S3,
+  // 予愿安洁莉娜 S1 极速送达).
+  const wideText = String(sk?.desc ?? '');
+  if (sk && Array.isArray(sk.rangeGrid) && sk.rangeGrid.length
+    && (/被动效果：攻击范围扩大/.test(wideText) || (sk.skillType === 'PASSIVE' && /攻击范围扩大/.test(wideText)))) {
     g = sk.rangeGrid;
   } else if (rec.isGolden && m && m.active && m.id && /攻击范围扩大/.test(String(rec.trait?.moduleDesc ?? ''))) {
     const mod = (Array.isArray(rec.modules) ? rec.modules : []).find((x) => x && x.uniEquipId === m.id);
