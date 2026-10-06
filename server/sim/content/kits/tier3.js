@@ -34,6 +34,7 @@ import { COLS, PUSH_DIRECTIONAL_MIN_DIST } from '../../constants.js';
 import { bodyDist, bodyInKeys, bodyOnTile } from '../../body.js';
 import { normalizeChess, normalizeSkill } from '../../simdata.js';
 import { tacticalPoint as sharedTacticalPoint, releaseSkillSummon } from '../tokens.js';
+import { batMod } from './tier1.js';
 
 // ---------------------------------------------------------------------------------------------------------------
 // helpers
@@ -1823,10 +1824,11 @@ const KITS = {
       });
     };
     const kit = {
-      // 降临 (S3, default): its own range, ATK +atk, attack interval shortened (base_attack_time), taunt +taunt_level
+      // 降临 (S3, default): its own range, ATK +atk, attack interval shortened (base_attack_time is a FLAT seconds
+      // change — batMod turns it into the engine's batPct of her 3.5 s base), taunt +taunt_level
       skill: {
         kind: 'duration',
-        mods: { atkPct: num(bb.atk), batPct: Math.max(-0.9, num(bb.base_attack_time)), taunt: num(bb.taunt_level) },
+        mods: { atkPct: num(bb.atk), batPct: batMod(bb.base_attack_time, chess, d.skill?.description ?? chess?.skill?.desc), taunt: num(bb.taunt_level) },
         targeting: { rangeGrid: copyGrid(d.skill?.rangeGrid) },
         onStart({ unit }) { unit.mem.asclnLevi = true; },
         onEnd({ unit }) { unit.mem.asclnLevi = false; },

@@ -1013,6 +1013,8 @@ test('3_4132 阿斯卡纶 降临 S3: ground enemies in range take -N% 物理/法
   h.run(1);
   assert.equal(e.s.hitRatePhys, ph);
   assert.equal(e.s.hitRateArts, ar);
+  // base_attack_time is a FLAT seconds change: S3's −1.2 s on her 3.5 s base ⇒ 2.3 s (never a ratio cut)
+  approx(u.s.bat, ds.getChess(id).stats.bat + bb.base_attack_time, 1e-6, 'S3 attack interval');
   h.runUntil(() => !u.skill.active, 60);
   h.run(1);
   assert.equal(e.s.hitRatePhys, 0, 'lapses with the skill');
