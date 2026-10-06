@@ -411,7 +411,7 @@ const CUSTOM_CHESS = [
     shopLevelSortId: 95,
     defaultSkillIndex: 2,
     defaultUniEquipId: 'uniequip_003_gdglow',     // FUN-Y 梦想终将实现 (the default module)
-    bonds: ['victoriaShip', 'preciShip'],        // 维多利亚 / 精准
+    bonds: ['victoriaShip', 'preciShip', 'deputShip'],   // 维多利亚 / 精准 / 助力
     normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
     golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
     garrison: {
