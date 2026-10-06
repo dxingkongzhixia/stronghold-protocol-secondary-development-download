@@ -400,6 +400,29 @@ const CUSTOM_CHESS = [
     },
     tokenIds: ['token_10064_wang_stone1'],
   },
+  {
+    // 澄闪 (docs/MATCHMAKING.md §31, custom): 6★ 术师·驭械术师 funnel, not in the season's roster. 3 阶; 整备能力
+    // 「购买费用为1」 rides the existing SERVER_CHESS_PRICE handler (`price` = the discount off the tier price: 3 → 1).
+    charId: 'char_377_gdglow',
+    baseId: 'chess_char_377_gdglow_a',
+    goldenId: 'chess_char_377_gdglow_b',
+    tier: 3,                                     // 3 阶
+    identifier: 940,
+    shopLevelSortId: 95,
+    defaultSkillIndex: 2,
+    defaultUniEquipId: null,
+    bonds: ['victoriaShip', 'preciShip'],        // 维多利亚 / 精准
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+    garrison: {
+      eventTypeDesc: '整备能力',
+      desc: '购买费用为1',
+      blackboard: [
+        { key: 'key', valueStr: 'SERVER_CHESS_PRICE' },
+        { key: 'price', value: 2 },
+      ],
+    },
+  },
 ];
 
 /** Merge CUSTOM_CHESS into the official season tables (idempotent). */
@@ -3334,7 +3357,7 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  if (visible.length !== 116) err(`expected 116 visible non-DIY chess, got ${visible.length}`);
+  if (visible.length !== 117) err(`expected 117 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);

@@ -1014,7 +1014,9 @@ export function wangStone(bb) {
         }
         if (hit && slug > 0) battle.applyStatus(hit, 'sluggish', { duration: slug, source: unit });
         if (hit && dot > 0) battle.addBuff(hit, { key: 'wang:dot', duration: slug || 6.5, source: unit, tick: 1, mods: null });
-        battle.fx('champagneBomb', { x: unit.x, y: unit.y, id: unit.id, target: hit.id, hits: 1, consumed: true });
+        // the blast fx: a range trigger (S3) may have no touched tile — report the first victim instead of `hit.id`
+        const victim = hit || (targets.length ? targets[0] : null);
+        battle.fx('champagneBomb', { x: unit.x, y: unit.y, id: unit.id, target: victim ? victim.id : null, hits: 1, consumed: true });
         battle.retreat(unit, { reason: 'expired', permanent: true });
       },
     },

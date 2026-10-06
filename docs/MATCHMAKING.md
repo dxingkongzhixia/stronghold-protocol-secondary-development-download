@@ -639,7 +639,10 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **推送**：`Lobby.broadcastNotice()`（`server/lobby.js`）把 `sys.notice { id, text, sign, at }` 发给**当前在线**的会话 —— 默认只发 `accountId != null`（已登录账号），`scope:'all'` 连游客一起发。历史保留最近 20 条（`this.notices`），并随 `buildSnapshot` 出现在 `/admin/api/state` 的 `notices` 里。
 - **客户端**：`main.js` 收到 `sys.notice` → 写入 `store.notice` + 弹一条 toast；`ui/notice.js` 的 `<NoticeBanner>`（挂在 App 根部，`ConnectionBanner` 旁）在**顶部居中**显示一条可关闭的通知条（内容 + `—— 署名` + 知道了），大厅与对局内都能看到；`z-index` 在连接条之上、弹窗之下（`calc(var(--z-conn) + 2)`）。
 - **常量**：`shared/constants.js` 的 `NOTICE_MAX_LEN = 300` / `NOTICE_HISTORY = 20`；`sys.notice` 已登记进 `shared/protocol.js` 的 S2C 列表。
-- **运维约定**：以后**每次部署 / 重启前**先推一条通知，署名 `d星空之下`。示例文案：
+- **运维约定（重要）**：
+  - **重启服务前必须先问 owner（d星空之下）**，得到同意后才执行；
+  - 得到同意后，**重启前先推一条通知**（署名 `d星空之下`），内容要说清这次更新/修复了什么、大约多久、请玩家刷新页面；
+  - 纯静态改动（`public/**`，不需要重启）仍按原流程：先推通知、再上传（客户端版本守卫会自动重载）。示例文案：
   - `服务器将在 5 分钟后重启更新，请尽快结束当前对局；更新完成后刷新页面即可。`
   - 命令行等价（服务器本机）：
     `curl -s -X POST "http://127.0.0.1:3000/admin/api/notify?token=$(cat var/admin-token.txt)" -H 'Content-Type: application/json' -d '{"text":"服务器将在 5 分钟后重启更新，请尽快结束当前对局","sign":"d星空之下"}'`

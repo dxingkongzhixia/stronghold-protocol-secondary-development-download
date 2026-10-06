@@ -2058,6 +2058,48 @@ const KITS = {
     return kit;
   },
 
+  // ---- 3_377 澄闪 · 驭械术师 funnel (custom: tools/build-data.mjs CUSTOM_CHESS). 浮游单元: the profession's
+  //      installFunnel + this file's funnelMap ramp each lock; its DRONE COUNT is the number of simultaneous targets
+  //      ("耶拉的 2 个浮游单元各自锁一个目标；1 个 = 职业默认"), so `浮游单元+N` = attack.maxTargets +N. S1 火花四溅 adds
+  //      ASPD, S2 电流翻涌 widens the range (持续无限), S3 澄净闪耀 stops her own attack, fires at the whole field and
+  //      its drones 停顿 what they hit.
+  chess_char_377_gdglow_a: (bb, chess, def) => {
+    const d = defOf(chess, def);
+    const rGrid = copyGrid(d.skill?.rangeGrid);
+    const drones = (b2) => 1 + Math.floor(num(b2 && b2['attack@cnt'], 0));
+    const stunOnHit = (b2) => {
+      const sl = num(b2 && b2['attack@sluggish'], 0);
+      return sl > 0 ? { onEachHit({ battle, unit: u, target }) { if (target?.alive) battle.applyStatus(target, 'sluggish', { duration: sl, source: u }); } } : null;
+    };
+    return {
+      // S3 澄净闪耀 (default): whole-field range, her own attack stops (the drones carry it), +2 drones, sluggish on hit
+      skill: {
+        kind: 'duration', duration: -1,
+        mods: { atkPct: num(bb.atk) },
+        targeting: { rangeGrid: rGrid },
+        attack: { maxTargets: drones(null), ...(stunOnHit(null) || null) },
+      },
+      skills: altSkills(chess, d, bb, {
+        skchr_gdglow_1: (s) => ({
+          kind: 'duration', duration: num(s.duration, -1),
+          mods: { atkPct: num(s.bb.atk), aspd: num(s.bb.attack_speed) },
+          // its OWN record's range (the alt-spec audit builds this spec with either skill selected, so it must not read
+          // the currently selected skill's grid)
+          targeting: { rangeGrid: copyGrid(s.rangeGrid) },
+          attack: { maxTargets: drones(s.bb), ...(stunOnHit(s.bb) || null) },
+        }),
+        skchr_gdglow_2: (s) => ({
+          // 持续无限: no kit in this repo uses a -1 duration (the sim never marks such a skill active); a very long
+          // finite window behaves as the official "持续时间无限"
+          kind: 'duration', duration: 9999,
+          mods: { atkPct: num(s.bb.atk) },
+          targeting: { rangeGrid: copyGrid(s.rangeGrid) },
+          attack: { maxTargets: drones(s.bb), ...(stunOnHit(s.bb) || null) },
+        }),
+      }),
+    };
+  },
+
   // ---- 3_1015 予愿安洁莉娜 · 巡空者 (custom: tools/build-data.mjs CUSTOM_CHESS) — 起飞 (`liftoff`: blocks flying
   //      enemies only, ground ones walk on; professions.js `skywalker` grants blockFly, the LIFTOFF flags the state).
   //      飘浮大地之上: every attack deals extra arts damage (atk_scale_lo, atk_scale_hi against a light enemy) and, while
