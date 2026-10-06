@@ -546,3 +546,18 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - `test/ui/bond-collapse.e2e.test.js`：删除（该 E2E 专测折叠）。
 
 **下次合并怎么自查**：`git log -S bondsCollapsed -- public/js/screens/game.js` 能看出上游是否又把它加回来；一旦 `.gm__bonds` 相关块冲突，取我们的版本。
+
+## 23. 自造干员：阿斯卡纶（2026-10-06）
+
+> 需求：新增干员**阿斯卡纶**，盟约 **灵巧 + 助力**，特质为**作战能力**、效果「助力、灵巧每叠加 3 层，本干员防御力 +1%」，其余数值/技能/美术用官方资料。
+
+本季官方名册里没有她（`act2autochess.charChessDataDict` 不含伏击客），所以走**自造干员**通道；`data/*.json` 仍是构建产物，`test/data.test.js` 的「离线重建逐字节复现」照常通过。
+
+- **数据注入**（`tools/build-data.mjs`）：新增 `CUSTOM_CHESS` 表 + `applyCustomChess(act, charTable)`，在 `loadContext` 里把记录并进官方赛季表（`charChessDataDict` / `charShopChessDatas` / `chessNormalIdLookupDict` / `bondInfoDict.chessIdList` / `garrisonDataDict`），此后所有构建逻辑照常生效；校验改为 `expected 113 visible non-DIY chess`（原 112）。
+  - `charId: char_4132_ascln`（6★ 特种·**伏击客 `stalker`**，近战 / 阻挡 0 / 嘲讽 -1 / 费用 21 / **3 阶**）；盟约 `skillfulShip`(灵巧) + `deputShip`(助力)；普通 E2L1、精锐 E2L60 + Lv1 模组（`uniequip_002_ascln` AMB-X）；默认技能位 2（降临）。
+  - 特质 `garrison_custom_ascln_a/_b`：`eventType: IN_BATTLE`（作战能力）、`effectKey: act1autochess_gar_eff_attrByBond`、`bb {divide_num:3, def:0.01}`、`bbStr.bond_id: "deputShip,skillfulShip"` → `floor((助力层+灵巧层)/3) × 1% 防御`（**复用现成处理器，无需新模拟代码**）。
+- **战斗行为**：`subProfessionId: stalker` 直接命中引擎的伏击客档案（`server/sim/professions.js` `installStalker`）：**范围群攻 + 50% 物理/法术闪避 + 嘲讽 -1**。技能/天赋手写在 `server/sim/content/kits/tier3.js`：追袭 S1（蓄力，下次攻击 ×倍率、连击两次）、恩赐 S2（攻击力+、命中地面敌人减速、其死亡时向周围扩散一层天赋）、降临 S3（默认：换范围 / 攻击力+ / 攻击间隔缩短 / 嘲讽+ / 闪避或未命中回血）、天赋「死亡拘审」（每次攻击叠层：减速 + 每秒 10% 攻击力的法术伤害，≤3 层）、「噬光残影」（攻速 +8；高台额外 +6 **未建模**）。
+- **资源**：`docs/research/07-assets.json` 加她的头像/立绘/技能图/脊柱/子职业图标；`fetch-assets --asset-source=mirror` 下载到 `public/assets/**`；语音用 `tools/local-extract/extract-voice.py --only char_4132_ascln --ffmpeg <ffmpeg>` **从本地日服客户端抽日语**（14 条，覆盖 fetch-assets 下到的 CN 版）。
+- **构建**：`tools/build-data.mjs` 新增 **`SP_GAMEDATA_BASE`** 环境变量（官方表走 gh-proxy）；`node tools/build-data.mjs` 重建 `data/`。
+- 同步更新的计数断言：`test/data.test.js`（268 / 113 / 分阶）、`test/{ui,match,sim}/loadout.test.js`、`test/match/pool.test.js`、`test/content/kits_alt_t3.test.js`。
+- 结果：全量 `node --test` **exit=0**（3765 项 / 0 失败）。

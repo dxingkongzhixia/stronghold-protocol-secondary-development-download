@@ -42,7 +42,9 @@ import { FORMS } from '../shared/forms.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RESEARCH_DIR = join(ROOT, 'docs', 'research');
-const GAMEDATA_URL = 'https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/zh_CN/gamedata/';
+// Official tables come from the Kengxxiao mirror. Override the base with SP_GAMEDATA_BASE to fetch through a proxy
+// (e.g. the CN gh-proxy used for the assets: SP_GAMEDATA_BASE=https://gh-proxy.com/https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/zh_CN/gamedata/).
+const GAMEDATA_URL = process.env.SP_GAMEDATA_BASE || 'https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/zh_CN/gamedata/';
 const SEASON = 'act2autochess';
 const USAGE = 'usage: node tools/build-data.mjs [--refresh | --offline] [--out <dir>] [--cache <dir>] [--report <file>] [--quiet] [--no-research] [--force]';
 
@@ -283,6 +285,87 @@ function bestCandidate(cands, phase, level) {
 
 // ===== context loading ==========================================================================
 
+// ===== custom (non-official) operators ===========================================================
+/**
+ * Chess added to the season by hand. They are merged into the official season tables *before* the builders
+ * run, so every derived file (chess/bonds/garrisons/ranges/kits) treats them like an official operator.
+ * Nothing custom lives in the sim: the battle behaviour comes from `subProfessionId`
+ * (server/sim/professions.js) and the 特质 from `garrisonIds` (server/sim/content/garrisons/).
+ *
+ * 阿斯卡纶 (Ascalon, char_4132_ascln) — 6★ 特种·伏击客 `stalker` (对攻击范围内所有敌人造成伤害 + 50% 物理/法术
+ * 闪避 + 嘲讽 -1, all already implemented for 水月). She is not part of the season, so she is declared here:
+ * bonds 灵巧 / 助力, 特质「助力、灵巧每叠加 3 层防御力 +1%」 (the existing `act1autochess_gar_eff_attrByBond`
+ * layer reader: floor((layers(灵巧) + layers(助力)) / 3) × bb.def).
+ */
+const CUSTOM_CHESS = [
+  {
+    charId: 'char_4132_ascln',
+    baseId: 'chess_char_4132_ascln_a',
+    goldenId: 'chess_char_4132_ascln_b',
+    tier: 3,
+    identifier: 900,
+    shopLevelSortId: 99,
+    defaultSkillIndex: 2,                        // 降临 (S3) — the usual pick among the tier-3 6★
+    defaultUniEquipId: 'uniequip_002_ascln',     // AMB-X「无形，无情」
+    bonds: ['skillfulShip', 'deputShip'],        // 灵巧 / 助力
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+    garrison: {
+      desc: '【助力】【灵巧】每叠加3层，本干员防御力+1%',
+      blackboard: [
+        { key: 'key', valueStr: 'act1autochess_gar_eff_attrByBond' },
+        { key: 'divide_num', value: 3 },
+        { key: 'bond_id', valueStr: 'deputShip,skillfulShip' },
+        { key: 'def', value: 0.01 },
+      ],
+    },
+  },
+];
+
+/** Merge CUSTOM_CHESS into the official season tables (idempotent). */
+function applyCustomChess(act, charTable) {
+  act.charChessDataDict ||= {};
+  act.charShopChessDatas ||= {};
+  act.chessNormalIdLookupDict ||= {};
+  act.bondInfoDict ||= {};
+  act.garrisonDataDict ||= {};
+  for (const c of CUSTOM_CHESS) {
+    if (!charTable?.[c.charId]) { warn(`custom chess ${c.baseId}: char ${c.charId} missing from character_table`); continue; }
+    const pair = [
+      { chessId: c.baseId, isGolden: false, st: c.normal, gid: 'garrison_custom_ascln_a' },
+      { chessId: c.goldenId, isGolden: true, st: c.golden, gid: 'garrison_custom_ascln_b' },
+    ];
+    for (const { chessId, isGolden, st, gid } of pair) {
+      act.charChessDataDict[chessId] = {
+        chessId, identifier: c.identifier + (isGolden ? 1 : 0), isGolden,
+        status: { evolvePhase: st.evolvePhase, charLevel: st.charLevel, skillLevel: st.skillLevel, favorPoint: 0, equipLevel: st.equipLevel },
+        upgradeChessId: isGolden ? null : c.goldenId,
+        upgradeNum: isGolden ? 0 : 3,
+        bondIds: [...c.bonds],
+        garrisonIds: [gid],
+      };
+      act.chessNormalIdLookupDict[chessId] = c.baseId;
+      act.garrisonDataDict[gid] = {
+        garrisonDesc: c.garrison.desc,
+        eventType: 'IN_BATTLE', eventTypeDesc: '作战能力', eventTypeIcon: 'icon_battle', eventTypeSmallIcon: 's_icon_battle',
+        effectType: 'GAIN_BUFF', charLevel: 0, battleRuneKey: 'env_gbuff_new_with_verify',
+        blackboard: c.garrison.blackboard.map((b) => ({ key: b.key, value: b.value ?? 0, valueStr: b.valueStr ?? null })),
+        description: c.garrison.desc,
+      };
+    }
+    act.charShopChessDatas[c.baseId] = {
+      chessId: c.baseId, goldenChessId: c.goldenId, chessLevel: c.tier, shopLevelSortId: c.shopLevelSortId,
+      chessType: 'NORMAL', charId: c.charId, tmplId: null,
+      defaultSkillIndex: c.defaultSkillIndex, defaultUniEquipId: c.defaultUniEquipId, isHidden: false,
+    };
+    for (const b of c.bonds) {
+      const bi = act.bondInfoDict[b];
+      if (!bi) { warn(`custom chess ${c.baseId}: bond ${b} missing from bondInfoDict`); continue; }
+      bi.chessIdList = Array.from(new Set([...(bi.chessIdList || []), c.baseId, c.goldenId]));
+    }
+  }
+}
+
 /**
  * Load every official table and research file into one context object.
  * @returns {Promise<object>} ctx
@@ -302,6 +385,7 @@ async function loadContext() {
   const act = activity?.activity?.AUTOCHESS_SEASON?.[SEASON];
   const ac = activity?.autoChessData;
   if (!act || !ac) throw new Error('activity_table has no act2autochess / autoChessData section');
+  applyCustomChess(act, charTable);
 
   // Note: summons/traps live in character_table (token_table.json only lists 4 unrelated traps).
 
@@ -3156,7 +3240,7 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  if (visible.length !== 112) err(`expected 112 visible non-DIY chess, got ${visible.length}`);
+  if (visible.length !== 113) err(`expected 113 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);

@@ -1,4 +1,4 @@
-// server/sim/content/kits/tier3.js — hand-authored kits for the 21 tier-3 chess (19 visible + 见行者/巫恋 hidden).
+// server/sim/content/kits/tier3.js — hand-authored kits for the 22 tier-3 chess (20 visible + 见行者/巫恋 hidden).
 //
 // export default { [baseChessId]: (bb, chess, def) => Kit } (docs/SIM.md §7.2). `bb` is the skill blackboard at the
 // chess's level (normal Lv4 `_a` / elite Lv7 `_b`), `chess` the data/chess.json record (talents incl. module upgrades,
@@ -1792,6 +1792,91 @@ const KITS = {
       ],
     };
     if (mod && num(mod.attack_speed) > 0) kit.install = groundAspd('trait:archet_ground', num(mod.attack_speed));
+    return kit;
+  },
+
+  // ---- 3_4132 阿斯卡纶 · 伏击客 (custom: tools/build-data.mjs CUSTOM_CHESS) — every attack hits all enemies in range
+  //      and the 50 % phys / arts dodge with taunt −1 come from the 'stalker' profession profile (professions.js
+  //      installStalker). 死亡拘审: each attack stacks 减速 + an arts DoT (atk_ratio × the operator's current ATK each
+  //      interval, ≤ max_stack_cnt); 噬光残影: ASPD +attack_speed (the 高台 +attack_speed_add is not modelled). 追袭 S1
+  //      (charges): next attack ×atk_scale, twice; 恩赐 S2: ATK +atk, ground enemies hit are slowed and one dying
+  //      spreads a 死亡拘审 stack; 降临 S3 (default): its own wider range, ATK +atk, shorter attack interval,
+  //      taunt +taunt_level, and a dodge / miss heals attack@hp_ratio of max HP.
+  chess_char_4132_ascln_a: (bb, chess, def) => {
+    const d = defOf(chess, def);
+    const t0 = talentBb(d, 0), t1 = talentBb(d, 1);
+    const t0dur = num(t0.debuff_duration, 25), t0iv = Math.max(0.1, num(t0.interval, 1));
+    const maxStack = Math.max(1, Math.floor(num(t0.max_stack_cnt, 3)));
+    const t0slow = num(t0.move_speed, -0.18), t0dot = num(t0.atk_ratio, 0.1);
+    const DECREE = (u) => `ascln:decree:${u.id}`;
+    const GIFT = (u) => `ascln:gift:${u.id}`;
+    /** One 死亡拘审 stack (≤ maxStack) on `target`: 减速 + an arts DoT of t0dot × the operator's CURRENT ATK. */
+    const decree = (battle, unit, target) => {
+      if (!target || !target.alive || target.side !== 'enemy') return;
+      const n = Math.min(maxStack, num(target.findBuff(DECREE(unit))?.data?.stack) + 1);
+      battle.addBuff(target, {
+        key: DECREE(unit), duration: t0dur, interval: t0iv, refresh: 'replace', source: unit, data: { stack: n },
+        mods: { speedMul: Math.max(0.05, 1 + t0slow * n) },
+        onTick: ({ battle: b, unit: e }) => b.dealDamage(unit, e, { amount: unit.s.atk * t0dot * n, type: 'arts', canDodge: false, tags: ['dot', 'decree'] }),
+      });
+    };
+    const kit = {
+      // 降临 (S3, default): its own range, ATK +atk, attack interval shortened (base_attack_time), taunt +taunt_level
+      skill: {
+        kind: 'duration',
+        mods: { atkPct: num(bb.atk), batPct: Math.max(-0.9, num(bb.base_attack_time)), taunt: num(bb.taunt_level) },
+        targeting: { rangeGrid: copyGrid(d.skill?.rangeGrid) },
+        onStart({ unit }) { unit.mem.asclnLevi = true; },
+        onEnd({ unit }) { unit.mem.asclnLevi = false; },
+      },
+      skills: altSkills(chess, d, bb, {
+        // 追袭 (S1): instant, or charges when the record stores several
+        skchr_ascln_1: (s) => ({
+          kind: instantKindOf(s),
+          attack: { atkScale: num(s.bb.atk_scale, 1), hits: Math.max(1, textNum(s.description, /连续攻击(.)次/, 2)) },
+        }),
+        // 恩赐 (S2): ATK +atk; every ground enemy hit is slowed for the skill's window
+        skchr_ascln_2: (s) => ({
+          kind: 'duration',
+          mods: { atkPct: num(s.bb.atk) },
+          attack: { onEachHit({ battle, unit, target }) {
+            if (target && target.alive && target.side === 'enemy' && !target.isFlying) {
+              battle.addBuff(target, { key: GIFT(unit), duration: 0.8, refresh: 'replace', source: unit, mods: { speedMul: Math.max(0.05, 1 + num(s.bb.move_speed, -0.3)) } });
+            }
+          } },
+        }),
+      }),
+      talents: [
+        // 死亡拘审 (talent 1): every attack adds a stack to the enemy it hits
+        { install(battle, unit) {
+          battle.on('damaged', (ctx) => {
+            if (ctx.source !== unit || !ctx.dmg?.isAttack || ctx.target?.side !== 'enemy' || !ctx.target.alive) return;
+            decree(battle, unit, ctx.target);
+          }, { owner: unit });
+        } },
+        // 噬光残影 (talent 2): ASPD +attack_speed
+        { install(battle, unit) {
+          if (num(t1.attack_speed) > 0) battle.addBuff(unit, { key: 'talent:ascln_shadow', mods: { aspd: num(t1.attack_speed) }, persist: true, allowDead: true });
+        } },
+      ],
+      // runs under EVERY selected skill: the S3 dodge / miss heal and the S2 on-kill spread
+      install(battle, unit) {
+        const hpRatio = num(bb['attack@hp_ratio']);      // the SELECTED skill's bb: only S3 has it
+        if (hpRatio > 0) {
+          battle.on('dodge', (c) => {
+            if (c.target === unit && unit.alive && unit.mem?.asclnLevi) battle.heal(unit, unit, unit.s.maxHp * hpRatio, { self: true, tags: ['skill'] });
+          }, { owner: unit });
+        }
+        const r = num(bb.range_radius);                  // only S2 has it
+        if (r > 0) {
+          battle.on('death', (c) => {
+            const v = c.unit;
+            if (!alive(unit) || !v || v.side !== 'enemy' || v.isFlying || !v.findBuff(GIFT(unit))) return;
+            for (const e of battle.foesInRadius(v.x, v.y, r).filter((e2) => e2.alive && !e2.isFlying)) decree(battle, unit, e);
+          }, { owner: unit });
+        }
+      },
+    };
     return kit;
   },
 };

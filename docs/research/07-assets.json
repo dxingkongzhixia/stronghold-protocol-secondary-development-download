@@ -17365,6 +17365,115 @@
     ]
    },
    "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_wandermedic_icon.png"
+  },
+  "char_4132_ascln": {
+   "name": "阿斯卡纶",
+   "rarity": "TIER_6",
+   "profession": "SPECIAL",
+   "subProfessionId": "stalker",
+   "nationId": "rhodes",
+   "chess": [
+    {
+     "chessId": "chess_char_4132_ascln_a",
+     "chessLevel": 3,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 2,
+     "evolvePhase": "PHASE_2"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_4132_ascln.png",
+     "bytes": 73584
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_4132_ascln_2.png",
+     "bytes": 62853
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_4132_ascln_1.png",
+     "bytes": 138720
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_4132_ascln_2.png",
+     "bytes": 124234
+    }
+   },
+   "fullArt": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skin/char_4132_ascln_1b.png",
+     "bytes": 1344236
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skin/char_4132_ascln_2b.png",
+     "bytes": 6511982
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skchr_ascln_1",
+     "iconId": "skchr_ascln_1",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_ascln_1.png",
+      "bytes": 22391
+     }
+    },
+    {
+     "index": 1,
+     "skillId": "skchr_ascln_2",
+     "iconId": "skchr_ascln_2",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_ascln_2.png",
+      "bytes": 22502
+     }
+    },
+    {
+     "index": 2,
+     "skillId": "skchr_ascln_3",
+     "iconId": "skchr_ascln_3",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_ascln_3.png",
+      "bytes": 21149
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4132_ascln/char_4132_ascln/Front/char_4132_ascln.skel",
+      "bytes": 395277
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4132_ascln/char_4132_ascln/Front/char_4132_ascln.atlas",
+      "bytes": 13927
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4132_ascln/char_4132_ascln/Front/char_4132_ascln.png",
+      "bytes": 181847
+     },
+     "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_4132_ascln/char_4132_ascln/Front/char_4132_ascln.skel"
+    },
+    "back": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4132_ascln/char_4132_ascln/Back/char_4132_ascln.skel",
+      "bytes": 257950
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4132_ascln/char_4132_ascln/Back/char_4132_ascln.atlas",
+      "bytes": 8531
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4132_ascln/char_4132_ascln/Back/char_4132_ascln.png",
+      "bytes": 134908
+     },
+     "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_4132_ascln/char_4132_ascln/Back/char_4132_ascln.skel"
+    },
+    "note": null
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_stalker_icon.png"
   }
  },
  "tokens": {
