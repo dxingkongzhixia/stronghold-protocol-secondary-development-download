@@ -19,6 +19,8 @@ import { net, identity, randomGuestName } from '../net.js';
 import { store, useStore, shallowEqual } from '../store.js';
 import { data, useData } from '../data.js';
 import { FullscreenButton, detectFeatures } from '../ui/device.js';
+import { GIcon } from '../ui/gameComponents.js';
+import { SettingsModal } from '../ui/settings.js';
 
 /**
  * The title's account section (docs/MATCHMAKING.md): the 博士代号 field above IS the account name, so this only adds
@@ -247,6 +249,7 @@ export function TitleScreen() {
   const [name, setName] = useState(() => identity.loadName() || '');
   // 博士代号 = the account name: keep the field in sync once logged in (and fill it after a login).
   useEffect(() => { if (auth?.account?.name) setName(auth.account.name); }, [auth?.account?.id]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const assetsSettled = useData('assets');
   const assets = data.get('assets');
   const backdrop = findUiAsset(assets, BACKDROP_KEYS);
@@ -330,10 +333,14 @@ export function TitleScreen() {
           <span>${STATUS_TEXT[conn.status] || conn.status}</span>
           ${conn.status === 'online' ? html`<${PingPill} ms=${conn.ping} />` : null}
           <${GuideButton} class="title-guide" />
+          <button type="button" class="title-settings fsbtn tapx" aria-label="设置" title="设置"
+            onClick=${() => setSettingsOpen(true)}><${GIcon} name="gear" /></button>
           <${FullscreenButton} class="title-fs" />
         </div>
       </div>
     </main>
+
+    <${SettingsModal} open=${settingsOpen} onClose=${() => setSettingsOpen(false)} />
 
     <footer class="title-foot">
       <span>非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有</span>

@@ -179,9 +179,9 @@ function SpectatorDock({ facts, myId, busy, onRemove, onSit, onTakeOver, onRelea
   </details>`;
 }
 
-function InviteBox({ code, public: isPublic }) {
+function InviteBox({ code, public: isPublic, name, difficulty }) {
   const copy = async (what) => {
-    const ok = await copyText(what === 'code' ? code : inviteLink(code));
+    const ok = await copyText(what === 'code' ? code : `${inviteLink(code)} ${name}邀请你加入卫戍协议：盟约【${DIFFICULTY_NAMES[difficulty]}】`);
     if (ok) toast(what === 'code' ? `已复制同盟密钥 ${code}` : '已复制邀请链接', 'success');
     else toast('复制失败，请手动复制', 'warn');
   };
@@ -315,7 +315,7 @@ export function RoomScreen() {
       <div class="topbar__right">
         ${!coop ? html`<div class="solo-note"><${MicroLabel}>SINGLE OPERATOR<//><span>仅限 1 名博士</span></div>`
           : room.auto ? html`<div class="solo-note mm-note"><${MicroLabel} tone="mint">MATCHED TEAM<//><span>野排队伍 · 对局结束后自动解散</span></div>`
-          : html`<${InviteBox} code=${room.code} public=${room.public} />`}
+          : html`<${InviteBox} code=${room.code} public=${room.public} name=${me.name} difficulty=${room.difficulty} />`}
       </div>
     </header>
 
