@@ -794,7 +794,9 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
   - `public/assets/prof/sub/funnel.png`（子职业图标）、`public/assets/audio/sfx/player/{p_atk/p_atk_funnel_cast_n.mp3,p_imp/p_imp_funnel_n.mp3}`（浮游单元音效）
   - 静态资源**不需要重启**，但**必须上传**；漏传后补传即可，玩家 `Ctrl+Shift+R` 刷新。
 - [x] **4. 测试计数**：`data.test.js`（276 / 117 / perTier 3:23）、`{ui,match,sim}/loadout` 名册 117、`match/pool`（117 / 115 / 池概率容差 0.03→0.045）、`kits_alt_t3`（23）→ 全量 `node --test` **3787 项 0 失败**。
-- [x] **5. 上线**：已上线（2026-10-07）。先问 owner → 推通知（署名 d星空之下，`sent:2`）→ 重启 → 校验：`healthz` ok（build `d0fb2cbe8bd0`）、`chess_char_377_gdglow_a` tier 3 / `victoriaShip`+`preciShip`、garrison `SERVER_PRICE`+`SERVER_CHESS_PRICE`+`bb.price 2`+desc「购买价格为1」、头像/脊柱 200。随本次一起上线的还有：望棋子崩溃修复、望 S3「补子」（按 `deployLimit` 封顶）、结城理技能窗口/技能条 + 对空、公告按 id 幂等。
+- [x] **5. 上线**：已上线（2026-10-07）。先问 owner → 推通知（署名 d星空之下，`sent:2`）→ 重启 → 校验：`healthz` ok（build `d0fb2cbe8bd0`）、`chess_char_377_gdglow_a` tier 3 / `victoriaShip`+`preciShip`+`deputShip`（助力）、garrison `SERVER_PRICE`+`SERVER_CHESS_PRICE`+`bb.price 2`+desc「购买价格为1」、头像/脊柱/技能图标 200。
+- [x] **6. 后续微调（同日）**：澄闪默认模组 → **FUN-Y「梦想终将实现」**（`defaultUniEquipId: uniequip_003_gdglow`）；澄闪新增 **助力** 盟约（`deputShip`）；阿斯卡纶默认模组 → **AMB-Y「阿斯卡纶的眼睛」**（`uniequip_003_ascln`）。已推通知（`sent:2`）+ 重启 + 校验通过。
+- ⚠️ **静态美术清单**（上线必带，漏了 UI 会缺图标）：见上方「3. 美术 / 语音」。
 
 ### 31.3 相关上下文（换新会话也够用）
 
