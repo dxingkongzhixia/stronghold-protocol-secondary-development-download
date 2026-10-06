@@ -333,6 +333,29 @@ function sendJson(req, res, status, obj) {
   res.end(req.method === 'HEAD' ? undefined : body);
 }
 
+/**
+ * Read a small JSON request body (POST /admin/api/notify). Resolves null on an empty / oversized / malformed body
+ * (the socket is destroyed past `maxBytes`, so a huge body can not be used as a memory lever).
+ * @param {import('node:http').IncomingMessage} req @param {number} [maxBytes]
+ * @returns {Promise<any|null>}
+ */
+function readJsonBody(req, maxBytes = 16 * 1024) {
+  return new Promise((resolve) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > maxBytes) { resolve(null); req.destroy(); return; }
+      chunks.push(c);
+    });
+    req.on('end', () => {
+      if (!chunks.length) { resolve(null); return; }
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch { resolve(null); }
+    });
+    req.on('error', () => resolve(null));
+  });
+}
+
 /** Split an absolute request URL into raw path + query (also accepts absolute-form URLs). */
 function splitUrl(url) {
   let u = url || '/';
@@ -685,7 +708,7 @@ export async function startServer(opts = {}) {
     if (url.length > MAX_URL_LENGTH) { sendError(req, res, 414, '请求地址过长 · URI too long'); return; }
     const parts = splitUrl(url);
     if (!parts) { sendError(req, res, 400, '请求地址无效 · Bad request'); return; }
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
+    if (req.method !== 'GET' && req.method !== 'HEAD' && !(req.method === 'POST' && parts.rawPath === '/admin/api/notify')) {
       res.setHeader('Allow', 'GET, HEAD');
       sendError(req, res, 405, '不支持的请求方法 · Method not allowed');
       return;
@@ -705,8 +728,10 @@ export async function startServer(opts = {}) {
       sendJson(req, res, 200, buildPublicSnapshot({ registry, lobby, matchmaker: lobby.mm }));
       return;
     }
-    // Operations page (server/admin.js): /admin (HTML) + /admin/api/state (JSON), both token-gated.
-    if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state') {
+    // Operations page (server/admin.js): /admin (HTML) + /admin/api/state (JSON) + /admin/api/notify (POST), all
+    // token-gated. notify pushes an operator notice to the live sessions (server/lobby.js broadcastNotice).
+    if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify') {
+      const notify = parts.rawPath === '/admin/api/notify';
       if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
       const queryToken = new URLSearchParams(parts.query).get('token');
       const provided = queryToken || req.headers['x-admin-token'] || cookieValue(req.headers.cookie, 'sp_admin') || '';
@@ -716,6 +741,15 @@ export async function startServer(opts = {}) {
       }
       // Remember a valid ?token= in a cookie for 30 days, so plain /admin links (the lobby's 在线 badge) work.
       if (queryToken) res.setHeader('Set-Cookie', `sp_admin=${encodeURIComponent(admin.token)}; HttpOnly; SameSite=Strict; Path=/admin; Max-Age=2592000`);
+      if (notify) {
+        if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
+        const body = await readJsonBody(req);
+        if (!body || typeof body !== 'object') { sendJson(req, res, 400, { error: '请求体需要是 JSON' }); return; }
+        const r = lobby.broadcastNotice({ text: body.text, sign: body.sign, scope: body.scope });
+        if (r.error) { sendJson(req, res, 400, { error: '通知内容为空或过长' }); return; }
+        sendJson(req, res, 200, { ok: true, sent: r.sent, notice: r.notice });
+        return;
+      }
       if (parts.rawPath === '/admin/api/state') {
         sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth }));
         return;

@@ -84,7 +84,7 @@
 //     seats and shut later watchers out ("进不了房间", 2026-10-06).
 
 import { randomBytes, randomInt } from 'node:crypto';
-import { ERR, MAX_SEATS, MAX_SPECTATORS, ROOM_CODE_LEN, modeIdFor } from '../shared/constants.js';
+import { ERR, MAX_SEATS, MAX_SPECTATORS, ROOM_CODE_LEN, modeIdFor, NAME_MAX_LEN, NOTICE_HISTORY, NOTICE_MAX_LEN } from '../shared/constants.js';
 import { checkLoadout } from '../shared/protocol.js';
 import { CLOSE, encode, isDroppable, isErrCode, presenceOnline, sendRaw, sendSession } from './net.js';
 import { getData as defaultGetData, lookup } from './data.js';
@@ -235,6 +235,12 @@ export class Lobby {
     this.graceTimers = new Map();
     /** @type {Map<string, NodeJS.Timeout>} deferred (coalesced) resyncs by playerId */
     this.resyncTimers = new Map();
+    /**
+     * Operator notices (the admin page's 通知 panel): the broadcast history, newest first, ≤ NOTICE_HISTORY.
+     * @type {Array<{ id: string, text: string, sign: string|null, at: number, scope: string, sent: number }>}
+     */
+    this.notices = [];
+    this._noticeSeq = 0;
     /** per-network limit warnings: at most one log line per 10 s (the rest are counted) */
     this.limitLog = { at: -Infinity, suppressed: 0 };
     /**
@@ -250,6 +256,39 @@ export class Lobby {
 
   /** @param {string} code @returns {Room | null} */
   getRoom(code) { return this.rooms.get(String(code).toUpperCase()) || null; }
+
+  /**
+   * Operator broadcast (the admin page's 通知 panel): push one notice to the sessions connected RIGHT NOW — every
+   * logged-in account by default, everyone (guests included) with `scope: 'all'`. The notice is kept in `this.notices`
+   * (newest first, ≤ NOTICE_HISTORY) so the admin page can show what was sent. Deploys / restarts announce themselves
+   * this way (docs/MATCHMAKING.md §28), signed `d星空之下`.
+   * @param {{ text: string, sign?: string|null, scope?: 'accounts'|'all' }} opts
+   * @returns {{ ok: true, notice: object, sent: number } | { error: string }}
+   */
+  broadcastNotice({ text, sign = null, scope = 'accounts' } = {}) {
+    const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+    const body = clean(text, NOTICE_MAX_LEN);
+    if (!body) return { error: 'BAD_NOTICE' };
+    const at = this.now();
+    const notice = {
+      id: `${at}-${++this._noticeSeq}`,
+      text: body,
+      sign: clean(sign, NAME_MAX_LEN) || null,
+      at,
+      scope: scope === 'all' ? 'all' : 'accounts',
+      sent: 0,
+    };
+    const frame = { t: 'sys.notice', id: notice.id, text: notice.text, sign: notice.sign, at: notice.at };
+    for (const session of this.registry.all()) {
+      if (!session.connected) continue;
+      if (notice.scope === 'accounts' && session.accountId == null) continue;
+      if (sendSession(session, frame)) notice.sent += 1;
+    }
+    this.notices.unshift(notice);
+    if (this.notices.length > NOTICE_HISTORY) this.notices.length = NOTICE_HISTORY;
+    this.log.info(`[lobby] notice → ${notice.sent} session(s) (${notice.scope}): ${notice.text.slice(0, 40)}`);
+    return { ok: true, notice, sent: notice.sent };
+  }
 
   /** Counters for /healthz. */
   stats() {

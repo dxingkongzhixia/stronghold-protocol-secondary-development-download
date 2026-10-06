@@ -935,12 +935,29 @@
 /* guest tag (docs/MATCHMAKING.md): shown when no account is bound */
 .me-chip__guest { display: inline-block; margin-left: .07rem; padding: 0 .07rem; font-size: .12rem; font-style: normal; font-weight: 500;
   vertical-align: middle; color: #ffd089; border: 1px solid rgba(255, 208, 137, .5); border-radius: 2px; }
-/* account role (shared/constants.js ROLES): 管理员 / 开发者, shown next to a player name on every screen */
-.role-tag { display: inline-block; margin-left: .06rem; padding: 0 .07rem; font-size: .12rem; font-style: normal; font-weight: 700;
-  vertical-align: middle; line-height: 1.45; color: #0b1520; background: var(--gold, #ffc600); border-radius: 3px; }
-.role-tag--md { font-size: .13rem; padding: 0 .09rem; }
-.role-tag--lg { font-size: .15rem; padding: .01rem .11rem; }
+/* account role (shared/constants.js ROLES): a one-character badge 管 / 开 next to a player name on every screen
+   (the full 管理员 / 开发者 is the tooltip). Compact so it never crowds the name. */
+.role-tag { display: inline-block; box-sizing: border-box; margin-left: .05rem; padding: 0 .04rem; min-width: .18rem;
+  text-align: center; font-size: .12rem; font-style: normal; font-weight: 700; vertical-align: middle; line-height: 1.42;
+  color: #0b1520; background: var(--gold, #ffc600); border-radius: 3px; }
+.role-tag--md { font-size: .13rem; min-width: .2rem; }
+.role-tag--lg { font-size: .16rem; min-width: .24rem; padding: 0 .06rem; }
 .role-tag--dev { color: #06121c; background: #a9c3d8; }
+
+/* operator notice (ui/notice.js, docs/MATCHMAKING.md §28): the deploy / restart broadcast strip, top centre — above
+   every screen and in-match panel, below modals. Dismissed with 知道了 (a later push opens it again). */
+.notice-banner { position: fixed; z-index: calc(var(--z-conn) + 2); top: 1.14rem; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: flex-start; gap: .1rem; width: max-content; max-width: min(9.4rem, 84vw);
+  padding: .12rem .14rem; border: 1px solid var(--mint-a35); border-radius: .08rem;
+  background: linear-gradient(180deg, #10201c, #0b1512);
+  box-shadow: 0 .06rem .22rem rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(78, 216, 175, .12);
+  animation: notice-in 180ms var(--ease-out); }
+@keyframes notice-in { from { opacity: 0; transform: translate(-50%, -.12rem); } to { opacity: 1; transform: translate(-50%, 0); } }
+.notice-banner__icon { width: .18rem; height: .18rem; color: var(--mint-400); flex: none; margin-top: .02rem; }
+.notice-banner__text { display: flex; flex-direction: column; gap: .02rem; min-width: 0; }
+.notice-banner__msg { font-size: .15rem; line-height: 1.45; color: #e6f2ec; word-break: break-word; }
+.notice-banner__sign { font-size: .12rem; color: var(--mint-400); align-self: flex-end; }
+.notice-banner .btn { flex: none; }
 
 /* account form / dialog (docs/MATCHMAKING.md): shared by the title panel and the in-game modal */
 .account-form { display: flex; flex-direction: column; gap: .08rem; }

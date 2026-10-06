@@ -195,6 +195,14 @@ test('dollswap_self (结城理, custom): a <替身> ⇄ <本体> swap gives 拉�
     h.run(21);
     assert.ok(g.alive && !g.trait.doll, `${gid}: swapped back`);
     assert.deepEqual(gains(h), { lateranoShip: swap * 2, indomShip: swap * 2 }, `${gid}: 替身 → body`);
+    // the trait text says 使已激活的… (requireActiveOf → true), so a bond that is NOT active — or one the mode
+    // switched off (本局禁用) — gains nothing: the official rule, the same one every data layer trait follows
+    const off = battle({ units: [{ id: 'off', g: [gid], row: 10, col: 4, o: { profession: 'SPECIAL', subProfessionId: 'dollkeeper' } }], bonds: { lateranoShip: B(0, false), indomShip: B(0, false) } });
+    const uo = off.unit('off');
+    off.b.dealDamage(null, uo, { amount: 1e9, type: 'true' });
+    off.step(1);
+    assert.ok(uo.alive && uo.trait.doll, `${gid}: substitute (inactive bonds)`);
+    assert.deepEqual(gains(off), {}, `${gid}: an inactive / 本局禁用 拉特兰 · 不屈 gains nothing (使已激活的)`);
     cover(gid);
     checkInvariants(h.b);
   }
@@ -227,6 +235,17 @@ test('airweight_fear_ammo (予愿安洁莉娜, custom): every 3 enemies in 缚�
     assert.equal(g1.swiftShip - g0.swiftShip, num(bb.bond_add_count_2), `${gid}: 迅捷 on ${per} ammo`);
     assert.equal(g1.skillfulShip - g0.skillfulShip, num(bb.bond_add_count_2), `${gid}: 灵巧 on ${per} ammo`);
     assert.equal(g1.siracusaShip, g0.siracusaShip, `${gid}: 叙拉古 untouched by ammo`);
+    // the trait text says 使已激活的… (requireActiveOf → true): bonds that are NOT active — or one the mode switched
+    // off (本局禁用) — gain nothing, the official rule every data layer trait follows
+    const off = battle({
+      units: [{ id: 'off', g: [gid], row: 10, col: 4, o: { subProfessionId: 'skywalker' } }],
+      bonds: { siracusaShip: B(0, false), swiftShip: B(0, false), skillfulShip: B(0, false) },
+      enemies: [{ key: 'e_dummy', count: 3, interval: 0, pos: [10, 5] }],
+    });
+    off.run(1);
+    for (const e of off.b.enemies) off.b.addBuff(e, { key: 'test:lev', status: 'levitate', duration: 30, flags: { levitate: true } });
+    off.run(1);
+    assert.deepEqual(gains(off), {}, `${gid}: inactive / 本局禁用 bonds gain nothing (使已激活的)`);
     cover(gid);
     checkInvariants(h.b);
   }
@@ -530,7 +549,7 @@ test('GAIN_BUFF (哈洛德 / 锡人 / 迷迭香 03, 流星 137) and 古米 08: d
   approx(stat('garrison_08_b').spRecovery, 1.3);
 });
 
-test('attrByBond (26 ids): floor(Σ layers of the listed ACTIVE bonds / divide_num) × per-step values; live recompute', () => {
+test('attrByBond (26 ids): floor(Σ layers of the listed bonds / divide_num) × per-step values; live recompute', () => {
   for (const gid of idsOfKey('act1autochess_gar_eff_attrByBond')) {
     const { bb, bbStr } = GR(gid);
     const list = ids(bbStr.bond_id);
@@ -558,7 +577,7 @@ test('attrByBond (26 ids): floor(Σ layers of the listed ACTIVE bonds / divide_n
   });
   approx(h.unit('mz').s.atk, 500 * 1.08, '水月: 25 / 3 = 8 × 1 %');
   approx(h.unit('ur').s.atk, 500 * 1.24, '乌尔比安 精锐: 25 / 2 = 12 × 2 %');
-  approx(h.unit('rs').s.atk, 500 * (1 + 0.02 * 13), '迷迭香 精锐 core bonds: (25 + 6 + 10) / 3 = 13 × 2 %, inactive 谢拉格 ignored');
+  approx(h.unit('rs').s.atk, 500 * (1 + 0.02 * 23), '迷迭香 精锐 core bonds: (25 + 6 + 30 + 10) / 3 = 23 × 2 % — an inactive / 本局禁用 谢拉格 counts too (每叠加N层 is not gated on activation)');
   assert.equal(h.unit('yx').findBuff('gar:garrison_16_a').mods.aspd, 2, '隐现: 10 / 5 × 1');
   assert.equal(h.unit('yx2').findBuff('gar:garrison_16_b').mods.aspd, 4);
   assert.deepEqual(h.unit('sk').findBuff('gar:garrison_84_b').mods, { hpRegen: 200, spRecoveryFlat: 0.6 }, '浊心斯卡蒂: 2 steps × (100 HP/s, 0.3 SP/s)');

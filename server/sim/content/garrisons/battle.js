@@ -39,6 +39,7 @@
 import * as S from '../support/index.js';
 import { mitigate } from '../../damage.js';
 import { frontOf } from '../../dir.js';
+import { requireActiveOf } from './meta.js';
 
 /** 华法琳's granted trait: per-battle cap override (research 02 Addendum 1: PRTS 3/27 "初始7/精锐14 → 初始12/精锐24"). */
 export const GRANTED_CAP_OVERRIDE = Object.freeze({ garrison_95_a: 12, garrison_95_b: 24 });
@@ -285,8 +286,10 @@ const INSTALLERS = {
     const gain = (it, bondStr, n) => {
       const bonds = ids(bondStr);
       if (!(n > 0) || !bonds.length) return;
+      // the trait text has no 已激活 (requireActiveOf → false): a bond this match disabled / has not activated yet
+      // still gets the layers (its tier effects stay off — the panel shows them as 本局禁用 with their 层数)
       const added = S.gainLayers(battle, {
-        playerId: it.unit.ownerId, bonds, n, requireActive: true, source: it.unit, reason: 'garrison', cap: Infinity, capKey: it.capKey,
+        playerId: it.unit.ownerId, bonds, n, requireActive: requireActiveOf(it.g), source: it.unit, reason: 'garrison', cap: Infinity, capKey: it.capKey,
       });
       if (added > 0) S.fxOn(battle, 'garrison', it.unit, `gar:${it.gid}`, it.key, { n: added });
     };
@@ -319,8 +322,10 @@ const INSTALLERS = {
     const gain = (it, bondStr, n) => {
       const bonds = ids(bondStr);
       if (!(n > 0) || !bonds.length) return;
+      // "持续叠加": no 已激活 in the text (requireActiveOf → false) — a bond the mode disabled or that has not
+      // activated yet still stacks layers (its tier effects stay off; the panel lists it 本局禁用 with its 层数)
       const added = S.gainLayers(battle, {
-        playerId: it.unit.ownerId, bonds, n, requireActive: true, source: it.unit, reason: 'garrison', cap: Infinity, capKey: it.capKey,
+        playerId: it.unit.ownerId, bonds, n, requireActive: requireActiveOf(it.g), source: it.unit, reason: 'garrison', cap: Infinity, capKey: it.capKey,
       });
       if (added > 0) S.fxOn(battle, 'garrison', it.unit, `gar:${it.gid}`, it.key, { n: added });
     };
@@ -442,11 +447,20 @@ const READERS = new Set([
   'act2autochess_gar_eff_attrByBond_add_onstart', 'act2autochess_gar_eff_ab_damageScaleByBond',
 ]);
 
-/** floor(Σ layers of the listed active bonds / divide_num). */
+/**
+ * floor(Σ layers of the listed bonds / divide_num).
+ * 「每叠加N层…」: these traits' texts have no 已激活 (requireActiveOf → false), so a bond the mode disabled
+ * (本局禁用) or that has not activated yet still counts — its layers exist (the panel lists them). A trait that
+ * DID say 已激活 would gate on activation, like the gain traits do.
+ */
 export function stepsOf(battle, it) {
   const div = Math.max(1, S.num(it.bb.divide_num, 1));
+  const needActive = requireActiveOf(it.g);
   let sum = 0;
-  for (const b of it.bonds ?? (it.bonds = ids(it.bbStr.bond_id))) if (S.bondActive(battle, it.unit.ownerId, b)) sum += S.bondLayers(battle, it.unit.ownerId, b);
+  for (const b of it.bonds ?? (it.bonds = ids(it.bbStr.bond_id))) {
+    if (needActive && !S.bondActive(battle, it.unit.ownerId, b)) continue;
+    sum += S.bondLayers(battle, it.unit.ownerId, b);
+  }
   return Math.floor(sum / div);
 }
 

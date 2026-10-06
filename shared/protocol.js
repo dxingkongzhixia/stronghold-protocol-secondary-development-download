@@ -330,9 +330,11 @@ export const C2S = {
 export const S2C = [
   'welcome', 'ok', 'error', 'pong',
   'room.state', 'room.closed',
-  // accounts & matchmaking: auth.ok { account: { id, name }, token } · auth.error { code } ·
+  // accounts & matchmaking: auth.ok { account: { id, name, role }, token } · auth.error { code } ·
   // mm.state { queued, difficulty, waiting, need, elapsedMs, deadlineMs } (pushed ~1 Hz while queueing)
   'auth.ok', 'auth.error', 'mm.state',
+  // operator notice (the admin page's 通知): sys.notice { id, text, sign, at } — pushed to the live sessions
+  'sys.notice',
   // boot gate: boot.state { granted, position } — pushed while waiting for / when granted a boot-preload slot
   'boot.state',
   'm.public', 'm.private', 'm.field', 'm.toast', 'm.ticker', 'm.emote', 'm.result',

@@ -117,7 +117,7 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, now = Date.no
     }
   }
 
-  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online };
+  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [] };
 }
 
 /**
@@ -249,6 +249,23 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
 /* account role (shared/constants.js ROLES): 管理员 / 开发者, assigned with tools/role.mjs */
 .roletag{display:inline-block;padding:1px 8px;font-size:11px;font-weight:600;color:#ffd089;
   border:1px solid rgba(255,208,137,.5);border-radius:99px;background:rgba(255,208,137,.08)}
+/* 通知 (operator broadcast, server/lobby.js broadcastNotice): a form + the sent history */
+.notice-form{display:flex;flex-direction:column;gap:9px;padding:14px 16px 4px}
+.notice-form textarea{width:100%;min-height:62px;resize:vertical;background:var(--panel2);color:var(--text);
+  border:1px solid var(--line2);border-radius:8px;padding:9px 11px;font:inherit}
+.notice-form textarea:focus{outline:none;border-color:var(--mint-dim)}
+.notice-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.notice-row input,.notice-row select{background:var(--panel2);color:var(--text);border:1px solid var(--line2);
+  border-radius:8px;padding:6px 10px;font:inherit;font-size:13px}
+.notice-row input{width:170px}
+.notice-row .grow{flex:1}
+.notice-hist{padding:10px 16px 14px}
+.notice-item{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.notice-item:last-child{border-bottom:0}
+.notice-item time{color:var(--dim2);font-size:11.5px;font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
+.notice-item b{color:#d3efe2;font-weight:600}
+.notice-item i{font-style:normal;color:var(--dim)}
+.notice-item em{font-style:normal;color:var(--mint);font-size:12px;white-space:nowrap}
 </style></head><body>
 <div class="wrap">
   <header class="topbar">
@@ -265,6 +282,25 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
   </header>
 
   <section class="cards" id="cards"></section>
+
+  <section class="panel">
+    <h2>通知<em>推送给在线玩家 · 署名建议 d星空之下</em></h2>
+    <div class="notice-form">
+      <textarea id="noticeText" maxlength="300" placeholder="通知内容（例如：服务器将在 5 分钟后重启更新，请尽快结束当前对局；更新完成后刷新页面即可）"></textarea>
+      <div class="notice-row">
+        <span class="pill">署名</span>
+        <input id="noticeSign" maxlength="12" value="d星空之下" />
+        <select id="noticeScope">
+          <option value="accounts">仅已登录账号</option>
+          <option value="all">全部在线（含游客）</option>
+        </select>
+        <span class="grow"></span>
+        <span class="pill" id="noticeHint">0/300</span>
+        <button class="refresh" id="noticeSend">发送通知</button>
+      </div>
+    </div>
+    <div class="notice-hist" id="noticeHist"></div>
+  </section>
 
   <section class="panel">
     <h2>注册账号<em id="acctCount"></em></h2>
@@ -334,6 +370,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
         cell(String(r.humans)), cell(String(r.bots))]);
     }).join('') || '<tr><td colspan="7" class="empty">当前无房间</td></tr>';
     el('updated').textContent = new Date(d.now).toLocaleTimeString('zh-CN');
+    renderNotices(d.notices);
     var v = d.verify || {};
     el('verify').textContent = v.mode
       ? '校验 ' + v.mode + ' · 复算 ' + (v.checked || 0) + ' · 不一致 ' + (v.mismatches || 0) + ' · 拒收 ' + (v.rejected || 0) + ' · 接管 ' + (v.takeovers || 0)
@@ -346,6 +383,35 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
       .catch(function (e) { el('updated').textContent = '加载失败：' + e.message; });
   }
   el('refresh').addEventListener('click', tick);
+  // 通知 (server/lobby.js broadcastNotice): push one notice to the live sessions; the history is the state's notices array.
+  var noticeText = el('noticeText'), noticeSign = el('noticeSign'), noticeScope = el('noticeScope');
+  noticeText.addEventListener('input', function () { el('noticeHint').textContent = noticeText.value.length + '/' + noticeText.maxLength; });
+  function renderNotices(list) {
+    el('noticeHist').innerHTML = (Array.isArray(list) ? list : []).map(function (n) {
+      return '<div class="notice-item"><time>' + ts(n.at) + '</time><b>' + esc(n.text) + '</b>'
+        + (n.sign ? '<i>—— ' + esc(n.sign) + '</i>' : '') + '<em>' + (n.sent || 0) + ' 人</em></div>';
+    }).join('') || '<div class="empty">还没有发过通知</div>';
+  }
+  el('noticeSend').addEventListener('click', function () {
+    var text = noticeText.value.trim();
+    if (!text) { noticeText.focus(); return; }
+    var btn = el('noticeSend');
+    btn.disabled = true;
+    fetch('/admin/api/notify?token=' + encodeURIComponent(token), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, sign: noticeSign.value, scope: noticeScope.value })
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error((res.j && (res.j.error || res.j.message)) || 'HTTP');
+        noticeText.value = '';
+        el('noticeHint').textContent = '0/300';
+        el('updated').textContent = '已推送 ' + res.j.sent + ' 人 · ' + new Date().toLocaleTimeString('zh-CN');
+        tick();
+      })
+      .catch(function (e) { el('updated').textContent = '推送失败：' + e.message; })
+      .then(function () { btn.disabled = false; });
+  });
   tick(); setInterval(tick, 2000);
 })();
 </script>

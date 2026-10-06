@@ -80,6 +80,8 @@ export const initialState = Object.freeze({
   auth: { account: null, error: null },
   // 野排 queue state (server mm.state): queued + progress; null difficulty = not queueing
   mm: { queued: false, difficulty: null, waiting: 0, need: 4, elapsedMs: 0, deadlineMs: 0 },
+  // operator notice (sys.notice, the admin page's 通知): { id, text, sign, at } until dismissed; null = none
+  notice: null,
   session: { entered: false },
   room: null,
   match: emptyMatch(),

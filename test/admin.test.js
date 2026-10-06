@@ -139,3 +139,50 @@ test('GET /admin + /admin/api/state are token-gated', async () => {
     await srv.close();
   }
 });
+
+// 通知 (docs/MATCHMAKING.md §28): POST /admin/api/notify pushes a sys.notice to the LIVE sessions — every logged-in
+// account by default (`scope: 'all'` reaches guests too) — and keeps the broadcast in the state's `notices` history.
+test('POST /admin/api/notify pushes sys.notice to the live sessions (scope, guards, history)', async () => {
+  const srv = await startServer({ port: 0, quiet: true, accounts: true, db: openMemoryDb(), adminToken: 'testtok' });
+  try {
+    const base = `http://localhost:${srv.port}`;
+    const fakeWs = () => ({ readyState: 1, bufferedAmount: 0, sent: [], send(d) { this.sent.push(d); } });
+    const acc = srv.auth.register('Doctor', 'secret1').account;
+    const doctor = srv.registry.create('Doctor');
+    doctor.connected = true; doctor.accountId = acc.id; doctor.ws = fakeWs();
+    const guest = srv.registry.create('Guest');
+    guest.connected = true; guest.ws = fakeWs();
+    const post = (body, token = 'testtok') => fetch(`${base}/admin/api/notify?token=${token}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    assert.equal((await post({ text: 'x' }, 'nope')).status, 403, 'token required');
+    assert.equal((await fetch(`${base}/admin/api/notify?token=testtok`)).status, 405, 'POST only');
+    assert.equal((await post({ text: '   ' })).status, 400, 'empty text refused');
+
+    // the default scope reaches logged-in accounts only
+    const r1 = await post({ text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下' });
+    assert.equal(r1.status, 200);
+    const j1 = await r1.json();
+    assert.equal(j1.sent, 1);
+    assert.equal(j1.notice.sign, 'd星空之下');
+    assert.equal(doctor.ws.sent.length, 1);
+    assert.equal(guest.ws.sent.length, 0, 'a guest is skipped for scope accounts');
+    const frame = JSON.parse(doctor.ws.sent[0]);
+    assert.deepEqual(
+      { t: frame.t, text: frame.text, sign: frame.sign },
+      { t: 'sys.notice', text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下' },
+    );
+
+    // scope 'all' reaches guests too
+    const j2 = await (await post({ text: '全部在线', sign: 'd星空之下', scope: 'all' })).json();
+    assert.equal(j2.sent, 2);
+    assert.equal(guest.ws.sent.length, 1);
+
+    // the history rides in /admin/api/state, newest first
+    const st = await (await fetch(`${base}/admin/api/state?token=testtok`)).json();
+    assert.deepEqual(st.notices.map((n) => n.text), ['全部在线', '服务器将在 5 分钟后重启更新']);
+    assert.equal(st.notices[0].sent, 2);
+  } finally {
+    await srv.close();
+  }
+});

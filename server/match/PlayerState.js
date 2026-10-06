@@ -1547,6 +1547,27 @@ export class PlayerState {
    * like settle()) — the 联防 field (unite.js; PRTS 卫戍协议/帮助 §联防阶段 "将以其阵地当前的状态", [ASSUMED] the current
    * state includes those layers, as the strip shows them). The gains stay pending: settle() adds them once.
    */
+  /**
+   * The bond snapshot a battle starts from: `this.bonds` (computeBonds — every bond that can ACTIVATE) plus the
+   * mode-inactive (本局禁用) bonds the player has members of, as INACTIVE entries (`active: false, tier: 0`). The
+   * battle never activates those (every bond effect gates on tier ≥ 1), but their layers still exist and count:
+   * 持续叠加 特质 stack them and 「每叠加N层」readers (sim/content/garrisons/battle.js `stepsOf`) must see them
+   * (player report: 本局禁用的盟约吃不到、也读不到层数).
+   * @param {boolean} reached 联防: use the layers this battle reached (view + pending gains)
+   */
+  battleBonds(reached = false) {
+    const snap = bondSnapshot(reached ? this.bondsView() : this.bonds);
+    const off = offBondCounts(this.gd, this);
+    if (off) {
+      for (const [id, o] of Object.entries(off)) {
+        if (snap[id]) continue;
+        const pending = reached && this.pendingLayerGains ? Math.floor(Number(this.pendingLayerGains[id]) || 0) : 0;
+        snap[id] = { count: o.count, active: false, tier: 0, layers: Math.max(0, Math.floor(Number(o.layers) || 0) + pending) };
+      }
+    }
+    return snap;
+  }
+
   battleInput({ side = 'L', colOffset = 0, carry = null, reached = false } = {}) {
     // a terrain change not yet followed by a recompute (a content hook at the prep end) never fields an illegal board
     this.deployMap();
@@ -1573,7 +1594,7 @@ export class PlayerState {
       side,
       colOffset,
       units,
-      bonds: bondSnapshot(reached ? this.bondsView() : this.bonds),
+      bonds: this.battleBonds(reached),
       bandId: this.bandId,
       playerEffects: this.effects.filter((e) => e.battle !== false).map((e) => ({
         id: e.id, key: e.key ?? null, source: e.iconKind ?? null, params: e.params ?? null, counter: e.counter ?? null, data: e.data ?? null,

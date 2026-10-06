@@ -334,7 +334,7 @@ const CUSTOM_CHESS = [
     golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
     garrison: {
       eventTypeDesc: '持续叠加',
-      desc: '【拉特兰】【不屈】每转换一次替身，层数+2；自身被击倒时，【不屈】层数+1',
+      desc: '每转换一次替身，使已激活的【拉特兰】层数+2，【不屈】层数+2；干员被击倒时【不屈】层数+1',
       blackboard: [
         { key: 'key', valueStr: 'act1autochess_gar_event_dollswap_self' },
         { key: 'bond_id_swap', valueStr: 'lateranoShip,indomShip' },
@@ -360,7 +360,7 @@ const CUSTOM_CHESS = [
       {
         id: 'garrison_custom_char_1015_aglna2',
         eventTypeDesc: '持续叠加',
-        desc: '攻击范围内每有3名敌方单位处于缚地、浮空或恐惧状态：【叙拉古】层数+2，【迅捷】【灵巧】层数+1\n每消耗8发子弹：【迅捷】【灵巧】层数+1',
+        desc: '攻击范围内每有3名敌方单位处于缚地、浮空或恐惧状态：使已激活的【叙拉古】层数+2，【迅捷】层数+1，【灵巧】层数+1\n每消耗8发子弹：使已激活的【迅捷】层数+1，【灵巧】层数+1',
         blackboard: [
           { key: 'key', valueStr: 'act1autochess_gar_event_airweight_fear_ammo' },
           { key: 'bond_id', valueStr: 'siracusaShip' },

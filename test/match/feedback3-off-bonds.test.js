@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GameData } from '../../server/match/gamedata.js';
 import { computeBonds, bondList, bondSnapshot, offBondCounts } from '../../server/match/bondsMeta.js';
+import { PlayerState } from '../../server/match/PlayerState.js';
 import { DATA } from './harness.js';
 
 const funny = new GameData(DATA, 'mode_single_funny');
@@ -88,4 +89,20 @@ test('a mode with an empty inactive set returns null, and those bonds stay in co
   assert.equal(bonds.investShip.count, 1);
   assert.equal(bonds.raidShip.count, 1);
   assert.equal(bondList(open, bonds).some((x) => x.off), false);
+});
+
+// Player report follow-up: a 本局禁用 盟约 stays out of computeBonds (it never ACTIVATES), but the battle input carries
+// it as an INACTIVE entry so its layers exist there: 「无需激活盟约」sources stack them and 「每叠加N层」readers
+// (sim/content/garrisons/battle.js stepsOf) see them. Every bond effect gates on tier ≥ 1, so nothing activates.
+test('a 本局禁用 bond rides into the battle input as an inactive entry (the readers still see its layers)', () => {
+  const ps = state({ board: [piece(RAIDER[0]), piece(YAN[0])], hand: [piece(INVESTOR[0])], layers: { investShip: 12, raidShip: 4 } });
+  const stub = { gd: funny, bonds: computeBonds(funny, ps), pendingLayerGains: null, bondsView() { return this.bonds; }, ...ps };
+  const snap = PlayerState.prototype.battleBonds.call(stub, false);
+  assert.deepEqual(snap.investShip, { count: 1, active: false, tier: 0, layers: 12 }, '投资人: 本局禁用, but the layers ride along');
+  assert.deepEqual(snap.raidShip, { count: 1, active: false, tier: 0, layers: 4 });
+  assert.deepEqual(snap.yanShip, stub.bonds.yanShip, 'a non-mode-off bond keeps its computeBonds entry unchanged');
+  assert.equal(snap.lateranoShip, undefined, 'no members: not in the battle input');
+  // 联防 (`reached`): the layers this battle reached include the pending gains of a 本局禁用 bond too
+  const reached = PlayerState.prototype.battleBonds.call({ ...stub, pendingLayerGains: { investShip: 5 } }, true);
+  assert.equal(reached.investShip.layers, 17);
 });

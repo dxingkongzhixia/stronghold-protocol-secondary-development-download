@@ -30,6 +30,7 @@ import { render } from '../vendor/preact.module.js';
 import { useErrorBoundary } from '../vendor/hooks.module.js';
 import { html, UiHosts, Button, MicroLabel, closeAllDialogs } from './ui/components.js';
 import { ConnectionBanner } from './ui/connBanner.js';
+import { NoticeBanner } from './ui/notice.js';
 import { ToastHost, toast, toastError, describeError } from './ui/toasts.js';
 import { net, identity, NetError } from './net.js';
 import { store, useStore, emptyMatch, selectRoute, sessionResetNotice, loadPref, savePref, isSpectating } from './store.js';
@@ -244,6 +245,15 @@ function wireNet() {
   }));
   // boot art preload gate (server/bootgate.js): the answer to boot.claim — granted, or the place in the queue
   net.on('boot.state', (msg) => { bootGate.granted = !!msg.granted; bootGate.position = Number(msg.position) || 0; });
+  // operator notice (the admin page's 通知; server/lobby.js broadcastNotice): a dismissable strip + a toast. Usually a
+  // deploy / restart heads-up signed `d星空之下`.
+  net.on('sys.notice', (msg) => {
+    const text = typeof msg.text === 'string' ? msg.text.trim() : '';
+    if (!text) return;
+    const sign = typeof msg.sign === 'string' && msg.sign ? msg.sign : null;
+    store.patch('notice', { id: msg.id ?? null, text, sign, at: Number(msg.at) || Date.now() });
+    toast(`通知：${text}${sign ? `（—— ${sign}）` : ''}`, 'info', { ttl: 10000 });
+  });
   net.on('room.state', onRoomState);
   net.on('room.closed', (msg) => {
     if (msg.reason === 'matched-end') {
@@ -320,6 +330,7 @@ function App() {
     <div class="app-bg" aria-hidden="true"></div>
     ${error ? html`<${ScreenCrashed} error=${error} reset=${resetError} />` : html`<${Screen} key=${route} />`}
     <${ConnectionBanner} />
+    <${NoticeBanner} />
     <${ToastHost} />
     <${UiHosts} />
     <${GuideHost} />

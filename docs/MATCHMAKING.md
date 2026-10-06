@@ -599,7 +599,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 > 需求：账号 **d星空之下**（id 38）要在**所有地方**显示成「**管理员**」标注。
 
-- **账号标记**：`accounts` 表新增 `role TEXT` 列（`server/db.mjs` schema **v2**：老库 `ALTER TABLE ... ADD COLUMN role` 就地升级，`PRAGMA user_version` 2；`null` = 普通账号）。标签文本在 `shared/constants.js` 的 `ROLES = { admin: '管理员', dev: '开发者' }`，取值统一走 `roleLabel(role)`（未知值/空 = 不显示），服务端与客户端共用。
+- **账号标记**：`accounts` 表新增 `role TEXT` 列（`server/db.mjs` schema **v2**：老库 `ALTER TABLE ... ADD COLUMN role` 就地升级，`PRAGMA user_version` 2；`null` = 普通账号）。`shared/constants.js` 的 `ROLES = { admin: '管', dev: '开' }` 是**显示用的一字标签**（`roleLabel`），完整名 `ROLE_NAMES = { admin: '管理员', dev: '开发者' }`（`roleName`）走标签的**悬浮提示**与**管理页**的「身份」列；未知值一律不显示。服务端与客户端共用同一份表。
 - **赋值（可给任何账号加）**：`node tools/role.mjs list` 看全部；`node tools/role.mjs <代号> admin|dev|off` 赋/清（代号大小写不敏感，与登录一致）。库默认 `var/accounts.db`，`SP_DB` 可覆盖。**本机与线上都已把 `d星空之下` 设为 `admin`**。
 - **传播链路**（一个字段 `role`，跟着名字走，服务端权威）：
   - `publicAccount` → `auth.ok.account.role` → 客户端 `store.auth.account.role`（自己）；
@@ -608,7 +608,40 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
   - 对局内：`m.public.players[].role`（`PlayerState.role`，`Match` / `StubMatch` 都在），结算 `m.result.players[].role`；
   - `/online/api`：`online[].role`，以及 `openRooms/playRooms[].hostRole`（房主）；
   - 管理页 `/admin`：`accounts[].role` / `online[].role`，账号表新增「身份」列。
-- **显示**：新组件 `<RoleTag role=…>`（`public/js/ui/components.js`，样式在 `css/components.css` 的 `.role-tag`；管理员金色底、开发者蓝灰底；`null`/未知什么都不渲染）。已挂到：**大厅**右上角自己的名字与账号浮层、`在线玩家` 浮层每行、`公开同盟 / 正在模拟` 的悬浮提示、**房间**座位与观战席、**对局内**（观战席、队伍面板、策略决策顺序、复核等待的队友进度、特殊选择的决策顺序）、**结算**卡片、**标题页/大厅账号面板**（`AccountWho`）、**管理页**账号表。
+- **显示**：新组件 `<RoleTag role=…>`（`public/js/ui/components.js`，样式在 `css/components.css` 的 `.role-tag`）——**一字标签**（管 / 开；管理员金底、开发者蓝灰底；悬浮提示给完整名；`null`/未知什么都不渲染）。已挂到：**大厅**右上角自己的名字与账号浮层、`在线玩家` 浮层每行、`公开同盟 / 正在模拟` 的悬浮提示（这里用完整名）、**房间**座位与观战席、**对局内**（观战席、队伍面板、策略决策顺序、复核等待的队友进度、特殊选择的决策顺序）、**结算**卡片、**标题页/大厅账号面板**（`AccountWho`）、**管理页**账号表（「身份」列用完整名）。
 - **不用重启即生效**：角色存在账号上，服务器在**该账号下次登录 / hello** 时取到（`Session` 的旧值随登录刷新）；管理页的账号列表则是每次请求现读。
 - 测试：`test/auth.test.js`（setRole 赋值 / 清除 / 未知角色 / 无此账号、`resolve` 带 role）、`test/admin.test.js`（两个快照带 role、`hostRole`），以及既有断言里 `publicAccount` 的形状。
 - 结果：全量 `node --test` **绿**。
+
+## 27. 自造特质的层数：一切以特质文本为准（2026-10-06/07）
+
+> 报告：**「本局禁用」的盟约层数一直是 0**（当时两个自造特质的层数增益被写死成「要求已激活」）。
+
+- **根因**：`server/sim/content/garrisons/battle.js` 里给**予愿安洁莉娜**和**结城理**两个自造特质写的层数增益，把 `requireActive` **写死**成 `true`。引擎规则（`sim/content/support/index.js` `gainLayers`）是：`requireActive` 为真时只有**已激活**（`tier ≥ 1`）的盟约才吃层数 —— 「本局禁用」的盟约永远不会激活，于是恒为 0。
+  - 这也解释了当时截图里的怪现象：她的特质**一次调用同时给 `swiftShip,skillfulShip`**，引擎**逐个盟约**判定 → 迅捷（2 名 ≥ 阈值 2，已激活）叠到 12 层，灵巧（本局禁用）被跳过恒为 0。
+- **修法（一劳永逸）**：两个处理器改成 `requireActive: requireActiveOf(it.g)` —— **一切以特质文本为准**（规则在 `garrisons/meta.js`：「已激活 / 激活且」→ 真；「无需激活盟约」或都没提 → 假），不再在代码里写死。文本怎么写，行为就怎么走。
+- **文本对齐官方（2026-10-07）**：两个特质的描述按官方原文补上「**使已激活的**」：
+  - 予愿安洁莉娜：「攻击范围内每有 3 名敌方单位处于缚地、浮空或恐惧状态：使已激活的【叙拉古】层数+2，【迅捷】层数+1，【灵巧】层数+1；每消耗 8 发子弹：使已激活的【迅捷】层数+1，【灵巧】层数+1」（数据里两段以换行分隔）
+  - 结城理：「每转换一次替身，使已激活的【拉特兰】层数+2，【不屈】层数+2；干员被击倒时【不屈】层数+1」
+  → `requireActiveOf` 现在判为**真**：这两个特质**只给已激活的盟约加层数**，「本局禁用 / 未激活」的盟约**不再吃到**（与官方文本一致）。**改文本即改行为，这是刻意的**。
+- **读取类（`stepsOf`）**：「每叠加 N 层，本干员 +X%」这类**读取**层数的特质（阿斯卡纶的自造 `attrByBond`、官方 `garrison_09/10` 等 34 条）同样按 `requireActiveOf(it.g)` 判定；这 34 条文本都**没有**「已激活」→ 不要求激活，**未激活 / 本局禁用盟约的层数也计入**。测试期望随之更新（迷迭香 (25+6+30+10)/3 = 23 × 2%）。
+- **「本局禁用」盟约的层数进入战斗**：新增 `PlayerState.battleBonds()`：战斗输入的 `bonds` 除 `computeBonds`（可激活的盟约）外，还把 `offBondCounts` 的**本局禁用**盟约以**未激活条目**（`active:false, tier:0, layers`；联防 `reached` 时带待结算层数）带进战斗。所有盟约效果都以 `tier ≥ 1` 为门（`content/bonds/*` 的 `makeState` / `install` / `bondActive`）→ 它们仍**不会激活**；`computeBonds` 与面板 / 条带（灰色「本局禁用」盘 + 层数）行为不变。这样来自**「无需激活盟约」**来源的层数（官方如 灵知 / 星熊 的「自身所属盟约层数+N（无需激活盟约）」、以及各类 `requireActive:false` 的来源）能被读取类与条带看到。
+- **结算 / 校验侧**无需改动：`server/match/fields.js` 的 `layerBondsOf()` 从干员 chess 记录就认得出 `skillfulShip`（本局禁用也认），`layerAllowanceOf()` 对无 `max_add_count_per_battle` 的特质给 `Infinity`，浏览器端算出的层数不会被判伪。
+- 测试：`test/content/garrisons_battle.test.js` 两个自造特质的用例都用**未激活盟约（`B(0, false)`）断言拿不到层数**（`使已激活的`），另覆盖「本局禁用盟约随战斗输入进入战斗」。
+- 结果：全量 `node --test` **exit=0**。
+
+## 28. 管理页：通知推送（2026-10-07）
+
+> 需求：管理页除了看用户，还要能把消息**推送给所有登录用户**；并且**每次更新 / 重启服务前都先推一条通知**，署名为 **d星空之下**。
+
+- **入口**：`/admin?token=…`（令牌见 `var/admin-token.txt`，启动日志里也有 Admin 链接）。页首新增「**通知**」面板：内容（≤300 字，带实时字数）、**署名**（默认 `d星空之下`）、范围（**仅已登录账号** / 全部在线含游客）、**发送通知**；下面是**发送历史**（时间 / 内容 / 署名 / 送达人数）。
+- **接口**：`POST /admin/api/notify?token=…`，body `{ text, sign?, scope? }` → `{ ok, sent, notice }`。令牌校验与 `/admin`、`/admin/api/state` 完全相同（query / `x-admin-token` / `sp_admin` cookie）；**只接受 POST**（其余 405），body 上限 16 KB（超出直接销毁连接），空内容 → 400。
+- **推送**：`Lobby.broadcastNotice()`（`server/lobby.js`）把 `sys.notice { id, text, sign, at }` 发给**当前在线**的会话 —— 默认只发 `accountId != null`（已登录账号），`scope:'all'` 连游客一起发。历史保留最近 20 条（`this.notices`），并随 `buildSnapshot` 出现在 `/admin/api/state` 的 `notices` 里。
+- **客户端**：`main.js` 收到 `sys.notice` → 写入 `store.notice` + 弹一条 toast；`ui/notice.js` 的 `<NoticeBanner>`（挂在 App 根部，`ConnectionBanner` 旁）在**顶部居中**显示一条可关闭的通知条（内容 + `—— 署名` + 知道了），大厅与对局内都能看到；`z-index` 在连接条之上、弹窗之下（`calc(var(--z-conn) + 2)`）。
+- **常量**：`shared/constants.js` 的 `NOTICE_MAX_LEN = 300` / `NOTICE_HISTORY = 20`；`sys.notice` 已登记进 `shared/protocol.js` 的 S2C 列表。
+- **运维约定**：以后**每次部署 / 重启前**先推一条通知，署名 `d星空之下`。示例文案：
+  - `服务器将在 5 分钟后重启更新，请尽快结束当前对局；更新完成后刷新页面即可。`
+  - 命令行等价（服务器本机）：
+    `curl -s -X POST "http://127.0.0.1:3000/admin/api/notify?token=$(cat var/admin-token.txt)" -H 'Content-Type: application/json' -d '{"text":"服务器将在 5 分钟后重启更新，请尽快结束当前对局","sign":"d星空之下"}'`
+- 测试：`test/admin.test.js`（令牌 / 方法 / 空内容拦截、默认只发已登录、`scope:'all'` 含游客、`sys.notice` 帧内容、历史顺序与人数）。
+- 结果：全量 `node --test` **exit=0**。
