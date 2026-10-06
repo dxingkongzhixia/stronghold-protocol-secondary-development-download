@@ -758,3 +758,38 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - `render/issue25-downback`：Die 剪辑检查跳过 `build_` 占位模型。
 
 **上线**：按约定先经 `/admin/api/notify` 推送通知（署名 `d星空之下`，`ok:true`）→ 重启本机服务；`/healthz` 正常，`/sim/content/kits/tier6.js` 已含新 kit，`/data/chess.json` 与头像/技能图标/棋子头像均 200。
+
+## 31. 自造干员：澄闪（待开工，2026-10-07）
+
+> 需求：新增干员**澄闪**，盟约 **维多利亚 + 精准**（`victoriaShip` / `preciShip`），特质**整备能力**「**购买费用为 1**」，**3 阶**，其余从网上拉。
+
+### 31.1 研究结果（已核对官方数据）
+
+| 项 | 值 |
+|---|---|
+| charId | **`char_377_gdglow`**（澄闪） |
+| 星级 / 职业 | 6★ 术师 · **驭械术师 `funnel`**（浮游炮 / 无人机机制） |
+| 本作定位 | **3 阶**（模式商店阶，与干员星级无关） |
+| 盟约 | **维多利亚 `victoriaShip`** + **精准 `preciShip`** |
+| 特质 | **整备能力**「购买费用为 1」 |
+| 现状 | **不在本作数据里**（模式名册无 `gdglow`）→ 按**自造干员**流程注入 |
+
+**特质沿用现成处理器**：项目已有 **`SERVER_CHESS_PRICE`**（`bb.price` = 相对该阶原价的**折扣**）。先例是**至简**（`garrison_13_a/b`，`price:2`：3 阶原价 3 → **1**）。澄闪同样配 `price` 让 3 阶价变 1，**无需新模拟代码**（`docs/MATCHMAKING.md` §3 / `garrisons/meta.js` 的 `SERVER_CHESS_PRICE` 说明）。
+
+### 31.2 待做（照 `docs/NEW-OPERATOR.md` 流程，小步执行）
+
+- [ ] **1. 数据**：`tools/build-data.mjs` 的 `CUSTOM_CHESS` 加 `char_377_gdglow`：3 阶、E2（`normal/_a` skillLevel 4、`golden/_b` skillLevel 7）、`bonds: ['victoriaShip','preciShip']`、默认技能位、`garrison`：
+  - `eventTypeDesc: '整备能力'`、`desc: '购买费用为1'`、`blackboard: [{key:'key',valueStr:'SERVER_CHESS_PRICE'}, {key:'price',value:2}]`（3 阶价 3 → 1）。
+  - 构建后 `visibleChess 116 → 117`。
+- [ ] **2. 技能 / kit**：拉官方三技能数值；**先确认重构对 `funnel`（浮游炮）的支持程度**（若机制落在召唤机/浮游炮上，可能需按望的棋子那样新写一套引擎件；若只是改数值/范围则复用 `altSkills` 即可）→ 写 `kits/tier3.js` 的 `chess_char_377_gdglow_a`。
+- [ ] **3. 美术 / 语音**：`docs/research/07-assets.json` 加他（头像、立绘、技能图、脊柱；含浮游炮 token 若有）→ `node tools/fetch-assets.mjs --asset-source=mirror`。
+- [ ] **4. 测试计数**：`data.test.js`（116→117）、`{ui,match,sim}/loadout` 名册、`match/pool` 概率、`ui/feedback1b-bonds`（维多利亚/精准成员）、token 列表等 → 全量 `node --test` 绿。
+- [ ] **5. 上线**：文档勾选 → **先推通知（署名 d星空之下）→ 再重启**。
+
+### 31.3 相关上下文（换新会话也够用）
+
+- 流程总纲：`docs/NEW-OPERATOR.md`（数据 / kit / 美术 / 测试 / 文档 / 上线）
+- 前例参考：望（`§30`，含自定义机制与棋子 token）、结城理（`§24`/`§29`）、阿斯卡纶（`§23`）、予愿安洁莉娜（`§25`）
+- 计数钉子：`visibleChess` 的期望值在 `tools/build-data.mjs`（现在 116，加了澄闪后要改 117）
+- 服务器：`ssh root@183.66.27.19 -p 45217`；线上路径 `/www/wwwroot/Stronghold-Protocol`；重启 = 杀 `:3000` pid 后 `su -s /bin/bash www -c 'setsid /www/server/nodejs/vhost/scripts/server.sh'`
+- 部署规矩：**先推通知（管理页 `/admin` 的「通知」面板，署名 d星空之下）→ 再重启**；静态文件（`public/**`）改动可不重启，但 `shared/`、`server/**` 改动需要重启。
