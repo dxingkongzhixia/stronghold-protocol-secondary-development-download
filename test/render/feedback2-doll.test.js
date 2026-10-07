@@ -328,9 +328,10 @@ describe('结城理\'s <替身> (FORMS doll / doll2 / doll3 / doll3b)', () => {
       assert.ok(f, `FORMS.${MAK}.${form} exists`);
       for (const n of [f.change, f.end, f.leave, f.roles.idle, f.roles.die].filter((x) => x != null)) assert.ok(n in front, `${form}: ${n} in the skeleton`);
       for (const n of names) assert.ok(n in front, `${form}: ${n}`);
-      // the S1 / S3-P1 dolls attack; the S2 / S3-P2 ones never do (their sets have no Attack clip)
-      if (form === 'doll' || form === 'doll3') assert.ok(f.roles.attack && f.roles.attack.loop in front, `${form}: the 替身 attacks`);
-      else assert.equal(f.roles.attack, null, `${form}: the 替身 never attacks`);
+      // every persona that swings carries its attack clip (S1 极速送达, S2 重力自定义 — its one Loop IS its attack — and
+      // S3-P1 塔纳托斯); only the S3 second <替身> (俄耳甫斯) draws none: the kit disarms it (a support persona)
+      if (form === 'doll3b') assert.equal(f.roles.attack, null, `${form}: the disarmed support 替身 never attacks`);
+      else assert.ok(f.roles.attack && f.roles.attack.loop in front, `${form}: the 替身 attacks`);
       assert.equal(f.leave, 'Start', `${form}: the 本体 comes back`);
     }
     assert.ok(!/Doll_/.test(JSON.stringify(assets.chars[MAK].spine.front.anims)), 'no Doll_ clip in the base roles');
@@ -353,5 +354,28 @@ describe('结城理\'s <替身> (FORMS doll / doll2 / doll3 / doll3b)', () => {
       assert.ok(u.alive && u.trait.dollNo === 2, 'S3: the second <替身> instead of a knock-out');
       assert.equal(u.form, form2, 'S3: the transformed doll form');
     }
+  });
+
+  // The regression the report describes: while the skill runs (so the skill flag is on and the persona is out) the
+  // persona that attacks must play ITS attack clip. S1 / S3-P1 did; S2's persona attacked in the sim (the kit's
+  // max_target / fear / execute hit) but had no attack role, so the actor stayed in its idle — its attack animation was
+  // lost. S3's second <替身> (俄耳甫斯) is disarmed by the kit, so it draws none.
+  test('the actor plays each swinging persona\'s attack clip while the skill runs; the disarmed second <替身> does not', async () => {
+    for (const [form, want, skillIndex] of [['doll', 'Doll_Skill_1_Attack', 0], ['doll2', 'Doll_Skill_2_Loop', 1], ['doll3', 'Doll_Skill_3_P1_Attack_A', 2]]) {
+      const v = await op(MAK, { skillIndex });
+      v.setForm(form, { dur: 20 });
+      v.setSkill(true);
+      secs(v, 1.2);                       // the switch clip plays out
+      v.onAttack(null, 3);
+      assert.equal(clip(v), want, `${form}: the 替身's attack clip, not its idle`);
+      assert.equal(v.actor.mode, 'attack', `${form}: the attack mode while the skill runs`);
+    }
+    const b = await op(MAK, { skillIndex: 2 });
+    b.setForm('doll3b', { dur: 20 });
+    b.setSkill(true);
+    secs(b, 1.2);
+    b.onAttack(null, 3);
+    assert.equal(clip(b), 'Doll_Skill_3_P2_Loop', 'doll3b: no attack clip of its own (the support persona)');
+    assert.notEqual(b.actor.mode, 'attack', 'doll3b: it does not enter attack mode');
   });
 });

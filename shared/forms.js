@@ -97,12 +97,14 @@ export const FORMS = Object.freeze({
       leave: 'Start',
       roles: dollRoles('Doll_Skill_1_Idle', 'Doll_Skill_1_Die', 'Doll_Skill_1_Attack'),
     }),
-    // 重力自定义 S2: a looping doll that never attacks (the set has no Idle / Attack clip)
+    // 重力自定义 S2 (塔纳托斯): the set has no separate Idle / Attack clip — its one Loop IS both, and the persona DOES
+    // attack (the kit's max_target / fear / execute hit), so the attack plays that Loop; without the attack role the
+    // actor stayed in its idle while the sim swung (the persona "lost" its attack animation)
     doll2: Object.freeze({
       change: 'Doll_Skill_2_SwitchIn',
       end: 'Doll_Skill_2_Die',
       leave: 'Start',
-      roles: dollRoles('Doll_Skill_2_Loop', 'Doll_Skill_2_Die'),
+      roles: dollRoles('Doll_Skill_2_Loop', 'Doll_Skill_2_Die', 'Doll_Skill_2_Loop'),
     }),
     // 酸橙的心事 S3, first <替身> (塔纳托斯): the complete P1 set — it has no death clip of its own, it TRANSFORMS
     // (P1toP2_ChangeEnd), which is what the sim does when it is knocked out (dollLives)
