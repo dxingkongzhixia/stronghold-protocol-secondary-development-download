@@ -15,7 +15,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GEO } from '../../shared/constants.js';
 import { parseStage } from '../../public/js/render/tiles.js';
-import { classifyStage, AREAS, ROWS, COLS } from '../../public/js/render/board3d/layout.js';
+import { classifyStage, buildBoard, AREAS, ROWS, COLS } from '../../public/js/render/board3d/layout.js';
+import { SURFACES } from '../../public/js/render/board3d/atlas.js';
+import { GLYPH, TILEKEY_GLYPH } from '../../public/js/render/style.js';
+import { MATERIALS } from '../../public/js/render/textures.js';
 import { viewKind, boardArea, bandFor, fieldRows } from '../../public/js/render/app/view.js';
 import { Battle } from '../../server/sim/Battle.js';
 import { DataSource } from '../../server/sim/simdata.js';
@@ -102,4 +105,35 @@ describe('联防 board (the unite field always draws a board)', () => {
     assert.equal(battle.stageId, 'empty', 'no stage requested → the empty sentinel stays');
     assert.equal(battle.stageResolved, false);
   });
+});
+
+// The two escaped maps use the official road-half vocabulary (tile_forbidden / tile_road / tile_floor / tile_start /
+// tile_end / tile_telin / tile_telout) — a different tileKey set from the round stages. Each glyph in `rows` (and each
+// legend tileKey) must resolve through render/style.js GLYPH / TILEKEY_GLYPH to a 2D MATERIALS material AND a 3D
+// SURFACES surface, and the 3D unite area must build real geometry: a mapping gap here would show the reported
+// "board renders but the terrain content is missing (units still drawn)".
+describe('联防 maps: every tile they use resolves to renderer art', () => {
+  for (const id of ['act1autochess_escaped_single', 'act1autochess_escaped_multi']) {
+    test(`${id}: row glyphs and legend tileKeys resolve to 2D + 3D art; the 3D unite area builds terrain`, () => {
+      const s = stages[id];
+      const chars = new Set();
+      for (const row of s.rows) for (const ch of row) chars.add(ch);
+      for (const ch of chars) {
+        assert.ok(GLYPH[ch], `${id}: row glyph ${JSON.stringify(ch)} is in GLYPH`);
+        assert.ok(MATERIALS.includes(GLYPH[ch].mat), `${id}: ${ch} → 2D material ${GLYPH[ch].mat}`);
+      }
+      for (const [ch, def] of Object.entries(s.tiles)) {
+        const mapped = GLYPH[ch] ? ch : TILEKEY_GLYPH[def.tileKey];
+        assert.ok(mapped && GLYPH[mapped], `${id}: legend ${JSON.stringify(ch)} (${def.tileKey}) maps to a glyph`);
+        assert.ok(MATERIALS.includes(GLYPH[mapped].mat), `${id}: legend ${JSON.stringify(ch)} → 2D material`);
+      }
+      const G = classifyStage(s, AREAS.unite);
+      let drawn = 0;
+      for (const row of G) for (const t of row) if (t.drawn) { drawn++; assert.ok(SURFACES[t.surf], `${id}: ${t.r},${t.c} → 3D surface ${t.surf}`); }
+      assert.ok(drawn > 0, `${id}: the 3D unite area classifies drawn tiles`);
+      const b = buildBoard(s, { area: AREAS.unite });
+      assert.ok(b.buckets.board.vertexCount > 0, `${id}: the 3D board builds terrain vertices`);
+      assert.ok(b.gates.length > 0, `${id}: gates are built`);
+    });
+  }
 });
