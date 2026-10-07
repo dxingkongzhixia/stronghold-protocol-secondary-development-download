@@ -985,10 +985,11 @@ function wangTalent2(unit) {
 export function wangStone(bb) {
   const scale = num(bb['attack@atk_scale'] ?? bb.atk_scale, 0);
   const slug = num(bb['attack@sluggish'] ?? bb.sluggish, 0);          // S1: 停顿 duration
-  const dot = num(bb['attack@dot_atk_scale'] ?? 0, 0);               // S1: the per-second arts DoT
+  const dot = num(bb['attack@dot_atk_scale'], scale);               // S1: the per-second arts scale (the data has none ⇒ the burst's)
   const slow = num(bb['attack@move_speed'] ?? bb.move_speed, 0);      // S2: the slow (negative)
   const slowDur = num(bb['attack@duration'] ?? bb.duration, 0);
-  const side = Math.max(0, Math.floor(num(bb.tile_count, 3)));        // S2: tiles on each side of the link
+  // S2 连星 "对连线方向上**两侧**3格范围内的敌人": the data `tile_count` counts BOTH sides (6 ⇒ 3 each), not each side.
+  const side = Math.max(0, Math.floor(num(bb.tile_count, 6) / 2));
   return {
     skill: {
       kind: 'passive',
@@ -1013,7 +1014,14 @@ export function wangStone(bb) {
           if (slowDur > 0 && slow < 0) battle.applyStatus(t, 'sluggish', { duration: slowDur, source: unit, mods: { moveMul: Math.max(0.1, 1 + slow) } });
         }
         if (hit && slug > 0) battle.applyStatus(hit, 'sluggish', { duration: slug, source: unit });
-        if (hit && dot > 0) battle.addBuff(hit, { key: 'wang:dot', duration: slug || 6.5, source: unit, tick: 1, mods: null });
+        // S1 取势 "每秒受到相当于望攻击力的 105 % 的法术伤害, 持续 6.5 秒": a per-second DoT buff — the engine's tick is
+        // `interval` + `onTick` (a `mods: null` buff with a `tick` field deals nothing, which silently dropped the DoT).
+        if (hit && slug > 0 && dot > 0 && scale > 0) {
+          battle.addBuff(hit, {
+            key: 'wang:dot', duration: slug, interval: 1, refresh: 'extend', source: unit, visible: false,
+            onTick: ({ unit: x }) => battle.dealDamage(unit, x, { amount: ownerAtk(unit) * dot, type: 'arts', isSkill: true, tags: ['summon', 'trap', 'dot'] }),
+          });
+        }
         // the blast fx: a range trigger (S3) may have no touched tile — report the first victim instead of `hit.id`
         const victim = hit || (targets.length ? targets[0] : null);
         battle.fx('champagneBomb', { x: unit.x, y: unit.y, id: unit.id, target: victim ? victim.id : null, hits: 1, consumed: true });
