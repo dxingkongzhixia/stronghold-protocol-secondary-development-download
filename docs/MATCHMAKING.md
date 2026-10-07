@@ -936,7 +936,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 - **决策**：`CUSTOM_CHESS` 里她的 `defaultSkillIndex` 由 **2（S3 破梏重生）** 改为 **1（S2 保护性拒止）**。
 - **依据**：owner 指定。S3 只是她的「战术锚点」技能，仍作为**可选中技能**保留（`skills[]` 三条都在，`overrideTokenKey` 不变）。
-- **文件**：`tools/build-data.mjs`（`CUSTOM_CHESS`）；重算 `data/chess.json` 与 `data/tokens.json`（她的 token 变体的默认与 `bySkill` 跟随 owner 的默认技能：`token_10068_kalts2_mtship` 默认变 `sktok_mtship_2`）。`test/content/chess_kalts2.test.js` 不受影响（它显式传 `skillIndex`）。
+- **文件**：`tools/build-data.mjs`（`CUSTOM_CHESS`）；重算 `data/chess.json` 与 `data/tokens.json`（她的 token 变体的默认与 `bySkill` 跟随 owner 的默认技能：`token_10068_kalts2_mtship` 默认变 `sktok_mtship_2`）。测试：`test/content/chess_kalts2.test.js` 新增「默认技能 S2」用例、`field()` 默认不传 `skillIndex`（即走生产默认）；`test/match/feedback5-we2-placement.test.js` 的战术锚点用例改为**显式选 S3**（默认已不是 S3，否则战术锚点不进手牌）。
 - **验证**：`chess_char_1052_kalts2_a` / `_b` 的 `skill.skillId = skchr_kalts2_2`，`skills[]` 恰好一个 `isDefault` 且等于它（`build-data.mjs` 自检）。
 - **golden 归属证明**：本改动使 roster 4 / bonds 13 / fields 5 / matches 12 个场次移动（她以默认技能上场时换了技能）。按老办法：**只回退本改动**（保留 §35.6 的修）重算 golden = **零差异**；恢复后恰为上述差异 → 全部归因于默认技能改变。`diy` / `standins` 不变（它们走自选 kit / 补位，不读商店默认技能）。
 - **诚实保留**：默认技能改变会牵动 bot 的上场 / 时序，`coop3-ABYSS-5`、`coop4-ABYSS-7` 的最终阵容因此**才首次出现她**；这是级联，不是新机制。
