@@ -730,6 +730,9 @@ export function resolveProfile(def, kitTrait = null) {
   // a boomerang thrower (回环射手) always throws its boomerang: the data's generic ranged projectile ('arrow', a
   // build-data default) would turn the out-and-back flight into a plain shot
   if (p.boomerang && p.attack === 'ranged') p.projectile = 'boomerang';
+  // the funnel (驭械术师) fires its 浮游单元: the data's generic ranged projectile ('bolt', a build-data default) would draw
+  // every drone as a cast bolt, so the SUB table's `projectile: 'drone'` wins (render/style.js PROJ.drone)
+  if (p.sub === 'funnel' && p.attack === 'ranged') p.projectile = 'drone';
   if (def.type === 'token') {
     if (p.dmgType === 'heal') p.heal = p.heal || { mode: 'single' };
     if (def.stats.atk <= 0) p.noAttack = true;

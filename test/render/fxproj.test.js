@@ -212,6 +212,30 @@ describe('shots', () => {
   });
 });
 
+describe('驭械术师 funnel drones', () => {
+  test('PROJ.drone draws the atlas `drone` pod frame, upright, one per locked target (澄闪 S3: three)', () => {
+    assert.equal(PROJ.drone.look, 'drone', 'its own look, not a dart');
+    assert.equal(PROJ.drone.speed, SIM.PROJECTILE_SPEEDS.drone);
+    const { frames } = T.fxFrames();
+    assert.deepEqual(frames.drone.slice(2), [64, 64], 'a 64² atlas frame (kept off its neighbours)');
+    const a = unit(1, 3, 10), b = unit(2, 8, 11, { isEnemy: true }), c = unit(3, 8, 12, { isEnemy: true }), d = unit(4, 7, 12, { isEnemy: true });
+    const { fx } = makeFx({ views: [a, b, c, d] });
+    // 澄闪 S3 lands one 'atk' event per locked enemy (sim ai.js performAttack): three drones at once
+    fx.attack(a, b, 'drone');
+    fx.attack(a, c, 'drone');
+    fx.attack(a, d, 'drone');
+    assert.equal(fx.projs.length, 3, 'one drone per locked target');
+    for (const pr of fx.projs) {
+      assert.equal(pr.core.texture, fx.tex.drone, 'the flying sprite is the drone frame');
+      assert.equal(pr.shadow.visible, false, 'a hovering drone leaves no ground shadow');
+    }
+    const pr = fx.projs[0];
+    fx.update(DT);
+    fx.update(DT);
+    assert.equal(pr.core.rotation, 0, 'kept upright (a pod flies level, unlike a boomerang that spins)');
+  });
+});
+
 describe('回环射手 boomerang', () => {
   test('out at the boomerang speed, back to where the thrower is now at the return speed, caught there', () => {
     FX.setSimProjectileSpeeds({ ...SIM.PROJECTILE_SPEEDS, boomerang: 15 }, 3.75);

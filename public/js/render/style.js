@@ -123,7 +123,8 @@ export const HIT_TINT = Object.freeze({ phys: 0xffd9a0, arts: 0xc77dff, true: 0x
  * Projectile visuals per b.ev 'atk' projKind (sim: none | arrow | bolt | bomb | lob | orb | drone | enemy | boomerang | droneBomb;
  * chain / chainHeal / beam are beams). Drawn by render/fx.js:
  *   look   tracer (bullet streak + muzzle flash) | orb (glowing ball, particle trail) | shell (lobbed on an arc with a
- *          ground shadow, smoke trail) | dart (small fast bolt) | boomerang (spins to the target and back to the thrower)
+ *          ground shadow, smoke trail) | dart (small fast bolt) | drone (a small hovering 浮游单元 pod flying out to
+ *          its locked target — 驭械术师) | boomerang (spins to the target and back to the thrower)
  *   speed  tiles per game second — a copy of the sim's PROJECTILE_SPEEDS (server/sim/constants.js; `back` of the
  *          boomerang = BOOMERANG_RETURN_SPEED, PRTS 跃跃: out 15, back 3.75). fx.js prefers the sim's own values, loaded
  *          from /sim/constants.js, so the visual flight ends with the sim's hit; this copy stands in until then (and in
@@ -141,7 +142,10 @@ export const PROJ = Object.freeze({
   orb: { look: 'orb', speed: 10, tint: 0xeafff0, glow: 0x3fe07a, len: 0.55, width: 0.3, head: 0.48, trail: 0x62f08a, muzzle: 0x62f08a, hit: 'heal' },
   bomb: { look: 'shell', speed: 8, tint: 0xffeed0, glow: 0xff8a3d, len: 0.85, width: 0.3, head: 0.56, trail: 0xff9c4a, arc: 1.1, smoke: 0x2e2824, muzzle: 0xffb35c, hit: 'boom' },
   lob: { look: 'shell', speed: 8, tint: 0xfff4dc, glow: 0xffb04a, len: 0.7, width: 0.26, head: 0.5, trail: 0xffc27a, arc: 1.4, smoke: 0x3a322c, muzzle: 0xffc27a, hit: 'splash' },
-  drone: { look: 'dart', speed: 16, tint: 0xe4fbff, glow: 0x57c9ff, len: 0.7, width: 0.16, head: 0.3, trail: 0x57c9ff, hit: 'zap' },
+  // 驭械术师 浮游单元 (professions.js SUB.funnel `projectile: 'drone'`): one small pod sprite per locked target —
+  // the drone itself darts to the enemy (never a cast bolt). Core = the atlas `drone` frame (a hovering pod), leaving
+  // a faint cyan wake; the sim's hit lands with the arrival burst ('zap').
+  drone: { look: 'drone', speed: 16, tint: 0xe4fbff, glow: 0x57c9ff, len: 0.5, width: 0.3, head: 0.62, trail: 0x57c9ff, hit: 'zap' },
   enemy: { look: 'orb', speed: 10, tint: 0xffe2da, glow: 0xff3b30, len: 0.55, width: 0.28, head: 0.44, trail: 0xff4a3a, muzzle: 0xff6a5a, hit: 'enemy' },
   boomerang: { look: 'boomerang', speed: 15, back: 3.75, tint: 0xfff4d6, glow: 0x9ff0dc, len: 0.4, width: 0.3, head: 0.5, trail: 0x9ff0dc, hit: 'spark' },
   // 暴鸰's bomb (sim content/enemies/fly.js kitBombd; official projectile_bombd, speed 5): dropped from the drone, it falls

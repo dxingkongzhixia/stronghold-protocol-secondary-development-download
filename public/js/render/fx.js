@@ -2,7 +2,8 @@
 //
 //   projectiles  b.ev 'atk' by projKind (render/style.js PROJ): sniper tracers with a muzzle flash; arts / heal / enemy
 //                orbs with a particle trail; bombs and lobs as shells on an arc with a ground shadow, a smoke trail and
-//                an explosion; drone darts; 回环射手 boomerangs that spin out to the target and back to the thrower's
+//                an explosion; 驭械术师 浮游单元 pods kept upright as they hover out; 回环射手 boomerangs that spin out
+//                to the target and back to the thrower's
 //                current position, gone when caught. Flight times from the sim's projectile speeds (/sim/constants.js
 //                PROJECTILE_SPEEDS — the visual lands with the sim's hit), homing on the interpolated target; a burst
 //                per kind on arrival; chain lightning (chain / chainHeal) and beams as short-lived jagged lines

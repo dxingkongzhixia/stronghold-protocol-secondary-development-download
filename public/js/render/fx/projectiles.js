@@ -119,7 +119,7 @@ export class FxProjectiles {
     halo.texture = this.tex.glow;
     halo.tint = pr.glow;
     halo.visible = true;
-    core.texture = this.tex[look === 'boomerang' ? 'boomerang' : thin ? 'dot' : 'orb'];
+    core.texture = this.tex[look === 'boomerang' ? 'boomerang' : look === 'drone' ? 'drone' : thin ? 'dot' : 'orb'];
     core.tint = spec.tint;
     core.rotation = 0;
     core.visible = true;
@@ -170,6 +170,7 @@ export class FxProjectiles {
     let fk = 0;
     if (pr.hit) { pr.fade += dt; fk = pr.fade / SHOT_FADE; if (fk >= 1) return false; }
     const p = this._shotPoint(pr, k, cam, this._p);
+    if (look === 'drone') p.y -= Math.sin(pr.t * 6.5 + pr.spin) * p.s * 0.05;   // a floating pod bobs as it hovers out
     const kb = Math.max(0, k - (pr.arc ? 0.12 : 0.25));
     const q = this._shotPoint(pr, kb, cam, this._q);
     const s = p.s, px = p.x, py = p.y;
@@ -192,6 +193,7 @@ export class FxProjectiles {
     core.position.set(px, py);
     if (thin) core.scale.set((hs * 0.5) / 32);
     else if (look === 'shell') { core.rotation = pr.ang; core.scale.set((hs * 0.85) / 64, (hs * 0.55) / 64); }   // a shell along its flight
+    else if (look === 'drone') core.scale.set(hs / 64);   // 驭械术师 浮游单元: a 64² pod, kept upright as it hovers out
     else core.scale.set((hs * 0.62) / 64);
     core.alpha = 1 - fk;
     if (look === 'shell') {

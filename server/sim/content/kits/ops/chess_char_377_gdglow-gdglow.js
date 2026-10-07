@@ -41,6 +41,9 @@ export default {
       for (let dr = -(ROWS - 1); dr <= ROWS - 1; dr++) for (let dc = -(COLS - 1); dc <= COLS - 1; dc++) g.push([dr, dc]);
       return g;
     })();
+    // `bb` is the SELECTED skill's blackboard (content/index.js `selectSkillSpec` calls the kit with `def.skill.bb`).
+    // The default `skill:` below is only ever used for the default skill (S3 澄净闪耀), so it must read `bb` — its own
+    // record's `attack@cnt` (+2 drones ⇒ 3 with the profession's base 1) and `attack@sluggish` (停顿 on hit).
     const drones = (b2) => 1 + Math.floor(num(b2 && b2['attack@cnt'], 0));
     const stunOnHit = (b2) => {
       const sl = num(b2 && b2['attack@sluggish'], 0);
@@ -52,7 +55,7 @@ export default {
         kind: 'duration', duration: num(d.skill && d.skill.duration, 30),   // 澄净闪耀: the official 30s
         mods: { atkPct: num(bb.atk) },
         targeting: { rangeGrid: wholeField, canHitFly: true },   // 整个战场
-        attack: { maxTargets: drones(null), ...(stunOnHit(null) || null) },
+        attack: { maxTargets: drones(bb), ...(stunOnHit(bb) || null) },
       },
       skills: altSkills(chess, d, bb, {
         skchr_gdglow_1: (s) => ({

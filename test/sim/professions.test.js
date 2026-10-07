@@ -283,6 +283,12 @@ test('loopshooter: the boomerang flies out (15 tiles/s), hits on arrival, flies 
   }
 });
 
+test('funnel (驭械术师): the data\'s generic bolt never replaces the drone projectile', () => {
+  const p = resolveProfile({ profession: 'CASTER', subProf: 'funnel', attackKind: 'ranged', dmgType: 'arts', projectile: 'bolt', traitBb: {} });
+  assert.equal(p.projectile, 'drone', "SUB.funnel's 'drone' wins over the data's 'bolt' (a build-data default)");
+  assert.equal(PROJECTILE_SPEEDS.drone, 16);
+});
+
 test('loopshooter: a target killed mid-flight is not hit, the boomerang still comes back; a knocked-out thrower gets a fresh one on redeploy', () => {
   const h = makeBattle({
     defs: { chess: { t_loop: LOOP() }, enemies: { enemy_dummy: dummy(), enemy_dummy2: dummy({ key: 'enemy_dummy2', hp: 1e7 }) } },

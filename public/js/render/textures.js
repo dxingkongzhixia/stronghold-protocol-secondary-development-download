@@ -695,9 +695,9 @@ let _fx = null;
  * (the light pillar once ran into the status-icon row, so every skill / deploy pillar carried the 'silence' and 'slow'
  * icons at its foot) and each drawing stays off its cell's outer pixel (mipmapped sampling of a small sprite must not
  * pull in a neighbour). Frame sizes are part of the API — sprites are scaled by them: glow / soft / ring / hex / shock /
- * reticle / smoke / flare 128², spark / plus / orb / chevron / boomerang / muzzle 64², coin 48², dot / shard / square
- * 32², streak / tracer / bolt 128×32 (head at the right), slash 128×64 (arc bulging up), pillar 64×256 (foot at the
- * bottom).
+ * reticle / smoke / flare 128², spark / plus / orb / chevron / boomerang / muzzle / drone 64², coin 48², dot / shard /
+ * square 32², streak / tracer / bolt 128×32 (head at the right), slash 128×64 (arc bulging up), pillar 64×256 (foot at
+ * the bottom).
  */
 const FX_DRAW = {
   glow: [0, 0, 128, 128, (c, x, y, w) => { radial(c, x + w / 2, y + w / 2, w / 2, [[0, 'rgba(255,255,255,1)'], [0.25, 'rgba(255,255,255,0.6)'], [1, 'rgba(255,255,255,0)']]); }],
@@ -867,6 +867,31 @@ const FX_DRAW = {
     const g = c.createLinearGradient(0, y, 0, y + h);
     g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
     c.fillStyle = g; c.fillRect(x + 1, y, w - 2, h);
+  }],
+  // 驭械术师 浮游单元 (PROJ.drone): the official drone-caster's floating unit is an effect-based pod that hovers by its
+  // master and darts to its locked target (no standalone sprite/spine ships in the client: see the attack prefabs
+  // dyn/battle/prefabs/[uc]projectiles/projectile_chr_*_funnel* + the effect dyn/battle/prefabs/effects/*_token_01).
+  // Drawn white — render/style.js PROJ.drone tints it cyan and keeps it upright (a hovering pod, never rotated to its
+  // flight) — as a rounded fuselage with two swept rotor arms and a glowing core over a faint thruster wash.
+  drone: [960, 160, 64, 64, (c, x, y, w) => {
+    const cx = x + w / 2, cy = y + w / 2 + 2;
+    radial(c, cx, cy + 16, 13, [[0, 'rgba(255,255,255,0.45)'], [1, 'rgba(255,255,255,0)']]);   // thruster wash below
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 3;                                    // swept rotor arms
+    for (const sx of [-1, 1]) {
+      c.beginPath(); c.moveTo(cx + sx * 4, cy - 1); c.lineTo(cx + sx * 17, cy - 11); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,0.55)';
+      c.beginPath(); c.ellipse(cx + sx * 18, cy - 12, 9, 3.5, 0, 0, Math.PI * 2); c.fill();      // rotor discs
+    }
+    c.fillStyle = '#fff';                                                                         // fuselage
+    c.beginPath(); c.ellipse(cx, cy + 3, 8.5, 12, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.35)';                                                       // cockpit shade
+    c.beginPath(); c.ellipse(cx, cy - 1, 5.5, 6, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fff';                                                                         // glowing core
+    c.beginPath(); c.arc(cx, cy + 2, 3, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 2;                                    // antenna
+    c.beginPath(); c.moveTo(cx, cy - 9); c.lineTo(cx, cy - 16); c.stroke();
+    c.beginPath(); c.arc(cx, cy - 17, 2.2, 0, Math.PI * 2); c.fill();
   }],
 };
 

@@ -23,12 +23,12 @@
       "killed": 20,
       "total": 20,
       "unspawned": 0,
-      "bossHpLeft": 326507,
+      "bossHpLeft": 326992,
       "rngDraws": 680,
       "errors": {"count":0,"kinds":[]},
       "players": {
         "p1": {"killed":20,"total":20,"perfect":true,"leaks":0,"leaksUncounted":0,"coins":0,"dmg":1824002,"bossDmg":1527237,"heal":20983,"deaths":1,"layerGains":{}},
-        "p2": {"killed":0,"total":0,"perfect":true,"leaks":0,"leaksUncounted":0,"coins":0,"dmg":2144638,"bossDmg":1746256,"heal":51791,"deaths":2,"layerGains":{}}
+        "p2": {"killed":0,"total":0,"perfect":true,"leaks":0,"leaksUncounted":0,"coins":0,"dmg":2144154,"bossDmg":1745771,"heal":51791,"deaths":2,"layerGains":{}}
       },
       "units": [
         ["p1",1,"op","chess_char_6_03_b",2,"uniequip_002_yu",3430,1,14,0,0,2104,4866,0,1],
@@ -39,7 +39,7 @@
         ["p1",6,"op","chess_char_6_02_b",2,"uniequip_002_sbell2",143.22,1,20,4,706096,12000,3712,66,3],
         ["p1",7,"op","chess_char_6_04_b",2,"uniequip_002_skadi2",1598,1,24,0,94242,13491,6209,0,6],
         ["p1",8,"op","chess_char_6_05_b",2,"uniequip_002_pasngr",967.4,1,12,0,0,2258,0,0,0],
-        ["p1",9,"op","chess_char_6_08_b",2,"uniequip_002_reed2",1668,1,26,3,407371,2198,5295,140,4],
+        ["p1",9,"op","chess_char_6_08_b",2,"uniequip_002_reed2",1668,1,26,4,407371,2198,5295,140,4],
         ["p1",10,"op","chess_char_6_09_b",0,"uniequip_002_cello",1322,1,73,0,250103,2354,406,35,35],
         ["p1",11,"token","token_10017_skadi2_dedant",null,null,130.4,0,28,0,0,0,0,0,null],
         ["p2",12,"op","chess_char_6_15_b",2,"uniequip_002_qiubai",1502.55,1,70,9,839499,16594,0,186,4],
@@ -50,7 +50,7 @@
         ["p2",17,"op","chess_char_6_13_b",1,"uniequip_002_angel2",3211.75,1,21,2,607487,7065,2139,340,7],
         ["p2",18,"op","chess_char_6_14_b",2,"uniequip_002_lumen",2050.92,1,25,0,0,1783,4571,65,1],
         ["p2",19,"op","chess_char_6_16_b",2,"uniequip_002_halo2",1439,1,13,0,0,1045,0,0,0],
-        ["p2",20,"op","chess_char_6_18_b",2,"uniequip_002_whitw2",1541,1,77,5,331423,1652,0,45,3],
+        ["p2",20,"op","chess_char_6_18_b",2,"uniequip_002_whitw2",1541,1,77,4,330939,1652,0,45,3],
         ["p2",21,"op","chess_char_6_20_b",2,"uniequip_002_agoat2",1631.88,1,23,0,0,1636,45081,44,2],
         ["p2",22,"token","token_10030_mlyss_wtrman",null,null,2062,1,9,0,3532,0,0,96,1],
         ["-","~1","device","trap_1105_accrate",null,null,100,1,1,0,0,0,0,0,null],
@@ -95,13 +95,13 @@
         "enemy_1005_yokai": [4,4,0,0,3200],
         "enemy_1006_shield_2": [14,14,0,22239,601974],
         "enemy_1061_zomshd": [2,2,0,1785,89910],
-        "enemy_9013_acstmk": [1,0,0,37087,3273493],
+        "enemy_9013_acstmk": [1,0,0,37087,3273008],
         "enemy_9016_acstmr": [8,8,0,0,64]
       },
-      "hooks": [1,52,6000,1440,1440,3094,3460,5106,31,48,79,72,268,36330,1211,12,29,0,1,40,0,11,0],
-      "events": {"atk":1714,"deploy":46,"die":48,"dmg":3132,"engage":20,"fx":498,"heal":498,"skill":157,"spawn":76,"status":705},
+      "hooks": [1,52,6000,1440,1440,3093,3459,5106,31,48,79,72,268,36330,1211,12,29,0,1,40,0,11,0],
+      "events": {"atk":1714,"deploy":46,"die":48,"dmg":3131,"engage":20,"fx":498,"heal":498,"skill":157,"spawn":76,"status":705},
       "fx": {"airstrike":89,"beam":54,"blessing":1,"blink":2,"burst":11,"copy":1,"dp":5,"drone":209,"droneLock":24,"drones":3,"firewall":1,"garrisonGrant":4,"link":1,"lure":3,"phase":1,"radiantSword":4,"scorchBurst":12,"shell":8,"snow":21,"split":9,"steal":7,"summon":9,"sunBurst":1,"talent":6,"tide":6,"undying":1,"wanted":5},
-      "snaps": "767ce6a2 4f59ba0c 166571ae 6a3fd421 9ab1cc65 3bce3b30 24ef785e 5c983506 18fbf361 bb360403 2919ebd3 cd096bda 7b970c02 00b60f08 6449fecd accbaffc 019161e2 19ce850b 805e7a2a 721e5b3e"
+      "snaps": "b99a32e4 98301d75 7fbd6d67 aeccebec 6002bfb6 eff907ea be9674e1 b5508a27 5c27ca7c 5bc92340 5461fb49 67fa67a4 748de298 c506ecfa d790a251 115fe3a5 0b6b1444 23ad85a8 5f4e970c 86efa8c4"
     },
     "boss-boss_1-solo": {
       "about": "假想敌：胄 solo pool 1800000: chess_char_5_08_b chess_char_5_11_b chess_char_5_01_b chess_char_5_05_b chess_char_5_06_b chess_char_5_07_b chess_char_5_02_b chess_char_5_03_b chess_char_5_10_b chess_char_5_12_b",
