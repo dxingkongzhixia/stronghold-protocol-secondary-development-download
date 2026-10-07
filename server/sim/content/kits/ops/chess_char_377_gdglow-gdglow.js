@@ -28,8 +28,10 @@ const copyGrid = (g) => (Array.isArray(g) && g.length ? g.map((p) => [p[0], p[1]
 
 export default {
   // ---- 3_377 澄闪 · 驭械术师 funnel (custom: tools/build-data.mjs CUSTOM_CHESS). 浮游单元: the profession's
-  //      installFunnel + this file's funnelMap ramp each lock; its DRONE COUNT is the number of simultaneous targets
-  //      ("耶拉的 2 个浮游单元各自锁一个目标；1 个 = 职业默认"), so `浮游单元+N` = attack.maxTargets +N. S1 火花四溅 adds
+  //      installFunnel holds ONE locked target (its funnelTarget, switching only after that enemy dies) and this file's
+  //      funnelMap ramp scales each lock, so her drones all focus that one enemy. Their COUNT is the number of FULL-ATK
+  //      hits per attack ("异格拉普兰德 (荒芜拉普兰德): 浮游单元+1 = one more drone hit per attack"), i.e. `attack.hits` +N,
+  //      NOT `attack.maxTargets` (which would split the volley across different enemies — wrong). S1 火花四溅 adds
   //      ASPD, S2 电流翻涌 widens the range (持续无限), S3 澄净闪耀 stops her own attack, fires at the whole field and
   //      its drones 停顿 what they hit.
   chess_char_377_gdglow_a: (bb, chess, def) => {
@@ -55,7 +57,7 @@ export default {
         kind: 'duration', duration: num(d.skill && d.skill.duration, 30),   // 澄净闪耀: the official 30s
         mods: { atkPct: num(bb.atk) },
         targeting: { rangeGrid: wholeField, canHitFly: true },   // 整个战场
-        attack: { maxTargets: drones(bb), ...(stunOnHit(bb) || null) },
+        attack: { hits: drones(bb), ...(stunOnHit(bb) || null) },
       },
       skills: altSkills(chess, d, bb, {
         skchr_gdglow_1: (s) => ({
@@ -64,7 +66,7 @@ export default {
           // its OWN record's range (the alt-spec audit builds this spec with either skill selected, so it must not read
           // the currently selected skill's grid)
           targeting: { rangeGrid: copyGrid(s.rangeGrid) },
-          attack: { maxTargets: drones(s.bb), ...(stunOnHit(s.bb) || null) },
+          attack: { hits: drones(s.bb), ...(stunOnHit(s.bb) || null) },
         }),
         skchr_gdglow_2: (s) => ({
           // 电流翻涌 持续无限: the sim's `duration` kind ends a skill whose duration is <= 0 on the next tick; `toggle`
@@ -72,7 +74,7 @@ export default {
           kind: 'toggle',
           mods: { atkPct: num(s.bb.atk) },
           targeting: { rangeGrid: copyGrid(s.rangeGrid) },
-          attack: { maxTargets: drones(s.bb), ...(stunOnHit(s.bb) || null) },
+          attack: { hits: drones(s.bb), ...(stunOnHit(s.bb) || null) },
         }),
       }),
     };
