@@ -18363,7 +18363,14 @@
    },
    "battleSpineDefault": null,
    "battleSpineSkinVariantsOnly": [],
-   "sfx": {}
+   "sfx": {
+    "ON_UNIT_BORN": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_imp/p_imp_stwctptkin.mp3"
+    ],
+    "ON_UNIT_DEAD": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/battle/b_char/b_char_tokendead.mp3"
+    ]
+   }
   },
   "token_10071_aglna2_agairp": {
    "name": "一会儿见！",
