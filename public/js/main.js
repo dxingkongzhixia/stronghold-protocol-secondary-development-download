@@ -43,7 +43,7 @@ import { BOOT_VIDEO, collectArtUrls, preloadImages } from './preload.js';
 import { data } from './data.js';
 import { GAME_FILES } from './ui/gameComponents.js';
 import { TitleScreen, sanitizeName } from './screens/title.js';
-import { LobbyScreen, rememberRoom, parseRoomParam } from './screens/lobby.js';
+import { LobbyScreen, parseRoomParam } from './screens/lobby.js';
 import { RoomScreen } from './screens/room.js';
 import { GameScreen } from './screens/game.js';
 import { installAudio } from './audio.js';
@@ -197,9 +197,6 @@ function onRoomState(msg) {
   // A (new) match starts: forget the previous match's state so stale results never show.
   if (room.inMatch && !(prevRoom && prevRoom.inMatch && prevRoom.code === room.code)) store.set({ match: emptyMatch() });
   store.set({ room });
-  // Only hand-made / 同盟密钥 rooms are remembered for re-joining; a 野排 (auto) room is transient and its code is
-  // not an alliance key the player ever shared.
-  if (room.mode === 'coop' && !room.auto && typeof room.code === 'string') rememberRoom(room.code);
   maybeFinishRestore();
 }
 

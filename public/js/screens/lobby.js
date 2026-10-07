@@ -1,5 +1,5 @@
 // Lobby screen: pick 独立模拟 / 同盟模拟 and a difficulty (标准/险境/绝境/终极), create a room,
-// or join one with a 同盟密钥 (recent codes remembered) — as a player (加入同盟) or in one of its MAX_SPECTATORS
+// or join one with a 同盟密钥 — as a player (加入同盟) or in one of its MAX_SPECTATORS
 // spectator seats (观战: room.spectate, also while its match runs; community report #26, a remake feature — the
 // official room has none). Shows connection status + ping.
 //
@@ -156,18 +156,6 @@ export function parseRoomParam(search) {
   }
 }
 
-/** Recently joined/created co-op room codes (most recent first). */
-export function recentRooms() {
-  const list = loadPref('recentRooms', []);
-  return Array.isArray(list) ? list.filter((c) => typeof c === 'string' && CODE_RE.test(c)).slice(0, 4) : [];
-}
-
-/** @param {string} code */
-export function rememberRoom(code) {
-  if (!CODE_RE.test(code)) return;
-  savePref('recentRooms', [code, ...recentRooms().filter((c) => c !== code)].slice(0, 4));
-}
-
 const FALLBACK_TIPS = [
   N_('联合模拟在选择策略时可以进行一次跳过'),
   N_('调度中心即使冻结，依然可以主动刷新'),
@@ -255,7 +243,6 @@ export function LobbyScreen() {
   const [busy, setBusy] = useState(null);
   // 公开同盟 (lobby 03 → server /online/api `openRooms`): whether a new 同盟 room is listed publicly. Persisted.
   const [isPublic, setIsPublic] = useState(() => loadPref('lobby.public', true) !== false);
-  const [recent] = useState(recentRooms);
   const alive = useRef(true);
   const inFlight = useRef(false); // synchronous guard against double clicks (state updates are async)
   useEffect(() => () => { alive.current = false; }, []);
@@ -362,12 +349,6 @@ export function LobbyScreen() {
             <${Tooltip} text=${t('以观战者身份进入：不占博士席位，只能观看（每个同盟最多 {MAX_SPECTATORS} 名，模拟进行中也可进入）', { MAX_SPECTATORS })}>
               <${Button} variant="secondary" size="lg" icon="eye" class="join-spectate" loading=${busy === 'spectate'} disabled=${!codeOk || !online} onClick=${spectate}>${t('观战')}<//>
             <//>
-          </div>
-          <div class="join-foot">
-            ${recent.length ? html`<span class="t-lo">${t('最近的同盟')}</span>
-              ${recent.map((c) => html`<button key=${c} type="button" class="code-chip num" title=${t('填入密钥（不会直接加入）')}
-                onClick=${() => setCode(c)}>${c}</button>`)}`
-              : html`<span class="t-dim">${t('向同伴索取 {ROOM_CODE_LEN} 位同盟密钥，或直接打开邀请链接', { ROOM_CODE_LEN })}</span>`}
           </div>
           <${PublicAlliances} onJoin=${(c) => { setCode(c); join(c); }} onSpectate=${(c) => { setCode(c); spectate(c); }} />
         <//>

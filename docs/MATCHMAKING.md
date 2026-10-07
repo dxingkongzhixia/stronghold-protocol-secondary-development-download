@@ -126,7 +126,7 @@
 ### 野排 ≠ 同盟密钥（两条独立流程，别混）
 
 - **同盟密钥**：手建房（`room.create`）得到房间码，或凭码 `room.join` 加入。房间**长期存在**、对局结束后**保留**可再来一局；房间界面显示 **「同盟密钥」**（复制密钥 / 邀请链接）。
-- **野排**：`mm.join` 进池 → 匹配成功由 `createMatchedRoom` 建**临时房**（`room.auto=true`）。**不显示同盟密钥、不进「最近同盟」**（`room.js` 对 auto 房显示「野排队伍 · 对局结束后自动解散」而非 `InviteBox`；`main.js` 只对非 auto 房 `rememberRoom`）；对局结束**自动解散**，想再玩重新排队。
+- **野排**：`mm.join` 进池 → 匹配成功由 `createMatchedRoom` 建**临时房**（`room.auto=true`）。**不显示同盟密钥**（`room.js` 对 auto 房显示「野排队伍 · 对局结束后自动解散」而非 `InviteBox`）；对局结束**自动解散**，想再玩重新排队。
 - 代码上全靠 `room.auto` 区分：`room.state` 带 `auto`，客户端据此决定 UI，服务端据此决定是否解散。
 - 两者**互斥**：在池里就不能在房里、反之亦然（`mmJoin` 先退房；`create` / `join` 先退池）。
 
@@ -184,7 +184,7 @@
 |---|---|
 | `public/js/net.js` | 账号 token 进出 `hello`；`authRegister/authLogin/mmJoin/mmCancel/setAccountToken`；`randomGuestName()` |
 | `public/js/store.js` | `auth` / `mm` 状态切片 |
-| `public/js/main.js` | `auth.ok/error`、`mm.state`、`room.closed{matched-end}` 接线；token 持久化；**重连/会话重置清排队态**；标题页临时 `hello`；**仅非 auto 房 `rememberRoom`** |
+| `public/js/main.js` | `auth.ok/error`、`mm.state`、`room.closed{matched-end}` 接线；token 持久化；**重连/会话重置清排队态**；标题页临时 `hello` |
 | `public/js/screens/title.js` | **重做**：博士代号=账号名；`AccountBox` 折叠登录/注册；空代号→游客随机代号进入 |
 | `public/js/screens/lobby.js` | 「搜寻队友」按钮 + `MmOverlay`；游客徽标；**「在线 N」徽标 + 游戏内 `OnlineOverlay`**；**「公开同盟」`PublicAlliances`（4s 轮询 `/online/api` 的 `openRooms`，最多 3 个密钥、点击即加入）**；**建房 `公开 / 不公开` 二选一（`lobby.public`）**；账号弹窗；返回时退池 |
 | `public/js/screens/room.js` | 野排房不再显示「同盟密钥」，改「野排队伍 · 对局结束后自动解散」；「同盟密钥」框显示 **公开 / 仅密钥** 徽标（`room.public`） |
@@ -217,7 +217,7 @@
 
 - **公开在线数据** `/online/api`（**免令牌**）：返回当前在线玩家（名字 / 是否登录 / 状态 / 房间）+ **可加入的同盟房间 `openRooms`**（`[{ code, difficulty, difficultyName, host, humans }]`，只含**房主设为公开**、**手建 coop、未开局、有空位**的房间，按人数降序、最多 12 条），**不含账号列表、IP、最后登录**；由大厅顶栏「在线 N」徽标的**游戏内浮层** `OnlineOverlay` 每 4s 拉取。**没有独立网页版**（数据来自 `server/admin.js` 的 `buildPublicSnapshot`）。
 - **建房可见性（公开 / 不公开）**：大厅「创建同盟」按钮上方有 `公开 / 不公开` 二选一（`public/js/screens/lobby.js`，仅同盟模式显示，选择记忆在 `lobby.public`）；创建时作为 `room.create.public` 发送（`shared/protocol.js` 的**可选**布尔字段，**缺省＝公开**）。服务端存进 `room.public`（`server/lobby.js`：**单人房恒为 `false`**；野排房 `false`；`toState().public` 下发），房间屏「同盟密钥」框据此显示 **公开 / 仅密钥** 徽标（`public/js/screens/room.js`）。**只有 `public:true` 的手建同盟房才会进 `openRooms`。**
-- **公开同盟（大厅「加入同盟」区）**：`public/js/screens/lobby.js` 的 `PublicAlliances` 同样 **4s 异步轮询** `/online/api`，把 `openRooms` 里**最多 3 个**密钥显示为 `code-chip`（悬停看「难度 · 人数/4 · 房主」），**点一下即填入密钥并加入**——与「最近的同盟」（本地记录）并列、互不影响；无公开房间时整行不渲染。
+- **公开同盟（大厅「加入同盟」区）**：`public/js/screens/lobby.js` 的 `PublicAlliances` 同样 **4s 异步轮询** `/online/api`，把 `openRooms` 里**最多 3 个**密钥显示为 `code-chip`（悬停看「难度 · 人数/4 · 房主」），**点一下即填入密钥并加入**；无公开房间时整行不渲染。
 - **在线 / 离线判定**（`server/net.js presenceOnline`，`/admin`、`/online/api`、`/healthz` 与大厅徽标同源）：socket 连着即在线；**游客断线立即离线**；**登录用户断线后保留"在线"5 分钟**（`PRESENCE_GRACE_MS`，覆盖刷新 / 网络抖动）再离线。
 - **管理页访问**：`http://<主机>:3000/admin?token=<令牌>`；令牌在 `var/admin-token.txt`（首次启动随机生成），启动日志会打印完整链接（`Admin: http://localhost:3000/admin?token=…`）。无 / 错令牌 → `403`。首次用 `?token=` 打开会下发一个 30 天的 HttpOnly cookie，之后裸链 `/admin` 也可访问。
 - **数据接口**：`GET /admin/api/state?token=…` → `{ now, counts, queue, verify, rooms, accounts, online }`（页面每 2 秒自取一次）；`verify` 是 `SP_VERIFY` 抽检计数（复算 / 不一致 / 拒收 / 接管）。公开在线数据另见 `/online/api`。
@@ -376,7 +376,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 大厅「加入同盟」面板下方两行（`public/js/screens/lobby.js` 的 `PublicAlliances`，4 s 轮询）：
   - **公开同盟**（`openRooms`）→ 点击**加入**；
   - **正在模拟**（`playRooms`）→ 点击**观战**（`room.spectate`）。
-- 原来的本地「最近的同盟」行已移除（它的位置就是上面的「正在模拟」）。
+- 本地「最近的同盟」行**已于 2026-10-07 下架**（见 §22；此前一直保留）。
 - 🐞 顺带修掉一个崩溃：`screens/lobby.js` 用了 `ERR.*` 却没 import `ERR` → 点「观战」报 `ERR is not defined`。
 
 ### 17.2 观战席：紧凑下拉，不占地方
@@ -533,17 +533,25 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 ## 22. 不采纳的上游改动（合并黑名单，2026-10-06）
 
-> 合并上游时**一律跳过**下列改动：即便上游再次提交/更新它们，也保持本仓库现状——冲突时**以我们为准**，必要时合并后再 `git revert`。
+> 合并上游时**一律跳过**下列改动：即便上游再次提交/更新它们，也保持本仓库现状——冲突时**以我们为准**，必要时合并后再 `git revert`。**我们下架的自有功能**（表内「我们自己的功能」一行）同理：**不要恢复 / 不要合并**。
 
 | 上游 | 内容 | 为什么不采纳 | 我们保留的行为 |
 |---|---|---|---|
 | **#149**（commit `ede8e7e`，issue #142「盟约条可折叠 / The bond bar can be folded」） | 盟约条加「收起／展开盟约」折叠按钮：收起时隐藏整个列表并关掉由它打开的浮层，只留一个 44×44 的恢复按钮 | **收起/展开很突兀**（用户 2026-10-06 反馈），不想为手机让位牺牲观感 | 盟约条**常驻**、居中，没有折叠按钮 |
+| **最近的同盟**（**我们自己的功能**，非上游） | lobby「加入同盟」区顶部一行「最近加入/创建过的同盟密钥」快捷芯片（本地记录，`sp.pref.recentRooms`；`public/js/screens/lobby.js` 的 `recentRooms` / `rememberRoom` + `public/js/main.js` 的记忆调用） | **owner 2026-10-07 要求下架**：不需要这排「最近」芯片 | **已整段删除**；「加入同盟」输入框 + 加入 / 观战、`公开同盟`、`正在模拟` 保留 |
 
 **回退内容**（#149 的痕迹已全部清除，`grep -r "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip"` 无命中）：
 - `public/js/screens/game.js`：删掉 `bondsCollapsed` state、`.bonds-toggle` 按钮、`#match-bond-strip` 包裹 div → 还原为直接渲染 `<BondStrip>`。
 - `public/css/screens/game.css`：`.gm__bonds` 去掉上游的 `align-items:flex-start; gap`（保留我们的 `display:flex; justify-content:center`）；删掉 `.gm__bond-list` 与 `.bonds-toggle*` 规则。
 - `docs/design/client.md`（合并前是 `docs/DESIGN.md` 的界面段）/ `docs/PLAYING.md`：删掉 #149 的两段说明。
 - `test/ui/bond-collapse.e2e.test.js`：删除（该 E2E 专测折叠）。
+
+**另有我们独有的「最近的同盟」（非上游，2026-10-07 下架）**：
+- `public/js/screens/lobby.js`：删掉 `recentRooms()` / `rememberRoom()` 两个导出、`const [recent] = useState(recentRooms)`，以及「加入同盟」面板里的 `.join-foot` 最近芯片行（含「填入密钥（不会直接加入）」提示与空态提示）。
+- `public/js/main.js`：删掉 `rememberRoom` 的 import 与 `room.code` 的记忆调用。
+- 4 个语言包（`public/i18n/{en,ja,ko,zh-TW}.json`）删掉只剩它用的 3 条 msgid：`最近的同盟`、`填入密钥（不会直接加入）`、`向同伴索取 {ROOM_CODE_LEN} 位同盟密钥，或直接打开邀请链接`。
+- 无测试覆盖它（`grep -rl 'recentRooms\|rememberRoom\|最近的同盟' test/` 无命中）。
+- 自查：`grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test` 应无命中。
 
 **下次合并怎么自查**：`git log -S bondsCollapsed -- public/js/screens/game.js` 能看出上游是否又把它加回来；一旦 `.gm__bonds` 相关块冲突，取我们的版本。
 
@@ -844,6 +852,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **Option A —— 商店棋子以我们为准**：上游把同名 5 人做成「自选干员」（`ops/op-{ascln,gdglow,narant,aglna2,wang}.js` 及其 `test/content/op_*.test.js`）与我们的商店棋子重复，**移除上游那 5 份**，保留我们的商店棋子；`data/backups.json` 的 `diy.ownedPool`（现 66 人）与 `KITTED_CHARS`（83）自然只认「有 kit 的自选干员」。
 - **盟约条（bondStrip）用我们的**：弹窗里**隐藏**本局被禁用的盟约成员（`shown` / `hiddenCount`），不采用上游「照常显示 + 禁用角标」的版本。
 - **#149 盟约收起 继续排除**（见 §22 黑名单）：合并后 `grep -r "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server` **无命中**，未回归；上游 `public/js/screens/game.js` 的折叠逻辑未取。
+- **下架我们独有的「最近的同盟」**（lobby「加入同盟」区的最近同盟快捷列表）：owner 2026-10-07 决定去掉——代码、本地持久化与 3 条 msgid 全删（见 §22 黑名单）。
 
 ### 33.2 结构搬迁（上游拆文件，我们的改动跟着搬）
 
@@ -855,7 +864,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 ### 33.3 i18n 扫尾（我们的字符串）
 
 - 上游 i18n 扫尾（`t()`）之后，补齐我们**新增 / 保留**中文字符串的包裹：跨 **12 个文件**用 `t()`；模块级常量表保持 `N_()`（`shared/constants.js` 的 `ERR_TEXT` / `ROLES` / `ROLE_NAMES`、`ui/account.js` 的 `AUTH_ERR_TEXT`、`screens/lobby.js` 的 `ONLINE_STATUS`），展示处再 `t()`；`server/admin.js` / `server/index.js` 标 `i18n-ignore`（运维页 / 双语错误页，非玩家文案）。
-- `public/i18n/en.json` **+119 msgid（1041→1160）**；`node tools/i18n.mjs check en --strict` **100%（1140/1140，0 缺失 0 错误）**；`test/i18n.test.js` / `i18n-packs.test.js` / `i18n-data.test.js` 全绿。
+- `public/i18n/en.json` **+119 msgid**（合并时 1041→1160；2026-10-07 下架「最近的同盟」再 −3 → **1159**）；`node tools/i18n.mjs check en --strict` **100%（0 缺失 0 错误）**；`test/i18n.test.js` / `i18n-packs.test.js` / `i18n-data.test.js` 全绿。
 
 ### 33.4 本地客户端素材（token 战斗 Spine）
 
