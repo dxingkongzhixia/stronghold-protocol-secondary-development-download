@@ -5,6 +5,8 @@
 // pushes (GitHub #87). Eliminated humans and spectator seats follow a player through every phase reset (community
 // report of 2026-10-06, item 56; the official DeadAutoObDn { obIndex, state, preparation }, research 09 §3.1; the idea
 // of PR #189): the player they last watched with a manual g.watch (`watchPref`), else the first player still in.
+// Also the seat handovers: takeOver / releaseSeat (a spectator 夺舍 an AI seat and back) and aiTakeOver (owner's rule:
+// a human who left a running match hands the seat to a bot while another human is still in the room), all on _rekeyPlayer.
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
 import { PHASE, ERR } from '../../../shared/constants.js';
@@ -85,6 +87,43 @@ export class MatchWatch {
     if (!ps || ps.isBot) return false;
     if (typeof aiId !== 'string' || !aiId || this.players.has(aiId)) return false;
 
+    this._seatToAI(ps, aiId, aiName);
+
+    const s = this._spectator(humanId);               // back to watching
+    if (s) this.guard(() => this._resync(s));
+    this.markPublic();
+    return true;
+  }
+
+  /**
+   * A human LEFT a running match while another human is still in the room (owner's rule, server/lobby.js handSeatToAI):
+   * the seat is handed to the AI `aiId` — the whole PlayerState stays (board, gold, pieces, loadout) and
+   * server/match/bot.js plays it on, so the side keeps a full lineup. Unlike releaseSeat the human is gone (no
+   * spectator seat). Called only with another human present; the LAST human leaving goes through onLeave, which ends
+   * the match as 'abandoned'.
+   * @param {string} humanId @param {string} aiId @param {string} [aiName] @returns {boolean} whether it happened
+   */
+  aiTakeOver(humanId, aiId, aiName) {
+    if (this.disposed || this.ended) return false;
+    const ps = this.players.get(humanId);
+    if (!ps || ps.isBot) return false;
+    if (typeof aiId !== 'string' || !aiId || this.players.has(aiId)) return false;
+
+    this._seatToAI(ps, aiId, aiName);
+    // mid-prep the seat was not in enterPrep's bot sweep: let the bot play this round too (else the deadline would
+    // only auto-ready it). Safe in any other phase.
+    if (this.phase === PHASE.PREP && ps.alive && !ps.ready) this.guard(() => this.scheduleBotPrep(ps));
+    this.markPublic();
+    return true;
+  }
+
+  /**
+   * The shared re-key of releaseSeat / aiTakeOver: the PlayerState `ps` (a human's) becomes the AI `aiId`. The
+   * `players` Map, `order` / `loneHuman` and every structure naming the human are re-keyed (`_rekeyPlayer`); the
+   * caller owns the spectator / lobby side.
+   */
+  _seatToAI(ps, aiId, aiName) {
+    const humanId = ps.playerId;
     this.players.delete(humanId);
     ps.playerId = aiId;
     if (aiName) ps.name = aiName;
@@ -96,11 +135,6 @@ export class MatchWatch {
     this.players.set(aiId, ps);
     this.watchers.delete(humanId);
     this._rekeyPlayer(humanId, aiId);
-
-    const s = this._spectator(humanId);               // back to watching
-    if (s) this.guard(() => this._resync(s));
-    this.markPublic();
-    return true;
   }
 
   /**

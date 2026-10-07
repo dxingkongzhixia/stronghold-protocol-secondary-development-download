@@ -46,6 +46,10 @@
 // onLeave(playerId)         The human quit permanently (g.leave, room.leave, or the 10-minute reconnect
 //                           window expired). They will never return under this playerId in this match;
 //                           treat as quit (AI takes over / eliminated per DESIGN). No onDisconnect follows.
+// aiTakeOver(humanId, aiId, aiName) → boolean   The human left a RUNNING match while another human is still in the room
+//                           (owner's rule, server/lobby.js handSeatToAI): the seat becomes the AI `aiId` and keeps the
+//                           state (board/gold); no elimination, no spectator seat. The last human's departure is
+//                           onLeave instead. Optional: the lobby falls back to onLeave when it is absent/false.
 // takeOver(humanId, seat, name) → boolean   A spectator takes over a BOT seat (server/lobby.js room.takeOver): the bot's
 //                           state becomes the human's. Re-key everything named by the old playerId and resend the new
 //                           player its m.public / m.private. A bot seat only trades its AI for a human, so the match
@@ -219,6 +223,28 @@ export class StubMatch {
     p.ready = true;
     this.players.set(aiId, p);
     this.sendFn(humanId, this.publicView());
+    if (!this.ended) this.broadcastFn(this.publicView());
+    return true;
+  }
+
+  /**
+   * The human left a RUNNING match while another human is still in the room (owner's rule, server/lobby.js
+   * handSeatToAI): the seat becomes the AI `aiId` and keeps playing — no elimination, no spectator seat. The LAST
+   * human's departure is onLeave (the stub then finishes).
+   * @param {string} humanId @param {string} aiId @param {string} [aiName] @returns {boolean}
+   */
+  aiTakeOver(humanId, aiId, aiName) {
+    if (this.disposed || this.ended || this.players.has(aiId)) return false;
+    const p = this.players.get(humanId);
+    if (!p || p.isBot) return false;
+    this.players.delete(humanId);
+    p.playerId = aiId;
+    if (aiName) p.name = aiName;
+    p.role = null;
+    p.isBot = true;
+    p.connected = true;
+    p.ready = true;
+    this.players.set(aiId, p);
     if (!this.ended) this.broadcastFn(this.publicView());
     return true;
   }

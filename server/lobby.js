@@ -49,9 +49,14 @@
 //     created from one network may exist at once and at most `maxMatchesPerAddr` matches started from one
 //     network may run at once (room.create / room.start → ERR.RATE). Without them a socket loop could fill
 //     `maxRooms` or keep hundreds of unattended matches simulating for the whole reconnect window.
-//   * Permanent departure during a match (room.leave, g.leave, reconnect window expired): the seat is
-//     marked departed (shown as connected=false), match.onLeave(playerId) is called, and the seat is freed
-//     when the match ends. 'g.leave' is handled here and never reaches match.handle().
+//   * Permanent departure during a match (room.leave, g.leave, reconnect window expired): OWNER'S RULE — while at least
+//     one OTHER human is still in the room the seat is handed to a fresh AI (Match.aiTakeOver: it keeps the whole
+//     PlayerState — board, gold, loadout — and server/match/bot.js plays it on, so the side stays full), and the seat
+//     shows as a bot in room.state. Only when no human seat is left does the seat depart for real (match.onLeave →
+//     elimination / 'abandoned') and the room get disposed ('empty'); an all-AI match never keeps running.
+//     'g.leave' is handled here and never reaches match.handle(). A TRANSIENT disconnect never hands the seat over: the
+//     dropped human keeps the reconnect grace (the seat auto-plays its last lineup meanwhile) and the AI only takes it
+//     once that grace lapses — a reconnect before it returns the seat to the human.
 //   * All other 'g.*' messages go to room.match.handle(playerId, msg); its {ok}/{error} becomes the reply.
 //   * Match lifecycle: room.start → new Match({...}) → room.state (inMatch=true) → match.start(). The match gets
 //     `matchNo` = the room's match number (1, 2, …): with the seed it keeps battleIds unique across the room's
@@ -1270,8 +1275,35 @@ export class Lobby {
   }
 
   /**
+   * Owner's rule (a human left a running match while another human is still in the room): hand the seat to a fresh AI
+   * so the side keeps playing, instead of eliminating it. The match re-keys the whole PlayerState (board, gold,
+   * loadout — Match.aiTakeOver) and the lobby seat becomes the bot. removeMember has already detached the departed
+   * human's session. Returns false when the match offers no takeover (a MatchClass without the optional hook, or one
+   * that already ended), so removeMember falls back to the departed-seat path. The last human leaving never gets here.
+   * @param {Room} room @param {Seat} seat @returns {boolean}
+   */
+  handSeatToAI(room, seat) {
+    if (!room.match) return false;
+    const bot = this.makeBot(room, seat.seat);
+    if (this.callMatch(room, 'aiTakeOver', seat.playerId, bot.playerId, bot.name) !== true) return false;
+    seat.playerId = bot.playerId;
+    seat.name = bot.name;
+    seat.role = null;
+    seat.isBot = true;
+    seat.connected = true;
+    seat.ready = true;
+    seat.fromAi = false;
+    delete seat.loadout;
+    delete seat.notOwned;
+    delete seat.diy;
+    this.log.info(`[lobby] ${room.code} seat ${seat.seat} handed to the AI ${bot.name}`);
+    return true;
+  }
+
+  /**
    * Remove a human from a room permanently (leave, grace timeout, expiry, switching rooms).
-   * In LOBBY the seat is freed; during a match it is marked departed and match.onLeave is called.
+   * In LOBBY the seat is freed; during a match, with another human still in the room, the seat is handed to an AI
+   * (handSeatToAI); only the last human's departure marks the seat departed and calls match.onLeave.
    * @param {Room} room @param {string} playerId
    */
   removeMember(room, playerId) {
@@ -1284,10 +1316,17 @@ export class Lobby {
     const seat = room.seatOf(playerId);
     if (!seat || seat.isBot || seat.left || room.disposed) return;
     if (room.match) {
-      seat.left = true;
-      seat.connected = false;
-      seat.ready = false;
-      this.callMatch(room, 'onLeave', playerId);
+      // Owner's rule: with another human still in the room the seat is handed to an AI and the match goes on (no
+      // elimination); only the last human's departure ends it (abandoned-party / 'empty' below). A match that offers
+      // no takeover (a MatchClass without the hook, or one that already ended) falls back to the departed-seat path.
+      if (room.activeHumans().some((s) => s.playerId !== playerId) && this.handSeatToAI(room, seat)) {
+        // the seat is a bot now: no `left` mark, no onLeave
+      } else {
+        seat.left = true;
+        seat.connected = false;
+        seat.ready = false;
+        this.callMatch(room, 'onLeave', playerId);
+      }
     } else {
       room.seats[seat.seat] = null;
     }

@@ -164,6 +164,37 @@ test('onLeave: quitting counts as elimination (copies back to the pool at once, 
   assert.equal(h.sched.pending(), 0, 'dispose cancels every timer');
 });
 
+test("aiTakeOver (owner's rule): a departing human with another human present becomes a bot (state kept), the match runs on", () => {
+  const h = makeMatch({ mode: 'coop', humans: 2, seed: 70, fake: true }).start();
+  const m = h.m;
+  // reach PREP R1 without readying, so the taken-over seat has a prep left for the bot to play
+  assert.ok(h.drive(() => m.phase === PHASE.PREP && m.round === 1, { ready: false }));
+  const q = h.ps('p_1');
+  const id = chessOfTier(1).find((x) => m.pool.has(x) && m.pool.left(x) >= 1);
+  give(m, q, id);
+  const gold = q.funds;
+  const board = q.board.size;
+  assert.equal(q.ready, false);
+  assert.equal(m.aiTakeOver('p_1', 'ai_x', 'AI·X'), true);
+  assert.equal(m.players.has('p_1'), false, 'the human id is gone');
+  const bot = m.players.get('ai_x');
+  assert.ok(bot && bot.isBot && bot.seat === 1, 'the AI owns the seat');
+  assert.equal(bot.funds, gold, 'gold follows the seat');
+  assert.equal(bot.board.size, board, 'board follows the seat');
+  assert.ok(bot.hand.some(Boolean), 'hand follows the seat');
+  assert.deepEqual(m.handle('ai_x', { t: 'g.ready', ready: true }), { error: ERR.NOT_IN_ROOM }, 'a bot seat produces no intents');
+  assert.equal(h.endedCount, 0);
+  // the seat was mid-prep: aiTakeOver schedules the bot, which plays the prep and readies
+  assert.ok(h.run(() => bot.ready || m.phase !== PHASE.PREP), 'the bot played the prep it was converted in');
+  assert.ok(bot.ready, 'the bot readied the seat');
+  // the match carries on to the next round
+  h.drive(() => m.phase === PHASE.PREP && m.round === 2);
+  assert.equal(h.endedCount, 0, 'the match runs on');
+  assert.equal(m.round, 2);
+  checkInvariants(m);
+  m.dispose();
+});
+
 test('onLeave: a quitter has no place in the Final Assault pairing or the boss pool; its draft turns pass on', () => {
   // band draft: the player on turn leaves → its pick is the default band and the turn moves on
   const h = makeMatch({ mode: 'coop', difficulty: 'FUNNY', humans: 3, seed: 5, fake: true, script: (b) => (b.kind === 'boss' ? { bossDps: 1e9 } : {}) }).start();

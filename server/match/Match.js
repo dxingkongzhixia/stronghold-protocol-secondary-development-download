@@ -59,6 +59,10 @@
 // onLeave(playerId)         The human quit permanently (g.leave, room.leave, or the 10-minute reconnect
 //                           window expired). They will never return under this playerId in this match;
 //                           treat as quit (AI takes over / eliminated per DESIGN). No onDisconnect follows.
+// aiTakeOver(playerId, aiId, aiName) → boolean   (owner's rule; server/lobby.js handSeatToAI) The human left a running
+//                           match while another human is still in the room: the seat's whole PlayerState becomes the AI
+//                           `aiId` (board, gold, loadout kept) and the bot plays it on — no elimination, no spectator
+//                           seat. Optional for the platform; the lobby falls back to onLeave when it is absent/false.
 // dispose()                 Stop every timer/interval and release resources. Idempotent. After dispose the
 //                           platform ignores send/broadcast/onEnd from this instance.
 // addSpectator(id)          (optional for the platform) A spectator seat joined during the match, came back or asked

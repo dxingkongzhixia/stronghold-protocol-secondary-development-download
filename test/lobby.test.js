@@ -933,7 +933,7 @@ describe('websocket lobby', () => {
     assert.equal(seatOf(ready, a.id).connected, true);
   });
 
-  test('g.leave / room.leave during a match departs permanently; seat freed when the match ends', async () => {
+  test('g.leave during a match: a leaver with another human present becomes an AI; the last human disposes the room', async () => {
     const host = await pool.player('Host');
     const st = await createRoom(host);
     const guest = await pool.player('Guest');
@@ -942,22 +942,16 @@ describe('websocket lobby', () => {
     await expectOk(host, { t: 'room.start' });
     await guest.waitFor('m.public');
     await expectOk(guest, { t: 'g.leave' });
-    const st2 = await host.waitFor('room.state', (s) => s.inMatch && seatOf(s, guest.id)?.connected === false);
-    assert.equal(seatOf(st2, guest.id).seat, 1, 'seat kept during the match');
+    const st2 = await host.waitFor('room.state', (s) => s.inMatch && s.seats[1]?.isBot);
+    assert.equal(st2.seats[1].seat, 1, 'seat kept during the match');
+    assert.ok(st2.seats[1].playerId.startsWith('ai_'), 'an AI holds it');
+    assert.equal(seatOf(st2, guest.id), null, 'the human id left the seat');
     await expectError(guest, { t: 'g.infoReady' }, ERR.NOT_IN_ROOM);
     await expectError(guest, { t: 'room.join', code: st.code }, ERR.ROOM_STARTED);
     // the departed player is free to do other things
     await createRoom(guest);
-    // host finishes; stub counts departed players as ready
+    // host leaving a running match with nobody else left disposes the room (its AI teammate included)
     host.clearInbox();
-    await expectOk(host, { t: 'g.infoReady' });
-    const back = await host.waitFor('room.state', (s) => !s.inMatch);
-    assert.equal(seatOf(back, guest.id), null, 'departed seat freed');
-
-    // host leaving a running match with nobody else disposes the room
-    host.clearInbox();
-    await expectOk(host, { t: 'room.start' });
-    await host.waitFor('m.public', (m) => m.phase === 'INFO_CHECK');
     await expectOk(host, { t: 'room.leave' });
     const probe = await pool.player('Probe');
     await expectError(probe, { t: 'room.join', code: st.code }, ERR.ROOM_NOT_FOUND);
@@ -1261,6 +1255,7 @@ class RecordingMatch extends Match {
   onDisconnect(playerId) { this.calls.push(['onDisconnect', playerId]); super.onDisconnect(playerId); }
   onReconnect(playerId) { this.calls.push(['onReconnect', playerId]); super.onReconnect(playerId); }
   onLeave(playerId) { this.calls.push(['onLeave', playerId]); super.onLeave(playerId); }
+  aiTakeOver(humanId, aiId, aiName) { this.calls.push(['aiTakeOver', humanId]); return super.aiTakeOver(humanId, aiId, aiName); }
   addSpectator(playerId) { this.calls.push(['addSpectator', playerId]); }
   removeSpectator(playerId) { this.calls.push(['removeSpectator', playerId]); }
   dispose() { this.calls.push(['dispose']); super.dispose(); }
@@ -1518,7 +1513,7 @@ describe('lobby timers and match interface', () => {
     await host.waitFor('m.public');
   });
 
-  test('reconnect window expiry during a match → onLeave; old token no longer resumes; empty room disposed', async () => {
+  test('reconnect window expiry during a match → the seat goes to an AI (another human present); old token no longer resumes; empty room disposed', async () => {
     const host = await pool.player('Host');
     const st = await createRoom(host);
     const guest = await pool.player('Guest');
@@ -1529,8 +1524,12 @@ describe('lobby timers and match interface', () => {
     const m = RecordingMatch.instances[0];
     await guest.terminate();
     await host.waitFor('room.state', (s) => seatOf(s, guest.id)?.connected === false);
-    await delay(WINDOW + 700);
-    assert.deepEqual(m.calls.filter((c) => c[0] === 'onLeave'), [['onLeave', guest.id]]);
+    // the lapsed grace hands the seat to an AI (the host is still in the room) — no elimination, the match runs on
+    const ai = await host.waitFor('room.state', (s) => s.inMatch && s.seats[1]?.isBot, WINDOW + 900);
+    assert.ok(ai.seats[1].playerId.startsWith('ai_'), 'a fresh AI holds the seat');
+    assert.deepEqual(m.calls.filter((c) => c[0] === 'aiTakeOver'), [['aiTakeOver', guest.id]]);
+    assert.deepEqual(m.calls.filter((c) => c[0] === 'onLeave'), [], 'no elimination while another human is present');
+    assert.equal(m.ended, false, 'the match runs on');
     const back = await pool.connect();
     const w = await back.hello('Guest', guest.token);
     assert.equal(w.resumed, false);
@@ -1541,6 +1540,90 @@ describe('lobby timers and match interface', () => {
     await delay(WINDOW + 700);
     assert.ok(m.calls.some((c) => c[0] === 'dispose'));
     await expectError(back, { t: 'room.join', code: st.code }, ERR.ROOM_NOT_FOUND);
+  });
+
+  // Owner's rule (leave / last-human): docs note this in server/lobby.js. A human who leaves a running match while
+  // another human is in the room hands the seat to an AI; the last human's departure destroys the room (its all-AI
+  // game never keeps running).
+  test("owner's rule: a leaver with another human present hands the seat to an AI, the match runs on", async () => {
+    const host = await pool.player('Host');
+    const st = await createRoom(host);
+    const guest = await pool.player('Guest');
+    await joinRoom(guest, st.code);
+    await expectOk(guest, { t: 'room.ready', ready: true });
+    RecordingMatch.instances.length = 0;
+    await expectOk(host, { t: 'room.start' });
+    const m = RecordingMatch.instances[0];
+    const room = srv.lobby.getRoom(st.code);
+    assert.ok(room.seatOf(guest.id) && !room.seatOf(guest.id).isBot);
+    host.clearInbox();
+    await expectOk(guest, { t: 'g.leave' });
+    const ai = await host.waitFor('room.state', (s) => s.inMatch && s.seats[1]?.isBot);
+    assert.ok(ai.seats[1].playerId.startsWith('ai_'), 'a fresh AI holds the seat');
+    assert.equal(ai.seats[1].connected, true);
+    assert.equal(m.ended, false, 'the match did not end');
+    assert.deepEqual(m.calls.filter((c) => c[0] === 'aiTakeOver').map((c) => c[1]), [guest.id], 'Match.aiTakeOver ran');
+    assert.ok(!m.calls.some((c) => c[0] === 'onLeave'), 'no elimination while another human is present');
+    assert.equal(m.players.has(guest.id), false);
+    assert.ok([...m.players.values()].some((p) => p.isBot && p.seat === 1), 'the AI plays seat 1 in the match');
+    assert.ok(srv.lobby.rooms.has(st.code), 'the room is alive');
+    await expectError(guest, { t: 'g.infoReady' }, ERR.NOT_IN_ROOM);
+    await host.waitFor('m.public'); // the match keeps broadcasting to the human left
+  });
+
+  test("owner's rule: the last human leaving destroys the room, all-AI game included", async () => {
+    const a = await pool.player('A');
+    const st = await createRoom(a);
+    const b = await pool.player('B');
+    await joinRoom(b, st.code);
+    await expectOk(b, { t: 'room.ready', ready: true });
+    RecordingMatch.instances.length = 0;
+    await expectOk(a, { t: 'room.start' });
+    const m = RecordingMatch.instances[0];
+    // B leaves first: another human (A) is present → B's seat becomes an AI and the room survives
+    await expectOk(b, { t: 'g.leave' });
+    await a.waitFor('room.state', (s) => s.inMatch && s.seats[1]?.isBot);
+    assert.equal(m.ended, false);
+    assert.ok(srv.lobby.rooms.has(st.code), 'the room survives the first leaver');
+    // A, the last human, leaves → the match ends and the room (and its all-AI game) is disposed
+    await expectOk(a, { t: 'g.leave' });
+    await delay(50);
+    assert.equal(m.ended, true, 'the match ended');
+    assert.ok(m.calls.some((c) => c[0] === 'onLeave' && c[1] === a.id), 'the last human goes through onLeave');
+    assert.ok(m.calls.some((c) => c[0] === 'dispose'), 'the game was disposed');
+    assert.ok(!srv.lobby.rooms.has(st.code), 'the room is gone from the lobby');
+    const probe = await pool.player('Probe');
+    await expectError(probe, { t: 'room.join', code: st.code }, ERR.ROOM_NOT_FOUND);
+  });
+
+  test("owner's rule: reconnecting before the grace returns the seat (no AI takeover)", async () => {
+    const host = await pool.player('Host');
+    const st = await createRoom(host);
+    const guest = await pool.player('Guest');
+    await joinRoom(guest, st.code);
+    await expectOk(guest, { t: 'room.ready', ready: true });
+    RecordingMatch.instances.length = 0;
+    await expectOk(host, { t: 'room.start' });
+    const m = RecordingMatch.instances[0];
+    // a transient disconnect: the seat is kept for the reconnect window (the AI only takes it once that lapses)
+    await guest.terminate();
+    await host.waitFor('room.state', (s) => seatOf(s, guest.id)?.connected === false);
+    await delay(Math.min(GRACE + 50, WINDOW - 400));
+    assert.equal(m.calls.filter((c) => c[0] === 'aiTakeOver').length, 0, 'no AI while the grace runs');
+    const back = await pool.connect();
+    const w = await back.hello('Guest', guest.token);
+    assert.equal(w.resumed, true);
+    assert.equal(w.playerId, guest.id, 'the SAME human gets the seat back');
+    const rs = await back.waitFor('room.state', (s) => seatOf(s, guest.id)?.connected === true);
+    assert.equal(seatOf(rs, guest.id).isBot, false, 'still a human seat');
+    assert.deepEqual(m.calls.filter((c) => c[0] === 'onReconnect').map((c) => c[1]), [guest.id]);
+    assert.equal(m.ended, false);
+    // let the grace lapse now: the seat goes to an AI
+    await back.terminate();
+    await host.waitFor('room.state', (s) => s.inMatch && s.seats[1]?.isBot, WINDOW + 900);
+    assert.deepEqual(m.calls.filter((c) => c[0] === 'aiTakeOver').map((c) => c[1]), [guest.id]);
+    // cleanup: the last human leaves → the room is disposed
+    await expectOk(host, { t: 'room.leave' });
   });
 
   test('match ending while a human is disconnected gives that human the lobby grace', async () => {
