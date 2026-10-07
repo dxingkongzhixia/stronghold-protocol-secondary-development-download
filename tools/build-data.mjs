@@ -427,6 +427,30 @@ const CUSTOM_CHESS = [
       ],
     },
   },
+  {
+    // 娜仁图亚 (docs/MATCHMAKING.md §32, custom): 6★ 狙击·回环射手 (loopshooter), not in the season's roster. 3 阶;
+    // 单次叠加「<获得时>自身所属盟约层数+6（无需激活盟约）」 rides the existing SERVER_ADD_BOND_CHESS_ALL handler
+    // (official precedent garrison_71_a — 忍冬's trait: SERVER_GAIN, bb {count:6}, icon_bond).
+    charId: 'char_4138_narant',
+    baseId: 'chess_char_4138_narant_a',
+    goldenId: 'chess_char_4138_narant_b',
+    tier: 3,                                     // 3 阶
+    identifier: 950,
+    shopLevelSortId: 96,
+    defaultSkillIndex: 2,
+    defaultUniEquipId: 'uniequip_003_narant',    // FUN-Y「致我们的老大」
+    bonds: ['sargonShip', 'preciShip', 'swiftShip'],   // 萨尔贡 / 精准 / 迅捷
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+    garrison: {
+      eventType: 'SERVER_GAIN',
+      effectType: 'SERVER_ADD_BOND_CHESS_ALL',
+      eventTypeDesc: '单次叠加',
+      eventTypeIcon: 'icon_bond',
+      desc: '<获得时>自身所属盟约层数+6（无需激活盟约）',
+      blackboard: [{ key: 'count', value: 6 }],
+    },
+  },
 ];
 
 /** Merge CUSTOM_CHESS into the official season tables (idempotent). */
@@ -3365,7 +3389,7 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  if (visible.length !== 117) err(`expected 117 visible non-DIY chess, got ${visible.length}`);
+  if (visible.length !== 118) err(`expected 118 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);

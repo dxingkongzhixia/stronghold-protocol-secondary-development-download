@@ -805,3 +805,28 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 计数钉子：`visibleChess` 的期望值在 `tools/build-data.mjs`（澄闪加入后现为 **117**）
 - 服务器：`ssh root@183.66.27.19 -p 45217`；线上路径 `/www/wwwroot/Stronghold-Protocol`；重启 = 杀 `:3000` pid 后 `su -s /bin/bash www -c 'setsid /www/server/nodejs/vhost/scripts/server.sh'`
 - 部署规矩：**先推通知（管理页 `/admin` 的「通知」面板，署名 d星空之下）→ 再重启**；静态文件（`public/**`）改动可不重启，但 `shared/`、`server/**` 改动需要重启。
+
+## 32. 自造干员：娜仁图亚（功能完成，待上线，2026-10-07）
+
+> 需求：新增干员**娜仁图亚**，盟约 **萨尔贡 + 精准 + 迅捷**（`sargonShip` / `preciShip` / `swiftShip`），特质**单次叠加**「获得时自身所属盟约+6（无需激活盟约）」，**3 阶**，其余从网上拉。
+
+### 32.1 研究结果（已核对官方数据）
+
+| 项 | 值 |
+|---|---|
+| charId | **`char_4138_narant`** |
+| 星级 / 职业 | 6★ 狙击 · **回环射手 `loopshooter`**（持有回旋投射物才能攻击，必须回收） |
+| 本作定位 | **3 阶** |
+| 盟约 | **萨尔贡 `sargonShip` + 精准 `preciShip` + 迅捷 `swiftShip`** |
+| 特质 | **单次叠加**「<获得时>自身所属盟约层数+6（无需激活盟约）」→ 官方先例 **`garrison_71_a`**（`SERVER_GAIN` + `SERVER_ADD_BOND_CHESS_ALL` + `bb{count:6}` + `icon_bond`） |
+| 模组 | LPS-X「吹尽狂沙」/ **LPS-Y「致我们的老大」（默认）** |
+| 技能 | S1「旋刃」开关 sp8：攻击距离−1、弹跳 ≤3 次、每发 ×160%；S2「恶魇」sp18：×225% + 停顿 1s，返回时对穿过的敌人 ×170%；**S3「吞日」（默认）**：3 发回旋投射物 ×160%，**全部回收时**对周围 8 格内 ≤3 敌 ×140% + 停顿 1s |
+| 天赋 | 「我见，我得」每次攻击偷取 ATK 27（≤270）/ DEF 21（≤210）· 「婀娜虚影」38% 物法闪避 + 周围 8 格敌人命中 −20% |
+
+### 32.2 实现（照 `docs/NEW-OPERATOR.md`）
+
+- [x] **1. 数据**：`CUSTOM_CHESS` 加 `char_4138_narant`（3 阶、identifier **950**、三条盟约、`defaultUniEquipId: 'uniequip_003_narant'`、`garrison` = `SERVER_GAIN` + `SERVER_ADD_BOND_CHESS_ALL` + `bb{count:6}` + `eventTypeDesc:'单次叠加'` + `eventTypeIcon:'icon_bond'`）。构建自检 `visibleChess 117 → 118`。
+- [x] **2. kit**：`kits/tier3.js` 的 `chess_char_4138_narant_a`——回旋投射物由职业 `loopshooter`（`professions.js installLoopshooter` + `ai.js throwBoomerang`）提供，**无需新引擎件**；S3 的「全部回收」用 `unit.trait.boomerangsOut` 归零轮询触发。
+- [x] **3. 美术 / 语音**：`07-assets.json` 加 `char_4138_narant`（头像/立绘/**技能图标**/脊柱前·后/子职业图标，字节实测）→ `fetch-assets --asset-source=mirror`（含 14 条语音 + 音效）。
+- [x] **4. 计数**：`data.test`（278 / 118 / 分档 3:24）、`{ui,match,sim}/loadout` 118、`match/pool`（118 / 116）、`kits_alt_t3` 24 → 全量 `node --test` 绿。
+- [ ] **5. 上线**：先问 owner → 推通知（署名 `d星空之下`）→ 重启 → 校验。
