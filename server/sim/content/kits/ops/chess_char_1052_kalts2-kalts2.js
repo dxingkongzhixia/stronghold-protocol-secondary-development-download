@@ -1,10 +1,11 @@
-// server/sim/content/kits/ops/op-kalts2.js — 凯尔希·思衡托 (char_1052_kalts2) 自选 operator kit: 6★ 守望者 (医疗), an owned-6★
-// pick of the tier-5 and tier-6 自选 slots; every skill, both talents and the trait at every form (she has no module),
-// and the kit of her summon 战术锚点 (token_10068_kalts2_mtship). Kit contract and the 自选 rules: ../README.md ("How to add
-// an operator (自选)").
+// server/sim/content/kits/ops/chess_char_1052_kalts2-kalts2.js — 凯尔希·思衡托 (char_1052_kalts2) shop-chess kit: 6★
+// 守望者 (医疗), a 4 阶 CUSTOM_CHESS (tools/build-data.mjs CUSTOM_CHESS; docs/MATCHMAKING.md §34) — the operator was an
+// upstream 自选 owned pick, pulled out of that pool so she exists only as this formal chess (docs/DATA.md §18); the kit
+// itself is unchanged from the former op-kalts2.js. Every skill, both talents and the trait at every form (she has no
+// module), and the kit of her summon 战术锚点 (token_10068_kalts2_mtship). Kit contract: ../README.md.
 //
-// Forms (data/backups.json units.char_1052_kalts2): normal = E2 Lv1, skills at rank 4; elite = E2 Lv60, rank 7 (no module,
-// so tiers 5 and 6 field the same elite) — the owner's decision of 2026-10-05. Potential 0 [ASSUMED: no account].
+// Forms (data/chess.json chess_char_1052_kalts2_a/_b): normal = E2 Lv1, skills at rank 4; elite = E2 Lv60, rank 7 (no
+// module). Potential 0 [ASSUMED: no account].
 // Sources: character_table / skill_table / token_table (zh_CN, as built into backups.json); PRTS 凯尔希·思衡托 (T1 备注
 // "治疗效果无视禁疗…除非该目标为Mon3tr(凯尔希的召唤物)", "阻挡范围加成为提升自身的“阻挡半径倍率”属性"; T2 备注 "无视孤立",
 // "“进入”的方式包括…部署时攻击范围碰撞到单位、单位部署在…攻击范围内…2技能攻击范围扩大时额外区域碰撞到的单位…3技能移动前发射的弹道
@@ -74,7 +75,7 @@
 //   her S3 gives one and its 70 s redeploy time has passed, on its own tile).
 
 import { num, talentBb, skillRec, batMod, up } from '../shared/tier1.js';
-import { releaseSkillSummon } from '../../tokens.js';
+import { releaseSkillSummon, anchorKit } from '../../tokens.js';
 import { COLS } from '../../../constants.js';
 
 const S1 = 'skchr_kalts2_1';
@@ -102,7 +103,6 @@ const T1_KEY = 'talent:kalts2:t1';
 const T2_SHIELD = 'talent:kalts2:shield';
 const T2_REGEN = 'talent:kalts2:regen';
 const S1_KEY = 'skill:kalts2:blockRadius';
-const ANCHOR_KEY = 'kalts2:anchor';
 const TAG_S2 = 'kalts2:s2';
 
 const bbOf = (chess, id) => skillRec(chess, id)?.bb ?? {};
@@ -116,18 +116,6 @@ const otherOp = (a, unit) => a !== unit && a.kind === 'op' && up(a) && !a.hidden
 function setStock(unit, n) {
   const s = unit.mem.summonStock || (unit.mem.summonStock = {});
   s[ANCHOR] = n;
-}
-
-/** The 战术锚点's kit: 无敌, never targeted, no attack, blocks nothing. */
-function anchorKit() {
-  return {
-    skill: null,
-    talents: [],
-    trait: { noAttack: true },
-    install(battle, t) {
-      battle.addBuff(t, { key: ANCHOR_KEY, flags: { invulnerable: true, untargetable: true, noBlock: true }, persist: true, allowDead: true });
-    },
-  };
 }
 
 /** T2's entry for operator `a`: 1 护盾 layer unless one from this talent is there, the 生命回复速度 buff (strongest). */
@@ -255,7 +243,7 @@ function tryTransport(battle, unit) {
 }
 
 export default {
-  char_1052_kalts2: (bb, chess) => {
+  chess_char_1052_kalts2_a: (bb, chess) => {
     const t0 = talentBb(chess, 0);   // 遗尘守望: max_hp, def, block_cnt, block_radius_scale
     const t1 = talentBb(chess, 1);   // 医者丰碑: buff_duration, hp_recovery_per_sec, rhodes_bonus
     const b1 = bbOf(chess, S1), b2 = bbOf(chess, S2), b3 = bbOf(chess, S3);

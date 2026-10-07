@@ -183,7 +183,9 @@ test('selling: +1 (normal and elite, board or hand), items return to the hand, i
   assert.equal(ps.funds, 1, 'destroying pays nothing');
   assert.deepEqual(m.handle('p_0', { t: 'g.sell', uid: 424242 }).error, ERR.BAD_TARGET);
   // a board chess carrying equipment is not sold while neither the hand nor the temp slots can take the equipment back
-  const b = give(m, ps, chessOfTier(4).find((x) => m.pool.has(x)), 'board', [10, 3]);
+  // (a summon-less tier-4 chess: a summoner like 凯尔希·思衡托 sends its summon to the hand on deployment, which would skew
+  // the hand/temp counts this test reads)
+  const b = give(m, ps, chessOfTier(4).find((x) => m.pool.has(x) && !(DATA.chess[x].tokens || []).length), 'board', [10, 3]);
   b.items.push(ps.newPiece('item', 'chess_item_1_01_e_a'), ps.newPiece('item', 'chess_item_3_03_e_a'));
   const fill = chessOfTier(1).filter((x) => m.pool.has(x));
   for (let i = 0; ps.hand.some((p) => p == null); i++) give(m, ps, fill[i]);

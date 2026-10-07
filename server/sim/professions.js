@@ -571,6 +571,7 @@ export const SUB = Object.freeze({
   corecaster: P({}),
   // --- MEDIC
   physician: P({ heal: { mode: 'single' } }),
+  watchman: P({ heal: { mode: 'single' } }),   // 守望者: 恢复友方单位生命，并且可以起飞 (the 起飞 is the kit/talent's)
   ringhealer: P({ heal: { mode: 'multi', count: 3 } }),
   chainhealer: P({ heal: { mode: 'chain', count: 3, falloff: 0.25 } }),
   healer: P({ heal: { mode: 'single', farMul: 0.8, nearDist: 2 } }),

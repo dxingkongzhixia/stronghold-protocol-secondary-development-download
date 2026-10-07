@@ -112,6 +112,7 @@ export const TOKEN_IDS = Object.freeze({
   manifold: 'token_10030_mlyss_wtrman',
   champagne: 'token_10031_swire2_gdtrap',
   wangStone: 'token_10064_wang_stone1',
+  anchor: 'token_10068_kalts2_mtship',
   ulpiaMarker: 'token_10039_ulpia_block',
   goldenOath: 'token_10040_siege2_vlion',
   catShield: 'token_10041_cathy_catsld',
@@ -1683,6 +1684,23 @@ export function spawnMapChar(battle, playerId, tokenId, { alias = null } = {}) {
   return null;
 }
 
+/**
+ * 凯尔希·思衡托's 战术锚点 (token_10068_kalts2_mtship, docs/MATCHMAKING.md §34): 无敌 and never targeted ("不会受到攻击"),
+ * no attack, blocks nothing; its range (hers) is only shown. The holder kit (chess_char_1052_kalts2-kalts2.js) sets it on
+ * its pieces and drives the S3 flight; this entry makes a generic `spawnToken` of the token work too.
+ */
+const ANCHOR_KEY = 'kalts2:anchor';
+export function anchorKit() {
+  return {
+    skill: null,
+    talents: [],
+    trait: { noAttack: true },
+    install(battle, t) {
+      battle.addBuff(t, { key: ANCHOR_KEY, flags: { invulnerable: true, untargetable: true, noBlock: true }, persist: true, allowDead: true });
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // registry
 
@@ -1699,6 +1717,7 @@ const RAW_KITS = {
   [TOKEN_IDS.manifold]: manifold,
   [TOKEN_IDS.champagne]: champagne,
   [TOKEN_IDS.wangStone]: wangStone,
+  [TOKEN_IDS.anchor]: anchorKit,
   [TOKEN_IDS.ulpiaMarker]: ulpiaMarker,
   [TOKEN_IDS.goldenOath]: goldenOath,
   [TOKEN_IDS.catShield]: catShield,

@@ -53,7 +53,9 @@ export const KIT_FILES = Object.freeze([
     'chess_char_4_13-gnosis.js', 'chess_char_4_14-lionhd.js', 'chess_char_4_15-reckpr.js', 'chess_char_4_16-texas2.js',
     'chess_char_4_17-hsguma.js', 'chess_char_4_18-mudrok.js', 'chess_char_4_19-flamtl.js', 'chess_char_4_20-fartth.js',
     'chess_char_4_21-plosis.js', 'chess_char_4_22-svrash.js', 'chess_char_4_23-gvial2.js', 'chess_char_4_24-billro.js',
-    'chess_char_4_25-cetsyr.js', 'chess_char_4_26-bldsk.js'],
+    'chess_char_4_25-cetsyr.js', 'chess_char_4_26-bldsk.js',
+    // custom (tools/build-data.mjs CUSTOM_CHESS)
+    'chess_char_1052_kalts2-kalts2.js'],
   // tier 5
   ['chess_char_5_01-excu2.js', 'chess_char_5_02-titi.js', 'chess_char_5_03-blaze2.js', 'chess_char_5_04-bldsk.js',
     'chess_char_5_05-ulpia.js', 'chess_char_5_06-etlchi.js', 'chess_char_5_07-surtr.js', 'chess_char_5_08-horn.js',
@@ -148,7 +150,6 @@ export const OPERATOR_KIT_FILES = Object.freeze([
   'op-ironmn.js',
   'op-nasti.js',
   'op-necras.js',
-  'op-kalts2.js',
   'op-monstr.js',
 ]);
 

@@ -16,7 +16,6 @@ import { DATA, makeMatch, checkInvariants } from './harness.js';
 const T5A = 'chess_char_5_diy1_a';
 const MONSTR = 'char_4179_monstr';
 const PROSTS = 'token_10050_monstr_prosts';
-const KALTS2 = 'char_1052_kalts2';
 const ANCHOR = 'token_10068_kalts2_mtship';
 
 /** A solo match whose human slots `picks`, in its first prep on `stage` (战场#01: 3 高台 tiles) with an empty board and hand. */
@@ -100,15 +99,16 @@ test('#26 Mon3tr\'s 重构体: only on a ground tile of her attack range — dat
 });
 
 test('#26 凯尔希·思衡托\'s 战术锚点 (S3): only on a ranged tile outside her attack range; re-oriented so that her range covers it, it goes back to the hand', () => {
-  const rec = DATA.backups.tokens[ANCHOR];
+  // she is a formal shop chess after docs/MATCHMAKING.md §34 (no longer a 自选 pick): the anchor is a tokens.json summon
+  const rec = DATA.tokens[ANCHOR];
   assert.deepEqual([rec.position, rec.ownerRangeOutside, rec.rangedTilesOnly, rec.ownerRange], ['RANGED', true, true, false]);
   // act1 m03: 高台 at (10, 3), (10, 4), (11, 7), (11, 8); she stands on the ground at (12, 5), facing RIGHT — her y-6 takes
   // (11, 7) in and leaves the other three out
-  const { h, m, ps } = prep({ [T5A]: { charId: KALTS2, skillIndex: 2 } }, 2102, 'act1autochess_m03');
+  const { h, m, ps } = prep({}, 2102, 'act1autochess_m03');
   const map = ps.deployMap();
   const highs = [...map].filter(([, v]) => v === 'ranged').map(([k]) => parseKey(k));
   assert.ok(highs.length >= 2, 'the stage has 高台 tiles');
-  const kal = placeDiy(m, ps, T5A, [12, 5]);
+  const kal = placeDiy(m, ps, 'chess_char_1052_kalts2_a', [12, 5]);   // placeDiy only gains + places a known chess id
   const stack = stackOf(ps, kal, ANCHOR);
   assert.ok(stack && (stack.count || 1) === 1, 'one 战术锚点 in the hand (S3)');
   const range = rangeOf(ps, kal);

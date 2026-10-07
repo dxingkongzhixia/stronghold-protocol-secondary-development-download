@@ -17983,6 +17983,105 @@
     "note": null
    },
    "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_loopshooter_icon.png"
+  },
+  "char_1052_kalts2": {
+   "name": "凯尔希·思衡托",
+   "rarity": "TIER_6",
+   "profession": "MEDIC",
+   "subProfessionId": "watchman",
+   "nationId": "rhodes",
+   "chess": [
+    {
+     "chessId": "chess_char_1052_kalts2_a",
+     "chessLevel": 4,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 2,
+     "evolvePhase": "PHASE_2"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_1052_kalts2.png",
+     "bytes": 66168
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_1052_kalts2_2.png",
+     "bytes": 67294
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_1052_kalts2_1.png",
+     "bytes": 129119
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_1052_kalts2_2.png",
+     "bytes": 126674
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skchr_kalts2_1",
+     "iconId": "skchr_kalts2_1",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_kalts2_1.png",
+      "bytes": 19671
+     }
+    },
+    {
+     "index": 1,
+     "skillId": "skchr_kalts2_2",
+     "iconId": "skchr_kalts2_2",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_kalts2_2.png",
+      "bytes": 22551
+     }
+    },
+    {
+     "index": 2,
+     "skillId": "skchr_kalts2_3",
+     "iconId": "skchr_kalts2_3",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_kalts2_3.png",
+      "bytes": 25900
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_1052_kalts2/char_1052_kalts2/Front/char_1052_kalts2.skel",
+      "bytes": 1136296,
+      "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_1052_kalts2/char_1052_kalts2/Front/char_1052_kalts2.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_1052_kalts2/char_1052_kalts2/Front/char_1052_kalts2.atlas",
+      "bytes": 27426
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_1052_kalts2/char_1052_kalts2/Front/char_1052_kalts2.png",
+      "bytes": 452423
+     }
+    },
+    "back": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_1052_kalts2/char_1052_kalts2/Back/char_1052_kalts2.skel",
+      "bytes": 690969,
+      "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_1052_kalts2/char_1052_kalts2/Back/char_1052_kalts2.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_1052_kalts2/char_1052_kalts2/Back/char_1052_kalts2.atlas",
+      "bytes": 27412
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_1052_kalts2/char_1052_kalts2/Back/char_1052_kalts2.png",
+      "bytes": 460873
+     }
+    },
+    "note": null
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_watchman_icon.png"
   }
  },
  "tokens": {
@@ -18396,6 +18495,16 @@
    "battleSpineSkinVariantsOnly": [],
    "sfx": {},
    "spineFallbackFrom": "token_10000_silent_healrb（医疗探机，官方镜像缺少本 token 的脊柱，作视觉兜底）"
+  },
+  "token_10068_kalts2_mtship": {
+   "name": "战术锚点",
+   "avatar": {
+    "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/token_10068_kalts2_mtship.png",
+    "bytes": 29236
+   },
+   "battleSpineDefault": null,
+   "battleSpineSkinVariantsOnly": [],
+   "sfx": {}
   }
  },
  "enemies": {

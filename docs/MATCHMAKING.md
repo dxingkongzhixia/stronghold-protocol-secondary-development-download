@@ -890,3 +890,40 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 - `_merge-scratch` 全量 `node --test`：**5110 项 / 5102 通过 / 0 失败 / 8 跳过**；`node tools/kit-coverage.mjs`：**301/301 技能、118/118 棋子**；`node tools/build-data.mjs --offline` 无错。
 - 真实树 `Stronghold-Protocol`：同样通过，除 `docs-paths` / `package` 两条 `git ls-files` 测试（无 `.git`）。
+
+## 34. 自造干员：凯尔希·思衡托（功能完成，待上线，2026-10-07）
+
+> 需求：新增干员**凯尔希·思衡托**，盟约 **调和 + 灵巧 + 协防干员**（`maniShip` / `skillfulShip` / `emptyShip`），特质**整备能力**「获得时，随机获取 2 件装备（无品阶限制）」，**4 阶**，其余从网上拉。她上游原本是**自选干员**，本次**移出协防 / 自选池**，只作为正式商店棋子存在。
+
+### 34.1 研究结果（已核对官方数据）
+
+| 项 | 值 |
+|---|---|
+| charId | **`char_1052_kalts2`**（凯尔希·思衡托） |
+| 星级 / 职业 | 6★ 医疗 · **守望者 `watchman`**（可起飞 / 治疗） |
+| 本作定位 | **4 阶**（`tier: 4`） |
+| 盟约 | **调和 `maniShip`** + **灵巧 `skillfulShip`** + **协防干员 `emptyShip`** |
+| 特质 | **整备能力**「获得时，随机获取 2 件装备（无品阶限制）」 |
+| 模组 | 无（`charEquip` 无条目，`defaultUniEquipId: null`） |
+| 召唤物 | **战术锚点 `token_10068_kalts2_mtship`**（S3 的 `overrideTokenKey`，本地已抽 Spine） |
+| 技能 | S1 应急肃正防线 / S2 保护性拒止 / **S3 破梏重生（默认）** |
+
+**特质的官方先例与处理器**：缓存 `activity_table.json` 的 `garrisonDataDict` 里，**整备能力 + `<获得时>` + 随机装备**的官方形状是 **`garrison_91`**（洛洛：「`<获得时>`随机制造 N 件洛洛的定制品」，`eventType SERVER_GAIN` + `effectType SERVER_POOL_EQUIP` + `bb.pool` + `bb.count`，`eventTypeIcon / eventTypeSmallIcon = icon_gold / s_icon_gold`）。官方**没有** `SERVER_GAIN_EQUIP_RANDOM` 一类的处理器，也没有「整备能力 + 无品阶限制随机装备」的现成 garrison —— 官方 `pool_equip_normal`（garrison_45 / 127「获得 N 件随机装备」）本身**受调度中心等级限制**，与「无品阶限制」矛盾。因此本节**复用现成处理器 `SERVER_POOL_EQUIP` ＋新增一个不限品阶的装备池 `pool_equip_all`**（`kind: 'equip'`、`rule: 'shopEligible'`，无 `maxTier` / `tiers` / `items`，与凯瑟琳 `pool_equip_kathe` 同形；`spDraft.rollItemId` 因而取 I–VI 全阶的商店装备）。**这是相对官方的数据层新增，不是新引擎机制。**
+
+### 34.2 移出协防 / 自选池（owner 要求）
+
+- 合并把上游的**补位 / 自选（DIY）机制**带了进来（docs/DATA.md §18）；凯尔希·思衡托原先是 **`diy.ownedPool`** 的 one owned-6★ pick（`diy.operators['char_1052_kalts2'].bonds = ['emptyShip']`，即落在**协防干员**池），并带 `kits/ops/op-kalts2.js` 与 `test/content/op_kalts2.test.js`。
+- **做法**：把她写进 `CUSTOM_CHESS` → `applyCustomChess` 把 `char_1052_kalts2` 塞进 `charShopChessDatas`（名册），`buildBackups` 的 `legal6` 以 `roster.has(id)` 排除 → 她自动离开 `diy.ownedPool` / `diy.operators` / `backups.units`，**不再进协防池**。同时**删除 `op-kalts2.js`、从 `OPERATOR_KIT_FILES` 移除**，把测试改写为 `test/content/chess_kalts2.test.js`（棋子的 kit / 玩法 / 「她不再是自选」不变式）。**协防机制（其它干员 / 原型）不受影响。**
+
+### 34.3 实现（照 docs/NEW-OPERATOR.md）
+
+- [x] **1. 数据**：`CUSTOM_CHESS` 加 `char_1052_kalts2`（**4 阶**、`identifier 960`、`shopLevelSortId 94`、默认技能 S3、`defaultUniEquipId: null`、三条盟约、无模组、特质 = `SERVER_GAIN` + `SERVER_POOL_EQUIP` + `pool_equip_all` + `count 2` + `icon_gold`）。构建自检：`chess 278 → 280`、`visibleChess 118 → 119`、`tokens 24 → 25`（战术锚点）、`garrisons 261 → 263`、`backupUnits 83 → 82`、`diyOwnedPicks 66 → 65`。`choices.pools` 新增 `pool_equip_all`。
+- [x] **2. kit**：`kits/ops/chess_char_1052_kalts2-kalts2.js` 注册 `chess_char_1052_kalts2_a` —— 内容即原 `op-kalts2.js`（三个技能 + 两条天赋 + 战术锚点的 kit；守望者 `watchman` 由 `professions.js` 提供）。
+- [x] **3. 美术 / 语音**：`07-assets.json` 加 `char_1052_kalts2`（头像 e0e1 / e2、立绘 e0e1 / e2、三技能图标、前后 Spine、`sub_watchman_icon`）与 `token_10068_kalts2_mtship`（头像；Spine 走本地 `spineLocal`，已在 §33.4 抽取）→ `node tools/fetch-assets.mjs --asset-source=mirror`（文件已在盘上，`data/assets.json` 仅 1 行变化）。语音继承她在自选池时已抽的日语。
+- [x] **4. 计数 / golden**：`data.test`（280 / 119 / 分档 4:23）、`backups.test`（140 / 62 NORMAL / `ownedPool 65` / 协防 tally 36 / summoners 24）、`{ui,match,sim}/loadout` 119、`match/pool`（119 / 117）、`kits_alt_t4` 23；**golden 全族重算**（新增棋子进共享池改变了 RNG 流，diy 场次的 `MATCH_DIY_SEED` 由 70 改 **5** 以继续展示自选、且无引擎错误）。
+
+### 34.4 验证
+
+- `node tools/build-data.mjs --offline` 无错。`node tools/kit-coverage.mjs`：**棋子 119/119**（技能数相应 +3）。
+- 全量 `node --test`：见提交记录（`_merge-scratch` 通过；真实树 `Stronghold-Protocol` 除 `docs-paths` / `package` 两条 `git ls-files` 外一致）。
+- [ ] **上线**：先问 owner → 推通知 → 重启 → 校验（静态资源需连同新棋子目录一并上传）。

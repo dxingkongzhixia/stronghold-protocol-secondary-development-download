@@ -34,9 +34,9 @@ const isFiniteNum = (v) => typeof v === 'number' && Number.isFinite(v);
 const ELITES = ['char_608_acpion', 'char_609_acguad', 'char_610_acfend', 'char_611_acnipe', 'char_612_accast', 'char_613_acmedc', 'char_614_acsupo', 'char_615_acspec', 'char_617_sharp2'];
 const RESERVES = ['char_600_cpione', 'char_601_cguard', 'char_602_cdfend', 'char_603_csnipe', 'char_604_ccast', 'char_605_cmedic', 'char_606_csuppo', 'char_607_cspec'];
 
-test('chess: 139 base chess — 74 PRESET / 61 NORMAL / 4 DIY (our CUSTOM_CHESS adds 6 always-owned NORMAL chess) — and every record keeps the five official backup fields', () => {
-  assert.equal(base.length, 139);
-  assert.deepEqual([ofType('PRESET').length, ofType('NORMAL').length, ofType('DIY').length], [74, 61, 4]);
+test('chess: 140 base chess — 74 PRESET / 62 NORMAL / 4 DIY (our CUSTOM_CHESS adds 7 always-owned NORMAL chess) — and every record keeps the five official backup fields', () => {
+  assert.equal(base.length, 140);
+  assert.deepEqual([ofType('PRESET').length, ofType('NORMAL').length, ofType('DIY').length], [74, 62, 4]);
   for (const c of all) {
     assert.deepEqual(Object.keys(c.backup), ['charId', 'tmplId', 'skillIndex', 'uniEquipId', 'potRank'], `${c.chessId}: backup fields`);
     assert.deepEqual(c.backup, chess[c.baseId].backup, `${c.chessId}: the elite shares its base row's backup`);
@@ -237,9 +237,9 @@ test('DIY: prototype picks — the 9 elites at tiers 5 and 6, six 4★ reserves 
   assert.equal(diyRecordOf(chess.chess_char_5_01_a, { charId: 'char_608_acpion' }, data), null, 'not a DIY slot');
 });
 
-test('DIY: the 66 owned 6★ picks — a form at every slot status with all three skills, every module at stage 1 and 3, their summons', () => {
+test('DIY: the 65 owned 6★ picks — a form at every slot status with all three skills, every module at stage 1 and 3, their summons', () => {
   const { ownedPool } = backups.diy;
-  assert.equal(ownedPool.length, 66);
+  assert.equal(ownedPool.length, 65);
   let summoners = 0;
   for (const id of ownedPool) {
     const u = backups.units[id];
@@ -271,7 +271,7 @@ test('DIY: the 66 owned 6★ picks — a form at every slot status with all thre
     }
     if (summons) summoners++;
   }
-  assert.equal(summoners, 25, 'owned picks with summons (down from 27: the 5 CUSTOM_CHESS picks are no longer owned picks)');
+  assert.equal(summoners, 24, 'owned picks with summons (down from 27: the 6 CUSTOM_CHESS picks are no longer owned picks)');
   for (const [id, rec] of Object.entries(backups.tokens)) {
     assert.deepEqual(Object.keys(rec.variants), rec.owners, `${id}: owners = variant keys`);
     for (const o of rec.owners) assert.ok(/^char_\w+@\d+\/\d+\/\d+\/\d+$/.test(o) && ownedPool.includes(o.split('@')[0]), `${id}: owner ${o}`);
@@ -311,7 +311,7 @@ test('DIY: prototype picks carry the skill / module of their 补位 rows at the 
 test('DIY: the owned-6★ pool and the faction → bond rule (mainPower + every subPower vs powerIdList, else 协防干员)', () => {
   const { ownedPool, operators, prototypes } = backups.diy;
   const roster = new Set(base.map((c) => c.charId).filter(Boolean));
-  assert.equal(ownedPool.length, 66);
+  assert.equal(ownedPool.length, 65);
   for (const id of ownedPool) {
     assert.ok(!roster.has(id), `${id}: a roster operator is never a pick`);
     assert.deepEqual([operators[id].rarity, operators[id].obtainable], [6, true], id);
@@ -325,7 +325,7 @@ test('DIY: the owned-6★ pool and the faction → bond rule (mainPower + every 
   }
   const tally = {};
   for (const id of ownedPool) { const k = operators[id].bonds.join('+'); tally[k] = (tally[k] || 0) + 1; }
-  assert.deepEqual(tally, { emptyShip: 37, yanShip: 13, victoriaShip: 7, sargonShip: 3, siracusaShip: 3, lateranoShip: 1, kazimierzShip: 1, 'yanShip+victoriaShip': 1 });
+  assert.deepEqual(tally, { emptyShip: 36, yanShip: 13, victoriaShip: 7, sargonShip: 3, siracusaShip: 3, lateranoShip: 1, kazimierzShip: 1, 'yanShip+victoriaShip': 1 });
   // the collab operators are out of the data and the pool (the owner's decision of 2026-10-05: copyright)
   assert.deepEqual(backups.diy.excluded.map((id) => [id, backups.units[id], operators[id]]),
     ['char_456_ash', 'char_1029_yato2', 'char_1048_orchd2', 'char_4123_ela', 'char_4141_marcil', 'char_4182_oblvns'].map((id) => [id, undefined, undefined]),
@@ -343,7 +343,7 @@ test('DIY: powers and the owned pool re-derived from character_table', { skip: !
   const legal = Object.entries(CT).filter(([id, c]) => id.startsWith('char_') && c.rarity === 'TIER_6' && !['TOKEN', 'TRAP'].includes(c.profession) && !c.isNotObtainable && !roster.has(id));
   assert.equal(legal.length, 78, 'the excel\'s 78 obtainable 6★ outside the chess pool');
   // our CUSTOM_CHESS operators (tools/build-data.mjs applyCustomChess) are in the season roster, so they are NOT DIY picks
-  const OUR_CHESS = new Set(['char_4132_ascln', 'char_377_gdglow', 'char_4138_narant', 'char_1015_aglna2', 'char_2027_wang', 'char_4217_makoto']);
+  const OUR_CHESS = new Set(['char_4132_ascln', 'char_377_gdglow', 'char_4138_narant', 'char_1015_aglna2', 'char_2027_wang', 'char_4217_makoto', 'char_1052_kalts2']);
   assert.deepEqual([...backups.diy.ownedPool].sort(), legal.filter(([, c]) => !collab(c)).filter(([id]) => !OUR_CHESS.has(id)).map(([id]) => id).sort());
   assert.deepEqual([...backups.diy.excluded].sort(), legal.filter(([, c]) => collab(c)).filter(([id]) => !OUR_CHESS.has(id)).map(([id]) => id).sort());
   for (const [id, o] of Object.entries(backups.diy.operators)) {

@@ -454,6 +454,37 @@ const CUSTOM_CHESS = [
       blackboard: [{ key: 'count', value: 6 }],
     },
   },
+  {
+    // 凯尔希·思衡托 (docs/MATCHMAKING.md §34, custom): 6★ 医疗·守望者 (watchman), an upstream 自选 owned pick we pull out
+    // of that pool (she is a formal shop chess now — the CUSTOM_CHESS roster entry removes her from diy.ownedPool, so she
+    // no longer fields under the 协防干员 (emptyShip) bond as a 自选; docs/DATA.md §18). 4 阶; 盟约 调和 / 灵巧 / 协防干员.
+    // 整备能力「获得时，随机获取2件装备（无品阶限制）」 mirrors the official `<获得时>` 整备能力 shape (garrison_91,
+    // SERVER_GAIN + SERVER_POOL_EQUIP) but with a no-tier-limit pool (pool_equip_all, like 凯瑟琳's pool_equip_kathe;
+    // docs/MATCHMAKING.md §34.1). Her summon 战术锚点 (token_10068_kalts2_mtship) comes from her S3 overrideTokenKey.
+    charId: 'char_1052_kalts2',
+    baseId: 'chess_char_1052_kalts2_a',
+    goldenId: 'chess_char_1052_kalts2_b',
+    tier: 4,                                     // 4 阶
+    identifier: 960,
+    shopLevelSortId: 94,
+    defaultSkillIndex: 2,                        // 破梏重生 (S3) — the 战术锚点 skill, her standard
+    defaultUniEquipId: null,                     // she has no modules
+    bonds: ['maniShip', 'skillfulShip', 'emptyShip'],   // 调和 / 灵巧 / 协防干员
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+    garrison: {
+      eventType: 'SERVER_GAIN',
+      effectType: 'SERVER_POOL_EQUIP',
+      eventTypeDesc: '整备能力',
+      eventTypeIcon: 'icon_gold',
+      eventTypeSmallIcon: 's_icon_gold',
+      desc: '获得时，随机获取2件装备（无品阶限制）',
+      blackboard: [
+        { key: 'pool', valueStr: 'pool_equip_all' },
+        { key: 'count', value: 2 },
+      ],
+    },
+  },
 ];
 
 /** The base chess ids of CUSTOM_CHESS: always-owned — they have no official 补位 stand-in (data/backups.json). */
@@ -3039,10 +3070,12 @@ const UNITE_STAGE_NAMES = { 1: '联防阵地（1名玩家）', 2: '联防阵地�
 
 /**
  * Build data/stages.json: 19×21 terrain grids (row 0 = bottom), legend, devices, special terrain
- * parameters, deployable tiles and helper ground paths — the 11 battle stages of stageDatasDict, then the two 联防
- * maps: act2autochess constData escapedBattleTemplateMapSinglePlayer / MultiPlayer name the level of the 联防 battle
- * (level_act1autochess_escaped_single / _multi), whose own map is the 联防 field — a road, not the round's stage (GitHub
- * #41). They carry `kind: 'unite'` and `helpers` (1 / 2), weight 0, no modes, and are never drawn as a match stage.
+ * parameters, deployable tiles and helper ground paths — the 11 battle stages of stageDatasDict, then the two records
+ * of the escaped levels' maps: act2autochess constData escapedBattleTemplateMapSinglePlayer / MultiPlayer name the level
+ * of the 联防 battle (level_act1autochess_escaped_single / _multi), whose map is built here as a record with `kind:
+ * 'unite'` and `helpers` (1 / 2), weight 0, no modes, never drawn as a match stage. The 联防 battle itself is fought on
+ * the round's own stage (owner decision; GitHub #41's escaped map is not used), so these records are data only — the
+ * escaped templates still provide the 联防 wave/routes (data/waves.json).
  */
 function buildStages(ctx, modesById) {
   const researchStages = ctx.research.maps?.stages || {};
@@ -3686,6 +3719,10 @@ function buildChoices(ctx, effects, items, chess) {
     schedule,
     pools: {
       pool_equip_normal: { kind: 'equip', rule: 'shopEligible', maxTier: 'shopLevel', assumed: true },
+      // 凯尔希·思衡托 整备能力 (docs/MATCHMAKING.md §34): 「获得时，随机获取2件装备（无品阶限制）」 — every shop-eligible
+      // item whatever its tier (no `maxTier`/`tiers`, so rollItemId draws tiers I–VI). Mirrors pool_equip_kathe's no-cap
+      // shape; the official `<获得时>` 整备能力 precedent is garrison_91 (SERVER_GAIN + SERVER_POOL_EQUIP). [ASSUMED]
+      pool_equip_all: { kind: 'equip', rule: 'shopEligible', assumed: true },
       pool_equip_shop_1: { kind: 'equip', rule: 'shopEligible', tiers: [1], assumed: true },
       // 凯瑟琳 定向投放 (up_shop_add_special_goods): every shop-eligible item, whatever the shop level — players' first-hand
       // report (community, 2026-10-06): 「原版凯瑟琳1升2都能有6本装备」; the pool itself is server-side, uniform [ASSUMED]
@@ -3956,7 +3993,7 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  if (visible.length !== 118) err(`expected 118 visible non-DIY chess, got ${visible.length}`);
+  if (visible.length !== 119) err(`expected 119 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);
@@ -4092,9 +4129,9 @@ function validateAll(f) {
     if (s.rows.some((r) => r.includes('?'))) err(`stage ${s.id}: unknown tile glyph`);
     if (s.name !== s.id && /[A-Za-z]/.test(s.name)) err(`stage ${s.id}: Latin text in player-facing name "${s.name}"`);
   }
-  // the 联防 field of 1 / 2 helpers is the map of its template (server/match/unite.js uniteStageId)
+  // the escaped templates' map records exist for 1 / 2 helpers (data only: the 联防 battle runs on the round's stage)
   for (const [n, id] of Object.entries(config.unite.templates)) {
-    if (stages[id]?.kind !== 'unite' || stages[id].helpers !== Number(n) || stages[id].active) err(`unite template ${id}: no inactive 联防 stage for ${n} helper(s)`);
+    if (stages[id]?.kind !== 'unite' || stages[id].helpers !== Number(n) || stages[id].active) err(`unite template ${id}: no inactive escaped-map stage for ${n} helper(s)`);
   }
   for (const m of Object.values(config.modes)) {
     for (const [r, rd] of Object.entries(m.rounds)) {

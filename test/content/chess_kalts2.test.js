@@ -1,32 +1,34 @@
-// test/content/op_kalts2.test.js — the 自选 operator kit of 凯尔希·思衡托 (char_1052_kalts2, 6★ 守望者; kit
-// server/sim/content/kits/ops/op-kalts2.js) and her summon 战术锚点 (token_10068_kalts2_mtship), fielded the production way (a
-// DIY slot + its `diy` pick; the anchor as a token piece of hers) in every form: tiers 5 / 6, normal (E2 Lv1, skill rank 4)
-// and elite (E2 Lv60, rank 7) — she has no module. Every number is read back from data/backups.json (the form of that slot
-// status, the token's variant); the fidelity checklist of kits/README.md item by item.
-// Run: node --test test/content/op_kalts2.test.js
+// test/content/chess_kalts2.test.js — the shop-chess kit of 凯尔希·思衡托 (char_1052_kalts2, 6★ 守望者; kit
+// server/sim/content/kits/ops/chess_char_1052_kalts2-kalts2.js) and her summon 战术锚点 (token_10068_kalts2_mtship), fielded
+// the production way (the shop chess chess_char_1052_kalts2_a / _b; the anchor as a token piece of hers) in every form:
+// normal (E2 Lv1, skill rank 4) and elite (E2 Lv60, rank 7) — she has no module. Every number is read back from
+// data/chess.json (the record) and data/tokens.json (the token's variant); the fidelity checklist of kits/README.md item
+// by item. She is a CUSTOM_CHESS now, NOT a 自选 pick (docs/MATCHMAKING.md §34; docs/DATA.md §18).
+// Run: node --test test/content/chess_kalts2.test.js
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { makeBattle, enemyRec, checkInvariants } from '../helpers/battleHarness.js';
-import { KITTED_CHARS, OPERATOR_KITS, KITS } from '../../server/sim/content/kits/index.js';
-import { diyPool, validateDiyPicks } from '../../shared/diy.js';
+import { KITTED_CHARS, OPERATOR_KITS } from '../../server/sim/content/kits/index.js';
+import { diyPool } from '../../shared/diy.js';
 import { COLS } from '../../server/sim/constants.js';
 
 const load = (f) => JSON.parse(readFileSync(new URL(`../../data/${f}.json`, import.meta.url), 'utf8'));
 const CHESS = load('chess');
 const BACKUPS = load('backups');
+const TOKEN_REC = load('tokens');
 const KALTS2 = 'char_1052_kalts2';
+const BASE = 'chess_char_1052_kalts2_a';
+const GOLD = 'chess_char_1052_kalts2_b';
 const ANCHOR = 'token_10068_kalts2_mtship';
-const FORMS = BACKUPS.units[KALTS2].forms;
-const TOKEN = BACKUPS.tokens[ANCHOR];
-const SLOT = { 5: 'chess_char_5_diy1_a', 6: 'chess_char_6_diy1_a' };
+const TOKEN = TOKEN_REC[ANCHOR];
 const S1 = 'skchr_kalts2_1', S2 = 'skchr_kalts2_2', S3 = 'skchr_kalts2_3';
-const statusKey = (tier, elite) => (elite ? (tier === 5 ? '2/60/7/1' : '2/60/7/3') : '2/1/4/0');
-const formOf = (tier, elite) => FORMS[statusKey(tier, elite)];
+const chessIdOf = (elite) => (elite ? GOLD : BASE);
+const formOf = (tier, elite) => CHESS[chessIdOf(elite)];
 const skillOf = (tier, elite, id) => formOf(tier, elite).skills.find((s) => s.skillId === id);
 const talentOf = (tier, elite, i) => formOf(tier, elite).talents.find((t) => t.index === i).bb;
-const variantOf = (tier, elite) => TOKEN.variants[`${KALTS2}@${statusKey(tier, elite)}`];
+const variantOf = (tier, elite) => TOKEN.variants[chessIdOf(elite)];
 const approx = (a, b, msg, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps * Math.max(1, Math.abs(b)), `${msg}: ${a} vs ${b}`);
 const dummy = (key, o = {}) => enemyRec({ key, hp: 1e9, speed: 0, mass: 0, ...o });
 const ENEMIES = {
@@ -34,14 +36,14 @@ const ENEMIES = {
   enemy_biter: dummy('enemy_biter', { atk: 400, range: 1.2, bat: 1 }),
   enemy_flybiter: dummy('enemy_flybiter', { atk: 300, range: 1.6, bat: 1, motion: 'FLY' }),
 };
-/** Every 自选 form: [tier, elite] (no module). */
-const FORMS_ALL = [[5, false], [6, false], [5, true], [6, true]];
+/** Both forms: [tier, elite] (tier is only a label now: the chess has a normal and an elite record). */
+const FORMS_ALL = [[5, false], [6, true]];
 const label = ([tier, elite]) => `T${tier} ${elite ? 'elite' : 'normal'}`;
 const YAK = 'chess_char_1_02_a', TEXAS = 'chess_char_1_08_a', PERFUMER = 'chess_char_2_14_a';
 
 /** A battle with 凯尔希·思衡托 as uid 1 at (10, 4) facing RIGHT (`anchor`: her piece as uid 2), plus `others`. */
 function field({ tier = 5, elite = false, skill = 0, anchor = null, others = [], seed = 5, dp = 99 } = {}) {
-  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: KALTS2, skillIndex: skill }, elite, row: 10, col: 4 }];
+  const units = [{ uid: 1, chessId: chessIdOf(elite), skillIndex: skill, row: 10, col: 4 }];
   if (anchor) units.push({ uid: 2, kind: 'token', tokenId: ANCHOR, ownerUid: 1, row: anchor.row, col: anchor.col, dir: anchor.dir ?? 'RIGHT' });
   const log = [];   // heal / damaged in the order they happen
   const h = makeBattle({
@@ -64,14 +66,13 @@ function done(h) {
   assert.equal(h.b.errors.length, 0, JSON.stringify(h.b.errors[0]));
 }
 
-test('凯尔希·思衡托 in every 自选 form: her operator kit (all three skills authored), the form\'s stats with 遗尘守望, y-6, one heal per attack, blocks 2, 起飞, 罗德岛, no module, no 特质; her 战术锚点: the form\'s token stats', () => {
-  assert.equal(OPERATOR_KITS[KALTS2], KITS[KALTS2]);
+test('凯尔希·思衡托 in both forms: her shop-chess kit (all three skills authored), the form\'s stats with 遗尘守望, y-6, one heal per attack, blocks 2, 起飞, 罗德岛, no module; 调和/灵巧/协防 特质; her 战术锚点: the form\'s token stats', () => {
   for (const f of FORMS_ALL) {
     const [tier, elite] = f;
     for (const skill of [0, 1, 2]) {
       const { h, u, a } = field({ tier, elite, skill, anchor: { row: 10, col: 9 } });
       const form = formOf(tier, elite), t0 = talentOf(tier, elite, 0);
-      assert.deepEqual([u.def.charId, u.def.diyFor, u.skill.id, !!u.kit.generic, u.kit.skillSource], [KALTS2, SLOT[tier], form.skills[skill].skillId, false, 'skills'], label(f));
+      assert.deepEqual([u.def.charId, u.def.id, u.skill.id, !!u.kit.generic, u.kit.skillSource], [KALTS2, chessIdOf(elite), form.skills[skill].skillId, false, 'skills'], label(f));
       assert.deepEqual([u.base.maxHp, u.base.atk, u.base.def, u.base.bat, u.base.cost], [form.stats.maxHp, form.stats.atk, form.stats.def, 2.85, 19], `${label(f)}: stats`);
       approx(u.s.maxHp, form.stats.maxHp * (1 + t0.max_hp), `${label(f)}: 生命上限 +25 %`);
       approx(u.s.def, form.stats.def * (1 + t0.def), `${label(f)}: 防御力 +25 %`);
@@ -80,7 +81,7 @@ test('凯尔希·思衡托 in every 自选 form: her operator kit (all three ski
       assert.deepEqual([u.s.flags.liftoff, u.s.flags.blockFly], [true, true], `${label(f)}: 起飞`);
       assert.deepEqual(u.liveRangeGrid, form.rangeGrid, `${label(f)}: y-6`);
       assert.deepEqual([u.def.bonds, u.def.raw.garrisonIds, u.def.tokens, u.def.raw.nationId, !!u.def.raw.module?.active, form.modules?.length ?? 0],
-        [BACKUPS.diy.operators[KALTS2].bonds, [], [ANCHOR], 'rhodes', false, 0], `${label(f)}: bonds / 特质 / summon / no module`);
+        [['maniShip', 'skillfulShip', 'emptyShip'], form.garrisonIds, [ANCHOR], 'rhodes', false, 0], `${label(f)}: bonds / 特质 / summon / no module`);
       const ts = variantOf(tier, elite).stats;
       assert.deepEqual([a.base.maxHp, a.base.atk, a.base.cost, a.base.respawnTime, a.s.blockCnt], [ts.maxHp, 0, 3, 70, 0], `${label(f)}: 战术锚点 stats`);
       assert.deepEqual([a.s.flags.invulnerable, a.s.flags.untargetable, a.profile.noAttack, !!a.kit.generic], [true, true, true, false], `${label(f)}: 战术锚点 无敌, never targeted, no attack`);
@@ -89,16 +90,18 @@ test('凯尔希·思衡托 in every 自选 form: her operator kit (all three ski
     }
   }
   // the numbers of the forms (zh_CN): E2 Lv1 1393 / 408 / 220, E2 Lv60 1543 / 476 / 257; the anchor 2235 HP, 3 DP, 70 s
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/3'].stats.atk], [1393, 408, 1543, 476]);
+  assert.deepEqual([CHESS[BASE].stats.maxHp, CHESS[BASE].stats.atk, CHESS[GOLD].stats.maxHp, CHESS[GOLD].stats.atk], [1393, 408, 1543, 476]);
   assert.deepEqual([variantOf(5, false).stats.maxHp, variantOf(6, true).stats.cost, TOKEN.placeable], [2235, 3, true]);
 });
 
-test('a 自选 pick: 凯尔希·思衡托 is offered at tiers 5 and 6 (she has a kit) and a roster with her passes validateDiyPicks', () => {
+test('she is a formal chess, not a 自选 pick: out of KITTED_CHARS / diy.ownedPool, never offered by diyPool, no operator kit (docs/MATCHMAKING.md §34)', () => {
   const data = { chess: CHESS, backups: BACKUPS };
-  assert.ok(KITTED_CHARS.includes(KALTS2));
-  for (const t of [5, 6]) assert.ok(diyPool(t, { data, kitted: KITTED_CHARS }).includes(KALTS2), `tier ${t}`);
-  assert.deepEqual(validateDiyPicks({ [SLOT[5]]: { charId: KALTS2, skillIndex: 2 } }, { data, kitted: KITTED_CHARS }),
-    { ok: true, picks: { [SLOT[5]]: { charId: KALTS2, skillIndex: 2, uniEquipId: null } } });
+  assert.ok(!KITTED_CHARS.includes(KALTS2), 'not a kitted 自选 operator any more');
+  assert.equal(OPERATOR_KITS[KALTS2], undefined, 'no operator kit');
+  assert.ok(!BACKUPS.diy.ownedPool.includes(KALTS2), 'not in the 协防/自选 owned pool');
+  assert.equal(BACKUPS.units[KALTS2], undefined, 'no 自选 backup unit');
+  for (const t of [5, 6]) assert.ok(!diyPool(t, { data, kitted: KITTED_CHARS }).includes(KALTS2), `tier ${t}`);
+  assert.ok(CHESS[BASE] && CHESS[GOLD], 'she is a formal shop chess instead');
 });
 
 test('trait: her heals take 凯尔希\'s Mon3tr through its 禁疗 (her selection too); another 禁疗 summon stays out', () => {

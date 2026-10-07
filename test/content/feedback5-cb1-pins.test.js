@@ -12,7 +12,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeBattle } from '../helpers/battleHarness.js';
-import { makeMatch } from '../match/harness.js';
+import { makeMatch, DATA } from '../match/harness.js';
 import { hasGeneratedData } from '../../server/sim/simdata.js';
 
 const REAL = { skip: !hasGeneratedData() };
@@ -49,7 +49,7 @@ test('50: two 空弦 made 阿戈尔 (变形同构体 + 阿戈尔重刃) in a row
   }
 });
 
-test('45: 寻呼模块 / 简易通讯机 on 缪尔赛思 below shop level 6 — nothing qualifies (调和, tier ≤ shop level), the item is used up', () => {
+test('45: 寻呼模块 / 简易通讯机 on 缪尔赛思 give an operator sharing 调和, never above the 调度中心 level (凯尔希·思衡托 tier IV is the one below 6)', REAL, () => {
   for (const itemId of ['chess_item_4_01_e_a', 'chess_item_2_06_e_a']) {
     for (const level of [5, 6]) {
       const h = makeMatch({ mode: 'solo', difficulty: 'NORMAL', humans: 1, seed: 7, fake: true }).start();
@@ -58,13 +58,22 @@ test('45: 寻呼模块 / 简易通讯机 on 缪尔赛思 below shop level 6 — 
       ps.shop.level = level;
       const mly = ps.acquireChess('chess_char_6_11_a', { source: 'test' });
       const item = ps.acquireItem(itemId, { source: 'test' });
-      const owned = () => [...ps.board.values(), ...ps.hand, ...ps.temp].filter((p) => p && p.id === 'chess_char_6_11_a').length;
-      const n0 = owned(), offers0 = ps.offers.length;
+      const held = () => [...ps.board.values(), ...ps.hand, ...ps.temp].filter((p) => p && p.kind === 'chess');
+      const before = new Set(held().map((p) => p.uid));
+      const offers0 = ps.offers.length;
       assert.deepEqual(h.m.handle('p_0', { t: 'g.equip', itemUid: item.uid, targetUid: mly.uid }), { ok: true });
       assert.equal(ps.find(item.uid), null, `${itemId} @${level}: consumed`);
-      const got = owned() - n0 + (ps.offers.length - offers0);
-      if (level < 6) assert.equal(got, 0, `${itemId} @${level}: nothing (no 调和 operator of tier ≤ ${level})`);
-      else assert.equal(got, 1, `${itemId} @6: 缪尔赛思 (granted, or offered by 寻呼模块)`);
+      const granted = held().filter((p) => !before.has(p.uid)).map((p) => p.id);
+      const offered = ps.offers.slice(offers0).flatMap((o) => o.slots.map((s) => s.id));
+      const got = [...granted, ...offered];
+      assert.ok(got.length >= 1, `${itemId} @${level}: an operator sharing 调和 (${got})`);
+      for (const id of got) {
+        const c = DATA.chess[id];
+        assert.ok(c.bonds.includes('maniShip'), `${itemId} @${level}: ${id} shares 调和`);
+        assert.ok(c.tier <= level, `${itemId} @${level}: ${id} tier ${c.tier} ≤ ${level}`);
+        if (level < 6) assert.notEqual(c.charId, 'char_249_mlyss', `${itemId} @${level}: never 缪尔赛思 herself below 6`);
+      }
+      h.m.dispose();
     }
   }
 });

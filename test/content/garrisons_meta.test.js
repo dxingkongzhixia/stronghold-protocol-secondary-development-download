@@ -653,10 +653,16 @@ test('pools: 凯瑟琳 127 odd rounds, 佩佩 94, 洛洛 91, 焰尾 149, 歌蕾�
     }
     cover(gid);
   }
+  // A shopEligible pool with no item list (pool_equip_all: 凯尔希·思衡托 整备能力「随机获取N件装备（无品阶限制）」) draws any
+  // shop-eligible item of any tier — its `allowed` is every shop item, not an enumerated subset.
+  const allShopItems = Object.values(DATA.items)
+    .filter((it) => !it.isGolden && !it.hideInShop && !it.shopExcluded && it.itemType === 'EQUIP' && Number.isInteger(it.tier))
+    .map((it) => it.id);
   for (const [ev, key] of [['SERVER_GAIN', 'SERVER_POOL_EQUIP'], ['SERVER_PREP_START', 'SERVER_POOL_EQUIP']]) {
     for (const { gid, g, owners } of idsOf(ev, key)) {
       const pool = DATA.choices.pools[g.bbStr.pool];
-      const allowed = new Set([...(pool.items || []), ...(pool.weighted || []).map((x) => x[0])]);
+      const listed = [...(pool.items || []), ...(pool.weighted || []).map((x) => x[0])];
+      const allowed = new Set(listed.length ? listed : allShopItems);
       for (const owner of owners) {
         for (let seed = 1; seed <= 4; seed++) {
           const s = setup(seed);

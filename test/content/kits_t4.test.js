@@ -21,7 +21,8 @@ for (let i = 1; i <= 26; i++) T4.push(`chess_char_4_${String(i).padStart(2, '0')
 
 test('tier4: every tier-4 chess has a hand-authored kit', () => {
   for (const id of T4) assert.equal(typeof kits[id], 'function', id);
-  assert.equal(Object.keys(kits).length, 26);
+  // 26 official tier-4 chess + our CUSTOM_CHESS 凯尔希·思衡托 (chess_char_1052_kalts2_a)
+  assert.equal(Object.keys(kits).length, 27);
 });
 
 test('tier4: all 52 kits (normal + elite) fight a mixed wave without content errors', () => {
