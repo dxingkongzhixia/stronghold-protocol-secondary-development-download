@@ -62,7 +62,7 @@ node tools/build-data.mjs
 - **分支档案**（`server/sim/professions.js`）：行为由 `subProfessionId` 决定。
   伏击客 `stalker` = 范围群攻 + 50% 物理/法术闪避 + 嘲讽 -1；散射手、炮手、无畏者、领主… 都已实现。
   **先查有没有 —— 有就白送，不用写码**。
-- **技能/天赋 kit**（`server/sim/content/kits/tierN.js`，按 `tier` 放）：每个干员的技能是**手写**的，
+- **技能/天赋 kit**（`server/sim/content/kits/ops/<chessId>-<codename>.js`，一干员一文件；注册表 / 命名 / 契约见 `server/sim/content/kits/README.md`）：每个干员的技能是**手写**的，
   key = `baseId`，返回 `Kit`（规范见 `docs/SIM.md` §7.2 / §7.3；blackboard→spec 的通用映射见 §7.4）。
   没写会退化成 `content/generic.js` 的「照 blackboard 自动」版本，但 `node tools/kit-coverage.mjs --missing`
   会报未覆盖 —— **必须手写**。
@@ -156,5 +156,5 @@ node --test
 
 ## 7. 参考实现
 
-**阿斯卡纶**（`docs/MATCHMAKING.md` §23）= `CUSTOM_CHESS` 一条 + `tier3.js` 一个 kit + `07-assets.json` 一条
+**阿斯卡纶**（`docs/MATCHMAKING.md` §23）= `CUSTOM_CHESS` 一条 + `kits/ops/chess_char_4132_ascln-ascln.js` 一个 kit + `07-assets.json` 一条
 + 日语语音抽取 + 计数更新 + 两处引擎补充（命中率降低 / 高台条件）。照抄改字段即可。

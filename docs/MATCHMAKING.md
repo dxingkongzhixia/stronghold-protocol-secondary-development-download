@@ -241,7 +241,7 @@
 - 官方式的 **快速 / 精确（按等级）搜寻**（当前只按难度分桶）；奖杯 / 功勋等级；
 - 匹配确认环节（当前直接开局）；匹配中显示队友昵称；
 - 账号资料（头像、战绩、历史）；登录限流与验证码；
-- `docs/DESIGN.md` / `META.md` 的对应英文规则段落。
+- `docs/design/*.md` / `docs/META.md` 的对应英文规则段落。
 
 ## 14. 启动带宽：预加载排队 + 缓存（2026-10，"33 人 455ms" 的处置）
 
@@ -490,7 +490,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 ### 19.4 测试
 - 新增 `test/lobby.test.js`「a dropped spectator is freed while the match runs too」：对局进行中 2 名观战、第 3 人被拒 → 断线一个 → grace 后席位释放 → 第 3 人进得来。
 - 既有「spectators during a match … reconnect gets the seat back」仍通过（重连远快于 grace）。
-- `docs/DESIGN.md` §观战席「Reconnect」段同步改写；`server/lobby.js` 文件头注释同步。
+- `docs/design/network.md` 的观战席「Reconnect」段同步改写；`server/lobby.js` 文件头注释同步。
 
 ## 20. 弃局房间销毁（2026-10-06，修「真人全退出了房间还在」）
 
@@ -542,7 +542,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 **回退内容**（#149 的痕迹已全部清除，`grep -r "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip"` 无命中）：
 - `public/js/screens/game.js`：删掉 `bondsCollapsed` state、`.bonds-toggle` 按钮、`#match-bond-strip` 包裹 div → 还原为直接渲染 `<BondStrip>`。
 - `public/css/screens/game.css`：`.gm__bonds` 去掉上游的 `align-items:flex-start; gap`（保留我们的 `display:flex; justify-content:center`）；删掉 `.gm__bond-list` 与 `.bonds-toggle*` 规则。
-- `docs/DESIGN.md` / `docs/PLAYING.md`：删掉 #149 的两段说明。
+- `docs/design/client.md`（合并前是 `docs/DESIGN.md` 的界面段）/ `docs/PLAYING.md`：删掉 #149 的两段说明。
 - `test/ui/bond-collapse.e2e.test.js`：删除（该 E2E 专测折叠）。
 
 **下次合并怎么自查**：`git log -S bondsCollapsed -- public/js/screens/game.js` 能看出上游是否又把它加回来；一旦 `.gm__bonds` 相关块冲突，取我们的版本。
@@ -556,7 +556,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **数据注入**（`tools/build-data.mjs`）：新增 `CUSTOM_CHESS` 表 + `applyCustomChess(act, charTable)`，在 `loadContext` 里把记录并进官方赛季表（`charChessDataDict` / `charShopChessDatas` / `chessNormalIdLookupDict` / `bondInfoDict.chessIdList` / `garrisonDataDict`），此后所有构建逻辑照常生效；校验改为 `expected 113 visible non-DIY chess`（原 112）。
   - `charId: char_4132_ascln`（6★ 特种·**伏击客 `stalker`**，近战 / 阻挡 0 / 嘲讽 -1 / 费用 21 / **3 阶**）；盟约 `skillfulShip`(灵巧) + `deputShip`(助力)；普通 E2L1、精锐 E2L60 + Lv1 模组（`uniequip_002_ascln` AMB-X）；默认技能位 2（降临）。
   - 特质 `garrison_custom_ascln_a/_b`：`eventType: IN_BATTLE`（作战能力）、`effectKey: act1autochess_gar_eff_attrByBond`、`bb {divide_num:3, def:0.01}`、`bbStr.bond_id: "deputShip,skillfulShip"` → `floor((助力层+灵巧层)/3) × 1% 防御`（**复用现成处理器，无需新模拟代码**）。
-- **战斗行为**：`subProfessionId: stalker` 直接命中引擎的伏击客档案（`server/sim/professions.js` `installStalker`）：**范围群攻 + 50% 物理/法术闪避 + 嘲讽 -1**。技能/天赋手写在 `server/sim/content/kits/tier3.js`：追袭 S1（蓄力，下次攻击 ×倍率、连击两次）、恩赐 S2（攻击力+、命中地面敌人减速、其死亡时向周围扩散一层天赋）、降临 S3（默认：换范围 / 攻击力+ / 攻击间隔缩短 / 嘲讽+ / 闪避或未命中回血）、天赋「死亡拘审」（每次攻击叠层：减速 + 每秒 10% 攻击力的法术伤害，≤3 层）、「噬光残影」（攻速 +8；高台额外 +6 **未建模**）。
+- **战斗行为**：`subProfessionId: stalker` 直接命中引擎的伏击客档案（`server/sim/professions.js` `installStalker`）：**范围群攻 + 50% 物理/法术闪避 + 嘲讽 -1**。技能/天赋手写在 `server/sim/content/kits/ops/chess_char_4132_ascln-ascln.js`：追袭 S1（蓄力，下次攻击 ×倍率、连击两次）、恩赐 S2（攻击力+、命中地面敌人减速、其死亡时向周围扩散一层天赋）、降临 S3（默认：换范围 / 攻击力+ / 攻击间隔缩短 / 嘲讽+ / 闪避或未命中回血）、天赋「死亡拘审」（每次攻击叠层：减速 + 每秒 10% 攻击力的法术伤害，≤3 层）、「噬光残影」（攻速 +8；高台额外 +6 **未建模**）。
 - **资源**：`docs/research/07-assets.json` 加她的头像/立绘/技能图/脊柱/子职业图标；`fetch-assets --asset-source=mirror` 下载到 `public/assets/**`；语音用 `tools/local-extract/extract-voice.py --only char_4132_ascln --ffmpeg <ffmpeg>` **从本地日服客户端抽日语**（14 条，覆盖 fetch-assets 下到的 CN 版）。
 - **构建**：`tools/build-data.mjs` 新增 **`SP_GAMEDATA_BASE`** 环境变量（官方表走 gh-proxy）；`node tools/build-data.mjs` 重建 `data/`。
 - 同步更新的计数断言：`test/data.test.js`（268 / 113 / 分阶）、`test/{ui,match,sim}/loadout.test.js`、`test/match/pool.test.js`、`test/content/kits_alt_t3.test.js`。
@@ -571,7 +571,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **数据**（`CUSTOM_CHESS`）：`char_4217_makoto`，3 阶，普通 E2L1 / 精锐 E2L60 + PUM-Y「彼此的声音」；盟约 `lateranoShip` + `indomShip`（她官方 `subPower` 正是拉特兰）；名册 113 → **114**。
 - **特质**：新处理器 **`act1autochess_gar_event_dollswap_self`**（`server/sim/content/garrisons/battle.js`）。官方的 `..._selfdead` 只有**一个** bond 列表 + **一个**数额；这个把两种事件拆开：`bond_id_swap`+`bond_add_count_swap`（切换替身）/ `bond_id_dead`+`bond_add_count_dead`（被击倒）。清单 `garrison_custom_char_4217_makoto_a/_b`。
 - **双替身**：`server/sim/professions.js` 的傀儡师扩展 `profile.dollLives`——替身被击倒时若还有名额就切到**下一个替身**（`nextDoll()`，`unit.trait.dollNo` 记第几个），只有**最后一个**被击倒才算她倒下（`addBuff` 同键原地替换，不能 `removeBuff`——那会触发 `onRemove: leave` 把她切回本体）。S3 的 kit 设 `dollLives: 1`。
-- **kit**（`kits/tier3.js`）：天赋「不羁之力」（替身形态 ATK+80% / HP+35% / 攻击间隔 +0.4，切进替身时对范围内敌人停顿 8s）、「S.E.E.S.队长」（替身结束时的真伤总攻击）；技能 俄耳甫斯 S1（≤50% 血友方转治疗）/ 塔纳托斯 S2（至多 4 目标 + 35% 恐惧 + 血线斩杀）/ **S3（默认，多目标弱点 + 攻速，双替身）**。
+- **kit**（`kits/ops/chess_char_4217_makoto-makoto.js`）：天赋「不羁之力」（替身形态 ATK+80% / HP+35% / 攻击间隔 +0.4，切进替身时对范围内敌人停顿 8s）、「S.E.E.S.队长」（替身结束时的真伤总攻击）；技能 俄耳甫斯 S1（≤50% 血友方转治疗）/ 塔纳托斯 S2（至多 4 目标 + 35% 恐惧 + 血线斩杀）/ **S3（默认，多目标弱点 + 攻速，双替身）**。
 - **美术**：`07-assets.json` + `fetch-assets --asset-source=mirror`（头像 / 立绘 / 技能图 / 脊柱 / 子职业图标）。
 - **语音**：社区语音包（`ArknightsAssets2@voice`、`isHarryh/Ark-Voice`）都还没收录她 → 改从 **PRTS** 取：`https://torappu.prts.wiki/assets/audio/voice/char_4217_makoto/cn_0NN.mp3`（**文件名小写**），14 条战斗语音（**CN**；她没有日语语音）。方法已写进 `docs/NEW-OPERATOR.md` §4。
 - 顺带修正：`tools/assets/manifest.mjs` —— 某干员**所有**语音槽都取不到时整条不下发（不再留 `{select:[],place:[]}` 空壳）。
@@ -589,7 +589,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
   - 监听 `ammoUsed`：**自身**每消耗 `consume_count`（8）发 → `bond_id_2` +1。
   清单 `garrison_custom_char_1015_aglna2_a/_b`（`eventTypeDesc: 持续叠加`，两段文本换行分隔，详情面板一行）。
 - **缚地（真的建模）**：引擎新增旗标 / 状态 **`grounded`**（`buffs.js` 的 `FLAG_KEYS` + 状态表），`Unit.isFlying`（`units.js`）**优先读它** → 被缚地的**飞行敌人变地面单位**（地面规则：可被地面干员阻挡、不再算空中）。她的 **S2 重力自定义**按官方文本执行：范围内**地面敌人 → 浮空**（`levitate`），**飞行敌人 → 缚地**（`grounded`）。
-- **kit**（`kits/tier3.js`）：巡空者起飞（`liftoff` + `blockFly`，只挡飞行敌人）；天赋「飘浮大地之上」（每次攻击附带法术伤害，轻敌更高 + 起飞时范围内敌人 **失重**）、「天穹间的舞步」（起飞友方 +13% 攻击、阻挡时每秒回 8% 生命）；技能 **极速送达 S1**（被动、部署即起飞、范围扩大）、**重力自定义 S2**（起飞 + 浮空/缚地 + 法术 5 目标）、**酸橙的心事 S3**（默认：弹药 33 发 + 4 目标 + 减速飞行敌人 + 对空庇护）。
+- **kit**（`kits/ops/chess_char_1015_aglna2-aglna2.js`）：巡空者起飞（`liftoff` + `blockFly`，只挡飞行敌人）；天赋「飘浮大地之上」（每次攻击附带法术伤害，轻敌更高 + 起飞时范围内敌人 **失重**）、「天穹间的舞步」（起飞友方 +13% 攻击、阻挡时每秒回 8% 生命）；技能 **极速送达 S1**（被动、部署即起飞、范围扩大）、**重力自定义 S2**（起飞 + 浮空/缚地 + 法术 5 目标）、**酸橙的心事 S3**（默认：弹药 33 发 + 4 目标 + 减速飞行敌人 + 对空庇护）。
 - **卡面范围规则**（`shared/loadoutRecord.js`）：细化成**有原则的规则**——「**被动**技能且文本含『攻击范围扩大』」才算进**部署时**的范围（引星棘刺 S3、她的 S1），「**开技才加宽**」的技能卡面仍用基础范围（野鬃 S2）。两条范围审计（`feedback1e-range` / `feedback1e-skillrange`）由此不再冲突。
 - **美术 / 语音**：镜像全有（社区语音包也收录了）→ `fetch-assets` 自动补齐；她 S3 的**起飞点 token**（`token_10071_aglna2_agairp`）按项目惯例是可放置召唤物 → 用现成的 `inert()` 注册为**标记**（模型缺 → 客户端回退）。
 - 同步更新：`data.test.js`（272 / 115 / 分阶 / 战役键 45 / token 列表）、`{ui,match,sim}/loadout`、`match/pool`、`content/kits_alt_t3`、`content/garrisons_battle`（她的测试组）、`content/tokens_devices`、`match/playtest6_summons`。
@@ -665,7 +665,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
     | `doll3` | 酸橙的心事 S3 第一替身（塔纳托斯） | `…_3_P1_SwitchIn` | `…_3_P1_Idle` | `…_3_P1_Attack_A` | `…_3_P1toP2_ChangeEnd`（它**没有阵亡剪辑**，被打就变成 P2） |
     | `doll3b` | S3 第二替身（俄耳甫斯） | `…_3_P1toP2_ChangeEnd` | `…_3_P2_Loop` | —（不攻击） | `…_3_P2_Die` |
 
-- **按技能 / 阶段发布形态**：模拟层 `installDollkeeper` 原来把形态写死 `unit.form = 'doll'`。现在新增 `dollForm()`：读 `unit.profile.dollForm` / `dollForm2`（由**技能 kit 的 `trait`** 声明 —— `kits/tier3.js`：S1 → `doll`、S2 → `doll2`、S3 → `doll3` + `dollForm2: 'doll3b'` 与 `dollLives: 1`），并在**每一次切换**（`enter()` / `nextDoll()`）写入 `unit.form` 与该形态的 `fx('substitute', { form })`，所以替身出现的那一帧就是「该技能的替身」。官方傀儡师不声明这两个字段 → 仍走 `doll`（她们的 `*_B` 套），行为不变。
+- **按技能 / 阶段发布形态**：模拟层 `installDollkeeper` 原来把形态写死 `unit.form = 'doll'`。现在新增 `dollForm()`：读 `unit.profile.dollForm` / `dollForm2`（由**技能 kit 的 `trait`** 声明 —— `kits/ops/chess_char_4217_makoto-makoto.js`：S1 → `doll`、S2 → `doll2`、S3 → `doll3` + `dollForm2: 'doll3b'` 与 `dollLives: 1`），并在**每一次切换**（`enter()` / `nextDoll()`）写入 `unit.form` 与该形态的 `fx('substitute', { form })`，所以替身出现的那一帧就是「该技能的替身」。官方傀儡师不声明这两个字段 → 仍走 `doll`（她们的 `*_B` 套），行为不变。
 - **换成时装（皮肤）**：结城理的**战斗模型**改用官方时装 **`char_4217_makoto@p3r`**（Persona 3 Reload 联动皮，镜像目录 `char_4217_makoto_p3r_1`），不再使用原版模型 —— `docs/research/07-assets.json` 的 `battleSpine`（front / back × skel / atlas / png）指向该皮肤，再用 `node tools/fetch-assets.mjs --asset-source=mirror` 下载并重建 `data/assets.json`（现在指向 `/assets/spine/op/char_4217_makoto/front/char_4217_makoto_p3r_1.skel`）。**皮肤骨架的动画名与原版完全一致（含全部 `Doll_Skill_*`）**，所以上面 4 套替身形态无需任何改动。
   - 头像 / 立绘暂未换：现有镜像（fexli / yuanyan）里没有这套皮肤的 avatar / portrait（只有战斗模型），UI 里的小头像与立绘仍是原版；要换需要另找可用图源。
 - **数据**：`data/assets.json` 因皮肤而更新（其余 `data/*.json` 不变）。
@@ -723,12 +723,12 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 **现成 API（下一步直接使用）**
 - **技能发棋子**：`owner.mem.summonStock[tokenId] = Math.min(cap, (stock[tokenId] || 0) + n)`（`tokens.js` 的召唤物库存；S1/S2 **+2**、S3 **+8**）。
-- **自动落位**：`freeTiles(battle, unit, grid, { ranged, ground })`（`kits/tier6.js` 现成：范围内可部署、未被占、自动跳过 `battle.isReservedTile`）。
+- **自动落位**：`freeTiles(battle, unit, grid, { ranged, ground })`（`kits/ops/chess_char_2027_wang-wang.js` 现成：范围内可部署、未被占、自动跳过 `battle.isReservedTile`）。
 - **生成棋子**：`battle.spawnToken(unit, tokId, r, c, { duration, kit })` —— **`kit` 可覆盖**，所以按所选技能传 `sktok_wang_1/2/3` 的 bb 即可切换触发效果。
 - **消耗 / 装置化**：`battle.retreat(unit, { reason: 'expired', permanent: true })`、`untargetable(battle, unit)`。
 
 **待做**
-- [x] `kits/tier6.js` 写 `chess_char_2027_wang_a`：技能主动发棋子 ＋ **手动部署棋子时在相邻格生成「跟子」**（优先级：**有敌人 > 无敌人**；**不可部署地面 > 可部署地面 > 可部署高台**；同级 **上 > 右 > 下 > 左**，在单位自身朝向坐标系）＋ 按所选技能给棋子传触发 kit。
+- [x] `kits/ops/chess_char_2027_wang-wang.js` 写 `chess_char_2027_wang_a`：技能主动发棋子 ＋ **手动部署棋子时在相邻格生成「跟子」**（优先级：**有敌人 > 无敌人**；**不可部署地面 > 可部署地面 > 可部署高台**；同级 **上 > 右 > 下 > 左**，在单位自身朝向坐标系）＋ 按所选技能给棋子传触发 kit。
 - [x] `wangStone` 的激活改为 **latch**（一旦激活不因对方消失而取消，含 S2 的垂直/水平效果范围）。
 - [x] 第二天赋「**料敌机先**」：棋子激活时所在的**连续直线**上每多一枚棋子 → 直线上所有棋子 **+10% 伤害**（≤3 层）＋本次伤害**无视 9 点法抗**（临时法穿，结算后清除）。
 - [x] **S3 特化**：20 发弹药、范围扩大、超上限棋子优先部署到范围内**敌人所在格**、可在敌人格部署、弹药耗尽/手动停止后结束并**剩余弹药返还为棋子**。
@@ -741,7 +741,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 ### 30.3 实现落地（2026-10-07）
 
 **引擎 / kit**
-- `server/sim/content/kits/tier6.js` 新增 `wang(bb, chess, def)`，注册 `chess_char_2027_wang_a`：  - 技能主动：S1/S2 `+2`、S3 `+8` 进 `owner.mem.summonStock`，再按 `placeTiles()` 在望攻击范围内落位（候选按**朝向坐标系** `localOrder` 排序；S3 `enemiesFirst` 先把棋子放到敌人格，含不可部署格）；库存上限取棋子 token 的 `deckStack`(7)。
+- `server/sim/content/kits/ops/chess_char_2027_wang-wang.js` 新增 `wang(bb, chess, def)`，注册 `chess_char_2027_wang_a`：  - 技能主动：S1/S2 `+2`、S3 `+8` 进 `owner.mem.summonStock`，再按 `placeTiles()` 在望攻击范围内落位（候选按**朝向坐标系** `localOrder` 排序；S3 `enemiesFirst` 先把棋子放到敌人格，含不可部署格）；库存上限取棋子 token 的 `deckStack`(7)。
   - 跟子：`deploy` 钩子对任意棋子（非跟子）在相邻格生成 1 枚跟子；优先级用 `rotateOffset` 转成单位自身「上>右>下>左」；有敌人 > 无敌人 · 不可部署地面 > 可部署地面 > 可部署高台；总跟子数 ≤ 天赋 `attack@max_spawn_cnt`(9)；`bstate` 守卫防递归。
   - 触发 kit：`spawnToken(..., { kit: { ...wangStoneKit(tokenDef.skill.bb), fromTokens: true } })`，随所选技能（token 的 `bySkill` 变体）。
   - S3：`kind:'ammo'` 20 发、`noAttack`、`targeting.rangeGrid`（4-12）；每次落子/跟子扣 1 发（`mem.wangAmmo`），归零或「棋子耗尽」即 `end('ammo')`；`onEnd` 把 `mem.wangAmmo` 返还为棋子。
@@ -760,7 +760,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - `sim/facing-invariance`：落位改到朝向坐标系后通过（望的 LEFT 原本与 RIGHT 不一致）。
 - `render/issue25-downback`：Die 剪辑检查跳过 `build_` 占位模型。
 
-**上线**：按约定先经 `/admin/api/notify` 推送通知（署名 `d星空之下`，`ok:true`）→ 重启本机服务；`/healthz` 正常，`/sim/content/kits/tier6.js` 已含新 kit，`/data/chess.json` 与头像/技能图标/棋子头像均 200。
+**上线**：按约定先经 `/admin/api/notify` 推送通知（署名 `d星空之下`，`ok:true`）→ 重启本机服务；`/healthz` 正常，`/sim/content/kits/ops/chess_char_2027_wang-wang.js` 已含新 kit，`/data/chess.json` 与头像/技能图标/棋子头像均 200。
 
 ## 31. 自造干员：澄闪（功能完成，待上线，2026-10-07）
 
@@ -784,7 +784,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - [x] **1. 数据**：`tools/build-data.mjs` 的 `CUSTOM_CHESS` 加 `char_377_gdglow`：3 阶、E2（`normal/_a` skillLevel 4、`golden/_b` skillLevel 7）、`bonds: ['victoriaShip','preciShip']`、默认技能 S3、`garrison`。构建后 `visibleChess 116 → 117`、`chess 274 → 276`、`garrisons 257 → 259`。
   - **修正（真 bug，构建期发现）**：整备能力**必须**是 `eventType: 'SERVER_PRICE'`（`effectType: 'SERVER_CHESS_PRICE'`、`bb: {price:2}`、`bbStr: {}`、`battleRuneKey: null`），与官方**至简** `garrison_13_a` 一致。若建成 `IN_BATTLE`，`effectsMeta._garrisonHooks` 取 `GARRISON_HOOK['IN_BATTLE']` 不含 `onPrice` → **价格效果永远不会触发**。`applyCustomChess` 已支持 `eventType` / `effectType` / 图标覆盖。
   - **描述文案**用官方口径 **`购买价格为1`**（`garrisons_meta.test.js` 用 `/购买价格为?(\d+)/` 校验；「购买费用」写法不通过）。
-- [x] **2. 技能 / kit**：`kits/tier3.js` 的 `chess_char_377_gdglow_a`——浮游单元复用 `professions.installFunnel` + `funnelMap`（数量＝同时锁敌数 `attack.maxTargets`）。S1 火花四溅（`duration 25`、+ASPD）、S2 电流翻涌（**`kind:'toggle'`**＝持续无限、扩大范围）、S3 澄净闪耀（默认、`duration 30`、全场、命中停顿）。
+- [x] **2. 技能 / kit**：`kits/ops/chess_char_377_gdglow-gdglow.js` 的 `chess_char_377_gdglow_a`——浮游单元复用 `professions.installFunnel` + `funnelMap`（数量＝同时锁敌数 `attack.maxTargets`）。S1 火花四溅（`duration 25`、+ASPD）、S2 电流翻涌（**`kind:'toggle'`**＝持续无限、扩大范围）、S3 澄净闪耀（默认、`duration 30`、全场、命中停顿）。
   - **坑 1**：本作「持续无限」的写法是 `kind: 'toggle'`（`skills.js`：`duration` 型技能 `duration<=0` 时下一 tick 就结束，`active` 立刻变 false）。
   - **坑 2**：备用技能的规格必须读**它自己的记录**（`s.rangeGrid` / `s.bb`），不能读「当前所选技能」的，否则 `kits_alt_t3` 的「备用规格由自己的记录构建」审计不通过。
 - [x] **3. 美术 / 语音**：`07-assets.json` + `fetch-assets --asset-source=mirror` 已拉。**上线时必须一并上传**（否则 UI 会缺图标）：
@@ -826,10 +826,58 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 ### 32.2 实现（照 `docs/NEW-OPERATOR.md`）
 
 - [x] **1. 数据**：`CUSTOM_CHESS` 加 `char_4138_narant`（3 阶、identifier **950**、三条盟约、`defaultUniEquipId: 'uniequip_003_narant'`、`garrison` = `SERVER_GAIN` + `SERVER_ADD_BOND_CHESS_ALL` + `bb{count:6}` + `eventTypeDesc:'单次叠加'` + `eventTypeIcon:'icon_bond'`）。构建自检 `visibleChess 117 → 118`。
-- [x] **2. kit**：`kits/tier3.js` 的 `chess_char_4138_narant_a`——回旋投射物由职业 `loopshooter`（`professions.js installLoopshooter` + `ai.js throwBoomerang`）提供，**无需新引擎件**；S3 的「全部回收」用 `unit.trait.boomerangsOut` 归零轮询触发。
+- [x] **2. kit**：`kits/ops/chess_char_4138_narant-narant.js` 的 `chess_char_4138_narant_a`——回旋投射物由职业 `loopshooter`（`professions.js installLoopshooter` + `ai.js throwBoomerang`）提供，**无需新引擎件**；S3 的「全部回收」用 `unit.trait.boomerangsOut` 归零轮询触发。
 - [x] **3. 美术 / 语音**：`07-assets.json` 加 `char_4138_narant`（头像/立绘/**技能图标**/脊柱前·后/子职业图标，字节实测）→ `fetch-assets --asset-source=mirror`（含 14 条语音 + 音效）。
 - [x] **4. 计数**：`data.test`（278 / 118 / 分档 3:24）、`{ui,match,sim}/loadout` 118、`match/pool`（118 / 116）、`kits_alt_t3` 24 → 全量 `node --test` 绿。
 - [ ] **5. 上线**：先问 owner → 推通知（署名 `d星空之下`）→ 重启 → 校验。
 
 ### 32.3 顺带修复：予愿安洁莉娜的小飞机 token 头像
 `token_10071_aglna2_agairp`（「一会儿见！」）的美术在镜像库（`yuanyan3060/ArknightsGameResource`、`fexli/ArknightsResource`、`ArknightsAssets2`、`torappu.prts.wiki`）**均未收录**（约 30 条路径全部 404；同一个库里望的棋子 token 反而有）。已按官方 token 头像风格（白/银物体、透明底 200×200、无边框）**自制兜底头像** `public/assets/token/avatar/token_10071_aglna2_agairp.png`，并在 `07-assets.json` 的 `tokens` 段登记（`fallbackLocal: true`）→ manifest 已含 `/assets/token/avatar/...`。等镜像库收录后换成官方文件即可。
+
+## 33. 上游 feedback5 大合并（2026-10-07）
+
+> 把上游 `master`（`1303321`，**383 commits / 848 files**：v0.2.0、i18n（zh-TW / ja / ko + 机翻标记）、R19A–R19G、CB1–CB5、Boss 与素材工作）合并进我们的 `ours`，**保住全部自定义内容**。合并提交 **`e3bd9de`**（父：我们的 `1557a5a` + 上游的 `1303321`）。逐块解冲突，**从不**用 `--theirs`/`--ours` 整文件覆盖。
+
+### 33.1 本次合并保留的决策
+
+- **6 个自造干员全部保留**：阿斯卡纶 / 结城理 / 予愿安洁莉娜 / 澄闪 / 娜仁图亚 / 望（数据、kit、美术、语音、测试、计数全在）。
+- **Option A —— 商店棋子以我们为准**：上游把同名 5 人做成「自选干员」（`ops/op-{ascln,gdglow,narant,aglna2,wang}.js` 及其 `test/content/op_*.test.js`）与我们的商店棋子重复，**移除上游那 5 份**，保留我们的商店棋子；`data/backups.json` 的 `diy.ownedPool`（现 66 人）与 `KITTED_CHARS`（83）自然只认「有 kit 的自选干员」。
+- **盟约条（bondStrip）用我们的**：弹窗里**隐藏**本局被禁用的盟约成员（`shown` / `hiddenCount`），不采用上游「照常显示 + 禁用角标」的版本。
+- **#149 盟约收起 继续排除**（见 §22 黑名单）：合并后 `grep -r "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server` **无命中**，未回归；上游 `public/js/screens/game.js` 的折叠逻辑未取。
+
+### 33.2 结构搬迁（上游拆文件，我们的改动跟着搬）
+
+- 上游删除 `server/sim/content/kits/tier{1..6}.js`，改为**一干员一文件** `kits/ops/chess_char_<…>-<codename>.js` + 注册表 `kits/index.js`（`KIT_FILES` 按阶分组、`STANDIN_KIT_FILES`、`OPERATOR_KIT_FILES`，`KITTED_CHARS` 由此派生）；原 `tierN.js` 里的公共 helper 移到 `kits/shared/tierN.js`（+ `shared/summoner.js`）。命名 / 契约 / 注册与旧引用对照见 `server/sim/content/kits/README.md`，由 `test/content/kits_layout.test.js` 校验。
+- 我们的 6 个 kit 落在 `kits/ops/chess_char_4132_ascln-ascln.js` / `chess_char_4217_makoto-makoto.js` / `chess_char_1015_aglna2-aglna2.js` / `chess_char_377_gdglow-gdglow.js` / `chess_char_4138_narant-narant.js` / `chess_char_2027_wang-wang.js`，并追加进 `KIT_FILES`。
+- 上游其它重构也已把我们的改动搬进新模块：`server/sim/battle/*`、`server/match/match/*`、`server/match/player/*`、`server/http/*`（`server/sim/Battle.js`、`server/match/Match.js` / `PlayerState.js`、`server/index.js` 成为「薄壳 + 方法模块」）。
+- `docs/DESIGN.md` 由**单体大文档**变为**索引**，正文拆到 `docs/design/*.md`、修订史拆到 `docs/history/*.md`（本节与 §19 / §22 里旧的 `docs/DESIGN.md` 引用已改指新文件）。
+
+### 33.3 i18n 扫尾（我们的字符串）
+
+- 上游 i18n 扫尾（`t()`）之后，补齐我们**新增 / 保留**中文字符串的包裹：跨 **12 个文件**用 `t()`；模块级常量表保持 `N_()`（`shared/constants.js` 的 `ERR_TEXT` / `ROLES` / `ROLE_NAMES`、`ui/account.js` 的 `AUTH_ERR_TEXT`、`screens/lobby.js` 的 `ONLINE_STATUS`），展示处再 `t()`；`server/admin.js` / `server/index.js` 标 `i18n-ignore`（运维页 / 双语错误页，非玩家文案）。
+- `public/i18n/en.json` **+119 msgid（1041→1160）**；`node tools/i18n.mjs check en --strict` **100%（1140/1140，0 缺失 0 错误）**；`test/i18n.test.js` / `i18n-packs.test.js` / `i18n-data.test.js` 全绿。
+
+### 33.4 本地客户端素材（token 战斗 Spine）
+
+- 用仓库既有机制 `tools/local-extract/extract.py --only spine/token`（`.venv-extract`）从**本地客户端**抽取 token 战斗 Spine 到 `public/assets/local/spine/token/**`：
+  - 日服 `…\YostarGames\Arknights_JP\…` → **35 个** token（105 文件）。
+  - B 站国服（较新）`…\B站鹰角启动器\Arknights bilibili\games\Arknights\Arknights_Data\StreamingAssets\AB\Windows` → 补 **4 个 0.2.0 token**：`10066_closur_ourbase`（27,645 B）、`10068_kalts2_mtship`（12,040 B）、`10069_mcnist_mcgraf`（102,675 B）、`10070_aphris_pc`（47,411 B）。合计 **39 token / 117 文件**。
+- 登记：`data/local-assets.json`（1556→1568 项）+ `tools/assets/local-token-spines.json`（39 models）；manifest `data/assets.json` 的 `tokens[id].spineLocal` 共 39 条。`_merge-scratch` 与真实树 `Stronghold-Protocol` 同步。
+- 上游新映射丢弃的 **4 条干员音效**用 `tools/assets/plan.mjs` 的 `UNIT_SFX_OVERRIDES` 加回（`char_107_liskam.hit`、`char_1032_excu2.hit`、`char_174_slbell.hit`、`char_172_svrash.attack`），于是 `fetch-assets` 无需 `--allow-shrink` 即可写 manifest。
+  - ⚠️ **`char_172_svrash.attack → p_atk_silver_n` 正是 `docs/history/0.2.0.md`（条目 54）记录为「已修复的 bug」**（银灰普通攻击误用三技能挥砍音效）。本次仅按 owner 明确指示加回；它是**可再次移除的候选**。
+
+### 33.5 无处可得的美术（三种来源都查过：日服 / 国服 / 镜像）
+
+- `token_10055_phatm2_mndclv`、`token_10065_demetr_dmtpos` 的 **Spine + 头像**：两客户端的 prefab 均「no Spine renderer」（EmptyAnimator），镜像（`gh-proxy` / `jsDelivr`）404 → 客户端走既有回退。
+- `enemy_5601_entlec`（心烛）**图标**：镜像 404、官方 dump 均无（`docs/ASSETS.md` §367）→ 客户端画程序化符号。
+- 均不影响测试（走既有回退）。
+
+### 33.6 环境注意
+
+- 树需要 `npm install`（dev 依赖 `acorn`，i18n 测试用）。
+- `test/docs-paths.test.js` 与 `test/package.test.js` 调用 `git ls-files`：**无 `.git` 的真实树**（`Stronghold-Protocol`）必然失败，`_merge-scratch`（git）通过；其余一致。
+
+### 33.7 验证
+
+- `_merge-scratch` 全量 `node --test`：**5110 项 / 5102 通过 / 0 失败 / 8 跳过**；`node tools/kit-coverage.mjs`：**301/301 技能、118/118 棋子**；`node tools/build-data.mjs --offline` 无错。
+- 真实树 `Stronghold-Protocol`：同样通过，除 `docs-paths` / `package` 两条 `git ls-files` 测试（无 `.git`）。

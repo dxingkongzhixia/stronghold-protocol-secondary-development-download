@@ -13,7 +13,7 @@
 | 文档 | 语言 | 作用 |
 |---|---|---|
 | `README.md` | 中 | 项目介绍、玩法、运行方式 |
-| `docs/DESIGN.md` | 英 | **唯一权威**：技术栈、坐标/时间模型、Battle API、协议、渲染契约、各次玩测修订（约 40 万字节，改动规则前必读） |
+| `docs/DESIGN.md` | 英 | **唯一权威（索引）**：§号全局不变；当前规则在 `docs/design/*.md`、各次玩测/发布的修订在 `docs/history/*.md`（改动规则前必读对应的 `design/` 篇） |
 | `docs/META.md` | 英 | 对局/经济引擎：回合流程、商店、盟约、联防、最终攻势实现细节 |
 | `docs/SIM.md` | 英 | 战斗模拟引擎参考：钩子、技能描述格式、职业默认行为 |
 | `docs/DATA.md` | 英 | `data/*.json` 的生成规则与 schema |
@@ -163,7 +163,7 @@ flowchart TB
 ```
 content/
   index.js         安装全部内容 / registerAllMeta
-  kits/tier1..6.js 按 baseChessId 手写的干员 kit（技能+天赋）
+  kits/ops/*.js     按 baseChessId 手写的干员 kit（技能+天赋），一干员一文件（注册表 kits/index.js；公共 helper 在 kits/shared/tierN.js）
   tokens.js        召唤物/炎佑/地图角色
   bonds/{core,addon}.js        盟约（战斗侧 + meta 侧）
   items/{battle,meta}.js       装备与法术
@@ -295,8 +295,8 @@ LOBBY → INFO_CHECK → BAND_DRAFT → BATTLE_CHECK
 
 ### A. 新增/修改干员技能（kit）
 1. 确认 `data/chess.json` 里该干员存在（`chessId/baseChessId/tier/skills[]/talents/trait/garrisonIds/bonds`）。
-2. 在对应 `content/kits/tierN.js` 的 `export default` 中按 **baseChessId**（`_a`；精锐 `_b` 共用）加条目：`{ skill, skills:{[skillId]:SkillSpec}, talents, trait, install }`。
-3. 数值从 `bb`（选中技能黑板）/`talentBb`/`traitBb`/`moduleBb` 读取；复用 `tier1.js` 的辅助函数（`onHitBy`/`makeZone`/`statBuff`/`once`/`installAura`…）。
+2. 新建 `content/kits/ops/<chessId>-<codename>.js`（`export default`），按 **baseChessId**（`_a`；精锐 `_b` 共用）加条目：`{ skill, skills:{[skillId]:SkillSpec}, talents, trait, install }`，并把文件名加进 `kits/index.js` 的 `KIT_FILES`。
+3. 数值从 `bb`（选中技能黑板）/`talentBb`/`traitBb`/`moduleBb` 读取；复用 `kits/shared/tier1.js` 的辅助函数（`onHitBy`/`makeZone`/`statBuff`/`once`/`installAura`…）。
 4. SkillSpec 字段与 kind 见 `sim/skills.js`；触发规则见同文件顶部；多技能用 `skills:{[skillId]:…}`。
 5. 测试：`test/content/kits_t{N}.test.js` / `kits_alt_t{N}.test.js`；`node tools/kit-coverage.mjs --missing`。
 
@@ -495,7 +495,7 @@ node tools/kit-coverage.mjs --missing
 | 改协议/加消息 | `shared/protocol.js` → `server/net.js` → `server/match/Match.js` → `public/js/net.js` |
 | 改回合/经济/结算 | `server/match/{Match,PlayerState,choices,waves,unite,finalAssault,results}.js` |
 | 改盟约/装备/策略/特质 | `server/sim/content/{bonds,items,bands,garrisons}/`（战斗侧 + meta 侧） |
-| 改干员技能 | `server/sim/content/kits/tierN.js` + `server/sim/skills.js` |
+| 改干员技能 | `server/sim/content/kits/ops/*.js`（公共 helper `kits/shared/tierN.js`）+ `server/sim/skills.js` |
 | 改敌人/Boss | `server/sim/content/{enemies,bosses}.js` |
 | 改战斗规则/数值口径 | `server/sim/{Battle,damage,ai,targeting,constants}.js`（先读 `docs/DESIGN.md`/`SIM.md`） |
 | 改界面逻辑 | `public/js/ui/gameLogic.js`、`public/js/screens/*`、`public/js/ui/components.js` |
