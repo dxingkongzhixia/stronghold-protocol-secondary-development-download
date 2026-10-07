@@ -19,8 +19,8 @@ const PROSTS = 'token_10050_monstr_prosts';
 const ANCHOR = 'token_10068_kalts2_mtship';
 
 /** A solo match whose human slots `picks`, in its first prep on `stage` (战场#01: 3 高台 tiles) with an empty board and hand. */
-function prep(picks, seed = 2101, stage = 'act2autochess_m01') {
-  const seats = [{ seat: 0, playerId: 'p_0', name: 'P0', isBot: false, connected: true, diy: picks }];
+function prep(picks, seed = 2101, stage = 'act2autochess_m01', loadout = null) {
+  const seats = [{ seat: 0, playerId: 'p_0', name: 'P0', isBot: false, connected: true, diy: picks, ...(loadout ? { loadout } : null) }];
   const h = makeMatch({ mode: 'solo', difficulty: 'NORMAL', seats, seed }).start();
   h.toPrep(1);
   h.setStage(stage);
@@ -99,12 +99,13 @@ test('#26 Mon3tr\'s 重构体: only on a ground tile of her attack range — dat
 });
 
 test('#26 凯尔希·思衡托\'s 战术锚点 (S3): only on a ranged tile outside her attack range; re-oriented so that her range covers it, it goes back to the hand', () => {
-  // she is a formal shop chess after docs/MATCHMAKING.md §34 (no longer a 自选 pick): the anchor is a tokens.json summon
+  // she is a formal shop chess after docs/MATCHMAKING.md §34 (no longer a 自选 pick): the anchor is a tokens.json summon.
+  // Her default skill is S2 now (docs/MATCHMAKING.md §35.1), so select S3 (index 2) to field the 战术锚点 this case is about.
   const rec = DATA.tokens[ANCHOR];
   assert.deepEqual([rec.position, rec.ownerRangeOutside, rec.rangedTilesOnly, rec.ownerRange], ['RANGED', true, true, false]);
   // act1 m03: 高台 at (10, 3), (10, 4), (11, 7), (11, 8); she stands on the ground at (12, 5), facing RIGHT — her y-6 takes
   // (11, 7) in and leaves the other three out
-  const { h, m, ps } = prep({}, 2102, 'act1autochess_m03');
+  const { h, m, ps } = prep({}, 2102, 'act1autochess_m03', { chess_char_1052_kalts2_a: { skill: 2, module: null } });
   const map = ps.deployMap();
   const highs = [...map].filter(([, v]) => v === 'ranged').map(([k]) => parseKey(k));
   assert.ok(highs.length >= 2, 'the stage has 高台 tiles');

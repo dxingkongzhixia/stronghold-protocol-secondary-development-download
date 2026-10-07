@@ -906,7 +906,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 | 特质 | **整备能力**「获得时，随机获取 2 件装备（无品阶限制）」 |
 | 模组 | 无（`charEquip` 无条目，`defaultUniEquipId: null`） |
 | 召唤物 | **战术锚点 `token_10068_kalts2_mtship`**（S3 的 `overrideTokenKey`，本地已抽 Spine） |
-| 技能 | S1 应急肃正防线 / S2 保护性拒止 / **S3 破梏重生（默认）** |
+| 技能 | S1 应急肃正防线 / **S2 保护性拒止（默认）** / S3 破梏重生（战术锚点；`defaultSkillIndex` 由 2 改为 **1**，见 §35.1） |
 
 **特质的官方先例与处理器**：缓存 `activity_table.json` 的 `garrisonDataDict` 里，**整备能力 + `<获得时>` + 随机装备**的官方形状是 **`garrison_91`**（洛洛：「`<获得时>`随机制造 N 件洛洛的定制品」，`eventType SERVER_GAIN` + `effectType SERVER_POOL_EQUIP` + `bb.pool` + `bb.count`，`eventTypeIcon / eventTypeSmallIcon = icon_gold / s_icon_gold`）。官方**没有** `SERVER_GAIN_EQUIP_RANDOM` 一类的处理器，也没有「整备能力 + 无品阶限制随机装备」的现成 garrison —— 官方 `pool_equip_normal`（garrison_45 / 127「获得 N 件随机装备」）本身**受调度中心等级限制**，与「无品阶限制」矛盾。因此本节**复用现成处理器 `SERVER_POOL_EQUIP` ＋新增一个不限品阶的装备池 `pool_equip_all`**（`kind: 'equip'`、`rule: 'shopEligible'`，无 `maxTier` / `tiers` / `items`，与凯瑟琳 `pool_equip_kathe` 同形；`spDraft.rollItemId` 因而取 I–VI 全阶的商店装备）。**这是相对官方的数据层新增，不是新引擎机制。**
 
@@ -917,7 +917,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 ### 34.3 实现（照 docs/NEW-OPERATOR.md）
 
-- [x] **1. 数据**：`CUSTOM_CHESS` 加 `char_1052_kalts2`（**4 阶**、`identifier 960`、`shopLevelSortId 94`、默认技能 S3、`defaultUniEquipId: null`、三条盟约、无模组、特质 = `SERVER_GAIN` + `SERVER_POOL_EQUIP` + `pool_equip_all` + `count 2` + `icon_gold`）。构建自检：`chess 278 → 280`、`visibleChess 118 → 119`、`tokens 24 → 25`（战术锚点）、`garrisons 261 → 263`、`backupUnits 83 → 82`、`diyOwnedPicks 66 → 65`。`choices.pools` 新增 `pool_equip_all`。
+- [x] **1. 数据**：`CUSTOM_CHESS` 加 `char_1052_kalts2`（**4 阶**、`identifier 960`、`shopLevelSortId 94`、默认技能 **S2**（§35.1）、`defaultUniEquipId: null`、三条盟约、无模组、特质 = `SERVER_GAIN` + `SERVER_POOL_EQUIP` + `pool_equip_all` + `count 2` + `icon_gold`）。构建自检：`chess 278 → 280`、`visibleChess 118 → 119`、`tokens 24 → 25`（战术锚点）、`garrisons 261 → 263`、`backupUnits 83 → 82`、`diyOwnedPicks 66 → 65`。`choices.pools` 新增 `pool_equip_all`。
 - [x] **2. kit**：`kits/ops/chess_char_1052_kalts2-kalts2.js` 注册 `chess_char_1052_kalts2_a` —— 内容即原 `op-kalts2.js`（三个技能 + 两条天赋 + 战术锚点的 kit；守望者 `watchman` 由 `professions.js` 提供）。
 - [x] **3. 美术 / 语音**：`07-assets.json` 加 `char_1052_kalts2`（头像 e0e1 / e2、立绘 e0e1 / e2、三技能图标、前后 Spine、`sub_watchman_icon`）与 `token_10068_kalts2_mtship`（头像；Spine 走本地 `spineLocal`，已在 §33.4 抽取）→ `node tools/fetch-assets.mjs --asset-source=mirror`（文件已在盘上，`data/assets.json` 仅 1 行变化）。语音继承她在自选池时已抽的日语。
 - [x] **4. 计数 / golden**：`data.test`（280 / 119 / 分档 4:23）、`backups.test`（140 / 62 NORMAL / `ownedPool 65` / 协防 tally 36 / summoners 24）、`{ui,match,sim}/loadout` 119、`match/pool`（119 / 117）、`kits_alt_t4` 23；**golden 全族重算**（新增棋子进共享池改变了 RNG 流，diy 场次的 `MATCH_DIY_SEED` 由 70 改 **5** 以继续展示自选、且无引擎错误）。
@@ -927,3 +927,62 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - `node tools/build-data.mjs --offline` 无错。`node tools/kit-coverage.mjs`：**棋子 119/119**（技能数相应 +3）。
 - 全量 `node --test`：见提交记录（`_merge-scratch` 通过；真实树 `Stronghold-Protocol` 除 `docs-paths` / `package` 两条 `git ls-files` 外一致）。
 - [ ] **上线**：先问 owner → 推通知 → 重启 → 校验（静态资源需连同新棋子目录一并上传）。
+
+## 35. 本轮修复 / 决策记录（2026-10-07）
+
+> 本文汇总 2026-10-07 这一批改动（`_merge-scratch` 提交 `8da64e8` → `6be1dd0` + 本次）的**决策、依据、涉及文件与诚实的保留意见**。上游文档已记录的条目只做交叉引用，不复述。
+
+### 35.1 凯尔希·思衡托默认技能 → S2（owner 要求）
+
+- **决策**：`CUSTOM_CHESS` 里她的 `defaultSkillIndex` 由 **2（S3 破梏重生）** 改为 **1（S2 保护性拒止）**。
+- **依据**：owner 指定。S3 只是她的「战术锚点」技能，仍作为**可选中技能**保留（`skills[]` 三条都在，`overrideTokenKey` 不变）。
+- **文件**：`tools/build-data.mjs`（`CUSTOM_CHESS`）；重算 `data/chess.json` 与 `data/tokens.json`（她的 token 变体的默认与 `bySkill` 跟随 owner 的默认技能：`token_10068_kalts2_mtship` 默认变 `sktok_mtship_2`）。`test/content/chess_kalts2.test.js` 不受影响（它显式传 `skillIndex`）。
+- **验证**：`chess_char_1052_kalts2_a` / `_b` 的 `skill.skillId = skchr_kalts2_2`，`skills[]` 恰好一个 `isDefault` 且等于它（`build-data.mjs` 自检）。
+- **golden 归属证明**：本改动使 roster 4 / bonds 13 / fields 5 / matches 12 个场次移动（她以默认技能上场时换了技能）。按老办法：**只回退本改动**（保留 §35.6 的修）重算 golden = **零差异**；恢复后恰为上述差异 → 全部归因于默认技能改变。`diy` / `standins` 不变（它们走自选 kit / 补位，不读商店默认技能）。
+- **诚实保留**：默认技能改变会牵动 bot 的上场 / 时序，`coop3-ABYSS-5`、`coop4-ABYSS-7` 的最终阵容因此**才首次出现她**；这是级联，不是新机制。
+
+### 35.2 澄闪「驭械术师」浮游单元：全部锁定同一敌人、各打满攻击力
+
+- **决策**：浮游单元（无人机）**同时锁定同一个敌人**，每个各造成**澄闪的满额攻击力**（不摊分），只有该敌人死亡后才换目标 —— 参照**异格拉普兰德（荒芜拉普兰德）**的浮游单元规则。
+- **实现**：`server/sim/content/kits/ops/chess_char_377_gdglow-gdglow.js`：无人机数量写入 `attack.hits`（＝无人机数），`maxTargets` 保持 1（原来错用 `maxTargets` 会把齐射**分散**到多个敌人）；`server/sim/professions.js` 的 `funnel` 分支用 `funnelTarget` 记「同一目标」以叠 `funnelScale`（换目标即从头叠）。
+- **投影修正**：`server/sim/professions.js resolveProfile`（`sub === 'funnel' && attack === 'ranged'`）把 `projectile` 还原成 `'drone'` —— 数据里的通用 `'bolt'` 默认值此前一直盖掉它，导致**没有任何一局画出浮游炮**。
+- **诚实保留**：客户端浮游单元是**手绘 2D 浮游舱**（`public/assets`），因为官方浮游炮是 3D 效果绑定，其贴图位于**无法解析的外部 CAB** 内。锁敌与数值由模拟层保证，视觉是自绘近似。
+- **交叉引用**：基础（价格特质、技能、美术）见 §31；分支特性表 `funnel` 一行见 `docs/SIM.md`。
+
+### 35.3 结城理〈替身〉攻击动画（FORM）
+
+- **决策**：每个技能的〈替身〉形态各自映射骨架的 `Doll_Skill_*` 剪辑（`shared/forms.js FORMS`）。**重力自定义 S2（塔纳托斯）**那一套**没有独立的 Idle / Attack**，只有一个 `Doll_Skill_2_Loop`，所以把该 Loop **同时**注册为 `idle` 与 `attack`；此前它只有 `idle`，于是技能期间（人格在场、kit 的 `max_target` / 恐惧 / 斩杀命中）角色**停在待机**、看不到挥击。
+- **机制**：per-form 剪辑角色（`dollRoles(idle, die, attack)`，`via: 'attackAny'` 让攻击按攻击间隔驱动）；形态由 kit 的 `trait.dollForm` / `dollForm2` 声明、`professions.js` 在每次切换时发布。与上游 `tools/assets/spine.mjs PREFAB_SPINE_ROLES`（按 prefab 修正角色的同族机制）一致；`dollKeepSkill` 让「人格就是技能窗口」的技能在切换时**不结束技能**（`professions.js startSwitch`）。
+- **文件**：`shared/forms.js`；`server/sim/content/kits/ops/chess_char_4217_makoto-makoto.js`（`dollKeepSkill` / `dollForm`）；`test/render/feedback2-doll.test.js`（S1 / S2 / S3-P1 的攻击剪辑，以及被缴械的 S3 第二〈替身〉不进入攻击）。
+- **交叉引用**：结城理基础（数据 / kit / 双替身）见 §24，〈替身〉动画根因与 4 套形态见 §29。
+- **诚实保留**：只动结城理；官方两位傀儡师（风丸 / 归溟幽灵鲨）的 FORM 不变。
+
+### 35.4 联防（unite）战场：改回本回合自己的整张竞技场（撤销上游 #41）
+
+- **决策**（owner）：联防要在**本回合玩家作战的那张完整地图**上打，而不是 #41 引入的「逃逸地图」（一条窄道）。
+- **实现**：`server/match/match/unitePhase.js` 的 `_uniteOpts.stageId` 改回 `this.stageId`；删除 `server/match/unite.js uniteStageId`；客户端 / mock 去掉「在自有地图上开战」的覆盖（`public/js/screens/game.js`、`public/js/battle/runner.js`、`public/dev/game-mock.js`）。
+- **逃逸记录保留为数据**：`data/stages.json` 的两条 escaped 记录（`act1autochess_escaped_single` / `_multi`）**只作数据**（`weight 0 / active false / modes []`，永不作为比赛地图）；逃逸模板**仍提供联防的波次 / 路线**（`server/match/waves.js buildUniteWave`），已在本回合整张竞技场上验证**会出生、穿场、漏怪**。
+- **SIM / CLIENT 一致**：`_uniteOpts` 的 `stageId` 同时进 field meta 与客户端跑的 spec，双方画同一张图；`test/match/feedback5-unite-map.test.js`、`test/render/unite-board.test.js` 钉死「本回合地图 + 逃逸波次 + 联防能画到的每个 glyph / tileKey 都能解析到美术」。
+- **交叉引用**：`docs/DATA.md` §12、`docs/META.md` §4、`docs/design/geometry-time.md`、`docs/PLAYING.md`，以及 `docs/history/0.2.0.md` §25.6.4 记录的这次**撤销**。
+
+### 35.5 掉线 / 离开座位规则（owner 规则）
+
+- **决策**：运行中的比赛里，一名**人类**离开、而房里**还有至少一名其他人**时，把该座位**交给一个全新 AI**（比赛继续，这一方仍被 bot 带着打）；**所有人类都走了**才真正解散房间（比赛结束、纯 AI 局被销毁，绝不留着跑）。**显式离开**（`room.leave` / `g.leave`）立即交接；**短暂掉线**不交接 —— 沿用既有的**重连宽限**（这期间座位自动打上一套阵容），只有**宽限过期**才把座位交给 AI，**此前重连即把座位还回人类**。
+- **实现**：`server/lobby.js removeMember` 在比赛中且还有别的人类时调 `handSeatToAI`（`Match.aiTakeOver`：整份 `PlayerState`（棋盘 / 金币 / 配装）转成 AI，休整期中途还要让 bot 打完这一次 prep）；`server/match/match/watch.js aiTakeOver` / `_seatToAI` 与 `releaseSeat` 共用重新挂靠；`StubMatch` 实现该可选钩子，`Match.js` / `StubMatch.js` 注明（无钩子时回退到 `onLeave`）。
+- **诚实保留**：主客 `takeOver` / `releaseSeat` / `_rekeyPlayer` 未动。测试：`test/lobby.test.js`、`test/match/connection.test.js`。
+
+### 35.6 「余音」受击脉冲不再对反伤 / 反弹回震（为保持 golden 全绿而必须修的既有内容 bug）
+
+- **背景**：§35.1 的默认技能改变使 `coop4-FUNNY-6` 的时序首次把**泡泡（`chess_char_2_08_b`）**放到**「余音」（假想敌：管的召唤物 `enemy_9023_acdums`）**的脉冲半径内：泡泡的「挨打」反伤（tag `counter`）命中余音 → 余音的 `taken`（「受到伤害时以自身为中心造成一次范围伤害」）再脉冲 → 又打中泡泡 → 再反伤 …… **无休止**，直到引擎 32 层嵌套护栏报 `hookDepth:*`，而 golden 的「任何存储场次 0 报错」断言会因此转红。
+- **依据**：`docs/SIM.md` §5 的**重入规则**明确写着「从 `hit` / `damaged` 里造成伤害的处理器**不得**对自身输出或别的**反应性伤害**再反应……tag 自己的伤害并跳过被打 tag 的伤害，或用 per-unit 标志」，且「护栏被触发**永远是内容 bug，绝不去调高上限**」；官方 ON_TAKE_DAMAGE 反伤本身也已跳过 `counter` / `reflect`（`kits/shared/tier1.js byEnemyAttack`）。
+- **修法**：`server/sim/content/bosses.js` `kitEcho` 的 `taken` 在脉冲前**跳过带 `counter` / `reflect` tag 的来伤**（普通我方命中照旧脉冲，只是**不再对反伤回震**）。
+- **验证**：`test/content/enemies_bosses.test.js` 新增回归用例（合成「挨打反伤」靠住余音；修前 `hookDepth` 报错、修后 0 错）；`node tools/golden.mjs` 相对改动前**只**清掉 `coop4-FUNNY-6` 的 5 条报错（`.errors.logged` / `.sim`: `5 → 0`），其余数字一字不变 —— 即修的是**报错**，不是玩法。
+- **诚实保留**：这是被 §35.1 的时序改动**暴露**的既有内容 bug（基线任何场次都没同时凑齐「泡泡 + 余音脉冲」），不是本次改动引入的引擎缺陷。修在内容层（余音），符合 SIM.md 的重入规则；未动嵌套护栏。
+
+### 35.7 凯尔希·思衡托「守望者」治疗核实（owner 报告「她不治疗」的核查，2026-10-08）
+
+- **报告**：owner 称她不治疗（守望者），怀疑 `server/sim/professions.js` 的 `watchman` 档位没有把她做成治疗者。
+- **核实结论：不成立（假警报）**。`watchman: P({ heal: { mode: 'single' } })` 已生效 —— 她的**普通攻击就是单体治疗**，且**永远不会**打她本可选择的敌人。此前一次核查把测试友军放在了她 y-6 攻击范围**之外**（她朝右站 `(10,4)`，友军放 `(10,7)`，超出 `[0,2]`），于是看到「0 次治疗、血量不变」的假象。
+- **官方语义（证据）**：缓存官方 `character_table.json` 的 `char_1052_kalts2` 为 `profession: MEDIC`、`subProfessionId: watchman`，trait `overrideDescripton`「恢复友方单位生命，并且可以起飞」。分支特性只比医师多了**起飞**（kit T1 的 `flags.liftoff` / `blockFly`），**治疗部分与 `physician` 完全相同**（单体、每次 100 % 攻击力）；`data/chess.json` 两个形态的 `dmgType` / `attackKind` 都是 `heal`。她的治疗黑板书：S2 `attack@heal_scale` 1.35（rank4）/ 1.7（rank7）在 1.5 半径内治疗；S3「额外治疗 1 个目标」（2 目标）；T2 `hp_recovery_per_sec` 50（罗德岛 ×2）是**生命回复速度 buff（hpRegen）**、不是直接治疗。与同科的差别：`healer` 远距 ×0.8、`wandermedic` 元素治疗、`ringhealer` / `chainhealer` 多目标 —— 守望者只取**单体**。
+- **结论 / 变更**：`server/sim/professions.js` 的 `watchman` 条目**无需改动**（已是最小正确形状）。本次只补**回归测试**：`test/content/chess_kalts2.test.js` 新增「守望者 heals」用例 —— 用**生产默认技能 S2** 上场（`field()` 不传 `skillIndex`），她 y-6 内有一个受伤的角峰、且一个她**可选中**的敌人（0 攻 / 0 速）也在范围内；断言治疗只落在角峰、每次 100 % 攻击力、她对敌人 **0 伤害**、所有攻击都指向友军。实测（4 s）：普攻 408 → 角峰 `886.4 → 1902.4`；精英 476 → `886.4 → 2038.4`（每次 100 % ATK 的两次普攻 ＋ 天赋 50/s 生命回复速度）；敌人受伤 0、每次攻击目标全为友军。另加一条「默认技能 S2」用例（`skill.skillId = skchr_kalts2_2`，`skills[]` 恰一条 `isDefault` = S2，三个技能仍可自选）。
+- **诚实保留**：她的 **S2 会主动打敌人**（「优先选择敌人」＋真实伤害），所以她是**带进攻性的治疗者**，不能按「纯治疗」加进 `test/sim/feedback1e-healers.test.js` 的纯治疗审计（该审计要求对阻挡的敌人 0 伤害）；本条目只核实**普攻 / 分支特性**的治疗，未改 `feedback1e` 的分支集合。

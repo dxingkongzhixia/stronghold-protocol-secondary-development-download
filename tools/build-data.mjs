@@ -467,7 +467,7 @@ const CUSTOM_CHESS = [
     tier: 4,                                     // 4 阶
     identifier: 960,
     shopLevelSortId: 94,
-    defaultSkillIndex: 2,                        // 破梏重生 (S3) — the 战术锚点 skill, her standard
+    defaultSkillIndex: 1,                        // 保护性拒止 (S2) — owner's pick (docs/MATCHMAKING.md §34/§35); the 战术锚点 of her S3 stays available as a selectable skill
     defaultUniEquipId: null,                     // she has no modules
     bonds: ['maniShip', 'skillfulShip', 'emptyShip'],   // 调和 / 灵巧 / 协防干员
     normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },

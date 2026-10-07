@@ -763,7 +763,15 @@ function kitEcho(ab, e) {
   return [
     {
       spawn(b, e2) { setHits(e2, e2.def.maxHp); hitCount(b, e2, true); e2.blockWeight = ECHO_BLOCK_WEIGHT; setEchoForm(b, e2, 'dark'); },
-      taken(c, b, e2) { const s = c.source || c.credit; if (s && s.side === 'ally') echoHit(b, e2); }, // 受到伤害时以自身为中心造成一次范围伤害 (a 无来源 burst too)
+      // 受到伤害时以自身为中心造成一次范围伤害 (a 无来源 burst too) — but never in answer to a counter / a reflection:
+      // this `taken` deals damage, so per SIM.md §5's re-entrancy rule it must not react to reactive damage, or 泡泡 S2's
+      // counter (tag 'counter') pulses back, hits 泡泡 again, counters again … until the nesting guard trips
+      // (0.2.0 coop4-FUNNY-6; the official ON_TAKE_DAMAGE counters already skip counter / reflect, tier1.js byEnemyAttack).
+      taken(c, b, e2) {
+        if (c.dmg && Array.isArray(c.dmg.tags) && (c.dmg.tags.includes('counter') || c.dmg.tags.includes('reflect'))) return;
+        const s = c.source || c.credit;
+        if (s && s.side === 'ally') echoHit(b, e2);
+      },
     },
     s && {
       cd: s.cd, icd: s.icd,

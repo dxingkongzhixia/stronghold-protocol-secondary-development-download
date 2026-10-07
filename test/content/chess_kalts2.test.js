@@ -41,15 +41,16 @@ const FORMS_ALL = [[5, false], [6, true]];
 const label = ([tier, elite]) => `T${tier} ${elite ? 'elite' : 'normal'}`;
 const YAK = 'chess_char_1_02_a', TEXAS = 'chess_char_1_08_a', PERFUMER = 'chess_char_2_14_a';
 
-/** A battle with 凯尔希·思衡托 as uid 1 at (10, 4) facing RIGHT (`anchor`: her piece as uid 2), plus `others`. */
-function field({ tier = 5, elite = false, skill = 0, anchor = null, others = [], seed = 5, dp = 99 } = {}) {
-  const units = [{ uid: 1, chessId: chessIdOf(elite), skillIndex: skill, row: 10, col: 4 }];
+/** A battle with 凯尔希·思衡托 as uid 1 at (10, 4) facing RIGHT (`anchor`: her piece as uid 2), plus `others`.
+ *  `skill` omitted (null) fields her the production way, with her shop record's default skill (S2). */
+function field({ tier = 5, elite = false, skill = null, anchor = null, others = [], seed = 5, dp = 99 } = {}) {
+  const units = [{ uid: 1, chessId: chessIdOf(elite), ...(skill == null ? {} : { skillIndex: skill }), row: 10, col: 4 }];
   if (anchor) units.push({ uid: 2, kind: 'token', tokenId: ANCHOR, ownerUid: 1, row: anchor.row, col: anchor.col, dir: anchor.dir ?? 'RIGHT' });
   const log = [];   // heal / damaged in the order they happen
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,
     flags: { dpInit: dp, dpPerSec: 0, dpMax: 999 },
-    hooks: ['damaged', 'heal', 'skillStart', 'skillEnd', 'statusApplied', 'death', 'deploy', 'blocked'], captureNoisy: true,
+    hooks: ['damaged', 'heal', 'attack', 'skillStart', 'skillEnd', 'statusApplied', 'death', 'deploy', 'blocked'], captureNoisy: true,
     units: [...units, ...others],
     setup: (b) => {
       b.on('heal', (c) => { if (!c.opts?.regen) log.push({ name: 'heal', ...c }); }, { priority: -1000 });
@@ -94,6 +95,19 @@ test('凯尔希·思衡托 in both forms: her shop-chess kit (all three skills a
   assert.deepEqual([variantOf(5, false).stats.maxHp, variantOf(6, true).stats.cost, TOKEN.placeable], [2235, 3, true]);
 });
 
+test('her shop default skill is S2 保护性拒止 (index 1): the record\'s `skill` and the single `isDefault` agree, and a production fielding takes S2 (docs/MATCHMAKING.md §35.1)', () => {
+  for (const f of FORMS_ALL) {
+    const [tier, elite] = f;
+    const form = formOf(tier, elite);
+    assert.equal(form.skill.skillId, S2, `${label(f)}: the record's default skill is S2 保护性拒止`);
+    assert.deepEqual(form.skills.map((s) => s.skillId), [S1, S2, S3], `${label(f)}: all three skills stay selectable`);
+    assert.deepEqual(form.skills.filter((s) => s.isDefault).map((s) => s.skillId), [S2], `${label(f)}: exactly one isDefault, and it is S2`);
+    const { h, u } = field({ tier, elite });   // no skillIndex: the production default
+    assert.equal(u.skill.id, S2, `${label(f)}: fielded with S2`);
+    done(h);
+  }
+});
+
 test('she is a formal chess, not a 自选 pick: out of KITTED_CHARS / diy.ownedPool, never offered by diyPool, no operator kit (docs/MATCHMAKING.md §34)', () => {
   const data = { chess: CHESS, backups: BACKUPS };
   assert.ok(!KITTED_CHARS.includes(KALTS2), 'not a kitted 自选 operator any more');
@@ -116,6 +130,30 @@ test('trait: her heals take 凯尔希\'s Mon3tr through its 禁疗 (her selectio
   assert.equal(heals(h, u)[n0].target, m, 'it is her target');
   approx(heals(h, u)[n0].amount, u.s.atk, 'a full heal through its 禁疗');
   done(h);
+});
+
+test('守望者 heals: her normal attack heals the injured ally in range and never the enemy — one target, 100 % ATK (branch trait 恢复友方单位生命)', () => {
+  for (const f of FORMS_ALL) {
+    const [tier, elite] = f;
+    const others = [{ uid: 3, chessId: YAK, row: 10, col: 5 }];
+    const { h, u } = field({ tier, elite, others });   // her shop default S2, not yet cast
+    const yak = h.unit(3);
+    assert.deepEqual([u.skill.id, u.profile.dmgType, u.profile.heal, u.profile.attack], [S2, 'heal', { mode: 'single' }, 'ranged'], `${label(f)}: a 守望者 heals`);
+    // an enemy she could select stands in her y-6 (0 atk / speed 0: it never acts); she must still heal the ally only
+    h.spawn('enemy_dummy', { pos: [10, 3] });
+    const hp0 = yak.s.maxHp * 0.4;
+    yak.hp = hp0;
+    h.run(4);
+    const hs = heals(h, u);
+    assert.ok(hs.length >= 1, `${label(f)}: she healed (${hs.length})`);
+    assert.ok(hs.every((c) => c.target === yak), `${label(f)}: every heal goes to the injured ally`);
+    approx(hs[0].amount, u.s.atk, `${label(f)}: 100 % ATK (a plain 守望者 heal)`);
+    assert.equal(h.hooksOf('damaged').filter((c) => c.source === u).length, 0, `${label(f)}: no damage to the enemy`);
+    const atks = h.hooksOf('attack').filter((c) => c.attacker === u);
+    assert.ok(atks.length > 0 && atks.every((c) => c.targets.every((t) => t.side === 'ally')), `${label(f)}: every attack targets an ally`);
+    assert.ok(yak.hp > hp0, `${label(f)}: the ally's HP rose (${hp0} → ${yak.hp})`);
+    done(h);
+  }
 });
 
 test('T1 遗尘守望 起飞: no ground enemy targets her or is blocked by her; she blocks a flyer 1.0 tile away (air radius 0.8944 × 1.23), two at most; the mod blockRadiusScale on any blocker', () => {

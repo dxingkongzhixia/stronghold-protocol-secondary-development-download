@@ -2715,6 +2715,28 @@ test('“余音”: 10-hit unit held only by block ≥2; pulses when hit; forms 
   assert.ok(!e.alive, 'the 10th hit knocks it out');
 });
 
+test('“余音” never pulses back in answer to a counter / a reflection (SIM.md §5: this `taken` deals damage, so it must not ping-pong — 0.2.0 coop4-FUNNY-6)', () => {
+  // A synthetic ON_TAKE_DAMAGE counter of 泡泡 S2's shape (any enemy damage instance ⇒ tag ['counter'] damage back). Beside
+  // the echo the pulse hits the counter, which counters, which — before the guard — pulsed again … hookDepth 32. The pulse
+  // still fires for a normal ally hit (the counter's own hit), it just never fires for the counter / reflection itself.
+  const h = bossArena({ units: [{ chessId: 't_wall', row: 10, col: 6 }] });
+  h.step();
+  const echo = put(h, 'enemy_9023_acdums', [3, 6], { tag: 'part' });
+  const wall = h.unit('t_wall');
+  h.b.on('damaged', (ctx) => {
+    if (ctx.target !== wall) return;
+    const tags = ctx.dmg && Array.isArray(ctx.dmg.tags) ? ctx.dmg.tags : [];
+    if (!ctx.source || ctx.source.side !== 'enemy' || tags.includes('counter') || tags.includes('reflect')) return;
+    h.b.dealDamage(wall, ctx.source, { amount: 5, type: 'phys', canDodge: false, tags: ['counter'] });
+  }, { owner: wall });
+  h.b.dealDamage(wall, echo, { amount: 1, type: 'phys' });        // a hit on the echo ⇒ its pulse
+  h.run(0.2);
+  assert.ok(wall.stats.taken > 0, 'the pulse reached the counter');
+  assert.ok(echo.hp < echo.s.maxHp, 'the counter struck the echo');
+  assert.equal(h.b.errors.length, 0, JSON.stringify(h.b.errors[0]));
+  checkInvariants(h.b);
+});
+
 test('盐风主教昆图斯: 2 highest-DEF targets + neural; 崩坍 / 大潮 / 断裂生殖; growth by lost HP; 物种爆发 LP loss', () => {
   const tpl = W.act1autochess_h07_04;
   const ov = JSON.parse(JSON.stringify(tpl.overrides));
