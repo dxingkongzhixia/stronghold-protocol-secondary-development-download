@@ -85,10 +85,16 @@ export class Battle {
     /** When false the battle only ends by time limit / boss pool / forceEnd (tests, sandboxes). */
     this.autoFinish = opts.autoFinish !== false;
     this.data = toDataSource(opts.data);
-    let stage = opts.stage ?? (opts.stageId ? this.data.getStage(opts.stageId) : null);
-    if (stage && !stage._norm) stage = normalizeStage(stage.id ?? opts.stageId, stage);
+    const requestedStageId = opts.stageId ?? null;
+    let stage = opts.stage ?? (requestedStageId ? this.data.getStage(requestedStageId) : null);
+    if (stage && !stage._norm) stage = normalizeStage(stage.id ?? requestedStageId, stage);
     this.stage = stage || { id: 'empty', rows: [], devices: [] };
-    this.stageId = this.stage.id ?? opts.stageId ?? null;
+    // A requested but unresolved stage id must NOT be silently rewritten to 'empty': keep the requested id so the field
+    // meta still names it and the client can resolve the stage from the match / field data (a spectator whose first
+    // field is the 联防 would otherwise have no board). A battle that requested no stage at all keeps the 'empty'
+    // fallback (it never draws a board).
+    this.stageResolved = !!stage;
+    this.stageId = stage ? (this.stage.id ?? requestedStageId) : (requestedStageId ?? this.stage.id);
     this.rect = { ...(opts.rect ?? DEFAULT_RECTS[this.kind] ?? GEO.NORMAL_RECT) };
     { // a malformed rect (non-integers, inverted, off the stage) falls back to the kind's default field
       const R = this.rect;

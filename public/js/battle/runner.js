@@ -113,6 +113,21 @@ export const LOST_RESULT_CODES = Object.freeze(['DISCONNECTED', 'OFFLINE', 'TIME
 /** Ticks per frame at a speed (same cap as the server pacing: server/match/fields.js maxTicksPerInterval). */
 export const ticksPerFrameCap = (speed) => Math.max(8, Math.ceil((Number(speed) || 2) * 4));
 
+/**
+ * The stage a field is drawn on (render/app.js `enterBattle` → screens/game.js `fieldStage`): the battle's own field
+ * meta (`fieldMeta().stageId`) wins, else the `b.start` spec's `stageId`. The sim's `'empty'` sentinel — a requested
+ * stage the local data source could not resolve — is never taken as a stage id: the requested id is what the match /
+ * field data still names, so the board resolves from it (a spectator whose first field is the 联防 has no earlier
+ * board to keep). Null when neither names a stage.
+ * @param {any} meta battle.fieldMeta() @param {any} spec b.start spec
+ * @returns {string|null}
+ */
+export function fieldStageId(meta, spec) {
+  const m = meta && typeof meta.stageId === 'string' && meta.stageId && meta.stageId !== 'empty' ? meta.stageId : null;
+  const s = spec && typeof spec.stageId === 'string' && spec.stageId ? spec.stageId : null;
+  return m ?? s ?? null;
+}
+
 function deepFreeze(root) {
   const stack = [root];
   while (stack.length) {
@@ -563,7 +578,7 @@ export function createBattleRunner(deps) {
     let meta = null;
     try { meta = e.battle.fieldMeta(); } catch { meta = { units: [] }; }
     const field = {
-      t: 'm.field', ...meta, fieldId: e.fieldId, kind: e.kind, rect: meta.rect ?? e.spec.rect, stageId: meta.stageId ?? e.spec.stageId,
+      t: 'm.field', ...meta, fieldId: e.fieldId, kind: e.kind, rect: meta.rect ?? e.spec.rect, stageId: fieldStageId(meta, e.spec),
       live: !e.done, battleId: e.battleId, players: e.members.slice(), local: true, speed: e.speed,
       // the watched player's effects column (user playtest #2; undefined for 联防 / boss pairs and server-run fields)
       effects: spectateEffects(e.spec, e.members),
