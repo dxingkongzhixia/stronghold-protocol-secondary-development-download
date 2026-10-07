@@ -30,7 +30,7 @@
 // deployment is free) and the 集成战略-only ISW-A modules of 琳琅诗怀雅 / 空弦 (their stats and trait cost still apply).
 
 import { absoluteRangeKeys, sortEnemyTargets, canTargetEnemy } from '../../targeting.js';
-import { COLS, PUSH_DIRECTIONAL_MIN_DIST } from '../../constants.js';
+import { COLS, ROWS, PUSH_DIRECTIONAL_MIN_DIST } from '../../constants.js';
 import { bodyDist, bodyInKeys, bodyOnTile } from '../../body.js';
 import { normalizeChess, normalizeSkill } from '../../simdata.js';
 import { tacticalPoint as sharedTacticalPoint, releaseSkillSummon } from '../tokens.js';
@@ -2065,7 +2065,13 @@ const KITS = {
   //      its drones 停顿 what they hit.
   chess_char_377_gdglow_a: (bb, chess, def) => {
     const d = defOf(chess, def);
-    const rGrid = copyGrid(d.skill?.rangeGrid);
+    // 澄净闪耀 (S3): 「攻击范围扩大至整个战场」 — the official record carries NO range for it (rangeGrid/rangeId null),
+    // so the kit draws the whole 19×21 field itself, the same WHOLE_FIELD shape 予愿安洁莉娜 S3 uses.
+    const wholeField = (() => {
+      const g = [];
+      for (let dr = -(ROWS - 1); dr <= ROWS - 1; dr++) for (let dc = -(COLS - 1); dc <= COLS - 1; dc++) g.push([dr, dc]);
+      return g;
+    })();
     const drones = (b2) => 1 + Math.floor(num(b2 && b2['attack@cnt'], 0));
     const stunOnHit = (b2) => {
       const sl = num(b2 && b2['attack@sluggish'], 0);
@@ -2076,7 +2082,7 @@ const KITS = {
       skill: {
         kind: 'duration', duration: num(d.skill && d.skill.duration, 30),   // 澄净闪耀: the official 30s
         mods: { atkPct: num(bb.atk) },
-        targeting: { rangeGrid: rGrid },
+        targeting: { rangeGrid: wholeField, canHitFly: true },   // 整个战场
         attack: { maxTargets: drones(null), ...(stunOnHit(null) || null) },
       },
       skills: altSkills(chess, d, bb, {

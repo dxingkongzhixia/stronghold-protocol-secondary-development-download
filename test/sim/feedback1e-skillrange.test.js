@@ -283,6 +283,7 @@ const BY_HAND = new Map([
   ['skchr_lionhd_2', 'instant: the burst hits the 3-3 skill range at its cast (kit onStart); no lasting range'],
   ['skchr_fartth_3', '前方无限长的直线 (CUSTOM_RANGE kit line)'],
   ['skchr_agoat2_3', '整个战场 (WHOLE_FIELD)'],
+  ['skchr_gdglow_3', '整个战场 (WHOLE_FIELD): 攻击范围扩大至整个战场'],
 ]);
 
 function rangeSkills() {
