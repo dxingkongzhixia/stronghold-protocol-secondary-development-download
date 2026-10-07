@@ -1,16 +1,17 @@
-// GitHub #41 (item 3): the 联防 field was the round's own stage — its water, crates and devices included — opened to both
-// halves. Official: act2autochess constData escapedBattleTemplateMapSinglePlayer / MultiPlayer = level_act1autochess_
-// escaped_single / _multi, the level of the 联防 battle and its map (two road halves joined at col 10). One helper →
-// escaped_single (enemies enter at col 10), two helpers → escaped_multi (enemies enter at col 18 and pass (9,10)); the
-// helpers' pieces stand on their prep tiles ("按休整期位置部署在场"), the first of two shifted 8 columns onto the right half
-// ("率先迎敌(即位于右侧阵地)"). data/stages.json holds both maps (kind 'unite'); server/match/unite.js uniteStageId.
+// The 联防 (unite) field is fought on the ROUND's own stage, opened to both halves (GEO.UNITE_RECT) — the same full
+// arena the round's players played on. Owner decision: GitHub #41's escaped map (act1autochess_escaped_single / _multi,
+// a narrow road) is NOT used; server/match/match/unitePhase.js `_uniteOpts.stageId` is the round's stage. The leaked
+// enemies still come from the escaped template's wave/routes (server/match/waves.js buildUniteWave; escaped_single
+// enters at col 10, escaped_multi at col 18 through the checkpoint (9,10)), so they still spawn, break through and leak
+// on the full arena. This pins: the stage IS the match stage (1 and 2 helpers, both combat modes), the helpers' pieces
+// on their prep tiles (the first of two shifted 8 columns), the escaped routes still spawn and cross the arena, and the
+// m.field a spectator receives names that stage (screens/game.js draws it).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GEO, PHASE } from '../../shared/constants.js';
 import { Battle } from '../../server/sim/Battle.js';
 import { createBattleFromSpec } from '../../server/sim/spec.js';
 import { DataSource } from '../../server/sim/simdata.js';
-import { uniteStageId } from '../../server/match/unite.js';
 import { FakeBattle } from './fakeBattle.js';
 import { DATA, makeMatch, give, chessOfTier, legalTileFor, checkInvariants } from './harness.js';
 
@@ -53,47 +54,43 @@ function uniteField(m, clientCombat) {
 }
 
 for (const clientCombat of [true, false]) {
-  test(`联防 with 1 helper (${clientCombat ? 'client-side combat' : 'server-run'}): escaped_single, not the round's stage — enemies enter at col 10 and walk row 9`, () => {
+  test(`联防 with 1 helper (${clientCombat ? 'client-side combat' : 'server-run'}): the ROUND's stage — enemies enter at col 10 and cross the full arena`, () => {
     const { m, helpers } = scenario({ humans: 2, clientCombat });
     assert.deepEqual(m.unitePlan.helpers.map((p) => p.playerId), ['p_1']);
     const { opts, battle: b } = uniteField(m, clientCombat);
-    assert.equal(opts.stageId, 'act1autochess_escaped_single');
-    assert.equal(uniteStageId(m.gd, 1), 'act1autochess_escaped_single');
-    assert.deepEqual(opts.rect, GEO.UNITE_RECT, 'the whole 19×21 map\'s field rows (both halves are road on it)');
-    assert.equal(b.stage.id, 'act1autochess_escaped_single');
-    assert.deepEqual(b.stage.devices, [], 'no crates or devices of 战场#01');
-    // the map: row 9 is road from the gate (9,10) to the objective (9,2); on 战场#01 cols 5–7 are fenced off
-    for (let c = 3; c <= 9; c++) assert.ok(b.grid.groundPassable(9, c), `(9,${c}) is road`);
-    assert.equal(m.stage.rows[9].slice(5, 8), '###', '战场#01 itself has no ground there');
-    for (const c of [19, 20]) assert.ok(!b.grid.groundPassable(9, c), `(9,${c}) is no ground`);
-    // the routes of escaped_single: every one starts at col 10
+    assert.equal(opts.stageId, m.stageId, "the 联防 field is the round's own stage, not an escaped map");
+    assert.equal(opts.stageId, 'act1autochess_m01');
+    assert.deepEqual(opts.rect, GEO.UNITE_RECT, 'the whole 19×21 map\'s field rows (both halves)');
+    assert.equal(b.stage.id, m.stageId, "the battle runs on the match's stage");
+    // the escape/break-through wave: every escaped_single route starts at col 10
     assert.ok(opts.routes.every((r) => (r.start ?? [r.startPosition?.row, r.startPosition?.col])[1] === 10));
-    // the helper's piece stands on its prep tile
+    // the helper's piece stands on its prep tile (a lone helper keeps colOffset 0)
     const { ps, piece } = helpers[0];
     const [r, c] = [...ps.board.entries()].find(([, p]) => p === piece)[0].split(',').map(Number);
     b.step();
     const u = b.allyUnits.find((x) => x.uid === piece.uid && x.ownerId === 'p_1');
     assert.deepEqual([u.tileR, u.tileC], [r, c]);
-    // a walker crosses the tiles 战场#01 fences off
+    // a leaked walker crosses the round arena's field rows (the break-through/leak mechanic still works)
     const crossed = new Set();
     while (b.time < 60 && !b.finished) {
       b.step();
       for (const e of b.enemies) if (e.alive && e.motion !== 'FLY') crossed.add(`${Math.round(e.y)},${Math.round(e.x)}`);
     }
-    assert.ok(['9,5', '9,6', '9,7'].some((k) => crossed.has(k)), `a walker on row 9 cols 5–7 (${[...crossed].sort().join(' ')})`);
+    assert.ok(['9,8', '9,9', '9,10'].some((k) => crossed.has(k)), `a walker on row 9 cols 8–10 (${[...crossed].sort().join(' ')})`);
     assert.equal(b.errorCount || 0, 0);
     checkInvariants(m);
     m.dispose();
   });
 }
 
-test('联防 with 2 helpers: escaped_multi — the first helper on the right half (col + 8), enemies enter at col 18 through (9,10); the client draws the field\'s map', () => {
+test("联防 with 2 helpers: the ROUND's stage — the first helper on the right half (col + 8), enemies enter at col 18 through (9,10); the client draws the round's map", () => {
   const { h, m, helpers } = scenario({ humans: 3, clientCombat: false });
   const order = m.unitePlan.helpers.map((p) => p.playerId);
   assert.equal(order.length, 2);
   const { opts, battle: b } = uniteField(m, false);
-  assert.equal(opts.stageId, 'act1autochess_escaped_multi');
-  assert.equal(b.stage.id, 'act1autochess_escaped_multi');
+  assert.equal(opts.stageId, m.stageId);
+  assert.equal(opts.stageId, 'act1autochess_m01');
+  assert.equal(b.stage.id, 'act1autochess_m01');
   assert.deepEqual(opts.players.map((p) => [p.playerId, p.colOffset]), [[order[0], 8], [order[1], 0]]);
   assert.ok(opts.routes.every((r) => r.start[1] === 18), 'every route enters at col 18');
   assert.ok(opts.routes.filter((r) => r.motion === 'WALK').every((r) => r.checkpoints.some(([rr, cc]) => rr === 9 && cc === 10)), 'walkers pass (9,10)');
@@ -103,23 +100,22 @@ test('联防 with 2 helpers: escaped_multi — the first helper on the right hal
     const u = b.allyUnits.find((x) => x.uid === piece.uid && x.ownerId === ps.playerId);
     const off = ps.playerId === order[0] ? 8 : 0;
     assert.deepEqual([u.tileR, u.tileC], [r, c + off], `${ps.playerId}: its prep tile${off ? ' on the right half' : ''}`);
-    assert.equal(b.stage.rows[r][c + off], 'r', 'a road tile of the 联防 map');
+    assert.notEqual(b.stage.rows[r][c + off], '#', 'a deployable tile of the round arena');
   }
-  // what a watching browser receives: the m.field of the 联防 carries the map it is drawn on
+  // what a watching browser receives: the m.field of the 联防 carries the round's stage (the client draws it)
   m.handle('p_0', { t: 'g.watch', fieldId: 'u' });
   const meta = h.lastTo('p_0', 'm.field');
-  assert.equal(meta && meta.stageId, 'act1autochess_escaped_multi');
-  assert.equal(m.stageId, 'act1autochess_m01', 'the match stage (m.public stageId, the boards) stays the round\'s');
+  assert.equal(meta && meta.stageId, 'act1autochess_m01');
+  assert.equal(m.stageId, 'act1autochess_m01', "the match stage (m.public stageId, the boards) is the 联防 field's stage");
   checkInvariants(m);
   m.dispose();
 });
 
-test('degraded data without the 联防 maps: the field keeps the round\'s stage', () => {
+test("data that lacks the escaped map records still fields the 联防 on the round's stage", () => {
   const stages = Object.fromEntries(Object.entries(DATA.stages).filter(([, s]) => s.kind !== 'unite'));
   const h = makeMatch({ mode: 'coop', humans: 2, seed: 4199, fake: true, data: { ...DATA, stages }, script: (b) => (b.kind === 'normal' ? { leaks: { p_0: 2 } } : {}) }).start();
   const m = h.m;
   h.toPrep(1);
-  assert.equal(uniteStageId(m.gd, 1), null);
   const ps = h.ps('p_1');
   const id = chessOfTier(1, (c) => c.position === 'RANGED').find((x) => m.pool.has(x));
   give(m, ps, id, 'board', legalTileFor(m, ps, id));

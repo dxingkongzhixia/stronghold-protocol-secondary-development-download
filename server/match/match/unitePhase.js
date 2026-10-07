@@ -5,7 +5,7 @@
 
 import { PHASE, GEO } from '../../../shared/constants.js';
 import { deriveSeed } from '../../sim/rng.js';
-import { uniteBattleOpts, uniteSurvivors, uniteStageId } from '../unite.js';
+import { uniteBattleOpts, uniteSurvivors } from '../unite.js';
 import { FieldRunner, timelineAt, uniteBillBounds } from '../fields.js';
 import { uniteLeft } from '../../sim/spec.js';
 import { FLOW_TICKER_PRIORITY, DELAYS } from './common.js';
@@ -40,9 +40,11 @@ export class MatchUnite {
   }
 
   /**
-   * Battle options of the 联防 field (helpers' carried end state, the leakers' enemies) on its own map — the escaped
-   * template's (unite.js uniteStageId; GitHub #41), the round's stage only when the data lacks it. The field meta and the
-   * client-run spec carry that stageId, so every viewer draws the 联防 map.
+   * Battle options of the 联防 field (helpers' carried end state, the leakers' enemies) on the ROUND's own stage,
+   * opened to both halves (GEO.UNITE_RECT): the 联防 is fought on the same full arena the round's players played on
+   * (owner decision — GitHub #41's escaped map, a narrow road, is not used). The leaked enemies still come from the
+   * escaped template's wave/routes (unite.js uniteBattleOpts → buildUniteWave), so they enter at the template's gates
+   * and break through as before. The field meta and the client-run spec carry `this.stageId`, so every viewer draws it.
    */
   _uniteOpts(plan, limit) {
     const { wave, players } = uniteBattleOpts(this, plan, limit);
@@ -51,7 +53,7 @@ export class MatchUnite {
       kind: 'unite',
       modeId: this.modeId,
       round: this.round,
-      stageId: uniteStageId(this.gd, plan.helpers.length) ?? this.stageId,
+      stageId: this.stageId,
       rect: { ...GEO.UNITE_RECT },
       timeLimit: limit,
       players,

@@ -114,7 +114,7 @@ export const LOST_RESULT_CODES = Object.freeze(['DISCONNECTED', 'OFFLINE', 'TIME
 export const ticksPerFrameCap = (speed) => Math.max(8, Math.ceil((Number(speed) || 2) * 4));
 
 /**
- * The stage a field is drawn on (render/app.js `enterBattle` → screens/game.js `fieldStage`): the battle's own field
+ * The stage a field is drawn on (render/app.js `enterBattle` → screens/game.js `setStage`): the battle's own field
  * meta (`fieldMeta().stageId`) wins, else the `b.start` spec's `stageId`. The sim's `'empty'` sentinel — a requested
  * stage the local data source could not resolve — is never taken as a stage id: the requested id is what the match /
  * field data still names, so the board resolves from it (a spectator whose first field is the 联防 has no earlier
