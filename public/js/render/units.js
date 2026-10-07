@@ -276,6 +276,7 @@ export class UnitView {
     this.alive = true;
     this.dying = 0;               // seconds left of the death fade (0 = not dying)
     this.dieT = 0;                // seconds since die() (the Die clip's clock; a late Spine model catches up)
+    this.consumedDur = 0;         // a consumed trap's trigger clip (consume) — die() plays it out instead of the idle
     this.remove = false;          // set when the death fade ended (owner removes the view)
     this.down = null;             // knocked out, waiting to redeploy: { until, total, state } (setDown) — no fade meanwhile
     this.gameT = 0;               // battle game time of the frame (render clock), for the redeploy ring's countdown and the element bar's refill
@@ -737,6 +738,21 @@ export class UnitView {
   }
 
   /**
+   * The unit was used up by its own effect (a sim fx `{ consumed: true, id }` — 香槟炸弹's blast, 多萝西's 共振装置, 望's
+   * 棋子): its trigger IS its attack clip, so play that clip once as its end (SpineActor.trigger, render/spine.js). The
+   * 'die' event of the same frame follows: die() lets the clip play out (consumedDur) instead of holding the idle a
+   * Die-less skeleton would. False without an attack clip (nothing to play — the plain fade).
+   */
+  consume() {
+    if (!this.alive || !this.actor || !this.spineReady) return false;
+    const d = this.actor.trigger?.() || 0;
+    if (!(d > 0)) return false;
+    this.consumedDur = d;
+    if (this.imp) this.imp.dirty = true;
+    return true;
+  }
+
+  /**
    * The unit died: its Die clip plays, then it fades (unless it stays down, setDown). `instant`: it starts on the held
    * end of the clip — a unit that is already down (a field joined mid-battle, an operator entering 联防 knocked out).
    * An operator facing UP whose Back model has no Die clip (GitHub issue #25) falls with its Front model: the swap is
@@ -751,6 +767,18 @@ export class UnitView {
     this.alive = false;
     this._modelDirty = true;
     this._dieForm = this._formSpec();
+    // a trap used up by its own effect (consume, the fx of the same frame): its attack clip is its end — a Die-less
+    // skeleton would hold its idle at once otherwise, cutting the trigger animation off
+    if (this.consumedDur > 0 && !instant) {
+      const d = this.consumedDur;
+      this.consumedDur = 0;
+      const rate = this.ctx.animRate?.() || 1;
+      this.dieT = 0;
+      this.dying = clamp(d / rate, 0.35, 1.6) + 0.55;
+      this.dieDur = this.dying;
+      if (this.imp) this.imp.dirty = true;
+      return;
+    }
     let d = this.actor ? this.actor.die() : 0;
     if (this.actor && !d) d = this._fallDur();
     const rate = this.ctx.animRate?.() || 1;
@@ -776,6 +804,7 @@ export class UnitView {
     this._dieForm = null;
     this.dying = 0; this.remove = false; this.alpha = 1;
     this.down = null;
+    this.consumedDur = 0;
     this.hp = this.maxHp; this.ghostHp = this.hp;
     if (this.actor) this.actor.revive();
   }

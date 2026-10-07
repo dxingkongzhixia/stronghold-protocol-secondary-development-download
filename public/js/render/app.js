@@ -1421,6 +1421,9 @@ export async function createFieldView(host, options = {}) {
       case 'status': { const v = views.get(e[1]); if (v) v.onStatus?.(e[2], !!e[3]); break; }
       case 'fx': {
         if (e[4] && typeof e[4] === 'object' && e[4].consumed && e[4].id != null) {
+          // a trap used up by its own effect (香槟炸弹's blast, 多萝西's 共振装置, 望's 棋子): play its attack clip (the
+          // trigger) as its end; the 'die' of the same frame then lets it play out (units.js UnitView.consume/die)
+          views.get(e[4].id)?.consume?.();
           consumedIds.add(e[4].id);
           if (consumedIds.size > 200) consumedIds.delete(consumedIds.values().next().value);
         }

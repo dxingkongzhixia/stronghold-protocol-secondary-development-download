@@ -331,6 +331,25 @@ export class SpineActor {
   }
 
   /**
+   * A one-off trigger clip: a trap used up by its own effect (sim fx `{ consumed: true }`, render/app.js
+   * UnitView.consume) plays its ATTACK clip once from the start at its own speed as its end — 望's 棋子, 香槟炸弹, 多萝西's
+   * 共振装置: the piece has no normal attack (`noAttack`, no 'atk' event), the trigger IS its attack animation (its
+   * OnAttack frame is the blast). Returns the clip's length (0 with no attack clip); the view stays on it that long
+   * (units.js die does not cut it with the idle a Die-less skeleton would hold).
+   */
+  trigger() {
+    if (this.dead || this.mode === 'change') return 0;
+    const a = this.roles.attack;
+    if (!a || !this.has(a.loop) || a.via === 'idle') return 0;   // via 'idle' = no attack clip of its own
+    const d = this.dur(a.loop);
+    this.mode = 'attack';
+    this.wound = false;
+    this.attackUntil = this.clock + d;
+    this._play(a.loop, false, { mix: 0.06 });
+    return d;
+  }
+
+  /**
    * A duration skill whose visual is the skill's OWN sustained loop (初雪/薄绿's floating stance): it has a begin or an
    * idle clip and is not driven through the attack clip, so its loop holds for the whole skill. The per-attack
    * behaviour stays upstream's (v0.1.3, community report #23): `_attackClip` returns this loop, `windUp` bails when the
