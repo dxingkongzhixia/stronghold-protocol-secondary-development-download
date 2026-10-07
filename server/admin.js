@@ -1,4 +1,5 @@
 // server/admin.js — the read-only operations page (docs/MATCHMAKING.md §12).
+// (i18n-ignore-file: the operations page and its strings are developer-facing, never shown to players — docs/I18N.md)
 //
 //   GET /admin?token=…            → a self-contained page (polls the JSON every 2 s)
 //   GET /admin/api/state?token=…  → { now, counts, queue, rooms, accounts, online }

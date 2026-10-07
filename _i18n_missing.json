@@ -1,0 +1,762 @@
+[
+  {
+    "msgid": "野排对局结束，队伍已解散",
+    "via": "t",
+    "params": [],
+    "where": "public/js/main.js:273"
+  },
+  {
+    "msgid": "正在加载美术资源 0 / {n}",
+    "via": "t",
+    "params": [
+      "n"
+    ],
+    "where": "public/js/main.js:501"
+  },
+  {
+    "msgid": "正在申请资源下载通道…",
+    "via": "t",
+    "params": [],
+    "where": "public/js/main.js:507"
+  },
+  {
+    "msgid": "正在加载美术资源 {d} / {t}",
+    "via": "t",
+    "params": [
+      "d",
+      "t"
+    ],
+    "where": "public/js/main.js:515"
+  },
+  {
+    "msgid": "游客{0}",
+    "via": "t",
+    "params": [
+      "0"
+    ],
+    "where": "public/js/net.js:44"
+  },
+  {
+    "msgid": "夺舍失败",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/game.js:133"
+  },
+  {
+    "msgid": "退出夺舍失败",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/game.js:137"
+  },
+  {
+    "msgid": "暂无其他观战者",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/game.js:146"
+  },
+  {
+    "msgid": "夺舍 AI 队友",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:170"
+  },
+  {
+    "msgid": "接管 {0} 的阵容与资金",
+    "via": "t",
+    "params": [
+      "0"
+    ],
+    "where": "public/js/screens/game.js:151"
+  },
+  {
+    "msgid": "退出夺舍（回到观战席）",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:178"
+  },
+  {
+    "msgid": "登录 / 注册",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:337"
+  },
+  {
+    "msgid": "游客",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:546"
+  },
+  {
+    "msgid": "房间可见性",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:384"
+  },
+  {
+    "msgid": "公开",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:196"
+  },
+  {
+    "msgid": "不公开",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:386"
+  },
+  {
+    "msgid": "公开：其他博士可在大厅「公开同盟」直接加入",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:396"
+  },
+  {
+    "msgid": "不公开：仅凭同盟密钥加入",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:397"
+  },
+  {
+    "msgid": "需要先登录账号",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:403"
+  },
+  {
+    "msgid": "搜寻队友（野排）",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:403"
+  },
+  {
+    "msgid": "进入共享池，最多 30 秒凑齐 4 人，不足由 AI 补位",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:404"
+  },
+  {
+    "msgid": "需先在标题页登录 / 注册账号",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:404"
+  },
+  {
+    "msgid": "公开同盟",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:444"
+  },
+  {
+    "msgid": "{0} · {humans}/{MAX_SEATS}{3} —— 点击加入",
+    "via": "t",
+    "params": [
+      "0",
+      "humans",
+      "MAX_SEATS",
+      "3"
+    ],
+    "where": "public/js/screens/lobby.js:446"
+  },
+  {
+    "msgid": "正在模拟",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:452"
+  },
+  {
+    "msgid": "{0} · {humans} 人{2}{3} —— 点击观战",
+    "via": "t",
+    "params": [
+      "0",
+      "humans",
+      "2",
+      "3"
+    ],
+    "where": "public/js/screens/lobby.js:454"
+  },
+  {
+    "msgid": "正在搜寻队友…",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:470"
+  },
+  {
+    "msgid": "难度",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:471"
+  },
+  {
+    "msgid": "已等待",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:472"
+  },
+  {
+    "msgid": "当前人数",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:473"
+  },
+  {
+    "msgid": "约 {left} s 后由 AI 补位开局",
+    "via": "t",
+    "params": [
+      "left"
+    ],
+    "where": "public/js/screens/lobby.js:474"
+  },
+  {
+    "msgid": "正在组队…",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:474"
+  },
+  {
+    "msgid": "取消搜寻",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:475"
+  },
+  {
+    "msgid": "查看在线玩家",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:500"
+  },
+  {
+    "msgid": "在线",
+    "via": "N_",
+    "params": [],
+    "where": "public/js/screens/lobby.js:507"
+  },
+  {
+    "msgid": "组队中",
+    "via": "N_",
+    "params": [],
+    "where": "public/js/screens/lobby.js:507"
+  },
+  {
+    "msgid": "野排排队",
+    "via": "N_",
+    "params": [],
+    "where": "public/js/screens/lobby.js:507"
+  },
+  {
+    "msgid": "野排游玩",
+    "via": "N_",
+    "params": [],
+    "where": "public/js/screens/lobby.js:508"
+  },
+  {
+    "msgid": "同盟游玩",
+    "via": "N_",
+    "params": [],
+    "where": "public/js/screens/lobby.js:508"
+  },
+  {
+    "msgid": "单人游玩",
+    "via": "N_",
+    "params": [],
+    "where": "public/js/screens/lobby.js:508"
+  },
+  {
+    "msgid": "离线",
+    "via": "N_",
+    "params": [],
+    "where": "public/js/screens/lobby.js:509"
+  },
+  {
+    "msgid": "在线玩家",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:538"
+  },
+  {
+    "msgid": "每 4 秒刷新",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:541"
+  },
+  {
+    "msgid": "已登录",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:546"
+  },
+  {
+    "msgid": "暂无在线玩家",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:549"
+  },
+  {
+    "msgid": "加载中…",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/lobby.js:549"
+  },
+  {
+    "msgid": "移出观战者 {0}",
+    "via": "t",
+    "params": [
+      "0"
+    ],
+    "where": "public/js/screens/room.js:163"
+  },
+  {
+    "msgid": "暂无观战者",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:165"
+  },
+  {
+    "msgid": "入座（空位）",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:167"
+  },
+  {
+    "msgid": "其他博士可在大厅「公开同盟」直接加入",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:196"
+  },
+  {
+    "msgid": "不会出现在公开列表，仅凭密钥加入",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:196"
+  },
+  {
+    "msgid": "仅密钥",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:196"
+  },
+  {
+    "msgid": "野排模拟",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:317"
+  },
+  {
+    "msgid": "野排队伍 · 对局结束后自动解散",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/room.js:321"
+  },
+  {
+    "msgid": "账号登录 / 注册",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:43"
+  },
+  {
+    "msgid": "展开",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:43"
+  },
+  {
+    "msgid": "已复制反馈群群号 {FEEDBACK_GROUP}",
+    "via": "t",
+    "params": [
+      "FEEDBACK_GROUP"
+    ],
+    "where": "public/js/screens/title.js:224"
+  },
+  {
+    "msgid": "反馈群：{FEEDBACK_GROUP}",
+    "via": "t",
+    "params": [
+      "FEEDBACK_GROUP"
+    ],
+    "where": "public/js/screens/title.js:224"
+  },
+  {
+    "msgid": "反馈群",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:236"
+  },
+  {
+    "msgid": "反馈群二维码",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:230"
+  },
+  {
+    "msgid": "点击复制群号",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:231"
+  },
+  {
+    "msgid": "QQ群",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:231"
+  },
+  {
+    "msgid": "使用手机 QQ 扫码加入同盟",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:232"
+  },
+  {
+    "msgid": "点击查看反馈群二维码",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:234"
+  },
+  {
+    "msgid": "服务器为个人免费服务器 · 容量较小",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:239"
+  },
+  {
+    "msgid": "已随机生成游客代号「{n}」",
+    "via": "t",
+    "params": [
+      "n"
+    ],
+    "where": "public/js/screens/title.js:279"
+  },
+  {
+    "msgid": "进入作战",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:339"
+  },
+  {
+    "msgid": "游客进入",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:339"
+  },
+  {
+    "msgid": "未填写代号 · 将以随机「游客XXXX」身份进入",
+    "via": "t",
+    "params": [],
+    "where": "public/js/screens/title.js:341"
+  },
+  {
+    "msgid": "代号需 2–12 个字符",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:167"
+  },
+  {
+    "msgid": "密码至少 6 位",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:167"
+  },
+  {
+    "msgid": "该代号已被使用",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:168"
+  },
+  {
+    "msgid": "代号或密码错误",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:168"
+  },
+  {
+    "msgid": "登录已过期，请重新登录",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:168"
+  },
+  {
+    "msgid": "正在连接服务器，请稍候…",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:57"
+  },
+  {
+    "msgid": "代号需 {AUTH_NAME_MIN}–{AUTH_NAME_MAX} 个字符",
+    "via": "t",
+    "params": [
+      "AUTH_NAME_MIN",
+      "AUTH_NAME_MAX"
+    ],
+    "where": "public/js/ui/account.js:58"
+  },
+  {
+    "msgid": "密码至少 {AUTH_PASS_MIN} 位",
+    "via": "t",
+    "params": [
+      "AUTH_PASS_MIN"
+    ],
+    "where": "public/js/ui/account.js:88"
+  },
+  {
+    "msgid": "注册成功，已登录",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:65"
+  },
+  {
+    "msgid": "登录成功",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:65"
+  },
+  {
+    "msgid": "代号「{accountName}」重名，已被占用 —— 请换一个",
+    "via": "t",
+    "params": [
+      "accountName"
+    ],
+    "where": "public/js/ui/account.js:70"
+  },
+  {
+    "msgid": "登录失败",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:71"
+  },
+  {
+    "msgid": "登录",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:78"
+  },
+  {
+    "msgid": "注册",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:79"
+  },
+  {
+    "msgid": "密码（≥{AUTH_PASS_MIN} 位）",
+    "via": "t",
+    "params": [
+      "AUTH_PASS_MIN"
+    ],
+    "where": "public/js/ui/account.js:82"
+  },
+  {
+    "msgid": "注册并进入",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:83"
+  },
+  {
+    "msgid": "登录并进入",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:83"
+  },
+  {
+    "msgid": "请填写 {AUTH_NAME_MIN}–{AUTH_NAME_MAX} 个字符的代号",
+    "via": "t",
+    "params": [
+      "AUTH_NAME_MIN",
+      "AUTH_NAME_MAX"
+    ],
+    "where": "public/js/ui/account.js:87"
+  },
+  {
+    "msgid": "代号即账号名 · 登录后可参与「搜寻队友」野排",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:88"
+  },
+  {
+    "msgid": "已登录 ·",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:95"
+  },
+  {
+    "msgid": "退出登录",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:96"
+  },
+  {
+    "msgid": "账号",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:110"
+  },
+  {
+    "msgid": "代号（{AUTH_NAME_MIN}–{AUTH_NAME_MAX} 字符）",
+    "via": "t",
+    "params": [
+      "AUTH_NAME_MIN",
+      "AUTH_NAME_MAX"
+    ],
+    "where": "public/js/ui/account.js:116"
+  },
+  {
+    "msgid": "已是游客？注册或登录后，当前这一局会继续，只是身份升级为正式账号。",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/account.js:118"
+  },
+  {
+    "msgid": "另有",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/bondStrip.js:184"
+  },
+  {
+    "msgid": "名成员本局禁用，未列出",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/bondStrip.js:184"
+  },
+  {
+    "msgid": "{full}账号",
+    "via": "t",
+    "params": [
+      "full"
+    ],
+    "where": "public/js/ui/components.js:719"
+  },
+  {
+    "msgid": "隐藏密码",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/components.js:880"
+  },
+  {
+    "msgid": "显示密码",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/components.js:880"
+  },
+  {
+    "msgid": "知道了",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/notice.js:21"
+  },
+  {
+    "msgid": "无 WebGL",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:48"
+  },
+  {
+    "msgid": "检测失败",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:54"
+  },
+  {
+    "msgid": "未知",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:221"
+  },
+  {
+    "msgid": "此浏览器没有可用的 WebGL",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:70"
+  },
+  {
+    "msgid": "渲染：无 WebGL",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:70"
+  },
+  {
+    "msgid": "（软件渲染）",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:71"
+  },
+  {
+    "msgid": "硬件加速",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:218"
+  },
+  {
+    "msgid": "已开启",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:219"
+  },
+  {
+    "msgid": "未开启",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:219"
+  },
+  {
+    "msgid": "渲染器：",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:221"
+  },
+  {
+    "msgid": "支持",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:221"
+  },
+  {
+    "msgid": "不支持",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:221"
+  },
+  {
+    "msgid": " · 请在浏览器设置里开启「使用硬件加速」，否则画面会明显卡顿",
+    "via": "t",
+    "params": [],
+    "where": "public/js/ui/settings.js:221"
+  },
+  {
+    "msgid": "搜寻队友需要先登录账号",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:167"
+  },
+  {
+    "msgid": "你已在搜寻队列中",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:169"
+  },
+  {
+    "msgid": "你不在搜寻队列中",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:169"
+  },
+  {
+    "msgid": "管",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:267"
+  },
+  {
+    "msgid": "开",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:267"
+  },
+  {
+    "msgid": "管理员",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:269"
+  },
+  {
+    "msgid": "开发者",
+    "via": "N_",
+    "params": [],
+    "where": "shared/constants.js:269"
+  }
+]

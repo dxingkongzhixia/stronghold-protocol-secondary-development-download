@@ -1,4 +1,6 @@
-// Title screen: season-style backdrop, big title 卫戍协议：盟约, remembered nickname, 开始.
+// Title screen: season-style backdrop, big title 卫戍协议：盟约, remembered nickname, 开始, the language menu
+// (中文 | English | every pack in public/i18n/, ui/lang.js; a title in an alphabetic script — English — is the big one and
+// the small wordmark above it hides).
 //
 // Pressing 开始 validates the nickname (1..NAME_MAX_LEN chars, no control characters), stores it,
 // marks this tab as "entered" (so reloads skip the title) and hands the name to net.js, which
@@ -9,7 +11,7 @@
 // pure CSS/SVG (radar, ridgelines, glow), so it never issues a request that can 404.
 
 import { useEffect, useMemo, useState } from '../../vendor/hooks.module.js';
-import { NAME_MAX_LEN, APP_VERSION } from '../../../shared/constants.js';
+import { NAME_MAX_LEN, APP_VERSION, DEV_BUILD } from '../../../shared/constants.js';
 import { html, Button, Icon, MicroLabel, TextField, PingPill } from '../ui/components.js';
 import { GuideButton } from '../ui/guide.js';
 import { toast } from '../ui/toasts.js';
@@ -19,6 +21,9 @@ import { net, identity, randomGuestName } from '../net.js';
 import { store, useStore, shallowEqual } from '../store.js';
 import { data, useData } from '../data.js';
 import { FullscreenButton, detectFeatures } from '../ui/device.js';
+import { LangToggle, useLang } from '../ui/lang.js';
+import { t, N_ } from '../../../shared/i18n.js';
+import { scriptOf } from '../../../shared/i18nPacks.js';
 import { GIcon } from '../ui/gameComponents.js';
 import { SettingsModal } from '../ui/settings.js';
 
@@ -35,7 +40,7 @@ function AccountBox({ name }) {
   }
   return html`<div class=${`title-account${open ? ' is-open' : ''}`}>
     <button type="button" class="title-account__toggle" aria-expanded=${open} onClick=${() => setOpen((v) => !v)}>
-      <${Icon} name="key" /><span>账号登录 / 注册</span><span class="title-account__caret">${open ? '收起' : '展开'}</span>
+      <${Icon} name="key" /><span>${t('账号登录 / 注册')}</span><span class="title-account__caret">${open ? t('收起') : t('展开')}</span>
     </button>
     ${open ? html`<div class="title-account__panel"><${AccountForm} name=${name} /></div>` : null}
   </div>`;
@@ -216,28 +221,28 @@ function FeedbackGroup() {
   const copy = async (e) => {
     if (e) e.stopPropagation();
     const ok = await copyText(FEEDBACK_GROUP);
-    toast(ok ? `已复制反馈群群号 ${FEEDBACK_GROUP}` : `反馈群：${FEEDBACK_GROUP}`, ok ? 'success' : 'info');
+    toast(ok ? t('已复制反馈群群号 {FEEDBACK_GROUP}', { FEEDBACK_GROUP }) : t('反馈群：{FEEDBACK_GROUP}', { FEEDBACK_GROUP }), ok ? 'success' : 'info');
   };
   return html`<div class="title-group-wrap">
     ${open ? html`<div class="title-group-card">
       <${MicroLabel} tone="mint">ALLIANCE COMMUNICATION<//>
-      <h3 class="title-group-card__title">反馈群</h3>
-      <img class="title-group-qr" src="/assets/ui/feedback-qr.png" alt="反馈群二维码" draggable=${false} />
-      <button type="button" class="title-group-card__num" onClick=${copy} title="点击复制群号">QQ群 <b class="num">${FEEDBACK_GROUP}</b></button>
-      <p class="title-group-card__hint">使用手机 QQ 扫码加入同盟</p>
+      <h3 class="title-group-card__title">${t('反馈群')}</h3>
+      <img class="title-group-qr" src="/assets/ui/feedback-qr.png" alt=${t('反馈群二维码')} draggable=${false} />
+      <button type="button" class="title-group-card__num" onClick=${copy} title=${t('点击复制群号')}>${t('QQ群')} <b class="num">${FEEDBACK_GROUP}</b></button>
+      <p class="title-group-card__hint">${t('使用手机 QQ 扫码加入同盟')}</p>
     </div>` : null}
-    <button type="button" class="title-group" onClick=${() => setOpen((v) => !v)} title="点击查看反馈群二维码">
+    <button type="button" class="title-group" onClick=${() => setOpen((v) => !v)} title=${t('点击查看反馈群二维码')}>
       <${Icon} name="users" />
-      <span>反馈群</span>
+      <span>${t('反馈群')}</span>
       <b class="num">${FEEDBACK_GROUP}</b>
     </button>
-    <span class="title-group-note">服务器为个人免费服务器 · 容量较小</span>
+    <span class="title-group-note">${t('服务器为个人免费服务器 · 容量较小')}</span>
   </div>`;
 }
 
 const STATUS_TEXT = {
-  idle: '准备连接', connecting: '正在连接服务器', connected: '已连接服务器', handshaking: '正在验证身份',
-  online: '已连接服务器', reconnecting: '连接中断，正在重连', closed: '连接已关闭',
+  idle: N_('准备连接'), connecting: N_('正在连接服务器'), connected: N_('已连接服务器'), handshaking: N_('正在验证身份'),
+  online: N_('已连接服务器'), reconnecting: N_('连接中断，正在重连'), closed: N_('连接已关闭'),
 };
 
 /** Title screen component. */
@@ -245,8 +250,9 @@ export function TitleScreen() {
   const conn = useStore((s) => s.connection, shallowEqual);
   const pendingJoin = useStore((s) => s.ui.pendingJoin);
   const auth = useStore((s) => s.auth, shallowEqual);
+  useLang(); // re-render on a language switch
   // Prefill only a previously entered callsign — never the provisional hello name (which is a placeholder).
-  const [name, setName] = useState(() => identity.loadName() || '');
+  const [name, setName] = useState(() => store.get().me.name || identity.loadName() || '');
   // 博士代号 = the account name: keep the field in sync once logged in (and fill it after a login).
   useEffect(() => { if (auth?.account?.name) setName(auth.account.name); }, [auth?.account?.id]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -270,7 +276,7 @@ export function TitleScreen() {
     if (acct) { enterSession(acct.name); return; }
     // 游客进入: an empty 博士代号 is allowed — generate a random 游客 callsign so nobody has to type one.
     let n = sanitizeName(name);
-    if (!n) { n = randomGuestName(); setName(n); toast(`已随机生成游客代号「${n}」`, 'info'); }
+    if (!n) { n = randomGuestName(); setName(n); toast(t('已随机生成游客代号「{n}」', { n }), 'info'); }
     enterSession(n);
   };
 
@@ -279,6 +285,9 @@ export function TitleScreen() {
 
   // touch screens: no autofocus (it would pop the on-screen keyboard over a landscape phone's whole view)
   const touchUi = useMemo(() => detectFeatures().coarse, []);
+  // a title in an alphabetic script (English, French …) is the big one in the display face and the wordmark above it
+  // hides; a CJK / kana / Hangul title keeps the Chinese layout (shared/i18nPacks.js scriptOf — a pack needs no flag)
+  const alphabetic = scriptOf(t('卫戍协议')) === 'alphabetic';
   return html`<div class="screen title-screen">
     <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} aria-hidden="true">
       ${backdrop ? html`<img class="title-bg__art" src=${backdrop} alt="" draggable=${false}
@@ -303,37 +312,40 @@ export function TitleScreen() {
       <div><${MicroLabel} tone="mint">RHODES ISLAND // SIMULATION SERVICE<//><br /><${MicroLabel}>TACTICAL CO-OP NODE · 02<//></div>
     </div>
     <div class="title-corner title-corner--tr">
-      <${MicroLabel} tone="hi">TARGET POINT<//><br /><${MicroLabel}>STRONGHOLD PROTOCOL<//>
+      <div>
+        <${LangToggle} class="title-lang" />
+        <${MicroLabel} tone="hi">TARGET POINT<//><br /><${MicroLabel}>STRONGHOLD PROTOCOL<//>
+      </div>
     </div>
 
     <main class="title-main">
       <${Emblem} />
-      <div class="title-en">
+      ${alphabetic ? null : html`<div class="title-en">
         <span class="title-en__a">STRONGHOLD PROTOCOL</span>
         <span class="title-en__b">ALLIANCE</span>
-      </div>
-      <h1 class="title-cn">卫戍协议<span class="title-cn__colon">：</span><em>盟约</em></h1>
-      <p class="title-tag">调配资金与干员，与同伴协同布防，抵御多波次进攻，直至击败敌方领袖。</p>
+      </div>`}
+      <h1 class=${`title-cn${alphabetic ? ' title-cn--latin' : ''}`}>${t('卫戍协议')}<span class="title-cn__colon">${alphabetic ? ': ' : '：'}</span><em>${t('盟约')}</em></h1>
+      <p class="title-tag">${t('调配资金与干员，与同伴协同布防，抵御多波次进攻，直至击败敌方领袖。')}</p>
 
       <div class="title-login">
         ${pendingJoin ? html`<div class="title-invite">
           <${Icon} name="key" />
-          <span>收到同盟邀请</span><b class="num">${pendingJoin}</b><span class="t-lo">· 输入代号后将自动加入</span>
+          <span>${t('收到同盟邀请')}</span><b class="num">${pendingJoin}</b><span class="t-lo">${t('· 输入代号后将自动加入')}</span>
         </div>` : null}
-        <${TextField} label="博士代号" micro="CALLSIGN" size="lg" icon="user" value=${name} maxLength=${NAME_MAX_LEN}
-          placeholder="输入代号 · 可留空" autoFocus=${!touchUi} disabled=${!!auth?.account}
+        <${TextField} label=${t('博士代号')} micro="CALLSIGN" size="lg" icon="user" value=${name} maxLength=${NAME_MAX_LEN}
+          placeholder=${t('输入你的代号（最多 {NAME_MAX_LEN} 字）', { NAME_MAX_LEN })} autoFocus=${!touchUi} disabled=${!!auth?.account}
           onInput=${setName} onEnter=${start} />
         <${Button} variant="primary" size="xl" block=${true} iconRight="chevrons" onClick=${start}>
-          ${auth?.account || valid ? '进入作战' : '游客进入'}
+          ${auth?.account || valid ? t('进入作战') : t('游客进入')}
         <//>
-        ${!auth?.account && !valid ? html`<div class="title-guest-hint">未填写代号 · 将以随机「游客XXXX」身份进入</div>` : null}
+        ${!auth?.account && !valid ? html`<div class="title-guest-hint">${t('未填写代号 · 将以随机「游客XXXX」身份进入')}</div>` : null}
         <${AccountBox} name=${name} />
         <div class="title-conn">
           <span class=${`status-dot ${dotClass}`}></span>
-          <span>${STATUS_TEXT[conn.status] || conn.status}</span>
+          <span>${STATUS_TEXT[conn.status] ? t(STATUS_TEXT[conn.status]) : conn.status}</span>
           ${conn.status === 'online' ? html`<${PingPill} ms=${conn.ping} />` : null}
-          <${GuideButton} class="title-guide" />
-          <button type="button" class="title-settings fsbtn tapx" aria-label="设置" title="设置"
+          <${GuideButton} class="title-guide" label=${t('玩法说明')} />
+          <button type="button" class="title-settings fsbtn tapx" aria-label=${t('设置')} title=${t('设置')}
             onClick=${() => setSettingsOpen(true)}><${GIcon} name="gear" /></button>
           <${FullscreenButton} class="title-fs" />
         </div>
@@ -343,8 +355,9 @@ export function TitleScreen() {
     <${SettingsModal} open=${settingsOpen} onClose=${() => setSettingsOpen(false)} />
 
     <footer class="title-foot">
-      <span>非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有</span>
+      <span>${t('非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有')}</span>
       <${MicroLabel}>v${APP_VERSION} · WEB SIMULATION<//>
+      ${DEV_BUILD ? html`<span class="title-dev" role="note">${t('开发版 · 不稳定，请勿用于公开服务器')}</span>` : null}
     </footer>
     <${FeedbackGroup} />
   </div>`;

@@ -14,11 +14,12 @@ import { html, Button, Icon, TextField, RoleTag } from './components.js';
 import { toast } from './toasts.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, savePref } from '../store.js';
+import { t, N_ } from '../../../shared/i18n.js';
 
 /** Server error code → Chinese message. */
 export const AUTH_ERR_TEXT = {
-  BAD_NAME: '代号需 2–12 个字符', BAD_PASSWORD: '密码至少 6 位', NAME_TAKEN: '该代号已被使用',
-  BAD_CREDENTIALS: '代号或密码错误', SESSION_EXPIRED: '登录已过期，请重新登录',
+  BAD_NAME: N_('代号需 2–12 个字符'), BAD_PASSWORD: N_('密码至少 6 位'), NAME_TAKEN: N_('该代号已被使用'),
+  BAD_CREDENTIALS: N_('代号或密码错误'), SESSION_EXPIRED: N_('登录已过期，请重新登录'),
 };
 
 /** Trim + cap like the server (the server re-sanitizes authoritatively). */
@@ -53,46 +54,46 @@ export function AccountForm({ name, onDone }) {
   const fail = (message) => { setError(message); toast(message, 'warn'); };
   const submit = async () => {
     setError(null);
-    if (!online) return fail('正在连接服务器，请稍候…');
-    if (!nameOk) return fail(`代号需 ${AUTH_NAME_MIN}–${AUTH_NAME_MAX} 个字符`);
-    if (pw.length < AUTH_PASS_MIN) return fail(`密码至少 ${AUTH_PASS_MIN} 位`);
+    if (!online) return fail(t('正在连接服务器，请稍候…'));
+    if (!nameOk) return fail(t('代号需 {AUTH_NAME_MIN}–{AUTH_NAME_MAX} 个字符', { AUTH_NAME_MIN, AUTH_NAME_MAX }));
+    if (pw.length < AUTH_PASS_MIN) return fail(t('密码至少 {AUTH_PASS_MIN} 位', { AUTH_PASS_MIN }));
     setBusy(true);
     try {
       if (mode === 'register') await net.authRegister(accountName, pw);
       else await net.authLogin(accountName, pw);
       setPw('');
-      toast(mode === 'register' ? '注册成功，已登录' : '登录成功', 'success');
+      toast(mode === 'register' ? t('注册成功，已登录') : t('登录成功'), 'success');
       onDone?.();
     } catch (err) {
       // Duplicate names get called out explicitly (the server enforces case-insensitive uniqueness).
       const message = err?.code === 'NAME_TAKEN'
-        ? `代号「${accountName}」重名，已被占用 —— 请换一个`
-        : (AUTH_ERR_TEXT[err?.code] || err?.message || '登录失败');
+        ? t('代号「{accountName}」重名，已被占用 —— 请换一个', { accountName })
+        : (t(AUTH_ERR_TEXT[err?.code]) || err?.message || t('登录失败'));
       setError(message);
       toast(message, 'error');
     } finally { setBusy(false); }
   };
   return html`<div class="account-form">
     <div class="account-form__tabs" role="tablist">
-      <button type="button" role="tab" aria-selected=${mode === 'login'} class=${mode === 'login' ? 'is-on' : ''} onClick=${() => setMode('login')}>登录</button>
-      <button type="button" role="tab" aria-selected=${mode === 'register'} class=${mode === 'register' ? 'is-on' : ''} onClick=${() => setMode('register')}>注册</button>
+      <button type="button" role="tab" aria-selected=${mode === 'login'} class=${mode === 'login' ? 'is-on' : ''} onClick=${() => setMode('login')}>${t('登录')}</button>
+      <button type="button" role="tab" aria-selected=${mode === 'register'} class=${mode === 'register' ? 'is-on' : ''} onClick=${() => setMode('register')}>${t('注册')}</button>
     </div>
     <${TextField} size="md" icon="key" type="password" value=${pw} maxLength=${AUTH_PASS_MAX}
-      placeholder=${`密码（≥${AUTH_PASS_MIN} 位）`} onInput=${(v) => { setPw(v); if (error) setError(null); }} onEnter=${submit} />
-    <${Button} variant="primary" size="lg" block=${true} loading=${busy} disabled=${!canSubmit} onClick=${submit}>${mode === 'register' ? '注册并进入' : '登录并进入'}<//>
+      placeholder=${t('密码（≥{AUTH_PASS_MIN} 位）', { AUTH_PASS_MIN })} onInput=${(v) => { setPw(v); if (error) setError(null); }} onEnter=${submit} />
+    <${Button} variant="primary" size="lg" block=${true} loading=${busy} disabled=${!canSubmit} onClick=${submit}>${mode === 'register' ? t('注册并进入') : t('登录并进入')}<//>
     ${error ? html`<span class="account-form__err">${error}</span>`
-      : (auth?.error ? html`<span class="account-form__err">${AUTH_ERR_TEXT[auth.error] || auth.error}</span>` : null)}
+      : (auth?.error ? html`<span class="account-form__err">${t(AUTH_ERR_TEXT[auth.error]) || auth.error}</span>` : null)}
     <span class="account-form__hint">${!nameOk
-      ? `请填写 ${AUTH_NAME_MIN}–${AUTH_NAME_MAX} 个字符的代号`
-      : (pw.length >= AUTH_PASS_MIN ? '代号即账号名 · 登录后可参与「搜寻队友」野排' : `密码至少 ${AUTH_PASS_MIN} 位`)}</span>
+      ? t('请填写 {AUTH_NAME_MIN}–{AUTH_NAME_MAX} 个字符的代号', { AUTH_NAME_MIN, AUTH_NAME_MAX })
+      : (pw.length >= AUTH_PASS_MIN ? t('代号即账号名 · 登录后可参与「搜寻队友」野排') : t('密码至少 {AUTH_PASS_MIN} 位', { AUTH_PASS_MIN }))}</span>
   </div>`;
 }
 
 /** The logged-in summary + 退出 (shared by the title panel and the dialog). */
 export function AccountWho({ account }) {
   return html`<div class="account-who">
-    <span class="account-who__line"><${Icon} name="user" />已登录 · <b>${account.name}</b><${RoleTag} role=${account.role} /></span>
-    <${Button} variant="secondary" onClick=${logoutAccount}>退出登录<//>
+    <span class="account-who__line"><${Icon} name="user" />${t('已登录 ·')} <b>${account.name}</b><${RoleTag} role=${account.role} /></span>
+    <${Button} variant="secondary" onClick=${logoutAccount}>${t('退出登录')}<//>
   </div>`;
 }
 
@@ -106,15 +107,15 @@ export function AccountDialog({ onClose, defaultName = '' }) {
   const [name, setName] = useState(defaultName);
   return html`<div class="account-modal" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
     <div class="account-modal__card brackets">
-      <div class="account-modal__head"><span>账号</span>
-        <button type="button" class="account-modal__close" onClick=${onClose} aria-label="关闭">✕</button></div>
+      <div class="account-modal__head"><span>${t('账号')}</span>
+        <button type="button" class="account-modal__close" onClick=${onClose} aria-label=${t('关闭')}>✕</button></div>
       ${auth?.account
         ? html`<${AccountWho} account=${auth.account} />`
         : html`<div class="account-modal__body">
             <${TextField} size="md" icon="user" value=${name} maxLength=${AUTH_NAME_MAX}
-              placeholder=${`代号（${AUTH_NAME_MIN}–${AUTH_NAME_MAX} 字符）`} onInput=${setName} />
+              placeholder=${t('代号（{AUTH_NAME_MIN}–{AUTH_NAME_MAX} 字符）', { AUTH_NAME_MIN, AUTH_NAME_MAX })} onInput=${setName} />
             <${AccountForm} name=${name} onDone=${onClose} />
-            <span class="account-modal__note">已是游客？注册或登录后，当前这一局会继续，只是身份升级为正式账号。</span>
+            <span class="account-modal__note">${t('已是游客？注册或登录后，当前这一局会继续，只是身份升级为正式账号。')}</span>
           </div>`}
     </div>
   </div>`;
