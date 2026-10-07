@@ -18364,6 +18364,17 @@
    "battleSpineDefault": null,
    "battleSpineSkinVariantsOnly": [],
    "sfx": {}
+  },
+  "token_10071_aglna2_agairp": {
+   "name": "一会儿见！",
+   "avatar": {
+    "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/token_10071_aglna2_agairp.png",
+    "bytes": 3238,
+    "fallbackLocal": true
+   },
+   "battleSpineDefault": null,
+   "battleSpineSkinVariantsOnly": [],
+   "sfx": {}
   }
  },
  "enemies": {

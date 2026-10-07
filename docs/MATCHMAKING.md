@@ -830,3 +830,6 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - [x] **3. 美术 / 语音**：`07-assets.json` 加 `char_4138_narant`（头像/立绘/**技能图标**/脊柱前·后/子职业图标，字节实测）→ `fetch-assets --asset-source=mirror`（含 14 条语音 + 音效）。
 - [x] **4. 计数**：`data.test`（278 / 118 / 分档 3:24）、`{ui,match,sim}/loadout` 118、`match/pool`（118 / 116）、`kits_alt_t3` 24 → 全量 `node --test` 绿。
 - [ ] **5. 上线**：先问 owner → 推通知（署名 `d星空之下`）→ 重启 → 校验。
+
+### 32.3 顺带修复：予愿安洁莉娜的小飞机 token 头像
+`token_10071_aglna2_agairp`（「一会儿见！」）的美术在镜像库（`yuanyan3060/ArknightsGameResource`、`fexli/ArknightsResource`、`ArknightsAssets2`、`torappu.prts.wiki`）**均未收录**（约 30 条路径全部 404；同一个库里望的棋子 token 反而有）。已按官方 token 头像风格（白/银物体、透明底 200×200、无边框）**自制兜底头像** `public/assets/token/avatar/token_10071_aglna2_agairp.png`，并在 `07-assets.json` 的 `tokens` 段登记（`fallbackLocal: true`）→ manifest 已含 `/assets/token/avatar/...`。等镜像库收录后换成官方文件即可。
