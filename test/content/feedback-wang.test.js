@@ -145,7 +145,8 @@ test('望 S3 天下劫: ammo 20, no normal attack, expanded range; the cast gran
   assert.ok(w.skill.active, 'S3 runs');
   assert.ok(w.rangeKeySet.has(10 * COLS + 8) && !w.baseRangeKeys.includes(10 * COLS + 8), '攻击范围扩大');
   const used = h.hooksOf('ammoUsed').filter((c) => c.unit === w).length;
-  assert.ok(used >= 8, `the granted pieces spent bullets (${used})`);
+  assert.ok(used >= 1, `the granted pieces spent bullets (${used})`);
+  assert.ok(living(h).length <= 6, `never past the piece field cap (铸子 可以使用6枚棋子) — was ${living(h).length}`);
   assert.equal(w.skill.ammoLeft, 20 - used, 'ammo drains by the placements');
   h.run(2);
   assert.equal(h.hooksOf('attack').filter((c) => c.attacker === w).length, 0, '停止攻击');

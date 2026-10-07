@@ -3355,6 +3355,10 @@ function wang(bb, chess, def) {
   const spawnCap = Math.max(0, Math.floor(num(t0['attack@max_spawn_cnt'], 9)));          // 跟子 最多9枚
   /** "最多拥有7枚" — the TOKEN's own deck stack cap (data, not the operator's 0). */
   const stockCapOf = (battle, unit) => Math.max(1, Math.floor(num(battle.tokenDef?.(tok, unit)?.stats?.deckStack, 7)));
+  /** The pieces this owner holds ON THE FIELD. 铸子 "可以使用6枚棋子": placing beyond the token's own `deployLimit`
+   *  makes tokens.js WITHDRAW the oldest piece — a placement that costs a bullet and changes nothing. */
+  const heldPieces = (battle, unit) => battle.allyUnits.filter((t) => t.alive && t.kind === 'token' && t.defId === tok && t.ownerUnit === unit);
+  const fieldCapOf = (battle, unit) => Math.max(1, Math.floor(num(battle.tokenDef?.(tok, unit)?.stats?.deployLimit, 6)));
   /** Per-battle follow-piece guard (a follow-piece never spawns another). */
   const wstate = (battle) => {
     const s = bstate(battle);
@@ -3386,6 +3390,7 @@ function wang(bb, chess, def) {
     if (st.busy) return;
     const mine = battle.allyUnits.filter((t) => t.kind === 'token' && t.defId === tok && t.ownerUnit === unit && t.mem.wangFollow && t.alive);
     if (mine.length >= spawnCap) return;
+    if (heldPieces(battle, unit).length >= fieldCapOf(battle, unit)) return;   // a full field would just withdraw another piece for a bullet
     if (s3Active(unit) && Math.floor(num(unit.mem.wangS3Follows, 0)) >= 3) return; // S3: 第一天赋额外至多3枚
     // 上 > 右 > 下 > 左 in the piece's own (facing) frame — a turned board plays alike (sim/dir.js)
     const DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
@@ -3453,6 +3458,7 @@ function wang(bb, chess, def) {
     let left = Math.max(0, Math.floor(num(stock[tok], 0)));
     for (const [r, c] of placeTiles(battle, unit, { enemiesFirst: s3 })) {
       if (left <= 0) break;
+      if (heldPieces(battle, unit).length >= fieldCapOf(battle, unit)) break;   // never place past the field cap (drops nothing)
       const p = battle.spawnToken(unit, tok, r, c, { kit });
       if (p) {
         left--;

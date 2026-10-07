@@ -18379,9 +18379,23 @@
     "bytes": 3238,
     "fallbackLocal": true
    },
-   "battleSpineDefault": null,
+   "battleSpineDefault": {
+    "skel": {
+     "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/token/token_10071_aglna2_agairp/token_10071_aglna2_agairp.skel",
+     "bytes": 4800
+    },
+    "atlas": {
+     "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/token/token_10071_aglna2_agairp/token_10071_aglna2_agairp.atlas",
+     "bytes": 921
+    },
+    "png": {
+     "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/token/token_10071_aglna2_agairp/token_10071_aglna2_agairp.png",
+     "bytes": 13159
+    }
+   },
    "battleSpineSkinVariantsOnly": [],
-   "sfx": {}
+   "sfx": {},
+   "spineFallbackFrom": "token_10000_silent_healrb（医疗探机，官方镜像缺少本 token 的脊柱，作视觉兜底）"
   }
  },
  "enemies": {
