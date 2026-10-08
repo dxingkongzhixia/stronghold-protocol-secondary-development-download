@@ -39,7 +39,7 @@ const ENEMIES = {
 /** Both forms: [tier, elite] (tier is only a label now: the chess has a normal and an elite record). */
 const FORMS_ALL = [[5, false], [6, true]];
 const label = ([tier, elite]) => `T${tier} ${elite ? 'elite' : 'normal'}`;
-const YAK = 'chess_char_1_02_a', TEXAS = 'chess_char_1_08_a', PERFUMER = 'chess_char_2_14_a';
+const YAK = 'chess_char_1_02_a', TEXAS = 'chess_char_1_08_a', PERFUMER = 'chess_char_2_14_a', UTAGE = 'chess_char_1_18_a';
 
 /** A battle with 凯尔希·思衡托 as uid 1 at (10, 4) facing RIGHT (`anchor`: her piece as uid 2), plus `others`.
  *  `skill` omitted (null) fields her the production way, with her shop record's default skill (S2). */
@@ -130,6 +130,35 @@ test('trait: her heals take 凯尔希\'s Mon3tr through its 禁疗 (her selectio
   assert.equal(heals(h, u)[n0].target, m, 'it is her target');
   approx(heals(h, u)[n0].amount, u.s.atk, 'a full heal through its 禁疗');
   done(h);
+});
+
+test('S2 保护性拒止\'s burst heal refuses a 禁疗 ally and a 武者 (无法被友方治疗) one — but the T2 生命回复速度 still reaches both; an ordinary injured ally is healed', () => {
+  for (const f of FORMS_ALL) {
+    const [tier, elite] = f;
+    // an ordinary injured ally (10,5), a healFree (禁疗) ally (9,5) and 宴 (武者: profile.noHeal) (11,5) — all within
+    // 1.5 of the burst centre; an enemy at (10,6) makes her S2 fire at it (damage first) with the heal after
+    const others = [{ uid: 3, chessId: YAK, row: 10, col: 5 },
+      { uid: 4, chessId: TEXAS, row: 9, col: 5 }, { uid: 5, chessId: UTAGE, row: 11, col: 5 }];
+    const { h, u } = field({ tier, elite, skill: 1, others });
+    const hurt = h.unit(3), free = h.unit(4), musha = h.unit(5);
+    h.b.addBuff(free, { key: 'test:healFree', flags: { healFree: true }, persist: true });   // 禁疗: no 无法被友方治疗 profile
+    assert.ok(!free.profile.noHeal && free.s.flags.healFree, `${label(f)}: the 禁疗 ally is blocked by healFree only`);
+    assert.ok(musha.profile.noHeal, `${label(f)}: 宴 is 武者, 无法被友方治疗`);
+    const e = h.spawn('enemy_dummy', { pos: [10, 6] });
+    for (const a of [hurt, free, musha]) a.hp = a.s.maxHp * 0.3;
+    u.skill.gainSp(999);
+    assert.ok(h.runUntil(() => u.skill.active, 4), `${label(f)}: cast`);
+    assert.ok(h.runUntil(() => h.hooksOf('damaged').some((c) => c.source === u && c.target === e), 4), `${label(f)}: the shot hits the enemy`);
+    h.run(3);
+    const mine = heals(h, u);
+    assert.ok(mine.some((c) => c.target === hurt), `${label(f)}: the ordinary injured ally is healed`);
+    assert.ok(!mine.some((c) => c.target === free), `${label(f)}: the 禁疗 ally is NOT healed`);
+    assert.ok(!mine.some((c) => c.target === musha), `${label(f)}: 宴 (武者) is NOT healed`);
+    // the T2 生命回复速度 is no heal — 禁疗 / 无法被友方治疗 do not stop it (PRTS 异常效果 禁疗)
+    assert.ok(free.findBuff('talent:kalts2:regen'), `${label(f)}: the 禁疗 ally still gets the hpRegen`);
+    assert.ok(musha.findBuff('talent:kalts2:regen'), `${label(f)}: 宴 still gets the hpRegen`);
+    done(h);
+  }
 });
 
 test('守望者 heals: her normal attack heals the injured ally in range and never the enemy — one target, 100 % ATK (branch trait 恢复友方单位生命)', () => {

@@ -154,6 +154,26 @@ export class BattleQueries {
   }
 
   /**
+   * May a heal from `healer` restore ally `a`? The one shared rule a heal selection must apply (the heal pipeline
+   * enforces it itself: damage.js heal, injuredAlliesInKeys, ai.js chainHealNext). Never a 禁疗 / 无法被友方治疗 ally:
+   * the `noHeal` flag (a summon's 禁疗, an 孤立 one), a profile `noHeal` (无法被友方治疗: 武者 / 收割者 / 不屈者) and the
+   * `healFree` flag (禁疗, "无法成为治疗类能力的目标，且受到的治疗量变为0") — unless the healer's profile
+   * `healThrough(healer, a)` names it (凯尔希 on her Mon3tr). No `isolated` ally (a friendly selector cannot pick it).
+   * A healer heals itself unless it holds `healFree` (a self-heal passes `noHeal`; the pipeline still lets `regen` /
+   * `ignoreHealFree` through — that is the heal call's own business, not this selection). An HP-regen attribute
+   * (`hpRegen`) is no heal and is never blocked here.
+   */
+  healTargetable(healer, a) {
+    if (!a) return false;
+    if (a === healer) return !a.s.flags.healFree;
+    if (this.allySelectable(a, healer) === false) return false;
+    if (a.profile && a.profile.noHeal) return false;   // 无法被友方治疗: no heal reaches it, not even through healThrough
+    const through = healer && healer.profile && typeof healer.profile.healThrough === 'function' ? healer.profile.healThrough : null;
+    if (through && through(healer, a)) return true;
+    return !(a.s.flags.noHeal || a.s.flags.healFree);
+  }
+
+  /**
    * Living enemies whose body (body.js: a huge enemy's hit rectangle, else its position) is within `r` of (x, y).
    * `centre` = a 中点判定 radius — splash around a struck / marked target (PRTS 作战机制: "中点判定…案例：阻挡，酒神1天赋的1.3
    * 溅射半径"): every enemy counts by its position (判定中心), a huge one too.

@@ -153,8 +153,11 @@ function s2Burst(battle, unit, target, attackId, b2) {
     }
   };
   const mend = () => {
-    for (const a of battle.alliesInRadius(x, y, S2_RADIUS)) if (battle.allySelectable(a, unit)) {
-      const actual = battle.heal(unit, a, healAmt, { ignoreHealFree: true });
+    // the shared heal-selection rule: 禁疗 / 无法被友方治疗 allies stay out (only 凯尔希's Mon3tr passes, via healThrough);
+    // the heal call itself then uses the engine's pipeline (no blanket `ignoreHealFree` — she cannot select a 禁疗 unit,
+    // so there is nothing to reach through but Mon3tr; MATCHMAKING §35.7: "目标选择受禁疗制约")
+    for (const a of battle.alliesInRadius(x, y, S2_RADIUS)) if (battle.healTargetable(unit, a)) {
+      const actual = battle.heal(unit, a, healAmt);
       // …and its heal burst is GREEN (kalts2_skill_02_range_heal_01): one clear pulse on every ally actually healed, so
       // a healed unit is unmistakable and reads apart from the enemy damage.
       if (actual > 0) battle.fx('kalts2Heal', { x: a.x, y: a.y, id: a.id });
@@ -171,7 +174,9 @@ function s2Burst(battle, unit, target, attackId, b2) {
 function s2CanAttack(battle, unit) {
   const prof = { canHitFly: true };
   if (battle.enemiesInKeys(unit.rangeKeys, unit, prof).length || battle.blockedTargets(unit, prof).length) return true;
-  const ally = battle.injuredAlliesInKeys(unit.rangeKeys, unit)[0];
+  // an injured ally she can actually heal (injuredAlliesInKeys skips noHeal / profile.noHeal; healTargetable skips a
+  // 禁疗 one too — she must not fire a 医疗单元 at an ally no heal can reach)
+  const ally = battle.injuredAlliesInKeys(unit.rangeKeys, unit).find((a) => battle.healTargetable(unit, a));
   if (ally && battle.forceAttack(unit, [ally])) unit.atkCd = Math.max(unit.atkCd, unit.s.interval);
   return false;
 }

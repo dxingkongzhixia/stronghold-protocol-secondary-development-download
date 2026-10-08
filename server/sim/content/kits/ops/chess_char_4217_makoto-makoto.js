@@ -61,7 +61,8 @@ export default {
     // S1 俄耳甫斯: an attack heals instead when a ≤ 50 % friendly stands in range (its `onAttack` replaces the hit)
     const healInstead = (battle, unit, ctx) => {
       if (!(healScale > 0)) return false;
-      const hurt = battle.alliesInRadius(unit.x, unit.y, 3, null).filter((a) => a !== unit && a.alive && a.hp < a.s.maxHp * 0.5);
+      // only an ally a heal can actually reach (Battle.healTargetable: no 禁疗 / 无法被友方治疗 one) — the shared rule
+      const hurt = battle.alliesInRadius(unit.x, unit.y, 3, null).filter((a) => a !== unit && a.alive && a.hp < a.s.maxHp * 0.5 && battle.healTargetable(unit, a));
       if (!hurt.length) return false;
       hurt.sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp);
       if (ctx) ctx.noAmmo = true;
@@ -165,8 +166,10 @@ export default {
             } else if (!want && unit.findBuff('makoto:orpheus')) battle.removeBuff(unit, 'makoto:orpheus');
             if (!want) return;
             const around = battle.alliesInRadius(unit.x, unit.y, 3, null).filter((a) => a !== unit && a.alive);
+            // the dodge is a buff, not a heal: every ally around gets it (禁疗 / 无法被友方治疗 included); only the heal
+            // selection applies the shared heal rule (Battle.healTargetable)
             if (prob > 0) for (const a of around) battle.addBuff(a, { key: 'makoto:orpheusDodge', duration: 0.6, refresh: 'replace', mods: { dodgePhys: prob, dodgeArts: prob }, tags: ['skill'] });
-            const hurt = around.filter((a) => a.hp < a.s.maxHp).sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp);
+            const hurt = around.filter((a) => a.hp < a.s.maxHp && battle.healTargetable(unit, a)).sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp);
             healAcc += 0.5;
             if (healAcc >= 1 && healScale > 0 && hurt.length) {
               healAcc = 0;
