@@ -124,7 +124,16 @@ kinds each operator's kit actually emits (by scanning `kits/ops/*.js`) and the c
 (`data/local-assets.committed.json`), and picks two signature Texture2D layers per operator. It writes
 `public/js/render/fx/official.js`; `--check` fails when the committed file is stale, `--print` prints the table.
 Pin an operator by hand in `tools/local-extract/fx-official-overrides.json`. Because the table is data, a
-registered operator supersedes the procedural archetype **without editing any kit or kind**.
+registered operator supersedes the procedural archetype **without editing any kit or kind**. Only the kinds a kit
+actually emits are listed (an operator with no attributable skill fx is absent).
+
+**The normal-attack impact is procedural — not in the table.** The official per-attack hit is a particle-system
+effect prefab each projectile prefab names in `_effectsWhenHit` (`common_hit_01` / `<op>_hit_01` …), a cluster of
+`ParticleSystem`s and transforms, **not** the operator's one signature Texture2D. An earlier design gave every
+operator a shared `hit` kind drawn from that signature texture as a ground field at the victim; it was removed as
+visibly wrong (wrong texture, wrong anchor/scale). `render/fx/projectiles.js` `_impact` (ranged) and
+`render/fx/numbers.js` `damage` (melee) now always draw the procedural hit; no normal attack consults the manifest.
+The `hit` kind, `fxOfficialHit` and `OFFICIAL_HIT_KINDS` are gone.
 
 **The committed local manifest (so a clone gets it).** `tools/local-extract/extract.py` writes the per-machine
 `data/local-assets.json`, which is git-ignored. The art under `public/assets/local/**` **is** committed, so
@@ -146,7 +155,8 @@ Re-run it after changing the committed art.
 
 - `test/render/fx-local.test.js` — the resolver, the per-client resolution (missing → procedural and no crash;
   present → local; listed-not-loaded → procedural this event / local next; `localFx:false` shuts it off), the
-  `byOp` attribution, the generated `FX_OFFICIAL` table, and that our custom operators' `fx/*` groups are committed
+  `byOp` attribution, the generated `FX_OFFICIAL` table (no `hit` kind), the normal-attack impact staying
+  procedural and never consulting the manifest, and that our custom operators' `fx/*` groups are committed
   on disk.
 - `test/render/fx-kalts2.test.js` — the kalts2 S2 archetypes / colours / radii.
 - `test/local-extract.test.js` — `node tools/build-fx-official.mjs --check` is up to date.

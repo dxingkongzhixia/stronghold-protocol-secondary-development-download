@@ -318,65 +318,72 @@ describe('fx official-art table: the season roster (render/fx/official.js)', () 
   });
 });
 
-// --- the shared normal-attack / hit flare (render/fx/projectiles.js _impact, render/fx/numbers.js damage) -------------
-describe("fx official normal-attack / hit flare (kind 'hit')", () => {
+// --- the normal-attack impact stays procedural (render/fx/projectiles.js _impact, render/fx/numbers.js damage) --------
+//
+// The client's official per-attack hit art is a particle-system effect prefab the projectile prefabs name in
+// `_effectsWhenHit` (common_hit_01 / <op>_hit_01 / …), not the operator's one signature Texture2D. An earlier design
+// drew that signature texture as a ground field at the victim — visibly wrong (wrong texture, wrong anchor/scale) — so
+// the normal-attack impact is drawn procedurally, never from the official table. These tests pin that: the hit path
+// stays procedural for a registered operator (whose skill fx DO use the table) too, and never consults the manifest.
+describe('fx normal-attack impact: procedural, not the official table', () => {
   const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.committed.json'), 'utf8')); } catch { return null; } })();
   const skip = manifest ? false : 'no data/local-assets.committed.json';
 
   /** A hit-path unit view (render/fx as the fx system reads it): `damage`/`_impact` need id / maxHp / onHit. */
   const hitView = (id, x, y, defId) => ({ id, x, y, z: 0, hover: 0, _headTiles: 1.2, alive: true, destroyed: false, maxHp: 3000, info: { defId, spine: defId }, onHit() {} });
 
-  test('every generated table entry carries the shared attack/hit kind', { skip }, () => {
-    for (const [op, e] of Object.entries(OFF.FX_OFFICIAL)) assert.ok(e.kinds.includes('hit'), `${op} lists 'hit'`);
+  test('the generated table carries no hit kind and no fx-less operator', { skip }, () => {
+    for (const [op, e] of Object.entries(OFF.FX_OFFICIAL)) {
+      assert.ok(!e.kinds.includes('hit'), `${op} must not list the normal-attack kind 'hit'`);
+      assert.ok(Array.isArray(e.kinds) && e.kinds.length, `${op} lists some fx kind`);
+    }
   });
 
-  test('a registered operator\'s melee blow draws its official layers; an unregistered attacker stays procedural (no fetch)', () => {
+  test('a registered operator\'s melee blow is drawn procedurally and never touches the manifest', () => {
+    // blaze2 is in the table (its skill fx use the official art) but its melee blow must stay procedural, and no
+    // registered layer is even resolved/fetched for the hit path.
+    assert.ok(OFF.FX_OFFICIAL.char_1040_blaze2, 'blaze2 is a registered operator');
     const e = OFF.FX_OFFICIAL.char_1040_blaze2;
     const url = (n) => `/assets/local/${e.group}/${n}.png`;
     const groups = { [e.group]: Object.fromEntries(e.layers.map((l) => [l.name, url(l.name)])) };
     const loaded = Object.fromEntries(e.layers.map((l) => [url(l.name), PICTURE]));
+    const a = fakeAssets(groups, loaded);
     const atk = hitView(1, 3, 4, 'char_1040_blaze2');
-    const fx = makeFx(fakeAssets(groups, loaded));
+    const fx = makeFx(a);
     fx._slashAt = atk.id;                          // app.js sets this just before a melee 'dmg'
     fx.damage(hitView(2, 5, 10, 'enemy_1001'), 100, 'phys', atk);
-    assert.equal(fx.rings.length, e.layers.length, 'one official ground field per layer');
-    assert.equal(fx.localTex.size, e.layers.length);
-    for (const r of fx.rings) assert.ok([...fx.localTex.values()].includes(r.sp.texture), 'each field draws an official texture');
-    fx.clear();
-    // an attacker not in the table (an enemy): the procedural white burst, no local texture, no manifest access
-    const a = fakeAssets(groups, loaded);
-    const fx2 = makeFx(a);
-    const enemy = hitView(3, 3, 4, 'enemy_1001');
-    fx2._slashAt = enemy.id;
-    fx2.damage(hitView(4, 5, 10, 'enemy_1001'), 100, 'phys', enemy);
-    assert.equal(fx2.localTex.size, 0);
-    assert.ok(fx2.parts.length > 0, 'the procedural white burst is drawn');
-    assert.deepEqual(a.called, [], 'an operator the table does not list is never fetched');
+    assert.equal(fx.rings.length, 0, 'no official ground field on the hit path');
+    assert.equal(fx.localTex.size, 0, 'no official texture on the hit path');
+    assert.ok(fx.parts.length > 0, 'the procedural glow / burst / slash is drawn');
+    assert.deepEqual(a.called, [], 'the hit path never consults (or fetches) the local manifest');
   });
 
-  test('a registered operator\'s ranged shot draws its official layers where it lands', () => {
+  test('a ranged shot\'s impact is drawn procedurally, even for a registered operator', () => {
     const e = OFF.FX_OFFICIAL.char_1040_blaze2;
     const url = (n) => `/assets/local/${e.group}/${n}.png`;
     const groups = { [e.group]: Object.fromEntries(e.layers.map((l) => [l.name, url(l.name)])) };
     const loaded = Object.fromEntries(e.layers.map((l) => [url(l.name), PICTURE]));
+    const a = fakeAssets(groups, loaded);
     const atk = hitView(1, 3, 10, 'char_1040_blaze2');
     const tgt = hitView(2, 6, 10, 'enemy_1001');
-    const fx = makeFx(fakeAssets(groups, loaded), undefined, new Map([[1, atk], [2, tgt]]));
+    const fx = makeFx(a, undefined, new Map([[1, atk], [2, tgt]]));
     fx.attack(atk, tgt, 'arrow');
-    for (let t = 0; t < 0.15; t += 1 / 120) fx.update(1 / 120);   // fly and land (rings live 0.32 s: still there)
-    assert.equal(fx.localTex.size, e.layers.length, 'the arrival burst uses the official textures');
-    assert.ok(fx.rings.length >= e.layers.length, 'the official ground fields are drawn at the impact');
+    for (let t = 0; t < 0.2; t += 1 / 120) fx.update(1 / 120);   // fly and land
+    assert.equal(fx.localTex.size, 0, 'the arrival burst draws no official texture');
+    assert.equal(fx.rings.length, 0, 'no official ground field at the impact');
+    assert.ok(fx.parts.length > 0, 'the procedural arrival burst (the spark flare) is drawn');
+    assert.deepEqual(a.called, [], 'the impact never consults the manifest');
   });
 
-  test('with the art not listed the hit stays procedural and never touches the network', () => {
+  test('an operator not listed behaves the same: procedural, no fetch', () => {
     const a = fakeAssets({});
-    const atk = hitView(1, 3, 4, 'char_1040_blaze2');
+    const atk = hitView(1, 3, 4, 'char_nope');
     const fx = makeFx(a);
     fx._slashAt = atk.id;
     fx.damage(hitView(2, 5, 10, 'enemy_1001'), 100, 'phys', atk);
     assert.equal(fx.localTex.size, 0);
     assert.ok(fx.parts.length > 0, 'the procedural white burst');
-    assert.deepEqual(a.called, [], 'an unlisted layer is not fetched');
+    assert.deepEqual(a.called, [], 'an unlisted operator is never fetched');
   });
 });
 

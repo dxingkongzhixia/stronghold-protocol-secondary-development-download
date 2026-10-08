@@ -4,19 +4,20 @@
 // UnitInfo.spine — the official charId) -> { group, kinds, layers }. render/fx/localart.js's fxLocalFor consults this
 // for an fx kind that carries no layers of its own and that the operator's kit emits, drawing the operator's official
 // textures (render/fx/simfx.js) instead of the procedural archetype; a client without the extracted art, or an
-// operator not listed, keeps the procedural tier (never a blank frame, no network in the fallback). Every listed
-// operator also carries the shared normal-attack / hit-flare kind 'hit' (render/fx/projectiles.js _impact,
-// render/fx/numbers.js damage), so their basic attacks use their official art too. Layer names are entries of the
-// committed local manifest (data/local-assets.committed.json). Re-run after an extraction / roster change:
-// node tools/build-fx-official.mjs. Pin an operator by hand in tools/local-extract/fx-official-overrides.json.
+// operator not listed, keeps the procedural tier (never a blank frame, no network in the fallback). Only the kinds a
+// kit actually emits are listed, so an operator with no attributable skill fx is absent. The normal-attack impact is
+// NOT here: it is drawn procedurally (render/fx/projectiles.js _impact, render/fx/numbers.js damage) — the official
+// per-attack hit is a particle-system effect prefab (the projectile prefabs' _effectsWhenHit), not one texture.
+// Layer names are entries of the committed local manifest (data/local-assets.committed.json). Re-run after an
+// extraction / roster change: node tools/build-fx-official.mjs. Pin an operator by hand in
+// tools/local-extract/fx-official-overrides.json.
 
 /** @type {Record<string, { group: string, kinds: string[], layers: { name: string, scale: number }[] }>} */
 export const FX_OFFICIAL = Object.freeze({
   char_498_inside: {
     group: "fx/inside",
     kinds: [
-      "buff",
-      "hit"
+      "buff"
     ],
     layers: [
       {
@@ -29,43 +30,10 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_306_leizi: {
-    group: "fx/leizi",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "leizi_sun01",
-        scale: 1.5
-      },
-      {
-        name: "shandian_15",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4137_udflow: {
-    group: "fx/udflow",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "AVG_trail_15",
-        scale: 1.5
-      },
-      {
-        name: "udflow_object_01",
-        scale: 1.1
-      }
-    ]
-  },
   char_494_vendla: {
     group: "fx/vendla",
     kinds: [
       "counter",
-      "hit",
       "taunt"
     ],
     layers: [
@@ -82,8 +50,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_145_prove: {
     group: "fx/prove",
     kinds: [
-      "crit",
-      "hit"
+      "crit"
     ],
     layers: [
       {
@@ -100,8 +67,7 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/texas",
     kinds: [
       "aoe",
-      "dp",
-      "hit"
+      "dp"
     ],
     layers: [
       {
@@ -113,8 +79,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_4100_caper: {
     group: "fx/caper",
     kinds: [
-      "crit",
-      "hit"
+      "crit"
     ],
     layers: [
       {
@@ -132,8 +97,7 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "buff",
       "crit",
-      "heal",
-      "hit"
+      "heal"
     ],
     layers: [
       {
@@ -146,75 +110,21 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_258_podego: {
-    group: "fx/podego",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "podego_01",
-        scale: 1.5
-      }
-    ]
-  },
-  char_253_greyy: {
-    group: "fx/greyy",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "shandian_13",
-        scale: 1.5
-      }
-    ]
-  },
-  char_469_indigo: {
-    group: "fx/indigo",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "indigo_04",
-        scale: 1.5
-      }
-    ]
-  },
   char_337_utage: {
     group: "fx/utage",
     kinds: [
-      "aoe",
-      "hit"
+      "aoe"
     ],
     layers: [
       {
         name: "star_02",
         scale: 1.5
-      }
-    ]
-  },
-  char_496_wildmn: {
-    group: "fx/wildmn",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "flipbook_121",
-        scale: 1.5
-      },
-      {
-        name: "star_02",
-        scale: 1.1
       }
     ]
   },
   char_107_liskam: {
     group: "fx/liskam",
     kinds: [
-      "hit",
       "shield"
     ],
     layers: [
@@ -228,38 +138,9 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_279_excu: {
-    group: "fx/excu",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "excu_boc_1_02",
-        scale: 1.5
-      },
-      {
-        name: "star_05",
-        scale: 1.1
-      }
-    ]
-  },
-  char_108_silent: {
-    group: "fx/silent",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "hemo_01",
-        scale: 1.5
-      }
-    ]
-  },
   char_4122_grabds: {
     group: "fx/grabds",
     kinds: [
-      "hit",
       "sleep"
     ],
     layers: [
@@ -273,27 +154,10 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_4114_harold: {
-    group: "fx/harold",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "special_object_harold_02",
-        scale: 1.5
-      },
-      {
-        name: "special_object_harold_03",
-        scale: 1.1
-      }
-    ]
-  },
   char_4139_papyrs: {
     group: "fx/papyrs",
     kinds: [
-      "buff",
-      "hit"
+      "buff"
     ],
     layers: [
       {
@@ -306,23 +170,10 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_143_ghost: {
-    group: "fx/ghost",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "guangxiao_02",
-        scale: 1.5
-      }
-    ]
-  },
   char_381_bubble: {
     group: "fx/bubble",
     kinds: [
-      "counter",
-      "hit"
+      "counter"
     ],
     layers: [
       {
@@ -335,22 +186,9 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_491_humus: {
-    group: "fx/humus",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "humus_02",
-        scale: 1.5
-      }
-    ]
-  },
   char_4040_rockr: {
     group: "fx/rockr",
     kinds: [
-      "hit",
       "overload"
     ],
     layers: [
@@ -368,7 +206,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/kazema",
     kinds: [
       "aoe",
-      "hit",
       "summon"
     ],
     layers: [
@@ -386,7 +223,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/tippi",
     kinds: [
       "dodge",
-      "hit",
       "takeoff"
     ],
     layers: [
@@ -403,8 +239,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_140_whitew: {
     group: "fx/whitew",
     kinds: [
-      "block",
-      "hit"
+      "block"
     ],
     layers: [
       {
@@ -420,8 +255,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_4207_branch: {
     group: "fx/branch",
     kinds: [
-      "aoe",
-      "hit"
+      "aoe"
     ],
     layers: [
       {
@@ -434,26 +268,9 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_431_ashlok: {
-    group: "fx/ashlok",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "ashlok_02",
-        scale: 1.5
-      },
-      {
-        name: "fangkuai_06",
-        scale: 1.1
-      }
-    ]
-  },
   char_4151_tinman: {
     group: "fx/tinman",
     kinds: [
-      "hit",
       "zone"
     ],
     layers: [
@@ -470,7 +287,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_294_ayer: {
     group: "fx/ayer",
     kinds: [
-      "hit",
       "strike"
     ],
     layers: [
@@ -484,28 +300,11 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_308_swire: {
-    group: "fx/swire",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "flipbook_23",
-        scale: 1.5
-      },
-      {
-        name: "fa_01",
-        scale: 1.1
-      }
-    ]
-  },
   char_1033_swire2: {
     group: "fx/swire2",
     kinds: [
       "coin",
       "explode",
-      "hit",
       "revive",
       "summon"
     ],
@@ -523,7 +322,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_263_skadi: {
     group: "fx/skadi",
     kinds: [
-      "hit",
       "revive"
     ],
     layers: [
@@ -541,7 +339,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/philae",
     kinds: [
       "aoe",
-      "hit",
       "shield",
       "shieldBreak"
     ],
@@ -560,7 +357,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/mint",
     kinds: [
       "aoe",
-      "hit",
       "pull"
     ],
     layers: [
@@ -574,42 +370,9 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_4079_haini: {
-    group: "fx/haini",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "hainixx_01",
-        scale: 1.5
-      },
-      {
-        name: "star_02_2",
-        scale: 1.1
-      }
-    ]
-  },
-  char_440_pinecn: {
-    group: "fx/pinecn",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "pinecn_02",
-        scale: 1.5
-      },
-      {
-        name: "star_02",
-        scale: 1.1
-      }
-    ]
-  },
   char_4211_snhunt: {
     group: "fx/snhunt",
     kinds: [
-      "hit",
       "strike",
       "volley"
     ],
@@ -627,8 +390,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_423_blemsh: {
     group: "fx/blemsh",
     kinds: [
-      "aoe",
-      "hit"
+      "aoe"
     ],
     layers: [
       {
@@ -641,42 +403,9 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_4054_malist: {
-    group: "fx/malist",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "shandian_17",
-        scale: 1.5
-      },
-      {
-        name: "drone_xin_01",
-        scale: 1.1
-      }
-    ]
-  },
-  char_150_snakek: {
-    group: "fx/snakek",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "snakek_flower01",
-        scale: 1.5
-      },
-      {
-        name: "snakek_flower02",
-        scale: 1.1
-      }
-    ]
-  },
   char_126_shotst: {
     group: "fx/shotst",
     kinds: [
-      "hit",
       "volley"
     ],
     layers: [
@@ -695,8 +424,7 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "aoe",
       "camouflage",
-      "dp",
-      "hit"
+      "dp"
     ],
     layers: [
       {
@@ -714,7 +442,6 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "buff",
       "dp",
-      "hit",
       "revive",
       "summon",
       "wolfShadowLost"
@@ -730,26 +457,9 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_4013_kjera: {
-    group: "fx/kjera",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "char_kjera_08",
-        scale: 1.5
-      },
-      {
-        name: "kjera_epoque_18_04",
-        scale: 1.1
-      }
-    ]
-  },
   char_332_archet: {
     group: "fx/archet",
     kinds: [
-      "hit",
       "shield",
       "shieldBreak",
       "volley"
@@ -769,7 +479,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/rmixer",
     kinds: [
       "counter",
-      "hit",
       "overload",
       "reload",
       "sermon",
@@ -789,7 +498,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_213_mostma: {
     group: "fx/mostma",
     kinds: [
-      "hit",
       "ripple",
       "zone"
     ],
@@ -808,7 +516,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/ines",
     kinds: [
       "beam",
-      "hit",
       "sentry",
       "shadowWeave",
       "stealth"
@@ -829,7 +536,6 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "camouflage",
       "crit",
-      "hit",
       "quadShot"
     ],
     layers: [
@@ -847,8 +553,7 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/bpipe",
     kinds: [
       "buff",
-      "charge",
-      "hit"
+      "charge"
     ],
     layers: [
       {
@@ -865,7 +570,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/mizuki",
     kinds: [
       "dilemma",
-      "hit",
       "ripple"
     ],
     layers: [
@@ -882,7 +586,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_446_aroma: {
     group: "fx/aroma",
     kinds: [
-      "hit",
       "levitate",
       "slippery",
       "splash"
@@ -901,7 +604,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_4162_cathy: {
     group: "fx/cathy",
     kinds: [
-      "hit",
       "overclock"
     ],
     layers: [
@@ -914,7 +616,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_474_glady: {
     group: "fx/glady",
     kinds: [
-      "hit",
       "pull",
       "tornado",
       "tornadoPulse",
@@ -936,7 +637,6 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "coldWind",
       "frostNova",
-      "hit",
       "iceSpike"
     ],
     layers: [
@@ -953,8 +653,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_373_lionhd: {
     group: "fx/lionhd",
     kinds: [
-      "explosion",
-      "hit"
+      "explosion"
     ],
     layers: [
       {
@@ -966,7 +665,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_1028_texas2: {
     group: "fx/texas2",
     kinds: [
-      "hit",
       "swordRain",
       "swordStorm"
     ],
@@ -985,7 +683,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/hsguma",
     kinds: [
       "block",
-      "hit",
       "overclock",
       "thorns"
     ],
@@ -1003,7 +700,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_311_mudrok: {
     group: "fx/mudrok",
     kinds: [
-      "hit",
       "rockfall",
       "rockslide",
       "shieldBreak",
@@ -1027,7 +723,6 @@ export const FX_OFFICIAL = Object.freeze({
       "dodge",
       "dp",
       "flame",
-      "hit",
       "riposte"
     ],
     layers: [
@@ -1045,7 +740,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/fartth",
     kinds: [
       "featherArrow",
-      "hit",
       "link"
     ],
     layers: [
@@ -1062,8 +756,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_128_plosis: {
     group: "fx/plosis",
     kinds: [
-      "healField",
-      "hit"
+      "healField"
     ],
     layers: [
       {
@@ -1075,7 +768,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_172_svrash: {
     group: "fx/svrash",
     kinds: [
-      "hit",
       "slash",
       "snow",
       "truesilver"
@@ -1094,7 +786,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_1026_gvial2: {
     group: "fx/gvial2",
     kinds: [
-      "hit",
       "jungleSoul",
       "overload"
     ],
@@ -1113,7 +804,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/billro",
     kinds: [
       "devour",
-      "hit",
       "shell"
     ],
     layers: [
@@ -1130,7 +820,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_4134_cetsyr: {
     group: "fx/cetsyr",
     kinds: [
-      "hit",
       "mote",
       "redistribute",
       "reweave"
@@ -1151,7 +840,6 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "bandage",
       "bloodBattle",
-      "hit",
       "spGift"
     ],
     layers: [
@@ -1170,8 +858,7 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "aoe",
       "dodge",
-      "extraAttack",
-      "hit"
+      "extraAttack"
     ],
     layers: [
       {
@@ -1187,7 +874,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_4056_titi: {
     group: "fx/titi",
     kinds: [
-      "hit",
       "sleepGuard",
       "wake"
     ],
@@ -1207,7 +893,6 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "aoe",
       "downed",
-      "hit",
       "meltdown",
       "revive",
       "splash"
@@ -1227,7 +912,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/ulpia",
     kinds: [
       "anchor",
-      "hit",
       "teleport"
     ],
     layers: [
@@ -1246,7 +930,6 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "aoe",
       "candle",
-      "hit",
       "reborn"
     ],
     layers: [
@@ -1264,8 +947,7 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/surtr",
     kinds: [
       "aoe",
-      "ember",
-      "hit"
+      "ember"
     ],
     layers: [
       {
@@ -1282,7 +964,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/horn",
     kinds: [
       "bloodBattle",
-      "hit",
       "overload",
       "zone"
     ],
@@ -1297,27 +978,10 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_358_lisa: {
-    group: "fx/lisa",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "Special_lisa_03",
-        scale: 1.5
-      },
-      {
-        name: "Special_lisa_04",
-        scale: 1.1
-      }
-    ]
-  },
   char_202_demkni: {
     group: "fx/demkni",
     kinds: [
-      "healAoe",
-      "hit"
+      "healAoe"
     ],
     layers: [
       {
@@ -1333,7 +997,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_2015_dusk: {
     group: "fx/dusk",
     kinds: [
-      "hit",
       "summon",
       "teleport"
     ],
@@ -1351,7 +1014,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_1023_ghost2: {
     group: "fx/ghost2",
     kinds: [
-      "hit",
       "hpShare"
     ],
     layers: [
@@ -1368,8 +1030,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_1045_svash2: {
     group: "fx/svash2",
     kinds: [
-      "aoe",
-      "hit"
+      "aoe"
     ],
     layers: [
       {
@@ -1385,7 +1046,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_1039_thorn2: {
     group: "fx/thorn2",
     kinds: [
-      "hit",
       "zone"
     ],
     layers: [
@@ -1402,8 +1062,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_264_f12yin: {
     group: "fx/f12yin",
     kinds: [
-      "crit",
-      "hit"
+      "crit"
     ],
     layers: [
       {
@@ -1419,8 +1078,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_4064_mlynar: {
     group: "fx/mlynar",
     kinds: [
-      "aoe",
-      "hit"
+      "aoe"
     ],
     layers: [
       {
@@ -1436,7 +1094,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_291_aglina: {
     group: "fx/aglina",
     kinds: [
-      "hit",
       "weightless"
     ],
     layers: [
@@ -1453,7 +1110,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_341_sntlla: {
     group: "fx/sntlla",
     kinds: [
-      "hit",
       "iceSpike"
     ],
     layers: [
@@ -1471,7 +1127,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/nymph",
     kinds: [
       "aoe",
-      "hit",
       "soul"
     ],
     layers: [
@@ -1485,29 +1140,12 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_4196_reckpr: {
-    group: "fx/reckpr",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "reckpr_02",
-        scale: 1.5
-      },
-      {
-        name: "reckpr_01",
-        scale: 1.1
-      }
-    ]
-  },
   char_4193_lemuen: {
     group: "fx/lemuen",
     kinds: [
       "bombard",
       "bombardShell",
       "crit",
-      "hit",
       "lock",
       "talent",
       "wanted"
@@ -1528,7 +1166,6 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "blessing",
       "frostNova",
-      "hit",
       "lure",
       "snow",
       "summon"
@@ -1549,7 +1186,6 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "firewall",
       "firewallBlock",
-      "hit",
       "pull",
       "teleport"
     ],
@@ -1568,7 +1204,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/skadi2",
     kinds: [
       "heal",
-      "hit",
       "tide"
     ],
     layers: [
@@ -1585,7 +1220,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_472_pasngr: {
     group: "fx/pasngr",
     kinds: [
-      "hit",
       "lightning",
       "storm"
     ],
@@ -1600,27 +1234,10 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_4058_pepe: {
-    group: "fx/pepe",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "special_object_pepe_01",
-        scale: 1.5
-      },
-      {
-        name: "trail_261",
-        scale: 1.1
-      }
-    ]
-  },
   char_1019_siege2: {
     group: "fx/siege2",
     kinds: [
       "aoe",
-      "hit",
       "summon"
     ],
     layers: [
@@ -1638,7 +1255,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/reed2",
     kinds: [
       "ember",
-      "hit",
       "scorchBurst",
       "strike"
     ],
@@ -1653,28 +1269,11 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_245_cello: {
-    group: "fx/cello",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "cello_01_1",
-        scale: 1.5
-      },
-      {
-        name: "cello_star_01",
-        scale: 1.1
-      }
-    ]
-  },
   char_249_mlyss: {
     group: "fx/mlyss",
     kinds: [
       "copy",
       "dp",
-      "hit",
       "pulse",
       "split"
     ],
@@ -1692,7 +1291,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_391_rosmon: {
     group: "fx/rosmon",
     kinds: [
-      "hit",
       "link",
       "summon"
     ],
@@ -1713,7 +1311,6 @@ export const FX_OFFICIAL = Object.freeze({
       "airstrike",
       "anchor",
       "appear",
-      "hit",
       "steal"
     ],
     layers: [
@@ -1732,8 +1329,7 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "emergency",
       "heal",
-      "healField",
-      "hit"
+      "healField"
     ],
     layers: [
       {
@@ -1750,7 +1346,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/qiubai",
     kinds: [
       "aoe",
-      "hit",
       "sword"
     ],
     layers: [
@@ -1767,7 +1362,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_1047_halo2: {
     group: "fx/halo2",
     kinds: [
-      "hit",
       "link"
     ],
     layers: [
@@ -1785,7 +1379,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/nearl2",
     kinds: [
       "disappear",
-      "hit",
       "summon",
       "sunBurst",
       "undying"
@@ -1807,7 +1400,6 @@ export const FX_OFFICIAL = Object.freeze({
       "drone",
       "droneLock",
       "drones",
-      "hit",
       "talent"
     ],
     layers: [
@@ -1825,7 +1417,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/blkkgt",
     kinds: [
       "finale",
-      "hit",
       "slash"
     ],
     layers: [
@@ -1842,7 +1433,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_1016_agoat2: {
     group: "fx/agoat2",
     kinds: [
-      "hit",
       "shield"
     ],
     layers: [
@@ -1859,8 +1449,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_377_gdglow: {
     group: "fx/gdglow",
     kinds: [
-      "drone",
-      "hit"
+      "drone"
     ],
     layers: [
       {
@@ -1872,7 +1461,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_1015_aglna2: {
     group: "fx/aglna2",
     kinds: [
-      "hit",
       "takeoff"
     ],
     layers: [
@@ -1890,7 +1478,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/kalts2",
     kinds: [
       "disappear",
-      "hit",
       "kalts2Damage",
       "kalts2Heal",
       "shield",
@@ -1911,7 +1498,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_2027_wang: {
     group: "fx/wang",
     kinds: [
-      "hit",
       "summon"
     ],
     layers: [
@@ -1925,27 +1511,10 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_4132_ascln: {
-    group: "fx/ascln",
-    kinds: [
-      "hit"
-    ],
-    layers: [
-      {
-        name: "ascln_01",
-        scale: 1.5
-      },
-      {
-        name: "ascln_04",
-        scale: 1.1
-      }
-    ]
-  },
   char_4138_narant: {
     group: "fx/narant",
     kinds: [
-      "aoe",
-      "hit"
+      "aoe"
     ],
     layers: [
       {
@@ -1962,7 +1531,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/makoto",
     kinds: [
       "aoe",
-      "hit",
       "strike"
     ],
     layers: [

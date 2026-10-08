@@ -303,6 +303,16 @@ obtainable, extract it (`tools/local-extract/extract.py`, e.g. the `fx/kalts2` j
 (`kalts2Heal` / `kalts2Damage`); the 驭械术师 浮游单元 (`PROJ.drone`) stays procedural because its textures live in
 unresolvable external CABs. `settings.localFx === false` opts the official tier off like a quality tier.
 
+**The normal-attack impact is deliberately procedural.** It is `render/fx/projectiles.js` `_impact` (a ranged shot) and
+`render/fx/numbers.js` `damage` (a melee blow), not a `local` kind: the official per-attack hit is a particle-system
+effect prefab each projectile prefab names in `_effectsWhenHit` (`common_hit_01` / `<op>_hit_01` …), a cluster of
+`ParticleSystem`s and transforms — **not** the operator's one signature Texture2D. An earlier design drew that
+signature texture as a ground field at the victim (`render/fx/official.js` kind `'hit'`, `fxOfficialHit`); it was
+removed because it was visibly misplaced (wrong texture, wrong anchor/scale). The generated table (`FX_OFFICIAL`) now
+carries only the fx kinds a kit actually emits — no `hit` — and no normal attack consults the manifest. Reproducing the
+official impacts faithfully would need a particle-system importer plus a per-operator projectile mapping, which the
+bundles do not give as a single sprite.
+
 ---
 
 ## 10. Where our custom content lives

@@ -4,7 +4,6 @@
 import { DMG_STYLE, HIT_TINT, dmgStyleKey } from '../style.js';
 import { camKey } from './camera.js';
 import { clamp, easeOut } from './limits.js';
-import { fxOfficialHit } from './localart.js';
 
 const MAX_NUMBERS = 90;
 
@@ -57,18 +56,14 @@ export class FxNumbers {
     const tint = HIT_TINT[style] || 0xffffff;
     const big = view.maxHp > 0 && amount >= view.maxHp * 0.18;
     const melee = !!srcView && this._slashAt === srcView.id;
-    // the optional official normal-attack hit: the attacker's bundle art (render/fx/official.js kind 'hit') drawn as a
-    // ground field when it is loaded, else the procedural white glow + burst below (never blank, no network in fallback)
-    let official = false;
-    if (melee) {
-      const info = srcView.info;
-      const opId = info && (info.spine || info.defId);
-      const hit = opId ? fxOfficialHit(opId) : null;
-      official = !!(hit && this._fxLocal(hit, { x: view.x, y: view.y, z: this._groundZ(view.x, view.y) }, 0.8, tint, 0.32));
-    }
-    if (!official) this.particle('glow', px, py, { tint, life: 0.18, s0: (s / 128) * (big ? 1.0 : 0.6), s1: (s / 128) * (big ? 1.5 : 0.9), a0: 0.9, a1: 0 });
+    // The melee blow is drawn procedurally (the attacker's slash + the victim's glow / burst). The client's official
+    // per-attack hit art is NOT used: it is a particle-system effect prefab named by the projectile prefabs
+    // (`_effectsWhenHit`), not the attacker's one signature Texture2D; drawing that as a ground field at the victim was
+    // visibly wrong (wrong texture, wrong anchor/scale). A correct procedural blow beats a wrong official one
+    // (docs/ASSETS.md "Battle effects", docs/DEVELOPMENT.md §9.1).
+    this.particle('glow', px, py, { tint, life: 0.18, s0: (s / 128) * (big ? 1.0 : 0.6), s1: (s / 128) * (big ? 1.5 : 0.9), a0: 0.9, a1: 0 });
     if (melee) { this._slashAt = null; this._slash(view, srcView, px, py, s, style, big); }
-    if (!official) this.burst(px, py, s, big ? 8 : melee ? 6 : 4, tint, { speed: melee ? 2.8 : 2.4, size: big ? 0.6 : 0.46 });
+    this.burst(px, py, s, big ? 8 : melee ? 6 : 4, tint, { speed: melee ? 2.8 : 2.4, size: big ? 0.6 : 0.46 });
     if (srcView && this.ctx.subProfOf && SPLASH_SUBS.has(this.ctx.subProfOf(srcView.info?.defId, srcView.info))) {
       if (!this._lastRing || this.time - this._lastRing > 0.08) {
         this._lastRing = this.time;

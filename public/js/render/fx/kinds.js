@@ -129,10 +129,8 @@ export const FX_KINDS = Object.freeze({
     char_4217_makoto: { group: 'fx/makoto', tint: 0xbfa8ff, dur: 0.6, layers: [{ name: 'star_324', scale: 1.4 }, { name: 'ray_136', scale: 1.2 }] },
   } } },
   // `hit` is the normal-attack / projectile impact flare (render/fx/projectiles.js `_impact`, render/fx/numbers.js
-  // `damage`): the client draws it itself, the sim never emits it. Every operator's attack draws it, so its official
-  // tier is attributed per operator — `render/fx/official.js` lists `hit` for every operator whose bundle is
-  // extractable. The procedural tier below (the white burst) is the fallback.
-  hit: { a: 'strike', c: 0xffffff },
+  // `damage`): the client draws it itself, the sim never emits it, so it needs no FX_KINDS entry — and it is drawn
+  // procedurally, never from the operator's official bundle (docs/ASSETS.md "Battle effects").
   volley: { a: 'volley', c: 0xfff2d0 }, column: { a: 'pillar', c: 0x9ff0dc }, obelisk: { a: 'pillar', c: 0xc9a2ff },
   duskDragon: { a: 'blast', c: 0x9dff6a, r: 1.5 }, shadowWeave: { a: 'vanish', c: 0x8f7bff }, reweave: { a: 'summon', c: 0x8f7bff },
   slash: { a: 'counter', c: 0xfff0d0 }, devour: { a: 'vanish', c: 0xff4b3e }, undying: { a: 'shield', c: 0xffd45a },

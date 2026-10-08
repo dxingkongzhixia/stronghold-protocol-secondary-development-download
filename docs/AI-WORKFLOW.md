@@ -63,7 +63,10 @@ Checklist by task type:
 **Battle fx rule (owner, 2026-10-08):** every fx kind has two tiers — the procedural drawing (mandatory, always
 available, the guaranteed fallback) and an optional local-client art tier drawn only when the client has it listed
 and loaded. Never a blank frame and never a network dependency in the fallback: a client without the art sees the
-procedural effect (Minecraft-shader-style graceful degradation). A `local`-only kind is a bug.
+procedural effect (Minecraft-shader-style graceful degradation). A `local`-only kind is a bug. The **normal-attack
+impact** is always procedural (no `local` tier): the official per-attack hit is a particle-system effect prefab the
+projectile prefabs name in `_effectsWhenHit`, not one texture — a signature-texture ground field there was removed as
+visibly wrong (docs/ASSETS.md "Battle effects", `docs/DEVELOPMENT.md` §9.1).
 
 ---
 
