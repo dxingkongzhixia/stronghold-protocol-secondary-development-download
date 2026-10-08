@@ -87,7 +87,8 @@ const LOCAL_SPINE_KINDS = {
 
 const HELP = `Usage: node tools/fetch-assets.mjs [options]
   --concurrency=N   parallel downloads (default 16)
-  --asset-source=M  direct (default) or mirror (opt-in; no public-IP lookup)
+  --asset-source=M  direct (default) | mirror (gh-proxy prefix) | gitcode (GitCode raw mirror of the
+                    yuanyan icon dump; no public-IP lookup)
   --force           re-download files even when present
   --offline         no network: post-process what is on disk and rebuild data/assets.json
   --dry-run         print the plan and exit

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { MirrorPolicy, selectDownloadSource } from '../tools/assets/network.mjs';
-import { downloadUrls, githubProxyUrl, githubSourceUrl, normalizeProxyPrefix } from '../tools/assets/sources.mjs';
+import { downloadUrls, githubProxyUrl, githubSourceUrl, gitcodeUrl, isGitcodeUrl, normalizeProxyPrefix } from '../tools/assets/sources.mjs';
 import { Downloader } from '../tools/assets/downloader.mjs';
 import { cachedJson, loadIndexes } from '../tools/assets/cache.mjs';
 import { resolveTemplate } from '../tools/assets/manifest.mjs';
@@ -26,7 +26,7 @@ async function fixture(t) {
 test('default, manual source and offline mode perform no public IP lookup', async (t) => {
   const fetch = t.mock.method(globalThis, 'fetch', async () => { assert.fail('unexpected network request'); });
   assert.equal(await selectDownloadSource({ log: quiet }), 'direct');
-  for (const mode of ['direct', 'mirror']) assert.equal(await selectDownloadSource({ mode, log: quiet }), mode);
+  for (const mode of ['direct', 'mirror', 'gitcode']) assert.equal(await selectDownloadSource({ mode, log: quiet }), mode);
   assert.equal(await selectDownloadSource({ offline: true }), 'direct');
   await assert.rejects(selectDownloadSource({ mode: 'invalid' }), /unknown asset source/);
   await assert.rejects(selectDownloadSource({ mode: 'auto' }), /unknown asset source/);
@@ -65,6 +65,36 @@ test('URL order, voice support, custom prefix, and no double prefix', () => {
   for (const prefix of ['http://mirror.example/', 'https://mirror.example/?q=x', 'https://user:secret@mirror.example/']) {
     assert.throws(() => normalizeProxyPrefix(prefix), /HTTPS URL/);
   }
+});
+
+test('gitcode source mirrors the yuanyan dump and maps no other repo', () => {
+  const y = 'https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_377_gdglow.png';
+  const gc = 'https://raw.gitcode.com/gh_mirrors/ar/ArknightsGameResource/raw/main/avatar/char_377_gdglow.png';
+  assert.equal(gitcodeUrl(y), gc);
+  assert.deepEqual(downloadUrls(y, { source: 'gitcode' }), [gc, y, 'https://cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/avatar/char_377_gdglow.png']);
+  // Repos GitCode does not mirror keep direct + jsDelivr (the yuanyan mirror is the only one).
+  const fex = 'https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/x/x/Front/x.skel';
+  assert.equal(gitcodeUrl(fex), null);
+  assert.deepEqual(downloadUrls(fex, { source: 'gitcode' }), [fex, 'https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/x/x/Front/x.skel']);
+  assert.deepEqual(downloadUrls('https://cdn.jsdelivr.net/gh/a/b@main/c.png', { source: 'gitcode' }), ['https://cdn.jsdelivr.net/gh/a/b@main/c.png']);
+  assert.equal(isGitcodeUrl(gc), true);
+  assert.equal(isGitcodeUrl(y), false);
+});
+
+test('gitcode mode gives the mirror one attempt and falls back to direct', async (t) => {
+  const dir = await fixture(t);
+  const y = 'https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/x.png';
+  const gc = 'https://raw.gitcode.com/gh_mirrors/ar/ArknightsGameResource/raw/main/avatar/x.png';
+  const calls = [];
+  const dl = new Downloader({ root: dir, ledgerPath: join(dir, 'ledger.json'), source: 'gitcode', retries: 3, backoffMs: 0, log: quiet,
+    fetchImpl: async (url) => {
+      calls.push(url);
+      return url.startsWith('https://raw.gitcode.com/') ? new Response('', { status: 500 }) : Response.json({ ok: true });
+    } });
+  const job = { rel: 'x.json', urls: [y], kind: 'json' };
+  assert.equal((await dl.run([job])).get('x.json').status, 'ok');
+  assert.deepEqual(calls, [gc, y], 'one mirror attempt, then the direct source');
+  assert.equal(dl.ledger.files['x.json'].url, y);
 });
 
 test('downloader uses proxy, validates payload, falls back, and skips existing files', async (t) => {

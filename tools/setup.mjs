@@ -19,9 +19,10 @@
 // Options:
 //   --check          report only, change nothing (exit 1 when something essential is missing)
 //   --no-assets      skip the art/audio download
-//   --asset-source=M direct (default) or mirror (opt-in; no public-IP lookup)
+//   --asset-source=M direct (default) | mirror (gh-proxy prefix) | gitcode (GitCode raw mirror)
 //                    SP_ASSET_SOURCE sets the default; SP_GITHUB_PROXY sets the HTTPS prefix (https://gh-proxy.com/)
 //                    An empty SP_GITHUB_PROXY disables the proxy, including in mirror mode.
+//                    gitcode mirrors the yuanyan avatar/portrait/skill/enemy icon dump (docs/ASSETS.md).
 //   --no-local       skip the local-client detection and extraction
 //   --local          extract from the local client without asking (re-extracts when already done)
 //   --game <dir>     AssetBundle root of the local client (…/StreamingAssets/AB/Windows or PlayCover …/Documents/Bundles)

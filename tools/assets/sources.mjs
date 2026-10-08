@@ -7,6 +7,40 @@
 
 export const DEFAULT_GITHUB_PROXY = 'https://gh-proxy.com/';
 
+/**
+ * GitCode mirrors of the community dumps (`--asset-source=gitcode`, docs/ASSETS.md): repo
+ * `owner/name` → the raw base URL (ends with `/`) of its GitCode mirror. GitCode hosts a
+ * read-only, credential-free mirror of the yuanyan icon dump — the only GitHub source the
+ * plan fetches that has one (probed 2026-10-08: fexli / Ark-Models / ArknightsAssets2 are not
+ * mirrored). A raw URL maps to `<base><branch>/<path>`, e.g.
+ * `https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/x.png` →
+ * `https://raw.gitcode.com/gh_mirrors/ar/ArknightsGameResource/raw/main/avatar/x.png`.
+ */
+export const GITCODE = Object.freeze({
+  'yuanyan3060/ArknightsGameResource': 'https://raw.gitcode.com/gh_mirrors/ar/ArknightsGameResource/raw/',
+});
+
+const RAW_REPO_RE = /^https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/;
+
+/**
+ * Map a raw.githubusercontent.com URL to its GitCode mirror URL, or null when that repo
+ * has no GitCode mirror. The path is preserved as it is (it is already URL-encoded).
+ * @param {string} url
+ * @returns {string|null}
+ */
+export function gitcodeUrl(url) {
+  const m = RAW_REPO_RE.exec(String(url));
+  if (!m) return null;
+  const base = GITCODE[`${m[1]}/${m[2]}`];
+  return base ? `${base}${m[3]}/${m[4]}` : null;
+}
+
+/** Whether `url` is one of the GitCode mirror URLs GITCODE defines. */
+export function isGitcodeUrl(url) {
+  const s = String(url);
+  return Object.values(GITCODE).some((base) => s.startsWith(base));
+}
+
 export function normalizeProxyPrefix(prefix = DEFAULT_GITHUB_PROXY) {
   if (prefix.trim() === '') return '';
   const url = new URL(prefix);
@@ -51,8 +85,10 @@ export function githubProxyUrl(url, prefix = DEFAULT_GITHUB_PROXY) {
 /** Ordered transport alternatives; direct mode retains the existing jsDelivr order. */
 export function downloadUrls(url, { source = 'direct', proxyPrefix = DEFAULT_GITHUB_PROXY } = {}) {
   url = githubSourceUrl(url);
-  const proxy = source === 'mirror' ? githubProxyUrl(url, proxyPrefix) : null;
-  return [...new Set([proxy, url, mirrorUrl(url)].filter(Boolean))];
+  const preferred = source === 'mirror' ? githubProxyUrl(url, proxyPrefix)
+    : source === 'gitcode' ? gitcodeUrl(url)
+      : null;
+  return [...new Set([preferred, url, mirrorUrl(url)].filter(Boolean))];
 }
 
 /** Raw base URLs (always end with '/'). */
