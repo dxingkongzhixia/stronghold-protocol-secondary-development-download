@@ -751,6 +751,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 **引擎 / kit**
 - `server/sim/content/kits/ops/chess_char_2027_wang-wang.js` 新增 `wang(bb, chess, def)`，注册 `chess_char_2027_wang_a`：  - 技能主动：S1/S2 `+2`、S3 `+8` 进 `owner.mem.summonStock`，再按 `placeTiles()` 在望攻击范围内落位（候选按**朝向坐标系** `localOrder` 排序；S3 `enemiesFirst` 先把棋子放到敌人格，含不可部署格）；库存上限取棋子 token 的 `deckStack`(7)。
   - 跟子：`deploy` 钩子对任意棋子（非跟子）在相邻格生成 1 枚跟子；优先级用 `rotateOffset` 转成单位自身「上>右>下>左」；有敌人 > 无敌人 · 不可部署地面 > 可部署地面 > 可部署高台；总跟子数 ≤ 天赋 `attack@max_spawn_cnt`(9)；`bstate` 守卫防递归。
+  - **连通落位**（2026-10-08，owner #7 / §35.8）：所有**自动落位**（`deployStock` 与 S3 补位）只落在与场上已有一枚棋子**正交相邻**的格，保证铸子「相连时相互激活」；空场第一枚由自身跟子连成对；S3 清场后的「种子」跟子不受「额外至多 3 枚」限制（仍扣弹药）。
   - 触发 kit：`spawnToken(..., { kit: { ...wangStoneKit(tokenDef.skill.bb), fromTokens: true } })`，随所选技能（token 的 `bySkill` 变体）。
   - S3：`kind:'ammo'` 20 发、`noAttack`、`targeting.rangeGrid`（4-12）；每次落子/跟子扣 1 发（`mem.wangAmmo`），归零或「棋子耗尽」即 `end('ammo')`；`onEnd` 把 `mem.wangAmmo` 返还为棋子。
 - `server/sim/content/tokens.js` 的 `wangStone`（已 `export` 供持有者 kit 复用）：
@@ -986,3 +987,25 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **官方语义（证据）**：缓存官方 `character_table.json` 的 `char_1052_kalts2` 为 `profession: MEDIC`、`subProfessionId: watchman`，trait `overrideDescripton`「恢复友方单位生命，并且可以起飞」。分支特性只比医师多了**起飞**（kit T1 的 `flags.liftoff` / `blockFly`），**治疗部分与 `physician` 完全相同**（单体、每次 100 % 攻击力）；`data/chess.json` 两个形态的 `dmgType` / `attackKind` 都是 `heal`。她的治疗黑板书：S2 `attack@heal_scale` 1.35（rank4）/ 1.7（rank7）在 1.5 半径内治疗；S3「额外治疗 1 个目标」（2 目标）；T2 `hp_recovery_per_sec` 50（罗德岛 ×2）是**生命回复速度 buff（hpRegen）**、不是直接治疗。与同科的差别：`healer` 远距 ×0.8、`wandermedic` 元素治疗、`ringhealer` / `chainhealer` 多目标 —— 守望者只取**单体**。
 - **结论 / 变更**：`server/sim/professions.js` 的 `watchman` 条目**无需改动**（已是最小正确形状）。本次只补**回归测试**：`test/content/chess_kalts2.test.js` 新增「守望者 heals」用例 —— 用**生产默认技能 S2** 上场（`field()` 不传 `skillIndex`），她 y-6 内有一个受伤的角峰、且一个她**可选中**的敌人（0 攻 / 0 速）也在范围内；断言治疗只落在角峰、每次 100 % 攻击力、她对敌人 **0 伤害**、所有攻击都指向友军。实测（4 s）：普攻 408 → 角峰 `886.4 → 1902.4`；精英 476 → `886.4 → 2038.4`（每次 100 % ATK 的两次普攻 ＋ 天赋 50/s 生命回复速度）；敌人受伤 0、每次攻击目标全为友军。另加一条「默认技能 S2」用例（`skill.skillId = skchr_kalts2_2`，`skills[]` 恰一条 `isDefault` = S2，三个技能仍可自选）。
 - **诚实保留**：她的 **S2 会主动打敌人**（「优先选择敌人」＋真实伤害），所以她是**带进攻性的治疗者**，不能按「纯治疗」加进 `test/sim/feedback1e-healers.test.js` 的纯治疗审计（该审计要求对阻挡的敌人 0 伤害）；本条目只核实**普攻 / 分支特性**的治疗，未改 `feedback1e` 的分支集合。
+
+### 35.8 望的棋子「总有一个不爆炸」＋自动下棋子（owner 报告 #7，2026-10-08）
+
+- **报告**（owner）：①「总有一个棋子不爆炸」；②「自动下棋子的功能也不对」。
+- **根因（无头复现）**：铸子「棋子相连时相互激活」，「相连」= 上下/左右**贴邻**。自动落位（S1/S2/S3 发子与 S3「有空地就不断下棋子」补位）只按攻击范围优先级选格，**不看是否贴邻**。于是当某枚棋子的「跟子」被 **S3「额外至多 3 枚」**或**场上 6 枚上限**挡下、或它唯一的邻居在**同一 tick** 先被连锁引爆时，这枚棋子从未激活（`mem.wangAxes` 全 `false`）—— 敌人踩上去也不触发，正是 owner 看到的「总有一个不爆炸」。实测（S3 补位循环）：出现 `(9,6) (9,8) (10,5)` 三枚 `follow=false`、无 axis 的孤立棋子。
+- **依据**：官方铸子文本「手动部署棋子时，望在相邻位置额外部署一枚棋子」；玩家手动落子必然连成一片，所以**自动落位必须模仿这条链**。
+- **实现**：
+  - `server/sim/content/kits/ops/chess_char_2027_wang-wang.js`：`deployStock` 与 S3 补位**只落在与场上已有一枚棋子正交相邻的格**（空场第一枚由自身跟子连成对）；S3 清场后的「种子」跟子**不受「额外至多 3 枚」限制**（仍扣 1 发弹药），使清场后能重新连成对；跟子优先级（有敌人 > 无敌人 · 不可部署地面 > 可部署地面 > 可部署高台 · 上>右>下>左）**不变**；6 枚场上上限与弹药记账不变。
+  - `server/sim/content/tokens.js` 的 `wangStone`：在 `deploy` 钩子里**立即**锁存相连（`wangAxes`），而不是等第一次 `onTick` —— 同一 tick 的连锁引爆不会再把刚落地的棋子变成永久死子。相邻 / latch 规则本身**不变**（未动触发/连线逻辑）。
+- **验证**：`test/content/feedback-wang.test.js` 新增 3 条：每次施放（S1/S2/S3）后棋子全相连、S3 补位穿爆后仍全相连、敌人进入后 `x-6` 十字范围内所有相连棋子爆炸。全量 `node --test`：**5150 项 / 5142 通过 / 0 失败 / 8 跳过**。
+- **golden 归属证明**：本次只移动**含望的 18 个场次** —— `roster` 015/019/020、`bonds`（arcaneShip / emptyShip / maniShip / yanShip 的 low/high）、`fields`（boss_1/3/5/7-pair、hidden-boss_9-pair）、`matches`（coop4-FUNNY-6、coop2-NORMAL-8-serverrun）；其余零差异 → 全部归因于本改动。
+- **诚实保留**：S3 空场「种子」跟子仍扣 1 发弹药（与官方「消耗等量弹药」一致）；只是不再让「额外 3 枚」上限把清场后的重连也一起挡死（否则补位必然产出死子）。跟子仍是**一枚特殊棋子**（§30.1 的约定），不是原版的弹道单位。
+
+### 35.8 凯尔希·思衡托 S2「保护性拒止」的可见反馈（owner 报告「看不出在治疗还是在打人」，2026-10-08）
+
+- **报告**：S2 的 医疗单元 命中时**看不出**谁被治疗、谁被伤害 —— 技能自己只画了一对通用的 `aoe`（橙）＋ `healAoe`（绿），都落在一个落点上，红绿混在一起。
+- **官方效果（客户端实证）**：CN 客户端 `battle/prefabs/effects/kalts2.ab` 里 S2 的效果 prefab 是**成对**的：`kalts2_skill_02_range_heal_01` / `_range_damage_01`（1.5 范围域）、`..._indicator_heal_01` / `..._indicator_damage_01`（落点指示）、`..._start_heal_01` / `..._start_damage_01`（命中起手）、`..._trail_heal_01` / `..._trail_damage_01`（弹道尾迹），另有 `kalts2_skill_02_buff_01`（治疗 buff）。颜色取自该 bundle 自带的材质 tint：治疗侧 `char_kalts2_43` 的 `_TintColor` ≈ (0.11, 0.56, 0.04)（**绿**）、伤害侧 `char_kalts2_41` / `char_kalts2_42` 的 `_TintColor` ≈ (0.86, 0.15, 0.15) / (0.75, 0.09, 0.09)（**红**）；绿波贴图 `flow_332*`、红波 `flow_331_2`、绿黑医疗单元 `char_kalts2_01` 也都对得上。该 bundle 的 Texture2D 是**可解析**的（本次用 `tools/local-extract` 的 UnityPy 直接导出了 38 张），即官方效果贴图**在本例中可提取**；`docs/ASSETS.md`「per-character effects 的贴图位于其他 bundle」的旧描述至少对 `kalts2.ab` 不准确。
+- **决策 / 实现**：客户端战斗特效**保持程序化**（`docs/ASSETS.md`：好友端没有本地素材也要看得到），所以**不引入官方贴图**，而是按官方配色**手绘最接近的近似** —— kit 在 `s2Burst` 里对**每个实际受伤的敌人**发一条红 `kalts2Damage`、对**每个实际被治疗的友军**发一条绿 `kalts2Heal`（治疗绿沿用项目既有 `heal` 绿 `0x62f08a`，保持全项目一致）。颜色 / 形状写在 `public/js/render/fx/kinds.js`：`kalts2Damage` = 红 blast r 1.5、`kalts2Heal` = 绿 healAoe r 1.5。
+- **文件**：`server/sim/content/kits/ops/chess_char_1052_kalts2-kalts2.js`；`public/js/render/fx/kinds.js`。
+- **测试**：`test/content/chess_kalts2.test.js`（S2 用例新增：角峰拿到 `kalts2Heal`、1.5 内的假人拿到 `kalts2Damage`，后续打飞机时飞机也拿到 `kalts2Damage`）；`test/render/fx-kalts2.test.js`（两个 kind 的 archetype / 颜色 / 半径，以及 `FxSystem` 真的会绘制）。
+- **golden 归属证明**：本改动只进 fx 事件直方图。在**干净工作树**（HEAD ＋ 本改动）重算：只回退本改动 → **零差异**；恢复后恰为 `roster` / `bonds` / `fields` 的 fx 计数差（`aoe` / `healAoe` 减少、`kalts2Damage` / `kalts2Heal` 出现）；`matches` / `diy` / `standins` 不变。全部归因于本改动。
+- **诚实保留**：官方 S2 的 3D 粒子 prefab / 贴图**未导出使用**，视觉是**程序化近似**，只保证三个官方可读特征：治疗=绿、伤害=红、各自落在**实际受益单位**上。
