@@ -20,6 +20,7 @@ import { toast, toastError } from '../ui/toasts.js';
 import { copyText } from '../ui/clipboard.js';
 import { GuideButton } from '../ui/guide.js';
 import { SettingsButton } from '../ui/settings.js';
+import { openStats } from './stats.js';
 import { LoadoutButton } from './loadout.js';
 import { ChatDock, ChatBubble, activeChatBubbles } from '../ui/chat.js';
 import { net } from '../net.js';
@@ -349,6 +350,7 @@ export function RoomScreen() {
           <${MicroLabel}>${t('当前延迟')}<//>
         </div>
         <${SettingsButton} class="room-settings" variant="secondary" label=${t('设置')} />
+        <${Button} variant="secondary" size="sm" icon="signal" onClick=${openStats} title=${t('统计数据')}>${t('统计')}<//>
         <${GuideButton} class="room-guide" variant="secondary" label=${t('玩法说明')} />
       </div>
       <div class="topbar__center">

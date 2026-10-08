@@ -16,6 +16,7 @@ import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_S
 import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, doctorNo, Tabs, RoleTag } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { GuideButton } from '../ui/guide.js';
+import { openStats } from './stats.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
 import { AccountDialog } from '../ui/account.js';
@@ -370,6 +371,7 @@ export function LobbyScreen() {
       </div>
       <div class="topbar__right">
         <${SettingsButton} class="lobby-settings" variant="secondary" label=${t('设置')} />
+        <${Button} variant="secondary" size="sm" icon="signal" onClick=${openStats} title=${t('统计数据')}>${t('统计')}<//>
         <${GuideButton} class="lobby-guide" variant="secondary" label=${t('玩法说明')} />
         <${LoadoutButton} from="lobby" size="sm" class="lobby-loadout" label=${t('干员调配')} />
         ${auth?.account ? null : html`<${Button} variant="secondary" size="sm" icon="user" class="lobby-account"
