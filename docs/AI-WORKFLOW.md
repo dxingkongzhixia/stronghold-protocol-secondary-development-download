@@ -57,16 +57,20 @@ Checklist by task type:
 | Match / lobby / protocol | `shared/protocol.js` + server handler + client send/receive + protocol test + `docs/META.md` |
 | Enemies / Boss | `tools/build-data.mjs` + `content/{enemies,bosses}.js` (exactly one of KITS/BOSS_KITS/STATS_ONLY) |
 | UI / render | client files + `test/ui|render/`; run the relevant `RENDER_E2E=1` suite |
-| Battle fx | a **procedural** archetype first (`FX_KINDS`, `render/fx/kinds.js`), then an optional `local` layer spec (`render/fx/localart.js`) if official art is extractable; pin both tiers in `test/render/fx-local.test.js` (docs/ASSETS.md "Battle effects") |
+| Battle fx | a **procedural** archetype first (`FX_KINDS`, `render/fx/kinds.js`), then an optional `local` layer spec (`render/fx/localart.js`) if official art is extractable; pin both tiers in `test/render/fx-local.test.js` (docs/ASSETS.md "Battle effects"). Our custom operators' normal-attack **hits** are the one hand-authored exception (`render/fx/hits.js`, `test/render/fx-hits.test.js`) |
 | Docs only | `test/docs-consistency.test.js` / `docs-paths.test.js`; no golden change |
 
 **Battle fx rule (owner, 2026-10-08):** every fx kind has two tiers — the procedural drawing (mandatory, always
 available, the guaranteed fallback) and an optional local-client art tier drawn only when the client has it listed
 and loaded. Never a blank frame and never a network dependency in the fallback: a client without the art sees the
 procedural effect (Minecraft-shader-style graceful degradation). A `local`-only kind is a bug. The **normal-attack
-impact** is always procedural (no `local` tier): the official per-attack hit is a particle-system effect prefab the
-projectile prefabs name in `_effectsWhenHit`, not one texture — a signature-texture ground field there was removed as
-visibly wrong (docs/ASSETS.md "Battle effects", `docs/DEVELOPMENT.md` §9.1).
+impact** is procedural for the season roster (no `local` tier) because the official per-attack hit is a
+particle-system effect prefab the projectile prefabs name in `_effectsWhenHit`, not one texture — a signature-texture
+ground field there was removed as visibly wrong. **Our seven custom operators are the exception** (`render/fx/hits.js`):
+each has a hand-authored, body-anchored hit read from its own `_*_hit_*` prefab, with an optional same-bundle official
+flash as a `local` core (docs/ASSETS.md "Battle effects", `docs/DEVELOPMENT.md` §9.1, `docs/OUR-FEATURES.md` §1). Faithful
+per-attack impacts for the whole roster are a **planned future task** (a particle-system importer + per-operator
+projectile mapping); do not start it without the owner.
 
 ---
 

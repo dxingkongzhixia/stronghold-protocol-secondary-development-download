@@ -374,12 +374,14 @@ export class FxProjectiles {
     const p = cam.project(pr.tx, pr.ty, pr.tz, this._g);
     const x = p.x, y = p.y, s = p.s;
     const rich = this.rich;
-    // The normal-attack impact is drawn procedurally here. The client's official per-attack hit art is NOT used: it is a
-    // particle-system effect prefab named by the projectile prefabs (`_effectsWhenHit`, e.g. common_hit_01 / <op>_hit_01)
-    // that resolves to a cluster of ParticleSystems, textures and transforms — not the operator's one signature
-    // Texture2D. Drawing that signature texture as a ground field at the victim (the earlier design) was visibly wrong
-    // (wrong texture, wrong anchor/scale), so it was removed: a correct procedural impact beats a wrong official one
-    // (docs/ASSETS.md "Battle effects", docs/DEVELOPMENT.md §9.1).
+    // Our seven custom operators draw their own hand-authored, body-anchored impact here (render/fx/hits.js), read from
+    // the operator's own official `_*_hit_*` prefab; the official season roster keeps the procedural arrival burst
+    // below, because the client's official per-attack hit is a particle-system effect prefab named by the projectile
+    // prefabs (`_effectsWhenHit`, e.g. common_hit_01 / <op>_hit_01) that resolves to a cluster of ParticleSystems,
+    // textures and transforms — not one signature Texture2D (docs/ASSETS.md "Battle effects", docs/DEVELOPMENT.md §9.1).
+    const sv = pr.src, svInfo = sv && sv.info;
+    const opId = svInfo && (svInfo.spine || svInfo.defId);
+    if (opId && this._opHit(opId, x, y, s, { melee: false })) return;
     switch (spec.hit) {
       case 'arts':
         this.particle('glow', x, y, { tint: pr.glow, life: 0.24, s0: (s / 128) * 0.7, s1: (s / 128) * 1.2, a0: 0.95, a1: 0 });

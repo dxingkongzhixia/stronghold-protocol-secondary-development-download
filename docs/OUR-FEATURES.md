@@ -115,6 +115,8 @@ listed-not-loading layer is retried on a later event; a layer the manifest does 
   `FX_OFFICIAL` fallback), `fxLocalSource` (which layers are listed **and** loaded), `fxOfficialFor`.
 - `simfx.js` — `FxSim.simFx` / `_fxLocalOp`: attributes the event to a `spine`/`defId` and draws the official
   layers as ground fields **instead of** the procedural archetype.
+- `hits.js` — **ours only** (`FX_HITS`, `fxHitFor`, `FxHits._opHit`): the hand-authored normal-attack impact of our
+  seven custom operators, anchored at the impact / body (never a ground field). See the normal-attack bullet below.
 - `rings.js` — `ring()` accepts a PIXI texture (scaled by the picture's own size, not the atlas 128²).
 - `system.js` — installs the method containers onto `FxSystem`.
 - `official.js` — **generated** `FX_OFFICIAL`: `opId → { group, kinds, layers }`.
@@ -127,13 +129,39 @@ Pin an operator by hand in `tools/local-extract/fx-official-overrides.json`. Bec
 registered operator supersedes the procedural archetype **without editing any kit or kind**. Only the kinds a kit
 actually emits are listed (an operator with no attributable skill fx is absent).
 
-**The normal-attack impact is procedural — not in the table.** The official per-attack hit is a particle-system
-effect prefab each projectile prefab names in `_effectsWhenHit` (`common_hit_01` / `<op>_hit_01` …), a cluster of
-`ParticleSystem`s and transforms, **not** the operator's one signature Texture2D. An earlier design gave every
-operator a shared `hit` kind drawn from that signature texture as a ground field at the victim; it was removed as
-visibly wrong (wrong texture, wrong anchor/scale). `render/fx/projectiles.js` `_impact` (ranged) and
-`render/fx/numbers.js` `damage` (melee) now always draw the procedural hit; no normal attack consults the manifest.
-The `hit` kind, `fxOfficialHit` and `OFFICIAL_HIT_KINDS` are gone.
+**The normal-attack impact: procedural for the roster, hand-authored for our seven.** The official per-attack hit is a
+particle-system effect prefab each projectile prefab names in `_effectsWhenHit` (`common_hit_01` / `<op>_hit_01` …;
+e.g. our operators' `ascln_attack_hit_01`, `makoto_attack_a_hit_01`, `aglna2_attack_hit_01`, `wang_attack_01_hit`,
+`gdglow_hit_01`, `narant_attack_01_hit`, `kalts2_skill_01_hit_01`), a cluster of `ParticleSystem`s, materials and
+transforms, **not** the operator's one signature Texture2D. An earlier design gave every operator a shared `hit` kind
+drawn from that signature texture as a ground field at the victim; it was removed as visibly wrong (wrong texture,
+wrong anchor/scale). `render/fx/projectiles.js` `_impact` (ranged) and `render/fx/numbers.js` `damage` (melee) now say:
+**the official season roster keeps the procedural hit** (no normal attack consults the manifest), and **only our seven
+custom operators** (`render/fx/hits.js` `FX_HITS`, keyed by `charId`) draw their own hand-authored effect — read from
+that operator's own `_*_hit_*` prefab (its colours and dominant pieces), **anchored at the impact / body** at ≈ one
+body, never a ground decal. A same-bundle official flash texture the client has extracted rides along as a `local`
+layer (body-anchored additive core, e.g. gdglow `star_05`, kalts2 `star_118_7` / `char_kalts2_03`) — local art when
+provably right, the procedural composition always drawn, never blank, fallback offline. The `hit` kind,
+`fxOfficialHit` and `OFFICIAL_HIT_KINDS` stay gone.
+
+**Planned future task — the official particle-system importer (not implemented; do not start without the owner).** The
+honest limit above is that we approximate each official impact instead of replaying it. To replace the procedural /
+hand-authored tier with faithful per-attack impacts for **every** operator, we would need:
+1. a **Unity particle-system importer** for the effect prefabs under `battle/prefabs/effects/<stem>.ab` — decode each
+   hit prefab's `ParticleSystem` cluster (InitialModule startLife/Size/Colour/Speed, ShapeModule type+radius,
+   EmissionModule bursts/rate, material `_MainTex` + `_TintColor`, renderer renderMode, sub-emitters) and replay it in
+   the Pixi fx system; and
+2. a **per-operator projectile → `_effectsWhenHit` mapping** — read `battle/prefabs/[uc]projectiles.ab` (2,858 prefab
+   objects, ~2,173 with `_effectsWhenHit`), resolve each `projectile_<op>` / `projectile_<op>_s*` prefab's
+   `_effectsWhenHit` list (the generic `common_hit_01` / `common_heal_hit_01`, or `<op>_hit_01` /
+   `<op>_attack_*_hit`), and map it onto the sim's emitted attack (kind + skill), distinguishing `common.ab` (shared)
+   from `<op>.ab` (per-operator).
+Both are readable today with the existing UnityPy venv (`tools/local-extract/.venv-extract`, UnityPy 1.25.4 +
+`aklz4.py`). What it would unlock: faithful per-attack impacts for the whole roster, retiring the procedural hit and
+our seven approximations. Evidence / paths (client `.../StreamingAssets/AB/Windows`): `battle/prefabs/[uc]projectiles.ab`
+(2,858 prefabs; `common_hit_01` = 5 ParticleSystems, `gdglow_hit_01` ≈ 12, `kalts2_skill_01_hit_01` = 14); the effects
+in `battle/prefabs/effects/*.ab` (`common.ab` shared vs `<op>.ab` per operator; `fx/<stem>` groups in
+`data/local-assets.committed.json` carry the extractable Texture2D only).
 
 **The committed local manifest (so a clone gets it).** `tools/local-extract/extract.py` writes the per-machine
 `data/local-assets.json`, which is git-ignored. The art under `public/assets/local/**` **is** committed, so
@@ -156,13 +184,17 @@ Re-run it after changing the committed art.
 - `test/render/fx-local.test.js` — the resolver, the per-client resolution (missing → procedural and no crash;
   present → local; listed-not-loaded → procedural this event / local next; `localFx:false` shuts it off), the
   `byOp` attribution, the generated `FX_OFFICIAL` table (no `hit` kind), the normal-attack impact staying
-  procedural and never consulting the manifest, and that our custom operators' `fx/*` groups are committed
-  on disk.
+  procedural for the roster and never consulting the manifest, and that our custom operators' `fx/*` groups are
+  committed on disk.
+- `test/render/fx-hits.test.js` — our seven custom operators' hand-authored hits: exactly the seven (nobody else),
+  every spec has a procedural composition, the melee / ranged anchors draw no ground field and never fetch, the
+  optional local official flash (loaded → used; listed-not-loaded → prefetched, procedural now; unlisted → no fetch;
+  `localFx:false` off), and every wired local layer is committed on disk.
 - `test/render/fx-kalts2.test.js` — the kalts2 S2 archetypes / colours / radii.
 - `test/local-extract.test.js` — `node tools/build-fx-official.mjs --check` is up to date.
 - `test/render/token-wang-stone.test.js` — 望's 棋子 burst kind.
 
-**Merge self-check.** `public/js/render/fx/{kinds,localart,simfx,rings,official}.js` and
+**Merge self-check.** `public/js/render/fx/{kinds,localart,simfx,rings,hits,system,official}.js` and
 `tools/build-fx-official.mjs` must survive; run `node tools/build-fx-official.mjs --check`.
 
 ---
@@ -390,7 +422,7 @@ changes still get a notice first.
 | Area | Files that must survive the merge |
 |---|---|
 | Custom operators | `tools/build-data.mjs` `CUSTOM_CHESS` + `applyCustomChess` + `CUSTOM_BASE_IDS`; the 7 `kits/ops/chess_char_*-*.js`; their `KIT_FILES` entries |
-| Battle effects | `public/js/render/fx/{kinds,localart,simfx,rings,system,official}.js`; `tools/build-fx-official.mjs`; `tools/local-extract/fx-official-overrides.json` |
+| Battle effects | `public/js/render/fx/{kinds,localart,simfx,rings,hits,system,official}.js`; `tools/build-fx-official.mjs`; `tools/local-extract/fx-official-overrides.json` |
 | Local-art pipeline | `tools/local-extract/{extract.py,committed-manifest.mjs,extract-voice.py}`; `data/local-assets.committed.json` |
 | Asset sources | `tools/fetch-assets.mjs`; `tools/assets/{network,sources}.mjs` |
 | Decisions | the §22 blacklist; the traits/rules in §5 (see `docs/MATCHMAKING.md` §22–§35) |

@@ -8,7 +8,9 @@
 //                PROJECTILE_SPEEDS — the visual lands with the sim's hit), homing on the interpolated target; a burst
 //                per kind on arrival; chain lightning (chain / chainHeal) and beams as short-lived jagged lines
 //   hits         glow + sparks by damage type; a melee blow adds a slash crescent swept along the blow (attacker →
-//                victim) in the hit colour; AoE ground rings for splash attackers
+//                victim) in the hit colour; AoE ground rings for splash attackers. OUR seven custom operators instead
+//                draw their own hand-authored, body-anchored impact (hits.js `FX_HITS`, read from their official
+//                `_*_hit_*` prefab); the official roster keeps the procedural hit (docs/ASSETS.md "Battle effects")
 //   numbers      damage numbers (phys orange-white, arts purple, true white, heal green, elements orange) as
 //                pooled BitmapText (per font); rapid same-style hits on a target merge into a running total; big hits
 //                (≥ 18 % max HP) pop larger; ≤ 4 per target; laid out in screen space against every live number (lanes
@@ -44,4 +46,5 @@ export { setSimProjectileSpeeds, projSpeed } from './fx/speeds.js';
 export { SHOT_HEIGHT, bodyZ } from './fx/camera.js';
 export { ensureDamageFonts } from './fx/fonts.js';
 export { FX_KINDS, fxSpec, tilesAround, wallTiles } from './fx/kinds.js';
+export { FX_HITS, fxHitFor } from './fx/hits.js';
 export { FxSystem } from './fx/system.js';
