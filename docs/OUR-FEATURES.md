@@ -1,0 +1,391 @@
+# Our fork-only mechanisms (merge-critical)
+
+Who this is for: **a future upstream merge** and **a newcomer maintaining this fork**. Everything below is
+**ours — not upstream**. It exists so that (a) a merge knows these mechanisms are here and must be preserved, and
+(b) a maintainer can change them without re-deriving them from the code.
+
+Read this together with:
+
+| Read this | For |
+|---|---|
+| [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) | the repository map; §12 points here |
+| [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§35 | the **decision record**: why each of these exists, the evidence, the honest caveats |
+| [`docs/ASSETS.md`](ASSETS.md) "Battle effects" / local-client sections | the asset-side detail this file summarises |
+| [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for a custom operator |
+| [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | the merge discipline, the Gitee push, the deploy order |
+
+> Convention for this file: every mechanism carries a **我们独有，非上游；合并时不得丢失** note. During an upstream
+> merge, resolve hunk-by-hunk keeping both sides (never `git checkout --ours/--theirs` on a source file) and treat
+> any change that would drop one of these as a stop-and-ask-`d星空之下` item (`docs/AI-WORKFLOW.md` (e)).
+
+---
+
+## 1. Custom operators (`CUSTOM_CHESS`)
+
+> **我们独有，非上游；合并时不得丢失** — the seven custom shop operators and their data/kit/art wiring are added by
+> this fork and are absent from upstream `master`. Upstream has (or has had) a *different* feature: the
+> 补位/自选 (stand-in / DIY) pool. The two must not be confused (see §5).
+
+**What it is.** Seven operators not in the official season roster are injected into the generated season tables as
+formal shop chess, each with a data entry, a hand-written kit, and (usually) art/voice. They are added through
+`CUSTOM_CHESS` in `tools/build-data.mjs`, merged into the official `activity_table` season tables by
+`applyCustomChess(act, charTable)` **before** the normal build runs, so every downstream rule (shop, bonds,
+garrisons, tokens, counts) applies unchanged.
+
+| Operator | charId | Tier | Kit file (`server/sim/content/kits/ops/`) | Record |
+|---|---|---|---|---|
+| 阿斯卡纶 | `char_4132_ascln` | 3 | `chess_char_4132_ascln-ascln.js` | `docs/MATCHMAKING.md` §23 |
+| 结城理 | `char_4217_makoto` | 3 | `chess_char_4217_makoto-makoto.js` | §24, §29, §35.3 |
+| 予愿安洁莉娜 | `char_1015_aglna2` | 3 | `chess_char_1015_aglna2-aglna2.js` | §25 |
+| 望 | `char_2027_wang` | 6 | `chess_char_2027_wang-wang.js` (+ `wangStone` in `server/sim/content/tokens.js`) | §30, §35.8 |
+| 澄闪 | `char_377_gdglow` | 3 | `chess_char_377_gdglow-gdglow.js` | §31 |
+| 娜仁图亚 | `char_4138_narant` | 3 | `chess_char_4138_narant-narant.js` | §32 |
+| 凯尔希·思衡托 | `char_1052_kalts2` | 4 | `chess_char_1052_kalts2-kalts2.js` | §34, §35.1, §35.7, §35.9 |
+
+**Where the code lives.**
+
+- **Data injection** — `tools/build-data.mjs`:
+  - `CUSTOM_CHESS` (the table, ~line 303): one record per operator (`charId`, `baseId`/`goldenId`, `tier`,
+    `identifier`/`shopLevelSortId`, `defaultSkillIndex`, `defaultUniEquipId`, `bonds`, `normal`/`golden` status,
+    `garrison`/`garrisons`, optional `tokenIds`).
+  - `applyCustomChess(act, charTable)` (~line 494) merges each record into `charChessDataDict`,
+    `charShopChessDatas`, `chessNormalIdLookupDict`, `bondInfoDict.chessIdList` and `garrisonDataDict`, and injects
+    the `tokenIds` summon records.
+  - `CUSTOM_BASE_IDS` (~line 491) = the base ids of `CUSTOM_CHESS`.
+- **The custom-only exception** (the reason `CUSTOM_BASE_IDS` exists): the stand-in validator at the end of the
+  build (`buildBackups`-adjacent, ~line 4050) composes each shop chess into its 补位 stand-in from
+  `data/backups.json` and errors when none exists. `if (CUSTOM_BASE_IDS.has(c.baseId)) continue;` **exempts the
+  custom chess** — they are always-owned and have no official stand-in character. This is the one place the build
+  knows about our operators; keep it.
+- **Kits** — one file per operator in `server/sim/content/kits/ops/`, registered in
+  `server/sim/content/kits/index.js` `KIT_FILES` (our tier-3, tier-4 and tier-6 entries are marked
+  `// custom (tools/build-data.mjs CUSTOM_CHESS)` in the list). Naming, contract and registration rules:
+  `server/sim/content/kits/README.md`; enforced by `test/content/kits_layout.test.js`.
+- **Engine carve-outs some of them rely on** (documented in `docs/DEVELOPMENT.md` §6): `stalker` (阿斯卡纶),
+  `dollkeeper` (结城理), `skywalker` (予愿安洁莉娜), `traper` + `wangStone` (望), `funnel` (澄闪), `loopshooter`
+  (娜仁图亚), `watchman` (凯尔希·思衡托).
+
+**How to extend.** Follow [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) end to end: (0) confirm the operator is not in
+the roster; (1) cache the official tables; (2) add a `CUSTOM_CHESS` entry and rebuild; (3) hand-write the kit
+(reuse the shared tier helpers; only add an engine flag in `server/sim/` when there is genuinely no existing
+profile); (4) add art/voice (`docs/research/07-assets.json` + `fetch-assets`, or the local-client extract); (5)
+update the **count assertions** listed in NEW-OPERATOR §5; (6) record a `docs/MATCHMAKING.md` section. The worked
+example is 阿斯卡纶 (§23).
+
+**Tests that pin it.**
+
+- `test/data.test.js` — the roster counts (`chess: 280 records, 119 visible non-DIY`, `visible.length`, per-tier
+  counts, DIY/diy interplay).
+- `test/content/chess_kalts2.test.js` — the 凯尔希·思衡托 custom chess, including "not a 自选 pick".
+- `test/content/feedback-wang.test.js` — 望's 棋子 mechanic.
+- `test/content/kits_alt_t3.test.js` / `kits_alt_t4.test.js` / `kits_alt_t6.test.js` — per-tier kit audits.
+- `test/content/kits_layout.test.js` — the KIT_FILES naming/registration contract.
+- `node tools/kit-coverage.mjs` — every chess has a kit and every skill is covered.
+- Plus the loadout/pool counts in `test/{ui,match,sim}/loadout.test.js`, `test/match/pool.test.js`.
+
+**Merge self-check.** `grep -c "char_4132_ascln\|char_4217_makoto\|char_1015_aglna2\|char_2027_wang\|char_377_gdglow\|char_4138_narant\|char_1052_kalts2" tools/build-data.mjs` must stay at 7; the seven kit files must be present in `KIT_FILES`; `node tools/build-data.mjs --offline` must be error-free.
+
+---
+
+## 2. The two-tier battle-effect system (procedural + optional local art)
+
+> **我们独有，非上游；合并时不得丢失** — the procedural/local two-tier model, the per-client resolution and the
+> generated `FX_OFFICIAL` roster table are ours. Upstream draws battle fx one way.
+
+**What it is.** Every battle-fx **kind** has two tiers, resolved **per client at render time**:
+
+1. **the procedural tier** (`a` + `c` + `r` in `FX_KINDS`) — drawn at run time from the FX atlas
+   (`public/js/render/textures.js`). It is **mandatory**, offline, and needs no local client. It is what a client
+   without any local art sees.
+2. **the optional local-art tier** — a kind's `local` spec (`{ group, layers: [{ name, scale? }], tint?, dur? }`,
+   plus `bySkill` / `byOp` attribution) names official pictures in the local-client manifest
+   (`data/local-assets.json`, or the committed `data/local-assets.committed.json`). It is drawn **only** when the
+   client lists **every** layer **and** it has loaded; otherwise the procedural tier is drawn.
+
+So the same effect is never a blank frame and the fallback never touches the network — the owner's
+"graceful degradation" rule (the Minecraft-shader analogy). A listed-but-still-loading layer is prefetched and a
+listed-not-loading layer is retried on a later event; a layer the manifest does not list is **never fetched**.
+
+**Where the code lives** (`public/js/render/fx/`):
+
+- `kinds.js` — `FX_KINDS`: every kind's procedural archetype and (optionally) its `local` spec. A kind shared by
+  many operators keys its layers by `local.bySkill` (an explicit label) or `local.byOp`
+  (`<spine|defId>` — the emitting operator, e.g. `token_10064_wang_stone1` for 望's 棋子).
+- `localart.js` — the resolver: `fxLocalLayers` / `fxLocalFor` (base + `bySkill` + `byOp` merge, then the
+  `FX_OFFICIAL` fallback), `fxLocalSource` (which layers are listed **and** loaded), `fxOfficialFor`.
+- `simfx.js` — `FxSim.simFx` / `_fxLocalOp`: attributes the event to a `spine`/`defId` and draws the official
+  layers as ground fields **instead of** the procedural archetype.
+- `rings.js` — `ring()` accepts a PIXI texture (scaled by the picture's own size, not the atlas 128²).
+- `system.js` — installs the method containers onto `FxSystem`.
+- `official.js` — **generated** `FX_OFFICIAL`: `opId → { group, kinds, layers }`.
+
+**The generated roster table.** `tools/build-fx-official.mjs` reads `data/chess.json` (the visible roster), the fx
+kinds each operator's kit actually emits (by scanning `kits/ops/*.js`) and the committed manifest
+(`data/local-assets.committed.json`), and picks two signature Texture2D layers per operator. It writes
+`public/js/render/fx/official.js`; `--check` fails when the committed file is stale, `--print` prints the table.
+Pin an operator by hand in `tools/local-extract/fx-official-overrides.json`. Because the table is data, a
+registered operator supersedes the procedural archetype **without editing any kit or kind**.
+
+**The committed local manifest (so a clone gets it).** `tools/local-extract/extract.py` writes the per-machine
+`data/local-assets.json`, which is git-ignored. The art under `public/assets/local/**` **is** committed, so
+`tools/local-extract/committed-manifest.mjs` walks it and emits `data/local-assets.committed.json` in the same
+`{ groups: { group: { name: { path, kind, w?, h? } } } }` shape. `server/http/static.js` serves the committed
+manifest in place of an absent per-machine one, so a fresh clone gets the official tier with no extraction step.
+Re-run it after changing the committed art.
+
+**How to add a new effect.**
+
+1. **Always** write/keep the procedural archetype first (`FX_KINDS` `a` + `c` + `r`). A `local`-only kind is a bug.
+2. Only if the official art is obtainable, extract it (`tools/local-extract/extract.py`, the relevant fx job) and add
+   the `local` spec (or rely on the generated `FX_OFFICIAL` table for a roster operator). Worked example: the kalts2
+   S2 burst (`kalts2Heal` / `kalts2Damage`). The 驭械术师 浮游单元 (`PROJ.drone`) stays procedural because its
+   textures live in unresolved external CABs (see §3).
+3. `settings.localFx === false` opts the official tier off like a quality tier (on by default).
+
+**Tests that pin it.**
+
+- `test/render/fx-local.test.js` — the resolver, the per-client resolution (missing → procedural and no crash;
+  present → local; listed-not-loaded → procedural this event / local next; `localFx:false` shuts it off), the
+  `byOp` attribution, the generated `FX_OFFICIAL` table, and that our custom operators' `fx/*` groups are committed
+  on disk.
+- `test/render/fx-kalts2.test.js` — the kalts2 S2 archetypes / colours / radii.
+- `test/local-extract.test.js` — `node tools/build-fx-official.mjs --check` is up to date.
+- `test/render/token-wang-stone.test.js` — 望's 棋子 burst kind.
+
+**Merge self-check.** `public/js/render/fx/{kinds,localart,simfx,rings,official}.js` and
+`tools/build-fx-official.mjs` must survive; run `node tools/build-fx-official.mjs --check`.
+
+---
+
+## 3. The local-art pipeline (`tools/local-extract/`)
+
+> **我们独有，非上游；合并时不得丢失** — the local-client extraction pipeline, its job table, the committed
+> manifest bridge and the dependency-loading model are ours.
+
+**What it is.** A host-side extractor that pulls the art only a real game client has (the official 3D board, some
+UI, the per-operator battle-effect textures, several enemy/token Spine models, the ported map effects) out of a
+locally installed CN/JP client, writing `public/assets/local/**` plus a manifest. It is **optional** — the game
+runs without it, with documented fallbacks (`docs/DEPLOY.md` §6).
+
+**Where the code lives.**
+
+- `tools/local-extract/extract.py` — the extractor. The `JOBS` table (~line 139) is `(bundle, output subdir,
+  object kinds[, name filter])`: map themes, the autochess UI bundles, the emoticon themes, the guidebook, the
+  projectiles, one fx bundle per visible operator, module icons, the board meshes and their prefabs, the gate /
+  objective map effects and the shared water textures. `EFFECT_FX_BUNDLES` (~line 103/135) is the custom operators
+  plus `roster_fx_bundles()` (every visible chess read from `data/chess.json`; `FX_BUNDLES` env overrides).
+  `ENEMY_SPINES`, `TOKEN_SPINES`, `MESH_BUNDLES`, `DERIVED`, `WEBP` are the other tables.
+- `tools/local-extract/committed-manifest.mjs` — the bridge from the committed art to
+  `data/local-assets.committed.json` (§2).
+- `tools/local-extract/extract-voice.py` — the per-operator voice extractor (JP from a local client, or PRTS for
+  CN-only / new operators; see `docs/NEW-OPERATOR.md` §4).
+- `tools/setup.mjs` — end-user entry point (creates `.venv-extract`, offers local extraction).
+
+**The Python environment.** Extraction needs UnityPy, so the interpreter must be new enough: the project venv is
+**Python 3.14** (`tools/local-extract/.venv-extract`, `requirements.txt` = `UnityPy>=1.25`, `lz4>=4`,
+`Pillow>=10`). **Python 3.8 is too old for the UnityPy build we use** — do not point the tooling at an old
+system interpreter. Invoke the venv explicitly:
+
+```powershell
+tools\local-extract\.venv-extract\Scripts\python.exe tools\local-extract\extract.py --game "<AB root>" [--only <subdir prefix>]
+tools\local-extract\.venv-extract\Scripts\python.exe tools\local-extract\extract.py --print-jobs   # the job table as JSON (no deps)
+tools\local-extract\.venv-extract\Scripts\python.exe tools\local-extract\extract.py --webp          # only the WebP copies (existing PNGs)
+```
+
+**Client paths (CN/JP).** `--game` points at the client's `.../StreamingAssets/AB/Windows`. Defaults probed by
+`extract.py` `CANDIDATES` (macOS CrossOver/iOS and the default Windows launcher installs). The installs this fork
+has used:
+
+- JP: `D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\Arknights_Data\StreamingAssets\AB\Windows`
+- B站国服 (often newer): `…\B站鹰角启动器\Arknights bilibili\Arknights_Data\StreamingAssets\AB\Windows`
+  (the autochess bundles live under the same AB root).
+
+A newer CN install may carry art the JP one lacks (new season tokens) and vice versa; extraction is per-machine,
+so different machines can end up with different subsets — the committed manifest is the union that ships.
+
+**The extract jobs, manifests and commits.**
+
+- Output: `public/assets/local/**` + the per-machine **`data/local-assets.json`** (git-ignored).
+- The art under `public/assets/local/**` **is committed**; `node tools/local-extract/committed-manifest.mjs`
+  regenerates **`data/local-assets.committed.json`** (committed). Re-run it whenever the committed art changes.
+- `--only <subdir prefix>` re-extracts only matching jobs and **merges** their groups into the existing manifest
+  (every other group is kept), so a refresh does not drop art this machine did not re-extract.
+
+**How to extend.** Add a `(bundle, subdir, kinds[, keep])` row to `JOBS` (or an entry to the relevant table), run
+`--print-jobs` to check, extract, then re-run `committed-manifest.mjs` and (if it feeds fx) `build-fx-official.mjs`.
+`test/local-extract.test.js` pins the job table shape and the `--check` of the generated table.
+
+**External-CAB dependency resolution.** A bundle's `Material`/Spine references can point into **external CABs** (a
+dependency bundle), and some operator art was previously thought unobtainable because it lives there. The current
+mechanism is minimal: `dep_bundles()` (~line 428) loads the `shaders/*.ab` bundles **beside a job that exports
+`Material`s** so shader references resolve to a name (nothing is exported from them), and `_pptr_name()`
+(~line 362) tolerates an **unloaded** external (returns `None` instead of throwing). Anything that genuinely lives
+in an external CAB therefore used to fall back (e.g. the 驭械术师 funnel drone kept the procedural tier, §2).
+
+> ⚠️ **In flight / not yet documented here.** A concurrent task is implementing **external-CAB dependency
+> resolution** in `tools/local-extract/extract.py` (loading the referenced dependency bundles so art previously
+> thought unobtainable — e.g. the funnel-drone textures — can be extracted). That work will write its own notes in
+> this section. Until they land, treat the mechanism above as the whole story and do not assume the
+> `dep_bundles` shader set is the only dependency set. **Read `extract.py` before changing dependency handling.**
+> When the in-flight work lands: document the new dep-loading entry point, the job(s) it unblocks, the manifest
+> groups and the tests it adds, and update §2's "funnel drone stays procedural" note accordingly.
+
+**Tests that pin it.**
+
+- `test/local-extract.test.js` — the job table (`--print-jobs`: map/material jobs, the per-operator `fx/<stem>`
+  jobs, the token/enemy Spine jobs), the `--only` merge, the helpers (`dep_bundles`, `material_info`,
+  `prefab_node`, `merge_alpha`, `pick_spine_node`, `atlas_pages`), and `build-fx-official.mjs --check`.
+- `test/local-token-models.test.js` — the token-model manifest side.
+
+**Merge self-check.** `tools/local-extract/extract.py`, `committed-manifest.mjs`, `extract-voice.py`,
+`data/local-assets.committed.json` and the `EFFECT_FX_BUNDLES_CUSTOM` list must survive.
+
+---
+
+## 4. Asset sources (mirrors) and the local-client-first rule
+
+> **我们独有，非上游；合并时不得丢失** — the `--asset-source` selection (in particular the `gitcode` mirror) is
+> ours.
+
+**What it is.** `tools/fetch-assets.mjs` downloads upstream art/audio/fonts from public community dumps. Because
+GitHub is blocked on some of our networks, a **source selector** chooses the mirror:
+
+| `--asset-source` | Order tried | Covers |
+|---|---|---|
+| `direct` (default) | raw GitHub, then jsDelivr | everything |
+| `mirror` | the `SP_GITHUB_PROXY` prefix first (default `https://gh-proxy.com/`), then fall back | everything (a general GitHub proxy) |
+| `gitcode` | the read-only GitCode raw mirror of `yuanyan3060/ArknightsGameResource` first, then direct + jsDelivr | **only** the yuanyan dump: avatars / portraits / skill icons / enemy icons. Spine (fexli), AA2 and Ark-Models have **no** GitCode mirror, so those still go direct + jsDelivr |
+
+All three are anonymous and never look up the public IP. `SP_ASSET_SOURCE` sets the default; `SP_GITHUB_PROXY`
+sets the mirror prefix (empty disables it). Mirror attempts have a header timeout; after a few consecutive
+failures the mirror is disabled for the run and the original sources are used (`tools/assets/network.mjs`,
+`tools/assets/sources.mjs`).
+
+**The local-client-first rule.** Where a picture exists both locally and on a mirror, the client takes the
+**local** copy first, then the mirrored/web copy, then a neutral fallback — the project's usual
+"local → mirror → neutral" order. Examples: emotes / guidebook pages (`public/js/data.js artUrls`), module type
+icons, enemy/token Spine overlays, and the battle fx (`local → procedural`, §2). `docs/ASSETS.md` has the full
+fallback table.
+
+**How to extend.** Add a new source in `tools/assets/sources.mjs` (`downloadUrls` / `isGitcodeUrl`) and
+`validateSource` / `selectDownloadSource` in `tools/assets/network.mjs`, then document it in `docs/ASSETS.md` and
+this table. Keep `direct` as the default and keep the mirror opt-in.
+
+**Tests that pin it.** `test/fetch-assets-shrink.test.js` (the shrink guard and source handling),
+`test/assets.test.js` / `test/assets-diy.test.js` (manifest/plan), and `node tools/doctor.mjs`.
+
+**Merge self-check.** `tools/fetch-assets.mjs`, `tools/assets/network.mjs` and `tools/assets/sources.mjs` must
+survive with the three sources intact.
+
+---
+
+## 5. Our carried decisions (the §22 blacklist, traits and rules)
+
+> **我们独有，非上游；合并时不得丢失** — these are decisions/behaviours we deliberately keep. **Do not duplicate
+> the prose here**: the authoritative record is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§35. This section is
+> the index plus the mechanical self-checks.
+
+| Decision | Where recorded | The rule, in one line |
+|---|---|---|
+| **Merge blacklist** | §22 | The upstream **#149 盟约收起** (foldable bond bar) and our own removed **最近的同盟** (recent-alliance chips) **must never come back**. |
+| **Funnel-hits model** | §31, §35.2 | 澄闪's 浮游单元 all lock the **same** enemy and each deals her **full** ATK (not split); the `'bolt'`→`'drone'` projectile fix lives in `professions.js`. |
+| **望's pieces** | §30, §35.8 | 棋子 placement / linkage: auto-placement only on orthogonally adjacent tiles so pieces link, latch on deploy, S3 ammo accounting, 跟子 priority. |
+| **Kalts2 traits / behaviour** | §34, §35.1, §35.7, §35.9 | 整备能力 `pool_equip_all`, default skill S2, 守望者 heals (single-target) **and** attacks, S2 red/green feedback kinds. |
+| **Leave → AI takeover / room disposal** | §35.5 | A human leaving a running match while others remain → seat handed to a fresh AI; only when **all** humans are gone is the room dissolved. Short disconnects use the reconnect grace, not takeover. |
+| **Notice convention** | §28 | Every restart / server-file upload is preceded by an in-game notice signed **`d星空之下`**. |
+| **Golden-attribution discipline** | §35.1 (worked example), `docs/DEVELOPMENT.md` §8 | Any `test/golden/*.json` move must be proven by reverting only your change → zero diff; never re-bless, never raise an engine guard. |
+
+**The §22 self-checks (run after every upstream merge):**
+
+```powershell
+# #149 盟约收起 must not return:
+grep -rn "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server
+# our removed 最近的同盟 must not return:
+grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test
+```
+
+Both must be **empty**. `git log -S bondsCollapsed -- public/js/screens/game.js` shows whether upstream re-added
+it. The merge procedure and the blacklist are in `docs/AI-WORKFLOW.md` (b).
+
+---
+
+## 6. Publishing (the Gitee mirror and the deploy order)
+
+> **我们独有，非上游；合并时不得丢失** — the two-tree mirror discipline, the Gitee push helper and the
+> notice-first deploy order are ours.
+
+**What it is.** The working project `Stronghold-Protocol` has **no `.git`** and is the single source of truth for
+the files on disk; the history lives in the git store `_merge-scratch` (branch `ours`). `tools/push-gitee.mjs`
+mirrors the working project's **tracked** files into the store (respecting `.gitignore`), commits, and pushes to
+the Gitee remote.
+
+**The byte-for-byte tree discipline.** The two trees must stay identical for every tracked file (`git ls-files`).
+Verify without copying:
+
+```powershell
+# run inside _merge-scratch; empty output = the store's HEAD equals the working project
+git --work-tree=D:\DOTK\Stronghold-Protocol status --short --untracked-files=all
+```
+
+The store's `node_modules`, `.cache` and the `public/assets`, `public/fonts`, `public/vendor` trees are junctions
+onto the working project, so builds/assets are shared and not duplicated. **Edit the working project only** —
+never edit files inside `_merge-scratch` directly (the next sync overwrites them).
+
+**The push.** Remote **`gitee`** →
+`https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`, branch **`master`**
+(`HEAD:refs/heads/master`). `origin` stays the GitHub upstream. Credentials are **never** in the URL or the repo:
+the ASCII Gitee login is **`marseille1`** (the Chinese name is only a display name) plus a personal access token
+(账号设置 → 私人令牌, scope `projects`). Supply them per run:
+
+```powershell
+$env:GIT_USERNAME="marseille1"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs -m "message"
+```
+
+The helper writes them to a **temp credential file outside the repo**, resets the helper list for the push (so a
+stale system `credential.helper=manager` cannot shadow the token), and deletes the temp file afterwards. Never
+write the token into the repository.
+
+**Never `git add -A` when the store holds other WIP.** The store is shared, so a blanket `git add -A` would sweep
+unrelated work-in-progress into your commit. Stage **only your own paths**:
+
+```powershell
+node tools/push-gitee.mjs -m "docs: ..." --only docs/OUR-FEATURES.md --only docs/DEVELOPMENT.md ...
+```
+
+`--only <path>` (repeatable, comma-separated allowed) restricts both the sync and the staging; it is already
+supported by `tools/push-gitee.mjs`. `--dry-run` shows what would change, `--no-push` commits locally only.
+
+**The deploy order (hard order — never reorder).** The full procedure is
+[`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (d); the essentials:
+
+1. **推通知 FIRST**, with the server still up — `POST /admin/api/notify?token=…` with
+   `{"text":…,"sign":"d星空之下"}` (signature **`d星空之下`** by default).
+2. Wait ~30 s so clients render the notice.
+3. Upload the delta (`public/**` needs no restart; `shared/**` or `server/**` does).
+4. Restart (only when server/shared changed and the owner approved).
+5. Verify (`/healthz`, the changed endpoints).
+
+**Never deploy without the owner's go-ahead** (`d星空之下`): restarting, uploading server files, changing env /
+`SP_VERIFY` / the admin token / firewall are all stop-and-ask items (`docs/AI-WORKFLOW.md` (e)). Pure static
+changes still get a notice first.
+
+**Tests that pin it.** `test/docs-paths.test.js` and `test/package.test.js` shell out to `git ls-files`, so they
+**only pass in the git store** — in the git-less working project expect exactly those two to fail
+(`docs/DEVELOPMENT.md` §8). `test/version.test.js` pins the single version source and the notice files.
+
+---
+
+## Appendix: fork-only surface — a merge checklist
+
+| Area | Files that must survive the merge |
+|---|---|
+| Custom operators | `tools/build-data.mjs` `CUSTOM_CHESS` + `applyCustomChess` + `CUSTOM_BASE_IDS`; the 7 `kits/ops/chess_char_*-*.js`; their `KIT_FILES` entries |
+| Battle effects | `public/js/render/fx/{kinds,localart,simfx,rings,system,official}.js`; `tools/build-fx-official.mjs`; `tools/local-extract/fx-official-overrides.json` |
+| Local-art pipeline | `tools/local-extract/{extract.py,committed-manifest.mjs,extract-voice.py}`; `data/local-assets.committed.json` |
+| Asset sources | `tools/fetch-assets.mjs`; `tools/assets/{network,sources}.mjs` |
+| Decisions | the §22 blacklist; the traits/rules in §5 (see `docs/MATCHMAKING.md` §22–§35) |
+| Publishing | `tools/push-gitee.mjs`; the notice-first deploy order |
+
+Honour the blacklist, run the full `node --test` in the store, and only then mirror back to the working project.
+If a merge would force a choice between our behaviour and upstream's beyond the blacklist, **stop and ask
+`d星空之下`**.

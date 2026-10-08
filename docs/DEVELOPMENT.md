@@ -13,6 +13,7 @@ restate the upstream design — it points at it:
 | [`docs/DESIGN.md`](DESIGN.md) → [`docs/design/`](design/) + [`docs/history/`](history/) | the authoritative rules (index + per-release revisions) |
 | [`docs/DATA.md`](DATA.md) · [`docs/SIM.md`](SIM.md) · [`docs/META.md`](META.md) · [`docs/ASSETS.md`](ASSETS.md) · [`docs/BALANCE.md`](BALANCE.md) | generated data, the combat engine, the match engine, assets, difficulty |
 | [`docs/MATCHMAKING.md`](MATCHMAKING.md) | **our** features and every decision record (§22 merge blacklist, §23–§35 the custom operators) |
+| [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **the fork-only mechanisms catalog** (what is ours, where it lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) — see §12 |
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for adding a custom operator |
 | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | how we research/change/test/deploy, the merge discipline, and the Gitee push |
 | [`docs/DEPLOY.md`](DEPLOY.md) | upstream deployment (Windows host, Docker, proxy) |
@@ -343,3 +344,24 @@ The helper syncs the working project → `_merge-scratch` (tracked files only), 
 a personal access token) are supplied via `--interactive`, or per-run via `GIT_USERNAME` / `GIT_PASSWORD` (the helper
 writes them to a temp file outside the repo), never committed — the full instructions, the merge
 discipline and the production deploy procedure are in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md).
+
+---
+
+## 12. Our fork-only mechanisms — the merge-critical catalog
+
+The account/matchmaking/spectate/admin features and the custom operators exist **only in this fork**. Before merging
+upstream (or when a newcomer asks "what is ours?"), work from
+[`docs/OUR-FEATURES.md`](OUR-FEATURES.md) — the catalog that gives, **per mechanism**, what it is, where the code
+lives, how to extend it, the tests that pin it, and an explicit **我们独有，非上游；合并时不得丢失** note:
+
+| § | Mechanism |
+|---|---|
+| 1 | Custom operators (`CUSTOM_CHESS` + `applyCustomChess`, the `CUSTOM_BASE_IDS` stand-in exemption, the 7 kits) |
+| 2 | The two-tier battle-effect system (procedural + optional local art; the generated `FX_OFFICIAL` table; the committed manifest) |
+| 3 | The local-art pipeline (`tools/local-extract/extract.py`, the `.venv-extract`, the committed manifest bridge) |
+| 4 | Asset sources (`--asset-source=direct|mirror|gitcode`) and the local-client-first rule |
+| 5 | Our carried decisions (the §22 blacklist, funnel hits, 望's pieces, kalts2, leave→AI, the notice convention, golden attribution) |
+| 6 | Publishing (the Gitee mirror, the byte-for-byte tree discipline, the notice-first deploy order) |
+
+It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§35 (the decision record) and
+[`docs/ASSETS.md`](ASSETS.md) (the asset detail). Its appendix is the merge checklist of fork-only files.
