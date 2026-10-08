@@ -56,6 +56,24 @@ test('missing data/local-assets.json → 200 empty manifest (no 404 on installs 
   }
 });
 
+test('absent data/local-assets.json → the committed manifest is served (a clone gets the official tier)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-committed-'));
+  const doc = { version: 1, source: 'committed', count: 2, groups: { 'fx/makoto': { star_324: { path: '/assets/local/fx/makoto/star_324.png' } } } };
+  fs.writeFileSync(path.join(dir, 'local-assets.committed.json'), JSON.stringify(doc));
+  const srv = await serve(dir);
+  try {
+    const r = await get(srv, '/data/local-assets.json');
+    assert.equal(r.status, 200);
+    assert.deepEqual(JSON.parse(r.body), doc);
+    assert.equal((await get(srv, '/data/local-assets.json', 'HEAD')).status, 200);
+    // the committed file is still addressable under its own name too
+    assert.deepEqual(JSON.parse((await get(srv, '/data/local-assets.committed.json')).body), doc);
+  } finally {
+    srv.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('present data/local-assets.json is served as-is', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-art-'));
   const doc = { version: 1, source: 'local-client', count: 1, groups: { module: { 'mar-x': { path: '/assets/local/module/mar-x.png' } } } };

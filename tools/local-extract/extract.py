@@ -90,6 +90,24 @@ MESH_BUNDLES = [
     ('arts/maps/common/meshes/s_wind_device.ab', 's_wind_device'),
 ]
 
+# Per-operator battle-effect bundles: the official Texture2D of `battle/prefabs/effects/<stem>.ab`, written to the
+# manifest group `fx/<stem>`. These are the optional local official-art tier of the fx kinds (public/js/render/fx/
+# kinds.js `local`, docs/ASSETS.md "Battle effects"): a kind's `local` names layers of one of these groups, and the
+# client draws them only when the manifest lists them (else its procedural drawing). The first batch is our seven
+# custom operators (tools/build-data.mjs CUSTOM_CHESS); extend the list — or pass a comma-separated FX_BUNDLES env — to
+# bring in more operators/enemies (each bundle is ~0.3–3 MB, ~10–44 textures). Some operators' art genuinely lives in
+# external CABs (e.g. the funnel drone) and cannot be extracted here: those kinds keep the procedural tier.
+EFFECT_FX_BUNDLES = [
+    'kalts2',   # 凯尔希·思衡托 (already wired: kalts2Heal / kalts2Damage)
+    'aglna2',   # 予愿安洁莉娜
+    'gdglow',   # 澄闪 (the funnel drone's live art is external; the bundle still carries its own effects)
+    'makoto',   # 结城理
+    'narant',   # 娜仁图亚
+    'ascln',    # 阿斯卡纶
+    'wang',     # 望
+]
+EFFECT_FX_BUNDLES = [b.strip() for b in (os.environ.get('FX_BUNDLES') or ','.join(EFFECT_FX_BUNDLES)).split(',') if b.strip()]
+
 # (bundle path relative to the AB root, output subdir, which object types to export[, name regex to keep])
 JOBS = [
     ('arts/maps/map_autochess/res.ab', 'map/autochess', {'Texture2D', 'Material'}),
@@ -101,10 +119,10 @@ JOBS = [
     ('arts/guidebookpages/[pack]autochess.ab', 'guide', {'Sprite', 'Texture2D'}),
     ('battle/prefabs/[uc]projectiles.ab', 'projectiles', {'Sprite', 'Texture2D'}),
     # official battle-effect textures the web sources lack (owner rule: every fx kind has a procedural tier and an
-    # optional local-art tier, docs/ASSETS.md "Battle effects"): the per-operator effect bundles carry their own
-    # Texture2D (the funnel drone's live in unresolvable external CABs and stay procedural). Read by a kind's
-    # `local` spec (public/js/render/fx/kinds.js); the client draws them only when this manifest lists them.
-    ('battle/prefabs/effects/kalts2.ab', 'fx/kalts2', {'Texture2D'}),
+    # optional local-art tier, docs/ASSETS.md "Battle effects"): each per-operator effect bundle (EFFECT_FX_BUNDLES)
+    # carries its own Texture2D. Read by a kind's `local` spec (public/js/render/fx/kinds.js); the client draws them
+    # only when this manifest lists them.
+    *[(f'battle/prefabs/effects/{b}.ab', f'fx/{b}', {'Texture2D'}) for b in EFFECT_FX_BUNDLES],
     # official module (uniequip) type icons, keyed by lower-case type name (e.g. 'mar-x')
     ('spritepack/ui_equip_type_hub_h2_0.ab', 'module', {'Sprite'}),
     *[(rel, f'mesh/{sub}', {'Mesh', 'GameObject', 'Material', 'Texture2D'}) for rel, sub in MESH_BUNDLES],

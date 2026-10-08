@@ -17,7 +17,8 @@
 //     /packs/<id>/<file> → a file of a pack folder — only one its manifest names (server/packs.js servable)
 //
 // Traversal & dotfile protection, a directory without its trailing slash → 301, 404 page; an absent
-// data/local-assets.json is answered with an empty manifest. Files go out through files.js serveFile.
+// data/local-assets.json is answered with the committed data/local-assets.committed.json when it exists, else with an
+// empty manifest. Files go out through files.js serveFile.
 
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -46,6 +47,11 @@ const SIM_PRIVATE = new Set(['nodedata.js']); // lower-case (compared case-insen
 
 /** Optional per-machine art manifest (tools/local-extract) and the empty stand-in served when it is absent. */
 const LOCAL_ART_MANIFEST = 'local-assets.json';
+// Committed manifest of the art tracked under public/assets/local (tools/local-extract/committed-manifest.mjs): a fresh
+// clone has the pictures but no per-machine manifest, so the packages that ARE committed (the 3D board, the local
+// enemy / token spines, the UI icons, the fx official-art tier) would fall back. This one is served in place of an
+// absent data/local-assets.json, so a clone gets the official tier with no extraction step.
+const COMMITTED_LOCAL_ART = 'local-assets.committed.json';
 const EMPTY_LOCAL_ART = Buffer.from(JSON.stringify({ version: 1, source: 'none', count: 0, groups: {} }));
 
 /**
@@ -140,8 +146,16 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
       }
     } catch (e) {
       if (e && e.code === 'ENOENT' && mount.name === 'data' && segments.length === 1 && segments[0] === LOCAL_ART_MANIFEST) {
-        // Optional local-client art (DESIGN §13): an install without it gets an empty manifest instead of a 404,
-        // so browsers don't log an error on every page load. Clients treat empty groups as "no local art".
+        // The per-machine extraction (tools/local-extract) is absent. Serve the COMMITTED manifest of the art that
+        // ships in the repo when there is one (a clone then gets the official tier with no extraction); else an empty
+        // manifest instead of a 404, so browsers don't log an error on every page load (clients treat empty groups as
+        // "no local art" — DESIGN §13).
+        const committed = path.join(mount.dir, COMMITTED_LOCAL_ART);
+        const cst = await fsp.stat(committed).catch(() => null);
+        if (cst && cst.isFile()) {
+          await serveFile(req, res, committed, cst, mount.name, [COMMITTED_LOCAL_ART], query, gzipCache, log);
+          return;
+        }
         res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-cache', 'Content-Length': EMPTY_LOCAL_ART.length });
         res.end(req.method === 'HEAD' ? undefined : EMPTY_LOCAL_ART);
       } else if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR' || e.code === 'EISDIR' || e.code === 'ENAMETOOLONG')) {

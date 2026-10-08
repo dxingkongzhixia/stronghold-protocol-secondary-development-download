@@ -3,7 +3,7 @@
 
 import { SHOT_HEIGHT, bodyZ } from './camera.js';
 import { fxSpec, tilesAround, wallTiles } from './kinds.js';
-import { fxLocalSource } from './localart.js';
+import { fxLocalFor, fxLocalSource } from './localart.js';
 import { clamp } from './limits.js';
 
 /**
@@ -23,6 +23,19 @@ export class FxSim {
     if (id == null || !this.ctx.view) return null;
     const v = this.ctx.view(id);
     return v && !v.destroyed ? v : null;
+  }
+
+  /**
+   * The operator an fx is attributable to: the rendered id (`UnitView.info.spine || .defId`) of its caster `src` first
+   * (a 'strike' anchored on the victim names its source in `src`), else of its anchor (`at.v`, the `id` the sim names —
+   * a kind's own unit, a token, …). `null` when neither view is known; the optional official-art tier then keeps its
+   * base `local` (or the procedural one) — render/fx/localart.js fxLocalFor (`local.byOp`).
+   */
+  _fxLocalOp(ex, at) {
+    const v = this._viewOf(ex && ex.src) || (at && at.v) || this._viewOf(ex && ex.id);
+    const info = v && v.info;
+    const id = info && (info.spine || info.defId);
+    return typeof id === 'string' && id ? id : null;
   }
 
   /**
@@ -46,16 +59,16 @@ export class FxSim {
   }
 
   /**
-   * The optional official-art tier of a kind (`spec.local`): draw every layer as a ground field with the local-client
-   * picture and return true when the client has them all loaded; else prefetch and return false so `simFx` draws the
-   * procedural tier (docs/ASSETS.md "Battle effects"; render/fx/localart.js). `ctx.settings.localFx === false` opts
-   * out (a host may turn the official art off like a quality tier; on by default).
+   * The optional official-art tier of a kind: draw every layer of its resolved `local` spec (see `fxLocalFor`) as a
+   * ground field with the local-client picture and return true when the client has them all loaded; else prefetch and
+   * return false so `simFx` draws the procedural tier (docs/ASSETS.md "Battle effects"; render/fx/localart.js).
+   * `ctx.settings.localFx === false` opts out (a host may turn the official art off like a quality tier; on by default).
    */
-  _fxLocal(spec, at, r, col, dur) {
+  _fxLocal(local, at, r, col, dur) {
     if (this.ctx.settings && this.ctx.settings.localFx === false) return false;
-    const src = fxLocalSource(this.ctx.assets, spec.local);
+    const src = fxLocalSource(this.ctx.assets, local);
     if (!src) return false;
-    const d = Number.isFinite(dur) && dur > 0 ? dur : (Number.isFinite(spec.local && spec.local.dur) ? spec.local.dur : 0.7);
+    const d = Number.isFinite(dur) && dur > 0 ? dur : (Number.isFinite(local && local.dur) ? local.dur : 0.7);
     for (const ly of src) {
       this.ring(at.x, at.y, at.z, 0, r * ly.scale, ly.tint ?? col, d, this._fxLocalTex(ly.url, ly.image));
     }
@@ -95,9 +108,11 @@ export class FxSim {
     const chest = (v, out = this._p) => (v ? this._chest(v, out) : cam.project(at.x, at.y, at.z + 0.5, out));
     const p = chest(at.v);
     const s = p.s;
-    // optional official-art tier (spec.local, docs/ASSETS.md): drawn when the client has every layer loaded, else the
-    // procedural archetype below (never a blank frame, never a network dependency in the fallback)
-    if (spec.local && this._fxLocal(spec, at, r, col, dur)) return;
+    // optional official-art tier (spec.local, docs/ASSETS.md): the layers the event's skill / operator attributes
+    // (fxLocalFor), drawn when the client has every one loaded, else the procedural archetype below (never a blank
+    // frame, never a network dependency in the fallback)
+    const local = spec.local ? fxLocalFor(spec.local, ex, this._fxLocalOp(ex, at)) : null;
+    if (local && this._fxLocal(local, at, r, col, dur)) return;
     switch (spec.a) {
       case 'blast': {
         if (r >= 12) { this.flashScreen(col, 0.5); break; }

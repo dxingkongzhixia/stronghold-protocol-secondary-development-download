@@ -271,7 +271,7 @@ services:
 
 ## 6. 本地客户端素材（可选）
 
-`public/assets/local/` 和 `data/local-assets.json` 是从本机安装的《明日方舟》客户端里提取的官方素材（`tools/local-extract`，DESIGN §13）：`node tools/setup.mjs` 检测到客户端时会询问是否提取，之后可以用 `node tools/setup.mjs --local` 重新提取，或用 `--game "<…/StreamingAssets/AB/Windows>"` 指定客户端目录。setup 从公开镜像下载的素材不包含这部分，所以在没有客户端的电脑上（例如 Linux 服务器）用源码或精简包部署时不会有它；Releases 的完整包里已经带上了。
+`public/assets/local/` 里的官方素材是从本机安装的《明日方舟》客户端里提取的（`tools/local-extract`，DESIGN §13）：`node tools/setup.mjs` 检测到客户端时会询问是否提取，之后可以用 `node tools/setup.mjs --local` 重新提取，或用 `--game "<…/StreamingAssets/AB/Windows>"` 指定客户端目录。`data/local-assets.json` 是这次提取的**本机清单**（git 忽略）；`data/local-assets.committed.json` 是**随仓库提交**的清单，列出 `public/assets/local/**` 里已经提交的那部分素材（由 `node tools/local-extract/committed-manifest.mjs` 生成）。服务器在找不到本机清单时就用提交清单来顶（`server/http/static.js`），所以 `git clone` 下来的源码仓库**不需要提取**也能拿到这些官方素材；setup / fetch-assets 从公开镜像下载的素材不包含这部分，Releases 的完整包里也都带上了。
 
 没有本地素材时游戏照常运行，只是下面几样换成替代样式：
 
@@ -281,7 +281,7 @@ services:
 | 部分官方界面图标与底板：交流按钮和表情面板的边框、暂停面板、装备替换窗口、干员调配界面、队友状态与漏怪标记、模组类型图标等 | 样式相近的替代图形、图标或文字 |
 | 灼热 / 炽焰源石虫的官方模型 | 染成橙色 / 红橙色的普通源石虫 |
 | 39 个召唤物的官方模型（多数自选召唤物，以及凯瑟琳的爬行号·防护单元、凛御银灰的风雪之眼；公开镜像没有） | 召唤物头像（菱形底板） |
-| 部分官方战斗特效贴图（目前只有卡尔茨 S2 的 `fx/kalts2` 组） | 按官方配色手绘的程序化特效（始终可用，离线、无客户端也能画） |
+| 部分官方战斗特效贴图（卡尔茨 S2 的 `fx/kalts2` 组，以及自选干员 阿斯卡纶 / 结城理 / 予愿安洁莉娜 / 望 / 澄闪 / 娜仁图亚 的 `fx/<charId>` 组，见 `EFFECT_FX_BUNDLES`） | 按官方配色手绘的程序化特效（始终可用，离线、无客户端也能画） |
 
 表情（6 套 × 6 个）和「玩法说明」的 19 页教程图公开镜像也有：`node tools/setup.mjs` 会和其他素材一起下载（约 21 MB），不需要客户端；有本地素材时优先显示本地的。
 

@@ -39,16 +39,19 @@ function fakeAssets(groups, loaded = {}) {
   };
 }
 
-/** A real FxSystem over the fake PIXI (assets is the fake store); view1/view2 record nothing. */
-function makeFx(assets, settings = { quality: 'high', damageNumbers: true }) {
+/** A real FxSystem over the fake PIXI (assets is the fake store); `views` maps a unit id to a fake UnitView. */
+function makeFx(assets, settings = { quality: 'high', damageNumbers: true }, views = new Map()) {
   const P = fake.P;
   const ctx = fakeViewCtx(P);
   return new FX.FxSystem({
     P, layers: ctx.layers, cam: () => cam, assets, settings, heightAt: () => 0,
-    timeScale: () => 2, loadLevel: () => 0, subProfOf: () => null, view: () => null,
+    timeScale: () => 2, loadLevel: () => 0, subProfOf: () => null, view: (id) => views.get(id) || null,
     screenSize: () => ({ width: 1600, height: 900 }), fieldTop: () => 120,
   });
 }
+
+/** A fake UnitView of an anchored fx: the manager's view reads `info.spine || info.defId` (render/fx/simfx.js). */
+const fakeView = (x, y, defId) => ({ x, y, z: 0, info: { defId, spine: defId } });
 
 const GROUP = 'fx/kalts2';
 const URL = (n) => `/assets/local/${GROUP}/${n}.png`;
@@ -168,5 +171,117 @@ describe('kalts2 S2 official textures (when the local client was extracted)', ()
     const a = { localUrl: (g, n) => (g === GROUP && group[n] && group[n].path) || null, imageNow: () => PICTURE, image: () => Promise.resolve(null) };
     assert.deepEqual(LA.fxLocalSource(a, FX.FX_KINDS.kalts2Heal.local).map((l) => l.name), ['flow_332_3', 'star_118_7']);
     assert.deepEqual(LA.fxLocalSource(a, FX.FX_KINDS.kalts2Damage.local).map((l) => l.name), ['flow_331_2', 'star_118_7']);
+  });
+});
+
+// --- attribution: a kind shared by many operators (local.bySkill / local.byOp) --------------------------------
+const MK = 'fx/makoto';
+const MK_URL = (n) => `/assets/local/${MK}/${n}.png`;
+const MK_GROUPS = { [MK]: { flow_294_color_01: MK_URL('flow_294_color_01'), star_324: MK_URL('star_324'), ray_136: MK_URL('ray_136') } };
+const MK_LOADED = { [MK_URL('flow_294_color_01')]: PICTURE, [MK_URL('star_324')]: PICTURE, [MK_URL('ray_136')]: PICTURE };
+
+describe('fx local-art attribution: render/fx/localart.js fxLocalFor', () => {
+  const base = { group: 'g', tint: 0x111111, dur: 0.5, layers: [{ name: 'base' }] };
+
+  test('a plain local (only layers / name) is returned as it is', () => {
+    assert.equal(LA.fxLocalFor(base), base);
+    const named = { group: 'g', name: 'n' };
+    assert.equal(LA.fxLocalFor(named), named);
+  });
+
+  test('bySkill picks the entry and wins over byOp; byOp is the fallback', () => {
+    const local = { group: 'g', bySkill: { s1: { layers: [{ name: 'sk' }] } }, byOp: { op1: { layers: [{ name: 'op' }] } } };
+    assert.deepEqual(LA.fxLocalFor(local, { skill: 's1' }, 'op1').layers, [{ name: 'sk' }]);
+    assert.deepEqual(LA.fxLocalFor(local, { skill: 'nope' }, 'op1').layers, [{ name: 'op' }]);
+    assert.deepEqual(LA.fxLocalFor(local, {}, 'op1').layers, [{ name: 'op' }]);
+  });
+
+  test('a selected entry inherits group / tint / dur (and base layers when it names none)', () => {
+    const local = { group: 'g', tint: 0x222222, dur: 0.4, layers: [{ name: 'base' }], byOp: { op1: { scale: 2, tint: 0x333333 } } };
+    const out = LA.fxLocalFor(local, {}, 'op1');
+    assert.equal(out.group, 'g');
+    assert.equal(out.tint, 0x333333);
+    assert.equal(out.dur, 0.4);
+    assert.deepEqual(out.layers, [{ name: 'base' }], 'the base layers are inherited when the entry has none');
+    assert.equal(out.byOp, undefined, 'the map is not carried into the resolved spec');
+  });
+
+  test('nothing matches and there are no base layers → null (the caller stays procedural, no fetch)', () => {
+    const local = { byOp: { op1: { group: 'g', layers: [{ name: 'x' }] } } };
+    assert.equal(LA.fxLocalFor(local, {}, 'other'), null);
+    assert.equal(LA.fxLocalFor(local, {}, null), null);
+    assert.equal(LA.fxLocalFor(null), null);
+  });
+});
+
+describe('fx kinds: official art attributed by operator (aoe / strike / champagneBomb / takeoff)', () => {
+  test('a matching operator anchor draws its official layers; another operator stays procedural (no fetch)', () => {
+    const a = fakeAssets(MK_GROUPS, MK_LOADED);
+    const fx = makeFx(a, undefined, new Map([[1, fakeView(5, 10, 'char_4217_makoto')]]));
+    fx.simFx('aoe', 5, 10, { id: 1 });
+    assert.equal(fx.rings.length, 2, '结城理 official aoe layers');
+    assert.equal(fx.parts.length, 0, 'the procedural blast is skipped');
+    assert.deepEqual(a.called, []);
+    fx.clear();
+    // the same kind from another operator: no byOp entry → procedural, and never consults the manifest
+    const fx2 = makeFx(a, undefined, new Map([[2, fakeView(5, 10, 'char_1234_other')]]));
+    fx2.simFx('aoe', 5, 10, { id: 2 });
+    assert.ok(fx2.parts.length > 0, 'the procedural blast');
+    assert.deepEqual(a.called, []);
+  });
+
+  test('a `strike` anchored on the victim attributes to its `src` (结城理), not the victim', () => {
+    const a = fakeAssets(MK_GROUPS, MK_LOADED);
+    const views = new Map([[7, fakeView(3, 4, 'char_4217_makoto')], [9, fakeView(5, 10, 'enemy_1001_slime')]]);
+    const fx = makeFx(a, undefined, views);
+    fx.simFx('strike', 5, 10, { id: 9, src: 7 });
+    assert.equal(fx.rings.length, 2);
+    assert.equal(fx.parts.length, 0);
+  });
+
+  test('望 棋子: the token anchor picks the wang group; a missing extraction keeps the procedural blast', () => {
+    const WG = 'fx/wang';
+    const W_URL = (n) => `/assets/local/${WG}/${n}.png`;
+    const groups = { [WG]: { char_wang_05: W_URL('char_wang_05'), char_wang_03: W_URL('char_wang_03') } };
+    const loaded = { [W_URL('char_wang_05')]: PICTURE, [W_URL('char_wang_03')]: PICTURE };
+    const views = new Map([[4, fakeView(5, 10, 'token_10064_wang_stone1')]]);
+    const fx = makeFx(fakeAssets(groups, loaded), undefined, views);
+    fx.simFx('champagneBomb', 5, 10, { id: 4, consumed: true });
+    assert.equal(fx.rings.length, 2);
+    fx.clear();
+    const fx2 = makeFx(fakeAssets({}), undefined, views);
+    fx2.simFx('champagneBomb', 5, 10, { id: 4 });
+    assert.ok(fx2.parts.length > 0, 'no manifest entry → the procedural explosion');
+  });
+});
+
+// --- the committed manifest ships the extracted groups (a clone gets them with no local client) ------------------
+describe('official fx art of our custom operators (committed manifest)', () => {
+  const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.committed.json'), 'utf8')); } catch { return null; } })();
+  const skip = manifest ? false : 'no data/local-assets.committed.json';
+
+  test('the operator effect groups are committed (extracted even before every one is wired)', { skip }, () => {
+    const groups = manifest.groups || {};
+    for (const g of ['fx/kalts2', 'fx/makoto', 'fx/narant', 'fx/wang', 'fx/aglna2', 'fx/ascln', 'fx/gdglow']) {
+      assert.ok(groups[g] && Object.keys(groups[g]).length, `${g} committed`);
+    }
+  });
+
+  test('every layer the wired kinds name is listed and on disk', { skip }, () => {
+    const groups = manifest.groups || {};
+    let n = 0;
+    for (const def of Object.values(FX.FX_KINDS)) {
+      const local = def && def.local;
+      if (!local) continue;
+      for (const [key, entry] of [...Object.entries(local.byOp || {}), ...Object.entries(local.bySkill || {})]) {
+        for (const ly of LA.fxLocalLayers(entry)) {
+          const g = ly.group || local.group;
+          assert.ok(groups[g] && groups[g][ly.name], `${g}/${ly.name} (${key}) committed`);
+          assert.ok(existsSync(path.join(ROOT, 'public', groups[g][ly.name].path)), `${g}/${ly.name} on disk`);
+          n++;
+        }
+      }
+    }
+    assert.ok(n >= 8, 'several wired layers');
   });
 });

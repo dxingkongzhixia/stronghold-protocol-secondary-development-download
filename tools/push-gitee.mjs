@@ -17,6 +17,9 @@
 //   node tools/push-gitee.mjs --branch main       # push to another remote branch
 //   node tools/push-gitee.mjs --dry-run           # show what would change, copy/stage/commit/push nothing
 //   node tools/push-gitee.mjs --no-push           # sync + commit locally, skip the push
+//   node tools/push-gitee.mjs --only public/js/render/fx --only docs/ASSETS.md   # sync + stage ONLY these paths
+//                                                 # (the store is shared and may hold unrelated WIP; without
+//                                                 #  --only the helper stages everything with `git add -A`)
 //   GIT_USERNAME=marseille1 GIT_PASSWORD=<token> node tools/push-gitee.mjs   # per-run creds (temp file outside repo)
 //   SP_DEV_TREE=<dir> SP_SCRATCH=<dir> node tools/push-gitee.mjs
 //
@@ -49,7 +52,7 @@ const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
 const valOf = (f, d) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
 if (has('-h') || has('--help')) {
-  console.log('usage: node tools/push-gitee.mjs [-m <message>] [--branch <name>] [--remote <name>] [--dry-run] [--no-push] [--interactive]');
+  console.log('usage: node tools/push-gitee.mjs [-m <message>] [--branch <name>] [--remote <name>] [--dry-run] [--no-push] [--only <path>]... [--interactive]');
   process.exit(0);
 }
 const MESSAGE = valOf('-m', valOf('--message', ''));
@@ -57,6 +60,20 @@ const BRANCH = valOf('--branch', 'master');
 const REMOTE = valOf('--remote', 'gitee');
 const DRY = has('--dry-run');
 const NO_PUSH = has('--no-push');
+// --only <path>[,<path>…] (repeatable): restrict syncing AND staging to these repo-relative paths (a path or a
+// directory prefix). The git store is shared and can hold other work-in-progress, and the default `git add -A` would
+// sweep it into the commit — this keeps a run to exactly what it names. Empty (the default) keeps the old behaviour.
+const ONLY = (() => {
+  const out = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--only' && argv[i + 1]) out.push(argv[++i]);
+    else if (argv[i].startsWith('--only=')) out.push(argv[i].slice('--only='.length));
+  }
+  return out.flatMap((s) => s.split(','))
+    .map((s) => s.trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, ''))
+    .filter(Boolean);
+})();
+const onlyMatch = (rel) => !ONLY.length || ONLY.some((p) => rel === p || rel.startsWith(`${p}/`));
 // By default the push never blocks on a terminal/GUI credential prompt (an agent has none); a stored credential is
 // still used. `--interactive` re-enables the prompt for a one-time sign-in.
 const INTERACTIVE = has('--interactive');
@@ -116,7 +133,8 @@ function syncFile(rel) {
 // ------------------------------------------------------------------ main
 function main() {
   const { tracked, untracked } = changedPaths();
-  const all = [...new Set([...tracked, ...untracked])].sort();
+  const all = [...new Set([...tracked, ...untracked])].filter(onlyMatch).sort();
+  if (ONLY.length) console.log(`[push-gitee] --only: ${ONLY.join(', ')}`);
   if (!all.length) {
     console.log('[push-gitee] the git store already matches the dev tree — nothing to sync.');
   } else {
@@ -127,7 +145,9 @@ function main() {
 
   if (DRY) { console.log('[push-gitee] --dry-run: nothing staged, committed or pushed.'); return; }
 
-  git(['add', '-A']);
+  // With --only, stage exactly those pathspecs (a deletion is committed too); else the historic `git add -A`.
+  if (ONLY.length) git(['add', '-A', '--', ...ONLY]);
+  else git(['add', '-A']);
   const staged = git(['diff', '--cached', '--name-only']).split('\n').filter(Boolean);
   if (!staged.length) {
     console.log('[push-gitee] nothing staged (the store was already up to date).');

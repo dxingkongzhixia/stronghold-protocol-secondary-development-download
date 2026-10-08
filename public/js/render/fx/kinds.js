@@ -14,15 +14,31 @@
  *     simply sees the procedural version: the same effect is never a blank frame (Minecraft-shader-style graceful
  *     degradation).
  * `local`: `{ group, layers: [{ name, scale?, rot? }], tint?, dur? }`; `tint` defaults to the kind's `c` when a
- * layer has none. Add a new effect as procedural first, then opt into local art (docs/DEVELOPMENT.md).
+ * layer has none. A kind shared by many operators keys its layers by event (`{ bySkill: { <extra.skill>: local },
+ * byOp: { <spine|defId>: local } }` — render/fx/localart.js fxLocalFor / simfx.js _fxLocalOp): the generic `aoe` /
+ * `strike` / `champagneBomb` / `takeoff` carry our custom operators' official art this way. Add a new effect as
+ * procedural first, then opt into local art (docs/DEVELOPMENT.md).
  */
 export const FX_KINDS = Object.freeze({
   // blasts
-  aoe: { a: 'blast', c: 0xffb35c }, explode: { a: 'blast', c: 0xff7a33 }, explosion: { a: 'blast', c: 0xff7a33 },
+  // `aoe` is shared by every operator's area skill, so its official layers are keyed by the emitting operator
+  // (`local.byOp`, render/fx/localart.js fxLocalFor): 结城理's 替身换位 (S.E.E.S. 停顿) and 娜仁图亚's S3 吞日 retrieve
+  // burst. A non-listed caster (or a missing extraction) keeps the procedural blast.
+  aoe: { a: 'blast', c: 0xffb35c, local: { byOp: {
+    char_4217_makoto: { group: 'fx/makoto', tint: 0xffffff, dur: 0.7, layers: [{ name: 'flow_294_color_01', scale: 1.6 }, { name: 'star_324', scale: 1.1 }] },
+    char_4138_narant: { group: 'fx/narant', tint: 0xffd27a, dur: 0.7, layers: [{ name: 'trail_335', scale: 1.5 }, { name: 'star_305', scale: 1.1 }] },
+  } } },
+  explode: { a: 'blast', c: 0xff7a33 }, explosion: { a: 'blast', c: 0xff7a33 },
   // `pt`: always at the event's (x, y) (its `id` is the shooter); `heavy`: debris + scorch
   bombard: { a: 'blast', c: 0xffa04a, r: 1.5, pt: true, heavy: true }, bombardShell: { a: 'shell', c: 0xff5a3a, r: 1.5, pt: true },
   airstrike: { a: 'blast', c: 0xff8a3d, r: 1.5, heavy: true }, splash: { a: 'blast', c: 0xffc27a },
-  scorchBurst: { a: 'blast', c: 0xff6a2a }, champagneBomb: { a: 'blast', c: 0xffd27a }, shockBlast: { a: 'blast', c: 0x9fd4ff, smoke: 0x1c2630 },
+  scorchBurst: { a: 'blast', c: 0xff6a2a },
+  // 望's 棋子 (token_10064_wang_stone1) goes off as a `champagneBomb` (content/tokens.js wangStone); the official
+  // 棋子 burst textures ride the token id (the shared 'champagneBomb' kind of 香槟炸弹 / 多萝西 keys differently).
+  champagneBomb: { a: 'blast', c: 0xffd27a, local: { byOp: {
+    token_10064_wang_stone1: { group: 'fx/wang', tint: 0xffe0a8, dur: 0.6, layers: [{ name: 'char_wang_05', scale: 1.5 }, { name: 'char_wang_03', scale: 1.2 }] },
+  } } },
+  shockBlast: { a: 'blast', c: 0x9fd4ff, smoke: 0x1c2630 },
   frostNova: { a: 'blast', c: 0x9fe6ff, smoke: 0x1c2630 }, sunBurst: { a: 'blast', c: 0xffe28a }, meltdown: { a: 'blast', c: 0xff5a2a, r: 1.5, heavy: true },
   iceSpike: { a: 'blast', c: 0xbfeeff, smoke: 0x1c2630 }, rockfall: { a: 'blast', c: 0xc8a878, smoke: 0x4a3f33 }, rockslide: { a: 'blast', c: 0xc8a878, smoke: 0x4a3f33 },
   finale: { a: 'blast', c: 0xffd45a, r: 1.5 }, swordStorm: { a: 'blast', c: 0xdfe8ff }, swordRain: { a: 'blast', c: 0xdfe8ff }, liberate: { a: 'blast', c: 0xffffff },
@@ -82,7 +98,12 @@ export const FX_KINDS = Object.freeze({
   // 炎佑 祛恶之焰: a continuous jet from the dragon (`id`) onto its locked target (`target`) + a burning disc (_flame)
   yanyouFlame: { a: 'flame', c: 0xff8a3d, r: 1 },
   // states
-  takeoff: { a: 'lift', c: 0xcfe0ff }, levitate: { a: 'lift', c: 0xcfe0ff }, weightless: { a: 'lift', c: 0xcfe0ff },
+  // 予愿安洁莉娜's 起飞 (`takeoff`, chess_char_1015_aglna2-aglna2.js) draws her official lift field; every other
+  // operator's takeoff keeps the procedural one.
+  takeoff: { a: 'lift', c: 0xcfe0ff, local: { byOp: {
+    char_1015_aglna2: { group: 'fx/aglna2', tint: 0x9fd4ff, dur: 0.6, layers: [{ name: 'char_aglna2_07', scale: 1.4 }, { name: 'star_289', scale: 1.1 }] },
+  } } },
+  levitate: { a: 'lift', c: 0xcfe0ff }, weightless: { a: 'lift', c: 0xcfe0ff },
   sleep: { a: 'sleep', c: 0xa8b6ff }, crit: { a: 'crit', c: 0xffe066 },
   dodge: { a: 'dodge', c: 0xffffff }, riposte: { a: 'counter', c: 0xffd9a0 }, counter: { a: 'counter', c: 0xffd9a0 }, block: { a: 'counter', c: 0xdfe8ff },
   thorns: { a: 'counter', c: 0xff9aa6 }, downed: { a: 'down', c: 0xbfeee2 }, stone: { a: 'down', c: 0xc0b8a8, smoke: 0x5a5448 },
@@ -100,7 +121,11 @@ export const FX_KINDS = Object.freeze({
   // beams
   beam: { a: 'beam', c: 0xff7a5a }, link: { a: 'beam', c: 0x9ff0dc }, lightning: { a: 'bolt', c: 0xc9a2ff }, tentacle: { a: 'beam', c: 0x5fe0ff },
   sandChains: { a: 'beam', c: 0xd8c8a0 }, sandChainsCharged: { a: 'beam', c: 0xffd45a },
-  strike: { a: 'strike', c: 0xffe6a8 }, volley: { a: 'volley', c: 0xfff2d0 }, column: { a: 'pillar', c: 0x9ff0dc }, obelisk: { a: 'pillar', c: 0xc9a2ff },
+  // `strike` (a single-target hit flare) is shared too: 结城理's S.E.E.S. 总攻击 draws his official flare / ring.
+  strike: { a: 'strike', c: 0xffe6a8, local: { byOp: {
+    char_4217_makoto: { group: 'fx/makoto', tint: 0xbfa8ff, dur: 0.6, layers: [{ name: 'star_324', scale: 1.4 }, { name: 'ray_136', scale: 1.2 }] },
+  } } },
+  volley: { a: 'volley', c: 0xfff2d0 }, column: { a: 'pillar', c: 0x9ff0dc }, obelisk: { a: 'pillar', c: 0xc9a2ff },
   duskDragon: { a: 'blast', c: 0x9dff6a, r: 1.5 }, shadowWeave: { a: 'vanish', c: 0x8f7bff }, reweave: { a: 'summon', c: 0x8f7bff },
   slash: { a: 'counter', c: 0xfff0d0 }, devour: { a: 'vanish', c: 0xff4b3e }, undying: { a: 'shield', c: 0xffd45a },
   // summon arrival bursts (content/tokens.js burst(): 沙之碑 default, 迷迭香 gear stun, 耀阳 sword, 纸偶)

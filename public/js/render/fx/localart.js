@@ -1,7 +1,9 @@
 // public/js/render/fx/localart.js — the optional local-client art tier of an fx kind (docs/ASSETS.md "Battle effects").
 //
 // A kind opts in with `spec.local` (render/fx/kinds.js):
-//   { group, layers: [{ name, scale? }], tint?, dur? }
+//   { group, layers: [{ name, scale? }], tint?, dur?, bySkill?, byOp? }
+// and, for a kind shared by many operators, attributes its layers per skill label (`bySkill: { <extra.skill>: local }`)
+// or per operator (`byOp: { <spine|defId>: local }`) — fxLocalFor picks the entry of the event (render/fx/simfx.js).
 // Each layer names a picture of the local-client manifest (`data/local-assets.json`, group + name). At render time the
 // official tier is used only when the client lists EVERY layer AND its picture has loaded: FxSystem then draws the
 // layers as ground fields (render/fx/rings.js) instead of the procedural archetype. When any layer is missing — no
@@ -16,6 +18,36 @@
 // No PIXI, no DOM at import time — Node tests import this file.
 
 const str = (v) => (typeof v === 'string' && v ? v : null);
+const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/**
+ * The `local` spec a kind uses for one fx event: the plain `spec.local` when it carries its own layers, else the entry
+ * its `bySkill` / `byOp` map holds. This is what makes official art attributable: a generic kind ('aoe', 'strike', …)
+ * is shared by many operators, so its layers live per skill label (`extra.skill`, e.g. 'makoto_sluggish') or per
+ * operator id (`opId`, the emitting unit's `spine` / `defId` — the sim always anchors an fx on its caster, `id`, or
+ * names it in `src`). A `byOp` / `bySkill` entry merges over the base (`{ ...local, ...entry }`), so it may inherit
+ * `group` / `tint` / `dur` and override only `layers`. `null` when nothing matches: the caller draws the procedural
+ * tier (never a fetch, never a blank frame — the same graceful degradation as a client without the art).
+ * @param {object} local the fx spec's `local` record ({ group, layers, tint?, dur?, bySkill?, byOp? })
+ * @param {object} [extra] the fx event's extra record (`extra.skill`)
+ * @param {string} [opId] the emitting operator's rendered id (UnitView.info.spine || .defId)
+ */
+export function fxLocalFor(local, extra = {}, opId = null) {
+  if (!isObj(local)) return null;
+  const hasBase = Array.isArray(local.layers) || !!str(local.name);
+  const skill = str(extra && extra.skill);
+  const skillSel = skill && isObj(local.bySkill) ? local.bySkill[skill] : null;
+  const opSel = !skillSel && opId && isObj(local.byOp) ? local.byOp[opId] : null;
+  const sel = isObj(skillSel) ? skillSel : (isObj(opSel) ? opSel : null);
+  if (!sel) return hasBase ? local : null;
+  const out = { ...local, ...sel };
+  delete out.bySkill; delete out.byOp;
+  if (!str(out.group) && str(local.group)) out.group = local.group;
+  if (out.tint == null && local.tint != null) out.tint = local.tint;
+  if (out.dur == null && local.dur != null) out.dur = local.dur;
+  if (!Array.isArray(out.layers) && !str(out.name) && Array.isArray(local.layers)) out.layers = local.layers;
+  return out;
+}
 
 /** Normalised layers of a `spec.local` (`{ group, layers: [...] }` or one `{ group, name }`); [] when unusable. */
 export function fxLocalLayers(local) {

@@ -38,11 +38,19 @@ describe('extract.py helpers (no UnityPy needed)', { skip: !PY && 'no python3' }
       'arts/maps/common/meshes/s_common_box_01.ab', 'arts/maps/common/meshes/s_wind_device.ab',
     ]);
     for (const j of mesh) assert.deepEqual(j.kinds, ['GameObject', 'Material', 'Mesh', 'Texture2D']);
-    // the official battle-effect bundle (the kalts2 S2 burst): Texture2D only, into fx/kalts2 (the fx kinds'
-    // optional local-art tier, docs/ASSETS.md "Battle effects")
+    // the official battle-effect bundles (EFFECT_FX_BUNDLES: the kalts2 S2 burst + our first batch of custom
+    // operators): Texture2D only, one fx/<stem> group each (the fx kinds' optional local-art tier, docs/ASSETS.md
+    // "Battle effects")
     const fx = jobs.filter((j) => j.sub.startsWith('fx/'));
-    assert.deepEqual(fx.map((j) => j.bundle), ['battle/prefabs/effects/kalts2.ab']);
-    assert.deepEqual(fx[0].kinds, ['Texture2D']);
+    assert.deepEqual(fx.map((j) => j.bundle), [
+      'battle/prefabs/effects/kalts2.ab', 'battle/prefabs/effects/aglna2.ab', 'battle/prefabs/effects/gdglow.ab',
+      'battle/prefabs/effects/makoto.ab', 'battle/prefabs/effects/narant.ab', 'battle/prefabs/effects/ascln.ab',
+      'battle/prefabs/effects/wang.ab',
+    ]);
+    for (const j of fx) {
+      assert.deepEqual(j.kinds, ['Texture2D']);
+      assert.equal(j.sub, `fx/${j.bundle.replace(/^.*\/effects\//, '').replace(/\.ab$/, '')}`, 'one fx/<bundle> group');
+    }
     assert.equal(new Set(jobs.map((j) => j.sub)).size, jobs.length, 'one output dir per job');
   });
 
