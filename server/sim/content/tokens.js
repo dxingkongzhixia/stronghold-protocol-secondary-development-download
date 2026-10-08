@@ -1188,6 +1188,15 @@ export function wangStone(bb) {
     install(battle, unit) {
       untargetable(battle, unit);
       wangSet(battle).add(unit);
+      // 「棋子相连时相互激活」 activates the moment two pieces touch (§30.1). Latch on DEPLOY, not first onTick: an S3 cascade
+      // can detonate a piece's neighbour later in the SAME tick, and a lazily-latched piece would then stay dark forever —
+      // the owner's 「总有一个棋子不爆炸」. At deploy both the unit and its neighbours are alive, so this registers the new
+      // touch on the neighbours' side too. The rule itself (上/下 左右贴邻, latch once set) is unchanged.
+      battle.on('deploy', ({ unit: u }) => {
+        if (u !== unit) return;
+        wangAxes(battle, unit);
+        for (const p of wangSet(battle)) if (p !== unit && p.alive) wangAxes(battle, p);
+      }, { owner: unit });
     },
   };
 }

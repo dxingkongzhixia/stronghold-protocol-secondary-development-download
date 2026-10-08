@@ -58,6 +58,15 @@ function wang(bb, chess, def) {
     return { ...wangStoneKit(bbTok ?? {}), fromTokens: true };
   };
   const enemyOn = (battle, r, c) => battle.enemies.some((e) => e.alive && !e.hidden && bodyOnTile(e, r, c));
+  // 铸子 「棋子相连时相互激活」 (docs/MATCHMAKING.md §30.1): 相连 = 上下/左右贴邻. The player places pieces by hand, so they
+  // always form a connected chain; our auto-placement must MIMIC that. A piece dropped on a tile that touches no other piece
+  // is never activated and never triggers (the owner's 「总有一个棋子不爆炸」). So every automatic placement after the first
+  // of a group must stand on a tile orthogonally adjacent to a piece already on the field; the first of a group is linked by
+  // its own 铸子 跟子 (spawnFollow below), which is why an empty field may still take a seed. See also §35.
+  const DIR4 = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+  const pieceAt = (battle, unit, r, c) => battle.allyUnits.some((t) => t && t.alive && t.kind === 'token' && t.defId === tok && t.ownerUnit === unit && t.tileR === r && t.tileC === c);
+  /** Whether (r,c) keeps the chain 相连 — it touches (orthogonally) one of our living pieces. */
+  const touchesChain = (battle, unit, r, c) => DIR4.some(([dr, dc]) => pieceAt(battle, unit, r + dr, c + dc));
   /** S3 天下劫 runs (stopped attacking, 20 bullets): its extra placements spend the bullets. */
   const s3Active = (unit) => {
     const s = unit.skill;
@@ -78,7 +87,10 @@ function wang(bb, chess, def) {
     const mine = battle.allyUnits.filter((t) => t.kind === 'token' && t.defId === tok && t.ownerUnit === unit && t.mem.wangFollow && t.alive);
     if (mine.length >= spawnCap) return;
     if (heldPieces(battle, unit).length >= fieldCapOf(battle, unit)) return;   // a full field would just withdraw another piece for a bullet
-    if (s3Active(unit) && Math.floor(num(unit.mem.wangS3Follows, 0)) >= 3) return; // S3: 第一天赋额外至多3枚
+    // S3: 第一天赋额外至多3枚 — but a piece that is the ONLY one on the field must still get its partner, or the auto-refill
+    // would seed a lone, never-activated piece (the owner's "总有一个棋子不爆炸"). A seed follow still costs a bullet.
+    const onlyPiece = !battle.allyUnits.some((t) => t !== piece && t.alive && t.kind === 'token' && t.defId === tok && t.ownerUnit === unit);
+    if (s3Active(unit) && !onlyPiece && Math.floor(num(unit.mem.wangS3Follows, 0)) >= 3) return; // S3: 第一天赋额外至多3枚
     // 上 > 右 > 下 > 左 in the piece's own (facing) frame — a turned board plays alike (sim/dir.js)
     const DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
     let best = null, bestS = null;
@@ -145,7 +157,10 @@ function wang(bb, chess, def) {
     let left = Math.max(0, Math.floor(num(stock[tok], 0)));
     for (const [r, c] of placeTiles(battle, unit, { enemiesFirst: s3 })) {
       if (left <= 0) break;
-      if (heldPieces(battle, unit).length >= fieldCapOf(battle, unit)) break;   // never place past the field cap (drops nothing)
+      const held = heldPieces(battle, unit);
+      if (held.length >= fieldCapOf(battle, unit)) break;                       // never place past the field cap (drops nothing)
+      if (battle.unitAt?.(r, c)?.alive) continue;                               // tile taken (S3 still allows enemy tiles — unitAt is allies only)
+      if (held.length > 0 && !touchesChain(battle, unit, r, c)) continue;        // keep the 相连 chain (a lone piece could never fire)
       const p = battle.spawnToken(unit, tok, r, c, { kit });
       if (p) {
         left--;
@@ -189,6 +204,7 @@ function wang(bb, chess, def) {
           const held = mine();
           if (held.length >= lim) break;
           if (held.some((t) => t.tileR === r && t.tileC === c) || battle.unitAt?.(r, c)?.alive) continue;
+          if (held.length > 0 && !touchesChain(battle, unit, r, c)) continue;    // 有空地就不断下棋子 — but only onto the 相连 chain
           const p = battle.spawnToken(unit, tok, r, c, { kit: triggerKit(battle, unit) });
           if (p) spendAmmo(battle, unit);
         }

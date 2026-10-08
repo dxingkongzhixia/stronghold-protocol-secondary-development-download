@@ -1028,7 +1028,7 @@
           "title": {"id":"comment_3","name":"坚若磐石","picId":"comment_icon_3","text":"目标生命值损失最少"},
           "trophies": 3,
           "reward": 250,
-          "stats": {"activatedLayers":290,"bossDamage":216155,"dmgDealt":1678561,"gold":129,"itemsEquipped":23,"kills":284,"leaks":0,"lpLost":0,"merges":3,"perfectRounds":13,"refreshes":9},
+          "stats": {"activatedLayers":290,"bossDamage":214456,"dmgDealt":1676862,"gold":129,"itemsEquipped":23,"kills":284,"leaks":0,"lpLost":0,"merges":3,"perfectRounds":13,"refreshes":9},
           "lineup": ["377_gdglow_a@12,8[4_03_e_a+1_01_e_b]","1052_kalts2_a@11,6","6_12_a@11,7","1_13_b@11,8[1_02_e_a+3_04_e_b]","4_07_a@10,8[3_01_e_a+3_11_e_b]","1_10_b@9,4","3_16_a@9,8[3_02_e_b+4_10_e_b]","4_14_a@9,9[3_07_e_a+3_06_e_a]"],
           "bonds": ["deputShip 1/79","emptyShip 1/18","indomShip 1/8","maniShip 1/22","preciShip 2/99","sargonShip 0/2","siracusaShip 0/3","steadShip 1/46","victoriaShip 1/16","visiShip 1/2"]
         },
@@ -1056,7 +1056,7 @@
           "title": {"id":"comment_1","name":"卫戍之星","picId":"comment_icon_1","text":"对敌方领袖造成伤害最高（仅胜利时）"},
           "trophies": 3,
           "reward": 250,
-          "stats": {"activatedLayers":221,"bossDamage":366122,"dmgDealt":1816057,"gold":130,"itemsEquipped":37,"kills":282,"leaks":1,"lpLost":0,"merges":3,"perfectRounds":12,"refreshes":15},
+          "stats": {"activatedLayers":221,"bossDamage":367821,"dmgDealt":1817756,"gold":130,"itemsEquipped":37,"kills":282,"leaks":1,"lpLost":0,"merges":3,"perfectRounds":12,"refreshes":15},
           "lineup": ["6_12_a@11,3[4_04_e_a+4_06_e_a]","4138_narant_a@11,6[4_09_e_a+3_02_e_b]","2027_wang_a@11,7[6_09_e_a]","2_08_b@11,8[2_04_e_a+6_09_e_a]","3_03_b@10,8[6_03_e_a+4_04_e_b]","2_17_a@9,4[2_03_e_a+4_11_e_a]","5_02_a@9,8[5_09_e_a+3_11_e_b]","4_14_a@9,9"],
           "bonds": ["deputShip 0/14","emptyShip 1/10","preciShip 2/84","sargonShip 1/31","siracusaShip 0/3","steadShip 1/52","swiftShip 1/44","visiShip 1/0","yanShip 0/1"]
         }
@@ -1318,7 +1318,7 @@
           "title": {"id":"comment_4","name":"精英云集","picId":"comment_icon_4","text":"晋升精锐次数最多"},
           "trophies": 4,
           "reward": 400,
-          "stats": {"activatedLayers":233,"bossDamage":476858,"dmgDealt":3848970,"gold":148,"itemsEquipped":26,"kills":274,"leaks":26,"lpLost":11,"merges":5,"perfectRounds":10,"refreshes":16},
+          "stats": {"activatedLayers":233,"bossDamage":444729,"dmgDealt":3808277,"gold":148,"itemsEquipped":26,"kills":273,"leaks":26,"lpLost":11,"merges":5,"perfectRounds":10,"refreshes":16},
           "lineup": ["1052_kalts2_a@12,3","5_10_a@11,3[4_03_e_b+1_02_e_b]","3_21_b@11,6[3_08_e_a+1_01_e_a]","2027_wang_a@11,7[3_03_e_a]","1_01_b@10,3","4_10_a@10,7[5_02_e_a+3_01_e_b]","1_08_b@10,8[3_11_e_a+4_03_e_a]","5_20_a@9,8[1_05_e_a+3_04_e_a]","3_18_a@9,9[3_06_e_a+4_12_e_a]"],
           "bonds": ["arcaneShip 1/14","emptyShip 1/6","indomShip 0/8","kjeragShip 0/7","lateranoShip 1/33","maniShip 1/6","preciShip 0/13","siracusaShip 2/106","skillfulShip 1/49","soloShip 1/9","steadShip 0/2","suntShip 1/0","swiftShip 1/10","victoriaShip 0/8","visiShip 0/8"]
         },
@@ -1332,7 +1332,7 @@
           "title": {"id":"comment_1","name":"卫戍之星","picId":"comment_icon_1","text":"对敌方领袖造成伤害最高（仅胜利时）"},
           "trophies": 4,
           "reward": 400,
-          "stats": {"activatedLayers":251,"bossDamage":873142,"dmgDealt":4487703,"gold":131,"itemsEquipped":22,"kills":277,"leaks":5,"lpLost":5,"merges":2,"perfectRounds":12,"refreshes":11},
+          "stats": {"activatedLayers":251,"bossDamage":905271,"dmgDealt":4527588,"gold":131,"itemsEquipped":22,"kills":277,"leaks":5,"lpLost":5,"merges":2,"perfectRounds":12,"refreshes":11},
           "lineup": ["1052_kalts2_a@11,3","4_20_a@11,6[3_05_e_b+2_01_e_b]","4138_narant_a@11,7","1_17_a@10,3[5_07_e_a+1_02_e_b]","4_10_a@10,7[4_07_e_b+3_01_e_a]","1015_aglna2_a@10,8","5_02_a@9,8[1_01_e_b+3_11_e_a]","2_12_a@9,9[2_04_e_a+4_11_e_a]"],
           "bonds": ["arcaneShip 1/14","indomShip 0/13","kazimierzShip 1/14","kjeragShip 0/8","maniShip 1/0","preciShip 2/66","sargonShip 1/56","siracusaShip 1/38","skillfulShip 1/27","steadShip 0/14","swiftShip 1/36","victoriaShip 0/8","visiShip 0/8"]
         }

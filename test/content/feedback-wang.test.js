@@ -14,6 +14,8 @@ const WANG = 'chess_char_2027_wang_a';
 const PIECE = TOKEN_IDS.wangStone;
 const living = (h) => h.b.allyUnits.filter((u) => u.defId === PIECE && u.alive);
 const still = (key, o = {}) => enemyRec({ key, hp: 1e7, speed: 0, ...o });
+/** 铸子 「相连时相互激活」: a piece that has ever touched another carries a latched axis (`mem.wangAxes`). */
+const linked = (p) => !!(p.mem.wangAxes && (p.mem.wangAxes.v || p.mem.wangAxes.h));
 
 test('望: a placed piece deploys a 跟子 on an adjacent tile; both are 装置 (untargetable, no attack)', REAL, () => {
   const h = makeBattle({
@@ -183,6 +185,81 @@ test('望 S3 天下劫: a consumed piece is refilled while bullets last ("有空
   assert.equal(left(), 0, 'the bullets ran out');
   assert.equal(w.skill.active, false, '弹药耗尽后技能结束');
   assert.ok(living(h).length <= 6, 'never more pieces than the piece deploy limit (铸子 可以使用6枚棋子)');
+  checkInvariants(h.b);
+});
+
+// ── 「总有一个棋子不爆炸」 (owner playtest #7): the auto-placement must MIMIC the player's manual chain. Every piece the
+// skill brings in (S1/S2/S3) and every piece the S3 refill drops must land 相连 to the field, or it can never trigger.
+test('望: every piece an auto-cast brings in is 相连 (S1/S2/S3) — never a lone piece', REAL, () => {
+  for (const skillIndex of [0, 1, null]) {
+    const h = makeBattle({
+      units: [{ chessId: WANG, row: 10, col: 4, uid: 1, ...(skillIndex == null ? {} : { skillIndex }) }],
+      autoFinish: false, timeLimit: 30,
+    });
+    h.step();
+    const w = h.unit(WANG);
+    w.skill.sp = w.skill.spCost;
+    assert.ok(w.skill.activate('test', { free: true }), `skill ${skillIndex} activates`);
+    h.step();
+    const pieces = living(h);
+    // S1/S2 grant 2 pieces (+2 跟子 = 4); S3 grants 8 but the field cap (铸子 可以使用6枚棋子) stops at 6
+    assert.equal(pieces.length, skillIndex == null ? 6 : 4, `skill ${skillIndex}: place count`);
+    for (const p of pieces) assert.ok(linked(p), `skill ${skillIndex}: (${p.tileR},${p.tileC}) linked`);
+    checkInvariants(h.b);
+  }
+});
+
+test('望: the S3 refill keeps every living piece 相连 through the explosions ("有空地就不断下棋子")', REAL, () => {
+  const h = makeBattle({
+    defs: { enemies: { e: still('e') } },
+    units: [{ chessId: WANG, row: 10, col: 4, uid: 1 }],
+    autoFinish: false, timeLimit: 120, captureNoisy: true, hooks: ['damaged', 'ammoUsed', 'death'],
+  });
+  h.step();
+  const w = h.unit(WANG);
+  w.skill.sp = w.skill.spCost;
+  assert.ok(w.skill.activate('test', { free: true }));
+  h.step();
+  const allLinked = () => living(h).every(linked);
+  assert.ok(allLinked(), 'after the cast every piece is linked');
+  // walk an enemy onto a piece: it (and every piece its expanded range reaches) detonates, then the field refills from the
+  // bullets. No refill may drop a piece off the chain — that would be the owner's dead piece.
+  for (let i = 0; i < 40 && w.skill.active; i++) {
+    const p = living(h)[0];
+    if (!p) break;
+    h.spawn('e', { pos: [p.tileR, p.tileC] });
+    h.run(0.3);
+    assert.ok(allLinked(), `iteration ${i}: every living piece linked (${living(h).map((q) => `${q.tileR},${q.tileC}:${linked(q)}`).join(' ')})`);
+  }
+  assert.equal(Math.floor(Number(w.skill.ammoLeft) || 0), 0, 'the bullets ran out');
+  assert.ok(living(h).length <= 6, 'never past the 6-piece field cap');
+  checkInvariants(h.b);
+});
+
+test('望 S3: an enemy entering the board detonates every 相连 piece whose expanded range (x-6 十字) reaches it', REAL, () => {
+  const h = makeBattle({
+    defs: { enemies: { e: still('e') } },
+    units: [
+      { chessId: WANG, row: 12, col: 3, uid: 1 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 8, uid: 4 },
+    ],
+    autoFinish: false, timeLimit: 20, captureNoisy: true, hooks: ['damaged', 'death'],
+  });
+  h.step();
+  assert.ok(living(h).every(linked), 'the opening line is linked');
+  assert.equal(living(h).length, 6, 'three placed pieces + three 跟子');
+  // the S3 trigger range is data `x-6` — a plus of radius 2, NOT the whole 5×5: every linked piece whose cross reaches the
+  // foe must fire, the diagonal survivors stay (and stay linked)
+  const CROSS = [[2, 0], [1, 0], [0, -2], [0, -1], [0, 0], [0, 1], [0, 2], [-1, 0], [-2, 0]];
+  const reaches = (p) => CROSS.some(([dr, dc]) => p.tileR + dr === 10 && p.tileC + dc === 6);
+  const doomed = living(h).filter(reaches);
+  assert.ok(doomed.length >= 4, `several linked pieces reach the foe (${doomed.length})`);
+  h.spawn('e', { pos: [10, 6] });
+  assert.ok(h.runUntil(() => doomed.every((p) => !p.alive), 5), 'the enemy sets off every in-range linked piece');
+  for (const p of living(h)) assert.ok(linked(p), `survivor (${p.tileR},${p.tileC}) stays linked`);
+  assert.ok(h.hooksOf('damaged').some((c) => c.source?.defId === PIECE && c.type === 'arts'), 'the triggers deal arts damage');
   checkInvariants(h.b);
 });
 
