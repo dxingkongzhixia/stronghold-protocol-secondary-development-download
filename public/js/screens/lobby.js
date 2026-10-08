@@ -369,11 +369,11 @@ export function LobbyScreen() {
         <h1 class="topbar__title">${t('选择模拟协议')}</h1>
       </div>
       <div class="topbar__right">
+        <${SettingsButton} class="lobby-settings" variant="secondary" label=${t('设置')} />
         <${GuideButton} class="lobby-guide" variant="secondary" label=${t('玩法说明')} />
         <${LoadoutButton} from="lobby" size="sm" class="lobby-loadout" label=${t('干员调配')} />
         ${auth?.account ? null : html`<${Button} variant="secondary" size="sm" icon="user" class="lobby-account"
           onClick=${() => setShowAccount(true)}>${t('登录 / 注册')}<//>`}
-        <${SettingsButton} class="lobby-set" variant="secondary" size="sm" />
         <div class="me-chip">
           <${AvatarFrame} size="sm" name=${me.name} seat=${0} self=${true} />
           <div class="me-chip__text">
