@@ -113,6 +113,14 @@ const PRISONER_GREY_3 = Object.freeze({
   die: 'Die3', move: clipOf('Move3'),
 });
 /**
+ * The running clips of 猎狗pro (PREFAB_SPINE_ROLES). Its skeleton carries BOTH a `Move_*` and a `Run_*` set: the prefab's
+ * Graphic anim key `Move` reads `Run_Loop`, while the skeleton's `Move_Loop` is a standing step-in-place pose (audited
+ * 2026-10-06 against all 242 enemy prefabs, docs/history/0.2.0.md §25.14.1 "Not changed, for later"). The by-name
+ * resolver, preferring `Move` over `Run`, gave the manifest `move: Move_Loop`, so the hound held that near-idle pose
+ * while it walked (and slid). The official's actual movement is the gallop.
+ */
+const GOPRO_RUN = Object.freeze({ move: { begin: 'Run_Begin', loop: 'Run_Loop', end: 'Run_End' } });
+/**
  * Role fixes of web models (enemies from their official battle prefabs; operators by character id) for skeletons whose clip
  * names mislead the resolver (by name): model id → roles replacing the resolved ones (the others are kept); processModels applies them, so
  * data/assets.json carries them. A fix naming a clip the skeleton lacks is dropped and reported. Source: the prefab's
@@ -136,6 +144,7 @@ const PRISONER_GREY_3 = Object.freeze({
 const UTAGE_S1 = Object.freeze({ begin: 'Skill_Start', loop: 'Skill_Loop', end: 'Skill_End', index: 0, idle: null });
 const UTAGE_S2 = Object.freeze({ ...clipOf('Attack', 'attack'), index: 1, idle: null });
 export const PREFAB_SPINE_ROLES = Object.freeze({
+  enemy_1000_gopro_2: GOPRO_RUN,
   enemy_1116_liprr: PRISONER_GREY_3,
   enemy_1116_liprr_2: PRISONER_GREY_3,
   // operators by character id: both the front and the back model
