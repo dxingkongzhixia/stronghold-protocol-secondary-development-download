@@ -1,8 +1,9 @@
-// test/ui/preload.test.js — boot art preloading (public/js/preload.js): the URL filter and the scope sets.
+// test/ui/preload.test.js — boot art preloading (public/js/preload.js): the URL filter, the scope sets, the loader's
+// progress counter (0→N, failures counted, never stalls/exceeds) and the boot progress reporter.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { collectArtUrls, isArtImage } from '../../public/js/preload.js';
+import { collectArtUrls, isArtImage, preloadImages, artProgressReporter } from '../../public/js/preload.js';
 
 const M = {
   chars: { a: { avatar: '/assets/char/avatar/a.png', avatarE2: '/assets/char/avatar/a_2.png', portrait: '/assets/char/portrait/a_1.png' } },
@@ -36,4 +37,54 @@ test('collectArtUrls scopes: icons (default) / ui / all', () => {
   assert.ok(all.includes('/assets/char/portrait/a_1.png'));
   assert.equal(new Set(all).size, all.length, 'de-duplicated');
   assert.ok(collectArtUrls(undefined, 'icons').length === 0, 'no manifest → empty');
+});
+
+/** A fake Image whose loads complete on the microtask queue; a URL containing 'fail' fires onerror. */
+class FakeImage {
+  set src(u) {
+    this._src = u;
+    queueMicrotask(() => (u.includes('fail') ? this.onerror : this.onload)?.call(this));
+  }
+  get src() { return this._src; }
+}
+
+async function withFakeImage(fn) {
+  const prev = globalThis.Image;
+  globalThis.Image = FakeImage;
+  try { return await fn(); } finally { globalThis.Image = prev; }
+}
+
+test('preloadImages reports progress 1…N (failures counted, never stalls or exceeds the total)', async () => {
+  await withFakeImage(async () => {
+    const urls = ['/a.png', '/b.png', '/fail.png', '/c.png', '/d.png'];
+    const seen = [];
+    const res = await preloadImages(urls, { concurrency: 2, onProgress: (done, total) => seen.push([done, total]) }).promise;
+    assert.deepEqual(seen, [[1, 5], [2, 5], [3, 5], [4, 5], [5, 5]], 'strictly 1..N, the failed image counted too');
+    assert.deepEqual(res, { done: 5, total: 5, aborted: false });
+  });
+});
+
+test('preloadImages with an empty list reports nothing and resolves at 0/0', async () => {
+  const seen = [];
+  const res = await preloadImages([], { onProgress: (d, t) => seen.push([d, t]) }).promise;
+  assert.deepEqual(seen, []);
+  assert.deepEqual(res, { done: 0, total: 0, aborted: false });
+});
+
+test('artProgressReporter advances the count line and the bar (regression: the numerator stuck at 0)', () => {
+  const fill = { style: {} };
+  const sub = { textContent: '' };
+  const report = artProgressReporter({ fill, sub });
+  report(0, 3);
+  assert.equal(sub.textContent, '正在加载美术资源 0 / 3');
+  assert.equal(fill.style.width, '0%');
+  report(1, 3);
+  assert.equal(sub.textContent, '正在加载美术资源 1 / 3', 'the loaded count must not shadow the i18n t');
+  assert.equal(fill.style.width, '33%');
+  report(3, 3);
+  assert.equal(sub.textContent, '正在加载美术资源 3 / 3');
+  assert.equal(fill.style.width, '100%');
+  // a 0-total never divides by zero, and missing elements are tolerated
+  assert.doesNotThrow(() => artProgressReporter({ fill, sub })(0, 0));
+  assert.doesNotThrow(() => artProgressReporter()(1, 2));
 });

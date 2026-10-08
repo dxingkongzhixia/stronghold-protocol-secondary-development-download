@@ -10,6 +10,8 @@
 //
 // Pure at import time (no DOM): `collectArtUrls` is unit-testable in Node; only `preloadImages` touches `Image`.
 
+import { t } from '../../shared/i18n.js';
+
 /**
  * Optional boot background video (a distraction while the first-load preload runs). `null` disables it. Two kinds:
  *   { kind: 'file', src: '/assets/loading/boot.mp4' } — a self-hosted clip shown muted / looped / autoplay, with NO
@@ -91,4 +93,20 @@ export function preloadImages(urls, { concurrency = 8, onProgress } = {}) {
   if (!total) { resolveFn({ done: 0, total: 0, aborted: false }); return { promise, cancel() {} }; }
   launch();
   return { promise, cancel: () => { cancelled = true; settle(); } };
+}
+
+/**
+ * Build the boot-progress callback for `preloadImages`: paint the bar and update the `done / total` line. Lives here
+ * (not inline in main.js) so it is unit-testable with fake elements, and so the total can never shadow the i18n `t`:
+ * the bug was `onProgress: (d, t) => { fill.style.width = …; t('正在加载美术资源 {d} / {t}', { d, t }) }` — `t` was the
+ * running total, so the call threw, and the numerator stayed 0 while `fill.style.width` (set first) kept advancing.
+ * @param {{ fill?: { style: any }, sub?: { textContent: string } }} [els]
+ * @returns {(done: number, total: number) => void}
+ */
+export function artProgressReporter({ fill, sub } = {}) {
+  return (done, total) => {
+    const n = Number(total) || 0;
+    if (fill) fill.style.width = `${n ? Math.round((done / n) * 100) : 0}%`;
+    if (sub) sub.textContent = t('正在加载美术资源 {d} / {t}', { d: done, t: n });
+  };
 }

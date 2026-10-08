@@ -39,7 +39,7 @@ import { NoticeBanner } from './ui/notice.js';
 import { ToastHost, toast, toastError, describeError } from './ui/toasts.js';
 import { net, identity, NetError } from './net.js';
 import { store, useStore, emptyMatch, selectRoute, sessionResetNotice, loadPref, savePref, isSpectating } from './store.js';
-import { BOOT_VIDEO, collectArtUrls, preloadImages } from './preload.js';
+import { BOOT_VIDEO, collectArtUrls, preloadImages, artProgressReporter } from './preload.js';
 import { data } from './data.js';
 import { GAME_FILES } from './ui/gameComponents.js';
 import { TitleScreen, sanitizeName } from './screens/title.js';
@@ -507,10 +507,7 @@ async function preloadArt() {
   // No skip and no cap: the gate is "everything loaded" — the title only appears once every image is in.
   const pre = preloadImages(urls, {
     concurrency: 8,
-    onProgress: (d, t) => {
-      fill.style.width = `${Math.round((d / t) * 100)}%`;
-      if (sub) sub.textContent = t('正在加载美术资源 {d} / {t}', { d, t });
-    },
+    onProgress: artProgressReporter({ fill, sub }),
   });
   try { await pre.promise; } finally {
     if (holding) net.request('boot.release', {}).catch(() => {});
