@@ -96,13 +96,19 @@ change → the diff must be **exactly** what you expect. Write the proof into th
   tracked files into the store (respecting `.gitignore`), commits, and pushes.
 - Push target: remote **`gitee`** → `https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`,
   branch **`master`** (the store's branch is `ours`; `HEAD:refs/heads/master`). `origin` stays the GitHub upstream.
-- **Credentials are not in the URL and must never be committed.** A push needs a Gitee **username + personal access
-  token**. Supply it once via a credential helper, or per-run via `GIT_USERNAME` / `GIT_PASSWORD`:
+- **Credentials are not in the URL and must never be committed.** A push needs the Gitee **login name** (ASCII,
+  `marseille1` — the Chinese name is only a display name) + a **personal access token** (账号设置 → 私人令牌, scope
+  `projects`). Supply them in one of two ways:
   ```powershell
-  git config --global credential.helper manager     # sign in once when prompted
-  # or, for one run (needs a helper that reads these; the built-in prompt is disabled by the helper):
-  $env:GIT_USERNAME="<gitee-user>"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs -m "…"
+  # one-time interactive sign-in (lets the credential manager store them):
+  node tools/push-gitee.mjs --interactive
+
+  # or per-run (agent/CI): the helper writes a temp credential file outside the repo and resets the helper list
+  $env:GIT_USERNAME="marseille1"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs -m "…"
   ```
+  This machine's **system** gitconfig sets `credential.helper=manager`; because the first helper that answers wins, a
+  stale stored credential there can shadow the token — the per-run path resets the list (`credential.helper=`) so the
+  supplied token is used. The committed helper never writes the token into the repository.
 - Git-ignored and never committed: `node_modules/`, `.cache/`, `.venv-extract/`, `__pycache__/`, `test/e2e/out/`,
   `public/assets/`, `public/fonts/`, `public/vendor/`, `logs/`, `var/`, `data/local-assets.json`,
   `scripts/service.env.cmd`, `.env*`, `packs/index.json`. The helper only ever touches `git ls-files` paths, so it

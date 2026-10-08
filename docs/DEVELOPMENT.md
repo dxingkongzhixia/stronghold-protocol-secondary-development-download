@@ -315,6 +315,7 @@ node tools/push-gitee.mjs -m "what changed"
 ```
 
 The helper syncs the working project → `_merge-scratch` (tracked files only), commits and pushes `HEAD` to
-`gitee/master`. The owner's convention is **之后每次有更新都提交下**. Credentials (Gitee username + personal access
-token) are supplied through a credential helper or environment, never committed — the full instructions, the merge
+`gitee/master`. The owner's convention is **之后每次有更新都提交下**. Credentials (the ASCII Gitee login `marseille1` +
+a personal access token) are supplied via `--interactive`, or per-run via `GIT_USERNAME` / `GIT_PASSWORD` (the helper
+writes them to a temp file outside the repo), never committed — the full instructions, the merge
 discipline and the production deploy procedure are in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md).

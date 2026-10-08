@@ -15,15 +15,18 @@
 //   node tools/push-gitee.mjs --branch main       # push to another remote branch
 //   node tools/push-gitee.mjs --dry-run           # show what would change, copy/stage/commit/push nothing
 //   node tools/push-gitee.mjs --no-push           # sync + commit locally, skip the push
+//   GIT_USERNAME=marseille1 GIT_PASSWORD=<token> node tools/push-gitee.mjs   # per-run creds (temp file outside repo)
 //   SP_DEV_TREE=<dir> SP_SCRATCH=<dir> node tools/push-gitee.mjs
 //
-// Credentials: the Gitee URL carries none. A push needs a Gitee username + personal access token. Supply them with a
-// credential helper (`git config --global credential.helper manager`, then let it prompt once), or store them
-// (Windows Credential Manager / `~/.git-credentials`), or set `GIT_USERNAME` + `GIT_PASSWORD`/`GITEE_TOKEN` for this
-// run. Never write the token into the repository.
+// Credentials: the Gitee URL carries none. A push needs the ASCII Gitee login name (`marseille1`) + a personal access
+// token. Supply them with a credential helper (`node tools/push-gitee.mjs --interactive` signs in once), or set
+// `GIT_USERNAME` + `GIT_PASSWORD` (aliases `GITEE_USERNAME`/`GITEE_TOKEN`) for this run — the helper writes them to a
+// temp credential file OUTSIDE the repo and resets the helper list, so a stale system `credential.helper=manager`
+// cannot shadow the token. Never write the token into the repository.
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmdirSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -134,28 +137,52 @@ function main() {
     console.log(`[push-gitee] added remote ${REMOTE}`);
   }
 
-  console.log(`[push-gitee] pushing HEAD → ${REMOTE}/${BRANCH} ...`);
+  // Per-run credentials from the environment (optional). The Gitee URL carries none, and this machine's SYSTEM
+  // gitconfig sets `credential.helper=manager`, which can shadow a supplied token with a stale stored credential.
+  // So when GIT_USERNAME/GIT_PASSWORD (or GITEE_USERNAME/GITEE_TOKEN) are set, write them to a temp credential file
+  // OUTSIDE the repo and reset the helper list for this one push. The token is never written into the repository.
+  const ENV_USER = process.env.GIT_USERNAME || process.env.GITEE_USERNAME || '';
+  const ENV_PASS = process.env.GIT_PASSWORD || process.env.GITEE_TOKEN || '';
+  const credArgs = [];
+  let credTmp = null;
+  if (ENV_USER && ENV_PASS) {
+    credTmp = join(tmpdir(), `push-gitee-${process.pid}.cred`);
+    writeFileSync(credTmp, `https://${ENV_USER}:${ENV_PASS}@gitee.com\n`, { mode: 0o600 });
+    const credPath = credTmp.replace(/\\/g, '/'); // git config treats backslashes as escapes
+    credArgs.push('-c', 'credential.helper=', '-c', `credential.helper=store --file=${credPath}`);
+  }
+
+  console.log(`[push-gitee] pushing HEAD → ${REMOTE}/${BRANCH}${ENV_USER ? ` (as ${ENV_USER})` : ''} ...`);
+  let pushOut = null, pushErr = null;
   try {
-    const out = git(['push', REMOTE, `HEAD:refs/heads/${BRANCH}`], { stdio: ['ignore', 'pipe', 'pipe'], env: NO_PROMPT_ENV });
-    if (out.trim()) console.log(out.trim());
-    console.log(`[push-gitee] pushed to ${REMOTE}/${BRANCH}.`);
+    pushOut = git([...credArgs, 'push', REMOTE, `HEAD:refs/heads/${BRANCH}`], { stdio: ['ignore', 'pipe', 'pipe'], env: NO_PROMPT_ENV });
   } catch (e) {
-    const text = `${e.stderr || ''}${e.stdout || ''}${e.message || ''}`;
+    pushErr = e;
+  } finally {
+    if (credTmp) { try { rmSync(credTmp); } catch { /* best effort */ } }
+  }
+
+  if (pushErr) {
+    const text = `${pushErr.stderr || ''}${pushErr.stdout || ''}${pushErr.message || ''}`;
     if (/could not read Username|Authentication failed|terminal prompts disabled|unable to get password|403/.test(text)) {
       console.error(
         '\n[push-gitee] the commit is in the git store but the PUSH needs Gitee credentials (the URL carries none).\n' +
-        '  Provide a Gitee username + personal access token (账号设置 → 私人令牌, scope `projects`) in ONE of these ways:\n' +
+        '  The Gitee login name is ASCII (`marseille1`); the Chinese name is only a display name. Provide the login\n' +
+        '  name + a personal access token (账号设置 → 私人令牌, scope `projects`) in ONE of these ways:\n' +
         '    0) one-time sign-in:       node tools/push-gitee.mjs --interactive   (lets the credential manager prompt)\n' +
-        '    1) git credential helper:  git config --global credential.helper manager   (then run the push once and sign in)\n' +
-        '    2) store it once:          printf "https://<user>:<token>@gitee.com\\n" > ~/.git-credentials  (chmod 600)\n' +
-        '    3) this run only:          $env:GIT_USERNAME="<user>"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs\n' +
-        '       (a helper that reads GIT_USERNAME/GIT_PASSWORD is required; the built-in prompt is disabled here.)\n' +
+        '    1) this run only:          $env:GIT_USERNAME="marseille1"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs\n' +
+        '       (the helper writes a temp credential file OUTSIDE the repo and resets the helper list for the push)\n' +
+        '    2) store it once:          put `https://marseille1:<token>@gitee.com` in a credential file OUTSIDE the repo, then\n' +
+        '       git -C ' + SCRATCH_ROOT + ' config credential.helper ""   # reset the system manager helper\n' +
+        '       git -C ' + SCRATCH_ROOT + ' config --add credential.helper "store --file=<that-file>"\n' +
         '  Then re-run:  git -C ' + SCRATCH_ROOT + ' push gitee HEAD:refs/heads/' + BRANCH + '\n' +
         '  Do NOT commit the token into the repository.\n');
       process.exit(2);
     }
     fail(`push failed:\n${text.trim()}`);
   }
+  if (pushOut.trim()) console.log(pushOut.trim());
+  console.log(`[push-gitee] pushed to ${REMOTE}/${BRANCH}.`);
 }
 
 main();
