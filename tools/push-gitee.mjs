@@ -44,7 +44,7 @@ const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
 const valOf = (f, d) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
 if (has('-h') || has('--help')) {
-  console.log('usage: node tools/push-gitee.mjs [-m <message>] [--branch <name>] [--remote <name>] [--dry-run] [--no-push]');
+  console.log('usage: node tools/push-gitee.mjs [-m <message>] [--branch <name>] [--remote <name>] [--dry-run] [--no-push] [--interactive]');
   process.exit(0);
 }
 const MESSAGE = valOf('-m', valOf('--message', ''));
@@ -52,11 +52,17 @@ const BRANCH = valOf('--branch', 'master');
 const REMOTE = valOf('--remote', 'gitee');
 const DRY = has('--dry-run');
 const NO_PUSH = has('--no-push');
+// By default the push never blocks on a terminal/GUI credential prompt (an agent has none); a stored credential is
+// still used. `--interactive` re-enables the prompt for a one-time sign-in.
+const INTERACTIVE = has('--interactive');
 
 // ------------------------------------------------------------------ git
 function git(args, opts = {}) {
   return execFileSync('git', ['-C', SCRATCH_ROOT, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts });
 }
+const NO_PROMPT_ENV = INTERACTIVE
+  ? { ...process.env }
+  : { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never', GCM_PROVIDER: 'generic' };
 function gitOrNull(args) { try { return git(args); } catch { return null; } }
 
 function fail(msg) { console.error(`\n[push-gitee] ${msg}`); process.exit(1); }
@@ -130,7 +136,7 @@ function main() {
 
   console.log(`[push-gitee] pushing HEAD → ${REMOTE}/${BRANCH} ...`);
   try {
-    const out = git(['push', REMOTE, `HEAD:refs/heads/${BRANCH}`], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const out = git(['push', REMOTE, `HEAD:refs/heads/${BRANCH}`], { stdio: ['ignore', 'pipe', 'pipe'], env: NO_PROMPT_ENV });
     if (out.trim()) console.log(out.trim());
     console.log(`[push-gitee] pushed to ${REMOTE}/${BRANCH}.`);
   } catch (e) {
@@ -139,6 +145,7 @@ function main() {
       console.error(
         '\n[push-gitee] the commit is in the git store but the PUSH needs Gitee credentials (the URL carries none).\n' +
         '  Provide a Gitee username + personal access token (账号设置 → 私人令牌, scope `projects`) in ONE of these ways:\n' +
+        '    0) one-time sign-in:       node tools/push-gitee.mjs --interactive   (lets the credential manager prompt)\n' +
         '    1) git credential helper:  git config --global credential.helper manager   (then run the push once and sign in)\n' +
         '    2) store it once:          printf "https://<user>:<token>@gitee.com\\n" > ~/.git-credentials  (chmod 600)\n' +
         '    3) this run only:          $env:GIT_USERNAME="<user>"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs\n' +
