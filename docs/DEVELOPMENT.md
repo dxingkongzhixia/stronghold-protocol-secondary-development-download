@@ -266,7 +266,7 @@ node tools/fetch-assets.mjs --asset-source=mirror    # prefer the gh-proxy mirro
 node tools/fetch-assets.mjs --asset-source=gitcode   # prefer the GitCode raw mirror of the yuanyan icon dump (avatars/portraits/skill/enemy icons)
 node tools/setup.mjs                                 # end-user setup (checks env, downloads assets, offers local extract)
 
-# local-client extraction (optional, from an installed game client; needs .venv-extract / Python 3.12)
+# local-client extraction (optional, from an installed game client; needs .venv-extract / Python 3.14 — 3.8 is too old for UnityPy; see docs/OUR-FEATURES.md §3)
 .venv-extract\Scripts\python.exe tools\local-extract\extract.py --game "<…/StreamingAssets/AB/Windows>"
 .venv-extract\Scripts\python.exe tools\local-extract\extract.py --only spine/token
 .venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py [--voice-dir …\voice_cn]
