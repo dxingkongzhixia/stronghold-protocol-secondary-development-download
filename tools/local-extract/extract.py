@@ -8,9 +8,10 @@ aklz4.py registers a decoder for it. This script pulls the art the web sources l
   - the 6 in-match emoticon themes of 盟约 (activity_table autoChessData.enabledEmoticonThemeIdList; only the
     *_battle sprites, keyed by display_meta_table picId: emoticon/<dir>/<picId>.png, see data/emotes.json)
   - the autochess guidebook pages and battle projectile sprites
-  - the battle-effect textures of the per-operator effect bundle battle/prefabs/effects/kalts2.ab (fx/kalts2: the
-    official S2 医疗单元 burst colours, used by the fx kinds kalts2Heal / kalts2Damage when this manifest lists them;
-    the kind's procedural drawing stays the fallback, docs/ASSETS.md "Battle effects")
+  - the battle-effect textures of the per-operator effect bundles battle/prefabs/effects/<stem>.ab (fx/<stem>: one per
+    visible chess of the season, read from data/chess.json — the generated official-art table behind
+    public/js/render/fx/official.js, docs/ASSETS.md "Battle effects"); the fx kinds' procedural drawing stays the
+    fallback (each bundle is Texture2D only, ~0.3–3 MB)
   (the emotes and the guidebook pages are on the public mirror too: tools/fetch-assets.mjs downloads them, and the
   client uses these local copies first — GitHub issue #42)
   - the enemy battle Spine models no community dump carries (ENEMY_SPINES: 灼热源石虫 / 炽焰源石虫), from the enemy art
@@ -93,11 +94,13 @@ MESH_BUNDLES = [
 # Per-operator battle-effect bundles: the official Texture2D of `battle/prefabs/effects/<stem>.ab`, written to the
 # manifest group `fx/<stem>`. These are the optional local official-art tier of the fx kinds (public/js/render/fx/
 # kinds.js `local`, docs/ASSETS.md "Battle effects"): a kind's `local` names layers of one of these groups, and the
-# client draws them only when the manifest lists them (else its procedural drawing). The first batch is our seven
-# custom operators (tools/build-data.mjs CUSTOM_CHESS); extend the list — or pass a comma-separated FX_BUNDLES env — to
-# bring in more operators/enemies (each bundle is ~0.3–3 MB, ~10–44 textures). Some operators' art genuinely lives in
-# external CABs (e.g. the funnel drone) and cannot be extracted here: those kinds keep the procedural tier.
-EFFECT_FX_BUNDLES = [
+# client draws them only when the manifest lists them (else its procedural drawing). The list is every VISIBLE chess
+# of the season read from data/chess.json (one bundle per official operator, stem = the charId's trailing segment), so
+# a new season's roster is picked up without editing it; `FX_BUNDLES` (env, comma-separated) overrides it. A stem with
+# no bundle in this client is skipped at run time (e.g. 能天使 char_103_angel ships no `angel.ab` here). Each bundle is
+# ~0.3–3 MB, ~0–53 textures. Some operators' art genuinely lives in external CABs (e.g. the 驭械术师 funnel drone) and
+# cannot be extracted here: those kinds keep the procedural tier.
+EFFECT_FX_BUNDLES_CUSTOM = [
     'kalts2',   # 凯尔希·思衡托 (already wired: kalts2Heal / kalts2Damage)
     'aglna2',   # 予愿安洁莉娜
     'gdglow',   # 澄闪 (the funnel drone's live art is external; the bundle still carries its own effects)
@@ -106,6 +109,30 @@ EFFECT_FX_BUNDLES = [
     'ascln',    # 阿斯卡纶
     'wang',     # 望
 ]
+
+
+def roster_fx_bundles():
+    """The effect-bundle stems of every visible chess of the season (data/chess.json), sorted and unique: the official
+    operators' per-operator effect bundles. Empty when the data file is absent (the tool still runs on its own)."""
+    try:
+        data = json.loads((ROOT / 'data' / 'chess.json').read_text(encoding='utf-8'))
+    except Exception:
+        return []
+    stems = set()
+    for rec in data.values():
+        if not isinstance(rec, dict) or rec.get('visible') is False or rec.get('isGolden'):
+            continue
+        names = [rec.get('charId')]
+        assets = rec.get('assets')
+        if isinstance(assets, dict):
+            names.append(assets.get('spine'))
+        for name in names:
+            if isinstance(name, str) and name:
+                stems.add(name.rsplit('_', 1)[-1])
+    return sorted(stems)
+
+
+EFFECT_FX_BUNDLES = sorted(set(EFFECT_FX_BUNDLES_CUSTOM) | set(roster_fx_bundles()))
 EFFECT_FX_BUNDLES = [b.strip() for b in (os.environ.get('FX_BUNDLES') or ','.join(EFFECT_FX_BUNDLES)).split(',') if b.strip()]
 
 # (bundle path relative to the AB root, output subdir, which object types to export[, name regex to keep])

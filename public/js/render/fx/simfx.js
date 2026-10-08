@@ -109,9 +109,10 @@ export class FxSim {
     const p = chest(at.v);
     const s = p.s;
     // optional official-art tier (spec.local, docs/ASSETS.md): the layers the event's skill / operator attributes
-    // (fxLocalFor), drawn when the client has every one loaded, else the procedural archetype below (never a blank
-    // frame, never a network dependency in the fallback)
-    const local = spec.local ? fxLocalFor(spec.local, ex, this._fxLocalOp(ex, at)) : null;
+    // (fxLocalFor), else the operator's generated table entry (render/fx/official.js, kinds their kit emits), drawn
+    // when the client has every one loaded, else the procedural archetype below (never a blank frame, never a network
+    // dependency in the fallback)
+    const local = fxLocalFor(spec.local || { official: true }, ex, this._fxLocalOp(ex, at), kind);
     if (local && this._fxLocal(local, at, r, col, dur)) return;
     switch (spec.a) {
       case 'blast': {

@@ -17,31 +17,68 @@
 //
 // No PIXI, no DOM at import time — Node tests import this file.
 
+import { FX_OFFICIAL } from './official.js';
+
 const str = (v) => (typeof v === 'string' && v ? v : null);
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /**
+ * The data-driven official-art entry of an operator (`render/fx/official.js` `FX_OFFICIAL`): the season roster's
+ * per-operator default ({ group, kinds, layers }) the generated table carries. `kind` filters it to the fx kinds that
+ * operator's kit actually emits, so an effect the operator never draws is never given their art. Null when the
+ * operator is not listed (or the kind is not theirs) — the caller keeps the procedural tier.
+ */
+export function fxOfficialFor(opId, kind = null) {
+  const e = opId && isObj(FX_OFFICIAL) ? FX_OFFICIAL[opId] : null;
+  if (!isObj(e)) return null;
+  if (kind && Array.isArray(e.kinds) && e.kinds.length && !e.kinds.includes(kind)) return null;
+  return e;
+}
+
+/** A resolved `local` of a registry entry, inheriting `tint` / `dur` of the kind's own spec when it names them. */
+function officialLocal(off, base) {
+  const b = isObj(base) ? base : {};
+  const out = { group: off.group, layers: off.layers };
+  const tint = b.tint != null ? b.tint : (off.tint != null ? off.tint : null);
+  const dur = b.dur != null ? b.dur : (off.dur != null ? off.dur : null);
+  if (tint != null) out.tint = tint;
+  if (dur != null) out.dur = dur;
+  return out;
+}
+
+/**
  * The `local` spec a kind uses for one fx event: the plain `spec.local` when it carries its own layers, else the entry
- * its `bySkill` / `byOp` map holds. This is what makes official art attributable: a generic kind ('aoe', 'strike', …)
- * is shared by many operators, so its layers live per skill label (`extra.skill`, e.g. 'makoto_sluggish') or per
- * operator id (`opId`, the emitting unit's `spine` / `defId` — the sim always anchors an fx on its caster, `id`, or
- * names it in `src`). A `byOp` / `bySkill` entry merges over the base (`{ ...local, ...entry }`), so it may inherit
- * `group` / `tint` / `dur` and override only `layers`. `null` when nothing matches: the caller draws the procedural
- * tier (never a fetch, never a blank frame — the same graceful degradation as a client without the art).
- * @param {object} local the fx spec's `local` record ({ group, layers, tint?, dur?, bySkill?, byOp? })
+ * its `bySkill` / `byOp` map holds, else the operator's generated official-art entry (`render/fx/official.js`). This is
+ * what makes official art attributable: a generic kind ('aoe', 'strike', …) is shared by many operators, so its layers
+ * live per skill label (`extra.skill`, e.g. 'makoto_sluggish'), per operator id (`opId`, the emitting unit's `spine` /
+ * `defId` — the sim always anchors an fx on its caster, `id`, or `src`), or, for the season roster, in the data table.
+ * A `byOp` / `bySkill` entry merges over the base (`{ ...local, ...entry }`), so it may inherit `group` / `tint` /
+ * `dur` and override only `layers`. The registry is consulted only when the kind carries no layers of its own (or
+ * marks itself `official: true`) so a kind with a fixed spec (kalts2Heal / kalts2Damage) is never overridden. `null`
+ * when nothing matches: the caller draws the procedural tier (never a fetch, never a blank frame — the same graceful
+ * degradation as a client without the art).
+ * @param {object} local the fx spec's `local` record ({ group, layers, tint?, dur?, bySkill?, byOp?, official? })
  * @param {object} [extra] the fx event's extra record (`extra.skill`)
  * @param {string} [opId] the emitting operator's rendered id (UnitView.info.spine || .defId)
+ * @param {string} [kind] the fx kind, to filter a generated registry entry to the operator's own effects
  */
-export function fxLocalFor(local, extra = {}, opId = null) {
+export function fxLocalFor(local, extra = {}, opId = null, kind = null) {
   if (!isObj(local)) return null;
   const hasBase = Array.isArray(local.layers) || !!str(local.name);
   const skill = str(extra && extra.skill);
   const skillSel = skill && isObj(local.bySkill) ? local.bySkill[skill] : null;
   const opSel = !skillSel && opId && isObj(local.byOp) ? local.byOp[opId] : null;
   const sel = isObj(skillSel) ? skillSel : (isObj(opSel) ? opSel : null);
-  if (!sel) return hasBase ? local : null;
+  if (!sel) {
+    // the generated operator table (a kind with its own base layers opts in with `official: true`)
+    if (!hasBase || local.official === true) {
+      const off = fxOfficialFor(opId, kind);
+      if (off) return officialLocal(off, local);
+    }
+    return hasBase ? local : null;
+  }
   const out = { ...local, ...sel };
-  delete out.bySkill; delete out.byOp;
+  delete out.bySkill; delete out.byOp; delete out.official;
   if (!str(out.group) && str(local.group)) out.group = local.group;
   if (out.tint == null && local.tint != null) out.tint = local.tint;
   if (out.dur == null && local.dur != null) out.dur = local.dur;

@@ -18,11 +18,12 @@ import { installFakePixi, fakeViewCtx } from './fakepixi.js';
 import { presetCamera } from '../../public/js/render/projection.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-let fake, FX, LA;
+let fake, FX, LA, OFF;
 before(async () => {
   fake = installFakePixi();
   FX = await import('../../public/js/render/fx.js');
   LA = await import('../../public/js/render/fx/localart.js');
+  OFF = await import('../../public/js/render/fx/official.js');
 });
 after(() => fake.restore());
 
@@ -252,6 +253,68 @@ describe('fx kinds: official art attributed by operator (aoe / strike / champagn
     const fx2 = makeFx(fakeAssets({}), undefined, views);
     fx2.simFx('champagneBomb', 5, 10, { id: 4 });
     assert.ok(fx2.parts.length > 0, 'no manifest entry → the procedural explosion');
+  });
+});
+
+// --- the generated per-operator table (render/fx/official.js, tools/build-fx-official.mjs) ------------------------
+describe('fx official-art table: the season roster (render/fx/official.js)', () => {
+  const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.committed.json'), 'utf8')); } catch { return null; } })();
+  const skip = manifest ? false : 'no data/local-assets.committed.json';
+
+  test('fxLocalFor consults the table for a kind with no layers of its own, filtered to the operator kinds', () => {
+    const e = OFF.FX_OFFICIAL.char_1040_blaze2;          // group fx/blaze2, kinds include 'splash'
+    assert.ok(e && e.kinds.includes('splash'), 'blaze2 emits splash');
+    assert.equal(LA.fxLocalFor({ official: true }, {}, 'char_1040_blaze2', 'splash').group, e.group);
+    assert.deepEqual(LA.fxLocalFor({ official: true }, {}, 'char_1040_blaze2', 'splash').layers, e.layers);
+    assert.equal(LA.fxLocalFor({ official: true }, {}, 'char_1040_blaze2', 'not_a_kind'), null, 'only the kinds the kit emits');
+    assert.equal(LA.fxLocalFor({ official: true }, {}, 'char_nope', 'splash'), null, 'an operator not listed stays procedural');
+    // a kind with its own base layers is never overridden by the table (kalts2Heal / kalts2Damage)
+    const base = { group: 'g', layers: [{ name: 'x' }] };
+    assert.equal(LA.fxLocalFor(base, {}, 'char_1040_blaze2', 'splash'), base);
+  });
+
+  test('a registered operator draws its official layers on a kind its kit emits; an unregistered one stays procedural', () => {
+    const e = OFF.FX_OFFICIAL.char_1040_blaze2;
+    const url = (n) => `/assets/local/${e.group}/${n}.png`;
+    const groups = { [e.group]: Object.fromEntries(e.layers.map((l) => [l.name, url(l.name)])) };
+    const loaded = Object.fromEntries(e.layers.map((l) => [url(l.name), PICTURE]));
+    const a = fakeAssets(groups, loaded);
+    const fx = makeFx(a, undefined, new Map([[1, fakeView(5, 10, 'char_1040_blaze2')]]));
+    fx.simFx('splash', 5, 10, { id: 1 });
+    assert.equal(fx.rings.length, e.layers.length, 'one official ground field per layer');
+    assert.equal(fx.parts.length, 0, 'the procedural blast is skipped');
+    assert.deepEqual(a.called, []);
+    fx.clear();
+    const fx2 = makeFx(fakeAssets(groups, loaded), undefined, new Map([[2, fakeView(5, 10, 'char_nope')]]));
+    fx2.simFx('splash', 5, 10, { id: 2 });
+    assert.ok(fx2.parts.length > 0, 'an operator not in the table keeps the procedural blast');
+  });
+
+  test('a registered operator whose group is absent draws the procedural tier (never a fetch, never blank)', () => {
+    const a = fakeAssets({});
+    const fx = makeFx(a, undefined, new Map([[1, fakeView(5, 10, 'char_1040_blaze2')]]));
+    fx.simFx('splash', 5, 10, { id: 1 });
+    assert.ok(fx.parts.length > 0, 'procedural blast');
+    assert.equal(fx.localTex.size, 0);
+    assert.deepEqual(a.called, [], 'the fallback never touches the network');
+  });
+
+  test('the table matches the registered groups: every entry is a roster operator of an fx group, all layers committed on disk', { skip }, () => {
+    const groups = manifest.groups || {};
+    const keys = Object.keys(OFF.FX_OFFICIAL);
+    assert.ok(keys.length >= 80, `the roster is covered (${keys.length} operators)`);
+    for (const [op, e] of Object.entries(OFF.FX_OFFICIAL)) {
+      assert.match(op, /^char_/, op);
+      assert.match(e.group, /^fx\//, op);
+      assert.ok(Array.isArray(e.kinds) && e.kinds.length, `${op}: at least one kind`);
+      assert.ok(Array.isArray(e.layers) && e.layers.length >= 1 && e.layers.length <= 2, `${op}: 1–2 layers`);
+      const g = groups[e.group];
+      assert.ok(g, `${op}: ${e.group} is a registered committed group`);
+      for (const ly of e.layers) {
+        assert.ok(g[ly.name], `${e.group}/${ly.name} committed`);
+        assert.ok(existsSync(path.join(ROOT, 'public', g[ly.name].path)), `${e.group}/${ly.name} on disk`);
+      }
+    }
   });
 });
 

@@ -38,18 +38,21 @@ describe('extract.py helpers (no UnityPy needed)', { skip: !PY && 'no python3' }
       'arts/maps/common/meshes/s_common_box_01.ab', 'arts/maps/common/meshes/s_wind_device.ab',
     ]);
     for (const j of mesh) assert.deepEqual(j.kinds, ['GameObject', 'Material', 'Mesh', 'Texture2D']);
-    // the official battle-effect bundles (EFFECT_FX_BUNDLES: the kalts2 S2 burst + our first batch of custom
-    // operators): Texture2D only, one fx/<stem> group each (the fx kinds' optional local-art tier, docs/ASSETS.md
-    // "Battle effects")
+    // the official battle-effect bundles (EFFECT_FX_BUNDLES: one per VISIBLE chess of the season read from
+    // data/chess.json, plus our custom operators — roster entries too): Texture2D only, one fx/<stem> group each (the
+    // fx kinds' optional local-art tier, docs/ASSETS.md "Battle effects")
     const fx = jobs.filter((j) => j.sub.startsWith('fx/'));
-    assert.deepEqual(fx.map((j) => j.bundle), [
-      'battle/prefabs/effects/kalts2.ab', 'battle/prefabs/effects/aglna2.ab', 'battle/prefabs/effects/gdglow.ab',
-      'battle/prefabs/effects/makoto.ab', 'battle/prefabs/effects/narant.ab', 'battle/prefabs/effects/ascln.ab',
-      'battle/prefabs/effects/wang.ab',
-    ]);
+    const chess = JSON.parse(readFileSync(path.join(ROOT, 'data/chess.json'), 'utf8'));
+    const stems = [...new Set(Object.values(chess)
+      .filter((c) => c && c.visible !== false && !c.isGolden)
+      .map((c) => String(c.charId).split('_').pop()))].sort();
+    assert.deepEqual(fx.map((j) => j.sub.replace(/^fx\//, '')), stems, 'one fx/<stem> job per visible operator');
     for (const j of fx) {
       assert.deepEqual(j.kinds, ['Texture2D']);
       assert.equal(j.sub, `fx/${j.bundle.replace(/^.*\/effects\//, '').replace(/\.ab$/, '')}`, 'one fx/<bundle> group');
+    }
+    for (const g of ['fx/kalts2', 'fx/makoto', 'fx/narant', 'fx/wang', 'fx/aglna2', 'fx/ascln', 'fx/gdglow']) {
+      assert.ok(fx.some((j) => j.sub === g), `${g} listed`);
     }
     assert.equal(new Set(jobs.map((j) => j.sub)).size, jobs.length, 'one output dir per job');
   });
@@ -220,6 +223,14 @@ print(json.dumps(e.prefab_node(go)))`);
     });
     const raw = spawnSync(PY, ['-c', `import sys; sys.path.insert(0, ${JSON.stringify(TOOL)}); import extract as e, json; print(json.dumps(e.vec(type('V', (), {'x': -0.0, 'y': float('inf'), 'z': 1e-9})())))`], { encoding: 'utf8', env: ENV });
     assert.equal(raw.stdout.trim(), '[0.0, 0, 0.0]');
+  });
+});
+
+describe('fx-official table (tools/build-fx-official.mjs)', () => {
+  test('the committed public/js/render/fx/official.js matches the roster + committed manifest', () => {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools/build-fx-official.mjs'), '--check'], { encoding: 'utf8', env: ENV });
+    assert.equal(r.status, 0, r.stderr || r.stdout);
+    assert.match(r.stdout, /up to date: \d+ operators/);
   });
 });
 

@@ -16,7 +16,10 @@
  * `local`: `{ group, layers: [{ name, scale?, rot? }], tint?, dur? }`; `tint` defaults to the kind's `c` when a
  * layer has none. A kind shared by many operators keys its layers by event (`{ bySkill: { <extra.skill>: local },
  * byOp: { <spine|defId>: local } }` — render/fx/localart.js fxLocalFor / simfx.js _fxLocalOp): the generic `aoe` /
- * `strike` / `champagneBomb` / `takeoff` carry our custom operators' official art this way. Add a new effect as
+ * `strike` / `champagneBomb` / `takeoff` carry our custom operators' official art this way. When a kind carries no
+ * layers of its own, the resolver falls back to the season roster's generated operator table (render/fx/official.js,
+ * `tools/build-fx-official.mjs`): the operator's own effect bundle art for the kinds their kit emits, so every
+ * extracted operator supersedes the procedural archetype without a per-kind entry. Add a new effect as
  * procedural first, then opt into local art (docs/DEVELOPMENT.md).
  */
 export const FX_KINDS = Object.freeze({
