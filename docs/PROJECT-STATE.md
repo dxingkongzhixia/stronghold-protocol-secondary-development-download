@@ -1,21 +1,22 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后更新：2026-10-06**。
-> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§20）。
+> 给「新会话 / 新接手的人」看的一页纸。**最后更新：2026-10-08**。
+> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§35）。
 
 ---
 
 ## 1. 这是什么
 「卫戍协议：盟约」的非官方同人**网页联机复刻**：Node 服务器 + 浏览器客户端，1–4 人合作塔防。
-基线是**官方上游 v0.1.3**（`sganggs/Stronghold-Protocol`），本项目在它之上加了：账号体系、野排匹配、公开同盟、
-在线状态与管理页、**观战 + 夺舍 AI**、启动体验与带宽治理。
+基线是**官方上游**（`sganggs/Stronghold-Protocol`；已合并到 **feedback5**，含 **v0.2.0** + i18n，见 `docs/MATCHMAKING.md` §33），
+本项目在它之上加了：账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、启动体验与带宽治理、
+**7 名自造干员**（见 §4；`tools/build-data.mjs` 的 `CUSTOM_CHESS`）与 Gitee 镜像（§4 / §9）。
 
 ## 2. 目录（都在 `D:\DOTK`）
 | 路径 | 说明 |
 |---|---|
 | `Stronghold-Protocol\` | **工作项目**（唯一真源；无 `.git`，改动直接落盘） |
 | `Stronghold-Protocol-github\` | 干净上游克隆（`master`；git proxy `127.0.0.1:31181`） |
-| `_merge-scratch\` | 上次合并上游用的 **git worktree**（分支 `ours`，含合并历史）——⚠️ 它用 junction 引用工作项目的 `node_modules`/`public/assets`，**别单独删工作项目** |
+| `_merge-scratch\` | **唯一的 git 仓库 / 完整历史**（分支 `ours`）——工作项目没有 `.git`。用 `node tools/push-gitee.mjs` 按 `git ls-files` 把工作项目镜像进来、提交并推送到 **Gitee 镜像**（`gitee` 远程 → 分支 `master`；凭据不入库，见 `docs/AI-WORKFLOW.md` §c）；它还在用 junction 引用工作项目的 `node_modules`/`public/assets`，⚠️ **别单独删工作项目** |
 | `_optim-backup-*\` | 每次改动前的备份（命名含日期+主题） |
 | `_optim-backup-20261005-merge-v013\` | 合并 v0.1.3 前后的**完整源码快照**（`ours-pre-merge` / `merged`） |
 
@@ -23,7 +24,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.1.3`；`build` 见 `/healthz` |
+| 版本 | `app 0.2.0`；`build` 见 `/healthz` |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -58,6 +59,8 @@
 - **观战席断线释放（2026-10-06，详见 §19）**：对局进行中断线的观战者原来要等 10 分钟 reconnect 窗口才释放席位，2 席锁死 → 后来者「房间已满」。现观战者断线后按 `lobbyGraceMs`（60 s）释放（对局中同样释放），重连仍拿回席位。
 - **弃局房间销毁（2026-10-06，详见 §20）**：合作房间原来会被「断线的真人席位」吊着最多 10 分钟（`activeHumans()` 不算在线状态）。现**一个房间只在还有在线真人时存在**：真人全离线 / 离开后最多 60 s grace 即销毁（观战者收 `room.closed {empty}`）；还有在线真人的派对仍保留掉线席位。solo 房间不受影响（24h 重连）。
 - **保留的战斗/渲染审计修复**：见 §16.6（runner 未送达结果、PMREM RT 释放、纹理存活、裁剪单位衰减、`_pubTimer`、部署退 DP…）。
+- **7 名自造干员**（`tools/build-data.mjs` `CUSTOM_CHESS`；kit 在 `server/sim/content/kits/ops/`；见 `docs/DEVELOPMENT.md` 自造干员表、`docs/MATCHMAKING.md` §23–§34）：阿斯卡纶 `ascln`、结城理 `makoto`、予愿安洁莉娜 `aglna2`、望 `wang`、澄闪 `gdglow`、娜仁图亚 `narant`、凯尔希·思衡托 `kalts2`。
+- **Gitee 镜像**：工作项目（无 `.git`）由 `node tools/push-gitee.mjs` 镜像进 `_merge-scratch` 并提交，再推送到 Gitee（`gitee` 远程 → 分支 `master`）；约定与凭据见 `docs/AI-WORKFLOW.md` §c。上游仍是 GitHub `origin`。
 
 ## 5. 环境开关 / 常量
 | 项 | 值 | 位置 |
@@ -93,13 +96,13 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - [ ] **首屏带宽**：新访客仍要下 ~104 MB 美术（`scope all`）+ 12 MB 视频。可选：降到 `ui`（−30 MB）、或把 `public/assets` 迁 CDN/OSS。
 - [ ] **观战席可见范围**：目前房间里**所有人**都能看到那个下拉；可改成「仅观战者可见」。
 - [ ] **攻击前冲 / 浮空技能**：已按上游 v0.1.3（#61 / #23）实现，**待实机验手感**。
-- [ ] 没有 CI，测试靠本地 `node --test`。
+- [x] **CI 已接入**：`.github/workflows/ci.yml` 在 Ubuntu / Windows × Node 22 / 24 上跑 `npm ci`、`node --test` 和服务器冒烟测试（README「开发与测试」）；本地 `node --test` 仍是主要闸门。原「没有 CI」已过时。
 - [ ] B 站宣传视频：见 §10 产物。
 
 ## 9. 与上游的关系 / 下次怎么合并
-- 上游：`https://github.com/sganggs/Stronghold-Protocol`；我们停在 **v0.1.3**（`master` @ `763e224`）。
+- 上游：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（`763e224`，§15）与 **feedback5 / v0.2.0**（`1303321`，合并提交 `e3bd9de`，§33）；本仓库版本 `0.2.0`。
 - 合并方式：在 `_merge-scratch`（分支 `ours` = 我们的状态）里 `git fetch origin && git merge origin/master`，
-  解冲突（思路见 `docs/MATCHMAKING.md` §15）→ 临时目录跑全量测试 → 才拷回工作项目。
+  解冲突（思路见 `docs/MATCHMAKING.md` §15、黑名单 §22、纪律见 `docs/AI-WORKFLOW.md` §b）→ 临时目录跑全量测试 → 才拷回工作项目。
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`。
 

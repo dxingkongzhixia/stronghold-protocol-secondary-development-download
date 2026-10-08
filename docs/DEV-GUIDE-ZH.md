@@ -1,6 +1,6 @@
 # 卫戍协议：盟约 · 二次开发指南（中文）
 
-> 对应版本 **0.1.2**（`package.json` / `shared/constants.js APP_VERSION`）。
+> 对应版本 **0.2.0**（`package.json` / `shared/constants.js APP_VERSION`）。
 > 本文基于本仓库快照整理，`文件:行号` 为整理时的位置，重构后可能漂移，**一切以代码为准**。
 > 代码/注释/标识符用英文，面向玩家的文案用简体中文——沿用项目既有约定。
 
@@ -507,4 +507,4 @@ node tools/kit-coverage.mjs --missing
 
 ---
 
-_整理自本仓库 0.1.2 快照。若你据此改动，请同步更新 `docs/DESIGN.md`/`docs/META.md`，并运行 `node --test`——`docs-consistency` 套件会帮你抓住文档与代码的偏差。_
+_整理自本仓库 0.2.0 快照。若你据此改动，请同步更新 `docs/DESIGN.md`/`docs/META.md`，并运行 `node --test`——`docs-consistency` 套件会帮你抓住文档与代码的偏差。_

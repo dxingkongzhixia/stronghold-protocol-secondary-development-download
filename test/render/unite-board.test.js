@@ -87,7 +87,7 @@ describe('联防 board (the unite field draws the round\'s full arena)', () => {
     delete without[stageId];
     const battle = new Battle({ kind: 'unite', stageId, rect: { ...GEO.UNITE_RECT }, content: 'none', data: new DataSource({ stages: without }, null) });
     assert.equal(battle.stageId, stageId, 'the requested stage id is preserved, NOT rewritten to "empty"');
-    assert.equal(battle.stageResolved, false, 'the sim knows its own geometry did not resolve');
+    assert.equal(battle.stage.id, 'empty', 'the unresolved geometry falls back to the empty sentinel');
     assert.deepEqual(battle.stage.rows, [], 'the unresolved battle itself has no geometry (the reported blank field)');
 
     // the field the client receives still names the requested stage
@@ -103,10 +103,18 @@ describe('联防 board (the unite field draws the round\'s full arena)', () => {
     assert.ok(drawn3D(resolved) > 0, 'the 3D board builds the resolved stage');
   });
 
-  test('a genuinely stage-less battle keeps the "empty" fallback (no requested id to keep)', () => {
-    const battle = new Battle({ kind: 'normal', content: 'none', data: new DataSource({ stages: {} }, null) });
+  test('a genuinely stage-less battle keeps the "empty" fallback; stageId falls through the id chain, never undefined', () => {
+    const ds = new DataSource({ stages: {} }, null);
+    const mk = (o) => new Battle({ kind: 'normal', content: 'none', data: ds, ...o });
+    const battle = mk({});
     assert.equal(battle.stageId, 'empty', 'no stage requested → the empty sentinel stays');
-    assert.equal(battle.stageResolved, false);
+    assert.equal(battle.stage.id, 'empty', 'the empty sentinel backs the stage-less fallback');
+    // the id chain: the resolved stage's own id wins, then the requested id, then the passed stage's own id, then the
+    // 'empty' sentinel — an unresolved requested stage keeps its id (server/sim/Battle.js); never undefined.
+    assert.equal(mk({ stage: { stageId: 'own', rows: [], devices: [] } }).stageId, 'own', 'a passed stage\'s own id is normalized in');
+    assert.equal(mk({ stage: { id: 'flat', rows: [], devices: [] } }).stageId, 'flat', 'a passed stage id wins');
+    assert.equal(mk({ stage: { _norm: true, rows: [], devices: [] }, stageId: 'req' }).stageId, 'req', 'an id-less normalized stage falls back to the requested id');
+    assert.equal(mk({ stageId: 'missing' }).stageId, 'missing', 'an unresolved requested id is kept');
   });
 });
 

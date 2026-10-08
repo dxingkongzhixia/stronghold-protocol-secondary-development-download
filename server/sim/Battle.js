@@ -92,9 +92,14 @@ export class Battle {
     // A requested but unresolved stage id must NOT be silently rewritten to 'empty': keep the requested id so the field
     // meta still names it and the client can resolve the stage from the match / field data (a spectator whose first
     // field is the 联防 would otherwise have no board). A battle that requested no stage at all keeps the 'empty'
-    // fallback (it never draws a board).
-    this.stageResolved = !!stage;
-    this.stageId = stage ? (this.stage.id ?? requestedStageId) : (requestedStageId ?? this.stage.id);
+    // fallback (it never draws a board). This is a legitimate path, not an error: the server's own data resolves every
+    // stage, and a client with partial data resolves the board from the match / field data (public/js/battle/runner.js
+    // fieldStageId), so there is deliberately no "unresolved" guard to act on — the battle keeps running on the empty
+    // grid while the client draws the requested stage. `stageId` therefore prefers the resolved stage's own id, then the
+    // requested id (kept even when the stage did not resolve), then the passed stage's own id, and is never undefined.
+    this.stageId = stage
+      ? (this.stage.id ?? requestedStageId ?? opts.stage?.id ?? null)
+      : (requestedStageId ?? opts.stage?.id ?? this.stage.id);
     this.rect = { ...(opts.rect ?? DEFAULT_RECTS[this.kind] ?? GEO.NORMAL_RECT) };
     { // a malformed rect (non-integers, inverted, off the stage) falls back to the kind's default field
       const R = this.rect;

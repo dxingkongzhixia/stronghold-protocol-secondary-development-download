@@ -502,8 +502,23 @@ test('user playtest #6 (DESIGN §20): summons, skill triggers, blocking, push fo
   // the 机变 card and the card tap (§10 = §18.2 = §20.7)
   assert.match(sec(10), /a tap anywhere on the card, its confirm strip included, is the card's tap/);
   assert.match(sec(18), /Each card shows its full effect text \(§20\.7\)/);
-  // README: the test count stays in the right order of magnitude
-  assert.match(README, /约 31\d0 项/);
+  // README: the stated full-suite count must track the suite itself, not a frozen literal. Count the cases registered
+  // under test/ as a lower bound (loops register more at run time), so "约 N 项" must sit between that and +25 % — a
+  // stale number (the old pinned 31xx) fails without hard-coding the current total a second time.
+  const registered = (() => {
+    let n = 0;
+    const walk = (dir) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        if (e.isDirectory()) { if (e.name !== 'golden' && e.name !== 'out' && e.name !== 'node_modules') walk(join(dir, e.name)); }
+        else if (e.name.endsWith('.test.js')) n += (readFileSync(join(dir, e.name), 'utf8').match(/(?<![A-Za-z0-9_.])(test|it)\s*\(/g) || []).length;
+      }
+    };
+    walk(join(ROOT, 'test'));
+    return n;
+  })();
+  const statedCount = Number((README.match(/约 (\d+) 项/) || [])[1]);
+  assert.ok(Number.isInteger(statedCount), 'README states the full-suite test count');
+  assert.ok(statedCount >= registered && statedCount <= Math.ceil(registered * 1.25), `README test count ${statedCount} tracks the suite (${registered} registered cases, plus loops)`);
 });
 
 test('user playtest #6 follow-up: a merge consuming a deployed copy puts the elite on that tile (code + research + META / PLAYING / SIM agree)', () => {
