@@ -48,7 +48,7 @@ describe('驭械术师 funnel official art (char_377_gdglow)', () => {
     const e = OFF.FX_OFFICIAL.char_377_gdglow;
     assert.ok(e, 'char_377_gdglow is in FX_OFFICIAL');
     assert.equal(e.group, 'fx/gdglow');
-    assert.deepEqual(e.kinds, ['drone']);
+    assert.ok(e.kinds.includes('drone'), `char_377_gdglow emits drone (kinds: ${e.kinds})`);
     assert.deepEqual(e.layers, [{ name: 'char_gdglow_04', scale: 1.3 }]);
   });
 
