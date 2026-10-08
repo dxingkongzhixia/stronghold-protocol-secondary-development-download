@@ -31,8 +31,9 @@ restate the upstream design — it points at it:
 | `D:\DOTK\_merge-scratch` | **the git store / worktree** (branch `ours`) with the whole history, including the upstream merges. | yes |
 
 The two are kept **byte-for-byte identical for every tracked file** (`git ls-files`). The store's `node_modules`,
-`.cache` and `public/assets` are junctions onto the working project, so builds and assets are shared and never
-duplicated or committed. (See `docs/PROJECT-STATE.md` §2.)
+`.cache` and the asset trees (`public/assets`, `public/fonts`, `public/vendor`) are junctions onto the working
+project, so builds and assets are shared and never duplicated — the asset trees themselves are **tracked in git**
+now (see §9). (See `docs/PROJECT-STATE.md` §2.)
 
 Rules:
 
@@ -252,11 +253,13 @@ regression net: any change that moves a stored number must be **explained**, not
 
 ## 9. The asset pipeline
 
-Game art/audio is copyrighted and **never committed** (`.gitignore` excludes `public/assets/`, `public/fonts/`,
-`public/vendor/`, `data/local-assets.json`). It is fetched or extracted per machine.
+Game art/audio is copyrighted (c) Hypergryph / Yostar and **is committed** to this (public) Gitee repo as of
+2026-10-08: `public/assets/**` (~570 MB, ~9600 files), `public/fonts/**` and `public/vendor/**`, so a plain clone
+runs with no fetch step. `data/local-assets.json` (the per-machine local-client manifest) is still git-ignored.
+Refreshing art is now optional — fetch/extract only the files that changed upstream and commit them.
 
 ```powershell
-npm run assets                                      # vendor + fetch-assets
+npm run assets                                      # optional refresh: vendor + fetch-assets
 node tools/fetch-assets.mjs                          # download from the public mirrors per docs/research/07-assets.json
 node tools/fetch-assets.mjs --asset-source=mirror    # prefer the gh-proxy mirror when direct GitHub is blocked
 node tools/setup.mjs                                 # end-user setup (checks env, downloads assets, offers local extract)

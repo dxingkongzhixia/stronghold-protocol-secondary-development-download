@@ -1,12 +1,15 @@
 # --- dependencies & generated client libs -------------------------------------------------------
 node_modules/
-# copied from node_modules by tools/vendor.mjs (postinstall); never commit third-party builds
-public/vendor/
 
-# --- game assets: (c) Hypergryph / Yostar, fetched or extracted locally, NEVER committed ----------
-# tools/fetch-assets.mjs → public/assets/** (~520 MB; the local public/assets/local/** is separate, below) and public/fonts/** (+ fonts.css)
-public/assets/
-public/fonts/
+# --- runtime static resources: committed so a clone runs without fetching art --------------------
+# public/assets/**, public/fonts/** and public/vendor/** ARE tracked in the Gitee repo (owner decision
+# 2026-10-08): a plain `git clone` is runnable with no mirror/extraction step. They were previously
+# git-ignored and delivered out-of-band by tools/fetch-assets.mjs (a public mirror) or
+# tools/local-extract/. Refreshing upstream art per machine is now optional:
+#   node tools/fetch-assets.mjs --asset-source=mirror
+# public/vendor/** is still copied from node_modules by tools/vendor.mjs (postinstall).
+# The repo is public and this art is (c) Hypergryph / Yostar — see docs/ASSETS.md / docs/AI-WORKFLOW.md.
+
 # tools/local-extract/extract.py → public/assets/local/** and this per-machine manifest
 # (optional: the client and the tests work without it; docs/DEPLOY.md §6 lists what falls back)
 data/local-assets.json

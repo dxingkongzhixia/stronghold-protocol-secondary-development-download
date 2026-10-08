@@ -109,10 +109,14 @@ change → the diff must be **exactly** what you expect. Write the proof into th
   This machine's **system** gitconfig sets `credential.helper=manager`; because the first helper that answers wins, a
   stale stored credential there can shadow the token — the per-run path resets the list (`credential.helper=`) so the
   supplied token is used. The committed helper never writes the token into the repository.
+- **Runtime static resources are tracked in the Gitee repo** (owner decision 2026-10-08): `public/assets/**`,
+  `public/fonts/**` and `public/vendor/**` are committed, so a plain `git clone` runs without fetching art. They used
+  to be git-ignored and delivered by `tools/fetch-assets.mjs` (a public mirror) or `tools/local-extract/`;
+  `node tools/fetch-assets.mjs --asset-source=mirror` is now **optional**, to pull upstream art that changed after the
+  last commit. This repo is public and the art is (c) Hypergryph / Yostar — the owner made that call knowingly.
 - Git-ignored and never committed: `node_modules/`, `.cache/`, `.venv-extract/`, `__pycache__/`, `test/e2e/out/`,
-  `public/assets/`, `public/fonts/`, `public/vendor/`, `logs/`, `var/`, `data/local-assets.json`,
-  `scripts/service.env.cmd`, `.env*`, `packs/index.json`. The helper only ever touches `git ls-files` paths, so it
-  cannot smuggle these in — but review `git status` in the store before pushing anyway.
+  `logs/`, `var/`, `data/local-assets.json`, `scripts/service.env.cmd`, `.env*`, `packs/index.json`. The helper only
+  ever touches `git ls-files` paths, but review `git status` in the store before pushing anyway.
 - Commit messages: concise English subject; add a `docs/MATCHMAKING.md` section reference for non-trivial changes.
 
 ---

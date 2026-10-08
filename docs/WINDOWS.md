@@ -14,7 +14,8 @@
 
 ## 2. 打一份便携包
 
-先准备素材（`public/assets`、`public/fonts`、`public/vendor` 都不进版本库）：
+先准备素材（`public/assets`、`public/fonts`、`public/vendor` 现在都在版本库里；如上游有新素材，先运行
+`node tools/setup.mjs` 刷新）：
 
 ```bash
 node tools/setup.mjs
@@ -58,9 +59,10 @@ LICENSE / NOTICE.md / THIRD-PARTY-NOTICES.md
 （`.env`、`.venv*`、`.claude/`、`scripts/service.env.cmd` …）**天然进不了包** ——
 它们里面可能有密钥或本机路径，旧实现用一张窄表整树复制，漏一项就是把它打进别人下载的压缩包。
 
-在此之上额外放入三份不进版本库、但游戏必需的资源，以及用 `npm ci --omit=dev` **重新装好的生产依赖**：
+在此之上额外放入游戏必需的静态资源，以及用 `npm ci --omit=dev` **重新装好的生产依赖**。这三份素材现在也在
+版本库里（`git ls-files` 会带上它们），打包脚本仍会确保它们在包里；上游刷新后由 `tools/setup.mjs` 更新：
 
-* `public/assets`、`public/fonts`、`public/vendor`（由 `tools/setup.mjs` 下载 / 生成）；
+* `public/assets`、`public/fonts`、`public/vendor`；
 * `node_modules` 只含生产依赖 —— `puppeteer-core` 这类 devDependency 是开发测试用的，打进发行包只会白涨体积；
 * `data/local-assets.json`（本机提取过 3D 棋盘贴图时才有）：贴图本体在 `public/assets/local`（约 68 MB，会随
   `public/assets` 进包），但游戏是靠这份 JSON 才知道有哪些贴图可用 —— 只带贴图不带清单，玩家拿到的是 68 MB

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Downloads, post-processes and indexes every art/audio/font asset the game
 // needs, from community dumps of the official client (research 07):
-//   public/assets/**   images, Spine models, audio   (git-ignored)
-//   public/fonts/**    Bender / Novecento (.otf/.ttf + .woff2) and fonts.css
+//   public/assets/**   images, Spine models, audio   (committed; refresh optional)
+//   public/fonts/**    Bender / Novecento (.otf/.ttf + .woff2) and fonts.css  (committed)
 //   data/assets.json   manifest used by the client (schema: docs/ASSETS.md)
 //
 // Enemy models no dump carries get another enemy's model (ASSETS.md "Enemy

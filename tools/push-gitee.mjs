@@ -4,8 +4,10 @@
 // The working project (`Stronghold-Protocol`) has NO `.git`: it is the single source of truth for the files on disk.
 // The full history lives in the sibling git store `_merge-scratch` (branch `ours`). This helper mirrors the dev tree
 // into that store (tracked files only — `git ls-files`, so `.gitignore` is respected: `node_modules`, `.cache`,
-// `.venv-extract`, `__pycache__`, `test/e2e/out`, `public/assets`, `public/fonts`, `public/vendor`, `logs`, `var`,
-// `data/local-assets.json` are never copied), commits, and pushes the store's HEAD to the Gitee remote.
+// `.venv-extract`, `__pycache__`, `test/e2e/out`, `logs`, `var`, `data/local-assets.json` are never copied), commits,
+// and pushes the store's HEAD to the Gitee remote. The runtime static resources (`public/assets`, `public/fonts`,
+// `public/vendor`) ARE committed now, and the two trees share them through junctions — `syncFile` leaves a path alone
+// when its real location is the same file in both trees.
 //
 // The owner's convention: "之后每次有更新都提交下" — after every change, run this so the Gitee copy tracks the dev tree.
 //
@@ -24,7 +26,7 @@
 // temp credential file OUTSIDE the repo and resets the helper list, so a stale system `credential.helper=manager`
 // cannot shadow the token. Never write the token into the repository.
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, realpathSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -97,6 +99,12 @@ function syncFile(rel) {
   const from = join(DEV_ROOT, ...rel.split('/'));
   const to = join(SCRATCH_ROOT, ...rel.split('/'));
   if (existsSync(from)) {
+    // The asset trees (`public/assets`, `public/fonts`, `public/vendor`) are junctions shared by both trees, so a
+    // change in the dev tree is already visible in the store and `from`/`to` are the same real file. Copying a file
+    // onto itself fails on Windows — nothing to do, the store already has the new bytes.
+    let same = false;
+    try { same = realpathSync(from) === realpathSync(to); } catch { same = false; }
+    if (same) return 'same';
     mkdirSync(dirname(to), { recursive: true });
     copyFileSync(from, to);
     return 'copy';
