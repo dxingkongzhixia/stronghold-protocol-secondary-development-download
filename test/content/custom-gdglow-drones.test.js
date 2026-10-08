@@ -109,3 +109,17 @@ test('澄闪 S3 澄净闪耀: the default spec reads its own blackboard — 停�
     done(h);
   }
 });
+
+test('澄闪 funnel: every volley anchors the official-art `drone` fx on the caster (the fx tier draws it)', () => {
+  for (const id of both('chess_char_377_gdglow')) {
+    const h = field(id, 'skchr_gdglow_3');
+    const u = h.unit(id);
+    assert.ok(h.runUntil(() => u.skill.active, 5), `${id}: cast`);
+    h.run(3);
+    const drone = h.eventsOf('fx').filter((e) => e[1] === 'drone');
+    assert.ok(drone.length >= 1, `${id}: ${drone.length} drone fx`);
+    // the fx carries the caster's id (render/fx/simfx.js attributes it to char_377_gdglow → fx/gdglow official art)
+    for (const e of drone) assert.equal(e[4].id, u.id, `${id}: anchored on the caster`);
+    done(h);
+  }
+});

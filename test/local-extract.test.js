@@ -51,6 +51,13 @@ describe('extract.py helpers (no UnityPy needed)', { skip: !PY && 'no python3' }
       assert.deepEqual(j.kinds, ['Texture2D']);
       assert.equal(j.sub, `fx/${j.bundle.replace(/^.*\/effects\//, '').replace(/\.ab$/, '')}`, 'one fx/<bundle> group');
     }
+    // the external-CAB jobs (EXTERNAL_MATERIALS): their bundle's material art lives in a shared CAB (refs/fx/texture/
+    // object.ab …), so the job additionally exports the matching materials' external `_MainTex`. Only 澄闪's bundle
+    // carries the spec; every other fx job exports only its own textures.
+    const ext = fx.filter((j) => j.external);
+    assert.deepEqual(ext.map((j) => j.sub), ['fx/gdglow'], 'only the funnel bundle resolves external CABs');
+    assert.equal(ext[0].external, '^char_gdglow_\\d+$');
+    for (const j of fx) if (j.sub !== 'fx/gdglow') assert.equal(j.external, null, `${j.sub}: no external spec`);
     for (const g of ['fx/kalts2', 'fx/makoto', 'fx/narant', 'fx/wang', 'fx/aglna2', 'fx/ascln', 'fx/gdglow']) {
       assert.ok(fx.some((j) => j.sub === g), `${g} listed`);
     }
@@ -189,6 +196,30 @@ rel = lambda ps: [p.relative_to(d).as_posix() for p in ps]
 print(json.dumps({'mat': rel(e.dep_bundles(d, {'Texture2D', 'Material'})), 'sprite': rel(e.dep_bundles(d, {'Sprite'})),
                   'none': rel(e.dep_bundles(d / 'missing', {'Material'}))}))`);
     assert.deepEqual(out, { mat: ['shaders/other.ab', 'shaders/standarddirectional.ab'], sprite: [], none: [] });
+  });
+
+  test('export_external_textures: the matching material\'s external _MainTex only (job-local / _RamTex skipped)', () => {
+    const out = py(`
+from types import SimpleNamespace as NS
+import pathlib
+class Img:
+    def __init__(self): self.width, self.height, self.saved = 4, 4, None
+    def save(self, p): self.saved = str(p)
+class PPtr:
+    def __init__(self, obj=None, fid=0): self.m_FileID, self._o = fid, obj
+    def read(self): return self._o
+def tex(name, fid): return PPtr(NS(m_Name=name, image=Img()), fid)
+def mat(name, main): return NS(type=NS(name='Material'),
+  read=lambda: NS(m_Name=name, m_SavedProperties=NS(m_TexEnvs=[('_MainTex', NS(m_Texture=main)),
+                                                              ('_RamTex', NS(m_Texture=tex('ram', 9)))])))
+objs = [mat('char_gdglow_14', tex('char_gdglow_04', 15)),        # external main texture -> exported
+        mat('char_gdglow_15', tex('char_gdglow_05', 0)),         # the bundle's own texture: the Texture2D pass has it
+        mat('char_gdglow_summer#12_01', tex('flow_78', 7)),      # a skin material: not matched
+        mat('star_02_ab', tex('star_02', 8))]                    # shared material: not matched
+manifest, seen = {}, set()
+n = e.export_external_textures(objs, e.EXTERNAL_MATERIALS['fx/gdglow'], pathlib.Path('.'), 'fx/gdglow', manifest, seen, lambda *a: None)
+print(json.dumps({'n': n, 'keys': sorted(manifest.get('fx/gdglow', {})), 'saved': sorted(seen)}))`);
+    assert.deepEqual(out, { n: 1, keys: ['char_gdglow_04'], saved: ['char_gdglow_04.png'] });
   });
 
   test('prefab_node: local transform, parent, mesh and materials; no -0.0 in the output', () => {

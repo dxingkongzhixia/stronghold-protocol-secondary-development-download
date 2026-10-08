@@ -77,6 +77,15 @@ export default {
           attack: { hits: drones(s.bb), ...(stunOnHit(s.bb) || null) },
         }),
       }),
+      // The funnel's 浮游单元 volley draws as `drone` projectiles; this fx kind carries the operator's OPTIONAL
+      // official art (group fx/gdglow, data/local-assets.committed.json + FX_OFFICIAL): once per attack it drops the
+      // official 浮游单元 field (char_gdglow_04, the `char_gdglow_14` material's texture, extracted from the shared
+      // refs/fx/texture/object.ab CAB) at the locked target. Without the extracted art the fx kind's procedural
+      // summon burst is drawn instead — the tier never blanks, never fetches (render/fx/localart.js).
+      trait: { afterAttack(battle, unit, targets) {
+        const t = Array.isArray(targets) ? targets[0] : null;
+        battle.fx('drone', { x: t ? t.x : unit.x, y: t ? t.y : unit.y, id: unit.id });
+      } },
     };
   },
 };

@@ -51,6 +51,7 @@ manifest (every other group is kept as is).
 Everything is (c) Hypergryph; for private, non-commercial fan use only.
 """
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -98,8 +99,8 @@ MESH_BUNDLES = [
 # of the season read from data/chess.json (one bundle per official operator, stem = the charId's trailing segment), so
 # a new season's roster is picked up without editing it; `FX_BUNDLES` (env, comma-separated) overrides it. A stem with
 # no bundle in this client is skipped at run time (e.g. 能天使 char_103_angel ships no `angel.ab` here). Each bundle is
-# ~0.3–3 MB, ~0–53 textures. Some operators' art genuinely lives in external CABs (e.g. the 驭械术师 funnel drone) and
-# cannot be extracted here: those kinds keep the procedural tier.
+# ~0.3–3 MB, ~0–53 textures. A few operators' art lives in a shared EXTERNAL CAB the bundle references by name (e.g.
+# the 驭械术师 funnel drone): EXTERNAL_MATERIALS resolves those dependencies and exports the referenced `_MainTex` too.
 EFFECT_FX_BUNDLES_CUSTOM = [
     'kalts2',   # 凯尔希·思衡托 (already wired: kalts2Heal / kalts2Damage)
     'aglna2',   # 予愿安洁莉娜
@@ -240,6 +241,19 @@ WEBP_OPTIONS = {
 SHADER_DEPS = 'shaders/*.ab'
 # the root shader bundle ([uc]shaders.ab) holds the Torappu particle shaders of the map effects (map/fx)
 SHADER_DEPS_ROOT = '[uc]shaders.ab'
+
+# Jobs whose bundle references art that lives in a SHARED external CAB — another .ab of the same StreamingAssets/AB
+# tree, named in the bundle's `m_Dependencies` by its CAB name (`cab-38df…`, the serialized file inside the target
+# bundle), NOT by file name. This is how the client stores most operator effect textures: the per-operator
+# `battle/prefabs/effects/<stem>.ab` holds the prefabs/materials/its own textures, while the material's `_MainTex`
+# points into `refs/fx/texture/*.ab` (object / ray / lighting / …). Keyed by output subdir → a regex over the bundle's
+# MATERIAL names; after the dependencies are resolved (cab_index + load_dependencies), the `_MainTex` of every matching
+# material whose texture is external is exported into the same group. Only operator-specific material names match, so a
+# shared texture (star_02, flow_…, mask_…) is never copied into the group by accident. E.g. 澄闪's funnel drone:
+# material char_gdglow_14's `_MainTex` char_gdglow_04 lives in refs/fx/texture/object.ab (CAB-38dfd5…).
+EXTERNAL_MATERIALS = {
+    'fx/gdglow': re.compile(r'^char_gdglow_\d+$'),
+}
 
 SAFE = re.compile(r'[^A-Za-z0-9_.\-\[\]]+')
 
@@ -434,6 +448,131 @@ def dep_bundles(ab_root, kinds):
     return sorted(p for p in root.glob(SHADER_DEPS) if p.is_file()) + extra
 
 
+def _bundle_cabs(path):
+    """The CAB name(s) of one bundle (`BundleFile.files`, minus the `.resS` stream), lower-cased: a pool worker.
+    Unity stores the CAB name (e.g. `CAB-929d264e…`) in the bundle header; in the Unity 5.x / 2019 layout the
+    serialized file is wrapped by the bundle and UnityPy exposes it as `BundleFile.files`."""
+    import aklz4  # noqa: F401  (registers the LZ4AK decoder)
+    import UnityPy
+    try:
+        env = UnityPy.load(str(path))
+        bf = next(iter(env.files.values()))
+        return [k.lower() for k in bf.files.keys() if not k.endswith('.resS')]
+    except Exception:  # a corrupt / unsupported bundle carries no indexable art
+        return []
+
+
+def cab_index(ab_root, log, rebuild=False):
+    """`{cab name (lower): path relative to ab_root}` for every `.ab` under the tree, cached under var/ (git-ignored).
+
+    A dependency is referenced by CAB name (`m_Dependencies` → `cab-38df…`), which is the serialized file inside the
+    target bundle, so the only way to map it back is to read each bundle's header. The first run scans the tree (one
+    header read per bundle, in parallel); the result is cached keyed on the install path and the AB root's mtime, so a
+    later run — or the next job — is instant. `--rebuild-cab-index` forces a rescan (after a client update)."""
+    root = Path(ab_root)
+    key = hashlib.sha1(str(root.resolve()).lower().encode('utf-8')).hexdigest()[:16]
+    cache = ROOT / 'var' / f'cab-index-{key}.json'
+    try:
+        stamp = f'{root.stat().st_mtime_ns}'
+    except OSError:
+        stamp = None
+    if not rebuild and cache.exists():
+        try:
+            doc = json.loads(cache.read_text(encoding='utf-8'))
+            if doc.get('stamp') == stamp and isinstance(doc.get('cabs'), dict):
+                log(f'cab index: {len(doc["cabs"])} CABs (cached {cache.name})')
+                return doc['cabs']
+        except (OSError, ValueError):
+            pass
+    files = sorted(root.rglob('*.ab'))
+    log(f'cab index: scanning {len(files)} bundles (parallel; cached after this run)')
+    cabs = {}
+    try:
+        import multiprocessing
+        with multiprocessing.Pool() as pool:
+            for rel, names in zip(files, pool.map(_bundle_cabs, files, chunksize=16)):
+                for n in names:
+                    cabs[n] = rel.relative_to(root).as_posix()
+    except Exception as e:  # a restricted host: fall back to a serial scan rather than fail the job
+        log(f'  warn cab index parallel scan failed ({e}); scanning serially')
+        for rel in files:
+            for n in _bundle_cabs(rel):
+                cabs[n] = rel.relative_to(root).as_posix()
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps({'stamp': stamp, 'cabs': cabs}, separators=(',', ':')), encoding='utf-8')
+    log(f'cab index: {len(cabs)} CABs from {len(files)} bundles -> {cache.name}')
+    return cabs
+
+
+def load_dependencies(env, ab_root, cabs, log):
+    """Load the bundles a bundle references by CAB name (`m_Dependencies`) so its external material textures resolve.
+
+    The externals list of the serialized file is the bundle's dependency list (`archive:/CAB-…/CAB-…`); each is mapped
+    through `cabs` (cab_index) to the `.ab` file that carries it and joined into `env`. Built-in externals with no
+    bundle (`Library/unity default resources`) and bundles this install does not carry are skipped. Returns the
+    `(cab, relative path)` pairs actually loaded."""
+    bf = next(iter(env.files.values()))
+    sf = next((v for k, v in bf.files.items() if not k.endswith('.resS')), None)
+    loaded = []
+    for ext in getattr(sf, 'externals', None) or []:
+        path = str(getattr(ext, 'path', '') or '')
+        if '/CAB-' not in path:
+            continue  # Library/unity default resources and other built-ins live in no bundle
+        cab = 'cab-' + path.split('/CAB-', 1)[1].split('/')[0].lower()
+        rel = cabs.get(cab)
+        if not rel:
+            continue  # a bundle this install does not carry (e.g. a stripped shader)
+        fp = Path(ab_root) / rel
+        if not fp.exists():
+            continue
+        try:
+            env.load_file(str(fp))
+            loaded.append((cab, rel))
+        except Exception as e:  # a missing/broken dependency only leaves its textures unresolved
+            log(f'  warn dependency {rel}: {e}')
+    return loaded
+
+
+def export_external_textures(objects, mat_re, out_dir, sub, manifest, seen, log):
+    """The `_MainTex` of a job's materials matching `mat_re` whose texture lives in a DEPENDENCY bundle
+    (`m_FileID != 0`): the operator art the bundle itself does not carry (e.g. the funnel drone's char_gdglow_04).
+    Only `_MainTex` is taken, so a shared `_RamTex` / `_DissolveTex` never leaks a whole shared bundle into the group."""
+    n = 0
+    for obj in objects:
+        if obj.type.name != 'Material':
+            continue
+        name = ''
+        try:
+            data = obj.read()
+            name = getattr(data, 'm_Name', '') or ''
+            if not mat_re.search(name):
+                continue
+            props = getattr(data, 'm_SavedProperties', None)
+            for key, envv in (getattr(props, 'm_TexEnvs', None) or []):
+                if key != '_MainTex':
+                    continue
+                t = envv.m_Texture
+                if not getattr(t, 'm_FileID', 0):
+                    continue  # the bundle's own texture: the Texture2D pass exports it
+                td = t.read()
+                tname = safe_name(getattr(td, 'm_Name', '') or '')
+                if not tname or f'{tname}.png' in seen:
+                    continue
+                img = td.image
+                if img is None or img.width < 2 or img.height < 2:
+                    continue
+                fname = f'{tname}.png'
+                img.save(out_dir / fname)
+                seen.add(fname)
+                manifest.setdefault(sub, {})[tname] = {
+                    'path': f'/assets/local/{sub}/{fname}', 'w': img.width, 'h': img.height, 'kind': 'Texture2D',
+                    'external': key, 'material': name}
+                n += 1
+        except Exception as e:
+            log(f'  warn external {name}: {e}')
+    return n
+
+
 _NORMAL_Z = None
 
 
@@ -542,7 +681,7 @@ def merge_manifest(old_groups, new_groups, ran_subs):
     return {g: dict(sorted(out[g].items())) for g in sorted(out)}
 
 
-def export_bundle(ab_root, job, out_root, manifest, log):
+def export_bundle(ab_root, job, out_root, manifest, log, rebuild_cabs=False):
     import aklz4  # noqa: F401  (registers the LZ4AK decoder)
     import UnityPy
     rel, sub, kinds, keep = job_parts(job)
@@ -561,6 +700,13 @@ def export_bundle(ab_root, job, out_root, manifest, log):
             env.load_file(str(dep))
         except Exception as e:  # a missing shader only leaves that material's shader name null
             log(f'  warn dependency {dep.name}: {e}')
+    # A bundle references art in other bundles by CAB name (`m_Dependencies`); load those before reading the job's
+    # materials so their external `_MainTex` resolves (EXTERNAL_MATERIALS, e.g. the funnel drone of 澄闪).
+    ext_re = EXTERNAL_MATERIALS.get(sub)
+    if ext_re:
+        cabs = cab_index(ab_root, log, rebuild=rebuild_cabs)
+        loaded = load_dependencies(env, ab_root, cabs, log)
+        log(f'  external CABs: {", ".join(rel for _, rel in loaded) or "none resolved"}')
     out_dir = out_root / sub
     out_dir.mkdir(parents=True, exist_ok=True)
     seen, n = set(), 0
@@ -619,6 +765,11 @@ def export_bundle(ab_root, job, out_root, manifest, log):
                 gos.append(data)  # summarised after every mesh got its manifest key
         except Exception as e:
             log(f'  warn {rel} #{obj.path_id}: {e}')
+    if ext_re:  # the art the bundle references in a shared external CAB (EXTERNAL_MATERIALS)
+        k = export_external_textures(objects, ext_re, out_dir, sub, manifest, seen, log)
+        if k:
+            log(f'  {k} external texture(s) -> {sub}')
+        n += k
     for go in gos:
         try:
             prefab.append(prefab_node(go, mesh_keys))
@@ -855,10 +1006,14 @@ def main():
     ap.add_argument('--webp', action='store_true',
                     help='only write the WebP copies of the board textures from the PNGs already under --out and list '
                          'them in the manifest (needs Pillow, not the client)')
+    ap.add_argument('--rebuild-cab-index', action='store_true',
+                    help='rescan the AB tree for the CAB → bundle map (EXTERNAL_MATERIALS jobs) instead of using the '
+                         'cached var/cab-index-*.json (use after a client update)')
     args = ap.parse_args()
 
     if args.print_jobs:
-        jobs = [{'bundle': rel, 'sub': sub, 'kinds': sorted(kinds), 'keep': keep.pattern if keep else None}
+        jobs = [{'bundle': rel, 'sub': sub, 'kinds': sorted(kinds), 'keep': keep.pattern if keep else None,
+                 'external': EXTERNAL_MATERIALS[sub].pattern if sub in EXTERNAL_MATERIALS else None}
                 for rel, sub, kinds, keep in map(job_parts, JOBS)]
         derived = [{'sub': sub, 'from': src, 'derive': kind, 'name': name} for sub, src, kind, name in DERIVED]
         webp = [{'sub': sub, 'name': name, 'mode': mode} for sub, name, mode in WEBP]
@@ -886,7 +1041,7 @@ def main():
     manifest, total = {}, 0
     print(f'AB root: {ab_root}')
     for job in jobs:
-        total += export_bundle(ab_root, job, out_root, manifest, print)
+        total += export_bundle(ab_root, job, out_root, manifest, print, args.rebuild_cab_index)
     if enemy_ids:
         total += export_enemy_spines(ab_root, out_root, manifest, print, enemy_ids)
     if token_ids:

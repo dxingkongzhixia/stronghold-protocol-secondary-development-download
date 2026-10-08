@@ -1442,6 +1442,18 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
+  char_377_gdglow: {
+    group: "fx/gdglow",
+    kinds: [
+      "drone"
+    ],
+    layers: [
+      {
+        name: "char_gdglow_04",
+        scale: 1.3
+      }
+    ]
+  },
   char_1015_aglna2: {
     group: "fx/aglna2",
     kinds: [
