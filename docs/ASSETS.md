@@ -96,7 +96,7 @@ The research JSONs in `docs/research/` (03, 05, 07) define **which** ids are nee
 | Operator battle Spine (Front, Back) | fexli/ArknightsResource `spine/{id}/{id}/{Front,Back}/` | `spine/op/{charId}/{front,back}/{stem}.{skel,atlas,png}` |
 | Token Spine | fexli: the default model, or else the first skin variant (`spine/{tokenId}/{variant}/Spine/`) | `spine/token/{tokenId}/{stem}.*` |
 | Enemy Spine (PC build, premultiplied alpha) | isHarryh/Ark-Models `models_enemies/{key}/`, file names from `models_data.json` | `spine/enemy/{enemyId}/{stem}.*` |
-| Enemy Spine that no dump carries (灼热源石虫 / 炽焰源石虫) | the local client only (`tools/local-extract/extract.py ENEMY_SPINES`, optional); never downloaded and never required: an overlay of the web alias (`enemies[id].spineLocal`) | `local/spine/enemy/{enemyId}/{stem}.*` (listed in `data/local-assets.json`) |
+| Enemy Spine that no dump carries (灼热源石虫 / 炽焰源石虫) | the local client only (`tools/local-extract/extract.py ENEMY_SPINES`, optional); never downloaded and never required. **Not drawn any more** — the game shows the tinted plain 源石虫 (`plan.mjs ENEMY_SPINE_NO_LOCAL`); the machinery stays for future enemies | `local/spine/enemy/{enemyId}/{stem}.*` (listed in `data/local-assets.json`) |
 | Token Spine that no dump carries (39 summons: most 自选 summons, 凯瑟琳's 爬行号·防护单元, 凛御银灰's 风雪之眼) | the local client only (`tools/local-extract/extract.py TOKEN_SPINES`, optional); never downloaded and never required: an overlay (`tokens[id].spineLocal`; without it the avatar diamond) | `local/spine/token/{tokenId}/{stem}.*` (listed in `data/local-assets.json`) |
 | BGM | AA2 `voice` branch `audio/sound_beta_2/music/**` (大厅/休整期 `act1autochess`, 开战 `act13side/m_bat_kazimierz2_{1,2}` — 骑士之日 / 无畏者; the 开战 track follows the round: `_2` 无畏者 rounds 1–7, `_1` 骑士之日 from round 8) | `audio/bgm/{file}.mp3` |
 | SFX (UI, battle, per unit) | AA2 `voice` `audio/sound_beta_2/**`, mapped from `audio_data.json` banks | `audio/sfx/{same sub-path}.mp3` |
@@ -315,35 +315,29 @@ Other renderer rules from research 07 §5.4–5.5:
 - **Flying units** hover `FLY_HOVER` = 1.3 tiles above the ground they cross (render/units.js; the client's single fly offset 0.35 in its character space, whose unit is the standard prefab scale 0.27 — docs/research/12): the body, its HP bar, damage numbers and hits ride the lift, the shadow stays on the ground tile, on the 2D and the 3D board alike (one camera drives both).
 - **Enemy aliases:** `enemies[id].spineAliasOf` means the model belongs to another enemy. Two cases:
   - `_2` variants whose official prefab is the base one (鸭爵, 高普尼克, 流泪小子, 圆仔, 假想敌：胄, 假想敌：铳): the base model, as in the game.
-  - an enemy whose own model no dump carries: 灼热源石虫 / 炽焰源石虫 (`enemy_1305_mhslim` / `_2`) use the plain 源石虫 on
-    the web (`plan.mjs ENEMY_SPINE_ALIAS`). The reason is upstream: isHarryh/Ark-Models *indexes* `1305_mhslim` /
-    `1305_mhslim_2` but with an **empty `assetList`** — registered, never uploaded — so `arkModel()` finds no files for
-    them and the alias chain drops to `enemy_1007_slime`, a different enemy rather than a variant of it, which is why
-    the renderer tints that alias toward the slug's own colours. Their official skeletons only exist in the client's
-    enemy art bundles (`refs/arts/enm_art_*.ab`); the *mobile* build also ships them as
-    `enemy_spine/<enemyId>/<enemyId>.{skel,atlas,png}` (straight-alpha pages: no `pma: true` line), but its only public
-    mirror is a community wiki rather than a GitHub dump, so it is deliberately **not** an asset source — a third-party
-    site is not added to `sources.mjs` for two models, and the tinted alias stays the web model until a GitHub dump
-    carries them. The same official model from the local client is the optional **overlay**,
-    `enemies[id].spineLocal` = `{ group, skel, atlas, textures, pma, anims, animations, events, hits, bounds }` (file
-    names in the `data/local-assets.json` group `spine/enemy/{enemyId}`; the rest as a `spine` entry):
-    - `tools/local-extract/extract.py` writes the model to `public/assets/local/spine/enemy/{enemyId}/` (page textures
-      with their `[alpha]` texture merged in: premultiplied RGB + A like Ark-Models; the atlas gets `size:` and
-      `pma: true`) and lists its files in `data/local-assets.json`.
-    - The metadata comes from the committed `tools/assets/local-enemy-spines.json` (`fetch-assets --local-spines`
-      parses the extracted models into it), never from the disk: `data/assets.json` is byte-identical with or without
-      the extraction, it has no `/assets/local/` URL, and setup / doctor / the manifest tests never miss these files.
-    - The client (`assets.js spineEntry`, with `assets.local()`, which `createFieldView` awaits with the manifest) draws
-      the official model when the local manifest lists every file of it; otherwise, or when it fails to load
-      (`UnitView`: the entry's `fallback`), the web alias, tinted toward the slug's own lava colours
-      (`render/units.js ALIAS_TINT`: 灼热 orange, 炽焰 red-orange; research 07 §5.6 "a hue shift", [ASSUMED] look) so a
-      source install without the extraction still tells them from the plain 源石虫. A release bundle carries the
-      models only when it is zipped from a checkout where the extraction ran with the `spine/enemy` job (an extraction
-      made with 0.1.0 lacks it: `node tools/setup.mjs --local` again, then check that `data/local-assets.json` lists
-      `spine/enemy/enemy_1305_mhslim` and `spine/enemy/enemy_1305_mhslim_2`).
-    User feedback after 0.1.0 (D3: "所有特殊源石虫的模型全表现为普通源石虫"): the ELEMENT faction spawns up to ten of them a
-    round. A 2026-10-03 audit of every enemy of `data/enemies.json` (249) against the client's battle prefabs (the
-    skeleton each prefab's Spine renderer draws) found no other enemy drawn with another enemy's model; 伊利昂的木驮兽
+  - an enemy whose own model no dump carries: 灼热源石虫 / 炽焰源石虫 (`enemy_1305_mhslim` / `_2`) use the plain 源石虫,
+    tinted toward the slug's own colours (`plan.mjs ENEMY_SPINE_ALIAS`, `ALIAS_TINT`; owner report after 0.2.0 — in the
+    game these two are the ordinary 源石虫 and only their colour tells them from it, so `plan.mjs ENEMY_SPINE_NO_LOCAL`
+    keeps the local-client `spineLocal` overlay off for them and `data/assets.json` carries no `spineLocal` for any
+    enemy). The reason for the alias is upstream: isHarryh/Ark-Models *indexes* `1305_mhslim` / `1305_mhslim_2` but with
+    an **empty `assetList`** — registered, never uploaded — so `arkModel()` finds no files for them and the alias chain
+    drops to `enemy_1007_slime`, a different enemy rather than a variant of it, which is why the renderer tints it. The
+    metadata machinery below (the committed `tools/assets/local-enemy-spines.json`, `findLocalEnemyModels`, the
+    `extract.py` `spine/enemy` job) stays for future enemies and the tokens; these two are simply never overlaid.
+    <details><summary>the (now unused) enemy-overlay plumbing</summary>
+
+    `tools/local-extract/extract.py` writes an extracted enemy model to `public/assets/local/spine/enemy/{enemyId}/`
+    (page textures with their `[alpha]` texture merged in: premultiplied RGB + A like Ark-Models; the atlas gets `size:`
+    and `pma: true`) and lists its files in `data/local-assets.json`; `fetch-assets --local-spines` parses them into the
+    committed `tools/assets/local-enemy-spines.json` (never from the disk: `data/assets.json` is byte-identical with or
+    without the extraction and has no `/assets/local/` URL). A `spineLocal` overlay, where attached, is
+    `{ group, skel, atlas, textures, pma, anims, animations, events, hits, bounds }` (file names in the
+    `data/local-assets.json` group `spine/enemy/{enemyId}`); `assets.js spineEntry` would draw it when the local
+    manifest lists every file, else the web model.
+    </details>
+    (高能 / 冰爆 / 简饲源石虫 and “庞贝” have their own web models.)
+    A 2026-10-03 audit of every enemy of `data/enemies.json` (249) against the client's battle prefabs (the skeleton each
+    prefab's Spine renderer draws) found no other enemy drawn with another enemy's model; 伊利昂的木驮兽
     (`enemy_10159_mntrjn`) starts on its `Full` skin (five passengers) in the game and is drawn with the `default` one.
 - **Token models from the local client** (0.2.0): no dump carries the battle Spine of most 自选 summons (fetch-assets:
   "missing skel"), nor of 凯瑟琳's 爬行号·防护单元 and 凛御银灰's 风雪之眼, so they were drawn as the avatar diamond. The

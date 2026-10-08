@@ -114,10 +114,14 @@ export const FORMS = Object.freeze({
       leave: 'Start',
       roles: dollRoles('Doll_Skill_3_P1_Idle', 'Doll_Skill_3_P1toP2_ChangeEnd', 'Doll_Skill_3_P1_Attack_A'),
     }),
-    // S3's second <替身> (俄耳甫斯): transformed out of P1 (P1toP2_ChangeEnd lands in the P2 loop), never attacks
+    // S3's second <替身> (俄耳甫斯): transformed out of P1 (P1toP2_ChangeEnd lands in the P2 loop), never attacks.
+    // The persona window closing is its SWITCH-OUT, not its death (the official prefab's Stand_S3_2 AnimReplacePair:
+    // SwitchOut → Doll_Skill_3_P2_SwitchOut, Die → Doll_Skill_3_P2_Die): the `end` clip used to be the P2 Die, so the
+    // healing persona visibly collapsed (倒地) over its last second while it was still alive. It only dies on a
+    // knock-out, which is what FORMS' `roles.die` (Doll_Skill_3_P2_Die) is for.
     doll3b: Object.freeze({
       change: 'Doll_Skill_3_P1toP2_ChangeEnd',
-      end: 'Doll_Skill_3_P2_Die',
+      end: 'Doll_Skill_3_P2_SwitchOut',
       leave: 'Start',
       roles: dollRoles('Doll_Skill_3_P2_Loop', 'Doll_Skill_3_P2_Die'),
     }),

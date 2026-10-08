@@ -1,24 +1,17 @@
-// test/feedback1d-models.test.js — community report D3 after 0.1.0 ("所有特殊源石虫的模型全表现为普通源石虫"): 灼热源石虫 /
-// 炽焰源石虫 (enemy_1305_mhslim / _2, the ELEMENT faction's slugs — up to 10 a round) were drawn with the plain 源石虫
-// skeleton because no community dump carries their models (Ark-Models lists them with an empty assetList), so the
-// asset plan aliased them to enemy_1007_slime. Their official skeletons only exist in the local client
-// (tools/local-extract/extract.py ENEMY_SPINES → public/assets/local/spine/enemy/<id>/, optional and git-ignored), so
-// they are an OVERLAY: data/assets.json keeps the alias as the web model (`spine` + `spineAliasOf`) and adds
-// `spineLocal` (file names in the data/local-assets.json group + the parsed metadata, from the committed
-// tools/assets/local-enemy-spines.json — never from the disk, so the manifest is the same with or without the
-// extraction). The client (assets.js spineEntry) draws the official model when data/local-assets.json lists every one
-// of its files and falls back to the web model when it fails to load (DESIGN §13: local art is optional).
-// Without the extraction the web alias is drawn tinted toward the slug's own colours (render/units.js ALIAS_TINT,
-// research 07 §5.6 "a hue shift" [ASSUMED look]), so source installs still tell them apart from the plain slug.
-// 高能 / 冰爆 / 简饲源石虫 and “庞贝” always had their own models (checked in headless Chrome).
+// test/feedback1d-models.test.js — 灼热源石虫 / 炽焰源石虫 (enemy_1305_mhslim / _2, the ELEMENT faction's slugs, up to
+// 10 a round) are drawn with the plain 源石虫's skeleton/texture, tinted toward their own colours (render/units.js
+// ALIAS_TINT). Owner report after 0.2.0 ("they use the wrong art"): in the game these two are the ordinary 源石虫 —
+// only their colour tells them apart. No community dump carries a model for them (Ark-Models lists them with an empty
+// `assetList`), so the asset plan aliases them to enemy_1007_slime (`spineAliasOf`), and the client draws that web
+// model. The plan does NOT attach the optional local-client `spineLocal` overlay for them (ENEMY_SPINE_NO_LOCAL), so
+// the plain slug is what the game shows everywhere — with or without the local extraction. The metadata machinery
+// (tools/assets/local-enemy-spines.json, findLocalEnemyModels, tools/local-extract ENEMY_SPINES) stays for other
+// enemies; the tinted alias is the look here.
 //
 // Root cause (2026-10-04): Ark-Models *indexes* 1305_mhslim / 1305_mhslim_2 with an EMPTY `assetList` — registered,
-// never uploaded — so `arkModel()` finds nothing and the alias chain drops to enemy_1007_slime, a *different* enemy
-// rather than a variant of it. The mobile build does ship their own model (straight-alpha pages, no `pma: true` line),
-// and it is reachable, but its only public mirror is a community wiki rather than a GitHub dump: adding it would put a
-// non-GitHub host into `sources.mjs` for two models, which the reviewer of this change asked not to do. So the tinted
-// alias stays the web model, the local extraction stays the overlay, and the last block below locks both halves
-// (only these two enemies borrow a different enemy's skeleton; every asset source stays a GitHub dump).
+// never uploaded — so `arkModel()` finds nothing and the alias chain drops to enemy_1007_slime. The last block below
+// locks the mapping: only these two enemies borrow a different enemy's skeleton, and every asset source is a GitHub
+// dump.
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -65,12 +58,15 @@ function localManifest(ids, drop = null) {
   return { version: 1, source: 'local-client', groups };
 }
 
-describe('D3: the official slug models are an optional overlay of the web alias', () => {
-  test('plan: the web model stays the 源石虫 alias; spineLocal comes from the committed metadata as it is', () => {
-    const before = plan(undefined);
-    for (const id of SLUGS) {
-      assert.equal(before.template.enemies[id].spineAliasOf, 'enemy_1007_slime');
-      assert.equal(before.template.enemies[id].spineLocal, undefined, 'no metadata → no overlay');
+describe('D3: the two ELEMENT slugs draw the plain 源石虫, with no local overlay', () => {
+  test('plan: the web model is the 源石虫 alias; the local metadata never becomes a spineLocal overlay', () => {
+    for (const localEnemySpines of [undefined, COMMITTED]) {
+      const p = plan(localEnemySpines);
+      for (const id of SLUGS) {
+        assert.equal(p.template.enemies[id].spineAliasOf, 'enemy_1007_slime', `${id}: the web model (works without the local client)`);
+        assert.equal(p.template.enemies[id].spineLocal, undefined, `${id}: no overlay (ENEMY_SPINE_NO_LOCAL)`);
+      }
+      assert.ok(!collectLeaves(p.template).some((l) => /spineLocal/.test(l.path)), 'no spineLocal leaf');
     }
     const p = plan(COMMITTED);
     const slime = { skel: '/assets/spine/enemy/enemy_1007_slime/enemy_1007_slime.skel', atlas: '/assets/spine/enemy/enemy_1007_slime/enemy_1007_slime.atlas', textures: [], anims: {} };
@@ -80,14 +76,13 @@ describe('D3: the official slug models are an optional overlay of the web alias'
         { root: tmp, spine: new Map([['enemy:enemy_1007_slime', slime]]) });
       for (const id of SLUGS) {
         const e = value.enemies[id];
-        assert.equal(e.spineAliasOf, 'enemy_1007_slime', `${id}: the web model (works without the local client)`);
-        assert.equal(e.spine, slime);
-        assert.deepEqual(e.spineLocal, { group: `spine/enemy/${id}`, ...COMMITTED[id] }, `${id}: the overlay, null fields kept`);
-        assert.equal(e.spineLocal.anims.attack.begin, null);
+        assert.equal(e.spineAliasOf, 'enemy_1007_slime', `${id}: the plain 源石虫`);
+        assert.equal(e.spine, slime, `${id}: its skeleton/texture`);
+        assert.equal(e.spineLocal, undefined, `${id}: no overlay`);
       }
     } finally { rmSync(tmp, { recursive: true, force: true }); }
-    assert.ok(!collectLeaves(p.template).some((l) => /spineLocal/.test(l.path)), 'the overlay is no file to download');
-    assert.ok(p.notes.some((n) => /enemy_1305_mhslim: official Spine from the local client/.test(n)));
+    assert.ok(p.notes.some((n) => n.includes('enemy_1305_mhslim') && /aliased/.test(n)),
+      'the plan says the web model is an alias, so a run is explainable');
   });
 
   test('the committed metadata: both ELEMENT slugs, file names of their extract.py group, roles resolved', () => {
@@ -104,20 +99,18 @@ describe('D3: the official slug models are an optional overlay of the web alias'
     }
   });
 
-  test('data/assets.json never depends on the local extraction (no /assets/local/ URL; the web model always there)', () => {
+  test('data/assets.json: no spineLocal overlay for the slugs; the plain 源石虫 is the resolved model', () => {
     const urls = [];
     const walk = (n) => { if (typeof n === 'string') { if (n.includes('/assets/local/')) urls.push(n); } else if (n && typeof n === 'object') Object.values(n).forEach(walk); };
     walk(MANIFEST);
     assert.deepEqual(urls, [], 'setup / doctor / the manifest tests count every /assets/ URL as required');
-    for (const [id, e] of Object.entries(MANIFEST.enemies)) {
-      if (!e.spineLocal) continue;
-      assert.ok(SLUGS.includes(id), id);
-      assert.deepEqual(e.spineLocal, { group: `spine/enemy/${id}`, ...COMMITTED[id] }, `${id}: the committed metadata`);
-      assert.ok(validSpine(spineEntry(MANIFEST, id)), `${id}: a web model without the local client`);
+    for (const id of SLUGS) {
+      assert.ok(validSpine(spineEntry(MANIFEST, id)), `${id}: a web model`);
       assert.equal(MANIFEST.enemies[id].spineAliasOf, 'enemy_1007_slime');
-      assert.deepEqual(spineEntry(MANIFEST, id), MANIFEST.enemies.enemy_1007_slime.spine, `${id}: the plain 源石虫 on the web`);
+      assert.equal(MANIFEST.enemies[id].spineLocal, undefined, `${id}: no overlay`);
+      assert.deepEqual(spineEntry(MANIFEST, id), MANIFEST.enemies.enemy_1007_slime.spine, `${id}: the plain 源石虫`);
     }
-    for (const id of SLUGS) assert.ok(MANIFEST.enemies[id].spineLocal, `${id} has its overlay`);
+    assert.ok(!Object.values(MANIFEST.enemies).some((e) => e.spineLocal), 'no enemy carries a spineLocal overlay');
   });
 
   test('the committed metadata is what the extracted models parse to', { skip: !SLUGS.every((id) => existsSync(path.join(ASSETS, 'local/spine/enemy', id))) && 'enemy models not extracted (tools/local-extract)' }, async () => {
@@ -211,32 +204,22 @@ describe('D3 root cause: only the two slugs borrow a different enemy\'s skeleton
   });
 });
 
-describe('D3 client: the official model only when data/local-assets.json lists it', () => {
+describe('D3 client: the slugs always draw the plain 源石虫 (no local overlay)', () => {
   const webOf = (id) => MANIFEST.enemies[id].spine;   // the plain 源石虫's model (spineAliasOf enemy_1007_slime)
 
-  test('assets.js spineEntry: every file listed → the official model (web fallback); anything missing → the web alias', () => {
+  test('assets.js spineEntry: the plain 源石虫 whatever the local manifest lists', () => {
     const local = localManifest(SLUGS);
     for (const id of SLUGS) {
       const web = webOf(id);
-      const e = spineEntry(MANIFEST, id, { local });
-      assert.equal(e.skel, `/assets/local/spine/enemy/${id}/${id}.skel`);
-      assert.equal(e.atlas, `/assets/local/spine/enemy/${id}/${id}.atlas`);
-      assert.deepEqual(e.textures, [`/assets/local/spine/enemy/${id}/${id}.png`]);
-      assert.equal(e.pma, true);
-      assert.deepEqual(e.anims, COMMITTED[id].anims);
-      assert.deepEqual(e.hits, COMMITTED[id].hits);
-      assert.equal(e.fallback, web, 'the plain 源石虫 if the official model fails to load');
-      assert.equal(spineEntry(MANIFEST, id, { local }), e, 'one entry object per manifest pair');
-      assert.equal(spineEntry(MANIFEST, id), web, 'no local manifest → the web model');
-      assert.equal(spineEntry(MANIFEST, id, { local: localManifest([]) }), web, 'not extracted → the web model');
-      assert.equal(spineEntry(MANIFEST, id, { local: localManifest([id], `${id}.png`) }), web, 'a page missing → the web model');
-      assert.equal(spineEntry(MANIFEST, id, { local: localManifest([id], `${id}.atlas`) }), web, 'the atlas missing → the web model');
+      assert.equal(spineEntry(MANIFEST, id, { local }), web, 'a listing is ignored (no spineLocal)');
+      assert.equal(spineEntry(MANIFEST, id), web, 'no local manifest');
+      assert.equal(spineEntry(MANIFEST, id, { local: localManifest([]) }), web, 'nothing extracted');
+      assert.equal(spineEntry(MANIFEST, id, { local: localManifest([id], `${id}.png`) }), web, 'a page missing');
     }
     assert.equal(spineEntry(MANIFEST, 'enemy_1007_slime', { local }), webOf('enemy_1007_slime'), 'other enemies unchanged');
-    // the store hands the local manifest over once local() has it
     const store = createAssets({ manifest: MANIFEST, localManifest: local });
-    assert.equal(store.spineEntry(SLUGS[0]).skel, `/assets/local/spine/enemy/${SLUGS[0]}/${SLUGS[0]}.skel`);
-    assert.equal(createAssets({ manifest: MANIFEST }).spineEntry(SLUGS[0]), webOf(SLUGS[0]), 'before / without local(): the web model');
+    assert.equal(store.spineEntry(SLUGS[0]), webOf(SLUGS[0]), 'the store hands out the web model too');
+    assert.equal(createAssets({ manifest: MANIFEST }).spineEntry(SLUGS[0]), webOf(SLUGS[0]), 'without local(): the web model');
   });
 
   test('render/app.js waits for the local manifest with the asset manifest before building unit views', () => {
@@ -257,58 +240,43 @@ describe('D3 client: the official model only when data/local-assets.json lists i
     const cam = () => presetCamera('normal', { width: 1280, height: 720 });
     const info = (id) => ({ id: 3, side: 'enemy', kind: 'enemy', defId: id, spine: id, tier: 1, x: 6, y: 10, maxHp: 1000 });
 
-    test('an official model that fails to load falls back to the web model (never the icon diamond)', async () => {
+    test('a slug whose local manifest lists its own files still draws the plain 源石虫 (no overlay)', async () => {
       const local = localManifest(SLUGS);
-      const asked = [], released = [];
-      const store = (fail) => ({
+      const asked = [];
+      const store = {
         picture: () => null, image: async () => null,
         spineEntry: (id) => spineEntry(MANIFEST, id, { local }),
-        spine: {
-          acquire: async (e) => { asked.push(e.skel); if (fail(e)) throw new Error('404'); return { animations: Object.keys(e.animations).map((name) => ({ name })) }; },
-          release: (e) => released.push(e.skel),
-        },
-      });
+        spine: { acquire: async (e) => { asked.push(e.skel); return { animations: Object.keys(e.animations).map((name) => ({ name })) }; }, release() {} },
+      };
       const id = SLUGS[0];
-      const web = webOf(id);
-      const ok = new UnitView(fakeViewCtx(fake.P, { assets: store(() => false), cam }), info(id));
-      await tick(); await tick();
-      assert.equal(ok.actor?.entry.skel, `/assets/local/spine/enemy/${id}/${id}.skel`, 'the official model');
-      assert.equal(ok.actor.entry.anims.move.loop, 'Move', 'with its own clips');
-      asked.length = 0;
-      const bad = new UnitView(fakeViewCtx(fake.P, { assets: store((e) => e.local), cam }), info(id));
-      await tick(); await tick(); await tick();
-      assert.deepEqual(asked, [`/assets/local/spine/enemy/${id}/${id}.skel`, web.skel], 'the official model, then the web one');
-      assert.ok(released.includes(`/assets/local/spine/enemy/${id}/${id}.skel`), 'the failed acquire is released');
-      assert.equal(bad.actor?.entry, web, 'drawn with the web model');
-      assert.equal(bad.entry, web);
+      const v = new UnitView(fakeViewCtx(fake.P, { assets: store, cam }), info(id));
+      for (let i = 0; i < 3; i++) await tick();
+      assert.equal(v.actor?.entry, webOf(id), 'the plain 源石虫 skeleton');
+      assert.deepEqual(asked, [webOf(id).skel], 'the local files are never requested');
+      assert.equal(v.entry, webOf(id));
     });
 
-    test('the web alias of a local-only slug is drawn tinted toward its own colours; the official model and the plain 源石虫 are not', async () => {
-      const store = (local, fail = () => false) => ({
+    test('the slugs are drawn tinted toward their own colours; the plain 源石虫 itself is not', async () => {
+      const store = (local) => ({
         picture: () => null, image: async () => null,
         spineEntry: (id) => spineEntry(MANIFEST, id, local ? { local } : undefined),
-        spine: { acquire: async (e) => { if (fail(e)) throw new Error('404'); return { animations: Object.keys(e.animations).map((name) => ({ name })) }; }, release() {} },
+        spine: { acquire: async (e) => ({ animations: Object.keys(e.animations).map((name) => ({ name })) }), release() {} },
       });
       const local = localManifest(SLUGS);
       const mk = (id, st) => new UnitView(fakeViewCtx(fake.P, { assets: st, cam }), info(id));
-      const web0 = mk(SLUGS[0], store(null)), web1 = mk(SLUGS[1], store(null));
-      const official = mk(SLUGS[0], store(local)), failed = mk(SLUGS[1], store(local, (e) => e.local));
+      const withLocal = mk(SLUGS[0], store(local)), withoutLocal = mk(SLUGS[1], store(null));
       const plain = mk('enemy_1007_slime', store(local));
       for (let i = 0; i < 4; i++) await tick();
-      const all = [web0, web1, official, failed, plain];
+      const all = [withLocal, withoutLocal, plain];
       for (const v of all) v.update(1 / 60, cam(), 0);
-      assert.equal(web0.actor.entry, webOf(SLUGS[0]), 'not extracted: the plain 源石虫 skeleton');
-      assert.equal(web0.actor.spine.tint, ALIAS_TINT[SLUGS[0]], '灼热源石虫: orange');
-      assert.equal(web1.actor.spine.tint, ALIAS_TINT[SLUGS[1]], '炽焰源石虫: red-orange');
+      assert.equal(withLocal.actor.entry, webOf(SLUGS[0]), 'the plain 源石虫 even with a local manifest');
+      assert.equal(withLocal.actor.spine.tint, ALIAS_TINT[SLUGS[0]], '灼热源石虫: orange');
+      assert.equal(withoutLocal.actor.spine.tint, ALIAS_TINT[SLUGS[1]], '炽焰源石虫: red-orange');
       assert.notEqual(ALIAS_TINT[SLUGS[0]], ALIAS_TINT[SLUGS[1]], 'the two read apart');
-      assert.ok(official.actor.entry.local);
-      assert.equal(official.actor.spine.tint, 0xffffff, 'the official model as it is');
-      assert.equal(failed.actor.entry, webOf(SLUGS[1]));
-      assert.equal(failed.actor.spine.tint, ALIAS_TINT[SLUGS[1]], 'the web fallback of a failed official model is tinted too');
       assert.equal(plain.actor.spine.tint, 0xffffff, 'the plain 源石虫 itself');
-      web0.flags = UF.FROZEN;
-      web0.update(1 / 60, cam(), 1 / 60);
-      assert.equal(web0.actor.spine.tint, 0x9fd4ff, 'a status tint wins (frozen)');
+      withLocal.flags = UF.FROZEN;
+      withLocal.update(1 / 60, cam(), 1 / 60);
+      assert.equal(withLocal.actor.spine.tint, 0x9fd4ff, 'a status tint wins (frozen)');
       for (const v of all) v.destroy?.();
     });
   });

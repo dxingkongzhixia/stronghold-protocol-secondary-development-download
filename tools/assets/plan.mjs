@@ -34,23 +34,23 @@ import { EMOTE_CATALOG } from '../../shared/constants.js';
 const VOICE_ID_LANG = 'CN';
 
 /**
- * Enemies whose Spine no community dump carries: the web model is another enemy's (research 07 §5.6). Their official
- * models come from the local client only (tools/local-extract ENEMY_SPINES): `localEnemySpines` adds them as the
- * optional `spineLocal` overlay, which the client draws when data/local-assets.json lists its files (user feedback
- * after 0.1.0, D3: 灼热源石虫 / 炽焰源石虫 were drawn as the plain 源石虫 everywhere).
+ * Enemies whose Spine no community dump carries: the web model is another enemy's (research 07 §5.6). `spineLocal`
+ * can overlay the official model from the local client (tools/local-extract ENEMY_SPINES) when the extraction is
+ * installed. These two (灼热源石虫 / 炽焰源石虫) are instead drawn with the plain 源石虫: the owner's report after
+ * 0.2.0 — verified against the client's `refs/arts/enm_art_12.ab` material/prefab — is that the official battle shows
+ * the ordinary 源石虫 and only its own colour, so the renderer's ALIAS_TINT (render/units.js) is the intended look and
+ * their `spineLocal` overlay must not be attached. The extraction job and the metadata machinery stay for other enemies.
  *
- * Why no dump carries them: isHarryh/Ark-Models *indexes* `1305_mhslim` / `1305_mhslim_2` but with an EMPTY
- * `assetList` — registered, never uploaded — so `arkModel()` returns nothing for them and the alias chain below falls
- * back to `enemy_1007_slime`: a different enemy rather than a variant of it, which is why the renderer tints it
- * (render/units.js ALIAS_TINT). The *mobile* build does ship their own model
- * (`enemy_spine/<enemyId>/<enemyId>.{skel,atlas,png}`), but the only public mirror of that build is a community wiki,
- * not a GitHub dump, so downloading from it would add a source the project deliberately does not use (docs/ASSETS.md
- * "Enemy aliases"). The tinted alias therefore stays the web model until a GitHub dump carries these two.
+ * Why no dump carries `1305_mhslim` / `_2`: isHarryh/Ark-Models *indexes* them but with an EMPTY `assetList` —
+ * registered, never uploaded — so `arkModel()` returns nothing for them and the alias chain below falls back to
+ * `enemy_1007_slime` (research 07 §5.6).
  */
 export const ENEMY_SPINE_ALIAS = Object.freeze({
   enemy_1305_mhslim: 'enemy_1007_slime',
   enemy_1305_mhslim_2: 'enemy_1007_slime',
 });
+/** Aliased enemies that must NOT take the optional `spineLocal` overlay: the plain alias + ALIAS_TINT is their look. */
+export const ENEMY_SPINE_NO_LOCAL = Object.freeze(new Set(Object.keys(ENEMY_SPINE_ALIAS)));
 
 /** Loading illustrations referenced by act2autochess modeDataDict (non-training). */
 const LOADING_USED = new Set(['loading_ac_core', 'loading_ac_prototype', 'loading_ac_hard', 'loading_ac_abyss']);
@@ -498,8 +498,9 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
       else notes.push(`${id}: Spine aliased to ${e.spineAliasOf}`);
     }
     e.spine = spine;
-    // the official model from the local client, drawn instead of `spine` when the extraction is installed (optional)
-    const loc = localEnemySpines && Object.hasOwn(localEnemySpines, id) ? localEnemySpines[id] : null;
+    // the official model from the local client, drawn instead of `spine` when the extraction is installed (optional) —
+    // except the plain-alias enemies (ENEMY_SPINE_NO_LOCAL): their look is the tinted web alias
+    const loc = localEnemySpines && !ENEMY_SPINE_NO_LOCAL.has(id) && Object.hasOwn(localEnemySpines, id) ? localEnemySpines[id] : null;
     if (loc && typeof loc === 'object') {
       e.spineLocal = literal({ group: `spine/enemy/${id}`, ...loc });
       notes.push(`${id}: official Spine from the local client when extracted (spineLocal)`);

@@ -673,7 +673,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
     | `doll` | 极速送达 S1 | `Doll_Skill_1_SwitchIn` | `…_1_Idle` | `…_1_Attack` | `…_1_Die` |
     | `doll2` | 重力自定义 S2 | `…_2_SwitchIn` | `…_2_Loop` | —（不攻击） | `…_2_Die` |
     | `doll3` | 酸橙的心事 S3 第一替身（塔纳托斯） | `…_3_P1_SwitchIn` | `…_3_P1_Idle` | `…_3_P1_Attack_A` | `…_3_P1toP2_ChangeEnd`（它**没有阵亡剪辑**，被打就变成 P2） |
-    | `doll3b` | S3 第二替身（俄耳甫斯） | `…_3_P1toP2_ChangeEnd` | `…_3_P2_Loop` | —（不攻击） | `…_3_P2_Die` |
+    | `doll3b` | S3 第二替身（俄耳甫斯） | `…_3_P1toP2_ChangeEnd` | `…_3_P2_Loop` | —（不攻击） | `…_3_P2_SwitchOut`（窗口结束=换出；阵亡才用 `…_3_P2_Die`） |
 
 - **按技能 / 阶段发布形态**：模拟层 `installDollkeeper` 原来把形态写死 `unit.form = 'doll'`。现在新增 `dollForm()`：读 `unit.profile.dollForm` / `dollForm2`（由**技能 kit 的 `trait`** 声明 —— `kits/ops/chess_char_4217_makoto-makoto.js`：S1 → `doll`、S2 → `doll2`、S3 → `doll3` + `dollForm2: 'doll3b'` 与 `dollLives: 1`），并在**每一次切换**（`enter()` / `nextDoll()`）写入 `unit.form` 与该形态的 `fx('substitute', { form })`，所以替身出现的那一帧就是「该技能的替身」。官方傀儡师不声明这两个字段 → 仍走 `doll`（她们的 `*_B` 套），行为不变。
 - **换成时装（皮肤）**：结城理的**战斗模型**改用官方时装 **`char_4217_makoto@p3r`**（Persona 3 Reload 联动皮，镜像目录 `char_4217_makoto_p3r_1`），不再使用原版模型 —— `docs/research/07-assets.json` 的 `battleSpine`（front / back × skel / atlas / png）指向该皮肤，再用 `node tools/fetch-assets.mjs --asset-source=mirror` 下载并重建 `data/assets.json`（现在指向 `/assets/spine/op/char_4217_makoto/front/char_4217_makoto_p3r_1.skel`）。**皮肤骨架的动画名与原版完全一致（含全部 `Doll_Skill_*`）**，所以上面 4 套替身形态无需任何改动。

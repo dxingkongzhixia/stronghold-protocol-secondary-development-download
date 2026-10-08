@@ -378,4 +378,35 @@ describe('结城理\'s <替身> (FORMS doll / doll2 / doll3 / doll3b)', () => {
     assert.equal(clip(b), 'Doll_Skill_3_P2_Loop', 'doll3b: no attack clip of its own (the support persona)');
     assert.notEqual(b.actor.mode, 'attack', 'doll3b: it does not enter attack mode');
   });
+
+  // Report after the S2 fix: the S3 second persona (俄耳甫斯) — the healing support one — collapsed (倒地) while its
+  // window was still running. The form's `end` clip (the closing clip timed from the sim fx `dur`, render/units.js
+  // setForm) was its DEATH clip Doll_Skill_3_P2_Die. The official prefab's second persona (Stand_S3_2) replaces its
+  // anim keys Idle → Doll_Skill_3_P2_Loop, SwitchOut → Doll_Skill_3_P2_SwitchOut and Die → Doll_Skill_3_P2_Die: the
+  // window closing is the SWITCH-OUT, the Die is only the knock-out. S1 / S2 / the S3 first persona are out of scope
+  // (their `end` values are unchanged).
+  test('doll3b: the second <替身> switches out at its window close (SwitchOut), it does not play its Die while alive', async () => {
+    const f = FORMS[MAK].doll3b;
+    const front = assets.chars[MAK].spine.front.animations;
+    assert.equal(f.end, 'Doll_Skill_3_P2_SwitchOut', 'the form-end clip is the persona\'s switch-out');
+    assert.equal(f.roles.die, 'Doll_Skill_3_P2_Die', 'the Die stays the knock-out clip');
+    assert.ok(f.end in front && f.roles.die in front, 'both clips are in the skeleton');
+
+    const v = await op(MAK, { skillIndex: 2 });
+    v.setForm('doll3b', { dur: 21 });
+    secs(v, 1.2);
+    assert.equal(clip(v), 'Doll_Skill_3_P2_Loop', 'alive, the healing persona holds its P2 idle');
+    secs(v, 19.0);                                   // the window closes: `end` plays at dur − its own 1 s
+    assert.equal(clip(v), 'Doll_Skill_3_P2_SwitchOut', 'it switches out instead of collapsing (倒地)');
+
+    const k = await op(MAK, { skillIndex: 2 });
+    k.setForm('doll3b', { dur: 21 });
+    k.die();
+    assert.equal(clip(k), 'Doll_Skill_3_P2_Die', 'a knocked-out persona still plays its own Die');
+
+    // the other persona forms are untouched
+    assert.equal(FORMS[MAK].doll.end, 'Doll_Skill_1_Die');
+    assert.equal(FORMS[MAK].doll2.end, 'Doll_Skill_2_Die');
+    assert.equal(FORMS[MAK].doll3.end, 'Doll_Skill_3_P1toP2_ChangeEnd');
+  });
 });
