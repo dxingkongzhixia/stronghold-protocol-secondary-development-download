@@ -47,6 +47,18 @@ function officialLocal(off, base) {
 }
 
 /**
+ * The official normal-attack / hit-flare `local` of an emitting operator (`render/fx/official.js` kind `'hit'`), or
+ * null. The client draws the shared `hit` kind itself (render/fx/projectiles.js `_impact` for a ranged shot,
+ * render/fx/numbers.js `damage` for a melee blow) — the sim never emits it — so these paths resolve the operator's
+ * bundle art here and draw it with `_fxLocal`, else the procedural white burst. Same two-tier rule and the same
+ * guarantees as `fxLocalFor` (never a blank frame; an unlisted layer is never a network dependency).
+ * @param {string} [opId] the emitting operator's rendered id (`UnitView.info.spine || .defId`)
+ */
+export function fxOfficialHit(opId) {
+  return fxLocalFor({ official: true }, {}, opId, 'hit');
+}
+
+/**
  * The `local` spec a kind uses for one fx event: the plain `spec.local` when it carries its own layers, else the entry
  * its `bySkill` / `byOp` map holds, else the operator's generated official-art entry (`render/fx/official.js`). This is
  * what makes official art attributable: a generic kind ('aoe', 'strike', …) is shared by many operators, so its layers

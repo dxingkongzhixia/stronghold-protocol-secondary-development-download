@@ -89,6 +89,59 @@ test('present data/local-assets.json is served as-is', async () => {
   }
 });
 
+test('a present but stale/partial per-machine manifest does not shadow the committed art: their union is served', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-union-'));
+  // the shipped art (committed), incl. a group the per-machine extraction never listed (the owner's case: a partial
+  // fx extraction shadowing the whole committed fx tier) and a key it lists too (with a stale path)
+  const committed = {
+    version: 1, source: 'committed', count: 3, groups: {
+      'fx/blaze2': { AVG_flow_71: { path: '/assets/local/fx/blaze2/AVG_flow_71.png', kind: 'Texture2D', w: 512, h: 512 } },
+      'ui/battle': { hp: { path: '/assets/local/ui/battle/hp.png' } },
+      module: { 'mar-x': { path: '/assets/local/module/mar-x.png' } },
+    },
+  };
+  const local = {
+    version: 1, source: 'local-client', count: 2, groups: {
+      module: { 'mar-x': { path: '/stale/module/mar-x.png' } },   // same key: the committed path must win
+      'spine/enemy/1001': { 's.skel': { path: '/assets/local/spine/enemy/1001/s.skel' } }, // per-machine extra: kept
+    },
+  };
+  fs.writeFileSync(path.join(dir, 'local-assets.committed.json'), JSON.stringify(committed));
+  fs.writeFileSync(path.join(dir, 'local-assets.json'), JSON.stringify(local));
+  const srv = await serve(dir);
+  try {
+    const r = await get(srv, '/data/local-assets.json');
+    assert.equal(r.status, 200);
+    assert.match(r.type, /application\/json/);
+    const doc = JSON.parse(r.body);
+    assert.equal(doc.source, 'local-client+committed');
+    assert.ok(doc.groups['fx/blaze2'].AVG_flow_71, 'the committed fx group is listed though the per-machine manifest omits it');
+    assert.ok(doc.groups['ui/battle'].hp, 'every committed group survives');
+    assert.equal(doc.groups.module['mar-x'].path, '/assets/local/module/mar-x.png', 'the committed path wins for a shipped file');
+    assert.ok(doc.groups['spine/enemy/1001']['s.skel'], 'the per-machine extra is kept');
+    assert.equal(doc.count, Object.values(doc.groups).reduce((n, g) => n + Object.keys(g).length, 0));
+    assert.equal((await get(srv, '/data/local-assets.json', 'HEAD')).status, 200);
+    // the committed file is still addressable as-is under its own name
+    assert.deepEqual(JSON.parse((await get(srv, '/data/local-assets.committed.json')).body), committed);
+  } finally {
+    srv.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('an empty stand-in still answers /data/local-assets.json when neither manifest exists', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-none-'));
+  const srv = await serve(dir);
+  try {
+    const r = await get(srv, '/data/local-assets.json');
+    assert.equal(r.status, 200);
+    assert.deepEqual(JSON.parse(r.body).groups, {});
+  } finally {
+    srv.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('docs and messages say what falls back without the local art and how a server without the client gets it (GitHub issue #42)', async () => {
   const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
   const { LOCAL_ART_FALLBACK, LOCAL_ART_COPY_HINT } = await import('../tools/setup.mjs');

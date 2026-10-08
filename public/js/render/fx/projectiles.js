@@ -5,6 +5,7 @@ import { PROJ } from '../style.js';
 import { SHOT_HEIGHT, bodyZ, feetZ } from './camera.js';
 import { clamp } from './limits.js';
 import { projSpeed } from './speeds.js';
+import { fxOfficialHit } from './localart.js';
 
 const MAX_PROJ = 260;
 
@@ -19,6 +20,9 @@ const BOOM_SPIN = 22, BOOM_BOW = 0.35, BOOM_MAX_T = 6;
 
 /** Bombard shell: share of its flight spent rising from the shooter, and the height it climbs / falls from (tiles). */
 const SHELL_RISE = 0.34, SHELL_UP = 5.5;
+
+/** Arrival bursts that are a direct hit (not an explosion / a heal orb): the operator's official 'hit' art may replace them. */
+const OFFICIAL_HIT_KINDS = new Set(['spark', 'arts', 'zap', 'enemy']);
 
 /** 蕾缪安 S3 shell (fx 'bombardShell'); `look` 'mortar' is its own flight (_stepMortar). */
 const BOMBARD_SHELL = Object.freeze({ look: 'mortar', tint: 0xfff2d8, glow: 0xff9c33, trail: 0xffb35c, smoke: 0x3a3430, len: 1.3, width: 0.3, head: 0.56 });
@@ -374,6 +378,14 @@ export class FxProjectiles {
     const p = cam.project(pr.tx, pr.ty, pr.tz, this._g);
     const x = p.x, y = p.y, s = p.s;
     const rich = this.rich;
+    // the optional official normal-attack impact: the shooter's bundle art (render/fx/official.js kind 'hit') drawn as
+    // a ground field when it is loaded, else the procedural arrival burst below (never blank, no network in the fallback)
+    if (OFFICIAL_HIT_KINDS.has(spec.hit)) {
+      const info = pr.src && pr.src.info;
+      const opId = info && (info.spine || info.defId);
+      const local = opId ? fxOfficialHit(opId) : null;
+      if (local && this._fxLocal(local, { x: pr.tx, y: pr.ty, z: this._groundZ(pr.tx, pr.ty) }, 0.8, pr.glow, 0.32)) return;
+    }
     switch (spec.hit) {
       case 'arts':
         this.particle('glow', x, y, { tint: pr.glow, life: 0.24, s0: (s / 128) * 0.7, s1: (s / 128) * 1.2, a0: 0.95, a1: 0 });

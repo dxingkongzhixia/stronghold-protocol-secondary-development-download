@@ -16,12 +16,16 @@
 //                public/i18n/ and the pack folders of packs/, re-read when they change; never cached)
 //     /packs/<id>/<file> → a file of a pack folder — only one its manifest names (server/packs.js servable)
 //
-// Traversal & dotfile protection, a directory without its trailing slash → 301, 404 page; an absent
-// data/local-assets.json is answered with the committed data/local-assets.committed.json when it exists, else with an
-// empty manifest. Files go out through files.js serveFile.
+// Traversal & dotfile protection, a directory without its trailing slash → 301, 404 page. /data/local-assets.json is
+// answered with the UNION of the committed data/local-assets.committed.json (the art that ships, tools/local-extract/
+// committed-manifest.mjs) and the per-machine data/local-assets.json (the optional extraction): every committed entry
+// is always listed — a present but stale/partial per-machine manifest no longer shadows the shipped art — and the
+// per-machine extras are kept. With only one of the two it is served as-is, with neither an empty manifest. Files go
+// out through files.js serveFile.
 
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { MEDIA_PREFIX } from '../../shared/media.js';
 import { ROOT, noopLog } from './config.js';
 import { sendError, sendJson } from './common.js';
@@ -73,6 +77,66 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
   const shimBody = Buffer.from(DATA_SHIM_JS);
   const shimTag = `"shim-${shimBody.length.toString(16)}"`;
   const gzipCache = new GzipCache();
+  const dataDirAbs = path.resolve(dataDir);
+  let localMerge = null; // cached { key, plain, gz, etag, mtime } of the merged manifest (rebuilt when either file changes)
+
+  /**
+   * The union of the committed manifest (authoritative for the art that ships) and the per-machine one (extras): every
+   * committed group+name is kept and points at its committed path, and a per-machine group/entry the committed manifest
+   * does not list is added. `count` is the number of listed files.
+   */
+  function mergeLocalArt(committed, local) {
+    const groups = {};
+    for (const [g, entries] of Object.entries(local && local.groups || {})) groups[g] = { ...entries };
+    for (const [g, entries] of Object.entries(committed && committed.groups || {})) groups[g] = { ...(groups[g] || {}), ...entries };
+    let count = 0;
+    for (const g of Object.keys(groups)) count += Object.keys(groups[g]).length;
+    return { version: 1, source: 'local-client+committed', count, groups };
+  }
+
+  /**
+   * /data/local-assets.json: the committed manifest (or the empty stand-in) when no per-machine one exists; the
+   * per-machine file as-is when there is no committed one; their union (cached, gzipped) when both exist. Never throws
+   * (a broken manifest falls back to the per-machine file as-is) and never 404s, so no page load logs an error.
+   */
+  async function serveLocalArt(req, res, query) {
+    const localAbs = path.join(dataDirAbs, LOCAL_ART_MANIFEST);
+    const committedAbs = path.join(dataDirAbs, COMMITTED_LOCAL_ART);
+    const [lst, cst] = await Promise.all([fsp.stat(localAbs).catch(() => null), fsp.stat(committedAbs).catch(() => null)]);
+    const localOk = !!lst && lst.isFile();
+    const committedOk = !!cst && cst.isFile();
+    if (!localOk && !committedOk) {
+      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-cache', 'Content-Length': EMPTY_LOCAL_ART.length });
+      res.end(req.method === 'HEAD' ? undefined : EMPTY_LOCAL_ART);
+      return;
+    }
+    if (!localOk) { await serveFile(req, res, committedAbs, cst, 'data', [COMMITTED_LOCAL_ART], query, gzipCache, log); return; }
+    if (!committedOk) { await serveFile(req, res, localAbs, lst, 'data', [LOCAL_ART_MANIFEST], query, gzipCache, log); return; }
+    try {
+      const key = `${lst.size}:${Math.floor(lst.mtimeMs)}:${cst.size}:${Math.floor(cst.mtimeMs)}`;
+      if (!localMerge || localMerge.key !== key) {
+        const [lb, cb] = await Promise.all([fsp.readFile(localAbs), fsp.readFile(committedAbs)]);
+        const plain = Buffer.from(JSON.stringify(mergeLocalArt(JSON.parse(String(cb)), JSON.parse(String(lb)))));
+        localMerge = {
+          key, plain, gz: Buffer.from(zlib.gzipSync(plain)),
+          etag: `"merge-${lst.size.toString(16)}-${Math.floor(lst.mtimeMs).toString(16)}-${cst.size.toString(16)}-${Math.floor(cst.mtimeMs).toString(16)}"`,
+          mtime: new Date(Math.max(lst.mtimeMs, cst.mtimeMs)),
+        };
+      }
+    } catch {
+      // an unreadable / malformed manifest: never blank the art — serve the per-machine file as-is
+      await serveFile(req, res, localAbs, lst, 'data', [LOCAL_ART_MANIFEST], query, gzipCache, log);
+      return;
+    }
+    const useGzip = /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''));
+    const body = useGzip ? localMerge.gz : localMerge.plain;
+    const headers = { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-cache', Vary: 'Accept-Encoding', ETag: localMerge.etag };
+    if (isNotModified(req, localMerge.etag, localMerge.mtime)) { res.writeHead(304, headers); res.end(); return; }
+    if (useGzip) headers['Content-Encoding'] = 'gzip';
+    headers['Content-Length'] = body.length;
+    res.writeHead(200, headers);
+    res.end(req.method === 'HEAD' ? undefined : body);
+  }
 
   return async function serveStatic(req, res, rawPath, query) {
     let decoded;
@@ -86,6 +150,11 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
       if (isNotModified(req, shimTag, new Date(0))) { delete headers['Content-Length']; res.writeHead(304, headers); res.end(); return; }
       res.writeHead(200, headers);
       res.end(req.method === 'HEAD' ? undefined : shimBody);
+      return;
+    }
+    // the optional local-art manifest: the committed ∪ per-machine union (see the header), never a 404
+    if (decoded === '/data/local-assets.json') {
+      await serveLocalArt(req, res, query);
       return;
     }
     // Content packs (server/packs.js): the live index, and only the files a pack's manifest names
@@ -145,20 +214,7 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
         if (mount.deny.has(path.basename(real).toLowerCase())) throw Object.assign(new Error('private'), { code: 'ENOENT' });
       }
     } catch (e) {
-      if (e && e.code === 'ENOENT' && mount.name === 'data' && segments.length === 1 && segments[0] === LOCAL_ART_MANIFEST) {
-        // The per-machine extraction (tools/local-extract) is absent. Serve the COMMITTED manifest of the art that
-        // ships in the repo when there is one (a clone then gets the official tier with no extraction); else an empty
-        // manifest instead of a 404, so browsers don't log an error on every page load (clients treat empty groups as
-        // "no local art" — DESIGN §13).
-        const committed = path.join(mount.dir, COMMITTED_LOCAL_ART);
-        const cst = await fsp.stat(committed).catch(() => null);
-        if (cst && cst.isFile()) {
-          await serveFile(req, res, committed, cst, mount.name, [COMMITTED_LOCAL_ART], query, gzipCache, log);
-          return;
-        }
-        res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-cache', 'Content-Length': EMPTY_LOCAL_ART.length });
-        res.end(req.method === 'HEAD' ? undefined : EMPTY_LOCAL_ART);
-      } else if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR' || e.code === 'EISDIR' || e.code === 'ENAMETOOLONG')) {
+      if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR' || e.code === 'EISDIR' || e.code === 'ENAMETOOLONG')) {
         sendError(req, res, 404, '页面不存在 · Not found', decoded.length <= 200 ? decoded : '');
       } else if (e && (e.code === 'EACCES' || e.code === 'EPERM')) {
         sendError(req, res, 403, '禁止访问 · Forbidden');
