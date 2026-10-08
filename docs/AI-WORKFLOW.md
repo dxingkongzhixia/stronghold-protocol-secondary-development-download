@@ -55,7 +55,13 @@ Checklist by task type:
 | Match / lobby / protocol | `shared/protocol.js` + server handler + client send/receive + protocol test + `docs/META.md` |
 | Enemies / Boss | `tools/build-data.mjs` + `content/{enemies,bosses}.js` (exactly one of KITS/BOSS_KITS/STATS_ONLY) |
 | UI / render | client files + `test/ui|render/`; run the relevant `RENDER_E2E=1` suite |
+| Battle fx | a **procedural** archetype first (`FX_KINDS`, `render/fx/kinds.js`), then an optional `local` layer spec (`render/fx/localart.js`) if official art is extractable; pin both tiers in `test/render/fx-local.test.js` (docs/ASSETS.md "Battle effects") |
 | Docs only | `test/docs-consistency.test.js` / `docs-paths.test.js`; no golden change |
+
+**Battle fx rule (owner, 2026-10-08):** every fx kind has two tiers — the procedural drawing (mandatory, always
+available, the guaranteed fallback) and an optional local-client art tier drawn only when the client has it listed
+and loaded. Never a blank frame and never a network dependency in the fallback: a client without the art sees the
+procedural effect (Minecraft-shader-style graceful degradation). A `local`-only kind is a bug.
 
 ---
 

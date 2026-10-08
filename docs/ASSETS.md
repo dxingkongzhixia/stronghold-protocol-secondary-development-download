@@ -53,6 +53,10 @@ How downloads are fetched:
 - Each source gets 3 attempts with exponential backoff.
 - If `raw.githubusercontent.com` fails, the jsDelivr mirror (`cdn.jsdelivr.net/gh/…`) is tried.
 - There is no mirror for the ArknightsAssets2 `voice` branch, because jsDelivr returns 404 for it.
+- **Source selection** — `--asset-source=direct|mirror|gitcode` (or `SP_ASSET_SOURCE`), three explicit modes, none of which performs a public-IP lookup:
+  - `direct` (default): `raw.githubusercontent.com` first, then jsDelivr.
+  - `mirror`: the `SP_GITHUB_PROXY` prefix proxy (default `https://gh-proxy.com/`) first, then direct + jsDelivr.
+  - `gitcode`: the **GitCode** raw mirror of `yuanyan3060/ArknightsGameResource` (the operator avatars/portraits, skill icons and enemy/token icons) first, then direct + jsDelivr. GitCode only mirrors that one repo of ours (checked 2026-10-08: fexli / Ark-Models / ArknightsAssets2 are absent), so `gitcode` is the mode to prefer when direct GitHub is blocked but the gh-proxy prefix is not wanted — the icon set still resolves, the Spine/AA2 sources fall back to direct + jsDelivr. It needs no credentials. Each mirror mode keeps its own 3-failure circuit breaker, an 8 s response-header deadline and one attempt per file (a tripped mirror never blocks the rest of the run).
 - A manifest entry with fallbacks (for example an enemy icon that falls back to its base enemy's icon) only moves on to the next alternative after a **definitive 404**. When the primary fails transiently (network error, 5xx or an invalid payload after all retries), no fallback is fetched. The path is listed under `downloadErrors` in the report, and the next run retries the primary.
 - A skeleton that fails to parse is deleted and removed from the ledger, so the next online run downloads it again.
 
@@ -98,6 +102,12 @@ The research JSONs in `docs/research/` (03, 05, 07) define **which** ids are nee
 | SFX (UI, battle, per unit) | AA2 `voice` `audio/sound_beta_2/**`, mapped from `audio_data.json` banks | `audio/sfx/{same sub-path}.mp3` |
 | 干员战斗语音 | AA2 `voice` `audio/sound_beta_2/voice_cn/{charId}/cn_nn.mp3` — the lines `charword_table.json` lists (`placeType` = when the game plays one, `voiceAsset` = the path); `--voice-lang=jp|en|kr` takes the same file names from `voice/`, `voice_en/`, `voice_kr/` | `audio/voice/{lang}/{charId}/{cn_nn}.mp3` |
 | Fonts: Bender Regular and Light, Novecento Wide | TimWangZi/The-font-of-Arknights | `public/fonts/*.{otf,ttf,woff2}`, `public/fonts/fonts.css` |
+
+The operator avatars, operator portraits, skill icons and the enemy/token icons (the `yuanyan` rows) all come from
+**yuanyan3060/ArknightsGameResource** — the one dump GitCode mirrors. `--asset-source=gitcode` fetches them through
+`https://raw.gitcode.com/gh_mirrors/ar/ArknightsGameResource/raw/main/…` when direct GitHub is blocked and the gh-proxy
+prefix is not wanted (`docs/DEVELOPMENT.md` §9, "Mirror selection"). It is a read-only anonymous mirror; the file is
+byte-identical to the GitHub raw copy (`avatar/char_377_gdglow.png`, 58,987 B, checked 2026-10-08).
 
 The `stem` of a Spine model is the upstream file name. Two examples: `char_107_liskam` has the stem `char_107_liskarm`, and `enemy_9032_aclionk` uses `enemy_1559_vtlionk`. The skel and atlas of a model always share one stem. pixi-spine locates the atlas by swapping the extension, so this matters.
 
@@ -368,7 +378,13 @@ Other renderer rules from research 07 §5.4–5.5:
   - Without a Spine (and without its local-client model, "Token models from the local client"), draw the avatar sprite with a bob tween.
   - `spineVariant` names the skin-variant model that stands in for the missing default model.
 - **Enemies without a spine** (for example `enemy_9016_acstmr`): draw `icon` in a diamond. Enemies with no manifest entry at all (`enemy_5601_entlec` 心烛): draw a procedural glyph.
-- **Battle effects** (projectiles per kind, hit sparks and slashes, skill bursts and auras, 蕾缪安's lock reticles and shells, 回环射手 boomerangs — DESIGN §17.3) are procedural: the FX atlas is drawn at run time (`public/js/render/textures.js`), so they need no downloaded or local art. The local client does have battle effect art — `battle/[pack]common.ab` holds per-weapon projectile sprites (`projectile_arrow(_new)`, `projectile_crossbow(_new)`, `projectile_yuki`, `img_fx_light_01/02`, `trail_11`), and the per-character `battle/prefabs/effects/*.ab` are particle systems whose textures usually live in other bundles (the S2 医疗单元 bundle `battle/prefabs/effects/kalts2.ab` carries its own, extractable with UnityPy — MATCHMAKING §35.9) — but none of it is extracted: the sim's `arrow` also covers gun snipers, and friends joining a game may not have the local art.
+- **Battle effects** (projectiles per kind, hit sparks and slashes, skill bursts and auras, 蕾缪安's lock reticles and shells, 回环射手 boomerangs — DESIGN §17.3) have **two tiers**, resolved at render time per client:
+  - The **procedural tier** is drawn at run time (`public/js/render/textures.js`, the FX atlas) and is always available — the sim's `arrow` covers gun snipers too, so it is not tied to any one client. Every kind has one (`FX_KINDS` `a` + `c` + `r`, `render/fx/kinds.js`). It is the guaranteed fallback: no download, no local client, no network.
+  - The **local-art tier** is optional: a kind's `local` spec (`{ group, layers: [{ name, scale? }], tint?, dur? }`) names pictures of the local client (`data/local-assets.json`, group + name). `render/fx/localart.js` resolves them and `render/fx/simfx.js` draws them as ground fields **instead of** the procedural archetype only when the client has every layer listed AND loaded; otherwise — art not extracted, manifest/join not loaded yet, a load failure — the procedural tier is drawn. A listed layer still loading is prefetched, so a later event uses the official art; a layer the manifest does not list is not fetched at all. Never a blank frame, and the fallback never depends on the network. `settings.localFx === false` opts the official tier off like a quality tier (on by default; no mandatory user setting).
+  - The colour order is the project's usual **local → mirror → neutral** (assets.js): the official picture first, then the procedural drawing (fx kinds have no mirrored web copy). This is the same per-client graceful degradation as the models and emotes (owner's analogy: Minecraft shader settings) — a friend joining without the local art sees the procedural effect.
+  - **Applied:** `battle/prefabs/effects/kalts2.ab` carries its own Texture2D (38, extractable with UnityPy — `tools/local-extract/extract.py` job `fx/kalts2`, MATCHMAKING §35.9), so `FX_KINDS.kalts2Heal` / `kalts2Damage` prefer them (green tint `0x1c8f09` for the heal, red `0xdc2828` for the damage — the official material tints in `kalts2_skill_02_range_heal_01` / `_range_damage_01`), with their procedural ring / explosion as the fallback. The 驭械术师 浮游单元 (the funnel `drone` pod, `PROJ.drone`) legitimately **stays procedural**: its textures live in unresolvable external CABs and no standalone sprite/spine ships in the client (`render/textures.js` `drone`), so there is nothing to extract.
+  - **Adding a new effect:** write/keep its procedural archetype first (always present), then, only if official art is obtainable, add a `local` spec naming the extracted layers — never a `local`-only kind.
+  - The S1 医疗单元 bundle `kalts2_skill_02_*` also has `indicator_*` / `start_*` / `trail_*` / `buff_01` prefabs; their textures are in the same `fx/kalts2` group for future kinds.
 - **Spine memory** (`public/js/assets.js`): skeletons are refcounted in an LRU with an idle budget (`SPINE_IDLE_BYTES`, 48 MB) and a 15 s grace; eviction runs `SPINE_EVICT_DELAY_MS` (1 s) after a release, the "no scene on screen" budget (0 bytes) applies after `SPINE_QUIET_DELAY_MS` (3 s) with nothing referenced, and a skeleton whose unload is still in flight is never handed out again — a new load waits for the unload (DESIGN §17.1; it used to leave operators invisible after a battle → prep switch).
 
 ### Looking up `data/chess.json` asset ids
@@ -413,7 +429,7 @@ The 2026-09-27 verification pass also checked:
   .venv-extract\Scripts\python.exe tools\local-extract\extract.py ^
     --game "D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\Arknights_Data\StreamingAssets\AB\Windows" [--only <subdir 前缀>]
   ```
-  （自动棋地图 / 自动棋 UI 切图 / 表情 / 说明页 / 投射物 / 若干 Spine / 3D 棋盘网格·材质·特效 / 派生 PBR / WebP / 敌人 Spine；写出到 `public/assets/local/**` 并更新 `data/local-assets.json`。）
+  （自动棋地图 / 自动棋 UI 切图 / 表情 / 说明页 / 投射物 / 战斗特效贴图（`fx/kalts2`，卡尔茨 S2）/ 若干 Spine / 3D 棋盘网格·材质·特效 / 派生 PBR / WebP / 敌人 Spine；写出到 `public/assets/local/**` 并更新 `data/local-assets.json`。）
   相关：`tools/local-extract/enemy_scales.py` 读模型缩放；`node tools/setup.mjs --local` 把本地抽取一并接入。
 - **语音**：本地客户端每个干员一个包 `audio/sound_beta_2/<lang>/<干员>.ab`（`<lang>`＝客户端默认语言 `voice`，另有 `voice_cn` / `voice_en`），内含该干员所有语音片段（`CN_019`…，**编号是 CN 行号，与语言无关**）。用 `tools/local-extract/extract-voice.py` 按清单把要的片段抽出来转 mp3 写回（**无需改清单**）：
   ```
@@ -427,6 +443,7 @@ The 2026-09-27 verification pass also checked:
   node tools\fetch-assets.mjs --asset-source=mirror
   ```
   2026-10-06 用它补齐了 BGM/音效。（`--asset-source` 也可用 `SP_ASSET_SOURCE` 环境变量；不带 flag 时先试原始源、失败再提示。）
+- ✅ **GitCode 镜像（yuanyan 图标库）**：`yuanyan3060/ArknightsGameResource`（干员头像/立绘、技能图标、敌人/召唤物图标）在 GitCode 有只读镜像，免登录。直连 GitHub 被墙时用 **`--asset-source=gitcode`**（等价前缀 `https://raw.gitcode.com/gh_mirrors/ar/ArknightsGameResource/raw/main/`）即可下到这批图标；其余源（fexli 脊柱 / AA2 / Ark-Models）GitCode 没有镜像，仍走直连 + jsDelivr。已验证镜像文件与 GitHub 逐字节一致（如 `avatar/char_377_gdglow.png`，58,987 B）。
 
 ## Licensing and credits
 
@@ -438,7 +455,7 @@ The project's code is GPL-3.0-or-later (`LICENSE`); none of the items below is c
   - Assets will be removed on request from the rights holders.
   - The client must show a credits screen: "Arknights © Hypergryph / Yostar. This is an unofficial fan project; all game assets belong to their owners."
 - **Asset dumps and tools.** Credit to:
-  - [yuanyan3060/ArknightsGameResource](https://github.com/yuanyan3060/ArknightsGameResource)
+  - [yuanyan3060/ArknightsGameResource](https://github.com/yuanyan3060/ArknightsGameResource) (mirrored on GitCode as [gh_mirrors/ar/ArknightsGameResource](https://gitcode.com/gh_mirrors/ar/ArknightsGameResource), used by `--asset-source=gitcode`)
   - [fexli/ArknightsResource](https://github.com/fexli/ArknightsResource) (ArkResourceAutoUpdateBot)
   - [isHarryh/Ark-Models](https://github.com/isHarryh/Ark-Models) (ArkUnpacker). Not for commercial use.
   - [ArknightsAssets/ArknightsAssets2](https://github.com/ArknightsAssets/ArknightsAssets2) (ArknightsStudio)

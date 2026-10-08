@@ -8,6 +8,9 @@ aklz4.py registers a decoder for it. This script pulls the art the web sources l
   - the 6 in-match emoticon themes of 盟约 (activity_table autoChessData.enabledEmoticonThemeIdList; only the
     *_battle sprites, keyed by display_meta_table picId: emoticon/<dir>/<picId>.png, see data/emotes.json)
   - the autochess guidebook pages and battle projectile sprites
+  - the battle-effect textures of the per-operator effect bundle battle/prefabs/effects/kalts2.ab (fx/kalts2: the
+    official S2 医疗单元 burst colours, used by the fx kinds kalts2Heal / kalts2Damage when this manifest lists them;
+    the kind's procedural drawing stays the fallback, docs/ASSETS.md "Battle effects")
   (the emotes and the guidebook pages are on the public mirror too: tools/fetch-assets.mjs downloads them, and the
   client uses these local copies first — GitHub issue #42)
   - the enemy battle Spine models no community dump carries (ENEMY_SPINES: 灼热源石虫 / 炽焰源石虫), from the enemy art
@@ -97,6 +100,11 @@ JOBS = [
     *[(f'ui/emoticon/theme/[uc]{theme}.ab', f'emoticon/{sub}', {'Sprite'}, BATTLE_EMOTE) for theme, sub in EMOTE_THEMES],
     ('arts/guidebookpages/[pack]autochess.ab', 'guide', {'Sprite', 'Texture2D'}),
     ('battle/prefabs/[uc]projectiles.ab', 'projectiles', {'Sprite', 'Texture2D'}),
+    # official battle-effect textures the web sources lack (owner rule: every fx kind has a procedural tier and an
+    # optional local-art tier, docs/ASSETS.md "Battle effects"): the per-operator effect bundles carry their own
+    # Texture2D (the funnel drone's live in unresolvable external CABs and stay procedural). Read by a kind's
+    # `local` spec (public/js/render/fx/kinds.js); the client draws them only when this manifest lists them.
+    ('battle/prefabs/effects/kalts2.ab', 'fx/kalts2', {'Texture2D'}),
     # official module (uniequip) type icons, keyed by lower-case type name (e.g. 'mar-x')
     ('spritepack/ui_equip_type_hub_h2_0.ab', 'module', {'Sprite'}),
     *[(rel, f'mesh/{sub}', {'Mesh', 'GameObject', 'Material', 'Texture2D'}) for rel, sub in MESH_BUNDLES],

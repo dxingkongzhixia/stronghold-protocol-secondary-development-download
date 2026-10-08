@@ -4,6 +4,17 @@
  * Sim fx kind → visual archetype (`a`), colour (`c`) and defaults (`r` radius, `dur` game s, `tex`, `smoke`).
  * Covers every kind emitted by server/sim (Battle, kits, tokens, enemies, bosses, devices, bonds, items); unknown
  * kinds fall back to a keyword guess, then to a generic sparkle (fxSpec).
+ *
+ * Two tiers per kind (docs/ASSETS.md "Battle effects"):
+ *   • the procedural tier (`a` + `c` + `r`) is drawn at run time (render/textures.js) and is ALWAYS available — no
+ *     download, no local client, no network; it is the guaranteed fallback;
+ *   • an OPTIONAL `local` tier points at official art the local client has (`data/local-assets.json`, group + name) —
+ *     e.g. the kalts2 S2 burst textures. At render time it is used only when the client has that art listed AND
+ *     loaded; otherwise the procedural tier is drawn (render/fx/localart.js). A connected client without the art
+ *     simply sees the procedural version: the same effect is never a blank frame (Minecraft-shader-style graceful
+ *     degradation).
+ * `local`: `{ group, layers: [{ name, scale?, rot? }], tint?, dur? }`; `tint` defaults to the kind's `c` when a
+ * layer has none. Add a new effect as procedural first, then opt into local art (docs/DEVELOPMENT.md).
  */
 export const FX_KINDS = Object.freeze({
   // blasts
@@ -26,8 +37,17 @@ export const FX_KINDS = Object.freeze({
   heal: { a: 'heal', c: 0x62f08a }, healAoe: { a: 'healAoe', c: 0x62f08a, r: 1.5 }, bandage: { a: 'heal', c: 0x62f08a }, blessing: { a: 'healAoe', c: 0xfff0a8 },
   // 凯尔希·思衡托 S2 保护性拒止's 医疗单元 burst, one effect per affected unit (kit chess_char_1052_kalts2-kalts2.js):
   // GREEN on every ally healed and RED on every enemy struck — the official colours, read from the client's own
-  // material tints in battle/prefabs/effects/kalts2.ab (kalts2_skill_02_range_heal_01 / _range_damage_01)
-  kalts2Heal: { a: 'healAoe', c: 0x62f08a, r: 1.5 }, kalts2Damage: { a: 'blast', c: 0xe03232, r: 1.5 },
+  // material tints in battle/prefabs/effects/kalts2.ab (kalts2_skill_02_range_heal_01 / _range_damage_01). When the
+  // client's local extraction lists the S2 bundle (group fx/kalts2) the official field/ray textures are drawn instead,
+  // tinted the same green / red; without it the procedural ring / explosion below is drawn (docs/ASSETS.md).
+  kalts2Heal: {
+    a: 'healAoe', c: 0x62f08a, r: 1.5,
+    local: { group: 'fx/kalts2', tint: 0x1c8f09, layers: [{ name: 'flow_332_3', scale: 1.5 }, { name: 'star_118_7', scale: 1.2 }] },
+  },
+  kalts2Damage: {
+    a: 'blast', c: 0xe03232, r: 1.5,
+    local: { group: 'fx/kalts2', tint: 0xdc2828, layers: [{ name: 'flow_331_2', scale: 1.5 }, { name: 'star_118_7', scale: 1.2 }] },
+  },
   cleanse: { a: 'healAoe', c: 0xdfffff, r: 0.9 }, revive: { a: 'summon', c: 0xfff0a8 }, reborn: { a: 'summon', c: 0xffd45a }, hpShare: { a: 'heal', c: 0xff9aa6 },
   spGift: { a: 'sp', c: 0x6fd3ff }, spGain: { a: 'sp', c: 0x6fd3ff }, reload: { a: 'sp', c: 0xffe066 },
   shield: { a: 'shield', c: 0xdfe8ff }, catShield: { a: 'shield', c: 0xffe0a8 }, saltWard: { a: 'shield', c: 0xbfeeff }, shell: { a: 'shield', c: 0xc8b890 },

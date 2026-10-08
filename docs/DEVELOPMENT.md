@@ -262,6 +262,7 @@ Refreshing art is now optional — fetch/extract only the files that changed ups
 npm run assets                                      # optional refresh: vendor + fetch-assets
 node tools/fetch-assets.mjs                          # download from the public mirrors per docs/research/07-assets.json
 node tools/fetch-assets.mjs --asset-source=mirror    # prefer the gh-proxy mirror when direct GitHub is blocked
+node tools/fetch-assets.mjs --asset-source=gitcode   # prefer the GitCode raw mirror of the yuanyan icon dump (avatars/portraits/skill/enemy icons)
 node tools/setup.mjs                                 # end-user setup (checks env, downloads assets, offers local extract)
 
 # local-client extraction (optional, from an installed game client; needs .venv-extract / Python 3.12)
@@ -272,14 +273,34 @@ node tools/setup.mjs                                 # end-user setup (checks en
 
 - `tools/fetch-assets.mjs` + `tools/assets/**` write `public/assets/**`, `public/fonts/**` and the manifest
   **`data/assets.json`**. It has a **shrink guard**: a new manifest that would drop entries is refused unless
-  `--allow-shrink`/`--prune` is passed. Mirror selection: `--asset-source=direct|mirror`, `SP_ASSET_SOURCE`,
-  `SP_GITHUB_PROXY`.
+  `--allow-shrink`/`--prune` is passed. **Mirror selection:** `--asset-source=direct|mirror|gitcode` (also
+  `SP_ASSET_SOURCE`), `SP_GITHUB_PROXY` for the prefix proxy. `direct` (default) = raw GitHub, then jsDelivr; `mirror` =
+  the `SP_GITHUB_PROXY` prefix first (default `https://gh-proxy.com/`); `gitcode` = the read-only GitCode raw mirror of
+  `yuanyan3060/ArknightsGameResource` first (the avatars/portraits/skill/enemy icons; no other repo of ours is mirrored
+  there, so Spine/AA2 fall back to direct + jsDelivr). All three are anonymous and never look up the public IP.
 - `tools/local-extract/extract.py` writes the per-machine **`public/assets/local/**`** and **`data/local-assets.json`**
   (what only a real game client has: the 3D board, some UI icons, several enemy/caller models). The game runs without
   it, with documented fallbacks (`docs/DEPLOY.md` §6). Spell/skill/voice art for new operators is usually added to
   `docs/research/07-assets.json` first so the mirror fetch picks it up.
 - `data/assets.json` is a generated file but is **committed**; when a change updates it, commit it together with the
   change (the packer checks it).
+
+### 9.1 Battle-effect art: a procedural tier + an optional local tier
+
+Every battle fx kind has **two tiers**, resolved at render time per client (`docs/ASSETS.md` "Battle effects"):
+
+1. the **procedural tier** (`FX_KINDS` `a` + `c` + `r`, `public/js/render/fx/kinds.js`) is drawn at run time and is
+   mandatory — every kind must have one, and it is what a client without any local art sees;
+2. the **optional local-art tier**: a kind's `local` spec (`{ group, layers: [{ name, scale? }], tint?, dur? }`) names
+   official pictures in `data/local-assets.json`. `public/js/render/fx/localart.js` resolves them (per client) and
+   `public/js/render/fx/simfx.js` draws them instead of the procedural archetype only when every layer is listed AND
+   loaded; a listed layer still loading is prefetched, and the fallback never touches the network — no blank frame.
+
+To add an effect the right way: write the procedural archetype first (always), then, only if the official art is
+obtainable, extract it (`tools/local-extract/extract.py`, e.g. the `fx/kalts2` job) and add the `local` layers. A
+`local`-only kind is a bug: a join without the art would show nothing. The kalts2 S2 burst is the worked example
+(`kalts2Heal` / `kalts2Damage`); the 驭械术师 浮游单元 (`PROJ.drone`) stays procedural because its textures live in
+unresolvable external CABs. `settings.localFx === false` opts the official tier off like a quality tier.
 
 ---
 

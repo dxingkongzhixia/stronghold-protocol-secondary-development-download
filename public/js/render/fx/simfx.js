@@ -3,6 +3,7 @@
 
 import { SHOT_HEIGHT, bodyZ } from './camera.js';
 import { fxSpec, tilesAround, wallTiles } from './kinds.js';
+import { fxLocalSource } from './localart.js';
 import { clamp } from './limits.js';
 
 /**
@@ -45,6 +46,30 @@ export class FxSim {
   }
 
   /**
+   * The optional official-art tier of a kind (`spec.local`): draw every layer as a ground field with the local-client
+   * picture and return true when the client has them all loaded; else prefetch and return false so `simFx` draws the
+   * procedural tier (docs/ASSETS.md "Battle effects"; render/fx/localart.js). `ctx.settings.localFx === false` opts
+   * out (a host may turn the official art off like a quality tier; on by default).
+   */
+  _fxLocal(spec, at, r, col, dur) {
+    if (this.ctx.settings && this.ctx.settings.localFx === false) return false;
+    const src = fxLocalSource(this.ctx.assets, spec.local);
+    if (!src) return false;
+    const d = Number.isFinite(dur) && dur > 0 ? dur : (Number.isFinite(spec.local && spec.local.dur) ? spec.local.dur : 0.7);
+    for (const ly of src) {
+      this.ring(at.x, at.y, at.z, 0, r * ly.scale, ly.tint ?? col, d, this._fxLocalTex(ly.url, ly.image));
+    }
+    return true;
+  }
+
+  /** PIXI texture of a loaded local-client picture (one per URL, created on first use). */
+  _fxLocalTex(url, image) {
+    let t = this.localTex.get(url);
+    if (!t) { t = this.P.Texture.from(image); this.localTex.set(url, t); }
+    return t;
+  }
+
+  /**
    * b.ev 'fx': every kind the sim / content emits has a visual (FX_KINDS archetypes: blast, shell, zone, telegraph,
    * heal, sp, shield, shatter, summon, vanish, blink, move, wave, mark, reticle, buff, lift, sleep, crit, dodge,
    * counter, dp, coin, crate, down, beam, bolt, strike, volley, pillar, lp, chill, element, flame), except kinds whose
@@ -70,6 +95,9 @@ export class FxSim {
     const chest = (v, out = this._p) => (v ? this._chest(v, out) : cam.project(at.x, at.y, at.z + 0.5, out));
     const p = chest(at.v);
     const s = p.s;
+    // optional official-art tier (spec.local, docs/ASSETS.md): drawn when the client has every layer loaded, else the
+    // procedural archetype below (never a blank frame, never a network dependency in the fallback)
+    if (spec.local && this._fxLocal(spec, at, r, col, dur)) return;
     switch (spec.a) {
       case 'blast': {
         if (r >= 12) { this.flashScreen(col, 0.5); break; }

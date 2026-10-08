@@ -1009,3 +1009,12 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **测试**：`test/content/chess_kalts2.test.js`（S2 用例新增：角峰拿到 `kalts2Heal`、1.5 内的假人拿到 `kalts2Damage`，后续打飞机时飞机也拿到 `kalts2Damage`）；`test/render/fx-kalts2.test.js`（两个 kind 的 archetype / 颜色 / 半径，以及 `FxSystem` 真的会绘制）。
 - **golden 归属证明**：本改动只进 fx 事件直方图。在**干净工作树**（HEAD ＋ 本改动）重算：只回退本改动 → **零差异**；恢复后恰为 `roster` / `bonds` / `fields` 的 fx 计数差（`aoe` / `healAoe` 减少、`kalts2Damage` / `kalts2Heal` 出现）；`matches` / `diy` / `standins` 不变。全部归因于本改动。
 - **诚实保留**：官方 S2 的 3D 粒子 prefab / 贴图**未导出使用**，视觉是**程序化近似**，只保证三个官方可读特征：治疗=绿、伤害=红、各自落在**实际受益单位**上。
+
+### 35.10 战斗特效的「双层」规则：程序化兜底 + 可选的本地官方贴图（owner 规则，2026-10-08）
+
+- **规则**：每个 fx kind **两层** —— **程序化层**（必选、运行时绘制、始终可用、离线、无本地客户端也能画，是保底）＋ **可选本地层**（客户端本地提取的官方贴图；`data/local-assets.json` 列出**且已加载**才用）。**按客户端**解析：没有本地素材的连接端看到程序化版本 —— owner 的类比「Minecraft 光影设置：按能力优雅降级」。绝不出现空白/黑帧，兜底也绝不依赖网络。顺序沿用项目既有的**本地 → 镜像 → 中性**（特效没有镜像 raster 副本，故为 本地 → 程序化）。
+- **机制**：`public/js/render/fx/kinds.js` 的 `local` 描述（`{ group, layers: [{ name, scale? }], tint?, dur? }`）→ `public/js/render/fx/localart.js` 解析（`fxLocalLayers` / `fxLocalSource`，复用 `assets.js` 的 `localUrl` / `imageNow` / `image`；列出未加载的层做预取，未列出的层**不联网**）→ `public/js/render/fx/simfx.js` 在本地层齐全且已加载时绘制为地面 field 并**跳过**程序化 archetype，否则走程序化。`render/fx/rings.js` 的 `ring()` 现可接收 PIXI 纹理（按纹理自身尺寸缩放）。`settings.localFx === false` 可像画质档一样关闭本地层（默认开，无强制用户设置）。
+- **kalts2 落地**：`tools/local-extract/extract.py` 新增 `battle/prefabs/effects/kalts2.ab → fx/kalts2` 任务（38 张 Texture2D）；`kalts2Heal` 用官方 `flow_332_3` + `star_118_7`，官方绿 tint `0x1c8f09`；`kalts2Damage` 用官方 `flow_331_2` + `star_118_7`，官方红 tint `0xdc2828`；程序化 ring / explosion 为兜底。这**扩展**了 §35.9（不再「一律不引入官方贴图」，而是按规则做成**可选本地层**；没有本地素材的客户端 / 好友 join 仍看程序化近似）。
+- **契约（`PROJ.drone` 浮游单元）保持程序化**：其贴图位于无法解析的外部 CAB，客户端也没有独立 sprite/spine，**无物可抽**（`render/textures.js` `drone`），如实保留。
+- **测试**：`test/render/fx-local.test.js`（缺本地素材→程序化且不崩、有→本地层取代程序化、列出未加载→本次程序化/下次本地、`localFx:false` 关闭、kalts2 各层在 `fx/kalts2` 组且落盘）；`test/local-extract.test.js`（新增 `fx/kalts2` 任务断言）。
+- **诚实保留**：官方 S2 效果本体是 3D 粒子 + 网格 core（绿/红为**网格材质** color，无独立主贴图），本层用**同一 prefab 引用的官方 flow/ray 贴图**做地面 field 近似，**非逐粒子还原**；`star_118_7` 自身含红/绿两条光线，两层均再套官方 tint；提取依赖各机本地客户端，manifest 为 per-machine（`data/local-assets.json` 不入 git）。
