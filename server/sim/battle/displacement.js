@@ -194,6 +194,7 @@ export class BattleDisplacement {
     if (moved > 0) {
       this._unblock(e);
       // 失衡 ends the attack clip it stood for (PRTS 状态机: the states are exclusive — UNBALANCE, then DEFAULT → MOVE)
+      this._cutAttackStand(e);
       e.atkStandUntil = -Infinity;
       if (e.route) e.route.pts = null;
       // a push / pull marks the fx `keepFacing` (the victim retains its pre-hit facing); a raw `displace` stays unmarked.
