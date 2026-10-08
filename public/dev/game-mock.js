@@ -23,6 +23,9 @@ import { PHASE, GEO } from '/shared/constants.js';
 const params = new URLSearchParams(location.search);
 const SHOT = params.get('shot') === '1';
 const VARIANTS = new Set((params.get('variant') || '').split(',').filter(Boolean));
+// the match's stage (data/stages.json id): ?stage=act1autochess_m01 boards a stage whose own devices (crates / turrets)
+// stand on the prep field — the default act2autochess_m01 keeps its blowers and turrets off it (rows 6 / 8 / 13)
+const STAGE_ID = params.get('stage') || 'act2autochess_m01';
 
 // ---- deterministic rng ----------------------------------------------------------------------------------
 let seed = 20260927;
@@ -119,7 +122,7 @@ function pushPublic() {
 function buildState() {
   uidSeq = 100;
   seed = 20260927;
-  const stage = data.lookup('stages', 'act2autochess_m01');
+  const stage = data.lookup('stages', STAGE_ID) || data.lookup('stages', 'act2autochess_m01');
   const melee = stage.deployTiles.normal.melee.slice();
   const ranged = stage.deployTiles.normal.rangedOnly.slice();
   const bonds = data.list('bonds');
@@ -206,7 +209,7 @@ function buildState() {
 
   const pub = {
     phase: PHASE.PREP, round: 6, lastRound: 14, bossRound: 14, hiddenRound: 15, deadline: Date.now() + 74000, serverNow: Date.now(), modeId: 'mode_multi_hard', difficulty: 'HARD',
-    stageId: 'act2autochess_m01', factions: ['FLY', 'TIMES', 'SPECIAL'], disabledBonds: [...disabled], bannedChess: banned, bossId: 'boss_5',
+    stageId: STAGE_ID, factions: ['FLY', 'TIMES', 'SPECIAL'], disabledBonds: [...disabled], bannedChess: banned, bossId: 'boss_5',
     hiddenBossId: 'boss_8', teamLp: null, bossHp: null, draft: null, sp: null, players, fields: [],
   };
   if (VARIANTS.has('boss') || VARIANTS.has('bossR')) pub.round = pub.bossRound;
@@ -474,6 +477,13 @@ function startCombat(phase) {
   }
   // the 联防 field fights on the round's own stage, opened to both halves (server unite.js _uniteOpts; GitHub #41's
   // escaped map is not used — owner decision)
+  // ?variant=devices — the stage's crates inside the rect are device UNITS (kind 'device', defId = the device key), as in the
+  // real sim: absent from the field meta (a battle shown from its start), they come in with 'spawn' events once it steps;
+  // __MOCK__.breakDevice(i) destroys one (hp 0 for a second in the snapshots, then gone)
+  const deviceUnits = !VARIANTS.has('devices') ? [] : (S.stage.devices || [])
+    .filter((d) => d.role === 'crate' && (typeof d.active === 'boolean' ? d.active : !d.hidden)
+      && d.pos[0] >= rect.r0 && d.pos[0] <= rect.r1 && d.pos[1] >= rect.c0 && d.pos[1] <= rect.c1)
+    .map((d) => ({ id: id++, kind: 'device', side: 'ally', ownerId: null, defId: d.key, name: d.name, x: d.pos[1], y: d.pos[0], facing: 1, maxHp: 100, hp: 100, deadAt: null }));
   const field = { fieldId, kind, rect, stageId: pub.stageId, units: units.map((u) => ({ ...u })) };
   store.patch('match', { field });
   const allyState = units.map((u) => ({ ...u, hp: u.maxHp * (0.55 + rnd() * 0.45), sp: rnd() * 20, spMax: 20 }));
@@ -490,6 +500,7 @@ function startCombat(phase) {
     if (pausedSince != null) { pausedFor += performance.now() - pausedSince; pausedSince = null; }
     const t = (performance.now() - t0 - pausedFor) / 1000 + 4;
     const ev = [];
+    for (const d of deviceUnits) if (!spawned.has(d.id)) { spawned.add(d.id); ev.push(['spawn', { ...d }]); }
     for (const e of enemies) {
       if (e.dead || t < e.spawnAt) continue;
       if (!spawned.has(e.id)) { spawned.add(e.id); ev.push(['spawn', { ...e }]); }
@@ -509,6 +520,7 @@ function startCombat(phase) {
     if (rnd() < 0.15) { const a = pick(allyState); a.hp = Math.min(a.maxHp, a.hp + 180); ev.push(['heal', a.id, 180]); }
     const snapUnits = [
       ...allyState.map((a) => [a.id, a.x, a.y, a.hp, a.maxHp, a.sp, a.spMax, a.sp > 15 ? 16 : 0, 2]),
+      ...deviceUnits.filter((d) => d.deadAt == null || t - d.deadAt < 1).map((d) => [d.id, d.x, d.y, Math.max(0, d.hp), d.maxHp, 0, 0, 0, 2]),
       ...enemies.filter((e) => !e.dead && t >= e.spawnAt).map((e) => [e.id, e.x, e.y, Math.max(1, e.hp), e.maxHp, 0, 0, e.y === 5 ? 512 : 0, e.dir ? 1 : 2]),
     ];
     // wire frames exactly like server/match/fields.js: `t` is the frame type, game time travels as `gt`; b.ev first
@@ -518,7 +530,13 @@ function startCombat(phase) {
     net._emit('b.snap', snap);
   };
   const e2boss = (e) => !!e.boss;
-  S.battle = { timer: setInterval(tick, 50), fieldRef };
+  S.battle = { timer: setInterval(tick, 50), fieldRef, devices: deviceUnits, hurtDevice: (i = 0, dmg = 100) => {
+    const d = deviceUnits[i];
+    if (!d || d.deadAt != null) return false;
+    d.hp = Math.max(0, d.hp - dmg);
+    if (d.hp <= 0) { d.deadAt = (performance.now() - t0 - pausedFor) / 1000 + 4; net._emit('b.ev', { t: 'b.ev', fieldId: fieldRef.id, gt: d.deadAt, ev: [['die', d.id]] }); }
+    return true;
+  } };
   setTimeout(tick, 60);
 }
 
@@ -791,6 +809,7 @@ async function boot() {
   render(html`<div class="app-root"><div class="app-bg" aria-hidden="true"></div><${GameScreen} /><${ConnectionBanner} /><${ToastHost} /><${UiHosts} /><${GuideHost} /></div>`, document.getElementById('app'));
   renderBar();
   store.subscribe(() => renderBar());
-  globalThis.__MOCK__ = { store, S: () => S, setPhase, mutate: (fn) => { fn(S); refreshPrivate(); }, pushPublic: () => pushPublic() };
+  globalThis.__MOCK__ = { store, S: () => S, setPhase, mutate: (fn) => { fn(S); refreshPrivate(); }, pushPublic: () => pushPublic(),
+    hurtDevice: (i, dmg) => S?.battle?.hurtDevice?.(i, dmg) ?? false };
 }
 boot().catch((err) => console.error('[mock] boot failed', err));
