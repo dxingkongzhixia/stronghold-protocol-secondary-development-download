@@ -516,8 +516,8 @@
         "enemy_9009_acfort": [1,1,0,3269,41472]
       },
       "hooks": [1,15,5100,727,727,1836,1843,776,89,89,24,23,75,21619,105,6,86,0,1,88,14,5,11],
-      "events": {"atk":838,"bounty":6,"deploy":15,"die":89,"dmg":1841,"engage":11,"fx":89,"heal":393,"layer":14,"skill":47,"spawn":98,"status":143},
-      "fx": {"aoe":22,"beam":2,"buff":1,"burst":5,"dodge":11,"dp":3,"garrison":8,"healAoe":22,"phase":1,"shield":5,"sp":1,"substitute":1,"summon":1,"swap":1,"takeoff":4,"zone":1},
+      "events": {"atk":838,"bounty":6,"deploy":15,"die":89,"dmg":1841,"engage":11,"fx":95,"heal":393,"layer":14,"skill":47,"spawn":98,"status":143},
+      "fx": {"beam":2,"buff":1,"burst":5,"dodge":11,"dp":3,"garrison":8,"kalts2Damage":47,"kalts2Heal":3,"phase":1,"shield":5,"sp":1,"substitute":1,"summon":1,"swap":1,"takeoff":4,"zone":1},
       "snaps": "1d0bc6a0 6b72e8d3 d2514e75 77876cd9 fc8b65bf e1238f62 77421c3f 221591c0 111af0dd bf88836c 8de4f235 fb679b9b ad003961 9136b8a9 dcd1b7ae 704ef2a0 75b9f772"
     },
     "roster-009": {
@@ -821,8 +821,40 @@
         "enemy_2008_flking": [1,0,1,20841,22960]
       },
       "hooks": [1,16,5597,570,570,1244,1297,2572,103,112,51,51,72,16770,271,31,98,6,1,103,12,0,0],
-      "events": {"atk":702,"bounty":5,"deploy":13,"die":106,"dmg":1233,"engage":10,"fx":486,"heal":105,"layer":12,"leak":6,"skill":102,"spawn":113,"status":625},
-      "fx": {"aoe":39,"bandage":3,"charge":26,"counter":32,"crit":31,"dilemma":1,"displace":4,"explode":29,"garrison":8,"garrisonGrant":1,"healAoe":39,"jungleSoul":1,"mote":73,"palsy":2,"quadShot":2,"redistribute":15,"reweave":2,"ripple":3,"sandChains":1,"sandChainsCharged":2,"sentry":1,"sermon":1,"shadowWeave":27,"shield":17,"slash":18,"spGift":32,"stealth":6,"summon":1,"takeoff":1,"truesilver":1,"zone":67},
+      "events": {"atk":702,"bounty":5,"deploy":13,"die":106,"dmg":1233,"engage":10,"fx":605,"heal":105,"layer":12,"leak":6,"skill":102,"spawn":113,"status":625},
+      "fx": {
+        "bandage": 3,
+        "charge": 26,
+        "counter": 32,
+        "crit": 31,
+        "dilemma": 1,
+        "displace": 4,
+        "explode": 29,
+        "garrison": 8,
+        "garrisonGrant": 1,
+        "jungleSoul": 1,
+        "kalts2Damage": 138,
+        "kalts2Heal": 59,
+        "mote": 73,
+        "palsy": 2,
+        "quadShot": 2,
+        "redistribute": 15,
+        "reweave": 2,
+        "ripple": 3,
+        "sandChains": 1,
+        "sandChainsCharged": 2,
+        "sentry": 1,
+        "sermon": 1,
+        "shadowWeave": 27,
+        "shield": 17,
+        "slash": 18,
+        "spGift": 32,
+        "stealth": 6,
+        "summon": 1,
+        "takeoff": 1,
+        "truesilver": 1,
+        "zone": 67
+      },
       "snaps": "ad52655e 67f0a2b2 d727f45f 993193a1 f639a039 000af044 87bf4707 f9fe7ac9 db7dba3f 7a3e38ea b74305ca 61f23896 0a6c6207 00f36d11 8d5b1275 4c3979c2 6a031e1b b408755f c703f6bc"
     },
     "roster-013": {

@@ -50,7 +50,11 @@
 //   selector has no profession mask; no 孤立 one) is healed for attack@heal_scale × ATK; with no enemy to select, at the
 //   lowest-HP-ratio injured ally of the y-11 — heal first, then the damage, no 停顿. The shot flies at the engine's orb speed
 //   (10 tiles/s; the official 12) [ASSUMED] and fizzles when its enemy dies on the way [ASSUMED]. "可以随时停止技能": the
-//   automatic battle never stops it.
+//   automatic battle never stops it. The 医疗单元's burst draws the OFFICIAL colours (client
+//   battle/prefabs/effects/kalts2.ab: the red kalts2_skill_02_range_damage_01 and the green kalts2_skill_02_range_heal_01):
+//   one red `kalts2Damage` burst on every enemy actually struck and one green `kalts2Heal` pulse on every ally actually
+//   healed (client render/fx/kinds.js) — the old `aoe` / `healAoe` pair both landed on the impact point and read as one
+//   generic orange + green blob, so the heal and the damage could not be told apart.
 // - S3 破梏重生 (MANUAL, data DEFAULT, 35 s): ATK +atk, base attack time base_attack_time (a flat −1.55 s on her 2.85 s), one
 //   more heal target (2). "立刻获得战术锚点": one anchor in stock (content/tokens.js releaseSkillSummon — the placed piece
 //   deploys on its tile if it is off the field and ready). With her anchor standing (one deployed while she stood:
@@ -141,15 +145,21 @@ function s2Burst(battle, unit, target, attackId, b2) {
   const hurt = () => {
     for (const e of battle.foesInRadius(x, y, S2_RADIUS, true)) {
       if (!e.alive) continue;
-      battle.dealDamage(unit, e, { amount: dmgAmt, type: 'true', isAttack: true, isSkill: true, attackId, tags: [TAG_S2] });
+      const dealt = battle.dealDamage(unit, e, { amount: dmgAmt, type: 'true', isAttack: true, isSkill: true, attackId, tags: [TAG_S2] });
       if (onEnemy && slug > 0 && e.alive) battle.applyStatus(e, 'sluggish', { duration: slug, source: unit });
+      // The 医疗单元's damage burst is RED (client battle/prefabs/effects/kalts2.ab, kalts2_skill_02_range_damage_01):
+      // one clear burst on every enemy actually struck, so a wounded unit is unmistakable.
+      if (dealt > 0) battle.fx('kalts2Damage', { x: e.x, y: e.y, id: e.id });
     }
   };
   const mend = () => {
-    for (const a of battle.alliesInRadius(x, y, S2_RADIUS)) if (battle.allySelectable(a, unit)) battle.heal(unit, a, healAmt, { ignoreHealFree: true });
+    for (const a of battle.alliesInRadius(x, y, S2_RADIUS)) if (battle.allySelectable(a, unit)) {
+      const actual = battle.heal(unit, a, healAmt, { ignoreHealFree: true });
+      // …and its heal burst is GREEN (kalts2_skill_02_range_heal_01): one clear pulse on every ally actually healed, so
+      // a healed unit is unmistakable and reads apart from the enemy damage.
+      if (actual > 0) battle.fx('kalts2Heal', { x: a.x, y: a.y, id: a.id });
+    }
   };
-  battle.fx('aoe', { x, y, radius: S2_RADIUS, id: unit.id, skill: TAG_S2 });
-  battle.fx('healAoe', { x, y, radius: S2_RADIUS, id: unit.id });
   if (onEnemy) { hurt(); mend(); } else { mend(); hurt(); }
 }
 

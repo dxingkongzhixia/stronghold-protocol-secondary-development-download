@@ -283,6 +283,10 @@ test('S2 保护性拒止 (MANUAL, data ACTIVE_RANGE on its y-11: an injured ally
     assert.deepEqual(shot.slice(0, 2).map((c) => [c.name, c.target]), [['heal', yak], ['damaged', e]], `${label(f)}: at an ally — heal first, then the enemy within 1.5`);
     approx(shot[0].amount, u.s.atk * sk.bb['attack@heal_scale'], `${label(f)}: heal ${sk.bb['attack@heal_scale'] * 100} % ATK`);
     approx(shot[1].amount, u.s.atk * sk.bb['attack@atk_scale'], `${label(f)}: ${sk.bb['attack@atk_scale'] * 100} % ATK true`);
+    // the S2 burst is visible both ways: a green heal pulse on 角峰 and a red damage burst on the dummy in the 1.5
+    const fx1 = h.eventsOf('fx');
+    assert.ok(fx1.some((ev) => ev[1] === 'kalts2Heal' && ev[4]?.id === yak.id), `${label(f)}: a green heal pulse on 角峰`);
+    assert.ok(fx1.some((ev) => ev[1] === 'kalts2Damage' && ev[4]?.id === e.id), `${label(f)}: a red damage burst on the dummy within the 1.5`);
     assert.equal(h.hooksOf('statusApplied').filter((c) => c.source === u).length, 0, `${label(f)}: no 停顿 from an ally shot`);
     // an enemy inside the y-11 is the target from now on — a flyer
     const fly = h.spawn('enemy_fly', { pos: [9, 7] });   // 1.0 from 角峰
@@ -294,6 +298,7 @@ test('S2 保护性拒止 (MANUAL, data ACTIVE_RANGE on its y-11: an injured ally
     for (const c of burst.filter((x) => x.name === 'damaged')) assert.deepEqual([c.type, c.dmg.isAttack, c.dmg.isSplash, c.dmg.isSkill], ['true', true, false, true], `${label(f)}: 真实普通伤害`);
     assert.ok(burst.some((c) => c.name === 'heal' && c.target === yak), `${label(f)}: then 角峰 (1.0 away) healed`);
     assert.ok(!burst.some((c) => c.target === e), `${label(f)}: the dummy (2.2 from the flyer) untouched`);
+    assert.ok(h.eventsOf('fx').some((ev) => ev[1] === 'kalts2Damage' && ev[4]?.id === fly.id), `${label(f)}: the flyer takes the red damage burst`);
     const slugs = h.hooksOf('statusApplied').filter((c) => c.source === u && c.status === 'sluggish');
     assert.ok(slugs.length >= 1 && slugs.every((c) => c.duration === 5 && c.target === fly), `${label(f)}: 停顿 5 s on the enemy struck`);
     h.runUntil(() => !u.skill.active, 40);

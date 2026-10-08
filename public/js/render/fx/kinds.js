@@ -24,6 +24,10 @@ export const FX_KINDS = Object.freeze({
   coldWind: { a: 'chill', c: 0x9fd4ff },
   // support
   heal: { a: 'heal', c: 0x62f08a }, healAoe: { a: 'healAoe', c: 0x62f08a, r: 1.5 }, bandage: { a: 'heal', c: 0x62f08a }, blessing: { a: 'healAoe', c: 0xfff0a8 },
+  // 凯尔希·思衡托 S2 保护性拒止's 医疗单元 burst, one effect per affected unit (kit chess_char_1052_kalts2-kalts2.js):
+  // GREEN on every ally healed and RED on every enemy struck — the official colours, read from the client's own
+  // material tints in battle/prefabs/effects/kalts2.ab (kalts2_skill_02_range_heal_01 / _range_damage_01)
+  kalts2Heal: { a: 'healAoe', c: 0x62f08a, r: 1.5 }, kalts2Damage: { a: 'blast', c: 0xe03232, r: 1.5 },
   cleanse: { a: 'healAoe', c: 0xdfffff, r: 0.9 }, revive: { a: 'summon', c: 0xfff0a8 }, reborn: { a: 'summon', c: 0xffd45a }, hpShare: { a: 'heal', c: 0xff9aa6 },
   spGift: { a: 'sp', c: 0x6fd3ff }, spGain: { a: 'sp', c: 0x6fd3ff }, reload: { a: 'sp', c: 0xffe066 },
   shield: { a: 'shield', c: 0xdfe8ff }, catShield: { a: 'shield', c: 0xffe0a8 }, saltWard: { a: 'shield', c: 0xbfeeff }, shell: { a: 'shield', c: 0xc8b890 },

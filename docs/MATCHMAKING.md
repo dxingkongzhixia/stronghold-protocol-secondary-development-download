@@ -1000,7 +1000,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **golden 归属证明**：本次只移动**含望的 18 个场次** —— `roster` 015/019/020、`bonds`（arcaneShip / emptyShip / maniShip / yanShip 的 low/high）、`fields`（boss_1/3/5/7-pair、hidden-boss_9-pair）、`matches`（coop4-FUNNY-6、coop2-NORMAL-8-serverrun）；其余零差异 → 全部归因于本改动。
 - **诚实保留**：S3 空场「种子」跟子仍扣 1 发弹药（与官方「消耗等量弹药」一致）；只是不再让「额外 3 枚」上限把清场后的重连也一起挡死（否则补位必然产出死子）。跟子仍是**一枚特殊棋子**（§30.1 的约定），不是原版的弹道单位。
 
-### 35.8 凯尔希·思衡托 S2「保护性拒止」的可见反馈（owner 报告「看不出在治疗还是在打人」，2026-10-08）
+### 35.9 凯尔希·思衡托 S2「保护性拒止」的可见反馈（owner 报告「看不出在治疗还是在打人」，2026-10-08）
 
 - **报告**：S2 的 医疗单元 命中时**看不出**谁被治疗、谁被伤害 —— 技能自己只画了一对通用的 `aoe`（橙）＋ `healAoe`（绿），都落在一个落点上，红绿混在一起。
 - **官方效果（客户端实证）**：CN 客户端 `battle/prefabs/effects/kalts2.ab` 里 S2 的效果 prefab 是**成对**的：`kalts2_skill_02_range_heal_01` / `_range_damage_01`（1.5 范围域）、`..._indicator_heal_01` / `..._indicator_damage_01`（落点指示）、`..._start_heal_01` / `..._start_damage_01`（命中起手）、`..._trail_heal_01` / `..._trail_damage_01`（弹道尾迹），另有 `kalts2_skill_02_buff_01`（治疗 buff）。颜色取自该 bundle 自带的材质 tint：治疗侧 `char_kalts2_43` 的 `_TintColor` ≈ (0.11, 0.56, 0.04)（**绿**）、伤害侧 `char_kalts2_41` / `char_kalts2_42` 的 `_TintColor` ≈ (0.86, 0.15, 0.15) / (0.75, 0.09, 0.09)（**红**）；绿波贴图 `flow_332*`、红波 `flow_331_2`、绿黑医疗单元 `char_kalts2_01` 也都对得上。该 bundle 的 Texture2D 是**可解析**的（本次用 `tools/local-extract` 的 UnityPy 直接导出了 38 张），即官方效果贴图**在本例中可提取**；`docs/ASSETS.md`「per-character effects 的贴图位于其他 bundle」的旧描述至少对 `kalts2.ab` 不准确。
