@@ -3,8 +3,8 @@
 //   · bug提交   — a player bug report: a title + a description + up to BUG_IMAGES_MAX images. The images upload one by
 //                 one to POST /community/api/bug/upload (raw bytes, magic-byte checked), then the report itself goes over
 //                 the WebSocket (`bug.report`, shared/protocol.js) so it carries the session's account / guest identity.
-//   · 公开房间  — a full-screen directory (screens/rooms.js), not a panel here: the lobby's 公开房间 button swaps it in
-//                 for the lobby body (screens/lobby.js).
+//   · 公开房间  — a full-screen directory (screens/rooms.js), not a panel here: the lobby's TOP-BAR 公开房间 button
+//                 (screens/lobby.js, right after the 在线 badge) swaps the screen in for the lobby body.
 // 玩家留言 (the guestbook) is deliberately NOT here: the owner dropped it.
 //
 // Text goes through t(); module-level tables hold msgids (N_).
@@ -16,11 +16,11 @@ import { net } from '../net.js';
 import { t } from '../../../shared/i18n.js';
 import { BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX, BUG_IMAGE_MAX_BYTES, BUG_IMAGE_MIMES } from '../../../shared/constants.js';
 
-/** The panel ids the bar opens. */
-export const COMMUNITY_PANELS = Object.freeze(['changelog', 'bug', 'rooms']);
+/** The panel ids the left community bar opens (公开房间 moved to the top bar, screens/lobby.js). */
+export const COMMUNITY_PANELS = Object.freeze(['changelog', 'bug']);
 
 /**
- * The lobby's left-side community buttons: 更新日志 / bug提交 / 公开房间.
+ * The lobby's left-side community buttons: 更新日志 / bug提交 (公开房间 is a top-bar entry now).
  * @param {{ onOpen: (panel: string) => void }} props
  */
 export function CommunityBar({ onOpen }) {
@@ -30,9 +30,6 @@ export function CommunityBar({ onOpen }) {
     </button>
     <button type="button" class="lobby-tool" onClick=${() => onOpen('bug')}>
       <${Icon} name="edit" /><span>${t('bug提交')}</span>
-    </button>
-    <button type="button" class="lobby-tool" onClick=${() => onOpen('rooms')}>
-      <${Icon} name="users" /><span>${t('公开房间')}</span>
     </button>
   </div>`;
 }

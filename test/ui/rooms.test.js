@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { roomSeats, splitRooms } from '../../public/js/screens/rooms.js';
+import { roomSeats, roomIsFull, splitRooms } from '../../public/js/screens/rooms.js';
 import { MAX_SEATS } from '../../shared/constants.js';
 
 test('roomSeats: exactly MAX_SEATS cells, null for empty / left, the public identity otherwise', () => {
@@ -35,4 +35,37 @@ test('splitRooms: openRooms → 组队中, playRooms → 对局中, missing arra
   assert.deepEqual(splitRooms({ openRooms: open, playRooms: play }), { open, play });
   assert.deepEqual(splitRooms(null), { open: [], play: [] });
   assert.deepEqual(splitRooms({ openRooms: 'x' }), { open: [], play: [] });
+});
+
+// 公开房间 ordering (docs/MATCHMAKING.md §36, owner 2026-10-09): 组队中 lists not-full rooms first, full lobbies last;
+// a full lobby room's action is 观战, decided by the server `full` flag / the seats.
+test('roomIsFull: the server `full` flag, else freeSeats, else the seat cells decide the 观战 action', () => {
+  assert.equal(roomIsFull({ full: true }), true);
+  assert.equal(roomIsFull({ full: false }), false);
+  assert.equal(roomIsFull({ freeSeats: 0 }), true);
+  assert.equal(roomIsFull({ freeSeats: 2 }), false);
+  assert.equal(roomIsFull({ seats: [{ name: 'a' }, { name: 'b' }, { name: 'c' }, { name: 'd' }] }), true, 'all seats taken');
+  assert.equal(roomIsFull({ seats: [{ name: 'a' }, null, null, null] }), false, 'a free seat');
+  assert.equal(roomIsFull(null), false, 'no room is never full');
+});
+
+test('splitRooms: 组队中 is not-full first (humans desc), a full lobby sinks to the bottom', () => {
+  const data = {
+    openRooms: [
+      { code: 'FULL', full: true, humans: 4 },
+      { code: 'B', full: false, humans: 2 },
+      { code: 'A', full: false, humans: 3 },
+    ],
+    playRooms: [{ code: 'P1' }],
+  };
+  assert.deepEqual(splitRooms(data).open.map((r) => r.code), ['A', 'B', 'FULL']);
+  assert.deepEqual(splitRooms(data).play.map((r) => r.code), ['P1'], '对局中 order untouched');
+  // a legacy payload without the `full` flag: the seat cells still sink a full lobby
+  const legacy = {
+    openRooms: [
+      { code: 'F2', seats: [{ name: '1' }, { name: '2' }, { name: '3' }, { name: '4' }] },
+      { code: 'O', seats: [{ name: '1' }, null, null, null] },
+    ],
+  };
+  assert.deepEqual(splitRooms(legacy).open.map((r) => r.code), ['O', 'F2']);
 });

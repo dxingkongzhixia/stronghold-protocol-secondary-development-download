@@ -163,9 +163,12 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       isHost: s.playerId === r.hostId,
     };
   });
-  // Joinable 同盟 rooms (hand-made co-op rooms still in the lobby with a free seat) — the lobby's 公开同盟 list.
+  // 组队中 rooms (hand-made co-op rooms still in the lobby): a full lobby (no free seat) is kept too — the directory
+  // lists it below the joinable ones and offers 观战 instead of 加入 (owner 2026-10-09). Each entry carries `full` and
+  // `freeSeats`; the rest of the fields are unchanged.
+  const freeSeatsOf = (r) => r.seats.filter((s) => s == null).length;
   const openRooms = [...lobby.rooms.values()]
-    .filter((r) => r.mode === 'coop' && r.public && !r.match && !r.auto && r.freeSeat() >= 0)
+    .filter((r) => r.mode === 'coop' && r.public && !r.match && !r.auto)
     .map((r) => ({
       code: r.code,
       difficulty: r.difficulty,
@@ -173,9 +176,11 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       host: (r.seatOf(r.hostId) || {}).name || null,
       hostRole: (r.seatOf(r.hostId) || {}).role ?? null,
       humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
+      full: r.freeSeat() < 0,
+      freeSeats: freeSeatsOf(r),
       seats: seatsOf(r),
     }))
-    .sort((a, b) => b.humans - a.humans)
+    .sort((a, b) => (a.full - b.full) || (b.humans - a.humans))
     .slice(0, 12);
   // Rooms whose match is already running (the lobby's 正在模拟 row → enter as a spectator): 野排 first, then rooms with
   // an AI seat to 夺舍, then the fullest — at most 4.

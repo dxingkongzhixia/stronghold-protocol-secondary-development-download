@@ -1,13 +1,15 @@
 // 公开房间 directory (docs/MATCHMAKING.md §36): a full screen, not a modal — its own top bar with a 返回 button and a
 // scrollable bracket-framed body, opened from the lobby's 公开房间 button. It lists the public co-op rooms from
-// GET /online/api (token-free), polled every 4 s: 组队中 (openRooms — a free seat, the action is 加入) and 对局中
-// (playRooms — the match is already running, the action is 观战). Each room is one wide amber bar carrying the
+// GET /online/api (token-free), polled every 4 s: 组队中 (openRooms — a hand-made lobby, not-full first; 加入 when a
+// seat is free, 观战 when the lobby is full) and 对局中 (playRooms — the match is already running, the action is
+// 观战). Each room is one wide amber bar carrying the
 // difficulty, its code, mode / rounds / occupancy, its MAX_SEATS co-op seats as square cells (the player's initial,
 // the host crown, the guest and AI markers; empty seats dashed), a status tag and the single action button.
 //
 // The screen is swapped in by screens/lobby.js in place of the lobby body (same LobbyScreen, same routing), so the
 // lobby's join / spectate handlers are reused as they are and the room-restore / `?room=` deep-link flows are
-// untouched. Text goes through t(); module-level tables hold msgids (N_).
+// untouched. 组队中 is not-full first: a full lobby room (no free seat) still lists here, but its action is 观战 like a
+// running match. Text goes through t(); module-level tables hold msgids (N_).
 
 import { useEffect, useState } from '../../vendor/hooks.module.js';
 import { html, Button, Icon, MicroLabel, DifficultyIcon, AvatarFrame, RoleTag, Spinner } from '../ui/components.js';
@@ -40,11 +42,29 @@ export function roomSeats(room) {
   });
 }
 
-/** Split an /online/api snapshot into the two lists the screen groups (组队中 first). */
+/**
+ * Whether a room's lobby has no free seat: the server's `full` flag (`buildPublicSnapshot`) when present, else a
+ * `freeSeats` count, else the seat cells themselves (all MAX_SEATS occupied). A full 组队中 room is still listed but
+ * its action is 观战.
+ * @param {any} room an /online/api openRooms / playRooms entry
+ */
+export function roomIsFull(room) {
+  if (typeof room?.full === 'boolean') return room.full;
+  if (Number.isFinite(room?.freeSeats)) return room.freeSeats <= 0;
+  return roomSeats(room).every(Boolean);
+}
+
+/**
+ * Split an /online/api snapshot into the two lists the screen groups (组队中 first). The 组队中 list is sorted so
+ * not-full rooms come first (within each group, humans desc) — a full lobby room sinks below the joinable ones.
+ */
 export function splitRooms(data) {
+  const open = Array.isArray(data?.openRooms) ? data.openRooms : [];
+  const play = Array.isArray(data?.playRooms) ? data.playRooms : [];
+  const humans = (r) => (Number.isFinite(r?.humans) ? r.humans : 0);
   return {
-    open: Array.isArray(data?.openRooms) ? data.openRooms : [],
-    play: Array.isArray(data?.playRooms) ? data.playRooms : [],
+    open: [...open].sort((a, b) => (roomIsFull(a) ? 1 : 0) - (roomIsFull(b) ? 1 : 0) || humans(b) - humans(a)),
+    play,
   };
 }
 
@@ -72,6 +92,7 @@ function SeatCell({ seat, index }) {
 /** One room as a wide bar: difficulty + code + mode/rounds meta · the 4 seat squares · status tag + action. */
 function RoomBar({ room, kind, onAct }) {
   const running = kind === 'play';
+  const watch = running || roomIsFull(room); // 观战: a running match, or a 组队中 lobby with no free seat left
   const seats = roomSeats(room);
   const diff = DIFFICULTY_NAMES[room.difficulty] ? t(DIFFICULTY_NAMES[room.difficulty]) : (room.difficultyName || room.difficulty || '');
   const rounds = roundsOf(room.difficulty);
@@ -99,8 +120,8 @@ function RoomBar({ room, kind, onAct }) {
     </div>
     <div class="rooms-bar__side">
       <span class=${`rooms-tag ${running ? 'is-play' : 'is-open'}`}>${running ? t('对局中') : t('组队中')}</span>
-      <${Button} variant=${running ? 'secondary' : 'primary'} size="lg" icon=${running ? 'eye' : 'users'}
-        onClick=${() => onAct(room.code)}>${running ? t('观战') : t('加入')}<//>
+      <${Button} variant=${watch ? 'secondary' : 'primary'} size="lg" icon=${watch ? 'eye' : 'users'}
+        onClick=${() => onAct(room.code)}>${watch ? t('观战') : t('加入')}<//>
     </div>
   </article>`;
 }
@@ -142,11 +163,11 @@ export function PublicRoomsScreen({ onBack, onJoin, onSpectate }) {
       </div>
     </header>
     <div class="screen__scroll rooms-body">
-      ${open.length ? html`<section class="rooms-section">
+      ${open.length ? html`<section class="rooms-section is-open">
         <div class="section-label"><span class="section-label__idx num">01</span>${t('组队中')}<${MicroLabel}>JOINABLE<//></div>
-        <div class="rooms-list">${open.map((r) => html`<${RoomBar} key=${r.code} room=${r} kind="open" onAct=${onJoin} />`)}</div>
+        <div class="rooms-list">${open.map((r) => html`<${RoomBar} key=${r.code} room=${r} kind="open" onAct=${roomIsFull(r) ? onSpectate : onJoin} />`)}</div>
       </section>` : null}
-      ${play.length ? html`<section class="rooms-section">
+      ${play.length ? html`<section class="rooms-section is-play">
         <div class="section-label"><span class="section-label__idx num">02</span>${t('对局中')}<${MicroLabel}>IN PROGRESS<//></div>
         <div class="rooms-list">${play.map((r) => html`<${RoomBar} key=${r.code} room=${r} kind="play" onAct=${onSpectate} />`)}</div>
       </section>` : null}

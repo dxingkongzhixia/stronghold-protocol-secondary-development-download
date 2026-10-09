@@ -95,8 +95,9 @@ test('account roles (ROLES) ride through both snapshots', () => {
 });
 
 // 公开同盟 (docs/MATCHMAKING.md): /online/api `openRooms` lists joinable hand-made co-op rooms that the creator left
-// public; private / solo / 野排(auto) / started / full rooms stay hidden.
-test('buildPublicSnapshot.openRooms lists only public, joinable, hand-made 同盟 rooms', () => {
+// public; private / solo / 野排(auto) / started rooms stay hidden. A FULL lobby (no free seat) is listed too, flagged
+// `full: true`, sorted after the joinable ones (owner 2026-10-09: 优先显示人不满的，满的显示观战).
+test('buildPublicSnapshot.openRooms lists public hand-made 同盟 rooms, not-full first, a full lobby flagged last', () => {
   const seat = (playerId, name, over = {}) => ({ playerId, name, isBot: false, left: false, ...over });
   const room = (over) => {
     const r = {
@@ -117,12 +118,41 @@ test('buildPublicSnapshot.openRooms lists only public, joinable, hand-made 同�
     FULL: room({ code: 'FULL', seats: [seat('1', '1'), seat('2', '2'), seat('3', '3'), seat('4', '4')] }),
   }));
   const snap = buildPublicSnapshot({ registry: { all: () => [] }, lobby: { rooms }, matchmaker: null, now: 0 });
-  assert.deepEqual(snap.openRooms.map((x) => x.code), ['PUB', 'BOT'], 'only public joinable hand-made co-op rooms, humans desc');
+  assert.deepEqual(snap.openRooms.map((x) => x.code), ['PUB', 'BOT', 'FULL'], 'public hand-made co-op rooms, not-full first, humans desc');
   assert.deepEqual(snap.openRooms[0], {
     code: 'PUB', difficulty: 'NORMAL', difficultyName: '险境模拟', host: 'Host', hostRole: null, humans: 1,
+    full: false, freeSeats: 3,
     seats: [{ name: 'Host', role: null, guest: true, isBot: false, isHost: true }, null, null, null],
   });
   assert.equal(snap.openRooms[1].humans, 1, 'bots are not counted as humans');
+  const full = snap.openRooms.find((x) => x.code === 'FULL');
+  assert.equal(full.full, true, 'a full lobby is listed, flagged full');
+  assert.equal(full.freeSeats, 0);
+  assert.equal(full.humans, 4);
+  assert.deepEqual(snap.openRooms.map((x) => x.full), [false, false, true], 'no full room before a joinable one');
+});
+
+// 公开房间 full lobby (docs/MATCHMAKING.md §36): a full room rides the public payload with the same privacy guarantees —
+// only the public seat identity, never the internal playerId / account binding / address / token.
+test('buildPublicSnapshot: a full lobby leaks no playerId / accountId / token (privacy holds for full rooms)', () => {
+  const registry = new SessionRegistry({ now: () => 0 });
+  const acc = registry.create('Acc'); acc.connected = true; acc.accountId = 7;
+  const guest = registry.create('Guest'); guest.connected = true;
+  const seat = (session) => ({ playerId: session.playerId, name: session.name, role: session.role ?? null, isBot: false, left: false });
+  const r = {
+    code: 'FULL', mode: 'coop', public: true, match: null, auto: false, hostId: acc.playerId, difficulty: 'HARD',
+    seats: [seat(acc), seat(guest), { playerId: 'ai_2', name: 'Bot', role: null, isBot: true, left: false }, { playerId: 'p_4', name: 'Four', role: null, isBot: false, left: false }],
+  };
+  r.seatOf = (id) => r.seats.find((s) => s && s.playerId === id) || null;
+  r.freeSeat = () => r.seats.indexOf(null);
+  const snap = buildPublicSnapshot({ registry, lobby: { rooms: new Map([['FULL', r]]) }, matchmaker: null, now: 0 });
+  const full = snap.openRooms.find((x) => x.code === 'FULL');
+  assert.equal(full.full, true);
+  assert.equal(full.seats.length, MAX_SEATS);
+  const json = JSON.stringify(snap.openRooms);
+  for (const leak of ['accountId', 'playerId', 'token', 'addr', acc.playerId, guest.playerId, 'p_4']) {
+    assert.ok(!json.includes(leak), `leaks ${leak}`);
+  }
 });
 
 // 公开房间 seat squares (docs/MATCHMAKING.md §36): every open / running room carries its MAX_SEATS seat cells — the

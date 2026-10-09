@@ -327,6 +327,9 @@ export function LobbyScreen() {
         <${Button} variant="ghost" size="sm" icon="chevronLeft" onClick=${backToTitle} title=${t('返回标题')}>${t('返回')}<//>
         <${PingPill} ms=${conn.ping} online=${online} />
         <${OnlineBadge} onOpen=${() => setShowOnline(true)} />
+        <button type="button" class="online-badge lobby-rooms" title=${t('公开房间')} onClick=${() => setShowCommunity('rooms')}>
+          <${Icon} name="users" /><span>${t('公开房间')}</span>
+        </button>
       </div>
       <div class="topbar__center">
         <${MicroLabel} tone="mint">SIMULATION PROTOCOL SELECT<//>
@@ -435,7 +438,7 @@ function PublicAlliances({ onJoin, onSpectate }) {
     const h = setInterval(tick, 4000);
     return () => { alive = false; clearInterval(h); };
   }, []);
-  const open = (data?.open || []).slice(0, 3);
+  const open = (data?.open || []).filter((r) => !r.full).slice(0, 3); // full lobbies are 观战-only → not a 加入 chip here
   const play = (data?.play || []).slice(0, 4);
   const rows = [];
   if (open.length) {
@@ -501,10 +504,10 @@ function OnlineBadge({ onOpen }) {
   </button>`;
 }
 
-/** Status key → label + tone (mirrors server/admin.js STATUS). */
+/** Status key → label + tone (distinct hues, all from the theme tokens; mirrors server/admin.js STATUS). */
 const ONLINE_STATUS = {
-  online: { label: N_('在线'), c: 'mint' }, room: { label: N_('组队中'), c: 'ice' }, queue: { label: N_('野排排队'), c: 'amber' },
-  mmplay: { label: N_('野排游玩'), c: 'amber' }, alliance: { label: N_('同盟游玩'), c: 'violet' }, solo: { label: N_('单人游玩'), c: 'mint' },
+  online: { label: N_('在线'), c: 'mint' }, room: { label: N_('组队中'), c: 'ice' }, queue: { label: N_('野排排队'), c: 'gold' },
+  mmplay: { label: N_('野排游玩'), c: 'amber' }, alliance: { label: N_('同盟游玩'), c: 'violet' }, solo: { label: N_('单人游玩'), c: 'green' },
   offline: { label: N_('离线'), c: 'dim' },
 };
 

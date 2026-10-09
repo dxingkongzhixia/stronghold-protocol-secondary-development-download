@@ -215,9 +215,9 @@
 
 看**已注册账号**与**实时在线状态**的只读页面：
 
-- **公开在线数据** `/online/api`（**免令牌**）：返回当前在线玩家（名字 / 是否登录 / 状态 / 房间）+ **可加入的同盟房间 `openRooms`**（`[{ code, difficulty, difficultyName, host, humans }]`，只含**房主设为公开**、**手建 coop、未开局、有空位**的房间，按人数降序、最多 12 条），**不含账号列表、IP、最后登录**；由大厅顶栏「在线 N」徽标的**游戏内浮层** `OnlineOverlay` 每 4s 拉取。**没有独立网页版**（数据来自 `server/admin.js` 的 `buildPublicSnapshot`）。
+- **公开在线数据** `/online/api`（**免令牌**）：返回当前在线玩家（名字 / 是否登录 / 状态 / 房间）+ **公开同盟房间 `openRooms`**（`[{ code, difficulty, difficultyName, host, humans, full, freeSeats, seats }]`，含**房主设为公开**、**手建 coop、未开局**的房间——大厅已满的也在内并标 `full:true`，**未满在前**、组内按人数降序、最多 12 条），**不含账号列表、IP、最后登录**；由大厅顶栏「在线 N」徽标的**游戏内浮层** `OnlineOverlay` 每 4s 拉取。**没有独立网页版**（数据来自 `server/admin.js` 的 `buildPublicSnapshot`）。
 - **建房可见性（公开 / 不公开）**：大厅「创建同盟」按钮上方有 `公开 / 不公开` 二选一（`public/js/screens/lobby.js`，仅同盟模式显示，选择记忆在 `lobby.public`）；创建时作为 `room.create.public` 发送（`shared/protocol.js` 的**可选**布尔字段，**缺省＝公开**）。服务端存进 `room.public`（`server/lobby.js`：**单人房恒为 `false`**；野排房 `false`；`toState().public` 下发），房间屏「同盟密钥」框据此显示 **公开 / 仅密钥** 徽标（`public/js/screens/room.js`）。**只有 `public:true` 的手建同盟房才会进 `openRooms`。**
-- **公开同盟（大厅「加入同盟」区）**：`public/js/screens/lobby.js` 的 `PublicAlliances` 同样 **4s 异步轮询** `/online/api`，把 `openRooms` 里**最多 3 个**密钥显示为 `code-chip`（悬停看「难度 · 人数/4 · 房主」），**点一下即填入密钥并加入**；无公开房间时整行不渲染。
+- **公开同盟（大厅「加入同盟」区）**：`public/js/screens/lobby.js` 的 `PublicAlliances` 同样 **4s 异步轮询** `/online/api`，把 `openRooms` 里**未满的最多 3 个**密钥显示为 `code-chip`（悬停看「难度 · 人数/4 · 房主」），**点一下即填入密钥并加入**（已满的 `full` 房跳过，不显示）；无公开房间时整行不渲染。
 - **在线 / 离线判定**（`server/net.js presenceOnline`，`/admin`、`/online/api`、`/healthz` 与大厅徽标同源）：socket 连着即在线；**游客断线立即离线**；**登录用户断线后保留"在线"5 分钟**（`PRESENCE_GRACE_MS`，覆盖刷新 / 网络抖动）再离线。
 - **管理页访问**：`http://<主机>:3000/admin?token=<令牌>`；令牌在 `var/admin-token.txt`（首次启动随机生成），启动日志会打印完整链接（`Admin: http://localhost:3000/admin?token=…`）。无 / 错令牌 → `403`。首次用 `?token=` 打开会下发一个 30 天的 HttpOnly cookie，之后裸链 `/admin` 也可访问。
 - **数据接口**：`GET /admin/api/state?token=…` → `{ now, counts, queue, verify, rooms, accounts, online }`（页面每 2 秒自取一次）；`verify` 是 `SP_VERIFY` 抽检计数（复算 / 不一致 / 拒收 / 接管）。公开在线数据另见 `/online/api`。
@@ -1022,7 +1022,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **诚实保留**：官方 S2 效果本体是 3D 粒子 + 网格 core（绿/红为**网格材质** color，无独立主贴图），本层用**同一 prefab 引用的官方 flow/ray 贴图**做地面 field 近似，**非逐粒子还原**；`star_118_7` 自身含红/绿两条光线，两层均再套官方 tint；提取依赖各机本地客户端，manifest 为 per-machine（`data/local-assets.json` 不入 git）。
 ## 36. 大厅社区功能：更新日志 / bug 提交 / 公开房间（2026-10-09）
 
-需求（owner）：大厅左侧三个按钮「更新日志」「bug提交」「公开房间」，数据落 SQLite；「玩家留言」不做（owner 明确放弃）。截图中列出的四个按钮里，玩家留言被删除——本仓库此前的代码里从未实现过它，因此没有可删除的实现，本次只保证不新增（`grep` 与 `git log -S` 均无记录）。
+需求（owner）：大厅社区功能「更新日志」「bug提交」「公开房间」（后二者曾同列大厅左侧；见 §36.4 的顶栏调整），数据落 SQLite；「玩家留言」不做（owner 明确放弃）。截图中列出的四个按钮里，玩家留言被删除——本仓库此前的代码里从未实现过它，因此没有可删除的实现，本次只保证不新增（`grep` 与 `git log -S` 均无记录）。
 
 ### 36.1 存储（server/db.mjs，user_version 3）
 
@@ -1052,9 +1052,14 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界面**（像游戏其它界面那样整屏、自带顶栏与「返回」，不是浮动弹窗卡片）；每个房间是一条**横向长条**（像「加入同盟」的琥珀色面板行），不是小卡片；一条长条显示难度图标 + 难度名 + 房间码（等宽）+ 模式 / 回合 / 人数、该房的 **4 个席位方块**、状态标签（组队中 / 对局中）与唯一的操作按钮。
 
+后续三项（owner 2026-10-09）：①「全都分色」——每个状态都要一眼可辨；②「优先显示人不满的，满的显示观战」；③「位置调一下，放上边，公开房间放在线后边」。
+
 - **界面而非路由**：`public/js/screens/rooms.js` 的 `PublicRoomsScreen`；由 `screens/lobby.js` 在 `showCommunity === 'rooms'` 时**整体替换大厅主体**（同一个 `LobbyScreen`、同一套路由）。这样不新增 `SCREENS` / `selectRoute` 分支，房间恢复（`room.state` 仍会接管路由）与 `?room=` 深链流程完全不动；加入 / 观战仍复用大厅自己的 `join()` / `spectate()` 处理函数（点按钮先关界面、写入密钥再走原路径）。顶栏复用 `.topbar` + `Button` + `MicroLabel`，主体是 `.screen__scroll` 的 `rooms-body`（`public/css/screens/lobby.css` 的 `.rooms-*`，全部用主题令牌，无一次性颜色）。
-- **数据**（`server/admin.js buildPublicSnapshot` → `GET /online/api`）：`openRooms`（可加入的手建公开同盟 → 组队中 → 「加入」）与 `playRooms`（进行中 → 对局中 → 「观战」）每个条目新增 `seats`：按席位顺序的 `MAX_SEATS`（=4）个元素，空席 / 已离开的席位为 `null`，否则 `{ name, role, guest, isBot, isHost }`。**隐私**：只暴露游戏内已经可见的信息（名字 / 身份 / AI / 房主），绝不带 `playerId`、`accountId`、IP 或 token；`guest` 由账号绑定推导，但不暴露绑定本身。旧字段（`code / difficulty / difficultyName / host / hostRole / humans`，及 `playRooms` 的 `bots / auto`）保持不变。
-- **席位方块**：owner 的「4 squares」读作「每房 4 个合作席位各画成一个方块」——占用席位为实心方块（首次字形 = 名字首字，房主金冠、游客角标、AI 角标；用游戏自带的 `AvatarFrame`，空席位即其虚线 `is-empty` 样式），空席位为虚线方块 + 「空席位」。每方块下带截断的名字（`title` 为全名），席位区带 `席位` 无障碍标签。若日后想表达更细的状态，可在方块上叠“准备 / 掉线”等（当前不要求）。
+- **入口（顶栏，③）**：不在左侧 `CommunityBar`（`public/js/ui/community.js`，现仅剩 更新日志 / bug提交）；改由 `screens/lobby.js` 的 `.topbar__left` 内、**紧接 `<OnlineBadge>` 之后**放一个「公开房间」按钮（`users` 图标，复用 `.online-badge` 观感，小顶栏下仍清晰），顺序为 **返回 · ping · 在线N · 公开房间**，点击同样 `setShowCommunity('rooms')` 打开整屏界面。公开房间界面**自己的**顶栏（返回 / PUBLIC ROOMS / 实时·刷新）保持不变。
+- **数据**（`server/admin.js buildPublicSnapshot` → `GET /online/api`）：`openRooms`（手建公开同盟 → 组队中）与 `playRooms`（进行中 → 对局中 → 「观战」）每个条目新增 `seats`：按席位顺序的 `MAX_SEATS`（=4）个元素，空席 / 已离开的席位为 `null`，否则 `{ name, role, guest, isBot, isHost }`。**隐私**：只暴露游戏内已经可见的信息（名字 / 身份 / AI / 房主），绝不带 `playerId`、`accountId`、IP 或 token；`guest` 由账号绑定推导，但不暴露绑定本身。旧字段（`code / difficulty / difficultyName / host / hostRole / humans`，及 `playRooms` 的 `bots / auto`）保持不变。
+- **排序 / 满房显示观战（②）**：`openRooms` 现在也包含**大厅已满**（无空席）的公开同盟房，每条新增 `full: <boolean>` 与 `freeSeats`（空席数）。排序为**未满在前、已满在后**，组内保持人数降序（`(a.full - b.full) || (b.humans - a.humans)`），上限仍为 12。`playRooms` 语义不变（已开局 → 观战，上限 4）。客户端 `screens/rooms.js` 的 `roomIsFull()` 用 `full` → `freeSeats` → 席位数判定；组队中区 `01` 的 `openRooms` 未满在前，操作按钮 **有空席＝「加入」、已满＝「观战」**；`02 对局中`（`playRooms`）恒为「观战」。大厅内联的 `PublicAlliances` 密钥 chips **跳过 `full` 房**，因此仍只显示可加入的。
+- **席位方块**：owner 的「4 squares」读作「每房 4 个合作席位各画成一个方块」——占用席位为实心方块（首次字形 = 名字首字，房主金冠、游客角标、AI 角标；用游戏自带的 `AvatarFrame`，空席位即其虚线 `is-empty` 样式），空席位为虚线方块 + 「空席位」。每方块下带截断的名字（`title` 为全名），席位区带 `席位` 无障碍标签。满房照常画出 4 个实心方块。
+- **分色（①）**：全部取自主题令牌（`.rooms-tag.is-open` 薄荷 `--mint-400` / `.is-play` 琥珀 `--amber`，并加同色描边 + 底色；两段区标题 `01 组队中` 薄荷、`02 对局中` 琥珀，序号块与英文 `micro` 同色）。在线玩家浮层的每个状态各有其色（`OnlineOverlay` 的 `ONLINE_STATUS` 映射到 `.online-row__status.is-*`）：在线 `--mint-400` / 组队中 `--ice` / 野排排队 `--gold` / 野排游玩 `--amber` / 同盟游玩 `#b28cff` / 单人游玩 `--tier-3` / 离线 `--text-dim`——`在线`↔`单人游玩`、`野排排队`↔`野排游玩` 不再同色。
 - 客户端每 4 秒轮询 `/online/api`（保留上一次快照、加载态与「暂无公开房间」空态）；房间历史未额外持久化（需求只要求展示）。
 
 ### 36.5 安全 / 不变量
