@@ -18129,7 +18129,8 @@
      "iconId": "skchr_clemnt_1",
      "icon": {
       "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_clemnt_1.png"
-     }
+     },
+     "sfx": {}
     },
     {
      "index": 1,
@@ -18137,6 +18138,11 @@
      "iconId": "skchr_clemnt_2",
      "icon": {
       "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_clemnt_2.png"
+     },
+     "sfx": {
+      "ON_SKILL_START": [
+       "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/battle/b_char/b_char_atkboost.mp3"
+      ]
      }
     },
     {
@@ -18145,6 +18151,14 @@
      "iconId": "skchr_clemnt_3",
      "icon": {
       "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_clemnt_3.png"
+     },
+     "sfx": {
+      "ON_SKILL_START": [
+       "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_skill/p_skill_wtsdrvr_s.mp3"
+      ],
+      "ON_SKILL_SPECIAL_POINT": [
+       "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/battle/b_char/b_char_boostclose.mp3"
+      ]
      }
     }
    ],
@@ -18174,6 +18188,38 @@
      "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_4231_clemnt/char_4231_clemnt/Back/char_4231_clemnt.skel"
     },
     "note": null
+   },
+   "sfx": {
+    "ON_ABILITY_START.attack.0": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_atk/p_atk_wtsdrvr_n.mp3"
+    ],
+    "ON_ABILITY_START.attack.1": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_atk/p_atk_wtsdrvr_h.mp3"
+    ],
+    "ON_ABILITY_START.attack.2": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_atk/p_atk_wtsdrvr_h.mp3"
+    ],
+    "ON_ABILITY_START.attack.3": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_atk/p_atk_wtsdrvr_s.mp3"
+    ],
+    "ON_ABILITY_START.attack.4": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_atk/p_atk_wtsdrvr_s.mp3"
+    ],
+    "ON_ABILITY_HIT.attack.0": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_imp/p_imp_wtsdrvr_n.mp3"
+    ],
+    "ON_ABILITY_HIT.attack.1": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_imp/p_imp_wtsdrvr_h.mp3"
+    ],
+    "ON_ABILITY_HIT.attack.2": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_imp/p_imp_wtsdrvr_h.mp3"
+    ],
+    "ON_ABILITY_HIT.attack.3": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_imp/p_imp_wtsdrvr_s.mp3"
+    ],
+    "ON_ABILITY_HIT.attack.4": [
+     "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/voice/assets/dyn/audio/sound_beta_2/player/p_imp/p_imp_wtsdrvr_s.mp3"
+    ]
    },
    "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_primguard_icon.png"
   }
