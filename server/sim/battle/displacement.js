@@ -36,9 +36,12 @@ export class BattleDisplacement {
    * 而改变推动的方向或削减力度" — the < 0.25 tile rule still applies). `inward` = a radial push towards `from` (薄绿 S2's "拖拽", PRTS 备注 "实际为
    * 反方向（指向薄绿方向）的推开"), never nearer than PULL_STOP_RADIUS to its centre [ASSUMED: "至面前"]. `effect` = a 特效
    * push (PRTS 推与拉: one frame less of travel than a 弹道 push — constants.js PUSH_TILES_EFFECT / PUSH_EFFECT_SKILLS).
+   * The displace fx keeps the enemy's pre-hit facing by default: official footage shows this for a directional push
+   * (野鬃 S2, #418) and a radial push (莫斯提马 S3). [ASSUMED] for other push sources; an explicitly different
+   * client action can pass `keepFacing: false`. Pulls use the same display rule; raw displacements remain unmarked.
    * Returns the tiles moved.
    */
-  push(e, force, { from = null, dir = null, fixed = false, fixedAngle = false, inward = false, effect = false } = {}) {
+  push(e, force, { from = null, dir = null, fixed = false, fixedAngle = false, inward = false, effect = false, keepFacing = true } = {}) {
     if (!this._displaceable(e)) return 0;
     let level = this.forceLevel(e, force);
     const fx0 = fin(from?.x, e.x), fy0 = fin(from?.y, e.y);
@@ -57,16 +60,20 @@ export class BattleDisplacement {
     else return 0;
     let dist = pushTiles(level, effect);
     if (inward && !(dl > 0)) { ux = -ux; uy = -uy; dist = Math.min(dist, Math.max(0, d - PULL_STOP_RADIUS)); }
-    return this.displace(e, { x: ux, y: uy }, dist);
+    return this.displace(e, { x: ux, y: uy }, dist, { keepFacing });
   }
 
   /**
    * Pull enemy `e` with 力度 `force` towards the point `to` (PRTS 推与拉 §拉力 / §捕网): 受力等级 ≥ 0 — all the way, until it
    * is within `stop` tiles of `center` (急停; `center` defaults to `to`, `stop` to PULL_STOP_RADIUS) or reaches `to`;
    * −1 — PULL_WEAK_SHARE of its starting distance to `to`; −2 — PULL_CRAWL tiles; ≤ −3 — nothing. `pullToFront` aims at
-   * the official 拉力起点 in front of an operator. Returns the tiles moved.
+   * the official 拉力起点 in front of an operator. The displace fx keeps the pre-hit facing by default, as for pushes.
+   * The supplied 歌蕾蒂娅 S1/S2 clip directly shows the target keeping its facing before and after a hook pull.
+   * [ASSUMED] for other pull directions/sources: the clip does not isolate travel against the prior facing.
+   * PRTS distinguishes 薄绿's inward push from a hook pull, not their model facing.
+   * Pass `keepFacing: false` for a documented exception. Returns the tiles moved.
    */
-  pull(e, force, { to, center = null, stop = PULL_STOP_RADIUS } = {}) {
+  pull(e, force, { to, center = null, stop = PULL_STOP_RADIUS, keepFacing = true } = {}) {
     if (!this._displaceable(e) || !to) return 0;
     // an enemy the puller itself blocks already stands in front of it (at contact) [ASSUMED: no pull, no unblocking]
     if (center && center.side === 'ally' && e.blockedBy === center) return 0;
@@ -85,7 +92,7 @@ export class BattleDisplacement {
     }
     const level = this.forceLevel(e, force);
     const dist = level >= 0 ? full : level === -1 ? Math.min(full, PULL_WEAK_SHARE * d0) : level === -2 ? Math.min(full, PULL_CRAWL) : 0;
-    return dist > 1e-6 ? this.displace(e, { x: ux, y: uy }, dist) : 0;
+    return dist > 1e-6 ? this.displace(e, { x: ux, y: uy }, dist, { keepFacing }) : 0;
   }
 
   /** Official distance (tiles) a push of 力度 `force` would move `e` on open ground (0 when it cannot be displaced). */
@@ -166,7 +173,7 @@ export class BattleDisplacement {
    * ⇒ no movement (_displaceable). The tiles it may cross follow its movement (`motion`): a hovering enemy walks the
    * ground, so it stays on ground-passable tiles.
    */
-  displace(e, dir, distance) {
+  displace(e, dir, distance, { keepFacing = false } = {}) {
     if (!this._displaceable(e) || !dir) return 0;
     const dxv = fin(dir.x, 0), dyv = fin(dir.y, 0);
     const len = Math.hypot(dxv, dyv);
@@ -189,7 +196,8 @@ export class BattleDisplacement {
       // 失衡 ends the attack clip it stood for (PRTS 状态机: the states are exclusive — UNBALANCE, then DEFAULT → MOVE)
       e.atkStandUntil = -Infinity;
       if (e.route) e.route.pts = null;
-      this.fx('displace', { x: e.x, y: e.y, id: e.id });
+      // a push / pull marks the fx `keepFacing` (the victim retains its pre-hit facing); a raw `displace` stays unmarked.
+      this.fx('displace', { x: e.x, y: e.y, id: e.id, ...(keepFacing ? { keepFacing: true } : {}) });
     }
     return moved;
   }
