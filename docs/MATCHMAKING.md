@@ -1144,7 +1144,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - `docs/research/07-assets.json` 增条目（头像/立绘 E0E1+E2、全立绘、三技能图标、战斗脊柱 Front/Back、子职业图标 `sub_primguard_icon`）。`node tools/fetch-assets.mjs --asset-source=mirror` 下到除 **S3 技能图标**以外的全部（镜像 `skill_icon_skchr_clemnt_3.png` 首轮 404/校验失败）；S3 图标改经 `gh-proxy` 直下补齐后重跑离线，`data/assets.json` 三技能图标齐全。
 - **语音**：本机 CN / JP 客户端**都没有**她的语音包（CN 客户端 `audio/sound_beta_2` 无 `voice*`，JP 客户端只有 `music`），按 owner 规则回退到 **PRTS CN 镜像**（`torappu.prts.wiki/assets/audio/voice/char_4231_clemnt/cn_019..032.mp3`）补齐 12 个战斗槽（`data/assets.json` 的 `audio.voice.char_4231_clemnt`）。
 - **战斗特效**：本机 CN 客户端 `battle/prefabs/effects/clemnt.ab` 存在 → `tools/local-extract/extract.py --only fx/clemnt` 抽出 17 张贴图到 `public/assets/local/fx/clemnt`，`committed-manifest.mjs` 汇总进 `data/local-assets.committed.json`；`node tools/build-fx-official.mjs` 生成表由 90 → **91** 名干员（她的 `explode`/`zone` kinds）。
-- **缺失项（如实报告，owner 决定）**：单位 **SFX**（普攻 / 命中 / 技能音）未取到——CN/JP 客户端无她的 `sound_beta_2/player` 包、`audio_data.json` 缓存与镜像亦无映射，客户端按既有 graceful fallback 用 `battle.enemyHit` / WebAudio 短音；`fx` 层的技能图标 / 立绘等**已齐**。
+- **单位 SFX 与语音补全（2026-10-09，`fd9fab31`）**：此前「单位 SFX（普攻 / 命中 / 技能音）未取到」的如实保留项**已闭环**——从本地客户端 / 镜像补到普攻 `p_atk/p_atk_wtsdrvr_n.mp3`、命中 `p_imp/p_imp_wtsdrvr_n.mp3` 与她自己的技能音 `p_skill/p_skill_wtsdrvr_s.mp3`（对应 S3；S1/S2 仍走通用 `b_char_atkboost`），并把 **PRTS CN 的 12 条战斗语音重新编码**（体积更大、音质更好）。`data/assets.json` 的 `audio.sfx.char_4231_clemnt`（`attack` / `hit` / `skills`）与 `audio.voice.char_4231_clemnt` 同步更新，`docs/research/07-assets.json` 记录；`fx` 层的技能图标 / 立绘等**已齐**。
 
 ### 37.5 测试 + golden 归属
 

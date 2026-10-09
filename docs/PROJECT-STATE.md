@@ -1,15 +1,15 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后更新：2026-10-08**。
-> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§35）。
+> 给「新会话 / 新接手的人」看的一页纸。**最后更新：2026-10-09**。
+> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§37）。
 
 ---
 
 ## 1. 这是什么
 「卫戍协议：盟约」的非官方同人**网页联机复刻**：Node 服务器 + 浏览器客户端，1–4 人合作塔防。
 基线是**官方上游**（`sganggs/Stronghold-Protocol`；已合并到 **feedback5**，含 **v0.2.0** + i18n，见 `docs/MATCHMAKING.md` §33），
-本项目在它之上加了：账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、启动体验与带宽治理、
-**7 名自造干员**（见 §4；`tools/build-data.mjs` 的 `CUSTOM_CHESS`）与 Gitee 镜像（§4 / §9）。
+本项目在它之上加了：账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、**大厅社区（更新日志 / bug提交 / 公开房间）**、
+启动体验与带宽治理、**8 名自造干员**（见 §4；`tools/build-data.mjs` 的 `CUSTOM_CHESS`）与 Gitee 镜像（§4 / §9）。
 
 ## 2. 目录（都在 `D:\DOTK`）
 | 路径 | 说明 |
@@ -24,7 +24,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.2.0`；`build` 见 `/healthz` |
+| 版本 | `app 0.3.0`；`build` 见 `/healthz` |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -53,13 +53,14 @@
 - **同盟**：建房可选**公开 / 不公开**；大厅两行 —— 「**公开同盟**」= 还在大厅有空位的房（点击**加入**）、「**正在模拟**」= 正在打的房（**野排优先 → 有 AI 优先 → 人多优先，最多 4 个**，点击**观战**）。
 - **观战 + 夺舍 AI**：`room.spectate` / `room.takeOver { seat }` / `room.releaseSeat`。「观战席」是**左侧队伍列表下方**的紧凑下拉（确认信息/选盟约等无队伍面板的阶段浮动在右下）；**夺舍 AI** 后接管它的棋盘·资金·调配；可**退出夺舍**回到观战席；**游玩者恒 ≤ 4**。
 - **在线状态**：游客断线即离线；登录用户断线保留 **5 分钟**；大厅「在线 N」徽标 + 游戏内 `OnlineOverlay` + `/admin` 只读页。
+- **大厅社区（2026-10-09，详见 §36）**：账号同一个 SQLite（schema v4）上的三块功能 —— **更新日志**（首次启动从 `CHANGELOG.md` 导入一次，`source: release`；每条一行**概要**可展开；每次推送通知自动追加一条**小版本** `source: notice`）、**bug提交**（标题 + 描述 + ≤4 张图片，png/jpeg/webp 按字节嗅探，限流 + 孤儿清理，管理端「玩家反馈」面板可筛选 / 排序 / 导出 / 放大）。**公开房间**是独立整屏界面（`screens/rooms.js`），每房 4 个席位方块、按状态分色、未满在前、满员可观战；入口在大厅顶栏「在线 N」之后。**玩家留言刻意不做**。
 - **启动体验**：进标题前**预加载全部美术**（scope `all` ≈1910 张 / 104 MB，**无跳过、无超时**）+ 自托管背景视频（**点击开声、无控件、标题出现即释放解码器**）；视频压到 **12.1 MB**（URL 带 `?v=2`）。
 - **带宽治理**：`server/bootgate.js` **排队闸门**（同时只放一个客户端预加载；已缓存的返回访客不排队；断线/过期立即释放）。
 - **界面打磨（2026-10-06，详见 §18）**：标题页左下角 **「反馈群 816461825」药丸 + 二维码卡**（含「服务器为个人免费服务器 · 容量较小」）；**盟约条横向居中 + 上移**（top 1.36→.80rem，不遮挡后排干员）+ **盟约详情弹窗固定居中**（不再随详情卡停靠跳位）；**点其他位置收起**（盟约弹窗 / 标题反馈卡 / 干员详情卡 / 本局信息·敌方情报抽屉）；**购买界面：干员/LEVEL/资金卡等宽 1.92rem**（`.scard`/`.lvcard`/`.funds`）+ **资金更醒目**（数字 .5rem 金色发光）+ 冻结/刷新按钮放大（1.5×.56rem）；**顶栏变扁**（`.gtop__center` .78→.52rem，内部胶囊/按钮/回合数/生命值同步缩小）；**盟约详情成员列表只列本局可用的干员**（禁用的隐藏，附「另有 N 名本局禁用」）+ **成员三态更明显**（在场=薄荷实框+角标/N 已拥有=白描边/未拥有=压暗，见 §18.9）；**官方质感打磨**（选中单位操作框 = 厚八角面板 + 键位胶囊 + 金币 hex / 购买栏卡片 = 稀有度描边 + 顶部色条 / 顶栏 = 薄荷描边 + 强调线；详见 §18.8）。
 - **观战席断线释放（2026-10-06，详见 §19）**：对局进行中断线的观战者原来要等 10 分钟 reconnect 窗口才释放席位，2 席锁死 → 后来者「房间已满」。现观战者断线后按 `lobbyGraceMs`（60 s）释放（对局中同样释放），重连仍拿回席位。
 - **弃局房间销毁（2026-10-06，详见 §20）**：合作房间原来会被「断线的真人席位」吊着最多 10 分钟（`activeHumans()` 不算在线状态）。现**一个房间只在还有在线真人时存在**：真人全离线 / 离开后最多 60 s grace 即销毁（观战者收 `room.closed {empty}`）；还有在线真人的派对仍保留掉线席位。solo 房间不受影响（24h 重连）。
 - **保留的战斗/渲染审计修复**：见 §16.6（runner 未送达结果、PMREM RT 释放、纹理存活、裁剪单位衰减、`_pubTimer`、部署退 DP…）。
-- **7 名自造干员**（`tools/build-data.mjs` `CUSTOM_CHESS`；kit 在 `server/sim/content/kits/ops/`；见 `docs/DEVELOPMENT.md` 自造干员表、`docs/MATCHMAKING.md` §23–§34）：阿斯卡纶 `ascln`、结城理 `makoto`、予愿安洁莉娜 `aglna2`、望 `wang`、澄闪 `gdglow`、娜仁图亚 `narant`、凯尔希·思衡托 `kalts2`。
+- **8 名自造干员**（`tools/build-data.mjs` `CUSTOM_CHESS`；kit 在 `server/sim/content/kits/ops/`；见 `docs/DEVELOPMENT.md` 自造干员表、`docs/MATCHMAKING.md` §23–§34 / §37）：阿斯卡纶 `ascln`、结城理 `makoto`、予愿安洁莉娜 `aglna2`、望 `wang`、澄闪 `gdglow`、娜仁图亚 `narant`、凯尔希·思衡托 `kalts2`、克莱门莎 `clemnt`（6★ 本源近卫，tier 6）。
 - **Gitee 镜像**：git 仓库 `_merge-scratch`（无工作项目 `.git`，仓库是唯一真相）由 `node tools/push-gitee.mjs` 推送 `HEAD` 到 Gitee（`gitee` 远程 → 分支 `master`，快进、绝不强推），再把仓库镜像回工作项目——**单向 store → Gitee → 工作树，绝不用工作树覆盖仓库**（反向同步须显式 `--from-dev`，默认关闭）；约定与凭据见 `docs/AI-WORKFLOW.md` §c。上游仍是 GitHub `origin`。
 
 ## 5. 环境开关 / 常量
@@ -100,7 +101,7 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - [ ] B 站宣传视频：见 §10 产物。
 
 ## 9. 与上游的关系 / 下次怎么合并
-- 上游：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（`763e224`，§15）与 **feedback5 / v0.2.0**（`1303321`，合并提交 `e3bd9de`，§33）；本仓库版本 `0.2.0`。
+- 上游：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（`763e224`，§15）与 **feedback5 / v0.2.0**（`1303321`，合并提交 `e3bd9de`，§33）；本仓库版本 `0.3.0`（在大厅社区 + 克莱门莎之前是 `0.2.0`）。
 - 合并方式：在 `_merge-scratch`（分支 `ours` = 我们的状态）里 `git fetch origin && git merge origin/master`，
   解冲突（思路见 `docs/MATCHMAKING.md` §15、黑名单 §22、纪律见 `docs/AI-WORKFLOW.md` §b）→ 临时目录跑全量测试 → 才拷回工作项目。
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、

@@ -9,7 +9,7 @@ Read this together with:
 | Read this | For |
 |---|---|
 | [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) | the repository map; §12 points here |
-| [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§35 | the **decision record**: why each of these exists, the evidence, the honest caveats |
+| [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§37 | the **decision record**: why each of these exists, the evidence, the honest caveats |
 | [`docs/ASSETS.md`](ASSETS.md) "Battle effects" / local-client sections | the asset-side detail this file summarises |
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for a custom operator |
 | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | the merge discipline, the Gitee push, the deploy order |
@@ -22,11 +22,11 @@ Read this together with:
 
 ## 1. Custom operators (`CUSTOM_CHESS`)
 
-> **我们独有，非上游；合并时不得丢失** — the seven custom shop operators and their data/kit/art wiring are added by
+> **我们独有，非上游；合并时不得丢失** — the eight custom shop operators and their data/kit/art wiring are added by
 > this fork and are absent from upstream `master`. Upstream has (or has had) a *different* feature: the
 > 补位/自选 (stand-in / DIY) pool. The two must not be confused (see §5).
 
-**What it is.** Seven operators not in the official season roster are injected into the generated season tables as
+**What it is.** Eight operators not in the official season roster are injected into the generated season tables as
 formal shop chess, each with a data entry, a hand-written kit, and (usually) art/voice. They are added through
 `CUSTOM_CHESS` in `tools/build-data.mjs`, merged into the official `activity_table` season tables by
 `applyCustomChess(act, charTable)` **before** the normal build runs, so every downstream rule (shop, bonds,
@@ -41,6 +41,7 @@ garrisons, tokens, counts) applies unchanged.
 | 澄闪 | `char_377_gdglow` | 3 | `chess_char_377_gdglow-gdglow.js` | §31 |
 | 娜仁图亚 | `char_4138_narant` | 3 | `chess_char_4138_narant-narant.js` | §32 |
 | 凯尔希·思衡托 | `char_1052_kalts2` | 4 | `chess_char_1052_kalts2-kalts2.js` | §34, §35.1, §35.7, §35.9 |
+| 克莱门莎 | `char_4231_clemnt` | 6 | `chess_char_4231_clemnt-clemnt.js` | §37 |
 
 **Where the code lives.**
 
@@ -63,7 +64,8 @@ garrisons, tokens, counts) applies unchanged.
   `server/sim/content/kits/README.md`; enforced by `test/content/kits_layout.test.js`.
 - **Engine carve-outs some of them rely on** (documented in `docs/DEVELOPMENT.md` §6): `stalker` (阿斯卡纶),
   `dollkeeper` (结城理), `skywalker` (予愿安洁莉娜), `traper` + `wangStone` (望), `funnel` (澄闪), `loopshooter`
-  (娜仁图亚), `watchman` (凯尔希·思衡托).
+  (娜仁图亚), `watchman` (凯尔希·思衡托), `primguard` (克莱门莎 — 放逐 / 传送 `Battle.banishEnemy` / `banishGroup`,
+  强制缴械 `disarmForce`；`docs/SIM.md` §8).
 
 **How to extend.** Follow [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) end to end: (0) confirm the operator is not in
 the roster; (1) cache the official tables; (2) add a `CUSTOM_CHESS` entry and rebuild; (3) hand-write the kit
@@ -83,7 +85,7 @@ example is 阿斯卡纶 (§23).
 - `node tools/kit-coverage.mjs` — every chess has a kit and every skill is covered.
 - Plus the loadout/pool counts in `test/{ui,match,sim}/loadout.test.js`, `test/match/pool.test.js`.
 
-**Merge self-check.** `grep -c "char_4132_ascln\|char_4217_makoto\|char_1015_aglna2\|char_2027_wang\|char_377_gdglow\|char_4138_narant\|char_1052_kalts2" tools/build-data.mjs` must stay at 7; the seven kit files must be present in `KIT_FILES`; `node tools/build-data.mjs --offline` must be error-free.
+**Merge self-check.** `grep -c "char_4132_ascln\|char_4217_makoto\|char_1015_aglna2\|char_2027_wang\|char_377_gdglow\|char_4138_narant\|char_1052_kalts2\|char_4231_clemnt" tools/build-data.mjs` must stay at 8; the eight kit files must be present in `KIT_FILES`; `node tools/build-data.mjs --offline` must be error-free.
 
 ---
 
@@ -115,8 +117,9 @@ listed-not-loading layer is retried on a later event; a layer the manifest does 
   `FX_OFFICIAL` fallback), `fxLocalSource` (which layers are listed **and** loaded), `fxOfficialFor`.
 - `simfx.js` — `FxSim.simFx` / `_fxLocalOp`: attributes the event to a `spine`/`defId` and draws the official
   layers as ground fields **instead of** the procedural archetype.
-- `hits.js` — **ours only** (`FX_HITS`, `fxHitFor`, `FxHits._opHit`): the hand-authored normal-attack impact of our
-  seven custom operators, anchored at the impact / body (never a ground field). See the normal-attack bullet below.
+- `hits.js` — **ours only** (`FX_HITS`, `fxHitFor`, `FxHits._opHit`): the hand-authored normal-attack impact of seven
+  of our custom operators (克莱门莎, the eighth, keeps the procedural hit — see the normal-attack bullet below),
+  anchored at the impact / body (never a ground field). See the normal-attack bullet below.
 - `rings.js` — `ring()` accepts a PIXI texture (scaled by the picture's own size, not the atlas 128²).
 - `system.js` — installs the method containers onto `FxSystem`.
 - `official.js` — **generated** `FX_OFFICIAL`: `opId → { group, kinds, layers }`.
@@ -142,7 +145,10 @@ that operator's own `_*_hit_*` prefab (its colours and dominant pieces), **ancho
 body, never a ground decal. A same-bundle official flash texture the client has extracted rides along as a `local`
 layer (body-anchored additive core, e.g. gdglow `star_05`, kalts2 `star_118_7` / `char_kalts2_03`) — local art when
 provably right, the procedural composition always drawn, never blank, fallback offline. The `hit` kind,
-`fxOfficialHit` and `OFFICIAL_HIT_KINDS` stay gone.
+`fxOfficialHit` and `OFFICIAL_HIT_KINDS` stay gone. **克莱门莎** (the eighth custom operator, 2026-10-09) is **not** in
+`FX_HITS`: her own `_*_hit_*` bundle textures instead feed the **generated** table for her hand-wired `explode` / `zone`
+kinds (the 漩涡 / burst, §37), and her normal attacks keep the procedural impact like the roster. The generated table is
+not the `hit` kind, so this stays within the rule.
 
 **Planned future task — the official particle-system importer (not implemented; do not start without the owner).** The
 honest limit above is that we approximate each official impact instead of replaying it. To replace the procedural /
@@ -430,11 +436,11 @@ changes still get a notice first.
 
 | Area | Files that must survive the merge |
 |---|---|
-| Custom operators | `tools/build-data.mjs` `CUSTOM_CHESS` + `applyCustomChess` + `CUSTOM_BASE_IDS`; the 7 `kits/ops/chess_char_*-*.js`; their `KIT_FILES` entries |
+| Custom operators | `tools/build-data.mjs` `CUSTOM_CHESS` + `applyCustomChess` + `CUSTOM_BASE_IDS`; the 8 `kits/ops/chess_char_*-*.js`; their `KIT_FILES` entries; `test/content/clemnt.test.js` |
 | Battle effects | `public/js/render/fx/{kinds,localart,simfx,rings,hits,system,official}.js`; `tools/build-fx-official.mjs`; `tools/local-extract/fx-official-overrides.json` |
 | Local-art pipeline | `tools/local-extract/{extract.py,committed-manifest.mjs,extract-voice.py}`; `data/local-assets.committed.json` |
 | Asset sources | `tools/fetch-assets.mjs`; `tools/assets/{network,sources}.mjs` |
-| Decisions | the §22 blacklist; the traits/rules in §5 (see `docs/MATCHMAKING.md` §22–§35) |
+| Decisions | the §22 blacklist; the traits/rules in §5 (see `docs/MATCHMAKING.md` §22–§37) |
 | Publishing | `tools/push-gitee.mjs`; the notice-first deploy order |
 
 Honour the blacklist, run the full `node --test` in the store, and only then mirror back to the working project.
@@ -446,11 +452,12 @@ If a merge would force a choice between our behaviour and upstream's beyond the 
 The 更新日志 / bug提交 panels, and the 公开房间 directory (owner's request of 2026-10-09; since 2026-10-09 改版 it is a
 full **screen** — `public/js/screens/rooms.js` — reached from the lobby's 公开房间 button, listing each room as a bar
 with its 4 seat squares), are **fork-only**, on the accounts SQLite
-(schema v3: `changelog`, `bug_reports`, `bug_uploads`). Bug reports are TEXT plus at most four raster images stored
+(schema v3: `changelog`, `bug_reports`, `bug_uploads`; v4 adds `changelog.summary` / `source` / `minor_seq`, so every
+entry carries a one-line 概要 and a pushed notice appends the next `<major.minor>.<seq>` as `source: notice`). Bug reports are TEXT plus at most four raster images stored
 as files under `var/bug-uploads/`; the database holds paths + metadata only, and the type is verified from the bytes.
 玩家留言 (the guestbook) is deliberately absent: the owner dropped it, and this fork never shipped one. See
 `docs/MATCHMAKING.md` §36. **我们独有，非上游；合并时不得丢失。**
 
 | Area | Files that must survive the merge |
 |---|---|
-| Lobby community | `server/community.js`; `server/db.mjs` (v3); `server/lobby.js` `bugReport`; `server/index.js` `/community/api/*` + `/admin/api/bug/*`; `public/js/ui/community.js`; `public/js/screens/rooms.js`; `test/community.test.js`; `test/ui/rooms.test.js` |
+| Lobby community | `server/community.js`; `server/db.mjs` (schema v3 / v4); `server/lobby.js` `bugReport` + `broadcastNotice` → `recordNotice`; `server/index.js` `/community/api/*` + `/admin/api/bug/*`; `server/admin.js` (`buildPublicSnapshot` `seats` / `full` / `freeSeats`, the 「玩家反馈」panel + export); `public/js/ui/community.js`; `public/js/screens/rooms.js`; `public/js/screens/lobby.js` (顶栏入口 + `consumeRoomsReturn`); `public/js/store.js` (`ui.roomsReturn` / `setRoomsReturn` / `consumeRoomsReturn`); `public/css/screens/lobby.css` (`.rooms-*`); `test/community.test.js`; `test/ui/rooms.test.js`; `test/ui/room-origin.test.js` |

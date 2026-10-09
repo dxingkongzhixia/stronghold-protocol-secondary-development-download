@@ -12,7 +12,7 @@ restate the upstream design — it points at it:
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | conventions, tests, PR flow |
 | [`docs/DESIGN.md`](DESIGN.md) → [`docs/design/`](design/) + [`docs/history/`](history/) | the authoritative rules (index + per-release revisions) |
 | [`docs/DATA.md`](DATA.md) · [`docs/SIM.md`](SIM.md) · [`docs/META.md`](META.md) · [`docs/ASSETS.md`](ASSETS.md) · [`docs/BALANCE.md`](BALANCE.md) | generated data, the combat engine, the match engine, assets, difficulty |
-| [`docs/MATCHMAKING.md`](MATCHMAKING.md) | **our** features and every decision record (§22 merge blacklist, §23–§35 the custom operators) |
+| [`docs/MATCHMAKING.md`](MATCHMAKING.md) | **our** features and every decision record (§22 merge blacklist, §23–§34 + §37 the custom operators) |
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **the fork-only mechanisms catalog** (what is ours, where it lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) — see §12 |
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for adding a custom operator |
 | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | how we research/change/test/deploy, the merge discipline, and the Gitee push |
@@ -315,9 +315,11 @@ cluster of `ParticleSystem`s and transforms — **not** the operator's one signa
 that signature texture as a ground field at the victim (`render/fx/official.js` kind `'hit'`, `fxOfficialHit`); it was
 removed because it was visibly misplaced (wrong texture, wrong anchor/scale). The generated table (`FX_OFFICIAL`) now
 carries only the fx kinds a kit actually emits — no `hit` — and no **roster** operator's normal attack consults the
-manifest. **Our seven custom operators are the documented exception** (`render/fx/hits.js`): each gets a hand-authored,
-body-anchored hit read from its own `_*_hit_*` prefab, with an optional same-bundle official flash as a `local` core
-and the procedural composition always drawn (docs/OUR-FEATURES.md, docs/ASSETS.md "Battle effects"). Reproducing the
+manifest. **Our custom operators are the documented exception** (`render/fx/hits.js`): **seven** of the eight get a
+hand-authored, body-anchored hit read from their own `_*_hit_*` prefab, with an optional same-bundle official flash as
+a `local` core and the procedural composition always drawn (克莱门莎, the eighth, is **not** in `FX_HITS`: her bundle's
+signature textures feed the generated `explode` / `zone` table instead, and her normal attacks keep the procedural hit).
+See `docs/OUR-FEATURES.md`, docs/ASSETS.md "Battle effects". Reproducing the
 official impacts faithfully for every operator would need a particle-system importer plus a per-operator projectile
 mapping, which the bundles do not give as a single sprite — **recorded as a planned future task** in
 `docs/OUR-FEATURES.md` §1 (docs/ASSETS.md "Battle effects"); do not start it without the owner.
@@ -326,7 +328,8 @@ mapping, which the bundles do not give as a single sprite — **recorded as a pl
 
 ## 10. Where our custom content lives
 
-Relative to the upstream, this fork adds the account/matchmaking/spectate/admin features and **seven** custom shop
+Relative to the upstream, this fork adds the account/matchmaking/spectate/admin features, the lobby community
+(更新日志 / bug提交 / 公开房间, §13) and **eight** custom shop
 operators (injected via `CUSTOM_CHESS` in `tools/build-data.mjs`), each with a data entry, a kit, and (usually) art
 and voice:
 
@@ -339,6 +342,7 @@ and voice:
 | 澄闪 | `char_377_gdglow` | 3 | `chess_char_377_gdglow-gdglow.js` | §31 |
 | 娜仁图亚 | `char_4138_narant` | 3 | `chess_char_4138_narant-narant.js` | §32 |
 | 凯尔希·思衡托 | `char_1052_kalts2` | 4 | `chess_char_1052_kalts2-kalts2.js` | §34, §35.1, §35.7 |
+| 克莱门莎 | `char_4231_clemnt` | 6 | `chess_char_4231_clemnt-clemnt.js` (+ `primguard` in `professions.js`) | §37 |
 
 Related custom mechanisms: the leave/takeover seat rules (`server/lobby.js removeMember` → `handSeatToAI` →
 `Match.aiTakeOver`, §35.5), the 联防 arena (§35.4), the 余音 re-entrancy fix (§35.6), and the added data-layer
@@ -380,22 +384,23 @@ lives, how to extend it, the tests that pin it, and an explicit **我们独有�
 
 | § | Mechanism |
 |---|---|
-| 1 | Custom operators (`CUSTOM_CHESS` + `applyCustomChess`, the `CUSTOM_BASE_IDS` stand-in exemption, the 7 kits) |
+| 1 | Custom operators (`CUSTOM_CHESS` + `applyCustomChess`, the `CUSTOM_BASE_IDS` stand-in exemption, the 8 kits) |
 | 2 | The two-tier battle-effect system (procedural + optional local art; the generated `FX_OFFICIAL` table; the committed manifest) |
 | 3 | The local-art pipeline (`tools/local-extract/extract.py`, the `.venv-extract`, the committed manifest bridge) |
 | 4 | Asset sources (`--asset-source=direct|mirror|gitcode`) and the local-client-first rule |
-| 5 | Our carried decisions (the §22 blacklist, funnel hits, 望's pieces, kalts2, leave→AI, the notice convention, golden attribution) |
+| 5 | Our carried decisions (the §22 blacklist, funnel hits, 望's pieces, kalts2, 克莱门莎, leave→AI, the notice convention, golden attribution) |
 | 6 | Publishing (the Gitee mirror, the byte-for-byte tree discipline, the notice-first deploy order) |
 
-It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§35 (the decision record) and
+It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§37 (the decision record) and
 [`docs/ASSETS.md`](ASSETS.md) (the asset detail). Its appendix is the merge checklist of fork-only files.
 
 ## 13. Lobby community data (our SQLite schema, `server/community.js`)
 
 The lobby's 更新日志 / bug提交 panels (and the server side of 公开房间, whose directory is a full screen now —
 `screens/rooms.js`, not a panel) live in the **same `node:sqlite` database as accounts**
-(`server/db.mjs`, now schema **v3**). The `migrate()` step adds three tables — `changelog`, `bug_reports`,
-`bug_uploads` — under the same `PRAGMA user_version` discipline. `CommunityService` mirrors `AuthService`: one
+(`server/db.mjs`, now schema **v4**). The `migrate()` step adds three tables — `changelog`, `bug_reports`,
+`bug_uploads` — under the same `PRAGMA user_version` discipline (v3); v4 adds `changelog.summary` / `source` /
+`minor_seq` for the one-line gist and the notice-appended minor versions. `CommunityService` mirrors `AuthService`: one
 `DatabaseSync` handle, prepared statements, synchronous methods; `openMemoryDb()` gives tests the schema.
 
 Bug-report images are **files** under `var/bug-uploads/` (git-ignored, never statically served); the database keeps

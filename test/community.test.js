@@ -243,7 +243,7 @@ test('HTTP: changelog, upload, bug.report, admin list / status / image', async (
     // ① the changelog seeded once from CHANGELOG.md (token-free)
     const clog = await (await fetch(`${base}/community/api/changelog`)).json();
     assert.ok(clog.changelog.length >= 6, `${clog.changelog.length} changelog entries`);
-    assert.equal(clog.changelog[0].version, '0.2.0', 'newest first');
+    assert.equal(clog.changelog[0].version, '0.3.0', 'newest first');
     assert.equal(clog.changelog[0].source, 'release', 'a seeded row is source release');
     assert.ok(clog.changelog[0].summary && clog.changelog[0].summary.length > 0, 'the seeded row carries a summary');
     for (const k of ['id', 'version', 'released_at', 'title', 'body', 'summary', 'source']) {
@@ -288,7 +288,7 @@ test('HTTP: changelog, upload, bug.report, admin list / status / image', async (
     const notify = (body) => fetch(`${base}/admin/api/notify?token=tok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const n = await (await notify({ text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下' })).json();
     assert.equal(n.ok, true);
-    assert.ok(n.changelog && /^0\.2\.\d+$/.test(n.changelog.version), `the notice is logged as a minor version (${n.changelog && n.changelog.version})`);
+    assert.ok(n.changelog && /^0\.3\.\d+$/.test(n.changelog.version), `the notice is logged as a minor version (${n.changelog && n.changelog.version})`);
     const after = await (await fetch(`${base}/community/api/changelog`)).json();
     assert.equal(after.changelog[0].version, n.changelog.version, 'the new entry is newest first');
     assert.equal(after.changelog[0].source, 'notice');
