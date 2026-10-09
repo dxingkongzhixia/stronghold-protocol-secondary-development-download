@@ -142,13 +142,15 @@ npm run golden         # 黄金结果：固定种子的整套战斗与人机对�
 
 ## 五、更新怎么发布
 
-我们的工作流是「**工作树 → git 仓库存档 → 推到 Gitee 镜像**」：
+我们的工作流是「**git 仓库存档（唯一真相）→ 推 Gitee 镜像 → 回镜像工作树**」：
 
 ```bash
-node tools/push-gitee.mjs -m "本次改了什么"   # 把工作树镜像进 git 仓库、提交，并推送到本仓库（gitee/master）
+node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动、推送 git 仓库到 Gitee（gitee/master），再回镜像工作树
 ```
 
-- 该脚本按 `git ls-files` 只处理被跟踪的文件（`.gitignore` 生效），把工作树的改动同步进 git 仓库、提交，再推送。
+- git 仓库（`_merge-scratch`，分支 `ours`）是**唯一真相**；工作项目没有 `.git`，是它的镜像。脚本**只单向** store → Gitee → 工作树，**绝不用工作树覆盖 git 仓库**（工作树过期时不会回退仓库里更新的提交）。
+- 该脚本按 `git ls-files` 只处理被跟踪的文件（`.gitignore` 生效），把仓库提交的内容镜像回工作树；工作树独有的文件不会被删除。
+- 若确实要反向同步（工作树 → 仓库），用显式开关 `--from-dev`（默认关闭）。
 - 运行时素材（`public/assets` / `public/fonts` / `public/vendor`）**连同源码一起提交**，所以克隆即得。
 - 凭据（Gitee 登录名 + 私人令牌）**从不写进仓库**：用 `--interactive` 一次性登录，或用当次环境变量 `GIT_USERNAME` / `GIT_PASSWORD` 传入（脚本在仓库外的临时文件里使用）。
 
@@ -199,5 +201,5 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 把工作树镜像进 git 
 A Gitee **download/mirror** of our independently maintained secondary-development build of Arknights' seasonal auto-chess tower-defense mode *Stronghold Protocol: Alliance*, played in the browser: solo, or 1–4 player co-op. **This is not the upstream project** — the original source is [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which we credit and periodically merge. Our additions include account/matchmaking/spectate features, seven custom shop operators, and a set of rule decisions recorded in [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md).
 
 - **Run:** Node.js 22 or 24; `git clone` this repository (the runtime art under `public/assets`, `public/fonts` and `public/vendor` is tracked, so a clone runs without fetching art), then `npm install` and `node server/index.js` → <http://localhost:3000>. The admin panel is at `/admin?token=…` (token in `var/admin-token.txt`). Tests: `node --test` and `npm run golden`.
-- **Updates:** `node tools/push-gitee.mjs -m "…"` mirrors the working tree into the git store, commits, and pushes to this Gitee repo; see [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) for the notice-then-deploy convention.
+- **Updates:** `node tools/push-gitee.mjs -m "…"` commits what you staged in the git store, pushes it to this Gitee repo, then mirrors the store back into the working tree (one-way: store → Gitee → working tree; it never overwrites the store with the working tree); see [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) for the notice-then-deploy convention.
 - **Disclaimer:** not affiliated with or endorsed by Hypergryph or Yostar. All Arknights names, art, audio, text and data are © their respective owners and are **not** covered by this project's GPL licence; they are redistributed here for the community's convenience, by the owner's decision, and must not be used commercially. Content will be removed on request of the rights holders. Code: GPL-3.0-or-later ([LICENSE](LICENSE)).

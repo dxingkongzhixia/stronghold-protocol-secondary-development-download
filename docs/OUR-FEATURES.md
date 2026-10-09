@@ -356,28 +356,34 @@ it. The merge procedure and the blacklist are in `docs/AI-WORKFLOW.md` (b).
 > **我们独有，非上游；合并时不得丢失** — the two-tree mirror discipline, the Gitee push helper and the
 > notice-first deploy order are ours.
 
-**What it is.** The working project `Stronghold-Protocol` has **no `.git`** and is the single source of truth for
-the files on disk; the history lives in the git store `_merge-scratch` (branch `ours`). `tools/push-gitee.mjs`
-mirrors the working project's **tracked** files into the store (respecting `.gitignore`), commits, and pushes to
-the Gitee remote.
+**What it is.** The git store `_merge-scratch` (branch `ours`) is the **single source of truth**: the history and
+the committed files. The working project `Stronghold-Protocol` has **no `.git`** and is a byte-for-byte **mirror**
+of the store. `tools/push-gitee.mjs` commits what is staged in the store, pushes the store's `HEAD` to the Gitee
+remote, and then mirrors the store's **tracked** files into the working project (respecting `.gitignore`).
+
+**The direction is one-way: store → Gitee → working project.** The helper **never overwrites the store with the
+working project** — a stale working project must not revert the store's newer commits. `--from-dev` is the explicit,
+opt-in reverse sync (working project → store) and is **off** by default; without it the helper warns that the tree
+diverged and restores it from the store.
 
 **The byte-for-byte tree discipline.** The two trees must stay identical for every tracked file (`git ls-files`).
 Verify without copying:
 
 ```powershell
-# run inside _merge-scratch; empty output = the store's HEAD equals the working project
+# run inside _merge-scratch; empty output = the working project equals the store's HEAD
 git --work-tree=D:\DOTK\Stronghold-Protocol status --short --untracked-files=all
 ```
 
 The store's `node_modules`, `.cache` and the `public/assets`, `public/fonts`, `public/vendor` trees are junctions
-onto the working project, so builds/assets are shared and not duplicated. **Edit the working project only** —
-never edit files inside `_merge-scratch` directly (the next sync overwrites them).
+onto the working project, so builds/assets are shared and not duplicated. **The store is the source of truth**;
+the helper keeps the working project in step, and the mirror skips the shared junctions so files are never copied
+onto themselves.
 
 **The push.** Remote **`gitee`** →
 `https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`, branch **`master`**
-(`HEAD:refs/heads/master`). `origin` stays the GitHub upstream. Credentials are **never** in the URL or the repo:
-the ASCII Gitee login is **`marseille1`** (the Chinese name is only a display name) plus a personal access token
-(账号设置 → 私人令牌, scope `projects`). Supply them per run:
+(`HEAD:refs/heads/master`), fast-forward only and **never forced**. `origin` stays the GitHub upstream.
+Credentials are **never** in the URL or the repo: the ASCII Gitee login is **`marseille1`** (the Chinese name is
+only a display name) plus a personal access token (账号设置 → 私人令牌, scope `projects`). Supply them per run:
 
 ```powershell
 $env:GIT_USERNAME="marseille1"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs -m "message"
@@ -387,15 +393,17 @@ The helper writes them to a **temp credential file outside the repo**, resets th
 stale system `credential.helper=manager` cannot shadow the token), and deletes the temp file afterwards. Never
 write the token into the repository.
 
-**Never `git add -A` when the store holds other WIP.** The store is shared, so a blanket `git add -A` would sweep
-unrelated work-in-progress into your commit. Stage **only your own paths**:
+**Stage only your own paths.** The store is shared, so it can hold unrelated work-in-progress. The helper commits
+what you staged (or, with `--only`, just those paths); it never sweeps the working project into the store:
 
 ```powershell
+git -C D:\DOTK\_merge-scratch add -- docs/OUR-FEATURES.md docs/DEVELOPMENT.md
 node tools/push-gitee.mjs -m "docs: ..." --only docs/OUR-FEATURES.md --only docs/DEVELOPMENT.md ...
 ```
 
-`--only <path>` (repeatable, comma-separated allowed) restricts both the sync and the staging; it is already
-supported by `tools/push-gitee.mjs`. `--dry-run` shows what would change, `--no-push` commits locally only.
+`--only <path>` (repeatable, comma-separated allowed) restricts the staging and the mirror; it is already
+supported by `tools/push-gitee.mjs`. `--dry-run` reports only (nothing written anywhere), `--no-push` skips the
+push (commit + mirror stay local), and `--from-dev` is the opt-in reverse sync described above.
 
 **The deploy order (hard order — never reorder).** The full procedure is
 [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (d); the essentials:

@@ -81,8 +81,9 @@ We have already merged through upstream `feedback5` (`docs/MATCHMAKING.md` §33)
 
 Merge procedure:
 
-1. In `_merge-scratch`: **first sync the working project** into the store (the store must equal the tree before you
-   start). `node tools/push-gitee.mjs --no-push` or the `git --work-tree` check in `docs/DEVELOPMENT.md` §1.
+1. In `_merge-scratch`: the **store is the source of truth** — first make the working project mirror it, so both
+   trees agree before the merge (`node tools/push-gitee.mjs --no-push` mirrors store → tree; the `git --work-tree`
+   check in `docs/DEVELOPMENT.md` §1 is the same test).
 2. `git fetch origin` (and/or `upstreamm`) then `git merge origin/master`.
 3. Resolve **hunk-by-hunk, keeping both sides.**
    - **NEVER** `git checkout --theirs` / `git checkout --ours` on a source file. Never blanket-accept a file.
@@ -94,7 +95,8 @@ Merge procedure:
    - Self-check after the merge: `grep -rn "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server`
      and `grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test` must both be empty.
    - `git log -S bondsCollapsed -- public/js/screens/game.js` shows if upstream re-added it.
-5. Run the full `node --test` in the store; only then mirror the store back to the working project.
+5. Run the full `node --test` in the store; only then publish (`node tools/push-gitee.mjs` pushes the store and
+   mirrors it back into the working project).
 6. Record the merge in `docs/MATCHMAKING.md` (new section: what came in, what conflicts, what we kept).
 
 **Golden attribution rule.** Any `test/golden/*.json` change must be proven to come from your change and nothing else:
@@ -106,11 +108,17 @@ change → the diff must be **exactly** what you expect. Write the proof into th
 
 ## (c) Commit & push discipline (Gitee)
 
-- The **working project has no `.git`** — it is the source of truth for files, but commits happen in `_merge-scratch`.
-- Everything is **mirrored byte-for-byte**: after changes, `node tools/push-gitee.mjs` copies the working project's
-  tracked files into the store (respecting `.gitignore`), commits, and pushes.
+- **The git store `_merge-scratch` is the single source of truth** (history *and* files). The **working project has
+  no `.git`** and is a byte-for-byte **mirror** of the store — the helper keeps it in step.
+- Everything is mirrored **one way: store → Gitee → working project.** `node tools/push-gitee.mjs` commits what you
+  staged in the store, pushes the store's `HEAD` to Gitee, and only then copies the store's tracked files into the
+  working project (respecting `.gitignore`). It **never overwrites the store with the working project** — a stale
+  working project must not revert the store's newer commits (that is why `--from-dev` exists and is **off** by default).
+- `--from-dev` is the explicit, opt-in reverse sync (working project → store) for the rare case the working project
+  is genuinely ahead; without it the helper warns that the tree diverged and restores it from the store.
 - Push target: remote **`gitee`** → `https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`,
-  branch **`master`** (the store's branch is `ours`; `HEAD:refs/heads/master`). `origin` stays the GitHub upstream.
+  branch **`master`** (the store's branch is `ours`; `HEAD:refs/heads/master`). The push is fast-forward only and
+  **never forced**. `origin` stays the GitHub upstream.
 - **Credentials are not in the URL and must never be committed.** A push needs the Gitee **login name** (ASCII,
   `marseille1` — the Chinese name is only a display name) + a **personal access token** (账号设置 → 私人令牌, scope
   `projects`). Supply them in one of two ways:
@@ -130,8 +138,9 @@ change → the diff must be **exactly** what you expect. Write the proof into th
   `node tools/fetch-assets.mjs --asset-source=mirror` is now **optional**, to pull upstream art that changed after the
   last commit. This repo is public and the art is (c) Hypergryph / Yostar — the owner made that call knowingly.
 - Git-ignored and never committed: `node_modules/`, `.cache/`, `.venv-extract/`, `__pycache__/`, `test/e2e/out/`,
-  `logs/`, `var/`, `data/local-assets.json`, `scripts/service.env.cmd`, `.env*`, `packs/index.json`. The helper only
-  ever touches `git ls-files` paths, but review `git status` in the store before pushing anyway.
+  `logs/`, `var/`, `data/local-assets.json`, `scripts/service.env.cmd`, `.env*`, `packs/index.json`. The mirror only
+  copies paths that the store tracks (`git ls-files`), never deletes working-project-only files, and never stages the
+  working project over the store; still review `git status` in the store before pushing.
 - Commit messages: concise English subject; add a `docs/MATCHMAKING.md` section reference for non-trivial changes.
 
 ---

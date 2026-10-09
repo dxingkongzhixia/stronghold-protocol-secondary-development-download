@@ -28,8 +28,8 @@ restate the upstream design — it points at it:
 
 | Tree | What it is | Has `.git`? |
 |---|---|---|
-| `D:\DOTK\Stronghold-Protocol` | **the working project — the single source of truth.** Every edit lands here. | no |
-| `D:\DOTK\_merge-scratch` | **the git store / worktree** (branch `ours`) with the whole history, including the upstream merges. | yes |
+| `D:\DOTK\_merge-scratch` | **the git store — the single source of truth** (branch `ours`): the history and the committed files, including the upstream merges. | yes |
+| `D:\DOTK\Stronghold-Protocol` | **the working project — a byte-for-byte mirror of the store.** The app runs here. | no |
 
 The two are kept **byte-for-byte identical for every tracked file** (`git ls-files`). The store's `node_modules`,
 `.cache` and the asset trees (`public/assets`, `public/fonts`, `public/vendor`) are junctions onto the working
@@ -38,18 +38,23 @@ now (see §9). (See `docs/PROJECT-STATE.md` §2.)
 
 Rules:
 
-- **Edit the working project only.** Never edit files inside `_merge-scratch` directly — the next sync overwrites them.
-- **Commit from the store.** Because the working project has no history, commits, merges and pushes happen in
-  `_merge-scratch`.
-- **Push to Gitee the same way every time**: `node tools/push-gitee.mjs` (or `node tools/push-gitee.mjs -m "…"`).
-  It mirrors the working project into the store (tracked files only — `.gitignore` respected), commits and pushes to
-  the `gitee` remote. See [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) for the credential setup and the convention
-  (`之后每次有更新都提交下`).
+- **The store is the source of truth.** Commits, merges and pushes happen in `_merge-scratch`; the working project
+  follows.
+- **The direction is one-way: store → Gitee → working project.** `node tools/push-gitee.mjs` pushes the store and
+  mirrors it into the working project. It **never overwrites the store with the working project** — a stale working
+  project must not revert the store's newer commits.
+- If you edited the working project and want those edits published, that is the explicit, opt-in reverse sync:
+  `node tools/push-gitee.mjs --from-dev` (off by default). Without it the helper warns that the tree diverged and
+  restores it from the store.
+- **Publish to Gitee the same way every time**: `node tools/push-gitee.mjs` (or `node tools/push-gitee.mjs -m "…"`).
+  It commits what you staged in the store, pushes the store's `HEAD` to the `gitee` remote (fast-forward, never
+  forced), then mirrors the store's tracked files into the working project. See
+  [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) for the credential setup and the convention (`之后每次有更新都提交下`).
 
 Verifying the mirror without copying anything:
 
 ```powershell
-# Run inside _merge-scratch. Empty output = the store's HEAD equals the working project.
+# Run inside _merge-scratch. Empty output = the working project equals the store's HEAD.
 git --work-tree=D:\DOTK\Stronghold-Protocol status --short --untracked-files=all
 ```
 
@@ -347,17 +352,22 @@ the exact procedure is in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md).
 
 ## 11. Pushing to Gitee
 
-The canonical copy is the git store; the Gitee remote (`gitee`) mirrors it. After any change:
+The canonical copy is the git store; the Gitee remote (`gitee`) mirrors it, and the working project is a local
+mirror of the store. After any change:
 
 ```powershell
 node tools/push-gitee.mjs -m "what changed"
 ```
 
-The helper syncs the working project → `_merge-scratch` (tracked files only), commits and pushes `HEAD` to
-`gitee/master`. The owner's convention is **之后每次有更新都提交下**. Credentials (the ASCII Gitee login `marseille1` +
-a personal access token) are supplied via `--interactive`, or per-run via `GIT_USERNAME` / `GIT_PASSWORD` (the helper
-writes them to a temp file outside the repo), never committed — the full instructions, the merge
-discipline and the production deploy procedure are in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md).
+The helper commits what you staged in the store, pushes the store's `HEAD` to `gitee/master` (fast-forward, never
+forced), and then mirrors the store's **tracked** files into the working project (`.gitignore` respected; dev-tree-only
+files are left alone). The flow is **one-way — store → Gitee → working project**; the helper **never overwrites the
+store with the working project**. Copying the working project into the store is the explicit, opt-in `--from-dev`
+(otherwise the helper warns when the trees diverge and restores the working project from the store). The owner's
+convention is **之后每次有更新都提交下**. Credentials (the ASCII Gitee login `marseille1` + a personal access token)
+are supplied via `--interactive`, or per-run via `GIT_USERNAME` / `GIT_PASSWORD` (the helper writes them to a temp
+file outside the repo), never committed — the full instructions, the merge discipline and the production deploy
+procedure are in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md).
 
 ---
 
