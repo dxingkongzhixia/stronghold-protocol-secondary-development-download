@@ -1,7 +1,7 @@
 // test/lobby-chat.test.js — room text chat (同盟等待室 + 局内, docs/MATCHMAKING.md §38): `room.chat { text }` →
 // `m.chat { from, name, text, at }`, broadcast to EVERY member of the room (seats + spectators) in the waiting lobby
-// AND while the room's match runs; the room keeps CHAT_HISTORY messages and replays them on entry as
-// `room.chat { messages }`; the length cap, control-char stripping and per-session rate limit.
+// AND while the room's match runs; transient (no history / replay), length-capped, control-char-stripped, per-session
+// rate-limited, and NEVER persisted (in memory only).
 
 import { describe, test, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { startServer } from '../server/index.js';
 import { StubMatch } from '../server/match/StubMatch.js';
 import { TestClient } from './helpers/wsClient.js';
-import { ERR, CHAT_MAX, CHAT_HISTORY, CHAT_RATE_LIMIT } from '../shared/constants.js';
+import { ERR, CHAT_MAX, CHAT_RATE_LIMIT } from '../shared/constants.js';
 import { validateC2S } from '../shared/protocol.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -60,6 +60,8 @@ describe('room.chat protocol', () => {
     assert.notEqual(validateC2S({ t: 'room.chat', text: 'x'.repeat(CHAT_MAX + 1) }), null, 'over the cap');
     assert.notEqual(validateC2S({ t: 'room.chat', text: 42 }), null);
     assert.notEqual(validateC2S({ t: 'room.chat', text: { $gt: '' } }), null);
+    // there is no history frame any more: the server never sends room.chat
+    assert.equal(validateC2S({ t: 'room.chat', text: 'hi' }), null);
   });
 });
 
@@ -80,7 +82,7 @@ describe('room.chat (lobby)', () => {
   test('broadcast reaches the seats AND the spectators, with { from, name, text, at }; never another room', async () => {
     const host = await pool.player('Host');
     const st = await createRoom(host);
-    assert.equal(Object.hasOwn(st, 'chat'), false, 'room.state never carries the chat history');
+    assert.equal(Object.hasOwn(st, 'chat'), false, 'room.state never carries chat');
     const guest = await pool.player('Guest');
     await joinRoom(guest, st.code);
     const watcher = await pool.player('Watcher');
@@ -127,27 +129,11 @@ describe('room.chat (lobby)', () => {
     await err(host, { t: 'room.chat', text: 'x'.repeat(CHAT_MAX + 1) }, ERR.BAD_MSG);
     await err(host, { t: 'room.chat', text: '   ' }, ERR.BAD_MSG);
     for (let i = 0; i < CHAT_RATE_LIMIT; i++) await ok(host, { t: 'room.chat', text: `m${i}` });
-    const limited = await err(host, { t: 'room.chat', text: 'one too many' }, ERR.RATE);
-    assert.equal(limited.t, 'error');
+    await err(host, { t: 'room.chat', text: 'one too many' }, ERR.RATE);
     // a different session is not affected by the burst
     const guest = await pool.player('Guest');
     await joinRoom(guest, st.code);
     await ok(guest, { t: 'room.chat', text: 'ok' });
-  });
-
-  test('a late member is sent the recent history (room.chat { messages }), oldest first', async () => {
-    const host = await pool.player('Host');
-    const st = await createRoom(host);
-    await ok(host, { t: 'room.chat', text: 'first' });
-    await ok(host, { t: 'room.chat', text: 'second' });
-    const guest = await pool.player('Guest');
-    const history = guest.waitFor('room.chat');
-    await joinRoom(guest, st.code);
-    const frame = await history;
-    assert.deepEqual(frame.messages.map((m) => m.text), ['first', 'second']);
-    assert.deepEqual(Object.keys(frame.messages[0]).sort(), ['at', 'from', 'name', 'text']);
-    assert.equal(frame.messages[0].from, host.id);
-    assert.equal(frame.messages[0].name, 'Host');
   });
 
   test('a player outside a room cannot chat (NOT_IN_ROOM)', async () => {
@@ -185,19 +171,28 @@ describe('room.chat (lobby)', () => {
     }
   });
 
-  test('reconnect re-sends the history; leaving a room stops the broadcast to that session', async () => {
+  test('no history: a later joiner gets nothing past; a resumed member only gets NEW live messages', async () => {
     const host = await pool.player('Host');
     const st = await createRoom(host);
-    await ok(host, { t: 'room.chat', text: 'kept' });
+    await ok(host, { t: 'room.chat', text: 'before join' });
+    // a new member joining after the message must NOT receive any history
+    const guest = await pool.player('Guest');
+    guest.clearInbox();
+    await joinRoom(guest, st.code);
+    await guest.expectNone(null, (m) => m.t === 'room.chat' || (m.t === 'm.chat' && m.text === 'before join'));
+    // a live message after joining does arrive
+    const live = guest.waitFor('m.chat', (m) => m.text === 'after join');
+    await ok(host, { t: 'room.chat', text: 'after join' });
+    assert.equal((await live).text, 'after join');
+  });
+
+  test('leaving a room stops the broadcast to that session', async () => {
+    const host = await pool.player('Host');
+    const st = await createRoom(host);
     const guest = await pool.player('Guest');
     await joinRoom(guest, st.code);
-    await guest.waitFor('room.chat', (f) => f.messages.some((m) => m.text === 'kept'));
-    // a repeated hello on the live socket is a resync: room.chat history comes again
-    guest.clearInbox();
-    await guest.hello('Guest', guest.token);
-    const again = await guest.waitFor('room.chat');
-    assert.ok(again.messages.some((m) => m.text === 'kept'));
-    // leaving: no m.chat reaches the departed session
+    await ok(host, { t: 'room.chat', text: 'while here' });
+    await guest.waitFor('m.chat', (m) => m.text === 'while here');
     await ok(guest, { t: 'room.leave' });
     guest.clearInbox();
     await ok(host, { t: 'room.chat', text: 'after leave' });
@@ -205,8 +200,8 @@ describe('room.chat (lobby)', () => {
   });
 });
 
-describe('room.chat is in memory only (owner rule: no DB, no disk)', () => {
-  test('the schema / community service never mention chat; the lobby keeps chat on the in-memory room and writes no SQL', () => {
+describe('room.chat is in memory only (owner rule: no DB, no disk, no history buffer)', () => {
+  test('the schema / community service never mention chat; the lobby keeps nothing and writes no SQL / disk', () => {
     const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
     for (const rel of ['server/db.mjs', 'server/community.js']) {
       assert.doesNotMatch(read(rel), /chat/i, `${rel} must not mention chat / gain a chat table`);
@@ -214,39 +209,9 @@ describe('room.chat is in memory only (owner rule: no DB, no disk)', () => {
     const lobby = read('server/lobby.js');
     assert.doesNotMatch(lobby, /\bCREATE\s+TABLE\b|INSERT\s+INTO|UPDATE\s+\w+\s+SET|node:sqlite/i, 'no SQL in the lobby');
     assert.doesNotMatch(lobby, /\bwriteFileSync\b|\bappendFileSync\b|\bcreateWriteStream\b/, 'chat is never written to disk');
-    assert.match(lobby, /this\.chat = \[\]/, 'the history is a plain in-memory array on the Room');
-    // and the room drops it with the room: disposeRoom deletes the Room object itself (no snapshot path carries chat)
-    assert.doesNotMatch(lobby, /chat\s*[:=][^;]*JSON\.stringify/, 'chat is never serialised into a snapshot');
-  });
-});
-
-describe('room.chat history cap', () => {
-  let srv;
-  let pool;
-  const cap = quietLog();
-  before(async () => {
-    // a high limit so the cap (not the rate limit) is what is measured; a high connection rate so 57 sends do not trip
-    // the 40 msg/s socket bucket either
-    srv = await startServer({ port: 0, host: '127.0.0.1', log: cap.log, MatchClass: StubMatch, chatRateLimit: 1000, chatRateWindowMs: 60_000, ratePerSec: 1000, rateBurst: 1000 });
-    pool = clientPool(() => `ws://127.0.0.1:${srv.port}/ws`);
-  });
-  afterEach(async () => { await pool.closeAll(); });
-  after(async () => {
-    await srv?.close();
-    assert.deepEqual(cap.errors, [], 'no server errors logged');
-  });
-
-  test('keeps only the last CHAT_HISTORY messages and replays exactly those', async () => {
-    const host = await pool.player('Host');
-    const st = await createRoom(host);
-    const total = CHAT_HISTORY + 7;
-    for (let i = 1; i <= total; i++) await ok(host, { t: 'room.chat', text: `#${i}` });
-    const guest = await pool.player('Guest');
-    const history = guest.waitFor('room.chat');
-    await joinRoom(guest, st.code);
-    const frame = await history;
-    assert.equal(frame.messages.length, CHAT_HISTORY);
-    assert.equal(frame.messages[0].text, `#${total - CHAT_HISTORY + 1}`);
-    assert.equal(frame.messages.at(-1).text, `#${total}`);
+    assert.doesNotMatch(lobby, /this\.chat\s*=\s*\[/, 'no in-memory room chat buffer (transient only)');
+    assert.doesNotMatch(lobby, /\bchat\s*[:=][^;]*JSON\.stringify/, 'chat is never serialised into a snapshot');
+    assert.match(lobby, /t: 'm\.chat'/, 'the message is broadcast, not stored');
+    assert.match(read('shared/protocol.js'), /'room\.chat': \{ text:/, 'room.chat is validated');
   });
 });

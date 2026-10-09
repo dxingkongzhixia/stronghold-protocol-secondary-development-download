@@ -307,34 +307,21 @@
 
 .room-bar .btn--xl { min-width: 3.2rem; letter-spacing: .2em; }
 
-/* ---- room text chat (同盟等待室 + 局内, docs/MATCHMAKING.md §38) ------------------------------------------------ */
-/* The waiting-room panel is anchored bottom-left above the action bar; the seat cards, difficulty picker and ready
-   button are untouched. The .chat-* primitives are shared with the in-match dock (screens/game.css .gm-chat). Player
-   text is rendered as text (ui/chat.js), never through innerHTML. */
+/* ---- room text chat: transient speech bubbles + composer (docs/MATCHMAKING.md §38) ---------------------------- */
+/* No log: a message pops up over the sender's seat (waiting room, .seat__chat) / player row (in match, .team__chat /
+   .specdock__chat) and fades. The bottom-left composer is the only persistent element. Player text is rendered as text
+   (ui/chat.js), never through innerHTML. */
 .room-chat {
   position: absolute;
   left: .6rem;
   bottom: 1.62rem;
   z-index: 4;
-  width: min(5rem, 42vw);
-  max-height: 3.2rem;
-  display: flex;
-  flex-direction: column;
-  gap: .06rem;
-  padding: .12rem .14rem;
+  width: min(4.6rem, 40vw);
+  padding: .1rem .12rem;
   background: rgba(6, 10, 9, .92);
   border: 1px solid var(--line-2);
   box-shadow: 0 .12rem .4rem rgba(0, 0, 0, .55);
 }
-.chat-panel__head { display: flex; align-items: center; gap: .07rem; font-size: .15rem; font-weight: 700; color: var(--text-md); letter-spacing: .08em; }
-.chat-panel__head .icon { width: .17rem; height: .17rem; color: var(--mint-500); }
-.chat-log { flex: 1; min-height: .8rem; max-height: 1.8rem; overflow-y: auto; display: flex; flex-direction: column; gap: .04rem; font-size: .15rem; }
-.chat-log__empty { font-size: .14rem; }
-.chat-log__line { display: flex; gap: .08rem; line-height: 1.35; overflow-wrap: anywhere; }
-.chat-log__name { flex: none; max-width: 1.5rem; color: var(--text-lo); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-log__text { color: var(--text-hi); white-space: pre-wrap; overflow-wrap: anywhere; }
-.chat-log__line.is-me .chat-log__name { color: var(--mint-500); }
-.chat-log__line.is-me .chat-log__text { color: var(--mint-400); }
 .chat-send { display: flex; align-items: center; gap: .08rem; flex-wrap: wrap; }
 .chat-send__input {
   flex: 1; min-width: 0; height: .42rem; padding: 0 .12rem; font-size: .16rem;
@@ -343,3 +330,47 @@
 .chat-send__input::placeholder { color: var(--text-dim); }
 .chat-send__input:disabled { opacity: .55; }
 .chat-send__hint { flex-basis: 100%; font-size: .13rem; }
+
+/* speech bubble: pops in, holds, fades; the CSS runs exactly for --chat-ttl (a remount resumes at --chat-age) */
+.cbubble {
+  --chat-ttl: 5000ms;
+  --chat-age: 0ms;
+  position: relative;
+  max-width: 100%;
+  padding: .07rem .14rem;
+  background: rgba(22, 28, 26, .97);
+  border: 1px solid var(--line-2);
+  color: var(--text-hi);
+  font-size: .15rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 .06rem .2rem rgba(0, 0, 0, .55);
+  animation: cbubble-life var(--chat-ttl) linear forwards;
+  animation-delay: calc(-1 * var(--chat-age));
+  pointer-events: none;
+}
+.cbubble::after { /* tail pointing down, toward the sender */
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -.1rem;
+  transform: translateX(-50%);
+  border: .1rem solid transparent;
+  border-top-color: rgba(22, 28, 26, .97);
+  border-bottom: 0;
+}
+.cbubble__name { display: block; font-size: .12rem; color: var(--text-lo); font-weight: 700; }
+.cbubble.is-own { border-color: var(--mint-700); }
+.cbubble.is-own .cbubble__text { color: var(--mint-400); }
+@keyframes cbubble-life {
+  0% { opacity: 0; transform: translateY(.08rem); }
+  8% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* waiting room: the bubble sits at the top of the sender's seat card (P1–P4) */
+.seat__chat { position: absolute; top: .06rem; left: .1rem; right: .1rem; z-index: 5; display: flex; justify-content: center; }
+/* a spectator has no seat: the bubble rides their row in the 观战席 dropdown */
+.specdock__chat { flex: 1; display: flex; justify-content: flex-end; }

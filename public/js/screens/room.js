@@ -12,15 +12,15 @@
 // Texts go through t() (docs/I18N.md).
 
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, MAX_SEATS, MAX_SPECTATORS } from '../../../shared/constants.js';
+import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, MAX_SEATS, MAX_SPECTATORS, CHAT_BUBBLE_MS } from '../../../shared/constants.js';
 import {
-  html, Button, Icon, MicroLabel, PingPill, AvatarFrame, DifficultyTag, DifficultyIcon, Tooltip, confirmDialog, doctorNo, RoleTag,
+  html, Button, Icon, MicroLabel, PingPill, AvatarFrame, DifficultyTag, DifficultyIcon, Tooltip, confirmDialog, doctorNo, RoleTag, useTicker,
 } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { copyText } from '../ui/clipboard.js';
 import { GuideButton } from '../ui/guide.js';
 import { LoadoutButton } from './loadout.js';
-import { ChatBox } from '../ui/chat.js';
+import { ChatComposer, ChatBubble, activeChatBubbles } from '../ui/chat.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, emptyMatch, isSpectating } from '../store.js';
 import { difficultyInfo } from './lobby.js';
@@ -85,7 +85,7 @@ export function inviteLink(code) {
  */
 export { copyText };
 
-function SeatCard({ seat, index, room, facts, myId, busy, onAddBot, onRemoveBot, onKick }) {
+function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRemoveBot, onKick }) {
   const coop = room.mode !== 'solo';
   if (!seat) {
     const canAdd = coop && facts.isHost;
@@ -110,6 +110,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, onAddBot, onRemoveBot,
   const state = offline ? 'offline' : seat.ready || seat.isBot ? 'ready' : isHostSeat ? 'host' : 'waiting';
   return html`<article class=${`seat brackets${isMe ? ' is-me' : ''}${isHostSeat ? ' is-host' : ''}${seat.isBot ? ' is-bot' : ''} is-${state}`}
       style=${`--seat-i:${index}`}>
+    ${bubble ? html`<div class="seat__chat"><${ChatBubble} key=${bubble.seq} name=${bubble.name} text=${bubble.text} own=${isMe} at=${bubble.at} ttl=${CHAT_BUBBLE_MS} /></div>` : null}
     <header class="seat__head">
       <span class="seat__no num">P${index + 1}</span>
       <${MicroLabel}>SEAT ${String(index + 1).padStart(2, '0')}<//>
@@ -147,7 +148,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, onAddBot, onRemoveBot,
  * names (the host's ✕ frees one), 入座 for a spectator while a player seat is free, and 夺舍 AI 队友 for a spectator
  * (room.takeOver: the AI's board, gold and loadout become theirs — players stay ≤ MAX_SEATS).
  */
-function SpectatorDock({ facts, myId, busy, onRemove, onSit, onTakeOver, onRelease }) {
+function SpectatorDock({ facts, myId, busy, bubbles, onRemove, onSit, onTakeOver, onRelease }) {
   const ais = facts.seats.filter((s) => s && s.isBot);
   const mine = facts.seats.find((s) => s && s.playerId === myId);
   const mineFromAi = !!(mine && mine.fromAi);        // we took an AI over → we may hand it back (room.releaseSeat)
@@ -162,6 +163,9 @@ function SpectatorDock({ facts, myId, busy, onRemove, onSit, onTakeOver, onRelea
             </span>
             ${facts.isHost ? html`<${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `rs${s.playerId}`}
               onClick=${() => onRemove(s.playerId)} aria-label=${t('移出观战者 {0}', { 0: s.name || '' })} title=${t('移出该观战者')} />` : null}
+            ${bubbles?.get(s.playerId) ? html`<div class="specdock__chat"><${ChatBubble} key=${bubbles.get(s.playerId).seq}
+              name=${bubbles.get(s.playerId).name} text=${bubbles.get(s.playerId).text} own=${s.playerId === myId}
+              at=${bubbles.get(s.playerId).at} ttl=${CHAT_BUBBLE_MS} /></div>` : null}
           </div>`)
         : html`<div class="specdock__empty t-dim">${t('暂无观战者')}</div>`}
       ${facts.spectating && facts.emptySeats > 0 ? html`<div class="specdock__act">
@@ -224,6 +228,9 @@ export function RoomScreen() {
   const room = useStore((s) => s.room);
   const me = useStore((s) => s.me, shallowEqual);
   const conn = useStore((s) => s.connection, shallowEqual);
+  const chat = useStore((s) => s.chat);
+  const bubbles = activeChatBubbles(chat, Date.now(), CHAT_BUBBLE_MS);
+  useTicker(bubbles.size ? 500 : 0); // re-render only while a bubble is showing (to expire it)
   const [busy, setBusy] = useState(null);
   const alive = useRef(true);
   const inFlight = useRef(false); // synchronous guard against double clicks (state updates are async)
@@ -326,7 +333,7 @@ export function RoomScreen() {
 
     <main class=${`seats${coop ? '' : ' seats--solo'}`}>
       ${facts.seats.map((s, i) => html`<${SeatCard} key=${s ? `p${s.playerId}` : `e${i}`} seat=${s} index=${i} room=${room} facts=${facts}
-        myId=${me.playerId} busy=${busy} onAddBot=${addBot} onRemoveBot=${removeBot} onKick=${kick} />`)}
+        myId=${me.playerId} busy=${busy} bubble=${s ? bubbles.get(s.playerId) : undefined} onAddBot=${addBot} onRemoveBot=${removeBot} onKick=${kick} />`)}
       ${coop ? null : html`<aside class="solo-brief brackets">
         <${MicroLabel} tone="mint">BRIEFING<//>
         <h2>${DIFFICULTY_NAMES[room.difficulty] ? t(DIFFICULTY_NAMES[room.difficulty]) : ''}<span class="num t-dim"> ${info.code}</span></h2>
@@ -338,8 +345,10 @@ export function RoomScreen() {
         </ul>
       </aside>`}
     </main>
-    <${SpectatorDock} facts=${facts} myId=${me.playerId} busy=${busy} onRemove=${removeSpectator} onSit=${sit} onTakeOver=${takeOver} onRelease=${releaseSeat} />
-    <${ChatBox} class="room-chat" disabled=${!online} />
+    <${SpectatorDock} facts=${facts} myId=${me.playerId} busy=${busy} bubbles=${bubbles} onRemove=${removeSpectator} onSit=${sit} onTakeOver=${takeOver} onRelease=${releaseSeat} />
+    <section class="room-chat brackets" aria-label=${t('聊天')}>
+      <${ChatComposer} disabled=${!online} />
+    </section>
 
     <footer class="room-bar">
       <div class="room-bar__left">

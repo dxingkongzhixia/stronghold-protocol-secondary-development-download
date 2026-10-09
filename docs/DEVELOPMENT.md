@@ -409,5 +409,6 @@ only the relative path + mime + byte count + uploader + time. The real content t
 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §36 for the endpoints, limits and the client panels.
 
 The schema stays at these four tables: **the room text chat (docs/MATCHMAKING.md §38) is deliberately NOT in the DB** —
-it lives in memory on the room (`server/lobby.js` `Room.chat`), is never written to `var/*.db` or disk, and is gone when
-the room is disposed. Do not add a `chat` table to `server/db.mjs` / `CommunityService`.
+a message is validated and broadcast as a transient `m.chat` frame (`server/lobby.js` `chat()`), shown as a short-lived
+bubble on the client; it is never buffered, never written to `var/*.db` or disk, and is gone as soon as it is displayed.
+Do not add a `chat` table to `server/db.mjs` / `CommunityService`.

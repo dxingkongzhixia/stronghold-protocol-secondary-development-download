@@ -46,7 +46,7 @@ import { TitleScreen, sanitizeName } from './screens/title.js';
 import { LobbyScreen, parseRoomParam } from './screens/lobby.js';
 import { RoomScreen } from './screens/room.js';
 import { GameScreen } from './screens/game.js';
-import { appendChat, chatHistory } from './ui/chat.js';
+import { chatMessage } from './ui/chat.js';
 import { installAudio } from './audio.js';
 import { settingsStore } from './ui/settings.js';
 import { GuideHost } from './ui/guide.js';
@@ -61,6 +61,7 @@ const RESTORE_GRACE_MS = 1500;
 const JOIN_DELAY_MS = 350;
 const TICKER_KEEP = 20;
 const EMOTE_KEEP = 20;
+const CHAT_KEEP = 20;
 
 const SCREENS = { title: TitleScreen, lobby: LobbyScreen, room: RoomScreen, game: GameScreen };
 
@@ -303,10 +304,12 @@ function wireNet() {
   net.on('m.emote', (msg) => {
     store.set((s) => ({ emotes: [...s.emotes.slice(-(EMOTE_KEEP - 1)), { seq: ++seq, playerId: msg.playerId, id: msg.id, at: Date.now() }] }));
   });
-  // room text chat (docs/MATCHMAKING.md §38): one live message, or the history on (re)entering a room. Player text is
-  // rendered as text (ui/chat.js), never through innerHTML. An older client that does not know these types ignores them.
-  net.on('m.chat', (msg) => store.set((s) => ({ chat: appendChat(s.chat, msg) })));
-  net.on('room.chat', (msg) => store.set({ chat: chatHistory(msg.messages) }));
+  // room text chat (docs/MATCHMAKING.md §38): one transient event per live message (shown as a bubble, ui/chat.js);
+  // never stored, never a list. Player text is rendered as text, never through innerHTML.
+  net.on('m.chat', (msg) => {
+    const ev = chatMessage(msg, seq + 1, Date.now());
+    if (ev) { seq++; store.set((s) => ({ chat: [...s.chat.slice(-(CHAT_KEEP - 1)), ev] })); }
+  });
 
   // Entering (title → lobby) while already online also needs the deep-link join.
   store.subscribe((s, prev) => {

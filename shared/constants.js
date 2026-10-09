@@ -260,13 +260,13 @@ export const EMOTE_BUBBLE_MS = 3000;   // constData.chatTime (s): how long a bub
 // ---- ours: room text chat (同盟等待室 + 局内, 2026-10-09) ------------------------------------------------
 // `room.chat { text }` — the lobby validates it (length cap, control-char stripping, per-session rate limit) and
 // broadcasts `m.chat { from, name, text, at }` to EVERY member of the room (seats + spectators) in the waiting lobby
-// AND while the room's match runs (room-scoped, never leaking to another room or a match one is not in). The room keeps
-// the last CHAT_HISTORY messages; a session that (re)enters the room is sent them as `room.chat { messages: [...] }`
-// (kept out of the periodic room.state broadcast). Plain text only: the client renders it as text (never innerHTML).
+// AND while the room's match runs (room-scoped, never leaking to another room or a match one is not in). The client
+// shows it as a TRANSIENT speech bubble over the sender's seat / player row for CHAT_BUBBLE_MS — no log, no history.
+// Plain text only: the client renders it as text (never innerHTML). NEVER persisted (see server/lobby.js).
 export const CHAT_MAX = 100;                  // characters of one message (UTF-16 units, like NAME_MAX_LEN)
-export const CHAT_HISTORY = 50;               // messages kept on the room and replayed on entry
 export const CHAT_RATE_WINDOW_MS = 10_000;    // per-session sliding window
 export const CHAT_RATE_LIMIT = 5;             // messages per session per window
+export const CHAT_BUBBLE_MS = 5000;           // how long a chat speech bubble stays before fading (client-side)
 
 // ---- ours: account (auth) limits -- kept through the upstream (feedback5) i18n merge ----
 export const AUTH_NAME_MIN = 2;

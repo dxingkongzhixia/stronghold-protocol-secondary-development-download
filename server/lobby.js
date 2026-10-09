@@ -106,7 +106,7 @@
 //     seats and shut later watchers out ("进不了房间", 2026-10-06).
 
 import { randomBytes, randomInt } from 'node:crypto';
-import { ERR, MAX_SEATS, MAX_SPECTATORS, ROOM_CODE_LEN, modeIdFor, NAME_MAX_LEN, NOTICE_HISTORY, NOTICE_MAX_LEN, CHAT_MAX, CHAT_HISTORY, CHAT_RATE_WINDOW_MS, CHAT_RATE_LIMIT } from '../shared/constants.js';
+import { ERR, MAX_SEATS, MAX_SPECTATORS, ROOM_CODE_LEN, modeIdFor, NAME_MAX_LEN, NOTICE_HISTORY, NOTICE_MAX_LEN, CHAT_MAX, CHAT_RATE_WINDOW_MS, CHAT_RATE_LIMIT } from '../shared/constants.js';
 import { checkLoadout, checkNotOwned, checkDiyPicks } from '../shared/protocol.js';
 import { CLOSE, encode, isDroppable, isErrCode, presenceOnline, sendRaw, sendSession } from './net.js';
 import { getData as defaultGetData, lookup } from './data.js';
@@ -196,13 +196,6 @@ export class Room {
     /** @type {{ live: boolean, ended: boolean, disposed: boolean, match: any } | null} */
     this.matchCtx = null;
     this.matchCount = 0;
-    /**
-     * Room text chat: the last CHAT_HISTORY messages `{ from, name, text, at }` (oldest first), broadcast live as
-     * `m.chat` and replayed to a session that (re)enters the room as `room.chat { messages }`. Never part of the
-     * periodic room.state (lobby chat stays small; a match broadcast never carries it).
-     * @type {{ from: string, name: string, text: string, at: number }[]}
-     */
-    this.chat = [];
     /** @type {any} summary passed to onEnd by the last match */
     this.lastSummary = null;
     /**
@@ -435,7 +428,6 @@ export class Lobby {
     if (!room.hostId) { this.migrateHost(room); changed = true; }
     if (changed) this.broadcastState(room);
     else this.sendState(room, session);
-    this.sendChatHistory(room, session);
     this.resync(session, !resumed);
   }
 
@@ -571,7 +563,7 @@ export class Lobby {
     if (!room) return fail(ERR.ROOM_NOT_FOUND);
     const cur = this.roomOf(session);
     // idempotent for members; a spectator of this room goes on below: it may take a free player seat (header)
-    if (cur === room && !room.spectatorOf(session.playerId)) { this.sendState(room, session); this.sendChatHistory(room, session); return OK; }
+    if (cur === room && !room.spectatorOf(session.playerId)) { this.sendState(room, session); return OK; }
     if (cur && cur.match) return fail(ERR.ROOM_STARTED, 'leave your running match first');
     if (room.match) return fail(ERR.ROOM_STARTED);
     if (room.mode === 'solo') return fail(ERR.ROOM_FULL, 'solo room');
@@ -585,7 +577,6 @@ export class Lobby {
     session.pendingResult = null;
     if (!room.hostId) room.hostId = session.playerId;
     this.broadcastState(room);
-    this.sendChatHistory(room, session);
     return OK;
   }
 
@@ -609,7 +600,6 @@ export class Lobby {
     if (cur === room) {
       if (!room.spectatorOf(session.playerId)) return fail(ERR.ALREADY, 'seated as a player');
       this.sendState(room, session);
-      this.sendChatHistory(room, session);
       return OK;
     }
     if (cur && cur.match) return fail(ERR.ROOM_STARTED, 'leave your running match first');
@@ -622,7 +612,6 @@ export class Lobby {
     session.pendingResult = null;
     this.broadcastState(room);
     if (room.match) this.callMatch(room, 'addSpectator', session.playerId);
-    this.sendChatHistory(room, session);
     return OK;
   }
 
@@ -720,10 +709,10 @@ export class Lobby {
    * room.chat { text } (docs/MATCHMAKING.md §38): one plain-text message to the whole room — its seated players AND its
    * spectators — in the waiting lobby AND while the room's match runs (room-scoped: never another room, never a match
    * one is not part of). The text is cleaned (control chars stripped, whitespace collapsed), capped at CHAT_MAX
-   * characters and rate-limited per session (CHAT_RATE_LIMIT per CHAT_RATE_WINDOW_MS, a sliding window); the room keeps
-   * the last CHAT_HISTORY messages and every member receives `m.chat { from, name, text, at }`. A spectator may chat
-   * here (unlike g.* intents); the message is plain text — escaping is not enough, so it is sanitised server-side and
-   * the client renders it as text.
+   * characters and rate-limited per session (CHAT_RATE_LIMIT per CHAT_RATE_WINDOW_MS, a sliding window); every member
+   * receives `m.chat { from, name, text, at }` — shown as a transient bubble, never stored (no DB, no room buffer, no
+   * replay). A spectator may chat here (unlike g.* intents); the message is plain text — escaping is not enough, so it
+   * is sanitised server-side and the client renders it as text.
    */
   chat(session, { text }) {
     const room = this.roomOf(session);
@@ -740,10 +729,7 @@ export class Lobby {
     }
     times.push(now);
     session.chatAt = times;
-    const line = Object.freeze({ from: session.playerId, name: session.name, text: body, at: now });
-    room.chat.push(line);
-    if (room.chat.length > CHAT_HISTORY) room.chat.splice(0, room.chat.length - CHAT_HISTORY);
-    this.broadcastRoom(room, { t: 'm.chat', from: line.from, name: line.name, text: line.text, at: line.at });
+    this.broadcastRoom(room, { t: 'm.chat', from: session.playerId, name: session.name, text: body, at: now });
     return OK;
   }
 
@@ -1594,15 +1580,6 @@ export class Lobby {
 
   sendState(room, session) {
     sendSession(session, room.toState());
-  }
-
-  /**
-   * Room chat history to ONE session (entry / resume, docs/MATCHMAKING.md §38): `room.chat { messages }`, oldest first.
-   * Sent beside room.state (never inside it, so the periodic state broadcast stays small); empty history sends nothing.
-   */
-  sendChatHistory(room, session) {
-    if (room.disposed || room.chat.length === 0) return;
-    sendSession(session, { t: 'room.chat', messages: room.chat.map((m) => ({ from: m.from, name: m.name, text: m.text, at: m.at })) });
   }
 
   /** Match broadcast: encode once, send to every connected member. @returns {string | null} the encoded frame */

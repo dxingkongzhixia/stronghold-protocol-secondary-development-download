@@ -65,7 +65,7 @@
 // phase). Its pill reads 观战中, never "你已被淘汰"; its exit only leaves the seat (ui/matchChrome.js ExitModal).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from '../../vendor/hooks.module.js';
-import { PHASE, GEO } from '../../../shared/constants.js';
+import { PHASE, GEO, CHAT_BUBBLE_MS } from '../../../shared/constants.js';
 import { html, Spinner, PhaseBanner, ResultDialog, Icon, Button, confirmDialog, closeAllDialogs, useTicker, RoleTag } from '../ui/components.js';
 import { useGameData, GIcon } from '../ui/gameComponents.js';
 import { useFieldView } from '../ui/fieldHost.js';
@@ -79,7 +79,7 @@ import { ChoiceOverlay } from '../ui/choiceOverlay.js';
 import { EnemyDrawer } from '../ui/enemyDrawer.js';
 import { Ticker } from '../ui/ticker.js';
 import { EmoteWheel } from '../ui/emotes.js';
-import { ChatDock } from '../ui/chat.js';
+import { ChatDock, ChatBubble, activeChatBubbles } from '../ui/chat.js';
 import { EffectsList } from '../ui/effectsList.js';
 import { CombatHud } from '../ui/combatHud.js';
 import { SettingsModal, settingsStore } from '../ui/settings.js';
@@ -125,7 +125,7 @@ import { t, tParts } from '../../../shared/i18n.js';
  * 观战席 while WATCHING a running match: a compact dropdown (almost no layout space) listing the other spectators and
  * 夺舍 AI 队友 (room.takeOver — the AI's board, gold and loadout become ours; players stay ≤ MAX_SEATS).
  */
-function SpecDock({ room, pub, myId, spectator, canRelease, panel = false }) {
+function SpecDock({ room, pub, myId, spectator, canRelease, panel = false, chat = null }) {
   const spectators = Array.isArray(room?.spectators) ? room.spectators : [];
   const ais = Array.isArray(pub?.players) ? pub.players.filter((p) => p && p.isBot) : [];
   const [busy, setBusy] = useState(null);
@@ -143,6 +143,9 @@ function SpecDock({ room, pub, myId, spectator, canRelease, panel = false }) {
       ${spectators.length
         ? spectators.map((s) => html`<div class="specdock__row" key=${s.playerId}>
             <span class=${`specdock__who${s.playerId === myId ? ' is-me' : ''}`}>${s.name || t('博士')}<${RoleTag} role=${s.role} />${s.playerId === myId ? html`<span class="seat__you">${t('你')}</span>` : null}</span>
+            ${chat?.get(s.playerId) ? html`<div class="specdock__chat"><${ChatBubble} key=${chat.get(s.playerId).seq}
+              name=${chat.get(s.playerId).name} text=${chat.get(s.playerId).text} own=${s.playerId === myId}
+              at=${chat.get(s.playerId).at} ttl=${CHAT_BUBBLE_MS} /></div>` : null}
           </div>`)
         : html`<div class="specdock__empty t-dim">${t('暂无其他观战者')}</div>`}
       ${spectator && ais.length ? html`<div class="specdock__act">
@@ -203,6 +206,7 @@ function MatchScreen() {
   const myId = useStore((s) => s.me.playerId);
   const conn = useStore((s) => s.connection, shallowEqual);
   const emotes = useStore((s) => s.emotes);
+  const chat = useStore((s) => s.chat);
   const roomSolo = useStore((s) => s.room?.mode === 'solo');
   const room = useStore((s) => s.room);                       // 观战席: the spectators live on the room
   const spectator = useStore((s) => isSpectating(s.room, s.me.playerId));
@@ -735,6 +739,9 @@ function MatchScreen() {
   const bubbleMs = (gd.config?.timers?.chatBubble ?? 3) * 1000;
   const bubbles = activeBubbles(emotes, Date.now(), bubbleMs);
   useTicker(bubbles.size ? 500 : 0); // re-render only while a bubble is showing (to expire it)
+  // room text chat bubbles (transient, docs/MATCHMAKING.md §38): over the sender's row in the left player list
+  const chatBubbles = activeChatBubbles(chat, Date.now(), CHAT_BUBBLE_MS);
+  useTicker(chatBubbles.size ? 500 : 0);
   const lastEmote = useRef(emotes.length ? emotes[emotes.length - 1].seq : 0);
   useEffect(() => {
     const e = emotes[emotes.length - 1];
@@ -1402,10 +1409,10 @@ function MatchScreen() {
       </div>
 
       <div class="gm__teamcol">
-        <${TeamPanel} pub=${pub} myId=${myId} watching=${watchingNow} bubbles=${bubbles} onWatch=${watchPlayer} cap=${gd.config?.lpCapPerRound ?? 10} uniteLocal=${uniteLocal}
+        <${TeamPanel} pub=${pub} myId=${myId} watching=${watchingNow} bubbles=${bubbles} chat=${chatBubbles} onWatch=${watchPlayer} cap=${gd.config?.lpCapPerRound ?? 10} uniteLocal=${uniteLocal}
           self=${Number.isFinite(priv?.lp) ? { lp: priv.lp, pending: liveLpNow.pending, unite: liveLpNow.unite, left: liveLpNow.left } : null}
           observe=${cc ? { canObserve: (p) => observeTarget(p, pub, myId, { observing: watchingOther, ownDone: localDone }), observing: watchingOther, onBack: backHome } : null} />
-        ${(spectator || tookOver) ? html`<${SpecDock} room=${room} pub=${pub} myId=${myId} spectator=${spectator} canRelease=${tookOver} panel=${true} />` : null}
+        ${(spectator || tookOver) ? html`<${SpecDock} room=${room} pub=${pub} myId=${myId} spectator=${spectator} canRelease=${tookOver} panel=${true} chat=${chatBubbles} />` : null}
       </div>
 
       <div class="gm__effects"><${EffectsList} effects=${watchingOther && field ? (field.effects ?? null) : priv?.effects} /></div>

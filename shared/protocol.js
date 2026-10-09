@@ -436,9 +436,9 @@ export const S2C = [
   'auth.ok', 'auth.error', 'mm.state',
   // operator notice (the admin page's 通知): sys.notice { id, text, sign, at } — pushed to the live sessions
   'sys.notice',
-  // room text chat (docs/MATCHMAKING.md §38): room.chat { messages: [{ from, name, text, at }] } is the history a session
-  // is sent when it (re)enters the room; m.chat { from, name, text, at } is one live message broadcast to every member.
-  'room.chat', 'm.chat',
+  // room text chat (docs/MATCHMAKING.md §38): m.chat { from, name, text, at } — one live message broadcast to every
+  // member of the room (seats + spectators), shown as a transient bubble. Never stored / replayed.
+  'm.chat',
   // boot gate: boot.state { granted, position } — pushed while waiting for / when granted a boot-preload slot
   'boot.state',
   'm.public', 'm.private', 'm.field', 'm.toast', 'm.ticker', 'm.emote', 'm.result',

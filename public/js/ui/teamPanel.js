@@ -16,10 +16,11 @@
 // report, ~1 Hz).
 
 import { useEffect, useState } from '../../vendor/hooks.module.js';
-import { PHASE } from '../../../shared/constants.js';
+import { PHASE, CHAT_BUBBLE_MS } from '../../../shared/constants.js';
 import { html, Icon, Tooltip, RoleTag } from './components.js';
 import { PlayerAvatar, LpTower, GIcon, LocalSprite } from './gameComponents.js';
 import { EmoteBubble } from './emotes.js';
+import { ChatBubble } from './chat.js';
 import { STATUS_META, sortedPlayers, teamFrameIds } from './gameLogic.js';
 import { MissTag, uniteRemaining } from './hud.js';
 import { localAsset } from '../data.js';
@@ -76,7 +77,7 @@ export function rowLpTip(lp, cap = 10) {
  *   observe?: null | { canObserve: (p:any) => { fieldId?: string, reason?: string|null, back?: boolean }, observing: boolean, onBack: () => void } }} props
  *   uniteLocal: the local 联防 replica's per-leaker counts while it is on screen (battle runner state().uniteLeft), else null
  */
-export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = false, observe = null, self: selfLive = null, cap = 10, uniteLocal = null }) {
+export function TeamPanel({ pub, myId, watching, bubbles, chat = null, onWatch, compact = false, observe = null, self: selfLive = null, cap = 10, uniteLocal = null }) {
   const [openPid, setOpenPid] = useState(null);
   const phaseKey = `${pub?.phase}:${pub?.round}`;
   useEffect(() => { setOpenPid(null); }, [phaseKey, watching, observe?.observing]);
@@ -100,6 +101,7 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
       const meta = STATUS_META[status] || STATUS_META.acting;
       const watched = watching && (watching === p.fieldId || watching === `n:${p.playerId}`);
       const bubble = bubbles?.get(p.playerId);
+      const chatBubble = chat?.get(p.playerId);
       const offline = p.connected === false && !p.isBot;
       const open = !!observe && openPid === p.playerId && !self;
       const back = !!observe && self && observe.observing;
@@ -135,6 +137,7 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
             onClick=${() => observe.onBack()}><span class="btn__label">${t('返回战场')}</span></button>` : null}
         </div>
         ${bubble ? html`<${EmoteBubble} key=${bubble.seq} id=${bubble.id} class="team__bubble" />` : null}
+        ${chatBubble ? html`<${ChatBubble} key=${chatBubble.seq} name=${chatBubble.name} text=${chatBubble.text} own=${self} at=${chatBubble.at} ttl=${CHAT_BUBBLE_MS} class="team__chat" />` : null}
       </div>`;
     })}
   </aside>`;

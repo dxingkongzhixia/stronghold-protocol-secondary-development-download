@@ -88,7 +88,8 @@ export const initialState = Object.freeze({
   match: emptyMatch(),
   ticker: [],
   emotes: [],
-  // room text chat (docs/MATCHMAKING.md §38): recent `m.chat` / `room.chat` messages, oldest first (ui/chat.js)
+  // room text chat (docs/MATCHMAKING.md §38): recent `m.chat` events, used only to mount transient speech bubbles
+  // (ui/chat.js activeChatBubbles); nothing is displayed as a list and nothing is persisted.
   chat: [],
   clock: { offset: 0, rtt: null, synced: false },
   ui: { pendingJoin: null, restoring: false, buildStale: false, roomsReturn: false },

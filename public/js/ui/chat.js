@@ -1,97 +1,89 @@
-// Room text chat (同盟等待室 + 局内, docs/MATCHMAKING.md §38).
+// Room text chat (同盟等待室 + 局内, docs/MATCHMAKING.md §38) — TRANSIENT SPEECH BUBBLES, no log.
 //
 // One room-scoped mechanism for both contexts: `room.chat { text }` → the server validates it (length cap, control-char
 // stripping, per-session rate limit) and broadcasts `m.chat { from, name, text, at }` to every member of the room — the
-// seated players AND the spectators — in the waiting lobby and while the room's match runs. A session that enters (or
-// re-enters) a room is sent the recent history as `room.chat { messages: [...] }`.
+// seated players AND the spectators — in the waiting lobby and while the room's match runs. The client shows each
+// message as a short-lived bubble over the SENDER's seat / player row (CHAT_BUBBLE_MS), then it is gone: there is no
+// message list, no history, nothing stored. Player text is ALWAYS rendered as text (Preact escapes `${}`), never
+// through innerHTML.
 //
-//   chatLine / chatHistory / appendChat   the pure mapping/normalisation of the wire frames into the store slice
-//   ChatLog        the scrollable message list (name + text; own messages highlighted) — display only
-//   ChatComposer   the input + 发送 button; Enter sends; disabled while empty / offline; a hint when rate-limited
-//   ChatBox        ChatLog + ChatComposer (the waiting-room panel and the in-match widget)
-//   ChatDock       a collapsible ChatBox (the in-match 聊天 entry, beside the 交流 button)
+//   chatMessage        the pure normalisation of one m.chat frame into the store event shape
+//   activeChatBubbles  the pure "which bubble is live right now" mapping (newest per sender, younger than the TTL)
+//   ChatBubble         one transient bubble (pops in, fades after the TTL) — placed over the sender
+//   ChatComposer       the input + 发送 button; Enter sends; disabled while empty / offline; a hint when rate-limited
+//   ChatDock           a collapsible ChatComposer (the in-match entry next to the 交流 button)
 //
-// Player text is ALWAYS rendered as text (Preact escapes `${}`), never through innerHTML; the server already strips
-// control characters. Emotes are a separate system (ui/emotes.js) and are untouched here.
-// Styles: public/css/screens/room.css (.room-chat / .chat-*) and public/css/screens/game.css (.gm-chat / .chat-*).
+// Emotes are a separate system (ui/emotes.js) and are untouched. Styles: public/css/screens/room.css / game.css.
 
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { CHAT_MAX, CHAT_HISTORY } from '../../../shared/constants.js';
+import { CHAT_MAX, CHAT_BUBBLE_MS } from '../../../shared/constants.js';
 import { html, Button, Icon } from './components.js';
 import { toastError } from './toasts.js';
 import { net } from '../net.js';
-import { useStore, shallowEqual } from '../store.js';
+import { bubbleAge } from './emotes.js';
 import { t } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
 /**
- * One chat message from the wire, normalised to the store shape — null when it is not a usable message. Every field is
- * coerced, so a hostile / truncated frame can never put a non-string into the renderer.
- * @param {any} msg m.chat / a room.chat history entry
- * @returns {{ from: string|null, name: string, text: string, at: number } | null}
+ * Normalise one `m.chat` frame into the transient store event: `{ seq, from, name, text, at }`, or null when it is not
+ * a usable message (no text) — every field is coerced, so a hostile / truncated frame can never put a non-string into
+ * the renderer. `seq` / `at` are assigned by the receiver (arrival order and time), like the emote events.
+ * @param {any} msg
+ * @param {number} seq
+ * @param {number} at
+ * @returns {{ seq: number, from: string|null, name: string, text: string, at: number } | null}
  */
-export function chatLine(msg) {
+export function chatMessage(msg, seq, at) {
   if (!msg || typeof msg !== 'object') return null;
   const text = typeof msg.text === 'string' ? msg.text : '';
   if (!text) return null;
   return {
+    seq: Number.isFinite(seq) ? seq : 0,
     from: typeof msg.from === 'string' && msg.from ? msg.from : null,
     name: typeof msg.name === 'string' ? msg.name : '',
     text,
-    at: Number.isFinite(msg.at) ? msg.at : 0,
+    at: Number.isFinite(at) ? at : 0,
   };
 }
 
 /**
- * A room.chat history payload (`{ messages }`) as the store slice: usable lines only, oldest first, at most `max`.
- * @param {any} list
- * @param {number} [max]
+ * The live chat bubbles right now: `from` → `{ text, name, seq, at }` for the NEWEST message of each sender younger
+ * than `ttl` (a message from the future by more than a second is ignored — a client-clock oddity, mirror activeBubbles).
+ * This is the whole "display": nothing else renders chat, so a message that has aged out simply disappears.
+ * @param {Array<{seq:number, from:string|null, name:string, text:string, at:number}>} chat
+ * @param {number} now
+ * @param {number} [ttl]
  */
-export function chatHistory(list, max = CHAT_HISTORY) {
-  const src = Array.isArray(list) ? list : [];
-  return src.map(chatLine).filter(Boolean).slice(-max);
+export function activeChatBubbles(chat, now, ttl = CHAT_BUBBLE_MS) {
+  const out = new Map();
+  for (const m of Array.isArray(chat) ? chat : []) {
+    if (!m || typeof m !== 'object' || !(now - m.at < ttl) || m.at > now + 1000) continue;
+    const cur = out.get(m.from);
+    if (!cur || cur.seq < m.seq) out.set(m.from, { text: m.text, name: m.name, seq: m.seq, at: m.at });
+  }
+  return out;
 }
 
 /**
- * Append one wire message to a chat slice: the new line last, capped at `max` (returns the same array when the message
- * is unusable).
- * @param {{ from: string|null, name: string, text: string, at: number }[]} list
- * @param {any} msg
- * @param {number} [max]
+ * One transient speech bubble (text only). The parent keys it by `seq` (a newer message remounts and pops again) and
+ * must unmount it once it has aged out; the CSS animation runs for the TTL and fades. `at` (Date.now clock) resumes a
+ * bubble mounted late. Own messages get the `is-own` accent.
+ * @param {{ name?: string, text: string, own?: boolean, ttl?: number, at?: number, class?: string }} props
  */
-export function appendChat(list, msg, max = CHAT_HISTORY) {
-  const line = chatLine(msg);
-  if (!line) return Array.isArray(list) ? list : [];
-  return [...(Array.isArray(list) ? list : []), line].slice(-max);
-}
-
-/**
- * Scrollable message log (name + text). Own messages are highlighted. Renders player text as text.
- * @param {{ class?: string, myId?: string|null, limit?: number, empty?: boolean }} props
- */
-export function ChatLog({ class: cls, myId = null, limit = 0, empty = true }) {
-  const chat = useStore((s) => s.chat, shallowEqual);
-  const ref = useRef(null);
-  const lines = limit > 0 ? chat.slice(-limit) : chat;
-  // follow the tail whenever a message arrives
-  useEffect(() => {
-    const el = ref.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [chat]);
-  return html`<div class=${cx('chat-log', cls)} ref=${ref} role="log" aria-live="polite">
-    ${lines.length === 0 && empty
-      ? html`<p class="chat-log__empty t-dim">${t('暂无消息')}</p>`
-      : lines.map((m, i) => html`<p key=${`${m.at}-${m.from}-${i}`} class=${cx('chat-log__line', m.from != null && m.from === myId && 'is-me')}>
-          <span class="chat-log__name">${m.name || t('博士')}</span>
-          <span class="chat-log__text">${m.text}</span>
-        </p>`)}
+export function ChatBubble({ name, text, own = false, ttl = CHAT_BUBBLE_MS, at, class: cls }) {
+  const life = Math.max(1000, Number(ttl) || CHAT_BUBBLE_MS);
+  const [age] = useState(() => bubbleAge(at, Date.now(), life)); // fixed at mount: the CSS animation runs from there
+  const style = [`--chat-ttl:${Math.round(life)}ms`, age && `--chat-age:${Math.round(age)}ms`].filter(Boolean).join(';');
+  return html`<div class=${cx('cbubble', own && 'is-own', cls)} style=${style} role="status">
+    ${name ? html`<span class="cbubble__name">${name}</span>` : null}
+    <span class="cbubble__text">${text}</span>
   </div>`;
 }
 
 /**
- * Input + 发送. Enter sends (never Shift+Enter: a single-line input has no newline anyway). Disabled while offline or
- * empty; a 3 s hint after the server rate-limits a burst.
+ * Input + 发送. Enter sends (never during IME composition: a Chinese / Japanese candidate confirm must not send).
+ * Disabled while offline or empty; a 3 s hint after the server rate-limits a burst.
  * @param {{ class?: string, disabled?: boolean }} props
  */
 export function ChatComposer({ class: cls, disabled = false }) {
@@ -128,26 +120,13 @@ export function ChatComposer({ class: cls, disabled = false }) {
 }
 
 /**
- * Message log + composer (the waiting-room panel; also the body of ChatDock).
- * @param {{ class?: string, disabled?: boolean, title?: boolean, limit?: number, logClass?: string }} props
- */
-export function ChatBox({ class: cls, disabled = false, title = true, limit = 0, logClass = null }) {
-  const myId = useStore((s) => s.me.playerId);
-  return html`<section class=${cx('chat-panel', 'brackets', cls)} aria-label=${t('聊天')}>
-    ${title ? html`<header class="chat-panel__head"><${Icon} name="chat" /><span>${t('聊天')}</span></header>` : null}
-    <${ChatLog} myId=${myId} limit=${limit} class=${logClass} />
-    <${ChatComposer} disabled=${disabled} />
-  </section>`;
-}
-
-/**
- * Collapsible in-match chat entry (`<details>`): the summary is the 聊天 toggle; opens onto a compact ChatBox. Placed
- * beside the 交流 button (ui/emotes.js) so both live in the bottom-left communication cluster.
+ * Collapsible in-match chat entry (`<details>`): the summary is the 聊天 toggle; opening it reveals the composer.
+ * Placed beside the 交流 button (ui/emotes.js) so both live in the bottom-left communication cluster.
  * @param {{ class?: string, disabled?: boolean }} props
  */
 export function ChatDock({ class: cls, disabled = false }) {
   return html`<details class=${cx('chat-dock', cls)}>
     <summary class="chat-dock__sum"><${Icon} name="chat" /><span>${t('聊天')}</span></summary>
-    <${ChatBox} disabled=${disabled} title=${false} />
+    <${ChatComposer} disabled=${disabled} />
   </details>`;
 }
