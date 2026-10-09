@@ -4,8 +4,21 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chatMessage, activeChatBubbles, chatDockStartsOpen, CHAT_OPEN_PREF } from '../../public/js/ui/chat.js';
 import { CHAT_BUBBLE_MS } from '../../shared/constants.js';
+
+const CSS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public/css/screens');
+/** Body of the first flat CSS rule whose selector is exactly `selector` (comments stripped). */
+function cssBody(file, selector) {
+  const src = readFileSync(path.join(CSS_DIR, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(src))) if (m[1].trim() === selector) return m[2];
+  return '';
+}
 
 test('chatMessage: normalises a wire message, rejects unusable input, coerces every field', () => {
   assert.deepEqual(chatMessage({ from: 'p_1', name: 'Host', text: '你好' }, 7, 1234), { seq: 7, from: 'p_1', name: 'Host', text: '你好', at: 1234 });
@@ -76,5 +89,23 @@ test('chat dock toggle: collapsed by default, and the last state is remembered (
     assert.equal(chatDockStartsOpen(), false, 'a saved closed state stays collapsed');
   } finally {
     if (orig === undefined) delete globalThis.localStorage; else globalThis.localStorage = orig;
+  }
+});
+
+test('bubble placement + no-scroll CSS: above the waiting seat, beside the in-match row, never scrollable', () => {
+  // waiting room: the bubble floats ABOVE the seat card (in the empty strip), never over its own header / name
+  const seat = cssBody('room.css', '.seat__chat');
+  assert.match(seat, /bottom:\s*calc\(100%\s*\+/, 'anchored above the card');
+  assert.doesNotMatch(seat, /(?:^|;)\s*top\s*:/, 'never anchored to the card top (would overlap the header)');
+  // in match: absolutely placed to the RIGHT of the sender's row, out of flow (never pushes the board)
+  const team = cssBody('game.css', '.team__chat');
+  assert.match(team, /position:\s*absolute/, 'out of flow');
+  assert.match(team, /left:\s*calc\(100%/, 'anchored to the side of the row');
+  // a long message wraps and is clamped instead of scrolling; the bubble hides overflow, never auto|scroll
+  const bubble = cssBody('room.css', '.cbubble');
+  assert.match(bubble, /overflow:\s*hidden/, 'no scrollbar on the bubble');
+  assert.match(bubble, /-webkit-line-clamp/, 'a very long message is clamped');
+  for (const [file, sel] of [['room.css', '.cbubble'], ['room.css', '.chat-dock'], ['room.css', '.room-chat'], ['room.css', '.chat-send'], ['game.css', '.gm-chat']]) {
+    assert.doesNotMatch(cssBody(file, sel), /overflow:\s*(?:auto|scroll)/, `${sel} must not scroll`);
   }
 });

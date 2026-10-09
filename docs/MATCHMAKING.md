@@ -1176,8 +1176,9 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 
 - 纯函数：`chatMessage(msg, seq, at)` 归一化入站帧；`activeChatBubbles(chat, now, ttl)` 返回「此刻活着的」气泡 `from → { text, name, seq, at }`（每位发送者取最新一条、未过 `CHAT_BUBBLE_MS` = 5000 ms 的）。`main.js` 把 `m.chat` 存成带 `seq` / 到达时间 `at` 的事件（与 `emotes` 同一套），组件据此渲染；超过 TTL 就不再被选中，自然消失。
 - `ChatBubble`：一条临时气泡（文字，`is-own` 高亮），CSS 动画按 `--chat-ttl` 弹出→停留→淡出；由父组件按 `seq` 做 key，新消息重挂载并重新弹出。
-- **等待室**（`screens/room.js`）：发送者若有座位，气泡出现在**该座位卡顶部**（P1–P4，`.seat__chat`）；观战者没有座位 → 气泡落到 `观战席` 下拉里其名字那一行（`.specdock__chat`）。自己的消息同样出现在自己的座位 / 观战行。座位卡 / 难度 / 准备按钮不受影响。
-- **局内**（`screens/game.js`）：气泡出现在左侧玩家列表（P1–P4）中**发送者那一行**的右侧（`TeamPanel` 的 `.team__chat`）；观战者同样落到 `观战席` 行的其名字处。表情面板与其精灵布局原样不动。
+- **等待室**（`screens/room.js`）：发送者若有座位，气泡浮在**该座位卡上方的空白条里**（P1–P4 四张卡上方各一个，排成一行，`.seat__chat` 用 `bottom: calc(100% + .08rem)`）——不压住卡片自身的 `P1 SEAT 01` / 名字 / 内容。观战者没有座位 → 气泡落到 `观战席` 下拉里其名字那一行（`.specdock__chat`）。自己的消息同样出现在自己的座位 / 观战行。座位卡 / 难度 / 准备按钮不受影响。
+- **局内**（`screens/game.js`）：气泡**绝对定位在发送者那一行的右侧**（`TeamPanel` 的 `.team__chat`：`left: calc(100% + .06rem)`），既压不到该行的头像 / 等级 / 名字，也不在文档流里、不会推动战场。观战者同样落到 `观战席` 行的其名字处。表情面板与其精灵布局原样不动。
+- **不滚动**：气泡自动适应宽度并**换行**；文字过长时**按行截断**（`.cbubble` 的 `-webkit-line-clamp: 6` + `overflow: hidden`）而不是出现滚动条。气泡与聊天 dock / 输入区都显式 `overflow: visible|hidden`，绝无 `overflow: auto|scroll`。（`test/ui/chat.test.js` 有一条静态断言守住这两点。）
 - **可折叠输入（两屏一致）**：等待室与局内用的是**同一个** `ChatDock`（`public/js/ui/chat.js`）——一行 `▸ 聊天` 标题（三角 + 聊天图标），点开才显示输入框 + `发送`，再点收起。等待室把它放在左下角（`.room-chat`），局内放在「交流」旁（`.gm-chat`），样式（`brackets`/pill、三角形、图标）与位置一致。默认**收起**；开 / 关状态记在 `localStorage` 的 `chatOpen`（`docs/I18N.md` 同类的 `loadPref`/`savePref`），下次进入沿用上次的开关。一次点击即可输入，Enter 仍然发送。
 - 纯文本渲染（绝不 `innerHTML` 玩家文本）；换房间 / 离开时清空 store 的 `chat`。
 - 旧客户端不知道 `m.chat`：客户端对未知类型的处理是**忽略**（`net.js` 只 `_emit(t, msg)`，无监听者即丢弃），不报错、不打断——确认向后兼容。
