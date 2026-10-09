@@ -470,8 +470,9 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
     }).join('') || '<tr><td colspan="7" class="empty">当前无房间</td></tr>';
     el('updated').textContent = new Date(d.now).toLocaleTimeString('zh-CN');
     renderNotices(d.notices);
-    renderBugToolbar(d.bugCounts);
+    // renderBugs FIRST: it sets bugList, which renderBugToolbar reads for the 「显示 N / 共 M 条」 count.
     renderBugs(d.bugs);
+    renderBugToolbar(d.bugCounts);
     var v = d.verify || {};
     el('verify').textContent = v.mode
       ? '校验 ' + v.mode + ' · 复算 ' + (v.checked || 0) + ' · 不一致 ' + (v.mismatches || 0) + ' · 拒收 ' + (v.rejected || 0) + ' · 接管 ' + (v.takeovers || 0)
