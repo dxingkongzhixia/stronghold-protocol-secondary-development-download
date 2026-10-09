@@ -486,12 +486,12 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .spov.has-armed .spcard.is-pickable:not(.is-armed) { filter: brightness(.7); }
 .spov.has-armed .spcard.is-pickable:not(.is-armed):hover { filter: none; }
 .spcard__confirm {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: baseline; justify-content: center; gap: .1rem;
-  padding: .04rem 0 .05rem; background: linear-gradient(0deg, var(--gold), #e0a800); color: #1d1400; pointer-events: none;
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: baseline; justify-content: center; gap: .14rem;
+  padding: .1rem 0 .11rem; background: linear-gradient(0deg, var(--gold), #e0a800); color: #1d1400; pointer-events: none;
   animation: confirm-in var(--t-fast) var(--ease-out);
 }
-.spcard__confirm b { font-size: .18rem; font-weight: 900; letter-spacing: .22em; padding-left: .22em; }
-.spcard__confirm small { font-size: .12rem; letter-spacing: .1em; opacity: .75; }
+.spcard__confirm b { font-size: .26rem; font-weight: 900; letter-spacing: .22em; padding-left: .22em; }
+.spcard__confirm small { font-size: .17rem; letter-spacing: .1em; opacity: .75; }
 .spov__confirm { animation: pulse-gold 1.2s var(--ease-in-out) infinite; }
 /* Short landscape phones (height < 10.8rem: the root size is clamped at 40 px, theme.css, so the page is only ≈ 9rem
    tall): a tighter header (no CONTINGENCY micro line, smaller margins) gives the grid ≈ .65rem more, and a smaller icon
