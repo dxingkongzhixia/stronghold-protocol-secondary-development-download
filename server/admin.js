@@ -50,9 +50,10 @@ export function statusOf(session, { lobby, matchmaker, now = Date.now() }) {
 
 /**
  * A JSON-serializable snapshot of accounts + live sessions + rooms.
- * @param {{ registry: any, lobby: any, matchmaker?: any, auth: any, now?: number }} deps
+ * @param {{ registry: any, lobby: any, matchmaker?: any, auth: any, community?: any, bugStatus?: string|null,
+ *   bugSort?: string, now?: number }} deps
  */
-export function buildSnapshot({ registry, lobby, matchmaker, auth, community = null, now = Date.now() }) {
+export function buildSnapshot({ registry, lobby, matchmaker, auth, community = null, bugStatus = null, bugSort = 'status', now = Date.now() }) {
   const mm = matchmaker || (lobby && lobby.mm) || null;
   const sessions = [...registry.all()];
   const liveByAccount = new Map();
@@ -119,10 +120,12 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
   }
 
   // Player bug reports (server/community.js, docs/MATCHMAKING.md §36): TEXT + images (metadata only here; the image
-  // bytes come from the token-gated /admin/api/bug/image/<id>). Newest / 待处理 first.
-  const bugs = community && typeof community.listBugReports === 'function' ? community.listBugReports({ limit: 100 }) : [];
+  // bytes come from the token-gated /admin/api/bug/image/<id>). Server-side filtered / sorted (bugStatus / bugSort) so
+  // the rules apply to the whole set, not only this page; `bugCounts` feeds the filter chips.
+  const bugs = community && typeof community.listBugReports === 'function' ? community.listBugReports({ status: bugStatus, sort: bugSort, limit: 100 }) : [];
+  const bugCounts = community && typeof community.bugReportCounts === 'function' ? community.bugReportCounts() : { new: 0, triaged: 0, fixed: 0, total: 0 };
 
-  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, bugs, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [] };
+  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, bugs, bugCounts, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [] };
 }
 
 /**
@@ -312,6 +315,28 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
 .bug-status.is-new{color:#ffd089;border-color:rgba(255,208,137,.45);background:rgba(255,208,137,.08)}
 .bug-status.is-triaged{color:#5cc8ff;border-color:rgba(92,200,255,.45);background:rgba(92,200,255,.08)}
 .bug-status.is-fixed{color:var(--mint);border-color:rgba(78,216,175,.45);background:rgba(78,216,175,.08)}
+.bug-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:11px 16px;border-bottom:1px solid var(--line)}
+.bug-toolbar .grow{flex:1}
+.bug-sorts{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;background:#111917;color:var(--dim);border:1px solid var(--line2);border-radius:999px;
+  padding:3px 12px;cursor:pointer;font:inherit;font-size:12px;transition:border-color .15s,color .15s,background .15s}
+.chip:hover{border-color:var(--mint-dim);color:var(--mint)}
+.chip.is-on{border-color:var(--mint-dim);color:var(--mint);background:rgba(78,216,175,.08)}
+.chip em{font-style:normal;color:var(--dim2);margin-left:6px;font-variant-numeric:tabular-nums}
+.chip.is-on em{color:var(--mint)}
+.bug-imgs img{cursor:zoom-in}
+/* 点击图片放大 (viewer / lightbox): the same token-gated /admin/api/bug/image route, just larger */
+.viewer{position:fixed;inset:0;z-index:60;background:rgba(4,7,6,.88);display:none;align-items:center;justify-content:center;padding:26px}
+.viewer.is-open{display:flex}
+.viewer img{max-width:92vw;max-height:84vh;border:1px solid var(--line2);border-radius:8px;background:#000;box-shadow:0 18px 60px rgba(0,0,0,.6)}
+.viewer__bar{position:fixed;top:14px;right:18px;display:flex;gap:8px}
+.viewer__nav{position:fixed;top:50%;transform:translateY(-50%);width:46px;height:70px;border:1px solid var(--line2);
+  background:rgba(14,21,19,.82);color:var(--text);border-radius:10px;cursor:pointer;font-size:24px;line-height:1}
+.viewer__nav:hover{border-color:var(--mint-dim);color:var(--mint)}
+.viewer__nav.prev{left:16px}
+.viewer__nav.next{right:16px}
+.viewer__count{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);color:var(--dim);font-size:12.5px;
+  background:rgba(8,12,11,.82);padding:4px 12px;border-radius:99px;border:1px solid var(--line);font-variant-numeric:tabular-nums}
 </style></head><body>
 <div class="wrap">
   <header class="topbar">
@@ -350,6 +375,22 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
 
   <section class="panel">
     <h2>玩家反馈<em id="bugCount"></em></h2>
+    <div class="bug-toolbar">
+      <div class="bug-filters" id="bugFilters">
+        <button class="chip is-on" data-status="">全部<em id="chipAll">0</em></button>
+        <button class="chip" data-status="new">待处理<em id="chipNew">0</em></button>
+        <button class="chip" data-status="triaged">已受理<em id="chipTriaged">0</em></button>
+        <button class="chip" data-status="fixed">已修复<em id="chipFixed">0</em></button>
+      </div>
+      <div class="bug-sorts" id="bugSorts">
+        <button class="chip is-on" data-sort="status">未处理优先</button>
+        <button class="chip" data-sort="newest">新→旧</button>
+        <button class="chip" data-sort="oldest">旧→新</button>
+      </div>
+      <span class="grow"></span>
+      <button class="refresh" id="bugExportJson">导出 JSON</button>
+      <button class="refresh" id="bugExportCsv">导出 CSV</button>
+    </div>
     <div id="bugsBody"></div>
   </section>
 
@@ -376,6 +417,13 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
       <tbody id="roomsBody"></tbody>
     </table></div>
   </section>
+</div>
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-hidden="true" aria-label="反馈图片">
+  <div class="viewer__bar"><button class="refresh" id="viewerClose">关闭 ✕</button></div>
+  <button class="viewer__nav prev" id="viewerPrev" title="上一张">‹</button>
+  <img id="viewerImg" alt="反馈图片">
+  <button class="viewer__nav next" id="viewerNext" title="下一张">›</button>
+  <div class="viewer__count" id="viewerCount"></div>
 </div>
 <script>
 (function () {
@@ -422,6 +470,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
     }).join('') || '<tr><td colspan="7" class="empty">当前无房间</td></tr>';
     el('updated').textContent = new Date(d.now).toLocaleTimeString('zh-CN');
     renderNotices(d.notices);
+    renderBugToolbar(d.bugCounts);
     renderBugs(d.bugs);
     var v = d.verify || {};
     el('verify').textContent = v.mode
@@ -429,7 +478,8 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
       : '校验 off';
   }
   function tick() {
-    fetch('/admin/api/state?token=' + encodeURIComponent(token), { cache: 'no-store' })
+    fetch('/admin/api/state?token=' + encodeURIComponent(token)
+      + '&bugStatus=' + encodeURIComponent(bugStatus) + '&bugSort=' + encodeURIComponent(bugSort), { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(render)
       .catch(function (e) { el('updated').textContent = '加载失败：' + e.message; });
@@ -464,16 +514,27 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
       .catch(function (e) { el('updated').textContent = '推送失败：' + e.message; })
       .then(function () { btn.disabled = false; });
   });
-  // 玩家反馈 (server/community.js): the report list, its images (token-gated image route) and the status buttons.
+  // 玩家反馈 (server/community.js): the report list, its images (token-gated image route), the status buttons, the
+  // status / sort filters (applied server-side) and the export.
   var BUG_LABELS = { new: '待处理', triaged: '已受理', fixed: '已修复' };
   var BUG_STATUSES = ['new', 'triaged', 'fixed'];
+  var bugStatus = ''; // '' = 全部; else new / triaged / fixed (a server-side filter, so it spans the whole set)
+  var bugSort = 'status'; // 'status' = 未处理优先 + 新→旧 (historical default); also newest / oldest
+  var bugList = []; // the last rendered page, kept for the image viewer
+  function bugImg(id) { return '/admin/api/bug/image/' + id + '?token=' + encodeURIComponent(token); }
+  function renderBugToolbar(counts) {
+    counts = counts || {};
+    el('chipAll').textContent = counts.total || 0;
+    el('chipNew').textContent = counts.new || 0;
+    el('chipTriaged').textContent = counts.triaged || 0;
+    el('chipFixed').textContent = counts.fixed || 0;
+    el('bugCount').textContent = '显示 ' + bugList.length + ' / 共 ' + (counts.total || 0) + ' 条';
+  }
   function renderBugs(list) {
-    list = Array.isArray(list) ? list : [];
-    el('bugCount').textContent = list.length + ' 条';
-    el('bugsBody').innerHTML = list.map(function (b) {
-      var img = function (i) { return '/admin/api/bug/image/' + i.id + '?token=' + encodeURIComponent(token); };
-      var imgs = (b.images || []).map(function (i) {
-        return '<a href="' + img(i) + '" target="_blank" rel="noopener"><img src="' + img(i) + '" alt=""></a>';
+    bugList = Array.isArray(list) ? list : [];
+    el('bugsBody').innerHTML = bugList.map(function (b, r) {
+      var imgs = (b.images || []).map(function (i, k) {
+        return '<img src="' + bugImg(i.id) + '" data-r="' + r + '" data-i="' + k + '" alt="" title="点击放大">';
       }).join('');
       var btns = BUG_STATUSES.map(function (s) {
         return '<button class="bst" data-id="' + b.id + '" data-status="' + s + '"' + (b.status === s ? ' disabled' : '') + '>' + (BUG_LABELS[s] || s) + '</button>';
@@ -488,9 +549,80 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
         + '<div class="bug-actions">' + btns + '</div></div>';
     }).join('') || '<div class="empty">暂无玩家反馈</div>';
   }
+  // Click a thumbnail → the full-size viewer (the same token-gated route, just larger); ← / → step through a report's
+  // images, Esc or the backdrop closes it.
+  var viewer = el('viewer'), viewerImg = el('viewerImg'), viewerCount = el('viewerCount');
+  var viewerUrls = [], viewerAt = 0;
+  function showViewer() {
+    viewerImg.src = viewerUrls[viewerAt];
+    viewerCount.textContent = (viewerAt + 1) + ' / ' + viewerUrls.length;
+    var multi = viewerUrls.length > 1;
+    el('viewerPrev').style.display = multi ? '' : 'none';
+    el('viewerNext').style.display = multi ? '' : 'none';
+  }
+  function openViewer(urls, at) {
+    if (!urls || !urls.length) return;
+    viewerUrls = urls; viewerAt = Math.max(0, Math.min(at | 0, urls.length - 1));
+    showViewer();
+    viewer.classList.add('is-open'); viewer.setAttribute('aria-hidden', 'false');
+  }
+  function closeViewer() {
+    viewer.classList.remove('is-open'); viewer.setAttribute('aria-hidden', 'true');
+    viewerImg.removeAttribute('src'); viewerUrls = [];
+  }
+  function stepViewer(d) { if (viewerUrls.length < 2) return; viewerAt = (viewerAt + d + viewerUrls.length) % viewerUrls.length; showViewer(); }
+  el('viewerClose').addEventListener('click', closeViewer);
+  el('viewerPrev').addEventListener('click', function () { stepViewer(-1); });
+  el('viewerNext').addEventListener('click', function () { stepViewer(1); });
+  viewer.addEventListener('click', function (e) { if (e.target === viewer) closeViewer(); });
+  document.addEventListener('keydown', function (e) {
+    if (!viewer.classList.contains('is-open')) return;
+    if (e.key === 'Escape') closeViewer();
+    else if (e.key === 'ArrowLeft') stepViewer(-1);
+    else if (e.key === 'ArrowRight') stepViewer(1);
+  });
+  // 筛选 / 排序: re-poll with the new params — the server filters / sorts the FULL set, not only the 100 rows here.
+  function setActive(container, attr, value) {
+    Array.prototype.forEach.call(container.querySelectorAll('.chip'), function (c) {
+      c.classList.toggle('is-on', (c.dataset[attr] || '') === value);
+    });
+  }
+  el('bugFilters').addEventListener('click', function (e) {
+    var c = e.target && e.target.closest ? e.target.closest('.chip') : null;
+    if (!c) return;
+    bugStatus = c.dataset.status || '';
+    setActive(el('bugFilters'), 'status', bugStatus);
+    tick();
+  });
+  el('bugSorts').addEventListener('click', function (e) {
+    var c = e.target && e.target.closest ? e.target.closest('.chip') : null;
+    if (!c) return;
+    bugSort = c.dataset.sort || 'status';
+    setActive(el('bugSorts'), 'sort', bugSort);
+    tick();
+  });
+  // 导出: the token-gated full (filtered) set, JSON or CSV, as a download.
+  function exportBugs(format) {
+    var a = document.createElement('a');
+    a.href = '/admin/api/bug/export?token=' + encodeURIComponent(token) + '&format=' + format
+      + '&status=' + encodeURIComponent(bugStatus) + '&sort=' + encodeURIComponent(bugSort);
+    a.download = 'bug-reports.' + format;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  el('bugExportJson').addEventListener('click', function () { exportBugs('json'); });
+  el('bugExportCsv').addEventListener('click', function () { exportBugs('csv'); });
+  setActive(el('bugFilters'), 'status', bugStatus);
+  setActive(el('bugSorts'), 'sort', bugSort);
   el('bugsBody').addEventListener('click', function (e) {
-    var b = e.target && e.target.closest ? e.target.closest('button.bst') : null;
-    if (!b) return;
+    var t = e.target;
+    if (t && t.tagName === 'IMG' && t.dataset && t.dataset.r != null) {
+      var rep = bugList[Number(t.dataset.r)];
+      if (rep) openViewer((rep.images || []).map(function (i) { return bugImg(i.id); }), Number(t.dataset.i));
+      return;
+    }
+    var btn = t && t.closest ? t.closest('button.bst') : null;
+    if (!btn) return;
+    var b = btn;
     b.disabled = true;
     fetch('/admin/api/bug/status?token=' + encodeURIComponent(token), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

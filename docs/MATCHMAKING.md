@@ -1045,7 +1045,8 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 报告提交走 WebSocket `bug.report`：绑定账号时 `account_id` = 账号、`submitter` = 账号名；游客 `account_id` = NULL、`submitter` = 当前代号。图片归属：上传与提交必须是同一个 key（`account:<id>` 或 `net:<客户端网络 key>`），未认领的图片不能挂到别人的报告。
 - 限流（内存滑动窗口，按 key）：提交 **5 次 / 30 分钟**，上传 **20 张 / 30 分钟**；未提交的孤儿图片 24 小时后由 `pruneUploads()` 清理。长度上限见 `shared/constants.js`。
 - 客户端 `BugReportOverlay`：标题、描述、最多 4 张图片（本地预览、逐张上传）、提交；文案全部 i18n。管理页 `/admin` 的「玩家反馈」面板列出报告、正文、缩略图与状态按钮（待处理 / 已受理 / 已修复）。
-- 管理接口（令牌见 `var/admin-token.txt`）：`GET /admin/api/state` 新增 `bugs`；`POST /admin/api/bug/status { id, status }`；`GET /admin/api/bug/image/<id>`（`X-Content-Type-Options: nosniff`、`Cache-Control: private, no-store`）。
+- 管理接口（令牌见 `var/admin-token.txt`）：`GET /admin/api/state` 新增 `bugs` 与 `bugCounts`（各状态计数）；`bugStatus`（`new` / `triaged` / `fixed`，缺省为全部）与 `bugSort`（`status` 缺省 = 未处理优先 + 新→旧；另有 `newest` / `oldest`）两个查询参数在**服务端**过滤与排序，作用于全集而非前 100 行；`POST /admin/api/bug/status { id, status }`；`GET /admin/api/bug/image/<id>`（`X-Content-Type-Options: nosniff`、`Cache-Control: private, no-store`）。
+- 导出（令牌门禁）：`GET /admin/api/bug/export?format=json|csv&status=&sort=` 返回当前筛选 / 排序的**全集**（最多 500 行）。CSV 为 RFC 4180、**带 UTF-8 BOM**（Excel 正确显示中文）、字段按需以 `"` 包裹并把 `"` 加倍，且对以 `= + - @` 开头的玩家文本加 `'` 前缀以防公式注入；JSON 为 `{ status, sort, count, reports[] }`。两者每行只含 id / status / submitter / created(ISO) / title / body / 图片数——**不含 accountId / 账户表 / 图片字节**。
 
 ### 36.4 公开房间（独立界面 + 席位方块，2026-10-09 改版）
 
@@ -1064,4 +1065,12 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 
 ### 36.6 测试
 
-`test/community.test.js`：markdown 解析、文本清洗、图片嗅探、迁移 v3、增删查、状态、限流、图片落盘 / 归属 / 清理、协议校验、HTTP（公开日志 + 上传 + `bug.report` + 管理列表 / 状态 / 图片）。
+`test/community.test.js`：markdown 解析、文本清洗、图片嗅探、迁移 v3、增删查、状态、限流、图片落盘 / 归属 / 清理、协议校验、HTTP（公开日志 + 上传 + `bug.report` + 管理列表 / 状态 / 图片）；服务端筛选 / 排序作用于全集（含 >100 行的用例）、`bugReportCounts()`、`bugReportsToCsv` / `bugReportsExport`（BOM / 引号 / 公式前缀 / 字段白名单）与令牌门禁的导出接口 + 管理页控件。
+
+### 36.7 管理页「玩家反馈」面板（筛选 / 排序 / 导出 / 图片放大）
+
+- 状态筛选 chips：全部 / 待处理（带未处理计数）/ 已受理 / 已修复。切换后请求带 `bugStatus`，由服务端过滤全集（不受 100 行上限影响），并显示「显示 N / 共 M 条」。
+- 排序 chips：未处理优先（缺省，保持历史行为）/ 新→旧 / 旧→新。请求带 `bugSort`，服务端排序全集。
+- 点击缩略图打开全屏 viewer（lightbox）：仍是令牌门禁的 `/admin/api/bug/image/<id>`，图片按自然尺寸并适配视口；「关闭」按钮 / `Esc` / 点击背景关闭，多图时用 ‹ › 按钮或 `←` `→` 翻页。
+- 「导出 JSON」「导出 CSV」按钮：以 `<a download>` 打开上面的令牌门禁导出接口，导出**当前筛选 / 排序的全集**（不是只看得到的一页）。
+- 安全不变：玩家文本一律经 `esc()` 文本渲染（无 innerHTML 注入）；筛选 / 排序的取值只做白名单映射（`BUG_STATUSES` / `BUG_SORTS`），绝不拼接进 SQL；导出与状态接口只走服务端的字段白名单。

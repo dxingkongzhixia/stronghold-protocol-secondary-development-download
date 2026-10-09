@@ -31,7 +31,7 @@ import { getData, loadData } from './data.js';
 import { readFileSync } from 'node:fs';
 import { openDb } from './db.mjs';
 import { AuthService } from './auth.js';
-import { CommunityService } from './community.js';
+import { CommunityService, bugReportsExport, bugReportsToCsv } from './community.js';
 import { ADMIN_HTML, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
 import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX } from '../shared/constants.js';
@@ -182,6 +182,7 @@ export async function startServer(opts = {}) {
   async function adminRoute(req, res, parts) {
     const notify = parts.rawPath === '/admin/api/notify';
     const bugStatus = parts.rawPath === '/admin/api/bug/status';
+    const bugExport = parts.rawPath === '/admin/api/bug/export';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -221,8 +222,29 @@ export async function startServer(opts = {}) {
       res.end(req.method === 'HEAD' ? undefined : bytes);
       return;
     }
+    // bug report export (server/community.js): the FULL filtered / sorted set as a download — JSON or CSV (UTF-8 BOM).
+    // Identity fields only: no accountId, no image bytes, never the account store.
+    if (bugExport) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET, HEAD'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      const qs = new URLSearchParams(parts.query);
+      const status = qs.get('status');
+      const sort = qs.get('sort');
+      const list = community ? community.listBugReports({ status, sort, limit: 500 }) : [];
+      const csv = qs.get('format') === 'csv';
+      const body = Buffer.from(csv ? bugReportsToCsv(list) : JSON.stringify(bugReportsExport(list, { status, sort })), 'utf8');
+      res.writeHead(200, {
+        'Content-Type': csv ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8',
+        'Content-Length': body.length,
+        'Content-Disposition': `attachment; filename="bug-reports.${csv ? 'csv' : 'json'}"`,
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      });
+      res.end(req.method === 'HEAD' ? undefined : body);
+      return;
+    }
     if (parts.rawPath === '/admin/api/state') {
-      sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth, community }));
+      const qs = new URLSearchParams(parts.query);
+      sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth, community, bugStatus: qs.get('bugStatus'), bugSort: qs.get('bugSort') || 'status' }));
       return;
     }
     const body = Buffer.from(ADMIN_HTML);
@@ -265,7 +287,7 @@ export async function startServer(opts = {}) {
       return true;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
-      || parts.rawPath === '/admin/api/bug/status' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
+      || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;
     }

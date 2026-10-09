@@ -55,6 +55,62 @@ export function sniffImageType(buf) {
 const EXT_OF = Object.freeze({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' });
 
 /**
+ * The admin list's ordering keys (server/community.js §36). `status` is the historical default — 未处理优先, then
+ * 新→旧 — while `newest` / `oldest` sort purely by time. Only these keys ever reach the SQL ORDER BY (never a value
+ * from the request).
+ */
+export const BUG_SORTS = Object.freeze(['status', 'newest', 'oldest']);
+const BUG_ORDER = Object.freeze({
+  status: "(status = 'new') DESC, created_at DESC, id DESC", // 未处理优先 + 新→旧 (docs/MATCHMAKING.md §36.3)
+  newest: 'created_at DESC, id DESC', // 新→旧
+  oldest: 'created_at ASC, id ASC', // 旧→新
+});
+
+/** Quote one CSV cell (RFC 4180) and defuse a leading =/+/-/@/tab/CR so Excel never runs player text as a formula. */
+function csvCell(v) {
+  let s = v == null ? '' : String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/** The CSV column order of the bug-report export (id, status, submitter, created, title, body, image count). */
+export const BUG_CSV_COLUMNS = Object.freeze(['id', 'status', 'submitter', 'created', 'title', 'body', 'images']);
+
+/**
+ * The bug reports as RFC-4180 CSV, prefixed with a UTF-8 BOM so Excel opens Chinese correctly. `created` is ISO-8601.
+ * @param {Array<object>} [list] rows from {@link CommunityService#listBugReports}
+ * @returns {string}
+ */
+export function bugReportsToCsv(list) {
+  const rows = [BUG_CSV_COLUMNS.join(',')];
+  for (const b of Array.isArray(list) ? list : []) {
+    rows.push([b.id, b.status, b.submitter ?? '', b.created_at == null ? '' : new Date(b.created_at).toISOString(), b.title, b.body, (b.images || []).length].map(csvCell).join(','));
+  }
+  return `\uFEFF${rows.join('\r\n')}\r\n`;
+}
+
+/**
+ * A JSON-serializable export of the (already filtered / sorted) reports — identity fields only, never accountId, the
+ * account store, or any image bytes (docs/MATCHMAKING.md §36.3).
+ * @param {Array<object>} [list]
+ * @param {{ status?: string|null, sort?: string }} [filters]
+ * @returns {{ status: string|null, sort: string, count: number, reports: Array<object> }}
+ */
+export function bugReportsExport(list, { status = null, sort = 'status' } = {}) {
+  const reports = (Array.isArray(list) ? list : []).map((b) => ({
+    id: b.id, status: b.status, submitter: b.submitter ?? null,
+    created: b.created_at == null ? null : new Date(b.created_at).toISOString(),
+    title: b.title, body: b.body, images: (b.images || []).length,
+  }));
+  return {
+    status: status && BUG_STATUSES.includes(status) ? status : null,
+    sort: BUG_SORTS.includes(sort) ? sort : 'status',
+    count: reports.length,
+    reports,
+  };
+}
+
+/**
  * Parse the repo's `CHANGELOG.md` into entries: each `## <version> — <YYYY-MM-DD>` starts one, its body is the markdown
  * up to the next `##` (or the end). → `{ version, releasedAt, title, body }` (title = version; date null when absent).
  * @param {unknown} markdown
@@ -121,6 +177,8 @@ export class CommunityService {
     this.uploads = new RateWindow(uploadLimit, windowMs, now);
     /** @type {Map<number, { key: string, at: number }>} an uploaded-but-not-yet-attached image's owner (in memory) */
     this._pending = new Map();
+    /** @type {Map<string, any>} the lazily prepared report-list statements, keyed by `status|sort`. */
+    this._reportStmts = new Map();
     this.q = {
       clogCount: db.prepare('SELECT COUNT(*) AS n FROM changelog'),
       clogInsert: db.prepare('INSERT INTO changelog (version, released_at, title, body, published, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
@@ -128,8 +186,7 @@ export class CommunityService {
       clogListAll: db.prepare('SELECT id, version, released_at, title, body, published FROM changelog ORDER BY released_at DESC, id DESC LIMIT ?'),
       reportInsert: db.prepare('INSERT INTO bug_reports (title, body, account_id, submitter, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
       reportById: db.prepare('SELECT * FROM bug_reports WHERE id = ?'),
-      reportList: db.prepare('SELECT * FROM bug_reports ORDER BY (status = \'new\') DESC, created_at DESC, id DESC LIMIT ?'),
-      reportListStatus: db.prepare('SELECT * FROM bug_reports WHERE status = ? ORDER BY created_at DESC, id DESC LIMIT ?'),
+      reportCounts: db.prepare('SELECT status, COUNT(*) AS n FROM bug_reports GROUP BY status'),
       reportStatus: db.prepare('UPDATE bug_reports SET status = ?, updated_at = ? WHERE id = ?'),
       uploadInsert: db.prepare('INSERT INTO bug_uploads (report_id, path, mime, bytes, account_id, created_at) VALUES (NULL, ?, ?, ?, ?, ?)'),
       uploadById: db.prepare('SELECT * FROM bug_uploads WHERE id = ?'),
@@ -231,11 +288,41 @@ export class CommunityService {
     return { ok: true, report: { id: reportId, title: t, body: b, status: 'new', accountId: aid, submitter: name, createdAt: now, images: owned.map((u) => ({ id: u.id, mime: u.mime, bytes: u.bytes })) } };
   }
 
-  /** @param {{ status?: string|null, limit?: number }} [opts] */
-  listBugReports({ status = null, limit = 100 } = {}) {
+  /**
+   * The reports, server-side filtered and sorted (so the rules apply to the whole set, not only the first page):
+   * `status` (`new` / `triaged` / `fixed`; anything else — including null / `'all'` — means every status) and `sort`
+   * (see {@link BUG_SORTS}; the default `'status'` keeps the historical 未处理优先 + 新→旧).
+   * @param {{ status?: string|null, sort?: string, limit?: number }} [opts]
+   */
+  listBugReports({ status = null, sort = 'status', limit = 100 } = {}) {
     const n = Math.max(1, Math.min(Number(limit) || 100, 500));
-    const rows = status && BUG_STATUSES.includes(status) ? this.q.reportListStatus.all(status, n) : this.q.reportList.all(n);
+    const s = BUG_SORTS.includes(sort) ? sort : 'status';
+    const where = status && BUG_STATUSES.includes(status) ? status : null;
+    const st = this._reportStmt(where, s);
+    const rows = where ? st.all(where, n) : st.all(n);
     return rows.map((row) => ({ ...row, images: this.q.uploadByReport.all(row.id).map((u) => ({ id: u.id, mime: u.mime, bytes: u.bytes })) }));
+  }
+
+  /** Prepare (once) the report-list statement for one `status|sort` pair — only BUG_ORDER text ever reaches ORDER BY. */
+  _reportStmt(status, sort) {
+    const key = `${status || ''}|${sort}`;
+    let st = this._reportStmts.get(key);
+    if (!st) {
+      const where = status ? 'WHERE status = ?' : '';
+      st = this.db.prepare(`SELECT * FROM bug_reports ${where} ORDER BY ${BUG_ORDER[sort]} LIMIT ?`);
+      this._reportStmts.set(key, st);
+    }
+    return st;
+  }
+
+  /** The report totals by status (for the admin page's filter chips). @returns {{new:number,triaged:number,fixed:number,total:number}} */
+  bugReportCounts() {
+    const out = { new: 0, triaged: 0, fixed: 0, total: 0 };
+    for (const row of this.q.reportCounts.all()) {
+      if (BUG_STATUSES.includes(row.status)) out[row.status] = Number(row.n);
+      out.total += Number(row.n);
+    }
+    return out;
   }
 
   /** @param {number} id @param {string} status @returns {{ ok: true } | { error: string }} */
