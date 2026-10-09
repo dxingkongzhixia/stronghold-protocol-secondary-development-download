@@ -80,6 +80,9 @@ export const ICONS = {
   // password reveal (TextField): an open eye, and the same eye with a diagonal slash when hidden
   eye: { d: 'M12 5C6.5 5 2.4 9.3 1.1 12c1.3 2.7 5.4 7 10.9 7s9.6-4.3 10.9-7C21.6 9.3 17.5 5 12 5zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', eo: true },
   eyeOff: { d: 'M12 5C6.5 5 2.4 9.3 1.1 12c1.3 2.7 5.4 7 10.9 7s9.6-4.3 10.9-7C21.6 9.3 17.5 5 12 5zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM2.2 4 4 2.2 21.8 20 20 21.8z', eo: true },
+  // room text chat (ui/chat.js): a speech bubble, and a paper plane for 发送
+  chat: { d: 'M3 4h18a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-5 4v-4H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm2 3v2h12V7zm0 4v2h9v-2z', eo: true },
+  send: { d: 'M2.5 21.5 22 12 2.5 2.5l3.2 7.1L15 12 5.7 14.4z', eo: true },
 };
 
 /**

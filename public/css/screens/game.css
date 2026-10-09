@@ -355,6 +355,23 @@
 
 /* ---- corner: emote + settings --------------------------------------------------------------------------------- */
 .gm__corner { position: absolute; left: .24rem; bottom: .24rem; display: flex; align-items: flex-end; gap: .1rem; }
+
+/* room text chat (局内, docs/MATCHMAKING.md §38): a collapsible dock beside the 交流 button (ui/chat.js ChatDock).
+   Collapsed by default so it never covers the board or the shop; the 交流 panel keeps its own fixed sprite layout. */
+.gm-chat { position: absolute; left: 0; bottom: calc(100% + .12rem); z-index: 4; width: 4.7rem; }
+.gm-chat__sum {
+  display: inline-flex; align-items: center; gap: .07rem; cursor: pointer; list-style: none; user-select: none;
+  min-height: .4rem; padding: 0 .14rem; background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2);
+  color: var(--text-md); font-size: .16rem; font-weight: 700; letter-spacing: .08em;
+}
+.gm-chat__sum::-webkit-details-marker { display: none; }
+.gm-chat__sum .icon { width: .2rem; height: .2rem; color: var(--mint-500); }
+.gm-chat[open] .gm-chat__sum { color: var(--mint-400); border-color: var(--mint-700); }
+.gm-chat .chat-panel {
+  display: flex; flex-direction: column; gap: .06rem; margin-top: .08rem; max-height: 2.7rem; padding: .1rem .12rem;
+  background: rgba(6, 10, 9, .96); border: 1px solid var(--line-2); box-shadow: 0 .1rem .3rem rgba(0, 0, 0, .6);
+}
+.gm-chat .chat-log { max-height: 1.5rem; }
 .gm__gear {
   width: .56rem; height: .56rem; display: grid; place-items: center; background: rgba(8, 11, 10, .85);
   border: 1px solid var(--line-2); color: var(--text-lo); transition: color var(--t-fast), border-color var(--t-fast);

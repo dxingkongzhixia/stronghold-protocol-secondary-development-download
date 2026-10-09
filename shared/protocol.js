@@ -1,7 +1,7 @@
 // Normative message catalogue (DESIGN §8). Used by server (validation) and client (building requests).
 // Every client→server message is `{ t, rid?, ...fields }`. Unknown `t` or invalid fields ⇒ ERR.BAD_MSG.
 
-import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO, AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX, BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX } from './constants.js';
+import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO, AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX, BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX, CHAT_MAX } from './constants.js';
 import { isDroppableChess } from './standIn.js';
 import { diySlotIds, validateDiyPicks } from './diy.js';
 
@@ -352,6 +352,10 @@ export const C2S = {
   // room.closed { reason: 'kicked' }). room.leave / g.leave leave a spectator seat like a player seat.
   'room.spectate': { code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v) },
   'room.removeSpectator': { playerId: isId },
+  // room text chat (同盟等待室 + 局内, docs/MATCHMAKING.md §38): one plain-text message, capped at CHAT_MAX characters.
+  // The lobby strips control characters, rate-limits per session and broadcasts m.chat to the whole room (seats +
+  // spectators, waiting lobby AND while the match runs). The client renders it as text.
+  'room.chat': { text: (v) => isStr(v, CHAT_MAX) && v.trim().length > 0 },
 
   // accounts (server/auth.js; docs/MATCHMAKING.md): 野排 requires one. Both answer with auth.ok { account, token }
   'auth.register': { name: (v) => isStr(v, AUTH_NAME_MAX) && v.trim().length >= AUTH_NAME_MIN, password: (v) => isStr(v, AUTH_PASS_MAX) && v.length >= AUTH_PASS_MIN },
@@ -432,6 +436,9 @@ export const S2C = [
   'auth.ok', 'auth.error', 'mm.state',
   // operator notice (the admin page's 通知): sys.notice { id, text, sign, at } — pushed to the live sessions
   'sys.notice',
+  // room text chat (docs/MATCHMAKING.md §38): room.chat { messages: [{ from, name, text, at }] } is the history a session
+  // is sent when it (re)enters the room; m.chat { from, name, text, at } is one live message broadcast to every member.
+  'room.chat', 'm.chat',
   // boot gate: boot.state { granted, position } — pushed while waiting for / when granted a boot-preload slot
   'boot.state',
   'm.public', 'm.private', 'm.field', 'm.toast', 'm.ticker', 'm.emote', 'm.result',

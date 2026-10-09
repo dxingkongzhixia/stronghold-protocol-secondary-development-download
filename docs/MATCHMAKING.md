@@ -1153,3 +1153,41 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - **golden 归属证明**：先在干净工作树（把本次非 golden 源 + 数据 `git stash`）重算 `node tools/golden.mjs` → **全绿 / 零差异**，证明无既有漂移；恢复后 `--update`：移动 **`roster`（52→53 场，含她的所有 loadout）**、**`bonds`**（阿戈尔 high 场景成员含她）、**`fields`**、**`matches`**（卡池变化），`standins` / `diy` 不变——全部归因于本改动。
 - 新增 `test/content/clemnt.test.js`（primguard / 两天赋 / S1 侵蚀 / S2 放逐舱+漩涡 / S3 弹药爆发 / `banishGroup` / `disarmForce` 共 7 条）。
 - 交叉引用：分支表与引擎键见 `docs/SIM.md` §8；新干员流程见 `docs/NEW-OPERATOR.md`。
+
+## 38. 同盟文字聊天（等待室 + 局内，2026-10-09）
+
+等待室里此前没有文字聊天（只有局内 `g.emote` → `m.emote` 表情与 `m.ticker` 播报，都不是聊天）。本功能加一条**房间级**纯文本聊天：等待界面左下角的消息日志 + 输入 + 发送，局内左下角「交流」按钮旁的可折叠聊天入口。
+
+### 38.1 协议（`shared/protocol.js`）
+
+- **client → server**：`room.chat { text }`（`text` 必填、去空白后非空、≤ `CHAT_MAX`）。
+- **server → client（实时）**：`m.chat { from, name, text, at }`，发给该房间**全部成员**——座位上的玩家**和**观战席——等待室与**局内**共用同一条消息（房间级：绝不外泄到别的房间，或玩家不在其中的对局）。`from` 是发送者的 playerId，`at` 是服务器时间戳。
+- **server → client（历史）**：`room.chat { messages: [{ from, name, text, at }] }`，在某会话创建 / 加入 / 观战 / 重连进入房间时**单独**推送（不放进会被周期广播的 `room.state`，避免每次房间状态变化都带上整段历史）。房间保留最近 `CHAT_HISTORY`（50）条。
+
+### 38.2 校验与限额（`server/lobby.js`）
+
+- 长度：`CHAT_MAX`（100 字符，UTF-16）；协议层超长 → `BAD_MSG`；服务端清洗后为空或只剩无意义字符 → 新的 `ERR.BAD_CHAT`。
+- 控制字符 / 双向 / 零宽字符与孤立代理项在服务端剥离，空白折叠，NFC 归一。转义不够：**绝不发送 HTML**，客户端也只按纯文本渲染（Preact 转义，不 `innerHTML`）。
+- 每条按会话滑动窗口限流：每 `CHAT_RATE_WINDOW_MS`（10 s）最多 `CHAT_RATE_LIMIT`（5）条，超出 → `ERR.RATE`（客户端提示「已发送过快，请稍候」）。可用 `chatRateLimit` / `chatRateWindowMs` 选项调整。
+- 观战席可以发言（`room.chat` 不是 `g.*`，不被 `SPECTATOR` 拒绝；只在不在房间时 `NOT_IN_ROOM`）。发送即广播给当前房间成员；离开房间（`memberSessions` 只路由当前成员、且要求 `session.roomCode === room.code`）后不再收到。
+
+### 38.3 客户端（`public/js/ui/chat.js`）
+
+- **等待室**（`screens/room.js`）：左下角固定面板——可滚动日志（名字 + 文本，自己的消息高亮）、输入框 + `发送` 按钮、Enter 发送、空输入 / 离线置灰、限流提示。座位卡 / 难度选择 / 准备按钮不受影响。
+- **局内**（`screens/game.js`）：左下角「交流」按钮旁的可折叠 `ChatDock`（日志 + 输入），玩家与观战者都能用，且不依赖表情面板的固定精灵布局（「交流」面板原样不动，表情照常）。
+- 纯文本渲染（绝不 `innerHTML` 玩家文本）；`useStore(s => s.chat)`；`main.js` 处理 `m.chat`（追加）/ `room.chat`（替换为历史）；换房间或离开时清空。
+- 旧客户端不知道 `m.chat` / `room.chat`：客户端对未知类型的处理是**忽略**（`net.js` 只 `_emit(t, msg)`，无监听者即丢弃），不报错、不打断——确认向后兼容。
+
+### 38.4 持久化：不入库、不落盘
+
+**聊天仅存于房间内存，不入库、不落盘，房间结束即清空。** 最近消息就是 `Room.chat` 这个普通数组（`server/lobby.js`），生命周期与房间相同，`disposeRoom()` 后即消失。**绝不写入 SQLite / `var/*.db`**：`server/db.mjs` 与 `CommunityService` 只保留 `changelog` / `bug_reports` / `bug_uploads` 三表，**不得新增聊天表**；聊天也不经过任何会持久化它的路径，也不写日记 / 快照。若房间被服务器快照 / 恢复（重连），聊天不进入任何持久快照——只有内存中的房间保有它：在线成员实时收到 `m.chat`，后来进入（含重连）的成员拿到内存里的最近历史；房间一旦销毁，历史随之消失。`test/lobby-chat.test.js` 有一条断言强制这一点（聊天在不带 DB 的服务器上工作，且 `server/db.mjs` / `server/community.js` 不含任何聊天 / 表引用）。
+
+### 38.5 相关文件
+
+- `shared/constants.js`（`CHAT_MAX` / `CHAT_HISTORY` / `CHAT_RATE_WINDOW_MS` / `CHAT_RATE_LIMIT`、`ERR.BAD_CHAT` + `ERR_TEXT`）
+- `shared/protocol.js`（C2S `room.chat`；S2C `room.chat` / `m.chat`）
+- `server/lobby.js`（`Room.chat`、`chat()`、`sendChatHistory()`、`LOBBY_DEFAULTS.chatRate*`）、`server/http/config.js`（选项透传）
+- `public/js/ui/chat.js`、`public/js/screens/room.js`、`public/js/screens/game.js`、`public/js/main.js`、`public/js/store.js`、`public/js/ui/components.js`（`chat` / `send` 图标）
+- `public/css/screens/room.css`（`.room-chat`）、`public/css/screens/game.css`（`.gm-chat`）
+- 测试：`test/lobby-chat.test.js`（协议 / 长度 / 限流 / 广播范围 / 历史 / 局内）、`test/ui/chat.test.js`（纯映射）
+- i18n（四语包）：`聊天` / `发送` / `说点什么…` / `暂无消息` / `已发送过快，请稍候` / `发言内容无效`

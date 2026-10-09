@@ -407,3 +407,7 @@ Bug-report images are **files** under `var/bug-uploads/` (git-ignored, never sta
 only the relative path + mime + byte count + uploader + time. The real content type is sniffed from the bytes
 (png / jpeg / webp only — no svg / html), never a filename. See
 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §36 for the endpoints, limits and the client panels.
+
+The schema stays at these four tables: **the room text chat (docs/MATCHMAKING.md §38) is deliberately NOT in the DB** —
+it lives in memory on the room (`server/lobby.js` `Room.chat`), is never written to `var/*.db` or disk, and is gone when
+the room is disposed. Do not add a `chat` table to `server/db.mjs` / `CommunityService`.

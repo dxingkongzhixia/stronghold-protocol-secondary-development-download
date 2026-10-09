@@ -306,3 +306,40 @@
 .ready-count__icons .icon.is-on { color: var(--mint-400); filter: drop-shadow(0 0 4px var(--mint-glow)); }
 
 .room-bar .btn--xl { min-width: 3.2rem; letter-spacing: .2em; }
+
+/* ---- room text chat (同盟等待室 + 局内, docs/MATCHMAKING.md §38) ------------------------------------------------ */
+/* The waiting-room panel is anchored bottom-left above the action bar; the seat cards, difficulty picker and ready
+   button are untouched. The .chat-* primitives are shared with the in-match dock (screens/game.css .gm-chat). Player
+   text is rendered as text (ui/chat.js), never through innerHTML. */
+.room-chat {
+  position: absolute;
+  left: .6rem;
+  bottom: 1.62rem;
+  z-index: 4;
+  width: min(5rem, 42vw);
+  max-height: 3.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: .06rem;
+  padding: .12rem .14rem;
+  background: rgba(6, 10, 9, .92);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 .12rem .4rem rgba(0, 0, 0, .55);
+}
+.chat-panel__head { display: flex; align-items: center; gap: .07rem; font-size: .15rem; font-weight: 700; color: var(--text-md); letter-spacing: .08em; }
+.chat-panel__head .icon { width: .17rem; height: .17rem; color: var(--mint-500); }
+.chat-log { flex: 1; min-height: .8rem; max-height: 1.8rem; overflow-y: auto; display: flex; flex-direction: column; gap: .04rem; font-size: .15rem; }
+.chat-log__empty { font-size: .14rem; }
+.chat-log__line { display: flex; gap: .08rem; line-height: 1.35; overflow-wrap: anywhere; }
+.chat-log__name { flex: none; max-width: 1.5rem; color: var(--text-lo); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-log__text { color: var(--text-hi); white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-log__line.is-me .chat-log__name { color: var(--mint-500); }
+.chat-log__line.is-me .chat-log__text { color: var(--mint-400); }
+.chat-send { display: flex; align-items: center; gap: .08rem; flex-wrap: wrap; }
+.chat-send__input {
+  flex: 1; min-width: 0; height: .42rem; padding: 0 .12rem; font-size: .16rem;
+  background: rgba(0, 0, 0, .5); border: 1px solid var(--line-2); color: var(--text-hi);
+}
+.chat-send__input::placeholder { color: var(--text-dim); }
+.chat-send__input:disabled { opacity: .55; }
+.chat-send__hint { flex-basis: 100%; font-size: .13rem; }

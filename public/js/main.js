@@ -46,6 +46,7 @@ import { TitleScreen, sanitizeName } from './screens/title.js';
 import { LobbyScreen, parseRoomParam } from './screens/lobby.js';
 import { RoomScreen } from './screens/room.js';
 import { GameScreen } from './screens/game.js';
+import { appendChat, chatHistory } from './ui/chat.js';
 import { installAudio } from './audio.js';
 import { settingsStore } from './ui/settings.js';
 import { GuideHost } from './ui/guide.js';
@@ -140,7 +141,7 @@ function backToLobby() {
   clearTimeout(restoreTimer);
   const s = store.get();
   if (s.room || s.match.public) closeAllDialogs();
-  store.set({ room: null, match: emptyMatch(), ticker: [], emotes: [] });
+  store.set({ room: null, match: emptyMatch(), ticker: [], emotes: [], chat: [] });
   // also drops a 公开房间 return intent: a closed / kicked / session-reset room is not an intentional 离开同盟.
   store.patch('ui', { restoring: false, roomsReturn: false });
 }
@@ -191,7 +192,7 @@ function onRoomState(msg) {
   if (myId != null && seats.length && !seats.some((s) => s && s.playerId === myId) && !isSpectating(room, myId)) {
     // We are no longer seated (kicked / left elsewhere) — neither in a player seat nor a spectator seat.
     if (store.get().room) toast(t('你已不在该同盟中'), 'warn');
-    store.set({ room: null, match: emptyMatch() });
+    store.set({ room: null, match: emptyMatch(), chat: [] });
     // kicked / removed elsewhere — NOT an intentional 离开同盟: never force the 公开房间 view.
     store.patch('ui', { roomsReturn: false });
     return;
@@ -199,7 +200,8 @@ function onRoomState(msg) {
   const prevRoom = store.get().room;
   // A (new) match starts: forget the previous match's state so stale results never show.
   if (room.inMatch && !(prevRoom && prevRoom.inMatch && prevRoom.code === room.code)) store.set({ match: emptyMatch() });
-  store.set({ room });
+  // A different room: drop the old chat (its history follows as room.chat { messages }); a same-room state update keeps it.
+  store.set(!prevRoom || prevRoom.code !== room.code ? { room, chat: [] } : { room });
   maybeFinishRestore();
 }
 
@@ -301,6 +303,10 @@ function wireNet() {
   net.on('m.emote', (msg) => {
     store.set((s) => ({ emotes: [...s.emotes.slice(-(EMOTE_KEEP - 1)), { seq: ++seq, playerId: msg.playerId, id: msg.id, at: Date.now() }] }));
   });
+  // room text chat (docs/MATCHMAKING.md §38): one live message, or the history on (re)entering a room. Player text is
+  // rendered as text (ui/chat.js), never through innerHTML. An older client that does not know these types ignores them.
+  net.on('m.chat', (msg) => store.set((s) => ({ chat: appendChat(s.chat, msg) })));
+  net.on('room.chat', (msg) => store.set({ chat: chatHistory(msg.messages) }));
 
   // Entering (title → lobby) while already online also needs the deep-link join.
   store.subscribe((s, prev) => {

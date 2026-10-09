@@ -157,6 +157,7 @@ export const ERR = Object.freeze({
   SPECTATOR: 'SPECTATOR',         // a spectator seat only watches (MAX_SPECTATORS)
   BAD_REPORT: 'BAD_REPORT',       // a bug report's title / body failed validation (server/community.js)
   BAD_IMAGE: 'BAD_IMAGE',         // an attached image is missing / too large / not a supported raster type
+  BAD_CHAT: 'BAD_CHAT',           // a room chat message is empty / only control characters / too long
   INTERNAL: 'INTERNAL',
 });
 
@@ -171,6 +172,7 @@ export const ERR_TEXT = {
   IN_QUEUE: N_('你已在搜寻队列中'), NOT_QUEUED: N_('你不在搜寻队列中'),
   SPECTATOR: N_('观战中无法进行该操作'), BAD_REPORT: N_('反馈内容为空或过长'),
   BAD_IMAGE: N_('图片无效：仅支持 PNG / JPG / WebP，且不要超过大小限制'), INTERNAL: N_('服务器内部错误'),
+  BAD_CHAT: N_('发言内容无效'),
 };
 
 // ---- Emotes (交流, research 09 §4) -----------------------------------------------------------------------------
@@ -254,6 +256,17 @@ export const emoteArtGroup = (id) => { const e = emoteInfo(id); return e ? `emot
 export const emoteArtPath = (id) => { const e = emoteInfo(id); return e ? `/assets/local/emoticon/${e.dir}/${e.picId}.png` : null; };
 export const EMOTE_COOLDOWN_MS = 1000; // activity_table autoChessData.constData.chatCD (s)
 export const EMOTE_BUBBLE_MS = 3000;   // constData.chatTime (s): how long a bubble stays up
+
+// ---- ours: room text chat (同盟等待室 + 局内, 2026-10-09) ------------------------------------------------
+// `room.chat { text }` — the lobby validates it (length cap, control-char stripping, per-session rate limit) and
+// broadcasts `m.chat { from, name, text, at }` to EVERY member of the room (seats + spectators) in the waiting lobby
+// AND while the room's match runs (room-scoped, never leaking to another room or a match one is not in). The room keeps
+// the last CHAT_HISTORY messages; a session that (re)enters the room is sent them as `room.chat { messages: [...] }`
+// (kept out of the periodic room.state broadcast). Plain text only: the client renders it as text (never innerHTML).
+export const CHAT_MAX = 100;                  // characters of one message (UTF-16 units, like NAME_MAX_LEN)
+export const CHAT_HISTORY = 50;               // messages kept on the room and replayed on entry
+export const CHAT_RATE_WINDOW_MS = 10_000;    // per-session sliding window
+export const CHAT_RATE_LIMIT = 5;             // messages per session per window
 
 // ---- ours: account (auth) limits -- kept through the upstream (feedback5) i18n merge ----
 export const AUTH_NAME_MIN = 2;
