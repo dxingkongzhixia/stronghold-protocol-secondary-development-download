@@ -155,6 +155,8 @@ export const ERR = Object.freeze({
   IN_QUEUE: 'IN_QUEUE',               // already queueing for a 野排 match
   NOT_QUEUED: 'NOT_QUEUED',
   SPECTATOR: 'SPECTATOR',         // a spectator seat only watches (MAX_SPECTATORS)
+  BAD_REPORT: 'BAD_REPORT',       // a bug report's title / body failed validation (server/community.js)
+  BAD_IMAGE: 'BAD_IMAGE',         // an attached image is missing / too large / not a supported raster type
   INTERNAL: 'INTERNAL',
 });
 
@@ -167,7 +169,8 @@ export const ERR_TEXT = {
   AUTH_REQUIRED: N_('搜寻队友需要先登录账号'), BAD_NAME: N_('代号需 2–12 个字符'), BAD_PASSWORD: N_('密码至少 6 位'),
   NAME_TAKEN: N_('该代号已被使用'), BAD_CREDENTIALS: N_('代号或密码错误'), SESSION_EXPIRED: N_('登录已过期，请重新登录'),
   IN_QUEUE: N_('你已在搜寻队列中'), NOT_QUEUED: N_('你不在搜寻队列中'),
-  SPECTATOR: N_('观战中无法进行该操作'), INTERNAL: N_('服务器内部错误'),
+  SPECTATOR: N_('观战中无法进行该操作'), BAD_REPORT: N_('反馈内容为空或过长'),
+  BAD_IMAGE: N_('图片无效：仅支持 PNG / JPG / WebP，且不要超过大小限制'), INTERNAL: N_('服务器内部错误'),
 };
 
 // ---- Emotes (交流, research 09 §4) -----------------------------------------------------------------------------
@@ -261,6 +264,26 @@ export const AUTH_PASS_MAX = 128;
 // sessions and kept in a short history. A deploy / restart should announce itself this way (signed `d星空之下`).
 export const NOTICE_MAX_LEN = 300;
 export const NOTICE_HISTORY = 20;
+// ---- ours: player bug reports + changelog (server/community.js) ------------------------------------------------
+// The lobby's 更新日志 / bug提交 / 公开房间 panels. A bug report is TEXT + at most BUG_IMAGES_MAX raster images
+// (no replay / seed / room data): the images live on disk under `var/bug-uploads/` (git-ignored, never statically
+// served) and the DB holds only path + mime + byte count + uploader + time. The mime is sniffed from the bytes, never
+// the filename (png / jpeg / webp only — no svg / html). Rate limits are per account (or, for a guest, per network).
+export const BUG_TITLE_MAX = 80;
+export const BUG_BODY_MAX = 2000;
+export const BUG_IMAGES_MAX = 4;
+export const BUG_IMAGE_MAX_BYTES = 4 * 1024 * 1024; // 4 MiB per image, enforced while reading the body
+export const BUG_IMAGE_MIMES = Object.freeze(['image/png', 'image/jpeg', 'image/webp']);
+export const BUG_RATE_WINDOW_MS = 30 * 60 * 1000;
+export const BUG_REPORT_LIMIT = 5;  // reports per window per account / guest network
+export const BUG_UPLOAD_LIMIT = 20; // image uploads per window per account / guest network (≤4 per report)
+export const BUG_STATUSES = Object.freeze(['new', 'triaged', 'fixed']);
+/** Status labels of the admin page (`t()` where shown; the server sends the key, the page its label). */
+export const BUG_STATUS_NAMES = Object.freeze({ new: N_('待处理'), triaged: N_('已受理'), fixed: N_('已修复') });
+/** The changelog panel shows the newest CHANGELOG_LIMIT versions (seeded once from the repo's CHANGELOG.md). */
+export const CHANGELOG_LIMIT = 50;
+export const CHANGELOG_BODY_MAX = 20000;
+
 // account roles (accounts.role, server/auth.js): a SHORT one-character badge shown next to the name everywhere it
 // appears — 管 (管理员) / 开 (开发者) — with the full name in the badge's tooltip. `null` = an ordinary account.
 // Assigned with `node tools/role.mjs <代号> <admin|dev>`.

@@ -439,3 +439,15 @@ changes still get a notice first.
 Honour the blacklist, run the full `node --test` in the store, and only then mirror back to the working project.
 If a merge would force a choice between our behaviour and upstream's beyond the blacklist, **stop and ask
 `d星空之下`**.
+
+## 7. Lobby community data (`server/community.js`)
+
+The 更新日志 / bug提交 / 公开房间 panels (owner's request of 2026-10-09) are **fork-only**, on the accounts SQLite
+(schema v3: `changelog`, `bug_reports`, `bug_uploads`). Bug reports are TEXT plus at most four raster images stored
+as files under `var/bug-uploads/`; the database holds paths + metadata only, and the type is verified from the bytes.
+玩家留言 (the guestbook) is deliberately absent: the owner dropped it, and this fork never shipped one. See
+`docs/MATCHMAKING.md` §36. **我们独有，非上游；合并时不得丢失。**
+
+| Area | Files that must survive the merge |
+|---|---|
+| Lobby community | `server/community.js`; `server/db.mjs` (v3); `server/lobby.js` `bugReport`; `server/index.js` `/community/api/*` + `/admin/api/bug/*`; `public/js/ui/community.js`; `test/community.test.js` |

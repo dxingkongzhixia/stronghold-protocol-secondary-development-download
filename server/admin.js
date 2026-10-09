@@ -52,7 +52,7 @@ export function statusOf(session, { lobby, matchmaker, now = Date.now() }) {
  * A JSON-serializable snapshot of accounts + live sessions + rooms.
  * @param {{ registry: any, lobby: any, matchmaker?: any, auth: any, now?: number }} deps
  */
-export function buildSnapshot({ registry, lobby, matchmaker, auth, now = Date.now() }) {
+export function buildSnapshot({ registry, lobby, matchmaker, auth, community = null, now = Date.now() }) {
   const mm = matchmaker || (lobby && lobby.mm) || null;
   const sessions = [...registry.all()];
   const liveByAccount = new Map();
@@ -118,7 +118,11 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, now = Date.no
     }
   }
 
-  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [] };
+  // Player bug reports (server/community.js, docs/MATCHMAKING.md §36): TEXT + images (metadata only here; the image
+  // bytes come from the token-gated /admin/api/bug/image/<id>). Newest / 待处理 first.
+  const bugs = community && typeof community.listBugReports === 'function' ? community.listBugReports({ limit: 100 }) : [];
+
+  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, bugs, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [] };
 }
 
 /**
@@ -267,6 +271,24 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
 .notice-item b{color:#d3efe2;font-weight:600}
 .notice-item i{font-style:normal;color:var(--dim)}
 .notice-item em{font-style:normal;color:var(--mint);font-size:12px;white-space:nowrap}
+/* 玩家反馈 (server/community.js): text reports + their images (served from the token-gated image route) */
+.bug-item{padding:11px 16px;border-bottom:1px dashed var(--line)}
+.bug-item:last-child{border-bottom:0}
+.bug-head{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+.bug-head b{color:#d3efe2;font-weight:600}
+.bug-head i{font-style:normal;color:var(--dim)}
+.bug-head time{color:var(--dim2);font-size:11.5px;font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
+.bug-body{white-space:pre-wrap;color:var(--dim);font-size:13px;margin:6px 0 8px;word-break:break-word}
+.bug-imgs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 8px}
+.bug-imgs img{max-width:160px;max-height:110px;border:1px solid var(--line2);border-radius:7px;background:#000}
+.bug-actions{display:flex;gap:7px;flex-wrap:wrap}
+.bug-actions button{background:#111917;color:var(--dim);border:1px solid var(--line2);border-radius:7px;padding:3px 12px;cursor:pointer;font:inherit;font-size:12px}
+.bug-actions button:hover:not(:disabled){border-color:var(--mint-dim);color:var(--mint)}
+.bug-actions button:disabled{opacity:.55;cursor:default;border-color:var(--mint-dim);color:var(--mint)}
+.bug-status{display:inline-block;padding:1px 9px;border-radius:7px;font-size:11.5px;border:1px solid var(--line2)}
+.bug-status.is-new{color:#ffd089;border-color:rgba(255,208,137,.45);background:rgba(255,208,137,.08)}
+.bug-status.is-triaged{color:#5cc8ff;border-color:rgba(92,200,255,.45);background:rgba(92,200,255,.08)}
+.bug-status.is-fixed{color:var(--mint);border-color:rgba(78,216,175,.45);background:rgba(78,216,175,.08)}
 </style></head><body>
 <div class="wrap">
   <header class="topbar">
@@ -301,6 +323,11 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
       </div>
     </div>
     <div class="notice-hist" id="noticeHist"></div>
+  </section>
+
+  <section class="panel">
+    <h2>玩家反馈<em id="bugCount"></em></h2>
+    <div id="bugsBody"></div>
   </section>
 
   <section class="panel">
@@ -372,6 +399,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
     }).join('') || '<tr><td colspan="7" class="empty">当前无房间</td></tr>';
     el('updated').textContent = new Date(d.now).toLocaleTimeString('zh-CN');
     renderNotices(d.notices);
+    renderBugs(d.bugs);
     var v = d.verify || {};
     el('verify').textContent = v.mode
       ? '校验 ' + v.mode + ' · 复算 ' + (v.checked || 0) + ' · 不一致 ' + (v.mismatches || 0) + ' · 拒收 ' + (v.rejected || 0) + ' · 接管 ' + (v.takeovers || 0)
@@ -412,6 +440,41 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
       })
       .catch(function (e) { el('updated').textContent = '推送失败：' + e.message; })
       .then(function () { btn.disabled = false; });
+  });
+  // 玩家反馈 (server/community.js): the report list, its images (token-gated image route) and the status buttons.
+  var BUG_LABELS = { new: '待处理', triaged: '已受理', fixed: '已修复' };
+  var BUG_STATUSES = ['new', 'triaged', 'fixed'];
+  function renderBugs(list) {
+    list = Array.isArray(list) ? list : [];
+    el('bugCount').textContent = list.length + ' 条';
+    el('bugsBody').innerHTML = list.map(function (b) {
+      var img = function (i) { return '/admin/api/bug/image/' + i.id + '?token=' + encodeURIComponent(token); };
+      var imgs = (b.images || []).map(function (i) {
+        return '<a href="' + img(i) + '" target="_blank" rel="noopener"><img src="' + img(i) + '" alt=""></a>';
+      }).join('');
+      var btns = BUG_STATUSES.map(function (s) {
+        return '<button class="bst" data-id="' + b.id + '" data-status="' + s + '"' + (b.status === s ? ' disabled' : '') + '>' + (BUG_LABELS[s] || s) + '</button>';
+      }).join('');
+      return '<div class="bug-item">'
+        + '<div class="bug-head"><span class="bug-status is-' + esc(b.status) + '">' + (BUG_LABELS[b.status] || esc(b.status)) + '</span>'
+        + '<b>#' + b.id + ' ' + esc(b.title) + '</b>'
+        + (b.submitter ? '<i>' + esc(b.submitter) + '</i>' : '<i>游客</i>')
+        + '<time>' + ts(b.created_at) + '</time></div>'
+        + (b.body ? '<div class="bug-body">' + esc(b.body) + '</div>' : '')
+        + (imgs ? '<div class="bug-imgs">' + imgs + '</div>' : '')
+        + '<div class="bug-actions">' + btns + '</div></div>';
+    }).join('') || '<div class="empty">暂无玩家反馈</div>';
+  }
+  el('bugsBody').addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('button.bst') : null;
+    if (!b) return;
+    b.disabled = true;
+    fetch('/admin/api/bug/status?token=' + encodeURIComponent(token), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: Number(b.dataset.id), status: b.dataset.status }),
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) { if (!res.ok) throw new Error((res.j && res.j.error) || 'HTTP'); tick(); })
+      .catch(function (err) { el('updated').textContent = '状态更新失败：' + err.message; });
   });
   tick(); setInterval(tick, 2000);
 })();

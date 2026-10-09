@@ -389,3 +389,15 @@ lives, how to extend it, the tests that pin it, and an explicit **我们独有�
 
 It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§35 (the decision record) and
 [`docs/ASSETS.md`](ASSETS.md) (the asset detail). Its appendix is the merge checklist of fork-only files.
+
+## 13. Lobby community data (our SQLite schema, `server/community.js`)
+
+The lobby's 更新日志 / bug提交 / 公开房间 panels live in the **same `node:sqlite` database as accounts**
+(`server/db.mjs`, now schema **v3**). The `migrate()` step adds three tables — `changelog`, `bug_reports`,
+`bug_uploads` — under the same `PRAGMA user_version` discipline. `CommunityService` mirrors `AuthService`: one
+`DatabaseSync` handle, prepared statements, synchronous methods; `openMemoryDb()` gives tests the schema.
+
+Bug-report images are **files** under `var/bug-uploads/` (git-ignored, never statically served); the database keeps
+only the relative path + mime + byte count + uploader + time. The real content type is sniffed from the bytes
+(png / jpeg / webp only — no svg / html), never a filename. See
+[`docs/MATCHMAKING.md`](MATCHMAKING.md) §36 for the endpoints, limits and the client panels.

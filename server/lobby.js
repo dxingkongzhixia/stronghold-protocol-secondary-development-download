@@ -247,7 +247,7 @@ export class Lobby {
    *   options?: Partial<typeof LOBBY_DEFAULTS>,
    * }} opts
    */
-  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, options = {}, auth = null, matchmaker = null }) {
+  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, options = {}, auth = null, matchmaker = null, community = null }) {
     this.registry = registry;
     this.log = log;
     this.MatchClass = MatchClass;
@@ -257,6 +257,8 @@ export class Lobby {
     this.opts = { ...LOBBY_DEFAULTS, ...options };
     /** @type {import('./auth.js').AuthService | null} accounts (野排 requires a bound one; null = guests only) */
     this.auth = auth;
+    /** @type {import('./community.js').CommunityService | null} changelog + bug reports (null disables bug.report) */
+    this.community = community;
     /** @type {import('./net.js').Network | null} set by index.js; lets the lobby close a socket the net way (kick) */
     this.network = null;
     /** @type {Map<string, Room>} */
@@ -424,6 +426,8 @@ export class Lobby {
       case 'auth.logout': return this.logout(session);
       case 'mm.join': return this.mmJoin(session, msg);
       case 'mm.cancel': return this.mmCancel(session);
+      // player bug report (server/community.js, docs/MATCHMAKING.md §36): TEXT + already-uploaded image ids
+      case 'bug.report': return this.bugReport(session, msg);
       // boot art preload gate (server/bootgate.js): one client downloads at a time, the rest wait their turn
       case 'boot.claim': return this.bootClaim(session);
       case 'boot.release': return this.bootRelease(session);
@@ -929,6 +933,20 @@ export class Lobby {
     const r = this.mm.cancel(session.playerId);
     if (r.ok) sendSession(session, { t: 'mm.state', queued: false });
     return r;
+  }
+
+  /**
+   * A player bug report (the lobby's bug提交 panel, server/community.js): the title / description and up to
+   * BUG_IMAGES_MAX image ids the same session already uploaded over HTTP. Attributed to the bound account when there is
+   * one, else a guest; rate limited per account, else per the session's network key. No replay / seed / room data.
+   */
+  bugReport(session, { title, body, images }) {
+    if (!this.community) return fail(ERR.INTERNAL, 'community disabled');
+    const key = session.accountId != null ? `account:${session.accountId}` : (session.limitKey ? `net:${session.limitKey}` : `player:${session.playerId}`);
+    const r = this.community.createBugReport({ title, body, images, accountId: session.accountId ?? null, submitter: session.name, key });
+    if (r.error) return fail(r.error);
+    this.log.info(`[lobby] bug report #${r.report.id} from ${session.name} (${r.report.images.length} image(s))`);
+    return OK;
   }
 
   /**

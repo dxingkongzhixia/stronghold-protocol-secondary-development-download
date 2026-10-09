@@ -28,9 +28,13 @@
 import http from 'node:http';
 import path from 'node:path';
 import { getData, loadData } from './data.js';
+import { readFileSync } from 'node:fs';
 import { openDb } from './db.mjs';
 import { AuthService } from './auth.js';
+import { CommunityService } from './community.js';
 import { ADMIN_HTML, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
+import { clientAddress } from './net.js';
+import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX } from '../shared/constants.js';
 import { ROOT, listenAddress, serveDirs, makeLogger, parseTrustProxy } from './http/config.js';
 import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
@@ -66,6 +70,26 @@ function readJsonBody(req, maxBytes = 16 * 1024) {
       if (!chunks.length) { resolve(null); return; }
       try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch { resolve(null); }
     });
+    req.on('error', () => resolve(null));
+  });
+}
+
+/**
+ * Read a raw request body (POST /community/api/bug/upload) up to `maxBytes`. Resolves null past the cap or on error
+ * (the socket is destroyed so an oversized upload cannot be used as a memory lever).
+ * @param {import('node:http').IncomingMessage} req @param {number} maxBytes
+ * @returns {Promise<Buffer|null>}
+ */
+function readRawBody(req, maxBytes) {
+  return new Promise((resolve) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > maxBytes) { resolve(null); req.destroy(); return; }
+      chunks.push(c);
+    });
+    req.on('end', () => resolve(chunks.length ? Buffer.concat(chunks) : Buffer.alloc(0)));
     req.on('error', () => resolve(null));
   });
 }
@@ -117,8 +141,16 @@ export async function startServer(opts = {}) {
   const auth = accounts ? (opts.auth || new AuthService({ db })) : null;
   // Operations page (server/admin.js): enabled with accounts; the token file is `var/admin-token.txt`.
   const admin = auth ? { token: opts.adminToken || loadAdminToken(ROOT) } : null;
+  // Community data (server/community.js): the persisted 更新日志 + player bug reports/images, on the same DB. Seeded
+  // ONCE from the repo's CHANGELOG.md; uploads land in `var/bug-uploads/` (git-ignored, never served statically).
+  const community = db
+    ? (opts.community || new CommunityService({ db, dir: opts.uploadDir || path.join(ROOT, 'var', 'bug-uploads') }))
+    : null;
+  if (community && !opts.community) {
+    try { community.importChangelogMarkdown(readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8')); } catch (e) { log.warn('[community] changelog seed skipped', e?.message); }
+  }
 
-  const { registry, lobby, network } = createSessionStack({ ...opts, auth }, { data, log });
+  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community }, { data, log });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
   // content packs (docs/PACKS.md): scanned now — the start log names them — and again whenever their folders change
   const packs = createPackRegistry({ publicDir, dataDir, packsDir }, { log });
@@ -131,12 +163,26 @@ export async function startServer(opts = {}) {
 
   const baseHandler = createRequestHandler({ serveStatic, health: { startedAt, network, registry, lobby }, log });
 
+  // The identity of a player's HTTP request (upload / changelog): the bound account when an `X-Account-Token` header
+  // resolves (the browser's stored session token), else the per-network key — the same scheme when the report arrives
+  // over the WebSocket, so an upload and its report share an owner.
+  const trustProxy = opts.trustProxy ?? parseTrustProxy(process.env.TRUST_PROXY);
+  function communityKey(req) {
+    const tok = req.headers['x-account-token'];
+    const acc = auth && typeof tok === 'string' && tok ? auth.resolve(tok) : null;
+    if (acc) return { key: `account:${acc.id}`, accountId: acc.id, name: acc.name };
+    const { ip, key } = clientAddress(req, trustProxy);
+    return { key: `net:${key || ip || 'unknown'}`, accountId: null, name: null };
+  }
+
   /**
    * Token-gated operations routes (server/admin.js). notify pushes an operator notice to the live sessions
    * (lobby.broadcastNotice). Security headers are already set by the caller.
    */
   async function adminRoute(req, res, parts) {
     const notify = parts.rawPath === '/admin/api/notify';
+    const bugStatus = parts.rawPath === '/admin/api/bug/status';
+    const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
     const provided = queryToken || req.headers['x-admin-token'] || cookieValue(req.headers.cookie, 'sp_admin') || '';
@@ -155,13 +201,45 @@ export async function startServer(opts = {}) {
       sendJson(req, res, 200, { ok: true, sent: r.sent, notice: r.notice });
       return;
     }
+    // bug report status (server/community.js): POST { id, status } marks a report 待处理 / 已受理 / 已修复.
+    if (bugStatus) {
+      if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
+      const body = await readJsonBody(req);
+      if (!body || typeof body !== 'object') { sendJson(req, res, 400, { error: '请求体需要是 JSON' }); return; }
+      const r = community ? community.setBugStatus(Number(body.id), String(body.status)) : { error: 'disabled' };
+      if (r.error) { sendJson(req, res, 400, { error: '无效的报告或状态' }); return; }
+      sendJson(req, res, 200, { ok: true });
+      return;
+    }
+    // one report image, from `var/bug-uploads/` (never statically served): Content-Type from the stored sniffed mime.
+    if (imageMatch) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET, HEAD'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      const row = community ? community.getUpload(Number(imageMatch[1])) : null;
+      const bytes = row ? community.readUpload(row) : null;
+      if (!bytes) { sendError(req, res, 404, '图片不存在 · Image not found'); return; }
+      res.writeHead(200, { 'Content-Type': row.mime, 'Content-Length': bytes.length, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
+      res.end(req.method === 'HEAD' ? undefined : bytes);
+      return;
+    }
     if (parts.rawPath === '/admin/api/state') {
-      sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth }));
+      sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth, community }));
       return;
     }
     const body = Buffer.from(ADMIN_HTML);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
     res.end(req.method === 'HEAD' ? undefined : body);
+  }
+
+  /** POST /community/api/bug/upload: an image's raw bytes (magic-byte checked, rate limited, never statically served). */
+  async function communityUploadRoute(req, res) {
+    if (!community) { sendJson(req, res, 404, { error: 'community disabled' }); return; }
+    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
+    const bytes = await readRawBody(req, BUG_IMAGE_MAX_BYTES + 1);
+    if (bytes == null) { sendJson(req, res, 413, { error: 'image too large' }); return; }
+    const { key, accountId } = communityKey(req);
+    const r = community.saveUpload({ key, accountId, bytes });
+    if (r.error) { sendJson(req, res, r.error === 'RATE' ? 429 : 400, { error: r.error, maxImages: BUG_IMAGES_MAX }); return; }
+    sendJson(req, res, 200, { ok: true, ...r.upload });
   }
 
   /** Our extra routes (online status, /admin); true when it took the request (or will). */
@@ -174,7 +252,20 @@ export async function startServer(opts = {}) {
       sendJson(req, res, 200, buildPublicSnapshot({ registry, lobby, matchmaker: lobby.mm }));
       return true;
     }
-    if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify') {
+    // Community (server/community.js): the lobby's 更新日志 panel reads the changelog, its bug提交 form uploads
+    // images. Token-free reads (the changelog is public), rate-limited uploads; the report itself goes over the
+    // WebSocket (`bug.report`), so it carries the session identity.
+    if (parts.rawPath === '/community/api/changelog') {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return false;
+      sendJson(req, res, 200, { now: Date.now(), changelog: community ? community.listChangelog() : [] });
+      return true;
+    }
+    if (parts.rawPath === '/community/api/bug/upload') {
+      communityUploadRoute(req, res).catch((e) => { log.error('[community] upload failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
+      return true;
+    }
+    if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
+      || parts.rawPath === '/admin/api/bug/status' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;
     }

@@ -1020,3 +1020,44 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **契约（`PROJ.drone` 浮游单元）保持程序化**：其贴图位于无法解析的外部 CAB，客户端也没有独立 sprite/spine，**无物可抽**（`render/textures.js` `drone`），如实保留。
 - **测试**：`test/render/fx-local.test.js`（缺本地素材→程序化且不崩、有→本地层取代程序化、列出未加载→本次程序化/下次本地、`localFx:false` 关闭、kalts2 各层在 `fx/kalts2` 组且落盘）；`test/local-extract.test.js`（新增 `fx/kalts2` 任务断言）。
 - **诚实保留**：官方 S2 效果本体是 3D 粒子 + 网格 core（绿/红为**网格材质** color，无独立主贴图），本层用**同一 prefab 引用的官方 flow/ray 贴图**做地面 field 近似，**非逐粒子还原**；`star_118_7` 自身含红/绿两条光线，两层均再套官方 tint；提取依赖各机本地客户端，manifest 为 per-machine（`data/local-assets.json` 不入 git）。
+## 36. 大厅社区功能：更新日志 / bug 提交 / 公开房间（2026-10-09）
+
+需求（owner）：大厅左侧三个按钮「更新日志」「bug提交」「公开房间」，数据落 SQLite；「玩家留言」不做（owner 明确放弃）。截图中列出的四个按钮里，玩家留言被删除——本仓库此前的代码里从未实现过它，因此没有可删除的实现，本次只保证不新增（`grep` 与 `git log -S` 均无记录）。
+
+### 36.1 存储（server/db.mjs，user_version 3）
+
+- `changelog(id, version, released_at, title, body, published, created_at)` + `idx_changelog_order`；
+- `bug_reports(id, title, body, account_id→accounts, submitter, status, created_at, updated_at)` + `idx_bug_reports_status`（status: `new` / `triaged` / `fixed`）；
+- `bug_uploads(id, report_id→bug_reports, path, mime, bytes, account_id→accounts, created_at)` + `idx_bug_uploads_report`。
+- 迁移沿用 `PRAGMA user_version`；新的服务类 `CommunityService`（server/community.js）与 `AuthService` 同风格：单句柄、预编译语句、同步方法，测试用 `openMemoryDb()`。
+- bug 报告**只有文字 + 图片**，不附带 seed / replay / room（owner 2026-10-09 修正）。
+
+### 36.2 更新日志（只读 + 一次性导入）
+
+- 首次启动（`changelog` 表为空时）由 `CommunityService.importChangelogMarkdown()` 解析仓库自己的 `CHANGELOG.md` 一次：`## <版本> — <YYYY-MM-DD>` 为一条，body 为到下一个 `##` 的 markdown。表非空时不重复导入。
+- 公开只读接口 `GET /community/api/changelog` → `{ now, changelog: [{ id, version, released_at, title, body }] }`，最新在前（与 `/online/api` 同风格、免令牌）。
+- 客户端 `public/js/ui/community.js` 的 `ChangelogOverlay` 渲染版本 + 日期 + 正文（纯文本，`white-space: pre-wrap`）。管理页的写入入口留作可选（服务端已提供 `addChangelog()`）。
+
+### 36.3 bug 提交（文字 + 图片）
+
+- 消息：`shared/protocol.js` `bug.report { title, body?, images? }`；结构校验 title ≤ 80、body ≤ 2000、images ≤ 4 个 id，语义校验在 `CommunityService`。
+- 图片走 HTTP：`POST /community/api/bug/upload`（原始字节，`Content-Type` 仅作提示）。**真实类型从字节嗅探**（magic bytes）——仅 `image/png`、`image/jpeg`、`image/webp`；svg / html 及其它一律拒绝；单张上限 4 MiB。文件落盘 `var/bug-uploads/<time>-<rand>.<ext>`（git-ignored、不被静态服务），DB 只存相对路径 + mime + 字节数 + 上传者 + 时间。
+- 报告提交走 WebSocket `bug.report`：绑定账号时 `account_id` = 账号、`submitter` = 账号名；游客 `account_id` = NULL、`submitter` = 当前代号。图片归属：上传与提交必须是同一个 key（`account:<id>` 或 `net:<客户端网络 key>`），未认领的图片不能挂到别人的报告。
+- 限流（内存滑动窗口，按 key）：提交 **5 次 / 30 分钟**，上传 **20 张 / 30 分钟**；未提交的孤儿图片 24 小时后由 `pruneUploads()` 清理。长度上限见 `shared/constants.js`。
+- 客户端 `BugReportOverlay`：标题、描述、最多 4 张图片（本地预览、逐张上传）、提交；文案全部 i18n。管理页 `/admin` 的「玩家反馈」面板列出报告、正文、缩略图与状态按钮（待处理 / 已受理 / 已修复）。
+- 管理接口（令牌见 `var/admin-token.txt`）：`GET /admin/api/state` 新增 `bugs`；`POST /admin/api/bug/status { id, status }`；`GET /admin/api/bug/image/<id>`（`X-Content-Type-Options: nosniff`、`Cache-Control: private, no-store`）。
+
+### 36.4 公开房间（展示）
+
+- 数据沿用既有 `server/admin.js buildPublicSnapshot` → `GET /online/api` 的 `openRooms`（可加入的手建公开同盟）与 `playRooms`（进行中，可观战）；「公开房间」面板每 4 秒轮询，列出房间码 / 难度 / 人数（/4）/ 房主，点「加入」等同「公开同盟」今天的加入路径，点「观战」进入观战席。
+- 房间历史未额外持久化（需求只要求展示）。
+
+### 36.5 安全 / 不变量
+
+- 图片不在 `data/`（被静态服务）下；只有令牌门禁的 `/admin/api/bug/image/<id>` 能取到。
+- 标题 / 正文在服务端清洗控制字符与零宽 / 双向字符；客户端与管理页均以文本渲染（不全信 HTML）。
+- 不新增任何秘密到仓库；上传目录 `var/` 已在 `.gitignore`。
+
+### 36.6 测试
+
+`test/community.test.js`：markdown 解析、文本清洗、图片嗅探、迁移 v3、增删查、状态、限流、图片落盘 / 归属 / 清理、协议校验、HTTP（公开日志 + 上传 + `bug.report` + 管理列表 / 状态 / 图片）。

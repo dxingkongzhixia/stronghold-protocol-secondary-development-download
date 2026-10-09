@@ -10,7 +10,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 /**
  * `node:sqlite` is experimental and prints an ExperimentalWarning on import; suppress just that one (it is expected).
@@ -62,6 +62,49 @@ function migrate(db) {
     // every ordinary account. `node tools/role.mjs` assigns one; it is shown next to the name in every screen.
     db.exec('ALTER TABLE accounts ADD COLUMN role TEXT');
     db.exec('PRAGMA user_version = 2');
+  }
+  if (v < 3) {
+    // The lobby's community data (docs/MATCHMAKING.md §36, server/community.js):
+    //   * changelog   — a persisted 更新日志, seeded once from CHANGELOG.md (version / date / title / markdown body);
+    //   * bug_reports — player bug reports, TEXT only (title + body) plus optional images in bug_uploads;
+    //   * bug_uploads — images on disk under `var/bug-uploads/` (path relative to it), one row per file. `report_id`
+    //     is NULL until the report that references it is submitted; account_id is NULL for a guest.
+    // account_id is the durable submitter link (ON DELETE SET NULL keeps a report after an account is removed); the
+    // rate-limit / upload-ownership key stays in memory in CommunityService and never touches the database.
+    db.exec(`
+      CREATE TABLE changelog (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        version     TEXT    NOT NULL,
+        released_at INTEGER,
+        title       TEXT    NOT NULL,
+        body        TEXT    NOT NULL DEFAULT '',
+        published   INTEGER NOT NULL DEFAULT 1,
+        created_at  INTEGER NOT NULL
+      );
+      CREATE INDEX idx_changelog_order ON changelog(released_at DESC, id DESC);
+      CREATE TABLE bug_reports (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        title      TEXT    NOT NULL,
+        body       TEXT    NOT NULL DEFAULT '',
+        account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+        submitter  TEXT,
+        status     TEXT    NOT NULL DEFAULT 'new',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE INDEX idx_bug_reports_status ON bug_reports(status);
+      CREATE TABLE bug_uploads (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_id  INTEGER REFERENCES bug_reports(id) ON DELETE CASCADE,
+        path       TEXT    NOT NULL,
+        mime       TEXT    NOT NULL,
+        bytes      INTEGER NOT NULL,
+        account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX idx_bug_uploads_report ON bug_uploads(report_id);
+    `);
+    db.exec('PRAGMA user_version = 3');
   }
 }
 

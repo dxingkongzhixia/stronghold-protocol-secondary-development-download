@@ -1,7 +1,7 @@
 // Normative message catalogue (DESIGN §8). Used by server (validation) and client (building requests).
 // Every client→server message is `{ t, rid?, ...fields }`. Unknown `t` or invalid fields ⇒ ERR.BAD_MSG.
 
-import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO, AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX } from './constants.js';
+import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO, AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX, BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX } from './constants.js';
 import { isDroppableChess } from './standIn.js';
 import { diySlotIds, validateDiyPicks } from './diy.js';
 
@@ -360,6 +360,15 @@ export const C2S = {
   // 野排 shared pool: mm.join { difficulty } enqueues (bucketed by difficulty), mm.cancel removes
   'mm.join': { difficulty: (v) => DIFFICULTIES.includes(v) },
   'mm.cancel': {},
+  // player bug report (the lobby's bug提交 panel; server/community.js, docs/MATCHMAKING.md §36): TEXT + up to
+  // BUG_IMAGES_MAX already-uploaded image ids. No replay / seed / room data; the semantic checks (lengths, image
+  // ownership, rate limit) are the service's. Images go over HTTP (`POST /community/api/bug/upload`), the report here.
+  'bug.report': {
+    title: (v) => isStr(v, BUG_TITLE_MAX) && v.trim().length > 0,
+    body: (v) => v == null || isStr(v, BUG_BODY_MAX),
+    images: (v) => v == null || isList(v, BUG_IMAGES_MAX, isUid),
+    $optional: ['body', 'images'],
+  },
   // boot gate (server/bootgate.js, docs/MATCHMAKING.md): serialise the boot art preload so simultaneous first-time
   // visitors don't saturate the server's uplink. boot.claim asks for a slot (the answer is pushed as boot.state),
   // boot.release hands it back once the preload is done.

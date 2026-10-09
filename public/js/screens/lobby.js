@@ -19,6 +19,7 @@ import { GuideButton } from '../ui/guide.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
 import { AccountDialog } from '../ui/account.js';
+import { CommunityBar, ChangelogOverlay, BugReportOverlay, PublicRoomsOverlay } from '../ui/community.js';
 import { net, identity } from '../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref } from '../store.js';
 import { getConfig, getMode, getStage, useData } from '../data.js';
@@ -233,6 +234,8 @@ export function LobbyScreen() {
   const mm = useStore((s) => s.mm, shallowEqual);
   const [showAccount, setShowAccount] = useState(false);
   const [showOnline, setShowOnline] = useState(false);
+  // 更新日志 / bug提交 / 公开房间 (ui/community.js): which community panel is open, or null.
+  const [showCommunity, setShowCommunity] = useState(null);
   useData('config');
   const [roomMode, setRoomMode] = useState(() => (loadPref('lobby.mode', 'coop') === 'solo' ? 'solo' : 'coop'));
   const [difficulty, setDifficulty] = useState(() => {
@@ -335,6 +338,7 @@ export function LobbyScreen() {
 
     <div class="lobby-body screen__scroll">
       <section class="lobby-left">
+        <${CommunityBar} onOpen=${setShowCommunity} />
         <div class="section-label"><span class="section-label__idx num">01</span>${t('模拟方式')}<${MicroLabel}>MODE<//></div>
         <div class="mode-cards">
           ${MODE_CARDS.map((c) => html`<${ModeCard} key=${c.id} card=${c} selected=${roomMode === c.id} onSelect=${pickMode} />`)}
@@ -389,6 +393,11 @@ export function LobbyScreen() {
     ${mm.queued ? html`<${MmOverlay} mm=${mm} onCancel=${mmCancel} />` : null}
     ${showAccount ? html`<${AccountDialog} defaultName=${me.name} onClose=${() => setShowAccount(false)} />` : null}
     ${showOnline ? html`<${OnlineOverlay} onClose=${() => setShowOnline(false)} />` : null}
+    ${showCommunity === 'changelog' ? html`<${ChangelogOverlay} onClose=${() => setShowCommunity(null)} />` : null}
+    ${showCommunity === 'bug' ? html`<${BugReportOverlay} onClose=${() => setShowCommunity(null)} />` : null}
+    ${showCommunity === 'rooms' ? html`<${PublicRoomsOverlay} onClose=${() => setShowCommunity(null)}
+      onJoin=${(c) => { setShowCommunity(null); setCode(c); join(c); }}
+      onSpectate=${(c) => { setShowCommunity(null); setCode(c); spectate(c); }} />` : null}
   </div>`;
 }
 
