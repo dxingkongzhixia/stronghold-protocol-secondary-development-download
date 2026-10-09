@@ -19,7 +19,8 @@ import { GuideButton } from '../ui/guide.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
 import { AccountDialog } from '../ui/account.js';
-import { CommunityBar, ChangelogOverlay, BugReportOverlay, PublicRoomsOverlay } from '../ui/community.js';
+import { CommunityBar, ChangelogOverlay, BugReportOverlay } from '../ui/community.js';
+import { PublicRoomsScreen } from './rooms.js';
 import { net, identity } from '../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref } from '../store.js';
 import { getConfig, getMode, getStage, useData } from '../data.js';
@@ -309,6 +310,17 @@ export function LobbyScreen() {
     store.set((s) => ({ session: { ...s.session, entered: false }, mm: { ...s.mm, queued: false, difficulty: null } }));
   };
 
+  // 公开房间 is a full screen, not a modal (docs/MATCHMAKING.md §36): the lobby body is swapped for screens/rooms.js
+  // while it is open — same LobbyScreen, same routing, so a room.state still takes over and the `?room=` deep-link is
+  // untouched; joining / spectating closes the screen and reuses the lobby's own handlers.
+  if (showCommunity === 'rooms') {
+    return html`<div class="screen lobby-screen">
+      <${PublicRoomsScreen} onBack=${() => setShowCommunity(null)}
+        onJoin=${(c) => { setShowCommunity(null); setCode(c); join(c); }}
+        onSpectate=${(c) => { setShowCommunity(null); setCode(c); spectate(c); }} />
+    </div>`;
+  }
+
   return html`<div class="screen lobby-screen">
     <header class="topbar">
       <div class="topbar__left">
@@ -395,9 +407,6 @@ export function LobbyScreen() {
     ${showOnline ? html`<${OnlineOverlay} onClose=${() => setShowOnline(false)} />` : null}
     ${showCommunity === 'changelog' ? html`<${ChangelogOverlay} onClose=${() => setShowCommunity(null)} />` : null}
     ${showCommunity === 'bug' ? html`<${BugReportOverlay} onClose=${() => setShowCommunity(null)} />` : null}
-    ${showCommunity === 'rooms' ? html`<${PublicRoomsOverlay} onClose=${() => setShowCommunity(null)}
-      onJoin=${(c) => { setShowCommunity(null); setCode(c); join(c); }}
-      onSpectate=${(c) => { setShowCommunity(null); setCode(c); spectate(c); }} />` : null}
   </div>`;
 }
 

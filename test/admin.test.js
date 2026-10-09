@@ -8,6 +8,7 @@ import { openMemoryDb } from '../server/db.mjs';
 import { AuthService } from '../server/auth.js';
 import { SessionRegistry } from '../server/net.js';
 import { startServer } from '../server/index.js';
+import { MAX_SEATS } from '../shared/constants.js';
 
 test('tokenMatches is exact and rejects empty / missing', () => {
   assert.ok(tokenMatches('abc', 'abc'));
@@ -117,8 +118,56 @@ test('buildPublicSnapshot.openRooms lists only public, joinable, hand-made 同�
   }));
   const snap = buildPublicSnapshot({ registry: { all: () => [] }, lobby: { rooms }, matchmaker: null, now: 0 });
   assert.deepEqual(snap.openRooms.map((x) => x.code), ['PUB', 'BOT'], 'only public joinable hand-made co-op rooms, humans desc');
-  assert.deepEqual(snap.openRooms[0], { code: 'PUB', difficulty: 'NORMAL', difficultyName: '险境模拟', host: 'Host', hostRole: null, humans: 1 });
+  assert.deepEqual(snap.openRooms[0], {
+    code: 'PUB', difficulty: 'NORMAL', difficultyName: '险境模拟', host: 'Host', hostRole: null, humans: 1,
+    seats: [{ name: 'Host', role: null, guest: true, isBot: false, isHost: true }, null, null, null],
+  });
   assert.equal(snap.openRooms[1].humans, 1, 'bots are not counted as humans');
+});
+
+// 公开房间 seat squares (docs/MATCHMAKING.md §36): every open / running room carries its MAX_SEATS seat cells — the
+// public identity only (name, role, guest, AI, host), never the internal playerId, the account binding, an address or
+// a token.
+test('buildPublicSnapshot exposes per-seat identity (guest / AI / host) and no accountId / playerId / token', () => {
+  const registry = new SessionRegistry({ now: () => 0 });
+  const acc = registry.create('Acc'); acc.connected = true; acc.accountId = 7;
+  const guest = registry.create('Guest'); guest.connected = true;
+  const seat = (session, over = {}) => ({ playerId: session.playerId, name: session.name, role: session.role ?? null, isBot: false, left: false, ...over });
+  const room = (over) => {
+    const r = {
+      code: 'SEAT', mode: 'coop', public: true, match: null, auto: false, hostId: acc.playerId, difficulty: 'HARD',
+      seats: [seat(acc), seat(guest), { seat: 2, playerId: 'ai_seat', name: 'Bot', role: null, isBot: true, left: false }, null],
+      ...over,
+    };
+    r.seatOf = (id) => r.seats.find((s) => s && s.playerId === id) || null;
+    r.freeSeat = () => r.seats.indexOf(null);
+    return r;
+  };
+  const rooms = new Map(Object.entries({
+    SEAT: room(),
+    RUN: room({
+      code: 'RUN', match: {}, hostId: guest.playerId,
+      seats: [seat(guest), null, null, { seat: 3, playerId: 'gone', name: 'Gone', isBot: false, left: true }],
+    }),
+  }));
+  const snap = buildPublicSnapshot({ registry, lobby: { rooms }, matchmaker: null, now: 0 });
+  const open = snap.openRooms.find((r) => r.code === 'SEAT');
+  assert.equal(open.seats.length, MAX_SEATS, 'one entry per co-op seat');
+  assert.deepEqual(open.seats, [
+    { name: 'Acc', role: null, guest: false, isBot: false, isHost: true },
+    { name: 'Guest', role: null, guest: true, isBot: false, isHost: false },
+    { name: 'Bot', role: null, guest: false, isBot: true, isHost: false },
+    null,
+  ]);
+  const run = snap.playRooms.find((r) => r.code === 'RUN');
+  assert.equal(run.seats.length, MAX_SEATS);
+  assert.equal(run.seats[0].guest, true, 'the guest host');
+  assert.equal(run.seats[3], null, 'a seat its player left reads as empty');
+  // privacy: the public rooms payload carries no internal id, account binding, address or token
+  const json = JSON.stringify({ openRooms: snap.openRooms, playRooms: snap.playRooms });
+  for (const leak of ['accountId', 'playerId', 'token', 'addr', acc.playerId, guest.playerId]) {
+    assert.ok(!json.includes(leak), `leaks ${leak}`);
+  }
 });
 
 test('GET /admin + /admin/api/state are token-gated', async () => {

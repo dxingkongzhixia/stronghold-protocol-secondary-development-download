@@ -392,7 +392,8 @@ It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.
 
 ## 13. Lobby community data (our SQLite schema, `server/community.js`)
 
-The lobby's 更新日志 / bug提交 / 公开房间 panels live in the **same `node:sqlite` database as accounts**
+The lobby's 更新日志 / bug提交 panels (and the server side of 公开房间, whose directory is a full screen now —
+`screens/rooms.js`, not a panel) live in the **same `node:sqlite` database as accounts**
 (`server/db.mjs`, now schema **v3**). The `migrate()` step adds three tables — `changelog`, `bug_reports`,
 `bug_uploads` — under the same `PRAGMA user_version` discipline. `CommunityService` mirrors `AuthService`: one
 `DatabaseSync` handle, prepared statements, synchronous methods; `openMemoryDb()` gives tests the schema.

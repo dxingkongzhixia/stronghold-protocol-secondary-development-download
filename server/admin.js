@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { DIFFICULTY_NAMES } from '../shared/constants.js';
+import { DIFFICULTY_NAMES, MAX_SEATS } from '../shared/constants.js';
 import { presenceOnline } from './net.js';
 
 /** The status vocabulary shown in the page (order = how the columns are grouped). */
@@ -139,6 +139,27 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
     roomCode: s.roomCode ?? null,
   }));
   const counts = { online: online.length, guests: online.filter((x) => x.guest).length };
+  // The account binding of a seat is the only private bit behind `seats` below; playerId is an internal id, so it is
+  // looked up here and never sent (the same rule that keeps accountId / addrs / tokens off this endpoint).
+  const accountByPlayerId = new Map();
+  for (const s of typeof registry.all === 'function' ? registry.all() : []) {
+    if (s && s.accountId != null) accountByPlayerId.set(s.playerId, s.accountId);
+  }
+  // A room's MAX_SEATS co-op seats, in seat order: null for an empty seat (or one its player has left), else the
+  // public identity the directory draws in a seat cell. No playerId / accountId / addr — names and roles are already
+  // exposed in-game; `guest` is the only thing read from the account binding.
+  const seatsOf = (r) => Array.from({ length: MAX_SEATS }, (_, i) => {
+    const s = r.seats[i];
+    if (!s || s.left) return null;
+    const isBot = !!s.isBot;
+    return {
+      name: s.name,
+      role: s.role ?? null,
+      guest: !isBot && !accountByPlayerId.has(s.playerId),
+      isBot,
+      isHost: s.playerId === r.hostId,
+    };
+  });
   // Joinable 同盟 rooms (hand-made co-op rooms still in the lobby with a free seat) — the lobby's 公开同盟 list.
   const openRooms = [...lobby.rooms.values()]
     .filter((r) => r.mode === 'coop' && r.public && !r.match && !r.auto && r.freeSeat() >= 0)
@@ -149,6 +170,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       host: (r.seatOf(r.hostId) || {}).name || null,
       hostRole: (r.seatOf(r.hostId) || {}).role ?? null,
       humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
+      seats: seatsOf(r),
     }))
     .sort((a, b) => b.humans - a.humans)
     .slice(0, 12);
@@ -165,6 +187,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
       bots: r.seats.filter((x) => x && !x.left && x.isBot).length,
       auto: !!r.auto,
+      seats: seatsOf(r),
     }))
     .sort((a, b) => (b.auto - a.auto) || ((b.bots > 0) - (a.bots > 0)) || (b.humans - a.humans))
     .slice(0, 4);

@@ -1047,10 +1047,14 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 客户端 `BugReportOverlay`：标题、描述、最多 4 张图片（本地预览、逐张上传）、提交；文案全部 i18n。管理页 `/admin` 的「玩家反馈」面板列出报告、正文、缩略图与状态按钮（待处理 / 已受理 / 已修复）。
 - 管理接口（令牌见 `var/admin-token.txt`）：`GET /admin/api/state` 新增 `bugs`；`POST /admin/api/bug/status { id, status }`；`GET /admin/api/bug/image/<id>`（`X-Content-Type-Options: nosniff`、`Cache-Control: private, no-store`）。
 
-### 36.4 公开房间（展示）
+### 36.4 公开房间（独立界面 + 席位方块，2026-10-09 改版）
 
-- 数据沿用既有 `server/admin.js buildPublicSnapshot` → `GET /online/api` 的 `openRooms`（可加入的手建公开同盟）与 `playRooms`（进行中，可观战）；「公开房间」面板每 4 秒轮询，列出房间码 / 难度 / 人数（/4）/ 房主，点「加入」等同「公开同盟」今天的加入路径，点「观战」进入观战席。
-- 房间历史未额外持久化（需求只要求展示）。
+owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界面**（像游戏其它界面那样整屏、自带顶栏与「返回」，不是浮动弹窗卡片）；每个房间是一条**横向长条**（像「加入同盟」的琥珀色面板行），不是小卡片；一条长条显示难度图标 + 难度名 + 房间码（等宽）+ 模式 / 回合 / 人数、该房的 **4 个席位方块**、状态标签（组队中 / 对局中）与唯一的操作按钮。
+
+- **界面而非路由**：`public/js/screens/rooms.js` 的 `PublicRoomsScreen`；由 `screens/lobby.js` 在 `showCommunity === 'rooms'` 时**整体替换大厅主体**（同一个 `LobbyScreen`、同一套路由）。这样不新增 `SCREENS` / `selectRoute` 分支，房间恢复（`room.state` 仍会接管路由）与 `?room=` 深链流程完全不动；加入 / 观战仍复用大厅自己的 `join()` / `spectate()` 处理函数（点按钮先关界面、写入密钥再走原路径）。顶栏复用 `.topbar` + `Button` + `MicroLabel`，主体是 `.screen__scroll` 的 `rooms-body`（`public/css/screens/lobby.css` 的 `.rooms-*`，全部用主题令牌，无一次性颜色）。
+- **数据**（`server/admin.js buildPublicSnapshot` → `GET /online/api`）：`openRooms`（可加入的手建公开同盟 → 组队中 → 「加入」）与 `playRooms`（进行中 → 对局中 → 「观战」）每个条目新增 `seats`：按席位顺序的 `MAX_SEATS`（=4）个元素，空席 / 已离开的席位为 `null`，否则 `{ name, role, guest, isBot, isHost }`。**隐私**：只暴露游戏内已经可见的信息（名字 / 身份 / AI / 房主），绝不带 `playerId`、`accountId`、IP 或 token；`guest` 由账号绑定推导，但不暴露绑定本身。旧字段（`code / difficulty / difficultyName / host / hostRole / humans`，及 `playRooms` 的 `bots / auto`）保持不变。
+- **席位方块**：owner 的「4 squares」读作「每房 4 个合作席位各画成一个方块」——占用席位为实心方块（首次字形 = 名字首字，房主金冠、游客角标、AI 角标；用游戏自带的 `AvatarFrame`，空席位即其虚线 `is-empty` 样式），空席位为虚线方块 + 「空席位」。每方块下带截断的名字（`title` 为全名），席位区带 `席位` 无障碍标签。若日后想表达更细的状态，可在方块上叠“准备 / 掉线”等（当前不要求）。
+- 客户端每 4 秒轮询 `/online/api`（保留上一次快照、加载态与「暂无公开房间」空态）；房间历史未额外持久化（需求只要求展示）。
 
 ### 36.5 安全 / 不变量
 

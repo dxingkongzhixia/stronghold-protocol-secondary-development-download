@@ -337,3 +337,53 @@
 .room-row { display: flex; align-items: center; gap: .14rem; padding: .1rem .14rem; border-bottom: 1px solid rgba(120, 220, 190, .12); }
 .room-row b { font-size: .2rem; color: var(--mint-400); }
 .room-row__meta { flex: 1; font-size: .15rem; color: var(--text-lo); }
+
+/* ---- 公开房间 directory screen (screens/rooms.js, docs/MATCHMAKING.md §36) ---------------------------- */
+/* A full screen (own topbar + scroll body) listing each room as one wide amber bar: difficulty + code + mode/rounds
+   meta · the 4 co-op seat squares · status tag + the one action button. Colours are the shared theme tokens. */
+.rooms-body { display: flex; flex-direction: column; gap: .34rem; width: 100%; max-width: 19.2rem; margin: 0 auto; padding: .3rem .6rem .5rem; }
+.rooms-section { display: flex; flex-direction: column; }
+.rooms-list { display: flex; flex-direction: column; gap: .18rem; }
+.rooms-live { display: inline-flex; align-items: center; gap: .1rem; font-size: .15rem; color: var(--mint-400); white-space: nowrap; }
+.rooms-live .online-dot { margin-right: 0; }
+.rooms-bar {
+  --d-color: var(--amber);
+  --bk-c: var(--amber);
+  --bk-l: .22rem;
+  display: grid;
+  grid-template-columns: minmax(3.4rem, 1fr) auto auto;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .3rem;
+  background: linear-gradient(90deg, rgba(31, 26, 15, .92), rgba(15, 19, 17, .94));
+  border: 1px solid var(--line);
+  transition: border-color var(--t-med), background var(--t-med);
+  animation: card-in var(--t-slow) var(--ease-out) backwards;
+}
+.rooms-bar:hover { border-color: var(--line-3); }
+.rooms-bar__id { display: flex; align-items: center; gap: .16rem; min-width: 0; }
+.rooms-bar__glyph { width: .42rem; height: .42rem; color: var(--d-color); filter: drop-shadow(0 0 .08rem var(--d-color)); }
+.rooms-bar__text { display: flex; flex-direction: column; gap: .06rem; min-width: 0; }
+.rooms-bar__line { display: flex; align-items: baseline; gap: .16rem; min-width: 0; }
+.rooms-bar__diff { font-size: .28rem; font-weight: 900; letter-spacing: .06em; color: var(--d-color); white-space: nowrap; }
+.rooms-bar__code { font-size: .22rem; color: var(--mint-400); letter-spacing: .28em; }
+.rooms-bar__meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: .1rem; font-size: .14rem; color: var(--text-lo); }
+.rooms-bar__meta b { color: var(--text-hi); }
+.rooms-bar__mode { color: var(--text-md); }
+/* the 4 seat squares: one square cell per co-op seat (MAX_SEATS), occupied = the player's initial + markers, empty = dashed */
+.rooms-seats { display: grid; grid-template-columns: repeat(4, .9rem); gap: .14rem; }
+.rooms-seat { position: relative; display: flex; flex-direction: column; align-items: center; gap: .05rem; min-width: 0; }
+.rooms-seat__name { display: flex; align-items: center; max-width: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .13rem; color: var(--text-lo); }
+.rooms-seat__guest {
+  position: absolute; top: -.07rem; right: -.07rem; z-index: 2; padding: 0 .05rem;
+  font-size: .1rem; line-height: 1.5; color: #ffd089; border: 1px solid rgba(255, 208, 137, .5);
+  border-radius: .03rem; background: rgba(0, 0, 0, .6);
+}
+.rooms-bar__side { display: flex; align-items: center; gap: .2rem; }
+.rooms-tag { padding: .03rem .12rem; font-size: .14rem; font-weight: 700; line-height: 1.6; white-space: nowrap;
+  border: 1px solid currentColor; border-radius: 999px; }
+.rooms-tag.is-open { color: var(--mint-400); }
+.rooms-tag.is-play { color: var(--amber); }
+.rooms-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem; min-height: 3.2rem;
+  color: var(--text-dim); font-size: .18rem; }
+.rooms-empty .icon { width: .6rem; height: .6rem; opacity: .5; }

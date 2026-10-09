@@ -3,7 +3,8 @@
 //   · bug提交   — a player bug report: a title + a description + up to BUG_IMAGES_MAX images. The images upload one by
 //                 one to POST /community/api/bug/upload (raw bytes, magic-byte checked), then the report itself goes over
 //                 the WebSocket (`bug.report`, shared/protocol.js) so it carries the session's account / guest identity.
-//   · 公开房间  — the public co-op rooms from GET /online/api (openRooms → 加入, playRooms → 观战), polled every 4 s.
+//   · 公开房间  — a full-screen directory (screens/rooms.js), not a panel here: the lobby's 公开房间 button swaps it in
+//                 for the lobby body (screens/lobby.js).
 // 玩家留言 (the guestbook) is deliberately NOT here: the owner dropped it.
 //
 // Text goes through t(); module-level tables hold msgids (N_).
@@ -13,7 +14,7 @@ import { html, Button, Icon, MicroLabel } from './components.js';
 import { toast, toastError } from './toasts.js';
 import { net } from '../net.js';
 import { t } from '../../../shared/i18n.js';
-import { BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX, BUG_IMAGE_MAX_BYTES, BUG_IMAGE_MIMES, MAX_SEATS } from '../../../shared/constants.js';
+import { BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX, BUG_IMAGE_MAX_BYTES, BUG_IMAGE_MIMES } from '../../../shared/constants.js';
 
 /** The panel ids the bar opens. */
 export const COMMUNITY_PANELS = Object.freeze(['changelog', 'bug', 'rooms']);
@@ -154,47 +155,6 @@ export function BugReportOverlay({ onClose }) {
       <div class="comm-actions">
         <${Button} variant="primary" size="lg" loading=${busy} onClick=${submit}>${busy ? t('正在上传…') : t('提交')}<//>
       </div>
-    </div>
-  <//>`;
-}
-
-/** ③ 公开房间: the public co-op rooms (open → 加入, running → 观战), refreshed every 4 s. */
-export function PublicRoomsOverlay({ onClose, onJoin, onSpectate }) {
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const r = await fetch('/online/api', { cache: 'no-store' });
-        if (!r.ok) return;
-        const j = await r.json();
-        if (alive) setData(j);
-      } catch { /* keep the last snapshot */ }
-    };
-    tick();
-    const h = setInterval(tick, 4000);
-    return () => { alive = false; clearInterval(h); };
-  }, []);
-  const open = (data && Array.isArray(data.openRooms) ? data.openRooms : []);
-  const play = (data && Array.isArray(data.playRooms) ? data.playRooms : []);
-  return html`<${Modal} title=${t('公开房间')} en="PUBLIC ROOMS" onClose=${onClose}>
-    <div class="online-modal__meta"><span><i class="online-dot"></i>${t('实时')}</span><span>${t('每 {n} 秒刷新', { n: 4 })}</span></div>
-    <div class="online-modal__list">
-      ${open.length ? html`<div class="comm-section"><span class="t-lo">${t('公开同盟')}</span>
-        ${open.map((r) => html`<div class="room-row" key=${r.code}>
-          <b class="num">${r.code}</b>
-          <span class="room-row__meta">${r.difficultyName || ''} · ${r.humans}/${MAX_SEATS}${r.host ? html` · ${r.host}` : null}</span>
-          <${Button} size="sm" variant="primary" onClick=${() => onJoin(r.code)}>${t('加入')}<//>
-        </div>`)}
-      </div>` : null}
-      ${play.length ? html`<div class="comm-section"><span class="t-lo">${t('正在模拟')}</span>
-        ${play.map((r) => html`<div class="room-row" key=${r.code}>
-          <b class="num">${r.code}</b>
-          <span class="room-row__meta">${r.difficultyName || ''} · ${r.humans}/${MAX_SEATS}</span>
-          <${Button} size="sm" variant="secondary" onClick=${() => onSpectate(r.code)}>${t('观战')}<//>
-        </div>`)}
-      </div>` : null}
-      ${!open.length && !play.length ? html`<div class="online-modal__empty">${data ? t('暂无公开房间') : t('加载中…')}</div>` : null}
     </div>
   <//>`;
 }

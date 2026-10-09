@@ -1198,5 +1198,8 @@
   "图片无效：仅支持 PNG / JPG / WebP，且不要超过大小限制": "Invalid image: PNG / JPG / WebP only, within the size limit",
   "待处理": "Pending",
   "已受理": "Triaged",
-  "已修复": "Fixed"
+  "已修复": "Fixed",
+  "对局中": "In a match",
+  "席位": "Seat",
+  "空席位": "Empty seat"
 }

@@ -442,7 +442,9 @@ If a merge would force a choice between our behaviour and upstream's beyond the 
 
 ## 7. Lobby community data (`server/community.js`)
 
-The 更新日志 / bug提交 / 公开房间 panels (owner's request of 2026-10-09) are **fork-only**, on the accounts SQLite
+The 更新日志 / bug提交 panels, and the 公开房间 directory (owner's request of 2026-10-09; since 2026-10-09 改版 it is a
+full **screen** — `public/js/screens/rooms.js` — reached from the lobby's 公开房间 button, listing each room as a bar
+with its 4 seat squares), are **fork-only**, on the accounts SQLite
 (schema v3: `changelog`, `bug_reports`, `bug_uploads`). Bug reports are TEXT plus at most four raster images stored
 as files under `var/bug-uploads/`; the database holds paths + metadata only, and the type is verified from the bytes.
 玩家留言 (the guestbook) is deliberately absent: the owner dropped it, and this fork never shipped one. See
@@ -450,4 +452,4 @@ as files under `var/bug-uploads/`; the database holds paths + metadata only, and
 
 | Area | Files that must survive the merge |
 |---|---|
-| Lobby community | `server/community.js`; `server/db.mjs` (v3); `server/lobby.js` `bugReport`; `server/index.js` `/community/api/*` + `/admin/api/bug/*`; `public/js/ui/community.js`; `test/community.test.js` |
+| Lobby community | `server/community.js`; `server/db.mjs` (v3); `server/lobby.js` `bugReport`; `server/index.js` `/community/api/*` + `/admin/api/bug/*`; `public/js/ui/community.js`; `public/js/screens/rooms.js`; `test/community.test.js`; `test/ui/rooms.test.js` |
