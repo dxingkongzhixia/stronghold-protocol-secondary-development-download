@@ -18082,6 +18082,100 @@
     "note": null
    },
    "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_watchman_icon.png"
+  },
+  "char_4231_clemnt": {
+   "name": "克莱门莎",
+   "rarity": "TIER_6",
+   "profession": "WARRIOR",
+   "subProfessionId": "primguard",
+   "nationId": "egir",
+   "chess": [
+    {
+     "chessId": "chess_char_4231_clemnt_a",
+     "chessLevel": 6,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 2,
+     "evolvePhase": "PHASE_2"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_4231_clemnt.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_4231_clemnt_2.png"
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_4231_clemnt_1.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_4231_clemnt_2.png"
+    }
+   },
+   "fullArt": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skin/char_4231_clemnt_1b.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skin/char_4231_clemnt_2b.png"
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skchr_clemnt_1",
+     "iconId": "skchr_clemnt_1",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_clemnt_1.png"
+     }
+    },
+    {
+     "index": 1,
+     "skillId": "skchr_clemnt_2",
+     "iconId": "skchr_clemnt_2",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_clemnt_2.png"
+     }
+    },
+    {
+     "index": 2,
+     "skillId": "skchr_clemnt_3",
+     "iconId": "skchr_clemnt_3",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_clemnt_3.png"
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4231_clemnt/char_4231_clemnt/Front/char_4231_clemnt.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4231_clemnt/char_4231_clemnt/Front/char_4231_clemnt.atlas"
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4231_clemnt/char_4231_clemnt/Front/char_4231_clemnt.png"
+     },
+     "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_4231_clemnt/char_4231_clemnt/Front/char_4231_clemnt.skel"
+    },
+    "back": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4231_clemnt/char_4231_clemnt/Back/char_4231_clemnt.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4231_clemnt/char_4231_clemnt/Back/char_4231_clemnt.atlas"
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4231_clemnt/char_4231_clemnt/Back/char_4231_clemnt.png"
+     },
+     "jsdelivrSkel": "https://cdn.jsdelivr.net/gh/fexli/ArknightsResource@main/spine/char_4231_clemnt/char_4231_clemnt/Back/char_4231_clemnt.skel"
+    },
+    "note": null
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_primguard_icon.png"
   }
  },
  "tokens": {

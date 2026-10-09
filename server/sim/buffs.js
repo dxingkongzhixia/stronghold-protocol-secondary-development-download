@@ -48,6 +48,13 @@ export const FLAG_KEYS = Object.freeze([
   // 缚地: a flying unit forced onto the ground — our custom 予愿安洁莉娜 uses the `grounded` flag, the official
   // status (ba.groundbind) the `groundbind` one; `Unit.isFlying` reads both
   'grounded', 'groundbind',
+  // 强制缴械 (PRTS ba.disarmedCombat): no normal attack, like `disarm`, but a plain flag rather than an 异常状态 — it is
+  // not in RESIST_STATUSES / ABNORMAL (no 抵抗 shortening, no 流明 cleanse) and no 无敌 / switch-housekeeping clears it
+  // (our 本源近卫 克莱门莎's 放逐舱 applies it to the enemies it banishes; ai.js blocks the attack on either flag).
+  'disarmForce',
+  // 放逐 (our 本源近卫's 放逐舱): 无敌 and moved by hand to the cabin — the flag marks the state, the invulnerable flag is
+  // the engine 无敌; `Unit.isFlying` is unaffected (banished enemies keep their motion).
+  'banish',
 ]);
 
 /**
@@ -87,6 +94,13 @@ export const STATUS = Object.freeze({
   // 战栗: 被阻挡后无法进行普通攻击
   tremble: { flags: { tremble: true }, immune: 'feared' },
   disarm: { flags: { disarm: true } },
+  // 强制缴械 (ba.disarmedCombat): like 缴械 but not an 异常状态 — no 抵抗 / cleanse, and nothing clears it but its own
+  // duration. Only the normal attack is blocked (ai.js); skills may still cast (PRTS: "无法进行普通攻击").
+  disarmForce: { flags: { disarmForce: true } },
+  // 放逐 (克莱门莎's 放逐舱): 无敌 while banished (the cabin carries the enemy forward); the carrier is unblockable and held
+  // in place between the teleports. Not a control status: no 抵抗, no immunity; `Battle.banishGroup` teleports the unit to
+  // the cabin and the kit refreshes this short state.
+  banish: { flags: { banish: true, invulnerable: true, unblockable: true, noMove: true } },
   // 隐匿 (ba.invisible): 不阻挡时不成为敌方攻击的目标 (an ally: only the enemy it blocks attacks it — targeting.js)
   stealth: { flags: { stealth: true } },
   // 迷彩 (ba.camou): "不阻挡时不成为敌方普通攻击的目标（无法躲避溅射类攻击）" — an ally's camouflage keeps the enemies off

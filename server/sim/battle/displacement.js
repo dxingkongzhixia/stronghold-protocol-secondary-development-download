@@ -101,6 +101,53 @@ export class BattleDisplacement {
   }
 
   /**
+   * Force-teleport a ground enemy onto tile (r, c) — the raw mover of 【放逐】 (克莱门莎's 放逐舱), like 余 S2's teleport
+   * (kits/ops/chess_char_6_03-yu.js) but as an engine helper. Refused when the target tile is off the field or not
+   * ground-passable, when the enemy is a flyer / 自缚 (flag `selfBound`), or when its current tile cannot walk to the
+   * target on the ground grid (`grid.findPath`) — the path-reachability abort of the cabin's carry. On success the unit
+   * is unblocked, its route re-planned from the new tile, and a `teleport` fx is emitted. Returns true when moved.
+   */
+  banishEnemy(e, r, c) {
+    if (!e || !e.alive || e.removed || e.side !== 'enemy' || e.isFlying) return false;
+    if (e.s.flags && e.s.flags.selfBound) return false;
+    if (!this.grid.inRect(r, c) || !this.grid.groundPassable(r, c)) return false;
+    const er = Math.round(e.y), ec = Math.round(e.x);
+    if ((er !== r || ec !== c) && !this.grid.findPath(er, ec, r, c)) return false;
+    e.x = c; e.y = r;
+    this._unblock(e);
+    if (e.route) e.route.pts = null;
+    e.moving = false;
+    this.fx('teleport', { x: c, y: r, id: e.id });
+    return true;
+  }
+
+  /**
+   * 【放逐】 a group of ground `enemies` onto tile (r, c) — each one force-teleported (`banishEnemy`) and given the `banish`
+   * (无敌, unblockable, noMove) and `disarmForce` (强制缴械) statuses for `duration` s: the enemies the 放逐舱 carries forward.
+   * The carry respects a 重量 budget and a count cap ("最多 15 名地面敌人", "累计不超过 8 重量"): greedily takes lighter
+   * enemies that still fit, skips the ones that would exceed `maxWeight`, and stops at `maxCount`. Enemies already
+   * on the tile / unteleportable (flyer, 自缚, unreachable) are left behind; returns the units banished.
+   * `weightOf(e)` overrides the weight (default the enemy's `blockWeight`, else 1).
+   */
+  banishGroup(enemies, r, c, { maxWeight = Infinity, maxCount = Infinity, duration = 1, source = null, weightOf = null } = {}) {
+    const out = [];
+    if (!this.grid.inRect(r, c) || !this.grid.groundPassable(r, c)) return out;
+    let used = 0;
+    for (const e of enemies || []) {
+      if (!e || !e.alive || e.removed || e.side !== 'enemy' || e.isFlying) continue;
+      if (out.length >= maxCount) break;
+      const w = Math.max(0, weightOf ? weightOf(e) : (e.blockWeight ?? 1));
+      if (used + w > maxWeight) continue;
+      if (!this.banishEnemy(e, r, c)) continue;
+      used += w;
+      out.push(e);
+      this.applyStatus(e, 'banish', { duration, source });
+      this.applyStatus(e, 'disarmForce', { duration, source });
+    }
+    return out;
+  }
+
+  /**
    * Can `e` be displaced at all: a living enemy, not a leader part of the boss pool, not 失衡免疫 (flag `noDisplace`:
    * 近地悬浮, 浮空, the 胄 parts …) and not a 静态刚体 (data `staticBody`). PRTS 特殊机制 静态刚体: such a unit "可以进入
    * 失衡状态 … 但物理层面上无法产生任何速度或移动" — every air unit of the mode except “炎佑”, plus the boss 昆图斯 (build-data

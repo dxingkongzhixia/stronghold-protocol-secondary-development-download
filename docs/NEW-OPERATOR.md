@@ -23,6 +23,34 @@ $env:SP_GAMEDATA_BASE = 'https://gh-proxy.com/https://raw.githubusercontent.com/
 node tools/build-data.mjs
 ```
 
+### 1.1 缓存早于新干员时：最小合并（不要整表刷新）
+
+缓存是 **git-ignore** 的本机产物。若某张表早于新干员（例如 2026-10-09 的克莱门莎：本地
+`character_table.json` / `skill_table.json` 都没有她，而线上 Kengxxiao 已更新），**优先「最小合并」**：
+只把新干员的 `character_table` 行与她的 `skill_table` 行插进缓存，而不是 `--refresh` 整表重下 ——
+整表重下会带上游对**既有干员**的平衡改动与 `sortIndex` 位移，可能让名册或 golden 多出与本任务无关的变化。
+
+克莱门莎的最小合并（`CUSTOM_CHESS` 需要她出现在 `character_table` 里，`applyCustomChess` 找不到会 warn 并跳过）：
+
+```js
+// 用一份新鲜的官方表（SP_GAMEDATA_BASE 镜像下到临时文件）做来源
+const ct = JSON.parse(fs.readFileSync('.cache/gamedata/excel/character_table.json', 'utf8'));
+const st = JSON.parse(fs.readFileSync('.cache/gamedata/excel/skill_table.json', 'utf8'));
+const fct = JSON.parse(fs.readFileSync('<fresh>/character_table.json', 'utf8'));
+const fst = JSON.parse(fs.readFileSync('<fresh>/skill_table.json', 'utf8'));
+ct['char_4231_clemnt'] = fct['char_4231_clemnt'];
+for (const k of ['skchr_clemnt_1', 'skchr_clemnt_2', 'skchr_clemnt_3']) st[k] = fst[k];
+fs.writeFileSync('.cache/gamedata/excel/character_table.json', JSON.stringify(ct));
+fs.writeFileSync('.cache/gamedata/excel/skill_table.json', JSON.stringify(st));
+```
+
+- 需要合并的只有她**被 build-data 读到的**表：`character_table`（数值/技能/天赋，分支特性在 `description`）、
+  `skill_table`（黑板书）。`uniequip_table`（若**有**模组才要）、`range_table`（技能 rangeId 若**是新**的）、
+  `charword_table`（若要补语音槽）按同样方式只插她的行。克莱门莎：无模组、`4-1`/`3-2` 与
+  `subProfDict.primguard` 缓存已有 → 只需上面两张表。
+- **新克隆 / CI 无需此步**：缓存缺失时构建会下载**当前**上游表，已含新干员。
+- 合并后 `node tools/build-data.mjs --offline`，核对名册**恰好 +1 名干员**（`chess=282 / visible=120`）。
+
 ## 2. 在 `tools/build-data.mjs` 的 `CUSTOM_CHESS` 表里加一条
 
 `applyCustomChess()` 会在构建**之前**把这些记录并进官方赛季表，于是 `data/chess.json` / `bonds.json` /
@@ -158,3 +186,5 @@ node --test
 
 **阿斯卡纶**（`docs/MATCHMAKING.md` §23）= `CUSTOM_CHESS` 一条 + `kits/ops/chess_char_4132_ascln-ascln.js` 一个 kit + `07-assets.json` 一条
 + 日语语音抽取 + 计数更新 + 两处引擎补充（命中率降低 / 高台条件）。照抄改字段即可。
+
+**克莱门莎**（`docs/MATCHMAKING.md` §37，2026-10-09）= `CUSTOM_CHESS` 一条（tier 6 / 阿戈尔·不屈·协防干员 / `act1autochess_gar_eff_attrByBond`）+ `kits/ops/chess_char_4231_clemnt-clemnt.js` 一个 kit（S1/S2/S3 + 两天赋）+ `professions.js` 新增 `primguard` 分支 + **三处引擎补充**（`banish` / `banishGroup`、`disarmForce`、漩涡）+ `07-assets.json` 一条 + 语音（客户端无 → PRTS CN）+ 本地 fx 抽取 + 计数 / golden 更新。她的缓存是**最小合并**（§1.1），因为上线当日本地缓存还没有她。

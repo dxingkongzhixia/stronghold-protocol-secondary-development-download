@@ -324,7 +324,7 @@ survive with the three sources intact.
 ## 5. Our carried decisions (the §22 blacklist, traits and rules)
 
 > **我们独有，非上游；合并时不得丢失** — these are decisions/behaviours we deliberately keep. **Do not duplicate
-> the prose here**: the authoritative record is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§35. This section is
+> the prose here**: the authoritative record is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§37. This section is
 > the index plus the mechanical self-checks.
 
 | Decision | Where recorded | The rule, in one line |
@@ -333,6 +333,7 @@ survive with the three sources intact.
 | **Funnel-hits model** | §31, §35.2 | 澄闪's 浮游单元 all lock the **same** enemy and each deals her **full** ATK (not split); the `'bolt'`→`'drone'` projectile fix lives in `professions.js`. |
 | **望's pieces** | §30, §35.8 | 棋子 placement / linkage: auto-placement only on orthogonally adjacent tiles so pieces link, latch on deploy, S3 ammo accounting, 跟子 priority. |
 | **Kalts2 traits / behaviour** | §34, §35.1, §35.7, §35.9 | 整备能力 `pool_equip_all`, default skill S2, 守望者 heals (single-target) **and** attacks, S2 red/green feedback kinds. |
+| **克莱门莎** | §37 | Custom tier-6 本源近卫: `primguard` branch (block 2, can hit air, blocked-first), the two talents, S1/S2/S3 verbatim from the blackboards, and the engine additions they need (放逐 `banishGroup`, 漩涡, 强制缴械 `disarmForce`). |
 | **Leave → AI takeover / room disposal** | §35.5 | A human leaving a running match while others remain → seat handed to a fresh AI; only when **all** humans are gone is the room dissolved. Short disconnects use the reconnect grace, not takeover. |
 | **Notice convention** | §28 | Every restart / server-file upload is preceded by an in-game notice signed **`d星空之下`**. |
 | **Golden-attribution discipline** | §35.1 (worked example), `docs/DEVELOPMENT.md` §8 | Any `test/golden/*.json` move must be proven by reverting only your change → zero diff; never re-bless, never raise an engine guard. |

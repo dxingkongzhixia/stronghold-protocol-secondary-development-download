@@ -485,6 +485,37 @@ const CUSTOM_CHESS = [
       ],
     },
   },
+  {
+    // 克莱门莎 (2026-10-09, docs/MATCHMAKING.md §36, custom): 6★ 近卫·本源近卫 (primguard) — released 2026-10-09 and NOT in
+    // the season roster (`activity.AUTOCHESS_SEASON.act2autochess.charChessDataDict` has no char_4231_clemnt; only the
+    // 卫戍协议 band `band_clementia` bears her name), so she is declared here like 阿斯卡纶. 6 阶; 盟约 阿戈尔 / 不屈 /
+    // 协防干员. Her 特质 is the stock `act1autochess_gar_eff_attrByBond` layer reader (no new garrison code):
+    // floor((layers(阿戈尔) + layers(不屈)) / 3) × bb.def. 分支 `primguard` is implemented in
+    // server/sim/professions.js (block 2 from the data; can hit air; the blocked-first rule is the engine default).
+    // The gamedata cache is stale (predates her): her character_table row and 3 skill_table rows are merged in locally
+    // per docs/NEW-OPERATOR.md §1 (the cache is git-ignored; a fresh build downloads the current upstream tables).
+    charId: 'char_4231_clemnt',
+    baseId: 'chess_char_4231_clemnt_a',
+    goldenId: 'chess_char_4231_clemnt_b',
+    tier: 6,                                     // 6 阶
+    identifier: 970,
+    shopLevelSortId: 93,
+    defaultSkillIndex: 2,                        // 与海为敌 (S3) — her signature ammo burst
+    defaultUniEquipId: null,                     // she has no modules yet (uniequip_table has no char_4231_clemnt entry)
+    bonds: ['egirShip', 'indomShip', 'emptyShip'],   // 阿戈尔 / 不屈 / 协防干员
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },   // like 望: no module, the elite record keeps the (empty) choice list
+    garrison: {
+      eventTypeDesc: '作战能力',
+      desc: '【阿戈尔】【不屈】每叠加3层，本干员防御力+1%',
+      blackboard: [
+        { key: 'key', valueStr: 'act1autochess_gar_eff_attrByBond' },
+        { key: 'divide_num', value: 3 },
+        { key: 'bond_id', valueStr: 'egirShip,indomShip' },
+        { key: 'def', value: 0.01 },
+      ],
+    },
+  },
 ];
 
 /** The base chess ids of CUSTOM_CHESS: always-owned — they have no official 补位 stand-in (data/backups.json). */
@@ -4001,7 +4032,7 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  if (visible.length !== 119) err(`expected 119 visible non-DIY chess, got ${visible.length}`);
+  if (visible.length !== 120) err(`expected 120 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);

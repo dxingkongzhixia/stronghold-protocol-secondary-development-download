@@ -1089,3 +1089,51 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - 点击缩略图打开全屏 viewer（lightbox）：仍是令牌门禁的 `/admin/api/bug/image/<id>`，图片按自然尺寸并适配视口；「关闭」按钮 / `Esc` / 点击背景关闭，多图时用 ‹ › 按钮或 `←` `→` 翻页。
 - 「导出 JSON」「导出 CSV」按钮：以 `<a download>` 打开上面的令牌门禁导出接口，导出**当前筛选 / 排序的全集**（不是只看得到的一页）。
 - 安全不变：玩家文本一律经 `esc()` 文本渲染（无 innerHTML 注入）；筛选 / 排序的取值只做白名单映射（`BUG_STATUSES` / `BUG_SORTS`），绝不拼接进 SQL；导出与状态接口只走服务端的字段白名单。
+
+## 37. 克莱门莎（2026-10-09 官方新 6★，自造干员）
+
+2026-10-09 官方上线 6★ 近卫·**本源近卫** `primguard` 克莱门莎（`charId = char_4231_clemnt`，`appellation Clementia`，`displayNumber AE01`，阿戈尔）。她**不在本赛季名册**（`activity_table` 的 `charChessDataDict` 无 `char_4231_clemnt`，只有卫戍协议 band `band_clementia` 带她的名字），因此走**自造干员通道**（`tools/build-data.mjs CUSTOM_CHESS`），与阿斯卡纶（§23）同一套流程，**非 DIY / 正式商店干员**。
+
+### 37.1 数据（最小合并，缓存过期）
+
+- 本地 `.cache/gamedata/excel/character_table.json` / `skill_table.json` 早于她（缓存不入 git，`.gitignore`）。**最小合并**：只把她的 character_table 行 + 三条 `skchr_clemnt_1/2/3` skill_table 行插进缓存（不整表刷新，避免带上游对既有干员的平衡改动与 sortIndex 位移）；`uniequip_table` 无她的模组（`charEquip` 无 `char_4231_clemnt`），`range_table` 的 `4-1` / `3-2`、`uniequip.subProfDict.primguard` 都在。新克隆/CI 直接下载的当前上游已含她，无需此步。
+- `CUSTOM_CHESS` 条目：`tier 6`、`identifier 970`、`shopLevelSortId 93`、`baseId chess_char_4231_clemnt_a` / `goldenId chess_char_4231_clemnt_b`、`defaultSkillIndex 2`（**与海为敌 S3**）、`defaultUniEquipId null`（无模组；精锐按 `equipLevel 1` 保留空模组选择表，同望）、`normal E2L1/skill 4`、`golden E2L60/skill 7`。名册因此**恰好 +1 名干员**（`chess=282 / visible=120`，tier 6: 20→21）。
+- **归属盟约**：`egirShip`（阿戈尔）/ `indomShip`（不屈）/ `emptyShip`（协防干员）——三者本季均为真实 `bondId`，她的 `nationId egir` 使阿戈尔自动纳员。
+- **特质（作战能力）**：`【阿戈尔】【不屈】每叠加3层，本干员防御力+1%` — 复用现成的 `act1autochess_gar_eff_attrByBond` 层数读取器（`bb.bond_id = 'egirShip,indomShip'`, `divide_num 3`, `def 0.01`），**无新 garrison 代码**。
+
+### 37.2 分支 `primguard`（`server/sim/professions.js`）
+
+- 数据 `blockCnt 2`（阻挡两个敌人）、近战物理。PRTS《分支特性信息》本源近卫：「**可以且优先攻击自身阻挡的单位（即使目标处于攻击范围外或为飞行单位）**」。
+- 「优先攻击自身阻挡」= **引擎默认**（`ai.js acquireTargets` / `Battle.blockedTargets` 永远把阻挡者列为候选、优先，且不受朝向与自身攻击范围限制）；分支额外把 `canHitFly` 强制为 true（数据里的通用近战 `false` 会盖掉它），使**被它阻挡的飞行单位**也可被选中。官方特性文本「能够阻挡两个敌人，可以造成元素伤害」来自 character_table 的 `description`（缓存把分支特性放在该字段），`classifyAttack` 由职业 `WARRIOR` 判为物理。
+
+### 37.3 技能 / 天赋（完整还原，补引擎）
+
+`server/sim/content/kits/ops/chess_char_4231_clemnt-clemnt.js`（注册于 `kits/index.js`）。数字取 blackboard（普通 Lv4 / 精锐 Lv7），仅文本值用 `textNum` 抓（「移动 N 格」= 3）。
+
+- **生死定夺**（天赋 1）：造成物理伤害时有 `prob_normal` 概率攻击力提升至 `t1_atk_scale`，目标防御力低于初始值时概率提升至 `prob_special` — 一个 `hit` 处理器（每次她造成的物理伤害实例）。
+- **习得性防御**（天赋 2）：受到来自**自身前方单位**的物理 / 法术伤害降低 `damage_resistance_normal`，若来源带 `seamonster`（海怪）tag 则降低 `damage_resistance_seamonster`。
+- **冲蚀 S1**（攻击回复 AUTO）：下次攻击 ×`atk_scale`，并造成相当于**物理伤害** `ep_damage_ratio` 的侵蚀损伤（`attack.onEachHit` 用实际 `dealt` 结算）。
+- **风暴潮 S2**（16 s）：攻击范围扩大（`4-1`），攻速 +`attack_speed`，每次攻击对目标及其周围最多 `attack@max_target`−1 名**地面**敌人造成 ×`attack@aoe_atk_scale` 物理；向前方召唤**放逐舱**，使周围累计不超过 `attack@max_passenger_mass`（8）、最多 `attack@max_passenger_cnt`（15）名地面敌人不断向前移动，移动 **3** 格后消失并留下**漩涡**（半径 1.5，可命中空中）：处于漩涡的敌人移动速度 −70%（`attack@move_speed`）且每秒受到 `attack@water_element`（200）点侵蚀损伤 + ×`attack@physical_atk_scale` 物理。
+- **与海为敌 S3**（默认；弹药 `trigger_time` 发）：攻击范围扩大（`3-2`），攻击目标数 +`attack@max_target`（3）；每次攻击对目标 ×`attack@atk_scale` 物理 + 相当于物理伤害 `attack@ep_damage_ratio` 的侵蚀损伤；**当全场有敌人侵蚀损伤爆发时**，消耗 1 发弹药，对爆发目标所在位置及其周围四格内所有地面敌人造成 `audio_trigger_cnt`（3）次 ×`s3_atk_scale` 物理与 ×`ep_damage_scale` 元素伤害；弹药打完结技。
+
+**引擎补充**（`server/sim/buffs.js` / `server/sim/battle/displacement.js`，均带测试）：
+
+- **【放逐】**：`STATUS.banish`（无敌 + 不可阻挡 + 不可移动）+ `Battle.banishEnemy(e,r,c)`（强制传送：目标格须在场上且地面可通行、`grid.findPath` 可达，否则 abort；解除阻挡、重规划路线、`teleport` fx）+ `Battle.banishGroup(enemies,r,c,{maxWeight,maxCount,duration})`（重量预算取 `blockWeight`，贪心取更轻者、超预算跳过、计数封顶）。放逐舱 3 格 / 15 名 / 8 重量由 kit 驱动，abort 时留下的漩涡在原位生成。
+- **【漩涡】**：kit 侧地面持续区（`battle.every(1,…)` + `battle.enemiesInRadius` 刷新 `slow −70%`，每秒结算 200 侵蚀损伤 + ×物理），`fx('zone',{kind:'whirlpool'})`；是可选本地官方特效层与程序化层的既有双层规则之一（§35.10）。
+- **【强制缴械】**：`FLAG_KEYS`/`STATUS` 新增 `disarmForce`（`ba.disarmedCombat`）——只阻止普通攻击（`ai.js` 与 `disarm` 并列判断），**不是异常状态**：不在 `RESIST_STATUSES` / `ABNORMAL`（不被抵抗缩短、不被流明净化），也无「缴械被无敌清除」的情况。放逐舱对被放逐的敌人同时挂 `banish` + `disarmForce`。
+- **侵蚀损伤**：`server/sim/damage.js` 既有元素计量/爆发（`applyElement` / `elementBurst` / `elementHit` hook）已覆盖 `erosion`，**未重复实现**；S3 的爆发反应监听 `elementBurst`（`element === 'erosion'`，全场）。
+
+### 37.4 美术 / 语音 / 特效（本地客户端优先）
+
+- `docs/research/07-assets.json` 增条目（头像/立绘 E0E1+E2、全立绘、三技能图标、战斗脊柱 Front/Back、子职业图标 `sub_primguard_icon`）。`node tools/fetch-assets.mjs --asset-source=mirror` 下到除 **S3 技能图标**以外的全部（镜像 `skill_icon_skchr_clemnt_3.png` 首轮 404/校验失败）；S3 图标改经 `gh-proxy` 直下补齐后重跑离线，`data/assets.json` 三技能图标齐全。
+- **语音**：本机 CN / JP 客户端**都没有**她的语音包（CN 客户端 `audio/sound_beta_2` 无 `voice*`，JP 客户端只有 `music`），按 owner 规则回退到 **PRTS CN 镜像**（`torappu.prts.wiki/assets/audio/voice/char_4231_clemnt/cn_019..032.mp3`）补齐 12 个战斗槽（`data/assets.json` 的 `audio.voice.char_4231_clemnt`）。
+- **战斗特效**：本机 CN 客户端 `battle/prefabs/effects/clemnt.ab` 存在 → `tools/local-extract/extract.py --only fx/clemnt` 抽出 17 张贴图到 `public/assets/local/fx/clemnt`，`committed-manifest.mjs` 汇总进 `data/local-assets.committed.json`；`node tools/build-fx-official.mjs` 生成表由 90 → **91** 名干员（她的 `explode`/`zone` kinds）。
+- **缺失项（如实报告，owner 决定）**：单位 **SFX**（普攻 / 命中 / 技能音）未取到——CN/JP 客户端无她的 `sound_beta_2/player` 包、`audio_data.json` 缓存与镜像亦无映射，客户端按既有 graceful fallback 用 `battle.enemyHit` / WebAudio 短音；`fx` 层的技能图标 / 立绘等**已齐**。
+
+### 37.5 测试 + golden 归属
+
+- `node tools/kit-coverage.mjs --missing` → **307/307** selectable skills、**120/120** chess fully covered。
+- 计数：`build-data validateAll`（120 visible）、`test/data.test.js`、`test/backups.test.js`、`test/ui/loadout.test.js`、`test/match/{loadout,pool}.test.js`、`test/sim/loadout.test.js`、`test/content/kits_alt_t6.test.js` 及 §21.30 的 44→46 主动范围技能。
+- **golden 归属证明**：先在干净工作树（把本次非 golden 源 + 数据 `git stash`）重算 `node tools/golden.mjs` → **全绿 / 零差异**，证明无既有漂移；恢复后 `--update`：移动 **`roster`（52→53 场，含她的所有 loadout）**、**`bonds`**（阿戈尔 high 场景成员含她）、**`fields`**、**`matches`**（卡池变化），`standins` / `diy` 不变——全部归因于本改动。
+- 新增 `test/content/clemnt.test.js`（primguard / 两天赋 / S1 侵蚀 / S2 放逐舱+漩涡 / S3 弹药爆发 / `banishGroup` / `disarmForce` 共 7 条）。
+- 交叉引用：分支表与引擎键见 `docs/SIM.md` §8；新干员流程见 `docs/NEW-OPERATOR.md`。

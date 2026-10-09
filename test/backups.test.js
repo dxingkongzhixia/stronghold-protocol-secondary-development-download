@@ -34,9 +34,9 @@ const isFiniteNum = (v) => typeof v === 'number' && Number.isFinite(v);
 const ELITES = ['char_608_acpion', 'char_609_acguad', 'char_610_acfend', 'char_611_acnipe', 'char_612_accast', 'char_613_acmedc', 'char_614_acsupo', 'char_615_acspec', 'char_617_sharp2'];
 const RESERVES = ['char_600_cpione', 'char_601_cguard', 'char_602_cdfend', 'char_603_csnipe', 'char_604_ccast', 'char_605_cmedic', 'char_606_csuppo', 'char_607_cspec'];
 
-test('chess: 140 base chess — 74 PRESET / 62 NORMAL / 4 DIY (our CUSTOM_CHESS adds 7 always-owned NORMAL chess) — and every record keeps the five official backup fields', () => {
-  assert.equal(base.length, 140);
-  assert.deepEqual([ofType('PRESET').length, ofType('NORMAL').length, ofType('DIY').length], [74, 62, 4]);
+test('chess: 141 base chess — 74 PRESET / 63 NORMAL / 4 DIY (our CUSTOM_CHESS adds 8 always-owned NORMAL chess) — and every record keeps the five official backup fields', () => {
+  assert.equal(base.length, 141);
+  assert.deepEqual([ofType('PRESET').length, ofType('NORMAL').length, ofType('DIY').length], [74, 63, 4]);
   for (const c of all) {
     assert.deepEqual(Object.keys(c.backup), ['charId', 'tmplId', 'skillIndex', 'uniEquipId', 'potRank'], `${c.chessId}: backup fields`);
     assert.deepEqual(c.backup, chess[c.baseId].backup, `${c.chessId}: the elite shares its base row's backup`);
@@ -341,9 +341,9 @@ test('DIY: powers and the owned pool re-derived from character_table', { skip: !
   const collab = (c) => [c.mainPower, ...(c.subPower || [])].some((p) => ['rainbow', 'action4', 'mujica', 'sees', 'laios'].includes(p?.teamId))
     || /^(?:MH|RS|AM|PS|DD)\d/.test(c.displayNumber || '');
   const legal = Object.entries(CT).filter(([id, c]) => id.startsWith('char_') && c.rarity === 'TIER_6' && !['TOKEN', 'TRAP'].includes(c.profession) && !c.isNotObtainable && !roster.has(id));
-  assert.equal(legal.length, 78, 'the excel\'s 78 obtainable 6★ outside the chess pool');
+  assert.equal(legal.length, 79, 'the excel\'s 79 obtainable 6★ outside the chess pool');
   // our CUSTOM_CHESS operators (tools/build-data.mjs applyCustomChess) are in the season roster, so they are NOT DIY picks
-  const OUR_CHESS = new Set(['char_4132_ascln', 'char_377_gdglow', 'char_4138_narant', 'char_1015_aglna2', 'char_2027_wang', 'char_4217_makoto', 'char_1052_kalts2']);
+  const OUR_CHESS = new Set(['char_4132_ascln', 'char_377_gdglow', 'char_4138_narant', 'char_1015_aglna2', 'char_2027_wang', 'char_4217_makoto', 'char_1052_kalts2', 'char_4231_clemnt']);
   assert.deepEqual([...backups.diy.ownedPool].sort(), legal.filter(([, c]) => !collab(c)).filter(([id]) => !OUR_CHESS.has(id)).map(([id]) => id).sort());
   assert.deepEqual([...backups.diy.excluded].sort(), legal.filter(([, c]) => collab(c)).filter(([id]) => !OUR_CHESS.has(id)).map(([id]) => id).sort());
   for (const [id, o] of Object.entries(backups.diy.operators)) {

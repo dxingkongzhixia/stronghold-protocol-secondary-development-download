@@ -83,7 +83,7 @@ export function updateAlly(b, u, dt) {
   let prof = effectiveProfile(u);
   if (prof.noAttack) return;
   if (prof.noAttackUnlessSkill && !(sk && sk.active)) return;
-  if (u.s.flags.disarm) return;
+  if (u.s.flags.disarm || u.s.flags.disarmForce) return;
   if (u.atkCd > 0) return;
   // (a 秘术师's `canAttack` is its own target rule: false = no valid target — 深靛's bound enemies, 维伊's marked ones)
   if (prof.canAttack && !prof.canAttack(b, u)) { if (prof.storeEnergy) { u.trait.hadTarget = false; storeEnergy(b, u, prof); } return; }
@@ -770,8 +770,8 @@ function enemyAttack(b, e, prevCd) {
   if (e.profile && e.profile.noAttack) { e.swing = false; return false; }
   const dmgType = (e.profile && e.profile.dmgType) || def.dmgType;
   if (dmgType === 'none' || e.s.atk <= 0) { e.swing = false; return false; }
-  // 恐惧 / 缴械 / 战栗 (被阻挡后无法进行普通攻击): no normal attack, and the one swung is interrupted
-  if (e.s.flags.fear || e.s.flags.disarm || (e.s.flags.tremble && e.blockedBy)) { e.swing = false; return false; }
+  // 恐惧 / 缴械 / 强制缴械 / 战栗 (被阻挡后无法进行普通攻击): no normal attack, and the one swung is interrupted
+  if (e.s.flags.fear || e.s.flags.disarm || e.s.flags.disarmForce || (e.s.flags.tremble && e.blockedBy)) { e.swing = false; return false; }
   if (dmgType === 'heal') { if (e.atkCd <= 0) enemyHeal(b, e, e.base.rangeRadius); return false; }
   // applyWay MELEE enemies only ever hit their blocker, even when their data carries a rangeRadius (粉碎攻坚手 2.5,
   // 宿主士兵 2.5, 深池伙友卫队 1.4 … — that radius belongs to their abilities/splash, handled by content).

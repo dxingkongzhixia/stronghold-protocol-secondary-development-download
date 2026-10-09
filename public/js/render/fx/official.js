@@ -1543,5 +1543,22 @@ export const FX_OFFICIAL = Object.freeze({
         scale: 1.1
       }
     ]
+  },
+  char_4231_clemnt: {
+    group: "fx/clemnt",
+    kinds: [
+      "explode",
+      "zone"
+    ],
+    layers: [
+      {
+        name: "fx_allow_2048_clemnt_flipbook_up",
+        scale: 1.5
+      },
+      {
+        name: "star_253",
+        scale: 1.1
+      }
+    ]
   }
 });

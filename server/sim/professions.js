@@ -593,6 +593,12 @@ export const SUB = Object.freeze({
   duelist: P({}),
   fortress: P({ fortress: true, splashRadius: 1.0, projectile: 'bomb', canHitFly: false, groundOnly: true }),
   // --- WARRIOR
+  // 本源近卫 (PRTS 分支特性信息): "可以且优先攻击自身阻挡的单位（即使目标处于攻击范围外或为飞行单位）" — the
+  // blocked-first selection is the engine default (ai.js acquireTargets / Battle.blockedTargets, out of range and whatever
+  // the facing); the branch can additionally hit a flying unit it blocks, so `canHitFly` is forced on (the data's
+  // `canHitFly: false` would otherwise win). It "可以造成元素伤害" through its kit (skills/talents attach 元素损伤); the
+  // branch itself adds no engine rule beyond the targeting line.
+  primguard: P({}),
   centurion: P({ hitAllBlocked: true }),
   crusher: P({ hitAllBlocked: true }),
   fearless: P({}),
@@ -728,6 +734,9 @@ export function resolveProfile(def, kitTrait = null) {
   }
   if (def.targetPriority) p.priority = PRIORITY_ALIASES[def.targetPriority] ?? def.targetPriority;
   if (def.splashRadius != null && def.splashRadius > 0) p.splashRadius = def.splashRadius;
+  // 本源近卫 (PRTS 分支特性信息 "可以且优先攻击自身阻挡的单位（即使目标处于攻击范围外或为飞行单位）"): the data's generic
+  // melee `canHitFly: false` is overridden so a flying unit it blocks is a valid target, like a 哨戒铁卫's air reach
+  if (def.subProf === 'primguard') p.canHitFly = true;
   // a boomerang thrower (回环射手) always throws its boomerang: the data's generic ranged projectile ('arrow', a
   // build-data default) would turn the out-and-back flight into a plain shot
   if (p.boomerang && p.attack === 'ranged') p.projectile = 'boomerang';
