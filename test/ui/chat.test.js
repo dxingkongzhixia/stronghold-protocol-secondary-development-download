@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chatMessage, activeChatBubbles } from '../../public/js/ui/chat.js';
+import { chatMessage, activeChatBubbles, chatDockStartsOpen, CHAT_OPEN_PREF } from '../../public/js/ui/chat.js';
 import { CHAT_BUBBLE_MS } from '../../shared/constants.js';
 
 test('chatMessage: normalises a wire message, rejects unusable input, coerces every field', () => {
@@ -54,4 +54,27 @@ test('activeChatBubbles: the newest message per sender wins; different senders e
   const m = activeChatBubbles(mixed, now);
   assert.equal(m.has('p1'), false, 'the older sender aged out');
   assert.equal(m.get('p2').text, 'new', 'the newer sender is live');
+});
+
+test('chat dock toggle: collapsed by default, and the last state is remembered (CHAT_OPEN_PREF)', () => {
+  assert.equal(CHAT_OPEN_PREF, 'chatOpen');
+  // default (nothing saved) is collapsed; only an explicit true expands it
+  assert.equal(chatDockStartsOpen(undefined), false);
+  assert.equal(chatDockStartsOpen(false), false);
+  assert.equal(chatDockStartsOpen('yes'), false);
+  assert.equal(chatDockStartsOpen(1), false);
+  assert.equal(chatDockStartsOpen(true), true);
+  // the pref round-trips through localStorage: expanded stays expanded, collapsed stays collapsed
+  const orig = globalThis.localStorage;
+  const mem = new Map();
+  globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)) };
+  try {
+    assert.equal(chatDockStartsOpen(), false, 'fresh browser: collapsed');
+    mem.set(`sp.pref.${CHAT_OPEN_PREF}`, 'true');
+    assert.equal(chatDockStartsOpen(), true, 'a saved open state expands the dock');
+    mem.set(`sp.pref.${CHAT_OPEN_PREF}`, 'false');
+    assert.equal(chatDockStartsOpen(), false, 'a saved closed state stays collapsed');
+  } finally {
+    if (orig === undefined) delete globalThis.localStorage; else globalThis.localStorage = orig;
+  }
 });

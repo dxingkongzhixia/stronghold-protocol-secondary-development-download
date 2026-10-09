@@ -20,7 +20,7 @@ import { toast, toastError } from '../ui/toasts.js';
 import { copyText } from '../ui/clipboard.js';
 import { GuideButton } from '../ui/guide.js';
 import { LoadoutButton } from './loadout.js';
-import { ChatComposer, ChatBubble, activeChatBubbles } from '../ui/chat.js';
+import { ChatDock, ChatBubble, activeChatBubbles } from '../ui/chat.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, emptyMatch, isSpectating } from '../store.js';
 import { difficultyInfo } from './lobby.js';
@@ -346,9 +346,7 @@ export function RoomScreen() {
       </aside>`}
     </main>
     <${SpectatorDock} facts=${facts} myId=${me.playerId} busy=${busy} bubbles=${bubbles} onRemove=${removeSpectator} onSit=${sit} onTakeOver=${takeOver} onRelease=${releaseSeat} />
-    <section class="room-chat brackets" aria-label=${t('聊天')}>
-      <${ChatComposer} disabled=${!online} />
-    </section>
+    <${ChatDock} class="room-chat" disabled=${!online} />
 
     <footer class="room-bar">
       <div class="room-bar__left">

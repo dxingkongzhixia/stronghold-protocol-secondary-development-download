@@ -356,21 +356,10 @@
 /* ---- corner: emote + settings --------------------------------------------------------------------------------- */
 .gm__corner { position: absolute; left: .24rem; bottom: .24rem; display: flex; align-items: flex-end; gap: .1rem; }
 
-/* room text chat (局内, docs/MATCHMAKING.md §38): a collapsible dock beside the 交流 button (ui/chat.js ChatDock).
-   Collapsed by default so it never covers the board or the shop; the 交流 panel keeps its own fixed sprite layout. */
+/* room text chat (局内, docs/MATCHMAKING.md §38): the same collapsible dock as the waiting room (header/body styles
+   live in screens/room.css .chat-dock*), placed beside the 交流 button. Collapsed by default so it never covers the
+   board or the shop; the 交流 panel keeps its own fixed sprite layout. */
 .gm-chat { position: absolute; left: 0; bottom: calc(100% + .12rem); z-index: 4; width: 4.7rem; }
-.gm-chat__sum {
-  display: inline-flex; align-items: center; gap: .07rem; cursor: pointer; list-style: none; user-select: none;
-  min-height: .4rem; padding: 0 .14rem; background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2);
-  color: var(--text-md); font-size: .16rem; font-weight: 700; letter-spacing: .08em;
-}
-.gm-chat__sum::-webkit-details-marker { display: none; }
-.gm-chat__sum .icon { width: .2rem; height: .2rem; color: var(--mint-500); }
-.gm-chat[open] .gm-chat__sum { color: var(--mint-400); border-color: var(--mint-700); }
-.gm-chat .chat-send {
-  margin-top: .08rem; padding: .1rem .12rem; background: rgba(6, 10, 9, .96);
-  border: 1px solid var(--line-2); box-shadow: 0 .1rem .3rem rgba(0, 0, 0, .6);
-}
 /* in match the chat bubble rides the sender's row in the left player list (to its right, like the emote bubble) */
 .team__chat { position: absolute; left: calc(100% + .06rem); top: 50%; transform: translateY(-50%); width: max-content; max-width: 3.6rem; z-index: 3; }
 .team__chat::after { left: -.1rem; bottom: 50%; transform: translateY(50%); border: .1rem solid transparent; border-right-color: rgba(22, 28, 26, .97); border-left: 0; }

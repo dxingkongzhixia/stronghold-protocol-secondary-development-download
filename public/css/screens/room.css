@@ -307,21 +307,32 @@
 
 .room-bar .btn--xl { min-width: 3.2rem; letter-spacing: .2em; }
 
-/* ---- room text chat: transient speech bubbles + composer (docs/MATCHMAKING.md §38) ---------------------------- */
+/* ---- room text chat: collapsible 聊天 dock + transient bubbles (docs/MATCHMAKING.md §38) --------------------- */
 /* No log: a message pops up over the sender's seat (waiting room, .seat__chat) / player row (in match, .team__chat /
-   .specdock__chat) and fades. The bottom-left composer is the only persistent element. Player text is rendered as text
-   (ui/chat.js), never through innerHTML. */
-.room-chat {
-  position: absolute;
-  left: .6rem;
-  bottom: 1.62rem;
-  z-index: 4;
-  width: min(4.6rem, 40vw);
-  padding: .1rem .12rem;
-  background: rgba(6, 10, 9, .92);
-  border: 1px solid var(--line-2);
-  box-shadow: 0 .12rem .4rem rgba(0, 0, 0, .55);
+   .specdock__chat) and fades. Both screens use the SAME collapsible `<details>` dock (ui/chat.js ChatDock): a
+   `▸ 聊天` header that expands to the composer and remembers its last state (localStorage `chatOpen`). Player text is
+   rendered as text (ui/chat.js), never through innerHTML. */
+.room-chat { position: absolute; left: .6rem; bottom: 1.62rem; z-index: 4; width: min(4.7rem, 42vw); }
+
+/* the shared dock header / body (both .room-chat and .gm-chat) */
+.chat-dock__sum {
+  display: inline-flex; align-items: center; gap: .07rem; cursor: pointer; list-style: none; user-select: none;
+  min-height: .4rem; padding: 0 .14rem; background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2);
+  color: var(--text-md); font-size: .16rem; font-weight: 700; letter-spacing: .08em;
 }
+.chat-dock__sum::-webkit-details-marker { display: none; }
+.chat-dock__sum::marker { content: ''; }
+.chat-dock__sum::before { /* disclosure triangle, rotates open */
+  content: '▸'; font-size: .14rem; line-height: 1; color: var(--text-lo); transition: transform var(--t-fast);
+}
+.chat-dock[open] .chat-dock__sum { color: var(--mint-400); border-color: var(--mint-700); }
+.chat-dock[open] .chat-dock__sum::before { transform: rotate(90deg); color: var(--mint-500); }
+.chat-dock__sum .icon { width: .2rem; height: .2rem; color: var(--mint-500); }
+.chat-dock .chat-send {
+  margin-top: .08rem; padding: .1rem .12rem; background: rgba(6, 10, 9, .96);
+  border: 1px solid var(--line-2); box-shadow: 0 .1rem .3rem rgba(0, 0, 0, .6);
+}
+
 .chat-send { display: flex; align-items: center; gap: .08rem; flex-wrap: wrap; }
 .chat-send__input {
   flex: 1; min-width: 0; height: .42rem; padding: 0 .12rem; font-size: .16rem;

@@ -20,10 +20,22 @@ import { CHAT_MAX, CHAT_BUBBLE_MS } from '../../../shared/constants.js';
 import { html, Button, Icon } from './components.js';
 import { toastError } from './toasts.js';
 import { net } from '../net.js';
+import { loadPref, savePref } from '../store.js';
 import { bubbleAge } from './emotes.js';
 import { t } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
+
+/** localStorage key remembering whether the 聊天 dock was left expanded (both screens share it). */
+export const CHAT_OPEN_PREF = 'chatOpen';
+
+/**
+ * Whether the 聊天 dock starts expanded: only an explicit saved `true` expands it, so the default is COLLAPSED
+ * (consistent with the in-match dock, one click away, Enter still sends).
+ * @param {unknown} [value] raw pref value (defaults to the stored one)
+ * @returns {boolean}
+ */
+export const chatDockStartsOpen = (value = loadPref(CHAT_OPEN_PREF, false)) => value === true;
 
 /**
  * Normalise one `m.chat` frame into the transient store event: `{ seq, from, name, text, at }`, or null when it is not
@@ -120,12 +132,20 @@ export function ChatComposer({ class: cls, disabled = false }) {
 }
 
 /**
- * Collapsible in-match chat entry (`<details>`): the summary is the 聊天 toggle; opening it reveals the composer.
- * Placed beside the 交流 button (ui/emotes.js) so both live in the bottom-left communication cluster.
+ * Collapsible chat dock (both screens) — the SAME component so the waiting room and the in-match cluster look and
+ * behave identically: a `▸ 聊天` header (disclosure triangle + chat icon) that expands to the composer and collapses
+ * back. The open/closed state is remembered across sessions (localStorage `chatOpen`, CHAT_OPEN_PREF); the default is
+ * collapsed.
  * @param {{ class?: string, disabled?: boolean }} props
  */
 export function ChatDock({ class: cls, disabled = false }) {
-  return html`<details class=${cx('chat-dock', cls)}>
+  const [open, setOpen] = useState(chatDockStartsOpen);
+  const onToggle = (e) => {
+    const next = !!e.currentTarget.open;
+    setOpen(next);
+    savePref(CHAT_OPEN_PREF, next);
+  };
+  return html`<details class=${cx('chat-dock', cls)} open=${open} onToggle=${onToggle}>
     <summary class="chat-dock__sum"><${Icon} name="chat" /><span>${t('聊天')}</span></summary>
     <${ChatComposer} disabled=${disabled} />
   </details>`;
