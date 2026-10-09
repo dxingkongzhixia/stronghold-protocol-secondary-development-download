@@ -17,6 +17,7 @@ import { randomBytes } from 'node:crypto';
 import {
   BUG_BODY_MAX, BUG_TITLE_MAX, BUG_IMAGES_MAX, BUG_IMAGE_MAX_BYTES, BUG_IMAGE_MIMES,
   BUG_RATE_WINDOW_MS, BUG_REPORT_LIMIT, BUG_UPLOAD_LIMIT, BUG_STATUSES, CHANGELOG_LIMIT, CHANGELOG_BODY_MAX,
+  CHANGELOG_SUMMARY_MAX, CHANGELOG_SOURCES, APP_VERSION,
 } from '../shared/constants.js';
 
 /** Control / bidi / lone-surrogate junk stripped from player text (a report is plain text). */
@@ -111,10 +112,37 @@ export function bugReportsExport(list, { status = null, sort = 'status' } = {}) 
 }
 
 /**
+ * A concise gist of a changelog body (docs/MATCHMAKING.md §36.2): the first meaningful line (markdown heading and list
+ * markers stripped), cut at its first sentence, collapsed to one line and trimmed to `max` characters. The panel shows
+ * this by default; the full markdown body stays available on demand. Empty in, empty out.
+ * @param {unknown} body
+ * @param {number} [max]
+ * @returns {string}
+ */
+export function summarizeChangelog(body, max = CHANGELOG_SUMMARY_MAX) {
+  const lines = String(body ?? '').replace(/\r\n?/g, '\n').split('\n');
+  let line = '';
+  for (const raw of lines) {
+    const s = raw.trim();
+    if (!s) continue;
+    if (/^#{1,6}(\s|$)/.test(s)) continue; // a markdown heading is not a summary
+    // drop one leading list / quote marker (`-`/`*`/`+`, `1.`/`1)`, `>`)
+    const text = s.replace(/^(?:[-*+]\s+|\d+[.)]\s+|>\s*)/, '').trim();
+    if (text) { line = text; break; }
+  }
+  if (!line) return '';
+  const m = /^(.*?[。！？!?；;])/.exec(line);
+  let out = (m ? m[1] : line).replace(/\s+/g, ' ').trim();
+  if (out.length > max) out = `${out.slice(0, max).trimEnd()}…`;
+  return out;
+}
+
+/**
  * Parse the repo's `CHANGELOG.md` into entries: each `## <version> — <YYYY-MM-DD>` starts one, its body is the markdown
- * up to the next `##` (or the end). → `{ version, releasedAt, title, body }` (title = version; date null when absent).
+ * up to the next `##` (or the end). → `{ version, releasedAt, title, body, summary }` (title = version; date null when
+ * absent; summary the derived gist).
  * @param {unknown} markdown
- * @returns {Array<{ version: string, releasedAt: number|null, title: string, body: string }>}
+ * @returns {Array<{ version: string, releasedAt: number|null, title: string, body: string, summary: string }>}
  */
 export function parseChangelogMarkdown(markdown) {
   const lines = String(markdown ?? '').replace(/\r\n?/g, '\n').split('\n');
@@ -122,7 +150,8 @@ export function parseChangelogMarkdown(markdown) {
   let cur = null;
   const flush = () => {
     if (!cur) return;
-    out.push({ version: cur.version, releasedAt: cur.releasedAt, title: cur.version, body: cur.lines.join('\n').trim() });
+    const body = cur.lines.join('\n').trim();
+    out.push({ version: cur.version, releasedAt: cur.releasedAt, title: cur.version, body, summary: summarizeChangelog(body) });
   };
   for (const line of lines) {
     const m = /^##\s+(.+?)\s*$/.exec(line);
@@ -165,11 +194,13 @@ class RateWindow {
 export class CommunityService {
   /**
    * @param {{ db: any, dir?: string|null, now?: () => number, reportLimit?: number, uploadLimit?: number,
-   *   windowMs?: number, maxImageBytes?: number }} opts
+   *   windowMs?: number, maxImageBytes?: number, appVersion?: string }} opts
    */
-  constructor({ db, dir = null, now = Date.now, reportLimit = BUG_REPORT_LIMIT, uploadLimit = BUG_UPLOAD_LIMIT, windowMs = BUG_RATE_WINDOW_MS, maxImageBytes = BUG_IMAGE_MAX_BYTES }) {
+  constructor({ db, dir = null, now = Date.now, reportLimit = BUG_REPORT_LIMIT, uploadLimit = BUG_UPLOAD_LIMIT, windowMs = BUG_RATE_WINDOW_MS, maxImageBytes = BUG_IMAGE_MAX_BYTES, appVersion = APP_VERSION }) {
     this.db = db;
     this.now = now;
+    /** @type {string} the release version a pushed notice's minor version is derived from (major.minor + seq). */
+    this.appVersion = appVersion;
     /** @type {string|null} the uploads directory (`<repo>/var/bug-uploads`), or null in a pure read test. */
     this.dir = dir;
     this.maxImageBytes = maxImageBytes;
@@ -181,9 +212,11 @@ export class CommunityService {
     this._reportStmts = new Map();
     this.q = {
       clogCount: db.prepare('SELECT COUNT(*) AS n FROM changelog'),
-      clogInsert: db.prepare('INSERT INTO changelog (version, released_at, title, body, published, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
-      clogList: db.prepare('SELECT id, version, released_at, title, body FROM changelog WHERE published = 1 ORDER BY released_at DESC, id DESC LIMIT ?'),
-      clogListAll: db.prepare('SELECT id, version, released_at, title, body, published FROM changelog ORDER BY released_at DESC, id DESC LIMIT ?'),
+      clogInsert: db.prepare('INSERT INTO changelog (version, released_at, title, body, summary, source, minor_seq, published, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      clogList: db.prepare('SELECT id, version, released_at, title, body, summary, source, minor_seq FROM changelog WHERE published = 1 ORDER BY released_at DESC, id DESC LIMIT ?'),
+      clogListAll: db.prepare('SELECT id, version, released_at, title, body, summary, source, minor_seq, published FROM changelog ORDER BY released_at DESC, id DESC LIMIT ?'),
+      clogMaxMinor: db.prepare('SELECT MAX(minor_seq) AS n FROM changelog'),
+      clogVersionExists: db.prepare('SELECT 1 AS hit FROM changelog WHERE version = ? LIMIT 1'),
       reportInsert: db.prepare('INSERT INTO bug_reports (title, body, account_id, submitter, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
       reportById: db.prepare('SELECT * FROM bug_reports WHERE id = ?'),
       reportCounts: db.prepare('SELECT status, COUNT(*) AS n FROM bug_reports GROUP BY status'),
@@ -207,28 +240,69 @@ export class CommunityService {
   changelogCount() { return Number(this.q.clogCount.get()?.n || 0); }
 
   /**
-   * The changelog, newest first.
+   * The changelog, newest first. Keep the old fields for compatibility and add `summary` / `source` / `minor_seq`
+   * (docs/MATCHMAKING.md §36.2): a row whose stored summary is empty (a pre-v4 row) gets its gist derived on the fly.
    * @param {{ limit?: number, includeUnpublished?: boolean }} [opts]
-   * @returns {Array<{ id:number, version:string, released_at:number|null, title:string, body:string }>}
+   * @returns {Array<{ id:number, version:string, released_at:number|null, title:string, body:string, summary:string, source:string, minor_seq:number|null }>}
    */
   listChangelog({ limit = CHANGELOG_LIMIT, includeUnpublished = false } = {}) {
     const n = Math.max(1, Math.min(Number(limit) || CHANGELOG_LIMIT, CHANGELOG_LIMIT));
-    return includeUnpublished ? this.q.clogListAll.all(n) : this.q.clogList.all(n);
+    const rows = includeUnpublished ? this.q.clogListAll.all(n) : this.q.clogList.all(n);
+    return rows.map((row) => ({
+      ...row,
+      source: CHANGELOG_SOURCES.includes(row.source) ? row.source : 'release',
+      summary: row.summary || summarizeChangelog(row.body),
+    }));
   }
 
   /**
-   * Add one entry (the seed path and, optionally, the admin page).
-   * @param {{ version: unknown, releasedAt?: number|null, title?: unknown, body?: unknown, published?: boolean }} entry
+   * Add one entry (the seed path, the notice log and, optionally, the admin page).
+   * @param {{ version: unknown, releasedAt?: number|null, title?: unknown, body?: unknown, summary?: unknown,
+   *   source?: string, minorSeq?: number|null, published?: boolean }} entry
    * @returns {{ ok: true, id: number } | { error: string }}
    */
-  addChangelog({ version, releasedAt = null, title, body = '', published = true }) {
+  addChangelog({ version, releasedAt = null, title, body = '', summary = '', source = 'release', minorSeq = null, published = true }) {
     const v = sanitizeText(version);
     const t = sanitizeText(title ?? version);
     const b = sanitizeText(body, { multiline: true });
     if (!v || !t || b.length > CHANGELOG_BODY_MAX) return { error: 'BAD_REPORT' };
     const at = Number.isFinite(releasedAt) ? Number(releasedAt) : null;
-    const r = this.q.clogInsert.run(v, at, t, b, published === false ? 0 : 1, this.now());
+    const s = sanitizeText(summary) || summarizeChangelog(b);
+    const src = CHANGELOG_SOURCES.includes(source) ? source : 'release';
+    const seq = Number.isInteger(minorSeq) && minorSeq > 0 ? minorSeq : null;
+    const r = this.q.clogInsert.run(v, at, t, b, s, src, seq, published === false ? 0 : 1, this.now());
     return { ok: true, id: Number(r.lastInsertRowid) };
+  }
+
+  /**
+   * The next minor version for a pushed notice (docs/MATCHMAKING.md §36.2): `<major>.<minor of APP_VERSION>.<seq>`, where
+   * `seq` is monotonic (the largest `minor_seq` already stored, + 1) and a version a seeded release already uses is
+   * skipped. Existing rows are never renumbered. Returns `{ version, seq }`.
+   * @returns {{ version: string, seq: number }}
+   */
+  _nextMinorVersion() {
+    const base = String(this.appVersion || APP_VERSION).replace(/-.*$/, '').split('.').slice(0, 2).join('.') || '0.0';
+    let seq = Number(this.q.clogMaxMinor.get()?.n || 0) + 1;
+    while (this.q.clogVersionExists.get(`${base}.${seq}`)) seq += 1;
+    return { version: `${base}.${seq}`, seq };
+  }
+
+  /**
+   * Record an operator notice as a MINOR-version changelog entry (docs/MATCHMAKING.md §36.3): every notice pushed from
+   * the admin page (`lobby.broadcastNotice` → `POST /admin/api/notify`) becomes the running 更新日志's next `0.2.N`.
+   * The notice text is both the body and the summary, `source` is `'notice'`, and `released_at` is the push time.
+   * @param {{ text?: unknown, releasedAt?: number|null }} [input]
+   * @returns {{ ok: true, id:number, version:string, minor_seq:number } | { error: string }}
+   */
+  recordNotice({ text, releasedAt = null } = {}) {
+    const b = sanitizeText(text, { multiline: true });
+    if (!b || b.length > CHANGELOG_BODY_MAX) return { error: 'BAD_REPORT' };
+    const { version, seq } = this._nextMinorVersion();
+    const r = this.addChangelog({
+      version, releasedAt: releasedAt ?? this.now(), title: version,
+      body: b, summary: summarizeChangelog(b), source: 'notice', minorSeq: seq,
+    });
+    return r.error ? r : { ok: true, id: r.id, version, minor_seq: seq };
   }
 
   /**

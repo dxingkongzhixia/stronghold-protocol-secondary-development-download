@@ -283,6 +283,10 @@ export const BUG_STATUS_NAMES = Object.freeze({ new: N_('待处理'), triaged: N
 /** The changelog panel shows the newest CHANGELOG_LIMIT versions (seeded once from the repo's CHANGELOG.md). */
 export const CHANGELOG_LIMIT = 50;
 export const CHANGELOG_BODY_MAX = 20000;
+/** The concise gist the changelog panel shows by default — the full `body` stays one tap away (server/community.js). */
+export const CHANGELOG_SUMMARY_MAX = 120;
+/** Where a changelog row came from: a seeded release (CHANGELOG.md) or a pushed operator notice (the minor log). */
+export const CHANGELOG_SOURCES = Object.freeze(['release', 'notice']);
 
 // account roles (accounts.role, server/auth.js): a SHORT one-character badge shown next to the name everywhere it
 // appears — 管 (管理员) / 开 (开发者) — with the full name in the badge's tooltip. `null` = an ordinary account.

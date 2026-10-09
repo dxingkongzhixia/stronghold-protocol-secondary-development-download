@@ -10,7 +10,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 /**
  * `node:sqlite` is experimental and prints an ExperimentalWarning on import; suppress just that one (it is expected).
@@ -105,6 +105,20 @@ function migrate(db) {
       CREATE INDEX idx_bug_uploads_report ON bug_uploads(report_id);
     `);
     db.exec('PRAGMA user_version = 3');
+  }
+  if (v < 4) {
+    // Minor-version notice entries (docs/MATCHMAKING.md §36.2/§36.3, server/community.js): every operator notice pushed
+    // from the admin page (`POST /admin/api/notify` → lobby.broadcastNotice) is ALSO appended to the changelog as the
+    // next minor version, so the 更新日志 panel is the running history.
+    //   * summary   — the concise gist the panel shows by default (the full `body` stays one tap away);
+    //   * source    — 'release' (seeded from CHANGELOG.md) or 'notice' (a pushed notice);
+    //   * minor_seq — the monotonic notice sequence the version is derived from (NULL for a release).
+    db.exec(`
+      ALTER TABLE changelog ADD COLUMN summary   TEXT    NOT NULL DEFAULT '';
+      ALTER TABLE changelog ADD COLUMN source    TEXT    NOT NULL DEFAULT 'release';
+      ALTER TABLE changelog ADD COLUMN minor_seq INTEGER;
+    `);
+    db.exec('PRAGMA user_version = 4');
   }
 }
 

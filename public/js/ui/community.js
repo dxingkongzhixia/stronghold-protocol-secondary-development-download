@@ -1,11 +1,12 @@
 // Lobby community panels (docs/MATCHMAKING.md §36):
 //   · 更新日志  — the persisted changelog (server/community.js), read from GET /community/api/changelog (newest first);
+//                 each entry shows version · date · a one-line summary, with the full body behind a 详情 toggle;
 //   · bug提交   — a player bug report: a title + a description + up to BUG_IMAGES_MAX images. The images upload one by
 //                 one to POST /community/api/bug/upload (raw bytes, magic-byte checked), then the report itself goes over
 //                 the WebSocket (`bug.report`, shared/protocol.js) so it carries the session's account / guest identity.
-//   · 公开房间  — a full-screen directory (screens/rooms.js), not a panel here: the lobby's TOP-BAR 公开房间 button
-//                 (screens/lobby.js, right after the 在线 badge) swaps the screen in for the lobby body.
-// 玩家留言 (the guestbook) is deliberately NOT here: the owner dropped it.
+//   · 公开房间  — a full-screen directory (screens/rooms.js), not a panel here.
+// All four entries (更新日志 / bug提交 / 公开房间) are opened from the lobby's TOP BAR (screens/lobby.js, right after the
+// 在线 badge); the left community column is gone. 玩家留言 (the guestbook) is deliberately NOT here: the owner dropped it.
 //
 // Text goes through t(); module-level tables hold msgids (N_).
 
@@ -15,24 +16,6 @@ import { toast, toastError } from './toasts.js';
 import { net } from '../net.js';
 import { t } from '../../../shared/i18n.js';
 import { BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX, BUG_IMAGE_MAX_BYTES, BUG_IMAGE_MIMES } from '../../../shared/constants.js';
-
-/** The panel ids the left community bar opens (公开房间 moved to the top bar, screens/lobby.js). */
-export const COMMUNITY_PANELS = Object.freeze(['changelog', 'bug']);
-
-/**
- * The lobby's left-side community buttons: 更新日志 / bug提交 (公开房间 is a top-bar entry now).
- * @param {{ onOpen: (panel: string) => void }} props
- */
-export function CommunityBar({ onOpen }) {
-  return html`<div class="lobby-tools">
-    <button type="button" class="lobby-tool" onClick=${() => onOpen('changelog')}>
-      <${Icon} name="book" /><span>${t('更新日志')}</span>
-    </button>
-    <button type="button" class="lobby-tool" onClick=${() => onOpen('bug')}>
-      <${Icon} name="edit" /><span>${t('bug提交')}</span>
-    </button>
-  </div>`;
-}
 
 /** A modal shell shared by the three panels (same chrome as the lobby's 在线 overlay). */
 function Modal({ title, en, onClose, children }) {
@@ -47,7 +30,26 @@ function Modal({ title, en, onClose, children }) {
   </div>`;
 }
 
-/** ① 更新日志: the persisted changelog, newest first (version, date, markdown body as plain text). */
+/** One 更新日志 row: the gist (version · date · summary) by default, the full body behind a 详情 / 收起 toggle. */
+function ChangelogItem({ entry }) {
+  const [open, setOpen] = useState(false);
+  const summary = String(entry.summary || '').trim();
+  const body = String(entry.body || '').trim();
+  // Offer the toggle only when it would reveal more than the gist already shows (a notice is body === summary).
+  const hasMore = !!body && body !== summary;
+  return html`<article class=${`changelog-item${entry.source === 'notice' ? ' is-notice' : ''}`}>
+    <header>
+      <b class="num">${entry.version}</b>
+      <time class="num">${entry.released_at ? new Date(entry.released_at).toISOString().slice(0, 10) : ''}</time>
+    </header>
+    <div class="changelog-summary">${summary}</div>
+    ${open ? html`<div class="changelog-body">${entry.body}</div>` : null}
+    ${hasMore ? html`<button type="button" class="changelog-more" aria-expanded=${open ? 'true' : 'false'}
+      onClick=${() => setOpen((v) => !v)}>${open ? t('收起') : t('详情')}</button>` : null}
+  </article>`;
+}
+
+/** ① 更新日志: the persisted changelog, newest first (version · date · a one-line summary, full body on demand). */
 export function ChangelogOverlay({ onClose }) {
   const [data, setData] = useState(null);
   useEffect(() => {
@@ -59,10 +61,7 @@ export function ChangelogOverlay({ onClose }) {
   const list = (data && Array.isArray(data.changelog) ? data.changelog : []);
   return html`<${Modal} title=${t('更新日志')} en="CHANGELOG" onClose=${onClose}>
     <div class="changelog-list">
-      ${list.length ? list.map((e) => html`<article class="changelog-item" key=${e.id}>
-        <header><b class="num">${e.version}</b><time class="num">${e.released_at ? new Date(e.released_at).toISOString().slice(0, 10) : ''}</time></header>
-        <div class="changelog-body">${e.body}</div>
-      </article>`) : html`<div class="online-modal__empty">${data ? t('暂无更新日志') : t('加载中…')}</div>`}
+      ${list.length ? list.map((e) => html`<${ChangelogItem} key=${e.id} entry=${e} />`) : html`<div class="online-modal__empty">${data ? t('暂无更新日志') : t('加载中…')}</div>`}
     </div>
   <//>`;
 }

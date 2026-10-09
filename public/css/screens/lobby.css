@@ -304,19 +304,22 @@
 .create-vis .tabs { flex: 0 0 auto; border-bottom: 0; }
 
 /* ---- community panels (ui/community.js, docs/MATCHMAKING.md §36): 更新日志 / bug提交 / 公开房间 ------------- */
-.lobby-tools { display: flex; flex-wrap: wrap; gap: .1rem; margin-bottom: .22rem; }
-.lobby-tool { display: inline-flex; align-items: center; gap: .08rem; padding: .1rem .16rem; font-size: .16rem;
-  color: var(--text-lo); background: var(--panel-bg, #101614); border: 1px solid rgba(120, 220, 190, .28);
-  border-radius: .09rem; cursor: pointer; font-family: inherit; transition: border-color .15s, color .15s; }
-.lobby-tool:hover { border-color: var(--mint-400); color: var(--mint-400); }
-.lobby-tool .icon { width: .2rem; height: .2rem; }
+/* The three entries all live in the top bar (screens/lobby.js) and reuse the .online-badge pill, so no left-column
+   .lobby-tools/.lobby-tool rules remain. The changelog row shows a one-line gist with the full body behind 详情. */
 .changelog-list { max-height: 62vh; overflow: auto; padding: .08rem .16rem .18rem; }
 .changelog-item { padding: .14rem 0; border-bottom: 1px dashed rgba(120, 220, 190, .18); }
 .changelog-item:last-child { border-bottom: 0; }
 .changelog-item header { display: flex; align-items: baseline; gap: .14rem; margin-bottom: .06rem; }
 .changelog-item header b { font-size: .22rem; color: var(--mint-400); }
 .changelog-item header time { font-size: .14rem; color: var(--text-lo); }
-.changelog-body { white-space: pre-wrap; word-break: break-word; font-size: .15rem; line-height: 1.6; color: var(--text-lo); }
+/* a notice-pushed minor entry (server/community.js source: 'notice') gets a subtle amber edge, from the theme tokens */
+.changelog-item.is-notice { border-left: .03rem solid var(--amber); padding-left: .14rem; }
+.changelog-summary { font-size: .16rem; line-height: 1.55; color: var(--text-lo); word-break: break-word; }
+.changelog-body { white-space: pre-wrap; word-break: break-word; font-size: .15rem; line-height: 1.6; color: var(--text-lo);
+  margin-top: .08rem; padding-top: .08rem; border-top: 1px dashed rgba(120, 220, 190, .14); }
+.changelog-more { margin-top: .06rem; background: none; border: 0; padding: 0; color: var(--mint-400); font: inherit;
+  font-size: .14rem; cursor: pointer; }
+.changelog-more:hover { text-decoration: underline; }
 .comm-form { display: flex; flex-direction: column; gap: .14rem; padding: .16rem; max-height: 66vh; overflow: auto; }
 .comm-field { display: flex; flex-direction: column; gap: .06rem; }
 .comm-label { display: flex; justify-content: space-between; align-items: baseline; font-size: .15rem; color: var(--text-lo); }

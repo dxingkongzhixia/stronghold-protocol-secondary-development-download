@@ -295,6 +295,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
   border-radius:8px;padding:6px 10px;font:inherit;font-size:13px}
 .notice-row input{width:170px}
 .notice-row .grow{flex:1}
+.notice-note{padding:4px 16px 0;color:var(--dim2);font-size:12px}
 .notice-hist{padding:10px 16px 14px}
 .notice-item{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
 .notice-item:last-child{border-bottom:0}
@@ -360,7 +361,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
   <section class="cards" id="cards"></section>
 
   <section class="panel">
-    <h2>通知<em>推送给在线玩家 · 署名建议 d星空之下</em></h2>
+    <h2>通知<em>推送给在线玩家 · 署名建议 d星空之下 · 每次发送同时记入「更新日志」的下一小版本</em></h2>
     <div class="notice-form">
       <textarea id="noticeText" maxlength="300" placeholder="通知内容（例如：服务器将在 5 分钟后重启更新，请尽快结束当前对局；更新完成后刷新页面即可）"></textarea>
       <div class="notice-row">
@@ -374,6 +375,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
         <span class="pill" id="noticeHint">0/300</span>
         <button class="refresh" id="noticeSend">发送通知</button>
       </div>
+      <div class="notice-note">发送后内容同时作为该条目摘要，记入大厅「更新日志」的下一小版本（如 0.2.1）。</div>
     </div>
     <div class="notice-hist" id="noticeHist"></div>
   </section>
@@ -514,7 +516,8 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
         if (!res.ok) throw new Error((res.j && (res.j.error || res.j.message)) || 'HTTP');
         noticeText.value = '';
         el('noticeHint').textContent = '0/300';
-        el('updated').textContent = '已推送 ' + res.j.sent + ' 人 · ' + new Date().toLocaleTimeString('zh-CN');
+        var ver = res.j.changelog && res.j.changelog.version;
+        el('updated').textContent = '已推送 ' + res.j.sent + ' 人' + (ver ? ' · 记入日志 ' + ver : ' · 日志写入失败（通知已发出）') + ' · ' + new Date().toLocaleTimeString('zh-CN');
         tick();
       })
       .catch(function (e) { el('updated').textContent = '推送失败：' + e.message; })

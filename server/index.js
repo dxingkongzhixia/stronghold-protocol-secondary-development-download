@@ -199,7 +199,9 @@ export async function startServer(opts = {}) {
       if (!body || typeof body !== 'object') { sendJson(req, res, 400, { error: '请求体需要是 JSON' }); return; }
       const r = lobby.broadcastNotice({ text: body.text, sign: body.sign, scope: body.scope });
       if (r.error) { sendJson(req, res, 400, { error: '通知内容为空或过长' }); return; }
-      sendJson(req, res, 200, { ok: true, sent: r.sent, notice: r.notice });
+      // Every notice is also logged as the running 更新日志's next minor version (server/community.js recordNotice),
+      // so report the created version back to the admin page; a failed write leaves `changelog` null, the push stands.
+      sendJson(req, res, 200, { ok: true, sent: r.sent, notice: r.notice, changelog: r.changelog || null });
       return;
     }
     // bug report status (server/community.js): POST { id, status } marks a report 待处理 / 已受理 / 已修复.

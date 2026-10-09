@@ -19,7 +19,7 @@ import { GuideButton } from '../ui/guide.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
 import { AccountDialog } from '../ui/account.js';
-import { CommunityBar, ChangelogOverlay, BugReportOverlay } from '../ui/community.js';
+import { ChangelogOverlay, BugReportOverlay } from '../ui/community.js';
 import { PublicRoomsScreen } from './rooms.js';
 import { net, identity } from '../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref } from '../store.js';
@@ -330,6 +330,12 @@ export function LobbyScreen() {
         <button type="button" class="online-badge lobby-rooms" title=${t('公开房间')} onClick=${() => setShowCommunity('rooms')}>
           <${Icon} name="users" /><span>${t('公开房间')}</span>
         </button>
+        <button type="button" class="online-badge lobby-rooms" title=${t('更新日志')} onClick=${() => setShowCommunity('changelog')}>
+          <${Icon} name="book" /><span>${t('更新日志')}</span>
+        </button>
+        <button type="button" class="online-badge lobby-rooms" title=${t('bug提交')} onClick=${() => setShowCommunity('bug')}>
+          <${Icon} name="edit" /><span>${t('bug提交')}</span>
+        </button>
       </div>
       <div class="topbar__center">
         <${MicroLabel} tone="mint">SIMULATION PROTOCOL SELECT<//>
@@ -353,7 +359,6 @@ export function LobbyScreen() {
 
     <div class="lobby-body screen__scroll">
       <section class="lobby-left">
-        <${CommunityBar} onOpen=${setShowCommunity} />
         <div class="section-label"><span class="section-label__idx num">01</span>${t('模拟方式')}<${MicroLabel}>MODE<//></div>
         <div class="mode-cards">
           ${MODE_CARDS.map((c) => html`<${ModeCard} key=${c.id} card=${c} selected=${roomMode === c.id} onSelect=${pickMode} />`)}

@@ -9,7 +9,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openMemoryDb } from '../server/db.mjs';
 import { AuthService } from '../server/auth.js';
-import { CommunityService, sanitizeText, sniffImageType, parseChangelogMarkdown, bugReportsToCsv, bugReportsExport } from '../server/community.js';
+import { CommunityService, sanitizeText, sniffImageType, parseChangelogMarkdown, summarizeChangelog, bugReportsToCsv, bugReportsExport } from '../server/community.js';
+import { Lobby } from '../server/lobby.js';
+import { SessionRegistry } from '../server/net.js';
 import { validateC2S } from '../shared/protocol.js';
 import { startServer } from '../server/index.js';
 
@@ -31,6 +33,18 @@ test('parseChangelogMarkdown: versions, ISO dates, bodies; a heading without a d
   assert.equal(out[0].title, '0.2.0');
   assert.equal(out[0].body, 'Big release.');
   assert.equal(out[2].body, 'Fix.');
+  assert.equal(out[0].summary, 'Big release.', 'the derived gist is the body when it is a single line');
+  assert.equal(out[1].summary, 'No date here.');
+});
+
+test('summarizeChangelog: first meaningful line, markdown markers stripped, first sentence, trimmed', () => {
+  assert.equal(summarizeChangelog(''), '');
+  assert.equal(summarizeChangelog('   \n\n  '), '');
+  assert.equal(summarizeChangelog('## Head\n\nFirst line.\nmore'), 'First line.');
+  assert.equal(summarizeChangelog('- bullet one\n- bullet two'), 'bullet one');
+  assert.equal(summarizeChangelog('第一条。第二条。'), '第一条。', 'cut at the first Chinese sentence end');
+  assert.equal(summarizeChangelog('a'.repeat(200)).length, 121, 'trimmed to the max + an ellipsis');
+  assert.ok(summarizeChangelog('a'.repeat(200)).endsWith('…'));
 });
 
 test('sanitizeText: control / bidi stripped, single-line collapses spaces, multiline keeps newlines', () => {
@@ -50,11 +64,13 @@ test('sniffImageType: png / jpeg / webp from the bytes; svg, html and short buff
   assert.equal(sniffImageType('not a buffer'), null);
 });
 
-test('db migration v3: the community tables exist', () => {
+test('db migration v4: the community tables + the notice-log columns exist', () => {
   const db = openMemoryDb();
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((r) => r.name);
   for (const t of ['changelog', 'bug_reports', 'bug_uploads']) assert.ok(tables.includes(t), `${t} exists`);
-  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 3);
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 4);
+  const cols = db.prepare('PRAGMA table_info(changelog)').all().map((r) => r.name);
+  for (const c of ['summary', 'source', 'minor_seq']) assert.ok(cols.includes(c), `changelog.${c} exists`);
 });
 
 test('changelog: insert, newest first, published filter, seed once', () => {
@@ -66,6 +82,10 @@ test('changelog: insert, newest first, published filter, seed once', () => {
   assert.deepEqual(svc.listChangelog().map((e) => e.version), ['0.2.0', '0.1.0'], 'newest first, unpublished hidden');
   assert.deepEqual(svc.listChangelog({ includeUnpublished: true }).map((e) => e.version), ['0.3.0', '0.2.0', '0.1.0']);
   assert.equal(svc.addChangelog({ version: '', title: '' }).error, 'BAD_REPORT');
+  const first = svc.listChangelog()[1];
+  assert.equal(first.summary, 'a', 'the gist is derived from the body when none is given');
+  assert.equal(first.source, 'release', 'a seeded row defaults to source release');
+  assert.equal(first.minor_seq, null);
 
   const md = '## 9.9.9 — 2030-01-01\nseed';
   assert.deepEqual(svc.importChangelogMarkdown(md), { ok: true, imported: 0, skipped: true }, 'a non-empty table is not re-seeded');
@@ -73,6 +93,59 @@ test('changelog: insert, newest first, published filter, seed once', () => {
   const fresh = new CommunityService({ db: openMemoryDb() });
   assert.deepEqual(fresh.importChangelogMarkdown(md), { ok: true, imported: 1, skipped: false });
   assert.equal(fresh.listChangelog()[0].version, '9.9.9');
+  assert.equal(fresh.listChangelog()[0].summary, 'seed');
+});
+
+test('recordNotice: a monotonic minor version per notice, derived from APP_VERSION, logged with source notice', () => {
+  let now = 1000;
+  const svc = new CommunityService({ db: openMemoryDb(), now: () => now++, appVersion: '0.2.0' });
+  // a seeded release that happens to sit at 0.2.1 and 0.2.2 must not be overwritten by a notice
+  svc.addChangelog({ version: '0.2.1', releasedAt: 1, title: '0.2.1', body: 'seeded patch release' });
+  svc.addChangelog({ version: '0.2.2', releasedAt: 2, title: '0.2.2', body: 'another seeded' });
+
+  const a = svc.recordNotice({ text: '服务器将在 5 分钟后重启更新' });
+  assert.equal(a.ok, true);
+  assert.equal(a.version, '0.2.3', 'skips the seeded 0.2.1 / 0.2.2');
+  assert.equal(a.minor_seq, 3, 'the counter jumped past the seeded versions, so the next version stays unique');
+
+  const b = svc.recordNotice({ text: '修复了某个问题' });
+  assert.equal(b.version, '0.2.4', 'monotonic +1');
+  assert.equal(b.minor_seq, 4);
+  assert.equal(svc.recordNotice({ text: '   ' }).error, 'BAD_REPORT');
+
+  const list = svc.listChangelog();
+  assert.deepEqual(list.slice(0, 2).map((e) => e.version), ['0.2.4', '0.2.3'], 'newest first');
+  assert.equal(list[0].source, 'notice');
+  assert.equal(list[0].minor_seq, 4);
+  assert.equal(list[0].summary, '修复了某个问题', 'the notice text is its own summary');
+  assert.equal(list[0].body, '修复了某个问题');
+  assert.equal(list.find((e) => e.version === '0.2.1').source, 'release', 'a seeded row keeps source release');
+
+  // an explicit appVersion drives the base: 0.3.x, still monotonic from the stored seq (never renumbered)
+  const svc2 = new CommunityService({ db: openMemoryDb(), now: () => now++, appVersion: '0.3.0' });
+  assert.equal(svc2.recordNotice({ text: 'one' }).version, '0.3.1');
+  assert.equal(svc2.recordNotice({ text: 'two' }).version, '0.3.2');
+});
+
+test('broadcastNotice: a failing changelog write is logged and never stops the push', () => {
+  const registry = new SessionRegistry({ now: () => 0 });
+  const warns = [];
+  const lobby = new Lobby({
+    registry, now: () => 5000,
+    log: { info() {}, warn(m) { warns.push(String(m)); }, error() {}, debug() {} },
+    community: { recordNotice() { throw new Error('disk full'); } },
+  });
+  const doctor = registry.create('Doctor');
+  doctor.connected = true; doctor.accountId = 7;
+  doctor.ws = { readyState: 1, bufferedAmount: 0, sent: [], send(d) { this.sent.push(d); } };
+  const r = lobby.broadcastNotice({ text: '马上重启', sign: 'd星空之下' });
+  assert.equal(r.ok, true);
+  assert.equal(r.sent, 1, 'the push went out');
+  assert.equal(r.changelog, null, 'no version when the write failed');
+  assert.equal(doctor.ws.sent.length, 1, 'the frame reached the player');
+  assert.match(JSON.parse(doctor.ws.sent[0]).text, /马上重启/);
+  assert.ok(warns.some((w) => /notice changelog failed/.test(w)), 'the failure was logged');
+  assert.equal(lobby.notices.length, 1, 'the notice history is unaffected');
 });
 
 test('bug reports: insert / list / status; validation and titles', () => {
@@ -171,6 +244,11 @@ test('HTTP: changelog, upload, bug.report, admin list / status / image', async (
     const clog = await (await fetch(`${base}/community/api/changelog`)).json();
     assert.ok(clog.changelog.length >= 6, `${clog.changelog.length} changelog entries`);
     assert.equal(clog.changelog[0].version, '0.2.0', 'newest first');
+    assert.equal(clog.changelog[0].source, 'release', 'a seeded row is source release');
+    assert.ok(clog.changelog[0].summary && clog.changelog[0].summary.length > 0, 'the seeded row carries a summary');
+    for (const k of ['id', 'version', 'released_at', 'title', 'body', 'summary', 'source']) {
+      assert.ok(k in clog.changelog[0], `the API keeps the ${k} field`);
+    }
 
     // ② an account uploads an image (token header), then the report references it over the lobby handler
     const acc = srv.auth.register('Reporter', 'secret1');
@@ -199,11 +277,29 @@ test('HTTP: changelog, upload, bug.report, admin list / status / image', async (
     const html = await (await fetch(`${base}/admin?token=tok`)).text();
     assert.match(html, /玩家反馈/);
     assert.match(html, /\/admin\/api\/bug\/image\//);
+    assert.match(html, /记入「更新日志」的下一小版本/, 'the notice form hints the changelog entry');
 
     const post = (body) => fetch(`${base}/admin/api/bug/status?token=tok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     assert.equal((await post({ id: st.bugs[0].id, status: 'fixed' })).status, 200);
     assert.equal((await (await fetch(`${base}/admin/api/state?token=tok`)).json()).bugs[0].status, 'fixed');
     assert.equal((await post({ id: st.bugs[0].id, status: 'nope' })).status, 400);
+
+    // ④ an operator notice is pushed AND logged as the next minor changelog entry (docs/MATCHMAKING.md §36)
+    const notify = (body) => fetch(`${base}/admin/api/notify?token=tok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const n = await (await notify({ text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下' })).json();
+    assert.equal(n.ok, true);
+    assert.ok(n.changelog && /^0\.2\.\d+$/.test(n.changelog.version), `the notice is logged as a minor version (${n.changelog && n.changelog.version})`);
+    const after = await (await fetch(`${base}/community/api/changelog`)).json();
+    assert.equal(after.changelog[0].version, n.changelog.version, 'the new entry is newest first');
+    assert.equal(after.changelog[0].source, 'notice');
+    assert.equal(after.changelog[0].summary, '服务器将在 5 分钟后重启更新', 'the notice text is the summary');
+    assert.equal(after.changelog[0].body, '服务器将在 5 分钟后重启更新');
+    const seeded = after.changelog.find((e) => e.version === '0.2.0');
+    assert.equal(seeded.source, 'release', 'the seeded release is untouched');
+    // a second notice takes the next minor version, never reusing one
+    const n2 = await (await notify({ text: '又一条通知' })).json();
+    assert.notEqual(n2.changelog.version, n.changelog.version);
+    assert.ok(n2.changelog.version > n.changelog.version, 'monotonic');
   } finally {
     await srv.close();
     rmSync(dir, { recursive: true, force: true });

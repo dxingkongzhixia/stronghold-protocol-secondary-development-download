@@ -297,7 +297,7 @@ export class Lobby {
    * (newest first, ≤ NOTICE_HISTORY) so the admin page can show what was sent. Deploys / restarts announce themselves
    * this way (docs/MATCHMAKING.md §28), signed `d星空之下`.
    * @param {{ text: string, sign?: string|null, scope?: 'accounts'|'all' }} opts
-   * @returns {{ ok: true, notice: object, sent: number } | { error: string }}
+   * @returns {{ ok: true, notice: object, sent: number, changelog: object|null } | { error: string }}
    */
   broadcastNotice({ text, sign = null, scope = 'accounts' } = {}) {
     const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -320,8 +320,20 @@ export class Lobby {
     }
     this.notices.unshift(notice);
     if (this.notices.length > NOTICE_HISTORY) this.notices.length = NOTICE_HISTORY;
+    // Every pushed notice also becomes the running 更新日志's next minor version (docs/MATCHMAKING.md §36.2/§36.3): this
+    // write must NEVER block or break the broadcast, so a failure is only logged and the push above still stands.
+    let changelog = null;
+    if (this.community && typeof this.community.recordNotice === 'function') {
+      try {
+        const c = this.community.recordNotice({ text: notice.text, releasedAt: at });
+        if (c && c.ok) changelog = { id: c.id, version: c.version, minor_seq: c.minor_seq };
+        else this.log.warn?.(`[lobby] notice changelog skipped: ${c && c.error}`);
+      } catch (e) {
+        this.log.warn?.(`[lobby] notice changelog failed: ${e?.message}`);
+      }
+    }
     this.log.info(`[lobby] notice → ${notice.sent} session(s) (${notice.scope}): ${notice.text.slice(0, 40)}`);
-    return { ok: true, notice, sent: notice.sent };
+    return { ok: true, notice, sent: notice.sent, changelog };
   }
 
   /** Counters for /healthz. */

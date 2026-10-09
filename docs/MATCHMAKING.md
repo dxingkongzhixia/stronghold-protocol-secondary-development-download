@@ -1026,17 +1026,27 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 ### 36.1 存储（server/db.mjs，user_version 3）
 
-- `changelog(id, version, released_at, title, body, published, created_at)` + `idx_changelog_order`；
+- `changelog(id, version, released_at, title, body, published, created_at)` + `idx_changelog_order`；v4 追加 `summary`（默认展示的一行概要）、`source`（`release` 种子 / `notice` 通知）、`minor_seq`（通知条目的单调序号，种子为 NULL）；
 - `bug_reports(id, title, body, account_id→accounts, submitter, status, created_at, updated_at)` + `idx_bug_reports_status`（status: `new` / `triaged` / `fixed`）；
 - `bug_uploads(id, report_id→bug_reports, path, mime, bytes, account_id→accounts, created_at)` + `idx_bug_uploads_report`。
 - 迁移沿用 `PRAGMA user_version`；新的服务类 `CommunityService`（server/community.js）与 `AuthService` 同风格：单句柄、预编译语句、同步方法，测试用 `openMemoryDb()`。
 - bug 报告**只有文字 + 图片**，不附带 seed / replay / room（owner 2026-10-09 修正）。
 
-### 36.2 更新日志（只读 + 一次性导入）
+### 36.2 更新日志（只读 + 一次性导入 + 每次通知记一小版本）
 
-- 首次启动（`changelog` 表为空时）由 `CommunityService.importChangelogMarkdown()` 解析仓库自己的 `CHANGELOG.md` 一次：`## <版本> — <YYYY-MM-DD>` 为一条，body 为到下一个 `##` 的 markdown。表非空时不重复导入。
-- 公开只读接口 `GET /community/api/changelog` → `{ now, changelog: [{ id, version, released_at, title, body }] }`，最新在前（与 `/online/api` 同风格、免令牌）。
-- 客户端 `public/js/ui/community.js` 的 `ChangelogOverlay` 渲染版本 + 日期 + 正文（纯文本，`white-space: pre-wrap`）。管理页的写入入口留作可选（服务端已提供 `addChangelog()`）。
+- 首次启动（`changelog` 表为空时）由 `CommunityService.importChangelogMarkdown()` 解析仓库自己的 `CHANGELOG.md` 一次：`## <版本> — <YYYY-MM-DD>` 为一条，body 为到下一个 `##` 的 markdown（`source: 'release'`）。表非空时不重复导入。
+- **概要**：每条都有一条**一行概要** `summary`（`summarizeChangelog()`：取正文第一条有意义的行，跳过标题行、去掉列表 / 引用前缀，截到第一个句末标点，压平空白并截断到 `CHANGELOG_SUMMARY_MAX` = 120 字，超出加省略号）。种子导入时由正文派生（也接受显式 `summary`）；旧的 v3 行没有该列值，读取时按同一函数即时派生。
+- 公开只读接口 `GET /community/api/changelog` → `{ now, changelog: [{ id, version, released_at, title, body, summary, source, minor_seq }] }`，最新在前（与 `/online/api` 同风格、免令牌）。旧字段（`id / version / released_at / title / body`）保持不变，只是**新增** `summary / source`。
+- 客户端 `public/js/ui/community.js` 的 `ChangelogOverlay` 默认只渲染 **版本 · 日期 · 概要**；一条正文比概要长时带一个「详情 / 收起」toggle（`ChangelogItem` 的局部 state）在原位展开完整正文，**默认不再打印整段多段正文**。「详情」「收起」复用既有 msgid，无需新增语言键。
+- **入口在顶栏**（§36.4）：更新日志 / bug提交 与公开房间一样由 `screens/lobby.js` 的 `.topbar__left` 打开（顺序 返回 · ping · 在线N · 公开房间 · 更新日志 · bug提交）；`ui/community.js` 不再导出 `CommunityBar` / `COMMUNITY_PANELS`，左侧社区列（`.lobby-tools`）已删除，左侧现在从 `01 模拟方式` 开始。三块面板（changelog / bug / rooms）功能不变。
+- 管理页的写入入口留作可选（服务端已提供 `addChangelog()`）。
+
+### 36.2.1 每次推送通知 = 下一小版本（来源 notice）
+
+- owner：「每次小更新推送通知也要记录进来（小版本）」。`Lobby.broadcastNotice()`（§28）在**推送成功之后**调用 `CommunityService.recordNotice()`，把这条通知**追加**为更新日志的一条**小版本**：内容同时作为 `body` 与 `summary`，`released_at` = 推送时间，`source: 'notice'`。
+- **版本号**：`_nextMinorVersion()` = `<APP_VERSION 的 major.minor>.<seq>`（如 `0.2.1`、`0.2.2`…，`package.json` / `shared/constants.js` 的 `APP_VERSION` 为 `0.2.0`）。`seq` = 已存 `minor_seq` 的最大值 + 1（**单调、绝不重编号**）；若算出的版本已被某条种子发布占用，则继续 +1 直到不冲突（`never collide with a seeded release version`）。
+- **失败隔离**：写入包在 try/catch 里（`this.community.recordNotice` 抛错只 `log.warn`），**推送永远先发出、绝不被日志写入阻断或破坏**；返回体带 `changelog: { id, version, minor_seq } | null`。
+- **接口**：`POST /admin/api/notify` 的响应新增 `changelog`（创建的小版本，写入失败为 `null`）；管理页「通知」表单下方提示「发送后……记入大厅「更新日志」的下一小版本」，成功提示里显示「记入日志 0.2.N」。
 
 ### 36.3 bug 提交（文字 + 图片）
 
@@ -1055,7 +1065,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 后续三项（owner 2026-10-09）：①「全都分色」——每个状态都要一眼可辨；②「优先显示人不满的，满的显示观战」；③「位置调一下，放上边，公开房间放在线后边」。
 
 - **界面而非路由**：`public/js/screens/rooms.js` 的 `PublicRoomsScreen`；由 `screens/lobby.js` 在 `showCommunity === 'rooms'` 时**整体替换大厅主体**（同一个 `LobbyScreen`、同一套路由）。这样不新增 `SCREENS` / `selectRoute` 分支，房间恢复（`room.state` 仍会接管路由）与 `?room=` 深链流程完全不动；加入 / 观战仍复用大厅自己的 `join()` / `spectate()` 处理函数（点按钮先关界面、写入密钥再走原路径）。顶栏复用 `.topbar` + `Button` + `MicroLabel`，主体是 `.screen__scroll` 的 `rooms-body`（`public/css/screens/lobby.css` 的 `.rooms-*`，全部用主题令牌，无一次性颜色）。
-- **入口（顶栏，③）**：不在左侧 `CommunityBar`（`public/js/ui/community.js`，现仅剩 更新日志 / bug提交）；改由 `screens/lobby.js` 的 `.topbar__left` 内、**紧接 `<OnlineBadge>` 之后**放一个「公开房间」按钮（`users` 图标，复用 `.online-badge` 观感，小顶栏下仍清晰），顺序为 **返回 · ping · 在线N · 公开房间**，点击同样 `setShowCommunity('rooms')` 打开整屏界面。公开房间界面**自己的**顶栏（返回 / PUBLIC ROOMS / 实时·刷新）保持不变。
+- **入口（顶栏，③）**：三个社区入口都在 `screens/lobby.js` 的 `.topbar__left` 内、**紧接 `<OnlineBadge>` 之后**：**公开房间 · 更新日志 · bug提交**（`users` / `book` / `edit` 图标，均复用 `.online-badge` 观感，小顶栏下仍清晰），顺序为 **返回 · ping · 在线N · 公开房间 · 更新日志 · bug提交**，点击分别 `setShowCommunity('rooms' | 'changelog' | 'bug')`。`ui/community.js` 不再有 `CommunityBar` / `COMMUNITY_PANELS`，大厅左侧社区列（`.lobby-tools`）已删除。公开房间界面**自己的**顶栏（返回 / PUBLIC ROOMS / 实时·刷新）保持不变。
 - **数据**（`server/admin.js buildPublicSnapshot` → `GET /online/api`）：`openRooms`（手建公开同盟 → 组队中）与 `playRooms`（进行中 → 对局中 → 「观战」）每个条目新增 `seats`：按席位顺序的 `MAX_SEATS`（=4）个元素，空席 / 已离开的席位为 `null`，否则 `{ name, role, guest, isBot, isHost }`。**隐私**：只暴露游戏内已经可见的信息（名字 / 身份 / AI / 房主），绝不带 `playerId`、`accountId`、IP 或 token；`guest` 由账号绑定推导，但不暴露绑定本身。旧字段（`code / difficulty / difficultyName / host / hostRole / humans`，及 `playRooms` 的 `bots / auto`）保持不变。
 - **排序 / 满房显示观战（②）**：`openRooms` 现在也包含**大厅已满**（无空席）的公开同盟房，每条新增 `full: <boolean>` 与 `freeSeats`（空席数）。排序为**未满在前、已满在后**，组内保持人数降序（`(a.full - b.full) || (b.humans - a.humans)`），上限仍为 12。`playRooms` 语义不变（已开局 → 观战，上限 4）。客户端 `screens/rooms.js` 的 `roomIsFull()` 用 `full` → `freeSeats` → 席位数判定；组队中区 `01` 的 `openRooms` 未满在前，操作按钮 **有空席＝「加入」、已满＝「观战」**；`02 对局中`（`playRooms`）恒为「观战」。大厅内联的 `PublicAlliances` 密钥 chips **跳过 `full` 房**，因此仍只显示可加入的。
 - **席位方块**：owner 的「4 squares」读作「每房 4 个合作席位各画成一个方块」——占用席位为实心方块（首次字形 = 名字首字，房主金冠、游客角标、AI 角标；用游戏自带的 `AvatarFrame`，空席位即其虚线 `is-empty` 样式），空席位为虚线方块 + 「空席位」。每方块下带截断的名字（`title` 为全名），席位区带 `席位` 无障碍标签。满房照常画出 4 个实心方块。
@@ -1070,7 +1080,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 
 ### 36.6 测试
 
-`test/community.test.js`：markdown 解析、文本清洗、图片嗅探、迁移 v3、增删查、状态、限流、图片落盘 / 归属 / 清理、协议校验、HTTP（公开日志 + 上传 + `bug.report` + 管理列表 / 状态 / 图片）；服务端筛选 / 排序作用于全集（含 >100 行的用例）、`bugReportCounts()`、`bugReportsToCsv` / `bugReportsExport`（BOM / 引号 / 公式前缀 / 字段白名单）与令牌门禁的导出接口 + 管理页控件。
+`test/community.test.js`：markdown 解析、文本清洗、图片嗅探、迁移 v4（表 + `summary / source / minor_seq` 列）、增删查、**概要派生（`summarizeChangelog`）**、**通知→小版本日志（`recordNotice`：单调版本、跳过种子版本、`source: 'notice'`）**、**写入失败不阻断推送（`broadcastNotice`）**、状态、限流、图片落盘 / 归属 / 清理、协议校验、HTTP（公开日志 + 上传 + `bug.report` + 管理列表 / 状态 / 图片 + 通知记日志与 API 形状）；服务端筛选 / 排序作用于全集（含 >100 行的用例）、`bugReportCounts()`、`bugReportsToCsv` / `bugReportsExport`（BOM / 引号 / 公式前缀 / 字段白名单）与令牌门禁的导出接口 + 管理页控件。
 
 ### 36.7 管理页「玩家反馈」面板（筛选 / 排序 / 导出 / 图片放大）
 
