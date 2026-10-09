@@ -141,7 +141,8 @@ function backToLobby() {
   const s = store.get();
   if (s.room || s.match.public) closeAllDialogs();
   store.set({ room: null, match: emptyMatch(), ticker: [], emotes: [] });
-  store.patch('ui', { restoring: false });
+  // also drops a 公开房间 return intent: a closed / kicked / session-reset room is not an intentional 离开同盟.
+  store.patch('ui', { restoring: false, roomsReturn: false });
 }
 
 function onWelcome(msg) {
@@ -191,6 +192,8 @@ function onRoomState(msg) {
     // We are no longer seated (kicked / left elsewhere) — neither in a player seat nor a spectator seat.
     if (store.get().room) toast(t('你已不在该同盟中'), 'warn');
     store.set({ room: null, match: emptyMatch() });
+    // kicked / removed elsewhere — NOT an intentional 离开同盟: never force the 公开房间 view.
+    store.patch('ui', { roomsReturn: false });
     return;
   }
   const prevRoom = store.get().room;
@@ -267,6 +270,7 @@ function wireNet() {
       // 野排: the auto party disbands when the match ends. Drop the room but keep the result on screen — the route
       // stays on the game's settle view, whose button then reads 返回大厅 (no room).
       store.set({ room: null });
+      store.patch('ui', { roomsReturn: false }); // 野排 disbanded by the server, not an intentional leave
       toast(t('野排对局结束，队伍已解散'), 'info');
       return;
     }

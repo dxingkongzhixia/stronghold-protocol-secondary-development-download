@@ -89,7 +89,7 @@ export const initialState = Object.freeze({
   ticker: [],
   emotes: [],
   clock: { offset: 0, rtt: null, synced: false },
-  ui: { pendingJoin: null, restoring: false, buildStale: false },
+  ui: { pendingJoin: null, restoring: false, buildStale: false, roomsReturn: false },
 });
 
 /** The app-wide store singleton. */
@@ -108,6 +108,29 @@ export function selectRoute(s) {
   if (s.room?.inMatch) return 'game'; // match starting: m.public is on its way
   if (s.room) return 'room';
   return 'lobby';
+}
+
+/**
+ * Remember that the room the player is entering was opened from the 公开房间 screen, so that an intentional leave can
+ * return them there instead of the plain lobby (owner 2026-10-09; docs/MATCHMAKING.md §36.4). Transient UI intent
+ * (`ui.roomsReturn`, never persisted): set only by the lobby's 公开房间 加入 / 观战 handlers, consumed once on the next
+ * lobby mount. Cleared on the title, a session reset, a kick / destroyed room or a 野排 disband — never for a manual
+ * 创建 / 密钥 / inline-chip / `?room=` entry.
+ * @param {boolean} on
+ */
+export function setRoomsReturn(on) {
+  store.patch('ui', { roomsReturn: !!on });
+}
+
+/**
+ * Read and clear the 公开房间 return flag in one step (one-shot): the lobby calls this once on mount to reopen the
+ * 公开房间 view; every later call — and any unrelated leave — sees false.
+ * @returns {boolean} whether the 公开房间 view must reopen
+ */
+export function consumeRoomsReturn() {
+  const on = !!store.get().ui.roomsReturn;
+  if (on) store.patch('ui', { roomsReturn: false });
+  return on;
 }
 
 /**

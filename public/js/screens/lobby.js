@@ -22,7 +22,7 @@ import { AccountDialog } from '../ui/account.js';
 import { ChangelogOverlay, BugReportOverlay } from '../ui/community.js';
 import { PublicRoomsScreen } from './rooms.js';
 import { net, identity } from '../net.js';
-import { store, useStore, shallowEqual, loadPref, savePref } from '../store.js';
+import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn } from '../store.js';
 import { getConfig, getMode, getStage, useData } from '../data.js';
 import { t, tc, N_ } from '../../../shared/i18n.js';
 
@@ -141,6 +141,17 @@ export function codeArg(arg, field) {
 }
 
 /**
+ * Whether a room entry initiated from `source` remembers the 公开房间 origin, so an intentional leave returns there
+ * (owner 2026-10-09; docs/MATCHMAKING.md §36.4). ONLY the 公开房间 screen itself passes `'rooms'`: 创建同盟, the 密钥
+ * field, the inline 公开同盟 / 正在模拟 chips and the `?room=` deep link all keep today's plain-lobby behaviour.
+ * @param {string|null|undefined} source
+ * @returns {boolean}
+ */
+export function remembersRoomOrigin(source) {
+  return source === 'rooms';
+}
+
+/**
  * Room code from a deep link query string (`?room=CODE`), or null when absent/malformed.
  * Accepts ROOM_CODE_LEN..ROOM_CODE_LEN+2 alphanumerics (the protocol's join limit).
  * @param {string} search e.g. location.search
@@ -235,8 +246,9 @@ export function LobbyScreen() {
   const mm = useStore((s) => s.mm, shallowEqual);
   const [showAccount, setShowAccount] = useState(false);
   const [showOnline, setShowOnline] = useState(false);
-  // 更新日志 / bug提交 / 公开房间 (ui/community.js): which community panel is open, or null.
-  const [showCommunity, setShowCommunity] = useState(null);
+  // 更新日志 / bug提交 / 公开房间 (ui/community.js): which community panel is open, or null. A pending 公开房间
+  // return (ui.roomsReturn, set by this screen's own 加入 / 观战) opens the rooms view at once — consumed here, once.
+  const [showCommunity, setShowCommunity] = useState(() => (consumeRoomsReturn() ? 'rooms' : null));
   useData('config');
   const [roomMode, setRoomMode] = useState(() => (loadPref('lobby.mode', 'coop') === 'solo' ? 'solo' : 'coop'));
   const [difficulty, setDifficulty] = useState(() => {
@@ -276,36 +288,51 @@ export function LobbyScreen() {
     store.patch('mm', { queued: false, difficulty: null });
     net.request('mm.cancel').catch(() => {});
   };
-  const join = (c = code) => {
+  const join = (c = code, source = null) => {
     // `onClick=${join}` hands the click EVENT as the first argument, and a default parameter only applies to
     // `undefined` — codeArg keeps an event target out of the key and falls back to the input field
     const k = codeArg(c, code);
     if (!k) { toast(t('同盟密钥为 {ROOM_CODE_LEN} 位字母或数字', { ROOM_CODE_LEN }), 'warn'); return; }
-    run('join', () => net.request('room.join', { code: k }));
+    const fromRooms = remembersRoomOrigin(source);
+    run('join', () => {
+      if (fromRooms) setRoomsReturn(true);
+      return net.request('room.join', { code: k }).catch((err) => {
+        // a failed 公开房间 join never entered the room: don't leave the return flag for a later, unrelated leave
+        if (fromRooms) setRoomsReturn(false);
+        throw err;
+      });
+    });
   };
   // a spectator seat: no player seat taken, nothing to do but watch (also a match already running)
-  const spectate = (c = code) => {
+  const spectate = (c = code, source = null) => {
     // same guard as join: `onClick=${spectate}` passes the click event, not a code
     const k = codeArg(c, code);
     if (!k) { toast(t('同盟密钥为 {ROOM_CODE_LEN} 位字母或数字', { ROOM_CODE_LEN }), 'warn'); return; }
-    run('spectate', () => net.request('room.spectate', { code: k }).catch((err) => {
-      // Clearer than the bare ERR_TEXT: the usual cause is a code that is not the host's (a remembered one from an
-      // earlier room, or another machine's) — the server can only answer "no such room".
-      if (err?.code === ERR.ROOM_NOT_FOUND) {
-        toast(t('没有找到密钥 {k} 对应的同盟：请和房主核对密钥（同盟结束后密钥即失效）', { k }), 'warn');
-        return;
-      }
-      if (err?.code === ERR.ALREADY) {
-        toast(t('你已经是该同盟的博士：先离开同盟，才能以观战身份进入'), 'warn');
-        return;
-      }
-      throw err;
-    }));
+    const fromRooms = remembersRoomOrigin(source);
+    run('spectate', () => {
+      if (fromRooms) setRoomsReturn(true);
+      return net.request('room.spectate', { code: k }).catch((err) => {
+        if (fromRooms) setRoomsReturn(false);
+        // Clearer than the bare ERR_TEXT: the usual cause is a code that is not the host's (a remembered one from an
+        // earlier room, or another machine's) — the server can only answer "no such room".
+        if (err?.code === ERR.ROOM_NOT_FOUND) {
+          toast(t('没有找到密钥 {k} 对应的同盟：请和房主核对密钥（同盟结束后密钥即失效）', { k }), 'warn');
+          return;
+        }
+        if (err?.code === ERR.ALREADY) {
+          toast(t('你已经是该同盟的博士：先离开同盟，才能以观战身份进入'), 'warn');
+          return;
+        }
+        throw err;
+      });
+    });
   };
   const backToTitle = () => {
     // Leaving the lobby must not leave the 野排 queue behind: the socket stays open, so without this the server
     // would keep this session in the shared pool (and could match it into a room the player never sees).
     if (mm.queued) mmCancel();
+    // 返回标题 clears the 公开房间 return intent: a later, unrelated room leave must not reopen it.
+    setRoomsReturn(false);
     identity.setEntered(false);
     store.set((s) => ({ session: { ...s.session, entered: false }, mm: { ...s.mm, queued: false, difficulty: null } }));
   };
@@ -316,8 +343,8 @@ export function LobbyScreen() {
   if (showCommunity === 'rooms') {
     return html`<div class="screen lobby-screen">
       <${PublicRoomsScreen} onBack=${() => setShowCommunity(null)}
-        onJoin=${(c) => { setShowCommunity(null); setCode(c); join(c); }}
-        onSpectate=${(c) => { setShowCommunity(null); setCode(c); spectate(c); }} />
+        onJoin=${(c) => { setShowCommunity(null); setCode(c); join(c, 'rooms'); }}
+        onSpectate=${(c) => { setShowCommunity(null); setCode(c); spectate(c, 'rooms'); }} />
     </div>`;
   }
 

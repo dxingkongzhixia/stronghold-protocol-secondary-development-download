@@ -1084,6 +1084,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - **席位方块**：owner 的「4 squares」读作「每房 4 个合作席位各画成一个方块」——占用席位为实心方块（首次字形 = 名字首字，房主金冠、游客角标、AI 角标；用游戏自带的 `AvatarFrame`，空席位即其虚线 `is-empty` 样式），空席位为虚线方块 + 「空席位」。每方块下带截断的名字（`title` 为全名），席位区带 `席位` 无障碍标签。满房照常画出 4 个实心方块。
 - **分色（①）**：全部取自主题令牌（`.rooms-tag.is-open` 薄荷 `--mint-400` / `.is-play` 琥珀 `--amber`，并加同色描边 + 底色；两段区标题 `01 组队中` 薄荷、`02 对局中` 琥珀，序号块与英文 `micro` 同色）。在线玩家浮层的每个状态各有其色（`OnlineOverlay` 的 `ONLINE_STATUS` 映射到 `.online-row__status.is-*`）：在线 `--mint-400` / 组队中 `--ice` / 野排排队 `--gold` / 野排游玩 `--amber` / 同盟游玩 `#b28cff` / 单人游玩 `--tier-3` / 离线 `--text-dim`——`在线`↔`单人游玩`、`野排排队`↔`野排游玩` 不再同色。
 - 客户端每 4 秒轮询 `/online/api`（保留上一次快照、加载态与「暂无公开房间」空态）；房间历史未额外持久化（需求只要求展示）。
+- **公开房间加入后的返回来源（owner 2026-10-09）**：从 公开房间 界面点「加入 / 观战」进入房间时记下来源（store 的 `ui.roomsReturn`，一次性、非持久）。此后**主动离开**（房间等待室的 `room.leave`、对局里的「放弃模拟 / 离开观战」`g.leave` → `room.leave`）回到大厅时，`LobbyScreen` 挂载即重新打开 公开房间 界面并重新轮询 `/online/api`（`consumeRoomsReturn()` 一次性消费并清除）。其它入口——「创建同盟」、密钥输入框、大厅内联的 `公开同盟 / 正在模拟` chips、`?room=` 深链——**不记来源**，离开仍回普通大厅（内联 chips 与 公开房间 界面是两个入口，按普通大厅处理）。若房间**被解散 / 被踢 / 会话重置**（`room.closed`、`onRoomState` 落座检查、`backToLobby`）则清除该标记，**不强行**打开 公开房间——强制行为只绑定「主动离开」；`store.reset()`（返回标题 / 重置）同样清除。来源放在 store 的 `ui.*`（不是随组件卸载丢失的局部 state）；`setRoomsReturn` / `consumeRoomsReturn` 见 `public/js/store.js`。
 
 ### 36.5 安全 / 不变量
 
@@ -1094,6 +1095,8 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 ### 36.6 测试
 
 `test/community.test.js`：markdown 解析、文本清洗、图片嗅探、迁移 v4（表 + `summary / source / minor_seq` 列）、增删查、**概要派生（`summarizeChangelog`）**、**通知→小版本日志（`recordNotice`：单调版本、跳过种子版本、`source: 'notice'`）**、**写入失败不阻断推送（`broadcastNotice`）**、状态、限流、图片落盘 / 归属 / 清理、协议校验、HTTP（公开日志 + 上传 + `bug.report` + 管理列表 / 状态 / 图片 + 通知记日志与 API 形状）；服务端筛选 / 排序作用于全集（含 >100 行的用例）、`bugReportCounts()`、`bugReportsToCsv` / `bugReportsExport`（BOM / 引号 / 公式前缀 / 字段白名单）与令牌门禁的导出接口 + 管理页控件。
+
+`test/ui/rooms.test.js`：公开房间目录的纯数据映射（席位归一 / 满房判定 / 排序）；`test/ui/room-origin.test.js`：公开房间来源标记的生命周期（`ui.roomsReturn` 默认关、公开房间 加入后置位并被大厅消费一次、加入失败清除、`store.reset()` 清除、只有 公开房间 入口置位——`remembersRoomOrigin`）。
 
 ### 36.7 管理页「玩家反馈」面板（筛选 / 排序 / 导出 / 图片放大）
 
