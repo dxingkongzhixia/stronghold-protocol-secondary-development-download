@@ -1006,7 +1006,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 - **报告**：S2 的 医疗单元 命中时**看不出**谁被治疗、谁被伤害 —— 技能自己只画了一对通用的 `aoe`（橙）＋ `healAoe`（绿），都落在一个落点上，红绿混在一起。
 - **官方效果（客户端实证）**：CN 客户端 `battle/prefabs/effects/kalts2.ab` 里 S2 的效果 prefab 是**成对**的：`kalts2_skill_02_range_heal_01` / `_range_damage_01`（1.5 范围域）、`..._indicator_heal_01` / `..._indicator_damage_01`（落点指示）、`..._start_heal_01` / `..._start_damage_01`（命中起手）、`..._trail_heal_01` / `..._trail_damage_01`（弹道尾迹），另有 `kalts2_skill_02_buff_01`（治疗 buff）。颜色取自该 bundle 自带的材质 tint：治疗侧 `char_kalts2_43` 的 `_TintColor` ≈ (0.11, 0.56, 0.04)（**绿**）、伤害侧 `char_kalts2_41` / `char_kalts2_42` 的 `_TintColor` ≈ (0.86, 0.15, 0.15) / (0.75, 0.09, 0.09)（**红**）；绿波贴图 `flow_332*`、红波 `flow_331_2`、绿黑医疗单元 `char_kalts2_01` 也都对得上。该 bundle 的 Texture2D 是**可解析**的（本次用 `tools/local-extract` 的 UnityPy 直接导出了 38 张），即官方效果贴图**在本例中可提取**；`docs/ASSETS.md`「per-character effects 的贴图位于其他 bundle」的旧描述至少对 `kalts2.ab` 不准确。
-- **决策 / 实现**：客户端战斗特效**保持程序化**（`docs/ASSETS.md`：好友端没有本地素材也要看得到），所以**不引入官方贴图**，而是按官方配色**手绘最接近的近似** —— kit 在 `s2Burst` 里对**每个实际受伤的敌人**发一条红 `kalts2Damage`、对**每个实际被治疗的友军**发一条绿 `kalts2Heal`（治疗绿沿用项目既有 `heal` 绿 `0x62f08a`，保持全项目一致）。颜色 / 形状写在 `public/js/render/fx/kinds.js`：`kalts2Damage` = 红 blast r 1.5、`kalts2Heal` = 绿 healAoe r 1.5。
+- **决策 / 实现**：客户端战斗特效**保持程序化**（`docs/ASSETS.md`：好友端没有本地素材也要看得到），所以**不引入官方贴图**，而是按官方配色**手绘最接近的近似** —— kit 在 `s2Burst` 里对**每个实际受伤的敌人**发一条红 `kalts2Damage`、对**每个实际被治疗的友军**发一条绿 `kalts2Heal`（治疗绿沿用项目既有 `heal` 绿 `0x62f08a`，保持全项目一致）。颜色 / 形状写在 `public/js/render/fx/kinds.js`：`kalts2Damage` = 红 blast r 1.5、`kalts2Heal` = 绿 healAoe r 1.5。**（§35.11 取代：现为每次爆发**一颗**红球 / **一颗**绿球，都落在落点；行为与数值不变。）**
 - **文件**：`server/sim/content/kits/ops/chess_char_1052_kalts2-kalts2.js`；`public/js/render/fx/kinds.js`。
 - **测试**：`test/content/chess_kalts2.test.js`（S2 用例新增：角峰拿到 `kalts2Heal`、1.5 内的假人拿到 `kalts2Damage`，后续打飞机时飞机也拿到 `kalts2Damage`）；`test/render/fx-kalts2.test.js`（两个 kind 的 archetype / 颜色 / 半径，以及 `FxSystem` 真的会绘制）。
 - **golden 归属证明**：本改动只进 fx 事件直方图。在**干净工作树**（HEAD ＋ 本改动）重算：只回退本改动 → **零差异**；恢复后恰为 `roster` / `bonds` / `fields` 的 fx 计数差（`aoe` / `healAoe` 减少、`kalts2Damage` / `kalts2Heal` 出现）；`matches` / `diy` / `standins` 不变。全部归因于本改动。
@@ -1020,6 +1020,19 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **契约（`PROJ.drone` 浮游单元）保持程序化**：其贴图位于无法解析的外部 CAB，客户端也没有独立 sprite/spine，**无物可抽**（`render/textures.js` `drone`），如实保留。
 - **测试**：`test/render/fx-local.test.js`（缺本地素材→程序化且不崩、有→本地层取代程序化、列出未加载→本次程序化/下次本地、`localFx:false` 关闭、kalts2 各层在 `fx/kalts2` 组且落盘）；`test/local-extract.test.js`（新增 `fx/kalts2` 任务断言）。
 - **诚实保留**：官方 S2 效果本体是 3D 粒子 + 网格 core（绿/红为**网格材质** color，无独立主贴图），本层用**同一 prefab 引用的官方 flow/ray 贴图**做地面 field 近似，**非逐粒子还原**；`star_118_7` 自身含红/绿两条光线，两层均再套官方 tint；提取依赖各机本地客户端，manifest 为 per-machine（`data/local-assets.json` 不入 git）。
+
+### 35.11 凯尔希·思衡托 S2「医疗单元」改为**每次爆发一颗球**（owner 报告「有大量图片显示」，2026-10-09）
+
+- **报告**：owner 附官方截图指出：S2 施放时**满屏大量特效图片**；官方的 S2 是**每次爆发一颗干净的球** —— 治疗处**绿**、伤害处**红**，落点一颗大球罩住整簇目标。
+- **根因**：§35.9 的实现让 kit 在 `s2Burst` 里**对每个实际受伤的敌人**发一条红 `kalts2Damage`、**对每个实际被治疗的友军**发一条绿 `kalts2Heal`；每个事件是一张 256×256、`scale 1.5` 的贴图（`kinds.js`，组 `fx/kalts2`），密集敌群里就叠成一大摞球。
+- **修法**（`server/sim/content/kits/ops/chess_char_1052_kalts2-kalts2.js` `s2Burst`）：**每次爆发至多一颗红球 + 一颗绿球**，都锚定在**落点**（`target.x, target.y` —— 即 `foesInRadius` / `alliesInRadius` 用的中心）；只有当本次爆发**确有**敌人吃到伤害 / 友军吃到治疗时才各发一条。伤害 / 治疗 / 停顿的行为与数值**一字未动**（伤害数字来自 `render/fx/numbers.js`，不受影响），仅改 fx 事件；敌方目标仍「伤害先、治疗后」，友方目标仍「治疗先、伤害后」。
+- **球的大小**：本地官方层的半径 = `r × layer.scale`（`render/fx/simfx.js` `_fxLocal` → `render/fx/rings.js` `ring`，量出来都是**半径**，不是直径）。`r` = kind 的 `1.5`（＝ S2 命中半径 `S2_RADIUS`）。原来的外层 `flow_331_2` / `flow_332_3` `scale 1.5` → 半径 **2.25**（比命中半径大 50 %）；现改为外层 `scale 1`（半径 **1.5**，**恰好罩住爆发**），内层 `star_118_7` 按原比例 **0.8**（半径 1.2）。程序化兜底本来就是 `r 1.5`（`blast` 的爆炸环 / `healAoe` 的治疗环都是半径 1.5），保持一致；未用逐事件 `r` 覆盖来 hack。
+- **别的 fx 事件排查**：同 kit 的 `shield`（T2 天赋，**每个进门友军**一条）落在**各自身上**、不是同一点堆叠，是「每个受益单位各自的护盾提示」，属于正确反馈，**不动**；`teleport`（S3 落地）/ `disappear`（起飞）/ `takeoff`（部署）本来就是**每次一次**，无 per-unit 问题。
+- **文件**：`server/sim/content/kits/ops/chess_char_1052_kalts2-kalts2.js`；`public/js/render/fx/kinds.js`；测试 `test/content/chess_kalts2.test.js`、`test/render/fx-kalts2.test.js`。
+- **测试**：新增「一次爆发打中多个敌人 / 多个友军 → 仍只有一颗红球 + 一颗绿球，都在落点、不带 `id`」与「一次爆发既没伤害也没治疗 → 一颗都不发（护盾整段吸收 + 1.5 内无友军）」两条；既有 S2 用例改为断言**恰好一条** `kalts2Damage` / `kalts2Heal`（落点在角峰、无 `id`），并断言后续打飞机只**多**一颗红球。
+- **golden 归属证明**：本改动只进 fx 事件直方图。全量 `node tools/golden.mjs` 相对改动前**逐字段枚举**：全部差异只有 `.events.fx`（总计数）与 `.fx.kalts2Damage` / `.fx.kalts2Heal`，**只落在含她的 13 个场次**（`roster-008`/`012`、`bonds` 5、`fields` 5、`matches`、`diy`——见 `golden:update` 后的文件 diff）；`snaps` / `players` / `units` / `enemies` / `hooks` / `errors` / `rngDraws` **零变化** —— 即伤害 / 治疗 / 结果一字未动。`node tools/golden.mjs --update` 只更新这些 fx 计数。
+- **诚实保留**：官方 S2 的 3D 粒子本体仍未使用（沿用 §35.10 的本地贴图近似）；本次只把**事件数量 / 落点 / 尺寸**对齐官方「每次一颗球」的观感，不逐粒子还原。
+
 ## 36. 大厅社区功能：更新日志 / bug 提交 / 公开房间（2026-10-09）
 
 需求（owner）：大厅社区功能「更新日志」「bug提交」「公开房间」（后二者曾同列大厅左侧；见 §36.4 的顶栏调整），数据落 SQLite；「玩家留言」不做（owner 明确放弃）。截图中列出的四个按钮里，玩家留言被删除——本仓库此前的代码里从未实现过它，因此没有可删除的实现，本次只保证不新增（`grep` 与 `git log -S` 均无记录）。

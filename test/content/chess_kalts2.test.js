@@ -312,14 +312,20 @@ test('S2 保护性拒止 (MANUAL, data ACTIVE_RANGE on its y-11: an injured ally
     assert.deepEqual(shot.slice(0, 2).map((c) => [c.name, c.target]), [['heal', yak], ['damaged', e]], `${label(f)}: at an ally — heal first, then the enemy within 1.5`);
     approx(shot[0].amount, u.s.atk * sk.bb['attack@heal_scale'], `${label(f)}: heal ${sk.bb['attack@heal_scale'] * 100} % ATK`);
     approx(shot[1].amount, u.s.atk * sk.bb['attack@atk_scale'], `${label(f)}: ${sk.bb['attack@atk_scale'] * 100} % ATK true`);
-    // the S2 burst is visible both ways: a green heal pulse on 角峰 and a red damage burst on the dummy in the 1.5
+    // the S2 burst is visible both ways, as ONE orb per side at the impact point: a green heal orb and a red damage orb
     const fx1 = h.eventsOf('fx');
-    assert.ok(fx1.some((ev) => ev[1] === 'kalts2Heal' && ev[4]?.id === yak.id), `${label(f)}: a green heal pulse on 角峰`);
-    assert.ok(fx1.some((ev) => ev[1] === 'kalts2Damage' && ev[4]?.id === e.id), `${label(f)}: a red damage burst on the dummy within the 1.5`);
+    const orbs = (kind) => fx1.filter((ev) => ev[1] === kind);
+    assert.equal(orbs('kalts2Heal').length, 1, `${label(f)}: one green heal orb`);
+    assert.equal(orbs('kalts2Damage').length, 1, `${label(f)}: one red damage orb`);
+    for (const ev of [orbs('kalts2Heal')[0], orbs('kalts2Damage')[0]]) {
+      assert.equal(ev[4].id, undefined, `${label(f)}: the orb is not anchored on a unit`);
+      assert.deepEqual([ev[2], ev[3]], [yak.x, yak.y], `${label(f)}: at the burst's impact point (角峰)`);
+    }
     assert.equal(h.hooksOf('statusApplied').filter((c) => c.source === u).length, 0, `${label(f)}: no 停顿 from an ally shot`);
     // an enemy inside the y-11 is the target from now on — a flyer
     const fly = h.spawn('enemy_fly', { pos: [9, 7] });   // 1.0 from 角峰
     const n1 = log.length;
+    const dmgOrbs0 = h.eventsOf('fx').filter((ev) => ev[1] === 'kalts2Damage').length;
     assert.ok(h.runUntil(() => mine(n1).some((c) => c.name === 'damaged'), 4), `${label(f)}: another shot lands (a 医疗单元 in flight)`);
     const burst = mine(n1);
     assert.equal(burst[0].name, 'damaged', `${label(f)}: at an enemy — damage first`);
@@ -327,11 +333,65 @@ test('S2 保护性拒止 (MANUAL, data ACTIVE_RANGE on its y-11: an injured ally
     for (const c of burst.filter((x) => x.name === 'damaged')) assert.deepEqual([c.type, c.dmg.isAttack, c.dmg.isSplash, c.dmg.isSkill], ['true', true, false, true], `${label(f)}: 真实普通伤害`);
     assert.ok(burst.some((c) => c.name === 'heal' && c.target === yak), `${label(f)}: then 角峰 (1.0 away) healed`);
     assert.ok(!burst.some((c) => c.target === e), `${label(f)}: the dummy (2.2 from the flyer) untouched`);
-    assert.ok(h.eventsOf('fx').some((ev) => ev[1] === 'kalts2Damage' && ev[4]?.id === fly.id), `${label(f)}: the flyer takes the red damage burst`);
+    assert.equal(h.eventsOf('fx').filter((ev) => ev[1] === 'kalts2Damage').length, dmgOrbs0 + 1, `${label(f)}: the flyer shot adds ONE red damage orb`);
     const slugs = h.hooksOf('statusApplied').filter((c) => c.source === u && c.status === 'sluggish');
     assert.ok(slugs.length >= 1 && slugs.every((c) => c.duration === 5 && c.target === fly), `${label(f)}: 停顿 5 s on the enemy struck`);
     h.runUntil(() => !u.skill.active, 40);
     assert.deepEqual(u.liveRangeGrid, formOf(tier, elite).rangeGrid, `${label(f)}: back to y-6 after 10 shots`);
+    done(h);
+  }
+});
+
+test('S2 医疗单元 burst reads as ONE orb per side: one red kalts2Damage and one green kalts2Heal per burst, at the impact point, however many units the 1.5 covers (docs/MATCHMAKING.md §35.11)', () => {
+  for (const f of FORMS_ALL) {
+    const [tier, elite] = f;
+    // 凯尔希 (10,4) with S2; the only enemy in her y-11 is (10,7), so the burst centres on it. Three enemies and three
+    // injured allies all sit within the 1.5 of that impact — six affected units, but still ONE orb of each colour.
+    const others = [{ uid: 3, chessId: YAK, row: 10, col: 8 }, { uid: 4, chessId: TEXAS, row: 11, col: 7 }, { uid: 5, chessId: PERFUMER, row: 9, col: 7 }];
+    const { h, u } = field({ tier, elite, skill: 1, others });
+    for (const a of [h.unit(3), h.unit(4), h.unit(5)]) a.hp = a.s.maxHp * 0.3;
+    for (const pos of [[10, 7], [11, 8], [9, 8]]) h.spawn('enemy_dummy', { pos });   // all within 1.5 of (10,7)
+    const fx0 = h.eventsOf('fx').length, h0 = h.hooksOf('heal').length, d0 = h.hooksOf('damaged').length;
+    u.skill.gainSp(999);
+    assert.ok(h.runUntil(() => u.skill.active, 4), `${label(f)}: cast`);
+    assert.ok(h.runUntil(() => u.skill.ammoLeft === 9, 3), `${label(f)}: one shot`);
+    h.run(1.2);   // let the 医疗单元 orb fly and land (the burst happens on impact, not at the attack)
+    const fx = h.eventsOf('fx').slice(fx0);
+    const orbs = (kind) => fx.filter((ev) => ev[1] === kind);
+    const healed = h.hooksOf('heal').slice(h0).filter((c) => c.source === u && !c.opts?.regen && c.amount > 0);
+    const damaged = h.hooksOf('damaged').slice(d0).filter((c) => c.source === u);
+    assert.ok(healed.length >= 2, `${label(f)}: several allies actually healed (${healed.length})`);
+    assert.ok(damaged.length >= 2, `${label(f)}: several enemies actually struck (${damaged.length})`);
+    assert.equal(orbs('kalts2Heal').length, 1, `${label(f)}: ONE green heal orb for the whole burst`);
+    assert.equal(orbs('kalts2Damage').length, 1, `${label(f)}: ONE red damage orb for the whole burst`);
+    const at = (ev) => [ev[2], ev[3]];
+    assert.deepEqual(at(orbs('kalts2Damage')[0]), at(orbs('kalts2Heal')[0]), `${label(f)}: both orbs share the burst's impact point`);
+    assert.deepEqual(at(orbs('kalts2Damage')[0]), [7, 10], `${label(f)}: anchored on the struck enemy (x, y)`);
+    for (const ev of [orbs('kalts2Damage')[0], orbs('kalts2Heal')[0]]) assert.equal(ev[4].id, undefined, `${label(f)}: not anchored on a unit`);
+    for (const c of [...healed, ...damaged]) assert.ok(Math.hypot(7 - c.target.x, 10 - c.target.y) <= 1.5 + 1e-6, `${label(f)}: every affected unit is inside the 1.5`);
+    done(h);
+  }
+});
+
+test('S2 医疗单元 emits no orb when the burst damages and heals no one: a shielded enemy absorbs its one hit whole and no ally lies inside the 1.5', () => {
+  for (const f of FORMS_ALL) {
+    const [tier, elite] = f;
+    // the injured ally that lets her cast sits at (10,5) — in the y-11 but 2.0 from the impact; the only enemy inside the
+    // 1.5, (10,7), carries one shield layer (like 医者丰碑's) that absorbs the burst's single hit whole
+    const others = [{ uid: 3, chessId: YAK, row: 10, col: 5 }];
+    const { h, u } = field({ tier, elite, skill: 1, others });
+    h.unit(3).hp = h.unit(3).s.maxHp * 0.3;
+    const e = h.spawn('enemy_dummy', { pos: [10, 7] });
+    h.b.addBuff(e, { key: 'test:s2shield', shieldHits: 1 });
+    u.skill.gainSp(999);
+    assert.ok(h.runUntil(() => u.skill.active, 4), `${label(f)}: cast (the injured ally in the y-11)`);
+    assert.ok(h.runUntil(() => u.skill.ammoLeft === 9, 3), `${label(f)}: one shot`);
+    h.run(1.2);   // the 医疗单元 orb flies to the enemy and its absorbed hit resolves
+    const fx = h.eventsOf('fx');
+    assert.equal(fx.filter((ev) => ev[1] === 'kalts2Heal').length, 0, `${label(f)}: no green orb — nobody was actually healed`);
+    assert.equal(fx.filter((ev) => ev[1] === 'kalts2Damage').length, 0, `${label(f)}: no red orb — the hit was absorbed whole`);
+    assert.equal(e.findBuff('test:s2shield'), null, `${label(f)}: the shield absorbed the one hit`);
+    assert.ok(e.hp >= e.s.maxHp - 1e-6, `${label(f)}: the enemy took nothing`);
     done(h);
   }
 });

@@ -54,18 +54,23 @@ export const FX_KINDS = Object.freeze({
   coldWind: { a: 'chill', c: 0x9fd4ff },
   // support
   heal: { a: 'heal', c: 0x62f08a }, healAoe: { a: 'healAoe', c: 0x62f08a, r: 1.5 }, bandage: { a: 'heal', c: 0x62f08a }, blessing: { a: 'healAoe', c: 0xfff0a8 },
-  // 凯尔希·思衡托 S2 保护性拒止's 医疗单元 burst, one effect per affected unit (kit chess_char_1052_kalts2-kalts2.js):
-  // GREEN on every ally healed and RED on every enemy struck — the official colours, read from the client's own
-  // material tints in battle/prefabs/effects/kalts2.ab (kalts2_skill_02_range_heal_01 / _range_damage_01). When the
-  // client's local extraction lists the S2 bundle (group fx/kalts2) the official field/ray textures are drawn instead,
-  // tinted the same green / red; without it the procedural ring / explosion below is drawn (docs/ASSETS.md).
+  // 凯尔希·思衡托 S2 保护性拒止's 医疗单元 burst, ONE orb per side per burst (kit chess_char_1052_kalts2-kalts2.js):
+  // one GREEN orb where allies are healed and one RED orb where enemies are struck, anchored on the impact point — the
+  // official colours, read from the client's own material tints in battle/prefabs/effects/kalts2.ab
+  // (kalts2_skill_02_range_heal_01 / _range_damage_01). When the client's local extraction lists the S2 bundle
+  // (group fx/kalts2) the official field/ray textures are drawn instead, tinted the same green / red; without it the
+  // procedural ring / explosion below is drawn (docs/ASSETS.md). The local field radius is `r × layer.scale`
+  // (render/fx/simfx.js `_fxLocal` → render/fx/rings.js `ring`), so the outer flow layer is scale 1 at `r` = 1.5 —
+  // the S2 hit radius (S2_RADIUS) — and the orb spans the burst exactly, like the official field (MATCHMAKING §35.11);
+  // the inner `star_118_7` core keeps the original 0.8 ratio of that field. The procedural tiers below (r: 1.5) already
+  // span the same radius.
   kalts2Heal: {
     a: 'healAoe', c: 0x62f08a, r: 1.5,
-    local: { group: 'fx/kalts2', tint: 0x1c8f09, layers: [{ name: 'flow_332_3', scale: 1.5 }, { name: 'star_118_7', scale: 1.2 }] },
+    local: { group: 'fx/kalts2', tint: 0x1c8f09, layers: [{ name: 'flow_332_3', scale: 1 }, { name: 'star_118_7', scale: 0.8 }] },
   },
   kalts2Damage: {
     a: 'blast', c: 0xe03232, r: 1.5,
-    local: { group: 'fx/kalts2', tint: 0xdc2828, layers: [{ name: 'flow_331_2', scale: 1.5 }, { name: 'star_118_7', scale: 1.2 }] },
+    local: { group: 'fx/kalts2', tint: 0xdc2828, layers: [{ name: 'flow_331_2', scale: 1 }, { name: 'star_118_7', scale: 0.8 }] },
   },
   cleanse: { a: 'healAoe', c: 0xdfffff, r: 0.9 }, revive: { a: 'summon', c: 0xfff0a8 }, reborn: { a: 'summon', c: 0xffd45a }, hpShare: { a: 'heal', c: 0xff9aa6 },
   spGift: { a: 'sp', c: 0x6fd3ff }, spGain: { a: 'sp', c: 0x6fd3ff }, reload: { a: 'sp', c: 0xffe066 },
