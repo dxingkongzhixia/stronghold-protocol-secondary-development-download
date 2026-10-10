@@ -26,7 +26,7 @@
 //   operators, then fires dozens of skills, so they run on their own channel (own gain, settings 干员语音) through
 //   VoiceGate: one line at a time, a global gap, a per-unit per-slot cooldown, and a higher-priority line taking the
 //   channel over — the official scheduling of `audio_data.json battleVoice.voiceTypeOptions` (a tap's 选中 line skips
-//   the gap: VOICE_TAP_SLOTS). Two dubs: 中文 `audio.voice` (default) and 日本語 `audio.voiceJp` (settings 语音语言, not
+//   the gap: VOICE_TAP_SLOTS). Two dubs: 日本語 `audio.voiceJp` (default) and 中文 `audio.voice` (settings 语音语言, not
 //   tied to the interface language; the owner's request of 2026-10-08 「全套的日配语音」) — a JP line the manifest or the
 //   host lacks falls back to the Chinese one (voiceLine).
 // - Battle SFX from `b.ev` tuples (`handleBattleEvents`): at most MAX_VOICES concurrent unit sounds, at most
@@ -294,8 +294,8 @@ export const VOICE_TAP_SLOTS = Object.freeze(['select']);
 /**
  * The line an operator says for a slot, in the chosen dub (settings 语音语言, ui/gameLogic/settings.js VOICE_LANGS):
  * { url, fallback }, or null for an operator no dub voices (the 预备干员 / 原型干员 stand-ins, 盟约·辅助干员, summons)
- * or a slot it lacks. 'cn' draws from `audio.voice`; 'jp' from
- * `audio.voiceJp`, the same slots and file names in the Japanese dub, and falls back to the Chinese line twice over: per
+ * or a slot it lacks. 'jp' (the default) draws from `audio.voiceJp`, the same slots and file names in the Japanese dub;
+ * 'cn' draws from `audio.voice`. The JP dub falls back to the Chinese line twice over: per
  * slot when the JP tree lacks it (a file the fetch could not get is left out of the manifest), and per line at play time
  * — `fallback` is the Chinese file of the same name, played when the host does not have the JP one (a full zip built
  * without the JP dub, before setup downloaded it). A slot with several lines draws one (`random` ∈ [0, 1)).
@@ -306,7 +306,7 @@ export const VOICE_TAP_SLOTS = Object.freeze(['select']);
  * @param {() => number} [random]
  * @returns {{ url: string, fallback: string|null } | null}
  */
-export function voiceLine(audio, charId, slot, lang = 'cn', random = Math.random) {
+export function voiceLine(audio, charId, slot, lang = 'jp', random = Math.random) {
   const lines = (line) => (Array.isArray(line) ? line : [line]).filter((u) => typeof u === 'string' && u);
   const draw = (list) => (list.length ? list[Math.min(list.length - 1, Math.floor(random() * list.length))] : null);
   const cn = lines(audio?.voice?.[charId]?.[slot]);
@@ -514,7 +514,7 @@ export class AudioManager {
     this.voiceGate = new VoiceGate();
     this.voiceNode = null;    // { src, gain, url, token } of the line on air
     this.voiceToken = 0;
-    this.voiceLang = 'cn';    // settings 语音语言: 'cn' (audio.voice) | 'jp' (audio.voiceJp, falling back to audio.voice)
+    this.voiceLang = 'jp';    // settings 语音语言: 'jp' (audio.voiceJp, falling back to audio.voice) | 'cn' (audio.voice)
     this.startVoiceDone = false; // 行动出发 of this field (the first operator deployed says it)
     this.uiVoices = 0;
     this.wantBgm = null;      // desired key (kept while locked)
@@ -656,12 +656,12 @@ export class AudioManager {
   }
 
   /**
-   * The voice dub (settings 语音语言): 'jp' plays `audio.voiceJp`, anything else `audio.voice` (中文, the default). The
+   * The voice dub (settings 语音语言): 'cn' plays `audio.voice`, anything else `audio.voiceJp` (日本語, the default). The
    * line on air finishes in its own dub; the next one follows the setting.
    * @param {string} lang
    */
   setVoiceLang(lang) {
-    this.voiceLang = lang === 'jp' ? 'jp' : 'cn';
+    this.voiceLang = lang === 'cn' ? 'cn' : 'jp';
   }
 
   _applyVolumes() {

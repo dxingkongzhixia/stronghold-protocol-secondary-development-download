@@ -7,13 +7,14 @@ import { DEFAULT_HOTKEYS, sanitizeHotkeys } from './shortcuts.js';
 // ---- settings ------------------------------------------------------------------------------------------------------
 
 /**
- * The operator voice dubs (settings 语音语言): 'cn' 中文 (`audio.voice`, the default) and 'jp' 日本語 (`audio.voiceJp`,
- * falling back to the Chinese line it lacks — public/js/audio.js voiceLine). Not tied to the interface language.
+ * The operator voice dubs (settings 语音语言): 'jp' 日本語 (`audio.voiceJp`, the default — the owner's JP-first rule) and
+ * 'cn' 中文 (`audio.voice`), to which a 日本語 line the manifest or host lacks falls back — public/js/audio.js voiceLine.
+ * Not tied to the interface language.
  */
 export const VOICE_LANGS = Object.freeze(['cn', 'jp']);
 
 /** keys: the in-match shortcuts' key map (ui/gameLogic/shortcuts.js; settings → 快捷键). voiceLang: VOICE_LANGS. */
-export const DEFAULT_SETTINGS = Object.freeze({ bgm: 0.6, sfx: 0.8, voice: 0.8, voiceLang: 'cn', muted: false, damageNumbers: true, quality: 'high', keys: DEFAULT_HOTKEYS });
+export const DEFAULT_SETTINGS = Object.freeze({ bgm: 0.6, sfx: 0.8, voice: 0.8, voiceLang: 'jp', muted: false, damageNumbers: true, quality: 'high', keys: DEFAULT_HOTKEYS });
 const QUALITIES = ['high', 'medium', 'low'];
 
 /**

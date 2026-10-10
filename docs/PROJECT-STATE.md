@@ -61,7 +61,7 @@
 - **弃局房间销毁（2026-10-06，详见 §20）**：合作房间原来会被「断线的真人席位」吊着最多 10 分钟（`activeHumans()` 不算在线状态）。现**一个房间只在还有在线真人时存在**：真人全离线 / 离开后最多 60 s grace 即销毁（观战者收 `room.closed {empty}`）；还有在线真人的派对仍保留掉线席位。solo 房间不受影响（24h 重连）。
 - **保留的战斗/渲染审计修复**：见 §16.6（runner 未送达结果、PMREM RT 释放、纹理存活、裁剪单位衰减、`_pubTimer`、部署退 DP…）。
 - **8 名自造干员**（`tools/build-data.mjs` `CUSTOM_CHESS`；kit 在 `server/sim/content/kits/ops/`；见 `docs/DEVELOPMENT.md` 自造干员表、`docs/MATCHMAKING.md` §23–§34 / §37）：阿斯卡纶 `ascln`、结城理 `makoto`、予愿安洁莉娜 `aglna2`、望 `wang`、澄闪 `gdglow`、娜仁图亚 `narant`、凯尔希·思衡托 `kalts2`、克莱门莎 `clemnt`（6★ 本源近卫，tier 6）。
-- **日语语音（2026-10-10，详见 `docs/UPSTREAM-MERGES.md` §4/§6）**：第二套语音树 `audio.voiceJp`（与中文同一套槽位 / 文件名），「设置 → 语音语言」切 中文 / 日本語（默认中文、与界面语言无关），缺日语时回退中文；完整包带两套配音、精简包不带语音。**我们独有，非上游的打包方式。**
+- **日语语音（2026-10-10，详见 `docs/UPSTREAM-MERGES.md` §4/§6）**：第二套语音树 `audio.voiceJp`（与中文同一套槽位 / 文件名），「设置 → 语音语言」切 中文 / 日本語（**默认日本語**、与界面语言无关，已保存的选择仍优先），缺日语时逐条回退中文；完整包带两套配音、精简包不带语音。**我们独有，非上游的打包方式。**
 - **本地统计页（2026-10-10）**：`public/js/ui/stats.js` + `public/js/screens/stats.js`（记录 / 汇总 / 历史回看；中途立刻退出只进历史不计数）；入口在标题 / 大厅 / 房间。**我们独有。**
 - **feedback6 选择性 + feedback7 R22 / R23（2026-10-09/10）**：见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。要点：官方 **失衡（UNBALANCE）** 与新渲染（`render/drag.js` 拖拽落点、推拉滑动、死亡朝向）、整帧攻击间隔 / 时间技力（1 s = 30 帧）、顶栏胶囊按官方计数、观战席胶囊、设置入口、场地装置说明、空商品栏、统计页，以及一批 GHSIM / OSIM / RENDER / HUD / FIELDS 规则修正；**未并入**「潜能 / 练度」自选界面与上游版克莱门莎（见 §9 与 `docs/UPSTREAM-MERGES.md` §0）。
 - **Gitee 镜像**：git 仓库 `_merge-scratch`（无工作项目 `.git`，仓库是唯一真相）由 `node tools/push-gitee.mjs` 推送 `HEAD` 到 Gitee（`gitee` 远程 → 分支 `master`，快进、绝不强推），再把仓库镜像回工作项目——**单向 store → Gitee → 工作树，绝不用工作树覆盖仓库**（反向同步须显式 `--from-dev`，默认关闭）；约定与凭据见 `docs/AI-WORKFLOW.md` §c。上游仍是 GitHub `origin`。

@@ -1,8 +1,9 @@
 // test/feedback7-voices.test.js — the Japanese voice dub beside the Chinese one (0.2.2; the owner's request of 2026-10-08
 // 「全套的日配语音」): tools/assets/plan.mjs plans `audio.voiceJp` — the same slots and file names from the
 // ArknightsAssets2 `voice/` folder (the JP dub), under audio/voice/jp/ — the committed data/assets.json lists it for every
-// operator the Chinese tree has (checked against public/assets when present), the settings carry 语音语言 (中文 by
-// default, the four language packs translate the row), and tools/package.mjs FULL_ZIP_JP_VOICE decides whether the full
+// operator the Chinese tree has (checked against public/assets when present), the settings carry 语音语言 (日本語 by
+// default — the owner's JP-first rule — with 中文 the fallback; the four language packs translate the row), and
+// tools/package.mjs FULL_ZIP_JP_VOICE decides whether the full
 // zip ships the JP files (default: yes) — held back, they are neither missing nor deleted by a prune.
 // The client's choice of line and its fallback: test/ui/audio.test.js (voiceLine).
 // Run: node --test test/feedback7-voices.test.js
@@ -98,12 +99,13 @@ test('data/assets.json: voiceJp gives every voiced operator the JP twin of each 
   if (fs.existsSync(dir)) for (const u of lines) assert.ok(fs.statSync(path.join(ROOT, 'public', u)).size > 0, u);
 });
 
-test('settings 语音语言: 中文 by default, 日本語 kept, nothing else; the row is translated in every language pack', () => {
+test('settings 语音语言: 日本語 by default, 中文 kept, nothing else; the row is translated in every language pack', () => {
   assert.deepEqual([...VOICE_LANGS], ['cn', 'jp']);
-  assert.equal(DEFAULT_SETTINGS.voiceLang, 'cn', 'not tied to the interface language: 中文 until the player picks 日本語');
-  assert.equal(sanitizeSettings({}).voiceLang, 'cn');
+  assert.equal(DEFAULT_SETTINGS.voiceLang, 'jp', 'not tied to the interface language: 日本語 by default (the owner\'s JP-first rule; 中文 stays the fallback)');
+  assert.equal(sanitizeSettings({}).voiceLang, 'jp');
+  assert.equal(sanitizeSettings({ voiceLang: 'cn' }).voiceLang, 'cn');
   assert.equal(sanitizeSettings({ voiceLang: 'jp' }).voiceLang, 'jp');
-  assert.equal(sanitizeSettings({ voiceLang: 'en' }).voiceLang, 'cn', 'no English / Korean dub');
+  assert.equal(sanitizeSettings({ voiceLang: 'en' }).voiceLang, 'jp', 'no English / Korean dub');
   const ui = fs.readFileSync(path.join(ROOT, 'public/js/ui/settings.js'), 'utf8');
   assert.match(ui, /updateSettings\(\{ voiceLang: id \}\)/);
   assert.match(ui, /const VOICE_LANG_NAMES = \{ cn: '中文', jp: '日本語' \};/, 'each dub named in its own language');

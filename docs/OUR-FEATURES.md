@@ -488,8 +488,8 @@ as files under `var/bug-uploads/`; the database holds paths + metadata only, and
 > it as ours.
 
 **The Japanese voice dub.** A second voice tree beside the Chinese one, selected at 设置 → 语音语言 = 中文 /
-日本語 (default 中文, not tied to the interface language); a JP line the manifest or the host lacks falls back to
-the Chinese one. Files: `audio.voiceJp` wiring in `shared/` / `public/js/audio*` and the asset plan; the full zip
+日本語 (**default 日本語** — the owner's JP-first rule, not tied to the interface language; a stored 中文 choice still
+wins); a JP line the manifest or the host lacks falls back to the Chinese one. Files: `audio.voiceJp` wiring in `shared/` / `public/js/audio*` and the asset plan; the full zip
 ships both dubs via one switch (`tools/package.mjs` `FULL_ZIP_JP_VOICE`), the lite zip stays art-free. This is our
 packaging — upstream's `ddf8c39e` was `SKIP`ped. See [`docs/ASSETS.md`](ASSETS.md) "Voice".
 

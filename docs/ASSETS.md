@@ -225,8 +225,8 @@ All paths are URL paths relative to the site root, for example `/assets/char/ava
     voiceJp: { [charId]: { …the same slots } },
                            // the Japanese dub (audio.voiceJp, the owner's request of 2026-10-08 「全套的日配语音」): the
                            // same slots and file names as `voice`, under audio/voice/jp/ (Voices from the local JP
-                           // client, else ArknightsAssets2 voice/). The 设置 → 语音语言 switch picks `voice` (中文,
-                           // default) or `voiceJp` (日本語, not tied to the interface language); a JP line the manifest
+                           // client, else ArknightsAssets2 voice/). The 设置 → 语音语言 switch picks `voiceJp` (日本語,
+                           // the default) or `voice` (中文, not tied to the interface language); a JP line the manifest
                            // or the host lacks falls back to the Chinese line of the same name (audio.js voiceLine)
     sfx: {
       ui:     { click, back, confirm, tab, pick, drop, error, buy, sell, income, refresh, freeze, levelup,
