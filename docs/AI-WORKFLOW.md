@@ -77,27 +77,67 @@ projectile mapping); do not start it without the owner.
 ## (b) Fork / merge discipline with upstream
 
 The upstream is `origin` (`sganggs/Stronghold-Protocol`); our state lives in `_merge-scratch` on branch `ours`.
-We have already merged through upstream `feedback5` (`docs/MATCHMAKING.md` §33).
+We have merged through upstream `feedback5` (`docs/MATCHMAKING.md` §33), then folded in **feedback6
+(selective)** and **feedback7 (the R22 batch + Group A + the JP voice dub + Group C/R23)** by **selective
+cherry-pick**. The chronological record of every batch — what came in, what was skipped and why, the conflicts,
+the golden movement and the local commits — is [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md); consult it and
+**append a section to it** for every new batch.
 
 Merge procedure:
 
 1. In `_merge-scratch`: the **store is the source of truth** — first make the working project mirror it, so both
    trees agree before the merge (`node tools/push-gitee.mjs --no-push` mirrors store → tree; the `git --work-tree`
    check in `docs/DEVELOPMENT.md` §1 is the same test).
-2. `git fetch origin` (and/or `upstreamm`) then `git merge origin/master`.
+2. `git fetch origin` (and/or `upstreamm`) then `git merge origin/master` for a **full** merge, or — the default for
+   a **feedback batch** — the selective cherry-pick below.
 3. Resolve **hunk-by-hunk, keeping both sides.**
    - **NEVER** `git checkout --theirs` / `git checkout --ours` on a source file. Never blanket-accept a file.
    - Keep our custom content and the upstream's new work together; when a block genuinely conflicts on the same line,
      take our behaviour and fold in the upstream improvement.
-4. Honour the **merge blacklist** (`docs/MATCHMAKING.md` §22):
+4. Honour the **merge blacklist** (`docs/MATCHMAKING.md` §22) and the **永不合并 list**
+   ([`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0):
    - **#149 盟约收起 (foldable bond bar)** — excluded; the bond strip stays permanently shown and centred.
    - **最近的同盟 (recent alliances chips)** — our own removed feature; must not come back.
+   - upstream 克莱门莎 (`2e122873` / `0b0ce4fb` / `ba5b998a`) — we keep our `char_4231_clemnt`.
+   - R21P 满潜 and R22-LOADOUT (潜能 / 练度) — excluded by the owner.
    - Self-check after the merge: `grep -rn "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server`
      and `grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test` must both be empty.
    - `git log -S bondsCollapsed -- public/js/screens/game.js` shows if upstream re-added it.
 5. Run the full `node --test` in the store; only then publish (`node tools/push-gitee.mjs` pushes the store and
    mirrors it back into the working project).
-6. Record the merge in `docs/MATCHMAKING.md` (new section: what came in, what conflicts, what we kept).
+6. Record the merge in [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) (a new `## N.` section) **and** in
+   `docs/MATCHMAKING.md` (what came in, what conflicts, what we kept).
+
+**Selective cherry-pick (the default for a feedback batch — feedback6, feedback7 R22/R23).** Do **not** rebase a
+whole upstream branch onto `ours`. Instead:
+
+1. Fetch upstream; the upstream object database is present locally, so an upstream hash is inspectable with
+   `git show <hash>` even when it hangs off no ref. Write the ordered upstream commit list to a scratch note (the
+   `D:\DOTK\_merge-attrib\all-fb7.txt` pattern: `git log --oneline <base>..<HEAD>`).
+2. **Triage each upstream commit into an area** (`G-*`, `R2x-GHSIM/OSIM/RENDER/HUD/FIELDS/LATE`, `VOICES`, `dober`,
+   `LOADOUT`, …) and mark it:
+   - `OK` — cherry-pick as-is; `OKg` — it moves golden, so it is regenerated in our combine commit;
+   - `SKIP` — not applied, **with the reason** (`SKIP-ALREADY` / `EMPTY`: ours already has it; *our file differs*:
+     the hunk lives in `render/units.js` / `skills.js` / a kit / a test we rewrote; *doc-only leftover*: the code is
+     already ours; *owner-excluded*: LOADOUT / the dobermann extras).
+   Record the triage in a scratch note (`apply-log.txt` pattern) before touching `ours`.
+3. Work in an **isolated throwaway worktree** (`git worktree add --detach <tmp> HEAD`) with `node_modules` and
+   `.cache` **junctioned** from the store and the git-ignored `data/local-assets.json` copied from the dev tree, so
+   the full suite (and the asset/package tests) run honestly; `cmd /c rmdir` the junctions afterwards — never delete
+   through them.
+4. **Cherry-pick the `OK`/`OKg` set onto `ours`, preserving the author and the subject**, adapting to the fork where
+   the tree differs (our `Math.hypot` not upstream's `detmath.js`, our `teammateProgress`, our test files, our
+   packaging). One commit per upstream commit is the target; the adaptation (`test/docs: adapt … to our fork`) and
+   the goldens go in their own commits.
+5. **Golden attribution proof first, regenerate second** (see the rule below). Never hand-edit golden and never
+   loosen an engine guard.
+6. **Preserve everything in [`docs/OUR-FEATURES.md`](OUR-FEATURES.md)** — in particular §7 (the lobby-community
+   surface: `server/community.js`, the rooms screen, the chat) and §8 (the post-0.3.0 surface: the JP voice
+   `audio.voiceJp`, the stats page, `render/drag.js`, the 失衡 / R23 timing constants). A hunk that would drop one
+   of these is a stop-and-ask item.
+7. Bump the version and write the [`CHANGELOG.md`](../CHANGELOG.md) entry (see `test/version.test.js`), then push
+   via the **one-way helper** `node tools/push-gitee.mjs` (store → Gitee → dev tree; never the reverse without
+   `--from-dev`) and **byte-verify the dev tree mirror**.
 
 **Golden attribution rule.** Any `test/golden/*.json` change must be proven to come from your change and nothing else:
 revert **only** your change (keep everything else) → `node tools/golden.mjs` must show **zero** diff; restore your

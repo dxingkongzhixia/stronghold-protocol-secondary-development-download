@@ -1,13 +1,13 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后更新：2026-10-09**。
+> 给「新会话 / 新接手的人」看的一页纸。**最后更新：2026-10-10**。
 > 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§37）。
 
 ---
 
 ## 1. 这是什么
 「卫戍协议：盟约」的非官方同人**网页联机复刻**：Node 服务器 + 浏览器客户端，1–4 人合作塔防。
-基线是**官方上游**（`sganggs/Stronghold-Protocol`；已合并到 **feedback5**，含 **v0.2.0** + i18n，见 `docs/MATCHMAKING.md` §33），
+基线是**官方上游**（`sganggs/Stronghold-Protocol`；已合并到 **feedback5**（含 **v0.2.0** + i18n，`docs/MATCHMAKING.md` §33），并选择性并入 **feedback6** 与 **feedback7 的 R22 / R23** 两批——完整记录见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)），
 本项目在它之上加了：账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、**大厅社区（更新日志 / bug提交 / 公开房间）**、
 启动体验与带宽治理、**8 名自造干员**（见 §4；`tools/build-data.mjs` 的 `CUSTOM_CHESS`）与 Gitee 镜像（§4 / §9）。
 
@@ -24,7 +24,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.3.0`；`build` 见 `/healthz` |
+| 版本 | `app 0.4.0`；`build` 见 `/healthz` |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -61,6 +61,9 @@
 - **弃局房间销毁（2026-10-06，详见 §20）**：合作房间原来会被「断线的真人席位」吊着最多 10 分钟（`activeHumans()` 不算在线状态）。现**一个房间只在还有在线真人时存在**：真人全离线 / 离开后最多 60 s grace 即销毁（观战者收 `room.closed {empty}`）；还有在线真人的派对仍保留掉线席位。solo 房间不受影响（24h 重连）。
 - **保留的战斗/渲染审计修复**：见 §16.6（runner 未送达结果、PMREM RT 释放、纹理存活、裁剪单位衰减、`_pubTimer`、部署退 DP…）。
 - **8 名自造干员**（`tools/build-data.mjs` `CUSTOM_CHESS`；kit 在 `server/sim/content/kits/ops/`；见 `docs/DEVELOPMENT.md` 自造干员表、`docs/MATCHMAKING.md` §23–§34 / §37）：阿斯卡纶 `ascln`、结城理 `makoto`、予愿安洁莉娜 `aglna2`、望 `wang`、澄闪 `gdglow`、娜仁图亚 `narant`、凯尔希·思衡托 `kalts2`、克莱门莎 `clemnt`（6★ 本源近卫，tier 6）。
+- **日语语音（2026-10-10，详见 `docs/UPSTREAM-MERGES.md` §4/§6）**：第二套语音树 `audio.voiceJp`（与中文同一套槽位 / 文件名），「设置 → 语音语言」切 中文 / 日本語（默认中文、与界面语言无关），缺日语时回退中文；完整包带两套配音、精简包不带语音。**我们独有，非上游的打包方式。**
+- **本地统计页（2026-10-10）**：`public/js/ui/stats.js` + `public/js/screens/stats.js`（记录 / 汇总 / 历史回看；中途立刻退出只进历史不计数）；入口在标题 / 大厅 / 房间。**我们独有。**
+- **feedback6 选择性 + feedback7 R22 / R23（2026-10-09/10）**：见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。要点：官方 **失衡（UNBALANCE）** 与新渲染（`render/drag.js` 拖拽落点、推拉滑动、死亡朝向）、整帧攻击间隔 / 时间技力（1 s = 30 帧）、顶栏胶囊按官方计数、观战席胶囊、设置入口、场地装置说明、空商品栏、统计页，以及一批 GHSIM / OSIM / RENDER / HUD / FIELDS 规则修正；**未并入**「潜能 / 练度」自选界面与上游版克莱门莎（见 §9 与 `docs/UPSTREAM-MERGES.md` §0）。
 - **Gitee 镜像**：git 仓库 `_merge-scratch`（无工作项目 `.git`，仓库是唯一真相）由 `node tools/push-gitee.mjs` 推送 `HEAD` 到 Gitee（`gitee` 远程 → 分支 `master`，快进、绝不强推），再把仓库镜像回工作项目——**单向 store → Gitee → 工作树，绝不用工作树覆盖仓库**（反向同步须显式 `--from-dev`，默认关闭）；约定与凭据见 `docs/AI-WORKFLOW.md` §c。上游仍是 GitHub `origin`。
 
 ## 5. 环境开关 / 常量
@@ -101,11 +104,12 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - [ ] B 站宣传视频：见 §10 产物。
 
 ## 9. 与上游的关系 / 下次怎么合并
-- 上游：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（`763e224`，§15）与 **feedback5 / v0.2.0**（`1303321`，合并提交 `e3bd9de`，§33）；本仓库版本 `0.3.0`（在大厅社区 + 克莱门莎之前是 `0.2.0`）。
-- 合并方式：在 `_merge-scratch`（分支 `ours` = 我们的状态）里 `git fetch origin && git merge origin/master`，
-  解冲突（思路见 `docs/MATCHMAKING.md` §15、黑名单 §22、纪律见 `docs/AI-WORKFLOW.md` §b）→ 临时目录跑全量测试 → 才拷回工作项目。
+- 上游：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（`763e224`，§15）、**feedback5 / v0.2.0**（`1303321`，合并提交 `e3bd9de`，§33），并**选择性**并入 **feedback6**（R21A / R21E×3 / R21H / R21D）与 **feedback7 的 R22 / R23** 两批（含 Group A、日语语音、Group C / R23）；本仓库版本 `0.4.0`（上一版 `0.3.0` 是大厅社区 + 克莱门莎）。**逐批的完整记录（上游提交范围 / HEAD、取用的提交、跳过的提交与原因、冲突、golden 变动、本地提交）见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)**；「永不合并」清单也在那里（§0）。
+- 合并方式（**选择性 cherry-pick**，不再只做大合并）：在临时 worktree（junction 进 `node_modules` / `.cache`）里按 `all-fb<N>.txt` 列出的上游提交逐个 triage（`OK` / `OKg` / `SKIP` + 原因），把 `OK` 的提交 **保留作者与提交信息** cherry-pick 到 `ours` 并适配本分支；golden 先做**归属证明**再在专门提交里重算（见 `docs/AI-WORKFLOW.md` §b）；跑全量 `node --test` 后才推。大合并仍走 `git merge origin/master` + 逐块解冲突。
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
-  `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`。
+  `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
+  `tools/build-data.mjs`（`CUSTOM_CHESS`）。
+- **本批的整体检查（HEAD 隔离 worktree）**：`node --test` **5806 项 / 5795 通过 / 0 失败 / 11 跳过**（带 `.git` 且复制了 `data/local-assets.json`，`package.test.js` 与两条素材测试均通过）；`node tools/kit-coverage.mjs --missing` **307/307 技能、120/120 棋子**；`node tools/i18n.mjs check en --strict` **1266/1266（0 缺失 0 错误）**；`node tools/doctor.mjs` **退出码 0**（仅防火墙规则提示）；`node tools/build-data.mjs --offline` 与 `data/` **逐字节一致**；工作项目相对 store HEAD **无跟踪漂移**；`gitee/master` == `HEAD`。
 
 ## 10. 产物
 - 文档：本文件、`docs/MATCHMAKING.md`（§0–§17 菜单）、`docs/DEPLOY.md`（上游的部署说明）。

@@ -1209,3 +1209,31 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - `public/css/screens/room.css`（`.room-chat` / `.seat__chat` / `.cbubble`）、`public/css/screens/game.css`（`.gm-chat` / `.team__chat`）
 - 测试：`test/lobby-chat.test.js`（协议 / 长度 / 限流 / 广播范围 / 无历史 / 局内 / 不入库）、`test/ui/chat.test.js`（归一化 + 气泡生命周期）
 - i18n（四语包）：`聊天` / `发送` / `说点什么…` / `已发送过快，请稍候` / `发言内容无效`
+
+## 39. 上游 feedback6 / feedback7 合并且「永不合并」清单（2026-10-09/10）
+
+本节是**索引**：合并的完整、逐批记录（上游提交范围 / HEAD、取用的提交、**跳过的提交与原因**、冲突与解法、每批的 golden 变动、产生的本地提交）统一写在 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。此后**每并入一批都在那里新增一节**；本节只留决策与清单。
+
+### 39.1 合并方式（选择性 cherry-pick）
+
+- 不整分支 rebase：按上游提交逐一 triage（`OK` / `OKg`（会动 golden）/ `SKIP` + 原因），把 `OK` 的提交**保留作者与提交信息** cherry-pick 到 `ours`，再适配本分支；golden 先做**归属证明**、再在专门提交里重算（`docs/AI-WORKFLOW.md` §b）。
+- 逐批：**feedback5**（整分支合并 `e3bd9de7`，§33）→ **feedback6 选择性**（R21A / R21E×3 / R21H / R21D，跳 R21B（本分支已有）/ R21C / R21F / R21G / R21P）→ **0.3.0**（我们的功能版，§36–§38）→ **Group A**（上游战斗修复）→ **feedback7 R22 批**（G-TOOLS / G-UI / G-SMALL / stats / UIBACK / GHSIM / OSIM / RENDER / HUD / FIELDS / LATE / VOICES / dober + 失衡 / 推拉滑动）→ **Group C / R23**（R23-TOAST / R23-TICK / R23-DRAGSNAP）。
+- 适配落在我们文件的地方（`render/units.js`、`skills.js`、某个 kit、某个测试、打包）以**本分支实现为准**，上游对应提交记为 `SKIP`（原因见 UPSTREAM-MERGES §4）。
+
+### 39.2 永不合并（owner 排除）
+
+| 项 | 上游证据 | 说明 |
+|---|---|---|
+| **#149 盟约收起**（可折叠盟约条） | upstream `bondsCollapsed` / `bonds-toggle` / `gm__bond-list` / `match-bond-strip` | 盟约条**永久显示并居中**；见 §22。 |
+| **最近的同盟**（recent-alliance chips） | 我们已下架的自有功能 | 不得回归；见 §22。 |
+| **上游版克莱门莎（Clementia）** | `2e122873` / `0b0ce4fb` / `ba5b998a` | **保留我们的 `char_4231_clemnt`**（§37）；不取上游的官方数据版本。 |
+| **R21P 满潜** | `806a0477` / 合并 `b05845f5` | 不采用「全员满潜能」；本分支自有权能规则。 |
+| **R22-LOADOUT（潜能 / 练度）** | `7e09c63d`、`ec0a2fc6`、`96d9441f`、`7a0937e3`、`519f04e2`、`dc336f24`、`8e2b981e`、`4f8f5d2a`、`9f36db32`、`4d63e9d5`、`66297106` | **owner 排除**「干员调配」里每名干员的潜能 / 练度自选界面；本批未并入。 |
+
+### 39.3 本批保留的决断（要点）
+
+- **失衡（UNBALANCE）+ 推 / 拉滑动**：按官方在位移时间内禁锢（不走动 / 不普攻），静态刚体 0.1 s 下限，客户端滑动用同一段游戏时间；见 UPSTREAM-MERGES §4、`docs/SIM.md`（位移 / 失衡）。
+- **整帧攻击间隔 / 时间技力**：整帧数取整整那么多帧（1 s = 30 帧），引擎与客户端显示常量同步。
+- **日语语音**：新增 `audio.voiceJp` 与 设置 → 语音语言（我们独有的打包方式）；见 `docs/ASSETS.md`。
+- **顶栏胶囊**：`已解决 = 击杀 + 漏怪`（只数本回合排定敌人）。
+- **数据可复现**：`node tools/build-data.mjs --offline` 后 `git status` 为空（`data/enemies.json` 的漂移已修）。

@@ -13,6 +13,7 @@ import { CommunityService, sanitizeText, sniffImageType, parseChangelogMarkdown,
 import { Lobby } from '../server/lobby.js';
 import { SessionRegistry } from '../server/net.js';
 import { validateC2S } from '../shared/protocol.js';
+import { APP_VERSION } from '../shared/constants.js';
 import { startServer } from '../server/index.js';
 
 const png = (n = 16) => Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(n)]);
@@ -243,7 +244,7 @@ test('HTTP: changelog, upload, bug.report, admin list / status / image', async (
     // ① the changelog seeded once from CHANGELOG.md (token-free)
     const clog = await (await fetch(`${base}/community/api/changelog`)).json();
     assert.ok(clog.changelog.length >= 6, `${clog.changelog.length} changelog entries`);
-    assert.equal(clog.changelog[0].version, '0.3.0', 'newest first');
+    assert.equal(clog.changelog[0].version, APP_VERSION, 'newest first (the current release)');
     assert.equal(clog.changelog[0].source, 'release', 'a seeded row is source release');
     assert.ok(clog.changelog[0].summary && clog.changelog[0].summary.length > 0, 'the seeded row carries a summary');
     for (const k of ['id', 'version', 'released_at', 'title', 'body', 'summary', 'source']) {
@@ -288,7 +289,8 @@ test('HTTP: changelog, upload, bug.report, admin list / status / image', async (
     const notify = (body) => fetch(`${base}/admin/api/notify?token=tok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const n = await (await notify({ text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下' })).json();
     assert.equal(n.ok, true);
-    assert.ok(n.changelog && /^0\.3\.\d+$/.test(n.changelog.version), `the notice is logged as a minor version (${n.changelog && n.changelog.version})`);
+    const mm = APP_VERSION.split(/[.-]/).slice(0, 2).join('\\.');
+    assert.ok(n.changelog && new RegExp(`^${mm}\\.\\d+$`).test(n.changelog.version), `the notice is logged as a minor version (${n.changelog && n.changelog.version})`);
     const after = await (await fetch(`${base}/community/api/changelog`)).json();
     assert.equal(after.changelog[0].version, n.changelog.version, 'the new entry is newest first');
     assert.equal(after.changelog[0].source, 'notice');

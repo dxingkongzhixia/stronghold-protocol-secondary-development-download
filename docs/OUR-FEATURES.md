@@ -478,3 +478,60 @@ as files under `var/bug-uploads/`; the database holds paths + metadata only, and
 |---|---|
 | Lobby community | `server/community.js`; `server/db.mjs` (schema v3 / v4); `server/lobby.js` `bugReport` + `broadcastNotice` → `recordNotice`; `server/index.js` `/community/api/*` + `/admin/api/bug/*`; `server/admin.js` (`buildPublicSnapshot` `seats` / `full` / `freeSeats`, the 「玩家反馈」panel + export); `public/js/ui/community.js`; `public/js/screens/rooms.js`; `public/js/screens/lobby.js` (顶栏入口 + `consumeRoomsReturn`); `public/js/store.js` (`ui.roomsReturn` / `setRoomsReturn` / `consumeRoomsReturn`); `public/css/screens/lobby.css` (`.rooms-*`); `test/community.test.js`; `test/ui/rooms.test.js`; `test/ui/room-origin.test.js` |
 | Room text chat (等待室 + 局内, 临时气泡) | `shared/constants.js` (`CHAT_MAX` / `CHAT_RATE_WINDOW_MS` / `CHAT_RATE_LIMIT` / `CHAT_BUBBLE_MS`, `ERR.BAD_CHAT`); `shared/protocol.js` (`room.chat` C2S, `m.chat` S2C); `server/lobby.js` (`chat()`); `server/http/config.js` (`chatRate*` options); `public/js/ui/chat.js` (`chatMessage` / `activeChatBubbles` / `ChatBubble` / `ChatComposer` / `ChatDock`); `public/js/screens/room.js` (seat + spectator bubbles, `.room-chat` composer); `public/js/screens/game.js` (`ChatDock`, spec-dock bubbles); `public/js/ui/teamPanel.js` (row bubble); `public/js/main.js` (`m.chat`); `public/js/store.js` (`chat` events); `public/css/screens/room.css` (`.room-chat` / `.seat__chat` / `.cbubble`); `public/css/screens/game.css` (`.gm-chat` / `.team__chat`); `test/lobby-chat.test.js`; `test/ui/chat.test.js` |
+
+## 8. Post-0.3.0 surface from the feedback7 merge (R22 / R23)
+
+> **我们独有 / 合并时不得丢失** — the pieces below were produced by the selective feedback6 / feedback7 merge
+> (see [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)). Where an upstream commit was `SKIP`ped because our file
+> differs, the fork's implementation is the one that must survive — not upstream's. Where a feature is a
+> player-facing *fork* choice (the JP voice switch, the stats page, the drag-snap rule, the capsule count), treat
+> it as ours.
+
+**The Japanese voice dub.** A second voice tree beside the Chinese one, selected at 设置 → 语音语言 = 中文 /
+日本語 (default 中文, not tied to the interface language); a JP line the manifest or the host lacks falls back to
+the Chinese one. Files: `audio.voiceJp` wiring in `shared/` / `public/js/audio*` and the asset plan; the full zip
+ships both dubs via one switch (`tools/package.mjs` `FULL_ZIP_JP_VOICE`), the lite zip stays art-free. This is our
+packaging — upstream's `ddf8c39e` was `SKIP`ped. See [`docs/ASSETS.md`](ASSETS.md) "Voice".
+
+**The local statistics page.** `public/js/ui/stats.js` (record store: bounded, corrupt-data tolerant, the "left
+right away does not count" rule, replay dedupe) + `public/js/screens/stats.js` (+ `public/css/screens/stats.css`);
+entries on the title / lobby / room screens; `test/ui` stats suites pin it. Fork-only.
+
+**The drag-snap rule (R23-DRAGSNAP).** `public/js/render/drag.js` (`dragStandTile`, `DRAG_HOLD_TILES`): a dragged
+operator stands on the tile under the pointer while it is a legal target (a board tile or a bench slot) and is held
+under the pointer elsewhere; the pick / highlight / tileHover / wheel / drop all stay the pointer's tile. The
+pointer tile also drives the unit-tap UX pinned in `test/docs-consistency.test.js`.
+
+**失衡 (UNBALANCE) + the push/pull slide (R22-UNBAL / R22-RENDER).** The engine holds a pushed / pulled enemy for
+the push's 位移时间 or the pull's force window (no walking / normal attack; a static body gets the 0.1 s floor);
+`server/sim/battle/displacement.js` + the render slide (`public/js/render/units.js`, the sample anchoring in
+`interp.js`) take the same game time; enemy facing is preserved through the slide. The slide + UNBAL stack lives in
+`ours` as `20ae5ac2` → `5f78eb63` → `453a4e81` → `6e71870d` → `c59aab17` → `5616d9b7` (see UPSTREAM-MERGES §4/§7).
+
+**R23 whole-frame timing.** `shared/` / `server/sim/constants.js`: an attack interval or a time-SP cost of a whole
+number of frames takes exactly that many (1 s = 30 frames, not 31). The engine constants and the
+`gameLogic` display constants must stay in step (the pre-merge value was the 31-frame round).
+
+**Interface pieces to keep.** The 观战席 capsule + host remove-spectator (`ui/combatHud.js`, the server already
+accepts `room.removeSpectator` mid-match); the 设置 entry in the lobby / room (`ui/settings.js` `SettingsButton`);
+准备就绪 folding the shop (`gameLogic` `readyShopFold`); the device-tooltip card (阻隔工事 / 双眼皮 / 射击台 /
+源石流发生装置); the EMPTY new shop slot after a 调度中心 upgrade (`EmptyCard`, `scard--sold` inert); the
+top-bar capsule's `resolved` count (killed + leaked among the round's scheduled enemies, with
+`inTotal` / `killedInTotal` / `leakedInTotal` on the snapshot / result / `m.public progress`).
+
+**Data.** `data/enemies.json` must stay reproducible: `node tools/build-data.mjs --offline` then `git status` is
+empty (rebuilt in `2cab8b6b` / `f26a4837` after the 克莱门莎 cache merge left a one-line drift).
+
+| Area | Files that must survive the merge |
+|---|---|
+| Japanese voice | the `audio.voiceJp` wiring (`shared/` + `public/js/`), the 设置 → 语音语言 switch, `tools/package.mjs` (`FULL_ZIP_JP_VOICE`); [`docs/ASSETS.md`](ASSETS.md) "Voice" |
+| Local stats page | `public/js/ui/stats.js`; `public/js/screens/stats.js`; `public/css/screens/stats.css`; the title / lobby / room entries; the `test/ui` stats suites |
+| Drag snap | `public/js/render/drag.js` (`dragStandTile` / `DRAG_HOLD_TILES`); `test/docs-consistency.test.js` (the pointer-tile UX) |
+| 失衡 / slide | `server/sim/battle/displacement.js`; `public/js/render/units.js`; `public/js/render/interp.js`; `test/sim/unbalance.test.js`; `test/sim/displace-fx.test.js`; `test/render/unitview.test.js` |
+| R23 timing | the whole-frame attack-interval / SP constants (`server/sim/constants.js`, `shared/`) and the `gameLogic` display constants |
+| Interface | `ui/combatHud.js` (观战席 + capsule); `ui/settings.js` (`SettingsButton`); `gameLogic` `readyShopFold`; the device-tooltip card; the empty-shop-slot `EmptyCard`; the capsule `resolved` fields |
+| Data | `data/enemies.json` (offline byte-for-byte); `data/*.json` reproduced by `node tools/build-data.mjs --offline` |
+
+During an upstream merge, resolve hunk-by-hunk keeping both sides; a change that would drop one of these is a
+**stop-and-ask-`d星空之下`** item ([`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (e)). The per-batch skip reasons (which
+upstream commit was *not* taken and why) are in [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §4.
