@@ -19,6 +19,12 @@ function cssBody(file, selector) {
   while ((m = re.exec(src))) if (m[1].trim() === selector) return m[2];
   return '';
 }
+/** Body of an `@keyframes <name>` block (comments stripped). */
+function keyframesBody(file, name) {
+  const src = readFileSync(path.join(CSS_DIR, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const m = src.match(new RegExp(`@keyframes\\s+${name}\\s*\\{([\\s\\S]*?)\\n\\}`));
+  return m ? m[1] : '';
+}
 
 test('chatMessage: normalises a wire message, rejects unusable input, coerces every field', () => {
   assert.deepEqual(chatMessage({ from: 'p_1', name: 'Host', text: '你好' }, 7, 1234), { seq: 7, from: 'p_1', name: 'Host', text: '你好', at: 1234 });
@@ -92,15 +98,22 @@ test('chat dock toggle: collapsed by default, and the last state is remembered (
   }
 });
 
-test('bubble placement + no-scroll CSS: above the waiting seat, beside the in-match row, never scrollable', () => {
-  // waiting room: the bubble floats ABOVE the seat card (in the empty strip), never over its own header / name
+test('bubble placement + no-scroll + no-motion CSS: above and centred on the waiting seat, centred on the in-match row', () => {
+  // waiting room: the bubble floats ABOVE the seat card, HORIZONTALLY CENTRED on it; never over its own header / name
   const seat = cssBody('room.css', '.seat__chat');
   assert.match(seat, /bottom:\s*calc\(100%\s*\+/, 'anchored above the card');
   assert.doesNotMatch(seat, /(?:^|;)\s*top\s*:/, 'never anchored to the card top (would overlap the header)');
-  // in match: absolutely placed to the RIGHT of the sender's row, out of flow (never pushes the board)
+  assert.match(seat, /justify-content:\s*center/, 'horizontally centred on its card');
+  // in match: absolutely placed to the RIGHT of the sender's row and vertically centred on it, out of flow
   const team = cssBody('game.css', '.team__chat');
-  assert.match(team, /position:\s*absolute/, 'out of flow');
+  assert.match(team, /position:\s*absolute/, 'out of flow: never pushes the board');
   assert.match(team, /left:\s*calc\(100%/, 'anchored to the side of the row');
+  assert.match(team, /top:\s*50%/, 'vertical centre of the row');
+  assert.match(team, /translateY\(-50%\)/, 'the static centring transform (not an animation)');
+  // no movement: the appear/disappear is a plain opacity fade, no transform / translate / scale / rotate
+  const kf = keyframesBody('room.css', 'cbubble-life');
+  assert.match(kf, /opacity/, 'a fade is present');
+  assert.doesNotMatch(kf, /transform|translate|scale|rotate/i, 'no motion in the bubble keyframes');
   // a long message wraps and is clamped instead of scrolling; the bubble hides overflow, never auto|scroll
   const bubble = cssBody('room.css', '.cbubble');
   assert.match(bubble, /overflow:\s*hidden/, 'no scrollbar on the bubble');

@@ -343,8 +343,9 @@
 .chat-send__input:disabled { opacity: .55; }
 .chat-send__hint { flex-basis: 100%; font-size: .13rem; }
 
-/* speech bubble: pops in, holds, fades; the CSS runs exactly for --chat-ttl (a remount resumes at --chat-age).
-   Auto-sizes and WRAPS, and NEVER scrolls: a very long message is clamped (line-clamp) instead of overflowing. */
+/* speech bubble: fades in, holds, fades out — FADE ONLY, no transform / slide / pop / scale. The CSS runs exactly for
+   --chat-ttl (a remount resumes at --chat-age). Auto-sizes and WRAPS, and NEVER scrolls: a very long message is
+   clamped (line-clamp) instead of overflowing. */
 .cbubble {
   --chat-ttl: 5000ms;
   --chat-age: 0ms;
@@ -368,7 +369,7 @@
   animation-delay: calc(-1 * var(--chat-age));
   pointer-events: none;
 }
-.cbubble::after { /* tail pointing down, toward the sender */
+.cbubble::after { /* tail pointing down, toward the sender (static position, not an animation) */
   content: '';
   position: absolute;
   left: 50%;
@@ -381,14 +382,15 @@
 .cbubble__name { display: block; font-size: .12rem; color: var(--text-lo); font-weight: 700; }
 .cbubble.is-own { border-color: var(--mint-700); }
 .cbubble.is-own .cbubble__text { color: var(--mint-400); }
+/* opacity only: the bubble simply appears at its final anchored position and disappears after the TTL */
 @keyframes cbubble-life {
-  0% { opacity: 0; transform: translateY(.08rem); }
-  8% { opacity: 1; transform: translateY(0); }
+  0% { opacity: 0; }
+  8% { opacity: 1; }
   80% { opacity: 1; }
   100% { opacity: 0; }
 }
-/* waiting room: the bubble floats ABOVE the sender's seat card (in the empty strip above P1–P4), never over the card's
-   own header / name / content. The card's four bubbles line up in a row; the tail points down at the card. */
+/* waiting room: the bubble floats ABOVE the sender's seat card (in the empty strip above P1–P4), HORIZONTALLY CENTRED
+   on that card so it obviously belongs to the card beneath it; the tail points down at the card. */
 .seat__chat { position: absolute; left: 0; right: 0; bottom: calc(100% + .08rem); z-index: 5; display: flex; justify-content: center; overflow: visible; pointer-events: none; }
-/* a spectator has no seat: the bubble rides their row in the 观战席 dropdown (no scrollbar) */
+/* a spectator has no seat: the bubble rides their row in the 观战席 dropdown (aligned to the end of the row, no scroll) */
 .specdock__chat { flex: 1; display: flex; justify-content: flex-end; overflow: visible; }
