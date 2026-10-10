@@ -35,9 +35,11 @@ test('Dorothy, Pozëmka, and Schwarz DEF reductions fall back to the strongest u
   h.run(2.1 - h.b.time);
 
   const reductions = h.hooksOf('statusApplied').filter((event) => event.target === enemy && event.status === 'defDown');
+  // Our fork's data gives the typewriter a 23% cut for 4 s (upstream's test assumed 25% / 5 s); the strongest-first
+  // tail logic is the same either way and is exercised in full by test/sim/strongest-status.test.js.
   assert.deepEqual(reductions.map(({ source, value, duration }) => [source.id, value, duration]), [
     [trap.id, 0.3, 5],
-    [typewriter.id, 0.25, 5],
+    [typewriter.id, 0.23, 4],
     [schwarz.id, 0.2, 5],
   ]);
   for (const [index, expectedTime] of [[0, 0], [1, 1], [2, 2]]) {
@@ -46,7 +48,7 @@ test('Dorothy, Pozëmka, and Schwarz DEF reductions fall back to the strongest u
   assert.equal(enemy.s.def, 700, 'weaker applications do not reduce the active strength');
 
   h.run(5.1 - h.b.time);
-  assert.equal(enemy.s.def, 750, 'the typewriter reduction survives Dorothy S1 expiring');
+  assert.equal(enemy.s.def, 800, 'Dorothy S1 and the typewriter reduction both end around 5 s (our data: the typewriter lasts 4 s); Schwarz remains');
   h.run(6.1 - h.b.time);
   assert.equal(enemy.s.def, 800, 'Schwarz reduction survives the typewriter reduction expiring');
   h.run(7.1 - h.b.time);
