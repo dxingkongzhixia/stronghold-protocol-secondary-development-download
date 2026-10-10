@@ -16,7 +16,7 @@ import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_S
 import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, doctorNo, Tabs, RoleTag } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { GuideButton } from '../ui/guide.js';
-import { openStats } from './stats.js';
+import { openStats, openPlayerStats } from './stats.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
 import { AccountDialog } from '../ui/account.js';
@@ -576,13 +576,24 @@ function OnlineOverlay({ onClose }) {
       </div>
       <div class="online-modal__meta"><span><i class="online-dot"></i>${t('实时')}</span><span>${t('游客')} ${data ? data.counts.guests : '—'}</span><span>${t('每 4 秒刷新')}</span></div>
       <div class="online-modal__list">
-        ${list.length ? list.map((p, i) => html`<div class="online-row" key=${`${p.name}-${i}`}>
+        ${list.length ? list.map((p, i) => {
+          // a registered player's row opens their public match records (server/stats.js stats.view); guests have no
+          // account-bound identity others can key on, so their row stays a plain row
+          const viewable = !p.guest && typeof p.name === 'string' && p.name.length > 0;
+          const open = viewable ? () => { onClose(); openPlayerStats(p.name); } : undefined;
+          return html`<div class=${`online-row${viewable ? ' is-viewable' : ''}`} key=${`${p.name}-${i}`}
+            role=${viewable ? 'button' : undefined} tabIndex=${viewable ? 0 : undefined}
+            title=${viewable ? t('查看其对局记录') : undefined}
+            onClick=${viewable ? open : undefined}
+            onKeyDown=${viewable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } } : undefined}>
           <${AvatarFrame} size="sm" name=${p.name} seat=${i} offline=${p.status === 'offline'} />
           <span class="online-row__name">${p.name}<${RoleTag} role=${p.role} /></span>
           ${p.guest ? html`<span class="online-row__tag">${t('游客')}</span>` : html`<span class="online-row__tag is-acc">${t('已登录')}</span>`}
           <span class=${`online-row__status is-${st(p.status).c}`}>${t(st(p.status).label)}</span>
           <span class="online-row__room num">${p.roomCode || '—'}</span>
-        </div>`) : html`<div class="online-modal__empty">${data ? t('暂无在线玩家') : t('加载中…')}</div>`}
+          ${viewable ? html`<span class="online-row__go" aria-hidden="true"><${Icon} name="chevronRight" /></span>` : null}
+        </div>`;
+        }) : html`<div class="online-modal__empty">${data ? t('暂无在线玩家') : t('加载中…')}</div>`}
       </div>
     </div>
   </div>`;

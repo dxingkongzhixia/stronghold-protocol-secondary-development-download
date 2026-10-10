@@ -53,7 +53,8 @@ import { GuideHost } from './ui/guide.js';
 import { installDeviceSupport } from './ui/device.js';
 import { LoadoutHost } from './screens/loadout.js';
 import { StatsHost } from './screens/stats.js';
-import { recordResult, installStatsRecorder } from './ui/stats.js';
+import { recordResult, installStatsRecorder, setStatsUploader } from './ui/stats.js';
+import { installStatsSync } from './ui/statsSync.js';
 import { installLoadoutSync, installOwnershipSync, installDiySync } from './ui/loadoutSync.js';
 import { startBuildGuard } from './ui/buildGuard.js';
 import { initLang, useLang, tickerText } from './ui/lang.js';
@@ -564,6 +565,10 @@ async function boot() {
 
   wireNet();
   installStatsRecorder(store); // follows the match on screen, so a 放弃模拟 can be recorded (ui/stats.js)
+  // Match records are also submitted to the server (ui/statsSync.js, docs/MATCHMAKING.md §39): every stored record,
+  // the local backlog on a `welcome`, and the backlog again once logged in.
+  const statsSync = installStatsSync({ net });
+  setStatsUploader(() => { void statsSync.flush(); });
   installLoadoutSync({ net });
   installOwnershipSync({ net });
   installDiySync({ net });

@@ -30,6 +30,8 @@ import {
   loadStats, saveStats, emptyStats, importStats, exportStats, aggregateStats, countsTowardStats, selfRowOf, roundsOf,
   recordToResult, MAX_RECORDS, FULL_KEEP, IMPORT_MAX_CHARS,
 } from '../ui/stats.js';
+import { fetchStats, clearServerStats, flushStats } from '../ui/statsSync.js';
+import { net } from '../../net.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
@@ -37,16 +39,24 @@ const cx = (...p) => p.flat().filter(Boolean).join(' ');
 /** Rows of 对局记录 shown at first and added by each 显示更多. */
 export const HISTORY_PAGE = 50;
 
-const statsStore = createStore({ open: false, tab: 'overview' });
+const statsStore = createStore({ open: false, tab: 'overview', view: null });
 
 /** Open the stats viewer (title screen / lobby / room entry points). */
 export function openStats() {
   data.load('config');
   data.load('bands');
   data.load('assets');
-  statsStore.set({ open: true, tab: 'overview' });
+  statsStore.set({ open: true, tab: 'overview', view: null });
 }
-export const closeStats = () => statsStore.set({ open: false });
+/** Open another ONLINE player's public record list (the 在线 overlay; server/stats.js stats.view). @param {string} name */
+export function openPlayerStats(name) {
+  if (typeof name !== 'string' || !name) return;
+  data.load('config');
+  data.load('bands');
+  data.load('assets');
+  statsStore.set({ open: true, tab: 'history', view: name });
+}
+export const closeStats = () => statsStore.set({ open: false, view: null });
 
 const TABS = [
   { id: 'overview', name: N_('总览'), micro: 'OVERVIEW' },
@@ -246,10 +256,15 @@ function Replay({ rec, onBack }) {
 }
 
 /** The overlay, rendered while open (its data hooks run only then). */
-function StatsScreen({ tab }) {
+function StatsScreen({ tab, view }) {
   const ready = useData('config', 'bands', 'assets');
   const gd = useMemo(() => makeLookups(ready), [ready, data.locale()]);
-  const [stats, setStats] = useState(() => loadStats());
+  const [local, setLocal] = useState(() => loadStats());
+  // The server's own answer (stats.list / stats.view): the page reads from the server in both cases (account or
+  // guest), and falls back to localStorage only when the socket is down.
+  const [remote, setRemote] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [retry, setRetry] = useState(0);
   const [replay, setReplay] = useState(null);
   const boxRef = useRef(null);
   const fileRef = useRef(null);
@@ -257,6 +272,11 @@ function StatsScreen({ tab }) {
   replayRef.current = replay;
   const inMatch = useStore((s) => selectRoute(s) === 'game');
   useDocClass('sp-stats-open');
+
+  const viewing = typeof view === 'string' && view.length ? view : null;
+  const readOnly = !!viewing;
+  const records = remote ? remote.records : (readOnly ? [] : local.records);
+  const viewerName = remote?.owner?.name || viewing;
 
   // a match starting (the host pressed 开始) takes the player to its briefing: the overlay must not sit on top of it
   useEffect(() => { if (inMatch) closeStats(); }, [inMatch]);
@@ -270,13 +290,33 @@ function StatsScreen({ tab }) {
     const timer = setTimeout(() => boxRef.current?.focus?.(), 30);
     return () => { window.removeEventListener('keydown', onKey, true); clearTimeout(timer); };
   }, []);
+  // read from the server when the overlay opens, and again on every (re)connect
+  useEffect(() => {
+    const off = typeof net?.on === 'function' ? net.on('welcome', () => setRetry((n) => n + 1)) : null;
+    return () => off?.();
+  }, []);
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    (async () => {
+      try {
+        const r = await fetchStats(net, { name: viewing });
+        if (alive) setRemote(r);
+      } catch {
+        if (alive) setRemote(null); // offline / refused: the own view falls back to localStorage, another view is empty
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [viewing, retry]);
 
-  const agg = useMemo(() => aggregateStats(stats.records), [stats]);
-  const reload = () => setStats(loadStats());
+  const agg = useMemo(() => aggregateStats(records), [records]);
+  const reload = () => { setLocal(loadStats()); setRetry((n) => n + 1); };
 
   const doExport = () => {
     try {
-      const payload = exportStats(stats);
+      const payload = exportStats({ records });
       downloadText(exportFilename(), JSON.stringify(payload));
       toast(t('已导出 {n} 条对局记录', { n: payload.records.length }), 'success');
     } catch (err) {
@@ -292,6 +332,7 @@ function StatsScreen({ tab }) {
       const raw = JSON.parse(await readFileText(file));
       const { stats: merged, added, skipped, dropped } = importStats(raw, loadStats());
       if (added && !saveStats(merged)) { toast(t('无法写入本机存储，可能已满'), 'error'); return; }
+      if (added) void flushStats(net); // the imported matches are submitted like any other (deduped server-side)
       reload();
       const tail = (skipped ? t('（跳过重复 {skipped} 条）', { skipped }) : '') + (dropped ? t('（{n} 条无法读取）', { n: dropped }) : '');
       toast(added ? t('已导入 {added} 条记录{tail}', { added, tail }) : t('没有新记录（全部与现有数据重复）'), 'success');
@@ -302,12 +343,15 @@ function StatsScreen({ tab }) {
   const doClear = async () => {
     const ok = await confirmDialog({
       title: t('清空统计数据'), micro: 'CLEAR STATISTICS', danger: true, okText: t('清空'),
-      text: t('将删除本机保存的 {n} 条对局记录，无法恢复。', { n: stats.records.length }),
+      text: t('将删除服务器与本机保存的 {n} 条对局记录，无法恢复。', { n: records.length }),
     });
     if (!ok) return;
+    let server = true;
+    try { await clearServerStats(net); } catch { server = false; } // offline: the local copy still goes
     if (!saveStats(emptyStats())) { try { globalThis.localStorage?.removeItem('sp.pref.stats'); } catch { /* ignore */ } }
-    reload();
-    toast(t('已清空本机统计数据'), 'success');
+    setLocal(loadStats());
+    setRemote(remote ? { ...remote, records: [] } : null);
+    toast(server ? t('已清空对局记录') : t('已清空本机记录（服务器暂时无法连接）'), 'success');
   };
 
   if (replay) return html`<div class="st st--replay" ref=${boxRef} tabindex="-1" role="dialog" aria-modal="true" aria-label=${t('统计数据')}>
@@ -315,7 +359,8 @@ function StatsScreen({ tab }) {
   </div>`;
 
   const tabInfo = TABS.find((x) => x.id === tab) || TABS[0];
-  const empty = !stats.records.length;
+  const empty = !records.length;
+  const showLocalNotes = !readOnly && !remote;
   return html`<div class="st" role="dialog" aria-modal="true" aria-label=${t('统计数据')} tabindex="-1" ref=${boxRef}>
     <div class="st__bg" aria-hidden="true"></div>
     <header class="st-top">
@@ -330,31 +375,36 @@ function StatsScreen({ tab }) {
         </div>
       </div>
       <div class="st-top__right">
-        <${Button} variant="ghost" size="sm" data-testid="stats-export" disabled=${empty || stats.newer} onClick=${doExport} title=${t('导出为文件（可在别的设备上导入）')}>${t('导出')}<//>
-        <${Button} variant="ghost" size="sm" data-testid="stats-import" disabled=${stats.newer} onClick=${() => fileRef.current?.click()} title=${t('从导出的文件导入（与现有记录合并）')}>${t('导入')}<//>
+        ${readOnly ? null : html`<${Button} variant="ghost" size="sm" data-testid="stats-export" disabled=${empty || local.newer} onClick=${doExport} title=${t('导出为文件（可在别的设备上导入）')}>${t('导出')}<//>
+        <${Button} variant="ghost" size="sm" data-testid="stats-import" disabled=${local.newer} onClick=${() => fileRef.current?.click()} title=${t('从导出的文件导入（与现有记录合并）')}>${t('导入')}<//>
         <input ref=${fileRef} type="file" accept="application/json,.json" hidden onChange=${doFile} />
-        <${Button} variant="secondary" size="sm" data-testid="stats-clear" disabled=${empty || stats.newer} onClick=${doClear} title=${t('清空本机的统计数据')}>${t('清空')}<//>
+        <${Button} variant="secondary" size="sm" data-testid="stats-clear" disabled=${empty || local.newer} onClick=${doClear} title=${t('清空对局记录（服务器与本机）')}>${t('清空')}<//>`}
       </div>
     </header>
-    <p class="st-note"><${Icon} name="info" />${t('本机数据：只保存在这个浏览器里，不会上传到服务器；同盟对局里队友的代号也会存在本机（导出文件里也有）。')}</p>
-    ${stats.damaged ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('本机保存的统计数据无法读取，已另存为备份，从现在起重新记录。')}</p>` : null}
-    ${stats.dropped ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('有 {n} 条记录已损坏，已忽略。', { n: stats.dropped })}</p>` : null}
+    ${readOnly
+      ? html`<p class="st-note"><${Icon} name="info" />${t('正在查看 {name} 的公开对局记录（仅在线玩家的游戏内数据，不含账号信息）。', { name: viewerName || '' })}</p>`
+      : html`<p class="st-note"><${Icon} name="info" />${t('对局记录会同步到服务器，并与你的身份绑定：登录后归入账号（可在其他设备查看），游客则绑定本机游客身份。在线玩家之间可以查看彼此的公开对局数据，其中不含账号信息；同盟对局里队友的代号也会一并保存。')}</p>`}
+    ${showLocalNotes && local.damaged ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('本机保存的统计数据无法读取，已另存为备份，从现在起重新记录。')}</p>` : null}
+    ${showLocalNotes && local.dropped ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('有 {n} 条记录已损坏，已忽略。', { n: local.dropped })}</p>` : null}
     <main class="st-body" data-tab=${tab}>
       ${!ready ? html`<div class="st-loading"><${Spinner} size="md" /></div>`
-        : stats.newer ? html`<p class="st-empty">${t('检测到更新版本的统计数据，请先升级客户端再查看，以免覆盖数据。')}</p>`
-          : empty ? html`<p class="st-empty">${t('还没有记录 —— 完成一局对局后，这里会开始积累。')}</p>`
-            : tab === 'bands' ? html`<${Bands} agg=${agg} gd=${gd} />`
-              : tab === 'totals' ? html`<${CombatSums} agg=${agg} />`
-                : tab === 'history' ? html`<${History} records=${stats.records} gd=${gd} onOpen=${setReplay} />`
-                  : html`<${Overview} agg=${agg} gd=${gd} />`}
+        : loading ? html`<div class="st-loading"><${Spinner} size="md" /><span class="st-hint">${t('正在从服务器读取对局记录…')}</span></div>`
+          : readOnly && !remote ? html`<p class="st-empty">${t('无法读取该玩家的记录（可能已离线）。')}</p>`
+            : !readOnly && local.newer ? html`<p class="st-empty">${t('检测到更新版本的统计数据，请先升级客户端再查看，以免覆盖数据。')}</p>`
+              : empty ? html`<p class="st-empty">${readOnly ? t('这名玩家还没有对局记录。') : t('还没有记录 —— 完成一局对局后，这里会开始积累。')}</p>`
+                : tab === 'bands' ? html`<${Bands} agg=${agg} gd=${gd} />`
+                  : tab === 'totals' ? html`<${CombatSums} agg=${agg} />`
+                    : tab === 'history' ? html`<${History} records=${records} gd=${gd} onOpen=${setReplay} />`
+                      : html`<${Overview} agg=${agg} gd=${gd} />`}
     </main>
   </div>`;
 }
 
 /** Global stats viewer host — mounted once by main.js; renders nothing (and loads nothing) until opened. */
 export function StatsHost() {
-  const { open, tab } = useStore((s) => s, Object.is, statsStore);
+  const { open, tab, view } = useStore((s) => s, Object.is, statsStore);
   if (!open) return null;
-  return html`<${StatsScreen} tab=${tab} />`;
+  return html`<${StatsScreen} tab=${tab} view=${view} />`;
 }
+
 
