@@ -1180,7 +1180,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - **局内**（`screens/game.js`）：气泡**绝对定位在发送者那一行的右侧并垂直居中于该行**（`TeamPanel` 的 `.team__chat`：`left: calc(100% + .06rem); top: 50%; transform: translateY(-50%)`）。因为 `.team` 的 `align-items: stretch` 让每行等宽，各行的 `left` 偏移一致，气泡排成一条清楚的纵列、明显属于各自那一行；既压不到该行的头像 / 等级 / 名字，也不在文档流里、不会推动战场。观战者同样落到 `观战席` 行的其名字处。表情面板与其精灵布局原样不动。
 - **无移动特效（只淡入淡出）**：气泡出现 / 消失**只做透明度淡入淡出**——`@keyframes cbubble-life` 里只有 `opacity`，**没有** `transform` / `translate` / `scale` / `rotate`（没有弹出、滑动、缩放）。因此气泡**一出现就在最终锚点上**，不会漂移；`transform: translateY(-50%)`（局内垂直居中）是静态定位，不是动画。TTL 仍为 `CHAT_BUBBLE_MS` = 5000 ms。
 - **不滚动**：气泡自动适应宽度并**换行**；文字过长时**按行截断**（`.cbubble` 的 `-webkit-line-clamp: 6` + `overflow: hidden`）而不是出现滚动条。气泡与聊天 dock / 输入区都显式 `overflow: visible|hidden`，绝无 `overflow: auto|scroll`。（`test/ui/chat.test.js` 有静态断言守住锚点、居中、无 transform 动画与不滚动。）
-- **可折叠输入（两屏一致）**：等待室与局内用的是**同一个** `ChatDock`（`public/js/ui/chat.js`）——一行 `▸ 聊天` 标题（三角 + 聊天图标），点开才显示输入框 + `发送`，再点收起。等待室把它放在左下角（`.room-chat`），局内放在「交流」旁（`.gm-chat`），样式（`brackets`/pill、三角形、图标）与位置一致。默认**收起**；开 / 关状态记在 `localStorage` 的 `chatOpen`（`docs/I18N.md` 同类的 `loadPref`/`savePref`），下次进入沿用上次的开关。一次点击即可输入，Enter 仍然发送。
+- **可折叠输入（两屏一致）**：等待室与局内用的是**同一个** `ChatDock`（`public/js/ui/chat.js`）——一行 `▸ 聊天` 标题（三角 + 聊天图标），点开才显示输入框 + `发送`，再点收起。等待室把它放在左下角（`.room-chat`），局内放在「交流」旁（`.gm-chat`），样式（`brackets`/pill、三角形、图标）与位置一致。**每次都默认收起、不记忆开关**：不读 / 不写 `localStorage`，因此返回玩家残留的旧 `sp.pref.chatOpen = true` 也不会让它在加载时自动展开。一次点击即可输入，Enter 仍然发送。
 - 纯文本渲染（绝不 `innerHTML` 玩家文本）；换房间 / 离开时清空 store 的 `chat`。
 - 旧客户端不知道 `m.chat`：客户端对未知类型的处理是**忽略**（`net.js` 只 `_emit(t, msg)`，无监听者即丢弃），不报错、不打断——确认向后兼容。
 

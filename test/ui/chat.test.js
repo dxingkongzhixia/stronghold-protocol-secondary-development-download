@@ -7,10 +7,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chatMessage, activeChatBubbles, chatDockStartsOpen, CHAT_OPEN_PREF } from '../../public/js/ui/chat.js';
+import { chatMessage, activeChatBubbles } from '../../public/js/ui/chat.js';
 import { CHAT_BUBBLE_MS } from '../../shared/constants.js';
 
 const CSS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public/css/screens');
+const JS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public/js');
 /** Body of the first flat CSS rule whose selector is exactly `selector` (comments stripped). */
 function cssBody(file, selector) {
   const src = readFileSync(path.join(CSS_DIR, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -75,27 +76,11 @@ test('activeChatBubbles: the newest message per sender wins; different senders e
   assert.equal(m.get('p2').text, 'new', 'the newer sender is live');
 });
 
-test('chat dock toggle: collapsed by default, and the last state is remembered (CHAT_OPEN_PREF)', () => {
-  assert.equal(CHAT_OPEN_PREF, 'chatOpen');
-  // default (nothing saved) is collapsed; only an explicit true expands it
-  assert.equal(chatDockStartsOpen(undefined), false);
-  assert.equal(chatDockStartsOpen(false), false);
-  assert.equal(chatDockStartsOpen('yes'), false);
-  assert.equal(chatDockStartsOpen(1), false);
-  assert.equal(chatDockStartsOpen(true), true);
-  // the pref round-trips through localStorage: expanded stays expanded, collapsed stays collapsed
-  const orig = globalThis.localStorage;
-  const mem = new Map();
-  globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)) };
-  try {
-    assert.equal(chatDockStartsOpen(), false, 'fresh browser: collapsed');
-    mem.set(`sp.pref.${CHAT_OPEN_PREF}`, 'true');
-    assert.equal(chatDockStartsOpen(), true, 'a saved open state expands the dock');
-    mem.set(`sp.pref.${CHAT_OPEN_PREF}`, 'false');
-    assert.equal(chatDockStartsOpen(), false, 'a saved closed state stays collapsed');
-  } finally {
-    if (orig === undefined) delete globalThis.localStorage; else globalThis.localStorage = orig;
-  }
+test('chat dock: always starts collapsed, even when a stale chatOpen pref says otherwise', () => {
+  const raw = readFileSync(path.join(JS_DIR, 'ui/chat.js'), 'utf8');
+  const src = raw.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, ''); // code only (the doc comment names the removed pref)
+  assert.match(src, /useState\(false\)/, 'the dock opens with a closed state');
+  assert.doesNotMatch(src, /loadPref|savePref|chatOpen|chatDockStartsOpen|localStorage/, 'no remembered-open pref / storage read at all');
 });
 
 test('bubble placement + no-scroll + no-motion CSS: above and centred on the waiting seat, centred on the in-match row', () => {

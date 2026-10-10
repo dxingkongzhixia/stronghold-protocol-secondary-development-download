@@ -9,7 +9,7 @@
 //
 //   chatMessage        the pure normalisation of one m.chat frame into the store event shape
 //   activeChatBubbles  the pure "which bubble is live right now" mapping (newest per sender, younger than the TTL)
-//   ChatBubble         one transient bubble (pops in, fades after the TTL) — placed over the sender
+//   ChatBubble         one transient bubble (fades in, fades out after the TTL) — placed over the sender
 //   ChatComposer       the input + 发送 button; Enter sends; disabled while empty / offline; a hint when rate-limited
 //   ChatDock           a collapsible ChatComposer (the in-match entry next to the 交流 button)
 //
@@ -20,22 +20,10 @@ import { CHAT_MAX, CHAT_BUBBLE_MS } from '../../../shared/constants.js';
 import { html, Button, Icon } from './components.js';
 import { toastError } from './toasts.js';
 import { net } from '../net.js';
-import { loadPref, savePref } from '../store.js';
 import { bubbleAge } from './emotes.js';
 import { t } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
-
-/** localStorage key remembering whether the 聊天 dock was left expanded (both screens share it). */
-export const CHAT_OPEN_PREF = 'chatOpen';
-
-/**
- * Whether the 聊天 dock starts expanded: only an explicit saved `true` expands it, so the default is COLLAPSED
- * (consistent with the in-match dock, one click away, Enter still sends).
- * @param {unknown} [value] raw pref value (defaults to the stored one)
- * @returns {boolean}
- */
-export const chatDockStartsOpen = (value = loadPref(CHAT_OPEN_PREF, false)) => value === true;
 
 /**
  * Normalise one `m.chat` frame into the transient store event: `{ seq, from, name, text, at }`, or null when it is not
@@ -78,9 +66,9 @@ export function activeChatBubbles(chat, now, ttl = CHAT_BUBBLE_MS) {
 }
 
 /**
- * One transient speech bubble (text only). The parent keys it by `seq` (a newer message remounts and pops again) and
- * must unmount it once it has aged out; the CSS animation runs for the TTL and fades. `at` (Date.now clock) resumes a
- * bubble mounted late. Own messages get the `is-own` accent.
+ * One transient speech bubble (text only). The parent keys it by `seq` (a newer message remounts and restarts the
+ * fade) and must unmount it once it has aged out; the CSS animation runs for the TTL and is a plain opacity fade (no
+ * movement). `at` (Date.now clock) resumes a bubble mounted late. Own messages get the `is-own` accent.
  * @param {{ name?: string, text: string, own?: boolean, ttl?: number, at?: number, class?: string }} props
  */
 export function ChatBubble({ name, text, own = false, ttl = CHAT_BUBBLE_MS, at, class: cls }) {
@@ -134,17 +122,13 @@ export function ChatComposer({ class: cls, disabled = false }) {
 /**
  * Collapsible chat dock (both screens) — the SAME component so the waiting room and the in-match cluster look and
  * behave identically: a `▸ 聊天` header (disclosure triangle + chat icon) that expands to the composer and collapses
- * back. The open/closed state is remembered across sessions (localStorage `chatOpen`, CHAT_OPEN_PREF); the default is
- * collapsed.
+ * back. It ALWAYS starts collapsed (owner rule 2026-10-10): there is no remembered-open pref, so a stale
+ * `sp.pref.chatOpen` in a returning player's localStorage can never re-open it. One click expands it, Enter sends.
  * @param {{ class?: string, disabled?: boolean }} props
  */
 export function ChatDock({ class: cls, disabled = false }) {
-  const [open, setOpen] = useState(chatDockStartsOpen);
-  const onToggle = (e) => {
-    const next = !!e.currentTarget.open;
-    setOpen(next);
-    savePref(CHAT_OPEN_PREF, next);
-  };
+  const [open, setOpen] = useState(false); // always collapsed on load; the user may expand it for this view
+  const onToggle = (e) => setOpen(!!e.currentTarget.open);
   return html`<details class=${cx('chat-dock', cls)} open=${open} onToggle=${onToggle}>
     <summary class="chat-dock__sum"><${Icon} name="chat" /><span>${t('聊天')}</span></summary>
     <${ChatComposer} disabled=${disabled} />

@@ -310,7 +310,7 @@
 /* ---- room text chat: collapsible 聊天 dock + transient bubbles (docs/MATCHMAKING.md §38) --------------------- */
 /* No log: a message pops up over the sender's seat (waiting room, .seat__chat) / player row (in match, .team__chat /
    .specdock__chat) and fades. Both screens use the SAME collapsible `<details>` dock (ui/chat.js ChatDock): a
-   `▸ 聊天` header that expands to the composer and remembers its last state (localStorage `chatOpen`). Player text is
+   `▸ 聊天` header that expands to the composer; it always starts collapsed (no remembered pref). Player text is
    rendered as text (ui/chat.js), never through innerHTML. */
 .room-chat { position: absolute; left: .6rem; bottom: 1.62rem; z-index: 4; width: min(4.7rem, 42vw); overflow: visible; }
 
