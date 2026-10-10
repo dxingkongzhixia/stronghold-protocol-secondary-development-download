@@ -5,9 +5,13 @@
 // for an fx kind that carries no layers of its own and that the operator's kit emits, drawing the operator's official
 // textures (render/fx/simfx.js) instead of the procedural archetype; a client without the extracted art, or an
 // operator not listed, keeps the procedural tier (never a blank frame, no network in the fallback). Only the kinds a
-// kit actually emits are listed, so an operator with no attributable skill fx is absent. The normal-attack impact is
-// NOT here: it is drawn procedurally (render/fx/projectiles.js _impact, render/fx/numbers.js damage) — the official
-// per-attack hit is a particle-system effect prefab (the projectile prefabs' _effectsWhenHit), not one texture.
+// kit actually emits are listed, so an operator with no attributable skill fx is absent. Two kinds of pick are never
+// made: an animation grid (a flipbook / sprite-sheet / atlas / sequence image is many frames, so one layer would show
+// a whole sheet of images) and an attack / impact kind (crit, strike, slash, beam, …) — per-attack feedback is drawn
+// procedurally (render/fx/projectiles.js _impact, render/fx/numbers.js damage), and an operator whose only art is
+// sheets (or whose kit emits only impact kinds) is absent, keeping its procedural tier (never a blank frame). The
+// normal-attack impact is NOT here: the official per-attack hit is a particle-system effect prefab (the projectile
+// prefabs' _effectsWhenHit), not one texture.
 // Layer names are entries of the committed local manifest (data/local-assets.committed.json). Re-run after an
 // extraction / roster change: node tools/build-fx-official.mjs. Pin an operator by hand in
 // tools/local-extract/fx-official-overrides.json.
@@ -21,11 +25,11 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "flipbook_215",
+        name: "inside_bullet01",
         scale: 1.5
       },
       {
-        name: "inside_bullet01",
+        name: "AVG_flow_05",
         scale: 1.1
       }
     ]
@@ -47,22 +51,6 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_145_prove: {
-    group: "fx/prove",
-    kinds: [
-      "crit"
-    ],
-    layers: [
-      {
-        name: "guangxiao_02",
-        scale: 1.5
-      },
-      {
-        name: "langtou_03",
-        scale: 1.1
-      }
-    ]
-  },
   char_102_texas: {
     group: "fx/texas",
     kinds: [
@@ -76,27 +64,10 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_4100_caper: {
-    group: "fx/caper",
-    kinds: [
-      "crit"
-    ],
-    layers: [
-      {
-        name: "caper_wheel",
-        scale: 1.5
-      },
-      {
-        name: "caper_wheelmask",
-        scale: 1.1
-      }
-    ]
-  },
   char_196_sunbr: {
     group: "fx/sunbr",
     kinds: [
       "buff",
-      "crit",
       "heal"
     ],
     layers: [
@@ -149,7 +120,7 @@ export const FX_OFFICIAL = Object.freeze({
         scale: 1.5
       },
       {
-        name: "flipbook_217",
+        name: "grabds_chitang_01",
         scale: 1.1
       }
     ]
@@ -193,7 +164,7 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "flipbook_67",
+        name: "rockr_15",
         scale: 1.5
       },
       {
@@ -284,22 +255,6 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_294_ayer: {
-    group: "fx/ayer",
-    kinds: [
-      "strike"
-    ],
-    layers: [
-      {
-        name: "ayer_01",
-        scale: 1.5
-      },
-      {
-        name: "ayer_06",
-        scale: 1.1
-      }
-    ]
-  },
   char_1033_swire2: {
     group: "fx/swire2",
     kinds: [
@@ -361,7 +316,7 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "flipbook_130",
+        name: "flow_100_2",
         scale: 1.5
       },
       {
@@ -373,7 +328,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_4211_snhunt: {
     group: "fx/snhunt",
     kinds: [
-      "strike",
       "volley"
     ],
     layers: [
@@ -410,7 +364,7 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "flipbook_165",
+        name: "gongjian_moxing_02",
         scale: 1.5
       },
       {
@@ -448,7 +402,7 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "flipbook_118",
+        name: "vigil_02_lamp_1",
         scale: 1.5
       },
       {
@@ -515,7 +469,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_4087_ines: {
     group: "fx/ines",
     kinds: [
-      "beam",
       "sentry",
       "shadowWeave",
       "stealth"
@@ -535,7 +488,6 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/kroos2",
     kinds: [
       "camouflage",
-      "crit",
       "quadShot"
     ],
     layers: [
@@ -650,18 +602,6 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_373_lionhd: {
-    group: "fx/lionhd",
-    kinds: [
-      "explosion"
-    ],
-    layers: [
-      {
-        name: "flipbook_86",
-        scale: 1.5
-      }
-    ]
-  },
   char_1028_texas2: {
     group: "fx/texas2",
     kinds: [
@@ -768,7 +708,6 @@ export const FX_OFFICIAL = Object.freeze({
   char_172_svrash: {
     group: "fx/svrash",
     kinds: [
-      "slash",
       "snow",
       "truesilver"
     ],
@@ -826,11 +765,11 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "cetsyr_flipbook_brid_01",
+        name: "cetsyr_object_01",
         scale: 1.5
       },
       {
-        name: "cetsyr_object_01",
+        name: "cetsyr_object_02",
         scale: 1.1
       }
     ]
@@ -1059,22 +998,6 @@ export const FX_OFFICIAL = Object.freeze({
       }
     ]
   },
-  char_264_f12yin: {
-    group: "fx/f12yin",
-    kinds: [
-      "crit"
-    ],
-    layers: [
-      {
-        name: "cyber_03",
-        scale: 1.5
-      },
-      {
-        name: "AVG_star_04",
-        scale: 1.1
-      }
-    ]
-  },
   char_4064_mlynar: {
     group: "fx/mlynar",
     kinds: [
@@ -1114,7 +1037,7 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "flipbook_81",
+        name: "sntlla_02",
         scale: 1.5
       },
       {
@@ -1145,7 +1068,6 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "bombard",
       "bombardShell",
-      "crit",
       "lock",
       "talent",
       "wanted"
@@ -1255,8 +1177,7 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/reed2",
     kinds: [
       "ember",
-      "scorchBurst",
-      "strike"
+      "scorchBurst"
     ],
     layers: [
       {
@@ -1366,11 +1287,11 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "flipbook_halo2_01",
+        name: "mask_halo2_01",
         scale: 1.5
       },
       {
-        name: "mask_halo2_01",
+        name: "object_halo2_01",
         scale: 1.1
       }
     ]
@@ -1416,8 +1337,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_4116_blkkgt: {
     group: "fx/blkkgt",
     kinds: [
-      "finale",
-      "slash"
+      "finale"
     ],
     layers: [
       {
@@ -1518,7 +1438,7 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "flipbook_272",
+        name: "narant_buff01",
         scale: 1.5
       },
       {
@@ -1530,8 +1450,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_4217_makoto: {
     group: "fx/makoto",
     kinds: [
-      "aoe",
-      "strike"
+      "aoe"
     ],
     layers: [
       {
@@ -1552,7 +1471,7 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "fx_allow_2048_clemnt_flipbook_up",
+        name: "clemnt_plane_02",
         scale: 1.5
       },
       {

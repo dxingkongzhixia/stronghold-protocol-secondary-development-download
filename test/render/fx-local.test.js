@@ -29,6 +29,11 @@ after(() => fake.restore());
 
 const cam = presetCamera('normal', { width: 1600, height: 900 });
 
+/** The animation-grid names the fx-official picker must never choose (tools/build-fx-official.mjs SHEET). */
+const SHEET = /(^|[^a-z0-9])(flipbook|sprite|sheet|atlas|sequence|filmstrip)([^a-z0-9]|$)/i;
+/** The per-attack / impact kinds the fx-official table must never carry (tools/build-fx-official.mjs IMPACT_KINDS). */
+const IMPACT_KINDS = new Set(['hit', 'crit', 'strike', 'slash', 'beam', 'bolt']);
+
 /** A fake assets.js store: a manifest { group: { name: url } } plus the pictures that have actually loaded. */
 function fakeAssets(groups, loaded = {}) {
   const called = [];
@@ -316,6 +321,24 @@ describe('fx official-art table: the season roster (render/fx/official.js)', () 
       }
     }
   });
+
+  test('no chosen layer is an animation grid (a flipbook / sheet would show a whole sheet of images)', { skip }, () => {
+    for (const [op, e] of Object.entries(OFF.FX_OFFICIAL)) {
+      for (const ly of e.layers) assert.ok(!SHEET.test(ly.name), `${op} picked the animation grid ${ly.name}`);
+    }
+  });
+
+  test('an operator whose only usable art is a sheet gets no entry (its procedural tier stays)', { skip }, () => {
+    // 烈夏 (lionhd): fx/lionhd carries one Texture2D, flipbook_86 — an animation grid, so there is no single-frame
+    // effect to draw and the entry is absent (the procedural 'explosion' is drawn instead).
+    const group = manifest.groups['fx/lionhd'];
+    assert.ok(group && Object.keys(group).length === 1 && SHEET.test(Object.keys(group)[0]), 'fx/lionhd is a single flipbook');
+    assert.equal(OFF.FX_OFFICIAL.char_373_lionhd, undefined, 'no entry for a sheet-only operator');
+    // a mixed bundle keeps its non-sheet field: 隐现 (inside) still has inside_bullet01 / AVG_flow_05, never flipbook_215.
+    const inside = OFF.FX_OFFICIAL.char_498_inside;
+    assert.ok(inside && inside.layers.length >= 1, 'inside keeps a non-sheet field');
+    for (const ly of inside.layers) assert.ok(!SHEET.test(ly.name), `inside: ${ly.name} is not a sheet`);
+  });
 });
 
 // --- the normal-attack impact stays procedural (render/fx/projectiles.js _impact, render/fx/numbers.js damage) --------
@@ -332,10 +355,17 @@ describe('fx normal-attack impact: procedural, not the official table', () => {
   /** A hit-path unit view (render/fx as the fx system reads it): `damage`/`_impact` need id / maxHp / onHit. */
   const hitView = (id, x, y, defId) => ({ id, x, y, z: 0, hover: 0, _headTiles: 1.2, alive: true, destroyed: false, maxHp: 3000, info: { defId, spine: defId }, onHit() {} });
 
-  test('the generated table carries no hit kind and no fx-less operator', { skip }, () => {
+  test('the generated table carries no impact kind and no fx-less operator', { skip }, () => {
     for (const [op, e] of Object.entries(OFF.FX_OFFICIAL)) {
-      assert.ok(!e.kinds.includes('hit'), `${op} must not list the normal-attack kind 'hit'`);
-      assert.ok(Array.isArray(e.kinds) && e.kinds.length, `${op} lists some fx kind`);
+      for (const k of e.kinds) {
+        assert.ok(!IMPACT_KINDS.has(k), `${op} must not list the attack / impact kind '${k}'`);
+      }
+      assert.ok(Array.isArray(e.kinds) && e.kinds.length, `${op} lists some skill fx kind`);
+    }
+    // an operator whose kit emits only impact kinds is absent entirely: 跃击's 战终 (ayer, 'strike'), 克洛丝 (prove,
+    // 'crit'), 跃跃 (caper, 'crit') and 雷蛇 (f12yin, 'crit') keep their procedural tier.
+    for (const op of ['char_294_ayer', 'char_145_prove', 'char_4100_caper', 'char_264_f12yin']) {
+      assert.equal(OFF.FX_OFFICIAL[op], undefined, `${op} (impact kinds only) has no entry`);
     }
   });
 

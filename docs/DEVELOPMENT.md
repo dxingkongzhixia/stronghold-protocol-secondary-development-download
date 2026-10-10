@@ -314,7 +314,8 @@ particle-system effect prefab each projectile prefab names in `_effectsWhenHit` 
 cluster of `ParticleSystem`s and transforms — **not** the operator's one signature Texture2D. An earlier design drew
 that signature texture as a ground field at the victim (`render/fx/official.js` kind `'hit'`, `fxOfficialHit`); it was
 removed because it was visibly misplaced (wrong texture, wrong anchor/scale). The generated table (`FX_OFFICIAL`) now
-carries only the fx kinds a kit actually emits — no `hit` — and no **roster** operator's normal attack consults the
+carries only the fx kinds a kit actually emits — no `hit` or other attack / impact kind (`crit` / `strike` / `slash` /
+`beam`), and no animation-grid (flipbook / sprite-sheet) layer — and no **roster** operator's normal attack consults the
 manifest. **Our custom operators are the documented exception** (`render/fx/hits.js`): **seven** of the eight get a
 hand-authored, body-anchored hit read from their own `_*_hit_*` prefab, with an optional same-bundle official flash as
 a `local` core and the procedural composition always drawn (克莱门莎, the eighth, is **not** in `FX_HITS`: her bundle's

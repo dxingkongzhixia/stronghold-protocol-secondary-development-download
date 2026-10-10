@@ -10,8 +10,15 @@
 // operator not listed) keeps the procedural tier, unchanged. No kit is edited: the table is the data.
 //
 // The layer choice is deterministic and best-effort (largest base-skin effect textures, a flow/field one and a
-// star/ray one, skin/cutscene variants excluded); re-run after an extraction or a roster change. Entries can be pinned
-// by hand through tools/local-extract/fx-official-overrides.json. `--check` fails when the committed file is stale.
+// star/ray one) with two exclusions that keep a bad pick off the board: skin/cutscene variants (VARIANT) and animation
+// grids (SHEET — a flipbook / sprite-sheet / atlas / sequence image packs many small frames, so drawing it as one
+// layer shows a whole sheet of images, not one effect). An operator whose usable textures are all sheets gets no entry
+// (its procedural tier stays — never a blank frame). The kinds are then restricted to legitimate skill / area effects:
+// the per-attack / impact kinds (IMPACT_KINDS — the normal-attack impact flare family: crit, strike, slash, beam, …)
+// are dropped, because per-attack feedback is drawn procedurally (render/fx/projectiles.js _impact, render/fx/numbers.js
+// damage) and must not come from this table; an operator whose kit emits only impact kinds is absent. Re-run after an
+// extraction or a roster change. Entries can be pinned by hand through tools/local-extract/fx-official-overrides.json.
+// `--check` fails when the committed file is stale.
 //
 // Usage: node tools/build-fx-official.mjs [--check] [--out public/js/render/fx/official.js]
 //        node tools/build-fx-official.mjs --print        (the table as JSON, writes nothing)
@@ -33,6 +40,23 @@ const OUT = path.resolve(ROOT, valOf('--out', 'public/js/render/fx/official.js')
 const VARIANT = /(^|_)(summer|snow|sanrio|winter|newyear|new_year|halloween|xmas|christmas|valentine|swimsuit|bikini|beach|swim|anniv|anniversary|gift|sale|skin\d*)(_|$)/i;
 
 /**
+ * A bundle texture name that is an animation grid — a flipbook / sprite-sheet / atlas / sequence image holds many small
+ * frames laid out in a matrix, so drawing it as one layer shows the whole sheet of images rather than one effect. Such a
+ * texture is never a single-frame effect and is never picked as a layer.
+ */
+const SHEET = /(^|[^a-z0-9])(flipbook|sprite|sheet|atlas|sequence|filmstrip)([^a-z0-9]|$)/i;
+
+/**
+ * The per-attack / impact fx kinds: drawn at the moment of a normal attack or on a single hit (a hit flare, a crit
+ * flash, a melee slash, an instant ranged line). The normal-attack impact is drawn procedurally and never from this
+ * table (render/fx/projectiles.js `_impact`, render/fx/numbers.js `damage`; docs/ASSETS.md "Battle effects"), so these
+ * kinds are excluded even when an operator's kit emits them: a big field texture on an ordinary attack is the defect.
+ * 'hit' is not an FX_KINDS entry (the sim never emits it), 'bolt' shares 'beam', and the rest are the emitters' own
+ * attack-time flashes; keeping them here is defensive (the table must never carry one).
+ */
+const IMPACT_KINDS = new Set(['hit', 'crit', 'strike', 'slash', 'beam', 'bolt']);
+
+/**
  * The fx kinds a kit source emits: `fx(battle, '<kind>'`, `battle.fx('<kind>'`) with a literal first argument.
  */
 function kindsOf(source) {
@@ -43,13 +67,15 @@ function kindsOf(source) {
 }
 
 /**
- * Two signature layers for one operator bundle: the largest base-skin effect texture in the field pool (flow / trail /
- * pattern / char / object / …) and, if one exists, the largest in the star / ray / glow pool — the shape the hand-wired
- * kinds use. Null when the bundle carries no usable base texture (an empty / all-skin bundle: procedural stays).
+ * Two signature single-frame layers for one operator bundle: the largest base-skin effect texture in the field pool
+ * (flow / trail / pattern / char / object / …) and, if one exists, the largest in the star / ray / glow pool — the
+ * shape the hand-wired kinds use. Animation grids (a flipbook / sprite-sheet / atlas, SHEET) are never candidates: a
+ * grid is many frames in one image, so one layer would show a whole sheet of images. Null when no usable base texture
+ * is left (an empty / all-skin bundle, or one whose only art is sheets: procedural stays, never a blank frame).
  */
 function pickLayers(items) {
   const tex = items.filter((t) => t && typeof t.name === 'string' && !t.name.includes('#') && !VARIANT.test(t.name)
-    && Number(t.w) >= 2 && Number(t.h) >= 2);
+    && !SHEET.test(t.name) && Number(t.w) >= 2 && Number(t.h) >= 2);
   if (!tex.length) return null;
   const area = (t) => t.w * t.h;
   const spark = (n) => /star|ray|glow|spark|light/i.test(n);
@@ -101,7 +127,7 @@ const overrides = (() => {
 })();
 
 const table = {};
-const skipped = { noKit: [], noBundle: [], noArt: [] };
+const skipped = { noKit: [], noBundle: [], noArt: [], impactOnly: [] };
 for (const [chessId, rec] of Object.entries(chess)) {
   if (!rec || rec.visible === false || rec.isGolden) continue;
   const charId = rec.charId;
@@ -113,10 +139,15 @@ for (const [chessId, rec] of Object.entries(chess)) {
   if (!kitKinds.length) { skipped.noKit.push(charId); continue; }
   if (!groups[group] || !groups[group].length) { skipped.noBundle.push(`${charId} (${group})`); continue; }
   const pinned = overrides[charId];
-  const layers = (pinned && Array.isArray(pinned.layers) && pinned.layers.length) ? pinned.layers : pickLayers(groups[group]);
-  if (!layers) { skipped.noArt.push(charId); continue; }
-  // only the fx kinds the kit actually emits (the normal-attack impact is drawn procedurally, never from the table)
-  const kinds = [...new Set((pinned && Array.isArray(pinned.kinds)) ? pinned.kinds : kitKinds)].sort();
+  // a sheet texture is never a layer — also for a hand-pinned entry, so the committed table can never carry one
+  const layers = ((pinned && Array.isArray(pinned.layers) && pinned.layers.length) ? pinned.layers : pickLayers(groups[group]) || [])
+    .filter((ly) => ly && typeof ly.name === 'string' && !SHEET.test(ly.name));
+  if (!layers.length) { skipped.noArt.push(charId); continue; }
+  // only the fx kinds the kit actually emits, and never an attack / impact kind: per-attack feedback is procedural and
+  // must not paint an official field texture (the normal-attack impact is drawn procedurally, never from the table)
+  const kinds = [...new Set((pinned && Array.isArray(pinned.kinds)) ? pinned.kinds : kitKinds)]
+    .filter((k) => !IMPACT_KINDS.has(k)).sort();
+  if (!kinds.length) { skipped.impactOnly.push(charId); continue; }
   table[charId] = { group, kinds, layers };
 }
 
@@ -127,9 +158,13 @@ const banner = `// public/js/render/fx/official.js — GENERATED by tools/build-
 // for an fx kind that carries no layers of its own and that the operator's kit emits, drawing the operator's official
 // textures (render/fx/simfx.js) instead of the procedural archetype; a client without the extracted art, or an
 // operator not listed, keeps the procedural tier (never a blank frame, no network in the fallback). Only the kinds a
-// kit actually emits are listed, so an operator with no attributable skill fx is absent. The normal-attack impact is
-// NOT here: it is drawn procedurally (render/fx/projectiles.js _impact, render/fx/numbers.js damage) — the official
-// per-attack hit is a particle-system effect prefab (the projectile prefabs' _effectsWhenHit), not one texture.
+// kit actually emits are listed, so an operator with no attributable skill fx is absent. Two kinds of pick are never
+// made: an animation grid (a flipbook / sprite-sheet / atlas / sequence image is many frames, so one layer would show
+// a whole sheet of images) and an attack / impact kind (crit, strike, slash, beam, …) — per-attack feedback is drawn
+// procedurally (render/fx/projectiles.js _impact, render/fx/numbers.js damage), and an operator whose only art is
+// sheets (or whose kit emits only impact kinds) is absent, keeping its procedural tier (never a blank frame). The
+// normal-attack impact is NOT here: the official per-attack hit is a particle-system effect prefab (the projectile
+// prefabs' _effectsWhenHit), not one texture.
 // Layer names are entries of the committed local manifest (data/local-assets.committed.json). Re-run after an
 // extraction / roster change: node tools/build-fx-official.mjs. Pin an operator by hand in
 // tools/local-extract/fx-official-overrides.json.
@@ -149,7 +184,9 @@ if (PRINT) {
 } else {
   writeFileSync(OUT, src, 'utf8');
   console.log(`wrote ${path.relative(ROOT, OUT)}: ${Object.keys(table).length} operators`
-    + ` (kit emits no fx: ${skipped.noKit.length}, no bundle: ${skipped.noBundle.length}, no art: ${skipped.noArt.length})`);
+    + ` (kit emits no fx: ${skipped.noKit.length}, no bundle: ${skipped.noBundle.length}, no art: ${skipped.noArt.length},`
+    + ` impact kinds only: ${skipped.impactOnly.length})`);
   if (skipped.noBundle.length) console.log(`  no bundle: ${skipped.noBundle.join(', ')}`);
-  if (skipped.noArt.length) console.log(`  no art: ${skipped.noArt.join(', ')}`);
+  if (skipped.noArt.length) console.log(`  no art (no usable non-sheet texture): ${skipped.noArt.join(', ')}`);
+  if (skipped.impactOnly.length) console.log(`  impact kinds only: ${skipped.impactOnly.join(', ')}`);
 }

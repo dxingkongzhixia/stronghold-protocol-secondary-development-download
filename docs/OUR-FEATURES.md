@@ -126,7 +126,10 @@ listed-not-loading layer is retried on a later event; a layer the manifest does 
 
 **The generated roster table.** `tools/build-fx-official.mjs` reads `data/chess.json` (the visible roster), the fx
 kinds each operator's kit actually emits (by scanning `kits/ops/*.js`) and the committed manifest
-(`data/local-assets.committed.json`), and picks two signature Texture2D layers per operator. It writes
+(`data/local-assets.committed.json`), and picks two signature Texture2D layers per operator. It never picks an
+animation grid (a `flipbook*` / sprite-sheet / atlas image packs many frames, so drawing it as one layer shows a whole
+sheet of images) nor an attack / impact kind (`crit` / `strike` / `slash` / `beam`): per-attack feedback is procedural.
+An operator whose usable art is all sheets, or whose kit emits only impact kinds, is absent. It writes
 `public/js/render/fx/official.js`; `--check` fails when the committed file is stale, `--print` prints the table.
 Pin an operator by hand in `tools/local-extract/fx-official-overrides.json`. Because the table is data, a
 registered operator supersedes the procedural archetype **without editing any kit or kind**. Only the kinds a kit
