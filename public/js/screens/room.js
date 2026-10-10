@@ -349,7 +349,6 @@ export function RoomScreen() {
           <${PingPill} ms=${conn.ping} online=${online} />
           <${MicroLabel}>${t('当前延迟')}<//>
         </div>
-        <${SettingsButton} class="room-settings" variant="secondary" label=${t('设置')} />
         <${Button} variant="secondary" size="sm" icon="chart" class="stats-entry" onClick=${openStats} title=${t('统计数据')} aria-label=${t('统计数据')}>${t('统计')}<//>
         <${GuideButton} class="room-guide" variant="secondary" label=${t('玩法说明')} />
       </div>
@@ -358,6 +357,7 @@ export function RoomScreen() {
         <h1 class="topbar__title">${coop ? (room.auto ? t('野排模拟') : t('同盟模拟')) : t('独立模拟')}<span class="topbar__sep"></span><${DifficultyTag} difficulty=${room.difficulty} size="lg" /></h1>
       </div>
       <div class="topbar__right">
+        <${SettingsButton} class="room-settings" variant="secondary" label=${t('设置')} />
         ${!coop ? html`<div class="solo-note"><${MicroLabel}>SINGLE OPERATOR<//><span>${t('仅限 1 名博士')}</span></div>`
           : room.auto ? html`<div class="solo-note mm-note"><${MicroLabel} tone="mint">MATCHED TEAM<//><span>${t('野排队伍 · 对局结束后自动解散')}</span></div>`
           : html`<${InviteBox} code=${room.code} public=${room.public} name=${me.name} difficulty=${room.difficulty} />`}

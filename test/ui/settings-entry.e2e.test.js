@@ -2,8 +2,9 @@
 // screen and a running match; opt-in, ~15 s):
 //   SP_E2E=1 CHROME_PATH=… node --test test/ui/settings-entry.e2e.test.js
 //
-// After 开始 the lobby's top bar carries a 设置 button left of 玩法说明 (ui/settings.js SettingsButton), and so does the
-// room's after 创建同盟; each opens the very settings modal of the title screen (language, sound, 快捷键 …) and closes
+// After 开始 the lobby's top bar carries a 设置 button in its right-hand group, immediately before the 档案 account chip
+// (ui/settings.js SettingsButton), and the room's after 创建同盟 (its top bar's right group, beside the invite key);
+// each opens the very settings modal of the title screen (language, sound, 快捷键 …) and closes
 // with Esc or 完成, leaving the screen as it was. No console / page errors. The modal itself and its contents are covered
 // by the title screen's tests; this file is about the entry. Not in the modal, deliberately: background music in a
 // hidden tab and the board style (the owner's decision of 2026-10-07 on #238).
@@ -32,15 +33,18 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     await srv?.close();
   });
 
-  /** Is the 设置 button the sibling right before the 玩法说明 button of `screen`'s top bar? */
-  const settingsBeforeGuide = (page, screen, guideClass) => page.evaluate((s, g) => {
+  /** Is the 设置 button in `screen`'s top-bar right group — and, when the screen carries a 档案 chip, right before it? */
+  const settingsByAccount = (page, screen) => page.evaluate((s) => {
     const btn = document.querySelector(`${s} [data-testid="settings-btn"]`);
-    const guide = document.querySelector(`${s} .${g}`);
-    return !!btn && !!guide && btn.nextElementSibling === guide && /设置/.test(btn.textContent) && btn.querySelector('svg.btn__icon') != null;
-  }, screen, guideClass);
+    const right = document.querySelector(`${s} .topbar__right`);
+    const chip = document.querySelector(`${s} .me-chip`);
+    return !!btn && !!right && right.contains(btn)
+      && (!chip || btn.nextElementSibling === chip)
+      && /设置/.test(btn.textContent) && btn.querySelector('svg.btn__icon') != null;
+  }, screen);
   const modalText = (page) => page.evaluate(() => document.querySelector('.modal')?.textContent.replace(/\s+/g, ' ').trim() ?? null);
 
-  test('the lobby: 设置 left of 玩法说明 opens the settings modal; Esc closes it; the room has the same entry', async () => {
+  test('the lobby: 设置 beside the 档案 chip opens the settings modal; Esc closes it; the room has the same entry', async () => {
     const page = await browser.newPage();
     await page.setViewport({ width: 1600, height: 900 });
     const problems = [];
@@ -53,7 +57,7 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     await page.waitForSelector('.lobby-screen', { timeout: 15000 });
     await sleep(500);
 
-    assert.ok(await settingsBeforeGuide(page, '.lobby-screen .topbar__right', 'lobby-guide'), '设置 sits right before 玩法说明 in the lobby\'s top bar');
+    assert.ok(await settingsByAccount(page, '.lobby-screen'), '设置 sits in the lobby top bar\'s right group, right before the 档案 chip');
     assert.equal(await modalText(page), null, 'closed until asked');
     await page.click('.lobby-screen [data-testid="settings-btn"]');
     await page.waitForSelector('.modal', { timeout: 5000 });
@@ -72,7 +76,7 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /创建同盟/.test(b.textContent))?.click());
     await page.waitForSelector('.room-screen', { timeout: 15000 });
     await sleep(500);
-    assert.ok(await settingsBeforeGuide(page, '.room-screen .topbar__left', 'room-guide'), '设置 sits right before 玩法说明 in the room\'s top bar');
+    assert.ok(await settingsByAccount(page, '.room-screen'), '设置 sits in the room top bar\'s right group');
     await page.click('.room-screen [data-testid="settings-btn"]');
     await page.waitForSelector('.modal', { timeout: 5000 });
     assert.match(await modalText(page), /背景音乐/);

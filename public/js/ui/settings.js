@@ -3,8 +3,9 @@
 // the settings modal — which also holds the language switch (ui/lang.js; kept apart in `sp.pref.lang`; under it a note
 // while the current language's pack is a machine translation, `_meta.machineTranslated`) and the 快捷键
 // section that rebinds the in-match shortcuts (the key map: ui/gameLogic/shortcuts.js; the community request
-// 「快捷键可不可以自己设置」, the owner's decision of 2026-10-07). The lobby and the room open it from a 设置 button next
-// to 玩法说明 (SettingsButton, GitHub #238); the title screen and the match have their own gear.
+// 「快捷键可不可以自己设置」, the owner's decision of 2026-10-07). The lobby and the room open it from a 设置 button in
+// the top bar's right-hand group — the lobby's immediately before the 档案 account chip, the room's beside the invite key
+// (SettingsButton, GitHub #238); the title screen and the match have their own gear.
 
 import { useLayoutEffect, useState } from '../../vendor/hooks.module.js';
 import { html, Modal, Button, Icon, MicroLabel } from './components.js';
