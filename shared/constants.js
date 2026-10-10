@@ -156,6 +156,7 @@ export const ERR = Object.freeze({
   NOT_QUEUED: 'NOT_QUEUED',
   SPECTATOR: 'SPECTATOR',         // a spectator seat only watches (MAX_SPECTATORS)
   BAD_REPORT: 'BAD_REPORT',       // a bug report's title / body failed validation (server/community.js)
+  BAD_STATS: 'BAD_STATS',         // a match record failed normalization (server/stats.js)
   BAD_IMAGE: 'BAD_IMAGE',         // an attached image is missing / too large / not a supported raster type
   BAD_CHAT: 'BAD_CHAT',           // a room chat message is empty / only control characters / too long
   INTERNAL: 'INTERNAL',
@@ -171,6 +172,7 @@ export const ERR_TEXT = {
   NAME_TAKEN: N_('该代号已被使用'), BAD_CREDENTIALS: N_('代号或密码错误'), SESSION_EXPIRED: N_('登录已过期，请重新登录'),
   IN_QUEUE: N_('你已在搜寻队列中'), NOT_QUEUED: N_('你不在搜寻队列中'),
   SPECTATOR: N_('观战中无法进行该操作'), BAD_REPORT: N_('反馈内容为空或过长'),
+  BAD_STATS: N_('对局记录无效'),
   BAD_IMAGE: N_('图片无效：仅支持 PNG / JPG / WebP，且不要超过大小限制'), INTERNAL: N_('服务器内部错误'),
   BAD_CHAT: N_('发言内容无效'),
 };
@@ -317,3 +319,22 @@ export const MM_SEATS = 4;
 // presence (server/net.js presenceOnline): a LOGGED-IN session stays "online" this long after its socket drops (a
 // reload / brief blip), then goes offline. Guests (no account) go offline the moment their socket closes.
 export const PRESENCE_GRACE_MS = 5 * 60 * 1000;
+
+// ---- ours: match statistics (server/stats.js, shared/stats.js, public/js/ui/stats.js) ---------------------------
+// Every finished match is one normalized record (`shared/stats.js`). The RECORD SCHEMA and the mainline *rules* are
+// upstream PR #323's: keep the newest `maxRecords` per owner, keep full rows (lineups / bonds / teammates) for only the
+// newest `fullKeep`, and stay under a per-owner `maxChars` JSON budget (oldest pruned first). WE store these records
+// on the accounts SQLite, tied to an owner (a registered player's account, else the guest's session identity), keep
+// exactly 2× those caps so one server-side history is worth roughly two upstream clients', and let online players read
+// each other's public record list. The client mirrors the same numbers (public/js/ui/stats.js derives its MAX_RECORDS /
+// FULL_KEEP / MAX_CHARS from here), so the local fallback and the server enforce one set of rules.
+export const STATS_MAINLINE = Object.freeze({ maxRecords: 1000, fullKeep: 30, maxChars: 800_000 });
+/** Ours = 2 × the mainline caps (owner decision): 1000→2000, 30→60, 800_000→1_600_000. */
+export const STATS_SCALE = 2;
+export const STATS_MAX_RECORDS = STATS_MAINLINE.maxRecords * STATS_SCALE;
+export const STATS_FULL_KEEP = STATS_MAINLINE.fullKeep * STATS_SCALE;
+export const STATS_MAX_CHARS = STATS_MAINLINE.maxChars * STATS_SCALE;
+/** Largest export file the stats page reads (foreign / hand-made data: NOT scaled). */
+export const STATS_IMPORT_MAX_CHARS = 8_000_000;
+/** The most records one `stats.list` / `stats.view` answer carries (= the per-owner cap). */
+export const STATS_LIST_LIMIT = STATS_MAX_RECORDS;

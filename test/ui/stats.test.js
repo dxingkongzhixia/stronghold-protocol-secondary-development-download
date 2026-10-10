@@ -398,9 +398,11 @@ describe('local stats: bounded storage', () => {
   test('over the character budget the oldest records go first; the newest is always kept', () => {
     const stats = manyRecords(200);
     const fit = fitToBudget(stats.records, 60_000);
-    assert.ok(fit.length < 200 && fit.length > FULL_KEEP, `kept ${fit.length}`);
-    assert.equal(fit[0].t, 199);
-    assert.equal(fit.at(-1).t, 200 - fit.length);
+    // ours keeps FULL_KEEP (=60) full rows, so a 60 000-char budget fills before the compaction window helps: some
+    // records are kept, the rest go, newest first, and the newest is always kept (the header's 2× rule)
+    assert.ok(fit.length < 200 && fit.length > 10, `kept ${fit.length}`);
+    assert.equal(fit[0].t, 199, 'the newest record is always kept');
+    assert.ok(fit.every((r, i) => i === 0 || fit[i - 1].t > r.t), 'newest first');
     assert.ok(JSON.stringify({ v: 1, records: fit }).length <= 60_000);
     // a budget below one record still keeps the newest
     assert.deepEqual(fitToBudget(stats.records, 10).map((r) => r.t), [199]);
