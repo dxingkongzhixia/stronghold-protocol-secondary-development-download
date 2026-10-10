@@ -50,12 +50,12 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const FOLDER = 'Stronghold-Protocol';
 
 /**
- * THE SWITCH for the Japanese voice dub in the full zip (`audio.voiceJp` of data/assets.json: 2674 files under
- * public/assets/audio/voice/jp/, 89,388,041 bytes = 85.2 MiB on disk, about 76 MB zipped). true (0.2.2): the full zip
- * ships both dubs, so it still runs with nothing to download. false: the full zip leaves the JP files out — setup
- * downloads them on the first start like the lite zip's art, and the 日本語 setting plays the Chinese line until then
- * (public/js/audio.js voiceLine). The lite zip stays art-free either way. This project has no update zip; the switch
- * only decides the full zip's art plan. */
+ * THE SWITCH for the Japanese voice dub in the full zip (`audio.voiceJp` of data/assets.json: 2702 files under
+ * public/assets/audio/voice/jp/, 133,186,297 bytes = 127.0 MiB on disk; MP3 is already compressed, so zip barely shrinks
+ * it). true (0.2.2): the full zip ships both dubs, so it still runs with nothing to download. false: the full zip leaves
+ * the JP files out — setup downloads them on the first start like the lite zip's art, and the 日本語 setting plays the
+ * Chinese line until then (public/js/audio.js voiceLine). The lite zip stays art-free either way. This project has no
+ * update zip; the switch only decides the full zip's art plan. */
 export const FULL_ZIP_JP_VOICE = true;
 /** The second voice tree of data/assets.json, held out of the full zip when FULL_ZIP_JP_VOICE is false. */
 export const JP_VOICE_DIR = 'public/assets/audio/voice/jp/';
