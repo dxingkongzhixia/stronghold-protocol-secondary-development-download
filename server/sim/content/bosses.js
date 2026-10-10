@@ -73,7 +73,7 @@ import { compileRoute } from '../ai.js';
 import { normalizeRoute } from '../simdata.js';
 import {
   ensureInstalled, abOf, attach, T, elem, hurt, targetsNear, allTargets, byPriority, areaAllies, areaAlliesInTiles, fieldAllies,
-  remainingRoute, stayRoute, stepToward, setHits, hitCount, lpLoss, blinkForward, canCast, absorbArts, nthOf,
+  remainingRoute, stayRoute, stepToward, setHits, hitCount, lpLoss, blinkForward, canCast, unbalancedNow, absorbArts, nthOf,
 } from './enemies.js';
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -538,7 +538,7 @@ function kitBlade(ab, e, b, tpl) {
         if (P.state === 'dive' && e2.alive && ++P.hits >= (bb.max_hit_cnt ?? Infinity)) shotDown(b2, e2); // 仅1次
       },
       tick(b2, e2, a, dt) {
-        if (P.state !== 'dive' || !canCast(e2)) return;                         // a stunned blade does not fly on
+        if (P.state !== 'dive' || !canCast(e2, false, b2)) return;                         // a stunned blade does not fly on
         const t = P.target;
         if (!stepToward(e2, t.c, t.r, e2.s.moveSpeed * MOVE_SCALE * dt)) return;
         // arrival: 3×3 stun + DoT (无来源: credited to 胄, as the shell's), then the 初始模式 copy takes over
@@ -592,7 +592,7 @@ function kitGun(ab, e, b) {
       dealt(c, b2, e2) { elem(b2, e2, c.target, 'erosion', e2.s.atk * (T(ab, '1.ep_damage_ratio') ?? 0)); }, // 攻击时附带侵蚀损伤
       tick(b2, e2, a, dt) {
         const ch = P.charge;
-        if (!ch) return;
+        if (!ch || unbalancedNow(b2, e2)) return;                              // (失衡: no scripted move meanwhile)
         const t = ch.target;
         const sp = (e2.s.moveSpeed + (T(ab, '3.move_speed') ?? 0)) * MOVE_SCALE * dt;
         const nx = e2.x, ny = e2.y;
@@ -710,7 +710,12 @@ function kitSpring(ab, e) {
       tick(b, e2, a, dt) {
         if (!P.up && P.downAt != null && b.time - P.downAt >= regen) raise(b);
         const d = e2.mem.ab.dash;
-        if (!d) return;
+        if (!d || unbalancedNow(b, e2)) return;                               // (失衡: no scripted move meanwhile)
+        // 追逐模式 lasts the whole gain (PRTS 末日布道 "令全场的“碎铳之簧”获得5秒增益…增益期间切换为追逐模式"; “碎铳之簧”
+        // 追逐模式 "持续追踪令其进入该形态的场上的假想敌：铳移动" — no arrival clause, unlike the 铳's own 冲锋模式): reaching
+        // the gun does not end it, the spring keeps following the gun until the 5 s are over (PR #347 by @CXUtk; until
+        // 0.2.1 it ended on arrival or within 1 tile). The casting gun dead: the nearest other gun; none left on the
+        // field: it holds still, the gain running on.
         const g = d.gun && d.gun.alive ? d.gun : gun(b);
         const arrived = !g || stepToward(e2, g.x, g.y, e2.s.moveSpeed * d.mul * MOVE_SCALE * dt) || Math.hypot(g.x - e2.x, g.y - e2.y) < 1;
         // 追逐模式 "对进入自身0.35半径范围内的我方单位（包括飞行单位）造成一次攻击力100%的物理普通伤害" (until 0.1.3: radius 0.5)
@@ -822,7 +827,7 @@ function pipeCore(ab, e, b, tpl, { form, prefix }) {
     tick(b2, e2, a, dt) {
       P.acc += dt;
       if (P.acc >= (e2.hpRatio < thr ? lo : hi)) { P.acc = 0; summon(b2, e2); }
-      if (!canCast(e2, false)) return;
+      if (!canCast(e2, false, b2)) return;
       P.atk += dt;
       if (P.atk < e2.s.interval) return;
       const t = b2.rng.pick(echoesOf(b2, form));                 // 优先攻击…形态余音
@@ -1054,7 +1059,7 @@ function kitLion(ab, e, b) {
           b2.addBuff(e2, { key: 'boss:advance', persist: true, visible: true, mods: { defPct: T(ab, 'advance.def') ?? 0, resFlat: T(ab, 'advance.magic_resistance') ?? 0 } });
           b2.fx('phase', { x: e2.x, y: e2.y, id: e2.id, kind: 'lionAdvance' });
         }
-        if (!canCast(e2, false)) return;
+        if (!canCast(e2, false, b2)) return;
         P.sp += dt * ENEMY_SP_PER_SEC;
         if (P.sp >= cost && decree(b2, e2)) P.sp = 0;
         // 【莫非王土】: ANIMATE_DELAY s after equipment first lies on the field, then once per 王权号令 cycle
@@ -1102,7 +1107,7 @@ function kitDeer(ab, e) {
           b.addBuff(e2, { key: 'boss:madness', persist: true, visible: true, mods: { physTakenMul: 1 - dr, artsTakenMul: 1 - dr } }); // 物理和法术伤害降低
           b.fx('phase', { x: e2.x, y: e2.y, id: e2.id, kind: 'deerMadness' });
         }
-        if (!canCast(e2, false)) return;
+        if (!canCast(e2, false, b)) return;
         P.acc += dt;
         if (P.acc < e2.s.interval) return;
         const cands = fairOrder(b, e2, allTargets(b, e2), P);

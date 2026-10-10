@@ -292,7 +292,7 @@
       "hooks": [1,33,6134,675,675,989,989,11,46,131,7,24,0,12494,2454,34,104,83,1,46,1,0,0],
       "events": {"atk":684,"bounty":1,"deploy":30,"die":48,"dmg":899,"engage":6,"fx":62,"heal":7,"layer":1,"leak":83,"skill":50,"spawn":114,"status":479},
       "fx": {"aoe":4,"blink":2,"camouflage":1,"displace":18,"dodge":5,"dp":2,"explode":10,"garrison":1,"garrisonGrant":2,"slash":8,"zone":9},
-      "snaps": "1fbc84c9 22000fcc 223bbac4 11cede44 dace9680 2509a928 1f7be7a9 113ea658 bee09383 a768bd6d 68202ff3 efaa7682 42a0be9a d408a79a 2aacf394 9f60eaf1 b582212e 9e757b79 8f799bd1 e6640f5d ef28c12c"
+      "snaps": "1fbc84c9 22000fcc 223bbac4 11cede44 dace9680 2509a928 50a71316 b6460e7a 1bd25aed bdb75e22 b26751de 17486885 af7ab2cf a3f673fc dc1b303e 67c5c08a cf356d75 f120c496 e40759c2 bc264b8a 8ddbd173"
     },
     "standin-06": {
       "about": "elite band 5 as stand-ins: chess_char_3_12_b→char_608_acpion chess_char_4_09_b→char_617_sharp2 chess_char_3_05_b→char_601_cguard chess_char_3_18_b→char_609_acguad chess_char_4_04_b→char_607_cspec chess_char_4_07_b→char_601_cguard chess_char_4_16_b→char_615_acspec chess_char_3_01_b→char_603_csnipe chess_char_3_04_b→char_605_cmedic chess_char_3_21_b→char_611_acnipe chess_char_4_02_b→char_611_acnipe chess_char_4_13_b→char_614_acsupo",

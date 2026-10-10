@@ -1622,33 +1622,33 @@
       "killed": 13,
       "total": 13,
       "unspawned": 0,
-      "bossHpLeft": 7407055,
+      "bossHpLeft": 7407059,
       "rngDraws": 294,
       "errors": {"count":0,"kinds":[]},
-      "players": {"p1":{"killed":13,"total":13,"perfect":true,"leaks":0,"leaksUncounted":0,"coins":0,"dmg":386827,"bossDmg":192945,"heal":38880,"deaths":9,"layerGains":{}}},
+      "players": {"p1":{"killed":13,"total":13,"perfect":true,"leaks":0,"leaksUncounted":0,"coins":0,"dmg":386823,"bossDmg":192941,"heal":38720,"deaths":8,"layerGains":{}}},
       "units": [
-        ["p1",1,"op","chess_char_4_01_b",2,"uniequip_002_rmixer",5482.35,1,4,2,37451,736,0,42,1],
-        ["p1",2,"op","chess_char_4_04_b",1,"uniequip_002_ines",1949,1,6,1,71619,10188,0,218,6],
-        ["p1",3,"op","chess_char_4_07_b",1,"uniequip_002_bpipe",0,0,23,0,23284,9197,0,65,17],
-        ["p1",4,"op","chess_char_4_09_b",1,"uniequip_002_mizuki",2777.6,1,5,2,13178,0,0,32,5],
-        ["p1",5,"op","chess_char_5_22_b",1,"uniequip_002_nymph",1611,1,1,4,33641,0,0,28,10],
-        ["p1",6,"op","chess_char_5_23_b",1,"uniequip_002_reckpr",0,0,26,0,0,4826,23725,31,2],
-        ["p1",7,"op","chess_char_1052_kalts2_b",1,"none",2623.1,1,2,2,27673,0,15155,28,2],
-        ["p1",8,"op","chess_char_4_02_b",2,"uniequip_002_mostma",0,0,27,0,150359,25508,0,59,2],
-        ["p1",9,"op","chess_char_4_06_b",1,"uniequip_002_kroos2",1561,1,3,2,19081,0,0,123,4],
-        ["p1",10,"op","chess_char_4_10_b",1,"uniequip_002_aroma",0,0,30,0,10541,4992,0,12,1]
+        ["p1",1,"op","chess_char_4_01_b",2,"uniequip_002_rmixer",5482.35,1,4,4,40159,884,0,38,1],
+        ["p1",2,"op","chess_char_4_04_b",1,"uniequip_002_ines",2149,1,6,0,65131,8815,0,218,6],
+        ["p1",3,"op","chess_char_4_07_b",1,"uniequip_002_bpipe",0,0,23,0,24868,8156,0,66,17],
+        ["p1",4,"op","chess_char_4_09_b",1,"uniequip_002_mizuki",2777.6,1,5,3,13185,31,0,33,5],
+        ["p1",5,"op","chess_char_5_22_b",1,"uniequip_002_nymph",1611,1,1,3,36799,0,0,25,9],
+        ["p1",6,"op","chess_char_5_23_b",1,"uniequip_002_reckpr",0,0,26,0,0,6303,25599,32,2],
+        ["p1",7,"op","chess_char_1052_kalts2_b",1,"none",2623.1,1,2,0,23421,0,13121,29,2],
+        ["p1",8,"op","chess_char_4_02_b",2,"uniequip_002_mostma",1,1,27,0,152943,25905,0,61,2],
+        ["p1",9,"op","chess_char_4_06_b",1,"uniequip_002_kroos2",1561,1,3,3,18603,0,0,122,4],
+        ["p1",10,"op","chess_char_4_10_b",1,"uniequip_002_aroma",0,0,30,0,11713,4992,0,13,2]
       ],
       "enemies": {
         "enemy_1005_yokai_3": [1,1,0,12516,107495],
         "enemy_9010_acpupp": [2,2,0,0,86026],
-        "enemy_9021_acduml_2": [1,0,0,0,192945],
-        "enemy_9022_acdumm": [1,0,0,3234,0],
-        "enemy_9023_acdums": [10,10,0,39698,360]
+        "enemy_9021_acduml_2": [1,0,0,0,192941],
+        "enemy_9022_acdumm": [1,0,0,2650,0],
+        "enemy_9023_acdums": [10,10,0,39921,360]
       },
-      "hooks": [1,15,6000,649,649,1577,1830,234,22,22,50,46,46,16140,156,0,15,0,1,58,0,16,0],
-      "events": {"atk":709,"deploy":15,"die":22,"dmg":1799,"engage":9,"fx":764,"heal":192,"skill":96,"spawn":25,"status":265},
-      "fx": {"aoe":10,"beam":20,"burst":16,"charge":17,"counter":24,"crit":40,"dilemma":5,"displace":3,"ember":2,"explode":468,"kalts2Damage":15,"kalts2Heal":19,"levitate":4,"phase":53,"ripple":22,"sermon":1,"shadowWeave":12,"shield":7,"shieldBreak":3,"slippery":1,"soul":3,"stealth":6,"summon":8,"takeoff":1,"telegraph":2,"undying":2},
-      "snaps": "7d6487f1 181ce5d5 f1c5dc16 cbe9ed0f f846c5a8 f90009b7 21cb8e16 10d5d0e7 b5d8a678 457e1425 ed6d97ce e30df7d7 53438a48 466e0ca9 585130d2 71b07338 e4633b7f 99a52f57 a6a6878a c48280ba"
+      "hooks": [1,15,6000,648,648,1574,1855,251,21,21,50,46,50,16111,153,0,15,0,1,94,0,17,0],
+      "events": {"atk":717,"deploy":15,"die":21,"dmg":1824,"engage":9,"fx":756,"heal":209,"skill":96,"spawn":25,"status":234},
+      "fx": {"aoe":9,"beam":18,"burst":17,"charge":17,"counter":26,"crit":32,"dilemma":5,"ember":2,"explode":470,"kalts2Damage":12,"kalts2Heal":19,"levitate":4,"phase":54,"quadShot":1,"ripple":22,"sermon":1,"shadowWeave":14,"shield":7,"shieldBreak":2,"slippery":2,"soul":3,"stealth":6,"summon":8,"takeoff":1,"telegraph":2,"undying":2},
+      "snaps": "7d6487f1 18515926 f7a2a62e 55c7ada7 c67afd09 fbe32fe1 2a99e9c1 a9c26a78 5b3d296d 9f15aa1a 8c013a2b fc88555f 0ee27d36 93650f0a 36e20a06 a68cb7f0 f002f8cf 7e8ae45c b395382f 2781229e"
     },
     "unite-1": {
       "about": "联防 1 helper(s), 11 leaked: chess_char_4_17_b chess_char_4_18_b chess_char_4_11_b chess_char_4_19_b chess_char_4_16_b chess_char_4_12_b chess_char_4_13_b chess_char_4_14_b token_10041_cathy_catsld token_10041_cathy_catsld",

@@ -118,7 +118,7 @@ import { SPECIAL_KITS } from './enemies/special.js';
 import { LEADER_KITS } from './enemies/leaders.js';
 
 export {
-  EROSION, EROSION_BURST, HUSK_REBIRTH, nthOf, abOf, attach, T, silenced, canCast, elem, hurt, alliesInTiles,
+  EROSION, EROSION_BURST, HUSK_REBIRTH, nthOf, abOf, attach, T, silenced, canCast, unbalancedNow, elem, hurt, alliesInTiles,
   targetsNear, allTargets, areaAllies, areaAlliesInTiles, fieldAllies, auraAllies, targetAndArea, byPriority, zone,
   remainingRoute, stayRoute, spawnChildren, stepToward, setHits, hitCount, isHitCount, setForm, lpLoss, expose,
   expectedFinal, absorbArts,
@@ -259,7 +259,7 @@ function onTick(b, dt) {
       }
       if (a.fire && a.cd != null) {
         a.left -= dt;
-        if (a.left <= 1e-9 && canCast(e, a.sil) && (!a.cond || safe(b, e, () => a.cond(b, e, a)))) {
+        if (a.left <= 1e-9 && canCast(e, a.sil, b) && (!a.cond || safe(b, e, () => a.cond(b, e, a)))) {
           a.left = Math.max(TICK, a.cd);
           a.casts = (a.casts ?? 0) + 1;
           e.skillAnimUntil = b.time + 0.5;
