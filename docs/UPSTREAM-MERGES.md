@@ -258,6 +258,12 @@ standins 2, diy 8 move) and **`177bad63`** (re-based onto Group A, combined corp
 `2cab8b6b` (**rebuild `data/enemies.json`** — a one-line drift left by the cache merge when 克莱门莎 was added;
 the offline rebuild reproduces `data/` byte-for-byte again).
 
+**Ours on top of the statistics page (PR #323 — not an upstream merge).** The local statistics page (`438a6b52` /
+`e33a8838`, rows above) later grew a **server-backed** store: `shared/stats.js`, `server/stats.js` on a new
+`match_stats` table (schema v5), the `stats.submit` / `list` / `clear` / `view` protocol, the per-owner sync and the
+online-player `stats.view`. That layer is entirely ours (caps = 2× the mainline) and must survive a merge — see
+`docs/MATCHMAKING.md` §40 and `docs/OUR-FEATURES.md` §8.
+
 **Skipped — the explicit list (upstream hash + why):**
 
 | Upstream | Why skipped (the files it would have touched) |

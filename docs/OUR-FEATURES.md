@@ -469,7 +469,8 @@ The 更新日志 / bug提交 panels, and the 公开房间 directory (owner's req
 full **screen** — `public/js/screens/rooms.js` — reached from the lobby's 公开房间 button, listing each room as a bar
 with its 4 seat squares), are **fork-only**, on the accounts SQLite
 (schema v3: `changelog`, `bug_reports`, `bug_uploads`; v4 adds `changelog.summary` / `source` / `minor_seq`, so every
-entry carries a one-line 概要 and a pushed notice appends the next `<major.minor>.<seq>` as `source: notice`). Bug reports are TEXT plus at most four raster images stored
+entry carries a one-line 概要 and a pushed notice appends the next `<major.minor>.<seq>` as `source: notice`; v5 adds
+`match_stats` — the server-side match statistics, see §8 and `docs/MATCHMAKING.md` §40). Bug reports are TEXT plus at most four raster images stored
 as files under `var/bug-uploads/`; the database holds paths + metadata only, and the type is verified from the bytes.
 玩家留言 (the guestbook) is deliberately absent: the owner dropped it, and this fork never shipped one. See
 `docs/MATCHMAKING.md` §36. **我们独有，非上游；合并时不得丢失。**
@@ -493,9 +494,14 @@ wins); a JP line the manifest or the host lacks falls back to the Chinese one. F
 ships both dubs via one switch (`tools/package.mjs` `FULL_ZIP_JP_VOICE`), the lite zip stays art-free. This is our
 packaging — upstream's `ddf8c39e` was `SKIP`ped. See [`docs/ASSETS.md`](ASSETS.md) "Voice".
 
-**The local statistics page.** `public/js/ui/stats.js` (record store: bounded, corrupt-data tolerant, the "left
-right away does not count" rule, replay dedupe) + `public/js/screens/stats.js` (+ `public/css/screens/stats.css`);
-entries on the title / lobby / room screens; `test/ui` stats suites pin it. Fork-only.
+**The match statistics (server-backed).** The record schema + pure logic live in `shared/stats.js` (strict
+normalization, bounded storage, the "left right away does not count" rule, replay dedupe), re-exported by
+`public/js/ui/stats.js` with the localStorage I/O; `public/js/ui/statsSync.js` uploads each finished match (deduped,
+marked) and the login backlog; `public/js/screens/stats.js` (+ `public/css/screens/stats.css`) reads `stats.list` /
+`stats.view` from the server with localStorage as the offline fallback, and the 在线玩家 overlay opens another online
+player's public records. Server side: `server/stats.js` `StatsService` on `match_stats` (schema v5), the `stats.*`
+protocol, and the owner resolution in `server/lobby.js` (`account_id`, else the guest session `playerId`). Our caps
+are 2× the mainline (`shared/constants.js` `STATS_*`). Fork-only; see `docs/MATCHMAKING.md` §40.
 
 **The drag-snap rule (R23-DRAGSNAP).** `public/js/render/drag.js` (`dragStandTile`, `DRAG_HOLD_TILES`): a dragged
 operator stands on the tile under the pointer while it is a legal target (a board tile or a bench slot) and is held
@@ -525,7 +531,7 @@ empty (rebuilt in `2cab8b6b` / `f26a4837` after the 克莱门莎 cache merge lef
 | Area | Files that must survive the merge |
 |---|---|
 | Japanese voice | the `audio.voiceJp` wiring (`shared/` + `public/js/`), the 设置 → 语音语言 switch, `tools/package.mjs` (`FULL_ZIP_JP_VOICE`); [`docs/ASSETS.md`](ASSETS.md) "Voice" |
-| Local stats page | `public/js/ui/stats.js`; `public/js/screens/stats.js`; `public/css/screens/stats.css`; the title / lobby / room entries; the `test/ui` stats suites |
+| Match statistics (server-backed) | `shared/stats.js`; `shared/constants.js` (`STATS_*`); `public/js/ui/stats.js` + `public/js/ui/statsSync.js`; `public/js/screens/stats.js`; `public/css/screens/stats.css`; the title / lobby / room entries; the 在线玩家 overlay row → `openPlayerStats` (`public/js/screens/lobby.js`); `server/stats.js`; `server/db.mjs` (schema v5 `match_stats`); `server/lobby.js` (`stats.*`); `server/index.js` (StatsService wiring); `docs/MATCHMAKING.md` §40; `test/ui/stats.test.js` + `test/ui/statsSync.test.js` + `test/server-stats.test.js` |
 | Drag snap | `public/js/render/drag.js` (`dragStandTile` / `DRAG_HOLD_TILES`); `test/docs-consistency.test.js` (the pointer-tile UX) |
 | 失衡 / slide | `server/sim/battle/displacement.js`; `public/js/render/units.js`; `public/js/render/interp.js`; `test/sim/unbalance.test.js`; `test/sim/displace-fx.test.js`; `test/render/unitview.test.js` |
 | R23 timing | the whole-frame attack-interval / SP constants (`server/sim/constants.js`, `shared/`) and the `gameLogic` display constants |

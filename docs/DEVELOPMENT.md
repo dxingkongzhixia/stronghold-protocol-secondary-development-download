@@ -415,13 +415,16 @@ lives, how to extend it, the tests that pin it, and an explicit **我们独有�
 It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§37 (the decision record) and
 [`docs/ASSETS.md`](ASSETS.md) (the asset detail). Its appendix is the merge checklist of fork-only files.
 
-## 13. Lobby community data (our SQLite schema, `server/community.js`)
+## 13. Lobby community data + match statistics (our SQLite schema, `server/community.js` / `server/stats.js`)
 
 The lobby's 更新日志 / bug提交 panels (and the server side of 公开房间, whose directory is a full screen now —
 `screens/rooms.js`, not a panel) live in the **same `node:sqlite` database as accounts**
-(`server/db.mjs`, now schema **v4**). The `migrate()` step adds three tables — `changelog`, `bug_reports`,
+(`server/db.mjs`, now schema **v5**). The `migrate()` step adds three tables — `changelog`, `bug_reports`,
 `bug_uploads` — under the same `PRAGMA user_version` discipline (v3); v4 adds `changelog.summary` / `source` /
-`minor_seq` for the one-line gist and the notice-appended minor versions. `CommunityService` mirrors `AuthService`: one
+`minor_seq` for the one-line gist and the notice-appended minor versions; **v5 adds `match_stats`** (the server-side
+match statistics, `server/stats.js`, docs/MATCHMAKING.md §40): one normalized record per finished match, keyed to an
+**owner** — `account_id` for a registered player, `guest_id` for a guest's session `playerId` (exactly one set). `CommunityService` /
+`StatsService` mirror `AuthService`: one
 `DatabaseSync` handle, prepared statements, synchronous methods; `openMemoryDb()` gives tests the schema.
 
 Bug-report images are **files** under `var/bug-uploads/` (git-ignored, never statically served); the database keeps
@@ -429,7 +432,8 @@ only the relative path + mime + byte count + uploader + time. The real content t
 (png / jpeg / webp only — no svg / html), never a filename. See
 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §36 for the endpoints, limits and the client panels.
 
-The schema stays at these four tables: **the room text chat (docs/MATCHMAKING.md §38) is deliberately NOT in the DB** —
+The schema now holds `accounts`, `sessions`, `changelog`, `bug_reports`, `bug_uploads` and `match_stats`:
+**the room text chat (docs/MATCHMAKING.md §38) is deliberately NOT in the DB** —
 a message is validated and broadcast as a transient `m.chat` frame (`server/lobby.js` `chat()`), shown as a short-lived
 bubble on the client; it is never buffered, never written to `var/*.db` or disk, and is gone as soon as it is displayed.
 Do not add a `chat` table to `server/db.mjs` / `CommunityService`.

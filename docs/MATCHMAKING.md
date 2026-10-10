@@ -1237,3 +1237,53 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - **日语语音**：新增 `audio.voiceJp` 与 设置 → 语音语言（我们独有的打包方式）；见 `docs/ASSETS.md`。
 - **顶栏胶囊**：`已解决 = 击杀 + 漏怪`（只数本回合排定敌人）。
 - **数据可复现**：`node tools/build-data.mjs --offline` 后 `git status` 为空（`data/enemies.json` 的漂移已修）。
+
+## 40. 对局统计（服务器 SQLite，账号 / 游客；2026-10-11）
+
+「统计数据」页（上游 PR #323 的本地版，见 §33 的合并记录）在本分支**同步到服务器**：每个打完的对局是**一条归一化记录**（`shared/stats.js`，与页面渲染的 schema 完全一致），存在账号 SQLite 的 `match_stats` 表里，并**归属到一个 owner**。
+
+### 40.1 记录 schema
+
+沿用上游 schema（**不改字段**）：`end`（`settled` / `quit`）、帧（`modeId` / `difficulty` / `seed` / `durationMs` / `victory` / `roundsPassed` / `hiddenReached` / `hiddenCleared` / `reason` / `roomMode` / `selfId`）、`players[]`（每名玩家的 `bandId` / `title{id}` / `lineup[]` / `bonds[]` / `stats{}` 与代号）。归一化在 `shared/stats.js normalizeRecord`（严格 schema：未知字段丢弃、每个字符串 / 列表有界）。
+
+### 40.2 存储（`server/db.mjs` schema v5）
+
+- 表 `match_stats (id, account_id, guest_id, record_id, mode, difficulty, seed, result, rounds, started_at, ended_at, payload_json, created_at)`。
+- **owner 恰有一个非空**：已登录玩家 = `account_id`（外键，账号删除级联）；游客 = `guest_id`（见 §40.4）。`CHECK ((account_id IS NULL) <> (guest_id IS NULL))`。
+- `record_id` = 记录自身的去重 id（`recordId` = seed + 历时 + 模式 + 回合 + 胜负 + 自己），`(owner, record_id)` 唯一 → 重复提交（重连重放）被 `INSERT OR IGNORE` 忽略。
+- `payload_json` = 归一化记录本体；`mode` / `difficulty` / `seed` / `result` / `rounds` / `started_at` / `ended_at` 是用于排序 / 裁剪的帧字段。
+- 索引：`(account_id, ended_at DESC, id DESC)`、`(guest_id, ended_at DESC, id DESC)`，以及两个 `(owner, record_id)` 唯一索引。
+
+### 40.3 上限（上游规则，数量 2×，`shared/constants.js`）
+
+`STATS_MAINLINE = { maxRecords: 1000, fullKeep: 30, maxChars: 800_000 }`，`STATS_SCALE = 2` →
+`STATS_MAX_RECORDS = 2000` / `STATS_FULL_KEEP = 60` / `STATS_MAX_CHARS = 1_600_000`。
+`server/stats.js StatsService` 按 owner 执行：只保留最新 2000 行；只有最新 60 行保留完整 `players`（更老的压成摘要 `compactRecord`）；所有行的 `payload_json` 合计超过 1.6M 字符时从**最旧**的行开始删（最新一行永远保留）。客户端 localStorage 用同一组值（离线回退）。
+
+### 40.4 游客身份
+
+游客没有账号，但有**会话身份**：`server/net.js` 每个 session 的 `playerId`（客户端持久化重连 token，重连窗口内 `hello` 复用同一 session），因此**游客记录跨对局、跨重连存活**，按 `playerId` 归属——复用仓库已有的身份，未新造 id。**边界**：会话被回收（空闲超时约 10 分钟 / 服务器重启）后游客拿到新的 `playerId`，旧记录不再归属新身份；`stats.view` 也只解析**当前在线**的 session（`net.js presenceOnline`，登录玩家还有 5 分钟 presence grace）。
+
+### 40.5 协议（`shared/protocol.js` + `server/lobby.js`）
+
+C2S：
+- `stats.submit { record }` — 一条归一化记录（结构上限 `players ≤ 6`，其余由 `normalizeRecord` 严格裁剪）。归属到 session 的 owner；按 `record_id` 去重；记录无法抢救 → `BAD_STATS`。
+- `stats.list { limit? }` — 自己的记录，最新在前，上限 `STATS_LIST_LIMIT`（= 2000）。
+- `stats.clear {}` — 删除自己的全部记录。
+- `stats.view { name }` — 按**公开代号**读取另一个**在线**玩家的公开记录；解析不到 / 同名多人 → `BAD_TARGET`。
+
+S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, records: [...] }`（`stats.list` / `stats.view` 的应答，带请求 `rid`；`stats.submit` / `stats.clear` 回 `ok`）。
+
+### 40.6 客户端
+
+- 每打完一局（`recordResult` / `recordQuit`）先写本机 localStorage，再由 `ui/statsSync.js` **上传**（按 `record_id` 去重，成功后在本机 `sp.pref.statsSync` 标记）。
+- **登录时把本地积压一次性补传**（去重），归入账号；游客照常上传（归属游客身份）。两条路径都只依赖 `welcome` / `auth.ok` 触发。
+- 统计页**登录 / 游客都优先读服务器**（`stats.list`），断网回退 localStorage；`stats.view` 读他人。
+- 导出 / 导入仍针对本机（导入的新记录随后补传）。
+- 大厅「在线玩家」里**已登录玩家**的行可点开其公开记录（只读：隐藏导出 / 导入 / 清空）。
+
+### 40.7 隐私
+
+- `stats.records` 只含**游戏内已公开字段**（记录本体）；`owner` 只有 `name` / `role` / `guest`。
+- **绝不**跨网传账号 id、email、token 或会话密钥；`stats.view` 也只按当前在线 session 解析，不按账号名录遍历。
+- 记录里本就有的队友代号（结算界面已向同局展示）随记录保存；本地导出文件同理。
