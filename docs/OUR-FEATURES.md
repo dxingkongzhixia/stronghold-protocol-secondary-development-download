@@ -501,7 +501,10 @@ marked) and the login backlog; `public/js/screens/stats.js` (+ `public/css/scree
 `stats.view` from the server with localStorage as the offline fallback, and the 在线玩家 overlay opens another online
 player's public records. Server side: `server/stats.js` `StatsService` on `match_stats` (schema v5), the `stats.*`
 protocol, and the owner resolution in `server/lobby.js` (`account_id`, else the guest session `playerId`). Our caps
-are 2× the mainline (`shared/constants.js` `STATS_*`). Fork-only; see `docs/MATCHMAKING.md` §40.
+are 2× the mainline (`shared/constants.js` `STATS_*`). A login merges the local backlog into the account (the
+guest keeps uploading under its own identity), and the cross-player view (`stats.view` → the 在线玩家 row) carries
+**only** the record's own in-game fields plus the owner's public `{ name, role, guest }` — never an account id, email,
+token or session key. Fork-only; see `docs/MATCHMAKING.md` §40 (schema, owner rule, privacy rules).
 
 **The drag-snap rule (R23-DRAGSNAP).** `public/js/render/drag.js` (`dragStandTile`, `DRAG_HOLD_TILES`): a dragged
 operator stands on the tile under the pointer while it is a legal target (a board tile or a bench slot) and is held
