@@ -109,7 +109,7 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
   `tools/build-data.mjs`（`CUSTOM_CHESS`）。
-- **本批的整体检查（HEAD 隔离 worktree）**：`node --test` **5806 项 / 5795 通过 / 0 失败 / 11 跳过**（带 `.git` 且复制了 `data/local-assets.json`，`package.test.js` 与两条素材测试均通过）；`node tools/kit-coverage.mjs --missing` **307/307 技能、120/120 棋子**；`node tools/i18n.mjs check en --strict` **1266/1266（0 缺失 0 错误）**；`node tools/doctor.mjs` **退出码 0**（仅防火墙规则提示）；`node tools/build-data.mjs --offline` 与 `data/` **逐字节一致**；工作项目相对 store HEAD **无跟踪漂移**；`gitee/master` == `HEAD`。
+- **本批的整体检查**：`node --test` **5829 项 / 5818 通过 / 0 失败 / 11 跳过**（带 `.git` 且复制了 `data/local-assets.json`，`package.test.js` 与两条素材测试均通过）；`node tools/kit-coverage.mjs --missing` **307/307 技能、120/120 棋子**；`node tools/i18n.mjs check en --strict` **1263/1263（0 缺失 0 错误）**；`node tools/doctor.mjs` **退出码 0**（仅防火墙规则提示）；`node tools/build-data.mjs --offline` 与 `data/` **逐字节一致**；工作项目相对 store HEAD **无跟踪漂移**；`gitee/master` == `HEAD`。
 
 ## 10. 产物
 - 文档：本文件、`docs/MATCHMAKING.md`（§0–§17 菜单）、`docs/DEPLOY.md`（上游的部署说明）。
