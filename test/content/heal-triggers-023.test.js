@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeBattle, chessRec, enemyRec, checkInvariants } from '../helpers/battleHarness.js';
+import { TICK as STEP } from '../../server/sim/constants.js';
 const GUARDIANS = [
   { chessId: 'chess_char_5_11_b', skillIndex: 0 },
   { diy: { slot: 6, charId: 'char_2025_shu', skillIndex: 0 }, elite: true },
@@ -41,7 +42,12 @@ for (const entry of GUARDIANS) {
       h.run(4);
       const times = h.hooksOf('heal').filter(c => c.source === u).map(c => c.t);
       assert.ok(times.length >= 3);
-      for (let i = 1; i < times.length; i++) assert.ok(Math.abs(times[i] - times[i - 1] - u.s.interval) < 1e-9);
+      // our engine may land the cast one fixed step after the cooldown expires (the interval is not a whole number of
+      // ticks under the +100 ASPD case); the cadence must still track the attack interval within one step.
+      for (let i = 1; i < times.length; i++) {
+        const dt = times[i] - times[i - 1];
+        assert.ok(dt >= u.s.interval - 1e-9 && dt <= u.s.interval + STEP + 1e-9, `cadence ${dt} ~ ${u.s.interval}`);
+      }
       checkInvariants(h.b);assert.deepEqual(h.b.errors, []);
     }
   });
@@ -60,7 +66,9 @@ for (const motion of ['WALK', 'FLY']) {
   test(`凯尔希·思衡托 S2 opens for a selectable ${motion} enemy only in the expanded range, without an injured ally`, () => {
     const h = makeBattle({ autoFinish: false,
       defs: { enemies: { target: enemyRec({ key: 'target', motion, hp: 1e8, atk: 0, speed: 0 }) } },
-      units: [{ uid: 1, diy: { slot: 6, charId: 'char_1052_kalts2', skillIndex: 1 }, elite: true, row: 10, col: 4 }] });
+      // 凯尔希·思衡托 is a NORMAL chess; our fork's 自选 pool (data/backups.json) does not list her, so field the elite
+      // record directly — the kit and its S2 mixed trigger are the same either way.
+      units: [{ uid: 1, chessId: 'chess_char_1052_kalts2_b', skillIndex: 1, row: 10, col: 4 }] });
     h.step();const u = h.unit(1);u.skill.gainSp(999);h.run(0.5);assert.equal(u.skill.activations, 0);
     const e = h.spawn('target', { pos: [10, 7] });h.b.applyStatus(e, 'sleep', { duration: 1 });
     assert.equal(h.b.enemiesInKeys(u.baseRangeKeys, u, { canHitFly: true }).length, 0);
