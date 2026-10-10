@@ -87,13 +87,13 @@ test('② 上报没有 resolved ⇒ progress.resolved = null，客户端回落�
   assert.deepEqual(progressOf(m, 'n:p_0'), { killed: 3, resolved: null, total: 9, done: false });
   // … and the teammate HUD falls back to `killed` (master's display: resolved ?? killed)
   const mine = (pub) => teammateProgress(pub, 'p_1').find((x) => x.playerId === 'p_0');
-  assert.deepEqual(mine(m.publicView()), { playerId: 'p_0', name: 'P0', isBot: false, killed: 3, resolved: 3, total: 9, done: false });
+  assert.deepEqual(mine(m.publicView()), { playerId: 'p_0', name: 'P0', role: null, isBot: false, killed: 3, resolved: 3, total: 9, done: false });
 
   // a reported 0 is a real value: adopted, and the HUD shows 0 (not the fallback)
   assert.deepEqual(m.handle('p_0', { t: 'b.progress', battleId: human.battleId, gt: 5, killed: 3, total: 9, leaks: 0, resolved: 0 }), { ok: true });
   m.flush(true);
   assert.deepEqual(progressOf(m, 'n:p_0'), { killed: 3, resolved: 0, total: 9, done: false });
-  assert.deepEqual(mine(m.publicView()), { playerId: 'p_0', name: 'P0', isBot: false, killed: 3, resolved: 0, total: 9, done: false });
+  assert.deepEqual(mine(m.publicView()), { playerId: 'p_0', name: 'P0', role: null, isBot: false, killed: 3, resolved: 0, total: 9, done: false });
 });
 
 test('a done field\'s m.public progress carries the reported resolved (never a fabricated one)', () => {
