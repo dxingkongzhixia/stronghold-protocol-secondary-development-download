@@ -1,7 +1,8 @@
-// The local stats viewer (统计数据): this browser's record of the matches the player took part in — see ui/stats.js for
-// what is recorded, what counts and how the storage is bounded. A full-screen overlay opened imperatively from the
-// title screen / lobby / room (`openStats()`); <StatsHost/> is mounted once by main.js. Ported from PR #323 by
-// @2321Robin; reworked for 0.2.2 in the grammar of 干员调配 (top bar with tabs, a note line, a scrolling body).
+// The stats viewer (统计数据): the matches the player took part in — see ui/stats.js for what is recorded, what counts
+// and how the storage is bounded. A full-screen overlay opened imperatively from the title screen / lobby / room
+// (`openStats()`), and from the 在线玩家 overlay for another online player (`openPlayerStats(name)` → stats.view);
+// <StatsHost/> is mounted once by main.js. Ported from PR #323 by @2321Robin; reworked for 0.2.2, server-backed in
+// this fork (docs/MATCHMAKING.md §40).
 //
 //   总览      – games, wins, win rate, hidden-core reaches / clears, best round, time played; the difficulties; the six
 //               评语 (titles) with their counts; what counts and what was left out
@@ -10,10 +11,12 @@
 //   对局记录  – every stored match, newest first. A settled row re-views that match's settlement screen (the record is
 //               inverted into an m.result payload for <ResultView/>); a match given up early is marked 中途退出 and,
 //               when it did not count, 不计入统计
-// Everything is 本机数据 (localStorage, `sp.pref.stats`) and the page says so, teammates' names included. 导出 / 导入 (a
-// JSON file, merged by record id on the way in) moves it between devices; 清空 resets it after a confirm dialog.
-// The host renders nothing until opened and the game data files the replay needs load only then (the lobby alone never
-// downloads them): the overview reads config / bands / assets only.
+// The page reads from the SERVER in both cases (account or guest: ui/statsSync.js `fetchStats` → stats.list), falling
+// back to localStorage (`sp.pref.stats`) only when the socket is down; another online player's view is read-only
+// (导出 / 导入 / 清空 are hidden and only already-public in-game fields are shown). 清空 clears the server copy and
+// the local one; 导出 / 导入 (a JSON file, merged by record id) still move the LOCAL copy, whose new rows are uploaded
+// afterwards. The host renders nothing until opened and the game data files the replay needs load only then (the lobby
+// alone never downloads them): the overview reads config / bands / assets only.
 
 import { useEffect, useMemo, useRef, useState } from '../../vendor/hooks.module.js';
 import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS } from '../../../shared/constants.js';
@@ -31,7 +34,7 @@ import {
   recordToResult, MAX_RECORDS, FULL_KEEP, IMPORT_MAX_CHARS,
 } from '../ui/stats.js';
 import { fetchStats, clearServerStats, flushStats } from '../ui/statsSync.js';
-import { net } from '../../net.js';
+import { net } from '../net.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');

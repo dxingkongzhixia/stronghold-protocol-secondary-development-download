@@ -121,7 +121,7 @@ function migrate(db) {
     db.exec('PRAGMA user_version = 4');
   }
   if (v < 5) {
-    // Match statistics (docs/MATCHMAKING.md §39, server/stats.js): every finished match is one normalized record
+    // Match statistics (docs/MATCHMAKING.md §40, server/stats.js): every finished match is one normalized record
     // (`shared/stats.js`) bound to an OWNER — a registered player's `account_id`, or a guest's `guest_id` (the
     // session's playerId; a guest has no account). Exactly one of the two is set (the CHECK). `record_id` is the
     // record's own dedupe id (`recordId`, unique per owner — a replayed submit is ignored); `payload_json` is the

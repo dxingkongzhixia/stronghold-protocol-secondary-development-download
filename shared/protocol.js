@@ -324,7 +324,7 @@ const target = (v) => {
 };
 
 /**
- * Structural check of a `stats.submit` record (docs/MATCHMAKING.md §39). Only the outer shape is checked here — the
+ * Structural check of a `stats.submit` record (docs/MATCHMAKING.md §40). Only the outer shape is checked here — the
  * strict per-field schema + bounds are `shared/stats.js normalizeRecord`, applied by the service (which refuses a
  * record it cannot salvage). The whole inbound frame is already bounded by the 64 KB WebSocket limit.
  */
@@ -399,7 +399,7 @@ export const C2S = {
   'boot.claim': {},
   'boot.release': {},
 
-  // match statistics (server/stats.js, docs/MATCHMAKING.md §39): one normalized match record per finished match,
+  // match statistics (server/stats.js, docs/MATCHMAKING.md §40): one normalized match record per finished match,
   // bound server-side to the session's OWNER — a registered player's account, else the guest's session identity (a
   // guest is stored too; only the owner key differs). `record` is validated structurally here and normalized against
   // the strict schema (shared/stats.js) in the service. `stats.submit` dedupes by the record's own id; `stats.list` /
@@ -482,7 +482,7 @@ export const S2C = [
   'm.public', 'm.private', 'm.field', 'm.toast', 'm.ticker', 'm.emote', 'm.result',
   // m.unitStats { seq, round, units: [unitStatsEntry] } — the answer to g.unitStats (the requester only)
   'm.unitStats',
-  // match statistics (server/stats.js, docs/MATCHMAKING.md §39): stats.records { scope: 'self'|'other',
+  // match statistics (server/stats.js, docs/MATCHMAKING.md §40): stats.records { scope: 'self'|'other',
   // owner: { name, role, guest }, records: [normalized records], limit } — the answer to stats.list / stats.view.
   // `records` are the already-public in-game fields; no account id / email / token is ever included.
   'stats.records',

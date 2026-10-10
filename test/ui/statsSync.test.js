@@ -1,5 +1,5 @@
 // test/ui/statsSync.test.js — the client side of the server-backed match statistics (public/js/ui/statsSync.js,
-// public/js/ui/stats.js; docs/MATCHMAKING.md §39):
+// public/js/ui/stats.js; docs/MATCHMAKING.md §40):
 //   the local backlog (pendingRecords) and the persisted uploaded set (markUploaded),
 //   flushStats: submits the un-uploaded records once, marks them, retries on a transient failure, drops a refused one,
 //   installStatsSync: flushes on `welcome` and on `auth.ok` (a login re-uploads the guest / offline backlog),

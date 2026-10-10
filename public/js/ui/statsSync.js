@@ -1,4 +1,4 @@
-// public/js/ui/statsSync.js — submits the local match records to the server (server/stats.js, docs/MATCHMAKING.md §39)
+// public/js/ui/statsSync.js — submits the local match records to the server (server/stats.js, docs/MATCHMAKING.md §40)
 // and reads the server's copy back for the stats page.
 //
 // The browser keeps every finished match in localStorage (`ui/stats.js`); this module uploads the ones the server has

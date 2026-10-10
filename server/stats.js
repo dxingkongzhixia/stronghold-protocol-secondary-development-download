@@ -1,4 +1,4 @@
-// server/stats.js — match statistics over the accounts SQLite (server/db.mjs schema v5, docs/MATCHMAKING.md §39).
+// server/stats.js — match statistics over the accounts SQLite (server/db.mjs schema v5, docs/MATCHMAKING.md §40).
 //
 // Every finished match the client recorded (public/js/ui/stats.js) is submitted here as ONE normalized record
 // (`shared/stats.js normalizeRecord`, the same strict schema the page renders) and stored on `match_stats`, bound to

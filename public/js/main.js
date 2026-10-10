@@ -565,7 +565,7 @@ async function boot() {
 
   wireNet();
   installStatsRecorder(store); // follows the match on screen, so a 放弃模拟 can be recorded (ui/stats.js)
-  // Match records are also submitted to the server (ui/statsSync.js, docs/MATCHMAKING.md §39): every stored record,
+  // Match records are also submitted to the server (ui/statsSync.js, docs/MATCHMAKING.md §40): every stored record,
   // the local backlog on a `welcome`, and the backlog again once logged in.
   const statsSync = installStatsSync({ net });
   setStatsUploader(() => { void statsSync.flush(); });

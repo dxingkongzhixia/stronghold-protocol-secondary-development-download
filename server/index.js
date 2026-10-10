@@ -149,7 +149,7 @@ export async function startServer(opts = {}) {
   if (community && !opts.community) {
     try { community.importChangelogMarkdown(readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8')); } catch (e) { log.warn('[community] changelog seed skipped', e?.message); }
   }
-  // Match statistics (server/stats.js, docs/MATCHMAKING.md §39): every finished match, per owner (account or guest),
+  // Match statistics (server/stats.js, docs/MATCHMAKING.md §40): every finished match, per owner (account or guest),
   // on the same DB — schema v5 (server/db.mjs). Null without a DB (guests-only, file-free tests): stats.* is disabled.
   const stats = db ? (opts.stats || new StatsService({ db })) : null;
 

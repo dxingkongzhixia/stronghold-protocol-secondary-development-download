@@ -467,7 +467,7 @@ export class Lobby {
       case 'mm.cancel': return this.mmCancel(session);
       // player bug report (server/community.js, docs/MATCHMAKING.md §36): TEXT + already-uploaded image ids
       case 'bug.report': return this.bugReport(session, msg);
-      // match statistics (server/stats.js, docs/MATCHMAKING.md §39): the finished matches, per owner (account or guest)
+      // match statistics (server/stats.js, docs/MATCHMAKING.md §40): the finished matches, per owner (account or guest)
       case 'stats.submit': return this.statsSubmit(session, msg);
       case 'stats.list': return this.statsList(session, msg);
       case 'stats.clear': return this.statsClear(session);
@@ -1039,7 +1039,7 @@ export class Lobby {
   }
 
   // ---------------------------------------------------------------------------------------------------
-  // Match statistics (server/stats.js, docs/MATCHMAKING.md §39)
+  // Match statistics (server/stats.js, docs/MATCHMAKING.md §40)
   // ---------------------------------------------------------------------------------------------------
 
   /**

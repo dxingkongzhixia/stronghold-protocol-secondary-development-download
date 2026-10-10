@@ -1,5 +1,5 @@
 // test/server-stats.test.js — match statistics on the accounts SQLite (server/stats.js, shared/stats.js,
-// server/db.mjs schema v5; docs/MATCHMAKING.md §39):
+// server/db.mjs schema v5; docs/MATCHMAKING.md §40):
 //   the v5 migration (match_stats + its indexes),
 //   the service: insert / per-owner dedupe / newest-first list / per-account + per-guest isolation / clear,
 //   the bounded storage (STATS_MAX_RECORDS, STATS_FULL_KEEP compaction, STATS_MAX_CHARS, the newest always kept),
