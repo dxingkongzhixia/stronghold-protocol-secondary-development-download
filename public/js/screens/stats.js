@@ -34,6 +34,7 @@ import {
   recordToResult, MAX_RECORDS, FULL_KEEP, IMPORT_MAX_CHARS,
 } from '../ui/stats.js';
 import { fetchStats, clearServerStats, flushStats } from '../ui/statsSync.js';
+import { ensureStylesheet } from '../ui/ensureStylesheet.js';
 import { net } from '../net.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
@@ -42,10 +43,14 @@ const cx = (...p) => p.flat().filter(Boolean).join(' ');
 /** Rows of 对局记录 shown at first and added by each 显示更多. */
 export const HISTORY_PAGE = 50;
 
+/** The overlay's stylesheet (public/index.html links it; ensureStylesheet covers a stale index.html — see that module). */
+export const STATS_CSS = '/css/screens/stats.css';
+
 const statsStore = createStore({ open: false, tab: 'overview', view: null });
 
 /** Open the stats viewer (title screen / lobby / room entry points). */
 export function openStats() {
+  ensureStylesheet(STATS_CSS);
   data.load('config');
   data.load('bands');
   data.load('assets');
@@ -54,6 +59,7 @@ export function openStats() {
 /** Open another ONLINE player's public record list (the 在线 overlay; server/stats.js stats.view). @param {string} name */
 export function openPlayerStats(name) {
   if (typeof name !== 'string' || !name) return;
+  ensureStylesheet(STATS_CSS);
   data.load('config');
   data.load('bands');
   data.load('assets');
@@ -406,6 +412,9 @@ function StatsScreen({ tab, view }) {
 /** Global stats viewer host — mounted once by main.js; renders nothing (and loads nothing) until opened. */
 export function StatsHost() {
   const { open, tab, view } = useStore((s) => s, Object.is, statsStore);
+  // Link the overlay's stylesheet at mount: a page served an outdated index.html (without the stats.css <link>) must
+  // never show the stats toolbar inline over the lobby (ui/ensureStylesheet.js).
+  useEffect(() => { ensureStylesheet(STATS_CSS); }, []);
   if (!open) return null;
   return html`<${StatsScreen} tab=${tab} view=${view} />`;
 }

@@ -1339,3 +1339,24 @@ describe('multi-device & browser compatibility (static)', () => {
     assert.match(src, /--tap-min: 44px/);
   });
 });
+
+// The screens' CSS is linked from public/index.html (DEV-GUIDE-ZH: 按屏引入 CSS). A stale served index.html must not
+// silently drop one: production 2026-10 served an index.html without the stats.css <link> — every JS/CSS file was
+// byte-identical to the repo, yet the 统计数据 overlay rendered inline over the lobby (its toolbar 导出 / 导入 / 清空
+// stuck at the top-left) because stats.css is what makes `.st` a fixed overlay. ui/ensureStylesheet.js now re-links it
+// at runtime (unit-tested in test/ui/ensure-stylesheet.test.js); this guards the source of truth.
+describe('public/index.html stylesheet links', () => {
+  const index = readFileSync(path.join(PUBLIC, 'index.html'), 'utf8');
+  const sheets = [...index.matchAll(/<link rel="stylesheet" href="(\/css\/[^"]+)"/g)].map((x) => x[1]);
+
+  test('links every stylesheet under public/css', () => {
+    for (const file of CSS_FILES) {
+      const href = fileToUrlPath(file);
+      assert.ok(sheets.includes(href), `index.html does not link ${href}`);
+    }
+  });
+
+  test('links the 统计数据 overlay stylesheet (`.st` is only position:fixed with it)', () => {
+    assert.ok(sheets.includes('/css/screens/stats.css'), 'index.html does not link /css/screens/stats.css');
+  });
+});
