@@ -43,9 +43,15 @@ DEFAULT_VOICE_DIR = Path(
 )
 
 
-def targets(manifest, lang=None):
-    """op -> { CLIP_NAME: out rel path } for every voice file the manifest lists."""
-    voice = (manifest.get('audio') or {}).get('voice') or {}
+def targets(manifest, lang=None, dub='cn'):
+    """op -> { CLIP_NAME: out rel path } for every voice file the manifest lists.
+
+    `dub` picks the manifest tree: 'cn' (default) reads `audio.voice` (the 中文 setting), 'jp' reads `audio.voiceJp`
+    (the 日本語 setting) — the same file names, under `/audio/voice/jp/`. The client's bundle folder differs (a JP
+    install's `voice` is the JP dub, `voice_cn` the CN one) while the AudioClip names are the CN line ids either way.
+    """
+    audio = manifest.get('audio') or {}
+    voice = (audio.get('voiceJp') if dub == 'jp' else audio.get('voice')) or {}
     out = {}
     for op, kv in voice.items():
         if not isinstance(kv, dict):
@@ -69,6 +75,7 @@ def rel_to_disk(rel):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--voice-dir', default=str(DEFAULT_VOICE_DIR), help='the client voice bundle dir')
+    ap.add_argument('--dub', choices=['cn', 'jp'], default='cn', help="manifest tree to fill: cn (audio.voice, default) | jp (audio.voiceJp)")
     ap.add_argument('--lang', default=None, help='only fill this manifest language segment (e.g. cn)')
     ap.add_argument('--only', nargs='*', default=None, help='only these operator ids')
     ap.add_argument('--ffmpeg', default=shutil.which('ffmpeg') or 'ffmpeg')
@@ -77,7 +84,7 @@ def main():
     args = ap.parse_args()
 
     manifest = json.load(open(ROOT / 'data' / 'assets.json', encoding='utf-8'))
-    todo = targets(manifest, args.lang)
+    todo = targets(manifest, args.lang, args.dub)
     if args.only:
         todo = {k: v for k, v in todo.items() if k in set(args.only)}
 

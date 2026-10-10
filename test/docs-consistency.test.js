@@ -923,8 +923,15 @@ test('干员战斗语音 (DESIGN §21.30): the manifest data, the official prior
   // the docs
   assert.match(DESIGN, /### 21\.30 /);
   assert.match(DESIGN, /\*\*Where each line plays — battle only\.\*\*/);
-  assert.match(doc('docs/ASSETS.md'), /\| 干员战斗语音 \|/);
+  assert.match(doc('docs/ASSETS.md'), /\| 干员战斗语音 /);
   assert.match(doc('docs/ASSETS.md'), /voiceChars/);
+  // 0.2.2: the Japanese dub beside the Chinese one (audio.voiceJp, settings 语音语言, FULL_ZIP_JP_VOICE)
+  assert.equal(Object.keys(manifest.audio?.voiceJp ?? {}).length, charIds.length, 'every voiced operator has its JP twin');
+  assert.equal(manifest.stats.voiceJpChars, charIds.length);
+  assert.match(doc('docs/ASSETS.md'), /voiceJp: \{ \[charId\]: \{ …the same slots \} \}/);
+  assert.match(doc('docs/ASSETS.md'), /audio\/voice\/jp\//);
+  assert.match(doc('docs/DEVELOPMENT.md'), /extract-voice\.py \[--dub jp\]/);
+  assert.match(doc('docs/NEW-OPERATOR.md'), /--dub jp/);
   assert.match(SIM, /\['engage', id\]/);
   // the code: every slot the client asks for comes from a running battle's own stream — the three prep-only lines
   // (干员报到 / 编入队伍 / 任命队长) are never requested — except 选中干员, the detail panel's line on every tap of an

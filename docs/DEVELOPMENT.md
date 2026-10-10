@@ -274,7 +274,7 @@ node tools/setup.mjs                                 # end-user setup (checks en
 # local-client extraction (optional, from an installed game client; needs .venv-extract / Python 3.14 — 3.8 is too old for UnityPy; see docs/OUR-FEATURES.md §3)
 .venv-extract\Scripts\python.exe tools\local-extract\extract.py --game "<…/StreamingAssets/AB/Windows>"
 .venv-extract\Scripts\python.exe tools\local-extract\extract.py --only spine/token
-.venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py [--voice-dir …\voice_cn]
+.venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py [--dub jp] [--voice-dir …\voice_cn]
 ```
 
 - `tools/fetch-assets.mjs` + `tools/assets/**` write `public/assets/**`, `public/fonts/**` and the manifest

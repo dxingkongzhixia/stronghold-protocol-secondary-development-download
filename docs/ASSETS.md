@@ -23,7 +23,7 @@ npm run assets       # = node tools/vendor.mjs && node tools/fetch-assets.mjs
 | `--offline` | No network. Re-runs post-processing (atlas fixes, skeleton parsing, WOFF2) on what is already on disk, then rebuilds `data/assets.json`. |
 | `--dry-run` | Print the plan (file and model counts, alias notes) and exit. |
 | `--refresh-index` | Re-download the upstream indexes: `audio_data.json`, `charword_table.json` (the 干员战斗语音 slots) and `models_data.json`. |
-| `--voice-lang=cn` | 干员战斗语音 language: `cn` (default) | `jp` | `en` | `kr` — the same file names under `voice_cn/`, `voice/`, `voice_en/`, `voice_kr/`. |
+| `--voice-lang=cn` | The dub of `audio.voice` (the 中文 voice setting): `cn` (default) | `jp` | `en` | `kr` — the same file names under `voice_cn/`, `voice/`, `voice_en/`, `voice_kr/`. `audio.voiceJp` (the 日本語 setting) is **always** the JP dub (`voice/`): both trees are planned every run. |
 | `--voice-all` | Plan every official voice slot, including the prep-only lines no battle plays (干员报到 / 编入队伍 / 任命队长 — 360 files, one per operator and slot). Off by default: nothing requests them, so planning them only makes every run download more. |
 | `--prune` | Delete files under `public/assets/` that the manifest no longer references, for example after a mapping change. Without this flag they are only listed in the report. `public/assets/local/` (written by `tools/local-extract`) is never pruned. Implies `--allow-shrink`. |
 | `--allow-shrink` | Write `data/assets.json` even when it loses entries the current one has (see "The manifest never shrinks by accident" below). |
@@ -80,6 +80,8 @@ How downloads are fetched:
 
 The first run downloads about **309 MiB in about 5,690 files** (it took 134 s on a ~3 MB/s link before the 55 emote and 玩法说明 files, 21.3 MiB, and the 1,680 干员战斗语音 files, 40.1 MiB, were added). A re-run takes about 1 s. The voice count is the twelve slots a battle plays; the three prep-only slots the official client uses elsewhere (干员报到 / 编入队伍 / 任命队长, 360 more files, 18.4 MiB) are left out unless `--voice-all` is passed.
 
+0.2.2 adds the Japanese dub beside the Chinese one (`audio.voiceJp`, settings 语音语言): the same lines from the dump's `voice/` folder into `audio/voice/jp/` — 2,702 more files. A run that fetches them from the mirror downloads about 85 MB; a machine with the local JP client can extract the compressed tree instead (`tools/local-extract/extract-voice.py --dub jp`, ~127 MiB of 96 kbps MP3s), so the committed `public/assets/audio/voice/jp/` here is that larger local encoding. The full release zip ships both dubs unless `tools/package.mjs` `FULL_ZIP_JP_VOICE` is set to `false`.
+
 Outputs:
 - `data/assets.json`: the manifest (committed).
 - `public/assets/**`: art and audio (tracked in the Gitee repo since 2026-10-08).
@@ -120,7 +122,8 @@ The research JSONs in `docs/research/` (03, 05, 07) define **which** ids are nee
 | Token Spine that no dump carries (39 summons: most 自选 summons, 凯瑟琳's 爬行号·防护单元, 凛御银灰's 风雪之眼) | the local client only (`tools/local-extract/extract.py TOKEN_SPINES`, optional); never downloaded and never required: an overlay (`tokens[id].spineLocal`; without it the avatar diamond) | `local/spine/token/{tokenId}/{stem}.*` (listed in `data/local-assets.json`) |
 | BGM | AA2 `voice` branch `audio/sound_beta_2/music/**` (大厅/休整期 `act1autochess`, 开战 `act13side/m_bat_kazimierz2_{1,2}` — 骑士之日 / 无畏者; the 开战 track follows the round: `_2` 无畏者 rounds 1–7, `_1` 骑士之日 from round 8) | `audio/bgm/{file}.mp3` |
 | SFX (UI, battle, per unit) | AA2 `voice` `audio/sound_beta_2/**`, mapped from `audio_data.json` banks | `audio/sfx/{same sub-path}.mp3` |
-| 干员战斗语音 | AA2 `voice` `audio/sound_beta_2/voice_cn/{charId}/cn_nn.mp3` — the lines `charword_table.json` lists (`placeType` = when the game plays one, `voiceAsset` = the path); `--voice-lang=jp|en|kr` takes the same file names from `voice/`, `voice_en/`, `voice_kr/` | `audio/voice/{lang}/{charId}/{cn_nn}.mp3` |
+| 干员战斗语音 (中文) | AA2 `voice` `audio/sound_beta_2/voice_cn/{charId}/cn_nn.mp3` — the lines `charword_table.json` lists (`placeType` = when the game plays one, `voiceAsset` = the path); `--voice-lang=jp\|en\|kr` takes the same file names from `voice/`, `voice_en/`, `voice_kr/` | `audio/voice/{lang}/{charId}/{cn_nn}.mp3` |
+| 干员战斗语音 (日本語, `audio.voiceJp`) | the same lines from ArknightsAssets2 `voice/` (`voice/{charId}/cn_nn.mp3`, the JP dub); the local JP client's `voice/` bundles when a machine has it (`tools/local-extract/extract-voice.py --dub jp`) | `audio/voice/jp/{charId}/{cn_nn}.mp3` |
 | Fonts: Bender Regular and Light, Novecento Wide | TimWangZi/The-font-of-Arknights | `public/fonts/*.{otf,ttf,woff2}`, `public/fonts/fonts.css` |
 
 The operator avatars, operator portraits, skill icons and the enemy/token icons (the `yuanyan` rows) all come from
@@ -181,7 +184,7 @@ All paths are URL paths relative to the site root, for example `/assets/char/ava
   hash: 'a1b2c3d4e5f6',             // content hash (cache busting)
   generator: 'tools/fetch-assets.mjs',
   stats: { files, bytes, chars, charsWithBack, enemies, enemiesWithSpine, tokens, tokensWithSpine,
-           spineModels, bonds, items, bands, skills, modules, ui, sfxUnits, voiceChars },
+           spineModels, bonds, items, bands, skills, modules, ui, sfxUnits, voiceChars, voiceJpChars },
   chars:   { [charId]: { avatar, avatarE2?, portrait, portraitE2?, spine: { front: Spine, back?: Spine } } },
   enemies: { [enemyId]: { icon, spine?: Spine, spineAliasOf?: enemyId,
                           spineLocal?: { group, skel, atlas, textures, …Spine } } },
@@ -219,6 +222,12 @@ All paths are URL paths relative to the site root, for example `/assets/char/ava
                            // prep-only slots 干员报到 / 编入队伍 / 任命队长 are left out of the plan by default —
                            // nothing requests them and they cost 360 files (19.3 MB) per run — and `--voice-all` adds
                            // them (audio.mjs VOICE_PREP_SLOTS) for the complete official set
+    voiceJp: { [charId]: { …the same slots } },
+                           // the Japanese dub (audio.voiceJp, the owner's request of 2026-10-08 「全套的日配语音」): the
+                           // same slots and file names as `voice`, under audio/voice/jp/ (Voices from the local JP
+                           // client, else ArknightsAssets2 voice/). The 设置 → 语音语言 switch picks `voice` (中文,
+                           // default) or `voiceJp` (日本語, not tied to the interface language); a JP line the manifest
+                           // or the host lacks falls back to the Chinese line of the same name (audio.js voiceLine)
     sfx: {
       ui:     { click, back, confirm, tab, pick, drop, error, buy, sell, income, refresh, freeze, levelup,
                 merge, equip, itemMerge, bondUp, artPlace, ready, timer, draft, yourTurn, yourTurnCircle,
@@ -473,6 +482,13 @@ The 2026-09-27 verification pass also checked:
     --voice-dir "D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\Arknights_Data\PersistentData\Bundles\audio\sound_beta_2\voice"
   ```
   2026-10-06 用它从**日服默认语言**补了 **1680 条**语音（120 干员，~78 MB）。`voice`＝日服默认（日语）；想补 CN 就把 `--voice-dir` 指到 `…\sound_beta_2\voice_cn`。`--print-jobs` 只看要写什么。
+  **日配树**（`audio.voiceJp`，2026-10-10）：加 `--dub jp`（源仍是 `…\voice`），输出的 `cn_nnn.mp3` 落到清单里的 `audio/voice/jp/<charId>/`，也就是设置→语音语言「日本語」播的那套：
+  ```
+  .venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py --dub jp ^
+    --voice-dir "D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\Arknights_Data\PersistentData\Bundles\audio\sound_beta_2\voice" ^
+    --ffmpeg "C:\…\ffmpeg.exe"
+  ```
+  `--dub`（`cn` 默认 / `jp`）选清单里的树；日服的 `voice` 是**日配**，`voice_cn` 是**中配**（英配 `voice_en`）。清单缺日配的干员/行会退回中配（`public/js/audio.js voiceLine`），所以本地客户端没有的（新干员）不影响它上线。
 - **BGM / SFX**：`extract.py` / `extract-voice.py` 都不管；本地这个日服客户端也**没有**上游新增的 `m_bat_kazimierz2_*` / `m_bat_corrosion_*` / `b_ui_alarmenter`。→ 走镜像（见下），或以后有更新的客户端再抽。
 - ✅ **远程镜像其实能用**：本机直连 `raw.githubusercontent` / `jsDelivr` 被墙，但 `fetch-assets` 带 **`--asset-source=mirror`**（#24 的 gh-proxy 镜像）就正常：
   ```

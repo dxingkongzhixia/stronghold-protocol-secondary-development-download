@@ -133,9 +133,16 @@ garrison 里给 `bbStr.bond_id`（逗号分隔多个）即可，**不用写码**
    战斗脊柱 `fexli/ArknightsResource`（`spine/<id>/<id>/Front|Back/<id>.skel|atlas|png`）；
    子职业图标 `ArknightsAssets/ArknightsAssets2`。**该文件是 1 空格缩进的 JSON、无尾换行**（解析→改→`JSON.stringify(o,null,1)` 写回即可逐字节一致）。
 2. 下载：`$env:SP_ASSET_SOURCE='mirror'; node tools/fetch-assets.mjs`（写 `public/assets/**` + `data/assets.json`）。
-3. 语音（**只补日语**）：`extract-voice.py --only <charId> --ffmpeg <ffmpeg.exe>`
-   （从本地日服客户端抽，覆盖 fetch-assets 下到的 CN 版；`--ffmpeg` 必给 —— ffmpeg 不在 PATH 上）。
-4. **CN 语音（联动干员 / 本地客户端没有时）**：社区语音包（`ArknightsAssets2@voice`、`isHarryh/Ark-Voice`）常常还没收录新干员，
+3. 语音（**两棵树**）：`audio.voice`（中文）指 `public/assets/audio/voice/cn/<charId>/cn_<NNN>.mp3`，`audio.voiceJp`
+   （日本語，默认「中文」/「日本語」由设置→语音语言切）指 `public/assets/audio/voice/jp/<charId>/cn_<NNN>.mp3`。
+   本地客户端两个包都在：`…\sound_beta_2\voice`＝日配、`voice_cn`＝中配。分别抽（**无需改清单**）：
+   ```
+   extract-voice.py --dub jp --only <charId> --voice-dir "…\sound_beta_2\voice" --ffmpeg <ffmpeg.exe>
+   extract-voice.py --dub cn --only <charId> --voice-dir "…\sound_beta_2\voice_cn" --ffmpeg <ffmpeg.exe>
+   ```
+   `--ffmpeg` 必给 —— ffmpeg 不在 PATH 上。日配/中配任一棵缺某员某行时，客户端按「日配优先，缺则中配」回退
+   （`public/js/audio.js voiceLine`），所以本地没有的（新干员）不影响上线。
+4. **语音缺失（联动干员 / 本地客户端没有时）**：社区语音包（`ArknightsAssets2@voice`——CN 在 `voice_cn/`、JP 在 `voice/`；`isHarryh/Ark-Voice`）常常还没收录新干员，
    但 **PRTS 有**：
    ```
    https://torappu.prts.wiki/assets/audio/voice/<charId>/cn_<NNN>.mp3      # 文件名必须小写
@@ -144,7 +151,7 @@ garrison 里给 `bbStr.bond_id`（逗号分隔多个）即可，**不用写码**
    大写 `CN_019.mp3` 会 404，其它路径会返回 SPA 的假 200。`<NNN>` 与槽位的对应见干员页
    `https://prts.wiki/w/<干员>/语音记录`——`data-voice-filename` + `data-place-type`；战斗槽固定是 019–032：
    行动出发 / 行动开始 / 选中×2 / 部署×2 / 作战中1–4 / 完成高难 / 3星 / 非3星 / 失败。）
-   下到 `public/assets/audio/voice/cn/<charId>/cn_<NNN>.mp3` 后**重跑 `node tools/fetch-assets.mjs`**：
+   下到 `public/assets/audio/voice/cn/<charId>/cn_<NNN>.mp3`（日配同理放 `…/jp/`）后**重跑 `node tools/fetch-assets.mjs`**：
    清单按「本地文件存在」收录（不必能从上流下到）。注意译名页里「日文」字段为空 ⇒ 该干员没有日语语音。
 5. 校验：`node tools/doctor.mjs`；测试见 `test/assets.test.js`、`test/ui/assetUrls.test.js`、`test/render/assets.test.js`。
 

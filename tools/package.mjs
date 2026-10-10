@@ -49,6 +49,17 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 /** The one folder inside both zips (DEPLOY §1.1: "解压后把里面的 Stronghold-Protocol 文件夹放到…"). */
 export const FOLDER = 'Stronghold-Protocol';
 
+/**
+ * THE SWITCH for the Japanese voice dub in the full zip (`audio.voiceJp` of data/assets.json: 2674 files under
+ * public/assets/audio/voice/jp/, 89,388,041 bytes = 85.2 MiB on disk, about 76 MB zipped). true (0.2.2): the full zip
+ * ships both dubs, so it still runs with nothing to download. false: the full zip leaves the JP files out — setup
+ * downloads them on the first start like the lite zip's art, and the 日本語 setting plays the Chinese line until then
+ * (public/js/audio.js voiceLine). The lite zip stays art-free either way. This project has no update zip; the switch
+ * only decides the full zip's art plan. */
+export const FULL_ZIP_JP_VOICE = true;
+/** The second voice tree of data/assets.json, held out of the full zip when FULL_ZIP_JP_VOICE is false. */
+export const JP_VOICE_DIR = 'public/assets/audio/voice/jp/';
+
 /** Root files a player gets. */
 export const ROOT_FILES = ['package.json', 'package-lock.json', 'LICENSE', 'NOTICE.md', 'THIRD-PARTY-NOTICES.md', 'README.md', 'CHANGELOG.md'];
 /** The player docs. */
@@ -194,13 +205,18 @@ export function manifestFiles(manifest) {
 /**
  * The art of a full package: every file data/assets.json lists, public/fonts, public/assets/local/ and
  * data/local-assets.json (when present). `missing`: listed files not on disk; `orphans`: files under public/assets
- * that nothing lists (left out).
+ * that nothing lists (left out). With `jpVoice` false the JP dub (audio.voiceJp) is held out of the zip: its files are
+ * neither shipped nor reported as orphans — setup downloads them on the first start (FULL_ZIP_JP_VOICE).
  */
-export function artPlan(root, { lite = false } = {}) {
-  if (lite) return { files: [], missing: [], orphans: [], local: false };
+export function artPlan(root, { lite = false, jpVoice = FULL_ZIP_JP_VOICE } = {}) {
+  if (lite) return { files: [], missing: [], orphans: [], held: [], local: false };
   const listed = manifestFiles(readJson(path.join(root, 'data', 'assets.json')) ?? {});
   const local = isFile(path.join(root, 'data', 'local-assets.json'));
   if (local) for (const f of manifestFiles(readJson(path.join(root, 'data', 'local-assets.json')) ?? {})) listed.add(f);
+  // FULL_ZIP_JP_VOICE false: the JP dub is held out of the full zip (setup downloads it on the first start) — not
+  // missing, and its files are not orphans either (they are listed, just not shipped): `held`.
+  const held = jpVoice ? [] : [...listed].filter((f) => f.startsWith(JP_VOICE_DIR)).sort();
+  if (!jpVoice) for (const f of [...listed]) if (f.startsWith(JP_VOICE_DIR)) listed.delete(f);
   const files = new Set();
   const missing = [];
   for (const f of listed) {
@@ -214,8 +230,9 @@ export function artPlan(root, { lite = false } = {}) {
   }
   // without case: on Windows / macOS a file whose name differs only in case is the listed one (fetch-assets orphanFiles)
   const lower = new Set([...files].map((f) => f.toLowerCase()));
-  const orphans = listTree(root, 'public/assets').filter((f) => !lower.has(f.toLowerCase()));
-  return { files: [...files].sort(), missing: missing.sort(), orphans, local };
+  const orphans = listTree(root, 'public/assets')
+    .filter((f) => !lower.has(f.toLowerCase()) && !(!jpVoice && f.startsWith(JP_VOICE_DIR)));
+  return { files: [...files].sort(), missing: missing.sort(), orphans, held, local };
 }
 
 const URL_MOUNTS = [['/data/', 'data/'], ['/shared/', 'shared/'], ['/sim/', 'server/sim/']];
@@ -322,13 +339,13 @@ function groupOf(rel) {
  * Everything a package would hold, with every check: no copying, no install. `scan: false` skips the personal-info
  * scan and `measure: false` the node_modules / public/vendor sizes (tests that only want the selection).
  * @param {string} root
- * @param {{ lite?: boolean, paths?: string[], allowDirty?: boolean, env?: object, scan?: boolean, measure?: boolean }} [opts]
+ * @param {{ lite?: boolean, paths?: string[], allowDirty?: boolean, env?: object, scan?: boolean, measure?: boolean, jpVoice?: boolean }} [opts]
  */
 export function plan(root, opts = {}) {
   const lite = !!opts.lite;
   const all = (opts.paths || trackedFiles(root)).map(posixRel);
   const { keep, drop } = selectTracked(all);
-  const art = artPlan(root, { lite });
+  const art = artPlan(root, { lite, jpVoice: opts.jpVoice });
   const pkg = readJson(path.join(root, 'package.json')) || {};
   const lock = readJson(path.join(root, 'package-lock.json')) || {};
   const generated = shipsPacks(keep) ? [GENERATED_PACK_INDEX] : [];
