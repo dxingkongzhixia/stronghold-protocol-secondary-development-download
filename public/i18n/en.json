@@ -1301,5 +1301,16 @@
   "清空本机的统计数据": "Clear the statistics stored on this device",
   "本机数据：只保存在这个浏览器里，不会上传到服务器；同盟对局里队友的代号也会存在本机（导出文件里也有）。": "Local data: kept only in this browser, never uploaded to the server. Teammates' names from Team Simulations are stored here too (and appear in an export file).",
   "本机保存的统计数据无法读取，已另存为备份，从现在起重新记录。": "The stats stored on this device could not be read. They were set aside as a backup and recording starts afresh.",
-  "有 {n} 条记录已损坏，已忽略。": "{n} damaged {n|record was|records were} ignored."
+  "有 {n} 条记录已损坏，已忽略。": "{n} damaged {n|record was|records were} ignored.",
+  "查看其对局记录": "View match records",
+  "将删除服务器与本机保存的 {n} 条对局记录，无法恢复。": "Deletes {n} match record(s) from the server and this device. This cannot be undone.",
+  "已清空对局记录": "Match records cleared",
+  "已清空本机记录（服务器暂时无法连接）": "Local records cleared (server unreachable for now)",
+  "清空对局记录（服务器与本机）": "Clear match records (server and this device)",
+  "正在查看 {name} 的公开对局记录（仅在线玩家的游戏内数据，不含账号信息）。": "Viewing {name}'s public match records (in-game data of an online player only; no account information).",
+  "对局记录会同步到服务器，并与你的身份绑定：登录后归入账号（可在其他设备查看），游客则绑定本机游客身份。在线玩家之间可以查看彼此的公开对局数据，其中不含账号信息；同盟对局里队友的代号也会一并保存。": "Match records sync to the server and bind to your identity: logging in keeps them on your account (viewable on other devices); a guest binds to this device's guest identity. Online players can view each other's public match data, which contains no account information; teammates' names from Alliance matches are stored too.",
+  "正在从服务器读取对局记录…": "Reading match records from the server…",
+  "无法读取该玩家的记录（可能已离线）。": "Could not read this player's records (they may be offline).",
+  "这名玩家还没有对局记录。": "This player has no match records yet.",
+  "对局记录无效": "Invalid match record"
 }
