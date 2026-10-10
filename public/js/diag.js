@@ -1,4 +1,5 @@
-// public/js/diag.js — the client's error log and the diagnostics a player copies into a bug report (设置 → 问题反馈).
+// public/js/diag.js — the client's in-memory error log (main.js / ui/toasts.js / battle/runner.js record into it) and a
+// diagnostics report builder kept for local use and its tests (the 设置 → 问题反馈 section was deliberately dropped).
 //
 // Nothing leaves the browser. The log is kept in memory (the last LOG_MAX entries, an identical error in a row counted
 // on its entry); the report is plain text the player copies and pastes into a GitHub issue, with the player names,

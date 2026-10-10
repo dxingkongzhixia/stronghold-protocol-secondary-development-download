@@ -1,4 +1,4 @@
-// test/diag.test.js — the client's error log and bug-report diagnostics (public/js/diag.js; 设置 → 问题反馈): what an
+// test/diag.test.js — the client's error log and diagnostics-report helpers (public/js/diag.js): what an
 // entry keeps (message, a short stack without the page's host), repeats counted on one entry, the cap, the report's
 // lines, the battle attached as a replayable b.start, and the player names / room code / token never in the text.
 import { test, describe, beforeEach } from 'node:test';

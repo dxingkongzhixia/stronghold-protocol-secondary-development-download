@@ -354,6 +354,12 @@ drift is now gone and `node tools/build-data.mjs --offline` reproduces `data/` b
 **Verification.** The isolated-worktree full suite at HEAD `f26a4837`: **5806 tests / 5795 pass / 0 fail /
 11 skipped** (see the report in `docs/PROJECT-STATE.md` §9).
 
+**Deliberate divergence.** The 设置 → **问题反馈 / DIAGNOSTICS** section that upstream's `3f884412` added (our R22 port
+`2ef6339b`, §4 above) was **deliberately dropped**: it duplicates our own bug-report entry point (the lobby's
+「bug提交」), so `public/js/ui/settings.js` no longer carries the section, its 「复制诊断信息」 button, its
+recorded-errors row or its `ISSUES_URL`, and the `set-diag*` CSS hooks are gone. `public/js/diag.js` itself stays —
+`main.js`, `ui/toasts.js` and `battle/runner.js` still record into its error log.
+
 ---
 
 ## 7. Pending: the displacement-slide + 失衡 port (`port-r22-slide`)
