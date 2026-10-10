@@ -536,20 +536,20 @@
       "time": 230,
       "ticks": 6900,
       "reason": "timeout",
-      "killed": 40,
-      "total": 131,
+      "killed": 38,
+      "total": 132,
       "unspawned": 0,
       "bossHpLeft": null,
-      "rngDraws": 418,
+      "rngDraws": 420,
       "errors": {"count":0,"kinds":[]},
       "players": {
-        "p1": {"killed":40,"total":131,"perfect":false,"leaks":91,"leaksUncounted":0,"coins":2,"dmg":783091,"bossDmg":0,"heal":9803,"deaths":36,"layerGains":{"raidShip":6}}
+        "p1": {"killed":38,"total":132,"perfect":false,"leaks":94,"leaksUncounted":0,"coins":6,"dmg":807564,"bossDmg":0,"heal":9803,"deaths":38,"layerGains":{"raidShip":6}}
       },
       "units": [
-        ["p1",1,"op","chess_char_6_17_b",2,"uniequip_002_acpion",0,0,100,17,281981,18207,0,93,9],
-        ["p1",2,"op","chess_char_6_13_b",2,"uniequip_002_acspec",248.25,1,176,7,153012,33884,0,316,0],
-        ["p1",3,"op","chess_char_6_19_b",2,"uniequip_002_acspec",0,0,175,3,56835,11872,0,94,0],
-        ["p1",4,"op","chess_char_6_12_b",2,"uniequip_002_accast",18563.73,1,4,10,190988,281,0,18,2],
+        ["p1",1,"op","chess_char_6_17_b",2,"uniequip_002_acpion",0,0,86,16,308894,16303,0,84,10],
+        ["p1",2,"op","chess_char_6_13_b",2,"uniequip_002_acspec",0,0,178,7,170216,43036,0,354,0],
+        ["p1",3,"op","chess_char_6_19_b",2,"uniequip_002_acspec",0,0,162,2,37191,5936,0,58,0],
+        ["p1",4,"op","chess_char_6_12_b",2,"uniequip_002_accast",18844.84,1,4,10,190988,0,0,18,2],
         ["p1",5,"op","chess_char_6_15_b",2,"uniequip_002_acsupo",0,0,11,0,33012,3594,0,16,1],
         ["p1",6,"op","chess_char_6_18_b",2,"uniequip_002_accast",1819,1,8,3,67263,618,0,42,2],
         ["p1",7,"op","chess_char_6_20_b",2,"uniequip_002_acmedc",1464,1,9,0,0,3373,9803,17,1],
@@ -557,22 +557,23 @@
         ["-","~2","device","trap_1105_accrate",null,null,100,1,2,0,0,0,0,0,null]
       ],
       "enemies": {
-        "enemy_1006_shield_3": [21,3,18,26170,308807],
-        "enemy_1043_zomsbr": [66,27,39,193,182904],
-        "enemy_1162_magmot": [1,0,1,5758,17128],
+        "enemy_1006_shield_3": [21,4,17,32795,367631],
+        "enemy_1043_zomsbr": [66,20,46,105,153585],
+        "enemy_1161_tidmag": [1,0,1,1031,0],
+        "enemy_1162_magmot": [1,1,0,5500,19907],
         "enemy_1165_duhond": [1,1,0,93,4645],
         "enemy_1165_duhond_2": [1,0,1,0,0],
-        "enemy_1166_dusbr": [1,0,1,0,3234],
-        "enemy_1166_dusbr_2": [1,0,1,0,1609],
+        "enemy_1166_dusbr": [1,0,1,0,3357],
+        "enemy_1166_dusbr_2": [1,1,0,0,7299],
         "enemy_1168_dumage": [1,1,0,1897,7465],
-        "enemy_1168_dumage_2": [1,1,0,4314,10783],
-        "enemy_1169_duphlx": [1,0,1,0,2854],
-        "enemy_1402_tgshd_2": [36,7,28,33403,243663]
+        "enemy_1168_dumage_2": [1,1,0,3354,10783],
+        "enemy_1169_duphlx": [1,1,0,0,6636],
+        "enemy_1402_tgshd_2": [36,8,27,28085,226257]
       },
-      "hooks": [1,45,6900,745,745,1361,1377,9196,76,169,15,45,0,8504,767,64,131,90,1,76,1,1,0],
-      "events": {"atk":753,"bounty":1,"deploy":43,"die":79,"dmg":1214,"engage":6,"fx":782,"heal":23,"layer":1,"leak":90,"skill":92,"spawn":140,"status":488},
-      "fx": {"aoe":4,"blink":3,"burst":1,"displace":39,"dodge":1,"dp":26,"expose":639,"garrison":1,"garrisonGrant":3,"slash":65},
-      "snaps": "0716ed7c 58d077a2 b8c6598a 4e840251 54267c5a b08caf19 1b94ec34 8cb779a1 646007e2 4cea9d41 8c4a9912 5972519d 26f41915 866ab2e4 fbd29700 a57bb9e7 e87a645e f74c68a5 83bc5617 784d7cd2 05c42896 4087ac1c 10eff01e"
+      "hooks": [1,46,6900,728,728,1399,1418,9169,76,172,16,49,0,8412,775,63,132,93,1,76,1,1,0],
+      "events": {"atk":738,"bounty":3,"deploy":44,"die":79,"dmg":1247,"engage":6,"fx":723,"heal":23,"layer":1,"leak":93,"skill":98,"spawn":141,"status":521},
+      "fx": {"aoe":4,"blink":3,"burst":1,"displace":34,"dodge":1,"dp":26,"expose":576,"garrison":1,"garrisonGrant":3,"slash":73,"summon":1},
+      "snaps": "0716ed7c 58d077a2 57c5afa3 a5975524 f084dff4 11230bb8 715a3405 3f7266b8 9dc3ebfc ad68ef09 d33d00a5 0f236321 dbdf63ff 43eec82e 570d94eb d5d50a17 269c3ab3 b19accfc 491eb3da ca0d8913 978a8c15 d6bcc94e c95b215d"
     }
   }
 }
