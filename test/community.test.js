@@ -69,7 +69,7 @@ test('db migration v4: the community tables + the notice-log columns exist', () 
   const db = openMemoryDb();
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((r) => r.name);
   for (const t of ['changelog', 'bug_reports', 'bug_uploads']) assert.ok(tables.includes(t), `${t} exists`);
-  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 4);
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 5); // v5 adds match_stats (test/server-stats.test.js)
   const cols = db.prepare('PRAGMA table_info(changelog)').all().map((r) => r.name);
   for (const c of ['summary', 'source', 'minor_seq']) assert.ok(cols.includes(c), `changelog.${c} exists`);
 });

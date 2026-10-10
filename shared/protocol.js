@@ -1,7 +1,7 @@
 // Normative message catalogue (DESIGN §8). Used by server (validation) and client (building requests).
 // Every client→server message is `{ t, rid?, ...fields }`. Unknown `t` or invalid fields ⇒ ERR.BAD_MSG.
 
-import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO, AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX, BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX, CHAT_MAX } from './constants.js';
+import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO, AUTH_NAME_MIN, AUTH_NAME_MAX, AUTH_PASS_MIN, AUTH_PASS_MAX, BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX, CHAT_MAX, STATS_LIST_LIMIT } from './constants.js';
 import { isDroppableChess } from './standIn.js';
 import { diySlotIds, validateDiyPicks } from './diy.js';
 
@@ -323,6 +323,15 @@ const target = (v) => {
   return false;
 };
 
+/**
+ * Structural check of a `stats.submit` record (docs/MATCHMAKING.md §39). Only the outer shape is checked here — the
+ * strict per-field schema + bounds are `shared/stats.js normalizeRecord`, applied by the service (which refuses a
+ * record it cannot salvage). The whole inbound frame is already bounded by the 64 KB WebSocket limit.
+ */
+export const STATS_RECORD_LIMITS = Object.freeze({ players: 6 });
+const isStatsRecord = (v) => isPlain(v) && Array.isArray(v.players)
+  && v.players.length >= 1 && v.players.length <= STATS_RECORD_LIMITS.players && v.players.every(isPlain);
+
 /** @type {Record<string, Record<string, (v:any)=>boolean> & { $optional?: string[] }>} */
 export const C2S = {
   // session & lobby
@@ -389,6 +398,17 @@ export const C2S = {
   // boot.release hands it back once the preload is done.
   'boot.claim': {},
   'boot.release': {},
+
+  // match statistics (server/stats.js, docs/MATCHMAKING.md §39): one normalized match record per finished match,
+  // bound server-side to the session's OWNER — a registered player's account, else the guest's session identity (a
+  // guest is stored too; only the owner key differs). `record` is validated structurally here and normalized against
+  // the strict schema (shared/stats.js) in the service. `stats.submit` dedupes by the record's own id; `stats.list` /
+  // `stats.clear` act on the caller's own records; `stats.view { name }` reads another ONLINE player's public record
+  // list (keyed by the public display name shown in /online/api; only already-public in-game fields answer).
+  'stats.submit': { record: isStatsRecord },
+  'stats.list': { limit: optional((v) => isInt(v, 1, STATS_LIST_LIMIT)) },
+  'stats.clear': {},
+  'stats.view': { name: (v) => isStr(v, NAME_MAX_LEN) && v.trim().length > 0 },
 
   // match
   'g.infoReady': {},
@@ -462,6 +482,10 @@ export const S2C = [
   'm.public', 'm.private', 'm.field', 'm.toast', 'm.ticker', 'm.emote', 'm.result',
   // m.unitStats { seq, round, units: [unitStatsEntry] } — the answer to g.unitStats (the requester only)
   'm.unitStats',
+  // match statistics (server/stats.js, docs/MATCHMAKING.md §39): stats.records { scope: 'self'|'other',
+  // owner: { name, role, guest }, records: [normalized records], limit } — the answer to stats.list / stats.view.
+  // `records` are the already-public in-game fields; no account id / email / token is ever included.
+  'stats.records',
   // client-side combat (DESIGN §14): b.start { battleId, fieldId, kind, spec, authoritative, startAt, serverNow, elapsed,
   // speed, watch? } · b.pool { hp, max, teamLp, acked: { [fieldId]: cumulative boss damage counted } } ·
   // b.end { battleId, fieldId, reason }

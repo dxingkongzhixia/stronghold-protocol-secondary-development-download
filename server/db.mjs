@@ -10,7 +10,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 /**
  * `node:sqlite` is experimental and prints an ExperimentalWarning on import; suppress just that one (it is expected).
@@ -119,6 +119,38 @@ function migrate(db) {
       ALTER TABLE changelog ADD COLUMN minor_seq INTEGER;
     `);
     db.exec('PRAGMA user_version = 4');
+  }
+  if (v < 5) {
+    // Match statistics (docs/MATCHMAKING.md §39, server/stats.js): every finished match is one normalized record
+    // (`shared/stats.js`) bound to an OWNER — a registered player's `account_id`, or a guest's `guest_id` (the
+    // session's playerId; a guest has no account). Exactly one of the two is set (the CHECK). `record_id` is the
+    // record's own dedupe id (`recordId`, unique per owner — a replayed submit is ignored); `payload_json` is the
+    // normalized record so the page renders it unchanged, while mode / difficulty / seed / result / rounds /
+    // started_at / ended_at are the small frame columns used for ordering + pruning. The oldest rows are pruned per
+    // owner (server/stats.js: STATS_MAX_RECORDS / STATS_FULL_KEEP / STATS_MAX_CHARS, ours = 2 × the mainline).
+    db.exec(`
+      CREATE TABLE match_stats (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id   INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+        guest_id     TEXT,
+        record_id    TEXT    NOT NULL,
+        mode         TEXT,
+        difficulty   TEXT,
+        seed         INTEGER,
+        result       TEXT,
+        rounds       INTEGER,
+        started_at   INTEGER,
+        ended_at     INTEGER NOT NULL,
+        payload_json TEXT    NOT NULL,
+        created_at   INTEGER NOT NULL,
+        CHECK ((account_id IS NULL) <> (guest_id IS NULL))
+      );
+      CREATE UNIQUE INDEX idx_match_stats_account_record ON match_stats(account_id, record_id) WHERE account_id IS NOT NULL;
+      CREATE UNIQUE INDEX idx_match_stats_guest_record   ON match_stats(guest_id, record_id) WHERE guest_id IS NOT NULL;
+      CREATE INDEX idx_match_stats_account_ended ON match_stats(account_id, ended_at DESC, id DESC);
+      CREATE INDEX idx_match_stats_guest_ended   ON match_stats(guest_id, ended_at DESC, id DESC);
+    `);
+    db.exec('PRAGMA user_version = 5');
   }
 }
 

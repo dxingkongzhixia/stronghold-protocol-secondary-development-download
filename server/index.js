@@ -32,6 +32,7 @@ import { readFileSync } from 'node:fs';
 import { openDb } from './db.mjs';
 import { AuthService } from './auth.js';
 import { CommunityService, bugReportsExport, bugReportsToCsv } from './community.js';
+import { StatsService } from './stats.js';
 import { ADMIN_HTML, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
 import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX } from '../shared/constants.js';
@@ -123,8 +124,7 @@ function cookieValue(header, name) {
  * @returns {Promise<{ port: number, host: string, url: string, server: http.Server, wss: import('ws').WebSocketServer,
  *                     lobby: import('./lobby.js').Lobby, network: import('./net.js').Network,
  *                     registry: import('./net.js').SessionRegistry, packs: ReturnType<typeof createPackRegistry>,
- *                     db: object|null, auth: object|null, adminUrl: string|null, close: () => Promise<void> }>}
- */
+ *                     db: object|null, auth: object|null, adminUrl: string|null, close: () => Promise<void> }>} */
 export async function startServer(opts = {}) {
   const { port, host } = listenAddress(opts);
   const log = opts.log || makeLogger(!!opts.quiet);
@@ -149,8 +149,11 @@ export async function startServer(opts = {}) {
   if (community && !opts.community) {
     try { community.importChangelogMarkdown(readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8')); } catch (e) { log.warn('[community] changelog seed skipped', e?.message); }
   }
+  // Match statistics (server/stats.js, docs/MATCHMAKING.md §39): every finished match, per owner (account or guest),
+  // on the same DB — schema v5 (server/db.mjs). Null without a DB (guests-only, file-free tests): stats.* is disabled.
+  const stats = db ? (opts.stats || new StatsService({ db })) : null;
 
-  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community }, { data, log });
+  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
   // content packs (docs/PACKS.md): scanned now — the start log names them — and again whenever their folders change
   const packs = createPackRegistry({ publicDir, dataDir, packsDir }, { log });
@@ -365,7 +368,7 @@ export async function startServer(opts = {}) {
   }
 
   const adminUrl = admin ? `${url}/admin?token=${admin.token}` : null;
-  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, db, auth, adminUrl, close };
+  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, db, auth, stats, adminUrl, close };
 }
 
 // `node server/index.js` / npm start: listen (accounts & 野排 on), print the banner, stop on SIGINT / SIGTERM

@@ -109,7 +109,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { ERR, MAX_SEATS, MAX_SPECTATORS, ROOM_CODE_LEN, modeIdFor, NAME_MAX_LEN, NOTICE_HISTORY, NOTICE_MAX_LEN, CHAT_MAX, CHAT_RATE_WINDOW_MS, CHAT_RATE_LIMIT } from '../shared/constants.js';
 import { checkLoadout, checkNotOwned, checkDiyPicks } from '../shared/protocol.js';
-import { CLOSE, encode, isDroppable, isErrCode, presenceOnline, sendRaw, sendSession } from './net.js';
+import { CLOSE, encode, isDroppable, isErrCode, presenceOnline, sanitizeName, sendRaw, sendSession } from './net.js';
 import { getData as defaultGetData, lookup } from './data.js';
 import { Match as DefaultMatch } from './match/Match.js';
 import { Matchmaker } from './matchmaker.js';
@@ -271,7 +271,7 @@ export class Lobby {
    *   options?: Partial<typeof LOBBY_DEFAULTS>,
    * }} opts
    */
-  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, options = {}, auth = null, matchmaker = null, community = null }) {
+  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, options = {}, auth = null, matchmaker = null, community = null, stats = null }) {
     this.registry = registry;
     this.log = log;
     this.MatchClass = MatchClass;
@@ -283,6 +283,8 @@ export class Lobby {
     this.auth = auth;
     /** @type {import('./community.js').CommunityService | null} changelog + bug reports (null disables bug.report) */
     this.community = community;
+    /** @type {import('./stats.js').StatsService | null} match statistics (null disables stats.*) */
+    this.matchStats = stats;
     /** @type {import('./net.js').Network | null} set by index.js; lets the lobby close a socket the net way (kick) */
     this.network = null;
     /** @type {Map<string, Room>} */
@@ -465,6 +467,11 @@ export class Lobby {
       case 'mm.cancel': return this.mmCancel(session);
       // player bug report (server/community.js, docs/MATCHMAKING.md §36): TEXT + already-uploaded image ids
       case 'bug.report': return this.bugReport(session, msg);
+      // match statistics (server/stats.js, docs/MATCHMAKING.md §39): the finished matches, per owner (account or guest)
+      case 'stats.submit': return this.statsSubmit(session, msg);
+      case 'stats.list': return this.statsList(session, msg);
+      case 'stats.clear': return this.statsClear(session);
+      case 'stats.view': return this.statsView(session, msg);
       // boot art preload gate (server/bootgate.js): one client downloads at a time, the rest wait their turn
       case 'boot.claim': return this.bootClaim(session);
       case 'boot.release': return this.bootRelease(session);
@@ -1029,6 +1036,79 @@ export class Lobby {
     if (r.error) return fail(r.error);
     this.log.info(`[lobby] bug report #${r.report.id} from ${session.name} (${r.report.images.length} image(s))`);
     return OK;
+  }
+
+  // ---------------------------------------------------------------------------------------------------
+  // Match statistics (server/stats.js, docs/MATCHMAKING.md §39)
+  // ---------------------------------------------------------------------------------------------------
+
+  /**
+   * The owner key of a session's match records: a registered player's account id, else the guest's session identity
+   * (`playerId` — the id the repo already assigns a session; the client keeps its reconnect token, so the session and
+   * its guest key survive a reload / reconnect for the reconnect window). Guests are stored exactly like accounts;
+   * only the key differs.
+   */
+  _statsOwner(session) {
+    if (session.accountId != null) return { accountId: session.accountId, guestId: null };
+    return { accountId: null, guestId: session.playerId };
+  }
+
+  /** The public identity of a session's owner (what /online/api already shows: name + role + guest, never an id). */
+  _statsOwnerPublic(session) {
+    return { name: session.name, role: session.role ?? null, guest: session.accountId == null };
+  }
+
+  /** One normalized finished match, bound to the session's owner (server/stats.js submit; the record id dedupes a replay). */
+  statsSubmit(session, { record }) {
+    if (!this.matchStats) return fail(ERR.INTERNAL, 'stats disabled');
+    const r = this.matchStats.submit({ ...this._statsOwner(session), record });
+    if (r.error) return fail(r.error);
+    return OK;
+  }
+
+  /** The caller's own records (newest first, bounded), answered with `stats.records { scope: 'self', ... }`. */
+  statsList(session, msg) {
+    if (!this.matchStats) return fail(ERR.INTERNAL, 'stats disabled');
+    const records = this.matchStats.list({ ...this._statsOwner(session), limit: msg?.limit });
+    sendSession(session, { t: 'stats.records', ...(Number.isInteger(msg?.rid) ? { rid: msg.rid } : {}), scope: 'self', owner: this._statsOwnerPublic(session), records });
+    return OK;
+  }
+
+  /** Delete the caller's own records. */
+  statsClear(session) {
+    if (!this.matchStats) return fail(ERR.INTERNAL, 'stats disabled');
+    this.matchStats.clear(this._statsOwner(session));
+    return OK;
+  }
+
+  /**
+   * Another ONLINE player's public record list, keyed by the public display name the 在线 overlay shows (no account
+   * id / token crosses the wire). The target is resolved among the sessions that count as online right now (guest or
+   * registered, unique by name); its records answer as `stats.records { scope: 'other', ... }`.
+   */
+  statsView(session, msg) {
+    if (!this.matchStats) return fail(ERR.INTERNAL, 'stats disabled');
+    const target = this._statsViewTarget(msg?.name);
+    if (!target) return fail(ERR.BAD_TARGET, 'no such online player');
+    const records = this.matchStats.list({ accountId: target.accountId, guestId: target.guestId, limit: msg?.limit });
+    sendSession(session, { t: 'stats.records', ...(Number.isInteger(msg?.rid) ? { rid: msg.rid } : {}), scope: 'other', owner: target.owner, records });
+    return OK;
+  }
+
+  /**
+   * Resolve a `stats.view` name to an owner among the currently-online sessions (net.js presenceOnline), unique by
+   * name. A registered session resolves to its account; a guest to its session identity. Non-unique / unknown → null.
+   */
+  _statsViewTarget(rawName) {
+    const want = sanitizeName(rawName);
+    if (!want) return null;
+    const now = this.now();
+    const matches = [...this.registry.all()].filter((s) => s && s.name === want && presenceOnline(s, now));
+    if (matches.length !== 1) return null;
+    const s = matches[0];
+    return s.accountId != null
+      ? { accountId: s.accountId, guestId: null, owner: { name: s.name, role: s.role ?? null, guest: false } }
+      : { accountId: null, guestId: s.playerId, owner: { name: s.name, role: null, guest: true } };
   }
 
   /**
