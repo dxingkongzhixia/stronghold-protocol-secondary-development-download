@@ -3,7 +3,7 @@
 
 import { SHOT_HEIGHT, bodyZ } from './camera.js';
 import { fxSpec, tilesAround, wallTiles } from './kinds.js';
-import { fxLocalFor, fxLocalSource } from './localart.js';
+import { fxLocalFor, fxLocalSource, LOCAL_FX_MAX_R } from './localart.js';
 import { clamp } from './limits.js';
 
 /**
@@ -59,9 +59,13 @@ export class FxSim {
   }
 
   /**
-   * The optional official-art tier of a kind: draw every layer of its resolved `local` spec (see `fxLocalFor`) as a
-   * ground field with the local-client picture and return true when the client has them all loaded; else prefetch and
-   * return false so `simFx` draws the procedural tier (docs/ASSETS.md "Battle effects"; render/fx/localart.js).
+   * The optional official-art tier of a kind: draw every layer of its resolved `local` spec (see `fxLocalFor`) as an
+   * in-place ground field with the local-client picture and return true when the client has them all loaded; else
+   * prefetch and return false so `simFx` draws the procedural tier (docs/ASSETS.md "Battle effects"; render/fx/localart.js).
+   * The whole layer set is SIZE-CAPPED: its drawn radii (`r × layer.scale`) are scaled down together so the largest is
+   * at most LOCAL_FX_MAX_R (≈ one body), preserving the authored ratios — an official picture reads as an effect at the
+   * anchor and never as a board-wide field (the archetype's area radius can be wide — a 'tide' r=2, an 'aoe' behind a
+   * large skill — and a scale of 1.5 there used to paint a whole tile board).
    * `ctx.settings.localFx === false` opts out (a host may turn the official art off like a quality tier; on by default).
    */
   _fxLocal(local, at, r, col, dur) {
@@ -69,8 +73,11 @@ export class FxSim {
     const src = fxLocalSource(this.ctx.assets, local);
     if (!src) return false;
     const d = Number.isFinite(dur) && dur > 0 ? dur : (Number.isFinite(local && local.dur) ? local.dur : 0.7);
+    const radOf = (ly) => r * (Number.isFinite(ly.scale) ? ly.scale : 1);
+    const maxRad = Math.max(...src.map(radOf));
+    const k = maxRad > LOCAL_FX_MAX_R ? LOCAL_FX_MAX_R / maxRad : 1;  // ≤ ~one body at the anchor, ratios kept
     for (const ly of src) {
-      this.ring(at.x, at.y, at.z, 0, r * ly.scale, ly.tint ?? col, d, this._fxLocalTex(ly.url, ly.image));
+      this.ring(at.x, at.y, at.z, 0, radOf(ly) * k, ly.tint ?? col, d, this._fxLocalTex(ly.url, ly.image));
     }
     return true;
   }

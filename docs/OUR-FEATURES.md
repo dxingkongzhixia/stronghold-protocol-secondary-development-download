@@ -102,7 +102,11 @@ example is 阿斯卡纶 (§23).
 2. **the optional local-art tier** — a kind's `local` spec (`{ group, layers: [{ name, scale? }], tint?, dur? }`,
    plus `bySkill` / `byOp` attribution) names official pictures in the local-client manifest
    (`data/local-assets.json`, or the committed `data/local-assets.committed.json`). It is drawn **only** when the
-   client lists **every** layer **and** it has loaded; otherwise the procedural tier is drawn.
+   client lists **every** layer **and** it has loaded; otherwise the procedural tier is drawn. Every layer is drawn as
+   an **in-place ground field at the anchor, size-capped to ~one body**: `simfx.js` `_fxLocal` scales the layer set's
+   drawn radii (`r × layer.scale`) down together so the largest is at most `LOCAL_FX_MAX_R` (= 1.1 tiles,
+   `localart.js`), preserving the ratios, and `hits.js` `_opHitLocal` caps its body-anchored flash the same way. An
+   official picture never covers the board.
 
 So the same effect is never a blank frame and the fallback never touches the network — the owner's
 "graceful degradation" rule (the Minecraft-shader analogy). A listed-but-still-loading layer is prefetched and a
@@ -116,7 +120,7 @@ listed-not-loading layer is retried on a later event; a layer the manifest does 
 - `localart.js` — the resolver: `fxLocalLayers` / `fxLocalFor` (base + `bySkill` + `byOp` merge, then the
   `FX_OFFICIAL` fallback), `fxLocalSource` (which layers are listed **and** loaded), `fxOfficialFor`.
 - `simfx.js` — `FxSim.simFx` / `_fxLocalOp`: attributes the event to a `spine`/`defId` and draws the official
-  layers as ground fields **instead of** the procedural archetype.
+  layers as size-capped ground fields **instead of** the procedural archetype.
 - `hits.js` — **ours only** (`FX_HITS`, `fxHitFor`, `FxHits._opHit`): the hand-authored normal-attack impact of seven
   of our custom operators (克莱门莎, the eighth, keeps the procedural hit — see the normal-attack bullet below),
   anchored at the impact / body (never a ground field). See the normal-attack bullet below.
@@ -126,14 +130,21 @@ listed-not-loading layer is retried on a later event; a layer the manifest does 
 
 **The generated roster table.** `tools/build-fx-official.mjs` reads `data/chess.json` (the visible roster), the fx
 kinds each operator's kit actually emits (by scanning `kits/ops/*.js`) and the committed manifest
-(`data/local-assets.committed.json`), and picks two signature Texture2D layers per operator. It never picks an
-animation grid (a `flipbook*` / sprite-sheet / atlas image packs many frames, so drawing it as one layer shows a whole
-sheet of images) nor an attack / impact kind (`crit` / `strike` / `slash` / `beam`): per-attack feedback is procedural.
-An operator whose usable art is all sheets, or whose kit emits only impact kinds, is absent. It writes
+(`data/local-assets.committed.json`), and picks up to two signature Texture2D layers per operator — only **soft
+in-place effect pictures** (the `flow` / `ray` / `glow` / `ring` / `star` / `light` / `smoke` / `aura` / `halo`
+families, `EFFECT_TEX`; walls, decals, patterns and object / prop / icon-looking textures are never used, and a bundle
+with no qualifying picture is absent). It never picks an animation grid (a `flipbook*` / sprite-sheet / atlas image
+packs many frames, so drawing it as one layer shows a whole sheet of images) nor a denied kind: only **AREA / SELF**
+kinds (archetypes `blast` / `zone` / `healAoe` / `wave` + `buff` / `shield` / `shatter` / `summon` / `vanish` / `lift` /
+`sleep` / `heal` / `down` / `counter` / `dodge` / `dp` / `coin` / `sp`, `KIND_ARCH`) are listed — per-attack / impact
+kinds (`crit` / `strike` / `slash` / `beam` / `bolt`) and per-target / instant / unit-attached kinds (`volley` /
+`shell` / `move` / `blink` / `mark` / `reticle` / `flame` / `wall` / `chill` / `telegraph`) are drawn procedurally,
+because a ground field on them just litters the board. An operator whose usable art is all sheets / non-effect
+pictures, or whose kit emits only denied kinds, is absent. It writes
 `public/js/render/fx/official.js`; `--check` fails when the committed file is stale, `--print` prints the table.
-Pin an operator by hand in `tools/local-extract/fx-official-overrides.json`. Because the table is data, a
-registered operator supersedes the procedural archetype **without editing any kit or kind**. Only the kinds a kit
-actually emits are listed (an operator with no attributable skill fx is absent).
+Pin an operator by hand in `tools/local-extract/fx-official-overrides.json` (the pin is filtered the same way). Because
+the table is data, a registered operator supersedes the procedural archetype **without editing any kit or kind**. Only
+the kinds a kit actually emits are listed (an operator with no attributable skill fx is absent).
 
 **The normal-attack impact: procedural for the roster, hand-authored for our seven.** The official per-attack hit is a
 particle-system effect prefab each projectile prefab names in `_effectsWhenHit` (`common_hit_01` / `<op>_hit_01` …;
@@ -186,7 +197,9 @@ Re-run it after changing the committed art.
    the `local` spec (or rely on the generated `FX_OFFICIAL` table for a roster operator). Worked example: the kalts2
    S2 burst (`kalts2Heal` / `kalts2Damage`). The 驭械术师 浮游单元 (`PROJ.drone`) stays procedural because its
    textures live in unresolved external CABs (see §3).
-3. `settings.localFx === false` opts the official tier off like a quality tier (on by default).
+3. `settings.localFx === false` opts the official tier off like a quality tier (on by default). To disable the whole
+   local tier in one place, set the source-level `LOCAL_ART_ENABLED` (`public/js/render/fx/localart.js`) to `false` —
+   then every operator (generated table, hand-wired kinds, hit flashes) falls back to procedural.
 
 **Tests that pin it.**
 

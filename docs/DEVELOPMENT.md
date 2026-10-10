@@ -302,6 +302,26 @@ Every battle fx kind has **two tiers**, resolved at render time per client (`doc
    `public/js/render/fx/simfx.js` draws them instead of the procedural archetype only when every layer is listed AND
    loaded; a listed layer still loading is prefetched, and the fallback never touches the network — no blank frame.
 
+**An official picture is an in-place effect at the anchor, size-capped to ~one body.** `simfx.js` `_fxLocal` scales every
+layer's drawn radius (`r × layer.scale`) down together so the largest is at most `LOCAL_FX_MAX_R` (= 1.1 tiles,
+`localart.js`), preserving the authored ratios; `hits.js` `_opHitLocal` caps its body-anchored flash the same way.
+Before this, the archetype's own area radius (a `tide` r=2, an `aoe` behind
+a wide skill) times a layer scale of 1.5 painted a 2–3-tile flat image over the board — the owner's "many operators
+paint a big flat picture" report. **The generated table (`render/fx/official.js`, `tools/build-fx-official.mjs`) only
+carries soft in-place effect pictures** (the `flow` / `ray` / `glow` / `ring` / `star` / `light` / `smoke` / `aura` /
+`halo` families — `EFFECT_TEX`; walls, decals, patterns and object / prop / icon-looking textures are never used) **and
+only AREA / SELF kinds** (archetypes `blast` / `zone` / `healAoe` / `wave` + `buff` / `shield` / `shatter` / `summon` /
+`vanish` / `lift` / `sleep` / `heal` / `down` / `counter` / `dodge` / `dp` / `coin` / `sp` — `KIND_ARCH`). Per-attack /
+impact kinds (`crit` / `strike` / `slash` / `beam` / `bolt`) and per-target / instant / unit-attached kinds (`volley` /
+`shell` / `move` / `blink` / `mark` / `reticle` / `flame` / `wall` / `chill` / `telegraph`) are drawn procedurally — a
+ground field on them just litters the board. A bundle with no qualifying picture, or a kit with no in-place kind, gets
+no entry (procedural stays).
+
+**Kill switch:** `render/fx/localart.js` exports `LOCAL_ART_ENABLED` (default `true`). Set it to `false` and the whole
+local tier goes inert in one edit — `fxLocalFor` / `fxLocalSource` return null, so the generated table, the hand-wired
+kinds and the custom-operator hit flashes all fall back to procedural (nothing is resolved or fetched). That is the
+source-level switch; `settings.localFx === false` is the per-client run-time one.
+
 To add an effect the right way: write the procedural archetype first (always), then, only if the official art is
 obtainable, extract it (`tools/local-extract/extract.py`, e.g. the `fx/kalts2` job) and add the `local` layers. A
 `local`-only kind is a bug: a join without the art would show nothing. The kalts2 S2 burst is the worked example

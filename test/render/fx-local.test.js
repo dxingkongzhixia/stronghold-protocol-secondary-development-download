@@ -33,6 +33,11 @@ const cam = presetCamera('normal', { width: 1600, height: 900 });
 const SHEET = /(^|[^a-z0-9])(flipbook|sprite|sheet|atlas|sequence|filmstrip)([^a-z0-9]|$)/i;
 /** The per-attack / impact kinds the fx-official table must never carry (tools/build-fx-official.mjs IMPACT_KINDS). */
 const IMPACT_KINDS = new Set(['hit', 'crit', 'strike', 'slash', 'beam', 'bolt']);
+/** The soft in-place effect texture families the fx-official picker is restricted to (tools/build-fx-official.mjs). */
+const EFFECT_TEX = /(?:^|[^a-z0-9])(flow|ray|glow|ring|star|light|smoke|aura|halo)(?:[^a-z0-9]|$)/i;
+/** The archetypes an official ground field is the right read for: AREA / SELF in-place effects (tools/build-fx-official.mjs KIND_ARCH). */
+const KIND_ARCH = new Set(['blast', 'zone', 'healAoe', 'wave',
+  'buff', 'shield', 'shatter', 'summon', 'vanish', 'lift', 'sleep', 'heal', 'down', 'counter', 'dodge', 'dp', 'coin', 'sp']);
 
 /** A fake assets.js store: a manifest { group: { name: url } } plus the pictures that have actually loaded. */
 function fakeAssets(groups, loaded = {}) {
@@ -307,7 +312,7 @@ describe('fx official-art table: the season roster (render/fx/official.js)', () 
   test('the table matches the registered groups: every entry is a roster operator of an fx group, all layers committed on disk', { skip }, () => {
     const groups = manifest.groups || {};
     const keys = Object.keys(OFF.FX_OFFICIAL);
-    assert.ok(keys.length >= 80, `the roster is covered (${keys.length} operators)`);
+    assert.ok(keys.length >= 50, `the roster is covered (${keys.length} operators)`);
     for (const [op, e] of Object.entries(OFF.FX_OFFICIAL)) {
       assert.match(op, /^char_/, op);
       assert.match(e.group, /^fx\//, op);
@@ -334,10 +339,95 @@ describe('fx official-art table: the season roster (render/fx/official.js)', () 
     const group = manifest.groups['fx/lionhd'];
     assert.ok(group && Object.keys(group).length === 1 && SHEET.test(Object.keys(group)[0]), 'fx/lionhd is a single flipbook');
     assert.equal(OFF.FX_OFFICIAL.char_373_lionhd, undefined, 'no entry for a sheet-only operator');
-    // a mixed bundle keeps its non-sheet field: 隐现 (inside) still has inside_bullet01 / AVG_flow_05, never flipbook_215.
+    // a mixed bundle keeps only its soft in-place effect pictures: 隐现 (inside) keeps AVG_flow_05, never the animation
+    // grid flipbook_215 nor the object-looking inside_bullet01.
     const inside = OFF.FX_OFFICIAL.char_498_inside;
-    assert.ok(inside && inside.layers.length >= 1, 'inside keeps a non-sheet field');
-    for (const ly of inside.layers) assert.ok(!SHEET.test(ly.name), `inside: ${ly.name} is not a sheet`);
+    assert.ok(inside && inside.layers.length >= 1, 'inside keeps a non-sheet effect field');
+    for (const ly of inside.layers) {
+      assert.ok(!SHEET.test(ly.name), `inside: ${ly.name} is not a sheet`);
+      assert.ok(EFFECT_TEX.test(ly.name), `inside: ${ly.name} is a soft in-place effect picture`);
+    }
+  });
+
+  test('every chosen layer is a soft in-place effect picture (flow / ray / glow / ring / star / light / smoke / aura / halo)', { skip }, () => {
+    for (const [op, e] of Object.entries(OFF.FX_OFFICIAL)) {
+      for (const ly of e.layers) {
+        assert.ok(EFFECT_TEX.test(ly.name), `${op} picked the non-effect picture ${ly.name}`);
+      }
+      assert.ok(e.layers.length >= 1 && e.layers.length <= 2, `${op}: 1–2 layers`);
+      // small scales: even before the draw-time cap, a layer stays around one body
+      for (const ly of e.layers) assert.ok(ly.scale > 0 && ly.scale <= 1, `${op}: ${ly.name} scale ${ly.scale} is small`);
+    }
+  });
+
+  test('the table only carries in-place AREA / SELF kinds (never per-target / per-hit / instant / unit-attached)', { skip }, () => {
+    for (const [op, e] of Object.entries(OFF.FX_OFFICIAL)) {
+      for (const k of e.kinds) {
+        assert.ok(!IMPACT_KINDS.has(k), `${op} must not list the impact kind '${k}'`);
+        assert.ok(KIND_ARCH.has(FX.fxSpec(k, {}).a), `${op} lists '${k}' (${FX.fxSpec(k, {}).a}), not an in-place area/self kind`);
+      }
+      assert.ok(e.kinds.length >= 1, `${op} lists some in-place kind`);
+    }
+  });
+});
+
+// --- the drawn-size cap and the kill switch (render/fx/localart.js, render/fx/simfx.js _fxLocal) ------------------
+//
+// An official picture is an in-place effect AT the anchor, never a board-wide ground field: a layer set's drawn radii
+// (`r × layer.scale`) are scaled down together so the largest is at most LOCAL_FX_MAX_R (≈ one body), preserving the
+// authored ratios. Before this, a wide archetype radius (a 'tide' r=2, a 'sermon' r=1.5, an 'aoe' behind a large
+// skill) times a 1.5 layer scale painted a 2–3 tile flat image over the board — the owner's report.
+describe('fx official-art drawn size: capped to ~one body (render/fx/simfx.js _fxLocal)', () => {
+  const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.committed.json'), 'utf8')); } catch { return null; } })();
+  const skip = manifest ? false : 'no data/local-assets.committed.json';
+
+  test('the kill switch is ON by default and the cap is ~one body', () => {
+    assert.equal(LA.LOCAL_ART_ENABLED, true, 'the local official-art tier is on by default');
+    assert.ok(LA.LOCAL_FX_MAX_R > 0 && LA.LOCAL_FX_MAX_R <= 1.1, `the cap is ~one body (${LA.LOCAL_FX_MAX_R})`);
+  });
+
+  test('a generated entry on a wide kind draws every layer at ≤ LOCAL_FX_MAX_R (never a field over the board)', { skip }, () => {
+    const e = OFF.FX_OFFICIAL.char_4194_rmixer;             // sermon: spec r = 1.5 (a wide 'wave')
+    assert.ok(e && e.kinds.includes('sermon'), 'rmixer emits sermon');
+    const url = (n) => `/assets/local/${e.group}/${n}.png`;
+    const groups = { [e.group]: Object.fromEntries(e.layers.map((l) => [l.name, url(l.name)])) };
+    const loaded = Object.fromEntries(e.layers.map((l) => [url(l.name), PICTURE]));
+    const fx = makeFx(fakeAssets(groups, loaded), undefined, new Map([[1, fakeView(5, 10, 'char_4194_rmixer')]]));
+    fx.simFx('sermon', 5, 10, { id: 1 });
+    assert.equal(fx.rings.length, e.layers.length, 'one ground field per layer');
+    assert.ok(fx.rings.length > 0, 'the official layers are drawn');
+    for (const r of fx.rings) {
+      assert.ok(r.r1 > 0 && r.r1 <= LA.LOCAL_FX_MAX_R, `r1 ${r.r1} ≤ ${LA.LOCAL_FX_MAX_R} (nominal r × scale = 1.35)`);
+    }
+    assert.equal(Math.max(...fx.rings.map((r) => r.r1)), LA.LOCAL_FX_MAX_R, 'the wide layer is clamped exactly to the cap');
+  });
+
+  test('a narrow kind keeps its own small radius (the cap is a ceiling, not a fixed size)', { skip }, () => {
+    const e = OFF.FX_OFFICIAL.char_1040_blaze2;             // splash: spec r defaults to 1
+    const url = (n) => `/assets/local/${e.group}/${n}.png`;
+    const groups = { [e.group]: Object.fromEntries(e.layers.map((l) => [l.name, url(l.name)])) };
+    const loaded = Object.fromEntries(e.layers.map((l) => [url(l.name), PICTURE]));
+    const fx = makeFx(fakeAssets(groups, loaded), undefined, new Map([[1, fakeView(5, 10, 'char_1040_blaze2')]]));
+    fx.simFx('splash', 5, 10, { id: 1 });
+    assert.equal(fx.rings.length, 1);
+    assert.ok(Math.abs(fx.rings[0].r1 - 0.9) < 1e-9, `1 × 0.9 = 0.9, under the cap (got ${fx.rings[0].r1})`);
+  });
+
+  test('the hand-written fields are capped too: 结城理 aoe (scale 1.6) and kalts2 S2 (scale 1 at r 1.5)', () => {
+    // makoto's hand-wired `aoe` layers are scale 1.6 / 1.1 at r = 1 (aoe spec) → 1.6 / 1.1, both clamped
+    const fx = makeFx(fakeAssets(MK_GROUPS, MK_LOADED), undefined, new Map([[1, fakeView(5, 10, 'char_4217_makoto')]]));
+    fx.simFx('aoe', 5, 10, { id: 1 });
+    assert.equal(fx.rings.length, 2, '结城理 aoe layers');
+    for (const r of fx.rings) assert.ok(r.r1 <= LA.LOCAL_FX_MAX_R, `makoto aoe r1 ${r.r1} ≤ cap`);
+    assert.equal(fx.rings[0].r1, LA.LOCAL_FX_MAX_R, 'the 1.6 layer is clamped to the cap');
+    // kalts2Heal: the outer flow layer is scale 1 at r = 1.5 → 1.5, the inner star 0.8 → 1.2; both scaled down
+    // together to the cap, so the outer is drawn at 1.1 and the inner keeps its 0.8 ratio (0.88)
+    const fx2 = makeFx(fakeAssets(GROUPS, LOADED), undefined, new Map([[1, fakeView(5, 10, 'char_1052_kalts2')]]));
+    fx2.simFx('kalts2Heal', 5, 10, { id: 1 });
+    assert.equal(fx2.rings.length, 2, 'kalts2 heal layers');
+    for (const r of fx2.rings) assert.ok(r.r1 <= LA.LOCAL_FX_MAX_R, `kalts2 r1 ${r.r1} ≤ cap`);
+    assert.equal(fx2.rings[0].r1, LA.LOCAL_FX_MAX_R, 'the 1.5-nominal outer layer is clamped to the cap');
+    assert.ok(fx2.rings[1].r1 < fx2.rings[0].r1, 'the 0.8 inner core stays proportionally smaller (ratio kept)');
   });
 });
 

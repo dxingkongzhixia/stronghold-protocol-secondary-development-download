@@ -60,10 +60,10 @@ export const FX_KINDS = Object.freeze({
   // (kalts2_skill_02_range_heal_01 / _range_damage_01). When the client's local extraction lists the S2 bundle
   // (group fx/kalts2) the official field/ray textures are drawn instead, tinted the same green / red; without it the
   // procedural ring / explosion below is drawn (docs/ASSETS.md). The local field radius is `r × layer.scale`
-  // (render/fx/simfx.js `_fxLocal` → render/fx/rings.js `ring`), so the outer flow layer is scale 1 at `r` = 1.5 —
-  // the S2 hit radius (S2_RADIUS) — and the orb spans the burst exactly, like the official field (MATCHMAKING §35.11);
-  // the inner `star_118_7` core keeps the original 0.8 ratio of that field. The procedural tiers below (r: 1.5) already
-  // span the same radius.
+  // (render/fx/simfx.js `_fxLocal` → render/fx/rings.js `ring`), SIZE-CAPPED to LOCAL_FX_MAX_R ≈ one body
+  // (render/fx/localart.js), so the outer flow layer draws at ~1.1 tiles — an in-place orb at the burst, never a
+  // board-wide field; the inner `star_118_7` core keeps the original 0.8 ratio of that field. The procedural tiers
+  // below (r: 1.5) keep their own radius.
   kalts2Heal: {
     a: 'healAoe', c: 0x62f08a, r: 1.5,
     local: { group: 'fx/kalts2', tint: 0x1c8f09, layers: [{ name: 'flow_332_3', scale: 1 }, { name: 'star_118_7', scale: 0.8 }] },

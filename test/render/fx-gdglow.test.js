@@ -1,9 +1,12 @@
 // test/render/fx-gdglow.test.js — 澄闪 (char_377_gdglow) 驭械术师 funnel: the optional official-art tier of the `drone`
 // fx kind (docs/ASSETS.md "Battle effects"). The funnel's own texture (char_gdglow_04, the `char_gdglow_14` material's
 // `_MainTex`) lives in a SHARED external CAB (refs/fx/texture/object.ab); tools/local-extract/extract.py resolves it
-// (EXTERNAL_MATERIALS) into fx/gdglow, tools/local-extract/fx-official-overrides.json pins it, and
-// tools/build-fx-official.mjs emits the FX_OFFICIAL entry the resolver consults. Without the art the `drone` kind's
-// procedural summon burst is drawn. Pinned against the headless fake PIXI like fx-local.test.js.
+// (EXTERNAL_MATERIALS) into fx/gdglow. It is an OBJECT-looking picture though — the effect-picture allow-list
+// (tools/build-fx-official.mjs EFFECT_TEX: flow / ray / glow / ring / star / light / smoke / aura / halo) drops it, so
+// tools/local-extract/fx-official-overrides.json pins a soft flow field + the star_05 flash instead, and
+// tools/build-fx-official.mjs emits the FX_OFFICIAL entry the resolver consults. Every layer is drawn at ≤ one body
+// (render/fx/simfx.js `_fxLocal`). Without the art the `drone` kind's procedural summon burst is drawn. Pinned against
+// the headless fake PIXI like fx-local.test.js.
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { installFakePixi, fakeViewCtx } from './fakepixi.js';
@@ -49,7 +52,8 @@ describe('驭械术师 funnel official art (char_377_gdglow)', () => {
     assert.ok(e, 'char_377_gdglow is in FX_OFFICIAL');
     assert.equal(e.group, 'fx/gdglow');
     assert.ok(e.kinds.includes('drone'), `char_377_gdglow emits drone (kinds: ${e.kinds})`);
-    assert.deepEqual(e.layers, [{ name: 'char_gdglow_04', scale: 1.3 }]);
+    // the pinned soft field + flash (the object-looking char_gdglow_04 is dropped by the effect-picture allow-list)
+    assert.deepEqual(e.layers, [{ name: 'flow_91_C_1', scale: 0.9 }, { name: 'star_05', scale: 0.6 }]);
   });
 
   test('the drone fx draws the extracted funnel field for char_377_gdglow; an unlisted caster stays procedural', () => {

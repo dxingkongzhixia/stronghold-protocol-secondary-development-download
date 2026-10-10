@@ -20,7 +20,7 @@
 //
 // No PIXI, no DOM at import time — Node tests import this file.
 
-import { fxLocalSource } from './localart.js';
+import { fxLocalSource, LOCAL_FX_MAX_R } from './localart.js';
 
 /**
  * Per-operator normal-attack impact of our custom operators (`charId` → spec). `shape` picks the procedural
@@ -99,7 +99,9 @@ export class FxHits {
     for (const ly of src) {
       const tex = this._fxLocalTex(ly.url, ly.image);
       const w = (tex && tex.width) || 128;
-      const size = (s * (Number.isFinite(ly.scale) ? ly.scale : 1) * 0.9) / w;   // ≤ ~0.9 tile, at the impact
+      const scale = Number.isFinite(ly.scale) ? ly.scale : 1;
+      // ≤ ~one body at the impact: the width is 0.9 × scale tiles, clamped to LOCAL_FX_MAX_R (≈1.1 tiles)
+      const size = (s * Math.min(scale * 0.9, LOCAL_FX_MAX_R)) / w;
       this.particle(tex, x, y, {
         tint: ly.tint ?? local.tint ?? 0xffffff, life: dur, s0: size * 0.7, s1: size, a0: 0.95, a1: 0,
         rot: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 6,

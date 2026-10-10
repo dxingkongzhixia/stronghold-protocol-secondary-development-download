@@ -5,13 +5,24 @@
 // for an fx kind that carries no layers of its own and that the operator's kit emits, drawing the operator's official
 // textures (render/fx/simfx.js) instead of the procedural archetype; a client without the extracted art, or an
 // operator not listed, keeps the procedural tier (never a blank frame, no network in the fallback). Only the kinds a
-// kit actually emits are listed, so an operator with no attributable skill fx is absent. Two kinds of pick are never
-// made: an animation grid (a flipbook / sprite-sheet / atlas / sequence image is many frames, so one layer would show
-// a whole sheet of images) and an attack / impact kind (crit, strike, slash, beam, …) — per-attack feedback is drawn
-// procedurally (render/fx/projectiles.js _impact, render/fx/numbers.js damage), and an operator whose only art is
-// sheets (or whose kit emits only impact kinds) is absent, keeping its procedural tier (never a blank frame). The
-// normal-attack impact is NOT here: the official per-attack hit is a particle-system effect prefab (the projectile
-// prefabs' _effectsWhenHit), not one texture.
+// kit actually emits are listed, so an operator with no attributable skill fx is absent.
+//
+// Three restrictions keep a bad pick off the board. (1) Layers are only SOFT in-place effect pictures — a flow / ray /
+// glow / ring / star / light / smoke / aura / halo family (tools/build-fx-official.mjs EFFECT_TEX); walls, decals,
+// patterns and object / prop / icon-looking textures are never used, and a bundle with no qualifying picture gets no
+// entry. (2) No animation grid (a flipbook / sprite-sheet / atlas / sequence image is many frames, so one layer would
+// show a whole sheet of images). (3) Only AREA / SELF kinds: a blast / zone / healAoe / wave, or an on-unit buff /
+// shield / shatter / summon / vanish / lift / sleep / heal / down / counter / dodge / dp / coin / sp effect. The
+// per-attack / impact kinds (crit, strike, slash, beam, bolt, …) and the per-target / instant / unit-attached kinds
+// (volley, shell, move, blink, mark, reticle, flame, wall, chill, …) are drawn procedurally — a ground field on them
+// only litters the board during combat. An operator whose only art is sheets, or whose kit emits only denied kinds, is
+// absent (its procedural tier stays, never a blank frame). The normal-attack impact is NOT here: the official
+// per-attack hit is a particle-system effect prefab (the projectile prefabs' _effectsWhenHit), not one texture.
+//
+// Every layer set is ALSO size-capped at draw time: render/fx/simfx.js `_fxLocal` scales its drawn radii
+// (`r × layer.scale`) down together so the largest is at most LOCAL_FX_MAX_R (≈ one body), so one official picture is
+// an in-place effect at the anchor and never a board-wide field. render/fx/localart.js `LOCAL_ART_ENABLED` (default
+// true) is a one-line kill switch for the whole local tier.
 // Layer names are entries of the committed local manifest (data/local-assets.committed.json). Re-run after an
 // extraction / roster change: node tools/build-fx-official.mjs. Pin an operator by hand in
 // tools/local-extract/fx-official-overrides.json.
@@ -25,59 +36,20 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "inside_bullet01",
-        scale: 1.5
-      },
-      {
         name: "AVG_flow_05",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
   char_494_vendla: {
     group: "fx/vendla",
     kinds: [
-      "counter",
-      "taunt"
+      "counter"
     ],
     layers: [
-      {
-        name: "trail_349_1",
-        scale: 1.5
-      },
       {
         name: "AVG_star_16",
-        scale: 1.1
-      }
-    ]
-  },
-  char_102_texas: {
-    group: "fx/texas",
-    kinds: [
-      "aoe",
-      "dp"
-    ],
-    layers: [
-      {
-        name: "jian_01",
-        scale: 1.5
-      }
-    ]
-  },
-  char_196_sunbr: {
-    group: "fx/sunbr",
-    kinds: [
-      "buff",
-      "heal"
-    ],
-    layers: [
-      {
-        name: "meat_01",
-        scale: 1.5
-      },
-      {
-        name: "meat_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -89,7 +61,7 @@ export const FX_OFFICIAL = Object.freeze({
     layers: [
       {
         name: "star_02",
-        scale: 1.5
+        scale: 0.9
       }
     ]
   },
@@ -100,60 +72,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "dunpai_01",
-        scale: 1.5
-      },
-      {
         name: "star_05",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4122_grabds: {
-    group: "fx/grabds",
-    kinds: [
-      "sleep"
-    ],
-    layers: [
-      {
-        name: "grabds_cloud_01",
-        scale: 1.5
-      },
-      {
-        name: "grabds_chitang_01",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4139_papyrs: {
-    group: "fx/papyrs",
-    kinds: [
-      "buff"
-    ],
-    layers: [
-      {
-        name: "papyrs_game_8_trail_01_1",
-        scale: 1.5
-      },
-      {
-        name: "papyrs_game_8_trail_01_2",
-        scale: 1.1
-      }
-    ]
-  },
-  char_381_bubble: {
-    group: "fx/bubble",
-    kinds: [
-      "counter"
-    ],
-    layers: [
-      {
-        name: "bubble_01",
-        scale: 1.5
-      },
-      {
-        name: "bubble_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -164,62 +84,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "rockr_15",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4016_kazema: {
-    group: "fx/kazema",
-    kinds: [
-      "aoe",
-      "summon"
-    ],
-    layers: [
-      {
-        name: "kazema_01",
-        scale: 1.5
-      },
-      {
-        name: "trail_05",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4191_tippi: {
-    group: "fx/tippi",
-    kinds: [
-      "dodge",
-      "takeoff"
-    ],
-    layers: [
-      {
-        name: "tippi_object_01",
-        scale: 1.5
-      },
-      {
-        name: "tippi_object_03",
-        scale: 1.1
-      }
-    ]
-  },
-  char_140_whitew: {
-    group: "fx/whitew",
-    kinds: [
-      "block"
-    ],
-    layers: [
-      {
-        name: "whitew_boc_1_02",
-        scale: 1.5
-      },
-      {
-        name: "langtou_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -230,28 +96,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "branch_yun_10_01",
-        scale: 1.5
+        name: "AVG_flow_11",
+        scale: 0.9
       },
       {
         name: "ray_67",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4151_tinman: {
-    group: "fx/tinman",
-    kinds: [
-      "zone"
-    ],
-    layers: [
-      {
-        name: "char_tinman_03",
-        scale: 1.5
-      },
-      {
-        name: "char_tinman_04",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -265,12 +115,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "swire2_04",
-        scale: 1.5
-      },
-      {
         name: "star_207",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -281,12 +127,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "shayu_01",
-        scale: 1.5
+        name: "star_04",
+        scale: 0.9
       },
       {
-        name: "star_04",
-        scale: 1.1
+        name: "star_141",
+        scale: 0.6
       }
     ]
   },
@@ -299,45 +145,24 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "philae_01_wenzi",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
   char_388_mint: {
     group: "fx/mint",
     kinds: [
-      "aoe",
-      "pull"
+      "aoe"
     ],
     layers: [
       {
         name: "flow_100_2",
-        scale: 1.5
+        scale: 0.9
       },
       {
         name: "star_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4211_snhunt: {
-    group: "fx/snhunt",
-    kinds: [
-      "volley"
-    ],
-    layers: [
-      {
-        name: "fx_allow_1024_snhunt_01",
-        scale: 1.5
-      },
-      {
-        name: "fx_allow_1024_snhunt_03",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -348,28 +173,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "Special_423_blemsh_06",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_126_shotst: {
-    group: "fx/shotst",
-    kinds: [
-      "volley"
-    ],
-    layers: [
-      {
-        name: "gongjian_moxing_02",
-        scale: 1.5
-      },
-      {
-        name: "star_05",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -382,12 +187,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "special_object_vulpis_01",
-        scale: 1.5
-      },
-      {
         name: "star_350",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -402,12 +203,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "vigil_02_lamp_1",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -415,17 +212,16 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/archet",
     kinds: [
       "shield",
-      "shieldBreak",
-      "volley"
+      "shieldBreak"
     ],
     layers: [
       {
-        name: "Special_332_archet_01",
-        scale: 1.5
+        name: "archet_glow",
+        scale: 0.9
       },
       {
-        name: "archet_glow",
-        scale: 1.1
+        name: "ray_70",
+        scale: 0.6
       }
     ]
   },
@@ -440,12 +236,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "bg_rhodes_day_camera_04",
-        scale: 1.5
+        name: "AVG_flow_71",
+        scale: 0.9
       },
       {
         name: "star_340",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -457,12 +253,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "mostma_001",
-        scale: 1.5
+        name: "AVG_flow_71",
+        scale: 0.9
       },
       {
         name: "star_18",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -475,46 +271,28 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "ines_ambienceSynesthesia_5_bg_02",
-        scale: 1.5
+        name: "flow_02",
+        scale: 0.9
       },
       {
         name: "ray_103",
-        scale: 1.1
-      }
-    ]
-  },
-  char_1021_kroos2: {
-    group: "fx/kroos2",
-    kinds: [
-      "camouflage",
-      "quadShot"
-    ],
-    layers: [
-      {
-        name: "cqbw_17",
-        scale: 1.5
-      },
-      {
-        name: "kroos2_01_game_3",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
   char_222_bpipe: {
     group: "fx/bpipe",
     kinds: [
-      "buff",
-      "charge"
+      "buff"
     ],
     layers: [
       {
         name: "flow_02",
-        scale: 1.5
+        scale: 0.9
       },
       {
         name: "v041_star_01",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -526,30 +304,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "mizuki_03",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_446_aroma: {
-    group: "fx/aroma",
-    kinds: [
-      "levitate",
-      "slippery",
-      "splash"
-    ],
-    layers: [
-      {
-        name: "aroma_02",
-        scale: 1.5
+        scale: 0.9
       },
       {
-        name: "mask_11",
-        scale: 1.1
+        name: "star_05",
+        scale: 0.6
       }
     ]
   },
@@ -561,44 +321,20 @@ export const FX_OFFICIAL = Object.freeze({
     layers: [
       {
         name: "AVG_star_16",
-        scale: 1.5
-      }
-    ]
-  },
-  char_474_glady: {
-    group: "fx/glady",
-    kinds: [
-      "pull",
-      "tornado",
-      "tornadoPulse",
-      "wake"
-    ],
-    layers: [
-      {
-        name: "glady_epoque_33_beijing_01",
-        scale: 1.5
-      },
-      {
-        name: "glady_epoque_33_daoguang_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
   char_206_gnosis: {
     group: "fx/gnosis",
     kinds: [
-      "coldWind",
       "frostNova",
       "iceSpike"
     ],
     layers: [
       {
-        name: "Special_gnosis_07",
-        scale: 1.5
-      },
-      {
         name: "star_93_2",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -610,30 +346,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "texas2_lt_06",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_136_hsguma: {
-    group: "fx/hsguma",
-    kinds: [
-      "block",
-      "overclock",
-      "thorns"
-    ],
-    layers: [
-      {
-        name: "hsguma_01",
-        scale: 1.5
-      },
-      {
-        name: "hsguma_03",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -647,12 +361,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "char_mdrock_07",
-        scale: 1.5
+        name: "flow_181",
+        scale: 0.9
       },
       {
         name: "ray_73",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -667,41 +381,20 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "flamtl_flash_03",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
   char_430_fartth: {
     group: "fx/fartth",
     kinds: [
-      "featherArrow",
-      "link"
+      "featherArrow"
     ],
     layers: [
-      {
-        name: "char_430_fartth_x_01",
-        scale: 1.5
-      },
       {
         name: "star_85",
-        scale: 1.1
-      }
-    ]
-  },
-  char_128_plosis: {
-    group: "fx/plosis",
-    kinds: [
-      "healField"
-    ],
-    layers: [
-      {
-        name: "plosis_yun_2_1",
-        scale: 1.5
+        scale: 0.9
       }
     ]
   },
@@ -713,12 +406,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "svrash_02",
-        scale: 1.5
+        name: "flow_262",
+        scale: 0.9
       },
       {
         name: "star_05",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -730,12 +423,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "gival2_dilie",
-        scale: 1.5
+        name: "star_02",
+        scale: 0.9
       },
       {
-        name: "star_02",
-        scale: 1.1
+        name: "star_05",
+        scale: 0.6
       }
     ]
   },
@@ -747,12 +440,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "water_46_04",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -765,30 +454,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "cetsyr_object_01",
-        scale: 1.5
+        name: "cetsyr_flow_01",
+        scale: 0.9
       },
       {
-        name: "cetsyr_object_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_171_bldsk: {
-    group: "fx/bldsk",
-    kinds: [
-      "bandage",
-      "bloodBattle",
-      "spGift"
-    ],
-    layers: [
-      {
-        name: "bldsk_01",
-        scale: 1.5
-      },
-      {
-        name: "bldsk_02",
-        scale: 1.1
+        name: "cetsyr_flow_04",
+        scale: 0.6
       }
     ]
   },
@@ -801,12 +472,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "AVG_screen_disturb_01",
-        scale: 1.5
+        name: "excu2_ring_01",
+        scale: 0.9
       },
       {
-        name: "color_179",
-        scale: 1.1
+        name: "flow_217",
+        scale: 0.6
       }
     ]
   },
@@ -818,12 +489,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "special_object_titi_01",
-        scale: 1.5
-      },
-      {
         name: "star_298",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -839,28 +506,7 @@ export const FX_OFFICIAL = Object.freeze({
     layers: [
       {
         name: "AVG_flow_71",
-        scale: 1.5
-      },
-      {
-        name: "blaze2_01",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4145_ulpia: {
-    group: "fx/ulpia",
-    kinds: [
-      "anchor",
-      "teleport"
-    ],
-    layers: [
-      {
-        name: "trail_299",
-        scale: 1.5
-      },
-      {
-        name: "star_276",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -873,12 +519,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "etlchi_dg_02",
-        scale: 1.5
+        name: "etlchi_flow_01",
+        scale: 0.9
       },
       {
-        name: "etlchi_object_light_04",
-        scale: 1.1
+        name: "etlchi_ray_01",
+        scale: 0.6
       }
     ]
   },
@@ -891,29 +537,11 @@ export const FX_OFFICIAL = Object.freeze({
     layers: [
       {
         name: "AVG_flow_25",
-        scale: 1.5
+        scale: 0.9
       },
       {
         name: "star_316",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4039_horn: {
-    group: "fx/horn",
-    kinds: [
-      "bloodBattle",
-      "overload",
-      "zone"
-    ],
-    layers: [
-      {
-        name: "horn_07",
-        scale: 1.5
-      },
-      {
-        name: "horn_epoque_24_04",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -924,29 +552,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "special_object_demkni_01",
-        scale: 1.5
-      },
-      {
         name: "star_320",
-        scale: 1.1
-      }
-    ]
-  },
-  char_2015_dusk: {
-    group: "fx/dusk",
-    kinds: [
-      "summon",
-      "teleport"
-    ],
-    layers: [
-      {
-        name: "dusk_nian_12_01",
-        scale: 1.5
-      },
-      {
-        name: "bird_03",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -957,12 +564,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "ghost2xx_05",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -973,44 +576,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "char_savsh2_07",
-        scale: 1.5
+        name: "AVG_flow_71",
+        scale: 0.9
       },
       {
         name: "star_288",
-        scale: 1.1
-      }
-    ]
-  },
-  char_1039_thorn2: {
-    group: "fx/thorn2",
-    kinds: [
-      "zone"
-    ],
-    layers: [
-      {
-        name: "thorn2_01_marthe_9",
-        scale: 1.5
-      },
-      {
-        name: "thorn2_02_marthe_9",
-        scale: 1.1
-      }
-    ]
-  },
-  char_4064_mlynar: {
-    group: "fx/mlynar",
-    kinds: [
-      "aoe"
-    ],
-    layers: [
-      {
-        name: "mlynar_jianqi_01",
-        scale: 1.5
-      },
-      {
-        name: "mlynar_jianqi_01_an",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1021,12 +592,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "trail_04",
-        scale: 1.5
+        name: "star_02",
+        scale: 0.9
       },
       {
-        name: "star_02",
-        scale: 1.1
+        name: "star_04",
+        scale: 0.6
       }
     ]
   },
@@ -1037,12 +608,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "sntlla_02",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -1054,12 +621,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "AVG_trail_15",
-        scale: 1.5
+        name: "AVG_flow_22",
+        scale: 0.9
       },
       {
         name: "star_311",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1067,19 +634,16 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/lemuen",
     kinds: [
       "bombard",
-      "bombardShell",
-      "lock",
-      "talent",
-      "wanted"
+      "talent"
     ],
     layers: [
       {
         name: "AVG_flow_102",
-        scale: 1.5
+        scale: 0.9
       },
       {
         name: "star_332",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1088,71 +652,33 @@ export const FX_OFFICIAL = Object.freeze({
     kinds: [
       "blessing",
       "frostNova",
-      "lure",
       "snow",
       "summon"
     ],
     layers: [
       {
-        name: "sbell2_001",
-        scale: 1.5
+        name: "flow_246_1",
+        scale: 0.9
       },
       {
-        name: "sbell2_002",
-        scale: 1.1
-      }
-    ]
-  },
-  char_2026_yu: {
-    group: "fx/yu",
-    kinds: [
-      "firewall",
-      "firewallBlock",
-      "pull",
-      "teleport"
-    ],
-    layers: [
-      {
-        name: "special_object_yu_01",
-        scale: 1.5
-      },
-      {
-        name: "special_object_yu_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_1012_skadi2: {
-    group: "fx/skadi2",
-    kinds: [
-      "heal",
-      "tide"
-    ],
-    layers: [
-      {
-        name: "char_skadi2_xxx_05",
-        scale: 1.5
-      },
-      {
-        name: "char_skadi2_xxx_06",
-        scale: 1.1
+        name: "flow_94_5",
+        scale: 0.6
       }
     ]
   },
   char_472_pasngr: {
     group: "fx/pasngr",
     kinds: [
-      "lightning",
       "storm"
     ],
     layers: [
       {
-        name: "pasngr_02_x",
-        scale: 1.5
+        name: "smoke_56",
+        scale: 0.9
       },
       {
         name: "star_02",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1164,65 +690,28 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "siege2_bg_01",
-        scale: 1.5
+        name: "flow_02",
+        scale: 0.9
       },
       {
         name: "star_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_1020_reed2: {
-    group: "fx/reed2",
-    kinds: [
-      "ember",
-      "scorchBurst"
-    ],
-    layers: [
-      {
-        name: "reed2s_05",
-        scale: 1.5
-      },
-      {
-        name: "trail_172",
-        scale: 1.1
-      }
-    ]
-  },
-  char_249_mlyss: {
-    group: "fx/mlyss",
-    kinds: [
-      "copy",
-      "dp",
-      "pulse",
-      "split"
-    ],
-    layers: [
-      {
-        name: "char_mlyss_03",
-        scale: 1.5
-      },
-      {
-        name: "char_mlyss_05",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
   char_391_rosmon: {
     group: "fx/rosmon",
     kinds: [
-      "link",
       "summon"
     ],
     layers: [
       {
         name: "flow_317",
-        scale: 1.5
+        scale: 0.9
       },
       {
         name: "star_02",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1230,36 +719,34 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/angel2",
     kinds: [
       "airstrike",
-      "anchor",
       "appear",
       "steal"
     ],
     layers: [
       {
-        name: "special_object_angel2_05",
-        scale: 1.5
+        name: "ray_145",
+        scale: 0.9
       },
       {
-        name: "ray_145",
-        scale: 1.1
+        name: "star_335",
+        scale: 0.6
       }
     ]
   },
   char_4042_lumen: {
     group: "fx/lumen",
     kinds: [
-      "emergency",
       "heal",
       "healField"
     ],
     layers: [
       {
-        name: "lumen_mk02",
-        scale: 1.5
+        name: "flow_02",
+        scale: 0.9
       },
       {
         name: "ray_79",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1271,47 +758,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "dilie_46",
-        scale: 1.5
+        name: "flow_02",
+        scale: 0.9
       },
       {
         name: "star_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_1047_halo2: {
-    group: "fx/halo2",
-    kinds: [
-      "link"
-    ],
-    layers: [
-      {
-        name: "mask_halo2_01",
-        scale: 1.5
-      },
-      {
-        name: "object_halo2_01",
-        scale: 1.1
-      }
-    ]
-  },
-  char_1014_nearl2: {
-    group: "fx/nearl2",
-    kinds: [
-      "disappear",
-      "summon",
-      "sunBurst",
-      "undying"
-    ],
-    layers: [
-      {
-        name: "zumama_60",
-        scale: 1.5
-      },
-      {
-        name: "zumama_52",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1319,18 +771,17 @@ export const FX_OFFICIAL = Object.freeze({
     group: "fx/whitw2",
     kinds: [
       "drone",
-      "droneLock",
       "drones",
       "talent"
     ],
     layers: [
       {
-        name: "AVG_trail_15",
-        scale: 1.5
+        name: "flow_02",
+        scale: 0.9
       },
       {
         name: "ray_13_1",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1341,28 +792,8 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "blkkgt_02",
-        scale: 1.5
-      },
-      {
         name: "star_02",
-        scale: 1.1
-      }
-    ]
-  },
-  char_1016_agoat2: {
-    group: "fx/agoat2",
-    kinds: [
-      "shield"
-    ],
-    layers: [
-      {
-        name: "agoat2_sk_02",
-        scale: 1.5
-      },
-      {
-        name: "agoat2_sk_01",
-        scale: 1.1
+        scale: 0.9
       }
     ]
   },
@@ -1373,8 +804,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "char_gdglow_04",
-        scale: 1.3
+        name: "flow_91_C_1",
+        scale: 0.9
+      },
+      {
+        name: "star_05",
+        scale: 0.6
       }
     ]
   },
@@ -1385,12 +820,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "pattern_16",
-        scale: 1.5
+        name: "AVG_flow_71",
+        scale: 0.9
       },
       {
         name: "star_289",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1401,33 +836,16 @@ export const FX_OFFICIAL = Object.freeze({
       "kalts2Damage",
       "kalts2Heal",
       "shield",
-      "takeoff",
-      "teleport"
+      "takeoff"
     ],
     layers: [
       {
         name: "flow_329_8",
-        scale: 1.5
+        scale: 0.9
       },
       {
         name: "ray_135",
-        scale: 1.1
-      }
-    ]
-  },
-  char_2027_wang: {
-    group: "fx/wang",
-    kinds: [
-      "summon"
-    ],
-    layers: [
-      {
-        name: "char_wang_05",
-        scale: 1.5
-      },
-      {
-        name: "char_wang_03",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1438,12 +856,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "narant_buff01",
-        scale: 1.5
+        name: "AVG_flow_05",
+        scale: 0.9
       },
       {
         name: "star_306",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1454,12 +872,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "wang7",
-        scale: 1.5
+        name: "AVG_flow_05",
+        scale: 0.9
       },
       {
         name: "ray_136",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   },
@@ -1471,12 +889,12 @@ export const FX_OFFICIAL = Object.freeze({
     ],
     layers: [
       {
-        name: "clemnt_plane_02",
-        scale: 1.5
+        name: "flow_175_2",
+        scale: 0.9
       },
       {
         name: "star_253",
-        scale: 1.1
+        scale: 0.6
       }
     ]
   }

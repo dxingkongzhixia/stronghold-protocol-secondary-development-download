@@ -23,12 +23,33 @@ const str = (v) => (typeof v === 'string' && v ? v : null);
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /**
+ * The one-line kill switch of the whole local official-art tier. Default ON: the local-client pictures
+ * (render/fx/official.js and the hand-wired `spec.local` maps) are drawn when the client has them, else the procedural
+ * archetype. Set this to `false` (a single edit; no other change) and every operator falls back to the procedural
+ * tier — `fxLocalFor` / `fxLocalSource` return null, nothing is resolved and nothing is fetched (docs/ASSETS.md
+ * "Battle effects"). It is a source-level pref, distinct from the per-client `ctx.settings.localFx === false`
+ * (render/fx/simfx.js, render/fx/hits.js), which opts a single client out at run time.
+ */
+export const LOCAL_ART_ENABLED = true;
+
+/**
+ * The largest radius (tiles) one official layer may cover. An official picture is an in-place effect AT the anchor
+ * (≈ one body), never a board-wide ground field: render/fx/simfx.js `_fxLocal` scales the layer set's drawn radii
+ * (`r × layer.scale`) down together so the largest is at most this (ratios kept), and render/fx/hits.js `_opHitLocal`
+ * caps its body-anchored flash to it too. Before this cap the archetype's own area radius (a 'tide' r=2, an 'aoe'
+ * behind a wide skill) multiplied a layer scale of 1.5 into a 3-tile field — the "big flat picture pasted on the board"
+ * the owner reported.
+ */
+export const LOCAL_FX_MAX_R = 1.1;
+
+/**
  * The data-driven official-art entry of an operator (`render/fx/official.js` `FX_OFFICIAL`): the season roster's
  * per-operator default ({ group, kinds, layers }) the generated table carries. `kind` filters it to the fx kinds that
  * operator's kit actually emits, so an effect the operator never draws is never given their art. Null when the
  * operator is not listed (or the kind is not theirs) — the caller keeps the procedural tier.
  */
 export function fxOfficialFor(opId, kind = null) {
+  if (!LOCAL_ART_ENABLED) return null;
   const e = opId && isObj(FX_OFFICIAL) ? FX_OFFICIAL[opId] : null;
   if (!isObj(e)) return null;
   if (kind && Array.isArray(e.kinds) && e.kinds.length && !e.kinds.includes(kind)) return null;
@@ -63,6 +84,7 @@ function officialLocal(off, base) {
  * @param {string} [kind] the fx kind, to filter a generated registry entry to the operator's own effects
  */
 export function fxLocalFor(local, extra = {}, opId = null, kind = null) {
+  if (!LOCAL_ART_ENABLED) return null; // the kill switch: every operator falls back to procedural
   if (!isObj(local)) return null;
   const hasBase = Array.isArray(local.layers) || !!str(local.name);
   const skill = str(extra && extra.skill);
@@ -116,6 +138,7 @@ export function fxLocalLayers(local) {
  * @param {object} local the fx spec's `local` record
  */
 export function fxLocalSource(assets, local) {
+  if (!LOCAL_ART_ENABLED) return null; // the kill switch: never resolve (or fetch) an official picture
   const layers = fxLocalLayers(local);
   if (!layers.length || !assets || typeof assets.localUrl !== 'function') return null;
   const out = [];

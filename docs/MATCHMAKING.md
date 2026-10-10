@@ -1033,6 +1033,18 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **golden 归属证明**：本改动只进 fx 事件直方图。全量 `node tools/golden.mjs` 相对改动前**逐字段枚举**：全部差异只有 `.events.fx`（总计数）与 `.fx.kalts2Damage` / `.fx.kalts2Heal`，**只落在含她的 13 个场次**（`roster-008`/`012`、`bonds` 5、`fields` 5、`matches`、`diy`——见 `golden:update` 后的文件 diff）；`snaps` / `players` / `units` / `enemies` / `hooks` / `errors` / `rngDraws` **零变化** —— 即伤害 / 治疗 / 结果一字未动。`node tools/golden.mjs --update` 只更新这些 fx 计数。
 - **诚实保留**：官方 S2 的 3D 粒子本体仍未使用（沿用 §35.10 的本地贴图近似）；本次只把**事件数量 / 落点 / 尺寸**对齐官方「每次一颗球」的观感，不逐粒子还原。
 
+### 35.12 官方本地贴图特效**限尺寸 / 限贴图 / 限 kind** + 一把总开关（owner 报告「很多干员攻击特效出现大片图片」，2026-10-10）
+
+- **报告**：owner 在看 `90b748be`（去掉翻页动画 / 攻击类 kind）后仍看到**很多干员**的攻击 / 技能特效在棋盘上**糊一大片图片**。
+- **根因**：生成的官方表（`render/fx/official.js`）给每个干员挑了**签名贴图**，`render/fx/simfx.js` `_fxLocal` 把每层画成半径 `r × layer.scale` 的**地面 field**（`render/fx/rings.js` `ring`）。表里 `scale 1.5`，而 archetype 自身面积半径不小（`tide` r=2、技能 `aoe` 的 r 更大），乘出来就是半径 2–3 格的「整张贴图」；贴图本身还常是 `char_*` / `special_object_*` / `bg_*` / `pattern_*` 这类**物件 / 图案**图，看起来就是「一张大图」。`hits.js` 头部早已记录同一根因（地面锚点 + ~2.4 格）而弃用。
+- **修法一：限尺寸（运行时）**。`render/fx/localart.js` 导出 `LOCAL_FX_MAX_R = 1.1`（≈ 一个身位）；`simfx.js` `_fxLocal` 把**整层集合**的半径 `r × layer.scale` **一起等比缩小**，使**最大值 ≤ `LOCAL_FX_MAX_R`**（保留各层原有比例，不压平），`hits.js` `_opHitLocal` 的手绘命中闪光同样按它封顶（≤ ~一个身位）。窄 kind 保持自己的小半径（这是**上限**不是固定值）；手写的 `aoe` / `s2` / `champagneBomb` / `takeoff` 等地面 field 一并受此上限约束（保留其手绘，不再可能糊满棋盘）。修前最大有效半径 **3.0 格**（skadi2 `tide` r=2 × 1.5），修后 **≤ 1.1 格**。
+- **修法二：限贴图（生成器）**。`tools/build-fx-official.mjs` 只认**柔和、就地**的特效图族 —— `flow` / `ray` / `glow` / `ring` / `star` / `light` / `smoke` / `aura` / `halo`（`EFFECT_TEX`）；墙 / 贴花 / 图案 / 物件图案（`char_*`、`special_object_*`、`bg_*`、`pattern_*`、`water_*` …）一律不选；bundle 里没有合格图就**不发条目**（走程序化）。手写 pin 同样过这道筛（`fx-official-overrides.json` 的澄闪由物件图 `char_gdglow_04` 改为 `flow_91_C_1` + `star_05`）。
+- **修法三：限 kind（生成器）**。只挂到**就地发生的 area / self** kind：archetype `blast` / `zone` / `healAoe` / `wave`（落在一片）＋ `buff` / `shield` / `shatter` / `summon` / `vanish` / `lift` / `sleep` / `heal` / `down` / `counter` / `dodge` / `dp` / `coin` / `sp`（落在单位身上）（`KIND_ARCH`）；**逐目标 / 逐击 / 瞬时 / 黏在单位上**的 archetype（`volley` / `shell` / `move` / `blink` / `mark` / `reticle` / `flame` / `wall` / `chill` / `telegraph`，以及既有的 `crit` / `strike` / `slash` / `beam` / `bolt` / `hit`）一律走程序化 —— 把地面 field 挂在这些上只会在战斗里**铺满一地板**。两项都只影响生成表；手写 kind 不动。
+- **修法四：一把总开关**。`render/fx/localart.js` 导出 `LOCAL_ART_ENABLED`（默认 `true`）；改成 `false` 一处即可让整个本地官方层失效（`fxLocalFor` / `fxLocalSource` 直接返回 null，生成表 / 手写层 / 自研干员命中闪光**全部**回退程序化，且不解析不联网）。与 `settings.localFx === false`（按客户端的运行时开关）区分。
+- **表统计**：operator 86 → **56**，layer 167 → **90**，distinct kind 106 → **71**；最大层 `scale` 1.5 → **0.9**，最大**有效**半径 3.0 → **1.1（运行时封顶）**。离开的干员 = 贴图不合规（如 德克萨斯 `jian_01`、临光 `meat_01`、望 `char_wang_05`、烈夏整包是一张 `flipbook` 动画网格）+ 只发射被拒 kind（`char_126_shotst`、`char_4145_ulpia`、`char_264_f12yin`）；它们的程序化兜底与手绘命中特效保持不变。
+- **测试**：`test/render/fx-local.test.js` 新增「贴图只许九族」「kind 只在 `KIND_ARCH` 内且不含 `IMPACT_KINDS`」「宽 kind 画出的 `r1 ≤ LOCAL_FX_MAX_R`、窄 kind 保持小半径」「手写 `aoe`（1.6）与 kalts2 S2（1.5）也被封顶」「`LOCAL_ART_ENABLED === true` 默认」；`test/render/fx-gdglow.test.js` 改钉新的 `flow_91_C_1` + `star_05`；`test/local-extract.test.js` 的 `--check` 仍保证表不过期。
+- **诚实保留**：这是**观感**修复（尺寸 / 贴图 / kind），不是逐粒子还原；被拒 kind 与不合格贴图的干员仍只有程序化近似。
+
 ## 36. 大厅社区功能：更新日志 / bug 提交 / 公开房间（2026-10-09）
 
 需求（owner）：大厅社区功能「更新日志」「bug提交」「公开房间」（后二者曾同列大厅左侧；见 §36.4 的顶栏调整），数据落 SQLite；「玩家留言」不做（owner 明确放弃）。截图中列出的四个按钮里，玩家留言被删除——本仓库此前的代码里从未实现过它，因此没有可删除的实现，本次只保证不新增（`grep` 与 `git log -S` 均无记录）。
