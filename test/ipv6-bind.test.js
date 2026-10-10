@@ -35,7 +35,7 @@ test('the listen entry points default to ::, and the image stays on IPv4', () =>
   assert.doesNotMatch(doc('scripts/install-service-windows.ps1'), /http:\/\/\\d/);
   assert.match(doc('scripts/launch.mjs'), /process\.env\.HOST \|\| '::'/);
   assert.match(doc('tools/doctor.mjs'), /process\.env\.HOST \|\| '::'/);
-  assert.match(doc('README.md'), /\| `HOST` \| `::` \|/);
+  assert.match(doc('README.md'), /`HOST`（默认 `::`/);
   assert.match(doc('Dockerfile'), /HOST=0\.0\.0\.0/);
   assert.doesNotMatch(doc('Dockerfile'), /HOST=::/);
 });

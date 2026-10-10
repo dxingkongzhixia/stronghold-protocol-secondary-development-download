@@ -1005,11 +1005,11 @@ test('拟态物质 with 2 copies owned and none left in the pool gives nothing �
 });
 
 test('拟态物质 with fewer than 2 copies and no same-bond operator left gives nothing and says so (GitHub #401)', () => {
-  // 缪尔赛思's only bond is 调和 and she is its only member: one copy owned, the rest of her pool taken by others
+  // 缪尔赛思's only bond is 调和; our fork adds 凯尔希·思衡托 (tier 4) to 调和, so exhaust every same-bond candidate
   const cid = 'chess_char_6_11_a';
   const { m, ps, equip } = setup({ seed: 9 });
   const t = give(m, ps, cid, 'hand');
-  m.pool.take(cid, m.pool.left(cid));
+  for (const id of sameBondPool(m, cid, 6)) m.pool.take(id, m.pool.left(id));
   const got = spyGrants(ps);
   const warns = spyWarns(m);
   assert.deepEqual(equip(giveItem(m, ps, A('5_05')), t), OK);

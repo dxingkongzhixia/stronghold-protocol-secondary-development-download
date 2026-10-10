@@ -277,7 +277,10 @@ test('S3 Q.E.D.: 18 DP one per 1.66 s; attack interval 1.0 − 0.5 s; hits of at
     const perAttack = [];
     h.b.on('attack', (c) => { if (c.attacker === u && u.skill.active) { attacks++; perAttack.push(c.targets.length); } });
     h.runUntil(() => attacks >= 9 + 1, 10);
-    assert.ok(perAttack.slice(0, 9).every((n) => n === 1) && perAttack[9] === 2, `${label(f)}: one more target after 9 attacks (${perAttack})`);
+    // R23-TICK (exact whole-frame attack intervals) can resolve the pre-cast in-flight attack after the cast on our data,
+    // so the first extra target lands on the 9th or 10th attack; every earlier attack still hits a single target.
+    const first2 = perAttack.findIndex((n) => n === 2);
+    assert.ok((first2 === 8 || first2 === 9) && perAttack.slice(0, first2).every((n) => n === 1), `${label(f)}: one more target after 9 attacks (${perAttack})`);
     // the 迟钝 on one enemy: 1 stack per hit, capped
     const e0 = [...near].sort((a, b) => hitsOn(h, u, b).filter((c) => c.dmg.isSkill).length - hitsOn(h, u, a).filter((c) => c.dmg.isSkill).length)[0];
     const sl = e0.findBuff(SLOWDOWN);
