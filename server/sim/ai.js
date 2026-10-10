@@ -722,7 +722,7 @@ function portalPickup(b, e) {
   if (!b.grid.inBounds(r, c) || b.grid.tile(r, c).special !== 'telin') return false;
   const outs = b.grid.specialTiles('telout');
   if (!outs.length) return false;
-  const dist = (p) => hypot(p[0] - r, p[1] - c);
+  const dist = (p) => Math.hypot(p[0] - r, p[1] - c);
   const out = outs.reduce((a, x) => (dist(x) > dist(a) ? x : a));
   const R = e.route;
   R.legs.splice(R.legIdx + 1, 0, { t: 'disappear' }, { t: 'wait', time: PORTAL_WAIT }, { t: 'appear', r: out[0], c: out[1] });
