@@ -437,3 +437,8 @@ The schema now holds `accounts`, `sessions`, `changelog`, `bug_reports`, `bug_up
 a message is validated and broadcast as a transient `m.chat` frame (`server/lobby.js` `chat()`), shown as a short-lived
 bubble on the client; it is never buffered, never written to `var/*.db` or disk, and is gone as soon as it is displayed.
 Do not add a `chat` table to `server/db.mjs` / `CommunityService`.
+
+The server-side account system (`server/auth.js`) and the `match_stats` statistics are **our fork's divergence** from
+upstream — mainline ships neither, only the local (browser-only) statistics page of PR #323. The design summary written
+for upstream developers (owner key, the 2× caps, the `localStorage` offline fallback, the privacy scope and the
+"optional backend" recommendation) is in [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) — 「账号与统计：与主线的设计差异」.

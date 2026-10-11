@@ -46,6 +46,56 @@ The self-checks for the §22 blacklist are in [`docs/OUR-FEATURES.md`](OUR-FEATU
 
 ---
 
+## 账号与统计：与主线的设计差异（本分支独有，非上游合并）
+
+This note sits beside §0 because it is the fork's other standing divergence from upstream: it is not a single merge
+record but the **two features the fork adds outside the mainline** — a server-side account system and server-side match
+statistics — with the rationale and a recommendation for upstream. Read it with [`docs/OUR-FEATURES.md`](OUR-FEATURES.md)
+§8 (the fork-only surface to keep), [`docs/MATCHMAKING.md`](MATCHMAKING.md) §2 (accounts) / §40 (statistics) and
+[`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §13 (the schema).
+
+> **提交摘要（可粘贴到上游 PR / issue）** 本分支在主线之外引入了**服务端账号体系**（`server/auth.js` +
+> `server/db.mjs`，SQLite `var/accounts.db`：登录 / 注册、角色与权限、会话令牌、账号与游客区分），并把**对局统计从
+> 浏览器本地迁移到服务端** —— 客户端把一条**已规范化**的记录（沿用主线的 `normalizeRecord` schema、**不改字段**）经
+> `stats.submit` 提交，服务端写入新增的 `match_stats` 表（`user_version 5`），**归属键**为登录账号的 account id（游客
+> 用其会话 / 游客身份），因此**同一身份跨设备可见**；上限**沿用主线规则、数值取主线的 2 倍**（2000 / 60 / 1.6M ←
+> 1000 / 30 / 800k），`localStorage` 退化为服务端不可用时的离线兜底。主线「纯本机、零上传、零服务端负担、隐私面最小」
+> 的设计更轻，本分支用**服务端持久化换长期留存、跨设备、玩家互看与后续数据分析**，因此把隐私收敛为「只暴露游戏内
+> 已公开字段」（不含账号 id / 邮箱 / 令牌 / 游客密钥），并保留离线兜底与账号级删除。**建议**：若主线愿意采纳，做成
+> **可选后端** —— 无账号或服务端不可用时自动回落到主线现有的 localStorage 方案，两侧共用同一记录 schema，零成本兼容。
+
+**这是本分支的偏离，不是上游。** The account system and server-backed statistics are **our fork's additions**;
+mainline ships neither (its statistics page is the local, browser-only PR #323). They must survive a merge —
+[`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §8 lists every file.
+
+**账号（服务端）。** 本分支在主线之外引入了一套**服务端账号体系**：`server/auth.js`（`AuthService`）+
+`server/db.mjs`（`node:sqlite`，`var/accounts.db`），提供**登录 / 注册、角色与权限、会话令牌、账号与游客的区分**；
+野排等需要身份的功能**以账号为前提**（主线是纯本机、无账号的）。
+
+**对局统计（服务端）。** 并把**对局统计从浏览器本地迁移到服务端**：
+
+- 每次本地玩家参与的对局结束后，客户端把一条**已规范化**的记录经 `stats.submit` 提交；该记录**沿用主线的
+  `normalizeRecord` schema，不改字段**（`shared/stats.js`）。
+- 服务端写入新增的 `match_stats` 表（`server/db.mjs`，`user_version 5`，索引 `(owner, ended_at DESC)`）。
+- **归属键（owner）**为登录账号的 account id、游客则用其**会话 / 游客身份**，因此**同一身份跨设备可见**（登录后本地
+  积压补传、归入账号）。
+- 支持 `stats.list`（自己的记录）、`stats.clear`、`stats.view`（在「在线玩家」中查看他人**仅游戏内已公开字段**的记录）。
+- `localStorage` 退化为**服务端不可用时的离线兜底**；重复提交按记录自身的 id / seed+start 去重。
+- 数量上限**沿用主线规则、但数值取主线的 2 倍**（2000 / 60 / 1.6M ← 1000 / 30 / 800k），服务端按**同一套裁剪**执行，
+  不只依赖客户端。
+
+详见 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §40（schema、owner、上限、隐私）与 [`docs/DEVELOPMENT.md`](DEVELOPMENT.md)
+§13（`server/db.mjs` schema v5）。
+
+**设计取舍。** 主线「纯本机、零上传、零服务端负担、隐私面最小」的设计更轻；本分支用**服务端持久化换长期留存、
+跨设备、玩家互看与后续数据分析**，因此把隐私收敛为「**只暴露游戏内已公开字段**」（不含账号 id / 邮箱 / 令牌 /
+游客密钥），并保留离线兜底与账号级删除。
+
+**给上游的建议。** 若主线愿意采纳，做成**可选后端** —— 无账号或服务端不可用时自动回落到主线现有的 localStorage
+方案，两侧**共用同一记录 schema**，零成本兼容。
+
+---
+
 ## 1. feedback5 — the full upstream merge (2026-10-07)
 
 **What it was.** The big upstream drop: `origin/master` at **`1303321` (v0.2.0)**, **383 commits / 848 files** —
