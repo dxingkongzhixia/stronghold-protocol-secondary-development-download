@@ -149,8 +149,9 @@ function backToLobby() {
   const s = store.get();
   if (s.room || s.match.public) closeAllDialogs();
   store.set({ room: null, match: emptyMatch(), ticker: [], emotes: [], chat: [] });
-  // also drops a 公开房间 return intent: a closed / kicked / session-reset room is not an intentional 离开同盟.
-  store.patch('ui', { restoring: false, roomsReturn: false });
+  // also drops a 公开房间 return intent and the 在线玩家 overlay / its stats-return intent: a closed / kicked /
+  // session-reset room is not an intentional 离开同盟.
+  store.patch('ui', { restoring: false, roomsReturn: false, onlineOpen: false, onlineFilter: '', onlineStatsReturn: false });
 }
 
 function onWelcome(msg) {
@@ -200,8 +201,9 @@ function onRoomState(msg) {
     // We are no longer seated (kicked / left elsewhere) — neither in a player seat nor a spectator seat.
     if (store.get().room) toast(t('你已不在该同盟中'), 'warn');
     store.set({ room: null, match: emptyMatch(), chat: [] });
-    // kicked / removed elsewhere — NOT an intentional 离开同盟: never force the 公开房间 view.
-    store.patch('ui', { roomsReturn: false });
+    // kicked / removed elsewhere — NOT an intentional 离开同盟: never force the 公开房间 view. The 在线玩家 overlay
+    // and its stats-return intent go too.
+    store.patch('ui', { roomsReturn: false, onlineOpen: false, onlineFilter: '', onlineStatsReturn: false });
     return;
   }
   const prevRoom = store.get().room;
@@ -279,7 +281,8 @@ function wireNet() {
       // 野排: the auto party disbands when the match ends. Drop the room but keep the result on screen — the route
       // stays on the game's settle view, whose button then reads 返回大厅 (no room).
       store.set({ room: null });
-      store.patch('ui', { roomsReturn: false }); // 野排 disbanded by the server, not an intentional leave
+      // 野排 disbanded by the server, not an intentional leave — and no 在线玩家 overlay / stats-return intent outlives it
+      store.patch('ui', { roomsReturn: false, onlineOpen: false, onlineFilter: '', onlineStatsReturn: false });
       toast(t('野排对局结束，队伍已解散'), 'info');
       return;
     }

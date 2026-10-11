@@ -276,6 +276,16 @@
 .online-modal__close .icon { width: .22rem; height: .22rem; }
 .online-modal__meta { display: flex; gap: .26rem; align-items: center; margin: .14rem 0 .18rem; font-size: .15rem; color: var(--text-lo); }
 .online-dot { display: inline-block; width: .08rem; height: .08rem; border-radius: 50%; background: var(--mint-400); box-shadow: 0 0 .1rem var(--mint-400); margin-right: .06rem; }
+/* search filter (callsign / room code / status): the field plus the visible / total count and a clear button */
+.online-modal__search { display: flex; align-items: center; gap: .12rem; margin: 0 0 .16rem; }
+.online-modal__search-field { flex: 1 1 auto; min-width: 0; }
+.online-modal__count { flex: none; font-size: .15rem; color: var(--text-lo); font-variant-numeric: tabular-nums; }
+.online-modal__count b { color: var(--mint-400); }
+.online-modal__count span { color: var(--text-dim); }
+.online-modal__clear { flex: none; width: .34rem; height: .34rem; display: grid; place-items: center; background: none;
+  border: 1px solid var(--line-2); border-radius: .06rem; color: var(--text-lo); cursor: pointer; }
+.online-modal__clear:hover { color: var(--mint-400); border-color: var(--mint-400); }
+.online-modal__clear .icon { width: .18rem; height: .18rem; }
 .online-modal__list { display: flex; flex-direction: column; gap: .04rem; overflow-y: auto; min-height: 0; }
 .online-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; align-items: center; gap: .14rem;
   padding: .1rem .12rem; border: 1px solid var(--line); background: rgba(0, 0, 0, .25); }

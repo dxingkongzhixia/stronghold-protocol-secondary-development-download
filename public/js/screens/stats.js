@@ -26,7 +26,7 @@ import { data, useData } from '../data.js';
 import { fmtNum } from '../ui/gameLogic.js';
 import { titleIconUrl } from '../ui/assetUrls.js';
 import { useDocClass } from '../ui/device.js';
-import { createStore, useStore, selectRoute } from '../store.js';
+import { store, createStore, useStore, selectRoute, setOnlineOpen, consumeOnlineStatsReturn, setOnlineStatsReturn } from '../store.js';
 import { ResultView } from './result.js';
 import { toast, toastError } from '../ui/toasts.js';
 import {
@@ -50,6 +50,8 @@ const statsStore = createStore({ open: false, tab: 'overview', view: null });
 
 /** Open the stats viewer (title screen / lobby / room entry points). */
 export function openStats() {
+  // the title / lobby / room entries are a plain close: drop any stale 在线玩家 return intent so closing never pops it
+  setOnlineStatsReturn(false);
   ensureStylesheet(STATS_CSS);
   data.load('config');
   data.load('bands');
@@ -65,7 +67,14 @@ export function openPlayerStats(name) {
   data.load('assets');
   statsStore.set({ open: true, tab: 'history', view: name });
 }
-export const closeStats = () => statsStore.set({ open: false, view: null });
+/**
+ * Close the viewer. When it was opened from the 在线玩家 list (`ui.onlineStatsReturn`, one-shot), pop back to that
+ * overlay — but only while the lobby is still on screen (a match starting clears the intent instead of reopening).
+ */
+export const closeStats = () => {
+  statsStore.set({ open: false, view: null });
+  if (consumeOnlineStatsReturn() && selectRoute(store.get()) === 'lobby') setOnlineOpen(true);
+};
 
 const TABS = [
   { id: 'overview', name: N_('总览'), micro: 'OVERVIEW' },
@@ -264,6 +273,24 @@ function Replay({ rec, onBack }) {
   return html`<${ResultView} res=${res} pub=${null} myId=${rec.selfId} backLabel=${t('返回统计')} onBack=${onBack} quiet=${true} />`;
 }
 
+/**
+ * Which body the overlay renders (pure, so the read-only / offline / empty branches are testable without a browser):
+ *   'loading'   the game data is not ready, or the server read is in flight
+ *   'no-target' another player whose records could not be read (offline / failed)
+ *   'newer'     the local copy is from a newer build — never shown / overwritten
+ *   'empty'     nothing to list (the viewer's own history, or another player with no records yet)
+ *   'content'   the tab body
+ * @param {{ ready: boolean, loading: boolean, readOnly: boolean, newer: boolean, hasRemote: boolean, empty: boolean }} s
+ * @returns {'loading'|'no-target'|'newer'|'empty'|'content'}
+ */
+export function statsBodyState({ ready, loading, readOnly, newer, hasRemote, empty }) {
+  if (!ready || loading) return 'loading';
+  if (readOnly && !hasRemote) return 'no-target';
+  if (!readOnly && newer) return 'newer';
+  if (empty) return 'empty';
+  return 'content';
+}
+
 /** The overlay, rendered while open (its data hooks run only then). */
 function StatsScreen({ tab, view }) {
   const ready = useData('config', 'bands', 'assets');
@@ -370,6 +397,7 @@ function StatsScreen({ tab, view }) {
   const tabInfo = TABS.find((x) => x.id === tab) || TABS[0];
   const empty = !records.length;
   const showLocalNotes = !readOnly && !remote;
+  const body = statsBodyState({ ready, loading, readOnly, newer: local.newer, hasRemote: !!remote, empty });
   return html`<div class="st" role="dialog" aria-modal="true" aria-label=${t('统计数据')} tabindex="-1" ref=${boxRef}>
     <div class="st__bg" aria-hidden="true"></div>
     <header class="st-top">
@@ -396,15 +424,14 @@ function StatsScreen({ tab, view }) {
     ${showLocalNotes && local.damaged ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('本机保存的统计数据无法读取，已另存为备份，从现在起重新记录。')}</p>` : null}
     ${showLocalNotes && local.dropped ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('有 {n} 条记录已损坏，已忽略。', { n: local.dropped })}</p>` : null}
     <main class="st-body" data-tab=${tab}>
-      ${!ready ? html`<div class="st-loading"><${Spinner} size="md" /></div>`
-        : loading ? html`<div class="st-loading"><${Spinner} size="md" /><span class="st-hint">${t('正在从服务器读取对局记录…')}</span></div>`
-          : readOnly && !remote ? html`<p class="st-empty">${t('无法读取该玩家的记录（可能已离线）。')}</p>`
-            : !readOnly && local.newer ? html`<p class="st-empty">${t('检测到更新版本的统计数据，请先升级客户端再查看，以免覆盖数据。')}</p>`
-              : empty ? html`<p class="st-empty">${readOnly ? t('这名玩家还没有对局记录。') : t('还没有记录 —— 完成一局对局后，这里会开始积累。')}</p>`
-                : tab === 'bands' ? html`<${Bands} agg=${agg} gd=${gd} />`
-                  : tab === 'totals' ? html`<${CombatSums} agg=${agg} />`
-                    : tab === 'history' ? html`<${History} records=${records} gd=${gd} onOpen=${setReplay} />`
-                      : html`<${Overview} agg=${agg} gd=${gd} />`}
+      ${body === 'loading' ? html`<div class="st-loading"><${Spinner} size="md" />${ready ? html`<span class="st-hint">${t('正在从服务器读取对局记录…')}</span>` : null}</div>`
+        : body === 'no-target' ? html`<p class="st-empty">${t('无法读取该玩家的记录（可能已离线）。')}</p>`
+          : body === 'newer' ? html`<p class="st-empty">${t('检测到更新版本的统计数据，请先升级客户端再查看，以免覆盖数据。')}</p>`
+            : body === 'empty' ? html`<p class="st-empty">${readOnly ? t('这名玩家还没有对局记录。') : t('还没有记录 —— 完成一局对局后，这里会开始积累。')}</p>`
+              : tab === 'bands' ? html`<${Bands} agg=${agg} gd=${gd} />`
+                : tab === 'totals' ? html`<${CombatSums} agg=${agg} />`
+                  : tab === 'history' ? html`<${History} records=${records} gd=${gd} onOpen=${setReplay} />`
+                    : html`<${Overview} agg=${agg} gd=${gd} />`}
     </main>
   </div>`;
 }

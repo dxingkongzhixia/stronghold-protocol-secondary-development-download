@@ -22,7 +22,7 @@ import { AccountDialog } from '../ui/account.js';
 import { ChangelogOverlay } from '../ui/community.js';
 import { PublicRoomsScreen } from './rooms.js';
 import { net, identity } from '../net.js';
-import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn } from '../store.js';
+import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn, setOnlineOpen, setOnlineFilter, setOnlineStatsReturn } from '../store.js';
 import { getConfig, getMode, getStage, useData } from '../data.js';
 import { t, tc, N_ } from '../../../shared/i18n.js';
 
@@ -252,7 +252,8 @@ export function LobbyScreen() {
   const auth = useStore((s) => s.auth, shallowEqual);
   const mm = useStore((s) => s.mm, shallowEqual);
   const [showAccount, setShowAccount] = useState(false);
-  const [showOnline, setShowOnline] = useState(false);
+  // 在线玩家 overlay: store-level (not local state) so opening a player's stats can pop back to it (ui.onlineOpen).
+  const showOnline = useStore((s) => s.ui.onlineOpen);
   // 更新日志 / 公开房间 (ui/community.js): which community panel is open, or null. A pending 公开房间
   // return (ui.roomsReturn, set by this screen's own 加入 / 观战) opens the rooms view at once — consumed here, once.
   // (bug提交 left this top bar on 2026-10-11 — it is reached from the 设置 dialog now, ui/settings.js.)
@@ -342,8 +343,12 @@ export function LobbyScreen() {
     // Leaving the lobby must not leave the 野排 queue behind: the socket stays open, so without this the server
     // would keep this session in the shared pool (and could match it into a room the player never sees).
     if (mm.queued) mmCancel();
-    // 返回标题 clears the 公开房间 return intent: a later, unrelated room leave must not reopen it.
+    // 返回标题 clears the 公开房间 return intent: a later, unrelated room leave must not reopen it; the 在线玩家
+    // overlay and its stats-return intent go with it too (docs/MATCHMAKING.md §8).
     setRoomsReturn(false);
+    setOnlineOpen(false);
+    setOnlineFilter('');
+    setOnlineStatsReturn(false);
     identity.setEntered(false);
     store.set((s) => ({ session: { ...s.session, entered: false }, mm: { ...s.mm, queued: false, difficulty: null } }));
   };
@@ -364,7 +369,7 @@ export function LobbyScreen() {
       <div class="topbar__left">
         <${Button} variant="ghost" size="sm" icon="chevronLeft" onClick=${backToTitle} title=${t('返回标题')}>${t('返回')}<//>
         <${PingPill} ms=${conn.ping} online=${online} />
-        <${OnlineBadge} onOpen=${() => setShowOnline(true)} />
+        <${OnlineBadge} onOpen=${() => setOnlineOpen(true)} />
         <button type="button" class="online-badge lobby-rooms" title=${t('公开房间')} onClick=${() => setShowCommunity('rooms')}>
           <${Icon} name="users" /><span>${t('公开房间')}</span>
         </button>
@@ -448,7 +453,7 @@ export function LobbyScreen() {
       </section>
     </div>
     ${showAccount ? html`<${AccountDialog} defaultName=${me.name} onClose=${() => setShowAccount(false)} />` : null}
-    ${showOnline ? html`<${OnlineOverlay} onClose=${() => setShowOnline(false)} />` : null}
+    ${showOnline ? html`<${OnlineOverlay} onClose=${() => setOnlineOpen(false)} />` : null}
     ${showCommunity === 'changelog' ? html`<${ChangelogOverlay} onClose=${() => setShowCommunity(null)} />` : null}
   </div>`;
 }
@@ -580,11 +585,66 @@ const ONLINE_STATUS = {
 };
 
 /**
+ * The public stats target of an /online/api online row: a registered player's callsign, else null. Guests have no
+ * account-bound identity others can key on (server/stats.js `stats.view` resolves by public callsign), so their row
+ * stays a plain row — and so does a nameless entry.
+ * @param {any} p an /online/api `online[]` entry
+ * @returns {string|null}
+ */
+export function onlineStatsTarget(p) {
+  return p && !p.guest && typeof p.name === 'string' && p.name.length > 0 ? p.name : null;
+}
+
+/**
+ * Filter the online list by a free-text query: a case-insensitive substring of the callsign, the room code, or the
+ * status (its key like `queue`, or its translated label like 野排排队), so any of those find a row. An empty / blank
+ * query keeps the list as it is (the same array reference — no needless re-render).
+ * @param {any[]} list /online/api `online[]`
+ * @param {string} query the search field's text
+ * @returns {any[]}
+ */
+export function filterOnlinePlayers(list, query) {
+  const arr = Array.isArray(list) ? list : [];
+  const q = String(query ?? '').trim().toLowerCase();
+  if (!q) return arr;
+  return arr.filter((p) => {
+    const status = ONLINE_STATUS[p?.status];
+    const hay = [p?.name, p?.roomCode, p?.status, status ? t(status.label) : '', p?.guest ? t('游客') : t('已登录')];
+    return hay.some((s) => typeof s === 'string' && s.toLowerCase().includes(q));
+  });
+}
+
+/**
+ * A 在线玩家 row click on a viewable player: hide the list and open their public records, remembering the online-list
+ * origin so closing the stats pops back here with the search still in place (ui.onlineStatsReturn, one-shot). Split
+ * out so the row → stats wiring is testable without a browser; `deps.open` defaults to the real `openPlayerStats`.
+ * @param {any} p an /online/api `online[]` entry
+ * @param {{ open?: (name: string) => void }} [deps]
+ * @returns {boolean} whether a viewable row opened the stats
+ */
+export function openOnlineStats(p, deps = {}) {
+  const name = onlineStatsTarget(p);
+  if (!name) return false;
+  setOnlineStatsReturn(true);
+  setOnlineOpen(false);
+  (deps.open || openPlayerStats)(name);
+  return true;
+}
+
+/**
  * The in-game online-players overlay: server data via /online/api (token-free), refreshed every 4 s. Opened from the
- * 在线 badge — no separate page. Styled with the game's own components (docs/MATCHMAKING.md §8).
+ * 在线 badge — no separate page. Rows list 名字 / 是否登录 / 状态 / 房间; a registered player's row (the `>` chevron)
+ * opens their public records (server/stats.js stats.view) and returns here on close. A search box filters the list by
+ * callsign / room code / status. Styled with the game's own components (docs/MATCHMAKING.md §8).
  */
 function OnlineOverlay({ onClose }) {
   const [data, setData] = useState(null);
+  const query = useStore((s) => s.ui.onlineFilter);
+  const list = (data && data.online) || [];
+  const shown = filterOnlinePlayers(list, query);
+  const st = (s) => ONLINE_STATUS[s] || { label: s, c: 'dim' };
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     let alive = true;
     const tick = async () => {
@@ -599,8 +659,17 @@ function OnlineOverlay({ onClose }) {
     const h = setInterval(tick, 4000);
     return () => { alive = false; clearInterval(h); };
   }, []);
-  const list = (data && data.online) || [];
-  const st = (s) => ONLINE_STATUS[s] || { label: s, c: 'dim' };
+  // Esc closes the overlay — but a confirm dialog on top takes the Esc. The stats viewer this overlay opens consumes
+  // the first Esc (popping back here); this listener is mounted only then, so the second Esc closes the list.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || document.querySelector('.modal')) return;
+      e.preventDefault(); e.stopPropagation();
+      closeRef.current?.();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
   return html`<div class="online-modal" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
     <div class="online-modal__card brackets">
       <div class="online-modal__head">
@@ -609,25 +678,33 @@ function OnlineOverlay({ onClose }) {
         <button type="button" class="online-modal__close" onClick=${onClose} aria-label=${t('关闭')}><${Icon} name="close" /><//>
       </div>
       <div class="online-modal__meta"><span><i class="online-dot"></i>${t('实时')}</span><span>${t('游客')} ${data ? data.counts.guests : '—'}</span><span>${t('每 4 秒刷新')}</span></div>
+      <div class="online-modal__search">
+        <${TextField} size="sm" icon="search" value=${query} placeholder=${t('搜索玩家代号 / 房间号')}
+          onInput=${setOnlineFilter} class="online-modal__search-field" />
+        <span class="online-modal__count num" title=${t('显示 {shown} / {total}', { shown: shown.length, total: list.length })}>
+          <b>${shown.length}</b><span>/${list.length}</span></span>
+        ${query ? html`<button type="button" class="online-modal__clear" aria-label=${t('清除搜索')} title=${t('清除搜索')}
+          onClick=${() => setOnlineFilter('')}><${Icon} name="close" /><//>` : null}
+      </div>
       <div class="online-modal__list">
-        ${list.length ? list.map((p, i) => {
-          // a registered player's row opens their public match records (server/stats.js stats.view); guests have no
-          // account-bound identity others can key on, so their row stays a plain row
-          const viewable = !p.guest && typeof p.name === 'string' && p.name.length > 0;
-          const open = viewable ? () => { onClose(); openPlayerStats(p.name); } : undefined;
-          return html`<div class=${`online-row${viewable ? ' is-viewable' : ''}`} key=${`${p.name}-${i}`}
-            role=${viewable ? 'button' : undefined} tabIndex=${viewable ? 0 : undefined}
-            title=${viewable ? t('查看其对局记录') : undefined}
-            onClick=${viewable ? open : undefined}
-            onKeyDown=${viewable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } } : undefined}>
+        ${shown.length ? shown.map((p, i) => {
+          // a registered player's row opens their public match records (server/stats.js stats.view) and returns here;
+          // guests have no account-bound identity others can key on, so their row stays a plain row
+          const target = onlineStatsTarget(p);
+          const open = target ? () => openOnlineStats(p) : undefined;
+          return html`<div class=${`online-row${target ? ' is-viewable' : ''}`} key=${`${p.name}-${i}`}
+            role=${target ? 'button' : undefined} tabIndex=${target ? 0 : undefined}
+            title=${target ? t('查看其对局记录') : undefined}
+            onClick=${target ? open : undefined}
+            onKeyDown=${target ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } } : undefined}>
           <${AvatarFrame} size="sm" name=${p.name} seat=${i} offline=${p.status === 'offline'} />
           <span class="online-row__name">${p.name}<${RoleTag} role=${p.role} /></span>
           ${p.guest ? html`<span class="online-row__tag">${t('游客')}</span>` : html`<span class="online-row__tag is-acc">${t('已登录')}</span>`}
           <span class=${`online-row__status is-${st(p.status).c}`}>${t(st(p.status).label)}</span>
           <span class="online-row__room num">${p.roomCode || '—'}</span>
-          ${viewable ? html`<span class="online-row__go" aria-hidden="true"><${Icon} name="chevronRight" /></span>` : null}
+          ${target ? html`<span class="online-row__go" aria-hidden="true"><${Icon} name="chevronRight" /></span>` : null}
         </div>`;
-        }) : html`<div class="online-modal__empty">${data ? t('暂无在线玩家') : t('加载中…')}</div>`}
+        }) : html`<div class="online-modal__empty">${!data ? t('加载中…') : list.length ? t('没有匹配的玩家') : t('暂无在线玩家')}</div>`}
       </div>
     </div>
   </div>`;

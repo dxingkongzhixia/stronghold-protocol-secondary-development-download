@@ -92,7 +92,7 @@ export const initialState = Object.freeze({
   // (ui/chat.js activeChatBubbles); nothing is displayed as a list and nothing is persisted.
   chat: [],
   clock: { offset: 0, rtt: null, synced: false },
-  ui: { pendingJoin: null, restoring: false, buildStale: false, roomsReturn: false },
+  ui: { pendingJoin: null, restoring: false, buildStale: false, roomsReturn: false, onlineOpen: false, onlineFilter: '', onlineStatsReturn: false },
 });
 
 /** The app-wide store singleton. */
@@ -133,6 +133,44 @@ export function setRoomsReturn(on) {
 export function consumeRoomsReturn() {
   const on = !!store.get().ui.roomsReturn;
   if (on) store.patch('ui', { roomsReturn: false });
+  return on;
+}
+
+/**
+ * Open / close the in-game 在线玩家 overlay (`OnlineOverlay`). Kept in the store (not local component state) so the
+ * stats viewer it opens can pop back to it; transient UI intent, never persisted (docs/MATCHMAKING.md §8).
+ * @param {boolean} on
+ */
+export function setOnlineOpen(on) {
+  store.patch('ui', { onlineOpen: !!on });
+}
+
+/**
+ * The 在线玩家 search text (in-memory only, not a pref): kept in the store so it survives the stats view a row opens.
+ * @param {string} q
+ */
+export function setOnlineFilter(q) {
+  store.patch('ui', { onlineFilter: typeof q === 'string' ? q : '' });
+}
+
+/**
+ * Remember that another player's stats were opened FROM the 在线玩家 list, so closing them returns to that overlay with
+ * its list state (one-shot, like `ui.roomsReturn`). Set only by that list's row handler; consumed once when the stats
+ * viewer closes; a title / session reset or the room taking over clears it (docs/MATCHMAKING.md §8).
+ * @param {boolean} on
+ */
+export function setOnlineStatsReturn(on) {
+  store.patch('ui', { onlineStatsReturn: !!on });
+}
+
+/**
+ * Read and clear the 在线玩家 stats return flag in one step (one-shot): the stats viewer calls this once on close to
+ * pop back to the online list; every later call sees false.
+ * @returns {boolean} whether the 在线玩家 overlay must reopen
+ */
+export function consumeOnlineStatsReturn() {
+  const on = !!store.get().ui.onlineStatsReturn;
+  if (on) store.patch('ui', { onlineStatsReturn: false });
   return on;
 }
 
