@@ -59,7 +59,7 @@
   - 桶内 **≥4** → 立即取最早进入的 4 人成组（多余者继续等待下一个 4 人）；
   - 桶内最早者等待满 **30 s** → 取**当前所有人（1–3）** + AI 补足到 4 成组。
 - **退出池**（任何"不再排队"的路径都会移出，**不会留幽灵**）：
-  - 点「取消搜寻」→ `mm.cancel`，回 `mm.state { queued:false }`；
+  - 点右下角面板的 **「✕ 退出匹配」** → `mm.cancel`，回 `mm.state { queued:false }`（客户端同时乐观清空本地 `mm.queued`）；
   - **离开大厅（点「返回」回标题）** → 客户端自动补发 `mm.cancel`（socket 仍连着，不加这步服务器会把这个人一直留在池里、甚至匹配进他看不到的房间）；
   - **建房 / 加入房间**（`room.create` / `room.join`）→ 服务端自动移出（一人不能同时在池里又在房里）；
   - 断线 / 会话过期 → `Lobby.onDisconnect` / `onExpire` 自动移出；`room.leave` 也会兜底清一次。
@@ -120,8 +120,9 @@
 - 顶栏左侧 **「在线 N」** 徽标（`.online-badge`）：数据来自**服务器** `/healthz` 的 `online`（= 真实在线人数，含登录用户断线后 5 分钟宽限；与 `/admin` 同源；客户端每 15s 拉一次）。**点击打开游戏内浮层**（`OnlineOverlay`，复用游戏自己的组件/风格，数据取免令牌的 `/online/api`，每 4s 刷新）——列出 名字 / 是否登录 / 状态 / 房间，**不开新页面**。
 - 顶栏玩家名旁：**未登录**时显示 `游客` 徽标（`.me-chip__guest`）。
 - 顶栏 **「登录 / 注册」** 按钮（仅游客显示）：打开 `ui/account.js` 的**账号弹窗**，把当前**游客身份升级为正式账号** —— 账号绑定到**当前会话**，房间 / 对局继续、`playerId` 不变（服务端 `Lobby.bindAccount`），升级后 `游客` 徽标消失、顶栏显示账号名。
-- 同盟模拟下新增 **「搜寻队友（野排）」** 按钮：未登录禁用并提示「需先在标题页登录 / 注册账号」；已登录进入共享池并弹出**排队浮层**（难度 / 已等待 / 当前人数 `k/4` / 取消 / 约 n 秒后由 AI 补位开局）。
-- **匹配成功**：服务器广播 `room.state` → 路由进房，浮层随 `mm.state queued:false` 消失。
+- 模式卡 `MODE_CARDS`：**独立模拟 / 同盟模拟 / 同盟匹配** 三张（`.mode-card`，第三张 `id:'mm'`、图标 `signal`、英文 `ALLIANCE MATCHMAKING`；选中一张显示薄荷描边 + **「✓ 已选定」**）。选 **同盟匹配** 即把右侧操作区换成野排动作区，沿用原 **「搜寻队友（野排）」** 按钮与提示：未登录禁用并提示「需先在标题页登录 / 注册账号」；已登录提示「进入共享池，最多 30 秒凑齐 4 人，不足由 AI 补位」。
+- 排队时在**右下角**（难度卡列表下方）渲染**状态面板** `MmPanel`（CSS `.mm-panel`，薄荷描边深色卡 + 括号角）：`ALLIANCE MATCHMAKING` 微型标签、`正在寻找同盟队友` + 动画信号 / 均衡条、右侧大号 `k/4`、细分隔线、难度 / 已等待 / 约 n 秒后由 AI 补位开局、红描边的 **「✕ 退出匹配」** 按钮（→ `mm.cancel`）。数据全部来自 `mm.state`；文案描述**我们自己的规则**（共享池 / ≤30 s / AI 补位），**不**采用参考站点的「仅匹配真人」「满四人后开始」。纯视图模型 `mmPanelView`（未排队 → `null`）与乐观清池 `clearMmQueue` 单独导出，便于测试。
+- **匹配成功**：服务器广播 `room.state` → 路由进房，面板随 `mm.state queued:false` 消失。
 
 ### 野排 ≠ 同盟密钥（两条独立流程，别混）
 
@@ -186,7 +187,7 @@
 | `public/js/store.js` | `auth` / `mm` 状态切片 |
 | `public/js/main.js` | `auth.ok/error`、`mm.state`、`room.closed{matched-end}` 接线；token 持久化；**重连/会话重置清排队态**；标题页临时 `hello` |
 | `public/js/screens/title.js` | **重做**：博士代号=账号名；`AccountBox` 折叠登录/注册；空代号→游客随机代号进入 |
-| `public/js/screens/lobby.js` | 「搜寻队友」按钮 + `MmOverlay`；游客徽标；**「在线 N」徽标 + 游戏内 `OnlineOverlay`**；**「公开同盟」`PublicAlliances`（4s 轮询 `/online/api` 的 `openRooms`，最多 3 个密钥、点击即加入）**；**建房 `公开 / 不公开` 二选一（`lobby.public`）**；账号弹窗；返回时退池 |
+| `public/js/screens/lobby.js` | 三张模式卡 `MODE_CARDS`（含「同盟匹配」）+ 野排状态面板 `MmPanel` / `mmPanelView` / `clearMmQueue`（右下角，替代旧的居中 `MmOverlay`）；游客徽标；**「在线 N」徽标 + 游戏内 `OnlineOverlay`**；**「公开同盟」`PublicAlliances`（4s 轮询 `/online/api` 的 `openRooms`，最多 3 个密钥、点击即加入）**；**建房 `公开 / 不公开` 二选一（`lobby.public`）**；账号弹窗；返回时退池 |
 | `public/js/screens/room.js` | 野排房不再显示「同盟密钥」，改「野排队伍 · 对局结束后自动解散」；「同盟密钥」框显示 **公开 / 仅密钥** 徽标（`room.public`） |
 | `public/js/screens/game.js` | `commitFacing` 定时器随卸载清理 |
 | `public/js/battle/runner.js` | `clear()` 保留未送达的 `b.result`（可重发） |
@@ -204,7 +205,7 @@
 ### 样式 / 脚本 / 文档 / 测试
 | 文件 | 改动 |
 |---|---|
-| `public/css/screens/title.css` `lobby.css` `room.css` | 登录块 / 野排按钮 / 排队浮层 / **在线徽标 + 在线浮层** / **大厅"贴合视口"**（难度卡滚动、两个按钮常驻）/ **`.create-vis` 可见性二选一** / **`.invite__vis` 公开徽标** |
+| `public/css/screens/title.css` `lobby.css` `room.css` | 登录块 / 野排按钮 / **野排状态面板 `.mm-panel`（均衡条动画 + 红描边退出）/ 三列模式卡 `.mode-cards`** / **在线徽标 + 在线浮层** / **大厅"贴合视口"**（难度卡滚动、两个按钮常驻）/ **`.create-vis` 可见性二选一** / **`.invite__vis` 公开徽标** |
 | `public/css/components.css` | 密码眼睛按钮、账号表单、`me-chip__guest` |
 | `server-start.cmd` | 启动时设 `SP_VERIFY=sample` |
 | `.gitignore` | 忽略 `var/`（SQLite） |
@@ -325,7 +326,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 ### 16.2 野排（自动匹配，`server/matchmaker.js`）
 - 共享池**按难度分桶**、**30 s 窗口**、满 4 人**立即开局**、不足由 **AI 补位**；`mm.state` 进度 ~1 Hz。
-- **需登录**；排队浮层 `MmOverlay`，取消 / 断线即退池。
+- **需登录**；右下角状态面板 `MmPanel`（`ALLIANCE MATCHMAKING` / 均衡条 / `k/4` / 「✕ 退出匹配」），取消 / 断线即退池。
 - **退池**：取消 / 离开大厅 / 建房 / 进房 / 断线 / 过期一律退池；成组失败也补发 `queued:false`（不留幽灵）。
 - 野排房 `room.auto`：**对局结束即解散**、不显示同盟密钥、不进「最近同盟」。
 

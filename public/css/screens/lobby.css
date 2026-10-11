@@ -18,10 +18,13 @@
    screen on a short window; on a tall window nothing grows (no gap between the cards and the buttons). */
 .lobby-right .diff-list { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 .lobby-right .diff-list > * { flex: 0 0 auto; } /* scroll the cards, never squish them */
-.lobby-right .create-box, .lobby-right .mm-box { flex: 0 0 auto; }
+.lobby-right .create-box, .lobby-right .mm-box, .lobby-right .mm-panel { flex: 0 0 auto; }
 
 /* ---- mode cards ------------------------------------------------------------------------------------ */
-.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: .24rem; margin-bottom: .34rem; }
+/* The mode row is THREE cards (独立模拟 · 同盟模拟 · 同盟匹配), mirroring the reference lobby: a big icon, the
+   uppercase English micro-label, the Chinese name, a description and two ◆ bullets, with a mint frame + ✓ 已选定 on
+   the picked one. 同盟匹配 is the 野排 matchmaker — it never creates a room, it enters the shared pool (screens/lobby.js). */
+.mode-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2rem; margin-bottom: .34rem; }
 .mode-card {
   --bk-c: transparent;
   --bk-l: .2rem;
@@ -29,9 +32,9 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: .22rem;
+  gap: .2rem;
   min-height: 4.3rem;
-  padding: .34rem .32rem .3rem;
+  padding: .3rem .26rem .28rem;
   overflow: hidden;
   text-align: left;
   background: linear-gradient(180deg, rgba(28, 34, 31, .92), rgba(13, 16, 15, .94));
@@ -41,6 +44,7 @@
   animation: card-in var(--t-slow) var(--ease-out) backwards;
 }
 .mode-card:nth-child(2) { animation-delay: 60ms; }
+.mode-card:nth-child(3) { animation-delay: 120ms; }
 .mode-card__bg {
   position: absolute;
   inset: 0;
@@ -243,8 +247,9 @@
 .lobby-gpu { display: inline-flex; align-items: center; max-width: 3.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: .14rem; letter-spacing: .01em; color: #6f7d78; }
 
-/* 野排 (docs/MATCHMAKING.md): the search card + the queue overlay */
-.mm-box { margin-top: .12rem; display: flex; flex-direction: column; gap: .06rem; }
+/* 野排 (docs/MATCHMAKING.md): the 同盟匹配 mode's start action (the old 搜寻队友（野排） button) + the bottom-right
+   status panel `.mm-panel` rendered while queued */
+.mm-box { margin-top: .3rem; display: flex; flex-direction: column; gap: .06rem; }
 .mm-box__hint { text-align: center; font-size: .13rem; color: var(--text-lo); opacity: .8; }
 
 /* server online-player count in the topbar (data from /healthz); clicking opens /admin */
@@ -294,13 +299,52 @@
 .online-row__status.is-dim { color: var(--text-dim); }
 .online-row__room { color: var(--text-lo); font-size: .15rem; }
 .online-modal__empty { text-align: center; color: var(--text-dim); padding: .4rem; font-size: .16rem; }
-.mm-overlay { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(4, 8, 7, .72); }
-.mm-overlay__card { display: flex; flex-direction: column; gap: .1rem; align-items: center; min-width: 3.6rem; padding: .22rem .26rem;
-  background: var(--panel-bg, #101614); border: 1px solid rgba(120, 220, 190, .35); }
-.mm-overlay__title { font-size: .22rem; color: var(--mint-400); letter-spacing: .04em; }
-.mm-overlay__row { display: flex; justify-content: space-between; width: 100%; gap: 1.2rem; font-size: .17rem; color: var(--text-lo); }
-.mm-overlay__row b { color: var(--text-hi, #e8f5ef); }
-.mm-overlay__hint { font-size: .14rem; color: var(--text-lo); opacity: .85; }
+
+/* ---- 野排 status panel (matches the reference lobby's bottom-right panel; docs/MATCHMAKING.md §16.2) ------------- */
+/* Mint-bordered dark panel where the difficulty list ends: ALLIANCE MATCHMAKING micro-label, the searching title with an
+   animated equalizer, the big n/4 head count, a thin rule, the difficulty / wait / AI-backfill meta, our shared-pool
+   behaviour line and a red-bordered ✕ 退出匹配 button. Rendered only while mm.queued (screens/lobby.js MmPanel). */
+.mm-panel {
+  --bk-c: var(--mint-400);
+  position: relative;
+  margin-top: .16rem;
+  padding: .18rem .22rem .2rem;
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  background: linear-gradient(180deg, rgba(14, 22, 19, .96), rgba(8, 12, 10, .97));
+  border: 1px solid var(--mint-a35);
+  box-shadow: 0 0 0 1px rgba(78, 216, 175, .12), 0 .18rem .5rem rgba(0, 0, 0, .45), inset 0 0 .7rem rgba(23, 249, 183, .04);
+  animation: card-in var(--t-slow) var(--ease-out);
+}
+.mm-panel__row { display: flex; align-items: center; justify-content: space-between; gap: .18rem; }
+.mm-panel__title { display: inline-flex; align-items: center; gap: .1rem; font-size: .22rem; font-weight: 800; letter-spacing: .03em; color: var(--mint-400); }
+.mm-panel__count { font-family: var(--font-num); font-size: .5rem; line-height: 1; color: var(--text-hi); font-variant-numeric: tabular-nums; }
+.mm-panel__count b { color: var(--mint-400); }
+.mm-panel__count span { font-size: .24rem; color: var(--text-lo); }
+/* animated signal/equalizer while searching (4 bars, staggered; motion-reduced callers get a static pose) */
+.mm-eq { display: inline-flex; align-items: flex-end; gap: .035rem; height: .22rem; }
+.mm-eq i { width: .05rem; height: 30%; background: var(--mint-400); transform-origin: bottom; animation: mm-eq 1s var(--ease-in-out) infinite; }
+.mm-eq i:nth-child(1) { animation-delay: -.45s; }
+.mm-eq i:nth-child(2) { animation-delay: -.15s; }
+.mm-eq i:nth-child(3) { animation-delay: -.65s; }
+.mm-eq i:nth-child(4) { animation-delay: -.3s; }
+@keyframes mm-eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+.mm-panel__rule { height: 1px; background: linear-gradient(90deg, transparent, var(--mint-a35), transparent); }
+.mm-panel__meta { display: flex; flex-wrap: wrap; gap: .06rem .22rem; font-size: .14rem; color: var(--text-lo); }
+.mm-panel__meta b { color: var(--text-md); font-weight: 700; }
+.mm-panel__meta .mm-panel__left { color: var(--mint-400); }
+.mm-panel__hint { font-size: .14rem; color: var(--text-lo); opacity: .85; }
+/* red-bordered ✕ 退出匹配 (a secondary Button restyled to the danger outline, not the filled danger variant) */
+.mm-panel .mm-panel__exit {
+  margin-top: .04rem;
+  --btn-bg: rgba(231, 49, 24, .08);
+  --btn-bg-hover: rgba(231, 49, 24, .2);
+  --btn-fg: #ff6a56;
+  --btn-bd: var(--red);
+  --btn-bd-hover: var(--red-premium);
+  --bk-c: var(--red-premium);
+}
 .diff-card.is-selected .diff-card__check span { opacity: 1; }
 
 /* ---- create ------------------------------------------------------------------------------------------ */

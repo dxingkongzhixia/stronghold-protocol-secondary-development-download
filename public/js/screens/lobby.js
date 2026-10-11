@@ -75,7 +75,7 @@ export function stageNote(stages) {
   return Number.isInteger(stages) && stages > 1 ? t('战场随机（共{stages}张）', { stages }) : '';
 }
 
-const MODE_CARDS = [
+export const MODE_CARDS = [
   {
     id: 'solo', name: N_('独立模拟'), en: 'SOLO SIMULATION', icon: 'user',
     desc: N_('独自调配资金与干员，以自己的节奏完成整场模拟。'),
@@ -85,6 +85,13 @@ const MODE_CARDS = [
     id: 'coop', name: N_('同盟模拟'), en: 'ALLIANCE SIMULATION', icon: 'users',
     desc: N_('与至多 {n} 名博士组成同盟，共享干员池，联防协作抵御敌潮。'), params: { n: MAX_SEATS - 1 },
     points: [N_('1–{n} 名博士 · 可由 AI 队友补位'), N_('联防阶段 · 最终攻势合并生命值')], pointParams: { n: MAX_SEATS },
+  },
+  // 野排 (docs/MATCHMAKING.md): the third mode card is the matchmaker, not a room mode — it never creates a room.
+  // Its bullets describe OUR rules (shared pool, AI backfill, an account is required), never the reference's wording.
+  {
+    id: 'mm', name: N_('同盟匹配'), en: 'ALLIANCE MATCHMAKING', icon: 'signal',
+    desc: N_('单人进入共享池，自动匹配队友组成同盟。'),
+    points: [N_('1 名博士 · 单人即可加入'), N_('最多 30 秒 · 不足由 AI 队友补位')],
   },
 ];
 
@@ -251,7 +258,10 @@ export function LobbyScreen() {
   // (bug提交 left this top bar on 2026-10-11 — it is reached from the 设置 dialog now, ui/settings.js.)
   const [showCommunity, setShowCommunity] = useState(() => (consumeRoomsReturn() ? 'rooms' : null));
   useData('config');
-  const [roomMode, setRoomMode] = useState(() => (loadPref('lobby.mode', 'coop') === 'solo' ? 'solo' : 'coop'));
+  const [roomMode, setRoomMode] = useState(() => {
+    const m = loadPref('lobby.mode', 'coop');
+    return m === 'solo' || m === 'mm' ? m : 'coop';
+  });
   const [difficulty, setDifficulty] = useState(() => {
     const d = loadPref('lobby.difficulty', 'FUNNY');
     return DIFFICULTIES.includes(d) ? d : 'FUNNY';
@@ -285,8 +295,8 @@ export function LobbyScreen() {
   // 野排 (docs/MATCHMAKING.md): enter the difficulty-bucketed shared pool (a logged-in account is required).
   const mmJoin = () => run('mm', () => net.request('mm.join', { difficulty }));
   const mmCancel = () => {
-    // Optimistic: clear locally so a failed / slow cancel can never leave the overlay stuck (a real mm.state re-syncs).
-    store.patch('mm', { queued: false, difficulty: null });
+    // Optimistic: clear locally so a failed / slow cancel can never leave the panel stuck (a real mm.state re-syncs).
+    clearMmQueue();
     net.request('mm.cancel').catch(() => {});
   };
   const join = (c = code, source = null) => {
@@ -407,35 +417,36 @@ export function LobbyScreen() {
       <section class="lobby-right">
         <div class="section-label"><span class="section-label__idx num">02</span>${t('模拟难度')}<${MicroLabel}>DIFFICULTY<//></div>
         <div class="diff-list">
-          ${DIFFICULTIES.map((d) => html`<${DifficultyCard} key=${d} roomMode=${roomMode} difficulty=${d} selected=${difficulty === d} onSelect=${pickDifficulty} />`)}
+          ${DIFFICULTIES.map((d) => html`<${DifficultyCard} key=${d} roomMode=${roomMode === 'mm' ? 'coop' : roomMode} difficulty=${d} selected=${difficulty === d} onSelect=${pickDifficulty} />`)}
         </div>
-        <div class="create-box">
-          ${roomMode === 'coop' ? html`<div class="create-vis">
-            <span class="create-vis__label">${t('房间可见性')}<${MicroLabel}>VISIBILITY<//></span>
-            <${Tabs} size="sm" value=${isPublic ? 'public' : 'private'} onChange=${pickPublic}
-              items=${[{ id: 'public', label: t('公开') }, { id: 'private', label: t('不公开') }]} />
-          </div>` : null}
-          <${Tooltip} block=${true} text=${online ? null : t('正在连接服务器…')}>
-            <${Button} variant="primary" size="xl" block=${true} iconRight="chevrons" loading=${busy === 'create'} disabled=${!online} onClick=${create}>
-              ${roomMode === 'solo' ? t('开始独立模拟') : t('创建同盟')}
-            <//>
-          <//>
-          <div class="create-box__hint">
-            ${online
-              ? html`<span>${roomMode === 'solo' ? t('创建后即可开始模拟')
-                : isPublic ? t('公开：其他博士可在大厅「公开同盟」直接加入')
-                : t('不公开：仅凭同盟密钥加入')}</span>`
-              : html`<${Spinner} size="sm" label="CONNECTING" />`}
-          </div>
-        </div>
-        ${roomMode === 'coop' ? html`<div class="mm-box">
-          <${Button} variant="primary" size="xl" block=${true} icon="search" disabled=${!online || !auth.account}
-            onClick=${mmJoin} title=${auth.account ? '' : t('需要先登录账号')}>${t('搜寻队友（野排）')}<//>
-          <div class="mm-box__hint">${auth.account ? t('进入共享池，最多 30 秒凑齐 4 人，不足由 AI 补位') : t('需先在标题页登录 / 注册账号')}</div>
-        </div>` : null}
+        ${roomMode === 'mm'
+          ? (mm.queued ? null : html`<div class="mm-box">
+              <${Button} variant="primary" size="xl" block=${true} icon="search" disabled=${!online || !auth.account}
+                onClick=${mmJoin} title=${auth.account ? '' : t('需要先登录账号')}>${t('搜寻队友（野排）')}<//>
+              <div class="mm-box__hint">${auth.account ? t('进入共享池，最多 30 秒凑齐 4 人，不足由 AI 补位') : t('需先在标题页登录 / 注册账号')}</div>
+            </div>`)
+          : html`<div class="create-box">
+              ${roomMode === 'coop' ? html`<div class="create-vis">
+                <span class="create-vis__label">${t('房间可见性')}<${MicroLabel}>VISIBILITY<//></span>
+                <${Tabs} size="sm" value=${isPublic ? 'public' : 'private'} onChange=${pickPublic}
+                  items=${[{ id: 'public', label: t('公开') }, { id: 'private', label: t('不公开') }]} />
+              </div>` : null}
+              <${Tooltip} block=${true} text=${online ? null : t('正在连接服务器…')}>
+                <${Button} variant="primary" size="xl" block=${true} iconRight="chevrons" loading=${busy === 'create'} disabled=${!online} onClick=${create}>
+                  ${roomMode === 'solo' ? t('开始独立模拟') : t('创建同盟')}
+                <//>
+              <//>
+              <div class="create-box__hint">
+                ${online
+                  ? html`<span>${roomMode === 'solo' ? t('创建后即可开始模拟')
+                    : isPublic ? t('公开：其他博士可在大厅「公开同盟」直接加入')
+                    : t('不公开：仅凭同盟密钥加入')}</span>`
+                  : html`<${Spinner} size="sm" label="CONNECTING" />`}
+              </div>
+            </div>`}
+        ${mm.queued ? html`<${MmPanel} mm=${mm} onCancel=${mmCancel} />` : null}
       </section>
     </div>
-    ${mm.queued ? html`<${MmOverlay} mm=${mm} onCancel=${mmCancel} />` : null}
     ${showAccount ? html`<${AccountDialog} defaultName=${me.name} onClose=${() => setShowAccount(false)} />` : null}
     ${showOnline ? html`<${OnlineOverlay} onClose=${() => setShowOnline(false)} />` : null}
     ${showCommunity === 'changelog' ? html`<${ChangelogOverlay} onClose=${() => setShowCommunity(null)} />` : null}
@@ -490,21 +501,49 @@ function PublicAlliances({ onJoin, onSpectate }) {
 }
 
 /**
- * The 野排 queue overlay: how long we have waited, how many are in the bucket, and the cancel button. It refreshes on
- * each `mm.state` push (~1 Hz, main.js wireNet → store.mm).
+ * The 野排 status panel's pure view model (bottom-right of the lobby, docs/MATCHMAKING.md §16.2): null when not queueing,
+ * else the live `mm.state` numbers the panel renders. Split out so the queued / un-queued split is testable without a
+ * browser, like the rest of the lobby's pure helpers.
+ * @param {{ queued?: boolean, difficulty?: string|null, waiting?: number, need?: number, elapsedMs?: number, deadlineMs?: number }} mm
+ * @param {number} [now]
+ * @returns {{ difficulty: string|null, waiting: number, need: number, elapsed: number, left: number } | null}
  */
-function MmOverlay({ mm, onCancel }) {
-  const left = Math.max(0, Math.ceil(((mm.deadlineMs || 0) - Date.now()) / 1000));
-  return html`<div class="mm-overlay" role="status">
-    <div class="mm-overlay__card brackets">
-      <${Spinner} size="sm" label="SEARCHING" />
-      <div class="mm-overlay__title">${t('正在搜寻队友…')}</div>
-      <div class="mm-overlay__row"><span>${t('难度')}</span><b>${DIFFICULTY_NAMES[mm.difficulty] || mm.difficulty || '-'}</b></div>
-      <div class="mm-overlay__row"><span>${t('已等待')}</span><b>${Math.floor((mm.elapsedMs || 0) / 1000)} s</b></div>
-      <div class="mm-overlay__row"><span>${t('当前人数')}</span><b>${mm.waiting} / ${mm.need}</b></div>
-      <div class="mm-overlay__hint">${left > 0 ? t('约 {left} s 后由 AI 补位开局', { left }) : t('正在组队…')}</div>
-      <${Button} variant="secondary" onClick=${onCancel}>${t('取消搜寻')}<//>
+export function mmPanelView(mm, now = Date.now()) {
+  if (!mm?.queued) return null;
+  const need = Number.isFinite(mm.need) && mm.need > 0 ? mm.need : MAX_SEATS;
+  const waiting = Number.isFinite(mm.waiting) ? Math.max(0, mm.waiting) : 0;
+  const elapsed = Math.max(0, Math.floor((mm.elapsedMs || 0) / 1000));
+  const left = Math.max(0, Math.ceil(((mm.deadlineMs || 0) - now) / 1000));
+  return { difficulty: typeof mm.difficulty === 'string' ? mm.difficulty : null, waiting, need, elapsed, left };
+}
+
+/** Optimistic local clear of the 野排 queue (the server's mm.state re-syncs). Used by the panel's ✕ 退出匹配. */
+export function clearMmQueue() {
+  store.patch('mm', { queued: false, difficulty: null });
+}
+
+/**
+ * The 野排 status panel: the shared-pool search, the current head count (n/4), the difficulty / wait / AI-backfill
+ * countdown and the cancel button. It refreshes on each `mm.state` push (~1 Hz, main.js wireNet → store.mm). Replaces
+ * the old centred `MmOverlay`; the wording describes OUR rules (shared pool, ≤30 s, AI backfill), not the reference's.
+ */
+function MmPanel({ mm, onCancel }) {
+  const v = mmPanelView(mm);
+  if (!v) return null;
+  return html`<div class="mm-panel brackets" role="status" aria-live="polite">
+    <${MicroLabel} tone="mint">ALLIANCE MATCHMAKING<//>
+    <div class="mm-panel__row">
+      <span class="mm-panel__title">${t('正在寻找同盟队友')}<span class="mm-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></span>
+      <span class="mm-panel__count num"><b>${v.waiting}</b>/<span>${v.need}</span></span>
     </div>
+    <div class="mm-panel__rule" aria-hidden="true"></div>
+    <div class="mm-panel__meta">
+      <span>${t('难度')} <b>${v.difficulty ? t(DIFFICULTY_NAMES[v.difficulty]) : '-'}</b></span>
+      <span>${t('已等待')} <b class="num">${v.elapsed} s</b></span>
+      ${v.left > 0 ? html`<span class="mm-panel__left num">${t('约 {left} s 后由 AI 补位开局', { left: v.left })}</span>` : html`<span class="mm-panel__left num">${t('正在组队…')}</span>`}
+    </div>
+    <div class="mm-panel__hint">${t('进入共享池，最多 30 秒凑齐 4 人，不足由 AI 补位')}</div>
+    <${Button} variant="secondary" size="md" block=${true} icon="close" class="mm-panel__exit" onClick=${onCancel}>${t('退出匹配')}<//>
   </div>`;
 }
 
