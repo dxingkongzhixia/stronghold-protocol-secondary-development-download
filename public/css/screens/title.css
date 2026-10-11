@@ -416,5 +416,5 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
 .title-about__platform { padding: .05rem .1rem; border-left: 2px solid var(--amber); color: #ffd08a; background: rgba(246, 163, 41, .06); }
 
 /* ---- 添加到桌面 (ui/install.js): the top row of the bottom-left rail (.title-rail) ------------------ */
-.title-install { max-width: min(4rem, 40vw); }
+.title-install { display: flex; flex-direction: column; align-items: flex-start; gap: .06rem; }
 .title-install__hint { max-width: 3rem; font-size: .12rem; line-height: 1.5; color: var(--text-dim); }
