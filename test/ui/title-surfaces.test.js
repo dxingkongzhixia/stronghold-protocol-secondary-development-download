@@ -179,14 +179,23 @@ test('添加到桌面: beforeinstallprompt present → available; prompt() consu
   assert.equal(d.offer().e.defaultPrevented, false, 'listeners removed after dispose');
 });
 
-test('our build has no PWA manifest / service worker, so the install button stays a graceful no-op', () => {
-  // The premise "upstream 0.2.3 install-icon work is merged" does NOT hold on `ours`: there is no public/manifest.json,
-  // public/icons/ or service worker, so no browser fires beforeinstallprompt here. The button must therefore hide.
-  for (const p of ['public/manifest.json', 'public/manifest.webmanifest', 'public/sw.js', 'public/service-worker.js']) {
+test('the PWA manifest + mint-rook icons are present and linked (no service worker), so Chromium can offer the install', () => {
+  // Upstream 0.2.3's install-icon work (commits 90421254 / 9ec84f36) is now merged: public/manifest.json + the
+  // public/icons/ set (the owner's mint rook) are in our tree and index.html links them, so a Chromium browser can
+  // fire beforeinstallprompt and the button becomes available. No service worker is shipped (Chrome 108/112+ dropped
+  // the requirement; upstream ships none either) — the button still decides at runtime and hides everywhere else.
+  const manifest = JSON.parse(src('public/manifest.json'));
+  assert.ok(manifest.name || manifest.short_name, 'manifest has a name');
+  assert.equal(manifest.start_url, '/');
+  assert.ok(/<link rel="manifest" href="\/manifest\.json"\s*\/?>/.test(src('public/index.html')), 'index.html links the manifest');
+  for (const p of ['public/icons/app-192.png', 'public/icons/app-512.png', 'public/icons/app-maskable-192.png',
+    'public/icons/app-maskable-512.png', 'public/icons/app.svg', 'public/icons/favicon.ico']) {
+    assert.doesNotThrow(() => readFileSync(join(ROOT, p)), `${p} is in our tree`);
+  }
+  for (const p of ['public/sw.js', 'public/service-worker.js']) {
     let exists = true;
     try { readFileSync(join(ROOT, p)); } catch { exists = false; }
-    assert.equal(exists, false, `${p} is not in our tree (button hidden by installVisible)`);
+    assert.equal(exists, false, `${p} is not shipped (no service worker; not required on Chrome 112+)`);
   }
   assert.ok(/InstallButton/.test(src('public/js/screens/title.js')), 'the InstallButton is still mounted (it decides at runtime)');
-  assert.ok(!/rel="manifest"/.test(src('public/index.html')), 'no manifest link in our index.html');
 });

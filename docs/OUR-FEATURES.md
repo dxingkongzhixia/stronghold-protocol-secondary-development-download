@@ -560,10 +560,14 @@ upstream commit was *not* taken and why) are in [`docs/UPSTREAM-MERGES.md`](UPST
   (`ChangelogOverlay` `title=` prop) — one store, no duplicate.
 - **关于本服务器** — the version / `/healthz` build tag / mode list / README Gitee-mirror framing / the footer
   attribution, all factual about this project.
-- **添加到桌面** — the browser install prompt (`beforeinstallprompt`), hidden when unavailable. Our build ships
-  **no** PWA `public/manifest.json` / `public/icons/` / service worker (upstream 0.2.3's install-icon work is on
-  `upstreamm/master`, not merged here), so the button is a deliberate graceful no-op.
+- **添加到桌面** — the browser install prompt (`beforeinstallprompt`), hidden when unavailable. The installability
+  half is now merged from upstream 0.2.3 (the mint-rook `public/manifest.json` + `public/icons/`; see
+  [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §8), so Chromium / Edge 112+ can actually offer the install; **no
+  service worker** is shipped (upstream ships none; Chrome 108/112+ dropped the requirement). Off-Chromium (or
+  already installed / standalone) the button stays a graceful no-op, and iOS shows the manual hint. A stale served
+  `index.html` cannot keep it hidden — `public/js/ui/ensureManifest.js` re-links the manifest at boot.
 
 | Area | Files that must survive the merge |
 |---|---|
 | Title surfaces | `public/js/ui/announce.js` `public/js/ui/about.js` `public/js/ui/install.js`; `public/js/screens/title.js` (the mounts); `public/js/ui/community.js` (`ChangelogOverlay` `title`); `public/js/ui/components.js` (`homePlus` icon); `public/css/screens/title.css` (`.title-announce*` / `.title-about*` / `.title-install*`); `test/ui/title-surfaces.test.js` (+ `.e2e.test.js`) |
+| PWA install assets (upstream 0.2.3, mint rook) | `public/manifest.json`; `public/icons/` (`app.svg`, `app-192/512.png`, `app-maskable-192/512.png`, `favicon-16/32/48.png`, `favicon.ico`, `apple-touch-icon.png`); the `<link rel="manifest">` + icon tags in `public/index.html`; `public/js/ui/ensureManifest.js`; `test/ui/pwa-assets.test.js` (+ `ensure-manifest.test.js`) |

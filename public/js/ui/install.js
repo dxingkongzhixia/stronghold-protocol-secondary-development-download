@@ -1,9 +1,10 @@
 // ui/install.js — the「添加到桌面」PWA install button on the title screen, built on the browser's own install prompt:
 //   beforeinstallprompt → prompt(). Nothing is faked: the service below only exposes the button while the browser has
-//   actually offered an install (which requires an installable app — a manifest + icons, and a service worker on
-//   Chromium); when the app is already installed / running standalone, when the event never fires, or when the browser
-//   cannot prompt, the button stays hidden (graceful no-op). On a platform whose browser has NO prompt event but a
-//   manual install affordance (iOS / iPadOS Safari) a short hint is shown instead.
+//   actually offered an install (which requires an installable app — a linked manifest + icons; a service worker was
+//   required on older Chromium, but Chrome 108/112+ dropped that and this build ships none, like upstream); when the
+//   app is already installed / running standalone, when the event never fires, or when the browser cannot prompt, the
+//   button stays hidden (graceful no-op). On a platform whose browser has NO prompt event but a manual install
+//   affordance (iOS / iPadOS Safari) a short hint is shown instead.
 //
 // `createPwaInstall(win)` takes the window (defaults to globalThis) so the whole thing is unit-testable with a fake
 // EventTarget (test/ui/title-surfaces.test.js) — no DOM needed here. The UI is InstallButton below.

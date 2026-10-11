@@ -58,6 +58,7 @@ import { recordResult, installStatsRecorder, setStatsUploader } from './ui/stats
 import { installStatsSync } from './ui/statsSync.js';
 import { installLoadoutSync, installOwnershipSync, installDiySync } from './ui/loadoutSync.js';
 import { startBuildGuard } from './ui/buildGuard.js';
+import { ensureManifestLink } from './ui/ensureManifest.js';
 import { initLang, useLang, tickerText } from './ui/lang.js';
 import { t, N_, translateWire } from '../../shared/i18n.js';
 import { recordError } from './diag.js';
@@ -545,6 +546,9 @@ async function preloadArt() {
 }
 
 async function boot() {
+  // A stale served index.html may lack the manifest <link> (the stats.css lesson), which hides the title's
+  // 添加到桌面 button; re-link it before the first render (ui/ensureManifest.js).
+  ensureManifestLink('/manifest.json');
   installGlobalErrorHandlers();
   // touch / hover / fullscreen classes, zoom-gesture blocking, rotation re-layout (ui/device.js, css/devices.css)
   installDeviceSupport();
