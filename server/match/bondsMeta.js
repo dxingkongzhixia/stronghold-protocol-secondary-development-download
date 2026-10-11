@@ -16,10 +16,13 @@
 //   助力 (deputShip): tier 1 needs `thresholds[0]` distinct operators; the upper tiers count operators that differ
 //                    in name OR elite state (PRTS 修正).
 //   独行 (soloShip, count_threshold_downward): active iff 1 ≤ count ≤ maxCount (distinct 独行 operators).
-//   Bonds in the mode's static inactive list (FUNNY) never activate and are omitted from computeBonds (the battle
-//                    input never sees them); the views list the ones the player has members of as `off: true`
-//                    (offBondCounts → bondList: count only, never active, after the others) so the strip can say
-//                    本局禁用 (community reports 「投资人…不生效」 / 「…不会触发斯卡蒂与异德的突袭」, 0.1.3).
+//   Bonds in the mode's static inactive list (FUNNY) are NOT OFFERED (server/match/pool.js excludes them from the
+//                    per-match draw, the strategy draft and the bots), but — the owner's rule — the ban must not make
+//                    an OTHERWISE-ACTIVE bond inert: computeBonds counts them like any bond, so a 本局禁用 bond whose
+//                    members reach its threshold IS active and its effect applies. A 本局禁用 bond that has not reached
+//                    its threshold stays inert (its layers still ride into the battle, §27). bondList marks such an
+//                    inactive one `off: true` so the strip can say 本局禁用 (community reports 「投资人…不生效」 /
+//                    「…不会触发斯卡蒂与异德的突袭」, 0.1.3).
 // `tier` = number of thresholds reached (downward: 1 when active); `active = tier ≥ 1`.
 // Layers (`ps.layers[bondId]`) persist the whole match; they are reported for every bond but only matter while active.
 
@@ -111,10 +114,11 @@ export function computeBonds(gd, ps) {
   const bonus = ps.bondCountBonus || {};
   const bonusOf = (id) => (Number.isInteger(bonus[id]) ? bonus[id] : 0);
 
-  // first pass: raw counts
+  // first pass: raw counts — every bond, the mode's static inactive list included (the owner's rule: a banned bond
+  // that reaches its threshold through its members is active and takes effect; only its OFFER is banned, not its
+  // effect — see the header)
   const raw = {};
   for (const id of gd.bondIds) {
-    if (gd.modeInactiveBonds.has(id)) continue;
     raw[id] = rawCount(gd, id, mem, ps);
   }
   // 调和: +1 to core bonds with ≥ 1 real board member while it is active
@@ -140,10 +144,11 @@ export function computeBonds(gd, ps) {
 }
 
 /**
- * The bonds this mode never activates (the static inactive list — 标准模拟's 拉特兰 阿戈尔 卡西米尔 灵巧 奥术 奇迹 投资人 突袭
- * 独行 绝技) that the player has members of, counted like computeBonds would (投资人 / 奇迹 with the hand): { [bondId]:
- * { count, layers } }, null when the mode switches nothing off. Only the views use it (bondList `off`) — the strip shows
- * such a bond as a grey 本局禁用 disc instead of leaving the player to wonder why it does nothing (0.1.3).
+ * The 本局禁用 bonds (the mode's static inactive list — 标准模拟's 拉特兰 阿戈尔 卡西米尔 灵巧 奥术 奇迹 投资人 突袭 独行
+ * 绝技) that the player has members of, counted like computeBonds would (投资人 / 奇迹 with the hand): { [bondId]:
+ * { count, layers } }, null when the mode switches nothing off. A view helper (bondList's legacy `off` fallback) so the
+ * strip can say 本局禁用 (0.1.3). It lists members regardless of whether the bond is active; computeBonds now decides
+ * activation (the owner's rule — a banned-but-activated bond takes effect).
  * @param {import('./gamedata.js').GameData} gd
  * @param {{ board: Map<string, any>, hand: Array<any>, layers: Record<string, number>, bondCountBonus?: Record<string, number> }} ps
  * @returns {Record<string, { count: number, layers: number }>|null}
@@ -189,9 +194,11 @@ export function activatedLayers(bonds) {
 
 /**
  * View list for m.private / m.public: bonds with members or layers, active first, then layers desc, then data order.
- * An entry whose count includes 调和's +1 carries `harmony: 1` (both views; absent otherwise). `off` (offBondCounts): the
- * mode-off bonds the player has members of follow, in data order, as `{ bondId, count, active: false, tier: 0, layers,
- * off: true }` — the strip's grey 本局禁用 discs; never in computeBonds, so never in the battle input.
+ * An entry whose count includes 调和's +1 carries `harmony: 1` (both views; absent otherwise). A 本局禁用 bond
+ * (gd.modeInactiveBonds) that has NOT reached its threshold is marked `off: true` — the strip's grey 本局禁用 disc;
+ * once its members make it active (computeBonds, the owner's rule) the entry reads like any active bond (no `off`).
+ * `off` (offBondCounts) is a legacy fallback for entries computeBonds did not carry; with every bond now computed it
+ * no longer fires.
  * @param {import('./gamedata.js').GameData} gd
  * @param {ReturnType<typeof computeBonds>} bonds
  * @param {{ full?: boolean, off?: ReturnType<typeof offBondCounts> }} [opts] full → include thresholds/countsHand (m.private)
@@ -209,10 +216,12 @@ export function bondList(gd, bonds, { full = false, off = null } = {}) {
   for (const [bondId, b] of Object.entries(bonds || {})) {
     if (!(b.count > 0 || b.layers > 0 || b.active)) continue;
     const e = { bondId, count: b.count, active: b.active, tier: b.tier, layers: b.layers };
+    // a 本局禁用 bond whose members have not reached its threshold: grey 本局禁用 disc; an active one is not `off`
+    if (!b.active && gd.modeInactiveBonds && gd.modeInactiveBonds.has(bondId)) e.off = true;
     if (b.harmony > 0) e.harmony = b.harmony;
     list.push(extras(e));
   }
-  list.sort((a, b) => (b.active - a.active) || (b.layers - a.layers) || ((order.get(a.bondId) ?? 99) - (order.get(b.bondId) ?? 99)));
+  list.sort((a, b) => (a.off ? 1 : 0) - (b.off ? 1 : 0) || (b.active - a.active) || (b.layers - a.layers) || ((order.get(a.bondId) ?? 99) - (order.get(b.bondId) ?? 99)));
   if (off) {
     for (const bondId of gd.bondIds) {
       const o = off[bondId];

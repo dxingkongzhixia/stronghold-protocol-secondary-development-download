@@ -7,7 +7,7 @@
 // the player state).
 
 import { boardOrder, pieceDir } from '../board.js';
-import { computeBonds, bondSnapshot, activatedLayers, bondsWithGains, offBondCounts } from '../bondsMeta.js';
+import { computeBonds, bondSnapshot, activatedLayers, bondsWithGains } from '../bondsMeta.js';
 
 export class PlayerRound {
   startRound(r) {
@@ -91,24 +91,15 @@ export class PlayerRound {
   bondsView() { return bondsWithGains(this.bonds, this.pendingLayerGains); }
 
   /**
-   * The bond snapshot a battle starts from: `this.bonds` (computeBonds — every bond that can ACTIVATE) plus the
-   * mode-inactive (本局禁用) bonds the player has members of, as INACTIVE entries (`active: false, tier: 0`). The
-   * battle never activates those (every bond effect gates on tier ≥ 1), but their layers still exist and count:
-   * 持续叠加 特质 stack them and 「每叠加N层」readers (sim/content/garrisons/battle.js `stepsOf`) must see them
-   * (player report: 本局禁用的盟约吃不到、也读不到层数).
+   * The bond snapshot a battle starts from: `this.bonds` (computeBonds — EVERY bond, the 本局禁用 ones included, so a
+   * banned bond whose members reach its threshold carries `active: true` and its effect applies — the owner's rule:
+   * the ban only stops it being OFFERED, never makes an active bond inert). A 本局禁用 bond that has not reached its
+   * threshold rides along inactive (`active: false, tier: 0`) so its layers still exist and count: 持续叠加 特质 stack
+   * them and 「每叠加N层」readers (sim/content/garrisons/battle.js `stepsOf`) see them (§27).
    * @param {boolean} reached 联防: use the layers this battle reached (view + pending gains)
    */
   battleBonds(reached = false) {
-    const snap = bondSnapshot(reached ? this.bondsView() : this.bonds);
-    const off = offBondCounts(this.gd, this);
-    if (off) {
-      for (const [id, o] of Object.entries(off)) {
-        if (snap[id]) continue;
-        const pending = reached && this.pendingLayerGains ? Math.floor(Number(this.pendingLayerGains[id]) || 0) : 0;
-        snap[id] = { count: o.count, active: false, tier: 0, layers: Math.max(0, Math.floor(Number(o.layers) || 0) + pending) };
-      }
-    }
-    return snap;
+    return bondSnapshot(reached ? this.bondsView() : this.bonds);
   }
 
   /**

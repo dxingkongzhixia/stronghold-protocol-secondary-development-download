@@ -4,8 +4,9 @@
 // 突袭 独行 绝技), yet 深靛 洛洛 阿罗玛 夕 圣聆初雪 stay in the pool through their other bond (server pool.js) and their cards
 // showed 奥术 like any bond: the detail card's chip read "奥术 0/2 未激活" with three 奥术 operators deployed (the server
 // used to leave an inactive bond out of m.private.bonds) and the bond popup "在场 0/2 未激活". The cards, chips and popup
-// say 本局禁用 for a bond the mode never activates (gameLogic modeOffBonds over config.modes[modeId].inactiveBondIds);
-// since 0.1.3 the view also lists it (`off: true`) so the strip can draw the grey disc — still never in ps.bonds.
+// say 本局禁用 for a bond the mode does not OFFER (gameLogic modeOffBonds over config.modes[modeId].inactiveBondIds);
+// since 0.1.3 the view also lists it (`off: true`) so the strip can draw the grey disc. Since 2026-10-11 (the owner's
+// rule) the ban only stops the OFFER: a banned bond whose members reach its threshold IS active and takes effect.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -54,7 +55,7 @@ test('modeOffBonds: 标准 (single and multi) switches off the 10 official inact
   assert.equal(modeOffBonds(null).size, 0);
 });
 
-test('a real 标准 match: 奥术 operators are buyable, three on the board never activate the bond — and the card chips say so', () => {
+test('a real 标准 match: 奥术 operators are buyable; three on the board DO activate the banned bond (the owner\'s rule)', () => {
   const h = makeMatch({ mode: 'solo', difficulty: 'FUNNY', humans: 1, seed: 3 }).start();
   h.toPrep(1);
   const m = h.m, ps = h.ps('p_0');
@@ -64,20 +65,33 @@ test('a real 标准 match: 奥术 operators are buyable, three on the board neve
   const used = new Set();
   for (const id of members.slice(0, 3)) { const t = legalTileFor(m, ps, id, used); used.add(tileKey(t[0], t[1])); give(m, ps, id, 'board', t); }
   ps.recompute();
-  assert.equal(ps.bonds.arcaneShip, undefined, 'official: the mode never activates 奥术 — not in the battle state');
+  // the ban only stops 奥术 being OFFERED; its members reaching the threshold make it active, so it takes effect
+  assert.equal(ps.bonds.arcaneShip.count, 3);
+  assert.equal(ps.bonds.arcaneShip.active, true, 'three 奥术 members activate the banned bond');
+  assert.equal(ps.bonds.arcaneShip.tier, 2);
   const priv = ps.privateView();
   const arc = priv.bonds.find((b) => b.bondId === 'arcaneShip');
-  assert.ok(arc && arc.off === true && arc.active === false && arc.tier === 0 && arc.count === 3, 'the view lists the members as a grey 本局禁用 disc');
-  assert.ok(priv.bonds.slice(priv.bonds.findIndex((b) => b.off)).every((b) => b.off), 'off entries come last');
+  assert.ok(arc && arc.active === true && arc.tier === 2 && arc.count === 3 && !arc.off, 'the view reads it like any active bond, no off disc');
   const off = modeOffBonds(getMode(m.modeId));
-  // without the mode's off set the chip would read the new entry as an ordinary inactive bond (在场 3/3，未激活)
   const bare = chipOf(BondChips({ bondIds: DATA.chess[members[0]].bonds, bonds: priv.bonds }), 'arcaneShip');
-  assert.match(bare.props.title, /在场 3\/3，未激活/);
+  assert.match(bare.props.title, /在场 3\/3，已激活/);
   const chip = chipOf(BondChips({ bondIds: DATA.chess[members[0]].bonds, bonds: priv.bonds, off }), 'arcaneShip');
-  assert.ok(hasClass(chip, 'is-off') && !hasClass(chip, 'is-active'));
-  assert.equal(chip.props.title, '奥术：本局禁用（该盟约不会激活）');
-  assert.match(textOf(chip), /本局禁用/);
-  assert.ok(![...walk(chip)].some((v) => hasClass(v, 'dbond__count')), 'no member count');
+  assert.ok(!hasClass(chip, 'is-off') && hasClass(chip, 'is-active'), 'an active banned bond is not greyed by the static off set');
+  assert.doesNotMatch(chip.props.title, /本局禁用/);
+  assert.match(chip.props.title, /已激活/);
+  // one member (below the threshold): still inert, still 本局禁用 on the chip
+  ps.board.clear();
+  { const t = legalTileFor(m, ps, members[0], new Set()); give(m, ps, members[0], 'board', t); }
+  ps.recompute();
+  assert.equal(ps.bonds.arcaneShip.active, false, 'below the threshold the banned bond stays inert');
+  const priv2 = ps.privateView();
+  const arc2 = priv2.bonds.find((b) => b.bondId === 'arcaneShip');
+  assert.ok(arc2 && arc2.off === true && arc2.active === false && arc2.tier === 0, 'the view lists it as a grey 本局禁用 disc');
+  const chip2 = chipOf(BondChips({ bondIds: DATA.chess[members[0]].bonds, bonds: priv2.bonds, off }), 'arcaneShip');
+  assert.ok(hasClass(chip2, 'is-off') && !hasClass(chip2, 'is-active'));
+  assert.equal(chip2.props.title, '奥术：本局禁用（该盟约不会激活）');
+  assert.match(textOf(chip2), /本局禁用/);
+  assert.ok(![...walk(chip2)].some((v) => hasClass(v, 'dbond__count')), 'no member count');
   // the operator's enabled bond (精准) keeps its normal chip
   const preci = chipOf(BondChips({ bondIds: DATA.chess[members[0]].bonds, bonds: priv.bonds, off }), 'preciShip');
   assert.ok(!hasClass(preci, 'is-off'));
@@ -97,7 +111,7 @@ test('shop / reward card: a mode-disabled bond tag is struck through with the �
   assert.ok(tags(null).every((v) => !hasClass(v, 'is-off')), 'no set: as before');
 });
 
-test('bond popup: 本局禁用 instead of 未激活, a note, and no misleading member count or 当前效果 numbers', () => {
+test('bond popup: a 本局禁用 bond reads 本局禁用 when inactive, and takes its effect when its members activate it', () => {
   const pop = BondPopup({ bondId: 'arcaneShip', entry: null, priv: { board: [], hand: [] }, onClose() {}, off: true });
   const text = textOf(pop);
   assert.match(text, /本局禁用/);
@@ -111,6 +125,17 @@ test('bond popup: 本局禁用 instead of 未激活, a note, and no misleading m
   assert.match(plain, /未激活/);
   assert.match(plain, /在场/);
   assert.match(plain, /当前效果/, 'an enabled bond keeps its current-effect block');
+
+  // the owner's rule: a banned bond that its members activated shows 已激活 and its 当前效果, with the ban note that it
+  // is not offered through the normal route (the old "never activates" wording would be a lie here)
+  const on = BondPopup({ bondId: 'arcaneShip', entry: { bondId: 'arcaneShip', count: 3, active: true, tier: 2, layers: 0 }, priv: { board: [], hand: [] }, onClose() {}, off: true });
+  const onText = textOf(on);
+  assert.match(onText, /已激活/);
+  assert.doesNotMatch(onText, /本局禁用/);
+  assert.match(onText, /本模式下该盟约不会通过常规途径激活，但已被激活，其效果生效/);
+  assert.doesNotMatch(onText, /本模式下该盟约不会激活（/);
+  assert.match(onText, /当前效果/, 'an activated banned bond shows its current effect');
+  assert.ok([...walk(on)].some((v) => hasClass(v, 'bpop__sec--now')));
 });
 
 test('the game screen hands the mode-disabled set to the shop bar, the detail card and the bond popup', () => {

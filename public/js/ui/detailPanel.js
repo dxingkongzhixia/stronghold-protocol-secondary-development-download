@@ -247,9 +247,10 @@ export function BondChips({ bondIds, bonds = [], onBond = null, off = null, gran
   return html`<div class="dbonds dbonds--top" role="list" aria-label=${t('所属盟约')}>
     ${ids.map((id) => {
       const rec = data.lookup('bonds', id);
-      // a bond this mode never activates (gameLogic modeOffBonds): 本局禁用, no count or tier pips
-      const isOff = !!(off && typeof off.has === 'function' && off.has(id));
       const e = mine.get(id) || null;
+      // a bond the mode does not OFFER (gameLogic modeOffBonds): 本局禁用, no count or tier pips — unless its members
+      // reached the threshold (e.active, the owner's rule): then it is active and reads like any active bond
+      const isOff = !!(off && typeof off.has === 'function' && off.has(id)) && !(e && e.active);
       const th = Array.isArray(e?.thresholds) && e.thresholds.length ? e.thresholds : Array.isArray(rec?.thresholds) ? rec.thresholds : [];
       const count = Number.isFinite(e?.count) ? e.count : 0;
       const tier = isOff ? 0 : Number.isFinite(e?.tier) ? e.tier : bondTier(count, th, rec?.maxCount ?? null);

@@ -34,6 +34,7 @@ reverted):
 | Item | Upstream evidence | Why never |
 |---|---|---|
 | **#149 盟约收起 (foldable bond bar)** | upstream `game.js` `bondsCollapsed` / `bonds-toggle` / `gm__bond-list` / `match-bond-strip` | The bond strip stays **permanently shown and centred**. Blacklisted in `docs/MATCHMAKING.md` §22. Self-check must stay empty: `grep -rn "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server`. |
+| **本局禁用盟约被强制失效 (a 本局禁用 bond forced inert even when its members activate it)** | upstream `server/match/bondsMeta.js` `computeBonds`' `if (gd.modeInactiveBonds.has(id)) continue;` (`01a44cd2`, the initial import — still at `upstreamm/master` `1db8e510`); the 本局禁用 UI `b4fa21a0` + `695ece26` (feedback1b WG) and `offBondCounts` / grey discs `c0cc1d61` (feedback3 WH). Carried unchanged by feedback5 `e3bd9de7`, Group A `6bdd0800`, R22 `177bad63`, R23 `8d20f50f`. | **The owner's rule (2026-10-11): the ban only stops a bond being OFFERED** (pool / strategy draft / bots). It must NOT make an otherwise-active bond inert — 「被 ban 的盟约即使被激活也无法生效」 is the bug. `computeBonds` counts every bond, so a 本局禁用 bond whose members reach its threshold is `active` and **takes effect**; one below its threshold stays inert (its layers still ride into the battle, §27). The dialog still reads 本局禁用 while it is inactive. Not the §22 bond-collapse family (that is the foldable bar). Self-check: `computeBonds` in `server/match/bondsMeta.js` has no `modeInactiveBonds.has(id)) continue`, and `PlayerState.battleBonds` forces no `active: false`. |
 | **最近的同盟 (recent-alliance chips)** | our own removed feature | We removed it (commit `6d27d583`, 2026-10-07) and it must not come back. Self-check: `grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test` empty. |
 | **Upstream 克莱门莎 (Clementia)** | `2e122873` *0.2.3: add Clementia and Shu/Ulpianus modules (#437)*, `0b0ce4fb` *Update expanded roster checks and register Clementia impact visuals*, `ba5b998a` *0.2.3: Clementia S2 releases a dead, hidden, uncarriable or pathless rider at once* | **We keep OUR `char_4231_clemnt`** (the self-made 6★ 本源近卫, `docs/MATCHMAKING.md` §37, `CUSTOM_CHESS`). Upstream's Clementia is a different, official-data operator; taking it would collide with ours. |
 | **R21P 满潜 (every operator at full potential)** | `806a0477` / merge `b05845f5` (feedback6 R21P: 潜能 6) | The owner's **full-potential rule is not adopted**; our fork keeps its own potential handling. Never merged. |
@@ -373,6 +374,16 @@ placement are on the 永不合并 list (§0).**
 lobby / room top bar; we keep 设置 in the top bar's right-hand group instead — in the lobby immediately before the 档案
 account chip (right of 登录 / 注册), in the room beside the invite key — so the merge must not restore upstream's middle
 placement (§0). Lobby right group, left→right: 统计 · 玩法说明 · 干员调配 · 登录 / 注册 (guests only) · 设置 · 档案 chip.
+
+**Divergence (2026-10-11) — a 本局禁用 bond is banned from being OFFERED, not from taking effect.** Upstream's
+`computeBonds` skips `gd.modeInactiveBonds` (`01a44cd2`; the 本局禁用 UI `b4fa21a0` / `695ece26` / `c0cc1d61`, all
+carried unchanged by our merges) so a bond the mode never offers could never activate — and upstream's `battleBonds`
+(the 0.1.3 §27 fix) even handed such a bond to the battle as an INACTIVE entry. The owner's decision of 2026-10-11
+(「被 ban 的盟约即使被激活也无法生效」): **the ban only governs the offer** (the pool, the strategy draft, the bots);
+`computeBonds` now counts every bond, so a banned bond whose members reach its threshold is `active` and its effect
+applies, while one below its threshold stays inert (its layers still ride into the battle, §27). `bondList` still marks
+an inactive one `off: true` (grey 本局禁用 disc) and the dialog says 本局禁用 until it is activated. Blacklisted in
+§0; self-check: no `modeInactiveBonds.has(id)) continue` in `computeBonds`, and `battleBonds` forces no `active: false`.
 
 ---
 

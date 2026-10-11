@@ -376,6 +376,7 @@
   "（含{harmonyName} +{harmony}）": "(incl. {harmonyName} +{harmony})",
   "未激活": "Inactive",
   "本模式下该盟约不会激活（其干员仍可能因所属的其他盟约出现）": "This Alliance never activates in this mode (its Operators may still appear through their other Alliances)",
+  "本模式下该盟约不会通过常规途径激活，但已被激活，其效果生效": "This Alliance is not offered through the normal route in this mode, but it is active, so its effect applies",
   "名及以下": " or fewer",
   "当前效果": "Current Effect",
   "（{layers} 层）": "({layers} Stacks)",

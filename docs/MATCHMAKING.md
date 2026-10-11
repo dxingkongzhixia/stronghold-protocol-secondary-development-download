@@ -1231,6 +1231,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 | **R22-LOADOUT（潜能 / 练度）** | `7e09c63d`、`ec0a2fc6`、`96d9441f`、`7a0937e3`、`519f04e2`、`dc336f24`、`8e2b981e`、`4f8f5d2a`、`9f36db32`、`4d63e9d5`、`66297106` | **owner 排除**「干员调配」里每名干员的潜能 / 练度自选界面；本批未并入。 |
 | **设置 → 问题反馈 / DIAGNOSTICS（复制诊断信息）** | `3f884412`（本分支 R22 port `2ef6339b`，UPSTREAM-MERGES §4） | **已下架**（`60e9eab8`）：我们大厅的「bug提交」已覆盖报 bug，重复的 section 不得回归（UPSTREAM-MERGES §6「Deliberate divergence」）；自检 `public/js/ui/settings.js` 不含 `ISSUES_URL` / `set-diag` / 「复制诊断信息」。 |
 | **上游的 设置 按钮位置（在 玩法说明 左边）** | `911e4bff`（`a9a1592a`） | **我们把 设置 移到 档案 chip 旁**（顶栏右侧分组；房间在邀请码旁），不恢复上游的中间位置（UPSTREAM-MERGES §0/§6）。 |
+| **本局禁用盟约被强制失效** | upstream `bondsMeta.js` `computeBonds` 里 `if (gd.modeInactiveBonds.has(id)) continue;`（`01a44cd2` 初始导入，`upstreamm/master` `1db8e510` 仍在）；本局禁用 UI `b4fa21a0` / `695ece26`、`offBondCounts` / 灰色盘 `c0cc1d61` | **owner 2026-10-11 决定：禁的只是「不被提供」（池 / 策略草稿 / bot），不得让本已激活的盟约失效**（「被 ban 的盟约即使被激活也无法生效」）。`computeBonds` 现在计算每一个盟约：达到阈值的本局禁用盟约 `active` 并**生效**；未达阈值仍不生效（层数照旧进入战斗，§27）。未激活时对话仍读「本局禁用」。**与 §22 的「盟约收起」不是同一改动家族**（那是可折叠盟约条）。自检：`computeBonds` 不含 `modeInactiveBonds.has(id)) continue`；`battleBonds` 不强制 `active: false`。详见 UPSTREAM-MERGES §0/§6。 |
 
 ### 39.3 本批保留的决断（要点）
 
@@ -1289,3 +1290,15 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - `stats.records` 只含**游戏内已公开字段**（记录本体）；`owner` 只有 `name` / `role` / `guest`。
 - **绝不**跨网传账号 id、email、token 或会话密钥；`stats.view` 也只按当前在线 session 解析，不按账号名录遍历。
 - 记录里本就有的队友代号（结算界面已向同局展示）随记录保存；本地导出文件同理。
+
+## 41. 本局禁用盟约：只禁「提供」，不禁「生效」（owner 决定，2026-10-11）
+
+> 报告（附截图）：局内 **附加盟约** 详情对**本局禁用**的盟约（如**灵巧**）显示「层数 0 · 本局禁用」与提示「本模式下该盟约不会激活（其干员仍可能因所属的其他盟约出现）」。owner：**「被 ban 的盟约即使被激活也无法生效」是错的** —— ban 只针对它**不被提供 / 不通过常规途径激活**，不该让一个**本来会激活**的盟约**失效**。
+
+- **根因（上游行为，非本次合并引入）**：`server/match/bondsMeta.js` 的 `computeBonds` 里 `if (gd.modeInactiveBonds.has(id)) continue;` 跳过模式的静态 `inactiveBondIds`（初始导入 `01a44cd2`，`upstreamm/master` `1db8e510` 仍在）；由此进入战斗的 `PlayerState.battleBonds` 还把这类盟约当**未激活条目**带进战斗（0.1.3 §27 的层数修复）。我们的每一次合并（feedback5 / Group A / R22 / R23）都**原样保留**了它 —— **不是我们引入的回归**，是长期沿用的上游规则；owner 现在决定改掉。
+- **修法**：`computeBonds` **计算每一个盟约**（含静态禁用表）。达到阈值的本局禁用盟约 `active: true`，战斗输入即 `active: true`，`sim/content/bonds/*` 的效果照常生效（所有效果都以 `tier ≥ 1` 为门）。未达阈值者仍 `active: false`、不生效；其层数照旧随战斗输入带入（§27 不变）。`battleBonds` 不再强制 `active: false`，只是 `bondSnapshot(computeBonds)`。
+- **ban 的正当作用不变**：`server/match/pool.js` 仍把静态禁用盟约排除出每局禁用抽样与「仅剩禁用盟约的干员」的下架判定；`server/match/bot.js` 仍不选围绕它的策略；策略草稿仍标「本局禁用」（仍可选）。
+- **视图**：`bondList` 对**未激活**的本局禁用盟约仍标 `off: true`（灰色带 ✕ 盘 + 层数）；**已激活**者按普通激活盟约显示。盟约详情弹窗未激活时仍读「本局禁用」；已激活时读「已激活」并给出「当前效果」，提示语改为「本模式下该盟约不会通过常规途径激活，但已被激活，其效果生效」。干员卡 / 盟约标签对**已激活**的本局禁用盟约不再置灰（`BondChips` 以 `e.active` 优先）。
+- **测试**：`test/match/feedback3-off-bonds.test.js`（达到阈值 → `active` + 战斗输入 `active: true` + `bond:skillfulShip` buff 真的生效；未达阈值 → 不生效且层数照旧进入战斗；`bondList` 的 `off` 标记；BOARD_AND_DECK 计数不变），`test/match/bonds.test.js`（FUNNY 的静态禁用盟约现被计算、未达阈值 `active: false`），`test/ui/feedback1b-bonds.test.js`（三名奥术**激活**该盟约、标签不再是本局禁用；一名仍为本局禁用；弹窗已激活时给出当前效果与新提示语）。
+- **golden 归属证明与变动**：先**只回退这一份源码**（`git stash push -- server/match/bondsMeta.js server/match/player/round.js public/js/ui/bondStrip.js public/js/ui/detailPanel.js`）→ `node tools/golden.mjs` **零差异**（roster 53 / bonds 46 / fields 22 / matches 18 / standins 10 / diy 129 全部 match）；恢复后 `node tools/golden.mjs --update`，变动恰为**本局禁用盟约激活**所及：**roster 9**（005、011、017、023、029、035、041、047、053）、**matches 3**（solo-FUNNY-1、solo-FUNNY-2、coop4-FUNNY-6；`m.public` 的盟约表出现 `arcaneShip` / `soloShip` 等本局禁用项，层数与结果随之变）、**standins 2**（standin-03、standin-09）；bonds / fields / diy 不变（bond-* 场景本就取该盟约可用的模式，见 `tools/golden.mjs` 的模式选择）。无任何引擎 guard 被放宽。
+- **合并黑名单**：见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 与本文档 §39.2；自检 —— `computeBonds` 不得含 `modeInactiveBonds.has(id)) continue`，`battleBonds` 不得强制 `active: false`。
