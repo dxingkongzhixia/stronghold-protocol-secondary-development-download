@@ -352,6 +352,7 @@ survive with the three sources intact.
 | Decision | Where recorded | The rule, in one line |
 |---|---|---|
 | **Merge blacklist** | §22 | The upstream **#149 盟约收起** (foldable bond bar) and our own removed **最近的同盟** (recent-alliance chips) **must never come back**. |
+| **Free `<获得时>` / strategy grants are never item-stock-gated** | §39.2, `UPSTREAM-MERGES.md` §0 | 缪尔赛思's `<获得时>` and 变形者集群's R5/10/15 变形同构体 are free grants: our `acquireItem` has no `itemPool` check (upstream `6bfc08270c` drops `requirePool` → GitHub #488). |
 | **Funnel-hits model** | §31, §35.2 | 澄闪's 浮游单元 all lock the **same** enemy and each deals her **full** ATK (not split); the `'bolt'`→`'drone'` projectile fix lives in `professions.js`. |
 | **望's pieces** | §30, §35.8 | 棋子 placement / linkage: auto-placement only on orthogonally adjacent tiles so pieces link, latch on deploy, S3 ammo accounting, 跟子 priority. |
 | **Kalts2 traits / behaviour** | §34, §35.1, §35.7, §35.9 | 整备能力 `pool_equip_all`, default skill S2, 守望者 heals (single-target) **and** attacks, S2 red/green feedback kinds. |
@@ -367,9 +368,11 @@ survive with the three sources intact.
 grep -rn "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server
 # our removed 最近的同盟 must not return:
 grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test
+# #488: a free <获得时> / strategy grant must not be item-stock-gated (ours has no item stock):
+grep -rn "itemPool\|canGain" server
 ```
 
-Both must be **empty**. `git log -S bondsCollapsed -- public/js/screens/game.js` shows whether upstream re-added
+All three must be **empty**. `git log -S bondsCollapsed -- public/js/screens/game.js` shows whether upstream re-added
 it. The merge procedure and the blacklist are in `docs/AI-WORKFLOW.md` (b).
 
 ---

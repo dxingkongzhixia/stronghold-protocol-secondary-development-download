@@ -552,6 +552,25 @@ test('SERVER_GAIN_EQUIP (诗怀雅 133, 耶拉 92, 卡涅利安 / 蜜蜡 49, 缪
   assert.deepEqual(handItems(t.ps), ['chess_item_1_03_e_a'], '诗怀雅: 1 盟约之币');
 });
 
+// GitHub #488 (upstream): the 0.2.4 shared card pool (`6bfc08270c`) checks `itemPool.canGain` in `acquireItem` with no
+// `requirePool` escape and `grantItem` drops the caller's `requirePool: false`, so 缪尔赛思's `<获得时>` and 变形者集群
+// stop paying 变形同构体 once the 3-copy stock is out. Our fork has no item stock: the trait pays on every gain and the
+// total passes the upstream cap of 3. Pinned so a future merge of the pool cannot silently re-introduce the block.
+test('#488: 缪尔赛思 获得时 pays 变形同构体 every gain — never gated by an item stock', () => {
+  const s = setup();
+  const ISO = 'chess_item_6_09_e_a'; // 变形同构体
+  const seq = [];
+  let prev = 0;
+  for (let i = 0; i < 4; i++) {
+    s.acquire('chess_char_6_11_a');
+    const c = itemUnits(s.ps, ISO);
+    seq.push(c - prev);
+    prev = c;
+  }
+  assert.deepEqual(seq, [1, 1, 2, 1], 'normal / normal / the elite the 3rd completes pays 2 / normal');
+  assert.equal(prev, 5, 'five 变形同构体 — upstream\'s item stock would stop at 3 (GitHub #488)');
+});
+
 test('free refreshes: 普罗旺斯 113 获得时, 德克萨斯 120 / 巫恋 132 售出时, 缄默德克萨斯 114 进入休整期时 (board only)', () => {
   for (const { gid, g, owners } of idsOf('SERVER_GAIN', 'SERVER_GAIN_FREE_REFRESH_COUNT')) {
     for (const owner of owners) { const s = setup(); s.acquire(owner); assert.equal(s.ps.shop.freeRefreshes, g.bb.count, gid); }
