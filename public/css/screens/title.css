@@ -290,12 +290,23 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
   color: var(--text-dim);
 }
 
-/* 「反馈群」 pill (bottom-left) + its QR card popover + server note */
-.title-group-wrap {
+/* The bottom-left rail (screens/title.js `.title-rail`): 添加到桌面 on top, then the 反馈群 pill + its
+   server note, as one normal-flow column. It is anchored above the footer attribution line (`.title-foot`
+   sits at bottom .3rem) and floored there, so nothing in the cluster can ride over the footer; the install
+   button used to be absolutely placed at bottom 1.06rem, over an independently-anchored 反馈群 pill at
+   bottom .56rem (they collided by ~.15rem at every size). */
+.title-rail {
   position: absolute;
   z-index: 3;
   left: .44rem;
-  bottom: .56rem;
+  bottom: .74rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .16rem;
+}
+/* 「反馈群」 pill + its QR card popover + server note (a row of the rail, in normal flow) */
+.title-group-wrap {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -404,6 +415,6 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
 /* the deployment's platform note: desktop web only (a quiet warning, not a wall of text) */
 .title-about__platform { padding: .05rem .1rem; border-left: 2px solid var(--amber); color: #ffd08a; background: rgba(246, 163, 41, .06); }
 
-/* ---- 添加到桌面 (ui/install.js), bottom-left above the 反馈群 pill ---------------------------------- */
-.title-install { position: absolute; z-index: 3; left: .44rem; bottom: 1.06rem; }
+/* ---- 添加到桌面 (ui/install.js): the top row of the bottom-left rail (.title-rail) ------------------ */
+.title-install { max-width: min(4rem, 40vw); }
 .title-install__hint { max-width: 3rem; font-size: .12rem; line-height: 1.5; color: var(--text-dim); }

@@ -6,7 +6,7 @@
 //   SP_E2E=1 node --test test/e2e/coop.e2e.mjs         # same through the test runner (skipped in `npm test` otherwise)
 //   SP_E2E_ONLY=facing|coop|solo|result  SP_E2E_ROUNDS=5  CHROME_PATH=…
 //
-// Co-op (host 1920×1080, guest 1280×720): title → 玩法说明 → lobby → create a 同盟模拟 room (险境) → add an AI → the
+// Co-op (host 1920×1080, guest 1280×720): title → lobby → create a 同盟模拟 room (险境) → add an AI → the
 // guest joins through the ?room= invite link → ready → start → briefing (both ready) → band draft (the guest skips
 // once) → rounds 1..N: merge reward if offered, enemy drawer, emote (bubble seen by the teammate), level up (two taps),
 // buy an item, refresh (R), buy operators (two taps: 确认购买), drag hand → board (legal tiles lit) + choose a direction on
@@ -1016,11 +1016,10 @@ describe('browser E2E against the real server', { skip: !ENABLED && 'needs Chrom
       reward: 0, sp: 0, unite: false, combatRounds: new Set(), takeover: false, lpChanged: false, settledBy: new Set(), facingTurned: 0 };
     const lps = new Map();
     try {
-      // ---- title, 玩法说明, lobby, room --------------------------------------------------------------------------
+      // ---- title, lobby, room ------------------------------------------------------------------------------------
       await host.open();
       await sleep(900);
       await host.shot('title');
-      await openGuide(host, '.title-guide', 'guide-title');
       await host.enter('凯尔希');
       await sleep(400);
       await host.shot('lobby');

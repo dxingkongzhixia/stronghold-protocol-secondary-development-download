@@ -463,6 +463,9 @@ kept reachable** from every screen's settings gear (title / lobby / room / match
 bug-report overlay (`ui/community.js` `BugReportHost`, mounted once by `main.js`, `css .bug-host` above `--z-modal`) open
 above the modal; the overlay still submits through `bug.report` + the image upload. A later merge must not move either
 back onto a top bar, nor drop the settings entries. (The in-match gear / step-head 玩法说明 buttons stay as they are.)
+The **title screen's** own 玩法说明 button (`.title-guide`, in the callsign console's 已连接服务器 · ping row, next to the
+settings gear) was **removed** as well — the title reaches the guide through its settings gear (设置 → 玩法说明), the same
+as every other screen, so the connection row now carries only the status dot / text / ping · 设置 · 全屏.
 
 **Divergence (2026-10-11) — a 本局禁用 bond is banned from being OFFERED, not from taking effect.** Upstream's
 `computeBonds` skips `gd.modeInactiveBonds` (`01a44cd2`; the 本局禁用 UI `b4fa21a0` / `695ece26` / `c0cc1d61`, all

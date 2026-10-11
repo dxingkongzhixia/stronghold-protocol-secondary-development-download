@@ -125,6 +125,51 @@ test('部署说明: the desktop-only / mobile-compatibility note is in the about
   assert.ok(/title-platform-hint/.test(title) && /\.title-platform-hint/.test(src('public/css/screens/title.css')), 'the hint has its own line / style');
 });
 
+test('标题画面不再有「玩法说明」入口：它只在 设置 → 玩法说明（2026-10-11 的移动）', () => {
+  const title = src('public/js/screens/title.js');
+  assert.ok(!/GuideButton/.test(title), 'the 玩法说明 trigger is gone from the title');
+  assert.ok(!/title-guide/.test(title), 'no .title-guide element on the title');
+  assert.ok(!/title-guide/.test(src('public/css/devices.css')), 'the dead .title-guide touch-target hook is gone too');
+  // one entry point stays (the settings dialog), and the in-match step-head trigger stays where it was
+  assert.ok(/set-guide/.test(src('public/js/ui/settings.js')) && /openGuide\(0\)/.test(src('public/js/ui/settings.js')), '设置 keeps the 玩法说明 entry');
+  assert.ok(/GuideButton/.test(src('public/js/ui/matchChrome.js')), 'the in-match 玩法说明 trigger is untouched');
+});
+
+test('标题画面左下角：添加到桌面 / 反馈群 / 服务器说明在一条流式竖列里，不会互相压叠', () => {
+  const title = src('public/js/screens/title.js');
+  const css = src('public/css/screens/title.css');
+  assert.ok(title.includes('class="title-rail"'), 'the install button and the feedback group share one rail');
+  assert.ok(title.includes('class="title-install"') && title.includes('<${InstallButton}'), '添加到桌面 is mounted in the rail');
+  assert.ok(title.includes('<${FeedbackGroup}'), '反馈群 is mounted in the rail');
+  // the rail is a normal-flow flex column, so its rows stack instead of one riding over another
+  const rail = (css.match(/\.title-rail\s*\{([^}]*)\}/) || [])[1] || '';
+  assert.match(rail, /display:\s*flex/, 'the rail is a flex container');
+  assert.match(rail, /flex-direction:\s*column/, 'the rail stacks its rows');
+  assert.match(rail, /gap:/, 'the rail spaces its rows');
+  // neither the install button nor the feedback group is absolute any more (they used to overlap by ~.15rem)
+  assert.ok(!/\.title-install\s*\{[^}]*position:\s*absolute/.test(css), 'the install button is in flow (no absolute over the pill)');
+  assert.ok(!/\.title-group-wrap\s*\{[^}]*position:\s*absolute/.test(css), 'the feedback group is in flow too');
+  assert.ok(/\.title-install__hint/.test(css), 'the iOS manual-install hint keeps its style');
+});
+
+test('标题画面：左下角竖列与平台说明都清出页脚归因行，且公告 / 关于行留在主列常规流里', () => {
+  const css = src('public/css/screens/title.css');
+  const num = (sel, prop) => {
+    const block = (css.match(new RegExp('\\.' + sel + '\\s*\\{([^}]*)\\}')) || [])[1] || '';
+    const m = block.match(new RegExp(prop + ':\\s*([\\d.]+)rem'));
+    return m ? parseFloat(m[1]) : null;
+  };
+  const railBottom = num('title-rail', 'bottom');
+  const footBottom = num('title-foot', 'bottom');
+  assert.ok(railBottom != null && footBottom != null, 'both anchors are declared in rem');
+  assert.ok(railBottom > footBottom, `the bottom-left rail (bottom ${railBottom}rem) clears the footer attribution (bottom ${footBottom}rem)`);
+  // the 公告 / 关于 row and the platform note are children of the title-main flex column: in flow, so they can
+  // never overlap the callsign panel above them (they are NOT absolutely positioned)
+  assert.ok(!/\.title-about-wrap\s*\{[^}]*position:\s*absolute/.test(css), '公告 / 关于 stays in the main column flow');
+  assert.ok(!/\.title-platform-hint\s*\{[^}]*position:\s*absolute/.test(css), 'the platform note stays in the main column flow');
+});
+
+
 test('添加到桌面: the button shows only while the browser has an install offer, and never once installed', () => {
   assert.equal(installVisible({ hasOffer: true }), true);
   assert.equal(installVisible({ hasOffer: false }), false, 'no beforeinstallprompt → hidden (our build, and any non-installable page)');

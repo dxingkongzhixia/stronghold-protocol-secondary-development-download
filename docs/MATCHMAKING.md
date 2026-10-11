@@ -418,6 +418,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 左下角新增 **`FeedbackGroup`**：药丸「反馈群 816461825」→ 点击展开**二维码卡片**（群号 `816461825`；二维码 `/assets/ui/feedback-qr.png` 由进群链接生成，560px），卡片内有「QQ群 816461825」按钮（**点击复制群号**）与说明「使用手机 QQ 扫码加入同盟」。
 - 药丸下方一行小字「**服务器为个人免费服务器 · 容量较小**」（对齐参考服务器的「服务器交流群」样式：药丸 + 二维码浮出卡 + 备注）。
 - **点卡片 / 药丸以外任意位置收起**（见 §18.4）。
+- 2026-10-11 起，它与「添加到桌面」按钮同处一个左下角**流式竖列 `.title-rail`**（`添加到桌面` 在上、`反馈群` 在下）：原先 `.title-install` 与 `.title-group-wrap` 各自绝对定位、互相压叠约 .15rem，现在改为同一条 `flex-direction:column`（`gap` 分隔）并整体抬到 `.74rem`，清空页脚归因行（`.title-foot` 在 `.3rem`）。
 
 ### 18.2 盟约条居中 + 上移（`css/screens/game.css`）
 - `.gm__bonds` 由偏左定位改为 **`left:0; right:0; justify-content:center`** —— 盟约条在**任意宽度下都整条横向居中**（`fieldHost.js` 注释里的「盟约条底边」随之下移，单位图标不再和它错位）。
@@ -440,7 +441,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 | 文件 | 改动 |
 |---|---|
 | `public/js/screens/title.js` | `FeedbackGroup`：反馈群药丸 + 二维码卡 + 复制群号；点外部收起 |
-| `public/css/screens/title.css` | `.title-group-wrap` / `.title-group` / `.title-group-card` / `.title-group-qr` / `.title-group-note` |
+| `public/css/screens/title.css` | `.title-rail`（2026-10-11 加，左下角流式竖列）/ `.title-group-wrap` / `.title-group` / `.title-group-card` / `.title-group-qr` / `.title-group-note` |
 | `public/assets/ui/feedback-qr.png` | **新增**：反馈群二维码（560px） |
 | `public/css/screens/game.css` | `.gm__bonds` 横向居中 |
 | `public/css/screens/game-panels.css` | `.bpop` 居中 + `--beside/--besideR/--right` 还原 `transform` |

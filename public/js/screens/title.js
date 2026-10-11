@@ -13,7 +13,6 @@
 import { useEffect, useMemo, useState } from '../../vendor/hooks.module.js';
 import { NAME_MAX_LEN, APP_VERSION, DEV_BUILD } from '../../../shared/constants.js';
 import { html, Button, Icon, MicroLabel, TextField, PingPill } from '../ui/components.js';
-import { GuideButton } from '../ui/guide.js';
 import { openStats } from './stats.js';
 import { toast } from '../ui/toasts.js';
 import { copyText } from '../ui/clipboard.js';
@@ -354,7 +353,6 @@ export function TitleScreen() {
           <span class=${`status-dot ${dotClass}`}></span>
           <span>${STATUS_TEXT[conn.status] ? t(STATUS_TEXT[conn.status]) : conn.status}</span>
           ${conn.status === 'online' ? html`<${PingPill} ms=${conn.ping} />` : null}
-          <${GuideButton} class="title-guide" label=${t('玩法说明')} />
           <button type="button" class="title-settings fsbtn tapx" aria-label=${t('设置')} title=${t('设置')}
             onClick=${() => setSettingsOpen(true)}><${GIcon} name="gear" /></button>
           <${FullscreenButton} class="title-fs" />
@@ -377,7 +375,9 @@ export function TitleScreen() {
       <${MicroLabel}>v${APP_VERSION} · WEB SIMULATION<//>
       ${DEV_BUILD ? html`<span class="title-dev" role="note">${t('开发版 · 不稳定，请勿用于公开服务器')}</span>` : null}
     </footer>
-    <${FeedbackGroup} />
-    <div class="title-install"><${InstallButton} /></div>
+    <div class="title-rail">
+      <div class="title-install"><${InstallButton} /></div>
+      <${FeedbackGroup} />
+    </div>
   </div>`;
 }
