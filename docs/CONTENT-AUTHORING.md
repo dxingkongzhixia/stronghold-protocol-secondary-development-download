@@ -11,31 +11,41 @@
 
 ---
 
-## 0. 资料库（CODEX）：盟约与策略总览 + 悬赏敌人池
+## 0. 资料库（CODEX）：盟约 / 策略 / 干员 + 悬赏决策 + 两阶段领袖池
 
-一个**只读、数据驱动**的浏览器，入口在 **设置弹窗** 的动作行 `资料库`（`public/js/ui/settings.js` 的 `set-codex` →
-`openCodex('bonds')`）；设置齿轮在每个界面（标题 / 大厅 / 房间 / 对局）都能打开，所以它是全站可达的单一入口。
+一个**只读、数据驱动**的浏览器。两个入口，都调 `openCodex(...)`：
+- **大厅顶栏** `资料库`（`public/js/screens/lobby.js`，`.topbar__right` 内、`统计` 左侧的 `codex-entry`）——不用开设置就能进；
+- **设置弹窗** 的动作行 `资料库`（`public/js/ui/settings.js` 的 `set-codex` → `openCodex('bonds')`）；设置齿轮在标题 / 大厅 / 房间 / 对局都能打开。
+
 覆盖层本体挂在根节点一次（`public/js/main.js` 的 `<CodexHost/>`），和 `玩法说明`（`ui/guide.js`）、`bug提交`（`ui/community.js`）
 同一套全局 host 模式，Esc / 点背景关闭，`ensureStylesheet('/css/screens/codex.css')` 让它在 **过期的 `index.html`** 下也能正常显示（见 §6）。
 
 - **纯映射**（无 DOM，Node 单测 `test/ui/codex.test.js`）：`public/js/ui/codexModel.js`
   - `bondView / filterBonds / bondKind / bondScope / bondStages / bondMilestones / bondEquipment / bondMembers` —— 盟约；
-  - `bandView / filterBands / bandBondIds / bandBuffKeys` —— 策略；
+  - `bandView / filterBands / bandBondIds / bandBuffKeys / bandsForBonds` —— 策略；
+  - `chessRoster / chessRosterFacets / filterChess / chessView / chessMatches / chessIsCustom / chessBonds / chessGarrisons / skillIconUrl / itemsForBonds` —— 干员与「所属盟约 / 策略 / 装备」交叉链接；
   - `bossPhasePools / bossPoolModes / bossEscorts / enemyStats` —— 两阶段领袖池（§4）；
-  - `bountyDraftPools` —— 悬赏决策卡池。
-- **界面**：`public/js/ui/codex.js`（三个分页 `盟约 / 策略 / 悬赏`，搜索 + 筛选 chips，列表 + 详情两栏）。
+  - `bountyDraftPools` —— 悬赏决策卡池；
+  - `enemyView / enemySources`、`itemView` —— 敌人 / 装备详情弹层。
+- **界面**：`public/js/ui/codex.js`（**六个分页** `盟约 / 策略 / 干员 / 悬赏 / 最终攻势 / 隐秘核心`，搜索 + 筛选 chips，列表 + 详情两栏；`悬赏` 与两个领袖分页各自独立，是两套机制）。`悬赏` 只放**悬赏决策**卡池，领袖池有自己的分页。
+- **点击穿透**：盟约详情的 **成员头像** → 干员详情；**相关装备** → 装备详情弹层；干员详情的 **盟约 / 策略 / 装备** → 对应分页 / 详情；敌人行 / 卡 → **敌人详情弹层**（含它来自哪个池 / 权重）。
 - **数据源**（`CODEX_FILES`，全部是游戏本来就加载的本地文件，离线可用）：`bonds.json`、`bands.json`、`items.json`、
-  `chess.json`、`bosses.json`、`enemies.json`、`choices.json`、`config.json`、`assets.json`（图标清单）。
-- 界面**不写死任何列表**：新加一条盟约 / 策略 / 领袖 / 悬赏卡，重开资料库就会出现。
+  `chess.json`、`garrisons.json`、`bosses.json`、`enemies.json`、`choices.json`、`config.json`、`assets.json`（图标 / 技能图标清单）。
+- 界面**不写死任何列表**：新加一条盟约 / 策略 / 干员 / 领袖 / 敌人 / 悬赏卡，重开资料库就会出现。
 
 | 分页 | 展示 | 精确数据源 |
 |---|---|---|
 | **盟约** | 卡片网格（核心/附加、战斗中/全程生效、已收录计数、成员数/装备数）、搜索（名称/效果/成员）、详情（激活阈值 = 阶段、逐层效果文本 + 层数滑杆、完整描述、层数里程碑、相关装备、成员头像、`spec` 折叠） | `bonds.json`（`thresholds / effectDescRaw / descRaw / layerMilestones / noStack / countsHand / activeType`）、逐层数值解析 `public/js/ui/richText.js formatBondEffect`；装备 `items.json`（`giveBondId` / `requiresBondId`）；成员 `chess.json`（`bonds`）；图标 `assets.json bonds[<bondId>]` |
 | **策略** | 列表 + 详情（策略效果、初始目标生命、胜利条件、奖励系数、可用模式、解锁条件、**相关盟约**、`spec` 折叠 = buff 处理器 key） | `bands.json`（`descRaw / totalHp / victorCount / rewardModulus / modeTypeList / unlockDesc / bondIds / buffs[].key`） |
-| **悬赏** | 难度选择器 → **两阶段敌人池**（最终攻势 / 隐秘核心，含领袖、权重、敌方图标/数值/描述、波次模板、护卫、能力/部件计数）+ **悬赏决策**卡池（initial / boss / hunter） | `config.json modes[modeId].bossWeights / .hiddenBossWeights / .bossRound / .hiddenRound`、`bosses.json`、`enemies.json`、`choices.json cards.bounty + bountyDrafts` |
+| **干员** | 名册网格（`chess.json` 的 `visible && !isGolden` 基础记录，含自造 `identifier ≥ 900` 的 `CUSTOM_CHESS`）+ 搜索 / 稀有度 / 阶数 / 职业 / 仅自造筛选；详情（名称 / 称号 / 稀有度 / 职业分支 / 阶数 / 部署费用、数值、盟约、特质与整备、天赋、技能 + `assets.json skills` 图标、所属策略、相关装备） | `chess.json`（`name / appellation / rarity / profession / subProfessionName / tier / stats / talents / skills[] / trait / bonds / garrisonIds / module / tokens`）、`garrisons.json`、`bonds.json`、`bands.json`、`items.json`、`assets.json`（`skills` / `skillsById`） |
+| **悬赏** | **只**放悬赏决策卡池（initial / boss / hunter），每张卡可点开目标敌人的详情 | `choices.json cards.bounty + bountyDrafts`、`enemies.json` |
+| **最终攻势** | 难度选择器 → `bossWeights` 池（领袖、权重、敌方图标/数值/描述、波次模板、护卫、能力/部件计数），每个敌人 / 护卫可点开详情 | `config.json modes[modeId].bossWeights / .bossRound`、`bosses.json`（`hidden:false`）、`enemies.json` |
+| **隐秘核心** | 同上，读 `hiddenBossWeights`；没有 hidden 轮的模式（如 `FUNNY`）如实显示空状态，不编造 | `config.json modes[modeId].hiddenBossWeights / .hiddenRound`、`bosses.json`（`hidden:true`）、`enemies.json` |
 
-组件/主题复用现有设计系统（`ui/components.js` 的 `Button / MicroLabel / TierChip / Spinner`、`ui/gameComponents.js` 的
-`BondGlyph / BandIcon / ItemIcon / UnitThumb / RichText`、`brackets` 角标、mint 主题变量），文案全部走 `t()` / `N_()`（§5 的 i18n）。
+**敌人详情弹层**（`enemyView` + `enemySources`）：名称 / key / 位阶 / 等级 / 图鉴号 / 数值（`enemies.json stats`）/ 描述 / 能力 / 标签与免疫，加上它**来自哪个池**（领袖权重、护卫 ×数量、悬赏决策卡、以及所属领袖的 `bosses.json abilities / parts`）。**装备详情弹层**（`itemView`）：名称 / 阶 / 类型 / 类别 / 效果 / 风味 / 相关盟约 / 效果键。
+
+组件/主题复用现有设计系统（`ui/components.js` 的 `Button / Panel / MicroLabel / Tabs / TierChip / Spinner / DifficultyIcon / AvatarFrame`、
+`ui/gameComponents.js` 的 `BondGlyph / BandIcon / ItemIcon / UnitThumb / RichText`、`brackets` 角标、mint 主题变量），文案全部走 `t()` / `N_()`（§5 的 i18n）。
 
 ---
 
@@ -177,12 +187,12 @@
 
 **phase → pool 的映射是数据**：`config.json` 的 `bossWeights` / `hiddenBossWeights` 给出 id→权重，`bosses.json` 的 `hidden`
 给阶段归属，代码只是应用它——`server/match/waves.js setupMatchWaves` 调 `gd.bossWeights(false/true)` 再 `weightedPick`，
-`server/match/gamedata.js bossWeights()` 读 `mode.bossWeights` / `mode.hiddenBossWeights`。所以资料库的「悬赏」分页能直接
-从数据生成两阶段池（`codexModel.bossPhasePools`）；没有 hidden 轮的模式（如 `FUNNY`）第二阶段池为空——**如实显示，不编**。
+`server/match/gamedata.js bossWeights()` 读 `mode.bossWeights` / `mode.hiddenBossWeights`。所以资料库的 **最终攻势 / 隐秘核心**
+两个分页各自直接从一个池生成（`codexModel.bossPhasePools`）；没有 hidden 轮的模式（如 `FUNNY`）在「隐秘核心」分页池为空——**如实显示，不编**。
 
 > 另注：本仓库里「悬赏」**也**指**悬赏决策**（`choices.json` 的 card 机制：`cards.bounty` + `bountyDrafts`，R3/R6 `initial`、
-> R9 `boss`、R11 `hunter`，每个 `enemyKey` 是卡上要打死的目标），它与上面的领袖两阶段是**两套**东西。资料库把两套都列出来
-> （「悬赏敌人池」= 领袖两阶段；「悬赏决策」= 卡池），以免混淆。
+> R9 `boss`、R11 `hunter`，每个 `enemyKey` 是卡上要打死的目标），它与上面的领袖两阶段是**两套**东西。「悬赏」分页只放**悬赏决策**
+> 卡池，领袖两阶段各有自己的分页（最终攻势 / 隐秘核心），两者不混在一个面板里。
 
 ### 4.2 数据
 

@@ -1,10 +1,11 @@
-// 资料库 / CODEX (public/js/ui/codex.js + codexModel.js): the pure data mapping behind the 盟约与策略总览 and the
-// 悬赏敌人池 browses, the overlay store, and the settings/main/index wiring.
+// 资料库 / CODEX (public/js/ui/codex.js + codexModel.js): the pure data mapping behind the 盟约 / 策略 / 干员 browses, the
+// 悬赏决策 card pools, the two leader phases (最终攻势 / 隐秘核心) and the enemy / item detail views, plus the overlay
+// store and the settings / lobby / main / index wiring.
 //
-// The mapping is derived from the real generated data (bonds.json / bands.json / items.json / chess.json / bosses.json /
-// enemies.json / choices.json / config.json) read here with readFileSync — no hardcoded lists. The 悬赏 finding pinned
-// here: the two phases are FINAL_ASSAULT (config `bossWeights`) and HIDDEN_CORE (`hiddenBossWeights`), and the mapping
-// is DATA (config modes + bosses.json `hidden`).
+// The mapping is derived from the real generated data (bonds.json / bands.json / items.json / chess.json / garrisons.json /
+// bosses.json / enemies.json / choices.json / config.json / assets.json) read here with readFileSync — no hardcoded
+// lists. The 悬赏 finding pinned here: the two phases are FINAL_ASSAULT (config `bossWeights`) and HIDDEN_CORE
+// (`hiddenBossWeights`), and the mapping is DATA (config modes + bosses.json `hidden`); the 悬赏决策 drafts are separate.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -13,8 +14,10 @@ import { fileURLToPath } from 'node:url';
 import {
   bondKind, bondScope, bondStages, bondMilestones, bondEquipment, bondMembers, chessCarryingBond, baseChessId,
   bondMatches, filterBonds, bondView,
-  bandView, bandBondIds, bandBuffKeys, filterBands,
-  enemyStats, bossPhasePools, bossPoolModes, bountyDraftPools, bossEscorts,
+  bandView, bandBondIds, bandBuffKeys, filterBands, bandsForBonds, itemsForBonds,
+  chessRoster, chessRosterFacets, chessIsCustom, chessMatches, filterChess, chessView, skillIconUrl,
+  itemView,
+  enemyStats, enemyView, enemySources, bossPhasePools, bossPoolModes, bountyDraftPools, bossEscorts,
 } from '../../public/js/ui/codexModel.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -25,13 +28,16 @@ const bonds = Object.values(load('bonds'));
 const bands = Object.values(load('bands'));
 const items = Object.values(load('items'));
 const chess = Object.values(load('chess'));
+const garrisons = Object.values(load('garrisons'));
 const bosses = Object.values(load('bosses'));
 const enemies = load('enemies');
 const choices = load('choices');
 const config = load('config');
+const assets = load('assets');
 const getEnemy = (k) => enemies[k] || null;
 const byBond = new Map(bonds.map((b) => [b.bondId, b]));
 const byBand = new Map(bands.map((b) => [b.bandId, b]));
+const byChess = new Map(chess.map((c) => [c.chessId, c]));
 
 const baseSet = (list) => new Set(list.map((c) => baseChessId(c.chessId || c.id)));
 
@@ -234,6 +240,131 @@ describe('悬赏决策 card draft pools', () => {
   });
 });
 
+describe('干员 (operators) mapping', () => {
+  test('chessRoster is the visible base roster (no golden, no hidden, no 甄选), custom included', () => {
+    const roster = chessRoster(chess);
+    assert.ok(roster.length > 0);
+    assert.ok(roster.every((c) => c.visible && !c.isGolden && !c.isDiy && !c.isHidden));
+    assert.equal(new Set(roster.map((c) => c.chessId)).size, roster.length, 'no duplicate operator');
+    // our CUSTOM_CHESS entries (identifier ≥ 900) are visible, so they are in the roster
+    const custom = roster.filter((c) => chessIsCustom(c));
+    assert.equal(custom.length, 8, 'the 8 CUSTOM_CHESS base operators');
+    assert.ok(custom.every((c) => c.identifier >= 900));
+    const tiers = roster.map((c) => c.tier);
+    assert.deepEqual(tiers, [...tiers].sort((a, b) => a - b), 'sorted by tier');
+  });
+
+  test('facets: rarities desc, tiers asc, professions with counts (data-driven filter options)', () => {
+    const f = chessRosterFacets(chess);
+    assert.deepEqual(f.rarities, [...f.rarities].sort((a, b) => b - a));
+    assert.deepEqual(f.tiers, [...f.tiers].sort((a, b) => a - b));
+    assert.ok(f.professions.length >= 6 && f.professions.every((p) => p.id && p.count > 0));
+    const total = f.professions.reduce((n, p) => n + p.count, 0);
+    assert.equal(total, chessRoster(chess).filter((c) => c.profession).length);
+  });
+
+  test('filterChess: rarity / tier / profession / custom / bondId are subsets; the query is case-insensitive', () => {
+    const all = chessRoster(chess);
+    const six = filterChess(chess, { rarity: 6 });
+    assert.ok(six.length > 0 && six.length < all.length && six.every((c) => c.rarity === 6));
+    const t3 = filterChess(chess, { tier: 3 });
+    assert.ok(t3.length > 0 && t3.every((c) => c.tier === 3));
+    const prof = chessRosterFacets(chess).professions[0].id;
+    assert.ok(filterChess(chess, { profession: prof }).every((c) => c.profession === prof));
+    assert.equal(filterChess(chess, { custom: true }).length, 8);
+    assert.equal(filterChess(chess, { custom: true }).length + filterChess(chess, { custom: false }).length, all.length);
+    const bondId = 'lateranoShip';
+    assert.ok(filterChess(chess, { bondId }).every((c) => (c.bonds || []).includes(bondId)));
+    assert.ok(chessMatches(byChess.get('chess_char_4132_ascln_a'), 'ascalon'), 'an English appellation matches');
+    assert.ok(filterChess(chess, { query: '阿斯卡纶' }).some((c) => c.chessId === 'chess_char_4132_ascln_a'));
+    assert.deepEqual(filterChess(chess, { query: 'zzz-no-such-operator' }), []);
+  });
+
+  test('chessView carries the detail fields (rarity / branch / bonds / talents / skills / stats) and the cross-links', () => {
+    const c = byChess.get('chess_char_4132_ascln_a');
+    const v = chessView(c, { bonds, bands, garrisons, items, assets });
+    assert.equal(v.name, '阿斯卡纶');
+    assert.equal(v.appellation, 'Ascalon');
+    assert.equal(v.rarity, 6);
+    assert.equal(v.subProfessionName, '伏击客');
+    assert.equal(v.custom, true);
+    assert.deepEqual(v.bonds.map((b) => b.name), ['灵巧', '助力']);
+    assert.ok(v.stats.maxHp > 0 && v.stats.cost > 0);
+    assert.ok(v.talents.length >= 1 && v.talents.every((t) => t.name && t.desc));
+    assert.equal(v.skills.length, c.skills.length);
+    assert.ok(v.skills.every((s) => s.name && s.iconUrl), 'every skill has its assets.json icon');
+    assert.ok(v.garrisons.length >= 1, 'the garrison / 特质 record resolves');
+    // cross-links: bonds → strategies, and the equipment granting / requiring a bond
+    const bondIds = v.bondIds;
+    assert.equal(bandsForBonds(bands, bondIds).length, v.bands.length);
+    assert.ok(v.equipment.every((x) => x.id && (x.relation === 'grant' || x.relation === 'require')));
+  });
+
+  test('skillIconUrl reads assets.json skills by iconId (and skillsById when only a skillId is given)', () => {
+    const c = byChess.get('chess_char_4132_ascln_a');
+    const sk = c.skills[0];
+    assert.equal(skillIconUrl(assets, sk), `/assets/skill/${sk.iconId}.png`);
+    assert.equal(skillIconUrl(assets, { skillId: sk.skillId }), `/assets/skill/${sk.iconId}.png`);
+    assert.equal(skillIconUrl(null, sk), null);
+  });
+
+  test('bandsForBonds / itemsForBonds: only the strategies on those bonds, and the items granting / requiring them', () => {
+    const found = bandsForBonds(bands, ['victoriaShip']);
+    assert.ok(found.length > 0 && found.every((b) => bandBondIds(b).includes('victoriaShip')));
+    const eq = itemsForBonds(items, ['victoriaShip']);
+    assert.ok(eq.length > 0);
+    assert.ok(eq.every((x) => x.item.giveBondId === 'victoriaShip' || x.item.requiresBondId === 'victoriaShip'));
+    assert.deepEqual(itemsForBonds(items, ['no-such-bond']), []);
+  });
+});
+
+describe('装备 (items) view', () => {
+  test('itemView exposes the detail fields a related-equipment link opens', () => {
+    const it = items.find((x) => x.giveBondId === 'victoriaShip' && !x.canGiveBond);
+    const v = itemView(it);
+    assert.equal(v.id, it.id);
+    assert.equal(v.name, it.name);
+    assert.ok(v.tier > 0 && v.itemType);
+    assert.equal(v.giveBondId, 'victoriaShip');
+    assert.ok(v.desc.length > 0);
+    assert.ok(Array.isArray(v.buffKeys));
+  });
+});
+
+describe('敌人详情 (enemy detail) mapping', () => {
+  test('enemyView normalizes name / key / rank / stats / description / abilities', () => {
+    const v = enemyView(enemies.enemy_9013_acstmk, 'enemy_9013_acstmk');
+    assert.equal(v.key, 'enemy_9013_acstmk');
+    assert.equal(v.name, enemies.enemy_9013_acstmk.name);
+    assert.equal(v.rank, 'BOSS');
+    assert.ok(v.stats.maxHp > 0 && Number.isFinite(v.stats.atk));
+    assert.ok(v.abilities.length > 0, 'the leader enemy lists its abilities');
+    assert.ok(v.desc.length > 0);
+  });
+
+  test('enemySources: the leader pool, its weight, its escorts and the boss record it belongs to', () => {
+    const src1 = enemySources('enemy_9013_acstmk', { config, bosses, choices });
+    const final = src1.pools.filter((p) => p.phase === 'FINAL_ASSAULT');
+    assert.ok(final.length > 0 && final.every((p) => p.bossId === 'boss_1' && p.weight > 0 && !p.hidden));
+    assert.ok(src1.references.some((r) => r.bossId === 'boss_1' && r.abilities.length > 0));
+    // the hidden core's own leader enemy and its parts
+    const hidden = enemySources('enemy_9013_acstmk_2', { config, bosses, choices });
+    assert.ok(hidden.pools.some((p) => p.phase === 'HIDDEN_CORE' && p.bossId === 'boss_8'));
+    const boss8 = hidden.references.find((r) => r.bossId === 'boss_8');
+    assert.ok(boss8 && boss8.hidden && boss8.parts.length > 0, 'boss_8 fields its parts');
+  });
+
+  test('enemySources: an escort and a 悬赏决策 card enemy are found from the same mapping', () => {
+    const boss = bosses.find((b) => b.bossId === 'boss_1');
+    const escortKey = Object.values(boss.escortsByTemplate)[0][0].key;
+    const es = enemySources(escortKey, { config, bosses, choices });
+    assert.ok(es.escorts.some((e) => e.bossId === 'boss_1') && es.escorts.every((e) => e.count > 0 && e.modes.length > 0));
+    const draftCard = choices.cards.bounty.find((c) => c.draft === true && c.enemyKey);
+    const ds = enemySources(draftCard.enemyKey, { config, bosses, choices });
+    assert.ok(ds.drafts.length > 0);
+  });
+});
+
 describe('CODEX overlay store + wiring', () => {
   test('openCodex / closeCodex drive the global store (loaded without a page)', async () => {
     const realFetch = globalThis.fetch;
@@ -242,13 +373,20 @@ describe('CODEX overlay store + wiring', () => {
     globalThis.fetch = () => Promise.resolve({ ok: false, status: 404 });
     console.warn = () => {};
     try {
-      const { codexStore, openCodex, closeCodex, CODEX_FILES } = await import('../../public/js/ui/codex.js');
-      assert.ok(CODEX_FILES.includes('bonds') && CODEX_FILES.includes('bosses') && CODEX_FILES.includes('choices'));
+      const { codexStore, openCodex, closeCodex, openEnemy, openItem, closePop, CODEX_FILES, TABS } = await import('../../public/js/ui/codex.js');
+      assert.ok(CODEX_FILES.includes('bonds') && CODEX_FILES.includes('bosses') && CODEX_FILES.includes('choices') && CODEX_FILES.includes('garrisons'));
+      assert.deepEqual(TABS.map((x) => x.id), ['bonds', 'bands', 'operators', 'bounty', 'final', 'hidden'], 'the split tab layout');
       closeCodex();
       assert.equal(codexStore.get().open, false);
       openCodex('bounty');
       assert.equal(codexStore.get().open, true);
       assert.equal(codexStore.get().tab, 'bounty');
+      openEnemy('enemy_1');
+      assert.deepEqual(codexStore.get().pop, { kind: 'enemy', id: 'enemy_1' });
+      openItem('chess_item_1_01_e_a');
+      assert.deepEqual(codexStore.get().pop, { kind: 'item', id: 'chess_item_1_01_e_a' });
+      closePop();
+      assert.equal(codexStore.get().pop, null);
       closeCodex();
       assert.equal(codexStore.get().open, false);
     } finally {
@@ -265,13 +403,31 @@ describe('CODEX overlay store + wiring', () => {
     assert.ok(main.indexOf('<${CodexHost} />') > main.indexOf('<${GuideHost} />'), 'codex stacks with the guide');
   });
 
+  test('the lobby top bar offers 资料库, left of 统计, without opening 设置', () => {
+    const lobby = src('public/js/screens/lobby.js');
+    assert.ok(lobby.includes("from '../ui/codex.js'"), 'lobby imports openCodex');
+    assert.ok(lobby.includes('class="codex-entry"') && lobby.includes("openCodex('bonds')"), 'the 资料库 entry opens the codex');
+    assert.ok(lobby.includes("t('资料库')"), 'the entry is labelled 资料库');
+    assert.ok(lobby.indexOf('class="codex-entry"') < lobby.indexOf('class="stats-entry"'), 'the 资料库 entry sits left of 统计');
+  });
+
+  test('bounty decisions and the two leader phases are separate tabs / panes', () => {
+    const codex = src('public/js/ui/codex.js');
+    assert.ok(codex.includes('function BountyTab(') && codex.includes('function PhaseView('), 'the draft cards and the leader phases have their own views');
+    assert.ok(codex.includes('phaseKey="FINAL_ASSAULT"') && codex.includes('phaseKey="HIDDEN_CORE"'), 'each leader phase is its own tab');
+    assert.ok(codex.includes("id: 'bounty'") && codex.includes("id: 'final'") && codex.includes("id: 'hidden'"));
+  });
+
   test('index.html links the overlay stylesheet and the overlay re-links it at runtime', () => {
     assert.ok(src('public/index.html').includes('/css/screens/codex.css'), 'index.html links codex.css');
     assert.ok(src('public/js/ui/codex.js').includes("ensureStylesheet(CX_CSS)"), 'codex.js survives a stale index.html');
   });
 
   test('every new msgid is translated in all four language packs', () => {
-    const MSGIDS = ['资料库', '悬赏敌人池', '战斗中生效', '全程生效', '激活阈值', '相关装备', '已收录 {n}', '本阶段无该池数据', '本地模拟'];
+    const MSGIDS = [
+      '资料库', '悬赏敌人池', '战斗中生效', '全程生效', '激活阈值', '相关装备', '已收录 {n}', '本阶段无该池数据', '本地模拟',
+      '干员', '敌人详情', '装备详情', '稀有度', '阶数', '仅自造', '出现于', '领袖权重 {n}', '最终攻势', '隐秘核心', '未找到匹配的干员',
+    ];
     for (const lang of ['en', 'ja', 'ko', 'zh-TW']) {
       const pack = JSON.parse(readFileSync(join(ROOT, 'public', 'i18n', `${lang}.json`), 'utf8'));
       for (const id of MSGIDS) assert.ok(id in pack, `${lang} is missing ${id}`);
