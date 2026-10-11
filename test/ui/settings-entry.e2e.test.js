@@ -64,7 +64,7 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     await page.goto(`${base}/`, { waitUntil: 'networkidle0', timeout: 60000 });
     await page.waitForSelector('input', { timeout: 15000 });
     await page.type('input', '测试博士');
-    await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /开始/.test(b.textContent))?.click());
+    await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /进入作战|游客进入/.test(b.textContent))?.click());
     await page.waitForSelector('.lobby-screen', { timeout: 15000 });
     await sleep(500);
 
@@ -102,12 +102,14 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     await page.waitForSelector('.bug-host', { hidden: true });
     assert.ok(await page.$('.modal'), 'closing the bug report keeps settings');
     // 玩法说明 opens the guide viewer above the settings modal; Esc closes only the viewer
+    await sleep(300);
     await page.click('.modal .set-guide');
     await page.waitForSelector('.guide', { timeout: 5000 });
     await page.keyboard.press('Escape');
     await page.waitForSelector('.guide', { hidden: true });
     assert.ok(await page.$('.modal'), 'closing the guide keeps settings');
 
+    await sleep(300); // the guide's keydown cleanup is a passive effect — let it detach before closing settings
     await page.keyboard.press('Escape');
     await sleep(300);
     assert.equal(await modalText(page), null, 'Esc closes it');

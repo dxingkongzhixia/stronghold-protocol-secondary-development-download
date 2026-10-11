@@ -1028,6 +1028,7 @@ describe('browser E2E against the real server', { skip: !ENABLED && 'needs Chrom
       await host.click('.lobby-settings');
       await host.page.waitForSelector('.modal', { timeout: 5000 });
       await openGuide(host, '.set-guide', 'guide-lobby');
+      await sleep(300); // the guide's keydown cleanup is a passive effect — let it detach before closing settings
       await host.page.keyboard.press('Escape');
       await host.page.waitForFunction(() => !document.querySelector('.modal'), { timeout: 4000 });
       await host.click('.mode-card', '同盟模拟');
