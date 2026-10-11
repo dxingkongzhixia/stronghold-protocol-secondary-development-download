@@ -15,6 +15,7 @@ restate the upstream design — it points at it:
 | [`docs/MATCHMAKING.md`](MATCHMAKING.md) | **our** features and every decision record (§22 merge blacklist, §23–§34 + §37 the custom operators) |
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **the fork-only mechanisms catalog** (what is ours, where it lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) — see §12 |
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for adding a custom operator |
+| [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | the authoring handbook for bonds / strategies / bounty leaders / operators and the 资料库 (CODEX) browser (Chinese) |
 | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | how we research/change/test/deploy, the merge discipline, and the Gitee push |
 | [`docs/DEPLOY.md`](DEPLOY.md) | upstream deployment (Windows host, Docker, proxy) |
 

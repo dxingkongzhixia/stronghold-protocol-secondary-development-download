@@ -169,6 +169,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 代码地图：服务器、联机协议与前后端共用的战斗模拟（英文） |
 | [`docs/DEPLOY.md`](docs/DEPLOY.md) | 部署指南：防火墙、开机自启、反向代理与 HTTPS、Docker（英文） |
 | [`docs/NEW-OPERATOR.md`](docs/NEW-OPERATOR.md) | 新增自造干员的端到端配方（英文） |
+| [`docs/CONTENT-AUTHORING.md`](docs/CONTENT-AUTHORING.md) | 内容制作手册：新盟约 / 新策略 / 新悬赏敌人 / 新干员，及资料库（盟约与策略总览 + 悬赏敌人池）（中文） |
 | [CHANGELOG.md](CHANGELOG.md) | 更新记录 |
 
 ## 七、目录结构

@@ -3,6 +3,9 @@
 > 本季的干员名册来自官方数据：`tools/build-data.mjs` 读 Kengxxiao 官方表生成 `data/*.json`。
 > **不在官方赛季名册里的干员**（例如阿斯卡纶）走**自造干员**通道 —— 下面这套流程就是给「加一名干员」用的。
 > 参考实现：阿斯卡纶（`docs/MATCHMAKING.md` §23），每一步都能照抄。
+>
+> 内容制作的全貌（盟约 / 策略 / 悬赏敌人、资料库 CODEX、验证清单与 gotchas）见
+> [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md)；本文是其中「新干员」一节的详细版。
 
 ## 0. 先判断
 
@@ -174,6 +177,9 @@ node --test
 | `test/content/kits_alt_tN.test.js` | `rep.summary.chess`（该阶） |
 
 **跑绿之前不要部署。**
+
+> 完整验证清单（数据重建逐字节、计数、kit coverage、i18n、golden 归属、eslint / 全量测试、资料库）见
+> [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §5。
 
 ## 6. 上线
 
