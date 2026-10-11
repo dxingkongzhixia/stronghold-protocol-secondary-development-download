@@ -547,3 +547,23 @@ empty (rebuilt in `2cab8b6b` / `f26a4837` after the 克莱门莎 cache merge lef
 During an upstream merge, resolve hunk-by-hunk keeping both sides; a change that would drop one of these is a
 **stop-and-ask-`d星空之下`** item ([`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (e)). The per-batch skip reasons (which
 upstream commit was *not* taken and why) are in [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §4.
+
+## 9. Title-screen surfaces from another deployment (announce / about / install)
+
+**我们独有 / 合并时不得丢失.** Three small title-screen entries were copied from another deployment
+(`wei.linxia.dev`, 0.2.4) into our own style, wired to our own data — **not** upstream, and **not** its resource-preload
+(PRELOAD) panel (our `public/js/preload.js` is the unrelated boot-time image warm-up):
+
+- **公告 banner + 公告 entry** — the newest changelog entry with `source: 'notice'` (our `server/community.js`, served
+  by `GET /community/api/changelog`) shown top-centre, dismissable; the seen id persists in `loadPref`/`savePref`
+  (`noticeSeen`), and nothing to show / offline hides it. The title's 公告 entry opens the same 更新日志 overlay
+  (`ChangelogOverlay` `title=` prop) — one store, no duplicate.
+- **关于本服务器** — the version / `/healthz` build tag / mode list / README Gitee-mirror framing / the footer
+  attribution, all factual about this project.
+- **添加到桌面** — the browser install prompt (`beforeinstallprompt`), hidden when unavailable. Our build ships
+  **no** PWA `public/manifest.json` / `public/icons/` / service worker (upstream 0.2.3's install-icon work is on
+  `upstreamm/master`, not merged here), so the button is a deliberate graceful no-op.
+
+| Area | Files that must survive the merge |
+|---|---|
+| Title surfaces | `public/js/ui/announce.js` `public/js/ui/about.js` `public/js/ui/install.js`; `public/js/screens/title.js` (the mounts); `public/js/ui/community.js` (`ChangelogOverlay` `title`); `public/js/ui/components.js` (`homePlus` icon); `public/css/screens/title.css` (`.title-announce*` / `.title-about*` / `.title-install*`); `test/ui/title-surfaces.test.js` (+ `.e2e.test.js`) |

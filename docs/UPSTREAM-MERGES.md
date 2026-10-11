@@ -97,6 +97,33 @@ mainline ships neither (its statistics page is the local, browser-only PR #323).
 
 ---
 
+## 标题画面：公告 / 关于本服务器 / 添加到桌面（本分支独有，灵感来自另一部署）
+
+**这是本分支的偏离，不是上游。** 标题画面的三处小入口是本分支自己加的，灵感来自另一个部署（`wei.linxia.dev`
+的 0.2.4 构建）的截图；数据与文案都接**我们自己的实现**，没有抄它的**资源预载（PRELOAD）**面板：
+
+- **公告 banner + 公告 入口** —— 接**我们自己的通知存储**：`server/community.js` 持久化「更新日志」里
+  `source: 'notice'` 的条目（管理端 `POST /admin/api/notify` → `lobby.broadcastNotice` → `recordNotice` 追加
+  `0.2.N`）。标题页顶部横幅显示**最新一条**公告；`知道了` 关闭后把该条目的 id 写进 `loadPref`/`savePref`
+  （键 `noticeSeen`），同一条不再打扰、有新公告再出现；`GET /community/api/changelog` 取不到（离线 / 还没有公告）
+  时横幅隐藏。登录框下方的「公告」入口打开**同一份**「更新日志」浮层（`ui/community.js` `ChangelogOverlay`，标题
+  改为「公告」）——**不是第二个 store**；与 `ui/notice.js` 的实时 `sys.notice` 条、房间文字聊天无关。文件：
+  `public/js/ui/announce.js`；`public/js/screens/title.js`（挂载）；`public/js/ui/community.js`（`title` 参数）。
+- **关于本服务器** —— 只写我们自己的项目事实（`README.md` §一「二次开发版的下载 / 镜像库」、Gitee 仓库、
+  `shared/constants.js` 的版本 / 模式、`/healthz` 的构建号与在线人数、页脚同款的素材版权声明），并明确本部署
+  **仅支持网页版（桌面浏览器）、手机端可能存在兼容问题**（标题画面入口下方也有一句同样的提示）。文件：
+  `public/js/ui/about.js`。
+- **添加到桌面** —— 接浏览器自己的安装提示（`beforeinstallprompt` → `prompt()`）；已安装 / 独立窗口 / 没有提示时
+  隐藏（优雅空操作），iOS 等无提示的浏览器给一句手动「添加到主屏幕」的说明。**注意**：上游 0.2.3 的安装图标 /
+  `public/manifest.json`（`upstreamm/master` 的 `90421254`、`9ec84f36`）**并没有合进本源**，所以本部署里浏览器不会
+  触发安装提示，按钮保持隐藏——这是有意为之（不伪造 manifest）。文件：`public/js/ui/install.js`。
+
+**不要把**上游 0.2.3 的 manifest / `public/icons/` 与这三处混为一谈：前者是上游工作、本分支尚未合并；这三处是
+我们的独立 UI 增加。上游的**资源预载（PRELOAD）**（`res-pill` / 「预载资源管理」/ ZIP 导入导出，依赖 Service
+Worker + Cache Storage）**不属于本分支**；我们自己的 `public/js/preload.js` 只是**启动时的图片预热**，与它无关。
+
+---
+
 ## 1. feedback5 — the full upstream merge (2026-10-07)
 
 **What it was.** The big upstream drop: `origin/master` at **`1303321` (v0.2.0)**, **383 commits / 848 files** —

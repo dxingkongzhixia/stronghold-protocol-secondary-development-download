@@ -53,8 +53,11 @@ function ChangelogItem({ entry }) {
   </article>`;
 }
 
-/** ① 更新日志: the persisted changelog, newest first (version · date · a one-line summary, full body on demand). */
-export function ChangelogOverlay({ onClose }) {
+/**
+ * ① 更新日志: the persisted changelog, newest first (version · date · a one-line summary, full body on demand).
+ * `title` lets the title screen open the same list as 公告 (ui/announce.js) — one store, two labels.
+ */
+export function ChangelogOverlay({ onClose, title = t('更新日志') }) {
   const [data, setData] = useState(null);
   useEffect(() => {
     let alive = true;
@@ -63,7 +66,7 @@ export function ChangelogOverlay({ onClose }) {
     return () => { alive = false; };
   }, []);
   const list = (data && Array.isArray(data.changelog) ? data.changelog : []);
-  return html`<${Modal} title=${t('更新日志')} en="CHANGELOG" onClose=${onClose}>
+  return html`<${Modal} title=${title} en="CHANGELOG" onClose=${onClose}>
     <div class="changelog-list">
       ${list.length ? list.map((e) => html`<${ChangelogItem} key=${e.id} entry=${e} />`) : html`<div class="online-modal__empty">${data ? t('暂无更新日志') : t('加载中…')}</div>`}
     </div>

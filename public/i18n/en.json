@@ -1313,5 +1313,17 @@
   "正在从服务器读取对局记录…": "Reading match records from the server…",
   "无法读取该玩家的记录（可能已离线）。": "Could not read this player's records (they may be offline).",
   "这名玩家还没有对局记录。": "This player has no match records yet.",
-  "对局记录无效": "Invalid match record"
+  "对局记录无效": "Invalid match record",
+  "公告": "Announcement",
+  "关于本服务器": "About this server",
+  "版本": "Version",
+  "服务器构建": "Server build",
+  "可用模式": "Available modes",
+  "在线人数": "Players online",
+  "本服务器运行的是独立的二次开发版：整份源码与运行时素材都在 Gitee 仓库分发，clone 下来即可运行。": "This server runs an independently maintained secondary-development build: the full source and runtime assets ship in the Gitee repository — clone it and it runs.",
+  "项目仓库": "Project repository",
+  "非官方同人作品，仅供学习交流与个人非商业使用；与上海鹰角网络、Yostar 没有任何关系。": "An unofficial fan work, for study, exchange and personal non-commercial use only; not affiliated with Hypergryph or Yostar.",
+  "添加到桌面": "Add to home screen",
+  "请在浏览器菜单中选择「添加到主屏幕」": "Use your browser’s menu and choose “Add to Home Screen”.",
+  "仅支持网页版（桌面浏览器）；手机端可能存在兼容问题": "Desktop web version only; mobile may have compatibility issues."
 }

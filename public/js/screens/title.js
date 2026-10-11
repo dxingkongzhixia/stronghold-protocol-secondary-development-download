@@ -27,6 +27,9 @@ import { t, N_ } from '../../../shared/i18n.js';
 import { scriptOf } from '../../../shared/i18nPacks.js';
 import { GIcon } from '../ui/gameComponents.js';
 import { SettingsModal } from '../ui/settings.js';
+import { AnnounceBanner, AnnounceButton, AnnouncementsOverlay } from '../ui/announce.js';
+import { AboutServerModal } from '../ui/about.js';
+import { InstallButton } from '../ui/install.js';
 
 /**
  * The title's account section (docs/MATCHMAKING.md): the 博士代号 field above IS the account name, so this only adds
@@ -257,6 +260,8 @@ export function TitleScreen() {
   // 博士代号 = the account name: keep the field in sync once logged in (and fill it after a login).
   useEffect(() => { if (auth?.account?.name) setName(auth.account.name); }, [auth?.account?.id]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [announceOpen, setAnnounceOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const assetsSettled = useData('assets');
   const assets = data.get('assets');
   const backdrop = findUiAsset(assets, BACKDROP_KEYS);
@@ -290,6 +295,7 @@ export function TitleScreen() {
   // hides; a CJK / kana / Hangul title keeps the Chinese layout (shared/i18nPacks.js scriptOf — a pack needs no flag)
   const alphabetic = scriptOf(t('卫戍协议')) === 'alphabetic';
   return html`<div class="screen title-screen">
+    <${AnnounceBanner} onOpen=${() => setAnnounceOpen(true)} />
     <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} aria-hidden="true">
       ${backdrop ? html`<img class="title-bg__art" src=${backdrop} alt="" draggable=${false}
         onLoad=${() => setBgLoadedUrl(backdrop)} />` : null}
@@ -354,9 +360,17 @@ export function TitleScreen() {
           <${FullscreenButton} class="title-fs" />
         </div>
       </div>
+      <div class="title-about-wrap">
+        <${AnnounceButton} onClick=${() => setAnnounceOpen(true)} />
+        <${Button} variant="ghost" size="sm" class="title-about-button" aria-haspopup="dialog"
+          onClick=${() => setAboutOpen(true)}>${t('关于本服务器')}<//>
+      </div>
+      <p class="title-platform-hint">${t('仅支持网页版（桌面浏览器）；手机端可能存在兼容问题')}</p>
     </main>
 
     <${SettingsModal} open=${settingsOpen} onClose=${() => setSettingsOpen(false)} />
+    <${AboutServerModal} open=${aboutOpen} onClose=${() => setAboutOpen(false)} />
+    ${announceOpen ? html`<${AnnouncementsOverlay} onClose=${() => setAnnounceOpen(false)} />` : null}
 
     <footer class="title-foot">
       <span>${t('非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有')}</span>
@@ -364,5 +378,6 @@ export function TitleScreen() {
       ${DEV_BUILD ? html`<span class="title-dev" role="note">${t('开发版 · 不稳定，请勿用于公开服务器')}</span>` : null}
     </footer>
     <${FeedbackGroup} />
+    <div class="title-install"><${InstallButton} /></div>
   </div>`;
 }
