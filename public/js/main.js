@@ -50,6 +50,7 @@ import { chatMessage } from './ui/chat.js';
 import { installAudio } from './audio.js';
 import { settingsStore } from './ui/settings.js';
 import { GuideHost } from './ui/guide.js';
+import { CodexHost } from './ui/codex.js';
 import { BugReportHost } from './ui/community.js';
 import { installDeviceSupport } from './ui/device.js';
 import { LoadoutHost } from './screens/loadout.js';
@@ -373,6 +374,7 @@ function App() {
     <${ToastHost} />
     <${UiHosts} />
     <${GuideHost} />
+    <${CodexHost} />
     <${BugReportHost} />
     <${LoadoutHost} />
     <${StatsHost} />

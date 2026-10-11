@@ -16,6 +16,7 @@ import { createStore, useStore, loadPref, savePref } from '../store.js';
 import { sanitizeSettings, HOTKEY_ACTIONS, DEFAULT_HOTKEYS, hotkeyLabel, rebindHotkey, isDefaultHotkeys, captureHotkey, VOICE_LANGS } from './gameLogic.js';
 import { audio } from '../audio.js';
 import { openGuide } from './guide.js';
+import { openCodex } from './codex.js';
 import { openBugReport } from './community.js';
 import { detectFeatures } from './device.js';
 import { LangToggle, machineTranslationNote } from './lang.js';
@@ -207,6 +208,7 @@ export function SettingsModal({ open, onClose }) {
   const mtNote = machineTranslationNote(); // a pack marked as machine translation says so under the switch
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('设置')} micro="SETTINGS" width="7.4rem"
     actions=${html`<${Button} variant="secondary" icon="book" class="set-guide" onClick=${() => openGuide(0)}>${t('玩法说明')}<//>
+      <${Button} variant="secondary" icon="info" class="set-codex" onClick=${() => openCodex('bonds')}>${t('资料库')}<//>
       <${Button} variant="secondary" icon="edit" class="set-bug" onClick=${openBugReport}>${t('bug提交')}<//>
       <${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
     <div class="set-list">
