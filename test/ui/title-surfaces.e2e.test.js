@@ -20,7 +20,7 @@ describe('the title screen 公告 / 关于本服务器 / 添加到桌面 surface
   before(async () => {
     const { startServer } = await import('../../server/index.js');
     const puppeteer = (await import('puppeteer-core')).default;
-    srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
+    srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, accounts: true });
     base = `http://127.0.0.1:${srv.port}`;
     browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--force-device-scale-factor=1'] });
   });
@@ -35,8 +35,10 @@ describe('the title screen 公告 / 关于本服务器 / 添加到桌面 surface
     const page = await browser.newPage();
     await page.setViewport({ width: 1600, height: 900 });
     const problems = [];
-    page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
+    const external = (u) => /fonts\.(googleapis|gstatic)/.test(u);
+    page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) problems.push(`console: ${m.text()} @ ${m.location()?.url ?? ''}`); });
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+    page.on('requestfailed', (r) => { if (!external(r.url()) && r.failure()?.errorText !== 'net::ERR_ABORTED') problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText ?? ''}`); });
     await page.goto(`${base}/`, { waitUntil: 'networkidle0', timeout: 60000 });
     await page.waitForSelector('.title-screen', { timeout: 15000 });
 
@@ -60,7 +62,7 @@ describe('the title screen 公告 / 关于本服务器 / 添加到桌面 surface
 
     // 关于本服务器: version · modes · disclaimer
     await page.click('.title-about-wrap .title-about-button');
-    await page.waitForSelector('.modal.title-about', { timeout: 5000 });
+    await page.waitForSelector('.modal__box.title-about', { timeout: 5000 });
     const about = await modalText(page);
     assert.match(about, /关于本服务器/);
     assert.match(about, /版本/);
@@ -70,18 +72,19 @@ describe('the title screen 公告 / 关于本服务器 / 添加到桌面 surface
     assert.match(about, /仅支持网页版（桌面浏览器）；手机端可能存在兼容问题/, 'the dialog states the platform note');
     assert.match(about, /非官方同人复刻/);
     assert.match(about, /gitee\.com\/marseille1/);
-    await page.click('.modal.title-about [data-autofocus]');
-    await page.waitForSelector('.modal.title-about', { hidden: true });
+    await page.click('.modal__box.title-about [data-autofocus]');
+    await page.waitForSelector('.modal__box.title-about', { hidden: true });
 
     // 公告: opens the changelog overlay (our one notice store) under the 公告 title
     await page.click('.title-about-wrap button');
-    await page.waitForSelector('.modal', { timeout: 5000 });
-    const comm = await modalText(page);
+    await page.waitForSelector('.online-modal', { timeout: 5000 });
+    const comm = await page.evaluate(() => document.querySelector('.online-modal')?.textContent.replace(/\s+/g, ' ').trim() ?? null);
     assert.match(comm, /公告/);
+    await page.waitForSelector('.changelog-item', { timeout: 8000 });
     const items = await page.evaluate(() => document.querySelectorAll('.changelog-item').length);
     assert.ok(items > 0, 'the seeded changelog lists at least one entry');
-    await page.keyboard.press('Escape');
-    await page.waitForSelector('.modal', { hidden: true });
+    await page.click('.online-modal__close');
+    await page.waitForSelector('.online-modal', { hidden: true });
     assert.ok(await page.$('.title-screen'), 'the title screen is still there');
 
     assert.deepEqual(problems, []);
