@@ -607,10 +607,11 @@ export function enemySources(enemyKey, { config = null, bosses = [], choices = n
         for (const e of bossEscorts(boss)) {
           if (s(e.key) !== key) continue;
           refs.set(s(bossId), boss);
+          const modeName = m.name || m.modeId;
           const tag = `${ph.phase}|${s(bossId)}|${e.count}`;
           const row = escortBy.get(tag);
-          if (row) { if (!row.modes.includes(m.modeId)) row.modes.push(m.modeId); }
-          else { const r = { bossId: s(bossId), bossName: s(boss.name), phase: ph.phase, count: e.count, modes: [m.modeId] }; escortBy.set(tag, r); escorts.push(r); }
+          if (row) { if (!row.modes.includes(modeName)) row.modes.push(modeName); }
+          else { const r = { bossId: s(bossId), bossName: s(boss.name), phase: ph.phase, count: e.count, modes: [modeName] }; escortBy.set(tag, r); escorts.push(r); }
         }
       }
     }
