@@ -10,6 +10,7 @@ import { html, UiHosts } from '/js/ui/components.js';
 import { ToastHost, toast } from '/js/ui/toasts.js';
 import { ConnectionBanner } from '/js/ui/connBanner.js';
 import { GuideHost } from '/js/ui/guide.js';
+import { BugReportHost } from '/js/ui/community.js';
 import { GameScreen } from '/js/screens/game.js';
 import { store, emptyMatch, selectRoute } from '/js/store.js';
 import { net, NetError } from '/js/net.js';
@@ -820,7 +821,7 @@ async function boot() {
   installAudio({ getManifest: () => data.get('assets'), subscribe: store.subscribe, getState: store.get, selectRoute, settings: settingsStore.get() });
   const phase = params.get('phase') || 'PREP';
   setPhase(PHASE[phase] || PHASE.PREP, params.get('variant') || '');
-  render(html`<div class="app-root"><div class="app-bg" aria-hidden="true"></div><${GameScreen} /><${ConnectionBanner} /><${ToastHost} /><${UiHosts} /><${GuideHost} /></div>`, document.getElementById('app'));
+  render(html`<div class="app-root"><div class="app-bg" aria-hidden="true"></div><${GameScreen} /><${ConnectionBanner} /><${ToastHost} /><${UiHosts} /><${GuideHost} /><${BugReportHost} /></div>`, document.getElementById('app'));
   renderBar();
   store.subscribe(() => renderBar());
   globalThis.__MOCK__ = { store, S: () => S, setPhase, mutate: (fn) => { fn(S); refreshPrivate(); }, pushPublic: () => pushPublic(),

@@ -15,12 +15,11 @@ import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, modeIdFor, ERR, roleName } from '../../../shared/constants.js';
 import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, doctorNo, Tabs, RoleTag } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
-import { GuideButton } from '../ui/guide.js';
 import { openStats, openPlayerStats } from './stats.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
 import { AccountDialog } from '../ui/account.js';
-import { ChangelogOverlay, BugReportOverlay } from '../ui/community.js';
+import { ChangelogOverlay } from '../ui/community.js';
 import { PublicRoomsScreen } from './rooms.js';
 import { net, identity } from '../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn } from '../store.js';
@@ -247,8 +246,9 @@ export function LobbyScreen() {
   const mm = useStore((s) => s.mm, shallowEqual);
   const [showAccount, setShowAccount] = useState(false);
   const [showOnline, setShowOnline] = useState(false);
-  // 更新日志 / bug提交 / 公开房间 (ui/community.js): which community panel is open, or null. A pending 公开房间
+  // 更新日志 / 公开房间 (ui/community.js): which community panel is open, or null. A pending 公开房间
   // return (ui.roomsReturn, set by this screen's own 加入 / 观战) opens the rooms view at once — consumed here, once.
+  // (bug提交 left this top bar on 2026-10-11 — it is reached from the 设置 dialog now, ui/settings.js.)
   const [showCommunity, setShowCommunity] = useState(() => (consumeRoomsReturn() ? 'rooms' : null));
   useData('config');
   const [roomMode, setRoomMode] = useState(() => (loadPref('lobby.mode', 'coop') === 'solo' ? 'solo' : 'coop'));
@@ -361,9 +361,6 @@ export function LobbyScreen() {
         <button type="button" class="online-badge lobby-rooms" title=${t('更新日志')} onClick=${() => setShowCommunity('changelog')}>
           <${Icon} name="book" /><span>${t('更新日志')}</span>
         </button>
-        <button type="button" class="online-badge lobby-rooms" title=${t('bug提交')} onClick=${() => setShowCommunity('bug')}>
-          <${Icon} name="edit" /><span>${t('bug提交')}</span>
-        </button>
       </div>
       <div class="topbar__center">
         <${MicroLabel} tone="mint">SIMULATION PROTOCOL SELECT<//>
@@ -371,7 +368,6 @@ export function LobbyScreen() {
       </div>
       <div class="topbar__right">
         <${Button} variant="secondary" size="sm" icon="chart" class="stats-entry" onClick=${openStats} title=${t('统计数据')} aria-label=${t('统计数据')}>${t('统计')}<//>
-        <${GuideButton} class="lobby-guide" variant="secondary" label=${t('玩法说明')} />
         <${LoadoutButton} from="lobby" size="sm" class="lobby-loadout" label=${t('干员调配')} />
         ${auth?.account ? null : html`<${Button} variant="secondary" size="sm" icon="user" class="lobby-account"
           onClick=${() => setShowAccount(true)}>${t('登录 / 注册')}<//>`}
@@ -443,7 +439,6 @@ export function LobbyScreen() {
     ${showAccount ? html`<${AccountDialog} defaultName=${me.name} onClose=${() => setShowAccount(false)} />` : null}
     ${showOnline ? html`<${OnlineOverlay} onClose=${() => setShowOnline(false)} />` : null}
     ${showCommunity === 'changelog' ? html`<${ChangelogOverlay} onClose=${() => setShowCommunity(null)} />` : null}
-    ${showCommunity === 'bug' ? html`<${BugReportOverlay} onClose=${() => setShowCommunity(null)} />` : null}
   </div>`;
 }
 

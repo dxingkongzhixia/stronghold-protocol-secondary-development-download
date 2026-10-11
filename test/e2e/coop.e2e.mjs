@@ -1024,7 +1024,12 @@ describe('browser E2E against the real server', { skip: !ENABLED && 'needs Chrom
       await host.enter('凯尔希');
       await sleep(400);
       await host.shot('lobby');
-      await openGuide(host, '.lobby-guide', 'guide-lobby');
+      // 玩法说明 moved into the 设置 dialog (2026-10-11): open the lobby settings, use its 玩法说明 entry, close again
+      await host.click('.lobby-settings');
+      await host.page.waitForSelector('.modal', { timeout: 5000 });
+      await openGuide(host, '.set-guide', 'guide-lobby');
+      await host.page.keyboard.press('Escape');
+      await host.page.waitForFunction(() => !document.querySelector('.modal'), { timeout: 4000 });
       await host.click('.mode-card', '同盟模拟');
       await host.click('.diff-card', '险境模拟');
       await host.click('.create-box button', '创建同盟');

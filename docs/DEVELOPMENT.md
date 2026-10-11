@@ -417,7 +417,8 @@ It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.
 
 ## 13. Lobby community data + match statistics (our SQLite schema, `server/community.js` / `server/stats.js`)
 
-The lobby's 更新日志 / bug提交 panels (and the server side of 公开房间, whose directory is a full screen now —
+The lobby's 更新日志 panel and the bug提交 panel (opened from the 设置 dialog since 2026-10-11 — see `docs/MATCHMAKING.md`
+§36.8; the server side of 公开房间, whose directory is a full screen now —
 `screens/rooms.js`, not a panel) live in the **same `node:sqlite` database as accounts**
 (`server/db.mjs`, now schema **v5**). The `migrate()` step adds three tables — `changelog`, `bug_reports`,
 `bug_uploads` — under the same `PRAGMA user_version` discipline (v3); v4 adds `changelog.summary` / `source` /

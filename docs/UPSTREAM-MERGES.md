@@ -39,8 +39,9 @@ reverted):
 | **Upstream 克莱门莎 (Clementia)** | `2e122873` *0.2.3: add Clementia and Shu/Ulpianus modules (#437)*, `0b0ce4fb` *Update expanded roster checks and register Clementia impact visuals*, `ba5b998a` *0.2.3: Clementia S2 releases a dead, hidden, uncarriable or pathless rider at once* | **We keep OUR `char_4231_clemnt`** (the self-made 6★ 本源近卫, `docs/MATCHMAKING.md` §37, `CUSTOM_CHESS`). Upstream's Clementia is a different, official-data operator; taking it would collide with ours. |
 | **R21P 满潜 (every operator at full potential)** | `806a0477` / merge `b05845f5` (feedback6 R21P: 潜能 6) | The owner's **full-potential rule is not adopted**; our fork keeps its own potential handling. Never merged. |
 | **R22-LOADOUT (per-operator 潜能 / 练度)** | `7e09c63d`, `ec0a2fc6`, `96d9441f`, `7a0937e3`, `519f04e2`, `dc336f24`, `8e2b981e`, `4f8f5d2a`, `9f36db32`, `4d63e9d5`, `66297106` | **The owner excluded the 潜能 / 练度 loadout screen** (`干员调配` per-operator potential/elite-level selects). Not taken in the R22 batch (see §4). |
-| **设置 → 问题反馈 / DIAGNOSTICS (copy local diagnostics)** | upstream `3f884412` (our R22 port `2ef6339b`, §4) — the settings section that copies local diagnostics for a GitHub issue | **We dropped it** in `60e9eab8` (the §6 *Deliberate divergence* note): our own lobby 「bug提交」 already reports bugs, so the duplicate section must not be re-introduced. Self-check: `grep -rn "ISSUES_URL\|set-diag\|复制诊断信息" public/js/ui/settings.js` must be empty. |
+| **设置 → 问题反馈 / DIAGNOSTICS (copy local diagnostics)** | upstream `3f884412` (our R22 port `2ef6339b`, §4) — the settings section that copies local diagnostics for a GitHub issue | **We dropped it** in `60e9eab8` (the §6 *Deliberate divergence* note): our own bug-report entry (the 设置 dialog's 「bug提交」 since 2026-10-11, before that the lobby's) already reports bugs, so the duplicate section must not be re-introduced. Self-check: `grep -rn "ISSUES_URL\|set-diag\|复制诊断信息" public/js/ui/settings.js` must be empty. |
 | **上游的 设置 按钮位置 (top-bar placement)** | upstream `911e4bff` (`a9a1592a`) — the 设置 button of the lobby / room top bar, placed left of 玩法说明 (#238) | **We move 设置 next to the 档案 account chip** instead (the top bar's right-hand group; in the room, beside the invite key). Upstream's middle placement must not be restored by a later merge. |
+| **上游道具牌库把「白给装备」也卡库存 (`6bfc08270c`)** | upstream `6bfc08270c` *0.2.4-dev: round-29 community fixes and the official shared card pool* — `server/match/player/acquire.js` `acquireItem` adds `if (!this.m.itemPool.canGain(itemId)) { … '装备库存不足，未获得该装备'; return null; }` with **no `requirePool` escape**, and `server/match/effectsMeta.js` `grantItem` forwards only `source` / `toTemp` / `deferMerge`, so the `requirePool: false` the callers already pass (`server/sim/content/bands/meta.js` 变形者集群 R5/10/15; `server/sim/content/garrisons/meta.js` `H.SERVER_GAIN_EQUIP` — 缪尔赛思's `<获得时>` `garrison_76_a/b`) is dropped; GitHub issue **#488** (saltwmc, 2026-10-11): the trait and the strategy stop paying 变形同构体 once the 3-copy item stock is out (投资人 ×2 exhausts it sooner). | **A `<获得时>` / strategy grant is not a shop purchase — the official text has no stock premise.** Our `acquireItem` has **no `itemPool` check**, so 缪尔赛思's trait and 变形者集群 pay 变形同构体 every time (the trait's total can pass the upstream cap 3). If the shared card pool is ever merged, `requirePool` must be forwarded through `grantItem` → `acquireItem` and the trait / strategy grants must pass `requirePool: false`. Self-check: `grep -rn "itemPool\|canGain" server` empty (or those grants pass `requirePool: false`); `test/content/garrisons_meta.test.js` #488. Mirrored in [`docs/MATCHMAKING.md`](MATCHMAKING.md) §39.2. |
 
 The self-checks for the §22 blacklist are in [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §5 and run after every merge.
 
@@ -414,16 +415,25 @@ drift is now gone and `node tools/build-data.mjs --offline` reproduces `data/` b
 11 skipped** (see the report in `docs/PROJECT-STATE.md` §9).
 
 **Deliberate divergence.** The 设置 → **问题反馈 / DIAGNOSTICS** section that upstream's `3f884412` added (our R22 port
-`2ef6339b`, §4 above) was **deliberately dropped**: it duplicates our own bug-report entry point (the lobby's
-「bug提交」), so `public/js/ui/settings.js` no longer carries the section, its 「复制诊断信息」 button, its
-recorded-errors row or its `ISSUES_URL`, and the `set-diag*` CSS hooks are gone. `public/js/diag.js` itself stays —
-`main.js`, `ui/toasts.js` and `battle/runner.js` still record into its error log. **Both it and the upstream 设置-button
-placement are on the 永不合并 list (§0).**
+`2ef6339b`, §4 above) was **deliberately dropped**: it duplicates our own bug-report entry point (the 设置 dialog's
+「bug提交」 since 2026-10-11, before that the lobby's), so `public/js/ui/settings.js` no longer carries the section, its
+「复制诊断信息」 button, its recorded-errors row or its `ISSUES_URL`, and the `set-diag*` CSS hooks are gone.
+`public/js/diag.js` itself stays — `main.js`, `ui/toasts.js` and `battle/runner.js` still record into its error log.
+**Both it and the upstream 设置-button placement are on the 永不合并 list (§0).**
 
 **Divergence (2026-10-11) — the 设置 button's position.** Upstream `911e4bff` put the 设置 button left of 玩法说明 in the
 lobby / room top bar; we keep 设置 in the top bar's right-hand group instead — in the lobby immediately before the 档案
 account chip (right of 登录 / 注册), in the room beside the invite key — so the merge must not restore upstream's middle
-placement (§0). Lobby right group, left→right: 统计 · 玩法说明 · 干员调配 · 登录 / 注册 (guests only) · 设置 · 档案 chip.
+placement (§0). Lobby right group, left→right: 统计 · 干员调配 · 登录 / 注册 (guests only) · 设置 · 档案 chip.
+
+**Divergence (2026-10-11) — 玩法说明 / bug提交 live in the 设置 dialog.** The lobby's top bar keeps 公开房间 · 更新日志
+(and the room keeps its other controls), but the 玩法说明 entry that used to sit in the lobby's and the room's top bars and
+the bug提交 entry that used to sit in the lobby's are now two actions inside the 设置 dialog (its action row, next to
+完成): `public/js/ui/settings.js` `set-guide` → `openGuide(0)` and `set-bug` → `openBugReport`. Both are **deliberately
+kept reachable** from every screen's settings gear (title / lobby / room / match) — the 玩法说明 viewer and the
+bug-report overlay (`ui/community.js` `BugReportHost`, mounted once by `main.js`, `css .bug-host` above `--z-modal`) open
+above the modal; the overlay still submits through `bug.report` + the image upload. A later merge must not move either
+back onto a top bar, nor drop the settings entries. (The in-match gear / step-head 玩法说明 buttons stay as they are.)
 
 **Divergence (2026-10-11) — a 本局禁用 bond is banned from being OFFERED, not from taking effect.** Upstream's
 `computeBonds` skips `gd.modeInactiveBonds` (`01a44cd2`; the 本局禁用 UI `b4fa21a0` / `695ece26` / `c0cc1d61`, all

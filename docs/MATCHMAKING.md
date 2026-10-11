@@ -1063,7 +1063,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **概要**：每条都有一条**一行概要** `summary`（`summarizeChangelog()`：取正文第一条有意义的行，跳过标题行、去掉列表 / 引用前缀，截到第一个句末标点，压平空白并截断到 `CHANGELOG_SUMMARY_MAX` = 120 字，超出加省略号）。种子导入时由正文派生（也接受显式 `summary`）；旧的 v3 行没有该列值，读取时按同一函数即时派生。
 - 公开只读接口 `GET /community/api/changelog` → `{ now, changelog: [{ id, version, released_at, title, body, summary, source, minor_seq }] }`，最新在前（与 `/online/api` 同风格、免令牌）。旧字段（`id / version / released_at / title / body`）保持不变，只是**新增** `summary / source`。
 - 客户端 `public/js/ui/community.js` 的 `ChangelogOverlay` 默认只渲染 **版本 · 日期 · 概要**；一条正文比概要长时带一个「详情 / 收起」toggle（`ChangelogItem` 的局部 state）在原位展开完整正文，**默认不再打印整段多段正文**。「详情」「收起」复用既有 msgid，无需新增语言键。
-- **入口在顶栏**（§36.4）：更新日志 / bug提交 与公开房间一样由 `screens/lobby.js` 的 `.topbar__left` 打开（顺序 返回 · ping · 在线N · 公开房间 · 更新日志 · bug提交）；`ui/community.js` 不再导出 `CommunityBar` / `COMMUNITY_PANELS`，左侧社区列（`.lobby-tools`）已删除，左侧现在从 `01 模拟方式` 开始。三块面板（changelog / bug / rooms）功能不变。
+- **入口**（§36.4）：更新日志 / 公开房间 由 `screens/lobby.js` 的 `.topbar__left` 打开；**bug提交 自 2026-10-11 起移入「设置」对话框**（与玩法说明同列，见 §36.8）。`ui/community.js` 不再导出 `CommunityBar` / `COMMUNITY_PANELS`，左侧社区列（`.lobby-tools`）已删除，左侧现在从 `01 模拟方式` 开始。三块面板（changelog / bug / rooms）功能不变。
 - 管理页的写入入口留作可选（服务端已提供 `addChangelog()`）。
 
 ### 36.2.1 每次推送通知 = 下一小版本（来源 notice）
@@ -1090,7 +1090,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 后续三项（owner 2026-10-09）：①「全都分色」——每个状态都要一眼可辨；②「优先显示人不满的，满的显示观战」；③「位置调一下，放上边，公开房间放在线后边」。
 
 - **界面而非路由**：`public/js/screens/rooms.js` 的 `PublicRoomsScreen`；由 `screens/lobby.js` 在 `showCommunity === 'rooms'` 时**整体替换大厅主体**（同一个 `LobbyScreen`、同一套路由）。这样不新增 `SCREENS` / `selectRoute` 分支，房间恢复（`room.state` 仍会接管路由）与 `?room=` 深链流程完全不动；加入 / 观战仍复用大厅自己的 `join()` / `spectate()` 处理函数（点按钮先关界面、写入密钥再走原路径）。顶栏复用 `.topbar` + `Button` + `MicroLabel`，主体是 `.screen__scroll` 的 `rooms-body`（`public/css/screens/lobby.css` 的 `.rooms-*`，全部用主题令牌，无一次性颜色）。
-- **入口（顶栏，③）**：三个社区入口都在 `screens/lobby.js` 的 `.topbar__left` 内、**紧接 `<OnlineBadge>` 之后**：**公开房间 · 更新日志 · bug提交**（`users` / `book` / `edit` 图标，均复用 `.online-badge` 观感，小顶栏下仍清晰），顺序为 **返回 · ping · 在线N · 公开房间 · 更新日志 · bug提交**，点击分别 `setShowCommunity('rooms' | 'changelog' | 'bug')`。`ui/community.js` 不再有 `CommunityBar` / `COMMUNITY_PANELS`，大厅左侧社区列（`.lobby-tools`）已删除。公开房间界面**自己的**顶栏（返回 / PUBLIC ROOMS / 实时·刷新）保持不变。
+- **入口（顶栏，③）**：**公开房间 · 更新日志** 两个社区入口在 `screens/lobby.js` 的 `.topbar__left` 内、**紧接 `<OnlineBadge>` 之后**（`users` / `book` 图标，复用 `.online-badge` 观感，小顶栏下仍清晰），顺序为 **返回 · ping · 在线N · 公开房间 · 更新日志**，点击分别 `setShowCommunity('rooms' | 'changelog')`。**bug提交 已移入「设置」对话框**（§36.8），不再在顶栏。`ui/community.js` 不再有 `CommunityBar` / `COMMUNITY_PANELS`，大厅左侧社区列（`.lobby-tools`）已删除。公开房间界面**自己的**顶栏（返回 / PUBLIC ROOMS / 实时·刷新）保持不变。
 - **数据**（`server/admin.js buildPublicSnapshot` → `GET /online/api`）：`openRooms`（手建公开同盟 → 组队中）与 `playRooms`（进行中 → 对局中 → 「观战」）每个条目新增 `seats`：按席位顺序的 `MAX_SEATS`（=4）个元素，空席 / 已离开的席位为 `null`，否则 `{ name, role, guest, isBot, isHost }`。**隐私**：只暴露游戏内已经可见的信息（名字 / 身份 / AI / 房主），绝不带 `playerId`、`accountId`、IP 或 token；`guest` 由账号绑定推导，但不暴露绑定本身。旧字段（`code / difficulty / difficultyName / host / hostRole / humans`，及 `playRooms` 的 `bots / auto`）保持不变。
 - **排序 / 满房显示观战（②）**：`openRooms` 现在也包含**大厅已满**（无空席）的公开同盟房，每条新增 `full: <boolean>` 与 `freeSeats`（空席数）。排序为**未满在前、已满在后**，组内保持人数降序（`(a.full - b.full) || (b.humans - a.humans)`），上限仍为 12。`playRooms` 语义不变（已开局 → 观战，上限 4）。客户端 `screens/rooms.js` 的 `roomIsFull()` 用 `full` → `freeSeats` → 席位数判定；组队中区 `01` 的 `openRooms` 未满在前，操作按钮 **有空席＝「加入」、已满＝「观战」**；`02 对局中`（`playRooms`）恒为「观战」。大厅内联的 `PublicAlliances` 密钥 chips **跳过 `full` 房**，因此仍只显示可加入的。
 - **席位方块**：owner 的「4 squares」读作「每房 4 个合作席位各画成一个方块」——占用席位为实心方块（首次字形 = 名字首字，房主金冠、游客角标、AI 角标；用游戏自带的 `AvatarFrame`，空席位即其虚线 `is-empty` 样式），空席位为虚线方块 + 「空席位」。每方块下带截断的名字（`title` 为全名），席位区带 `席位` 无障碍标签。满房照常画出 4 个实心方块。
@@ -1117,6 +1117,15 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - 点击缩略图打开全屏 viewer（lightbox）：仍是令牌门禁的 `/admin/api/bug/image/<id>`，图片按自然尺寸并适配视口；「关闭」按钮 / `Esc` / 点击背景关闭，多图时用 ‹ › 按钮或 `←` `→` 翻页。
 - 「导出 JSON」「导出 CSV」按钮：以 `<a download>` 打开上面的令牌门禁导出接口，导出**当前筛选 / 排序的全集**（不是只看得到的一页）。
 - 安全不变：玩家文本一律经 `esc()` 文本渲染（无 innerHTML 注入）；筛选 / 排序的取值只做白名单映射（`BUG_STATUSES` / `BUG_SORTS`），绝不拼接进 SQL；导出与状态接口只走服务端的字段白名单。
+
+### 36.8 玩法说明 / bug提交 移入「设置」对话框（2026-10-11）
+
+- **动因**：玩法说明 与 bug提交 原先占着大厅 / 房间顶栏的位置；把它们收进每个界面都能打开的「设置」对话框，顶栏只留高频入口（公开房间 / 更新日志 / 统计 / 干员调配 / 设置 / 档案）。
+- **入口**：`public/js/ui/settings.js` 的 `SettingsModal` 动作行 —— `玩法说明`（`.set-guide` → `openGuide(0)`，容器 `ui/guide.js GuideHost`）与 `bug提交`（`.set-bug` → `openBugReport`，容器 `ui/community.js BugReportHost`），都在 `完成` 左边。两处都复用既有 msgid，无新增语言键。
+- **顶栏变化**：`screens/lobby.js` 的 `.topbar__left` 去掉 bug提交 按钮、`.topbar__right` 去掉玩法说明 按钮（保留 公开房间 · 更新日志 · 统计 · 干员调配 · 设置 · 档案）；`screens/room.js` 顶栏去掉玩法说明 按钮，其余控件不动。**对局内的** gear / 步骤头 玩法说明 按钮保持不变。
+- **bug 弹层**：新增全局 `BugReportHost`（`main.js` 挂一次，dev mock harness 也挂），`openBugReport()` / `closeBugReport()` 驱动 store；弹层不重写表单，仍是 `BugReportOverlay`（`bug.report` + `/community/api/bug/upload` 图片上传，行为不变）。
+- **层级 / 关闭**：`.bug-host`（`css/screens/lobby.css`）`z-index: calc(var(--z-modal) + 4)`，与 `.guide` 同层；`components.js` 的 `Modal` `topmost()` 也认 `.bug-host`，所以设置对话框在弹层打开时让出焦点与 `Esc`；弹层用背景点击 / ✕ 关闭，关掉后回到设置对话框。
+- **测试**：`test/ui/settings-community-entries.test.js`（无浏览器：入口接线、`openBugReport` / `closeBugReport`、顶栏不再有按钮、层级与提交路径）；`test/ui/settings-entry.e2e.test.js`（真实浏览器：顶栏无按钮、设置里两个入口分别打开 guide / bug 弹层）。
 
 ## 37. 克莱门莎（2026-10-09 官方新 6★，自造干员）
 
@@ -1210,7 +1219,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - 测试：`test/lobby-chat.test.js`（协议 / 长度 / 限流 / 广播范围 / 无历史 / 局内 / 不入库）、`test/ui/chat.test.js`（归一化 + 气泡生命周期）
 - i18n（四语包）：`聊天` / `发送` / `说点什么…` / `已发送过快，请稍候` / `发言内容无效`
 
-## 39. 上游 feedback6 / feedback7 合并且「永不合并」清单（2026-10-09/10）
+## 39. 上游 feedback6 / feedback7 合并且「永不合并」清单（2026-10-09/11；§39.2 另含 0.2.4-dev「道具牌库卡白给」一条）
 
 本节是**索引**：合并的完整、逐批记录（上游提交范围 / HEAD、取用的提交、**跳过的提交与原因**、冲突与解法、每批的 golden 变动、产生的本地提交）统一写在 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。此后**每并入一批都在那里新增一节**；本节只留决策与清单。
 
@@ -1229,9 +1238,10 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 | **上游版克莱门莎（Clementia）** | `2e122873` / `0b0ce4fb` / `ba5b998a` | **保留我们的 `char_4231_clemnt`**（§37）；不取上游的官方数据版本。 |
 | **R21P 满潜** | `806a0477` / 合并 `b05845f5` | 不采用「全员满潜能」；本分支自有权能规则。 |
 | **R22-LOADOUT（潜能 / 练度）** | `7e09c63d`、`ec0a2fc6`、`96d9441f`、`7a0937e3`、`519f04e2`、`dc336f24`、`8e2b981e`、`4f8f5d2a`、`9f36db32`、`4d63e9d5`、`66297106` | **owner 排除**「干员调配」里每名干员的潜能 / 练度自选界面；本批未并入。 |
-| **设置 → 问题反馈 / DIAGNOSTICS（复制诊断信息）** | `3f884412`（本分支 R22 port `2ef6339b`，UPSTREAM-MERGES §4） | **已下架**（`60e9eab8`）：我们大厅的「bug提交」已覆盖报 bug，重复的 section 不得回归（UPSTREAM-MERGES §6「Deliberate divergence」）；自检 `public/js/ui/settings.js` 不含 `ISSUES_URL` / `set-diag` / 「复制诊断信息」。 |
+| **设置 → 问题反馈 / DIAGNOSTICS（复制诊断信息）** | `3f884412`（本分支 R22 port `2ef6339b`，UPSTREAM-MERGES §4） | **已下架**（`60e9eab8`）：我们设置里的「bug提交」（§36.8）已覆盖报 bug，重复的 section 不得回归（UPSTREAM-MERGES §6「Deliberate divergence」）；自检 `public/js/ui/settings.js` 不含 `ISSUES_URL` / `set-diag` / 「复制诊断信息」。 |
 | **上游的 设置 按钮位置（在 玩法说明 左边）** | `911e4bff`（`a9a1592a`） | **我们把 设置 移到 档案 chip 旁**（顶栏右侧分组；房间在邀请码旁），不恢复上游的中间位置（UPSTREAM-MERGES §0/§6）。 |
 | **本局禁用盟约被强制失效** | upstream `bondsMeta.js` `computeBonds` 里 `if (gd.modeInactiveBonds.has(id)) continue;`（`01a44cd2` 初始导入，`upstreamm/master` `1db8e510` 仍在）；本局禁用 UI `b4fa21a0` / `695ece26`、`offBondCounts` / 灰色盘 `c0cc1d61` | **owner 2026-10-11 决定：禁的只是「不被提供」（池 / 策略草稿 / bot），不得让本已激活的盟约失效**（「被 ban 的盟约即使被激活也无法生效」）。`computeBonds` 现在计算每一个盟约：达到阈值的本局禁用盟约 `active` 并**生效**；未达阈值仍不生效（层数照旧进入战斗，§27）。未激活时对话仍读「本局禁用」。**与 §22 的「盟约收起」不是同一改动家族**（那是可折叠盟约条）。自检：`computeBonds` 不含 `modeInactiveBonds.has(id)) continue`；`battleBonds` 不强制 `active: false`。详见 UPSTREAM-MERGES §0/§6。 |
+| **上游道具牌库把「白给装备」也卡库存**（`6bfc08270c`，issue #488） | upstream `6bfc08270c`「0.2.4-dev: round-29 community fixes and the official shared card pool」：`server/match/player/acquire.js` 的 `acquireItem` 加 `this.m.itemPool.canGain`（**无 `requirePool` 出口**），`server/match/effectsMeta.js` 的 `grantItem` 只透传 source / toTemp / deferMerge，于是调用方已传的 `requirePool:false`（`bands/meta.js` 策略「变形者集群」R5/10/15、`garrisons/meta.js` `H.SERVER_GAIN_EQUIP` 缪尔赛思 `<获得时>` `garrison_76_a/b`）被丢掉；**#488**（saltwmc，2026-10-11）：池里只有 3 张「变形同构体」，缪缪 / 变形者集群发到第 3 张后不再发放（投资人 ×2 更早耗尽），弹「装备库存不足，未获得该装备」。 | **`<获得时>` / 策略的白给不是商店购买，官方文本没有库存前提。** 我们保持白给不受道具库存约束：本分支 `acquireItem` **没有 `itemPool` 检查**，缪尔赛思的特质与「变形者集群」每次都发「变形同构体」（特质累计可超过上游上限 3）。若日后并入道具牌库，必须把 `requirePool` 透传到 `acquireItem`，并让特质 / 策略发放传 `requirePool:false`。自检：`grep -rn "itemPool\|canGain" server` 为空（或上述发放传 `requirePool:false`）；`test/content/garrisons_meta.test.js` #488。详见 UPSTREAM-MERGES §0。 |
 
 ### 39.3 本批保留的决断（要点）
 

@@ -5,14 +5,18 @@
 //                 one to POST /community/api/bug/upload (raw bytes, magic-byte checked), then the report itself goes over
 //                 the WebSocket (`bug.report`, shared/protocol.js) so it carries the session's account / guest identity.
 //   · 公开房间  — a full-screen directory (screens/rooms.js), not a panel here.
-// All four entries (更新日志 / bug提交 / 公开房间) are opened from the lobby's TOP BAR (screens/lobby.js, right after the
-// 在线 badge); the left community column is gone. 玩家留言 (the guestbook) is deliberately NOT here: the owner dropped it.
+// The 更新日志 / 公开房间 entries are opened from the lobby's TOP BAR (screens/lobby.js, right after the 在线 badge); the
+// left community column is gone. 更新日志 stays there; **bug提交 moved into the 设置 dialog** (ui/settings.js, next to
+// 玩法说明) on 2026-10-11 — it is reached from every screen's settings gear now, not the lobby. Its overlay is mounted
+// once as <BugReportHost/> (main.js), the same global pattern as the 玩法说明 viewer (ui/guide.js GuideHost), so the
+// settings modal can open it above itself. 玩家留言 (the guestbook) is deliberately NOT here: the owner dropped it.
 //
 // Text goes through t(); module-level tables hold msgids (N_).
 
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { html, Button, Icon, MicroLabel } from './components.js';
 import { toast, toastError } from './toasts.js';
+import { createStore, useStore } from '../store.js';
 import { net } from '../net.js';
 import { t } from '../../../shared/i18n.js';
 import { BUG_TITLE_MAX, BUG_BODY_MAX, BUG_IMAGES_MAX, BUG_IMAGE_MAX_BYTES, BUG_IMAGE_MIMES } from '../../../shared/constants.js';
@@ -153,4 +157,24 @@ export function BugReportOverlay({ onClose }) {
       </div>
     </div>
   <//>`;
+}
+
+// ---- global bug-report overlay (mounted once, like the 玩法说明 viewer) --------------------------
+// Global & imperative so the 设置 dialog can open it from any screen: `openBugReport()`; <BugReportHost/> is mounted once
+// by main.js (and by the dev mock harness). Its z-index (css `.bug-host`) sits above the settings modal, which yields
+// focus / Escape to it (`components.js` Modal's topmost); the backdrop and ✕ close it, and 提交 still goes through
+// `bug.report` + the image upload unchanged.
+
+/** Open/closed of the global bug-report overlay. */
+export const bugStore = createStore({ open: false });
+
+/** Open the bug-report overlay (from the 设置 dialog's bug提交 entry). */
+export const openBugReport = () => bugStore.set({ open: true });
+export const closeBugReport = () => bugStore.set({ open: false });
+
+/** The global host (mounted once near the root, above every screen and the settings modal). */
+export function BugReportHost() {
+  const { open } = useStore((s) => s, Object.is, bugStore);
+  if (!open) return null;
+  return html`<div class="bug-host"><${BugReportOverlay} onClose=${closeBugReport} /></div>`;
 }

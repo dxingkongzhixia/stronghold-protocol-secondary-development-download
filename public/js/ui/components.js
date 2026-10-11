@@ -410,8 +410,9 @@ export function Modal({ open, title, micro, tone = 'mint', onClose, actions, wid
     modalStack.push(token);
     const prevFocus = typeof document !== 'undefined' ? document.activeElement : null;
     const box = boxRef.current;
-    // The independent guide can open above SettingsModal (its z-index is higher than --z-modal).
-    const topmost = () => modalStack[modalStack.length - 1] === token && !document.querySelector('.guide');
+    // The independent guide viewer and the global bug-report overlay can open above SettingsModal (their z-index is
+    // higher than --z-modal): while either is on screen the modal yields focus / Escape to it.
+    const topmost = () => modalStack[modalStack.length - 1] === token && !document.querySelector('.guide, .bug-host');
     const available = (el) => !el.matches(':disabled') && !el.closest('[inert]') && el.getClientRects().length > 0
       && getComputedStyle(el).visibility !== 'hidden';
     const tabbable = () => [...box.querySelectorAll('button, [href], input, select, textarea, [tabindex], summary')]
