@@ -8,6 +8,7 @@ import { Lobby, Room } from '../server/lobby.js';
 import { SessionRegistry } from '../server/net.js';
 import { AuthService } from '../server/auth.js';
 import { openMemoryDb } from '../server/db.mjs';
+import { MM_WINDOW_MS } from '../shared/constants.js';
 
 const S = (id) => ({ playerId: id, connected: true });
 
@@ -16,7 +17,7 @@ function make(ref) {
   const matches = [];
   const states = [];
   const m = new Matchmaker({
-    now: () => ref.t, windowMs: 30_000, seats: 4,
+    now: () => ref.t, windowMs: MM_WINDOW_MS, seats: 4,
     setInterval: () => 1, clearInterval: () => {},
     onMatch: (sessions, info) => matches.push({ players: sessions.map((s) => s.playerId), difficulty: info.difficulty, ai: info.ai }),
     onState: (s, st) => states.push([s.playerId, st.queued]),
@@ -33,18 +34,31 @@ test('four gathered in one bucket start at once (no waiting)', () => {
   assert.equal(m.queued, 0);
 });
 
-test('below four: the 30 s window ends and AI fills the alliance', () => {
+test('below four: the 5-minute window ends and AI fills the alliance', () => {
   const ref = { t: 0 };
   const { m, matches } = make(ref);
   m.join({ key: 'a', session: S('a'), difficulty: 'HARD' });
   m.join({ key: 'b', session: S('b'), difficulty: 'HARD' });
   m.tick();
   assert.equal(matches.length, 0, 'still waiting');
-  ref.t = 30_000;
+  ref.t = MM_WINDOW_MS;
   m.tick();
   assert.equal(matches.length, 1);
   assert.deepEqual(matches[0], { players: ['a', 'b'], difficulty: 'HARD', ai: 2 });
   assert.equal(m.queued, 0);
+});
+
+test('the pool window is MM_WINDOW_MS = 5 minutes (owner 2026-10-11)', () => {
+  assert.equal(MM_WINDOW_MS, 300_000, 'up to 5 min, not 30 s');
+  const ref = { t: 0 };
+  const m = new Matchmaker({ now: () => ref.t, setInterval: () => 1, clearInterval: () => {} });
+  m.join({ key: 'a', session: S('a'), difficulty: 'HARD' });
+  assert.equal(m.state('a').deadlineMs - ref.t, MM_WINDOW_MS, 'the default deadline is join + the window');
+  ref.t = MM_WINDOW_MS - 1; m.tick();
+  assert.equal(m.queued, 1, 'a moment before 5 min: still waiting');
+  ref.t = MM_WINDOW_MS; m.tick();
+  assert.equal(m.queued, 0, 'at 5 min the window ends and AI fills the alliance');
+  m.dispose();
 });
 
 test('a 5th player starts the next group; buckets are per difficulty', () => {

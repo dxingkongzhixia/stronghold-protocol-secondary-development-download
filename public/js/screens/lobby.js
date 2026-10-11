@@ -18,6 +18,7 @@ import { toast, toastError } from '../ui/toasts.js';
 import { openStats, openPlayerStats } from './stats.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
+import { openCodex } from '../ui/codex.js';
 import { AccountDialog } from '../ui/account.js';
 import { ChangelogOverlay } from '../ui/community.js';
 import { PublicRoomsScreen } from './rooms.js';
@@ -91,7 +92,7 @@ export const MODE_CARDS = [
   {
     id: 'mm', name: N_('同盟匹配'), en: 'ALLIANCE MATCHMAKING', icon: 'signal',
     desc: N_('单人进入共享池，自动匹配队友组成同盟。'),
-    points: [N_('1 名博士 · 单人即可加入'), N_('最多 30 秒 · 不足由 AI 队友补位')],
+    points: [N_('1 名博士 · 单人即可加入'), N_('最多 5 分钟 · 不足由 AI 队友补位')],
   },
 ];
 
@@ -277,6 +278,10 @@ export function LobbyScreen() {
 
   const online = conn.status === 'online';
   const codeOk = CODE_RE.test(code);
+  // 野排 rules for the room actions (owner 2026-10-11, docs/MATCHMAKING.md §16): while a queue is live the create-room
+  // action is blocked; join-by-key stays available and leaves the pool (the helper says why). Recomputed per render, so
+  // a mode switch can never leave a stale enabled 创建同盟 button.
+  const entryPolicy = roomEntryPolicy(mm, roomMode);
 
   const pickMode = (m) => { setRoomMode(m); savePref('lobby.mode', m); };
   const pickDifficulty = (d) => { setDifficulty(d); savePref('lobby.difficulty', d); };
@@ -292,7 +297,11 @@ export function LobbyScreen() {
       if (alive.current) setBusy(null);
     }
   };
-  const create = () => run('create', () => net.request('room.create', { mode: roomMode, difficulty, public: isPublic }));
+  const create = () => {
+    // The button is disabled while blocked, but a keyboard activation or a stale click must not slip through either.
+    if (entryPolicy.blocked) { if (entryPolicy.reason) toast(entryPolicy.reason, 'warn'); return; }
+    run('create', () => net.request('room.create', { mode: roomMode, difficulty, public: isPublic }));
+  };
   // 野排 (docs/MATCHMAKING.md): enter the difficulty-bucketed shared pool (a logged-in account is required).
   const mmJoin = () => run('mm', () => net.request('mm.join', { difficulty }));
   const mmCancel = () => {
@@ -308,7 +317,12 @@ export function LobbyScreen() {
     const fromRooms = remembersRoomOrigin(source);
     run('join', () => {
       if (fromRooms) setRoomsReturn(true);
-      return net.request('room.join', { code: k }).catch((err) => {
+      return net.request('room.join', { code: k }).then((r) => {
+        // Entering a room leaves the 野排 pool (server/lobby.js room.join → mm.leave): mirror that locally at once. A
+        // FAILED join never reached the pool drop, so it keeps the queue (the server is the source of truth either way).
+        if (entryPolicy.joinClearsQueue) clearMmQueue();
+        return r;
+      }).catch((err) => {
         // a failed 公开房间 join never entered the room: don't leave the return flag for a later, unrelated leave
         if (fromRooms) setRoomsReturn(false);
         throw err;
@@ -323,7 +337,11 @@ export function LobbyScreen() {
     const fromRooms = remembersRoomOrigin(source);
     run('spectate', () => {
       if (fromRooms) setRoomsReturn(true);
-      return net.request('room.spectate', { code: k }).catch((err) => {
+      return net.request('room.spectate', { code: k }).then((r) => {
+        // same as join: a spectator seat also leaves the 野排 pool (server/lobby.js room.spectate → mm.leave)
+        if (entryPolicy.joinClearsQueue) clearMmQueue();
+        return r;
+      }).catch((err) => {
         if (fromRooms) setRoomsReturn(false);
         // Clearer than the bare ERR_TEXT: the usual cause is a code that is not the host's (a remembered one from an
         // earlier room, or another machine's) — the server can only answer "no such room".
@@ -382,6 +400,7 @@ export function LobbyScreen() {
         <h1 class="topbar__title">${t('选择模拟协议')}</h1>
       </div>
       <div class="topbar__right">
+        <${Button} variant="secondary" size="sm" icon="info" class="codex-entry" onClick=${() => openCodex('bonds')} title=${t('资料库')} aria-label=${t('资料库')}>${t('资料库')}<//>
         <${Button} variant="secondary" size="sm" icon="chart" class="stats-entry" onClick=${openStats} title=${t('统计数据')} aria-label=${t('统计数据')}>${t('统计')}<//>
         <${LoadoutButton} from="lobby" size="sm" class="lobby-loadout" label=${t('干员调配')} />
         ${auth?.account ? null : html`<${Button} variant="secondary" size="sm" icon="user" class="lobby-account"
@@ -428,7 +447,7 @@ export function LobbyScreen() {
           ? (mm.queued ? null : html`<div class="mm-box">
               <${Button} variant="primary" size="xl" block=${true} icon="search" disabled=${!online || !auth.account}
                 onClick=${mmJoin} title=${auth.account ? '' : t('需要先登录账号')}>${t('搜寻队友（野排）')}<//>
-              <div class="mm-box__hint">${auth.account ? t('进入共享池，最多 30 秒凑齐 4 人，不足由 AI 补位') : t('需先在标题页登录 / 注册账号')}</div>
+              <div class="mm-box__hint">${auth.account ? t('进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位') : t('需先在标题页登录 / 注册账号')}</div>
             </div>`)
           : html`<div class="create-box">
               ${roomMode === 'coop' ? html`<div class="create-vis">
@@ -436,17 +455,19 @@ export function LobbyScreen() {
                 <${Tabs} size="sm" value=${isPublic ? 'public' : 'private'} onChange=${pickPublic}
                   items=${[{ id: 'public', label: t('公开') }, { id: 'private', label: t('不公开') }]} />
               </div>` : null}
-              <${Tooltip} block=${true} text=${online ? null : t('正在连接服务器…')}>
-                <${Button} variant="primary" size="xl" block=${true} iconRight="chevrons" loading=${busy === 'create'} disabled=${!online} onClick=${create}>
+              <${Tooltip} block=${true} text=${entryPolicy.reason || (online ? null : t('正在连接服务器…'))}>
+                <${Button} variant="primary" size="xl" block=${true} iconRight="chevrons" loading=${busy === 'create'} disabled=${!online || entryPolicy.blocked} onClick=${create}>
                   ${roomMode === 'solo' ? t('开始独立模拟') : t('创建同盟')}
                 <//>
               <//>
               <div class="create-box__hint">
-                ${online
-                  ? html`<span>${roomMode === 'solo' ? t('创建后即可开始模拟')
-                    : isPublic ? t('公开：其他博士可在大厅「公开同盟」直接加入')
-                    : t('不公开：仅凭同盟密钥加入')}</span>`
-                  : html`<${Spinner} size="sm" label="CONNECTING" />`}
+                ${entryPolicy.reason
+                  ? html`<span class="create-box__blocked">${entryPolicy.reason}</span>`
+                  : online
+                    ? html`<span>${roomMode === 'solo' ? t('创建后即可开始模拟')
+                      : isPublic ? t('公开：其他博士可在大厅「公开同盟」直接加入')
+                      : t('不公开：仅凭同盟密钥加入')}</span>`
+                    : html`<${Spinner} size="sm" label="CONNECTING" />`}
               </div>
             </div>`}
         ${mm.queued ? html`<${MmPanel} mm=${mm} onCancel=${mmCancel} />` : null}
@@ -522,6 +543,40 @@ export function mmPanelView(mm, now = Date.now()) {
   return { difficulty: typeof mm.difficulty === 'string' ? mm.difficulty : null, waiting, need, elapsed, left };
 }
 
+/**
+ * The 野排 rules on the lobby's ROOM actions (owner 2026-10-11, docs/MATCHMAKING.md §16) — pure and unit-testable:
+ * while a queue is live (`mm.queued`) and/or the 同盟匹配 mode is selected, a hand-made room contradicts the pool, so
+ * the CREATE-room action (创建同盟 / 开始独立模拟) is BLOCKED and says why:
+ *   · `blocked` — disable the create button + show `reason` as its hint/tooltip. `reason` is empty when allowed.
+ *   · 加入同盟 / 观战 (join-by-key) stays ALLOWED: entering a room leaves the pool anyway (server/lobby.js `join` /
+ *     `spectate` → `mm.leave`; `main.js onRoomState` clears the local queue on the pushed `room.state`), so
+ *     `joinClearsQueue` tells the caller to mirror that clear optimistically. A FAILED join keeps the queue.
+ * @param {{ queued?: boolean }} mm the store's mm slice
+ * @param {'solo'|'coop'|'mm'} roomMode the selected mode card
+ * @returns {{ blocked: boolean, reason: string, joinClearsQueue: boolean }}
+ */
+export function roomEntryPolicy(mm, roomMode) {
+  const queued = !!(mm && mm.queued);
+  const mmMode = roomMode === 'mm';
+  return {
+    blocked: queued || mmMode,
+    reason: queued ? t('匹配中不可创建房间，请先退出匹配') : mmMode ? t('同盟匹配不会创建房间') : '',
+    joinClearsQueue: queued,
+  };
+}
+
+/**
+ * A queue time for the 野排 panel (the window is minutes long, MM_WINDOW_MS): seconds below a minute ("45s"), `m:ss`
+ * from a minute up ("4:55") — so the 5-minute countdown never reads as a bare "300s".
+ * @param {number} sec
+ * @returns {string}
+ */
+export function fmtMmClock(sec) {
+  const s = Math.max(0, Math.floor(Number(sec) || 0));
+  if (s < 60) return `${s}s`;
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
 /** Optimistic local clear of the 野排 queue (the server's mm.state re-syncs). Used by the panel's ✕ 退出匹配. */
 export function clearMmQueue() {
   store.patch('mm', { queued: false, difficulty: null });
@@ -530,7 +585,7 @@ export function clearMmQueue() {
 /**
  * The 野排 status panel: the shared-pool search, the current head count (n/4), the difficulty / wait / AI-backfill
  * countdown and the cancel button. It refreshes on each `mm.state` push (~1 Hz, main.js wireNet → store.mm). Replaces
- * the old centred `MmOverlay`; the wording describes OUR rules (shared pool, ≤30 s, AI backfill), not the reference's.
+ * the old centred `MmOverlay`; the wording describes OUR rules (shared pool, ≤5 min, AI backfill), not the reference's.
  */
 function MmPanel({ mm, onCancel }) {
   const v = mmPanelView(mm);
@@ -544,10 +599,10 @@ function MmPanel({ mm, onCancel }) {
     <div class="mm-panel__rule" aria-hidden="true"></div>
     <div class="mm-panel__meta">
       <span>${t('难度')} <b>${v.difficulty ? t(DIFFICULTY_NAMES[v.difficulty]) : '-'}</b></span>
-      <span>${t('已等待')} <b class="num">${v.elapsed} s</b></span>
-      ${v.left > 0 ? html`<span class="mm-panel__left num">${t('约 {left} s 后由 AI 补位开局', { left: v.left })}</span>` : html`<span class="mm-panel__left num">${t('正在组队…')}</span>`}
+      <span>${t('已等待')} <b class="num">${fmtMmClock(v.elapsed)}</b></span>
+      ${v.left > 0 ? html`<span class="mm-panel__left num">${t('约 {left} 后由 AI 补位开局', { left: fmtMmClock(v.left) })}</span>` : html`<span class="mm-panel__left num">${t('正在组队…')}</span>`}
     </div>
-    <div class="mm-panel__hint">${t('进入共享池，最多 30 秒凑齐 4 人，不足由 AI 补位')}</div>
+    <div class="mm-panel__hint">${t('进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位')}</div>
     <${Button} variant="secondary" size="md" block=${true} icon="close" class="mm-panel__exit" onClick=${onCancel}>${t('退出匹配')}<//>
   </div>`;
 }

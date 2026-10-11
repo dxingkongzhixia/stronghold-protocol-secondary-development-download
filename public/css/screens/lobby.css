@@ -361,6 +361,8 @@
 .create-box { margin-top: .3rem; display: flex; flex-direction: column; gap: .12rem; }
 .create-box .btn--xl { height: .92rem; font-size: .32rem; letter-spacing: .3em; }
 .create-box__hint { display: flex; align-items: center; justify-content: center; min-height: .3rem; font-size: .14rem; color: var(--text-lo); }
+/* why 创建同盟 / 开始独立模拟 is disabled (野排 queue live or 同盟匹配 selected): amber, not the dim hint tone */
+.create-box__blocked { color: var(--amber); }
 /* 房间可见性: 公开 lists the 同盟 in the lobby's 公开同盟 directory; 不公开 is 密钥-only (docs/MATCHMAKING.md) */
 .create-vis { display: flex; align-items: center; justify-content: space-between; gap: .12rem; }
 .create-vis__label { display: inline-flex; align-items: baseline; gap: .08rem; font-size: .15rem; color: var(--text-lo); }

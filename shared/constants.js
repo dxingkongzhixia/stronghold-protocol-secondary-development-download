@@ -314,7 +314,7 @@ export const roleLabel = (role) => (typeof role === 'string' && ROLES[role]) || 
 /** The full name of a role, or null for null/unknown values. */
 export const roleName = (role) => (typeof role === 'string' && ROLE_NAMES[role]) || null;
 // matchmaking (server/matchmaker.js): the shared pool of 野排 (搜寻队友)
-export const MM_WINDOW_MS = 30_000;   // one pool window; < 4 gathered by then ⇒ AI fills the alliance
+export const MM_WINDOW_MS = 300_000;  // one pool window (owner 2026-10-11: up to 5 min); < 4 gathered by then ⇒ AI fills the alliance
 export const MM_SEATS = 4;
 // presence (server/net.js presenceOnline): a LOGGED-IN session stays "online" this long after its socket drops (a
 // reload / brief blip), then goes offline. Guests (no account) go offline the moment their socket closes.

@@ -10,9 +10,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MODE_CARDS, mmPanelView, clearMmQueue } from '../../public/js/screens/lobby.js';
+import { MODE_CARDS, mmPanelView, clearMmQueue, roomEntryPolicy, fmtMmClock } from '../../public/js/screens/lobby.js';
 import { store } from '../../public/js/store.js';
-import { MAX_SEATS, DIFFICULTIES } from '../../shared/constants.js';
+import { MAX_SEATS, DIFFICULTIES, MM_WINDOW_MS } from '../../shared/constants.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const src = (p) => readFileSync(join(ROOT, p), 'utf8');
@@ -109,6 +109,99 @@ describe('panel styles: mint bracket panel with the equalizer and the red ✕ �
     assert.ok(/\.mode-cards\s*\{[^}]*grid-template-columns:\s*repeat\(3, 1fr\)/.test(css), 'three mode cards in a row');
     // the old overlay style is gone
     assert.ok(!css.includes('.mm-overlay'), 'no leftover overlay styles');
+  });
+});
+
+describe('matching blocks the create-room action (owner 2026-10-11: 匹配的时候不要让其创建房间)', () => {
+  test('blocked while queued — for every room mode; allowed otherwise', () => {
+    const queued = { queued: true, difficulty: 'HARD' };
+    for (const mode of ['solo', 'coop', 'mm']) assert.equal(roomEntryPolicy(queued, mode).blocked, true, `queued + ${mode}`);
+    assert.equal(roomEntryPolicy({ queued: false }, 'coop').blocked, false);
+    assert.equal(roomEntryPolicy(null, 'solo').blocked, false);
+    assert.equal(roomEntryPolicy({}, 'coop').blocked, false);
+  });
+
+  test('the 同盟匹配 mode itself never creates a room', () => {
+    const p = roomEntryPolicy({ queued: false }, 'mm');
+    assert.equal(p.blocked, true);
+    assert.equal(p.reason, '同盟匹配不会创建房间');
+    assert.equal(roomEntryPolicy({ queued: false }, 'coop').reason, '', 'no reason when the create action is allowed');
+  });
+
+  test('the queued reason wins and names the way out (退出匹配)', () => {
+    const p = roomEntryPolicy({ queued: true }, 'coop');
+    assert.equal(p.reason, '匹配中不可创建房间，请先退出匹配');
+    assert.match(p.reason, /退出匹配/);
+  });
+
+  test('clearMmQueue (the panel\'s 退出匹配) re-enables create at once', () => {
+    store.patch('mm', { queued: true, difficulty: 'HARD' });
+    assert.equal(roomEntryPolicy(store.get().mm, 'coop').blocked, true);
+    clearMmQueue();
+    assert.equal(roomEntryPolicy(store.get().mm, 'coop').blocked, false);
+    assert.equal(roomEntryPolicy(store.get().mm, 'coop').reason, '');
+  });
+
+  test('lobby wiring: entryPolicy drives the create button + a visible hint, and the handler guards too', () => {
+    const lobby = src('public/js/screens/lobby.js');
+    assert.ok(lobby.includes('const entryPolicy = roomEntryPolicy(mm, roomMode);'), 'recomputed per render, so a mode switch cannot leave a stale button');
+    assert.ok(lobby.includes('disabled=${!online || entryPolicy.blocked}'), 'the create button is disabled while blocked');
+    assert.ok(lobby.includes('text=${entryPolicy.reason ||'), 'the reason rides the tooltip');
+    assert.ok(lobby.includes('<span class="create-box__blocked">'), 'and a visible hint, not only the tooltip');
+    assert.ok(lobby.includes('if (entryPolicy.blocked) { if (entryPolicy.reason) toast(entryPolicy.reason'), 'a keyboard / stale click is refused too');
+    assert.equal((lobby.match(/entryPolicy\.blocked/g) || []).length, 2, 'only the create button and its handler use blocked');
+  });
+});
+
+describe('join-by-key while queued: ALLOWED, and entering a room leaves the pool', () => {
+  test('the policy keeps 加入同盟 / 观战 enabled and flags the queue clear', () => {
+    // the chosen behaviour (matches the server: room.join / room.spectate → mm.leave, a queued player is dropped):
+    // join is never blocked; it cancels the queue instead. A FAILED join must keep the queue.
+    assert.equal(roomEntryPolicy({ queued: true }, 'coop').joinClearsQueue, true);
+    assert.equal(roomEntryPolicy({ queued: false }, 'coop').joinClearsQueue, false);
+  });
+
+  test('lobby wiring: neither join button is disabled by the queue; both clear the local queue on SUCCESS', () => {
+    const lobby = src('public/js/screens/lobby.js');
+    assert.ok(lobby.includes('disabled=${!codeOk || !online} onClick=${() => join()}'), '加入同盟 keeps its own guard');
+    assert.ok(lobby.includes('disabled=${!codeOk || !online} onClick=${spectate}'), '观战 keeps its own guard');
+    assert.equal((lobby.match(/if \(entryPolicy\.joinClearsQueue\) clearMmQueue\(\);/g) || []).length, 2, 'join and spectate both clear on success');
+    assert.ok(/net\.request\('room\.join', \{ code: k \}\)\.then\(\(r\) => \{[\s\S]*?if \(entryPolicy\.joinClearsQueue\) clearMmQueue\(\)/.test(lobby), 'a failed join (the .catch) keeps the queue');
+    assert.ok(/net\.request\('room\.spectate', \{ code: k \}\)\.then\(\(r\) => \{[\s\S]*?if \(entryPolicy\.joinClearsQueue\) clearMmQueue\(\)/.test(lobby), 'a failed spectate keeps the queue');
+  });
+});
+
+describe('the 野排 window is up to 5 minutes, and the panel formats it', () => {
+  test('MM_WINDOW_MS is 300 000 ms', () => {
+    assert.equal(MM_WINDOW_MS, 300_000);
+  });
+
+  test('fmtMmClock: seconds below a minute, m:ss from a minute up', () => {
+    assert.equal(fmtMmClock(0), '0s');
+    assert.equal(fmtMmClock(45), '45s');
+    assert.equal(fmtMmClock(59), '59s');
+    assert.equal(fmtMmClock(60), '1:00');
+    assert.equal(fmtMmClock(295), '4:55');
+    assert.equal(fmtMmClock(MM_WINDOW_MS / 1000), '5:00');
+    assert.equal(fmtMmClock(-5), '0s');
+    assert.equal(fmtMmClock(undefined), '0s');
+  });
+
+  test('the panel / mode card carry the 5-minute copy and use the clock', () => {
+    const lobby = src('public/js/screens/lobby.js');
+    assert.ok(lobby.includes('${fmtMmClock(v.elapsed)}'), '已等待 uses the clock');
+    assert.ok(lobby.includes("t('约 {left} 后由 AI 补位开局', { left: fmtMmClock(v.left) })"), 'countdown uses the clock');
+    assert.ok(lobby.includes("t('进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位')"), 'panel / mm-box hint');
+    assert.ok(MODE_CARDS.find((c) => c.id === 'mm').points.some((p) => p.includes('最多 5 分钟')), 'the mode card bullet');
+    assert.ok(!lobby.includes('最多 30 秒'), 'no 30 s copy left in the lobby');
+  });
+
+  test('the view model still reports raw seconds: the clock governs the format', () => {
+    const now = 1_000_000;
+    const v = mmPanelView({ queued: true, difficulty: 'HARD', waiting: 1, need: 4, elapsedMs: 12_000, deadlineMs: now + MM_WINDOW_MS }, now);
+    assert.equal(v.elapsed, 12);
+    assert.equal(v.left, 300);
+    assert.equal(fmtMmClock(v.left), '5:00');
   });
 });
 

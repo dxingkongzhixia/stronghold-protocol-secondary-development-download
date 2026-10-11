@@ -9,7 +9,7 @@
 
 1. 服务端真实注册：仅用户名 / 密码，账号有独立 id，禁止重名。
 2. 用 **SQLite** 存用户数据（内置到项目）。
-3. 野排规则：**共享池**，排队窗口 **30 秒**；30 秒内凑齐 4 人即可开局，不足用 **AI 队友**补位。
+3. 野排规则：**共享池**，排队窗口 **最多 5 分钟**（`MM_WINDOW_MS`；owner 2026-10-11 从 30 秒改为 5 分钟）；窗口内凑齐 4 人即可开局，不足用 **AI 队友**补位。
 4. 池必须**异步**（并发多人进入），每 4 人组成一个同盟后按对应逻辑执行。
 5. 匹配成功**直接开局**（无二次确认）。
 6. 中途有人退出 → **AI 接管**（既有机制，见 §7）。
@@ -22,7 +22,7 @@
   auth.register / auth.login ─▶ lobby.register/login ─▶ AuthService(server/auth.js) ─▶ SQLite(server/db.mjs)
   mm.join{difficulty} / mm.cancel ─▶ lobby.mmJoin ─▶ Matchmaker(server/matchmaker.js)
                                                     │  桶: (难度) → 队列
-                                                    │  ≥4 立即成组；最早者等待满 30s → 补 AI 成组
+                                                    │  ≥4 立即成组；最早者等待满 5min → 补 AI 成组
                                                     ▼
                                         lobby.createMatchedRoom(sessions)
                                                     ▼
@@ -57,7 +57,7 @@
 - **入池** `mm.join { difficulty }`：每个会话（playerId）最多一条；已在池 → `IN_QUEUE`；在跑对局 → `ROOM_STARTED`；在未开始的大厅房间 → 先退出该房间。
 - **成组规则**：
   - 桶内 **≥4** → 立即取最早进入的 4 人成组（多余者继续等待下一个 4 人）；
-  - 桶内最早者等待满 **30 s** → 取**当前所有人（1–3）** + AI 补足到 4 成组。
+  - 桶内最早者等待满 **5 分钟**（`MM_WINDOW_MS = 300_000`）→ 取**当前所有人（1–3）** + AI 补足到 4 成组。
 - **退出池**（任何"不再排队"的路径都会移出，**不会留幽灵**）：
   - 点右下角面板的 **「✕ 退出匹配」** → `mm.cancel`，回 `mm.state { queued:false }`（客户端同时乐观清空本地 `mm.queued`）；
   - **离开大厅（点「返回」回标题）** → 客户端自动补发 `mm.cancel`（socket 仍连着，不加这步服务器会把这个人一直留在池里、甚至匹配进他看不到的房间）；
@@ -91,7 +91,7 @@
 | S2C | `mm.state { queued, difficulty, waiting, need, elapsedMs, deadlineMs }` | 排队进度 |
 
 错误码（`shared/constants.js ERR`）：`AUTH_REQUIRED`、`BAD_NAME`、`BAD_PASSWORD`、`NAME_TAKEN`、`BAD_CREDENTIALS`、`SESSION_EXPIRED`、`IN_QUEUE`、`NOT_QUEUED`，中文本在 `ERR_TEXT`。
-常量：`AUTH_NAME_MIN/MAX`、`AUTH_PASS_MIN/MAX`、`MM_WINDOW_MS=30000`、`MM_SEATS=4`。
+常量：`AUTH_NAME_MIN/MAX`、`AUTH_PASS_MIN/MAX`、`MM_WINDOW_MS=300000`、`MM_SEATS=4`。
 
 ## 7. 退出与断线
 
@@ -125,8 +125,9 @@
   - 测试：`test/ui/online-overlay.test.js`（过滤、行→统计接线含「无记录玩家」、返回来源生命周期）。
 - 顶栏玩家名旁：**未登录**时显示 `游客` 徽标（`.me-chip__guest`）。
 - 顶栏 **「登录 / 注册」** 按钮（仅游客显示）：打开 `ui/account.js` 的**账号弹窗**，把当前**游客身份升级为正式账号** —— 账号绑定到**当前会话**，房间 / 对局继续、`playerId` 不变（服务端 `Lobby.bindAccount`），升级后 `游客` 徽标消失、顶栏显示账号名。
-- 模式卡 `MODE_CARDS`：**独立模拟 / 同盟模拟 / 同盟匹配** 三张（`.mode-card`，第三张 `id:'mm'`、图标 `signal`、英文 `ALLIANCE MATCHMAKING`；选中一张显示薄荷描边 + **「✓ 已选定」**）。选 **同盟匹配** 即把右侧操作区换成野排动作区，沿用原 **「搜寻队友（野排）」** 按钮与提示：未登录禁用并提示「需先在标题页登录 / 注册账号」；已登录提示「进入共享池，最多 30 秒凑齐 4 人，不足由 AI 补位」。
-- 排队时在**右下角**（难度卡列表下方）渲染**状态面板** `MmPanel`（CSS `.mm-panel`，薄荷描边深色卡 + 括号角）：`ALLIANCE MATCHMAKING` 微型标签、`正在寻找同盟队友` + 动画信号 / 均衡条、右侧大号 `k/4`、细分隔线、难度 / 已等待 / 约 n 秒后由 AI 补位开局、红描边的 **「✕ 退出匹配」** 按钮（→ `mm.cancel`）。数据全部来自 `mm.state`；文案描述**我们自己的规则**（共享池 / ≤30 s / AI 补位），**不**采用参考站点的「仅匹配真人」「满四人后开始」。纯视图模型 `mmPanelView`（未排队 → `null`）与乐观清池 `clearMmQueue` 单独导出，便于测试。
+- 模式卡 `MODE_CARDS`：**独立模拟 / 同盟模拟 / 同盟匹配** 三张（`.mode-card`，第三张 `id:'mm'`、图标 `signal`、英文 `ALLIANCE MATCHMAKING`；选中一张显示薄荷描边 + **「✓ 已选定」**）。选 **同盟匹配** 即把右侧操作区换成野排动作区，沿用原 **「搜寻队友（野排）」** 按钮与提示：未登录禁用并提示「需先在标题页登录 / 注册账号」；已登录提示「进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位」。
+- **匹配时不能创建房间**（owner 2026-10-11：「匹配的时候点同盟不要让其可以创建房间」）：**只要在池里**（`mm.queued`），或**当前模式是同盟匹配**，**「创建同盟」/「开始独立模拟」按钮一律禁用**并给出理由提示——排队中：「匹配中不可创建房间，请先退出匹配」；同盟匹配：「同盟匹配不会创建房间」。纯规则 `roomEntryPolicy(mm, roomMode)`（`screens/lobby.js`）返回 `{ blocked, reason, joinClearsQueue }`；`reason` 同时挂在按钮的 Tooltip 与下方 `.create-box__blocked` 提示上，`create()` 处理器也再拦一次（键盘 / 陈旧点击）。模式卡切换后 `entryPolicy` 每次渲染重算，**不会留下可点的陈旧创建按钮**；面板 **「✕ 退出匹配」** 一按（乐观清池 + `mm.state` 重同步）创建立即恢复可用。**加入同盟 / 观战不受影响**（见下）。
+- 排队时在**右下角**（难度卡列表下方）渲染**状态面板** `MmPanel`（CSS `.mm-panel`，薄荷描边深色卡 + 括号角）：`ALLIANCE MATCHMAKING` 微型标签、`正在寻找同盟队友` + 动画信号 / 均衡条、右侧大号 `k/4`、细分隔线、难度 / 已等待 / 约 n 后由 AI 补位开局（`fmtMmClock`：不足 1 分钟显示「45s」，≥1 分钟显示 `m:ss`「4:55」，所以 5 分钟窗口不会只显示「300s」）、红描边的 **「✕ 退出匹配」** 按钮（→ `mm.cancel`）。数据全部来自 `mm.state`；文案描述**我们自己的规则**（共享池 / ≤5 分钟 / AI 补位），**不**采用参考站点的「仅匹配真人」「满四人后开始」。纯视图模型 `mmPanelView`（未排队 → `null`）与乐观清池 `clearMmQueue` 单独导出，便于测试。
 - **匹配成功**：服务器广播 `room.state` → 路由进房，面板随 `mm.state queued:false` 消失。
 
 ### 野排 ≠ 同盟密钥（两条独立流程，别混）
@@ -134,7 +135,7 @@
 - **同盟密钥**：手建房（`room.create`）得到房间码，或凭码 `room.join` 加入。房间**长期存在**、对局结束后**保留**可再来一局；房间界面显示 **「同盟密钥」**（复制密钥 / 邀请链接）。
 - **野排**：`mm.join` 进池 → 匹配成功由 `createMatchedRoom` 建**临时房**（`room.auto=true`）。**不显示同盟密钥**（`room.js` 对 auto 房显示「野排队伍 · 对局结束后自动解散」而非 `InviteBox`）；对局结束**自动解散**，想再玩重新排队。
 - 代码上全靠 `room.auto` 区分：`room.state` 带 `auto`，客户端据此决定 UI，服务端据此决定是否解散。
-- 两者**互斥**：在池里就不能在房里、反之亦然（`mmJoin` 先退房；`create` / `join` 先退池）。
+- 两者**互斥**：在池里就不能在房里、反之亦然（`mmJoin` 先退房；`create` / `join` 先退池）。所以大厅在池里时**禁用创建房间**（下方 `roomEntryPolicy` / 「匹配时不能创建房间」）；**加入同盟 / 观战**仍可用——点它们会进房并**自动退池**（服务端 `room.join` / `room.spectate` 在通过校验后 `mm.leave`，客户端也只在 `room.join` / `room.spectate` **成功后**才 `clearMmQueue()`，所以密钥错误那种**失败的加入保留队列**；`main.js onRoomState` 收到 `room.state` 时同样清）。
 
 ### 组件
 
@@ -146,7 +147,7 @@
 | 项 | 默认 | 说明 |
 |---|---|---|
 | `SP_DB` | `<repo>/var/accounts.db` | SQLite 文件路径 |
-| `MM_WINDOW_MS` | 30000 | 排队窗口（`shared/constants.js`，单一来源） |
+| `MM_WINDOW_MS` | 300000 | 排队窗口 5 分钟（`shared/constants.js`，单一来源） |
 | `MM_SEATS` | 4 | 每组成员数 |
 | `SP_VERIFY` | `off` | 服务端**战斗结果校验**模式：`sample` ≈ 每 8 场复算 1 场、`all` 全复算、`off` 关；不一致时**用服务器自己的模拟结果**（不会误拒合法结果）。本机 `server-start.cmd` 已设为 `sample`，可在 `/admin` 看到 `校验 sample · 复算/不一致/拒收/接管` 计数 |
 | `var/admin-token.txt` | 首次启动随机生成 | 管理页 `/admin` 的访问令牌（启动日志会打印完整 Admin 链接） |
@@ -157,7 +158,7 @@
 ## 10. 测试
 
 - `test/auth.test.js`：密码哈希往返、名字清洗与长度、重名（不区分大小写）、登录、会话过期、**登录轮换作废旧 token**。
-- `test/matchmaker.test.js`：满 4 即时成组、不足 30s 补 AI、分桶、取消 / 断线 / `IN_QUEUE`/`NOT_QUEUED`、`mm.state` 1Hz；`createMatchedRoom`、**退池**、**对局结束解散**、**单账号踢人**、`auth.logout`、**掉线补发结算回放**。
+- `test/matchmaker.test.js`：满 4 即时成组、不足 5 分钟补 AI（`MM_WINDOW_MS=300_000` 默认窗口与 deadline 有专门用例）、分桶、取消 / 断线 / `IN_QUEUE`/`NOT_QUEUED`、`mm.state` 1Hz；`createMatchedRoom`、**退池**、**对局结束解散**、**单账号踢人**、`auth.logout`、**掉线补发结算回放**。`test/ui/mm-look.test.js`：`roomEntryPolicy`（排队 / 同盟匹配禁用创建、退出后恢复）、`fmtMmClock`、加入 / 观战自动退池。
 - `test/admin.test.js`：状态判定、**在线/离线 presence**（游客断线即时离线 / 登录用户 5 分钟宽限）、快照计数、令牌鉴权、HTTP 路由。
 - 运行：`node --test`（全部）。
 
@@ -170,7 +171,7 @@
 |---|---|
 | `server/db.mjs` | **新增**：内置 `node:sqlite` 打开 / 迁移 / 内存库 |
 | `server/auth.js` | **新增** `AuthService`：scrypt 哈希、名字清洗与校验、注册 / 登录 / 会话（登录**轮换作废旧 token**）、`listAccounts()`、`logout()` |
-| `server/matchmaker.js` | **新增**：野排共享池（按难度分桶 / 30s 窗口 / AI 补位 / `mm.state` / `leave`） |
+| `server/matchmaker.js` | **新增**：野排共享池（按难度分桶 / 5 分钟窗口 `MM_WINDOW_MS` / AI 补位 / `mm.state` / `leave`） |
 | `server/bootgate.js` | **新增**：`BootGate` 启动预加载排队闸门（`bootSlots` 个通道、FIFO、`drain`、`holdMs` 兜底回收）——见 §14 |
 | `server/admin.js` | **新增**：`/admin`(HTML)+`/admin/api/state`（令牌）、`buildPublicSnapshot`（免令牌 `/online/api`，含**可加入房间 `openRooms`**）、`statusOf` / `buildSnapshot`（含 `verify` 计数） |
 | `server/lobby.js` | 注入 `auth`+`Matchmaker`；`accountToken` 绑定 + **单账号踢人**（`kickOtherSessions`）；`auth.*`/`mm.*`；`createMatchedRoom`/`makeBot`（`room.auto`）；`create` 存 **`room.public`**（单人房恒 false、野排 false）、`toState().public`；**`boot.claim`/`boot.release` + `bootGate`（§14 排队）**；成组失败通知；**退池**（create/join/leave/断线/返回）；对局结束**解散野排房**；退出登录；`stats().online` 走 presence；`removeMember`/`disposeRoom` 清 resync、给掉线者补结算回放 |
@@ -330,7 +331,8 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - `auth.logout` 服务端解绑（不是只清本地）。
 
 ### 16.2 野排（自动匹配，`server/matchmaker.js`）
-- 共享池**按难度分桶**、**30 s 窗口**、满 4 人**立即开局**、不足由 **AI 补位**；`mm.state` 进度 ~1 Hz。
+- 共享池**按难度分桶**、**5 分钟窗口**（`MM_WINDOW_MS`）、满 4 人**立即开局**、不足由 **AI 补位**；`mm.state` 进度 ~1 Hz。
+- **匹配时不能创建房间**：在池里（或选了同盟匹配）时大厅的创建房间按钮禁用并给出理由，`roomEntryPolicy` 判定；加入同盟 / 观战不受影响，进房即自动退池（owner 2026-10-11）。
 - **需登录**；右下角状态面板 `MmPanel`（`ALLIANCE MATCHMAKING` / 均衡条 / `k/4` / 「✕ 退出匹配」），取消 / 断线即退池。
 - **退池**：取消 / 离开大厅 / 建房 / 进房 / 断线 / 过期一律退池；成组失败也补发 `queued:false`（不留幽灵）。
 - 野排房 `room.auto`：**对局结束即解散**、不显示同盟密钥、不进「最近同盟」。

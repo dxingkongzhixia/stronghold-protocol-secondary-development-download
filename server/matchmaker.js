@@ -1,8 +1,8 @@
 // server/matchmaker.js — the 野排 (搜寻队友) shared pool (docs/MATCHMAKING.md).
 //
 // Players queue by difficulty; the pool is async (entries arrive from many sockets). Every `seats` (4) gathered in a
-// bucket start immediately; a bucket whose OLDEST entry has waited `windowMs` (30 s) starts with whatever it holds,
-// the rest of the alliance filled by AI. `onMatch(sessions, { difficulty, ai })` is the Lobby's createMatchedRoom.
+// bucket start immediately; a bucket whose OLDEST entry has waited `windowMs` (MM_WINDOW_MS, up to 5 min) starts with
+// whatever it holds, the rest of the alliance filled by AI. `onMatch(sessions, { difficulty, ai })` is the Lobby's createMatchedRoom.
 //
 // Single-threaded: `join`/`cancel` are called from the WS handler, `tick` from one interval; a matched entry is removed
 // from the bucket BEFORE onMatch runs, so no double assignment. `onState` (throttled to ~1 Hz) pushes mm.state.
