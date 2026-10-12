@@ -669,6 +669,9 @@ export class Lobby {
   /**
    * room.releaseSeat (a human who took an AI over, docs/MATCHMAKING.md): hand the seat back to a fresh AI and return to a
    * spectator seat — the reverse of room.takeOver. The AI carries on with the board, gold and loadout the human had.
+   * Owner's rule: a room lives only while it holds a human PLAYER. Releasing the last player's seat leaves only AI
+   * seats — the releaser watches but is not a player — so the room (and its match) is destroyed at once, never left
+   * as a spectator-only / all-AI room (spectators do not keep a room alive, the same as room.leave).
    */
   releaseSeat(session) {
     const room = this.roomOf(session);
@@ -692,11 +695,13 @@ export class Lobby {
     seat.fromAi = false;
     delete seat.loadout;
     room.spectators.push({ playerId: session.playerId, name: session.name, role: session.role ?? null, connected: session.connected });
-    if (wasHost) {
-      this.migrateHost(room);
-      if (!room.hostId) room.hostId = session.playerId;   // still in the room (watching) → keep the controls theirs
-    }
     session.roomCode = room.code;
+    if (room.activeHumans().length === 0) {
+      // no human player is left (spectators are not players): the last player released its seat → destroy the room
+      this.disposeRoom(room, 'empty');
+      return OK;
+    }
+    if (wasHost) this.migrateHost(room);   // never leaves the host on the released (now AI) seat
     this.broadcastState(room);
     this.log.info(`[lobby] ${room.code} ${session.name} released seat ${seat.seat} back to an AI`);
     return OK;

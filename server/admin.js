@@ -167,15 +167,19 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
   // lists it below the joinable ones and offers 观战 instead of 加入 (owner 2026-10-09). Each entry carries `full` and
   // `freeSeats`; the rest of the fields are unchanged.
   const freeSeatsOf = (r) => r.seats.filter((s) => s == null).length;
+  // A room lives only while it seats a human PLAYER (owner rule, docs/MATCHMAKING.md §20): never list an all-AI room,
+  // and never a `humans: 0` entry. Bot-only rooms are already disposed when their last human leaves, so this is a
+  // belt-and-braces guard on the public directory too.
+  const humansOf = (r) => r.seats.filter((x) => x && !x.left && !x.isBot).length;
   const openRooms = [...lobby.rooms.values()]
-    .filter((r) => r.mode === 'coop' && r.public && !r.match && !r.auto)
+    .filter((r) => r.mode === 'coop' && r.public && !r.match && !r.auto && humansOf(r) > 0)
     .map((r) => ({
       code: r.code,
       difficulty: r.difficulty,
       difficultyName: DIFFICULTY_NAMES[r.difficulty] || r.difficulty,
       host: (r.seatOf(r.hostId) || {}).name || null,
       hostRole: (r.seatOf(r.hostId) || {}).role ?? null,
-      humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
+      humans: humansOf(r),
       full: r.freeSeat() < 0,
       freeSeats: freeSeatsOf(r),
       seats: seatsOf(r),
@@ -185,14 +189,14 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
   // Rooms whose match is already running (the lobby's 正在模拟 row → enter as a spectator): 野排 first, then rooms with
   // an AI seat to 夺舍, then the fullest — at most 4.
   const playRooms = [...lobby.rooms.values()]
-    .filter((r) => r.mode === 'coop' && r.match)
+    .filter((r) => r.mode === 'coop' && r.match && humansOf(r) > 0)
     .map((r) => ({
       code: r.code,
       difficulty: r.difficulty,
       difficultyName: DIFFICULTY_NAMES[r.difficulty] || r.difficulty,
       host: (r.seatOf(r.hostId) || {}).name || null,
       hostRole: (r.seatOf(r.hostId) || {}).role ?? null,
-      humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
+      humans: humansOf(r),
       bots: r.seats.filter((x) => x && !x.left && x.isBot).length,
       auto: !!r.auto,
       seats: seatsOf(r),

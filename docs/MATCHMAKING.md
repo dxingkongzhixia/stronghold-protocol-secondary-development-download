@@ -408,7 +408,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 行为：把席位交还给一台**新的 AI**（沿用你那时的棋盘 / 资金 / 调配），本人**回到观战席**继续看 —— `room.takeOver` 的反操作。
 - `Match.releaseSeat(humanId, aiId, aiName)`：把 `PlayerState` 反向改写成 `ai_…`（`isBot = true`），再跑一遍重写，然后把本人注册成观战者并 `_resync`（发公开视图）。
 - 重写逻辑抽成 **`Match._rekeyPlayer(from, to)`**，夺舍 / 退出夺舍共用（`players`/`spectators`/`watchers`/`fields[].players`/`draft.*`/`sp.*`/`f.result.perPlayer`）。
-- 房主若退出夺舍：先 `migrateHost`；若场上已无人持有席位，则**保留本人为房主**（人还在房里，控制权不变）。
+- 房主若退出夺舍：先 `migrateHost`（房主交给仍在玩家席位上的最低真人）。**最后一名真人玩家退出夺舍**——交还后场上只剩 AI 席位——则**立即销毁房间（含正在跑的对局）**，观战者收到 `room.closed {empty}`：真人全退 → 销毁，**观战者不续命**（与 `room.leave` 同一规则，见 §20.5）。
 - 客户端：`SpectatorDock`（房间屏）与 `SpecDock`（战斗界面）在「**你自己的席位 `fromAi`**」时显示 **退出夺舍（回到观战席）**；战斗界面那个下拉此时也会为"夺舍者"显示（此前只在观战时显示）。
 - `test/lobby.test.js`：夺舍用例补上「退回观战席」与「普通玩家不能退（`BAD_TARGET`）」。
 
@@ -519,6 +519,13 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 ### 20.4 测试
 - 新增 `test/lobby.test.js`「all humans dropping mid-match disposes the room after the grace; a live party keeps the dropped seat」：① 真人断线但还有另一个在线真人 → 房间保留、席位 `connected=false`；② 全体离线 → grace 后房间销毁、观战者收到 `{empty}` 且 `room.leave` 报 `NOT_IN_ROOM`。
 - `server/lobby.js` 文件头注释同步。
+
+### 20.5 观战者不是玩家：**无真人 PLAYER 的房间一律销毁**（2026-10-12 核实 / 修复）
+- **规则澄清（owner 意图）**：一个房间只有在**至少一名真人坐在玩家席位**时才存活；**观战席（≤ 2）不续命**。最后一名真人玩家无论走 **离开（`room.leave`）/ 断线（宽限过期）/ 被踢（`room.kick`）/ 退出夺舍（`room.releaseSeat`）** 哪条路，房间（含正在跑的对局、其 AI 席位）都**立即销毁**，观战者收到 `room.closed`。
+- **发现（僵尸房间）**：`server/lobby.js releaseSeat` 在最后一名真人玩家交还夺舍来的 AI 席位后，会把本人留成"观战者房主"（`room.hostId = 观战者`），房间**不销毁** —— 于是出现 **0 真人 + AI 席位**的僵尸房间：大厅里挂着 `组队中`（`humans: 0`），对局里挂着 `对局中` 的纯 AI 局一直跑（违反 §35.5「纯 AI 局绝不留着跑」）。
+- **修复**：`releaseSeat` 交还后若 `room.activeHumans()` 归零即 `disposeRoom(room, 'empty')`；只有当房里还有真人玩家（哪怕只是断线宽限中的席位）时才 `migrateHost` + `broadcastState`。
+- **兜底**：`server/admin.js buildPublicSnapshot` 的 `openRooms` / `playRooms` 额外过滤 `humans > 0`，公开目录（`/online/api`）永不出现无真人房间，`humans: 0` 条目不可能出现。
+- **测试**：新增 `test/lobby-room-destroy.test.js`（确定性）：① 公开大厅最后一人 `room.leave` → 销毁且 `/online/api` 无该房；② 最后一人**断线** → 宽限后销毁；③ 对局中一人离开（另有真人）→ AI 接管保房、最后一人 `releaseSeat` → 对局 + 房间销毁且 `playRooms` 无该房；④ **仅观战者**的房间销毁；⑤ `buildPublicSnapshot` 不列无真人房间。既有 `test/lobby.test.js` 的 owner's-rule 用例（离开 / 断线 / 宽限）继续覆盖真人少的其余路径。
 
 ## 21. 合并上游 18 个提交（2026-10-06）
 
