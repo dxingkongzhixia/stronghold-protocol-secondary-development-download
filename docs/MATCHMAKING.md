@@ -1137,6 +1137,13 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - **层级 / 关闭**：`.bug-host`（`css/screens/lobby.css`）`z-index: calc(var(--z-modal) + 4)`，与 `.guide` 同层；`components.js` 的 `Modal` `topmost()` 也认 `.bug-host`，所以设置对话框在弹层打开时让出焦点与 `Esc`；弹层用背景点击 / ✕ 关闭，关掉后回到设置对话框。
 - **测试**：`test/ui/settings-community-entries.test.js`（无浏览器：入口接线、`openBugReport` / `closeBugReport`、顶栏不再有按钮、层级与提交路径）；`test/ui/settings-entry.e2e.test.js`（真实浏览器：顶栏无按钮、设置里两个入口分别打开 guide / bug 弹层）。
 
+### 36.9 玩法说明 / 资料库 移出「设置」对话框（2026-10-12）
+
+- **动因**：§36.8 把 玩法说明 与 bug提交 收进设置后，资料库 又有了自己的**大厅顶栏**入口（`screens/lobby.js` 的 `.codex-entry`，`统计` 左侧），而 玩法说明 在**局内**（`screens/game.js` 的 `.gm__guide`、`ui/matchChrome.js` 的 `GuideButton`）一直可开——设置里的这两个入口成了重复入口。owner 2026-10-12：设置对话框动作行只留 **bug提交 + 完成**。
+- **改动**：`public/js/ui/settings.js` 的 `SettingsModal` 去掉 `玩法说明`（`.set-guide`）与 `资料库`（`.set-codex`）两个按钮及其 `openGuide` / `openCodex` import；`GuideHost` / `CodexHost` 的挂载与 `openGuide` / `openCodex` 本身不动。
+- **可达性不变**：玩法说明 保持**局内**可达（`.gm__guide` / `GuideButton`）；资料库 保持**大厅顶栏**可达（`.codex-entry`）。删的是既有 msgid 的**使用**，没有新增 / 删除语言键。
+- **测试**：`test/ui/settings-community-entries.test.js`（动作行只剩 bug提交，guide / codex 仍可达）、`test/ui/settings-entry.e2e.test.js`、`test/ui/codex.test.js`、`test/ui/title-surfaces.test.js`、`test/ui/modal.e2e.test.js`（引导层改为命令式打开，仍覆盖「`.guide` 叠在 `.modal` 上仍收键盘」）、`test/e2e/coop.e2e.mjs`（同样改为命令式打开 guide）。
+
 ## 37. 克莱门莎（2026-10-09 官方新 6★，自造干员）
 
 2026-10-09 官方上线 6★ 近卫·**本源近卫** `primguard` 克莱门莎（`charId = char_4231_clemnt`，`appellation Clementia`，`displayNumber AE01`，阿戈尔）。她**不在本赛季名册**（`activity_table` 的 `charChessDataDict` 无 `char_4231_clemnt`，只有卫戍协议 band `band_clementia` 带她的名字），因此走**自造干员通道**（`tools/build-data.mjs CUSTOM_CHESS`），与阿斯卡纶（§23）同一套流程，**非 DIY / 正式商店干员**。
@@ -1249,6 +1256,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 | **R21P 满潜** | `806a0477` / 合并 `b05845f5` | 不采用「全员满潜能」；本分支自有权能规则。 |
 | **R22-LOADOUT（潜能 / 练度）** | `7e09c63d`、`ec0a2fc6`、`96d9441f`、`7a0937e3`、`519f04e2`、`dc336f24`、`8e2b981e`、`4f8f5d2a`、`9f36db32`、`4d63e9d5`、`66297106` | **owner 排除**「干员调配」里每名干员的潜能 / 练度自选界面；本批未并入。 |
 | **设置 → 问题反馈 / DIAGNOSTICS（复制诊断信息）** | `3f884412`（本分支 R22 port `2ef6339b`，UPSTREAM-MERGES §4） | **已下架**（`60e9eab8`）：我们设置里的「bug提交」（§36.8）已覆盖报 bug，重复的 section 不得回归（UPSTREAM-MERGES §6「Deliberate divergence」）；自检 `public/js/ui/settings.js` 不含 `ISSUES_URL` / `set-diag` / 「复制诊断信息」。 |
+| **设置 里的 玩法说明 / 资料库 入口**（§36.8 自加，上游没有） | 本分支自有 | 2026-10-12 **已移除**（§36.9）：资料库 用大厅顶栏 `.codex-entry`，玩法说明 用局内 `.gm__guide` / `GuideButton`；不得把这两个入口加回设置。 |
 | **上游的 设置 按钮位置（在 玩法说明 左边）** | `911e4bff`（`a9a1592a`） | **我们把 设置 移到 档案 chip 旁**（顶栏右侧分组；房间在邀请码旁），不恢复上游的中间位置（UPSTREAM-MERGES §0/§6）。 |
 | **本局禁用盟约被强制失效** | upstream `bondsMeta.js` `computeBonds` 里 `if (gd.modeInactiveBonds.has(id)) continue;`（`01a44cd2` 初始导入，`upstreamm/master` `1db8e510` 仍在）；本局禁用 UI `b4fa21a0` / `695ece26`、`offBondCounts` / 灰色盘 `c0cc1d61` | **owner 2026-10-11 决定：禁的只是「不被提供」（池 / 策略草稿 / bot），不得让本已激活的盟约失效**（「被 ban 的盟约即使被激活也无法生效」）。`computeBonds` 现在计算每一个盟约：达到阈值的本局禁用盟约 `active` 并**生效**；未达阈值仍不生效（层数照旧进入战斗，§27）。未激活时对话仍读「本局禁用」。**与 §22 的「盟约收起」不是同一改动家族**（那是可折叠盟约条）。自检：`computeBonds` 不含 `modeInactiveBonds.has(id)) continue`；`battleBonds` 不强制 `active: false`。详见 UPSTREAM-MERGES §0/§6。 |
 | **上游道具牌库把「白给装备」也卡库存**（`6bfc08270c`，issue #488） | upstream `6bfc08270c`「0.2.4-dev: round-29 community fixes and the official shared card pool」：`server/match/player/acquire.js` 的 `acquireItem` 加 `this.m.itemPool.canGain`（**无 `requirePool` 出口**），`server/match/effectsMeta.js` 的 `grantItem` 只透传 source / toTemp / deferMerge，于是调用方已传的 `requirePool:false`（`bands/meta.js` 策略「变形者集群」R5/10/15、`garrisons/meta.js` `H.SERVER_GAIN_EQUIP` 缪尔赛思 `<获得时>` `garrison_76_a/b`）被丢掉；**#488**（saltwmc，2026-10-11）：池里只有 3 张「变形同构体」，缪缪 / 变形者集群发到第 3 张后不再发放（投资人 ×2 更早耗尽），弹「装备库存不足，未获得该装备」。 | **`<获得时>` / 策略的白给不是商店购买，官方文本没有库存前提。** 我们保持白给不受道具库存约束：本分支 `acquireItem` **没有 `itemPool` 检查**，缪尔赛思的特质与「变形者集群」每次都发「变形同构体」（特质累计可超过上游上限 3）。若日后并入道具牌库，必须把 `requirePool` 透传到 `acquireItem`，并让特质 / 策略发放传 `requirePool:false`。自检：`grep -rn "itemPool\|canGain" server` 为空（或上述发放传 `requirePool:false`）；`test/content/garrisons_meta.test.js` #488。详见 UPSTREAM-MERGES §0。 |
@@ -1257,7 +1265,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 
 - **失衡（UNBALANCE）+ 推 / 拉滑动**：按官方在位移时间内禁锢（不走动 / 不普攻），静态刚体 0.1 s 下限，客户端滑动用同一段游戏时间；见 UPSTREAM-MERGES §4、`docs/SIM.md`（位移 / 失衡）。
 - **整帧攻击间隔 / 时间技力**：整帧数取整整那么多帧（1 s = 30 帧），引擎与客户端显示常量同步。
-- **日语语音**：新增 `audio.voiceJp` 与 设置 → 语音语言（我们独有的打包方式）；见 `docs/ASSETS.md`。
+- **日语语音**：新增 `audio.voiceJp` 与 设置 → 语音语言（我们独有的打包方式）；**选中的语言优先，缺则回退另一套**（中文⇒CN 否则 JP；日本語⇒JP 否则 CN）；见 `docs/ASSETS.md`。
 - **顶栏胶囊**：`已解决 = 击杀 + 漏怪`（只数本回合排定敌人）。
 - **数据可复现**：`node tools/build-data.mjs --offline` 后 `git status` 为空（`data/enemies.json` 的漂移已修）。
 

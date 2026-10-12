@@ -581,9 +581,10 @@ async function openSettings(c) {
   return true;
 }
 
-/** 玩法说明 viewer: open from `openSel`, page forward (button + arrow key), screenshot, close. */
+/** 玩法说明 viewer: open from `openSel` (or imperatively when null), page forward (button + arrow key), screenshot, close. */
 async function openGuide(c, openSel, shotName) {
-  await c.click(openSel);
+  if (openSel) await c.click(openSel);
+  else await c.page.evaluate(() => import('/js/ui/guide.js').then((m) => m.openGuide(0)));
   await c.page.waitForSelector('.guide', { timeout: 5000 });
   await c.page.waitForFunction(() => { const i = document.querySelector('.guide__page img'); return i && i.complete && i.naturalWidth > 0; }, { timeout: 15000 });
   const r = await c.page.$eval('.guide__page', (el) => { const b = el.getBoundingClientRect(); return b.width / b.height; });
@@ -1023,13 +1024,9 @@ describe('browser E2E against the real server', { skip: !ENABLED && 'needs Chrom
       await host.enter('凯尔希');
       await sleep(400);
       await host.shot('lobby');
-      // 玩法说明 moved into the 设置 dialog (2026-10-11): open the lobby settings, use its 玩法说明 entry, close again
-      await host.click('.lobby-settings');
-      await host.page.waitForSelector('.modal', { timeout: 5000 });
-      await openGuide(host, '.set-guide', 'guide-lobby');
-      await sleep(300); // the guide's keydown cleanup is a passive effect — let it detach before closing settings
-      await host.page.keyboard.press('Escape');
-      await host.page.waitForFunction(() => !document.querySelector('.modal'), { timeout: 4000 });
+      // 玩法说明 no longer exists in the 设置 dialog (removed 2026-10-12): open the viewer imperatively from the lobby
+      await openGuide(host, null, 'guide-lobby');
+      await sleep(300);
       await host.click('.mode-card', '同盟模拟');
       await host.click('.diff-card', '险境模拟');
       await host.click('.create-box button', '创建同盟');

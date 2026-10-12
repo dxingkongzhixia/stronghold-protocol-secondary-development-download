@@ -7,9 +7,10 @@ import { DEFAULT_HOTKEYS, sanitizeHotkeys } from './shortcuts.js';
 // ---- settings ------------------------------------------------------------------------------------------------------
 
 /**
- * The operator voice dubs (settings 语音语言): 'jp' 日本語 (`audio.voiceJp`, the default — the owner's JP-first rule) and
- * 'cn' 中文 (`audio.voice`), to which a 日本語 line the manifest or host lacks falls back — public/js/audio.js voiceLine.
- * Not tied to the interface language.
+ * The operator voice dubs (settings 语音语言): 'jp' 日本語 (`audio.voiceJp`, the default) and 'cn' 中文
+ * (`audio.voice`) — the selected dub is authoritative per line and the other is its fallback (a slot the chosen tree
+ * lacks, or a file the host lacks at play time, plays the other dub's line of the same name) — public/js/audio.js
+ * voiceLine. Not tied to the interface language.
  */
 export const VOICE_LANGS = Object.freeze(['cn', 'jp']);
 

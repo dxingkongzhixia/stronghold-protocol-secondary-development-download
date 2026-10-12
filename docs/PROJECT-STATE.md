@@ -9,14 +9,14 @@
 「卫戍协议：盟约」的非官方同人**网页联机复刻**：Node 服务器 + 浏览器客户端，1–4 人合作塔防。
 基线是**官方上游**（`sganggs/Stronghold-Protocol`；已合并到 **feedback5**（含 **v0.2.0** + i18n，`docs/MATCHMAKING.md` §33），并选择性并入 **feedback6** 与 **feedback7 的 R22 / R23** 两批——完整记录见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)），
 本项目在它之上加了：账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、**大厅社区（更新日志 / bug提交 / 公开房间）**、
-启动体验与带宽治理、**8 名自造干员**（见 §4；`tools/build-data.mjs` 的 `CUSTOM_CHESS`）与 Gitee 镜像（§4 / §9）。
+启动体验与带宽治理、**8 名自造干员**（见 §4；`tools/build-data.mjs` 的 `CUSTOM_CHESS`）、**GitHub 主仓库 + Gitee 国内镜像**（§4 / §9）。
 
 ## 2. 目录（都在 `D:\DOTK`）
 | 路径 | 说明 |
 |---|---|
 | `Stronghold-Protocol\` | **工作项目**（唯一真源；无 `.git`，改动直接落盘） |
 | `Stronghold-Protocol-github\` | 干净上游克隆（`master`；git proxy `127.0.0.1:31181`） |
-| `_merge-scratch\` | **唯一的 git 仓库 / 完整历史 / 唯一真相**（分支 `ours`）——工作项目没有 `.git`，是它的镜像。用 `node tools/push-gitee.mjs` 提交已暂存的改动、把仓库 `HEAD` 推送到 **Gitee 镜像**（`gitee` 远程 → 分支 `master`；快进、绝不强推；凭据不入库，见 `docs/AI-WORKFLOW.md` §c），再把仓库被跟踪的文件镜像回工作项目——**只单向 store → Gitee → 工作树，绝不用工作树覆盖仓库**；它还在用 junction 引用工作项目的 `node_modules`/`public/assets`，⚠️ **别单独删工作项目** |
+| `_merge-scratch\` | **唯一的 git 仓库 / 完整历史 / 唯一真相**（分支 `ours`）——工作项目没有 `.git`，是它的镜像。用 `node tools/push-gitee.mjs` 提交已暂存的改动、把仓库 `HEAD` 推送到 **所有已配置的远程**（`github` 主仓库 → `gitee` 国内镜像 → 分支 `master`；快进、绝不强推；凭据不入库，见 `docs/AI-WORKFLOW.md` §c），再把仓库被跟踪的文件镜像回工作项目——**只单向 store → 远程 → 工作树，绝不用工作树覆盖仓库**；它还在用 junction 引用工作项目的 `node_modules`/`public/assets`，⚠️ **别单独删工作项目** |
 | `_optim-backup-*\` | 每次改动前的备份（命名含日期+主题） |
 | `_optim-backup-20261005-merge-v013\` | 合并 v0.1.3 前后的**完整源码快照**（`ours-pre-merge` / `merged`） |
 
@@ -61,10 +61,10 @@
 - **弃局房间销毁（2026-10-06，详见 §20）**：合作房间原来会被「断线的真人席位」吊着最多 10 分钟（`activeHumans()` 不算在线状态）。现**一个房间只在还有在线真人时存在**：真人全离线 / 离开后最多 60 s grace 即销毁（观战者收 `room.closed {empty}`）；还有在线真人的派对仍保留掉线席位。solo 房间不受影响（24h 重连）。
 - **保留的战斗/渲染审计修复**：见 §16.6（runner 未送达结果、PMREM RT 释放、纹理存活、裁剪单位衰减、`_pubTimer`、部署退 DP…）。
 - **8 名自造干员**（`tools/build-data.mjs` `CUSTOM_CHESS`；kit 在 `server/sim/content/kits/ops/`；见 `docs/DEVELOPMENT.md` 自造干员表、`docs/MATCHMAKING.md` §23–§34 / §37）：阿斯卡纶 `ascln`、结城理 `makoto`、予愿安洁莉娜 `aglna2`、望 `wang`、澄闪 `gdglow`、娜仁图亚 `narant`、凯尔希·思衡托 `kalts2`、克莱门莎 `clemnt`（6★ 本源近卫，tier 6）。
-- **日语语音（2026-10-10，详见 `docs/UPSTREAM-MERGES.md` §4/§6）**：第二套语音树 `audio.voiceJp`（与中文同一套槽位 / 文件名），「设置 → 语音语言」切 中文 / 日本語（**默认日本語**、与界面语言无关，已保存的选择仍优先），缺日语时逐条回退中文；完整包带两套配音、精简包不带语音。**我们独有，非上游的打包方式。**
+- **日语语音（2026-10-10，详见 `docs/UPSTREAM-MERGES.md` §4/§6）**：第二套语音树 `audio.voiceJp`（与中文同一套槽位 / 文件名），「设置 → 语音语言」切 中文 / 日本語（**默认日本語**、与界面语言无关，已保存的选择仍优先）；**选中的语言逐条优先，缺则回退另一套**（中文⇒CN 否则 JP；日本語⇒JP 否则 CN），两套都没有才不出声；完整包带两套配音、精简包不带语音。**我们独有，非上游的打包方式。**
 - **统计数据（2026-10-10/11）**：`public/js/ui/stats.js` + `public/js/screens/stats.js`（记录 / 汇总 / 历史回看；中途立刻退出只进历史不计数），入口在标题 / 大厅 / 房间；**已同步到服务器**——账号 SQLite schema v5 的 `match_stats`（`server/stats.js`），**登录绑账号、游客绑本机会话身份**，两者都上传并按 owner 隔离，**可跨设备查看**；统计页**优先读服务器**、断网回退 `localStorage`；大厅「在线玩家」里可查看其他在线玩家的公开对局数据（不含账号信息）；上限取主线 **2×**（2000 局 / 最新 60 局完整 / 每 owner 1.6M 字符）。**我们独有。**
 - **feedback6 选择性 + feedback7 R22 / R23（2026-10-09/10）**：见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。要点：官方 **失衡（UNBALANCE）** 与新渲染（`render/drag.js` 拖拽落点、推拉滑动、死亡朝向）、整帧攻击间隔 / 时间技力（1 s = 30 帧）、顶栏胶囊按官方计数、观战席胶囊、设置入口（大厅在账号名旁、房间在邀请码旁；并移除与「bug提交」重复的设置内诊断区块）、场地装置说明、空商品栏、统计页，以及一批 GHSIM / OSIM / RENDER / HUD / FIELDS 规则修正；**未并入**「潜能 / 练度」自选界面与上游版克莱门莎（见 §9 与 `docs/UPSTREAM-MERGES.md` §0）。
-- **Gitee 镜像**：git 仓库 `_merge-scratch`（无工作项目 `.git`，仓库是唯一真相）由 `node tools/push-gitee.mjs` 推送 `HEAD` 到 Gitee（`gitee` 远程 → 分支 `master`，快进、绝不强推），再把仓库镜像回工作项目——**单向 store → Gitee → 工作树，绝不用工作树覆盖仓库**（反向同步须显式 `--from-dev`，默认关闭）；约定与凭据见 `docs/AI-WORKFLOW.md` §c。上游仍是 GitHub `origin`。
+- **发布（GitHub 主仓库 + Gitee 国内镜像）**：git 仓库 `_merge-scratch`（无工作项目 `.git`，仓库是唯一真相）由 `node tools/push-gitee.mjs` 推送 `HEAD` 到所有已配置的远程（`github` 主仓库 → `gitee` 国内镜像 → 分支 `master`，快进、绝不强推），再把仓库镜像回工作项目——**单向 store → 远程 → 工作树，绝不用工作树覆盖仓库**（反向同步须显式 `--from-dev`，默认关闭）；约定与凭据见 `docs/AI-WORKFLOW.md` §c。上游仍是 GitHub `origin`。
 
 ## 5. 环境开关 / 常量
 | 项 | 值 | 位置 |
@@ -109,7 +109,7 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
   `tools/build-data.mjs`（`CUSTOM_CHESS`）。
-- **本批的整体检查**：`node --test` **5829 项 / 5818 通过 / 0 失败 / 11 跳过**（带 `.git` 且复制了 `data/local-assets.json`，`package.test.js` 与两条素材测试均通过）；`node tools/kit-coverage.mjs --missing` **307/307 技能、120/120 棋子**；`node tools/i18n.mjs check en --strict` **1263/1263（0 缺失 0 错误）**；`node tools/doctor.mjs` **退出码 0**（仅防火墙规则提示）；`node tools/build-data.mjs --offline` 与 `data/` **逐字节一致**；工作项目相对 store HEAD **无跟踪漂移**；`gitee/master` == `HEAD`。
+- **本批的整体检查**：`node --test` **5829 项 / 5818 通过 / 0 失败 / 11 跳过**（带 `.git` 且复制了 `data/local-assets.json`，`package.test.js` 与两条素材测试均通过）；`node tools/kit-coverage.mjs --missing` **307/307 技能、120/120 棋子**；`node tools/i18n.mjs check en --strict` **1263/1263（0 缺失 0 错误）**；`node tools/doctor.mjs` **退出码 0**（仅防火墙规则提示）；`node tools/build-data.mjs --offline` 与 `data/` **逐字节一致**；工作项目相对 store HEAD **无跟踪漂移**；`github/master` 与 `gitee/master` == `HEAD`。
 
 ## 10. 产物
 - 文档：本文件、`docs/MATCHMAKING.md`（§0–§17 菜单）、`docs/DEPLOY.md`（上游的部署说明）。

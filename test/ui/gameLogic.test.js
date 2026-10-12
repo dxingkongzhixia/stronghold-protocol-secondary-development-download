@@ -701,7 +701,7 @@ describe('keyboard & settings', () => {
       'a saved profile without `keys` (before 0.2.0) gets the default key map (test/ui/feedback5-hotkeys.test.js)');
     assert.equal(sanitizeSettings({ bgm: 0.5 }).voice, DEFAULT_SETTINGS.voice, 'a saved profile without `voice` gets the default');
     // 语音语言 (0.2.2): 日本語 by default (the owner's JP-first rule) — a profile saved before it, or any other value,
-    // plays the Japanese dub; 中文 is still accepted, and a JP line the tree lacks falls back to 中文 (voiceLine)
+    // plays the Japanese dub; 中文 is still accepted and each line falls back to the other dub's twin (voiceLine)
     assert.equal(DEFAULT_SETTINGS.voiceLang, 'jp');
     assert.equal(sanitizeSettings({ bgm: 0.5 }).voiceLang, 'jp');
     assert.equal(sanitizeSettings({ voiceLang: 'cn' }).voiceLang, 'cn');

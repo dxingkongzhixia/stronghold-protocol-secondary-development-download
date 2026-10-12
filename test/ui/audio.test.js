@@ -311,26 +311,34 @@ describe('operator battle voice', () => {
     }
   });
 
-  test('语音语言 (0.2.2): 日本語 plays audio.voiceJp — the same slots and file names — and falls back to the Chinese line per slot and per line', async () => {
+  test('语音语言: the selected dub is authoritative per line and the OTHER dub is its fallback in BOTH directions (中文 ⇒ CN else JP; 日本語 ⇒ JP else CN)', async () => {
     const audioM = {
       voice: { char_a: { select: ['/a/voice/cn/char_a/cn_021.mp3', '/a/voice/cn/char_a/cn_022.mp3'], place: '/a/voice/cn/char_a/cn_023.mp3', start: '/a/voice/cn/char_a/cn_019.mp3' } },
-      voiceJp: { char_a: { select: ['/a/voice/jp/char_a/cn_021.mp3', '/a/voice/jp/char_a/cn_022.mp3'], place: '/a/voice/jp/char_a/cn_023.mp3' } },
+      voiceJp: { char_a: { select: ['/a/voice/jp/char_a/cn_021.mp3', '/a/voice/jp/char_a/cn_022.mp3'], place: '/a/voice/jp/char_a/cn_023.mp3', faceEnemy: '/a/voice/jp/char_a/cn_020.mp3' } },
     };
+    // 日本語 (default): the JP line, with the CN twin of the same name as the per-line fallback
     assert.deepEqual(voiceLine(audioM, 'char_a', 'place'), { url: '/a/voice/jp/char_a/cn_023.mp3', fallback: '/a/voice/cn/char_a/cn_023.mp3' }, '日本語 by default (the owner\'s JP-first rule)');
-    assert.deepEqual(voiceLine(audioM, 'char_a', 'place', 'cn'), { url: '/a/voice/cn/char_a/cn_023.mp3', fallback: null });
     assert.deepEqual(voiceLine(audioM, 'char_a', 'place', 'jp'), { url: '/a/voice/jp/char_a/cn_023.mp3', fallback: '/a/voice/cn/char_a/cn_023.mp3' });
-    // a drawn line keeps its Chinese twin as the fallback (选中干员2 ⇒ 选中干员2)
-    assert.deepEqual(voiceLine(audioM, 'char_a', 'select', 'jp', () => 0.99), { url: '/a/voice/jp/char_a/cn_022.mp3', fallback: '/a/voice/cn/char_a/cn_022.mp3' });
+    assert.deepEqual(voiceLine(audioM, 'char_a', 'select', 'jp', () => 0.99), { url: '/a/voice/jp/char_a/cn_022.mp3', fallback: '/a/voice/cn/char_a/cn_022.mp3' }, 'a drawn line keeps its Chinese twin as the fallback (选中干员2 ⇒ 选中干员2)');
     assert.deepEqual(voiceLine(audioM, 'char_a', 'select', 'jp', () => 0), { url: '/a/voice/jp/char_a/cn_021.mp3', fallback: '/a/voice/cn/char_a/cn_021.mp3' });
     assert.deepEqual(voiceLine(audioM, 'char_a', 'start', 'jp'), { url: '/a/voice/cn/char_a/cn_019.mp3', fallback: null }, 'a slot the JP tree lacks: the Chinese line');
-    assert.equal(voiceLine(audioM, 'char_zz', 'select', 'jp'), null, 'an operator no dub voices (stand-ins, 盟约·辅助干员, summons) stays silent');
+    // 中文: the CN line, with the JP twin as the per-line fallback — and a slot the CN tree LACKS plays the JP line
+    assert.deepEqual(voiceLine(audioM, 'char_a', 'place', 'cn'), { url: '/a/voice/cn/char_a/cn_023.mp3', fallback: '/a/voice/jp/char_a/cn_023.mp3' }, '中文: the Chinese line, the Japanese twin as its fallback');
+    assert.deepEqual(voiceLine(audioM, 'char_a', 'select', 'cn', () => 0), { url: '/a/voice/cn/char_a/cn_021.mp3', fallback: '/a/voice/jp/char_a/cn_021.mp3' });
+    assert.deepEqual(voiceLine(audioM, 'char_a', 'faceEnemy', 'cn'), { url: '/a/voice/jp/char_a/cn_020.mp3', fallback: null }, '中文, a slot the CN tree lacks: the Japanese line');
+    // silence only when NEITHER tree voices the slot / operator (stand-ins, 盟约·辅助干员, summons)
+    assert.equal(voiceLine(audioM, 'char_zz', 'select', 'jp'), null, 'an operator no dub voices stays silent');
+    assert.equal(voiceLine(audioM, 'char_a', 'nope', 'cn'), null, 'a slot neither tree has stays silent');
     assert.equal(voiceLine({ voice: {} }, 'char_a', 'select', 'jp'), null);
     assert.equal(voiceLine(null, 'char_a', 'select', 'jp'), null);
     assert.deepEqual(voiceLine({ voice: audioM.voice }, 'char_a', 'place', 'jp'), { url: '/a/voice/cn/char_a/cn_023.mp3', fallback: null }, 'a manifest without voiceJp');
-    // the real manifest: every operator with a Chinese line has its Japanese twin
-    const real = voiceLine(manifest.audio, 'char_263_skadi', 'select', 'jp', () => 0);
-    assert.match(real.url, /^\/assets\/audio\/voice\/jp\/char_263_skadi\/cn_021\.mp3$/);
-    assert.equal(real.fallback, '/assets/audio/voice/cn/char_263_skadi/cn_021.mp3');
+    // the real manifest: both trees carry the same slots, so either mode falls back to the other dub's file of the same name
+    const realJp = voiceLine(manifest.audio, 'char_263_skadi', 'select', 'jp', () => 0);
+    assert.match(realJp.url, /^\/assets\/audio\/voice\/jp\/char_263_skadi\/cn_021\.mp3$/);
+    assert.equal(realJp.fallback, '/assets/audio/voice/cn/char_263_skadi/cn_021.mp3');
+    const realCn = voiceLine(manifest.audio, 'char_263_skadi', 'select', 'cn', () => 0);
+    assert.match(realCn.url, /^\/assets\/audio\/voice\/cn\/char_263_skadi\/cn_021\.mp3$/);
+    assert.equal(realCn.fallback, '/assets/audio/voice/jp/char_263_skadi/cn_021.mp3');
 
     // the manager: the setting picks the tree; a JP file the host lacks (404) plays the Chinese one, holding the channel
     const fw = fakeWindow();
@@ -368,6 +376,30 @@ describe('operator battle voice', () => {
       const settings = readFileSync(path.join(ROOT, 'public/js/ui/settings.js'), 'utf8');
       assert.match(settings, /audio\.setVoiceLang\(s\.voiceLang\)/);
       assert.match(settings, /t\('语音语言'\)/);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  test('语音语言 中文: a CN file the host lacks (404) plays the JP line of the same name — and the setting change takes effect with no reload', async () => {
+    const fw = fakeWindow();
+    const origFetch = globalThis.fetch;
+    const urls = [];
+    const missing = new Set(['/a/voice/cn/char_a/cn_023.mp3', mediaUrl('/a/voice/cn/char_a/cn_023.mp3')]);
+    globalThis.fetch = async (u) => { urls.push(u); return missing.has(u) ? { ok: false, status: 404 } : { ok: true, arrayBuffer: async () => new ArrayBuffer(8) }; };
+    const tick = () => new Promise((r) => setTimeout(r, 10));
+    try {
+      const audioM = { voice: { char_a: { place: '/a/voice/cn/char_a/cn_023.mp3' } }, voiceJp: { char_a: { place: '/a/voice/jp/char_a/cn_023.mp3' } } };
+      const a = new AudioManager({ win: fw.win, getManifest: () => ({ audio: { sfx: { ui: {}, battle: {}, units: {} }, ...audioM } }) });
+      a.voiceGate = new VoiceGate({ gapMs: 0 });
+      a.install();
+      fw.fire('pointerdown');
+      await tick();
+      a.setVoiceLang('cn');   // the persisted setting applied at runtime: it takes effect at once, no reload
+      assert.equal(a.voice('char_a', 'place', { unitKey: 1 }), true);
+      await tick(); await tick();
+      assert.ok(asked(urls, '/a/voice/cn/char_a/cn_023.mp3'), '中文 asked for the CN file first');
+      assert.equal(a.voiceNode?.url, '/a/voice/jp/char_a/cn_023.mp3', 'the host lacks it: the JP twin plays (not silence)');
     } finally {
       globalThis.fetch = origFetch;
     }

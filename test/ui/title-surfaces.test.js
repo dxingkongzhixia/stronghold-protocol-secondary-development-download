@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { latestNotice, announcementKey, shouldAnnounce, seenAnnouncement, markAnnouncementSeen } from '../../public/js/ui/announce.js';
-import { aboutServerInfo, PROJECT_URL } from '../../public/js/ui/about.js';
+import { aboutServerInfo, PROJECT_URL, PROJECT_MIRROR_URL } from '../../public/js/ui/about.js';
 import { installVisible, installHintMessage, createPwaInstall } from '../../public/js/ui/install.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -102,18 +102,20 @@ test('关于本服务器: aboutServerInfo is factual and drops what the server d
   assert.equal(offline.build, null, 'an empty build tag is omitted');
   assert.equal(offline.online, null, 'no online count is omitted');
   assert.deepEqual(offline.modes, ['HARD'], 'junk mode ids are dropped');
-  assert.match(PROJECT_URL, /gitee\.com\/marseille1\/stronghold-protocol-secondary-development-download/);
+  assert.match(PROJECT_URL, /^https:\/\/github\.com\/dxingkongzhixia\/stronghold-protocol-secondary-development-download$/, 'the PRIMARY repo is GitHub');
+  assert.match(PROJECT_MIRROR_URL, /^https:\/\/gitee\.com\/marseille1\/stronghold-protocol-secondary-development-download$/, 'the 国内下载镜像 is Gitee');
 });
 
-test('关于本服务器: the dialog shows version / build / modes / attribution and links the project repo (README framing)', () => {
+test('关于本服务器: the dialog shows version / build / modes / attribution and links the primary repo + the mirror (README framing)', () => {
   const about = src('public/js/ui/about.js');
-  for (const key of ['关于本服务器', '版本', '服务器构建', '可用模式', '在线人数', '项目仓库']) {
+  for (const key of ['关于本服务器', '版本', '服务器构建', '可用模式', '在线人数', '主仓库（GitHub）', '国内镜像（Gitee）']) {
     assert.ok(about.includes(`t('${key}')`), `shows ${key}`);
   }
   assert.ok(/healthz/.test(about), 'the served build tag comes from /healthz');
   assert.ok(/DIFFICULTY_NAMES/.test(about), 'the mode list is the difficulties the server uses');
   assert.ok(about.includes('非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有'), 'the footer attribution is reused');
-  assert.ok(/Gitee 仓库分发/.test(about), 'the README download/mirror framing');
+  assert.ok(/GitHub 主仓库分发/.test(about), 'the README framing names GitHub as the primary repo');
+  assert.ok(/Gitee 镜像/.test(about), 'and mentions the Gitee 国内镜像');
 });
 
 test('部署说明: the desktop-only / mobile-compatibility note is in the about dialog and on the title screen', () => {
@@ -125,14 +127,14 @@ test('部署说明: the desktop-only / mobile-compatibility note is in the about
   assert.ok(/title-platform-hint/.test(title) && /\.title-platform-hint/.test(src('public/css/screens/title.css')), 'the hint has its own line / style');
 });
 
-test('标题画面不再有「玩法说明」入口：它只在 设置 → 玩法说明（2026-10-11 的移动）', () => {
+test('标题画面不再有「玩法说明」入口：它只在局内（齿轮 / 步骤头 GuideButton）（2026-10-12 的设置清理）', () => {
   const title = src('public/js/screens/title.js');
   assert.ok(!/GuideButton/.test(title), 'the 玩法说明 trigger is gone from the title');
   assert.ok(!/title-guide/.test(title), 'no .title-guide element on the title');
   assert.ok(!/title-guide/.test(src('public/css/devices.css')), 'the dead .title-guide touch-target hook is gone too');
-  // one entry point stays (the settings dialog), and the in-match step-head trigger stays where it was
-  assert.ok(/set-guide/.test(src('public/js/ui/settings.js')) && /openGuide\(0\)/.test(src('public/js/ui/settings.js')), '设置 keeps the 玩法说明 entry');
-  assert.ok(/GuideButton/.test(src('public/js/ui/matchChrome.js')), 'the in-match 玩法说明 trigger is untouched');
+  // the settings dialog's own 玩法说明 entry was removed on 2026-10-12 — the in-match triggers are what is left
+  assert.ok(!/set-guide/.test(src('public/js/ui/settings.js')) && !/openGuide/.test(src('public/js/ui/settings.js')), '设置 no longer has a 玩法说明 entry');
+  assert.ok(/GuideButton/.test(src('public/js/ui/matchChrome.js')), 'the in-match step-head 玩法说明 trigger stays');
 });
 
 test('标题画面左下角：添加到桌面 / 反馈群 / 服务器说明在一条流式竖列里，不会互相压叠', () => {

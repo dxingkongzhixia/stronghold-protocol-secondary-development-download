@@ -27,8 +27,9 @@
 //   VoiceGate: one line at a time, a global gap, a per-unit per-slot cooldown, and a higher-priority line taking the
 //   channel over — the official scheduling of `audio_data.json battleVoice.voiceTypeOptions` (a tap's 选中 line skips
 //   the gap: VOICE_TAP_SLOTS). Two dubs: 日本語 `audio.voiceJp` (default) and 中文 `audio.voice` (settings 语音语言, not
-//   tied to the interface language; the owner's request of 2026-10-08 「全套的日配语音」) — a JP line the manifest or the
-//   host lacks falls back to the Chinese one (voiceLine).
+//   tied to the interface language; the owner's request of 2026-10-08 「全套的日配语音」) — the selected dub is
+//   authoritative per line and the other one is its fallback in BOTH directions (2026-10-12: 中文 plays the CN line and
+//   falls back to the JP one when the CN tree lacks it; 日本語 plays the JP line and falls back to the CN twin) — voiceLine.
 // - Battle SFX from `b.ev` tuples (`handleBattleEvents`): at most MAX_VOICES concurrent unit sounds, at most
 //   MAX_PER_URL overlapping copies of one sound (the official banks' maxSoundAllowed 2), a per-unit cooldown and a
 //   per-URL minimum gap (SfxLimiter), so a 60-unit fight stays listenable. A `['skill', id, 1]` that arrives before its
@@ -294,11 +295,17 @@ export const VOICE_TAP_SLOTS = Object.freeze(['select']);
 /**
  * The line an operator says for a slot, in the chosen dub (settings 语音语言, ui/gameLogic/settings.js VOICE_LANGS):
  * { url, fallback }, or null for an operator no dub voices (the 预备干员 / 原型干员 stand-ins, 盟约·辅助干员, summons)
- * or a slot it lacks. 'jp' (the default) draws from `audio.voiceJp`, the same slots and file names in the Japanese dub;
- * 'cn' draws from `audio.voice`. The JP dub falls back to the Chinese line twice over: per
- * slot when the JP tree lacks it (a file the fetch could not get is left out of the manifest), and per line at play time
- * — `fallback` is the Chinese file of the same name, played when the host does not have the JP one (a full zip built
- * without the JP dub, before setup downloaded it). A slot with several lines draws one (`random` ∈ [0, 1)).
+ * or a slot both trees lack. `'jp'` (the default) draws from `audio.voiceJp` (the Japanese dub); `'cn'` draws from
+ * `audio.voice` (the Chinese one) — the same slots and file names in either tree.
+ *
+ * **The selected dub is authoritative per line, and the OTHER dub is the fallback in BOTH directions** (the owner's
+ * rule of 2026-10-12): with 中文 a slot the CN tree lacks plays the JP line, and with 日本語 a slot the JP tree lacks
+ * plays the CN twin (the earlier JP→CN-only fallback). The fallback applies twice over: **per slot** when the chosen
+ * tree has no line at all (a file the fetch could not get is left out of the manifest), and **per line** at play time —
+ * `fallback` is the other dub's file of the same name, played when the host does not have the chosen one (a full zip
+ * built without the chosen dub, or a host missing a file), drawing one of the slot's other-dub lines when the tree has
+ * no same-named twin. A slot with several lines draws one (`random` ∈ [0, 1)); a slot neither tree voices returns null
+ * (silent).
  * @param {any} audio the manifest's `audio`
  * @param {string} charId
  * @param {string} slot
@@ -309,14 +316,16 @@ export const VOICE_TAP_SLOTS = Object.freeze(['select']);
 export function voiceLine(audio, charId, slot, lang = 'jp', random = Math.random) {
   const lines = (line) => (Array.isArray(line) ? line : [line]).filter((u) => typeof u === 'string' && u);
   const draw = (list) => (list.length ? list[Math.min(list.length - 1, Math.floor(random() * list.length))] : null);
+  const file = (u) => u.slice(u.lastIndexOf('/') + 1);
   const cn = lines(audio?.voice?.[charId]?.[slot]);
-  const jp = lang === 'jp' ? draw(lines(audio?.voiceJp?.[charId]?.[slot])) : null;
-  if (jp) {
-    const file = (u) => u.slice(u.lastIndexOf('/') + 1);
-    return { url: jp, fallback: cn.find((u) => file(u) === file(jp)) ?? draw(cn) };
-  }
-  const url = draw(cn);
-  return url ? { url, fallback: null } : null;
+  const jp = lines(audio?.voiceJp?.[charId]?.[slot]);
+  // the chosen dub first; the other one is the per-slot (and per-line) fallback, in either direction
+  const chosen = lang === 'cn' ? cn : jp;
+  const other = lang === 'cn' ? jp : cn;
+  const url = draw(chosen);
+  if (url) return { url, fallback: other.find((u) => file(u) === file(url)) ?? draw(other) };
+  const alt = draw(other);
+  return alt ? { url: alt, fallback: null } : null;
 }
 
 /**
@@ -514,7 +523,7 @@ export class AudioManager {
     this.voiceGate = new VoiceGate();
     this.voiceNode = null;    // { src, gain, url, token } of the line on air
     this.voiceToken = 0;
-    this.voiceLang = 'jp';    // settings 语音语言: 'jp' (audio.voiceJp, falling back to audio.voice) | 'cn' (audio.voice)
+    this.voiceLang = 'jp';    // settings 语音语言: 'jp' (audio.voiceJp, falling back to audio.voice) | 'cn' (audio.voice, falling back to audio.voiceJp)
     this.startVoiceDone = false; // 行动出发 of this field (the first operator deployed says it)
     this.uiVoices = 0;
     this.wantBgm = null;      // desired key (kept while locked)
@@ -656,8 +665,9 @@ export class AudioManager {
   }
 
   /**
-   * The voice dub (settings 语音语言): 'cn' plays `audio.voice`, anything else `audio.voiceJp` (日本語, the default). The
-   * line on air finishes in its own dub; the next one follows the setting.
+   * The voice dub (settings 语音语言): 'cn' plays `audio.voice` and falls back to `audio.voiceJp` per line, anything
+   * else `audio.voiceJp` (日本語, the default) and falls back to `audio.voice` (voiceLine). The line on air finishes in
+   * its own dub; the next one follows the setting.
    * @param {string} lang
    */
   setVoiceLang(lang) {
@@ -906,7 +916,7 @@ export class AudioManager {
     try {
       if (!this.ctx || !this.voiceGain || this.volumes.muted || this.volumes.voice <= 0) return false;
       if (typeof charId !== 'string' || typeof slot !== 'string') return false;
-      // the chosen dub's line (settings 语音语言), with the Chinese file of the same name as its fallback (voiceLine)
+      // the chosen dub's line (settings 语音语言), with the other dub's file of the same name as its fallback (voiceLine)
       const line = voiceLine(this.getManifest()?.audio, charId, slot, this.voiceLang);
       if (!line) return false;
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();

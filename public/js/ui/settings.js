@@ -6,8 +6,10 @@
 // 「快捷键可不可以自己设置」, the owner's decision of 2026-10-07). The lobby and the room open it from a 设置 button in
 // the top bar's right-hand group — the lobby's immediately before the 档案 account chip, the room's beside the invite key
 // (SettingsButton, GitHub #238); the title screen and the match have their own gear. The dialog's action row opens the
-// 玩法说明 viewer (`set-guide`) and the player bug-report overlay (`set-bug` → ui/community.js BugReportHost) — the
-// bug提交 entry moved here from the lobby's top bar on 2026-10-11 (docs/MATCHMAKING.md §36).
+// player bug-report overlay (`set-bug` → ui/community.js BugReportHost) — the bug提交 entry moved here from the
+// lobby's top bar on 2026-10-11 (docs/MATCHMAKING.md §36). Its 玩法说明 / 资料库 entries were **removed on 2026-10-12**:
+// the codex has its own lobby top-bar entry (`codex-entry`) and the guide stays reachable in-match (the gear / step-head
+// `GuideButton`, ui/guide.js on matchChrome), so the settings copies were redundant.
 
 import { useLayoutEffect, useState } from '../../vendor/hooks.module.js';
 import { html, Modal, Button, Icon, MicroLabel } from './components.js';
@@ -15,8 +17,6 @@ import { GIcon } from './gameComponents.js';
 import { createStore, useStore, loadPref, savePref } from '../store.js';
 import { sanitizeSettings, HOTKEY_ACTIONS, DEFAULT_HOTKEYS, hotkeyLabel, rebindHotkey, isDefaultHotkeys, captureHotkey, VOICE_LANGS } from './gameLogic.js';
 import { audio } from '../audio.js';
-import { openGuide } from './guide.js';
-import { openCodex } from './codex.js';
 import { openBugReport } from './community.js';
 import { detectFeatures } from './device.js';
 import { LangToggle, machineTranslationNote } from './lang.js';
@@ -207,9 +207,7 @@ export function SettingsModal({ open, onClose }) {
   const gpu = gpuInfo();
   const mtNote = machineTranslationNote(); // a pack marked as machine translation says so under the switch
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('设置')} micro="SETTINGS" width="7.4rem"
-    actions=${html`<${Button} variant="secondary" icon="book" class="set-guide" onClick=${() => openGuide(0)}>${t('玩法说明')}<//>
-      <${Button} variant="secondary" icon="info" class="set-codex" onClick=${() => openCodex('bonds')}>${t('资料库')}<//>
-      <${Button} variant="secondary" icon="edit" class="set-bug" onClick=${openBugReport}>${t('bug提交')}<//>
+    actions=${html`<${Button} variant="secondary" icon="edit" class="set-bug" onClick=${openBugReport}>${t('bug提交')}<//>
       <${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
     <div class="set-list">
       <div class="set-row">

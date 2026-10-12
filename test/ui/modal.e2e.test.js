@@ -149,9 +149,11 @@ describe('Modal keyboard focus', { skip: !ENABLED && 'set SP_E2E=1 and have Chro
       await page.goto(srv.url, { waitUntil: 'domcontentloaded' });
       await page.waitForSelector('.title-settings');
       await page.click('.title-settings');
-      await page.waitForSelector('.set-guide');
+      await page.waitForSelector('.modal');
       await page.waitForFunction(() => !document.querySelector('.modal__box').getAnimations().some((a) => a.playState === 'running'));
-      await page.click('.set-guide');
+      // the guide is no longer a settings action (removed 2026-10-12); open it imperatively — the stacking case
+      // (a .guide above the .modal must keep the keyboard) is what this test covers
+      await page.evaluate(() => import('/js/ui/guide.js').then((m) => m.openGuide(0)));
       await page.waitForSelector('.guide');
       await page.waitForFunction(() => document.querySelector('.guide').contains(document.activeElement));
       await tab(page);

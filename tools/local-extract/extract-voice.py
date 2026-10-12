@@ -20,6 +20,11 @@ Usage:
   --print-jobs    list what would be written, without extracting (no UnityPy needed)
   --ffmpeg PATH   the ffmpeg used to encode mp3 (default: ffmpeg on PATH)
   --bitrate 96k   mp3 bitrate
+  --client-lang   the client's OWN language (the language of its bare `voice` folder): cn | jp | en | kr (default jp)
+
+The `--voice-dir` folder names the language it holds (`voice_cn` = CN, `voice` = the client's own `--client-lang`), and
+`--dub` must match it: filling the CN tree (`--dub cn`) from a JP client's `voice` folder would write **Japanese** audio
+into the CN slots (2026-10-06 → fixed 2026-10-12: 120 operators' CN slots held Japanese). The guard refuses the mismatch.
 
 Needs UnityPy + lz4 (tools/local-extract/requirements.txt; `aklz4.py` decodes the LZ4AK
 bundles) and Pillow only for the other extractor. Everything is (c) Hypergryph; private,
@@ -76,12 +81,25 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--voice-dir', default=str(DEFAULT_VOICE_DIR), help='the client voice bundle dir')
     ap.add_argument('--dub', choices=['cn', 'jp'], default='cn', help="manifest tree to fill: cn (audio.voice, default) | jp (audio.voiceJp)")
+    ap.add_argument('--client-lang', choices=['cn', 'jp', 'en', 'kr'], default='jp', help="the client's own language (its bare `voice` folder): default jp")
     ap.add_argument('--lang', default=None, help='only fill this manifest language segment (e.g. cn)')
     ap.add_argument('--only', nargs='*', default=None, help='only these operator ids')
     ap.add_argument('--ffmpeg', default=shutil.which('ffmpeg') or 'ffmpeg')
     ap.add_argument('--bitrate', default='96k')
     ap.add_argument('--print-jobs', action='store_true', help='list what would be written and exit')
     args = ap.parse_args()
+
+    # Guard: the voice-dir names the language it holds, and --dub must match it (see the docstring). `voice_cn` /
+    # `voice_en` / `voice_kr` are explicit; the bare `voice` folder is the client's own `--client-lang`.
+    dir_name = Path(args.voice_dir).name
+    explicit = {'voice_cn': 'cn', 'voice_en': 'en', 'voice_kr': 'kr'}
+    src_lang = explicit.get(dir_name, args.client_lang if dir_name == 'voice' else None)
+    if src_lang is not None and src_lang != args.dub:
+        ap.error(
+            f"--voice-dir …/{dir_name} holds {src_lang.upper()} but --dub is {args.dub}: "
+            f"that would write {src_lang.upper()} audio into the {args.dub.upper()} tree "
+            f"(use the {args.dub} folder, or --client-lang if the client's `voice` is {args.dub})."
+        )
 
     manifest = json.load(open(ROOT / 'data' / 'assets.json', encoding='utf-8'))
     todo = targets(manifest, args.lang, args.dub)

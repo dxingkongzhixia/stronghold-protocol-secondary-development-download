@@ -9,10 +9,10 @@
 // by the title screen's tests; this file is about the entry. Not in the modal, deliberately: background music in a
 // hidden tab and the board style (the owner's decision of 2026-10-07 on #238).
 //
-// Since 2026-10-11 the dialog is also the home of the 玩法说明 and bug提交 entries (its action row): both opened from the
-// lobby top bar before, they sit next to 完成 now, and 玩法说明 is gone from the room's top bar too (docs/MATCHMAKING.md
-// §36). This file checks that the top bar no longer carries them and that the dialog's 玩法说明 / bug提交 open the guide
-// viewer and the player bug-report overlay above the modal.
+// Since 2026-10-11 the dialog is the home of the bug提交 entry (its action row), opened from the lobby top bar before,
+// next to 完成; the dialog's 玩法说明 / 资料库 actions were removed on 2026-10-12 (the guide lives in-match, the codex
+// in the lobby top bar), so the row is bug提交 + 完成 (docs/MATCHMAKING.md §36). This file checks that the top bar no
+// longer carries them and that bug提交 opens the player bug-report overlay above the modal.
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -70,7 +70,7 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
 
     assert.ok(await settingsByAccount(page, '.lobby-screen'), '设置 sits in the lobby top bar\'s right group, right before the 档案 chip');
     const topbar = await topbarCommunity(page, '.lobby-screen');
-    assert.equal(topbar.guide, false, '玩法说明 is no longer a lobby top-bar button (it lives in settings)');
+    assert.equal(topbar.guide, false, '玩法说明 is not a lobby top-bar button (removed 2026-10-12 — the in-match guide stays)');
     assert.equal(topbar.bug, false, 'bug提交 is no longer a lobby top-bar button (it lives in settings)');
     assert.equal(topbar.rooms, true, '公开房间 stays on the lobby top bar');
     assert.equal(topbar.changelog, true, '更新日志 stays on the lobby top bar');
@@ -84,12 +84,14 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     assert.doesNotMatch(text, /棋盘/, 'no board-style option (declined)');
     assert.doesNotMatch(text, /后台/, 'no background-music option (declined)');
 
-    // the action row's two entries: 玩法说明 (guide) and bug提交 (bug report)
+    // the action row carries bug提交 only (玩法说明 / 资料库 were removed on 2026-10-12)
     const entries = await page.evaluate(() => ({
       guide: document.querySelector('.modal .set-guide')?.textContent.trim() ?? null,
+      codex: document.querySelector('.modal .set-codex')?.textContent.trim() ?? null,
       bug: document.querySelector('.modal .set-bug')?.textContent.trim() ?? null,
     }));
-    assert.equal(entries.guide, '玩法说明');
+    assert.equal(entries.guide, null, 'no 玩法说明 action (removed — the guide lives in-match)');
+    assert.equal(entries.codex, null, 'no 资料库 action (removed — the lobby top bar has it)');
     assert.equal(entries.bug, 'bug提交');
     // bug提交 opens the player bug-report overlay above the settings modal; its ✕ closes only the overlay
     await page.click('.modal .set-bug');
@@ -101,15 +103,8 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     await page.click('.bug-host .online-modal__close');
     await page.waitForSelector('.bug-host', { hidden: true });
     assert.ok(await page.$('.modal'), 'closing the bug report keeps settings');
-    // 玩法说明 opens the guide viewer above the settings modal; Esc closes only the viewer
-    await sleep(300);
-    await page.click('.modal .set-guide');
-    await page.waitForSelector('.guide', { timeout: 5000 });
-    await page.keyboard.press('Escape');
-    await page.waitForSelector('.guide', { hidden: true });
-    assert.ok(await page.$('.modal'), 'closing the guide keeps settings');
 
-    await sleep(300); // the guide's keydown cleanup is a passive effect — let it detach before closing settings
+    await sleep(300);
     await page.keyboard.press('Escape');
     await sleep(300);
     assert.equal(await modalText(page), null, 'Esc closes it');
@@ -121,7 +116,7 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     await sleep(500);
     assert.ok(await settingsByAccount(page, '.room-screen'), '设置 sits in the room top bar\'s right group');
     const roomTopbar = await topbarCommunity(page, '.room-screen');
-    assert.equal(roomTopbar.guide, false, '玩法说明 is no longer a room top-bar button (it lives in settings)');
+    assert.equal(roomTopbar.guide, false, '玩法说明 is not a room top-bar button (removed 2026-10-12 — the in-match guide stays)');
     await page.click('.room-screen [data-testid="settings-btn"]');
     await page.waitForSelector('.modal', { timeout: 5000 });
     assert.match(await modalText(page), /背景音乐/);

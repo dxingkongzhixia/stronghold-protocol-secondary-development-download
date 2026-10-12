@@ -395,9 +395,9 @@ describe('CODEX overlay store + wiring', () => {
     }
   });
 
-  test('the 设置 dialog offers 资料库 (set-codex) and the overlay is mounted globally', () => {
+  test('the 设置 dialog no longer offers 资料库 (set-codex); the codex is reached from the lobby and mounted globally', () => {
     const settings = src('public/js/ui/settings.js');
-    assert.ok(settings.includes('class="set-codex"') && settings.includes("openCodex(") && settings.includes("t('资料库')"));
+    assert.ok(!settings.includes('class="set-codex"') && !settings.includes('openCodex') && !settings.includes("t('资料库')"), 'the 资料库 settings action was removed (2026-10-12)');
     const main = src('public/js/main.js');
     assert.ok(main.includes("from './ui/codex.js'") && main.includes('<${CodexHost} />'), 'main.js mounts CodexHost');
     assert.ok(main.indexOf('<${CodexHost} />') > main.indexOf('<${GuideHost} />'), 'codex stacks with the guide');

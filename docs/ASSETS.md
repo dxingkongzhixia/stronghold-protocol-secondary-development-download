@@ -123,7 +123,7 @@ The research JSONs in `docs/research/` (03, 05, 07) define **which** ids are nee
 | Official battlefield scenes (one per battlefield: meshes, lightmaps, albedo textures; load.js `loadScenePack`) | the scene bundles `scenes/activities/<season>/level_<stage>/…` (`tools/local-extract/extract.py --only scene`, optional). The client carries them only while the season runs; off season `tools/local-extract/fetch_scenes.py` downloads the bundles of the in-season version `26-04-13-12-31-42_e9b560` from the official CDN into `.cache/official-scenes/` (33 bundles, 22,801,308 bytes compressed on the Android list, md5-checked), and the materials / textures still come from the local client's theme bundles. The extracted files live under `public/assets/local/scene/` — **git-ignored in this fork** (`.gitignore`), so the repository never stores the bundles or the extracted files; keep a copy aside before reverting the 3D-scenes merge (`docs/UPSTREAM-MERGES.md`). A full release zip includes them when the packaging machine extracted them (`npm run package` prints a `battlefield scenes` line); a lite zip and a source install fetch and extract them with `node tools/setup.mjs --scenes`. Without a scene the 3D board draws its procedural metal tiles | `local/scene/{stageId}/scene.json`, `scene.bin`, `lm{i}.*`; `local/scene/tex/{texture}.*` (listed in `data/local-assets.json`) |
 | BGM | AA2 `voice` branch `audio/sound_beta_2/music/**` (大厅/休整期 `act1autochess`, 开战 `act13side/m_bat_kazimierz2_{1,2}` — 骑士之日 / 无畏者; the 开战 track follows the round: `_2` 无畏者 rounds 1–7, `_1` 骑士之日 from round 8) | `audio/bgm/{file}.mp3` |
 | SFX (UI, battle, per unit) | AA2 `voice` `audio/sound_beta_2/**`, mapped from `audio_data.json` banks | `audio/sfx/{same sub-path}.mp3` |
-| 干员战斗语音 (中文) | AA2 `voice` `audio/sound_beta_2/voice_cn/{charId}/cn_nn.mp3` — the lines `charword_table.json` lists (`placeType` = when the game plays one, `voiceAsset` = the path); `--voice-lang=jp\|en\|kr` takes the same file names from `voice/`, `voice_en/`, `voice_kr/` | `audio/voice/{lang}/{charId}/{cn_nn}.mp3` |
+| 干员战斗语音 (中文) | AA2 `voice` `audio/sound_beta_2/voice_cn/{charId}/cn_nn.mp3` — the lines `charword_table.json` lists (`placeType` = when the game plays one, `voiceAsset` = the path); the local **CN** client's `voice_cn/` bundles when a machine has it (`tools/local-extract/extract-voice.py --dub cn`); `--voice-lang=jp\|en\|kr` takes the same file names from `voice/`, `voice_en/`, `voice_kr/` | `audio/voice/{lang}/{charId}/{cn_nn}.mp3` |
 | 干员战斗语音 (日本語, `audio.voiceJp`) | the same lines from ArknightsAssets2 `voice/` (`voice/{charId}/cn_nn.mp3`, the JP dub); the local JP client's `voice/` bundles when a machine has it (`tools/local-extract/extract-voice.py --dub jp`) | `audio/voice/jp/{charId}/{cn_nn}.mp3` |
 | Fonts: Bender Regular and Light, Novecento Wide | TimWangZi/The-font-of-Arknights | `public/fonts/*.{otf,ttf,woff2}`, `public/fonts/fonts.css` |
 
@@ -482,14 +482,14 @@ The 2026-09-27 verification pass also checked:
   .venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py ^
     --voice-dir "D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\Arknights_Data\PersistentData\Bundles\audio\sound_beta_2\voice"
   ```
-  2026-10-06 用它从**日服默认语言**补了 **1680 条**语音（120 干员，~78 MB）。`voice`＝日服默认（日语）；想补 CN 就把 `--voice-dir` 指到 `…\sound_beta_2\voice_cn`。`--print-jobs` 只看要写什么。
+  2026-10-06 的第一版**误用**了日服默认语言 `voice`（日语）填了中配槽（120 干员、1680 条）——`audio.voice` 指的中配树因此混进了一批日语（设置→语音语言选「中文」时那批干员仍说日语）。2026-10-12 修正：**中配从本地中配客户端（B 站）的 `…\sound_beta_2\voice_cn` 抽**（`--dub cn`），**日配从 `voice` 抽**（`--dub jp`）；两家客户端都同时带 `voice`（日配）与 `voice_cn`（中配），别交叉。`--print-jobs` 只看要写什么。
   **日配树**（`audio.voiceJp`，2026-10-10）：加 `--dub jp`（源仍是 `…\voice`），输出的 `cn_nnn.mp3` 落到清单里的 `audio/voice/jp/<charId>/`，也就是设置→语音语言「日本語」播的那套：
   ```
   .venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py --dub jp ^
     --voice-dir "D:\本地网络游戏中心\鹰角启动器\YostarGames\Arknights_JP\Arknights_Data\PersistentData\Bundles\audio\sound_beta_2\voice" ^
     --ffmpeg "C:\…\ffmpeg.exe"
   ```
-  `--dub`（`cn` 默认 / `jp`）选清单里的树；日服的 `voice` 是**日配**，`voice_cn` 是**中配**（英配 `voice_en`）。清单缺日配的干员/行会退回中配（`public/js/audio.js voiceLine`），所以本地客户端没有的（新干员）不影响它上线。
+  `--dub`（`cn` 默认 / `jp`）选清单里的树；客户端的 `voice` 是**日配**、`voice_cn` 是**中配**（英配 `voice_en`）。播放时**选中的语言优先，缺则逐条回退另一套**——中文⇒CN 否则 JP；日本語⇒JP 否则 CN——两套都没有才不出声（`public/js/audio.js voiceLine`），所以本地客户端没有的（新干员）不影响它上线。
 - **BGM / SFX**：`extract.py` / `extract-voice.py` 都不管；本地这个日服客户端也**没有**上游新增的 `m_bat_kazimierz2_*` / `m_bat_corrosion_*` / `b_ui_alarmenter`。→ 走镜像（见下），或以后有更新的客户端再抽。
 - ✅ **远程镜像其实能用**：本机直连 `raw.githubusercontent` / `jsDelivr` 被墙，但 `fetch-assets` 带 **`--asset-source=mirror`**（#24 的 gh-proxy 镜像）就正常：
   ```

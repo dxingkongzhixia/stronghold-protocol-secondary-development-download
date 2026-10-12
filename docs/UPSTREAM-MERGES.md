@@ -417,17 +417,17 @@ lobby / room top bar; we keep 璁剧疆 in the top bar's right-hand group instea
 account chip (right of 鐧诲綍 / 娉ㄥ唽), in the room beside the invite key 鈥?so the merge must not restore upstream's middle
 placement (搂0). Lobby right group, left鈫抮ight: 缁熻 路 骞插憳璋冮厤 路 鐧诲綍 / 娉ㄥ唽 (guests only) 路 璁剧疆 路 妗ｆ chip.
 
-**Divergence (2026-10-11) 鈥?鐜╂硶璇存槑 / bug鎻愪氦 live in the 璁剧疆 dialog.** The lobby's top bar keeps 鍏紑鎴块棿 路 鏇存柊鏃ュ織
-(and the room keeps its other controls), but the 鐜╂硶璇存槑 entry that used to sit in the lobby's and the room's top bars and
-the bug鎻愪氦 entry that used to sit in the lobby's are now two actions inside the 璁剧疆 dialog (its action row, next to
-瀹屾垚): `public/js/ui/settings.js` `set-guide` 鈫?`openGuide(0)` and `set-bug` 鈫?`openBugReport`. Both are **deliberately
-kept reachable** from every screen's settings gear (title / lobby / room / match) 鈥?the 鐜╂硶璇存槑 viewer and the
-bug-report overlay (`ui/community.js` `BugReportHost`, mounted once by `main.js`, `css .bug-host` above `--z-modal`) open
-above the modal; the overlay still submits through `bug.report` + the image upload. A later merge must not move either
-back onto a top bar, nor drop the settings entries. (The in-match gear / step-head 鐜╂硶璇存槑 buttons stay as they are.)
-The **title screen's** own 鐜╂硶璇存槑 button (`.title-guide`, in the callsign console's 宸茶繛鎺ユ湇鍔″櫒 路 ping row, next to the
-settings gear) was **removed** as well 鈥?the title reaches the guide through its settings gear (璁剧疆 鈫?鐜╂硶璇存槑), the same
-as every other screen, so the connection row now carries only the status dot / text / ping 路 璁剧疆 路 鍏ㄥ睆.
+**Divergence (2026-10-12) — 玩法说明 / 资料库 are NOT in the 设置 dialog; bug提交 still is.** The lobby's top bar keeps 公开房间 · 更新日志
+(and the room keeps its other controls). The 设置 dialog's action row now carries only the player **bug提交** entry beside 完成:
+`public/js/ui/settings.js` `set-bug` → `openBugReport` (the `ui/community.js` `BugReportHost`, mounted once by `main.js`,
+`css .bug-host` above `--z-modal`, opens above the modal and still submits through `bug.report` + the image upload). The
+2026-10-11 玩法说明 (`set-guide`) and 资料库 (`set-codex`) actions were **removed on 2026-10-12**: the codex has its own
+lobby top-bar entry (`codex-entry`) and the guide stays reachable in-match (the gear / step-head `GuideButton`,
+`ui/matchChrome.js`). A later merge must not move the bug提交 entry back onto a top bar nor drop it, and must not
+re-introduce the removed 玩法说明 / 资料库 settings actions. (The in-match gear / step-head 玩法说明 buttons stay as they are.)
+The **title screen's** own 玩法说明 button (`.title-guide`, in the callsign console's 已连接服务器 · ping row, next to the
+settings gear) was **removed** earlier — the title reaches the guide through the in-match triggers now, and the connection
+row carries only the status dot / text / ping · 设置 · 全屏.
 
 **Divergence (2026-10-11) 鈥?a 鏈眬绂佺敤 bond is banned from being OFFERED, not from taking effect.** Upstream's
 `computeBonds` skips `gd.modeInactiveBonds` (`01a44cd2`; the 鏈眬绂佺敤 UI `b4fa21a0` / `695ece26` / `c0cc1d61`, all

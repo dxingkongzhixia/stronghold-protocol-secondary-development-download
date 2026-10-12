@@ -13,9 +13,9 @@
 
 ## 0. 资料库（CODEX）：盟约 / 策略 / 干员 + 悬赏决策 + 两阶段领袖池
 
-一个**只读、数据驱动**的浏览器。两个入口，都调 `openCodex(...)`：
+一个**只读、数据驱动**的浏览器。入口：
 - **大厅顶栏** `资料库`（`public/js/screens/lobby.js`，`.topbar__right` 内、`统计` 左侧的 `codex-entry`）——不用开设置就能进；
-- **设置弹窗** 的动作行 `资料库`（`public/js/ui/settings.js` 的 `set-codex` → `openCodex('bonds')`）；设置齿轮在标题 / 大厅 / 房间 / 对局都能打开。
+- （设置弹窗动作行里原来的 `资料库` 入口已于 **2026-10-12 移除**，见 `MATCHMAKING.md` §36.9；只留大厅顶栏这一个。）
 
 覆盖层本体挂在根节点一次（`public/js/main.js` 的 `<CodexHost/>`），和 `玩法说明`（`ui/guide.js`）、`bug提交`（`ui/community.js`）
 同一套全局 host 模式，Esc / 点背景关闭，`ensureStylesheet('/css/screens/codex.css')` 让它在 **过期的 `index.html`** 下也能正常显示（见 §6）。

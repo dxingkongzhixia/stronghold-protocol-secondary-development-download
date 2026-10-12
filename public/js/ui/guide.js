@@ -10,9 +10,10 @@
 // tabs, the page dots and the keys still reach the other pages.
 //
 // Global & imperative so every screen can open it: `openGuide(page?)`; <GuideHost/> is mounted once by main.js
-// (and by the dev mock harness); <GuideButton/> is the standard in-match trigger (the step-head menu) and the 设置
-// dialog's 玩法说明 entry (`set-guide`, ui/settings.js) opens it too — the lobby / room / title's own buttons are gone
-// (2026-10-11): the title reaches it through its settings gear (设置 → 玩法说明).
+// (and by the dev mock harness). The in-match triggers are <GuideButton/> (the step-head menu) and the match gear's
+// `gm__guide`; the 设置 dialog's 玩法说明 entry (`set-guide`, ui/settings.js) was **removed on 2026-10-12** — the
+// guide stays reachable in-match, so the settings copy was redundant (the lobby / room / title's own buttons were
+// gone before it).
 
 import { useEffect, useMemo, useRef, useState } from '../../vendor/hooks.module.js';
 import { html, Icon, MicroLabel, Button, Spinner } from './components.js';

@@ -137,14 +137,14 @@ garrison 里给 `bbStr.bond_id`（逗号分隔多个）即可，**不用写码**
    子职业图标 `ArknightsAssets/ArknightsAssets2`。**该文件是 1 空格缩进的 JSON、无尾换行**（解析→改→`JSON.stringify(o,null,1)` 写回即可逐字节一致）。
 2. 下载：`$env:SP_ASSET_SOURCE='mirror'; node tools/fetch-assets.mjs`（写 `public/assets/**` + `data/assets.json`）。
 3. 语音（**两棵树**）：`audio.voice`（中文）指 `public/assets/audio/voice/cn/<charId>/cn_<NNN>.mp3`，`audio.voiceJp`
-   （日本語，默认「日本語」，「中文」/「日本語」由设置→语音语言切，缺日语时逐条回退中配）指 `public/assets/audio/voice/jp/<charId>/cn_<NNN>.mp3`。
-   本地客户端两个包都在：`…\sound_beta_2\voice`＝日配、`voice_cn`＝中配。分别抽（**无需改清单**）：
+   （日本語，默认「日本語」，「中文」/「日本語」由设置→语音语言切）指 `public/assets/audio/voice/jp/<charId>/cn_<NNN>.mp3`。
+   本地客户端两个包都在：`…\sound_beta_2\voice`＝日配、`voice_cn`＝中配（**别交叉**——中配必须用 `voice_cn`，用 `voice` 会把日语写进中配树）。分别抽（**无需改清单**）：
    ```
    extract-voice.py --dub jp --only <charId> --voice-dir "…\sound_beta_2\voice" --ffmpeg <ffmpeg.exe>
    extract-voice.py --dub cn --only <charId> --voice-dir "…\sound_beta_2\voice_cn" --ffmpeg <ffmpeg.exe>
    ```
-   `--ffmpeg` 必给 —— ffmpeg 不在 PATH 上。日配/中配任一棵缺某员某行时，客户端按「日配优先，缺则中配」回退
-   （`public/js/audio.js voiceLine`），所以本地没有的（新干员）不影响上线。
+   `--ffmpeg` 必给 —— ffmpeg 不在 PATH 上。播放时**选中的语言优先，缺则逐条回退另一套**（中文⇒CN 否则 JP；
+   日本語⇒JP 否则 CN，`public/js/audio.js voiceLine`），两套都没有才不出声，所以本地没有的（新干员）不影响上线。
 4. **语音缺失（联动干员 / 本地客户端没有时）**：社区语音包（`ArknightsAssets2@voice`——CN 在 `voice_cn/`、JP 在 `voice/`；`isHarryh/Ark-Voice`）常常还没收录新干员，
    但 **PRTS 有**：
    ```

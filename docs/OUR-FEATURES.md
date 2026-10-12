@@ -12,7 +12,7 @@ Read this together with:
 | [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§37 | the **decision record**: why each of these exists, the evidence, the honest caveats |
 | [`docs/ASSETS.md`](ASSETS.md) "Battle effects" / local-client sections | the asset-side detail this file summarises |
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for a custom operator |
-| [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | the merge discipline, the Gitee push, the deploy order |
+| [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | the merge discipline, the GitHub/Gitee push, the deploy order |
 
 > Convention for this file: every mechanism carries a **我们独有，非上游；合并时不得丢失** note. During an upstream
 > merge, resolve hunk-by-hunk keeping both sides (never `git checkout --ours/--theirs` on a source file) and treat
@@ -377,17 +377,18 @@ it. The merge procedure and the blacklist are in `docs/AI-WORKFLOW.md` (b).
 
 ---
 
-## 6. Publishing (the Gitee mirror and the deploy order)
+## 6. Publishing (the GitHub primary + Gitee mirror and the deploy order)
 
-> **我们独有，非上游；合并时不得丢失** — the two-tree mirror discipline, the Gitee push helper and the
+> **我们独有，非上游；合并时不得丢失** — the two-tree mirror discipline, the push helper and the
 > notice-first deploy order are ours.
 
 **What it is.** The git store `_merge-scratch` (branch `ours`) is the **single source of truth**: the history and
 the committed files. The working project `Stronghold-Protocol` has **no `.git`** and is a byte-for-byte **mirror**
-of the store. `tools/push-gitee.mjs` commits what is staged in the store, pushes the store's `HEAD` to the Gitee
-remote, and then mirrors the store's **tracked** files into the working project (respecting `.gitignore`).
+of the store. `tools/push-gitee.mjs` commits what is staged in the store, pushes the store's `HEAD` to the **GitHub
+primary** and then the **Gitee 国内下载镜像**, and then mirrors the store's **tracked** files into the working project
+(respecting `.gitignore`).
 
-**The direction is one-way: store → Gitee → working project.** The helper **never overwrites the store with the
+**The direction is one-way: store → remotes → working project.** The helper **never overwrites the store with the
 working project** — a stale working project must not revert the store's newer commits. `--from-dev` is the explicit,
 opt-in reverse sync (working project → store) and is **off** by default; without it the helper warns that the tree
 diverged and restores it from the store.
@@ -405,19 +406,25 @@ onto the working project, so builds/assets are shared and not duplicated. **The 
 the helper keeps the working project in step, and the mirror skips the shared junctions so files are never copied
 onto themselves.
 
-**The push.** Remote **`gitee`** →
-`https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`, branch **`master`**
-(`HEAD:refs/heads/master`), fast-forward only and **never forced**. `origin` stays the GitHub upstream.
-Credentials are **never** in the URL or the repo: the ASCII Gitee login is **`marseille1`** (the Chinese name is
-only a display name) plus a personal access token (账号设置 → 私人令牌, scope `projects`). Supply them per run:
+**The push.** Remote **`github`** (PRIMARY) →
+`https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download.git`, then remote **`gitee`**
+(国内下载镜像) → `https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`, branch
+**`master`** (`HEAD:refs/heads/master`), fast-forward only and **never forced**. A run pushes every configured remote,
+primary first; `--remote <name>` restricts it, `--all-remotes` forces both, `--tags` pushes the tags too. `origin`
+stays the GitHub upstream (`sganggs/Stronghold-Protocol`).
+
+Credentials are **never** in the URL or the repo. **GitHub (primary)** uses the owner's configured git credential
+helper (or per-run `GITHUB_TOKEN`); **Gitee (mirror)** uses the ASCII login **`marseille1`** (the Chinese name is
+only a display name) plus a personal access token (账号设置 → 私人令牌, scope `projects`). Supply either per run:
 
 ```powershell
-$env:GIT_USERNAME="marseille1"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs -m "message"
+$env:GITHUB_TOKEN="<pat>"; node tools/push-gitee.mjs -m "message"                                    # GitHub
+$env:GIT_USERNAME="marseille1"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs -m "message"  # Gitee
 ```
 
-The helper writes them to a **temp credential file outside the repo**, resets the helper list for the push (so a
-stale system `credential.helper=manager` cannot shadow the token), and deletes the temp file afterwards. Never
-write the token into the repository.
+The helper writes a supplied credential to a **temp credential file outside the repo**, resets the helper list for
+the push (so a stale system `credential.helper=manager` cannot shadow the token), and deletes the temp file
+afterwards. Never write a token into the repository.
 
 **Stage only your own paths.** The store is shared, so it can hold unrelated work-in-progress. The helper commits
 what you staged (or, with `--only`, just those paths); it never sweeps the working project into the store:
@@ -493,7 +500,9 @@ as files under `var/bug-uploads/`; the database holds paths + metadata only, and
 
 **The Japanese voice dub.** A second voice tree beside the Chinese one, selected at 设置 → 语音语言 = 中文 /
 日本語 (**default 日本語** — the owner's JP-first rule, not tied to the interface language; a stored 中文 choice still
-wins); a JP line the manifest or the host lacks falls back to the Chinese one. Files: `audio.voiceJp` wiring in `shared/` / `public/js/audio*` and the asset plan; the full zip
+wins). **The selected dub is authoritative per line and the other is its fallback in BOTH directions**: 中文 plays the
+CN line and falls back to the JP one when the CN tree lacks it, 日本語 plays the JP line and falls back to the CN twin.
+Files: `audio.voiceJp` wiring in `shared/` / `public/js/audio*` and the asset plan; the full zip
 ships both dubs via one switch (`tools/package.mjs` `FULL_ZIP_JP_VOICE`), the lite zip stays art-free. This is our
 packaging — upstream's `ddf8c39e` was `SKIP`ped. See [`docs/ASSETS.md`](ASSETS.md) "Voice".
 
@@ -558,7 +567,7 @@ upstream commit was *not* taken and why) are in [`docs/UPSTREAM-MERGES.md`](UPST
   by `GET /community/api/changelog`) shown top-centre, dismissable; the seen id persists in `loadPref`/`savePref`
   (`noticeSeen`), and nothing to show / offline hides it. The title's 公告 entry opens the same 更新日志 overlay
   (`ChangelogOverlay` `title=` prop) — one store, no duplicate.
-- **关于本服务器** — the version / `/healthz` build tag / mode list / README Gitee-mirror framing / the footer
+- **关于本服务器** — the version / `/healthz` build tag / mode list / README primary+mirror framing / the footer
   attribution, all factual about this project.
 - **添加到桌面** — the browser install prompt (`beforeinstallprompt`), hidden when unavailable. The installability
   half is now merged from upstream 0.2.3 (the mint-rook `public/manifest.json` + `public/icons/`; see
