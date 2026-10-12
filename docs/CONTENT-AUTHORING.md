@@ -312,4 +312,12 @@ platforms: {
 - **纯视觉**：不动 `server/sim` 的格子/高度/部署逻辑；`deployTiles`、`AREAS` 一律不变。若将来某个战场的模拟高度就是官方高度，用 `heightFromTiles: true` 从 `layout.js` 的 `h` 取。
 - 数值来源：官方沙地截图与我们的同相机渲染比对（台阶高度 ≈ 官方一级/二级台阶，跑道贴场地顶边），记录在 `docs/ASSETS.md`。没有 `platforms` 行 = 不加高台。
 
+### 8.2 光照 / 阴影
+
+官方是 Unity HDR：一盏**方向光太阳**（`scene.json` 的 `light .dir/.color/.intensity`，由场景 bundle 的 Light 导出）+ 烘焙光照贴图（间接光 + AO + 阴影遮罩）+ **实时阴影**。我们的移植：
+- 方向光 / 环境光来自 `scene.json`（`sceneMaterial` 的 `uLightDir/uLightColor`，`uLmScale` 用烘焙光）。
+- 官方场景的网格现在 `castShadow` + `receiveShadow`（`scene.js` `_buildScene`），`sceneMaterial`（`lights: true`）在片元里对方向光取 `directionalShadowMap[0]` 的阴影，即官方那种道具投在场地上的投影；阴影相机由 `_fitShadow` 贴合场地。
+- 注意：场景块按材质合并成单个网格，道具与地面同网格 → 实时自阴影是退化的；要更锐利的投影需要保留未合并的道具或单独一层。烘焙阴影（光照贴图 RGB 的 AO/间接光）已在用，且是官方阴影的主要来源。
+
+
 

@@ -445,7 +445,8 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     assert.ok(!xs.includes(16) && !xs.includes(11), 'the right field and the boss field stay out');
     for (const m of meshes) {
       assert.ok(m.geometry.getAttribute('aLm') && m.geometry.getAttribute('aColor').normalized && m.geometry.getAttribute('normal').normalized);
-      assert.equal(m.castShadow, false);
+      assert.equal(m.castShadow, true, 'the scene casts the sun’s shadows');
+      assert.equal(m.receiveShadow, true, 'and receives them (official AO / cast shadows)');
     }
     const water = meshes.find((m) => m.material.uniforms.uDeep);
     assert.ok(water && water.material.transparent);

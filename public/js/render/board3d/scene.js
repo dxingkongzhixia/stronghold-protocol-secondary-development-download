@@ -414,7 +414,7 @@ export class BoardScene {
       if (mat.userData.normalMap) { try { g.computeTangents(); } catch { /* a degenerate chunk keeps its vertex normals */ } }
       g.computeBoundingSphere();
       const mesh = new T.Mesh(g, mat);
-      mesh.castShadow = false; mesh.receiveShadow = false;
+      mesh.castShadow = true; mesh.receiveShadow = true;
       mesh.renderOrder = water ? 1 : mat.userData.blend === 'blend' ? 2 : mat.userData.blend === 'cutout' ? -3 : -4;
       mesh.matrixAutoUpdate = false; mesh.updateMatrix();
       this.root.add(mesh);
@@ -492,7 +492,7 @@ export class BoardScene {
     g.setIndex(new T.BufferAttribute(pos.length / 3 > 65535 ? new Uint32Array(idx) : new Uint16Array(idx), 1));
     if (!res.platformMat) res.platformMat = new T.MeshStandardMaterial({ map, color: new T.Color(tint[0], tint[1], tint[2]), roughness: 0.92, metalness: 0 });
     const mesh = new T.Mesh(g, res.platformMat);
-    mesh.castShadow = false; mesh.receiveShadow = false; mesh.renderOrder = -2;
+    mesh.castShadow = true; mesh.receiveShadow = true; mesh.renderOrder = -2;
     mesh.matrixAutoUpdate = false; mesh.updateMatrix();
     this.root.add(mesh);
     this.meshes.platforms = mesh;

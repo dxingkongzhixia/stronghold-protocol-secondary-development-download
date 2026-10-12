@@ -395,7 +395,7 @@ export function sceneMaterial(THREE, o, focus) {
   const theme = o.theme || null;
   const tint = theme?.tint || [1, 1, 1];
   const normalMap = o.normalMap || null, roughMap = o.roughnessMap || null, emisMap = o.emissionMap || null;
-  const uniforms = {
+  const uniforms = Object.assign({}, THREE.UniformsLib.lights, {
     uMap: { value: o.map || null }, uLm: { value: o.lightMap || null },
     uColor: { value: new THREE.Vector4(lin(col[0]) * (tint[0] ?? 1), lin(col[1]) * (tint[1] ?? 1), lin(col[2]) * (tint[2] ?? 1), col[3]) },
     uCutoff: { value: blend === 'cutout' ? floatOf(info, '_Cutoff', 0.5) : 0 },
@@ -409,7 +409,7 @@ export function sceneMaterial(THREE, o, focus) {
     uEmisMap: { value: emisMap }, uEmisColor: { value: new THREE.Vector3(lin(emis[0]), lin(emis[1]), lin(emis[2])) },
     uSaturate: { value: Number.isFinite(theme?.saturate) ? theme.saturate : 1 },
     ...focus,
-  };
+  });
   const defines = {
     ...(o.map ? { SCENE_MAP: 1 } : {}), ...(o.lightMap ? { SCENE_LM: 1 } : {}),
     ...(normalMap ? { SCENE_NORMAL: 1 } : {}),
@@ -418,7 +418,9 @@ export function sceneMaterial(THREE, o, focus) {
   const m = new THREE.ShaderMaterial({
     uniforms,
     defines,
+    lights: true,
     vertexShader: [
+      '#include <common>',
       'attribute vec2 aLm;',
       '#ifdef SCENE_NORMAL',
       'attribute vec4 tangent;',
@@ -427,6 +429,7 @@ export function sceneMaterial(THREE, o, focus) {
       '#ifdef SCENE_NORMAL',
       'varying vec3 vT; varying vec3 vB;',
       '#endif',
+      '#include <shadowmap_pars_vertex>',
       'void main() {',
       '  vUv = uv; vLm = aLm;',
       '  vec3 n = normalize(mat3(modelMatrix) * normal);',
@@ -438,10 +441,16 @@ export function sceneMaterial(THREE, o, focus) {
       '#endif',
       '  vec4 w = modelMatrix * vec4(position, 1.0);',
       '  vWorld = w.xyz;',
+      '  vec4 worldPosition = w;',
+      '  vec3 transformedNormal = n;',
+      '  #include <shadowmap_vertex>',
       '  gl_Position = projectionMatrix * viewMatrix * w;',
       '}',
     ].join('\n'),
     fragmentShader: [
+      '#include <common>',
+      '#include <packing>',
+      '#include <shadowmap_pars_fragment>',
       'uniform sampler2D uMap; uniform sampler2D uLm; uniform vec4 uColor; uniform float uCutoff;',
       'uniform float uLmScale; uniform float uAmbient; uniform float uShadow; uniform vec3 uLightDir; uniform vec3 uLightColor;',
       'uniform sampler2D uNormalMap; uniform float uNormalScale; uniform sampler2D uRoughMap;',
@@ -470,7 +479,12 @@ export function sceneMaterial(THREE, o, focus) {
       '  #else',
       '    vec3 n = normalize(gl_FrontFacing ? vN : -vN);',
       '  #endif',
-      '  light += uLightColor * max(dot(n, uLightDir), 0.0) * shade;',
+      '  #if defined(USE_SHADOWMAP) && NUM_DIR_LIGHT_SHADOWS > 0',
+      '    float sceneShadow = getShadow(directionalShadowMap[0], directionalLightShadows[0].shadowMapSize, 1.0, directionalLightShadows[0].shadowBias, directionalLightShadows[0].shadowRadius, vDirectionalShadowCoord[0]);',
+      '  #else',
+      '    float sceneShadow = 1.0;',
+      '  #endif',
+      '  light += uLightColor * max(dot(n, uLightDir), 0.0) * shade * sceneShadow;',
       '  vec3 c = a.rgb * light;',
       '  #ifdef SCENE_ROUGH',
       '    float sm = 1.0 - texture2D(uRoughMap, vUv).g;',
