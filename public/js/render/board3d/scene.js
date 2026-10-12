@@ -369,6 +369,7 @@ export class BoardScene {
     if (!res) return;
     for (const m of res.mats.values()) m.dispose();
     res.apronMat?.dispose?.();
+    res.platformMat?.dispose?.();
     for (const t of [...Object.values(res.tex), ...res.lm]) t?.dispose?.();
     this.sceneRes.delete(pack.key);
   }
@@ -427,6 +428,7 @@ export class BoardScene {
       }
     }
     this._buildApron(theme, res, pack);
+    this._buildPlatforms(theme, res, pack);
     return n > 0;
   }
 
@@ -531,6 +533,76 @@ export class BoardScene {
   _apronFallbackTexture(pack) {
     for (const m of Object.values(pack?.doc?.materials || {})) if (m && typeof m.map === 'string') return m.map;
     return '';
+  }
+
+  /**
+   * The battlefield's 高台: the official's raised SANDSTONE BLOCKS (`theme.platforms.blocks`), built as flat-topped
+   * boxes with lit / shaded sides, sharing the field's albedo and the scene's own key light (`sceneMaterial`) so they
+   * read as the same sandstone as the ground. The rects are the localised blocks the battlefield's official PRTS map
+   * shows — the earlier ring / lane `platforms` (a bright rectangular frame around the whole field, a wrong read) is
+   * gone. Every rect lies OUTSIDE the deploy field, so a block never covers a deploy highlight / the direction wheel.
+   * VISUAL only: the sim's tiles / heights / deployTiles are untouched. Visible only in the focus-lit scene path.
+   * @param {{ platforms?: { texture?: string, tint?: number[], uv?: number, blocks?: Array<{r0:number,r1:number,c0:number,c1:number,h:number,base?:number}> } }} theme
+   * @param {{ tex: object, mats: Map, platformMat?: any }} res
+   * @param {{ doc?: object }} pack
+   */
+  _buildPlatforms(theme, res, pack) {
+    const spec = theme?.platforms;
+    const blocks = Array.isArray(spec?.blocks) ? spec.blocks : null;
+    if (!spec || !blocks || !blocks.length) return;
+    const T = this.THREE;
+    const map = res.tex[spec.texture] || res.tex[this._apronFallbackTexture(pack)] || null;
+    if (!map) return;
+    // the scene material record of the block's texture (its _Color / _ShadowStrength), so the block is shaded like
+    // the ground it copies; else any lit material.
+    const infos = pack?.doc?.materials || {};
+    let info = null;
+    for (const m of Object.values(infos)) if (m && m.map === spec.texture) { info = m; break; }
+    if (!info) for (const m of Object.values(infos)) if (m && m.kind !== 'water' && typeof m.map === 'string') { info = m; break; }
+    const s = Number.isFinite(spec.uv) ? spec.uv : 0.23;
+    const pos = [], uv = [], nrm = [], lm = [], idx = [];
+    const push = (x, y, z, nx, ny, nz) => {
+      pos.push(x, y, z); nrm.push(nx, ny, nz);
+      // world-space UV per face so the sandstone grain keeps a constant density across top and sides
+      if (ny !== 0) uv.push(x * s, z * s); else if (nx !== 0) uv.push(y * s, z * s); else uv.push(x * s, y * s);
+      lm.push(0, 0);
+    };
+    const quad = (a, b, c, d, n) => {
+      const o = pos.length / 3;
+      for (const p of [a, b, c, d]) push(p[0], p[1], p[2], n[0], n[1], n[2]);
+      idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
+    };
+    for (const b of blocks) {
+      if (!b) continue;
+      const r0 = Math.min(b.r0, b.r1), r1 = Math.max(b.r0, b.r1), c0 = Math.min(b.c0, b.c1), c1 = Math.max(b.c0, b.c1);
+      const top = Number.isFinite(b.h) ? b.h : 0.42;
+      const base = Number.isFinite(b.base) ? b.base : 0;
+      if (!(top > base)) continue;
+      const x0 = c0 - 0.5, x1 = c1 + 0.5, y0 = r0 - 0.5, y1 = r1 + 0.5;
+      quad([x0, y0, top], [x1, y0, top], [x1, y1, top], [x0, y1, top], [0, 0, 1]);             // top
+      quad([x0, y0, base], [x0, y0, top], [x1, y0, top], [x1, y0, base], [0, -1, 0]);          // front (-y)
+      quad([x1, y0, base], [x1, y0, top], [x1, y1, top], [x1, y1, base], [1, 0, 0]);           // right (+x)
+      quad([x1, y1, base], [x1, y1, top], [x0, y1, top], [x0, y1, base], [0, 1, 0]);           // back (+y)
+      quad([x0, y1, base], [x0, y1, top], [x0, y0, top], [x0, y0, base], [-1, 0, 0]);          // left (-x)
+    }
+    if (!pos.length) return;
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+    g.setAttribute('normal', new T.BufferAttribute(new Float32Array(nrm), 3));
+    g.setAttribute('uv', new T.BufferAttribute(new Float32Array(uv), 2));
+    g.setAttribute('aLm', new T.BufferAttribute(new Float32Array(lm), 2));
+    g.setIndex(new T.BufferAttribute(pos.length / 3 > 65535 ? new Uint32Array(idx) : new Uint16Array(idx), 1));
+    g.computeBoundingSphere();
+    if (!res.platformMat) {
+      const tint = Array.isArray(spec.tint) ? spec.tint : [1, 1, 1];
+      res.platformMat = new T.MeshStandardMaterial({ map, color: new T.Color(tint[0], tint[1], tint[2]), roughness: 0.92, metalness: 0 });
+    }
+    const mesh = new T.Mesh(g, res.platformMat);
+    mesh.castShadow = true; mesh.receiveShadow = true; mesh.renderOrder = -3;
+    mesh.matrixAutoUpdate = false; mesh.updateMatrix();
+    this.root.add(mesh);
+    this.meshes.platforms = mesh;
+    this.renderer.shadowMap.needsUpdate = true;
   }
 
 
