@@ -588,6 +588,40 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     board.destroy(); b2.destroy();
   });
 
+  test('_buildPlatforms: the sand theme raises the official blocks outside the deploy field; the metal theme has none', () => {
+    const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
+    const { doc, bin } = fakeScene([{ material: 'M', x0: 4, y0: 9, group: 'HIDDEN@1' }]);
+    doc.materials.M.map = 'TX_AutochessSand_A';
+    const chunks = parseSceneChunks(doc, bin);
+    const img = { width: 4, height: 4 };
+    board.setScenePack(stage.id, { key: 'plat', stage: stage.id, doc, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_AutochessSand_A: img, TX_AutochessSand_sand_A: img }, lm: [img] } });
+    board.setStage(stage);
+    assert.equal(board.theme, SCENE_THEMES.sand, 'the sand theme is picked from the doc albedo');
+    const plat = board.meshes.platforms;
+    assert.ok(plat && plat.geometry.getAttribute('position').count > 0, 'the blocks are built');
+    const pos = plat.geometry.getAttribute('position');
+    assert.equal(plat.geometry.getAttribute('uv').count, pos.count, 'one world-space UV per vertex');
+    assert.equal(plat.geometry.getAttribute('aLm').count, pos.count, 'the scene material needs its aLm slot');
+    assert.equal(plat.geometry.getAttribute('normal').getZ(0), 1, 'the first face is a top, facing up');
+    // every vertex is OUTSIDE the deploy field (rows 9-12, cols 3-9), so the blocks never cover a deploy tile, and the
+    // blocks rise above the field (a raised 高台, not a flat patch)
+    let hitsDeploy = 0, above = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      if (x > 2.5 && x < 9.5 && y > 8.5 && y < 12.5) hitsDeploy++;
+      if (z >= 0.3) above++;
+    }
+    assert.equal(hitsDeploy, 0, 'no vertex on a deploy tile (the deploy highlight / wheel stays clear)');
+    assert.ok(above > 0, 'the blocks rise above the field');
+    // a theme without platforms builds none (the metal / procedural regression baseline)
+    const b2 = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
+    b2.setScenePack(stage.id, { key: 'noplat', stage: stage.id, doc: { ...doc, materials: { M: { ...doc.materials.M, map: 'TX_Syracuse_metro_D' } } }, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_Syracuse_metro_D: img }, lm: [img] } });
+    b2.setStage(stage);
+    assert.equal(b2.theme, SCENE_THEMES.city);
+    assert.equal(b2.meshes.platforms, undefined, 'no platforms for a theme without the layout');
+    board.destroy(); b2.destroy();
+  });
+
   test('a scene\'s standing props split out of its terrain: the terrain does not cast, the props do', () => {
     const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer(), propSplit: { minProps: 1 } });
     const { doc, bin } = fakeScene([{ material: 'M', x0: 4, y0: 9, group: 'HIDDEN@1' }, { material: 'M', x0: 6, y0: 9, top: 0.6, group: 'HIDDEN@1' }]);
