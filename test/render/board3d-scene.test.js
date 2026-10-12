@@ -20,7 +20,7 @@ import { presetCamera } from '../../public/js/render/projection.js';
 import { sceneMaterial, sceneWaterMaterial, sceneBlend, focusUniforms, SCENE_LIGHT } from '../../public/js/render/board3d/materials.js';
 import { SCENE_THEMES, sceneTheme } from '../../public/js/render/board3d/theme.js';
 import {
-  parseSceneChunks, sceneGroupRects, loadScenePack, sceneListed, resetBoardPack, sceneGroup, sceneMaterialKey, mergeSceneChunks,
+  parseSceneChunks, sceneGroupRects, loadScenePack, sceneListed, resetBoardPack, sceneGroup, sceneMaterialKey, mergeSceneChunks, splitSceneProps,
   SCENE_TEX_GROUP, SCENE_VERSION, SCENE_VERTEX_BYTES,
 } from '../../public/js/render/board3d/load.js';
 
@@ -40,10 +40,10 @@ function py(code) {
 }
 
 /** One quad as a scene chunk record + its bytes (the layout of scenes.py pack_chunk). */
-function quadChunk({ x0 = 0, y0 = 0, z = 0, material = 'M', lightmap = 0, group = '' } = {}) {
+function quadChunk({ x0 = 0, y0 = 0, z = 0, top = z, material = 'M', lightmap = 0, group = '' } = {}) {
   const n = 4, idx = [0, 1, 2, 0, 2, 3];
   const buf = new ArrayBuffer(n * SCENE_VERTEX_BYTES + idx.length * 2);
-  new Float32Array(buf, 0, 12).set([x0, y0, z, x0 + 1, y0, z, x0 + 1, y0 + 1, z, x0, y0 + 1, z]);
+  new Float32Array(buf, 0, 12).set([x0, y0, z, x0 + 1, y0, z, x0 + 1, y0 + 1, top, x0, y0 + 1, top]);
   new Float32Array(buf, 48, 8).set([0, 0, 1, 0, 1, 1, 0, 1]);
   new Float32Array(buf, 80, 8).set([0, 0, 0.5, 0, 0.5, 0.5, 0, 0.5]);
   new Int8Array(buf, 112, 16).set([0, 0, 127, 0, 0, 0, 127, 0, 0, 0, 127, 0, 0, 0, 127, 0]);
@@ -259,10 +259,12 @@ describe('scene themes (theme.js)', () => {
     assert.ok(Number.isFinite(p.width) && p.width > 0, 'a blend width');
     assert.ok(Number.isFinite(p.alpha) && p.alpha > 0 && p.alpha <= 1, 'a starting alpha');
     assert.ok(Number.isFinite(p.z) && p.z > 0, 'a low z above the scene ground');
+    assert.ok(Number.isFinite(p.gap) && p.gap > 0, 'the band starts clear of the field edge (never tints the last tile row)');
     assert.ok(SCENE_THEMES.sand.sun > 1, 'the sand theme pushes the sun term up (the official sunlit/shaded range)');
     assert.equal(SCENE_THEMES.default.apron, undefined, 'no apron by default');
-    assert.equal(SCENE_THEMES.city.apron, undefined, 'metal / industrial keeps none (regression baseline)');
+    assert.equal(SCENE_THEMES.city.apron, undefined, 'the city keeps none (its official edge is pavement, not sand)');
     assert.equal(SCENE_THEMES.default.sun, undefined, 'no sun gain by default');
+    assert.ok(SCENE_THEMES.city.sun > 1 && SCENE_THEMES.kxmr.sun > 1, 'every listed theme reads the official sun');
   });
 });
 
@@ -319,6 +321,37 @@ describe('scene chunks (load.js)', () => {
     assert.equal(wide.index[3], 65535);
     assert.equal(wide.position[65535 * 3], 9);
     assert.throws(() => mergeSceneChunks([{ ...chunks[0], material: 'Other' }, chunks[1]]), /mixes/);
+  });
+
+  test('splitSceneProps: a flat tile stays terrain, a standing island becomes its own props mesh', () => {
+    // a merged chunk: quad A flat on the ground (z 0), quad B standing up (z 0..0.6)
+    const quad = (z0, z1, x, y) => ({
+      position: [x, y, z0, x + 1, y, z0, x + 1, y + 1, z0, x, y + 1, z1],
+      uv: [0, 0, 1, 0, 1, 1, 0, 1], uv1: [0, 0, 1, 0, 1, 1, 0, 1],
+      normal: [0, 0, 127, 0, 0, 0, 127, 0, 0, 0, 127, 0, 0, 0, 127, 0],
+      color: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+      index: [0, 1, 2, 0, 2, 3],
+    });
+    const merge = (a, b) => {
+      const nv = a.position.length / 3, off = (arr) => [...a[arr], ...b[arr]];
+      return { material: 'M', lightmap: 0, group: '', bounds: null, position: off('position'), uv: off('uv'), uv1: off('uv1'), normal: off('normal'), color: off('color'), index: [...a.index, ...b.index.map((i) => i + nv)] };
+    };
+    const flat = quad(0, 0, 0, 0), tall = quad(0, 0.6, 3, 0);
+    const r = splitSceneProps(merge(flat, tall), { minProps: 1 });
+    assert.equal(r.propsCount, 2);
+    assert.deepEqual([...r.ground.index], [0, 1, 2, 0, 2, 3], 'the flat tile is terrain');
+    assert.deepEqual([...r.props.index], [0, 1, 2, 0, 2, 3]);
+    assert.deepEqual([...r.props.position].map((v) => Math.round(v * 1000) / 1000), tall.position, 'the props part is compact: only its own vertices');
+    assert.equal(r.props.position.length / 3, 4);
+    // two flat quads (no standing island) stay one chunk — the merged mesh is returned as-is
+    const same = merge(flat, quad(0, 0.05, 3, 0));
+    assert.equal(splitSceneProps(same).ground, same);
+    assert.equal(splitSceneProps(same).props, null);
+    // a 2-triangle speck is not worth its own mesh (`minProps`)
+    assert.ok(splitSceneProps(merge(flat, tall), { minProps: 1 }).props, 'a 2-tri prop splits when minProps allows it');
+    assert.equal(splitSceneProps(merge(flat, tall)).props, null, 'but not by default: a 2-triangle speck is not a draw call');
+    assert.equal(splitSceneProps(merge(flat, tall), { minProps: 3 }).props, null);
+    assert.equal(splitSceneProps(null).ground, null);
   });
 
   test('sceneGroupRects / sceneGroupVisible: the official sub-graphics are the fields of the built areas', () => {
@@ -451,7 +484,7 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     assert.ok(!xs.includes(16) && !xs.includes(11), 'the right field and the boss field stay out');
     for (const m of meshes) {
       assert.ok(m.geometry.getAttribute('aLm') && m.geometry.getAttribute('aColor').normalized && m.geometry.getAttribute('normal').normalized);
-      assert.equal(m.castShadow, true, 'the scene casts the sun’s shadows');
+      assert.equal(m.castShadow, false, 'the terrain does not re-cast its baked shadow (only props cast)');
       assert.equal(m.receiveShadow, true, 'and receives them (official AO / cast shadows)');
     }
     const water = meshes.find((m) => m.material.uniforms.uDeep);
@@ -530,6 +563,21 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     assert.equal(b2.theme, SCENE_THEMES.city);
     assert.equal(b2.meshes.apron, undefined, 'no apron for a theme without the layout');
     board.destroy(); b2.destroy();
+  });
+
+  test('a scene\'s standing props split out of its terrain: the terrain does not cast, the props do', () => {
+    const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer(), propSplit: { minProps: 1 } });
+    const { doc, bin } = fakeScene([{ material: 'M', x0: 4, y0: 9, group: 'HIDDEN@1' }, { material: 'M', x0: 6, y0: 9, top: 0.6, group: 'HIDDEN@1' }]);
+    const chunks = parseSceneChunks(doc, bin);
+    board.setScenePack(stage.id, { key: 'props', stage: stage.id, doc, chunks, groups: sceneGroupRects(chunks), images: { tex: {}, lm: [] } });
+    board.setStage(stage);
+    const meshes = sceneMeshes(board);
+    assert.equal(meshes.length, 2, 'the flat tile stays terrain, the standing quad splits out');
+    assert.deepEqual(meshes.map((m) => m.castShadow).sort(), [false, true], 'terrain does not cast, props do');
+    assert.ok(meshes.every((m) => m.receiveShadow), 'everything receives');
+    let verts = 0; for (const m of meshes) verts += m.geometry.getAttribute('position').count;
+    assert.equal(verts, 8, 'each shown vertex lives in exactly one mesh');
+    board.destroy();
   });
 
   test('a different lightmap page stays its own mesh; water pages share one', () => {
@@ -645,13 +693,18 @@ describe('extracted scenes (when scene bundles were extracted here)', { skip: !O
         board.setArea(area);
         const shown = chunks.filter((c) => !c.group || sceneGroupVisible(rects[c.group], area));
         const keys = new Set(shown.map((c) => sceneMaterialKey(c, doc.materials[c.material])));
+        // one mesh per material/lightmap bucket, plus one more where a bucket's standing props split out of its terrain
+        const buckets = new Map();
+        for (const c of shown) { const k = sceneMaterialKey(c, doc.materials[c.material]); const b = buckets.get(k); if (b) b.push(c); else buckets.set(k, [c]); }
+        let expect = 0;
+        for (const list of buckets.values()) { const info = doc.materials[list[0].material]; expect += (info?.kind === 'water' || !splitSceneProps(mergeSceneChunks(list)).props) ? 1 : 2; }
         const meshes = sceneMeshes(board);
-        assert.equal(meshes.length, keys.size, `${doc.stage} ${name}: ${shown.length} chunks → ${keys.size} meshes`);
-        assert.ok(meshes.length > 0 && meshes.length <= 16, `${doc.stage} ${name}: ${meshes.length} scene draw calls`);
+        assert.equal(meshes.length, expect, `${doc.stage} ${name}: ${shown.length} chunks / ${keys.size} buckets → ${expect} meshes`);
+        assert.ok(meshes.length > 0 && meshes.length <= 24, `${doc.stage} ${name}: ${meshes.length} scene draw calls`);
         let verts = 0;
         for (const m of meshes) verts += m.geometry.getAttribute('position').count;
         assert.equal(verts, shown.reduce((a, c) => a + c.position.length / 3, 0), `${doc.stage} ${name} vertices`);
-        if (name !== 'unite') assert.ok(board.root.children.length <= 19, `${doc.stage} ${name}: ${board.root.children.length} meshes beside one battle device still fit 20 draws`);
+        if (name !== 'unite') assert.ok(board.root.children.length <= 24, `${doc.stage} ${name}: ${board.root.children.length} meshes beside one battle device still fit 24 draws`);
       }
       assert.equal(board.meshes.board, undefined, `${doc.stage}: the scene replaces the metal tiles`);
       board.setScenePack(doc.stage, null);

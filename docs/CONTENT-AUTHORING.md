@@ -284,7 +284,17 @@
 | `tint` | 反照率乘子（色偏校正，`[1,1,1]` = 不调） | 官方材质的 `_Color` 与截图的通道比 |
 | `saturate` | 最终线性的饱和度（<1 = 官方更柔和的观感） | 截图的饱和度比对 |
 
-**主题判定**：`sceneTheme(stageId, doc)` 先按 `scene doc` 的贴图族（`THEME_MARKERS`，如 `TX_AutochessSand_*` → `sand`、`TX_Syracuse_metro_*` → `city`、`TX_KXMR_*` / `TX_LMZ_*`）判定，再按 `stageId` 前缀兜底，最后 `default`。现有主题：`sand`（9 张图）、`city`（act2 m01）、`kxmr` / `lmz`（act2 m03）、`default`。
+**主题判定**：`sceneTheme(stageId, doc)` 先按 `scene doc` 的贴图族（`THEME_MARKERS`，如 `TX_AutochessSand_*` → `sand`、`TX_Syracuse_metro_*` → `city`、`TX_KXMR_*` / `TX_LMZ_*`）判定，再按 `stageId` 前缀兜底，最后 `default`。现有主题与取值：
+
+| 主题 | 地图 | exposure | ambient | sun | tint | saturate | apron |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `sand` | act1 m01–m07、act2 m02/m04 | 2.7 | 0.12 | 3.4 | 1.01/1.00/0.98 | 0.97 | 有 |
+| `city` | act2 m01（叙拉古·城市） | 2.45 | 0.15 | 3.0 | 1/1/1 | 0.95 | 无 |
+| `kxmr` | act2 m03（含 TX_KXMR 与 TX_LMZ 两族，取前者） | 2.0 | 0.13 | 2.4 | 1/1/1 | 0.94 | 无 |
+| `lmz` | 暂无仅含 `TX_LMZ` 的场景（`TX_LMZ`-only 时启用），与 kxmr 同值 | 2.0 | 0.13 | 2.4 | 1/1/1 | 0.94 | 无 |
+| `default` | 未列出的场景 | 1.5 | 0.12 | — | 1/1/1 | 0.94 | 无 |
+
+取样（同 1280×720 战斗相机，区域 = 画面中部 25–78% × 28–80%）：官方沙地截图 mean 164 / std 40；我们 `sand` 改前 140/27 → 改后 154/31。`city` 改前 120/42 → 改后 157/56（官方就是明亮日照）；`kxmr` 改前 127/29 → 改后 135/31。金属 / 工业主题走程序化板（`boardMaterial`），本表不影响它，改后与改前**逐像素一致**（125.3/40.8 完全相同）。
 
 **加 / 调一个主题**：
 1. 在 `SCENE_THEMES` 加一行（或改现有行）——先只动 `exposure` / `ambient` / `sun` / `saturate`。
@@ -299,27 +309,29 @@
 ```js
 apron: {
   texture: 'TX_AutochessSand_sand_A', // 沙地贴图（scene/tex 里的名字；省略 = 用场景地面贴图）
-  tint:    [1.10, 1.07, 1.02],        // 材质乘子
+  tint:    [1.08, 1.06, 1.02],        // 材质乘子
   uv:      0.23,                      // 世界坐标 UV 密度（每格纹理重复数；≈ 官方 _sand 材质的实测值）
-  width:   2.2,                       // 铺边向外几格
-  rings:   5,                         // 渐变分几圈
-  alpha:   0.45,                      // 场边处的起始透明度（向外线性到 0）
+  width:   1.6,                       // 铺边向外几格
+  gap:     0.5,                       // 内缘离场边的**额外**留白（格）：保证不与任何可玩行/列重叠（含底行）
+  rings:   4,                         // 渐变分几圈
+  alpha:   0.34,                      // 场边处的起始透明度（向外线性到 0）
   z:       0.014,                     // 略高于场地，避免与官方地面 z-fighting
 }
 ```
 
 **规则**：
-- 铺边**只在场地区域（`this.area`）的外接矩形之外**，因此不会压在可玩格上。
+- 铺边的**内缘**是 `area` 外接矩形再向外 `0.5 + gap` 格，因此它**永远在最外一行可玩格之外**（owner 反馈：早期 `gap=0` 时沙粒贴着底行、读起来像盖住了底行）。底行格子必须仍是**格子反照率**，不是沙子——用同相机开/关铺边两次取样，底行各列 delta ≈ 0。
 - **纯视觉**：不动 `server/sim` 的格子/高度/部署逻辑；`deployTiles`、`AREAS` 一律不变。
-- 注意它盖住的是场地**紧邻一圈**的东西（官方场景自带的整备区木板 / 草坪 / 水面也在这圈里），所以 `alpha` 要低（0.45 左右）——高了会把官方自带的景盖成沙色。数值来源：官方沙地截图与我们的同相机渲染比对，记录在 `docs/ASSETS.md`。没有 `apron` 行 = 不铺边。
+- 注意它盖住的是场地**紧邻一圈**的东西（官方场景自带的整备区木板 / 草坪 / 水面也在这圈里），所以 `alpha` 要低（0.34 左右）——高了会把官方自带的景盖成沙色。数值来源：官方沙地截图与我们的同相机渲染比对，记录在 `docs/ASSETS.md`。没有 `apron` 行 = 不铺边。
 
 ### 8.2 光照 / 阴影
 
 官方是 Unity HDR：一盏**方向光太阳**（`scene.json` 的 `light .dir/.color/.intensity`，由场景 bundle 的 Light 导出）+ 烘焙光照贴图（间接光 + AO + 阴影遮罩）+ **实时阴影**。我们的移植：
 - 方向光 / 环境光来自 `scene.json`（`sceneMaterial` 的 `uLightDir/uLightColor`，`uLmScale` 用烘焙光）。
 - **太阳增益**：`uLightColor = scene light.intensity × SCENE_LIGHT.direct × theme.sun`。官方沙地亮沙 ≈ (223,180,131)、背光沙 ≈ (129,104,77)，亮/暗比约 1.7；我们原来只有约 1.25（sun = 1、intensity 1.1），场地偏平、发暗。沙地主题给 `sun: 1.85`，把太阳提亮到官方的反差。
-- 官方场景的网格现在 `castShadow` + `receiveShadow`（`scene.js` `_buildScene`），`sceneMaterial`（`lights: true`）在片元里对方向光取 `directionalShadowMap[0]` 的阴影，即官方那种道具投在场地上的投影；阴影相机由 `_fitShadow` 贴合场地。**实测**：关掉 `renderer.shadowMap` 后同一点由 (74,71,69) 变 (86,79,72)——实时阴影确实在场地/道具上生效（约 14%）。
-- 注意：场景块按材质合并成单个网格，同网格内的**自阴影**退化（一块地里的道具投不到旁边），要更锐利的投影需要保留未合并的道具或单独一层；道具是不合并的 `dynamic` 网格，所以它们投影正常。烘焙阴影（光照贴图 RGB 的 AO/间接光）已在用，且是官方阴影的主要来源。
+- 官方场景的网格现在 `receiveShadow`（`scene.js` `_buildScene`），`sceneMaterial`（`lights: true`）在片元里对方向光取 `directionalShadowMap[0]` 的阴影，即官方那种道具投在场地上的投影；阴影相机由 `_fitShadow` 贴合场地。
+- **道具不合并、地形不投影**（owner 反馈「看不出光照效果」的根因）：官方场景的**地表**（平铺格 / 宽缓沙丘）按材质 + 光照图页合并成一块（省 draw call），但**竖着的道具**（岩石 / 木箱 / 仙人掌 / 草丛，`load.js splitSceneProps` 按三角形连通分量 + 高度/占地阈值判定）拆成**独立的 props 网格**，各自 `castShadow`。地表本身**不投**实时阴影——它的阴影早已烘焙进光照图 A 的 shadowmask（官方 Shadowmask 模式），重投会把整片场地自阴影、把太阳压平。于是：道具把**清晰的投影**投到地面上（这是低分辨率烘焙给不了的），地表只**接收**。实测（act1autochess_m01 战斗相机）：关掉实时阴影只影响约 6.9 万像素（全场 0.92M 的 7%），正是道具投影；关掉太阳则影响约 72 万像素（mean ΔL 37），说明太阳确实在照。
+- 环境/间接：`uLmScale = lightRange × SCENE_LIGHT.indirect`，`SCENE_LIGHT.indirect` 保持 1（烘焙即官方间接光）；`theme.ambient` 是每主题的中性补光。
 
 
 

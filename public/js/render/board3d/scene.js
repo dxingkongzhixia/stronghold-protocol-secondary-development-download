@@ -20,7 +20,9 @@
 // decals (MT_autochess_common), fence pipes, blowers (merged, unlit), gate boxes (additive + alpha, merged per
 // material), cyan field edges, terrain overlays (≤ 4), background plane + its shadow catcher — ~12–16 in total.
 // An official scene replaces the tiles, glass, decals, pipes and background with one mesh per material and lightmap
-// page of the parts the built areas show (load.js mergeSceneChunks). Devices, gates, edges and terrain stay.
+// page of the parts the built areas show (load.js mergeSceneChunks), PLUS one more per bucket that carries standing
+// props — the props of a bucket are split out of its terrain (load.js splitSceneProps) so each casts its own shadow on
+// the ground instead of a degenerate self-shadow within one huge island. Devices, gates, edges and terrain stay.
 // The key light's shadow map is rendered only when the geometry changes (autoUpdate off).
 
 import { buildBoard, objToBoard, boxProjectUV, ROWS, COLS, DEVICE_H, AREAS } from './layout.js';
@@ -30,7 +32,7 @@ import {
   waterMaterial, mireMaterial, infectionMaterial, smogMaterial, dashTexture, environmentMap, sceneMaterial, sceneWaterMaterial,
 } from './materials.js';
 import { syncThreeCamera } from '../projection.js';
-import { mergeSceneChunks, sceneMaterialKey } from './load.js';
+import { mergeSceneChunks, sceneMaterialKey, splitSceneProps } from './load.js';
 import { sceneTheme } from './theme.js';
 
 /** Lighting rig (tuned against the official screenshots: bright even tops, darker sides, soft shadows). */
@@ -132,6 +134,9 @@ export class BoardScene {
     this.opts = opts;
     this.destroyed = false;
     this.lost = false;
+    // split the official scene's standing props out of the merged terrain (PROP_SPLIT); off → one mesh per material
+    this.splitProps = opts.splitProps !== false;
+    this.propSplit = opts.propSplit || null;   // splitSceneProps tuning override (PROP_SPLIT by default)
     const T = THREE;
     this.renderer = opts.renderer || new T.WebGLRenderer({
       canvas: opts.canvas, antialias: opts.antialias ?? true, alpha: false, stencil: false, depth: true,
@@ -404,24 +409,45 @@ export class BoardScene {
         res.mats.set(mk, mat);
       }
       if (water) this.sceneWater.push(mat);
-      const g = new T.BufferGeometry();
-      g.setAttribute('position', new T.BufferAttribute(c.position, 3));
-      g.setAttribute('normal', new T.BufferAttribute(c.normal, 4, true));
-      g.setAttribute('uv', new T.BufferAttribute(c.uv, 2));
-      g.setAttribute('aLm', new T.BufferAttribute(c.uv1, 2));
-      g.setAttribute('aColor', new T.BufferAttribute(c.color, 4, true));
-      g.setIndex(new T.BufferAttribute(c.index, 1));
-      if (mat.userData.normalMap) { try { g.computeTangents(); } catch { /* a degenerate chunk keeps its vertex normals */ } }
-      g.computeBoundingSphere();
-      const mesh = new T.Mesh(g, mat);
-      mesh.castShadow = true; mesh.receiveShadow = true;
-      mesh.renderOrder = water ? 1 : mat.userData.blend === 'blend' ? 2 : mat.userData.blend === 'cutout' ? -3 : -4;
-      mesh.matrixAutoUpdate = false; mesh.updateMatrix();
-      this.root.add(mesh);
-      this.meshes[`scene${n++}`] = mesh;
+      const order = water ? 1 : mat.userData.blend === 'blend' ? 2 : mat.userData.blend === 'cutout' ? -3 : -4;
+      // Terrain stays merged (the draw-call win); the standing props of a bucket (rocks / crates / cacti / tufts) split
+      // into their own mesh, so a chunk whose ground and props share a material no longer fuses them into one island.
+      // The terrain does NOT cast the realtime shadow: its shadow is already in the lightmap's baked shadowmask, and
+      // re-casting it shadow-acnes the whole field and cancels the sun. Only the props cast — that is exactly the crisp
+      // prop-on-ground shadow the bake is too low-res to hold. Everything still receives.
+      const parts = (water || this.splitProps === false) ? { ground: c, props: null } : splitSceneProps(c, this.propSplit || undefined);
+      for (const [part, cast] of [[parts.ground, false], [parts.props, true]]) {
+        if (!part || !part.index || part.index.length === 0) continue;
+        const mesh = this._sceneMesh(part, mat, order, water ? false : cast);
+        this.root.add(mesh);
+        this.meshes[`scene${n++}`] = mesh;
+      }
     }
     this._buildApron(theme, res, pack);
     return n > 0;
+  }
+
+  /**
+   * One scene mesh of a bucket (its merged terrain or its split-out props). Position / uv / aLm / aColor / normal are
+   * the part's compact buffers. `cast` — the realtime shadow caster flag: the props cast, the terrain does not (its
+   * shadow is baked in the lightmap's shadowmask; re-casting it shadow-acnes the field). Everything receives.
+   */
+  _sceneMesh(part, mat, order, cast) {
+    const T = this.THREE;
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(part.position, 3));
+    g.setAttribute('normal', new T.BufferAttribute(part.normal, 4, true));
+    g.setAttribute('uv', new T.BufferAttribute(part.uv, 2));
+    g.setAttribute('aLm', new T.BufferAttribute(part.uv1, 2));
+    g.setAttribute('aColor', new T.BufferAttribute(part.color, 4, true));
+    g.setIndex(new T.BufferAttribute(part.index, 1));
+    if (mat.userData.normalMap) { try { g.computeTangents(); } catch { /* a degenerate chunk keeps its vertex normals */ } }
+    g.computeBoundingSphere();
+    const mesh = new T.Mesh(g, mat);
+    mesh.castShadow = !!cast; mesh.receiveShadow = true;
+    mesh.renderOrder = order;
+    mesh.matrixAutoUpdate = false; mesh.updateMatrix();
+    return mesh;
   }
 
   /**
@@ -451,10 +477,13 @@ export class BoardScene {
     const s = Number.isFinite(spec.uv) ? spec.uv : 0.23;
     const tint = Array.isArray(spec.tint) ? spec.tint : [1, 1, 1];
     const z = Number.isFinite(spec.z) ? spec.z : 0.014;
+    // `gap` (tiles) keeps the band clear of the field edge so it can never tint the last playable row; the fade starts
+    // at the gap, entirely outside the play area
+    const gap = Number.isFinite(spec.gap) && spec.gap > 0 ? spec.gap : 0;
     const a0 = Number.isFinite(spec.alpha) ? spec.alpha : 0.92;
     const pos = [], uv = [], nrm = [], col = [], idx = [];
     // rings[j] = the rectangle `j` steps out from the built area: d_j tiles out, flat at z, alpha fading to 0
-    const expand = (d) => ({ r0: area.r0 - 0.5 - d, r1: area.r1 + 0.5 + d, c0: area.c0 - 0.5 - d, c1: area.c1 + 0.5 + d });
+    const expand = (d) => ({ r0: area.r0 - 0.5 - gap - d, r1: area.r1 + 0.5 + gap + d, c0: area.c0 - 0.5 - gap - d, c1: area.c1 + 0.5 + gap + d });
     const dOf = (j) => (j / rings) * width;
     const aOf = (j) => a0 * Math.max(0, 1 - j / rings);
     const aoOf = (j) => 1 - 0.10 * (j / rings);
