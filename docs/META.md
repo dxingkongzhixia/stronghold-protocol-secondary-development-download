@@ -735,7 +735,7 @@ leaker's own capsule / row (`ui/hud.js uniteRemaining`) and the leakers' team ro
 
 ## 5. Views (DESIGN §8.2 / §8.3) and deviations
 
-The client's stored loadout and `m.private.loadout` must agree after a successful sync. In `public/js/ui/loadoutSync.js`, edits and `welcome` invalidate preparation still awaiting game data, so an older payload cannot overwrite a newer reset on the session or seat, or enter the next match (DESIGN §16, DESIGN §30.17). Request reply ordering, debounce, close flush and retry/lock handling remain unchanged.
+The client's stored loadout and `m.private.loadout` must agree after a successful sync. In `public/js/ui/loadoutSync.js`, edits and `welcome` invalidate preparation still awaiting game data, so an older payload cannot overwrite a newer reset on the session or seat, or enter the next match (DESIGN §16, docs/MATCHMAKING.md). Request reply ordering, debounce, close flush and retry/lock handling remain unchanged.
 
 `m.public` (throttled ≤ 10/s, only sent when it changed) carries the DESIGN fields plus: `drawnDisabledBonds` (the 3+4
 drawn set; `disabledBonds` = drawn ∪ the mode's static list), `hiddenBossId`, `bossRound`, `hiddenRound`, `spRound`,

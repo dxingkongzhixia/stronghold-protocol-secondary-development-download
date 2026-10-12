@@ -122,7 +122,7 @@ Piece = { uid, kind: 'chess'|'item'|'token', id, golden: bool, tier, items: [ { 
 C→S adds host-only `room.rerollSetup {setupRevision}` / `room.cancelReroll {voteId}` and participant
 `g.rerollVote {voteId, agree}`. `m.public` carries `setupRevision` and nullable `rerollVote {id, proposerId, voters, agreed}`.
 Ready must reference the current revision; omission means revision 0 for old clients. The server blocks Ready while
-voting, refuses stale ids and cancels on disconnect/leave; DESIGN §28.21 / META.md describe the complete contract.
+voting, refuses stale ids and cancels on disconnect/leave; META.md describes the complete contract.
 
 Explicit local recovery (§28.20) reuses saved hello tokens after a fresh live-tab claim check. Display names and room
 codes are UI metadata only, never authentication. No new network message or nickname/IP matching is introduced.

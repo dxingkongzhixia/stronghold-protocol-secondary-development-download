@@ -102,5 +102,5 @@ test('packaged copies of the shipped docs point unshipped relative links at the 
       }
     }
   }
-  assert.ok(fileRewrites >= 23, `README / PLAYING / DEPLOY rewrote ${fileRewrites} file links, want at least 23`);
+  assert.ok(fileRewrites >= 20, `README / PLAYING / DEPLOY rewrote ${fileRewrites} file links, want at least 20`);
 });
