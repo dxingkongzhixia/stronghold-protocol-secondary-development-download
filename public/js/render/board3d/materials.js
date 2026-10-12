@@ -350,10 +350,12 @@ export function smogMaterial(THREE, tex, focus) {
  * Tuning of the official scene materials (sceneMaterial). The official shader (Torappu/Scene/StandardRealtimeShadow) is
  * not reproduced: the albedo is lit by the baked indirect light of the scene's lightmap plus the scene's key light
  * masked by its baked shadow, in linear light (Unity's Shadowmask lighting mode). `range` — the linear light a lightmap
- * texel of 1.0 stands for when scene.json has no lightRange; [ASSUMED] `ambient` — the light of a mesh without a
- * lightmap page; `direct` / `indirect` — gains of the two terms (1 = the scene's own values).
+ * texel of 1.0 stands for when scene.json has no lightRange; `ambient` — a small neutral fill every material gets (the
+ * scene's sky / probe light; it is what lifts the baked ground towards the official's light sandstone instead of the
+ * flat albedo); `direct` / `indirect` — gains of the two terms, 1 = the scene's own values (the extractor already
+ * applies the lightmap's range, so an indirect gain below 1 just darkens the official bake).
  */
-export const SCENE_LIGHT = Object.freeze({ range: 8.0, ambient: 0.2, direct: 0.8, indirect: 0.4 });
+export const SCENE_LIGHT = Object.freeze({ range: 8.0, ambient: 0.12, direct: 1.0, indirect: 1.0 });
 
 const colorOf = (info, key, fallback = [1, 1, 1, 1]) => {
   const c = info && info.colors && Array.isArray(info.colors[key]) ? info.colors[key] : fallback;
@@ -397,7 +399,7 @@ export function sceneMaterial(THREE, o, focus) {
     uColor2: { value: new THREE.Vector4(lin(col2[0]), lin(col2[1]), lin(col2[2]), col2[3]) },
     uCutoff: { value: blend === 'cutout' ? floatOf(info, '_Cutoff', 0.5) : 0 },
     uLmScale: { value: o.lightMap ? (o.lightRange > 0 ? o.lightRange : SCENE_LIGHT.range) * SCENE_LIGHT.indirect : 0 },
-    uAmbient: { value: o.lightMap ? 0 : SCENE_LIGHT.ambient },
+    uAmbient: { value: SCENE_LIGHT.ambient },
     uShadow: { value: floatOf(info, '_ShadowStrength', 1) },
     uLightDir: { value: new THREE.Vector3(...L.dir).normalize() },
     uLightColor: { value: new THREE.Vector3(lin(L.color[0]) * k, lin(L.color[1]) * k, lin(L.color[2]) * k) },
