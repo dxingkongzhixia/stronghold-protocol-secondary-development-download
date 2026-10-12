@@ -128,9 +128,10 @@ describe('the 自选 summon models from the local client are an optional overlay
     const { meta, problems } = await localSpineMeta(ASSETS, Object.fromEntries(IDS.map((id) => [id, found[id]])));
     assert.deepEqual(problems, []);
     for (const id of IDS) assert.deepEqual(meta[id], COMMITTED[id], `${id}: re-run node tools/fetch-assets.mjs --local-spines`);
-    // and the shared data/local-assets.json lists every file of each (the client draws the model only then)
-    const local = JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8'));
-    for (const id of IDS) assert.ok(spineEntry(MANIFEST, id, { local })?.local, `${id}: listed in data/local-assets.json`);
+    // and the shared data/local-assets.json lists every file of each (the client draws the model only then);
+    // a fresh clone has no per-machine manifest, so that part is skipped there
+    const local = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8')); } catch { return null; } })();
+    if (local) for (const id of IDS) assert.ok(spineEntry(MANIFEST, id, { local })?.local, `${id}: listed in data/local-assets.json`);
   });
 
   test('findLocalTokenModels: skeleton + same-stem atlas + page PNGs under local/spine/token/<id>/; loadLocalSpines', async () => {

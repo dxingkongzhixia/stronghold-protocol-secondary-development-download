@@ -16,7 +16,8 @@ import { presetCamera } from '../../public/js/render/projection.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const assets = JSON.parse(readFileSync(path.join(ROOT, 'data/assets.json'), 'utf8'));
-const local = JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8'));
+/** The per-machine manifest (data/local-assets.json); null in a fresh clone without the extraction. */
+const local = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8')); } catch { return null; } })();
 const PIECE = 'token_10064_wang_stone1';
 
 let fake, UnitView;
@@ -50,9 +51,11 @@ describe('望 棋子 (token_10064_wang_stone1): the official model and its clips
     assert.deepEqual([sl.anims.idle, sl.anims.deploy, sl.anims.attack.loop, sl.anims.die], ['Idle', 'Start', 'Attack', null]);
     for (const name of ['Idle', 'Start', 'Attack']) assert.ok(name in sl.animations, `clip ${name}`);
     assert.equal(sl.hits.Attack[0], 0.167, 'the Attack clip, its OnAttack frame');
-    // the client draws it only when data/local-assets.json lists every one of its files
-    const g = local.groups[sl.group];
-    for (const f of [sl.skel, sl.atlas, ...sl.textures]) assert.ok(g[f], `local-assets ${f}`);
+    // the client draws it only when data/local-assets.json lists every one of its files (skip without the extraction)
+    if (local) {
+      const g = local.groups[sl.group];
+      for (const f of [sl.skel, sl.atlas, ...sl.textures]) assert.ok(g[f], `local-assets ${f}`);
+    }
   });
 
   test('deploy plays Start; the armed piece rests on Idle; the consumable trigger plays Attack (not the idle)', async () => {
