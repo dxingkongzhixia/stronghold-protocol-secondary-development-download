@@ -116,3 +116,32 @@ Piece = { uid, kind: 'chess'|'item'|'token', id, golden: bool, tier, items: [ { 
 - Emotes: 6 themes × 6 battle emotes (research 09 §4.2), image-only bubbles beside the sender avatar, 1 s cooldown, 3 s bubble; `g.emote {id}` with the official emoji id.
 
 ---
+
+### Opening reroll messages and local seat recovery
+
+C→S adds host-only `room.rerollSetup {setupRevision}` / `room.cancelReroll {voteId}` and participant
+`g.rerollVote {voteId, agree}`. `m.public` carries `setupRevision` and nullable `rerollVote {id, proposerId, voters, agreed}`.
+Ready must reference the current revision; omission means revision 0 for old clients. The server blocks Ready while
+voting, refuses stale ids and cancels on disconnect/leave; DESIGN §28.21 / META.md describe the complete contract.
+
+Explicit local recovery (§28.20) reuses saved hello tokens after a fresh live-tab claim check. Display names and room
+codes are UI metadata only, never authentication. No new network message or nickname/IP matching is introduced.
+
+Optional `coins: [[id, balance, cap]]` is an integer skill-currency readout (§29.6), separate from ammo. It includes zero, is stepped between snapshots and clears when omitted. Result-validation names for board operators are resolved from the server's DIY/stand-in selections, never a supplied display name.
+
+Preparation state carries read-only `prepMapChars` for 外勤医疗. The owner's entries can be clicked for a detail card
+and board-space range preview without adding a placement intent or a combat entity. Boss-mate and scouting metadata
+include them in displayed field coordinates. Draft cards expose optional `soldOut` when equipment stock is unavailable; the client
+disables picking and the server checks again before consumption.
+
+`m.public.bossPairs: [[playerId, playerId?], …] | null` publishes the preparation pairing, first member left and
+second right. It is drawn once per match and retained for Hidden Core; intact pairs survive departures, singles
+pair up. Clients use it for preparation camera/placement/team frames; only older servers lacking the field use
+the legacy seat-order fallback. Viewing or reconnecting never draws a new pair.
+
+[ASSUMED] Touch's confirmed initial team grant persists for this match after its holder is eliminated or leaves.
+The maintainer explicitly approved retaining this policy on 2026-10-12; its official-game lifetime remains unverified.
+The preparation medic and future battle's medic/Touch use the same entitlement; the receiving player must still be
+alive. A mere draft focus grants nothing; another match starts without it. Only `band_amedic` is retained in
+`contentInfo.matchBands`; `teammates` and other team strategies still filter eliminated players. The official text
+and initial/unlimited-round data do not explicitly settle the holder-elimination case (§30.14).
