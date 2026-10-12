@@ -28,12 +28,14 @@ const copyGrid = (g) => (Array.isArray(g) && g.length ? g.map((p) => [p[0], p[1]
 
 export default {
   // ---- 3_377 澄闪 · 驭械术师 funnel (custom: tools/build-data.mjs CUSTOM_CHESS). 浮游单元: the profession's
-  //      installFunnel holds ONE locked target (its funnelTarget, switching only after that enemy dies) and this file's
-  //      funnelMap ramp scales each lock, so her drones all focus that one enemy. Their COUNT is the number of FULL-ATK
-  //      hits per attack ("异格拉普兰德 (荒芜拉普兰德): 浮游单元+1 = one more drone hit per attack"), i.e. `attack.hits` +N,
-  //      NOT `attack.maxTargets` (which would split the volley across different enemies — wrong). S1 火花四溅 adds
-  //      ASPD, S2 电流翻涌 widens the range (持续无限), S3 澄净闪耀 stops her own attack, fires at the whole field and
-  //      its drones 停顿 what they hit.
+  //      installFunnel holds ONE locked target (its funnelTarget, switching only after that enemy dies) and the
+  //      profession's ramp (funnelMul) scales each lock, so her drones all focus that one enemy. Their COUNT is the
+  //      number of FULL-ATK drone ADDITIONS per attack ("异格拉普兰德 (荒芜拉普兰德): 浮游单元+1 = one more drone hit per
+  //      attack"), i.e. `attack.hits` +N, NOT `attack.maxTargets` (which would split the volley across different
+  //      enemies — wrong). The operator's own hit stays beside them (upstream 0.2.5 funnel fix, PR #537 — an unreleased
+  //      drone is additional damage, not a replacement for the caster's attack); S3 澄净闪耀 停止攻击, so it sets
+  //      `funnelBodyHits: 0` (drone-only, the ramp folded into the hits) and fires at the whole field. S1 火花四溅 adds
+  //      ASPD, S2 电流翻涌 widens the range (持续无限); both keep the own hit. S3's drones 停顿 what they hit.
   chess_char_377_gdglow_a: (bb, chess, def) => {
     const d = defOf(chess, def);
     // 澄净闪耀 (S3): 「攻击范围扩大至整个战场」 — the official record carries NO range for it (rangeGrid/rangeId null),
@@ -52,12 +54,14 @@ export default {
       return sl > 0 ? { onEachHit({ battle, unit: u, target }) { if (target?.alive) battle.applyStatus(target, 'sluggish', { duration: sl, source: u }); } } : null;
     };
     return {
-      // S3 澄净闪耀 (default): whole-field range, her own attack stops (the drones carry it), +2 drones, sluggish on hit
+      // S3 澄净闪耀 (default): whole-field range, her own attack stops (停止攻击 — the drones carry it), +2 drones,
+      // sluggish on hit. `funnelBodyHits: 0` is the drone-only opt-out of the 0.2.5 own-hit fix (the ramp stays inside
+      // the drone hits, no body attack).
       skill: {
         kind: 'duration', duration: num(d.skill && d.skill.duration, 30),   // 澄净闪耀: the official 30s
         mods: { atkPct: num(bb.atk) },
         targeting: { rangeGrid: wholeField, canHitFly: true },   // 整个战场
-        attack: { hits: drones(bb), ...(stunOnHit(bb) || null) },
+        attack: { hits: drones(bb), funnelBodyHits: 0, ...(stunOnHit(bb) || null) },
       },
       skills: altSkills(chess, d, bb, {
         skchr_gdglow_1: (s) => ({

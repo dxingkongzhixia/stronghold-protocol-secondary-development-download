@@ -123,8 +123,10 @@ function whitw2(bb, chess, def) {
 
   const skills = {
     // S1 慵怠者悲鸣: passive 浮游单元+1 (trait: one more hit per attack); toggled on: ATK +atk and the drones lock a random
-    // non-moving enemy anywhere on the field (re-locking when it moves or falls; install), else her range. The whole-field
-    // grid only selects those targets — no rangeId, no 攻击范围 in the text — so the card keeps her 3-1 (showOwnRange)
+    // non-moving enemy anywhere on the field (re-locking when it moves or falls; install), else her range. The toggle
+    // retargets her attack; the text does not say she stops attacking, so the body and both unreleased additions stay.
+    // The whole-field grid only selects those targets — no rangeId, no 攻击范围 in the text — so the card keeps her 3-1
+    // (showOwnRange)
     skchr_whitw2_1: {
       kind: 'toggle',
       mods: { atkPct: num(bb.atk) },
@@ -139,7 +141,9 @@ function whitw2(bb, chess, def) {
       ...(skillGridW ? { targeting: { rangeGrid: skillGridW } } : {}),
       attack: {
         hits: 1,
-        dmgMul(battle, unit, target) {
+        // The skill names the released drones, not a second hit from her. 0 keeps the ramp inside these hits.
+        funnelBodyHits: 0,
+        funnelMul(battle, unit, target) {
           const f = unit.profile?.funnel || { init: 0.2, delta: 0.15, max: 1.1 };
           const m = unit.mem.hunt;
           if (!m) return f.init;

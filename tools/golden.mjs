@@ -745,9 +745,12 @@ const MATCH_DIY_SEED = 5;
  * when the 调度中心 upgrade's new card (DESIGN §25.19) changed the seat's shop: 忍冬 → Sharp from round 4, 缄默德克萨斯 →
  * Misery from round 7, 铃兰 → 预备干员-辅助 from round 9, 安洁莉娜 → Raidian in round 12.
  */
+// 0.2.5 (2026-10-12): the funnel/drone own-hit fix, the hit-tile rounding and the bot soft-reserve moved this match's
+// whole trajectory, so its earlier 5_20_a / 4_16_a stand-ins were no longer fielded. The list is now three of the
+// seat's new board pieces that HAVE a 补位 prototype (chess_char_3_05_a → char_601_cguard, chess_char_5_02_a →
+// char_604_ccast, chess_char_6_03_a → char_...), so the scenario again exercises the 补位 path.
 const MATCH_NOT_OWNED = Object.freeze([
-  'chess_char_3_12_a', 'chess_char_3_18_a', 'chess_char_4_16_a', 'chess_char_5_10_a', 'chess_char_5_20_a', 'chess_char_6_05_a', 'chess_char_6_06_a',
-  'chess_char_6_17_a', 'chess_char_6_19_a',
+  'chess_char_3_05_a', 'chess_char_5_02_a', 'chess_char_6_03_a',
 ]);
 
 const pieceStr = (p, r, c) => `${p.id.replace(/^chess_char_/, '')}@${r},${c}${p.dir && p.dir !== 'RIGHT' ? p.dir[0] : ''}${p.items && p.items.length ? `[${p.items.map((i) => i.id.replace(/^chess_item_/, '')).join('+')}]` : ''}`;

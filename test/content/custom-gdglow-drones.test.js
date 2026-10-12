@@ -32,20 +32,27 @@ function field(id, sid, positions = [[10, 6], [10, 7], [11, 6]], enemyOpts = {})
   });
 }
 
-/** The skill's own damage instances (the drone volley), grouped by attackId → { targets, hits }. */
+/** The skill's own damage instances, grouped by attackId → { targets, attacks, funnel }: `attacks` counts the
+ *  instances on the operator's attack path (`isAttack`), `funnel` the drone ADDITIONS (tag `funnel`). With the 0.2.5
+ *  own-hit fix (PR #537) an attached volley is one body (`attacks`) + N additions (`funnel`); a drone-only skill
+ *  (`funnelBodyHits: 0`, 停止攻击) puts the whole ramped volley on `attacks` with no `funnel` tag. */
 function volleys(h, u, t0) {
   const byAtk = new Map();
   for (const c of h.hooksOf('damaged')) {
-    if (c.source !== u || c.t < t0 - 1e-9 || !c.dmg || !c.dmg.isAttack || !c.dmg.isSkill) continue;
+    if (c.source !== u || c.t < t0 - 1e-9 || !c.dmg || !c.dmg.isSkill) continue;
     let e = byAtk.get(c.dmg.attackId);
-    if (!e) byAtk.set(c.dmg.attackId, e = { targets: new Set(), hits: 0, total: 0 });
-    e.targets.add(c.target.defId); e.hits++; e.total += c.amount;
+    if (!e) byAtk.set(c.dmg.attackId, e = { targets: new Set(), attacks: 0, funnel: 0 });
+    e.targets.add(c.target.defId);
+    if ((c.dmg.tags || []).includes('funnel')) e.funnel++;
+    else if (c.dmg.isAttack) e.attacks++;
   }
   return [...byAtk.values()];
 }
 
-test('澄闪 浮游单元 focus ONE locked enemy: S1/S2 ⇒ 2 hits, S3 ⇒ 3 hits per attack, all as drones', () => {
-  for (const [sid, declared] of [['skchr_gdglow_1', 2], ['skchr_gdglow_2', 2], ['skchr_gdglow_3', 3]]) {
+test('澄闪 浮游单元 focus ONE locked enemy: S1/S2 ⇒ own hit + 2 drones, S3 ⇒ 3 drones (停止攻击)', () => {
+  // [drones, bodies] per skill: the 0.2.5 own-hit fix keeps the operator's hit beside the unreleased drones, except S3
+  // 澄净闪耀 whose own attack stops (`funnelBodyHits: 0`).
+  for (const [sid, drones, bodies] of [['skchr_gdglow_1', 2, 1], ['skchr_gdglow_2', 2, 1], ['skchr_gdglow_3', 3, 0]]) {
     for (const id of both('chess_char_377_gdglow')) {
       const h = field(id, sid);
       const u = h.unit(id);
@@ -57,12 +64,18 @@ test('澄闪 浮游单元 focus ONE locked enemy: S1/S2 ⇒ 2 hits, S3 ⇒ 3 hit
       assert.ok(atks.length >= 2, `${id} ${sid}: ${atks.length} volleys`);
       // ONE locked target per attack — never 3 different targets
       for (const a of atks) assert.equal(a.targets.length, 1, `${id} ${sid}: attack locks exactly one enemy`);
-      // the damage of every volley concentrates on that single enemy: ~declared hits, one victim, nothing split
+      // the damage of every volley concentrates on that single enemy: the drone additions + the own hit, nothing split
       const vols = volleys(h, u, t0);
       assert.ok(vols.length >= 2, `${id} ${sid}: ${vols.length} damage volleys`);
       for (const v of vols) {
         assert.equal(v.targets.size, 1, `${id} ${sid}: a volley damages exactly one enemy`);
-        assert.equal(v.hits, declared, `${id} ${sid}: ${declared} drone hits per volley`);
+        if (bodies === 0) {
+          assert.equal(v.attacks, drones, `${id} ${sid}: ${drones} drone hits on the attack path (drone-only)`);
+          assert.equal(v.funnel, 0, `${id} ${sid}: no tagged addition`);
+        } else {
+          assert.equal(v.funnel, drones, `${id} ${sid}: ${drones} drone additions per volley`);
+          assert.equal(v.attacks, bodies, `${id} ${sid}: ${bodies} own hit(s) per volley`);
+        }
       }
       // everything the skill dealt landed on the lock — the other two enemies are untouched
       const perEnemy = {};
@@ -70,7 +83,7 @@ test('澄闪 浮游单元 focus ONE locked enemy: S1/S2 ⇒ 2 hits, S3 ⇒ 3 hit
       assert.deepEqual(Object.keys(perEnemy), ['enemy_e1'], `${id} ${sid}: damage concentrated on the locked enemy`);
       // every funnel attack flies as the profession's 'drone' projectile (b.ev ['atk', shooter, target, vis])
       const shots = h.eventsOf('atk').filter((e) => e[1] === u.id);
-      assert.ok(shots.length >= declared, `${id} ${sid}: shots captured`);
+      assert.ok(shots.length >= drones, `${id} ${sid}: shots captured`);
       assert.ok(shots.every((e) => e[3] === 'drone'), `${id} ${sid}: the funnel fires drones, not bolts`);
       done(h);
     }

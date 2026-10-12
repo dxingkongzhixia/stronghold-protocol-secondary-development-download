@@ -80,6 +80,7 @@ export const FX_OFFICIAL = Object.freeze({
   char_4040_rockr: {
     group: "fx/rockr",
     kinds: [
+      "drone",
       "overload"
     ],
     layers: [
