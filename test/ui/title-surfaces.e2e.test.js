@@ -71,7 +71,8 @@ describe('the title screen 公告 / 关于本服务器 / 添加到桌面 surface
     assert.match(about, /终极模拟/);
     assert.match(about, /仅支持网页版（桌面浏览器）；手机端可能存在兼容问题/, 'the dialog states the platform note');
     assert.match(about, /非官方同人复刻/);
-    assert.match(about, /gitee\.com\/marseille1/);
+    assert.match(about, /github\.com\/dxingkongzhixia/, 'the primary repo is GitHub');
+    assert.match(about, /gitee\.com\/marseille1/, 'the 国内下载镜像 is linked too');
     await page.click('.modal__box.title-about [data-autofocus]');
     await page.waitForSelector('.modal__box.title-about', { hidden: true });
 

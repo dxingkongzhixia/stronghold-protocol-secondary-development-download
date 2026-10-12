@@ -4,12 +4,12 @@
 ![license](https://img.shields.io/badge/code%20license-GPL--3.0--or--later-blue)
 ![node](https://img.shields.io/badge/node-22%20%7C%2024-339933)
 
-> **这是什么仓库？** 这里是「卫戍协议：盟约」**二次开发版**的**下载 / 镜像库**（Gitee）。
+> **这是什么仓库？** 这里是「卫戍协议：盟约」**二次开发版**的**主仓库**（GitHub），并在 Gitee 提供**国内下载镜像**。
 > 它不是上游项目 —— 我们把上游 `sganggs/Stronghold-Protocol` 当作**原始来源**，
 > 在它之上做了一套**独立维护**的二次开发（见 [相对上游的差异](#四相对上游的差异)），
 > 并**整份源码 + 运行时素材**都放在这个仓库里，`git clone` 下来就能跑。
 
-English one-liner: a Gitee **download/mirror** of our independently maintained secondary-development build of the browser co-op fan mode *Stronghold Protocol: Alliance* (not the upstream project; the upstream is credited as the original source).
+English one-liner: the **primary repository** (GitHub) of our independently maintained secondary-development build of the browser co-op fan mode *Stronghold Protocol: Alliance*, with a **Gitee mirror for downloads from mainland China** (not the upstream project; the upstream is credited as the original source).
 
 ## 目录
 
@@ -20,7 +20,7 @@ English one-liner: a Gitee **download/mirror** of our independently maintained s
 
 ## 一、这是什么仓库
 
-- **下载 / 镜像库**：这个 Gitee 仓库（`marseille1/stronghold-protocol-secondary-development-download`）是**我们二次开发版的分发入口**。想直接玩、想部署到自己机器上的博士，从这里克隆或下载即可。
+- **主仓库 / 国内镜像**：**GitHub 仓库**（`dxingkongzhixia/stronghold-protocol-secondary-development-download`）是**我们二次开发版的主仓库与分发入口**；国内访问慢时改用 **Gitee 镜像**（`marseille1/stronghold-protocol-secondary-development-download`）。想直接玩、想部署到自己机器上的博士，从这里克隆或下载即可。
 - **二次开发版**：上游是 `sganggs/Stronghold-Protocol`（**原始项目**，代码基线、美术与数据来源都在那里）。本项目在上游之上**独立维护**了一套改动：账号 / 野排匹配 / 公开同盟 / 观战与夺舍 AI、启动体验与带宽治理、**7 名自造干员**，以及一批规则修复与决策（见 [四、相对上游的差异](#四相对上游的差异) 与 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md)）。
 - **不是上游**：上游的介绍、版本与发行包以**上游仓库**为准；本仓库只描述**我们这一版**。上游会**定期合并**进来（见 §四末），但我们的改动一直保留。
 - **素材随仓库分发**：`public/assets`、`public/fonts`、`public/vendor` 在**本仓库里被跟踪**（约 590 MB），所以克隆下来**不需要再拉素材**就能运行。这些素材版权归鹰角网络 / Yostar，属社区便利分发，见 [八、致谢与许可](#八致谢与许可)。
@@ -63,8 +63,11 @@ English one-liner: a Gitee **download/mirror** of our independently maintained s
 ### 从克隆运行
 
 ```bash
-git clone https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git
+git clone https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download.git
 cd stronghold-protocol-secondary-development-download
+
+# 国内访问慢时改用 Gitee 镜像：
+# git clone https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git
 
 npm install            # 安装依赖（postinstall 会把 pixi / preact / three 复制到 public/vendor）
 # 数据已随仓库提交；只有在需要时（例如改了生成脚本）才重建：
@@ -142,17 +145,17 @@ npm run golden         # 黄金结果：固定种子的整套战斗与人机对�
 
 ## 五、更新怎么发布
 
-我们的工作流是「**git 仓库存档（唯一真相）→ 推 Gitee 镜像 → 回镜像工作树**」：
+我们的工作流是「**git 仓库存档（唯一真相）→ 推 GitHub 主仓库 + Gitee 镜像 → 回镜像工作树**」：
 
 ```bash
-node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动、推送 git 仓库到 Gitee（gitee/master），再回镜像工作树
+node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动、推送 git 仓库到所有已配置的远程（GitHub 主仓库 → Gitee 镜像），再回镜像工作树
 ```
 
-- git 仓库（`_merge-scratch`，分支 `ours`）是**唯一真相**；工作项目没有 `.git`，是它的镜像。脚本**只单向** store → Gitee → 工作树，**绝不用工作树覆盖 git 仓库**（工作树过期时不会回退仓库里更新的提交）。
+- git 仓库（`_merge-scratch`，分支 `ours`）是**唯一真相**；工作项目没有 `.git`，是它的镜像。脚本**只单向** store → 远程（GitHub 主仓库 / Gitee 镜像）→ 工作树，**绝不用工作树覆盖 git 仓库**（工作树过期时不会回退仓库里更新的提交）。
 - 该脚本按 `git ls-files` 只处理被跟踪的文件（`.gitignore` 生效），把仓库提交的内容镜像回工作树；工作树独有的文件不会被删除。
 - 若确实要反向同步（工作树 → 仓库），用显式开关 `--from-dev`（默认关闭）。
 - 运行时素材（`public/assets` / `public/fonts` / `public/vendor`）**连同源码一起提交**，所以克隆即得。
-- 凭据（Gitee 登录名 + 私人令牌）**从不写进仓库**：用 `--interactive` 一次性登录，或用当次环境变量 `GIT_USERNAME` / `GIT_PASSWORD` 传入（脚本在仓库外的临时文件里使用）。
+- 凭据**从不写进仓库**：GitHub 用**主人自己的**凭据（`gh auth login` / 凭据管理器已登录，或当次 `GITHUB_TOKEN`），Gitee 用登录名 + 私人令牌（`--interactive` 一次性登录，或当次环境变量 `GIT_USERNAME` / `GIT_PASSWORD`）——脚本一律在仓库外的临时文件里使用。
 
 **部署约定**（上线到自己的服务器时）：**先推通知、再上传 / 重启**。重启或上传服务端文件前，先在管理页 `/admin?token=…` 的「通知」面板给在线玩家推一条告示，署名默认 **`d星空之下`**，内容说清这次更新了什么、大约多久、请刷新页面；纯静态（`public/**`）改动不重启但**同样先推通知**。完整步骤见 [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md)。
 
@@ -164,7 +167,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) | **我们的改动与全部决策记录**：账号 / 野排 / 观战夺舍 / 7 名自造干员（§23–§35） |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | 仓库地图与构建 / 测试 / 素材流水线（英文） |
 | [`docs/DEV-GUIDE-ZH.md`](docs/DEV-GUIDE-ZH.md) | 同一张地图的中文版 + 二次开发手册（中文） |
-| [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) | 我们怎么研究 / 改动 / 测试 / 合并 / 部署，以及 Gitee 推送约定（英文） |
+| [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) | 我们怎么研究 / 改动 / 测试 / 合并 / 部署，以及 GitHub 主仓库 / Gitee 镜像的推送约定（英文） |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | 设计文档索引：现行规则在 `docs/design/`、各次修订在 `docs/history/`（英文） |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 代码地图：服务器、联机协议与前后端共用的战斗模拟（英文） |
 | [`docs/DEPLOY.md`](docs/DEPLOY.md) | 部署指南：防火墙、开机自启、反向代理与 HTTPS、Docker（英文） |
@@ -199,8 +202,8 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 
 ## English
 
-A Gitee **download/mirror** of our independently maintained secondary-development build of Arknights' seasonal auto-chess tower-defense mode *Stronghold Protocol: Alliance*, played in the browser: solo, or 1–4 player co-op. **This is not the upstream project** — the original source is [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which we credit and periodically merge. Our additions include account/matchmaking/spectate features, seven custom shop operators, and a set of rule decisions recorded in [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md).
+The **primary repository** (GitHub) of our independently maintained secondary-development build of Arknights' seasonal auto-chess tower-defense mode *Stronghold Protocol: Alliance*, played in the browser: solo, or 1–4 player co-op — with a **Gitee mirror for downloads from mainland China**. **This is not the upstream project** — the original source is [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which we credit and periodically merge. Our additions include account/matchmaking/spectate features, seven custom shop operators, and a set of rule decisions recorded in [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md).
 
 - **Run:** Node.js 22 or 24; `git clone` this repository (the runtime art under `public/assets`, `public/fonts` and `public/vendor` is tracked, so a clone runs without fetching art), then `npm install` and `node server/index.js` → <http://localhost:3000>. The admin panel is at `/admin?token=…` (token in `var/admin-token.txt`). Tests: `node --test` and `npm run golden`.
-- **Updates:** `node tools/push-gitee.mjs -m "…"` commits what you staged in the git store, pushes it to this Gitee repo, then mirrors the store back into the working tree (one-way: store → Gitee → working tree; it never overwrites the store with the working tree); see [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) for the notice-then-deploy convention.
+- **Updates:** `node tools/push-gitee.mjs -m "…"` commits what you staged in the git store, pushes it to every configured remote (the **GitHub primary** then the **Gitee mirror**), then mirrors the store back into the working tree (one-way: store → remotes → working tree; it never overwrites the store with the working tree); see [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) for the notice-then-deploy convention.
 - **Disclaimer:** not affiliated with or endorsed by Hypergryph or Yostar. All Arknights names, art, audio, text and data are © their respective owners and are **not** covered by this project's GPL licence; they are redistributed here for the community's convenience, by the owner's decision, and must not be used commercially. Content will be removed on request of the rights holders. Code: GPL-3.0-or-later ([LICENSE](LICENSE)).

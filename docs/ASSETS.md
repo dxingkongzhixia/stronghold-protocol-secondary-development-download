@@ -2,7 +2,7 @@
 
 Owner: `tools/fetch-assets.mjs` and `tools/assets/*`. Research background: `docs/research/07-assets.md`.
 
-All art, Spine models and audio are **committed to this (public) Gitee repo** as of 2026-10-08, so a plain clone runs
+All art, Spine models and audio are **committed to this (public) repository** (GitHub primary + Gitee mirror) as of 2026-10-08, so a plain clone runs
 with no fetch step (`public/assets/**`, `public/fonts/**`, `public/vendor/**`). They used to be git-ignored and
 downloaded at install time; that fetch is now optional, for pulling upstream art that changed after the last commit.
 The art is (c) Hypergryph / Yostar.
@@ -84,7 +84,7 @@ The first run downloads about **309 MiB in about 5,690 files** (it took 134 s on
 
 Outputs:
 - `data/assets.json`: the manifest (committed).
-- `public/assets/**`: art and audio (tracked in the Gitee repo since 2026-10-08).
+- `public/assets/**`: art and audio (tracked in the repository since 2026-10-08).
 - `public/fonts/*`: fonts and `fonts.css` (tracked too).
 - `.cache/assets-report.json`: misses, fallbacks, `droppedLeaves` (the leaves left out of the manifest for having no file
   on disk) and notes from the last run.

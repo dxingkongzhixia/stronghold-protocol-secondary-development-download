@@ -2,7 +2,8 @@
 node_modules/
 
 # --- runtime static resources: committed so a clone runs without fetching art --------------------
-# public/assets/**, public/fonts/** and public/vendor/** ARE tracked in the Gitee repo (owner decision
+# public/assets/**, public/fonts/** and public/vendor/** ARE tracked in the repository (GitHub primary + Gitee
+# mirror; owner decision
 # 2026-10-08): a plain `git clone` is runnable with no mirror/extraction step. They were previously
 # git-ignored and delivered out-of-band by tools/fetch-assets.mjs (a public mirror) or
 # tools/local-extract/. Refreshing upstream art per machine is now optional:

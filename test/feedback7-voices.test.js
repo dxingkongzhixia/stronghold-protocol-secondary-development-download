@@ -94,7 +94,7 @@ test('data/assets.json: voiceJp gives every voiced operator the JP twin of each 
     assert.equal(jp[id], undefined, `${id}: no JP line`);
     assert.equal(cn[id], undefined, `${id}: no line`);
   }
-  // the files themselves, where this checkout has the art (committed in the Gitee repo)
+  // the files themselves, where this checkout has the art (committed in the repository)
   const dir = path.join(ROOT, 'public', 'assets', 'audio', 'voice', 'jp');
   if (fs.existsSync(dir)) for (const u of lines) assert.ok(fs.statSync(path.join(ROOT, 'public', u)).size > 0, u);
 });

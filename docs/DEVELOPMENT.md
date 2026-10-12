@@ -16,7 +16,7 @@ restate the upstream design — it points at it:
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **the fork-only mechanisms catalog** (what is ours, where it lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) — see §12 |
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for adding a custom operator |
 | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | the authoring handbook for bonds / strategies / bounty leaders / operators and the 资料库 (CODEX) browser (Chinese) |
-| [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | how we research/change/test/deploy, the merge discipline, and the Gitee push |
+| [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | how we research/change/test/deploy, the merge discipline, and the GitHub/Gitee push |
 | [`docs/DEPLOY.md`](DEPLOY.md) | upstream deployment (Windows host, Docker, proxy) |
 
 > Conventions kept from upstream: code/comments/identifiers in English, player-facing strings in Simplified Chinese.
@@ -41,15 +41,16 @@ Rules:
 
 - **The store is the source of truth.** Commits, merges and pushes happen in `_merge-scratch`; the working project
   follows.
-- **The direction is one-way: store → Gitee → working project.** `node tools/push-gitee.mjs` pushes the store and
+- **The direction is one-way: store → remotes → working project.** `node tools/push-gitee.mjs` pushes the store and
   mirrors it into the working project. It **never overwrites the store with the working project** — a stale working
   project must not revert the store's newer commits.
 - If you edited the working project and want those edits published, that is the explicit, opt-in reverse sync:
   `node tools/push-gitee.mjs --from-dev` (off by default). Without it the helper warns that the tree diverged and
   restores it from the store.
-- **Publish to Gitee the same way every time**: `node tools/push-gitee.mjs` (or `node tools/push-gitee.mjs -m "…"`).
-  It commits what you staged in the store, pushes the store's `HEAD` to the `gitee` remote (fast-forward, never
-  forced), then mirrors the store's tracked files into the working project. See
+- **Publish the same way every time**: `node tools/push-gitee.mjs` (or `node tools/push-gitee.mjs -m "…"`).
+  It commits what you staged in the store, pushes the store's `HEAD` to the **`github` remote (primary)** and then the
+  **`gitee` remote (国内下载镜像)** (fast-forward, never forced), then mirrors the store's tracked files into the
+  working project. See
   [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) for the credential setup and the convention (`之后每次有更新都提交下`).
 
 Verifying the mirror without copying anything:
@@ -260,7 +261,7 @@ regression net: any change that moves a stored number must be **explained**, not
 
 ## 9. The asset pipeline
 
-Game art/audio is copyrighted (c) Hypergryph / Yostar and **is committed** to this (public) Gitee repo as of
+Game art/audio is copyrighted (c) Hypergryph / Yostar and **is committed** to this (public) repository as of
 2026-10-08: `public/assets/**` (~570 MB, ~9600 files), `public/fonts/**` and `public/vendor/**`, so a plain clone
 runs with no fetch step. `data/local-assets.json` (the per-machine local-client manifest) is still git-ignored.
 Refreshing art is now optional — fetch/extract only the files that changed upstream and commit them.
@@ -376,24 +377,26 @@ the exact procedure is in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md).
 
 ---
 
-## 11. Pushing to Gitee
+## 11. Publishing (GitHub primary + Gitee mirror)
 
-The canonical copy is the git store; the Gitee remote (`gitee`) mirrors it, and the working project is a local
-mirror of the store. After any change:
+The canonical copy is the git store; the **`github` remote (primary)** and the **`gitee` remote (国内下载镜像)** mirror
+it, and the working project is a local mirror of the store. After any change:
 
 ```powershell
 node tools/push-gitee.mjs -m "what changed"
 ```
 
-The helper commits what you staged in the store, pushes the store's `HEAD` to `gitee/master` (fast-forward, never
-forced), and then mirrors the store's **tracked** files into the working project (`.gitignore` respected; dev-tree-only
-files are left alone). The flow is **one-way — store → Gitee → working project**; the helper **never overwrites the
+The helper commits what you staged in the store, pushes the store's `HEAD` to every configured remote, the GitHub
+primary first and then `gitee/master` (fast-forward, never forced; `--remote`, `--all-remotes` and `--tags` steer it),
+and then mirrors the store's **tracked** files into the working project (`.gitignore` respected; dev-tree-only
+files are left alone). The flow is **one-way — store → remotes → working project**; the helper **never overwrites the
 store with the working project**. Copying the working project into the store is the explicit, opt-in `--from-dev`
 (otherwise the helper warns when the trees diverge and restores the working project from the store). The owner's
-convention is **之后每次有更新都提交下**. Credentials (the ASCII Gitee login `marseille1` + a personal access token)
-are supplied via `--interactive`, or per-run via `GIT_USERNAME` / `GIT_PASSWORD` (the helper writes them to a temp
-file outside the repo), never committed — the full instructions, the merge discipline and the production deploy
-procedure are in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md).
+convention is **之后每次有更新都提交下**. Credentials: GitHub uses the owner's configured git credential helper (or
+per-run `GITHUB_TOKEN`); Gitee uses the ASCII login `marseille1` + a personal access token via `--interactive` or
+per-run `GIT_USERNAME` / `GIT_PASSWORD` (the helper writes them to a temp file outside the repo). Neither is ever
+committed — the full instructions, the merge discipline and the production deploy procedure are in
+[`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md).
 
 ---
 
@@ -411,7 +414,7 @@ lives, how to extend it, the tests that pin it, and an explicit **我们独有�
 | 3 | The local-art pipeline (`tools/local-extract/extract.py`, the `.venv-extract`, the committed manifest bridge) |
 | 4 | Asset sources (`--asset-source=direct|mirror|gitcode`) and the local-client-first rule |
 | 5 | Our carried decisions (the §22 blacklist, funnel hits, 望's pieces, kalts2, 克莱门莎, leave→AI, the notice convention, golden attribution) |
-| 6 | Publishing (the Gitee mirror, the byte-for-byte tree discipline, the notice-first deploy order) |
+| 6 | Publishing (the GitHub primary + Gitee mirror, the byte-for-byte tree discipline, the notice-first deploy order) |
 
 It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§37 (the decision record) and
 [`docs/ASSETS.md`](ASSETS.md) (the asset detail). Its appendix is the merge checklist of fork-only files.

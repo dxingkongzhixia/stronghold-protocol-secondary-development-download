@@ -5,7 +5,8 @@
 //     the live player count from the same `/healthz`;
 //   · the mode list this server offers (shared/constants.js DIFFICULTIES / DIFFICULTY_NAMES — the difficulties the
 //     lobby's 创建同盟 and 野排 already use);
-//   · the project framing from README §一 ("二次开发版的下载 / 镜像库", distributed on Gitee, clone-and-run);
+//   · the project framing from README §一 ("二次开发版的下载 / 镜像库": GitHub is the primary repository, Gitee the
+//     国内下载镜像, clone-and-run);
 //   · the operator / asset attribution line the title footer already shows.
 // Every fetched field is OPTIONAL: offline the dialog still shows the version, modes and attribution.
 //
@@ -16,10 +17,14 @@ import { html, Button, Modal } from './components.js';
 import { APP_VERSION, DEV_BUILD, DIFFICULTIES, DIFFICULTY_NAMES } from '../../../shared/constants.js';
 import { t } from '../../../shared/i18n.js';
 
-/** The Gitee download / mirror repository of this fork's build (README.md §一). */
-export const PROJECT_URL = 'https://gitee.com/marseille1/stronghold-protocol-secondary-development-download';
-/** The project repository line shown in the dialog (text, not a claim). */
-export const PROJECT_REPO_LABEL = 'gitee.com/marseille1/stronghold-protocol-secondary-development-download';
+/** The PRIMARY repository of this fork's build — GitHub (README.md §一). */
+export const PROJECT_URL = 'https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download';
+/** The display text of the primary repository link (text, not a claim). */
+export const PROJECT_REPO_LABEL = 'github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download';
+/** The 国内下载镜像 of the same repository — Gitee (README.md §一). */
+export const PROJECT_MIRROR_URL = 'https://gitee.com/marseille1/stronghold-protocol-secondary-development-download';
+/** The display text of the mirror link (text, not a claim). */
+export const PROJECT_MIRROR_LABEL = 'gitee.com/marseille1/stronghold-protocol-secondary-development-download';
 
 /**
  * Normalise the server info the dialog shows. Pure (no fetch / DOM), so it is unit-testable.
@@ -61,8 +66,9 @@ export function AboutServerModal({ open, onClose }) {
       ${modes ? html`<div><dt>${t('可用模式')}</dt><dd>${modes}</dd></div>` : null}
       ${info.online != null ? html`<div><dt>${t('在线人数')}</dt><dd class="num">${info.online}</dd></div>` : null}
     </dl>
-    <p class="title-about__project">${t('本服务器运行的是独立的二次开发版：整份源码与运行时素材都在 Gitee 仓库分发，clone 下来即可运行。')}</p>
-    <p class="title-about__project"><a href=${PROJECT_URL} target="_blank" rel="noopener noreferrer">${t('项目仓库')} · ${PROJECT_REPO_LABEL}</a></p>
+    <p class="title-about__project">${t('本服务器运行的是独立的二次开发版：整份源码与运行时素材都在 GitHub 主仓库分发，clone 下来即可运行；国内访问可用 Gitee 镜像。')}</p>
+    <p class="title-about__project"><a href=${PROJECT_URL} target="_blank" rel="noopener noreferrer">${t('主仓库（GitHub）')} · ${PROJECT_REPO_LABEL}</a></p>
+    <p class="title-about__project"><a href=${PROJECT_MIRROR_URL} target="_blank" rel="noopener noreferrer">${t('国内镜像（Gitee）')} · ${PROJECT_MIRROR_LABEL}</a></p>
     ${info.devBuild ? html`<p class="title-about__disclaimer">${t('开发版 · 不稳定，请勿用于公开服务器')}</p>` : null}
     <p class="title-about__disclaimer title-about__platform">${t('仅支持网页版（桌面浏览器）；手机端可能存在兼容问题')}</p>
     <p class="title-about__disclaimer">${t('非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有')}</p>

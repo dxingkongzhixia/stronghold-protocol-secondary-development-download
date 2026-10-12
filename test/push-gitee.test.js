@@ -60,12 +60,17 @@ function scenario(t) {
   return root;
 }
 
-test('--help documents the unidirectional flow and the opt-in --from-dev', () => {
+test('--help documents the unidirectional flow, the two remotes and the opt-in --from-dev', () => {
   const r = spawnSync(process.execPath, [SCRIPT, '--help'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /--from-dev/);
   assert.match(r.stdout, /--dry-run/);
   assert.match(r.stdout, /--no-push/);
+  assert.match(r.stdout, /--remote <name>/);
+  assert.match(r.stdout, /--all-remotes/);
+  assert.match(r.stdout, /--tags/);
+  assert.match(r.stdout, /github \(primary\)/);
+  assert.match(r.stdout, /gitee \(mirror\)/);
 });
 
 test('store ahead of a stale dev tree: --dry-run reports only, and changes nothing anywhere', (t) => {
@@ -132,6 +137,98 @@ test('a normal run pushes the store HEAD to gitee/master and mirrors the dev tre
   assert.equal(read(dev, 'a.txt'), 'store-two\n', 'the dev tree mirrors the pushed state');
   assert.equal(read(dev, 'sub/c.txt'), 'see\n');
   assert.equal(git(store, ['rev-parse', 'HEAD']), head, 'publishing an in-sync store creates no commit');
+});
+
+test('a run pushes to every configured remote: github (primary) first, then the gitee mirror', (t) => {
+  const root = scenario(t);
+  const store = join(root, 'store'), dev = join(root, 'dev');
+  const github = join(root, 'github.git'), gitee = join(root, 'gitee.git');
+  initStore(store);
+  commit(store, 'one', { '.gitignore': 'ignored.txt\n', 'a.txt': 'one\n' });
+  exportToDev(store, dev);
+  commit(store, 'two', { 'a.txt': 'store-two\n', 'sub/c.txt': 'see\n' });
+  initBare(github);
+  initBare(gitee);
+  git(store, ['remote', 'add', 'github', github]);
+  git(store, ['remote', 'add', 'gitee', gitee]);
+
+  const head = git(store, ['rev-parse', 'HEAD']);
+  const r = run([], store, dev);
+
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(r.stdout, /pushed to github\/master/, 'the primary is pushed');
+  assert.match(r.stdout, /pushed to gitee\/master/, 'the mirror is pushed');
+  assert.ok(r.stdout.indexOf('pushed to github/master') < r.stdout.indexOf('pushed to gitee/master'), 'github (primary) goes first');
+  assert.equal(git(github, ['rev-parse', 'master']), head, 'the primary ends at the store HEAD');
+  assert.equal(git(gitee, ['rev-parse', 'master']), head, 'the mirror ends at the store HEAD');
+});
+
+test('--remote restricts the push to the named remote (default pushes to all configured ones)', (t) => {
+  const root = scenario(t);
+  const store = join(root, 'store'), dev = join(root, 'dev');
+  const github = join(root, 'github.git'), gitee = join(root, 'gitee.git');
+  initStore(store);
+  commit(store, 'one', { '.gitignore': 'ignored.txt\n', 'a.txt': 'one\n' });
+  exportToDev(store, dev);
+  initBare(github);
+  initBare(gitee);
+  git(store, ['remote', 'add', 'github', github]);
+  git(store, ['remote', 'add', 'gitee', gitee]);
+
+  const r = run(['--remote', 'gitee'], store, dev);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(r.stdout, /pushed to gitee\/master/);
+  assert.ok(!/pushed to github/.test(r.stdout), 'the primary is untouched when --remote names only the mirror');
+  const githubHasMaster = spawnSync('git', ['-C', github, 'rev-parse', '--verify', 'master'], { encoding: 'utf8' });
+  assert.notEqual(githubHasMaster.status, 0, 'the primary still has no master');
+});
+
+test('--tags pushes the tags (refs/tags/*) to the target remote, never forced', (t) => {
+  const root = scenario(t);
+  const store = join(root, 'store'), dev = join(root, 'dev');
+  const gitee = join(root, 'gitee.git');
+  initStore(store);
+  commit(store, 'one', { '.gitignore': 'ignored.txt\n', 'a.txt': 'one\n' });
+  exportToDev(store, dev);
+  git(store, ['tag', 'backup/pre-3d-scenes']);
+  initBare(gitee);
+  git(store, ['remote', 'add', 'gitee', gitee]);
+
+  const r = run(['--remote', 'gitee', '--tags'], store, dev);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(git(gitee, ['tag', '-l']), /backup\/pre-3d-scenes/, 'the tag reached the remote');
+});
+
+test('--all-remotes forces both even when the store has only one configured remote', (t) => {
+  const root = scenario(t);
+  const store = join(root, 'store'), dev = join(root, 'dev');
+  const gitee = join(root, 'gitee.git');
+  initStore(store);
+  commit(store, 'one', { '.gitignore': 'ignored.txt\n', 'a.txt': 'one\n' });
+  exportToDev(store, dev);
+  initBare(gitee);
+  git(store, ['remote', 'add', 'gitee', gitee]);
+  // a `github` remote that already exists (a local bare) so --all-remotes never reaches the network
+  const github = join(root, 'github.git');
+  initBare(github);
+  git(store, ['remote', 'add', 'github', github]);
+
+  const r = run(['--all-remotes'], store, dev);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(r.stdout, /pushed to github\/master/);
+  assert.match(r.stdout, /pushed to gitee\/master/);
+});
+
+test('an unknown --remote fails clearly (no convention URL to add, no network)', (t) => {
+  const root = scenario(t);
+  const store = join(root, 'store'), dev = join(root, 'dev');
+  initStore(store);
+  commit(store, 'one', { '.gitignore': 'ignored.txt\n', 'a.txt': 'one\n' });
+  exportToDev(store, dev);
+
+  const r = run(['--remote', 'nope'], store, dev);
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr + r.stdout, /unknown remote 'nope'/);
 });
 
 test('a diverged remote is rejected, never force-pushed', (t) => {

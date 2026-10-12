@@ -9,7 +9,7 @@ Read this together with:
 
 | Read this | For |
 |---|---|
-| [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | the merge **procedure**, the golden-attribution rule, the Gitee push, the deploy order |
+| [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | the merge **procedure**, the golden-attribution rule, the GitHub/Gitee push, the deploy order |
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | what is **ours and must survive** a merge (and the 搂7 lobby-community surface) |
 | [`docs/MATCHMAKING.md`](MATCHMAKING.md) 搂22 / 搂33鈥撀?8 | the **decision record** (the blacklist 搂22, the feedback5 merge 搂33, the fix log 搂35, the community surface 搂36/搂38) |
 
@@ -567,7 +567,7 @@ before a re-clone or `git clean -x` (runbook below).
 is byte-identical (both `-x` messages say "golden: unchanged"; `node tools/golden.mjs` reports no movement).
 
 **Restore point (the backup).** Annotated tag **`backup/pre-3d-scenes`** on commit
-**`fc06debda36da1f7c735ed10be04d9ddf7625bdd`** (the pre-merge `ours` HEAD), pushed to Gitee (remote tag object
+**`fc06debda36da1f7c735ed10be04d9ddf7625bdd`** (the pre-merge `ours` HEAD), pushed to GitHub and Gitee (remote tag object
 `3d5a475afac546895812b4f220faa109254ec8f4`). A standalone bundle of the tag + `refs/heads/ours` is at
 `C:\Users\31273\AppData\Local\Temp\opencode\sp-backup-pre-3d-scenes.bundle` (582,104,649 bytes, `git bundle verify`
 okay).
@@ -601,7 +601,7 @@ git -C $STORE log --oneline --first-parent backup/ours-before-scenes-revert-* ^b
 # cherry-pick / merge the listed commits back, then publish with (c).
 ```
 
-**(c) Publish the revert to Gitee and restore the dev tree.** The store is the source of truth; the one-way helper
+**(c) Publish the revert to the remotes (GitHub primary + Gitee) and restore the dev tree.** The store is the source of truth; the one-way helper
 pushes it and mirrors it into `Stronghold-Protocol` (it never copies the dev tree back).
 
 ```powershell

@@ -142,7 +142,7 @@ public/assets/ ─────────▶ public/js/render/, public/js/audio
   (`server/packs.js`; PACKS.md). The English game texts come from the official EN client (`tools/build-i18n.mjs` →
   `data/i18n/en.json`, applied by `public/js/data.js`); UI strings are wrapped in `t('…')` and translated in the packs
   (`tools/i18n.mjs` lists what is missing); server messages travel as message ids. I18N.md.
-- **Art and audio** are committed to the (public) Gitee repo as of 2026-10-08 (`public/assets/**`,
+- **Art and audio** are committed to the (public) repository (GitHub primary + Gitee mirror) as of 2026-10-08 (`public/assets/**`,
   `public/fonts/**`, `public/vendor/**`), so a plain clone runs with no fetch step. Refreshing upstream art is
   optional: `tools/fetch-assets.mjs` (planned by `tools/assets/plan.mjs`) downloads it from public mirrors into
   `public/assets/` and writes the manifest `data/assets.json`; `tools/local-extract/` can add art from a local game

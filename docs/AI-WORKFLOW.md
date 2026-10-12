@@ -1,7 +1,7 @@
 # AI workflow — how we change, merge, commit and deploy this fork
 
 Audience: the AI agent(s) working on this fork with the owner (`d星空之下`). This is the operational contract:
-how a request is handled, how the upstream is merged, how commits and the Gitee push work, how production is
+how a request is handled, how the upstream is merged, how commits and the GitHub/Gitee push work, how production is
 deployed, and **when to stop and ask the owner**. It complements [`docs/MATCHMAKING.md`](MATCHMAKING.md) (the
 decision record, including the merge blacklist §22) and [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) (the repository map).
 Read `docs/DEVELOPMENT.md` first if you do not know the layout. The **fork-only mechanisms** (what is ours, where it
@@ -10,7 +10,7 @@ lives, how to extend it, the tests that pin it, and the merge "must not be lost"
 
 Companion conventions, quoted verbatim:
 
-- **之后每次有更新都提交下** — after every change, commit it and push to Gitee.
+- **之后每次有更新都提交下** — after every change, commit it and push to the remotes (GitHub primary + Gitee mirror).
 - **重启 / 上传前先推通知，署名 `d星空之下`** — before any restart or upload, push an in-game notice signed
   `d星空之下`.
 
@@ -136,7 +136,8 @@ whole upstream branch onto `ours`. Instead:
    `audio.voiceJp`, the stats page, `render/drag.js`, the 失衡 / R23 timing constants). A hunk that would drop one
    of these is a stop-and-ask item.
 7. Bump the version and write the [`CHANGELOG.md`](../CHANGELOG.md) entry (see `test/version.test.js`), then push
-   via the **one-way helper** `node tools/push-gitee.mjs` (store → Gitee → dev tree; never the reverse without
+   via the **one-way helper** `node tools/push-gitee.mjs` (store → remotes (GitHub primary + Gitee mirror) → dev tree;
+   never the reverse without
    `--from-dev`) and **byte-verify the dev tree mirror**.
 
 **Golden attribution rule.** Any `test/golden/*.json` change must be proven to come from your change and nothing else:
@@ -146,33 +147,46 @@ change → the diff must be **exactly** what you expect. Write the proof into th
 
 ---
 
-## (c) Commit & push discipline (Gitee)
+## (c) Commit & push discipline (GitHub primary + Gitee mirror)
 
 - **The git store `_merge-scratch` is the single source of truth** (history *and* files). The **working project has
   no `.git`** and is a byte-for-byte **mirror** of the store — the helper keeps it in step.
-- Everything is mirrored **one way: store → Gitee → working project.** `node tools/push-gitee.mjs` commits what you
-  staged in the store, pushes the store's `HEAD` to Gitee, and only then copies the store's tracked files into the
+- Everything is mirrored **one way: store → remotes → working project.** `node tools/push-gitee.mjs` commits what you
+  staged in the store, pushes the store's `HEAD` to **every configured remote** (the **GitHub primary** first, then the
+  **Gitee 国内下载镜像**), and only then copies the store's tracked files into the
   working project (respecting `.gitignore`). It **never overwrites the store with the working project** — a stale
   working project must not revert the store's newer commits (that is why `--from-dev` exists and is **off** by default).
 - `--from-dev` is the explicit, opt-in reverse sync (working project → store) for the rare case the working project
   is genuinely ahead; without it the helper warns that the tree diverged and restores it from the store.
-- Push target: remote **`gitee`** → `https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`,
-  branch **`master`** (the store's branch is `ours`; `HEAD:refs/heads/master`). The push is fast-forward only and
-  **never forced**. `origin` stays the GitHub upstream.
-- **Credentials are not in the URL and must never be committed.** A push needs the Gitee **login name** (ASCII,
-  `marseille1` — the Chinese name is only a display name) + a **personal access token** (账号设置 → 私人令牌, scope
-  `projects`). Supply them in one of two ways:
+- Push targets: the **`github`** remote (PRIMARY) →
+  `https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download.git`, then the **`gitee`**
+  remote (国内下载镜像) → `https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`, branch
+  **`master`** (the store's branch is `ours`; `HEAD:refs/heads/master`). A normal run pushes to **every configured
+  remote**, primary first; `--remote <name>` restricts it, `--all-remotes` forces both, `--tags` also pushes
+  `refs/tags/*`. Every push is fast-forward only and **never forced**. `origin` stays the GitHub upstream
+  (`sganggs/Stronghold-Protocol`).
+- **Credentials are not in the URL and must never be committed.** Each remote has its own:
+  - **GitHub (primary) — the OWNER's credential.** By default the helper uses whatever git credential helper is
+    configured (Git Credential Manager, already signed in, or `gh auth login`). For a per-run token set
+    `GITHUB_TOKEN` (alias `GH_TOKEN`; `GITHUB_USERNAME` optional) — a PAT with `repo` scope. The helper writes it to a
+    temp credential file OUTSIDE the repo (same mechanism as Gitee). If GitHub still asks for credentials the helper
+    reports exactly what is needed; it never guesses a token.
+  - **Gitee (mirror) — login name + token.** The ASCII login is **`marseille1`** (the Chinese name is only a display
+    name) + a **personal access token** (账号设置 → 私人令牌, scope `projects`): `GITEE_USERNAME`/`GITEE_TOKEN`
+    (aliases `GIT_USERNAME`/`GIT_PASSWORD`).
   ```powershell
-  # one-time interactive sign-in (lets the credential manager store them):
+  # one-time interactive sign-in (lets the credential manager store them), for either remote:
   node tools/push-gitee.mjs --interactive
 
   # or per-run (agent/CI): the helper writes a temp credential file outside the repo and resets the helper list
-  $env:GIT_USERNAME="marseille1"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs -m "…"
+  $env:GIT_USERNAME="marseille1"; $env:GIT_PASSWORD="<token>"; node tools/push-gitee.mjs -m "…"   # Gitee
+  $env:GITHUB_TOKEN="<pat>"; node tools/push-gitee.mjs -m "…"                                      # GitHub
   ```
   This machine's **system** gitconfig sets `credential.helper=manager`; because the first helper that answers wins, a
-  stale stored credential there can shadow the token — the per-run path resets the list (`credential.helper=`) so the
-  supplied token is used. The committed helper never writes the token into the repository.
-- **Runtime static resources are tracked in the Gitee repo** (owner decision 2026-10-08): `public/assets/**`,
+  stale stored credential there can shadow a supplied token — the per-run path resets the list (`credential.helper=`)
+  so the supplied token is used. The committed helper never writes a token into the repository.
+- **Runtime static resources are tracked in the repository** (owner decision 2026-10-08; the GitHub primary and the
+  Gitee mirror): `public/assets/**`,
   `public/fonts/**` and `public/vendor/**` are committed, so a plain `git clone` runs without fetching art. They used
   to be git-ignored and delivered by `tools/fetch-assets.mjs` (a public mirror) or `tools/local-extract/`;
   `node tools/fetch-assets.mjs --asset-source=mirror` is now **optional**, to pull upstream art that changed after the
