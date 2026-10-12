@@ -12,6 +12,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
+import { decodePng } from '../../tools/crop-board-atlas.mjs';
 import { BoardScene, sceneGroupVisible } from '../../public/js/render/board3d/scene.js';
 import { AREAS } from '../../public/js/render/board3d/layout.js';
 import { resolveUvTable } from '../../public/js/render/board3d/atlas.js';
@@ -194,6 +195,31 @@ print(json.dumps({'mode': d.mode, 'px': list(d.getdata()), 'range': s.LIGHT_RANG
     assert.equal(out.hash, 'avg_a__1.dat');
     assert.equal(out.wanted.length, 2, 'the scene and its lighting data, nothing else');
   });
+
+  test('scene map slots: albedo plus the normal / metallic-gloss / emission the material keywords turn on', () => {
+    const out = py(`import extract as e
+print(json.dumps({'slots': list(s.SCENE_MAP_SLOTS), 'derivers': sorted(e.DERIVERS), 'same': e.derive_normal_rg is __import__('derived').derive_normal_rg}))`);
+    assert.deepEqual(out.slots, ['_MainTex', '_BumpMap', '_MetallicGlossMap', '_EmissionMap']);
+    assert.deepEqual(out.derivers, ['normal_rg', 'rough_from_gloss']);
+    assert.equal(out.same, true, 'scenes.py and extract.py share one derivation');
+  });
+
+  test('save_image: the data maps (derived normal / roughness) get a lossless WebP copy', { skip: !HAS_PIL && 'no Pillow' }, () => {
+    const out = py(`from PIL import Image
+import tempfile, os, json
+d = tempfile.mkdtemp()
+img = Image.new('RGBA', (4, 2))
+img.putdata([(255, 118, 118, 0), (10, 200, 30, 255), (255, 255, 255, 128), (0, 0, 0, 255)] * 2)
+lossy = s.save_image(img, d, 'TX_A', 'scene/tex')
+lossless = s.save_image(img, d, 'TX_N', 'scene/tex', True)
+back = Image.open(os.path.join(d, 'TX_N.webp')).convert('RGBA')
+print(json.dumps({'lw': lossy.get('webp'), 'sw': lossless.get('webp'), 'path': lossless['path'],
+  'same': list(back.getdata()) == list(img.getdata()), 'png': os.path.exists(os.path.join(d, 'TX_N.png'))}))`);
+    assert.equal(out.lw, 'lossy', 'albedo / emission stay lossy');
+    assert.equal(out.sw, 'lossless', 'a normal / roughness map must not be chroma-subsampled');
+    assert.match(out.path, /\.webp$/);
+    assert.ok(out.same && out.png, 'lossless WebP keeps every texel; the PNG stays beside it');
+  });
 });
 
 describe('scene chunks (load.js)', () => {
@@ -330,6 +356,29 @@ describe('scene materials', () => {
     assert.equal(w.transparent, true);
     assert.ok(!w.defines.WATER_MAPS, 'no water maps: a flat tint');
   });
+
+  test('sceneMaterial: the normal / roughness / emission maps and the _Color2 vertex-colour blend', () => {
+    const focus = focusUniforms(THREE);
+    const n = new THREE.Texture(), r = new THREE.Texture(), e = new THREE.Texture();
+    const info = {
+      keywords: ['_NORMALMAP', '_METALLICGLOSSMAP', '_EMISSION', '_HG_VERTEX_COLOR_BLEND_ON'],
+      colors: { _Color: [1, 1, 1, 1], _Color2: [0.5, 0.4, 0.2, 1], _EmissionColor: [1, 0.5, 0.25, 1] },
+      floats: { _BumpScale: 1.5, _ShadowStrength: 0.9 },
+    };
+    const light = { dir: [0, 0, 1], color: [1, 1, 1], intensity: 1 };
+    const m = sceneMaterial(THREE, { map: new THREE.Texture(), lightMap: new THREE.Texture(), normalMap: n, roughnessMap: r, emissionMap: e, info, lightRange: 8, light }, focus);
+    assert.equal(m.uniforms.uNormalMap.value, n);
+    assert.equal(m.uniforms.uRoughMap.value, r);
+    assert.equal(m.uniforms.uEmisMap.value, e);
+    assert.equal(m.uniforms.uNormalScale.value, 1.5);
+    assert.ok(Math.abs(m.uniforms.uColor2.value.x - 0.5 ** 2.2) < 1e-6, '_Color2 in linear space');
+    assert.ok(Math.abs(m.uniforms.uEmisColor.value.y - 0.5 ** 2.2) < 1e-6, '_EmissionColor in linear space');
+    for (const d of ['SCENE_NORMAL', 'SCENE_ROUGH', 'SCENE_EMIS', 'SCENE_VCOL', 'SCENE_MAP', 'SCENE_LM']) assert.ok(m.defines[d], d);
+    assert.equal(m.userData.normalMap, true, 'tangents are needed');
+    const bare = sceneMaterial(THREE, { info: { keywords: [] } }, focus);
+    for (const d of ['SCENE_NORMAL', 'SCENE_ROUGH', 'SCENE_EMIS', 'SCENE_VCOL']) assert.ok(!bare.defines[d], d);
+    assert.equal(bare.userData.normalMap, false, 'no tangents without a normal map');
+  });
 });
 
 describe('BoardScene with an official scene (stub renderer)', () => {
@@ -422,6 +471,28 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     board.destroy();
   });
 
+  test('a scene material with a normal / roughness map binds them and gets tangents; the data maps stay linear', () => {
+    const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
+    const { doc, bin } = fakeScene([{ material: 'N', x0: 4, y0: 9, group: 'HIDDEN@1' }]);
+    doc.materials.N = {
+      shader: 'Torappu/Scene/StandardRealtimeShadow', keywords: ['_NORMALMAP', '_METALLICGLOSSMAP'],
+      colors: { _Color: [1, 1, 1, 1] }, floats: { _ShadowStrength: 0.9 }, textures: {},
+      kind: 'lit', map: 'TX_A', normalMap: 'TX_N', metalGlossMap: 'TX_M',
+    };
+    const chunks = parseSceneChunks(doc, bin);
+    const img = { width: 4, height: 4 };
+    board.setScenePack(stage.id, { key: 'maps', stage: stage.id, doc, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_A: img, TX_N: img, TX_M: img }, lm: [img] } });
+    board.setStage(stage);
+    const mesh = sceneMeshes(board)[0];
+    assert.ok(mesh.material.defines.SCENE_NORMAL && mesh.material.defines.SCENE_ROUGH);
+    assert.equal(mesh.material.uniforms.uNormalMap.value.colorSpace, THREE.NoColorSpace, 'a normal map is a linear data map');
+    assert.equal(mesh.material.uniforms.uRoughMap.value.colorSpace, THREE.NoColorSpace, 'so is the roughness map');
+    assert.equal(mesh.material.uniforms.uMap.value.colorSpace, THREE.SRGBColorSpace, 'albedo stays sRGB');
+    const tangent = mesh.geometry.getAttribute('tangent');
+    assert.ok(tangent && tangent.itemSize === 4, 'tangents computed for the normal map');
+    board.destroy();
+  });
+
   test('a scene whose chunks are all hidden parts of other areas keeps the procedural board', () => {
     const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
     const { doc, bin } = fakeScene([{ material: 'M', x0: 10, y0: 3, group: 'HIDDEN@3' }]);
@@ -455,11 +526,26 @@ describe('extracted scenes (when scene bundles were extracted here)', { skip: !O
         assert.ok(doc.materials[c.material], `material ${c.material}`);
         if (c.lightmap >= 0) assert.ok(c.lightmap < doc.lightmaps && groups[g][`lm${c.lightmap}`], `lightmap page ${c.lightmap}`);
       }
-      for (const m of Object.values(doc.materials)) if (m.map) assert.ok(groups[SCENE_TEX_GROUP]?.[m.map], `texture ${m.map}`);
+      for (const m of Object.values(doc.materials)) {
+        for (const k of ['map', 'normalMap', 'metalGlossMap', 'emissionMap']) if (m[k]) assert.ok(groups[SCENE_TEX_GROUP]?.[m[k]], `${k} ${m[k]}`);
+      }
       const L = doc.light;
       assert.ok(L && Math.abs(Math.hypot(...L.dir) - 1) < 1e-3 && L.dir[2] > 0, 'the key light shines down on the board');
     });
   }
+
+  test('the derived normal / roughness maps are on disk and well formed', { skip: !groups[SCENE_TEX_GROUP]?.TX_AutochessSand_N_rgb && 'no derived scene maps' }, () => {
+    const g = groups[SCENE_TEX_GROUP];
+    const nPath = file(g.TX_AutochessSand_N_rgb.path.replace(/\.webp$/, '.png'));
+    if (!existsSync(nPath)) return;   // listed but the files were cleaned off this machine
+    const n = decodePng(readFileSync(nPath));
+    let z = 0, count = 0;
+    for (let i = 2; i < n.rgba.length; i += 4 * 97) { z += n.rgba[i]; count++; }
+    assert.ok(z / count > 200, `mean normal Z ${z / count} (a DXT5nm map decoded as BC5 stays near 128: re-extract the scene)`);
+    const r = decodePng(readFileSync(file(g.TX_AutochessSand_M_rough.path.replace(/\.webp$/, '.png'))));
+    assert.equal(r.rgba[0], 255, 'R = 1');
+    assert.equal(r.rgba[2], 0, 'B = 0 (metalness)');
+  });
 
   test('each built area is one mesh per material and lightmap, with every shown vertex and no switched-off part', () => {
     const views = [['normal', AREAS.normal], ['boss', AREAS.boss], ['unite', AREAS.unite]];

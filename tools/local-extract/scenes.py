@@ -16,7 +16,10 @@ Output per stage, under <out>/scene/<stageId>/ (manifest group scene/<stageId>):
                normal i8×4, colour u8×4, indices u16|u32 (padded to 4 bytes)
   lm<i>.png    lightmap page i (+ a WebP copy, the one the manifest lists): RGB = the baked indirect light (Lightmap-<i>_comp_light, stored RGBM: decode_rgbm),
                A = the key light's baked shadow (Lightmap-<i>_comp_shadowmask, R)
-and the materials' albedo textures under <out>/scene/tex/ (manifest group scene/tex, shared by the scenes).
+and the materials' albedo textures under <out>/scene/tex/ (manifest group scene/tex, shared by the scenes); beside
+each albedo a material's normal / metallic-gloss / emission maps are exported too — the derived RGB normal
+(<name>_rgb, Z rebuilt) and roughness (<name>_rough, 1 − smoothness) maps of `derived.py`, so the renderer shades a
+prop the way the official shader does instead of just albedo × lightmap.
 A chunk's `group` is '' for what the scene shows at rest and the sub-graphic name (HIDDEN@1 …, MapSubGraphicHolder)
 for the meshes the game switches on later.
 """
@@ -24,6 +27,8 @@ import json
 import re
 import struct
 from pathlib import Path
+
+from derived import derive_normal_rg, derive_rough_from_gloss
 
 SAND = ['arts/maps/map_autochesssand/res.ab', 'arts/maps/map_survivaloasis_city/res.ab', 'arts/maps/map_yumen/res.ab']
 SHORE = ['arts/maps/map_doss_shore/res.ab']
@@ -54,6 +59,11 @@ SCENE_VERSION = 1
 LIGHT_RANGE = 8.0
 HIDDEN_NAME = re.compile(r'^[A-Z_]+@\d+$')
 WATER_SHADERS = ('StylizedWater', 'StandardWater', 'DynamicWaterTile')
+# Material texture slots the renderer shades with: albedo, normal (→ a derived RGB map), metallic/gloss (→ a derived
+# roughness map) and emission. Their tiling/offset (scene.json `textures[slot].scale/offset`) is identity for every
+# lit slot of every shipped scene (the water material's normal, never used by the lit path, and one UI decal aside),
+# so the renderer samples all of them on uv0.
+SCENE_MAP_SLOTS = ('_MainTex', '_BumpMap', '_MetallicGlossMap', '_EmissionMap')
 
 
 def scene_bundle(stage_id):
@@ -133,15 +143,19 @@ def decode_rgbm(img):
     return Image.merge('RGB', tuple(ImageChops.multiply(ch.point(gamma), m) for ch in (r, g, b)))
 
 
-def save_image(img, out_dir, stem, sub):
+def save_image(img, out_dir, stem, sub, lossless=False):
     """Write `img` as <stem>.png and a WebP copy beside it (lossy at quality 95 with the alpha lossless and the RGB
     under transparent texels kept, like extract.py WEBP: every player downloads these with the scene); returns the
-    manifest entry, which lists the copy (the PNG with a Pillow that has no WebP)."""
+    manifest entry, which lists the copy (the PNG with a Pillow that has no WebP). `lossless` is for a normal /
+    roughness map, whose channels lossy WebP's chroma subsampling would mix (extract.py WEBP does the same)."""
     img.save(Path(out_dir) / f'{stem}.png')
     entry = {'path': f'/assets/local/{sub}/{stem}.png', 'w': img.width, 'h': img.height}
     try:
-        img.save(Path(out_dir) / f'{stem}.webp', 'WEBP', quality=95, method=6, alpha_quality=100, exact=True)
-        entry.update(path=f'/assets/local/{sub}/{stem}.webp', webp='lossy')
+        if lossless:
+            img.save(Path(out_dir) / f'{stem}.webp', 'WEBP', lossless=True, method=6, exact=True)
+        else:
+            img.save(Path(out_dir) / f'{stem}.webp', 'WEBP', quality=95, method=6, alpha_quality=100, exact=True)
+        entry.update(path=f'/assets/local/{sub}/{stem}.webp', webp='lossless' if lossless else 'lossy')
     except Exception:
         pass
     return entry
@@ -306,10 +320,11 @@ def export_scene(stage_id, deps, scene_path, ab_root, out_root, manifest, log, m
             shader = info.get('shader') or ''
             info['kind'] = 'water' if any(w in shader for w in WATER_SHADERS) else 'lit'
             materials[name] = info
+            slots = mat_tex.setdefault(name, {})
             try:
                 for slot, env_ in mat.m_SavedProperties.m_TexEnvs:
-                    if slot == '_MainTex' and env_.m_Texture.m_PathID:
-                        mat_tex[name] = env_.m_Texture
+                    if slot in SCENE_MAP_SLOTS and env_.m_Texture.m_PathID:
+                        slots[slot] = env_.m_Texture
             except Exception:
                 pass
         return name
@@ -430,20 +445,41 @@ def export_scene(stage_id, deps, scene_path, ab_root, out_root, manifest, log, m
         lightmaps = max(lightmaps, i + 1)
         n += 1
 
-    # albedo textures of the materials (shared by the scenes)
+    # the materials' textures (shared by the scenes): albedo, plus the derived normal / roughness and the emission.
+    # A slot is only exported when the material's keyword turns it on (Unity Standard: _NORMALMAP / _METALLICGLOSSMAP
+    # / _EMISSION) — a water material's _BumpMap, unused by the water shader, is left out that way.
     tex_dir = Path(out_root) / TEX_SUB
     tex_dir.mkdir(parents=True, exist_ok=True)
-    for name, pptr in sorted(mat_tex.items()):
-        try:
-            tex = pptr.read()
-            tname = re.sub(r'[^A-Za-z0-9_.\-\[\]]+', '_', tex.m_Name or f'tex_{pptr.m_PathID}')
-            materials[name]['map'] = tname
-            if tname in manifest.get(TEX_SUB, {}):
-                continue
-            manifest.setdefault(TEX_SUB, {})[tname] = {**save_image(tex.image, tex_dir, tname, TEX_SUB), 'kind': 'Texture2D'}
-            n += 1
-        except Exception as e:
-            log(f'  warn {stage_id}: texture of {name}: {e}')
+    for name, slots in sorted(mat_tex.items()):
+        kw = materials[name].get('keywords') or []
+        for slot, pptr in sorted(slots.items()):
+            try:
+                tex = pptr.read()
+                tname = re.sub(r'[^A-Za-z0-9_.\-\[\]]+', '_', tex.m_Name or f'tex_{pptr.m_PathID}')
+                if slot == '_MainTex':
+                    materials[name]['map'] = tname
+                    out_img, out_name, lossless = tex.image, tname, False
+                elif slot == '_BumpMap':
+                    if '_NORMALMAP' not in kw:
+                        continue
+                    materials[name]['normalMap'] = out_name = f'{tname}_rgb'
+                    out_img, lossless = derive_normal_rg(tex.image), True
+                elif slot == '_MetallicGlossMap':
+                    if '_METALLICGLOSSMAP' not in kw:
+                        continue
+                    materials[name]['metalGlossMap'] = out_name = f'{tname}_rough'
+                    out_img, lossless = derive_rough_from_gloss(tex.image), True
+                else:  # _EmissionMap
+                    if '_EMISSION' not in kw:
+                        continue
+                    materials[name]['emissionMap'] = out_name = tname
+                    out_img, lossless = tex.image, False
+                if out_name in manifest.get(TEX_SUB, {}):
+                    continue
+                manifest.setdefault(TEX_SUB, {})[out_name] = {**save_image(out_img, tex_dir, out_name, TEX_SUB, lossless), 'kind': 'Texture2D'}
+                n += 1
+            except Exception as e:
+                log(f'  warn {stage_id}: texture of {name} ({slot}): {e}')
 
     doc = {'version': SCENE_VERSION, 'stage': stage_id, 'bundle': scene_bundle(stage_id), 'light': light, 'lightmaps': lightmaps,
            'lightRange': LIGHT_RANGE, 'materials': dict(sorted(materials.items())), 'groups': sorted({rec['group'] for rec in records}),

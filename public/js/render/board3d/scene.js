@@ -332,8 +332,16 @@ export class BoardScene {
     if (res) return res;
     const T = this.THREE;
     const aniso = Math.min(8, this.renderer.capabilities?.getMaxAnisotropy?.() || 1);
+    // a material's normal / roughness maps are linear data maps; the albedo and emission maps are sRGB. The scene's
+    // tiling/offset per slot is identity, so every map samples on uv0.
+    const linear = new Set();
+    for (const m of Object.values(pack.doc?.materials || {})) {
+      if (!m || typeof m !== 'object') continue;
+      if (typeof m.normalMap === 'string') linear.add(m.normalMap);
+      if (typeof m.metalGlossMap === 'string') linear.add(m.metalGlossMap);
+    }
     const tex = {}, lm = [];
-    for (const [name, img] of Object.entries(pack.images?.tex || {})) tex[name] = makeTexture(T, img, { aniso, repeat: true });
+    for (const [name, img] of Object.entries(pack.images?.tex || {})) tex[name] = makeTexture(T, img, { aniso, repeat: true, srgb: !linear.has(name) });
     for (const img of pack.images?.lm || []) lm.push(img ? makeTexture(T, img, { srgb: false }) : null);
     res = { tex, lm, mats: new Map() };
     this.sceneRes.set(pack.key, res);
@@ -376,7 +384,9 @@ export class BoardScene {
         mat = water
           ? sceneWaterMaterial(T, this.tex, this.focus, info)
           : sceneMaterial(T, {
-            map: res.tex[info?.map] || null, lightMap: c.lightmap >= 0 ? (res.lm[c.lightmap] || null) : null, info,
+            map: res.tex[info?.map] || null, lightMap: c.lightmap >= 0 ? (res.lm[c.lightmap] || null) : null,
+            normalMap: res.tex[info?.normalMap] || null, roughnessMap: res.tex[info?.metalGlossMap] || null,
+            emissionMap: res.tex[info?.emissionMap] || null, info,
             light: pack.doc?.light || null, lightRange: pack.doc?.lightRange,
           }, this.focus);
         res.mats.set(mk, mat);
@@ -389,6 +399,7 @@ export class BoardScene {
       g.setAttribute('aLm', new T.BufferAttribute(c.uv1, 2));
       g.setAttribute('aColor', new T.BufferAttribute(c.color, 4, true));
       g.setIndex(new T.BufferAttribute(c.index, 1));
+      if (mat.userData.normalMap) { try { g.computeTangents(); } catch { /* a degenerate chunk keeps its vertex normals */ } }
       g.computeBoundingSphere();
       const mesh = new T.Mesh(g, mat);
       mesh.castShadow = false; mesh.receiveShadow = false;
