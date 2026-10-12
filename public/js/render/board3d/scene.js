@@ -40,7 +40,7 @@ export const LIGHTING = Object.freeze({
   emissive: 0.25,
   roughness: 0.78,
   shadow: { size: 2048, radius: 3, bias: -0.0004, normalBias: 0.025 },
-  exposure: 1.0,
+  exposure: 1.5,
   // the clear colour is the fog colour: the far background fades into the void without a visible edge
   clear: 0x0c1114,
   fog: { color: 0x0c1114, near: 17, far: 36 },
@@ -138,7 +138,12 @@ export class BoardScene {
     });
     const R = this.renderer;
     R.outputColorSpace = T.SRGBColorSpace;
-    R.toneMapping = T.NoToneMapping;
+    // The official board is lit by Unity's HDR pipeline and shown through a filmic tonemapper (the client's post FX):
+    // a plain NoToneMapping renders the dark baked albedo (TX_AutochessSand_A's tiles are ~(69,56,35)) as a mud-brown
+    // lattice, where the official's lifted-shadow grade shows the light sandstone ~(140,125,100). ACES + exposure
+    // matches the sampled official ground without washing the highlights.
+    R.toneMapping = T.ACESFilmicToneMapping;
+    R.toneMappingExposure = LIGHTING.exposure;
     R.setClearColor(LIGHTING.clear, 1);
     R.shadowMap.enabled = opts.shadows !== false;
     R.shadowMap.type = T.PCFShadowMap;
