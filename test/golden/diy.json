@@ -2097,7 +2097,7 @@
       "hooks": [1,14,6560,868,868,4003,7369,0,344,345,32,32,0,37155,1553,147,345,1,1,344,0,204,0],
       "events": {"atk":1022,"deploy":12,"die":344,"dmg":7064,"engage":12,"fx":1073,"leak":1,"skill":64,"spawn":359,"status":3236},
       "fx": {"burst":204,"displace":102,"shield":640,"summon":105,"zone":22},
-      "snaps": "409f2049 66223e47 bde14de4 3b134cc4 e9d92343 17a5e47a bef263f4 0f84fa21 a7f6acd5 8f76935e 70e47278 8dcfe2a9 e7b78370 a89d1dd9 1900a836 861b2c0a f0741d5c 64c038dc e0d8b290 acfa1116 366f1531 ec4083a6"
+      "snaps": "409f2049 66223e47 bde14de4 3b134cc4 e9d92343 17a5e47a bef263f4 0f84fa21 a7f6acd5 8f76935e 34e8e906 3c666c2b 64be685e 3dd367ef 148bf1b0 d2dad510 e5cc5d06 97b1bfe6 1aeeabd6 2d2fd2c4 aad7b19f ac8662a0"
     },
     "diy-052": {
       "about": "5_diy1_a=zumama/S1 5_diy2_a=zumama/S2 5_diy1_a=zumama/S3 5_diy2_b=zumama/S1 5_diy1_b=zumama/S2 5_diy2_b=zumama/S3 5_diy1_b=zumama/S1/002_zumama 5_diy2_b=zumama/S2/002_zumama 5_diy1_b=zumama/S3/002_zumama 5_diy2_b=zumama/S1/003_zumama 5_diy1_b=zumama/S2/003_zumama 5_diy2_b=zumama/S3/003_zumama",
