@@ -960,6 +960,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **投影修正**：`server/sim/professions.js resolveProfile`（`sub === 'funnel' && attack === 'ranged'`）把 `projectile` 还原成 `'drone'` —— 数据里的通用 `'bolt'` 默认值此前一直盖掉它，导致**没有任何一局画出浮游炮**。
 - **诚实保留**：客户端浮游单元是**手绘 2D 浮游舱**（`public/assets`），因为官方浮游炮是 3D 效果绑定，其贴图位于**无法解析的外部 CAB** 内。锁敌与数值由模拟层保证，视觉是自绘近似。
 - **交叉引用**：基础（价格特质、技能、美术）见 §31；分支特性表 `funnel` 一行见 `docs/SIM.md`。
+- **0.2.5 修正并入（2026-10-12，上游 `e0f37718` + `a451ddcf`）**：上游把「未释放的浮游单元」改成**干员自身一击之外的附加伤害**（`funnelMul` / `funnelBodyHits`，`ai.js resolveHit`），并把无人机倍率与按目标记的倍率在**再部署时清零**。我们只取这份「意图」，**保留本分支的浮游规则**：`attack.hits` 仍是无人机数、全部锁定**同一目标**、每台各打满额（`funnelTarget` / `funnelScale` 斜坡）——因此澄闪**普通攻击与 S1/S2 现在是「本体一击 + 无人机附加」**，而 **S3 澄净闪耀「停止攻击」**，其规格写 `funnelBodyHits: 0`（整段伤害都是无人机，斜坡留在 hits 里；`attack.hits` = 3，即 +2 台）。上游那套把澄闪所有技能都交给独立 `dealDamage` 的 `op-gdglow.js` 模型**不采用**（那是他们的自造实现）。同批并入 `洛洛` S2 独立无人机锁敌（击杀 / 技能结束才回手）与 `耶拉`（双形态）/ `荒芜拉普兰德` S1 保留本体一击的评审修正。回归：`test/sim/funnel-body.test.js`、`test/content/rockrock-s2-lock.test.js`、`test/sim/funnel-redeploy.test.js`、`test/content/custom-gdglow-drones.test.js`。
 
 ### 35.3 结城理〈替身〉攻击动画（FORM）
 
