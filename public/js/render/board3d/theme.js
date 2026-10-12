@@ -16,9 +16,9 @@
 //   tint      a multiplier on the material's albedo (a colour grade; [1,1,1] = none)
 //   saturate  the final colour's saturation (<1 = the official's softer, desaturated look)
 //   sun       a gain on the scene's key light (the sun term; default 1)
-//   apron (optional) the surrounding-sand blend band: { texture?, tint?, uv?, width?, rings?, alpha?, z? }.
-//             Rendered by scene.js `_buildApron`; omitted = none (the metal / procedural board keeps none — the
-//             regression baseline).
+//   apron (optional) the surrounding-sand blend band: { texture?, tint?, uv?, width?, gap?, rings?, alpha?, z? }.
+//             Rendered by scene.js `_buildApron`; `gap` keeps its inner edge clear of the field (never tints the last
+//             playable row). Omitted = none (the metal / procedural board keeps none — the regression baseline).
 export const SCENE_THEMES = Object.freeze({
   // The global default: the official's HDR tone/exposure with a lightly desaturated finish.
   default: Object.freeze({ exposure: 1.5, ambient: 0.12, tint: Object.freeze([1, 1, 1]), saturate: 0.94 }),
@@ -28,14 +28,17 @@ export const SCENE_THEMES = Object.freeze({
   // perimeter platform, so the earlier ring + lane 高台 geometry was a wrong read. The apron adds the surrounding sand
   // grain (the scene's own sand albedo, official UV scale) blending out from the field edge. VISUAL only.
   sand: Object.freeze({
-    exposure: 2.05, ambient: 0.22, tint: Object.freeze([1.03, 1.0, 0.97]), saturate: 0.94, sun: 1.85,
-    apron: Object.freeze({ texture: 'TX_AutochessSand_sand_A', tint: Object.freeze([1.10, 1.07, 1.02]), uv: 0.23, width: 2.2, rings: 5, alpha: 0.45, z: 0.014 }),
+    exposure: 2.7, ambient: 0.12, tint: Object.freeze([1.01, 1.0, 0.98]), saturate: 0.97, sun: 3.4,
+    apron: Object.freeze({ texture: 'TX_AutochessSand_sand_A', tint: Object.freeze([1.08, 1.06, 1.02]), uv: 0.23, width: 1.6, gap: 0.5, rings: 4, alpha: 0.34, z: 0.014 }),
   }),
-  // act2autochess m01/m02 (Syracuse metro / 叙拉古·城市): the official is bright sunny daylight, ours read dark/grey.
-  city: Object.freeze({ exposure: 2.0, ambient: 0.20, tint: Object.freeze([1, 1, 1]), saturate: 0.94 }),
-  // act2autochess m03 (KXMR / LMZ) and m04 (Doss shore): not sampled yet — the default finish, a touch brighter.
-  kxmr: Object.freeze({ exposure: 1.6, ambient: 0.15, tint: Object.freeze([1, 1, 1]), saturate: 0.94 }),
-  lmz: Object.freeze({ exposure: 1.6, ambient: 0.15, tint: Object.freeze([1, 1, 1]), saturate: 0.94 }),
+  // act2autochess m01 (Syracuse metro / 叙拉古·城市): the official is bright sunny daylight — a high sun, crisp cast
+  // shadows on the pavement; ours read dark/grey. Same treatment as the sand (a strong sun gain, low ambient).
+  city: Object.freeze({ exposure: 2.45, ambient: 0.15, tint: Object.freeze([1, 1, 1]), saturate: 0.95, sun: 3.0 }),
+  // act2autochess m03 (KXMR / LMZ): the official is a grittier, higher-contrast industrial shore — a touch darker than
+  // the sand/city, but still clearly sunlit. m03 carries both TX_KXMR and TX_LMZ materials; THEME_MARKERS resolves it to
+  // `kxmr` (the first family in the list), so `lmz` is the row for a TX_LMZ-only scene (same grade).
+  kxmr: Object.freeze({ exposure: 2.0, ambient: 0.13, tint: Object.freeze([1, 1, 1]), saturate: 0.94, sun: 2.4 }),
+  lmz: Object.freeze({ exposure: 2.0, ambient: 0.13, tint: Object.freeze([1, 1, 1]), saturate: 0.94, sun: 2.4 }),
 });
 
 // Albedo-texture marker → theme. The scene doc's material list is the official data: a battlefield's theme is the
