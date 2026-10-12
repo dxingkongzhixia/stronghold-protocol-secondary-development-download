@@ -502,6 +502,21 @@ resolve to real files of the declared size). `test/ui/ensure-manifest.test.js` c
 
 ## 9. 0.2.5 official battlefield scenes on the 3D board (2026-10-12)
 
+**Extraction on this machine (2026-10-12).** The owner's standing rule is the local client first: the **CN** Bilibili
+client (`D:\...\Arknights_Data\StreamingAssets\AB\Windows`) has the autochess bundles but is **off-season** (no
+`scenes/activities/act1autochess`), so the scene bundles came from the CDN (`fetch_scenes.py`) while the materials /
+textures still came from the client. `node tools/setup.mjs --scenes` alone finds no client here (the owner's install
+sits under a custom path, `D:\<local network games>\...`), so the run was
+`node tools/setup.mjs --scenes --game "<CN AB root>"`. Result: **33/33 bundles**, **11/11 stages**.
+`public/assets/local/scene/` = **92 files, 64,423,310 bytes** (`scene/<stageId>/{scene.json,scene.bin,lm<i>.png,lm<i>.webp}`
+for the 11 stages; `scene/tex/` = 30 files); `.cache/official-scenes/26-04-13-12-31-42_e9b560/` = the 33 bundles
+(**29,714,076 bytes** on disk; the list's 22,801,308 is the CDN-compressed size). Stages: `act1autochess_m01`-`m07`
+and `act2autochess_m01`-`m04`. Backup at
+`C:\Users\31273\AppData\Local\Temp\opencode\sp-scenes-backup-20261012.zip` (**67,603,003 bytes**; `scene\` +
+`official-scenes\`) - restore in runbook (d) below. `data/local-assets.json` now lists all 12 `scene/...` groups
+(`sceneListed` needs group `scene/<stageId>` with a `scene` and a `bin` entry); the files stay git-ignored
+(`git ls-files` shows 0).
+
 **Why.** Upstream 0.2.5 renders the official battlefield scene on the 3D board (PR #532 / #533 by @andrew05060414),
 falling back to our procedural metal board when a scene is absent. Our fork already had the 3D board
 (`public/js/render/board3d/`), so this is an additive client feature plus a local extraction tool step.
@@ -603,6 +618,16 @@ robocopy $SP\public\assets\local\scene C:\Users\31273\AppData\Local\Temp\opencod
 robocopy C:\Users\31273\AppData\Local\Temp\opencode\sp-scenes-backup $SP\public\assets\local\scene /E
 # or from scratch (needs the client / network):
 Set-Location $SP; python tools\local-extract\fetch_scenes.py; python tools\local-extract\extract.py --only scene
+```
+
+**Backup taken 2026-10-12** (the extracted scenes + the downloaded bundles):
+`C:\Users\31273\AppData\Local\Temp\opencode\sp-scenes-backup-20261012.zip` (67,603,003 bytes) packs `scene\` (the 92
+files) and `official-scenes\` (the 33 bundles). Unpack it and copy each part back over the tree:
+
+```powershell
+Expand-Archive C:\Users\31273\AppData\Local\Temp\opencode\sp-scenes-backup-20261012.zip -DestinationPath $env:TEMP\sp-scenes-restore -Force
+robocopy $env:TEMP\sp-scenes-restore\scene $SP\public\assets\local\scene /E
+robocopy $env:TEMP\sp-scenes-restore\official-scenes $SP\.cache\official-scenes /E
 ```
 
 **(e) Last resort 鈥?restore the whole pre-merge tree from the bundle** (offline, no Gitee):
