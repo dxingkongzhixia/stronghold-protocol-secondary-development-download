@@ -538,7 +538,122 @@ resolve to real files of the declared size). `test/ui/ensure-manifest.test.js` c
 
 ---
 
-## 9. How to add the next batch to this log
+## 9. 0.2.5 official battlefield scenes on the 3D board (2026-10-12)
+
+**Why.** Upstream 0.2.5 renders the official battlefield scene on the 3D board (PR #532 / #533 by @andrew05060414),
+falling back to our procedural metal board when a scene is absent. Our fork already had the 3D board
+(`public/js/render/board3d/`), so this is an additive client feature plus a local extraction tool step.
+
+**What came in** (each `cherry-pick -x`, adapted; author and subject preserved; the local commits carry the upstream
+hash in their `(cherry picked from commit …)` trailer):
+
+| Upstream | Status | What it is |
+|---|---|---|
+| `d482fbb8` | taken (`-x`) | the full ported feature: `load.js` `loadScenePack` / `parseSceneChunks` / `sceneGroupRects` / `sceneListed` / `sceneGroup`; `materials.js` `sceneMaterial` / `sceneWaterMaterial` / `sceneBlend` / `SCENE_LIGHT`; `scene.js` `setScenePack` / `_sceneResources` / `_disposeScene` / `_buildScene` / `sceneGroupVisible`; `app.js` `useOfficialScene`; the extractor `tools/local-extract/{scenes.py,fetch_scenes.py}` + `extract.py --only scene`; `tools/setup.mjs --scenes`; `tools/package.mjs` full-zip scenes; `tools/doctor.mjs`; `test/render/board3d-scene.test.js`, `test/scene-assets.test.js` |
+| `3bb7fef7` | taken (`-x`) | `load.js` `mergeSceneChunks` / `sceneMaterialKey` and the `scene.js _buildScene` bucketing (chunks sharing a material / lightmap page become one mesh — draw calls back in budget), plus the boss-round real-server test reading the actual seat pairing (`test/ui/playtest2.real.e2e.test.js`) |
+| `1fe81947` | **subsumed — no separate commit** | the raw #532 PR by @andrew05060414. Its whole content is contained in `d482fbb8` (the ported #533): `git diff 1fe81947 d482fbb8 -- public/js/render/board3d/ public/js/render/app.js tools/local-extract/` shows only refinements on `d482fbb8`'s side (a `load.js` reformat, the `c.lightmap >= 0` guard, the `sceneWater` array, the DXT5nm normal-map comment) and `app.js` is identical — so taking `d482fbb8` carries it. |
+
+**Adapted to this fork** (ours wins where they differ):
+
+- `load.js`: kept our `resetBoardPack()` (our fork never had the `threeFailures` retry state) and added
+  `sceneCache.clear()`; the scene loader is otherwise upstream's.
+- `scene.js` / `materials.js`: kept our `environmentMap` PMREM `__rt` disposal (`envRT`, which upstream lacks) —
+  the merged files carry both the scene code and our `envRT` handling.
+- `CHANGELOG.md`: our 0.4.0 section kept; one scene bullet added under 新功能. Upstream's `docs/history/0.2.5.md`
+  is **not** imported (kept deleted — our fork does not carry upstream's 0.2.3–0.2.5 history docs).
+- `docs/DESIGN.md`, `docs/DEPLOY.md`, `docs/ASSETS.md`, `docs/design/client.md`, `tools/package.mjs`, `tools/setup.mjs`:
+  resolved to our docs and our JP-voice `held` logic, plus the scene row / paragraphs / `SCENE_ART_PREFIX` /
+  `scenes` plan field. The stale `§30.17` citation in `docs/design/client.md` (our DESIGN stops at §29) was
+  repointed at `docs/ASSETS.md`.
+- `test/scene-assets.test.js`: fixed the Windows path (`fileURLToPath`; upstream used `new URL(...).pathname`, which
+  yields `D:\D:\…`) and asserted our `.gitignore` invariant (`public/assets/local/scene/` ignored, since this fork
+  otherwise tracks `public/assets/**`).
+- `test/ui/playtest2.real.e2e.test.js`: upstream's fix reads `m.public.bossPairs`; our server publishes none, so
+  `assignedBossSide` recomputes the pair from the alive players in seat order (the rule `prepCamera` already uses).
+  Opt-in real-server E2E only.
+
+**Nothing official is committed.** The bundles and the extracted files stay out of the tree: `.gitignore` now lists
+`public/assets/local/scene/` explicitly (this fork otherwise tracks `public/assets/**`) and `.cache/` already covers
+`.cache/official-scenes/`. `tools/package.mjs` ships the extracted scenes in the **full** zip when the packaging
+machine extracted them (`SCENE_ART_PREFIX`; the `battlefield scenes` summary line) and never in the lite zip.
+`node tools/setup.mjs --scenes` fetches (`fetch_scenes.py`: 33 bundles, 22,801,308 bytes compressed on the Android
+list, md5-checked) and extracts (`extract.py --only scene`) on the machine. The client falls back to the metal board
+whenever `data/local-assets.json` lists no `scene/<stageId>` — or a load fails, or `version` is unknown.
+
+**Where they live / size.** Extracted: `public/assets/local/scene/<stageId>/{scene.json,scene.bin,lm<i>}` and
+`public/assets/local/scene/tex/<texture>`; downloaded bundles: `.cache/official-scenes/<version>/`. In this
+environment **no scenes are extracted** (`data/local-assets.json` lists no `scene/…`; `.cache/official-scenes/` is
+absent), so nothing was cached or backed up here — run the two steps above on a machine with the client / network to
+get them. Because they are git-ignored, a `git revert` / `reset --hard` does not delete them; still copy them aside
+before a re-clone or `git clean -x` (runbook below).
+
+**Golden: unchanged.** The scenes are render-only — the 3D board is a client view over the same sim — so `test/golden/*`
+is byte-identical (both `-x` messages say "golden: unchanged"; `node tools/golden.mjs` reports no movement).
+
+**Restore point (the backup).** Annotated tag **`backup/pre-3d-scenes`** on commit
+**`fc06debda36da1f7c735ed10be04d9ddf7625bdd`** (the pre-merge `ours` HEAD), pushed to Gitee (remote tag object
+`3d5a475afac546895812b4f220faa109254ec8f4`). A standalone bundle of the tag + `refs/heads/ours` is at
+`C:\Users\31273\AppData\Local\Temp\opencode\sp-backup-pre-3d-scenes.bundle` (582,104,649 bytes, `git bundle verify`
+okay).
+
+### Runbook — revert the 3D scenes at any time
+
+PowerShell, copy-paste. `$SP = D:\DOTK\Stronghold-Protocol`, `$STORE = D:\DOTK\_merge-scratch`.
+
+**(a) Revert only the 3D-scene change (preferred — keeps the other concurrent merges).** Revert the two `-x`
+commits; git adds a revert commit each, history stays linear and the other agents' work is untouched.
+
+```powershell
+$STORE = 'D:\DOTK\_merge-scratch'
+git -C $STORE fetch gitee
+git -C $STORE checkout ours
+git -C $STORE pull --ff-only gitee master                      # the latest ours
+$scene1 = git -C $STORE log --format=%H --grep 'cherry picked from commit d482fbb8' -1
+$scene2 = git -C $STORE log --format=%H --grep 'cherry picked from commit 3bb7fef7' -1
+git -C $STORE revert --no-edit $scene2 $scene1                 # newest first
+# a conflict here just means later work touched the same files — resolve keeping the later work
+```
+
+**(b) Reset to the tag and re-apply the later work** (heavier; only if (a) conflicts badly). Keep the current tip so
+nothing is lost, reset to the restore point, then re-apply the batches merged after it.
+
+```powershell
+$STORE = 'D:\DOTK\_merge-scratch'
+git -C $STORE branch backup/ours-before-scenes-revert-$(Get-Date -Format yyyyMMddHHmm) ours
+git -C $STORE reset --hard backup/pre-3d-scenes
+git -C $STORE log --oneline --first-parent backup/ours-before-scenes-revert-* ^backup/pre-3d-scenes
+# cherry-pick / merge the listed commits back, then publish with (c).
+```
+
+**(c) Publish the revert to Gitee and restore the dev tree.** The store is the source of truth; the one-way helper
+pushes it and mirrors it into `Stronghold-Protocol` (it never copies the dev tree back).
+
+```powershell
+$env:GIT_USERNAME = 'marseille1'; $env:GIT_PASSWORD = '<token>'   # the Gitee PAT, never committed
+node $SP\tools\push-gitee.mjs --dry-run                           # what would move
+node $SP\tools\push-gitee.mjs                                     # push HEAD:refs/heads/master + mirror
+```
+
+**(d) Keep / restore the extracted scenes without re-extracting.** They are git-ignored, so a revert or `reset --hard`
+leaves them in place. If they are removed, restore a copy or re-extract:
+
+```powershell
+robocopy $SP\public\assets\local\scene C:\Users\31273\AppData\Local\Temp\opencode\sp-scenes-backup /E
+robocopy C:\Users\31273\AppData\Local\Temp\opencode\sp-scenes-backup $SP\public\assets\local\scene /E
+# or from scratch (needs the client / network):
+Set-Location $SP; python tools\local-extract\fetch_scenes.py; python tools\local-extract\extract.py --only scene
+```
+
+**(e) Last resort — restore the whole pre-merge tree from the bundle** (offline, no Gitee):
+
+```powershell
+git clone C:\Users\31273\AppData\Local\Temp\opencode\sp-backup-pre-3d-scenes.bundle D:\DOTK\_restore-pre-scenes -b ours
+# then compare / cherry-pick back whatever work is needed.
+```
+
+---
+
+## 10. How to add the next batch to this log
 
 1. Fetch upstream; write the ordered commit list (`git log --oneline <base>..<head>`) to a scratch note (the
    `_merge-attrib/all-fb7.txt` pattern).
