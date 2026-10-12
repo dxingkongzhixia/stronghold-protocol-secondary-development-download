@@ -291,3 +291,25 @@
 3. 用同一张官方截图与我们的渲染**同区域取色**校准（`docs/ASSETS.md` 记录了各主题的取样值），不要凭手感调。
 4. 金属/工业主题是**回归基线**：它走程序化板（`boardMaterial`），不受本表影响，改动后必须复核它没变。
 
+### 8.1 高台（`platforms`）
+
+官方沙地战场把可玩地面放在一座**抬高的砂岩平台**上，四周有两级台阶（低一级 / 高一级）与一条**跑道**。我们能抽到的官方场景里可玩面是**平的**（离线客户端不带平台网格），所以台阶在 `theme.js` 里**按主题手工标定**，由 `scene.js` `_buildPlatforms` 生成几何：
+
+```js
+platforms: {
+  texture: 'TX_AutochessSand_background_A', // 平台贴图（scene/tex 里的名字；省略 = 用场景地面贴图）
+  tint:    [1.02, 1.0, 0.98],               // 平台材质乘子
+  uv:      0.22,                            // 世界坐标 UV 密度（每格纹理重复数）
+  rings:   2,                               // 绕建造区（this.area：场地 + 预备区）贴几圈 1 格宽的台阶
+  levels:  [0.3, 0.58],                     // 每圈的高度（格），由内向外
+  lane:    { side: 'top', h: 0.58, depth: 1 }, // 额外的一条跑道（可选；贴边外沿）
+  heightFromTiles: false,                   // true = 高度取 layout.js 该格的 h（仅当模拟高度就是官方高度时）
+}
+```
+
+**规则**：
+- 台阶只沿 `this.area` 的**外圈**铺（`_buildPlatforms` 里有 `inPlay` 兜底），因此**不会压在可玩格上**，也不会碰部署高亮 / 方向轮的层（`renderOrder: -2`，在场地之下）。
+- **纯视觉**：不动 `server/sim` 的格子/高度/部署逻辑；`deployTiles`、`AREAS` 一律不变。若将来某个战场的模拟高度就是官方高度，用 `heightFromTiles: true` 从 `layout.js` 的 `h` 取。
+- 数值来源：官方沙地截图与我们的同相机渲染比对（台阶高度 ≈ 官方一级/二级台阶，跑道贴场地顶边），记录在 `docs/ASSETS.md`。没有 `platforms` 行 = 不加高台。
+
+

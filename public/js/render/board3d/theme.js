@@ -15,12 +15,24 @@
 //   ambient   the neutral ambient/probe fill added to every scene material (0..1, linear)
 //   tint      a multiplier on the material's albedo (a colour grade; [1,1,1] = none)
 //   saturate  the final colour's saturation (<1 = the official's softer, desaturated look)
+//   platforms (optional) the 高台 block layout: { texture?, tint?, uv?, rings?, levels?, lane?, heightFromTiles? }.
+//             `levels` = the step heights in tiles, `rings` = how many 1-tile rings hug the built area, `lane` =
+//             an extra band ({ side, h, depth }). Rendered by scene.js `_buildPlatforms`; omitted = none (the
+//             metal / procedural board keeps none — the regression baseline).
 export const SCENE_THEMES = Object.freeze({
   // The global default: the official's HDR tone/exposure with a lightly desaturated finish.
   default: Object.freeze({ exposure: 1.5, ambient: 0.12, tint: Object.freeze([1, 1, 1]), saturate: 0.94 }),
   // act1autochess (sand / desert): sampled official ground ~(142,123,95) vs ours (106,77,50) before the grade; the
-  // official is a pale, soft, desaturated sandstone, ours was too red/dark (the removed _Color2 vertex tint).
-  sand: Object.freeze({ exposure: 1.45, ambient: 0.15, tint: Object.freeze([0.97, 0.99, 1.02]), saturate: 0.9 }),
+  // official is a pale, soft, desaturated sandstone, ours was too red/dark (the removed _Color2 vertex tint). The
+  // official also shows the field on a raised sandstone platform with two step levels + a lane; the scene's own
+  // surface is flat, so the steps are authored here (heights = tiles, rings hug the built area). VISUAL only.
+  sand: Object.freeze({
+    exposure: 1.45, ambient: 0.15, tint: Object.freeze([0.97, 0.99, 1.02]), saturate: 0.9,
+    platforms: Object.freeze({
+      texture: 'TX_AutochessSand_background_A', tint: Object.freeze([1.02, 1.0, 0.98]), uv: 0.22, rings: 2,
+      levels: Object.freeze([0.3, 0.58]), lane: Object.freeze({ side: 'top', h: 0.58, depth: 1 }),
+    }),
+  }),
   // act2autochess m01/m02 (Syracuse metro / 叙拉古·城市): the official is bright sunny daylight, ours read dark/grey.
   city: Object.freeze({ exposure: 2.0, ambient: 0.20, tint: Object.freeze([1, 1, 1]), saturate: 0.94 }),
   // act2autochess m03 (KXMR / LMZ) and m04 (Doss shore): not sampled yet — the default finish, a touch brighter.

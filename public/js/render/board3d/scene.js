@@ -305,7 +305,7 @@ export class BoardScene {
     const board = buildBoard(stage, { uv: this.pack?.uv || null, area: this.area });
     this.board = board;
     const M = this.meshes = {};
-    this.official = official && this._buildScene(official) ? official : null;
+    this.official = official && this._buildScene(official, board) ? official : null;
     if (!this.official) {
       this.theme = null;
       this.renderer.toneMappingExposure = LIGHTING.exposure;   // the procedural board's grade
@@ -360,6 +360,7 @@ export class BoardScene {
     const res = this.sceneRes.get(pack.key);
     if (!res) return;
     for (const m of res.mats.values()) m.dispose();
+    res.platformMat?.dispose?.();
     for (const t of [...Object.values(res.tex), ...res.lm]) t?.dispose?.();
     this.sceneRes.delete(pack.key);
   }
@@ -368,7 +369,7 @@ export class BoardScene {
    * The official scene's meshes: the base plus the fields of the built areas, one mesh per material and lightmap
    * page (`mergeSceneChunks`). A switched-off HIDDEN part is left out before the merge.
    */
-  _buildScene(pack) {
+  _buildScene(pack, board) {
     const T = this.THREE;
     const res = this._sceneResources(pack);
     const infos = pack.doc?.materials || {};
@@ -419,7 +420,88 @@ export class BoardScene {
       this.root.add(mesh);
       this.meshes[`scene${n++}`] = mesh;
     }
+    this._buildPlatforms(board, theme, res, pack);
     return n > 0;
+  }
+
+  /**
+   * The battlefield's 高台 (raised sandstone platforms). The official desert board shows the playable field on a raised
+   * sandstone platform with TWO step levels around it and a lane; the official scene we can extract has a FLAT
+   * playable surface (an off-season client ships no platform mesh), so the steps are authored per theme in theme.js
+   * (`platforms`) and built here. The rings hug the built area (`this.area`: the field + the pen), so no block ever
+   * lands on a playable tile (there is also an explicit `inPlay` guard); the heights are VISUAL only — the sim's tile
+   * heights and deploy tiles are untouched (a `platforms.heightFromTiles` flag would derive them from layout.js's `h`
+   * instead, for a stage whose sim height is the official one).
+   * @param {{ grid: Array<Array<object>> }} board from buildBoard
+   * @param {{ platforms?: { texture?: string, tint?: number[], levels?: number[], rings?: number, lane?: object, heightFromTiles?: boolean } }} theme
+   * @param {{ tex: object }} res the scene textures
+   * @param {{ doc?: object }} pack
+   */
+  _buildPlatforms(board, theme, res, pack) {
+    const spec = theme?.platforms;
+    if (!spec || !Array.isArray(board?.grid) || !Array.isArray(this.area) || !this.area.length) return;
+    const T = this.THREE;
+    const map = res.tex[spec.texture] || res.tex[this._platformFallbackTexture(pack)] || null;
+    if (!map) return;
+    const levels = Array.isArray(spec.levels) && spec.levels.length ? spec.levels : [0.32];
+    const rings = Number.isInteger(spec.rings) ? spec.rings : levels.length;
+    const area = this.area.reduce((a, r) => (a
+      ? { r0: Math.min(a.r0, r.r0), r1: Math.max(a.r1, r.r1), c0: Math.min(a.c0, r.c0), c1: Math.max(a.c1, r.c1) }
+      : { ...r }), null);
+    const inPlay = (r, c) => this.area.some((a) => r >= a.r0 && r <= a.r1 && c >= a.c0 && c <= a.c1);
+    const boxes = new Map();   // "r,c" → height (a tile gets the highest step that claims it)
+    const add = (r, c, h) => { if (inPlay(r, c)) return; const k = `${r},${c}`; boxes.set(k, Math.max(boxes.get(k) ?? -Infinity, h)); };
+    for (let i = 0; i < rings; i++) {
+      const k = i + 1, h = levels[Math.min(i, levels.length - 1)];
+      for (let c = area.c0 - k; c <= area.c1 + k; c++) { add(area.r0 - k, c, h); add(area.r1 + k, c, h); }
+      for (let r = area.r0 - k + 1; r <= area.r1 + k - 1; r++) { add(r, area.c0 - k, h); add(r, area.c1 + k, h); }
+    }
+    if (spec.lane) {
+      const { side = 'top', h = levels[levels.length - 1], depth = 2 } = spec.lane;
+      for (let d = 0; d < depth; d++) {
+        if (side === 'top' || side === 'bottom') { const r = side === 'top' ? area.r0 - rings - 1 - d : area.r1 + rings + 1 + d; for (let c = area.c0; c <= area.c1; c++) add(r, c, h); }
+        else { const c = side === 'left' ? area.c0 - rings - 1 - d : area.c1 + rings + 1 + d; for (let r = area.r0; r <= area.r1; r++) add(r, c, h); }
+      }
+    }
+    if (!boxes.size) return;
+    const s = Number.isFinite(spec.uv) ? spec.uv : 0.5;
+    const tint = Array.isArray(spec.tint) ? spec.tint : [1, 1, 1];
+    const pos = [], uv = [], nrm = [], idx = [];
+    const quad = (a, b, c, d, n, u) => {
+      const o = pos.length / 3;
+      for (const p of [a, b, c, d]) { pos.push(p[0], p[1], p[2]); nrm.push(n[0], n[1], n[2]); }
+      uv.push(u[0], u[1], u[2], u[3], u[4], u[5], u[6], u[7]);
+      idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
+    };
+    for (const [k, raw] of boxes) {
+      const [r, c] = k.split(',').map(Number);
+      const z = spec.heightFromTiles ? (Number.isFinite(board.grid?.[r]?.[c]?.h) ? board.grid[r][c].h : 0) : raw;
+      if (!(z > 0)) continue;
+      const x0 = c - 0.5, x1 = c + 0.5, y0 = r - 0.5, y1 = r + 0.5;
+      quad([x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z], [0, 0, 1], [x0 * s, y0 * s, x1 * s, y0 * s, x1 * s, y1 * s, x0 * s, y1 * s]);
+      quad([x0, y0, 0], [x0, y0, z], [x1, y0, z], [x1, y0, 0], [0, -1, 0], [x0 * s, 0, x0 * s, z * s, x1 * s, z * s, x1 * s, 0]);
+      quad([x1, y0, 0], [x1, y0, z], [x1, y1, z], [x1, y1, 0], [1, 0, 0], [y0 * s, 0, y0 * s, z * s, y1 * s, z * s, y1 * s, 0]);
+      quad([x1, y1, 0], [x1, y1, z], [x0, y1, z], [x0, y1, 0], [0, 1, 0], [x1 * s, 0, x1 * s, z * s, x0 * s, z * s, x0 * s, 0]);
+      quad([x0, y1, 0], [x0, y1, z], [x0, y0, z], [x0, y0, 0], [-1, 0, 0], [y1 * s, 0, y1 * s, z * s, y0 * s, z * s, y0 * s, 0]);
+    }
+    if (!pos.length) return;
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+    g.setAttribute('normal', new T.BufferAttribute(new Float32Array(nrm), 3));
+    g.setAttribute('uv', new T.BufferAttribute(new Float32Array(uv), 2));
+    g.setIndex(new T.BufferAttribute(pos.length / 3 > 65535 ? new Uint32Array(idx) : new Uint16Array(idx), 1));
+    if (!res.platformMat) res.platformMat = new T.MeshStandardMaterial({ map, color: new T.Color(tint[0], tint[1], tint[2]), roughness: 0.92, metalness: 0 });
+    const mesh = new T.Mesh(g, res.platformMat);
+    mesh.castShadow = false; mesh.receiveShadow = false; mesh.renderOrder = -2;
+    mesh.matrixAutoUpdate = false; mesh.updateMatrix();
+    this.root.add(mesh);
+    this.meshes.platforms = mesh;
+  }
+
+  /** The theme platform texture fallback: the scene's first lit material's ground albedo. */
+  _platformFallbackTexture(pack) {
+    for (const m of Object.values(pack?.doc?.materials || {})) if (m && typeof m.map === 'string') return m.map;
+    return '';
   }
 
 

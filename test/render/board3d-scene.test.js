@@ -249,6 +249,15 @@ describe('scene themes (theme.js)', () => {
     assert.equal(m.uniforms.uSaturate.value, 0.8);
     assert.ok(Math.abs(m.uniforms.uColor.value.x - 0.5 ** 2.2 * 0.5) < 1e-6, 'the theme tint multiplies the linear albedo');
   });
+
+  test('the sand theme carries the 高台 layout; the default / metal themes carry none', () => {
+    const p = SCENE_THEMES.sand.platforms;
+    assert.ok(p && Array.isArray(p.levels) && p.levels.length === 2, 'two step levels');
+    assert.ok(Number.isInteger(p.rings) && p.rings >= 1, 'rings');
+    assert.ok(p.levels[0] > 0 && p.levels[1] > p.levels[0], 'the outer step is the higher one');
+    assert.equal(SCENE_THEMES.default.platforms, undefined, 'no platforms by default');
+    assert.equal(SCENE_THEMES.city.platforms, undefined, 'metal / industrial keeps none (regression baseline)');
+  });
 });
 
 describe('scene chunks (load.js)', () => {
@@ -478,6 +487,35 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     assert.equal(board.setScenePack(stage.id, null), false, 'nothing to drop');
     assert.equal(board.setScenePack('', fakeScenePack()), false);
     board.destroy();
+  });
+
+  test('_buildPlatforms: the sand theme raises the stepped rings outside the play area; the metal theme has none', () => {
+    const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
+    const { doc, bin } = fakeScene([{ material: 'M', x0: 4, y0: 9, group: 'HIDDEN@1' }]);
+    doc.materials.M.map = 'TX_AutochessSand_A';
+    const chunks = parseSceneChunks(doc, bin);
+    const img = { width: 4, height: 4 };
+    board.setScenePack(stage.id, { key: 'plat', stage: stage.id, doc, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_AutochessSand_A: img }, lm: [img] } });
+    board.setStage(stage);
+    assert.equal(board.theme, SCENE_THEMES.sand, 'the sand theme is picked from the doc albedo');
+    const plat = board.meshes.platforms;
+    assert.ok(plat && plat.geometry.getAttribute('position').count > 0, 'the rings are built');
+    const pos = plat.geometry.getAttribute('position');
+    const area = board.area;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i);
+      for (const a of area) {
+        const inside = x > a.c0 - 0.5 && x < a.c1 + 0.5 && y > a.r0 - 0.5 && y < a.r1 + 0.5;
+        assert.ok(!inside, `platform vertex ${x},${y} inside the play rect ${JSON.stringify(a)}`);
+      }
+    }
+    // a theme without platforms builds none (the metal / procedural regression baseline)
+    const b2 = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
+    b2.setScenePack(stage.id, { key: 'noplat', stage: stage.id, doc: { ...doc, materials: { M: { ...doc.materials.M, map: 'TX_Syracuse_metro_D' } } }, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_Syracuse_metro_D: img }, lm: [img] } });
+    b2.setStage(stage);
+    assert.equal(b2.theme, SCENE_THEMES.city);
+    assert.equal(b2.meshes.platforms, undefined, 'no platforms for a theme without the layout');
+    board.destroy(); b2.destroy();
   });
 
   test('a different lightmap page stays its own mesh; water pages share one', () => {
