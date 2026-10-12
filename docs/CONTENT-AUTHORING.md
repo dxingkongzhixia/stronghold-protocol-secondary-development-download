@@ -269,3 +269,25 @@
 - [`docs/MATCHMAKING.md`](MATCHMAKING.md) —— 我们的改动与全部决策记录（§22 合并黑名单、§39.2 #488、§40.3 统计）
 - [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) —— 与上游的差异与合并纪律
 - [`docs/ASSETS.md`](ASSETS.md) —— 素材 / 语音 / FX 流水线
+
+---
+
+## 8. 战场主题配色（3D 板）
+
+官方 3D 战场按主题分别调过色（沙地淡雅、城市明亮、工业对比强），我们的移植原来用一套全局参数，导致沙地偏红偏暗、城市偏灰。配色集中在 **`public/js/render/board3d/theme.js`** 的一张表里：**一行全局 `default` + 每个主题一行 override**，渲染器读取它（`BoardScene` 取 `exposure` 作 `renderer.toneMappingExposure`，`sceneMaterial` 取 `ambient` / `tint` / `saturate`）。
+
+| 参数 | 含义 | 来源 |
+| --- | --- | --- |
+| `exposure` | `renderer.toneMappingExposure`（ACES）；官方是 HDR + 后期曝光 | 官方同地图截图与我们的同区域取色比对 |
+| `ambient` | 每个 scene 材质加的中性环境/探针补光（线性） | 同上：官方亮部/暗部的中性分量 |
+| `tint` | 反照率乘子（色偏校正，`[1,1,1]` = 不调） | 官方材质的 `_Color` 与截图的通道比 |
+| `saturate` | 最终线性的饱和度（<1 = 官方更柔和的观感） | 截图的饱和度比对 |
+
+**主题判定**：`sceneTheme(stageId, doc)` 先按 `scene doc` 的贴图族（`THEME_MARKERS`，如 `TX_AutochessSand_*` → `sand`、`TX_Syracuse_metro_*` → `city`、`TX_KXMR_*` / `TX_LMZ_*`）判定，再按 `stageId` 前缀兜底，最后 `default`。现有主题：`sand`（9 张图）、`city`（act2 m01）、`kxmr` / `lmz`（act2 m03）、`default`。
+
+**加 / 调一个主题**：
+1. 在 `SCENE_THEMES` 加一行（或改现有行）——先只动 `exposure` / `ambient` / `saturate`。
+2. 新贴图族就加一条 `THEME_MARKERS`（贴图名前缀 → 主题名）。
+3. 用同一张官方截图与我们的渲染**同区域取色**校准（`docs/ASSETS.md` 记录了各主题的取样值），不要凭手感调。
+4. 金属/工业主题是**回归基线**：它走程序化板（`boardMaterial`），不受本表影响，改动后必须复核它没变。
+

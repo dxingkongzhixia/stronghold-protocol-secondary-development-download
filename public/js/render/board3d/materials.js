@@ -371,14 +371,16 @@ export function sceneBlend(info) {
 }
 
 /**
- * A lit material of an official scene: albedo (`map`, × _Color, blended with _Color2 by the vertex colour when the
- * material has `_HG_VERTEX_COLOR_BLEND_ON`) × (the lightmap's baked light + key light · N·L · baked shadow (lightmap
- * A, by _ShadowStrength)), plus the material's normal (`_BumpMap`, a derived RGB map), a sheen from its roughness
- * (`_MetallicGlossMap`, a derived map) and its emission (`_EmissionMap` × _EmissionColor, when `_EMISSION`). Alpha
- * test / blend by the keywords, the focus falloff of the other board materials. `map` / `emissionMap` are sRGB
- * textures, `normalMap` / `roughnessMap` linear data maps; `lightMap` holds (light / lightRange)^(1/2.2) in RGB (no
- * colour space). Geometry attributes: position, normal, uv, aLm (lightmap uv), aColor (vertex colour), and — with a
- * normal map — tangent (four.tangents, handedness in w).
+ * A lit material of an official scene: albedo (`map`, × _Color) × (the lightmap's baked light + key light · N·L ·
+ * baked shadow (lightmap A, by _ShadowStrength)), plus the material's normal (`_BumpMap`, a derived RGB map), a sheen
+ * from its roughness (`_MetallicGlossMap`, a derived map) and its emission (`_EmissionMap` × _EmissionColor, when
+ * `_EMISSION`). Alpha test / blend by the keywords, the focus falloff of the other board materials. `map` /
+ * `emissionMap` are sRGB textures, `normalMap` / `roughnessMap` linear data maps; `lightMap` holds
+ * (light / lightRange)^(1/2.2) in RGB (no colour space). The `_HG_VERTEX_COLOR_BLEND_ON` tint is NOT applied: the
+ * material's `_Color2` is a dark red-brown and blending the field's vertex colours towards it red-shifted the board,
+ * where the official's ground is a pale neutral sandstone (the vertex colours are the terrain/AO channel, not a tint).
+ * Geometry attributes: position, normal, uv, aLm (lightmap uv), aColor (kept for the client's attribute layout), and —
+ * with a normal map — tangent (four.tangents, handedness in w).
  * @param {{ map?: any, lightMap?: any, normalMap?: any, roughnessMap?: any, emissionMap?: any, info?: object,
  *   lightRange?: number, light?: { dir: number[], color: number[], intensity: number } }} o
  */
@@ -389,28 +391,28 @@ export function sceneMaterial(THREE, o, focus) {
   const k = (Number.isFinite(L.intensity) ? L.intensity : 1) * SCENE_LIGHT.direct;
   const lin = (v) => Math.pow(Math.max(0, v), 2.2);   // the scene's colours are authored in gamma space
   const col = colorOf(info, '_Color');
-  const col2 = colorOf(info, '_Color2');
   const emis = colorOf(info, '_EmissionColor', [0, 0, 0, 0]);
-  const vcol = hasKeyword(info, '_HG_VERTEX_COLOR_BLEND_ON');
+  const theme = o.theme || null;
+  const tint = theme?.tint || [1, 1, 1];
   const normalMap = o.normalMap || null, roughMap = o.roughnessMap || null, emisMap = o.emissionMap || null;
   const uniforms = {
     uMap: { value: o.map || null }, uLm: { value: o.lightMap || null },
-    uColor: { value: new THREE.Vector4(lin(col[0]), lin(col[1]), lin(col[2]), col[3]) },
-    uColor2: { value: new THREE.Vector4(lin(col2[0]), lin(col2[1]), lin(col2[2]), col2[3]) },
+    uColor: { value: new THREE.Vector4(lin(col[0]) * (tint[0] ?? 1), lin(col[1]) * (tint[1] ?? 1), lin(col[2]) * (tint[2] ?? 1), col[3]) },
     uCutoff: { value: blend === 'cutout' ? floatOf(info, '_Cutoff', 0.5) : 0 },
     uLmScale: { value: o.lightMap ? (o.lightRange > 0 ? o.lightRange : SCENE_LIGHT.range) * SCENE_LIGHT.indirect : 0 },
-    uAmbient: { value: SCENE_LIGHT.ambient },
+    uAmbient: { value: theme ? theme.ambient : SCENE_LIGHT.ambient },
     uShadow: { value: floatOf(info, '_ShadowStrength', 1) },
     uLightDir: { value: new THREE.Vector3(...L.dir).normalize() },
     uLightColor: { value: new THREE.Vector3(lin(L.color[0]) * k, lin(L.color[1]) * k, lin(L.color[2]) * k) },
     uNormalMap: { value: normalMap }, uNormalScale: { value: floatOf(info, '_BumpScale', 1) },
     uRoughMap: { value: roughMap },
     uEmisMap: { value: emisMap }, uEmisColor: { value: new THREE.Vector3(lin(emis[0]), lin(emis[1]), lin(emis[2])) },
+    uSaturate: { value: Number.isFinite(theme?.saturate) ? theme.saturate : 1 },
     ...focus,
   };
   const defines = {
     ...(o.map ? { SCENE_MAP: 1 } : {}), ...(o.lightMap ? { SCENE_LM: 1 } : {}),
-    ...(vcol ? { SCENE_VCOL: 1 } : {}), ...(normalMap ? { SCENE_NORMAL: 1 } : {}),
+    ...(normalMap ? { SCENE_NORMAL: 1 } : {}),
     ...(roughMap ? { SCENE_ROUGH: 1 } : {}), ...(emisMap ? { SCENE_EMIS: 1 } : {}),
   };
   const m = new THREE.ShaderMaterial({
@@ -418,24 +420,15 @@ export function sceneMaterial(THREE, o, focus) {
     defines,
     vertexShader: [
       'attribute vec2 aLm;',
-      '#ifdef SCENE_VCOL',
-      'attribute vec4 aColor;',
-      '#endif',
       '#ifdef SCENE_NORMAL',
       'attribute vec4 tangent;',
       '#endif',
       'varying vec2 vUv; varying vec2 vLm; varying vec3 vN; varying vec3 vWorld;',
-      '#ifdef SCENE_VCOL',
-      'varying vec4 vVcol;',
-      '#endif',
       '#ifdef SCENE_NORMAL',
       'varying vec3 vT; varying vec3 vB;',
       '#endif',
       'void main() {',
       '  vUv = uv; vLm = aLm;',
-      '#ifdef SCENE_VCOL',
-      '  vVcol = aColor;',
-      '#endif',
       '  vec3 n = normalize(mat3(modelMatrix) * normal);',
       '  vN = n;',
       '#ifdef SCENE_NORMAL',
@@ -449,24 +442,18 @@ export function sceneMaterial(THREE, o, focus) {
       '}',
     ].join('\n'),
     fragmentShader: [
-      'uniform sampler2D uMap; uniform sampler2D uLm; uniform vec4 uColor; uniform vec4 uColor2; uniform float uCutoff;',
+      'uniform sampler2D uMap; uniform sampler2D uLm; uniform vec4 uColor; uniform float uCutoff;',
       'uniform float uLmScale; uniform float uAmbient; uniform float uShadow; uniform vec3 uLightDir; uniform vec3 uLightColor;',
       'uniform sampler2D uNormalMap; uniform float uNormalScale; uniform sampler2D uRoughMap;',
       'uniform sampler2D uEmisMap; uniform vec3 uEmisColor;',
-      'uniform vec3 uSheen;',
+      'uniform vec3 uSheen; uniform float uSaturate;',
       FOCUS_GLSL,
       'varying vec2 vUv; varying vec2 vLm; varying vec3 vN; varying vec3 vWorld;',
-      '#ifdef SCENE_VCOL',
-      'varying vec4 vVcol;',
-      '#endif',
       '#ifdef SCENE_NORMAL',
       'varying vec3 vT; varying vec3 vB;',
       '#endif',
       'void main() {',
       '  vec4 a = uColor;',
-      '  #ifdef SCENE_VCOL',
-      '    a.rgb = mix(a.rgb, uColor2.rgb, vVcol.rgb);',
-      '  #endif',
       '  #ifdef SCENE_MAP',
       '    a *= texture2D(uMap, vUv);',
       '  #endif',
@@ -492,6 +479,7 @@ export function sceneMaterial(THREE, o, focus) {
       '  #ifdef SCENE_EMIS',
       '    c += uEmisColor * texture2D(uEmisMap, vUv).rgb;',
       '  #endif',
+      '  c = mix(vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), c, uSaturate);',
       '  gl_FragColor = vec4(c * focusMask(vWorld.xy), a.a);',
       '  #include <colorspace_fragment>',
       '}',

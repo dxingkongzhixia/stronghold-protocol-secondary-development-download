@@ -18,6 +18,7 @@ import { AREAS } from '../../public/js/render/board3d/layout.js';
 import { resolveUvTable } from '../../public/js/render/board3d/atlas.js';
 import { presetCamera } from '../../public/js/render/projection.js';
 import { sceneMaterial, sceneWaterMaterial, sceneBlend, focusUniforms, SCENE_LIGHT } from '../../public/js/render/board3d/materials.js';
+import { SCENE_THEMES, sceneTheme } from '../../public/js/render/board3d/theme.js';
 import {
   parseSceneChunks, sceneGroupRects, loadScenePack, sceneListed, resetBoardPack, sceneGroup, sceneMaterialKey, mergeSceneChunks,
   SCENE_TEX_GROUP, SCENE_VERSION, SCENE_VERTEX_BYTES,
@@ -222,6 +223,34 @@ print(json.dumps({'lw': lossy.get('webp'), 'sw': lossless.get('webp'), 'path': l
   });
 });
 
+describe('scene themes (theme.js)', () => {
+  test('every theme row carries the grade knobs; a scene doc maps to its theme', () => {
+    for (const [name, t] of Object.entries(SCENE_THEMES)) {
+      assert.ok(t.exposure > 0, `${name}.exposure`);
+      assert.ok(t.ambient >= 0, `${name}.ambient`);
+      assert.ok(Array.isArray(t.tint) && t.tint.length === 3, `${name}.tint`);
+      assert.ok(t.saturate > 0 && t.saturate <= 1, `${name}.saturate`);
+    }
+    assert.equal(sceneTheme('act1autochess_m01', { materials: { a: { map: 'TX_AutochessSand_A' } } }), SCENE_THEMES.sand);
+    assert.equal(sceneTheme('act2autochess_m01', { materials: { a: { map: 'TX_Syracuse_metro_D' } } }), SCENE_THEMES.city);
+    assert.equal(sceneTheme('act2autochess_m03', { materials: { a: { map: 'TX_KXMR_A' } } }), SCENE_THEMES.kxmr);
+    assert.equal(sceneTheme('act2autochess_m03', { materials: { a: { map: 'TX_LMZ_A' } } }), SCENE_THEMES.lmz);
+    assert.equal(sceneTheme('mystery', null), SCENE_THEMES.default);
+    assert.equal(sceneTheme('act1autochess_m01', null), SCENE_THEMES.sand, 'the act falls back when the doc is absent');
+  });
+
+  test('sceneMaterial applies the theme ambient/tint/saturate; without a theme it uses SCENE_LIGHT', () => {
+    const focus = focusUniforms(THREE);
+    const plain = sceneMaterial(THREE, { info: { colors: { _Color: [1, 1, 1, 1] } } }, focus);
+    assert.equal(plain.uniforms.uAmbient.value, SCENE_LIGHT.ambient);
+    assert.equal(plain.uniforms.uSaturate.value, 1);
+    const m = sceneMaterial(THREE, { info: { colors: { _Color: [0.5, 1, 1, 1] } }, theme: { exposure: 2, ambient: 0.4, tint: [0.5, 1, 2], saturate: 0.8 } }, focus);
+    assert.equal(m.uniforms.uAmbient.value, 0.4);
+    assert.equal(m.uniforms.uSaturate.value, 0.8);
+    assert.ok(Math.abs(m.uniforms.uColor.value.x - 0.5 ** 2.2 * 0.5) < 1e-6, 'the theme tint multiplies the linear albedo');
+  });
+});
+
 describe('scene chunks (load.js)', () => {
   test('parseSceneChunks: typed-array views per chunk; a record that does not fit the buffer rejects the scene', () => {
     const { doc, bin } = fakeScene(PARTS);
@@ -357,7 +386,7 @@ describe('scene materials', () => {
     assert.ok(!w.defines.WATER_MAPS, 'no water maps: a flat tint');
   });
 
-  test('sceneMaterial: the normal / roughness / emission maps and the _Color2 vertex-colour blend', () => {
+  test('sceneMaterial: the normal / roughness / emission maps; _Color2/the vertex tint is deliberately not applied', () => {
     const focus = focusUniforms(THREE);
     const n = new THREE.Texture(), r = new THREE.Texture(), e = new THREE.Texture();
     const info = {
@@ -371,9 +400,10 @@ describe('scene materials', () => {
     assert.equal(m.uniforms.uRoughMap.value, r);
     assert.equal(m.uniforms.uEmisMap.value, e);
     assert.equal(m.uniforms.uNormalScale.value, 1.5);
-    assert.ok(Math.abs(m.uniforms.uColor2.value.x - 0.5 ** 2.2) < 1e-6, '_Color2 in linear space');
     assert.ok(Math.abs(m.uniforms.uEmisColor.value.y - 0.5 ** 2.2) < 1e-6, '_EmissionColor in linear space');
-    for (const d of ['SCENE_NORMAL', 'SCENE_ROUGH', 'SCENE_EMIS', 'SCENE_VCOL', 'SCENE_MAP', 'SCENE_LM']) assert.ok(m.defines[d], d);
+    assert.equal(m.uniforms.uColor2, undefined, 'the red-shifting _Color2 blend is gone');
+    for (const d of ['SCENE_NORMAL', 'SCENE_ROUGH', 'SCENE_EMIS', 'SCENE_MAP', 'SCENE_LM']) assert.ok(m.defines[d], d);
+    assert.equal(m.defines.SCENE_VCOL, undefined, 'the vertex tint is not applied');
     assert.equal(m.userData.normalMap, true, 'tangents are needed');
     const bare = sceneMaterial(THREE, { info: { keywords: [] } }, focus);
     for (const d of ['SCENE_NORMAL', 'SCENE_ROUGH', 'SCENE_EMIS', 'SCENE_VCOL']) assert.ok(!bare.defines[d], d);

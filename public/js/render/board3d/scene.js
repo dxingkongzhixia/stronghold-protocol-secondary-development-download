@@ -31,6 +31,7 @@ import {
 } from './materials.js';
 import { syncThreeCamera } from '../projection.js';
 import { mergeSceneChunks, sceneMaterialKey } from './load.js';
+import { sceneTheme } from './theme.js';
 
 /** Lighting rig (tuned against the official screenshots: bright even tops, darker sides, soft shadows). */
 export const LIGHTING = Object.freeze({
@@ -306,6 +307,8 @@ export class BoardScene {
     const M = this.meshes = {};
     this.official = official && this._buildScene(official) ? official : null;
     if (!this.official) {
+      this.theme = null;
+      this.renderer.toneMappingExposure = LIGHTING.exposure;   // the procedural board's grade
       M.board = this._mesh(board.buckets.board, this.mat.board);
       M.glass = this._mesh(board.buckets.glass, this.mat.glass);
       M.decal = this._mesh(board.buckets.decal, this.mat.decal, { cast: false });
@@ -369,6 +372,9 @@ export class BoardScene {
     const T = this.THREE;
     const res = this._sceneResources(pack);
     const infos = pack.doc?.materials || {};
+    // the battlefield theme's grade (theme.js): its HDR exposure + the ambient/tint sceneMaterial applies
+    const theme = this.theme = sceneTheme(pack.stage, pack.doc);
+    this.renderer.toneMappingExposure = theme.exposure;
     this.sceneWater = [];
     const buckets = new Map();
     for (const c of pack.chunks || []) {
@@ -391,7 +397,7 @@ export class BoardScene {
           : sceneMaterial(T, {
             map: res.tex[info?.map] || null, lightMap: c.lightmap >= 0 ? (res.lm[c.lightmap] || null) : null,
             normalMap: res.tex[info?.normalMap] || null, roughnessMap: res.tex[info?.metalGlossMap] || null,
-            emissionMap: res.tex[info?.emissionMap] || null, info,
+            emissionMap: res.tex[info?.emissionMap] || null, info, theme,
             light: pack.doc?.light || null, lightRange: pack.doc?.lightRange,
           }, this.focus);
         res.mats.set(mk, mat);
@@ -415,6 +421,8 @@ export class BoardScene {
     }
     return n > 0;
   }
+
+
 
   _buildDevices(board) {
     const crates = [], blowers = [];
