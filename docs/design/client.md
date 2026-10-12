@@ -97,3 +97,84 @@ are verified, and cleans up / restores focus on both success and failure. Failur
 Push/pull slides preserve the target's pre-hit facing through the waiting and moving phases (`keepFacing`, §28.9).
 Explicit false and unmarked raw displacements face the travel direction. Normal snapshot facing resumes on landing.
 [ASSUMED] unrecorded push sources and reverse-facing hook pulls use the same display rule as the cited examples.
+
+### Local preferences and recovery (§28.14, §28.18–20)
+
+Settings persist `textSize` (sm/md/lg/xl; default sm) and `voiceOverrides` (charId → cn/jp; default empty) alongside the
+existing global `voiceLang`. CSS text uses `--t`; the layout rem, camera and board geometry stay unchanged. Larger text
+and translated controls wrap within the settings modal. The normal roster detail and chosen DIY cards expose each
+operator's voice preference, shared across that charId's forms. An absent override follows the global preference;
+missing Japanese lines retain the existing Chinese fallback. Overrides are local listening preferences, absent from
+room loadouts and their exports.
+
+The title and lobby offer explicit recovery of a previously saved local match seat. `sp.matches` stores bounded name /
+room-code metadata indexed by token hash; the existing four-entry `sp.tokens` ring remains the authority. Recovery
+rechecks BroadcastChannel claims before selecting the token in memory and reconnecting in the same document.
+Only the server's `welcome` (`saveToken`) persists that selection and its first-welcome stamp (`sp.tokenWelcome`,
+bound to the token hash). Refreshing or reconnecting the same token preserves that stamp. A tab with a session token
+initializes with that token or null, never another recent token, and answers ownership queries during initialization.
+An earlier welcome takes precedence; equal stamps prefer an already welcomed live document over a copied session,
+then tab id breaks ties. A session token without a stamp still outranks a tentative shared-token selection. A pending
+recovery yields when the original owner returns; a later welcomed holder also gives up its local claim and pending
+reconnect. `hello.noReplace` prevents tentative recovery from evicting a connected session even if its hello is already
+in flight; `hello.claimAt` preserves the earlier-welcome priority for established holders' in-flight reconnects. A stale
+welcome never reaches the store or flushes queued game actions. Nickname persistence also waits for welcome, so a
+refused recovery can return to the previous identity and nickname. It does not identify players by name or IP.
+Without BroadcastChannel it refuses shared recovery. Server restart / expiry clears
+obsolete metadata on the next welcome. A spectator never registers a recoverable player seat.
+
+`manifest.json` enables browser installation. The maintainer's revised decision of 2026-10-10 is to
+**沿用 0.2.x 的薄荷绿城堡并精修**: `public/icons/app.svg` keeps the existing three-battlement rook, inset tower
+and splayed base in mint `#4ed8af` on dark `#0c0f0e`. Refinement B narrows the tower, balances the battlements,
+thins the base and increases breathing room. It has no lettering, gradients or gloss and uses no official art,
+logos, icons or fonts.
+`tools/export-app-icons.py` exports 192/512 px PNGs for `any` and separate opaque `maskable` icons: the latter scale
+only the mark to 87.5%, keeping every foreground pixel inside the central circle of radius 40% of the canvas.
+The same master supplies 16/32/48 px PNG / ICO favicons and the 180 px Apple touch icon linked from `index.html`.
+These project-owned assets live in `public/icons/` and ship in full and lite packages; ASSETS.md records their provenance.
+The install button appears only for a live browser install offer and hides
+in standalone/fullscreen windows or after installation. Every offer is consumed before awaiting the prompt, including
+cancellation or failure. No service worker, offline cache or persistent server is introduced; HTTPS or localhost and
+browser support still govern installation.
+
+### Skill-mode sound and delayed models (§28.17, §28.22)
+
+The audio manifest can carry `attacks` / `hits` plus independent `attackMix` / `hitMix` by skill index. Only an active
+skill uses a mode bank. Impacts remember the mode at the time of the attack; an end event cancels a queued start for
+an unknown unit, and a late-join snapshot restores the current mode. A mode without a bank falls back to its normal
+sound. A selected mode with no mix uses its own default volume/probability, not the ordinary bank's mix.
+
+A model that arrives after an actual deployment continues Start at the elapsed game time; after the clip's duration it
+shows the current base pose. A subsequent attack/death supersedes that pending entrance. No extra deployment sound
+or per-phase animation schedule is added by this change.
+
+The simplified-view notice describes a renderer load failure, rather than declaring the device incapable of 3D.
+On same-battle metadata refresh, remembered once-spawned device records also seed the renderer's new entry (§29.14).
+This preserves device tile picking and live-HP cards; records explicitly supplied by the refresh take precedence,
+and a different field never inherits the previous field's devices.
+The same fallback covers import failure, timeout and WebGL initialization errors; a reload can retry.
+It does not diagnose a particular user's GPU or persist a disabled renderer preference (§28.25).
+
+Community UI and recovery (§29.6): DIY reuses roster stats and skill previews; Swire's coins show current/cap. The lobby player chip opens statistics and the responsive header keeps optional controls from overlapping its title. Settlement's summary scrolls separately from Return. Failed board art can retry, and failed three.js imports use two bounded fresh URLs. Failed engine initialization can remount on online/visibility, at most twice consecutively, cleaning up each previous view; explicit fallback/2D stays selected.
+
+Replacing a field renderer also resets the game screen's entered-view identity. Frames are buffered while the replacement loads; after subscribing, the local runner re-shows full current metadata/snapshot, or the server resends the watched field. Real local and server-streamed battles preserve the same simulation object and clock through recovery, including enemies spawned before the new renderer existed.
+
+§30.4: the HP tower retains current HP until settlement and shows pending loss separately. Shop refresh is single
+flight per client until its promise settles (success or error); the button and R key share that state. DIY-only
+potential/cultivation changes are exportable; spectator member resolution includes the owner's DIY selection.
+Bond tooltips show banned visible members in one clamped scrollable compound box, stacked on narrow screens.
+An open list updates on member changes; long-press lists persist for reading and close on outside tap/Escape.
+The developer simulation checker and its bounded verification claims are specified in SIM §11 and history §30.5.
+
+Operator attack clips play once per actual attack (§30.7), retaining their interval-based speed. A prepared wind-up
+is consumed without replay; a later queued attack may start during the previous recovery. Without another attack
+the actor returns to base/skill idle. Late operator events still start at the strike frame; no sim timing changes.
+
+Connection recovery sits above the AI-away overlay and below global modals (§30.8), so a replaced session can
+be reclaimed by pointer while away. This does not change the stacking behavior of modals nested inside a screen.
+
+§30.17: 设置 →「官方伤害数字」 defaults off. Off, damage numbers stay the typed every-hit popups. On, and only
+while 「显示伤害数字」 is also on, the field draws a red integer for a `dmg` tuple marked `'r'` and a yellow MISS
+for a dodge fx whose payload is `num: 'm'` (PRTS 作战机制 「伤害红字（暴击）」). Ordinary hits and heals draw no
+digits in that mode. The mark is computed in the sim; the random offset above the model is client-side. The
+simplified board uses the same mark with a fixed slot. The title footer links the project repository in a new tab.
