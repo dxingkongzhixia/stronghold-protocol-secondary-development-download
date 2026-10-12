@@ -1,6 +1,6 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后更新：2026-10-11**。
+> 给「新会话 / 新接手的人」看的一页纸。**最后更新：2026-10-13**。
 > 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§37）。
 
 ---
@@ -102,6 +102,7 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - [ ] **攻击前冲 / 浮空技能**：已按上游 v0.1.3（#61 / #23）实现，**待实机验手感**。
 - [x] **CI 已接入**：`.github/workflows/ci.yml` 在 Ubuntu / Windows × Node 22 / 24 上跑 `npm ci`、`node --test` 和服务器冒烟测试（README「开发与测试」）；本地 `node --test` 仍是主要闸门。原「没有 CI」已过时。
 - [ ] B 站宣传视频：见 §10 产物。
+- [ ] **沙地战场官方的「高台」（局部抬升块）未复刻**（owner 2026-10-13：**先记录、暂不实现**——「高台先记录下，就一张图有问题先不管了」）。官方战场 #01 的可玩面上有一处**局部的抬升台**（owner 截图标注在场地**左中**；参考 `D:\DOTK\_shots\official-map01.png`），我们的板在那里是**平的**。根因：能抽到的官方场景（off-season 客户端，`.cache/official-scenes/26-04-13-12-31-42_e9b560`）可玩面基本是平的（只有约半格落差），官方那块抬升**不在**可抽数据里；`data/stages.json` 里**有** `height: "HIGH"` 的高台格（战场 #01 下半的远程位 `10,4 / 11,4 / 12,4`），但那是**部署格高度**，不是这块抬升的位置。第一次尝试把它误读成**整圈**高台（提交 `6e988b44`：两级台阶 + 一条跑道），画面里是一圈亮边框 + 底部长木板，**不对**，已按提交 `02ebc35a` 删除、改成沙地铺边。将来做：按 `docs/CONTENT-AUTHORING.md` §8.3 的每主题 `platforms` 结构（位置 / 尺寸 / 高度 / 材质）+ `scene.js _buildPlatforms` 复刻**局部**块，数值从官方参考量出；**纯视觉**（`server/sim` 的格子 / 高度 / `deployTiles` 不动），**不挡**部署高亮 / 方向轮盘；验证用同 stage / 同相机的官方截图比对。
 
 ## 9. 与上游的关系 / 下次怎么合并
 - 上游：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（`763e224`，§15）、**feedback5 / v0.2.0**（`1303321`，合并提交 `e3bd9de`，§33），并**选择性**并入 **feedback6**（R21A / R21E×3 / R21H / R21D）与 **feedback7 的 R22 / R23** 两批（含 Group A、日语语音、Group C / R23）；本仓库版本 `0.4.0`（上一版 `0.3.0` 是大厅社区 + 克莱门莎）。**逐批的完整记录（上游提交范围 / HEAD、取用的提交、跳过的提交与原因、冲突、golden 变动、本地提交）见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)**；「永不合并」清单也在那里（§0）。
