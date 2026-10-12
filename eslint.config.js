@@ -53,6 +53,10 @@ export default [
   {
     ignores: [
       'node_modules/**',
+      // the optional local-client extraction venv (.gitignore `.venv*/`), wherever it is created:
+      // tools/local-extract/.venv-extract holds a vendored pip whose worker tripped no-undef
+      '.venv*/**',
+      '**/.venv*/**',
       'public/vendor/**',
       'public/assets/**',
       'public/fonts/**',
