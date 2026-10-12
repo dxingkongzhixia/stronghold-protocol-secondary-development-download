@@ -6,6 +6,8 @@ Language: player-facing text is **Simplified Chinese** by default, with an Engli
 
 Versions: the first public release was **0.1.0** (2026-10-02, the state of §0–§20.15); the releases after it add the player feedback and GitHub reports — 0.1.1 §21, 0.1.2 §22, 0.1.3 §23, 0.1.4 §24 — and **0.2.0** (2026-10-07; `CHANGELOG.md`) the maintainability refactor, two languages, 补位, 自选编队 and their fidelity work — §25. The 0.2.1 dev line (`package.json`, `shared/constants.js APP_VERSION`: `0.2.1-dev`) adds §26 and is the state described by this document. The labels v1 / v2 / v2.1–v2.5.2 in §0, §14–§20 and in the BALANCE / SIM comparisons name the design generations and the private playtest builds that came before it; they are kept as history.
 
+Official battlefield scenes (0.2.5; see [`docs/ASSETS.md`](ASSETS.md) and [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)) are **optional local art**: the client renders a stage's extracted official scene (`public/js/render/board3d/load.js` `loadScenePack`, `scene.js` `setScenePack`) and keeps the procedural metal tiles when a scene is absent. The repository never stores the official scene files; they are a local extraction step (`tools/setup.mjs --scenes`).
+
 ---
 
 ## Where each section lives
