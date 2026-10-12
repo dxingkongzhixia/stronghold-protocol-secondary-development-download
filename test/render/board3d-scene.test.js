@@ -266,6 +266,26 @@ describe('scene themes (theme.js)', () => {
     assert.equal(SCENE_THEMES.default.sun, undefined, 'no sun gain by default');
     assert.ok(SCENE_THEMES.city.sun > 1 && SCENE_THEMES.kxmr.sun > 1, 'every listed theme reads the official sun');
   });
+
+  test('the sand theme carries the 高台 platforms (a localised block list); the default / metal themes carry none', () => {
+    const p = SCENE_THEMES.sand.platforms;
+    assert.ok(p && typeof p.texture === 'string' && p.texture, 'a sandstone texture (the scene\'s own sand/field albedo)');
+    assert.ok(Array.isArray(p.blocks) && p.blocks.length >= 1, 'a list of raised blocks');
+    assert.ok(Number.isFinite(p.uv) && p.uv > 0, 'a natural UV scale');
+    for (const b of p.blocks) {
+      assert.ok(Number.isInteger(b.r0) && Number.isInteger(b.c0) && b.r1 >= b.r0 && b.c1 >= b.c0, `a tile rect ${JSON.stringify(b)}`);
+      assert.ok(Number.isFinite(b.h) && b.h > 0, `a raised height ${JSON.stringify(b)}`);
+    }
+    // the owner's block is the field's LEFT-MIDDLE (cols 0-2, rows 9-11) — a LOCALISED block, not a perimeter ring
+    const left = p.blocks.find((b) => b.c0 === 0 && b.c1 === 2 && b.r0 <= 10 && b.r1 >= 10);
+    assert.ok(left, 'the left-middle raised block the owner pointed at');
+    // no block may cover a deploy tile (the normal field: rows 9-12, cols 3-9) — the deploy highlight / wheel stays clear
+    for (const b of p.blocks) {
+      assert.ok(!(b.r0 <= 12 && b.r1 >= 9 && b.c0 <= 9 && b.c1 >= 3), `a block must not cover the deploy field: ${JSON.stringify(b)}`);
+    }
+    assert.equal(SCENE_THEMES.default.platforms, undefined, 'no platforms by default');
+    assert.equal(SCENE_THEMES.city.platforms, undefined, 'the metal / industrial board keeps none (regression baseline)');
+  });
 });
 
 describe('scene chunks (load.js)', () => {
