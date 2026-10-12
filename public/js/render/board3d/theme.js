@@ -41,16 +41,17 @@ export const SCENE_THEMES = Object.freeze({
     // gone). VISUAL only: the sim's tiles / heights / deployTiles are untouched, and every rect sits OUTSIDE the
     // deploy field (cols 0-2 / 19-20, rows 14-15), so a block never covers a deploy highlight / the direction wheel.
     platforms: Object.freeze({
-      texture: 'TX_AutochessSand_A', tint: Object.freeze([1.02, 1.0, 0.98]), uv: 0.23,
+      texture: 'TX_AutochessSand_sand_A', tint: Object.freeze([1.06, 1.04, 1.0]), uv: 0.5,
       blocks: Object.freeze([
-        // left-middle: the owner's 高台 (cols 0-2, rows 9-11) - the block the deploy highlight sits against
-        Object.freeze({ r0: 9, r1: 11, c0: 0, c1: 2, h: 0.42 }),
-        // the same terrace one row further back (row 12, cols 1-2): the map steps it up again
-        Object.freeze({ r0: 12, r1: 12, c0: 1, c1: 2, h: 0.62 }),
+        // left-middle: the owner's 高台 (cols 0-2, rows 9-11) - the # HIGH cluster the reference steps up, the block
+        // the deploy highlight sits against
+        Object.freeze({ r0: 9, r1: 11, c0: 0, c1: 2, h: 0.40 }),
+        // the same terrace one row further back (row 12, cols 1-2): the reference steps it up again
+        Object.freeze({ r0: 12, r1: 12, c0: 1, c1: 2, h: 0.55 }),
         // bottom-left corner of the field (rows 14-15, cols 0-2): the raised blocks above the bench plank
-        Object.freeze({ r0: 14, r1: 15, c0: 0, c1: 2, h: 0.42 }),
-        // the right field's mirrored left-middle block (cols 19-20, rows 9-11)
-        Object.freeze({ r0: 9, r1: 11, c0: 19, c1: 20, h: 0.42 }),
+        Object.freeze({ r0: 14, r1: 15, c0: 0, c1: 2, h: 0.40 }),
+        // the right field's mirror block (cols 19-20, rows 9-11)
+        Object.freeze({ r0: 9, r1: 11, c0: 19, c1: 20, h: 0.40 }),
       ]),
     }),
   }),
