@@ -248,15 +248,21 @@ describe('scene themes (theme.js)', () => {
     assert.equal(m.uniforms.uAmbient.value, 0.4);
     assert.equal(m.uniforms.uSaturate.value, 0.8);
     assert.ok(Math.abs(m.uniforms.uColor.value.x - 0.5 ** 2.2 * 0.5) < 1e-6, 'the theme tint multiplies the linear albedo');
+    // the theme's sun gain multiplies the key light (a bright sun so the lit sides read)
+    const s = sceneMaterial(THREE, { info: { colors: {} }, light: { dir: [0, 0, 1], color: [1, 1, 1], intensity: 1 }, theme: { ambient: 0.1, sun: 2 } }, focus);
+    assert.equal(s.uniforms.uLightColor.value.x, 2, 'uLightColor = the scene intensity × SCENE_LIGHT.direct × theme.sun');
   });
 
-  test('the sand theme carries the 高台 layout; the default / metal themes carry none', () => {
-    const p = SCENE_THEMES.sand.platforms;
-    assert.ok(p && Array.isArray(p.levels) && p.levels.length === 2, 'two step levels');
-    assert.ok(Number.isInteger(p.rings) && p.rings >= 1, 'rings');
-    assert.ok(p.levels[0] > 0 && p.levels[1] > p.levels[0], 'the outer step is the higher one');
-    assert.equal(SCENE_THEMES.default.platforms, undefined, 'no platforms by default');
-    assert.equal(SCENE_THEMES.city.platforms, undefined, 'metal / industrial keeps none (regression baseline)');
+  test('the sand theme carries the sand apron; the default / metal themes carry none', () => {
+    const p = SCENE_THEMES.sand.apron;
+    assert.ok(p && Number.isFinite(p.uv) && p.uv > 0, 'a natural UV scale');
+    assert.ok(Number.isFinite(p.width) && p.width > 0, 'a blend width');
+    assert.ok(Number.isFinite(p.alpha) && p.alpha > 0 && p.alpha <= 1, 'a starting alpha');
+    assert.ok(Number.isFinite(p.z) && p.z > 0, 'a low z above the scene ground');
+    assert.ok(SCENE_THEMES.sand.sun > 1, 'the sand theme pushes the sun term up (the official sunlit/shaded range)');
+    assert.equal(SCENE_THEMES.default.apron, undefined, 'no apron by default');
+    assert.equal(SCENE_THEMES.city.apron, undefined, 'metal / industrial keeps none (regression baseline)');
+    assert.equal(SCENE_THEMES.default.sun, undefined, 'no sun gain by default');
   });
 });
 
@@ -490,32 +496,39 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     board.destroy();
   });
 
-  test('_buildPlatforms: the sand theme raises the stepped rings outside the play area; the metal theme has none', () => {
+  test('_buildApron: the sand theme lays a sand blend band outside the play area; the metal theme has none', () => {
     const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
     const { doc, bin } = fakeScene([{ material: 'M', x0: 4, y0: 9, group: 'HIDDEN@1' }]);
     doc.materials.M.map = 'TX_AutochessSand_A';
     const chunks = parseSceneChunks(doc, bin);
     const img = { width: 4, height: 4 };
-    board.setScenePack(stage.id, { key: 'plat', stage: stage.id, doc, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_AutochessSand_A: img }, lm: [img] } });
+    board.setScenePack(stage.id, { key: 'apron', stage: stage.id, doc, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_AutochessSand_A: img }, lm: [img] } });
     board.setStage(stage);
     assert.equal(board.theme, SCENE_THEMES.sand, 'the sand theme is picked from the doc albedo');
-    const plat = board.meshes.platforms;
-    assert.ok(plat && plat.geometry.getAttribute('position').count > 0, 'the rings are built');
-    const pos = plat.geometry.getAttribute('position');
+    const apron = board.meshes.apron;
+    assert.ok(apron && apron.geometry.getAttribute('position').count > 0, 'the blend band is built');
+    assert.ok(apron.material.transparent && apron.material.vertexColors, 'a soft, vertex-alpha blend');
+    assert.equal(apron.geometry.getAttribute('color').itemSize, 4, 'per-vertex alpha');
+    assert.equal(apron.geometry.getAttribute('normal').getZ(0), 1, 'flat, facing up');
+    const pos = apron.geometry.getAttribute('position');
+    const col = apron.geometry.getAttribute('color');
     const area = board.area;
+    let maxA = 0, minA = 1;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), y = pos.getY(i);
       for (const a of area) {
         const inside = x > a.c0 - 0.5 && x < a.c1 + 0.5 && y > a.r0 - 0.5 && y < a.r1 + 0.5;
-        assert.ok(!inside, `platform vertex ${x},${y} inside the play rect ${JSON.stringify(a)}`);
+        assert.ok(!inside, `apron vertex ${x},${y} inside the play rect ${JSON.stringify(a)}`);
       }
+      maxA = Math.max(maxA, col.getW(i)); minA = Math.min(minA, col.getW(i));
     }
-    // a theme without platforms builds none (the metal / procedural regression baseline)
+    assert.ok(maxA > 0.1 && maxA <= 1 && minA < 0.05, `alpha fades from the field edge (${maxA}) outward to 0 (${minA})`);
+    // a theme without an apron builds none (the metal / procedural regression baseline)
     const b2 = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
-    b2.setScenePack(stage.id, { key: 'noplat', stage: stage.id, doc: { ...doc, materials: { M: { ...doc.materials.M, map: 'TX_Syracuse_metro_D' } } }, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_Syracuse_metro_D: img }, lm: [img] } });
+    b2.setScenePack(stage.id, { key: 'noapron', stage: stage.id, doc: { ...doc, materials: { M: { ...doc.materials.M, map: 'TX_Syracuse_metro_D' } } }, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_Syracuse_metro_D: img }, lm: [img] } });
     b2.setStage(stage);
     assert.equal(b2.theme, SCENE_THEMES.city);
-    assert.equal(b2.meshes.platforms, undefined, 'no platforms for a theme without the layout');
+    assert.equal(b2.meshes.apron, undefined, 'no apron for a theme without the layout');
     board.destroy(); b2.destroy();
   });
 

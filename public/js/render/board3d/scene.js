@@ -15,7 +15,7 @@
 //   board.render(cam, timeSec)       sync the camera, animate, draw
 //   board.resize(w, h, dpr) · board.stats() · board.destroy()
 //
-// Draw calls: board (tiles + blocks + platforms, merged, MT_autochess), the pen's glass hatches (glassMaterial),
+// Draw calls: board (tiles + blocks + apron, merged, MT_autochess), the pen's glass hatches (glassMaterial),
 // static crates (merged, same material),
 // decals (MT_autochess_common), fence pipes, blowers (merged, unlit), gate boxes (additive + alpha, merged per
 // material), cyan field edges, terrain overlays (≤ 4), background plane + its shadow catcher — ~12–16 in total.
@@ -305,7 +305,7 @@ export class BoardScene {
     const board = buildBoard(stage, { uv: this.pack?.uv || null, area: this.area });
     this.board = board;
     const M = this.meshes = {};
-    this.official = official && this._buildScene(official, board) ? official : null;
+    this.official = official && this._buildScene(official) ? official : null;
     if (!this.official) {
       this.theme = null;
       this.renderer.toneMappingExposure = LIGHTING.exposure;   // the procedural board's grade
@@ -318,7 +318,7 @@ export class BoardScene {
     this._buildGates(board);
     this._buildEdges(board);
     this._buildTerrain(board);
-    if (!this.official) this._buildBackground(board);
+    if (!this.official) this._buildBackground();
     this._fitShadow(board);
     this.renderer.shadowMap.needsUpdate = true;
   }
@@ -360,7 +360,7 @@ export class BoardScene {
     const res = this.sceneRes.get(pack.key);
     if (!res) return;
     for (const m of res.mats.values()) m.dispose();
-    res.platformMat?.dispose?.();
+    res.apronMat?.dispose?.();
     for (const t of [...Object.values(res.tex), ...res.lm]) t?.dispose?.();
     this.sceneRes.delete(pack.key);
   }
@@ -369,7 +369,7 @@ export class BoardScene {
    * The official scene's meshes: the base plus the fields of the built areas, one mesh per material and lightmap
    * page (`mergeSceneChunks`). A switched-off HIDDEN part is left out before the merge.
    */
-  _buildScene(pack, board) {
+  _buildScene(pack) {
     const T = this.THREE;
     const res = this._sceneResources(pack);
     const infos = pack.doc?.materials || {};
@@ -420,86 +420,83 @@ export class BoardScene {
       this.root.add(mesh);
       this.meshes[`scene${n++}`] = mesh;
     }
-    this._buildPlatforms(board, theme, res, pack);
+    this._buildApron(theme, res, pack);
     return n > 0;
   }
 
   /**
-   * The battlefield's 高台 (raised sandstone platforms). The official desert board shows the playable field on a raised
-   * sandstone platform with TWO step levels around it and a lane; the official scene we can extract has a FLAT
-   * playable surface (an off-season client ships no platform mesh), so the steps are authored per theme in theme.js
-   * (`platforms`) and built here. The rings hug the built area (`this.area`: the field + the pen), so no block ever
-   * lands on a playable tile (there is also an explicit `inPlay` guard); the heights are VISUAL only — the sim's tile
-   * heights and deploy tiles are untouched (a `platforms.heightFromTiles` flag would derive them from layout.js's `h`
-   * instead, for a stage whose sim height is the official one).
-   * @param {{ grid: Array<Array<object>> }} board from buildBoard
-   * @param {{ platforms?: { texture?: string, tint?: number[], levels?: number[], rings?: number, lane?: object, heightFromTiles?: boolean } }} theme
-   * @param {{ tex: object }} res the scene textures
+   * The battlefield's sand apron: a soft, flat band of the scene's own sand texture laid around the built area
+   * (`this.area`), so the playable field blends into the surrounding sand instead of ending in a hard rectangular
+   * edge. The official desert board (PRTS 战场#01) lays the field, the dunes and the rocks into ONE bright sand
+   * surface — it is NOT a raised perimeter platform — so the earlier ring + lane `platforms` geometry (theme.js) was a
+   * wrong read of the reference and is gone. Every apron ring lies outside the built area's bounding box, so no
+   * vertex is on a playable tile; the band is flat, at a fixed low z, and its alpha fades from `alpha` at the field
+   * edge to 0 outward, so it reads as more sand grain around the field rather than a slab. Visible only in the
+   * focus-lit scene path (the procedural board has none).
+   * @param {{ apron?: { texture?: string, tint?: number[], uv?: number, width?: number, rings?: number, alpha?: number, z?: number } }} theme
+   * @param {{ tex: object, apronMat?: any }} res the scene textures / material cache
    * @param {{ doc?: object }} pack
    */
-  _buildPlatforms(board, theme, res, pack) {
-    const spec = theme?.platforms;
-    if (!spec || !Array.isArray(board?.grid) || !Array.isArray(this.area) || !this.area.length) return;
+  _buildApron(theme, res, pack) {
+    const spec = theme?.apron;
+    if (!spec || !Array.isArray(this.area) || !this.area.length) return;
     const T = this.THREE;
-    const map = res.tex[spec.texture] || res.tex[this._platformFallbackTexture(pack)] || null;
+    const map = res.tex[spec.texture] || res.tex[this._apronFallbackTexture(pack)] || null;
     if (!map) return;
-    const levels = Array.isArray(spec.levels) && spec.levels.length ? spec.levels : [0.32];
-    const rings = Number.isInteger(spec.rings) ? spec.rings : levels.length;
     const area = this.area.reduce((a, r) => (a
       ? { r0: Math.min(a.r0, r.r0), r1: Math.max(a.r1, r.r1), c0: Math.min(a.c0, r.c0), c1: Math.max(a.c1, r.c1) }
       : { ...r }), null);
-    const inPlay = (r, c) => this.area.some((a) => r >= a.r0 && r <= a.r1 && c >= a.c0 && c <= a.c1);
-    const boxes = new Map();   // "r,c" → height (a tile gets the highest step that claims it)
-    const add = (r, c, h) => { if (inPlay(r, c)) return; const k = `${r},${c}`; boxes.set(k, Math.max(boxes.get(k) ?? -Infinity, h)); };
-    for (let i = 0; i < rings; i++) {
-      const k = i + 1, h = levels[Math.min(i, levels.length - 1)];
-      for (let c = area.c0 - k; c <= area.c1 + k; c++) { add(area.r0 - k, c, h); add(area.r1 + k, c, h); }
-      for (let r = area.r0 - k + 1; r <= area.r1 + k - 1; r++) { add(r, area.c0 - k, h); add(r, area.c1 + k, h); }
-    }
-    if (spec.lane) {
-      const { side = 'top', h = levels[levels.length - 1], depth = 2 } = spec.lane;
-      for (let d = 0; d < depth; d++) {
-        if (side === 'top' || side === 'bottom') { const r = side === 'top' ? area.r0 - rings - 1 - d : area.r1 + rings + 1 + d; for (let c = area.c0; c <= area.c1; c++) add(r, c, h); }
-        else { const c = side === 'left' ? area.c0 - rings - 1 - d : area.c1 + rings + 1 + d; for (let r = area.r0; r <= area.r1; r++) add(r, c, h); }
-      }
-    }
-    if (!boxes.size) return;
-    const s = Number.isFinite(spec.uv) ? spec.uv : 0.5;
+    const width = Number.isFinite(spec.width) ? spec.width : 2.4;
+    const rings = Math.max(1, Math.round(Number.isFinite(spec.rings) ? spec.rings : 4));
+    const s = Number.isFinite(spec.uv) ? spec.uv : 0.23;
     const tint = Array.isArray(spec.tint) ? spec.tint : [1, 1, 1];
-    const pos = [], uv = [], nrm = [], idx = [];
-    const quad = (a, b, c, d, n, u) => {
+    const z = Number.isFinite(spec.z) ? spec.z : 0.014;
+    const a0 = Number.isFinite(spec.alpha) ? spec.alpha : 0.92;
+    const pos = [], uv = [], nrm = [], col = [], idx = [];
+    // rings[j] = the rectangle `j` steps out from the built area: d_j tiles out, flat at z, alpha fading to 0
+    const expand = (d) => ({ r0: area.r0 - 0.5 - d, r1: area.r1 + 0.5 + d, c0: area.c0 - 0.5 - d, c1: area.c1 + 0.5 + d });
+    const dOf = (j) => (j / rings) * width;
+    const aOf = (j) => a0 * Math.max(0, 1 - j / rings);
+    const aoOf = (j) => 1 - 0.10 * (j / rings);
+    const quad = (a, b, c, d, aa, ab, ac, ad) => {
       const o = pos.length / 3;
-      for (const p of [a, b, c, d]) { pos.push(p[0], p[1], p[2]); nrm.push(n[0], n[1], n[2]); }
-      uv.push(u[0], u[1], u[2], u[3], u[4], u[5], u[6], u[7]);
+      for (const p of [a, b, c, d]) { pos.push(p[0], p[1], z); nrm.push(0, 0, 1); }
+      uv.push(a[0] * s, a[1] * s, b[0] * s, b[1] * s, c[0] * s, c[1] * s, d[0] * s, d[1] * s);
+      for (const p of [aa, ab, ac, ad]) col.push(p[0], p[0], p[0], p[1]);   // rgb = AO, a = the blend
       idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
     };
-    for (const [k, raw] of boxes) {
-      const [r, c] = k.split(',').map(Number);
-      const z = spec.heightFromTiles ? (Number.isFinite(board.grid?.[r]?.[c]?.h) ? board.grid[r][c].h : 0) : raw;
-      if (!(z > 0)) continue;
-      const x0 = c - 0.5, x1 = c + 0.5, y0 = r - 0.5, y1 = r + 0.5;
-      quad([x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z], [0, 0, 1], [x0 * s, y0 * s, x1 * s, y0 * s, x1 * s, y1 * s, x0 * s, y1 * s]);
-      quad([x0, y0, 0], [x0, y0, z], [x1, y0, z], [x1, y0, 0], [0, -1, 0], [x0 * s, 0, x0 * s, z * s, x1 * s, z * s, x1 * s, 0]);
-      quad([x1, y0, 0], [x1, y0, z], [x1, y1, z], [x1, y1, 0], [1, 0, 0], [y0 * s, 0, y0 * s, z * s, y1 * s, z * s, y1 * s, 0]);
-      quad([x1, y1, 0], [x1, y1, z], [x0, y1, z], [x0, y1, 0], [0, 1, 0], [x1 * s, 0, x1 * s, z * s, x0 * s, z * s, x0 * s, 0]);
-      quad([x0, y1, 0], [x0, y1, z], [x0, y0, z], [x0, y0, 0], [-1, 0, 0], [y1 * s, 0, y1 * s, z * s, y0 * s, z * s, y0 * s, 0]);
+    for (let j = 0; j < rings; j++) {
+      const i0 = expand(dOf(j)), i1 = expand(dOf(j + 1)), a1 = aOf(j), a2 = aOf(j + 1);
+      const ao1 = aoOf(j), ao2 = aoOf(j + 1), k1 = [ao1, a1], k2 = [ao2, a2];
+      // the four strips of the ring, each wound CCW (facing +z); every ring lies outside the built area's
+      // bounding box, so no vertex is on a playable tile
+      quad([i1.c0, i1.r0], [i1.c1, i1.r0], [i0.c1, i0.r0], [i0.c0, i0.r0], k2, k2, k1, k1);   // top (outer first)
+      quad([i0.c0, i0.r1], [i0.c1, i0.r1], [i1.c1, i1.r1], [i1.c0, i1.r1], k1, k1, k2, k2);   // bottom
+      quad([i1.c0, i0.r0], [i0.c0, i0.r0], [i0.c0, i0.r1], [i1.c0, i0.r1], k2, k1, k1, k2);   // left
+      quad([i0.c1, i0.r0], [i1.c1, i0.r0], [i1.c1, i0.r1], [i0.c1, i0.r1], k1, k2, k2, k1);   // right
     }
     if (!pos.length) return;
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
     g.setAttribute('normal', new T.BufferAttribute(new Float32Array(nrm), 3));
     g.setAttribute('uv', new T.BufferAttribute(new Float32Array(uv), 2));
+    g.setAttribute('color', new T.BufferAttribute(new Float32Array(col), 4));
     g.setIndex(new T.BufferAttribute(pos.length / 3 > 65535 ? new Uint32Array(idx) : new Uint16Array(idx), 1));
-    if (!res.platformMat) res.platformMat = new T.MeshStandardMaterial({ map, color: new T.Color(tint[0], tint[1], tint[2]), roughness: 0.92, metalness: 0 });
-    const mesh = new T.Mesh(g, res.platformMat);
-    mesh.castShadow = true; mesh.receiveShadow = true; mesh.renderOrder = -2;
+    if (!res.apronMat) {
+      res.apronMat = new T.MeshBasicMaterial({
+        map, vertexColors: true, transparent: true, depthWrite: false,
+        color: new T.Color(tint[0], tint[1], tint[2]),
+      });
+    }
+    const mesh = new T.Mesh(g, res.apronMat);
+    mesh.castShadow = false; mesh.receiveShadow = false; mesh.renderOrder = 0;
     mesh.matrixAutoUpdate = false; mesh.updateMatrix();
     this.root.add(mesh);
-    this.meshes.platforms = mesh;
+    this.meshes.apron = mesh;
   }
 
-  /** The theme platform texture fallback: the scene's first lit material's ground albedo. */
-  _platformFallbackTexture(pack) {
+  /** The theme apron texture fallback: the scene's first lit material's ground albedo. */
+  _apronFallbackTexture(pack) {
     for (const m of Object.values(pack?.doc?.materials || {})) if (m && typeof m.map === 'string') return m.map;
     return '';
   }
@@ -622,7 +619,7 @@ export class BoardScene {
     }
   }
 
-  _buildBackground(board) {
+  _buildBackground() {
     const T = this.THREE;
     const B = LIGHTING.bg;
     const cx = (COLS - 1) / 2, cy = (ROWS - 1) / 2;

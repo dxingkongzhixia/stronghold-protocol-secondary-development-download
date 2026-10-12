@@ -388,12 +388,14 @@ export function sceneMaterial(THREE, o, focus) {
   const info = o.info || null;
   const blend = sceneBlend(info);
   const L = o.light || { dir: [0.36, 0.45, 0.82], color: [1, 1, 1], intensity: 1 };
-  const k = (Number.isFinite(L.intensity) ? L.intensity : 1) * SCENE_LIGHT.direct;
   const lin = (v) => Math.pow(Math.max(0, v), 2.2);   // the scene's colours are authored in gamma space
   const col = colorOf(info, '_Color');
   const emis = colorOf(info, '_EmissionColor', [0, 0, 0, 0]);
   const theme = o.theme || null;
   const tint = theme?.tint || [1, 1, 1];
+  // the scene's key light: its own intensity, × the global direct gain, × the theme's sun gain (the owner's official
+  // boards show a strong sun — bright lit sides against dark shaded ones — so a theme can push the sun term up).
+  const k = (Number.isFinite(L.intensity) ? L.intensity : 1) * SCENE_LIGHT.direct * (Number.isFinite(theme?.sun) ? theme.sun : 1);
   const normalMap = o.normalMap || null, roughMap = o.roughnessMap || null, emisMap = o.emissionMap || null;
   const uniforms = Object.assign({}, THREE.UniformsLib.lights, {
     uMap: { value: o.map || null }, uLm: { value: o.lightMap || null },

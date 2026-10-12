@@ -280,44 +280,46 @@
 | --- | --- | --- |
 | `exposure` | `renderer.toneMappingExposure`（ACES）；官方是 HDR + 后期曝光 | 官方同地图截图与我们的同区域取色比对 |
 | `ambient` | 每个 scene 材质加的中性环境/探针补光（线性） | 同上：官方亮部/暗部的中性分量 |
+| `sun` | 关键光（太阳）增益乘子（默认 1）；官方亮面 / 暗面反差大 | 官方亮面与暗面取色的比值 |
 | `tint` | 反照率乘子（色偏校正，`[1,1,1]` = 不调） | 官方材质的 `_Color` 与截图的通道比 |
 | `saturate` | 最终线性的饱和度（<1 = 官方更柔和的观感） | 截图的饱和度比对 |
 
 **主题判定**：`sceneTheme(stageId, doc)` 先按 `scene doc` 的贴图族（`THEME_MARKERS`，如 `TX_AutochessSand_*` → `sand`、`TX_Syracuse_metro_*` → `city`、`TX_KXMR_*` / `TX_LMZ_*`）判定，再按 `stageId` 前缀兜底，最后 `default`。现有主题：`sand`（9 张图）、`city`（act2 m01）、`kxmr` / `lmz`（act2 m03）、`default`。
 
 **加 / 调一个主题**：
-1. 在 `SCENE_THEMES` 加一行（或改现有行）——先只动 `exposure` / `ambient` / `saturate`。
+1. 在 `SCENE_THEMES` 加一行（或改现有行）——先只动 `exposure` / `ambient` / `sun` / `saturate`。
 2. 新贴图族就加一条 `THEME_MARKERS`（贴图名前缀 → 主题名）。
 3. 用同一张官方截图与我们的渲染**同区域取色**校准（`docs/ASSETS.md` 记录了各主题的取样值），不要凭手感调。
 4. 金属/工业主题是**回归基线**：它走程序化板（`boardMaterial`），不受本表影响，改动后必须复核它没变。
 
-### 8.1 高台（`platforms`）
+### 8.1 沙地铺边（`apron`）
 
-官方沙地战场把可玩地面放在一座**抬高的砂岩平台**上，四周有两级台阶（低一级 / 高一级）与一条**跑道**。我们能抽到的官方场景里可玩面是**平的**（离线客户端不带平台网格），所以台阶在 `theme.js` 里**按主题手工标定**，由 `scene.js` `_buildPlatforms` 生成几何：
+官方沙地战场（PRTS「盟约」下半 #01）把可玩地面、沙丘与石块**铺在同一层亮沙面上**——不是一圈抬高的平台。我们早期按“高台”理解在 `theme.js` 里手工标定过两级台阶 + 一条跑道（`platforms`），运行后画面里是一圈**很亮的矩形边框 + 底部长木板**，既不像官方也把官方自己的沙地盖住了，因此**删掉**。取而代之的是一条**沙地铺边**（`scene.js` `_buildApron`）：用场景自带的沙地贴图（官方同款 UV 密度）贴场地外一圈，alpha 从场边向外渐隐到 0，读起来是场地周围多出来的沙粒，而不是一块板：
 
 ```js
-platforms: {
-  texture: 'TX_AutochessSand_background_A', // 平台贴图（scene/tex 里的名字；省略 = 用场景地面贴图）
-  tint:    [1.02, 1.0, 0.98],               // 平台材质乘子
-  uv:      0.22,                            // 世界坐标 UV 密度（每格纹理重复数）
-  rings:   2,                               // 绕建造区（this.area：场地 + 预备区）贴几圈 1 格宽的台阶
-  levels:  [0.3, 0.58],                     // 每圈的高度（格），由内向外
-  lane:    { side: 'top', h: 0.58, depth: 1 }, // 额外的一条跑道（可选；贴边外沿）
-  heightFromTiles: false,                   // true = 高度取 layout.js 该格的 h（仅当模拟高度就是官方高度时）
+apron: {
+  texture: 'TX_AutochessSand_sand_A', // 沙地贴图（scene/tex 里的名字；省略 = 用场景地面贴图）
+  tint:    [1.10, 1.07, 1.02],        // 材质乘子
+  uv:      0.23,                      // 世界坐标 UV 密度（每格纹理重复数；≈ 官方 _sand 材质的实测值）
+  width:   2.2,                       // 铺边向外几格
+  rings:   5,                         // 渐变分几圈
+  alpha:   0.45,                      // 场边处的起始透明度（向外线性到 0）
+  z:       0.014,                     // 略高于场地，避免与官方地面 z-fighting
 }
 ```
 
 **规则**：
-- 台阶只沿 `this.area` 的**外圈**铺（`_buildPlatforms` 里有 `inPlay` 兜底），因此**不会压在可玩格上**，也不会碰部署高亮 / 方向轮的层（`renderOrder: -2`，在场地之下）。
-- **纯视觉**：不动 `server/sim` 的格子/高度/部署逻辑；`deployTiles`、`AREAS` 一律不变。若将来某个战场的模拟高度就是官方高度，用 `heightFromTiles: true` 从 `layout.js` 的 `h` 取。
-- 数值来源：官方沙地截图与我们的同相机渲染比对（台阶高度 ≈ 官方一级/二级台阶，跑道贴场地顶边），记录在 `docs/ASSETS.md`。没有 `platforms` 行 = 不加高台。
+- 铺边**只在场地区域（`this.area`）的外接矩形之外**，因此不会压在可玩格上。
+- **纯视觉**：不动 `server/sim` 的格子/高度/部署逻辑；`deployTiles`、`AREAS` 一律不变。
+- 注意它盖住的是场地**紧邻一圈**的东西（官方场景自带的整备区木板 / 草坪 / 水面也在这圈里），所以 `alpha` 要低（0.45 左右）——高了会把官方自带的景盖成沙色。数值来源：官方沙地截图与我们的同相机渲染比对，记录在 `docs/ASSETS.md`。没有 `apron` 行 = 不铺边。
 
 ### 8.2 光照 / 阴影
 
 官方是 Unity HDR：一盏**方向光太阳**（`scene.json` 的 `light .dir/.color/.intensity`，由场景 bundle 的 Light 导出）+ 烘焙光照贴图（间接光 + AO + 阴影遮罩）+ **实时阴影**。我们的移植：
 - 方向光 / 环境光来自 `scene.json`（`sceneMaterial` 的 `uLightDir/uLightColor`，`uLmScale` 用烘焙光）。
-- 官方场景的网格现在 `castShadow` + `receiveShadow`（`scene.js` `_buildScene`），`sceneMaterial`（`lights: true`）在片元里对方向光取 `directionalShadowMap[0]` 的阴影，即官方那种道具投在场地上的投影；阴影相机由 `_fitShadow` 贴合场地。
-- 注意：场景块按材质合并成单个网格，道具与地面同网格 → 实时自阴影是退化的；要更锐利的投影需要保留未合并的道具或单独一层。烘焙阴影（光照贴图 RGB 的 AO/间接光）已在用，且是官方阴影的主要来源。
+- **太阳增益**：`uLightColor = scene light.intensity × SCENE_LIGHT.direct × theme.sun`。官方沙地亮沙 ≈ (223,180,131)、背光沙 ≈ (129,104,77)，亮/暗比约 1.7；我们原来只有约 1.25（sun = 1、intensity 1.1），场地偏平、发暗。沙地主题给 `sun: 1.85`，把太阳提亮到官方的反差。
+- 官方场景的网格现在 `castShadow` + `receiveShadow`（`scene.js` `_buildScene`），`sceneMaterial`（`lights: true`）在片元里对方向光取 `directionalShadowMap[0]` 的阴影，即官方那种道具投在场地上的投影；阴影相机由 `_fitShadow` 贴合场地。**实测**：关掉 `renderer.shadowMap` 后同一点由 (74,71,69) 变 (86,79,72)——实时阴影确实在场地/道具上生效（约 14%）。
+- 注意：场景块按材质合并成单个网格，同网格内的**自阴影**退化（一块地里的道具投不到旁边），要更锐利的投影需要保留未合并的道具或单独一层；道具是不合并的 `dynamic` 网格，所以它们投影正常。烘焙阴影（光照贴图 RGB 的 AO/间接光）已在用，且是官方阴影的主要来源。
 
 
 
