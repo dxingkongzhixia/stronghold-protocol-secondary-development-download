@@ -380,7 +380,7 @@ Authoritative: [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 and `docs/MAT
 | **#149 盟约收起 (a foldable/collapsible bond bar)** | the bond strip stays **permanently shown and centred**. |
 | **最近的同盟 (recent-alliance chips)** | our own removed feature (commit `6d27d583`). |
 | **Upstream 克莱门莎 (Clementia)** (`2e122873` / `0b0ce4fb` / `ba5b998a`) | we keep **our** `char_4231_clemnt`; upstream's is a different operator and would collide. |
-| **R21P 满潜 / R22-LOADOUT (潜能 / 练度)** | the owner excluded the full-potential rule and the per-operator potential/level loadout screen. |
+| **R21P 满潜 / R22-LOADOUT (潜能 / 练度)** | **kept since the v0.2.6 whole-branch merge (2026-10-14)**: the merge brought the per-operator potential/level loadout in and the owner chose to keep it (operators default to 满潜 / 精英2 Lv.60). The earlier exclusion is withdrawn — **do not revert the loadout feature back out**; [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 / §11. |
 | **设置 → 问题反馈 / DIAGNOSTICS (copy local diagnostics)** | our own 设置 dialog's bug提交 already covers it; the duplicate section was dropped. |
 | **Upstream's 设置-button placement** | we place 设置 in the top bar's right-hand group (lobby: before the 档案 chip; room: beside the invite key). |
 | **Upstream's item-stock gate on free `<获得时>` / strategy grants** (`6bfc08270c`, GitHub #488) | a grant is not a shop purchase; our `acquireItem` has **no** `itemPool` check. |

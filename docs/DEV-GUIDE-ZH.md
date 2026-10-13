@@ -525,7 +525,7 @@ node tools/kit-coverage.mjs --missing
 
 2026-10-14 **整支合并主线 v0.2.6**（`sganggs/Stronghold-Protocol` `488db49f`，380 个提交）后，主线**自己的**子系统也进入了本仓库。
 它们属于上游代码、不是我们的，但已经在这里——不要顺手回退。完整记录见
-[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §12。
+[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §11。
 
 | 特性 | 代码位置 | 说明 |
 |---|---|---|

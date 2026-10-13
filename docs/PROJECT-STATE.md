@@ -12,7 +12,7 @@
 基线是**主线项目**（`sganggs/Stronghold-Protocol`；已合并到 **feedback5**（含 **v0.2.0** + i18n，见
 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §33），选择性并入 **feedback6** 与 **feedback7 的 R22 / R23**
 两批，并于 **2026-10-14 整支合并主线 v0.2.6**（`488db49f`，190 个冲突全解、门禁全绿）——完整记录见
-[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §12）。
+[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §11）。
 
 本仓库是**基于主线开发的分支项目**，在主线之上独立维护：账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、
 **大厅社区（更新日志 / bug提交 / 公开房间）**、启动体验与带宽治理、**8 名自造干员**（§4；
@@ -132,7 +132,7 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 
 ## 10. 与主线的关系 / 下次怎么合并
 
-- 主线：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（§15）、**feedback5 / v0.2.0**（合并提交 `e3bd9de`，§33），**选择性**并入 **feedback6** 与 **feedback7 R22 / R23**，并于 **2026-10-14 整支合并 v0.2.6**（`488db49f`，190 冲突全解、门禁全绿，见 §12）；本仓库版本 `0.4.0`。逐批完整记录（主线提交范围 / HEAD、取用的提交、跳过的提交与原因、冲突、golden 变动、本地提交）见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)；**「永不合并」清单**也在其 §0。
+- 主线：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（§15）、**feedback5 / v0.2.0**（合并提交 `e3bd9de`，§33），**选择性**并入 **feedback6** 与 **feedback7 R22 / R23**，并于 **2026-10-14 整支合并 v0.2.6**（`488db49f`，190 冲突全解、门禁全绿，见 §11）；本仓库版本 `0.4.0`。逐批完整记录（主线提交范围 / HEAD、取用的提交、跳过的提交与原因、冲突、golden 变动、本地提交）见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)；**「永不合并」清单**也在其 §0。
 - 合并方式（**选择性 cherry-pick**，不再只做大合并）：在临时 worktree 里按 `all-fb<N>.txt` 列出的主线提交逐个 triage（`OK` / `OKg` / `SKIP` + 原因），把 `OK` 的提交**保留作者与提交信息** cherry-pick 到 `ours` 并适配本分支；golden 先做**归属证明**再在专门提交里重算（[`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md)）；跑全量 `node --test` 后才推。大合并仍走 `git merge origin/master` + 逐块解冲突。
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、

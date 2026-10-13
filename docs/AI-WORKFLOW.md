@@ -106,7 +106,8 @@ Merge procedure:
    - **#149 盟约收起 (foldable bond bar)** — excluded; the bond strip stays permanently shown and centred.
    - **最近的同盟 (recent alliances chips)** — our own removed feature; must not come back.
    - upstream 克莱门莎 (`2e122873` / `0b0ce4fb` / `ba5b998a`) — we keep our `char_4231_clemnt`.
-   - R21P 满潜 and R22-LOADOUT (潜能 / 练度) — excluded by the owner.
+   - R21P 满潜 / R22-LOADOUT (潜能 / 练度) — **kept since the v0.2.6 merge (2026-10-14)**: the merge re-introduced
+     them and the owner chose to keep them, so **do not revert the loadout feature back out** (see §0 / §11).
    - Self-check after the merge: `grep -rn "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server`
      and `grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test` must both be empty.
    - `git log -S bondsCollapsed -- public/js/screens/game.js` shows if upstream re-added it.

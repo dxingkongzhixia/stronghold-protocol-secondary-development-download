@@ -1262,8 +1262,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 | **#149 盟约收起**（可折叠盟约条） | upstream `bondsCollapsed` / `bonds-toggle` / `gm__bond-list` / `match-bond-strip` | 盟约条**永久显示并居中**；见 §22。 |
 | **最近的同盟**（recent-alliance chips） | 我们已下架的自有功能 | 不得回归；见 §22。 |
 | **上游版克莱门莎（Clementia）** | `2e122873` / `0b0ce4fb` / `ba5b998a` | **保留我们的 `char_4231_clemnt`**（§37）；不取上游的官方数据版本。 |
-| **R21P 满潜** | `806a0477` / 合并 `b05845f5` | 不采用「全员满潜能」；本分支自有权能规则。 |
-| **R22-LOADOUT（潜能 / 练度）** | `7e09c63d`、`ec0a2fc6`、`96d9441f`、`7a0937e3`、`519f04e2`、`dc336f24`、`8e2b981e`、`4f8f5d2a`、`9f36db32`、`4d63e9d5`、`66297106` | **owner 排除**「干员调配」里每名干员的潜能 / 练度自选界面；本批未并入。 |
+| **R21P 满潜 / R22-LOADOUT（潜能 / 练度）—— 2026-10-14 改为「保留」** | `806a0477` / 合并 `b05845f5`（R21P：潜能 6）；`7e09c63d`、`ec0a2fc6`、`96d9441f`、`7a0937e3`、`519f04e2`、`dc336f24`、`8e2b981e`、`4f8f5d2a`、`9f36db32`、`4d63e9d5`、`66297106`（R22-LOADOUT）；**v0.2.6 整支合并重新引入**（UPSTREAM-MERGES §11） | **owner 2026-10-14 决定：保留**「干员调配」里逐名干员的潜能（1–6）/ 练度自选，默认**满潜 6 / 精英2 Lv.60**（回退代价大于适配，故保留并适配）。自检：`shared/potential.js`、`public/js/ui/loadoutModel.js`、`public/js/screens/cultivation.js` 在，潜能 / 练度测试全绿（`test/full-potential.test.js`、`test/match/loadout.test.js`、`test/ui/potential-ui.test.js` 等）。**本条不再表示「永不合并」，而表示「不得把该功能回退掉」**；原「owner 排除」（2026-10-08）作废。 |
 | **设置 → 问题反馈 / DIAGNOSTICS（复制诊断信息）** | `3f884412`（本分支 R22 port `2ef6339b`，UPSTREAM-MERGES §4） | **已下架**（`60e9eab8`）：我们设置里的「bug提交」（§36.8）已覆盖报 bug，重复的 section 不得回归（UPSTREAM-MERGES §6「Deliberate divergence」）；自检 `public/js/ui/settings.js` 不含 `ISSUES_URL` / `set-diag` / 「复制诊断信息」。 |
 | **设置 里的 玩法说明 / 资料库 入口**（§36.8 自加，上游没有） | 本分支自有 | 2026-10-12 **已移除**（§36.9）：资料库 用大厅顶栏 `.codex-entry`，玩法说明 用局内 `.gm__guide` / `GuideButton`；不得把这两个入口加回设置。 |
 | **上游的 设置 按钮位置（在 玩法说明 左边）** | `911e4bff`（`a9a1592a`） | **我们把 设置 移到 档案 chip 旁**（顶栏右侧分组；房间在邀请码旁），不恢复上游的中间位置（UPSTREAM-MERGES §0/§6）。 |

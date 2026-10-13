@@ -478,7 +478,7 @@ for upstream developers (owner key, the 2× caps, the `localStorage` offline fal
 
 The **whole-branch merge of mainline v0.2.6** (2026-10-14, `sganggs/Stronghold-Protocol` `488db49f`, 380 commits) brought
 upstream's **own** subsystems into this fork. They are upstream code, not ours, but they now live here — keep them green and
-do not revert them by accident. The full record is [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §12.
+do not revert them by accident. The full record is [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §11.
 
 | Feature | Where | Notes |
 |---|---|---|

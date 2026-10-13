@@ -39,8 +39,7 @@ reverted):
 | **本局禁用盟约被强制失效 (a 本局禁用 bond forced inert even when its members activate it)** | upstream `server/match/bondsMeta.js` `computeBonds`' `if (gd.modeInactiveBonds.has(id)) continue;` (`01a44cd2`, the initial import — still at `upstreamm/master` `1db8e510`); the 本局禁用 UI `b4fa21a0` + `695ece26` (feedback1b WG) and `offBondCounts` / grey discs `c0cc1d61` (feedback3 WH). Carried unchanged by feedback5 `e3bd9de7`, Group A `6bdd0800`, R22 `177bad63`, R23 `8d20f50f`. | **The owner's rule (2026-10-11): the ban only stops a bond being OFFERED** (pool / strategy draft / bots). It must NOT make an otherwise-active bond inert — 「被 ban 的盟约即使被激活也无法生效」 is the bug. `computeBonds` counts every bond, so a 本局禁用 bond whose members reach its threshold is `active` and **takes effect**; one below its threshold stays inert (its layers still ride into the battle, §27). The dialog still reads 本局禁用 while it is inactive. Not the §22 bond-collapse family (that is the foldable bar). Self-check: `computeBonds` in `server/match/bondsMeta.js` has no `modeInactiveBonds.has(id)) continue`, and `PlayerState.battleBonds` forces no `active: false`. |
 | **最近的同盟 (recent-alliance chips)** | our own removed feature | We removed it (commit `6d27d583`, 2026-10-07) and it must not come back. Self-check: `grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test` empty. |
 | **Upstream 克莱门莎 (Clementia)** | `2e122873` *0.2.3: add Clementia and Shu/Ulpianus modules (#437)*, `0b0ce4fb` *Update expanded roster checks and register Clementia impact visuals*, `ba5b998a` *0.2.3: Clementia S2 releases a dead, hidden, uncarriable or pathless rider at once* | **We keep OUR `char_4231_clemnt`** (the self-made 6★ 本源近卫, `docs/MATCHMAKING.md` §37, `CUSTOM_CHESS`). Upstream's Clementia is a different, official-data operator; taking it would collide with ours. |
-| **R21P 满潜 (every operator at full potential)** | `806a0477` / merge `b05845f5` (feedback6 R21P: 潜能 6) | The owner's **full-potential rule is not adopted**; our fork keeps its own potential handling. Never merged. |
-| **R22-LOADOUT (per-operator 潜能 / 练度)** | `7e09c63d`, `ec0a2fc6`, `96d9441f`, `7a0937e3`, `519f04e2`, `dc336f24`, `8e2b981e`, `4f8f5d2a`, `9f36db32`, `4d63e9d5`, `66297106` | **The owner excluded the 潜能 / 练度 loadout screen** (`干员调配` per-operator potential/elite-level selects). Not taken in the R22 batch (see §4). |
+| **R21P 满潜 / R22-LOADOUT (per-operator 潜能 / 练度)** — **SUPERSEDED 2026-10-14** | `806a0477` / merge `b05845f5` (R21P: 潜能 6); `7e09c63d`, `ec0a2fc6`, `96d9441f`, `7a0937e3`, `519f04e2`, `dc336f24`, `8e2b981e`, `4f8f5d2a`, `9f36db32`, `4d63e9d5`, `66297106` (R22-LOADOUT); **re-introduced by the whole-branch v0.2.6 merge** (§11) | **Owner's decision 2026-10-14: the fork now KEEPS the 潜能 / 练度 subsystem.** The v0.2.6 whole-branch merge re-introduced it and reverting it back out would have cost more than adapting, so the fork adapted instead: operators compose at **满潜 (潜能 6) / 精英2 Lv.60** by default. **This row no longer means "never merge"** — it now means **do not revert the feature back out**, and the earlier R21P / R22 exclusion (owner, 2026-10-08) is withdrawn. Self-check: `shared/potential.js`, `public/js/ui/loadoutModel.js` and `public/js/screens/cultivation.js` exist and the loadout / potential tests pass (`test/full-potential.test.js`, `test/match/loadout.test.js`, `test/match/potential.test.js`, `test/ui/potential-ui.test.js`, `test/ui/loadout.test.js`). |
 | **设置 → 问题反馈 / DIAGNOSTICS (copy local diagnostics)** | upstream `3f884412` (our R22 port `2ef6339b`, §4) — the settings section that copies local diagnostics for a GitHub issue | **We dropped it** in `60e9eab8` (the §6 *Deliberate divergence* note): our own bug-report entry (the 设置 dialog's 「bug提交」 since 2026-10-11, before that the lobby's) already reports bugs, so the duplicate section must not be re-introduced. Self-check: `grep -rn "ISSUES_URL\|set-diag\|复制诊断信息" public/js/ui/settings.js` must be empty. |
 | **上游的 设置 按钮位置 (top-bar placement)** | upstream `911e4bff` (`a9a1592a`) — the 设置 button of the lobby / room top bar, placed left of 玩法说明 (#238) | **We move 设置 next to the 档案 account chip** instead (the top bar's right-hand group; in the room, beside the invite key). Upstream's middle placement must not be restored by a later merge. |
 | **上游道具牌库把「白给装备」也卡库存 (`6bfc08270c`)** | upstream `6bfc08270c` *0.2.4-dev: round-29 community fixes and the official shared card pool* — `server/match/player/acquire.js` `acquireItem` adds `if (!this.m.itemPool.canGain(itemId)) { … '装备库存不足，未获得该装备'; return null; }` with **no `requirePool` escape**, and `server/match/effectsMeta.js` `grantItem` forwards only `source` / `toTemp` / `deferMerge`, so the `requirePool: false` the callers already pass (`server/sim/content/bands/meta.js` 变形者集群 R5/10/15; `server/sim/content/garrisons/meta.js` `H.SERVER_GAIN_EQUIP` — 缪尔赛思's `<获得时>` `garrison_76_a/b`) is dropped; GitHub issue **#488** (saltwmc, 2026-10-11): the trait and the strategy stop paying 变形同构体 once the 3-copy item stock is out (投资人 ×2 exhausts it sooner). | **A `<获得时>` / strategy grant is not a shop purchase — the official text has no stock premise.** Our `acquireItem` has **no `itemPool` check**, so 缪尔赛思's trait and 变形者集群 pay 变形同构体 every time (the trait's total can pass the upstream cap 3). If the shared card pool is ever merged, `requirePool` must be forwarded through `grantItem` → `acquireItem` and the trait / strategy grants must pass `requirePool: false`. Self-check: `grep -rn "itemPool\|canGain" server` empty (or those grants pass `requirePool: false`); `test/content/garrisons_meta.test.js` #488. Mirrored in [`docs/MATCHMAKING.md`](MATCHMAKING.md) §39.2. |
@@ -198,7 +197,7 @@ of community rules (R21A…R21P + `fb6-diy-esc` + `fb6-small-fixes`). We took a 
 - **R21C** (自选 picks in bond member lists), **R21F** (enemy flyer hover), **R21G** (held control messages),
   **`fb6-diy-esc`** (Esc in the 自选 picker), **`fb6-small-fixes`** — not part of the selective set (where the
   behaviour was wanted it is present in `ours` by another route or arrived later).
-- **R21P 满潜** — **never merged** (§0).
+- **R21P 满潜** — not merged **in this batch**; **superseded by the v0.2.6 whole-branch merge (§11): the fork keeps it (§0)**.
 
 **Conflicts.** The R21E Touch card reads our `tokens.json` record; every golden was regenerated on the merged
 tree and the R21 streams' moves were kept. Local: `8fa90abb` (feedback6 selective: regenerate the golden corpus
@@ -376,9 +375,10 @@ online-player `stats.view`. That layer is entirely ours (caps = 2× the mainline
 | `b972c1fc` / `267a826b` / `917e8924` | our `screens/diy.js` and the loadout e2e tests differ |
 | `56a7b918` / `e6321457` / `1ab12763` | **excluded by the owner** (教练 personal choice; the bots' zero-range heavy-guard placement; their docs) |
 
-**R22-LOADOUT (excluded, §0).** `7e09c63d`, `ec0a2fc6`, `96d9441f`, `7a0937e3`, `519f04e2`, `dc336f24`,
+**R22-LOADOUT (excluded from this batch, §0; re-adopted later).** `7e09c63d`, `ec0a2fc6`, `96d9441f`, `7a0937e3`, `519f04e2`, `dc336f24`,
 `8e2b981e`, `4f8f5d2a`, `9f36db32`, `4d63e9d5`, `66297106` — the per-operator 潜能 / 练度 loadout screen; the
-owner excluded it, so it was never applied.
+owner excluded it here and it was not applied **in this batch**. **Superseded:** the whole-branch **v0.2.6** merge (§11)
+brought it in and the owner chose to keep it (2026-10-14, §0).
 
 **Local commits produced:** the ~50 cherry-picks listed above plus the goldens/adaptations/data commits, ending
 `177bad63`, then the slide + UNBAL stack `20ae5ac2`→`c59aab17` and `b3c561ba`/`b398cc46`/`af981bd7`/`2cab8b6b`.
@@ -719,7 +719,71 @@ so `tools/golden.mjs` re-chooses its not-owned set (pieces with a 补位 prototy
 meaningful. Local commits: `cc35f164` (source) → `2661d8d2` (golden) → `881a80c0` (docs), on `3f38337f`.
 
 ---
-## 11. How to add the next batch to this log
+## 11. v0.2.6 — the **whole-branch** merge (2026-10-14)
+
+**What it was.** The first **whole-branch** merge since feedback5 (§1): `git merge origin/master`, not a commit-by-commit
+cherry-pick. Upstream mainline **v0.2.6** = `488db49f`; the merge base is **v0.2.0** `1303321`, so the range brings the
+**374 upstream commits** of the 0.2.1 – 0.2.6 line (the feedback6 / feedback7 tail included) on top of `ours` `417b1e97`.
+Done in the throwaway worktree `_merge-v026` (branch `merge/v026`); **190 conflicts**, each resolved hunk-by-hunk keeping
+both sides (never `--ours` / `--theirs` on a source file).
+
+**Local commits.** `aec85c5d` (the merge; conflicts resolved, tests not yet green) → `c849a632` → `656fada6` →
+`6a463e73` → `d2f4b411` (the adaptation) → `5e8207c8` (all gates green). The docs commits sit on top of those.
+
+**Adopted upstream (kept and working).**
+
+| Upstream | What we took |
+|---|---|
+| 潜能 / 练度 (0.2.2 …; `0ced21d3` fb7-loadout, `96d9441f` R22-LOADOUT) | the per-operator 潜能 (1–6) + 练度 (未精英化 / 精英1 / 精英2 / 精英2 Lv.60) set in 干员调配, defaults 潜能 6 / 精英2 Lv.60 — **kept by the owner**, see the decision note below. Code: `shared/potential.js`, `shared/loadoutRecord.js`, `public/js/ui/loadoutModel.js`, `public/js/screens/cultivation.js` |
+| 文字大小 (text-size scaling) | the 设置 rows plus the `calc(NN * var(--t))` rollout (254 declarations across 10 CSS files; a few test-pinned plain selectors stay literal) |
+| 弹药数量 (#552) | the optional 「剩余 / 总」 ammo read-out under a yellow bar |
+| Spine clip bounds / impostor sizing (#542) | `public/js/render/spine.js` (`clipBounds`, `CLIP_SAMPLE_*`) |
+| Device slabs on the official scenes (#569) | `public/js/render/board3d/scene.js` (`M.raised`) |
+| Deploy replay + landing sound (#416) | the per-round deploy replay and its landing SFX |
+| Content-hashed asset URLs / brotli / traffic counters (0.2.6) | `server/http/{assetIndex,files,traffic}.js`; [`docs/ASSETS.md`](ASSETS.md) |
+| Per-character voice dubs | `public/js/voicePrefs.js` (设置 → 语音语言) |
+
+The rest of the range is the remainder of the 0.2.1 – 0.2.6 rules / UI **not** already carried by our R22 (§4) / R23 (§6)
+cherry-picks; where our file already had the change, ours stayed.
+
+**Kept from the fork (kept out of the merge).**
+
+- The economy / card-pool rules, including **#488**: upstream's item-stock gate in `acquireItem` is removed again and the
+  item-cap invariant allows the overdraw, so a `<获得时>` / strategy grant stays free ([`docs/MATCHMAKING.md`](MATCHMAKING.md) §39.2).
+- `pool_equip_rockr` — our four 维式重锤 as `items`, not upstream's `weighted`.
+- `public/js/render/spine.js` `windUp` (ours), alongside the new clip bounds.
+- `tools/package.mjs` and the no-update-zip packaging (ours) — `test/update-package.test.js` went with it.
+- `server/sim/content/kits/shared/summoner.js` `tokenStat` keys on `owner.def.tokenOwner ?? owner.defId` (our token variants).
+- `server/match/builtinMeta.js` 拟态物质 grants with `requirePool:false`; `public/js/ui/gameLogic/settings.js` re-exports
+  `VOICE_LANGS` from `voicePrefs.js` (the doubled definition).
+- **Upstream 克莱门莎 (`op-clemnt.js`) is not taken** (§0): the kit file is absent while our
+  `chess_char_4231_clemnt-clemnt.js` + `test/content/clemnt.test.js` stay.
+
+**Upstream tests deliberately dropped (12).** Tests for content / features we do not carry, plus two audio tests:
+`test/content/{community-round30,echo-counter-023,item-damage-procs,new-modules-023,skill-trigger-followup}.test.js`,
+`test/match/{community-round30,leaver-isolation-ws,runner-pending}.test.js`, `test/ui/feedback6-diy-bond-members.test.js`,
+`test/update-package.test.js`, and the two SFX tests (`test/feedback6-leizi2-attack-sfx.test.js`,
+`test/feedback7-chen3-s3-sfx.test.js` — the mode-attack SFX are **pending regeneration** from the local client, so pinning
+them now would pin the wrong audio).
+
+**Golden.** The merge moves the corpus (**7 files**: roster, bonds, fields, matches, standins, diy + README) — upstream's
+rule changes and the fork's full-potential composition both shift it; it was regenerated with the merged engine inside the
+adaptation commits (`node tools/golden.mjs --update`, never hand-edited).
+
+**The 潜能 / 练度 decision (owner, 2026-10-14).** The loadout subsystem was excluded in the R22 batch (§4,
+[`docs/MATCHMAKING.md`](MATCHMAKING.md) §39.2), but the whole-branch merge re-introduced it and the owner chose to **keep
+and adapt** it (reverting it back out would have cost more than adapting the tests): operators compose at
+**满潜 / 精英2 Lv.60** by default and the fork content tests moved from potential-0 to full-potential numbers. The §0
+R21P / R22-LOADOUT rows now read as *kept*, not *excluded*.
+
+**Verification.** The full suite in the store at `5e8207c8`: **6600 tests / 6579 pass / 0 fail / 21 skipped**;
+`build-data --offline` leaves `data/` byte-identical; `kit-coverage --missing` 307/307 skills · 120/120 chess;
+`i18n check en --strict` **1454/1454**; `doctor` exit 0; `eslint .` 0 errors; `check:imports` / `typecheck` pass; the three
+docs guards 34 pass / 0 fail.
+
+---
+
+## 12. How to add the next batch to this log
 
 1. Fetch upstream; write the ordered commit list (`git log --oneline <base>..<head>`) to a scratch note (the
    `_merge-attrib/all-fb7.txt` pattern).
