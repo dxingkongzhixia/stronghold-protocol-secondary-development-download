@@ -15,7 +15,7 @@ deploy), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) (the repository map) and
 
 > **Status today (2026-10-13).** Version `0.4.0` (single source: `package.json` /
 > `shared/constants.js APP_VERSION` / `CHANGELOG.md`, pinned by `test/version.test.js`). The git store
-> HEAD is `5f4bdb25` on branch `ours`; the dev tree mirrors it. **Production is live but behind**. The
+> tip is on branch `ours` (check with `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD`); the dev tree mirrors it. **Production is live but behind**. The
 > owner's instruction is **先不上线 — do not deploy** unless the owner explicitly asks. Other agents may
 > be working in the store at the same time: work on your own branch/worktree, commit only your own
 > paths, and rebase onto the latest `ours` before you push.

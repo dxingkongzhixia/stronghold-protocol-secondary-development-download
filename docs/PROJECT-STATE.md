@@ -33,7 +33,7 @@
 | 项 | 值 |
 |---|---|
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
-| git store HEAD | `5f4bdb25`（分支 `ours`）；工作项目与 store HEAD **零跟踪漂移** |
+| git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
 | 远程同步 | `gitee/master` == HEAD；`github/master` 曾落后一个提交（`31bba4af`，本次已随发布补齐）；上游 `origin/master` = `488db49f` |
 | 全量测试 | `node --test`：**6129 项 / 6118 通过 / 0 失败 / 11 跳过**（约 267 s，在 store 里跑） |
 | 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1360/1360；`doctor` 退出码 0 |
