@@ -467,6 +467,83 @@ The 2026-09-27 verification pass also checked:
 - **Browser:** headless Chrome loads and animates all 529 Spine models with the vendored PixiJS 7.4.2 and pixi-spine 4.0.6, with no console errors. Chrome's font sanitizer also accepts the three WOFF2 files.
 - **Official data:** 771 provenance checks against the official data (`activity_table`, `skill_table`, `models_data.json`) all match: avatars, portraits, E2 art, bond, band and item icons, and enemy skeleton files.
 
+## Local asset cache & CDN mirror download chain
+
+**Why.** The box's uplink is ~2.3 MB/s and a cold load pulls ~104 MB of art, so the owner asked (2026-10-13) to move
+that traffic off the server: (1) a returning player keeps the art locally and re-downloads **nothing**; (2) a first load
+comes from a **CDN mirror**, not the box; (3) the box is only the **last resort**, and is **rate-limited** so live
+matches keep their bandwidth. This is a **fork-only** feature — the merge-critical file list is in
+[`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10, the decision record in [`docs/MATCHMAKING.md`](MATCHMAKING.md) §42.
+
+**Server side.**
+- **`GET /asset-index.json`** (`server/assetindex.js`; route in `server/http/static.js`) →
+  `{ version, app, revision, count, bytes, files, sources }`:
+  - `files` — `{ url: byteSize }` for every cacheable file that `data/assets.json` (plus the committed / per-machine
+    local manifests) names under `/assets` and `/fonts` **and that exists on disk** (~14k files, ~828 MB here).
+  - `revision` — a deterministic hash of `files` (`indexVersion`); an **equal revision means the client's cache already
+    matches**, so nothing is downloaded. Rebuilt only when a source manifest changes (mtime-keyed cache).
+  - `sources` — CORS-capable CDN mirrors of the primary repo's `public/` tree (`mirrorSources`): **gh-proxy**, then
+    **jsDelivr**; `SP_ASSET_REF` pins the git ref (`''` disables the mirrors). Served `no-cache` +
+    `Access-Control-Allow-Origin: *`.
+- **`server/http/files.js`** — asset / font responses carry `Access-Control-Allow-Origin: *` (so a player's own machine
+  can serve them). A **process-wide token bucket** (`RateLimiter` + `assetRateBytesPerSec`) paces `public/assets` /
+  `fonts` / `vendor` response **bodies** — the server fallback path — at **`SP_ASSET_RATE_KBPS` KB/s (default 1200 ≈
+  1.2 MB/s; `0` disables)**; non-art paths are never paced. `server/http/media.js` (the extension-less `/media/…` audio
+  route) is paced too.
+
+**Browser side.**
+- **`public/sw.js`** — the Service Worker: cache-first for same-origin `/assets|/fonts|/vendor` in Cache Storage
+  (`sp-assets`); Range requests and non-GET pass through; an optional `localBase` (a player's own machine) changes only
+  where it fetches from.
+- **`public/js/assetCache.js`** — the policy. Pure, unit-tested: `syncPlan` (per-file diff — download the missing /
+  resized, remove the dropped), `cacheIsCurrent` (revision + per-file sizes), `candidatesFor` (mirrors first, server
+  last). Glue: `registerAssetWorker` (+ `navigator.storage.persist()`), `fetchAssetIndex`, `ensureAssets` (download the
+  diff), `fetchArtFile` (**try each mirror with a 15 s timeout, verify the bytes against `index.files[url]`, store the
+  first good source in the cache under the same-origin URL; else the server**), `assetCacheUsage`, `clearAssetCache`,
+  `assetCacheInfo`. Storage keys: `sp.pref.assetMode` (`stream` | `cache`), `sp.assetCache.revision`,
+  `sp.assetCache.sizes`.
+- **`public/js/assetSource.js`** — the optional **local origin**: probe `127.0.0.1:3000` / `localhost:3000` for an
+  `/asset-index.json` with the **same `revision`**, then point the worker at it (a player who also runs the game on
+  their own machine touches the box not at all). Pref `sp.pref.assetLocalSource`.
+- **`public/js/ui/assetMode.js`** — the first-visit chooser (`AssetModePrompt`, **default 缓存到本地**) and the 设置 row
+  (`AssetCacheSection`: mode / usage / 立即缓存 / 清除缓存 / 优先使用本机资源), backed by `js/ui/settings.js`.
+- **`public/js/main.js`** `preloadArt` — in `cache` mode it syncs through the worker (and skips the boot gate); otherwise
+  the HTTP-cache warm-up is unchanged.
+
+**Behaviour matrix.**
+
+| situation | what happens |
+|---|---|
+| never chose | web load (HTTP-cache warm-up + the boot gate) — **unchanged** from before this feature |
+| chose cache, revision current | **nothing is fetched**; the worker serves every art request from the local cache |
+| chose cache, revision changed | only the missing / resized files are downloaded; files the server dropped are removed |
+| a file: a mirror answers | fetched from gh-proxy / jsDelivr (15 s each), size-verified, then cached |
+| a file: every mirror fails | the **game server**, paced at `SP_ASSET_RATE_KBPS` |
+| a same-revision server runs locally | the **local origin** (the box is not touched) |
+
+**Failure modes.** No Service Worker / Cache Storage ⇒ the mode degrades to a web load; a mirror with a wrong byte size
+is skipped and the next source is tried; a file that fails everywhere stays out of `sizes` and retries next boot; the
+设置 清除缓存 (or clearing site data) simply re-downloads.
+
+**Persistence.** Cache Storage survives reloads, browser restarts and even the server being down — **verified in a real
+browser** (below). It is **not guaranteed permanent**: the browser may evict it under storage pressure, so
+`navigator.storage.persist()` is requested (best-effort) to reduce that risk. It is not a release artifact and can be
+cleared by the player or the browser.
+
+**How the field test was run (2026-10-13).** Served the dev tree on `127.0.0.1:3100`; chose 缓存到本地; the cache filled
+to **2461 files / 138 MB**, revision matching the server; then **stopped the server** and fetched a cached asset — it
+still returned **200 / 56,617 B from the local cache**. The default pre-cache is the boot **image** set
+(`collectArtUrls(manifest, 'all')`, ~104 MB); the full index is ~828 MB and stays **on-demand** (or 立即缓存).
+
+**Testing.** `test/asset-index.test.js` (collection / version / disk pass / mtime cache), `test/ui/asset-cache.test.js`
+(`syncPlan`, `cacheIsCurrent`, `candidatesFor`, `fetchArtFile` fallback + size check), `test/asset-rate-limit.test.js`
+(the token bucket), `test/ui/title-surfaces.test.js` (allows `public/sw.js`).
+
+**Why not Gitee / GitLab.** Their **raw** endpoints send **no `Access-Control-Allow-Origin`**, so a browser `fetch` is
+blocked, and Gitee **Releases 403** hotlinks — so neither can be a *browser* download source. Gitee stays the **code
+mirror** and the human-facing **package download** links only. (gh-proxy and jsDelivr were both verified to serve our
+primary repo with `ACAO: *`.)
+
 ## 本地客户端来源（owner 提供，2026-10-06）
 
 主人本地装了官方客户端，缺的**美术**资源可直接从它抽（不用镜像）：

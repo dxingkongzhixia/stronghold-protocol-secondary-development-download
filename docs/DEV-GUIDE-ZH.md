@@ -288,6 +288,19 @@ LOBBY → INFO_CHECK → BAND_DRAFT → BATTLE_CHECK
   node tools/kit-coverage.mjs --missing   # 哪些可选技能还没手写 kit
   ```
 
+### 4.8 客户端素材交付：本机缓存 + CDN 镜像 + 服务端兜底限速
+
+服务器上行很小（约 2.3 MB/s），而冷启动要拉 ~104 MB 美术，所以交付分四层（**权威细节见 [`docs/ASSETS.md`](ASSETS.md)「Local asset cache & CDN mirror download chain」**；fork 独有：`docs/OUR-FEATURES.md` §10，决策：`docs/MATCHMAKING.md` §42）：
+
+1. **本机缓存**：`public/sw.js`（Service Worker）+ `public/js/assetCache.js`。SW 把 `/assets|/fonts|/vendor` 存进 Cache Storage（`sp-assets`），cache-first；老玩家再来**零下载**（实测：停掉服务器仍能从本机缓存取到）。
+2. **CDN 镜像优先**：`GET /asset-index.json`（`server/assetindex.js`）给出 `revision`（`{url:size}` 的内容哈希）+ 每文件大小 + `sources`（`gh-proxy → jsDelivr`，都指向主仓库 `public/` 树）。`js/assetCache.js fetchArtFile` **每个镜像 15 秒超时**、按 `files[url]` **校验字节数**，**最后才回退游戏服务器**；`revision` 一致则整批跳过。`SP_ASSET_REF` 钉 git ref、`''` 关闭镜像。
+3. **服务端兜底限速**：`server/http/files.js` 的进程级令牌桶只限速 `public/assets|fonts|vendor` 响应体，`SP_ASSET_RATE_KBPS`（默认 **1200 ≈ 1.2 MB/s**，`0` 关闭），给对局留带宽；非素材路径不限速。
+4. **可选本机源**：`public/js/assetSource.js` 探测本机 `127.0.0.1:3000` 上 `revision` 相同的服务，把 SW 指过去，线上盒子完全不被访问。
+
+首访弹窗与设置行在 `public/js/ui/assetMode.js`；boot 的 `preloadArt`（`public/js/main.js`）在 `cache` 模式走 SW 并**跳过 `bootgate`**。存储键：`sp.pref.assetMode`（`stream`/`cache`）、`sp.assetCache.revision`/`sizes`、`sp.pref.assetLocalSource`。默认预缓存 boot 的**界面美术**（~104 MB），全量索引 ~828 MB 按需或点「立即缓存」。
+**测试**：`test/ui/asset-cache.test.js`（diff / 候选链 / 回退）、`test/asset-index.test.js`（索引/版本）、`test/asset-rate-limit.test.js`（令牌桶）。
+**注意**：**Gitee / GitLab raw 无 CORS、Gitee Releases 对盗链 403** —— 都不能当浏览器下载源；Gitee 只作代码镜像与人工下载。
+
 ---
 
 ## 5. 二次开发手册（Recipes）

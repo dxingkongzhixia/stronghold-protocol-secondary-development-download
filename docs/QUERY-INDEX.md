@@ -100,6 +100,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | subject | doc |
 |---|---|
 | asset sources, layout, manifest, licensing | [`docs/ASSETS.md`](ASSETS.md) |
+| browser local asset cache + CDN mirror chain + paced fallback | [`docs/ASSETS.md`](ASSETS.md) "Local asset cache & CDN mirror download chain" · [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10 |
 | languages: UI strings, game texts, server messages, adding a language | [`docs/I18N.md`](I18N.md) |
 | content-pack format | [`docs/PACKS.md`](PACKS.md) |
 | local-client extraction (official art/voice/Spine) | `tools/local-extract/`, [`docs/HANDOVER.md`](HANDOVER.md) §3 |

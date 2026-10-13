@@ -351,6 +351,26 @@ official impacts faithfully for every operator would need a particle-system impo
 mapping, which the bundles do not give as a single sprite — **recorded as a planned future task** in
 `docs/OUR-FEATURES.md` §1 (docs/ASSETS.md "Battle effects"); do not start it without the owner.
 
+### 9.2 Browser asset delivery: local cache + CDN mirrors + paced server fallback
+
+The server's uplink is small (~2.3 MB/s) but a cold load pulls ~104 MB of art, so delivery is layered (full detail in
+[docs/ASSETS.md](ASSETS.md) "Local asset cache & CDN mirror download chain"; fork-only — [docs/OUR-FEATURES.md](OUR-FEATURES.md) §10,
+decision: [docs/MATCHMAKING.md](MATCHMAKING.md) §42):
+
+1. **Local cache** — `public/sw.js` + `public/js/assetCache.js`: a Service Worker keeps `/assets|/fonts|/vendor` in
+   Cache Storage (`sp-assets`) and serves them cache-first. A returning player fetches nothing.
+2. **CDN mirrors first** — `GET /asset-index.json` (server/assetindex.js) returns `revision` + per-file `files` sizes +
+   `sources` (gh-proxy → jsDelivr over the primary repo's `public/` tree). `fetchArtFile` tries each mirror with a
+   **15 s timeout**, verifies the bytes against `files[url]`, and only then the game server.
+3. **Paced server fallback** — the server paces `/assets|/fonts|/vendor` bodies with a token bucket
+   (`SP_ASSET_RATE_KBPS`, default **1.2 MB/s**; `0` off) so a pre-cache never starves live matches.
+4. **Optional local origin** — `public/js/assetSource.js` probes `127.0.0.1` for the same `revision` and points the
+   worker at a player's own machine.
+
+The boot `preloadArt` (main.js) uses the cache in `cache` mode and skips the boot gate; the first-visit chooser and the
+设置 row are `public/js/ui/assetMode.js`. Tests: `test/ui/asset-cache.test.js`, `test/asset-index.test.js`,
+`test/asset-rate-limit.test.js`. Config: `SP_ASSET_REF` (mirror git ref), `SP_ASSET_RATE_KBPS` (fallback pace).
+
 ---
 
 ## 10. Where our custom content lives
