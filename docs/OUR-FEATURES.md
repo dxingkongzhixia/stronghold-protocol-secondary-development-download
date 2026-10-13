@@ -599,6 +599,12 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
   through) and `public/js/assetCache.js` (register; `syncPlan` / `cacheIsCurrent` are pure and unit-tested — a
   per-file diff against the index, revision-keyed). `public/js/assetSource.js` probes a local origin (127.0.0.1)
   serving the same `revision` and points the worker at it.
+- **Download chain (the server-uplink offload)**: `GET /asset-index.json` also returns `sources` — CORS-capable CDN
+  mirrors of the primary repo's `public/` tree (`server/assetindex.js mirrorSources`: **gh-proxy** then **jsDelivr**;
+  `SP_ASSET_REF` pins the ref, `''` disables). `js/assetCache.js fetchArtFile` tries each mirror FIRST (15 s timeout
+  each) and the game server LAST, accepting a mirror only when its bytes match `index.files[url]`. **Gitee / GitLab
+  raw are deliberately NOT used** — they send no `Access-Control-Allow-Origin`, so a browser `fetch` is blocked (and
+  Gitee Releases 403s hotlinks); tested 2026-10-13.
 - **UX**: `public/js/ui/assetMode.js` — the first-visit chooser (**default 缓存到本地**) and the 设置 row (mode /
   usage / 立即缓存 / 清除缓存 / 优先使用本机资源). `main.js preloadArt` syncs the missing / changed files, skipping the
   boot gate for a local hit.

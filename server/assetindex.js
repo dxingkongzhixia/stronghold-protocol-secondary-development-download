@@ -22,6 +22,25 @@ import { APP_VERSION } from '../shared/constants.js';
 /** The manifest trees whose string leaves are cacheable asset URLs (art + fonts). */
 const URL_PREFIXES = ['/assets/', '/fonts/'];
 
+/** The GitHub primary repository that tracks the runtime art, and the ref the CDN mirrors should serve. */
+export const ASSET_REPO = 'dxingkongzhixia/stronghold-protocol-secondary-development-download';
+export const ASSET_REPO_REF = process.env.SP_ASSET_REF || 'master';
+
+/**
+ * CORS-capable CDN mirrors of the primary repo's `public/` tree, tried BEFORE the game server so its uplink carries
+ * only the misses (the client downloads the file from the first mirror that answers and verifies the size). Tested to
+ * serve with `Access-Control-Allow-Origin: *`: gh-proxy (a GitHub-raw prefix proxy) and jsDelivr. Gitee / GitLab raw
+ * are NOT usable here — they send no CORS header, so a browser `fetch` is blocked. See docs/OUR-FEATURES.md §10.
+ * Set SP_ASSET_REF to pin a release tag; '' disables the mirrors (the client then goes straight to the server).
+ */
+export function mirrorSources(repo = ASSET_REPO, ref = ASSET_REPO_REF) {
+  if (!repo || !ref) return [];
+  return [
+    `https://gh-proxy.com/https://raw.githubusercontent.com/${repo}/${ref}/public`,
+    `https://cdn.jsdelivr.net/gh/${repo}@${ref}/public`,
+  ];
+}
+
 /**
  * Every distinct cacheable asset URL among the string leaves of a JSON value.
  * @param {unknown} value
@@ -86,7 +105,7 @@ export function buildAssetIndexValue({ dataDir, publicDir, log = noopLog }) {
     bytes += st.size;
   }
   log.info?.(`[asset-index] ${Object.keys(files).length} files, ${bytes} bytes`);
-  return { version: 1, app: APP_VERSION, revision: indexVersion(files), count: Object.keys(files).length, bytes, files };
+  return { version: 1, app: APP_VERSION, revision: indexVersion(files), count: Object.keys(files).length, bytes, files, sources: mirrorSources() };
 }
 
 /**

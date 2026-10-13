@@ -37,6 +37,53 @@ export function setAssetMode(mode) { if (mode === 'stream' || mode === 'cache') 
 /** Effective mode: an unchosen visitor loads from the web (the pre-cache modal sets 'cache' explicitly). */
 export function effectiveAssetMode() { return getAssetMode() || 'stream'; }
 
+/** Per-mirror download timeout: 15 s, then the next source (docs/OUR-FEATURES.md §10). */
+export const MIRROR_TIMEOUT_MS = 15000;
+
+/**
+ * Pure: the ordered download candidates for one asset URL — the CDN mirrors (index.sources: gh-proxy, jsDelivr, each a
+ * prefix ending at the repo's `public/`) first, and the game server (same-origin) last.
+ * @param {string} url e.g. '/assets/char/avatar/x.png'
+ * @param {string[]} [sources]
+ * @returns {string[]}
+ */
+export function candidatesFor(url, sources = []) {
+  return [...(Array.isArray(sources) ? sources : []).map((b) => b + url), url];
+}
+
+/** `fetch` with an AbortController timeout (ms<=0 = no timeout). */
+async function fetchWithTimeout(fetchFn, url, ms) {
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctrl && ms > 0 ? setTimeout(() => ctrl.abort(), ms) : null;
+  try { return await fetchFn(url, { signal: ctrl ? ctrl.signal : undefined }); }
+  finally { if (timer) clearTimeout(timer); }
+}
+
+/**
+ * Download one asset into the local cache: try each CDN mirror first (15 s, size-verified against index.files), then
+ * the game server. The first source whose bytes match is stored in the cache under the same-origin URL (so the worker
+ * serves it later). Returns where it came from, or `{ ok:false }` when every source failed (it retries next boot).
+ * @param {string} url
+ * @param {{ index: any, sources?: string[], timeoutMs?: number, fetchFn?: typeof fetch, cache?: Cache | null }} [o]
+ */
+export async function fetchArtFile(url, { index, sources, timeoutMs = MIRROR_TIMEOUT_MS, fetchFn = globalThis.fetch, cache } = {}) {
+  const want = index && index.files ? index.files[url] : null;
+  const src = sources !== undefined ? sources : (index && index.sources);
+  const cacheObj = cache !== undefined ? cache : (assetCacheSupported() ? await caches.open(ASSET_CACHE).catch(() => null) : null);
+  for (const cand of candidatesFor(url, src)) {
+    const isServer = cand === url;
+    try {
+      const res = await fetchWithTimeout(fetchFn, cand, isServer ? 0 : timeoutMs);
+      if (!res || !res.ok) continue;
+      const buf = await res.arrayBuffer();
+      if (want != null && buf.byteLength !== want) continue; // wrong / a lagging mirror ref → next source
+      if (cacheObj) { try { await cacheObj.put(url, new Response(buf, { status: 200, headers: res.headers })); } catch { /* over quota */ } }
+      return { ok: true, from: isServer ? 'server' : 'mirror', bytes: buf.byteLength };
+    } catch { /* timeout / CORS / offline: next source */ }
+  }
+  return { ok: false };
+}
+
 /**
  * Pure: of `urls` (the set we care about), which to download and which cached files are stale.
  * A file is downloaded when its size differs from the server's or it is not cached; a cached file not in the newer
@@ -125,8 +172,10 @@ export async function ensureAssets({ urls, index, onProgress, concurrency = 6, f
   }
   const total = plan.download.length;
   let done = 0;
+  const cache = assetCacheSupported() ? await caches.open(ASSET_CACHE).catch(() => null) : null;
   await runPool(plan.download, Math.max(1, concurrency), async (u) => {
-    try { const res = await fetchFn(u, { cache: 'no-store' }); if (!res || !res.ok) throw new Error(String(res && res.status)); } catch { /* keep it out of sizes: it retries next boot */ }
+    // mirrors first (15 s each, size-verified), the game server last; a miss stays out of `sizes`, retried next boot
+    try { await fetchArtFile(u, { index, sources: index.sources, fetchFn, cache }); } catch { /* ignore */ }
     done++;
     try { onProgress?.(done, total); } catch { /* ignore */ }
   });
