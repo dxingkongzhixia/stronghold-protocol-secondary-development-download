@@ -82,7 +82,7 @@ node server/index.js            # http://localhost:3000  (npm run dev = --watch)
 # verify (in the STORE — the full suite needs .git, so it only passes here)
 cd D:\DOTK\_merge-scratch
 node tools/build-data.mjs --offline     # must leave data/ byte-for-byte unchanged
-node --test                             # the whole suite  (~6100 tests; 11 skipped)
+node --test                             # the whole suite  (~6600 tests; 21 skipped)
 node tools/kit-coverage.mjs --missing   # every chess has a kit, every skill covered (must be empty)
 node tools/i18n.mjs check en --strict   # English UI pack complete (0 missing, 0 errors)
 node tools/doctor.mjs                   # environment diagnosis (exit 0)

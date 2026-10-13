@@ -471,3 +471,25 @@ The server-side account system (`server/auth.js`) and the `match_stats` statisti
 upstream — mainline ships neither, only the local (browser-only) statistics page of PR #323. The design summary written
 for upstream developers (owner key, the 2× caps, the `localStorage` offline fallback, the privacy scope and the
 "optional backend" recommendation) is in [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) — 「账号与统计：与主线的设计差异」.
+
+---
+
+## 14. Upstream features carried in by the v0.2.6 merge
+
+The **whole-branch merge of mainline v0.2.6** (2026-10-14, `sganggs/Stronghold-Protocol` `488db49f`, 380 commits) brought
+upstream's **own** subsystems into this fork. They are upstream code, not ours, but they now live here — keep them green and
+do not revert them by accident. The full record is [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §12.
+
+| Feature | Where | Notes |
+|---|---|---|
+| 潜能 / 练度 (per-operator potential + level; R21P / R22-LOADOUT) | `shared/potential.js`, `shared/loadoutRecord.js`, `server/match/player/{basics,diy}.js`, `public/js/ui/loadoutModel.js`, `public/js/screens/cultivation.js` | upstream's; the fork **keeps and adapts** it and composes operators at 满潜 (potential 6) by default — many fork content tests are pinned at full potential |
+| 文字大小 (text-size scaling) | `public/js/ui/gameLogic/settings.js`, `public/css/*.css` (`calc(NN * var(--t))`) | every font size is `calc(… * var(--t))`, driven by the 设置 rows; a few test-pinned plain selectors stay literal |
+| 弹药数量 (ammo count on the unit strip; #552) | `public/js/render/app.js`, `public/js/render/units.js` (`ammoCount`) | |
+| Spine clip bounds / impostor sizing (#542) | `public/js/render/spine.js` (`clipBounds`, `CLIP_SAMPLE_*`), `public/js/render/units.js` | sizes a unit's slot from the clips it actually plays |
+| Device slabs on the official 3D scenes (#569) | `public/js/render/board3d/scene.js` (`M.raised`) | |
+| Deploy replay / landing sounds (#416) | `public/js/render/` + `server/sim/` | |
+| Content-hashed asset URLs, brotli, traffic counters | `server/http/assetIndex.js`, `server/http/files.js`, `server/http/traffic.js` | the delivery chain is §9.2 |
+| Per-character voice dubs (设置 → 语音语言) | `public/js/voicePrefs.js` (`VOICE_LANGS`, `sanitizeVoiceOverrides`), `public/js/ui/gameLogic/settings.js` | |
+
+**Removed from upstream on purpose:** the standalone 克莱门莎 `op-clemnt.js` kit (we ship our own
+`chess_char_4231_clemnt-clemnt.js`) — the never-merge list, [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0.

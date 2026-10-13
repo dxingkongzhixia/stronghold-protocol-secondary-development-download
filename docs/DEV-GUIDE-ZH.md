@@ -521,4 +521,26 @@ node tools/kit-coverage.mjs --missing
 
 ---
 
+## 10. 上游 v0.2.6 合并带入的特性
+
+2026-10-14 **整支合并主线 v0.2.6**（`sganggs/Stronghold-Protocol` `488db49f`，380 个提交）后，主线**自己的**子系统也进入了本仓库。
+它们属于上游代码、不是我们的，但已经在这里——不要顺手回退。完整记录见
+[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §12。
+
+| 特性 | 代码位置 | 说明 |
+|---|---|---|
+| 潜能 / 练度（干员潜能+等级；R21P / R22-LOADOUT） | `shared/potential.js`、`shared/loadoutRecord.js`、`server/match/player/{basics,diy}.js`、`public/js/ui/loadoutModel.js`、`public/js/screens/cultivation.js` | 上游的；本分支**保留并适配**，默认按**满潜（潜能 6）**编成——很多内容测试是按满潜数值钉住的 |
+| 文字大小（字号缩放） | `public/js/ui/gameLogic/settings.js`、`public/css/*.css`（`calc(NN * var(--t))`） | 字号统一写成 `calc(… * var(--t))`，由设置项驱动；少数被测试钉住的纯选择器保持字面值 |
+| 弹药数量（干员条上的弹药；#552） | `public/js/render/app.js`、`public/js/render/units.js`（`ammoCount`） | |
+| Spine 裁剪边界 / 占位尺寸（#542） | `public/js/render/spine.js`（`clipBounds`、`CLIP_SAMPLE_*`）、`public/js/render/units.js` | 按干员实际播放的 clip 计算占位格大小 |
+| 官方 3D 场景的装置台（#569） | `public/js/render/board3d/scene.js`（`M.raised`） | |
+| 部署回放 / 落地音效（#416） | `public/js/render/` + `server/sim/` | |
+| 内容哈希资源地址、brotli、流量统计 | `server/http/assetIndex.js`、`server/http/files.js`、`server/http/traffic.js` | 交付链路见 [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.2 |
+| 逐角色语音（设置 → 语音语言） | `public/js/voicePrefs.js`（`VOICE_LANGS`、`sanitizeVoiceOverrides`）、`public/js/ui/gameLogic/settings.js` | |
+
+**有意剔除的上游内容**：上游独立的克莱门莎 `op-clemnt.js` 干员（我们用自造的 `chess_char_4231_clemnt-clemnt.js`）——见
+[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 的 never-merge 清单。
+
+---
+
 _整理自本仓库 0.2.0 快照。若你据此改动，请同步更新 `docs/DESIGN.md`/`docs/META.md`，并运行 `node --test`——`docs-consistency` 套件会帮你抓住文档与代码的偏差。_

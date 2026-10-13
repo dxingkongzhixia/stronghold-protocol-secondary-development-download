@@ -1,6 +1,6 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-13**（数值为本地实测，见 §3）。
+> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-14**（数值为本地实测，见 §3）。
 > 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§41）。
 > 接手入口见 [`docs/HANDOVER.md`](HANDOVER.md)；按问题查文档见 [`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
 
@@ -10,8 +10,9 @@
 
 「卫戍协议：盟约」的非官方同人**网页联机复刻**：Node 服务器 + 浏览器客户端，1–4 人合作塔防。
 基线是**主线项目**（`sganggs/Stronghold-Protocol`；已合并到 **feedback5**（含 **v0.2.0** + i18n，见
-[`docs/MATCHMAKING.md`](MATCHMAKING.md) §33），并选择性并入 **feedback6** 与 **feedback7 的 R22 / R23**
-两批——完整记录见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)）。
+[`docs/MATCHMAKING.md`](MATCHMAKING.md) §33），选择性并入 **feedback6** 与 **feedback7 的 R22 / R23**
+两批，并于 **2026-10-14 整支合并主线 v0.2.6**（`488db49f`，190 个冲突全解、门禁全绿）——完整记录见
+[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §12）。
 
 本仓库是**基于主线开发的分支项目**，在主线之上独立维护：账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、
 **大厅社区（更新日志 / bug提交 / 公开房间）**、启动体验与带宽治理、**8 名自造干员**（§4；
@@ -28,15 +29,15 @@
 
 > ⚠️ store 里的 `.cache` / `public/assets` / `public/fonts` / `public/vendor` 是**指向工作项目的 junction**，约 600 MB 美术只有一份。**别单独删工作项目**，也别把 store 的 `public/assets` 当副本删掉。
 
-## 3. 当前状态（2026-10-13 本地实测）
+## 3. 当前状态（2026-10-14 本地实测）
 
 | 项 | 值 |
 |---|---|
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
 | git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
-| 远程同步 | `gitee/master` == HEAD；`github/master` 曾落后一个提交（`31bba4af`，本次已随发布补齐）；主线 `origin/master` = `488db49f` |
-| 全量测试 | `node --test`：**6129 项 / 6118 通过 / 0 失败 / 11 跳过**（约 267 s，在 store 里跑） |
-| 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1360/1360；`doctor` 退出码 0 |
+| 远程同步 | `github/master` == `gitee/master` == HEAD `5e8207c8`（v0.2.6 合并已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
+| 全量测试 | `node --test`：**6600 项 / 6579 通过 / 0 失败 / 21 跳过**（在 store 里跑） |
+| 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1454/1454（100%）；`doctor` 退出码 0；`eslint` 0 error；`npm run typecheck` / `check:imports` 通过 |
 | 本机环境 | Node **v24.19.0** |
 | 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build） |
 
@@ -131,13 +132,13 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 
 ## 10. 与主线的关系 / 下次怎么合并
 
-- 主线：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（§15）、**feedback5 / v0.2.0**（合并提交 `e3bd9de`，§33），并**选择性**并入 **feedback6** 与 **feedback7 R22 / R23**；本仓库版本 `0.4.0`。逐批完整记录（主线提交范围 / HEAD、取用的提交、跳过的提交与原因、冲突、golden 变动、本地提交）见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)；**「永不合并」清单**也在其 §0。
+- 主线：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（§15）、**feedback5 / v0.2.0**（合并提交 `e3bd9de`，§33），**选择性**并入 **feedback6** 与 **feedback7 R22 / R23**，并于 **2026-10-14 整支合并 v0.2.6**（`488db49f`，190 冲突全解、门禁全绿，见 §12）；本仓库版本 `0.4.0`。逐批完整记录（主线提交范围 / HEAD、取用的提交、跳过的提交与原因、冲突、golden 变动、本地提交）见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)；**「永不合并」清单**也在其 §0。
 - 合并方式（**选择性 cherry-pick**，不再只做大合并）：在临时 worktree 里按 `all-fb<N>.txt` 列出的主线提交逐个 triage（`OK` / `OKg` / `SKIP` + 原因），把 `OK` 的提交**保留作者与提交信息** cherry-pick 到 `ours` 并适配本分支；golden 先做**归属证明**再在专门提交里重算（[`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md)）；跑全量 `node --test` 后才推。大合并仍走 `git merge origin/master` + 逐块解冲突。
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
   `tools/build-data.mjs`（`CUSTOM_CHESS`）。
-- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 6129 项全绿、`kit-coverage` 307/307 · 120/120、
-  `i18n en --strict` 1360/1360、`doctor` 退出码 0、`build-data --offline` 与 `data/` 逐字节一致、
+- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 6600 项 / 6579 通过 / 0 失败 / 21 跳过、`kit-coverage` 307/307 · 120/120、
+  `i18n en --strict` 1454/1454、`doctor` 退出码 0、`build-data --offline` 与 `data/` 逐字节一致、
   工作项目相对 store HEAD 无跟踪漂移。
 
 ## 11. 产物

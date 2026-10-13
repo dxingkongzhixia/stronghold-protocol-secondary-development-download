@@ -40,6 +40,8 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 | browser UI widgets | `public/js/ui/` |
 | 2D (PixiJS) + 3D (three.js) rendering | `public/js/render/`, `public/js/render/board3d/`, `public/js/render/fx/` |
 | client networking / preload | `public/js/net.js`, `public/js/preload.js`, `public/js/assets.js` |
+| 潜能 / 练度 per-operator settings (0.2.2) | `shared/potential.js`, `shared/loadoutRecord.js`, `server/match/player/{basics,diy}.js`, `public/js/ui/loadoutModel.js` |
+| content-hashed asset index (0.2.6) | `server/http/assetIndex.js`, `server/assetindex.js`, `shared/assetPaths.js` |
 
 ## 3. Game rules (the design document)
 
@@ -77,6 +79,10 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 | 3D board (official scenes, 高台, props, shadows) | `public/js/render/board3d/`, [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §8 |
 | battle FX (two tiers, allow-lists, kill switches) | [`docs/ASSETS.md`](ASSETS.md), `public/js/render/fx/` |
 | picking / dragging / facing wheel | `public/js/render/pick.js`, `public/js/render/drag.js`, `public/js/ui/facingWheel.js` |
+| Spine clip bounds / impostor sizing (#542) | `public/js/render/spine.js` (`clipBounds`, `CLIP_SAMPLE_*`, `stepClipBounds`), `public/js/render/units.js` |
+| per-character voice overrides (语音语言) | `public/js/voicePrefs.js` |
+| 文字大小 (text-size) and 弹药数量 (ammo count) settings | `public/js/ui/gameLogic/settings.js`, `public/css/theme.css` (`--t`), `public/js/render/app.js` (`ammoCount`) |
+| device slabs on official scenes (#569) | `public/js/render/board3d/scene.js` (`M.raised`) |
 
 ## 7. Networking and protocol
 

@@ -99,7 +99,7 @@ so old imports keep working: `public/js/ui/gameLogic.js` (`public/js/ui/gameLogi
 | `server/sim/content/garrisons/`, `items/`, `bands/` | 特质, equipment and strategies: `battle.js` is the battle side, `meta.js` the prep side (`registerMeta`, META §2) |
 | `server/sim/content/bonds/` | the 23 bonds: `core.js` the 8 core bonds (both sides), `server/sim/content/bonds/addon/` the 15 add-on bonds (`battle.js`, `meta.js`) |
 | `server/sim/content/` (the rest) | `tokens.js` (summons), `devices.js` (terrain and stage devices), `generic.js` (the kit built from a skill's data when a chess has none), `choices.js` (机变 cards in battle), `traitMods.js` (the module trait line the engine applies to every operator: 「攻击范围内存在N名及以上敌人时攻击速度+X」) |
-| `shared/` | imported by the server and the browser: `protocol.js`, `constants.js`, `i18n.js`, `i18nData.js` and `i18nPacks.js` (languages), `packs.js` (the content-pack format), `standIn.js` (补位), `diy.js` (自选编队), `highGround.js`, `loadoutRecord.js` |
+| `shared/` | imported by the server and the browser: `protocol.js`, `constants.js`, `i18n.js`, `i18nData.js` and `i18nPacks.js` (languages), `packs.js` (the content-pack format), `standIn.js` (补位), `diy.js` (自选编队), `highGround.js`, `loadoutRecord.js`, `potential.js` (潜能 / 练度), `forms.js` (the model-form catalogue), `stats.js` (the stats schema + pure logic), `assetPaths.js` (asset URL helpers and the traffic categories) |
 
 ### Client (`public/`)
 
@@ -109,8 +109,9 @@ so old imports keep working: `public/js/ui/gameLogic.js` (`public/js/ui/gameLogi
 | `public/js/net.js`, `public/js/store.js`, `public/js/data.js` | the socket client, the observable store, the data loader (`/data/*.json`, with the English overlay) |
 | `public/js/battle/` | `runner.js` (the local battle: loads `/sim/`, steps it, reports), `observe.js` (who may watch which field) |
 | `public/js/screens/` | `title.js`, `lobby.js`, `room.js`, `loadout.js` (干员调配), `cultivation.js` (its 潜能 / 练度 controls), `ownership.js` (干员持有), `diy.js` (自选编队), `briefing.js`, `bandDraft.js`, `game.js` with `public/js/screens/game/`, `result.js` |
-| `public/js/ui/` | the HUD components (`hud.js`, `shopBar.js`, `detailPanel.js`, `bondStrip.js`, `teamPanel.js` …); `public/js/ui/gameLogic/` the pure in-match logic, unit-tested in Node |
-| `public/js/render/` | the field view: `app.js` with `public/js/render/app/`, `units.js` and `spine.js` (models), `tiles.js`, `projection.js`, `interp.js`, `pick.js`, `drag.js`, `public/js/render/fx/` (effects; `kinds.js` maps the fx kinds), `public/js/render/board3d/` (the official 3D board) |
+| `public/js/ui/` | the HUD components (`hud.js`, `shopBar.js`, `detailPanel.js`, `bondStrip.js`, `teamPanel.js` …); `public/js/ui/gameLogic/` the pure in-match logic, unit-tested in Node; `loadoutModel.js` (the 干员调配 model: loadout + 潜能 / 练度 `ops`) |
+| `public/js/voicePrefs.js` | the operator voice dubs (设置 → 语音语言): `VOICE_LANGS`, per-character overrides (`sanitizeVoiceOverrides`), `voiceLangFor` (audio.js) |
+| `public/js/render/` | the field view: `app.js` with `public/js/render/app/`, `units.js` and `spine.js` (models; its `clipBounds` sizes a unit's impostor slot from the clips it plays — GitHub #542), `tiles.js`, `projection.js`, `interp.js`, `pick.js`, `drag.js`, `public/js/render/fx/` (effects; `kinds.js` maps the fx kinds), `public/js/render/board3d/` (the official 3D board, incl. `theme.js` per-battlefield lighting + apron / 高台) |
 | `public/css/`, `public/i18n/<code>.json` | the styles; the UI strings of each language pack (English ships) |
 
 ### Data, tools, tests
