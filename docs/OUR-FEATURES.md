@@ -176,7 +176,7 @@ hand-authored tier with faithful per-attack impacts for **every** operator, we w
    `_effectsWhenHit` list (the generic `common_hit_01` / `common_heal_hit_01`, or `<op>_hit_01` /
    `<op>_attack_*_hit`), and map it onto the sim's emitted attack (kind + skill), distinguishing `common.ab` (shared)
    from `<op>.ab` (per-operator).
-Both are readable today with the existing UnityPy venv (`tools/local-extract/.venv-extract`, UnityPy 1.25.4 +
+Both are readable today with the existing UnityPy venv (`.venv-extract` at the repo root, UnityPy 1.25.4 +
 `aklz4.py`). What it would unlock: faithful per-attack impacts for the whole roster, retiring the procedural hit and
 our seven approximations. Evidence / paths (client `.../StreamingAssets/AB/Windows`): `battle/prefabs/[uc]projectiles.ab`
 (2,858 prefabs; `common_hit_01` = 5 ParticleSystems, `gdglow_hit_01` ≈ 12, `kalts2_skill_01_hit_01` = 14); the effects
@@ -246,14 +246,14 @@ runs without it, with documented fallbacks (`docs/DEPLOY.md` §6).
 - `tools/setup.mjs` — end-user entry point (creates `.venv-extract`, offers local extraction).
 
 **The Python environment.** Extraction needs UnityPy, so the interpreter must be new enough: the project venv is
-**Python 3.14** (`tools/local-extract/.venv-extract`, `requirements.txt` = `UnityPy>=1.25`, `lz4>=4`,
+**Python 3.14** (`.venv-extract` at the repo root, `requirements.txt` = `UnityPy>=1.25`, `lz4>=4`,
 `Pillow>=10`). **Python 3.8 is too old for the UnityPy build we use** — do not point the tooling at an old
 system interpreter. Invoke the venv explicitly:
 
 ```powershell
-tools\local-extract\.venv-extract\Scripts\python.exe tools\local-extract\extract.py --game "<AB root>" [--only <subdir prefix>]
-tools\local-extract\.venv-extract\Scripts\python.exe tools\local-extract\extract.py --print-jobs   # the job table as JSON (no deps)
-tools\local-extract\.venv-extract\Scripts\python.exe tools\local-extract\extract.py --webp          # only the WebP copies (existing PNGs)
+.venv-extract\Scripts\python.exe tools\local-extract\extract.py --game "<AB root>" [--only <subdir prefix>]
+.venv-extract\Scripts\python.exe tools\local-extract\extract.py --print-jobs   # the job table as JSON (no deps)
+.venv-extract\Scripts\python.exe tools\local-extract\extract.py --webp          # only the WebP copies (existing PNGs)
 ```
 
 **Client paths (CN/JP).** `--game` points at the client's `.../StreamingAssets/AB/Windows`. Defaults probed by

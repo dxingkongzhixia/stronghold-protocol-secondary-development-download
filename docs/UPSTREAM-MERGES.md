@@ -597,10 +597,10 @@ whenever `data/local-assets.json` lists no `scene/<stageId>` — or a load fails
 
 **Where they live / size.** Extracted: `public/assets/local/scene/<stageId>/{scene.json,scene.bin,lm<i>}` and
 `public/assets/local/scene/tex/<texture>`; downloaded bundles: `.cache/official-scenes/<version>/`. In this
-environment **no scenes are extracted** (`data/local-assets.json` lists no `scene/…`; `.cache/official-scenes/` is
-absent), so nothing was cached or backed up here — run the two steps above on a machine with the client / network to
-get them. Because they are git-ignored, a `git revert` / `reset --hard` does not delete them; still copy them aside
-before a re-clone or `git clean -x` (runbook below).
+environment the scenes **are** extracted and cached (`data/local-assets.json` lists the `scene/...` groups and
+`node tools/doctor.mjs` reports the 3D board usable); both live under git-ignored paths. Because they are
+git-ignored, a `git revert` / `reset --hard` does not delete them; still copy them aside before a re-clone or
+`git clean -x` (runbook below).
 
 **Golden: unchanged.** The scenes are render-only — the 3D board is a client view over the same sim — so `test/golden/*`
 is byte-identical (both `-x` messages say "golden: unchanged"; `node tools/golden.mjs` reports no movement).

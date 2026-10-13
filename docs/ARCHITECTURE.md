@@ -25,7 +25,9 @@ effects), [DATA.md](DATA.md) (generated data), [ASSETS.md](ASSETS.md) (art and a
 
 - **The server** is one Node process: plain `node:http` plus `ws`, no framework (`server/index.js` wires
   `server/http/`). It serves the static client, the generated data and the sim's source files, and runs every room and
-  match in memory — rounds, shop, economy, bots, validation. Nothing is written to disk.
+  match in memory — rounds, shop, economy, bots, validation. **Match/room state is never written to disk** (this fork
+  adds only the account / lobby-community / match-statistics SQLite under the git-ignored `var/` — see
+  [HANDOVER.md](HANDOVER.md) §8).
 - **The browser** loads native ES modules with no bundler and no build step; the libraries are vendored into
   `public/vendor/` by `tools/vendor.mjs` on `npm install`.
 - **The battle simulation** (`server/sim/`) is pure ESM without any Node API, served read-only at `/sim/`. Both sides

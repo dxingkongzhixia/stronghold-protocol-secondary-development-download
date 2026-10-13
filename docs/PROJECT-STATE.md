@@ -1,7 +1,7 @@
 # 项目现状一览（PROJECT-STATE）
 
 > 给「新会话 / 新接手的人」看的一页纸。**最后更新：2026-10-13**。
-> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§37）。
+> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§41）。接手入口见 [`docs/HANDOVER.md`](HANDOVER.md)。
 
 ---
 
@@ -14,7 +14,7 @@
 ## 2. 目录（都在 `D:\DOTK`）
 | 路径 | 说明 |
 |---|---|
-| `Stronghold-Protocol\` | **工作项目**（唯一真源；无 `.git`，改动直接落盘） |
+| `Stronghold-Protocol\` | **工作项目 / 运行目录**：没有 `.git`，是 git 仓库的**逐字节镜像**（**不是**真源；改动请在 `_merge-scratch` 提交，见下一行）。`node server/index.js` 在这里跑。 |
 | `Stronghold-Protocol-github\` | 干净上游克隆（`master`；git proxy `127.0.0.1:31181`） |
 | `_merge-scratch\` | **唯一的 git 仓库 / 完整历史 / 唯一真相**（分支 `ours`）——工作项目没有 `.git`，是它的镜像。用 `node tools/push-gitee.mjs` 提交已暂存的改动、把仓库 `HEAD` 推送到 **所有已配置的远程**（`github` 主仓库 → `gitee` 国内镜像 → 分支 `master`；快进、绝不强推；凭据不入库，见 `docs/AI-WORKFLOW.md` §c），再把仓库被跟踪的文件镜像回工作项目——**只单向 store → 远程 → 工作树，绝不用工作树覆盖仓库**；它还在用 junction 引用工作项目的 `node_modules`/`public/assets`，⚠️ **别单独删工作项目** |
 | `_optim-backup-*\` | 每次改动前的备份（命名含日期+主题） |
@@ -102,7 +102,7 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - [ ] **攻击前冲 / 浮空技能**：已按上游 v0.1.3（#61 / #23）实现，**待实机验手感**。
 - [x] **CI 已接入**：`.github/workflows/ci.yml` 在 Ubuntu / Windows × Node 22 / 24 上跑 `npm ci`、`node --test` 和服务器冒烟测试（README「开发与测试」）；本地 `node --test` 仍是主要闸门。原「没有 CI」已过时。
 - [ ] B 站宣传视频：见 §10 产物。
-- [ ] **沙地战场官方的「高台」（局部抬升块）未复刻**（owner 2026-10-13：**先记录、暂不实现**——「高台先记录下，就一张图有问题先不管了」）。官方战场 #01 的可玩面上有一处**局部的抬升台**（owner 截图标注在场地**左中**；参考 `D:\DOTK\_shots\official-map01.png`），我们的板在那里是**平的**。根因：能抽到的官方场景（off-season 客户端，`.cache/official-scenes/26-04-13-12-31-42_e9b560`）可玩面基本是平的（只有约半格落差），官方那块抬升**不在**可抽数据里；`data/stages.json` 里**有** `height: "HIGH"` 的高台格（战场 #01 下半的远程位 `10,4 / 11,4 / 12,4`），但那是**部署格高度**，不是这块抬升的位置。第一次尝试把它误读成**整圈**高台（提交 `6e988b44`：两级台阶 + 一条跑道），画面里是一圈亮边框 + 底部长木板，**不对**，已按提交 `02ebc35a` 删除、改成沙地铺边。将来做：按 `docs/CONTENT-AUTHORING.md` §8.3 的每主题 `platforms` 结构（位置 / 尺寸 / 高度 / 材质）+ `scene.js _buildPlatforms` 复刻**局部**块，数值从官方参考量出；**纯视觉**（`server/sim` 的格子 / 高度 / `deployTiles` 不动），**不挡**部署高亮 / 方向轮盘；验证用同 stage / 同相机的官方截图比对。
+- [x] **沙地战场官方的「高台」（局部抬升块）已实现**（2026-10-13 起，不再是待办）：官方战场 #01 可玩面上**左中**的一处局部抬升台（owner 截图 `D:\DOTK\_shots\official-map01.png`）由 `public/js/render/board3d/theme.js` 的每主题 `platforms` 表 + `scene.js _buildPlatforms` 建成几何（左中块 + 向后一级 + 左下角 + 右场镜像块）；**纯视觉**，`server/sim` 的格子 / 高度 / `deployTiles` 一律不变，块只落在可玩区之外、**永不遮挡**部署高亮 / 方向轮盘。数值 / 规则 / 验证见 `docs/CONTENT-AUTHORING.md` §8.3，`test/render/board3d-scene.test.js` 钉住它。历史：最早的**整圈**「两级台阶 + 一条跑道」尝试（提交 `6e988b44`）与官方不符，已按 `02ebc35a` 删除、改沙地铺边（`theme.js` `apron`，§8.1）。
 
 ## 9. 与上游的关系 / 下次怎么合并
 - 上游：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（`763e224`，§15）、**feedback5 / v0.2.0**（`1303321`，合并提交 `e3bd9de`，§33），并**选择性**并入 **feedback6**（R21A / R21E×3 / R21H / R21D）与 **feedback7 的 R22 / R23** 两批（含 Group A、日语语音、Group C / R23）；本仓库版本 `0.4.0`（上一版 `0.3.0` 是大厅社区 + 克莱门莎）。**逐批的完整记录（上游提交范围 / HEAD、取用的提交、跳过的提交与原因、冲突、golden 变动、本地提交）见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)**；「永不合并」清单也在那里（§0）。
@@ -110,7 +110,7 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
   `tools/build-data.mjs`（`CUSTOM_CHESS`）。
-- **本批的整体检查**：`node --test` **5829 项 / 5818 通过 / 0 失败 / 11 跳过**（带 `.git` 且复制了 `data/local-assets.json`，`package.test.js` 与两条素材测试均通过）；`node tools/kit-coverage.mjs --missing` **307/307 技能、120/120 棋子**；`node tools/i18n.mjs check en --strict` **1263/1263（0 缺失 0 错误）**；`node tools/doctor.mjs` **退出码 0**（仅防火墙规则提示）；`node tools/build-data.mjs --offline` 与 `data/` **逐字节一致**；工作项目相对 store HEAD **无跟踪漂移**；`github/master` 与 `gitee/master` == `HEAD`。
+- **本批的整体检查**（快照；`node --test` 的项数随套件增长，最新以 `README.md`「测试」一节为准）：`node --test` **5829 项 / 5818 通过 / 0 失败 / 11 跳过**（带 `.git` 且复制了 `data/local-assets.json`，`package.test.js` 与两条素材测试均通过）；`node tools/kit-coverage.mjs --missing` **307/307 技能、120/120 棋子**；`node tools/i18n.mjs check en --strict` **1360/1360（0 缺失 0 错误）**；`node tools/doctor.mjs` **退出码 0**（仅防火墙规则提示）；`node tools/build-data.mjs --offline` 与 `data/` **逐字节一致**；工作项目相对 store HEAD **无跟踪漂移**；`github/master` 与 `gitee/master` == `HEAD`。
 
 ## 10. 产物
 - 文档：本文件、`docs/MATCHMAKING.md`（§0–§17 菜单）、`docs/DEPLOY.md`（上游的部署说明）。

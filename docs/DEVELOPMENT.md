@@ -6,13 +6,14 @@ restate the upstream design — it points at it:
 
 | Read this | For |
 |---|---|
+| [`docs/HANDOVER.md`](HANDOVER.md) | **the entry point / handover** (repo map, run locally, build/verify, content, upstream merges, publish/deploy, known issues) — read this first |
 | [`README.md`](../README.md) | what the game is, how to run it |
 | [`docs/DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) | the same map in Chinese, plus recipes and a prioritized optimization list |
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | the module overview and import boundaries |
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | conventions, tests, PR flow |
 | [`docs/DESIGN.md`](DESIGN.md) → [`docs/design/`](design/) + [`docs/history/`](history/) | the authoritative rules (index + per-release revisions) |
 | [`docs/DATA.md`](DATA.md) · [`docs/SIM.md`](SIM.md) · [`docs/META.md`](META.md) · [`docs/ASSETS.md`](ASSETS.md) · [`docs/BALANCE.md`](BALANCE.md) | generated data, the combat engine, the match engine, assets, difficulty |
-| [`docs/MATCHMAKING.md`](MATCHMAKING.md) | **our** features and every decision record (§22 merge blacklist, §23–§34 + §37 the custom operators) |
+| [`docs/MATCHMAKING.md`](MATCHMAKING.md) | **our** features and every decision record (§22 merge blacklist, §23–§37 the custom operators, §1–§41 total) |
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **the fork-only mechanisms catalog** (what is ours, where it lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) — see §12 |
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for adding a custom operator |
 | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | the authoring handbook for bonds / strategies / bounty leaders / operators and the 资料库 (CODEX) browser (Chinese) |
@@ -416,7 +417,7 @@ lives, how to extend it, the tests that pin it, and an explicit **我们独有�
 | 5 | Our carried decisions (the §22 blacklist, funnel hits, 望's pieces, kalts2, 克莱门莎, leave→AI, the notice convention, golden attribution) |
 | 6 | Publishing (the GitHub primary + Gitee mirror, the byte-for-byte tree discipline, the notice-first deploy order) |
 
-It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§37 (the decision record) and
+It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§41 (the decision record) and
 [`docs/ASSETS.md`](ASSETS.md) (the asset detail). Its appendix is the merge checklist of fork-only files.
 
 ## 13. Lobby community data + match statistics (our SQLite schema, `server/community.js` / `server/stats.js`)

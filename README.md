@@ -21,7 +21,8 @@ English one-liner: the **primary repository** (GitHub) of our independently main
 ## 一、这是什么仓库
 
 - **主仓库 / 国内镜像**：**GitHub 仓库**（`dxingkongzhixia/stronghold-protocol-secondary-development-download`）是**我们二次开发版的主仓库与分发入口**；国内访问慢时改用 **Gitee 镜像**（`marseille1/stronghold-protocol-secondary-development-download`）。想直接玩、想部署到自己机器上的博士，从这里克隆或下载即可。
-- **二次开发版**：上游是 `sganggs/Stronghold-Protocol`（**原始项目**，代码基线、美术与数据来源都在那里）。本项目在上游之上**独立维护**了一套改动：账号 / 野排匹配 / 公开同盟 / 观战与夺舍 AI、启动体验与带宽治理、**7 名自造干员**，以及一批规则修复与决策（见 [四、相对上游的差异](#四相对上游的差异) 与 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md)）。
+- **二次开发版**：上游是 `sganggs/Stronghold-Protocol`（**原始项目**，代码基线、美术与数据来源都在那里）。本项目在上游之上**独立维护**了一套改动：账号 / 野排匹配 / 公开同盟 / 观战与夺舍 AI、启动体验与带宽治理、**8 名自造干员**，以及一批规则修复与决策（见 [四、相对上游的差异](#四相对上游的差异) 与 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md)）。
+> **第一次接手本仓库？** 先读 [`docs/HANDOVER.md`](docs/HANDOVER.md)（接手入口：仓库地图、本地运行、构建 / 测试、内容制作、上游合并、发布与部署、已知坑）。
 - **不是上游**：上游的介绍、版本与发行包以**上游仓库**为准；本仓库只描述**我们这一版**。上游会**定期合并**进来（见 §四末），但我们的改动一直保留。
 - **素材随仓库分发**：`public/assets`、`public/fonts`、`public/vendor` 在**本仓库里被跟踪**（约 590 MB），所以克隆下来**不需要再拉素材**就能运行。这些素材版权归鹰角网络 / Yostar，属社区便利分发，见 [八、致谢与许可](#八致谢与许可)。
 
@@ -117,9 +118,9 @@ npm run golden         # 黄金结果：固定种子的整套战斗与人机对�
 
 下面是**我们这一版自己加的东西**，都保留、不会因为合并上游而丢掉。
 
-### 7 名自造干员
+### 8 名自造干员
 
-由 `tools/build-data.mjs` 的 `CUSTOM_CHESS` 注入；每名都有数据、`server/sim/content/kits/ops/` 下的 kit、美术与（多数）语音，并记录在 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md)。
+由 `tools/build-data.mjs` 的 `CUSTOM_CHESS` 注入；每名都有数据、`server/sim/content/kits/ops/` 下的 kit、美术与（多数）语音，并记录在 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md)。完整配方见 [`docs/NEW-OPERATOR.md`](docs/NEW-OPERATOR.md)，合并自检见 [`docs/OUR-FEATURES.md`](docs/OUR-FEATURES.md) §1。
 
 | 干员 | 阶 | 盟约 | 一句话（依据） |
 |---|---|---|---|
@@ -130,6 +131,7 @@ npm run golden         # 黄金结果：固定种子的整套战斗与人机对�
 | **澄闪** | 3 | 维多利亚 + 精准 + 助力 | 驭械术师：浮游单元全部锁定**同一敌人**、每个各打满攻击力；特质「购买价格为 1」（§31 / §35.2） |
 | **娜仁图亚** | 3 | 萨尔贡 + 精准 + 迅捷 | 回环射手：回旋投射物必须回收才能再攻击，S3「吞日」三发齐射后在回收时爆发（§32） |
 | **凯尔希·思衡托** | 4 | 调和 + 灵巧 + 协防干员 | 守望者：普通攻击即单体治疗、还能起飞；特质「获得时随机获取 2 件装备」；已**移出自选池**只作商店棋子（§34 / §35.1 / §35.7） |
+| **克莱门莎** | 6 | 阿戈尔 + 不屈 + 协防干员 | 本源近卫「primguard」：阻挡 2、近战物理、可且优先攻击自身阻挡的单位；S1 冲蚀 / S2 风暴眼 / S3 与海为敌 + 两天赋；引擎为此加了放逐 / 传送、漩涡与强制缴械（§37） |
 
 ### 我们携带的修复与决策
 
@@ -163,16 +165,22 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 
 | 文档 | 内容 |
 |---|---|
+| [`docs/HANDOVER.md`](docs/HANDOVER.md) | **接手入口**：仓库地图、本地运行、构建 / 测试、内容制作、上游合并、发布与部署、已知坑（中英混排） |
 | [`docs/PLAYING.md`](docs/PLAYING.md) | 玩法指南（中文）：流程、经济、招募与晋升、摆阵、联防、盟约、最终攻势、结算称号 |
-| [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) | **我们的改动与全部决策记录**：账号 / 野排 / 观战夺舍 / 7 名自造干员（§23–§35） |
+| [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) | **我们的改动与全部决策记录**：账号 / 野排 / 观战夺舍 / 8 名自造干员（§1–§41） |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | 仓库地图与构建 / 测试 / 素材流水线（英文） |
 | [`docs/DEV-GUIDE-ZH.md`](docs/DEV-GUIDE-ZH.md) | 同一张地图的中文版 + 二次开发手册（中文） |
 | [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) | 我们怎么研究 / 改动 / 测试 / 合并 / 部署，以及 GitHub 主仓库 / Gitee 镜像的推送约定（英文） |
+| [`docs/OUR-FEATURES.md`](docs/OUR-FEATURES.md) | **只属于本 fork 的机制目录**（哪里、怎么扩展、哪些测试钉住它、合并时不得丢失）（英文） |
+| [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) | 上游合并逐批记录 + **永不合并清单**（§0）（英文） |
+| [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md) | 当前状态一页纸：线上、开关、备份、已知问题（中文） |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | 设计文档索引：现行规则在 `docs/design/`、各次修订在 `docs/history/`（英文） |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 代码地图：服务器、联机协议与前后端共用的战斗模拟（英文） |
+| [`docs/DATA.md`](docs/DATA.md) · [`docs/SIM.md`](docs/SIM.md) · [`docs/META.md`](docs/META.md) | 生成数据 / 战斗引擎 / 对局引擎参考（英文） |
+| [`docs/ASSETS.md`](docs/ASSETS.md) · [`docs/BALANCE.md`](docs/BALANCE.md) · [`docs/I18N.md`](docs/I18N.md) | 素材流水线 / 难度模型 / 多语言（英文） |
 | [`docs/DEPLOY.md`](docs/DEPLOY.md) | 部署指南：防火墙、开机自启、反向代理与 HTTPS、Docker（英文） |
-| [`docs/NEW-OPERATOR.md`](docs/NEW-OPERATOR.md) | 新增自造干员的端到端配方（英文） |
-| [`docs/CONTENT-AUTHORING.md`](docs/CONTENT-AUTHORING.md) | 内容制作手册：新盟约 / 新策略 / 新悬赏敌人 / 新干员，及资料库（盟约与策略总览 + 悬赏敌人池）（中文） |
+| [`docs/NEW-OPERATOR.md`](docs/NEW-OPERATOR.md) | 新增自造干员的端到端配方（中文） |
+| [`docs/CONTENT-AUTHORING.md`](docs/CONTENT-AUTHORING.md) | 内容制作手册：新盟约 / 新策略 / 新悬赏敌人 / 新干员，及资料库与 3D 板主题（中文） |
 | [CHANGELOG.md](CHANGELOG.md) | 更新记录 |
 
 ## 七、目录结构
@@ -202,7 +210,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 
 ## English
 
-The **primary repository** (GitHub) of our independently maintained secondary-development build of Arknights' seasonal auto-chess tower-defense mode *Stronghold Protocol: Alliance*, played in the browser: solo, or 1–4 player co-op — with a **Gitee mirror for downloads from mainland China**. **This is not the upstream project** — the original source is [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which we credit and periodically merge. Our additions include account/matchmaking/spectate features, seven custom shop operators, and a set of rule decisions recorded in [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md).
+The **primary repository** (GitHub) of our independently maintained secondary-development build of Arknights' seasonal auto-chess tower-defense mode *Stronghold Protocol: Alliance*, played in the browser: solo, or 1–4 player co-op — with a **Gitee mirror for downloads from mainland China**. **This is not the upstream project** — the original source is [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which we credit and periodically merge. Our additions include account/matchmaking/spectate features, **eight** custom shop operators, and a set of rule decisions recorded in [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md). New here? Start with [`docs/HANDOVER.md`](docs/HANDOVER.md).
 
 - **Run:** Node.js 22 or 24; `git clone` this repository (the runtime art under `public/assets`, `public/fonts` and `public/vendor` is tracked, so a clone runs without fetching art), then `npm install` and `node server/index.js` → <http://localhost:3000>. The admin panel is at `/admin?token=…` (token in `var/admin-token.txt`). Tests: `node --test` and `npm run golden`.
 - **Updates:** `node tools/push-gitee.mjs -m "…"` commits what you staged in the git store, pushes it to every configured remote (the **GitHub primary** then the **Gitee mirror**), then mirrors the store back into the working tree (one-way: store → remotes → working tree; it never overwrites the store with the working tree); see [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) for the notice-then-deploy convention.

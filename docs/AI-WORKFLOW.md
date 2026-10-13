@@ -8,6 +8,10 @@ Read `docs/DEVELOPMENT.md` first if you do not know the layout. The **fork-only 
 lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) are catalogued in
 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) — consult it during every upstream merge (see (b)).
 
+> **Note for a newcomer:** start with [`docs/HANDOVER.md`](HANDOVER.md) — the entry point (repo map, run locally,
+> build/verify, content, upstream merges, publish/deploy, known issues). This file is the operational contract it
+> points at.
+
 Companion conventions, quoted verbatim:
 
 - **之后每次有更新都提交下** — after every change, commit it and push to the remotes (GitHub primary + Gitee mirror).
@@ -264,7 +268,7 @@ and never paste it into a commit, doc, script or log. See `docs/PROJECT-STATE.md
 
 **Stop and ask `d星空之下` before acting when:**
 
-- A change would **remove, hide or override our custom content** (any of the seven custom operators, their kits/art,
+- A change would **remove, hide or override our custom content** (any of the eight custom operators, their kits/art,
   the custom traits, the leave/takeover rule, the 联防 arena) or a blacklisted feature would reappear.
 - Two of our features conflict, or an upstream merge would force a choice between our behaviour and theirs beyond the
   blacklist.
