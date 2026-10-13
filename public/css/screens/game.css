@@ -552,6 +552,15 @@
 .set-seg button.is-on { background: var(--mint-500); color: var(--text-on-mint); font-weight: 700; }
 .set-hint { margin-top: .06rem; font-size: .14rem; color: var(--text-dim); line-height: 1.8; }
 .set-hint kbd, .lvcard__key, .toolbtn kbd { font-family: var(--font-num); font-size: .11rem; border: 1px solid var(--line-2); padding: 0 .04rem; color: var(--text-lo); background: rgba(0, 0, 0, .3); }
+/* local asset cache (ui/assetMode.js): the first-visit chooser + the 设置 row */
+.set-asset { display: flex; flex-direction: column; gap: .12rem; }
+.set-row--actions { display: flex; justify-content: flex-end; gap: .12rem; grid-template-columns: none; }
+.asset-opts { display: flex; flex-direction: column; gap: .12rem; margin-top: .08rem; }
+.asset-opt { display: flex; flex-direction: column; gap: .04rem; text-align: left; padding: .16rem .18rem; border: 1px solid var(--line-2); background: #0a0d0c; color: var(--text-lo); cursor: pointer; }
+.asset-opt.is-on { border-color: var(--mint-500); }
+.asset-opt__title { font-size: .2rem; color: var(--text-hi); }
+.asset-opt.is-on .asset-opt__title { color: var(--mint-400); }
+.asset-opt__desc { font-size: .14rem; color: var(--text-dim); line-height: 1.6; }
 /* 快捷键 (ui/settings.js HotkeySection): each shortcut with its key — click the key, press the new one; two columns,
    one under 768 px (phones in landscape) */
 .set-keys { display: flex; flex-direction: column; gap: .08rem; padding-top: .1rem; border-top: 1px solid var(--line); }

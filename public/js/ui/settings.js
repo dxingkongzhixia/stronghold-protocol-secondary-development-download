@@ -20,6 +20,7 @@ import { audio } from '../audio.js';
 import { openBugReport } from './community.js';
 import { detectFeatures } from './device.js';
 import { LangToggle, machineTranslationNote } from './lang.js';
+import { AssetCacheSection } from './assetMode.js';
 import { t, tc, N_ } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
@@ -238,6 +239,7 @@ export function SettingsModal({ open, onClose }) {
         </div>
       </div>
       <${HotkeySection} keys=${s.keys} touchUi=${touchUi} />
+      <${AssetCacheSection} />
       <div class="set-row">
         <span class="set-row__label">${t('硬件加速')}<${MicroLabel}>GPU ACCELERATION<//></span>
         <span class="set-row__val" style=${`color:${gpu.hardware ? '#4ed8af' : '#ff7a5c'}`}>${gpu.hardware ? t('已开启') : t('未开启')}</span>

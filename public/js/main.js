@@ -56,6 +56,7 @@ import { BugReportHost } from './ui/community.js';
 import { installDeviceSupport } from './ui/device.js';
 import { LoadoutHost } from './screens/loadout.js';
 import { StatsHost } from './screens/stats.js';
+import { AssetModePrompt } from './ui/assetMode.js';
 import { recordResult, installStatsRecorder, setStatsUploader } from './ui/stats.js';
 import { installStatsSync } from './ui/statsSync.js';
 import { installLoadoutSync, installOwnershipSync, installDiySync } from './ui/loadoutSync.js';
@@ -379,6 +380,7 @@ function App() {
     <${BugReportHost} />
     <${LoadoutHost} />
     <${StatsHost} />
+    <${AssetModePrompt} />
   </div>`;
 }
 
