@@ -87,6 +87,8 @@ export async function registerAssetWorker() {
   if (!assetCacheSupported()) return null;
   try {
     await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    // Ask the browser to keep the cache under storage pressure (best-effort; a no-op where unsupported).
+    try { await navigator.storage?.persist?.(); } catch { /* ignore */ }
     return await navigator.serviceWorker.ready;
   } catch { return null; }
 }
