@@ -321,7 +321,10 @@ export class BoardScene {
     }
     this._buildDevices(board);
     this._buildGates(board);
-    this._buildEdges(board);
+    // The remake's cyan field-edge strips (glowMaterial, additive) saturate to pure white over a bright official scene,
+    // so each read as a white line along the field's edge (the owner's 白线); the official battlefield delimits its own
+    // field anyway. Procedural boards still get them.
+    if (!this.official) this._buildEdges(board);
     this._buildTerrain(board);
     if (!this.official) this._buildBackground();
     this._fitShadow(board);
@@ -678,7 +681,13 @@ export class BoardScene {
     // poison the whole light-space transform. Fall back to a fixed box centred on the origin.
     const finite = Number.isFinite(b.x0) && Number.isFinite(b.x1) && Number.isFinite(b.y0) && Number.isFinite(b.y1);
     const cx = finite ? (b.x0 + b.x1) / 2 : 0, cy = finite ? (b.y0 + b.y1) / 2 : 0;
-    const d = LIGHTING.key.dir;
+    // The shadow-casting light has to sit on the same side as the sun the materials shade with: an official scene
+    // lights itself with its own `light.dir` (sceneMaterial's uLightDir, e.g. (0.36, 0.45, 0.82) on the sand), while
+    // this rig's direction (LIGHTING.key.dir) is on the other side — every prop then cast its shadow straight behind
+    // itself, where the camera cannot see it, and the board read as if nothing cast anything (the owner's 「阴影要搞下」).
+    // The procedural board keeps the rig's direction.
+    const s = this.official && this.official.doc ? this.official.doc.light : null;
+    const d = s && Array.isArray(s.dir) && s.dir.length === 3 ? s.dir : LIGHTING.key.dir;
     const len = Math.hypot(d[0], d[1], d[2]) || 1;
     const dist = 30;
     k.position.set(cx + (d[0] / len) * dist, cy + (d[1] / len) * dist, (d[2] / len) * dist);

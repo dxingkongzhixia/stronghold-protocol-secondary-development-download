@@ -355,7 +355,7 @@ export function smogMaterial(THREE, tex, focus) {
  * flat albedo); `direct` / `indirect` — gains of the two terms, 1 = the scene's own values (the extractor already
  * applies the lightmap's range, so an indirect gain below 1 just darkens the official bake).
  */
-export const SCENE_LIGHT = Object.freeze({ range: 8.0, ambient: 0.12, direct: 1.0, indirect: 1.0 });
+export const SCENE_LIGHT = Object.freeze({ range: 8.0, ambient: 0.12, direct: 1.0, indirect: 1.0, sheen: 0 });
 
 const colorOf = (info, key, fallback = [1, 1, 1, 1]) => {
   const c = info && info.colors && Array.isArray(info.colors[key]) ? info.colors[key] : fallback;
@@ -411,6 +411,11 @@ export function sceneMaterial(THREE, o, focus) {
     uEmisMap: { value: emisMap }, uEmisColor: { value: new THREE.Vector3(lin(emis[0]), lin(emis[1]), lin(emis[2])) },
     uSaturate: { value: Number.isFinite(theme?.saturate) ? theme.saturate : 1 },
     ...focus,
+    // The procedural sheen is off for official scenes (SCENE_LIGHT.sheen): `addFocus` adds `sheen × smoothness²` to a
+    // material as the port's stand-in for the official's baked reflections, but an official scene's lightmap already
+    // carries its gloss — on top, every smooth pixel of its props picked up a bright, slightly cool highlight, which is
+    // the owner's 白线 along the crates' metal straps. The procedural board keeps the sheen.
+    uSheen: { value: new THREE.Vector3().setScalar(SCENE_LIGHT.sheen) },
   });
   const defines = {
     ...(o.map ? { SCENE_MAP: 1 } : {}), ...(o.lightMap ? { SCENE_LM: 1 } : {}),

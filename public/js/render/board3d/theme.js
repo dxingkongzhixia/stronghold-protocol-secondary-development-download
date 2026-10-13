@@ -28,7 +28,7 @@ export const SCENE_THEMES = Object.freeze({
   // perimeter platform, so the earlier ring + lane 高台 geometry was a wrong read. The apron adds the surrounding sand
   // grain (the scene's own sand albedo, official UV scale) blending out from the field edge. VISUAL only.
   sand: Object.freeze({
-    exposure: 2.7, ambient: 0.12, tint: Object.freeze([1.01, 1.0, 0.98]), saturate: 0.97, sun: 3.4,
+    exposure: 2.5, ambient: 0.20, tint: Object.freeze([1.0, 1.0, 0.99]), saturate: 0.78, sun: 3.4,
     apron: Object.freeze({ texture: 'TX_AutochessSand_sand_A', tint: Object.freeze([1.08, 1.06, 1.02]), uv: 0.23, width: 1.6, gap: 0.5, rings: 4, alpha: 0.34, z: 0.014 }),
   }),
   // act2autochess m01 (Syracuse metro / 叙拉古·城市): the official is bright sunny daylight — a high sun, crisp cast

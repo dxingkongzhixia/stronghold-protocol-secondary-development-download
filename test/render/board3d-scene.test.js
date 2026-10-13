@@ -470,7 +470,10 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     assert.equal(board.setScenePack(stage.id, fakeScenePack()), true);
     assert.ok(board.official, 'official scene on');
     assert.ok(!board.meshes.board && !board.meshes.glass && !board.meshes.decal && !board.meshes.pipe && !board.meshes.bg && !board.meshes.bgShadow);
-    assert.ok(board.meshes.crates && board.meshes.edges && board.meshes.mire, Object.keys(board.meshes).join());
+    // the official scene gets no cyan field-edge strips (their additive colour saturates to white over the bright
+    // official scenes - the owner's 白线); the procedural board still does
+    assert.ok(!board.meshes.edges, 'no field-edge strips on an official scene');
+    assert.ok(board.meshes.crates && board.meshes.mire, Object.keys(board.meshes).join());
     const meshes = sceneMeshes(board);
     assert.equal(meshes.length, 3, 'base + the left field: the two M quads share one mesh');
     assert.deepEqual(meshes.map((m) => m.geometry.getAttribute('position').count).sort((a, b) => a - b), [4, 4, 8]);
