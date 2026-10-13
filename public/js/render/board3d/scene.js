@@ -553,12 +553,6 @@ export class BoardScene {
     const T = this.THREE;
     const map = res.tex[spec.texture] || res.tex[this._apronFallbackTexture(pack)] || null;
     if (!map) return;
-    // the scene material record of the block's texture (its _Color / _ShadowStrength), so the block is shaded like
-    // the ground it copies; else any lit material.
-    const infos = pack?.doc?.materials || {};
-    let info = null;
-    for (const m of Object.values(infos)) if (m && m.map === spec.texture) { info = m; break; }
-    if (!info) for (const m of Object.values(infos)) if (m && m.kind !== 'water' && typeof m.map === 'string') { info = m; break; }
     const s = Number.isFinite(spec.uv) ? spec.uv : 0.23;
     const pos = [], uv = [], nrm = [], lm = [], idx = [];
     const push = (x, y, z, nx, ny, nz) => {
