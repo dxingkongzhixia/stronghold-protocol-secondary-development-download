@@ -202,17 +202,8 @@ export function collectViolations(m, { limit = 25 } = {}) {
   }
   for (const [base, n] of held) if (!m.pool.has(base) && n !== 0) fail(`non-pool chess ${base} holds ${n} copies`);
 
-  // Fixed operator gifts may overdraw equipment stock; ownership still counts and keeps shop availability at zero.
-  // Other item families retain their cap. The chess pool above also permits explicit overdraw (Mimic).
-  if (m.itemPool && gd.raw.items) {
-    for (const [id, rec] of Object.entries(gd.raw.items)) {
-      if (!rec || rec.isGolden) continue;
-      const cap = m.itemPool.cap(id);
-      if (!Number.isInteger(cap)) continue;
-      const h = m.itemPool.held(id);
-      if (h > cap && !gd.isUnlimitedGiftItem(id)) fail(`item ${id}: held ${h} > cap ${cap}`);
-    }
-  }
+  // Equipment stock is a shop-availability cap, not a hard ceiling: a grant (a 特质 / strategy / item <获得时>) may
+  // overdraw it (the fork's model, GitHub #488), so ownership is not checked against the pool cap here.
 
   // combat fields
   if (m.phase === PHASE.COMBAT) {

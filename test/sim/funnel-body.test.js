@@ -56,13 +56,13 @@ test('all normal/elite funnel casters and eight Goldenglow forms: a body hit plu
 test('Lolo ATK 283: each component passes through RES, hit-count HP and a one-hit barrier separately', () => {
   for (const mode of ['plain', 'res', 'times', 'barrier']) {
     const { h, u, e } = field({ chessId: 'chess_char_2_10_a' }, { res: mode === 'res' ? 50 : 0, hp: mode === 'times' ? 100 : 1e8 });
-    // Our fork keeps the 洛洛 record at 259 (upstream's 0.2.5 data moved it to 283); the derived numbers follow.
-    near(u.s.atk, 259, 'unbuffed Lolo');
+    // Lolo at full potential: ATK 283 (潜能 steps applied); the derived numbers follow.
+    near(u.s.atk, 283, 'unbuffed Lolo');
     if (mode === 'times') hitCount(h.b, e, true);
     if (mode === 'barrier') h.b.addBuff(e, { key: 'test:barrier', shieldHits: 1 });
     h.run(0.7);
     const loss = (mode === 'times' ? 100 : 1e8) - e.hp;
-    near(loss, { plain: 310.8, res: 155.4, times: 2, barrier: 51.8 }[mode], mode);
+    near(loss, { plain: 339.6, res: 169.8, times: 2, barrier: 56.6 }[mode], mode);
     assert.equal(h.hooksOf('attack').filter((c) => c.attacker === u).length, 1, 'one attack action');
     done(h);
   }
@@ -281,7 +281,7 @@ test('lethal body or addition: one death and no remaining instances redirected t
     const hits = mine(h, u);
     assert.equal(hits.length, hp === 200 ? 1 : 2);
     assert.ok(hits.every((c) => c.target === e));
-    near(hits.reduce((sum, c) => sum + c.amount, 0), hp === 200 ? 259 : 310.8, 'mitigated amounts before HP clamping');
+    near(hits.reduce((sum, c) => sum + c.amount, 0), hp === 200 ? 283 : 339.6, 'mitigated amounts before HP clamping');
     near(u.stats.dmg, hp, 'damage statistics count only HP actually removed');
     near(other.hp, hp, 'no transfer to a spare target');
     assert.equal(h.hooksOf('death').filter((c) => c.unit === e).length, 1);
