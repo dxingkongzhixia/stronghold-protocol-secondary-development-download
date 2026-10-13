@@ -16,7 +16,7 @@ import { serveFile } from './files.js';
  * `MEDIA_PREFIX` / `AUDIO_EXTS` live in `shared/media.js`: the browser decides which URLs to rewrite with the
  * same two values, and they must not drift apart.
  */
-export async function serveMedia(req, res, rest, query, publicDir, gzipCache, log) {
+export async function serveMedia(req, res, rest, query, publicDir, gzipCache, log, limiter = null) {
   const root = path.join(path.resolve(publicDir), 'assets', 'audio');
   const segments = String(rest || '').split('/').filter((s) => s.length > 0);
   if (!segments.length || rest.endsWith('/')) { sendError(req, res, 404, '页面不存在 · Not found'); return; }
@@ -46,7 +46,7 @@ export async function serveMedia(req, res, rest, query, publicDir, gzipCache, lo
     // serveFile decides Content-Type from the resolved name (`.mp3` → audio/mpeg) — Range/ETag handling is shared.
     // Cache policy is that of the public path the client would otherwise have asked for (`/assets/audio/…`, 1 day).
     // eslint-disable-next-line no-await-in-loop
-    await serveFile(req, res, absPath, stat, 'public', ['assets', 'audio', ...segments], query, gzipCache, log);
+    await serveFile(req, res, absPath, stat, 'public', ['assets', 'audio', ...segments], query, gzipCache, log, limiter);
     return;
   }
   sendError(req, res, 404, '页面不存在 · Not found');

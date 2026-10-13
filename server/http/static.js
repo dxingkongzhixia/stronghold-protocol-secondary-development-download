@@ -29,7 +29,7 @@ import zlib from 'node:zlib';
 import { MEDIA_PREFIX } from '../../shared/media.js';
 import { ROOT, noopLog } from './config.js';
 import { sendError, sendJson } from './common.js';
-import { MIME, GzipCache, isNotModified, serveFile } from './files.js';
+import { MIME, GzipCache, isNotModified, serveFile, RateLimiter, assetRateBytesPerSec } from './files.js';
 import { serveMedia } from './media.js';
 import { createPackRegistry } from '../packs.js';
 import { createAssetIndex } from '../assetindex.js';
@@ -80,6 +80,8 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
   const gzipCache = new GzipCache();
   const dataDirAbs = path.resolve(dataDir);
   const assetIndex = createAssetIndex({ dataDir: dataDirAbs, publicDir: path.resolve(publicDir), log });
+  // Bulk asset downloads are paced server-side (a last-resort fallback after the CDN mirrors): SP_ASSET_RATE_KBPS.
+  const assetLimiter = new RateLimiter(assetRateBytesPerSec());
   let localMerge = null; // cached { key, plain, gz, etag, mtime } of the merged manifest (rebuilt when either file changes)
 
   /**
@@ -177,7 +179,7 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     }
     // Extension-less audio (download-manager avoidance): /media/bgm/act1 → /assets/audio/bgm/act1.mp3
     if (decoded.startsWith(MEDIA_PREFIX)) {
-      await serveMedia(req, res, decoded.slice(MEDIA_PREFIX.length), query, publicDir, gzipCache, log);
+      await serveMedia(req, res, decoded.slice(MEDIA_PREFIX.length), query, publicDir, gzipCache, log, assetLimiter);
       return;
     }
     // Bare mount paths (e.g. "/data") → treat as the mount directory.
@@ -232,6 +234,6 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
       }
       return;
     }
-    await serveFile(req, res, absPath, stat, mount.name, segments, query, gzipCache, log);
+    await serveFile(req, res, absPath, stat, mount.name, segments, query, gzipCache, log, assetLimiter);
   };
 }

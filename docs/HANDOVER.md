@@ -187,6 +187,7 @@ node server/index.js        # http://localhost:3000   (npm start; npm run dev = 
 | Read-only public API | `GET /online/api` |
 | Combat mode | `SP_COMBAT=client` (default: the browser simulates) or `server` (older: the server streams snapshots) |
 | Verification | `SP_VERIFY=off\|sample\|all` — whether the server re-simulates client results |
+| Asset cache pacing | `SP_ASSET_RATE_KBPS` (default `1200` ≈ 1.2 MB/s; `0` off) throttles server-side `/assets\|fonts\|vendor` bodies; `SP_ASSET_REF` pins the CDN-mirror git ref (`''` disables the mirrors) |
 | Windows helper | `server-start.cmd` (sets `SP_VERIFY=sample`), `server-stop.cmd` |
 
 **State is in memory**: rooms and matches vanish when the server restarts. The fork additionally

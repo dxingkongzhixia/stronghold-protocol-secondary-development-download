@@ -95,6 +95,8 @@
 | `LOBBY_DEFAULTS.bootSlots` / `bootHoldMs` | `1` / `180000` | `server/lobby.js` |
 | `SP_VERIFY` | `sample`（**仅 Windows 启动脚本**） | `server-start.cmd` |
 | 静态缓存 | `/assets\|fonts\|vendor` 7 天；带 `?v=` 1 年 immutable | `server/index.js` |
+| `SP_ASSET_RATE_KBPS` | `1200`（服务器兜底素材下载限速 ≈1.2 MB/s；0 关闭） | `server/http/files.js` |
+| `SP_ASSET_REF` | `master`（CDN 镜像钉的 git ref；空串关闭镜像） | `server/assetindex.js` |
 
 ## 7. 常用命令
 

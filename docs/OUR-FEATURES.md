@@ -605,6 +605,9 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
   each) and the game server LAST, accepting a mirror only when its bytes match `index.files[url]`. **Gitee / GitLab
   raw are deliberately NOT used** — they send no `Access-Control-Allow-Origin`, so a browser `fetch` is blocked (and
   Gitee Releases 403s hotlinks); tested 2026-10-13.
+- **Server fallback is paced**: a server fetch is the last resort and is throttled so a bulk pre-cache never starves
+  live matches — a process-wide token bucket on `public/assets|fonts|vendor` bodies (`server/http/files.js`
+  `RateLimiter`), default **1.2 MB/s**, `SP_ASSET_RATE_KBPS` overrides (0 disables). Non-art paths are never paced.
 - **UX**: `public/js/ui/assetMode.js` — the first-visit chooser (**default 缓存到本地**) and the 设置 row (mode /
   usage / 立即缓存 / 清除缓存 / 优先使用本机资源). `main.js preloadArt` syncs the missing / changed files, skipping the
   boot gate for a local hit.

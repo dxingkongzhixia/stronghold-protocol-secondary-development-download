@@ -10,6 +10,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { promisify } from 'node:util';
+import { Transform, Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 /** Extension → Content-Type. */
@@ -67,6 +68,62 @@ const GZIP_CACHE_MAX_TOTAL = 96 << 20;
 const LONG_CACHE = 'public, max-age=604800';         // 7 days (art/fonts/vendor rarely change; the boot preloads ~104 MB)
 const IMMUTABLE_CACHE = 'public, max-age=31536000, immutable';
 const LONG_CACHE_DIRS = ['assets', 'fonts', 'vendor']; // first path segment under public/
+
+/**
+ * Total asset-download throughput the server serves, in bytes/sec. The client tries the CDN mirrors first
+ * (server/assetindex.js `sources`); a server fetch is the last resort, and the owner wants it throttled so a bulk
+ * pre-cache never starves live matches (the box's uplink is ~2.3 MB/s). `SP_ASSET_RATE_KBPS` overrides (KB/s;
+ * default 1200 ≈ 1.2 MB/s; 0 disables the limit). Applied to public/assets|fonts|vendor response bodies only.
+ * @param {Record<string, string|undefined>} [env]
+ */
+export function assetRateBytesPerSec(env = process.env) {
+  const raw = env && env.SP_ASSET_RATE_KBPS;
+  const kb = raw == null || raw === '' ? 1200 : Number(raw);
+  return Number.isFinite(kb) && kb > 0 ? Math.round(kb * 1024) : 0;
+}
+
+/** A process-wide token bucket in bytes: `take(n)` resolves once `n` bytes of budget are free (rate<=0 ⇒ free). */
+export class RateLimiter {
+  /** @param {number} ratePerSec bytes/sec @param {number} [burst] the most that can be granted at once */
+  constructor(ratePerSec, burst = 0) {
+    this.rate = ratePerSec > 0 ? ratePerSec : 0;
+    this.capacity = Math.max(this.rate, burst || this.rate || 0);
+    this.tokens = this.capacity;
+    this.last = Date.now();
+    /** @type {{want:number, resolve:()=>void}[]} */ this.waiters = [];
+    this.timer = null;
+  }
+  /** @param {number} n @returns {Promise<void>} */
+  take(n) {
+    if (!this.rate) return Promise.resolve();
+    const want = Math.min(Math.max(0, n | 0), this.capacity);
+    return new Promise((resolve) => { this.waiters.push({ want, resolve }); this._pump(); });
+  }
+  _pump() {
+    const now = Date.now();
+    this.tokens = Math.min(this.capacity, this.tokens + ((now - this.last) / 1000) * this.rate);
+    this.last = now;
+    while (this.waiters.length && this.tokens >= this.waiters[0].want) {
+      const w = this.waiters.shift();
+      this.tokens -= w.want;
+      w.resolve();
+    }
+    if (this.waiters.length && !this.timer) {
+      const wait = Math.max(4, Math.ceil(((this.waiters[0].want - this.tokens) / this.rate) * 1000));
+      this.timer = setTimeout(() => { this.timer = null; this._pump(); }, wait);
+    }
+  }
+}
+
+/** A Transform that pauses every chunk through a RateLimiter — the pacing stage of an asset response body. */
+export class Throttle extends Transform {
+  /** @param {RateLimiter} limiter */
+  constructor(limiter) { super(); this.limiter = limiter; }
+  _transform(chunk, _enc, cb) { this.limiter.take(chunk.length).then(() => { this.push(chunk); cb(); }, cb); }
+}
+
+/** Split a buffer into ≤`size` chunks so a cached body still passes the limiter smoothly. */
+function* chunksOf(buf, size = 64 * 1024) { for (let i = 0; i < buf.length; i += size) yield buf.subarray(i, i + size); }
 
 const gzipAsync = promisify(zlib.gzip);
 
@@ -190,8 +247,10 @@ function cacheControlFor(ext, mountName, segments, query) {
   return 'no-cache';
 }
 
-export async function serveFile(req, res, absPath, stat, mountName, segments, query, gzipCache, log) {
+export async function serveFile(req, res, absPath, stat, mountName, segments, query, gzipCache, log, limiter = null) {
   const ext = path.extname(absPath).toLowerCase();
+  // Pace only the bulk art (public/assets|fonts|vendor); code, data, packs and HTML are never throttled.
+  const pace = !!(limiter && limiter.rate && mountName === 'public' && segments.length > 0 && LONG_CACHE_DIRS.includes(segments[0]));
   const type = MIME[ext] || 'application/octet-stream';
   const compressible = COMPRESSIBLE.has(ext);
   const rangeHeader = req.headers.range;
@@ -224,12 +283,14 @@ export async function serveFile(req, res, absPath, stat, mountName, segments, qu
       const gz = await gzipCache.get(absPath, stat);
       headers['Content-Length'] = gz.length;
       res.writeHead(200, headers);
-      res.end(isHead ? undefined : gz);
+      if (isHead) { res.end(); return; }
+      if (pace) { await streamTo(Readable.from(chunksOf(gz)), res, log, new Throttle(limiter)); return; }
+      res.end(gz);
       return;
     }
     res.writeHead(200, headers);
     if (isHead) { res.end(); return; }
-    await streamTo(fs.createReadStream(absPath), res, log, zlib.createGzip());
+    await streamTo(fs.createReadStream(absPath), res, log, zlib.createGzip(), pace ? new Throttle(limiter) : null);
     return;
   }
 
@@ -253,13 +314,13 @@ export async function serveFile(req, res, absPath, stat, mountName, segments, qu
   headers['Content-Length'] = stat.size === 0 ? 0 : end - start + 1;
   res.writeHead(status, headers);
   if (isHead || stat.size === 0) { res.end(); return; }
-  await streamTo(fs.createReadStream(absPath, { start, end }), res, log);
+  await streamTo(fs.createReadStream(absPath, { start, end }), res, log, pace ? new Throttle(limiter) : null);
 }
 
-async function streamTo(src, res, log, transform) {
+async function streamTo(src, res, log, ...transforms) {
+  const stages = transforms.filter(Boolean);
   try {
-    if (transform) await pipeline(src, transform, res);
-    else await pipeline(src, res);
+    await pipeline(src, ...stages, res);
   } catch (e) {
     if (e && e.code !== 'ERR_STREAM_PREMATURE_CLOSE') log.debug?.('[http] stream aborted', e.code || e.message);
     res.destroy();
