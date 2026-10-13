@@ -923,8 +923,8 @@
 .field--lg .field__box { height: .68rem; }
 .field--lg .field__input { font-size: calc(.26 * var(--t)); font-weight: 700; }
 .field--code .field__box { height: .64rem; }
-.field--code .field__input { font-family: var(--font-num); font-size: .34rem; font-weight: 700; letter-spacing: .42em; text-transform: uppercase; }
-.field--code .field__input::placeholder { font-family: var(--font-cjk); font-size: .18rem; letter-spacing: .06em; font-weight: 400; text-transform: none; }
+.field--code .field__input { font-family: var(--font-num); font-size: calc(.34 * var(--t)); font-weight: 700; letter-spacing: .42em; text-transform: uppercase; }
+.field--code .field__input::placeholder { font-family: var(--font-cjk); font-size: calc(.18 * var(--t)); letter-spacing: .06em; font-weight: 400; text-transform: none; }
 .field.is-invalid .field__box { border-color: var(--red); --bk-c: var(--red-premium); }
 .field.is-disabled { opacity: .5; }
 
@@ -1082,15 +1082,15 @@
 .me-chip__stats { flex: none; width: .2rem; height: .2rem; margin-left: .04rem; color: var(--mint-500); opacity: .7; }
 .me-chip--btn:hover .me-chip__stats { opacity: 1; }
 /* guest tag (docs/MATCHMAKING.md): shown when no account is bound */
-.me-chip__guest { display: inline-block; margin-left: .07rem; padding: 0 .07rem; font-size: .12rem; font-style: normal; font-weight: 500;
+.me-chip__guest { display: inline-block; margin-left: .07rem; padding: 0 .07rem; font-size: calc(.12 * var(--t)); font-style: normal; font-weight: 500;
   vertical-align: middle; color: #ffd089; border: 1px solid rgba(255, 208, 137, .5); border-radius: 2px; }
 /* account role (shared/constants.js ROLES): a one-character badge 管 / 开 next to a player name on every screen
    (the full 管理员 / 开发者 is the tooltip). Compact so it never crowds the name. */
 .role-tag { display: inline-block; box-sizing: border-box; margin-left: .05rem; padding: 0 .04rem; min-width: .18rem;
-  text-align: center; font-size: .12rem; font-style: normal; font-weight: 700; vertical-align: middle; line-height: 1.42;
+  text-align: center; font-size: calc(.12 * var(--t)); font-style: normal; font-weight: 700; vertical-align: middle; line-height: 1.42;
   color: #0b1520; background: var(--gold, #ffc600); border-radius: 3px; }
-.role-tag--md { font-size: .13rem; min-width: .2rem; }
-.role-tag--lg { font-size: .16rem; min-width: .24rem; padding: 0 .06rem; }
+.role-tag--md { font-size: calc(.13 * var(--t)); min-width: .2rem; }
+.role-tag--lg { font-size: calc(.16 * var(--t)); min-width: .24rem; padding: 0 .06rem; }
 .role-tag--dev { color: #06121c; background: #a9c3d8; }
 
 /* operator notice (ui/notice.js, docs/MATCHMAKING.md §28): the deploy / restart broadcast strip, top centre — above
@@ -1104,28 +1104,28 @@
 @keyframes notice-in { from { opacity: 0; transform: translate(-50%, -.12rem); } to { opacity: 1; transform: translate(-50%, 0); } }
 .notice-banner__icon { width: .18rem; height: .18rem; color: var(--mint-400); flex: none; margin-top: .02rem; }
 .notice-banner__text { display: flex; flex-direction: column; gap: .02rem; min-width: 0; }
-.notice-banner__msg { font-size: .15rem; line-height: 1.45; color: #e6f2ec; word-break: break-word; }
-.notice-banner__sign { font-size: .12rem; color: var(--mint-400); align-self: flex-end; }
+.notice-banner__msg { font-size: calc(.15 * var(--t)); line-height: 1.45; color: #e6f2ec; word-break: break-word; }
+.notice-banner__sign { font-size: calc(.12 * var(--t)); color: var(--mint-400); align-self: flex-end; }
 .notice-banner .btn { flex: none; }
 
 /* account form / dialog (docs/MATCHMAKING.md): shared by the title panel and the in-game modal */
 .account-form { display: flex; flex-direction: column; gap: .08rem; }
 .account-form__tabs { display: flex; gap: .06rem; justify-content: center; }
-.account-form__tabs button { background: none; border: 0; color: var(--text-lo); font: inherit; font-size: .15rem; padding: .02rem .12rem; cursor: pointer; opacity: .7; }
+.account-form__tabs button { background: none; border: 0; color: var(--text-lo); font: inherit; font-size: calc(.15 * var(--t)); padding: .02rem .12rem; cursor: pointer; opacity: .7; }
 .account-form__tabs button.is-on { color: var(--mint-400); opacity: 1; box-shadow: inset 0 -1px 0 var(--mint-400); }
-.account-form__err { text-align: center; font-size: .14rem; color: #ff7a5c; }
-.account-form__hint { text-align: center; font-size: .13rem; color: var(--text-lo); opacity: .75; }
-.account-who { display: flex; align-items: center; justify-content: center; gap: .12rem; font-size: .15rem; color: var(--text-lo); }
+.account-form__err { text-align: center; font-size: calc(.14 * var(--t)); color: #ff7a5c; }
+.account-form__hint { text-align: center; font-size: calc(.13 * var(--t)); color: var(--text-lo); opacity: .75; }
+.account-who { display: flex; align-items: center; justify-content: center; gap: .12rem; font-size: calc(.15 * var(--t)); color: var(--text-lo); }
 .account-who__line { display: inline-flex; align-items: center; gap: .05rem; }
 .account-who__line b { color: var(--mint-400); }
 .account-modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: rgba(4, 8, 7, .74); }
 .account-modal__card { width: min(4.6rem, 92vw); display: flex; flex-direction: column; gap: .12rem; padding: .2rem .22rem;
   background: #0f1714; border: 1px solid rgba(120, 220, 190, .35); box-shadow: 0 18px 60px rgba(0, 0, 0, .5); }
-.account-modal__head { display: flex; align-items: center; justify-content: space-between; font-size: .2rem; color: var(--mint-400); letter-spacing: .04em; }
-.account-modal__close { background: none; border: 0; color: var(--text-lo); font-size: .18rem; cursor: pointer; line-height: 1; }
+.account-modal__head { display: flex; align-items: center; justify-content: space-between; font-size: calc(.2 * var(--t)); color: var(--mint-400); letter-spacing: .04em; }
+.account-modal__close { background: none; border: 0; color: var(--text-lo); font-size: calc(.18 * var(--t)); cursor: pointer; line-height: 1; }
 .account-modal__close:hover { color: var(--mint-400); }
 .account-modal__body { display: flex; flex-direction: column; gap: .1rem; }
-.account-modal__note { font-size: .13rem; color: var(--text-lo); opacity: .8; text-align: center; }
+.account-modal__note { font-size: calc(.13 * var(--t)); color: var(--text-lo); opacity: .8; text-align: center; }
 .lobby-account { white-space: nowrap; }
 
 .crash { align-items: center; justify-content: center; }

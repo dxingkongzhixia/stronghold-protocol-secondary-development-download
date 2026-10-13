@@ -98,7 +98,7 @@ test('summons follow their owner\'s potential: Mon3tr\'s 不毁重构 and 望\'s
   assert.deepEqual([mon(null).stun, mon(null).value], [3.5, 1400]);
   // 望 (tier-6 slot, normal form E2 Lv1): her 棋子 hold 7 / deploy 6 below 潜能3, 8 / 7 from it (the kit's tokenStat)
   const wang = (potential) => {
-    const h = makeBattle({ units: [{ diy: { slot: 6, charId: 'char_2027_wang', skillIndex: 0 }, potential, row: 10, col: 5 }], timeLimit: 1 });
+    const h = makeBattle({ units: [{ chessId: 'chess_char_2027_wang_a', potential, row: 10, col: 5 }], timeLimit: 1 });
     const u = h.b.allyUnits.find((x) => x.kind === 'op');
     return [tokenStat(h.b, u, 'token_10064_wang_stone1', 'deployLimit'), tokenStat(h.b, u, 'token_10064_wang_stone1', 'deckStack')];
   };

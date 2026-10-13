@@ -84,7 +84,7 @@ export function summonTriggerArea(battle, owner, skillId, area) {
  */
 export function tokenStat(battle, owner, tokenId, key) {
   const raw = battle.data?.rawToken?.(tokenId) ?? null;
-  const v = atPotential(raw?.variants?.[owner?.def?.tokenOwner] ?? null, owner?.def?.loadout?.potential);
+  const v = atPotential(raw?.variants?.[owner?.def?.tokenOwner ?? owner?.defId] ?? null, owner?.def?.loadout?.potential);
   const mod = owner?.def?.loadout?.diy?.uniEquipId ?? owner?.def?.loadout?.moduleId ?? null;
   const st = (mod && v?.byModule?.[mod]?.stats) || v?.stats || raw?.stats || null;
   return st && Number.isFinite(st[key]) ? st[key] : (Number.isFinite(raw?.[key]) ? raw[key] : null);

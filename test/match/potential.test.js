@@ -10,6 +10,7 @@ import { ERR, PHASE } from '../../shared/constants.js';
 import { validateC2S, checkLoadoutOps, isLoadoutOps, cultivationCharIds, LOADOUT_LIMITS } from '../../shared/protocol.js';
 import { buildBattleSpec, createBattleFromSpec } from '../../server/sim/spec.js';
 import { DATA, makeMatch } from './harness.js';
+import { atPotential } from '../../shared/potential.js';
 
 const chess = (id) => (Object.hasOwn(DATA.chess, id) ? DATA.chess[id] : null);
 const VENDLA = 'chess_char_1_06_a';                 // 刺玫 (PRESET)
@@ -115,11 +116,12 @@ test('自选: an owned pick states its operator\'s settings, a prototype neither
   const s = units.find((u) => u.chessId === T5A);
   assert.deepEqual([k.diy.charId, k.potential, k.cultivate], [KALTS, 2, 1]);
   assert.deepEqual([s.diy.charId, 'potential' in s, 'cultivate' in s], [SHARP, false, false]);
-  // 望 (潜能 2): 6 棋子 to the hand, not 7
-  const lo = p0.loadoutFor(p0.gd.chess('chess_char_6_diy2_a'));
-  assert.equal(lo.potential, 2);
-  assert.deepEqual(p0.gd.placeableTokens('chess_char_6_diy2_a', lo), [{ tokenId: 'token_10064_wang_stone1', count: 6 }]);
-  assert.deepEqual(p0.gd.placeableTokens('chess_char_6_diy2_a', { ...lo, potential: 6 }), [{ tokenId: 'token_10064_wang_stone1', count: 7 }]);
+  // 望 (潜能 2): her 棋子 deploy limit / holding follow her potential (our 望 is a normal shop chess whose token is a trap)
+  const wangLo = p0.loadoutFor(p0.gd.chess('chess_char_2027_wang_a'));
+  assert.equal(wangLo.potential, 2);
+  const stone = p0.gd.token('token_10064_wang_stone1').variants['chess_char_2027_wang_a'];
+  assert.deepEqual([atPotential(stone, 2).stats.deployLimit, atPotential(stone, 2).stats.deckStack], [6, 7]);
+  assert.deepEqual([atPotential(stone, 6).stats.deployLimit, atPotential(stone, 6).stats.deckStack], [7, 8]);
   m.dispose();
 });
 

@@ -20,7 +20,7 @@
 .invite__label { grid-column: 1 / -1; display: flex; align-items: center; gap: .07rem; font-size: calc(.14 * var(--t)); color: var(--text-lo); }
 .invite__label .icon { width: .16rem; height: .16rem; color: var(--mint-500); }
 /* 公开同盟 badge: whether this 同盟 room is listed in the lobby directory (docs/MATCHMAKING.md) */
-.invite__vis { margin-left: auto; padding: .02rem .09rem; font-size: .12rem; letter-spacing: .06em; color: var(--text-lo); border: 1px solid var(--line-2); }
+.invite__vis { margin-left: auto; padding: .02rem .09rem; font-size: calc(.12 * var(--t)); letter-spacing: .06em; color: var(--text-lo); border: 1px solid var(--line-2); }
 .invite__vis.is-public { color: var(--mint-500); border-color: var(--mint-a35); }
 .invite__code { display: flex; gap: .06rem; }
 .invite__code span {
@@ -213,7 +213,7 @@
 
 /* ---- spectator seats (观战席 + 夺舍 AI, community report #26) ------------------------------------------------------ */
 /* A compact dropdown (not a strip): one small row that opens upward into an overlay, so it costs almost no space. */
-.specdock { flex: none; position: relative; align-self: flex-end; margin: 0 .4rem .08rem; font-size: .15rem; color: var(--text-lo); }
+.specdock { flex: none; position: relative; align-self: flex-end; margin: 0 .4rem .08rem; font-size: calc(.15 * var(--t)); color: var(--text-lo); }
 .specdock__sum {
   display: inline-flex; align-items: center; gap: .07rem; cursor: pointer; list-style: none; user-select: none;
   min-height: .38rem; padding: 0 .16rem; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .5);
@@ -233,7 +233,7 @@
 .specdock__who.is-me { color: var(--mint-400); }
 .specdock__who.is-offline { color: var(--text-dim); }
 .specdock__who > .icon { width: .16rem; height: .16rem; }
-.specdock__empty { font-size: .14rem; }
+.specdock__empty { font-size: calc(.14 * var(--t)); }
 .specdock__act { display: flex; flex-direction: column; gap: .07rem; padding-top: .07rem; border-top: 1px solid var(--line); }
 .specdock__ais { display: flex; flex-wrap: wrap; gap: .07rem; }
 
@@ -326,12 +326,12 @@
 .chat-dock__sum {
   display: inline-flex; align-items: center; gap: .07rem; cursor: pointer; list-style: none; user-select: none;
   min-height: .4rem; padding: 0 .14rem; background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2);
-  color: var(--text-md); font-size: .16rem; font-weight: 700; letter-spacing: .08em;
+  color: var(--text-md); font-size: calc(.16 * var(--t)); font-weight: 700; letter-spacing: .08em;
 }
 .chat-dock__sum::-webkit-details-marker { display: none; }
 .chat-dock__sum::marker { content: ''; }
 .chat-dock__sum::before { /* disclosure triangle, rotates open */
-  content: '▸'; font-size: .14rem; line-height: 1; color: var(--text-lo); transition: transform var(--t-fast);
+  content: '▸'; font-size: calc(.14 * var(--t)); line-height: 1; color: var(--text-lo); transition: transform var(--t-fast);
 }
 .chat-dock[open] .chat-dock__sum { color: var(--mint-400); border-color: var(--mint-700); }
 .chat-dock[open] .chat-dock__sum::before { transform: rotate(90deg); color: var(--mint-500); }
@@ -343,12 +343,12 @@
 
 .chat-send { display: flex; align-items: center; gap: .08rem; flex-wrap: wrap; overflow: visible; }
 .chat-send__input {
-  flex: 1; min-width: 0; height: .42rem; padding: 0 .12rem; font-size: .16rem;
+  flex: 1; min-width: 0; height: .42rem; padding: 0 .12rem; font-size: calc(.16 * var(--t));
   background: rgba(0, 0, 0, .5); border: 1px solid var(--line-2); color: var(--text-hi);
 }
 .chat-send__input::placeholder { color: var(--text-dim); }
 .chat-send__input:disabled { opacity: .55; }
-.chat-send__hint { flex-basis: 100%; font-size: .13rem; }
+.chat-send__hint { flex-basis: 100%; font-size: calc(.13 * var(--t)); }
 
 /* speech bubble: fades in, holds, fades out — FADE ONLY, no transform / slide / pop / scale. The CSS runs exactly for
    --chat-ttl (a remount resumes at --chat-age). Auto-sizes and WRAPS, and NEVER scrolls: a very long message is
@@ -362,7 +362,7 @@
   background: rgba(22, 28, 26, .97);
   border: 1px solid var(--line-2);
   color: var(--text-hi);
-  font-size: .15rem;
+  font-size: calc(.15 * var(--t));
   font-weight: 700;
   line-height: 1.3;
   white-space: pre-wrap;
@@ -386,7 +386,7 @@
   border-top-color: rgba(22, 28, 26, .97);
   border-bottom: 0;
 }
-.cbubble__name { display: block; font-size: .12rem; color: var(--text-lo); font-weight: 700; }
+.cbubble__name { display: block; font-size: calc(.12 * var(--t)); color: var(--text-lo); font-weight: 700; }
 .cbubble.is-own { border-color: var(--mint-700); }
 .cbubble.is-own .cbubble__text { color: var(--mint-400); }
 /* opacity only: the bubble simply appears at its final anchored position and disappears after the TTL */

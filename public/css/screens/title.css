@@ -104,7 +104,7 @@
   padding: .02rem .08rem;
   border: 1px solid rgba(246, 163, 41, .35);
   font-family: var(--font-display);
-  font-size: .1rem;
+  font-size: calc(.1 * var(--t));
   letter-spacing: .2em;
   color: rgba(246, 163, 41, .7);
   white-space: nowrap;
@@ -172,9 +172,9 @@
   line-height: 1;
   animation: rise-in 600ms 80ms var(--ease-out) backwards;
 }
-.title-en__a { font-size: .34rem; font-weight: 500; letter-spacing: .3em; padding-left: .3em; color: #cdd6d1; }
+.title-en__a { font-size: calc(.34 * var(--t)); font-weight: 500; letter-spacing: .3em; padding-left: .3em; color: #cdd6d1; }
 .title-en__b {
-  font-size: .38rem;
+  font-size: calc(.38 * var(--t));
   font-weight: 700;
   letter-spacing: .34em;
   padding-left: .34em;
@@ -193,7 +193,7 @@
 }
 .title-cn__colon { color: #f4f6f5; }
 /* a title in an alphabetic script (English …; screens/title.js): the display face, smaller so "Stronghold Protocol: Alliance" fits one line */
-.title-cn--latin { font-family: var(--font-display); font-size: .6rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.title-cn--latin { font-family: var(--font-display); font-size: calc(.6 * var(--t)); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
 .title-cn em { font-style: normal; color: var(--mint-500); text-shadow: 0 0 .26rem rgba(23, 249, 183, .45); }
 .title-tag {
   margin-top: .12rem;
@@ -256,26 +256,26 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
 .title-conn .title-gpu { max-width: 3.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .85; }
 
 /* guest hint under the primary button when no callsign is typed (docs/MATCHMAKING.md) */
-.title-guest-hint { text-align: center; font-size: .13rem; color: var(--text-lo); opacity: .8; letter-spacing: .02em; }
+.title-guest-hint { text-align: center; font-size: calc(.13 * var(--t)); color: var(--text-lo); opacity: .8; letter-spacing: .02em; }
 
 /* account box (docs/MATCHMAKING.md): 博士代号 IS the account name; this only adds a password + 登录/注册 */
 .title-account { display: flex; flex-direction: column; gap: .06rem; margin-top: .06rem; width: 100%; }
-.title-account.is-on { flex-direction: row; align-items: center; justify-content: center; gap: .12rem; font-size: .15rem; color: var(--text-lo); }
+.title-account.is-on { flex-direction: row; align-items: center; justify-content: center; gap: .12rem; font-size: calc(.15 * var(--t)); color: var(--text-lo); }
 .title-account__who { display: inline-flex; align-items: center; gap: .05rem; }
 .title-account__who b { color: var(--mint-400); }
 .title-account__toggle { display: inline-flex; align-items: center; justify-content: center; gap: .06rem; width: 100%; padding: .06rem .1rem;
-  background: none; border: 0; border-top: 1px solid rgba(120, 220, 190, .18); color: var(--text-lo); font: inherit; font-size: .15rem; cursor: pointer; }
+  background: none; border: 0; border-top: 1px solid rgba(120, 220, 190, .18); color: var(--text-lo); font: inherit; font-size: calc(.15 * var(--t)); cursor: pointer; }
 .title-account__toggle:hover { color: var(--mint-400); }
-.title-account__caret { font-size: .13rem; opacity: .6; }
+.title-account__caret { font-size: calc(.13 * var(--t)); opacity: .6; }
 .title-account__panel { display: flex; flex-direction: column; gap: .08rem; padding: .1rem .12rem;
   border: 1px solid rgba(120, 220, 190, .22); background: rgba(8, 16, 14, .66); }
 .title-account__tabs { display: flex; gap: .06rem; justify-content: center; }
-.title-account__tabs button { background: none; border: 0; color: var(--text-lo); font: inherit; font-size: .15rem; padding: .02rem .12rem; cursor: pointer; opacity: .7; }
+.title-account__tabs button { background: none; border: 0; color: var(--text-lo); font: inherit; font-size: calc(.15 * var(--t)); padding: .02rem .12rem; cursor: pointer; opacity: .7; }
 .title-account__tabs button.is-on { color: var(--mint-400); opacity: 1; box-shadow: inset 0 -1px 0 var(--mint-400); }
 .title-account__fields { display: flex; gap: .06rem; align-items: stretch; }
 .title-account__fields .field { flex: 1 1 auto; min-width: 0; }
-.title-account__err { text-align: center; font-size: .14rem; color: #ff7a5c; }
-.title-account__hint { text-align: center; font-size: .13rem; color: var(--text-lo); opacity: .75; }
+.title-account__err { text-align: center; font-size: calc(.14 * var(--t)); color: #ff7a5c; }
+.title-account__hint { text-align: center; font-size: calc(.13 * var(--t)); color: var(--text-lo); opacity: .75; }
 
 .title-foot {
   position: absolute;
@@ -288,7 +288,7 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
   align-items: flex-end;
   flex-wrap: wrap;
   gap: .12rem .2rem;
-  font-size: .13rem;
+  font-size: calc(.13 * var(--t));
   color: var(--text-dim);
 }
 
@@ -323,15 +323,15 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
   border: 1px solid rgba(120, 220, 190, .28);
   color: var(--text-md);
   font: inherit;
-  font-size: .14rem;
+  font-size: calc(.14 * var(--t));
   cursor: pointer;
   transition: border-color .15s var(--ease-out), color .15s var(--ease-out), background .15s var(--ease-out);
 }
 .title-group:hover { border-color: var(--mint-400); color: var(--mint-400); background: rgba(16, 40, 34, .8); }
 .title-group .icon { width: .18rem; height: .18rem; color: var(--mint-400); flex: none; }
-.title-group b { color: var(--mint-400); font-size: .15rem; letter-spacing: .05em; }
+.title-group b { color: var(--mint-400); font-size: calc(.15 * var(--t)); letter-spacing: .05em; }
 .title-group span { color: var(--text-lo); }
-.title-group-note { font-size: .12rem; color: var(--text-dim); }
+.title-group-note { font-size: calc(.12 * var(--t)); color: var(--text-dim); }
 .title-group-card {
   position: absolute;
   left: 0;
@@ -346,12 +346,12 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
   align-items: center;
   gap: .08rem;
 }
-.title-group-card__title { margin: 0; font-size: .28rem; color: var(--text-hi); letter-spacing: .06em; }
+.title-group-card__title { margin: 0; font-size: calc(.28 * var(--t)); color: var(--text-hi); letter-spacing: .06em; }
 .title-group-qr { width: 2.48rem; height: 2.48rem; background: #e8f8f2; }
-.title-group-card__num { background: none; border: 0; color: var(--text-md); font: inherit; font-size: .17rem; cursor: pointer; }
+.title-group-card__num { background: none; border: 0; color: var(--text-md); font: inherit; font-size: calc(.17 * var(--t)); cursor: pointer; }
 .title-group-card__num:hover { color: var(--mint-400); }
 .title-group-card__num b { color: var(--mint-400); }
-.title-group-card__hint { margin: 0; font-size: .13rem; color: var(--text-lo); }
+.title-group-card__hint { margin: 0; font-size: calc(.13 * var(--t)); color: var(--text-lo); }
 .title-foot__meta { display: flex; align-items: flex-end; gap: .16rem; flex-wrap: wrap; justify-content: flex-end; }
 .title-repo { color: inherit; text-decoration: none; border-bottom: 1px solid transparent; }
 .title-repo:hover, .title-repo:focus-visible { color: var(--text-hi); border-bottom-color: currentColor; }
@@ -384,7 +384,7 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
   box-shadow: 0 .06rem .22rem rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(78, 216, 175, .12);
   animation: notice-in 180ms var(--ease-out);
 }
-.title-announce__label { flex: none; font-weight: 700; font-size: .14rem; letter-spacing: .08em; color: var(--mint-400); }
+.title-announce__label { flex: none; font-weight: 700; font-size: calc(.14 * var(--t)); letter-spacing: .08em; color: var(--mint-400); }
 .title-announce__text {
   flex: 1 1 auto;
   min-width: 0;
@@ -393,7 +393,7 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
   background: none;
   color: #e6f2ec;
   font: inherit;
-  font-size: .15rem;
+  font-size: calc(.15 * var(--t));
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
@@ -407,19 +407,19 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
 .title-about-wrap { display: flex; justify-content: center; gap: .1rem; margin-top: .12rem; }
 .title-about-button { flex: none; }
 /* the deployment's platform note under the 公告 / 关于 entries (desktop web only) */
-.title-platform-hint { max-width: 5.4rem; margin: .1rem auto 0; font-size: .12rem; line-height: 1.5; color: var(--text-dim); text-align: center; }
+.title-platform-hint { max-width: 5.4rem; margin: .1rem auto 0; font-size: calc(.12 * var(--t)); line-height: 1.5; color: var(--text-dim); text-align: center; }
 
 /* 关于本服务器 dialog (ui/about.js) */
 .title-about__rows { display: flex; flex-direction: column; gap: .1rem; margin: 0 0 .16rem; }
 .title-about__rows > div { display: flex; gap: .14rem; align-items: baseline; }
-.title-about__rows dt { flex: none; width: 1.4rem; font-size: .14rem; color: var(--text-lo); }
-.title-about__rows dd { margin: 0; font-size: .15rem; color: var(--text-hi); }
-.title-about__project { margin: 0 0 .1rem; font-size: .14rem; line-height: 1.7; color: var(--text-md); }
+.title-about__rows dt { flex: none; width: 1.4rem; font-size: calc(.14 * var(--t)); color: var(--text-lo); }
+.title-about__rows dd { margin: 0; font-size: calc(.15 * var(--t)); color: var(--text-hi); }
+.title-about__project { margin: 0 0 .1rem; font-size: calc(.14 * var(--t)); line-height: 1.7; color: var(--text-md); }
 .title-about__project a { color: var(--mint-400); overflow-wrap: anywhere; }
-.title-about__disclaimer { margin: 0 0 .06rem; font-size: .13rem; line-height: 1.7; color: var(--text-lo); }
+.title-about__disclaimer { margin: 0 0 .06rem; font-size: calc(.13 * var(--t)); line-height: 1.7; color: var(--text-lo); }
 /* the deployment's platform note: desktop web only (a quiet warning, not a wall of text) */
 .title-about__platform { padding: .05rem .1rem; border-left: 2px solid var(--amber); color: #ffd08a; background: rgba(246, 163, 41, .06); }
 
 /* ---- 添加到桌面 (ui/install.js): the top row of the bottom-left rail (.title-rail) ------------------ */
 .title-install { display: flex; flex-direction: column; align-items: flex-start; gap: .06rem; }
-.title-install__hint { max-width: 3rem; font-size: .12rem; line-height: 1.5; color: var(--text-dim); }
+.title-install__hint { max-width: 3rem; font-size: calc(.12 * var(--t)); line-height: 1.5; color: var(--text-dim); }
