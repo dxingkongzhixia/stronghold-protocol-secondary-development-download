@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from '../../vendor/hooks.module.js';
 import { html, Modal, Button, MicroLabel } from './components.js';
-import { t } from '../../../shared/i18n.js';
+import { t, tc } from '../../../shared/i18n.js';
 import { toast } from './toasts.js';
 import { data } from '../data.js';
 import { collectArtUrls } from '../preload.js';
@@ -14,6 +14,7 @@ import {
   getAssetMode, setAssetMode, assetCacheSupported, assetCacheInfo,
   assetCacheUsage, clearAssetCache, fetchAssetIndex, ensureAssets,
 } from '../assetCache.js';
+import { localSourceEnabled, setLocalSourceEnabled, probeLocalBase } from '../assetSource.js';
 
 /** Human bytes for the settings row (GB / MB / KB). */
 export function formatBytes(n) {
@@ -22,6 +23,15 @@ export function formatBytes(n) {
   if (v >= 1 << 20) return `${(v / (1 << 20)).toFixed(1)} MB`;
   if (v >= 1 << 10) return `${Math.round(v / (1 << 10))} KB`;
   return `${v} B`;
+}
+
+/** A minimal switch row — the twin of ui/settings.js Toggle (kept local to avoid a circular import). */
+function Toggle({ label, micro, value, onChange }) {
+  return html`<div class="set-row">
+    <span class="set-row__label">${label}<${MicroLabel}>${micro}<//></span>
+    <button type="button" class=${`set-toggle${value ? ' is-on' : ''}`} role="switch" aria-checked=${value ? 'true' : 'false'}
+      onClick=${() => onChange(!value)}><i></i><span>${value ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
+  </div>`;
 }
 
 /** The boot-art image set the pre-cache fetches (the default, ~104 MB): mirrors main.js preloadArt. */
@@ -40,7 +50,8 @@ export async function syncAssetCache() {
   toast(t('正在缓存…'));
   try {
     const [urls, index] = await Promise.all([bootArtUrls(), fetchAssetIndex()]);
-    const r = await ensureAssets({ urls, index });
+    const localBase = localSourceEnabled() ? await probeLocalBase({ remoteRevision: index.revision }) : '';
+    const r = await ensureAssets({ urls, index, localBase });
     if (r && r.ok && r.skipped) toast(t('本地缓存已是最新'));
     else if (r && r.ok) toast(t('已缓存美术资源'));
     else toast(t('缓存失败，请稍后重试'));
@@ -86,6 +97,8 @@ export function AssetCacheSection() {
   useEffect(() => { refresh(); }, []);
   const pick = (m) => { setAssetMode(m); setModeState(m); if (m === 'cache') void syncAssetCache().then(refresh); };
   const clear = () => { void clearAssetCache().then(() => { refresh(); toast(t('已清除本地缓存')); }); };
+  const [localSrc, setLocalSrc] = useState(() => localSourceEnabled());
+  const toggleLocal = (v) => { setLocalSourceEnabled(v); setLocalSrc(v); };
   const seg = (id, label) => html`<button type="button" role="radio" aria-checked=${mode === id ? 'true' : 'false'}
     class=${mode === id ? 'is-on' : ''} data-testid=${`asset-cache-${id}`} onClick=${() => pick(id)}>${label}</button>`;
   return html`<div class="set-asset" data-testid="asset-cache">
@@ -98,6 +111,7 @@ export function AssetCacheSection() {
     ${!supported
       ? html`<p class="set-hint">${t('此浏览器不支持本地缓存')}</p>`
       : html`<p class="set-hint">${info.files ? t('已缓存 {size}（{n} 个文件）', { size: formatBytes(usage ? usage.usage : 0), n: info.files }) : t('未缓存')}${usage ? ` · ${formatBytes(usage.usage)} / ${formatBytes(usage.quota)}` : ''}<br/>${t('位置：浏览器站点数据（默认在系统盘）')}</p>
+        <${Toggle} label=${t('优先使用本机资源（本机也开着服务时）')} micro="LOCAL SOURCE" value=${localSrc} onChange=${toggleLocal} />
         <div class="set-row set-row--actions">
           <${Button} variant="secondary" size="sm" onClick=${() => void syncAssetCache().then(refresh)}>${t('立即缓存')}<//>
           <${Button} variant="secondary" size="sm" onClick=${clear}>${t('清除缓存')}<//>

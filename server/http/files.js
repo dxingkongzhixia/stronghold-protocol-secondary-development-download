@@ -208,6 +208,9 @@ export async function serveFile(req, res, absPath, stat, mountName, segments, qu
     'Last-Modified': lastModified,
   };
   if (compressible) headers.Vary = 'Accept-Encoding';
+  // Cross-origin read for the client's local asset source (public/js/assetSource.js): a page on the public server may
+  // fetch /assets|/fonts|/vendor from a player's own machine (same app) when 优先使用本机资源 is on.
+  if (mountName === 'public' && segments.length && LONG_CACHE_DIRS.includes(segments[0])) headers['Access-Control-Allow-Origin'] = '*';
 
   if (isNotModified(req, etag, stat.mtime)) {
     res.writeHead(304, headers);

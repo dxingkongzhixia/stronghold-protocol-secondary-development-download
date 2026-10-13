@@ -156,6 +156,7 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     }
     // the asset index the client's local cache (public/js/assetCache.js) diffs against: current art version + per-file sizes
     if (decoded === '/asset-index.json') {
+      res.setHeader('Access-Control-Allow-Origin', '*'); // readable from a player's own machine (js/assetSource.js)
       sendJson(req, res, 200, assetIndex.get());
       return;
     }

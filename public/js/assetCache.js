@@ -105,10 +105,12 @@ export async function fetchAssetIndex(fetchFn = globalThis.fetch) {
  * @param {{ urls: string[], index: any, onProgress?: (done: number, total: number) => void, concurrency?: number,
  *           fetchFn?: typeof fetch }} o
  */
-export async function ensureAssets({ urls, index, onProgress, concurrency = 6, fetchFn = globalThis.fetch }) {
+export async function ensureAssets({ urls, index, onProgress, concurrency = 6, fetchFn = globalThis.fetch, localBase } = {}) {
   if (!assetCacheSupported() || !index || !index.files) return { ok: false, reason: 'unsupported' };
   const worker = await registerAssetWorker();
   if (!worker) return { ok: false, reason: 'no-worker' };
+  // Point the worker at a player's own machine (js/assetSource.js), or clear it ('' = the public server).
+  if (localBase !== undefined) { try { worker.active?.postMessage({ type: 'localBase', base: localBase || '' }); } catch { /* the worker decides */ } }
   const indexFiles = index.files;
   const storedSizes = readPref(SIZES_PREF, {}) || {};
   const cached = await cacheKeys();

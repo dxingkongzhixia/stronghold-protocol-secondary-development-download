@@ -41,6 +41,7 @@ import { net, identity, NetError } from './net.js';
 import { store, useStore, emptyMatch, selectRoute, sessionResetNotice, loadPref, savePref, isSpectating } from './store.js';
 import { BOOT_VIDEO, collectArtUrls, preloadImages, artProgressReporter } from './preload.js';
 import { effectiveAssetMode, assetCacheSupported, fetchAssetIndex, ensureAssets } from './assetCache.js';
+import { localSourceEnabled, probeLocalBase } from './assetSource.js';
 import { data } from './data.js';
 import { GAME_FILES } from './ui/gameComponents.js';
 import { TitleScreen, sanitizeName } from './screens/title.js';
@@ -540,7 +541,8 @@ async function preloadArt() {
     if (sub) { sub.hidden = false; sub.textContent = t('正在同步本地美术缓存…'); }
     try {
       const index = await fetchAssetIndex();
-      const r = await ensureAssets({ urls, index, onProgress: artProgressReporter({ fill, sub }) });
+      const localBase = localSourceEnabled() ? await probeLocalBase({ remoteRevision: index.revision }) : '';
+      const r = await ensureAssets({ urls, index, onProgress: artProgressReporter({ fill, sub }), localBase });
       if (r && r.ok) { bar.hidden = true; if (sub) sub.hidden = true; return; }
     } catch { /* fall back to the HTTP preload below */ }
     if (sub) sub.textContent = t('正在加载美术资源 0 / {n}', { n: urls.length });

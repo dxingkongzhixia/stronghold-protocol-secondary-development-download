@@ -12,6 +12,10 @@
 const CACHE = 'sp-assets';
 const PREFIXES = ['/assets/', '/fonts/', '/vendor/'];
 
+// A player's own machine may run the same app (js/assetSource.js): when it does, the page tells this worker to fetch
+// these files from there instead of the public server. '' = no local source.
+let localBase = '';
+
 /** @param {URL} url */
 function isCacheable(url) {
   return url.origin === self.location.origin && PREFIXES.some((p) => url.pathname.startsWith(p));
@@ -30,9 +34,13 @@ self.addEventListener('fetch', (event) => {
     const cache = await caches.open(CACHE);
     const hit = await cache.match(req);
     if (hit) return hit;
-    const res = await fetch(req);
+    let res = null;
+    if (localBase) {
+      try { const r = await fetch(localBase + url.pathname + url.search); if (r && r.ok) res = r; } catch { /* local went away: fall back */ }
+    }
+    if (!res) res = await fetch(req);
     // Only cache a clean, complete, readable response; never an error, a redirect, or the index itself.
-    if (res && res.ok && res.status === 200 && (res.type === 'basic' || res.type === 'default')) {
+    if (res && res.ok && res.status === 200 && (res.type === 'basic' || res.type === 'default' || res.type === 'cors')) {
       try { await cache.put(req, res.clone()); } catch { /* over quota: keep serving from network */ }
     }
     return res;
@@ -42,4 +50,5 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
   const d = event.data || {};
   if (d.type === 'clear') event.waitUntil(caches.delete(CACHE));
+  if (d.type === 'localBase') localBase = typeof d.base === 'string' ? d.base : '';
 });

@@ -1109,6 +1109,7 @@
   "本地缓存已是最新": "The local cache is already up to date",
   "已缓存美术资源": "Art assets cached",
   "缓存失败，请稍后重试": "Caching failed; try again later",
+  "优先使用本机资源（本机也开着服务时）": "Prefer a local copy (when this device runs the server)",
   "美术资源": "Art assets",
   "首次进入，请选择美术资源的加载方式（可随时在设置里更改）：": "Choose how art assets load (changeable in Settings any time):",
   "网页加载（不缓存）": "Load from the web (no local copy)",
