@@ -1,0 +1,153 @@
+# QUERY-INDEX — where to find what
+
+A **lookup table** for an agent or a newcomer: start from the question you have, land on the owning
+document or code file. The authoritative docs are still the ones linked here; this file only points.
+
+Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER.md`](HANDOVER.md)
+(newcomer entry) → [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) (where are we now).
+
+> **Pinned vs free docs.** `test/docs-consistency.test.js` pins exact wording in `DESIGN` / `design/` /
+> `history/` / `SIM.md` / `META.md` / `DATA.md` / `README.md` / `DEPLOY.md` / `PLAYING.md`;
+> `test/docs-paths.test.js` checks every path and link in `ARCHITECTURE.md` and `CONTRIBUTING.md`;
+> `test/docs-mojibake.test.js` checks encoding for every `.md`. Reorganise freely only in the
+> **free** docs (`HANDOVER`, `PROJECT-STATE`, `MATCHMAKING`, `OUR-FEATURES`, `UPSTREAM-MERGES`,
+> `AI-WORKFLOW`, this file, `AGENTS.md`).
+
+## 1. Orientation and current state
+
+| question | file |
+|---|---|
+| What is this project? How do I run it? What can players do? | [`README.md`](../README.md) |
+| I just inherited this — where do I even start? | [`docs/HANDOVER.md`](HANDOVER.md) |
+| What is deployed right now, which switches, which backups, known issues? | [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) |
+| Which file implements feature X? | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md), [`docs/DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) |
+| What changed in each release? | [`CHANGELOG.md`](../CHANGELOG.md) |
+| How do I contribute? | [`CONTRIBUTING.md`](../CONTRIBUTING.md) |
+
+## 2. "Which file implements X?" — code map
+
+| area | entry points |
+|---|---|
+| server process / HTTP / WebSocket | `server/index.js`, `server/http/` (`routes.js`, `static.js`, `websocket.js`, `buildTag.js`) |
+| sessions and the wire | `server/net.js`, `shared/protocol.js` |
+| lobby, rooms, seats, reconnect, boot gate | `server/lobby.js`, `server/bootgate.js` |
+| matchmaking (野排) | `server/matchmaker.js` |
+| match / meta engine (rounds, economy, views) | `server/match/` (`Match.js`, `match/`, `player/`, `unite.js`, `board.js`, `choices.js`, `waves.js`, `finalAssault.js`) |
+| battle engine (units, buffs, damage, skills) | `server/sim/` (`Battle.js`, `battle/`, `units.js`, `buffs.js`, `damage.js`, `skills.js`, `targeting.js`, `professions.js`, `content/`) |
+| fork-only persistence (accounts, community, stats) | `server/db.mjs`, `server/auth.js`, `server/community.js`, `server/stats.js`, `server/admin.js` |
+| shared constants + wire contract | `shared/constants.js` (incl. `APP_VERSION`), `shared/protocol.js`, `shared/stats.js` |
+| browser client (screens) | `public/js/main.js`, `public/js/store.js`, `public/js/screens/` |
+| browser UI widgets | `public/js/ui/` |
+| 2D (PixiJS) + 3D (three.js) rendering | `public/js/render/`, `public/js/render/board3d/`, `public/js/render/fx/` |
+| client networking / preload | `public/js/net.js`, `public/js/preload.js`, `public/js/assets.js` |
+
+## 3. Game rules (the design document)
+
+- Index: [`docs/DESIGN.md`](DESIGN.md).
+- **Current rules**: [`docs/design/`](design/) — `overview.md`, `engine.md`, `match.md`, `client.md`,
+  `network.md`, `geometry-time.md`.
+- **Per-release revisions and the evidence**: [`docs/history/`](history/).
+- Rules cited anywhere as `DESIGN §N` are checked against these headings (`docs-paths.test.js`):
+  **do not renumber or retitle a section**.
+- Player-facing rules guide (中文): [`docs/PLAYING.md`](PLAYING.md).
+
+## 4. Engines (deep reference)
+
+| engine | doc |
+|---|---|
+| battle simulator (`server/sim`) — units, buffs, damage, hooks, skills, professions | [`docs/SIM.md`](SIM.md) |
+| match/meta (`server/match`) — flow, effect registry, 联防, views, assumptions | [`docs/META.md`](META.md) |
+
+## 5. Data and content authoring
+
+| subject | doc / file |
+|---|---|
+| every `data/*.json` field and how it is generated | [`docs/DATA.md`](DATA.md) |
+| the generator (incl. `CUSTOM_CHESS`, the 8 custom operators) | `tools/build-data.mjs` |
+| add a **custom operator** end-to-end (中文) | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) |
+| author a **bond / strategy (band) / bounty enemy / 3D theme** | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) |
+| operator kits — contract and registration | `server/sim/content/kits/README.md`, `server/sim/content/kits/index.js` |
+| difficulty model (official numbers, no custom tuning) | [`docs/BALANCE.md`](BALANCE.md) |
+
+## 6. Client / rendering
+
+| subject | doc / file |
+|---|---|
+| client architecture | [`docs/design/client.md`](design/client.md) |
+| 3D board (official scenes, 高台, props, shadows) | `public/js/render/board3d/`, [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §8 |
+| battle FX (two tiers, allow-lists, kill switches) | [`docs/ASSETS.md`](ASSETS.md), `public/js/render/fx/` |
+| picking / dragging / facing wheel | `public/js/render/pick.js`, `public/js/render/drag.js`, `public/js/ui/facingWheel.js` |
+
+## 7. Networking and protocol
+
+| subject | doc / file |
+|---|---|
+| the wire contract (normative) | [`shared/protocol.js`](../shared/protocol.js), [`docs/design/network.md`](design/network.md) |
+| server HTTP/WS plumbing | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), `server/http/` |
+| server-side re-simulation / verification | `SP_VERIFY` (see [`docs/HANDOVER.md`](HANDOVER.md) §3) |
+
+## 8. Accounts, matchmaking and the community surface (fork-only)
+
+The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §1–§41. Code:
+`server/auth.js`, `server/db.mjs` (schema v4/v5), `server/matchmaker.js`, `server/community.js`,
+`server/stats.js`, `server/admin.js`; client `public/js/screens/lobby.js`, `rooms.js`, `stats.js`,
+`public/js/ui/community.js`, `stats.js`, `chat.js`.
+
+> **Trap:** the room **text chat is never persisted** — do not add a `chat` table.
+
+## 9. Assets, audio and i18n
+
+| subject | doc |
+|---|---|
+| asset sources, layout, manifest, licensing | [`docs/ASSETS.md`](ASSETS.md) |
+| languages: UI strings, game texts, server messages, adding a language | [`docs/I18N.md`](I18N.md) |
+| content-pack format | [`docs/PACKS.md`](PACKS.md) |
+| local-client extraction (official art/voice/Spine) | `tools/local-extract/`, [`docs/HANDOVER.md`](HANDOVER.md) §3 |
+
+## 10. Build, test and tooling
+
+| subject | command / doc |
+|---|---|
+| rebuild `data/*.json` deterministically | `node tools/build-data.mjs --offline` |
+| the whole test suite (run in the store) | `node --test` |
+| golden corpus | `node tools/golden.mjs`, `test/golden/README.md` |
+| kit coverage | `node tools/kit-coverage.mjs --missing` |
+| i18n completeness | `node tools/i18n.mjs check en --strict` |
+| environment diagnosis | `node tools/doctor.mjs` |
+| local CI mirror | `npm run ci` (`tools/ci.mjs`) |
+| release packaging | `tools/package.mjs`, `docs/WINDOWS.md` |
+
+## 11. Ops: publish, deploy, backups
+
+| subject | doc |
+|---|---|
+| the operating contract (research → change → merge → push → deploy) | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) |
+| publish helper (store → github → gitee → dev tree) | `tools/push-gitee.mjs` |
+| deploy guide (firewall, autostart, reverse proxy, Docker) | [`docs/DEPLOY.md`](DEPLOY.md) |
+| **our** production runbook (notice-first) | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (d) |
+| external server directory we are listed on | [`docs/RELAY.md`](RELAY.md) |
+
+## 12. History: decisions, merges, releases
+
+| subject | doc |
+|---|---|
+| **our** decisions §1–§41 | [`docs/MATCHMAKING.md`](MATCHMAKING.md) |
+| upstream merge log + never-merge list (§0) | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
+| fork-only mechanisms that must survive a merge | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) |
+| release notes | [`CHANGELOG.md`](../CHANGELOG.md) |
+
+## 13. Research (official data, machine-readable)
+
+Start at [`docs/research/00-INDEX.md`](research/00-INDEX.md). The `.md` files are the readable
+notes; the matching `.json` files are the machine-readable companions (not read by `build-data`).
+
+## 14. Search recipes
+
+```powershell
+# run from the store root D:\DOTK\_merge-scratch
+git grep -n "MATCHMAKING.md §" -- docs public server shared   # where a decision is cited
+git grep -n "DESIGN §" -- server public shared                 # rules cited in code
+git grep -n "OUR-FEATURES"                                     # fork-only mechanism pointers
+git log -S "<symbol>" --all                                    # when a symbol changed
+node tools/kit-coverage.mjs --missing                          # is any kit missing?
+```
