@@ -150,11 +150,11 @@ const ITEM_HANDLERS = {
       const base = ctx.gd.baseIdOf(ev.target.id);
       const owned = [...ctx.board(), ...ctx.hand(), ...ctx.temp()].filter((p) => p && p.kind === 'chess' && !p.golden && ctx.gd.baseIdOf(p.id) === base).length;
       if (owned >= 2) {
-        if (!ctx.grantChess(base)) toastNothing(ctx, ev, ctx.gd.chess(base)?.name || null);
+        if (!ctx.grantChess(base, { requirePool: false })) toastNothing(ctx, ev, ctx.gd.chess(base)?.name || null);
         return;
       }
       const id = rollSameBond(ctx, ctx.pieceBonds(ev.target.uid), 6);
-      if (!id || !ctx.grantChess(id)) toastNothing(ctx, ev);
+      if (!id || !ctx.grantChess(id, { requirePool: false })) toastNothing(ctx, ev);
     },
   },
   use_equip_reward_special_goods_char_chess: {

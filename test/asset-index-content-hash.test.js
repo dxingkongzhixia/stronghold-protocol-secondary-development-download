@@ -51,7 +51,9 @@ describe('the asset index', () => {
       'public/assets/char/a.png': a, 'public/assets/spine/x/x.atlas': b, 'public/assets/.hidden': 'h', 'public/assets/.git/obj': 'o',
       'public/fonts/f.woff2': 'font', 'public/js/app.js': 'not indexed', 'elsewhere/linked/l.png': 'linked',
     });
-    fs.symlinkSync(path.join(dir, 'elsewhere/linked'), path.join(dir, 'public/assets/link'), 'dir');
+    let linked = true;
+    try { fs.symlinkSync(path.join(dir, 'elsewhere/linked'), path.join(dir, 'public/assets/link'), 'dir'); }
+    catch { linked = false; } // Windows without developer mode / privilege cannot create symlinks: skip that part
     const cacheFile = path.join(dir, '.cache/asset-hashes.json');
     try {
       const idx = createAssetIndex({ publicDir: path.join(dir, 'public'), cacheFile, delayMs: 0 });
@@ -63,12 +65,12 @@ describe('the asset index', () => {
       assert.equal(idx.hashOf('assets/char/a.png', st('assets/char/a.png')), sha16(a));
       assert.equal(idx.hashOf('assets/spine/x/x.atlas'), sha16(b));
       assert.equal(idx.hashOf('fonts/f.woff2'), sha16(Buffer.from('font')));
-      assert.equal(idx.hashOf('assets/link/l.png'), sha16(Buffer.from('linked')), 'a linked folder is followed');
+      if (linked) assert.equal(idx.hashOf('assets/link/l.png'), sha16(Buffer.from('linked')), 'a linked folder is followed');
       assert.equal(idx.hashOf('assets/.hidden'), null, 'dot names are never served, never hashed');
       assert.equal(idx.hashOf('assets/.git/obj'), null);
       assert.equal(idx.hashOf('js/app.js'), null, 'only the asset folders');
-      assert.equal(idx.size, 4);
-      assert.equal(idx.stats().last.hashed, 4);
+      assert.equal(idx.size, linked ? 4 : 3);
+      assert.equal(idx.stats().last.hashed, linked ? 4 : 3);
       assert.equal(idx.hashOf('assets/CHAR/A.PNG'), sha16(a), 'a name that differs only in case finds the file');
       // a stat that no longer matches: no hash (the caller serves the plain way)
       assert.equal(idx.hashOf('assets/char/a.png', { size: 1, mtimeMs: st('assets/char/a.png').mtimeMs }), null);
@@ -85,7 +87,7 @@ describe('the asset index', () => {
       idx2.start();
       await idx2.whenReady();
       assert.equal(idx2.stats().last.hashed, 1, 'only the changed file was read');
-      assert.equal(idx2.stats().last.reused, 2);
+      assert.equal(idx2.stats().last.reused, linked ? 2 : 1);
       assert.equal(idx2.hashOf('assets/char/a.png'), sha16(a2));
       assert.equal(idx2.hashOf('fonts/f.woff2'), null);
       assert.equal(JSON.parse(fs.readFileSync(cacheFile, 'utf8')).files['fonts/f.woff2'], undefined);

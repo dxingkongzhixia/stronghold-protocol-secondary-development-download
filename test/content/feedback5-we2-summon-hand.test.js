@@ -89,8 +89,8 @@ test('the data: deploy limit / holding = the attribute frame + the token talents
   const ph = 'token_10003_cgbird_bird';
   assert.equal(v(ph, 'char_179_cgbird@2/1/4/0').stats.deployLimit, 3);
   assert.equal(v(ph, 'char_179_cgbird@2/60/7/3').byModule.uniequip_003_cgbird.stats.deployLimit, 3);
-  // 望's 棋子 (a custom shop CHESS under Option A, not a 自选 pick): the rank-2 talent (+1) is a potential talent — potential 0 keeps 6
-  assert.equal(load('tokens').token_10064_wang_stone1.variants.chess_char_2027_wang_a.stats.deployLimit, 6);
+  // 望's 棋子 (a custom shop CHESS under Option A, not a 自选 pick): the rank-2 talent (+1) is a potential talent — full potential gives 7
+  assert.equal(load('tokens').token_10064_wang_stone1.variants.chess_char_2027_wang_a.stats.deployLimit, 7);
   // the chess summons of tokens.json have no such talent: 凯瑟琳's 爬行号 2 of 3, everyone else 1
   const tokens = load('tokens');
   assert.equal(tokens.token_10041_cathy_catsld.variants.chess_char_4_11_a.stats.deployLimit, 2);

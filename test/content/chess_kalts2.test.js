@@ -90,8 +90,8 @@ test('凯尔希·思衡托 in both forms: her shop-chess kit (all three skills a
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 1393 / 408 / 220, E2 Lv60 1543 / 476 / 257; the anchor 2235 HP, 3 DP, 70 s
-  assert.deepEqual([CHESS[BASE].stats.maxHp, CHESS[BASE].stats.atk, CHESS[GOLD].stats.maxHp, CHESS[GOLD].stats.atk], [1393, 408, 1543, 476]);
+  // the numbers of the forms (zh_CN, full potential): E2 Lv1 1393 / 433 / 220, E2 Lv60 1543 / 501 / 257; the anchor 2235 HP, 3 DP, 70 s
+  assert.deepEqual([CHESS[BASE].stats.maxHp, CHESS[BASE].stats.atk, CHESS[GOLD].stats.maxHp, CHESS[GOLD].stats.atk], [1393, 433, 1543, 501]);
   assert.deepEqual([variantOf(5, false).stats.maxHp, variantOf(6, true).stats.cost, TOKEN.placeable], [2235, 3, true]);
 });
 

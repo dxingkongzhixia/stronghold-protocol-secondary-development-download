@@ -55,8 +55,8 @@ test('生死定夺 (talent 1): a physical hit can raise the ATK scale; 习得性
   const behind = h.b.dealDamage(e, u, { amount: 1000, type: 'phys', canDodge: false });
 
   assert.ok(behind > 0);
-  assert.ok(Math.abs(frontPlain / behind - 0.7) < 1e-9, `front plain ×0.7 (got ${frontPlain}/${behind})`);
-  assert.ok(Math.abs(frontSea / behind - 0.5) < 1e-9, `front 海怪 ×0.5 (got ${frontSea}/${behind})`);
+  assert.ok(Math.abs(frontPlain / behind - 0.65) < 1e-9, `front plain ×0.65 (got ${frontPlain}/${behind})`);
+  assert.ok(Math.abs(frontSea / behind - 0.45) < 1e-9, `front 海怪 ×0.45 (got ${frontSea}/${behind})`);
 
   // talent 1: the proc multiplies the physical amount; only a phys hit of hers (never the target's) is touched
   let scaled = false;

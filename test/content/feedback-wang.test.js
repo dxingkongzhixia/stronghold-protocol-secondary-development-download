@@ -124,9 +124,9 @@ test('望 第二天赋 料敌机先: the line adds +10 % damage per other piece 
   h.spawn('e', { pos: [10, 7] });
   assert.ok(h.runUntil(() => h.hooksOf('damaged').some((c) => c.source === mid && c.type === 'arts'), 5));
   const d = h.hooksOf('damaged').find((c) => c.source === mid && c.type === 'arts');
-  // the continuous line through it: (10,6) (10,7) (10,8) + the 跟子 (11,7) = 4 pieces ⇒ stacks = min(3, 4 − 1) = 3 ⇒ ×1.3
-  assert.ok(Math.abs(d.amount - w.s.atk * 1.05 * 1.3) < 1e-6, `line bonus (${d.amount} vs ${w.s.atk * 1.05 * 1.3})`);
-  assert.equal(d.dmg.resIgnoreFlat, 9, '无视 9 点法抗 (临时法穿)');
+  // the continuous line through it: (10,6) (10,7) (10,8) + the 跟子 (11,7) = 4 pieces ⇒ stacks = min(3, 4 − 1) = 3 ⇒ ×1.36 (full potential)
+  assert.ok(Math.abs(d.amount - w.s.atk * 1.05 * 1.36) < 1e-6, `line bonus (${d.amount} vs ${w.s.atk * 1.05 * 1.36})`);
+  assert.equal(d.dmg.resIgnoreFlat, 10, '无视 10 点法抗 (临时法穿, full potential)');
   checkInvariants(h.b);
 });
 
