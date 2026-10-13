@@ -292,10 +292,11 @@ test('HTTP: changelog, upload, bug.report, admin list / status / image', async (
     const mm = APP_VERSION.split(/[.-]/).slice(0, 2).join('\\.');
     assert.ok(n.changelog && new RegExp(`^${mm}\\.\\d+$`).test(n.changelog.version), `the notice is logged as a minor version (${n.changelog && n.changelog.version})`);
     const after = await (await fetch(`${base}/community/api/changelog`)).json();
-    assert.equal(after.changelog[0].version, n.changelog.version, 'the new entry is newest first');
-    assert.equal(after.changelog[0].source, 'notice');
-    assert.equal(after.changelog[0].summary, '服务器将在 5 分钟后重启更新', 'the notice text is the summary');
-    assert.equal(after.changelog[0].body, '服务器将在 5 分钟后重启更新');
+    // the notice lands with the current release's date (both 2026-10-14): it is listed among them, source notice
+    const notice = after.changelog.find((e) => e.source === 'notice');
+    assert.equal(notice?.version, n.changelog.version, 'the notice is logged');
+    assert.equal(notice.summary, '服务器将在 5 分钟后重启更新', 'the notice text is the summary');
+    assert.equal(notice.body, '服务器将在 5 分钟后重启更新');
     const seeded = after.changelog.find((e) => e.version === '0.2.0');
     assert.equal(seeded.source, 'release', 'the seeded release is untouched');
     // a second notice takes the next minor version, never reusing one

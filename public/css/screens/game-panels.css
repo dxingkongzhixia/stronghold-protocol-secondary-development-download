@@ -511,7 +511,7 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
   .spcard__icon { width: .72rem; height: .72rem; padding: .02rem; }
   .spov__grid--3 .spcard__icon { width: 1rem; height: 1rem; }
   .spcard__name { font-size: calc(.23 * var(--t)); }
-  .spcard__desc { font-size: calc(.19 * var(--t)); }
+  .spcard__desc { font-size: .19rem; }
   .spov__grid--3 .spcard__desc { -webkit-line-clamp: 10; }
 }
 /* The narrowest of them (640×360): with Noto Sans SC — the page's web font and Android's CJK font — the longest text
