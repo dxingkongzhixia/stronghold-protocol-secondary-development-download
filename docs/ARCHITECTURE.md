@@ -113,6 +113,7 @@ so old imports keep working: `public/js/ui/gameLogic.js` (`public/js/ui/gameLogi
 | `public/js/voicePrefs.js` | the operator voice dubs (设置 → 语音语言): `VOICE_LANGS`, per-character overrides (`sanitizeVoiceOverrides`), `voiceLangFor` (audio.js) |
 | `public/js/render/` | the field view: `app.js` with `public/js/render/app/`, `units.js` and `spine.js` (models; its `clipBounds` sizes a unit's impostor slot from the clips it plays — GitHub #542), `tiles.js`, `projection.js`, `interp.js`, `pick.js`, `drag.js`, `public/js/render/fx/` (effects; `kinds.js` maps the fx kinds), `public/js/render/board3d/` (the official 3D board, incl. `theme.js` per-battlefield lighting + apron / 高台) |
 | `public/css/`, `public/i18n/<code>.json` | the styles; the UI strings of each language pack (English ships) |
+| `public/sw.js`, `public/js/assetCache.js`, `public/js/assetSource.js`, `public/js/ui/assetMode.js` | the **asset delivery chain** (our scheme; DEVELOPMENT §9.2, OUR-FEATURES §10, MATCHMAKING §42): the Service Worker keeps `public/assets/`, `public/fonts/` and `public/vendor/` in Cache Storage, the client reads `/asset-index.json` and tries the CDN mirrors (`gh-proxy` → jsDelivr) before a paced server fallback, and the 设置 row picks the mode |
 
 ### Data, tools, tests
 
