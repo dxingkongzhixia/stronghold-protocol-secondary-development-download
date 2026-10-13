@@ -5,6 +5,8 @@ Who this is for: **the next person who merges upstream** and **anyone auditing w
 what came in, what we deliberately left out, how conflicts were resolved, how the golden corpus moved, and the
 local commits it produced.
 
+> **Navigation.** The **never-merge list** is §0; the per-batch records follow chronologically (§1 …). The merge procedure itself is in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (b). See also [`docs/QUERY-INDEX.md`](QUERY-INDEX.md).
+
 Read this together with:
 
 | Read this | For |

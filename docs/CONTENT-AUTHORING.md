@@ -9,6 +9,8 @@
 
 本文对应的**浏览器**（资料库 / CODEX）在 `public/js/ui/codex.js` + `public/js/ui/codexModel.js`（§0）。
 
+> **导航**：§0 资料库（CODEX） · §1 新干员 · §2 新盟约（bond） · §3 新策略（band） · §4 新悬赏敌人 · §5 验证清单 · §6 踩过的坑 · §7 相关文档 · §8 战场主题配色（3D 板）。相关：[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
+
 ---
 
 ## 0. 资料库（CODEX）：盟约 / 策略 / 干员 + 悬赏决策 + 两阶段领袖池

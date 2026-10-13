@@ -8,6 +8,8 @@ Versions: the first public release was **0.1.0** (2026-10-02, the state of §0�
 
 Official battlefield scenes (0.2.5; see [`docs/ASSETS.md`](ASSETS.md) and [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)) are **optional local art**: the client renders a stage's extracted official scene (`public/js/render/board3d/load.js` `loadScenePack`, `scene.js` `setScenePack`) and keeps the procedural metal tiles when a scene is absent. The repository never stores the official scene files; they are a local extraction step (`tools/setup.mjs --scenes`).
 
+> **How to use this index.** Section numbers are global and permanent. Find the file that holds a section in the table below; the current rule lives in `docs/design/`, the per-release evidence in `docs/history/`. Any `DESIGN §N` cited in code, tests or docs is checked against these headings (`test/docs-paths.test.js`). See also [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (topic → file).
+
 ---
 
 ## Where each section lives

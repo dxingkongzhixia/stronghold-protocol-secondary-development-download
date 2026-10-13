@@ -5,6 +5,8 @@
 > `server/index.js`、`server/admin.js`、`shared/protocol.js`、`shared/constants.js`；客户端 `public/js/net.js`、
 > `store.js`、`main.js`、`screens/title.js`、`screens/lobby.js`、`ui/account.js`、`ui/components.js`。
 
+> **导航**：本文件是**我们的全部决策记录**（§0–§41）——账号 / 野排匹配 / 公开同盟 / 观战夺舍 AI / 大厅社区 / **8 名自造干员** / 统计数据。合并黑名单在 **§22**；自造干员在 **§23–§37**；按 § 号检索即可（`git grep "§NN"`）。相关：[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)、[`docs/OUR-FEATURES.md`](OUR-FEATURES.md)、[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。
+
 ## 0. 需求（用户确认）
 
 1. 服务端真实注册：仅用户名 / 密码，账号有独立 id，禁止重名。

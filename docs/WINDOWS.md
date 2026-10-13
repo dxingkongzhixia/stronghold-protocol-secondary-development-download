@@ -3,6 +3,8 @@
 本文说明怎么打一份「目标机器什么都不用装」的 Windows 便携包，包里放了什么、没放什么，以及发出去之前要确认的授权。
 相关代码：`scripts/make-windows-bundle.mjs`（打包）、`scripts/launch.mjs`（准备 + 起服务器 + 打开浏览器）。
 
+> **导航**：§1 这份包解决什么 · 包内放什么 / 不放什么 · 发出去前的授权确认。相关：[`docs/DEPLOY.md`](DEPLOY.md)（部署）、[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
+
 ## 1. 这份包解决什么
 
 便携包只做一件事：**让这台 Windows 电脑当服务器**——包内自带 Node、素材与生产依赖，目标机器什么都不用装，

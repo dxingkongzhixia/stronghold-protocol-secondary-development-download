@@ -7,6 +7,8 @@
 > 内容制作的全貌（盟约 / 策略 / 悬赏敌人、资料库 CODEX、验证清单与 gotchas）见
 > [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md)；本文是其中「新干员」一节的详细版。
 
+> **导航**：§0 先判断 · §1 准备官方数据 · §2 加 `CUSTOM_CHESS` 条目 · §3 战斗行为（kit） · §4 美术与语音 · §5 跑测试 + 修计数 · §6 上线 · §7 参考实现。相关：[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
+
 ## 0. 先判断
 
 1. `grep <charId> data/chess.json` —— 已经有了就收工。

@@ -5,6 +5,8 @@ A **content pack** is add-on content a server picks up from a folder: a manifest
 fonts) and server-side data packs reuse the same manifest, registry and index instead of each inventing its own. In
 0.2.0 one type loads, **`lang`** (a language: docs/I18N.md "Adding a language"); `assets` and `data` are planned.
 
+> **Navigation.** The pack format (`shared/packs.js`), the `lang` type (`shared/i18nPacks.js`), the server registry (`server/packs.js`), the tools and the folder layout. See also [`docs/I18N.md`](I18N.md) (language packs) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
+
 | File | Role |
 |---|---|
 | `shared/packs.js` | the format: the manifest, the pack types (`PACK_TYPES`), app version ranges, the index (browser, server and tools) |
