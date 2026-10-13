@@ -1,5 +1,7 @@
 # Typecheck
 
+> **See also.** [`docs/QUERY-INDEX.md`](../docs/QUERY-INDEX.md) (lookup) · [`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md) (repo map).
+
 `npm run typecheck` runs `tsc --noEmit --checkJs -p jsconfig.json`.
 
 The first slice is the closed set that already typechecks:

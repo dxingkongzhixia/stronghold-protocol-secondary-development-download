@@ -4,6 +4,8 @@ Written 2026-09-27 by the completeness critic, after reading every file in this 
 
 **Precedence rule:** where a file's body and its `## Addendum (critic)` disagree, **the addendum wins**. In JSON, `_criticAddendum` wins over the older fields.
 
+> **See also.** [`docs/QUERY-INDEX.md`](../QUERY-INDEX.md) (lookup) and the design document index [`docs/DESIGN.md`](../DESIGN.md) (when research and the design disagree, the design wins).
+
 Tags: **[DATA]** client game data · **[VERIFIED]** official or wiki rule text, or a screenshot · **[ASSUMED]** a proposal, kept in config.
 
 ## 1. Files
