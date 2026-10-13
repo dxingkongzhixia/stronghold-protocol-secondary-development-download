@@ -12,6 +12,9 @@ lives, how to extend it, the tests that pin it, and the merge "must not be lost"
 > build/verify, content, upstream merges, publish/deploy, known issues). This file is the operational contract it
 > points at.
 
+> **Navigation.** (a) Handling a feature / bug request · (b) Fork / merge discipline with upstream · (c) Commit & push discipline (GitHub primary + Gitee mirror) · (d) Production deploy procedure · (e) When to ask the owner.
+> See also [`docs/HANDOVER.md`](HANDOVER.md) (the entry point) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
+
 Companion conventions, quoted verbatim:
 
 - **之后每次有更新都提交下** — after every change, commit it and push to the remotes (GitHub primary + Gitee mirror).

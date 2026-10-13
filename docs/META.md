@@ -5,6 +5,9 @@ the **UI owner** consuming `m.public` / `m.private` / `m.result`, and anyone dri
 Normative contracts stay in DESIGN.md §6 and §8 ([design/match.md](design/match.md),
 [design/network.md](design/network.md)); this file documents the implementation and every assumption it makes.
 
+> **Navigation.** §1 Match flow · §2 Effect registry (content API) · §3 Rules implemented · §4 联防 (Unite) · §5 Views and deviations · §6 Testing & tools · §7 Assumptions.
+> The normative contracts are DESIGN §6 / §8 ([design/match.md](design/match.md), [design/network.md](design/network.md)); this file is the **implementation** reference. See also [`docs/SIM.md`](SIM.md) (battle engine), [`docs/DATA.md`](DATA.md) (data fields), [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
+
 ```
 server/match/
   Match.js         state machine, timers, round loop, co-op orchestration, views (the lobby⇄match interface is at the top)

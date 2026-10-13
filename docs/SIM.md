@@ -5,6 +5,9 @@ Audience: **content authors** (kits, bonds, garrisons, items, bands, enemies, bo
 this file documents the concrete implementation, every hook and helper, the SkillSpec schema with worked examples,
 the profession defaults and the test harness. Everything here is deterministic: the only randomness is `battle.rng()`.
 
+> **Navigation.** §1 Driving a battle · §2 Units · §3 Buffs / Mods / statuses · §4 Damage & heal pipeline · §5 Hook bus · §6 Engine helpers (content must use these) · §7 Skills · §8 Professions · §9 Wire format · §10 Testing content · §11 Tools · §12 Data notes.
+> The normative contract is DESIGN §5 ([design/engine.md](design/engine.md)); this file is its **implementation** reference. See also [`docs/DATA.md`](DATA.md) (data fields), [`docs/META.md`](META.md) (match engine), [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
+
 ```
 server/sim/
   Battle.js        one field (normal / unite / boss / hidden) — the class: constructor, method install, public API

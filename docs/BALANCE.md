@@ -4,6 +4,8 @@ Owner: match / balance. Tools: `tools/balance.mjs` (competent-board model — no
 `tools/matchrun.mjs` (bot matches). Tests: `test/match/balance.test.js`, `test/match/waves-official.test.js`,
 `test/match/waves.test.js`, `test/sim/pathing.test.js`.
 
+> **Navigation.** §1 Method · §2 What the numbers were checked against · §3 Measurement per round · §4 The tuning (removed) · §5 Bots · §6 Match follow-ups · §7 Official limits (999 layers, 限伤 300000). See also [`docs/QUERY-INDEX.md`](QUERY-INDEX.md).
+
 **Every enemy number is the official one; the custom balance layer was removed** (user request: rules, numbers, enemy
 kinds / counts and routes must follow the official game; research 08 §6–§7, DESIGN §14 corrections):
 

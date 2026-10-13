@@ -9,6 +9,9 @@ the details in [SIM.md](SIM.md) (battle engine, hooks, SkillSpec), [META.md](MET
 effects), [DATA.md](DATA.md) (generated data), [ASSETS.md](ASSETS.md) (art and audio) and [I18N.md](I18N.md)
 (languages). How to set up, test and send a change: [CONTRIBUTING.md](../CONTRIBUTING.md).
 
+> **Navigation.** §1 What runs where · §2 The WebSocket protocol · §3 The directory layout · §4 Data flow · §5 Safety nets · §6 Where to start.
+> See also [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
+
 ## 1. What runs where
 
 ```

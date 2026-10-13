@@ -9,6 +9,9 @@ fails while it is stale).
 `data/assets.json` is written by `tools/fetch-assets.mjs`, which keeps the current file rather than drop entries whose
 downloads failed on this machine unless `--allow-shrink` (or `--prune`) is passed (docs/ASSETS.md, DESIGN §21.25).
 
+> **Navigation.** §0 Conventions · §1 `config.json` · §2 `chess.json` · §3 `bonds.json` · §4 `garrisons.json` · §5 `items.json` · §6 `bands.json` · §7 `effects.json` · §8 `choices.json` · §9 `enemies.json` · §10 `factions.json` · §11 `waves.json` · §12 `stages.json` · §13 `bosses.json` · §14 `tokens.json` · §15 Anomalies · §16 Counts · §17 Integrity guarantees · §18 `backups.json` (补位 / 自选).
+> See also [`docs/SIM.md`](SIM.md) (the engine that reads this data), [`docs/META.md`](META.md) (the match engine), [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
+
 ```
 node tools/build-data.mjs              # build (downloads missing official files into .cache/gamedata/)
 node tools/build-data.mjs --offline    # never download; fail if a cached file is missing

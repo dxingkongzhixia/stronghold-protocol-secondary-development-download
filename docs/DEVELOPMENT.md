@@ -4,6 +4,9 @@ Who this is for: anyone (human or AI) changing this fork. It is the map of **how
 content, the server, the tests and the asset pipeline fit together**, plus where our own content lives. It does not
 restate the upstream design — it points at it:
 
+> **Navigation.** §1 The two trees · §2 Repository layout · §3 The build / data pipeline · §4 The kit structure · §5 How `sim/` and `content/` fit together · §6 Professions and our engine carve-outs · §7 Running the server · §8 Running the tests · §9 The asset pipeline · §10 Where our custom content lives · §11 Publishing · §12 Our fork-only mechanisms (merge-critical) · §13 Lobby community data + match statistics.
+> See also [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
+
 | Read this | For |
 |---|---|
 | [`docs/HANDOVER.md`](HANDOVER.md) | **the entry point / handover** (repo map, run locally, build/verify, content, upstream merges, publish/deploy, known issues) — read this first |

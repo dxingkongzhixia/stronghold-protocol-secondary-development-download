@@ -4,6 +4,9 @@ Who this is for: **a future upstream merge** and **a newcomer maintaining this f
 **ours — not upstream**. It exists so that (a) a merge knows these mechanisms are here and must be preserved, and
 (b) a maintainer can change them without re-deriving them from the code.
 
+> **Contents.** §1 Custom operators (`CUSTOM_CHESS`) · §2 The two-tier battle-effect system · §3 The local-art pipeline · §4 Asset sources (mirrors) · §5 Our carried decisions · §6 Publishing (GitHub primary + Gitee mirror) · §7 Lobby community data · §8 Post-0.3.0 surface (feedback7 R22 / R23) · §9 Title-screen surfaces · Appendix: fork-only merge checklist.
+> See also [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
+
 Read this together with:
 
 | Read this | For |
