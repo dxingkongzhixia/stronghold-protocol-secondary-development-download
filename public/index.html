@@ -16,8 +16,9 @@
   <meta name="description" content="卫戍协议：盟约 · 网页联机复刻（非官方同人作品）" />
   <title>卫戍协议：盟约 · STRONGHOLD PROTOCOL</title>
   <!-- PWA install surface (upstream 0.2.3 install-icon work, mint rook): a manifest + the icon set make the app
-       installable, so the title screen's 添加到桌面 button can appear. No service worker is shipped (upstream's is
-       explicit about this); Chrome/Edge 112+ no longer require one to fire beforeinstallprompt. -->
+       installable, so the title screen's 添加到桌面 button can appear. A service worker is not required to fire
+       beforeinstallprompt on Chrome/Edge 112+. (public/sw.js exists only as the opt-in local asset cache,
+       docs/OUR-FEATURES.md §10 — registered on demand, never for the install.) -->
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icons/favicon.ico" sizes="16x16 32x32 48x48" />
   <link rel="icon" href="/icons/favicon-16.png" type="image/png" sizes="16x16" />

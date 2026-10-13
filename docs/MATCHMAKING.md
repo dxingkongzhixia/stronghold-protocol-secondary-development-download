@@ -1341,3 +1341,15 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **测试**：`test/match/feedback3-off-bonds.test.js`（达到阈值 → `active` + 战斗输入 `active: true` + `bond:skillfulShip` buff 真的生效；未达阈值 → 不生效且层数照旧进入战斗；`bondList` 的 `off` 标记；BOARD_AND_DECK 计数不变），`test/match/bonds.test.js`（FUNNY 的静态禁用盟约现被计算、未达阈值 `active: false`），`test/ui/feedback1b-bonds.test.js`（三名奥术**激活**该盟约、标签不再是本局禁用；一名仍为本局禁用；弹窗已激活时给出当前效果与新提示语）。
 - **golden 归属证明与变动**：先**只回退这一份源码**（`git stash push -- server/match/bondsMeta.js server/match/player/round.js public/js/ui/bondStrip.js public/js/ui/detailPanel.js`）→ `node tools/golden.mjs` **零差异**（roster 53 / bonds 46 / fields 22 / matches 18 / standins 10 / diy 129 全部 match）；恢复后 `node tools/golden.mjs --update`，变动恰为**本局禁用盟约激活**所及：**roster 9**（005、011、017、023、029、035、041、047、053）、**matches 3**（solo-FUNNY-1、solo-FUNNY-2、coop4-FUNNY-6；`m.public` 的盟约表出现 `arcaneShip` / `soloShip` 等本局禁用项，层数与结果随之变）、**standins 2**（standin-03、standin-09）；bonds / fields / diy 不变（bond-* 场景本就取该盟约可用的模式，见 `tools/golden.mjs` 的模式选择）。无任何引擎 guard 被放宽。
 - **合并黑名单**：见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 与本文档 §39.2；自检 —— `computeBonds` 不得含 `modeInactiveBonds.has(id)) continue`，`battleBonds` 不得强制 `active: false`。
+
+## 42. 本机美术资源缓存：Service Worker + 版本索引（owner 2026-10-13）
+
+> 需求（owner）：服务器压力主要来自加载美术资源。① 本机有资源就用本机；② 设置里显示资源位置并可删除；资源文件夹带一个与服务器版本关联的东西，下载前先比对版本、一致就跳过；③ 只下载缺失 / 有改动的，降低下载量；④ 进站时让玩家选「网页加载」还是「缓存到本地」。
+
+- **方案**：客户端 **Service Worker（`public/sw.js`）+ Cache Storage** 做本机持久缓存——网页里唯一可靠的方式；物理位置在系统盘（C 盘）的浏览器数据目录。首访弹窗选择，**默认「缓存到本地（推荐）」**，可随时在 设置 → 美术资源缓存 改。选「网页加载」的访客行为与之前完全一致（HTTP 缓存预热 + `server/bootgate.js`）。
+- **版本关联 / 只下缺失或改动**：服务器 `GET /asset-index.json`（`server/assetindex.js`）给出 `revision`（`{url:size}` 的内容哈希）与每文件大小。客户端存 `revision` + `{url:size}`；**revision 一致 ⇒ 全部跳过**；否则按文件 diff，只下载缺失 / 大小变化的，并删掉服务器已下架的。`revision` 由清单 + 磁盘算出，清单 mtime 变了即重算（不写死、不手改）。
+- **本机资源优先（"两者都做"）**：`public/js/assetSource.js` 探测本机 `http://127.0.0.1:3000` / `localhost:3000` 的 `/asset-index.json`，`revision` 与线上一致就把 SW 指向本机（`localBase`），线上盒子完全不被访问；**可选**（设置「优先使用本机资源」），失败即回退。资源响应带 `Access-Control-Allow-Origin: *`（`server/http/files.js`）以便跨源读取。
+- **设置**：`public/js/ui/assetMode.js` 的 `AssetCacheSection` —— 加载方式 / 已缓存用量（`navigator.storage.estimate`）/ 位置说明（浏览器站点数据，默认系统盘）/ 立即缓存 / 清除缓存 / 本机优先。
+- **默认预热集**：boot 的界面美术（~104 MB，`collectArtUrls(manifest,'all')`）。全量清单约 **14,172 个文件 / 828 MB**，**不默认全量**；其余按需由 SW 缓存，或点「立即缓存」。本地命中不再走 `bootgate` 闸门。
+- **测试**：`test/asset-index.test.js`（收集 / 版本 / 磁盘 / 缓存）、`test/ui/asset-cache.test.js`（`syncPlan` / `cacheIsCurrent`）。`test/ui/title-surfaces.test.js` 原先断言**不存在** `public/sw.js`——本功能**有意改变**该长期决定：测试改为「存在 `public/sw.js`（可选资源缓存），仍不存在 `public/service-worker.js`，安装不需要 worker」。相关文档（`docs/design/client.md`、`docs/UPSTREAM-MERGES.md`、`docs/PLAYING.md`、`public/index.html`）同步更正了「不注册 service worker」的旧表述。
+- **我们独有**：见 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10（合并时不得丢失）。

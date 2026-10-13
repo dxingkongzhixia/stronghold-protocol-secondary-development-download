@@ -574,8 +574,9 @@ upstream commit was *not* taken and why) are in [`docs/UPSTREAM-MERGES.md`](UPST
   attribution, all factual about this project.
 - **添加到桌面** — the browser install prompt (`beforeinstallprompt`), hidden when unavailable. The installability
   half is now merged from upstream 0.2.3 (the mint-rook `public/manifest.json` + `public/icons/`; see
-  [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §8), so Chromium / Edge 112+ can actually offer the install; **no
-  service worker** is shipped (upstream ships none; Chrome 108/112+ dropped the requirement). Off-Chromium (or
+  [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §8), so Chromium / Edge 112+ can actually offer the install; the install
+  needs no service worker (Chrome 108/112+ dropped it) — the fork's opt-in local asset cache registers `public/sw.js`
+  (see §10). Off-Chromium (or
   already installed / standalone) the button stays a graceful no-op, and iOS shows the manual hint. A stale served
   `index.html` cannot keep it hidden — `public/js/ui/ensureManifest.js` re-links the manifest at boot.
 
@@ -583,3 +584,29 @@ upstream commit was *not* taken and why) are in [`docs/UPSTREAM-MERGES.md`](UPST
 |---|---|
 | Title surfaces | `public/js/ui/announce.js` `public/js/ui/about.js` `public/js/ui/install.js`; `public/js/screens/title.js` (the mounts); `public/js/ui/community.js` (`ChangelogOverlay` `title`); `public/js/ui/components.js` (`homePlus` icon); `public/css/screens/title.css` (`.title-announce*` / `.title-about*` / `.title-rail*` / `.title-install*` / `.title-group*`); `test/ui/title-surfaces.test.js` (+ `.e2e.test.js`) |
 | PWA install assets (upstream 0.2.3, mint rook) | `public/manifest.json`; `public/icons/` (`app.svg`, `app-192/512.png`, `app-maskable-192/512.png`, `favicon-16/32/48.png`, `favicon.ico`, `apple-touch-icon.png`); the `<link rel="manifest">` + icon tags in `public/index.html`; `public/js/ui/ensureManifest.js`; `test/ui/pwa-assets.test.js` (+ `ensure-manifest.test.js`) |
+
+## 10. Local asset cache (`public/sw.js` + `public/js/assetCache.js`)
+
+**我们独有 / 合并时不得丢失.** A returning player can keep the art on their own device so the public box is not asked
+for ~104 MB on every cold load — the fork's answer to the VPS uplink being the bottleneck. Upstream has no such cache
+(and deliberately ships no service worker — see §9).
+
+- **Server**: `GET /asset-index.json` (`server/assetindex.js`, route in `server/http/static.js`) → `{ version, app,
+  revision, count, bytes, files }`, where `revision` is a hash of the `{ url: size }` map; `no-cache` (it must track
+  the server's current art). Asset / font responses carry `Access-Control-Allow-Origin: *` (`server/http/files.js`)
+  so a player's own machine can serve them.
+- **Worker + policy**: `public/sw.js` (cache-first for `/assets|/fonts|/vendor`; Range requests and non-GET pass
+  through) and `public/js/assetCache.js` (register; `syncPlan` / `cacheIsCurrent` are pure and unit-tested — a
+  per-file diff against the index, revision-keyed). `public/js/assetSource.js` probes a local origin (127.0.0.1)
+  serving the same `revision` and points the worker at it.
+- **UX**: `public/js/ui/assetMode.js` — the first-visit chooser (**default 缓存到本地**) and the 设置 row (mode /
+  usage / 立即缓存 / 清除缓存 / 优先使用本机资源). `main.js preloadArt` syncs the missing / changed files, skipping the
+  boot gate for a local hit.
+- **Storage**: `sp.pref.assetMode` (`stream` | `cache`), `sp.assetCache.revision` / `sp.assetCache.sizes`,
+  `sp.pref.assetLocalSource`. The mode is **opt-in per browser**; an unchosen visitor behaves exactly as before
+  (HTTP-cache warm-up + the boot gate).
+
+| Area | Files that must survive a merge |
+|---|---|
+| Asset index (server) | `server/assetindex.js`; `server/http/static.js` (`/asset-index.json`); `server/http/files.js` (asset CORS); `test/asset-index.test.js` |
+| Local cache (client) | `public/sw.js`; `public/js/assetCache.js`; `public/js/assetSource.js`; `public/js/ui/assetMode.js`; `public/js/main.js` (the preloadArt branch); `public/js/ui/settings.js` (the row); `public/css/screens/game.css` (`.asset-*` / `.set-asset`); `public/i18n/en.json` (the strings); `test/ui/asset-cache.test.js`; `test/ui/title-surfaces.test.js` (allows `public/sw.js`) |

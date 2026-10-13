@@ -226,11 +226,11 @@ test('添加到桌面: beforeinstallprompt present → available; prompt() consu
   assert.equal(d.offer().e.defaultPrevented, false, 'listeners removed after dispose');
 });
 
-test('the PWA manifest + mint-rook icons are present and linked (no service worker), so Chromium can offer the install', () => {
+test('the PWA manifest + mint-rook icons are present and linked, so Chromium can offer the install', () => {
   // Upstream 0.2.3's install-icon work (commits 90421254 / 9ec84f36) is now merged: public/manifest.json + the
   // public/icons/ set (the owner's mint rook) are in our tree and index.html links them, so a Chromium browser can
-  // fire beforeinstallprompt and the button becomes available. No service worker is shipped (Chrome 108/112+ dropped
-  // the requirement; upstream ships none either) — the button still decides at runtime and hides everywhere else.
+  // fire beforeinstallprompt and the button becomes available. The install does not require a service worker (Chrome
+  // 108/112+ dropped it) — the button still decides at runtime and hides everywhere else.
   const manifest = JSON.parse(src('public/manifest.json'));
   assert.ok(manifest.name || manifest.short_name, 'manifest has a name');
   assert.equal(manifest.start_url, '/');
@@ -239,10 +239,11 @@ test('the PWA manifest + mint-rook icons are present and linked (no service work
     'public/icons/app-maskable-512.png', 'public/icons/app.svg', 'public/icons/favicon.ico']) {
     assert.doesNotThrow(() => readFileSync(join(ROOT, p)), `${p} is in our tree`);
   }
-  for (const p of ['public/sw.js', 'public/service-worker.js']) {
-    let exists = true;
-    try { readFileSync(join(ROOT, p)); } catch { exists = false; }
-    assert.equal(exists, false, `${p} is not shipped (no service worker; not required on Chrome 112+)`);
-  }
+  // Our fork ships public/sw.js as the local asset cache (docs/OUR-FEATURES.md "local asset cache"); the PWA install
+  // does not require a worker, and the generic upstream name is still absent.
+  assert.doesNotThrow(() => readFileSync(join(ROOT, 'public/sw.js')), 'public/sw.js is our asset-cache worker');
+  let genericWorker = true;
+  try { readFileSync(join(ROOT, 'public/service-worker.js')); } catch { genericWorker = false; }
+  assert.equal(genericWorker, false, 'no service-worker.js (the install does not require one)');
   assert.ok(/InstallButton/.test(src('public/js/screens/title.js')), 'the InstallButton is still mounted (it decides at runtime)');
 });

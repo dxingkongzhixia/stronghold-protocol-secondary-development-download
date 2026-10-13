@@ -134,7 +134,9 @@ The same master supplies 16/32/48 px PNG / ICO favicons and the 180 px Apple tou
 These project-owned assets live in `public/icons/` and ship in full and lite packages; ASSETS.md records their provenance.
 The install button appears only for a live browser install offer and hides
 in standalone/fullscreen windows or after installation. Every offer is consumed before awaiting the prompt, including
-cancellation or failure. No service worker, offline cache or persistent server is introduced; HTTPS or localhost and
+cancellation or failure. The install itself introduces no service worker — one is not required on Chrome/Edge 112+.
+(The fork's opt-in **local asset cache** does register `public/sw.js`; that is a separate, player-chosen feature —
+docs/OUR-FEATURES.md §10 — not part of the PWA install.) HTTPS or localhost and
 browser support still govern installation.
 
 ### Skill-mode sound and delayed models (§28.17, §28.22)

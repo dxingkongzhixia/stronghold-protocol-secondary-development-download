@@ -118,9 +118,10 @@ mainline ships neither (its statistics page is the local, browser-only PR #323).
 - **添加到桌面** —— 接浏览器自己的安装提示（`beforeinstallprompt` → `prompt()`）；已安装 / 独立窗口 / 没有提示时
   隐藏（优雅空操作），iOS 等无提示的浏览器给一句手动「添加到主屏幕」的说明。**安装资格已补齐**：上游 0.2.3 的
   安装图标与 `public/manifest.json`（`upstreamm/master` 的 `90421254`、`9ec84f36`）已合入本源（见 §8），因此
-  Chromium / Edge 112+ 会真正触发安装提示、按钮才可能显示。本分支**不注册 service worker**（与上游一致；
-  Chrome 108 / Edge 112 起安装不再要求），所以上游的 `public/js/pwa.js` 未合并——我们已有
-  `public/js/ui/install.js`。文件：`public/js/ui/install.js`。
+  Chromium / Edge 112+ 会真正触发安装提示、按钮才可能显示。安装本身**不需要 service worker**（Chrome 108 /
+  Edge 112 起不再要求），所以上游的 `public/js/pwa.js` 未合并——我们已有 `public/js/ui/install.js`；本分支后来
+  （0.4.0）为**可选的美术资源缓存**才注册 `public/sw.js`（见 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10），
+  与安装无关。文件：`public/js/ui/install.js`。
 
 **不要把**这三处 UI 与上游的**资源预载（PRELOAD）**混为一谈：后者（`res-pill` / 「预载资源管理」/ ZIP 导入导出，
 依赖 Service Worker + Cache Storage）**不属于本分支**；我们自己的 `public/js/preload.js` 只是**启动时的图片预热**，
@@ -521,13 +522,14 @@ the PWA section of `tools/assets/manifest.mjs`) is **not** needed here — the b
 assets were taken. `public/index.html` now links the manifest and the icon set (replacing our inline data-URI
 favicon).
 
-**No service worker (deliberate).** Upstream ships none — its `public/js/pwa.js` states it explicitly — and Chrome
+**No worker is needed for the install.** Upstream ships none — its `public/js/pwa.js` states it explicitly — and Chrome
 108 (Android) / 112 (desktop) dropped the fetch-handler requirement, so `beforeinstallprompt` fires without a worker
-in current Chromium. We deliberately do **not** add one: a worker here would only risk re-introducing the
-stale-`index.html` class of bug (the stats.css lesson) and cost a startup per navigation, for a game already served
-over the LAN with an explicit `?v=`/ETag cache. Upstream's `public/js/pwa.js` is **not** merged (we already have
-`public/js/ui/install.js`), so no `sw.js` / `service-worker.js` is shipped. (Chromium on iOS and Firefox never fire
-the event; iOS gets the manual hint, Firefox silently hides the button.)
+in current Chromium. At merge time we added none (a worker only for the install would risk the stale-`index.html`
+class of bug and cost a startup per navigation, for a game already served over the LAN). Upstream's `public/js/pwa.js`
+is **not** merged (we already have `public/js/ui/install.js`). **Later (0.4.0)** the fork added an **opt-in local asset
+cache** that DOES ship and register `public/sw.js` — only when the player chooses 缓存到本地, and never for the install
+([`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10). (Chromium on iOS and Firefox never fire the event; iOS gets the
+manual hint, Firefox silently hides the button.)
 
 **Stale-`index.html` guard.** `public/js/ui/ensureManifest.js` re-links `/manifest.json` at boot (its boot call is in
 `public/js/main.js`), like `ui/ensureStylesheet.js`, so a served `index.html` that predates this merge cannot keep the
@@ -536,7 +538,7 @@ button hidden. The source of truth is still the `<link>` in `public/index.html`.
 **Guards.** New `test/ui/pwa-assets.test.js` (the manifest is installable, every named icon exists, decodes to its
 declared size, is opaque with a real mark, and the maskable ones stay inside the safe circle; the favicon / Apple tags
 resolve to real files of the declared size). `test/ui/ensure-manifest.test.js` covers the re-link; the updated
-`test/ui/title-surfaces.test.js` asserts the manifest + icons are present and linked with no service worker.
+`test/ui/title-surfaces.test.js` asserts the manifest + icons are present and linked (the install needs no worker; our opt-in `public/sw.js` asset-cache worker is a separate surface).
 
 ---
 
