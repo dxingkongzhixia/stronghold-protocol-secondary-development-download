@@ -1,6 +1,6 @@
 # DESIGN §0, §1, §2, §11, §12 — Scope, stack, repository layout, quality bar
 
-Part of [DESIGN.md](../DESIGN.md) (the index; section numbers are global).
+Part of [DESIGN.md](../DESIGN.md) · lookup [QUERY-INDEX.md](../QUERY-INDEX.md) (the index; section numbers are global).
 
 ## 0. Product scope (v1)
 

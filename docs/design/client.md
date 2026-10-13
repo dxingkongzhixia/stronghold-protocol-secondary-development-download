@@ -1,6 +1,6 @@
 # DESIGN §9, §10, §13, §15 — Rendering, UI, local-client art, the 3D board
 
-Part of [DESIGN.md](../DESIGN.md) (the index; section numbers are global).
+Part of [DESIGN.md](../DESIGN.md) · lookup [QUERY-INDEX.md](../QUERY-INDEX.md) (the index; section numbers are global).
 
 ## 9. Client rendering contract (public/js/render)
 

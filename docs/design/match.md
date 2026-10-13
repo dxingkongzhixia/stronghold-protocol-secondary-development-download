@@ -1,6 +1,6 @@
 # DESIGN §6, §16 — The match and meta engine (server/match), operator loadouts
 
-Part of [DESIGN.md](../DESIGN.md) (the index; section numbers are global).
+Part of [DESIGN.md](../DESIGN.md) · lookup [QUERY-INDEX.md](../QUERY-INDEX.md) (the index; section numbers are global).
 
 ## 6. Match & meta (server/match)
 

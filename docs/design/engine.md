@@ -1,6 +1,6 @@
 # DESIGN §5, §7 — The battle engine (server/sim) and content modules
 
-Part of [DESIGN.md](../DESIGN.md) (the index; section numbers are global).
+Part of [DESIGN.md](../DESIGN.md) · lookup [QUERY-INDEX.md](../QUERY-INDEX.md) (the index; section numbers are global).
 
 ## 5. Simulation (server/sim) — engine contract
 

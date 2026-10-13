@@ -1,6 +1,6 @@
 # DESIGN §3, §4 — Coordinates, fields, geometry and time
 
-Part of [DESIGN.md](../DESIGN.md) (the index; section numbers are global).
+Part of [DESIGN.md](../DESIGN.md) · lookup [QUERY-INDEX.md](../QUERY-INDEX.md) (the index; section numbers are global).
 
 ## 3. Coordinates, fields and geometry
 
