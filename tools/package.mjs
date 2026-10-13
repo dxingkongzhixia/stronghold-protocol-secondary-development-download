@@ -92,7 +92,7 @@ export const PLAYER_NPM_SCRIPTS = ['start', 'setup', 'doctor', 'launch', 'postin
 /** Markdown copied into the zip. Relative links to anything else are rewritten at stage time. */
 export const PLAYER_MARKDOWN = [...ROOT_FILES, ...PLAYER_DOCS].filter((f) => f.endsWith('.md'));
 /** Where a packaged doc link points when the file itself is not in the zip. */
-export const GITHUB_REPO = 'https://github.com/sganggs/Stronghold-Protocol';
+export const GITHUB_REPO = 'https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download';
 
 /**
  * Refused in a plan and in a stage: 0.1.x's list (owner-only notes, the promo project, caches, per-machine config) and

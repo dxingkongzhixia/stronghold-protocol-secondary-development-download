@@ -182,7 +182,7 @@
 
 ## 12. 反馈问题
 
-标题画面页脚的「项目仓库」在新标签页打开本项目的 [GitHub 仓库](https://github.com/sganggs/Stronghold-Protocol)。
+标题画面页脚的「项目仓库」在新标签页打开本项目的 [GitHub 仓库](https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download)。
 
 遇到报错、卡住或结果不对时，用「设置」里的「bug提交」提交（标题画面的「设置」、大厅 / 房间顶栏的「设置」、对局左下角的「设置」都能打开，见 §11）：填标题和描述，可附最多 4 张图片，提交直达管理端的「玩家反馈」面板。
 
