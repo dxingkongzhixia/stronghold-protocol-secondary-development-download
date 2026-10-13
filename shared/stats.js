@@ -56,7 +56,7 @@ const MAX_NAME = 24;
  * @returns {Record<string, number>}
  */
 export function normalizeStatBlock(raw) {
-  const out = {};
+  const out = /** @type {Record<string, number>} */ ({});
   if (!isObj(raw)) return out;
   let n = 0;
   for (const [k, v] of Object.entries(raw)) {
@@ -398,18 +398,18 @@ export function mergeStats(a, b) {
 export function importStats(raw, current) {
   if (isObj(raw) && raw.kind != null && raw.kind !== 'local-stats') {
     const err = new Error('not a stats export'); // the page shows its own text
-    err.code = 'stats-bad-file';
+    Object.assign(err, { code: 'stats-bad-file' });
     throw err;
   }
   if (!isObj(raw) || !Array.isArray(raw.records)) {
     const err = new Error('not a stats export');
-    err.code = 'stats-bad-file';
+    Object.assign(err, { code: 'stats-bad-file' });
     throw err;
   }
   const { stats: incoming, newer, dropped } = migrateStats(raw);
   if (newer) {
     const err = new Error('exported by a newer client'); // the page shows its own text
-    err.code = 'stats-newer-version';
+    Object.assign(err, { code: 'stats-newer-version' });
     throw err;
   }
   const have = new Set((Array.isArray(current?.records) ? current.records : []).map((r) => r.id));

@@ -876,16 +876,6 @@ export function createBattleRunner(deps) {
       return { battleId: e.battleId, fieldId: e.fieldId, kind: e.kind, spec: e.spec, time };
     },
     state,
-    /**
-     * The battle on screen as a report attaches it (diag.js): its b.start fields and its game time; null without one.
-     * @returns {{ battleId: string, fieldId: string, kind: string, spec: object, time: number|null }|null}
-     */
-    currentBattle() {
-      const e = cur;
-      if (!e || !e.spec) return null;
-      const time = e.battle && Number.isFinite(e.battle.time) ? e.battle.time : null;
-      return { battleId: e.battleId, fieldId: e.fieldId, kind: e.kind, spec: e.spec, time };
-    },
     stats() {
       return { ...stats, avgTickMs: stats.ticks ? stats.stepMs / stats.ticks : 0, entries: entries.size, loadingSim: !!simP };
     },
