@@ -7,32 +7,32 @@
 ## 一句话（TL;DR）
 
 - **这是什么**：明日方舟「卫戍协议」的非官方同人**网页复刻**，1–4 人合作，浏览器里玩。
-- **在哪儿**：这里是二次开发版**主仓库**（GitHub），另有 **Gitee 国内镜像**；不是上游项目。
+- **在哪儿**：这里是二次开发版**主仓库**（GitHub），另有 **Gitee 国内镜像**；**我们是基于主线开发的分支项目**，不是主线项目本身。
 - **怎么跑**：装 Node 22/24 → `npm install` → `node server/index.js` → 打开 `http://localhost:3000`。
 - **第一次接手**：先读 [`docs/HANDOVER.md`](docs/HANDOVER.md)；按问题查文档用 [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md)。
 
-English one-liner: the **primary repository** (GitHub) of our independently maintained secondary-development build of the browser co-op fan mode *Stronghold Protocol: Alliance*, with a **Gitee mirror for downloads from mainland China** (not the upstream project; the upstream is credited as the original source).
+English one-liner: the **primary repository** (GitHub) of our independently maintained secondary-development build of the browser co-op fan mode *Stronghold Protocol: Alliance*, with a **Gitee mirror for downloads from mainland China**. This is **not the mainline project** — we are a **branch project** forked from the mainline [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which is credited as the original source.
 
 ## 目录
 
 - [一、这是什么仓库](#一这是什么仓库)
 - [二、仓库里有什么](#二仓库里有什么)（含 [玩法一览](#玩法一览我们这一版)）
 - [三、快速开始](#三快速开始)
-- [四、相对上游的差异](#四相对上游的差异)
+- [四、相对主线的差异](#四相对主线的差异)
 - [五、更新怎么发布](#五更新怎么发布)
 - [六、文档](#六文档)
 - [七、目录结构](#七目录结构)
 - [八、致谢与许可](#八致谢与许可)
 - [English](#english)
 
-> **第一次接手本仓库？** 先读 [`docs/HANDOVER.md`](docs/HANDOVER.md)——接手入口：仓库地图、本地运行、构建 / 测试、内容制作、上游合并、发布与部署、已知坑。
+> **第一次接手本仓库？** 先读 [`docs/HANDOVER.md`](docs/HANDOVER.md)——接手入口：仓库地图、本地运行、构建 / 测试、内容制作、主线合并、发布与部署、已知坑。
 > 想按主题直接跳到某份文档，用 [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md)。
 
 ## 一、这是什么仓库
 
 - **主仓库 / 国内镜像**：**GitHub 仓库**（`dxingkongzhixia/stronghold-protocol-secondary-development-download`）是我们二次开发版的**主仓库与分发入口**；国内访问慢时改用 **Gitee 镜像**（`marseille1/stronghold-protocol-secondary-development-download`）。想直接玩、想部署到自己机器上的博士，从这里克隆或下载即可。
-- **二次开发版**：上游是 `sganggs/Stronghold-Protocol`（**原始项目**，代码基线、美术与数据来源都在那里）。本项目在上游之上**独立维护**了一套改动：账号 / 野排匹配 / 公开同盟 / 观战与夺舍 AI、启动体验与带宽治理、**8 名自造干员**，以及一批规则修复与决策（见 [四、相对上游的差异](#四相对上游的差异) 与 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md)）。
-- **不是上游**：上游的介绍、版本与发行包以**上游仓库**为准；本仓库只描述**我们这一版**。上游会**定期合并**进来（见 §四末），但我们的改动一直保留。
+- **分支项目（基于主线开发）**：**主线项目**是 `sganggs/Stronghold-Protocol`（代码基线、美术与数据来源都在那里）；本仓库在主线之上**独立维护**了一套改动：账号 / 野排匹配 / 公开同盟 / 观战与夺舍 AI、启动体验与带宽治理、**8 名自造干员**，以及一批规则修复与决策（见 [四、相对主线的差异](#四相对主线的差异) 与 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md)）。
+- **不是主线**：主线的介绍、版本与发行包以**主线仓库**为准；本仓库只描述**我们这一版**。主线会**定期合并**进来（见 §四末），但我们的改动一直保留。
 - **素材随仓库分发**：`public/assets`、`public/fonts`、`public/vendor` 在本仓库里被**跟踪**（约 590 MB），所以克隆下来**不需要再拉素材**就能运行。这些素材版权归鹰角网络 / Yostar，属社区便利分发，见 [八、致谢与许可](#八致谢与许可)。
 
 > [!IMPORTANT]
@@ -123,9 +123,9 @@ npm run golden         # 黄金结果：固定种子的整套战斗与人机对�
 
 完整规则见 [`docs/PLAYING.md`](docs/PLAYING.md)。
 
-## 四、相对上游的差异
+## 四、相对主线的差异
 
-下面是**我们这一版自己加的东西**，都保留、不会因为合并上游而丢掉。
+下面是**我们这一版自己加的东西**，都保留、不会因为合并主线而丢掉。
 
 ### 8 名自造干员
 
@@ -150,9 +150,9 @@ npm run golden         # 黄金结果：固定种子的整套战斗与人机对�
 - **更新先推通知的工作流**：每次更新 / 重启前先在管理页 `/admin` 的「通知」面板推送一条告示（署名 `d星空之下`），玩家刷新页面即拿到新版（§28）。
 - **其余规则修复**：命中率降低、缚地（`grounded`）、余音反伤脉冲重入、精锐合成落位、守望者治疗核实等，见 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) §23–§35。
 
-### 与上游的关系
+### 与主线的关系
 
-我们会**定期合并上游** [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol)：已经合并到上游 `feedback5` / **v0.2.0**（含 i18n 与一批规则修正，见 §33），合并时逐块解冲突、**保住我们的全部自定义内容**（合并黑名单与纪律见 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) §22 与 [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md)）。
+我们会**定期合并主线** [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol)：已经合并到主线 `feedback5` / **v0.2.0**（含 i18n 与一批规则修正，见 §33），合并时逐块解冲突、**保住我们的全部自定义内容**（合并黑名单与纪律见 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) §22 与 [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md)）。
 
 ## 五、更新怎么发布
 
@@ -175,7 +175,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | 文档 | 内容 |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | **AI agent 入口**：唯一规则、查询表、守则 |
-| [`docs/HANDOVER.md`](docs/HANDOVER.md) | **接手入口**：仓库地图、本地运行、构建 / 测试、内容制作、上游合并、发布与部署、已知坑 |
+| [`docs/HANDOVER.md`](docs/HANDOVER.md) | **接手入口**：仓库地图、本地运行、构建 / 测试、内容制作、主线合并、发布与部署、已知坑 |
 | [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) | **问题 → 文档 → 代码文件** 查询索引 |
 | [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md) | 当前状态一页纸：线上、开关、备份、已知问题 |
 | [`docs/PLAYING.md`](docs/PLAYING.md) | 玩法指南：流程、经济、招募与晋升、摆阵、联防、盟约、最终攻势、结算称号 |
@@ -184,7 +184,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/DEV-GUIDE-ZH.md`](docs/DEV-GUIDE-ZH.md) | 同一张地图的中文版 + 二次开发手册 |
 | [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) | 我们怎么研究 / 改动 / 测试 / 合并 / 部署，以及推送约定 |
 | [`docs/OUR-FEATURES.md`](docs/OUR-FEATURES.md) | **只属于本 fork 的机制目录**（合并时不得丢失） |
-| [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) | 上游合并逐批记录 + **永不合并清单**（§0） |
+| [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) | 主线合并逐批记录 + **永不合并清单**（§0） |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | 设计文档索引：现行规则在 [`docs/design/`](docs/design/)、各次修订在 [`docs/history/`](docs/history/) |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 代码地图：服务器、联机协议与前后端共用的战斗模拟 |
 | [`docs/DATA.md`](docs/DATA.md) · [`docs/SIM.md`](docs/SIM.md) · [`docs/META.md`](docs/META.md) | 生成数据 / 战斗引擎 / 对局引擎参考 |
@@ -209,13 +209,13 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 
 ## 八、致谢与许可
 
-- **原始项目与上游**：[`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol) 及其所有贡献者 —— 本项目的代码基线、设计文档、数据管线与素材清单都来自上游。上游解决的问题由上游记录；本仓库只负责**我们这一版**。
+- **主线项目**：[`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol) 及其所有贡献者 —— 本项目（**分支项目**）的代码基线、设计文档、数据管线与素材清单都来自主线。主线解决的问题由主线记录；本仓库只负责**我们这一版**。
 - **游戏数据来源**：[`Kengxxiao/ArknightsGameData`](https://github.com/Kengxxiao/ArknightsGameData)。
 - **素材来源**：[`yuanyan3060/ArknightsGameResource`](https://github.com/yuanyan3060/ArknightsGameResource)、[`fexli/ArknightsResource`](https://github.com/fexli/ArknightsResource)、[`isHarryh/Ark-Models`](https://github.com/isHarryh/Ark-Models)、[`ArknightsAssets/ArknightsAssets2`](https://github.com/ArknightsAssets/ArknightsAssets2)；字体来自 [`TimWangZi/The-font-of-Arknights`](https://github.com/TimWangZi/The-font-of-Arknights) 与 Google Fonts（Noto Sans SC）。
 - **规则核对参考**：[PRTS 明日方舟中文 Wiki](https://prts.wiki/)。
 - **版权与许可**：《明日方舟》相关的美术、音乐、音效、文本与数据等版权归**鹰角网络（Hypergryph）/ Yostar**及其权利人所有，**不适用** GPL；本仓库为社区便利把这些素材一并分发，是维护者本人的决定，**不得用于商业用途**，也不得单独再分发。本项目自己编写的代码以 **GPL-3.0-or-later** 发布，全文见 [LICENSE](LICENSE)；第三方组件各自遵循其许可证，清单见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。条款细节见 [NOTICE.md](NOTICE.md)。
 
-感谢上游项目与以上所有来源的作者、维护者，以及鹰角网络带来的这款游戏。
+感谢主线项目与以上所有来源的作者、维护者，以及鹰角网络带来的这款游戏。
 
 ---
 

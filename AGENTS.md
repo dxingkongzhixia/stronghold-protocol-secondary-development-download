@@ -14,9 +14,7 @@ mode **卫戍协议：盟约 / Stronghold Protocol: Alliance** — solo, or **1�
 - Node server (lobby, economy, rounds, validation) + browser client (native ES modules).
 - The battle is simulated **deterministically in each player's browser** from the same code the
   server ships; the server only owns the lobby, economy, rounds and validation.
-- Upstream / original source: [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol).
-  We **periodically merge it selectively**; our code, the design doc, the data pipeline and the
-  asset manifest all start there.
+- **Mainline project (主线项目)**: [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol). We are a **branch project (分支项目)** forked from the mainline and **periodically merge it selectively**; our code, the design doc, the data pipeline and the asset manifest all start there.
 - Licence: our code is **GPL-3.0-or-later**; all Arknights art/audio/text/data is © Hypergryph /
   Yostar and is **NOT** GPL — non-commercial fan project, remove on request of the rights holders.
   See [`NOTICE.md`](NOTICE.md).
@@ -102,7 +100,7 @@ node tools/doctor.mjs                   # environment diagnosis (exit 0)
 - **Publish (every change)**: `node tools/push-gitee.mjs -m "what changed"` — commits what *you*
   staged in the store → pushes to the **`github` primary** → the **`gitee` mirror** (fast-forward,
   never forced) → mirrors the store's tracked files into the dev tree.
-  Remotes: `github` = primary, `gitee` = 国内镜像, `origin` = the **upstream** (not ours).
+  Remotes: `github` = primary, `gitee` = 国内镜像, `origin` = the **mainline** (`sganggs/Stronghold-Protocol`, not ours).
 - **Credentials are never in the repo** — GitHub uses the owner's credential helper / `GITHUB_TOKEN`;
   Gitee uses `marseille1` + a personal token via `GITEE_USERNAME` / `GITEE_TOKEN`. Never commit a token.
 - **Deploy (only when the owner says so)**: notice-first runbook in [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) (d).

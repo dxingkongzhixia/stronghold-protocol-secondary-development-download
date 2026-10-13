@@ -61,10 +61,10 @@ An **independent, non-official web remake / fork** of Arknights' seasonal auto-c
 server ships; the Node server only owns the lobby, the economy, the rounds and validation, so one small
 host can run it.
 
-- **Upstream / original source** — [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol).
-  Our code base, design document, data pipeline and asset manifest all start there. We credit it and
-  **periodically merge it** (selectively — §7). It is **not** the same project as ours, and it is where
-  the game's own issues are tracked.
+- **Mainline project (主线项目)** — [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol).
+  We are a **branch project (分支项目)** forked from the mainline: our code base, design document, data pipeline
+  and asset manifest all start there. We credit it and **periodically merge it** (selectively — §7). It is
+  **not** the same project as ours, and it is where the game's own issues are tracked.
 - **This fork's own additions** (ours, absent from upstream — see [`docs/OUR-FEATURES.md`](OUR-FEATURES.md)):
   - **Eight custom shop operators** (自造干员) injected by `CUSTOM_CHESS` in `tools/build-data.mjs`:
     阿斯卡纶, 结城理, 予愿安洁莉娜, 望, 澄闪, 娜仁图亚, 凯尔希·思衡托, 克莱门莎. Their decision record is
@@ -81,7 +81,7 @@ host can run it.
   |---|---|---|
   | `github` | **PRIMARY** (main distribution) | `github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download` |
   | `gitee` | **国内下载镜像** (mirror for mainland China) | `gitee.com/marseille1/stronghold-protocol-secondary-development-download` |
-  | `origin` | the **upstream** (`sganggs/Stronghold-Protocol`), not ours | `github.com/sganggs/Stronghold-Protocol` |
+  | `origin` | the **mainline** (`sganggs/Stronghold-Protocol`), not ours | `github.com/sganggs/Stronghold-Protocol` |
 
   Both our remotes receive the store's branch `ours` as their `master`. `push-gitee.mjs` pushes the
   primary first, then the mirror (fast-forward only, never forced).

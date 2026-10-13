@@ -83,7 +83,7 @@ projectile mapping); do not start it without the owner.
 
 ## (b) Fork / merge discipline with upstream
 
-The upstream is `origin` (`sganggs/Stronghold-Protocol`); our state lives in `_merge-scratch` on branch `ours`.
+The **mainline (主线项目)** is `origin` (`sganggs/Stronghold-Protocol`); our state lives in `_merge-scratch` on branch `ours`.
 We have merged through upstream `feedback5` (`docs/MATCHMAKING.md` §33), then folded in **feedback6
 (selective)** and **feedback7 (the R22 batch + Group A + the JP voice dub + Group C/R23)** by **selective
 cherry-pick**. The chronological record of every batch — what came in, what was skipped and why, the conflicts,

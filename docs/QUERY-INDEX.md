@@ -132,7 +132,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | subject | doc |
 |---|---|
 | **our** decisions §1–§41 | [`docs/MATCHMAKING.md`](MATCHMAKING.md) |
-| upstream merge log + never-merge list (§0) | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
+| mainline-merge log + never-merge list (§0) | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
 | fork-only mechanisms that must survive a merge | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) |
 | release notes | [`CHANGELOG.md`](../CHANGELOG.md) |
 

@@ -414,7 +414,7 @@ onto themselves.
 (国内下载镜像) → `https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`, branch
 **`master`** (`HEAD:refs/heads/master`), fast-forward only and **never forced**. A run pushes every configured remote,
 primary first; `--remote <name>` restricts it, `--all-remotes` forces both, `--tags` pushes the tags too. `origin`
-stays the GitHub upstream (`sganggs/Stronghold-Protocol`).
+stays the GitHub **mainline (主线项目)** (`sganggs/Stronghold-Protocol`).
 
 Credentials are **never** in the URL or the repo. **GitHub (primary)** uses the owner's configured git credential
 helper (or per-run `GITHUB_TOKEN`); **Gitee (mirror)** uses the ASCII login **`marseille1`** (the Chinese name is
