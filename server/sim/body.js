@@ -1,9 +1,9 @@
 // server/sim/body.js — where a unit can be hit: the ONE helper behind every range test that targets enemies (user
 // playtest #5 item 10: "大体型的关底boss实际受击判定范围很小…原版是很大的一片区域").
 //
-// Regular units are a point: in a grid range when the tile containing their position — the position rounded half to
-// even (`roundHalfEven`; PRTS 作战机制 "受击方坐标经round函数取整(四舍六入五成双)得到其所属格坐标") — is a range tile,
-// in a radius when their position is (DESIGN §3). Huge units (巨型单位 — enemy data `hitArea`, tools/build-data.mjs
+// Regular units are a point: in a grid range when the tile containing their position is a range tile — the position
+// rounded half to even (detmath roundHalfEven; PRTS 作战机制 "受击方坐标经round函数取整(四舍六入五成双)得到其所属格
+// 坐标") —, in a radius when their position is (DESIGN §3). Huge units (巨型单位 — enemy data `hitArea`, tools/build-data.mjs
 // HIT_AREAS, from PRTS "巨型单位：受击判定区域为长4.95、宽2.95的长方形，向上偏移1.0") are hit anywhere on a rectangle
 // `w` tiles along the columns × `h` along the rows, centred on their position moved `dx` columns right and `dy` rows
 // up:
@@ -25,18 +25,7 @@
 // `hitRect`).
 
 import { ROWS, COLS } from './constants.js';
-
-/**
- * x rounded to an integer, ties to even (2.5 → 2, 3.5 → 4, −2.5 → −2): the rule PRTS 作战机制 gives for the tile of a
- * target — 受击方坐标经round函数取整(四舍六入五成双)得到其所属格坐标. `Math.round` rounds ties up (2.5 → 3). Exact;
- * never −0. (Our fork has no `detmath.js` — DESIGN §6 divergence — so this lives beside the hit-tile helpers.)
- * @param {number} x
- */
-export function roundHalfEven(x) {
-  const f = Math.floor(x);
-  if (x - f !== 0.5) return Math.round(x) + 0;
-  return (f % 2 === 0 ? f : f + 1) + 0;
-}
+import { hypot, roundHalfEven } from './detmath.js';
 
 /**
  * Validated hit area of a data record (`{ w, h, dx, dy }`, tiles) or null for a regular (point) unit.
@@ -96,10 +85,10 @@ export function bodyInKeys(u, keys) {
 /** Distance (tiles) from point (x, y) to the unit's body: its position, or its rectangle (0 inside). */
 export function bodyDist(u, x, y) {
   const R = hitRect(u);
-  if (!R) return Math.hypot(u.x - x, u.y - y);
+  if (!R) return hypot(u.x - x, u.y - y);
   const dx = x < R.x0 ? R.x0 - x : x > R.x1 ? x - R.x1 : 0;
   const dy = y < R.y0 ? R.y0 - y : y > R.y1 ? y - R.y1 : 0;
-  return Math.hypot(dx, dy);
+  return hypot(dx, dy);
 }
 
 /** Is the unit's body within `r` tiles of point (x, y)? (the same ≤ r + 1e-9 test as Battle.enemiesInRadius) */

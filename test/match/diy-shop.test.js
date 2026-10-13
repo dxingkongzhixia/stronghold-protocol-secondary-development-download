@@ -97,7 +97,8 @@ test('seats[].diy → PlayerState.diy (re-checked, frozen; bots none); the playe
     const want = diyRecord(T5A, SIEGE_PICK, { elite, data: DATA });
     assert.deepEqual([rec.name, rec.charId, rec.diyFor, rec.bonds, rec.garrisonIds, rec.tier, rec.price, rec.sellPrice], [want.name, SIEGE, T5A, ['victoriaShip'], [], 5, 4, 1]);
     assert.equal(rec.skill.skillId, 'skchr_siege_3');
-    assert.deepEqual(p0.loadoutFor(h.m.gd.chess(id)), { skillIndex: 2, moduleId: elite ? 'uniequip_002_siege' : null }, 'the pick, never the loadout');
+    // (0.2.2: an owned pick at the player's 潜能 / 练度 — none set: 6 / 3)
+    assert.deepEqual(p0.loadoutFor(h.m.gd.chess(id)), { skillIndex: 2, moduleId: elite ? 'uniequip_002_siege' : null, potential: 6, cultivate: 3 }, 'the pick, never the loadout');
     assert.equal(h.m.gd.chess(id).name, DATA.chess[id].name, 'the match\'s own record is the slot');
   }
   const s1 = DATA.backups.units[SIEGE].forms['2/1/4/0'].skills.find((x) => x.index === 0).skillId;
@@ -173,7 +174,9 @@ test('buy → 3 copies merge into the elite (the stock pays the copies); sell / 
   for (let i = 0; i < 8; i++) gain(p0, T5A);
   assert.equal(p0.diyStock.left(T5A), 0);
   p0.shop.slots[0] = { kind: 'chess', id: T5A, basePrice: 4, frozen: false, sold: false };
-  assert.equal(m.handle('p_0', { t: 'g.buy', slot: 0 }).error, 'SOLD_OUT');
+  assert.ok(m.handle('p_0', { t: 'g.buy', slot: 0 }).ok, 'a displayed operator remains purchasable after exhaustion');
+  assert.equal(p0.allChess().filter(p => p0.gd.baseIdOf(p.id) === T5A).reduce((n, p) => n + p.poolCopies, 0), 9);
+  assert.equal(p0.diyStock.left(T5A), 0, 'the extra copy does not reopen available stock');
   h.invariants();
   // The promotion reward draws 自选 of the reward tier (shop 4 → tier 5, shop 5 → tier 6), one shop level before the
   // ordinary shop (owner 2026-10-12, #515). clear() returned the drained T5A copies; the loops roll this stock.

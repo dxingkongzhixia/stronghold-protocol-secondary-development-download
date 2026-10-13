@@ -2,7 +2,7 @@
 //
 // Grid ranges: `[dRow, dCol]` offsets relative to facing RIGHT, rotated by the unit's direction (sim/dir.js: RIGHT
 // (dr,dc), UP (dc,−dr), LEFT (−dr,−dc), DOWN (−dc,dr); row 0 = bottom). An enemy is in range when the tile containing
-// it (round(y), round(x)) is one of the absolute range tiles — a huge enemy (巨型单位) when any tile its hit rectangle
+// it (rounded half to even, detmath roundHalfEven; PRTS 作战机制 四舍六入五成双) is one of the absolute range tiles — a huge enemy (巨型单位) when any tile its hit rectangle
 // occupies is (body.js; user playtest #5 item 10). `rangeExtend` (ability_range_forward_extend) adds N tiles
 // past the furthest cell of every row, along +dCol BEFORE rotating (DESIGN §3).
 // Operator priority: (1) enemies it blocks (every blocker, ranged ones on melee tiles included — user playtest #6
@@ -16,7 +16,8 @@
 
 import { COLS, ROWS } from './constants.js';
 import { normDir, rotateOffset } from './dir.js';
-import { bodyDist, roundHalfEven } from './body.js';
+import { bodyDist } from './body.js';
+import { roundHalfEven } from './detmath.js';
 
 /**
  * Build the absolute tile-key list of a grid for a unit standing at (r,c) facing `dir` ('UP'|'RIGHT'|'DOWN'|'LEFT';

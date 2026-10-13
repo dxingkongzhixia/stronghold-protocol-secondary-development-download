@@ -11,11 +11,10 @@ import {
   phaseMode, phaseBanner, isCombatPhase, isBossPhase, countdownState, phaseTotalSeconds, sortBonds, bondTier, nextThreshold,
   battleOverSfx, ownRoundLoss, uniteResultBox, battleResultBox, roundResultBox, RESULT_BOX_MS,
   bondMembers, memberHeadCount, bannedPerBond, priceTone, mergeProgress, shopBlockReason, deploySets, indexPieces, placementContext, canPlace,
-  boardTargets, dropIntent, normalizeDraft, normalizeSp, groupEnemies, factionTypes, snapHud, bossFrac, attackInterval, fmtNum,
+  boardTargets, dropIntent, normalizeDraft, normalizeSp, normalizePersonalChoice, groupEnemies, factionTypes, snapHud, bossFrac, attackInterval, fmtNum,
   rangeGridBox, shortcutFor, sanitizeSettings, DEFAULT_SETTINGS, normalizeResult, cycleField, fieldLabel, homeFieldId,
   activeBubbles, sortedPlayers, tileKey, prepCapsuleLabel, prepCamera, dropFailureReason, terrainInfo,
 } from '../../public/js/ui/gameLogic.js';
-import { pairPlayers } from '../../server/match/finalAssault.js';
 import { PHASE, GEO } from '../../shared/constants.js';
 import { setLang, setMessages } from '../../shared/i18n.js';
 
@@ -584,6 +583,32 @@ describe('drafts', () => {
     assert.equal(normalizeSp(null), null);
     assert.equal(normalizeSp({ cards: new Array(9).fill({}) }).cards.length, 6, 'at most 6 cards');
   });
+  test('personal choice: only the living recipient in the current PREP, independent of the public draft', () => {
+    const pub = { phase: PHASE.PREP, round: 14, sp: { family: 'supply', cards: ['global'] } };
+    const priv = { playerId: 'a', alive: true, canReady: false, temp: [], personalChoice: {
+      id: 'seed.choice.3', round: 14, sourceItemId: 'chess_item_6_03_m',
+      cards: [{ id: 'e1', kind: 'bounty', name: '战术特训', coin: 2 }, { id: 'e2', kind: 'bounty' }],
+    } };
+    const before = JSON.stringify({ pub, priv });
+    const sp = normalizePersonalChoice(pub, priv, 'a');
+    assert.equal(sp.id, priv.personalChoice.id);
+    assert.equal(sp.family, 'bounty');
+    assert.equal(sp.name, '教鞭 · 战术特训');
+    assert.equal(sp.turnPid, 'a');
+    assert.equal(sp.pickOf.size, 0);
+    assert.deepEqual(sp.cards.map((c) => c.idx), [0, 1]);
+    assert.ok(sp.cards.every((c) => c.takenBy === null));
+    assert.equal(JSON.stringify({ pub, priv }), before);
+    assert.equal(shopBlockReason('ready', { priv, editable: true }), '请先完成教鞭选择');
+    assert.equal(shopBlockReason('ready', { priv: { ...priv, temp: [{}] }, editable: true }), '请先完成教鞭选择');
+    assert.match(shopBlockReason('ready', { priv: { ...priv, personalChoice: null }, editable: true }), /临时整备区/);
+    for (const phase of [PHASE.SP_DRAFT, PHASE.COMBAT, PHASE.ROUND_START]) assert.equal(normalizePersonalChoice({ ...pub, phase }, priv, 'a'), null);
+    assert.equal(normalizePersonalChoice(pub, null, 'a'), null, 'spectator has no private state');
+    assert.equal(normalizePersonalChoice(pub, priv, 'b'), null);
+    assert.equal(normalizePersonalChoice(pub, { ...priv, alive: false }, 'a'), null);
+    assert.equal(normalizePersonalChoice({ ...pub, round: 15 }, priv, 'a'), null);
+    assert.equal(normalizePersonalChoice(pub, { ...priv, personalChoice: null }, 'a'), null);
+  });
 });
 
 describe('fields, players, emotes', () => {
@@ -697,7 +722,7 @@ describe('keyboard & settings', () => {
   test('sanitizeSettings', () => {
     assert.deepEqual(sanitizeSettings(null), { ...DEFAULT_SETTINGS });
     assert.deepEqual(sanitizeSettings({ bgm: 3, sfx: -1, voice: 2, muted: 'yes', damageNumbers: false, quality: 'ultra' }),
-      { bgm: 1, sfx: 0, voice: 1, voiceLang: 'jp', muted: false, damageNumbers: false, officialDamageNumbers: false, quality: 'high', keys: { ...DEFAULT_SETTINGS.keys } },
+      { bgm: 1, sfx: 0, voice: 1, voiceLang: 'jp', voiceOverrides: {}, muted: false, damageNumbers: false, officialDamageNumbers: false, ammoCount: false, quality: 'high', textSize: 'sm', keys: { ...DEFAULT_SETTINGS.keys } },
       'a saved profile without `keys` (before 0.2.0) gets the default key map (test/ui/feedback5-hotkeys.test.js)');
     assert.equal(sanitizeSettings({ bgm: 0.5 }).voice, DEFAULT_SETTINGS.voice, 'a saved profile without `voice` gets the default');
     // 语音语言 (0.2.2): 日本語 by default (the owner's JP-first rule) — a profile saved before it, or any other value,
@@ -738,16 +763,16 @@ describe('prepCamera (research 09 §1.2: the Final Assault prep on the own half 
     assert.equal(prepCamera(null, 'a').kind, 'prep');
     assert.equal(prepCamera({ round: 14, bossRound: null, hiddenRound: null, players: [] }, 'a').kind, 'prep');
   });
-  test('boss / hidden round prep: bossPrep on the side of the server pairing (alive players by seat, two by two)', () => {
+  test('older servers without bossPairs keep the legacy seat-order prep camera fallback', () => {
     const players = [pl('d', 3), pl('a', 0), pl('c', 2), pl('b', 1)];
     for (const round of [14, 15]) {
       const sides = Object.fromEntries(players.map((p) => [p.playerId, prepCamera(pub(round, players), p.playerId)]));
       assert.deepEqual(Object.fromEntries(Object.entries(sides).map(([k, v]) => [k, `${v.kind}:${v.opts.side}`])),
         { a: 'bossPrep:L', b: 'bossPrep:R', c: 'bossPrep:L', d: 'bossPrep:R' });
     }
-    // somebody left (eliminated): the pairs close up exactly like the server's (Match._quit re-plans the boss waves)
+    // Legacy servers closed the ordered pairs up when somebody left; new servers publish bossPairs explicitly.
     const left = [pl('a', 0), pl('b', 1, false), pl('c', 2), pl('d', 3)];
-    const groups = pairPlayers(left.filter((p) => p.alive).map((p) => ({ ...p })));
+    const groups = [[left[0], left[2]], [left[3]]];
     for (const g of groups) g.forEach((p, j) => assert.equal(prepCamera(pub(14, left), p.playerId).opts.side, j === 1 ? 'R' : 'L', p.playerId));
     assert.equal(prepCamera(pub(14, left), 'c').opts.side, 'R', 'c moves up to the right half');
     assert.equal(prepCamera(pub(14, left), 'b').kind, 'prep', 'an eliminated player has no half');

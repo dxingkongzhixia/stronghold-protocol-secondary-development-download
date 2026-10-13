@@ -10,9 +10,11 @@
 // entry/loading illustration names) it is layered under the CSS art; otherwise the screen is
 // pure CSS/SVG (radar, ridgelines, glow), so it never issues a request that can 404.
 
+import { ResumeMatchButton } from '../ui/resumeMatch.js';
 import { useEffect, useMemo, useState } from '../../vendor/hooks.module.js';
 import { NAME_MAX_LEN, APP_VERSION, DEV_BUILD } from '../../../shared/constants.js';
 import { html, Button, Icon, MicroLabel, TextField, PingPill } from '../ui/components.js';
+import { GuideButton } from '../ui/guide.js';
 import { openStats } from './stats.js';
 import { toast } from '../ui/toasts.js';
 import { copyText } from '../ui/clipboard.js';
@@ -20,7 +22,7 @@ import { AccountForm, AccountWho } from '../ui/account.js';
 import { net, identity, randomGuestName } from '../net.js';
 import { store, useStore, shallowEqual } from '../store.js';
 import { data, useData } from '../data.js';
-import { FullscreenButton, detectFeatures } from '../ui/device.js';
+import { FullscreenButton, PwaInstallButton, detectFeatures } from '../ui/device.js';
 import { LangToggle, useLang } from '../ui/lang.js';
 import { t, N_ } from '../../../shared/i18n.js';
 import { scriptOf } from '../../../shared/i18nPacks.js';
@@ -371,6 +373,8 @@ export function TitleScreen() {
     ${announceOpen ? html`<${AnnouncementsOverlay} onClose=${() => setAnnounceOpen(false)} />` : null}
 
     <footer class="title-foot">
+      <${ResumeMatchButton} />
+      <${PwaInstallButton} />
       <span>${t('非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有')}</span>
       <span class="title-foot__meta">
         <a class="title-repo" href="https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download" target="_blank" rel="noopener noreferrer">${t('项目仓库')}</a>

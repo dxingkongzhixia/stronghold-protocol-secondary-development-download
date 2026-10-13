@@ -22,13 +22,20 @@
 //     included — are always delivered, and a full queue sheds only cosmetic ones.
 //
 // Snapshot tuple layout (DESIGN §8.2): [id, x, y, hp, maxHp, sp, spMax, flags, anim]. Optional lists ride along
-// (server/sim/battle/events.js snapshot; user playtest #4 items 8 / 9, PR #381):
+// (server/sim/battle/events.js snapshot; the first two from user playtest #4 items 8 / 9, `stand` / `standCut` from PR #381):
 //   * `elem` [[id, element, fill, cooldownEnd, cooldown]] — the element gauge a unit shows: appended to that unit's
 //     normalised tuple (EL…EL_DUR) and handed out by sample() as `el`, `elFill`, `elUntil`, `elDur` (from the older
 //     snapshot, like flags);
 //   * `down` [[id, respawnAt, respawnTime, state, row?, col?]] — knocked-out operators waiting to redeploy (they are no
 //     longer in `units`) and the tile they lie on (where they fell, or their home — sim Battle._layBody; kept only when
 //     both are integers): downAt(time) returns the list of the snapshot at `time`;
+//   * three HP-bar readouts, kept per snapshot beside the tuples (the tuple layout is unchanged) and handed out by sample()
+//     from the older snapshot like flags, so they step with the skill flag instead of sliding:
+//       `ammo`   [[id, rounds left, rounds in the magazine]]  → sample().ammo   [left, magazine] | null (whole numbers only)
+//       `wolves` [[id, 狼影 left, the talent's maximum]]      → sample().wolves [left, maximum]  | null
+//       `neg`    [[id, fill]] (0.01–1: the negative-HP pool's share of its cap) → sample().neg  number (0: none)
+//     An entry that is malformed, or names a unit the snapshot does not list, is dropped; a snapshot without the list
+//     clears the readout (render/units.js: the segmented ammo bar, the wolf pips, the red bar of 斩业星熊's 我执).
 //   * `stand` [[id, until]] — the game time an enemy's attack recovery ends (sim atkStandUntil, PR #381): the position
 //     holds until then and interpolates the rest of the interval; nothing is inferred from the attack animation, and a
 //     snapshot without it interpolates linearly;
@@ -82,9 +89,11 @@ export function frameTime(msg) {
 
 /**
  * Validate & normalise a b.snap payload. Returns `{ t, units: Map<id, tuple>, down: [[id, respawnAt, respawnTime,
- * state, row?, col?]] | null, stand: Map<id, until> | null, standCut: Map<id, at> | null, raw }` or null when unusable. Tuples with a non-finite id/x/y are skipped; other numbers default
- * to 0; a unit's `elem` entry (see header) is appended to its tuple; malformed `elem` / `down` entries are dropped.
- * `stand` keeps finite end times after `t` of units in the snapshot; `standCut` keeps finite times in [0, t] of units in it.
+ * state, row?, col?]] | null, ammo, wolves: Map id → [left, max] | null, neg: Map id → fill | null, stand: Map<id, until> | null,
+ * standCut: Map<id, at> | null, raw }` or null when unusable. Tuples with a non-finite id/x/y are skipped; other numbers
+ * default to 0; a unit's `elem` entry (see header) is appended to its tuple; malformed `elem` / `down` / `ammo` / `wolves` /
+ * `neg` entries are dropped. `stand` keeps finite end times after `t` of units in the snapshot; `standCut` keeps finite
+ * times in [0, t] of units in it.
  */
 export function normalizeSnapshot(snap) {
   if (!snap || typeof snap !== 'object') return null;
@@ -105,6 +114,14 @@ export function normalizeSnapshot(snap) {
       if (!Array.isArray(e) || !ELEMENT_KEYS.has(e[1])) continue;
       const tu = units.get(e[0]);
       if (tu && tu.length === 9) tu.push(e[1], clamp(finite(e[2]), 0, 1), finite(e[3]), Math.max(0, finite(e[4])));
+    }
+  }
+  const ammo = countList(snap.ammo, units), wolves = countList(snap.wolves, units), coins = countList(snap.coins, units);
+  let neg = null;
+  if (Array.isArray(snap.neg)) {
+    for (const e of snap.neg) {
+      if (!Array.isArray(e) || !units.has(e[0]) || !(typeof e[1] === 'number' && e[1] > 0)) continue;
+      (neg || (neg = new Map())).set(e[0], Math.min(1, e[1]));
     }
   }
   let down = null;
@@ -130,7 +147,22 @@ export function normalizeSnapshot(snap) {
       (standCut || (standCut = new Map())).set(e[0], e[1]);
     }
   }
-  return { t, units, down, stand, standCut, raw: snap };
+  return { t, units, down, ammo, wolves, coins, neg, stand, standCut, raw: snap };
+}
+
+/**
+ * `[[id, left, max]]` → Map id → [left, max] for the ids in `units`: whole numbers with 0 ≤ left ≤ max and max ≥ 1 (the
+ * `ammo` and `wolves` lists); null without a valid entry.
+ */
+function countList(list, units) {
+  if (!Array.isArray(list)) return null;
+  let m = null;
+  for (const e of list) {
+    if (!Array.isArray(e) || !units.has(e[0]) || !Number.isSafeInteger(e[1]) || !Number.isSafeInteger(e[2])
+      || e[1] < 0 || e[2] < 1 || e[1] > e[2]) continue;
+    (m || (m = new Map())).set(e[0], [e[1], e[2]]);
+  }
+  return m;
 }
 
 export class SnapshotBuffer {
@@ -306,8 +338,9 @@ export class SnapshotBuffer {
 
   /**
    * Interpolated state at `time` (default renderT). Fills and returns `out` (a Map id → sample object reused
-   * across calls: `{ id, x, y, hp, maxHp, sp, spMax, flags, anim, vx, vy, seen, el, elFill, elUntil, elDur }` —
-   * `el` = the shown element gauge (null: none), see header). Samples of units no longer present are deleted from `out`.
+   * across calls: `{ id, x, y, hp, maxHp, sp, spMax, flags, anim, vx, vy, seen, el, elFill, elUntil, elDur, ammo, wolves,
+   * neg }` — `el` = the shown element gauge (null: none), `ammo` / `wolves` / `neg` the HP-bar readouts (null / null / 0:
+   * none), see header). Samples of units no longer present are deleted from `out`.
    */
   sample(time = this.renderT, out = new Map()) {
     const s = this.snaps;
@@ -323,7 +356,7 @@ export class SnapshotBuffer {
     const stamp = A.t;
     for (const [id, a] of A.units) {
       let o = out.get(id);
-      if (!o) { o = { id, x: 0, y: 0, hp: 0, maxHp: 0, sp: 0, spMax: 0, flags: 0, anim: 0, vx: 0, vy: 0, seen: 0, el: null, elFill: 0, elUntil: 0, elDur: 0 }; out.set(id, o); }
+      if (!o) { o = { id, x: 0, y: 0, hp: 0, maxHp: 0, sp: 0, spMax: 0, flags: 0, anim: 0, vx: 0, vy: 0, seen: 0, el: null, elFill: 0, elUntil: 0, elDur: 0, ammo: null, wolves: null, neg: 0 }; out.set(id, o); }
       const b = B ? B.units.get(id) : null;
       if (b) {
         const dx = b[1] - a[1], dy = b[2] - a[2];
@@ -366,6 +399,11 @@ export class SnapshotBuffer {
       o.flags = a[7];
       o.anim = a[8];
       if (a.length > 9) { o.el = a[9]; o.elFill = a[10]; o.elUntil = a[11]; o.elDur = a[12]; } else if (o.el !== null) { o.el = null; o.elFill = 0; o.elUntil = 0; o.elDur = 0; }
+      // the HP-bar readouts come with the older snapshot, like flags (whole rounds step with the skill flag)
+      o.ammo = A.ammo ? A.ammo.get(id) || null : null;
+      o.wolves = A.wolves ? A.wolves.get(id) || null : null;
+      o.coins = A.coins?.get(id) ?? null;
+      o.neg = A.neg ? A.neg.get(id) || 0 : 0;
       o.seen = stamp;
     }
     for (const id of out.keys()) if (!A.units.has(id)) out.delete(id);

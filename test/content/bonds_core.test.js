@@ -544,11 +544,12 @@ test('阿戈尔 5: a member devoured by several 阿戈尔 spends one slot at mos
 });
 
 test('阿戈尔 5: an operator\'s own save or revive uses no slot (斯卡蒂\'s DRE-Y, M3茧甲, 埃芒加德 [ASSUMED for the band]); the slot waits for its first unanswered knock-out', () => {
-  // 斯卡蒂 (elite, module DRE-Y by default) enters 联防 at half HP in front of 乌尔比安: his mark is lethal, DRE-Y saves her
+  // 斯卡蒂 (elite, module DRE-Y by default) starts a normal field at half HP in front of 乌尔比安: his mark is lethal,
+  // DRE-Y saves her. Half HP is a fixture here; a restored 联防 target no longer pays opening devour damage twice.
   // (PRTS: once per deployment, full HP with max HP −60 %) — no knock-out, so no slot
   const SKADI = 'chess_char_3_05_b', ULPIA = 'chess_char_5_05_a', GHOST = 'chess_char_2_07_a', HN = 'chess_char_3_09_a', DEEP = 'chess_char_1_04_a';
   const h = makeBattle({
-    kind: 'unite', autoFinish: false, timeLimit: 60, hooks: ['damaged', 'death', 'deploy'], captureNoisy: true,
+    kind: 'normal', autoFinish: false, timeLimit: 60, hooks: ['damaged', 'death', 'deploy'], captureNoisy: true,
     units: [
       { chessId: ULPIA, row: 10, col: 3 }, { chessId: SKADI, row: 10, col: 4, dir: 'UP', carryState: { hpPct: 0.5 } },
       { chessId: GHOST, row: 12, col: 3 }, { chessId: HN, row: 12, col: 5 }, { chessId: DEEP, row: 12, col: 7 },
@@ -715,11 +716,11 @@ test('阿戈尔 (community report, 2026-10-07) step 1: the bond HP is on every m
     assert.equal(h.hooksOf('death').filter((c) => c.unit === h.unit(DEEP) && c.reason === 'killed').length, stands ? 0 : 1, `L ${L}`);
     if (stands) close(post.get(DEEP).hp, 2904 * 1.5 - 4345, 1e-6, 'L 15: 4356 − 4345 = 11 HP left');
   }
-  // an elite 幽灵鲨 at 62 layers: 2422 × (1 + 0.35 + 0.62 + 0.10 her talent) = 5013.54 HP, DEF 365 — one mark (4635) leaves
-  // 378.54; behind 浊心斯卡蒂 and 乌尔比安 she takes both marks and falls to the second (the kill is 乌尔比安's)
+  // an elite 幽灵鲨 at 62 layers: 2422 × (1 + 0.35 + 0.62 + 0.12 her talent at full potential) = 5061.98 HP, DEF 365 — one
+  // mark (4635) leaves 426.98; behind 浊心斯卡蒂 and 乌尔比安 she takes both marks and falls to the second (the kill is 乌尔比安's)
   const one = fight([{ chessId: ULPIA, row: 10, col: 3 }, { chessId: GHOST, row: 10, col: 4 }], 62);
-  close(one.pre.get(GHOST).maxHp, 2422 * 2.07, 1e-6, 'over 5000 HP');
-  close(one.post.get(GHOST).hp, 2422 * 2.07 - (5000 - 365), 1e-6, 'one mark: she stands');
+  close(one.pre.get(GHOST).maxHp, 2422 * 2.09, 1e-6, 'over 5000 HP');
+  close(one.post.get(GHOST).hp, 2422 * 2.09 - (5000 - 365), 1e-6, 'one mark: she stands');
   assert.equal(one.h.hooksOf('death').length, 0);
   const two = fight([{ chessId: SKADI2, row: 10, col: 3 }, { chessId: ULPIA, row: 10, col: 4 }, { chessId: GHOST, row: 10, col: 5 }], 62);
   assert.deepEqual(tagged(two.h, 'bond:egir:devour').filter((c) => c.target.defId === GHOST).map((c) => [c.source.defId, c.amount]),

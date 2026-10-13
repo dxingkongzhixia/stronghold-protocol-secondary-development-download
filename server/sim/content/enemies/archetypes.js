@@ -9,6 +9,7 @@ import {
   areaAllies, areaAlliesInTiles, zone, spawnChildren, stepToward, setHits, hitCount, setForm, absorbArts, auraBuff,
   unbalancedNow,
 } from './helpers.js';
+import { hypot } from '../../detmath.js';
 
 // ---------------------------------------------------------------------------------------------------------------
 // archetypes
@@ -106,7 +107,7 @@ function pathKeysAhead(e) {
   if (!R || !Array.isArray(R.pts)) return keys;
   let x = e.x, y = e.y;
   for (let i = R.ptIdx ?? 0; i < R.pts.length; i++) {
-    const p = R.pts[i], n = Math.max(1, Math.ceil(Math.hypot(p.x - x, p.y - y) * 4));
+    const p = R.pts[i], n = Math.max(1, Math.ceil(hypot(p.x - x, p.y - y) * 4));
     for (let k = 1; k <= n; k++) keys.add(Math.round(y + ((p.y - y) * k) / n) * COLS + Math.round(x + ((p.x - x) * k) / n));
     x = p.x; y = p.y;
   }
@@ -336,10 +337,11 @@ function rebirthCleanse(b, e) {
  * (no move / attack / skill).
  * `onKo(b, e, a)` runs at once (self-destruct, freeing prisoners …), `during(b, e, a, elapsed)` every tick of it; then the
  * enemy stands up with `hpRatio` of its max HP, `onReborn(b, e, a)` switches the form and `invincible` s of 无敌 follow.
+ * `invincibleUntargetable` opts a verified enemy into hostile selection immunity for that same window (Xi, #510).
  * `a.state`: undefined → 'reborn' → 'form2'. The 'telegraph' fx of the knock-out carries `form: 'reborn'` and the 'revive'
  * fx `form: 'form2'`: models with those clip sets (render/units.js FORMS — 锏, 扎罗, “复仇者”, 杰斯顿) play them.
  */
-function reborn({ dur = 0, hpRatio = 1, invincible = 0, onKo = null, during = null, onReborn = null, key = 'ab:reborn' } = {}) {
+function reborn({ dur = 0, hpRatio = 1, invincible = 0, invincibleUntargetable = false, onKo = null, during = null, onReborn = null, key = 'ab:reborn' } = {}) {
   const finish = (b, e, a) => {
     if (!e.alive || a.state !== 'reborn') return;
     a.state = 'form2';
@@ -347,7 +349,8 @@ function reborn({ dur = 0, hpRatio = 1, invincible = 0, onKo = null, during = nu
     e.profile.noAttack = a.noAtk;
     if (onReborn) safe(b, e, () => onReborn(b, e, a));
     e.hp = Math.max(1, e.s.maxHp * Math.max(0, Math.min(1, hpRatio)));
-    if (invincible > 0) b.addBuff(e, { key: `${key}:inv`, duration: invincible, visible: true, flags: { invulnerable: true } });
+    if (invincible > 0) b.addBuff(e, { key: `${key}:inv`, duration: invincible, visible: true,
+      flags: { invulnerable: true, ...(invincibleUntargetable ? { untargetable: true } : {}) } });
     if (e.route) e.route.pts = null;
     e.atkCd = 0;
     rebirthCooldowns(e);
@@ -412,7 +415,7 @@ function unbalanced(onMove) {
       a.px = e.x; a.py = e.y; a.hid = e.hidden;
       if (px == null || hid || e.hidden) return;
       const own = e.s.moveSpeed * MOVE_SCALE * dt * 1.5 + 1e-3;
-      const extra = Math.hypot(e.x - px, e.y - py) - own;
+      const extra = hypot(e.x - px, e.y - py) - own;
       a.lx = px; a.ly = py;                                          // where the move started (direction for onMove)
       if (extra > 0.05) onMove(b, e, a, extra);
     },
@@ -614,7 +617,7 @@ export function blinkForward(b, e, dist) {
     let i = R.ptIdx;
     while (left > 1e-9 && i < R.pts.length) {
       const p = R.pts[i];
-      const d = Math.hypot(p.x - e.x, p.y - e.y);
+      const d = hypot(p.x - e.x, p.y - e.y);
       if (d <= left) { e.x = p.x; e.y = p.y; left -= d; i++; } else { stepToward(e, p.x, p.y, left); left = 0; }
     }
   } else if (R && R.legs && R.legs[R.legIdx] && R.legs[R.legIdx].r != null) {

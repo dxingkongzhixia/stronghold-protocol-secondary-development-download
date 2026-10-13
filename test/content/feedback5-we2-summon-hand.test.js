@@ -3,7 +3,7 @@
 // data's deploy limit / holding carry the tokens' own talent additions (tools/build-data.mjs tokenTalentDeckBonus: the
 // hidden "TOKEN数" talent max_deploy_count / max_deck_stack_cnt on top of the attribute frame). Official counts: the owners'
 // talents (麦哲伦 / 令 / 电弧 "最多同时部署3个", SUM-Y stage 2+ "最多同时部署4个", 白铁 / 娜斯提 "最多可部署2个", 望 "可以使用6枚
-// 棋子", TRP-X +1), PRTS 幻影 备注 "最大可部署数量为3" (夜莺).
+// 棋子" — 7 at full potential (望's 潜能 3 「第一天赋效果增强」, the owner's decision of 2026-10-07) —, TRP-X +1), PRTS 幻影 备注 "最大可部署数量为3" (夜莺).
 // #24: a summon no owner shows (displayTokenDict: the variants' `display` source) is its skill's own object, never a hand
 // card — 予愿安洁莉娜 S3's “一会儿见！” (PRTS 予愿安洁莉娜 S3 备注: the skill deploys it at her initial tile).
 // Run: node --test test/content/feedback5-we2-summon-hand.test.js
@@ -33,7 +33,7 @@ function official(charId, mod, stage) {
     case 'char_4072_ironmn': return 2;
     case 'char_4212_nasti': return 2;
     case 'char_179_cgbird': return 3;                                                      // PRTS 幻影 备注
-    case 'char_2027_wang': return mod === 'uniequip_002_wang' ? 7 : 6;                     // TRP-X +1
+    case 'char_2027_wang': return mod === 'uniequip_002_wang' ? 8 : 7;                     // 7 at full potential, TRP-X +1
     case 'char_4048_doroth': return 9;                                                     // 10 / 13, the hand's 9 cap
     default: return 1;
   }

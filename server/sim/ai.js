@@ -39,6 +39,7 @@ import { sortEnemyTargets, sortAllyTargets, canTargetEnemy, canTargetAlly, tileK
 import { reduceElement } from './damage.js';
 import { straightClear } from './grid.js';
 import { moveFeared, endFear } from './fear.js';
+import { hypot, powi } from './detmath.js';
 
 // ---------------------------------------------------------------------------------------------------------------
 // profiles
@@ -170,6 +171,16 @@ export function acquireTargets(b, u, prof) {
   if (u.blocking.length) for (const e of b.blockedTargets(u, prof)) if (!cands.includes(e)) cands.push(e);
   // an ally target (Battle.setAllyTarget: 白铁's 铁钳号·原型机, an enemy-camp summon with 嘲讽等级 −2) after every enemy
   const extra = b._allyTargets && b._allyTargets.size ? b.allyTargetsInKeys(u.rangeKeys, u) : null;
+  // Fortress has an extra melee tile even against enemies it cannot block (PRTS branch / 号角). Its ordinary
+  // ranged targets still take priority; this does not fill the other tiles in its ranged blind spot.
+  if (prof.fortress && !cands.length && !extra?.length) {
+    const here = [u.tileR * COLS + u.tileC];
+    const near = b.enemiesInKeys(here, u, prof);
+    if (!near.length && b._allyTargets?.size) near.push(...b.allyTargetsInKeys(here, u));
+    prof._fortressMelee = near.length > 0;
+    sortEnemyTargets(b, u, near, prof.priority);
+    return near.slice(0, 1);
+  }
   if (extra && extra.length) {
     if (prof.allInRange) return cands.concat(extra);
     sortEnemyTargets(b, u, cands, prof.priority);
@@ -224,7 +235,8 @@ export function performAttack(b, u, prof, targets, opts = null) {
     const t = targets[i];
     b._ev(['atk', u.id, t.id, vis]);
     if (isHeal) { doHeal(b, u, prof, t); continue; }
-    const info = { isSkill, index: i, attackId, energy: i === 0 ? energy : 0 };
+    // Target acquisition mutates the fortress profile. Keep this shot's mode while its shell is in flight.
+    const info = { isSkill, index: i, attackId, fortressMelee: !!prof._fortressMelee, energy: i === 0 ? energy : 0 };
     const foe = t.side === 'enemy' || b.isAllyTarget(t);
     if (ranged && foe && prof.projectile === 'boomerang') {
       throwBoomerang(b, u, prof, t, info);
@@ -338,7 +350,7 @@ export function resolveHit(b, u, prof, target, info, x, y) {
     x = target.x; y = target.y;
   }
   // splash: a 中点判定 radius around the target's position — a huge enemy counts by its 判定中心 (Battle.enemiesInRadius)
-  if (prof.splashRadius > 0) {
+  if (prof.splashRadius > 0 && (!info.fortressMelee || prof.fortressMeleeSplash)) {
     const r = prof.splashRadius;
     const sc = prof.splashScale ?? 1;
     for (const e of b.foesInRadius(x, y, r, true)) {
@@ -360,13 +372,13 @@ export function resolveHit(b, u, prof, target, info, x, y) {
       let best = null, bd = Infinity;
       for (const e of b.enemiesInRadius(prev.x, prev.y, prof.chain.radius || CHAIN_RADIUS)) {
         if (hit.has(e.id) || !canTargetEnemy(u, e, prof)) continue;
-        const d = Math.hypot(e.x - prev.x, e.y - prev.y);
+        const d = hypot(e.x - prev.x, e.y - prev.y);
         if (d < bd - 1e-9 || (Math.abs(d - bd) <= 1e-9 && best && e.spawnSeq < best.spawnSeq)) { bd = d; best = e; }
       }
       if (!best) break;
       hit.add(best.id);
       b._ev(['atk', prev.id, best.id, 'chain']);
-      const d = b.dealDamage(u, best, { amount: atk * scale * skillMul * Math.pow(1 - (prof.chain.falloff ?? 0.15), k), type: baseType, isAttack: true, isSkill: info.isSkill, tags: ['chain'], attackId });
+      const d = b.dealDamage(u, best, { amount: atk * scale * skillMul * powi(1 - (prof.chain.falloff ?? 0.15), k), type: baseType, isAttack: true, isSkill: info.isSkill, tags: ['chain'], attackId });
       dealtTotal += d;
       if (prof.chain.sluggish && best.alive) b.applyStatus(best, 'sluggish', { duration: prof.chain.sluggish, source: u });
       if (each) each(best, d, 'chain');
@@ -424,7 +436,7 @@ function doHeal(b, u, prof, t) {
       if (!best) break;
       seen.add(best.id);
       b._ev(['atk', prev.id, best.id, 'chainHeal']);
-      b.heal(u, best, amount * Math.pow(1 - (h.falloff ?? 0.25), k));
+      b.heal(u, best, amount * powi(1 - (h.falloff ?? 0.25), k));
       prev = best;
     }
   }
@@ -510,7 +522,7 @@ function planLeg(b, e, leg) {
   R.version = b.grid.version;
   // suffix lengths for remaining-distance queries
   const suf = new Float64Array(pts.length);
-  for (let i = pts.length - 2; i >= 0; i--) suf[i] = suf[i + 1] + Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+  for (let i = pts.length - 2; i >= 0; i--) suf[i] = suf[i + 1] + hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
   R.suffix = suf;
 }
 
@@ -532,7 +544,7 @@ function tailLength(b, e, idx) {
       let len = 0;
       if (L.t === 'move') {
         const [sr, sc] = starts[i];
-        len = Math.hypot(L.r - sr, L.c - sc);
+        len = hypot(L.r - sr, L.c - sc);
         if (e.motion !== 'FLY' && b.grid.inBounds(sr, sc)) {
           const f = legField(b, L.r, L.c, sr * COLS + sc);
           const fl = f ? b.grid.fieldLength(f, sr * COLS + sc) : Infinity;
@@ -554,9 +566,9 @@ export function remainingDistance(b, e) {
   const leg = R.legs[R.legIdx];
   if (leg && leg.t === 'move' && R.pts && R.ptIdx < R.pts.length) {
     const p = R.pts[R.ptIdx];
-    d += Math.hypot(p.x - e.x, p.y - e.y) + R.suffix[R.ptIdx];
+    d += hypot(p.x - e.x, p.y - e.y) + R.suffix[R.ptIdx];
   } else if (leg && leg.t === 'move') {
-    d += Math.hypot(leg.c - e.x, leg.r - e.y);
+    d += hypot(leg.c - e.x, leg.r - e.y);
   }
   return d;
 }
@@ -655,7 +667,7 @@ function moveAttracted(b, e, dt) {
   let moved = false;
   while (dist > 1e-9 && A.i < A.pts.length) {
     const p = A.pts[A.i];
-    const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy);
+    const dx = p.x - e.x, dy = p.y - e.y, d = hypot(dx, dy);
     if (d <= dist) { e.x = p.x; e.y = p.y; dist -= d; A.i++; } else { e.x += (dx / d) * dist; e.y += (dy / d) * dist; dist = 0; }
     moved = true;
   }
@@ -714,7 +726,7 @@ function advanceRoute(b, e, dt, R, standing = false) {
       if (R.ptIdx >= R.pts.length) break;
       const p = R.pts[R.ptIdx];
       const dx = p.x - e.x, dy = p.y - e.y;
-      const d = Math.hypot(dx, dy);
+      const d = hypot(dx, dy);
       if (d <= dist) {
         e.x = p.x; e.y = p.y;
         dist -= d;
@@ -756,7 +768,7 @@ function portalPickup(b, e) {
   if (!b.grid.inBounds(r, c) || b.grid.tile(r, c).special !== 'telin') return false;
   const outs = b.grid.specialTiles('telout');
   if (!outs.length) return false;
-  const dist = (p) => Math.hypot(p[0] - r, p[1] - c);
+  const dist = (p) => hypot(p[0] - r, p[1] - c);
   const out = outs.reduce((a, x) => (dist(x) > dist(a) ? x : a));
   const R = e.route;
   R.legs.splice(R.legIdx + 1, 0, { t: 'disappear' }, { t: 'wait', time: PORTAL_WAIT }, { t: 'appear', r: out[0], c: out[1] });
@@ -930,7 +942,7 @@ function enemyAttack(b, e, prevCd) {
       if (!tt || !tt.alive || !e.alive && !rangedShot) return;
       b.dealDamage(e, tt, { amount: e.s.atk * (e.profile?.atkScale ?? 1), type, isAttack: true, attackId, isProjectile });
     };
-    if (rangedShot && Math.hypot(t.x - e.x, t.y - e.y) > 0.75) {
+    if (rangedShot && hypot(t.x - e.x, t.y - e.y) > 0.75) {
       b.addProjectile({ from: e, target: t, speed: PROJECTILE_SPEEDS.enemy, visual: 'enemy', source: e, onHit: (c) => hit(c.target, true) });
     } else hit(t);
   }

@@ -23,6 +23,11 @@
 // 0.2.0 补位: a member the player fields as its stand-in (the own m.private.standIns; a teammate's unit that says so —
 // UnitInfo `standInFor`) is drawn as the stand-in — avatar, name, a small 「替补」 mark on the thumbnail — and its row
 // opens the stand-in's card (gameLogic memberStandIn; the owner's recall of the official mode, 2026-10-06).
+// 0.2.1 自选编队 (the owner's report of 2026-10-07): each 自选 pick of the player (m.private.diy) is a row of every bond its
+// operator carries — the operator's name and portrait with the 「自选」 tag, dimmed until owned (not bought, or not in the
+// shop yet), ✕ when all its bonds are off this match (m.private.diyBanned) — and opens the operator's card; a watched
+// teammate's 自选 pieces on the field are rows too (their picks are not sent), opening THEIR operator's card (the unit's
+// pick goes with onMember: never the empty 甄选干员 slot's card).
 
 import { html, BondDisc, Icon, MicroLabel, Tooltip } from './components.js';
 import { RichText, UnitThumb, BondGlyph, GIcon } from './gameComponents.js';
@@ -88,7 +93,7 @@ export function BondStrip({ bonds, layersDisabled = false, onOpen, openId = null
 /**
  * Bond detail popup.
  * @param {{ bondId: string, entry?: any, priv?: any, banned?: string[], onClose: Function,
- *   onMember?: (chessId:string, items?:string[]|null, standInFor?:string|null)=>void,
+ *   onMember?: (chessId:string, items?:string[]|null, standInFor?:string|null, diy?:any)=>void,
  *   place?: 'left'|'beside'|'besideR'|'right'|null, over?: boolean, beside?: 'left'|'right'|null, owner?: string|null, off?: boolean }} props —
  *   `place`: where it opens (gameLogic bondPopupPlace; `beside: 'left'` = the older spelling of 'beside'); `over`: above the
  *   detail card; `owner`: the watched teammate's name (`entry` / `priv` are then theirs: ui/watchBonds.js); `onMember`

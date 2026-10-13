@@ -75,6 +75,7 @@ import {
   ensureInstalled, abOf, attach, T, elem, hurt, targetsNear, allTargets, byPriority, areaAllies, areaAlliesInTiles, fieldAllies,
   remainingRoute, stayRoute, stepToward, setHits, hitCount, lpLoss, blinkForward, canCast, unbalancedNow, absorbArts, nthOf,
 } from './enemies.js';
+import { hypot, powi } from '../detmath.js';
 
 // ---------------------------------------------------------------------------------------------------------------
 // constants
@@ -209,7 +210,7 @@ function rawRouteOf(b, e, tpl) {
 function toGoal(b, x, y, motion = 'WALK') {
   const ends = b.grid.specialTiles('end');
   let best = ends[0] ?? [Math.round(y), Math.round(x)], bd = Infinity;
-  for (const p of ends) { const d = Math.hypot(p[0] - y, p[1] - x); if (d < bd) { bd = d; best = p; } }
+  for (const p of ends) { const d = hypot(p[0] - y, p[1] - x); if (d < bd) { bd = d; best = p; } }
   return { motion, start: [y, x], end: best, checkpoints: [] };
 }
 
@@ -318,7 +319,7 @@ function mirror(b, e, tpl) {
 const opsOnly = (list) => list.filter((u) => u.kind === 'op');
 const nearestOf = (b, e, pred) => {
   let best = null, bd = Infinity;
-  for (const o of b.enemies) { if (!o.alive || o === e || !pred(o)) continue; const d = Math.hypot(o.x - e.x, o.y - e.y); if (d < bd) { bd = d; best = o; } }
+  for (const o of b.enemies) { if (!o.alive || o === e || !pred(o)) continue; const d = hypot(o.x - e.x, o.y - e.y); if (d < bd) { bd = d; best = o; } }
   return best;
 };
 /** Apply a floor to an enemy whose data attack speed is 0 (skill-driven leaders: 铳/管/弦). */
@@ -370,7 +371,7 @@ function stunBlast(b, src, by, r, c, stun, dot, dur, kind) {
 function segDist(px, py, ax, ay, bx, by) {
   const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
   const t = L > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L)) : 0;
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  return hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -642,8 +643,11 @@ function kitGun(ab, e, b) {
     });
     if (s2) list.push({
       cd: s2.cd, icd: s2.icd, cond: (b2) => b2.enemies.some((o) => o.alive && isSpring(o)),
-      fire(b2, e2) { // 【末日布道】 springs dash to 铳, invulnerable, trampling operators
-        // PRTS “碎铳之簧” 追逐模式 "不进行普通攻击": `disarm` for the dash (until 0.1.3 it kept shooting while it ran)
+      fire(b2, e2) { // 【末日布道】 springs chase 铳 for the whole 5 s gain, invulnerable, trampling operators (kitSpring)
+        // PRTS “碎铳之簧” 追逐模式 "不进行普通攻击": `disarm` for the dash (until 0.1.3 it kept shooting while it ran).
+        // Each gun casts on its own data timer, and a cast takes every spring — on a pair field the later of the two
+        // calls retargets them all to its gun (handbook 「持续召唤场上所有“碎铳之簧”向自身移动」; no stagger, no lock while
+        // a chase runs: PR #347's pair coordination is not taken, the data has neither)
         for (const sp of b2.enemies) {
           if (!sp.alive || !isSpring(sp) || !sp.mem.ab) continue;
           sp.mem.ab.dash = { until: b2.time + (s2.bb.dog_duration ?? 0), mul: 1 + (s2.bb.move_speed ?? 0), gun: e2, hit: new Set() };
@@ -717,10 +721,10 @@ function kitSpring(ab, e) {
         // 0.2.1 it ended on arrival or within 1 tile). The casting gun dead: the nearest other gun; none left on the
         // field: it holds still, the gain running on.
         const g = d.gun && d.gun.alive ? d.gun : gun(b);
-        const arrived = !g || stepToward(e2, g.x, g.y, e2.s.moveSpeed * d.mul * MOVE_SCALE * dt) || Math.hypot(g.x - e2.x, g.y - e2.y) < 1;
+        if (g) stepToward(e2, g.x, g.y, e2.s.moveSpeed * d.mul * MOVE_SCALE * dt);
         // 追逐模式 "对进入自身0.35半径范围内的我方单位（包括飞行单位）造成一次攻击力100%的物理普通伤害" (until 0.1.3: radius 0.5)
         for (const u of areaAllies(b, e2, e2.x, e2.y, CHARGE_RADIUS)) if (!d.hit.has(u)) { d.hit.add(u); hurt(b, e2, u, e2.s.atk, 'phys'); }
-        if (arrived || b.time >= d.until) { e2.mem.ab.dash = null; b.removeBuff(e2, 'boss:dash'); if (e2.route) e2.route.pts = null; }
+        if (b.time >= d.until) { e2.mem.ab.dash = null; b.removeBuff(e2, 'boss:dash'); if (e2.route) e2.route.pts = null; }
       },
     },
     // while shielded, every (spCost+1)-th attack (enemy SP +1 per attack, as 粉碎攻坚手's official text) adds the shield's
@@ -739,9 +743,9 @@ function kitSpring(ab, e) {
           for (let k = 0; k < times && t; k++) {
             hit.add(t);
             b.fx('beam', { x: e2.x, y: e2.y, from: e2.id, to: t.id, kind: 'springBullet' });
-            elem(b, e2, t, 'erosion', e2.s.atk * ratio * Math.pow(SPRING_BOUNCE_FALLOFF, k));
+            elem(b, e2, t, 'erosion', e2.s.atk * ratio * powi(SPRING_BOUNCE_FALLOFF, k));
             const prev = t;
-            t = areaAllies(b, e2, prev.x, prev.y, SPRING_BOUNCE_RANGE).filter((u) => !hit.has(u)).sort((p, q) => Math.hypot(p.x - prev.x, p.y - prev.y) - Math.hypot(q.x - prev.x, q.y - prev.y) || aggroCmp(p, q))[0];
+            t = areaAllies(b, e2, prev.x, prev.y, SPRING_BOUNCE_RANGE).filter((u) => !hit.has(u)).sort((p, q) => hypot(p.x - prev.x, p.y - prev.y) - hypot(q.x - prev.x, q.y - prev.y) || aggroCmp(p, q))[0];
           }
         } else { // 十连击
           b.fx('beam', { x: e2.x, y: e2.y, from: e2.id, to: t0.id, kind: 'springCombo' });
@@ -773,15 +777,25 @@ export function setEchoForm(b, echo, form) {
 export function echoHit(b, echo) {
   const ab = echo.mem.ab;
   if (!ab || !echo.alive) return;
-  const atk = echo.s.atk;
-  b.fx('explode', { x: echo.x, y: echo.y, r: ECHO_PULSE_RADIUS, kind: 'echoPulse' });
-  for (const u of areaAllies(b, echo, echo.x, echo.y, ECHO_PULSE_RADIUS)) {
-    hurt(b, echo, u, atk * (T(ab, '3.atk_scale') ?? 0), 'arts');
-    elem(b, echo, u, 'apoptosis', atk * (T(ab, '3.ep_damage_ratio') ?? 0));
-  }
-  const need = ab.form === 'gold' ? T(ab, '1.hit_times_to_switch') : T(ab, '2.hit_times_to_switch');
-  ab.strikes = (ab.strikes ?? 0) + 1;
-  if (need > 0 && ab.strikes >= need) setEchoForm(b, echo, ab.form === 'gold' ? 'dark' : 'gold');
+  // [ASSUMED] Resolve recursively earned pulses FIFO after the current pulse. A counter can remove dozens of
+  // hit-count HP here; synchronous damaged → counter → pulse nesting used to trip the engine's 32-hook guard.
+  // Keep the pulse earned by the lethal hit, too. No timer, extra RNG or skipped damage (DESIGN §28.24).
+  (ab.pulses ||= []).push(echo.s.atk);
+  if (ab.pulsing) return;
+  ab.pulsing = true;
+  try {
+    for (let i = 0; i < ab.pulses.length; i++) {
+      const atk = ab.pulses[i];
+      b.fx('explode', { x: echo.x, y: echo.y, r: ECHO_PULSE_RADIUS, kind: 'echoPulse' });
+      for (const u of areaAllies(b, echo, echo.x, echo.y, ECHO_PULSE_RADIUS)) {
+        hurt(b, echo, u, atk * (T(ab, '3.atk_scale') ?? 0), 'arts');
+        elem(b, echo, u, 'apoptosis', atk * (T(ab, '3.ep_damage_ratio') ?? 0));
+      }
+      const need = ab.form === 'gold' ? T(ab, '1.hit_times_to_switch') : T(ab, '2.hit_times_to_switch');
+      ab.strikes = (ab.strikes ?? 0) + 1;
+      if (echo.alive && need > 0 && ab.strikes >= need) setEchoForm(b, echo, ab.form === 'gold' ? 'dark' : 'gold');
+    }
+  } finally { ab.pulses.length = 0; ab.pulsing = false; }
 }
 
 function kitEcho(ab, e) {

@@ -105,6 +105,59 @@ describe('自选编队 picker: reselecting retains the draft (real server, no ar
   }
 });
 
+// GitHub #284 (idea from PR #286): Esc in the picker cancels only the picker, like its 取消, also from its search
+// field — the 干员调配 overlay and its four slots stay, and the saved picks do not change; the next Esc closes the overlay
+describe('自选编队 picker: Esc closes only the picker (real server, no art needed)', { skip: !UI_ENABLED && 'set SP_E2E=1 (and have Chrome)' }, () => {
+  test('5阶 / 6阶 slots: Esc cancels the picker, the overlay stays; a second Esc closes the overlay', { timeout: 90000 }, async () => {
+    const srv = await startRealServer();
+    const P = (await import('puppeteer-core')).default;
+    const c = new Client(P, srv.base, 'diy-esc', { prefix: 'diy-esc' });
+    const picker = '[data-testid="diy-picker"]';
+    const saved = () => c.page.evaluate(() => localStorage.getItem('sp.pref.diy'));
+    try {
+      await c.open();
+      await c.enter('自选取消');
+      await c.click('.lobby-screen [data-testid="loadout-open"]');
+      await c.page.waitForSelector('.lo .lo-tab[data-tab="diy"]', { visible: true, timeout: 15000 });
+      await c.click('.lo .lo-tab[data-tab="diy"]');
+      const before = await saved();
+      for (const [slot, search] of [[SLOT, false], ['chess_char_6_diy1_a', true]]) {
+        await c.page.waitForSelector(`.diy-slot[data-slot="${slot}"] .diy-slot__fill`, { visible: true, timeout: 15000 });
+        await c.click(`.diy-slot[data-slot="${slot}"] .diy-slot__fill`);
+        await c.page.waitForSelector(picker, { visible: true, timeout: 8000 });
+        if (search) {
+          await c.click(`${picker} input[type="search"]`);
+          await c.page.keyboard.type('推进');
+        }
+        await c.page.keyboard.press('Escape');
+        await c.page.waitForSelector(picker, { hidden: true, timeout: 3000 });
+        assert.ok(await c.page.$('.lo'), `${slot}: Esc keeps the 干员调配 overlay${search ? ' (from the search field)' : ''}`);
+        assert.equal((await c.page.$$('.diy-slot')).length, 4, `${slot}: the four slots stay`);
+      }
+      // an Esc pressed the moment the picker appears — before the next animation frame — closes it too: its listener comes
+      // with the picker's own commit (a plain effect attached it a frame later and the overlay skipped the key: the
+      // picker stayed open — the 0.2.2 full browser pass)
+      const opened = await c.page.evaluate(async (slot, sel) => {
+        document.querySelector(`.diy-slot[data-slot="${slot}"] .diy-slot__fill`).click();
+        for (let k = 0; k < 50 && !document.querySelector(sel); k++) await Promise.resolve();
+        const open = !!document.querySelector(sel);
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        return open;
+      }, SLOT, picker);
+      assert.ok(opened, 'the picker opened');
+      await c.page.waitForSelector(picker, { hidden: true, timeout: 3000 });
+      assert.ok(await c.page.$('.lo'), 'an immediate Esc keeps the 干员调配 overlay');
+      assert.equal(await saved(), before, 'cancelling a picker does not change the saved picks');
+      await c.page.keyboard.press('Escape');
+      await c.page.waitForFunction(() => !document.querySelector('.lo'), { timeout: 3000 });
+      assert.deepEqual(c.problems.filter((p) => p.startsWith('pageerror:')), []);
+    } finally {
+      await c.close();
+      await srv.stop();
+    }
+  });
+});
+
 describe('0.2.0 自选编队 — a slotted operator in the own shop and battle (real server)', { skip: !ENABLED && 'set SP_E2E=1 (Chrome + public/assets)' }, () => {
   test('自选编队: slot 推进之王 → level-5 shop card (自选) → buy → deploy → the local battle fields 推进之王', { timeout: 6 * 60 * 1000 }, async () => {
     const srv = await startRealServer({ fast: { timerScale: 0.5, combatSpeed: 2, startRound: 1, kit: 0, level: 5, shop: [SLOT] } });
@@ -125,10 +178,11 @@ describe('0.2.0 自选编队 — a slotted operator in the own shop and battle (
       await c.page.waitForSelector(`[data-testid="diy-picker"] .diy-opt[data-char="${SIEGE}"]`, { visible: true, timeout: 8000 });
       const listed = await c.page.evaluate(() => [...document.querySelectorAll('[data-testid="diy-picker"] .diy-opt')].map((el) => el.dataset.char));
       assert.ok(listed.includes('char_609_acguad') && listed.includes('char_601_cguard'), 'the tier-5 prototypes are listed');
+      await c.page.$eval(`[data-testid="diy-picker"] .diy-opt[data-char="${SIEGE}"]`, e => e.scrollIntoView({ block: 'nearest' }));
       await c.click(`[data-testid="diy-picker"] .diy-opt[data-char="${SIEGE}"]`);
       await c.page.waitForSelector('[data-testid="diy-picker"] .diy-choice[data-skill="2"]', { visible: true, timeout: 5000 });
-      await c.click('[data-testid="diy-picker"] .diy-choice[data-skill="2"]');
-      await c.click('[data-testid="diy-picker"] .diy-choice[data-module="uniequip_002_siege"]');
+      await c.page.click('[data-testid="diy-picker"] .diy-choice[data-skill="2"]');
+      await c.page.click('[data-testid="diy-picker"] .diy-choice[data-module="uniequip_002_siege"]');
       await c.shot('picker');
       await c.click('[data-testid="diy-confirm"]');
       await c.page.waitForFunction((slot, id) => document.querySelector(`.diy-slot[data-slot="${slot}"]`)?.dataset.char === id, { timeout: 4000 }, SLOT, SIEGE);

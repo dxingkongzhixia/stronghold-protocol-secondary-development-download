@@ -37,3 +37,8 @@ normative lines it rewrote).
 | §24 | [history/0.1.4.md](history/0.1.4.md) | 0.1.4 — community reports after 0.1.3 |
 | §25 | [history/0.2.0.md](history/0.2.0.md) | 0.2.0 |
 | §26 | [history/0.2.1.md](history/0.2.1.md) | 0.2.1 — after the 0.2.0 release |
+| §27 | [history/0.2.2.md](history/0.2.2.md) | 0.2.2 — after the 0.2.1 release |
+| §28 | [history/0.2.3.md](history/0.2.3.md) | New content and community fixes |
+| §29 | [history/0.2.4.md](history/0.2.4.md) | Community follow-up |
+| §30 | [history/0.2.5.md](history/0.2.5.md) | Community follow-up |
+| §31 | [history/0.2.6.md](history/0.2.6.md) | Host bandwidth (layers 0 and 1) and community follow-up |

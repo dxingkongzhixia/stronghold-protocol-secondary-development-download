@@ -1,13 +1,12 @@
 // The tile of a target is its position rounded half to even — PRTS 作战机制 「受击方坐标经round函数取整(四舍六入五成双)
 // 得到其所属格坐标，按是否属于该格判定」 — not Math.round, which rounds every tie up: an enemy exactly halfway between
 // columns 10 and 11 (x = 10.5) is on column 10, one at x = 11.5 on column 12.
-//
-// Our fork has no `detmath.js` (DESIGN §6 divergence), so `roundHalfEven` lives in `server/sim/body.js`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeBattle, chessRec, enemyRec } from '../helpers/battleHarness.js';
-import { roundHalfEven, bodyKeys, bodyOnTile, bodyTileReach } from '../../server/sim/body.js';
+import { roundHalfEven } from '../../server/sim/detmath.js';
+import { bodyKeys, bodyOnTile, bodyTileReach } from '../../server/sim/body.js';
 import { tileKeyOf } from '../../server/sim/targeting.js';
 import { COLS } from '../../server/sim/constants.js';
 

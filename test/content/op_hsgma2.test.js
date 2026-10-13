@@ -69,7 +69,7 @@ test('斩业星熊 in every 自选 form: her operator kit (all three skills auth
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 2592 / 533 / 431, E2 Lv60 3228 / 622 / 517; AST-X +190 / +55 → +325 / +80
+  // the numbers of the forms (zh_CN): E2 Lv1 2592 / 533 / 461, E2 Lv60 3228 / 622 / 547; AST-X +190 / +55 → +325 / +80
   assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2592, 533, 3228, 622]);
   assert.deepEqual([modOf(5, ASTX).attr, modOf(6, ASTX).attr], [{ maxHp: 190, atk: 55 }, { maxHp: 325, atk: 80 }]);
 });
@@ -300,10 +300,37 @@ test('S3 临死模式 (a 主动关闭 only — no strategy of this mode closes i
   }
 });
 
-test('T1 业火 我执: a lethal hit leaves her on the field (HP floor) with the excess as negative HP; later damage goes there (受击回复 SP still), 禁疗 meanwhile; 200 % of max HP knocks her out; 5 s without damage ⇒ 生命回复速度 5 %/s clears it and she leaves 我执', () => {
+// 社区反馈 (PR #383 by @Convey123): 「绿条被打空以后受到伤害就会涨红条，这里看不到红条」 — the official HP bar shows the 我执 pool as a red bar
+// growing over the drained green one. The sim has kept the pool since 0.2.0 (unit.mem.hsEgo); the snapshot now lists its share of the
+// cap (b.snap `neg`, snapshot.js negView — display only) and render/units.js draws it (test/render/hud-readouts.test.js).
+test('T1 业火 我执: the pool reaches the client as b.snap `neg` — its share of the cap (2 × max HP) from the first lethal hit, growing with the damage, gone with 我执', () => {
+  const { h, u } = field({ tier: 6, elite: true, skill: 0, others: [{ uid: 2, chessId: TEXAS, row: 12, col: 9 }] });
+  const e = h.spawn('enemy_dummy', { pos: [10, 8] });
+  h.step();
+  const max = u.s.maxHp;
+  const negOf = () => (h.b.snapshot().neg || []).find((x) => x[0] === u.id);
+  assert.equal(h.b.snapshot().neg, undefined, 'not in 我执: no list');
+  h.b.dealDamage(e, u, { amount: u.hp + 300, type: 'true' });
+  h.step();
+  assert.ok(u.mem.hsEgo, '已进入 我执');
+  const cap = 2 * max;                      // max_minus_hp_ratio
+  approx(negOf()[1], 300 / cap, 'the share of the cap', 0.02);
+  h.b.dealDamage(e, u, { amount: 400, type: 'true' });
+  h.step();
+  approx(negOf()[1], 700 / cap, 'it grew with the damage', 0.02);
+  assert.ok(negOf()[1] < 1, 'still below a full pool');
+  assert.ok(u.hp / max < 0.01, 'her green bar sits on the 1-HP floor: the red bar is the whole story');
+  assert.equal(h.b.snapshot().units.find((t) => t[0] === u.id).length, 9, 'the tuple is not widened');
+  assert.ok(h.runUntil(() => !u.mem.hsEgo, 60), 'the quiet-time regeneration clears the pool');
+  h.step();
+  assert.equal(h.b.snapshot().neg, undefined, 'no pool, no red bar');
+  done(h);
+});
+
+test('T1 业火 我执: a lethal hit leaves her on the field (HP floor) with the excess as negative HP; later damage goes there (受击回复 SP still), 禁疗 meanwhile; 200 % of max HP knocks her out; 4 s without damage ⇒ 生命回复速度 5 %/s clears it and she leaves 我执', () => {
   for (const [tier, elite] of [[5, false], [6, true]]) {
     const t0 = formOf(tier, elite).talents.find((t) => t.index === 0).bb;
-    assert.deepEqual([t0.max_minus_hp_ratio, t0['hsgma2_t_1[heal].interval'], t0['hsgma2_t_1[heal].hp_recovery_per_sec_by_max_hp_ratio']], [2, 5, 0.05], `T${tier}`);
+    assert.deepEqual([t0.max_minus_hp_ratio, t0['hsgma2_t_1[heal].interval'], t0['hsgma2_t_1[heal].hp_recovery_per_sec_by_max_hp_ratio']], [2, 4, 0.05], `T${tier}`);
     const { h, u } = field({ tier, elite, skill: 0, others: [{ uid: 2, chessId: TEXAS, row: 12, col: 9 }] });
     const e = h.spawn('enemy_dummy', { pos: [10, 8] });
     h.step();
@@ -323,9 +350,9 @@ test('T1 业火 我执: a lethal hit leaves her on the field (HP floor) with the
     assert.deepEqual([u.hp, Math.round(u.mem.hsEgo.pool)], [1, 600], `T${tier}: a heal that ignores 禁疗 clears negative HP first`);
     h.b.loseHp(u, 200, { source: e });
     assert.deepEqual([u.alive, u.hp, Math.round(u.mem.hsEgo.pool)], [true, 1, 800], `T${tier}: a 流失 adds to it`);
-    // quiet: the regeneration starts at 5 s and clears the pool at 5 % max HP / s
-    h.run(4.9);
-    assert.equal(u.findBuff('talent:hsgma2:egoRegen'), null, `T${tier}: not before 5 s`);
+    // quiet: the regeneration starts at 4 s and clears the pool at 5 % max HP / s
+    h.run(3.9);
+    assert.equal(u.findBuff('talent:hsgma2:egoRegen'), null, `T${tier}: not before 4 s`);
     h.run(0.2);
     assert.deepEqual(u.findBuff('talent:hsgma2:egoRegen')?.mods, { hpRegenRatio: 0.05 }, `T${tier}: 生命回复速度（百分比）`);
     const t1 = h.b.time;

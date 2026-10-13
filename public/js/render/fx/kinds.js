@@ -24,6 +24,8 @@
  */
 export const FX_KINDS = Object.freeze({
   // blasts
+  // [ASSUMED] Clementia's S3 uses the shared blast placeholder until her official effect is ported.
+  blast: { a: 'blast', c: 0xffb35c },
   // `aoe` is shared by every operator's area skill, so its official layers are keyed by the emitting operator
   // (`local.byOp`, render/fx/localart.js fxLocalFor): 结城理's 替身换位 (S.E.E.S. 停顿) and 娜仁图亚's S3 吞日 retrieve
   // burst. A non-listed caster (or a missing extraction) keeps the procedural blast.

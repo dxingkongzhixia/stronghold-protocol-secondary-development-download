@@ -13,7 +13,9 @@
 //   never block or warn; everything requested before that is remembered (BGM) or dropped (SFX).
 // - Channels: master → { bgm, sfx, voice } gains; volumes from settings (0..1) + mute. Tab hidden ⇒ suspend.
 // - BGM: `intro` then `loop` (1 s crossfade); switching tracks fades out/in (0.8 s). The same loop URL
-//   keeps playing across phases (prep and combat share a track).
+//   keeps playing across phases (prep and combat share a track). While the music is silent — muted, or the BGM volume
+//   at 0 — no track is downloaded (≈ 14 MB a match): the wanted one is remembered, another one playing stops, and the
+//   track the screen wants then starts once the music is audible again (`setVolumes`; host bandwidth, layer 0).
 // - 开战 BGM: `bgm.combatAlts` are the mode's own battle tracks (塞壬唱片 骑士之日 / 无畏者). The track is fixed per
 //   round, not drawn: 无畏者 through rounds 1–7 and 骑士之日 from round 8 on (`combatTrackFor`, the official
 //   schedule), so every client of a match hears the same one, a fight never switches track halfway through and the
@@ -44,6 +46,16 @@
 //   sound of that target. An operator's attack / hit sound that is a skill-mode file of its own (official names end in
 //   `_n` for the normal attack, `_d` / `_h` / `_s` for its skill modes — the manifest picked 纯烬艾雅法拉's S3 impact
 //   p_imp_gtshpbrnch_s as her `hit`) never plays for a normal attack (normalAttackSfx).
+// - The attack sound of the RUNNING skill (`attacks`, 技能1 / 2 / 3 = `_d` / `_h` / `_s`): an operator whose every attack
+//   belongs to a skill mode has no normal attack bank at all — 司霆惊蛰 (解放者: she only attacks while a skill runs) was
+//   completely silent when she attacked (report 「三技能攻击没有音效」). The manifest then carries that mode's own file
+//   per skill index (`attacks`, tools/assets/audio.mjs pickModeAttacks) and it plays while the skill is active, from the
+//   `['skill', id, 1]` / `0` events; a unit with a normal bank too (能天使 S2 过载模式, 史尔特尔 S2) keeps that bank
+//   outside the skill. Being the official file of that very skill, it is not the normalAttackSfx case above.
+// - …and its impact (`hits`): a mode's swing is not always the whole difference — 赤刃明霄陈 S3's slashes swing
+//   p_atk_hljdswd_s AND land p_imp_hljdswd_s, while her normal attack uses p_atk_hljdswd_n / p_imp_hljdswd_n
+//   (report 「开启三技能后斩击音效应该和普通攻击不一样」). Same mechanism and the same window: the `hit` of an attack
+//   aimed while the skill ran — the attacker's state travels with `lastAttacker`.
 // - The official bank mix of a unit's own attack / hit / die / born sound (`mix`, tools/assets/audio.mjs bankMix; community
 //   report #30): it plays with chance `p` — 猎狗pro / 深池侦察犬's attack bank is 80 % silence, so they bark on about one
 //   attack in five (never replaced by the generic enemy sound) — at its base gain × `vol`, capped at 1: an official volume
@@ -51,13 +63,19 @@
 // - Deaths/deployments follow the official per-class defaults (unitSoundClass): only operators play the
 //   operator-knocked-down sound; summons use the token sounds; a summon used up by its own effect (fx `consumed`,
 //   香槟炸弹) plays its impact sound instead of a death sound.
+// - A prep piece that plays its Start clip again (render/units.js land(), PR #416: the round start's replay of the own
+//   board, a purchase, a move onto or across the board) makes its battle deploy sound once (`deployCue`): the same file
+//   and gain through the SFX channel's volume and mute, in its own voices (LAND_VOICES) instead of the battle limiter —
+//   a full pool hands the oldest landing's voice to the newest, so every piece of the chain is heard.
 // - Buffers are fetched once and cached (LRU); failed fetch/decode ⇒ silent (logged once as a warning).
 //
 // `bgmKeyFor(route, pub)` picks the track for the current screen/phase (main.js calls `audio.install()`,
 // which follows the store).
 
+import { sanitizeVoiceOverrides, voiceLangFor } from './voicePrefs.js';
 import { PHASE } from '../../shared/constants.js';
 import { mediaUrl } from './media.js';
+import { unhashedUrl } from '../../shared/assetPaths.js';
 
 const MAX_VOICES = 8;
 const UNIT_COOLDOWN_MS = 160;
@@ -88,6 +106,19 @@ const IMPACT_TYPES = new Set(['phys', 'arts', 'true']);
 const IMPACT_WINDOW_MS = 2500;
 /** Casts held for a unit that is not tracked yet (`pendingSkill`): a hold per unit of a field, never more than this. */
 const PENDING_SKILL_MAX = 64;
+/**
+ * Prep landing sounds (deployCue, PR #416) at once: their own pool, apart from the battle limiter. A landing over the cap
+ * takes the oldest landing's voice (it fades out in LAND_STEAL_S) instead of being dropped — 192 of the 210 operators
+ * land with the same 1.41 s b_char_set and the round start lands one every 50 ms, so the battle rule (≤ 2 copies of a
+ * file, the rest dropped) left all but the first two silent. 3: at the replay's 50 ms rhythm every copy still rings for
+ * 150 ms before it is taken over — b_char_set's attack, its loudest part, lies in its first 100 ms, and b_char_tokenset
+ * (0.5 s) has 95 % of its energy in 150 ms — while three copies sum at most one more than the battle's two; a fourth would
+ * add ~2.5 dB of level to a dense chain and no further attack. [ASSUMED] (no source gives the official cap: its born bank
+ * allows any number of copies).
+ */
+export const LAND_VOICES = 3;
+/** Seconds a landing sound taken over by a newer one fades out (a hard stop clicks). */
+const LAND_STEAL_S = 0.03;
 /** Official operator sound files of a skill mode: `…_d` / `…_h` / `…_s` (+ digits) — the normal attack's end in `_n`. */
 const SKILL_MODE_FILE = /_(d|h|s)\d*\.mp3$/i;
 
@@ -181,11 +212,14 @@ export function unitSoundClass(info) {
   return 'char';
 }
 
-/** URL of the generic token death sound (b_char_tokendead): sfx.battle.tokenDie, else next to charDie. */
+/**
+ * URL of the generic token death sound (b_char_tokendead): sfx.battle.tokenDie, else next to charDie — without charDie's
+ * content-hash segment, which names charDie's bytes, not this file's (the plain URL is cached for a day).
+ */
 function tokenDieUrl(manifest) {
   const b = manifest?.audio?.sfx?.battle;
   if (typeof b?.tokenDie === 'string') return b.tokenDie;
-  return typeof b?.charDie === 'string' && /b_char_dead\.mp3$/.test(b.charDie) ? b.charDie.replace(/b_char_dead\.mp3$/, 'b_char_tokendead.mp3') : null;
+  return typeof b?.charDie === 'string' && /b_char_dead\.mp3$/.test(b.charDie) ? unhashedUrl(b.charDie).replace(/b_char_dead\.mp3$/, 'b_char_tokendead.mp3') : null;
 }
 
 /**
@@ -422,6 +456,18 @@ export class SfxLimiter {
     const n = this.activeByUrl.get(url) || 0;
     if (n <= 1) this.activeByUrl.delete(url); else this.activeByUrl.set(url, n - 1);
   }
+
+  /**
+   * Whether `unitKey` is still inside its cooldown at `now` (ms) — read only; a caller that takes a voice by stealing
+   * (AudioManager._playLanding) asks first, so a refused key never costs another sound its voice.
+   * @param {number} now ms
+   * @param {string|number|null} unitKey
+   */
+  cooling(now, unitKey) {
+    if (unitKey == null) return false;
+    const t = this.lastByUnit.get(unitKey);
+    return t != null && now - t < this.unitCooldownMs;
+  }
 }
 
 /**
@@ -520,9 +566,19 @@ export class AudioManager {
     this.bufBytes = new Map(); // url → decoded PCM bytes (the byte budget of the LRU, see _buffer)
     this.warned = new Set();
     this.limiter = new SfxLimiter();
+    // prep landings (deployCue): their own voices — a full pool hands the oldest one's voice to the newest (_playLanding);
+    // no per-file gap (one landing per piece, the cap bounds the overlap), the per-piece cooldown of the battle sounds
+    this.landLimiter = new SfxLimiter({ maxVoices: LAND_VOICES, maxPerUrl: LAND_VOICES, urlGapMs: 0 });
+    this.landVoices = [];      // the landing sounds holding a voice, oldest first: { url, src, gain, over, release }
+    this.landStats = { started: 0, stolen: 0 }; // landing sounds started / taken over since the page opened (dev / tests)
+    this.landWarm = false;     // the field view asked for the landing sounds ahead while they could not be fetched (warmLandings)
     this.voiceGate = new VoiceGate();
     this.voiceNode = null;    // { src, gain, url, token } of the line on air
     this.voiceToken = 0;
+    this.bondCueNode = null;
+    this.bondCueToken = 0;
+    this.bondCueScope = null;
+    this.voiceOverrides = {};
     this.voiceLang = 'jp';    // settings 语音语言: 'jp' (audio.voiceJp, falling back to audio.voice) | 'cn' (audio.voice, falling back to audio.voiceJp)
     this.startVoiceDone = false; // 行动出发 of this field (the first operator deployed says it)
     this.uiVoices = 0;
@@ -531,7 +587,8 @@ export class AudioManager {
     this.bgmToken = 0;
     this.units = new Map();   // battle unit id → defId
     this.pendingSkill = new Map(); // unit id → the 'skill' tuple that arrived before the unit was known (see _track)
-    this.lastAttacker = new Map(); // target id → { def, at } of the hostile attack last aimed at it (its impact sound)
+    this.lastAttacker = new Map(); // target id → { def, at, skillIndex, skillActive } of the hostile attack aimed at it (its impact sound,
+                                   // including the running skill's own `hits` — 赤刃明霄陈 S3's slash)
     this.consumed = new Set();     // summons used up by their own effect (香槟炸弹 exploded): no death sound
     this.installed = false;
     this._unlock = this._unlock.bind(this);
@@ -593,6 +650,7 @@ export class AudioManager {
       } catch { /* ignore */ }
       this._applyVolumes();
       this._primeOutput();
+      if (this.landWarm) this.warmLandings();
       if (this.ctx.state === 'running') this._dropUnlock();
       else {
         const p = this.ctx.resume?.();
@@ -655,6 +713,7 @@ export class AudioManager {
    */
   setVolumes(v) {
     const n = (x, d) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : d);
+    const wasSilent = this.bgmSilent;
     this.volumes = {
       bgm: n(v?.bgm, this.volumes.bgm),
       sfx: n(v?.sfx, this.volumes.sfx),
@@ -662,16 +721,25 @@ export class AudioManager {
       muted: typeof v?.muted === 'boolean' ? v.muted : this.volumes.muted,
     };
     this._applyVolumes();
+    if (this.volumes.muted || this.volumes.sfx <= 0) this.stopBondCue();
+    // the music became audible again: download and start the track the screen wants now (none was fetched meanwhile)
+    if (wasSilent && !this.bgmSilent && this.ctx && this.wantBgm) { const k = this.wantBgm; this.wantBgm = null; this.playBgm(k); }
+    if (this.landWarm && this.ctx && !this.volumes.muted && this.volumes.sfx > 0) this.warmLandings();
   }
+
+  /** Is the music silent — muted, or the BGM volume at 0? Then no BGM is downloaded (playBgm). */
+  get bgmSilent() { return this.volumes.muted || this.volumes.bgm <= 0; }
 
   /**
    * The voice dub (settings 语音语言): 'cn' plays `audio.voice` and falls back to `audio.voiceJp` per line, anything
-   * else `audio.voiceJp` (日本語, the default) and falls back to `audio.voice` (voiceLine). The line on air finishes in
-   * its own dub; the next one follows the setting.
+   * else `audio.voiceJp` (日本語, the default) and falls back to `audio.voice` (voiceLine); `overrides` are the
+   * per-character dub picks (voicePrefs). The line on air finishes in its own dub; the next one follows the setting.
    * @param {string} lang
+   * @param {object} [overrides]
    */
-  setVoiceLang(lang) {
+  setVoiceLang(lang, overrides = this.voiceOverrides) {
     this.voiceLang = lang === 'cn' ? 'cn' : 'jp';
+    this.voiceOverrides = sanitizeVoiceOverrides(overrides);
   }
 
   _applyVolumes() {
@@ -758,12 +826,23 @@ export class AudioManager {
   // ---- BGM ------------------------------------------------------------------------------------------------
 
   /**
-   * Switch BGM (null stops). Same loop URL ⇒ no restart.
+   * Switch BGM (null stops). Same loop URL ⇒ no restart. Before the first gesture, or while the music is silent
+   * (`bgmSilent`), the key is only remembered (`wantBgm`) and nothing is downloaded; a different track that is still
+   * playing stops. `_unlock` / `setVolumes` start the remembered track once it can be heard.
    * @param {string|null} key see bgmKeyFor
    */
   playBgm(key) {
     try {
       if (!this.ctx) { this.wantBgm = key; return; }
+      if (this.bgmSilent) {
+        this.wantBgm = key;
+        const silentTrack = resolveBgm(this.getManifest(), key);
+        if (this.bgm && silentTrack && this.bgm.loopUrl === silentTrack.loop) { this.bgm.key = key; return; }
+        ++this.bgmToken; // a start still waiting for its download stays silent too
+        this._fadeOutBgm();
+        return;
+      }
+      this.wantBgm = null;
       const track = resolveBgm(this.getManifest(), key);
       if (this.bgm && track && this.bgm.loopUrl === track.loop) { this.bgm.key = key; return; }
       if (!track && !this.bgm) return;
@@ -830,6 +909,58 @@ export class AudioManager {
 
   // ---- SFX ------------------------------------------------------------------------------------------------
 
+  /**
+   * True while a cue of `scope` started less than `ms` ago. One preparation update can both add layers (m.layer → layerGain)
+   * and raise the active-bond count (screens/game.js): the second trigger of that same update keeps the playing cue
+   * instead of cutting it off and starting it again. A later gain still replaces the cue at once (no cooldown).
+   */
+  bondCueRecent(scope, ms = 400) {
+    if (this.bondCueScope !== scope || typeof performance === 'undefined') return false;
+    return performance.now() - (this.bondCueAt || 0) < ms;
+  }
+
+  /** The official ADD_BOND bank has maxSoundAllowed=1 / popOldest=true. No extra cooldown. */
+  stopBondCue(scope = null) {
+    if (scope && this.bondCueScope !== scope) return;
+    this.bondCueToken++;
+    this.bondCueScope = null;
+    const cur = this.bondCueNode;
+    this.bondCueNode = null;
+    if (!cur) return;
+    try { cur.src.stop(); } catch { /* already ended */ }
+    cur.end();
+  }
+
+  _playBondCue(url, volume, scope = 'prep') {
+    this.stopBondCue();
+    const token = this.bondCueToken, ctx = this.ctx;
+    if (!ctx || !url || this.volumes.muted || this.volumes.sfx <= 0) return;
+    this.bondCueScope = scope;
+    this.bondCueAt = typeof performance !== 'undefined' ? performance.now() : 0;
+    this._buffer(url).then((buf) => {
+      if (!buf || token !== this.bondCueToken || ctx !== this.ctx || this.volumes.muted || this.volumes.sfx <= 0) return;
+      let src, gain;
+      const end = () => {
+        try { src?.disconnect(); gain?.disconnect(); } catch { /* ignore */ }
+        if (this.bondCueNode?.src === src) this.bondCueNode = null;
+      };
+      try {
+        src = ctx.createBufferSource(); gain = ctx.createGain();
+        src.buffer = buf;
+        gain.gain.value = Math.max(0, Math.min(1.5, volume));
+        src.connect(gain); gain.connect(this.sfxGain);
+        src.onended = end;
+        this.bondCueNode = { src, gain, end };
+        src.start();
+      } catch { end(); }
+    }, () => {});
+  }
+
+  /** One cue per real gain, including several layers at once or an inactive bond. */
+  layerGain(bondId, add, scope = 'prep') {
+    if (typeof bondId === 'string' && bondId && Number.isFinite(add) && add > 0) this.sfx('bondUp', { volume: 0.7, scope });
+  }
+
   _play(url, { volume = 1, rate = 1, limited = false, unitKey = null } = {}) {
     if (!this.ctx || !url || this.volumes.muted || this.volumes.sfx <= 0) return;
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -858,12 +989,15 @@ export class AudioManager {
   /**
    * UI sound by name (sfx.ui keys). Unknown names are ignored.
    * @param {string} name
-   * @param {{ volume?: number }} [o]
+   * @param {{ volume?: number, scope?: string }} [o]
    */
   sfx(name, o = {}) {
     try {
       const url = this.getManifest()?.audio?.sfx?.ui?.[name];
-      if (typeof url === 'string') this._play(url, { volume: o.volume ?? 0.9 });
+      if (typeof url === 'string') {
+        if (name === 'bondUp') this._playBondCue(url, o.volume ?? 0.9, o.scope);
+        else this._play(url, { volume: o.volume ?? 0.9 });
+      }
     } catch { /* ignore */ }
   }
 
@@ -880,18 +1014,27 @@ export class AudioManager {
    * @param {string} defId charId/tokenId/enemyId (or chess id — mapped via its spine/char id by the caller)
    * @param {'attack'|'hit'|'skill'|'die'|'born'} kind
    * @param {number|string} unitId battle unit id (cooldown key)
+   * @param {number} [skillIndex] the unit's equipped skill slot (0-based)
+   * @param {boolean} [skillActive] whether that skill runs right now (`attacks` / `hits` need it, see header)
    * @returns {boolean} whether a unit-specific sound exists
    */
-  unit(defId, kind, unitId, skillIndex) {
+  unit(defId, kind, unitId, skillIndex, skillActive = false) {
     try {
       const u = this.getManifest()?.audio?.sfx?.units?.[defId];
       // DESIGN §16: the equipped skill's own ON_SKILL_START sound (`skills[index]`) when the manifest has it
       const own = kind === 'skill' && Number.isInteger(skillIndex) && u?.skills ? u.skills[skillIndex] : null;
-      const url = typeof own === 'string' ? own : u?.[kind];
+      // the running skill's own swing / impact (header); only while it runs — otherwise 能天使 S2's file would ring on
+      // every normal attack of hers (exactly what normalAttackSfx keeps out). 赤刃明霄陈 S3: `attacks[2]` = the S3 swing,
+      // `hits[2]` = the S3 slash's impact.
+      const table = kind === 'attack' ? u?.attacks : kind === 'hit' ? u?.hits : null;
+      const mode = skillActive && Number.isInteger(skillIndex) && table ? table[skillIndex] : null;
+      const url = typeof own === 'string' ? own : typeof mode === 'string' ? mode : u?.[kind];
       if (typeof url !== 'string') return false;
-      if ((kind === 'attack' || kind === 'hit') && !normalAttackSfx(defId, url)) return false;
+      // a skill-mode file is fine here when it IS the running skill's (mode); the gate is for normal attacks
+      if ((kind === 'attack' || kind === 'hit') && typeof mode !== 'string' && !normalAttackSfx(defId, url)) return false;
       // the official bank's mix (header): a silent roll still counts as the unit's own sound (no generic fallback)
-      const mix = kind === 'skill' ? null : u?.mix?.[kind];
+      const mix = kind === 'skill' ? null : typeof mode === 'string'
+        ? (kind === 'attack' ? u?.attackMix : u?.hitMix)?.[skillIndex] : u?.mix?.[kind];
       if (!unitSoundPlays(mix, this.random())) return true;
       this._play(url, { volume: unitGain(kind === 'attack' || kind === 'hit' ? 0.55 : 0.8, mix), limited: true, unitKey: `${unitId}:${kind}` });
       return true;
@@ -916,8 +1059,8 @@ export class AudioManager {
     try {
       if (!this.ctx || !this.voiceGain || this.volumes.muted || this.volumes.voice <= 0) return false;
       if (typeof charId !== 'string' || typeof slot !== 'string') return false;
-      // the chosen dub's line (settings 语音语言), with the other dub's file of the same name as its fallback (voiceLine)
-      const line = voiceLine(this.getManifest()?.audio, charId, slot, this.voiceLang);
+      // the chosen dub's line (settings 语音语言), with the Chinese file of the same name as its fallback (voiceLine)
+      const line = voiceLine(this.getManifest()?.audio, charId, slot, voiceLangFor(charId, this.voiceLang, this.voiceOverrides));
       if (!line) return false;
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
       const verdict = this.voiceGate.request(slot, o.unitKey ?? null, now);
@@ -1000,6 +1143,7 @@ export class AudioManager {
 
   /** Reset the unit map for a new field (m.field.units = UnitInfo[]). */
   setFieldUnits(units) {
+    this.stopBondCue();
     this.units.clear();
     // unit ids belong to one battle: a cast still held for a unit of the field left must not sound for a unit of the new
     // one that happens to share its id
@@ -1015,9 +1159,9 @@ export class AudioManager {
   _track(u) {
     if (!u || typeof u !== 'object' || u.id == null) return;
     // UnitInfo.spine is the model id (charId / tokenId / enemyId) — the key of sfx.units; kind/defId pick the
-    // official class sounds (operator vs summon vs device)
+    // official class sounds (operator vs summon vs device). `skillActive` follows the ['skill', id, 1] / 0 events.
     this.units.set(u.id, { def: u.spine || u.defId, defId: u.defId ?? null, kind: u.kind ?? null, side: u.side, boss: !!u.boss,
-      skillIndex: Number.isInteger(u.skillIndex) ? u.skillIndex : null });
+      skillIndex: Number.isInteger(u.skillIndex) ? u.skillIndex : null, skillActive: !!u.skillActive });
     // a cast that arrived before this unit was known (handleBattleEvents): it sounds now, once
     const held = this.pendingSkill.get(u.id);
     if (held) {
@@ -1032,6 +1176,104 @@ export class AudioManager {
   }
 
   /**
+   * The landing sound of a prep piece that plays its Start clip again (render/units.js land(), PR #416: the round start's
+   * replay of the own board, a purchase, a move onto or across the board): the sound its battle deployment makes
+   * (deploySfxUrl — its own ON_UNIT_BORN sound with the bank's mix, else b_char_set / b_char_tokenset) at the same gains,
+   * through the SFX channel (volume, mute) and the landing voices (_playLanding: at most LAND_VOICES at once, the oldest
+   * taken over by the newest, a cooldown per piece) — every landing is heard, one after another.
+   * @param {{ def?: string|null, defId?: string|null, kind?: string|null }} info the piece: its model id (the sfx.units
+   *   key), its chess / token id and its kind ('op' | 'token' — the official sound class, unitSoundClass)
+   * @param {string|number} key the piece (its cooldown key)
+   * @returns {boolean} whether the piece has a landing sound (a silent roll of its bank still counts)
+   */
+  deployCue(info, key) {
+    try {
+      const m = this.getManifest();
+      const u = { def: info?.def ?? null, defId: info?.defId ?? null, kind: info?.kind ?? null, side: 'ally' };
+      const url = deploySfxUrl(m, u);
+      if (!url) return false;
+      const own = url === m?.audio?.sfx?.units?.[u.def]?.born;
+      const mix = own ? m.audio.sfx.units[u.def].mix?.born : null;
+      if (unitSoundPlays(mix, this.random())) this._playLanding(url, `land:${key}`, own ? unitGain(0.8, mix) : 0.5);
+      return true;
+    } catch { return false; }
+  }
+
+  /**
+   * Play a landing sound in the landing voices: never dropped for want of a voice — over LAND_VOICES (any file) the oldest
+   * landing, playing or still loading, gives its voice up (_stealLanding) and the new one starts; only the per-piece
+   * cooldown refuses one (the same piece twice within UNIT_COOLDOWN_MS: one landing never sounds twice), checked before
+   * anything is taken over. The battle limiter is not touched. Muted or at SFX volume 0, nothing happens.
+   * @param {string} url
+   * @param {string} unitKey the piece's cooldown key (`land:<view id>`)
+   * @param {number} volume gain of this sound under the SFX channel
+   */
+  _playLanding(url, unitKey, volume) {
+    if (!this.ctx || typeof url !== 'string' || !url || this.volumes.muted || this.volumes.sfx <= 0) return;
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const pool = this.landLimiter;
+    if (pool.cooling(now, unitKey)) return;
+    while (!pool.tryAcquire(now, unitKey, url)) {
+      if (!this.landVoices.length) return;   // (a full pool always holds voices; never loop on a refusal it cannot lift)
+      this._stealLanding(this.landVoices[0]);
+    }
+    const v = { url, src: null, gain: null, over: false, release: null };
+    v.release = () => {
+      if (v.over) return;
+      v.over = true;
+      pool.release(url);
+      const i = this.landVoices.indexOf(v);
+      if (i >= 0) this.landVoices.splice(i, 1);
+    };
+    this.landVoices.push(v);
+    this._buffer(url).then((buf) => {
+      if (v.over || !buf || !this.ctx) { v.release(); return; }   // taken over while it loaded: it never starts
+      try {
+        const s = this.ctx.createBufferSource();
+        s.buffer = buf;
+        const g = this.ctx.createGain();
+        g.gain.value = Math.max(0, Math.min(1.5, volume));
+        s.connect(g); g.connect(this.sfxGain);
+        v.src = s; v.gain = g;
+        let done = false;
+        const end = () => { if (done) return; done = true; v.release(); try { g.disconnect(); } catch { /* ignore */ } };
+        s.onended = end;
+        setTimeout(end, (buf.duration || 0) * 1000 + 250); // safety if onended never fires
+        s.start();
+        this.landStats.started += 1;
+      } catch { v.release(); }
+    }, v.release);
+  }
+
+  /** A landing sound gives its voice to a newer one: the voice is free at once, the sound fades out over LAND_STEAL_S. */
+  _stealLanding(v) {
+    v.release();
+    this.landStats.stolen += 1;
+    if (!v.src || !v.gain || !this.ctx) return;
+    try {
+      const t = this.ctx.currentTime;
+      const g = v.gain.gain;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(0, t + LAND_STEAL_S);
+      v.src.stop(t + LAND_STEAL_S + 0.005);
+    } catch { /* ignore */ }
+  }
+
+  /**
+   * Fetch the generic landing sounds ahead (b_char_set / b_char_tokenset, ~30 KB together), so the round start's first
+   * landings never wait for a download (a wait would bunch the chain's first sounds together). The field view asks when a
+   * match screen comes up (render/app.js createFieldView); before the first gesture, or while the SFX are silent, the wish
+   * is kept (`landWarm`) and _unlock / setVolumes fetch then. An own deploy sound loads with the first landing that uses it.
+   */
+  warmLandings() {
+    if (!this.ctx || this.volumes.muted || this.volumes.sfx <= 0) { this.landWarm = true; return; }
+    this.landWarm = false;
+    const b = this.getManifest()?.audio?.sfx?.battle;
+    for (const url of [b?.deploy, b?.tokenDeploy]) if (typeof url === 'string') this._buffer(url);
+  }
+
+  /**
    * React to `b.ev` tuples (DESIGN §8.2).
    * @param {any[]} ev
    */
@@ -1043,25 +1285,29 @@ export class AudioManager {
         if (!Array.isArray(e)) continue;
         const kind = e[0];
         if (kind === 'spawn') { this._track(e[1]); continue; }
-        if (kind === 'atk') {
+        if (kind === 'layer') {
+          this.layerGain(e[2], e[3], 'battle');
+        } else if (kind === 'atk') {
           // a chain bounce: its first id is the previous target, whose attack sound this is not (see header)
           if (CHAIN_KINDS.has(e[3])) { this.lastAttacker.delete(e[2]); continue; }
           const src = this.units.get(e[1]);
           if (!src) continue;
           // only a hostile attack authors the target's next impact (a heal — an ally aiming at an ally — never does)
           const tgt = this.units.get(e[2]);
-          if (tgt && tgt.side !== src.side) this.lastAttacker.set(e[2], { def: src.def, at: now });
-          if (!this.unit(src.def, 'attack', e[1]) && src.side === 'enemy') this.battle('enemyHit', { unitKey: `${e[1]}:atk`, volume: 0.35 });
+          if (tgt && tgt.side !== src.side) this.lastAttacker.set(e[2], { def: src.def, at: now, skillIndex: src.skillIndex ?? null, skillActive: !!src.skillActive });
+          if (!this.unit(src.def, 'attack', e[1], src.skillIndex ?? undefined, src.skillActive) && src.side === 'enemy') this.battle('enemyHit', { unitKey: `${e[1]}:atk`, volume: 0.35 });
         } else if (kind === 'dmg') {
           const by = this.lastAttacker.get(e[1]);
           if (!by || !IMPACT_TYPES.has(e[3])) continue;
           this.lastAttacker.delete(e[1]); // one impact per attack
-          if (now - by.at <= IMPACT_WINDOW_MS) this.unit(by.def, 'hit', `h${e[1]}`);
+          if (now - by.at <= IMPACT_WINDOW_MS) this.unit(by.def, 'hit', `h${e[1]}`, by.skillIndex ?? undefined, by.skillActive);
         } else if (kind === 'heal') {
           this.battle('heal', { unitKey: `heal:${e[1]}`, volume: 0.35 });
         } else if (kind === 'skill' && e[2]) {
           const u = this.units.get(e[1]);
           if (u) {
+            // the running skill's own swing / impact (`attacks` / `hits`, header) follow this flag
+            u.skillActive = true;
             this.unit(u.def, 'skill', e[1], u.skillIndex ?? undefined);
             // 作战中N: the equipped skill's own slot (0-based; 作战中4 is the fallback of a 4th slot)
             if (unitSoundClass(u) === 'char') {
@@ -1076,6 +1322,12 @@ export class AudioManager {
             if (this.pendingSkill.size >= PENDING_SKILL_MAX) this.pendingSkill.delete(this.pendingSkill.keys().next().value);
             this.pendingSkill.set(e[1], e);
           }
+        } else if (kind === 'skill') {
+          // ['skill', id, 0] = the skill ENDED (the sim's skills.js: `b._ev(['skill', u.id, 0])`): back to the unit's own
+          // attack / impact. The end carries no sound of its own (the activation sound belongs to the start).
+          const u = this.units.get(e[1]);
+          if (u) u.skillActive = false;
+          this.pendingSkill.delete(e[1]);
         } else if (kind === 'engage') {
           // 行动开始: the first attack a unit makes on an enemy (the sim's ENGAGE, official ENCOUNTER_ENEMY, 3 s apart)
           const u = this.units.get(e[1]);
@@ -1150,11 +1402,16 @@ export function installAudio(deps) {
   try {
     manifestGetter = typeof deps?.getManifest === 'function' ? deps.getManifest : manifestGetter;
     audio.install();
-    if (deps?.settings) { audio.setVolumes(deps.settings); audio.setVoiceLang(deps.settings.voiceLang); }
+    if (deps?.settings) { audio.setVolumes(deps.settings); audio.setVoiceLang(deps.settings.voiceLang, deps.settings.voiceOverrides); }
     if (typeof deps?.subscribe === 'function' && typeof deps?.getState === 'function') {
       const sync = (s) => {
         try {
           const pub = s.match?.public ?? null;
+          if (deps.selectRoute(s) !== 'game') audio.stopBondCue();
+          else if (![PHASE.COMBAT, PHASE.UNITE, PHASE.FINAL_ASSAULT, PHASE.HIDDEN_CORE].includes(pub?.phase)) {
+            // A new prep gain can precede its m.public phase update. Cancel only the previous battle's cue.
+            audio.stopBondCue('battle');
+          }
           // 开战 BGM: the round's own track out of bgm.combatAlts (骑士之日 / 无畏者 are fixed per round, not drawn),
           // so every client of a room hears the same one, a mid-fight re-render (or a teammate view) never switches,
           // and the next round moves on by the table. 联防 shares its round ⇒ same key ⇒ the loop keeps playing.

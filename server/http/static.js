@@ -15,6 +15,13 @@
 //     /packs/index.json → the content packs of this server (server/packs.js: the language packs of
 //                public/i18n/ and the pack folders of packs/, re-read when they change; never cached)
 //     /packs/<id>/<file> → a file of a pack folder — only one its manifest names (server/packs.js servable)
+//     /assets/~<hash>/…, /fonts/~<hash>/…, /media/~<hash>/… → the same files: the content-hash segment
+//                (shared/assetPaths.js) is stripped. A hash that names the file's current bytes (assetIndex.js
+//                urlHashOk: its own hash, or its Spine model's) answers `immutable` for a year; any other hash —
+//                an old page, a URL derived from another file's — the current file with `no-cache`
+//     /data/assets.json, /data/local-assets.json → the served manifests (assetViews.js: every art URL with its
+//                content-hash segment; no-cache, the ETag of the view) once the asset index is ready, the files as
+//                they are before that or without an index
 //
 // Traversal & dotfile protection, a directory without its trailing slash → 301, 404 page. /data/local-assets.json is
 // answered with the UNION of the committed data/local-assets.committed.json (the art that ships, tools/local-extract/
@@ -27,9 +34,11 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { MEDIA_PREFIX } from '../../shared/media.js';
+import { splitHashedPath } from '../../shared/assetPaths.js';
 import { ROOT, noopLog } from './config.js';
 import { sendError, sendJson } from './common.js';
-import { MIME, GzipCache, isNotModified, serveFile, RateLimiter, assetRateBytesPerSec } from './files.js';
+import { MIME, CompressCache, isNotModified, serveFile, serveBuffer, RateLimiter, assetRateBytesPerSec } from './files.js';
+import { ASSET_INDEX_ROOTS, hashedFileOpts } from './assetIndex.js';
 import { serveMedia } from './media.js';
 import { createPackRegistry } from '../packs.js';
 import { createAssetIndex } from '../assetindex.js';
@@ -62,11 +71,15 @@ const EMPTY_LOCAL_ART = Buffer.from(JSON.stringify({ version: 1, source: 'none',
 /**
  * Create the static request handler.
  * @param {{ publicDir: string, dataDir: string, sharedDir: string, simDir?: string, packsDir?: string,
- *   packs?: ReturnType<typeof createPackRegistry>, log?: object }} dirs
- *   packs: the server's pack registry (default: one over publicDir, dataDir and packsDir — ROOT/packs)
+ *   packs?: ReturnType<typeof createPackRegistry>, log?: object,
+ *   assetIndex?: ReturnType<typeof import('./assetIndex.js').createAssetIndex> | null,
+ *   views?: ReturnType<typeof import('./assetViews.js').createManifestViews> | null }} dirs
+ *   packs: the server's pack registry (default: one over publicDir, dataDir and packsDir — ROOT/packs);
+ *   assetIndex / views: the content hashes and the served manifests (none: plain URLs, size-mtime ETags)
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, rawPath: string, query: string) => Promise<void>}
  */
-export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = path.join(ROOT, 'server', 'sim'), packsDir = path.join(ROOT, 'packs'), packs = null, log = noopLog }) {
+export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = path.join(ROOT, 'server', 'sim'), packsDir = path.join(ROOT, 'packs'), packs = null, log = noopLog,
+  assetIndex = null, views = null }) {
   const registry = packs || createPackRegistry({ publicDir, dataDir, packsDir }, { log: /** @type {any} */ (log) });
   const mounts = [
     { prefix: '/data/', name: 'data', dir: path.resolve(dataDir) },
@@ -77,9 +90,9 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
   ];
   const shimBody = Buffer.from(DATA_SHIM_JS);
   const shimTag = `"shim-${shimBody.length.toString(16)}"`;
-  const gzipCache = new GzipCache();
+  const gzipCache = new CompressCache();
   const dataDirAbs = path.resolve(dataDir);
-  const assetIndex = createAssetIndex({ dataDir: dataDirAbs, publicDir: path.resolve(publicDir), log });
+  const clientAssetIndex = createAssetIndex({ dataDir: dataDirAbs, publicDir: path.resolve(publicDir), log });
   // Bulk asset downloads are paced server-side (a last-resort fallback after the CDN mirrors): SP_ASSET_RATE_KBPS.
   const assetLimiter = new RateLimiter(assetRateBytesPerSec());
   let localMerge = null; // cached { key, plain, gz, etag, mtime } of the merged manifest (rebuilt when either file changes)
@@ -149,6 +162,10 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
       sendError(req, res, 400, '请求地址无效 · Bad request');
       return;
     }
+    // /assets/~<hash>/x → /assets/x (the hash decides the cache policy below)
+    const hashed = splitHashedPath(decoded);
+    const urlHash = hashed.hash;
+    decoded = hashed.path;
     if (decoded === '/data.js') {
       const headers = { 'Content-Type': MIME['.js'], 'Cache-Control': 'no-cache', ETag: shimTag, 'Content-Length': shimBody.length };
       if (isNotModified(req, shimTag, new Date(0))) { delete headers['Content-Length']; res.writeHead(304, headers); res.end(); return; }
@@ -159,7 +176,7 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     // the asset index the client's local cache (public/js/assetCache.js) diffs against: current art version + per-file sizes
     if (decoded === '/asset-index.json') {
       res.setHeader('Access-Control-Allow-Origin', '*'); // readable from a player's own machine (js/assetSource.js)
-      sendJson(req, res, 200, assetIndex.get());
+      sendJson(req, res, 200, clientAssetIndex.get());
       return;
     }
     // the optional local-art manifest: the committed ∪ per-machine union (see the header), never a 404
@@ -179,8 +196,16 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     }
     // Extension-less audio (download-manager avoidance): /media/bgm/act1 → /assets/audio/bgm/act1.mp3
     if (decoded.startsWith(MEDIA_PREFIX)) {
-      await serveMedia(req, res, decoded.slice(MEDIA_PREFIX.length), query, publicDir, gzipCache, log, assetLimiter);
+      await serveMedia(req, res, decoded.slice(MEDIA_PREFIX.length), query, publicDir, gzipCache, log, { urlHash, assetIndex }, assetLimiter);
       return;
+    }
+    // The served manifests: every art URL with its content hash (assetViews.js), once the index is ready
+    if (views && (decoded === '/data/assets.json' || decoded === '/data/local-assets.json')) {
+      const view = await views.get(decoded.slice('/data/'.length));
+      if (view) {
+        await serveBuffer(req, res, { body: view.body, hash: view.hash, type: MIME['.json'], cacheControl: 'no-cache', key: `view:${decoded}`, cache: gzipCache });
+        return;
+      }
     }
     // Bare mount paths (e.g. "/data") → treat as the mount directory.
     const mount = mounts.find((m) => decoded.startsWith(m.prefix) || decoded === m.prefix.slice(0, -1)) || mounts[mounts.length - 1];
@@ -234,6 +259,8 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
       }
       return;
     }
-    await serveFile(req, res, absPath, stat, mount.name, segments, query, gzipCache, log, assetLimiter);
+    const indexed = mount.name === 'public' && segments.length > 1 && ASSET_INDEX_ROOTS.includes(segments[0]);
+    const opts = indexed ? hashedFileOpts(assetIndex, segments.join('/'), stat, urlHash) : (urlHash ? { cacheControl: 'no-cache' } : {});
+    await serveFile(req, res, absPath, stat, mount.name, segments, query, gzipCache, log, opts, assetLimiter);
   };
 }
