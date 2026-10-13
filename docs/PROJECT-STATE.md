@@ -35,7 +35,7 @@
 |---|---|
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
 | git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
-| 远程同步 | `github/master` == `gitee/master` == HEAD `5e8207c8`（v0.2.6 合并已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
+| 远程同步 | `github/master` == `gitee/master` == HEAD `7ffd9977`（v0.2.6 合并 + 文档修正已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
 | 全量测试 | `node --test`：**6600 项 / 6579 通过 / 0 失败 / 21 跳过**（在 store 里跑） |
 | 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1454/1454（100%）；`doctor` 退出码 0；`eslint` 0 error；`npm run typecheck` / `check:imports` 通过 |
 | 本机环境 | Node **v24.19.0** |
@@ -46,7 +46,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；build 见 `/healthz` |
+| 版本 | `app 0.4.0`；**已上线 build `bc625f088f6b`**（2026-10-14 部署，含 v0.2.6 整支合并）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -67,7 +67,8 @@
 5. `curl http://127.0.0.1:3000/healthz` + 外网 `/healthz` 验证。
 
 > **先推通知、再上传 / 重启**：发布前先在 `/admin` 的「通知」面板推一条告示（署名 `d星空之下`），
-> 说清更新内容、大约多久、请刷新。**没有 owner 明确许可，不要部署**（当前指令：先不上线）。
+> 说清更新内容、大约多久、请刷新。**没有 owner 明确许可，不要部署**（默认「先不上线」；**2026-10-14 的
+> 上线是 owner 明确要求**，公告记为更新日志 `0.4.8`，部署前备份 `/root/sp-backup-deploy-20261014-024306.tgz`）。
 > 客户端改完**刷新即可**（`/js`、`/css` 是 `no-cache`；build 变了开着的老页面会自动重载）。
 > ⚠️ **`SP_VERIFY=sample` 只在 Windows 的 `server-start.cmd` 里设**，Linux 上没设 → 线上**服务端抽检复算 = off**。
 
