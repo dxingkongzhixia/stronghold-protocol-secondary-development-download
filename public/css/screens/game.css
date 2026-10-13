@@ -551,6 +551,7 @@
 .set-seg button:last-child { border-right: 0; }
 .set-seg button.is-on { background: var(--mint-500); color: var(--text-on-mint); font-weight: 700; }
 .set-hint { margin-top: .06rem; font-size: .14rem; color: var(--text-dim); line-height: 1.8; }
+.set-hint.set-warn { color: #ffb26b; }
 .set-hint kbd, .lvcard__key, .toolbtn kbd { font-family: var(--font-num); font-size: .11rem; border: 1px solid var(--line-2); padding: 0 .04rem; color: var(--text-lo); background: rgba(0, 0, 0, .3); }
 /* local asset cache (ui/assetMode.js): the first-visit chooser + the 设置 row */
 .set-asset { display: flex; flex-direction: column; gap: .12rem; }

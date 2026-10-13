@@ -160,6 +160,8 @@ export async function ensureAssets({ urls, index, onProgress, concurrency = 6, f
   if (!worker) return { ok: false, reason: 'no-worker' };
   // Point the worker at a player's own machine (js/assetSource.js), or clear it ('' = the public server).
   if (localBase !== undefined) { try { worker.active?.postMessage({ type: 'localBase', base: localBase || '' }); } catch { /* the worker decides */ } }
+  // Tell the worker the current art revision so it drops its cached mirror index on an update (public/sw.js).
+  if (index.revision) { try { worker.active?.postMessage({ type: 'revision', revision: index.revision }); } catch { /* ignore */ } }
   const indexFiles = index.files;
   const storedSizes = readPref(SIZES_PREF, {}) || {};
   const cached = await cacheKeys();

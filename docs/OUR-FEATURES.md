@@ -595,10 +595,11 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
   revision, count, bytes, files }`, where `revision` is a hash of the `{ url: size }` map; `no-cache` (it must track
   the server's current art). Asset / font responses carry `Access-Control-Allow-Origin: *` (`server/http/files.js`)
   so a player's own machine can serve them.
-- **Worker + policy**: `public/sw.js` (cache-first for `/assets|/fonts|/vendor`; Range requests and non-GET pass
-  through) and `public/js/assetCache.js` (register; `syncPlan` / `cacheIsCurrent` are pure and unit-tested — a
-  per-file diff against the index, revision-keyed). `public/js/assetSource.js` probes a local origin (127.0.0.1)
-  serving the same `revision` and points the worker at it.
+- **Worker + policy**: `public/sw.js` (cache-first for `/assets|/fonts|/vendor`; **on a miss it also tries the mirrors
+  first (15 s, byte-verified) and the game server last**, so on-demand art is offloaded too; Range requests and non-GET
+  pass through) and `public/js/assetCache.js` (register; `syncPlan` / `cacheIsCurrent` are pure and unit-tested — a
+  per-file diff against the index, revision-keyed; a **revision change is incremental**). `public/js/assetSource.js`
+  probes a local origin (127.0.0.1) serving the same `revision` and points the worker at it.
 - **Download chain (the server-uplink offload)**: `GET /asset-index.json` also returns `sources` — CORS-capable CDN
   mirrors of the primary repo's `public/` tree (`server/assetindex.js mirrorSources`: **gh-proxy** then **jsDelivr**;
   `SP_ASSET_REF` pins the ref, `''` disables). `js/assetCache.js fetchArtFile` tries each mirror FIRST (15 s timeout

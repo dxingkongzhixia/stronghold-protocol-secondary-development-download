@@ -81,7 +81,7 @@ export function AssetModePrompt() {
       <p class="set-hint">${t('首次进入，请选择美术资源的加载方式（可随时在设置里更改）：')}</p>
       <div class="asset-opts" role="radiogroup" aria-label=${t('美术资源')}>
         ${option('cache', t('缓存到本地（推荐）'), t('首次下载后存到本机，之后不再占用服务器'))}
-        ${option('stream', t('网页加载（不缓存）'), t('每次从服务器加载，占用磁盘最少'))}
+        ${option('stream', t('网页加载（不推荐）'), t('每次从服务器加载，服务器带宽有限，可能较慢'))}
       </div>
     </div>
   <//>`;
@@ -111,6 +111,7 @@ export function AssetCacheSection() {
     ${!supported
       ? html`<p class="set-hint">${t('此浏览器不支持本地缓存')}</p>`
       : html`<p class="set-hint">${info.files ? t('已缓存 {size}（{n} 个文件）', { size: formatBytes(usage ? usage.usage : 0), n: info.files }) : t('未缓存')}${usage ? ` · ${formatBytes(usage.usage)} / ${formatBytes(usage.quota)}` : ''}<br/>${t('位置：浏览器站点数据（默认在系统盘）')}</p>
+        ${mode === 'stream' ? html`<p class="set-hint set-warn">${t('每次从服务器加载，服务器带宽有限，可能较慢')}</p>` : null}
         <${Toggle} label=${t('优先使用本机资源（本机也开着服务时）')} micro="LOCAL SOURCE" value=${localSrc} onChange=${toggleLocal} />
         <div class="set-row set-row--actions">
           <${Button} variant="secondary" size="sm" onClick=${() => void syncAssetCache().then(refresh)}>${t('立即缓存')}<//>

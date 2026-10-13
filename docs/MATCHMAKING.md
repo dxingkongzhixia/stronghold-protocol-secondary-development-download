@@ -1352,6 +1352,7 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **CDN 镜像下载链（卸载服务器上行）**：`GET /asset-index.json` 还返回 `sources` —— 主仓库 `public/` 树的**带 CORS** 镜像（`server/assetindex.js mirrorSources`：**gh-proxy → jsDelivr**；`SP_ASSET_REF` 钉 ref，`''` 关闭）。`js/assetCache.js fetchArtFile` **优先镜像、每个 15 秒超时**、**最后回退游戏服务器**，且只接受字节数与 `index.files[url]` 相符的镜像。**不用 Gitee / GitLab raw** —— 它们不发 `Access-Control-Allow-Origin`，浏览器 `fetch` 会被拦（Gitee Releases 还对盗链 403）；2026-10-13 实测。
 - **服务器兜底限速**：回退到服务器时，素材响应走**进程级令牌桶**限速（`server/http/files.js RateLimiter`，只作用于 `public/assets|fonts|vendor`），默认 **1.2 MB/s**（`SP_ASSET_RATE_KBPS` 可调、0 关闭），给对局留带宽；非素材路径不限速。
 - **设置**：`public/js/ui/assetMode.js` 的 `AssetCacheSection` —— 加载方式 / 已缓存用量（`navigator.storage.estimate`）/ 位置说明（浏览器站点数据，默认系统盘）/ 立即缓存 / 清除缓存 / 本机优先。
+- **服务器彻底兜底**：`public/sw.js` 未命中时也按 **本机源 → 镜像(15s+校验) → 服务器(限速)** 取，连按需资源（spine / 音频）也优先走镜像；首访弹窗把「网页加载」标**不推荐**；版本变化**只下缺失/变动**（增量）。
 - **默认预热集**：boot 的界面美术（~104 MB，`collectArtUrls(manifest,'all')`）。全量清单约 **14,172 个文件 / 828 MB**，**不默认全量**；其余按需由 SW 缓存，或点「立即缓存」。本地命中不再走 `bootgate` 闸门。
 - **测试**：`test/asset-index.test.js`（收集 / 版本 / 磁盘 / 缓存）、`test/ui/asset-cache.test.js`（`syncPlan` / `cacheIsCurrent`）。`test/ui/title-surfaces.test.js` 原先断言**不存在** `public/sw.js`——本功能**有意改变**该长期决定：测试改为「存在 `public/sw.js`（可选资源缓存），仍不存在 `public/service-worker.js`，安装不需要 worker」。相关文档（`docs/design/client.md`、`docs/UPSTREAM-MERGES.md`、`docs/PLAYING.md`、`public/index.html`）同步更正了「不注册 service worker」的旧表述。
 - **我们独有**：见 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10（合并时不得丢失）。

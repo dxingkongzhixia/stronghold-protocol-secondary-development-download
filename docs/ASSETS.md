@@ -493,8 +493,11 @@ matches keep their bandwidth. This is a **fork-only** feature — the merge-crit
 
 **Browser side.**
 - **`public/sw.js`** — the Service Worker: cache-first for same-origin `/assets|/fonts|/vendor` in Cache Storage
-  (`sp-assets`); Range requests and non-GET pass through; an optional `localBase` (a player's own machine) changes only
-  where it fetches from.
+  (`sp-assets`). **On a miss it fetches from, in order: the player's own machine (`localBase`), the CDN mirrors
+  (`/asset-index.json` `sources`, 15 s each, byte-verified against `files[url]`) and only then the game server** — so
+  **on-demand** art (spine, audio, anything the pre-cache did not cover) is offloaded too, and the server is the true
+  **last resort**. The worker reads the index lazily and drops it when the page reports a new `revision`. Range
+  requests and non-GET pass through.
 - **`public/js/assetCache.js`** — the policy. Pure, unit-tested: `syncPlan` (per-file diff — download the missing /
   resized, remove the dropped), `cacheIsCurrent` (revision + per-file sizes), `candidatesFor` (mirrors first, server
   last). Glue: `registerAssetWorker` (+ `navigator.storage.persist()`), `fetchAssetIndex`, `ensureAssets` (download the
@@ -505,8 +508,9 @@ matches keep their bandwidth. This is a **fork-only** feature — the merge-crit
 - **`public/js/assetSource.js`** — the optional **local origin**: probe `127.0.0.1:3000` / `localhost:3000` for an
   `/asset-index.json` with the **same `revision`**, then point the worker at it (a player who also runs the game on
   their own machine touches the box not at all). Pref `sp.pref.assetLocalSource`.
-- **`public/js/ui/assetMode.js`** — the first-visit chooser (`AssetModePrompt`, **default 缓存到本地**) and the 设置 row
-  (`AssetCacheSection`: mode / usage / 立即缓存 / 清除缓存 / 优先使用本机资源), backed by `js/ui/settings.js`.
+- **`public/js/ui/assetMode.js`** — the first-visit chooser (`AssetModePrompt`, **default 缓存到本地**; the web-load
+  option is labelled **不推荐**) and the 设置 row (`AssetCacheSection`: mode / usage / 立即缓存 / 清除缓存 /
+  优先使用本机资源), backed by `js/ui/settings.js`.
 - **`public/js/main.js`** `preloadArt` — in `cache` mode it syncs through the worker (and skips the boot gate); otherwise
   the HTTP-cache warm-up is unchanged.
 
@@ -516,9 +520,10 @@ matches keep their bandwidth. This is a **fork-only** feature — the merge-crit
 |---|---|
 | never chose | web load (HTTP-cache warm-up + the boot gate) — **unchanged** from before this feature |
 | chose cache, revision current | **nothing is fetched**; the worker serves every art request from the local cache |
-| chose cache, revision changed | only the missing / resized files are downloaded; files the server dropped are removed |
+| chose cache, revision changed | **incremental**: only the missing / resized files are downloaded (never the whole set); files the server dropped are removed |
 | a file: a mirror answers | fetched from gh-proxy / jsDelivr (15 s each), size-verified, then cached |
 | a file: every mirror fails | the **game server**, paced at `SP_ASSET_RATE_KBPS` |
+| an on-demand file (spine, audio …) | the **same chain on its first request** — mirrors first, the server last |
 | a same-revision server runs locally | the **local origin** (the box is not touched) |
 
 **Failure modes.** No Service Worker / Cache Storage ⇒ the mode degrades to a web load; a mirror with a wrong byte size
