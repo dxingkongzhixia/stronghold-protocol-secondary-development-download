@@ -40,6 +40,7 @@ import { ToastHost, toast, toastError, describeError } from './ui/toasts.js';
 import { net, identity, NetError } from './net.js';
 import { store, useStore, emptyMatch, selectRoute, sessionResetNotice, loadPref, savePref, isSpectating } from './store.js';
 import { BOOT_VIDEO, collectArtUrls, preloadImages, artProgressReporter } from './preload.js';
+import { effectiveAssetMode, assetCacheSupported, fetchAssetIndex, ensureAssets } from './assetCache.js';
 import { data } from './data.js';
 import { GAME_FILES } from './ui/gameComponents.js';
 import { TitleScreen, sanitizeName } from './screens/title.js';
@@ -530,6 +531,18 @@ async function preloadArt() {
   if (!urls.length) return;
   bar.hidden = false;
   if (sub) { sub.hidden = false; sub.textContent = t('正在加载美术资源 0 / {n}', { n: urls.length }); }
+  // Local asset cache (js/assetCache.js + public/sw.js): when the player chose "缓存到本地", bring the Service Worker
+  // cache up to the server's art revision — a current copy fetches nothing, otherwise only the missing / changed
+  // files. The server is never gated for a local hit, so we skip the boot gate here entirely.
+  if (effectiveAssetMode() === 'cache' && assetCacheSupported()) {
+    if (sub) { sub.hidden = false; sub.textContent = t('正在同步本地美术缓存…'); }
+    try {
+      const index = await fetchAssetIndex();
+      const r = await ensureAssets({ urls, index, onProgress: artProgressReporter({ fill, sub }) });
+      if (r && r.ok) { bar.hidden = true; if (sub) sub.hidden = true; return; }
+    } catch { /* fall back to the HTTP preload below */ }
+    if (sub) sub.textContent = t('正在加载美术资源 0 / {n}', { n: urls.length });
+  }
   // Boot gate (server/bootgate.js, docs/MATCHMAKING.md): the first-time payload is ~140 MB and the VPS uplink is only
   // 20 Mbps, so a few simultaneous arrivals saturate it and spike everyone's ping. Only a COLD load queues — a
   // returning visitor whose images are already cached skips the gate entirely.

@@ -86,7 +86,7 @@ export function buildAssetIndexValue({ dataDir, publicDir, log = noopLog }) {
     bytes += st.size;
   }
   log.info?.(`[asset-index] ${Object.keys(files).length} files, ${bytes} bytes`);
-  return { version: 1, app: APP_VERSION, count: Object.keys(files).length, bytes, files };
+  return { version: 1, app: APP_VERSION, revision: indexVersion(files), count: Object.keys(files).length, bytes, files };
 }
 
 /**
