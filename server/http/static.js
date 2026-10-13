@@ -32,6 +32,7 @@ import { sendError, sendJson } from './common.js';
 import { MIME, GzipCache, isNotModified, serveFile } from './files.js';
 import { serveMedia } from './media.js';
 import { createPackRegistry } from '../packs.js';
+import { createAssetIndex } from '../assetindex.js';
 import { PACKS_URL, PACK_INDEX_FILE } from '../../shared/packs.js';
 
 /** Browser stand-in of server/data.js, served at /data.js (see the header). Served byte for byte: its first line names the entry, server/index.js. */
@@ -78,6 +79,7 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
   const shimTag = `"shim-${shimBody.length.toString(16)}"`;
   const gzipCache = new GzipCache();
   const dataDirAbs = path.resolve(dataDir);
+  const assetIndex = createAssetIndex({ dataDir: dataDirAbs, publicDir: path.resolve(publicDir), log });
   let localMerge = null; // cached { key, plain, gz, etag, mtime } of the merged manifest (rebuilt when either file changes)
 
   /**
@@ -150,6 +152,11 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
       if (isNotModified(req, shimTag, new Date(0))) { delete headers['Content-Length']; res.writeHead(304, headers); res.end(); return; }
       res.writeHead(200, headers);
       res.end(req.method === 'HEAD' ? undefined : shimBody);
+      return;
+    }
+    // the asset index the client's local cache (public/js/assetCache.js) diffs against: current art version + per-file sizes
+    if (decoded === '/asset-index.json') {
+      sendJson(req, res, 200, assetIndex.get());
       return;
     }
     // the optional local-art manifest: the committed ∪ per-machine union (see the header), never a 404
