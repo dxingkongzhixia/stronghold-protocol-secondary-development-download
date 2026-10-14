@@ -301,21 +301,22 @@
 
 | 参数 | 含义 | 来源 |
 | --- | --- | --- |
-| `exposure` | `renderer.toneMappingExposure`（ACES）；官方是 HDR + 后期曝光 | 官方同地图截图与我们的同区域取色比对 |
+| `exposure` | `renderer.toneMappingExposure`（ACES）；官方是 HDR + 后期曝光。**注意：我们的官方场景材质没有接 three 的色调映射，所以这一项对官方战场其实是空转**（见下方 `gain`） | 官方同地图截图与我们的同区域取色比对 |
 | `ambient` | 每个 scene 材质加的中性环境/探针补光（线性） | 同上：官方亮部/暗部的中性分量 |
 | `sun` | 关键光（太阳）增益乘子（默认 1）；官方亮面 / 暗面反差大 | 官方亮面与暗面取色的比值 |
 | `tint` | 反照率乘子（色偏校正，`[1,1,1]` = 不调） | 官方材质的 `_Color` 与截图的通道比 |
-| `saturate` | 最终线性的饱和度（<1 = 官方更柔和的观感） | 截图的饱和度比对 |
+| `saturate` | 最终线性的饱和度（`c = mix(grey, c, saturate)`，<1 = 官方更柔和的观感） | 截图的饱和度比对 |
+| `gain` | **最终颜色的线性增益**（默认 1，纯乘法）。官方战场走的是游戏自己的 HDR 后期，我们的官方材质没接 three 的色调映射，画面由**烘焙光照贴图**主导（`ambient` / `sun` 调它几乎无效，实测 p50 只动 5–6）。某主题若实测比官方截图**整体暗**（亮/暗比例一致），就在这一项上整体乘一个系数；因为是纯乘法，实测的**比例**保持不变 | 官方截图与我们的同区域 p20/p50/p90 |
 
 **主题判定**：`sceneTheme(stageId, doc)` 先按 `scene doc` 的贴图族（`THEME_MARKERS`，如 `TX_AutochessSand_*` → `sand`、`TX_Syracuse_metro_*` → `city`、`TX_KXMR_*` / `TX_LMZ_*`）判定，再按 `stageId` 前缀兜底，最后 `default`。现有主题与取值：
 
-| 主题 | 地图 | exposure | ambient | sun | tint | saturate | apron | platforms |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `sand` | act1 m01–m07、act2 m02/m04 | 2.7 | 0.12 | 3.4 | 1.01/1.00/0.98 | 0.97 | 有 | 有 |
-| `city` | act2 m01（叙拉古·城市） | 2.45 | 0.15 | 3.0 | 1/1/1 | 0.95 | 无 | 无 |
-| `kxmr` | act2 m03（含 TX_KXMR 与 TX_LMZ 两族，取前者） | 2.0 | 0.13 | 2.4 | 1/1/1 | 0.94 | 无 | 无 |
-| `lmz` | 暂无仅含 `TX_LMZ` 的场景（`TX_LMZ`-only 时启用），与 kxmr 同值 | 2.0 | 0.13 | 2.4 | 1/1/1 | 0.94 | 无 | 无 |
-| `default` | 未列出的场景 | 1.5 | 0.12 | — | 1/1/1 | 0.94 | 无 | 无 |
+| 主题 | 地图 | exposure | ambient | sun | tint | saturate | gain | apron | platforms |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `sand` | act1 m01–m07、act2 m02/m04 | 2.5 | 0.20 | 3.4 | 1.00/1.00/0.99 | 0.78 | 1 | 有 | 无 |
+| `city` | act2 m01（叙拉古·城市） | 2.45 | 0.15 | 3.0 | 1/1/1 | 0.95 | 1 | 无 | 无 |
+| `kxmr` | act2 m03（含 TX_KXMR 与 TX_LMZ 两族，取前者） | 2.0 | 0.13 | 2.4 | 0.98/1.00/1.03 | 0.94 | **1.95** | 无 | 无 |
+| `lmz` | 暂无仅含 `TX_LMZ` 的场景（`TX_LMZ`-only 时启用），与 kxmr 同值 | 2.0 | 0.13 | 2.4 | 0.98/1.00/1.03 | 0.94 | **1.95** | 无 | 无 |
+| `default` | 未列出的场景 | 1.5 | 0.12 | — | 1/1/1 | 0.94 | 1 | 无 | 无 |
 
 取样（同 1280×720 战斗相机，区域 = 画面中部 25–78% × 28–80%；mean / std，0–255 亮度）：
 
@@ -330,7 +331,7 @@
 > ⚠️ **参考来源要分清**：只有 `sand` 有官方截图在盘上（`_shots/official-map01.png`），`city` / `kxmr` / `lmz` **没有**官方截图，是按官方 **`scene doc` 的材质（`_Color` / 方向光 `light`）与烘焙光照数据**校准的——将来若拿到这几种地图的官方截图，应重新取样复核。金属 / 工业走程序化板（`boardMaterial`），本表不影响它。
 
 **加 / 调一个主题**：
-1. 在 `SCENE_THEMES` 加一行（或改现有行）——先只动 `exposure` / `ambient` / `sun` / `saturate`。
+1. 在 `SCENE_THEMES` 加一行（或改现有行）——先只动 `ambient` / `sun` / `tint` / `saturate`；整体偏暗再加 `gain`（`exposure` 对我们自己的官方材质是空转的，见 §8.5）。
 2. 新贴图族就加一条 `THEME_MARKERS`（贴图名前缀 → 主题名）。
 3. 用同一张官方截图与我们的渲染**同区域取色**校准（`docs/ASSETS.md` 记录了各主题的取样值），不要凭手感调。
 4. 金属/工业主题是**回归基线**：它走程序化板（`boardMaterial`），不受本表影响，改动后必须复核它没变。
@@ -366,7 +367,7 @@ apron: {
 - **道具不合并、地形不投影**（owner 反馈「看不出光照效果」的根因）：官方场景的**地表**（平铺格 / 宽缓沙丘）按材质 + 光照图页合并成一块（省 draw call），但**竖着的道具**（岩石 / 木箱 / 仙人掌 / 草丛，`load.js splitSceneProps` 按三角形连通分量 + 高度/占地阈值判定）拆成**独立的 props 网格**，各自 `castShadow`。地表本身**不投**实时阴影——它的阴影早已烘焙进光照图 A 的 shadowmask（官方 Shadowmask 模式），重投会把整片场地自阴影、把太阳压平。于是：道具把**清晰的投影**投到地面上（这是低分辨率烘焙给不了的），地表只**接收**。实测（act1autochess_m01 战斗相机）：关掉实时阴影只影响约 6.9 万像素（全场 0.92M 的 7%），正是道具投影；关掉太阳则影响约 72 万像素（mean ΔL 37），说明太阳确实在照。
 - **合并 / 拆分与 draw call**（提交 `f76a0704` 把竖着的道具从地表里拆出来）：地表仍按材质 + 光照图页合并成一块（省 draw call），道具各自成网格。实测 `act1autochess_m01`（1280×720）：`prep` 13 → 16、`battle` 15 → 18 calls，三角形 **16,561 不变**（道具只是从地表网格里分出来，不是新增几何）；最差的 `act2autochess_m02` 19/20 → 25/26 calls；金属 / 程序化板**完全不动**（9 calls / 2,236 tris，逐像素一致——回归基线）。
 - 环境/间接：`uLmScale = lightRange × SCENE_LIGHT.indirect`，`SCENE_LIGHT.indirect` 保持 1（烘焙即官方间接光）；`theme.ambient` 是每主题的中性补光。
-- **装置台（射击台 / 特制水上平台 / 封印的地面）要跟场景同色**（owner 2026-10-14：「渲染出来了，但颜色不是沙地色的」）：官方场景本身没有这些台子，`setStage` 会把程序化板的 `buckets.raised / raisedDecal` 单独画到场景上（units 的 `heightAt` 依赖它们，GitHub #569），原先用的是 `this.mat.board` —— 也就是**程序化金属板**的材质，所以台子在沙地上是**白灰色**。现在主题可以给一行 `slab`：`{ texture, tint }`（沙地主题用场景自己的 `TX_AutochessSand_sand_A`），`_buildScene` 用它建一个 `MeshStandardMaterial` 存进 `this.slabMat`，`setStage` 优先用它；没有 `slab` 的主题（city / kxmr / lmz）仍用程序化板材质。实测（act1autochess_m01 战斗相机）：台子 (164,146,135) vs 旁边沙丘地面 (172,160,142)。
+- **装置台（射击台 / 特制水上平台 / 封印的地面）用程序化板的材质**：官方场景本身没有这些台子，`setStage` 会把程序化板的 `buckets.raised / raisedDecal` 单独画到场景上（units 的 `heightAt` 依赖它们，GitHub #569），用 `this.mat.board`。中间做过一版“让主题给它一个 `slab` 材质”（沙地主题用场景自己的沙地反照率），**已回退**（owner 2026-10-14：act1 m03 的高台“直接成沙地了”，并指定 **act2 m02 为正确样本**）——`slab` 只写在沙地主题里，而沙地主题覆盖**全部 act1 战场**，所以每张 act1 图的台子都被染成沙色；act2 m02 走 `city` 主题、没有 `slab`，用的就是程序化板材质。现在每个主题每张图都回到 `this.mat.board`。
 
 ### 8.3 官方高台（局部抬升块，`platforms`）
 
@@ -410,3 +411,20 @@ platforms: {                                     // 每个主题可选（省略 
 **没有进这一版**（都做过、owner 否掉，代码在分支 `feat/scene-board-fixes`／tag `backup/scene-board-work`）：格子贴图的混合/重着色/重绘、场地变体命名、按 chunk 的可见性修正。要再动棋盘格，**先按 §6 的坑把材质按 chunk 分组拆开**，再谈效果。
 
 **验证基线**：金属/程序化板必须逐像素不变（9 calls / 2,236 tris）；`act1autochess_m01` 战斗相机下关掉实时阴影只影响约 7% 像素（道具投影）。
+
+### 8.5 act2autochess_m03 的整体亮度（主题 `gain`，2026-10-14）
+
+owner 反馈这张图“光照问题”。测量后发现**比例完全一致、只是整体被压暗**（同一截图同区域，0–255 亮度）：
+
+| | p20（暗部） | p50（中间调） | p90（亮部） | p20/p50 | p90/p50 |
+| --- | --- | --- | --- | --- | --- |
+| 官方截图 | 80 | 127 | 179 | 0.63 | 1.41 |
+| 我们（修前） | 61 | 96 | 138 | 0.64 | 1.44 |
+| 我们（`gain: 1.95` + `tint [0.98,1.00,1.03]`） | 83 | 126 | 177 | 0.66 | 1.40 |
+
+所以不是要换一条色调曲线（不要接 three 的色调映射 —— 那会同时改掉其他每一张官方赛场），而是一个**纯乘法的线性增益**：`theme.gain` 由 `sceneMaterial` / `sceneWaterMaterial` 乘在最终颜色上（`uniform float uGain`，缺省 1）。
+
+**为什么不用 `exposure`**：我们的官方场景材质是自己写的 `ShaderMaterial`，只有 `<colorspace_fragment>`、**没有 `<tonemapping_fragment>`**，所以 `renderer.toneMappingExposure`（以及 ACES 曲线）对它们是**空转**的（实测：把 `exposure` 从 2.0 改到 3.4，像素只动 1%）；而程序化金属板是补丁过的**内置**材质，有这段，两者走的是不同管线。
+曾经试过给官方材质补上 `<tonemapping_fragment>` 并按各主题重新标定 —— 那会同时改掉全部 11 张战场的观感，owner 明确反对（“我只要改一张图，咋影响全部了？”），已全部回退。
+
+**作用域**：`gain` 只有 `kxmr` / `lmz` 两行带；而 `TX_KXMR_*` / `TX_LMZ_*` 只出现在 **act2autochess_m03** 一张场景的 `scene.json` 里，所以它不可能影响别的地图（验证：同一套代码分别用 `gain=1` 与 `gain=1.95` 渲染 11 张图，逐张取 p20/p50/p90，除 act2autochess_m03 外全部一致）。

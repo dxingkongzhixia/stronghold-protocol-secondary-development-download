@@ -411,7 +411,7 @@ export class BoardScene {
       let mat = res.mats.get(mk);
       if (!mat) {
         mat = water
-          ? sceneWaterMaterial(T, this.tex, this.focus, info)
+          ? sceneWaterMaterial(T, this.tex, this.focus, info, theme)
           : sceneMaterial(T, {
             map: res.tex[info?.map] || null, lightMap: c.lightmap >= 0 ? (res.lm[c.lightmap] || null) : null,
             normalMap: res.tex[info?.normalMap] || null, roughnessMap: res.tex[info?.metalGlossMap] || null,

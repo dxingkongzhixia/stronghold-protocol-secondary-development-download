@@ -396,6 +396,12 @@ export function sceneMaterial(THREE, o, focus) {
   // the scene's key light: its own intensity, × the global direct gain, × the theme's sun gain (the owner's official
   // boards show a strong sun — bright lit sides against dark shaded ones — so a theme can push the sun term up).
   const k = (Number.isFinite(L.intensity) ? L.intensity : 1) * SCENE_LIGHT.direct * (Number.isFinite(theme?.sun) ? theme.sun : 1);
+  // A per-theme linear gain on the scene's final colour. The official board renders through the game's own Unity HDR
+  // post FX; our materials do not run three's tone mapping, so `theme.exposure` (renderer.toneMappingExposure) is inert
+  // and the lightmap term dominates. A theme that measured darker than its official screenshot is scaled here instead —
+  // it is a pure multiply, so the shadow/highlight RATIOS stay exactly as measured. Absent = 1: every other theme and
+  // every procedural board is untouched.
+  const gain = Number.isFinite(theme?.gain) && theme.gain > 0 ? theme.gain : 1;
   const normalMap = o.normalMap || null, roughMap = o.roughnessMap || null, emisMap = o.emissionMap || null;
   const uniforms = Object.assign({}, THREE.UniformsLib.lights, {
     uMap: { value: o.map || null }, uLm: { value: o.lightMap || null },
@@ -410,6 +416,7 @@ export function sceneMaterial(THREE, o, focus) {
     uRoughMap: { value: roughMap },
     uEmisMap: { value: emisMap }, uEmisColor: { value: new THREE.Vector3(lin(emis[0]), lin(emis[1]), lin(emis[2])) },
     uSaturate: { value: Number.isFinite(theme?.saturate) ? theme.saturate : 1 },
+    uGain: { value: gain },
     ...focus,
     // The procedural sheen is off for official scenes (SCENE_LIGHT.sheen): `addFocus` adds `sheen × smoothness²` to a
     // material as the port's stand-in for the official's baked reflections, but an official scene's lightmap already
@@ -462,7 +469,7 @@ export function sceneMaterial(THREE, o, focus) {
       'uniform float uLmScale; uniform float uAmbient; uniform float uShadow; uniform vec3 uLightDir; uniform vec3 uLightColor;',
       'uniform sampler2D uNormalMap; uniform float uNormalScale; uniform sampler2D uRoughMap;',
       'uniform sampler2D uEmisMap; uniform vec3 uEmisColor;',
-      'uniform vec3 uSheen; uniform float uSaturate;',
+      'uniform vec3 uSheen; uniform float uSaturate; uniform float uGain;',
       FOCUS_GLSL,
       'varying vec2 vUv; varying vec2 vLm; varying vec3 vN; varying vec3 vWorld;',
       '#ifdef SCENE_NORMAL',
@@ -501,11 +508,7 @@ export function sceneMaterial(THREE, o, focus) {
       '    c += uEmisColor * texture2D(uEmisMap, vUv).rgb;',
       '  #endif',
       '  c = mix(vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), c, uSaturate);',
-      '  gl_FragColor = vec4(c * focusMask(vWorld.xy), a.a);',
-      '  // The official scene goes through the renderer\'s tone mapping like the procedural board\'s patched built-ins do;',
-      '  // without this include the ACES curve and `theme.exposure` (scene.js setStage) never reach the battlefield, which',
-      '  // is what made every official board render uniformly darker than the official (owner report, act2autochess_m03).',
-      '  #include <tonemapping_fragment>',
+      '  gl_FragColor = vec4(c * uGain * focusMask(vWorld.xy), a.a);',
       '  #include <colorspace_fragment>',
       '}',
     ].join('\n'),
@@ -517,18 +520,21 @@ export function sceneMaterial(THREE, o, focus) {
 }
 
 /** A water surface of an official scene (Torappu/Scene/StylizedWater): the board's water shader in the material's colours. */
-export function sceneWaterMaterial(THREE, tex, focus, info) {
+export function sceneWaterMaterial(THREE, tex, focus, info, theme) {
   const deep = colorOf(info, '_DeepWaterColor', [0.03, 0.2, 0.27, 0.7]), shallow = colorOf(info, '_ShallowWaterColor', [0.09, 0.46, 0.55, 0.5]);
+  // the theme's linear scene gain (see sceneMaterial): keeps the water in the same exposure as the scene's land.
+  const gain = Number.isFinite(theme?.gain) && theme.gain > 0 ? theme.gain : 1;
   const uniforms = {
     uTime: { value: 0 }, uNormal: { value: tex.waterN || null }, uCaustics: { value: tex.caustics || null },
     uDeep: { value: new THREE.Vector4(...deep) }, uShallow: { value: new THREE.Vector4(...shallow) }, ...focus,
+    uGain: { value: gain },
   };
   return new THREE.ShaderMaterial({
     uniforms,
     defines: tex.waterN && tex.caustics ? { WATER_MAPS: 1 } : {},
     vertexShader: TERRAIN_VERT,
     fragmentShader: [
-      'uniform float uTime; uniform sampler2D uNormal; uniform sampler2D uCaustics; uniform vec4 uDeep; uniform vec4 uShallow;',
+      'uniform float uTime; uniform sampler2D uNormal; uniform sampler2D uCaustics; uniform vec4 uDeep; uniform vec4 uShallow; uniform float uGain;',
       FOCUS_GLSL,
       'varying vec2 vUv; varying vec3 vWorld;',
       'void main() {',
@@ -545,8 +551,7 @@ export function sceneWaterMaterial(THREE, tex, focus, info) {
       '  #endif',
       '  vec4 w = mix(uDeep, uShallow, 0.08 + 0.2 * diff);',
       '  vec3 c = pow(w.rgb, vec3(2.2)) + ca * vec3(0.03, 0.05, 0.05) + spec * vec3(0.5, 0.6, 0.65);',
-      '  gl_FragColor = vec4(c * focusMask(vWorld.xy), clamp(w.a + 0.2, 0.0, 1.0));',
-      '  #include <tonemapping_fragment>',
+      '  gl_FragColor = vec4(c * uGain * focusMask(vWorld.xy), clamp(w.a + 0.2, 0.0, 1.0));',
       '  #include <colorspace_fragment>',
       '}',
     ].join('\n'),

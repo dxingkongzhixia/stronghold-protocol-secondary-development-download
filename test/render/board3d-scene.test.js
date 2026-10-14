@@ -229,8 +229,16 @@ describe('scene themes (theme.js)', () => {
       assert.ok(t.exposure > 0, `${name}.exposure`);
       assert.ok(t.ambient >= 0, `${name}.ambient`);
       assert.ok(Array.isArray(t.tint) && t.tint.length === 3, `${name}.tint`);
-      assert.ok(t.saturate > 0, `${name}.saturate`); // >1 is a boost: ACES desaturates the highlights the bright boards sit in
+      assert.ok(t.saturate > 0, `${name}.saturate`); // a mix factor (c = mix(grey, c, saturate)); only a theme that measured needs a boost above 1
+      assert.ok(t.gain === undefined || t.gain > 0, `${name}.gain`);
     }
+    // `gain` (sceneMaterial's uGain) is the per-theme linear brightening for a battlefield that measured darker than its
+    // own official screenshot. It exists so such a fix cannot leak into the other battlefields: exactly one theme family
+    // carries it, and that family is the theme of exactly one stage (act2autochess_m03's TX_KXMR / TX_LMZ).
+    assert.equal(SCENE_THEMES.default.gain, undefined, 'no gain by default');
+    assert.equal(SCENE_THEMES.sand.gain, undefined, 'the sand theme needs none');
+    assert.equal(SCENE_THEMES.city.gain, undefined, 'the city theme needs none');
+    assert.ok(SCENE_THEMES.kxmr.gain > 1 && SCENE_THEMES.lmz.gain === SCENE_THEMES.kxmr.gain, 'only the KXMR/LMZ family carries a gain');
     assert.equal(sceneTheme('act1autochess_m01', { materials: { a: { map: 'TX_AutochessSand_A' } } }), SCENE_THEMES.sand);
     assert.equal(sceneTheme('act2autochess_m01', { materials: { a: { map: 'TX_Syracuse_metro_D' } } }), SCENE_THEMES.city);
     assert.equal(sceneTheme('act2autochess_m03', { materials: { a: { map: 'TX_KXMR_A' } } }), SCENE_THEMES.kxmr);
@@ -244,6 +252,7 @@ describe('scene themes (theme.js)', () => {
     const plain = sceneMaterial(THREE, { info: { colors: { _Color: [1, 1, 1, 1] } } }, focus);
     assert.equal(plain.uniforms.uAmbient.value, SCENE_LIGHT.ambient);
     assert.equal(plain.uniforms.uSaturate.value, 1);
+    assert.equal(plain.uniforms.uGain.value, 1, 'no theme gain: the scene output is unscaled');
     const m = sceneMaterial(THREE, { info: { colors: { _Color: [0.5, 1, 1, 1] } }, theme: { exposure: 2, ambient: 0.4, tint: [0.5, 1, 2], saturate: 0.8 } }, focus);
     assert.equal(m.uniforms.uAmbient.value, 0.4);
     assert.equal(m.uniforms.uSaturate.value, 0.8);
@@ -251,6 +260,15 @@ describe('scene themes (theme.js)', () => {
     // the theme's sun gain multiplies the key light (a bright sun so the lit sides read)
     const s = sceneMaterial(THREE, { info: { colors: {} }, light: { dir: [0, 0, 1], color: [1, 1, 1], intensity: 1 }, theme: { ambient: 0.1, sun: 2 } }, focus);
     assert.equal(s.uniforms.uLightColor.value.x, 2, 'uLightColor = the scene intensity × SCENE_LIGHT.direct × theme.sun');
+    assert.equal(s.uniforms.uGain.value, 1, 'a theme without gain leaves the scene unscaled');
+    // the theme gain is a plain multiplier on the finished colour (a linear gain; the official boards' post FX, which our
+    // materials do not run, is what it stands in for) — applied to the land and the water alike.
+    const g = sceneMaterial(THREE, { info: { colors: {} }, theme: { ambient: 0.1, gain: 1.9 } }, focus);
+    assert.equal(g.uniforms.uGain.value, 1.9, 'the theme gain scales the scene output');
+    const w = sceneWaterMaterial(THREE, {}, focus, { colors: {} }, { ambient: 0.1, gain: 1.9 });
+    assert.equal(w.uniforms.uGain.value, 1.9, 'and the water with it');
+    const w0 = sceneWaterMaterial(THREE, {}, focus, { colors: {} });
+    assert.equal(w0.uniforms.uGain.value, 1, 'no theme: the water is unscaled');
   });
 
   test('the sand theme carries the sand apron; the default / metal themes carry none', () => {
