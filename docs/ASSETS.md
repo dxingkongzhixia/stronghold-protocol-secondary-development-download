@@ -636,10 +636,11 @@ register — so the HTTPS future keeps the better chain.
   first": at boot it times every configured origin in parallel on one committed sample
   (`/assets/char/portrait/char_003_kalts_1.png`, ~110 KB, `cache: 'no-store'`) and installs the **first** one that
   clears its own bar — the owner's relay **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **1.0 MB/s**
-  (`MIRROR_MIN_BPS`) — otherwise the manifest URLs are left on this server. The measurement is cached in
-  `localStorage` for 30 min (`SPEED_CACHE_MS`), so a warm visit never re-probes; the whole list stays as the per-file
-  error fallback. This is what demoted the relay when the owner's box measured ~0.05–0.4 MB/s (its plan's real egress,
-  far under the advertised 200 Mbps — measured 2026-10-15: the game box was 3–4× faster than the relay).
+  (`MIRROR_MIN_BPS`) — otherwise the manifest URLs are left on this server. **The relay stays the first choice and is
+  re-measured on every page load** (`SPEED_CACHE_MS = 0`), so a relay that drops under its bar is switched away from on
+  the very next visit; the whole list stays as the per-file error fallback. This is what demoted the relay when the
+  owner's box measured ~0.05–0.4 MB/s (its plan's real egress, far under the advertised 200 Mbps — measured 2026-10-15:
+  the game box was 3–4× faster than the relay).
 
   > ⚠️ **An HTTPS site needs an HTTPS relay.** A page served over HTTPS may not fetch `http://…` subresources (the
   > browser blocks them as **mixed content**, silently), so on the filed domain `strongholdprotocolcsym.top` the chain's

@@ -36,8 +36,9 @@ export const MIRROR_MIN_BPS = 1.0 * 1024 * 1024; // 1.0 MB/s
 /** Per-candidate probe budget, and the byte cap that ends a fast one early (a full measure would waste bandwidth). */
 export const SPEED_TIMEOUT_MS = 800;
 export const SPEED_BYTE_CAP = 400 * 1024;
-/** How long a measurement is reused, so a warm visit does not re-probe (localStorage). */
-export const SPEED_CACHE_MS = 30 * 60 * 1000;
+/** How long a measurement may be reused. **0 = re-measure on every page load**: the relay is the first choice, but
+ *  the moment it drops under its bar the next visit switches away from it (a degraded relay is never remembered). */
+export const SPEED_CACHE_MS = 0;
 const SPEED_PREF = 'sp.mirror.speed';
 
 /** Pure: the rate of a timed download in bytes per second (0 when nothing arrived). */
@@ -86,15 +87,17 @@ async function measureSource(base, fetchFn, samplePath, budgetMs) {
   } catch { return 0; } finally { if (timer) clearTimeout(timer); }
 }
 
-/** The cached measurement of a previous visit (same origin list, still fresh), or null. */
-function readSpeedCache(list) {
+/** The cached measurement of a previous visit (same origin list, still within `ttlMs`), or null. A ttl of 0 disables
+ *  the reuse entirely — the relay is measured again on every load, so a drop below its bar is caught at once. */
+function readSpeedCache(list, ttlMs) {
+  if (!(ttlMs > 0)) return null;
   try {
     const raw = globalThis.localStorage?.getItem(SPEED_PREF);
     if (!raw) return null;
     const c = JSON.parse(raw);
     if (!c || !Array.isArray(c.list) || !Array.isArray(c.measured)) return null;
     if (c.list.join('|') !== list.join('|')) return null;
-    if (!(Date.now() - (c.at || 0) < SPEED_CACHE_MS)) return null;
+    if (!(Date.now() - (c.at || 0) < ttlMs)) return null;
     return c.measured;
   } catch { return null; }
 }
@@ -268,15 +271,16 @@ export function installImageFallback({ doc = globalThis.document } = {}) {
  * Pick the origin the manifest URLs are rewritten to, by **measured throughput** instead of "who answers first": every
  * candidate is timed in parallel on one committed sample, and the first one clearing its bar wins — a FULL origin (the
  * relay) 1.2 MB/s, a plain-file mirror (gh-proxy / jsDelivr) 1.0 MB/s; when none clears its bar the page keeps using
- * this server. The measurement is cached for `SPEED_CACHE_MS` so a warm visit never re-probes, and the whole configured
- * list stays available for the per-file error fallback. Never throws: any failure leaves the prefix empty.
+ * this server. The **relay stays the first choice**, but it is measured on **every page load** (`cacheMs = 0` by
+ * default): the moment it drops under its bar, the very next visit switches away from it. The whole configured list
+ * stays available for the per-file error fallback. Never throws: any failure leaves the prefix empty.
  * @param {{ fetchFn?: typeof fetch, hostname?: string, timeoutMs?: number, mirrorsUrl?: string,
- *           samplePath?: string, speedMs?: number }} [o]
+ *           samplePath?: string, speedMs?: number, cacheMs?: number }} [o]
  * @returns {Promise<string>} the installed prefix ('' when none)
  */
 export async function initAssetMirror({
   fetchFn = globalThis.fetch, hostname = globalThis.location?.hostname, timeoutMs = PROBE_TIMEOUT_MS,
-  mirrorsUrl = MIRRORS_URL, samplePath = SPEED_SAMPLE_PATH, speedMs = SPEED_TIMEOUT_MS,
+  mirrorsUrl = MIRRORS_URL, samplePath = SPEED_SAMPLE_PATH, speedMs = SPEED_TIMEOUT_MS, cacheMs = SPEED_CACHE_MS,
 } = {}) {
   setMirrorPrefix('');
   sources = [];
@@ -289,7 +293,7 @@ export async function initAssetMirror({
     const list = cfg && Array.isArray(cfg.sources) ? cfg.sources.filter((s) => typeof s === 'string' && s) : [];
     if (!list.length) return '';
     const full = new Set(cfg && Array.isArray(cfg.fullSources) ? cfg.fullSources : []);
-    let measured = readSpeedCache(list);
+    let measured = readSpeedCache(list, cacheMs);
     if (!measured) {
       const rates = await Promise.all(list.map((base) => measureSource(base, fetchFn, samplePath, budget)));
       measured = list.map((base, i) => ({ base, full: full.has(base), bps: rates[i] }));

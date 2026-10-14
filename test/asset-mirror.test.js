@@ -214,7 +214,7 @@ describe('asset mirror: the origin is picked by MEASURED throughput', () => {
     assert.equal(mirrorPrefix(), '');
   });
 
-  test('initAssetMirror: a fresh measurement is reused, so a warm visit does not re-probe', async () => {
+  test('initAssetMirror: the relay is re-measured on EVERY load (a drop is switched away from at once)', async () => {
     const saved = globalThis.localStorage;
     const store = new Map();
     globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) };
@@ -228,9 +228,11 @@ describe('asset mirror: the origin is picked by MEASURED throughput', () => {
       };
       await initAssetMirror({ fetchFn, hostname: 'game.test' });
       const first = samples;
-      assert.ok(first >= 2, 'the cold call measures both origins');
+      assert.ok(first >= 2, 'the first load measures both origins');
       await initAssetMirror({ fetchFn, hostname: 'game.test' });
-      assert.equal(samples, first, 'the warm call re-probes nothing');
+      assert.equal(samples, first * 2, 'the next load measures them again: the default cacheMs is 0, the relay is never trusted on a stale reading');
+      await initAssetMirror({ fetchFn, hostname: 'game.test', cacheMs: 60 * 1000 });
+      assert.equal(samples, first * 2, 'a caller that passes a TTL reuses the fresh measurement instead');
       setMirrorPrefix('');
     } finally {
       if (saved === undefined) delete globalThis.localStorage; else globalThis.localStorage = saved;
