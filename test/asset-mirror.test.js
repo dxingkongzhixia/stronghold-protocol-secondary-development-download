@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {
   isMirrorable, mirrorUrl, rewriteAssetPaths, mirrorPrefix, setMirrorPrefix, DEV_HOSTS, MIRRORS_URL,
   unmirrorUrl, installImageFallback, mirrorRouteUrl, mirrorIsFull, mirrorCandidates, nextMirrorCandidate,
-  rateOf, pickMirror, initAssetMirror, RELAY_MIN_BPS, MIRROR_MIN_BPS, SPEED_SAMPLE_PATH,
+  rateOf, pickMirror, initAssetMirror, RELAY_MIN_BPS, MIRROR_MIN_BPS, SPEED_SAMPLE_PATH, SPEED_SAMPLES,
 } from '../public/js/assetMirror.js';
 
 const BASE = 'https://cdn.example/gh/o/r@master/public';
@@ -192,7 +192,7 @@ describe('asset mirror: the origin is picked by MEASURED throughput', () => {
       if (url.endsWith(MIRRORS_URL)) return { ok: true, json: async () => cfg };
       const slow = url.startsWith(RELAY);                    // the relay crawls, gh-proxy is fast
       await new Promise((r) => setTimeout(r, slow ? 40 : 0));
-      return { ok: true, body: null, arrayBuffer: async () => new ArrayBuffer(slow ? 8 * 1024 : 400 * 1024) };
+      return { ok: true, body: null, arrayBuffer: async () => new ArrayBuffer(slow ? 4 * 1024 : 400 * 1024) };
     };
     const chosen = await initAssetMirror({ fetchFn, hostname: 'game.test' });
     assert.equal(chosen, GH, 'the slow relay is skipped for the fast mirror');
@@ -214,7 +214,7 @@ describe('asset mirror: the origin is picked by MEASURED throughput', () => {
     assert.equal(mirrorPrefix(), '');
   });
 
-  test('initAssetMirror: the relay is re-measured on EVERY load (a drop is switched away from at once)', async () => {
+  test('initAssetMirror: a fresh reading is reused for the TTL; cacheMs 0 forces a re-measure', async () => {
     const saved = globalThis.localStorage;
     const store = new Map();
     globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) };
@@ -228,11 +228,11 @@ describe('asset mirror: the origin is picked by MEASURED throughput', () => {
       };
       await initAssetMirror({ fetchFn, hostname: 'game.test' });
       const first = samples;
-      assert.ok(first >= 2, 'the first load measures both origins');
+      assert.ok(first >= SPEED_SAMPLES.length, 'the first load measures every sample of the first origin');
       await initAssetMirror({ fetchFn, hostname: 'game.test' });
-      assert.equal(samples, first * 2, 'the next load measures them again: the default cacheMs is 0, the relay is never trusted on a stale reading');
-      await initAssetMirror({ fetchFn, hostname: 'game.test', cacheMs: 60 * 1000 });
-      assert.equal(samples, first * 2, 'a caller that passes a TTL reuses the fresh measurement instead');
+      assert.equal(samples, first, 'a fresh reading is reused (SPEED_CACHE_MS = 2 min), so a warm visit does not re-probe');
+      await initAssetMirror({ fetchFn, hostname: 'game.test', cacheMs: 0 });
+      assert.ok(samples > first, 'cacheMs 0 forces a re-measure on every call');
       setMirrorPrefix('');
     } finally {
       if (saved === undefined) delete globalThis.localStorage; else globalThis.localStorage = saved;

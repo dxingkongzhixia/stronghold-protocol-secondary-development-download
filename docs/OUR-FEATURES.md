@@ -610,14 +610,16 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
   Gitee Releases 403s hotlinks); tested 2026-10-13.
 - **The plain-HTTP chain picks the origin by MEASURED THROUGHPUT (2026-10-15)**: on the production site the Service
   Worker cannot register (plain HTTP), so `public/js/assetMirror.js` rewrites the manifests' **image** URLs to a chosen
-  origin instead. It times every configured source (`public/asset-mirrors.json`) in parallel on one committed sample
-  (~110 KB, `cache: 'no-store'`) and installs the **first** that clears its bar — the owner's relay **1.2 MB/s**
-  (`RELAY_MIN_BPS`), a plain-file GitHub mirror **1.0 MB/s** (`MIRROR_MIN_BPS`) — otherwise the URLs stay on this
-  server. **The relay keeps the first place and is re-measured on every page load** (`SPEED_CACHE_MS = 0`), so a relay
-  that falls under its bar is switched away from on the very next visit; the whole list stays as the per-file error
-  fallback. Measured 2026-10-15: the relay's real egress is ~0.05–0.4 MB/s (its plan advertises 200 Mbps) while the game
-  box does 0.4–1.5 MB/s, so the chain served the art from the box — whose `immutable, max-age=31536000` headers make a
-  return visit free (the relay's `max-age=604800` did not).
+  origin instead. It times the origins on **six committed operator portraits (~110 KB each) fetched in parallel** — the
+  way the boot preload pulls art — so the measured rate is the throughput a player actually gets, not one stream's
+  latency (a single small file made a fixed relay look slow). **The relay is probed first** (the healthy case costs one
+  round of samples; the other sources are probed in parallel only when it misses its bar) and installs the **first**
+  source that clears its bar — the owner's relay **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **1.0 MB/s**
+  (`MIRROR_MIN_BPS`) — otherwise the URLs stay on this server. A fresh reading is reused for `SPEED_CACHE_MS` (2 min,
+  `cacheMs: 0` re-measures every call), and the whole list stays as the per-file error fallback. Measured 2026-10-15
+  (domestic vantage): the relay's egress was ~0.05–0.4 MB/s before Aliyun fixed its bandwidth and **1.9 MB/s at 4-way
+  after** — the fastest origin again, picked up by the same rule with no code change; the game box does ~1.05 MB/s at
+  4-way and its `immutable, max-age=31536000` headers make a return visit free.
 - **Server fallback is paced**: a server fetch is the last resort and is throttled so a bulk pre-cache never starves
   live matches — a process-wide token bucket on `public/assets|fonts|vendor` bodies (`server/http/files.js`
   `RateLimiter`), default **1.2 MB/s**, `SP_ASSET_RATE_KBPS` overrides (0 disables). Non-art paths are never paced.

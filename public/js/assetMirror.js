@@ -27,18 +27,29 @@ export const DEV_HOSTS = Object.freeze(['localhost', '127.0.0.1', '::1', '']);
 /** One probe per mirror: a HEAD is enough and the mirrors answer CORS. */
 export const PROBE_TIMEOUT_MS = 4000;
 
-/** The sample every origin is timed on: a committed asset (~110 KB) with a stable official name. */
-export const SPEED_SAMPLE_PATH = '/assets/char/portrait/char_003_kalts_1.png';
+/** The samples every origin is timed on: six committed operator portraits (~110 KB each, stable official names, present
+ *  on the relay, the GitHub mirrors and this server). They are fetched **in parallel** — the same way the boot preload
+ *  pulls art — so the measured rate is the throughput a player actually gets, not one stream's latency. */
+export const SPEED_SAMPLES = Object.freeze([
+  '/assets/char/portrait/char_003_kalts_1.png',
+  '/assets/char/portrait/char_010_chen_1.png',
+  '/assets/char/portrait/char_103_angel_1.png',
+  '/assets/char/portrait/char_140_whitew_1.png',
+  '/assets/char/portrait/char_199_yak_1.png',
+  '/assets/char/portrait/char_150_snakek_1.png',
+]);
+/** The first sample (kept for callers/tests that name one path). */
+export const SPEED_SAMPLE_PATH = SPEED_SAMPLES[0];
 /** A FULL origin (the owner's relay: files + the /media,/scene,/clip routes) must clear this to stay first. */
 export const RELAY_MIN_BPS = 1.2 * 1024 * 1024; // 1.2 MB/s
 /** A plain-file mirror (gh-proxy / jsDelivr) must clear this to be used at all. */
 export const MIRROR_MIN_BPS = 1.0 * 1024 * 1024; // 1.0 MB/s
-/** Per-candidate probe budget, and the byte cap that ends a fast one early (a full measure would waste bandwidth). */
-export const SPEED_TIMEOUT_MS = 800;
+/** Per-source probe budget, and the per-file byte cap that ends a fast one early. */
+export const SPEED_TIMEOUT_MS = 2500;
 export const SPEED_BYTE_CAP = 400 * 1024;
-/** How long a measurement may be reused. **0 = re-measure on every page load**: the relay is the first choice, but
- *  the moment it drops under its bar the next visit switches away from it (a degraded relay is never remembered). */
-export const SPEED_CACHE_MS = 0;
+/** How long a measurement is reused. The probe costs ~650 KB per source, so a fresh reading is reused for two minutes —
+ *  a relay that drops under its bar is still caught within the window (and a hard failure walks the chain at once). */
+export const SPEED_CACHE_MS = 2 * 60 * 1000;
 const SPEED_PREF = 'sp.mirror.speed';
 
 /** Pure: the rate of a timed download in bytes per second (0 when nothing arrived). */
@@ -62,13 +73,14 @@ export function pickMirror(measured, { relayMin = RELAY_MIN_BPS, mirrorMin = MIR
 }
 
 /** Time one origin on the sample: bytes received within the budget (a partial read is enough to judge). */
-async function measureSource(base, fetchFn, samplePath, budgetMs) {
+/** Read one sample, stopping at the byte cap or the budget. Returns the bytes read; never throws. */
+async function readCapped(url, fetchFn, budgetMs, cap = SPEED_BYTE_CAP) {
   const t0 = Date.now();
   let timer = null;
   try {
     const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
     timer = ctrl && budgetMs > 0 ? setTimeout(() => ctrl.abort(), budgetMs + 500) : null;
-    const res = await fetchFn(base + samplePath, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
+    const res = await fetchFn(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
     if (!res || !res.ok) return 0;
     let bytes = 0;
     const reader = res.body && typeof res.body.getReader === 'function' ? res.body.getReader() : null;
@@ -77,14 +89,27 @@ async function measureSource(base, fetchFn, samplePath, budgetMs) {
         const { value, done } = await reader.read();
         if (done) break;
         bytes += value && value.byteLength ? value.byteLength : 0;
-        if (bytes >= SPEED_BYTE_CAP || Date.now() - t0 >= budgetMs) break;
+        if (bytes >= cap || Date.now() - t0 >= budgetMs) break;
       }
       try { await reader.cancel(); } catch { /* ignore */ }
     } else {
       bytes = (await res.arrayBuffer()).byteLength;
     }
-    return rateOf(bytes, Date.now() - t0);
+    return bytes;
   } catch { return 0; } finally { if (timer) clearTimeout(timer); }
+}
+
+/**
+ * Time one origin the way a player actually loads it: every sample is fetched **in parallel** (the boot preload pulls
+ * art 8 at a time) and the aggregate bytes over the wall-clock time is the throughput. A single small file would
+ * measure the round-trip latency instead of the bandwidth — that is what made a fixed relay look slower than it is.
+ */
+async function measureSource(base, fetchFn, samples, budgetMs) {
+  const list = Array.isArray(samples) ? samples : [samples];
+  const t0 = Date.now();
+  const parts = await Promise.all(list.map((s) => readCapped(base + s, fetchFn, budgetMs)));
+  const bytes = parts.reduce((a, b) => a + b, 0);
+  return rateOf(bytes, Date.now() - t0);
 }
 
 /** The cached measurement of a previous visit (same origin list, still within `ttlMs`), or null. A ttl of 0 disables
@@ -280,7 +305,8 @@ export function installImageFallback({ doc = globalThis.document } = {}) {
  */
 export async function initAssetMirror({
   fetchFn = globalThis.fetch, hostname = globalThis.location?.hostname, timeoutMs = PROBE_TIMEOUT_MS,
-  mirrorsUrl = MIRRORS_URL, samplePath = SPEED_SAMPLE_PATH, speedMs = SPEED_TIMEOUT_MS, cacheMs = SPEED_CACHE_MS,
+  mirrorsUrl = MIRRORS_URL, samples = SPEED_SAMPLES, speedMs = SPEED_TIMEOUT_MS, cacheMs = SPEED_CACHE_MS,
+  relayMin = RELAY_MIN_BPS, mirrorMin = MIRROR_MIN_BPS,
 } = {}) {
   setMirrorPrefix('');
   sources = [];
@@ -295,12 +321,18 @@ export async function initAssetMirror({
     const full = new Set(cfg && Array.isArray(cfg.fullSources) ? cfg.fullSources : []);
     let measured = readSpeedCache(list, cacheMs);
     if (!measured) {
-      const rates = await Promise.all(list.map((base) => measureSource(base, fetchFn, samplePath, budget)));
-      measured = list.map((base, i) => ({ base, full: full.has(base), bps: rates[i] }));
+      // The FIRST source (the relay) answers the common case on its own; the rest are probed in parallel only when it
+      // fails its bar, so a healthy relay costs one round of samples and a dead one still resolves within the budget.
+      measured = [{ base: list[0], full: full.has(list[0]), bps: await measureSource(list[0], fetchFn, samples, budget) }];
+      if (!pickMirror(measured, { relayMin, mirrorMin })) {
+        const rest = list.slice(1);
+        const rates = await Promise.all(rest.map((base) => measureSource(base, fetchFn, samples, budget)));
+        rest.forEach((base, i) => measured.push({ base, full: full.has(base), bps: rates[i] }));
+      }
       writeSpeedCache(list, measured);
     }
     sources = list;                                   // the whole chain, for the per-file fallback
-    const chosen = pickMirror(measured);
+    const chosen = pickMirror(measured, { relayMin, mirrorMin });
     if (chosen) setMirrorPrefix(chosen, full.has(chosen));
     return chosen || '';
   } catch { /* no config / bad JSON: keep the server */ }

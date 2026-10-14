@@ -633,14 +633,15 @@ register — so the HTTPS future keeps the better chain.
   with no 404s (nothing fell back), and with the first two tiers dead a page image still loaded from this server.
 
   **Since 2026-10-15 the client picks the origin by MEASURED THROUGHPUT** (`js/assetMirror.js`), not by "who answers
-  first": at boot it times every configured origin in parallel on one committed sample
-  (`/assets/char/portrait/char_003_kalts_1.png`, ~110 KB, `cache: 'no-store'`) and installs the **first** one that
-  clears its own bar — the owner's relay **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **1.0 MB/s**
-  (`MIRROR_MIN_BPS`) — otherwise the manifest URLs are left on this server. **The relay stays the first choice and is
-  re-measured on every page load** (`SPEED_CACHE_MS = 0`), so a relay that drops under its bar is switched away from on
-  the very next visit; the whole list stays as the per-file error fallback. This is what demoted the relay when the
-  owner's box measured ~0.05–0.4 MB/s (its plan's real egress, far under the advertised 200 Mbps — measured 2026-10-15:
-  the game box was 3–4× faster than the relay).
+  first": at boot it times the origins on **six committed portraits (~110 KB each) fetched in parallel** — the way the
+  boot preload pulls art — so the rate is the throughput a player gets, not one stream's latency. **The relay is probed
+  first** (the healthy case costs one round of samples) and the remaining sources are probed in parallel only when it
+  misses its bar: the relay must clear **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **1.0 MB/s**
+  (`MIRROR_MIN_BPS`), otherwise the manifest URLs are left on this server. A fresh reading is reused for
+  `SPEED_CACHE_MS` (2 min; `cacheMs: 0` re-measures every call), and the whole list stays as the per-file error
+  fallback. This is what demoted the relay when the owner's box measured ~0.05–0.4 MB/s (its plan's real egress, far
+  under the advertised 200 Mbps); after Aliyun raised it (2026-10-15: 0.42 MB/s single, **1.9 MB/s at 4-way** — the
+  fastest origin again) the same rule picks it back up with no code change.
 
   > ⚠️ **An HTTPS site needs an HTTPS relay.** A page served over HTTPS may not fetch `http://…` subresources (the
   > browser blocks them as **mixed content**, silently), so on the filed domain `strongholdprotocolcsym.top` the chain's
