@@ -366,8 +366,11 @@ apron: {
 - **道具不合并、地形不投影**（owner 反馈「看不出光照效果」的根因）：官方场景的**地表**（平铺格 / 宽缓沙丘）按材质 + 光照图页合并成一块（省 draw call），但**竖着的道具**（岩石 / 木箱 / 仙人掌 / 草丛，`load.js splitSceneProps` 按三角形连通分量 + 高度/占地阈值判定）拆成**独立的 props 网格**，各自 `castShadow`。地表本身**不投**实时阴影——它的阴影早已烘焙进光照图 A 的 shadowmask（官方 Shadowmask 模式），重投会把整片场地自阴影、把太阳压平。于是：道具把**清晰的投影**投到地面上（这是低分辨率烘焙给不了的），地表只**接收**。实测（act1autochess_m01 战斗相机）：关掉实时阴影只影响约 6.9 万像素（全场 0.92M 的 7%），正是道具投影；关掉太阳则影响约 72 万像素（mean ΔL 37），说明太阳确实在照。
 - **合并 / 拆分与 draw call**（提交 `f76a0704` 把竖着的道具从地表里拆出来）：地表仍按材质 + 光照图页合并成一块（省 draw call），道具各自成网格。实测 `act1autochess_m01`（1280×720）：`prep` 13 → 16、`battle` 15 → 18 calls，三角形 **16,561 不变**（道具只是从地表网格里分出来，不是新增几何）；最差的 `act2autochess_m02` 19/20 → 25/26 calls；金属 / 程序化板**完全不动**（9 calls / 2,236 tris，逐像素一致——回归基线）。
 - 环境/间接：`uLmScale = lightRange × SCENE_LIGHT.indirect`，`SCENE_LIGHT.indirect` 保持 1（烘焙即官方间接光）；`theme.ambient` 是每主题的中性补光。
+- **装置台（射击台 / 特制水上平台 / 封印的地面）要跟场景同色**（owner 2026-10-14：「渲染出来了，但颜色不是沙地色的」）：官方场景本身没有这些台子，`setStage` 会把程序化板的 `buckets.raised / raisedDecal` 单独画到场景上（units 的 `heightAt` 依赖它们，GitHub #569），原先用的是 `this.mat.board` —— 也就是**程序化金属板**的材质，所以台子在沙地上是**白灰色**。现在主题可以给一行 `slab`：`{ texture, tint }`（沙地主题用场景自己的 `TX_AutochessSand_sand_A`），`_buildScene` 用它建一个 `MeshStandardMaterial` 存进 `this.slabMat`，`setStage` 优先用它；没有 `slab` 的主题（city / kxmr / lmz）仍用程序化板材质。实测（act1autochess_m01 战斗相机）：台子 (164,146,135) vs 旁边沙丘地面 (172,160,142)。
 
 ### 8.3 官方高台（局部抬升块，`platforms`）
+
+> **已关闭（owner，2026-10-14）**：`theme.sand.platforms` 已移除，`_buildPlatforms` 因此不建任何块。原因：它用普通 `MeshStandardMaterial` 建块（不读 `aLm`），**拿不到场景的烘焙光照/AO**，在官方场景上渲染成一块**扁平、发白**的板压在自然沙丘上（owner 的「错误模型」）。重新启用前必须先把它的材质接到场景的烘焙光上，否则会再次发白。下面的标定数据保留备查。
 
 官方战场 #01 的可玩面上有一处**局部的抬升台**（owner 截图标注在场地**左中**：`D:\DOTK\_shots\official-map01.png`）——**不是** §8.1 的「一圈」：官方**没有**周长边框，只有**局部几块**抬升。我们按 §8.2 的方式抽到的官方场景可玩面基本是平的（只约半格落差），这块抬升**不在**可抽数据里，所以它在 `theme.js` 里**按主题手工标定**、由 `scene.js` `_buildPlatforms` 建成几何：
 

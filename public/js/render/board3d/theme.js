@@ -35,25 +35,15 @@ export const SCENE_THEMES = Object.freeze({
   sand: Object.freeze({
     exposure: 2.5, ambient: 0.20, tint: Object.freeze([1.0, 1.0, 0.99]), saturate: 0.78, sun: 3.4,
     apron: Object.freeze({ texture: 'TX_AutochessSand_sand_A', tint: Object.freeze([1.08, 1.06, 1.02]), uv: 0.23, width: 1.6, gap: 0.5, rings: 4, alpha: 0.34, z: 0.014 }),
-    // The official's 高台: the raised sandstone block at the field's LEFT-MIDDLE (the owner's pointer; the PRTS
-    // 战场#01 map steps the deploy terrace up there) plus the localised blocks the map shows at the field's other
-    // edge. These ARE the official blocks (a list of rects), NOT the earlier ring / perimeter frame (a wrong read,
-    // gone). VISUAL only: the sim's tiles / heights / deployTiles are untouched, and every rect sits OUTSIDE the
-    // deploy field (cols 0-2 / 19-20, rows 14-15), so a block never covers a deploy highlight / the direction wheel.
-    platforms: Object.freeze({
-      texture: 'TX_AutochessSand_sand_A', tint: Object.freeze([1.06, 1.04, 1.0]), uv: 0.5,
-      blocks: Object.freeze([
-        // left-middle: the owner's 高台 (cols 0-2, rows 9-11) - the # HIGH cluster the reference steps up, the block
-        // the deploy highlight sits against
-        Object.freeze({ r0: 9, r1: 11, c0: 0, c1: 2, h: 0.40 }),
-        // the same terrace one row further back (row 12, cols 1-2): the reference steps it up again
-        Object.freeze({ r0: 12, r1: 12, c0: 1, c1: 2, h: 0.55 }),
-        // bottom-left corner of the field (rows 14-15, cols 0-2): the raised blocks above the bench plank
-        Object.freeze({ r0: 14, r1: 15, c0: 0, c1: 2, h: 0.40 }),
-        // the right field's mirror block (cols 19-20, rows 9-11)
-        Object.freeze({ r0: 9, r1: 11, c0: 19, c1: 20, h: 0.40 }),
-      ]),
-    }),
+    // The device slabs (射击台 / 特制水上平台 / 封印的地面) stay drawn on an official scene so units have their plate
+    // height. With the procedural board's material they read grey metal against the scene's sand (the owner's
+    // 「渲染出来了，但颜色不是沙地色的」), so the sand theme gives them the scene's own sand albedo instead.
+    slab: Object.freeze({ texture: 'TX_AutochessSand_sand_A', tint: Object.freeze([1.15, 1.10, 1.03]) }),
+    // The 高台 platform blocks are OFF (owner, 2026-10-14): _buildPlatforms builds them with a plain
+    // MeshStandardMaterial, so they get no baked lightmap/AO — they render flat and much paler than the scene's own
+    // ground, covering the dunes as a "wrong model" plate. Leaving `platforms` out means _buildPlatforms does
+    // nothing; the official scenes' own terrain is what shows. (Re-enable only together with a material that reads
+    // the scene's baked light.)
   }),
   // act2autochess m01 (Syracuse metro / 叙拉古·城市): the official is bright sunny daylight — a high sun, crisp cast
   // shadows on the pavement; ours read dark/grey. Same treatment as the sand (a strong sun gain, low ambient).

@@ -314,6 +314,7 @@ export class BoardScene {
     this.official = official && this._buildScene(official) ? official : null;
     if (!this.official) {
       this.theme = null;
+      this.slabMat = null;   // only an official scene uses the theme's slab material
       this.renderer.toneMappingExposure = LIGHTING.exposure;   // the procedural board's grade
       M.board = this._mesh(board.buckets.board, this.mat.board);
       M.glass = this._mesh(board.buckets.glass, this.mat.glass);
@@ -321,8 +322,9 @@ export class BoardScene {
       M.pipe = this._mesh(board.buckets.pipe, this.mat.pipe);
     } else {
       // the scene has no device slabs: the 射击台 / 特制水上平台 / 封印的地面 slabs stay drawn on it (units stand
-      // on them at tiles.js heightAt; GitHub #569)
-      M.raised = this._mesh(board.buckets.raised, this.mat.board);
+      // on them at tiles.js heightAt; GitHub #569). `slabMat` (theme.slab) keeps them the scene's colour instead of
+      // the procedural board's grey metal.
+      M.raised = this._mesh(board.buckets.raised, this.slabMat || this.mat.board);
       M.raisedDecal = this._mesh(board.buckets.raisedDecal, this.mat.decal, { cast: false });
     }
     this._buildDevices(board);
@@ -435,6 +437,17 @@ export class BoardScene {
     }
     this._buildApron(theme, res, pack);
     this._buildPlatforms(theme, res, pack);
+    // The device slabs stay drawn on an official scene (see setStage); a theme may give them its own material
+    // (`theme.slab`) instead of the procedural board's, which reads as grey metal against a sand scene. Built here,
+    // where the scene's own textures are in scope.
+    const slab = theme && theme.slab;
+    this.slabMat = slab && res.tex[slab.texture]
+      ? new T.MeshStandardMaterial({
+        map: res.tex[slab.texture],
+        color: new T.Color(...(Array.isArray(slab.tint) ? slab.tint.slice(0, 3) : [1, 1, 1])),
+        roughness: 0.92, metalness: 0,
+      })
+      : null;
     return n > 0;
   }
 

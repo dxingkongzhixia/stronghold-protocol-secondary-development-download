@@ -267,24 +267,19 @@ describe('scene themes (theme.js)', () => {
     assert.ok(SCENE_THEMES.city.sun > 1 && SCENE_THEMES.kxmr.sun > 1, 'every listed theme reads the official sun');
   });
 
-  test('the sand theme carries the 高台 platforms (a localised block list); the default / metal themes carry none', () => {
-    const p = SCENE_THEMES.sand.platforms;
-    assert.ok(p && typeof p.texture === 'string' && p.texture, 'a sandstone texture (the scene\'s own sand/field albedo)');
-    assert.ok(Array.isArray(p.blocks) && p.blocks.length >= 1, 'a list of raised blocks');
-    assert.ok(Number.isFinite(p.uv) && p.uv > 0, 'a natural UV scale');
-    for (const b of p.blocks) {
-      assert.ok(Number.isInteger(b.r0) && Number.isInteger(b.c0) && b.r1 >= b.r0 && b.c1 >= b.c0, `a tile rect ${JSON.stringify(b)}`);
-      assert.ok(Number.isFinite(b.h) && b.h > 0, `a raised height ${JSON.stringify(b)}`);
+  test('no theme ships 高台 platform blocks (the owner turned them off); the sand theme gives the slabs an albedo', () => {
+    // _buildPlatforms builds its blocks with a plain MeshStandardMaterial, so they take no baked lightmap/AO and read
+    // as a flat pale plate over the scene's own ground (the owner's 「错误模型」). The rects were authored as
+    // `theme.platforms`; leaving the key out means _buildPlatforms does nothing. Re-enable only together with a
+    // material that reads the scene's baked light.
+    for (const name of ['default', 'sand', 'city', 'kxmr', 'lmz']) {
+      assert.equal(SCENE_THEMES[name].platforms, undefined, `${name} carries no platform blocks`);
     }
-    // the owner's block is the field's LEFT-MIDDLE (cols 0-2, rows 9-11) — a LOCALISED block, not a perimeter ring
-    const left = p.blocks.find((b) => b.c0 === 0 && b.c1 === 2 && b.r0 <= 10 && b.r1 >= 10);
-    assert.ok(left, 'the left-middle raised block the owner pointed at');
-    // no block may cover a deploy tile (the normal field: rows 9-12, cols 3-9) — the deploy highlight / wheel stays clear
-    for (const b of p.blocks) {
-      assert.ok(!(b.r0 <= 12 && b.r1 >= 9 && b.c0 <= 9 && b.c1 >= 3), `a block must not cover the deploy field: ${JSON.stringify(b)}`);
-    }
-    assert.equal(SCENE_THEMES.default.platforms, undefined, 'no platforms by default');
-    assert.equal(SCENE_THEMES.city.platforms, undefined, 'the metal / industrial board keeps none (regression baseline)');
+    // the device slabs still need a scene-coloured material (the owner: they read grey metal against the sand)
+    const slab = SCENE_THEMES.sand.slab;
+    assert.ok(slab && typeof slab.texture === 'string' && slab.texture, 'the sand theme names the slab albedo');
+    assert.ok(Array.isArray(slab.tint) && slab.tint.length === 3, 'and its tint');
+    assert.equal(SCENE_THEMES.city.slab, undefined, 'the metal / industrial board keeps the procedural slab material');
   });
 });
 
@@ -605,7 +600,7 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     board.destroy(); b2.destroy();
   });
 
-  test('_buildPlatforms: the sand theme raises the official blocks outside the deploy field; the metal theme has none', () => {
+  test('no theme raises 高台 blocks; the sand theme hands the device slabs the scene albedo', () => {
     const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
     const { doc, bin } = fakeScene([{ material: 'M', x0: 4, y0: 9, group: 'HIDDEN@1' }]);
     doc.materials.M.map = 'TX_AutochessSand_A';
@@ -614,28 +609,21 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     board.setScenePack(stage.id, { key: 'plat', stage: stage.id, doc, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_AutochessSand_A: img, TX_AutochessSand_sand_A: img }, lm: [img] } });
     board.setStage(stage);
     assert.equal(board.theme, SCENE_THEMES.sand, 'the sand theme is picked from the doc albedo');
-    const plat = board.meshes.platforms;
-    assert.ok(plat && plat.geometry.getAttribute('position').count > 0, 'the blocks are built');
-    const pos = plat.geometry.getAttribute('position');
-    assert.equal(plat.geometry.getAttribute('uv').count, pos.count, 'one world-space UV per vertex');
-    assert.equal(plat.geometry.getAttribute('aLm').count, pos.count, 'the scene material needs its aLm slot');
-    assert.equal(plat.geometry.getAttribute('normal').getZ(0), 1, 'the first face is a top, facing up');
-    // every vertex is OUTSIDE the deploy field (rows 9-12, cols 3-9), so the blocks never cover a deploy tile, and the
-    // blocks rise above the field (a raised 高台, not a flat patch)
-    let hitsDeploy = 0, above = 0;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-      if (x > 2.5 && x < 9.5 && y > 8.5 && y < 12.5) hitsDeploy++;
-      if (z >= 0.3) above++;
-    }
-    assert.equal(hitsDeploy, 0, 'no vertex on a deploy tile (the deploy highlight / wheel stays clear)');
-    assert.ok(above > 0, 'the blocks rise above the field');
-    // a theme without platforms builds none (the metal / procedural regression baseline)
+    // the 高台 blocks are off: _buildPlatforms builds nothing for any shipped theme
+    assert.equal(board.meshes.platforms, undefined, 'no platform blocks are built');
+    // the device slabs take the theme's own sand albedo instead of the procedural board's grey metal
+    assert.ok(board.slabMat, 'the sand theme supplies the slabs a material');
+    assert.ok(board.slabMat.map && board.slabMat.map.isTexture, 'sampling a scene albedo texture');
+    assert.notEqual(board.slabMat.map, board.mat.board.map, 'not the procedural board map');
+    const tint = SCENE_THEMES.sand.slab.tint;
+    assert.ok(board.slabMat.color.r >= board.slabMat.color.g && board.slabMat.color.g >= board.slabMat.color.b, 'a warm tint (r >= g >= b)');
+    assert.ok(Math.abs(board.slabMat.color.r - tint[0]) < 0.35, 'close to the theme tint');
+    // a theme without a slab spec keeps the procedural board material
     const b2 = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
     b2.setScenePack(stage.id, { key: 'noplat', stage: stage.id, doc: { ...doc, materials: { M: { ...doc.materials.M, map: 'TX_Syracuse_metro_D' } } }, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_Syracuse_metro_D: img }, lm: [img] } });
     b2.setStage(stage);
     assert.equal(b2.theme, SCENE_THEMES.city);
-    assert.equal(b2.meshes.platforms, undefined, 'no platforms for a theme without the layout');
+    assert.equal(b2.slabMat, null, 'no slab spec: the board material is used');
     board.destroy(); b2.destroy();
   });
 
