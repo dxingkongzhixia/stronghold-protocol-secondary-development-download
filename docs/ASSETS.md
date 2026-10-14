@@ -621,6 +621,37 @@ register — so the HTTPS future keeps the better chain.
   that also reimplements `/media`, `/scene` and `/clip`; the plain-file mirrors only ever get the files, so with them
   alone every route stays on this server.Verified 2026-10-14: one cold visit moved 95.3 MB / 1820 requests to the relay
   with no 404s (nothing fell back), and with the first two tiers dead a page image still loaded from this server.
+
+### The relay (the owner's own art origin)
+
+Since 2026-10-14 the art is served from this fork's own relay rather than the game box. Everything needed to take it
+over:
+
+| | |
+|---|---|
+| host | `123.57.150.185` — Aliyun lightweight, **Beijing** (华北2), Ubuntu 24.04, 2 vCPU / 1 GB / 30 GB, **200 Mbps peak**, traffic unmetered (owner + Aliyun support, 2026-10-14) |
+| ssh | `ssh root@123.57.150.185` (port 22), authorised by the owner's deploy key `~/.ssh/sp-deploy` (also the key the game box uses). The box was first reached with a password — **rotate it** in the Aliyun panel; the key is the supported way in |
+| serves | `/srv/sp/public` through nginx: config `/etc/nginx/sites-available/sp-relay` (enabled in `sites-enabled`), port 80, `Access-Control-Allow-Origin: *`, `Timing-Allow-Origin: *`, `Cache-Control: public, max-age=604800`. `nginx -t && systemctl reload nginx` after a config edit |
+| repo | `/srv/sp.git` — a **bare** repository whose `hooks/post-receive` checks the pushed branch out into `/srv/sp` (`git --work-tree=/srv/sp … checkout -f`), so **a push IS the deploy**. `/srv/sp` is that checkout, not a clone: do not `git pull` in it |
+| history | fetched from gitee once (678 MB), so a push from the dev machine carries only the new objects. There is **no cron** — the push is the deploy |
+| deploy | from the dev machine: `node tools/push-assets-relay.mjs` |
+
+**Routes.** nginx answers the same paths the game server does, so any asset URL can be prefixed with the origin:
+
+| path | file |
+|---|---|
+| `/assets/**`, `/fonts/**`, `/vendor/**` | the same path under `public/` |
+| `/media/<path>` and `/media/~<hash>/<path>` | `public/assets/audio/<path>.mp3` — the `~<hash>` segment is a cache-buster the path ignores, exactly like `server/http/media.js` |
+| `/scene/<id>/meta` · `/scene/<id>/bin` | `public/assets/local/scene/<id>/scene.json` · `scene.bin` |
+| `/clip/<name>` | `public/assets/loading/<name>.mp4` |
+
+**Publishing order (owner, 2026-10-14): the relay first, then gitee / github.** The clients hit the relay first, so it
+has to hold the bytes before the code that asks for them is published:
+
+```powershell
+node tools/push-assets-relay.mjs        # 1. deploy the relay (a push; its hook checks the tree out)
+node tools/push-gitee.mjs -m "…"        # 2. then the two mirrors (github primary + gitee)
+```
 - **Extension-less routes** for the files a download manager (IDM / 迅雷 / FDM) hijacks out of XHR/fetch. The audio has
   had `/media/…` since 0.2.5; the scene bundle and the boot clip joined it:
   **`/scene/<stageId>/{meta,bin}`** (`shared/scene.js` + `server/http/scene.js`) and **`/clip/<name>`**

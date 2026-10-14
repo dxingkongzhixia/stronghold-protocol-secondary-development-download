@@ -98,7 +98,9 @@ node tools/doctor.mjs                   # environment diagnosis (exit 0)
 
 ## 5. Publishing and deploying
 
-- **Publish (every change)**: `node tools/push-gitee.mjs -m "what changed"` — commits what *you*
+- **Publish (every change)**: the **art relay first** — `node tools/push-assets-relay.mjs` deploys
+  `123.57.150.185`, the box clients load art from first ([`docs/ASSETS.md`](docs/ASSETS.md) "The relay") — then
+  `node tools/push-gitee.mjs -m "what changed"` — commits what *you*
   staged in the store → pushes to the **`github` primary** → the **`gitee` mirror** (fast-forward,
   never forced) → mirrors the store's tracked files into the dev tree.
   Remotes: `github` = primary, `gitee` = 国内镜像, `origin` = the **mainline** (`sganggs/Stronghold-Protocol`, not ours).

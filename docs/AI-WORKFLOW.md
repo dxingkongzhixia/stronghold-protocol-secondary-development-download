@@ -160,7 +160,14 @@ change → the diff must be **exactly** what you expect. Write the proof into th
 
 ---
 
-## (c) Commit & push discipline (GitHub primary + Gitee mirror)
+## (c) Commit & push discipline (art relay first, then GitHub primary + Gitee mirror)
+
+> **Order matters since 2026-10-14 (owner): publish the ART RELAY first.** `node tools/push-assets-relay.mjs` pushes the
+> checkout to `123.57.150.185`, the box every client now loads assets from first — a push deploys it (its bare repo's
+> `post-receive` checks the tree out into what nginx serves), and its full history came from gitee once, so the push
+> carries only the new objects. Then push the mirrors as usual. Details, connection and routes:
+> [`docs/ASSETS.md`](ASSETS.md) "The relay".
+
 
 - **The git store `_merge-scratch` is the single source of truth** (history *and* files). The **working project has
   no `.git`** and is a byte-for-byte **mirror** of the store — the helper keeps it in step.
