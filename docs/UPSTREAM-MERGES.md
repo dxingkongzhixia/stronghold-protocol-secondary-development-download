@@ -46,6 +46,13 @@ reverted):
 
 The self-checks for the §22 blacklist are in [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §5 and run after every merge.
 
+**Machine-readable projection.** `node tools/check-upstream.mjs` fetches the mainline and says whether any new upstream
+commit lands on this surface: it flags every path we **deleted** relative to the mainline, plus `NEVER_MERGE_WATCH` in
+[`tools/check-upstream.mjs`](../tools/check-upstream.mjs) — the rows above that live *inside* a file we still keep
+(#149 收起 in `public/js/screens/game.js`, the 本局禁用 rule in `server/match/bondsMeta.js`, 克莱门莎's kit, the
+R21P/R22-LOADOUT files, the DIAGNOSTICS settings section, the item-stock gate). **This table stays the authority**: when
+a row is added here, add its upstream path there too.
+
 ---
 
 ## 账号与统计：与主线的设计差异（本分支独有，非上游合并）

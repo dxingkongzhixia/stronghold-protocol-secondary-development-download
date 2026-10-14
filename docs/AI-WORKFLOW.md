@@ -92,6 +92,11 @@ the golden movement and the local commits — is [`docs/UPSTREAM-MERGES.md`](UPS
 
 Merge procedure:
 
+0. **Reconnaissance first.** `node tools/check-upstream.mjs` — fetches the mainline and reports how many commits are new
+   to us, which of the files they touch we changed too (the predicted conflicts), whether any of them lands on the §0
+   never-merge surface, and the **real** conflict list from an in-memory `git merge-tree` (it never touches the working
+   tree). `--strict` exits 1 when there is new work, so it can gate a script; `--no-fetch` works offline against an
+   existing ref. **Nothing to merge → stop here and say so** instead of opening a merge.
 1. In `_merge-scratch`: the **store is the source of truth** — first make the working project mirror it, so both
    trees agree before the merge (`node tools/push-gitee.mjs --no-push` mirrors store → tree; the `git --work-tree`
    check in `docs/DEVELOPMENT.md` §1 is the same test).
