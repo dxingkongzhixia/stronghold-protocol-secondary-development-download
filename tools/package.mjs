@@ -62,8 +62,9 @@ export const FOLDER = 'Stronghold-Protocol';
 export const FULL_ZIP_JP_VOICE = true;
 /** The second voice tree of data/assets.json, held out of the full zip when FULL_ZIP_JP_VOICE is false. */
 export const JP_VOICE_DIR = 'public/assets/audio/voice/jp/';
-/** Extracted official battlefield scenes (0.2.5 asset pack). Lives under a git-ignored path in this fork so the
- *  repository never stores the official files — see docs/ASSETS.md. Missing scenes keep the procedural metal board. */
+/** Extracted official battlefield scenes (0.2.5 asset pack). Tracked in the repository since 2026-10-14 (the owner
+ *  lifted the old "never commit official files" rule so the CDN mirrors can serve them too — see docs/ASSETS.md).
+ *  Missing scenes keep the procedural metal board. */
 const SCENE_ART_PREFIX = 'public/assets/local/scene/';
 
 /** Root files a player gets. */

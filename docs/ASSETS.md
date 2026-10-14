@@ -580,6 +580,45 @@ still returned **200 / 56,617 B from the local cache**. The default pre-cache is
 (`syncPlan`, `cacheIsCurrent`, `candidatesFor`, `fetchArtFile` fallback + size check), `test/asset-rate-limit.test.js`
 (the token bucket), `test/ui/title-surfaces.test.js` (allows `public/sw.js`).
 
+### Without a Service Worker (the deployed site is plain HTTP, 2026-10-14)
+
+The chain above is built on a Service Worker, which needs a **secure context**. The production box serves
+`http://<ip>:<port>`, so the worker never registers there and every byte used to come from the box (the owner's
+「此浏览器不支持本地缓存」). Three layers now cover that case, and all three stay dormant whenever the worker can
+register — so the HTTPS future keeps the better chain.
+
+- **The image manifests load from the CDN mirror** — `public/js/assetMirror.js` + the static
+  `public/asset-mirrors.json` (a plain file: changing the list needs no restart). At boot it probes the mirrors with a
+  GET of `/asset-mirrors.json` itself and, when one answers, prefixes the **image** URLs of `data/assets.json` /
+  `data/local-assets.json` at load. `rewriteAssetPaths` moves the `~hash` serving segment to a `?h=` query: the CDNs
+  cache an image for a week (`jsDelivr`: `max-age=604800`), so a URL without it could serve a stale image after an
+  update, while a query is harmless here (only images are rewritten; a Spine atlas and its pages never are). A dev
+  origin (`localhost` / `127.0.0.1`) and a mirror that does not answer leave every URL alone — the local 11-stage
+  render is byte-identical.
+- **An IndexedDB store for the files the page fetches itself** — `public/js/assetIdb.js`. A page cannot intercept a
+  request without a worker, so this covers exactly what the game loads through its own code and can therefore serve
+  from a `blob:` URL: the **audio** (`js/audio.js` `_buffer`: check the store, else fetch and store) and the
+  **battlefield scene bundles** (`render/board3d/load.js`). A `blob:` URL cannot carry a Spine atlas (the atlas names
+  its pages relatively), so the Spine models stay on the server / the mirror. Priority is the owner's: `main.js` sets
+  the gate to `idbSupported() && !assetCacheSupported()` — the worker wins whenever it can register.
+- **Extension-less routes** for the files a download manager (IDM / 迅雷 / FDM) hijacks out of XHR/fetch. The audio has
+  had `/media/…` since 0.2.5; the scene bundle and the boot clip joined it:
+  **`/scene/<stageId>/{meta,bin}`** (`shared/scene.js` + `server/http/scene.js`) and **`/clip/<name>`**
+  (`shared/clip.js` + `server/http/clip.js`). A path with no extension matches none of the download types such a
+  manager reacts to — without it the owner's IDM grabbed `…/scene.bin` and the 3D board silently fell back to the
+  procedural tiles. The direct `/assets/…` URLs keep working (they are the fallback for a plain static host, which
+  `load.js` uses). Tested live: `/scene/act2autochess_m04/bin` → 200, 2,139,668 B; `/clip/boot?v=2` → 200 `video/mp4`,
+  immutable.
+
+**The extracted scenes are tracked now** (owner's decision, 2026-10-14). `public/assets/local/scene/**` used to be
+git-ignored ("the repository stores no official files"), but the CDN mirrors serve the *primary repository*, so the
+74.8 MB of scene bundles 404ed there and every 3D board fell back to this box. `test/scene-assets.test.js` asserts the
+directory is **not** ignored any more.
+
+**Testing (this fork's additions).** `test/asset-mirror.test.js` (the mirror rules, the `?h=` mapping, the deep
+rewrite), `test/asset-idb.test.js` (the store's Node-safe surface), `test/short-routes.test.js` (the `/scene/` and
+`/clip/` mappings + live requests against the routes).
+
 **Why not Gitee / GitLab.** Their **raw** endpoints send **no `Access-Control-Allow-Origin`**, so a browser `fetch` is
 blocked, and Gitee **Releases 403** hotlinks — so neither can be a *browser* download source. Gitee stays the **code
 mirror** and the human-facing **package download** links only. (gh-proxy and jsDelivr were both verified to serve our
