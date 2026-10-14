@@ -70,6 +70,14 @@ import { initAssetMirror, installImageFallback } from './assetMirror.js';
 import { idbSupported, setIdbEnabled } from './assetIdb.js';
 
 const RESTORE_GRACE_MS = 1500;
+
+/**
+ * How long the boot preload may hold the title back, in ms. The preload warms the browser's cache for the small UI image
+ * set; it is not a correctness gate, and with the art coming from a CDN mirror the wall clock is the mirror's per-image
+ * latency (measured 2026-10-14: gh-proxy ~6 images/s, so the full 2461 images is ~6 min). Past the deadline the title
+ * renders and the remaining art loads on demand. `0` = no deadline (the old "everything before the title" behaviour).
+ */
+const PRELOAD_DEADLINE_MS = 60_000;
 const JOIN_DELAY_MS = 350;
 const TICKER_KEEP = 20;
 const EMOTE_KEEP = 20;
@@ -588,12 +596,26 @@ async function preloadArt() {
     if (sub) { sub.hidden = false; sub.textContent = t('正在申请资源下载通道…'); }
     holding = await acquireBootSlot();
   }
-  // No skip and no cap: the gate is "everything loaded" — the title only appears once every image is in.
+  // The preload is a cache warmer, not a gate. It used to be open-ended ("the title only appears once every image is
+  // in"), which held while this box was the source — its 1.2 MB/s pace put a floor of ~2 min on the whole load either
+  // way. With the CDN mirror carrying the art (js/assetMirror.js) the wall clock is bounded by the mirror's per-image
+  // latency instead: measured 2026-10-14, gh-proxy answered ~6 images/s (the browser's 6 connections per host), so the
+  // full 2461 took ~6 min. Past the deadline the title shows and the rest warms on demand, which is what heavy art
+  // (Spine, portraits, audio) already does. PRELOAD_DEADLINE_MS = 0 restores the old "everything first" behaviour.
   const pre = preloadImages(urls, {
     concurrency: 8,
     onProgress: artProgressReporter({ fill, sub }),
   });
-  try { await pre.promise; } finally {
+  let preloadTimer = null;
+  try {
+    // Race the deadline against the preload rather than relying on cancel() to settle: cancel() stays pending while an
+    // in-flight image hangs, and the title must not wait on that.
+    const deadline = PRELOAD_DEADLINE_MS > 0
+      ? new Promise((resolve) => { preloadTimer = setTimeout(() => { pre.cancel(); resolve(); }, PRELOAD_DEADLINE_MS); })
+      : null;
+    await (deadline ? Promise.race([pre.promise, deadline]) : pre.promise);
+  } finally {
+    if (preloadTimer) clearTimeout(preloadTimer);
     if (holding) net.request('boot.release', {}).catch(() => {});
     bar.hidden = true;
     if (sub) sub.hidden = true;
