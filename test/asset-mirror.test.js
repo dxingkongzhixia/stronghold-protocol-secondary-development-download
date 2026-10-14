@@ -28,8 +28,8 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     assert.ok(!isMirrorable(null));
   });
 
-  test('the ~hash serving segment is stripped (it is not a file name)', () => {
-    assert.equal(mirrorUrl(BASE, '/assets/~0123456789abcdef/char/avatar/x.png'), `${BASE}/assets/char/avatar/x.png`);
+  test('the ~hash serving segment becomes a ?h= query (the CDN caches an image for a week)', () => {
+    assert.equal(mirrorUrl(BASE, '/assets/~0123456789abcdef/char/avatar/x.png'), `${BASE}/assets/char/avatar/x.png?h=0123456789abcdef`);
     assert.equal(mirrorUrl(BASE, '/assets/char/avatar/x.png'), `${BASE}/assets/char/avatar/x.png`);
   });
 
@@ -43,12 +43,12 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
       deep: [{ img: '/assets/~aaaaaaaaaaaaaaaa/ui/x.png' }],
     };
     const out = rewriteAssetPaths(doc, BASE);
-    assert.equal(out.avatars.a, `${BASE}/assets/char/avatar/a.png`);
+    assert.equal(out.avatars.a, `${BASE}/assets/char/avatar/a.png?h=0123456789abcdef`);
     assert.equal(out.avatars.b, `${BASE}/assets/char/avatar/b.webp`);
     assert.deepEqual(out.audio, ['/assets/audio/bgm/act1.mp3']);
     assert.equal(out.spine.s.skel, '/assets/spine/op/s.skel');
     assert.equal(out.spine.s.atlas, '/assets/spine/op/s.atlas');
-    assert.equal(out.deep[0].img, `${BASE}/assets/ui/x.png`);
+    assert.equal(out.deep[0].img, `${BASE}/assets/ui/x.png?h=aaaaaaaaaaaaaaaa`);
     assert.equal(out.label, '叙拉古');
     assert.equal(out.n, 3);
     // the input is untouched (a copy is returned)

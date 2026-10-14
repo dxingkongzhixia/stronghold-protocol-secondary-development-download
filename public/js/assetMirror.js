@@ -43,13 +43,17 @@ export function isMirrorable(path) {
 
 /**
  * Pure: the mirror URL of a manifest path. The `~<hash>` segment is this server's serving trick (shared/assetPaths.js)
- * and is not a file name, so it is stripped: `/assets/~abc…/char/avatar/x.png` → `<base>/assets/char/avatar/x.png`.
+ * and is not a file name, so it is stripped — and the hash is carried along as a query instead: the CDN caches an
+ * image for a week (jsDelivr's `max-age=604800`), so a URL without it could serve a stale image after an update. A
+ * query is safe here because only images are rewritten (a Spine atlas and its pages are never), and each content
+ * version then has its own URL.
  * @param {string} base a source prefix ending at the repo's `public/`
  * @param {string} path
  * @returns {string}
  */
 export function mirrorUrl(base, path) {
-  return base + splitHashedPath(path).path;
+  const { hash, path: plain } = splitHashedPath(path);
+  return base + plain + (hash ? `?h=${hash}` : '');
 }
 
 /**
