@@ -13,12 +13,41 @@ const M = {
   prof: { icon: '/assets/prof/icon.png' },
 };
 
-test('isArtImage keeps only real /assets image URLs (never spine, never bare filenames)', () => {
+test('isArtImage keeps real /assets image URLs and their mirror URLs (never spine, never bare filenames)', () => {
   assert.ok(isArtImage('/assets/char/avatar/a.png'));
   assert.ok(!isArtImage('/assets/spine/e/e.png'), 'spine excluded');
   assert.ok(!isArtImage('enemy_1305_mhslim.png'), 'a bare filename is not a URL');
   assert.ok(!isArtImage('/data/foo.json'));
   assert.ok(!isArtImage(null));
+  // a manifest fetched after the mirror prefix is installed carries the mirror's URL; the preload list then has to
+  // accept it, or it comes back empty and the boot preload silently does nothing (the 2026-10-14 measurement)
+  const mirror = 'https://gh-proxy.com/https://raw.githubusercontent.com/o/r/master/public';
+  assert.ok(isArtImage(mirror + '/assets/~0123456789abcdef/char/avatar/a.png'), 'the mirror URL of an avatar');
+  assert.ok(isArtImage(mirror + '/assets/~0123456789abcdef/ui/x.png?h=0123456789abcdef'), 'and with the ?h= query');
+  assert.ok(!isArtImage(mirror + '/assets/spine/e/e.png'), 'spine stays excluded on a mirror URL too');
+  assert.ok(!isArtImage('https://example.com/other/a.png'), 'an unrelated host is not art');
+});
+
+test('preloadImages retries a failed mirrored URL from this server, once', async () => {
+  const { setMirrorPrefix } = await import('../../public/js/assetMirror.js');
+  const BASE = 'https://mirror.example/repo/public';
+  setMirrorPrefix(BASE);
+  const seen = [];
+  const realImage = globalThis.Image;
+  // a fake Image: the mirror URL always errors, the same-origin retry succeeds
+  globalThis.Image = class {
+    set src(u) { seen.push(u); this._u = u; setTimeout(() => (u.startsWith(BASE) ? this.onerror?.() : this.onload?.()), 0); }
+    get src() { return this._u; }
+  };
+  try {
+    const mirrored = `${BASE}/assets/char/avatar/a.png?h=0123456789abcdef`;
+    const r = await preloadImages([mirrored], { concurrency: 1 }).promise;
+    assert.deepEqual(seen, [mirrored, '/assets/~0123456789abcdef/char/avatar/a.png'], 'mirror first, then this server');
+    assert.equal(r.done, 1, 'the image counts as done exactly once');
+  } finally {
+    globalThis.Image = realImage;
+    setMirrorPrefix('');
+  }
 });
 
 test('collectArtUrls scopes: icons (default) / ui / all', () => {

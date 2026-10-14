@@ -80,6 +80,43 @@ export function mirrorPrefix() { return prefix; }
 export function setMirrorPrefix(base) { prefix = typeof base === 'string' ? base : ''; }
 
 /**
+ * Pure: the same-origin path behind a mirror URL this page installed, or null. The inverse of `mirrorUrl` — the `?h=`
+ * hash comes back as the `~<hash>` serving segment.
+ * @param {string} url
+ * @returns {string|null}
+ */
+export function unmirrorUrl(url) {
+  if (typeof url !== 'string' || !prefix || !url.startsWith(prefix)) return null;
+  const rest = url.slice(prefix.length);
+  const at = rest.indexOf('?h=');
+  const hash = at >= 0 ? rest.slice(at + 3) : '';
+  const plain = at >= 0 ? rest.slice(0, at) : rest;
+  if (!plain.startsWith('/assets/')) return null;
+  return hash ? `/assets/~${hash}${plain.slice('/assets'.length)}` : plain;
+}
+
+/**
+ * Keep the mirror best-effort: when an `<img>` whose URL this page mirrored fails to load (the mirror is blocked, rate
+ * limited or lacks the file), it retries **once** from this server, the same URL the manifest carried before the
+ * rewrite. A capture-phase `error` listener catches every `<img>`, including the ones a component rendered, so no
+ * consumer needs its own fallback. Returns false when already installed.
+ * @param {{ doc?: Document }} [o]
+ */
+export function installImageFallback({ doc = globalThis.document } = {}) {
+  if (!doc || doc.__spMirrorFallback || typeof doc.addEventListener !== 'function') return false;
+  doc.__spMirrorFallback = true;
+  doc.addEventListener('error', (ev) => {
+    const el = ev && ev.target;
+    if (!el || el.tagName !== 'IMG' || el.dataset?.spMirrorRetry) return;
+    const local = unmirrorUrl(el.currentSrc || el.src);
+    if (!local) return;
+    if (el.dataset) el.dataset.spMirrorRetry = '1';
+    el.src = local;
+  }, true);
+  return true;
+}
+
+/**
  * Pick the first mirror that answers and install it as the prefix. Never throws: any failure leaves the prefix empty
  * (the page keeps using this server).
  * @param {{ fetchFn?: typeof fetch, hostname?: string, timeoutMs?: number, mirrorsUrl?: string, path?: string }} [o]

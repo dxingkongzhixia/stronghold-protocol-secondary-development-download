@@ -12,6 +12,7 @@
 
 import { t } from '../../shared/i18n.js';
 import { clipUrl } from '../../shared/clip.js';
+import { unmirrorUrl } from './assetMirror.js';
 
 /**
  * Optional boot background video (a distraction while the first-load preload runs). `null` disables it. Two kinds:
@@ -25,11 +26,15 @@ export const BOOT_VIDEO = { kind: 'file', src: clipUrl('boot', 2) }; // the exte
 
 const IMG_RE = /\.(png|webp|jpg|jpeg|gif|avif)$/i;
 
-/** An image URL from the manifest (spine atlases/PNGs excluded). Bare filenames that are not real URLs are ignored. */
+/** An image URL from the manifest (spine atlases/PNGs excluded). Accepts a bare path (`/assets/…`) and the mirror URL
+ * of one (`https://<mirror>/…/public/assets/…`), which is what a manifest carries once the prefix is installed — the
+ * rewrite happens at load, so this must accept both or the boot preload list comes back empty (measured 2026-10-14: the
+ * prefix arrived after the manifest was already cached). Bare filenames that are not real URLs are ignored. */
 export function isArtImage(u) {
   if (typeof u !== 'string' || !u) return false;
   const s = u.split('?')[0];
-  return s.startsWith('/assets/') && IMG_RE.test(s) && !/\/spine\//.test(s);
+  if (!IMG_RE.test(s) || /\/spine\//.test(s)) return false;
+  return s.startsWith('/assets/') || (/^https?:\/\//i.test(s) && s.includes('/assets/'));
 }
 
 /**
@@ -79,7 +84,15 @@ export function preloadImages(urls, { concurrency = 8, onProgress } = {}) {
       const url = list[next++];
       active++;
       const img = new Image();
+      // A mirrored URL that fails retries this server once (js/assetMirror.js `unmirrorUrl`): the mirror is best-effort,
+      // and without the retry a blocked/slow mirror would just leave those images unwarmed and the UI would pay for them
+      // again as it renders.
+      let tried = false;
       const onEnd = () => {
+        if (!tried) {
+          const local = unmirrorUrl(url);
+          if (local) { tried = true; try { img.src = local; return; } catch { /* fall through */ } }
+        }
         img.onload = img.onerror = null;
         active--;
         done++;

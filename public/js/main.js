@@ -66,7 +66,7 @@ import { ensureManifestLink } from './ui/ensureManifest.js';
 import { initLang, useLang, tickerText } from './ui/lang.js';
 import { t, N_, translateWire } from '../../shared/i18n.js';
 import { recordError, installTrafficMeter } from './diag.js';
-import { initAssetMirror } from './assetMirror.js';
+import { initAssetMirror, installImageFallback } from './assetMirror.js';
 import { idbSupported, setIdbEnabled } from './assetIdb.js';
 
 const RESTORE_GRACE_MS = 1500;
@@ -537,6 +537,19 @@ async function acquireBootSlot() {
  * not pop images in. Runs while fonts load and the socket connects; skippable and capped so a slow link is never stuck.
  * Scope 'all' = every manifest image (~104 MB, ~1 min at 20 Mbps) — the user asked for a full preload before the title.
  */
+/**
+ * Pick the CDN mirror **once**, as early as possible (js/assetMirror.js). The order is the whole point: the art
+ * manifests are rewritten when they are fetched (`js/data.js` `rewriteArtManifest`), so a prefix that arrives after
+ * them changes nothing — measured 2026-10-14 on the box, `/data/assets.json` came down 40 ms before the probe answered,
+ * the store kept the raw paths, and the boot preload pulled all 135 MB of art from this server with the mirror idle.
+ * One probe per page: a second call would clear the prefix mid-load.
+ * @returns {Promise<string>} the installed prefix ('' when none)
+ */
+let assetMirrorReady = null;
+function ensureAssetMirror() {
+  return (assetMirrorReady ||= initAssetMirror().catch(() => ''));
+}
+
 async function preloadArt() {
   const bar = document.getElementById('boot-bar');
   const fill = document.getElementById('boot-bar-fill');
@@ -544,7 +557,7 @@ async function preloadArt() {
   if (!bar || !fill) return;
   // Pick the CDN mirror first (js/assetMirror.js): it lets the boot preload come from gh-proxy / jsDelivr instead of
   // this box, while a dev origin and a silent mirror leave everything on this server.
-  await initAssetMirror().catch(() => '');
+  await ensureAssetMirror();
   // The local cache has two layers: the Service Worker (intercepts everything, needs HTTPS) and, when it cannot
   // register, the IndexedDB store for the files the game fetches itself (audio, scene bundles). The SW wins.
   setIdbEnabled(idbSupported() && !assetCacheSupported());
@@ -625,6 +638,11 @@ async function boot() {
   net.attachBrowserHooks();
   // Audio: unlock on first gesture, BGM follows the route / match phase (js/audio.js).
   installAudio({ getManifest: () => data.get('assets'), subscribe: store.subscribe, getState: store.get, selectRoute, settings: settingsStore.get() });
+  // Pick the CDN mirror BEFORE any art manifest is fetched (js/assetMirror.js): the rewrite happens at load time, so a
+  // prefix installed later would arrive after the manifests are already cached and change nothing. The image fallback
+  // keeps the mirror best-effort — a mirrored <img> that fails retries this server once.
+  await ensureAssetMirror();
+  installImageFallback();
   data.load('assets').catch(() => {});
   // Warm the data cache in the background (missing files are tolerated).
   data.loadAll('config').catch(() => {});
