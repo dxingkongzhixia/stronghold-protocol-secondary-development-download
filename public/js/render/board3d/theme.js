@@ -35,10 +35,6 @@ export const SCENE_THEMES = Object.freeze({
   sand: Object.freeze({
     exposure: 1.3, ambient: 0.20, tint: Object.freeze([1.05, 1.0, 0.95]), saturate: 1.06, sun: 3.4,
     apron: Object.freeze({ texture: 'TX_AutochessSand_sand_A', tint: Object.freeze([1.08, 1.06, 1.02]), uv: 0.23, width: 1.6, gap: 0.5, rings: 4, alpha: 0.34, z: 0.014 }),
-    // The device slabs (射击台 / 特制水上平台 / 封印的地面) stay drawn on an official scene so units have their plate
-    // height. With the procedural board's material they read grey metal against the scene's sand (the owner's
-    // 「渲染出来了，但颜色不是沙地色的」), so the sand theme gives them the scene's own sand albedo instead.
-    slab: Object.freeze({ texture: 'TX_AutochessSand_sand_A', tint: Object.freeze([1.15, 1.10, 1.03]) }),
     // The 高台 platform blocks are OFF (owner, 2026-10-14): _buildPlatforms builds them with a plain
     // MeshStandardMaterial, so they get no baked lightmap/AO — they render flat and much paler than the scene's own
     // ground, covering the dunes as a "wrong model" plate. Leaving `platforms` out means _buildPlatforms does

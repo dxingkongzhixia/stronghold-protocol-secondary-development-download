@@ -267,19 +267,14 @@ describe('scene themes (theme.js)', () => {
     assert.ok(SCENE_THEMES.city.sun > 1 && SCENE_THEMES.kxmr.sun > 1, 'every listed theme reads the official sun');
   });
 
-  test('no theme ships 高台 platform blocks (the owner turned them off); the sand theme gives the slabs an albedo', () => {
-    // _buildPlatforms builds its blocks with a plain MeshStandardMaterial, so they take no baked lightmap/AO and read
-    // as a flat pale plate over the scene's own ground (the owner's 「错误模型」). The rects were authored as
-    // `theme.platforms`; leaving the key out means _buildPlatforms does nothing. Re-enable only together with a
-    // material that reads the scene's baked light.
+  test('no theme ships 高台 platform blocks or a slab material (the owner turned both off)', () => {
+    // `theme.platforms` built flat pale blocks over the official 高台 (the owner's 错误模型), and `theme.slab` painted the
+    // device slabs flat sand — act1autochess_m03's 高台 成沙地. Both are gone: the device slabs use the procedural
+    // board's material, the look the owner pointed at as correct (act2autochess_m02).
     for (const name of ['default', 'sand', 'city', 'kxmr', 'lmz']) {
       assert.equal(SCENE_THEMES[name].platforms, undefined, `${name} carries no platform blocks`);
+      assert.equal(SCENE_THEMES[name].slab, undefined, `${name} carries no slab material`);
     }
-    // the device slabs still need a scene-coloured material (the owner: they read grey metal against the sand)
-    const slab = SCENE_THEMES.sand.slab;
-    assert.ok(slab && typeof slab.texture === 'string' && slab.texture, 'the sand theme names the slab albedo');
-    assert.ok(Array.isArray(slab.tint) && slab.tint.length === 3, 'and its tint');
-    assert.equal(SCENE_THEMES.city.slab, undefined, 'the metal / industrial board keeps the procedural slab material');
   });
 });
 
@@ -600,7 +595,7 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     board.destroy(); b2.destroy();
   });
 
-  test('no theme raises 高台 blocks; the sand theme hands the device slabs the scene albedo', () => {
+  test('no theme raises 高台 blocks; the device slabs keep the procedural board material', () => {
     const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
     const { doc, bin } = fakeScene([{ material: 'M', x0: 4, y0: 9, group: 'HIDDEN@1' }]);
     doc.materials.M.map = 'TX_AutochessSand_A';
@@ -609,22 +604,8 @@ describe('BoardScene with an official scene (stub renderer)', () => {
     board.setScenePack(stage.id, { key: 'plat', stage: stage.id, doc, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_AutochessSand_A: img, TX_AutochessSand_sand_A: img }, lm: [img] } });
     board.setStage(stage);
     assert.equal(board.theme, SCENE_THEMES.sand, 'the sand theme is picked from the doc albedo');
-    // the 高台 blocks are off: _buildPlatforms builds nothing for any shipped theme
     assert.equal(board.meshes.platforms, undefined, 'no platform blocks are built');
-    // the device slabs take the theme's own sand albedo instead of the procedural board's grey metal
-    assert.ok(board.slabMat, 'the sand theme supplies the slabs a material');
-    assert.ok(board.slabMat.map && board.slabMat.map.isTexture, 'sampling a scene albedo texture');
-    assert.notEqual(board.slabMat.map, board.mat.board.map, 'not the procedural board map');
-    const tint = SCENE_THEMES.sand.slab.tint;
-    assert.ok(board.slabMat.color.r >= board.slabMat.color.g && board.slabMat.color.g >= board.slabMat.color.b, 'a warm tint (r >= g >= b)');
-    assert.ok(Math.abs(board.slabMat.color.r - tint[0]) < 0.35, 'close to the theme tint');
-    // a theme without a slab spec keeps the procedural board material
-    const b2 = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
-    b2.setScenePack(stage.id, { key: 'noplat', stage: stage.id, doc: { ...doc, materials: { M: { ...doc.materials.M, map: 'TX_Syracuse_metro_D' } } }, chunks, groups: sceneGroupRects(chunks), images: { tex: { TX_Syracuse_metro_D: img }, lm: [img] } });
-    b2.setStage(stage);
-    assert.equal(b2.theme, SCENE_THEMES.city);
-    assert.equal(b2.slabMat, null, 'no slab spec: the board material is used');
-    board.destroy(); b2.destroy();
+    board.destroy();
   });
 
   test('a scene\'s standing props split out of its terrain: the terrain does not cast, the props do', () => {
