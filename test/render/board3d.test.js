@@ -16,7 +16,7 @@ import {
   DEVICE_H, RAISED_FOOT,
 } from '../../public/js/render/board3d/layout.js';
 import { BoardScene, gatePulse, DIR_TURNS, boxData, LIGHTING } from '../../public/js/render/board3d/scene.js';
-import { loadBoardPack, loadThree, resetBoardPack, PACK_IMAGES } from '../../public/js/render/board3d/load.js';
+import { loadBoardPack, loadThree, resetBoardPack, PACK_IMAGES, idbBodyFor, idbValueFrom } from '../../public/js/render/board3d/load.js';
 import { parseStage } from '../../public/js/render/tiles.js';
 import { TILE_H } from '../../public/js/render/style.js';
 import { presetCamera, syncThreeCamera } from '../../public/js/render/projection.js';
@@ -391,4 +391,24 @@ describe('asset pack loader (fake store)', () => {
       resetBoardPack();
     }
   });
+});
+
+
+// The IndexedDB entry codec of the board pack loader (js/assetIdb.js + render/board3d/load.js).
+//
+// v1 encoded every non-buffer entry with JSON.stringify and decoded a `text` entry verbatim, so a stored `.obj` came
+// back as `"\"v 0 0 0\\n\""`. The gate meshes are the only text entries the board fetches, and parseObj() read that as
+// nothing — the 红门/蓝门 disappeared on every visit after the first (owner report 2026-10-14).
+test('the board pack’s IndexedDB entries round-trip: text verbatim, json encoded, buffers as themselves', () => {
+  const obj = 'mtllib gate.mtl\nv 0.0 0.0 0.0\nf 1/1 2/2 3/3\n';
+  assert.equal(idbBodyFor('text', obj), obj, 'text must go in verbatim — JSON.stringify here is what hid the gates');
+  assert.equal(idbValueFrom('text', String(idbBodyFor('text', obj))), obj, 'and it must come back byte-identical');
+  assert.notEqual(idbBodyFor('text', obj), JSON.stringify(obj), 'the v1 encoding must not come back');
+
+  const doc = { chunks: [{ material: 'M', verts: 3 }] };
+  assert.equal(idbBodyFor('json', doc), JSON.stringify(doc), 'a json manifest is stored as its JSON encoding');
+  assert.deepEqual(idbValueFrom('json', String(idbBodyFor('json', doc))), doc);
+
+  const buf = new ArrayBuffer(8);
+  assert.equal(idbBodyFor('arrayBuffer', buf), buf, 'a scene.bin stays a buffer (Blob([]) takes it as-is)');
 });

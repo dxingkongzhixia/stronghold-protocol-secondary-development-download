@@ -103,14 +103,29 @@ export async function boardArtListed(assets) {
  * `scene.bin`), nothing is resolved relative to it. A miss falls through to the network, a success is stored.
  * `kind` picks the decode: 'text' | 'json' | 'arrayBuffer'.
  */
+/**
+ * The bytes stored for one `kind` (js/assetIdb.js): `json` is encoded, `text` and the buffers go in verbatim. The
+ * reader hands a `text` entry straight back, so encoding it corrupts it — v1 did exactly that (`JSON.stringify`), which
+ * is why the gate meshes (the `.obj` files the board fetches as text) parsed to nothing on the second visit and the
+ * 红门/蓝门 disappeared (owner report 2026-10-14). js/assetIdb.js bumps the store version so the entries v1 wrote do
+ * not survive the fix.
+ */
+export function idbBodyFor(kind, out) {
+  return kind === 'json' ? JSON.stringify(out) : out;
+}
+
+/** The inverse of `idbBodyFor`: what a stored entry decodes to. */
+export function idbValueFrom(kind, text) {
+  return kind === 'json' ? JSON.parse(text) : text;
+}
+
 async function fetchScene(url, kind) {
   if (idbEnabled()) {
     try {
       const blob = await idbGet(url);
       if (blob) {
         if (kind === 'arrayBuffer') return await blob.arrayBuffer();
-        const text = await blob.text();
-        return kind === 'json' ? JSON.parse(text) : text;
+        return idbValueFrom(kind, await blob.text());
       }
     } catch { /* a broken cached entry must not break the load */ }
   }
@@ -121,7 +136,7 @@ async function fetchScene(url, kind) {
   } catch { out = null; }
   if (out != null && idbEnabled()) {
     try {
-      const body = kind === 'arrayBuffer' ? out : JSON.stringify(out);
+      const body = idbBodyFor(kind, out);
       await idbPut(url, new Blob([body], { type: kind === 'json' ? 'application/json' : undefined }));
     } catch { /* quota / private mode */ }
   }

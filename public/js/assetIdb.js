@@ -20,10 +20,17 @@
 // Priority: the Service Worker first (it covers everything). This layer is dormant whenever the SW is available —
 // `idbActive()` is what the callers check.
 
-/** IndexedDB database / object store of the local blobs. Distinct from the SW's Cache Storage name (`sp-assets`). */
+/**
+ * IndexedDB database / object store of the local blobs. Distinct from the SW's Cache Storage name (`sp-assets`).
+ *
+ * v2 (2026-10-14): v1 stored its `text` entries JSON-quoted (render/board3d/load.js `fetchScene`) and read them back
+ * verbatim, so the gate meshes — the `.obj` files the board fetches as text — came back as `"v 0 …"` with quotes and
+ * escaped newlines, parsed to nothing, and the 红门/蓝门 vanished on every visit after the first (the owner's report).
+ * load.js writes text verbatim now; opening at 2 drops the store so the entries v1 wrote cannot keep the bug alive.
+ */
 export const IDB_NAME = 'sp-asset-blobs';
 export const IDB_STORE = 'files';
-export const IDB_VERSION = 1;
+export const IDB_VERSION = 2;
 
 let enabled = false;
 let dbPromise = null;
@@ -51,7 +58,9 @@ function openDb() {
       const req = globalThis.indexedDB.open(IDB_NAME, IDB_VERSION);
       req.onupgradeneeded = () => {
         const db = req.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+        // an upgrade drops the store: v1's text entries are the ones this version exists to retire
+        if (db.objectStoreNames.contains(IDB_STORE)) db.deleteObjectStore(IDB_STORE);
+        db.createObjectStore(IDB_STORE);
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
