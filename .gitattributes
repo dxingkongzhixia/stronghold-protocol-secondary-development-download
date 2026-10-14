@@ -5,6 +5,8 @@
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
 *.sh  text eol=lf
+# nginx config applied on the relay by scp: LF, or the directives keep a trailing CR
+*.conf text eol=lf
 *.mjs text eol=lf
 *.js  text eol=lf
 *.py  text eol=lf
