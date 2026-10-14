@@ -15,10 +15,11 @@ node_modules/
 
 # tools/local-extract/extract.py → public/assets/local/** and this per-machine manifest
 # (optional: the client and the tests work without it; docs/DEPLOY.md §6 lists what falls back)
-# Battlefield scenes (0.2.5): the extracted official scene files live under public/assets/local/scene/ and MUST NOT
-# be committed — this fork tracks public/assets/** otherwise. Downloaded bundles live in .cache/official-scenes/
-# (ignored by .cache/ below). The repository never stores those official files — see docs/ASSETS.md.
-public/assets/local/scene/
+# Battlefield scenes (0.2.5): the extracted official scene files live under public/assets/local/scene/. They WERE
+# git-ignored (the repository stored no official files); the owner lifted that on 2026-10-14 so the CDN mirrors
+# (asset-index.json `sources`) can serve them too — otherwise every 3D board's scene bundle (74.8 MB) 404s on the
+# mirror and falls back to this server. Downloaded bundles still live in .cache/official-scenes/ (ignored below).
+# See docs/ASSETS.md.
 data/local-assets.json
 # download caches, upstream tables, ledgers, reports, setup state
 .cache/
