@@ -67,6 +67,7 @@
 | **域名 / 备案** | **`strongholdprotocolcsym.top`** — ICP 备案已通过（**浙ICP备2026085059号-1**，2026-10-14），页脚已展示并链接到 `beian.miit.gov.cn`（`public/js/screens/title.js`，`test/ui/title-surfaces.test.js` 钉住）。⚠️ 截至 2026-10-14 该域名**尚未解析**到本机，线上仍走 `http://183.66.27.19:20522`；**HTTPS 未启用 → Service Worker 注册不了**（本地缓存 / 增量同步那条链只在 HTTPS 下生效） |
 | **HTTPS / SW 的前置** | ① 域名 A 记录指向生产机；② 签证书并在反代上启用 HTTPS；③ **中继也必须 HTTPS** —— HTTPS 页面不允许明文 `http://` 子资源（mixed content），`http://123.57.150.185` 会被浏览器拦掉、客户端静默回退到免费 CDN；给中继一个子域名（如 `relay.strongholdprotocolcsym.top`）签证书，再把 `public/asset-mirrors.json` 的第一个源改成 `https://…`；④ 之后 SW 自动注册，`设置 → 美术资源缓存` 生效，用 `node tools/check-delivery.mjs --live` 核对 |
 | **公安联网备案** | 进行中：2026-10-14 已在「全国互联网安全管理服务平台」创建主体 + 绑定网站（`strongholdprotocolcsym.top` / 浙ICP备2026085059号-1）；拿到公安备案号后再把图标 + `beian.mps.gov.cn` 链接加到页脚（数据码属敏感凭据，**不进仓库**） |
+| **新生产机（阿里云 ECS，2026-10-14 起建）** | **`121.43.140.85`**（华东1 杭州 · 2 vCPU / 2 GiB / 40 GiB / 3 Mbps · Alibaba Cloud Linux 3 + 宝塔面板）。代码 `/www/wwwroot/Stronghold-Protocol`（gitee 浅克隆，`git fetch --depth 1 origin master && git reset --hard origin/master` 即可更新）；Node `/www/server/nodejs/v26.10.0`（与旧机同版本）；**systemd 服务 `stronghold`**（`/etc/systemd/system/stronghold.service`，`User=www`、开机自启、崩溃自重启、日志 `/var/log/stronghold.log`），应用监听 `:3000`；**本机 admin token 与旧机不同**（`var/admin-token.txt`）。切流量的顺序：DNS 生效 → 旧机停服 → 拷 `var/`（账号 / 统计 / 社区）→ 新机起 → 验证。该机在阿里云，与备案接入商一致，「接入商不一致」的隐患随之消失 |
 
 **部署流程（当前做法）**
 1. 本地 `node --test` 全绿；
