@@ -21,7 +21,11 @@ mode **卫戍协议：盟约 / Stronghold Protocol: Alliance** — solo, or **1�
 
 ## 2. The one operational rule (get this right or lose work)
 
-There are **two trees**, both under `D:\DOTK`:
+**This checkout** is a **single tree that is both the store and the run tree** —
+`D:\Git本地库\stronghold-protocol-secondary-development-download`, `.git` at its root, branch `master`, remotes
+`github` (primary) + `gitee` (mirror). Commit, run the suite and publish from it directly. On the **owner's machine**
+the same repository is kept as the **two trees** below (branch `ours`); read every `D:\DOTK\...` path in these docs as
+*store ↔ this checkout*, *dev tree ↔ this checkout*.
 
 | tree | role | `.git` |
 |---|---|---|
@@ -74,19 +78,22 @@ There are **two trees**, both under `D:\DOTK`:
 ## 4. Run, build and verify
 
 ```powershell
-# run (in the dev tree)
-cd D:\DOTK\Stronghold-Protocol
+# run — from THIS CHECKOUT (on the owner's machine: the dev tree D:\DOTK\Stronghold-Protocol)
+cd D:\Git本地库\stronghold-protocol-secondary-development-download
 node server/index.js            # http://localhost:3000  (npm run dev = --watch)
 #   admin: http://localhost:3000/admin?token=<var/admin-token.txt>
 #   health: GET /healthz    read-only public API: GET /online/api
 
-# verify (in the STORE — the full suite needs .git, so it only passes here)
-cd D:\DOTK\_merge-scratch
+# verify — in THIS CHECKOUT (.git and node_modules are present; the full suite needs .git;
+#          owner's machine: the STORE D:\DOTK\_merge-scratch)
+cd D:\Git本地库\stronghold-protocol-secondary-development-download
 node tools/build-data.mjs --offline     # must leave data/ byte-for-byte unchanged
-node --test                             # the whole suite  (~6600 tests; 21 skipped)
+node --test                             # the whole suite  (~6650 tests; 26 skipped; see below)
 node tools/kit-coverage.mjs --missing   # every chess has a kit, every skill covered (must be empty)
 node tools/i18n.mjs check en --strict   # English UI pack complete (0 missing, 0 errors)
 node tools/doctor.mjs                   # environment diagnosis (exit 0)
+node tools/check-upstream.mjs           # new mainline work + predicted conflicts + §0 never-merge hits
+node tools/check-delivery.mjs --live    # the asset chain + the cache-first path, against the live site
 ```
 
 - **Dev-tree caveat:** `test/docs-paths.test.js` and `test/package.test.js` shell out to `git ls-files`,

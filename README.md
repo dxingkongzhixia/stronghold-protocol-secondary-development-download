@@ -159,6 +159,7 @@ npm run golden         # 黄金结果：固定种子的整套战斗与人机对�
 我们的工作流是「**git 仓库存档（唯一真相）→ 推 GitHub 主仓库 + Gitee 镜像 → 回镜像工作树**」：
 
 ```bash
+node tools/push-assets-relay.mjs              # ① 先把资源部署到中转机（123.57.150.185，客户端第一来源；推即部署）
 node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动、推送 git 仓库到所有已配置的远程（GitHub 主仓库 → Gitee 镜像），再回镜像工作树
 ```
 

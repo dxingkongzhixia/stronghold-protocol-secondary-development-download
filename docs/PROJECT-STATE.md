@@ -18,7 +18,14 @@
 **大厅社区（更新日志 / bug提交 / 公开房间）**、启动体验与带宽治理、**8 名自造干员**（§4；
 `tools/build-data.mjs` 的 `CUSTOM_CHESS`）、**GitHub 主仓库 + Gitee 国内镜像**。
 
-## 2. 目录与「唯一真相」（都在 `D:\DOTK`）
+## 2. 目录与「唯一真相」
+
+**当前检出（本机，接手请从这里开始）**：**单仓库 / 单工作树** ——
+`D:\Git本地库\stronghold-protocol-secondary-development-download`，`.git` 在根目录，分支 `master`，远程 `github`（主）+ `gitee`（镜像）。
+`tools/push-gitee.mjs` 在这种单树布局下同时充当 store 与 dev tree；发布顺序见 §7。
+**资源中转机**（`123.57.150.185`）由 `tools/push-assets-relay.mjs` 部署，是**发布的第一步**。
+
+**owner 机器上的「双树」约定**（下表以此为准；在本机请按 *store ↔ 当前检出*、*dev tree ↔ 当前检出*、*分支 `ours` ↔ `master`* 换算）：
 
 | 路径 | 说明 |
 |---|---|
@@ -114,6 +121,12 @@ sqlite3 var/accounts.db                              # 表: accounts / sessions 
 .venv-extract\Scripts\python.exe tools\local-extract\extract.py --game "<...\StreamingAssets\AB\Windows>"
 .venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py --ffmpeg "<ffmpeg.exe>"
 node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-proxy 镜像
+# 发布（owner 规定顺序）：① 资源中转机 ② github 主仓 + gitee 镜像
+node tools/push-assets-relay.mjs                      # = npm run push:relay；推即部署 123.57.150.185
+node tools/push-gitee.mjs -m "本次改了什么"
+# 两个常备检查
+node tools/check-upstream.mjs                         # 主线有没有新提交 / 会冲突哪些文件 / 是否碰到 never-merge
+node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存优先（浏览器自报 fromCache）
 ```
 
 ## 8. 备份 / 回滚
@@ -123,6 +136,16 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - **git 回退点**：tag `backup/pre-3d-scenes`、`backup-pre-groupA`，分支 `backup/ours-pre-reconcile-20261013`（见 [`docs/HANDOVER.md`](HANDOVER.md)）。
 
 ## 9. 已知问题 / 待办
+
+**接手须知（2026-10-14 复核）**
+
+- **全量测试 `node --test`**：6654 项 / 6624 通过 / **4 失败** / 26 跳过。4 个失败**均非代码缺陷**、且与最近改动无关：
+  `test/asset-index.test.js:58`（同秒内改文件的 mtime 粒度）与 `test/lobby.test.js:560/:578`（限速桶计时）在**满负载并发**下才失败，**单跑全绿**（4/4、74/74）；
+  `test/render/token-wang-stone.test.js:48` 是本机每机一份的 `data/local-assets.json` 缺该 token 模型（环境）。要领判定门禁用 `node --test --test-concurrency=1`。
+- **github 推送** 依赖本机代理 `127.0.0.1:31181`；代理没起时 gitee 与中转机不受影响。
+- **中转机 root 密码** 曾用于开通，建议在阿里云面板重置（已装部署密钥 `~/.ssh/sp-deploy`，日常不需要密码）。
+- **充能型技能的层数未上界面**：数据里 66 个技能 `maxChargeTime > 1`，模拟算出了层数，但 `snapshot.js` 没有 `charges`、显示层也没读它 —— 这些干员的技能条只显示技力、看不到已储存层数（修法见 `docs/ASSETS.md`/待办）。
+- **冷启动页面字节**（`public/js` + `data`，约 4–6 MB）仍由游戏机提供且不限速 —— 游戏机上目前唯一的带宽大头。
 
 - [ ] **`SP_VERIFY` 在 Linux 上没开**（线上不抽检战斗结果）。要开：在宝塔的 `server.sh` 加 `export SP_VERIFY=sample`（面板重建脚本会覆盖，注意）。
 - [ ] **首屏带宽**：新访客仍要下 ~104 MB 美术（scope `all`）+ 12 MB 视频。可选：降到 `ui`（−30 MB）、或把 `public/assets` 迁 CDN / OSS。

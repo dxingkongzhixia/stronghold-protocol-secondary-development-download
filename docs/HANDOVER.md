@@ -25,31 +25,48 @@ deploy), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) (the repository map) and
 ## 0. The 10-minute cheat sheet
 
 ```powershell
-# The git store is the single source of truth; the dev tree has no .git and mirrors it.
-#   Store:    D:\DOTK\_merge-scratch        (branch ours — commit here)
-#   Dev tree: D:\DOTK\Stronghold-Protocol   (no .git; the app runs here)
+# THIS CHECKOUT (2026-10-14): ONE tree — its .git is at the root, branch `master`, remotes `github` (primary) + `gitee`
+#   D:\Git本地库\stronghold-protocol-secondary-development-download
+# The older `D:\DOTK\...` paths in these docs are the owner's machine, where the same repository is kept as the
+# store + mirror pair described in §2; translate them as store <-> this repo, dev tree <-> this repo.
 
 # 1. Run it locally
-cd D:\DOTK\Stronghold-Protocol
-node server/index.js            # http://localhost:3000   (or npm start / npm run dev = --watch)
+cd D:\Git本地库\stronghold-protocol-secondary-development-download
+node server/index.js            # http://localhost:3000   (npm run dev = --watch)
 #    admin: http://localhost:3000/admin?token=<contents of var/admin-token.txt>
+#    the dev pages (3D board, sim check) live under /dev/, e.g. /dev/render-demo.html?scene=prep&stage=act1autochess_m01&board=3d
 
-# 2. Verify in the store (the full suite needs a .git, so run it in _merge-scratch)
-cd D:\DOTK\_merge-scratch
+# 2. Verify (this checkout has .git + node_modules, so the whole suite runs here)
 node tools/build-data.mjs --offline   # must leave data/ byte-for-byte unchanged
-node --test                            # the full suite (docs-paths / package need a .git)
+node --test                            # the full suite (~6650; see §5 for the known non-code failures)
 node tools/kit-coverage.mjs --missing  # every chess has a kit, every skill covered
 node tools/i18n.mjs check en --strict  # English UI pack complete
 node tools/doctor.mjs                  # environment diagnosis, exit 0
+node tools/check-upstream.mjs          # is there new mainline work, and what will it conflict with
+node tools/check-delivery.mjs --live   # the asset chain + the cache-first path, against the live site
 
-# 3. Publish (ONE-WAY: store -> remotes -> dev tree) — GitHub primary, then Gitee mirror
-git -C D:\DOTK\_merge-scratch add -- docs/HANDOVER.md      # stage ONLY your own paths
-node D:\DOTK\_merge-scratch\tools\push-gitee.mjs -m "docs: ..."
+# 3. Publish — THE ART RELAY FIRST, then the two mirrors (owner's order, 2026-10-14)
+node tools/push-assets-relay.mjs       # deploys 123.57.150.185, the box every client loads art from first
+node tools/push-gitee.mjs -m "what changed"
 ```
 
-**If you only remember one thing:** you edit and commit in `_merge-scratch`; `push-gitee.mjs` mirrors
-everything down into `Stronghold-Protocol`. **Never copy the dev tree into the store without the explicit
-`--from-dev` flag.**
+**If you only remember one thing:** clients load their art from **the relay** (`docs/ASSETS.md` "The relay"), so publish
+there **before** the mirrors — a push deploys it. Everything else in these docs that mentions the store / dev tree pair
+still applies on the owner's machine; in a single checkout the two are the same directory.
+
+### 接手清单 — taking this over (first afternoon)
+
+| # | do this | expect |
+|---|---|---|
+| 1 | Read **this file**, then [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) (the one-page state) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (question → doc → file) | ~30 minutes; you now know where everything is |
+| 2 | `npm install` then `node server/index.js` | <http://localhost:3000> serves; `GET /healthz` returns the version + build hash |
+| 3 | `node --test` (this checkout has `.git` + `node_modules`) | ~6650 pass; the 4 known non-code failures are listed in `PROJECT-STATE.md` §9 — read that before you chase them |
+| 4 | `node tools/doctor.mjs`, `node tools/kit-coverage.mjs --missing`, `node tools/i18n.mjs check en --strict` | exit 0 / no gaps (the gates in §5) |
+| 5 | `node tools/check-delivery.mjs --live` | the asset chain order + cache-first, measured in a real browser (needs the live site reachable) |
+| 6 | Read §9 (the traps) **before** touching rendering, assets or deployment | each row is a mistake that already cost a debugging session |
+
+**The three things not to break:** the **licence** (§1), the **one-way** store → remotes → run-tree direction (§2, never
+`--from-dev` by accident), and **relay-first** publishing (§0, §8). Everything else is negotiable with the owner.
 
 ---
 
@@ -96,7 +113,17 @@ host can run it.
 
 ---
 
-## 2. The two trees — the single most important operational fact
+## 2. Layout — where the repo is, and the store/mirror convention
+
+**This checkout** is a single repository that is also the tree the app runs from:
+
+| path | role | `.git` |
+|---|---|---|
+| `D:\Git本地库\stronghold-protocol-secondary-development-download` | **the repository and the run tree** — history, files and the running app | **yes** (branch `master`; remotes `github`, `gitee`) |
+
+On the **owner's machine** the same repository is kept as a **store + mirror pair**, and `tools/push-gitee.mjs` is written
+for it (it derives both from its own location; `SP_SCRATCH` / `SP_DEV_TREE` override). Translate the older paths below as
+*store ↔ this checkout*, *dev tree ↔ this checkout*, *branch `ours` ↔ `master`*:
 
 | tree | role | `.git` |
 |---|---|---|
@@ -175,7 +202,7 @@ Root layout (both trees are identical for every tracked file; §2 explains the s
 
 ### Start the dev server
 ```powershell
-cd D:\DOTK\Stronghold-Protocol
+cd D:\Git本地库\stronghold-protocol-secondary-development-download   # on the owner's machine: D:\DOTK\Stronghold-Protocol
 node server/index.js        # http://localhost:3000   (npm start; npm run dev = --watch)
 ```
 
@@ -271,6 +298,9 @@ npx eslint .                            # correctness-only lint (npm run lint): 
 npm run check:imports                   # import boundaries (server/sim may not touch match/lobby/node builtins)
 npm run typecheck                       # the JSDoc-checked slice
 npm run ci                              # tools/ci.mjs: lint + imports + data + tests, the local CI mirror
+npm run check:upstream                  # the mainline: new commits, predicted conflicts, §0 hits (docs/UPSTREAM-MERGES.md)
+npm run check:delivery                  # the asset chain + the cache-first path (--live adds two browser visits)
+node tools/push-assets-relay.mjs --dry-run   # what publishing to the art relay would carry
 ```
 
 ### The golden corpus and its attribution discipline — non-negotiable
@@ -487,6 +517,10 @@ lost by a re-clone or `git clean -x`. **Backups taken 2026-10-12** (this machine
 | **The board's IndexedDB entries round-trip by kind** | `render/board3d/load.js` `fetchScene` stores `json` encoded but `text` / buffers **verbatim** (`idbBodyFor` / `idbValueFrom`). v1 encoded `text` too, which corrupted the gate meshes: `parseObj` found no mesh and the **红门/蓝门 vanished from the second visit on**. Changing that encoding also means bumping `assetIdb.js` `IDB_VERSION` **and dropping the store on upgrade**, or a cached browser keeps the broken bytes. [`docs/ASSETS.md`](ASSETS.md) (local asset cache). |
 | **IDM steals the scene** | Internet Download Manager sniffs local HTTP and grabs the 2–6 MB `scene.bin`, silently dropping the board to the procedural metal tiles. Add `127.0.0.1` to IDM's exceptions. |
 | **`SP_VERIFY` is off on Linux** | `SP_VERIFY=sample` is only set by the Windows `server-start.cmd`; production (Linux) runs `off` unless the BT `server.sh` exports it (the panel rewrites that script — be careful). |
+| **3D battlefield themes** | the official boards' own `ShaderMaterial` runs no tone mapping, so `theme.exposure` is inert; a map that measures darker than its official screenshot is fixed with the per-theme `gain` (act2autochess_m03). `platforms` / `slab` are off — see `docs/CONTENT-AUTHORING.md` §8. |
+| **Spine must stay same-origin** | mirroring `.skel`/`.atlas` adds `?h=`, `assets.js validSpine` then rejects the entry and **every unit falls back to its placeholder diamond**. The atlas PAGES are images and ride the mirror; the skeleton/atlas do not. |
+| **The mirror chain advances on ERROR only** | the preload walked to the next origin on `load` too, so every image was re-fetched from gh-proxy and this server and the browser cache held the fallback's URL. `tools/check-delivery.mjs --live` is the regression check. |
+| **The relay's nginx config comes from the repository** | a push installs `tools/relay/sp-relay.nginx.conf` (only if `nginx -t` accepts it). Editing `/etc/nginx/sites-available/sp-relay` on the box drifts and is overwritten by the next push. |
 | **Never deploy without the owner** | restarting, uploading server files, changing env / `SP_VERIFY` / the admin token / firewall are all **stop-and-ask** items. |
 
 ---
