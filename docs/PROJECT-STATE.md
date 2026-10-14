@@ -47,8 +47,8 @@
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
 | git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
 | 远程同步 | `github/master` == `gitee/master` == HEAD `d5a6412c`（v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复 + 工具与文档，全部已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
-| 全量测试 | `node --test --test-concurrency=2`：**6669 项 / 6654 通过 / 0 失败 / 15 跳过**（约 611 s，台式机 store，2026-10-14 实测；笔记本的数字见 §9） |
-| 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1454/1454（100%）；`doctor` 退出码 0；`eslint` 0 error（148 warning）；`npm run typecheck` / `check:imports` 通过 |
+| 全量测试 | `node --test --test-concurrency=2`：**6670 项 / 6655 通过 / 0 失败 / 15 跳过**（约 670 s，台式机 store，2026-10-14 实测；笔记本的数字见 §9） |
+| 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1455/1455（100%）；`doctor` 退出码 0；`eslint` 0 error（148 warning）；`npm run typecheck` / `check:imports` 通过 |
 | 本机环境 | Node **v24.19.0** |
 | 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build） |
 
@@ -64,6 +64,9 @@
 | **资源中转** | **http://123.57.150.185**（阿里云轻量 · 华北2 北京 · 200 Mbps · 流量不限）：nginx 服务 `/srv/sp/public`，裸仓库 `/srv/sp.git` + `post-receive` 钩子（**推即部署**）。发布顺序：**先** `node tools/push-assets-relay.mjs`，**再** gitee/github。资源加载链：中转机 → GitHub 及其镜像 → 游戏服务器兜底。接入与运维见 [`docs/ASSETS.md`](ASSETS.md)「The relay」 |
 | 管理页 | `/admin?token=<var/admin-token.txt>`（令牌 + 30 天 cookie）；公开只读 `/online/api` |
 | 进程管理 | 宝塔「Node项目」脚本 `/www/server/nodejs/vhost/scripts/server.sh`（`setsid` 启动）；日志 `/www/wwwlogs/nodejs/server.log` |
+| **域名 / 备案** | **`strongholdprotocolcsym.top`** — ICP 备案已通过（**浙ICP备2026085059号-1**，2026-10-14），页脚已展示并链接到 `beian.miit.gov.cn`（`public/js/screens/title.js`，`test/ui/title-surfaces.test.js` 钉住）。⚠️ 截至 2026-10-14 该域名**尚未解析**到本机，线上仍走 `http://183.66.27.19:20522`；**HTTPS 未启用 → Service Worker 注册不了**（本地缓存 / 增量同步那条链只在 HTTPS 下生效） |
+| **HTTPS / SW 的前置** | ① 域名 A 记录指向生产机；② 签证书并在反代上启用 HTTPS；③ **中继也必须 HTTPS** —— HTTPS 页面不允许明文 `http://` 子资源（mixed content），`http://123.57.150.185` 会被浏览器拦掉、客户端静默回退到免费 CDN；给中继一个子域名（如 `relay.strongholdprotocolcsym.top`）签证书，再把 `public/asset-mirrors.json` 的第一个源改成 `https://…`；④ 之后 SW 自动注册，`设置 → 美术资源缓存` 生效，用 `node tools/check-delivery.mjs --live` 核对 |
+| **公安联网备案** | 进行中：2026-10-14 已在「全国互联网安全管理服务平台」创建主体 + 绑定网站（`strongholdprotocolcsym.top` / 浙ICP备2026085059号-1）；拿到公安备案号后再把图标 + `beian.mps.gov.cn` 链接加到页脚（数据码属敏感凭据，**不进仓库**） |
 
 **部署流程（当前做法）**
 1. 本地 `node --test` 全绿；
@@ -170,8 +173,8 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
   `tools/build-data.mjs`（`CUSTOM_CHESS`）。
-- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 6669 项 / 6654 通过 / 0 失败 / 15 跳过、`kit-coverage` 307/307 · 120/120、
-  `i18n en --strict` 1454/1454、`doctor` 退出码 0、`eslint` 0 error（148 warning）、`typecheck` / `check:imports` 通过、
+- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 6670 项 / 6655 通过 / 0 失败 / 15 跳过、`kit-coverage` 307/307 · 120/120、
+  `i18n en --strict` 1455/1455、`doctor` 退出码 0、`eslint` 0 error（148 warning）、`typecheck` / `check:imports` 通过、
   `build-data --offline` 与 `data/` 逐字节一致、工作项目相对 store HEAD 无跟踪漂移。
 
 ## 11. 产物

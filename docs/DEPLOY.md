@@ -364,3 +364,11 @@ npm run package -- --update --from <旧版本的完整包>[,<…>] --out <目录
 - **需要**：已下载素材的仓库（完整包）——打包前先联网运行一次 `node tools/fetch-assets.mjs`，补齐清单计划但本机还没有的素材（清单只列出磁盘上有的文件，打包工具看不出缺了哪些；`data/assets.json` 有变化就先提交）；能访问 npm 的网络（`npm ci`）；`zip`（或 bsdtar 的 `tar`，Windows 10 起自带）。`--out` 默认是系统临时目录下的 `stronghold-protocol-release`，不能在仓库里面；`--force` 覆盖已有的 zip，`--keep-stage` 保留打包用的目录供检查。
 
 **资源中继（发布顺序的第一步）**：本项目自己的素材源在中继机 `123.57.150.185` 上，**先** `node tools/push-assets-relay.mjs`（推即部署），**再** `node tools/push-gitee.mjs` 推 github 主仓 + gitee 镜像。中继机的接入、路由与 nginx 配置见 [`docs/ASSETS.md`](ASSETS.md)「The relay」，发布顺序见 [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (c)。
+
+**域名与 HTTPS（备案后）**：生产域名 `strongholdprotocolcsym.top`（备案 **浙ICP备2026085059号-1**，页脚展示）。要启用 HTTPS 与本地缓存：
+
+1. **解析**：给域名加 A 记录指向生产机（`183.66.27.19`），www 子域按需。
+2. **证书**：在反代（宝塔 / nginx / caddy）上签证书并启用 HTTPS，HTTP 跳转 HTTPS。
+3. **⚠️ 中继也要 HTTPS**：HTTPS 页面**不允许**明文 `http://` 子资源（mixed content），`http://123.57.150.185` 会被浏览器拦掉、客户端静默回退到免费 CDN。给中继一个**子域名**（如 `relay.strongholdprotocolcsym.top`，备案覆盖主域名）并在中继机上签证书，然后把 [`public/asset-mirrors.json`](../public/asset-mirrors.json) 的第一个源改成 `https://…`（服务器端的 `/asset-index.json` 会跟着它走，见 `server/assetindex.js` `assetSources()`）。
+4. **验证**：HTTPS 下 **Service Worker 才会注册**（本地缓存 / 增量同步那条链），`设置 → 美术资源缓存` 出现；用 `node tools/check-delivery.mjs --live` 核对链条顺序与 `fromCache`。
+5. **备案号常驻页脚**：`public/js/screens/title.js` 的 `.title-beian`（法定义务，`test/ui/title-surfaces.test.js` 钉住，别删）。

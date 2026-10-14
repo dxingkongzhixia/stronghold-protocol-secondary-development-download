@@ -632,6 +632,14 @@ register — so the HTTPS future keeps the better chain.
   alone every route stays on this server.Verified 2026-10-14: one cold visit moved 95.3 MB / 1820 requests to the relay
   with no 404s (nothing fell back), and with the first two tiers dead a page image still loaded from this server.
 
+  > ⚠️ **An HTTPS site needs an HTTPS relay.** A page served over HTTPS may not fetch `http://…` subresources (the
+  > browser blocks them as **mixed content**, silently), so on the filed domain `strongholdprotocolcsym.top` the chain's
+  > first tier (`http://123.57.150.185`) would be dropped and every client would fall back to the CDN mirrors. Before the
+  > site moves to HTTPS, give the relay a certificate on a subdomain of the filed domain (e.g.
+  > `relay.strongholdprotocolcsym.top`) and list the `https://` origin first in `public/asset-mirrors.json` —
+  > `server/assetindex.js` `assetSources()` reads that order, so the Service Worker's chain follows it too. See
+  > `docs/DEPLOY.md` "域名与 HTTPS".
+
 ### The relay (the owner's own art origin)
 
 Since 2026-10-14 the art is served from this fork's own relay rather than the game box. Everything needed to take it
