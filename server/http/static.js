@@ -34,12 +34,14 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { MEDIA_PREFIX } from '../../shared/media.js';
+import { SCENE_PREFIX } from '../../shared/scene.js';
 import { splitHashedPath } from '../../shared/assetPaths.js';
 import { ROOT, noopLog } from './config.js';
 import { sendError, sendJson } from './common.js';
 import { MIME, CompressCache, isNotModified, serveFile, serveBuffer, RateLimiter, assetRateBytesPerSec } from './files.js';
 import { ASSET_INDEX_ROOTS, hashedFileOpts } from './assetIndex.js';
 import { serveMedia } from './media.js';
+import { serveScene } from './scene.js';
 import { createPackRegistry } from '../packs.js';
 import { createAssetIndex } from '../assetindex.js';
 import { PACKS_URL, PACK_INDEX_FILE } from '../../shared/packs.js';
@@ -197,6 +199,11 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     // Extension-less audio (download-manager avoidance): /media/bgm/act1 → /assets/audio/bgm/act1.mp3
     if (decoded.startsWith(MEDIA_PREFIX)) {
       await serveMedia(req, res, decoded.slice(MEDIA_PREFIX.length), query, publicDir, gzipCache, log, { urlHash, assetIndex }, assetLimiter);
+      return;
+    }
+    // Extension-less scene bundle (same trick): /scene/act2autochess_m04/bin → /assets/local/scene/…/scene.bin
+    if (decoded.startsWith(SCENE_PREFIX)) {
+      await serveScene(req, res, decoded.slice(SCENE_PREFIX.length), query, publicDir, gzipCache, log, { urlHash, assetIndex }, assetLimiter);
       return;
     }
     // The served manifests: every art URL with its content hash (assetViews.js), once the index is ready

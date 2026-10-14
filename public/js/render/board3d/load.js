@@ -16,6 +16,7 @@
 import { resolveUvTable } from './atlas.js';
 import { parseObj } from './obj.js';
 import { idbEnabled, idbGet, idbPut } from '../../assetIdb.js';
+import { sceneRouteUrl } from '../../../../shared/scene.js';
 
 export const THREE_URL = '/vendor/three.module.js';
 
@@ -128,6 +129,13 @@ async function fetchScene(url, kind) {
 }
 async function fetchText(url) { return fetchScene(url, 'text'); }
 async function fetchJson(url) { return fetchScene(url, 'json'); }
+
+/** The extension-less route first (IDM-safe), then the direct /assets/… URL (a plain static host). */
+async function fetchSceneViaRoute(routeUrl, directUrl, kind) {
+  const viaRoute = routeUrl ? await fetchScene(routeUrl, kind) : null;
+  if (viaRoute != null) return viaRoute;
+  return directUrl ? fetchScene(directUrl, kind) : null;
+}
 
 /**
  * Load the board pack through the asset store of public/js/assets.js (needs local(), localUrl(), image()).
@@ -410,7 +418,13 @@ export function loadScenePack(assets, stageId) {
     if (!(await sceneListed(assets, stageId)) || typeof assets.image !== 'function') return null;
     const url = (g, n) => { const u = assets.localUrl(g, n); return typeof u === 'string' && u ? encodeURI(u) : null; };
     const group = sceneGroup(stageId);
-    const [doc, buf] = await Promise.all([fetchJson(url(group, 'scene')), fetchBuffer(url(group, 'bin'))]);
+    // The scene bundle goes through the extension-less route first (shared/scene.js: a download manager hijacks
+    // `.bin` URLs, and a stolen response leaves the board on its procedural fallback), then the direct /assets/ URL a
+    // plain static host serves.
+    const [doc, buf] = await Promise.all([
+      fetchSceneViaRoute(sceneRouteUrl(stageId, 'meta'), url(group, 'scene'), 'json'),
+      fetchSceneViaRoute(sceneRouteUrl(stageId, 'bin'), url(group, 'bin'), 'arrayBuffer'),
+    ]);
     if (!isObj(doc) || doc.version !== SCENE_VERSION || !buf) return null;
     const chunks = parseSceneChunks(doc, buf);
     if (!chunks || !chunks.length) return null;
