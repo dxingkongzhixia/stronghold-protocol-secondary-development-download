@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { collectAssetUrls, indexVersion, buildAssetIndexValue, createAssetIndex } from '../server/assetindex.js';
+import { collectAssetUrls, indexVersion, buildAssetIndexValue, createAssetIndex, assetSources, relaySource, RELAY_FALLBACK } from '../server/assetindex.js';
 
 test('collectAssetUrls: only /assets and /fonts string leaves, query/hash stripped, de-duplicated', () => {
   const manifest = {
@@ -72,4 +72,36 @@ test('createAssetIndex: rebuilds only when a source manifest changes', () => {
   assert.notEqual(next, first, 'a manifest change rebuilds');
   assert.equal(next.count, 2);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('assetSources: the owner\'s relay FIRST, then the CDN mirrors; an empty ref turns the mirrors off', () => {
+  const saved = process.env.SP_ASSET_RELAY;
+  delete process.env.SP_ASSET_RELAY; // the test drives the file, not the machine's env
+  try {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'src-'));
+    const publicDir = path.join(root, 'public');
+    fs.mkdirSync(publicDir, { recursive: true });
+
+    // No asset-mirrors.json → the constant relay, then the built-in CDN templates.
+    const fallback = assetSources(publicDir, 'o/r', 'master');
+    assert.equal(fallback.length, 3, 'relay + gh-proxy + jsDelivr');
+    assert.equal(fallback[0], RELAY_FALLBACK, 'the relay is tried before any CDN');
+    assert.match(fallback[1], /^https:\/\/gh-proxy\.com\//);
+    assert.match(fallback[2], /^https:\/\/cdn\.jsdelivr\.net\//);
+
+    // The client's own list is the source of truth for the relay origin.
+    fs.writeFileSync(path.join(publicDir, 'asset-mirrors.json'), JSON.stringify({ sources: ['http://10.0.0.9', 'https://gh-proxy.com/x/y'] }));
+    assert.equal(relaySource(publicDir), 'http://10.0.0.9');
+
+    // A CDN as sources[0] (the file's own fallback shape) must not be mistaken for the relay.
+    fs.writeFileSync(path.join(publicDir, 'asset-mirrors.json'), JSON.stringify({ sources: ['https://cdn.jsdelivr.net/gh/o/r@master/public'] }));
+    assert.equal(relaySource(publicDir), RELAY_FALLBACK);
+
+    // SP_ASSET_REF='' (ref === '') disables the mirror tier entirely — the docs' switch.
+    assert.deepEqual(assetSources(publicDir, 'o/r', ''), []);
+
+    fs.rmSync(root, { recursive: true, force: true });
+  } finally {
+    if (saved === undefined) delete process.env.SP_ASSET_RELAY; else process.env.SP_ASSET_RELAY = saved;
+  }
 });

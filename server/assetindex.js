@@ -24,7 +24,42 @@ const URL_PREFIXES = ['/assets/', '/fonts/'];
 
 /** The GitHub primary repository that tracks the runtime art, and the ref the CDN mirrors should serve. */
 export const ASSET_REPO = 'dxingkongzhixia/stronghold-protocol-secondary-development-download';
-export const ASSET_REPO_REF = process.env.SP_ASSET_REF || 'master';
+// `SP_ASSET_REF=''` disables the mirrors (the client then goes straight to the game server — the docs say so, so the
+// empty string must survive); only an UNSET variable falls back to `master`.
+export const ASSET_REPO_REF = process.env.SP_ASSET_REF ?? 'master';
+
+/** The owner's own art relay, used when neither `SP_ASSET_RELAY` nor `public/asset-mirrors.json` names one. */
+export const RELAY_FALLBACK = 'http://123.57.150.185';
+
+/**
+ * The owner's own art relay — the FIRST origin a client tries (`public/asset-mirrors.json`, docs/ASSETS.md "The relay").
+ * Read from that same file so the plain-HTTP prefix path and the Service Worker's miss chain share ONE list;
+ * `SP_ASSET_RELAY` overrides it, and the constant is the last fallback. A `sources[0]` that names a CDN (the file's own
+ * fallback entries) is ignored here — the CDN templates below cover those.
+ * @param {string} [publicDir]
+ * @returns {string}
+ */
+export function relaySource(publicDir = 'public') {
+  if (process.env.SP_ASSET_RELAY) return process.env.SP_ASSET_RELAY;
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(publicDir, 'asset-mirrors.json'), 'utf8'));
+    const first = Array.isArray(raw.sources) ? raw.sources[0] : null;
+    if (typeof first === 'string' && /^https?:\/\//.test(first) && !/github|jsdelivr/i.test(first)) return first;
+  } catch { /* no file / unreadable → the constant */ }
+  return RELAY_FALLBACK;
+}
+
+/**
+ * The ordered origins a cache MISS may try, best first: **the owner's own relay, then the CDN mirrors** — the game
+ * server stays the client's own last resort (rate-limited). `/asset-index.json` serves this as `sources`, so the
+ * Service Worker's miss chain is the same as the plain-HTTP one. A `ref` of `''` returns none (mirrors off).
+ * @param {string} [publicDir] @param {string} [repo] @param {string} [ref]
+ * @returns {string[]}
+ */
+export function assetSources(publicDir = 'public', repo = ASSET_REPO, ref = ASSET_REPO_REF) {
+  if (!ref) return [];
+  return [relaySource(publicDir), ...mirrorSources(repo, ref)];
+}
 
 /**
  * CORS-capable CDN mirrors of the primary repo's `public/` tree, tried BEFORE the game server so its uplink carries
@@ -105,7 +140,7 @@ export function buildAssetIndexValue({ dataDir, publicDir, log = noopLog }) {
     bytes += st.size;
   }
   log.info?.(`[asset-index] ${Object.keys(files).length} files, ${bytes} bytes`);
-  return { version: 1, app: APP_VERSION, revision: indexVersion(files), count: Object.keys(files).length, bytes, files, sources: mirrorSources() };
+  return { version: 1, app: APP_VERSION, revision: indexVersion(files), count: Object.keys(files).length, bytes, files, sources: assetSources(publicDir) };
 }
 
 /**

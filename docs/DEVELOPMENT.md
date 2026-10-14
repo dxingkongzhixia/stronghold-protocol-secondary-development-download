@@ -351,26 +351,33 @@ official impacts faithfully for every operator would need a particle-system impo
 mapping, which the bundles do not give as a single sprite — **recorded as a planned future task** in
 `docs/OUR-FEATURES.md` §1 (docs/ASSETS.md "Battle effects"); do not start it without the owner.
 
-### 9.2 Browser asset delivery: the relay first, then the CDN mirrors, then this server
+### 9.2 Browser asset delivery: the local cache first, then the relay → CDN mirrors → this server
 
-The server's uplink is small (~2.3 MB/s) but a cold load pulls ~104 MB of art, so delivery is layered. The owning
-document is [docs/ASSETS.md](ASSETS.md) "Local asset cache & CDN mirror download chain" + "Without a Service Worker"
-+ "The relay" (fork-only — [docs/OUR-FEATURES.md](OUR-FEATURES.md) §10, decision: [docs/MATCHMAKING.md](MATCHMAKING.md) §42):
+The server's uplink is small (~2.3 MB/s) but a cold load pulls ~104 MB of art, so delivery is layered. **The rule is:
+the local cache answers first; only a miss walks a source chain.** The owning document is
+[docs/ASSETS.md](ASSETS.md) "Local asset cache & CDN mirror download chain" + "Without a Service Worker" + "The relay"
+(fork-only — [docs/OUR-FEATURES.md](OUR-FEATURES.md) §10, decisions: [docs/MATCHMAKING.md](MATCHMAKING.md) §42 and §43):
 
-1. **With a Service Worker** (HTTPS) — `public/sw.js` + `public/js/assetCache.js` keep `public/assets`, `public/fonts`
-   and `public/vendor` in Cache Storage (`sp-assets`) and serve them cache-first: a returning player fetches nothing.
-   The worker wins whenever it can register.
-2. **On the plain-HTTP production site** the worker never registers, so three layers replace it:
-   - **The mirror list** — `public/js/assetMirror.js` + the static `public/asset-mirrors.json` (a plain file, so the
-     list changes without a restart). At boot it probes `/asset-mirrors.json` itself and, when an origin answers,
-     prefixes the **image** URLs of `data/assets.json` / `data/local-assets.json` with it, moving the `~hash` serving
-     segment to `?h=` (the CDNs cache an image for a week). Order (owner, 2026-10-14): **the owner's own relay**
-     (`123.57.150.185`) → **GitHub and its mirrors** (gh-proxy → jsDelivr) → **this server**.
-   - **IndexedDB** — `public/js/assetIdb.js`, for what the page fetches through its own code: the audio (`js/audio.js`)
-     and the battlefield scene bundles (`render/board3d/load.js`). `main.js` enables it only when the worker cannot.
-   - **A failed fetch walks the chain** — images through the capture-phase error listener, and the audio / scene /
-     clip routes through their own candidate lists. **Only an error advances the chain, never a successful load**
-     (advancing on load re-fetched every image from the next origin — measured 2026-10-14).
+1. **The cache.**
+   - **With a Service Worker** (HTTPS) — `public/sw.js` + `public/js/assetCache.js` keep `public/assets`, `public/fonts`
+     and `public/vendor` in Cache Storage (`sp-assets`): `handle()` returns a `cache.match` hit immediately.
+   - **On the plain-HTTP production site** the worker never registers, so the browser's own HTTP cache plays that role —
+     `public/js/assetMirror.js` rewrites the manifest **image** URLs to the chosen origin with `?h=<hash>` (cached for a
+     week) — and `public/js/assetIdb.js` (IndexedDB) covers what the page fetches through its own code: the **audio**
+     (`js/audio.js`) and the **battlefield scene bundles** (`render/board3d/load.js`). `main.js` enables the IDB layer
+     only when the worker cannot register.
+2. **On a miss, the source chain — and only an error advances it, never a successful load** (advancing on load made a
+   cold visit pull every image from the relay, then gh-proxy, then this server — measured 2026-10-14):
+   - **Plain HTTP:** `public/asset-mirrors.json` (a plain file, so the list changes without a restart) — **the owner's
+     relay (`123.57.150.185`) first**, then GitHub and its mirrors (gh-proxy → jsDelivr) — then **this server**.
+   - **Service Worker:** the player's own machine (when `assetSource.js` found one at the same `revision`), then
+     `/asset-index.json` `sources` — the same relay → gh-proxy → jsDelivr order (`server/assetindex.js`
+     `assetSources()` builds it from the relay plus the CDN templates) — then this server. Images are walked by the
+     capture-phase error listener; the audio / scene / clip routes by their own candidate lists.
+   - **A hashed request is asked for as the real path + `?h=<hash>`** in both paths: the served manifests carry a
+     `~<hash>` segment, but the plain-file mirrors have no such directory (only the relay and this server strip it), so
+     `sw.js` (`sourcePath`) and `assetCache.js` (`mirrorPath`, plus every `index.files` lookup through `unhashedUrl`)
+     normalize it — the relay, the CDNs and this server all answer the same URL, and the byte check actually runs.
 3. **Paced server fallback** — the server paces `public/assets`, `public/fonts` and `public/vendor` bodies with a token
    bucket (`SP_ASSET_RATE_KBPS`, default **1.2 MB/s**; `0` off) so a pre-cache never starves live matches.
 4. **Optional local origin** — `public/js/assetSource.js` probes `127.0.0.1` for the same `revision` and points the

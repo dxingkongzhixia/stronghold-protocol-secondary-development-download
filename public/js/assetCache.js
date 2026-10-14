@@ -9,6 +9,8 @@
 // The planning is pure (`syncPlan` / `cacheIsCurrent`, unit-tested in Node); everything touching `fetch`,
 // `navigator.serviceWorker` and `caches` is thin glue used only in the browser.
 
+import { splitHashedPath, unhashedUrl } from '../../shared/assetPaths.js';
+
 /** The Service Worker cache name (public/sw.js). */
 export const ASSET_CACHE = 'sp-assets';
 /** localStorage key of the player's choice: 'stream' (load from the web) or 'cache' (keep a local copy). */
@@ -41,14 +43,28 @@ export function effectiveAssetMode() { return getAssetMode() || 'stream'; }
 export const MIRROR_TIMEOUT_MS = 15000;
 
 /**
- * Pure: the ordered download candidates for one asset URL — the CDN mirrors (index.sources: gh-proxy, jsDelivr, each a
- * prefix ending at the repo's `public/`) first, and the game server (same-origin) last.
+ * Pure: what a mirror should be asked for — the REAL path with the `~<hash>` serving segment moved into a `?h=` query
+ * (shared/assetPaths.js). The plain-file mirrors have no `~<hash>` directory (only the relay and the game server strip
+ * that segment), so a hashed URL has to be normalized or every mirror 404s. An unhashed URL is returned unchanged.
+ * @param {string} url
+ * @returns {string}
+ */
+export function mirrorPath(url) {
+  const { hash, path: plain } = splitHashedPath(url);
+  if (!hash) return url;
+  return `${plain}${plain.includes('?') ? '&' : '?'}h=${hash}`;
+}
+
+/**
+ * Pure: the ordered download candidates for one asset URL — the mirrors (index.sources: the owner's relay, gh-proxy,
+ * jsDelivr — each a prefix ending at the repo's `public/`) first, and the game server (same-origin) last.
  * @param {string} url e.g. '/assets/char/avatar/x.png'
  * @param {string[]} [sources]
  * @returns {string[]}
  */
 export function candidatesFor(url, sources = []) {
-  return [...(Array.isArray(sources) ? sources : []).map((b) => b + url), url];
+  const target = mirrorPath(url);
+  return [...(Array.isArray(sources) ? sources : []).map((b) => b + target), url];
 }
 
 /** `fetch` with an AbortController timeout (ms<=0 = no timeout). */
@@ -67,7 +83,7 @@ async function fetchWithTimeout(fetchFn, url, ms) {
  * @param {{ index: any, sources?: string[], timeoutMs?: number, fetchFn?: typeof fetch, cache?: Cache | null }} [o]
  */
 export async function fetchArtFile(url, { index, sources, timeoutMs = MIRROR_TIMEOUT_MS, fetchFn = globalThis.fetch, cache } = {}) {
-  const want = index && index.files ? index.files[url] : null;
+  const want = index && index.files ? index.files[unhashedUrl(url)] : null; // the index keys are the real (unhashed) paths
   const src = sources !== undefined ? sources : (index && index.sources);
   const cacheObj = cache !== undefined ? cache : (assetCacheSupported() ? await caches.open(ASSET_CACHE).catch(() => null) : null);
   for (const cand of candidatesFor(url, src)) {
@@ -97,13 +113,13 @@ export function syncPlan({ urls, indexFiles = {}, storedSizes = {}, cachedUrls }
   const download = [];
   const keep = [];
   for (const u of urls) {
-    const want = indexFiles[u];
+    const want = indexFiles[unhashedUrl(u)]; // the index keys are the real (unhashed) paths; `u` carries the `~hash`
     if (want == null) continue;                       // the server no longer lists it
     if (storedSizes[u] !== want || !cached.has(u)) download.push(u);
     else keep.push(u);
   }
   const remove = [];
-  for (const u of urls) if (cached.has(u) && indexFiles[u] == null) remove.push(u);
+  for (const u of urls) if (cached.has(u) && indexFiles[unhashedUrl(u)] == null) remove.push(u);
   return { download, remove, keep };
 }
 
@@ -112,7 +128,7 @@ export function cacheIsCurrent({ urls, indexFiles = {}, storedSizes = {}, cached
   if (storedRevision == null || storedRevision !== revision) return false;
   const cached = cachedUrls instanceof Set ? cachedUrls : new Set(cachedUrls || []);
   for (const u of urls) {
-    const want = indexFiles[u];
+    const want = indexFiles[unhashedUrl(u)]; // the index keys are the real (unhashed) paths
     if (want == null) continue;
     if (storedSizes[u] !== want || !cached.has(u)) return false;
   }
@@ -184,7 +200,7 @@ export async function ensureAssets({ urls, index, onProgress, concurrency = 6, f
   // Record only what is actually in the cache now (a failed / over-quota put stays out and retries next time).
   const after = await cacheKeys();
   const sizes = {};
-  for (const u of urls) if (after.has(u) && indexFiles[u] != null) sizes[u] = indexFiles[u];
+  for (const u of urls) if (after.has(u) && indexFiles[unhashedUrl(u)] != null) sizes[u] = indexFiles[unhashedUrl(u)];
   writePref(SIZES_PREF, sizes);
   writePref(REVISION_PREF, index.revision);
   return { ok: true, skipped: false, downloaded: done, total, removed: plan.remove.length, revision: index.revision };

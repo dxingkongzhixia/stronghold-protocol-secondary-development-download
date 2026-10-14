@@ -4,7 +4,7 @@
 // docs/OUR-FEATURES.md "local asset cache".
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { syncPlan, cacheIsCurrent, effectiveAssetMode, candidatesFor, fetchArtFile } from '../../public/js/assetCache.js';
+import { syncPlan, cacheIsCurrent, effectiveAssetMode, candidatesFor, fetchArtFile, mirrorPath } from '../../public/js/assetCache.js';
 
 test('syncPlan: downloads the missing and the size-changed, keeps the current, removes the dropped', () => {
   const urls = ['/assets/a.png', '/assets/b.png', '/assets/c.png', '/assets/gone.png'];
@@ -85,4 +85,50 @@ test('fetchArtFile: ok:false when every source fails', async () => {
   const fetchFn = async () => { throw new Error('down'); };
   const r = await fetchArtFile('/assets/c.png', { index, fetchFn, cache: { put: async () => {} } });
   assert.deepEqual(r, { ok: false });
+});
+
+// --- the `~<hash>` serving segment: the manifests carry it, /asset-index.json names the REAL paths ---------------
+// The plain-file mirrors have no `~<hash>` directory (only the relay and the game server strip it), so the mirror
+// tier has to be asked for the real path + `?h=<hash>` — and every size lookup has to use the real path too.
+
+const H = '/assets/~0123456789abcdef/char/avatar/a.png'; // what a served manifest names
+const PLAIN = '/assets/char/avatar/a.png';               // what the index and the mirrors use
+
+test('mirrorPath: the ~<hash> segment becomes the real path + ?h= (what every mirror can serve)', () => {
+  assert.equal(mirrorPath(H), `${PLAIN}?h=0123456789abcdef`);
+  assert.equal(mirrorPath(PLAIN), PLAIN, 'unhashed ⇒ unchanged');
+  assert.equal(mirrorPath('/assets/a.png?v=3'), '/assets/a.png?v=3', 'no segment ⇒ unchanged (query kept)');
+});
+
+test('candidatesFor: a hashed URL is asked of the mirrors as the real path + ?h=; the server keeps the hashed URL', () => {
+  assert.deepEqual(candidatesFor(H, ['https://relay.test']), [
+    `https://relay.test${PLAIN}?h=0123456789abcdef`,
+    H,
+  ]);
+});
+
+test('syncPlan: a hashed manifest URL is judged by the index\'s real path — kept, never removed', () => {
+  const indexFiles = { [PLAIN]: 7 };
+  const cachedUrls = new Set([H]);
+  assert.deepEqual(syncPlan({ urls: [H], indexFiles, storedSizes: { [H]: 7 }, cachedUrls }), { download: [], remove: [], keep: [H] }, 'current ⇒ keep (before, the key missed and the cache dropped it)');
+  assert.deepEqual(syncPlan({ urls: [H], indexFiles, storedSizes: {}, cachedUrls }).download, [H], 'no stored size ⇒ download');
+  assert.deepEqual(syncPlan({ urls: [H], indexFiles: {}, storedSizes: {}, cachedUrls }).remove, [H], 'a URL the server no longer lists ⇒ remove');
+});
+
+test('cacheIsCurrent: a hashed URL whose real path is indexed at its stored size is current', () => {
+  const base = { urls: [H], indexFiles: { [PLAIN]: 7 }, storedSizes: { [H]: 7 }, cachedUrls: new Set([H]), storedRevision: 'r', revision: 'r' };
+  assert.equal(cacheIsCurrent(base), true);
+  assert.equal(cacheIsCurrent({ ...base, storedSizes: { [H]: 8 } }), false, 'a size change is stale');
+});
+
+test('fetchArtFile: a hashed URL is fetched from the mirror as the real path + ?h=, size-checked by the real key', async () => {
+  const index = { files: { [PLAIN]: 3 }, sources: ['https://relay.test'] };
+  const got = [];
+  const fetchFn = async (u) => { got.push(u); return new Response(Buffer.alloc(3), { status: 200 }); };
+  const put = [];
+  const cache = { put: async (u, r) => { put.push({ u, bytes: (await r.arrayBuffer()).byteLength }); } };
+  const r = await fetchArtFile(H, { index, fetchFn, cache });
+  assert.deepEqual(r, { ok: true, from: 'mirror', bytes: 3 });
+  assert.deepEqual(got, [`https://relay.test${PLAIN}?h=0123456789abcdef`], 'the mirror gets a URL it can actually serve');
+  assert.deepEqual(put, [{ u: H, bytes: 3 }], 'still cached under the page\'s own (hashed) URL');
 });

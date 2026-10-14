@@ -787,7 +787,7 @@ R21P / R22-LOADOUT rows now read as *kept*, not *excluded*.
 
 **Verification.** The full suite in the store at `5e8207c8`: **6600 tests / 6579 pass / 0 fail / 21 skipped**
 (measured at *that* commit; the tree has moved on since — see `docs/PROJECT-STATE.md` §3 for the current
-numbers, 6658 / 6643 / 0 / 15 on the desktop store);
+numbers, 6669 / 6654 / 0 / 15 on the desktop store);
 `build-data --offline` leaves `data/` byte-identical; `kit-coverage --missing` 307/307 skills · 120/120 chess;
 `i18n check en --strict` **1454/1454**; `doctor` exit 0; `eslint .` 0 errors; `check:imports` / `typecheck` pass; the three
 docs guards 34 pass / 0 fail.

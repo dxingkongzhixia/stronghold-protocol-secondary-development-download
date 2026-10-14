@@ -518,9 +518,11 @@ matches keep their bandwidth. This is a **fork-only** feature — the merge-crit
     local manifests) names under `/assets` and `/fonts` **and that exists on disk** (~14k files, ~828 MB here).
   - `revision` — a deterministic hash of `files` (`indexVersion`); an **equal revision means the client's cache already
     matches**, so nothing is downloaded. Rebuilt only when a source manifest changes (mtime-keyed cache).
-  - `sources` — CORS-capable CDN mirrors of the primary repo's `public/` tree (`mirrorSources`): **gh-proxy**, then
-    **jsDelivr**; `SP_ASSET_REF` pins the git ref (`''` disables the mirrors). Served `no-cache` +
-    `Access-Control-Allow-Origin: *`.
+  - `sources` — the fallback origins a cache miss may try, best first (`assetSources`): **the owner's own relay**, then
+    the CORS-capable CDN mirrors of the primary repo's `public/` tree (`mirrorSources`) — **gh-proxy**, then
+    **jsDelivr**. The relay is read from `public/asset-mirrors.json` (the list the plain-HTTP path uses;
+    `SP_ASSET_RELAY` overrides it), so both paths agree; `SP_ASSET_REF` pins the CDN git ref and **an empty string
+    disables the whole mirror tier**. Served `no-cache` + `Access-Control-Allow-Origin: *`.
 - **`server/http/files.js`** — asset / font responses carry `Access-Control-Allow-Origin: *` (so a player's own machine
   can serve them). A **process-wide token bucket** (`RateLimiter` + `assetRateBytesPerSec`) paces `public/assets` /
   `fonts` / `vendor` response **bodies** — the server fallback path — at **`SP_ASSET_RATE_KBPS` KB/s (default 1200 ≈
@@ -529,14 +531,17 @@ matches keep their bandwidth. This is a **fork-only** feature — the merge-crit
 
 **Browser side.**
 - **`public/sw.js`** — the Service Worker: cache-first for same-origin `/assets|/fonts|/vendor` in Cache Storage
-  (`sp-assets`). **On a miss it fetches from, in order: the player's own machine (`localBase`), the CDN mirrors
-  (`/asset-index.json` `sources`, 15 s each, byte-verified against `files[url]`) and only then the game server** — so
+  (`sp-assets`). **On a miss it fetches from, in order: the player's own machine (`localBase`), then `/asset-index.json`
+  `sources` — the owner's relay first, then gh-proxy / jsDelivr, 15 s each, byte-verified against the index — and only
+  then the game server** (a hashed `~<hash>` request is asked for as the **real path + `?h=`**, because the plain-file
+  mirrors have no `~<hash>` directory, and the size is looked up by that real path) — so
   **on-demand** art (spine, audio, anything the pre-cache did not cover) is offloaded too, and the server is the true
   **last resort**. The worker reads the index lazily and drops it when the page reports a new `revision`. Range
   requests and non-GET pass through.
 - **`public/js/assetCache.js`** — the policy. Pure, unit-tested: `syncPlan` (per-file diff — download the missing /
   resized, remove the dropped), `cacheIsCurrent` (revision + per-file sizes), `candidatesFor` (mirrors first, server
-  last). Glue: `registerAssetWorker` (+ `navigator.storage.persist()`), `fetchAssetIndex`, `ensureAssets` (download the
+  last) and `mirrorPath` (a hashed URL → the real path + `?h=`). Every `index.files` lookup goes through
+  `unhashedUrl` — the index names the **real** paths while the manifests carry the `~<hash>` segment. Glue: `registerAssetWorker` (+ `navigator.storage.persist()`), `fetchAssetIndex`, `ensureAssets` (download the
   diff), `fetchArtFile` (**try each mirror with a 15 s timeout, verify the bytes against `index.files[url]`, store the
   first good source in the cache under the same-origin URL; else the server**), `assetCacheUsage`, `clearAssetCache`,
   `assetCacheInfo`. Storage keys: `sp.pref.assetMode` (`stream` | `cache`), `sp.assetCache.revision`,

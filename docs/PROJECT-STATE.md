@@ -47,7 +47,7 @@
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
 | git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
 | 远程同步 | `github/master` == `gitee/master` == HEAD `d5a6412c`（v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复 + 工具与文档，全部已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
-| 全量测试 | `node --test --test-concurrency=2`：**6658 项 / 6643 通过 / 0 失败 / 15 跳过**（约 495 s，台式机 store，2026-10-14 实测；笔记本的数字见 §9） |
+| 全量测试 | `node --test --test-concurrency=2`：**6669 项 / 6654 通过 / 0 失败 / 15 跳过**（约 611 s，台式机 store，2026-10-14 实测；笔记本的数字见 §9） |
 | 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1454/1454（100%）；`doctor` 退出码 0；`eslint` 0 error（148 warning）；`npm run typecheck` / `check:imports` 通过 |
 | 本机环境 | Node **v24.19.0** |
 | 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build） |
@@ -110,7 +110,8 @@
 | `SP_VERIFY` | `sample`（**仅 Windows 启动脚本**） | `server-start.cmd` |
 | 静态缓存 | `/assets\|fonts\|vendor` 7 天；带 `?v=` 1 年 immutable | `server/index.js` |
 | `SP_ASSET_RATE_KBPS` | `1200`（服务器兜底素材下载限速 ≈1.2 MB/s；0 关闭） | `server/http/files.js` |
-| `SP_ASSET_REF` | `master`（CDN 镜像钉的 git ref；空串关闭镜像） | `server/assetindex.js` |
+| `SP_ASSET_REF` | `master`（CDN 镜像钉的 git ref；**空串关闭镜像层**——代码用 `??` 取值，空串不会被默认值顶掉） | `server/assetindex.js` |
+| `SP_ASSET_RELAY` | 未设（未设时取 `public/asset-mirrors.json` 的第一个源，再退回常量 `http://123.57.150.185`）——客户端**素材链的第一源**，也由 `/asset-index.json` 的 `sources` 交给 Service Worker | `server/assetindex.js` |
 
 ## 7. 常用命令
 
@@ -169,7 +170,7 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
   `tools/build-data.mjs`（`CUSTOM_CHESS`）。
-- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 6658 项 / 6643 通过 / 0 失败 / 15 跳过、`kit-coverage` 307/307 · 120/120、
+- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 6669 项 / 6654 通过 / 0 失败 / 15 跳过、`kit-coverage` 307/307 · 120/120、
   `i18n en --strict` 1454/1454、`doctor` 退出码 0、`eslint` 0 error（148 warning）、`typecheck` / `check:imports` 通过、
   `build-data --offline` 与 `data/` 逐字节一致、工作项目相对 store HEAD 无跟踪漂移。
 

@@ -2,11 +2,11 @@
 // the authoritative design is docs/ASSETS.md "Local asset cache & CDN mirror download chain".
 //
 // Cache-first for the art (/assets/, /fonts/, /vendor/). On a MISS it fetches from, in order: the player's own machine
-// (localBase, when the page found one), the CDN mirrors of the primary repo (the server's /asset-index.json `sources`
-// — gh-proxy then jsDelivr, each with a 15 s timeout and a byte-size check against `files[url]`), and only then the
-// game server (which is rate-limited server-side, SP_ASSET_RATE_KBPS). This is what makes the server the true LAST
-// RESORT — on-demand art (spine, audio, …) is offloaded too, not just the boot pre-cache. The page owns the policy
-// (js/assetCache.js registers it, decides what to pre-cache and clears it).
+// (localBase, when the page found one), then the server's /asset-index.json `sources` — the owner's own relay first,
+// then the CDN mirrors (gh-proxy then jsDelivr) — each with a 15 s timeout and a byte-size check against the index, and
+// only then the game server (which is rate-limited server-side, SP_ASSET_RATE_KBPS). This is what makes the server the
+// true LAST RESORT — on-demand art (spine, audio, …) is offloaded too, not just the boot pre-cache. The page owns the
+// policy (js/assetCache.js registers it, decides what to pre-cache and clears it).
 //
 // Deliberately NOT cached: Range requests, non-GET, and any origin but our own.
 
@@ -62,16 +62,33 @@ self.addEventListener('fetch', (event) => {
  * @param {Request} req @param {URL} url
  * @returns {Promise<Response>}
  */
+/**
+ * The served manifests carry a `~<contentHash>` segment as a cache-buster. The plain-file mirrors
+ * (raw.githubusercontent / jsDelivr) have no such directory — only the relay and the game server strip the segment
+ * (nginx / server/http/files.js) — so a miss asks every source for the REAL path and moves the hash into a `?h=`
+ * query, exactly what the plain-HTTP path does. The worker still caches under the page's own request URL, so the
+ * segment keeps busting its own cache.
+ * @param {string} pathname @param {string} search
+ */
+function sourcePath(pathname, search) {
+  const m = /\/~([0-9a-f]{6,})(?=\/)/i.exec(pathname);
+  if (!m) return { missPath: pathname + search, plainPath: pathname };
+  const plainPath = pathname.slice(0, m.index) + pathname.slice(m.index + m[0].length);
+  return { missPath: `${plainPath}?h=${m[1]}`, plainPath };
+}
+
 async function handle(req, url) {
   const cache = await caches.open(CACHE);
   const hit = await cache.match(req);
   if (hit) return hit;
-  const path = url.pathname + url.search;
+  const { missPath, plainPath } = sourcePath(url.pathname, url.search);
   const idx = await ensureIndex();
-  const want = idx && idx.files ? idx.files[path] : null;
+  // The index keys are the real (unhashed) paths, so look the size up by the plain path — that is also what makes the
+  // byte check run for a hashed request (it used to miss the key and skip the check).
+  const want = idx && idx.files ? idx.files[plainPath] : null;
   for (const base of missSources(idx)) {
     try {
-      const r = await fetchWithTimeout(base + path, MIRROR_TIMEOUT_MS);
+      const r = await fetchWithTimeout(base + missPath, MIRROR_TIMEOUT_MS);
       if (!r || !r.ok) continue;
       const buf = await r.arrayBuffer();
       if (want != null && buf.byteLength !== want) continue; // wrong / a lagging mirror ref → next source
