@@ -20,6 +20,9 @@ node_modules/
 # (asset-index.json `sources`) can serve them too — otherwise every 3D board's scene bundle (74.8 MB) 404s on the
 # mirror and falls back to this server. Downloaded bundles still live in .cache/official-scenes/ (ignored below).
 # See docs/ASSETS.md.
+# public/assets/local/scene/_scene-hold/ is a leftover staging copy from the extraction work
+# (2026-10-12) that no code references; it is not committed, so keep it out of status output.
+public/assets/local/scene/_scene-hold/
 data/local-assets.json
 # download caches, upstream tables, ledgers, reports, setup state
 .cache/

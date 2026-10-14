@@ -1355,3 +1355,16 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **默认预热集**：boot 的界面美术（~104 MB，`collectArtUrls(manifest,'all')`）。全量清单约 **14,172 个文件 / 828 MB**，**不默认全量**；其余按需由 SW 缓存，或点「立即缓存」。本地命中不再走 `bootgate` 闸门。
 - **测试**：`test/asset-index.test.js`（收集 / 版本 / 磁盘 / 缓存）、`test/ui/asset-cache.test.js`（`syncPlan` / `cacheIsCurrent`）。`test/ui/title-surfaces.test.js` 原先断言**不存在** `public/sw.js`——本功能**有意改变**该长期决定：测试改为「存在 `public/sw.js`（可选资源缓存），仍不存在 `public/service-worker.js`，安装不需要 worker」。相关文档（`docs/design/client.md`、`docs/UPSTREAM-MERGES.md`、`docs/PLAYING.md`、`public/index.html`）同步更正了「不注册 service worker」的旧表述。
 - **我们独有**：见 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10（合并时不得丢失）。
+
+## 43. 素材交付改为「自有中继优先」+ 无 Service Worker 时的三层兜底（owner 2026-10-14）
+
+> 背景：线上是**纯 HTTP** 站点（`http://183.66.27.19:20522`），**Service Worker 注册不了**——§42 的本机缓存方案在线上完全不生效，每个访客的每一字节都由游戏机上行承担（owner：「此浏览器不支持本地缓存」）。owner 为此提供了一台自己的阿里云轻量（华北2 北京，200 Mbps，流量不限）专做素材源。
+
+- **发布顺序（owner 规定）：先推中继，再推镜像。** `node tools/push-assets-relay.mjs` 把 checkout 推到中继的裸仓库 `/srv/sp.git`，其 `post-receive` 钩子直接 checkout 到 `/srv/sp/public` 供 nginx 服务 —— **推即部署**；之后才是 `node tools/push-gitee.mjs`（github 主仓 + gitee 镜像）。中继机的接入、路由与 nginx 配置（配置**在仓库里**，由钩子安装）见 [`docs/ASSETS.md`](ASSETS.md)「The relay」。
+- **加载链（owner 定的顺序）**：`public/asset-mirrors.json` 的 `sources` —— **自有中继（`123.57.150.185`）→ GitHub 及其镜像（gh-proxy → jsDelivr）→ 游戏服务器兜底**。`public/js/assetMirror.js` 启动时探测 `/asset-mirrors.json`，有应答就把 `data/assets.json` / `data/local-assets.json` 里的**图片** URL 前缀到该源，并把 `~<hash>` 段改写成 `?h=`（CDN 对图片缓存一周，没有它更新后会命中旧图）。
+- **只有出错才推进链条（2026-10-14 实测修）**：最初写成「加载成功就推进」，结果每张图依次向中继、gh-proxy、本机各取一次，并把**兜底源的 URL 留在浏览器缓存里**，下次访问全部重下（实测一次冷访问：中继 2465 张 + gh-proxy 686 张 + 本机 340 张）。现在**只有出错才推进** —— 图片走捕获阶段 error 监听，音频 / 场景 / 片段走各自的候选列表；修后同一次访问 2465/2465 全走中继。
+- **无 Service Worker 时的三层兜底**：① 上面的镜像前缀（图片）；② `public/js/assetIdb.js` 的 **IndexedDB** 层，覆盖页面自己发起的请求（音频、战场场景包），`main.js` **只在 worker 注册不了时**启用；③ 服务器令牌桶限速兜底（§42 不变）。**有** worker（HTTPS）时 worker 优先、三层休眠。
+- **IndexedDB 的存储编码是契约**：`fetchScene` 把 `json` 按 JSON 存，`text` 与二进制**原样**存（`idbBodyFor` / `idbValueFrom` 导出并由测试钉住）。v1 把 `text` 也 `JSON.stringify` 了，官方的门网格（`map/fx` 的 `Start_*.obj`）回来是带引号转义的字符串，**第二次进场景红门/蓝门不再绘制**（owner 报告 2026-10-14；开发页不启用该层，所以只有线上中招）。改编码必须同时**提升 `assetIdb.js` 的 `IDB_VERSION` 并丢弃旧库**。
+- **官方战场场景纳入版本库**（owner 同意，2026-10-14）：提取出的 `public/assets/local/scene/**`（136 文件，场景包 74.8 MB）**不再被 git 忽略**，这样 CDN 镜像也能提供它们 —— 否则 3D 棋盘的每个场景包都在镜像上 404、回落到本机。下载的季节包仍在被忽略的 `.cache/official-scenes/`。
+- **验证 / 相关文档**：`node tools/check-delivery.mjs --live`（对着线上核查链条顺序与缓存优先）；[`docs/ASSETS.md`](ASSETS.md)「Without a Service Worker」「The relay」、[`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.2、[`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (c)。
+- **我们独有**：见 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10（合并时不得丢失）。

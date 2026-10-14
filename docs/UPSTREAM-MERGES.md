@@ -563,8 +563,9 @@ for the 11 stages; `scene/tex/` = 30 files); `.cache/official-scenes/26-04-13-12
 and `act2autochess_m01`-`m04`. Backup at
 `C:\Users\31273\AppData\Local\Temp\opencode\sp-scenes-backup-20261012.zip` (**67,603,003 bytes**; `scene\` +
 `official-scenes\`) - restore in runbook (d) below. `data/local-assets.json` now lists all 12 `scene/...` groups
-(`sceneListed` needs group `scene/<stageId>` with a `scene` and a `bin` entry); the files stay git-ignored
-(`git ls-files` shows 0).
+(`sceneListed` needs group `scene/<stageId>` with a `scene` and a `bin` entry); at the time the files stayed
+git-ignored (`git ls-files` showed 0) — **superseded 2026-10-14: the owner committed them** so the CDN mirrors can
+serve them (see ASSETS.md and HANDOVER §8).
 
 **Why.** Upstream 0.2.5 renders the official battlefield scene on the 3D board (PR #532 / #533 by @andrew05060414),
 falling back to our procedural metal board when a scene is absent. Our fork already had the 3D board
@@ -660,8 +661,9 @@ node $SP\tools\push-gitee.mjs --dry-run                           # what would m
 node $SP\tools\push-gitee.mjs                                     # push HEAD:refs/heads/master + mirror
 ```
 
-**(d) Keep / restore the extracted scenes without re-extracting.** They are git-ignored, so a revert or `reset --hard`
-leaves them in place. If they are removed, restore a copy or re-extract:
+**(d) Keep / restore the extracted scenes without re-extracting.** They are **committed since 2026-10-14**, so a
+revert or `reset --hard` onto an older commit *does* drop them (before that they were git-ignored and survived).
+If they are removed, restore a copy or re-extract:
 
 ```powershell
 robocopy $SP\public\assets\local\scene C:\Users\31273\AppData\Local\Temp\opencode\sp-scenes-backup /E
@@ -783,7 +785,9 @@ and adapt** it (reverting it back out would have cost more than adapting the tes
 **满潜 / 精英2 Lv.60** by default and the fork content tests moved from potential-0 to full-potential numbers. The §0
 R21P / R22-LOADOUT rows now read as *kept*, not *excluded*.
 
-**Verification.** The full suite in the store at `5e8207c8`: **6600 tests / 6579 pass / 0 fail / 21 skipped**;
+**Verification.** The full suite in the store at `5e8207c8`: **6600 tests / 6579 pass / 0 fail / 21 skipped**
+(measured at *that* commit; the tree has moved on since — see `docs/PROJECT-STATE.md` §3 for the current
+numbers, 6658 / 6643 / 0 / 15 on the desktop store);
 `build-data --offline` leaves `data/` byte-identical; `kit-coverage --missing` 307/307 skills · 120/120 chess;
 `i18n check en --strict` **1454/1454**; `doctor` exit 0; `eslint .` 0 errors; `check:imports` / `typecheck` pass; the three
 docs guards 34 pass / 0 fail.

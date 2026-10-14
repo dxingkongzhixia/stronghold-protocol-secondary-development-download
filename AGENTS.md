@@ -21,11 +21,20 @@ mode **卫戍协议：盟约 / Stronghold Protocol: Alliance** — solo, or **1�
 
 ## 2. The one operational rule (get this right or lose work)
 
-**This checkout** is a **single tree that is both the store and the run tree** —
-`D:\Git本地库\stronghold-protocol-secondary-development-download`, `.git` at its root, branch `master`, remotes
-`github` (primary) + `gitee` (mirror). Commit, run the suite and publish from it directly. On the **owner's machine**
-the same repository is kept as the **two trees** below (branch `ours`); read every `D:\DOTK\...` path in these docs as
-*store ↔ this checkout*, *dev tree ↔ this checkout*.
+This repository lives on **two of the owner's machines**, in **two different layouts** — work out which one
+you are in before committing:
+
+| layout | machine | what it is | `.git` |
+|---|---|---|---|
+| **two-tree** | the owner's **desktop** (`D:\DOTK`) | a **git store** plus a byte-for-byte **mirror** the app runs from | store `D:\DOTK\_merge-scratch` (branch `ours`); dev tree `D:\DOTK\Stronghold-Protocol` (no `.git`) |
+| **single-tree** | the owner's **laptop** (`D:\Git本地库\stronghold-protocol-secondary-development-download`; the `masai` commits) | **one tree** that is both the store and the run tree | `.git` at its root, branch `master` |
+
+Both are the same repository, and `tools/push-gitee.mjs` derives both roles from its own location: the store's
+`ours` ↔ the single checkout's `master`. **On the laptop, read every `D:\DOTK\...` path below as
+*store ↔ this checkout*, *dev tree ↔ this checkout*.** Quick check: `git rev-parse --abbrev-ref HEAD` prints
+`ours` on the desktop and `master` on the laptop.
+
+The table below is the **desktop (two-tree)** layout:
 
 | tree | role | `.git` |
 |---|---|---|
@@ -78,17 +87,17 @@ the same repository is kept as the **two trees** below (branch `ours`); read eve
 ## 4. Run, build and verify
 
 ```powershell
-# run — from THIS CHECKOUT (on the owner's machine: the dev tree D:\DOTK\Stronghold-Protocol)
-cd D:\Git本地库\stronghold-protocol-secondary-development-download
+# run — in the RUN tree (desktop two-tree layout: the dev tree D:\DOTK\Stronghold-Protocol; laptop single-tree: the checkout itself)
+cd <this checkout>              # e.g. D:\DOTK\Stronghold-Protocol  or  D:\Git本地库\stronghold-protocol-secondary-development-download
 node server/index.js            # http://localhost:3000  (npm run dev = --watch)
 #   admin: http://localhost:3000/admin?token=<var/admin-token.txt>
 #   health: GET /healthz    read-only public API: GET /online/api
 
-# verify — in THIS CHECKOUT (.git and node_modules are present; the full suite needs .git;
-#          owner's machine: the STORE D:\DOTK\_merge-scratch)
-cd D:\Git本地库\stronghold-protocol-secondary-development-download
+# verify — where `.git` + node_modules are (desktop: the STORE; laptop: the checkout itself;
+#          the full suite needs .git, so it cannot pass in a git-less dev tree)
+cd <the same directory as above, or D:\DOTK\_merge-scratch on the desktop>
 node tools/build-data.mjs --offline     # must leave data/ byte-for-byte unchanged
-node --test                             # the whole suite  (~6650 tests; 26 skipped; see below)
+node --test                             # the whole suite  (~6658 tests, 15 skipped on the desktop store; 0 fail — §4)
 node tools/kit-coverage.mjs --missing   # every chess has a kit, every skill covered (must be empty)
 node tools/i18n.mjs check en --strict   # English UI pack complete (0 missing, 0 errors)
 node tools/doctor.mjs                   # environment diagnosis (exit 0)

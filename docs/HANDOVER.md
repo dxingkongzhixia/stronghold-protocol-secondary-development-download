@@ -13,22 +13,28 @@ current rules in [`docs/design/`](design/), per-release revisions in [`docs/hist
 deploy), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) (the repository map) and
 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) (what is ours and must survive an upstream merge).
 
-> **Status today (2026-10-13).** Version `0.4.0` (single source: `package.json` /
-> `shared/constants.js APP_VERSION` / `CHANGELOG.md`, pinned by `test/version.test.js`). The git store
-> tip is on branch `ours` (check with `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD`); the dev tree mirrors it. **Production is live but behind**. The
-> owner's instruction is **先不上线 — do not deploy** unless the owner explicitly asks. Other agents may
-> be working in the store at the same time: work on your own branch/worktree, commit only your own
-> paths, and rebase onto the latest `ours` before you push.
+> **Status today (2026-10-14).** Version `0.4.0` (single source: `package.json` /
+> `shared/constants.js APP_VERSION` / `CHANGELOG.md`, pinned by `test/version.test.js`). **Everything is in
+> sync at `d5a6412c`**: the store's `ours` (in a single-tree checkout: `master`) == `github/master` ==
+> `gitee/master`, and production serves the same content (spot-checked 2026-10-14: the live
+> `/js/*`, `/shared/clip.js`, `/shared/scene.js`, `/sw.js` were byte-identical to the tree). The owner's
+> instruction is **先不上线 — do not deploy** unless the owner explicitly asks (the 2026-10-14 deploy was
+> such a request). Other agents may be working in the same repository at the same time: work on your own
+> branch/worktree, commit only your own paths, and rebase onto the latest `ours` (or `master`) before you
+> push.
 
 ---
 
 ## 0. The 10-minute cheat sheet
 
 ```powershell
-# THIS CHECKOUT (2026-10-14): ONE tree — its .git is at the root, branch `master`, remotes `github` (primary) + `gitee`
-#   D:\Git本地库\stronghold-protocol-secondary-development-download
-# The older `D:\DOTK\...` paths in these docs are the owner's machine, where the same repository is kept as the
-# store + mirror pair described in §2; translate them as store <-> this repo, dev tree <-> this repo.
+# THE TWO MACHINES — use the one you are on (details in §2):
+#   laptop  — ONE tree: .git at the root, branch `master`, remotes `github` (primary) + `gitee`
+#             D:\Git本地库\stronghold-protocol-secondary-development-download
+#   desktop — TWO trees: the store D:\DOTK\_merge-scratch (branch `ours`) + the git-less run tree
+#             D:\DOTK\Stronghold-Protocol
+# Every D:\DOTK\... path in these docs assumes the desktop; on the laptop translate them as
+# store <-> this checkout, dev tree <-> this checkout.
 
 # 1. Run it locally
 cd D:\Git本地库\stronghold-protocol-secondary-development-download
@@ -38,7 +44,7 @@ node server/index.js            # http://localhost:3000   (npm run dev = --watch
 
 # 2. Verify (this checkout has .git + node_modules, so the whole suite runs here)
 node tools/build-data.mjs --offline   # must leave data/ byte-for-byte unchanged
-node --test                            # the full suite (~6650; see §5 for the known non-code failures)
+node --test                            # the full suite (~6658; 0 failures on the desktop store — the laptop's environment-only failures are explained in PROJECT-STATE.md §9)
 node tools/kit-coverage.mjs --missing  # every chess has a kit, every skill covered
 node tools/i18n.mjs check en --strict  # English UI pack complete
 node tools/doctor.mjs                  # environment diagnosis, exit 0
@@ -60,7 +66,7 @@ still applies on the owner's machine; in a single checkout the two are the same 
 |---|---|---|
 | 1 | Read **this file**, then [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) (the one-page state) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (question → doc → file) | ~30 minutes; you now know where everything is |
 | 2 | `npm install` then `node server/index.js` | <http://localhost:3000> serves; `GET /healthz` returns the version + build hash |
-| 3 | `node --test` (this checkout has `.git` + `node_modules`) | ~6650 pass; the 4 known non-code failures are listed in `PROJECT-STATE.md` §9 — read that before you chase them |
+| 3 | `node --test` (needs `.git` + `node_modules`) | 6658 tests / 6643 pass / **0 fail** / 15 skipped on the desktop store (2026-10-14); the laptop sees 4 **environment-only** failures, explained in `PROJECT-STATE.md` §9 — read that before chasing a red run |
 | 4 | `node tools/doctor.mjs`, `node tools/kit-coverage.mjs --missing`, `node tools/i18n.mjs check en --strict` | exit 0 / no gaps (the gates in §5) |
 | 5 | `node tools/check-delivery.mjs --live` | the asset chain order + cache-first, measured in a real browser (needs the live site reachable) |
 | 6 | Read §9 (the traps) **before** touching rendering, assets or deployment | each row is a mistake that already cost a debugging session |
@@ -115,15 +121,17 @@ host can run it.
 
 ## 2. Layout — where the repo is, and the store/mirror convention
 
-**This checkout** is a single repository that is also the tree the app runs from:
+This repository is checked out on **two of the owner's machines**, in two different layouts.
+
+**The laptop** — one tree, which is also the run tree:
 
 | path | role | `.git` |
 |---|---|---|
 | `D:\Git本地库\stronghold-protocol-secondary-development-download` | **the repository and the run tree** — history, files and the running app | **yes** (branch `master`; remotes `github`, `gitee`) |
 
-On the **owner's machine** the same repository is kept as a **store + mirror pair**, and `tools/push-gitee.mjs` is written
-for it (it derives both from its own location; `SP_SCRATCH` / `SP_DEV_TREE` override). Translate the older paths below as
-*store ↔ this checkout*, *dev tree ↔ this checkout*, *branch `ours` ↔ `master`*:
+**The desktop** — the same repository kept as a **store + mirror pair**, which is what `tools/push-gitee.mjs` is
+written for (it derives both trees from its own location; `SP_SCRATCH` / `SP_DEV_TREE` override). On the laptop,
+translate *store ↔ this checkout*, *dev tree ↔ this checkout*, *branch `ours` ↔ `master`*:
 
 | tree | role | `.git` |
 |---|---|---|
@@ -248,7 +256,7 @@ The game **runs without it**, with documented fallbacks (2D procedural board, ne
   | `public/assets/local/**` | **committed** (the fork tracks `public/assets/**`) | the extracted local art that ships. |
   | `data/local-assets.json` | **git-ignored, per-machine** | this machine's extraction manifest. |
   | `data/local-assets.committed.json` | committed | the union manifest of the committed local art; `server/http/static.js` serves it when the per-machine one is absent, so a fresh clone still gets the official tier. Regenerate with `node tools/local-extract/committed-manifest.mjs`. |
-  | `public/assets/local/scene/**` | **git-ignored** (official battlefield scenes) | the 11 extracted official scenes; `.cache/official-scenes/` holds the downloaded bundles. See §8. |
+  | `public/assets/local/scene/**` | **committed since 2026-10-14** (they were git-ignored; the owner lifted it so the CDN mirrors can serve the 74.8 MB scene bundles) | the 11 extracted official scenes; `.cache/official-scenes/` holds the downloaded bundles (still ignored). See §8. |
 
 - **A clean clone / CI needs none of this**: `node tools/setup.mjs` offers to create the venv and extract;
   on a server without a client you can copy `public/assets/local/` + `data/local-assets.json` from the
@@ -486,10 +494,14 @@ Authoritative: [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (d). Production: `http://
 | `backup-pre-groupA` | `a4e11922830434c174ca9d6192c77359788c74fc` (pre-Group-A tip) | revert the post-0.3.0 Group A combat fixes. |
 | branch `backup/ours-pre-reconcile-20261013` | a recent snapshot | the pre-reconcile state. |
 
-### Official-scene assets (git-ignored — a revert does not delete them)
-The 11 official battlefield scenes live in `public/assets/local/scene/**` (git-ignored) with the downloaded
-bundles in `.cache/official-scenes/`. A `git revert` / `reset --hard` leaves them in place; they are only
-lost by a re-clone or `git clean -x`. **Backups taken 2026-10-12** (this machine):
+### Official-scene assets (committed since 2026-10-14)
+The 11 official battlefield scenes live in `public/assets/local/scene/**` — **tracked in the repository** since
+2026-10-14 (the owner lifted the old git-ignore so the CDN mirrors can serve the 74.8 MB scene bundles); the
+downloaded season bundles stay in `.cache/official-scenes/` (still git-ignored). Because they are committed now,
+a `git revert` / `reset --hard` onto a commit from before 2026-10-14 **does** drop them — re-extract with
+`node tools/setup.mjs --scenes --game "<CN AB root>"` (then `python tools/local-extract/extract.py --only scene`)
+if that happens; the season bundles are **not** in an off-season client. Older local-only backups (2026-10-12,
+taken while they were still untracked):
 - `C:\Users\31273\AppData\Local\Temp\opencode\sp-scenes-backup-20261012.zip` (67,603,003 bytes; the 92
   extracted files + the 33 bundles) — restore with `Expand-Archive` then `robocopy` back into
   `public/assets/local/scene` and `.cache/official-scenes`.

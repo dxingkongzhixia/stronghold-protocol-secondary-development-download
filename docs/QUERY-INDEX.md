@@ -106,7 +106,9 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | subject | doc |
 |---|---|
 | asset sources, layout, manifest, licensing | [`docs/ASSETS.md`](ASSETS.md) |
-| browser local asset cache + CDN mirror chain + paced fallback | [`docs/ASSETS.md`](ASSETS.md) "Local asset cache & CDN mirror download chain" · [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10 |
+| browser asset chain: **relay first**, then the CDN mirrors, then this server (Service Worker, or IndexedDB on the plain-HTTP site) | [`docs/ASSETS.md`](ASSETS.md) "Local asset cache & CDN mirror download chain" + "Without a Service Worker" · [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10 · [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.2 |
+| the art relay (`123.57.150.185`): what it serves, its nginx config, how to deploy it | [`docs/ASSETS.md`](ASSETS.md) "The relay" · `tools/relay/sp-relay.nginx.conf` · [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (c) |
+| battlefield scenes (extracted official bundles, **committed** since 2026-10-14) | [`docs/ASSETS.md`](ASSETS.md) · [`docs/HANDOVER.md`](HANDOVER.md) §8 · [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §8.3 |
 | languages: UI strings, game texts, server messages, adding a language | [`docs/I18N.md`](I18N.md) |
 | content-pack format | [`docs/PACKS.md`](PACKS.md) |
 | local-client extraction (official art/voice/Spine) | `tools/local-extract/`, [`docs/HANDOVER.md`](HANDOVER.md) §3 |
@@ -134,6 +136,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 |---|---|
 | the operating contract (research → change → merge → push → deploy) | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) |
 | publish helper (store → github → gitee → dev tree) | `tools/push-gitee.mjs` |
+| **publish order (owner, 2026-10-14): the ART RELAY first, then the two mirrors** | `node tools/push-assets-relay.mjs` then `node tools/push-gitee.mjs`, [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (c) |
 | deploy guide (firewall, autostart, reverse proxy, Docker) | [`docs/DEPLOY.md`](DEPLOY.md) |
 | **our** production runbook (notice-first) | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (d) |
 | external server directory we are listed on | [`docs/RELAY.md`](RELAY.md) |

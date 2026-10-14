@@ -272,7 +272,9 @@ so different machines can end up with different subsets — the committed manife
 
 **The extract jobs, manifests and commits.**
 
-- Output: `public/assets/local/**` + the per-machine **`data/local-assets.json`** (git-ignored).
+- Output: `public/assets/local/**` + the per-machine **`data/local-assets.json`** (git-ignored). The extracted
+  battlefield scenes (`public/assets/local/scene/**`) are **committed** too since 2026-10-14 — the owner lifted the
+  old git-ignore so the CDN mirrors can serve them (ASSETS.md "The relay").
 - The art under `public/assets/local/**` **is committed**; `node tools/local-extract/committed-manifest.mjs`
   regenerates **`data/local-assets.committed.json`** (committed). Re-run it whenever the committed art changes.
 - `--only <subdir prefix>` re-extracts only matching jobs and **merges** their groups into the existing manifest

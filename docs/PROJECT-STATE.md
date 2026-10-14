@@ -20,12 +20,16 @@
 
 ## 2. 目录与「唯一真相」
 
-**当前检出（本机，接手请从这里开始）**：**单仓库 / 单工作树** ——
-`D:\Git本地库\stronghold-protocol-secondary-development-download`，`.git` 在根目录，分支 `master`，远程 `github`（主）+ `gitee`（镜像）。
-`tools/push-gitee.mjs` 在这种单树布局下同时充当 store 与 dev tree；发布顺序见 §7。
+**同一份仓库在 owner 的**两台机器**上，布局不同——先认自己在哪台：
+
+- **笔记本（`masai`）**：**单仓库 / 单工作树** —— `D:\Git本地库\stronghold-protocol-secondary-development-download`，
+  `.git` 在根目录，分支 `master`，远程 `github`（主）+ `gitee`（镜像）。`tools/push-gitee.mjs` 在这里同时充当
+  store 与 dev tree。
+- **台式机（`D:\DOTK`）**：**双树**，见下表。
+
 **资源中转机**（`123.57.150.185`）由 `tools/push-assets-relay.mjs` 部署，是**发布的第一步**。
 
-**owner 机器上的「双树」约定**（下表以此为准；在本机请按 *store ↔ 当前检出*、*dev tree ↔ 当前检出*、*分支 `ours` ↔ `master`* 换算）：
+**台式机的「双树」约定**（下表以此为准；在**笔记本**上请按 *store ↔ 当前检出*、*dev tree ↔ 当前检出*、*分支 `ours` ↔ `master`* 换算）：
 
 | 路径 | 说明 |
 |---|---|
@@ -42,9 +46,9 @@
 |---|---|
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
 | git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
-| 远程同步 | `github/master` == `gitee/master` == HEAD `49130d36`（3D 战场光照 / 高台修复 + 文档已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
-| 全量测试 | `node --test`：**6600 项 / 6579 通过 / 0 失败 / 21 跳过**（在 store 里跑） |
-| 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1454/1454（100%）；`doctor` 退出码 0；`eslint` 0 error；`npm run typecheck` / `check:imports` 通过 |
+| 远程同步 | `github/master` == `gitee/master` == HEAD `d5a6412c`（v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复 + 工具与文档，全部已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
+| 全量测试 | `node --test --test-concurrency=2`：**6658 项 / 6643 通过 / 0 失败 / 15 跳过**（约 495 s，台式机 store，2026-10-14 实测；笔记本的数字见 §9） |
+| 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1454/1454（100%）；`doctor` 退出码 0；`eslint` 0 error（148 warning）；`npm run typecheck` / `check:imports` 通过 |
 | 本机环境 | Node **v24.19.0** |
 | 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build） |
 
@@ -53,7 +57,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线 build `eb29e3ee0a28`**（2026-10-14 部署，含 v0.2.6 整支合并 + 3D 战场光照 / 高台修复）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build） |
+| 版本 | `app 0.4.0`；**已上线 build `eb29e3ee0a28`**（2026-10-14 部署；内容与 HEAD `d5a6412c` 一致 —— v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复，2026-10-14 抽查 `/js/*`、`/shared/clip.js`、`/shared/scene.js`、`/sw.js` 与仓库逐字节相同）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -139,9 +143,12 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 **接手须知（2026-10-14 复核）**
 
-- **全量测试 `node --test`**：6654 项 / 6624 通过 / **4 失败** / 26 跳过。4 个失败**均非代码缺陷**、且与最近改动无关：
-  `test/asset-index.test.js:58`（同秒内改文件的 mtime 粒度）与 `test/lobby.test.js:560/:578`（限速桶计时）在**满负载并发**下才失败，**单跑全绿**（4/4、74/74）；
-  `test/render/token-wang-stone.test.js:48` 是本机每机一份的 `data/local-assets.json` 缺该 token 模型（环境）。要领判定门禁用 `node --test --test-concurrency=1`。
+- **全量测试 `node --test`**：**两台机器的实测不同**（计数随机器、是否有本机素材、负载变化）：
+  - **台式机（`D:\DOTK` 双树，本仓库 store）**：**6658 项 / 6643 通过 / 0 失败 / 15 跳过**（`--test-concurrency=2`，约 495 s，2026-10-14 实测）。
+  - **笔记本（`masai` 单树）**：6654 项 / 6624 通过 / **4 失败** / 26 跳过。那 4 个失败**均非代码缺陷**、且与最近改动无关：
+    `test/asset-index.test.js:58`（同秒内改文件的 mtime 粒度）与 `test/lobby.test.js:560/:578`（限速桶计时）只在**满负载并发**下失败、**单跑全绿**；
+    `test/render/token-wang-stone.test.js:48` 是该机的 `data/local-assets.json` 缺该 token 模型（环境）。**要领判定门禁就单跑**
+    （`node --test --test-concurrency=1`），或直接看上面台式机的结果（0 失败）。
 - **github 推送** 依赖本机代理 `127.0.0.1:31181`；代理没起时 gitee 与中转机不受影响。
 - **中转机 root 密码** 曾用于开通，建议在阿里云面板重置（已装部署密钥 `~/.ssh/sp-deploy`，日常不需要密码）。
 - **充能型技能的层数未上界面**：数据里 66 个技能 `maxChargeTime > 1`，模拟算出了层数，但 `snapshot.js` 没有 `charges`、显示层也没读它 —— 这些干员的技能条只显示技力、看不到已储存层数（修法见 `docs/ASSETS.md`/待办）。
@@ -162,9 +169,9 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
   `tools/build-data.mjs`（`CUSTOM_CHESS`）。
-- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 6600 项 / 6579 通过 / 0 失败 / 21 跳过、`kit-coverage` 307/307 · 120/120、
-  `i18n en --strict` 1454/1454、`doctor` 退出码 0、`build-data --offline` 与 `data/` 逐字节一致、
-  工作项目相对 store HEAD 无跟踪漂移。
+- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 6658 项 / 6643 通过 / 0 失败 / 15 跳过、`kit-coverage` 307/307 · 120/120、
+  `i18n en --strict` 1454/1454、`doctor` 退出码 0、`eslint` 0 error（148 warning）、`typecheck` / `check:imports` 通过、
+  `build-data --offline` 与 `data/` 逐字节一致、工作项目相对 store HEAD 无跟踪漂移。
 
 ## 11. 产物
 

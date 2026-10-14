@@ -351,25 +351,35 @@ official impacts faithfully for every operator would need a particle-system impo
 mapping, which the bundles do not give as a single sprite — **recorded as a planned future task** in
 `docs/OUR-FEATURES.md` §1 (docs/ASSETS.md "Battle effects"); do not start it without the owner.
 
-### 9.2 Browser asset delivery: local cache + CDN mirrors + paced server fallback
+### 9.2 Browser asset delivery: the relay first, then the CDN mirrors, then this server
 
-The server's uplink is small (~2.3 MB/s) but a cold load pulls ~104 MB of art, so delivery is layered (full detail in
-[docs/ASSETS.md](ASSETS.md) "Local asset cache & CDN mirror download chain"; fork-only — [docs/OUR-FEATURES.md](OUR-FEATURES.md) §10,
-decision: [docs/MATCHMAKING.md](MATCHMAKING.md) §42):
+The server's uplink is small (~2.3 MB/s) but a cold load pulls ~104 MB of art, so delivery is layered. The owning
+document is [docs/ASSETS.md](ASSETS.md) "Local asset cache & CDN mirror download chain" + "Without a Service Worker"
++ "The relay" (fork-only — [docs/OUR-FEATURES.md](OUR-FEATURES.md) §10, decision: [docs/MATCHMAKING.md](MATCHMAKING.md) §42):
 
-1. **Local cache** — `public/sw.js` + `public/js/assetCache.js`: a Service Worker keeps `/assets|/fonts|/vendor` in
-   Cache Storage (`sp-assets`) and serves them cache-first. A returning player fetches nothing.
-2. **CDN mirrors first** — `GET /asset-index.json` (server/assetindex.js) returns `revision` + per-file `files` sizes +
-   `sources` (gh-proxy → jsDelivr over the primary repo's `public/` tree). `fetchArtFile` tries each mirror with a
-   **15 s timeout**, verifies the bytes against `files[url]`, and only then the game server.
-3. **Paced server fallback** — the server paces `/assets|/fonts|/vendor` bodies with a token bucket
-   (`SP_ASSET_RATE_KBPS`, default **1.2 MB/s**; `0` off) so a pre-cache never starves live matches.
+1. **With a Service Worker** (HTTPS) — `public/sw.js` + `public/js/assetCache.js` keep `public/assets`, `public/fonts`
+   and `public/vendor` in Cache Storage (`sp-assets`) and serve them cache-first: a returning player fetches nothing.
+   The worker wins whenever it can register.
+2. **On the plain-HTTP production site** the worker never registers, so three layers replace it:
+   - **The mirror list** — `public/js/assetMirror.js` + the static `public/asset-mirrors.json` (a plain file, so the
+     list changes without a restart). At boot it probes `/asset-mirrors.json` itself and, when an origin answers,
+     prefixes the **image** URLs of `data/assets.json` / `data/local-assets.json` with it, moving the `~hash` serving
+     segment to `?h=` (the CDNs cache an image for a week). Order (owner, 2026-10-14): **the owner's own relay**
+     (`123.57.150.185`) → **GitHub and its mirrors** (gh-proxy → jsDelivr) → **this server**.
+   - **IndexedDB** — `public/js/assetIdb.js`, for what the page fetches through its own code: the audio (`js/audio.js`)
+     and the battlefield scene bundles (`render/board3d/load.js`). `main.js` enables it only when the worker cannot.
+   - **A failed fetch walks the chain** — images through the capture-phase error listener, and the audio / scene /
+     clip routes through their own candidate lists. **Only an error advances the chain, never a successful load**
+     (advancing on load re-fetched every image from the next origin — measured 2026-10-14).
+3. **Paced server fallback** — the server paces `public/assets`, `public/fonts` and `public/vendor` bodies with a token
+   bucket (`SP_ASSET_RATE_KBPS`, default **1.2 MB/s**; `0` off) so a pre-cache never starves live matches.
 4. **Optional local origin** — `public/js/assetSource.js` probes `127.0.0.1` for the same `revision` and points the
    worker at a player's own machine.
 
-The boot `preloadArt` (main.js) uses the cache in `cache` mode and skips the boot gate; the first-visit chooser and the
-设置 row are `public/js/ui/assetMode.js`. Tests: `test/ui/asset-cache.test.js`, `test/asset-index.test.js`,
-`test/asset-rate-limit.test.js`. Config: `SP_ASSET_REF` (mirror git ref), `SP_ASSET_RATE_KBPS` (fallback pace).
+The boot `preloadArt` (main.js) uses the cache in `cache` mode and caps how long it may hold the title (60 s); the
+first-visit chooser and the 设置 row are `public/js/ui/assetMode.js`. Tests: `test/ui/asset-cache.test.js`,
+`test/asset-index.test.js`, `test/asset-rate-limit.test.js`, `test/asset-mirror.test.js`, `test/asset-idb.test.js`,
+`test/ui/preload.test.js`. Config: `SP_ASSET_REF` (mirror git ref), `SP_ASSET_RATE_KBPS` (fallback pace).
 
 ---
 
