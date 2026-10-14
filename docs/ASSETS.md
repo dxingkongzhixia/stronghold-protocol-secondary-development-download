@@ -617,7 +617,12 @@ register — so the HTTPS future keeps the better chain.
   `js/assetMirror.js` installs the first origin that answers and rewrites the manifests' image URLs to it; a fetch that
   fails walks the rest of the chain — an `<img>` through the capture-phase error listener (`mirrorCandidates` /
   `nextMirrorCandidate`), the preload per image, and the audio / scene / clip routes through their own candidate lists
-  (the relay's route → the CDN's plain file → this server's route → the file). A **full origin** (`fullSources`) is one
+  (the relay's route → the CDN's plain file → this server's route → the file). **Only an error advances the
+  chain, never a successful load**: advancing on load re-fetched every image from the next origin, so a cold visit
+  pulled the same pictures from the relay, then gh-proxy, then this server, and left the browser cache holding the
+  fallback's URL — the next visit re-downloaded everything (measured 2026-10-14: 2465 images from the relay PLUS 686
+  from gh-proxy and 340 from this server; after the fix the same visit is 2465/2465 from the relay, and a warm visit
+  costs the relay 30 requests instead of 2965 — the cache answers the rest). A **full origin** (`fullSources`) is one
   that also reimplements `/media`, `/scene` and `/clip`; the plain-file mirrors only ever get the files, so with them
   alone every route stays on this server.Verified 2026-10-14: one cold visit moved 95.3 MB / 1820 requests to the relay
   with no 404s (nothing fell back), and with the first two tiers dead a page image still loaded from this server.
