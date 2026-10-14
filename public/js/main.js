@@ -68,7 +68,6 @@ import { t, N_, translateWire } from '../../shared/i18n.js';
 import { recordError, installTrafficMeter } from './diag.js';
 import { initAssetMirror } from './assetMirror.js';
 import { idbSupported, setIdbEnabled } from './assetIdb.js';
-import { assetCacheSupported } from './assetCache.js';
 
 const RESTORE_GRACE_MS = 1500;
 const JOIN_DELAY_MS = 350;

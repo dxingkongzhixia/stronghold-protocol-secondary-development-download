@@ -71,11 +71,13 @@ test('an older extraction is told it lacks the battlefield scenes', () => {
   assert.match(localGaps({ enemySpines: false, tokenSpines: false, scenes: false }), /各战场官方场景/);
 });
 
-test('official scene bundles and extracted scenes are not git files; the extractor scripts are', () => {
+test('the extracted scenes are tracked now (the owner\'s 2026-10-14 decision); the extractor scripts ship', () => {
   const gi = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
-  // This fork tracks public/assets/** (a clone runs without a fetch); the extracted official scenes are the one
-  // exception, ignored explicitly so they are never committed.
-  assert.match(gi, /^public\/assets\/local\/scene\/$/m);
+  // This fork tracks public/assets/** so a clone runs without a fetch step. The extracted official scenes used to be
+  // the one exception (never committed, delivered by the extractor); the owner lifted that on 2026-10-14 so the CDN
+  // mirrors (asset-index.json `sources`) can serve them too — otherwise every 3D board's scene bundle 404s there and
+  // falls back to our server.
+  assert.doesNotMatch(gi, /^public\/assets\/local\/scene\/$/m, 'the scene directory is no longer ignored');
   assert.match(gi, /^data\/local-assets\.json$/m);
   assert.match(gi, /^\.cache\/$/m);
   assert.match(gi, /official-scenes/);

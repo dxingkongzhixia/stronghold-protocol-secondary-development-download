@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { SCENE_PREFIX, SCENE_PARTS, SCENE_FILE_PARTS, sceneRouteUrl, scenePartFile } from '../shared/scene.js';
+import { CLIP_PREFIX, CLIP_PARTS, clipUrl, clipFile } from '../shared/clip.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STAGE = 'act2autochess_m04';
@@ -45,10 +46,40 @@ describe('the extension-less scene route (shared/scene.js + server/http/scene.js
       assert.match(meta.headers.get('content-type') || '', /application\/json/);
       const doc = await meta.json();
       assert.ok(doc && doc.version, 'the scene.json parses');
-      // anything else is a 404: an unknown part, a traversal, a missing stage
-      for (const bad of [`/scene/${STAGE}/nope`, `/scene/${STAGE}/..`, '/scene/../etc/passwd', '/scene/nostage/bin']) {
+      // anything else is refused: an unknown part, a missing stage. (A traversal cannot be tested through fetch —
+      // the WHATWG URL parser normalises `..` and even `%2e%2e` away before the request leaves; the handlers check it.)
+      for (const bad of [`/scene/${STAGE}/nope`, '/scene/nostage/bin']) {
         const r = await fetch(`${base}${bad}`);
         assert.ok(r.status === 404 || r.status === 403, `${bad} is refused (got ${r.status})`);
+      }
+    } finally { await srv.close(); }
+  });
+
+  test('the clip route is extension-less, versioned and round-trips', () => {
+    assert.equal(CLIP_PREFIX, '/clip/');
+    assert.equal(clipUrl('boot'), '/clip/boot');
+    assert.equal(clipUrl('boot', 2), '/clip/boot?v=2');
+    assert.ok(!/\.[a-z0-9]+(\?|$)/i.test(clipUrl('boot', 2)), 'no media extension in the path');
+    assert.equal(clipFile('boot'), 'loading/boot.mp4');
+    assert.equal(clipFile('../etc/passwd'), null);
+    assert.deepEqual(Object.keys(CLIP_PARTS), ['boot']);
+  });
+
+  test('a live clip request streams the file and refuses anything else', async (t) => {
+    const clip = path.join(ROOT, 'public', 'assets', ...CLIP_PARTS.boot.split('/'));
+    if (!existsSync(clip)) { t.skip('no boot clip here'); return; }
+    const { startServer } = await import('../server/index.js');
+    const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
+    const base = `http://127.0.0.1:${srv.port}`;
+    try {
+      const r = await fetch(`${base}${clipUrl('boot', 2)}`);
+      assert.equal(r.status, 200, 'the clip is served');
+      assert.match(r.headers.get('content-type') || '', /video\/mp4/);
+      assert.equal(r.headers.get('cache-control'), 'public, max-age=31536000, immutable', 'the ?v= makes it immutable');
+      assert.ok(Number(r.headers.get('content-length')) > 100000, 'a real clip, not an error page');
+      for (const bad of ['/clip/nope', '/clip/boot/extra']) {
+        const bad1 = await fetch(`${base}${bad}`);
+        assert.ok(bad1.status === 404 || bad1.status === 403, `${bad} is refused (got ${bad1.status})`);
       }
     } finally { await srv.close(); }
   });

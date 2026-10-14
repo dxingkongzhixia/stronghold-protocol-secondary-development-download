@@ -11,6 +11,7 @@
 // Pure at import time (no DOM): `collectArtUrls` is unit-testable in Node; only `preloadImages` touches `Image`.
 
 import { t } from '../../shared/i18n.js';
+import { clipUrl } from '../../shared/clip.js';
 
 /**
  * Optional boot background video (a distraction while the first-load preload runs). `null` disables it. Two kinds:
@@ -18,7 +19,9 @@ import { t } from '../../shared/i18n.js';
  *                                                        controls (not seekable, not draggable — pure background)
  *   { kind: 'bilibili', bvid: 'BV…', page: 1 }        — embeds the Bilibili player (needs internet; interactive)
  */
-export const BOOT_VIDEO = { kind: 'file', src: '/assets/loading/boot.mp4?v=2' }; // bump `?v=` when the file changes: it is served immutable for a year
+export const BOOT_VIDEO = { kind: 'file', src: clipUrl('boot', 2) }; // the extension-less /clip/ route (shared/clip.js):
+// download managers hijack a URL ending in .mp4 and a stolen response leaves the boot screen without its clip.
+// Bump the `?v=` when the file changes: the route serves it immutable for a year (server/http/files.js).
 
 const IMG_RE = /\.(png|webp|jpg|jpeg|gif|avif)$/i;
 
