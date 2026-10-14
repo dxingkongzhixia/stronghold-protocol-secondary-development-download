@@ -640,8 +640,10 @@ over:
 | repo | `/srv/sp.git` — a **bare** repository whose `hooks/post-receive` checks the pushed branch out into `/srv/sp` (`git --work-tree=/srv/sp … checkout -f`), so **a push IS the deploy**. `/srv/sp` is that checkout, not a clone: do not `git pull` in it |
 | history | fetched from gitee once (678 MB), so a push from the dev machine carries only the new objects. There is **no cron** — the push is the deploy |
 | deploy | from the dev machine: `node tools/push-assets-relay.mjs` |
-| config | versioned at [`tools/relay/sp-relay.nginx.conf`](../tools/relay/sp-relay.nginx.conf) — copy it to
-  `/etc/nginx/sites-available/sp-relay` and `nginx -t && systemctl reload nginx` |
+| config | versioned at [`tools/relay/sp-relay.nginx.conf`](../tools/relay/sp-relay.nginx.conf) **and installed by the
+  hook**: a push copies it to `/etc/nginx/sites-available/sp-relay` when it differs, runs `nginx -t` and reloads only
+  when nginx accepts it (a rejected config leaves the previous one in place and says so). Editing the live file
+  directly therefore drifts and is lost on the next push — edit the repository copy and push |
 
 **Routes.** nginx answers the same paths the game server does, so any asset URL can be prefixed with the origin:
 
