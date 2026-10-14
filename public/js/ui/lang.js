@@ -159,8 +159,8 @@ function applyDocument(lang) {
   if (!doc) return;
   doc.documentElement.lang = htmlLang(lang);
   doc.documentElement.dataset.lang = lang;
-  doc.documentElement.dataset.script = scriptOf(t('卫戍协议'));
-  doc.title = t('卫戍协议：盟约 · STRONGHOLD PROTOCOL');
+  doc.documentElement.dataset.script = scriptOf(t('我的接口'));
+  doc.title = t('我的接口');
   updateRotateHintPwaI18n(doc);
 }
 
