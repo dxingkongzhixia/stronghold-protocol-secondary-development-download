@@ -260,6 +260,11 @@
 - **合并黑名单条目**：定期并入上游前，先看 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22 / [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)
   的黑名单与「永不合并」清单——我们自造/改写过的文件（含 `acquireItem`、`bondsMeta.js`、`codex*`）在冲突时要保住我们的版本，
   新增的 `codex*` 文件也要进「保留」一侧。
+- **3D 板 IndexedDB 缓存条目按 kind 存**：`render/board3d/load.js` 的 `fetchScene` 对 `json` 存 JSON 编码、对
+  `text` 与缓冲区**原样存**（`idbBodyFor` / `idbValueFrom`）。v1 把 `text` 也 `JSON.stringify` 了，于是门的网格
+  （`map/fx` 的 `Start_*.obj`，棋盘唯一走 text 的资源）第二次进图起就解析不出网格、**红门蓝门消失**（owner 2026-10-14）。
+  改这个编码必须同时把 `assetIdb.js` 的 `IDB_VERSION` +1 并在升级时丢弃 store，否则已缓存的浏览器会一直带着坏数据。
+  详见 [`docs/ASSETS.md`](ASSETS.md)。
 - **官方 3D 板的坑（2026-10-13 一整轮踩出来的，动手前务必先读 §8）**：
   - **场地格和外围地形/石头共用同一个材质** `MT_AutochessSand`（区别只在 chunk 分组：场地是 `hide01/02/03`，外围是 `(rest)`）。
     **任何"按材质"改颜色/贴图的操作都会同时刷到石头、崖壁、帆布上** —— 就是「石头、帆布全被染成沙色」的根因。

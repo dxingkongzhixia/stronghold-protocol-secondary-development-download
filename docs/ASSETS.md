@@ -601,6 +601,16 @@ register — so the HTTPS future keeps the better chain.
   **battlefield scene bundles** (`render/board3d/load.js`). A `blob:` URL cannot carry a Spine atlas (the atlas names
   its pages relatively), so the Spine models stay on the server / the mirror. Priority is the owner's: `main.js` sets
   the gate to `idbSupported() && !assetCacheSupported()` — the worker wins whenever it can register.
+
+  **The stored encoding is part of the contract.** `fetchScene` writes three kinds and they are not interchangeable:
+  `json` is stored as its JSON encoding, while `text` and the buffers go in **verbatim** (`idbBodyFor` / `idbValueFrom`,
+  exported so the rule is pinned by a test). Getting that wrong is not a cache miss but silently corrupt data: v1 ran
+  `JSON.stringify` over `text` too, so the official gate meshes — the `map/fx` `Start_*.obj` files, the only `text`
+  entries the board fetches — came back as a quoted, escaped string, `parseObj` found no mesh, `_buildGates` drew
+  nothing, and the **红门/蓝门 disappeared on every visit after the first** (owner report 2026-10-14; the dev harness
+  never enables this layer, so `render-demo.html` renders the gates fine and only production was hit).
+  **Changing the encoding therefore also means bumping `assetIdb.js` `IDB_VERSION` and dropping the store on upgrade** —
+  a browser that cached the old bytes would otherwise keep the bug forever, since the IDB sits under the app.
 - **Extension-less routes** for the files a download manager (IDM / 迅雷 / FDM) hijacks out of XHR/fetch. The audio has
   had `/media/…` since 0.2.5; the scene bundle and the boot clip joined it:
   **`/scene/<stageId>/{meta,bin}`** (`shared/scene.js` + `server/http/scene.js`) and **`/clip/<name>`**
