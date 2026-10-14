@@ -5,6 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { collectArtUrls, isArtImage, preloadImages, artProgressReporter } from '../../public/js/preload.js';
 
+
+const mirrorUrlFor = (base, path) => `${base}${path.replace(/^\/assets\/~[0-9a-f]{16}/, '/assets')}?h=${/^\/assets\/~([0-9a-f]{16})/.exec(path)?.[1] ?? ''}`;
+
 const M = {
   chars: { a: { avatar: '/assets/char/avatar/a.png', avatarE2: '/assets/char/avatar/a_2.png', portrait: '/assets/char/portrait/a_1.png' } },
   enemies: { e: { icon: '/assets/enemy/e.png', spine: { front: { skel: '/assets/spine/e/e.skel', atlas: '/assets/spine/e/e.atlas' } } } },
@@ -44,6 +47,29 @@ test('preloadImages retries a failed mirrored URL from this server, once', async
     const r = await preloadImages([mirrored], { concurrency: 1 }).promise;
     assert.deepEqual(seen, [mirrored, '/assets/~0123456789abcdef/char/avatar/a.png'], 'mirror first, then this server');
     assert.equal(r.done, 1, 'the image counts as done exactly once');
+  } finally {
+    globalThis.Image = realImage;
+    setMirrorPrefix('');
+  }
+});
+
+test('a SUCCESSFUL preload does not walk the chain (only an error does)', async () => {
+  const { setMirrorPrefix } = await import('../../public/js/assetMirror.js');
+  const BASE = 'https://relay.example';
+  const GH = 'https://gh-proxy.com/x/public';
+  setMirrorPrefix(BASE, true, [BASE, GH]);
+  const seen = [];
+  const realImage = globalThis.Image;
+  globalThis.Image = class {
+    set src(u) { seen.push(u); setTimeout(() => this.onload?.(), 0); }   // every origin succeeds
+    get src() { return seen[seen.length - 1]; }
+  };
+  try {
+    const path = '/assets/~0123456789abcdef/char/avatar/a.png';
+    const r = await preloadImages([mirrorUrlFor(BASE, path)], { concurrency: 1 }).promise;
+    assert.equal(r.done, 1);
+    assert.equal(seen.length, 1, 'one request per image when it loads: no second origin, no cache churn');
+    assert.equal(seen[0], mirrorUrlFor(BASE, path));
   } finally {
     globalThis.Image = realImage;
     setMirrorPrefix('');

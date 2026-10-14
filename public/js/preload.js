@@ -84,12 +84,12 @@ export function preloadImages(urls, { concurrency = 8, onProgress } = {}) {
       const url = list[next++];
       active++;
       const img = new Image();
-      // A failed origin falls through the chain (js/assetMirror.js mirrorCandidates): the relay, then GitHub and its
-      // mirrors, then this server — the same order the <img> fallback uses.
+      // A FAILED origin falls through the chain (js/assetMirror.js mirrorCandidates): the relay, then GitHub and its
+      // mirrors, then this server — the same order the <img> fallback uses. Only an error advances it: hanging the walk
+      // on `load` too re-fetched every image from the next origin (measured 2026-10-14: 686 images came back from
+      // gh-proxy and 340 from this server on a single cold load, and the browser cache never held the warm entry).
       let current = url;
-      const onEnd = () => {
-        const fallback = nextMirrorCandidate(current);
-        if (fallback) { current = fallback; try { img.src = fallback; return; } catch { /* fall through */ } }
+      const finish = () => {
         img.onload = img.onerror = null;
         active--;
         done++;
@@ -97,9 +97,14 @@ export function preloadImages(urls, { concurrency = 8, onProgress } = {}) {
         launch();
         settle();
       };
-      img.onload = onEnd;
-      img.onerror = onEnd;
-      try { img.src = url; } catch { onEnd(); }
+      const onError = () => {
+        const fallback = nextMirrorCandidate(current);
+        if (fallback) { current = fallback; try { img.src = fallback; return; } catch { /* fall through */ } }
+        finish();
+      };
+      img.onload = finish;
+      img.onerror = onError;
+      try { img.src = url; } catch { onError(); }
     }
     settle();
   };
