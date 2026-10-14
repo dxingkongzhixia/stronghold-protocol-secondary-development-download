@@ -39,6 +39,7 @@
     "typecheck": "tsc --noEmit --checkJs -p jsconfig.json",
     "check:imports": "node tools/check-imports.mjs",
     "check:upstream": "node tools/check-upstream.mjs",
+    "check:delivery": "node tools/check-delivery.mjs",
     "push:relay": "node tools/push-assets-relay.mjs",
     "ci": "node tools/ci.mjs",
     "package": "node tools/package.mjs",

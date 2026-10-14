@@ -657,6 +657,19 @@ over:
 | `/scene/<id>/meta` · `/scene/<id>/bin` | `public/assets/local/scene/<id>/scene.json` · `scene.bin` |
 | `/clip/<name>` | `public/assets/loading/<name>.mp4` |
 
+**Verify it, do not assume it.** `node tools/check-delivery.mjs` prints the configured origins, which one answered,
+the chain the client would use per class, and what each origin's route shapes answer; `--live` adds the check that
+matters most — two visits in one browser, where the warm one must come back from the browser cache:
+
+```
+Cold visit   requests  2237  ·  fromCache     1  ·  relay 2237  ·  github 0  ·  this server 0
+Warm visit   requests  2470  ·  fromCache  2240  ·  relay  230  ·  github 0  ·  this server 0
+CACHE-FIRST OK: 90.7% of the warm visit is answered by the browser cache.
+```
+
+(Those 230 are the images the cold visit did not reach — the preload stops at its 60 s deadline — so they are first
+fetches, not cache misses: nothing came from gh-proxy or the game server in either visit.)
+
 **Publishing order (owner, 2026-10-14): the relay first, then gitee / github.** The clients hit the relay first, so it
 has to hold the bytes before the code that asks for them is published:
 
