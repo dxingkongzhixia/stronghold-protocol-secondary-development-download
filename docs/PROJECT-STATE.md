@@ -46,8 +46,8 @@
 |---|---|
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
 | git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
-| 远程同步 | `github/master` == `gitee/master` == HEAD `d5a6412c`（v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复 + 工具与文档，全部已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
-| 全量测试 | `node --test --test-concurrency=2`：**6670 项 / 6655 通过 / 0 失败 / 15 跳过**（约 670 s，台式机 store，2026-10-14 实测；笔记本的数字见 §9） |
+| 远程同步 | `github/master` == `gitee/master` == HEAD `1d86692a`（v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复 + 工具与文档；2026-10-15 追加**按实测速度选源**、中继带宽事件与**中继缓存头口径**，全部已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
+| 全量测试 | `node --test --test-concurrency=2`：**6674 项 / 6659 通过 / 0 失败 / 15 跳过**（约 607 s，台式机 store，2026-10-15 实测；笔记本的数字见 §9） |
 | 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1455/1455（100%）；`doctor` 退出码 0；`eslint` 0 error（148 warning）；`npm run typecheck` / `check:imports` 通过 |
 | 本机环境 | Node **v24.19.0** |
 | 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build） |
@@ -57,11 +57,11 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线 build `eb29e3ee0a28`**（2026-10-14 部署；内容与 HEAD `d5a6412c` 一致 —— v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复，2026-10-14 抽查 `/js/*`、`/shared/clip.js`、`/shared/scene.js`、`/sw.js` 与仓库逐字节相同）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `eb29e3ee0a28`**（2026-10-14 启动时算出、重启前不变；**线上静态树此后又更新过**：2026-10-15 把 `/js/assetMirror.js` 换成「按实测速度选源」的版本，`/sw.js`、`/js/assetCache.js`、`/data/chess.json` 与站点名回退的页面文件一并同步，逐一与仓库 sha 相同，**全程未重启**，所以在飞的房间不受影响）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
-| **资源中转** | **http://123.57.150.185**（阿里云轻量 · 华北2 北京 · 200 Mbps · 流量不限）：nginx 服务 `/srv/sp/public`，裸仓库 `/srv/sp.git` + `post-receive` 钩子（**推即部署**）。发布顺序：**先** `node tools/push-assets-relay.mjs`，**再** gitee/github。资源加载链：中转机 → GitHub 及其镜像 → 游戏服务器兜底。接入与运维见 [`docs/ASSETS.md`](ASSETS.md)「The relay」 |
+| **资源中转** | **http://123.57.150.185**（阿里云轻量 · 华北2 北京 · 200 Mbps · 流量不限）：nginx 服务 `/srv/sp/public`，裸仓库 `/srv/sp.git` + `post-receive` 钩子（**推即部署**）。发布顺序：**先** `node tools/push-assets-relay.mjs`，**再** gitee/github。资源加载链：中转机 → GitHub 及其镜像 → 游戏服务器兜底。**缓存头（2026-10-15）**：带内容哈希的 URL（`~<hash>` 路径、客户端镜像前缀写出的 `?h=`）一年 `immutable`，普通路径与无扩展名路由（`/media`、`/scene`、`/clip`）一周（`map $arg_h`）——常客不再每周重下 135 MB 美术。接入与运维见 [`docs/ASSETS.md`](ASSETS.md)「The relay」 |
 | 管理页 | `/admin?token=<var/admin-token.txt>`（令牌 + 30 天 cookie）；公开只读 `/online/api` |
 | 进程管理 | 宝塔「Node项目」脚本 `/www/server/nodejs/vhost/scripts/server.sh`（`setsid` 启动）；日志 `/www/wwwlogs/nodejs/server.log` |
 | **域名 / 备案（2026-10-14 放弃）** | **owner 决定彻底不办备案**：不用域名（`strongholdprotocolcsym.top` 虽已 ICP 通过 **浙ICP备2026085059号-1**，但不解析、不使用）、不上 HTTPS、页脚的 ICP 号与站点名**已回退**（站点名回到「卫戍协议：盟约」）。域名/证书/HTTPS 的完整步骤保留在下面一行，将来想捡随时能捡。线上仍走 `http://183.66.27.19:20522`（纯 HTTP、本地缓存 + 中继那套，owner 认为已够用） |
@@ -113,6 +113,7 @@
 | `LOBBY_DEFAULTS.bootSlots` / `bootHoldMs` | `1` / `180000` | `server/lobby.js` |
 | `SP_VERIFY` | `sample`（**仅 Windows 启动脚本**） | `server-start.cmd` |
 | 静态缓存 | `/assets\|fonts\|vendor` 7 天；带 `?v=` 1 年 immutable | `server/index.js` |
+| 中继静态缓存 | 同游戏机口径：带内容哈希的 URL（`~<hash>` 路径 / `?h=` 查询）1 年 `immutable`，普通路径与 `/media`、`/scene`、`/clip` 路由 7 天（随推送由 relay 的 hook 安装并 `nginx -t`） | `tools/relay/sp-relay.nginx.conf` |
 | `SP_ASSET_RATE_KBPS` | `1200`（服务器兜底素材下载限速 ≈1.2 MB/s；0 关闭） | `server/http/files.js` |
 | `SP_ASSET_REF` | `master`（CDN 镜像钉的 git ref；**空串关闭镜像层**——代码用 `??` 取值，空串不会被默认值顶掉） | `server/assetindex.js` |
 | `SP_ASSET_RELAY` | 未设（未设时取 `public/asset-mirrors.json` 的第一个源，再退回常量 `http://123.57.150.185`）——客户端**素材链的第一源**，也由 `/asset-index.json` 的 `sources` 交给 Service Worker | `server/assetindex.js` |
