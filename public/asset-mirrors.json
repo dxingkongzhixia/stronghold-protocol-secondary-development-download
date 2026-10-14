@@ -3,6 +3,5 @@
   "sources": [
     "https://gh-proxy.com/https://raw.githubusercontent.com/dxingkongzhixia/stronghold-protocol-secondary-development-download/master/public",
     "https://cdn.jsdelivr.net/gh/dxingkongzhixia/stronghold-protocol-secondary-development-download@master/public"
-  ],
-  "probe": "/assets/loading/boot.mp4"
+  ]
 }

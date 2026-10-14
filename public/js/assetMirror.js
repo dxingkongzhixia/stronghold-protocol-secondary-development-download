@@ -83,7 +83,7 @@ export function setMirrorPrefix(base) { prefix = typeof base === 'string' ? base
  */
 export async function initAssetMirror({
   fetchFn = globalThis.fetch, hostname = globalThis.location?.hostname, timeoutMs = PROBE_TIMEOUT_MS,
-  mirrorsUrl = MIRRORS_URL, path = '/js/assetMirror.js',
+  mirrorsUrl = MIRRORS_URL, path = MIRRORS_URL,
 } = {}) {
   setMirrorPrefix('');
   if (!fetchFn || DEV_HOSTS.includes(hostname)) return '';
