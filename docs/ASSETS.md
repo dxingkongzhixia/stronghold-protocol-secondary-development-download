@@ -697,6 +697,27 @@ CACHE-FIRST OK: 90.7% of the warm visit is answered by the browser cache.
 (Those 230 are the images the cold visit did not reach — the preload stops at its 60 s deadline — so they are first
 fetches, not cache misses: nothing came from gh-proxy or the game server in either visit.)
 
+**When the relay suddenly slows down (the 2026-10-15 incident).** Its real egress collapsed to ~1 Mbps (0.05–0.4 MB/s
+single, 0.42 MB/s at 4-way) while the plan advertises **200 Mbps** — the 轻量 console read "峰值公网带宽 1.03 Mbps /
+200 Mbps". The site stayed usable with **no deploy**: `js/assetMirror.js` measures the origins, the relay missed its
+1.2 MB/s bar, and the manifest URLs moved to the **game box** (3–4× faster than the throttled relay). Aliyun's support
+lifted the instance's restriction the same day, and the same rule picked the relay back up (measured 2026-10-15:
+**7.1 MB/s sustained on a 2.1 MB file, 21.7 MB/s at 8-way** — ~18× the box).
+
+What to check next time, in order:
+
+1. **Measure from a domestic vantage** (the Hangzhou ECS is fine): fetch the same committed file from both origins — for
+   example 8 parallel of `/assets/local/scene/act1autochess_m01/scene.bin` (~2.1 MB) — and compare the aggregate MB/s.
+   A single small file only measures round-trip latency (that mistake made the fixed relay look slow: one 112 KB sample
+   read 0.42 MB/s while six in parallel read 1.9 MB/s).
+2. **轻量 console → 流量使用情况 / 带宽 / 监控**: is the monthly traffic package exhausted? Is the bandwidth **峰值
+   (peak / burst)** or **固定 (fixed)**? A throttled instance shows a **flat line** in the bandwidth chart.
+3. **It is not the DDoS page.** 流量安全's 清洗阈值 is 200 Mbps / 200k pps — a few Mbps of normal traffic never triggers
+   scrubbing, and a blackhole makes the IP **unreachable**, not slow. (Recorded because that page was the first suspect.)
+4. **Nothing else to do.** The client re-measures on every load (a reading is reused for `SPEED_CACHE_MS`, 2 min) and
+   walks the chain on errors, so a source whose quality changes needs **no code change and no restart** — this incident
+   is exactly what the speed rule was added for ([`docs/MATCHMAKING.md`](MATCHMAKING.md) §44).
+
 **Publishing order (owner, 2026-10-14): the relay first, then gitee / github.** The clients hit the relay first, so it
 has to hold the bytes before the code that asks for them is published:
 
