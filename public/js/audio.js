@@ -75,6 +75,7 @@
 import { sanitizeVoiceOverrides, voiceLangFor } from './voicePrefs.js';
 import { PHASE } from '../../shared/constants.js';
 import { mediaUrl } from './media.js';
+import { idbEnabled, idbGet, idbPut } from './assetIdb.js';
 import { unhashedUrl } from '../../shared/assetPaths.js';
 
 const MAX_VOICES = 8;
@@ -766,16 +767,26 @@ export class AudioManager {
     }
     const p = (async () => {
       try {
-        // Extension-less URL first so download managers leave the BGM alone; a host without /media/ still works.
-        const media = mediaUrl(url);
-        let res = await fetch(media);
-        if (media !== url && !isAudioResponse(res)) {
-          // Drop the unusable response (404, or a 200 that is really index.html) before trying the original URL.
-          try { await res.body?.cancel?.(); } catch { /* the fallback request matters more than draining this one */ }
-          res = await fetch(url);
+        // The IndexedDB layer (js/assetIdb.js) answers from a local blob when the Service Worker cannot register (a
+        // plain-HTTP site): a repeated track never touches the network, and a download manager never sees it. A miss
+        // falls through to the normal request, and a success is stored for next time (best-effort: never fatal).
+        let ab = null;
+        if (idbEnabled()) {
+          try { const cachedBlob = await idbGet(url); if (cachedBlob) ab = await cachedBlob.arrayBuffer(); } catch { /* fall through */ }
         }
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const ab = await res.arrayBuffer();
+        if (!ab) {
+          // Extension-less URL first so download managers leave the BGM alone; a host without /media/ still works.
+          const media = mediaUrl(url);
+          let res = await fetch(media);
+          if (media !== url && !isAudioResponse(res)) {
+            // Drop the unusable response (404, or a 200 that is really index.html) before trying the original URL.
+            try { await res.body?.cancel?.(); } catch { /* the fallback request matters more than draining this one */ }
+            res = await fetch(url);
+          }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          ab = await res.arrayBuffer();
+          if (idbEnabled()) { try { await idbPut(url, new Blob([ab])); } catch { /* quota / private mode */ } }
+        }
         return await new Promise((resolve) => {
           try {
             const r = this.ctx.decodeAudioData(ab, resolve, () => resolve(null));

@@ -15,6 +15,7 @@
 
 import { resolveUvTable } from './atlas.js';
 import { parseObj } from './obj.js';
+import { idbEnabled, idbGet, idbPut } from '../../assetIdb.js';
 
 export const THREE_URL = '/vendor/three.module.js';
 
@@ -95,12 +96,38 @@ export async function boardArtListed(assets) {
   return typeof u === 'string' && u.length > 0;
 }
 
-async function fetchText(url) {
-  try { const r = await fetch(url, { cache: 'no-cache' }); return r.ok ? await r.text() : null; } catch { return null; }
+/**
+ * The IndexedDB layer (js/assetIdb.js) covers the scene bundles on a plain-HTTP site, where the Service Worker cannot
+ * register. A `blob:` URL is fine for these files: the loader asks for each one by its own URL (`scene.json`,
+ * `scene.bin`), nothing is resolved relative to it. A miss falls through to the network, a success is stored.
+ * `kind` picks the decode: 'text' | 'json' | 'arrayBuffer'.
+ */
+async function fetchScene(url, kind) {
+  if (idbEnabled()) {
+    try {
+      const blob = await idbGet(url);
+      if (blob) {
+        if (kind === 'arrayBuffer') return await blob.arrayBuffer();
+        const text = await blob.text();
+        return kind === 'json' ? JSON.parse(text) : text;
+      }
+    } catch { /* a broken cached entry must not break the load */ }
+  }
+  let out = null;
+  try {
+    const r = await fetch(url, { cache: 'no-cache' });
+    if (r && r.ok) out = kind === 'arrayBuffer' ? await r.arrayBuffer() : (kind === 'json' ? await r.json() : await r.text());
+  } catch { out = null; }
+  if (out != null && idbEnabled()) {
+    try {
+      const body = kind === 'arrayBuffer' ? out : JSON.stringify(out);
+      await idbPut(url, new Blob([body], { type: kind === 'json' ? 'application/json' : undefined }));
+    } catch { /* quota / private mode */ }
+  }
+  return out ?? null;
 }
-async function fetchJson(url) {
-  try { const r = await fetch(url, { cache: 'no-cache' }); return r.ok ? await r.json() : null; } catch { return null; }
-}
+async function fetchText(url) { return fetchScene(url, 'text'); }
+async function fetchJson(url) { return fetchScene(url, 'json'); }
 
 /**
  * Load the board pack through the asset store of public/js/assets.js (needs local(), localUrl(), image()).
@@ -360,9 +387,7 @@ export function sceneGroupRects(chunks) {
   return out;
 }
 
-async function fetchBuffer(url) {
-  try { const r = await fetch(url, { cache: 'no-cache' }); return r.ok ? await r.arrayBuffer() : null; } catch { return null; }
-}
+async function fetchBuffer(url) { return fetchScene(url, 'arrayBuffer'); }
 
 const sceneCache = new Map();
 
