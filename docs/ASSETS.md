@@ -640,8 +640,9 @@ register — so the HTTPS future keeps the better chain.
   (`MIRROR_MIN_BPS`), otherwise the manifest URLs are left on this server. A fresh reading is reused for
   `SPEED_CACHE_MS` (2 min; `cacheMs: 0` re-measures every call), and the whole list stays as the per-file error
   fallback. This is what demoted the relay when the owner's box measured ~0.05–0.4 MB/s (its plan's real egress, far
-  under the advertised 200 Mbps); after Aliyun raised it (2026-10-15: 0.42 MB/s single, **1.9 MB/s at 4-way** — the
-  fastest origin again) the same rule picks it back up with no code change.
+  under the advertised 200 Mbps); after Aliyun lifted the instance's restriction (2026-10-15: **7.1 MB/s sustained on a
+  2.1 MB file, 21.7 MB/s at 8-way** — ~18× the game box's 1.18 MB/s at the same width) the same rule picks it back up
+  with no code change.
 
   > ⚠️ **An HTTPS site needs an HTTPS relay.** A page served over HTTPS may not fetch `http://…` subresources (the
   > browser blocks them as **mixed content**, silently), so on the filed domain `strongholdprotocolcsym.top` the chain's

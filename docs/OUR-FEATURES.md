@@ -617,9 +617,9 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
   source that clears its bar — the owner's relay **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **1.0 MB/s**
   (`MIRROR_MIN_BPS`) — otherwise the URLs stay on this server. A fresh reading is reused for `SPEED_CACHE_MS` (2 min,
   `cacheMs: 0` re-measures every call), and the whole list stays as the per-file error fallback. Measured 2026-10-15
-  (domestic vantage): the relay's egress was ~0.05–0.4 MB/s before Aliyun fixed its bandwidth and **1.9 MB/s at 4-way
-  after** — the fastest origin again, picked up by the same rule with no code change; the game box does ~1.05 MB/s at
-  4-way and its `immutable, max-age=31536000` headers make a return visit free.
+  (domestic vantage): the relay's egress was ~0.05-0.4 MB/s before Aliyun lifted the restriction, then **7.1 MB/s
+  sustained / 21.7 MB/s at 8-way** - ~18x the game box's 1.18 MB/s at the same width, so the same rule picks it back
+  up with no code change; the box's `immutable, max-age=31536000` headers still make a return visit free.
 - **Server fallback is paced**: a server fetch is the last resort and is throttled so a bulk pre-cache never starves
   live matches — a process-wide token bucket on `public/assets|fonts|vendor` bodies (`server/http/files.js`
   `RateLimiter`), default **1.2 MB/s**, `SP_ASSET_RATE_KBPS` overrides (0 disables). Non-art paths are never paced.
