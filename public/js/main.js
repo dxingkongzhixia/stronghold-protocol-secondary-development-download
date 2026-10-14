@@ -633,6 +633,13 @@ async function preloadArt() {
 }
 
 async function boot() {
+  // Pick the art origin FIRST (js/assetMirror.js). Everything below resolves against it — the art manifests are
+  // rewritten when they are fetched, the boot video's <video> takes its src here, and a prefix that arrives later
+  // cannot rewrite what is already cached or already loading (measured 2026-10-14: the manifests came down 40 ms
+  // before the probe answered, and later the boot clip had already taken this server's URL).
+  await ensureAssetMirror();
+  // A mirrored <img> that fails falls back to this server once, whatever component rendered it.
+  installImageFallback();
   // A stale served index.html may lack the manifest <link> (the stats.css lesson), which hides the title's
   // 添加到桌面 button; re-link it before the first render (ui/ensureManifest.js).
   ensureManifestLink('/manifest.json');
@@ -670,12 +677,6 @@ async function boot() {
   net.attachBrowserHooks();
   // Audio: unlock on first gesture, BGM follows the route / match phase (js/audio.js).
   installAudio({ getManifest: () => data.get('assets'), subscribe: store.subscribe, getState: store.get, selectRoute, settings: settingsStore.get() });
-  // Pick the CDN mirror BEFORE any art manifest is fetched (js/assetMirror.js): the rewrite happens at load time, so a
-  // prefix installed later would arrive after the manifests are already cached and change nothing. The image fallback
-  // keeps the mirror best-effort — a mirrored <img> that fails retries this server once.
-  await ensureAssetMirror();
-  installImageFallback();
-  data.load('assets').catch(() => {});
   // Warm the data cache in the background (missing files are tolerated).
   data.loadAll('config').catch(() => {});
   // Optional local-client art manifest (emotes, tutorial pages, official UI sprites; DESIGN §13).
