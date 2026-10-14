@@ -1,5 +1,6 @@
 // server/http/scene.js — the extension-less battlefield-scene route /scene/<stageId>/<part> →
 // `public/assets/local/scene/<stageId>/scene.{json,bin}`.
+// (i18n-ignore-file: the error pages are bilingual by design, 中文 · English — docs/I18N.md)
 //
 // Clients ask for the scene bundle through this path because download managers (IDM, 迅雷, FDM …) hijack XHR/fetch
 // whose URL ends in a downloadable extension — `scene.bin` is `application/octet-stream`, and a stolen response leaves

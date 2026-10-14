@@ -1,4 +1,5 @@
 // server/http/clip.js — the extension-less clip route /clip/<name> → a file under `public/assets/` (shared/clip.js).
+// (i18n-ignore-file: the error pages are bilingual by design, 中文 · English — docs/I18N.md)
 //
 // Clients ask for the boot clip through this path because download managers (IDM, 迅雷, FDM …) hijack XHR/fetch whose
 // URL ends in a media extension; a stolen response leaves the boot screen without its background video. The same trick
