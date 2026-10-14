@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import {
   isMirrorable, mirrorUrl, rewriteAssetPaths, mirrorPrefix, setMirrorPrefix, DEV_HOSTS, MIRRORS_URL,
   unmirrorUrl, installImageFallback, mirrorRouteUrl, mirrorIsFull, mirrorCandidates, nextMirrorCandidate,
+  rateOf, pickMirror, initAssetMirror, RELAY_MIN_BPS, MIRROR_MIN_BPS, SPEED_SAMPLE_PATH,
 } from '../public/js/assetMirror.js';
 
 const BASE = 'https://cdn.example/gh/o/r@master/public';
@@ -152,5 +153,87 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     assert.equal(mirrorPrefix(), BASE);
     setMirrorPrefix('');
     assert.ok(DEV_HOSTS.includes('localhost') && DEV_HOSTS.includes('127.0.0.1'));
+  });
+});
+
+describe('asset mirror: the origin is picked by MEASURED throughput', () => {
+  const RELAY = 'http://relay.test';
+  const GH = 'https://gh.test';
+
+  test('rateOf: bytes per second; 0 when nothing arrived', () => {
+    assert.equal(rateOf(1000, 1000), 1000);
+    assert.equal(rateOf(2 * 1024 * 1024, 1000), 2 * 1024 * 1024);
+    assert.equal(rateOf(0, 500), 0);
+    assert.equal(rateOf(500, 0), 0);
+  });
+
+  test('pickMirror: the FIRST candidate that clears its own bar wins (relay 1.2 MB/s, mirror 1.0 MB/s)', () => {
+    const relay = { base: RELAY, full: true };
+    const gh = { base: GH, full: false };
+    assert.equal(RELAY_MIN_BPS, 1.2 * 1024 * 1024, 'the relay bar is 1.2 MB/s');
+    assert.equal(MIRROR_MIN_BPS, 1.0 * 1024 * 1024, 'a mirror bar is 1.0 MB/s');
+    // a relay that clears 1.2 MB/s keeps its first place even when a mirror is faster
+    assert.equal(pickMirror([{ ...relay, bps: 1.5 * 1024 * 1024 }, { ...gh, bps: 9 * 1024 * 1024 }]), RELAY);
+    // a SLOW relay (below 1.2 MB/s — what the owner's box measures) hands over to the GitHub mirror
+    assert.equal(pickMirror([{ ...relay, bps: 0.4 * 1024 * 1024 }, { ...gh, bps: 2 * 1024 * 1024 }]), GH);
+    // a mirror below 1 MB/s is not used either → the chain keeps this server
+    assert.equal(pickMirror([{ ...relay, bps: 100 * 1024 }, { ...gh, bps: 0.9 * 1024 * 1024 }]), '');
+    // nothing measurable → this server
+    assert.equal(pickMirror([{ ...relay, bps: 0 }, { ...gh, bps: 0 }]), '');
+    assert.equal(pickMirror([]), '');
+    assert.equal(pickMirror(null), '');
+  });
+
+  test('initAssetMirror: times every origin on the sample and installs the first one over its bar', async () => {
+    const cfg = { sources: [RELAY, GH], fullSources: [RELAY] };
+    const calls = [];
+    const fetchFn = async (url) => {
+      calls.push(url);
+      if (url.endsWith(MIRRORS_URL)) return { ok: true, json: async () => cfg };
+      const slow = url.startsWith(RELAY);                    // the relay crawls, gh-proxy is fast
+      await new Promise((r) => setTimeout(r, slow ? 40 : 0));
+      return { ok: true, body: null, arrayBuffer: async () => new ArrayBuffer(slow ? 8 * 1024 : 400 * 1024) };
+    };
+    const chosen = await initAssetMirror({ fetchFn, hostname: 'game.test' });
+    assert.equal(chosen, GH, 'the slow relay is skipped for the fast mirror');
+    assert.equal(mirrorPrefix(), GH);
+    assert.ok(calls.some((u) => u.startsWith(RELAY + SPEED_SAMPLE_PATH)), 'the relay was measured on the sample');
+    assert.ok(calls.some((u) => u.startsWith(GH + SPEED_SAMPLE_PATH)), 'and so was the mirror');
+    setMirrorPrefix('');
+  });
+
+  test('initAssetMirror: every origin below its bar leaves the chain on this server', async () => {
+    const cfg = { sources: [RELAY, GH], fullSources: [RELAY] };
+    const fetchFn = async (url) => {
+      if (url.endsWith(MIRRORS_URL)) return { ok: true, json: async () => cfg };
+      await new Promise((r) => setTimeout(r, 40));
+      return { ok: true, body: null, arrayBuffer: async () => new ArrayBuffer(4 * 1024) };
+    };
+    const chosen = await initAssetMirror({ fetchFn, hostname: 'game.test' });
+    assert.equal(chosen, '', 'no origin clears its bar');
+    assert.equal(mirrorPrefix(), '');
+  });
+
+  test('initAssetMirror: a fresh measurement is reused, so a warm visit does not re-probe', async () => {
+    const saved = globalThis.localStorage;
+    const store = new Map();
+    globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) };
+    try {
+      const cfg = { sources: [RELAY, GH], fullSources: [RELAY] };
+      let samples = 0;
+      const fetchFn = async (url) => {
+        if (url.endsWith(MIRRORS_URL)) return { ok: true, json: async () => cfg };
+        samples++;
+        return { ok: true, body: null, arrayBuffer: async () => new ArrayBuffer(400 * 1024) };
+      };
+      await initAssetMirror({ fetchFn, hostname: 'game.test' });
+      const first = samples;
+      assert.ok(first >= 2, 'the cold call measures both origins');
+      await initAssetMirror({ fetchFn, hostname: 'game.test' });
+      assert.equal(samples, first, 'the warm call re-probes nothing');
+      setMirrorPrefix('');
+    } finally {
+      if (saved === undefined) delete globalThis.localStorage; else globalThis.localStorage = saved;
+    }
   });
 });

@@ -116,6 +116,7 @@
 | `SP_ASSET_RATE_KBPS` | `1200`（服务器兜底素材下载限速 ≈1.2 MB/s；0 关闭） | `server/http/files.js` |
 | `SP_ASSET_REF` | `master`（CDN 镜像钉的 git ref；**空串关闭镜像层**——代码用 `??` 取值，空串不会被默认值顶掉） | `server/assetindex.js` |
 | `SP_ASSET_RELAY` | 未设（未设时取 `public/asset-mirrors.json` 的第一个源，再退回常量 `http://123.57.150.185`）——客户端**素材链的第一源**，也由 `/asset-index.json` 的 `sources` 交给 Service Worker | `server/assetindex.js` |
+| `RELAY_MIN_BPS` / `MIRROR_MIN_BPS` | `1.2 MB/s` / `1.0 MB/s`（**按实测速度选源**：中继不达标就让位给 GitHub 镜像，镜像也不达标就回落游戏服务器；`SPEED_CACHE_MS` = 30 分钟内复用上次测量） | `public/js/assetMirror.js` |
 
 ## 7. 常用命令
 

@@ -1,12 +1,10 @@
 // public/js/assetMirror.js — the CDN-mirror prefix for the art manifests (docs/OUR-FEATURES.md §4).
 //
-// Why: the box's uplink is small and a cold load preloads ~104 MB of art. `/asset-index.json` already hands the local
-// asset cache two CDN mirrors (gh-proxy, jsDelivr) that are tried before this server — but that path only runs inside
-// the pre-cache, which needs a Service Worker (HTTPS). This module lets the *normal* loading use the mirrors too, by
-// prefixing the manifest's image URLs. A path prefix keeps every relative relationship intact (a Spine atlas and its
-// pages, a scene and its bundle), which a `blob:` URL would break — that is why the flat, fetch-only files (audio, the
-// scene bundles) go through the IndexedDB layer instead, and why the Spine models are left to the mirror or the
-// server.
+// Why: the box's uplink is small and a cold load preloads ~135 MB of art (`collectArtUrls(manifest, 'all')`). This
+// module picks the origin those URLs are rewritten to (a path prefix, so a Spine atlas and its pages, or a scene and its
+// bundle, stay together — a `blob:` URL would break them) and keeps the rest of the chain behind it. Since 2026-10-15
+// the choice is by **measured throughput**, not by "who answers first": the owner's relay is kept only while it clears
+// 1.2 MB/s, otherwise a GitHub mirror gets its turn (1.0 MB/s bar), and when nobody does the page stays on this server.
 //
 // Only images are rewritten here:
 //   * the audio goes through the server's extension-less `/media/` route on purpose (download managers hook media
@@ -28,6 +26,82 @@ export const ROUTE_RE = /^\/(?:media|scene|clip)\//;
 export const DEV_HOSTS = Object.freeze(['localhost', '127.0.0.1', '::1', '']);
 /** One probe per mirror: a HEAD is enough and the mirrors answer CORS. */
 export const PROBE_TIMEOUT_MS = 4000;
+
+/** The sample every origin is timed on: a committed asset (~110 KB) with a stable official name. */
+export const SPEED_SAMPLE_PATH = '/assets/char/portrait/char_003_kalts_1.png';
+/** A FULL origin (the owner's relay: files + the /media,/scene,/clip routes) must clear this to stay first. */
+export const RELAY_MIN_BPS = 1.2 * 1024 * 1024; // 1.2 MB/s
+/** A plain-file mirror (gh-proxy / jsDelivr) must clear this to be used at all. */
+export const MIRROR_MIN_BPS = 1.0 * 1024 * 1024; // 1.0 MB/s
+/** Per-candidate probe budget, and the byte cap that ends a fast one early (a full measure would waste bandwidth). */
+export const SPEED_TIMEOUT_MS = 800;
+export const SPEED_BYTE_CAP = 400 * 1024;
+/** How long a measurement is reused, so a warm visit does not re-probe (localStorage). */
+export const SPEED_CACHE_MS = 30 * 60 * 1000;
+const SPEED_PREF = 'sp.mirror.speed';
+
+/** Pure: the rate of a timed download in bytes per second (0 when nothing arrived). */
+export const rateOf = (bytes, ms) => (bytes > 0 && ms > 0 ? (bytes * 1000) / ms : 0);
+
+/**
+ * Pure: the origin to install, from the candidates in configured order with their measured rate. The **first** one that
+ * clears its own bar wins — a full origin (the relay) `relayMin`, a plain-file mirror `mirrorMin`; when none does, the
+ * chain keeps the game server (''). Order matters: the relay is only kept while it is actually fast enough, otherwise
+ * the GitHub mirrors get their turn, and their failure falls through to this server.
+ * @param {{ base: string, full?: boolean, bps: number }[]} measured
+ * @param {{ relayMin?: number, mirrorMin?: number }} [o]
+ * @returns {string}
+ */
+export function pickMirror(measured, { relayMin = RELAY_MIN_BPS, mirrorMin = MIRROR_MIN_BPS } = {}) {
+  for (const m of Array.isArray(measured) ? measured : []) {
+    if (!m || typeof m.base !== 'string' || !m.base) continue;
+    if (m.bps >= (m.full ? relayMin : mirrorMin)) return m.base;
+  }
+  return '';
+}
+
+/** Time one origin on the sample: bytes received within the budget (a partial read is enough to judge). */
+async function measureSource(base, fetchFn, samplePath, budgetMs) {
+  const t0 = Date.now();
+  let timer = null;
+  try {
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    timer = ctrl && budgetMs > 0 ? setTimeout(() => ctrl.abort(), budgetMs + 500) : null;
+    const res = await fetchFn(base + samplePath, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
+    if (!res || !res.ok) return 0;
+    let bytes = 0;
+    const reader = res.body && typeof res.body.getReader === 'function' ? res.body.getReader() : null;
+    if (reader) {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        bytes += value && value.byteLength ? value.byteLength : 0;
+        if (bytes >= SPEED_BYTE_CAP || Date.now() - t0 >= budgetMs) break;
+      }
+      try { await reader.cancel(); } catch { /* ignore */ }
+    } else {
+      bytes = (await res.arrayBuffer()).byteLength;
+    }
+    return rateOf(bytes, Date.now() - t0);
+  } catch { return 0; } finally { if (timer) clearTimeout(timer); }
+}
+
+/** The cached measurement of a previous visit (same origin list, still fresh), or null. */
+function readSpeedCache(list) {
+  try {
+    const raw = globalThis.localStorage?.getItem(SPEED_PREF);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (!c || !Array.isArray(c.list) || !Array.isArray(c.measured)) return null;
+    if (c.list.join('|') !== list.join('|')) return null;
+    if (!(Date.now() - (c.at || 0) < SPEED_CACHE_MS)) return null;
+    return c.measured;
+  } catch { return null; }
+}
+
+function writeSpeedCache(list, measured) {
+  try { globalThis.localStorage?.setItem(SPEED_PREF, JSON.stringify({ at: Date.now(), list, measured })); } catch { /* private mode */ }
+}
 
 let prefix = '';
 /** Does the installed prefix reimplement the game's extension-less routes (/media, /scene, /clip) beside the files? */
@@ -191,37 +265,40 @@ export function installImageFallback({ doc = globalThis.document } = {}) {
 }
 
 /**
- * Pick the first mirror that answers and install it as the prefix, keeping the whole list for the fallback chain.
- * Never throws: any failure leaves the prefix empty (the page keeps using this server).
- * @param {{ fetchFn?: typeof fetch, hostname?: string, timeoutMs?: number, mirrorsUrl?: string, path?: string }} [o]
+ * Pick the origin the manifest URLs are rewritten to, by **measured throughput** instead of "who answers first": every
+ * candidate is timed in parallel on one committed sample, and the first one clearing its bar wins — a FULL origin (the
+ * relay) 1.2 MB/s, a plain-file mirror (gh-proxy / jsDelivr) 1.0 MB/s; when none clears its bar the page keeps using
+ * this server. The measurement is cached for `SPEED_CACHE_MS` so a warm visit never re-probes, and the whole configured
+ * list stays available for the per-file error fallback. Never throws: any failure leaves the prefix empty.
+ * @param {{ fetchFn?: typeof fetch, hostname?: string, timeoutMs?: number, mirrorsUrl?: string,
+ *           samplePath?: string, speedMs?: number }} [o]
  * @returns {Promise<string>} the installed prefix ('' when none)
  */
 export async function initAssetMirror({
   fetchFn = globalThis.fetch, hostname = globalThis.location?.hostname, timeoutMs = PROBE_TIMEOUT_MS,
-  mirrorsUrl = MIRRORS_URL, path = MIRRORS_URL,
+  mirrorsUrl = MIRRORS_URL, samplePath = SPEED_SAMPLE_PATH, speedMs = SPEED_TIMEOUT_MS,
 } = {}) {
   setMirrorPrefix('');
   sources = [];
   if (!fetchFn || DEV_HOSTS.includes(hostname)) return '';
+  const budget = speedMs > 0 ? Math.min(speedMs, timeoutMs > 0 ? timeoutMs : speedMs) : SPEED_TIMEOUT_MS;
   try {
     const res = await fetchFn(mirrorsUrl, { cache: 'no-cache' });
     if (!res || !res.ok) return '';
     const cfg = await res.json();
     const list = cfg && Array.isArray(cfg.sources) ? cfg.sources.filter((s) => typeof s === 'string' && s) : [];
+    if (!list.length) return '';
     const full = new Set(cfg && Array.isArray(cfg.fullSources) ? cfg.fullSources : []);
-    for (const base of list) {
-      try {
-        const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-        const timer = ctrl && timeoutMs > 0 ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
-        const probe = await fetchFn(mirrorUrl(base, path), { cache: 'no-cache', signal: ctrl ? ctrl.signal : undefined });
-        if (timer) clearTimeout(timer);
-        if (probe && probe.ok) {
-          sources = list;                      // the whole chain, for the per-file fallback
-          setMirrorPrefix(base, full.has(base));
-          return base;
-        }
-      } catch { /* blocked / slow: the next source */ }
+    let measured = readSpeedCache(list);
+    if (!measured) {
+      const rates = await Promise.all(list.map((base) => measureSource(base, fetchFn, samplePath, budget)));
+      measured = list.map((base, i) => ({ base, full: full.has(base), bps: rates[i] }));
+      writeSpeedCache(list, measured);
     }
+    sources = list;                                   // the whole chain, for the per-file fallback
+    const chosen = pickMirror(measured);
+    if (chosen) setMirrorPrefix(chosen, full.has(chosen));
+    return chosen || '';
   } catch { /* no config / bad JSON: keep the server */ }
   return '';
 }
