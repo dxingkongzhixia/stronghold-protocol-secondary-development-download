@@ -17,14 +17,14 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     assert.equal(MIRRORS_URL, '/asset-mirrors.json');
   });
 
-  test('images and plain-file assets under /assets/ are mirrorable (the audio and the routes are not)', () => {
+  test('only images under /assets/ are mirrorable (the audio and the routes are not)', () => {
     assert.ok(isMirrorable('/assets/char/avatar/x.png'));
     assert.ok(isMirrorable('/assets/~0123456789abcdef/ui/a.webp'));
-    // a Spine skeleton/atlas is a plain file every mirror holds, so it rides along with the images (Part B); the
-    // audio keeps its extension-less route, and a query / anything outside /assets/ stays put
+    // the audio's extension-less route, a Spine skeleton/atlas (a mirrored URL's ?h= breaks `validSpine`), a
+    // query string and anything outside /assets/ all stay put
     assert.ok(!isMirrorable('/media/~0123456789abcdef/bgm/act1'));
-    assert.ok(isMirrorable('/assets/spine/op/x.skel'));
-    assert.ok(isMirrorable('/assets/spine/op/x.atlas'));
+    assert.ok(!isMirrorable('/assets/spine/op/x.skel'));
+    assert.ok(!isMirrorable('/assets/spine/op/x.atlas'));
     assert.ok(!isMirrorable('/assets/loading/boot.mp4?v=2'));
     assert.ok(!isMirrorable('/fonts/a.woff2'));
     assert.ok(!isMirrorable('/data/assets.json'));
@@ -49,8 +49,8 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     assert.equal(out.avatars.a, `${BASE}/assets/char/avatar/a.png?h=0123456789abcdef`);
     assert.equal(out.avatars.b, `${BASE}/assets/char/avatar/b.webp`);
     assert.deepEqual(out.audio, ['/assets/audio/bgm/act1.mp3']);
-    assert.equal(out.spine.s.skel, `${BASE}/assets/spine/op/s.skel`, 'a Spine skeleton rides along with the images');
-    assert.equal(out.spine.s.atlas, `${BASE}/assets/spine/op/s.atlas`);
+    assert.equal(out.spine.s.skel, '/assets/spine/op/s.skel', 'a Spine skeleton stays root-relative for validSpine');
+    assert.equal(out.spine.s.atlas, '/assets/spine/op/s.atlas');
     assert.equal(out.deep[0].img, `${BASE}/assets/ui/x.png?h=aaaaaaaaaaaaaaaa`);
     assert.equal(out.label, '叙拉古');
     assert.equal(out.n, 3);
@@ -111,11 +111,14 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     assert.equal(mirrorRouteUrl('/media/x'), '/media/x');
   });
 
-  test('plain-file assets a mirror holds are mirrorable; the audio stays on its extension-less route', () => {
-    assert.ok(isMirrorable('/assets/spine/op/x/front/x.skel'), 'a Spine skeleton is a plain file');
-    assert.ok(isMirrorable('/assets/spine/op/x/front/x.atlas'));
+  test('images only: the Spine skeleton/atlas and the audio stay on this server', () => {
+    // a mirrored `.skel` carries a ?h= query and `validSpine` (assets.js) then rejects the entry, so every unit
+    // fell back to its placeholder diamond — the image-only rule is deliberate.
+    assert.ok(!isMirrorable('/assets/spine/op/x/front/x.skel'));
+    assert.ok(!isMirrorable('/assets/spine/op/x/front/x.atlas'));
     assert.ok(!isMirrorable('/assets/audio/bgm/x.mp3'), 'the audio keeps /media (a download manager must not sniff it)');
     assert.ok(!isMirrorable('/assets/local/scene/x/scene.bin'), 'the scene bundle keeps /scene');
+    assert.ok(isMirrorable('/assets/spine/op/x/front/x.png'), 'its PAGES are images, so those are mirrored');
   });
 
   test('the prefix defaults to this server, and a dev origin is on the never-mirror list', () => {

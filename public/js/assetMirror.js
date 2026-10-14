@@ -22,8 +22,6 @@ import { splitHashedPath } from '../../shared/assetPaths.js';
 export const MIRRORS_URL = '/asset-mirrors.json';
 /** Image extensions the mirror may serve (the same rule `preload.js` preloads). */
 export const IMG_RE = /\.(png|webp|jpg|jpeg|gif|avif)$/i;
-/** Plain-file asset extensions a mirror may serve beside the images (a Spine skeleton/atlas; any file mirror has them). */
-export const FILE_RE = /\.(png|webp|jpg|jpeg|gif|avif|skel|atlas)$/i;
 /** The game's extension-less asset routes (`shared/{media,scene,clip}.js`): only a FULL origin reimplements them. */
 export const ROUTE_RE = /^\/(?:media|scene|clip)\//;
 /** Origins that never use a mirror (a dev server / the portable bundle's own copy). */
@@ -44,10 +42,12 @@ let fullOrigin = false;
 export function isMirrorable(path) {
   if (typeof path !== 'string' || !path.startsWith('/assets/')) return false;
   if (path.includes('?') || path.includes('/media/')) return false;
-  // Images are what the free CDNs are for; a Spine skeleton/atlas is a plain file they hold too. The audio's `.mp3`
-  // is deliberately NOT here: it stays on the extension-less /media route (shared/media.js) so a download manager
-  // cannot sniff it.
-  return FILE_RE.test(path) && !/\.mp3$/i.test(path);
+  // Images only. A Spine `.skel`/`.atlas` must stay a root-relative path: `assets.js validSpine` requires a path that
+  // ends in `.skel` (and pixi-spine derives the atlas from it by swapping the extension), while a mirrored URL carries
+  // a `?h=` query — mirroring them returned "no spine entry", so every unit fell back to its placeholder diamond
+  // (owner report 2026-10-14). They are small files; the operator's atlas PAGES are images and ride along wherever the
+  // atlas resolves from.
+  return IMG_RE.test(path);
 }
 
 /**
