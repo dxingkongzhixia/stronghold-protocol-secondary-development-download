@@ -640,12 +640,19 @@ over:
 | repo | `/srv/sp.git` — a **bare** repository whose `hooks/post-receive` checks the pushed branch out into `/srv/sp` (`git --work-tree=/srv/sp … checkout -f`), so **a push IS the deploy**. `/srv/sp` is that checkout, not a clone: do not `git pull` in it |
 | history | fetched from gitee once (678 MB), so a push from the dev machine carries only the new objects. There is **no cron** — the push is the deploy |
 | deploy | from the dev machine: `node tools/push-assets-relay.mjs` |
+| config | versioned at [`tools/relay/sp-relay.nginx.conf`](../tools/relay/sp-relay.nginx.conf) — copy it to
+  `/etc/nginx/sites-available/sp-relay` and `nginx -t && systemctl reload nginx` |
 
 **Routes.** nginx answers the same paths the game server does, so any asset URL can be prefixed with the origin:
 
 | path | file |
 |---|---|
 | `/assets/**`, `/fonts/**`, `/vendor/**` | the same path under `public/` |
+| `/assets/~<hash>/**` (and `fonts` / `vendor` likewise) | the same file with the `~<hash>` segment dropped — it is a
+  cache-buster, not a directory (`server/http/files.js` strips it; the client's mirror prefix turns it into `?h=`).
+  The hashed rule must come **before** the plain one: nginx takes the first matching regex, and falling into the
+  plain one 404s the asset (2026-10-14: that turned every image into a fallback fetch under a different URL, which
+  is what kept the browser cache cold) |
 | `/media/<path>` and `/media/~<hash>/<path>` | `public/assets/audio/<path>.mp3` — the `~<hash>` segment is a cache-buster the path ignores, exactly like `server/http/media.js` |
 | `/scene/<id>/meta` · `/scene/<id>/bin` | `public/assets/local/scene/<id>/scene.json` · `scene.bin` |
 | `/clip/<name>` | `public/assets/loading/<name>.mp4` |
