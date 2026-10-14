@@ -35,7 +35,7 @@
 |---|---|
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
 | git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
-| 远程同步 | `github/master` == `gitee/master` == HEAD `7ffd9977`（v0.2.6 合并 + 文档修正已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
+| 远程同步 | `github/master` == `gitee/master` == HEAD `49130d36`（3D 战场光照 / 高台修复 + 文档已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
 | 全量测试 | `node --test`：**6600 项 / 6579 通过 / 0 失败 / 21 跳过**（在 store 里跑） |
 | 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1454/1454（100%）；`doctor` 退出码 0；`eslint` 0 error；`npm run typecheck` / `check:imports` 通过 |
 | 本机环境 | Node **v24.19.0** |
@@ -46,7 +46,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线 build `bc625f088f6b`**（2026-10-14 部署，含 v0.2.6 整支合并）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build） |
+| 版本 | `app 0.4.0`；**已上线 build `eb29e3ee0a28`**（2026-10-14 部署，含 v0.2.6 整支合并 + 3D 战场光照 / 高台修复）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -129,7 +129,7 @@ node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-pro
 - [ ] **攻击前冲 / 浮空技能**（主线 v0.1.3 #61 / #23）已实现，**待实机验手感**。
 - [ ] B 站宣传视频：见 §11 产物。
 - [x] **CI 已接入**：`.github/workflows/ci.yml` 在 Ubuntu / Windows × Node 22 / 24 上跑 `npm ci`、`node --test` 和服务器冒烟测试。
-- [x] **沙地战场官方的「高台」（局部抬升块）已实现**（2026-10-13）：官方战场 #01 的局部抬升台由 `public/js/render/board3d/theme.js` 的每主题 `platforms` 表 + `scene.js _buildPlatforms` 建成几何（**纯视觉**，`server/sim` 的格子 / 高度 / `deployTiles` 一律不变），见 [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §8.3，`test/render/board3d-scene.test.js` 钉住它。
+- [x] **3D 战场的「高台」与配色已定案（2026-10-14）**：官方的「高台」抬升块（`theme.platforms`，用普通 `MeshStandardMaterial` 拿不到场景的烘焙光、渲染成扁平的白板）与装置台的 `slab` 材质（把 act1 各图的装置台染成沙色）**都已关闭 / 回退**，装置台统一用程序化板材质（owner 指定 act2autochess_m02 为正确样本）；另外只给 act2autochess_m03 加了主题线性增益 `theme.gain`（按官方截图校准）。见 [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §8.2 / §8.5，`test/render/board3d-scene.test.js` 钉住它。
 
 ## 10. 与主线的关系 / 下次怎么合并
 
