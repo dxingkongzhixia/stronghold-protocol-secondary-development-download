@@ -229,7 +229,7 @@ describe('scene themes (theme.js)', () => {
       assert.ok(t.exposure > 0, `${name}.exposure`);
       assert.ok(t.ambient >= 0, `${name}.ambient`);
       assert.ok(Array.isArray(t.tint) && t.tint.length === 3, `${name}.tint`);
-      assert.ok(t.saturate > 0 && t.saturate <= 1, `${name}.saturate`);
+      assert.ok(t.saturate > 0, `${name}.saturate`); // >1 is a boost: ACES desaturates the highlights the bright boards sit in
     }
     assert.equal(sceneTheme('act1autochess_m01', { materials: { a: { map: 'TX_AutochessSand_A' } } }), SCENE_THEMES.sand);
     assert.equal(sceneTheme('act2autochess_m01', { materials: { a: { map: 'TX_Syracuse_metro_D' } } }), SCENE_THEMES.city);
