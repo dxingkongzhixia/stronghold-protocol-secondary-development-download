@@ -1368,3 +1368,14 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **官方战场场景纳入版本库**（owner 同意，2026-10-14）：提取出的 `public/assets/local/scene/**`（136 文件，场景包 74.8 MB）**不再被 git 忽略**，这样 CDN 镜像也能提供它们 —— 否则 3D 棋盘的每个场景包都在镜像上 404、回落到本机。下载的季节包仍在被忽略的 `.cache/official-scenes/`。
 - **验证 / 相关文档**：`node tools/check-delivery.mjs --live`（对着线上核查链条顺序与缓存优先）；[`docs/ASSETS.md`](ASSETS.md)「Without a Service Worker」「The relay」、[`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.2、[`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (c)。
 - **我们独有**：见 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §10（合并时不得丢失）。
+
+## 44. 素材源改为「按实测速度选源」：中继仍第一优先，但不达标立刻切（owner 2026-10-15）
+
+> 起因：线上首屏要下 **2461 张 / 135.2 MB** 美术，而实测（2026-10-15，国内视角）中继 `123.57.150.185` 的**实际出口只有 ~0.05–0.4 MB/s**（套餐标称 200 Mbps，阿里云控制台的「峰值公网带宽」也只显示 1.03 Mbps），比游戏机（0.4–1.5 MB/s）**慢 3–4 倍**——中继从"加速器"变成了"减速带"。
+
+- **规则（owner 定）**：中继**仍是第一优先**，但每次加载都实测它的真实速度；低于预设就**立刻**让位给 GitHub 镜像，镜像也不达标就回落游戏服务器：中继（full origin）**1.2 MB/s**（`RELAY_MIN_BPS`）、GitHub 镜像 **1.0 MB/s**（`MIRROR_MIN_BPS`），都不达标 ⇒ 清单 URL 保持同源（游戏服务器）。
+- **怎么测**：`public/js/assetMirror.js` 的 `initAssetMirror` 并行给每个源下一个**固定的已提交样本**（`/assets/char/portrait/char_003_kalts_1.png`，~110 KB，`cache: 'no-store'`），800 ms 预算 + 400 KB 字节上限（读到一部分就够算速率），总探测约 1.7 s；选中者只作"前缀"，出错时仍按 `asset-mirrors.json` 的顺序逐个回退。
+- **每次都测**：`SPEED_CACHE_MS = 0` —— 不缓存测量结果，**每次页面加载重新测**，所以中继一旦掉速**下一次访问立刻切走**（调用方仍可传 `cacheMs` 复用一次新读数）。
+- **效果**：切到游戏服务器后，游戏机缓存头是 `public, max-age=31536000, immutable`（**一年**；中继只有 7 天）⇒ **回访几乎 0 下载**。中继修好带宽后**不用改代码**——超过 1.2 MB/s 会被自动放回第一位。
+- **测试**：`test/asset-mirror.test.js` 新增 5 例（速率换算 / 选源规则 / 慢中继让位 / 全不达标→服务器 / **每次加载都重测**）。
+- **待办**：首屏 **135 MB 的总量**仍是最大瓶颈（收窄到 `ui` / `icons` 可 −35% / −64%）；中继的带宽类型需向阿里云确认。

@@ -608,6 +608,16 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
   each) and the game server LAST, accepting a mirror only when its bytes match `index.files[url]`. **Gitee / GitLab
   raw are deliberately NOT used** — they send no `Access-Control-Allow-Origin`, so a browser `fetch` is blocked (and
   Gitee Releases 403s hotlinks); tested 2026-10-13.
+- **The plain-HTTP chain picks the origin by MEASURED THROUGHPUT (2026-10-15)**: on the production site the Service
+  Worker cannot register (plain HTTP), so `public/js/assetMirror.js` rewrites the manifests' **image** URLs to a chosen
+  origin instead. It times every configured source (`public/asset-mirrors.json`) in parallel on one committed sample
+  (~110 KB, `cache: 'no-store'`) and installs the **first** that clears its bar — the owner's relay **1.2 MB/s**
+  (`RELAY_MIN_BPS`), a plain-file GitHub mirror **1.0 MB/s** (`MIRROR_MIN_BPS`) — otherwise the URLs stay on this
+  server. **The relay keeps the first place and is re-measured on every page load** (`SPEED_CACHE_MS = 0`), so a relay
+  that falls under its bar is switched away from on the very next visit; the whole list stays as the per-file error
+  fallback. Measured 2026-10-15: the relay's real egress is ~0.05–0.4 MB/s (its plan advertises 200 Mbps) while the game
+  box does 0.4–1.5 MB/s, so the chain served the art from the box — whose `immutable, max-age=31536000` headers make a
+  return visit free (the relay's `max-age=604800` did not).
 - **Server fallback is paced**: a server fetch is the last resort and is throttled so a bulk pre-cache never starves
   live matches — a process-wide token bucket on `public/assets|fonts|vendor` bodies (`server/http/files.js`
   `RateLimiter`), default **1.2 MB/s**, `SP_ASSET_RATE_KBPS` overrides (0 disables). Non-art paths are never paced.
