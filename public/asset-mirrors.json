@@ -1,0 +1,8 @@
+{
+  "note": "CDN mirrors of this repository's public/ (asset-index.json carries the same list). The client prefixes a mirrorable asset URL with the first source that answers, and falls back to this server. Update the owner/repo here if the repository moves.",
+  "sources": [
+    "https://gh-proxy.com/https://raw.githubusercontent.com/dxingkongzhixia/stronghold-protocol-secondary-development-download/master/public",
+    "https://cdn.jsdelivr.net/gh/dxingkongzhixia/stronghold-protocol-secondary-development-download@master/public"
+  ],
+  "probe": "/assets/loading/boot.mp4"
+}

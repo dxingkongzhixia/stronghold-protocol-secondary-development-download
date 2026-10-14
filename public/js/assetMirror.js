@@ -1,0 +1,106 @@
+// public/js/assetMirror.js — the CDN-mirror prefix for the art manifests (docs/OUR-FEATURES.md §4).
+//
+// Why: the box's uplink is small and a cold load preloads ~104 MB of art. `/asset-index.json` already hands the local
+// asset cache two CDN mirrors (gh-proxy, jsDelivr) that are tried before this server — but that path only runs inside
+// the pre-cache, which needs a Service Worker (HTTPS). This module lets the *normal* loading use the mirrors too, by
+// prefixing the manifest's image URLs. A path prefix keeps every relative relationship intact (a Spine atlas and its
+// pages, a scene and its bundle), which a `blob:` URL would break — that is why the flat, fetch-only files (audio, the
+// scene bundles) go through the IndexedDB layer instead, and why the Spine models are left to the mirror or the
+// server.
+//
+// Only images are rewritten here:
+//   * the audio goes through the server's extension-less `/media/` route on purpose (download managers hook media
+//     URLs — `shared/media.js`), and
+//   * the Spine models and the scene bundles are fetched by their own loaders (the IndexedDB layer's job).
+//
+// Everything is opt-out-safe: no config, no mirror answering, or a dev origin leaves every URL untouched, so the page
+// behaves exactly as before.
+
+import { splitHashedPath } from '../../shared/assetPaths.js';
+
+/** The mirror list the client reads (a static file: deploying it needs no restart). */
+export const MIRRORS_URL = '/asset-mirrors.json';
+/** Image extensions the mirror may serve (the same rule `preload.js` preloads). */
+export const IMG_RE = /\.(png|webp|jpg|jpeg|gif|avif)$/i;
+/** Origins that never use a mirror (a dev server / the portable bundle's own copy). */
+export const DEV_HOSTS = Object.freeze(['localhost', '127.0.0.1', '::1', '']);
+/** One probe per mirror: a HEAD is enough and the mirrors answer CORS. */
+export const PROBE_TIMEOUT_MS = 4000;
+
+let prefix = '';
+
+/**
+ * Pure: may the mirror serve this manifest path? Images under `/assets/` only — a query string (the `?v=` preload uses)
+ * is kept out, and the `/media/` audio route is never rewritten.
+ * @param {unknown} path
+ * @returns {boolean}
+ */
+export function isMirrorable(path) {
+  if (typeof path !== 'string' || !path.startsWith('/assets/')) return false;
+  if (path.includes('?') || path.includes('/media/')) return false;
+  return IMG_RE.test(path);
+}
+
+/**
+ * Pure: the mirror URL of a manifest path. The `~<hash>` segment is this server's serving trick (shared/assetPaths.js)
+ * and is not a file name, so it is stripped: `/assets/~abc…/char/avatar/x.png` → `<base>/assets/char/avatar/x.png`.
+ * @param {string} base a source prefix ending at the repo's `public/`
+ * @param {string} path
+ * @returns {string}
+ */
+export function mirrorUrl(base, path) {
+  return base + splitHashedPath(path).path;
+}
+
+/**
+ * Pure: a deep copy of `value` with every mirrorable string replaced by its mirror URL. Arrays, plain objects and
+ * strings are walked; anything else is returned as is.
+ * @param {unknown} value
+ * @param {string} base
+ * @returns {unknown}
+ */
+export function rewriteAssetPaths(value, base) {
+  if (typeof value === 'string') return isMirrorable(value) ? mirrorUrl(base, value) : value;
+  if (Array.isArray(value)) return value.map((v) => rewriteAssetPaths(v, base));
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = rewriteAssetPaths(v, base);
+    return out;
+  }
+  return value;
+}
+
+/** The active mirror prefix ('' = this server). */
+export function mirrorPrefix() { return prefix; }
+/** @param {string} base */
+export function setMirrorPrefix(base) { prefix = typeof base === 'string' ? base : ''; }
+
+/**
+ * Pick the first mirror that answers and install it as the prefix. Never throws: any failure leaves the prefix empty
+ * (the page keeps using this server).
+ * @param {{ fetchFn?: typeof fetch, hostname?: string, timeoutMs?: number, mirrorsUrl?: string, path?: string }} [o]
+ * @returns {Promise<string>} the installed prefix ('' when none)
+ */
+export async function initAssetMirror({
+  fetchFn = globalThis.fetch, hostname = globalThis.location?.hostname, timeoutMs = PROBE_TIMEOUT_MS,
+  mirrorsUrl = MIRRORS_URL, path = '/js/assetMirror.js',
+} = {}) {
+  setMirrorPrefix('');
+  if (!fetchFn || DEV_HOSTS.includes(hostname)) return '';
+  try {
+    const res = await fetchFn(mirrorsUrl, { cache: 'no-cache' });
+    if (!res || !res.ok) return '';
+    const cfg = await res.json();
+    const sources = cfg && Array.isArray(cfg.sources) ? cfg.sources.filter((s) => typeof s === 'string' && s) : [];
+    for (const base of sources) {
+      try {
+        const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+        const timer = ctrl && timeoutMs > 0 ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
+        const probe = await fetchFn(mirrorUrl(base, path), { cache: 'no-cache', signal: ctrl ? ctrl.signal : undefined });
+        if (timer) clearTimeout(timer);
+        if (probe && probe.ok) { setMirrorPrefix(base); return base; }
+      } catch { /* blocked / slow: the next source */ }
+    }
+  } catch { /* no config / bad JSON: keep the server */ }
+  return '';
+}

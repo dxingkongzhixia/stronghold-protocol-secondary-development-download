@@ -30,6 +30,7 @@
 import { useEffect, useReducer } from '../vendor/hooks.module.js';
 import { applyFileOverlay } from '../../shared/i18nData.js';
 import { canonicalLang } from '../../shared/i18nPacks.js';
+import { mirrorPrefix, rewriteAssetPaths } from './assetMirror.js';
 
 /** Known data files (name → URL basename). Unknown names are allowed too (`/data/<name>.json`). */
 export const DATA_FILES = Object.freeze({
@@ -105,6 +106,19 @@ export const ART_MANIFEST_TIMEOUT_MS = 8000;
 const ART_MANIFESTS = new Set(['local', 'assets']);
 
 /**
+ * The CDN-mirror prefix for the art manifests (js/assetMirror.js): a cold load preloads ~104 MB of art, and these two
+ * manifests are exactly the image URLs it walks. Only when a mirror answered at boot, and only the images inside them,
+ * so every other data file and the audio / Spine / scene URLs stay on this server.
+ * @param {string} name
+ * @param {unknown} json
+ * @returns {unknown}
+ */
+function rewriteArtManifest(name, json) {
+  const base = mirrorPrefix();
+  return base && ART_MANIFESTS.has(name) ? rewriteAssetPaths(json, base) : json;
+}
+
+/**
  * A failed load worth retrying: the request itself failed (network error) or the server answered 5xx / 408 / 429 — not a
  * definite 4xx (the file is not there) nor a delivered file that is not valid JSON (`badJson`).
  */
@@ -165,7 +179,7 @@ export function createDataStore(opts = {}) {
       const res = await doFetch(urlFor(name), { cache: 'no-cache' });
       if (!res || !res.ok) throw Object.assign(new Error(`HTTP ${res ? res.status : '???'}`), { status: res ? res.status : null });
       try {
-        return await res.json();
+        return rewriteArtManifest(name, await res.json());
       } catch (err) {
         throw Object.assign(err instanceof Error ? err : new Error(String(err)), { badJson: true });
       }

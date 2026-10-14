@@ -66,6 +66,7 @@ import { ensureManifestLink } from './ui/ensureManifest.js';
 import { initLang, useLang, tickerText } from './ui/lang.js';
 import { t, N_, translateWire } from '../../shared/i18n.js';
 import { recordError, installTrafficMeter } from './diag.js';
+import { initAssetMirror } from './assetMirror.js';
 
 const RESTORE_GRACE_MS = 1500;
 const JOIN_DELAY_MS = 350;
@@ -540,6 +541,9 @@ async function preloadArt() {
   const fill = document.getElementById('boot-bar-fill');
   const sub = document.getElementById('boot-sub');
   if (!bar || !fill) return;
+  // Pick the CDN mirror first (js/assetMirror.js): it lets the boot preload come from gh-proxy / jsDelivr instead of
+  // this box, while a dev origin and a silent mirror leave everything on this server.
+  await initAssetMirror().catch(() => '');
   let manifest = data.get('assets');
   if (!manifest) { try { await data.load('assets'); } catch { /* ignore */ } manifest = data.get('assets'); }
   const urls = collectArtUrls(manifest, 'all');
