@@ -216,7 +216,7 @@ describe('language switch on the title screen', { skip: !ENABLED && 'set SP_E2E=
     saved: JSON.parse(localStorage.getItem('sp.pref.lang')),
   }));
   const expectedLanguage = {
-    zh: { current: 'zh', document: 'zh-CN', dataLang: 'zh', script: 'cjk', title: '我的接口', start: '开始', selected: 'zh', saved: 'zh' },
+    zh: { current: 'zh', document: 'zh-CN', dataLang: 'zh', script: 'cjk', title: '卫戍协议：盟约 · STRONGHOLD PROTOCOL', start: '开始', selected: 'zh', saved: 'zh' },
     en: { current: 'en', document: 'en', dataLang: 'en', script: 'alphabetic', title: 'Stronghold Protocol: Alliance · Web Simulation', start: 'Start', selected: 'en', saved: 'en' },
     'zh-TW': { current: 'zh-TW', document: 'zh-TW', dataLang: 'zh-TW', script: 'cjk', title: '衛戍協議：盟約 · STRONGHOLD PROTOCOL', start: '開始', selected: 'zh-TW', saved: 'zh-TW' },
   };

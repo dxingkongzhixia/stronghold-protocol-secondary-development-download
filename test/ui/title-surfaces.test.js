@@ -247,11 +247,3 @@ test('the PWA manifest + mint-rook icons are present and linked, so Chromium can
   assert.equal(genericWorker, false, 'no service-worker.js (the install does not require one)');
   assert.ok(/InstallButton/.test(src('public/js/screens/title.js')), 'the InstallButton is still mounted (it decides at runtime)');
 });
-
-test('the title footer carries the filed ICP number, linking to beian.miit.gov.cn (a legal requirement)', () => {
-  const title = src('public/js/screens/title.js');
-  assert.ok(title.includes('浙ICP备2026085059号-1'), 'the 备案号 is displayed in the footer');
-  assert.ok(/class="title-beian"[^>]*href="https:\/\/beian\.miit\.gov\.cn\/"/.test(title), 'and links to the MIIT filing site');
-  const pack = JSON.parse(src('public/i18n/en.json'));
-  assert.ok(pack['浙ICP备2026085059号-1'], 'the English pack carries the label (the i18n gate stays complete)');
-});

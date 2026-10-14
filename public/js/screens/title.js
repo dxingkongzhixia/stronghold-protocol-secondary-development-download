@@ -293,7 +293,7 @@ export function TitleScreen() {
   const touchUi = useMemo(() => detectFeatures().coarse, []);
   // a title in an alphabetic script (English, French …) is the big one in the display face and the wordmark above it
   // hides; a CJK / kana / Hangul title keeps the Chinese layout (shared/i18nPacks.js scriptOf — a pack needs no flag)
-  const alphabetic = scriptOf(t('我的接口')) === 'alphabetic';
+  const alphabetic = scriptOf(t('卫戍协议')) === 'alphabetic';
   return html`<div class="screen title-screen">
     <${AnnounceBanner} onOpen=${() => setAnnounceOpen(true)} />
     <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} aria-hidden="true">
@@ -334,7 +334,7 @@ export function TitleScreen() {
         <span class="title-en__a">STRONGHOLD PROTOCOL</span>
         <span class="title-en__b">ALLIANCE</span>
       </div>`}
-      <h1 class=${`title-cn${alphabetic ? ' title-cn--latin' : ''}`}>${t('我的接口')}</h1>
+      <h1 class=${`title-cn${alphabetic ? ' title-cn--latin' : ''}`}>${t('卫戍协议')}<span class="title-cn__colon">${alphabetic ? ': ' : '：'}</span><em>${t('盟约')}</em></h1>
       <p class="title-tag">${t('调配资金与干员，与同伴协同布防，抵御多波次进攻，直至击败敌方领袖。')}</p>
 
       <div class="title-login">
@@ -377,7 +377,6 @@ export function TitleScreen() {
       <span>${t('非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有')}</span>
       <span class="title-foot__meta">
         <a class="title-repo" href="https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download" target="_blank" rel="noopener noreferrer">${t('项目仓库')}</a>
-        <a class="title-beian" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">${t('浙ICP备2026085059号-1')}</a>
         <${MicroLabel}>v${APP_VERSION} · WEB SIMULATION<//>
         ${DEV_BUILD ? html`<span class="title-dev" role="note">${t('开发版 · 不稳定，请勿用于公开服务器')}</span>` : null}
       </span>

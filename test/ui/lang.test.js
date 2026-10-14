@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getLang, onLangChange, registerLangs, setLang, setMessages, setI18nWarn, t } from '../../shared/i18n.js';
 
-const TITLE = '我的接口';
+const TITLE = '卫戍协议：盟约 · STRONGHOLD PROTOCOL';
 const PACKS = {
   en: { 开始: 'Start', 卫戍协议: 'Stronghold Protocol', [TITLE]: 'Stronghold Protocol: Alliance' },
   'zh-TW': { 开始: '開始', 卫戍协议: '衛戍協議', [TITLE]: '衛戍協議：盟約' },
