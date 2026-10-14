@@ -12,7 +12,7 @@
 
 import { t } from '../../shared/i18n.js';
 import { clipUrl } from '../../shared/clip.js';
-import { unmirrorUrl } from './assetMirror.js';
+import { nextMirrorCandidate } from './assetMirror.js';
 
 /**
  * Optional boot background video (a distraction while the first-load preload runs). `null` disables it. Two kinds:
@@ -84,15 +84,12 @@ export function preloadImages(urls, { concurrency = 8, onProgress } = {}) {
       const url = list[next++];
       active++;
       const img = new Image();
-      // A mirrored URL that fails retries this server once (js/assetMirror.js `unmirrorUrl`): the mirror is best-effort,
-      // and without the retry a blocked/slow mirror would just leave those images unwarmed and the UI would pay for them
-      // again as it renders.
-      let tried = false;
+      // A failed origin falls through the chain (js/assetMirror.js mirrorCandidates): the relay, then GitHub and its
+      // mirrors, then this server — the same order the <img> fallback uses.
+      let current = url;
       const onEnd = () => {
-        if (!tried) {
-          const local = unmirrorUrl(url);
-          if (local) { tried = true; try { img.src = local; return; } catch { /* fall through */ } }
-        }
+        const fallback = nextMirrorCandidate(current);
+        if (fallback) { current = fallback; try { img.src = fallback; return; } catch { /* fall through */ } }
         img.onload = img.onerror = null;
         active--;
         done++;

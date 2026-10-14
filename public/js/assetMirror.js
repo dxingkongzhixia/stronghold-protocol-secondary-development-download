@@ -32,6 +32,8 @@ export const PROBE_TIMEOUT_MS = 4000;
 let prefix = '';
 /** Does the installed prefix reimplement the game's extension-less routes (/media, /scene, /clip) beside the files? */
 let fullOrigin = false;
+/** Every configured origin, best first (the list from /asset-mirrors.json), so a failed fetch can try the next one. */
+let sources = [];
 
 /**
  * Pure: may the mirror serve this manifest path? Images under `/assets/` only — a query string (the `?v=` preload uses)
@@ -101,27 +103,69 @@ export function rewriteAssetPaths(value, base) {
 export function mirrorPrefix() { return prefix; }
 /** Is the active prefix a full origin (it also answers /media, /scene, /clip)? */
 export function mirrorIsFull() { return fullOrigin; }
-/** @param {string} base @param {boolean} [full] */
-export function setMirrorPrefix(base, full = false) {
+/** @param {string} base @param {boolean} [full] @param {string[]} [list] the whole chain, for the fallback tiers */
+export function setMirrorPrefix(base, full = false, list = null) {
   prefix = typeof base === 'string' ? base : '';
   fullOrigin = !!prefix && !!full;
+  if (Array.isArray(list)) sources = list.filter((s) => typeof s === 'string' && s);
+  else if (!prefix) sources = [];      // no origin installed: nothing to mirror, nothing to fall back through
 }
 
 /**
- * Pure: the same-origin path behind a mirror URL this page installed, or null. The inverse of `mirrorUrl` — the `?h=`
- * hash comes back as the `~<hash>` serving segment.
+ * The canonical (same-origin) path behind a URL this page mirrored, or null. Strips any configured origin prefix; the
+ * `?h=` hash comes back as the `~<hash>` serving segment. Accepts the extension-less routes too.
  * @param {string} url
  * @returns {string|null}
  */
 export function unmirrorUrl(url) {
-  if (typeof url !== 'string' || !prefix || !url.startsWith(prefix)) return null;
-  const rest = url.slice(prefix.length);
+  if (typeof url !== 'string' || !url) return null;
+  for (const base of [prefix, ...sources]) {
+    if (base && url.startsWith(base)) return plainPath(url.slice(base.length));
+  }
+  return null;
+}
+
+/** The path part of a mirrored URL, with the `?h=` hash turned back into the `~<hash>` segment. */
+function plainPath(rest) {
   const at = rest.indexOf('?h=');
   const hash = at >= 0 ? rest.slice(at + 3) : '';
   const plain = at >= 0 ? rest.slice(0, at) : rest;
   if (ROUTE_RE.test(plain)) return plain;      // /media/…, /scene/…, /clip/… — the route carries no serving hash
   if (!plain.startsWith('/assets/')) return null;
   return hash ? `/assets/~${hash}${plain.slice('/assets'.length)}` : plain;
+}
+
+/**
+ * The ordered fetch candidates for one plain-file asset (an image, or a file behind a route): the installed origin
+ * first, then the other configured mirrors, and **this server last**. The owner's chain (2026-10-14): the Aliyun relay,
+ * then GitHub and its mirrors, the game server only as the fallback. A URL that is already one of them is canonicalised
+ * first, so the same list comes back however it is asked.
+ * @param {string} url
+ * @returns {string[]} at least one entry (the same-origin path)
+ */
+export function mirrorCandidates(url) {
+  const plain = unmirrorUrl(url) || (typeof url === 'string' && url.startsWith('/') ? url : null);
+  if (!plain) return typeof url === 'string' ? [url] : [];
+  if (ROUTE_RE.test(plain)) return routeCandidates(plain);
+  const out = [];
+  for (const base of [prefix, ...sources]) if (base) out.push(mirrorUrl(base, plain));
+  out.push(plain);
+  return [...new Set(out)];
+}
+
+/** The candidates for an extension-less route: only a full origin answers one, so the last entry is this server. */
+function routeCandidates(path) {
+  const out = [];
+  if (prefix && fullOrigin) out.push(prefix + path);
+  out.push(path);
+  return out;
+}
+
+/** The next origin to try after `url` failed, or null when this server is already the last one. */
+export function nextMirrorCandidate(url) {
+  const list = mirrorCandidates(url);
+  const i = list.indexOf(String(url));
+  return i >= 0 && i + 1 < list.length ? list[i + 1] : null;
 }
 
 /**
@@ -136,18 +180,19 @@ export function installImageFallback({ doc = globalThis.document } = {}) {
   doc.__spMirrorFallback = true;
   doc.addEventListener('error', (ev) => {
     const el = ev && ev.target;
-    if (!el || el.tagName !== 'IMG' || el.dataset?.spMirrorRetry) return;
-    const local = unmirrorUrl(el.currentSrc || el.src);
-    if (!local) return;
-    if (el.dataset) el.dataset.spMirrorRetry = '1';
-    el.src = local;
+    if (!el || el.tagName !== 'IMG') return;
+    const src = el.currentSrc || el.src;
+    const next = nextMirrorCandidate(src);
+    if (!next) return;                       // this server was the last tier: let the placeholder stand
+    if (el.dataset) el.dataset.spMirrorTier = String((Number(el.dataset.spMirrorTier) || 0) + 1);
+    el.src = next;
   }, true);
   return true;
 }
 
 /**
- * Pick the first mirror that answers and install it as the prefix. Never throws: any failure leaves the prefix empty
- * (the page keeps using this server).
+ * Pick the first mirror that answers and install it as the prefix, keeping the whole list for the fallback chain.
+ * Never throws: any failure leaves the prefix empty (the page keeps using this server).
  * @param {{ fetchFn?: typeof fetch, hostname?: string, timeoutMs?: number, mirrorsUrl?: string, path?: string }} [o]
  * @returns {Promise<string>} the installed prefix ('' when none)
  */
@@ -156,20 +201,25 @@ export async function initAssetMirror({
   mirrorsUrl = MIRRORS_URL, path = MIRRORS_URL,
 } = {}) {
   setMirrorPrefix('');
+  sources = [];
   if (!fetchFn || DEV_HOSTS.includes(hostname)) return '';
   try {
     const res = await fetchFn(mirrorsUrl, { cache: 'no-cache' });
     if (!res || !res.ok) return '';
     const cfg = await res.json();
-    const sources = cfg && Array.isArray(cfg.sources) ? cfg.sources.filter((s) => typeof s === 'string' && s) : [];
+    const list = cfg && Array.isArray(cfg.sources) ? cfg.sources.filter((s) => typeof s === 'string' && s) : [];
     const full = new Set(cfg && Array.isArray(cfg.fullSources) ? cfg.fullSources : []);
-    for (const base of sources) {
+    for (const base of list) {
       try {
         const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
         const timer = ctrl && timeoutMs > 0 ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
         const probe = await fetchFn(mirrorUrl(base, path), { cache: 'no-cache', signal: ctrl ? ctrl.signal : undefined });
         if (timer) clearTimeout(timer);
-        if (probe && probe.ok) { setMirrorPrefix(base, full.has(base)); return base; }
+        if (probe && probe.ok) {
+          sources = list;                      // the whole chain, for the per-file fallback
+          setMirrorPrefix(base, full.has(base));
+          return base;
+        }
       } catch { /* blocked / slow: the next source */ }
     }
   } catch { /* no config / bad JSON: keep the server */ }

@@ -75,7 +75,7 @@
 import { sanitizeVoiceOverrides, voiceLangFor } from './voicePrefs.js';
 import { PHASE } from '../../shared/constants.js';
 import { mediaUrl } from './media.js';
-import { mirrorRouteUrl } from './assetMirror.js';
+import { mirrorRouteUrl, mirrorCandidates } from './assetMirror.js';
 import { idbEnabled, idbGet, idbPut } from './assetIdb.js';
 import { unhashedUrl } from '../../shared/assetPaths.js';
 
@@ -776,10 +776,11 @@ export class AudioManager {
           try { const cachedBlob = await idbGet(url); if (cachedBlob) ab = await cachedBlob.arrayBuffer(); } catch { /* fall through */ }
         }
         if (!ab) {
-          // The relay's /media route first (js/assetMirror.js mirrorRouteUrl), then this server's own extension-less
-          // route (so a download manager leaves the BGM alone), then the plain /assets file (a host with neither route).
+          // The owner's chain: the relay's /media route, then GitHub and its mirrors (their plain file), then this
+          // server's own extension-less route (a download manager leaves it alone), then the plain /assets file.
           const media = mediaUrl(url);
-          const targets = [...new Set([mirrorRouteUrl(media), media, url])].filter(Boolean);
+          const fileTiers = mirrorCandidates(url).slice(1, -1);       // the CDN tiers of the file behind the route
+          const targets = [...new Set([mirrorRouteUrl(media), ...fileTiers, media, url])].filter(Boolean);
           let res = null;
           for (const target of targets) {
             const r = await fetch(target);

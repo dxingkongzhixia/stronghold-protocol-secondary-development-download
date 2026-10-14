@@ -611,6 +611,16 @@ register — so the HTTPS future keeps the better chain.
   never enables this layer, so `render-demo.html` renders the gates fine and only production was hit).
   **Changing the encoding therefore also means bumping `assetIdb.js` `IDB_VERSION` and dropping the store on upgrade** —
   a browser that cached the old bytes would otherwise keep the bug forever, since the IDB sits under the app.
+- **The fallback chain (owner, 2026-10-14).** The order is the `sources` list of `public/asset-mirrors.json`, best
+  first: **the owner's own relay** (`http://123.57.150.185`, Aliyun Beijing, 200 Mbps, nginx over a clone of this repo's
+  `public/`; unmetered), then **GitHub and its mirrors** (gh-proxy → jsDelivr), then **this server** as the fallback.
+  `js/assetMirror.js` installs the first origin that answers and rewrites the manifests' image URLs to it; a fetch that
+  fails walks the rest of the chain — an `<img>` through the capture-phase error listener (`mirrorCandidates` /
+  `nextMirrorCandidate`), the preload per image, and the audio / scene / clip routes through their own candidate lists
+  (the relay's route → the CDN's plain file → this server's route → the file). A **full origin** (`fullSources`) is one
+  that also reimplements `/media`, `/scene` and `/clip`; the plain-file mirrors only ever get the files, so with them
+  alone every route stays on this server.Verified 2026-10-14: one cold visit moved 95.3 MB / 1820 requests to the relay
+  with no 404s (nothing fell back), and with the first two tiers dead a page image still loaded from this server.
 - **Extension-less routes** for the files a download manager (IDM / 迅雷 / FDM) hijacks out of XHR/fetch. The audio has
   had `/media/…` since 0.2.5; the scene bundle and the boot clip joined it:
   **`/scene/<stageId>/{meta,bin}`** (`shared/scene.js` + `server/http/scene.js`) and **`/clip/<name>`**

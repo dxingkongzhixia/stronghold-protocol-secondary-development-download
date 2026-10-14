@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 
 import {
   isMirrorable, mirrorUrl, rewriteAssetPaths, mirrorPrefix, setMirrorPrefix, DEV_HOSTS, MIRRORS_URL,
-  unmirrorUrl, installImageFallback, mirrorRouteUrl, mirrorIsFull,
+  unmirrorUrl, installImageFallback, mirrorRouteUrl, mirrorIsFull, mirrorCandidates, nextMirrorCandidate,
 } from '../public/js/assetMirror.js';
 
 const BASE = 'https://cdn.example/gh/o/r@master/public';
@@ -69,7 +69,30 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     assert.equal(unmirrorUrl(`${BASE}/assets/a.png`), null, 'no prefix installed, nothing to undo');
   });
 
-  test('the image fallback retries a failed mirrored <img> from this server, once', () => {
+  test('the chain is the relay, then GitHub and its mirrors, then this server', () => {
+    const RELAY = 'http://relay.example';
+    const GH = 'https://gh-proxy.com/https://raw.githubusercontent.com/o/r/master/public';
+    const JSD = 'https://cdn.jsdelivr.net/gh/o/r@master/public';
+    setMirrorPrefix(RELAY, true, [RELAY, GH, JSD]);
+    const path = '/assets/~0123456789abcdef/char/avatar/x.png';
+    const chain = mirrorCandidates(path);
+    assert.deepEqual(chain, [
+      mirrorUrl(RELAY, path), mirrorUrl(GH, path), mirrorUrl(JSD, path), path,
+    ], 'the relay first, then GitHub and its mirror, this server last');
+    assert.equal(nextMirrorCandidate(chain[0]), chain[1]);
+    assert.equal(nextMirrorCandidate(chain[2]), chain[3]);
+    assert.equal(nextMirrorCandidate(chain[3]), null, 'this server is the last tier');
+    // however it is asked — a mirror URL or the plain path — the same chain comes back
+    assert.deepEqual(mirrorCandidates(chain[1]), chain);
+    assert.deepEqual(mirrorCandidates(path), chain);
+    // a route only the relay can answer: its file tiers are added by the caller, so the chain is relay -> this server
+    assert.deepEqual(mirrorCandidates('/media/~0123456789abcdef/bgm/act1'),
+      [`${RELAY}/media/~0123456789abcdef/bgm/act1`, '/media/~0123456789abcdef/bgm/act1']);
+    setMirrorPrefix('');
+    assert.deepEqual(mirrorCandidates(path), [path], 'no prefix: this server only');
+  });
+
+  test('the image fallback walks the chain and stops at this server', () => {
     setMirrorPrefix(BASE);
     const listeners = new Map();
     const doc = {
@@ -77,17 +100,19 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     };
     assert.equal(installImageFallback({ doc }), true);
     assert.equal(installImageFallback({ doc }), false, 'installed once per document');
+    const GH = 'https://gh-proxy.com/x/public';
+    setMirrorPrefix(BASE, false, [BASE, GH]);
     const el = {
       tagName: 'IMG', dataset: {},
       src: mirrorUrl(BASE, '/assets/~0123456789abcdef/char/avatar/x.png'),
       get currentSrc() { return this.src; },
     };
     listeners.get('error')({ target: el });
-    assert.equal(el.src, '/assets/~0123456789abcdef/char/avatar/x.png', 'retried from this server');
-    const again = { tagName: 'IMG', dataset: {}, src: `${BASE}/assets/a.png`, get currentSrc() { return this.src; } };
-    again.dataset.spMirrorRetry = '1';
-    listeners.get('error')({ target: again });
-    assert.match(again.src, /^https:/, 'a second failure never loops');
+    assert.equal(el.src, mirrorUrl(GH, '/assets/~0123456789abcdef/char/avatar/x.png'), 'tier 2: GitHub');
+    listeners.get('error')({ target: el });
+    assert.equal(el.src, '/assets/~0123456789abcdef/char/avatar/x.png', 'tier 3: this server');
+    listeners.get('error')({ target: el });
+    assert.equal(el.src, '/assets/~0123456789abcdef/char/avatar/x.png', 'and it stays there (no loop)');
     const other = { tagName: 'IMG', dataset: {}, src: 'https://elsewhere/a.png', get currentSrc() { return this.src; } };
     listeners.get('error')({ target: other });
     assert.equal(other.src, 'https://elsewhere/a.png', 'a foreign URL is left alone');

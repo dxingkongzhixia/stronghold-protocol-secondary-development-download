@@ -16,7 +16,7 @@
 import { resolveUvTable } from './atlas.js';
 import { parseObj } from './obj.js';
 import { idbEnabled, idbGet, idbPut } from '../../assetIdb.js';
-import { mirrorRouteUrl } from '../../assetMirror.js';
+import { mirrorRouteUrl, mirrorCandidates } from '../../assetMirror.js';
 import { sceneRouteUrl } from '../../../../shared/scene.js';
 
 export const THREE_URL = '/vendor/three.module.js';
@@ -146,12 +146,14 @@ async function fetchScene(url, kind, keyUrl = url) {
 async function fetchText(url) { return fetchScene(url, 'text'); }
 async function fetchJson(url) { return fetchScene(url, 'json'); }
 
-/** The relay's route first (js/assetMirror.js mirrorRouteUrl), then this server's route, then the plain /assets file
- *  (a static host has no route). The IndexedDB entry is keyed by the canonical route so a relay going away never
- *  strands the cache. */
+/** The relay's route first, then GitHub and its mirrors (their plain file), then this server's route, then the plain
+ *  /assets file (a static host has no route). The IndexedDB entry is keyed by the canonical route so a relay going away
+ *  never strands the cache. */
 async function fetchSceneViaRoute(routeUrl, directUrl, kind) {
   const key = routeUrl || directUrl;
-  for (const u of [...new Set([mirrorRouteUrl(routeUrl), routeUrl, directUrl])].filter(Boolean)) {
+  const fileTiers = directUrl ? mirrorCandidates(directUrl).slice(1, -1) : [];
+  const chain = [...new Set([mirrorRouteUrl(routeUrl), ...fileTiers, routeUrl, directUrl])].filter(Boolean);
+  for (const u of chain) {
     const v = await fetchScene(u, kind, key);
     if (v != null) return v;
   }
