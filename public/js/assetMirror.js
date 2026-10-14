@@ -22,12 +22,18 @@ import { splitHashedPath } from '../../shared/assetPaths.js';
 export const MIRRORS_URL = '/asset-mirrors.json';
 /** Image extensions the mirror may serve (the same rule `preload.js` preloads). */
 export const IMG_RE = /\.(png|webp|jpg|jpeg|gif|avif)$/i;
+/** Plain-file asset extensions a mirror may serve beside the images (a Spine skeleton/atlas; any file mirror has them). */
+export const FILE_RE = /\.(png|webp|jpg|jpeg|gif|avif|skel|atlas)$/i;
+/** The game's extension-less asset routes (`shared/{media,scene,clip}.js`): only a FULL origin reimplements them. */
+export const ROUTE_RE = /^\/(?:media|scene|clip)\//;
 /** Origins that never use a mirror (a dev server / the portable bundle's own copy). */
 export const DEV_HOSTS = Object.freeze(['localhost', '127.0.0.1', '::1', '']);
 /** One probe per mirror: a HEAD is enough and the mirrors answer CORS. */
 export const PROBE_TIMEOUT_MS = 4000;
 
 let prefix = '';
+/** Does the installed prefix reimplement the game's extension-less routes (/media, /scene, /clip) beside the files? */
+let fullOrigin = false;
 
 /**
  * Pure: may the mirror serve this manifest path? Images under `/assets/` only — a query string (the `?v=` preload uses)
@@ -38,7 +44,24 @@ let prefix = '';
 export function isMirrorable(path) {
   if (typeof path !== 'string' || !path.startsWith('/assets/')) return false;
   if (path.includes('?') || path.includes('/media/')) return false;
-  return IMG_RE.test(path);
+  // Images are what the free CDNs are for; a Spine skeleton/atlas is a plain file they hold too. The audio's `.mp3`
+  // is deliberately NOT here: it stays on the extension-less /media route (shared/media.js) so a download manager
+  // cannot sniff it.
+  return FILE_RE.test(path) && !/\.mp3$/i.test(path);
+}
+
+/**
+ * The mirror URL of one of the game's extension-less asset routes — the audio (`/media/…`), a battlefield scene bundle
+ * (`/scene/<id>/{meta,bin}`) or the boot clip (`/clip/boot`) — or the path unchanged. Only a **full origin** may carry
+ * these: one that reimplements the routes beside the plain files (the owner's relay does; gh-proxy and jsDelivr serve
+ * files only). A no-op until such an origin answers, so the client is safe with the free CDNs alone.
+ * @param {string} path
+ * @returns {string}
+ */
+export function mirrorRouteUrl(path) {
+  if (typeof path !== 'string' || !path || !prefix || !fullOrigin) return path;
+  if (!ROUTE_RE.test(path)) return path;
+  return prefix + path;
 }
 
 /**
@@ -76,8 +99,13 @@ export function rewriteAssetPaths(value, base) {
 
 /** The active mirror prefix ('' = this server). */
 export function mirrorPrefix() { return prefix; }
-/** @param {string} base */
-export function setMirrorPrefix(base) { prefix = typeof base === 'string' ? base : ''; }
+/** Is the active prefix a full origin (it also answers /media, /scene, /clip)? */
+export function mirrorIsFull() { return fullOrigin; }
+/** @param {string} base @param {boolean} [full] */
+export function setMirrorPrefix(base, full = false) {
+  prefix = typeof base === 'string' ? base : '';
+  fullOrigin = !!prefix && !!full;
+}
 
 /**
  * Pure: the same-origin path behind a mirror URL this page installed, or null. The inverse of `mirrorUrl` — the `?h=`
@@ -91,6 +119,7 @@ export function unmirrorUrl(url) {
   const at = rest.indexOf('?h=');
   const hash = at >= 0 ? rest.slice(at + 3) : '';
   const plain = at >= 0 ? rest.slice(0, at) : rest;
+  if (ROUTE_RE.test(plain)) return plain;      // /media/…, /scene/…, /clip/… — the route carries no serving hash
   if (!plain.startsWith('/assets/')) return null;
   return hash ? `/assets/~${hash}${plain.slice('/assets'.length)}` : plain;
 }
@@ -133,13 +162,14 @@ export async function initAssetMirror({
     if (!res || !res.ok) return '';
     const cfg = await res.json();
     const sources = cfg && Array.isArray(cfg.sources) ? cfg.sources.filter((s) => typeof s === 'string' && s) : [];
+    const full = new Set(cfg && Array.isArray(cfg.fullSources) ? cfg.fullSources : []);
     for (const base of sources) {
       try {
         const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
         const timer = ctrl && timeoutMs > 0 ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
         const probe = await fetchFn(mirrorUrl(base, path), { cache: 'no-cache', signal: ctrl ? ctrl.signal : undefined });
         if (timer) clearTimeout(timer);
-        if (probe && probe.ok) { setMirrorPrefix(base); return base; }
+        if (probe && probe.ok) { setMirrorPrefix(base, full.has(base)); return base; }
       } catch { /* blocked / slow: the next source */ }
     }
   } catch { /* no config / bad JSON: keep the server */ }

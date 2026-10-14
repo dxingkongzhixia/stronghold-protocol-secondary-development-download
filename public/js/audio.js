@@ -75,6 +75,7 @@
 import { sanitizeVoiceOverrides, voiceLangFor } from './voicePrefs.js';
 import { PHASE } from '../../shared/constants.js';
 import { mediaUrl } from './media.js';
+import { mirrorRouteUrl } from './assetMirror.js';
 import { idbEnabled, idbGet, idbPut } from './assetIdb.js';
 import { unhashedUrl } from '../../shared/assetPaths.js';
 
@@ -775,15 +776,17 @@ export class AudioManager {
           try { const cachedBlob = await idbGet(url); if (cachedBlob) ab = await cachedBlob.arrayBuffer(); } catch { /* fall through */ }
         }
         if (!ab) {
-          // Extension-less URL first so download managers leave the BGM alone; a host without /media/ still works.
+          // The relay's /media route first (js/assetMirror.js mirrorRouteUrl), then this server's own extension-less
+          // route (so a download manager leaves the BGM alone), then the plain /assets file (a host with neither route).
           const media = mediaUrl(url);
-          let res = await fetch(media);
-          if (media !== url && !isAudioResponse(res)) {
-            // Drop the unusable response (404, or a 200 that is really index.html) before trying the original URL.
-            try { await res.body?.cancel?.(); } catch { /* the fallback request matters more than draining this one */ }
-            res = await fetch(url);
+          const targets = [...new Set([mirrorRouteUrl(media), media, url])].filter(Boolean);
+          let res = null;
+          for (const target of targets) {
+            const r = await fetch(target);
+            if (r && r.ok && isAudioResponse(r)) { res = r; break; }
+            try { await r?.body?.cancel?.(); } catch { /* the next candidate matters more than draining this one */ }
           }
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (!res) throw new Error('no audio source');
           ab = await res.arrayBuffer();
           if (idbEnabled()) { try { await idbPut(url, new Blob([ab])); } catch { /* quota / private mode */ } }
         }

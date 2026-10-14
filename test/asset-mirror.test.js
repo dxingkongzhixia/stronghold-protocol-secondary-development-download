@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 
 import {
   isMirrorable, mirrorUrl, rewriteAssetPaths, mirrorPrefix, setMirrorPrefix, DEV_HOSTS, MIRRORS_URL,
-  unmirrorUrl, installImageFallback,
+  unmirrorUrl, installImageFallback, mirrorRouteUrl, mirrorIsFull,
 } from '../public/js/assetMirror.js';
 
 const BASE = 'https://cdn.example/gh/o/r@master/public';
@@ -17,12 +17,14 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     assert.equal(MIRRORS_URL, '/asset-mirrors.json');
   });
 
-  test('only images under /assets/ are mirrorable', () => {
+  test('images and plain-file assets under /assets/ are mirrorable (the audio and the routes are not)', () => {
     assert.ok(isMirrorable('/assets/char/avatar/x.png'));
     assert.ok(isMirrorable('/assets/~0123456789abcdef/ui/a.webp'));
-    // the audio's extension-less route, the Spine models, a query string and anything outside /assets/ stay put
+    // a Spine skeleton/atlas is a plain file every mirror holds, so it rides along with the images (Part B); the
+    // audio keeps its extension-less route, and a query / anything outside /assets/ stays put
     assert.ok(!isMirrorable('/media/~0123456789abcdef/bgm/act1'));
-    assert.ok(!isMirrorable('/assets/spine/op/x.skel'));
+    assert.ok(isMirrorable('/assets/spine/op/x.skel'));
+    assert.ok(isMirrorable('/assets/spine/op/x.atlas'));
     assert.ok(!isMirrorable('/assets/loading/boot.mp4?v=2'));
     assert.ok(!isMirrorable('/fonts/a.woff2'));
     assert.ok(!isMirrorable('/data/assets.json'));
@@ -47,8 +49,8 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     assert.equal(out.avatars.a, `${BASE}/assets/char/avatar/a.png?h=0123456789abcdef`);
     assert.equal(out.avatars.b, `${BASE}/assets/char/avatar/b.webp`);
     assert.deepEqual(out.audio, ['/assets/audio/bgm/act1.mp3']);
-    assert.equal(out.spine.s.skel, '/assets/spine/op/s.skel');
-    assert.equal(out.spine.s.atlas, '/assets/spine/op/s.atlas');
+    assert.equal(out.spine.s.skel, `${BASE}/assets/spine/op/s.skel`, 'a Spine skeleton rides along with the images');
+    assert.equal(out.spine.s.atlas, `${BASE}/assets/spine/op/s.atlas`);
     assert.equal(out.deep[0].img, `${BASE}/assets/ui/x.png?h=aaaaaaaaaaaaaaaa`);
     assert.equal(out.label, '叙拉古');
     assert.equal(out.n, 3);
@@ -90,6 +92,30 @@ describe('asset mirror prefix (js/assetMirror.js)', () => {
     listeners.get('error')({ target: other });
     assert.equal(other.src, 'https://elsewhere/a.png', 'a foreign URL is left alone');
     setMirrorPrefix('');
+  });
+
+  test('a full origin also carries the extension-less routes; a plain-file mirror never does', () => {
+    setMirrorPrefix(BASE, false);
+    assert.equal(mirrorIsFull(), false);
+    assert.equal(mirrorRouteUrl('/media/~0123456789abcdef/bgm/act1'), '/media/~0123456789abcdef/bgm/act1', 'not a full origin');
+    setMirrorPrefix(BASE, true);
+    assert.equal(mirrorIsFull(), true);
+    assert.equal(mirrorRouteUrl('/media/~0123456789abcdef/bgm/act1'), `${BASE}/media/~0123456789abcdef/bgm/act1`);
+    assert.equal(mirrorRouteUrl('/scene/act1autochess_m01/bin'), `${BASE}/scene/act1autochess_m01/bin`);
+    assert.equal(mirrorRouteUrl('/clip/boot?v=2'), `${BASE}/clip/boot?v=2`, 'the clip keeps its ?v=');
+    assert.equal(mirrorRouteUrl('/assets/char/avatar/a.png'), '/assets/char/avatar/a.png', 'a plain file is not a route');
+    assert.equal(unmirrorUrl(mirrorRouteUrl('/scene/x/bin')), '/scene/x/bin', 'and it un-mirrors back');
+    assert.equal(unmirrorUrl(`${BASE}/clip/boot?v=2`), '/clip/boot?v=2');
+    setMirrorPrefix('');
+    assert.equal(mirrorIsFull(), false, 'no prefix, no full origin');
+    assert.equal(mirrorRouteUrl('/media/x'), '/media/x');
+  });
+
+  test('plain-file assets a mirror holds are mirrorable; the audio stays on its extension-less route', () => {
+    assert.ok(isMirrorable('/assets/spine/op/x/front/x.skel'), 'a Spine skeleton is a plain file');
+    assert.ok(isMirrorable('/assets/spine/op/x/front/x.atlas'));
+    assert.ok(!isMirrorable('/assets/audio/bgm/x.mp3'), 'the audio keeps /media (a download manager must not sniff it)');
+    assert.ok(!isMirrorable('/assets/local/scene/x/scene.bin'), 'the scene bundle keeps /scene');
   });
 
   test('the prefix defaults to this server, and a dev origin is on the never-mirror list', () => {

@@ -16,6 +16,7 @@
 import { resolveUvTable } from './atlas.js';
 import { parseObj } from './obj.js';
 import { idbEnabled, idbGet, idbPut } from '../../assetIdb.js';
+import { mirrorRouteUrl } from '../../assetMirror.js';
 import { sceneRouteUrl } from '../../../../shared/scene.js';
 
 export const THREE_URL = '/vendor/three.module.js';
@@ -119,10 +120,10 @@ export function idbValueFrom(kind, text) {
   return kind === 'json' ? JSON.parse(text) : text;
 }
 
-async function fetchScene(url, kind) {
+async function fetchScene(url, kind, keyUrl = url) {
   if (idbEnabled()) {
     try {
-      const blob = await idbGet(url);
+      const blob = await idbGet(keyUrl);
       if (blob) {
         if (kind === 'arrayBuffer') return await blob.arrayBuffer();
         return idbValueFrom(kind, await blob.text());
@@ -137,7 +138,7 @@ async function fetchScene(url, kind) {
   if (out != null && idbEnabled()) {
     try {
       const body = idbBodyFor(kind, out);
-      await idbPut(url, new Blob([body], { type: kind === 'json' ? 'application/json' : undefined }));
+      await idbPut(keyUrl, new Blob([body], { type: kind === 'json' ? 'application/json' : undefined }));
     } catch { /* quota / private mode */ }
   }
   return out ?? null;
@@ -145,11 +146,16 @@ async function fetchScene(url, kind) {
 async function fetchText(url) { return fetchScene(url, 'text'); }
 async function fetchJson(url) { return fetchScene(url, 'json'); }
 
-/** The extension-less route first (IDM-safe), then the direct /assets/… URL (a plain static host). */
+/** The relay's route first (js/assetMirror.js mirrorRouteUrl), then this server's route, then the plain /assets file
+ *  (a static host has no route). The IndexedDB entry is keyed by the canonical route so a relay going away never
+ *  strands the cache. */
 async function fetchSceneViaRoute(routeUrl, directUrl, kind) {
-  const viaRoute = routeUrl ? await fetchScene(routeUrl, kind) : null;
-  if (viaRoute != null) return viaRoute;
-  return directUrl ? fetchScene(directUrl, kind) : null;
+  const key = routeUrl || directUrl;
+  for (const u of [...new Set([mirrorRouteUrl(routeUrl), routeUrl, directUrl])].filter(Boolean)) {
+    const v = await fetchScene(u, kind, key);
+    if (v != null) return v;
+  }
+  return null;
 }
 
 /**

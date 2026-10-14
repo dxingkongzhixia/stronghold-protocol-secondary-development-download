@@ -1,8 +1,11 @@
 {
-  "note": "Art origins, best first. The client prefixes the image URLs of the art manifests with the first source that answers (/asset-mirrors.json is its probe), falling back to the game server — see docs/ASSETS.md. `http://123.57.150.185` is the owner's own relay (Aliyun Beijing, 200 Mbps, nginx over a clone of this repository's public/): it mirrors the whole tree AND reimplements the game's extension-less routes (/media, /scene, /clip), so it can carry everything, not only images. The two free CDN mirrors below only serve plain files (they have no /media, /scene or /clip), and github raw is often unreachable from mainland China — which is why the relay comes first. Update the owner/repo in the CDN entries if the repository moves.",
+  "note": "Art origins, best first. The client prefixes the art manifests' image/Spine URLs with the first source that answers (/asset-mirrors.json is its probe) and falls back to the game server — see docs/ASSETS.md. `http://123.57.150.185` is the owner's own relay (Aliyun Beijing, 200 Mbps, nginx over a clone of this repository's public/) and is listed in `fullSources` because it ALSO reimplements the game's extension-less routes (/media audio, /scene battlefield bundles, /clip boot video): with it installed the client sends those classes to the relay too. The two free CDN mirrors below serve plain files only (no /media, /scene or /clip) and github raw is often unreachable from mainland China — they stay as plain-file fallbacks. Update the owner/repo in the CDN entries if the repository moves. Traffic on the relay is unmetered (owner, 2026-10-14).",
   "sources": [
     "http://123.57.150.185",
     "https://gh-proxy.com/https://raw.githubusercontent.com/dxingkongzhixia/stronghold-protocol-secondary-development-download/master/public",
     "https://cdn.jsdelivr.net/gh/dxingkongzhixia/stronghold-protocol-secondary-development-download@master/public"
+  ],
+  "fullSources": [
+    "http://123.57.150.185"
   ]
 }

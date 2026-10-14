@@ -66,7 +66,7 @@ import { ensureManifestLink } from './ui/ensureManifest.js';
 import { initLang, useLang, tickerText } from './ui/lang.js';
 import { t, N_, translateWire } from '../../shared/i18n.js';
 import { recordError, installTrafficMeter } from './diag.js';
-import { initAssetMirror, installImageFallback } from './assetMirror.js';
+import { initAssetMirror, installImageFallback, mirrorRouteUrl } from './assetMirror.js';
 import { idbSupported, setIdbEnabled } from './assetIdb.js';
 
 const RESTORE_GRACE_MS = 1500;
@@ -463,7 +463,17 @@ function mountBootVideo() {
     } else if (BOOT_VIDEO.kind === 'file' && BOOT_VIDEO.src) {
       const v = document.createElement('video');
       v.className = 'boot__frame';
-      v.src = BOOT_VIDEO.src;
+      // The relay first (js/assetMirror.js mirrorRouteUrl: 12 MB per cold visit), this server's own /clip route as the
+      // fallback — the video only falls back once, and only when the relay does not answer.
+      const localClip = BOOT_VIDEO.src;
+      const remoteClip = mirrorRouteUrl(localClip);
+      let clipFellBack = remoteClip === localClip;
+      v.addEventListener('error', () => {
+        if (clipFellBack) return;
+        clipFellBack = true;
+        try { v.src = localClip; v.load?.(); v.play?.().catch(() => {}); } catch { /* ignore */ }
+      });
+      v.src = remoteClip;
       // Background only: looped + autoplay + NO controls (not seekable, not draggable, no PiP). Browsers refuse sound
       // until the user interacts with the page, so it starts muted and unmutes on the first pointer/键 gesture — no
       // visible control; a dim hint tells the player to tap/click.
