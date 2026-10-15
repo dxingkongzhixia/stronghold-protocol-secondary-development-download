@@ -46,7 +46,7 @@
 |---|---|
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
 | git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
-| 远程同步 | `github/master` == `gitee/master` == HEAD `1d86692a`（v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复 + 工具与文档；2026-10-15 追加**按实测速度选源**、中继带宽事件与**中继缓存头口径**，全部已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
+| 远程同步 | `github/master` == `gitee/master` == HEAD `2618bfce`（v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复 + 工具与文档；2026-10-15 追加**按实测速度选源**、中继带宽事件与**中继缓存头口径**，以及笔记本那台的**运维控制台（六视图）/ 测速页 / 单一源文件**，全部已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
 | 全量测试 | `node --test --test-concurrency=2`：**6674 项 / 6659 通过 / 0 失败 / 15 跳过**（约 607 s，台式机 store，2026-10-15 实测；笔记本的数字见 §9） |
 | 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1455/1455（100%）；`doctor` 退出码 0；`eslint` 0 error（148 warning）；`npm run typecheck` / `check:imports` 通过 |
 | 本机环境 | Node **v24.19.0** |
@@ -57,7 +57,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `eb29e3ee0a28`**（2026-10-14 启动时算出、重启前不变；**线上静态树此后又更新过**：2026-10-15 把 `/js/assetMirror.js` 换成「按实测速度选源」的版本，`/sw.js`、`/js/assetCache.js`、`/data/chess.json` 与站点名回退的页面文件一并同步，逐一与仓库 sha 相同，**全程未重启**，所以在飞的房间不受影响）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `ef79c683b064`**（2026-10-15 重启后由 `/healthz` 实测；线上 `public` 树与仓库 `2618bfce` 的 `/js/screens/lobby.js`、`/js/ui/codex.js` 逐字节相同）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
