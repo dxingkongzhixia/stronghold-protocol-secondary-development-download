@@ -241,11 +241,14 @@ Production: `http://183.66.27.19:20522` (NAT → internal `:3000`) on a RainYun 
    under `shared/**` or `server/**` needs a restart. Back up first (see rollback below). Package excluding machine
    files:
    ```bash
-   tar -czf sp-full.tgz --exclude=./node_modules --exclude=./public/assets --exclude=./public/vendor \
+   tar -czf sp-full.tgz --exclude=./.git --exclude=./node_modules --exclude=./public/assets --exclude=./public/vendor \
      --exclude=./public/fonts --exclude=./.cache --exclude=./var --exclude=./logs \
      --exclude=./test/e2e/out --exclude=./data/local-assets.json .
    scp -P 45217 sp-full.tgz root@183.66.27.19:/root/
    ```
+   **`--exclude=./.git` is required on the laptop** (single tree — [`AGENTS.md`](../AGENTS.md) §2): the checkout's
+   `.git` holds the packed art (~700 MB), so without it the bundle is **705 MB instead of ~12 MB**. The desktop's dev
+   tree has no `.git`, which is why the original command omitted it.
    On the host: unpack into `/www/wwwroot/Stronghold-Protocol`, `chown -R www:www .`, dirs 755 / files 644. (Assets
    are the exception: new art/voice/Spine must be uploaded too — for a new operator, all files its manifest lists.)
 4. **Restart** (only when server/shared changed): find the `:3000` pid (`ss -ltnp`) and `kill -TERM` it, then

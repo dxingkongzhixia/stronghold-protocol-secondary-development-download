@@ -73,10 +73,12 @@
 1. 本地 `node --test` 全绿；
 2. 打包（不带超大 / 本机文件）：
    ```
-   tar -czf sp-full.tgz --exclude=./node_modules --exclude=./public/assets --exclude=./public/vendor \
+   tar -czf sp-full.tgz --exclude=./.git --exclude=./node_modules --exclude=./public/assets --exclude=./public/vendor \
      --exclude=./public/fonts --exclude=./.cache --exclude=./var --exclude=./logs \
      --exclude=./test/e2e/out --exclude=./data/local-assets.json .
    ```
+   ⚠️ **笔记本（单树）必须加 `--exclude=./.git`**：单树检出的 `.git` 里打包着美术资源，约 **700 MB**，
+   漏掉这一项会打出 **705 MB** 的包（正常约 12 MB）。桌面机的开发树没有 `.git`，所以原命令没写它。
 3. `scp` 到 `/root/sp-full.tgz`；服务器解包 → `chown -R www:www .` → 目录 755 / 文件 644；
 4. 停旧进程（按 `ss -ltnp` 里 `:3000` 的 pid，`kill -TERM`）→
    `su -s /bin/bash www -c 'setsid /www/server/nodejs/vhost/scripts/server.sh'`；
