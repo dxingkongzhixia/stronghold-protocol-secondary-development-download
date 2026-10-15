@@ -1472,7 +1472,7 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **文档**：本节 + §22 黑名单行、[`CHANGELOG.md`](../CHANGELOG.md) 0.4.0「规则（按官方）」首条、[`docs/DATA.md`](DATA.md) §2 / §2.3、[`docs/SIM.md`](SIM.md) §12、[`docs/design/match.md`](design/match.md) §16、[`docs/PLAYING.md`](PLAYING.md)（玩家向）、[`docs/PROJECT-STATE.md`](PROJECT-STATE.md)（常量表）、[`docs/research/03-operators.md`](research/03-operators.md)、`server/sim/content/kits/README.md`、[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 / §11。
 - **合并黑名单**：见 §22 的新增行与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0——**上游若再次把「满潜 / 满练度」当默认带回，一律以我们为准**（自查：`POTENTIAL_DEFAULT` 必须是 `POTENTIAL_MIN`、`CULTIVATE_DEFAULT` 必须是 `0`，且 `loadoutRecord` 不得对默认档直接返回原始记录）。
 - **发布快照**：全量 `node --test` **6690 项 / 6675 通过 / 0 失败 / 15 跳过**；`build-data --offline` 零漂移；`kit-coverage` 307/307；`eslint` 0 error（148 warning 与基线一致）；`i18n check en --strict` 1454/1454；docs 守卫 34/0；`golden` 重算后 verify 全过。提交 `442ee2ec`（代码 / 测试 / 文档）+ `f38c5249`（golden）。
-- **未做 / 待定**：① **图鉴**（资料库）仍显示数据里的满潜数值——要不要与实战默认一致待 owner 定；② **信赖**：bwiki / 调度手册 说本模式信赖一律 100%，我们此前按 `favorPoint 0` 建（= 0 信赖）——**owner 2026-10-15 决定按官方满信赖，见 §46**；③ 浏览器 e2e（`SP_E2E=1`）未跑；④ **尚未部署**（改动含 `server/**` + `shared/**`，需重启）。
+- **未做 / 待定**：① **图鉴**（资料库）——**owner 2026-10-16 决定「默认一致」**：`public/js/ui/codexModel.js chessView` 与 `codex.js OperatorCard` 改为用 `atPotential(c, POTENTIAL_DEFAULT)` 组合（数值与**天赋的 `potBelow` 链**都按**默认档 潜能 1 / 未精英化**显示，与详情卡/战斗同一套组合；潜能 6 仍是数据原值）；② **信赖**：bwiki / 调度手册 说本模式信赖一律 100%，我们此前按 `favorPoint 0` 建（= 0 信赖）——**owner 2026-10-15 决定按官方满信赖，见 §46**；③ 浏览器 e2e（`SP_E2E=1`）未跑；④ **尚未部署**（改动含 `server/**` + `shared/**`，需重启）。
 
 ## 46. 信赖按官方满 100% 计入（owner 2026-10-15）
 

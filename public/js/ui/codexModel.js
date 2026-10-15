@@ -15,6 +15,7 @@
 // those, the two leader phases have their own tabs.
 
 import { richTextPlain, formatBondEffect } from './richText.js';
+import { atPotential, POTENTIAL_DEFAULT } from '../../../shared/potential.js';
 
 const s = (v) => (typeof v === 'string' ? v : '');
 const arr = (v) => (Array.isArray(v) ? v : []);
@@ -344,7 +345,11 @@ export function skillIconUrl(assets, skill) {
 
 /** The full codex view of one operator (bonds / garrisons / talents / skills / stats / cross-links). */
 export function chessView(c, { bonds = [], bands = [], garrisons = [], items = [], assets = null } = {}) {
-  const st = obj(c && c.stats) || {};
+  // The codex shows the DEFAULT numbers a player actually gets — 潜能 1 / 未精英化 since 2026-10-15 (owner). The records
+  // in data/chess.json are built at FULL potential, so compose them down exactly as the cards and the battle do
+  // (shared/potential.js atPotential; the talents' potBelow chains come along). 潜能 6 keeps the record's own numbers.
+  const rec = atPotential(c, POTENTIAL_DEFAULT);
+  const st = obj(rec && rec.stats) || {};
   const bondIds = arr(c && c.bonds);
   return {
     chess: c,
@@ -369,7 +374,7 @@ export function chessView(c, { bonds = [], bands = [], garrisons = [], items = [
     garrisons: chessGarrisons(c, garrisons).map((g) => ({
       id: s(g.garrisonId), desc: s(g.descRaw || g.desc), eventTypeDesc: s(g.eventTypeDesc),
     })),
-    talents: arr(c && c.talents).filter((tl) => tl && !tl.hidden).map((tl) => ({
+    talents: arr(rec && rec.talents).filter((tl) => tl && !tl.hidden).map((tl) => ({
       name: s(tl.name), desc: s(tl.descRaw || tl.desc), fromModule: !!tl.fromModule,
     })),
     skills: arr(c && c.skills).map((sk) => ({

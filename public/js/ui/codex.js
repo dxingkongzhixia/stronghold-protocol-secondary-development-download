@@ -26,6 +26,7 @@ import { createStore, useStore } from '../store.js';
 import { data, useData } from '../data.js';
 import { ensureStylesheet } from './ensureStylesheet.js';
 import { t, N_ } from '../../../shared/i18n.js';
+import { atPotential, POTENTIAL_DEFAULT } from '../../../shared/potential.js';
 import {
   bondView, filterBonds, bondKind, bondScope,
   filterBands, bandView,
@@ -326,7 +327,9 @@ function BandDetail({ b, bondNames, onOpenBond }) {
 // ---- 干员 ------------------------------------------------------------------------------------------
 
 function OperatorCard({ c, selected, onOpen, bondNames }) {
-  const cost = c.stats && Number.isFinite(Number(c.stats.cost)) ? Number(c.stats.cost) : null;
+  // the DEFAULT numbers (潜能 1 / 未精英化 since 2026-10-15): the record in data/chess.json is built at full potential
+  const costStats = atPotential(c, POTENTIAL_DEFAULT).stats;
+  const cost = costStats && Number.isFinite(Number(costStats.cost)) ? Number(costStats.cost) : null;
   return html`<button type="button" class=${cx('cx-op', selected && 'is-on', chessIsCustom(c) && 'is-custom')}
       data-chess=${c.chessId} onClick=${() => onOpen(c.chessId)} title=${c.name}>
     <span class="cx-op__thumb"><${UnitThumb} kind="chess" id=${c.chessId} size="md" /></span>
