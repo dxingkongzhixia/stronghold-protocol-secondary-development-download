@@ -14,8 +14,8 @@
 // Read-only: the probe only GETs third-party URLs. It never touches the lobby, the registry or the database, and the
 // console cannot use it to change anything — the origins come from public/asset-mirrors.json, not from the caller.
 
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { readMirrors } from './mirrors.js';
 
 /** Mirrors public/js/assetMirror.js SPEED_SAMPLES: six operator portraits (~110 KB each) present on the relay, on both
  *  GitHub mirrors and on this server. */
@@ -70,24 +70,15 @@ export function labelOf(base) {
 }
 
 /**
- * The origins to measure, in the client's own order: public/asset-mirrors.json `sources` (best first) with
- * `fullSources` marking the ones that also reimplement /media, /scene and /clip. Never throws: a missing or malformed
- * file yields an empty list, and the console just shows nothing to measure.
+ * The origins to measure, in the client's own order, straight from `public/asset-mirrors.json` (server/mirrors.js — the
+ * same file the client and the Service Worker read), with `fullSources` marking the ones that also reimplement /media,
+ * /scene and /clip. Never throws: a missing or malformed file yields an empty list, and the console shows nothing to
+ * measure.
  * @param {string} root repository root
  */
 export function readOrigins(root) {
-  let cfg;
-  try {
-    cfg = JSON.parse(readFileSync(join(root, 'public', 'asset-mirrors.json'), 'utf8'));
-  } catch { return []; }
-  const full = new Set(Array.isArray(cfg && cfg.fullSources) ? cfg.fullSources : []);
-  const list = Array.isArray(cfg && cfg.sources) ? cfg.sources : [];
-  return list
-    .filter((b) => typeof b === 'string' && b.trim())
-    .map((b) => {
-      const base = b.trim().replace(/\/+$/, '');
-      return { base, label: labelOf(base), full: full.has(b.trim()) || full.has(base) };
-    });
+  const { sources, fullSources } = readMirrors(join(root, 'public'));
+  return sources.map((base) => ({ base, label: labelOf(base), full: fullSources.includes(base) }));
 }
 
 /**

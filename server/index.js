@@ -43,6 +43,7 @@ import { CommunityService, bugReportsExport, bugReportsToCsv } from './community
 import { StatsService } from './stats.js';
 import { ADMIN_HTML, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
 import { createSpeedProbe } from './speed.js';
+import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from './mirrors.js';
 import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX } from '../shared/constants.js';
 import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';
@@ -211,6 +212,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const bugStatus = parts.rawPath === '/admin/api/bug/status';
     const bugExport = parts.rawPath === '/admin/api/bug/export';
     const speed = parts.rawPath === '/admin/api/speed';
+    const origins = parts.rawPath === '/admin/api/origins';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -229,6 +231,25 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       const force = new URLSearchParams(parts.query).get('force') === '1';
       const r = await speedProbe.run({ force });
       sendJson(req, res, 200, { ok: true, ...r });
+      return;
+    }
+    // 来源配置 (server/mirrors.js, docs/MATCHMAKING.md §12.3): read / write public/asset-mirrors.json — the ONE place
+    // the art origins are written down. Every URL is validated and the previous file is kept as a backup, so an edit is
+    // reversible; a save is live on the next request (the asset index keys its cache on this file's mtime) — no restart.
+    if (origins) {
+      const backup = backupPath(ROOT);
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        sendJson(req, res, 200, { ok: true, file: 'public/asset-mirrors.json', backup: hasBackup(ROOT), ...readMirrors(publicDir) });
+        return;
+      }
+      if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); sendJson(req, res, 405, { error: 'GET or POST required' }); return; }
+      const body = await readJsonBody(req);
+      if (!body || typeof body !== 'object') { sendJson(req, res, 400, { error: '请求体需要是 JSON' }); return; }
+      const r = body.revert
+        ? revertMirrors(publicDir, { backup })
+        : writeMirrors(publicDir, { sources: body.sources, fullSources: body.fullSources }, { backup });
+      if (r.error) { sendJson(req, res, 400, { error: r.error }); return; }
+      sendJson(req, res, 200, { ok: true, file: 'public/asset-mirrors.json', backup: hasBackup(ROOT), reverted: !!body.revert, ...readMirrors(publicDir) });
       return;
     }
     if (notify) {
@@ -327,7 +348,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       return true;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
-      || parts.rawPath === '/admin/api/speed'
+      || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;

@@ -518,11 +518,12 @@ matches keep their bandwidth. This is a **fork-only** feature — the merge-crit
     local manifests) names under `/assets` and `/fonts` **and that exists on disk** (~14k files, ~828 MB here).
   - `revision` — a deterministic hash of `files` (`indexVersion`); an **equal revision means the client's cache already
     matches**, so nothing is downloaded. Rebuilt only when a source manifest changes (mtime-keyed cache).
-  - `sources` — the fallback origins a cache miss may try, best first (`assetSources`): **the owner's own relay**, then
-    the CORS-capable CDN mirrors of the primary repo's `public/` tree (`mirrorSources`) — **gh-proxy**, then
-    **jsDelivr**. The relay is read from `public/asset-mirrors.json` (the list the plain-HTTP path uses;
-    `SP_ASSET_RELAY` overrides it), so both paths agree; `SP_ASSET_REF` pins the CDN git ref and **an empty string
-    disables the whole mirror tier**. Served `no-cache` + `Access-Control-Allow-Origin: *`.
+  - `sources` — the fallback origins a cache miss may try, best first (`assetSources`): read straight out of
+    `public/asset-mirrors.json`, **the ONE place the origins are written down** (`server/mirrors.js`; the console's
+    来源配置 view edits that file, live — a save is picked up on the next request, no restart). Nothing is hardcoded any
+    more: no repository slug, no relay constant, no CDN template. `SP_ASSET_RELAY` overrides the full origin a client
+    installs, and **`SP_ASSET_REF=''` turns the whole tier off** (every class then stays on the game server). Served
+    `no-cache` + `Access-Control-Allow-Origin: *`.
 - **`server/http/files.js`** — asset / font responses carry `Access-Control-Allow-Origin: *` (so a player's own machine
   can serve them). A **process-wide token bucket** (`RateLimiter` + `assetRateBytesPerSec`) paces `public/assets` /
   `fonts` / `vendor` response **bodies** — the server fallback path — at **`SP_ASSET_RATE_KBPS` KB/s (default 1200 ≈

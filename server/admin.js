@@ -446,6 +446,16 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
 .note{margin:13px 0 0;color:var(--dim2);font-size:12px;line-height:1.65}
 .note strong{color:var(--dim);font-weight:600}
 
+/* 来源配置 (server/mirrors.js): the origin list, edited in place. Order = the chain's order. */
+.origins{display:flex;flex-direction:column;gap:7px}
+.origin-row{display:flex;align-items:center;gap:8px}
+.origin-row__idx{width:18px;text-align:right;color:var(--dim2);font-size:12px;font-variant-numeric:tabular-nums}
+.origin-row__url{flex:1;min-width:0;background:var(--panel2);color:var(--text);border:1px solid var(--line2);
+  border-radius:8px;padding:6px 11px;font:inherit;font-size:13px;font-family:ui-monospace,Consolas,monospace}
+.origin-row__url:focus{outline:none;border-color:var(--mint-dim)}
+.origin-row__full{display:inline-flex;align-items:center;gap:5px;color:var(--dim);font-size:12.5px;white-space:nowrap;cursor:pointer}
+.btn--tiny{padding:3px 9px;font-size:12px;line-height:1.35}
+
 /* 窄屏：侧栏变成顶部导航 */
 @media (max-width:900px){
   .app{flex-direction:column}
@@ -475,13 +485,14 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       <button class="nav__item" data-view="bugs"><i>⚑</i>反馈<em id="navBugs">0</em></button>
       <div class="nav__sect">诊断</div>
       <button class="nav__item" data-view="speed"><i>⚡</i>测速</button>
+      <button class="nav__item" data-view="origins"><i>⇄</i>来源配置</button>
     </nav>
     <div class="side__foot">
       <span class="live"><i></i>实时 · 每 2 秒</span>
       <span class="side__line" id="verify">校验 —</span>
       <span class="side__line" id="updated">—</span>
       <button class="btn" id="refresh">立即刷新</button>
-      <span class="side__keys">快捷键 <kbd>1</kbd>-<kbd>7</kbd> 切换 · <kbd>/</kbd> 搜索 · <kbd>Esc</kbd> 关闭预览</span>
+      <span class="side__keys">快捷键 <kbd>1</kbd>-<kbd>8</kbd> 切换 · <kbd>/</kbd> 搜索 · <kbd>Esc</kbd> 关闭预览</span>
     </div>
   </aside>
 
@@ -610,6 +621,23 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         </div>
       </section>
     </section>
+
+    <section class="view" id="view-origins" hidden>
+      <section class="panel">
+        <h2>来源配置<em>public/asset-mirrors.json · 客户端与 Service Worker 都读这一份</em></h2>
+        <div class="tools">
+          <button class="btn" id="originsAdd">+ 添加来源</button>
+          <span class="grow"></span>
+          <button class="btn" id="originsRevert">还原上一版</button>
+          <button class="btn btn--primary" id="originsSave">保存</button>
+        </div>
+        <div class="panel__body">
+          <div class="verdict" id="originsMsg">正在读取…</div>
+          <div class="origins" id="originsList"></div>
+          <p class="note">顺序就是链路的尝试顺序：客户端按顺序取 <strong>第一个跑过自己阈值</strong> 的来源（中继这类「全路由」来源要 1.2 MB/s，普通镜像 1.0 MB/s —— 见「测速」）。勾「全路由」= 它除普通文件外还能提供 /media · /scene · /clip。<strong>保存后立即生效</strong>（下一次请求就是新配置），客户端下次加载即可见，<strong>不需要重启</strong>。空地址行会被忽略；保存前会校验每个地址，并把上一版留成备份。</p>
+        </div>
+      </section>
+    </section>
   </main>
 </div>
 <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-hidden="true" aria-label="反馈图片">
@@ -639,9 +667,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     online: ['在线','当前在线会话（含游客）'],
     notice: ['通知','向在线玩家推送公告，并保留发送历史'],
     bugs: ['反馈','玩家提交的问题报告与处理状态'],
-    speed: ['测速','中继与 GitHub 镜像的实测速率 · 与客户端同一套口径']
+    speed: ['测速','中继与 GitHub 镜像的实测速率 · 与客户端同一套口径'],
+    origins: ['来源配置','中继与镜像地址 · 改完即时生效，不用重启']
   };
-  var VIEW_ORDER = ['overview','rooms','accounts','online','notice','bugs','speed'];
+  var VIEW_ORDER = ['overview','rooms','accounts','online','notice','bugs','speed','origins'];
   // 表格列：[表头, 排序键]（排序键为空 = 该列不可排序，只能搜索）
   var COLS = {
     rooms: [['房间码','code'],['模式','mode'],['难度','difficulty'],['状态',''],['类型',''],['玩家','humans'],['AI','bots']],
@@ -676,6 +705,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     document.title = VIEWS[id][0] + ' · 服务器管理 · Stronghold Protocol';
     if (!silent && location.hash.slice(1) !== id) location.hash = id;
     if (id === 'speed' && !speedLoaded && !speedRunning) runSpeed(false);
+    if (id === 'origins' && !originsLoaded && !originsBusy) loadOrigins();
     if (id !== 'bugs') closeViewer();
   }
   el('nav').addEventListener('click', function (e) {
@@ -1110,6 +1140,107 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       .then(function () { speedRunning = false; speedLoaded = true; el('speedRun').disabled = false; });
   }
   el('speedRun').addEventListener('click', function () { runSpeed(true); });
+
+  // ---------------- 来源配置 (server/mirrors.js → /admin/api/origins): the art origins, edited in place. The file is
+  // the ONE place they live; a save is validated, backed up, and live on the next request (no restart). --------------
+  var originsLoaded = false, originsBusy = false, originsRows = [];
+  function originsMsg(text, bad) {
+    var n = el('originsMsg');
+    n.textContent = text;
+    n.className = 'verdict' + (bad ? ' is-bad' : '');
+  }
+  function originsToRows(d) {
+    var full = {};
+    (Array.isArray(d.fullSources) ? d.fullSources : []).forEach(function (u) { full[u] = true; });
+    return (Array.isArray(d.sources) ? d.sources : []).map(function (u) { return { url: u, full: !!full[u] }; });
+  }
+  function originsBody() {
+    var rows = originsRows.map(function (r) { return { url: String(r.url || '').trim(), full: !!r.full }; })
+      .filter(function (r) { return r.url; });
+    return { sources: rows.map(function (r) { return r.url; }), fullSources: rows.filter(function (r) { return r.full; }).map(function (r) { return r.url; }) };
+  }
+  function renderOrigins() {
+    var rows = originsRows.length ? originsRows : [{ url: '', full: false }];
+    el('originsList').innerHTML = rows.map(function (r, i) {
+      return '<div class="origin-row" data-i="' + i + '">'
+        + '<span class="origin-row__idx">' + (i + 1) + '</span>'
+        + '<input class="origin-row__url" value="' + esc(r.url) + '" placeholder="https://…" spellcheck="false"/>'
+        + '<label class="origin-row__full"><input type="checkbox" data-full="1"' + (r.full ? ' checked' : '') + '/>全路由</label>'
+        + '<button class="btn btn--tiny" data-act="up" title="上移" aria-label="上移">↑</button>'
+        + '<button class="btn btn--tiny" data-act="down" title="下移" aria-label="下移">↓</button>'
+        + '<button class="btn btn--tiny" data-act="del" title="删除" aria-label="删除">✕</button>'
+        + '</div>';
+    }).join('');
+  }
+  function loadOrigins() {
+    originsBusy = true;
+    originsMsg('正在读取…', false);
+    fetch('/admin/api/origins?token=' + encodeURIComponent(token), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        originsRows = originsToRows(d);
+        originsLoaded = true;
+        renderOrigins();
+        originsMsg('已加载 ' + originsRows.length + ' 个来源 · ' + (d.backup ? '可还原上一版' : '暂无上一版可还原'), false);
+      })
+      .catch(function (e) { originsMsg('读取失败：' + e.message, true); })
+      .then(function () { originsBusy = false; });
+  }
+  function saveOrigins(what, body) {
+    if (originsBusy) return;
+    originsBusy = true;
+    originsMsg('正在' + what + '…', false);
+    fetch('/admin/api/origins?token=' + encodeURIComponent(token), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || originsBody()),
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error((res.j && res.j.error) || 'HTTP');
+        originsRows = originsToRows(res.j);
+        originsLoaded = true;
+        renderOrigins();
+        originsMsg(what + '成功 · ' + originsRows.length + ' 个来源 · 下一次请求即生效，客户端下次加载可见'
+          + (res.j.revert ? ' · 已还原到上一版' : ' · 上一版已留作备份'), false);
+      })
+      .catch(function (e) { originsMsg(what + '失败：' + e.message, true); })
+      .then(function () { originsBusy = false; });
+  }
+  el('originsAdd').addEventListener('click', function () {
+    originsRows = (originsRows.length ? originsRows : []).concat([{ url: '', full: false }]);
+    renderOrigins();
+    var inputs = el('originsList').querySelectorAll('.origin-row__url');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+  el('originsSave').addEventListener('click', function () { saveOrigins('保存'); });
+  el('originsRevert').addEventListener('click', function () { saveOrigins('还原', { revert: true }); });
+  el('originsList').addEventListener('input', function (e) {
+    var t = e.target;
+    if (!t || !t.classList || !t.classList.contains('origin-row__url')) return;
+    var row = t.closest('.origin-row');
+    if (row) originsRows[Number(row.dataset.i)].url = t.value;
+  });
+  el('originsList').addEventListener('change', function (e) {
+    var t = e.target;
+    if (!t || !t.dataset || t.dataset.full !== '1') return;
+    var row = t.closest('.origin-row');
+    if (row) originsRows[Number(row.dataset.i)].full = !!t.checked;
+  });
+  el('originsList').addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('button[data-act]') : null;
+    if (!b) return;
+    var row = b.closest('.origin-row');
+    var i = Number(row.dataset.i);
+    var act = b.dataset.act;
+    if (act === 'del') originsRows.splice(i, 1);
+    else {
+      var j = act === 'up' ? i - 1 : i + 1;
+      if (j < 0 || j >= originsRows.length) return;
+      var swap = originsRows[i];
+      originsRows[i] = originsRows[j];
+      originsRows[j] = swap;
+    }
+    renderOrigins();
+  });
 
   setView(location.hash.slice(1) || 'overview', true);
   tick(); setInterval(tick, 2000);

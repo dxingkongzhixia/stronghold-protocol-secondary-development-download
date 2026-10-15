@@ -18,62 +18,40 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { noopLog } from './http/config.js';
 import { APP_VERSION } from '../shared/constants.js';
+import { readMirrors, tidyOrigin, configPath } from './mirrors.js';
 
 /** The manifest trees whose string leaves are cacheable asset URLs (art + fonts). */
 const URL_PREFIXES = ['/assets/', '/fonts/'];
 
-/** The GitHub primary repository that tracks the runtime art, and the ref the CDN mirrors should serve. */
-export const ASSET_REPO = 'dxingkongzhixia/stronghold-protocol-secondary-development-download';
-// `SP_ASSET_REF=''` disables the mirrors (the client then goes straight to the game server — the docs say so, so the
-// empty string must survive); only an UNSET variable falls back to `master`.
-export const ASSET_REPO_REF = process.env.SP_ASSET_REF ?? 'master';
-
-/** The owner's own art relay, used when neither `SP_ASSET_RELAY` nor `public/asset-mirrors.json` names one. */
-export const RELAY_FALLBACK = 'http://123.57.150.185';
+/**
+ * The origins a client may load art from, in order, read from `public/asset-mirrors.json` — the ONE place they are
+ * written down (`server/mirrors.js`; the console's 来源配置 view edits that file). Nothing here is hardcoded any more:
+ * moving the relay or the repository is a config edit, and the asset index keys its cache on that file's mtime, so a
+ * save is live on the next request. Local overrides: `SP_ASSET_RELAY` forces the full origin a client installs, and
+ * `SP_ASSET_REF=''` turns the whole chain off (the client then goes straight to the game server, rate-limited).
+ * @param {string} [publicDir]
+ * @returns {string[]}
+ */
+export function assetSources(publicDir = 'public') {
+  if (process.env.SP_ASSET_REF === '') return [];
+  const { sources } = readMirrors(publicDir);
+  const relay = process.env.SP_ASSET_RELAY ? tidyOrigin(process.env.SP_ASSET_RELAY) : '';
+  if (!relay) return sources;
+  return [relay, ...sources.filter((s) => s !== relay)];
+}
 
 /**
- * The owner's own art relay — the FIRST origin a client tries (`public/asset-mirrors.json`, docs/ASSETS.md "The relay").
- * Read from that same file so the plain-HTTP prefix path and the Service Worker's miss chain share ONE list;
- * `SP_ASSET_RELAY` overrides it, and the constant is the last fallback. A `sources[0]` that names a CDN (the file's own
- * fallback entries) is ignored here — the CDN templates below cover those.
+ * The FULL origin — the one that also reimplements `/media`, `/scene` and `/clip` (docs/ASSETS.md "The relay"): the
+ * first entry of the config's `fullSources`, or `''` when the config names none (every route then stays on the game
+ * server). `SP_ASSET_RELAY` overrides it. `assetSources` above already returns the file's order, so this is the
+ * accessor for callers that need just that one origin.
  * @param {string} [publicDir]
  * @returns {string}
  */
 export function relaySource(publicDir = 'public') {
-  if (process.env.SP_ASSET_RELAY) return process.env.SP_ASSET_RELAY;
-  try {
-    const raw = JSON.parse(fs.readFileSync(path.join(publicDir, 'asset-mirrors.json'), 'utf8'));
-    const first = Array.isArray(raw.sources) ? raw.sources[0] : null;
-    if (typeof first === 'string' && /^https?:\/\//.test(first) && !/github|jsdelivr/i.test(first)) return first;
-  } catch { /* no file / unreadable → the constant */ }
-  return RELAY_FALLBACK;
-}
-
-/**
- * The ordered origins a cache MISS may try, best first: **the owner's own relay, then the CDN mirrors** — the game
- * server stays the client's own last resort (rate-limited). `/asset-index.json` serves this as `sources`, so the
- * Service Worker's miss chain is the same as the plain-HTTP one. A `ref` of `''` returns none (mirrors off).
- * @param {string} [publicDir] @param {string} [repo] @param {string} [ref]
- * @returns {string[]}
- */
-export function assetSources(publicDir = 'public', repo = ASSET_REPO, ref = ASSET_REPO_REF) {
-  if (!ref) return [];
-  return [relaySource(publicDir), ...mirrorSources(repo, ref)];
-}
-
-/**
- * CORS-capable CDN mirrors of the primary repo's `public/` tree, tried BEFORE the game server so its uplink carries
- * only the misses (the client downloads the file from the first mirror that answers and verifies the size). Tested to
- * serve with `Access-Control-Allow-Origin: *`: gh-proxy (a GitHub-raw prefix proxy) and jsDelivr. Gitee / GitLab raw
- * are NOT usable here — they send no CORS header, so a browser `fetch` is blocked. See docs/OUR-FEATURES.md §10.
- * Set SP_ASSET_REF to pin a release tag; '' disables the mirrors (the client then goes straight to the server).
- */
-export function mirrorSources(repo = ASSET_REPO, ref = ASSET_REPO_REF) {
-  if (!repo || !ref) return [];
-  return [
-    `https://gh-proxy.com/https://raw.githubusercontent.com/${repo}/${ref}/public`,
-    `https://cdn.jsdelivr.net/gh/${repo}@${ref}/public`,
-  ];
+  if (process.env.SP_ASSET_RELAY) return tidyOrigin(process.env.SP_ASSET_RELAY);
+  const { sources, fullSources } = readMirrors(publicDir);
+  return fullSources.find((f) => sources.includes(f)) || '';
 }
 
 /**
@@ -150,7 +128,10 @@ export function buildAssetIndexValue({ dataDir, publicDir, log = noopLog }) {
  * @returns {{ get: () => { version: number, app: string, count: number, bytes: number, files: Record<string, number> } }}
  */
 export function createAssetIndex({ dataDir, publicDir, log = noopLog }) {
-  const sources = ['assets.json', 'local-assets.committed.json', 'local-assets.json'].map((f) => path.join(dataDir, f));
+  // The config is part of the key: an origin edited from the console (server/mirrors.js) must reach /asset-index.json on
+  // the next request, without a restart.
+  const sources = ['assets.json', 'local-assets.committed.json', 'local-assets.json'].map((f) => path.join(dataDir, f))
+    .concat([configPath(publicDir)]);
   const keyOf = () => sources.map((f) => mtimeMs(f)).join(':');
   /** @type {{ key: string, value: ReturnType<typeof buildAssetIndexValue> } | null} */
   let cache = null;

@@ -386,7 +386,7 @@ the local cache answers first; only a miss walks a source chain.** The owning do
 The boot `preloadArt` (main.js) uses the cache in `cache` mode and caps how long it may hold the title (60 s); the
 first-visit chooser and the 设置 row are `public/js/ui/assetMode.js`. Tests: `test/ui/asset-cache.test.js`,
 `test/asset-index.test.js`, `test/asset-rate-limit.test.js`, `test/asset-mirror.test.js`, `test/asset-idb.test.js`,
-`test/ui/preload.test.js`. Config: `SP_ASSET_REF` (mirror git ref), `SP_ASSET_RATE_KBPS` (fallback pace).
+`test/ui/preload.test.js`. Config: `public/asset-mirrors.json` (the origins — the ONLY place they live; the console's 来源配置 view edits it live), `SP_ASSET_RELAY` (override the full origin), `SP_ASSET_REF=''` (turn the origins off), `SP_ASSET_RATE_KBPS` (fallback pace).
 
 ---
 

@@ -208,6 +208,7 @@ test('GET /admin + /admin/api/state are token-gated', async () => {
     assert.equal((await fetch(`${base}/admin`)).status, 403);
     assert.equal((await fetch(`${base}/admin/api/state?token=nope`)).status, 403);
     assert.equal((await fetch(`${base}/admin/api/speed?token=nope`)).status, 403, 'the speed probe is token-gated too');
+    assert.equal((await fetch(`${base}/admin/api/origins?token=nope`)).status, 403, 'so is the origins config');
     const html = await fetch(`${base}/admin?token=testtok`);
     assert.equal(html.status, 200);
     assert.match(await html.text(), /服务器管理/);
@@ -279,13 +280,13 @@ test('the admin page is a self-contained console: six views, hash routing, searc
   // the strings the route tests rely on
   assert.match(html, /服务器管理/);
   assert.match(html, /\/admin\/api\/bug\/image\//);
-  // sidebar: seven nav buttons, each with its section
-  for (const v of ['overview', 'rooms', 'accounts', 'online', 'notice', 'bugs', 'speed']) {
+  // sidebar: eight nav buttons, each with its section
+  for (const v of ['overview', 'rooms', 'accounts', 'online', 'notice', 'bugs', 'speed', 'origins']) {
     assert.ok(html.includes(`id="view-${v}"`), `section #view-${v} exists`);
     assert.ok(html.includes(`data-view="${v}"`), `nav button for ${v}`);
   }
-  assert.equal(count(/<button class="nav__item" data-view="/g), 7, 'exactly seven nav buttons');
-  assert.equal(count(/class="view"/g), 7, 'exactly seven view sections');
+  assert.equal(count(/<button class="nav__item" data-view="/g), 8, 'exactly eight nav buttons');
+  assert.equal(count(/class="view"/g), 8, 'exactly eight view sections');
   // one view at a time, hash-routed (reload / bookmark / back land on the same view)
   assert.ok(html.includes('hashchange') && html.includes('setView(location.hash'), 'hash routing');
   assert.ok(html.includes("el('viewTitle')") && html.includes("el('viewSub')"), 'the header follows the view');
@@ -310,6 +311,9 @@ test('the admin page is a self-contained console: six views, hash routing, searc
   assert.ok(html.includes('id="speedRun"') && html.includes('id="speedBody"') && html.includes('id="speedVerdict"'), 'the speed view is wired');
   assert.ok(html.includes('/admin/api/speed?token='), 'it asks the server to probe the origins');
   assert.ok(html.includes('measureFromBrowser(') && html.includes('readCappedInPage('), 'and times the same URLs from this browser');
+  // 来源配置 (docs/MATCHMAKING.md §12.3): the origins edited in place, saved through the API
+  assert.ok(html.includes('id="originsList"') && html.includes('id="originsSave"') && html.includes('id="originsRevert"'), 'the origins view is wired');
+  assert.ok(html.includes('/admin/api/origins?token='), 'it reads and writes the origins config');
   // read-only still: the write endpoints are exactly notify + bug status
   for (const route of ['/admin/api/notify', '/admin/api/bug/status']) {
     assert.ok(html.includes(route + '?token='), `${route} is wired`);

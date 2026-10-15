@@ -266,6 +266,15 @@
 - **成本与节制**：每次约 650 KB/来源；服务端探针有 **10 秒冷却**（冷却内沿用上次结果并标注「冷却中」），按钮可强制重测；切到「测速」视图自动测一次，页面隐藏时暂停（见 §12.1）。
 - **测试**：`test/speed.test.js`（速率换算、来源清单与 full 标记、带上限/预算的读取与永不抛错、逐源判定与回落、冷却与强制重测、**与客户端常量一致**）；`test/admin.test.js`（结构断言含第 7 个视图；`/admin/api/speed` 需令牌）。
 
+### 12.3 来源配置：在后台直接改中继 / 镜像地址（2026-10-15）
+
+- **动因**：owner「地址类的东西最好是放配置文件里，后面换服务器方便修改；服务器管理里最好也能直接换配置，对管理友好」。此前只能看，改地址要动代码或手改文件再重启。
+- **一处真相**：`public/asset-mirrors.json` 是**唯一**写下来源的地方（读写都在 `server/mirrors.js`）。`server/assetindex.js` 里原来写死的**仓库名 `ASSET_REPO`、中继兜底常量 `RELAY_FALLBACK`、两条 CDN 模板 `mirrorSources`** 全部删除 —— 客户端（`js/assetMirror.js`）、Service Worker 的 miss 链（`/asset-index.json` 的 `sources`）、`relaySource`、以及测速（`server/speed.js`）现在都只读这一份。`SP_ASSET_RELAY` 覆盖全路由来源；`SP_ASSET_REF=''` 关闭来源层（**不再用来钉 git ref** —— ref 就在 URL 里）。
+- **界面**：侧栏「诊断 → 来源配置」。每行一个来源：地址可编辑、可勾「全路由」（= 也能提供 /media · /scene · /clip）、可上移 / 下移 / 删除；另有「+ 添加来源」「保存」「还原上一版」。**顺序即链路顺序**，页面脚注写明这条规则与两个阈值。
+- **校验与可逆**：`GET/POST /admin/api/origins`（令牌门禁）。保存前逐项校验（必须 http(s)、不得重复、全路由必须也在来源列表里；留空的行忽略），并把**上一版**留成 `var/asset-mirrors.backup.json`，一键还原。写入走「临时文件 + rename」，客户端不会读到写了一半的配置。
+- **立即生效、无需重启**：`/asset-index.json` 的缓存键已包含这个配置文件的 mtime（`server/assetindex.js createAssetIndex`），保存后**下一次请求**即是新配置，客户端下次加载可见。2026-10-15 实测：改 `sources` → `curl /asset-index.json` 立刻反映；点「还原」后文件 md5 与 git 完全一致。
+- **测试**：`test/mirrors.test.js`（读取永不抛错、校验规则、原子写入与备份、还原、随仓库发布的那份配置合法且中继仍排第一）、`test/asset-index.test.js`（改为断言「配置即列表、无硬编码、`SP_ASSET_REF=''` 关闭」）、`test/admin.test.js`（第 8 个视图 + `/admin/api/origins` 需令牌）。
+
 ## 13. 后续可做（未实现）
 
 - 官方式的 **快速 / 精确（按等级）搜寻**（当前只按难度分桶）；奖杯 / 功勋等级；
@@ -1377,7 +1386,7 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **方案**：客户端 **Service Worker（`public/sw.js`）+ Cache Storage** 做本机持久缓存——网页里唯一可靠的方式；物理位置在系统盘（C 盘）的浏览器数据目录。首访弹窗选择，**默认「缓存到本地（推荐）」**，可随时在 设置 → 美术资源缓存 改。选「网页加载」的访客行为与之前完全一致（HTTP 缓存预热 + `server/bootgate.js`）。
 - **版本关联 / 只下缺失或改动**：服务器 `GET /asset-index.json`（`server/assetindex.js`）给出 `revision`（`{url:size}` 的内容哈希）与每文件大小。客户端存 `revision` + `{url:size}`；**revision 一致 ⇒ 全部跳过**；否则按文件 diff，只下载缺失 / 大小变化的，并删掉服务器已下架的。`revision` 由清单 + 磁盘算出，清单 mtime 变了即重算（不写死、不手改）。
 - **本机资源优先（"两者都做"）**：`public/js/assetSource.js` 探测本机 `http://127.0.0.1:3000` / `localhost:3000` 的 `/asset-index.json`，`revision` 与线上一致就把 SW 指向本机（`localBase`），线上盒子完全不被访问；**可选**（设置「优先使用本机资源」），失败即回退。资源响应带 `Access-Control-Allow-Origin: *`（`server/http/files.js`）以便跨源读取。
-- **CDN 镜像下载链（卸载服务器上行）**：`GET /asset-index.json` 还返回 `sources` —— 主仓库 `public/` 树的**带 CORS** 镜像（`server/assetindex.js mirrorSources`：**gh-proxy → jsDelivr**；`SP_ASSET_REF` 钉 ref，`''` 关闭）。`js/assetCache.js fetchArtFile` **优先镜像、每个 15 秒超时**、**最后回退游戏服务器**，且只接受字节数与 `index.files[url]` 相符的镜像。**不用 Gitee / GitLab raw** —— 它们不发 `Access-Control-Allow-Origin`，浏览器 `fetch` 会被拦（Gitee Releases 还对盗链 403）；2026-10-13 实测。
+- **CDN 镜像下载链（卸载服务器上行）**：`GET /asset-index.json` 还返回 `sources` —— **直接读 `public/asset-mirrors.json`**（`server/mirrors.js`：唯一写下来源的地方；后台「来源配置」可直接改，保存即生效、不用重启）。`js/assetCache.js fetchArtFile` **按这个顺序优先、每个 15 秒超时**、**最后回退游戏服务器**，且只接受字节数与 `index.files[url]` 相符的来源。**不用 Gitee / GitLab raw** —— 它们不发 `Access-Control-Allow-Origin`，浏览器 `fetch` 会被拦（Gitee Releases 还对盗链 403）；2026-10-13 实测。
 - **服务器兜底限速**：回退到服务器时，素材响应走**进程级令牌桶**限速（`server/http/files.js RateLimiter`，只作用于 `public/assets|fonts|vendor`），默认 **1.2 MB/s**（`SP_ASSET_RATE_KBPS` 可调、0 关闭），给对局留带宽；非素材路径不限速。
 - **设置**：`public/js/ui/assetMode.js` 的 `AssetCacheSection` —— 加载方式 / 已缓存用量（`navigator.storage.estimate`）/ 位置说明（浏览器站点数据，默认系统盘）/ 立即缓存 / 清除缓存 / 本机优先。
 - **服务器彻底兜底**：`public/sw.js` 未命中时也按 **本机源 → 镜像(15s+校验) → 服务器(限速)** 取，连按需资源（spine / 音频）也优先走镜像；首访弹窗把「网页加载」标**不推荐**；版本变化**只下缺失/变动**（增量）。

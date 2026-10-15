@@ -603,9 +603,10 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
   per-file diff against the index, revision-keyed; a **revision change is incremental**). `public/js/assetSource.js`
   probes a local origin (127.0.0.1) serving the same `revision` and points the worker at it.
 - **Download chain (the server-uplink offload)**: `GET /asset-index.json` also returns `sources` — CORS-capable CDN
-  mirrors of the primary repo's `public/` tree (`server/assetindex.js mirrorSources`: **gh-proxy** then **jsDelivr**;
-  `SP_ASSET_REF` pins the ref, `''` disables). `js/assetCache.js fetchArtFile` tries each mirror FIRST (15 s timeout
-  each) and the game server LAST, accepting a mirror only when its bytes match `index.files[url]`. **Gitee / GitLab
+  mirrors of the primary repo's `public/` tree, read **straight from `public/asset-mirrors.json`** (the same file the
+  plain-HTTP path uses, `server/mirrors.js`; the console's 来源配置 view edits it live). `js/assetCache.js fetchArtFile`
+  tries each origin FIRST (15 s timeout each) and the game server LAST, accepting a source only when its bytes match
+  `index.files[url]`. **Gitee / GitLab
   raw are deliberately NOT used** — they send no `Access-Control-Allow-Origin`, so a browser `fetch` is blocked (and
   Gitee Releases 403s hotlinks); tested 2026-10-13.
 - **The plain-HTTP chain picks the origin by MEASURED THROUGHPUT (2026-10-15)**: on the production site the Service
