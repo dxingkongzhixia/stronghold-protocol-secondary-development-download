@@ -403,12 +403,15 @@ describe('CODEX overlay store + wiring', () => {
     assert.ok(main.indexOf('<${CodexHost} />') > main.indexOf('<${GuideHost} />'), 'codex stacks with the guide');
   });
 
-  test('the lobby top bar offers 资料库, left of 统计, without opening 设置', () => {
+  test('the lobby top bar offers 资料库 without opening 设置, and the account chip carries 统计', () => {
     const lobby = src('public/js/screens/lobby.js');
     assert.ok(lobby.includes("from '../ui/codex.js'"), 'lobby imports openCodex');
     assert.ok(lobby.includes('class="codex-entry"') && lobby.includes("openCodex('bonds')"), 'the 资料库 entry opens the codex');
     assert.ok(lobby.includes("t('资料库')"), 'the entry is labelled 资料库');
-    assert.ok(lobby.indexOf('class="codex-entry"') < lobby.indexOf('class="stats-entry"'), 'the 资料库 entry sits left of 统计');
+    assert.ok(!lobby.includes('stats-entry'), 'the standalone 统计 button was removed (2026-10-15)');
+    assert.ok(lobby.includes('class="me-chip me-chip--btn"') && lobby.includes('onClick=${openStats}'),
+      'the account chip is the 统计数据 entry (components.css `.me-chip--btn` styles it)');
+    assert.ok(lobby.indexOf('class="codex-entry"') < lobby.indexOf('class="me-chip me-chip--btn"'), 'the chip sits right of 资料库');
   });
 
   test('bounty decisions and the two leader phases are separate tabs / panes', () => {

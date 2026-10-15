@@ -89,7 +89,7 @@ describe('统计数据 overlay with a stale index.html (real server, headless Ch
   }
 
   const openStats = async (page) => {
-    await page.click('.lobby-screen .topbar__right .stats-entry');
+    await page.click('.lobby-screen .topbar__right .me-chip');
     await page.waitForSelector('.st .st-tab', { visible: true, timeout: 15000 });
     // Preact runs the overlay's effects after paint: wait for the mounted marker and the loaded overview.
     await page.waitForFunction(() => document.documentElement.classList.contains('sp-stats-open'), { timeout: 15000 });

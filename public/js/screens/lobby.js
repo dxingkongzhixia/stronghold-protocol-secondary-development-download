@@ -383,6 +383,10 @@ export function LobbyScreen() {
     </div>`;
   }
 
+  // The 档案 chip in `.topbar__right` IS the 统计数据 entry (owner 2026-10-15: 「统计按钮移除，把这个功能放到账号
+  // 显示上」). The standalone 统计 button is gone; the chip's chart icon and `.me-chip--btn` already existed from
+  // upstream, unwired — this completes that (the class was applied to a `<div>` that could not be clicked, and an
+  // orphan `</button>` was left behind). The 设置 dialog and the room / title bars keep their own entries.
   return html`<div class="screen lobby-screen">
     <header class="topbar">
       <div class="topbar__left">
@@ -402,17 +406,16 @@ export function LobbyScreen() {
       </div>
       <div class="topbar__right">
         <${Button} variant="secondary" size="sm" icon="info" class="codex-entry" onClick=${() => openCodex('bonds')} title=${t('资料库')} aria-label=${t('资料库')}>${t('资料库')}<//>
-        <${Button} variant="secondary" size="sm" icon="chart" class="stats-entry" onClick=${openStats} title=${t('统计数据')} aria-label=${t('统计数据')}>${t('统计')}<//>
         <${LoadoutButton} from="lobby" size="sm" class="lobby-loadout" label=${t('干员调配')} />
         ${auth?.account ? null : html`<${Button} variant="secondary" size="sm" icon="user" class="lobby-account"
           onClick=${() => setShowAccount(true)}>${t('登录 / 注册')}<//>`}
         <${SettingsButton} class="lobby-settings" variant="secondary" label=${t('设置')} />
-        <div class="me-chip">
+        <button type="button" class="me-chip me-chip--btn" onClick=${openStats} title=${t('统计数据')} aria-label=${t('统计数据')}>
           <${AvatarFrame} size="sm" name=${me.name} seat=${0} self=${true} />
           <div class="me-chip__text">
             <span class="me-chip__name">${me.name || t('博士')}<${RoleTag} role=${auth?.account?.role} />${auth?.account ? null : html`<em class="me-chip__guest">${t('游客')}</em>`}</span>
             <${MicroLabel}>${me.playerId != null ? `DOCTOR #${doctorNo(me.playerId)}` : 'DOCTOR'}<//>
-          </span>
+          </div>
           <${Icon} name="chart" class="me-chip__stats" />
         </button>
       </div>

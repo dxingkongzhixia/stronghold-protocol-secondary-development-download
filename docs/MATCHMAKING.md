@@ -1153,6 +1153,14 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 - **可达性不变**：玩法说明 保持**局内**可达（`.gm__guide` / `GuideButton`）；资料库 保持**大厅顶栏**可达（`.codex-entry`）。删的是既有 msgid 的**使用**，没有新增 / 删除语言键。
 - **测试**：`test/ui/settings-community-entries.test.js`（动作行只剩 bug提交，guide / codex 仍可达）、`test/ui/settings-entry.e2e.test.js`、`test/ui/codex.test.js`、`test/ui/title-surfaces.test.js`、`test/ui/modal.e2e.test.js`（引导层改为命令式打开，仍覆盖「`.guide` 叠在 `.modal` 上仍收键盘」）、`test/e2e/coop.e2e.mjs`（同样改为命令式打开 guide）。
 
+### 36.10 顶栏「统计」并入账号牌（2026-10-15）
+
+- **动因**：owner 2026-10-15「统计按钮移除，把这个功能放到账号显示上」——大厅顶栏右侧的独立 `统计` 按钮占着一个位置，而紧挨它的**档案牌**（`.me-chip`）本来就带着图表图标（`.me-chip__stats`）和 `.me-chip--btn` 的指针 / 悬停样式；`public/css/components.css` 的原注释写得很直白（「the lobby's chip doubles as the 统计数据 entry」），只是标记停在 `<div>` 上、还留着一个多余的 `</button>`，所以一直点不动——**上游留下的半成品**。
+- **改动**：`public/js/screens/lobby.js` 的 `.topbar__right` 去掉 `统计` 按钮（`.stats-entry`），档案牌改成真正的 `<button type="button" class="me-chip me-chip--btn" onClick=${openStats}>`，并修掉错配的 `</span>`（原为 `<div class="me-chip__text">` 配 `</span>`）。图标与文案沿用：悬停时图标 `opacity` 由 .7 提到 1（CSS 已有）。
+- **范围**：只动**大厅**。`screens/room.js` 的 `.stats-entry`（等待室左侧、延迟指示旁）与 `screens/title.js` 的 `.title-stats` 保留——房间顶栏没有档案牌可挂，标题画面的那个是玩家指南（`docs/PLAYING.md` §13）写明的主入口。
+- **可达性不变**：`ui/stats.js` 的 `openStats()` / `StatsHost` 与统计页本身不动；语言键不增不减（`统计` 仍被房间页 / 标题页使用）。
+- **测试**：`test/ui/codex.test.js`（改为断言「没有独立统计按钮，且档案牌就是统计入口」）、`test/ui/stats.e2e.test.js`、`test/ui/stats-overlay-css.e2e.test.js`、`test/ui/community-controls.e2e.test.js`（选择器由 `.stats-entry` / `.topbar__right .btn` 改为 `.lobby-screen .me-chip`）。
+
 ## 37. 克莱门莎（2026-10-09 官方新 6★，自造干员）
 
 2026-10-09 官方上线 6★ 近卫·**本源近卫** `primguard` 克莱门莎（`charId = char_4231_clemnt`，`appellation Clementia`，`displayNumber AE01`，阿戈尔）。她**不在本赛季名册**（`activity_table` 的 `charChessDataDict` 无 `char_4231_clemnt`，只有卫戍协议 band `band_clementia` 带她的名字），因此走**自造干员通道**（`tools/build-data.mjs CUSTOM_CHESS`），与阿斯卡纶（§23）同一套流程，**非 DIY / 正式商店干员**。

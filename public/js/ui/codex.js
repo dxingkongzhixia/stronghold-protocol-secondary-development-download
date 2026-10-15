@@ -5,7 +5,8 @@
 // bands.json, items.json, chess.json, garrisons.json, bosses.json, enemies.json, choices.json, config.json,
 // assets.json), so adding a bond / strategy / operator / boss / enemy / bounty card needs no change here.
 //
-// Entry point: the lobby top bar's 资料库 button (screens/lobby.js, left of 统计). The 设置 dialog's own 资料库
+// Entry point: the lobby top bar's 资料库 button (screens/lobby.js, left of the 档案 chip — which since 2026-10-15 is
+// also the 统计数据 entry, `MATCHMAKING.md` §36.10). The 设置 dialog's own 资料库
 // action (`set-codex`, ui/settings.js) was **removed on 2026-10-12** — the lobby entry already reaches it from every
 // screen's lobby, so the settings copy was redundant. The overlay itself is mounted once by main.js as <CodexHost/>
 // above the settings modal — the same global-host pattern as 玩法说明 (ui/guide.js) and bug提交 (ui/community.js).
