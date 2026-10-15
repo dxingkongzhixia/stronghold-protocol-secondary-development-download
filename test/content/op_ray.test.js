@@ -42,8 +42,9 @@ const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => 
 const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${mod ?? 'none'}`;
 
 /** 莱伊 as uid 1 at (row, col) facing RIGHT; `beast` = the 沙地兽 piece's tile (uid 2) or null. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 3, beast = null, beastFirst = false, others = [], seed = 5, flags = {} } = {}) {
-  const op = { uid: 1, diy: { slot: SLOT[tier], charId: RAY, skillIndex: skill, uniEquipId: mod }, elite, row, col };
+  const op = { uid: 1, diy: { slot: SLOT[tier], charId: RAY, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 };
   const piece = beast ? [{ uid: 2, kind: 'token', tokenId: SANDBEAST, ownerUid: 1, row: beast[0], col: beast[1] }] : [];
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,

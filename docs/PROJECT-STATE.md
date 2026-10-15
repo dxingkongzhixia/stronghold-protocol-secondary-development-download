@@ -126,6 +126,7 @@
 | `SP_VERIFY` | `sample`（**仅 Windows 启动脚本**） | `server-start.cmd` |
 | 静态缓存 | `/assets\|fonts\|vendor` 7 天；带 `?v=` 1 年 immutable | `server/index.js` |
 | 中继静态缓存 | 同游戏机口径：带内容哈希的 URL（`~<hash>` 路径 / `?h=` 查询）1 年 `immutable`，普通路径与 `/media`、`/scene`、`/clip` 路由 7 天（随推送由 relay 的 hook 安装并 `nginx -t`） | `tools/relay/sp-relay.nginx.conf` |
+| 干员默认潜能 / 练度 | **`1` / 未精英化**（2026-10-15 owner 决定，官方对「未持有」干员的基准；数据仍在满潜构建，按 `potDown` 向下组合；可在「干员调配」里逐名调高。改动前是满潜 6 / 精英2 Lv.60） | `shared/potential.js`（`POTENTIAL_DEFAULT` / `CULTIVATE_DEFAULT`） |
 | `SP_ASSET_RATE_KBPS` | `1200`（服务器兜底素材下载限速 ≈1.2 MB/s；0 关闭） | `server/http/files.js` |
 | `SP_ASSET_REF` | 未设（**空串＝关闭来源层**：客户端直接走游戏机。不再用来钉 CDN 的 git ref —— ref 就写在 `public/asset-mirrors.json` 的 URL 里） | `server/assetindex.js` |
 | `SP_ASSET_RELAY` | 未设（未设时取 `public/asset-mirrors.json` 里 `fullSources` 的第一个源；**已无写死的中继 IP**，配置里没有来源就是没有）——客户端**素材链的第一源**，也由 `/asset-index.json` 的 `sources` 交给 Service Worker | `server/assetindex.js` |

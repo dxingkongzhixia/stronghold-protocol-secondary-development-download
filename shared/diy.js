@@ -19,8 +19,9 @@
 //   still field any module, as the kits test them); a prototype carries the skill
 //   and module of its 补位 rows at that tier (`diy.locked`: "技能携带规则与系统补位时一致" — [ASSUMED] that reading, the
 //   owner's decision of 2026-10-05);
-// - an owned pick fights at its player's potential and 练度, as every chess (0.2.2, the owner's decision of 2026-10-08 —
-//   default 潜能 6 / 精英2 Lv.60; the backups.json forms carry the lower potentials, shared/potential.js); a prototype
+// - an owned pick fights at its player's potential and 练度, as every chess (0.2.2; the defaults since 2026-10-15 are
+//   潜能 1 / 未精英化, the owner's decision — 潜能 6 / 精英2 Lv.60 was the default 2026-10-08 → 2026-10-15; the
+//   backups.json forms carry the lower potentials, shared/potential.js); a prototype
 //   pick has neither (`diyProto` on its composed record).
 // Which operators have a kit (a pick without one is not offered) is the sim's kit registry
 // (server/sim/content/kits/index.js KITTED_CHARS), passed in as `kitted`.
@@ -194,8 +195,8 @@ export function checkDiyPick(slotId, pick, data) {
 
 /**
  * A 自选 slot record (either form) filled with a checked pick: composeUnitRecord of the slot's identity (tier, price,
- * merge, status; no 特质) with the operator's form at the slot's status — an owned pick's at `potential` (1–6, default
- * 6: shared/potential.js atPotential) — the pick's skill and module (active on the elite form only), the derived bonds —
+ * merge, status; no 特质) with the operator's form at the slot's status — an owned pick's at `potential` (1–6; absent /
+ * null = the default, 潜能 1 since 2026-10-15: shared/potential.js atPotential) — the pick's skill and module (active on the elite form only), the derived bonds —
  * plus `diyFor` (the slot's base id: the record is a 自选 piece), `charId` (the operator) and, for a prototype pick,
  * `diyProto: true` (no potential, no 练度: shared/potential.js cultivationOf). Null when the pick is not legal for the
  * slot (checkDiyPick) or the data lacks a part.

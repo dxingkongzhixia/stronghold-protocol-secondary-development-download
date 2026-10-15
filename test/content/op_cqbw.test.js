@@ -46,11 +46,12 @@ const NO_TILE = { 9: '##ErfffffrSrrrrrrrS##', 10: '##hrrffffrfrrrrrrrf##', 11: '
 const TWO_TILES = { 9: '##ErfrfffrSrrrrrrrS##', 10: '##hrrffffrfrrrrrrrf##', 11: '##hrffffrrfrrrrrrrf##' };
 
 /** A battle with W as uid 1 at (row, col) facing RIGHT (her 3-10: the 3 rows around her, her column and the 4 ahead). */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 4, others = [], seed = 5, rows = null } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed, flat: rows ? { rows } : {},
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied', 'death', 'deploy', 'spGain', 'dodge'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: W, skillIndex: skill, uniEquipId: mod }, elite, row, col }, ...others],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: W, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 }, ...others],
   });
   h.step();
   return { h, u: h.unit(1) };
@@ -354,7 +355,7 @@ test('T2 落井下石: a stunned enemy in her range takes ×1.21 physical damage
   }
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 60, autoFinish: false, seed: 1, flags: { dpPerSec: 0, dpMax: 999 },
-    units: [{ uid: 1, diy: { slot: 5, charId: W, skillIndex: 2 }, row: 10, col: 4 }, { uid: 2, diy: { slot: 6, charId: W, skillIndex: 2, uniEquipId: X }, elite: true, row: 11, col: 4 }],
+    units: [{ uid: 1, diy: { slot: 5, charId: W, skillIndex: 2 }, row: 10, col: 4, potential: 6 }, { uid: 2, diy: { slot: 6, charId: W, skillIndex: 2, uniEquipId: X }, elite: true, row: 11, col: 4, potential: 6 }],
   });
   h.step();
   const e = h.spawn('enemy_dummy', { pos: [10, 7] });

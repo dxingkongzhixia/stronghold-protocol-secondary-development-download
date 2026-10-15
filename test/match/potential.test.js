@@ -1,7 +1,7 @@
-// test/match/potential.test.js — the player's 潜能 / 练度 on the server (0.2.2, the owner's decision of 2026-10-08:
-// 「调配干员里自己设置吧，默认满潜满加成」): room.loadout `ops` (shared/protocol.js checkLoadoutOps) → seats[].ops →
+// test/match/potential.test.js — the player's 潜能 / 练度 on the server (0.2.2; the defaults are the owner's decision of
+// 2026-10-15: 潜能 1 / 未精英化): room.loadout `ops` (shared/protocol.js checkLoadoutOps) → seats[].ops →
 // PlayerState.ops (re-checked, frozen; bots none) → every owned operator's PlayerBattleInput entry states `potential` /
-// `cultivate` (defaults 6 / 3 — also an old loadout without ops), never a 补位 stand-in or a prototype 自选 pick; the
+// `cultivate` (defaults 1 / 0 — also an old loadout without ops), never a 补位 stand-in or a prototype 自选 pick; the
 // 自选 summons' hand count follows the owner's potential; m.private.ops; the scouting units; Match.setLoadout takes
 // them in INFO_CHECK only.
 import { test } from 'node:test';
@@ -47,13 +47,13 @@ test('room.loadout ops: structure (≤ 256 charIds → { potential 1–6?, culti
   assert.ok(IDS.size >= 180 && IDS.size <= 200, `${IDS.size}`);
   const has = (id) => IDS.has(id);
   assert.deepEqual(checkLoadoutOps(undefined, has), { ok: true, ops: {} });
-  assert.deepEqual(checkLoadoutOps({ [VENDLA_CHAR]: { potential: 2 }, [KALTS]: { potential: 6, cultivate: 3 } }, has), { ok: true, ops: { [VENDLA_CHAR]: { potential: 2, cultivate: 3 } } });
+  assert.deepEqual(checkLoadoutOps({ [VENDLA_CHAR]: { potential: 2 }, [KALTS]: { potential: 6, cultivate: 3 } }, has), { ok: true, ops: { [VENDLA_CHAR]: { potential: 2, cultivate: 0 }, [KALTS]: { potential: 6, cultivate: 3 } } });
   assert.equal(checkLoadoutOps({ [SHARP]: { potential: 2 } }, has).error, 'BAD_TARGET');
   assert.equal(checkLoadoutOps({ [VENDLA_CHAR]: { potential: 9 } }, has).error, 'BAD_MSG');
 });
 
-test('battle input: every owned operator states 潜能 / 练度 — the human\'s settings, the defaults (6 / 3) for the rest, for a seat without ops and for bots', () => {
-  const ops = { [VENDLA_CHAR]: { potential: 1, cultivate: 0 } };
+test('battle input: every owned operator states 潜能 / 练度 — the human\'s settings, the defaults (1 / 0) for the rest, for a seat without ops and for bots', () => {
+  const ops = { [VENDLA_CHAR]: { potential: 6, cultivate: 3 } };
   const seats = [
     { seat: 0, playerId: 'p_0', name: 'P0', isBot: false, connected: true, loadout: null, ops, notOwned: [GRANI.chessId] },
     { seat: 1, playerId: 'p_1', name: 'P1', isBot: false, connected: true, loadout: {} },  // an old seat: no ops
@@ -62,7 +62,7 @@ test('battle input: every owned operator states 潜能 / 练度 — the human\'s
   const h = makeMatch({ mode: 'coop', seats, seed: 3 }).start();
   const m = h.m;
   const [p0, p1, bot] = ['p_0', 'p_1', 'ai_0'].map((id) => h.ps(id));
-  assert.deepEqual(p0.ops, { [VENDLA_CHAR]: { potential: 1, cultivate: 0 } });
+  assert.deepEqual(p0.ops, { [VENDLA_CHAR]: { potential: 6, cultivate: 3 } });
   assert.ok(Object.isFrozen(p0.ops) && Object.isFrozen(p0.ops[VENDLA_CHAR]));
   assert.deepEqual([p1.ops, bot.ops], [{}, {}], 'no settings / a bot: the defaults');
   h.flushAll();
@@ -76,26 +76,26 @@ test('battle input: every owned operator states 潜能 / 练度 — the human\'s
   place(p1, VENDLA, 9, 3);
   place(bot, VENDLA, 9, 3);
   const by = (ps, id) => ps.battleInput().units.find((u) => u.chessId === id);
-  assert.deepEqual([by(p0, VENDLA).potential, by(p0, VENDLA).cultivate], [1, 0], 'the human\'s setting');
-  assert.deepEqual([by(p0, chess(VENDLA).goldenId).potential, by(p0, chess(VENDLA).goldenId).cultivate], [1, 0], 'the elite shares the charId');
-  assert.deepEqual([by(p0, 'chess_char_1_02_a').potential, by(p0, 'chess_char_1_02_a').cultivate], [6, 3], 'no entry: 满潜满加成');
+  assert.deepEqual([by(p0, VENDLA).potential, by(p0, VENDLA).cultivate], [6, 3], 'the human\'s setting');
+  assert.deepEqual([by(p0, chess(VENDLA).goldenId).potential, by(p0, chess(VENDLA).goldenId).cultivate], [6, 3], 'the elite shares the charId');
+  assert.deepEqual([by(p0, 'chess_char_1_02_a').potential, by(p0, 'chess_char_1_02_a').cultivate], [1, 0], 'no entry: the defaults');
   assert.deepEqual(['potential' in by(p0, GRANI.chessId), 'cultivate' in by(p0, GRANI.chessId), by(p0, GRANI.chessId).standIn], [false, false, true], 'a stand-in has neither');
-  assert.deepEqual([by(p1, VENDLA).potential, by(p1, VENDLA).cultivate], [6, 3], 'an old loadout: the defaults');
-  assert.deepEqual([by(bot, VENDLA).potential, by(bot, VENDLA).cultivate], [6, 3], 'bots: the defaults');
+  assert.deepEqual([by(p1, VENDLA).potential, by(p1, VENDLA).cultivate], [1, 0], 'an old loadout: the defaults');
+  assert.deepEqual([by(bot, VENDLA).potential, by(bot, VENDLA).cultivate], [1, 0], 'bots: the defaults');
   // the spec keeps them and the battle fields them
   const spec = buildBattleSpec(m._normalOpts(p0));
   const b = createBattleFromSpec(spec, undefined, { quiet: true });
   const u = b.allyUnits.find((x) => x.defId === VENDLA);
   const e = b.allyUnits.find((x) => x.defId === 'chess_char_1_02_a');
-  assert.deepEqual([u.base.atk, u.base.cost, u.cultivate, u.s.atk], [413, 17, 0, 413]);
-  assert.deepEqual([e.cultivate, e.s.maxHp], [3, e.base.maxHp * 1.1]);
+  assert.deepEqual([u.base.atk, u.base.cost, u.cultivate, u.s.atk], [435, 15, 3, 435 * 1.1]);
+  assert.deepEqual([e.cultivate, e.s.maxHp], [0, e.base.maxHp]);
   // the scouting units carry them (a teammate's card)
   const scout = m.prepFieldMeta(p0).units;
   const sv = scout.find((x) => x.defId === VENDLA);
-  assert.deepEqual([sv.potential, sv.cultivate], [1, 0]);
+  assert.deepEqual([sv.potential, sv.cultivate], [6, 3]);
   const sg = scout.find((x) => x.defId === GRANI.chessId);
   assert.deepEqual([sg.potential, sg.cultivate], [undefined, undefined]);
-  assert.deepEqual([scout.find((x) => x.defId === 'chess_char_1_02_a').potential, scout.find((x) => x.defId === 'chess_char_1_02_a').cultivate], [undefined, 3]);
+  assert.deepEqual([scout.find((x) => x.defId === 'chess_char_1_02_a').potential, scout.find((x) => x.defId === 'chess_char_1_02_a').cultivate], [undefined, 0]);
   m.dispose();
 });
 
@@ -131,12 +131,12 @@ test('Match.setLoadout: the settings change with the loadout in INFO_CHECK only;
   const ps = h.ps('p_0');
   assert.deepEqual(ps.ops, {});
   assert.deepEqual(m.setLoadout('p_0', {}, { [VENDLA_CHAR]: { potential: 3 } }), { ok: true });
-  assert.deepEqual(ps.ops, { [VENDLA_CHAR]: { potential: 3, cultivate: 3 } });
+  assert.deepEqual(ps.ops, { [VENDLA_CHAR]: { potential: 3, cultivate: 0 } });
   assert.deepEqual(m.setLoadout('p_0', {}), { ok: true }, 'no ops argument: unchanged');
-  assert.deepEqual(ps.ops, { [VENDLA_CHAR]: { potential: 3, cultivate: 3 } });
+  assert.deepEqual(ps.ops, { [VENDLA_CHAR]: { potential: 3, cultivate: 0 } });
   assert.equal(m.setLoadout('p_0', {}, { [SHARP]: { potential: 1 } }).error, ERR.BAD_TARGET);
   assert.equal(m.setLoadout('p_0', { chess_char_1_01_a: { skill: 0 } }, { [VENDLA_CHAR]: { potential: 9 } }).error, ERR.BAD_TARGET);
-  assert.deepEqual([ps.ops, ps.loadout], [{ [VENDLA_CHAR]: { potential: 3, cultivate: 3 } }, {}], 'a refusal changes nothing');
+  assert.deepEqual([ps.ops, ps.loadout], [{ [VENDLA_CHAR]: { potential: 3, cultivate: 0 } }, {}], 'a refusal changes nothing');
   assert.deepEqual(m.setLoadout('p_0', {}, null), { ok: true }, 'null: none set');
   assert.deepEqual(ps.ops, {});
   for (const id of ['p_0', 'p_1']) m.handle(id, { t: 'g.infoReady' });

@@ -15,8 +15,9 @@ const raw = (id) => ds.rawChess(id);
 const rec = (id, sid) => raw(id).skills.find((s) => s.skillId === sid);
 const bbOf = (id, sid) => rec(id, sid).bb;
 /** Named talent blackboard / trait blackboard / hidden module parts of the loadout-resolved def. */
-const tal = (id, lo = null, i = 0) => ds.getChess(id, lo).talents[i]?.bb ?? {};
-const tbOf = (id, lo = null) => ds.getChess(id, lo).traitBb ?? {};
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
+const tal = (id, lo = null, i = 0) => ds.getChess(id, { potential: 6, ...(lo ?? {}) }).talents[i]?.bb ?? {};
+const tbOf = (id, lo = null) => ds.getChess(id, { potential: 6, ...(lo ?? {}) }).traitBb ?? {};
 const both = (base) => [`${base}_a`, `${base}_b`];
 const MOD = (id) => ({ moduleId: id });
 
@@ -31,7 +32,8 @@ function run(o) {
   return makeBattle({ seed: 7, autoFinish: false, timeLimit: 400, hooks: HOOKS, captureNoisy: true, ...o });
 }
 /** Unit entry with skill `sid` selected (plus loadout / carry extras). */
-const U = (id, sid, row, col, o = {}) => ({ chessId: id, row, col, skillIndex: rec(id, sid).index, ...o });
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
+const U = (id, sid, row, col, o = {}) => ({ chessId: id, potential: 6, row, col, skillIndex: rec(id, sid).index, ...o });
 const dealt = (h, u, f = () => true) => h.hooksOf('damaged').filter((c) => c.source === u && f(c));
 const statuses = (h, key, f = () => true) => h.hooksOf('statusApplied').filter((c) => c.status === key && f(c));
 const heals = (h, u, f = () => true) => h.hooksOf('heal').filter((c) => c.source === u && f(c));
@@ -75,7 +77,7 @@ test('every tier-6 skill × module choice (normal + elite) survives a real wave 
       for (const s of r.skills) for (const moduleId of mods) {
         const h = makeBattle({
           seed: 3, timeLimit: 60,
-          units: [{ chessId: id, row: 10, col: 4, skillIndex: s.index, moduleId, carryState: READY }, { chessId: 'chess_char_1_01_a', row: 9, col: 4 }, { chessId: 'chess_char_2_06_a', row: 11, col: 5 }],
+          units: [{ chessId: id, row: 10, col: 4, skillIndex: s.index, moduleId, carryState: READY, potential: 6 }, { chessId: 'chess_char_1_01_a', row: 9, col: 4, potential: 6 }, { chessId: 'chess_char_2_06_a', row: 11, col: 5, potential: 6 }],
           enemies: [{ key: 'enemy_1007_slime', count: 8, interval: 1.5 }, { key: 'enemy_1007_slime', route: 1, count: 8, interval: 1.5, time: 3 }],
         });
         // (a medic acts on the hurt only, and the slimes may fall before they reach anyone: the team starts at half HP)
@@ -281,7 +283,7 @@ test('6_03 余 S1 今日做东: taunt +1 while carried; TAKE_DAMAGE cast, HP/DEF
     done(h);
   }
   // the default skill carries no taunt
-  const d = run({ units: [{ chessId: 'chess_char_6_03_a', row: 10, col: 4 }] });
+  const d = run({ units: [{ chessId: 'chess_char_6_03_a', row: 10, col: 4, potential: 6 }] });
   d.step();
   assert.equal(d.unit('chess_char_6_03_a').s.taunt, 0);
 });
@@ -322,7 +324,7 @@ test('6_04 浊心斯卡蒂 S1 同归殊途之吟: SP_FULL, full HP + max HP +; t
     const sid = 'skchr_skadi2_1', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { ally_a: plain('ally_a', { stats: { def: 0, maxHp: 1e6 } }) }, enemies: { hit: enemyRec({ key: 'hit', hp: 1e7, speed: 0, atk: 1000, bat: 2 }) } },
-      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'ally_a', row: 10, col: 5 }], enemies: [{ key: 'hit', pos: [10, 5], time: 1 }],
+      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'ally_a', row: 10, col: 5, potential: 6 }], enemies: [{ key: 'hit', pos: [10, 5], time: 1 }],
     });
     const u = h.unit(id), a = h.unit('ally_a');
     usesSkill(u, sid);
@@ -349,7 +351,7 @@ test('6_04 浊心斯卡蒂 S2 同葬无光之愿: toggle; 鼓舞 ATK and DEF (at
     const sid = 'skchr_skadi2_2', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { ally_a: plain('ally_a', { stats: { maxHp: 1e5, atk: 400, def: 100 } }) }, enemies: { e: dummy('e') } },
-      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'ally_a', row: 10, col: 5 }], enemies: [{ key: 'e', pos: [10, 6] }],
+      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'ally_a', row: 10, col: 5, potential: 6 }], enemies: [{ key: 'e', pos: [10, 6] }],
     });
     const u = h.unit(id), a = h.unit('ally_a');
     usesSkill(u, sid);
@@ -377,7 +379,7 @@ test('6_04 浊心斯卡蒂 S2 同葬无光之愿 (自动触发, effects on her a
     const sid = 'skchr_skadi2_2';
     const h = run({
       defs: { chess: { ally_a: plain('ally_a', { stats: { maxHp: 1e5, atk: 400, def: 100 } }) } },
-      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'ally_a', row: 10, col: 5 }],
+      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'ally_a', row: 10, col: 5, potential: 6 }],
     });
     const u = h.unit(id), a = h.unit('ally_a');
     usesSkill(u, sid);
@@ -522,7 +524,7 @@ test('6_07 维娜 S2 进赴故土: passive SP +0.3/0.5 with ≥2 allies around h
     const sid = 'skchr_siege2_2', bb = bbOf(id, sid);
     const p = run({
       defs: { chess: { a1: plain('a1'), a2: plain('a2') } },
-      units: [U(id, sid, 10, 4, { carryState: IDLE }), { chessId: 'a1', row: 9, col: 4 }, { chessId: 'a2', row: 11, col: 4 }],
+      units: [U(id, sid, 10, 4, { carryState: IDLE }), { chessId: 'a1', row: 9, col: 4, potential: 6 }, { chessId: 'a2', row: 11, col: 4, potential: 6 }],
     });
     const pu = p.unit(id);
     p.run(0.5);
@@ -565,7 +567,7 @@ test('6_08 焰影苇草 S2 枯荣共息: fireballs on ground operators of her ra
     const sid = 'skchr_reed2_2', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { g1: plain('g1', { stats: { maxHp: 1e5 } }), g2: plain('g2', { stats: { maxHp: 1e5 } }) }, enemies: { e: dummy('e') } },
-      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'g1', row: 10, col: 5 }, { chessId: 'g2', row: 11, col: 5 }],
+      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'g1', row: 10, col: 5, potential: 6 }, { chessId: 'g2', row: 11, col: 5, potential: 6 }],
       enemies: [{ key: 'e', pos: [10, 6] }],
     });
     const u = h.unit(id), g1 = h.unit('g1'), g2 = h.unit('g2');
@@ -610,7 +612,7 @@ test('6_09 塑心 S2 “安魂的弥撒”: normal attacks allowed; ASPD +, 2 ta
 
     const h = run({
       defs: { chess: { big: plain('big', { stats: { atk: 2000 } }), small: plain('small', { stats: { atk: 100 } }) }, enemies: { e: dummy('e') } },
-      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'big', row: 10, col: 5 }, { chessId: 'small', row: 11, col: 5 }],
+      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'big', row: 10, col: 5, potential: 6 }, { chessId: 'small', row: 11, col: 5, potential: 6 }],
       enemies: [{ key: 'e', pos: [10, 6] }, { key: 'e', pos: [11, 6] }],
     });
     const u = h.unit(id), big = h.unit('big'), small = h.unit('small');
@@ -638,7 +640,7 @@ test('6_09 塑心 S3 “自由的探戈”: no attack, skill range, ATK +; 精�
     const sid = 'skchr_cello_3', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { tank: plain('tank', { stats: { maxHp: 9000, atk: 100, def: 900 } }), dps: plain('dps', { stats: { maxHp: 1000, atk: 1500, def: 50 } }) }, enemies: { e: dummy('e') } },
-      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'tank', row: 10, col: 5 }, { chessId: 'dps', row: 11, col: 5 }],
+      units: [U(id, sid, 10, 4, { carryState: READY }), { chessId: 'tank', row: 10, col: 5, potential: 6 }, { chessId: 'dps', row: 11, col: 5, potential: 6 }],
       enemies: [{ key: 'e', pos: [10, 6] }],
     });
     const u = h.unit(id), tank = h.unit('tank'), dps = h.unit('dps');
@@ -667,7 +669,7 @@ function mlyssBattle(id, sid, extra = {}) {
   const log = [];
   const h = run({
     defs: { chess: { guard: plain('guard', { profession: 'WARRIOR', stats: { maxHp: 3000, atk: 800, def: 100 } }), ...(extra.chess || {}) }, enemies: { e: dummy('e') } },
-    units: [U(id, sid, 10, 3, extra.unit ?? { carryState: READY }), { chessId: extra.copyId ?? 'guard', row: 11, col: 5 }, { kind: 'token', tokenId: 'token_10030_mlyss_wtrman', row: 10, col: 5, ownerUid: 1 }],
+    units: [U(id, sid, 10, 3, extra.unit ?? { carryState: READY }), { chessId: extra.copyId ?? 'guard', row: 11, col: 5, potential: 6 }, { kind: 'token', tokenId: 'token_10030_mlyss_wtrman', row: 10, col: 5, ownerUid: 1, potential: 6 }],
     enemies: [{ key: 'e', pos: [10, 6], time: extra.enemyAt ?? 7 }],
     flags: { dpInit: 0, dpPerSec: 0 },
     setup(b) { const add = b.addDp.bind(b); b.addDp = (pid, n) => { log.push({ t: b.time, n }); return add(pid, n); }; },
@@ -821,7 +823,7 @@ test('6_13 新约能天使 S3 使命必达！: 5 hits per attack spending 5 bull
     const sid = 'skchr_angel2_3', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { vg: plain('vg', { skill: { skillId: 'sk_vg', spCost: 30, initSp: 0 }, stats: { respawnTime: 60 } }) }, enemies: { e: dummy('e') } },
-      units: [U(id, sid, 10, 3, { carryState: { sp: rec(id, sid).spCost - 2 } }), { chessId: 'vg', row: 12, col: 3 }], enemies: [{ key: 'e', pos: [10, 6] }],
+      units: [U(id, sid, 10, 3, { carryState: { sp: rec(id, sid).spCost - 2 } }), { chessId: 'vg', row: 12, col: 3, potential: 6 }], enemies: [{ key: 'e', pos: [10, 6] }],
     });
     const u = h.unit(id), vg = h.unit('vg');
     usesSkill(u, sid);
@@ -860,7 +862,7 @@ test('6_14 流明 S1 沐雨: the next heal gives its target and the allies aroun
     const sid = 'skchr_lumen_1', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { a1: plain('a1', { stats: { maxHp: 1e5 } }), a2: plain('a2', { stats: { maxHp: 1e5 } }), far: plain('far', { stats: { maxHp: 1e5 } }) } },
-      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5 }, { chessId: 'a2', row: 11, col: 5 }, { chessId: 'far', row: 9, col: 7 }],
+      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5, potential: 6 }, { chessId: 'a2', row: 11, col: 5, potential: 6 }, { chessId: 'far', row: 9, col: 7, potential: 6 }],
     });
     const u = h.unit(id), a1 = h.unit('a1'), a2 = h.unit('a2'), far = h.unit('far');
     usesSkill(u, sid);
@@ -885,7 +887,7 @@ test('6_14 流明 S2 沛霖: 2 charges; heals 2 allies for heal_scale × ATK; wi
     const sid = 'skchr_lumen_2', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { a1: plain('a1', { stats: { maxHp: 1e5 } }), a2: plain('a2', { stats: { maxHp: 1e5 } }), a3: plain('a3', { stats: { maxHp: 1e5 } }) } },
-      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5 }, { chessId: 'a2', row: 11, col: 5 }, { chessId: 'a3', row: 9, col: 5 }],
+      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5, potential: 6 }, { chessId: 'a2', row: 11, col: 5, potential: 6 }, { chessId: 'a3', row: 9, col: 5, potential: 6 }],
     });
     const u = h.unit(id), a1 = h.unit('a1'), a2 = h.unit('a2'), a3 = h.unit('a3');
     usesSkill(u, sid);
@@ -1045,7 +1047,7 @@ test('6_17 耀骑士临光 S2 逐夜烁光: on deploy ATK + and 3 护盾 layers 
     assert.deepEqual(h.hooksOf('skillEnd').filter((c) => c.unit === u).map((c) => c.reason), ['duration']);
     done(h);
 
-    const k = run({ defs: { chess: { kaz: plain('kaz', { bonds: ['kazimierzShip'] }) } }, units: [U(id, sid, 10, 4), { chessId: 'kaz', row: 12, col: 4 }] });
+    const k = run({ defs: { chess: { kaz: plain('kaz', { bonds: ['kazimierzShip'] }) } }, units: [U(id, sid, 10, 4), { chessId: 'kaz', row: 12, col: 4, potential: 6 }] });
     const ku = k.unit(id);
     k.step(2);
     assert.ok(ku.alive && ku.skill.active);
@@ -1176,7 +1178,7 @@ test('6_20 纯烬艾雅法拉 S1 无声润物: toggle heal; ATK +, 2 heal target
     const sid = 'skchr_agoat2_1', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { a1: plain('a1', { stats: { maxHp: 1e5 } }), a2: plain('a2', { stats: { maxHp: 1e5 } }), a3: plain('a3') } },
-      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5 }, { chessId: 'a2', row: 11, col: 5 }, { chessId: 'a3', row: 9, col: 5 }],
+      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5, potential: 6 }, { chessId: 'a2', row: 11, col: 5, potential: 6 }, { chessId: 'a3', row: 9, col: 5, potential: 6 }],
     });
     const u = h.unit(id), a1 = h.unit('a1'), a2 = h.unit('a2'), a3 = h.unit('a3');
     usesSkill(u, sid);
@@ -1201,7 +1203,7 @@ test('6_20 纯烬艾雅法拉 S1 无声润物 (自动触发, effects on her alli
     const sid = 'skchr_agoat2_1', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { a1: plain('a1', { stats: { maxHp: 1e5 } }) } },
-      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5 }],
+      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5, potential: 6 }],
     });
     const u = h.unit(id), a1 = h.unit('a1');
     usesSkill(u, sid);
@@ -1221,7 +1223,7 @@ test('6_20 纯烬艾雅法拉 S2 云霭荫佑: one heal on every ally of her ran
     const sid = 'skchr_agoat2_2', bb = bbOf(id, sid);
     const h = run({
       defs: { chess: { a1: plain('a1', { stats: { maxHp: 1e5 } }), a2: plain('a2', { stats: { maxHp: 1e5 } }) } },
-      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5 }, { chessId: 'a2', row: 11, col: 5 }],
+      units: [U(id, sid, 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5, potential: 6 }, { chessId: 'a2', row: 11, col: 5, potential: 6 }],
     });
     const u = h.unit(id), a1 = h.unit('a1'), a2 = h.unit('a2');
     usesSkill(u, sid);
@@ -1251,7 +1253,7 @@ test('default-skill-only hooks do not run under an alternate skill (余 / 维娜
   {
     const h = run({
       defs: { chess: { o1: plain('o1'), o2: plain('o2'), o3: plain('o3') }, enemies: { e: dummy('e', { atk: 100, bat: 1 }) } }, // (S2: an enemy on x-1)
-      units: [U('chess_char_6_03_a', 'skchr_yu_2', 10, 4, { carryState: READY }), { chessId: 'o1', row: 9, col: 6 }, { chessId: 'o2', row: 11, col: 6 }, { chessId: 'o3', row: 12, col: 6 }],
+      units: [U('chess_char_6_03_a', 'skchr_yu_2', 10, 4, { carryState: READY }), { chessId: 'o1', row: 9, col: 6, potential: 6 }, { chessId: 'o2', row: 11, col: 6, potential: 6 }, { chessId: 'o3', row: 12, col: 6, potential: 6 }],
       enemies: [{ key: 'e', pos: [10, 4] }],
     });
     const u = h.unit('chess_char_6_03_a'), o1 = h.unit('o1');
@@ -1266,7 +1268,7 @@ test('default-skill-only hooks do not run under an alternate skill (余 / 维娜
   {
     const h = run({
       defs: { chess: { b1: plain('b1') }, enemies: { e: dummy('e') } },
-      units: [U('chess_char_6_07_a', 'skchr_siege2_2', 10, 4, { carryState: READY }), { chessId: 'b1', row: 11, col: 3 }],
+      units: [U('chess_char_6_07_a', 'skchr_siege2_2', 10, 4, { carryState: READY }), { chessId: 'b1', row: 11, col: 3, potential: 6 }],
       enemies: [{ key: 'e', pos: [10, 5] }, { key: 'e', pos: [11, 3] }],
     });
     const u = h.unit('chess_char_6_07_a');
@@ -1290,7 +1292,7 @@ test('default-skill-only hooks do not run under an alternate skill (余 / 维娜
     const id = 'chess_char_6_14_a';
     const h = run({
       defs: { chess: { a1: plain('a1', { stats: { maxHp: 1e5 } }), a2: plain('a2', { stats: { maxHp: 1e5 } }) } },
-      units: [U(id, 'skchr_lumen_1', 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5 }, { chessId: 'a2', row: 11, col: 5 }],
+      units: [U(id, 'skchr_lumen_1', 10, 3, { carryState: READY }), { chessId: 'a1', row: 10, col: 5, potential: 6 }, { chessId: 'a2', row: 11, col: 5, potential: 6 }],
     });
     const u = h.unit(id), a1 = h.unit('a1'), a2 = h.unit('a2');
     h.step();
@@ -1343,7 +1345,7 @@ test('module 浊心斯卡蒂 新生代: 捕食习性 ATK +9 % / DEF +8 %, +3 SP 
   const id = ELITE('chess_char_6_04'), M = 'uniequip_003_skadi2';
   const mk = (moduleId, o = {}) => run({
     defs: { chess: { ally_a: plain('ally_a', { stats: { def: 0, maxHp: 1e6 } }) }, enemies: { hit: enemyRec({ key: 'hit', hp: 1e7, speed: 0, atk: 500, bat: 2 }) } },
-    units: [{ chessId: id, row: 11, col: 4, moduleId, ...o }, { chessId: 'ally_a', row: 10, col: 5 }],
+    units: [{ chessId: id, row: 11, col: 4, moduleId, ...o, potential: 6 }, { chessId: 'ally_a', row: 10, col: 5, potential: 6 }],
     enemies: o.enemies ?? [],
   });
   const y = mk(M), x = mk(null);
@@ -1372,7 +1374,7 @@ test('module 异客 王权金币: bounces lose nothing and 机理分析 is ×1.2
   for (const [moduleId, fall] of [['uniequip_003_pasngr', 0], ['uniequip_004_pasngr', 0.15], ['none', 0.15], [null, 0.1]]) {
     const h = run({
       defs: { enemies: { e: dummy('e') } },
-      units: [{ chessId: id, row: 10, col: 4, moduleId, carryState: IDLE }],
+      units: [{ chessId: id, row: 10, col: 4, moduleId, carryState: IDLE, potential: 6 }],
       enemies: [{ key: 'e', pos: [10, 6] }, { key: 'e', pos: [10, 7] }, { key: 'e', pos: [11, 7] }, { key: 'e', pos: [11, 8] }],
     });
     const u = h.unit(id);
@@ -1391,7 +1393,7 @@ test('module 异客 王权金币: bounces lose nothing and 机理分析 is ×1.2
 test('module 佩佩 特限证章: no ×1.15 when 3 enemies stand in the splash (晴雨 only)', () => {
   const id = ELITE('chess_char_6_06');
   for (const [moduleId, mul] of [[null, tbOf(id).atk_scale_e], ['uniequip_003_pepe', 1], ['none', 1]]) {
-    const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId, carryState: IDLE }], enemies: [{ key: 'e', pos: [10, 5] }, { key: 'e', pos: [10, 6] }, { key: 'e', pos: [11, 5] }] });
+    const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId, carryState: IDLE, potential: 6 }], enemies: [{ key: 'e', pos: [10, 5] }, { key: 'e', pos: [10, 6] }, { key: 'e', pos: [11, 5] }] });
     const u = h.unit(id);
     assert.ok(h.runUntil(() => dealt(h, u, (c) => c.dmg.isAttack && !c.dmg.isSplash).length > 0, 5));
     approx(dealt(h, u, (c) => c.dmg.isAttack && !c.dmg.isSplash)[0].amount, u.s.atk * mul, `module ${moduleId}`);
@@ -1403,7 +1405,7 @@ test('module 维娜 秩序圣“球”: 战栗 6 s (elite / leader 12 s), ×1.15
   const id = ELITE('chess_char_6_07'), M = 'uniequip_003_siege2';
   const h = run({
     defs: { enemies: { n: dummy('n'), el: dummy('el', { rank: 'ELITE' }) } },
-    units: [{ chessId: id, row: 10, col: 4, moduleId: M, carryState: IDLE }], enemies: [{ key: 'el', pos: [10, 5] }, { key: 'n', pos: [10, 4], time: 2 }],
+    units: [{ chessId: id, row: 10, col: 4, moduleId: M, carryState: IDLE, potential: 6 }], enemies: [{ key: 'el', pos: [10, 5] }, { key: 'n', pos: [10, 4], time: 2 }],
   });
   const u = h.unit(id);
   h.run(4);
@@ -1415,10 +1417,10 @@ test('module 维娜 秩序圣“球”: 战栗 6 s (elite / leader 12 s), ×1.15
   assert.ok(statuses(h, 'fragile', (c) => c.target === n && c.source === u && Math.abs(c.value - (tbOf(id, MOD(M)).damage_scale - 1)) < 1e-9).length > 0, 'blocked ⇒ 脆弱');
   const onEl = dealt(h, u, (c) => c.dmg.isAttack && isKey(c.target, 'el') && c.t < 2);
   assert.ok(onEl.length >= 2);
-  approx(onEl[1].amount / onEl[0].amount, ds.getChess(id, MOD(M)).talents.find((t) => t.bb.damage_scale && !t.name)?.bb.damage_scale ?? 1.15, '×1.15 once trembling', 1e-3);
+  approx(onEl[1].amount / onEl[0].amount, ds.getChess(id, { potential: 6, ...MOD(M) }).talents.find((t) => t.bb.damage_scale && !t.name)?.bb.damage_scale ?? 1.15, '×1.15 once trembling', 1e-3);
   done(h);
   // the default module: 4 s everywhere, no ×1.15
-  const d = run({ defs: { enemies: { el: dummy('el', { rank: 'ELITE' }) } }, units: [{ chessId: id, row: 10, col: 4, carryState: IDLE }], enemies: [{ key: 'el', pos: [10, 5] }] });
+  const d = run({ defs: { enemies: { el: dummy('el', { rank: 'ELITE' }) } }, units: [{ chessId: id, row: 10, col: 4, carryState: IDLE, potential: 6 }], enemies: [{ key: 'el', pos: [10, 5] }] });
   const du = d.unit(id);
   d.run(4);
   approx(statuses(d, 'tremble', (c) => c.source === du)[0].duration, tal(id, null, 1).not_combat);
@@ -1429,7 +1431,7 @@ test('module 维娜 秩序圣“球”: 战栗 6 s (elite / leader 12 s), ×1.15
 
 test('module 焰影苇草 “独属自己的一隅”: damage ×1.1 while an operator of her range is injured; 灼痕 40 % / 8 s (full potential)', () => {
   const id = ELITE('chess_char_6_08'), M = 'uniequip_003_reed2';
-  const h = run({ defs: { chess: { a: plain('a') }, enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId: M, carryState: IDLE }, { chessId: 'a', row: 11, col: 5 }], enemies: [{ key: 'e', pos: [10, 6] }] });
+  const h = run({ defs: { chess: { a: plain('a') }, enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId: M, carryState: IDLE, potential: 6 }, { chessId: 'a', row: 11, col: 5, potential: 6 }], enemies: [{ key: 'e', pos: [10, 6] }] });
   const u = h.unit(id), a = h.unit('a');
   h.run(0.5);
   assert.ok(!u.findBuff('reed2:corner'), 'nobody injured');
@@ -1438,7 +1440,7 @@ test('module 焰影苇草 “独属自己的一隅”: damage ×1.1 while an ope
   approx(u.findBuff('reed2:corner')?.mods.dmgDealtMul ?? 1, 1.1, 'injured ally ⇒ ×1.1');
   approx(tal(id, MOD(M)).damage_scale, 1.4);   // 1.38 + the potential step
   done(h);
-  const d = run({ defs: { chess: { a: plain('a') } }, units: [{ chessId: id, row: 10, col: 4, carryState: IDLE }, { chessId: 'a', row: 11, col: 5 }] });
+  const d = run({ defs: { chess: { a: plain('a') } }, units: [{ chessId: id, row: 10, col: 4, carryState: IDLE, potential: 6 }, { chessId: 'a', row: 11, col: 5, potential: 6 }] });
   d.step();
   d.unit('a').hp = 1;
   d.run(0.5);
@@ -1449,7 +1451,7 @@ test('module 焰影苇草 “独属自己的一隅”: damage ×1.1 while an ope
 test('module 塑心 音乐家的旅程: 精神逆构 field-wide ×1.2 and 150 元素伤害/s during 凋亡 bursts; 10 % 元素脆弱 in her range', () => {
   const id = ELITE('chess_char_6_09'), M = 'uniequip_003_cello';
   for (const moduleId of [M, null]) {
-    const h = run({ defs: { enemies: { far: dummy('far'), near: dummy('near') } }, units: [{ chessId: id, row: 10, col: 4, moduleId, carryState: IDLE }], enemies: [{ key: 'far', pos: [12, 16] }, { key: 'near', pos: [10, 5] }] });
+    const h = run({ defs: { enemies: { far: dummy('far'), near: dummy('near') } }, units: [{ chessId: id, row: 10, col: 4, moduleId, carryState: IDLE, potential: 6 }], enemies: [{ key: 'far', pos: [12, 16] }, { key: 'near', pos: [10, 5] }] });
     const u = h.unit(id);
     h.run(0.5);
     const far = enemyOf(h, 'far');
@@ -1488,7 +1490,7 @@ test('module 缪尔赛思 落叶四季: copying a 莱茵生命 operator gives he
 test('module 迷迭香 特限证章: two hits (one aftershock) instead of three', () => {
   const id = ELITE('chess_char_6_12');
   for (const [moduleId, n] of [[null, 3], ['uniequip_003_rosmon', 2], ['none', 2]]) {
-    const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId, carryState: IDLE }], enemies: [{ key: 'e', pos: [10, 7] }] });
+    const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId, carryState: IDLE, potential: 6 }], enemies: [{ key: 'e', pos: [10, 7] }] });
     const u = h.unit(id);
     assert.ok(h.runUntil(() => h.hooksOf('attack').some((c) => c.attacker === u), 5));
     h.run(1.5);
@@ -1503,7 +1505,7 @@ test('module 迷迭香 特限证章: two hits (one aftershock) instead of three'
 test('module 流明 “幸运”: far heals are not reduced; 应急处理 heals 100 % with an 8 s cooldown (full potential)', () => {
   const id = ELITE('chess_char_6_14'), M = 'uniequip_003_lumen';
   for (const [moduleId, mul] of [[M, 1], [null, tbOf(id).heal_scale]]) {
-    const h = run({ defs: { chess: { f: plain('f', { stats: { maxHp: 1e5 } }) } }, units: [{ chessId: id, row: 10, col: 3, moduleId, carryState: IDLE }, { chessId: 'f', row: 10, col: 6 }] });
+    const h = run({ defs: { chess: { f: plain('f', { stats: { maxHp: 1e5 } }) } }, units: [{ chessId: id, row: 10, col: 3, moduleId, carryState: IDLE, potential: 6 }, { chessId: 'f', row: 10, col: 6, potential: 6 }] });
     const u = h.unit(id), f = h.unit('f');
     h.step();
     f.hp = f.s.maxHp * 0.5;
@@ -1517,14 +1519,14 @@ test('module 流明 “幸运”: far heals are not reduced; 应急处理 heals 
 
 test('module 仇白 欲雪时: the first hit on an enemy binds it 3 s; ASPD +12 with ≥2 enemies in range', () => {
   const id = ELITE('chess_char_6_15'), M = 'uniequip_003_qiubai';
-  const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId: M, carryState: IDLE }], enemies: [{ key: 'e', pos: [10, 5] }, { key: 'e', pos: [10, 6] }] });
+  const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId: M, carryState: IDLE, potential: 6 }], enemies: [{ key: 'e', pos: [10, 5] }, { key: 'e', pos: [10, 6] }] });
   const u = h.unit(id);
   assert.ok(h.runUntil(() => statuses(h, 'bind', (c) => c.source === u).length > 0, 5));
   approx(statuses(h, 'bind', (c) => c.source === u)[0].duration, tal(id, MOD(M), 1).duration_advanced, 'first hit ⇒ 3 s');
   h.run(0.5);
   approx(u.findBuff('qiubai:crowd').mods.aspd, tal(id, MOD(M)).attack_speed, 'ASPD +12');
   done(h);
-  const d = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, carryState: IDLE }], enemies: [{ key: 'e', pos: [10, 5] }, { key: 'e', pos: [10, 6] }] });
+  const d = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, carryState: IDLE, potential: 6 }], enemies: [{ key: 'e', pos: [10, 5] }, { key: 'e', pos: [10, 6] }] });
   d.run(1);
   assert.ok(!d.unit(id).findBuff('qiubai:crowd'), 'default module: no crowd ASPD');
   done(d);
@@ -1532,7 +1534,7 @@ test('module 仇白 欲雪时: the first hit on an enemy binds it 3 s; ASPD +12 
 
 test('module 耀骑士临光 “骑士家族”: the first knock-out of a deployment keeps her up (max HP −60 %, ASPD +30) and bursts 不畏苦暗 again', () => {
   const id = ELITE('chess_char_6_17'), M = 'uniequip_003_nearl2';
-  const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId: M, carryState: IDLE }], enemies: [{ key: 'e', pos: [10, 5], time: 1 }] });
+  const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: id, row: 10, col: 4, moduleId: M, carryState: IDLE, potential: 6 }], enemies: [{ key: 'e', pos: [10, 5], time: 1 }] });
   const u = h.unit(id);
   h.run(1.5);
   const max0 = u.s.maxHp, as0 = u.s.aspd;
@@ -1546,7 +1548,7 @@ test('module 耀骑士临光 “骑士家族”: the first knock-out of a deploy
   h.b.dealDamage(null, u, { amount: 1e9, type: 'true' });
   assert.ok(!u.alive, 'only once per deployment');
   done(h);
-  const d = run({ units: [{ chessId: id, row: 10, col: 4, carryState: IDLE }] });
+  const d = run({ units: [{ chessId: id, row: 10, col: 4, carryState: IDLE, potential: 6 }] });
   d.step();
   d.b.dealDamage(null, d.unit(id), { amount: 1e9, type: 'true' });
   assert.ok(!d.unit(id).alive, 'default module: knocked out');
@@ -1554,7 +1556,7 @@ test('module 耀骑士临光 “骑士家族”: the first knock-out of a deploy
 
 test('module 锏 新合同: ATK +8 %, ignores 70 DEF, ground enemies entering her range tremble 6 s', () => {
   const id = ELITE('chess_char_6_19'), M = 'uniequip_003_blkkgt';
-  const h = run({ defs: { enemies: { w: enemyRec({ key: 'w', hp: 1e7, speed: 1 }) } }, units: [{ chessId: id, row: 9, col: 5, moduleId: M, carryState: IDLE }], enemies: [{ key: 'w', route: 0 }] });
+  const h = run({ defs: { enemies: { w: enemyRec({ key: 'w', hp: 1e7, speed: 1 }) } }, units: [{ chessId: id, row: 9, col: 5, moduleId: M, carryState: IDLE, potential: 6 }], enemies: [{ key: 'w', route: 0 }] });
   const u = h.unit(id);
   h.step();
   const b = u.findBuff('blkkgt:contract');
@@ -1563,14 +1565,14 @@ test('module 锏 新合同: ATK +8 %, ignores 70 DEF, ground enemies entering he
   const entry = (c) => c.source === u && Math.abs(c.duration - tal(id, MOD(M), 1).not_combat) < 1e-9;
   assert.ok(h.runUntil(() => statuses(h, 'tremble', entry).length > 0, 20), '6 s 战栗 on entering her range');
   done(h);
-  const d = run({ units: [{ chessId: id, row: 9, col: 5, carryState: IDLE }] });
+  const d = run({ units: [{ chessId: id, row: 9, col: 5, carryState: IDLE, potential: 6 }] });
   d.step();
   assert.ok(!d.unit(id).findBuff('blkkgt:contract'), 'default module: none');
 });
 
 test('module 纯烬艾雅法拉 想要留下的生命: ASPD +8 while an ally of her range carries 元素损伤', () => {
   const id = ELITE('chess_char_6_20'), M = 'uniequip_003_agoat2';
-  const h = run({ defs: { chess: { a: plain('a') } }, units: [{ chessId: id, row: 10, col: 3, moduleId: M, carryState: IDLE }, { chessId: 'a', row: 10, col: 5 }] });
+  const h = run({ defs: { chess: { a: plain('a') } }, units: [{ chessId: id, row: 10, col: 3, moduleId: M, carryState: IDLE, potential: 6 }, { chessId: 'a', row: 10, col: 5, potential: 6 }] });
   const u = h.unit(id), a = h.unit('a');
   h.run(0.5);
   assert.ok(!u.findBuff('agoat2:linger'));
@@ -1584,7 +1586,7 @@ test('module none (elites whose only module is the default): the module-only par
   // 蕾缪安: 攻击的敌人未被击倒时额外获得1点技力 (trait) / 逃犯引渡手续 numbers
   const lem = ELITE('chess_char_6_01');
   for (const [moduleId, gain] of [[null, true], ['none', false]]) {
-    const h = run({ hooks: [...HOOKS, 'spGain'], defs: { enemies: { e: dummy('e') } }, units: [{ chessId: lem, row: 10, col: 4, moduleId, carryState: IDLE }], enemies: [{ key: 'e', pos: [10, 6] }] });
+    const h = run({ hooks: [...HOOKS, 'spGain'], defs: { enemies: { e: dummy('e') } }, units: [{ chessId: lem, row: 10, col: 4, moduleId, carryState: IDLE, potential: 6 }], enemies: [{ key: 'e', pos: [10, 6] }] });
     const u = h.unit(lem);
     h.run(6);
     assert.equal(h.hooksOf('attack').some((c) => c.attacker === u), true);
@@ -1597,14 +1599,14 @@ test('module none (elites whose only module is the default): the module-only par
   // 荒芜拉普兰德: initial drone scale 0.35 (module) vs 0.2
   const w = ELITE('chess_char_6_18');
   for (const [moduleId, init] of [[null, 0.35], ['none', 0.2]]) {
-    const h = run({ units: [{ chessId: w, row: 10, col: 4, moduleId }] });
+    const h = run({ units: [{ chessId: w, row: 10, col: 4, moduleId, potential: 6 }] });
     h.step();
     approx(h.unit(w).profile.funnel.init, init, `module ${moduleId}`);
   }
   // 圣聆初雪: 范围内敌人越多造成的伤害越高 (module) — none: no bonus
   const sb = ELITE('chess_char_6_02');
   for (const [moduleId, on] of [[null, true], ['none', false]]) {
-    const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: sb, row: 10, col: 4, moduleId }], enemies: [{ key: 'e', pos: [10, 5] }] });
+    const h = run({ defs: { enemies: { e: dummy('e') } }, units: [{ chessId: sb, row: 10, col: 4, moduleId, potential: 6 }], enemies: [{ key: 'e', pos: [10, 5] }] });
     h.run(0.6);
     assert.equal(!!h.unit(sb).findBuff('sbell2:heart'), on, `module ${moduleId}`);
   }
@@ -1620,7 +1622,7 @@ test('module 缪尔赛思 落叶四季: enemies blocked by her 流形 are more l
         chess: { guard: plain('guard', { profession: 'WARRIOR', stats: { maxHp: 3000, atk: 800, def: 100, blockCnt: 2 } }) },
         enemies: { w: enemyRec({ key: 'w', hp: 1e7, speed: 1 }) },
       },
-      units: [U(id, 'skchr_mlyss_3', 10, 3, { moduleId, carryState: IDLE }), { chessId: 'guard', row: 11, col: 5 }, { kind: 'token', tokenId: 'token_10030_mlyss_wtrman', row: 9, col: 6, ownerUid: 1 }],
+      units: [U(id, 'skchr_mlyss_3', 10, 3, { moduleId, carryState: IDLE }), { chessId: 'guard', row: 11, col: 5, potential: 6 }, { kind: 'token', tokenId: 'token_10030_mlyss_wtrman', row: 9, col: 6, ownerUid: 1, potential: 6 }],
       enemies: [{ key: 'w', route: 0, time: 12 }],
     });
     const tok = () => h.b.allyUnits.find((x) => x.defId === 'token_10030_mlyss_wtrman' && x.alive);

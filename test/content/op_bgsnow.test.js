@@ -39,8 +39,9 @@ const ENEMIES = { enemy_dummy: dummy('enemy_dummy'), enemy_fly: dummy('enemy_fly
 const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => [null, Y, X].map((m) => [t, true, m]))];
 
 /** 鸿雪 as uid 1 at (10, 5) facing RIGHT; `tok` = the typewriter piece's tile (uid 2) or null. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, tok = null, tokFirst = false, seed = 5, others = [] } = {}) {
-  const op = { uid: 1, diy: { slot: SLOT[tier], charId: SNOW, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 5 };
+  const op = { uid: 1, diy: { slot: SLOT[tier], charId: SNOW, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 5, potential: 6 };
   const piece = tok ? [{ uid: 2, kind: 'token', tokenId: TOK, ownerUid: 1, row: tok[0], col: tok[1] }] : [];
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,

@@ -529,7 +529,7 @@ node tools/kit-coverage.mjs --missing
 
 | 特性 | 代码位置 | 说明 |
 |---|---|---|
-| 潜能 / 练度（干员潜能+等级；R21P / R22-LOADOUT） | `shared/potential.js`、`shared/loadoutRecord.js`、`server/match/player/{basics,diy}.js`、`public/js/ui/loadoutModel.js`、`public/js/screens/cultivation.js` | 上游的；本分支**保留并适配**，默认按**满潜（潜能 6）**编成——很多内容测试是按满潜数值钉住的 |
+| 潜能 / 练度（干员潜能+等级；R21P / R22-LOADOUT） | `shared/potential.js`、`shared/loadoutRecord.js`、`server/match/player/{basics,diy}.js`、`public/js/ui/loadoutModel.js`、`public/js/screens/cultivation.js` | 上游的；本分支**保留并适配**。默认是**潜能 1 / 未精英化**（2026-10-15 owner 决定：官方对「未持有」干员的基准；此前默认满潜 / 精英2 Lv.60），内容测试按这个默认钉数值 |
 | 文字大小（字号缩放） | `public/js/ui/gameLogic/settings.js`、`public/css/*.css`（`calc(NN * var(--t))`） | 字号统一写成 `calc(… * var(--t))`，由设置项驱动；少数被测试钉住的纯选择器保持字面值 |
 | 弹药数量（干员条上的弹药；#552） | `public/js/render/app.js`、`public/js/render/units.js`（`ammoCount`） | |
 | Spine 裁剪边界 / 占位尺寸（#542） | `public/js/render/spine.js`（`clipBounds`、`CLIP_SAMPLE_*`）、`public/js/render/units.js` | 按干员实际播放的 clip 计算占位格大小 |

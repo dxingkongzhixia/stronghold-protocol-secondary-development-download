@@ -11,7 +11,7 @@
 import { html, MicroLabel } from '../ui/components.js';
 import { data } from '../data.js';
 import { opsOf } from '../ui/loadoutModel.js';
-import { CULTIVATE_EFFECTS, POTENTIAL_MIN, POTENTIAL_MAX } from '../../../shared/potential.js';
+import { CULTIVATE_EFFECTS, CULTIVATE_DEFAULT, POTENTIAL_MIN, POTENTIAL_MAX, POTENTIAL_DEFAULT } from '../../../shared/potential.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
@@ -43,13 +43,13 @@ export function CultivationSelects({ charId, ops, onSet, note = null }) {
   const set = (patch) => onSet(charId, patch);
   // a setting off the default stands out (mint); the default stays quiet — it is the same on every row
   return html`<span class=${cx('lo-cult', cur.changed && 'is-changed', note && 'is-moot')} data-char=${charId} title=${note || undefined}>
-    <span class=${cx('lo-select', 'lo-cult__sel', 'lo-cult__pot', cur.potential !== 6 && 'is-off')}>
+    <span class=${cx('lo-select', 'lo-cult__sel', 'lo-cult__pot', cur.potential !== POTENTIAL_DEFAULT && 'is-off')}>
       <select value=${String(cur.potential)} aria-label=${t('潜能')} data-cult="potential"
         onChange=${(e) => set({ potential: Number(e.currentTarget.value) })}>
         ${POTENTIALS.map((n) => html`<option key=${n} value=${String(n)}>${t('潜能 {n}', { n })}</option>`)}
       </select>
     </span>
-    <span class=${cx('lo-select', 'lo-cult__sel', 'lo-cult__tier', cur.cultivate !== TIERS.length - 1 && 'is-off')} title=${note ? undefined : cultivateName(cur.cultivate)}>
+    <span class=${cx('lo-select', 'lo-cult__sel', 'lo-cult__tier', cur.cultivate !== CULTIVATE_DEFAULT && 'is-off')} title=${note ? undefined : cultivateName(cur.cultivate)}>
       <select value=${String(cur.cultivate)} aria-label=${t('练度')} data-cult="cultivate"
         onChange=${(e) => set({ cultivate: Number(e.currentTarget.value) })}>
         ${TIERS.map((n) => html`<option key=${n} value=${String(n)}>${t(SHORT_NAMES[n])}</option>`)}
@@ -70,7 +70,7 @@ export function CultivationSection({ charId, ops, onSet, standIn = false }) {
   return html`<section class=${cx('lo-sec', 'lo-sec--cult', standIn && 'is-moot')} aria-label=${t('潜能与练度')} data-char=${charId}>
     <header class="lo-sec__head">
       <h3>${t('潜能与练度')}<${MicroLabel}>POTENTIAL<//></h3>
-      ${cur.changed ? html`<span class="lo-badge lo-badge--changed">${t('已调整')}</span>` : html`<span class="lo-badge lo-badge--plain">${t('满潜能 · 精英2 Lv.60')}</span>`}
+      ${cur.changed ? html`<span class="lo-badge lo-badge--changed">${t('已调整')}</span>` : html`<span class="lo-badge lo-badge--plain">${t('默认：潜能 1 · 未精英化')}</span>`}
     </header>
     <div class="lo-cult__row">
       <span class="lo-cult__k">${t('潜能')}</span>
@@ -89,6 +89,6 @@ export function CultivationSection({ charId, ops, onSet, standIn = false }) {
     <p class="lo-cult__eff" data-cultivate=${cur.cultivate}><b>${cultivateName(cur.cultivate)}</b> <span>${cultivateDesc(cur.cultivate)}</span></p>
     <p class="lo-cult__note">${standIn
       ? t('干员持有中标记为未持有：替补干员没有潜能与练度；这里的设置在改回「持有」后生效')
-      : t('默认满潜能、精英2 Lv.60（满加成）。官方的潜能取你自己的潜能，练度是自持有加成（已持有的同名干员的养成，攻击 / 防御 / 生命单独乘算）；未持有的特许干员在官方按潜能1、没有加成，要照官方打请手动设为潜能1、未精英化。')}</p>
+      : t('默认潜能 1、未精英化——官方对「未持有」干员的基准，也是本分支在 v0.2.6 合并前的数值。官方的潜能取你自己账号的持有情况，练度是自持有加成（已持有的同名干员按自身养成，攻击 / 防御 / 生命单独乘算）；想更强就按你的实际情况调高。')}</p>
   </section>`;
 }

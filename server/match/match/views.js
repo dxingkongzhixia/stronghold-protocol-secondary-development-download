@@ -12,6 +12,7 @@ import { bountySpawns, previewOf } from '../waves.js';
 import { timelineAt } from '../fields.js';
 import { bossFieldPlacement } from '../finalAssault.js';
 import { battleProgress } from '../../sim/spec.js';
+import { atPotential, cultivateMul, cultivatedStats, POTENTIAL_DEFAULT, CULTIVATE_DEFAULT } from '../../../shared/potential.js';
 
 /** A reported capsule numerator clamped to its denominator, else null (unknown — never a fabricated 0). */
 const finiteOrNull = (v, cap = Infinity) => {
@@ -27,9 +28,26 @@ const finiteOrNull = (v, cap = Infinity) => {
  */
 function cultivationInfo(lo) {
   const out = {};
-  if (lo && Number.isInteger(lo.potential) && lo.potential < 6) out.potential = lo.potential;
+  // the potential travels unless it IS the default (the client reads an absent one as the default, shared/potential.js)
+  if (lo && Number.isInteger(lo.potential) && lo.potential !== POTENTIAL_DEFAULT) out.potential = lo.potential;
   if (lo && Number.isInteger(lo.cultivate)) out.cultivate = lo.cultivate;
   return out;
+}
+
+/**
+ * The max HP a board / bench unit shows: the record composed at the player's 潜能 and 练度 — the numbers the battle
+ * fields (the default is 潜能 1 / 未精英化, so a raw full-potential record would overstate it by ~10 %). A stand-in or a
+ * prototype 自选 piece has neither (`lo.cultivate` null = no multiplier).
+ * @param {{ effect: (id: string) => any }} gd the match's game data (effects.json for the 练度 tiers)
+ * @param {any} rec the record (or a stand-in body) the piece is shown as
+ * @param {any} lo the owner's resolved loadout (`ps.loadoutFor`), or null
+ */
+function shownMaxHp(gd, rec, lo) {
+  if (!rec || !rec.stats || !Number.isFinite(rec.stats.maxHp)) return 1;
+  const pot = lo && Number.isInteger(lo.potential) ? lo.potential : POTENTIAL_DEFAULT;
+  const cult = lo && Number.isInteger(lo.cultivate) ? lo.cultivate : CULTIVATE_DEFAULT;
+  const mul = cultivateMul((id) => gd.effect(id), cult);
+  return cultivatedStats(atPotential(rec, pot).stats, mul).maxHp;
 }
 
 export class MatchViews {
@@ -285,7 +303,7 @@ export class MatchViews {
         area: 'board',
         name: rec ? rec.name : piece.id, tier: rec && Number.isInteger(rec.tier) ? rec.tier : 1, golden: !!(rec && rec.isGolden),
         spine: assets.spine || (rec && rec.charId) || piece.id, avatar: assets.avatar || (rec && rec.charId) || piece.id,
-        x: c, y: r, dir: pieceDir(piece), facing: pieceDir(piece) === 'LEFT' ? -1 : 1, maxHp: rec && rec.stats && Number.isFinite(rec.stats.maxHp) ? rec.stats.maxHp : 1,
+        x: c, y: r, dir: pieceDir(piece), facing: pieceDir(piece) === 'LEFT' ? -1 : 1, maxHp: shownMaxHp(gd, rec, lo),
         skillIndex: lo && Number.isInteger(lo.skillIndex) ? lo.skillIndex : undefined,
         moduleId: lo && typeof lo.moduleId === 'string' ? lo.moduleId : undefined,
         // the equipped items (like the sim's UnitInfo): a 变形同构体 wearer shows as a member of the bond it grants
@@ -350,7 +368,7 @@ export class MatchViews {
         side: 'ally', ownerId: ps.playerId, defId: piece.id, area,
         name: body ? body.name : piece.id, tier: rec && Number.isInteger(rec.tier) ? rec.tier : 1, golden: !!(rec && rec.isGolden),
         spine: assets.spine || (body && body.charId) || piece.id, avatar: assets.avatar || (body && body.charId) || piece.id,
-        x: i, y, maxHp: body && body.stats && Number.isFinite(body.stats.maxHp) ? body.stats.maxHp : 1,
+        x: i, y, maxHp: shownMaxHp(gd, body, lo),
         skillIndex: lo && Number.isInteger(lo.skillIndex) ? lo.skillIndex : undefined,
         moduleId: lo && typeof lo.moduleId === 'string' ? lo.moduleId : undefined,
         items: piece.kind === 'chess' && Array.isArray(piece.items) && piece.items.length ? piece.items.map((it) => it.id) : undefined,

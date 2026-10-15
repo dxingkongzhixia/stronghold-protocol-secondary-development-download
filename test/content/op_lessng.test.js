@@ -34,11 +34,12 @@ const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => 
 const PLAIN = chessRec({ id: 'test_plain_a', name: '测试', skill: null });
 
 /** A battle with 止颂 as uid 1 at (row, col) facing RIGHT, plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 5, others = [], seed = 5 } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES, chess: { test_plain_a: PLAIN } }, timeLimit: 600, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LESSNG, skillIndex: skill, uniEquipId: mod }, elite, row, col }, ...others],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LESSNG, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 }, ...others],
   });
   h.step();
   return { h, u: h.unit(1) };
@@ -346,7 +347,7 @@ test('DRE-Y “苦修者的抗压训练”: the first lethal hit of a deployment
     const h = makeBattle({
       defs: { enemies: { enemy_walk: enemyRec({ key: 'enemy_walk', hp: 1e9, speed: 0.6, mass: 0, def: ENEMY_DEF }), enemy_dummy: dummy('enemy_dummy', { def: ENEMY_DEF }) } },
       timeLimit: 600, autoFinish: false, seed: 5, flags: { dpPerSec: 0 }, hooks: ['damaged'], captureNoisy: true,
-      units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LESSNG, skillIndex: 2, uniEquipId: DREY }, elite: true, row: 9, col: 5 }],
+      units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LESSNG, skillIndex: 2, uniEquipId: DREY }, elite: true, row: 9, col: 5, potential: 6 }],
     });
     h.step();
     const u = h.unit(1);

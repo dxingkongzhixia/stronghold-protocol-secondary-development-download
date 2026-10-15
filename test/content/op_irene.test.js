@@ -39,12 +39,13 @@ const skillMulOf = (elite, mod) => (elite && mod === SWOX ? 1.1 : 1);
 const penOf = (tier, elite, mod) => (elite && mod === SWOX && tier === 6 ? 0.55 : 0.5);
 
 /** A battle with 艾丽妮 as uid 1 at (row, col) facing RIGHT, plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 5, others = [], seed = 5 } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 600, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999 },
     hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied', 'attack'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: IRENE, skillIndex: skill, uniEquipId: mod }, elite, row, col }, ...others],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: IRENE, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 }, ...others],
   });
   h.step();
   return { h, u: h.unit(1) };

@@ -43,8 +43,9 @@ const YAK = 'chess_char_1_02_a', TEXAS = 'chess_char_1_08_a', PERFUMER = 'chess_
 
 /** A battle with 凯尔希·思衡托 as uid 1 at (10, 4) facing RIGHT (`anchor`: her piece as uid 2), plus `others`.
  *  `skill` omitted (null) fields her the production way, with her shop record's default skill (S2). */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, skill = null, anchor = null, others = [], seed = 5, dp = 99 } = {}) {
-  const units = [{ uid: 1, chessId: chessIdOf(elite), ...(skill == null ? {} : { skillIndex: skill }), row: 10, col: 4 }];
+  const units = [{ uid: 1, chessId: chessIdOf(elite), ...(skill == null ? {} : { skillIndex: skill }), row: 10, col: 4, potential: 6 }];
   if (anchor) units.push({ uid: 2, kind: 'token', tokenId: ANCHOR, ownerUid: 1, row: anchor.row, col: anchor.col, dir: anchor.dir ?? 'RIGHT' });
   const log = [];   // heal / damaged in the order they happen
   const h = makeBattle({

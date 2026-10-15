@@ -48,8 +48,9 @@ const sortN = (a) => [...a].sort((x, y) => x - y);
 const ABOVE = { row: 11, col: 4 }, FRONT = { row: 10, col: 5 }, BEHIND = { row: 10, col: 3 };
 
 /** A battle with 涤火杰西卡 as uid 1 at (10, 4) facing RIGHT (`shield`: her piece as uid 2), plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, shield = ABOVE, others = [], seed = 5, dp = 99 } = {}) {
-  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: JESCA, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 4 }];
+  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: JESCA, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 4, potential: 6 }];
   if (shield) units.push({ uid: 2, kind: 'token', tokenId: SHIELD, ownerUid: 1, row: shield.row, col: shield.col });
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,

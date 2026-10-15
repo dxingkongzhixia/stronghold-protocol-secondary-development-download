@@ -13,11 +13,12 @@ const ordinary = ['2_10', '3_13', '3_20', '4_03', '6_18'].flatMap((id) => ['a', 
 // records. Its own hit + one unreleased drone follows the same profession rule as the official funnel casters.
 const glow = ['a', 'b'].map((form) => ({ chessId: `chess_char_377_gdglow_${form}` }));
 
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field(unit, enemy = {}, opts = {}) {
   const h = makeBattle({
     seed: 3, autoFinish: false, timeLimit: 120, captureNoisy: true, hooks: ['damaged', 'attack'],
     defs: { enemies: { enemy_dummy: enemyRec({ key: 'enemy_dummy', hp: 1e8, speed: 0, mass: 0, ...enemy }) } },
-    units: [{ uid: 1, row: 10, col: 4, ...unit }], ...opts,
+    units: [{ uid: 1, row: 10, col: 4, ...unit, potential: 6 }], ...opts,
   });
   h.step();
   return { h, u: h.unit(1), e: h.spawn('enemy_dummy', { pos: [10, 6] }) };
@@ -201,7 +202,7 @@ test('Kjera S2: a lock that leaves her range still takes drone hits, and the bod
     const h = makeBattle({
       seed: 4, autoFinish: false, timeLimit: 40, captureNoisy: true, hooks: ['damaged', 'attack'],
       defs: { enemies: { enemy_lock: enemyRec({ key: 'enemy_lock', hp: 1e8, speed: 1, motion: 'FLY' }) } },
-      units: [{ uid: 1, row: 10, col: 4, chessId: id, carryState: { sp: 999 } }],
+      units: [{ uid: 1, row: 10, col: 4, chessId: id, carryState: { sp: 999 }, potential: 6 }],
       enemies: [{ key: 'enemy_lock', route }],
     });
     h.step();
@@ -229,7 +230,7 @@ test('one attached volley: attack-SP, attack equipment and afterHit fire once wh
         skill: { spType: 'INCREASE_WHEN_ATTACK', spCost: 100, initSp: 0 } }) },
       enemies: { enemy_dummy: enemyRec({ key: 'enemy_dummy', hp: 10000, speed: 0, mass: 0 }) },
     },
-    units: [{ uid: 1, chessId: 'test_funnel', row: 10, col: 4, items: ['chess_item_4_03_e_a'] }],
+    units: [{ uid: 1, chessId: 'test_funnel', row: 10, col: 4, items: ['chess_item_4_03_e_a'], potential: 6 }],
   });
   h.step();
   const u = h.unit(1), e = h.spawn('enemy_dummy', { pos: [10, 6] });

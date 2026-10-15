@@ -39,12 +39,13 @@ const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => 
 const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${mod ?? 'none'}`;
 
 /** 令 as uid 1 at (row, col) facing RIGHT; `souls` = [[tokenId, row, col, dir?]] placed pieces (uid 10 +). */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, souls = [], row = 10, col = 3, seed = 5, dp = 99 } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999, dpInit: dp }, captureNoisy: true,
     hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied', 'death', 'deploy', 'attack', 'dodge'],
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LING, skillIndex: skill, uniEquipId: mod }, elite, row, col },
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LING, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 },
       ...souls.map(([tokenId, r, c, dir], i) => ({ uid: 10 + i, kind: 'token', tokenId, ownerUid: 1, row: r, col: c, dir: dir ?? 'RIGHT' }))],
   });
   h.step();

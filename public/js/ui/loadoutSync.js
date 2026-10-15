@@ -44,7 +44,7 @@ function readStoredDiy() {
 /** Loadout + ownership + screen state (separate from the app store: it must survive room / match resets). */
 export const loadoutStore = createStore({
   entries: readStored(),
-  ops: readStoredOps(), // 0.2.2 潜能 / 练度: { [charId]: { potential?, cultivate? } } ({} = every operator 潜能 6, 精英2 Lv.60)
+  ops: readStoredOps(), // 0.2.2 潜能 / 练度: { [charId]: { potential?, cultivate? } } ({} = every operator at the defaults)
   notOwned: readStoredOwnership(), // 干员持有: base chess ids marked 未持有 (sorted; [] = every operator owned)
   diy: readStoredDiy(), // 自选编队: { [slotBaseId]: { charId, skillIndex?, uniEquipId? } } ({} = every slot empty)
   diyKitted: null,     // the operators a DIY slot may field (welcome.diyKitted; null before the first welcome)

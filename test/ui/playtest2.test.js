@@ -18,6 +18,7 @@ import { panelSide, panelSlots, chessLoadout, prepCamera, bondPopupPlace, BPOP }
 import { checkButtons } from '../../public/js/ui/hud.js';
 import { DATA } from '../match/harness.js';
 import { skillRecordIconUrl } from '../../public/js/ui/assetUrls.js';
+import { atPotential, POTENTIAL_DEFAULT, POTENTIAL_MAX } from '../../shared/potential.js';
 
 const maxRow = (areas) => Math.max(...areas.map((a) => a.r1));
 const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -307,12 +308,15 @@ describe('§16: chessLoadout (m.private.loadout → skill / module shown)', () =
     const get2 = (id) => DATA.chess[id] || null;
     // 野鬃 elite on 不装备: base ATK / ASPD and the no-module trait (the default module: ATK +40, ASPD +3, "获得2点")
     const g = DATA.chess.chess_char_1_19_b;
+    const g1 = atPotential(g, POTENTIAL_DEFAULT);   // the card / sim compose at the player's settings; the default is 潜能 1
     const none = chessLoadout(g, { chess_char_1_19_a: { skill: 0, module: 'none' } }, get2);
-    assert.equal(none.record.stats.atk, g.statsBase.atk);
-    assert.equal(none.record.stats.aspd, g.statsBase.aspd);
+    assert.equal(none.record.stats.atk, g1.statsBase.atk);
+    assert.equal(none.record.stats.aspd, g1.statsBase.aspd);
     assert.notEqual(none.record.stats.atk, g.stats.atk, 'differs from the default-module card');
     assert.match(none.record.trait.desc, /获得1点部署费用/);
-    assert.equal(chessLoadout(g, null, get2).record, g, 'default loadout: the data record itself');
+    assert.notEqual(chessLoadout(g, null, get2).record, g, 'since 2026-10-15 the DEFAULT composes a record at 潜能 1');
+    const at6 = chessLoadout(g, null, get2, { cultivation: { potential: POTENTIAL_MAX } }).record;
+    assert.deepEqual(at6.stats, g.stats, '潜能 6 = the data record\'s own numbers');
     // every elite × every module choice: the card's record equals the sim's unit def (stats, trait, talents)
     let n = 0;
     for (const c of Object.values(DATA.chess)) {

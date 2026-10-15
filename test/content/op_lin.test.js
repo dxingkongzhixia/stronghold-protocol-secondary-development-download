@@ -32,11 +32,12 @@ const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${
 const X1 = [[12, 5], [11, 4], [11, 5], [11, 6], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7], [9, 4], [9, 5], [9, 6], [8, 5]];
 
 /** A battle with 林 as uid 1 at (10, 5) facing RIGHT, plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, others = [], seed = 5, setup = null } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed, setup,
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied', 'spGain'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LIN, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 5 }, ...others],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LIN, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 5, potential: 6 }, ...others],
   });
   h.step();
   return { h, u: h.unit(1) };

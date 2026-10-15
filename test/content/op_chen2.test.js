@@ -34,11 +34,12 @@ const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => 
 const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${mod ?? 'none'}`;
 
 /** 假日威龙陈 as uid 1 at (row, col) facing RIGHT, plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 4, others = [], seed = 5, flags = {} } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999, ...flags }, hooks: ['damaged', 'skillStart', 'skillEnd', 'ammoUsed', 'attack', 'statusApplied'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: CHEN, skillIndex: skill, uniEquipId: mod }, elite, row, col }, ...others],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: CHEN, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 }, ...others],
   });
   h.step();
   return { h, u: h.unit(1) };
@@ -204,7 +205,7 @@ test('slime (S2 / S3): each attack slimes the tiles of her attack range (2-5; S3
   // two of them: one slow each (independentCharacterSource)
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 60, autoFinish: false, seed: 3, flags: { dpPerSec: 0 },
-    units: [{ uid: 1, diy: { slot: 5, charId: CHEN, skillIndex: 1 }, row: 10, col: 4 }, { uid: 2, diy: { slot: 6, charId: CHEN, skillIndex: 1 }, row: 11, col: 4 }],
+    units: [{ uid: 1, diy: { slot: 5, charId: CHEN, skillIndex: 1 }, row: 10, col: 4, potential: 6 }, { uid: 2, diy: { slot: 6, charId: CHEN, skillIndex: 1 }, row: 11, col: 4, potential: 6 }],
   });
   h.step();
   const e = h.spawn('enemy_armor', { pos: [10, 5] });
@@ -330,9 +331,9 @@ test('T1 节约风气 on others while she is on the field: another 【狙击】 
   // which she keeps), the other gives her 22 % (below her own 27 %)
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 60, autoFinish: false, seed: 3, flags: { dpPerSec: 0 },
-    units: [{ uid: 1, diy: { slot: 6, charId: CHEN, skillIndex: 0, uniEquipId: RX }, elite: true, row: 10, col: 4 },
-      { uid: 2, diy: { slot: 5, charId: CHEN, skillIndex: 0, uniEquipId: null }, elite: false, row: 11, col: 4 },
-      { uid: 3, chessId: 'chess_char_5_03_a', row: 12, col: 3 }],
+    units: [{ uid: 1, diy: { slot: 6, charId: CHEN, skillIndex: 0, uniEquipId: RX }, elite: true, row: 10, col: 4, potential: 6 },
+      { uid: 2, diy: { slot: 5, charId: CHEN, skillIndex: 0, uniEquipId: null }, elite: false, row: 11, col: 4, potential: 6 },
+      { uid: 3, chessId: 'chess_char_5_03_a', row: 12, col: 3, potential: 6 }],
   });
   h.step();
   assert.deepEqual([spareChance(h.b, h.unit(1)), spareChance(h.b, h.unit(2)), spareChance(h.b, h.unit(3))], [0.27, 0.22, 0.12]);

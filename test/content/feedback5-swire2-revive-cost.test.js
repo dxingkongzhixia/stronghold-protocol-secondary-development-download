@@ -10,8 +10,9 @@ import { makeBattle, checkInvariants } from '../helpers/battleHarness.js';
 
 const ID = 'chess_char_3_04_a';
 
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field(kind = 'normal') {
-  const h = makeBattle({ kind, units: [{ chessId: ID, row: 10, col: 5 }], timeLimit: 300, autoFinish: false, flags: { dpInit: 60, dpMax: 99 } });
+  const h = makeBattle({ kind, units: [{ chessId: ID, row: 10, col: 5, potential: 6 }], timeLimit: 300, autoFinish: false, flags: { dpInit: 60, dpMax: 99 } });
   h.step();
   return { h, u: h.unit(ID), ps: h.b.getPlayer('p1') };
 }

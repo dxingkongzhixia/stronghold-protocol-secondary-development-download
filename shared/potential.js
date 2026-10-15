@@ -1,7 +1,11 @@
-// shared/potential.js — operator potential (潜能 1–6) as a runtime input, and the 自持有 练度 bonus (0.2.2; the owner's
-// decision of 2026-10-08: 「调配干员里自己设置吧，默认满潜满加成」). Pure ESM shared by the build (tools/build-data.mjs
-// proves the composition below rebuilds every record at every potential), the simulation (server/sim/simdata.js), the
-// server (PlayerState) and the client (干员调配 / detail cards).
+// shared/potential.js — operator potential (潜能 1–6) as a runtime input, and the 自持有 练度 bonus (0.2.2). Pure ESM
+// shared by the build (tools/build-data.mjs proves the composition below rebuilds every record at every potential), the
+// simulation (server/sim/simdata.js), the server (PlayerState) and the client (干员调配 / detail cards).
+//
+// THE DEFAULTS (owner, 2026-10-15: 「那我们项目所有干员的默认潜能 1 / 未精英化」, superseding the 2026-10-08
+// 「默认满潜满加成」): a player who set nothing fights at 潜能 1 with 未精英化 练度 — the official baseline for an
+// operator the player does NOT own, and what this fork fought at before the v0.2.6 merge brought the subsystem in. The
+// per-operator 干员调配 setting still raises both; the data below is unaffected (it is always built at full potential).
 //
 // Official (调度手册 autochess_shop_3 「卫戍协议中干员潜能由自身已持有干员潜能决定」; PRTS 卫戍协议 「干员的潜能等级始终以自身
 // 持有状态为准」): an operator fights at the player's own potential; the season's chess rows carry none. The data records
@@ -25,18 +29,22 @@
 // of the same name has it — initial, elite and 自选 forms alike; a 补位 stand-in and a prototype 自选 pick have neither
 // potential nor 练度 (`cultivationOf`).
 
-/** Potential bounds (潜能 1–6) and the default (full potential, the data's own). */
+/**
+ * Potential bounds (潜能 1–6). The default is 潜能 1 — the official baseline for an operator the player does not own
+ * (「卫戍协议中干员潜能由自身已持有干员潜能决定」; owner's decision 2026-10-15).
+ */
 export const POTENTIAL_MIN = 1;
 export const POTENTIAL_MAX = 6;
-export const POTENTIAL_DEFAULT = 6;
-/** The data rank every record is built at (potential 6). */
+export const POTENTIAL_DEFAULT = POTENTIAL_MIN;
+/** The data rank every record is built at (potential 6): the maximal superset, annotated down with `potDown`. */
 export const FULL_RANK = POTENTIAL_MAX - 1;
 
 /** The 练度 tiers: effects.json CHAR_MAP effect ids in cultivateEffectList order (cultivateNum 1 / 1001 / 2001 / 2060). */
 export const CULTIVATE_EFFECTS = Object.freeze(['aceffect_char_1', 'aceffect_char_2', 'aceffect_char_3', 'aceffect_char_4']);
 export const CULTIVATE_MAX = CULTIVATE_EFFECTS.length - 1;
-/** The default 练度: 精英阶段2-60级 (the owner's 「默认满潜满加成」). */
-export const CULTIVATE_DEFAULT = CULTIVATE_MAX;
+/** The default 练度: 未精英化 (no 自持有 bonus) — the official baseline for an operator the player does not own
+ *  (owner's decision 2026-10-15). The per-operator 干员调配 setting can raise it to 精英2 Lv.60. */
+export const CULTIVATE_DEFAULT = 0;
 
 /** Is `v` a potential (integer 1–6)? */
 export const isPotential = (v) => Number.isInteger(v) && v >= POTENTIAL_MIN && v <= POTENTIAL_MAX;
@@ -121,15 +129,17 @@ export function atRank(obj, rank) {
 }
 
 /**
- * A data/chess.json record (or a backups form, or a token variant) at `potential` (1–6; anything else = full
- * potential, the record itself) — atRank of its data rank.
+ * A data/chess.json record (or a backups form, or a token variant) at `potential` (1–6; anything else — including a
+ * missing value — is the default, 潜能 1): atRank of its data rank. 潜能 6 (the data's own build) returns the record
+ * itself, so a caller that asks for full potential pays nothing.
  * @template T
  * @param {T} rec
  * @param {number|null|undefined} potential
  * @returns {T}
  */
 export function atPotential(rec, potential) {
-  return isPotential(potential) && potential < POTENTIAL_MAX ? atRank(rec, potential - 1) : rec;
+  const p = isPotential(potential) ? potential : POTENTIAL_DEFAULT;
+  return p < POTENTIAL_MAX ? atRank(rec, p - 1) : rec;
 }
 
 /** Whether a record / form / variant changes below full potential at all (`potDown` or a chained talent list). */

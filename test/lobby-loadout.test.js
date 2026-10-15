@@ -131,9 +131,9 @@ describe('room.loadout (lobby, stub match)', () => {
     await a.waitFor('m.public', (p) => p.phase === 'INFO_CHECK');
     const seat = RecordingStub.instances.at(-1).opts.seats[0];
     assert.deepEqual(seat.loadout, { [INSIDE]: { skill: 0, module: 'uniequip_002_inside' } });
-    assert.deepEqual(seat.ops, { [VENDLA]: { potential: 1, cultivate: 0 }, [KALTS]: { potential: 6, cultivate: 2 } }, 'complete entries, defaults dropped');
-    assert.ok(Object.isFrozen(seat.ops) && Object.isFrozen(seat.ops[VENDLA]));
-    // an older client's message (no ops): none set — the next match fields every operator at 潜能 6 / 精英2 Lv.60
+    assert.deepEqual(seat.ops, { [KALTS]: { potential: 1, cultivate: 2 }, [C(INSIDE).charId]: { potential: 6, cultivate: 3 } }, 'complete entries, defaults dropped (the explicit 潜能 6 / 精英2 Lv.60 is kept)');
+    assert.ok(Object.isFrozen(seat.ops) && Object.isFrozen(seat.ops[KALTS]));
+    // an older client's message (no ops): none set — the next match fields every operator at 潜能 1 / 未精英化
     await err(a, { t: 'room.loadout', entries: {} }, ERR.ROOM_STARTED);
     const b = await pool.player('Old');
     await ok(b, { t: 'room.loadout', entries: { [INSIDE]: { skill: 0 } } });

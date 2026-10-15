@@ -33,7 +33,7 @@ function spawnOn(h, owner, tokenId, r, c, opts = {}) {
 // tokens
 
 test('医疗探机: heals an injured ally next to it, untargetable, self-destructs after the withdraw time (10 s)', REAL, () => {
-  const h = makeBattle({ defs: { chess: { test_owner: summoner(), test_guard: guard() } }, units: [{ chessId: 'test_owner', row: 10, col: 3 }, { chessId: 'test_guard', row: 10, col: 5 }], autoFinish: false, timeLimit: 60, hooks: ['death'] });
+  const h = makeBattle({ defs: { chess: { test_owner: summoner(), test_guard: guard() } }, units: [{ chessId: 'test_owner', row: 10, col: 3, potential: 6 }, { chessId: 'test_guard', row: 10, col: 5, potential: 6 }], autoFinish: false, timeLimit: 60, hooks: ['death'] });
   h.step();
   const g = h.unit('test_guard');
   g.hp = 100;
@@ -52,7 +52,7 @@ test('医疗探机: heals an injured ally next to it, untargetable, self-destruc
 
 test('诅咒娃娃: enemies in its range get ATK/DEF −25 % (normal) / −30 % (精锐 owner) for 15 s', REAL, () => {
   for (const [ownerId, pct] of [['chess_char_3_15_a', 0.25], ['chess_char_3_15_b', 0.3]]) {
-    const h = makeBattle({ defs: { enemies: { enemy_dummy: dummy({ atk: 1000, def: 400 }) } }, kits: { chess_char_3_15_a: bare }, units: [{ chessId: ownerId, row: 12, col: 3 }], enemies: [{ key: 'enemy_dummy', pos: [10, 7] }], autoFinish: false, timeLimit: 60 });
+    const h = makeBattle({ defs: { enemies: { enemy_dummy: dummy({ atk: 1000, def: 400 }) } }, kits: { chess_char_3_15_a: bare }, units: [{ chessId: ownerId, row: 12, col: 3, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [10, 7] }], autoFinish: false, timeLimit: 60 });
     h.step();
     const doll = spawnOn(h, h.unit(ownerId), TOKEN_IDS.curseDoll, 10, 6);
     const e = h.enemy('enemy_dummy');
@@ -70,7 +70,7 @@ test('诅咒娃娃: enemies in its range get ATK/DEF −25 % (normal) / −30 % 
 });
 
 test('沙之碑: appears with owner ATK × atk_scale arts + stun on the 3×3 around it, blocks 3, lives the talent duration', REAL, () => {
-  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_dummy: dummy() } }, units: [{ chessId: 'test_owner', row: 12, col: 3 }], enemies: [{ key: 'enemy_dummy', pos: [10, 7] }, { key: 'enemy_dummy', pos: [12, 9] }], autoFinish: false, timeLimit: 60 });
+  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_dummy: dummy() } }, units: [{ chessId: 'test_owner', row: 12, col: 3, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [10, 7] }, { key: 'enemy_dummy', pos: [12, 9] }], autoFinish: false, timeLimit: 60 });
   h.step();
   const [near, far] = h.enemies();
   const ob = h.b.spawnToken(h.unit('test_owner'), TOKEN_IDS.obelisk, 10, 6);
@@ -87,7 +87,7 @@ test('沙之碑: appears with owner ATK × atk_scale arts + stun on the 3×3 aro
 });
 
 test('迷迭香的战术装备: stuns around on appear; enemies it blocks lose talent DEF (−160); 25 s', REAL, () => {
-  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_walker: walker({ def: 300 }) } }, units: [{ chessId: 'test_owner', row: 12, col: 3 }], enemies: [{ key: 'enemy_walker', route: 0 }], autoFinish: false, timeLimit: 60 });
+  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_walker: walker({ def: 300 }) } }, units: [{ chessId: 'test_owner', row: 12, col: 3, potential: 6 }], enemies: [{ key: 'enemy_walker', route: 0 }], autoFinish: false, timeLimit: 60 });
   h.step();
   const gear = spawnOn(h, h.unit('test_owner'), TOKEN_IDS.rosmonGear, 9, 6);
   const e = h.enemy('enemy_walker');
@@ -104,7 +104,7 @@ test('迷迭香的战术装备: stuns around on appear; enemies it blocks lose t
 });
 
 test('“小自在”: arts melee blocker, 25 s lifetime, kills emit summonKill for its owner', REAL, () => {
-  const h = makeBattle({ defs: { enemies: { enemy_dummy: dummy({ hp: 300 }) } }, kits: { chess_char_5_12_a: bare }, units: [{ chessId: 'chess_char_5_12_a', row: 12, col: 3 }], enemies: [{ key: 'enemy_dummy', pos: [10, 7] }], autoFinish: false, timeLimit: 60, hooks: ['summonKill'] });
+  const h = makeBattle({ defs: { enemies: { enemy_dummy: dummy({ hp: 300 }) } }, kits: { chess_char_5_12_a: bare }, units: [{ chessId: 'chess_char_5_12_a', row: 12, col: 3, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [10, 7] }], autoFinish: false, timeLimit: 60, hooks: ['summonKill'] });
   h.step();
   const xi = h.unit('chess_char_5_12_a');
   const d = spawnOn(h, xi, TOKEN_IDS.duskDragon, 10, 6);
@@ -123,7 +123,7 @@ test('斯卡蒂的海嗣: its owner\'s trait (生命回复速度) on the allies 
   const ratio = tokDef(TOKEN_IDS.seaborn, 'chess_char_6_04_a').traitBb['attack@atk_to_hp_recovery_ratio'];
   // heal mode (owner skill idle)
   {
-    const h = makeBattle({ defs: { chess: { test_guard: guard() } }, kits: { chess_char_6_04_a: genericNoSkill }, units: [{ chessId: 'chess_char_6_04_a', row: 12, col: 3 }, { chessId: 'test_guard', row: 10, col: 8 }], autoFinish: false, timeLimit: 90 });
+    const h = makeBattle({ defs: { chess: { test_guard: guard() } }, kits: { chess_char_6_04_a: genericNoSkill }, units: [{ chessId: 'chess_char_6_04_a', row: 12, col: 3, potential: 6 }, { chessId: 'test_guard', row: 10, col: 8, potential: 6 }], autoFinish: false, timeLimit: 90 });
     h.step();
     const sk = h.unit('chess_char_6_04_a');
     const g = h.unit('test_guard');
@@ -148,7 +148,7 @@ test('斯卡蒂的海嗣: its owner\'s trait (生命回复速度) on the allies 
   // owner skill running: damage + inspire
   {
     const kit = () => ({ generic: true, talents: [], skill: { kind: 'duration', duration: 20, trigger: 'SP_FULL', spCost: 1, initSp: 1 } });
-    const h = makeBattle({ defs: { chess: { test_guard: guard() }, enemies: { enemy_dummy: dummy() } }, kits: { chess_char_6_04_a: kit }, units: [{ chessId: 'chess_char_6_04_a', row: 12, col: 3 }, { chessId: 'test_guard', row: 10, col: 8 }], enemies: [{ key: 'enemy_dummy', pos: [9, 7] }], autoFinish: false, timeLimit: 60 });
+    const h = makeBattle({ defs: { chess: { test_guard: guard() }, enemies: { enemy_dummy: dummy() } }, kits: { chess_char_6_04_a: kit }, units: [{ chessId: 'chess_char_6_04_a', row: 12, col: 3, potential: 6 }, { chessId: 'test_guard', row: 10, col: 8, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [9, 7] }], autoFinish: false, timeLimit: 60 });
     h.step(2);
     const sk = h.unit('chess_char_6_04_a');
     assert.ok(sk.skill.active);
@@ -166,7 +166,7 @@ test('斯卡蒂的海嗣: its owner\'s trait (生命回复速度) on the allies 
 test('“耀阳”: true burst = owner ATK × atk_scale + stun on the plus grid; +1 hit after a 卡西米尔 deploy; ends with the owner skill', REAL, () => {
   const bb = tokDef(TOKEN_IDS.radiantSword, 'chess_char_6_17_a').skill.bb;
   const run = (withOther) => {
-    const units = [{ chessId: 'chess_char_6_17_a', row: 11, col: 3 }];
+    const units = [{ chessId: 'chess_char_6_17_a', row: 11, col: 3, potential: 6 }];
     if (withOther) units.push({ chessId: 'test_guard', row: 9, col: 3 }); // deploys after 临光 (lower row)
     const h = makeBattle({ defs: { chess: { test_guard: guard() }, enemies: { enemy_dummy: dummy() } }, kits: { chess_char_6_17_a: bare }, units, enemies: [{ key: 'enemy_dummy', pos: [10, 7] }], autoFinish: false, timeLimit: 60 });
     h.step();
@@ -185,7 +185,7 @@ test('“耀阳”: true burst = owner ATK × atk_scale + stun on the plus grid;
   // bound to the owner's running skill
   const kit = () => ({ talents: [], skill: { kind: 'duration', duration: 3, trigger: 'SP_FULL', spCost: 1, initSp: 1,
     onStart({ battle, unit }) { battle.spawnToken(unit, TOKEN_IDS.radiantSword, 10, 4); } } });
-  const h = makeBattle({ kits: { chess_char_6_17_a: kit }, units: [{ chessId: 'chess_char_6_17_a', row: 10, col: 3 }], autoFinish: false, timeLimit: 60 });
+  const h = makeBattle({ kits: { chess_char_6_17_a: kit }, units: [{ chessId: 'chess_char_6_17_a', row: 10, col: 3, potential: 6 }], autoFinish: false, timeLimit: 60 });
   h.step(2);
   const sw = h.b.allyUnits.find((u) => u.defId === TOKEN_IDS.radiantSword);
   assert.ok(sw && sw.alive);
@@ -196,7 +196,7 @@ test('“耀阳”: true burst = owner ATK × atk_scale + stun on the plus grid;
 });
 
 test('纸偶: appear burst = its ATK × damage_scale arts on the 8 surrounding tiles; does not block', REAL, () => {
-  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_dummy: dummy() } }, units: [{ chessId: 'test_owner', row: 12, col: 3 }], enemies: [{ key: 'enemy_dummy', pos: [11, 7] }, { key: 'enemy_dummy', pos: [10, 9] }], autoFinish: false, timeLimit: 30 });
+  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_dummy: dummy() } }, units: [{ chessId: 'test_owner', row: 12, col: 3, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [11, 7] }, { key: 'enemy_dummy', pos: [10, 9] }], autoFinish: false, timeLimit: 30 });
   h.step();
   const [a, b] = h.enemies();
   const doll = h.b.spawnToken(h.unit('test_owner'), TOKEN_IDS.paperDoll, 10, 6);
@@ -214,7 +214,7 @@ test('狼群: board piece becomes 伺夜\'s 援军; 2→3 狼影 (block & hits),
     defs: { enemies: { enemy_walker: walker({ def: 250, atk: 0 }) } },
     kits: { chess_char_3_19_a: genericNoSkill },
     // the wolf is listed before its owner (higher row): it must still be linked to 伺夜 (owner-level variant)
-    units: [{ kind: 'token', tokenId: TOKEN_IDS.wolfPack, row: 9, col: 6, uid: 1, ownerUid: 2 }, { chessId: 'chess_char_3_19_b', row: 10, col: 4, uid: 2 }],
+    units: [{ kind: 'token', tokenId: TOKEN_IDS.wolfPack, row: 9, col: 6, uid: 1, ownerUid: 2, potential: 6 }, { chessId: 'chess_char_3_19_b', row: 10, col: 4, uid: 2, potential: 6 }],
     enemies: [{ key: 'enemy_walker', route: 0 }], autoFinish: false, timeLimit: 120,
     setup: (b) => b.on('damaged', (c) => { if (c.source?.defId === TOKEN_IDS.wolfPack && c.type === 'phys') { wolfHits++; c.dmgSeen = c.amount; } }),
   });
@@ -263,7 +263,7 @@ test('狼群: board piece becomes 伺夜\'s 援军; 2→3 狼影 (block & hits),
 
 test('hand-authored summoner kits: the board 狼群 deploys before 伺夜 (one pack); managed 海嗣 leaves its pulses to the owner kit', REAL, () => {
   // real 伺夜 kit (content/kits): the board wolf sits below-right of 伺夜, so it would deploy after him
-  const h = makeBattle({ units: [{ chessId: 'chess_char_3_19_a', row: 11, col: 4, uid: 1 }, { kind: 'token', tokenId: TOKEN_IDS.wolfPack, row: 9, col: 6, uid: 2, ownerUid: 1 }], autoFinish: false, timeLimit: 10 });
+  const h = makeBattle({ units: [{ chessId: 'chess_char_3_19_a', row: 11, col: 4, uid: 1, potential: 6 }, { kind: 'token', tokenId: TOKEN_IDS.wolfPack, row: 9, col: 6, uid: 2, ownerUid: 1, potential: 6 }], autoFinish: false, timeLimit: 10 });
   h.step(3);
   const vigil = h.unit('chess_char_3_19_a');
   const packs = h.b.allyUnits.filter((u) => u.defId === TOKEN_IDS.wolfPack && u.alive);
@@ -271,7 +271,7 @@ test('hand-authored summoner kits: the board 狼群 deploys before 伺夜 (one p
   assert.equal(packs[0].uid, 2, 'the player\'s piece');
   assert.equal(vigil.trait.reinforcement, packs[0]);
   // a summoner with a hand kit (no skill here): the seaborn does not run its own trait pulses
-  const h2 = makeBattle({ defs: { chess: { test_guard: guard() } }, kits: { chess_char_6_04_a: bare }, units: [{ chessId: 'chess_char_6_04_a', row: 12, col: 3 }, { chessId: 'test_guard', row: 10, col: 8 }], autoFinish: false, timeLimit: 30 });
+  const h2 = makeBattle({ defs: { chess: { test_guard: guard() } }, kits: { chess_char_6_04_a: bare }, units: [{ chessId: 'chess_char_6_04_a', row: 12, col: 3, potential: 6 }, { chessId: 'test_guard', row: 10, col: 8, potential: 6 }], autoFinish: false, timeLimit: 30 });
   h2.step();
   const g = h2.unit('test_guard');
   g.hp = 1000;
@@ -283,7 +283,7 @@ test('hand-authored summoner kits: the board 狼群 deploys before 伺夜 (one p
 });
 
 test('tactician without a board piece: the 援军 is the real talent token (狼群), never the generic one', REAL, () => {
-  const h = makeBattle({ kits: { chess_char_3_19_a: genericNoSkill }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3 }], autoFinish: false, timeLimit: 20 });
+  const h = makeBattle({ kits: { chess_char_3_19_a: genericNoSkill }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3, potential: 6 }], autoFinish: false, timeLimit: 20 });
   h.step();
   const vigil = h.unit('chess_char_3_19_a');
   const w = vigil.trait.reinforcement;
@@ -299,7 +299,7 @@ test('流形: copies the nearest operator (scale × stats, block, range, damage 
   const h = makeBattle({
     defs: { chess: { test_guard: g }, enemies: { enemy_dummy: dummy({ atk: 500, def: 400 }) } },
     kits: { chess_char_6_11_a: genericNoSkill },
-    units: [{ chessId: 'chess_char_6_11_a', row: 12, col: 3, uid: 1 }, { chessId: 'test_guard', row: 10, col: 5, uid: 2 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 6, uid: 3, ownerUid: 1 }],
+    units: [{ chessId: 'chess_char_6_11_a', row: 12, col: 3, uid: 1, potential: 6 }, { chessId: 'test_guard', row: 10, col: 5, uid: 2, potential: 6 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 6, uid: 3, ownerUid: 1, potential: 6 }],
     enemies: [{ key: 'enemy_dummy', pos: [10, 7] }], autoFinish: false, timeLimit: 60,
   });
   h.step();
@@ -323,7 +323,7 @@ test('流形: copies the nearest operator (scale × stats, block, range, damage 
   checkInvariants(h.b);
   // 精锐: +sp ⇒ copies at once, scale 1
   const h2 = makeBattle({ defs: { chess: { test_guard: g } }, kits: { chess_char_6_11_a: genericNoSkill },
-    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 3, uid: 1 }, { chessId: 'test_guard', row: 10, col: 5, uid: 2 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 6, uid: 3, ownerUid: 1 }], autoFinish: false, timeLimit: 10 });
+    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 3, uid: 1, potential: 6 }, { chessId: 'test_guard', row: 10, col: 5, uid: 2, potential: 6 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 6, uid: 3, ownerUid: 1, potential: 6 }], autoFinish: false, timeLimit: 10 });
   h2.step(2);
   const m2 = h2.b.allyUnits.find((u) => u.defId === TOKEN_IDS.manifold);
   assert.ok(m2.mem.copy);
@@ -336,7 +336,7 @@ test('流形 ranged copy splits into a timed clone every N attacks', REAL, () =>
   const sniper = chessRec({ id: 'test_sniper', profession: 'SNIPER', skill: null, stats: { atk: 300, bat: 0.2, maxHp: 1000 }, rangeGrid: [[0, 0], [0, 1], [0, 2], [1, 1], [-1, 1]] });
   const h = makeBattle({
     defs: { chess: { test_sniper: sniper }, enemies: { enemy_dummy: dummy() } }, kits: { chess_char_6_11_a: genericNoSkill },
-    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 3, uid: 1 }, { chessId: 'test_sniper', row: 10, col: 4, uid: 2 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 5, uid: 3, ownerUid: 1 }],
+    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 3, uid: 1, potential: 6 }, { chessId: 'test_sniper', row: 10, col: 4, uid: 2, potential: 6 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 5, uid: 3, ownerUid: 1, potential: 6 }],
     enemies: [{ key: 'enemy_dummy', pos: [10, 6] }], autoFinish: false, timeLimit: 60,
   });
   h.step(2);
@@ -356,7 +356,7 @@ test('流形 ranged copy splits into a timed clone every N attacks', REAL, () =>
 test('香槟炸弹: the first ground enemy on its tile takes owner ATK × atk_scale (×2 after duration_switch s) and sluggish', REAL, () => {
   const bb = tokDef(TOKEN_IDS.champagne, 'chess_char_3_04_a').skill.bb;
   // armed for > duration_switch before contact: two hits
-  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_walker: walker() } }, units: [{ chessId: 'test_owner', row: 12, col: 3 }], enemies: [{ key: 'enemy_walker', route: 0, time: 1 }], autoFinish: false, timeLimit: 60, hooks: ['death'] });
+  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_walker: walker() } }, units: [{ chessId: 'test_owner', row: 12, col: 3, potential: 6 }], enemies: [{ key: 'enemy_walker', route: 0, time: 1 }], autoFinish: false, timeLimit: 60, hooks: ['death'] });
   h.step();
   const bomb = spawnOn(h, h.unit('test_owner'), TOKEN_IDS.champagne, 9, 6);
   assert.equal(bomb.s.flags.untargetable, true);
@@ -367,7 +367,7 @@ test('香槟炸弹: the first ground enemy on its tile takes owner ATK × atk_sc
   assert.ok(e().findBuff('sluggish'));
   approx(e().findBuff('sluggish').timeLeft, bb['attack@sluggish'], 0.05);
   // fresh bomb under an enemy: one hit
-  const h2 = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_dummy: dummy() } }, units: [{ chessId: 'test_owner', row: 12, col: 3 }], enemies: [{ key: 'enemy_dummy', pos: [9, 6] }], autoFinish: false, timeLimit: 10 });
+  const h2 = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_dummy: dummy() } }, units: [{ chessId: 'test_owner', row: 12, col: 3, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [9, 6] }], autoFinish: false, timeLimit: 10 });
   h2.step();
   h2.b.spawnToken(h2.unit('test_owner'), TOKEN_IDS.champagne, 9, 6);
   h2.step(2);
@@ -381,7 +381,7 @@ test('从不混淆的方向: marker of the owner\'s tile; when the skill ends it
       const [r, c] = [unit.tileR, unit.tileC];
       if (battle.relocate(unit, 10, 7)) battle.spawnToken(unit, TOKEN_IDS.ulpiaMarker, r, c);
     } } });
-  const h = makeBattle({ kits: { chess_char_5_05_a: kit }, units: [{ chessId: 'chess_char_5_05_a', row: 10, col: 4 }], autoFinish: false, timeLimit: 20 });
+  const h = makeBattle({ kits: { chess_char_5_05_a: kit }, units: [{ chessId: 'chess_char_5_05_a', row: 10, col: 4, potential: 6 }], autoFinish: false, timeLimit: 20 });
   h.step(2);
   const u = h.unit('chess_char_5_05_a');
   const marker = h.b.allyUnits.find((x) => x.defId === TOKEN_IDS.ulpiaMarker);
@@ -398,7 +398,7 @@ test('黄金盟誓: attacks deal true damage; lasts while the owner skill runs',
   const kit = () => ({ talents: [], skill: { kind: 'duration', duration: 6, trigger: 'SP_FULL', spCost: 1, initSp: 1,
     onStart({ battle, unit }) { battle.spawnToken(unit, TOKEN_IDS.goldenOath, 9, 6); } } });
   const types = new Set();
-  const h = makeBattle({ defs: { enemies: { enemy_dummy: dummy({ def: 5000 }) } }, kits: { chess_char_6_07_a: kit }, units: [{ chessId: 'chess_char_6_07_a', row: 12, col: 3 }], enemies: [{ key: 'enemy_dummy', pos: [9, 6] }], autoFinish: false, timeLimit: 30,
+  const h = makeBattle({ defs: { enemies: { enemy_dummy: dummy({ def: 5000 }) } }, kits: { chess_char_6_07_a: kit }, units: [{ chessId: 'chess_char_6_07_a', row: 12, col: 3, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [9, 6] }], autoFinish: false, timeLimit: 30,
     setup: (b) => b.on('damaged', (c) => { if (c.source?.defId === TOKEN_IDS.goldenOath) types.add(c.type); }) });
   h.step(2);
   const lion = h.b.allyUnits.find((x) => x.defId === TOKEN_IDS.goldenOath);
@@ -412,7 +412,7 @@ test('黄金盟誓: attacks deal true damage; lasts while the owner skill runs',
 
 test('爬行号·防护单元: shield = 凯瑟琳 max HP × max_shield_ratio on the operator in front; refills when not hit', REAL, () => {
   const t = tokDef(TOKEN_IDS.catShield, 'chess_char_4_11_a').talents[0].bb;
-  const h = makeBattle({ defs: { chess: { test_guard: guard() } }, kits: { chess_char_4_11_a: bare }, units: [{ chessId: 'chess_char_4_11_a', row: 12, col: 3 }, { chessId: 'test_guard', row: 10, col: 5 }], autoFinish: false, timeLimit: 60 });
+  const h = makeBattle({ defs: { chess: { test_guard: guard() } }, kits: { chess_char_4_11_a: bare }, units: [{ chessId: 'chess_char_4_11_a', row: 12, col: 3, potential: 6 }, { chessId: 'test_guard', row: 10, col: 5, potential: 6 }], autoFinish: false, timeLimit: 60 });
   h.step();
   const cathy = h.unit('chess_char_4_11_a');
   const g = h.unit('test_guard');
@@ -439,7 +439,7 @@ test('every token of data/tokens.json spawns with data defaults and runs without
   const raw = ds.raw.tokens && Object.keys(ds.raw.tokens).length ? ds.raw.tokens : {};
   const ids = Object.keys(raw).filter((id) => id !== TOKEN_IDS.yanyou);
   assert.ok(ids.length >= 21);
-  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_walker: walker({ atk: 50 }) } }, units: [{ chessId: 'test_owner', row: 12, col: 2 }], enemies: [{ key: 'enemy_walker', route: 0, count: 5, interval: 2 }], autoFinish: false, timeLimit: 60 });
+  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_walker: walker({ atk: 50 }) } }, units: [{ chessId: 'test_owner', row: 12, col: 2, potential: 6 }], enemies: [{ key: 'enemy_walker', route: 0, count: 5, interval: 2 }], autoFinish: false, timeLimit: 60 });
   h.step();
   const o = h.unit('test_owner');
   const tiles = [];
@@ -463,7 +463,7 @@ test('every token of data/tokens.json spawns with data defaults and runs without
 });
 
 test('deploy limit: a new summon of the same owner withdraws the oldest (医疗探机 limit 1)', REAL, () => {
-  const h = makeBattle({ defs: { chess: { test_owner: summoner() } }, units: [{ chessId: 'test_owner', row: 12, col: 3 }], autoFinish: false, timeLimit: 30 });
+  const h = makeBattle({ defs: { chess: { test_owner: summoner() } }, units: [{ chessId: 'test_owner', row: 12, col: 3, potential: 6 }], autoFinish: false, timeLimit: 30 });
   h.step();
   const o = h.unit('test_owner');
   const a = spawnOn(h, o, TOKEN_IDS.healDrone, 10, 4);
@@ -504,7 +504,7 @@ test('炎佑: spawnYanyou — flying ally, bond stats, 3 targets with burn + ele
 
 test('band map characters: spawnMapChar puts 预备干员-医疗 at its stage slot; Touch 恳切福音 heals ×heal_scale on allies below 50 % HP', REAL, () => {
   const g = guard({ stats: { maxHp: 10000 } });
-  const h = makeBattle({ stageId: 'act2autochess_m01', defs: { chess: { test_guard: g } }, units: [{ chessId: 'test_guard', row: 10, col: 3 }], autoFinish: false, timeLimit: 60,
+  const h = makeBattle({ stageId: 'act2autochess_m01', defs: { chess: { test_guard: g } }, units: [{ chessId: 'test_guard', row: 10, col: 3, potential: 6 }], autoFinish: false, timeLimit: 60,
     setup: (b) => b.on('heal', (c) => { if (c.source?.defId === TOKEN_IDS.touch) (b.mem ??= []).push({ amount: c.amount, ratio: c.target.hpRatio, active: c.source.skill.active }); }, { priority: -500 }) });
   h.step();
   const med = spawnMapChar(h.b, 'p1', TOKEN_IDS.reserveMedic);
@@ -534,7 +534,7 @@ test('fallbacks for generic summoners: 赫默 placed drone on skill, 夕 小自�
   // 赫默 (generic kit): S2 fires on an injured ally → the placed drone piece takes the field on its tile
   const h = makeBattle({
     defs: { chess: { test_guard: guard({ stats: { maxHp: 1e5, atk: 0 } }) } }, kits: { chess_char_2_02_a: genericKit },
-    units: [{ chessId: 'chess_char_2_02_a', row: 10, col: 3, uid: 1 }, { chessId: 'test_guard', row: 10, col: 4, uid: 2 }, { kind: 'token', tokenId: TOKEN_IDS.healDrone, ownerUid: 1, row: 11, col: 3, uid: 3 }],
+    units: [{ chessId: 'chess_char_2_02_a', row: 10, col: 3, uid: 1, potential: 6 }, { chessId: 'test_guard', row: 10, col: 4, uid: 2, potential: 6 }, { kind: 'token', tokenId: TOKEN_IDS.healDrone, ownerUid: 1, row: 11, col: 3, uid: 3, potential: 6 }],
     autoFinish: false, timeLimit: 60,
   });
   h.step();
@@ -546,19 +546,19 @@ test('fallbacks for generic summoners: 赫默 placed drone on skill, 夕 小自�
   h.step();
   assert.ok(h.b.allyUnits.some((u) => u.defId === TOKEN_IDS.healDrone && u.alive && u.ownerUnit === hm && u.tileR === 11 && u.tileC === 3), 'drone deployed on its tile');
   // 夕 (generic): 小自在 near the first target
-  const h2 = makeBattle({ defs: { enemies: { enemy_dummy: dummy() } }, kits: { chess_char_5_12_a: genericKit }, units: [{ chessId: 'chess_char_5_12_a', row: 10, col: 3 }], enemies: [{ key: 'enemy_dummy', pos: [10, 5] }], autoFinish: false, timeLimit: 30 });
+  const h2 = makeBattle({ defs: { enemies: { enemy_dummy: dummy() } }, kits: { chess_char_5_12_a: genericKit }, units: [{ chessId: 'chess_char_5_12_a', row: 10, col: 3, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [10, 5] }], autoFinish: false, timeLimit: 30 });
   assert.ok(h2.runUntil(() => h2.b.allyUnits.some((u) => u.defId === TOKEN_IDS.duskDragon), 10));
   const dd = h2.b.allyUnits.find((u) => u.defId === TOKEN_IDS.duskDragon);
   assert.ok(Math.abs(dd.tileC - 5) + Math.abs(dd.tileR - 10) <= 1, 'at the target');
   h2.runUntil(() => !dd.alive, 30);
   approx(dd.deathAt - dd.deployedAt, 25, 0.05);
   // 凯瑟琳 (generic): her devices are hand pieces (user playtest #6) — none placed, none in battle; a placed one serves
-  const h3 = makeBattle({ defs: { chess: { test_guard: guard() } }, kits: { chess_char_4_11_a: genericKit }, units: [{ chessId: 'chess_char_4_11_a', row: 10, col: 3 }, { chessId: 'test_guard', row: 10, col: 5 }, { chessId: 'test_guard', row: 11, col: 5, uid: 9 }], autoFinish: false, timeLimit: 10 });
+  const h3 = makeBattle({ defs: { chess: { test_guard: guard() } }, kits: { chess_char_4_11_a: genericKit }, units: [{ chessId: 'chess_char_4_11_a', row: 10, col: 3, potential: 6 }, { chessId: 'test_guard', row: 10, col: 5, potential: 6 }, { chessId: 'test_guard', row: 11, col: 5, uid: 9, potential: 6 }], autoFinish: false, timeLimit: 10 });
   h3.run(1);
   assert.equal(h3.b.allyUnits.filter((u) => u.defId === TOKEN_IDS.catShield).length, 0, 'no device of her own');
   const h4 = makeBattle({
     defs: { chess: { test_guard: guard() } }, kits: { chess_char_4_11_a: genericKit },
-    units: [{ chessId: 'chess_char_4_11_a', row: 10, col: 3, uid: 1 }, { chessId: 'test_guard', row: 10, col: 5, uid: 2 }, { kind: 'token', tokenId: TOKEN_IDS.catShield, ownerUid: 1, row: 10, col: 4, uid: 3, dir: 'RIGHT' }],
+    units: [{ chessId: 'chess_char_4_11_a', row: 10, col: 3, uid: 1, potential: 6 }, { chessId: 'test_guard', row: 10, col: 5, uid: 2, potential: 6 }, { kind: 'token', tokenId: TOKEN_IDS.catShield, ownerUid: 1, row: 10, col: 4, uid: 3, dir: 'RIGHT', potential: 6 }],
     autoFinish: false, timeLimit: 10,
   });
   h4.step();
@@ -573,7 +573,7 @@ test('fallbacks for generic summoners: 赫默 placed drone on skill, 夕 小自�
 
 test('阻隔工事: map card overrides remove crates before deployment; a harmless walker stopped by a crate breaks it', REAL, () => {
   const bb = { 'trap_1105_accrate#001': 0, 'trap_1105_accrate#002': 0, 'trap_1105_accrate#003': 0 };
-  const players = [{ playerId: 'p1', seat: 0, side: 'L', colOffset: 0, units: [{ uid: 1, kind: 'chess', chessId: 'test_guard', row: 10, col: 5 }], bonds: {}, deviceOverrides: bb }];
+  const players = [{ playerId: 'p1', seat: 0, side: 'L', colOffset: 0, units: [{ uid: 1, kind: 'chess', chessId: 'test_guard', row: 10, col: 5, potential: 6 }], bonds: {}, deviceOverrides: bb }];
   const h = makeBattle({ stageId: 'act1autochess_m01', defs: { chess: { test_guard: guard() } }, players, autoFinish: false, timeLimit: 10 });
   h.step();
   assert.equal(h.b.allyUnits.filter((u) => u.kind === 'device' && u.alive).length, 0, 'crates removed');
@@ -597,7 +597,7 @@ test('射击台 overrides (模拟战场演变·模式二): crates become platfor
   const e = ds.raw.effects?.map_m02_1;
   const ov = {};
   for (const b of e?.buffs ?? [{ bb: { 'trap_1105_accrate#001': 0, 'trap_1105_accrate#002': 0, 'trap_1106_achplat#001': 1, 'trap_1106_achplat#002': 1 } }]) Object.assign(ov, b.bb);
-  const players = [{ playerId: 'p1', seat: 0, side: 'L', colOffset: 0, units: [{ uid: 1, kind: 'chess', chessId: 'test_guard', row: 12, col: 4 }], bonds: {}, deviceOverrides: ov }];
+  const players = [{ playerId: 'p1', seat: 0, side: 'L', colOffset: 0, units: [{ uid: 1, kind: 'chess', chessId: 'test_guard', row: 12, col: 4, potential: 6 }], bonds: {}, deviceOverrides: ov }];
   const h = makeBattle({ stageId: 'act1autochess_m02', defs: { chess: { test_guard: guard() } }, players, autoFinish: false, timeLimit: 10 });
   h.step();
   const g = h.unit('test_guard');
@@ -613,7 +613,7 @@ test('气流 (act2 m01 blowers): enemies moving with the flow ×(1+equal), again
   const bb = stage.devices.find((d) => d.role === 'blower').raw.skill.bb;
   const run = (route) => {
     const muls = new Set();
-    const h = makeBattle({ stageId: 'act2autochess_m01', defs: { chess: { test_guard: guard() }, enemies: { enemy_walker: walker() } }, units: [{ chessId: 'test_guard', row: 11, col: 5 }], enemies: [{ key: 'enemy_walker', route }], autoFinish: false, timeLimit: 30,
+    const h = makeBattle({ stageId: 'act2autochess_m01', defs: { chess: { test_guard: guard() }, enemies: { enemy_walker: walker() } }, units: [{ chessId: 'test_guard', row: 11, col: 5, potential: 6 }], enemies: [{ key: 'enemy_walker', route }], autoFinish: false, timeLimit: 30,
       setup: (b) => b.on('tick', () => { const e = b.enemies[0]; if (e && Math.round(e.x) === 9 && Math.round(e.y) >= 10 && Math.round(e.y) <= 11) muls.add(Math.round(e.s.moveSpeed * 100) / 100); }) });
     h.run(12);
     assert.equal(h.unit('test_guard').findBuff('terrain:airflow'), null, 'facing across the flow: ATK +0');
@@ -630,7 +630,7 @@ test('沼泽 (act2 m02): a trigger on entering and every second — 1 layer (an 
   // PRTS 沼泽控制: "每秒将会触发一次" (sktok_mire spData maxChargeTime 1); "若其重量大于等于3，改为获得2层" (the skill's value 3)
   assert.equal(mire.intervalSec, 1);
   assert.equal(mire.heavyWeight, 3);
-  const h = makeBattle({ stageId: 'act2autochess_m02', defs: { chess: { test_guard: guard() } }, units: [{ chessId: 'test_guard', row: 11, col: 7 }], autoFinish: false, timeLimit: 60 });
+  const h = makeBattle({ stageId: 'act2autochess_m02', defs: { chess: { test_guard: guard() } }, units: [{ chessId: 'test_guard', row: 11, col: 7, potential: 6 }], autoFinish: false, timeLimit: 60 });
   h.step(2);
   assert.equal(terrainAt(h.b, 11, 7), 'mire');
   const g = h.unit('test_guard');
@@ -675,7 +675,7 @@ test('沼泽 (act2 m02): a trigger on entering and every second — 1 layer (an 
 
 test('烟雾 (act2 m03): an operator on smog is not picked by ranged enemies; the one beside it is', REAL, () => {
   const shooter = enemyRec({ key: 'enemy_shooter', hp: 1e7, speed: 0, atk: 200, range: 2.5, bat: 1 });
-  const h = makeBattle({ stageId: 'act2autochess_m03', defs: { chess: { test_guard: guard() }, enemies: { enemy_shooter: shooter } }, units: [{ chessId: 'test_guard', row: 12, col: 5, uid: 1 }, { chessId: 'test_guard', row: 12, col: 6, uid: 2 }], enemies: [{ key: 'enemy_shooter', pos: [11, 5.5] }], autoFinish: false, timeLimit: 30 });
+  const h = makeBattle({ stageId: 'act2autochess_m03', defs: { chess: { test_guard: guard() }, enemies: { enemy_shooter: shooter } }, units: [{ chessId: 'test_guard', row: 12, col: 5, uid: 1, potential: 6 }, { chessId: 'test_guard', row: 12, col: 6, uid: 2, potential: 6 }], enemies: [{ key: 'enemy_shooter', pos: [11, 5.5] }], autoFinish: false, timeLimit: 30 });
   h.run(6);
   const onSmog = h.unit(2), off = h.unit(1);
   assert.equal(terrainAt(h.b, 12, 6), 'smog');
@@ -728,7 +728,7 @@ test('深水: the 【水蚀】 tick is 无来源 true 持续伤害, not 环境�
 test('活性源石 (act1 m04): units on it take damage/s and gain ATK/ASPD (allies and ground enemies)', REAL, () => {
   const bb = ds.getStage('act1autochess_m04').special.infection.bb;
   const g = guard({ stats: { atk: 1000, maxHp: 1e5 } });
-  const h = makeBattle({ stageId: 'act1autochess_m04', defs: { chess: { test_guard: g }, enemies: { enemy_dummy: dummy({ atk: 500 }) } }, units: [{ chessId: 'test_guard', row: 11, col: 6 }], enemies: [{ key: 'enemy_dummy', pos: [10, 6] }], autoFinish: false, timeLimit: 30 });
+  const h = makeBattle({ stageId: 'act1autochess_m04', defs: { chess: { test_guard: g }, enemies: { enemy_dummy: dummy({ atk: 500 }) } }, units: [{ chessId: 'test_guard', row: 11, col: 6, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [10, 6] }], autoFinish: false, timeLimit: 30 });
   h.step();
   h.run(2);
   const u = h.unit('test_guard'), e = h.enemy('enemy_dummy');
@@ -801,7 +801,7 @@ test('活性源石: one effect per unit — contact restarts its duration, it en
   // an operator deployed on it is always in contact: it keeps draining past `duration` (no lifetime of the tiles; 3 ×
   // `duration`, so that a shut-off at `duration` followed by the effect's own `duration` would still show)
   const g = guard({ stats: { atk: 1000, maxHp: 1e5 } });
-  const h2 = makeBattle({ stage, defs: { chess: { test_guard: g } }, units: [{ chessId: 'test_guard', row: 11, col: 6 }], autoFinish: false, timeLimit: 120 });
+  const h2 = makeBattle({ stage, defs: { chess: { test_guard: g } }, units: [{ chessId: 'test_guard', row: 11, col: 6, potential: 6 }], autoFinish: false, timeLimit: 120 });
   h2.step();
   h2.run(3 * bb.duration);
   const u = h2.unit('test_guard');
@@ -911,7 +911,7 @@ test('every token variant: a spawn with that owner takes the owner-level stats (
       if (!ds.raw.chess[ownerId]) continue;
       expected++;
       const base = ownerId.replace(/_[ab]$/, '_a');
-      const h = makeBattle({ kits: { [base]: genericNoSkill }, units: [{ chessId: ownerId, row: 12, col: 2 }], autoFinish: false, timeLimit: 10 });
+      const h = makeBattle({ kits: { [base]: genericNoSkill }, units: [{ chessId: ownerId, row: 12, col: 2, potential: 6 }], autoFinish: false, timeLimit: 10 });
       h.step();
       const o = h.unit(ownerId);
       const t = h.b.spawnToken(o, id, 9, 8);
@@ -934,7 +934,7 @@ test('every token variant: a spawn with that owner takes the owner-level stats (
 test('elite numbers: 沙之碑 230 %/1.5 s, 香槟炸弹 170 %, 纸偶 its ATK × 2.75 (full potential), “耀阳” 100 % + ×1.15 vs blocked, 医疗探机 ATK 114', REAL, () => {
   const burstOf = (ownerId, tokenId, r, c, ePos) => {
     const base = ownerId.replace(/_[ab]$/, '_a');
-    const h = makeBattle({ defs: { enemies: { enemy_dummy: dummy() } }, kits: { [base]: genericNoSkill }, units: [{ chessId: ownerId, row: 12, col: 2 }], enemies: [{ key: 'enemy_dummy', pos: ePos }], autoFinish: false, timeLimit: 10 });
+    const h = makeBattle({ defs: { enemies: { enemy_dummy: dummy() } }, kits: { [base]: genericNoSkill }, units: [{ chessId: ownerId, row: 12, col: 2, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: ePos }], autoFinish: false, timeLimit: 10 });
     h.step();
     const o = h.unit(ownerId);
     const t = h.b.spawnToken(o, tokenId, r, c);
@@ -966,7 +966,7 @@ test('elite numbers: 沙之碑 230 %/1.5 s, 香槟炸弹 170 %, 纸偶 its ATK �
   // (the sword's range is its own tile: a walker entering it is blocked and bitten)
   for (const [ownerId, mul] of [['chess_char_6_17_b', 1.15], ['chess_char_6_17_a', 1]]) {
     const hits = [];
-    const h = makeBattle({ defs: { enemies: { enemy_walker: walker({ def: 0, atk: 0 }) } }, kits: { chess_char_6_17_a: genericNoSkill }, units: [{ chessId: ownerId, row: 12, col: 2 }], enemies: [{ key: 'enemy_walker', route: 0, time: 4 }], autoFinish: false, timeLimit: 30 });
+    const h = makeBattle({ defs: { enemies: { enemy_walker: walker({ def: 0, atk: 0 }) } }, kits: { chess_char_6_17_a: genericNoSkill }, units: [{ chessId: ownerId, row: 12, col: 2, potential: 6 }], enemies: [{ key: 'enemy_walker', route: 0, time: 4 }], autoFinish: false, timeLimit: 30 });
     h.step();
     const t = h.b.spawnToken(h.unit(ownerId), TOKEN_IDS.radiantSword, 9, 6);
     h.b.on('damaged', (c) => { if (c.source === t && c.dmg?.isAttack) hits.push({ amount: c.amount, blocked: c.target.blockedBy === t }); });
@@ -976,7 +976,7 @@ test('elite numbers: 沙之碑 230 %/1.5 s, 香槟炸弹 170 %, 纸偶 its ATK �
     checkInvariants(h.b);
   }
   {
-    const h = makeBattle({ kits: { chess_char_2_02_a: genericNoSkill }, units: [{ chessId: 'chess_char_2_02_b', row: 12, col: 2 }], autoFinish: false, timeLimit: 10 });
+    const h = makeBattle({ kits: { chess_char_2_02_a: genericNoSkill }, units: [{ chessId: 'chess_char_2_02_b', row: 12, col: 2, potential: 6 }], autoFinish: false, timeLimit: 10 });
     h.step();
     const d = h.b.spawnToken(h.unit('chess_char_2_02_b'), TOKEN_IDS.healDrone, 10, 4);
     assert.equal(d.s.atk, 114);
@@ -985,7 +985,7 @@ test('elite numbers: 沙之碑 230 %/1.5 s, 香槟炸弹 170 %, 纸偶 its ATK �
 
 test('海嗣 elite: skill bb 55 %/80 %, lifetime 30 s, respawn 25 s', REAL, () => {
   const kit = () => ({ generic: true, talents: [], skill: { kind: 'duration', duration: 40, trigger: 'SP_FULL', spCost: 1, initSp: 1 } });
-  const h = makeBattle({ defs: { chess: { test_guard: guard() }, enemies: { enemy_dummy: dummy() } }, kits: { chess_char_6_04_a: kit }, units: [{ chessId: 'chess_char_6_04_b', row: 12, col: 3 }, { chessId: 'test_guard', row: 10, col: 8 }], enemies: [{ key: 'enemy_dummy', pos: [9, 7] }], autoFinish: false, timeLimit: 120 });
+  const h = makeBattle({ defs: { chess: { test_guard: guard() }, enemies: { enemy_dummy: dummy() } }, kits: { chess_char_6_04_a: kit }, units: [{ chessId: 'chess_char_6_04_b', row: 12, col: 3, potential: 6 }, { chessId: 'test_guard', row: 10, col: 8, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [9, 7] }], autoFinish: false, timeLimit: 120 });
   h.step(2);
   const sk = h.unit('chess_char_6_04_b');
   const sea = spawnOn(h, sk, TOKEN_IDS.seaborn, 10, 7);
@@ -1006,7 +1006,7 @@ test('狼群 S3 bb: while 伺夜\'s timed skill runs, each bite on an enemy the 
   for (const [ownerId, scale] of [['chess_char_3_19_a', 0.2], ['chess_char_3_19_b', 0.3]]) {
     const kit = () => ({ generic: true, talents: [], skill: { kind: 'duration', duration: 60, trigger: 'SP_FULL', spCost: 1, initSp: 1 } });
     const extra = [];
-    const h = makeBattle({ defs: { enemies: { enemy_walker: walker({ atk: 0, res: 0 }) } }, kits: { chess_char_3_19_a: kit }, units: [{ chessId: ownerId, row: 10, col: 3 }], enemies: [{ key: 'enemy_walker', route: 0 }], autoFinish: false, timeLimit: 60,
+    const h = makeBattle({ defs: { enemies: { enemy_walker: walker({ atk: 0, res: 0 }) } }, kits: { chess_char_3_19_a: kit }, units: [{ chessId: ownerId, row: 10, col: 3, potential: 6 }], enemies: [{ key: 'enemy_walker', route: 0 }], autoFinish: false, timeLimit: 60,
       setup: (b) => b.on('damaged', (c) => { if (c.dmg?.tags?.includes('vigil')) extra.push(c.amount); }) });
     h.step(2);
     const vigil = h.unit(ownerId);
@@ -1022,7 +1022,7 @@ test('狼群 S3 bb: while 伺夜\'s timed skill runs, each bite on an enemy the 
 test('流形 fixes: elite first-deploy +5 SP only once (not after respawn); module ×0.85 from its blocked enemies even when managed', REAL, () => {
   const g = guard({ stats: { atk: 600, def: 300, maxHp: 5000, blockCnt: 2, bat: 1 } });
   const h = makeBattle({ defs: { chess: { test_guard: g }, enemies: { enemy_dummy: dummy({ atk: 1000 }) } }, kits: { chess_char_6_11_a: genericNoSkill },
-    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 3, uid: 1 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 6, uid: 3, ownerUid: 1 }], autoFinish: false, timeLimit: 120 });
+    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 3, uid: 1, potential: 6 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 6, uid: 3, ownerUid: 1, potential: 6 }], autoFinish: false, timeLimit: 120 });
   h.step();
   const m = h.b.allyUnits.find((u) => u.defId === TOKEN_IDS.manifold);
   assert.ok(m.mem.firstSpDone, 'first deploy bonus');
@@ -1036,7 +1036,7 @@ test('流形 fixes: elite first-deploy +5 SP only once (not after respawn); modu
   checkInvariants(h.b);
   // module guard, owner with a hand kit (managed token)
   const h2 = makeBattle({ defs: { enemies: { enemy_walker: walker({ atk: 1000, def: 0 }) } }, kits: { chess_char_6_11_a: bare },
-    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 2, uid: 1 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 9, col: 6, uid: 3, ownerUid: 1 }],
+    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 2, uid: 1, potential: 6 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 9, col: 6, uid: 3, ownerUid: 1, potential: 6 }],
     enemies: [{ key: 'enemy_walker', route: 0 }], autoFinish: false, timeLimit: 60 });
   h2.step();
   const m2 = h2.b.allyUnits.find((u) => u.defId === TOKEN_IDS.manifold);
@@ -1048,7 +1048,7 @@ test('流形 fixes: elite first-deploy +5 SP only once (not after respawn); modu
 });
 
 test('deploy limit: a withdrawn board piece (limit 1) never respawns — no two pieces taking turns', REAL, () => {
-  const h = makeBattle({ kits: { chess_char_3_19_a: genericNoSkill }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3, uid: 1 }], autoFinish: false, timeLimit: 60, hooks: ['death'] });
+  const h = makeBattle({ kits: { chess_char_3_19_a: genericNoSkill }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3, uid: 1, potential: 6 }], autoFinish: false, timeLimit: 60, hooks: ['death'] });
   h.step();
   const vigil = h.unit('chess_char_3_19_a');
   const a = vigil.trait.reinforcement;
@@ -1101,7 +1101,7 @@ test('预备干员-医疗: stat talent 攻击提升 (+4 % ATK) on top of the dat
 
 test('Touch talents: 攫升 +3 SP to the healed unit, 超脱 +5 SP when an operator in range is knocked out; extra heal = 30 % of the main heal\'s base, ×heal_scale on its own low recipient', REAL, () => {
   const g = chessRec({ id: 'test_sp', stats: { maxHp: 10000, atk: 0, spRecovery: 0 }, skill: { spCost: 100, initSp: 0 } });
-  const h = makeBattle({ stageId: 'act2autochess_m01', defs: { chess: { test_sp: g } }, units: [{ chessId: 'test_sp', row: 10, col: 3, uid: 1 }, { chessId: 'test_sp', row: 11, col: 3, uid: 2 }], autoFinish: false, timeLimit: 60,
+  const h = makeBattle({ stageId: 'act2autochess_m01', defs: { chess: { test_sp: g } }, units: [{ chessId: 'test_sp', row: 10, col: 3, uid: 1, potential: 6 }, { chessId: 'test_sp', row: 11, col: 3, uid: 2, potential: 6 }], autoFinish: false, timeLimit: 60,
     setup: (b) => b.on('heal', (c) => { if (c.source?.defId === TOKEN_IDS.touch) (b.mem ??= []).push({ t: c.target.id, amount: c.amount, ratio: c.target.hpRatio }); }, { priority: -500 }) });
   h.step();
   const touch = spawnMapChar(h.b, 'p1', TOKEN_IDS.touch);
@@ -1131,7 +1131,7 @@ test('Touch talents: 攫升 +3 SP to the healed unit, 超脱 +5 SP when an opera
 test('GitHub #260: the 外勤医疗 Touch casts 恳切福音 on an injured ally only inside the skill\'s 5-2 (ACTIVE_RANGE, as the 补位 Touch); a full-HP or unhealable one does not', REAL, () => {
   // Touch stands on (10,2) facing right: her 3-3 reaches column 5, the skill's 5-2 column 7
   const h = makeBattle({ stageId: 'act2autochess_m01', defs: { chess: { test_guard: guard({ stats: { maxHp: 10000, atk: 0 } }) } },
-    units: [{ chessId: 'test_guard', row: 10, col: 7 }], autoFinish: false, timeLimit: 60 });
+    units: [{ chessId: 'test_guard', row: 10, col: 7, potential: 6 }], autoFinish: false, timeLimit: 60 });
   h.step();
   const touch = spawnMapChar(h.b, 'p1', TOKEN_IDS.touch);
   assert.deepEqual([touch.tileR, touch.tileC], [10, 2]);
@@ -1179,7 +1179,7 @@ test('spawnMapChar: per-player slots — unite: p1 #1 (10,2), p2 its multi-only 
 
 test('summon tiles never take the home tile of a piece that waits to redeploy (battle.isReservedTile)', REAL, () => {
   const g = guard({ stats: { maxHp: 100, atk: 0, respawnTime: 60 } });
-  const h = makeBattle({ defs: { chess: { test_guard: g, test_owner: summoner({ rangeGrid: [[0, 1]] }) } }, units: [{ chessId: 'test_owner', row: 10, col: 3, uid: 1 }, { chessId: 'test_guard', row: 10, col: 4, uid: 2 }], autoFinish: false, timeLimit: 60 });
+  const h = makeBattle({ defs: { chess: { test_guard: g, test_owner: summoner({ rangeGrid: [[0, 1]] }) } }, units: [{ chessId: 'test_owner', row: 10, col: 3, uid: 1, potential: 6 }, { chessId: 'test_guard', row: 10, col: 4, uid: 2, potential: 6 }], autoFinish: false, timeLimit: 60 });
   h.step();
   const gu = h.unit(2);
   h.b.dealDamage(null, gu, { amount: 1e6, type: 'true' });
@@ -1217,7 +1217,7 @@ test('“双眼皮” per player: a partner\'s 机械援助 only switches on the
 // verification wave 2 (regressions for the fixes of this pass)
 
 test('tactical point: without a board piece the 援军 (狼群) stands on an enemy ground path inside the tactician range', REAL, () => {
-  const h = makeBattle({ kits: { chess_char_3_19_a: genericNoSkill }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3 }], autoFinish: false, timeLimit: 10 });
+  const h = makeBattle({ kits: { chess_char_3_19_a: genericNoSkill }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3, potential: 6 }], autoFinish: false, timeLimit: 10 });
   h.step();
   const vigil = h.unit('chess_char_3_19_a');
   const w = vigil.trait.reinforcement;
@@ -1236,7 +1236,7 @@ test('狼群 (generic 伺夜): 伺夜\'s own attacks on pack-blocked enemies ign
   const kit = () => ({ generic: true, talents: [], skill: { kind: 'duration', duration: 60, trigger: 'SP_FULL', spCost: 1, initSp: 1 } });
   const own = [], bonus = [];
   // RES 100: the 弱点伤害 garrison keeps the attacks physical (arts would do 5 %)
-  const h = makeBattle({ defs: { enemies: { enemy_walker: walker({ atk: 0, def: 300, res: 100, hp: 1e8 }) } }, kits: { chess_char_3_19_a: kit }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3 }], enemies: [{ key: 'enemy_walker', route: 0 }], autoFinish: false, timeLimit: 60,
+  const h = makeBattle({ defs: { enemies: { enemy_walker: walker({ atk: 0, def: 300, res: 100, hp: 1e8 }) } }, kits: { chess_char_3_19_a: kit }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3, potential: 6 }], enemies: [{ key: 'enemy_walker', route: 0 }], autoFinish: false, timeLimit: 60,
     setup: (b) => b.on('damaged', (c) => {
       if (c.source?.defId === 'chess_char_3_19_a' && c.dmg?.isAttack) own.push({ amount: c.amount, type: c.type, blocked: c.target.blockedBy?.defId === TOKEN_IDS.wolfPack });
       if (c.dmg?.tags?.includes('vigil')) bonus.push({ src: c.source?.defId, amount: c.amount });
@@ -1262,7 +1262,7 @@ test('狼群 (generic 伺夜): 伺夜\'s own attacks on pack-blocked enemies ign
 });
 
 test('狼群 (generic 伺夜): a killed pack waits while 伺夜 is down and comes back with him', REAL, () => {
-  const h = makeBattle({ kits: { chess_char_3_19_a: genericNoSkill }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3 }], autoFinish: false, timeLimit: 120 });
+  const h = makeBattle({ kits: { chess_char_3_19_a: genericNoSkill }, units: [{ chessId: 'chess_char_3_19_a', row: 10, col: 3, potential: 6 }], autoFinish: false, timeLimit: 120 });
   h.step();
   const vigil = h.unit('chess_char_3_19_a');
   const wolf = vigil.trait.reinforcement;
@@ -1282,7 +1282,7 @@ test('狼群 (generic 伺夜): a killed pack waits while 伺夜 is down and come
 });
 
 test('沙之碑 (token kit): a blocking pillar — it never attacks the enemies it blocks', REAL, () => {
-  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_walker: walker({ atk: 0 }) } }, units: [{ chessId: 'test_owner', row: 12, col: 3 }], enemies: [{ key: 'enemy_walker', route: 0, time: 3 }], autoFinish: false, timeLimit: 30 });
+  const h = makeBattle({ defs: { chess: { test_owner: summoner() }, enemies: { enemy_walker: walker({ atk: 0 }) } }, units: [{ chessId: 'test_owner', row: 12, col: 3, potential: 6 }], enemies: [{ key: 'enemy_walker', route: 0, time: 3 }], autoFinish: false, timeLimit: 30 });
   h.step();
   const ob = h.b.spawnToken(h.unit('test_owner'), TOKEN_IDS.obelisk, 9, 6);
   assert.ok(h.runUntil(() => h.enemy('enemy_walker')?.blockedBy === ob, 15), 'blocked by the obelisk');
@@ -1297,7 +1297,7 @@ test('流形 melee copy: ATK/DEF stolen up to steal_*_max; the robbed enemy lose
   const steal = tokDef(TOKEN_IDS.manifold, 'chess_char_6_11_a').talents.find((t) => t.bb.steal_atk != null).bb;
   const g = guard({ stats: { atk: 600, def: 300, maxHp: 5000, blockCnt: 2, bat: 0.2 }, rangeGrid: [[0, 0], [0, 1]] });
   const h = makeBattle({ defs: { chess: { test_guard: g }, enemies: { enemy_dummy: dummy({ atk: 800, def: 600 }) } }, kits: { chess_char_6_11_a: genericNoSkill },
-    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 3, uid: 1 }, { chessId: 'test_guard', row: 10, col: 5, uid: 2 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 6, uid: 3, ownerUid: 1 }],
+    units: [{ chessId: 'chess_char_6_11_b', row: 12, col: 3, uid: 1, potential: 6 }, { chessId: 'test_guard', row: 10, col: 5, uid: 2, potential: 6 }, { kind: 'token', tokenId: TOKEN_IDS.manifold, row: 10, col: 6, uid: 3, ownerUid: 1, potential: 6 }],
     enemies: [{ key: 'enemy_dummy', pos: [10, 7] }], autoFinish: false, timeLimit: 60 });
   h.step(2);
   const m = h.b.allyUnits.find((u) => u.defId === TOKEN_IDS.manifold);

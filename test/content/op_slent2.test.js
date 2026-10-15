@@ -37,8 +37,9 @@ const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => 
 const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${mod ?? 'none'}`;
 
 /** 淬羽赫默 as uid 1 at (10, 5) facing RIGHT, plus `others`; `lamp` = the 夜灯 piece's tile (uid 9) or null. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 5, others = [], lamp = null, lampFirst = false, seed = 5, flags = {} } = {}) {
-  const op = { uid: 1, diy: { slot: SLOT[tier], charId: ID, skillIndex: skill, uniEquipId: mod }, elite, row, col };
+  const op = { uid: 1, diy: { slot: SLOT[tier], charId: ID, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 };
   const piece = lamp ? [{ uid: 9, kind: 'token', tokenId: LAMP, ownerUid: 1, row: lamp[0], col: lamp[1] }] : [];
   const h = makeBattle({
     defs: { enemies: ENEMIES, chess: { test_rhine_a: RHINE_REC, test_plain_a: PLAIN_REC } }, timeLimit: 900, autoFinish: false, seed,

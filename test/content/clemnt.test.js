@@ -15,7 +15,7 @@ const IDX = (chessId, skillId) => ds.rawChess(chessId).skills.findIndex((s) => s
 const dummy = (key, extra = {}) => enemyRec({ key, hp: 1e7, def: 0, speed: 0, ...extra });
 
 test('primguard: block 2, can hit air, blocked-first selection', () => {
-  const h = makeBattle({ units: [{ chessId: CLEM, row: 10, col: 5 }] });
+  const h = makeBattle({ units: [{ chessId: CLEM, row: 10, col: 5, potential: 6 }] });
   h.step();
   const u = h.unit(CLEM);
   assert.equal(u.profile.sub, 'primguard');
@@ -27,7 +27,7 @@ test('primguard: block 2, can hit air, blocked-first selection', () => {
 
 test('生死定夺 (talent 1): a physical hit can raise the ATK scale; 习得性防御 (talent 2) only from the front, more vs 海怪', () => {
   const h = makeBattle({
-    units: [{ chessId: CLEM, row: 10, col: 5, dir: 'RIGHT' }],
+    units: [{ chessId: CLEM, row: 10, col: 5, dir: 'RIGHT', potential: 6 }],
     defs: { enemies: { enemy_d: dummy('enemy_d') } },
     enemies: [{ key: 'enemy_d', pos: [10, 6] }],
   });
@@ -41,7 +41,7 @@ test('生死定夺 (talent 1): a physical hit can raise the ATK scale; 习得性
   const frontPlain = h.b.dealDamage(e, u, { amount: 1000, type: 'phys', canDodge: false });
   // a second battle for the seamonster, so the HP pools never mix
   const h2 = makeBattle({
-    units: [{ chessId: CLEM, row: 10, col: 5, dir: 'RIGHT' }],
+    units: [{ chessId: CLEM, row: 10, col: 5, dir: 'RIGHT', potential: 6 }],
     defs: { enemies: { enemy_s: { ...dummy('enemy_s'), tags: ['seamonster'] } } },
     enemies: [{ key: 'enemy_s', pos: [10, 6] }],
   });
@@ -71,7 +71,7 @@ test('生死定夺 (talent 1): a physical hit can raise the ATK scale; 习得性
 
 test('冲蚀 S1: next attack ×atk_scale, then 侵蚀损伤 = ep_damage_ratio × the physical damage dealt', () => {
   const h = makeBattle({
-    units: [{ chessId: CLEM, row: 10, col: 5, skillIndex: IDX(CLEM, 'skchr_clemnt_1') }],
+    units: [{ chessId: CLEM, row: 10, col: 5, skillIndex: IDX(CLEM, 'skchr_clemnt_1'), potential: 6 }],
     defs: { enemies: { enemy_d: dummy('enemy_d') } },
     enemies: [{ key: 'enemy_d', pos: [10, 6] }],
     hooks: ['damaged'], captureNoisy: true,
@@ -92,7 +92,7 @@ test('冲蚀 S1: next attack ×atk_scale, then 侵蚀损伤 = ep_damage_ratio ×
 
 test('风暴潮 S2: range + ASPD, the 放逐舱 carries enemies and leaves a 漩涡 (no content errors)', () => {
   const h = makeBattle({
-    units: [{ chessId: CLEM, row: 10, col: 5, skillIndex: IDX(CLEM, 'skchr_clemnt_2'), dir: 'RIGHT' }],
+    units: [{ chessId: CLEM, row: 10, col: 5, skillIndex: IDX(CLEM, 'skchr_clemnt_2'), dir: 'RIGHT', potential: 6 }],
     defs: { enemies: { enemy_d: dummy('enemy_d') } },
     enemies: [{ key: 'enemy_d', pos: [10, 7] }],
     hooks: ['statusApplied'], autoFinish: false,
@@ -111,7 +111,7 @@ test('风暴潮 S2: range + ASPD, the 放逐舱 carries enemies and leaves a 漩
 
 test('与海为敌 S3: an 侵蚀 burst anywhere spends one bullet on the bursting enemy + its 4 neighbours, 3 hits each', () => {
   const h = makeBattle({
-    units: [{ chessId: CLEM, row: 10, col: 5, skillIndex: IDX(CLEM, 'skchr_clemnt_3') }],
+    units: [{ chessId: CLEM, row: 10, col: 5, skillIndex: IDX(CLEM, 'skchr_clemnt_3'), potential: 6 }],
     defs: { enemies: { enemy_d: dummy('enemy_d'), enemy_n: dummy('enemy_n') } },
     enemies: [{ key: 'enemy_d', pos: [10, 7] }, { key: 'enemy_n', pos: [10, 8] }],
     hooks: ['ammoUsed', 'damaged'], captureNoisy: true,
@@ -153,7 +153,7 @@ test('engine 放逐: banishGroup teleports under a weight budget, applies 无敌
 
 test('engine 强制缴械: disarmForce blocks an enemy normal attack; a blocked operator still uses its own', () => {
   const h = makeBattle({
-    units: [{ chessId: CLEM, row: 10, col: 5 }],
+    units: [{ chessId: CLEM, row: 10, col: 5, potential: 6 }],
     defs: { enemies: { enemy_d: enemyRec({ key: 'enemy_d', hp: 1e7, def: 0, atk: 200, bat: 1 }) } },
     enemies: [{ key: 'enemy_d', pos: [10, 8], route: { motion: 'WALK', start: [10, 8], end: [10, 2], checkpoints: [] } }],
     autoFinish: false,

@@ -28,7 +28,7 @@
 // `def.tokenOwner` = the key of its summons' variants (data/backups.json `tokens`, read by getToken); null for an illegal
 // pick.
 // Potential (潜能 1–6, 0.2.2 — the player's 干员调配 setting; shared/potential.js): a loadout's `potential` composes the
-// chess / 自选 record at it (`def.loadout.potential`; full potential 6 is the default and the data's own) and the
+// chess / 自选 record at it (`def.loadout.potential`; the default is 潜能 1 / 未精英化 since 2026-10-15) and the
 // summons' variants at their owner's potential (getToken / getDiyToken: talents, a 自选 summon's deploy limit / count).
 // A 补位 stand-in and a prototype 自选 pick have no potential.
 //
@@ -666,7 +666,8 @@ export class DataSource {
    * module, `def.charId` the operator's, `def.diyFor` the slot's base id, `def.loadout` = the selection (`isDefault`) with
    * `diy` = the checked pick, `def.tokenOwner` = its summons' variant key (shared/diy.js diyTokenOwner). Null for an
    * illegal pick (not a pick of the slot's tier, a prototype off its locked skill, an unknown skill or module — checkDiyPick)
-   * or when the data lacks it. An owned pick is composed at `potential` (1–6, default 6; shared/diy.js diyRecordOf —
+   * or when the data lacks it. An owned pick is composed at `potential` (1–6; absent / null = the default, 潜能 1 since
+ * 2026-10-15; shared/diy.js diyRecordOf —
    * `def.loadout.potential`, its summons' variants follow); a prototype has none. Cached per (id, pick, potential).
    * @param {string} id
    * @param {{ charId?: string, skillIndex?: number|null, uniEquipId?: string|null }} pick
@@ -732,8 +733,10 @@ export class DataSource {
     }
     if (r && r.variants && !owner) owner = Object.keys(r.variants)[0] ?? null;
     let variant = r && r.variants && owner ? r.variants[owner] ?? null : null;
-    // the owner's potential (0.2.2): the variant's talents (and counts) at it — before the skill / module parts merge
-    if (variant && olo && olo.potentialIsDefault === false) variant = atPotential(variant, olo.potential);
+    // the owner's potential (0.2.2): the variant's talents (and counts) at it — before the skill / module parts merge.
+    // Compose whenever an owner loadout is resolved: since 2026-10-15 the DEFAULT is 潜能 1, so "default" no longer
+    // means "the full-potential record" (atPotential returns the variant itself for 潜能 6, so full stays free).
+    if (variant && olo) variant = atPotential(variant, olo.potential);
     if (variant && olo && !olo.isDefault) {
       if (!olo.skillIsDefault && variant.bySkill && variant.bySkill[olo.skillIndex]) variant = { ...variant, ...variant.bySkill[olo.skillIndex] };
       if (!olo.moduleIsDefault && variant.byModule && variant.byModule[olo.moduleId]) variant = { ...variant, ...variant.byModule[olo.moduleId] };
@@ -751,7 +754,7 @@ export class DataSource {
    * @param {string} id token id
    * @param {string} slotId the owner's DIY slot record id (`_a` / `_b`)
    * @param {{ charId?: string, skillIndex?: number|null, uniEquipId?: string|null }} pick the owner def's `loadout.diy`
-   * @param {number|null} [potential] the owner's potential (its `loadout.potential`; default 6): the variant at it
+   * @param {number|null} [potential] the owner's potential (its `loadout.potential`; absent = the default, 潜能 1): the variant at it
    */
   getDiyToken(id, slotId, pick, potential = null) {
     const slot = this.rawChess(slotId);

@@ -1,5 +1,5 @@
-// test/ui/potential-ui.test.js — the client side of the per-operator 潜能 / 练度 (0.2.2, the owner's decision of
-// 2026-10-08: 「调配干员里自己设置吧，默认满潜满加成」): the stored settings (`sp.pref.loadout` { v, entries, ops } — an
+// test/ui/potential-ui.test.js — the client side of the per-operator 潜能 / 练度 (0.2.2; the defaults are the owner's
+// decision of 2026-10-15: 潜能 1 / 未精英化): the stored settings (`sp.pref.loadout` { v, entries, ops } — an
 // older stored loadout has none = the defaults), their helpers (set / reset / sanitise against the operators the server
 // knows), 导出 / 导入 with them, the sync (`room.loadout { entries, ops }`), and the cards: chessLoadout composes the record
 // at the operator's potential with its 练度 multiplier (the player's settings, a teammate's unit's own, never a stand-in's),
@@ -35,24 +35,24 @@ test('storage: ops beside the entries; junk / defaults dropped; an older stored 
   assert.deepEqual(parseStoredOps({ v: 1, entries: { [VENDLA]: { skill: 0 } } }), {}, 'a 0.2.1 stored loadout');
   assert.deepEqual(parseStoredOps(null), {});
   const raw = { v: 1, entries: {}, ops: { [V]: { potential: 1, cultivate: 0 }, [KALTS]: { potential: 6, cultivate: 3 }, x: 'junk', 'a b': { potential: 1 }, char_y: { potential: 9 }, __proto__: { potential: 1 } } };
-  assert.deepEqual(parseStoredOps(raw), { [V]: { potential: 1, cultivate: 0 } });
+  assert.deepEqual(parseStoredOps(raw), { [KALTS]: { potential: 6, cultivate: 3 } });
   assert.deepEqual(toStored({ [VENDLA]: { skill: 0 } }, { [V]: { potential: 2 } }), { v: 1, entries: { [VENDLA]: { skill: 0 } }, ops: { [V]: { potential: 2 } } });
   assert.deepEqual(parseStored(toStored({ [VENDLA]: { skill: 0 } }, { [V]: { potential: 2 } })), { [VENDLA]: { skill: 0 } }, 'the entries read as before');
 });
 
 test('helpers: opsOf / setOps / resetOps keep only non-default values; sanitizeOps keeps what the server would', () => {
-  assert.deepEqual(opsOf({}, V), { potential: 6, cultivate: 3, changed: false });
-  let o = setOps({}, V, { potential: 1 });
-  assert.deepEqual(o, { [V]: { potential: 1 } });
-  o = setOps(o, V, { cultivate: 0 });
-  assert.deepEqual(opsOf(o, V), { potential: 1, cultivate: 0, changed: true });
-  o = setOps(o, V, { potential: 6, cultivate: 3 });
+  assert.deepEqual(opsOf({}, V), { potential: 1, cultivate: 0, changed: false });
+  let o = setOps({}, V, { potential: 2 });
+  assert.deepEqual(o, { [V]: { potential: 2 } });
+  o = setOps(o, V, { cultivate: 1 });
+  assert.deepEqual(opsOf(o, V), { potential: 2, cultivate: 1, changed: true });
+  o = setOps(o, V, { potential: 1, cultivate: 0 });
   assert.deepEqual(o, {}, 'back to the defaults: no entry');
   o = setOps(o, V, { potential: 0 });
   assert.deepEqual(o, {}, 'an illegal value is ignored');
   assert.deepEqual(resetOps({ [V]: { potential: 2 }, [KALTS]: { cultivate: 1 } }, V), { [KALTS]: { cultivate: 1 } });
-  assert.deepEqual(sanitizeOps({ [V]: { potential: 2 }, [KALTS]: { cultivate: 1 }, char_609_acguad: { potential: 1 }, char_999_x: { potential: 1 }, [CHESS.chess_char_1_01_a.charId]: { potential: 6 } }, isOp),
-    { [V]: { potential: 2 }, [KALTS]: { cultivate: 1 } }, 'a prototype / unknown operator / defaults dropped');
+  assert.deepEqual(sanitizeOps({ [V]: { potential: 2 }, [KALTS]: { potential: 6, cultivate: 1 }, char_609_acguad: { potential: 2 }, char_999_x: { potential: 1 }, [CHESS.chess_char_1_01_a.charId]: { potential: 1, cultivate: 0 } }, isOp),
+    { [V]: { potential: 2 }, [KALTS]: { potential: 6, cultivate: 1 } }, 'a prototype / unknown operator / defaults dropped');
 });
 
 test('导出 / 导入: the envelope carries ops; an older export keeps the current settings; settings alone import', () => {
@@ -84,7 +84,7 @@ test('the 已调整 count and 仅看已调整 include an operator whose 潜能 /
   assert.equal(changedCount({}, get, { [V]: { potential: 2 } }, roster), 1);
   assert.equal(changedCount({ [VENDLA]: { skill: 0 } }, get, { [V]: { potential: 2 } }, roster), 1, 'one operator');
   assert.equal(changedCount({}, get, {}, roster), 0);
-  const only = filterRoster(roster, { changedOnly: true }, {}, get, () => null, { [V]: { cultivate: 0 } });
+  const only = filterRoster(roster, { changedOnly: true }, {}, get, () => null, { [V]: { cultivate: 1 } });
   assert.deepEqual(only.map((c) => c.chessId), [VENDLA]);
 });
 
@@ -122,15 +122,15 @@ test('sync: room.loadout carries the sanitised ops; an edit of the settings alon
   const net = fakeNet();
   const T = fakeTimers();
   let backups = 0;
-  const target = createStore({ entries: {}, ops: { [V]: { potential: 1 }, char_609_acguad: { potential: 1 } }, open: false, sync: 'idle' });
+  const target = createStore({ entries: {}, ops: { [V]: { potential: 2 }, char_609_acguad: { potential: 2 } }, open: false, sync: 'idle' });
   const s = installLoadoutSync({ net, timers: T, target, getChessReady: async () => CHESS, getBackupsReady: async () => { backups++; return BACKUPS; }, lookupChess: get, operatorIds: () => IDS });
   net.emit('welcome', {});
   await T.advance(100);
-  assert.deepEqual(net.sent, [{ t: 'room.loadout', entries: {}, ops: { [V]: { potential: 1 } } }], 'a prototype dropped');
+  assert.deepEqual(net.sent, [{ t: 'room.loadout', entries: {}, ops: { [V]: { potential: 2 } } }], 'a prototype dropped');
   assert.equal(backups, 1, 'the 自选 pool needs backups.json');
-  target.set({ ops: { [V]: { potential: 1, cultivate: 2 } } });
+  target.set({ ops: { [V]: { potential: 2, cultivate: 2 } } });
   await T.advance(SYNC_DEBOUNCE_MS + 10);
-  assert.deepEqual(net.sent[1], { t: 'room.loadout', entries: {}, ops: { [V]: { potential: 1, cultivate: 2 } } });
+  assert.deepEqual(net.sent[1], { t: 'room.loadout', entries: {}, ops: { [V]: { potential: 2, cultivate: 2 } } });
   s.dispose();
   // nothing set: nothing to sanitise, no data loaded
   const net2 = fakeNet();
@@ -147,16 +147,16 @@ test('cards: the record at the player\'s 潜能 with its 练度 multiplier; a te
   const v = CHESS[VENDLA];
   const fx = { effects: EFFECTS };
   const at = (opts) => chessLoadout(v, null, get, { ...fx, ...opts }).record.stats;
-  assert.deepEqual([at({}).atk, at({}).cost], [435 * 1.1, 15], 'no settings: 满潜 + 精英2 Lv.60');
-  assert.deepEqual([at({ ops: { [V]: { potential: 1, cultivate: 0 } } }).atk, at({ ops: { [V]: { potential: 1, cultivate: 0 } } }).cost], [413, 17]);
-  assert.deepEqual([at({ ops: { [V]: { cultivate: 1 } } }).atk, at({ ops: { [V]: { cultivate: 1 } } }).def], [435 * 1.05, 77 * 1.05]);
+  assert.deepEqual([at({}).atk, at({}).cost], [413, 17], 'no settings: 潜能 1 + 未精英化 (no ×1.1)');
+  assert.deepEqual([at({ ops: { [V]: { potential: 6, cultivate: 3 } } }).atk, at({ ops: { [V]: { potential: 6, cultivate: 3 } } }).cost], [435 * 1.1, 15]);
+  assert.deepEqual([at({ ops: { [V]: { cultivate: 1 } } }).atk, at({ ops: { [V]: { cultivate: 1 } } }).def], [413 * 1.05, 77 * 1.05]);
   assert.equal(chessLoadout(v, null, get, { ops: { [V]: { potential: 4 } }, ...fx }).record.talents.find((t) => t.name === '土壤基肥改良').bb.heal_scale, 1.08);
-  assert.deepEqual(chessLoadout(v, null, get, { ops: { [V]: { potential: 2 } }, ...fx }).cultivation, { potential: 2, cultivate: 3 });
+  assert.deepEqual(chessLoadout(v, null, get, { ops: { [V]: { potential: 2 } }, ...fx }).cultivation, { potential: 2, cultivate: 0 });
   // a teammate's unit: its UnitInfo
   assert.deepEqual(unitCultivation({ potential: 3, cultivate: 1 }), { potential: 3, cultivate: 1 });
   assert.equal(unitCultivation({}), null, 'neither: a raw / stand-in unit');
-  assert.equal(at({ cultivation: unitCultivation({ cultivate: 0 }) }).atk, 435);
-  assert.equal(at({ cultivation: null }).atk, 435, 'none');
+  assert.equal(at({ cultivation: unitCultivation({ cultivate: 0 }) }).atk, 413);
+  assert.equal(at({ cultivation: null }).atk, 413, 'none');
   // a stand-in (补位): neither, whatever the settings say
   const normal = Object.values(CHESS).find((c) => c.chessType === 'NORMAL' && !c.isGolden && c.visible);
   const st = standInOf(normal, BACKUPS);
@@ -170,14 +170,14 @@ test('cards: the record at the player\'s 潜能 with its 练度 multiplier; a te
 test('自选 cards: the player\'s own pick at its 潜能 (m.private.ops), another player\'s unit at its UnitInfo potential', () => {
   const T6 = 'chess_char_6_diy1_a';
   const data = { chess: CHESS, backups: BACKUPS };
-  const priv = { diy: { [T6]: { charId: KALTS, skillIndex: 0, uniEquipId: null } }, ops: { [KALTS]: { potential: 1 } } };
-  assert.deepEqual(ownDiyPick(priv, CHESS[T6]), { charId: KALTS, skillIndex: 0, uniEquipId: null, potential: 1 });
+  const priv = { diy: { [T6]: { charId: KALTS, skillIndex: 0, uniEquipId: null } }, ops: { [KALTS]: { potential: 4, cultivate: 2 } } };
+  assert.deepEqual(ownDiyPick(priv, CHESS[T6]), { charId: KALTS, skillIndex: 0, uniEquipId: null, potential: 4 });
   const rec = ownDiyRecord(CHESS[T6], priv, data);
-  assert.deepEqual([rec.stats.atk, rec.stats.cost], [392, 20], '凯尔希 潜能1');
+  assert.deepEqual([rec.stats.atk, rec.stats.cost], [417, 19], '凯尔希 潜能4');
   const full = ownDiyRecord(CHESS[T6], { ...priv, ops: {} }, data);
-  assert.deepEqual([full.stats.atk, full.stats.cost], [417, 18]);
-  const mate = cardDiy(CHESS[T6], { unit: { diy: { charId: KALTS, skillIndex: 0, uniEquipId: null }, potential: 1, cultivate: 3 }, data });
-  assert.equal(mate.stats.atk, 392);
+  assert.deepEqual([full.stats.atk, full.stats.cost], [392, 20], 'no setting: the defaults (潜能 1)');
+  const mate = cardDiy(CHESS[T6], { unit: { diy: { charId: KALTS, skillIndex: 0, uniEquipId: null }, potential: 6, cultivate: 3 }, data });
+  assert.equal(mate.stats.atk, 417);
   // the card multiplies the 练度 on top (the composed record is already at its potential)
-  assert.equal(chessLoadout(rec, null, get, { ops: priv.ops, effects: EFFECTS }).record.stats.atk, 392 * 1.1);
+  assert.equal(chessLoadout(rec, null, get, { ops: priv.ops, effects: EFFECTS }).record.stats.atk, 417 * 1.1);
 });

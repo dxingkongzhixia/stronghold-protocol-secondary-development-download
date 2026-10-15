@@ -137,9 +137,9 @@ test('萨尔贡 6 + 娜仁图亚: no ATK stacks; skill start lends the caster’
   try {
     // caster s0 at (10,4) with an item; neighbours: s1 (10,5), s2 (10,3); none_a far away
     const units = [
-      { chessId: 's0_a', row: 10, col: 4, items: ['test_item_a'] }, { chessId: 's1_a', row: 10, col: 5 }, { chessId: 's2_a', row: 11, col: 3 },
-      { chessId: 's3_a', row: 12, col: 8 }, { chessId: 's4_a', row: 12, col: 9 }, { chessId: 's5_a', row: 12, col: 10 },
-      { chessId: 'none_a', row: 9, col: 4 },
+      { chessId: 's0_a', row: 10, col: 4, items: ['test_item_a'], potential: 6 }, { chessId: 's1_a', row: 10, col: 5, potential: 6 }, { chessId: 's2_a', row: 11, col: 3, potential: 6 },
+      { chessId: 's3_a', row: 12, col: 8, potential: 6 }, { chessId: 's4_a', row: 12, col: 9, potential: 6 }, { chessId: 's5_a', row: 12, col: 10, potential: 6 },
+      { chessId: 'none_a', row: 9, col: 4, potential: 6 },
     ];
     const h = makeBattle({ defs: defsOf(list), units, bandId: 'band_narant', bonds: { sargonShip: bondOn(6, 0, null, [3, 6]) } });
     h.step(1);
@@ -155,7 +155,7 @@ test('萨尔贡 6 + 娜仁图亚: no ATK stacks; skill start lends the caster’
     checkInvariants(h.b);
   } finally { deps.lendItemEffects = null; }
   if (typeof items.lendItemEffects === 'function') {
-    const h = makeBattle({ defs: defsOf(list), units: [{ chessId: 's0_a', row: 10, col: 4, items: ['chess_item_1_01_e_a'] }, { chessId: 's1_a', row: 10, col: 5 }],
+    const h = makeBattle({ defs: defsOf(list), units: [{ chessId: 's0_a', row: 10, col: 4, items: ['chess_item_1_01_e_a'], potential: 6 }, { chessId: 's1_a', row: 10, col: 5, potential: 6 }],
       bandId: 'band_narant', bonds: { sargonShip: bondOn(6, 0, null, [3, 6]) } });
     h.step(1);
     h.unit('s0_a').skill.activate('test', { free: true });
@@ -314,7 +314,7 @@ test('阿戈尔: HP ×(1.35+0.01L); devour chain (left first): 5000 物理流失
   ];
   const L = 10;
   // g1 (10,3) → g2 (10,4) → fodder (10,5); g3 (11,3) has an empty front tile
-  const units = [{ chessId: 'g1_a', row: 10, col: 3 }, { chessId: 'g2_a', row: 10, col: 4 }, { chessId: 'fod_a', row: 10, col: 5 }, { chessId: 'g3_a', row: 11, col: 3 }];
+  const units = [{ chessId: 'g1_a', row: 10, col: 3, potential: 6 }, { chessId: 'g2_a', row: 10, col: 4, potential: 6 }, { chessId: 'fod_a', row: 10, col: 5, potential: 6 }, { chessId: 'g3_a', row: 11, col: 3, potential: 6 }];
   const h = makeBattle({ defs: defsOf(list), units, bonds: { egirShip: bondOn(3, L, null, [3, 5]) }, hooks: ['damaged', 'layerGain'], captureNoisy: true });
   h.step(1);
   const [g1, g2, g3, f] = ['g1_a', 'g2_a', 'g3_a', 'fod_a'].map((id) => h.unit(id));
@@ -343,7 +343,7 @@ test('阿戈尔 devour ATK is a 最终加算 (GitHub #165 point 2, PR #176): 100
     ['fod_a', ['preciShip'], { stats: { atk: 2000, maxHp: 20000, def: 0, blockCnt: 1 } }],
   ];
   // g1 (10,3) → fodder (10,4, 2000 base ATK); g2 / g3 face empty tiles
-  const units = [{ chessId: 'g1_a', row: 10, col: 3 }, { chessId: 'fod_a', row: 10, col: 4 }, { chessId: 'g2_a', row: 12, col: 3 }, { chessId: 'g3_a', row: 12, col: 5 }];
+  const units = [{ chessId: 'g1_a', row: 10, col: 3, potential: 6 }, { chessId: 'fod_a', row: 10, col: 4, potential: 6 }, { chessId: 'g2_a', row: 12, col: 3, potential: 6 }, { chessId: 'g3_a', row: 12, col: 5, potential: 6 }];
   const h = makeBattle({ defs: defsOf(list), units, bonds: { egirShip: bondOn(3, 0, null, [3, 5]) } });
   h.step(1);
   const g1 = h.unit('g1_a');
@@ -364,7 +364,7 @@ test('阿戈尔 devour: 物理流失 ignores the marker’s damage bonuses and t
     ['fod_a', ['preciShip'], { tier: 2, stats: { maxHp: 20000, def: 500 } }],
   ];
   // g1 (10,3) → g2 (10,4, 3000×1.35 HP: dies to the first mark) → fodder (10,5); g3 elsewhere
-  const units = [{ chessId: 'g1_a', row: 10, col: 3 }, { chessId: 'g2_a', row: 10, col: 4 }, { chessId: 'fod_a', row: 10, col: 5 }, { chessId: 'g3_a', row: 12, col: 3 }];
+  const units = [{ chessId: 'g1_a', row: 10, col: 3, potential: 6 }, { chessId: 'g2_a', row: 10, col: 4, potential: 6 }, { chessId: 'fod_a', row: 10, col: 5, potential: 6 }, { chessId: 'g3_a', row: 12, col: 3, potential: 6 }];
   const h = makeBattle({
     defs: defsOf(list), units, hooks: ['damaged', 'kill'], captureNoisy: true,
     bonds: { egirShip: bondOn(3, 0, null, [3, 5]), kjeragShip: bondOn(3, 0, null, [3, 6]) },   // g1 deals ×1.25
@@ -393,7 +393,7 @@ test('阿戈尔 devour, A → B → C with B devoured first (GitHub #165 point 3
   ];
   // A (10,3) → B (10,4, 3000 × 1.35 HP: knocked out by A's mark) → C (10,5, 9000 HP, DEF 0: A's mark leaves 4000, B's
   // knocks it out); g3 faces an empty tile. Marks: A → B, A → C (through B), B → C.
-  const units = [{ chessId: 'A_a', row: 10, col: 3 }, { chessId: 'B_a', row: 10, col: 4 }, { chessId: 'C_a', row: 10, col: 5 }, { chessId: 'g3_a', row: 12, col: 3 }];
+  const units = [{ chessId: 'A_a', row: 10, col: 3, potential: 6 }, { chessId: 'B_a', row: 10, col: 4, potential: 6 }, { chessId: 'C_a', row: 10, col: 5, potential: 6 }, { chessId: 'g3_a', row: 12, col: 3, potential: 6 }];
   const h = makeBattle({ defs: defsOf(list), units, bonds: { egirShip: bondOn(3, 0, null, [3, 5]) }, hooks: ['damaged', 'kill'], captureNoisy: true });
   h.step(1);
   const [A, B, C] = ['A_a', 'B_a', 'C_a'].map((id) => h.unit(id));
@@ -409,9 +409,9 @@ test('阿戈尔 devour, A → B → C with B devoured first (GitHub #165 point 3
 test('阿戈尔 devour order: left first, then top first (row 0 is the bottom: the top board row is 12)', () => {
   const list = [['g1_a', ['egirShip']], ['g2_a', ['egirShip']], ['g3_a', ['egirShip']], ['fod_a', ['preciShip']]];
   const units = [
-    { uid: 'low', chessId: 'g1_a', row: 9, col: 3 }, { uid: 'f_low', chessId: 'fod_a', row: 9, col: 4 },
-    { uid: 'high', chessId: 'g2_a', row: 12, col: 3 }, { uid: 'f_high', chessId: 'fod_a', row: 12, col: 4 },
-    { uid: 'right', chessId: 'g3_a', row: 11, col: 2 }, { uid: 'f_right', chessId: 'fod_a', row: 11, col: 3 },
+    { uid: 'low', chessId: 'g1_a', row: 9, col: 3, potential: 6 }, { uid: 'f_low', chessId: 'fod_a', row: 9, col: 4, potential: 6 },
+    { uid: 'high', chessId: 'g2_a', row: 12, col: 3, potential: 6 }, { uid: 'f_high', chessId: 'fod_a', row: 12, col: 4, potential: 6 },
+    { uid: 'right', chessId: 'g3_a', row: 11, col: 2, potential: 6 }, { uid: 'f_right', chessId: 'fod_a', row: 11, col: 3, potential: 6 },
   ];
   const h = makeBattle({ defs: defsOf(list), units, bonds: { egirShip: bondOn(3, 0, null, [3, 5]) }, hooks: ['damaged'], captureNoisy: true });
   h.step(1);
@@ -479,7 +479,7 @@ test('阿戈尔 5 + the devour chain (GitHub #33, #105, #140): the eaten members
   const ULPIA = 'chess_char_5_05_a';
   for (const kind of ['normal', 'unite']) {
     const h = makeBattle({
-      kind, units: [...ids.map((chessId, i) => ({ chessId, row: 10, col: 2 + i })), { chessId: ULPIA, row: 12, col: 3 }],
+      kind, units: [...ids.map((chessId, i) => ({ chessId, row: 10, col: 2 + i })), { chessId: ULPIA, row: 12, col: 3, potential: 6 }],
       bonds: { egirShip: bondOn(6, 0, null, [3, 5]) }, hooks: ['damaged', 'death', 'deploy'], captureNoisy: true, autoFinish: false, timeLimit: 60,
     });
     h.step(1);
@@ -513,8 +513,8 @@ test('阿戈尔 5: a member devoured by several 阿戈尔 spends one slot at mos
   const list = [['A_a', ['egirShip']], ['B_a', ['egirShip']], ['X_a', ['egirShip']], ['C_a', ['egirShip']], ['D_a', ['egirShip']]];
   const defs = defsOf(list.map(([id, b]) => [id, b, { stats: { maxHp: 3000 } }]));
   const units = [
-    { chessId: 'A_a', row: 10, col: 3 }, { chessId: 'B_a', row: 10, col: 4 }, { chessId: 'X_a', row: 10, col: 5 },
-    { chessId: 'C_a', row: 11, col: 5, dir: 'DOWN' }, { chessId: 'D_a', row: 12, col: 8 },
+    { chessId: 'A_a', row: 10, col: 3, potential: 6 }, { chessId: 'B_a', row: 10, col: 4, potential: 6 }, { chessId: 'X_a', row: 10, col: 5, potential: 6 },
+    { chessId: 'C_a', row: 11, col: 5, dir: 'DOWN', potential: 6 }, { chessId: 'D_a', row: 12, col: 8, potential: 6 },
   ];
   const h = makeBattle({ defs, units, bonds: { egirShip: bondOn(5, 0, null, [3, 5]) }, hooks: ['damaged', 'death', 'deploy'], captureNoisy: true, autoFinish: false, timeLimit: 60 });
   h.step(1);
@@ -551,8 +551,8 @@ test('阿戈尔 5: an operator\'s own save or revive uses no slot (斯卡蒂\'s 
   const h = makeBattle({
     kind: 'normal', autoFinish: false, timeLimit: 60, hooks: ['damaged', 'death', 'deploy'], captureNoisy: true,
     units: [
-      { chessId: ULPIA, row: 10, col: 3 }, { chessId: SKADI, row: 10, col: 4, dir: 'UP', carryState: { hpPct: 0.5 } },
-      { chessId: GHOST, row: 12, col: 3 }, { chessId: HN, row: 12, col: 5 }, { chessId: DEEP, row: 12, col: 7 },
+      { chessId: ULPIA, row: 10, col: 3, potential: 6 }, { chessId: SKADI, row: 10, col: 4, dir: 'UP', carryState: { hpPct: 0.5 }, potential: 6 },
+      { chessId: GHOST, row: 12, col: 3, potential: 6 }, { chessId: HN, row: 12, col: 5, potential: 6 }, { chessId: DEEP, row: 12, col: 7, potential: 6 },
     ],
     bonds: { egirShip: bondOn(5, 0, null, [3, 5]) },
   });
@@ -619,7 +619,7 @@ test('阿戈尔 5 slots in 联防 and on the boss field: a member entering down 
   // 调和 (an active 调和 member enjoys the core bonds): knocked out first, it takes the first slot
   const hm = makeBattle({
     defs: defsOf(list), autoFinish: false, timeLimit: 60,
-    units: [{ chessId: 'mani_a', row: 11, col: 2 }, ...units.slice(0, 4)],
+    units: [{ chessId: 'mani_a', row: 11, col: 2, potential: 6 }, ...units.slice(0, 4)],
     bonds: { egirShip: bondOn(5, 0, null, [3, 5]), maniShip: { count: 1, active: true, tier: 1, layers: 0 } },
   });
   hm.step(1);
@@ -642,8 +642,8 @@ test('阿戈尔 devour, a unit back during the pass: a knocked-out marker (reviv
     ['g4_a', ['egirShip']], ['g5_a', ['egirShip']], ['fod_a', ['preciShip'], { tier: 2, stats: { maxHp: 20000 } }],
   ];
   const units = [
-    { chessId: 'g1_a', row: 10, col: 3 }, { chessId: 'g2_a', row: 10, col: 4 }, { chessId: 'g3_a', row: 10, col: 5 }, { chessId: 'fod_a', row: 10, col: 6 },
-    { chessId: 'g4_a', row: 12, col: 3 }, { chessId: 'g5_a', row: 12, col: 5 },
+    { chessId: 'g1_a', row: 10, col: 3, potential: 6 }, { chessId: 'g2_a', row: 10, col: 4, potential: 6 }, { chessId: 'g3_a', row: 10, col: 5, potential: 6 }, { chessId: 'fod_a', row: 10, col: 6, potential: 6 },
+    { chessId: 'g4_a', row: 12, col: 3, potential: 6 }, { chessId: 'g5_a', row: 12, col: 5, potential: 6 },
   ];
   const h = makeBattle({ defs: defsOf(list), units, bonds: { egirShip: bondOn(5, 0, null, [3, 5]) }, hooks: ['damaged', 'deploy'], captureNoisy: true });
   h.step(1);
@@ -697,7 +697,9 @@ test('阿戈尔 (community report, 2026-10-07) step 1: the bond HP is on every m
     const pre = new Map(), post = new Map();
     const look = (b, into) => () => { for (const u of b.allyUnits) into.set(u.defId, { hp: u.hp, maxHp: u.s.maxHp, def: u.s.def }); };
     const h = makeBattle({
-      units: [...units, ...rest], autoFinish: false, timeLimit: 60, hooks: ['damaged', 'death', 'kill'], captureNoisy: true,
+      // pinned at full potential (潜能 6 / 精英2 Lv.60) — this test asserts the official data numbers (GHOST's ×2.09 bond HP);
+      // the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
+      units: [...units, ...rest].map((u) => ({ potential: 6, ...u })), autoFinish: false, timeLimit: 60, hooks: ['damaged', 'death', 'kill'], captureNoisy: true,
       bonds: { egirShip: bondOn(5, layers, null, [3, 5]) },
       // before (priority 100) and after (−100) the devour, which runs at the default 0
       setup: (b) => { b.on('battleStart', look(b, pre), { priority: 100 }); b.on('battleStart', look(b, post), { priority: -100 }); },
@@ -743,11 +745,11 @@ function egirFood({ downB4 = false } = {}) {
     ['F3_a', ['egirShip'], { stats: { maxHp: 5000 } }], ['F4_a', ['egirShip'], { stats: { maxHp: 3000 } }],
   ];
   const units = [
-    { uid: 11, chessId: 'B1_a', row: 12, col: 3 }, { uid: 1, chessId: 'F1_a', row: 12, col: 4, dir: 'LEFT' },
-    { uid: 12, chessId: 'B2_a', row: 11, col: 3 }, { uid: 2, chessId: 'F2_a', row: 11, col: 4, dir: 'LEFT' },
-    { uid: 13, chessId: 'B3_a', row: 10, col: 3 }, { uid: 3, chessId: 'F3_a', row: 10, col: 4, dir: 'LEFT' },
-    { uid: 14, chessId: 'B4_a', row: 9, col: 4, ...(downB4 ? { carryState: { down: true } } : {}) }, { uid: 4, chessId: 'F4_a', row: 9, col: 5, dir: 'LEFT' },
-    { uid: 15, chessId: 'B5_a', row: 10, col: 5, dir: 'LEFT' },
+    { uid: 11, chessId: 'B1_a', row: 12, col: 3, potential: 6 }, { uid: 1, chessId: 'F1_a', row: 12, col: 4, dir: 'LEFT', potential: 6 },
+    { uid: 12, chessId: 'B2_a', row: 11, col: 3, potential: 6 }, { uid: 2, chessId: 'F2_a', row: 11, col: 4, dir: 'LEFT', potential: 6 },
+    { uid: 13, chessId: 'B3_a', row: 10, col: 3, potential: 6 }, { uid: 3, chessId: 'F3_a', row: 10, col: 4, dir: 'LEFT', potential: 6 },
+    { uid: 14, chessId: 'B4_a', row: 9, col: 4, ...(downB4 ? { carryState: { down: true } } : {}), potential: 6 }, { uid: 4, chessId: 'F4_a', row: 9, col: 5, dir: 'LEFT', potential: 6 },
+    { uid: 15, chessId: 'B5_a', row: 10, col: 5, dir: 'LEFT', potential: 6 },
   ];
   return { defs: defsOf(list), units };
 }
@@ -789,9 +791,9 @@ test('阿戈尔 5 (community report, 2026-10-07): the slots the devour leaves go
   const { defs } = egirFood();
   // only F1 and F2 are eaten: B1 → F1, B2 → F2; B3 (10,3), B4 (9,4), B5 (9,6) face empty tiles
   const units = [
-    { uid: 11, chessId: 'B1_a', row: 12, col: 3 }, { uid: 1, chessId: 'F1_a', row: 12, col: 4, dir: 'LEFT' },
-    { uid: 12, chessId: 'B2_a', row: 11, col: 3 }, { uid: 2, chessId: 'F2_a', row: 11, col: 4, dir: 'LEFT' },
-    { uid: 13, chessId: 'B3_a', row: 10, col: 3, dir: 'DOWN' }, { uid: 14, chessId: 'B4_a', row: 9, col: 5 }, { uid: 15, chessId: 'B5_a', row: 9, col: 7 },
+    { uid: 11, chessId: 'B1_a', row: 12, col: 3, potential: 6 }, { uid: 1, chessId: 'F1_a', row: 12, col: 4, dir: 'LEFT', potential: 6 },
+    { uid: 12, chessId: 'B2_a', row: 11, col: 3, potential: 6 }, { uid: 2, chessId: 'F2_a', row: 11, col: 4, dir: 'LEFT', potential: 6 },
+    { uid: 13, chessId: 'B3_a', row: 10, col: 3, dir: 'DOWN', potential: 6 }, { uid: 14, chessId: 'B4_a', row: 9, col: 5, potential: 6 }, { uid: 15, chessId: 'B5_a', row: 9, col: 7, potential: 6 },
   ];
   const run = (extra = {}) => {
     const h = makeBattle({ defs, units, autoFinish: false, timeLimit: 60, hooks: ['death', 'deploy'], bonds: { egirShip: bondOn(5, 0, null, [3, 5]), ...extra } });
@@ -934,7 +936,7 @@ test('inactive core bonds do nothing (layers alone are not enough)', () => {
   const bonds = ['yanShip', 'sargonShip', 'victoriaShip', 'kjeragShip', 'lateranoShip', 'egirShip', 'siracusaShip', 'kazimierzShip'];
   const list = [['all_a', bonds], ['all2_a', bonds]];
   const h = makeBattle({
-    defs: defsOf(list), units: [{ chessId: 'all_a', row: 10, col: 3, items: ['test_item_a'] }, { chessId: 'all2_a', row: 10, col: 4 }],
+    defs: defsOf(list), units: [{ chessId: 'all_a', row: 10, col: 3, items: ['test_item_a'], potential: 6 }, { chessId: 'all2_a', row: 10, col: 4, potential: 6 }],
     bonds: Object.fromEntries(bonds.map((b) => [b, { count: 2, active: false, tier: 0, layers: 50 }])),
     hooks: ['damaged'], captureNoisy: true,
   });
@@ -951,7 +953,7 @@ test('变形同构体 makes the wearer a member; 6-tier thresholds also read the
   const list = [['y0_a', ['yanShip']], ['y1_a', ['yanShip']], ['x_a', ['preciShip']]];
   const h = makeBattle({
     defs: defsOf(list),
-    units: [{ chessId: 'y0_a', row: 10, col: 3 }, { chessId: 'y1_a', row: 10, col: 4 }, { chessId: 'x_a', row: 10, col: 5, items: ['chess_item_6_09_e_a', 'chess_item_3_04_e_a'] }],
+    units: [{ chessId: 'y0_a', row: 10, col: 3, potential: 6 }, { chessId: 'y1_a', row: 10, col: 4, potential: 6 }, { chessId: 'x_a', row: 10, col: 5, items: ['chess_item_6_09_e_a', 'chess_item_3_04_e_a'], potential: 6 }],
     bonds: { yanShip: { active: true, tier: 1, layers: 0 } },
   });
   h.step(1);

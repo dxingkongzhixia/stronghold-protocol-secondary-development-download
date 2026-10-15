@@ -42,11 +42,12 @@ const ENEMIES = {
 const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => [null, LORX, LORD].map((m) => [t, true, m]))];
 
 /** A battle with 棘刺 as uid 1 at (row, col) facing RIGHT. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 5, seed = 5, others = [] } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 600, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'skillStart', 'skillEnd', 'attack'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: THORNS, skillIndex: skill, uniEquipId: mod }, elite, row, col }, ...others],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: THORNS, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 }, ...others],
   });
   h.step();
   return { h, u: h.unit(1) };

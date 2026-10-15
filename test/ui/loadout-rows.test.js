@@ -1,7 +1,7 @@
 // test/ui/loadout-rows.test.js — the 干员调配 roster as one list (0.2.2): the quick choices of PR #301 (by @farridge) laid
 // out as one row per operator with aligned columns instead of three columns of cards (the owner's decision of 2026-10-08:
-// 「三个竖排有点乱影响观感」), and the per-operator 潜能 / 练度 controls (「调配干员里自己设置吧，默认满潜满加成」): the row's skill
-// / module buttons and selects (state, labels, what a tap sets), the detail's section, a 自选 slot's selects, the 局内数值 at
+// 「三个竖排有点乱影响观感」), and the per-operator 潜能 / 练度 controls (defaults 潜能 1 / 未精英化, owner's decision of
+// 2026-10-15): the row's skill / module buttons and selects (state, labels, what a tap sets), the detail's section, a 自选 slot's selects, the 局内数值 at
 // the settings, and the css that keeps the columns aligned and the detail sliding over the list below 1000 px. Hook-free
 // views drawn as vnode trees. (The browser side: test/ui/loadout.e2e.test.js.)
 import { test } from 'node:test';
@@ -69,7 +69,7 @@ test('a row\'s 潜能 / 练度 selects: the defaults quiet, a changed one marked
   const sets = [];
   const r = row({ onOps: (id, p) => sets.push([id, p]) });
   const sel = find(r, (v) => v.type === 'select');
-  assert.deepEqual(sel.map((s) => [s.props['data-cult'], s.props.value]), [['potential', '6'], ['cultivate', '3']]);
+  assert.deepEqual(sel.map((s) => [s.props['data-cult'], s.props.value]), [['potential', '1'], ['cultivate', '0']]);
   assert.equal(find(r, (v) => hasClass(v, 'is-off')).length, 0, 'the defaults are not marked');
   sel[0].props.onChange({ currentTarget: { value: '2' } });
   sel[1].props.onChange({ currentTarget: { value: '0' } });
@@ -102,17 +102,18 @@ test('the detail\'s section: 潜能 1–6 and the four official 练度 tiers, th
   assert.deepEqual(pots.map((b) => [b.props['data-potential'], b.props['aria-checked']]), [[1, 'false'], [2, 'false'], [3, 'true'], [4, 'false'], [5, 'false'], [6, 'false']]);
   const tiers = find(sec, (v) => v.type === 'button' && v.props['data-cultivate'] != null);
   assert.deepEqual(tiers.map((b) => textOf(b)), ['未精英化', '精英阶段1', '精英阶段2', '精英阶段2-60级'], 'effects.json names');
-  assert.equal(tiers[3].props['aria-checked'], 'true', 'the default tier');
-  assert.match(textOf(find(sec, (v) => hasClass(v, 'lo-cult__eff'))[0]), /精英阶段2-60级 攻击力、防御力和最大生命值\+10%/);
+  assert.equal(tiers[0].props['aria-checked'], 'true', 'the default tier (未精英化)');
+  assert.match(textOf(find(sec, (v) => hasClass(v, 'lo-cult__eff'))[0]), /未精英化 无相关加成/);
+  assert.match(textOf(find(CultivationSection({ charId: id, ops: { [id]: { cultivate: 3 } }, onSet: () => {} }), (v) => hasClass(v, 'lo-cult__eff'))[0]), /精英阶段2-60级 攻击力、防御力和最大生命值\+10%/);
   pots[0].props.onClick();
   tiers[1].props.onClick();
   assert.deepEqual(sets, [[id, { potential: 1 }], [id, { cultivate: 1 }]]);
   assert.equal(cultivateName(0), '未精英化');
-  // the rule line says what an operator with nothing set fights at — the default, 满潜能 / 精英2 Lv.60 — and that an unowned
-  // 特许 operator at the official 潜能1 / 未精英化 is the player's own setting (Grok review of the branch: it read as automatic)
+  // the rule line says what an operator with nothing set fights at — the default, 潜能 1 / 未精英化 — and how official
+  // potential / 练度 work (the operator's own account for potential, the 自持有 bonus for 练度)
   const note = textOf(find(sec, (v) => hasClass(v, 'lo-cult__note'))[0]);
-  assert.match(note, /^默认满潜能、精英2 Lv\.60（满加成）。/);
-  assert.match(note, /未持有的特许干员在官方按潜能1、没有加成，要照官方打请手动设为潜能1、未精英化。$/);
+  assert.match(note, /^默认潜能 1、未精英化——官方对「未持有」干员的基准/);
+  assert.match(note, /想更强就按你的实际情况调高。$/);
   const st = CultivationSection({ charId: id, ops: {}, onSet: () => {}, standIn: true });
   assert.ok(hasClass(st, 'is-moot'));
   assert.match(textOf(find(st, (v) => hasClass(v, 'lo-cult__note'))[0]), /替补干员没有潜能与练度/);
@@ -125,18 +126,19 @@ test('自选编队: an owned pick\'s card carries its operator\'s selects, a pro
   const cult = find(tree, (v) => hasClass(v, 'diy-slot__cult'));
   assert.equal(cult.length, 2);
   const sel = find(tree, (v) => v.type === 'select');
-  assert.deepEqual(sel.map((s) => s.props.value), ['6', '1'], '凯尔希: 潜能 6, 精英1');
+  assert.deepEqual(sel.map((s) => s.props.value), ['1', '1'], '凯尔希: 潜能 1 (the default), 精英1');
   sel[0].props.onChange({ currentTarget: { value: '4' } });
   assert.deepEqual(sets, [['char_003_kalts', { potential: 4 }]]);
   assert.ok(cult.some((v) => textOf(v) === '原型干员没有潜能与练度'));
 });
 
-test('局内数值 at the operator\'s settings: 刺玫 at 潜能1 / 未精英化 and at the defaults (×1.1)', () => {
+test('局内数值 at the operator\'s settings: 刺玫 at 潜能1 / 未精英化 and at an explicit 潜能6 / 精英2 Lv.60 (×1.1)', () => {
   const v = get(VENDLA);
   const g = get(v.goldenId);
   const pv = (ops, level = 'normal') => statsPreview(v, g, {}, level, get, ops).record.stats;
-  assert.deepEqual([pv({ [v.charId]: { potential: 1, cultivate: 0 } }).atk, pv({ [v.charId]: { potential: 1, cultivate: 0 } }).cost], [413, 17]);
-  assert.equal(pv({}).atk, 435 * 1.1, 'none set: 满潜 + 精英2 Lv.60');
+  assert.deepEqual([pv({ [v.charId]: { potential: 1, cultivate: 0 } }).atk, pv({ [v.charId]: { potential: 1, cultivate: 0 } }).cost], [413, 17], 'the defaults (潜能 1 / 未精英化)');
+  assert.equal(pv({}).atk, 413, 'none set: the same defaults');
+  assert.equal(pv({ [v.charId]: { potential: 6, cultivate: 3 } }).atk, 435 * 1.1, 'an explicit 潜能 6 + 精英2 Lv.60: ×1.1');
   assert.equal(pv({ [v.charId]: { potential: 1, cultivate: 0 } }, 'elite').atk, 508 + 23, 'the elite: statsBase at 潜能1 + INC-X');
   assert.ok(statsPreview(v, g, {}, 'normal', get, {}).lo.cultivation);
   // the caption says the numbers carry 潜能 and 练度 (an owned operator; effects.json loaded)
@@ -150,12 +152,12 @@ test('the module card reads its talent changes at the operator\'s 潜能, as 局
   const mod = g.modules.find((x) => x.uniEquipId === 'uniequip_002_yu');
   const opt = { id: mod.uniEquipId, rec: mod, isDefault: !!mod.isDefault };
   const texts = (tree) => find(tree, (v) => typeof v.type === 'function' && v.type.name === 'RichText').map((v) => String(v.props.text));
-  const full = texts(ModuleInfo({ m: null, golden: g, opt }));
-  assert.ok(full.some((x) => x.includes('生命上限2%<@ba.talpu>（+0.5%）</>')), 'full potential (none given)');
-  assert.deepEqual(texts(ModuleInfo({ m: null, golden: g, opt, potential: 6 })), full);
-  const p1 = texts(ModuleInfo({ m: null, golden: g, opt, potential: 1 }));
-  assert.ok(p1.some((x) => x.includes('生命上限1.5%的生命')), '潜能1');
+  const p1 = texts(ModuleInfo({ m: null, golden: g, opt }));
+  assert.ok(p1.some((x) => x.includes('生命上限1.5%的生命')), 'none given: the default, 潜能1');
   assert.ok(!p1.some((x) => x.includes('（+0.5%）')));
+  assert.deepEqual(texts(ModuleInfo({ m: null, golden: g, opt, potential: 1 })), p1);
+  const full = texts(ModuleInfo({ m: null, golden: g, opt, potential: 6 }));
+  assert.ok(full.some((x) => x.includes('生命上限2%<@ba.talpu>（+0.5%）</>')), 'full potential (潜能 6)');
   assert.deepEqual(texts(ModuleInfo({ m: null, golden: g, opt: { id: 'none', rec: null }, potential: 1 })), [g.traitBase.descRaw], '不装备: the base 特性');
   // 圣约送葬人 REA-Y (GitHub #400): 特性 heals 50 per enemy hit as in battle; 特性追加 is the module's ASPD line
   const ex = get('chess_char_5_01_b');

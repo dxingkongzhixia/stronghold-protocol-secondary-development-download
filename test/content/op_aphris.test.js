@@ -40,8 +40,9 @@ const OWN = [[9, 2], [9, 3], [9, 4], [9, 5], [9, 6], [9, 7]];
 const BENT = [[9, 2], [9, 3], [9, 4], [10, 4], [11, 4], [12, 4], [13, 4], [14, 4]];
 
 /** A battle with 谬因 as uid 1 at (9, 2) facing RIGHT (`relay`: her piece as uid 2 at relay.row / col / dir), plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 1, relay = null, others = [], seed = 5, dp = 99 } = {}) {
-  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: APHRIS, skillIndex: skill, uniEquipId: mod }, elite, row: 9, col: 2 }];
+  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: APHRIS, skillIndex: skill, uniEquipId: mod }, elite, row: 9, col: 2, potential: 6 }];
   if (relay) units.push({ uid: 2, kind: 'token', tokenId: RELAY, ownerUid: 1, row: relay.row, col: relay.col, dir: relay.dir });
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,

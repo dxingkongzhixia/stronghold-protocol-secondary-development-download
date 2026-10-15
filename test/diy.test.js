@@ -136,7 +136,9 @@ test('diyRecord: the slot\'s identity (tier, price, merge, status), no 特质, d
   const cases = [[T5, false, '2/1/4/0', 0], [T5, true, '2/60/7/1', 1], [T6, false, '2/1/4/0', 0], [T6, true, '2/60/7/3', 3]];
   for (const [slotId, elite, key, stage] of cases) {
     for (const mod of [null, 'uniequip_002_siege', 'uniequip_003_siege']) {
-      const r = diyRecord(slotId, { charId: SIEGE, skillIndex: 1, uniEquipId: mod }, { elite, data: DATA });
+      // 潜能 6 on purpose: the expectations below compare against the RAW slot form (built at full potential; the
+      // runtime default is 潜能 1 / 未精英化 since 2026-10-15)
+      const r = diyRecord(slotId, { charId: SIEGE, skillIndex: 1, uniEquipId: mod }, { elite, data: DATA, potential: 6 });
       const slot = chess[elite ? backups.diy.slots[slotId].goldenId : slotId];
       const form = backups.units[SIEGE].forms[key];
       const label = `${slot.chessId} ${mod}`;
@@ -154,8 +156,10 @@ test('diyRecord: the slot\'s identity (tier, price, merge, status), no 特质, d
       if (m) assert.equal(r.module.level, stage, `${label}: stage ${stage}`);
       if (elite) assert.deepEqual(r.modules.map((x) => [x.uniEquipId, x.level, x.isDefault]), form.modules.map((x) => [x.uniEquipId, stage, x.uniEquipId === mod]), label);
       assert.equal(r.assets.avatar, elite ? `${SIEGE}_2` : SIEGE, `${label}: E2 art on the elite`);
-      // chess-shaped: the loadout machinery and the sim read it unchanged
-      assert.equal(loadoutRecord(r, resolveLoadout(r, null)), r);
+      // chess-shaped: the loadout machinery and the sim read it unchanged (the DEFAULT 潜能 1 composition is a structural
+      // copy of a record without potential data — equal, not the same object; 潜能 6 returns it as-is)
+      assert.deepEqual(loadoutRecord(r, resolveLoadout(r, null)), r);
+      assert.deepEqual(loadoutRecord(r, resolveLoadout(r, { potential: 6 })), r, '潜能 6 = the record the data holds (structurally)');
       const def = normalizeChess(r);
       assert.deepEqual([def.id, def.baseId, def.charId, def.diyFor, def.golden, def.tier, def.skill.id], [slot.chessId, slotId, SIEGE, slotId, elite, slot.tier, 'skchr_siege_2'], label);
     }
@@ -165,7 +169,7 @@ test('diyRecord: the slot\'s identity (tier, price, merge, status), no 特质, d
   assert.deepEqual([sharp.bonds, sharp.skill.skillId, sharp.module.id, sharp.module.level, sharp.garrisonIds], [['emptyShip'], 'skchr_acguad_3', 'uniequip_002_acguad', 3, []]);
   assert.deepEqual(diyRecord(T5, { charId: 'char_017_huang', skillIndex: 0 }, { data: DATA }).bonds, ['yanShip', 'victoriaShip']);
   const slot = chess.chess_char_5_diy2_b;
-  const { diyFor, ...rest } = diyRecordOf(slot, { charId: SIEGE, skillIndex: 2, uniEquipId: 'uniequip_003_siege' }, DATA);
+  const { diyFor, ...rest } = diyRecordOf(slot, { charId: SIEGE, skillIndex: 2, uniEquipId: 'uniequip_003_siege' }, DATA, { potential: 6 });
   assert.equal(diyFor, T5B);
   assert.deepEqual(rest, composeUnitRecord(slot, backups.units[SIEGE], unitForm(backups, SIEGE, slot.status), { skillIndex: 2, moduleId: 'uniequip_003_siege', bonds: ['victoriaShip'] }));
   assert.equal(diyRecord(T6, { charId: 'char_601_cguard' }, { data: DATA }), null, 'illegal ⇒ null');

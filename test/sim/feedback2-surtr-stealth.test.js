@@ -34,9 +34,9 @@ describe('#52 史尔特尔 余烬: 禁疗 from the lethal blow until she leaves'
     const h = makeBattle({
       defs: { enemies: { enemy_dummy: DUMMY } }, autoFinish: false, timeLimit: 200, seed: 2,
       units: [
-        { chessId: SURTR, row: 9, col: 5, dir: 'RIGHT', skillIndex: 0, carryState: { sp: 0 } },
-        { chessId: MEDIC, row: 9, col: 4, dir: 'RIGHT' },     // her range covers (9,5) and (10,5)
-        { chessId: TANK, row: 10, col: 5, dir: 'RIGHT' },
+        { chessId: SURTR, row: 9, col: 5, dir: 'RIGHT', skillIndex: 0, carryState: { sp: 0 }, potential: 6 },
+        { chessId: MEDIC, row: 9, col: 4, dir: 'RIGHT', potential: 6 },     // her range covers (9,5) and (10,5)
+        { chessId: TANK, row: 10, col: 5, dir: 'RIGHT', potential: 6 },
       ],
       enemies: [{ key: 'enemy_dummy', pos: [9, 9] }],
     });
@@ -79,7 +79,7 @@ describe('#52 史尔特尔 余烬: 禁疗 from the lethal blow until she leaves'
   test('her own heals stop too (休眠子裔), an HP-regen attribute does not, and S3 黄昏\'s start heal ignores 禁疗 (PRTS 技能3 备注) — she still leaves at 9 s', () => {
     const mk = (o = {}) => makeBattle({
       defs: { enemies: { enemy_dummy: DUMMY } }, autoFinish: false, timeLimit: 200, seed: 2,
-      units: [{ chessId: SURTR, row: 9, col: 5, dir: 'RIGHT', carryState: { sp: 0 }, ...o }],
+      units: [{ chessId: SURTR, row: 9, col: 5, dir: 'RIGHT', carryState: { sp: 0 }, ...o, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [9, 6] }],
     });
     // control: 休眠子裔 ("每攻击1个目标，回复自身2%最大生命值") heals her while she is not under 禁疗
@@ -131,6 +131,7 @@ const CHESS = {
   t_gun: chessRec({ id: 't_gun', profession: 'SNIPER', projectile: 'none', stats: { atk: 50, maxHp: 1e7, bat: 1, blockCnt: 0 }, rangeGrid: BIG, skill: null }),
 };
 const NOATK = () => ({ trait: { noAttack: true } });
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function arena(o = {}) {
   const { kits = {}, ...rest } = o;
   return makeBattle({
@@ -153,7 +154,7 @@ const stun = (h, u, d) => h.b.applyStatus(u, 'stun', { duration: d, force: true 
 
 describe('#43: a blocked 隐匿 enemy hides again only 3 s after the block ends (PRTS 作战机制 §隐匿)', () => {
   test(`潜伏者: blocked = revealed; the blocker lets go ⇒ revealed for STEALTH_RESTORE (${STEALTH_RESTORE}) s — targetable, splashed, drawn solid, shot by a ranged operator — then 隐匿 again`, () => {
-    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5 }, { chessId: 't_gun', row: 11, col: 3 }] });
+    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5, potential: 6 }, { chessId: 't_gun', row: 11, col: 3, potential: 6 }] });
     h.step();
     const wall = h.unit('t_wall');
     const e = put(h, 'enemy_1009_lurker', [9, 5]);
@@ -181,7 +182,7 @@ describe('#43: a blocked 隐匿 enemy hides again only 3 s after the block ends 
   });
 
   test('a new block inside the window lifts it again, and the window restarts when that block ends (the first one does not cut it short)', () => {
-    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5 }] });
+    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5, potential: 6 }] });
     h.step();
     const wall = h.unit('t_wall');
     const e = put(h, 'enemy_1009_lurker', [9, 5]);
@@ -204,7 +205,7 @@ describe('#43: a blocked 隐匿 enemy hides again only 3 s after the block ends 
   });
 
   test('a release through the block count (ai.js enforceBlockCapacity) and a 反隐 that ends: the same switch; a 反隐 ending inside the window keeps it revealed', () => {
-    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5 }] });
+    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5, potential: 6 }] });
     h.step();
     const wall = h.unit('t_wall');
     const e = put(h, 'enemy_1009_lurker', [9, 5]);
@@ -226,7 +227,7 @@ describe('#43: a blocked 隐匿 enemy hides again only 3 s after the block ends 
   });
 
   test('"（解除阻挡N秒后恢复）" on the enemy pages: 0 s (业余竞演者, 清明\'s veil …), 1 s (家族灭迹人); a veil over its own 隐匿 hides it at once, its own switch takes over when the veil ends', () => {
-    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5 }, { chessId: 't_wall', row: 11, col: 5 }, { chessId: 't_wall', row: 12, col: 7 }] });
+    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5, potential: 6 }, { chessId: 't_wall', row: 11, col: 5, potential: 6 }, { chessId: 't_wall', row: 12, col: 7, potential: 6 }] });
     h.step();
     const [w1, w2, w3] = h.allies();
     // (流泪小子 has 0 s too, but its first hit stuns its blocker, which lets it go at once)
@@ -256,7 +257,7 @@ describe('#43: a blocked 隐匿 enemy hides again only 3 s after the block ends 
   });
 
   test('清明 / 堂皇 give their veil a 0 s switch; every other stealthy enemy here keeps the general 3 s unless its PRTS page says otherwise', () => {
-    const h = arena({ units: [{ chessId: 't_wall', row: 12, col: 3 }] });
+    const h = arena({ units: [{ chessId: 't_wall', row: 12, col: 3, potential: 6 }] });
     h.step();
     const lamp = put(h, 'enemy_1209_sfden', [10, 7]);
     const o = put(h, 'enemy_1007_slime', [10, 8]);
@@ -272,7 +273,7 @@ describe('#43: a blocked 隐匿 enemy hides again only 3 s after the block ends 
   });
 
   test('our operators: 隐匿 is never lifted by blocking, and its block ending switches nothing (PRTS "我方干员并不会因为阻挡而解除隐匿")', () => {
-    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5 }] });
+    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5, potential: 6 }] });
     h.step();
     const wall = h.unit('t_wall');
     h.b.applyStatus(wall, 'stealth', { duration: 99 });
@@ -288,7 +289,7 @@ describe('#43: a blocked 隐匿 enemy hides again only 3 s after the block ends 
 
   test('山海众头目: its 强击标记 comes with its 隐匿 ("该隐匿每次生效后自身获得强击标记") — a new block inside the 3 s gives no second strong hit, one after it hid again does', () => {
     const key = 'enemy_1299_ymkilr';
-    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5 }], captureNoisy: true, hooks: ['damaged'] });
+    const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5, potential: 6 }], captureNoisy: true, hooks: ['damaged'] });
     h.step();
     const wall = h.unit('t_wall');
     const e = put(h, key, [9, 5]);
@@ -319,7 +320,7 @@ describe('#43: a blocked 隐匿 enemy hides again only 3 s after the block ends 
 describe('深池逐火: an ember knocked out while blocked stays revealed until 3 s after the knock-out [ASSUMED order]', () => {
   for (const key of ['enemy_1288_duskls', 'enemy_1288_duskls_2', 'enemy_1292_duskld']) {
     test(`${key}: its blocker takes the next warrior during the 1 s 重生 (无敌, untargetable) — the ember is then targetable by ranged and operator splash until +${STEALTH_RESTORE} s, then 隐匿`, () => {
-      const h = arena({ units: [{ chessId: 't_wall1', row: 9, col: 5 }, { chessId: 't_gun', row: 11, col: 3 }], kits: { t_gun: NOATK } });
+      const h = arena({ units: [{ chessId: 't_wall1', row: 9, col: 5, potential: 6 }, { chessId: 't_gun', row: 11, col: 3, potential: 6 }], kits: { t_gun: NOATK } });
       h.step();
       const wall = h.unit('t_wall1'), gun = h.unit('t_gun');
       const a = put(h, key, [9, 5]);
@@ -350,7 +351,7 @@ describe('深池逐火: an ember knocked out while blocked stays revealed until 
   }
 
   test('knocked out while NOT blocked: 隐匿 at once when the 重生 ends (the switch only follows a block)', () => {
-    const h = arena({ units: [{ chessId: 't_gun', row: 11, col: 3 }], kits: { t_gun: NOATK } });
+    const h = arena({ units: [{ chessId: 't_gun', row: 11, col: 3, potential: 6 }], kits: { t_gun: NOATK } });
     h.step();
     const a = put(h, 'enemy_1288_duskls', [9, 6]);
     h.b.kill(a, h.unit('t_gun'));
@@ -366,10 +367,10 @@ test('#52 a chain healer\'s bounces skip 史尔特尔 in 余烬 (禁疗: no heal
   const h = makeBattle({
     defs: { enemies: { enemy_dummy: enemyRec({ key: 'enemy_dummy', hp: 1e9, speed: 0, atk: 0 }) } }, autoFinish: false, timeLimit: 200, seed: 3,
     units: [
-      { chessId: SURTR, row: 9, col: 5, dir: 'RIGHT', skillIndex: 0, carryState: { sp: 0 } },
-      { chessId: PAP, row: 10, col: 3, dir: 'RIGHT', skillIndex: 0, carryState: { sp: 0 } },
-      { chessId: TANK, row: 10, col: 5, dir: 'RIGHT' },
-      { chessId: MEDIC, row: 11, col: 5, dir: 'RIGHT', carryState: { sp: 0 } },
+      { chessId: SURTR, row: 9, col: 5, dir: 'RIGHT', skillIndex: 0, carryState: { sp: 0 }, potential: 6 },
+      { chessId: PAP, row: 10, col: 3, dir: 'RIGHT', skillIndex: 0, carryState: { sp: 0 }, potential: 6 },
+      { chessId: TANK, row: 10, col: 5, dir: 'RIGHT', potential: 6 },
+      { chessId: MEDIC, row: 11, col: 5, dir: 'RIGHT', carryState: { sp: 0 }, potential: 6 },
     ],
     enemies: [{ key: 'enemy_dummy', pos: [9, 9] }],
   });

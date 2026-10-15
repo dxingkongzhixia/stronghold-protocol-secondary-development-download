@@ -113,6 +113,9 @@ Merge procedure:
    - upstream 克莱门莎 (`2e122873` / `0b0ce4fb` / `ba5b998a`) — we keep our `char_4231_clemnt`.
    - R21P 满潜 / R22-LOADOUT (潜能 / 练度) — **kept since the v0.2.6 merge (2026-10-14)**: the merge re-introduced
      them and the owner chose to keep them, so **do not revert the loadout feature back out** (see §0 / §11).
+     **The runtime DEFAULT changed on 2026-10-15 (owner): 潜能 1 / 未精英化** for every operator (the official baseline
+     for an operator the player does not own), replacing the 2026-10-08 满潜 6 / 精英2 Lv.60 — the data is still built
+     at full potential; only the default composition moved.
    - Self-check after the merge: `grep -rn "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server`
      and `grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test` must both be empty.
    - `git log -S bondsCollapsed -- public/js/screens/game.js` shows if upstream re-added it.

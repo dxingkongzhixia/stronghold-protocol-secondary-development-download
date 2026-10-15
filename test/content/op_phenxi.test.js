@@ -31,11 +31,12 @@ const P1 = 'phenxi_t_1[peak_1].peak_performance', P2 = 'phenxi_t_1[peak_2].peak_
 
 /** 菲亚梅塔 as uid 1 at (10, 4) facing RIGHT (3-10: rows 9–11, columns 4–8; her 4th tile ahead is (10, 8)). `pin` keeps
  *  her HP full at the end of every tick (陈述苦难's 流失 would move 精力充沛 under exact damage checks). */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 4, others = [], seed = 5, pin = false } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied', 'death', 'hit'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: PX, skillIndex: skill, uniEquipId: mod }, elite, row, col }, ...others],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: PX, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 }, ...others],
   });
   const u = h.unit(1);
   if (pin) h.b.on('tick', () => { if (u.alive) u.hp = u.s.maxHp; });

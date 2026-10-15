@@ -499,7 +499,7 @@ do not revert them by accident. The full record is [`docs/UPSTREAM-MERGES.md`](U
 
 | Feature | Where | Notes |
 |---|---|---|
-| 潜能 / 练度 (per-operator potential + level; R21P / R22-LOADOUT) | `shared/potential.js`, `shared/loadoutRecord.js`, `server/match/player/{basics,diy}.js`, `public/js/ui/loadoutModel.js`, `public/js/screens/cultivation.js` | upstream's; the fork **keeps and adapts** it and composes operators at 满潜 (potential 6) by default — many fork content tests are pinned at full potential |
+| 潜能 / 练度 (per-operator potential + level; R21P / R22-LOADOUT) | `shared/potential.js`, `shared/loadoutRecord.js`, `server/match/player/{basics,diy}.js`, `public/js/ui/loadoutModel.js`, `public/js/screens/cultivation.js` | upstream's; the fork **keeps and adapts** it. The default is **潜能 1 / 未精英化** (2026-10-15, the owner's decision — the official baseline for an operator the player does not own; full potential / 精英2 Lv.60 was the default before), so content tests are pinned at those numbers |
 | 文字大小 (text-size scaling) | `public/js/ui/gameLogic/settings.js`, `public/css/*.css` (`calc(NN * var(--t))`) | every font size is `calc(… * var(--t))`, driven by the 设置 rows; a few test-pinned plain selectors stay literal |
 | 弹药数量 (ammo count on the unit strip; #552) | `public/js/render/app.js`, `public/js/render/units.js` (`ammoCount`) | |
 | Spine clip bounds / impostor sizing (#542) | `public/js/render/spine.js` (`clipBounds`, `CLIP_SAMPLE_*`), `public/js/render/units.js` | sizes a unit's slot from the clips it actually plays |

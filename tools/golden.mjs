@@ -40,7 +40,7 @@
 //            12 pieces per battle on a real stage against the round's real wave three times over (diyScenarios)
 // Battles run through the production BattleSpec path (server/sim/spec.js buildBattleSpec → createBattleFromSpec, the
 // path browsers and the server's headless fields use) with every option explicit — every operator the player owns at
-// the default player's settings, 潜能 6 and 练度 精英2 Lv.60 (PlayerBattleInput `potential` / `cultivate`, as
+// the default player's settings, 潜能 1 and 练度 未精英化 (PlayerBattleInput `potential` / `cultivate`, as
 // PlayerState.battleInput states them, 0.2.2; a stand-in and a prototype 自选 pick neither); matches construct Match directly
 // with a VirtualScheduler (as tools/botbench.mjs) — test-harness defaults never move a digest.
 //

@@ -8,11 +8,12 @@
 // the player's 干员调配 setting since 0.2.2 — shared/potential.js): the record is composed at it first.
 
 import { GEO } from './constants.js';
-import { atPotential, isPotential, POTENTIAL_DEFAULT } from './potential.js';
+import { atPotential, isPotential, POTENTIAL_DEFAULT, POTENTIAL_MAX } from './potential.js';
 
 /**
- * Resolve a loadout against a chess record. `potential` (潜能 1–6; anything else = 6, full potential — the default)
- * rides along: loadoutRecord composes the record at it (shared/potential.js atPotential).
+ * Resolve a loadout against a chess record. `potential` (潜能 1–6; anything else = the default, 潜能 1 — the player's
+ * 干员调配 baseline since 2026-10-15; 6 = the data's own build) rides along: loadoutRecord composes the record at it
+ * (shared/potential.js atPotential).
  * @param {object|null} rec data/chess.json record
  * @param {{ skillIndex?: number, moduleId?: string, skill?: number, module?: string, potential?: number }|null} [loadout]
  * @returns {{ skillIndex: number|null, moduleId: string|null, potential: number, skillIsDefault: boolean,
@@ -90,13 +91,16 @@ export function composeTalents(base, changes) {
  * atPotential); `skill` = the selected SkillRecord; golden chess with a non-default module choice: `stats` = statsBase +
  * module attr, `trait` = the module's traitOverride or traitBase, `talents` = talentsBase + talentChanges, `module` =
  * the chosen module (`active:false`, id null for 'none'). A talent that summons through a container token (凛御银灰)
- * follows the selected skill's token. The default loadout returns `rec` itself.
+ * follows the selected skill's token. A fully DEFAULT loadout still composes the potential — since 2026-10-15 the
+ * default is 潜能 1, NOT the full-potential record the data holds — so `rec0` itself comes back only for the all-default
+ * loadout (潜能 1) or for 潜能 6 with the default skill / module (which returns a structural copy of `rec0`).
  * @param {object} rec0 data/chess.json record
  * @param {object} lo resolveRecordLoadout(rec0, …)
  */
 export function loadoutRecord(rec0, lo) {
-  if (!rec0 || !lo || lo.isDefault) return rec0;
-  const rec = lo.potentialIsDefault === false ? atPotential(rec0, lo.potential) : rec0;
+  if (!rec0 || !lo) return rec0;
+  const rec = lo.potential === POTENTIAL_MAX ? rec0 : atPotential(rec0, lo.potential);
+  if (lo.isDefault) return rec;
   const out = { ...rec };
   if (!lo.moduleIsDefault && Array.isArray(rec.modules)) {
     const m = lo.moduleId === 'none' ? null : rec.modules.find((x) => x.uniEquipId === lo.moduleId) ?? null;

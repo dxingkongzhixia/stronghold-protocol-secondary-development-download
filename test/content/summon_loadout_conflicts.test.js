@@ -26,14 +26,16 @@ function patchedToken(tokenId, owner, patch) {
   return { [tokenId]: rec };
 }
 /** The token def the patched data gives a summon of `chessId` with loadout `lo` (the expectation). */
-const want = (tokens, tokenId, chessId, lo) => new DataSource({ chess: {}, enemies: {}, tokens, stages: {}, waves: {} }, base).getToken(tokenId, chessId, lo);
+const want = (tokens, tokenId, chessId, lo) => new DataSource({ chess: {}, enemies: {}, tokens, stages: {}, waves: {} }, base).getToken(tokenId, chessId, { potential: 6, ...lo });
 
 /**
  * A 联防 field: p1 (left half) and p2 (right half, +8 columns) each field `chessId` (uid 1) with loadouts lo[0] / lo[1]
  * (plus `extra` units). Returns the harness and both summoners after the first tick.
  */
 function duel({ chessId, lo, tokens, row = 10, col = 4, extra = [], enemies = {}, spawns = [] }) {
-  const units = (l) => [{ uid: 1, chessId, row, col, dir: 'RIGHT', ...l }, ...extra.map((e, i) => ({ uid: i + 2, dir: 'RIGHT', ...e }))];
+  // pinned at full potential (潜能 6 / 精英2 Lv.60) — the assertions compare against the full-potential token variants
+  // (want(…)); the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
+  const units = (l) => [{ uid: 1, chessId, row, col, dir: 'RIGHT', potential: 6, ...l }, ...extra.map((e, i) => ({ uid: i + 2, dir: 'RIGHT', ...e }))];
   const h = makeBattle({
     kind: 'unite', seed: 7, timeLimit: 120, defs: { tokens, enemies }, enemies: spawns, hooks: ['damaged', 'deploy'], captureNoisy: true,
     players: [mk('p1', 0, 0, units(lo[0])), mk('p2', 1, 8, units(lo[1]))],

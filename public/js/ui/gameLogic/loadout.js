@@ -2,7 +2,7 @@
 
 import { MODULE_NONE, loadoutOptions, resolveLoadout } from '../../../../shared/protocol.js';
 import { loadoutRecord, resolveRecordLoadout } from '../../../../shared/loadoutRecord.js';
-import { cultivationOf, cultivateMul, cultivatedStats, isPotential, isCultivate } from '../../../../shared/potential.js';
+import { cultivationOf, cultivateMul, cultivatedStats, isPotential, isCultivate, POTENTIAL_DEFAULT } from '../../../../shared/potential.js';
 import { isObj } from './shared.js';
 import { t } from '../../../../shared/i18n.js';
 
@@ -81,7 +81,7 @@ function cultivationFor(chess, opts) {
   if (opts && opts.cultivation !== undefined) {
     const c = opts.cultivation;
     if (!isObj(c) || !isObj(chess) || chess.standInFor || chess.diyProto) return null;
-    return { potential: isPotential(c.potential) ? c.potential : 6, cultivate: isCultivate(c.cultivate) ? c.cultivate : null };
+    return { potential: isPotential(c.potential) ? c.potential : POTENTIAL_DEFAULT, cultivate: isCultivate(c.cultivate) ? c.cultivate : null };
   }
   return cultivationOf(chess, opts ? opts.ops : null);
 }
@@ -93,9 +93,9 @@ function cultivationFor(chess, opts) {
  */
 export function unitCultivation(unit) {
   if (!isObj(unit)) return null;
-  const pot = isPotential(unit.potential) ? unit.potential : 6;
+  const pot = isPotential(unit.potential) ? unit.potential : POTENTIAL_DEFAULT;
   const cult = isCultivate(unit.cultivate) ? unit.cultivate : null;
-  return cult == null && pot === 6 ? null : { potential: pot, cultivate: cult };
+  return cult == null && pot === POTENTIAL_DEFAULT ? null : { potential: pot, cultivate: cult };
 }
 
 /**

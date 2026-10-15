@@ -1,4 +1,5 @@
-// test/full-potential.test.js — the data records are built at FULL potential (潜能 6: the default — the owner's decisions of
+// test/full-potential.test.js — the data records are built at FULL potential (潜能 6: the data's own build — NOT the
+// runtime default since 2026-10-15 (that is 潜能 1 / 未精英化, the owner's decision); the owner's decisions of
 // 2026-10-07, GitHub #252 / PR #255, and 2026-10-08: a lower potential is the player's 干员调配 setting, test/potential.test.js;
 // tools/build-data.mjs FULL_RANK, docs/DATA.md §2 / §2.3): every chess (normal and elite), 自选
 // pick and 补位 stand-in adds its character_table `potentialRanks` attribute steps and takes its talent / module-talent
@@ -148,23 +149,24 @@ test('summons: talent candidates at the owner\'s potential, none of the owner\'s
 });
 
 test('the numbers reach the loadout record (局内数值 / detail card), the 自选 and 补位 compositions and the battle', () => {
-  // a non-default module on the elite: statsBase (full potential) + the module's attr
+  // a non-default module on the elite: statsBase (full potential) + the module's attr. This is the FULL-potential test,
+  // so every composition below states 潜能 6 (the data's own build; the runtime default is 潜能 1 since 2026-10-15).
   const e = chess.chess_char_1_06_b;
   const other = (e.modules || []).find((m) => !m.isDefault);
-  const none = loadoutRecord(e, resolveLoadout(e, { moduleId: 'none' }));
+  const none = loadoutRecord(e, resolveLoadout(e, { moduleId: 'none', potential: 6 }));
   assert.deepEqual([none.stats.atk, none.stats.cost, none.stats.respawnTime], [530, 15, 66]);
   if (other) {
-    const r = loadoutRecord(e, resolveLoadout(e, { moduleId: other.uniEquipId }));
+    const r = loadoutRecord(e, resolveLoadout(e, { moduleId: other.uniEquipId, potential: 6 }));
     assert.equal(r.stats.atk, 530 + (other.attr.atk || 0));
   }
   // 自选 凯尔希 (an owned 6★): her form at full potential
-  const diy = diyRecordOf(chess.chess_char_6_diy1_a, { charId: 'char_003_kalts', skillIndex: 0 }, { chess, backups });
+  const diy = diyRecordOf(chess.chess_char_6_diy1_a, { charId: 'char_003_kalts', skillIndex: 0 }, { chess, backups }, { potential: 6 });
   assert.deepEqual([diy.stats.atk, diy.stats.cost, diy.stats.respawnTime], [417, 18, 66]);
   // a 补位 stand-in is unchanged by the rule (预备干员 / 原型干员 have no potential ranks)
   const st = standInRecord(chess.chess_char_3_21_a, backups);
   assert.equal(st.stats.cost, backups.units[st.charId].forms[`${chess.chess_char_3_21_a.status.phase}/${chess.chess_char_3_21_a.status.level}/${chess.chess_char_3_21_a.status.skillLevel}/0`].stats.cost);
-  // the battle fields 刺玫 with ATK 435 / cost 15 / 66 s
-  const h = makeBattle({ units: [{ chessId: 'chess_char_1_06_a', row: 10, col: 5 }], timeLimit: 5 });
+  // the battle fields 刺玫 with ATK 435 / cost 15 / 66 s at 潜能 6
+  const h = makeBattle({ units: [{ chessId: 'chess_char_1_06_a', row: 10, col: 5, potential: 6 }], timeLimit: 5 });
   const u = h.unit('chess_char_1_06_a');
   assert.deepEqual([u.base.atk, u.base.cost, u.base.respawnTime], [435, 15, 66]);
 });

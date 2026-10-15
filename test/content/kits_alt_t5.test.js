@@ -29,7 +29,8 @@ const run = (o) => makeBattle({ seed: 7, autoFinish: false, timeLimit: 400, hook
 /** No more casts (a silence buff): lets a test watch the end of an effect without a recast. */
 const mute = (h, u) => h.b.addBuff(u, { key: 'test:mute', flags: { silence: true } });
 /** Board entry of chess `id` carrying skill `skillId` (+ extra fields: module, tile). */
-const entry = (id, skillId, o = {}) => ({ chessId: id, skillIndex: rec(id, skillId).index, ...o });
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
+const entry = (id, skillId, o = {}) => ({ chessId: id, potential: 6, skillIndex: rec(id, skillId).index, ...o });
 /** The unit of chess `id`, asserted to run the selected skill with its hand-authored spec. */
 function sel(h, id, skillId) {
   const u = h.unit(id);
@@ -81,7 +82,7 @@ test('tier 5: every chess × every legal skill × every module fights with its a
         const h = makeBattle({
           seed: 5, hooks: [],
           defs: { enemies: { enemy_dummy: enemyRec({ key: 'enemy_dummy', hp: 30000, atk: 400, bat: 2, speed: 0.6 }) }, chess: { t_a: ally('t_a', { stats: { maxHp: 5000, atk: 100, blockCnt: 1 } }) } },
-          units: [{ chessId: id, row: 10, col: 5, skillIndex, ...(moduleId ? { moduleId } : {}) }, { chessId: 't_a', row: 11, col: 5 }, { chessId: 'chess_char_5_11_a', row: 9, col: 4 }],
+          units: [{ chessId: id, row: 10, col: 5, skillIndex, ...(moduleId ? { moduleId } : {}), potential: 6 }, { chessId: 't_a', row: 11, col: 5, potential: 6 }, { chessId: 'chess_char_5_11_a', row: 9, col: 4, potential: 6 }],
           enemies: [{ key: 'enemy_dummy', count: 6, interval: 2 }, { key: 'enemy_dummy', route: 1, count: 6, interval: 2 }],
           timeLimit: 90,
         });
@@ -165,7 +166,7 @@ test('圣约送葬人 module REA-Y (已知悉): ASPD +12 with ≥ 2 enemies in r
   for (const [moduleId, want] of [['uniequip_003_excu2', 12], ['uniequip_002_excu2', 0]]) {
     const h = run({
       defs: { enemies: { enemy_dummy: dummy('enemy_dummy') } },
-      units: [{ chessId: 'chess_char_5_01_b', row: 10, col: 4, moduleId }],
+      units: [{ chessId: 'chess_char_5_01_b', row: 10, col: 4, moduleId, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 5] }],
     });
     const u = h.unit('chess_char_5_01_b');
@@ -182,7 +183,7 @@ test('圣约送葬人 heals 50 per enemy hit with REA-Y or no module, 60 with RE
   for (const [moduleId, want] of [['uniequip_003_excu2', 50], ['uniequip_002_excu2', 60], ['none', 50]]) {
     const h = run({
       defs: { enemies: { enemy_dummy: dummy('enemy_dummy') } },
-      units: [{ chessId: 'chess_char_5_01_b', row: 10, col: 4, moduleId }],
+      units: [{ chessId: 'chess_char_5_01_b', row: 10, col: 4, moduleId, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 5] }],
     });
     const u = h.unit('chess_char_5_01_b');
@@ -219,7 +220,7 @@ test('缇缇 S2 封护: no attacks; she and the lowest-HP op in range sleep (inv
   for (const id of pair('02')) {
     const h = run({
       defs: { enemies: { enemy_dummy: dummy('enemy_dummy') }, chess: { t_hurt: ally('t_hurt'), t_fine: ally('t_fine') } },
-      units: [entry(id, 'skchr_titi_2', { row: 10, col: 4 }), { chessId: 't_hurt', row: 10, col: 6 }, { chessId: 't_fine', row: 11, col: 5 }],
+      units: [entry(id, 'skchr_titi_2', { row: 10, col: 4 }), { chessId: 't_hurt', row: 10, col: 6, potential: 6 }, { chessId: 't_fine', row: 11, col: 5, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 7] }, { key: 'enemy_dummy', pos: [12, 8] }],
     });
     const u = sel(h, id, 'skchr_titi_2');
@@ -268,7 +269,7 @@ test('烛煌 S1 炙手之援: the highest-max-HP op in range carries a fire aura
   for (const id of pair('03')) {
     const h = run({
       defs: { enemies: { enemy_dummy: dummy('enemy_dummy') }, chess: { t_big: ally('t_big', { stats: { maxHp: 30000 } }), t_small: ally('t_small') } },
-      units: [entry(id, 'skchr_blaze2_1', { row: 10, col: 3 }), { chessId: 't_big', row: 10, col: 5 }, { chessId: 't_small', row: 11, col: 4 }],
+      units: [entry(id, 'skchr_blaze2_1', { row: 10, col: 3 }), { chessId: 't_big', row: 10, col: 5, potential: 6 }, { chessId: 't_small', row: 11, col: 4, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 6] }],
     });
     const u = sel(h, id, 'skchr_blaze2_1');
@@ -331,7 +332,7 @@ test('烛煌 / 妮芙 module PRI-Y: SP +0.2/s while an enemy in range is in an e
   for (const [id, moduleId] of [['chess_char_5_03_b', 'uniequip_003_blaze2'], ['chess_char_5_22_b', 'uniequip_003_nymph']]) {
     const h = run({
       defs: { enemies: { enemy_dummy: dummy('enemy_dummy') } },
-      units: [{ chessId: id, row: 10, col: 4, moduleId }], enemies: [{ key: 'enemy_dummy', pos: [10, 6] }],
+      units: [{ chessId: id, row: 10, col: 4, moduleId, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [10, 6] }],
     });
     const u = h.unit(id);
     const e = h.b.enemies[0];
@@ -420,7 +421,7 @@ test('隐德来希 S2 绯红壁合: no attacks; blood sickles on her and on the 
   for (const id of pair('06')) {
     const h = run({
       defs: { enemies: { enemy_dummy: dummy('enemy_dummy') }, chess: { t_g: ally('t_g'), t_idle: ally('t_idle') } },
-      units: [entry(id, 'skchr_etlchi_2', { row: 10, col: 4 }), { chessId: 't_g', row: 12, col: 7 }, { chessId: 't_idle', row: 10, col: 3 }],
+      units: [entry(id, 'skchr_etlchi_2', { row: 10, col: 4 }), { chessId: 't_g', row: 12, col: 7, potential: 6 }, { chessId: 't_idle', row: 10, col: 3, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 5] }, { key: 'enemy_dummy', pos: [12, 8] }, { key: 'enemy_dummy', pos: [9, 9] }],
     });
     const u = sel(h, id, 'skchr_etlchi_2');
@@ -489,7 +490,7 @@ test('隐德来希 S2 绯红壁合: the 收割者 heal is capped by the block co
 test('隐德来希 module REA-Y (玫瑰色故事集): ASPD +12 with ≥ 2 enemies in range', () => {
   const h = run({
     defs: { enemies: { enemy_dummy: dummy('enemy_dummy') } },
-    units: [{ chessId: 'chess_char_5_06_b', row: 10, col: 4, moduleId: 'uniequip_003_etlchi' }],
+    units: [{ chessId: 'chess_char_5_06_b', row: 10, col: 4, moduleId: 'uniequip_003_etlchi', potential: 6 }],
     enemies: [{ key: 'enemy_dummy', pos: [10, 5] }],
   });
   const u = h.unit('chess_char_5_06_b');
@@ -553,7 +554,7 @@ test('史尔特尔 S2 熔核巨影: ATK +, range +1, 2 targets; a lone target ta
 test('史尔特尔 module AFT-Y (旅游必需品): blocked enemies are 法术脆弱 +10 %; no ASPD +8 unblocking', () => {
   const h = run({
     defs: { enemies: { enemy_walk: enemyRec({ key: 'enemy_walk', hp: 1e7, speed: 1 }) } },
-    units: [{ chessId: 'chess_char_5_07_b', row: 9, col: 5, moduleId: 'uniequip_003_surtr' }], enemies: [{ key: 'enemy_walk', route: 0 }],
+    units: [{ chessId: 'chess_char_5_07_b', row: 9, col: 5, moduleId: 'uniequip_003_surtr', potential: 6 }], enemies: [{ key: 'enemy_walk', route: 0 }],
   });
   const u = h.unit('chess_char_5_07_b');
   h.run(0.5);
@@ -627,7 +628,7 @@ test('号角 S2 暴风号令: cast with an enemy in range (DEFAULT, DESIGN §21.
 test('号角 module FOR-Y (旧日新装): ASPD +10 while not blocking; no ×1.1 vs blocked', () => {
   const h = run({
     defs: { enemies: { enemy_walk: enemyRec({ key: 'enemy_walk', hp: 1e7, speed: 1 }) } },
-    units: [{ chessId: 'chess_char_5_08_b', row: 9, col: 5, moduleId: 'uniequip_003_horn' }], enemies: [{ key: 'enemy_walk', route: 0, time: 3 }],
+    units: [{ chessId: 'chess_char_5_08_b', row: 9, col: 5, moduleId: 'uniequip_003_horn', potential: 6 }], enemies: [{ key: 'enemy_walk', route: 0, time: 3 }],
   });
   const u = h.unit('chess_char_5_08_b');
   h.run(0.5);
@@ -673,7 +674,7 @@ test('铃兰 S1 全力以赴: ATK +, ASPD + for the duration; S2 儿时的舞乐
 });
 
 test('铃兰 module DEC-Y (孩子们): longer 停顿 (1.2 s) and no SP rider', () => {
-  const h = run({ defs: { enemies: { enemy_dummy: dummy('enemy_dummy') } }, units: [{ chessId: 'chess_char_5_10_b', row: 10, col: 4, moduleId: 'uniequip_003_lisa' }], enemies: [{ key: 'enemy_dummy', pos: [10, 5] }] });
+  const h = run({ defs: { enemies: { enemy_dummy: dummy('enemy_dummy') } }, units: [{ chessId: 'chess_char_5_10_b', row: 10, col: 4, moduleId: 'uniequip_003_lisa', potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [10, 5] }] });
   const u = h.unit('chess_char_5_10_b');
   assert.ok(h.runUntil(() => statuses(h, 'sluggish', (c) => c.source === u).length > 0, 5));
   approx(statuses(h, 'sluggish', (c) => c.source === u)[0].duration, u.def.traitBb.sluggish);
@@ -689,7 +690,7 @@ test('塞雷娅 S1 急救 (自动触发, at her attack: an ally of the area at �
     // PRTS 备注 "此技能仅在周围有符合血量条件的友方单位时可触发，触发时会替换当次攻击"; "血量小于等于一半" (PRTS 修正)
     const h = run({
       defs: { enemies: { enemy_dummy: dummy('enemy_dummy') }, chess: { t_low: ally('t_low'), t_mid: ally('t_mid') } },
-      units: [entry(id, 'skchr_demkni_1', { row: 10, col: 4 }), { chessId: 't_low', row: 11, col: 3 }, { chessId: 't_mid', row: 9, col: 4 }],
+      units: [entry(id, 'skchr_demkni_1', { row: 10, col: 4 }), { chessId: 't_low', row: 11, col: 3, potential: 6 }, { chessId: 't_mid', row: 9, col: 4, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 4] }],
     });
     const u = sel(h, id, 'skchr_demkni_1');
@@ -716,7 +717,7 @@ test('塞雷娅 S3 钙质化: allies in the area heal attack@heal_scale × ATK/s
   for (const id of pair('11')) {
     const h = run({
       defs: { enemies: { enemy_dummy: dummy('enemy_dummy', { atk: 100, bat: 1 }) }, chess: { t_a: ally('t_a') } }, // 重装: TAKE_DAMAGE
-      units: [entry(id, 'skchr_demkni_3', { row: 10, col: 4 }), { chessId: 't_a', row: 10, col: 6 }],
+      units: [entry(id, 'skchr_demkni_3', { row: 10, col: 4 }), { chessId: 't_a', row: 10, col: 6, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 4] }, { key: 'enemy_dummy', pos: [9, 6] }, { key: 'enemy_dummy', pos: [12, 9] }],
     });
     const u = sel(h, id, 'skchr_demkni_3');
@@ -742,12 +743,12 @@ test('塞雷娅 S3 钙质化: allies in the area heal attack@heal_scale × ATK/s
 });
 
 test('塞雷娅 module GUA-Y (科技新星): damage taken −15 %; the S2 auto-cast only runs for S2', () => {
-  const h = run({ units: [{ chessId: 'chess_char_5_11_b', row: 10, col: 4, moduleId: 'uniequip_003_demkni' }] });
+  const h = run({ units: [{ chessId: 'chess_char_5_11_b', row: 10, col: 4, moduleId: 'uniequip_003_demkni', potential: 6 }] });
   const u = h.unit('chess_char_5_11_b');
   h.step();
   approx(h.b.dealDamage(null, u, { amount: 1000, type: 'true' }), 1000 * (1 - u.def.traitBb.damage_resistance));
   done(h);
-  const g = run({ defs: { chess: { t_a: ally('t_a') } }, units: [entry('chess_char_5_11_a', 'skchr_demkni_3', { row: 10, col: 4 }), { chessId: 't_a', row: 10, col: 5 }] });
+  const g = run({ defs: { chess: { t_a: ally('t_a') } }, units: [entry('chess_char_5_11_a', 'skchr_demkni_3', { row: 10, col: 4 }), { chessId: 't_a', row: 10, col: 5, potential: 6 }] });
   const v = g.unit('chess_char_5_11_a');
   g.step();
   g.unit('t_a').hp = 1000;
@@ -828,7 +829,7 @@ test('夕 S3 写意胜形: unblocked enemies first (the blocked one is attacked 
     defs: { enemies: { enemy_walk: enemyRec({ key: 'enemy_walk', hp: 1e7, speed: 1 }), enemy_dummy: dummy('enemy_dummy') }, chess: { t_block: ally('t_block', { stats: { blockCnt: 1 } }) } },
     // (the blocker at col 4: the walker stops 0.71 tile in front of it — block radius, user playtest #5 — on col 5,
     // inside 夕's 3-column range)
-    units: [entry('chess_char_5_12_a', 'skchr_dusk_3', { row: 10, col: 3 }), { chessId: 't_block', row: 9, col: 4 }],
+    units: [entry('chess_char_5_12_a', 'skchr_dusk_3', { row: 10, col: 3 }), { chessId: 't_block', row: 9, col: 4, potential: 6 }],
     enemies: [{ key: 'enemy_walk', route: 0 }, { key: 'enemy_dummy', pos: [10, 6] }],
   });
   const u = h.unit('chess_char_5_12_a');
@@ -846,7 +847,7 @@ test('夕 S3 写意胜形: unblocked enemies first (the blocked one is attacked 
 
 test('夕 modules: SPC-Y (终夜无寐) −8 cost and no range +1; no module: no range +1 either', () => {
   for (const moduleId of ['uniequip_003_dusk', 'none']) {
-    const h = run({ units: [{ chessId: 'chess_char_5_12_b', row: 10, col: 4, moduleId }] });
+    const h = run({ units: [{ chessId: 'chess_char_5_12_b', row: 10, col: 4, moduleId, potential: 6 }] });
     const u = h.unit('chess_char_5_12_b');
     h.step();
     assert.equal(u.s.rangeExtend, 0, moduleId);
@@ -862,7 +863,7 @@ test('归溟幽灵鲨 S1 生存的技巧: swaps HP ratios with the lowest-ratio 
   for (const id of pair('13')) {
     const h = run({
       defs: { chess: { t_low: ally('t_low'), t_mid: ally('t_mid'), t_far: ally('t_far') }, enemies: { enemy_dummy: dummy('enemy_dummy') } },
-      units: [entry(id, 'skchr_ghost2_1', { row: 10, col: 4 }), { chessId: 't_low', row: 11, col: 4 }, { chessId: 't_mid', row: 9, col: 3 }, { chessId: 't_far', row: 12, col: 8 }],
+      units: [entry(id, 'skchr_ghost2_1', { row: 10, col: 4 }), { chessId: 't_low', row: 11, col: 4, potential: 6 }, { chessId: 't_mid', row: 9, col: 3, potential: 6 }, { chessId: 't_far', row: 12, col: 8, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 5] }],
     });
     const u = sel(h, id, 'skchr_ghost2_1');
@@ -916,8 +917,8 @@ test('归溟幽灵鲨 S1/S3: the S2 "HP never below 1" guard does not run under 
   h.b.dealDamage(null, u, { amount: 1e9, type: 'true' });
   assert.ok(u.trait.doll, 'lethal damage during S3 → substitute (trait), not a 1-HP guard');
   done(h);
-  const hx = run({ units: [{ chessId: 'chess_char_5_13_b', row: 10, col: 4 }] });
-  const hy = run({ units: [{ chessId: 'chess_char_5_13_b', row: 10, col: 4, moduleId: 'uniequip_003_ghost2' }] });
+  const hx = run({ units: [{ chessId: 'chess_char_5_13_b', row: 10, col: 4, potential: 6 }] });
+  const hy = run({ units: [{ chessId: 'chess_char_5_13_b', row: 10, col: 4, moduleId: 'uniequip_003_ghost2', potential: 6 }] });
   const x = hx.unit('chess_char_5_13_b'), y = hy.unit('chess_char_5_13_b');
   hx.step(); hy.step();
   for (const [g, v] of [[hx, x], [hy, y]]) { g.b.dealDamage(null, v, { amount: 1e9, type: 'true' }); g.run(0.5); assert.ok(v.trait.doll); }
@@ -935,7 +936,7 @@ test('凛御银灰 S1 周旋的谋略: +10 DP; the waiting op nearest to the eye
   for (const id of pair('14')) {
     const h = run({
       defs: { chess: { t_guard: ally('t_guard', { profession: 'WARRIOR', stats: { cost: 20, respawnTime: 999 } }), t_cheap: ally('t_cheap', { stats: { cost: 8, respawnTime: 999 } }) }, enemies: { enemy_dummy: dummy('enemy_dummy') } },
-      units: [entry(id, 'skchr_svash2_1', { row: 10, col: 4 }), { chessId: 't_guard', row: 12, col: 3 }, { chessId: 't_cheap', row: 12, col: 5 }],
+      units: [entry(id, 'skchr_svash2_1', { row: 10, col: 4 }), { chessId: 't_guard', row: 12, col: 3, potential: 6 }, { chessId: 't_cheap', row: 12, col: 5, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 5] }], flags: { dpPerSec: 0 },
     });
     const u = sel(h, id, 'skchr_svash2_1');
@@ -975,7 +976,7 @@ test('凛御银灰 S3 变革已至: skill range, line attacks bird_atk_scale × 
   for (const id of pair('14')) {
     const h = run({
       defs: { chess: { t_hi: ally('t_hi', { profession: 'CASTER', stats: { cost: 30, respawnTime: 999 } }), t_lo: ally('t_lo', { stats: { cost: 6, respawnTime: 999 } }) }, enemies: { enemy_dummy: dummy('enemy_dummy') } },
-      units: [entry(id, 'skchr_svash2_3', { row: 10, col: 3 }), { chessId: 't_hi', row: 12, col: 3 }, { chessId: 't_lo', row: 12, col: 5 }],
+      units: [entry(id, 'skchr_svash2_3', { row: 10, col: 3 }), { chessId: 't_hi', row: 12, col: 3, potential: 6 }, { chessId: 't_lo', row: 12, col: 5, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 4] }, { key: 'enemy_dummy', pos: [10, 6] }, { key: 'enemy_dummy', pos: [9, 5] }], flags: { dpPerSec: 0 },
     });
     const u = sel(h, id, 'skchr_svash2_3');
@@ -1017,7 +1018,7 @@ test('引星棘刺 S1 度算浪波: an alchemy unit on the lowest-HP ally: DEF +
   for (const id of pair('15')) {
     const h = run({
       defs: { chess: { t_low: ally('t_low', { stats: { def: 100 } }), t_near: ally('t_near', { stats: { def: 100 } }), t_far: ally('t_far', { stats: { def: 100 } }) }, enemies: { enemy_dummy: dummy('enemy_dummy') } },
-      units: [entry(id, 'skchr_thorn2_1', { row: 10, col: 3 }), { chessId: 't_low', row: 10, col: 5 }, { chessId: 't_near', row: 11, col: 6 }, { chessId: 't_far', row: 12, col: 9 }],
+      units: [entry(id, 'skchr_thorn2_1', { row: 10, col: 3 }), { chessId: 't_low', row: 10, col: 5, potential: 6 }, { chessId: 't_near', row: 11, col: 6, potential: 6 }, { chessId: 't_far', row: 12, col: 9, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 4] }],
     });
     const u = sel(h, id, 'skchr_thorn2_1');
@@ -1050,7 +1051,7 @@ test('引星棘刺 S1 度算浪波: two alchemy units on one ally add their DEF 
   const [na, el] = pair('15');
   const h = run({
     defs: { chess: { t_low: ally('t_low', { stats: { def: 100 } }) } },
-    units: [entry(na, 'skchr_thorn2_1', { row: 10, col: 3 }), entry(el, 'skchr_thorn2_1', { row: 11, col: 3 }), { chessId: 't_low', row: 10, col: 5 }],
+    units: [entry(na, 'skchr_thorn2_1', { row: 10, col: 3 }), entry(el, 'skchr_thorn2_1', { row: 11, col: 3 }), { chessId: 't_low', row: 10, col: 5, potential: 6 }],
     enemies: [],
   });
   const a = sel(h, na, 'skchr_thorn2_1'), b = sel(h, el, 'skchr_thorn2_1');
@@ -1079,7 +1080,7 @@ test('引星棘刺 S1 度算浪波: at an HP-ratio tie the unit goes to the late
     const h = run({
       defs: { chess: { t_first: ally('t_first'), t_last: ally('t_last') } },
       // t_first stands nearer to her, t_last deploys after it (until 0.2.2 a tie went to more blocking, then the nearer)
-      units: [entry(id, 'skchr_thorn2_1', { row: 10, col: 3 }), { chessId: 't_first', row: 11, col: 4 }, { chessId: 't_last', row: 9, col: 5 }],
+      units: [entry(id, 'skchr_thorn2_1', { row: 10, col: 3 }), { chessId: 't_first', row: 11, col: 4, potential: 6 }, { chessId: 't_last', row: 9, col: 5, potential: 6 }],
       enemies: [],
     });
     const u = sel(h, id, 'skchr_thorn2_1');
@@ -1105,7 +1106,7 @@ test('引星棘刺 S1 度算浪波 (AUTO): fires as soon as its SP is full, no e
   for (const id of pair('15')) {
     const h = run({
       defs: { chess: { t_low: ally('t_low') } },
-      units: [entry(id, 'skchr_thorn2_1', { row: 10, col: 3 }), { chessId: 't_low', row: 10, col: 5 }],
+      units: [entry(id, 'skchr_thorn2_1', { row: 10, col: 3 }), { chessId: 't_low', row: 10, col: 5, potential: 6 }],
       enemies: [],
     });
     const u = sel(h, id, 'skchr_thorn2_1');
@@ -1125,7 +1126,7 @@ test('引星棘刺 S3 “我的海疆”: passive skill range; alchemy units on 
         chess: { t_b0: ally('t_b0', { stats: { blockCnt: 0 } }), t_b1: ally('t_b1', { stats: { blockCnt: 1 } }), t_b2: ally('t_b2', { stats: { blockCnt: 2 } }), t_b3: ally('t_b3', { stats: { blockCnt: 3 } }) },
         enemies: { enemy_dummy: dummy('enemy_dummy', { atk: 100, def: 100 }), enemy_res: dummy('enemy_res', { res: 50 }) },
       },
-      units: [entry(id, 'skchr_thorn2_3', { row: 10, col: 3 }), { chessId: 't_b0', row: 12, col: 8 }, { chessId: 't_b1', row: 12, col: 9 }, { chessId: 't_b2', row: 9, col: 9 }, { chessId: 't_b3', row: 9, col: 5 }],
+      units: [entry(id, 'skchr_thorn2_3', { row: 10, col: 3 }), { chessId: 't_b0', row: 12, col: 8, potential: 6 }, { chessId: 't_b1', row: 12, col: 9, potential: 6 }, { chessId: 't_b2', row: 9, col: 9, potential: 6 }, { chessId: 't_b3', row: 9, col: 5, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 7] }, { key: 'enemy_dummy', pos: [11, 9] }, { key: 'enemy_dummy', pos: [9, 7] }, { key: 'enemy_res', pos: [12, 7] }],
     });
     const u = sel(h, id, 'skchr_thorn2_3');
@@ -1214,7 +1215,7 @@ test('山 S3 震地碎岩击: BAT +0.7 s, ATK +, double hits on up to 3 enemies,
 });
 
 test('山 module FGT-X (夜深人静): an own 15 % physical dodge on top of 强壮肉体; no ASPD rider', () => {
-  const h = run({ units: [{ chessId: 'chess_char_5_17_b', row: 10, col: 4, moduleId: 'uniequip_003_f12yin' }] });
+  const h = run({ units: [{ chessId: 'chess_char_5_17_b', row: 10, col: 4, moduleId: 'uniequip_003_f12yin', potential: 6 }] });
   const u = h.unit('chess_char_5_17_b');
   h.step();
   approx(u.s.dodgePhys, 1 - (1 - tal(u, 1).prob) * (1 - u.def.traitBb.prob));
@@ -1308,7 +1309,7 @@ test('安洁莉娜 S2 秘杖·微粒模式 (SEARCH): no attack off-skill; interv
 });
 
 test('安洁莉娜 module DEC-X (实验用反重力模块): SP +0.2/s with an enemy in range', () => {
-  const h = run({ defs: { enemies: { enemy_dummy: dummy('enemy_dummy') } }, units: [{ chessId: 'chess_char_5_20_b', row: 10, col: 4, moduleId: 'uniequip_003_aglina' }] });
+  const h = run({ defs: { enemies: { enemy_dummy: dummy('enemy_dummy') } }, units: [{ chessId: 'chess_char_5_20_b', row: 10, col: 4, moduleId: 'uniequip_003_aglina', potential: 6 }] });
   const u = h.unit('chess_char_5_20_b');
   h.run(0.5);
   assert.equal(u.s.spRecovery, u.base.spRecovery);
@@ -1395,7 +1396,7 @@ test('录武官 S1 触类旁通 (charges): the next heal restores heal_scale × 
   for (const id of pair('23')) {
     const h = run({
       defs: { chess: { t_a: ally('t_a'), t_b: ally('t_b') } },
-      units: [entry(id, 'skchr_reckpr_1', { row: 10, col: 3 }), { chessId: 't_a', row: 10, col: 4 }, { chessId: 't_b', row: 10, col: 5 }],
+      units: [entry(id, 'skchr_reckpr_1', { row: 10, col: 3 }), { chessId: 't_a', row: 10, col: 4, potential: 6 }, { chessId: 't_b', row: 10, col: 5, potential: 6 }],
     });
     const u = sel(h, id, 'skchr_reckpr_1');
     const bb = bbOf(u);
@@ -1419,10 +1420,10 @@ test('module "none": 缇缇 heals 50 % (not 60 %), 乌尔比安 no healing ×1.2
   const h = run({
     defs: { enemies: { enemy_dummy: dummy('enemy_dummy') }, chess: { t_a: ally('t_a') } },
     units: [
-      { chessId: 'chess_char_5_02_b', row: 9, col: 3, moduleId: 'none' }, { chessId: 'chess_char_5_05_b', row: 9, col: 4, moduleId: 'none' },
-      { chessId: 'chess_char_5_15_b', row: 10, col: 3, moduleId: 'none' }, { chessId: 'chess_char_5_19_b', row: 10, col: 4, moduleId: 'none' },
-      { chessId: 'chess_char_5_21_b', row: 11, col: 3, moduleId: 'none' }, { chessId: 'chess_char_5_23_b', row: 11, col: 4, moduleId: 'none' },
-      { chessId: 't_a', row: 12, col: 9 },
+      { chessId: 'chess_char_5_02_b', row: 9, col: 3, moduleId: 'none', potential: 6 }, { chessId: 'chess_char_5_05_b', row: 9, col: 4, moduleId: 'none', potential: 6 },
+      { chessId: 'chess_char_5_15_b', row: 10, col: 3, moduleId: 'none', potential: 6 }, { chessId: 'chess_char_5_19_b', row: 10, col: 4, moduleId: 'none', potential: 6 },
+      { chessId: 'chess_char_5_21_b', row: 11, col: 3, moduleId: 'none', potential: 6 }, { chessId: 'chess_char_5_23_b', row: 11, col: 4, moduleId: 'none', potential: 6 },
+      { chessId: 't_a', row: 12, col: 9, potential: 6 },
     ],
     enemies: [{ key: 'enemy_dummy', pos: [10, 5] }],
   });
@@ -1445,8 +1446,8 @@ test('module "none": 缇缇 heals 50 % (not 60 %), 乌尔比安 no healing ×1.2
 test('default-skill machinery stays with the default skill: 圣约送葬人 S1 never dodges, 缇缇 S1 has no sleep guard, 玛恩纳 S1 adds no Kazimierz mark', () => {
   const h = run({
     defs: { enemies: { enemy_hitter: dummy('enemy_hitter', { atk: 300, bat: 0.5 }) }, chess: { t_a: ally('t_a'), t_kaz: ally('t_kaz', { bonds: ['kazimierzShip'], stats: { atk: 500 } }) } },
-    units: [entry('chess_char_5_01_a', 'skchr_excu2_1', { row: 9, col: 5 }), entry('chess_char_5_02_a', 'skchr_titi_1', { row: 10, col: 3 }), { chessId: 't_a', row: 10, col: 4 },
-      entry('chess_char_5_19_a', 'skchr_mlynar_1', { row: 12, col: 5 }), { chessId: 't_kaz', row: 12, col: 4 }],
+    units: [entry('chess_char_5_01_a', 'skchr_excu2_1', { row: 9, col: 5 }), entry('chess_char_5_02_a', 'skchr_titi_1', { row: 10, col: 3 }), { chessId: 't_a', row: 10, col: 4, potential: 6 },
+      entry('chess_char_5_19_a', 'skchr_mlynar_1', { row: 12, col: 5 }), { chessId: 't_kaz', row: 12, col: 4, potential: 6 }],
     enemies: [{ key: 'enemy_hitter', pos: [9, 5] }, { key: 'enemy_hitter', pos: [12, 5] }],
   });
   const ex = h.unit('chess_char_5_01_a'), ti = h.unit('chess_char_5_02_a'), ml = h.unit('chess_char_5_19_a');
@@ -1488,7 +1489,7 @@ test('号角 S1 / 塞雷娅 S1 (自动触发, elite: 2 charges): hits never arm 
   {
     const id = 'chess_char_5_11_b';
     const h = run({ defs: { enemies: { enemy_dummy: dummy('enemy_dummy') }, chess: { t_low: ally('t_low'), t_low2: ally('t_low2') } },
-      units: [entry(id, 'skchr_demkni_1', { row: 10, col: 4 }), { chessId: 't_low', row: 11, col: 4 }, { chessId: 't_low2', row: 9, col: 4 }],
+      units: [entry(id, 'skchr_demkni_1', { row: 10, col: 4 }), { chessId: 't_low', row: 11, col: 4, potential: 6 }, { chessId: 't_low2', row: 9, col: 4, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 4] }] });
     const u = sel(h, id, 'skchr_demkni_1');
     const e = h.b.enemies[0];
@@ -1522,7 +1523,7 @@ test('圣约送葬人 module REA-Y: the reaper heal stays the base 50 per enemy 
   for (const [moduleId, want] of [['uniequip_003_excu2', 50], ['uniequip_002_excu2', 60], ['none', 50]]) {
     const h = run({
       defs: { enemies: { enemy_dummy: dummy('enemy_dummy') } },
-      units: [{ chessId: 'chess_char_5_01_b', row: 10, col: 4, moduleId }], enemies: [{ key: 'enemy_dummy', pos: [10, 5] }],
+      units: [{ chessId: 'chess_char_5_01_b', row: 10, col: 4, moduleId, potential: 6 }], enemies: [{ key: 'enemy_dummy', pos: [10, 5] }],
     });
     const u = h.unit('chess_char_5_01_b');
     assert.equal(u.profile.selfHeal, want, moduleId);

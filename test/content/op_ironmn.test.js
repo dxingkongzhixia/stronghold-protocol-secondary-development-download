@@ -48,9 +48,10 @@ const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${
  * 白铁 as uid 1 at (row, col) facing `dir`; `pieces` = his device pieces [[r, c, dir?]] (uids 10…, the picked skill's
  * device); `others` = more units.
  */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 5, dir = 'RIGHT', pieces = [], others = [], seed = 5, dp = 99 } = {}) {
   const units = [
-    { uid: 1, diy: { slot: SLOT[tier], charId: IRON, skillIndex: skill, uniEquipId: mod }, elite, row, col, dir },
+    { uid: 1, diy: { slot: SLOT[tier], charId: IRON, skillIndex: skill, uniEquipId: mod }, elite, row, col, dir, potential: 6 },
     ...pieces.map(([r, c, d], i) => ({ uid: 10 + i, kind: 'token', tokenId: TOK[skill], ownerUid: 1, row: r, col: c, dir: d ?? 'RIGHT' })),
     ...others,
   ];
@@ -424,8 +425,8 @@ test('铁钳号·原型机: enemies never select it (a ranged enemy beside it sh
   for (const [tier, elite, mod] of [[5, false, null], [6, true, X], [6, true, Y]]) {
     const f = label([tier, elite, mod]);
     const units = [
-      { uid: 1, diy: { slot: SLOT[tier], charId: IRON, skillIndex: 2, uniEquipId: mod }, elite, row: 10, col: 5 },
-      { uid: 10, kind: 'token', tokenId: CRAB, ownerUid: 1, row: 11, col: 6 },
+      { uid: 1, diy: { slot: SLOT[tier], charId: IRON, skillIndex: 2, uniEquipId: mod }, elite, row: 10, col: 5, potential: 6 },
+      { uid: 10, kind: 'token', tokenId: CRAB, ownerUid: 1, row: 11, col: 6, potential: 6 },
     ];
     const h = makeBattle({ defs: { enemies: { ...ENEMIES, enemy_shooter: shooter } }, timeLimit: 900, autoFinish: false, seed: 7, flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'death'], captureNoisy: true, units });
     h.step();

@@ -32,11 +32,12 @@ const ENEMIES = { enemy_dummy: dummy('enemy_dummy'), enemy_fly: dummy('enemy_fly
 const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => [null, BOM].map((m) => [t, true, m]))];
 
 /** 维什戴尔 as uid 1 at (10, 4) facing RIGHT (3-9: rows 8–12; (10, 4..8), (9 / 11, 4..7), (8 / 12, 4..6)). */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 4, others = [], seed = 5 } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 1200, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied', 'death', 'deploy', 'heal'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: WD, skillIndex: skill, uniEquipId: mod }, elite, row, col }, ...others],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: WD, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 }, ...others],
   });
   h.step();
   return { h, u: h.unit(1) };
@@ -187,7 +188,7 @@ test('T2 死魂灵的余息: a 魂灵之影 (the form\'s stats, 禁疗, no attac
 test('user #557 (PR #558 by IceCodeNew): Given a bottom-row boss lineup, When the talent and S3 summon, Then shadows skip the bench and use only free combat tiles', () => {
   for (const kind of ['boss', 'hidden']) for (const side of ['L', 'R']) for (const free of [false, true]) {
     // Board (9, 7) becomes field (2, 7)/(2, 13). Row 1 is the temporary bench, inside BOSS_RECT.
-    const units = [{ uid: 1, chessId: SLOT[5], diy: { charId: WD, skillIndex: 2 }, row: 9, col: 7, dir: 'DOWN' }];
+    const units = [{ uid: 1, chessId: SLOT[5], diy: { charId: WD, skillIndex: 2 }, row: 9, col: 7, dir: 'DOWN', potential: 6 }];
     for (let col = 5; col <= 9; col++) {
       if (col === 7 || free && col === 8) continue;
       units.push({ uid: col, chessId: 'chess_char_1_01_a', row: 9, col });
@@ -207,10 +208,10 @@ test('#557: a shadow may stand on the teammate\'s half of a pair field (Battle.o
   // board (10, 8) facing RIGHT = field (3, 8) on the left half / (3, 12) mirrored; her own free tiles of range filled,
   // the bench tile (1, 8 / 12) and the other half's (2, 11 / 9) and (3, 12 / 8) stay in range
   for (const kind of ['boss', 'hidden']) for (const side of ['L', 'R']) for (const pair of [false, true]) {
-    const units = [{ uid: 1, chessId: SLOT[6], diy: { charId: WD, skillIndex: 0 }, row: 10, col: 8, dir: 'RIGHT' },
+    const units = [{ uid: 1, chessId: SLOT[6], diy: { charId: WD, skillIndex: 0 }, row: 10, col: 8, dir: 'RIGHT', potential: 6 },
       ...[[9, 8], [11, 8], [12, 8], [9, 9]].map(([row, col], i) => ({ uid: 2 + i, chessId: 'chess_char_1_01_a', row, col }))];
     const players = [{ playerId: 'p1', side, units }];
-    if (pair) players.push({ playerId: 'p2', side: side === 'L' ? 'R' : 'L', units: [{ uid: 11, chessId: 'chess_char_1_01_a', row: 12, col: 2 }] });
+    if (pair) players.push({ playerId: 'p2', side: side === 'L' ? 'R' : 'L', units: [{ uid: 11, chessId: 'chess_char_1_01_a', row: 12, col: 2, potential: 6 }] });
     const h = makeBattle({ kind, stageId: 'act2autochess_m02', players, autoFinish: false });
     h.step();
     const u = h.unit(1);

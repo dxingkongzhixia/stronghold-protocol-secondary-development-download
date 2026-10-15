@@ -34,11 +34,12 @@ const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => 
 const pierce = (tier, elite, mod) => ({ ...formOf(tier, elite).talents[0].bb, ...(modOf(tier, mod)?.talentChanges ?? []).filter((t) => t.talentIndex === 0 && t.name).reduce((o, t) => ({ ...o, ...t.bb }), {}) });
 
 /** A battle with 黑 as uid 1 at (row, col) facing RIGHT, plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 5, others = [], seed = 5, players = null } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied', 'dodge'], captureNoisy: true,
-    ...(players ? { players } : { units: [{ uid: 1, diy: { slot: SLOT[tier], charId: SHWAZ, skillIndex: skill, uniEquipId: mod }, elite, row, col }, ...others] }),
+    ...(players ? { players } : { units: [{ uid: 1, diy: { slot: SLOT[tier], charId: SHWAZ, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 }, ...others] }),
   });
   h.step();
   return { h, u: h.unit(1) };
@@ -217,8 +218,8 @@ test('T2 交叉火力: with another 【狙击】 operator on the field every sni
   }
   // a partner's sniper on a shared field: the field version counts it and buffs it; the squad version does not
   const pair = (mod, tier) => field({ players: [
-    { playerId: 'p1', seat: 0, side: 'L', colOffset: 0, units: [{ uid: 1, kind: 'chess', chessId: tier === 6 ? 'chess_char_6_diy1_b' : 'chess_char_5_diy1_b', diy: { charId: SHWAZ, skillIndex: 0, uniEquipId: mod }, row: 10, col: 5 }], bonds: {}, bandId: null, playerEffects: [] },
-    { playerId: 'p2', seat: 1, side: 'L', colOffset: 0, units: [{ uid: 1, kind: 'chess', chessId: PROVE, row: 12, col: 3 }], bonds: {}, bandId: null, playerEffects: [] },
+    { playerId: 'p1', seat: 0, side: 'L', colOffset: 0, units: [{ uid: 1, kind: 'chess', chessId: tier === 6 ? 'chess_char_6_diy1_b' : 'chess_char_5_diy1_b', diy: { charId: SHWAZ, skillIndex: 0, uniEquipId: mod }, row: 10, col: 5, potential: 6 }], bonds: {}, bandId: null, playerEffects: [] },
+    { playerId: 'p2', seat: 1, side: 'L', colOffset: 0, units: [{ uid: 1, kind: 'chess', chessId: PROVE, row: 12, col: 3, potential: 6 }], bonds: {}, bandId: null, playerEffects: [] },
   ] });
   for (const [mod, tier, want] of [[null, 6, 0.1], [X, 6, null]]) {
     const { h } = pair(mod, tier);
@@ -257,7 +258,7 @@ test('ARC-Y 老剃刀 trait: an enemy on her straight line ahead takes ×105 % a
   }
   // facing UP: the line is the column above her
   const h = makeBattle({ defs: { enemies: ENEMIES }, timeLimit: 60, autoFinish: false, seed: 2, flags: { dpPerSec: 0 }, hooks: ['damaged'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: 6, charId: SHWAZ, skillIndex: 0, uniEquipId: Y }, elite: true, row: 10, col: 5, dir: 'UP' }] });
+    units: [{ uid: 1, diy: { slot: 6, charId: SHWAZ, skillIndex: 0, uniEquipId: Y }, elite: true, row: 10, col: 5, dir: 'UP', potential: 6 }] });
   h.step();
   const u = h.unit(1);
   const e = h.spawn('enemy_dummy', { pos: [12, 5] });

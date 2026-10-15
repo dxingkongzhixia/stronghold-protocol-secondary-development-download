@@ -46,8 +46,9 @@ const YAK = 'chess_char_1_02_a', ESTELLE = 'chess_char_1_12_a', SILENCE = 'chess
  * A battle with Mon3tr as uid 1 at (10, 4) facing RIGHT (`prosts`: her piece as uid 2), plus `others`; `log` = her heals /
  * damage in the order they happen.
  */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, prosts = null, others = [], seed = 5, dp = 99 } = {}) {
-  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: MONSTR, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 4 }];
+  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: MONSTR, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 4, potential: 6 }];
   if (prosts) units.push({ uid: 2, kind: 'token', tokenId: PROSTS, ownerUid: 1, row: prosts.row, col: prosts.col });
   const log = [];
   const h = makeBattle({

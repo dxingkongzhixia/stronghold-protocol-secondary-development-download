@@ -40,8 +40,9 @@ test('刺玫 at every potential: 潜能1 ATK 413 / cost 17 / 70 s and 土壤基�
   assert.deepEqual(row(4), [435, 16, 66, 1.08], '潜能4 攻击力+22');
   assert.deepEqual(row(5), [435, 16, 66, 1.11], '潜能5 天赋效果增强');
   assert.deepEqual(row(6), [435, 15, 66, 1.11], '潜能6 部署费用-1');
-  assert.equal(at(6), v, 'full potential is the record itself');
-  assert.equal(at(null), v);
+  assert.equal(at(6), v, 'full potential is the record itself (the data’s own build)');
+  assert.deepEqual([at(null).stats.atk, at(null).stats.cost], [413, 17], 'a missing value = the DEFAULT, 潜能 1 (owner, 2026-10-15)');
+  assert.notEqual(at(null), v, 'the default is no longer the full-potential record');
   assert.equal(talent(at(1), '土壤基肥改良').desc, '攻击范围内生命上限最高的友方角色受到的治疗效果提升8%');
   // the elite: statsBase and stats move together, the talent from its own E2 candidates
   const e = chess.chess_char_1_06_b;
@@ -169,13 +170,13 @@ test('练度 helpers: the four tiers, the default, the products, who has neither
   assert.equal(cultivateMul(effects, 4), null);
   assert.equal(cultivateMul(effects, null), null);
   assert.deepEqual(cultivatedStats({ atk: 435, def: 77, maxHp: 1137, cost: 15 }, cultivateMul(effects, 3)), { atk: 435 * 1.1, def: 77 * 1.1, maxHp: 1137 * 1.1, cost: 15 });
-  assert.deepEqual([POTENTIAL_DEFAULT, CULTIVATE_DEFAULT, rankOf(1), rankOf(6), rankOf(0), rankOf('6')], [6, 3, 0, 5, 5, 5]);
+  assert.deepEqual([POTENTIAL_DEFAULT, CULTIVATE_DEFAULT, rankOf(1), rankOf(6), rankOf(0), rankOf('6')], [1, 0, 0, 5, 5, 5]);
   assert.deepEqual([isPotential(0), isPotential(1), isPotential(6), isPotential(7), isPotential(2.5)], [false, true, true, false, false]);
   assert.deepEqual([isCultivate(-1), isCultivate(0), isCultivate(3), isCultivate(4)], [false, true, true, false]);
   const v = chess.chess_char_1_06_a;
-  assert.deepEqual(cultivationOf(v, null), { potential: 6, cultivate: 3 }, 'no setting: 满潜满加成');
-  assert.deepEqual(cultivationOf(v, { [v.charId]: { potential: 1 } }), { potential: 1, cultivate: 3 });
-  assert.deepEqual(cultivationOf(v, { [v.charId]: { potential: 9, cultivate: 0 } }), { potential: 6, cultivate: 0 }, 'a bad value is the default');
+  assert.deepEqual(cultivationOf(v, null), { potential: 1, cultivate: 0 }, 'no setting: 潜能 1 / 未精英化 (owner, 2026-10-15)');
+  assert.deepEqual(cultivationOf(v, { [v.charId]: { potential: 6 } }), { potential: 6, cultivate: 0 });
+  assert.deepEqual(cultivationOf(v, { [v.charId]: { potential: 9, cultivate: 3 } }), { potential: 1, cultivate: 3 }, 'a bad value is the default');
   assert.equal(cultivationOf({ ...v, standInFor: 'char_x' }, null), null, '补位');
   assert.equal(cultivationOf({ ...v, diyProto: true }, null), null, '原型 自选');
 });

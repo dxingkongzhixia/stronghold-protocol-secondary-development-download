@@ -15,6 +15,8 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { atPotential } from '../../shared/potential.js';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = path.join(ROOT, 'test/e2e/out');
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -445,7 +447,8 @@ describe('干员调配 overlay (real server, headless Chrome)', { skip: !ENABLED
   // ---- 局内数值 (GitHub issue #64) -------------------------------------------------------------------------------------
   const CHESS = () => JSON.parse(readFileSync(path.join(ROOT, 'data/chess.json'), 'utf8'));
   const fmt = (n) => Math.round(n).toLocaleString('en-US');
-  // 0.2.2: the numbers carry the 练度 — none set: 精英2 Lv.60, effects.json aceffect_char_4 (×1.1 ATK / DEF / max HP)
+  // 0.2.2: the numbers carry the 练度 — none set: 潜能 1 / 未精英化 (×1); an explicit 精英2 Lv.60 is effects.json
+  // aceffect_char_4 (×1.1 ATK / DEF / max HP)
   const T4 = JSON.parse(readFileSync(path.join(ROOT, 'data/effects.json'), 'utf8')).aceffect_char_4.buffs.find((b) => b.key === 'char_attribute_mul').bb;
   /** The section's eight stats: label → shown value. */
   const shownStats = (page) => page.$$eval('.lo-sec--stats .dstat', (els) => Object.fromEntries(els.map((e) => [e.querySelector('.dstat__k').textContent, e.querySelector('.dstat__v').textContent])));
@@ -476,19 +479,19 @@ describe('干员调配 overlay (real server, headless Chrome)', { skip: !ENABLED
     assert.deepEqual(await page.$$eval('.lo-detail__body > .lo-sec > header h3', (els) => els.map((e) => e.firstChild.textContent)), ['潜能与练度', '技能', '局内数值', '模组']);
     const stats = await shownStats(page);
     assert.deepEqual(Object.keys(stats), ['生命上限', '攻击', '防御', '法术抗性', '攻击间隔', '阻挡数', '部署费用', '再部署']);
-    assert.equal(stats['生命上限'], fmt((golden.statsBase.maxHp + mod.attr.maxHp) * T4.max_hp));
-    assert.equal(stats['攻击'], fmt((golden.statsBase.atk + mod.attr.atk) * T4.atk));
+    assert.equal(stats['生命上限'], fmt(atPotential(golden, 1).statsBase.maxHp + mod.attr.maxHp));
+    assert.equal(stats['攻击'], fmt(atPotential(golden, 1).statsBase.atk + mod.attr.atk));
     assert.equal(await rangeTiles(page), base.rangeGrid.length);
     assert.equal(await page.$eval('.lo-sec--stats', (el) => el.dataset.variant), 'elite');
     await page.screenshot({ path: path.join(OUT, 'loadout-stats-desktop.png') });
     // 不装备 → the base numbers; the skill choice changes nothing; 普通 → the normal chess; both toggles are independent
     await page.click('.lo-detail .lo-mod[data-module="none"]');
-    await page.waitForFunction((v) => document.querySelector('.lo-sec--stats .dstat__v')?.textContent === v, {}, fmt(golden.statsBase.maxHp * T4.max_hp));
-    assert.equal((await shownStats(page))['攻击'], fmt(golden.statsBase.atk * T4.atk));
+    await page.waitForFunction((v) => document.querySelector('.lo-sec--stats .dstat__v')?.textContent === v, {}, fmt(atPotential(golden, 1).statsBase.maxHp));
+    assert.equal((await shownStats(page))['攻击'], fmt(atPotential(golden, 1).statsBase.atk));
     await page.click('.lo-detail .lo-skill[data-skill="0"]');
-    assert.equal((await shownStats(page))['攻击'], fmt(golden.statsBase.atk * T4.atk), 'a skill is not a stat');
+    assert.equal((await shownStats(page))['攻击'], fmt(atPotential(golden, 1).statsBase.atk), 'a skill is not a stat');
     await page.click('.lo-sec--stats .lo-seg button[data-variant="normal"]');
-    await page.waitForFunction((v) => document.querySelector('.lo-sec--stats .dstat__v')?.textContent === v, {}, fmt(base.stats.maxHp * T4.max_hp));
+    await page.waitForFunction((v) => document.querySelector('.lo-sec--stats .dstat__v')?.textContent === v, {}, fmt(atPotential(base, 1).stats.maxHp));
     assert.equal(await page.$eval('.lo-sec--stats', (el) => el.dataset.variant), 'normal');
     assert.equal(await page.$eval('.lo-skill.is-on', (el) => el.dataset.skill), '0');
     assert.equal(await page.$eval('.lo-sec:not(.lo-sec--cult) .lo-seg button.is-on', (el) => el.textContent.startsWith('普通')), true, 'the skill level toggle is its own');
@@ -550,36 +553,40 @@ describe('干员调配 overlay (real server, headless Chrome)', { skip: !ENABLED
     await page.screenshot({ path: path.join(OUT, 'loadout-stats-phone.png') });
     // a choice made further down updates it (touch: the module card, 不装备)
     await page.tap('.lo-detail .lo-mod[data-module="none"]');
-    await page.waitForFunction((v) => document.querySelector('.lo-sec--stats .dstat__v')?.textContent === v, {}, fmt(golden.statsBase.maxHp * T4.max_hp));
-    assert.equal((await shownStats(page))['攻击'], fmt(golden.statsBase.atk * T4.atk));
+    await page.waitForFunction((v) => document.querySelector('.lo-sec--stats .dstat__v')?.textContent === v, {}, fmt(atPotential(golden, 1).statsBase.maxHp));
+    assert.equal((await shownStats(page))['攻击'], fmt(atPotential(golden, 1).statsBase.atk));
     assert.deepEqual(problems, []);
     await ctx.close();
   });
 
   test('潜能 / 练度 (0.2.2): a row\'s selects and the detail\'s buttons set the operator\'s settings — stored, synced, the numbers follow', async () => {
     const chess = CHESS();
-    const v = chess.chess_char_1_06_a; // 刺玫: 潜能1 ATK 413 / cost 17; elite statsBase 508 at 潜能1
+    const v = chess.chess_char_1_06_a; // 刺玫: the defaults 潜能1 / 未精英化 ATK 413 / cost 17; 潜能6 ATK 435 / cost 15
     const { ctx, page, problems } = await open();
     await clickSel(page, '.lobby-screen [data-testid="loadout-open"]');
     await page.waitForSelector('.lo .lo-card', { visible: true, timeout: 15000 });
     await pickChess(page, '刺玫');
-    // a row's select: 潜能 1
-    await page.select('.lo-card[data-chess="chess_char_1_06_a"] select[data-cult="potential"]', '1');
-    await page.waitForFunction((id) => JSON.parse(localStorage.getItem('sp.pref.loadout') || '{}').ops?.[id]?.potential === 1, {}, v.charId);
     await page.click('.lo-sec--stats .lo-seg button[data-variant="normal"]');
+    // the defaults (潜能 1 / 未精英化): no ops stored, ATK 413 / cost 17
     await page.waitForFunction((x) => [...document.querySelectorAll('.lo-sec--stats .dstat')].some((e) => e.querySelector('.dstat__k').textContent === '部署费用' && e.querySelector('.dstat__v').textContent === x), {}, '17');
-    assert.equal((await shownStats(page))['攻击'], fmt(413 * T4.atk), '潜能1 at 精英2 Lv.60');
-    // the detail's 练度 buttons: 未精英化 → ×1
-    await page.click('.lo-sec--cult [data-cultivate="0"]');
-    await page.waitForFunction(() => document.querySelector('.lo-sec--cult [data-cultivate="0"]').getAttribute('aria-checked') === 'true');
-    assert.equal((await shownStats(page))['攻击'], fmt(413));
-    assert.equal(await page.$eval('.lo-card[data-chess="chess_char_1_06_a"] select[data-cult="cultivate"]', (el) => el.value), '0', 'the row follows');
+    assert.equal((await shownStats(page))['攻击'], fmt(413), 'the default 潜能1 / 未精英化');
+    assert.equal(await page.$eval('.lo-card[data-chess="chess_char_1_06_a"] select[data-cult="potential"]', (el) => el.value), '1', 'the row shows the default');
+    // a row's select: 潜能 6 (an explicit, non-default setting) → cost 15 / ATK 435
+    await page.select('.lo-card[data-chess="chess_char_1_06_a"] select[data-cult="potential"]', '6');
+    await page.waitForFunction((id) => JSON.parse(localStorage.getItem('sp.pref.loadout') || '{}').ops?.[id]?.potential === 6, {}, v.charId);
+    await page.waitForFunction((x) => [...document.querySelectorAll('.lo-sec--stats .dstat')].some((e) => e.querySelector('.dstat__k').textContent === '部署费用' && e.querySelector('.dstat__v').textContent === x), {}, '15');
+    assert.equal((await shownStats(page))['攻击'], fmt(435), '潜能6 at 未精英化');
+    // the detail's 练度 buttons: 精英2 Lv.60 → ×1.1
+    await page.click('.lo-sec--cult [data-cultivate="3"]');
+    await page.waitForFunction(() => document.querySelector('.lo-sec--cult [data-cultivate="3"]').getAttribute('aria-checked') === 'true');
+    assert.equal((await shownStats(page))['攻击'], fmt(435 * T4.atk), '潜能6 at 精英2 Lv.60 (×1.1)');
+    assert.equal(await page.$eval('.lo-card[data-chess="chess_char_1_06_a"] select[data-cult="cultivate"]', (el) => el.value), '3', 'the row follows');
     assert.ok(await page.$eval('.lo-card[data-chess="chess_char_1_06_a"]', (el) => el.classList.contains('is-changed')), 'a changed operator');
     await page.waitForFunction(() => /已同步/.test(document.querySelector('.lo-sync')?.textContent || ''), { timeout: 8000 });
-    // 恢复默认 resets them with the skill / module
+    // 恢复默认 resets them with the skill / module — back to the defaults (潜能 1 / 未精英化)
     await page.click('.lo-dhead__reset');
     await page.waitForFunction((id) => !JSON.parse(localStorage.getItem('sp.pref.loadout') || '{}').ops?.[id], {}, v.charId);
-    assert.equal((await shownStats(page))['攻击'], fmt(v.stats.atk * T4.atk));
+    assert.equal((await shownStats(page))['攻击'], fmt(413), 'back to the default 潜能1 / 未精英化');
     assert.deepEqual(problems, []);
     await ctx.close();
   });

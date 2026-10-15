@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { atPotential, POTENTIAL_DEFAULT } from '../../shared/potential.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = (p) => readFileSync(path.join(ROOT, p), 'utf8');
@@ -85,21 +86,22 @@ test('statsPreview: the 精锐 record under the chosen module (stats = base + th
   const mod = golden.modules.find((m) => m.isDefault);
   assert.deepEqual(mod.attr, { maxHp: 80, atk: 22 }, 'MAR-X');
   const def = preview(INSIDE, 'elite');
+  const g1 = atPotential(golden, POTENTIAL_DEFAULT);   // the card composes at the player's settings; the default is 潜能 1
   assert.equal(def.elite, true);
   assert.equal(def.chess, golden);
-  assert.equal(def.record, golden, 'the default loadout is the data record itself (the card\'s rule)');
-  assert.equal(def.record.stats.maxHp, golden.statsBase.maxHp + 80);
-  assert.equal(def.record.stats.atk, golden.statsBase.atk + 22);
+  assert.notEqual(def.record, golden, 'since 2026-10-15 the DEFAULT composes a record (潜能 6 is the data record itself)');
+  assert.equal(def.record.stats.maxHp, g1.statsBase.maxHp + 80);
+  assert.equal(def.record.stats.atk, g1.statsBase.atk + 22);
   const none = preview(INSIDE, 'elite', { [INSIDE]: { module: 'none' } });
-  assert.equal(none.record.stats.maxHp, golden.statsBase.maxHp, '不装备: the no-module stats');
-  assert.equal(none.record.stats.atk, golden.statsBase.atk);
+  assert.equal(none.record.stats.maxHp, g1.statsBase.maxHp, '不装备: the no-module stats');
+  assert.equal(none.record.stats.atk, g1.statsBase.atk);
   assert.equal(none.lo.module.none, true);
   assert.notEqual(none.record.stats.maxHp, def.record.stats.maxHp, 'switching the module changes what the section shows');
   // 普通: the normal chess, whatever module is stored (modules are the elite's)
   const normal = preview(INSIDE, 'normal', { [INSIDE]: { module: 'none' } });
   assert.equal(normal.elite, false);
   assert.equal(normal.chess, base);
-  assert.equal(normal.record.stats.maxHp, base.stats.maxHp);
+  assert.equal(normal.record.stats.maxHp, atPotential(base, POTENTIAL_DEFAULT).stats.maxHp);
   assert.equal(normal.lo.module, null, 'no module on a normal chess');
   assert.deepEqual(normal.record.stats, preview(INSIDE, 'normal').record.stats, 'the module choice does not reach it');
   // a skill choice is carried (lo.skillIndex) but does not change a chess's stats
@@ -107,9 +109,10 @@ test('statsPreview: the 精锐 record under the chosen module (stats = base + th
   assert.equal(s0.lo.skillIndex, 0);
   assert.equal(def.lo.skillIndex, 1, 'S2 is the default');
   assert.deepEqual(s0.record.stats, def.record.stats);
-  // an entry of another chess, or an option the data does not offer, falls back to the defaults
-  assert.equal(preview(INSIDE, 'elite', { [MIXER]: { module: 'none' } }).record, golden);
-  assert.equal(preview(INSIDE, 'elite', { [INSIDE]: { module: 'uniequip_999_nope' } }).record, golden);
+  // an entry of another chess, or an option the data does not offer, falls back to the defaults (identical to the
+  // default preview; a composed record is structurally equal, not the same object)
+  assert.deepEqual(preview(INSIDE, 'elite', { [MIXER]: { module: 'none' } }).record, def.record);
+  assert.deepEqual(preview(INSIDE, 'elite', { [INSIDE]: { module: 'uniequip_999_nope' } }).record, def.record);
 });
 
 test('statsPreview: no elite record → the normal one; no record → null; the data records are never mutated', () => {
@@ -170,20 +173,21 @@ test('the section draws the detail card\'s own stats block: same eight values an
 test('the eight stats shown are the record\'s: 生命上限 攻击 防御 法术抗性 攻击间隔 阻挡数 部署费用 再部署; no live tag, no colours', () => {
   const { golden } = slot(INSIDE);
   const mod = golden.modules.find((m) => m.isDefault);
-  const s = golden.stats;
+  const rec = atPotential(golden, POTENTIAL_DEFAULT);   // the card shows the player's settings; the default is 潜能 1
+  const s = rec.stats;
   const vals = statValues(section(INSIDE, 'elite'));
   assert.deepEqual(Object.keys(vals), ['生命上限', '攻击', '防御', '法术抗性', '攻击间隔', '阻挡数', '部署费用', '再部署']);
   assert.deepEqual(vals, {
-    生命上限: fmtNum(golden.statsBase.maxHp + mod.attr.maxHp), 攻击: fmtNum(golden.statsBase.atk + mod.attr.atk), 防御: fmtNum(s.def),
+    生命上限: fmtNum(rec.statsBase.maxHp + mod.attr.maxHp), 攻击: fmtNum(rec.statsBase.atk + mod.attr.atk), 防御: fmtNum(s.def),
     法术抗性: String(s.res ?? 0), 攻击间隔: `${attackInterval(s.bat, s.aspd).toFixed(2)}s`, 阻挡数: String(s.blockCnt),
     部署费用: String(s.cost), 再部署: `${s.respawnTime}s`,
   });
   // 不装备 → the base numbers; 普通 → the normal chess's (lower) ones
   const none = statValues(section(INSIDE, 'elite', { [INSIDE]: { module: 'none' } }));
-  assert.equal(none['生命上限'], fmtNum(golden.statsBase.maxHp));
-  assert.equal(none['攻击'], fmtNum(golden.statsBase.atk));
+  assert.equal(none['生命上限'], fmtNum(rec.statsBase.maxHp));
+  assert.equal(none['攻击'], fmtNum(rec.statsBase.atk));
   const normal = statValues(section(INSIDE, 'normal'));
-  assert.equal(normal['生命上限'], fmtNum(slot(INSIDE).base.stats.maxHp));
+  assert.equal(normal['生命上限'], fmtNum(atPotential(slot(INSIDE).base, POTENTIAL_DEFAULT).stats.maxHp));
   assert.ok(Number(normal['生命上限'].replace(/,/g, '')) < Number(none['生命上限'].replace(/,/g, '')));
   // the record's numbers, not a live entry: no 实时 / 开战时 tag and no up / down colouring
   const block = statsBlock(section(INSIDE, 'elite'));

@@ -1,5 +1,6 @@
-// test/sim/potential-battle.test.js — potential and 练度 on a battle unit (0.2.2, the owner's decision of 2026-10-08:
-// 「调配干员里自己设置吧，默认满潜满加成」): a PlayerBattleInput operator entry's `potential` (潜能 1–6) composes its def at
+// test/sim/potential-battle.test.js — potential and 练度 on a battle unit (0.2.2; the owner's decision of 2026-10-15 sets
+// the DEFAULTS: 潜能 1 / 未精英化 — the official baseline for an operator the player does not own, replacing the
+// 2026-10-08 「默认满潜满加成」): a PlayerBattleInput operator entry's `potential` (潜能 1–6) composes its def at
 // that potential (stats, talents, its summons' talents at the owner's potential), its `cultivate` (练度 0–3: effects.json
 // aceffect_char_1…4 char_attribute_mul) multiplies ATK / DEF / max HP on top of every other bonus (Πmul, never summed
 // with the 直接乘算 percentages: PRTS 盟约记录 「…与自持有干员的属性加成独立」); a stand-in and a prototype 自选 pick take
@@ -20,7 +21,7 @@ const T6 = 'chess_char_6_diy1_a';
 const unit = (h, id) => h.b.allyUnits.find((u) => u.defId === id && u.kind === 'op');
 const talentBb = (u, name) => u.def.talents.find((t) => t.name === name)?.bb;
 
-test('potential on a battle unit: the def at that potential (stats, redeploy, cost, talent), 潜能 6 / absent = the data record', () => {
+test('potential on a battle unit: the def at that potential (stats, redeploy, cost, talent); absent = the default, 潜能 1', () => {
   const at = (potential) => {
     const h = makeBattle({ units: [{ chessId: VENDLA, row: 10, col: 5, ...(potential != null ? { potential } : null) }], timeLimit: 1 });
     const u = unit(h, VENDLA);
@@ -30,15 +31,16 @@ test('potential on a battle unit: the def at that potential (stats, redeploy, co
   assert.deepEqual(at(3), [413, 16, 66, 1.08, 3]);
   assert.deepEqual(at(5), [435, 16, 66, 1.11, 5]);
   assert.deepEqual(at(6), [435, 15, 66, 1.11, 6]);
-  assert.deepEqual(at(null), [435, 15, 66, 1.11, 6], 'absent: full potential');
+  assert.deepEqual(at(null), [413, 17, 70, 1.08, 1], 'absent: the DEFAULT, 潜能 1 (owner, 2026-10-15)');
   // the elite with another module: statsBase at the potential + the module's attr
   const h = makeBattle({ units: [{ chessId: 'chess_char_1_06_b', moduleId: 'none', potential: 1, row: 10, col: 5 }], timeLimit: 1 });
   assert.deepEqual([unit(h, 'chess_char_1_06_b').base.atk, unit(h, 'chess_char_1_06_b').base.cost], [508, 17]);
 });
 
 test('练度 on a battle unit: ×ATK / ×DEF / ×max HP of its tier, a multiplier of its own on top of the percentages', () => {
+  // 潜能 6 on purpose: this test isolates the 练度 multiplier against the data's own numbers (435 / 77 / 1137)
   const field = (cultivate, extra = {}) => {
-    const h = makeBattle({ units: [{ chessId: VENDLA, row: 10, col: 5, ...(cultivate != null ? { cultivate } : null), ...extra }], timeLimit: 1 });
+    const h = makeBattle({ units: [{ chessId: VENDLA, row: 10, col: 5, potential: 6, ...(cultivate != null ? { cultivate } : null), ...extra }], timeLimit: 1 });
     return unit(h, VENDLA);
   };
   const raw = field(null);
@@ -54,13 +56,13 @@ test('练度 on a battle unit: ×ATK / ×DEF / ×max HP of its tier, a multiplie
   u.markDirty();
   assert.equal(u.s.atk, 435 * 1.2 * 1.1);
   // the deployed unit starts at its multiplied max HP; the card's own numbers include the tier
-  const h = makeBattle({ units: [{ chessId: VENDLA, row: 10, col: 5, cultivate: 3 }], timeLimit: 3 });
+  const h = makeBattle({ units: [{ chessId: VENDLA, row: 10, col: 5, potential: 6, cultivate: 3 }], timeLimit: 3 });
   h.run(1);
   const d = unit(h, VENDLA);
   assert.ok(d.alive && Math.abs(d.hp - 1137 * 1.1) < 1e-9, `HP ${d.hp}`);
   const e = unitStatsEntry(d, d.s);
   assert.deepEqual([e.atk, e.base.atk, e.maxHp, e.base.maxHp, e.def, e.base.def], [479, 479, 1251, 1251, 85, 85], 'no green delta for the tier');
-  assert.deepEqual([unitInfo(d).cultivate, unitInfo(d).potential], [3, undefined]);
+  assert.deepEqual([unitInfo(d).cultivate, unitInfo(d).potential], [3, 6], '潜能 6 differs from the default, so it travels');
 });
 
 test('a 补位 stand-in and a prototype 自选 pick take neither; an owned 自选 pick takes both', () => {
@@ -77,7 +79,7 @@ test('a 补位 stand-in and a prototype 自选 pick take neither; an owned 自�
   const proto = ops.find((u) => u.def.charId === 'char_609_acguad');
   const kalts = ops.find((u) => u.def.charId === 'char_003_kalts');
   assert.deepEqual([st.cultMul, st.def.loadout.potentialIsDefault ?? true], [null, true], 'stand-in');
-  assert.deepEqual([proto.cultMul, proto.def.loadout.potential], [null, 6], 'prototype');
+  assert.deepEqual([proto.cultMul, proto.def.loadout.potential], [null, 1], 'prototype: the default potential, no 练度');
   // 凯尔希 潜能1: E2 Lv1 ATK 392 / cost 20 / 70 s (潜能 6: 417 / 18 / 66), ×1.1
   assert.deepEqual([kalts.base.atk, kalts.base.cost, kalts.base.respawnTime, kalts.def.loadout.potential], [392, 20, 70, 1]);
   assert.equal(kalts.s.atk, 392 * 1.1);
@@ -95,7 +97,7 @@ test('summons follow their owner\'s potential: Mon3tr\'s 不毁重构 and 望\'s
   const mon = (p) => ds.getToken('token_10002_kalts_mon3tr', T6, owner(p).loadout).talents.find((t) => t.name === '不毁重构').bb;
   assert.deepEqual([mon(4).stun, mon(4).value], [3, 1200]);
   assert.deepEqual([mon(5).stun, mon(5).value], [3.5, 1400]);
-  assert.deepEqual([mon(null).stun, mon(null).value], [3.5, 1400]);
+  assert.deepEqual([mon(null).stun, mon(null).value], [3, 1200], 'absent = the DEFAULT 潜能 1, below the owner rank 4');
   // 望 (tier-6 slot, normal form E2 Lv1): her 棋子 hold 7 / deploy 6 below 潜能3, 8 / 7 from it (the kit's tokenStat)
   const wang = (potential) => {
     const h = makeBattle({ units: [{ chessId: 'chess_char_2027_wang_a', potential, row: 10, col: 5 }], timeLimit: 1 });

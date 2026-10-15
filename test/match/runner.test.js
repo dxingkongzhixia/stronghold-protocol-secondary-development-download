@@ -438,8 +438,10 @@ test('live unit stats (user playtest #4 item 7): unitStats(id) reads the battle 
   assert.equal(got.interval, Math.round(s.interval * 100) / 100);
   assert.equal(got.blockCnt, s.blockCnt);
   assert.equal(got.hp, Math.round(ally.hp));
-  // the unit's own numbers: its base with its 练度 (0.2.2: the match states 精英2 Lv.60 by default — ×1.1)
-  assert.equal(ally.cultivate, 3);
+  // the unit's own numbers: its base with its 练度 (0.2.2; since 2026-10-15 the match states the DEFAULT 潜能 1 /
+  // 未精英化 — no ×1.1; a player who sets 潜能 6 + 精英2 Lv.60 gets it, test/sim/potential-battle.test.js)
+  assert.equal(ally.cultivate, 0);
+  assert.equal(ally.def.loadout.potential, 1);
   assert.equal(got.base.atk, Math.round(ally.base.atk * ally.cultMul.atk));
   assert.equal(got.base.maxHp, Math.round(ally.base.maxHp * ally.cultMul.hp));
   assert.equal(r.runner.unitStats(ally.id, start.fieldId)?.id, ally.id, 'on the named field');

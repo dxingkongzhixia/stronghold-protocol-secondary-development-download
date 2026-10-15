@@ -19,7 +19,7 @@ const linked = (p) => !!(p.mem.wangAxes && (p.mem.wangAxes.v || p.mem.wangAxes.h
 
 test('望: a placed piece deploys a 跟子 on an adjacent tile; both are 装置 (untargetable, no attack)', REAL, () => {
   const h = makeBattle({
-    units: [{ chessId: WANG, row: 10, col: 4, uid: 1 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 }],
+    units: [{ chessId: WANG, row: 10, col: 4, uid: 1, potential: 6 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2, potential: 6 }],
     autoFinish: false, timeLimit: 20,
   });
   h.step();
@@ -40,7 +40,7 @@ test('望: the 跟子 prefers a non-deployable ground tile (不可部署地面 >
   // flatStage (10,10) is 'f' (LOW build NONE = 不可部署地面), while the "up" neighbour (11,9) is plain ground: the
   // deploy-class rule ranks the floor tile above the up neighbour
   const h = makeBattle({
-    units: [{ chessId: WANG, row: 12, col: 4, uid: 1 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 9, uid: 2 }],
+    units: [{ chessId: WANG, row: 12, col: 4, uid: 1, potential: 6 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 9, uid: 2, potential: 6 }],
     autoFinish: false, timeLimit: 20,
   });
   h.step();
@@ -52,7 +52,7 @@ test('望: the 跟子 prefers a non-deployable ground tile (不可部署地面 >
 
 test('望 S1 取势: the cast grants 2 more pieces (auto-deployed in range), each with its 跟子', REAL, () => {
   const h = makeBattle({
-    units: [{ chessId: WANG, row: 10, col: 4, uid: 1, skillIndex: 0 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 }],
+    units: [{ chessId: WANG, row: 10, col: 4, uid: 1, skillIndex: 0, potential: 6 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2, potential: 6 }],
     autoFinish: false, timeLimit: 30,
   });
   h.step();
@@ -70,7 +70,7 @@ test('望 S1 取势: the cast grants 2 more pieces (auto-deployed in range), eac
 test('望: the piece trigger is the SELECTED skill (S1 sktok_wang_1 / S2 sktok_wang_2 / default S3 sktok_wang_3)', REAL, () => {
   const run = (skillIndex) => {
     const h = makeBattle({
-      units: [{ chessId: WANG, row: 12, col: 4, uid: 1, ...(skillIndex == null ? {} : { skillIndex }) }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 }],
+      units: [{ chessId: WANG, row: 12, col: 4, uid: 1, ...(skillIndex == null ? {} : { skillIndex }), potential: 6 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2, potential: 6 }],
       autoFinish: false, timeLimit: 5,
     });
     h.step();
@@ -88,9 +88,9 @@ test('望: activation is latched — a piece keeps its axis (and keeps triggerin
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
     units: [
-      { chessId: WANG, row: 12, col: 3, uid: 1, skillIndex: 0 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3 },
+      { chessId: WANG, row: 12, col: 3, uid: 1, skillIndex: 0, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3, potential: 6 },
     ],
     autoFinish: false, timeLimit: 20, captureNoisy: true, hooks: ['damaged', 'statusApplied'],
   });
@@ -110,10 +110,10 @@ test('望 第二天赋 料敌机先: the line adds +10 % damage per other piece 
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
     units: [
-      { chessId: WANG, row: 10, col: 4, uid: 1, skillIndex: 0 },   // S1: atk_scale 1.05
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 8, uid: 4 },
+      { chessId: WANG, row: 10, col: 4, uid: 1, skillIndex: 0, potential: 6 },   // S1: atk_scale 1.05
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 8, uid: 4, potential: 6 },
     ],
     autoFinish: false, timeLimit: 20, captureNoisy: true, hooks: ['damaged'],
   });
@@ -134,7 +134,7 @@ test('望 S3 天下劫: ammo 20, no normal attack, expanded range; the cast gran
   const cnt = (v) => Math.max(0, Math.floor(Number.isFinite(+v) ? +v : 0));
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
-    units: [{ chessId: WANG, row: 10, col: 4, uid: 1 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 }],
+    units: [{ chessId: WANG, row: 10, col: 4, uid: 1, potential: 6 }, { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2, potential: 6 }],
     autoFinish: false, timeLimit: 30, hooks: ['ammoUsed', 'attack'], captureNoisy: true,
   });
   h.step();
@@ -164,7 +164,7 @@ test('望 S3 天下劫: ammo 20, no normal attack, expanded range; the cast gran
 test('望 S3 天下劫: a consumed piece is refilled while bullets last ("有空地就不断下棋子"); the skill ends when they run out', REAL, () => {
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
-    units: [{ chessId: WANG, row: 10, col: 4, uid: 1 }],
+    units: [{ chessId: WANG, row: 10, col: 4, uid: 1, potential: 6 }],
     autoFinish: false, timeLimit: 60, captureNoisy: true, hooks: ['damaged', 'ammoUsed'],
   });
   h.step();
@@ -193,7 +193,7 @@ test('望 S3 天下劫: a consumed piece is refilled while bullets last ("有空
 test('望: every piece an auto-cast brings in is 相连 (S1/S2/S3) — never a lone piece', REAL, () => {
   for (const skillIndex of [0, 1, null]) {
     const h = makeBattle({
-      units: [{ chessId: WANG, row: 10, col: 4, uid: 1, ...(skillIndex == null ? {} : { skillIndex }) }],
+      units: [{ chessId: WANG, row: 10, col: 4, uid: 1, ...(skillIndex == null ? {} : { skillIndex }), potential: 6 }],
       autoFinish: false, timeLimit: 30,
     });
     h.step();
@@ -212,7 +212,7 @@ test('望: every piece an auto-cast brings in is 相连 (S1/S2/S3) — never a l
 test('望: the S3 refill keeps every living piece 相连 through the explosions ("有空地就不断下棋子")', REAL, () => {
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
-    units: [{ chessId: WANG, row: 10, col: 4, uid: 1 }],
+    units: [{ chessId: WANG, row: 10, col: 4, uid: 1, potential: 6 }],
     autoFinish: false, timeLimit: 120, captureNoisy: true, hooks: ['damaged', 'ammoUsed', 'death'],
   });
   h.step();
@@ -240,10 +240,10 @@ test('望 S3: an enemy entering the board detonates every 相连 piece whose exp
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
     units: [
-      { chessId: WANG, row: 12, col: 3, uid: 1 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 8, uid: 4 },
+      { chessId: WANG, row: 12, col: 3, uid: 1, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 8, uid: 4, potential: 6 },
     ],
     autoFinish: false, timeLimit: 20, captureNoisy: true, hooks: ['damaged', 'death'],
   });
@@ -268,9 +268,9 @@ test('望: an enemy on a LINKED piece fires the selected skill trigger (S1 停�
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
     units: [
-      { chessId: WANG, row: 12, col: 3, uid: 1, skillIndex: 0 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3 },
+      { chessId: WANG, row: 12, col: 3, uid: 1, skillIndex: 0, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3, potential: 6 },
     ],
     enemies: [{ key: 'e', pos: [10, 6] }],
     autoFinish: false, timeLimit: 20,
@@ -292,9 +292,9 @@ test('望: the piece has NO normal attack — its end is the trigger (champagneB
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
     units: [
-      { chessId: WANG, row: 12, col: 3, uid: 1, skillIndex: 0 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2 },
-      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3 },
+      { chessId: WANG, row: 12, col: 3, uid: 1, skillIndex: 0, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 6, uid: 2, potential: 6 },
+      { kind: 'token', tokenId: PIECE, ownerUid: 1, row: 10, col: 7, uid: 3, potential: 6 },
     ],
     enemies: [{ key: 'e', pos: [10, 6] }],
     autoFinish: false, timeLimit: 20,

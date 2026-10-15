@@ -41,8 +41,9 @@ const K = (r, c) => r * 21 + c;
 const sortN = (a) => [...a].sort((x, y) => x - y);
 
 /** A battle with 机械师 as uid 1 at (10, 3) facing RIGHT (`graf`: her 结构性原理 as uid 2 at graf.row / col), plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, graf = { row: 10, col: 4 }, others = [], seed = 5, dp = 99 } = {}) {
-  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: MCN, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 3 }];
+  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: MCN, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 3, potential: 6 }];
   if (graf) units.push({ uid: 2, kind: 'token', tokenId: GRAF, ownerUid: 1, row: graf.row, col: graf.col, dir: graf.dir });
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,

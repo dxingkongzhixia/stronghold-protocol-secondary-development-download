@@ -168,7 +168,7 @@ Top level: `{ season, seasonName, modes, economy, lpCapPerRound, bossOvertimeAft
 | `price`, `sellPrice` | `2`, `1` | |
 | `upgradeNum`, `upgradeChessId` | `3`, `"chess_char_1_01_b"` | copies needed to merge (风丸 2; golden 0) |
 | `status` | `{"phase":2,"level":50,"skillLevel":7,"equipLevel":1}` | training status used for all numbers |
-| `stats` | `{"maxHp":1421,"atk":531,"def":167,"res":0,"cost":12,"blockCnt":1,"bat":1,"aspd":100,"respawnTime":70,"spRecovery":1,"hpRecoveryPerSec":0,"moveSpeed":1,"tauntLevel":0,"massLevel":0,"deployLimit":1,"deckStack":0}` | keyframes linearly interpolated at `status` **plus every potential attribute modifier** (full potential, 潜能 6 — the default; character_table `potentialRanks` 1–5 — 「攻击力+N」, 「部署费用-1」, 「再部署时间-N秒」, 生命 / 防御 / 法抗 / 攻速 — added to the raw values: the official records carry no potential, a tournament video shows 刺玫 at ATK 435 / cost 15 = her E1 Lv55 413 / 17 + 攻击力+22 and two 部署费用-1; a lower potential — the player's 干员调配 setting since 0.2.2 — reads `potDown`, §2.3), hp/atk/def/cost/block/respawn rounded; **golden includes the module attribute bonus**. `aspd` 100 = base (module attack_speed added). Talent stat boosts are NOT folded in. |
+| `stats` | `{"maxHp":1421,"atk":531,"def":167,"res":0,"cost":12,"blockCnt":1,"bat":1,"aspd":100,"respawnTime":70,"spRecovery":1,"hpRecoveryPerSec":0,"moveSpeed":1,"tauntLevel":0,"massLevel":0,"deployLimit":1,"deckStack":0}` | keyframes linearly interpolated at `status` **plus every potential attribute modifier** (full potential, 潜能 6 = the data's own build — NOT the runtime default since 2026-10-15, that is 潜能 1; character_table `potentialRanks` 1–5 — 「攻击力+N」, 「部署费用-1」, 「再部署时间-N秒」, 生命 / 防御 / 法抗 / 攻速 — added to the raw values: the official records carry no potential, a tournament video shows 刺玫 at ATK 435 / cost 15 = her E1 Lv55 413 / 17 + 攻击力+22 and two 部署费用-1; a lower potential — the player's 干员调配 setting, §2.3 — reads `potDown`), hp/atk/def/cost/block/respawn rounded; **golden includes the module attribute bonus**. `aspd` 100 = base (module attack_speed added). Talent stat boosts are NOT folded in. |
 | `immunities` | `{"stun":false,"silence":false,"sleep":false,"frozen":false,"levitate":false}` | |
 | `rangeId`, `rangeGrid` | `"3-3"`, `[[1,0],[1,1],…]` | attack range at `status` |
 | `dmgType` | `"phys"` | `phys` / `arts` / `heal` (derived, see §2.1) |
@@ -252,12 +252,14 @@ everything needed to resolve a unit for `(chessId, skillIndex, moduleId)` (`simd
 
 ### 2.3 Potential below full potential: `potDown` and chained talents (0.2.2)
 
-Potential (潜能 1–6) is the player's per-operator setting (干员调配, the owner's decision of 2026-10-08 — default 潜能 6;
-official: 调度手册 「卫戍协议中干员潜能由自身已持有干员潜能决定」). Every record is built at **full potential** and carries
-what each lower one changes; `shared/potential.js atPotential(rec, potential)` composes the record at a potential
-(data rank r = potential − 1, character_table's `potentialRanks[r]` being the step from rank r to r + 1). The same
-annotation is on chess records, `backups.json` unit forms (§18) and token variants (`tokens.json` and `backups.json`
-`tokens` variants, §14 — the owner's potential; a token record's top-level defaults stay full):
+Potential (潜能 1–6) is the player's per-operator setting (干员调配; **default 潜能 1 since 2026-10-15** — the owner's
+decision 「所有干员的默认潜能 1 / 未精英化」, the official baseline for an operator the player does not own, replacing the
+2026-10-08 default 潜能 6; official: 调度手册 「卫戍协议中干员潜能由自身已持有干员潜能决定」). Every record is built at **full
+potential** (the maximal superset — never the runtime default) and carries what each lower one changes;
+`shared/potential.js atPotential(rec, potential)` composes the record at a potential (data rank r = potential − 1,
+character_table's `potentialRanks[r]` being the step from rank r to r + 1). The same annotation is on chess records,
+`backups.json` unit forms (§18) and token variants (`tokens.json` and `backups.json` `tokens` variants, §14 — the
+owner's potential; a token record's top-level defaults stay full):
 
 - `potDown`: `{ "<rank>": { "<dotted.path>": value } }` — for each rank 0–4, the exact value at that rank of every leaf
   that differs from the rank above (`stats.*` / `statsBase.*` of a record, `stats.*` of a form; a variant's

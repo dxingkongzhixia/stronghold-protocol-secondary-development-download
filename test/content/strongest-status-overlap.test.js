@@ -9,11 +9,11 @@ test('Dorothy, Pozëmka, and Schwarz DEF reductions fall back to the strongest u
     flags: { dpInit: 0, dpPerSec: 0 },
     defs: { enemies: { enemy_dummy: enemyRec({ key: 'enemy_dummy', hp: 1e9, def: 1000, speed: 0 }) } },
     units: [
-      { uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4048_doroth', skillIndex: 0, uniEquipId: null }, elite: true, row: 10, col: 4 },
-      { uid: 2, kind: 'token', tokenId: 'token_10025_doroth_recttp', ownerUid: 1, row: 9, col: 6 },
-      { uid: 3, diy: { slot: 'chess_char_6_diy2_a', charId: 'char_4055_bgsnow', skillIndex: 0, uniEquipId: null }, elite: true, row: 10, col: 5 },
-      { uid: 4, kind: 'token', tokenId: 'token_10026_bgsnow_subbow', ownerUid: 3, row: 9, col: 5 },
-      { uid: 5, diy: { slot: 'chess_char_5_diy1_a', charId: 'char_340_shwaz', skillIndex: 2, uniEquipId: null }, elite: true, row: 9, col: 4 },
+      { uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4048_doroth', skillIndex: 0, uniEquipId: null }, elite: true, row: 10, col: 4, potential: 6 },
+      { uid: 2, kind: 'token', tokenId: 'token_10025_doroth_recttp', ownerUid: 1, row: 9, col: 6, potential: 6 },
+      { uid: 3, diy: { slot: 'chess_char_6_diy2_a', charId: 'char_4055_bgsnow', skillIndex: 0, uniEquipId: null }, elite: true, row: 10, col: 5, potential: 6 },
+      { uid: 4, kind: 'token', tokenId: 'token_10026_bgsnow_subbow', ownerUid: 3, row: 9, col: 5, potential: 6 },
+      { uid: 5, diy: { slot: 'chess_char_5_diy1_a', charId: 'char_340_shwaz', skillIndex: 2, uniEquipId: null }, elite: true, row: 9, col: 4, potential: 6 },
     ],
   });
   h.step();

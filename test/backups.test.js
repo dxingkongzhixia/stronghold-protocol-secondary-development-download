@@ -148,8 +148,9 @@ test('backups: every NORMAL chess (both forms) resolves to its stand-in with the
       assert.deepEqual(dm?.traitOverride ?? r.traitBase, r.trait);
       assert.deepEqual(composeTalents(r.talentsBase, dm?.talentChanges), r.talents);
     }
-    // the chess's loadout machinery reads it unchanged: no loadout = the backup selection; the sim normalises it
-    assert.equal(loadoutRecord(r, resolveLoadout(r, null)), r);
+    // the chess's loadout machinery reads it unchanged: no loadout = the backup selection (a stand-in has no potential
+    // ranks, so the DEFAULT 潜能 1 composition is a structural copy — equal, not the same object)
+    assert.deepEqual(loadoutRecord(r, resolveLoadout(r, null)), r);
     const def = normalizeChess(r);
     assert.deepEqual([def.id, def.baseId, def.charId, def.spine, def.skill.id, def.tier], [c.chessId, c.baseId, c.backup.charId, c.backup.charId, r.skill.skillId, c.tier]);
     assert.deepEqual(def.bonds, c.bonds);

@@ -1560,8 +1560,10 @@ Operator loadouts (DESIGN §16, DATA.md §2.2 / §14): `getChess(id, { skillInde
 skill (`def.skill`, its bb / SP / trigger) and, for elites, the module's stats / trait / talents; `def.loadout` = the
 resolved loadout `{ skillIndex, moduleId, potential, skillIsDefault, moduleIsDefault, potentialIsDefault, isDefault }`
 (illegal choices fall back to the default; cached per loadout; the default loadout is the same object as `getChess(id)`).
-Potential (0.2.2, DATA.md §2.3, shared/potential.js): a loadout's `potential` (潜能 1–6; default 6 = the data's full
-potential) composes the record at it first (`loadoutRecord` → `atPotential`: stats, statsBase, talents, module talent
+Potential (0.2.2, DATA.md §2.3, shared/potential.js): a loadout's `potential` (潜能 1–6; **default 1 since 2026-10-15** —
+the official baseline for an operator the player does not own, owner's decision 「所有干员的默认潜能 1 / 未精英化」; 潜能 6 =
+the data's full potential, which is the record's own build and the only value that skips composition) composes the record
+at it first (`loadoutRecord` → `atPotential`: stats, statsBase, talents, module talent
 changes); `getToken` composes the owner variant at the owner's `loadout.potential` (talents; a 自选 summon's deploy
 limit / holding / count) and `getDiy(slotId, pick, potential)` an owned pick's form (a prototype has none: `diyProto`);
 the kits that read a summon variant raw (content/tokens.js `ownVariant`, `kits/shared/summoner.js tokenStat`, 多萝西,
@@ -1579,14 +1581,15 @@ the replaced operator's, `loadout` the backup selection (`standIn: true`); its s
 fetch backups.json) gives the chess's own def. A PlayerBattleInput entry carries it as `standIn: true` (spec.js keeps
 nothing else — no `potential` / `cultivate`: a stand-in has neither); the per-battle view maps id-only lookups of that
 chess id to the stand-in.
-潜能 / 练度 in a PlayerBattleInput operator entry (0.2.2; the owner's decision of 2026-10-08 — the player's 干员调配 settings,
-PlayerState.battleInput states both for every owned operator, bots the defaults 6 / 3): `potential` (1–6) → the def of
+潜能 / 练度 in a PlayerBattleInput operator entry (0.2.2; the player's 干员调配 settings, defaults **潜能 1 / 未精英化**
+since 2026-10-15 — the owner's decision, the official baseline for an operator the player does not own, replacing the
+2026-10-08 满潜 6 / 精英2 Lv.60; PlayerState.battleInput states both for every owned operator, bots the defaults 1 / 0): `potential` (1–6) → the def of
 `getChess(chessId, { …, potential })`; `cultivate` (0–3) → `unit.cultivate` and `unit.cultMul` = `data.cultivateMul(n)`,
 the effects.json CHAR_MAP `aceffect_char_<n+1>` `char_attribute_mul` (×ATK / ×DEF / ×max HP: 1 / 1.05·1.05·1 / 1.1·1.05·1.05
 / 1.1 each), a multiplier of its own in the Πmul of §2 (never summed with the 直接乘算 percentages: PRTS 盟约记录
 「…与自持有干员的属性加成独立」); a stand-in or a prototype 自选 def never takes it, summons neither [ASSUMED: the official
-buff names the operator]. spec.js keeps each only when well-formed (never on a stand-in or a summon); absent = full
-potential and no 练度 (a raw unit: tests, tools). `unitStatsEntry` counts the 练度 in the unit's own numbers (`base`), as
+buff names the operator]. spec.js keeps each only when well-formed (never on a stand-in or a summon); absent potential = the
+default (潜能 1, composed) and absent 练度 = no multiplier (a raw unit: tests, tools). `unitStatsEntry` counts the 练度 in the unit's own numbers (`base`), as
 the record cards do; UnitInfo carries `potential` (below 6) and `cultivate`.
 自选 (DATA.md §18): `getChess(slotId, { diy })` = `getDiy(slotId, pick)` — shared/diy.js `diyRecordOf` of the DIY slot
 record (`_a` normal, `_b` elite) with the pick over this source, normalised: `id` / `baseId` / `golden` / `tier` of the

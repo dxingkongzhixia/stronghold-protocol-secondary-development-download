@@ -41,8 +41,9 @@ const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => 
 const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${mod ?? 'none'}`;
 
 /** 多萝西 as uid 1 at (10, 4) facing RIGHT; `pieces` = the tiles of her placed traps (uids 2…). */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, pieces = [], dp = 0, seed = 5, others = [] } = {}) {
-  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: DOR, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 4 }];
+  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: DOR, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 4, potential: 6 }];
   pieces.forEach(([r, c], i) => units.push({ uid: 2 + i, kind: 'token', tokenId: TRAP, ownerUid: 1, row: r, col: c }));
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,
@@ -368,7 +369,7 @@ test('TRP-X 梦中人: traps cost 2, limit / stock 13; stage 3: 3 traps at her d
     {
       const units = [[9, 6], [9, 8], [12, 6]];
       const h0 = makeBattle({ defs: { enemies: ENEMIES }, timeLimit: 300, autoFinish: false, seed: 5, flags: { dpPerSec: 0, dpMax: 999 },
-        units: [{ uid: 1, diy: { slot: SLOT[6], charId: DOR, skillIndex: 0, uniEquipId: X }, elite: true, row: 10, col: 4 },
+        units: [{ uid: 1, diy: { slot: SLOT[6], charId: DOR, skillIndex: 0, uniEquipId: X }, elite: true, row: 10, col: 4, potential: 6 },
           ...units.map(([r, c], i) => ({ uid: 2 + i, kind: 'token', tokenId: TRAP, ownerUid: 1, row: r, col: c }))],
         setup(b) { const ch = b.rng.chance.bind(b.rng); b.rng.chance = (p) => (p === 0.5 ? true : ch(p)); } });
       h0.step();

@@ -41,12 +41,13 @@ const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => 
 const COUNT_IV = 31 / 30;
 
 /** A battle with 司霆惊蛰 as uid 1 at (row, col) facing RIGHT; `rec` logs her damage with her ATK at that moment. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 5, seed = 5, silence = false } = {}) {
   const log = [];
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied', 'attack'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LEIZI2, skillIndex: skill, uniEquipId: mod }, elite, row, col }],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: LEIZI2, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 }],
     setup(b) {
       b.on('damaged', (c) => {
         const u = b.allyUnits.find((a) => a.uid === 1);

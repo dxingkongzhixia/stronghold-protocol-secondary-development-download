@@ -41,13 +41,14 @@ const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${
  * (11,5) and (9,1)–(9,3) —, allies (melee, no skill) at (11,3) uid 2, (10,3) uid 3, (12,3) uid 4, (10,4) uid 5 (all in
  * y-2), (11,5) uid 6 (RIN-X / y-4 only), (9,3) uid 7 (y-4 only), (11,8) uid 8 (outside); `phantom` = a board 幻影 of hers.
  */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, seed = 5, phantom = null, dp = 0 } = {}) {
   const ally = (uid, row, col) => ({ uid, chessId: 'test_melee_a', row, col });
   const h = makeBattle({
     defs: { enemies: ENEMIES, chess: ALLIES }, timeLimit: 900, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999, dpInit: dp }, hooks: ['damaged', 'heal', 'attack', 'skillStart', 'skillEnd', 'death', 'deploy'], captureNoisy: true,
     units: [
-      { uid: 1, diy: { slot: SLOT[tier], charId: CGBIRD, skillIndex: skill, uniEquipId: mod }, elite, row: 11, col: 2 },
+      { uid: 1, diy: { slot: SLOT[tier], charId: CGBIRD, skillIndex: skill, uniEquipId: mod }, elite, row: 11, col: 2, potential: 6 },
       ally(2, 11, 3), ally(3, 10, 3), ally(4, 12, 3), ally(5, 10, 4), ally(6, 11, 5), ally(7, 9, 3), ally(8, 11, 8),
       ...(phantom ? [{ uid: 9, kind: 'token', tokenId: PHANTOM, ownerUid: 1, row: phantom[0], col: phantom[1] }] : []),
     ],

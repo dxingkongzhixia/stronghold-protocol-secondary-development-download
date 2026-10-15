@@ -41,8 +41,9 @@ const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => 
 const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${mod ?? 'none'}`;
 
 /** A battle with 凯尔希 as uid 1 at (10, 2) facing RIGHT (`mon3tr`: her piece as uid 2), plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, mon3tr = { row: 10, col: 4 }, others = [], seed = 5, dp = 99 } = {}) {
-  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: KALTS, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 2 }];
+  const units = [{ uid: 1, diy: { slot: SLOT[tier], charId: KALTS, skillIndex: skill, uniEquipId: mod }, elite, row: 10, col: 2, potential: 6 }];
   if (mon3tr) units.push({ uid: 2, kind: 'token', tokenId: MON3TR, ownerUid: 1, row: mon3tr.row, col: mon3tr.col });
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,

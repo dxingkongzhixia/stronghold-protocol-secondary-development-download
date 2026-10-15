@@ -30,7 +30,8 @@ const run = (o) => makeBattle({ seed: 7, autoFinish: false, timeLimit: 400, hook
 /** defs.chess: the chess without its 特质 (garrisons have their own tests) — isolates kit numbers. */
 const noGarrison = (...ids) => Object.fromEntries(ids.map((id) => [id, { ...raw(id), garrisonIds: [] }]));
 /** Board entry of chess `id` carrying skill `skillId` (+ extra fields: module, tile, carry state). */
-const entry = (id, skillId, o = {}) => ({ chessId: id, skillIndex: rec(id, skillId).index, ...o });
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
+const entry = (id, skillId, o = {}) => ({ chessId: id, potential: 6, skillIndex: rec(id, skillId).index, ...o });
 /** The unit of chess `id`, asserted to run the selected skill with its hand-authored spec. */
 function sel(h, id, skillId) {
   const u = h.unit(id);
@@ -69,7 +70,7 @@ test('tier 1: every chess × every legal skill × module (default / none) fights
         const h = makeBattle({
           stageId: 'act2autochess_m04', seed: 5,
           defs: { enemies: { enemy_dummy: enemyRec({ key: 'enemy_dummy', hp: 20000, atk: 300, bat: 2, speed: 0.6 }) } },
-          units: [{ chessId: id, row: 9, col: 7, skillIndex, ...(moduleId ? { moduleId } : {}) }, { chessId: 'chess_char_1_02_a', row: 9, col: 4 }, { chessId: 'chess_char_2_14_a', row: 10, col: 5 }],
+          units: [{ chessId: id, row: 9, col: 7, skillIndex, ...(moduleId ? { moduleId } : {}), potential: 6 }, { chessId: 'chess_char_1_02_a', row: 9, col: 4, potential: 6 }, { chessId: 'chess_char_2_14_a', row: 10, col: 5, potential: 6 }],
           enemies: [{ key: 'enemy_dummy', count: 4, interval: 2 }, { key: 'enemy_dummy', route: 1, count: 2, interval: 3 }],
           timeLimit: 60,
         });
@@ -202,7 +203,7 @@ test('1_06 刺玫 S1 战术咏唱·γ型: ASPD +attack_speed; the trait heal goe
     const ally = chessRec({ id: 't_ally', profession: 'WARRIOR', rangeGrid: [[0, 0]], skill: null, stats: { maxHp: 5000 } });
     const h = run({
       defs: { enemies: { e: dummy('e') }, chess: { ...noGarrison(id), t_ally: ally } },
-      units: [entry(id, s.skillId, { row: 10, col: 4, carryState: READY }), { chessId: 't_ally', row: 10, col: 5 }],
+      units: [entry(id, s.skillId, { row: 10, col: 4, carryState: READY }), { chessId: 't_ally', row: 10, col: 5, potential: 6 }],
       enemies: [{ key: 'e', pos: [10, 7] }],
     });
     const u = sel(h, id, s.skillId), a = h.unit('t_ally');
@@ -311,7 +312,7 @@ test('1_10 古米 S2 食粮烹制: disarm s cooking (no attacks, DEF +def), then
     const h = run({
       // a MANUAL 重装 skill: the TAKE_DAMAGE strategy (PRTS 卫戍协议/帮助 "不受技能范围影响，受到伤害时释放技能")
       defs: { enemies: { e: dummy('e', { atk: 300, bat: 1 }) }, chess: { ...noGarrison(id), t_ally: ally } },
-      units: [entry(id, s.skillId, { row: 9, col: 5, carryState: READY }), { chessId: 't_ally', row: 10, col: 6 }],
+      units: [entry(id, s.skillId, { row: 9, col: 5, carryState: READY }), { chessId: 't_ally', row: 10, col: 6, potential: 6 }],
       enemies: [{ key: 'e', pos: [9, 5] }],
     });
     const u = sel(h, id, s.skillId), a = h.unit('t_ally');
@@ -360,7 +361,7 @@ test('1_13 波登可 S1 花香疗法: a heal skill — ATK +atk, attacks heal th
     const ally = chessRec({ id: 't_ally', profession: 'WARRIOR', rangeGrid: [[0, 0]], skill: null, stats: { maxHp: 20000 } });
     const defs = { enemies: { e: dummy('e') }, chess: { ...noGarrison(id), t_ally: ally } };
     // (a) enemy and injured ally in range: heals only, for ATK
-    const h = run({ defs, units: [entry(id, s.skillId, { row: 10, col: 4, carryState: READY }), { chessId: 't_ally', row: 10, col: 5 }], enemies: [{ key: 'e', pos: [10, 6] }] });
+    const h = run({ defs, units: [entry(id, s.skillId, { row: 10, col: 4, carryState: READY }), { chessId: 't_ally', row: 10, col: 5, potential: 6 }], enemies: [{ key: 'e', pos: [10, 6] }] });
     const u = sel(h, id, s.skillId), a = h.unit('t_ally');
     h.step();
     a.hp = a.s.maxHp * 0.3;
@@ -374,7 +375,7 @@ test('1_13 波登可 S1 花香疗法: a heal skill — ATK +atk, attacks heal th
     assert.equal(attacks(h, u, (c) => c.t > st && c.t < ended(h, u)[0].t && c.targets.some((x) => x.side === 'enemy')).length, 0, 'no attack on enemies');
     done(h);
     // (b) no enemy on the field: an injured ally in range is enough
-    const h2 = run({ defs, units: [entry(id, s.skillId, { row: 10, col: 4, carryState: READY }), { chessId: 't_ally', row: 10, col: 5 }] });
+    const h2 = run({ defs, units: [entry(id, s.skillId, { row: 10, col: 4, carryState: READY }), { chessId: 't_ally', row: 10, col: 5, potential: 6 }] });
     const u2 = sel(h2, id, s.skillId);
     h2.step();
     h2.unit('t_ally').hp = 5000;
@@ -382,7 +383,7 @@ test('1_13 波登可 S1 花香疗法: a heal skill — ATK +atk, attacks heal th
     assert.equal(started(h2, u2)[0].reason, 'DEFAULT');
     done(h2);
     // (c) an enemy but nobody injured: the heal skill waits
-    const h3 = run({ defs, units: [entry(id, s.skillId, { row: 10, col: 4, carryState: READY }), { chessId: 't_ally', row: 10, col: 5 }], enemies: [{ key: 'e', pos: [10, 6] }] });
+    const h3 = run({ defs, units: [entry(id, s.skillId, { row: 10, col: 4, carryState: READY }), { chessId: 't_ally', row: 10, col: 5, potential: 6 }], enemies: [{ key: 'e', pos: [10, 6] }] });
     const u3 = sel(h3, id, s.skillId);
     h3.run(6);
     assert.equal(u3.skill.activations, 0);
@@ -539,7 +540,7 @@ test('1_20 雷蛇 S1 充能防御: 自动触发 "技能自动开启" (SP_FULL, n
     const mate = chessRec({ id: 't_mate', profession: 'WARRIOR', rangeGrid: [[0, 0]], skill: { spType: 'INCREASE_WHEN_ATTACK', spCost: 200 } });
     const h = run({
       defs: { enemies: { a: dummy('a', { atk: 700, bat: 1 }) }, chess: { ...noGarrison(id), t_mate: mate } },
-      units: [entry(id, s.skillId, { row: 9, col: 4, carryState: READY }), { chessId: 't_mate', row: 10, col: 4 }],
+      units: [entry(id, s.skillId, { row: 9, col: 4, carryState: READY }), { chessId: 't_mate', row: 10, col: 4, potential: 6 }],
       enemies: [{ key: 'a', pos: [9, 4], time: 1 }], // arrives after the skill is on (it needs no hit to start)
     });
     const u = sel(h, id, s.skillId), m = h.unit('t_mate');
@@ -577,7 +578,7 @@ test('modules: 无模组 stats = statsBase; the default module adds its attr', (
     const id = base.replace(/_a$/, '_b');
     const r = raw(id);
     assert.equal(r.modules.length, 1, id);
-    const h = run({ units: [{ chessId: id, row: 9, col: 4, uid: 1 }, { chessId: id, row: 10, col: 4, uid: 2, moduleId: 'none' }] });
+    const h = run({ units: [{ chessId: id, row: 9, col: 4, uid: 1, potential: 6 }, { chessId: id, row: 10, col: 4, uid: 2, moduleId: 'none', potential: 6 }] });
     const [dm, nm] = [h.unit(1), h.unit(2)];
     for (const k of ['maxHp', 'atk', 'def', 'res', 'blockCnt', 'cost', 'respawnTime']) {
       approx(nm.base[k], r.statsBase[k], `${id} none ${k}`);
@@ -599,7 +600,7 @@ test('modules: profile traits follow the module (隐现 air ×1.1, 惊蛰 chain,
   ];
   for (const [n, get, withMod, without] of cases) {
     const id = `chess_char_1_${n}_b`;
-    const h = run({ units: [{ chessId: id, row: 9, col: 4, uid: 1 }, { chessId: id, row: 10, col: 4, uid: 2, moduleId: 'none' }] });
+    const h = run({ units: [{ chessId: id, row: 9, col: 4, uid: 1, potential: 6 }, { chessId: id, row: 10, col: 4, uid: 2, moduleId: 'none', potential: 6 }] });
     h.step();
     assert.deepEqual([get(h.unit(1)), get(h.unit(2))], [withMod, without], id);
     done(h);
@@ -608,7 +609,7 @@ test('modules: profile traits follow the module (隐现 air ×1.1, 惊蛰 chain,
   const id = 'chess_char_1_01_b';
   const h = run({
     defs: { enemies: { f: dummy('f', { motion: 'FLY' }) }, chess: noGarrison(id) },
-    units: [{ chessId: id, row: 9, col: 4, uid: 1 }, { chessId: id, row: 11, col: 4, uid: 2, moduleId: 'none' }],
+    units: [{ chessId: id, row: 9, col: 4, uid: 1, potential: 6 }, { chessId: id, row: 11, col: 4, uid: 2, moduleId: 'none', potential: 6 }],
     enemies: [{ key: 'f', pos: [10, 6], route: 2 }],
   });
   h.runUntil(() => dealt(h, h.unit(1)).length && dealt(h, h.unit(2)).length, 10);
@@ -623,7 +624,7 @@ test('modules none: 深巡 / 雷蛇 lose the SPT-X reveal (kept with the default
     const s1 = raw(id).skills.find((x) => !x.isDefault).skillId;
     const h = run({
       defs: { enemies: { e: dummy('e') } },
-      units: [{ chessId: id, row: 9, col: 4, uid: 1 }, entry(id, s1, { row: 11, col: 4, uid: 2 }), { chessId: id, row: 12, col: 4, uid: 3, moduleId: 'none' }],
+      units: [{ chessId: id, row: 9, col: 4, uid: 1, potential: 6 }, entry(id, s1, { row: 11, col: 4, uid: 2 }), { chessId: id, row: 12, col: 4, uid: 3, moduleId: 'none', potential: 6 }],
       enemies: [{ key: 'e', pos: [9, 6] }, { key: 'e', pos: [11, 6] }, { key: 'e', pos: [12, 6] }],
     });
     h.step();
@@ -642,7 +643,7 @@ test('modules none: 跃跃 no ×1.1 on adjacent enemies; 艾丝黛尔 no −20 %
   {
     const id = 'chess_char_1_09_b', t = tal(id);
     for (const [moduleId, k] of [[undefined, 1.1], ['none', 1]]) {
-      const h = run({ defs: { enemies: { e: dummy('e') }, chess: noGarrison(id) }, units: [{ chessId: id, row: 10, col: 4, ...(moduleId ? { moduleId } : {}) }], enemies: [{ key: 'e', pos: [10, 5] }] });
+      const h = run({ defs: { enemies: { e: dummy('e') }, chess: noGarrison(id) }, units: [{ chessId: id, row: 10, col: 4, ...(moduleId ? { moduleId } : {}), potential: 6 }], enemies: [{ key: 'e', pos: [10, 5] }] });
       const u = h.unit(id);
       h.runUntil(() => dealt(h, u).length >= 4, 20);
       for (const c of dealt(h, u).filter((x) => !x.dmg.isSkill)) assert.ok([1, t.atk_scale].some((p) => Math.abs(c.amount - u.s.atk * k * p) < 1e-6 * c.amount), `跃跃 ${moduleId ?? 'LPS-X'} ${c.amount}`);
@@ -655,7 +656,7 @@ test('modules none: 跃跃 no ×1.1 on adjacent enemies; 艾丝黛尔 no −20 %
     ['chess_char_1_18_b', 0.3, raw('chess_char_1_18_b').modules[0].talentChanges[0].bb.damage_resistance],
   ]) {
     for (const [moduleId, k] of [[undefined, 1 - red], ['none', 1]]) {
-      const h = run({ defs: { enemies: { e: dummy('e') }, chess: noGarrison(id) }, units: [{ chessId: id, row: 9, col: 5, ...(moduleId ? { moduleId } : {}) }], enemies: [{ key: 'e', pos: [9, 7] }] });
+      const h = run({ defs: { enemies: { e: dummy('e') }, chess: noGarrison(id) }, units: [{ chessId: id, row: 9, col: 5, ...(moduleId ? { moduleId } : {}), potential: 6 }], enemies: [{ key: 'e', pos: [9, 7] }] });
       const u = h.unit(id);
       h.step();
       u.hp = u.s.maxHp * hpRatio;
@@ -673,7 +674,7 @@ test('modules none: 古米 heals without the GUA-X bonus (S1 and S2); 波登可 
     const ally = chessRec({ id: 't_ally', profession: 'WARRIOR', rangeGrid: [[0, 0]], skill: null, stats: { maxHp: 20000 } });
     const h = run({
       defs: { enemies: { e: dummy('e', { atk: 1 }) }, chess: { ...noGarrison(id), t_ally: ally } },
-      units: [entry(id, skillId, { row: 9, col: 5, carryState: READY, moduleId: 'none' }), { chessId: 't_ally', row: 10, col: 5 }],
+      units: [entry(id, skillId, { row: 9, col: 5, carryState: READY, moduleId: 'none' }), { chessId: 't_ally', row: 10, col: 5, potential: 6 }],
       enemies: [{ key: 'e', pos: [9, 5] }],
     });
     const u = h.unit(id), a = h.unit('t_ally');
@@ -686,7 +687,7 @@ test('modules none: 古米 heals without the GUA-X bonus (S1 and S2); 波登可 
   const pid = 'chess_char_1_13_b', bonus = raw(pid).modules[0].talentChanges.find((x) => x.talentIndex === -1).bb.sp_recovery_per_sec;
   const sp = {};
   for (const moduleId of [undefined, 'none']) {
-    const h = run({ defs: { enemies: { e: dummy('e') }, chess: noGarrison(pid) }, units: [{ chessId: pid, row: 10, col: 4, ...(moduleId ? { moduleId } : {}) }], enemies: [{ key: 'e', pos: [10, 6] }] });
+    const h = run({ defs: { enemies: { e: dummy('e') }, chess: noGarrison(pid) }, units: [{ chessId: pid, row: 10, col: 4, ...(moduleId ? { moduleId } : {}), potential: 6 }], enemies: [{ key: 'e', pos: [10, 6] }] });
     const u = h.unit(pid);
     h.step();
     const s0 = u.skill.sp;
@@ -704,7 +705,7 @@ test('1_07 普罗旺斯 狼眼 is continuous (PRTS: ×(1 + lost / 20 % × atk_sc
   for (const id of pair('07')) {
     const bb = raw(id).skill.bb;
     assert.equal(raw(id).skill.skillId, 'skchr_prove_1');
-    const h = run({ defs: { enemies: { e: dummy('e') }, chess: noGarrison(id) }, units: [{ chessId: id, row: 10, col: 4 }], enemies: [{ key: 'e', pos: [10, 6] }] });
+    const h = run({ defs: { enemies: { e: dummy('e') }, chess: noGarrison(id) }, units: [{ chessId: id, row: 10, col: 4, potential: 6 }], enemies: [{ key: 'e', pos: [10, 6] }] });
     h.step();
     const u = h.unit(id), e = h.enemies()[0];
     for (const ratio of [0.9, 0.55, 0.3, 0.05]) {
@@ -726,7 +727,7 @@ test('1_20 雷蛇 反击电弧: attack interval +70 % of the base (PRTS 增大(+
     // 重装 S2 反击电弧 is an OFFENSIVE skill: the basic strategy casts it with an enemy in the skill range (issue #4; the
     // deliberate deviation from the official 重装 row, DESIGN §21.29) —
     // the enemy here stands two tiles ahead and, being a speed-0 dummy, never touches her
-    const h = run({ defs: { enemies: { e: dummy('e', { atk: 300, bat: 1 }) }, chess: noGarrison(id) }, units: [{ chessId: id, row: 9, col: 4, carryState: READY }], enemies: [{ key: 'e', pos: [9, 6] }] });
+    const h = run({ defs: { enemies: { e: dummy('e', { atk: 300, bat: 1 }) }, chess: noGarrison(id) }, units: [{ chessId: id, row: 9, col: 4, carryState: READY, potential: 6 }], enemies: [{ key: 'e', pos: [9, 6] }] });
     const u = h.unit(id);
     assert.ok(h.runUntil(() => u.skill.active, 5));
     assert.equal(started(h, u)[0].reason, 'DEFAULT');
@@ -742,7 +743,7 @@ test('刺玫 土壤基肥改良 (+heal_scale healing received) never boosts HP r
   const t = tal(vendla);
   const h = run({
     defs: { enemies: { e: dummy('e', { atk: 1, bat: 5 }) }, chess: noGarrison(vendla, yak) },
-    units: [{ chessId: vendla, row: 10, col: 3 }, entry(yak, s.skillId, { row: 9, col: 5, carryState: READY })],
+    units: [{ chessId: vendla, row: 10, col: 3, potential: 6 }, entry(yak, s.skillId, { row: 9, col: 5, carryState: READY })],
     enemies: [{ key: 'e', pos: [9, 5] }],
   });
   const v = h.unit(vendla), y = h.unit(yak);

@@ -12,7 +12,9 @@ const BACKUPS = JSON.parse(readFileSync(new URL('../../data/backups.json', impor
 const INSIDE = 'chess_char_1_01_a';
 const CHAR = CHESS[INSIDE].charId;
 const ENTRIES = { [INSIDE]: { skill: 0 } };
-const OPS = { [CHAR]: { potential: 1 } };
+// an explicit 潜能 (6, NOT the default since 2026-10-15 — the default 潜能 1 is dropped like every default) travels with
+// the loadout, so the flush carries it.
+const OPS = { [CHAR]: { potential: 6 } };
 const IDS = cultivationCharIds(CHESS, BACKUPS);
 const ticks = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 function deferred() {

@@ -73,8 +73,9 @@ export function isBattleResult(v) {
 /**
  * `room.loadout { entries, ops? }`: `entries` = `{ [baseChessId]: { skill?: skillIndex, module?: uniEquipId | 'none' } }`
  * (the per-browser loadout of the 干员调配 screen); `ops` (0.2.2) = `{ [charId]: { potential?: 1–6, cultivate?: 0–3 } }`,
- * the player's per-operator 潜能 and 练度 (shared/potential.js; absent / missing = 潜能 6, 精英2 Lv.60 — the owner's
- * decision of 2026-10-08). Structural limits below; the semantic checks against the game data — known visible chess,
+ * the player's per-operator 潜能 and 练度 (shared/potential.js; absent / missing = the defaults, 潜能 1 / 未精英化 —
+ * the owner's decision of 2026-10-15; 潜能 6 / 精英2 Lv.60 was the default 2026-10-08 → 2026-10-15). Structural limits
+ * below; the semantic checks against the game data — known visible chess,
  * legal skill index for the normal AND the elite status, legal module of the elite (`checkLoadout`); an operator of the
  * 干员调配 roster or the 自选 owned pool (`checkLoadoutOps`) — are used by the server (lobby, match) and by the client to
  * sanitise a stored loadout before sending.
@@ -417,7 +418,7 @@ export const C2S = {
   'room.rerollSetup': { setupRevision: (v) => isInt(v, 0, 2 ** 31) },
   'room.cancelReroll': { voteId: (v) => isInt(v, 1, 2 ** 31) },
   // operator loadout (DESIGN §16): stored per session/seat; accepted until the match leaves INFO_CHECK — `ops` (0.2.2):
-  // the per-operator 潜能 / 练度 (absent = none set: every operator at 潜能 6, 精英2 Lv.60)
+  // the per-operator 潜能 / 练度 (absent = none set: every operator at the defaults, 潜能 1 / 未精英化)
   'room.loadout': { entries: isLoadoutEntries, ops: isLoadoutOps, $optional: ['ops'] },
   // operator ownership (干员持有, 0.2.0 补位): stored per session / seat; a match takes the list its seat had when it
   // started (an out-of-match setting — during a match it is stored for the next one: ROOM_STARTED)

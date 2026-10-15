@@ -121,10 +121,8 @@ describe('user playtest #2 item 1 — loadout chosen in the UI fights in the loc
       assert.ok(detail.skill.includes(s1.name) && detail.tag, `detail card: ${s1.name} 已调配 (${JSON.stringify(detail)})`);
       assert.ok(detail.none && detail.module.includes('未装备模组'), `detail card: 未装备模组 (${JSON.stringify(detail)})`);
       // …and the stats / 特性 the unit fights with: no module (ATK 524, interval 1.00 s, "获得1点") — not the default module's;
-      // 0.2.2: the card's base value carries the player's 练度, here the default 精英2 Lv.60 (effects.json aceffect_char_4,
-      // ×1.1 ATK — a multiplier of its own, the unit's def keeps the record's 524)
-      const t4 = JSON.parse(readFileSync(path.join(ROOT, 'data/effects.json'), 'utf8')).aceffect_char_4.buffs.find((b) => b.key === 'char_attribute_mul').bb;
-      assert.equal(detail.stats['攻击'], String(Math.round(rec.statsBase.atk * t4.atk)), `detail card ATK without the module, at the default 练度 (${JSON.stringify(detail.stats)})`);
+      // 0.2.2: the card's base value carries the player's 练度, here the default 未精英化 (×1 — 潜能 1 leaves the record's 524)
+      assert.equal(detail.stats['攻击'], String(Math.round(rec.statsBase.atk)), `detail card ATK without the module, at the default 练度 (${JSON.stringify(detail.stats)})`);
       assert.equal(detail.stats['攻击间隔'], '1.00s', 'detail card interval: ASPD 100');
       assert.match(detail.trait, /获得1点部署费用/, `detail card 特性 without the module (${detail.trait})`);
       await c.shot('detail');

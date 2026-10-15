@@ -50,7 +50,7 @@ function heldBetween(chessId, dir, secs = 8, { late = false } = {}) {
   const h = makeBattle({
     stageId: 'act2autochess_m01', timeLimit: 200, hooks: ['damaged'], captureNoisy: true,
     defs: { chess: { [REAR]: chessRec({ id: REAR, stats: { atk: 0, blockCnt: 1, maxHp: 1e9, respawnTime: 999 }, skill: null }) }, enemies },
-    units: [{ chessId, row: 10, col: 7, dir }, { chessId: REAR, row: 11, col: 7, dir }],
+    units: [{ chessId, row: 10, col: 7, dir, potential: 6 }, { chessId: REAR, row: 11, col: 7, dir, potential: 6 }],
     enemies: spawns,
   });
   const F = h.unit(chessId), R = h.unit(REAR);
@@ -152,7 +152,7 @@ function plainBlock(chessId, dir, secs = 8) {
   const h = makeBattle({
     stageId: 'act2autochess_m01', timeLimit: 200, hooks: ['damaged'], captureNoisy: true,
     defs: { enemies: { enemy_e: foe('enemy_e') } },
-    units: [{ chessId, row: 10, col: 7, dir }],
+    units: [{ chessId, row: 10, col: 7, dir, potential: 6 }],
     enemies: [{ key: 'enemy_e', time: 0.3 }],
   });
   const F = h.unit(chessId);
@@ -206,7 +206,7 @@ test('#17 skills that pick their own targets keep the enemy the operator blocks 
       const h = makeBattle({
         timeLimit: 400, hooks: ['damaged'], captureNoisy: true,
         defs: { enemies: { enemy_e: foe('enemy_e'), enemy_o: foe('enemy_o', { speed: 0 }) } },
-        units: [{ chessId: c.chessId, row: 9, col: 6, dir: 'LEFT', skillIndex }],
+        units: [{ chessId: c.chessId, row: 9, col: 6, dir: 'LEFT', skillIndex, potential: 6 }],
         enemies: [{ key: 'enemy_e', time: 0.2 }, { key: 'enemy_o', time: 0.1, route: { motion: 'WALK', start: [9, 4], end: [9, 2], checkpoints: [] } }],
       });
       const F = h.unit(c.chessId);
@@ -238,9 +238,9 @@ test('#17 流形\'s melee copy (a summon of no fixed position) attacks the enemy
   const h = makeBattle({
     defs: { chess: { test_guard_a: guard }, enemies: { enemy_w: foe('enemy_w') } }, timeLimit: 120, hooks: ['damaged'], captureNoisy: true,
     units: [
-      { chessId: 'chess_char_6_11_a', row: 12, col: 3 },
-      { chessId: 'test_guard_a', row: 12, col: 6 },
-      { kind: 'token', tokenId: 'token_10030_mlyss_wtrman', row: 9, col: 6, ownerUid: 1, dir: 'LEFT' },
+      { chessId: 'chess_char_6_11_a', row: 12, col: 3, potential: 6 },
+      { chessId: 'test_guard_a', row: 12, col: 6, potential: 6 },
+      { kind: 'token', tokenId: 'token_10030_mlyss_wtrman', row: 9, col: 6, ownerUid: 1, dir: 'LEFT', potential: 6 },
     ],
     enemies: [{ key: 'enemy_w', time: 9 }],
   });
@@ -277,7 +277,7 @@ test('#17 the user\'s case under heavy slows: the front blocker that took the en
   const h = makeBattle({
     stageId: 'act2autochess_m01', timeLimit: 200, hooks: ['damaged'], captureNoisy: true,
     defs: { chess: { test_front_a: front, [REAR]: rear }, enemies: { enemy_x0: foe('enemy_x0'), enemy_e: foe('enemy_e') } },
-    units: [{ chessId: 'test_front_a', row: 10, col: 7 }, { chessId: REAR, row: 11, col: 7 }],
+    units: [{ chessId: 'test_front_a', row: 10, col: 7, potential: 6 }, { chessId: REAR, row: 11, col: 7, potential: 6 }],
     enemies: [{ key: 'enemy_x0', time: 0 }, { key: 'enemy_e', time: 0.9 }],
   });
   const F = h.unit('test_front_a'), R = h.unit(REAR);
@@ -364,9 +364,10 @@ test('#14 见行者 S2 惊爆射击: angle waived, a target nearer than 0.25 til
   const id = 'chess_char_3_07_a';
   const ds = getDefaultSource();
   const bb = ds.rawChess(id).skill.bb;
+  // pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
   const run = (pos) => {
     const h = makeBattle({
-      defs: { enemies: { enemy_t: foe('enemy_t', { speed: 0, mass: 0 }) } }, units: [{ chessId: id, row: 10, col: 3, dir: 'RIGHT', carryState: { sp: 1e3 } }],
+      defs: { enemies: { enemy_t: foe('enemy_t', { speed: 0, mass: 0 }) } }, units: [{ chessId: id, row: 10, col: 3, dir: 'RIGHT', carryState: { sp: 1e3 }, potential: 6 }],
       enemies: [{ key: 'enemy_t', pos }], autoFinish: false, timeLimit: 30, hooks: ['statusApplied'], captureNoisy: true,
     });
     const u = h.unit(id);
@@ -400,7 +401,7 @@ test('#14 特效 pushes (PRTS 推与拉: one frame less of travel than 弹道 on
   // 见行者 S1 (generic kit, 推击手 directional push on her next attack, bb.force 1) on a weight-0 enemy ahead: 1.987, not 2.14
   const id = 'chess_char_3_07_a';
   const k = makeBattle({
-    defs: { enemies: { enemy_t: foe('enemy_t', { speed: 0, mass: 0 }) } }, units: [{ chessId: id, row: 10, col: 3, dir: 'RIGHT', skillIndex: 0, carryState: { sp: 1e3 } }],
+    defs: { enemies: { enemy_t: foe('enemy_t', { speed: 0, mass: 0 }) } }, units: [{ chessId: id, row: 10, col: 3, dir: 'RIGHT', skillIndex: 0, carryState: { sp: 1e3 }, potential: 6 }],
     enemies: [{ key: 'enemy_t', pos: [10, 4] }], autoFinish: false, timeLimit: 30,
   });
   const u = k.unit(id);
@@ -417,7 +418,7 @@ test('#14 锏 S3 归于宁静 slashes air units and pulls a non-static one (PRTS
   const id = 'chess_char_6_19_a';
   const h = makeBattle({
     defs: { enemies: { enemy_fly: foe('enemy_fly', { speed: 0, mass: 0, motion: 'FLY' }), enemy_near: foe('enemy_near', { speed: 0, mass: 0 }) } },
-    units: [{ chessId: id, row: 10, col: 4, dir: 'RIGHT' }], enemies: [{ key: 'enemy_fly', pos: [10, 6] }, { key: 'enemy_near', pos: [10, 4.5] }],
+    units: [{ chessId: id, row: 10, col: 4, dir: 'RIGHT', potential: 6 }], enemies: [{ key: 'enemy_fly', pos: [10, 6] }, { key: 'enemy_near', pos: [10, 4.5] }],
     autoFinish: false, timeLimit: 30, hooks: ['damaged'], captureNoisy: true,
   });
   h.step();
@@ -437,7 +438,7 @@ test('#14 锏 S3 归于宁静 slashes air units and pulls a non-static one (PRTS
 test('#14 pulls: 受力等级 ≥ 0 all the way to the 急停 radius, −1 → 35 % of the way, −2 → 0.03, ≤ −3 → nothing; the puller\'s own blocked enemy stays', () => {
   const guard = chessRec({ id: 'test_puller_a', stats: { atk: 0, blockCnt: 0, maxHp: 1e6 }, skill: null });
   const h = makeBattle({ defs: { chess: { test_puller_a: guard }, enemies: Object.fromEntries([0, 1, 2, 3, 4].map((m) => [`enemy_m${m}`, foe(`enemy_m${m}`, { speed: 0, mass: m })])) },
-    units: [{ chessId: 'test_puller_a', row: 10, col: 3 }], content: 'none', autoFinish: false, timeLimit: 60 });
+    units: [{ chessId: 'test_puller_a', row: 10, col: 3, potential: 6 }], content: 'none', autoFinish: false, timeLimit: 60 });
   h.step();
   const u = h.unit('test_puller_a');
   const start = 7;
@@ -459,9 +460,9 @@ test('#14 流形 S3 pulse: the enemy a melee copy blocks is not pulled (so not r
     const h = makeBattle({
       defs: { chess: { test_guard_a: guard }, enemies: { enemy_w: foe('enemy_w', { mass }) } }, timeLimit: 120, captureNoisy: true,
       units: [
-        { chessId: 'chess_char_6_11_a', row: 12, col: 3, skillIndex: 2 },
-        { chessId: 'test_guard_a', row: 12, col: 6 },
-        { kind: 'token', tokenId: 'token_10030_mlyss_wtrman', row: 9, col: 6, ownerUid: 1, dir: 'LEFT' },
+        { chessId: 'chess_char_6_11_a', row: 12, col: 3, skillIndex: 2, potential: 6 },
+        { chessId: 'test_guard_a', row: 12, col: 6, potential: 6 },
+        { kind: 'token', tokenId: 'token_10030_mlyss_wtrman', row: 9, col: 6, ownerUid: 1, dir: 'LEFT', potential: 6 },
       ],
       enemies: [{ key: 'enemy_w', time: 9 }],
     });
@@ -490,7 +491,7 @@ test('#14 the user\'s case: 野鬃 S2 夹枪冲锋 pushes by 力度 − 重量 �
   const moved = (mass) => {
     const pushes = [];
     const h = makeBattle({
-      defs: { enemies: { enemy_t: foe('enemy_t', { speed: 0, mass }) } }, units: [{ chessId: id, row: 10, col: 3, carryState: { sp: 1e3 } }],
+      defs: { enemies: { enemy_t: foe('enemy_t', { speed: 0, mass }) } }, units: [{ chessId: id, row: 10, col: 3, carryState: { sp: 1e3 }, potential: 6 }],
       enemies: [{ key: 'enemy_t', pos: [10, 4] }], autoFinish: false, timeLimit: 30, hooks: [],
       setup(b) {
         let x0 = null;
@@ -522,7 +523,7 @@ test('#18 炎佑 holds 孤立 (PRTS “炎佑” 天赋): medics never heal it, 
   const ds = getDefaultSource();
   assert.deepEqual(ds.rawToken(TOKEN_IDS.yanyou).abnormal, ['isolated'], 'data: tokens.json abnormal');
   const h = makeBattle({ defs: { chess: { test_medic_a: medic(), test_hurt_a: chessRec({ id: 'test_hurt_a', stats: { atk: 0, maxHp: 1e5 }, skill: null }) } },
-    units: [{ chessId: 'test_medic_a', row: 10, col: 5 }, { chessId: 'test_hurt_a', row: 12, col: 3 }], autoFinish: false, timeLimit: 60, hooks: ['heal'], captureNoisy: true });
+    units: [{ chessId: 'test_medic_a', row: 10, col: 5, potential: 6 }, { chessId: 'test_hurt_a', row: 12, col: 3, potential: 6 }], autoFinish: false, timeLimit: 60, hooks: ['heal'], captureNoisy: true });
   h.step();
   const [y] = spawnYanyou(h.b, 'p1', { atk: 0, hp: 5000 });
   const m = h.unit('test_medic_a'), op = h.unit('test_hurt_a');
@@ -546,7 +547,7 @@ test('#18 the summons that hold 禁疗 (PRTS summon pages) are not healed by oth
   assert.deepEqual(ds.rawToken('token_10039_ulpia_block').abnormal, ['isolated']);
   for (const id of ['token_10000_silent_healrb', 'token_10006_vodfox_doll', 'token_10022_kazema_shadow', 'char_605_cmedic']) assert.deepEqual(ds.rawToken(id).abnormal, [], id);
   const h = makeBattle({ defs: { chess: { test_medic_a: medic() } },
-    units: [{ chessId: 'chess_char_3_19_a', row: 12, col: 3 }, { chessId: 'test_medic_a', row: 11, col: 3 }, { kind: 'token', tokenId: 'token_10028_vigil_wolf', row: 10, col: 5, ownerUid: 1 }],
+    units: [{ chessId: 'chess_char_3_19_a', row: 12, col: 3, potential: 6 }, { chessId: 'test_medic_a', row: 11, col: 3, potential: 6 }, { kind: 'token', tokenId: 'token_10028_vigil_wolf', row: 10, col: 5, ownerUid: 1, potential: 6 }],
     autoFinish: false, timeLimit: 60, hooks: ['heal'], captureNoisy: true });
   h.step();
   const w = h.b.allyUnits.find((x) => x.defId === 'token_10028_vigil_wolf' && x.alive);
@@ -559,7 +560,7 @@ test('#18 the summons that hold 禁疗 (PRTS summon pages) are not healed by oth
 
 test('#18 圣聆初雪\'s 保护目标（冻结状态） holds 禁疗 (PRTS 备注 "持有禁疗、无法撤退"): a medic next to it does not heal it', REAL, () => {
   const h = makeBattle({ defs: { chess: { test_medic_a: medic() } },
-    units: [{ chessId: 'chess_char_6_02_a', row: 12, col: 3 }, { chessId: 'test_medic_a', row: 11, col: 3 }],
+    units: [{ chessId: 'chess_char_6_02_a', row: 12, col: 3, potential: 6 }, { chessId: 'test_medic_a', row: 11, col: 3, potential: 6 }],
     autoFinish: false, timeLimit: 60, hooks: ['heal'], captureNoisy: true });
   h.step();
   const ice = h.b.spawnToken(h.unit('chess_char_6_02_a'), 'token_10058_sbell2_icetgt', 10, 5);
@@ -572,8 +573,8 @@ test('#18 圣聆初雪\'s 保护目标（冻结状态） holds 禁疗 (PRTS 备�
 
 test('#18 安洁莉娜 兼职工作 is an HP-regen attribute (PRTS 备注 "不受治疗加成和禁疗影响"): the 禁疗 狼群 gets it; 炎佑 (孤立) is never selected', REAL, () => {
   const h = makeBattle({
-    units: [{ chessId: 'chess_char_3_19_a', row: 12, col: 3 }, { chessId: 'chess_char_5_20_a', row: 11, col: 3, carryState: { sp: 0 } },
-      { kind: 'token', tokenId: 'token_10028_vigil_wolf', row: 10, col: 5, ownerUid: 1 }],
+    units: [{ chessId: 'chess_char_3_19_a', row: 12, col: 3, potential: 6 }, { chessId: 'chess_char_5_20_a', row: 11, col: 3, carryState: { sp: 0 }, potential: 6 },
+      { kind: 'token', tokenId: 'token_10028_vigil_wolf', row: 10, col: 5, ownerUid: 1, potential: 6 }],
     autoFinish: false, timeLimit: 60,
   });
   h.step();
@@ -592,7 +593,7 @@ test('#18 安洁莉娜 兼职工作 is an HP-regen attribute (PRTS 备注 "不�
 test('#18 孤立 in every ally selection: 刺玫\'s 荆藤庇荫 picks the operator in her range, not 炎佑 (higher max HP)', REAL, () => {
   const h = makeBattle({
     defs: { chess: { test_op_a: chessRec({ id: 'test_op_a', stats: { atk: 0, maxHp: 3000 }, skill: null }) } },
-    units: [{ chessId: 'chess_char_1_06_a', row: 10, col: 3, dir: 'RIGHT' }, { chessId: 'test_op_a', row: 10, col: 4 }], autoFinish: false, timeLimit: 60,
+    units: [{ chessId: 'chess_char_1_06_a', row: 10, col: 3, dir: 'RIGHT', potential: 6 }, { chessId: 'test_op_a', row: 10, col: 4, potential: 6 }], autoFinish: false, timeLimit: 60,
   });
   h.step();
   const [y] = spawnYanyou(h.b, 'p1', { atk: 0, hp: 50000 });

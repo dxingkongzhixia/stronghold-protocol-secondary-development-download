@@ -24,7 +24,7 @@ const WTRMAN = 'token_10030_mlyss_wtrman';
 
 test('resolveLoadout: legal choices resolve, anything else falls back to the default', { skip }, () => {
   const n = C[INSIDE];
-  assert.deepEqual(resolveLoadout(n, null), { skillIndex: 1, moduleId: null, potential: 6, skillIsDefault: true, moduleIsDefault: true, potentialIsDefault: true, isDefault: true });
+  assert.deepEqual(resolveLoadout(n, null), { skillIndex: 1, moduleId: null, potential: 1, skillIsDefault: true, moduleIsDefault: true, potentialIsDefault: true, isDefault: true });
   assert.equal(resolveLoadout(n, { skillIndex: 0 }).skillIndex, 0);
   assert.equal(resolveLoadout(n, { skill: 0 }).skillIndex, 0, 'client shape { skill, module } accepted');
   assert.equal(resolveLoadout(n, { skillIndex: 2 }).skillIndex, 1, 'S3 is not unlocked at E1 → default');
@@ -39,7 +39,8 @@ test('resolveLoadout: legal choices resolve, anything else falls back to the def
   assert.equal(resolveLoadout(g, { skillIndex: 2, moduleId: 'uniequip_002_mlyss' }).isDefault, true);
   // research-shaped record (no skills list): always the default
   assert.equal(resolveLoadout({ skill: { skillId: 'x', index: 0 } }, { skillIndex: 1 }).skillIndex, 0);
-  assert.equal(loadoutRecord(n, resolveLoadout(n, null)), n, 'default loadout = the record itself');
+  assert.notEqual(loadoutRecord(n, resolveLoadout(n, null)), n, 'the default is 潜能 1 since 2026-10-15, so it composes a new record');
+  assert.deepEqual(loadoutRecord(n, resolveLoadout(n, { potential: 6 })), n, '潜能 6 = the record the data holds');
 });
 
 test('every choice the lobby accepts (shared loadoutOptions) resolves to itself in the sim; defaults agree', { skip }, () => {
@@ -80,7 +81,7 @@ test('getChess(id, loadout): selected skill (bb, SP, trigger) and module (stats,
   assert.equal(s1.skill.id, 'skchr_inside_1');
   assert.deepEqual(s1.skill.bb, C[INSIDE].skills[0].bb);
   assert.equal(s1.skill.spCost, C[INSIDE].skills[0].spCost);
-  assert.deepEqual(s1.loadout, { skillIndex: 0, moduleId: null, potential: 6, skillIsDefault: false, moduleIsDefault: true, potentialIsDefault: true, isDefault: false });
+  assert.deepEqual(s1.loadout, { skillIndex: 0, moduleId: null, potential: 1, skillIsDefault: false, moduleIsDefault: true, potentialIsDefault: true, isDefault: false });
   assert.deepEqual(s1.stats, def0.stats, 'a skill choice never changes stats');
   assert.ok(Object.isFrozen(s1) && Object.isFrozen(s1.skill.bb), 'variant defs are frozen like every def');
   assert.equal(C[INSIDE].skill.skillId, 'skchr_inside_2', 'the raw record is never mutated');
@@ -91,11 +92,12 @@ test('getChess(id, loadout): selected skill (bb, SP, trigger) and module (stats,
   assert.equal(d.getChess('chess_char_1_10_a', { skillIndex: 0 }).skill.trigger.rule, 'DEFAULT');
   assert.equal(d.getChess('chess_char_1_10_a', { skillIndex: 1 }).skill.trigger.rule, 'TAKE_DAMAGE');
 
-  // modules on the elite: statsBase + module attr; trait / talents of that module; 'none' = the base
+  // modules on the elite: statsBase + module attr; trait / talents of that module; 'none' = the base. These compare
+  // against the RAW record (built at full potential), so they field it explicitly at 潜能 6.
   const g = C[MLYSS];
-  const dm = d.getChess(MLYSS);
-  const m3 = d.getChess(MLYSS, { moduleId: 'uniequip_003_mlyss' });
-  const none = d.getChess(MLYSS, { moduleId: 'none' });
+  const dm = d.getChess(MLYSS, { potential: 6 });
+  const m3 = d.getChess(MLYSS, { moduleId: 'uniequip_003_mlyss', potential: 6 });
+  const none = d.getChess(MLYSS, { moduleId: 'none', potential: 6 });
   assert.equal(dm.stats.maxHp, 1893);
   assert.equal(m3.stats.maxHp, g.statsBase.maxHp + 170);
   assert.equal(m3.stats.atk, g.statsBase.atk + 28);
@@ -109,7 +111,7 @@ test('getChess(id, loadout): selected skill (bb, SP, trigger) and module (stats,
   assert.ok(m3.talents.some((t) => t.bb.runtime_cost === -2 && t.bb.cost === -2), 'module talent change applied');
   assert.ok(m3.talents.some((t) => t.bb.sp_other === 10) && !none.talents.some((t) => t.bb.sp_other === 10), 'the module-only talent');
   assert.equal(m3.skill.id, dm.skill.id, 'a module choice keeps the skill');
-  const both = d.getChess(MLYSS, { skillIndex: 0, moduleId: 'none' });
+  const both = d.getChess(MLYSS, { skillIndex: 0, moduleId: 'none', potential: 6 });
   assert.equal(both.skill.id, 'skchr_mlyss_1');
   assert.equal(both.stats.maxHp, g.statsBase.maxHp);
 });
@@ -186,9 +188,9 @@ function normalSpec(units, { seed = 4242 } = {}) {
 
 test('BattleSpec: units carry skillIndex / moduleId (sanitised); a battle uses the selected skill and module', { skip }, () => {
   const spec = normalSpec([
-    { uid: 1, chessId: INSIDE, row: 10, col: 5, dir: 'RIGHT', skillIndex: 0 },
-    { uid: 2, chessId: MLYSS, row: 11, col: 4, dir: 'RIGHT', skillIndex: 0, moduleId: 'uniequip_003_mlyss' },
-    { uid: 3, chessId: 'chess_char_1_02_a', row: 10, col: 7, dir: 'RIGHT', skillIndex: 'x', moduleId: '../../etc' },
+    { uid: 1, chessId: INSIDE, row: 10, col: 5, dir: 'RIGHT', skillIndex: 0, potential: 6 },
+    { uid: 2, chessId: MLYSS, row: 11, col: 4, dir: 'RIGHT', skillIndex: 0, moduleId: 'uniequip_003_mlyss', potential: 6 },
+    { uid: 3, chessId: 'chess_char_1_02_a', row: 10, col: 7, dir: 'RIGHT', skillIndex: 'x', moduleId: '../../etc', potential: 6 },
     { uid: 4, kind: 'token', tokenId: WTRMAN, ownerUid: 2, row: 12, col: 6, skillIndex: 1 },
   ]);
   const u = spec.players[0].units;
@@ -222,9 +224,10 @@ test('BattleSpec: units carry skillIndex / moduleId (sanitised); a battle uses t
 
 test('determinism: a spec with loadouts gives identical results on independent sources; the loadout matters', { skip }, () => {
   const units = [
-    { uid: 1, chessId: INSIDE, row: 10, col: 5, dir: 'RIGHT', skillIndex: 0 },
-    { uid: 2, chessId: 'chess_char_1_02_a', row: 10, col: 8, dir: 'RIGHT', skillIndex: 0 },
-    { uid: 3, chessId: MLYSS, row: 11, col: 4, dir: 'RIGHT', skillIndex: 1, moduleId: 'none' },
+    // 潜能 6 on purpose: the expectations below compare against the RAW records (built at full potential)
+    { uid: 1, chessId: INSIDE, row: 10, col: 5, dir: 'RIGHT', skillIndex: 0, potential: 6 },
+    { uid: 2, chessId: 'chess_char_1_02_a', row: 10, col: 8, dir: 'RIGHT', skillIndex: 0, potential: 6 },
+    { uid: 3, chessId: MLYSS, row: 11, col: 4, dir: 'RIGHT', skillIndex: 1, moduleId: 'none', potential: 6 },
   ];
   const spec = normalSpec(units);
   const run = (s, src) => resultDigest(createBattleFromSpec(s, src, { recordEvents: false, quiet: true }).runToEnd(4000));

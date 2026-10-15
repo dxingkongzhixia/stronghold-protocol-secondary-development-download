@@ -43,9 +43,10 @@ const ENEMIES = {
 const FORMS_ALL = [[5, false, null], [6, false, null], [5, true, null], [5, true, X], [6, true, null], [6, true, X]];
 const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${mod ?? 'none'}`;
 
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 5, dir = 'RIGHT', pieces = [], others = [], seed = 5, dp = 99 } = {}) {
   const units = [
-    { uid: 1, diy: { slot: SLOT[tier], charId: NASTI, skillIndex: skill, uniEquipId: mod }, elite, row, col, dir },
+    { uid: 1, diy: { slot: SLOT[tier], charId: NASTI, skillIndex: skill, uniEquipId: mod }, elite, row, col, dir, potential: 6 },
     ...pieces.map(([r, c, d], i) => ({ uid: 10 + i, kind: 'token', tokenId: TOK[skill], ownerUid: 1, row: r, col: c, dir: d ?? 'RIGHT' })),
     ...others,
   ];

@@ -40,8 +40,9 @@ const tk = (r, c) => r * COLS + c;
 /**
  * 可露希尔 as uid 1 at (row, col) facing RIGHT; `base` = the 指挥中心 piece's tile (uid 2) or null; `others` as given.
  */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, row = 10, col = 4, base = [10, 6], others = [], seed = 5 } = {}) {
-  const op = { uid: 1, diy: { slot: SLOT[tier], charId: CL, skillIndex: skill, uniEquipId: mod }, elite, row, col };
+  const op = { uid: 1, diy: { slot: SLOT[tier], charId: CL, skillIndex: skill, uniEquipId: mod }, elite, row, col, potential: 6 };
   const piece = base ? [{ uid: 2, kind: 'token', tokenId: BASE, ownerUid: 1, row: base[0], col: base[1] }] : [];
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,

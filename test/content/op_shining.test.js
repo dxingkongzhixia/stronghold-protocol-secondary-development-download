@@ -38,15 +38,16 @@ const label = ([tier, elite, mod]) => `T${tier} ${elite ? 'elite' : 'normal'} ${
  * 地面 tile (10,4) (uid 2) and a ranged ally on the 高台 tile (10,2) (uid 3) — both in her range —, a melee ally outside it
  * at (10,8) (uid 4).
  */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 0, seed = 5, extra = [] } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES, chess: ALLIES }, timeLimit: 600, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'heal', 'skillStart', 'skillEnd'], captureNoisy: true,
     units: [
-      { uid: 1, diy: { slot: SLOT[tier], charId: SHINING, skillIndex: skill, uniEquipId: mod }, elite, row: 11, col: 2 },
-      { uid: 2, chessId: 'test_melee_a', row: 10, col: 4 },
-      { uid: 3, chessId: 'test_ranged_a', row: 10, col: 2 },
-      { uid: 4, chessId: 'test_melee_a', row: 10, col: 8 },
+      { uid: 1, diy: { slot: SLOT[tier], charId: SHINING, skillIndex: skill, uniEquipId: mod }, elite, row: 11, col: 2, potential: 6 },
+      { uid: 2, chessId: 'test_melee_a', row: 10, col: 4, potential: 6 },
+      { uid: 3, chessId: 'test_ranged_a', row: 10, col: 2, potential: 6 },
+      { uid: 4, chessId: 'test_melee_a', row: 10, col: 8, potential: 6 },
       ...extra,
     ],
   });

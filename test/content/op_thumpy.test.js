@@ -38,11 +38,12 @@ const K = (r, c) => r * 21 + c;
 const sortN = (a) => [...a].sort((x, y) => x - y);
 
 /** A battle with 珊比 as uid 1 at (row, col) facing `dir` (RIGHT), plus `others`. */
+// pinned at full potential (潜能 6 / 精英2 Lv.60) — these tests assert the official data numbers; the runtime default is 潜能 1 / 未精英化 since 2026-10-15.
 function field({ tier = 5, elite = false, mod = null, skill = 2, row = 10, col = 5, dir = 'RIGHT', others = [], seed = 5 } = {}) {
   const h = makeBattle({
     defs: { enemies: ENEMIES }, timeLimit: 900, autoFinish: false, seed,
     flags: { dpPerSec: 0, dpMax: 999 }, hooks: ['damaged', 'skillStart', 'skillEnd', 'statusApplied', 'elementBurst'], captureNoisy: true,
-    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: THUMPY, skillIndex: skill, uniEquipId: mod }, elite, row, col, dir }, ...others],
+    units: [{ uid: 1, diy: { slot: SLOT[tier], charId: THUMPY, skillIndex: skill, uniEquipId: mod }, elite, row, col, dir, potential: 6 }, ...others],
   });
   h.step();
   return { h, u: h.unit(1) };
