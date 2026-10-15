@@ -423,9 +423,10 @@ test('chess/tokens: talent tokens resolve and every token variant says where it 
   // Placeable (hand) tokens = the manually deployable summons (PRTS 卫戍协议/帮助 §战斗部署; user playtest #6): shop
   // state DEFAULT or no shop-state entry (凯瑟琳's device), never HIDDEN, made by some owner loadout (talent or skill) —
   // 赫默's 医疗探机 and 巫恋's 诅咒娃娃 included (in battle they wait on their tile for the skill).
-  // Exception: 望's 棋子 are granted AND deployed AUTOMATICALLY by his kit — never hand cards, so placeable is false
-  // although a talent/skill makes them.
-  const AUTO_ONLY = new Set(['token_10064_wang_stone1', 'token_10071_aglna2_agairp']); // 望's 棋子 (auto-deployed) + 予愿安洁莉娜's S3 “一会儿见！” (her own object; CUSTOM_CHESS chess now)
+  // 望's 棋子 joined them on 2026-10-15 (MATCHMAKING §30 / §46): PRTS 第一天赋「**手动部署**棋子时，望在相邻位置额外部署一枚
+  // 棋子」and S3「在攻击范围内**手动部署**棋子时可部署至敌人所在位置」— the pieces are hand cards (the 干员 talent's `cnt`
+  // is the opening hand), and only their in-battle grants stay auto-placed (this port has no mid-battle placement action).
+  const AUTO_ONLY = new Set(['token_10071_aglna2_agairp']); // 予愿安洁莉娜's S3 “一会儿见！” (her own object; CUSTOM_CHESS chess now)
   const makes = (list) => list.includes('talent') || list.includes('skill');
   for (const t of Object.values(tokens)) {
     if (t.kind !== 'summon') continue;
@@ -433,7 +434,7 @@ test('chess/tokens: talent tokens resolve and every token variant says where it 
     assert.equal(t.placeable, t.displayType !== 'HIDDEN' && made && !AUTO_ONLY.has(t.tokenId), `${t.tokenId} (${t.name}): placeable`);
   }
   assert.deepEqual(Object.values(tokens).filter((t) => t.placeable).map((t) => t.name).sort(),
-    ['医疗探机', '诅咒娃娃', '斯卡蒂的海嗣', '流形', '狼群', '爬行号·防护单元', '战术锚点'].sort());
+    ['医疗探机', '诅咒娃娃', '斯卡蒂的海嗣', '流形', '狼群', '爬行号·防护单元', '战术锚点', '棋子'].sort());
   assert.equal(tokens.enemy_9012_acloon.stats.deployLimit, tokens.enemy_9012_acloon.deployLimit);
 });
 

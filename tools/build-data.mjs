@@ -2064,11 +2064,15 @@ function buildTokens(ctx, chess, tokenOwners, enemies) {
     const produced = owners.some((o) => makes(o.sources) || (o.skillAlts || []).some((a) => makes(a.sources)));
     const ownerTexts = owners.flatMap((o) => (chess[o.chessId]?.talents || []).filter((t) => t.tokenKey === tokenId).map((t) => t.desc || ''));
     out[tokenId] = summonRecord(ctx, tokenId, char, variants, produced, ownerTexts);
-    // 望's 棋子 (docs/MATCHMAKING.md §30): in-game it is placeable on ANY tile (全部位) and hits air (可对空); the
-    // mode's own table says MELEE / no-air, so correct the two fields here. `placeable: false` — the pieces are NOT
-    // hand cards: 望's kit grants them and deploys them AUTOMATICALLY in battle (the web port cannot place mid-battle),
-    // so the match must not also send 6 piece cards to the hand (pure automatic, owner's call).
-    if (tokenId === 'token_10064_wang_stone1') Object.assign(out[tokenId], { position: 'ALL', canHitFly: true, placeable: false });
+    // 望's 棋子 (docs/MATCHMAKING.md §30, corrected 2026-10-15): in-game it is placeable on ANY tile (全部位) and hits air
+    // (可对空); the mode's own table says MELEE / no-air, so correct the two fields here.
+    // `placeable: true` — PRTS 第一天赋「**手动部署**棋子时，望在相邻位置额外部署一枚棋子」and S3「在攻击范围内**手动部署**
+    // 棋子时可部署至敌人所在位置」: the pieces are HAND PIECES (the official model: the player places one at a time, and the
+    // 干员 talent's `cnt` — 6 at E2, 7 at 潜能3 — is the opening hand). The engine's placeable-summon contract then gives
+    // them the hand, the equip-time stack and the prep placement (docs: server/sim/content/kits/README.md).
+    // [ASSUMED] the in-battle grants of S1/S2/S3 keep being auto-placed by the kit: this port's battle is deterministic
+    // and has no mid-battle placement action, while the official player may place them as the skills fire.
+    if (tokenId === 'token_10064_wang_stone1') Object.assign(out[tokenId], { position: 'ALL', canHitFly: true, placeable: true });
   }
 
   // 炎佑 (yanShip 6-member summon) — allied flying unit built from its enemy template.

@@ -37,9 +37,11 @@ const tokensOf = (ps, id) => [...ps.hand, ...ps.temp, ...ps.board.values()].filt
 const stackOf = (ps, id) => ps.hand.find((p) => p && p.kind === 'token' && p.id === id) ?? null;
 const move = (m, uid, to, dir) => m.handle('p_0', { t: 'g.move', uid, to, ...(dir ? { dir } : {}) });
 
-test('tokens.json: the manually deployable summons are hand pieces — 医疗探机, 诅咒娃娃, 爬行号·防护单元 with the talent ones', () => {
+test('tokens.json: the manually deployable summons are hand pieces — 医疗探机, 诅咒娃娃, 爬行号·防护单元 and 望\'s 棋子 with the talent ones', () => {
   const placeable = Object.values(DATA.tokens).filter((t) => t.placeable).map((t) => t.tokenId).sort();
-  assert.deepEqual(placeable, [DRONE, DOLL, 'token_10017_skadi2_dedant', 'token_10028_vigil_wolf', 'token_10030_mlyss_wtrman', DEVICE, 'token_10068_kalts2_mtship'].sort());
+  // 望's 棋子 joined on 2026-10-15 (MATCHMAKING §30): the official pieces are hand cards — the player places them one at
+  // a time, the 干员 talent's `cnt` being the opening hand (PRTS 天赋「手动部署棋子时…」).
+  assert.deepEqual(placeable, [DRONE, DOLL, 'token_10017_skadi2_dedant', 'token_10028_vigil_wolf', 'token_10030_mlyss_wtrman', DEVICE, 'token_10064_wang_stone1', 'token_10068_kalts2_mtship'].sort());
   // HIDDEN shop-state tokens stay battle-only (PRTS: 新约能天使 with 使命必达！ provides no 投递坐标 card)
   for (const t of Object.values(DATA.tokens)) if (t.displayType === 'HIDDEN') assert.equal(t.placeable, false, t.name);
   assert.equal(DATA.tokens.token_10056_angel2_target.placeable, false);
