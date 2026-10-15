@@ -984,6 +984,11 @@ function buildSkill(ctx, skillId, level, trigger, label) {
   const { desc, descRaw } = textPair(lv.description, phBB, bbStr, `skill ${skillId}`);
   const sp = lv.spData || {};
   if (typeof sp.spType === 'number' && !SP_TYPE_NAMES[sp.spType]) warn(`skill ${skillId}: unknown numeric spType ${sp.spType}`);
+  // 望's 棋子 S3 (docs/MATCHMAKING.md §30.4): PRTS's 天下劫 备注 says 「棋子与跟子的攻击范围/触发范围为 x-1」 (阵法术士's
+  // 13-tile diamond), while the client's skill_table carries `sktok_wang_3` with `rangeId x-6` (a 9-tile cross) — the owner
+  // sees the diamond in game (2026-10-16), and the wiki's source agrees, so the trigger range is corrected here. Delete
+  // this block to go back to the raw table value.
+  const grid = skillId === 'sktok_wang_3' ? rangeGrid(ctx, 'x-1') : rangeGrid(ctx, lv.rangeId);
   return {
     skillId,
     iconId: s.iconId || skillId,
@@ -999,8 +1004,8 @@ function buildSkill(ctx, skillId, level, trigger, label) {
     maxChargeTime: sp.maxChargeTime,
     increment: cleanNum(sp.increment),
     bb, bbStr,
-    rangeId: lv.rangeId || null,
-    rangeGrid: rangeGrid(ctx, lv.rangeId),
+    rangeId: skillId === 'sktok_wang_3' ? 'x-1' : lv.rangeId || null,
+    rangeGrid: grid,
     prefabId: lv.prefabId || skillId,
     trigger: trigger || { rule: 'DEFAULT', rawRule: 'DEFAULT', customRangeGrid: null },
   };

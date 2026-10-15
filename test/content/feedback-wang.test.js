@@ -176,11 +176,17 @@ test('望 S3 天下劫: a consumed piece is refilled while bullets last ("有空
   const left = () => Math.floor(Number(w.skill.ammoLeft) || 0);
   // an enemy on a piece detonates it (and every other piece its expanded range reaches); the field is refilled from the
   // bullets until none are left
-  for (let i = 0; i < 40 && w.skill.active; i++) {
+  for (let i = 0; i < 200 && w.skill.active; i++) {
     const p = living(h)[0];
-    if (!p) break;
+    // The x-1 (阵法术士 diamond) trigger can wipe the whole chain at once: the S3 refill then reseeds on its next tick,
+    // so keep the clock running instead of stopping (the official 「有空地就不断下棋子」).
+    if (!p) { h.run(0.5); continue; }
     h.spawn('e', { pos: [p.tileR, p.tileC] });
     h.run(0.3);
+    // Clear the stationary body after the detonation: left lying on the tile it would block the 相连 tile the next refill
+    // needs (one enemy per iteration already spends a full refill's worth of bullets).
+    const foe = h.b.enemies.find((x) => x.alive && x.tileR === p.tileR && x.tileC === p.tileC);
+    if (foe) h.b.retreat(foe, { reason: 'expired' });
   }
   assert.equal(left(), 0, 'the bullets ran out');
   assert.equal(w.skill.active, false, '弹药耗尽后技能结束');
@@ -224,11 +230,15 @@ test('望: the S3 refill keeps every living piece 相连 through the explosions 
   assert.ok(allLinked(), 'after the cast every piece is linked');
   // walk an enemy onto a piece: it (and every piece its expanded range reaches) detonates, then the field refills from the
   // bullets. No refill may drop a piece off the chain — that would be the owner's dead piece.
-  for (let i = 0; i < 40 && w.skill.active; i++) {
+  for (let i = 0; i < 200 && w.skill.active; i++) {
     const p = living(h)[0];
-    if (!p) break;
+    // see the test above: the x-1 diamond can wipe the whole chain, and the refill reseeds on its next tick
+    if (!p) { h.run(0.5); continue; }
     h.spawn('e', { pos: [p.tileR, p.tileC] });
     h.run(0.3);
+    // clear the stationary body (see the test above): it would otherwise block the 相连 tile the refill needs
+    const foe = h.b.enemies.find((x) => x.alive && x.tileR === p.tileR && x.tileC === p.tileC);
+    if (foe) h.b.retreat(foe, { reason: 'expired' });
     assert.ok(allLinked(), `iteration ${i}: every living piece linked (${living(h).map((q) => `${q.tileR},${q.tileC}:${linked(q)}`).join(' ')})`);
   }
   assert.equal(Math.floor(Number(w.skill.ammoLeft) || 0), 0, 'the bullets ran out');
@@ -236,7 +246,7 @@ test('望: the S3 refill keeps every living piece 相连 through the explosions 
   checkInvariants(h.b);
 });
 
-test('望 S3: an enemy entering the board detonates every 相连 piece whose expanded range (x-6 十字) reaches it', REAL, () => {
+test('望 S3: an enemy entering the board detonates every 相连 piece whose expanded range (x-1 阵法术士菱形) reaches it', REAL, () => {
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
     units: [
@@ -250,10 +260,10 @@ test('望 S3: an enemy entering the board detonates every 相连 piece whose exp
   h.step();
   assert.ok(living(h).every(linked), 'the opening line is linked');
   assert.equal(living(h).length, 6, 'three placed pieces + three 跟子');
-  // the S3 trigger range is data `x-6` — a plus of radius 2, NOT the whole 5×5: every linked piece whose cross reaches the
-  // foe must fire, the diagonal survivors stay (and stay linked)
-  const CROSS = [[2, 0], [1, 0], [0, -2], [0, -1], [0, 0], [0, 1], [0, 2], [-1, 0], [-2, 0]];
-  const reaches = (p) => CROSS.some(([dr, dc]) => p.tileR + dr === 10 && p.tileC + dc === 6);
+  // the S3 trigger range is the 阵法术士 diamond `x-1` (13 tiles) — every linked piece whose diamond reaches the foe must
+  // fire; pieces out of range stay (and stay linked)
+  const DIAMOND = [[2, 0], [1, -1], [1, 0], [1, 1], [0, -2], [0, -1], [0, 0], [0, 1], [0, 2], [-1, -1], [-1, 0], [-1, 1], [-2, 0]];
+  const reaches = (p) => DIAMOND.some(([dr, dc]) => p.tileR + dr === 10 && p.tileC + dc === 6);
   const doomed = living(h).filter(reaches);
   assert.ok(doomed.length >= 4, `several linked pieces reach the foe (${doomed.length})`);
   h.spawn('e', { pos: [10, 6] });
