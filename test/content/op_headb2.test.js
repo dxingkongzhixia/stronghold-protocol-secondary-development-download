@@ -75,9 +75,9 @@ test('怒潮凛冬 in every 自选 form: her operator kit (all three skills auth
       done(h);
     }
   }
-  // zh_CN (full potential: ATK +40): E2 Lv1 2301 / 1100 / 346, E2 Lv60 2731 / 1234 / 387; HAM-X +250 / +63 / +21 →
+  // zh_CN (full potential: ATK +40, +50 信赖): E2 Lv1 2301 / 1150 / 346, E2 Lv60 2731 / 1284 / 387; HAM-X +250 / +63 / +21 →
   // +380 / +83 / +30
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2301, 1100, 2731, 1234]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2301, 1150, 2731, 1284]);
   assert.deepEqual([modOf(5, HAMX).attr, modOf(6, HAMX).attr], [{ maxHp: 250, atk: 63, def: 21 }, { maxHp: 380, atk: 83, def: 30 }]);
 });
 

@@ -219,7 +219,7 @@ test('缇缇 S1 缓蚀: ATK +, each attack sleeps the target attack@sleep s with
 test('缇缇 S2 封护: no attacks; she and the lowest-HP op in range sleep (invulnerable) until the end; enemies around them sleep; T1 ×talent_scale', () => {
   for (const id of pair('02')) {
     const h = run({
-      defs: { enemies: { enemy_dummy: dummy('enemy_dummy') }, chess: { t_hurt: ally('t_hurt'), t_fine: ally('t_fine') } },
+      defs: { enemies: { enemy_dummy: dummy('enemy_dummy') }, chess: { t_hurt: ally('t_hurt', { stats: { maxHp: 1e6 } }), t_fine: ally('t_fine', { stats: { maxHp: 1e6 } }) } },
       units: [entry(id, 'skchr_titi_2', { row: 10, col: 4 }), { chessId: 't_hurt', row: 10, col: 6, potential: 6 }, { chessId: 't_fine', row: 11, col: 5, potential: 6 }],
       enemies: [{ key: 'enemy_dummy', pos: [10, 7] }, { key: 'enemy_dummy', pos: [12, 8] }],
     });

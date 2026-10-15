@@ -4,8 +4,8 @@
 // tools/build-data.mjs FULL_RANK, docs/DATA.md §2 / §2.3): every chess (normal and elite), 自选
 // pick and 补位 stand-in adds its character_table `potentialRanks` attribute steps and takes its talent / module-talent
 // candidates up to `requiredPotentialRank` 5; a summon picks its talent candidates at its owner's potential but takes
-// none of the owner's attribute steps. The evidence: a tournament video shows 刺玫 (chess_char_1_06_a) at ATK 435 and
-// cost 15 — her E1 Lv55 413 / 17 plus 攻击力+22 and two 部署费用-1. These numbers reach the battle, the 干员调配 局内数值
+// none of the owner's attribute steps. The evidence: a tournament video shows 刺玫 (chess_char_1_06_a) at ATK 465 and
+// cost 15 — her E1 Lv55 443 / 17 (413 + 信赖 30) plus 攻击力+22 and two 部署费用-1. These numbers reach the battle, the 干员调配 局内数值
 // and the detail card through the records (shared/loadoutRecord.js, simdata getChess).
 // With the official-data cache (.cache/gamedata) the potential steps are re-derived from the raw character_table.
 // Run: node --test test/full-potential.test.js
@@ -31,14 +31,14 @@ const backups = load('backups');
 const raw = (f) => JSON.parse(readFileSync(join(CACHE, 'excel', `${f}.json`), 'utf8'));
 const talent = (rec, name) => rec.talents.find((t) => t.name === name);
 
-test('刺玫 at full potential: ATK 435 / cost 15 (the tournament video), 再部署 66 s, 土壤基肥改良 at its 「天赋效果增强」 step', () => {
+test('刺玫 at full potential: ATK 465 / cost 15 (the tournament video), 再部署 66 s, 土壤基肥改良 at its 「天赋效果增强」 step', () => {
   const v = chess.chess_char_1_06_a;
   assert.equal(v.name, '刺玫');
-  assert.deepEqual([v.stats.atk, v.stats.cost, v.stats.respawnTime, v.stats.maxHp, v.stats.def], [435, 15, 66, 1137, 77]);
+  assert.deepEqual([v.stats.atk, v.stats.cost, v.stats.respawnTime, v.stats.maxHp, v.stats.def], [465, 15, 66, 1317, 77]);
   assert.equal(talent(v, '土壤基肥改良').bb.heal_scale, 1.11, 'E1: 1.08 + the potential-5 step');
   assert.match(talent(v, '土壤基肥改良').desc, /111%|11%/);
   const e = chess.chess_char_1_06_b;   // the elite: its own E2 Lv50 record plus the same five steps
-  assert.deepEqual([e.stats.atk, e.stats.cost, e.stats.respawnTime, e.statsBase.atk, e.statsBase.cost], [553, 15, 66, 530, 15]);
+  assert.deepEqual([e.stats.atk, e.stats.cost, e.stats.respawnTime, e.statsBase.atk, e.statsBase.cost], [583, 15, 66, 560, 15]);
   assert.equal(talent(e, '土壤基肥改良').bb.heal_scale, 1.18);
 });
 
@@ -46,8 +46,8 @@ test('the other potential kinds: 攻击速度 (格雷伊 +6, 崖心 / 伊内丝 
   const s = (id) => chess[id].stats;
   assert.deepEqual([s('chess_char_1_14_a').aspd, s('chess_char_1_14_b').aspd], [106, 109], '格雷伊 攻击速度+6');
   assert.deepEqual([s('chess_char_2_03_a').aspd, s('chess_char_4_04_a').aspd], [108, 108], '崖心 / 伊内丝 攻击速度+8');
-  assert.equal(s('chess_char_1_02_a').maxHp, 2466, '角峰 生命上限 +250');
-  assert.equal(s('chess_char_1_20_a').def, 516, '雷蛇 防御力 +27');
+  assert.equal(s('chess_char_1_02_a').maxHp, 2851, '角峰 生命上限 +250 potential, +385 信赖');
+  assert.equal(s('chess_char_1_20_a').def, 561, '雷蛇 防御力 +27 potential, +45 信赖');
   assert.equal(s('chess_char_3_09_a').res, 33, '海霓 法术抗性 +8');
   // GitHub #252: 砾 18 → 16 s, 至简 80 → 70 s; 野鬃's two 再部署时间-10秒 steps: 80 → 60 s
   assert.deepEqual([s('chess_char_2_12_a').respawnTime, s('chess_char_2_12_a').cost], [16, 6]);
@@ -78,6 +78,10 @@ test('every chess, 自选 form and stand-in form: the raw keyframes plus every p
   };
   const check = (label, charId, status, stats) => {
     const exp = frame(charId, status.phase, status.level);
+    // + the FULL trust bonus (the season fixes trust at 100 %; tools/build-data.mjs withFavor, MATCHMAKING §46)
+    const fav = (CT[charId].favorKeyFrames || []).slice(-1)[0]?.data || {};
+    const FAV = { maxHp: 'maxHp', atk: 'atk', def: 'def', magicResistance: 'res', attackSpeed: 'aspd', cost: 'cost', respawnTime: 'respawnTime', blockCnt: 'blockCnt' };
+    for (const [k, key] of Object.entries(FAV)) if (key in exp && fav[k]) exp[key] += fav[k];
     for (const [k, v] of Object.entries(steps(charId))) exp[k] += v;
     for (const [k, v] of Object.entries(exp)) assert.ok(Math.abs(v - stats[k]) <= 0.5 + 1e-9, `${label}: ${k} ${stats[k]} vs official ${v}`);
   };
@@ -154,10 +158,10 @@ test('the numbers reach the loadout record (局内数值 / detail card), the 自
   const e = chess.chess_char_1_06_b;
   const other = (e.modules || []).find((m) => !m.isDefault);
   const none = loadoutRecord(e, resolveLoadout(e, { moduleId: 'none', potential: 6 }));
-  assert.deepEqual([none.stats.atk, none.stats.cost, none.stats.respawnTime], [530, 15, 66]);
+  assert.deepEqual([none.stats.atk, none.stats.cost, none.stats.respawnTime], [560, 15, 66]);
   if (other) {
     const r = loadoutRecord(e, resolveLoadout(e, { moduleId: other.uniEquipId, potential: 6 }));
-    assert.equal(r.stats.atk, 530 + (other.attr.atk || 0));
+    assert.equal(r.stats.atk, 560 + (other.attr.atk || 0));
   }
   // 自选 凯尔希 (an owned 6★): her form at full potential
   const diy = diyRecordOf(chess.chess_char_6_diy1_a, { charId: 'char_003_kalts', skillIndex: 0 }, { chess, backups }, { potential: 6 });
@@ -165,8 +169,8 @@ test('the numbers reach the loadout record (局内数值 / detail card), the 自
   // a 补位 stand-in is unchanged by the rule (预备干员 / 原型干员 have no potential ranks)
   const st = standInRecord(chess.chess_char_3_21_a, backups);
   assert.equal(st.stats.cost, backups.units[st.charId].forms[`${chess.chess_char_3_21_a.status.phase}/${chess.chess_char_3_21_a.status.level}/${chess.chess_char_3_21_a.status.skillLevel}/0`].stats.cost);
-  // the battle fields 刺玫 with ATK 435 / cost 15 / 66 s at 潜能 6
+  // the battle fields 刺玫 with ATK 465 / cost 15 / 66 s at 潜能 6
   const h = makeBattle({ units: [{ chessId: 'chess_char_1_06_a', row: 10, col: 5, potential: 6 }], timeLimit: 5 });
   const u = h.unit('chess_char_1_06_a');
-  assert.deepEqual([u.base.atk, u.base.cost, u.base.respawnTime], [435, 15, 66]);
+  assert.deepEqual([u.base.atk, u.base.cost, u.base.respawnTime], [465, 15, 66]);
 });

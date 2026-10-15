@@ -84,8 +84,8 @@ test('多萝西 in every 自选 form: her operator kit (all three skills authore
       done(h);
     }
   }
-  // E2 Lv1 1186 / 503 / 142, E2 Lv60 1395 / 573 / 162; TRP-Y +120 / +42 → +155 / +57, TRP-X +36 / +12 → +60 / +30
-  assert.deepEqual([FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.atk], [503, 573]);
+  // E2 Lv1 1186 / 583 / 142, E2 Lv60 1395 / 653 / 162 (+80 信赖 ATK); TRP-Y +120 / +42 → +155 / +57, TRP-X +36 / +12 → +60 / +30
+  assert.deepEqual([FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.atk], [583, 653]);
   assert.deepEqual([modOf(5, Y).attr, modOf(6, Y).attr, modOf(5, X).attr, modOf(6, X).attr], [{ maxHp: 120, atk: 42 }, { maxHp: 155, atk: 57 }, { atk: 36, def: 12 }, { atk: 60, def: 30 }]);
   // the trap card: cost 3 (TRP-X 2), redeploy 5 s, deploy limit 10 (TRP-X 13)
   assert.deepEqual([tokOf(6, true, 0, null).stats.cost, tokOf(6, true, 0, X).stats.cost, tokOf(6, true, 0, null).stats.respawnTime, tokOf(6, true, 0, null).stats.deployLimit, tokOf(6, true, 0, X).stats.deployLimit], [3, 2, 5, 10, 13]);

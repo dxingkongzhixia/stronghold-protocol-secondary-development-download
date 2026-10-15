@@ -136,10 +136,10 @@ test('局内数值 at the operator\'s settings: 刺玫 at 潜能1 / 未精英化
   const v = get(VENDLA);
   const g = get(v.goldenId);
   const pv = (ops, level = 'normal') => statsPreview(v, g, {}, level, get, ops).record.stats;
-  assert.deepEqual([pv({ [v.charId]: { potential: 1, cultivate: 0 } }).atk, pv({ [v.charId]: { potential: 1, cultivate: 0 } }).cost], [413, 17], 'the defaults (潜能 1 / 未精英化)');
-  assert.equal(pv({}).atk, 413, 'none set: the same defaults');
-  assert.equal(pv({ [v.charId]: { potential: 6, cultivate: 3 } }).atk, 435 * 1.1, 'an explicit 潜能 6 + 精英2 Lv.60: ×1.1');
-  assert.equal(pv({ [v.charId]: { potential: 1, cultivate: 0 } }, 'elite').atk, 508 + 23, 'the elite: statsBase at 潜能1 + INC-X');
+  assert.deepEqual([pv({ [v.charId]: { potential: 1, cultivate: 0 } }).atk, pv({ [v.charId]: { potential: 1, cultivate: 0 } }).cost], [443, 17], 'the defaults (潜能 1 / 未精英化)');
+  assert.equal(pv({}).atk, 443, 'none set: the same defaults');
+  assert.equal(pv({ [v.charId]: { potential: 6, cultivate: 3 } }).atk, 465 * 1.1, 'an explicit 潜能 6 + 精英2 Lv.60: ×1.1');
+  assert.equal(pv({ [v.charId]: { potential: 1, cultivate: 0 } }, 'elite').atk, 538 + 23, 'the elite: statsBase at 潜能1 + INC-X');
   assert.ok(statsPreview(v, g, {}, 'normal', get, {}).lo.cultivation);
   // the caption says the numbers carry 潜能 and 练度 (an owned operator; effects.json loaded)
   const cap = (tree) => textOf(find(tree, (n) => hasClass(n, 'lo-stats__cap'))[0]);

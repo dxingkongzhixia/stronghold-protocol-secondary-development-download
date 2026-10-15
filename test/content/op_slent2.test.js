@@ -77,7 +77,7 @@ test('淬羽赫默 in every 自选 form: her kit (all three skills authored), th
       done(h);
     }
   }
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1445, 387, 1765, 440]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1795, 442, 2115, 495]);   // +350 HP / +55 ATK 信赖
   assert.deepEqual([modOf(5, X).attr, modOf(6, X).attr, modOf(5, Y).attr, modOf(6, Y).attr], [{ maxHp: 100, atk: 45 }, { maxHp: 150, atk: 70 }, { maxHp: 150, atk: 40 }, { maxHp: 200, atk: 62 }]);
 });
 

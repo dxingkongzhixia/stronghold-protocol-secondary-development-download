@@ -79,9 +79,9 @@ test('机械师 in every 自选 form: her operator kit (all three skills authore
       done(h);
     }
   }
-  // E2 Lv1 2614 / 425 / 542, E2 Lv60 3288 / 483 / 669 (full potential: DEF +28); SO-A +60 / +40 → +100 / +80 ATK / DEF; the token
+  // E2 Lv1 2614 / 485 / 542, E2 Lv60 3288 / 543 / 729 (full potential: DEF +28, +60 信赖 ATK/DEF); SO-A +60 / +40 → +100 / +80 ATK / DEF; the token
   // 2800 / 492 / 451 → 3264 / 564 / 517
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.def], [2614, 425, 3288, 669]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.def], [2614, 485, 3288, 729]);
   assert.deepEqual([modOf(5, SOA).attr, modOf(6, SOA).attr], [{ atk: 60, def: 40 }, { atk: 100, def: 80 }]);
   assert.deepEqual([variantOf(5, false).stats.maxHp, variantOf(6, true).stats.maxHp], [2800, 3264]);
 });

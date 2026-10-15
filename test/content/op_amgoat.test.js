@@ -69,9 +69,9 @@ test('艾雅法拉 in every 自选 form: her operator kit (all three skills auth
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential: ATK +27): E2 Lv1 1359 / 562 / 109, E2 Lv60 1614 / 635 / 118; CCR-X
+  // the numbers of the forms (zh_CN, full potential: ATK +27, +90 信赖): E2 Lv1 1359 / 652 / 109, E2 Lv60 1614 / 725 / 118; CCR-X
   // +130 / +40 → +180 / +65, CCR-Y +180 / +25 → +230 / +50 HP / ATK
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1359, 562, 1614, 635]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1359, 652, 1614, 725]);
   assert.deepEqual([modOf(5, CCRX).attr, modOf(6, CCRX).attr, modOf(5, CCRY).attr, modOf(6, CCRY).attr], [{ maxHp: 130, atk: 40 }, { maxHp: 180, atk: 65 }, { maxHp: 180, atk: 25 }, { maxHp: 230, atk: 50 }]);
 });
 

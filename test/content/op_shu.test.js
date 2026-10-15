@@ -87,8 +87,8 @@ test('黍 in every 自选 form: her operator kit (all three skills authored), th
       done(h);
     }
   }
-  // zh_CN numbers: E2 Lv1 2513 / 417 / 493, E2 Lv60 3110 / 475 / 565; GUA-X +160/+30/+30 → +270/+50/+50
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2513, 417, 3110, 475]);
+  // zh_CN numbers (+50 信赖 ATK): E2 Lv1 2513 / 467 / 493, E2 Lv60 3110 / 525 / 565; GUA-X +160/+30/+30 → +270/+50/+50
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2513, 467, 3110, 525]);
   assert.deepEqual([modOf(5, GUAX).attr, modOf(6, GUAX).attr], [{ maxHp: 160, atk: 30, def: 30 }, { maxHp: 270, atk: 50, def: 50 }]);
 });
 

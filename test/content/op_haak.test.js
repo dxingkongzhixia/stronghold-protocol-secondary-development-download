@@ -78,9 +78,9 @@ test('阿 in every 自选 form: his operator kit (all three skills authored), th
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 1777 / 583 / 121, E2 Lv60 2047 / 663 / 142; GEE-X +135 / +37 → +240 / +57 HP / ATK,
+  // the numbers of the forms (zh_CN, +300 HP / +50 ATK 信赖): E2 Lv1 2077 / 633 / 121, E2 Lv60 2347 / 713 / 142; GEE-X +135 / +37 → +240 / +57 HP / ATK,
   // GEE-Y +43 / +3 → +75 / +5 ATK / ASPD and respawn −15
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1777, 583, 2047, 663]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2077, 633, 2347, 713]);
   assert.deepEqual([modOf(5, GX).attr, modOf(6, GX).attr, modOf(5, GY).attr, modOf(6, GY).attr],
     [{ maxHp: 135, atk: 37 }, { maxHp: 240, atk: 57 }, { atk: 43, aspd: 3, respawnTime: -15 }, { atk: 75, aspd: 5, respawnTime: -15 }]);
 });

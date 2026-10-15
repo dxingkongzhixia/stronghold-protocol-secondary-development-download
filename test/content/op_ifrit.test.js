@@ -68,8 +68,8 @@ test('伊芙利特 in every 自选 form: her operator kit (all three skills auth
       done(h);
     }
   }
-  // E2 Lv1 1276 / 757, E2 Lv60 1544 / 855; BLA-X +50 ATK +5 ASPD → +72 / +7, BLA-D +120 HP +45 ATK → +200 / +70
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1276, 757, 1544, 855]);
+  // E2 Lv1 1276 / 867, E2 Lv60 1544 / 965 (+110 信赖 ATK); BLA-X +50 ATK +5 ASPD → +72 / +7, BLA-D +120 HP +45 ATK → +200 / +70
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1276, 867, 1544, 965]);
   assert.deepEqual([modOf(5, BLAX).attr, modOf(6, BLAX).attr, modOf(5, BLAD).attr, modOf(6, BLAD).attr], [{ atk: 50, aspd: 5 }, { atk: 72, aspd: 7 }, { maxHp: 120, atk: 45 }, { maxHp: 200, atk: 70 }]);
 });
 

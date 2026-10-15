@@ -69,9 +69,9 @@ test('年 in every 自选 form: her operator kit (all three skills authored), th
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential): E2 Lv1 2737 / 537 / 559, E2 Lv60 3375 / 607 / 690; PRO-X +200 HP / +60 DEF →
+  // the numbers of the forms (zh_CN, full potential: +400 HP / +70 DEF 信赖): E2 Lv1 3137 / 537 / 629, E2 Lv60 3775 / 607 / 760; PRO-X +200 HP / +60 DEF →
   // +375 / +50 / +80, PRO-Y +320 / +35 / +21 / block +1 → +550 / +70 / +30 / block +1
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/1/4/0'].stats.def, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.def], [2737, 537, 559, 3375, 690]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/1/4/0'].stats.def, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.def], [3137, 537, 629, 3775, 760]);
   assert.deepEqual([modOf(5, PROX).attr, modOf(6, PROX).attr, modOf(5, PROY).attr, modOf(6, PROY).attr],
     [{ maxHp: 200, def: 60 }, { maxHp: 375, atk: 50, def: 80 }, { maxHp: 320, atk: 35, def: 21, blockCnt: 1 }, { maxHp: 550, atk: 70, def: 30, blockCnt: 1 }]);
 });

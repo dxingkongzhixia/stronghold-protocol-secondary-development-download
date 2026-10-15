@@ -77,7 +77,7 @@ test('遥 in every 自选 form: her kit (all three skills authored), the form\'s
       done(h);
     }
   }
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1415, 423, 1728, 477]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1765, 478, 2078, 532]);   // +350 HP / +55 ATK 信赖
   assert.deepEqual([modOf(5, Y).attr, modOf(6, Y).attr], [{ maxHp: 130, atk: 30 }, { maxHp: 210, atk: 52 }]);
 });
 

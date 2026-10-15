@@ -54,16 +54,16 @@ test('all normal/elite funnel casters and eight Goldenglow forms: a body hit plu
   }
 });
 
-test('Lolo ATK 283: each component passes through RES, hit-count HP and a one-hit barrier separately', () => {
+test('Lolo ATK 343: each component passes through RES, hit-count HP and a one-hit barrier separately', () => {
   for (const mode of ['plain', 'res', 'times', 'barrier']) {
     const { h, u, e } = field({ chessId: 'chess_char_2_10_a' }, { res: mode === 'res' ? 50 : 0, hp: mode === 'times' ? 100 : 1e8 });
-    // Lolo at full potential: ATK 283 (潜能 steps applied); the derived numbers follow.
-    near(u.s.atk, 283, 'unbuffed Lolo');
+    // Lolo at full potential: ATK 343 (潜能 steps + 信赖); the derived numbers follow.
+    near(u.s.atk, 343, 'unbuffed Lolo');
     if (mode === 'times') hitCount(h.b, e, true);
     if (mode === 'barrier') h.b.addBuff(e, { key: 'test:barrier', shieldHits: 1 });
     h.run(0.7);
     const loss = (mode === 'times' ? 100 : 1e8) - e.hp;
-    near(loss, { plain: 339.6, res: 169.8, times: 2, barrier: 56.6 }[mode], mode);
+    near(loss, { plain: 411.6, res: 205.8, times: 2, barrier: 68.6 }[mode], mode);
     assert.equal(h.hooksOf('attack').filter((c) => c.attacker === u).length, 1, 'one attack action');
     done(h);
   }
@@ -273,8 +273,8 @@ test('damage equipment: Pegasus riders stay bounded and burn sees both arts comp
 });
 
 test('lethal body or addition: one death and no remaining instances redirected to another target', () => {
-  // 200 < the 259 body (the body alone kills); 300 is between the body and the body + drone (259 + 51.8 = 310.8).
-  for (const hp of [200, 300]) {
+  // 200 < the 343 body (the body alone kills); 380 is between the body and the body + drone (343 + 68.6 = 411.6).
+  for (const hp of [200, 380]) {
     const { h, u, e } = field({ chessId: 'chess_char_2_10_a' }, { hp }, { hooks: ['damaged', 'attack', 'death', 'kill'] });
     const other = h.spawn('enemy_dummy', { pos: [11, 6] });
     h.run(0.7);
@@ -282,7 +282,7 @@ test('lethal body or addition: one death and no remaining instances redirected t
     const hits = mine(h, u);
     assert.equal(hits.length, hp === 200 ? 1 : 2);
     assert.ok(hits.every((c) => c.target === e));
-    near(hits.reduce((sum, c) => sum + c.amount, 0), hp === 200 ? 283 : 339.6, 'mitigated amounts before HP clamping');
+    near(hits.reduce((sum, c) => sum + c.amount, 0), hp === 200 ? 343 : 411.6, 'mitigated amounts before HP clamping');
     near(u.stats.dmg, hp, 'damage statistics count only HP actually removed');
     near(other.hp, hp, 'no transfer to a spare target');
     assert.equal(h.hooksOf('death').filter((c) => c.unit === e).length, 1);

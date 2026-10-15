@@ -85,8 +85,8 @@ test('司霆惊蛰 in every 自选 form: her operator kit (all three skills auth
       done(h);
     }
   }
-  // E2 Lv1 3206 / 335 / 417, E2 Lv60 3642 / 371 / 466 (full potential); LIB-X +225 / +26 / +27 → +360 / +42 / +36 (HP / ATK / DEF)
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [3206, 335, 3642, 371]);
+  // E2 Lv1 3566 / 365 / 417, E2 Lv60 4002 / 401 / 466 (full potential +360 HP / +30 ATK 信赖); LIB-X +225 / +26 / +27 → +360 / +42 / +36 (HP / ATK / DEF)
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [3566, 365, 4002, 401]);
   assert.deepEqual([modOf(5, LIBX).attr, modOf(6, LIBX).attr], [{ maxHp: 225, atk: 26, def: 27 }, { maxHp: 360, atk: 42, def: 36 }]);
 });
 

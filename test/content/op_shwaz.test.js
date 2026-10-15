@@ -70,9 +70,9 @@ test('黑 in every 自选 form: her operator kit (all three skills authored), th
     }
   }
   // the data: all three DEFAULT (S3's 「攻击范围改为」 is an attack-range change, not a 技能范围 — tools/build-data.mjs
-  // ATTACK_RANGE_CHANGE); E2 Lv1 1393 / 676 / 164, Lv60 1685 / 805 / 204
+  // ATTACK_RANGE_CHANGE); E2 Lv1 1393 / 776 / 164, Lv60 1685 / 905 / 204 (+100 信赖 ATK)
   assert.deepEqual(formOf(6, true).skills.map((s) => s.trigger.rule), ['DEFAULT', 'DEFAULT', 'DEFAULT']);
-  assert.deepEqual([FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.atk], [676, 805]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.atk], [776, 905]);
   assert.deepEqual([modOf(5, X).attr, modOf(6, X).attr, modOf(5, Y).attr, modOf(6, Y).attr],
     [{ maxHp: 130, atk: 55, respawnTime: -25 }, { maxHp: 170, atk: 75, respawnTime: -25 }, { atk: 80, def: 10 }, { atk: 120, def: 16 }]);
 });

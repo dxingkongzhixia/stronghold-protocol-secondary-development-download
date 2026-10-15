@@ -74,9 +74,9 @@ test('逻各斯 in every 自选 form: his operator kit (all three skills authore
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential): E2 Lv1 1297 / 583, E2 Lv60 1540 / 659; CCR-Δ +100 / +36 → +170 / +67 HP / ATK,
+  // the numbers of the forms (zh_CN, full potential +90 信赖): E2 Lv1 1297 / 673, E2 Lv60 1540 / 749; CCR-Δ +100 / +36 → +170 / +67 HP / ATK,
   // CCR-Y +35 / +5 → +60 / +5 ATK / RES
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1297, 583, 1540, 659]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1297, 673, 1540, 749]);
   assert.deepEqual([modOf(5, CCRD).attr, modOf(6, CCRD).attr, modOf(5, CCRY).attr, modOf(6, CCRY).attr], [{ maxHp: 100, atk: 36 }, { maxHp: 170, atk: 67 }, { atk: 35, res: 5 }, { atk: 60, res: 5 }]);
 });
 

@@ -76,9 +76,9 @@ test('重岳 in every 自选 form: his operator kit (all three skills authored),
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential): E2 Lv1 2160 / 501 / 304, E2 Lv60 2475 / 576 / 343; FGT-X +210 / +25 / +20 →
+  // the numbers of the forms (zh_CN, full potential +60 信赖): E2 Lv1 2160 / 561 / 304, E2 Lv60 2475 / 636 / 343; FGT-X +210 / +25 / +20 →
   // +260 / +45 / +30, FGT-Y +52 / +25 → +75 / +35 ATK / DEF
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2160, 501, 2475, 576]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2160, 561, 2475, 636]);
   assert.deepEqual([modOf(5, FGTX).attr, modOf(6, FGTX).attr, modOf(5, FGTY).attr, modOf(6, FGTY).attr],
     [{ maxHp: 210, atk: 25, def: 20 }, { maxHp: 260, atk: 45, def: 30 }, { atk: 52, def: 25 }, { atk: 75, def: 35 }]);
   assert.deepEqual([modOf(5, FGTX).traitOverride.bb, modOf(6, FGTY).traitOverride.bb], [{ prob: 0.15 }, { attack_speed: 10, hp_ratio: 0.5 }]);

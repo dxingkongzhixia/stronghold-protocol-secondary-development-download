@@ -8,7 +8,7 @@ For a topic → file lookup table, use [`docs/QUERY-INDEX.md`](QUERY-INDEX.md); 
 It is an **orientation + map**, not a duplicate. Where a topic needs detail it points at the owning
 document — the authoritative sources are, in order: [`docs/DESIGN.md`](DESIGN.md) (the design index —
 current rules in [`docs/design/`](design/), per-release revisions in [`docs/history/`](history/)),
-[`docs/MATCHMAKING.md`](MATCHMAKING.md) (the fork's decision record, §1–§45),
+[`docs/MATCHMAKING.md`](MATCHMAKING.md) (the fork's decision record, §1–§46),
 [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (the operational contract — research → change → merge → push →
 deploy), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) (the repository map) and
 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) (what is ours and must survive an upstream merge).
@@ -209,7 +209,7 @@ Root layout (both trees are identical for every tracked file; §2 explains the s
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | the code map: what runs where, the WebSocket protocol, the directory layout, data flow, safety nets. |
 | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | the operational contract: the request loop, merge discipline, commit/push, the **production deploy runbook**, and when to stop and ask the owner. |
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **fork-only mechanisms** (what is ours, where it lives, how to extend it, the tests that pin it, the merge "must not be lost" note). |
-| [`docs/MATCHMAKING.md`](MATCHMAKING.md) | the **decision record** §1–§45 (accounts, matchmaking, the custom operators, the community surface, the merge blacklist §22, #488 §39.2, stats §40). |
+| [`docs/MATCHMAKING.md`](MATCHMAKING.md) | the **decision record** §1–§46 (accounts, matchmaking, the custom operators, the community surface, the merge blacklist §22, #488 §39.2, stats §40). |
 | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | the chronological upstream-merge log + the **never-merge list (§0)** + the per-batch skip reasons. |
 | [`docs/DESIGN.md`](DESIGN.md) → [`docs/design/`](design/) + [`docs/history/`](history/) | the normative game rules (index + current rules + per-release revisions). |
 | [`docs/DATA.md`](DATA.md) | every `data/*.json` field and how it is generated. |

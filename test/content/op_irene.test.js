@@ -29,7 +29,7 @@ const ENEMIES = {
   enemy_dummy: dummy('enemy_dummy'), enemy_fly: dummy('enemy_fly', { motion: 'FLY' }),
   enemy_def: dummy('enemy_def', { def: 400 }), enemy_fly_def: dummy('enemy_fly_def', { motion: 'FLY', def: 400 }),
   enemy_heavy: dummy('enemy_heavy', { mass: 4 }), enemy_fly_weak: dummy('enemy_fly_weak', { motion: 'FLY', hp: 2000 }),
-  enemy_frail: dummy('enemy_frail', { hp: 1000 }), enemy_weak2k: dummy('enemy_weak2k', { hp: 2000 }), enemy_sea: { ...dummy('enemy_sea'), tags: ['seamonster'] },
+  enemy_frail: dummy('enemy_frail', { hp: 1000 }), enemy_weak2k: dummy('enemy_weak2k', { hp: 2500 }), enemy_sea: { ...dummy('enemy_sea'), tags: ['seamonster'] },
 };
 /** Every 自选 form: [tier, elite, module]. */
 const FORMS_ALL = [[5, false, null], [6, false, null], ...[5, 6].flatMap((t) => [null, SWOY, SWOX, ISWA].map((m) => [t, true, m]))];
@@ -74,9 +74,9 @@ test('艾丽妮 in every 自选 form: her operator kit (all three skills authore
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential): E2 Lv1 2201 / 507 / 282, E2 Lv60 2688 / 598 / 326; SWO-Y +50 / +35 → +65 / +50
+  // the numbers of the forms (zh_CN, full potential +80 信赖): E2 Lv1 2201 / 587 / 282, E2 Lv60 2688 / 678 / 326; SWO-Y +50 / +35 → +65 / +50
   // ATK / DEF, SWO-X +50 ATK +5 ASPD → +80 / +7, ISW-A +240 HP +40 ATK → +300 / +65
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2201, 507, 2688, 598]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2201, 587, 2688, 678]);
   assert.deepEqual([SWOY, SWOX, ISWA].map((m) => [modOf(5, m).attr, modOf(6, m).attr]),
     [[{ atk: 50, def: 35 }, { atk: 65, def: 50 }], [{ atk: 50, aspd: 5 }, { atk: 80, aspd: 7 }], [{ maxHp: 240, atk: 40 }, { maxHp: 300, atk: 65 }]]);
 });

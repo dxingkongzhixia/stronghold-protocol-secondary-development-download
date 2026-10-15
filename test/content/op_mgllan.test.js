@@ -81,9 +81,9 @@ test('麦哲伦 in every 自选 form: her kit (all three skills authored), the f
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 871 / 426 / 116, E2 Lv60 1025 / 470 / 132; SUM-X +100 / +30 → +150 / +50 HP /
+  // the numbers of the forms (zh_CN, +300 HP / +40 ATK 信赖): E2 Lv1 1171 / 466 / 116, E2 Lv60 1325 / 510 / 132; SUM-X +100 / +30 → +150 / +50 HP /
   // ATK, SUM-Y +25 / +25 → +40 / +40 ATK / DEF
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [871, 426, 1025, 470]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1171, 466, 1325, 510]);
   assert.deepEqual([modOf(5, SUMX).attr, modOf(6, SUMX).attr, modOf(5, SUMY).attr, modOf(6, SUMY).attr], [{ maxHp: 100, atk: 30 }, { maxHp: 150, atk: 50 }, { atk: 25, def: 25 }, { atk: 40, def: 40 }]);
 });
 

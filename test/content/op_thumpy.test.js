@@ -72,9 +72,9 @@ test('珊比 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential: HP +270): E2 Lv1 2835 / 536 / 430, E2 Lv60 3464 / 625 / 516; PRP-X +250 / +50
+  // the numbers of the forms (zh_CN, full potential: HP +270, +300 HP / +30 ATK 信赖): E2 Lv1 3135 / 566 / 430, E2 Lv60 3764 / 655 / 516; PRP-X +250 / +50
   // → +450 / +80
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2835, 536, 3464, 625]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [3135, 566, 3764, 655]);
   assert.deepEqual([modOf(5, PRPX).attr, modOf(6, PRPX).attr], [{ maxHp: 250, atk: 50 }, { maxHp: 450, atk: 80 }]);
 });
 

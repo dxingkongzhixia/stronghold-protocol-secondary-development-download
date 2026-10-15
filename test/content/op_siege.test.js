@@ -64,9 +64,9 @@ test('推进之王 in every 自选 form: its operator kit (all three skills auth
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential: ATK +25): E2 Lv1 1643 / 447 / 307, E2 Lv60 2046 / 509 / 358; SOL-X +60 / +40
+  // the numbers of the forms (zh_CN, full potential: ATK +25, +60 信赖): E2 Lv1 1643 / 507 / 307, E2 Lv60 2046 / 569 / 358; SOL-X +60 / +40
   // → +75 / +50 ATK / DEF, SOL-Y +200 / +65 → +260 / +82 HP / ATK
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1643, 447, 2046, 509]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1643, 507, 2046, 569]);
   assert.deepEqual([modOf(5, SOLX).attr, modOf(6, SOLX).attr, modOf(5, SOLY).attr, modOf(6, SOLY).attr], [{ atk: 60, def: 40 }, { atk: 75, def: 50 }, { maxHp: 200, atk: 65 }, { maxHp: 260, atk: 82 }]);
 });
 

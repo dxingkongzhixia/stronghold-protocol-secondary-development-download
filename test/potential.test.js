@@ -30,23 +30,23 @@ const effects = load('effects');
 const raw = (f) => JSON.parse(readFileSync(join(CACHE, 'excel', `${f}.json`), 'utf8'));
 const talent = (rec, name) => rec.talents.find((t) => t.name === name);
 
-test('刺玫 at every potential: 潜能1 ATK 413 / cost 17 / 70 s and 土壤基肥改良 8%, each step at its rank, 潜能6 = the record itself', () => {
+test('刺玫 at every potential: 潜能1 ATK 443 / cost 17 / 70 s and 土壤基肥改良 8%, each step at its rank, 潜能6 = the record itself', () => {
   const v = chess.chess_char_1_06_a;
   const at = (p) => atPotential(v, p);
   const row = (p) => [at(p).stats.atk, at(p).stats.cost, at(p).stats.respawnTime, talent(at(p), '土壤基肥改良').bb.heal_scale];
-  assert.deepEqual(row(1), [413, 17, 70, 1.08]);
-  assert.deepEqual(row(2), [413, 16, 70, 1.08], '潜能2 部署费用-1');
-  assert.deepEqual(row(3), [413, 16, 66, 1.08], '潜能3 再部署时间-4秒');
-  assert.deepEqual(row(4), [435, 16, 66, 1.08], '潜能4 攻击力+22');
-  assert.deepEqual(row(5), [435, 16, 66, 1.11], '潜能5 天赋效果增强');
-  assert.deepEqual(row(6), [435, 15, 66, 1.11], '潜能6 部署费用-1');
+  assert.deepEqual(row(1), [443, 17, 70, 1.08]);
+  assert.deepEqual(row(2), [443, 16, 70, 1.08], '潜能2 部署费用-1');
+  assert.deepEqual(row(3), [443, 16, 66, 1.08], '潜能3 再部署时间-4秒');
+  assert.deepEqual(row(4), [465, 16, 66, 1.08], '潜能4 攻击力+22');
+  assert.deepEqual(row(5), [465, 16, 66, 1.11], '潜能5 天赋效果增强');
+  assert.deepEqual(row(6), [465, 15, 66, 1.11], '潜能6 部署费用-1');
   assert.equal(at(6), v, 'full potential is the record itself (the data’s own build)');
-  assert.deepEqual([at(null).stats.atk, at(null).stats.cost], [413, 17], 'a missing value = the DEFAULT, 潜能 1 (owner, 2026-10-15)');
+  assert.deepEqual([at(null).stats.atk, at(null).stats.cost], [443, 17], 'a missing value = the DEFAULT, 潜能 1 (owner, 2026-10-15)');
   assert.notEqual(at(null), v, 'the default is no longer the full-potential record');
   assert.equal(talent(at(1), '土壤基肥改良').desc, '攻击范围内生命上限最高的友方角色受到的治疗效果提升8%');
   // the elite: statsBase and stats move together, the talent from its own E2 candidates
   const e = chess.chess_char_1_06_b;
-  assert.deepEqual([atPotential(e, 1).stats.atk, atPotential(e, 1).statsBase.atk, atPotential(e, 1).stats.cost], [531, 508, 17]);
+  assert.deepEqual([atPotential(e, 1).stats.atk, atPotential(e, 1).statsBase.atk, atPotential(e, 1).stats.cost], [561, 538, 17]);
   assert.equal(talent(atPotential(e, 4), '土壤基肥改良').bb.heal_scale, 1.15);
 });
 
@@ -87,6 +87,10 @@ test('every chess and 自选 form at every potential: the raw keyframes plus the
   };
   const check = (label, charId, status, stats, rank) => {
     const exp = frame(charId, status.phase, status.level);
+    // + the FULL trust bonus (the season fixes trust at 100 %; tools/build-data.mjs withFavor, MATCHMAKING §46)
+    const fav = (CT[charId].favorKeyFrames || []).slice(-1)[0]?.data || {};
+    const FAV = { maxHp: 'maxHp', atk: 'atk', def: 'def', magicResistance: 'res', attackSpeed: 'aspd', cost: 'cost', respawnTime: 'respawnTime', blockCnt: 'blockCnt' };
+    for (const [k, key] of Object.entries(FAV)) if (key in exp && fav[k]) exp[key] += fav[k];
     for (const [k, v] of Object.entries(steps(charId, rank))) exp[k] += v;
     for (const [k, v] of Object.entries(exp)) assert.ok(Math.abs(v - stats[k]) <= 0.5 + 1e-9, `${label} rank ${rank}: ${k} ${stats[k]} vs official ${v}`);
   };

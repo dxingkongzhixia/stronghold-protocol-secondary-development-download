@@ -76,8 +76,8 @@ test('薇薇安娜 in every 自选 form: her operator kit (all three skills auth
       done(h);
     }
   }
-  // zh_CN, full potential: E2 Lv1 2219 / 551 / 371, E2 Lv60 2684 / 633 / 421; AFT-D +240 / +30 → +420 / +60 HP / ATK, AFT-Y +240 / +30 / +30 → +300 / +45 / +45
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2219, 551, 2684, 633]);
+  // zh_CN, full potential +100 信赖: E2 Lv1 2219 / 651 / 371, E2 Lv60 2684 / 733 / 421; AFT-D +240 / +30 → +420 / +60 HP / ATK, AFT-Y +240 / +30 / +30 → +300 / +45 / +45
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2219, 651, 2684, 733]);
   assert.deepEqual([modOf(5, AFTD).attr, modOf(6, AFTD).attr, modOf(5, AFTY).attr, modOf(6, AFTY).attr], [{ maxHp: 240, atk: 30 }, { maxHp: 420, atk: 60 }, { maxHp: 240, atk: 30, def: 30 }, { maxHp: 300, atk: 45, def: 45 }]);
 });
 

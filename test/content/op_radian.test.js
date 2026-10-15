@@ -76,9 +76,9 @@ test('电弧 in every 自选 form: her kit (all three skills authored), the form
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 844 / 424 / 118, E2 Lv60 993 / 468 / 135; SO-A +125 / +27 → +165 / +43 HP / ATK,
+  // the numbers of the forms (zh_CN, +300 HP / +20 ATK 信赖): E2 Lv1 1144 / 444 / 118, E2 Lv60 1293 / 488 / 135; SO-A +125 / +27 → +165 / +43 HP / ATK,
   // SO-B +41 → +65 ATK
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [844, 424, 993, 468]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1144, 444, 1293, 488]);
   assert.deepEqual([modOf(5, SOA).attr, modOf(6, SOA).attr, modOf(5, SOB).attr, modOf(6, SOB).attr], [{ maxHp: 125, atk: 27 }, { maxHp: 165, atk: 43 }, { atk: 41 }, { atk: 65 }]);
 });
 

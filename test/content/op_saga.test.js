@@ -68,8 +68,8 @@ test('嵯峨 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  // E2 Lv1 1609 / 459 / 297, E2 Lv60 2004 / 523 / 347 (full potential); SOL-Y +75 / +45 / +15 → +125 / +55 / +20, SOL-X +50 / +28 → +70 / +44
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1609, 459, 2004, 523]);
+  // E2 Lv1 1609 / 544 / 297, E2 Lv60 2004 / 608 / 347 (full potential +85 信赖 ATK); SOL-Y +75 / +45 / +15 → +125 / +55 / +20, SOL-X +50 / +28 → +70 / +44
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1609, 544, 2004, 608]);
   assert.deepEqual([modOf(5, SOLY).attr, modOf(6, SOLY).attr, modOf(5, SOLX).attr, modOf(6, SOLX).attr],
     [{ maxHp: 75, atk: 45, def: 15 }, { maxHp: 125, atk: 55, def: 20 }, { atk: 50, def: 28 }, { atk: 70, def: 44 }]);
 });

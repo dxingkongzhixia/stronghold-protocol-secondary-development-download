@@ -182,6 +182,10 @@ test('backups: the stand-in numbers re-derived from the raw official tables', { 
     const t = (c.status.level - k0.level) / (k1.level - k0.level || 1);
     const f = (key) => k0.data[key] + (k1.data[key] - k0.data[key]) * t;
     const exp = { maxHp: f('maxHp'), atk: f('atk'), def: f('def'), res: f('magicResistance'), aspd: f('attackSpeed'), blockCnt: f('blockCnt'), cost: f('cost') };
+    // + the FULL trust bonus (the season fixes trust at 100 %; tools/build-data.mjs withFavor, MATCHMAKING §46)
+    const fav = (ch.favorKeyFrames || []).slice(-1)[0]?.data || {};
+    const FAV = { maxHp: 'maxHp', atk: 'atk', def: 'def', magicResistance: 'res', attackSpeed: 'aspd', cost: 'cost', blockCnt: 'blockCnt' };
+    for (const [k, key] of Object.entries(FAV)) if (key in exp && fav[k]) exp[key] += fav[k];
     const map = { max_hp: 'maxHp', atk: 'atk', def: 'def', magic_resistance: 'res', attack_speed: 'aspd', block_cnt: 'blockCnt', cost: 'cost' };
     if (c.status.equipLevel > 0 && c.backup.uniEquipId) {
       for (const b of BE[c.backup.uniEquipId].phases.find((p) => p.equipLevel === c.status.equipLevel).attributeBlackboard) if (map[b.key]) exp[map[b.key]] += b.value;
@@ -279,10 +283,10 @@ test('DIY: the 65 owned 6★ picks — a form at every slot status with all thre
     assert.deepEqual(Object.keys(rec.variants), rec.owners, `${id}: owners = variant keys`);
     for (const o of rec.owners) assert.ok(/^char_\w+@\d+\/\d+\/\d+\/\d+$/.test(o) && ownedPool.includes(o.split('@')[0]), `${id}: owner ${o}`);
   }
-  // spot checks (zh_CN client data): 推进之王 E2 Lv60 = 2046 HP / 484 ATK (+ 攻击力+25 at full potential: 509; cost 2 lower),
+  // spot checks (zh_CN client data): 推进之王 E2 Lv60 = 2046 HP / 484 ATK (+ 攻击力+25 potential = 509, + 信赖 60 = 569; cost 2 lower),
   // SOL-X stage 1 ATK +60 DEF +40 and its trait, stage 3 the 万兽之王 change; 令 S1 / S2 / S3 summon 清平 / 逍遥 / 弦惊
   const siege = backups.units.char_112_siege.forms;
-  assert.deepEqual([siege['2/60/7/1'].stats.maxHp, siege['2/60/7/1'].stats.atk], [2046, 509]);
+  assert.deepEqual([siege['2/60/7/1'].stats.maxHp, siege['2/60/7/1'].stats.atk], [2046, 569]);
   const solx1 = siege['2/60/7/1'].modules.find((m) => m.typeName === 'SOL-X');
   assert.deepEqual([solx1.attr, solx1.traitOverride.bb, solx1.talentChanges], [{ atk: 60, def: 40 }, { atk: 0.08, def: 0.08 }, []]);
   assert.deepEqual(siege['2/60/7/3'].modules.find((m) => m.typeName === 'SOL-X').talentChanges.map((t) => [t.talentIndex, t.bb]), [[0, { atk: 0.08, def: 0.08 }]]);

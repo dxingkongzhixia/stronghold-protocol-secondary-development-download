@@ -75,8 +75,8 @@ test('止颂 in every 自选 form: his operator kit (all three skills authored),
       done(h);
     }
   }
-  // E2 Lv1 2798 / 866 / 232, E2 Lv60 3384 / 984 / 262; DRE-X +230 / +17 / +17 → +400 / +30 / +30; DRE-Y +300 / +55 → +450 / +80
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2798, 866, 3384, 984]);
+  // E2 Lv1 2998 / 951 / 232, E2 Lv60 3584 / 1069 / 262 (+200 HP / +85 ATK 信赖); DRE-X +230 / +17 / +17 → +400 / +30 / +30; DRE-Y +300 / +55 → +450 / +80
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2998, 951, 3584, 1069]);
   assert.deepEqual([modOf(5, DREX).attr, modOf(6, DREX).attr, modOf(5, DREY).attr, modOf(6, DREY).attr],
     [{ maxHp: 230, atk: 17, def: 17 }, { maxHp: 400, atk: 30, def: 30 }, { maxHp: 300, atk: 55 }, { maxHp: 450, atk: 80 }]);
 });

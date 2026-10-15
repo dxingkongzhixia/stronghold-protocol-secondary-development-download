@@ -77,9 +77,9 @@ test('闪灵 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 1451 / 424 / 135, E2 Lv60 1558 / 494 / 154; PHY-Y +35 ATK +5 ASPD → +60 / +7,
+  // the numbers of the forms (zh_CN, +80 信赖 ATK): E2 Lv1 1451 / 504 / 135, E2 Lv60 1558 / 574 / 154; PHY-Y +35 ATK +5 ASPD → +60 / +7,
   // PHY-X +45 ATK +13 DEF → +63 / +20
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1451, 424, 1558, 494]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1451, 504, 1558, 574]);
   assert.deepEqual([modOf(5, PHYY).attr, modOf(6, PHYY).attr, modOf(5, PHYX).attr, modOf(6, PHYX).attr], [{ atk: 35, aspd: 5 }, { atk: 60, aspd: 7 }, { atk: 45, def: 13 }, { atk: 63, def: 20 }]);
 });
 

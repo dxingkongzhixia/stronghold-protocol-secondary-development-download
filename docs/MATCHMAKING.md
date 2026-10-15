@@ -5,7 +5,7 @@
 > `server/index.js`、`server/admin.js`、`shared/protocol.js`、`shared/constants.js`；客户端 `public/js/net.js`、
 > `store.js`、`main.js`、`screens/title.js`、`screens/lobby.js`、`ui/account.js`、`ui/components.js`。
 
-> **导航**：本文件是**我们的全部决策记录**（§0–§45）——账号 / 野排匹配 / 公开同盟 / 观战夺舍 AI / 大厅社区 / **8 名自造干员** / 统计数据。合并黑名单在 **§22**；自造干员在 **§23–§37**；**干员默认潜能 / 练度**在 **§45**；按 § 号检索即可（`git grep "§NN"`）。相关：[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)、[`docs/OUR-FEATURES.md`](OUR-FEATURES.md)、[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。
+> **导航**：本文件是**我们的全部决策记录**（§0–§46）——账号 / 野排匹配 / 公开同盟 / 观战夺舍 AI / 大厅社区 / **8 名自造干员** / 统计数据。合并黑名单在 **§22**；自造干员在 **§23–§37**；**干员默认潜能 / 练度**在 **§45**、**满信赖**在 **§46**；按 § 号检索即可（`git grep "§NN"`）。相关：[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)、[`docs/OUR-FEATURES.md`](OUR-FEATURES.md)、[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。
 
 ## 0. 需求（用户确认）
 
@@ -1435,4 +1435,19 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **文档**：本节 + §22 黑名单行、[`CHANGELOG.md`](../CHANGELOG.md) 0.4.0「规则（按官方）」首条、[`docs/DATA.md`](DATA.md) §2 / §2.3、[`docs/SIM.md`](SIM.md) §12、[`docs/design/match.md`](design/match.md) §16、[`docs/PLAYING.md`](PLAYING.md)（玩家向）、[`docs/PROJECT-STATE.md`](PROJECT-STATE.md)（常量表）、[`docs/research/03-operators.md`](research/03-operators.md)、`server/sim/content/kits/README.md`、[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 / §11。
 - **合并黑名单**：见 §22 的新增行与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0——**上游若再次把「满潜 / 满练度」当默认带回，一律以我们为准**（自查：`POTENTIAL_DEFAULT` 必须是 `POTENTIAL_MIN`、`CULTIVATE_DEFAULT` 必须是 `0`，且 `loadoutRecord` 不得对默认档直接返回原始记录）。
 - **发布快照**：全量 `node --test` **6690 项 / 6675 通过 / 0 失败 / 15 跳过**；`build-data --offline` 零漂移；`kit-coverage` 307/307；`eslint` 0 error（148 warning 与基线一致）；`i18n check en --strict` 1454/1454；docs 守卫 34/0；`golden` 重算后 verify 全过。提交 `442ee2ec`（代码 / 测试 / 文档）+ `f38c5249`（golden）。
-- **未做 / 待定**：① **图鉴**（资料库）仍显示数据里的满潜数值——要不要与实战默认一致待 owner 定；② 官方 bwiki 写本模式**信赖一律 100%**，而我们的研究数据按 `favorPoint 0` 建（=0 信赖）——方向相反（那样我们会**偏弱**一块），本次**未动**，待单独核实；③ 浏览器 e2e（`SP_E2E=1`）未跑；④ **尚未部署**（改动含 `server/**` + `shared/**`，需重启）。
+- **未做 / 待定**：① **图鉴**（资料库）仍显示数据里的满潜数值——要不要与实战默认一致待 owner 定；② **信赖**：bwiki / 调度手册 说本模式信赖一律 100%，我们此前按 `favorPoint 0` 建（= 0 信赖）——**owner 2026-10-15 决定按官方满信赖，见 §46**；③ 浏览器 e2e（`SP_E2E=1`）未跑；④ **尚未部署**（改动含 `server/**` + `shared/**`，需重启）。
+
+## 46. 信赖按官方满 100% 计入（owner 2026-10-15）
+
+> 承接 §45 的待定项：官方把本模式的信赖**固定为 100%**——bwiki 卫戍协议：「**相同的是信赖值都为100%，潜能则与自身所持有的相同**」；调度手册 / PRTS 同口径（干员的养成按阶级固定，只有潜能跟账号）。而我们的数据此前按官方活动表里的 `status.favorPoint = 0` 建（`docs/research/03-operators.md` 曾写「No trust」），等于**少了一整块属性**。
+
+- **决定（owner 2026-10-15）**：「按官方来吧，满信赖」——**把满信赖加成计入每名干员**。
+- **怎么做**：`tools/build-data.mjs` 新增 `withFavor(char, attrs)`，取 `character_table[charId].favorKeyFrames` 的**最后一帧**（level 50 = 满信赖；level 0 那一帧全 0）的**非零数值**加到插值属性上，作用于**干员记录**两处调用点（`data/chess.json` 的棋子、`data/backups.json` 的形态 / 自选）；**召唤物（token）与场地装置不加**（信赖只作用于干员）。潜能步进（`withPotential`）仍在其后叠加。
+- **满信赖的值**（官方表实数）：刺玫 `+180 生命 / +30 攻击`；银灰 `+50 攻击 / +50 防御`；能天使 `+90 攻击`。
+- **默认档实测**：刺玫普通 413→**443** 攻击、1137→**1317** 生命（精锐 531→561 / 1402→1582）；银灰普通 577→**627** 攻击、329→**379** 防御（精锐 712→762 / 374→424）；能天使 437→**527** 攻击（+20.6%）。⚠️ 与 §45 的减益**部分相互抵消**：相对合并前的满潜满练度，现在多数干员仍略低（刺玫 −7.5%、银灰 −5.4% 攻击），但信赖加成大的（如能天使）会**略高**（+3.3%）——这是官方数值本身的样子。
+- **⚠️ 反向证据（留档）**：仓库用来核对官方的**官方赛事视频**里，刺玫显示 ATK **435** = 她 E1 Lv55 的 **413** + 潜能「攻击力+22」、**不含信赖**（`docs/DATA.md` §2 / `tools/build-data.mjs` 的注释都引了它）。也就是说 bwiki / 调度手册 与那段视频**冲突**；owner 2026-10-15 选择按 bwiki / 调度手册 走。将来若拿到更硬的证据（官方实机面板 / 更清晰的录屏），改回来只需删掉 `withFavor` 的两处调用并把 `data/` 重建。
+- **✅ 支持证据（同日核对）**：本仓库**自己记录**的官方面板也含信赖——§30.1 的望（陷阱师）规格写「HP 1480 / ATK **589(+信赖80)** / DEF 174 / RES 0；费用 10→12」，而重建后的 `chess_char_2027_wang_a` 在**潜能6** 正好是 **ATK 589 / 费用 10**、潜能1 是 562 / 12 ✓。**改动之前**这一步算出来是 509（589 − 80），与仓库自己记的这行**对不上**；满信赖把它修回来了。三处（bwiki / 调度手册 / 本仓库官方面板）一致指向「含信赖」，因此那段视频的 435 更可能是另一栏口径或读数差异。
+- **连带改动**：`data/chess.json`、`data/backups.json` 重建（`node tools/build-data.mjs --offline`）；`golden` 语料重算（单独提交）；`test/` 里钉住的字面数值更新；文档：`CHANGELOG` 0.4.0「规则」、`docs/DATA.md`（`status` / `stats` 两行）、`docs/research/03-operators.md`、本节。
+- **golden 的补位覆盖要重新选种**：信赖把商店 / 上阵的随机流又推了一次，`coop2-NORMAL-14-standins` 与原来的 `coop2-NORMAL-1-coverage-standins` **都不再派出任何替补**了。按生成器既有的做法（保留原场景的既定结果、另加 companion 种子），coverage 场景改为 **seed 26**（3 个不同替补、7 个回合；11 / 13 / 16 / 19 / 25 / 27 也可用，`tools/golden.mjs matchScenarios()` + `runMatch()` 可随时再探）。`test/golden-standins.test.js` 相应改为对 coverage 场景断言、并同时校验两个场景**零错误**。
+- **谁来守这条规则**：① 4 处「从官方表独立重算」的测试（`test/data.test.js`、`test/backups.test.js`、`test/potential.test.js`、`test/full-potential.test.js`）都带上了满信赖项——**构建里一旦丢掉 `withFavor`，它们立刻失败**；② 本节的自查 `grep`。
+- **自查**：`grep -n 'withFavor' tools/build-data.mjs` 应有两处调用点（chess + backups）；重建后 `node tools/build-data.mjs --offline` 应当**零差异**（`data/` 已提交）；`grep -n 'favorKeyFrames' tools/build-data.mjs` 只看得到 `withFavor` 内部。

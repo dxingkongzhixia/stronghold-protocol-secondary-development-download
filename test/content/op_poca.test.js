@@ -72,9 +72,9 @@ test('早露 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 1351 / 890 / 100, E2 Lv60 1619 / 1007 / 115; SIE-X +60 / +30 → +90 / +45,
+  // the numbers of the forms (zh_CN, +110 信赖 ATK): E2 Lv1 1351 / 1000 / 100, E2 Lv60 1619 / 1117 / 115; SIE-X +60 / +30 → +90 / +45,
   // SIE-Y +70 / +20 → +100 / +30 ATK / DEF
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1351, 890, 1619, 1007]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1351, 1000, 1619, 1117]);
   assert.deepEqual([modOf(5, SIEX).attr, modOf(6, SIEX).attr, modOf(5, SIEY).attr, modOf(6, SIEY).attr], [{ atk: 60, def: 30 }, { atk: 90, def: 45 }, { atk: 70, def: 20 }, { atk: 100, def: 30 }]);
 });
 

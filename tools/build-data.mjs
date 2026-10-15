@@ -297,6 +297,8 @@ function bestCandidate(cands, phase, level, potRank = 0) {
  * equipLevel) carry no potential field; a tournament video shows 刺玫 (chess_char_1_06_a) at ATK 435 and cost 15 (her
  * E1 Lv55 413 / 17 plus 攻击力+22 and two 部署费用-1: an account at full potential). Ranks count like character_table
  * `potentialRanks` (ranks 1–5 = the 潜能 2–6 steps) and a candidate's `requiredPotentialRank`.
+ * ⚠️ Trust: that same video shows 刺玫 at 435 WITHOUT the trust bonus, while 调度手册 / bwiki fix the season's trust at
+ * 100 % (「相同的是信赖值都为100%」) — the owner 2026-10-15 followed the latter (withFavor below, MATCHMAKING §46).
  * The builders take the rank from `ctx.potRank`: main() runs the chess / backups / tokens builders once per rank (0–5)
  * and keeps the FULL-potential build (潜能 6 = rank 5, FULL_RANK: the default and what the data's own fields
  * hold) annotated with what every lower rank changes (attachPotential: `potDown` leaves, chained talent entries —
@@ -708,6 +710,26 @@ function rangeGrid(ctx, rangeId) {
   const r = ctx.rangeTable[rangeId];
   if (!r) { warn(`unknown rangeId ${rangeId}`); return null; }
   return (r.grids || []).map((g) => [g.row, g.col]);
+}
+
+/**
+ * Interpolated attributes + the character's **满信赖** bonus. The season fixes trust at 100 % — 调度手册 / bwiki
+ * 「相同的是信赖值都为100%，潜能则与自身所持有的相同」(the status' `favorPoint: 0` only means the mode does NOT read the
+ * account's own trust; it grants the full one). The character_table's last `favorKeyFrames` frame is that bonus (its
+ * level-0 frame is all zeros; 刺玫 +180 HP / +30 ATK, 银灰 +50 ATK / +50 DEF, 能天使 +90 ATK). Operators only: a summon
+ * (token) and a stage device take none, and the operator's own potential steps are added on top (withPotential).
+ *
+ * NOTE — the counter-evidence on record (docs/research/03-operators.md §that file): the official tournament video the
+ * fork's tables were validated against shows 刺玫 at ATK 435 = her E1 Lv55 413 + 攻击力+22 and NO trust. The owner
+ * 2026-10-15 decided to follow bwiki / 调度手册 and include 满信赖 anyway (MATCHMAKING §46).
+ */
+function withFavor(char, attrs) {
+  const frames = char?.favorKeyFrames;
+  const data = Array.isArray(frames) && frames.length ? frames[frames.length - 1]?.data : null;
+  if (!data || !attrs) return attrs;
+  const out = { ...attrs };
+  for (const [k, v] of Object.entries(data)) if (typeof v === 'number' && v !== 0) out[k] = (typeof out[k] === 'number' ? out[k] : 0) + v;
+  return out;
 }
 
 /** Interpolate character attribute keyframes at (phase, level); returns the raw float data object. */
@@ -1293,7 +1315,7 @@ function buildChess(ctx) {
     const moduleParts = splitModuleParts(modulePhase);
 
     // Stats at the pass's potential rank (ctx.potRank, withPotential) (+ module attribute bonus on golden).
-    const attrs = withPotential(char, interpolateAttrs(char, phase, level), ctx.potRank, `chess ${chessId}`);
+    const attrs = withPotential(char, withFavor(char, interpolateAttrs(char, phase, level)), ctx.potRank, `chess ${chessId}`);
     if (!attrs) warn(`chess ${chessId}: cannot interpolate attributes`);
     const bonus = {};
     for (const b of modulePhase?.attributeBlackboard || []) bonus[b.key] = (bonus[b.key] || 0) + b.value;
@@ -1525,7 +1547,7 @@ function buildUnitForm(ctx, charId, status, { chessId = null, skillIndex = null 
   const char = charTable[charId];
   const { phase, level, skillLevel, equipLevel } = status;
   const label = chessId ? `chess ${chessId}` : `unit ${charId}@${statusKey(status)}`;
-  const attrs = withPotential(char, interpolateAttrs(char, phase, level), ctx.potRank, label);
+  const attrs = withPotential(char, withFavor(char, interpolateAttrs(char, phase, level)), ctx.potRank, label);
   if (!attrs) warn(`${label}: cannot interpolate attributes`);
   const stats = statsFrom(attrs, {});
   const rangeId = char.phases?.[phase]?.rangeId || null;

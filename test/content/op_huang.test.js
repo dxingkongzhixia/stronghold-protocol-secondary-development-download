@@ -67,9 +67,9 @@ test('煌 in every 自选 form: her operator kit (all three skills authored), th
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential): E2 Lv1 2115 / 609 / 303, E2 Lv60 2583 / 731 / 347; CEN-X +240 / +50 → +285 / +86
+  // the numbers of the forms (zh_CN, full potential +60 信赖): E2 Lv1 2115 / 669 / 303, E2 Lv60 2583 / 791 / 347; CEN-X +240 / +50 → +285 / +86
   // HP / ATK, CEN-Y +300 / +40 → +345 / +66
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2115, 609, 2583, 731]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2115, 669, 2583, 791]);
   assert.deepEqual([modOf(5, CENX).attr, modOf(6, CENX).attr, modOf(5, CENY).attr, modOf(6, CENY).attr], [{ maxHp: 240, atk: 50 }, { maxHp: 285, atk: 86 }, { maxHp: 300, atk: 40 }, { maxHp: 345, atk: 66 }]);
 });
 

@@ -73,8 +73,8 @@ test('刻俄柏 in every 自选 form: her operator kit (all three skills authore
       done(h);
     }
   }
-  // E2 Lv1 1220 / 580 / 114, E2 Lv60 1449 / 656 / 123; CCR-X +130 / +40 → +180 / +65, CCR-Y +80 / +40 / +17 → +120 / +56 / +23
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1220, 580, 1449, 656]);
+  // E2 Lv1 1220 / 670 / 114, E2 Lv60 1449 / 746 / 123 (+90 信赖 ATK); CCR-X +130 / +40 → +180 / +65, CCR-Y +80 / +40 / +17 → +120 / +56 / +23
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1220, 670, 1449, 746]);
   assert.deepEqual([modOf(5, CCRX).attr, modOf(6, CCRX).attr, modOf(5, CCRY).attr, modOf(6, CCRY).attr], [{ maxHp: 130, atk: 40 }, { maxHp: 180, atk: 65 }, { maxHp: 80, atk: 40, def: 17 }, { maxHp: 120, atk: 56, def: 23 }]);
 });
 

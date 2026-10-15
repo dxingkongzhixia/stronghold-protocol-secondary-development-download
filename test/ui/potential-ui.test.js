@@ -147,16 +147,16 @@ test('cards: the record at the player\'s 潜能 with its 练度 multiplier; a te
   const v = CHESS[VENDLA];
   const fx = { effects: EFFECTS };
   const at = (opts) => chessLoadout(v, null, get, { ...fx, ...opts }).record.stats;
-  assert.deepEqual([at({}).atk, at({}).cost], [413, 17], 'no settings: 潜能 1 + 未精英化 (no ×1.1)');
-  assert.deepEqual([at({ ops: { [V]: { potential: 6, cultivate: 3 } } }).atk, at({ ops: { [V]: { potential: 6, cultivate: 3 } } }).cost], [435 * 1.1, 15]);
-  assert.deepEqual([at({ ops: { [V]: { cultivate: 1 } } }).atk, at({ ops: { [V]: { cultivate: 1 } } }).def], [413 * 1.05, 77 * 1.05]);
+  assert.deepEqual([at({}).atk, at({}).cost], [443, 17], 'no settings: 潜能 1 + 未精英化 (no ×1.1)');
+  assert.deepEqual([at({ ops: { [V]: { potential: 6, cultivate: 3 } } }).atk, at({ ops: { [V]: { potential: 6, cultivate: 3 } } }).cost], [465 * 1.1, 15]);
+  assert.deepEqual([at({ ops: { [V]: { cultivate: 1 } } }).atk, at({ ops: { [V]: { cultivate: 1 } } }).def], [443 * 1.05, 77 * 1.05]);
   assert.equal(chessLoadout(v, null, get, { ops: { [V]: { potential: 4 } }, ...fx }).record.talents.find((t) => t.name === '土壤基肥改良').bb.heal_scale, 1.08);
   assert.deepEqual(chessLoadout(v, null, get, { ops: { [V]: { potential: 2 } }, ...fx }).cultivation, { potential: 2, cultivate: 0 });
   // a teammate's unit: its UnitInfo
   assert.deepEqual(unitCultivation({ potential: 3, cultivate: 1 }), { potential: 3, cultivate: 1 });
   assert.equal(unitCultivation({}), null, 'neither: a raw / stand-in unit');
-  assert.equal(at({ cultivation: unitCultivation({ cultivate: 0 }) }).atk, 413);
-  assert.equal(at({ cultivation: null }).atk, 413, 'none');
+  assert.equal(at({ cultivation: unitCultivation({ cultivate: 0 }) }).atk, 443);
+  assert.equal(at({ cultivation: null }).atk, 443, 'none');
   // a stand-in (补位): neither, whatever the settings say
   const normal = Object.values(CHESS).find((c) => c.chessType === 'NORMAL' && !c.isGolden && c.visible);
   const st = standInOf(normal, BACKUPS);

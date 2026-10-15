@@ -71,9 +71,9 @@ test('陈 in every 自选 form: her operator kit (all three skills authored), th
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential): E2 Lv1 2188 / 492 / 288, E2 Lv60 2647 / 585 / 330; SWO-X +50 ATK +5 ASPD → +80 / +7,
+  // the numbers of the forms (zh_CN, full potential +50 信赖): E2 Lv1 2188 / 542 / 288, E2 Lv60 2647 / 635 / 330; SWO-X +50 ATK +5 ASPD → +80 / +7,
   // SWO-Y +52 / +28 → +85 / +42 ATK / DEF
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2188, 492, 2647, 585]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2188, 542, 2647, 635]);
   assert.deepEqual([modOf(5, SWOX).attr, modOf(6, SWOX).attr, modOf(5, SWOY).attr, modOf(6, SWOY).attr], [{ atk: 50, aspd: 5 }, { atk: 80, aspd: 7 }, { atk: 52, def: 28 }, { atk: 85, def: 42 }]);
 });
 

@@ -77,7 +77,7 @@ test('酒神 in every 自选 form: her kit (all three skills authored), the form
       done(h);
     }
   }
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [936, 434, 1111, 486]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1236, 474, 1411, 526]);   // +300 HP / +40 ATK 信赖
   assert.deepEqual([modOf(5, X).attr, modOf(6, X).attr], [{ maxHp: 125, atk: 30 }, { maxHp: 200, atk: 42 }]);
 });
 

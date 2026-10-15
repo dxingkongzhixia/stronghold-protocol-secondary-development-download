@@ -73,7 +73,7 @@ test('真言 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1071, 614, 1308, 688]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1251, 674, 1488, 748]);   // +180 HP / +60 ATK 信赖
   assert.deepEqual([modOf(5, PRIX).attr, modOf(6, PRIX).attr], [{ maxHp: 90, atk: 43 }, { maxHp: 145, atk: 87 }]);
 });
 

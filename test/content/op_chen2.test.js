@@ -76,7 +76,7 @@ test('假日威龙陈 in every 自选 form: her kit (all three skills authored),
     }
   }
   assert.deepEqual(formOf(6, true).skills.map((s) => s.trigger.rule), ['DEFAULT', 'DEFAULT', 'ACTIVE_RANGE']);
-  assert.deepEqual([FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.atk, FORMS['2/1/4/0'].stats.cost], [682, 764, 30]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.atk, FORMS['2/1/4/0'].stats.cost], [762, 844, 30]);   // +80 信赖 ATK
   assert.deepEqual([modOf(5, RX).attr, modOf(6, RX).attr, modOf(5, RY).attr, modOf(6, RY).attr],
     [{ atk: 30, def: 37 }, { atk: 60, def: 45 }, { cost: -8, maxHp: 135, atk: 55 }, { cost: -8, maxHp: 180, atk: 100 }]);
   const data = { chess: CHESS, backups: BACKUPS };

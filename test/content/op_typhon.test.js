@@ -70,9 +70,9 @@ test('提丰 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  // E2 Lv1 1310 / 901 / 92, E2 Lv60 1570 / 1019 / 106; SIE-X +120 HP / +60 ATK → +210 / +90, SIE-Y +70 ATK / +5 ASPD → +94 / +7,
+  // E2 Lv1 1310 / 1011 / 92, E2 Lv60 1570 / 1129 / 106 (+110 信赖 ATK); SIE-X +120 HP / +60 ATK → +210 / +90, SIE-Y +70 ATK / +5 ASPD → +94 / +7,
   // ISW-A +100 / +70 → +150 / +90
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1310, 901, 1570, 1019]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1310, 1011, 1570, 1129]);
   assert.deepEqual([modOf(5, SIEX).attr, modOf(6, SIEX).attr, modOf(5, SIEY).attr, modOf(6, SIEY).attr, modOf(5, ISWA).attr, modOf(6, ISWA).attr],
     [{ maxHp: 120, atk: 60 }, { maxHp: 210, atk: 90 }, { atk: 70, aspd: 5 }, { atk: 94, aspd: 7 }, { maxHp: 100, atk: 70 }, { maxHp: 150, atk: 90 }]);
 });

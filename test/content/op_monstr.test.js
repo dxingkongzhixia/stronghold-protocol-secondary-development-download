@@ -91,8 +91,8 @@ test('Mon3tr in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  // E2 Lv1 1492 / 447 / 176, E2 Lv60 1653 / 517 / 206; XAH-X +40 / +30 → +65 / +40 ATK / DEF; the 重构体 4292 / 181 → 5048 / 208
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1492, 447, 1653, 517]);
+  // E2 Lv1 1992 / 477 / 176, E2 Lv60 2153 / 547 / 206 (+500 HP / +30 ATK 信赖); XAH-X +40 / +30 → +65 / +40 ATK / DEF; the 重构体 4292 / 181 → 5048 / 208
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1992, 477, 2153, 547]);
   assert.deepEqual([modOf(5, XAHX).attr, modOf(6, XAHX).attr], [{ atk: 40, def: 30 }, { atk: 65, def: 40 }]);
   assert.deepEqual([variantOf(5, false).stats.maxHp, variantOf(5, false).stats.def, variantOf(6, true).stats.maxHp], [4292, 181, 5048]);
   assert.deepEqual([t0Of(5, true, XAHX).atk, t0Of(6, true, XAHX).atk, t0Of(6, true, XAHX)['attack@chain.extra_cnt'], t0Of(6, false, null).atk], [0.2, 0.3, 1, 0.2]);

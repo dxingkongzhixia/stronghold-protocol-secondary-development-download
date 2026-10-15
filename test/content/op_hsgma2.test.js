@@ -70,8 +70,8 @@ test('斩业星熊 in every 自选 form: her operator kit (all three skills auth
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 2592 / 533 / 461, E2 Lv60 3228 / 622 / 547; AST-X +190 / +55 → +325 / +80
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2592, 533, 3228, 622]);
+  // the numbers of the forms (zh_CN, +55 信赖 ATK): E2 Lv1 2592 / 588 / 461, E2 Lv60 3228 / 677 / 547; AST-X +190 / +55 → +325 / +80
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2592, 588, 3228, 677]);
   assert.deepEqual([modOf(5, ASTX).attr, modOf(6, ASTX).attr], [{ maxHp: 190, atk: 55 }, { maxHp: 325, atk: 80 }]);
 });
 

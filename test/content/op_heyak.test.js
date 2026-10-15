@@ -74,9 +74,9 @@ test('霍尔海雅 in every 自选 form: her operator kit (all three skills auth
       done(h);
     }
   }
-  // E2 Lv1 1380 / 552 / 116, E2 Lv60 1639 / 624 / 125; CCR-X +120 / +40 → +175 / +65, CCR-Y +105 / +32 / +15 → +140 / +45 /
+  // E2 Lv1 1380 / 642 / 116, E2 Lv60 1639 / 714 / 125 (+90 信赖 ATK); CCR-X +120 / +40 → +175 / +65, CCR-Y +105 / +32 / +15 → +140 / +45 /
   // +25, ISW-A +100 / +55 → +130 / +80
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1380, 552, 1639, 624]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1380, 642, 1639, 714]);
   assert.deepEqual([modOf(5, CCRX).attr, modOf(6, CCRX).attr, modOf(5, CCRY).attr, modOf(6, CCRY).attr, modOf(5, ISWA).attr, modOf(6, ISWA).attr],
     [{ maxHp: 120, atk: 40 }, { maxHp: 175, atk: 65 }, { maxHp: 105, atk: 32, def: 15 }, { maxHp: 140, atk: 45, def: 25 }, { maxHp: 100, atk: 55 }, { maxHp: 130, atk: 80 }]);
 });

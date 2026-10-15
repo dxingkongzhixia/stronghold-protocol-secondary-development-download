@@ -70,9 +70,9 @@ test('琴柳 in every 自选 form: her kit (all three skills authored), the form
       done(h);
     }
   }
-  // the form numbers (zh_CN, full potential): E2 Lv1 1339 / 483 / 311, E2 Lv60 1668 / 541 / 348; BEA-X +150 / +48 → +200 / +68 HP / ATK,
+  // the form numbers (zh_CN, full potential +40 信赖): E2 Lv1 1339 / 523 / 311, E2 Lv60 1668 / 581 / 348; BEA-X +150 / +48 → +200 / +68 HP / ATK,
   // BEA-Y +150 / +45 → +200 / +70 HP / DEF
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1339, 483, 1668, 541]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1339, 523, 1668, 581]);
   assert.deepEqual([modOf(5, BX).attr, modOf(6, BX).attr, modOf(5, BY).attr, modOf(6, BY).attr], [{ maxHp: 150, atk: 48 }, { maxHp: 200, atk: 68 }, { maxHp: 150, def: 45 }, { maxHp: 200, def: 70 }]);
 });
 

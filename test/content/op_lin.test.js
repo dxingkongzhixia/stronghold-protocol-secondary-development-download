@@ -70,8 +70,8 @@ test('林 in every 自选 form: her operator kit (all three skills authored), th
       done(h);
     }
   }
-  // E2 Lv1 1679 / 764 / 212, E2 Lv60 1924 / 843 / 232; PLX-X +62 / +45 → +77 / +53 ATK / DEF, PLX-Y +50 / +20 → +73 / +40
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1679, 764, 1924, 843]);
+  // E2 Lv1 1679 / 834 / 212, E2 Lv60 1924 / 913 / 232 (+70 信赖 ATK); PLX-X +62 / +45 → +77 / +53 ATK / DEF, PLX-Y +50 / +20 → +73 / +40
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1679, 834, 1924, 913]);
   assert.deepEqual([modOf(5, PLXX).attr, modOf(6, PLXX).attr, modOf(5, PLXY).attr, modOf(6, PLXY).attr], [{ atk: 62, def: 45 }, { atk: 77, def: 53 }, { atk: 50, def: 20 }, { atk: 73, def: 40 }]);
 });
 

@@ -690,7 +690,7 @@ test('阿戈尔 devour, a unit back during the pass: a knocked-out marker (reviv
 // A community report the owner relayed on 2026-10-07 (DESIGN §25.22.5): 「原作里是第一步给所有鱼加盟约的血量，第二步是开始
 // 一个个大鱼吃小鱼，第三步是检测左下到右上哪些鱼睡着了给他复活」.
 
-test('阿戈尔 (community report, 2026-10-07) step 1: the bond HP is on every member before the devour — an elite 深巡 (2904 HP, DEF 655) in front of one 阿戈尔 stands from 15 layers on; step 2: one 5000 物理流失 per mark — over 5000 HP survives one mark, falls to a second', () => {
+test('阿戈尔 (community report, 2026-10-07) step 1: the bond HP is on every member before the devour — an elite 深巡 (2904 HP, DEF 700) in front of one 阿戈尔 stands from 14 layers on; step 2: one 5000 物理流失 per mark — over 5000 HP survives one mark, falls to a second', () => {
   const ULPIA = 'chess_char_5_05_b', DEEP = 'chess_char_1_04_b', GHOST = 'chess_char_2_07_b', SKADI2 = 'chess_char_6_04_b';
   const rest = [{ chessId: 'chess_char_4_09_b', row: 12, col: 3 }, { chessId: 'chess_char_3_09_b', row: 12, col: 5 }, { chessId: 'chess_char_4_12_b', row: 12, col: 7 }];
   const fight = (units, layers) => {
@@ -708,15 +708,15 @@ test('阿戈尔 (community report, 2026-10-07) step 1: the bond HP is on every m
     return { h, pre, post };
   };
   // the player's official game: 「深巡是精二的，休整期的原始血量只有不到三千，所以肯定是部署后先经过盟约加血才活了下来」
-  for (const [L, stands] of [[14, false], [15, true]]) {
+  for (const [L, stands] of [[13, false], [14, true]]) {
     const { h, pre, post } = fight([{ chessId: ULPIA, row: 10, col: 3 }, { chessId: DEEP, row: 10, col: 4 }], L);
     const p = pre.get(DEEP);
     close(p.maxHp, 2904 * (1 + 0.35 + 0.01 * L), 1e-6, `L ${L}: the bond's +(35 + L) % is there before the devour`);
     close(p.hp, p.maxHp, 1e-6, `L ${L}: deployed at full HP`);
-    assert.equal(p.def, 655);
-    assert.deepEqual(tagged(h, 'bond:egir:devour').map((c) => [c.source.defId, c.target.defId, c.amount]), [[ULPIA, DEEP, 5000 - 655]]);
+    assert.equal(p.def, 700);
+    assert.deepEqual(tagged(h, 'bond:egir:devour').map((c) => [c.source.defId, c.target.defId, c.amount]), [[ULPIA, DEEP, 5000 - 700]]);
     assert.equal(h.hooksOf('death').filter((c) => c.unit === h.unit(DEEP) && c.reason === 'killed').length, stands ? 0 : 1, `L ${L}`);
-    if (stands) close(post.get(DEEP).hp, 2904 * 1.5 - 4345, 1e-6, 'L 15: 4356 − 4345 = 11 HP left');
+    if (stands) close(post.get(DEEP).hp, 2904 * (1 + 0.35 + 0.01 * L) - (5000 - 700), 1e-6, `L ${L}: 2904 × ${(1 + 0.35 + 0.01 * L).toFixed(2)} − 4300 = ${(2904 * (1 + 0.35 + 0.01 * L) - 4300).toFixed(0)} HP left`);
   }
   // an elite 幽灵鲨 at 62 layers: 2422 × (1 + 0.35 + 0.62 + 0.12 her talent at full potential) = 5061.98 HP, DEF 365 — one
   // mark (4635) leaves 426.98; behind 浊心斯卡蒂 and 乌尔比安 she takes both marks and falls to the second (the kill is 乌尔比安's)

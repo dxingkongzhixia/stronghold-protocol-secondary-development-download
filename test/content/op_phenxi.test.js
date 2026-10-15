@@ -79,7 +79,7 @@ test('菲亚梅塔 in every 自选 form: her kit (all three skills authored), th
     }
   }
   assert.deepEqual(formOf(6, true).skills.map((s) => [s.skillType, s.trigger.rule]), [['MANUAL', 'DEFAULT'], ['MANUAL', 'DEFAULT'], ['MANUAL', 'DEFAULT']]);
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1540, 706, 1796, 832]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1540, 806, 1796, 932]);   // +100 信赖 ATK
   assert.deepEqual([Y, X, ISW].flatMap((id) => [modOf(5, id).attr, modOf(6, id).attr]),
     [{ atk: 48, def: 26 }, { atk: 70, def: 43 }, { atk: 60, def: 17 }, { atk: 85, def: 32 }, { maxHp: 85, atk: 65 }, { maxHp: 115, atk: 90 }]);
   const data = { chess: CHESS, backups: BACKUPS };

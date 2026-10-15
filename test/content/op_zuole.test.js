@@ -70,9 +70,9 @@ test('左乐 in every 自选 form: his operator kit (all three skills authored),
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 2893 / 673 / 267, E2 Lv60 3533 / 761 / 299; SBL-X +55 / +40 → +90 / +60
+  // the numbers of the forms (zh_CN, +340 HP / +40 ATK 信赖): E2 Lv1 3233 / 713 / 267, E2 Lv60 3873 / 801 / 299; SBL-X +55 / +40 → +90 / +60
   // ATK / DEF, SBL-Y +300 / +60 → +380 / +84 HP / ATK
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2893, 673, 3533, 761]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [3233, 713, 3873, 801]);
   assert.deepEqual([modOf(5, SBLX).attr, modOf(6, SBLX).attr, modOf(5, SBLY).attr, modOf(6, SBLY).attr], [{ atk: 55, def: 40 }, { atk: 90, def: 60 }, { maxHp: 300, atk: 60 }, { maxHp: 380, atk: 84 }]);
 });
 

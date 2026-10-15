@@ -130,7 +130,7 @@ for (const id of ['chess_char_2_10_a', 'chess_char_2_10_b']) {
   });
 
   test(`${id} S2: an out-of-range combat kill waits for a candidate and restarts the trait ramp`, () => {
-    const { h, u, target } = setup(id, { outsideHp: id.endsWith('_a') ? 4000 : 5000, newcomer: true });
+    const { h, u, target } = setup(id, { outsideHp: id.endsWith('_a') ? 4000 : 6000, newcomer: true });
     assert.ok(h.runUntil(() => !bodyInKeys(target, u.rangeKeySet), 10));
     assert.ok(target.alive);
     assert.ok(h.runUntil(() => !target.alive, 10));

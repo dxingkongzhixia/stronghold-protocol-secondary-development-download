@@ -76,9 +76,9 @@ test('赫德雷 in every 自选 form: his operator kit (all three skills authore
       done(h);
     }
   }
-  // zh_CN (full potential: HP +250, ATK +45): E2 Lv1 4920 / 1368 / 0, E2 Lv60 5794 / 1536 / 0; CRU-X +290 / +92 → +450 / +130,
+  // zh_CN (full potential: HP +250, ATK +45, +500 HP / +80 ATK 信赖): E2 Lv1 5420 / 1448 / 0, E2 Lv60 6294 / 1616 / 0; CRU-X +290 / +92 → +450 / +130,
   // CRU-Y +300 / +110 → +400 / +160
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [4920, 1368, 5794, 1536]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [5420, 1448, 6294, 1616]);
   assert.deepEqual([modOf(5, CRUX).attr, modOf(6, CRUX).attr, modOf(5, CRUY).attr, modOf(6, CRUY).attr], [{ maxHp: 290, atk: 92 }, { maxHp: 450, atk: 130 }, { maxHp: 300, atk: 110 }, { maxHp: 400, atk: 160 }]);
 });
 

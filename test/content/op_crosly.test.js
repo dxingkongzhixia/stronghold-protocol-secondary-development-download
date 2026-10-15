@@ -92,9 +92,9 @@ test('弑君者 in every 自选 form: her operator kit (all three skills authore
       done(h);
     }
   }
-  // the numbers (zh_CN): E2 Lv1 1322 / 425 / 273, E2 Lv60 1569 / 505 / 307; EXE-X +90 / +34 / +23 → +130 / +45 / +30,
+  // the numbers (zh_CN, +90 信赖): E2 Lv1 1322 / 515 / 273, E2 Lv60 1569 / 595 / 307; EXE-X +90 / +34 / +23 → +130 / +45 / +30,
   // EXE-Y +84 / +63 → +135 / +88 HP / ATK
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1322, 425, 1569, 505]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1322, 515, 1569, 595]);
   assert.deepEqual([modOf(5, EX).attr, modOf(6, EX).attr, modOf(5, EY).attr, modOf(6, EY).attr],
     [{ maxHp: 90, atk: 34, def: 23 }, { maxHp: 130, atk: 45, def: 30 }, { maxHp: 84, atk: 63 }, { maxHp: 135, atk: 88 }]);
 });

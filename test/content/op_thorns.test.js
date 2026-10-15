@@ -77,9 +77,9 @@ test('棘刺 in every 自选 form: his operator kit (all three skills authored),
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 2063 / 601 / 333, E2 Lv60 2427 / 691 / 379; LOR-X +160 / +39 / +5 → +260 / +55 / +7,
+  // the numbers of the forms (zh_CN, +30 信赖 ATK): E2 Lv1 2063 / 631 / 333, E2 Lv60 2427 / 721 / 379; LOR-X +160 / +39 / +5 → +260 / +55 / +7,
   // LOR-Δ +80 / +60 / +5 → +150 / +75 / +7 (HP / ATK / ASPD)
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2063, 601, 2427, 691]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2063, 631, 2427, 721]);
   assert.deepEqual([modOf(5, LORX).attr, modOf(6, LORX).attr, modOf(5, LORD).attr, modOf(6, LORD).attr],
     [{ maxHp: 160, atk: 39, aspd: 5 }, { maxHp: 260, atk: 55, aspd: 7 }, { maxHp: 80, atk: 60, aspd: 5 }, { maxHp: 150, atk: 75, aspd: 7 }]);
 });

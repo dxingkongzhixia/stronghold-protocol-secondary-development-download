@@ -74,7 +74,7 @@ test('维什戴尔 in every 自选 form: her kit (all three skills authored), th
     }
   }
   assert.deepEqual(formOf(6, true).skills.map((s) => [s.skillType, s.trigger.rule, s.trigger.rawRule]), [['AUTO', 'DEFAULT', 'DEFAULT'], ['MANUAL', 'DEFAULT', 'DEFAULT'], ['MANUAL', 'SP_FULL', 'ALWAYS']]);
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1434, 615, 1735, 684]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1434, 705, 1735, 774]);   // +90 信赖 ATK
   assert.deepEqual([modOf(5, BOM).attr, modOf(6, BOM).attr], [{ atk: 45, aspd: 5 }, { atk: 65, aspd: 7 }]);
   const data = { chess: CHESS, backups: BACKUPS };
   assert.ok(KITTED_CHARS.includes(WD) && [5, 6].every((t) => diyPool(t, { data, kitted: KITTED_CHARS }).includes(WD)));

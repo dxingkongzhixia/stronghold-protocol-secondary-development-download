@@ -86,9 +86,9 @@ test('涤火杰西卡 in every 自选 form: her operator kit (all three skills a
       done(h);
     }
   }
-  // E2 Lv1 2589 / 461 / 522, E2 Lv60 3265 / 520 / 651 (full potential: ATK +28); SPT-X +180 / +50 / +25 → +250 / +65 / +37,
+  // E2 Lv1 2589 / 521 / 522, E2 Lv60 3265 / 580 / 711 (full potential: ATK +28, +60 信赖 ATK/DEF); SPT-X +180 / +50 / +25 → +250 / +65 / +37,
   // SPT-Y +180 / +52 → +325 / +83; the shield 3041 / 619, 3545 / 709, SPT-X stage 3 3925 / 788 and 60 s
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.def], [2589, 461, 3265, 651]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.def], [2589, 521, 3265, 711]);
   assert.deepEqual([modOf(5, SPTX).attr, modOf(6, SPTX).attr, modOf(5, SPTY).attr, modOf(6, SPTY).attr], [{ maxHp: 180, atk: 50, def: 25 }, { maxHp: 250, atk: 65, def: 37 }, { maxHp: 180, atk: 52 }, { maxHp: 325, atk: 83 }]);
   assert.deepEqual([tokenStats(5, false).maxHp, tokenStats(5, true).maxHp, tokenStats(6, true, SPTX).maxHp, tokenStats(6, true, SPTX).def, tokenTalent(6, true, SPTX).duration, tokenTalent(5, true, SPTX).duration], [3041, 3545, 3925, 788, 60, 50]);
 });

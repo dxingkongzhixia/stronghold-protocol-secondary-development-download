@@ -92,9 +92,9 @@ test('傀影 in every 自选 form: his operator kit (all three skills authored),
       done(h);
     }
   }
-  // the numbers (zh_CN): 傀影 E2 Lv1 1413 / 457 / 270, E2 Lv60 1653 / 539 / 304; the twin 1126 / 429 / 226 → 1318 / 508 / 254,
+  // the numbers (zh_CN, +90 信赖 ATK): 傀影 E2 Lv1 1413 / 547 / 270, E2 Lv60 1653 / 629 / 304; the twin 1126 / 429 / 226 → 1318 / 508 / 254,
   // EXE-Y stage 3 "属性进一步增强" 1418 / 568 / 294; modules
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1413, 457, 1653, 539]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1413, 547, 1653, 629]);
   assert.deepEqual([twinOf(5, false).stats.maxHp, twinOf(5, true).stats.atk, twinOf(6, true, EY).stats.maxHp, twinOf(6, true, EY).stats.atk, twinOf(5, true, EY).stats.atk], [1126, 508, 1418, 568, 508]);
   assert.deepEqual([modOf(5, EX).attr, modOf(6, EX).attr, modOf(5, EY).attr, modOf(6, EY).attr, modOf(5, IS).attr, modOf(6, IS).attr],
     [{ maxHp: 100, atk: 50 }, { maxHp: 140, atk: 73 }, { atk: 40, def: 24 }, { atk: 75, def: 30 }, { atk: 37, aspd: 5 }, { atk: 71, aspd: 7 }]);

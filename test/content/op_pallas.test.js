@@ -75,9 +75,9 @@ test('帕拉斯 in every 自选 form: her operator kit (all three skills authore
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN, full potential: ATK +25): E2 Lv1 1413 / 602 / 382, E2 Lv60 1778 / 675 / 430; INS-X +150 HP
+  // the numbers of the forms (zh_CN, full potential: ATK +25, +300 HP / +50 ATK 信赖): E2 Lv1 1713 / 652 / 382, E2 Lv60 2078 / 725 / 430; INS-X +150 HP
   // +55 ATK → +210 / +83, trait 130 %; INS-Y +40 ATK +3 ASPD → +60 / +5
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/1/4/0'].stats.def, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1413, 602, 382, 1778, 675]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/1/4/0'].stats.def, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1713, 652, 382, 2078, 725]);
   assert.deepEqual([modOf(5, INSX).attr, modOf(6, INSX).attr, modOf(5, INSY).attr, modOf(6, INSY).attr], [{ maxHp: 150, atk: 55 }, { maxHp: 210, atk: 83 }, { atk: 40, aspd: 3 }, { atk: 60, aspd: 5 }]);
   assert.deepEqual([formOf(5, false).trait.bb.atk_scale, modOf(5, INSX).traitOverride.bb.atk_scale, modOf(6, INSY).traitOverride.bb.atk_scale], [1.2, 1.3, 1.2]);
 });

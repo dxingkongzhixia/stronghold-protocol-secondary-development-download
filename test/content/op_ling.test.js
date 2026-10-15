@@ -75,8 +75,8 @@ test('令 in every 自选 form: her kit (all three skills authored), the form\'s
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 852 / 430 / 114, E2 Lv60 1002 / 474 / 130; SUM-Y +100 / +30 → +150 / +50 HP / ATK
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [852, 430, 1002, 474]);
+  // the numbers of the forms (zh_CN, +350 HP / +35 ATK 信赖): E2 Lv1 1202 / 465 / 114, E2 Lv60 1352 / 509 / 130; SUM-Y +100 / +30 → +150 / +50 HP / ATK
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [1202, 465, 1352, 509]);
   assert.deepEqual([modOf(5, SUMY).attr, modOf(6, SUMY).attr], [{ maxHp: 100, atk: 30 }, { maxHp: 150, atk: 50 }]);
 });
 

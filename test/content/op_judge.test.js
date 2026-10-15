@@ -84,8 +84,8 @@ test('斥罪 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  // zh_CN numbers (full potential): E2 Lv1 2960 / 711 / 474, E2 Lv60 3686 / 839 / 568; UNY-X +150/+35/+15 → +300/+50/+33, UNY-Y +60/+48 → +85/+70
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2960, 711, 3686, 839]);
+  // zh_CN numbers (full potential +600 HP / +40 ATK 信赖): E2 Lv1 3560 / 751 / 474, E2 Lv60 4286 / 879 / 568; UNY-X +150/+35/+15 → +300/+50/+33, UNY-Y +60/+48 → +85/+70
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [3560, 751, 4286, 879]);
   assert.deepEqual([modOf(5, UNYX).attr, modOf(6, UNYX).attr, modOf(5, UNYY).attr, modOf(6, UNYY).attr],
     [{ maxHp: 150, atk: 35, def: 15 }, { maxHp: 300, atk: 50, def: 33 }, { atk: 60, def: 48 }, { atk: 85, def: 70 }]);
 });

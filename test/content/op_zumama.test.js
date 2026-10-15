@@ -77,9 +77,9 @@ test('森蚺 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  // zh_CN numbers (full potential): E2 Lv1 3440 / 835 / 519, E2 Lv60 4121 / 949 / 601; HES-X +80/+70 → +105/+85 ATK/DEF, HES-Y +70/+80 →
+  // zh_CN numbers (full potential +70 信赖 ATK): E2 Lv1 3440 / 905 / 519, E2 Lv60 4121 / 1019 / 601; HES-X +80/+70 → +105/+85 ATK/DEF, HES-Y +70/+80 →
   // +85/+110, RA-A +280/+80 → +380/+130 HP/ATK
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [3440, 835, 4121, 949]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [3440, 905, 4121, 1019]);
   assert.deepEqual([modOf(5, HESX).attr, modOf(6, HESX).attr, modOf(5, HESY).attr, modOf(6, HESY).attr, modOf(5, RAA).attr, modOf(6, RAA).attr],
     [{ atk: 80, def: 70 }, { atk: 105, def: 85 }, { atk: 70, def: 80 }, { atk: 85, def: 110 }, { maxHp: 280, atk: 80 }, { maxHp: 380, atk: 130 }]);
 });

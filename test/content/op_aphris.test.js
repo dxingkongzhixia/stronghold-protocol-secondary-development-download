@@ -77,8 +77,8 @@ test('谬因 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  // E2 Lv1 1261 / 762, E2 Lv60 1526 / 861, cost 32 (full potential); BLA-Y −8 cost, +120 / +45 → +200 / +70 HP / ATK
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk, FORMS['2/60/7/1'].stats.cost], [1261, 762, 1526, 861, 32]);
+  // E2 Lv1 1261 / 872, E2 Lv60 1526 / 971, cost 32 (full potential +60 信赖); BLA-Y −8 cost, +120 / +45 → +200 / +70 HP / ATK
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk, FORMS['2/60/7/1'].stats.cost], [1261, 872, 1526, 971, 32]);
   assert.deepEqual([modOf(5, BLAY).attr, modOf(6, BLAY).attr], [{ cost: -8, maxHp: 120, atk: 45 }, { cost: -8, maxHp: 200, atk: 70 }]);
 });
 

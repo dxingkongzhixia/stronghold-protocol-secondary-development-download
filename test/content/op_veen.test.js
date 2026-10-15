@@ -71,7 +71,7 @@ test('维伊 in every 自选 form: her operator kit (all three skills authored),
       done(h);
     }
   }
-  assert.deepEqual([FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.atk, FORMS['2/60/7/1'].trait.bb], [1142, 1320, { times: 9, merge_cnt: 3 }]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.atk, FORMS['2/60/7/1'].trait.bb], [1242, 1420, { times: 9, merge_cnt: 3 }]);   // +100 信赖 ATK
   assert.deepEqual([modOf(5, MSCY).attr, modOf(6, MSCY).attr], [{ maxHp: 80, atk: 85 }, { maxHp: 190, atk: 120 }]);
 });
 

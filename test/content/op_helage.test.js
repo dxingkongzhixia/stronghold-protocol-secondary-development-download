@@ -69,9 +69,9 @@ test('赫拉格 in every 自选 form: his operator kit (all three skills authore
       done(h);
     }
   }
-  // the numbers of the forms (zh_CN): E2 Lv1 2868 / 658 / 283, E2 Lv60 3502 / 744 / 317; SBL-X +230 HP +55 ATK → +350 / +90,
+  // the numbers of the forms (zh_CN, +400 HP / +70 ATK 信赖): E2 Lv1 3268 / 728 / 283, E2 Lv60 3902 / 814 / 317; SBL-X +230 HP +55 ATK → +350 / +90,
   // SBL-Y +55 ATK +50 DEF → +90 / +60
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2868, 658, 3502, 744]);
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [3268, 728, 3902, 814]);
   assert.deepEqual([modOf(5, SBLX).attr, modOf(6, SBLX).attr, modOf(5, SBLY).attr, modOf(6, SBLY).attr], [{ maxHp: 230, atk: 55 }, { maxHp: 350, atk: 90 }, { atk: 55, def: 50 }, { atk: 90, def: 60 }]);
 });
 

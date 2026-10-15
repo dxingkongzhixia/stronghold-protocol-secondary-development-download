@@ -71,8 +71,8 @@ test('贝洛内 in every 自选 form: his operator kit (all three skills authore
       done(h);
     }
   }
-  // full potential: E2 Lv1 2152 / 514 / 298, E2 Lv60 2466 / 590 / 336; FGT-Y +140 / +50 → +230 / +80
-  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2152, 514, 2466, 590]);
+  // full potential +60 信赖: E2 Lv1 2152 / 574 / 298, E2 Lv60 2466 / 650 / 336; FGT-Y +140 / +50 → +230 / +80
+  assert.deepEqual([FORMS['2/1/4/0'].stats.maxHp, FORMS['2/1/4/0'].stats.atk, FORMS['2/60/7/1'].stats.maxHp, FORMS['2/60/7/1'].stats.atk], [2152, 574, 2466, 650]);
   assert.deepEqual([modOf(5, FGTY).attr, modOf(6, FGTY).attr], [{ maxHp: 140, atk: 50 }, { maxHp: 230, atk: 80 }]);
 });
 

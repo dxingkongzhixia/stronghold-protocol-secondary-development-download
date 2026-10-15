@@ -87,7 +87,7 @@ test('battle input: every owned operator states 潜能 / 练度 — the human\'s
   const b = createBattleFromSpec(spec, undefined, { quiet: true });
   const u = b.allyUnits.find((x) => x.defId === VENDLA);
   const e = b.allyUnits.find((x) => x.defId === 'chess_char_1_02_a');
-  assert.deepEqual([u.base.atk, u.base.cost, u.cultivate, u.s.atk], [435, 15, 3, 435 * 1.1]);
+  assert.deepEqual([u.base.atk, u.base.cost, u.cultivate, u.s.atk], [465, 15, 3, 465 * 1.1]);
   assert.deepEqual([e.cultivate, e.s.maxHp], [0, e.base.maxHp]);
   // the scouting units carry them (a teammate's card)
   const scout = m.prepFieldMeta(p0).units;
