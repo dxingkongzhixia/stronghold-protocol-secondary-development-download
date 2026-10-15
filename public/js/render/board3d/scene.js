@@ -15,13 +15,15 @@
 //   board.render(cam, timeSec)       sync the camera, animate, draw
 //   board.resize(w, h, dpr) · board.stats() · board.destroy()
 //
-// Draw calls: board (tiles + blocks + platforms, merged, MT_autochess), the pen's glass hatches (glassMaterial),
+// Draw calls: board (tiles + blocks + apron, merged, MT_autochess), the pen's glass hatches (glassMaterial),
 // static crates (merged, same material),
 // decals (MT_autochess_common), fence pipes, blowers (merged, unlit), gate boxes (additive + alpha, merged per
 // material), cyan field edges, terrain overlays (≤ 4), background plane + its shadow catcher — ~12–16 in total.
 // An official scene replaces the tiles, glass, decals, pipes and background (all but the device slabs, layout.js
 // buckets.raised — GitHub #569) with one mesh per material and lightmap
-// page of the parts the built areas show (load.js mergeSceneChunks). Devices, gates, edges and terrain stay.
+// page of the parts the built areas show (load.js mergeSceneChunks), PLUS one more per bucket that carries standing
+// props — the props of a bucket are split out of its terrain (load.js splitSceneProps) so each casts its own shadow on
+// the ground instead of a degenerate self-shadow within one huge island. Devices, gates, edges and terrain stay.
 // The key light's shadow map is rendered only when the geometry changes (autoUpdate off).
 
 import { buildBoard, objToBoard, boxProjectUV, ROWS, COLS, DEVICE_H, AREAS } from './layout.js';
@@ -31,7 +33,8 @@ import {
   waterMaterial, mireMaterial, infectionMaterial, smogMaterial, dashTexture, environmentMap, sceneMaterial, sceneWaterMaterial,
 } from './materials.js';
 import { syncThreeCamera } from '../projection.js';
-import { mergeSceneChunks, sceneMaterialKey } from './load.js';
+import { mergeSceneChunks, sceneMaterialKey, splitSceneProps } from './load.js';
+import { sceneTheme } from './theme.js';
 
 /** Lighting rig (tuned against the official screenshots: bright even tops, darker sides, soft shadows). */
 export const LIGHTING = Object.freeze({
@@ -41,7 +44,7 @@ export const LIGHTING = Object.freeze({
   emissive: 0.25,
   roughness: 0.78,
   shadow: { size: 2048, radius: 3, bias: -0.0004, normalBias: 0.025 },
-  exposure: 1.0,
+  exposure: 1.5,
   // the clear colour is the fog colour: the far background fades into the void without a visible edge
   clear: 0x0c1114,
   fog: { color: 0x0c1114, near: 17, far: 36 },
@@ -132,6 +135,9 @@ export class BoardScene {
     this.opts = opts;
     this.destroyed = false;
     this.lost = false;
+    // split the official scene's standing props out of the merged terrain (PROP_SPLIT); off → one mesh per material
+    this.splitProps = opts.splitProps !== false;
+    this.propSplit = opts.propSplit || null;   // splitSceneProps tuning override (PROP_SPLIT by default)
     const T = THREE;
     this.renderer = opts.renderer || new T.WebGLRenderer({
       canvas: opts.canvas, antialias: opts.antialias ?? true, alpha: false, stencil: false, depth: true,
@@ -139,7 +145,12 @@ export class BoardScene {
     });
     const R = this.renderer;
     R.outputColorSpace = T.SRGBColorSpace;
-    R.toneMapping = T.NoToneMapping;
+    // The official board is lit by Unity's HDR pipeline and shown through a filmic tonemapper (the client's post FX):
+    // a plain NoToneMapping renders the dark baked albedo (TX_AutochessSand_A's tiles are ~(69,56,35)) as a mud-brown
+    // lattice, where the official's lifted-shadow grade shows the light sandstone ~(140,125,100). ACES + exposure
+    // matches the sampled official ground without washing the highlights.
+    R.toneMapping = T.ACESFilmicToneMapping;
+    R.toneMappingExposure = LIGHTING.exposure;
     R.setClearColor(LIGHTING.clear, 1);
     R.shadowMap.enabled = opts.shadows !== false;
     R.shadowMap.type = T.PCFShadowMap;
@@ -152,9 +163,11 @@ export class BoardScene {
     this.scene.fog = new T.Fog(LIGHTING.fog.color, LIGHTING.fog.near, LIGHTING.fog.far);
     this.camera = new T.PerspectiveCamera(40, 16 / 9, 0.5, 120);
     this.focus = focusUniforms(T);
+    this.envRT = null;
     if (opts.environment !== false) {
       try {
         this.envMap = environmentMap(T, R);
+        this.envRT = this.envMap?.__rt || null;
         if (this.envMap) {
           this.scene.environment = this.envMap;
           this.scene.environmentIntensity = LIGHTING.env;
@@ -300,19 +313,26 @@ export class BoardScene {
     const M = this.meshes = {};
     this.official = official && this._buildScene(official) ? official : null;
     if (!this.official) {
+      this.theme = null;
+      this.renderer.toneMappingExposure = LIGHTING.exposure;   // the procedural board's grade
       M.board = this._mesh(board.buckets.board, this.mat.board);
       M.glass = this._mesh(board.buckets.glass, this.mat.glass);
       M.decal = this._mesh(board.buckets.decal, this.mat.decal, { cast: false });
       M.pipe = this._mesh(board.buckets.pipe, this.mat.pipe);
     } else {
       // the scene has no device slabs: the 射击台 / 特制水上平台 / 封印的地面 slabs stay drawn on it (units stand
-      // on them at tiles.js heightAt; GitHub #569)
+      // on them at tiles.js heightAt; GitHub #569), with the procedural board's material. A theme colouring them
+      // (the `slab` key that existed briefly) painted the official 高台 flat sand — act2autochess_m02's look is the
+      // reference the owner pointed at instead.
       M.raised = this._mesh(board.buckets.raised, this.mat.board);
       M.raisedDecal = this._mesh(board.buckets.raisedDecal, this.mat.decal, { cast: false });
     }
     this._buildDevices(board);
     this._buildGates(board);
-    this._buildEdges(board);
+    // The remake's cyan field-edge strips (glowMaterial, additive) saturate to pure white over a bright official scene,
+    // so each read as a white line along the field's edge (the owner's 白线); the official battlefield delimits its own
+    // field anyway. Procedural boards still get them.
+    if (!this.official) this._buildEdges(board);
     this._buildTerrain(board);
     if (!this.official) this._buildBackground(board);
     this._fitShadow(board);
@@ -336,8 +356,16 @@ export class BoardScene {
     if (res) return res;
     const T = this.THREE;
     const aniso = Math.min(8, this.renderer.capabilities?.getMaxAnisotropy?.() || 1);
+    // a material's normal / roughness maps are linear data maps; the albedo and emission maps are sRGB. The scene's
+    // tiling/offset per slot is identity, so every map samples on uv0.
+    const linear = new Set();
+    for (const m of Object.values(pack.doc?.materials || {})) {
+      if (!m || typeof m !== 'object') continue;
+      if (typeof m.normalMap === 'string') linear.add(m.normalMap);
+      if (typeof m.metalGlossMap === 'string') linear.add(m.metalGlossMap);
+    }
     const tex = {}, lm = [];
-    for (const [name, img] of Object.entries(pack.images?.tex || {})) tex[name] = makeTexture(T, img, { aniso, repeat: true });
+    for (const [name, img] of Object.entries(pack.images?.tex || {})) tex[name] = makeTexture(T, img, { aniso, repeat: true, srgb: !linear.has(name) });
     for (const img of pack.images?.lm || []) lm.push(img ? makeTexture(T, img, { srgb: false }) : null);
     res = { tex, lm, mats: new Map() };
     this.sceneRes.set(pack.key, res);
@@ -348,6 +376,8 @@ export class BoardScene {
     const res = this.sceneRes.get(pack.key);
     if (!res) return;
     for (const m of res.mats.values()) m.dispose();
+    res.apronMat?.dispose?.();
+    res.platformMat?.dispose?.();
     for (const t of [...Object.values(res.tex), ...res.lm]) t?.dispose?.();
     this.sceneRes.delete(pack.key);
   }
@@ -360,6 +390,9 @@ export class BoardScene {
     const T = this.THREE;
     const res = this._sceneResources(pack);
     const infos = pack.doc?.materials || {};
+    // the battlefield theme's grade (theme.js): its HDR exposure + the ambient/tint sceneMaterial applies
+    const theme = this.theme = sceneTheme(pack.stage, pack.doc);
+    this.renderer.toneMappingExposure = theme.exposure;
     this.sceneWater = [];
     const buckets = new Map();
     for (const c of pack.chunks || []) {
@@ -378,31 +411,203 @@ export class BoardScene {
       let mat = res.mats.get(mk);
       if (!mat) {
         mat = water
-          ? sceneWaterMaterial(T, this.tex, this.focus, info)
+          ? sceneWaterMaterial(T, this.tex, this.focus, info, theme)
           : sceneMaterial(T, {
-            map: res.tex[info?.map] || null, lightMap: c.lightmap >= 0 ? (res.lm[c.lightmap] || null) : null, info,
+            map: res.tex[info?.map] || null, lightMap: c.lightmap >= 0 ? (res.lm[c.lightmap] || null) : null,
+            normalMap: res.tex[info?.normalMap] || null, roughnessMap: res.tex[info?.metalGlossMap] || null,
+            emissionMap: res.tex[info?.emissionMap] || null, info, theme,
             light: pack.doc?.light || null, lightRange: pack.doc?.lightRange,
           }, this.focus);
         res.mats.set(mk, mat);
       }
       if (water) this.sceneWater.push(mat);
-      const g = new T.BufferGeometry();
-      g.setAttribute('position', new T.BufferAttribute(c.position, 3));
-      g.setAttribute('normal', new T.BufferAttribute(c.normal, 4, true));
-      g.setAttribute('uv', new T.BufferAttribute(c.uv, 2));
-      g.setAttribute('aLm', new T.BufferAttribute(c.uv1, 2));
-      g.setAttribute('aColor', new T.BufferAttribute(c.color, 4, true));
-      g.setIndex(new T.BufferAttribute(c.index, 1));
-      g.computeBoundingSphere();
-      const mesh = new T.Mesh(g, mat);
-      mesh.castShadow = false; mesh.receiveShadow = false;
-      mesh.renderOrder = water ? 1 : mat.userData.blend === 'blend' ? 2 : mat.userData.blend === 'cutout' ? -3 : -4;
-      mesh.matrixAutoUpdate = false; mesh.updateMatrix();
-      this.root.add(mesh);
-      this.meshes[`scene${n++}`] = mesh;
+      const order = water ? 1 : mat.userData.blend === 'blend' ? 2 : mat.userData.blend === 'cutout' ? -3 : -4;
+      // Terrain stays merged (the draw-call win); the standing props of a bucket (rocks / crates / cacti / tufts) split
+      // into their own mesh, so a chunk whose ground and props share a material no longer fuses them into one island.
+      // The terrain does NOT cast the realtime shadow: its shadow is already in the lightmap's baked shadowmask, and
+      // re-casting it shadow-acnes the whole field and cancels the sun. Only the props cast — that is exactly the crisp
+      // prop-on-ground shadow the bake is too low-res to hold. Everything still receives.
+      const parts = (water || this.splitProps === false) ? { ground: c, props: null } : splitSceneProps(c, this.propSplit || undefined);
+      for (const [part, cast] of [[parts.ground, false], [parts.props, true]]) {
+        if (!part || !part.index || part.index.length === 0) continue;
+        const mesh = this._sceneMesh(part, mat, order, water ? false : cast);
+        this.root.add(mesh);
+        this.meshes[`scene${n++}`] = mesh;
+      }
     }
+    this._buildApron(theme, res, pack);
+    this._buildPlatforms(theme, res, pack);
     return n > 0;
   }
+
+  /**
+   * One scene mesh of a bucket (its merged terrain or its split-out props). Position / uv / aLm / aColor / normal are
+   * the part's compact buffers. `cast` — the realtime shadow caster flag: the props cast, the terrain does not (its
+   * shadow is baked in the lightmap's shadowmask; re-casting it shadow-acnes the field). Everything receives.
+   */
+  _sceneMesh(part, mat, order, cast) {
+    const T = this.THREE;
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(part.position, 3));
+    g.setAttribute('normal', new T.BufferAttribute(part.normal, 4, true));
+    g.setAttribute('uv', new T.BufferAttribute(part.uv, 2));
+    g.setAttribute('aLm', new T.BufferAttribute(part.uv1, 2));
+    g.setAttribute('aColor', new T.BufferAttribute(part.color, 4, true));
+    g.setIndex(new T.BufferAttribute(part.index, 1));
+    if (mat.userData.normalMap) { try { g.computeTangents(); } catch { /* a degenerate chunk keeps its vertex normals */ } }
+    g.computeBoundingSphere();
+    const mesh = new T.Mesh(g, mat);
+    mesh.castShadow = !!cast; mesh.receiveShadow = true;
+    mesh.renderOrder = order;
+    mesh.matrixAutoUpdate = false; mesh.updateMatrix();
+    return mesh;
+  }
+
+  /**
+   * The battlefield's sand apron: a soft, flat band of the scene's own sand texture laid around the built area
+   * (`this.area`), so the playable field blends into the surrounding sand instead of ending in a hard rectangular
+   * edge. The official desert board (PRTS 战场#01) lays the field, the dunes and the rocks into ONE bright sand
+   * surface — it is NOT a raised perimeter platform — so the earlier ring + lane `platforms` geometry (theme.js) was a
+   * wrong read of the reference and is gone. Every apron ring lies outside the built area's bounding box, so no
+   * vertex is on a playable tile; the band is flat, at a fixed low z, and its alpha fades from `alpha` at the field
+   * edge to 0 outward, so it reads as more sand grain around the field rather than a slab. Visible only in the
+   * focus-lit scene path (the procedural board has none).
+   * @param {{ apron?: { texture?: string, tint?: number[], uv?: number, width?: number, rings?: number, alpha?: number, z?: number } }} theme
+   * @param {{ tex: object, apronMat?: any }} res the scene textures / material cache
+   * @param {{ doc?: object }} pack
+   */
+  _buildApron(theme, res, pack) {
+    const spec = theme?.apron;
+    if (!spec || !Array.isArray(this.area) || !this.area.length) return;
+    const T = this.THREE;
+    const map = res.tex[spec.texture] || res.tex[this._apronFallbackTexture(pack)] || null;
+    if (!map) return;
+    const area = this.area.reduce((a, r) => (a
+      ? { r0: Math.min(a.r0, r.r0), r1: Math.max(a.r1, r.r1), c0: Math.min(a.c0, r.c0), c1: Math.max(a.c1, r.c1) }
+      : { ...r }), null);
+    const width = Number.isFinite(spec.width) ? spec.width : 2.4;
+    const rings = Math.max(1, Math.round(Number.isFinite(spec.rings) ? spec.rings : 4));
+    const s = Number.isFinite(spec.uv) ? spec.uv : 0.23;
+    const tint = Array.isArray(spec.tint) ? spec.tint : [1, 1, 1];
+    const z = Number.isFinite(spec.z) ? spec.z : 0.014;
+    // `gap` (tiles) keeps the band clear of the field edge so it can never tint the last playable row; the fade starts
+    // at the gap, entirely outside the play area
+    const gap = Number.isFinite(spec.gap) && spec.gap > 0 ? spec.gap : 0;
+    const a0 = Number.isFinite(spec.alpha) ? spec.alpha : 0.92;
+    const pos = [], uv = [], nrm = [], col = [], idx = [];
+    // rings[j] = the rectangle `j` steps out from the built area: d_j tiles out, flat at z, alpha fading to 0
+    const expand = (d) => ({ r0: area.r0 - 0.5 - gap - d, r1: area.r1 + 0.5 + gap + d, c0: area.c0 - 0.5 - gap - d, c1: area.c1 + 0.5 + gap + d });
+    const dOf = (j) => (j / rings) * width;
+    const aOf = (j) => a0 * Math.max(0, 1 - j / rings);
+    const aoOf = (j) => 1 - 0.10 * (j / rings);
+    const quad = (a, b, c, d, aa, ab, ac, ad) => {
+      const o = pos.length / 3;
+      for (const p of [a, b, c, d]) { pos.push(p[0], p[1], z); nrm.push(0, 0, 1); }
+      uv.push(a[0] * s, a[1] * s, b[0] * s, b[1] * s, c[0] * s, c[1] * s, d[0] * s, d[1] * s);
+      for (const p of [aa, ab, ac, ad]) col.push(p[0], p[0], p[0], p[1]);   // rgb = AO, a = the blend
+      idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
+    };
+    for (let j = 0; j < rings; j++) {
+      const i0 = expand(dOf(j)), i1 = expand(dOf(j + 1)), a1 = aOf(j), a2 = aOf(j + 1);
+      const ao1 = aoOf(j), ao2 = aoOf(j + 1), k1 = [ao1, a1], k2 = [ao2, a2];
+      // the four strips of the ring, each wound CCW (facing +z); every ring lies outside the built area's
+      // bounding box, so no vertex is on a playable tile
+      quad([i1.c0, i1.r0], [i1.c1, i1.r0], [i0.c1, i0.r0], [i0.c0, i0.r0], k2, k2, k1, k1);   // top (outer first)
+      quad([i0.c0, i0.r1], [i0.c1, i0.r1], [i1.c1, i1.r1], [i1.c0, i1.r1], k1, k1, k2, k2);   // bottom
+      quad([i1.c0, i0.r0], [i0.c0, i0.r0], [i0.c0, i0.r1], [i1.c0, i0.r1], k2, k1, k1, k2);   // left
+      quad([i0.c1, i0.r0], [i1.c1, i0.r0], [i1.c1, i0.r1], [i0.c1, i0.r1], k1, k2, k2, k1);   // right
+    }
+    if (!pos.length) return;
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+    g.setAttribute('normal', new T.BufferAttribute(new Float32Array(nrm), 3));
+    g.setAttribute('uv', new T.BufferAttribute(new Float32Array(uv), 2));
+    g.setAttribute('color', new T.BufferAttribute(new Float32Array(col), 4));
+    g.setIndex(new T.BufferAttribute(pos.length / 3 > 65535 ? new Uint32Array(idx) : new Uint16Array(idx), 1));
+    if (!res.apronMat) {
+      res.apronMat = new T.MeshBasicMaterial({
+        map, vertexColors: true, transparent: true, depthWrite: false,
+        color: new T.Color(tint[0], tint[1], tint[2]),
+      });
+    }
+    const mesh = new T.Mesh(g, res.apronMat);
+    mesh.castShadow = false; mesh.receiveShadow = false; mesh.renderOrder = 0;
+    mesh.matrixAutoUpdate = false; mesh.updateMatrix();
+    this.root.add(mesh);
+    this.meshes.apron = mesh;
+  }
+
+  /** The theme apron texture fallback: the scene's first lit material's ground albedo. */
+  _apronFallbackTexture(pack) {
+    for (const m of Object.values(pack?.doc?.materials || {})) if (m && typeof m.map === 'string') return m.map;
+    return '';
+  }
+
+  /**
+   * The battlefield's 高台: the official's raised SANDSTONE BLOCKS (`theme.platforms.blocks`), built as flat-topped
+   * boxes with lit / shaded sides, sharing the field's albedo and the scene's own key light (`sceneMaterial`) so they
+   * read as the same sandstone as the ground. The rects are the localised blocks the battlefield's official PRTS map
+   * shows — the earlier ring / lane `platforms` (a bright rectangular frame around the whole field, a wrong read) is
+   * gone. Every rect lies OUTSIDE the deploy field, so a block never covers a deploy highlight / the direction wheel.
+   * VISUAL only: the sim's tiles / heights / deployTiles are untouched. Visible only in the focus-lit scene path.
+   * @param {{ platforms?: { texture?: string, tint?: number[], uv?: number, blocks?: Array<{r0:number,r1:number,c0:number,c1:number,h:number,base?:number}> } }} theme
+   * @param {{ tex: object, mats: Map, platformMat?: any }} res
+   * @param {{ doc?: object }} pack
+   */
+  _buildPlatforms(theme, res, pack) {
+    const spec = theme?.platforms;
+    const blocks = Array.isArray(spec?.blocks) ? spec.blocks : null;
+    if (!spec || !blocks || !blocks.length) return;
+    const T = this.THREE;
+    const map = res.tex[spec.texture] || res.tex[this._apronFallbackTexture(pack)] || null;
+    if (!map) return;
+    const s = Number.isFinite(spec.uv) ? spec.uv : 0.23;
+    const pos = [], uv = [], nrm = [], lm = [], idx = [];
+    const push = (x, y, z, nx, ny, nz) => {
+      pos.push(x, y, z); nrm.push(nx, ny, nz);
+      // world-space UV per face so the sandstone grain keeps a constant density across top and sides
+      if (ny !== 0) uv.push(x * s, z * s); else if (nx !== 0) uv.push(y * s, z * s); else uv.push(x * s, y * s);
+      lm.push(0, 0);
+    };
+    const quad = (a, b, c, d, n) => {
+      const o = pos.length / 3;
+      for (const p of [a, b, c, d]) push(p[0], p[1], p[2], n[0], n[1], n[2]);
+      idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
+    };
+    for (const b of blocks) {
+      if (!b) continue;
+      const r0 = Math.min(b.r0, b.r1), r1 = Math.max(b.r0, b.r1), c0 = Math.min(b.c0, b.c1), c1 = Math.max(b.c0, b.c1);
+      const top = Number.isFinite(b.h) ? b.h : 0.42;
+      const base = Number.isFinite(b.base) ? b.base : 0;
+      if (!(top > base)) continue;
+      const x0 = c0 - 0.5, x1 = c1 + 0.5, y0 = r0 - 0.5, y1 = r1 + 0.5;
+      quad([x0, y0, top], [x1, y0, top], [x1, y1, top], [x0, y1, top], [0, 0, 1]);             // top
+      quad([x0, y0, base], [x0, y0, top], [x1, y0, top], [x1, y0, base], [0, -1, 0]);          // front (-y)
+      quad([x1, y0, base], [x1, y0, top], [x1, y1, top], [x1, y1, base], [1, 0, 0]);           // right (+x)
+      quad([x1, y1, base], [x1, y1, top], [x0, y1, top], [x0, y1, base], [0, 1, 0]);           // back (+y)
+      quad([x0, y1, base], [x0, y1, top], [x0, y0, top], [x0, y0, base], [-1, 0, 0]);          // left (-x)
+    }
+    if (!pos.length) return;
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
+    g.setAttribute('normal', new T.BufferAttribute(new Float32Array(nrm), 3));
+    g.setAttribute('uv', new T.BufferAttribute(new Float32Array(uv), 2));
+    g.setAttribute('aLm', new T.BufferAttribute(new Float32Array(lm), 2));
+    g.setIndex(new T.BufferAttribute(pos.length / 3 > 65535 ? new Uint32Array(idx) : new Uint16Array(idx), 1));
+    g.computeBoundingSphere();
+    if (!res.platformMat) {
+      const tint = Array.isArray(spec.tint) ? spec.tint : [1, 1, 1];
+      res.platformMat = new T.MeshStandardMaterial({ map, color: new T.Color(tint[0], tint[1], tint[2]), roughness: 0.92, metalness: 0 });
+    }
+    const mesh = new T.Mesh(g, res.platformMat);
+    mesh.castShadow = true; mesh.receiveShadow = true; mesh.renderOrder = -3;
+    mesh.matrixAutoUpdate = false; mesh.updateMatrix();
+    this.root.add(mesh);
+    this.meshes.platforms = mesh;
+    this.renderer.shadowMap.needsUpdate = true;
+  }
+
+
 
   _buildDevices(board) {
     const crates = [], blowers = [];
@@ -520,7 +725,7 @@ export class BoardScene {
     }
   }
 
-  _buildBackground(board) {
+  _buildBackground() {
     const T = this.THREE;
     const B = LIGHTING.bg;
     const cx = (COLS - 1) / 2, cy = (ROWS - 1) / 2;
@@ -546,16 +751,25 @@ export class BoardScene {
   _fitShadow(board) {
     const k = this.key;
     const b = board.bounds;
-    const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
-    const d = LIGHTING.key.dir;
-    const len = Math.hypot(d[0], d[1], d[2]);
+    // An empty stage (no tile classified `drawn`) leaves bounds at ±Infinity; that would make the shadow box NaN and
+    // poison the whole light-space transform. Fall back to a fixed box centred on the origin.
+    const finite = Number.isFinite(b.x0) && Number.isFinite(b.x1) && Number.isFinite(b.y0) && Number.isFinite(b.y1);
+    const cx = finite ? (b.x0 + b.x1) / 2 : 0, cy = finite ? (b.y0 + b.y1) / 2 : 0;
+    // The shadow-casting light has to sit on the same side as the sun the materials shade with: an official scene
+    // lights itself with its own `light.dir` (sceneMaterial's uLightDir, e.g. (0.36, 0.45, 0.82) on the sand), while
+    // this rig's direction (LIGHTING.key.dir) is on the other side — every prop then cast its shadow straight behind
+    // itself, where the camera cannot see it, and the board read as if nothing cast anything (the owner's 「阴影要搞下」).
+    // The procedural board keeps the rig's direction.
+    const s = this.official && this.official.doc ? this.official.doc.light : null;
+    const d = s && Array.isArray(s.dir) && s.dir.length === 3 ? s.dir : LIGHTING.key.dir;
+    const len = Math.hypot(d[0], d[1], d[2]) || 1;
     const dist = 30;
     k.position.set(cx + (d[0] / len) * dist, cy + (d[1] / len) * dist, (d[2] / len) * dist);
     k.target.position.set(cx, cy, 0);
     k.target.updateMatrixWorld();
     const cam = k.shadow.camera;
     // light-space box covering the island and its shadow on the background plane
-    const half = Math.max(b.x1 - b.x0, b.y1 - b.y0) / 2 + 9;
+    const half = (finite ? Math.max(b.x1 - b.x0, b.y1 - b.y0) : 30) / 2 + 9;
     cam.left = -half; cam.right = half; cam.top = half; cam.bottom = -half;
     cam.near = 1; cam.far = dist + 30;
     cam.updateProjectionMatrix();
@@ -688,6 +902,8 @@ export class BoardScene {
     for (const m of Object.values(this.mat)) m?.dispose?.();
     for (const t of Object.values(this.tex)) t?.dispose?.();
     this.envMap?.dispose?.();
+    this.envRT?.dispose?.(); // the PMREM render target's framebuffer/depth buffer (not freed by the texture's dispose)
+    this.envRT = null;
     this.canvas.removeEventListener?.('webglcontextlost', this._onLost);
     try { this.renderer.dispose(); } catch { /* ignore */ }
     try { this.renderer.forceContextLoss?.(); } catch { /* ignore */ }

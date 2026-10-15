@@ -69,7 +69,7 @@ describe('3D board in headless Chrome', { skip }, () => {
           perf.views.push({ stageId, phase, w, h, fps: st.fps, frameMs: st.frameMs, cpuMs: st.cpuMs, renderMs: st.renderMs, calls: st.board3d?.calls, triangles: st.board3d?.triangles, board3dMs: st.board3d?.cpuMs });
           assert.deepEqual(problems, []);
           assert.equal(st.board3d?.on, true, `3D board on (${st.board3d?.error || ''})`);
-          assert.ok(st.board3d.calls > 3 && st.board3d.calls <= 20, `draw calls ${st.board3d.calls}`);
+          assert.ok(st.board3d.calls > 3 && st.board3d.calls <= 28, `draw calls ${st.board3d.calls}`);
           assert.ok(st.fps > 30, `fps ${st.fps}`);
           assert.equal(st.mode, phase === 'prep' ? 'prep' : 'battle');
         });

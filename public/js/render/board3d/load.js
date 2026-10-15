@@ -264,6 +264,84 @@ export function mergeSceneChunks(chunks) {
 }
 
 /** Ground rect [x0, y0, x1, y1] (board space) of every named group of chunks (the scene's switchable parts). */
+export const PROP_SPLIT = Object.freeze({ minHeight: 0.30, maxFootprint: 120, minProps: 12 });
+
+/**
+ * Split a merged scene chunk into a `ground` part (its flat tiles and broad low-relief terrain, still merged) and a
+ * `props` part (the compact, standing pieces — rocks, crates, cacti, tufts), by connected component of the triangle
+ * graph, so a chunk whose ground and props share a material no longer fuses them into one mesh: each prop
+ * `castShadow`s onto the ground and receives the sun on its own lit / shaded sides instead of the degenerate self-shadow
+ * of one big island. Each part is a compact chunk: only the vertices its triangles use are copied out (in the scene.bin
+ * attribute layout), so every shown vertex stays in exactly one mesh. A chunk with no props (or all props) is returned
+ * unchanged as `ground`, so a scene without props keeps exactly one mesh per material/lightmap.
+ * @param {object|null} merged a `mergeSceneChunks` result
+ * @param {{ minHeight?: number, maxFootprint?: number }} [opts]
+ * @returns {{ ground: object|null, props: object|null, propsCount: number }}
+ */
+export function splitSceneProps(merged, opts = PROP_SPLIT) {
+  const index = merged?.index;
+  if (!merged || !index || index.length === 0) return { ground: merged || null, props: null, propsCount: 0 };
+  const nv = merged.position.length / 3;
+  const parent = new Int32Array(nv);
+  for (let i = 0; i < nv; i++) parent[i] = i;
+  const find = (x) => { let r = x; while (parent[r] !== r) r = parent[r]; while (parent[x] !== r) { const n = parent[x]; parent[x] = r; x = n; } return r; };
+  for (let i = 0; i < index.length; i += 3) { const a = find(index[i]), b = find(index[i + 1]); if (a !== b) parent[a] = b; const c = find(index[i + 1]), d = find(index[i + 2]); if (c !== d) parent[c] = d; }
+  // component extents → is the island a standing prop?
+  const seen = new Map();
+  const p = merged.position;
+  for (let v = 0; v < nv; v++) {
+    const r = find(v);
+    let e = seen.get(r);
+    if (!e) { e = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, z0: Infinity, z1: -Infinity }; seen.set(r, e); }
+    const x = p[v * 3], y = p[v * 3 + 1], z = p[v * 3 + 2];
+    if (x < e.x0) e.x0 = x; if (x > e.x1) e.x1 = x;
+    if (y < e.y0) e.y0 = y; if (y > e.y1) e.y1 = y;
+    if (z < e.z0) e.z0 = z; if (z > e.z1) e.z1 = z;
+  }
+  const minHeight = Number.isFinite(opts?.minHeight) ? opts.minHeight : PROP_SPLIT.minHeight;
+  const maxFoot = Number.isFinite(opts?.maxFootprint) ? opts.maxFootprint : PROP_SPLIT.maxFootprint;
+  const propRoot = new Map();
+  for (const [r, e] of seen) propRoot.set(r, (e.z1 - e.z0) >= minHeight && (e.x1 - e.x0) * (e.y1 - e.y0) <= maxFoot);
+  const isProp = (v) => propRoot.get(find(v));
+  const minProps = Number.isFinite(opts?.minProps) ? opts.minProps : PROP_SPLIT.minProps;
+  let hasProp = false, hasGround = false, propTris = 0;
+  for (let i = 0; i < index.length; i += 3) { if (isProp(index[i])) { hasProp = true; propTris++; } else hasGround = true; }
+  if (!hasProp || !hasGround || propTris < minProps) return { ground: merged, props: null, propsCount: 0 };
+  const index32 = index instanceof Uint32Array || nv > 65535;
+  // a compact part: copy only the vertices its triangles use, remap the indices (attributes stay the scene.bin layout)
+  const part = (prop) => {
+    const remap = new Map();
+    const pos = [], uv = [], uv1 = [], nrm = [], col = [], idx = [];
+    const P = merged.position, U = merged.uv, L = merged.uv1, N = merged.normal, C = merged.color;
+    const push = (v) => {
+      let j = remap.get(v);
+      if (j === undefined) {
+        j = remap.size; remap.set(v, j);
+        pos.push(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
+        uv.push(U[v * 2], U[v * 2 + 1]);
+        uv1.push(L[v * 2], L[v * 2 + 1]);
+        nrm.push(N[v * 4], N[v * 4 + 1], N[v * 4 + 2], N[v * 4 + 3]);
+        col.push(C[v * 4], C[v * 4 + 1], C[v * 4 + 2], C[v * 4 + 3]);
+      }
+      return j;
+    };
+    for (let i = 0; i < index.length; i += 3) {
+      if (isProp(index[i]) !== prop) continue;
+      idx.push(push(index[i]), push(index[i + 1]), push(index[i + 2]));
+    }
+    const arr = (a, Type) => Type.from(a);
+    return {
+      material: merged.material, lightmap: merged.lightmap, group: '', bounds: merged.bounds,
+      position: arr(pos, Float32Array), uv: arr(uv, Float32Array), uv1: arr(uv1, Float32Array),
+      normal: arr(nrm, Int8Array), color: arr(col, Uint8Array), index: arr(idx, index32 ? Uint32Array : Uint16Array),
+    };
+  };
+  const ground = part(false), props = part(true);
+  return { ground, props, propsCount: props.index.length / 3 };
+}
+
+/** Ground rect [x0, y0, x1, y1] (board space) of every named group of chunks (the scene's switchable parts). */
+
 export function sceneGroupRects(chunks) {
   const out = {};
   for (const c of chunks || []) {
