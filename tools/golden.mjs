@@ -725,7 +725,11 @@ export function matchScenarios() {
   out.push({ id: `coop2-NORMAL-${MATCH_DIY_SEED}-diy`, mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: MATCH_DIY_SEED, human: { diy: MATCH_DIY, shopLevel: 5 } });
   // The measured shared-stock changes leave the original seeds without a fielded DIY/stand-in operator. Keep those
   // original outcomes, and add companion seeds that still exercise the complete shop → deployment → battle path.
-  out.push({ id: 'coop2-NORMAL-1-coverage-standins', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 1, human: { notOwned: MATCH_NOT_OWNED } });
+  // The 满信赖 data rebuild (2026-10-15, MATCHMAKING §46) shifted the shop / deployment stream again: seed 1 (this
+  // scenario's old seed) and seed 14 now field NO stand-in at all, so the companion seed is 26 — three distinct
+  // stand-ins over 7 rounds. (Seeds 11 / 13 / 16 / 19 / 25 / 27 also field stand-ins; re-probe with the exported
+  // matchScenarios() + runMatch() if this moves again.)
+  out.push({ id: 'coop2-NORMAL-26-coverage-standins', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 26, human: { notOwned: MATCH_NOT_OWNED } });
   out.push({ id: 'coop2-NORMAL-5-coverage-diy', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 5, human: { diy: MATCH_DIY, shopLevel: 5 } });
   const humanAbout = (h) => (h.notOwned ? ` + 1 human seat (AI 托管) without ${h.notOwned.length} operators (补位 stand-ins)`
     : ` + 1 human seat (AI 托管) with ${Object.keys(h.diy || {}).length} 自选 picks${h.shopLevel ? ` and its 调度中心 at level ${h.shopLevel} from the first prep` : ''}`);
