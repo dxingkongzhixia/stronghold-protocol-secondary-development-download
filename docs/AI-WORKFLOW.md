@@ -256,6 +256,13 @@ Production: `http://183.66.27.19:20522` (NAT → internal `:3000`) on a RainYun 
 5. **Verify**: `curl http://127.0.0.1:3000/healthz` (and the public URL), then spot-check the changed endpoints:
    `/data/<file>.json`, `/sim/content/...` for a new kit, an avatar/skill icon URL for new art. Confirm the notice
    history recorded the push.
+   **And check that the build tag actually moved**: on the host,
+   `node -e "import('./server/http/buildTag.js').then(m=>console.log(m.computeBuildTag()))"` must equal `/healthz`'s
+   `build`. `buildTag()` caches for the process lifetime (`server/http/buildTag.js`), so a deploy that uploaded but
+   **skipped the restart** keeps serving — and reporting — the old code; unequal values mean exactly that, and the fix
+   is the restart. This is not hypothetical: on 2026-10-15 the process had been started 12 h before the files on disk
+   were replaced (`/healthz` said `eb29e3ee0a28`, the disk said `47c37209549a`). A `kill` that never reaches the start
+   leaves the box down — run the start in its own step and health-check before you walk away.
 
 **Rollback.** Before uploading, snapshot on the host; `PROJECT-STATE.md` §7 keeps the convention:
 

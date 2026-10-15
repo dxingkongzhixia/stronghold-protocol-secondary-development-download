@@ -82,11 +82,21 @@
 3. `scp` 到 `/root/sp-full.tgz`；服务器解包 → `chown -R www:www .` → 目录 755 / 文件 644；
 4. 停旧进程（按 `ss -ltnp` 里 `:3000` 的 pid，`kill -TERM`）→
    `su -s /bin/bash www -c 'setsid /www/server/nodejs/vhost/scripts/server.sh'`；
-5. `curl http://127.0.0.1:3000/healthz` + 外网 `/healthz` 验证。
+5. `curl http://127.0.0.1:3000/healthz` + 外网 `/healthz` 验证；
+   ⚠️ **确认进程真的换成了新代码**：盒上
+   `node -e "import('/www/wwwroot/Stronghold-Protocol/server/http/buildTag.js').then(m=>console.log(m.computeBuildTag()))"`
+   的结果必须**等于** `/healthz` 的 `build`。`buildTag()` 在进程内**缓存**（`server/http/buildTag.js`），
+   所以**只上传、不重启**的部署会让进程继续按旧代码跑、`build` 也停在旧值 —— **两者不等就是"跑着旧代码"**，
+   重启即可。（2026-10-15 实测：进程 10-14 12:12 启动、盒上文件 10-15 00:30 被换，`build` 停在 `eb29e3ee0a28`
+   而磁盘已是 `47c37209549a`；重启后一致。）
 
 > **先推通知、再上传 / 重启**：发布前先在 `/admin` 的「通知」面板推一条告示（署名 `d星空之下`），
 > 说清更新内容、大约多久、请刷新。**没有 owner 明确许可，不要部署**（默认「先不上线」；**2026-10-14 的
 > 上线是 owner 明确要求**，公告记为更新日志 `0.4.8`，部署前备份 `/root/sp-backup-deploy-20261014-024306.tgz`）。
+> **2026-10-15 部署（owner 明确要求）**：代码 `4e6058f8`，快照 `/root/sp-backup-20261015-102124.tgz`，
+> 更新日志 `0.4.25`，重启后 `build = 47c37209549a`。本次增量**内容上只有文档**（server / shared / public 与盒上
+> 逐字节一致，708 个文件比对），但**仍然必须重启** —— 旧进程启动于 10-14 12:12，而盒上文件在 10-15 00:30 被换过
+> （判定方法见第 5 步）。
 > 客户端改完**刷新即可**（`/js`、`/css` 是 `no-cache`；build 变了开着的老页面会自动重载）。
 > ⚠️ **`SP_VERIFY=sample` 只在 Windows 的 `server-start.cmd` 里设**，Linux 上没设 → 线上**服务端抽检复算 = off**。
 
