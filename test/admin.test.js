@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { statusOf, buildSnapshot, buildPublicSnapshot, tokenMatches } from '../server/admin.js';
+import { statusOf, buildSnapshot, buildPublicSnapshot, tokenMatches, ADMIN_HTML } from '../server/admin.js';
 import { openMemoryDb } from '../server/db.mjs';
 import { AuthService } from '../server/auth.js';
 import { SessionRegistry } from '../server/net.js';
@@ -263,5 +263,50 @@ test('POST /admin/api/notify pushes sys.notice to the live sessions (scope, guar
     assert.equal(st.notices[0].sent, 2);
   } finally {
     await srv.close();
+  }
+});
+
+// 后台控制台 (docs/MATCHMAKING.md §12.1, 2026-10-15): the page went from one long scrolling column to a sidebar
+// console. These pin the INTERFACE only — the snapshot API, the notify / bug routes and the read-only stance are
+// unchanged (the two tests above still cover them).
+test('the admin page is a self-contained console: six views, hash routing, searchable tables', () => {
+  const html = ADMIN_HTML;
+  const count = (re) => (html.match(re) || []).length;
+  // still one self-contained document — no external stylesheet, script or font
+  assert.ok(!/<link\b/i.test(html), 'no external <link>');
+  assert.ok(!/<script[^>]+src=/i.test(html), 'no external <script src>');
+  // the strings the route tests rely on
+  assert.match(html, /服务器管理/);
+  assert.match(html, /\/admin\/api\/bug\/image\//);
+  // sidebar: six nav buttons, each with its section
+  for (const v of ['overview', 'rooms', 'accounts', 'online', 'notice', 'bugs']) {
+    assert.ok(html.includes(`id="view-${v}"`), `section #view-${v} exists`);
+    assert.ok(html.includes(`data-view="${v}"`), `nav button for ${v}`);
+  }
+  assert.equal(count(/<button class="nav__item" data-view="/g), 6, 'exactly six nav buttons');
+  assert.equal(count(/class="view"/g), 6, 'exactly six view sections');
+  // one view at a time, hash-routed (reload / bookmark / back land on the same view)
+  assert.ok(html.includes('hashchange') && html.includes('setView(location.hash'), 'hash routing');
+  assert.ok(html.includes("el('viewTitle')") && html.includes("el('viewSub')"), 'the header follows the view');
+  // tables: head + body + a search box each, and sortable headers
+  for (const k of ['rooms', 'accounts', 'online']) {
+    for (const suffix of ['Head', 'Body', 'Search']) {
+      assert.ok(html.includes(`id="${k}${suffix}"`), `${k}${suffix} exists`);
+    }
+  }
+  assert.ok(count(/data-table="/g) === 3 && html.includes('th[data-key]'), 'three tables with sortable headers');
+  assert.ok(html.includes('aria-label="反馈图片"'), 'the image viewer stays');
+  // the polling contract is unchanged: 2 s, the same route and parameters
+  assert.ok(html.includes('/admin/api/state?token='), 'state polling');
+  assert.ok(html.includes('setInterval(tick, 2000)'), 'still every 2 s');
+  assert.ok(html.includes('bugStatus=') && html.includes('bugSort='), 'the bug filter / sort params still ride the poll');
+  assert.ok(html.includes('visibilitychange'), 'pauses while hidden and refreshes on return');
+  assert.ok(html.includes('if (painted && document.hidden) return;'), 'the first paint happens even in a hidden tab');
+  // dashboard bits
+  assert.ok(html.includes('id="cards"') && html.includes('id="dist"') && html.includes('id="runtime"'), 'overview panels');
+  assert.ok(html.includes("'玩家'") && html.includes("'对局'"), 'the KPI cards are grouped');
+  // read-only still: the write endpoints are exactly notify + bug status
+  for (const route of ['/admin/api/notify', '/admin/api/bug/status']) {
+    assert.ok(html.includes(route + '?token='), `${route} is wired`);
   }
 });
