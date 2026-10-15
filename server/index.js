@@ -42,6 +42,7 @@ import { AuthService } from './auth.js';
 import { CommunityService, bugReportsExport, bugReportsToCsv } from './community.js';
 import { StatsService } from './stats.js';
 import { ADMIN_HTML, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
+import { createSpeedProbe } from './speed.js';
 import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX } from '../shared/constants.js';
 import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';
@@ -157,6 +158,9 @@ export async function startServer(opts = {}) {
   const auth = accounts ? (opts.auth || new AuthService({ db })) : null;
   // Operations page (server/admin.js): enabled with accounts; the token file is `var/admin-token.txt`.
   const admin = auth ? { token: opts.adminToken || loadAdminToken(ROOT) } : null;
+// 测速 (server/speed.js, docs/MATCHMAKING.md §12.2): the console times the art origins from here on demand. Created
+// only with the admin page; the cooldown inside the probe keeps a refresh-happy operator off the free mirrors.
+const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // Community data (server/community.js): the persisted 更新日志 + player bug reports/images, on the same DB. Seeded
   // ONCE from the repo's CHANGELOG.md; uploads land in `var/bug-uploads/` (git-ignored, never served statically).
   const community = db
@@ -206,6 +210,7 @@ export async function startServer(opts = {}) {
     const notify = parts.rawPath === '/admin/api/notify';
     const bugStatus = parts.rawPath === '/admin/api/bug/status';
     const bugExport = parts.rawPath === '/admin/api/bug/export';
+    const speed = parts.rawPath === '/admin/api/speed';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -216,6 +221,16 @@ export async function startServer(opts = {}) {
     }
     // Remember a valid ?token= in a cookie for 30 days, so plain /admin links (the lobby's 在线 badge) work.
     if (queryToken) res.setHeader('Set-Cookie', `sp_admin=${encodeURIComponent(admin.token)}; HttpOnly; SameSite=Strict; Path=/admin; Max-Age=2592000`);
+    // 测速 (server/speed.js, docs/MATCHMAKING.md §12.2): time every configured art origin (the relay + the GitHub
+    // mirrors) and report which one a client would install right now. GET only; the probe's own cooldown keeps a
+    // refresh-happy operator from hammering the free mirrors (?force=1 skips it, used by the button).
+    if (speed) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      const force = new URLSearchParams(parts.query).get('force') === '1';
+      const r = await speedProbe.run({ force });
+      sendJson(req, res, 200, { ok: true, ...r });
+      return;
+    }
     if (notify) {
       if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
       const body = await readJsonBody(req);
@@ -312,6 +327,7 @@ export async function startServer(opts = {}) {
       return true;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
+      || parts.rawPath === '/admin/api/speed'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;

@@ -413,6 +413,39 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
 .viewer__count{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);color:var(--dim);font-size:12.5px;
   background:rgba(8,12,11,.82);padding:4px 12px;border-radius:99px;border:1px solid var(--line);font-variant-numeric:tabular-nums}
 
+/* 测速 (server/speed.js): both vantages per origin, each judged against its own bar. The address is deliberately NOT
+   on screen — it is long and pushes the numbers out of view; it stays in the row's tooltip for the rare case. */
+.verdict{display:flex;gap:9px;align-items:flex-start;margin:0 0 13px;padding:10px 13px;border:1px solid rgba(78,216,175,.28);
+  border-radius:10px;background:rgba(78,216,175,.06);font-size:13.5px;line-height:1.5}
+.verdict::before{content:"✔";color:var(--mint);font-weight:700}
+.verdict.is-bad{border-color:rgba(255,208,137,.45);background:rgba(255,208,137,.07)}
+.verdict.is-bad::before{content:"!";color:var(--amber)}
+.verdict b{color:var(--mint)}
+.verdict.is-bad b{color:var(--amber)}
+.verdict em{font-style:normal;color:var(--dim)}
+.speed-table table{table-layout:fixed}
+.speed-table th,.speed-table td{white-space:normal;padding:9px 12px}
+.speed-table th:nth-child(1){width:30%}
+.speed-table th:nth-child(2),.speed-table th:nth-child(3){width:19%}
+.speed-table th:nth-child(4){width:13%}
+.speed-table th:nth-child(5){width:19%}
+.rate{display:flex;flex-direction:column;gap:3px}
+.rate b{font-size:14.5px;font-variant-numeric:tabular-nums;color:var(--dim2);line-height:1.2}
+.rate__unit{font-size:11px;color:var(--dim2);margin-left:3px}
+.rate__bar{height:4px;border-radius:99px;background:#12201c;overflow:hidden;width:100%;max-width:104px}
+.rate__bar i{display:block;height:100%;background:var(--grey);transition:width .3s}
+.rate.is-ok b{color:var(--mint)}
+.rate.is-ok .rate__bar i{background:var(--mint)}
+.rate.is-slow b{color:var(--amber)}
+.rate.is-slow .rate__bar i{background:var(--amber)}
+.src{display:flex;flex-direction:column;gap:2px}
+.src b{font-weight:600;color:var(--text)}
+.src em{font-style:normal;color:var(--dim2);font-size:11px}
+tbody tr.is-chosen td{background:rgba(78,216,175,.06)}
+tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
+.note{margin:13px 0 0;color:var(--dim2);font-size:12px;line-height:1.65}
+.note strong{color:var(--dim);font-weight:600}
+
 /* 窄屏：侧栏变成顶部导航 */
 @media (max-width:900px){
   .app{flex-direction:column}
@@ -440,13 +473,15 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
       <button class="nav__item" data-view="online"><i>◎</i>在线<em id="navOnline">0</em></button>
       <button class="nav__item" data-view="notice"><i>✦</i>通知<em id="navNotice">0</em></button>
       <button class="nav__item" data-view="bugs"><i>⚑</i>反馈<em id="navBugs">0</em></button>
+      <div class="nav__sect">诊断</div>
+      <button class="nav__item" data-view="speed"><i>⚡</i>测速</button>
     </nav>
     <div class="side__foot">
       <span class="live"><i></i>实时 · 每 2 秒</span>
       <span class="side__line" id="verify">校验 —</span>
       <span class="side__line" id="updated">—</span>
       <button class="btn" id="refresh">立即刷新</button>
-      <span class="side__keys">快捷键 <kbd>1</kbd>-<kbd>6</kbd> 切换 · <kbd>/</kbd> 搜索 · <kbd>Esc</kbd> 关闭预览</span>
+      <span class="side__keys">快捷键 <kbd>1</kbd>-<kbd>7</kbd> 切换 · <kbd>/</kbd> 搜索 · <kbd>Esc</kbd> 关闭预览</span>
     </div>
   </aside>
 
@@ -554,6 +589,27 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
         <div id="bugsBody"></div>
       </section>
     </section>
+
+    <section class="view" id="view-speed" hidden>
+      <section class="panel">
+        <h2>测速<em id="speedNote">各来源的实测加载速率 · 判定与客户端同一套规则</em></h2>
+        <div class="tools">
+          <button class="btn btn--primary" id="speedRun">开始测速</button>
+          <span class="hint" id="speedWhen">—</span>
+          <span class="grow"></span>
+          <span class="hint" id="speedBars">阈值 中继 1.2 MB/s · 镜像 1.0 MB/s</span>
+        </div>
+        <div class="panel__body">
+          <div class="verdict" id="speedVerdict">还没有测过 —— 点「开始测速」，或切到本页时会自动测一次。</div>
+          <div class="speed-table">
+            <table><thead><tr><th>来源</th><th>服务器</th><th>本机浏览器</th><th>阈值</th><th>判定</th></tr></thead>
+              <tbody id="speedBody"></tbody>
+            </table>
+          </div>
+          <p class="note" id="speedHint">「服务器」列 = 本机服务端到各来源；「本机浏览器」列 = 你当前这台浏览器到各来源 —— <strong>玩家看到的就是这一列</strong>，判定与结论也按它算。取样与客户端一致：并行拉 6 张立绘（每来源约 650 KB、单文件上限 400 KB / 2.5 秒）。来源要跑过自己的阈值才会被装上，否则链路继续往后走，最后回落到本服务器。<strong>地址不显示</strong>，鼠标悬停「来源」可见。</p>
+        </div>
+      </section>
+    </section>
   </main>
 </div>
 <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-hidden="true" aria-label="反馈图片">
@@ -582,9 +638,10 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
     accounts: ['账号','全部注册账号与其实时状态'],
     online: ['在线','当前在线会话（含游客）'],
     notice: ['通知','向在线玩家推送公告，并保留发送历史'],
-    bugs: ['反馈','玩家提交的问题报告与处理状态']
+    bugs: ['反馈','玩家提交的问题报告与处理状态'],
+    speed: ['测速','中继与 GitHub 镜像的实测速率 · 与客户端同一套口径']
   };
-  var VIEW_ORDER = ['overview','rooms','accounts','online','notice','bugs'];
+  var VIEW_ORDER = ['overview','rooms','accounts','online','notice','bugs','speed'];
   // 表格列：[表头, 排序键]（排序键为空 = 该列不可排序，只能搜索）
   var COLS = {
     rooms: [['房间码','code'],['模式','mode'],['难度','difficulty'],['状态',''],['类型',''],['玩家','humans'],['AI','bots']],
@@ -618,6 +675,7 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
     el('viewSub').textContent = VIEWS[id][1];
     document.title = VIEWS[id][0] + ' · 服务器管理 · Stronghold Protocol';
     if (!silent && location.hash.slice(1) !== id) location.hash = id;
+    if (id === 'speed' && !speedLoaded && !speedRunning) runSpeed(false);
     if (id !== 'bugs') closeViewer();
   }
   el('nav').addEventListener('click', function (e) {
@@ -925,6 +983,134 @@ td.mono,.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;color:
       .then(function (res) { if (!res.ok) throw new Error((res.j && res.j.error) || 'HTTP'); tick(); })
       .catch(function (err) { el('updated').textContent = '状态更新失败：' + err.message; });
   });
+  // ---------------- 测速 (server/speed.js → /admin/api/speed): the origins timed from the SERVER and from this
+  // BROWSER (the vantage a player has). Same samples, same budgets; the verdict reuses the client's own rule, so
+  // the console says which origin a player would install right now — the point is spotting a throttled relay. -----
+  var speedLoaded = false, speedRunning = false;
+  var SPEED_BUDGET = 2500, SPEED_CAP = 400 * 1024;
+  function rateCell(r, min) {
+    if (!r) return '<td class="ratecell"><div class="rate"><b>…</b><div class="rate__bar"><i style="width:0"></i></div></div></td>';
+    var cls = !r.ok ? 'is-fail' : (r.bps >= min ? 'is-ok' : 'is-slow');
+    var pct = min > 0 ? Math.max(3, Math.min(100, (r.bps / min) * 100)) : 0;
+    return '<td class="ratecell"><div class="rate ' + cls + '">'
+      + '<div><b>' + (r.ok ? (r.bps / 1048576).toFixed(2) : '失败') + '</b>'
+      + '<span class="rate__unit">' + (r.ok ? 'MB/s' : '0 字节 / ' + r.ms + 'ms') + '</span></div>'
+      + '<div class="rate__bar" title="阈值 ' + (min / 1048576).toFixed(1) + ' MB/s"><i style="width:' + pct.toFixed(0) + '%"></i></div>'
+      + '</div></td>';
+  }
+  /**
+   * A client decides on ITS OWN measurement, so the verdict follows the browser column whenever it has one (that is
+   * the player's vantage) and falls back to the server's. Returns the rows in configured order with the deciding
+   * numbers, plus the origin the rule would install — the point of the whole view.
+   */
+  function speedVerdict(srcs, browser) {
+    var rows = srcs.map(function (s) {
+      var b = browser[s.base];
+      var use = b || s;
+      return { label: s.label, full: s.full, base: s.base, min: s.min, bps: use.bps, ok: use.ok,
+        pass: !!use.ok && use.bps >= s.min, from: b ? 'browser' : 'server' };
+    });
+    var chosen = null;
+    for (var i = 0; i < rows.length; i++) if (rows[i].pass) { chosen = rows[i]; break; }
+    return { rows: rows, chosen: chosen, byBrowser: rows.some(function (r) { return r.from === 'browser'; }) };
+  }
+  function renderSpeed(d, browser) {
+    var srcs = Array.isArray(d.sources) ? d.sources : [];
+    var b = browser || {};
+    var v = speedVerdict(srcs, b);
+    el('speedBody').innerHTML = srcs.map(function (s, i) {
+      var rowv = v.rows[i] || {};
+      var chosen = !!(v.chosen && v.chosen.base === s.base);
+      var short = String(s.label || '').split('·').pop().trim() || s.label;
+      var group = s.full ? '含 /media · /scene · /clip' : (short === s.label ? '仅普通文件' : 'GitHub 镜像');
+      return '<tr' + (chosen ? ' class="is-chosen"' : '') + '>'
+        + cell('<div class="src" title="' + esc(s.base) + '"><b>' + esc(short) + '</b><em>' + esc(group) + '</em></div>'
+            + (chosen ? ' <span class="pill yes">当前加载</span>' : ''))
+        + rateCell(s, s.min)
+        + rateCell(b[s.base], s.min)
+        + cell('<span class="mono">' + (s.min / 1048576).toFixed(1) + ' MB/s</span>')
+        + cell((rowv.pass ? '<span class="pill yes">通过</span>' : '<span class="pill bad" title="低于该来源的阈值，客户端会继续往后走">偏慢</span>')
+            + (rowv.from === 'browser' ? ' <span class="pill">按浏览器</span>' : ''))
+        + '</tr>';
+    }).join('') || '<tr><td colspan="5" class="empty">public/asset-mirrors.json 里没有配置来源</td></tr>';
+    var slow = v.rows.filter(function (r) { return !r.pass; });
+    var line = '按' + (v.byBrowser ? '本机浏览器实测（玩家视角）' : '服务器实测')
+      + '，现在会加载：<b>' + esc(v.chosen ? v.chosen.label : '本服务器') + '</b>';
+    if (!srcs.length) line = '没有配置任何来源。';
+    else if (!slow.length) line += '（所有来源都跑过了各自的阈值）';
+    else {
+      line += '（' + slow.map(function (r) { return esc(r.label); }).join(' / ') + ' 未过阈值被跳过'
+        + (v.chosen ? '' : '，链路回落到本服务器') + '）';
+    }
+    var el0 = el('speedVerdict');
+    el0.innerHTML = line;
+    el0.className = 'verdict' + (srcs.length && !v.chosen ? ' is-bad' : '');
+    var t = d.thresholds || {};
+    el('speedBars').textContent = '阈值 中继 ' + ((t.relay || 0) / 1048576).toFixed(1) + ' MB/s · 镜像 ' + ((t.mirror || 0) / 1048576).toFixed(1) + ' MB/s';
+    el('speedWhen').textContent = '测得于 ' + new Date(d.at).toLocaleTimeString('zh-CN')
+      + (d.cached ? ' · 冷却中（沿用上次结果，点按钮强制重测）' : '')
+      + (browser ? '' : ' · 正在从本机浏览器测…');
+  }
+  /** One sample, byte-capped and budgeted — the same read the client's assetMirror.js does. */
+  function readCappedInPage(url) {
+    var t0 = Date.now();
+    var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, SPEED_BUDGET + 500) : null;
+    return fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (res) {
+        if (!res || !res.ok) return 0;
+        if (!res.body || !res.body.getReader) return res.arrayBuffer().then(function (buf) { return buf.byteLength; });
+        var reader = res.body.getReader(), bytes = 0;
+        var pump = function () {
+          return reader.read().then(function (part) {
+            if (part.done) return bytes;
+            bytes += part.value && part.value.byteLength ? part.value.byteLength : 0;
+            if (bytes >= SPEED_CAP || Date.now() - t0 >= SPEED_BUDGET) {
+              try { reader.cancel(); } catch (e) { /* the cap is enough */ }
+              return bytes;
+            }
+            return pump();
+          });
+        };
+        return pump();
+      })
+      .catch(function () { return 0; })
+      .then(function (n) { if (timer) clearTimeout(timer); return n; });
+  }
+  /** Time every origin from this browser: samples in parallel, aggregate bytes over the wall clock (the client's way). */
+  function measureFromBrowser(sources, samples) {
+    var list = Array.isArray(samples) && samples.length ? samples : [];
+    if (!list.length) return Promise.resolve({});
+    return Promise.all(sources.map(function (s) {
+      var t0 = Date.now();
+      return Promise.all(list.map(function (p) { return readCappedInPage(s.base + p); })).then(function (parts) {
+        var bytes = parts.reduce(function (a, x) { return a + x; }, 0);
+        var ms = Date.now() - t0;
+        return { bytes: bytes, ms: ms, bps: bytes > 0 && ms > 0 ? (bytes * 1000) / ms : 0, ok: bytes > 0 };
+      }).then(function (r) { return [s.base, r]; });
+    })).then(function (pairs) {
+      var out = {};
+      for (var i = 0; i < pairs.length; i++) out[pairs[i][0]] = pairs[i][1];
+      return out;
+    });
+  }
+  function runSpeed(force) {
+    if (speedRunning) return;
+    speedRunning = true;
+    el('speedRun').disabled = true;
+    el('speedWhen').textContent = '测量中…（服务器视角约 2-3 秒）';
+    fetch('/admin/api/speed?token=' + encodeURIComponent(token) + (force ? '&force=1' : ''), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        renderSpeed(d, null);
+        el('speedWhen').textContent = '服务器视角已出，正在从本机浏览器测…';
+        return measureFromBrowser(d.sources || [], d.samples || []).then(function (b) { renderSpeed(d, b); });
+      })
+      .catch(function (e) { el('speedWhen').textContent = '测速失败：' + e.message; })
+      .then(function () { speedRunning = false; speedLoaded = true; el('speedRun').disabled = false; });
+  }
+  el('speedRun').addEventListener('click', function () { runSpeed(true); });
+
   setView(location.hash.slice(1) || 'overview', true);
   tick(); setInterval(tick, 2000);
 })();

@@ -644,6 +644,13 @@ register — so the HTTPS future keeps the better chain.
   2.1 MB file, 21.7 MB/s at 8-way** — ~18× the game box's 1.18 MB/s at the same width) the same rule picks it back up
   with no code change.
 
+  **Watch it from the console** (2026-10-15): the admin page's 「诊断 → 测速」 (`server/speed.js`,
+  `GET /admin/api/speed`, `docs/MATCHMAKING.md` §12.2) times the same origins on the same samples and shows **two
+  columns** — the game box's own view and the operator's browser, which is the vantage a player has — plus the origin
+  the rule would install right now. That is the quickest way to catch a throttled relay or a dead mirror: each row has
+  a bar against the same 1.2 / 1.0 MB/s bars, and `test/speed.test.js` re-reads `assetMirror.js` and fails if the
+  samples, the bars or the budgets drift apart.
+
   > ⚠️ **An HTTPS site needs an HTTPS relay.** A page served over HTTPS may not fetch `http://…` subresources (the
   > browser blocks them as **mixed content**, silently), so on the filed domain `strongholdprotocolcsym.top` the chain's
   > first tier (`http://123.57.150.185`) would be dropped and every client would fall back to the CDN mirrors. Before the
