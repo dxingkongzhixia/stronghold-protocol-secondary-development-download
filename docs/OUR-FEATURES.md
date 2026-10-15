@@ -357,6 +357,7 @@ survive with the three sources intact.
 | Decision | Where recorded | The rule, in one line |
 |---|---|---|
 | **Merge blacklist** | §22 | The upstream **#149 盟约收起** (foldable bond bar) and our own removed **最近的同盟** (recent-alliance chips) **must never come back**. |
+| **干员默认 潜能 / 练度** | §45, `UPSTREAM-MERGES.md` §0 | The DEFAULT is **潜能 1 / 未精英化** (the official baseline for an operator the player does not own — owner, 2026-10-15) — a merge must **not** restore a 满潜 / 满练度 default. Self-check: `POTENTIAL_DEFAULT === POTENTIAL_MIN`, `CULTIVATE_DEFAULT === 0`, and `loadoutRecord` composes a default loadout (only 潜能 6 skips it). |
 | **Free `<获得时>` / strategy grants are never item-stock-gated** | §39.2, `UPSTREAM-MERGES.md` §0 | 缪尔赛思's `<获得时>` and 变形者集群's R5/10/15 变形同构体 are free grants: our `acquireItem` has no `itemPool` check (upstream `6bfc08270c` drops `requirePool` → GitHub #488). |
 | **Funnel-hits model** | §31, §35.2 | 澄闪's 浮游单元 all lock the **same** enemy and each deals her **full** ATK (not split); the `'bolt'`→`'drone'` projectile fix lives in `professions.js`. |
 | **望's pieces** | §30, §35.8 | 棋子 placement / linkage: auto-placement only on orthogonally adjacent tiles so pieces link, latch on deploy, S3 ammo accounting, 跟子 priority. |

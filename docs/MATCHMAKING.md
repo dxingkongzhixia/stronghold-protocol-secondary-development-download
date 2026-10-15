@@ -5,7 +5,7 @@
 > `server/index.js`、`server/admin.js`、`shared/protocol.js`、`shared/constants.js`；客户端 `public/js/net.js`、
 > `store.js`、`main.js`、`screens/title.js`、`screens/lobby.js`、`ui/account.js`、`ui/components.js`。
 
-> **导航**：本文件是**我们的全部决策记录**（§0–§41）——账号 / 野排匹配 / 公开同盟 / 观战夺舍 AI / 大厅社区 / **8 名自造干员** / 统计数据。合并黑名单在 **§22**；自造干员在 **§23–§37**；按 § 号检索即可（`git grep "§NN"`）。相关：[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)、[`docs/OUR-FEATURES.md`](OUR-FEATURES.md)、[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。
+> **导航**：本文件是**我们的全部决策记录**（§0–§45）——账号 / 野排匹配 / 公开同盟 / 观战夺舍 AI / 大厅社区 / **8 名自造干员** / 统计数据。合并黑名单在 **§22**；自造干员在 **§23–§37**；**干员默认潜能 / 练度**在 **§45**；按 § 号检索即可（`git grep "§NN"`）。相关：[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)、[`docs/OUR-FEATURES.md`](OUR-FEATURES.md)、[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)。
 
 ## 0. 需求（用户确认）
 
@@ -587,6 +587,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 |---|---|---|---|
 | **#149**（commit `ede8e7e`，issue #142「盟约条可折叠 / The bond bar can be folded」） | 盟约条加「收起／展开盟约」折叠按钮：收起时隐藏整个列表并关掉由它打开的浮层，只留一个 44×44 的恢复按钮 | **收起/展开很突兀**（用户 2026-10-06 反馈），不想为手机让位牺牲观感 | 盟约条**常驻**、居中，没有折叠按钮 |
 | **最近的同盟**（**我们自己的功能**，非上游） | lobby「加入同盟」区顶部一行「最近加入/创建过的同盟密钥」快捷芯片（本地记录，`sp.pref.recentRooms`；`public/js/screens/lobby.js` 的 `recentRooms` / `rememberRoom` + `public/js/main.js` 的记忆调用） | **owner 2026-10-07 要求下架**：不需要这排「最近」芯片 | **已整段删除**；「加入同盟」输入框 + 加入 / 观战、`公开同盟`、`正在模拟` 保留 |
+| **上游把「满潜 6 / 精英2 Lv60」当默认值**（R21P / R22-LOADOUT 子系统的一部分） | 主线的默认：干员一律按 **潜能 6 / 精英2 Lv60** 编成（`shared/potential.js` 的 `POTENTIAL_DEFAULT = 6`、`CULTIVATE_DEFAULT = 3`；v0.2.6 整支合并 `aec85c5d` 曾把它带进来） | **owner 2026-10-15 决定**（§45）：太强——比官方对「未持有」干员的基准高 **攻击 15~17%、防御 / 生命上限 10%、部署费用 −2、再部署 −4 秒**，游玩时表现为「敌人变脆」 | 默认 **潜能 1 / 未精英化**（官方对未持有干员的基准，也是 v0.2.6 合并前的数值）；每位干员仍可在「干员调配」里自己调高，所以只影响**没设置过的人自己的干员**。**自查**：`grep -n 'POTENTIAL_DEFAULT = ' shared/potential.js` 必须是 `POTENTIAL_MIN`（=1）、`grep -n 'CULTIVATE_DEFAULT = ' shared/potential.js` 必须是 `0`；`shared/loadoutRecord.js` 不得再出现「默认档直接返回原始记录」的写法（只有潜能 6 才跳过组合） |
 
 **回退内容**（#149 的痕迹已全部清除，`grep -r "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip"` 无命中）：
 - `public/js/screens/game.js`：删掉 `bondsCollapsed` state、`.bonds-toggle` 按钮、`#match-bond-strip` 包裹 div → 还原为直接渲染 `<BondStrip>`。
@@ -1418,3 +1419,20 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **中继缓存头（2026-10-15）**：中继此前对所有响应一律 `max-age=604800`（7 天），常客每周都要重下那 135 MB。现在**带内容哈希的 URL**（`/…/~<hash>/…` 路径，以及客户端镜像前缀改写出的 `?h=` 查询）返回 `public, max-age=31536000, immutable`；**不带哈希的路径和无扩展名路由**仍是 7 天（`tools/relay/sp-relay.nginx.conf` 的 `map $arg_h`，随推送由 hook 安装并 `nginx -t`）。URL 自带内容哈希，所以一年缓存不会拿到旧图——这与游戏服务器的 `IMMUTABLE_CACHE` 是同一套口径。
 - **测试**：`test/asset-mirror.test.js` 新增 5 例（速率换算 / 选源规则 / 慢中继让位 / 全不达标→服务器 / **每次加载都重测**）。
 - **待办**：首屏 **135 MB 的总量**仍是最大瓶颈——收窄到 `ui` / `icons` 可 −35% / −64%，owner 2026-10-15 看过流量数字后决定**暂不收窄**（中继恢复后首屏约 6 s，弱网玩家仍受益，随时可做）。中继的带宽类型已由阿里云确认并解除限制（见上）。**源的质量变化无需改代码**：阈值与「每次加载都实测」都在已上线的 `public/js/assetMirror.js` 里，它一旦 ≥1.2 MB/s，下一次页面加载就会自动切回中继。
+
+## 45. 干员默认数值回到官方基准：默认潜能 1 / 未精英化（owner 2026-10-15）
+
+> 起因（owner 2026-10-15 游玩反馈）：**「敌人变脆了」**。核对后**不是敌人变弱**——`data/enemies.json` 249 条记录零差异、`config.enemyScale` 与伤害公式（`server/sim/damage.js`）都没动——而是 **v0.2.6 整支合并（0.4.0）把主线的「默认满潜 6 / 精英2 Lv60」带了进来**：全员我方攻击 **+15~17%**、防御与生命上限 **+10%**、部署费用 **−2**、再部署 **−4 秒**（实测：银灰 atk 577→663、刺玫 413→479、能天使 437→510、纯烬艾雅法拉 339→398）。
+
+- **官方是什么**（`docs/research/01-core-data.json` 的 `cultivateEffectList` + bwiki / PRTS）：
+  - **练度由阶级固定**（「不同阶级的干员练度将被限制并固定，阶级越高…养成等级便越高」）——**这部分本来就在我们的数据里**（`data/chess.json` 每条记录的 `status`，普通 / 精锐各自一份）；
+  - **潜能按玩家自己账号的持有**（调度手册「卫戍协议中干员潜能由自身已持有干员潜能决定」、PRTS「潜能的等级始终以自身持有状态为准」）；
+  - 那 ×1.05 / ×1.1 的自持有加成，只有**确实持有**该干员时，才按**自身养成状态**额外给（`data/effects.json` 的 `aceffect_char_1…4`）。
+  我们此前的默认等于**两条轴都拉满** = 官方「满配账号」，比官方基准（未持有）高一大截。
+- **决定（owner 2026-10-15）**：「那我们项目所有干员的默认潜能 1 / 未精英化」——即官方对**未持有**干员的基准，也正是本分支在 v0.2.6 合并前的数值。**每位干员仍可在「干员调配」里自己调高**（按 `charId`；普通 / 精锐 / 自选共用一份设置），所以这个默认**只影响从没设置过的人自己的干员**（设置按座位存：`room.loadout.ops` → `seats[].ops` → `PlayerState.ops`；战斗里每个单位取的是**它主人自己**的潜能 / 练度，AI 队友恒为默认）。
+- **代码**：`shared/potential.js`（`POTENTIAL_DEFAULT = POTENTIAL_MIN`、`CULTIVATE_DEFAULT = 0`，并让 `atPotential` 的缺省 = 默认）、`shared/loadoutRecord.js`（**默认不再等于「直接返回原始满潜记录」**——只有潜能 6 走那条快路，这是最关键的一处）、`server/sim/simdata.js`（召唤物变体按主人的潜能）、`server/match/match/views.js`（备战面板血量按潜能 / 练度组合后再下发；`cultivationInfo` 按默认值判断而非「< 6」）、客户端写死的 `6`（`public/js/ui/gameLogic/loadout.js`、`screens/cultivation.js` 等）与干员调配的文案（含 `public/i18n/en.json`）。**数据没动**：仍按满潜构建 + `potDown` 向下组合（`node tools/build-data.mjs --offline` 逐字节一致）。
+- **测试**：专用潜能 / 设置类测试改到新默认（`test/potential.test.js`、`test/sim/{loadout,potential-battle}.test.js`、`test/match/{potential,runner,diy-shop}.test.js`、`test/ui/{potential-ui,loadout-rows,loadout-stats,loadout-sync-stale,playtest2}.test.js`、`test/{diy,backups,lobby-loadout}.test.js`）；约 80 个**内容测试**（`test/content/**` 与部分 `test/sim/**`）**显式按潜能 6 运行**——它们钉的是官方数据数值，而且从来不带练度（练度只在 `PlayerState` 层注入，harness 直接建的单位没有）；**golden 语料重算**并**单独提交**（动的是有「拥有干员」的场景 roster / bonds / fields / matches / diy，替补与原型干员不动）。
+- **文档**：本节 + §22 黑名单行、[`CHANGELOG.md`](../CHANGELOG.md) 0.4.0「规则（按官方）」首条、[`docs/DATA.md`](DATA.md) §2 / §2.3、[`docs/SIM.md`](SIM.md) §12、[`docs/design/match.md`](design/match.md) §16、[`docs/PLAYING.md`](PLAYING.md)（玩家向）、[`docs/PROJECT-STATE.md`](PROJECT-STATE.md)（常量表）、[`docs/research/03-operators.md`](research/03-operators.md)、`server/sim/content/kits/README.md`、[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 / §11。
+- **合并黑名单**：见 §22 的新增行与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0——**上游若再次把「满潜 / 满练度」当默认带回，一律以我们为准**（自查：`POTENTIAL_DEFAULT` 必须是 `POTENTIAL_MIN`、`CULTIVATE_DEFAULT` 必须是 `0`，且 `loadoutRecord` 不得对默认档直接返回原始记录）。
+- **发布快照**：全量 `node --test` **6690 项 / 6675 通过 / 0 失败 / 15 跳过**；`build-data --offline` 零漂移；`kit-coverage` 307/307；`eslint` 0 error（148 warning 与基线一致）；`i18n check en --strict` 1454/1454；docs 守卫 34/0；`golden` 重算后 verify 全过。提交 `442ee2ec`（代码 / 测试 / 文档）+ `f38c5249`（golden）。
+- **未做 / 待定**：① **图鉴**（资料库）仍显示数据里的满潜数值——要不要与实战默认一致待 owner 定；② 官方 bwiki 写本模式**信赖一律 100%**，而我们的研究数据按 `favorPoint 0` 建（=0 信赖）——方向相反（那样我们会**偏弱**一块），本次**未动**，待单独核实；③ 浏览器 e2e（`SP_E2E=1`）未跑；④ **尚未部署**（改动含 `server/**` + `shared/**`，需重启）。

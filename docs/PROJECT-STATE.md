@@ -1,7 +1,7 @@
 # 项目现状一览（PROJECT-STATE）
 
 > 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-14**（数值为本地实测，见 §3）。
-> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§41）。
+> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§45）。
 > 接手入口见 [`docs/HANDOVER.md`](HANDOVER.md)；按问题查文档见 [`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
 
 ---

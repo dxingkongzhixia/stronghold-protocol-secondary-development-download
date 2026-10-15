@@ -16,7 +16,7 @@ restate the upstream design — it points at it:
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | conventions, tests, PR flow |
 | [`docs/DESIGN.md`](DESIGN.md) → [`docs/design/`](design/) + [`docs/history/`](history/) | the authoritative rules (index + per-release revisions) |
 | [`docs/DATA.md`](DATA.md) · [`docs/SIM.md`](SIM.md) · [`docs/META.md`](META.md) · [`docs/ASSETS.md`](ASSETS.md) · [`docs/BALANCE.md`](BALANCE.md) | generated data, the combat engine, the match engine, assets, difficulty |
-| [`docs/MATCHMAKING.md`](MATCHMAKING.md) | **our** features and every decision record (§22 merge blacklist, §23–§37 the custom operators, §1–§41 total) |
+| [`docs/MATCHMAKING.md`](MATCHMAKING.md) | **our** features and every decision record (§22 merge blacklist, §23–§37 the custom operators, §1–§45 total) |
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **the fork-only mechanisms catalog** (what is ours, where it lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) — see §12 |
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for adding a custom operator |
 | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | the authoring handbook for bonds / strategies / bounty leaders / operators and the 资料库 (CODEX) browser (Chinese) |

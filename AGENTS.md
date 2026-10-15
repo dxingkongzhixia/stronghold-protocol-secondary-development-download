@@ -72,7 +72,7 @@ The table below is the **desktop (two-tree)** layout:
 | **languages / i18n** | [`docs/I18N.md`](docs/I18N.md) |
 | player-facing rules guide (中文) | [`docs/PLAYING.md`](docs/PLAYING.md) |
 | **our fork-only mechanisms** (must survive merges) | [`docs/OUR-FEATURES.md`](docs/OUR-FEATURES.md) |
-| the **decision record** §1–§41 (accounts, matchmaking, the 8 custom operators, community) | [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) |
+| the **decision record** §1–§45 (accounts, matchmaking, the 8 custom operators, community) | [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) |
 | **upstream merge log** + the never-merge list (§0) | [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) |
 | **is there new upstream work, and what will it conflict with** (run before every merge) | `node tools/check-upstream.mjs` (`npm run check:upstream`) |
 | add a **custom operator** (end-to-end recipe, 中文) | [`docs/NEW-OPERATOR.md`](docs/NEW-OPERATOR.md) |
