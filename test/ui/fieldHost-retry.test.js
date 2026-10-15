@@ -24,6 +24,7 @@ function fixture({ kinds = ['fallback', 'engine'], forced = false } = {}) {
     location: { search: forced ? '?render=fallback' : '' },
     console: { error() {}, warn() {} },
     settingsStore: { subscribe: () => () => {} },
+    store: { get: () => ({ me: null, match: null }), subscribe: () => () => {} },
     useState(initial) {
       const i = cursor++; if (!(i in slots)) slots[i] = initial;
       return [slots[i], value => { const next = typeof value === 'function' ? value(slots[i]) : value;
@@ -72,8 +73,17 @@ test('permanent failure stops after two automatic retries rather than looping', 
   const f = fixture({ kinds: ['fallback'] }); await flush();
   f.fire(); await flush(); f.fire(); await flush();
   assert.equal(f.attempts.length, 3); assert.equal(f.timers.size, 0);
-  f.event('online'); f.event('visibilitychange'); await flush(); assert.equal(f.attempts.length, 3);
+  f.event('online'); await flush(); assert.equal(f.attempts.length, 4, 'existing user-event recovery remains available');
+  f.event('visibilitychange'); await flush(); assert.equal(f.attempts.length, 5);
+  f.event('online'); await flush(); assert.equal(f.attempts.length, 5, 'event retries are still bounded');
   f.unmount(); assert.ok(f.views.every(v => v.destroyed === 1));
+});
+
+test('a long outage can recover on return even after the automatic retry budget is exhausted', async () => {
+  const f = fixture({ kinds: ['fallback', 'fallback', 'fallback', 'engine'] }); await flush();
+  f.fire(); await flush(); f.fire(); await flush(); assert.equal(f.timers.size, 0);
+  f.event('online'); await flush(); assert.equal(f.state.kind, 'engine'); assert.equal(f.attempts.length, 4);
+  f.unmount();
 });
 
 test('automatic retry and repeated user events share a single attempt', async () => {
