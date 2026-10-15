@@ -126,6 +126,10 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | local CI mirror | `npm run ci` (`tools/ci.mjs`) |
 | is the delivery chain + cache-first still right? | `node tools/check-delivery.mjs [--live]`, [`docs/ASSETS.md`](ASSETS.md) |
 | the art relay (address, ssh, routes, how to deploy it) | `node tools/push-assets-relay.mjs` (`npm run push:relay`), [`docs/ASSETS.md`](ASSETS.md) "The relay" |
+| change the relay / mirror addresses (no deploy, no restart) | the operations page (`/admin`) → **来源配置**, `GET/POST /admin/api/origins`, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12.3, `server/mirrors.js` |
+| is the relay throttled? which origin would a client install right now? | the operations page → **测速**, `GET /admin/api/speed`, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12.2, `server/speed.js` |
+| what the operations page (`/admin`) covers | accounts / rooms / online / notices / reports / 测速 / 来源配置, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12 |
+| where the art origins are written down (the only place) | `public/asset-mirrors.json`, [`docs/ASSETS.md`](ASSETS.md) "sources", `public/js/assetMirror.js` |
 | where is the project / how do I take it over | [`docs/HANDOVER.md`](HANDOVER.md) §0, [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §2 |
 | is there new upstream work, and what will it conflict with | `node tools/check-upstream.mjs` (`npm run check:upstream`), [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 |
 | release packaging | `tools/package.mjs`, `docs/WINDOWS.md` |
