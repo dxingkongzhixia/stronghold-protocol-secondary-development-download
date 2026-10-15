@@ -1212,9 +1212,14 @@ export function wangStone(bb) {
             onTick: ({ unit: x }) => battle.dealDamage(unit, x, { amount: ownerAtk(unit) * dot, type: 'arts', isSkill: true, tags: ['summon', 'trap', 'dot'] }),
           });
         }
-        // the blast fx: a range trigger (S3) may have no touched tile — report the first victim instead of `hit.id`
+        // The blast fx: the piece's OWN kind (render/fx/kinds.js `wangStoneBlast` — the official 棋子 textures ride this
+        // token id). It must NOT reuse the shared `champagneBomb` kind: that one's events carry `consumed: true`, which
+        // the client reads as 「被自己效果消耗掉的召唤物」 and then plays no death sound and pops the sprite outright
+        // (audio.js deathSfxUrl: `if (!info || consumed) return null`). The official piece is simply consumed by its
+        // trigger, so it keeps its normal death — the `Die` clip its spine carries and its ON_UNIT_DEAD.
+        // A range trigger (S3) may have no touched tile: report the first victim instead of `hit.id`.
         const victim = hit || (targets.length ? targets[0] : null);
-        battle.fx('champagneBomb', { x: unit.x, y: unit.y, id: unit.id, target: victim ? victim.id : null, hits: 1, consumed: true });
+        battle.fx('wangStoneBlast', { x: unit.x, y: unit.y, id: unit.id, target: victim ? victim.id : null, hits: 1 });
         battle.retreat(unit, { reason: 'expired', permanent: true });
       },
     },

@@ -38,9 +38,14 @@ export const FX_KINDS = Object.freeze({
   bombard: { a: 'blast', c: 0xffa04a, r: 1.5, pt: true, heavy: true }, bombardShell: { a: 'shell', c: 0xff5a3a, r: 1.5, pt: true },
   airstrike: { a: 'blast', c: 0xff8a3d, r: 1.5, heavy: true }, splash: { a: 'blast', c: 0xffc27a },
   scorchBurst: { a: 'blast', c: 0xff6a2a },
-  // 望's 棋子 (token_10064_wang_stone1) goes off as a `champagneBomb` (content/tokens.js wangStone); the official
-  // 棋子 burst textures ride the token id (the shared 'champagneBomb' kind of 香槟炸弹 / 多萝西 keys differently).
-  champagneBomb: { a: 'blast', c: 0xffd27a, local: { byOp: {
+  // 琳琅诗怀雅's 香槟炸弹: a summon consumed by its own effect — its events carry `consumed: true`, so the client plays
+  // the impact sound and pops the sprite (audio.js deathSfxUrl).
+  champagneBomb: { a: 'blast', c: 0xffd27a },
+  // 望's 棋子 (token_10064_wang_stone1) bursting (content/tokens.js wangStone): its OWN kind, so the piece keeps its
+  // normal death — the `Die` clip its spine carries and its own ON_UNIT_DEAD (`b_char_tokendead`) — instead of the
+  // `consumed` path of the kind above, which silences the death sound. The official 棋子 burst textures ride the token id
+  // here (render/fx/localart.js fxLocalFor keys the layers by the emitting piece).
+  wangStoneBlast: { a: 'blast', c: 0xffd27a, local: { byOp: {
     token_10064_wang_stone1: { group: 'fx/wang', tint: 0xffe0a8, dur: 0.6, layers: [{ name: 'char_wang_05', scale: 1.5 }, { name: 'char_wang_03', scale: 1.2 }] },
   } } },
   shockBlast: { a: 'blast', c: 0x9fd4ff, smoke: 0x1c2630 },

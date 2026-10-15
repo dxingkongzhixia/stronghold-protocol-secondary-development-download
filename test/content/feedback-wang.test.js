@@ -285,10 +285,12 @@ test('望: an enemy on a LINKED piece fires the selected skill trigger (S1 停�
   checkInvariants(h.b);
 });
 
-test('望: the piece has NO normal attack — its end is the trigger (champagneBomb consumed fx), never an "atk" event', REAL, () => {
+test('望: the piece has NO normal attack — its end is the trigger (its own wangStoneBlast fx), never an "atk" event', REAL, () => {
   // The official token data has attackKind melee / atk 100 / empty trait, but the official prefab's Default mode has no
-  // attack component (unlike 狼群/沙之碑): the piece only TRIGGERS. The trigger is its end, marked `consumed` so clients
-  // play the explosion (its Attack clip), not a knock-out.
+  // attack component (unlike 狼群/沙之碑): the piece only TRIGGERS.
+  // Its end is NOT the `consumed` path 琳琅诗怀雅's 香槟炸弹 uses: a consumed summon gets no death sound and pops out
+  // outright (audio.js deathSfxUrl), while the official 棋子 keeps its normal death — the `Die` clip its spine carries
+  // and its ON_UNIT_DEAD — which is what the player hears when the explosion goes off (owner, 2026-10-15).
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },
     units: [
@@ -306,9 +308,9 @@ test('望: the piece has NO normal attack — its end is the trigger (champagneB
   assert.equal(piece.profile.noAttack, true, '装置: no normal attack');
   assert.ok(h.runUntil(() => !piece.alive, 5), 'the piece is used up by its trigger');
   assert.equal(h.eventsOf('atk').filter((e) => e[1] === piece.id).length, 0, 'never an "atk" event (no normal attack)');
-  const blast = h.eventsOf('fx').find((e) => e[1] === 'champagneBomb' && e[4]?.id === piece.id);
+  const blast = h.eventsOf('fx').find((e) => e[1] === 'wangStoneBlast' && e[4]?.id === piece.id);
   assert.ok(blast, 'the trigger blast fx carries its id');
-  assert.equal(blast[4].consumed, true, 'consumed: the trigger is its end (no death particles), its Attack clip plays');
-  assert.equal(h.hooksOf('death').find((c) => c.unit === piece)?.reason, 'expired', 'consumed, not a knock-out');
+  assert.notEqual(blast[4].consumed, true, 'NOT consumed: the piece keeps its normal death (Die clip + ON_UNIT_DEAD)');
+  assert.equal(h.hooksOf('death').find((c) => c.unit === piece)?.reason, 'expired', 'used up, not a knock-out');
   checkInvariants(h.b);
 });
