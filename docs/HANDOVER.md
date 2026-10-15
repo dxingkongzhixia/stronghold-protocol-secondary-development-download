@@ -128,6 +128,29 @@ This repository is checked out on **two of the owner's machines**, in two differ
 | path | role | `.git` |
 |---|---|---|
 | `D:\Git本地库\stronghold-protocol-secondary-development-download` | **the repository and the run tree** — history, files and the running app | **yes** (branch `master`; remotes `github`, `gitee`) |
+| `D:\Git本地库\stronghold-protocol-mainline` | the **mainline project at `488db49f`** (v0.2.6, the commit we last folded in) — a read-only reference to open side by side | a **worktree** of the checkout above (`.git` is a file; no second object store) |
+
+The reference checkout needs no network and costs nothing to keep: the mainline's history is already inside our
+repository (the `aec85c5d` merge brought it in), so it is materialised from what we have with
+`git worktree add --detach D:\Git本地库\stronghold-protocol-mainline 488db49f`. Note it carries **no `public/assets`**
+(the mainline does not commit art), so it is for reading and diffing, not for running.
+
+The comparison worth making is usually not the two folders but **our whole delta against upstream**:
+
+```powershell
+git diff --stat 488db49f HEAD -- server/ public/js/    # 137 files, +13512 / -3006 as of 2026-10-15
+git diff 488db49f HEAD -- server/sim/skills.js         # one file, side by side
+git log --oneline 488db49f..HEAD                       # every fork commit on top of v0.2.6
+```
+
+When the mainline moves (`node tools/check-upstream.mjs` says so), fetch it **through the proxy** and re-point the
+worktree — `SP_UPSTREAM` overrides the URL if the mainline ever moves:
+
+```powershell
+git fetch https://github.com/sganggs/Stronghold-Protocol.git master
+git worktree remove D:\Git本地库\stronghold-protocol-mainline
+git worktree add --detach D:\Git本地库\stronghold-protocol-mainline FETCH_HEAD
+```
 
 **The desktop** — the same repository kept as a **store + mirror pair**, which is what `tools/push-gitee.mjs` is
 written for (it derives both trees from its own location; `SP_SCRATCH` / `SP_DEV_TREE` override). On the laptop,
