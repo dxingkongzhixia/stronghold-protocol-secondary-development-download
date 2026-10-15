@@ -57,7 +57,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `ef79c683b064`**（2026-10-15 重启后由 `/healthz` 实测；线上 `public` 树与仓库 `2618bfce` 的 `/js/screens/lobby.js`、`/js/ui/codex.js` 逐字节相同）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `90f5e7f2c477`**（2026-10-16 数据订正后重启由 `/healthz` 实测；线上 `data/tokens.json` 与仓库 md5 `2756fcc6017bea2cc8e260d2ecedc9b0` **逐字节相同**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -97,6 +97,7 @@
 > 更新日志 `0.4.25`，重启后 `build = 47c37209549a`。本次增量**内容上只有文档**（server / shared / public 与盒上
 > 逐字节一致，708 个文件比对），但**仍然必须重启** —— 旧进程启动于 10-14 12:12，而盒上文件在 10-15 00:30 被换过
 > （判定方法见第 5 步）。
+> **2026-10-16 晚 部署（owner 明确要求）**：望三技能「天下劫」的棋子触发范围订正（客户端 `sktok_wang_3.rangeId` 的 `x-6` 9 格十字 → **PRTS 原文 / owner 游戏内所见** 的 `x-1` 阵法术士 13 格菱形）。代码 `e0758c50`（源码提交 `075f160f`，golden 重算单独一个提交），更新日志 **`0.4.28`**，增量包 `sp-delta-20261016b.tgz`（9 个文件，解包后 md5 与仓库一致），重启后 `build = 90f5e7f2c477`（旧进程 395310 → 396198），线上 `data/tokens.json` 与仓库逐字节相同、对外 `/data/tokens.json` 为 `no-cache`（老客户端刷新即得新值）。同时把 `0.4.27` 那行公告里被 owner 更正的措辞「耗尽会播死亡动画」改为「**攻击敌人后消失**」（直接改线上 `var/accounts.db` 的 `changelog` 行，版本号不变）。**本次只改数据**（`server/**`、`shared/**` 未动），但 `BUILD_INPUTS` 含 `data/`（旧页面会收到「请刷新」提示），且服务器数据**启动时读入并冻结**（`server/data.js` 的 `loadData` 单例）→ **必须重启**。
 > 客户端改完**刷新即可**（`/js`、`/css` 是 `no-cache`；build 变了开着的老页面会自动重载）。
 > ⚠️ **`SP_VERIFY=sample` 只在 Windows 的 `server-start.cmd` 里设**，Linux 上没设 → 线上**服务端抽检复算 = off**。
 
