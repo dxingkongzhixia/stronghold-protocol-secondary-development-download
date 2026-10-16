@@ -551,14 +551,17 @@ export class SpineActor {
    * it did before the wind-up existed).
    * @param {any} clip an attack clip ({ begin, loop, end })
    */
-  _attackSeq(clip) {
+  _attackSeq(clip, out = null) {
     const loopDur = this.dur(clip.loop);
     const hit = this._hitTime(clip.loop, loopDur);
     // the wind-up is the unit's OWN attack clip's begin — a skill's own Begin is the skill's activation (setSkill), not
     // a per-attack pose, so a skill-driven attack clip (clip !== roles.attack) adds none
     const begin = clip === this.roles.attack && this.has(clip.begin) ? clip.begin : null;
     const bd = begin ? this.dur(begin) : 0;
-    return { begin, bd, loopDur, hit, seqDur: bd + loopDur, strikeSeq: bd + hit };
+    const o = out || { begin: null, bd: 0, loopDur: 0, hit: 0, seqDur: 0, strikeSeq: 0 };
+    o.begin = begin; o.bd = bd; o.loopDur = loopDur; o.hit = hit;
+    o.seqDur = bd + loopDur; o.strikeSeq = bd + hit;
+    return o;
   }
 
   /**
@@ -577,6 +580,22 @@ export class SpineActor {
     } else {
       this._play(c.loop, loop, { timeScale: ts, start: bd ? o - bd : o, mix });
     }
+  }
+
+  /**
+   * The wind-up a rhythmically attacking unit should already be in (render/units.js `_predictWindUp`): the sequence's
+   * clip seconds (`seqDur`, `strikeSeq`) and the timeScale its attack runs at. Null when there is nothing to predict —
+   * no attack clip, no wind-up `begin` (a skill's own Begin is the skill's activation, not a per-attack pose), or dead.
+   */
+  attackAhead(interval) {
+    if (this.dead) return null;
+    const clip = this._attackClip();
+    if (!clip) return null;
+    const o = this._attackSeq(clip, this._ahead || (this._ahead = { begin: null, bd: 0, loopDur: 0, hit: 0, seqDur: 0, strikeSeq: 0, ts: 1 }));
+    if (!(o.bd > 0) || !(o.strikeSeq > 0)) return null;
+    const iv = clampN(Number.isFinite(interval) && interval > 0 ? interval : this.interval, 0.08, 8);
+    o.ts = this.clipPerAttack ? clampN(o.seqDur / Math.min(iv, o.seqDur), 1, 4) : clampN(o.seqDur / iv, 0.35, 4);
+    return o;
   }
 
   /**

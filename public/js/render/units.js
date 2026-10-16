@@ -548,6 +548,7 @@ export class UnitView {
     this.bob = Math.random() * Math.PI * 2;
     this.hovered = false; this.dimmed = false; this.lift = 0;
     this.lastAtk = -1; this.atkInterval = defaultInterval(ctx, info);
+    this._windUpAt = NaN;         // the predicted strike the rhythm wind-up was already started for (see _predictWindUp)
     this.shake = 0;
     this.screen = { x: 0, y: 0, s: 1, top: 0 };
     this.placed = false;          // set by the first update's projection: until then `screen` is not on screen (bounds)
@@ -1104,6 +1105,31 @@ export class UnitView {
     return ok;
   }
 
+  /**
+   * Start the next attack's wind-up from the attack's own RHYTHM (owner, 2026-10-16). The 'atk' event reaches the
+   * renderer only ~0.1–0.2 game s ahead (`render/interp.js` delay), shorter than an operator's wind-up clip (澄闪's
+   * `Attack_Start` is 0.33 game s), so the wind-up could never play; a unit attacking on its rhythm starts its attack
+   * sequence `strikeSeq / ts` before the strike it predicts from `lastAtk + atkInterval`. The real 'atk' re-phases the
+   * same sequence (SpineActor.attack), so the drawn strike still lands with the damage; a prediction nothing follows
+   * (the unit stopped attacking) costs one swing — the trade the owner accepted.
+   */
+  _predictWindUp() {
+    const a = this.actor;
+    if (!a || !this.alive || this.destroyed || !this.spineReady) return;
+    if (!Number.isFinite(this.gameT) || !(this.atkInterval > 0) || !(this.lastAtk >= 0)) return;
+    if (a.mode !== 'base') return;                                   // an attack / stun / die / form change runs on its own
+    if (this.gameT - this.lastAtk > this.atkInterval * 1.6) return;  // the rhythm has gone stale (it stopped attacking)
+    const seq = a.attackAhead ? a.attackAhead(this.atkInterval) : null;
+    if (!seq) return;
+    const next = this.lastAtk + this.atkInterval;                    // the strike it predicts
+    if (this._windUpAt === next) return;                             // already started for this one
+    if (!(this.gameT >= next - seq.strikeSeq / seq.ts)) return;      // not yet: the wind-up would be too early
+    if (a.windUp(this.atkInterval, next - this.gameT)) {
+      this._windUpAt = next;
+      if (this.imp) this.imp.dirty = true;
+    }
+  }
+
   onHit() { this.flash = 1; }
 
   setSkill(on) {
@@ -1369,6 +1395,8 @@ export class UnitView {
       return;
     }
     const flip = (this.isEnemy ? (ENEMY_MODEL_FACES_LEFT ? -this.visFacing : this.visFacing) : this.visFacing) * (this.mirrorX ? -1 : 1);
+    // an attack's wind-up starts on the unit's own rhythm (only a drawn unit: a culled one is not animated at all)
+    this._predictWindUp();
 
     // shadow (on a raised top it is drawn with that block row, else in the shadow layer under everything); an enemy
     // flyer's lies on the tile under it while its body hovers from the road (shadowZ, GitHub #277)
