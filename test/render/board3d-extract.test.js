@@ -46,7 +46,7 @@ describe('extract.py board jobs', { skip: !PY && 'no python3' }, () => {
     assert.ok(new RegExp(by['map/common'].keep).test('TX_wind_device') && !new RegExp(by['map/common'].keep).test('TX_R6_bomb'));
     assert.ok(new RegExp(by['map/water'].keep).test('[ucp]TX_water_normal'));
     // no new mesh/ groups (the board meshes of DESIGN §15 stay the four of the mesh job table)
-    assert.equal(jobs.filter((j) => j.sub.startsWith('mesh/')).length, 4);
+    assert.equal(jobs.filter((j) => j.sub.startsWith('mesh/')).length, 5);   // + mesh/trap_110 (the 射击台 model, round 40)
     assert.deepEqual(derived.map((d) => [d.sub, d.from, d.derive, d.name]), [
       ['map/autochess', 'TX_autochessi_N', 'normal_rg', 'TX_autochessi_N_rgb'],
       ['map/autochess', 'TX_autochessi_M', 'rough_from_gloss', 'TX_autochessi_M_rough'],

@@ -922,6 +922,15 @@ docs guards 34 pass / 0 fail.
 
 **待办（下一步）**：客户端接线 4 件 —— `public/js/render/app.js`（**评审过：56 hunk / 25 像 fx，且混着我们自己的 `projSpeed`、`mysticEnergy` 等 ⇒ 必须逐 hunk 手并** ✗）、`units.js`、`spine.js`、`ui/settings.js`（设置界面）+ i18n 的「官方特效」词条；然后全量套件转绿 → **合并回 master** ✓ → 先推中继 ✓ → 再 gitee/github。
 
+**收尾时的准确剩余清单（2026-10-16，分支 `fx-official` 12 个提交）**：
+
+- 已做完：运行时 ✓、sim 管道 + golden（先归因零漂移 ✓、单独重算 ✓）、设置模型 ✓、提取器升级 ✓、服务端分发 `local-fx.json` ✓、素材 196.5 MB ✓、`units.js` 骨骼挂点 ✓、**`app.js` 挂载 ✓**（上游本来就是"官方接管则跳过、否则走我们的" ⇒ 自研干员自动保留兜底 ✓，无需补丁 ✓）。
+- **剩余 3 处测试期望**（都是升级提取器带来的 ✓，同一类）：① `test/render/board3d-extract.test.js` 的 WebP 名单要补 `mesh/trap_110/TX_trap_1106_achplat`（射击台那张，`WEBP` 表里 mode `lossy`）；② `test/render/board3d-scene.test.js:204` 的 `same` 同一性断言（新版把 `derive_normal_rg` 从 `derived.py` 换成了别处的实现 ⇒ 该断言应改为**比行为**而不是比对象身份）；③ `test/render/token-wang-stone.test.js` 的望棋子模型（**既有环境问题** ✓：本机 `local-assets.json` 没有 `token_10064_wang_stone1.skel`，需要一次覆盖 `TOKEN_SPINES` 的提取）。
+- **未做**：`public/js/ui/settings.js` 的「官方特效」行（自动/关闭/精简/完整，且只有提取过才显示）+ i18n 词条（`官方特效` / `自动` / `关闭` / `精简` / `完整` —— 注意 `关闭` 与我们既有的 `"关闭": "Close"` 撞键，需改为不冲突的源串）。
+- **部署注意**：`data/local-fx.json`（9,243 条 / 1.23 MB）按设计是 per-machine + gitignored ✓；盒子上没有它 → 服务端回空清单 → 客户端看不到官方特效 ✗。部署时要在盒子上跑一次提取 ✓ 或把这份清单带上去 ✓（写进 DEPLOY 时确认）。
+- **两个 `.venv` 依赖**：`test/local-extract*.test.js`、`test/render/board3d-*.test.js` 都改成**优先用仓库 `.venv`** ✓（新版 helper 用了 Python 3.12 的 f-string 语法，系统 `python` 是 3.8 ✗）。
+
+
 
 
 ### 设计文档：§32 与 §33 一并落地（2026-10-16）
