@@ -949,13 +949,28 @@ docs guards 34 pass / 0 fail.
 
 > **状态**：官方特效已上线（`master` = `6cc99417`，盒子 build `db7299140227`）；线上**无 outage**（客户端已回退 + `gpu` 修复已上线）。**本清单是剩下的"还原度缺陷"**，不影响可玩性。
 
+### 0. 复核结论（2026-10-16 夜，第二会话）—— §2 的「提取侧」判断**已证伪**，真因在运行时，已修
+
+一份逐项复核（本机 `master`，`node --test test/render/…` + 浏览器实测）：
+
+- **§2 的「`follow` 恒无」不成立。** `public/assets/local/fx/index.json`（v3，与 `HEAD` blob 哈希一致）里 **4,557 个 prefab 摘要中 4,169 条带 `spawn`、866 条带 `follow`**（取值 0–18：`SPECIAL_0` 472、`SPECIAL_1` 162、`MUZZLE` 65、`HIT` 8 …）。`fx.py` 的 `prefab_anchor` 与客户端数据（`FollowMountPoint` / `_mountPointType`）一致，**提取没有丢**。文中的 "4,169 spawn / 0 follow" 只有前半句对得上。
+- **`follow` 从第一次提取起就在**：`e6676f11`（首次提取）与 `df8b1de6`（补天赋表）两个 blob 都带 866 条 `follow`；文档 `c2394421` 提交时产物已是这样，所以那不是「待修」的提取问题。**不必重跑提取。**
+- **真的缺陷：`SpineActor.strikePose()` 缺失。** `public/js/render/units.js` 的 `boneOffset` 用 `typeof a.strikePose === 'function' ? a.strikePose() : null` 读「攻击剪影的出手帧（strike frame）」——但全仓库**没有任何地方定义 `strikePose`**，所以该分支恒为 `null`，`strike=true` 时永远退回到「模型当前姿态」而不是 OnAttack 那一帧。上游 `docs/history/0.3.0.md` §32.14.36 明确要求 `SpineActor.strikePose`（「a shot leaves where the clip fires whatever frame the model was last posed in」）——我们的移植**漏了这个方法**。`test/render/vfx-origins.test.js:433` 用桩 `strikePose()` 把它遮住了，所以测试一直绿。
+  - 已补：`public/js/render/spine.js` 的 `SpineActor.strikePose()`（`mode === 'attack'` 时返回当前攻击剪影 `{ anim, time: entry.hits[<clip>][0] }`，否则 `null`）+ `test/render/vfx-strike-pose.test.js`（真 `SpineActor`，风起 / 攻击 / 技能 / 死亡四态）。
+  - 影响面：`_fly` 的出手点、`playOn`/`_casts` 的 `strike` 施法/枪口特效都用它——修好后出手点落在「剪影出手那一帧」的挂点上（上游 0.3.0 的 灰毫 / 安洁莉娜 案例）。
+- **dev 查看器本身会误导**：`dev/fx-viewer.html` 的 `?attack=` / `?skilldemo=` **从不画干员模型**，`wiring.pose(v)` 的 fake view 也没有 `boneOffset`，于是所有特效都按**皮肤静态点**摆放、在空场里「悬空」——看起来就像「不从法杖出 / 凭空生成」。已修：查看器现在会加载并绘制该干员的 Spine，把 `UnitView.prototype.boneOffset` 接到 fake view 上（含 `strikePose` 的出手帧），并按 `?attack=` 的节奏驱动攻击剪影。**默认开启**，`&model=0` 关闭；两个 headless 浏览器套件（`vfx-skills` / `vfx-funnels`）在 URL 里显式加了 `&model=0` 以保持旧的静态点行为。
+- **另一处「半个 hunk」：`app.js` 的 `NO_SPARK` 未定义（已修）。** 官方特效接管伤害 / 治疗时，`public/js/render/app.js` 的 `dmg` / `heal` 事件分支会读 `NO_SPARK`（`fx/numbers.js` 的 `o.noSpark`：官方已画了这次打击，就不要自研的火光 / 斩击），但 `3222d54c`（挂载 `app.js`）那次**只带了引用、丢了定义** —— 这是 `npm run lint` 的 **2 个 error**，也是上一会话 `gpu is not defined` 的同型病（§6.1）。已在 `app.js` 顶部补 `const NO_SPARK = Object.freeze({ noSpark: true })`；`npx eslint .` 现在 **0 error**。（它只在官方特效开启、且有 dmg / heal 事件时触发；`npm run ci` 的 lint 步本该拦住它。）
+- **B1（术士 / 狙击）逐人实测**：33 名有官方特效的术士 / 狙击跑 `?attack=` 定点采样，**每一条弹道首帧都落在某个挂点（muzzle / SPECIAL_n）0.03–0.71 格内**（多数 ≤0.36），**没有半空生成**。**§1 的两条症状在本机、当前树上都复现不出来**；`野鬃 S2`（`char_496_wildmn`）的 buff 特效也只在脚下一个紧凑爆点。
+
+**给下一会话**：§2 的表格与 §3 的「重跑提取」步骤**作废**；真问题已按上文修掉。若在**盒子 / 桌面 store** 上仍看到「弹道悬空」，先确认那台机器的 `master` 是否含本修复，再按 §5 的环境注意项排查（`data/local-fx.json` 是 per-machine）。
+
 ### 1. 症状（owner 实测，本机 `localhost:3000/dev/fx-viewer.html` 可复现）
 
 - **术士的普攻弹道不从法杖出，而是"半空直接生成"** ✗。
 - **野鬃的技能特效疑似"铺满整行"** ✗（未真机确认，属同一类待查）。
 - owner 要求：**所有干员（含自造）逐个真机对照官方** —— 见第 4 节的批次计划。
 
-### 2. 已定案：缺陷在**提取侧**（行号级证据）
+### 2. ~~已定案：缺陷在**提取侧**（行号级证据）~~ —— **已证伪，见上 §0**
 
 | 事实 | 证据 |
 |---|---|
@@ -967,7 +982,7 @@ docs guards 34 pass / 0 fail.
 **数据侧本身是好的**（可用于排除怀疑）：`index.units['char_377_gdglow'].modes[0].attack` 带
 `projectileKey: "projectile_chr_gdglow"`、`mount: "MUZZLE"`（**字符串**）、`node: "Modes/Default/Body/Attack"`、`cast: [{directionType, effects:["gdglow_attack_start_01"], …}]` —— 施法/命中位置正确 ✓。
 
-### 3. 下一步（一条命令就能定案）
+### 3. ~~下一步（一条命令就能定案）~~ —— **已作废（前提不成立）；真因与修复见上 §0**
 
 1. 读 `tools/local-extract/fx.py` 的 **`def prefab_anchor`**，看它判定"跟随挂点"用的**行为类名 / 字段名**；
 2. 二选一（都不会碰其它系统）：
@@ -985,8 +1000,11 @@ docs guards 34 pass / 0 fail.
 - `?skilldemo=<charId>&s=<技能位>` —— **技能特效**演示；
 - `?unit=<charId>` —— 画出该干员的**挂点标记**（`mounts.js` 的 `POINT_NAMES`：`muzzle: Muzzle/MuzzlePoint/muzzle`）；
 - 逐帧取证：`window.__fx = { play, step, render, stats, skillDemo, setTier, keys }`（`tools.browser.evaluate({ tabID, script })` 驱动，注意这套运行时**没有定时器**，不要 `setTimeout`）。
+- **查看器现在会画出干员模型**（2026-10-16 夜）：加载该干员的 Spine，把 `UnitView.boneOffset` 接到演示用的 view 上、并按演示节奏驱动攻击剪影，于是特效按**实时骨骼 / 出手帧**摆放（此前只按皮肤静态点摆、场上没有模型 ⇒ 看起来「凭空出现」）。默认开启；`&model=0` 关掉（headless 浏览器套件用它保持旧的静态点行为）。新增只读探针：`__fx.modelInfo()`、`__fx.demoViews()`、`__fx.loadUnitModel(id)`。
 
 批次：**B1 术士/狙击 → B2 近卫/重装/先锋 → B3 辅助/医疗/特种/召唤物（含望的棋子）→ B4 敌人/BOSS**；每批产出"干员 / 看到的问题 / 对照官方结论 / 截图"清单。自造干员（`char_377_gdglow` 澄闪、`char_1015_aglna2`、`char_1052_kalts2`、`char_4132_ascln`、`char_4138_narant` 娜仁图亚、`token_10064_wang_stone1` 望的棋子 …）**必查** ✓。
+
+**B1 进度（2026-10-16 夜）**：33 名有官方特效的**术士 / 狙击**逐一跑 `?attack=` 定点采样，**每一条弹道的首帧都落在某个挂点（muzzle / SPECIAL_n）0.03–0.71 格内**（多数 ≤0.36），**没有半空生成**；官方特效对这些干员**全部接管**（未回退到自研）。仍未做：需要 owner 在**真机 / 官方录像**前逐人核对「好不好看 / 对不对味」（本会话只能核对几何与接管与否）。
 
 ### 5. 环境与坑（新会话直接可用）
 

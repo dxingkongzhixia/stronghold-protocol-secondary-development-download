@@ -30,6 +30,9 @@ import { projSpeed } from '../js/render/fx.js';
 import { spawnPoint, unitPoint } from '../js/render/vfx/mounts.js';
 import { fallbackLog } from '../js/render/vfx/materials.js';
 import { presetCamera } from '../js/render/projection.js';
+import { SpineActor } from '../js/render/spine.js';
+import { UnitView } from '../js/render/units.js';
+import { UNIT } from '../js/render/style.js';
 import { assets } from '../js/assets.js';
 import { ensurePixi } from '../js/render/app/pixi.js';
 import { UF, ANIM } from '../../shared/constants.js';
@@ -40,6 +43,10 @@ const api = { ready: false, error: null };
 window.__fx = api;
 
 const UNIT_TILE = { row: 10, col: 5 };
+// Draw the unit's own Spine model so effects can be judged against the weapon (see "the unit's own model" below).
+// On by default; `&model=0` turns it off for the headless browser suites, which drive the demos programmatically and
+// pin the skin's static-point placement (they pass no unit of the model's own).
+const MODELS = q.get('model') !== '0';
 const state = { key: q.get('key') || 'common_hit_01', speed: Number(q.get('speed')) === 1 ? 1 : 2, paused: false, loop: true, left: q.get('face') === 'L', unit: q.get('unit') || '', handle: null };
 
 function drawBoard(cam, w, h) {
@@ -80,7 +87,8 @@ async function main() {
   const ofx = new OfficialFx({ P, renderer: app.renderer, assets, cam: () => cam, heightAt: () => 0, tier: q.get('tier') === 'lite' ? 'lite' : 'full' });
   ofx.setGround(() => 0, 'flat');
   const markers = new P.Graphics();
-  app.stage.addChild(ofx.ground, markers, ofx.over);
+  const unitLayer = new P.Container();   // the operator / enemy model the effects sit on (below the markers)
+  app.stage.addChild(ofx.ground, unitLayer, markers, ofx.over);
   api.ofx = ofx; api.lib = ofx.lib; api.app = app;
   const ok = await ofx.init();
   if (!ok) { $('stats').textContent = 'no extracted effects (data/local-fx.json)'; api.error = 'no effects'; api.ready = true; return; }
@@ -114,6 +122,95 @@ async function main() {
       const s = cam.project(p[0] + 10, p[1] + 9, -p[2]);
       markers.lineStyle(2, col, 0.9).moveTo(s.x - 5, s.y).lineTo(s.x + 5, s.y).moveTo(s.x, s.y - 5).lineTo(s.x, s.y + 5);
     }
+  }
+
+  // ---- the unit's own model (render/units.js + spine.js), so effects can be judged against the weapon --------------
+  // The wiring reads a mount point from the model drawn now (`pose(v).view.boneOffset`, render/vfx/mounts.js). The
+  // viewer's fake views carried none, so every effect was placed on the skin's STATIC point in empty space — it looked
+  // like it came from nowhere. Loading the unit's Spine and delegating boneOffset to UnitView gives the same live bones
+  // (and the attack clip's strike frame, `SpineActor.strikePose`) the battle uses.
+  const models = new Map();        // `${unitKey}|F` -> { actor, entry, holder } | null
+  let modelViews = [];             // the demo's views with their models: [{ view, rec, isEnemy }]
+  let preview = null;              // { rec } for the standalone prefab preview (state.unit)
+  let demoGen = 0;                 // bumped per demo so a slow model load cannot land in a later demo's list
+
+  async function loadModel(unitKey) {
+    const k = String(unitKey || '');
+    if (!k) return null;
+    if (models.has(k)) return models.get(k);
+    let rec = null;
+    if (assets && assets.spineEntry && assets.spine) {
+      try {
+        const entry = assets.spineEntry(k, { back: false });
+        if (entry) {
+          const data = await assets.spine.acquire(entry);
+          const holder = new P.Container();
+          const actor = new SpineActor(data, entry);
+          actor.clipPerAttack = true;
+          holder.addChild(actor.spine);
+          unitLayer.addChild(holder);
+          holder.visible = false;
+          rec = { actor, entry, holder, unitKey: k };
+        }
+      } catch (err) { console.warn('[fx-viewer] model failed', k, err?.message || err); }
+    }
+    models.set(k, rec);
+    return rec;
+  }
+
+  /** Give a fake view the model's live bones (UnitView.boneOffset) — the mount points move with the drawn skeleton. */
+  function attachModel(view, rec, isEnemy) {
+    if (!view) return;
+    const probe = { actor: rec ? rec.actor : null, spineReady: !!rec, destroyed: false, isEnemy: !!isEnemy, visFacing: view.visFacing ?? 1, mirrorX: false, modelK: 1, modelKY: 1 };
+    probe.modelFlip = UnitView.prototype.modelFlip;
+    view.__probe = probe;
+    view.__rec = rec;
+    view.boneOffset = (names, out, strike) => {
+      probe.visFacing = view.visFacing ?? 1;
+      return probe.actor ? UnitView.prototype.boneOffset.call(probe, names, out, strike) : null;
+    };
+  }
+
+  /** Draw a loaded model at a view's tile, facing the view; tick it by dt (the actor poses the skeleton). */
+  function placeRec(rec, view, dt) {
+    if (!rec) return;
+    const p = cam.project(view.x, view.y, view.z || 0);
+    const left = (view.visFacing ?? 1) < 0;
+    const sc = p.s * UNIT.modelScale;
+    rec.holder.position.set(p.x, p.y);
+    rec.actor.spine.scale.set(sc * (left ? -1 : 1), sc);
+    rec.holder.visible = true;
+    rec.actor.update(dt);
+  }
+
+  function tickModels(dt) {
+    const seen = new Set();
+    if (preview && !demo.on && !sk.on) { placeRec(preview, { x: UNIT_TILE.col, y: UNIT_TILE.row, visFacing: state.left ? -1 : 1 }, dt); seen.add(preview); }
+    for (const { view, rec } of modelViews) if (rec) { placeRec(rec, view, dt); seen.add(rec); }
+    for (const rec of models.values()) if (rec && !seen.has(rec)) rec.holder.visible = false;
+  }
+
+  /** An attack happened on a view: play the model's attack clip (its strike frame is then read by the wiring). */
+  function attackModel(view) {
+    const rec = view && view.__rec;
+    if (rec && rec.actor) rec.actor.attack(1);
+  }
+
+  /** Show a view's model (its spine is loaded on demand); `gen` drops a load that a later demo superseded. */
+  async function showUnitModel(view, unitKey, isEnemy, gen) {
+    if (!view || !MODELS) return null;
+    const rec = await loadModel(unitKey);
+    if (gen != null && gen !== demoGen) return null;
+    attachModel(view, rec, isEnemy);
+    if (rec && !modelViews.some((m) => m.view === view)) modelViews.push({ view, rec, isEnemy });
+    return rec;
+  }
+
+  async function setPreviewUnit(unitKey) {
+    const rec = unitKey && MODELS ? await loadModel(unitKey) : null;
+    preview = rec;
+    for (const r of models.values()) if (r && r !== rec) r.holder.visible = false;
+    return rec;
   }
 
   async function play(key, o = {}) {
@@ -150,6 +247,7 @@ async function main() {
     for (let i = 0; i < frames; i++) {
       ofx.update(dt * state.speed);
       demoStep(dt * state.speed);
+      tickModels(dt * state.speed);
       if (state.loop && state.handle && !state.handle.alive && !demo.on) play(state.key);
     }
   }
@@ -199,7 +297,7 @@ async function main() {
   $('lite').onclick = () => { ofx.setTier('lite'); toggle('lite', 'full'); play(state.key); };
   $('faceL').onclick = () => { state.left = true; toggle('faceL', 'faceR'); play(state.key); };
   $('faceR').onclick = () => { state.left = false; toggle('faceR', 'faceL'); play(state.key); };
-  $('unit').onchange = () => { state.unit = $('unit').value; play(state.key); };
+  $('unit').onchange = () => { state.unit = $('unit').value; setPreviewUnit(state.unit); play(state.key); };
   if (q.get('speed')) toggle(state.speed === 1 ? 'speed1' : 'speed2', state.speed === 1 ? 'speed2' : 'speed1');
 
   // ---- the wiring demo: a unit attacking a dummy (render/vfx/wiring.js) ----------------------------------------------
@@ -219,6 +317,10 @@ async function main() {
     if (!demo.src.isEnemy) demo.src.dir = left ? 'LEFT' : 'RIGHT';
     if (o.skill) demo.src.flags |= UF.SKILL;
     wiring.begin([demo.src, demo.tgt]);
+    modelViews = [];
+    const gen = ++demoGen;
+    showUnitModel(demo.src, unitKey, /^enemy_/.test(unitKey), gen);
+    showUnitModel(demo.tgt, o.target || 'enemy_1007_slime', !/^enemy_/.test(unitKey), gen);
   }
   // the wind-up, as render/app.js starts it with the attacker's clip: the casts that start with the cast (ON_CAST_START)
   // play WIND_UP s before each attack after the first, the rest at the strike
@@ -228,10 +330,14 @@ async function main() {
     const before = demo.t;
     demo.t += dt;
     wiring.tick();
-    if (before > 0 && Math.floor(before + WIND_UP) !== Math.floor(demo.t + WIND_UP)) wiring.castStart(demo.src, demo.tgt, demo.kind, { skip: 0, left: WIND_UP + 0.5 });
+    if (before > 0 && Math.floor(before + WIND_UP) !== Math.floor(demo.t + WIND_UP)) {
+      wiring.castStart(demo.src, demo.tgt, demo.kind, { skip: 0, left: WIND_UP + 0.5 });
+      if (demo.src.__rec) demo.src.__rec.actor.windUp(1, WIND_UP);
+    }
     if (Math.floor(before) !== Math.floor(demo.t) || before === 0) {
       const melee = demo.kind === 'none';
       wiring.attack(demo.src, demo.tgt, demo.kind, ofx.time, before > 0);
+      attackModel(demo.src);
       // the damage lands when the sim's projectile would (melee: at once)
       const dur = melee ? 0 : Math.hypot(demo.tgt.x - demo.src.x, demo.tgt.y - demo.src.y) / projSpeed(demo.kind);
       (ofx.timers || (ofx.timers = [])).push({ at: ofx.time + dur, fn: () => wiring.damage(demo.tgt, 'phys', demo.src, ofx.time) });
@@ -273,6 +379,10 @@ async function main() {
     if (o.block) sk.src.flags |= UF.BLOCKED;
     sk.on = true; sk.t = 0; sk.last = -1; sk.store = 0;
     wiring.begin([sk.src, sk.tgt]);
+    modelViews = [];
+    const gen = ++demoGen;
+    showUnitModel(sk.src, unitKey, enemy, gen);
+    showUnitModel(sk.tgt, o.target || (enemy ? 'char_010_chen' : 'enemy_1007_slime'), !enemy, gen);
     if (sk.o.passive) { wiring.skill(sk.src, true); wiring.deploy(sk.src); }
     const U = wiring.skills.of(sk.src);
     return { sid, plan: (enemy ? U?.enemy?.find((x) => x.slot === sk.o.s)?.plan : U?.plan) || null };
@@ -295,6 +405,7 @@ async function main() {
         const kind = a || sk.o.kind;
         wiring.castStart(s, t, kind, { skip: 0, left: 0.6, skillOn: !!(s.flags & UF.SKILL) });
         wiring.attack(s, t, kind, ofx.time, true);
+        attackModel(s);
         const dur = kind === 'none' ? 0 : Math.hypot(t.x - s.x, t.y - s.y) / projSpeed(kind);
         (ofx.timers || (ofx.timers = [])).push({ at: ofx.time + dur, fn: () => { const now = ofx.time; for (let i = 0; i < sk.o.hits; i++) wiring.damage(t, 'phys', s, now); } });
         return true;
@@ -398,9 +509,14 @@ async function main() {
     stopTicker: () => app.ticker.stop(),
     setLoop: (v) => { state.loop = !!v; },
     setFace: (left) => { state.left = !!left; },
-    setUnit: (u) => { state.unit = u || ''; },
+    setUnit: (u) => { state.unit = u || ''; setPreviewUnit(state.unit); },
+    loadUnitModel: (u) => loadModel(u),
+    demoViews: () => ({ src: demo.src, tgt: demo.tgt, skSrc: sk.src, skTgt: sk.tgt }),
+    /** Whether each demo view got a live model (render/vfx/mounts.js reads its bones). */
+    modelInfo: () => modelViews.map((m) => ({ spine: m.view?.info?.spine, loaded: !!m.rec, bones: !!(m.rec && m.view?.boneOffset) })),
     fallbacks: () => fallbackLog(),
   });
+  if (state.unit) await setPreviewUnit(state.unit);
   if (!q.get('attack') && !q.get('skilldemo')) await play(state.key);
   api.ready = true;
 }

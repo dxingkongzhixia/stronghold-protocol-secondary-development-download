@@ -75,7 +75,7 @@ describe('official skill effects in headless Chrome', { skip }, () => {
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
     page.on('response', (r) => { if (r.status() >= 400) problems.push(`HTTP ${r.status()} ${r.url()}`); });
     await page.setViewport({ width: W, height: H, deviceScaleFactor: 1 });
-    await page.goto(`http://127.0.0.1:${srv.port}/dev/fx-viewer.html?panel=0&grid=0&bg=%23404040&key=common_hit_01`);
+    await page.goto(`http://127.0.0.1:${srv.port}/dev/fx-viewer.html?panel=0&grid=0&bg=%23404040&key=common_hit_01&model=0`);
     await page.waitForFunction('window.__fx && window.__fx.ready', { timeout: 60000 });
     const err = await page.evaluate(() => window.__fx.error);
     assert.equal(err, null, `viewer: ${err}`);

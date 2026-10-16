@@ -161,6 +161,10 @@ export { viewKind, boardArea, bandFor, fieldRows, penShown, leaderShown, boardPr
 export { FORCED_EXIT, showsDeathFx, renderInfo } from './app/info.js';
 export { releaseGl } from './app/host.js';
 
+/** The options `fx.damage` / `fx.heal` get when the official effects already drew the hit (render/fx/numbers.js
+ * `o.noSpark`): only the number (and a splash ring) stays, no procedural spark / slash / glow. */
+const NO_SPARK = Object.freeze({ noSpark: true });
+
 /**
  * Create the battlefield view inside `host` (an element sized by CSS; the canvas fills it).
  * @param {HTMLElement} host

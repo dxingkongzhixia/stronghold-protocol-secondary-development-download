@@ -683,6 +683,23 @@ export class SpineActor {
     return dur * 0.5;
   }
 
+  /**
+   * The pose the running attack's strike frame holds (render/units.js `UnitView.boneOffset`'s `strike`): `{ anim, time }`
+   * for the attack clip in force at its first OnAttack (the manifest's hits), so a shot leaves the weapon where the clip
+   * fires it — whatever frame the model was last posed in (安洁莉娜's staff swings 0.3 tile a frame, an impostor refresh
+   * poses it between the wind-up and the strike) — read through bonePose on a scratch skeleton, the drawn model untouched.
+   * null when no attack is playing (the caller then reads the pose as drawn).
+   * @returns {{ anim: any, time: number }|null}
+   */
+  strikePose() {
+    if (this.dead || this.mode !== 'attack' || !this.current) return null;
+    const anim = (() => {
+      try { return this.spine ? this.spine.spineData.findAnimation(this.current) : null; } catch { return null; }
+    })();
+    if (!anim) return null;
+    return { anim, time: this._hitTime(this.current, this.dur(this.current)) };
+  }
+
   /** Skill active flag changed. */
   setSkill(on) {
     on = !!on;
