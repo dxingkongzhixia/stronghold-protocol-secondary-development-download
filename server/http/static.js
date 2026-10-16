@@ -19,9 +19,9 @@
 //                (shared/assetPaths.js) is stripped. A hash that names the file's current bytes (assetIndex.js
 //                urlHashOk: its own hash, or its Spine model's) answers `immutable` for a year; any other hash —
 //                an old page, a URL derived from another file's — the current file with `no-cache`
-//     /data/assets.json, /data/local-assets.json → the served manifests (assetViews.js: every art URL with its
-//                content-hash segment; no-cache, the ETag of the view) once the asset index is ready, the files as
-//                they are before that or without an index
+//     /data/assets.json, /data/local-assets.json, /data/local-fx.json → the served manifests (assetViews.js: every art
+//                URL with its content-hash segment; no-cache, the ETag of the view) once the asset index is ready, the
+//                files as they are before that or without an index
 //
 // Traversal & dotfile protection, a directory without its trailing slash → 301, 404 page. /data/local-assets.json is
 // answered with the UNION of the committed data/local-assets.committed.json (the art that ships, tools/local-extract/
@@ -65,6 +65,8 @@ const SIM_PRIVATE = new Set(['nodedata.js']); // lower-case (compared case-insen
 
 /** Optional per-machine art manifest (tools/local-extract) and the empty stand-in served when it is absent. */
 const LOCAL_ART_MANIFEST = 'local-assets.json';
+/** The official effects' file list (DESIGN §33; tools/local-extract/fx.py): per-machine like the manifest above. */
+const LOCAL_FX_MANIFEST = 'local-fx.json';
 // Committed manifest of the art tracked under public/assets/local (tools/local-extract/committed-manifest.mjs): a fresh
 // clone has the pictures but no per-machine manifest, so the packages that ARE committed (the 3D board, the local
 // enemy / token spines, the UI icons, the fx official-art tier) would fall back. This one is served in place of an
@@ -159,6 +161,23 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     res.end(req.method === 'HEAD' ? undefined : body);
   }
 
+  /**
+   * /data/local-fx.json: the official battle effects' file list (DESIGN §33, tools/local-extract/fx.py) — the
+   * per-machine file as-is when it exists, an empty manifest otherwise, so no page load logs an error. It has no
+   * committed counterpart (the fx art ships under public/assets/local/fx/ and a clone that never extracted serves the
+   * empty list; the client's procedural tier covers the effects then).
+   */
+  async function serveLocalFx(req, res, query) {
+    const fxAbs = path.join(dataDirAbs, LOCAL_FX_MANIFEST);
+    const st = await fsp.stat(fxAbs).catch(() => null);
+    if (!st || !st.isFile()) {
+      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-cache', 'Content-Length': EMPTY_LOCAL_ART.length });
+      res.end(req.method === 'HEAD' ? undefined : EMPTY_LOCAL_ART);
+      return;
+    }
+    await serveFile(req, res, fxAbs, st, 'data', [LOCAL_FX_MANIFEST], query, gzipCache, log);
+  }
+
   return async function serveStatic(req, res, rawPath, query) {
     let decoded;
     try { decoded = decodeURIComponent(rawPath); } catch { sendError(req, res, 400, '请求地址无效 · Bad request'); return; }
@@ -186,6 +205,11 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     // the optional local-art manifest: the committed ∪ per-machine union (see the header), never a 404
     if (decoded === '/data/local-assets.json') {
       await serveLocalArt(req, res, query);
+      return;
+    }
+    // the official effects' file list (DESIGN §33): per-machine only, never a 404 either
+    if (decoded === '/data/local-fx.json') {
+      await serveLocalFx(req, res, query);
       return;
     }
     // Content packs (server/packs.js): the live index, and only the files a pack's manifest names
