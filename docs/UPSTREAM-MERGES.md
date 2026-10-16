@@ -942,3 +942,62 @@ docs guards 34 pass / 0 fail.
 - 上游把 0.3.0 的修订史写成 `docs/history/0.3.0.md`（**§32**）、把官方特效的格式写成 `docs/design/vfx-format.md`（**§33**）。我们此前删掉 0.3.0.md ✗，于是合并内容里成千条 `§32.14.*` / `§33.*` 引用全部悬空，守卫只能靠豁免兜 ✗。
 - **决定（owner 2026-10-16「开始携带 0.3.0.md」）**：**携带 `docs/history/0.3.0.md` = 我们的 §32** ✓ —— 与我们一向携带 0.2.3–0.2.6 的做法一致 ✓。§33 必须**同时**落地（§32 的正文自己就引用 §33 ✓），`docs/DESIGN.md` 索引补 `| §32 |` 与 `| §33 |` 两行，`test/docs-paths.test.js` 里那张 `ABSENT` 豁免表**撤掉** —— 守卫恢复满强度 ✓（§32 的修订史里没有 `DESIGN §N` 形式的引用 ✓，不会连带引爆更多）。
 - 后续 0.3.0 的文档更新照此办理：该文件是**上游的修订史**，冲突时**以上游为准** ✓；我们的自研说明只写在 `docs/MATCHMAKING.md` 与 `docs/OUR-FEATURES.md` ✓。
+
+---
+
+## 官方特效：待修清单（2026-10-16 夜，owner 报障 → 交下一会话）
+
+> **状态**：官方特效已上线（`master` = `6cc99417`，盒子 build `db7299140227`）；线上**无 outage**（客户端已回退 + `gpu` 修复已上线）。**本清单是剩下的"还原度缺陷"**，不影响可玩性。
+
+### 1. 症状（owner 实测，本机 `localhost:3000/dev/fx-viewer.html` 可复现）
+
+- **术士的普攻弹道不从法杖出，而是"半空直接生成"** ✗。
+- **野鬃的技能特效疑似"铺满整行"** ✗（未真机确认，属同一类待查）。
+- owner 要求：**所有干员（含自造）逐个真机对照官方** —— 见第 4 节的批次计划。
+
+### 2. 已定案：缺陷在**提取侧**（行号级证据）
+
+| 事实 | 证据 |
+|---|---|
+| 上游提取器**会**输出跟随挂点 | `tools/local-extract/fx.py:1081` `spawn, follow = prefab_anchor(nodes)`；`:1084` `**({'follow': follow} if follow is not None else {})` —— **只在非 None 时写入** |
+| 我们的产物里 `spawn` 有、**`follow` 恒无** | `public/assets/local/fx/index.json`（v3，517 单元 / 4,557 prefab 摘要）：带 `spawn` 的 **4,169** 条，带 **`follow` 的 0 条** ✗ |
+| 弹道行为里**没有**跟随类 | `index.projectiles['projectile_chr_gdglow'].behaviours` = `SimpleProjectile` / `EffectBehaviour` / `AdvancedMovement`；全 542 条的 top 行为里**没有** FollowMountPoint 类 ✗ |
+| 运行时靠它挂到骨骼 | `public/js/render/vfx/wiring.js:484` `const pos = P.fmp ? mountPoint(skin, P.fmp.mount, pose) : spawnPoint(skin, P.spawn, pose);` ⇒ 没有 `follow` ⇒ `P.fmp` 恒空 ⇒ 弹道走默认点 = **半空** |
+
+**数据侧本身是好的**（可用于排除怀疑）：`index.units['char_377_gdglow'].modes[0].attack` 带
+`projectileKey: "projectile_chr_gdglow"`、`mount: "MUZZLE"`（**字符串**）、`node: "Modes/Default/Body/Attack"`、`cast: [{directionType, effects:["gdglow_attack_start_01"], …}]` —— 施法/命中位置正确 ✓。
+
+### 3. 下一步（一条命令就能定案）
+
+1. 读 `tools/local-extract/fx.py` 的 **`def prefab_anchor`**，看它判定"跟随挂点"用的**行为类名 / 字段名**；
+2. 二选一（都不会碰其它系统）：
+   - **类名/字段与客户端版本不符** → 改 `fx.py` → 重跑提取；
+   - **我们这次提取落了这一项** → 补齐后重跑提取。
+3. 重跑：`.venv\Scripts\python.exe tools/local-extract/extract.py --only fx --fx-set used --game "D:\明日方舟\Hypergryph Launcher\games\Arknights\Arknights_Data\StreamingAssets\AB\Windows" --out <临时目录>/public/assets/local --manifest <临时目录>/data/local-assets.json`（≈5 分钟），再只替换 `public/assets/local/fx/{index.json,textures.json,tex,prefabs,mesh}`（**保留**自研的 119 个 `<stem>/` 目录）与 `data/local-fx.json`；
+4. **验收**：`npm run ci`（**含 `tsc --checkJs`** —— 上次 `gpu is not defined` 就是它本该抓到的 ✗）+ `test/render/vfx-*.test.js` + 真机对照；
+5. 部署见 `docs/AI-WORKFLOW.md` (d)（**公告 → 等 30 s → 增量 → 重启 → 验证 build 变化**）。
+
+### 4. 逐人真机对照（owner 要求，含自造干员）
+
+用本机查看器（`node server/index.js` 后开）：
+
+- `http://localhost:3000/dev/fx-viewer.html?attack=<charId>` —— **普攻/弹道起点**演示；
+- `?skilldemo=<charId>&s=<技能位>` —— **技能特效**演示；
+- `?unit=<charId>` —— 画出该干员的**挂点标记**（`mounts.js` 的 `POINT_NAMES`：`muzzle: Muzzle/MuzzlePoint/muzzle`）；
+- 逐帧取证：`window.__fx = { play, step, render, stats, skillDemo, setTier, keys }`（`tools.browser.evaluate({ tabID, script })` 驱动，注意这套运行时**没有定时器**，不要 `setTimeout`）。
+
+批次：**B1 术士/狙击 → B2 近卫/重装/先锋 → B3 辅助/医疗/特种/召唤物（含望的棋子）→ B4 敌人/BOSS**；每批产出"干员 / 看到的问题 / 对照官方结论 / 截图"清单。自造干员（`char_377_gdglow` 澄闪、`char_1015_aglna2`、`char_1052_kalts2`、`char_4132_ascln`、`char_4138_narant` 娜仁图亚、`token_10064_wang_stone1` 望的棋子 …）**必查** ✓。
+
+### 5. 环境与坑（新会话直接可用）
+
+- **Python**：用仓库自己的 `.venv`（3.12 + UnityPy 1.25.4 / lz4 / Pillow ✓）；系统 `python` 是 **3.8** ✗，跑新版 helper 会 `SyntaxError` ✗。四个提取类测试已改成优先用 `.venv` ✓。
+- **官方表**（天赋链接需要）：`.cache/gamedata/excel/{character_table,battle_equip_table,uniequip_table}.json` ✓ 已下好 ✓（直连 github 会挂 ✗ → 走 `https://gh-proxy.com/https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/zh_CN/gamedata/…` ✓ 并**设超时** ✓）。有了它们才会出现 `talents of N units`（先前是 `0` ✗）。
+- **中文请求体**：**不要过 PowerShell 管道** ✗（会变 `?` ✗）→ 一律写文件 + `curl -H 'Content-Type: application/json' --data-binary @文件` ✓（公告那次就是这么栽的 ✗）。
+- **部署前**：**必须 `npm run ci`**（typecheck 能抓住"未声明变量"这类 ✗ —— 上次线上 `gpu is not defined` 就是它本该拦下的 ✗）；`public/js` 是静态文件 ✓ 可单独热更（无需重启 ✓）。
+- **盒子**：`ssh -p 45217 root@183.66.27.19` ✓（**密码认证** ✗ → 非交互需 `SSH_ASKPASS` + `SSH_ASKPASS_REQUIRE=force` ✓）；部署树 `/www/wwwroot/Stronghold-Protocol` ✓（**无 `.git`** ✗ → 只能 tar/scp ✓）；`data/local-fx.json` 是 **per-machine** ✓，不上传则服务端回空清单 → 客户端**看不到官方特效** ✗。
+- **远端**：`github` 走**本地代理 127.0.0.1** ✗ —— 代理没开时只推 `gitee`（`git push gitee HEAD:refs/heads/master` ✓）；`relay` 用 `node tools/push-assets-relay.mjs` ✓（**素材先推中继** ✓）。
+
+### 6. 两条方法学（本次踩过的）
+
+1. **部分 hunk = 线上事故** ✗：并上游文件时只应用了一半（带了用它的行、丢了声明它的行 ✗）→ ES 模块严格模式直接抛错 ✗ → 整站挂掉 ✓。**任何并进来的 `public/js` 文件都要过 `npm run ci`** ✓。
+2. **改 sim/com 之前先量、改完跑全量** ✓：`test/sim` 全量 + golden 先归因（只退自己的改动 → 零漂移 ✓）再单独重算 ✓。
