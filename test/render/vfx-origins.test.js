@@ -243,6 +243,7 @@ function makeIndex() {
       ], skills: { skchr_lob_2: { mode: null, projectiles: [], uses: [] } } },
       char_chain: { kind: 'char', skin: 'char_lob', modes: [{ name: 'Default', attack: ranged('proj_chain') }], skills: {} },
       char_harp: { kind: 'char', skin: 'char_lob', modes: [{ name: 'Default', attack: ranged('proj_harp') }], skills: {} },
+      char_boom: { kind: 'char', skin: 'char_lob', modes: [{ name: 'Default', attack: ranged('proj_boom') }], skills: {} },
       enemy_t: { kind: 'enemy', modes: [{ name: 'Default', attack: null }], skills: {} },
     },
     skills: {},
@@ -253,6 +254,8 @@ function makeIndex() {
       proj_lob_s2lr: { main: 's2lr_trail', effects: ['s2lr_trail'], movement: { class: 'AdvancedMovement' }, behaviours: [b('SimpleProjectile', 's2lr_trail')] },
       proj_chain: { main: 'c_line', onHit: [], effects: ['c_trail', 'c_line'], movement: { class: 'AdvancedMovement' }, behaviours: [b('SimpleProjectile', 'c_trail'), b('ChainLightningEffectBehaviour', 'c_line')] },
       proj_harp: { main: 'h_line', onHit: [], effects: ['h_trail', 'h_line'], movement: { class: 'HarpoonMovement' }, behaviours: [b('HarpoonProjectile', 'h_trail'), b('HarpoonRenderer', 'h_line')] },
+      // a boomerang (回环射手): AdvancedMovement `comeBack` — the flying effect returns to the shooter's point
+      proj_boom: { main: 'boom_trail', effects: ['boom_trail'], movement: { class: 'AdvancedMovement', speed: 15, comeBack: 1, comeBackSpeedScale: 0.25, delayAfterReached: 0.01 }, behaviours: [b('SimpleProjectile', 'boom_trail')] },
     },
     skins: { char_lob: SKIN },
     generic: { hit: {}, die: {}, birth: {}, status: {} },
@@ -263,6 +266,7 @@ function makeIndex() {
 /** The effect descriptors the fake library hands out (spawn location, FollowMountPoint, direction). */
 const DEFS = {
   lob_trail: { spawn: 0 }, lob_hit: { spawn: 2 }, lob_flash: { spawn: 3 }, s2u_trail: {}, s2d_trail: {}, s2lr_trail: {},
+  boom_trail: { spawn: 0 },
   c_trail: {}, c_line: {}, h_trail: {}, h_line: { n: 2, line: [null, { points: [[0, 0, 0], [1, 0, 0]] }] },
   staff_glow: { spawn: 0, follow: { mount: 5, keepRot: false } },     // aglina_skill_02_start: SPECIAL_0, the point's rotation
   stun_loop: { spawn: 4, follow: { mount: 3, keepRot: true } },        // buff_stun: HEAD, its own (pre-tilted) rotation
@@ -342,6 +346,31 @@ describe('the wiring places shots and weapon effects on the drawn model', () => 
     nearV(pts[1], head.fx.anchor, 1e-9, 'its other end at the head');
     run(head, 1);
     assert.ok(rope.fx.stopped, 'the rope goes with the head');
+  });
+
+  test('a boomerang flies back to the thrower (AdvancedMovement comeBack): the hit lands at the target, the effect returns', async () => {
+    const { w, spawned, view } = await setup();
+    const bones = boneView({ F_Muzzle: { x: 0.5, up: 0.8, angle: 0 } });
+    const src = view(1, 'char_boom', 4, 11, { boneOffset: bones.boneOffset.bind(bones) });
+    const tgt = view(2, 'enemy_t', 7, 11);
+    assert.equal(w.attack(src, tgt, 'arrow', 0), true);
+    const trail = spawned.find((h) => h.key === 'boom_trail');
+    const muzzle = [4 - 10 + 0.5, 2 + 0.8 * C30, -0.8 * S30];
+    nearV(trail.place.pos, muzzle, 1e-9, 'starts at the muzzle');
+    // out: the sim's flight time (3 tiles at 10 tiles / s) — at the target the hit lands and the effect flies on
+    const dur = 0.3;
+    run(trail, dur);
+    assert.ok(!trail.fx.stopped, 'a boomerang is not gone at the target');
+    const atTarget = trail.fx.anchor.slice();
+    const toMuzzle = (p) => Math.hypot(p[0] - muzzle[0], p[1] - muzzle[1], p[2] - muzzle[2]);
+    // back: 15 × comeBackSpeedScale 0.25 = 3.75 tiles / s — it comes home (further along after more time)
+    run(trail, dur + 0.2);
+    const mid = trail.fx.anchor.slice();
+    assert.ok(toMuzzle(mid) < toMuzzle(atTarget) - 0.1, `on the way back (${toMuzzle(mid)} vs ${toMuzzle(atTarget)})`);
+    run(trail, dur + 0.5);
+    assert.ok(toMuzzle(trail.fx.anchor) < toMuzzle(mid), 'closer still');
+    run(trail, 2);
+    assert.ok(trail.fx.stopped, 'caught: the effect ends');
   });
 
   test('FollowMountPoint places and turns every effect that has one; MUZZLE_POINT turns, MUZZLE_POINT_WITHOUT_ROTATION does not', async () => {

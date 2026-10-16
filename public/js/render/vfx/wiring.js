@@ -945,6 +945,14 @@ export class FxWiring {
     const seed = seedOf(id, this.attackN.get(id) || 0);
     const arc = paracurve(mv, -from[2], -to0[2], Math.hypot(to0[0] - from[0], to0[1] - from[1]), seed);
     const wob = wobble(mv, seed);
+    // the boomerang: the client's AdvancedMovement `comeBack` flies the flying effect BACK to the shooter's point after
+    // it reaches the target (after `delayAfterReached` first), at `speed` × `comeBackSpeedScale` — 跃跃 / 娜仁图亚:
+    // 15 → 3.75 (PRTS 回旋速度), then it is caught (the sim's own return projectile is not drawn). Owner report
+    // 2026-10-16: with the official effects on, only the outbound leg was drawn.
+    const backSpeed = Number(mv.comeBack) === 1
+      ? Math.max(0.1, (Number(mv.speed) > 0 ? Number(mv.speed) : 12) * Math.max(0.05, Number.isFinite(Number(mv.comeBackSpeedScale)) ? Number(mv.comeBackSpeedScale) : 1))
+      : 0;
+    const backDelay = backSpeed ? Math.max(0, Number.isFinite(Number(mv.delayAfterReached)) ? Number(mv.delayAfterReached) : 0) : 0;
     const parts = projectileParts(proj);
     for (const k of proj.onStart || []) this.playOn(k, src, { toward: tgt, strike: !o.later });
     const placed = this._startOnTarget(proj, src, tgt);
@@ -962,30 +970,45 @@ export class FxWiring {
     const rows = Array.isArray(o.hits) && o.hits.length ? o.hits : null;
     if (tgt && !o.followUp) this._expect(tgt, hitAt);
     if (!mainKey && !ropeKey) { this._arrive(proj, tgt, to0, t0 + hitAt, rows, src); return hitAt; }
-    const flight = { t: -1, dur, from, to: to0.slice(), pos: from.slice(), next: from.slice(), done: false, rope: null };
-    // the flight at t battle s: the head and a point a little further on (its direction), homing on the target's point
+    const flight = { t: -1, dur, from, to: to0.slice(), pos: from.slice(), next: from.slice(), done: false, rope: null, arrived: false, backAt: null, backFrom: null, backDur: 0, hand: null };
+    // the flight at t battle s: the head and a point a little further on (its direction), homing on the target's point;
+    // past `dur` a boomerang's return leg runs from the point it turned at back to the shooter's point as drawn now
     const step = (t) => {
       if (t === flight.t) return;
       if (tgt && !tgt.destroyed && tgt.alive !== false) unitPoint(tSkin, 'hit', this.pose(tgt), flight.to);
       flight.t = t;
-      const k = Math.min(1, t / flight.dur);
-      this._flightPoint(flight, arc, wob, k, t, flight.pos);
-      this._flightPoint(flight, arc, wob, Math.min(1, k + 0.02), t + 0.02 * flight.dur, flight.next);
+      if (t <= flight.dur) {
+        const k = Math.min(1, t / flight.dur);
+        this._flightPoint(flight, arc, wob, k, t, flight.pos);
+        this._flightPoint(flight, arc, wob, Math.min(1, k + 0.02), t + 0.02 * flight.dur, flight.next);
+        return;
+      }
+      if (!(backSpeed > 0)) return;                 // no comeBack: the caller stops the effect at `dur`
+      if (flight.backAt == null) { flight.backAt = flight.dur; flight.backFrom = flight.to.slice(); }   // the turn is at `dur`
+      const hand = startAt(flight.hand || (flight.hand = [0, 0, 0]), false);
+      const d = Math.hypot(hand[0] - flight.backFrom[0], hand[1] - flight.backFrom[1], hand[2] - flight.backFrom[2]);
+      if (!(flight.backDur > 0)) flight.backDur = Math.max(0.05, d / backSpeed);
+      const k2 = Math.min(1, Math.max(0, (t - flight.backAt - backDelay) / flight.backDur));
+      for (let i = 0; i < 3; i++) {
+        flight.pos[i] = flight.backFrom[i] + (hand[i] - flight.backFrom[i]) * k2;
+        flight.next[i] = flight.pos[i] + (hand[i] - flight.backFrom[i]) * 0.02;
+      }
     };
-    const finish = (fx) => {
+    const arrive = () => { if (flight.arrived) return; flight.arrived = true; this._arrive(proj, tgt, flight.to, hitAt > dur ? t0 + hitAt : null, rows, src); };
+    const stop = (fx) => {
       flight.done = true;
       fx.stop({ hit: true });
       if (flight.rope && flight.rope !== fx) flight.rope.stop();
       this.flights.delete(flight);
-      this._arrive(proj, tgt, flight.to, hitAt > dur ? t0 + hitAt : null, rows, src);
     };
+    const finish = (fx) => { arrive(); stop(fx); };
     const def = mainKey ? this.ofx.lib.def(mainKey) : null;
     const flipIfLeft = def ? def.flipIfLeft : false;
     const handle = mainKey ? this.ofx.spawn(mainKey, { pos: from.slice(), groundZ: -(src.z || 0) }, {
       important: true,
       track: (fx) => {
         if (flight.done) return;
-        step(Math.min(flight.dur, fx.time));
+        step(fx.time);
         // direction of travel (Unity frame): yaw in the board plane, pitch with the climb
         const p = flight.pos, q = flight.next;
         const dx = q[0] - p[0], dy = q[1] - p[1], dz = q[2] - p[2];
@@ -994,7 +1017,11 @@ export class FxWiring {
         if (flipIfLeft && dx < 0) { fx.mirror = true; fx.yaw = Math.atan2(dy, -dx); } // mirrored art: +x after the mirror
         else { fx.mirror = false; fx.yaw = Math.atan2(dy, dx); }
         fx.pitch = horiz > 1e-5 || Math.abs(dz) > 1e-5 ? Math.atan2(-dz, horiz) : 0;
-        if (fx.time >= flight.dur) finish(fx);
+        if (fx.time >= flight.dur) {
+          if (!(backSpeed > 0)) { finish(fx); return; }                     // no comeBack: it ends at the target
+          arrive();                                                          // the hit lands on the target
+          if (flight.backDur > 0 && fx.time >= flight.backAt + backDelay + flight.backDur) stop(fx);   // back in hand
+        }
       },
     }) : null;
     if (ropeKey) {
@@ -1005,7 +1032,7 @@ export class FxWiring {
         important: true,
         track: (fx) => {
           if (flight.done) return;
-          step(Math.min(flight.dur, fx.time));
+          step(fx.time);
           fx.linkLines(startAt(fx.anchor), flight.pos);
           if (fx.time >= flight.dur) { if (drive) finish(fx); else fx.stop(); }
         },

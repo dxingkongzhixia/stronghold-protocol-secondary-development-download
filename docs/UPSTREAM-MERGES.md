@@ -966,6 +966,12 @@ docs guards 34 pass / 0 fail.
 
 **给下一会话**：§2 的表格与 §3 的「重跑提取」步骤**作废**；真问题已按上文修掉。若在**盒子 / 桌面 store** 上仍看到「弹道悬空」，先确认那台机器的 `master` 是否含本修复，再按 §5 的环境注意项排查（`data/local-fx.json` 是 per-machine）。
 
+### 0.1 运行时补齐：回环射手的回程（owner 报障 2026-10-16 夜）
+
+- **症状**：回环射手（跃跃 `char_4100_caper` / 娜仁图亚 `char_4138_narant`）的**攻击物没有回收动画** —— 飞出去就没回来。
+- **根源**：官方 projectile 的 `movement` 是 `AdvancedMovement` 且 **`comeBack: 1`**（`speed` 15、`comeBackSpeedScale` 0.25 ⇒ 回旋 3.75，与 PRTS「投掷 15 / 回旋 3.75」一致、`delayAfterReached` 0.01），而 `render/vfx/wiring.js` 的 `_fly` 只画了去程（`flight.dur` 一到就 `finish`）。官方开着时**官方层接管**了这次攻击，程序化回环（`fx/projectiles.js _stepBoomerang`，自带回程）就不再画 ⇒ 去程有、回程没有。
+- **修**：`_fly` 认出 `movement.comeBack === 1` 时，命中之后（`delayAfterReached` 起）把飞行特效**飞回射手当前挂点**，速度 `speed × comeBackSpeedScale`，回到手上才 `stop`；命中仍落在目标（`dur`）。`test/render/vfx-origins.test.js` 新增一条（去程 → 命中不停 → 回程靠近 → 收回）。
+
 ### 1. 症状（owner 实测，本机 `localhost:3000/dev/fx-viewer.html` 可复现）
 
 - **术士的普攻弹道不从法杖出，而是"半空直接生成"** ✗。
