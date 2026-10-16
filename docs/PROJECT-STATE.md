@@ -46,7 +46,7 @@
 |---|---|
 | 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致；0.4.0 一节仍在累加未发布的改动） |
 | git store | 笔记本 = **本检出**（分支 `master`，HEAD `df3b1897`）；台式机 = `_merge-scratch`（分支 `ours`），工作项目与 store HEAD **零跟踪漂移** |
-| 远程同步 | **本机 `master` 领先 `github/master` 15 个提交、领先 `gitee/master` 13 个**（2026-10-16 的官方特效还原度修正 / 望 S3 跟子 / 文档梳理，**未推送**）；远程上次同步点 `github/master = 6cc99417`（0.3.0 官方特效那一批，**已上线**）；主线 `origin/master` = `76700abe`（`check-upstream` 实测：主线未动，我们领先 566） |
+| 远程同步 | **已全部推送**（2026-10-17 00:2x）：`github/master` == `gitee/master` == HEAD（`20f3437d`，本批 22 个提交：官方特效收尾 / 望 S3 跟子 / 官方数据刷新 / 补召唤物模型 / 文档梳理 / `.atlas` 换行）；主线 `origin/master` = `76700abe`（`check-upstream` 实测：主线未动，我们领先 566） |
 | 全量测试 | **本机 `node --test`：7081 项 / 7060 通过 / 3 失败 / 18 跳过**（2026-10-16 夜，笔记本；3 个失败全是既有环境项：`test/lobby.test.js` 的两条限速桶计时 + `test/sim/robustness.test.js:739` 的重装 boss 性能阈值 —— 都只在满负载并发下红）。台式机 store 上一次实测：6674 / 6659 / 0 失败 / 15 跳过（2026-10-15） |
 | 其它闸门 | **2026-10-16 夜实测（笔记本）**：`kit-coverage --missing` 307/307 技能 + 120/120 棋子 ✓；`i18n check en --strict` 1475/1475（100%，0 missing / 0 errors）✓；`doctor` 退出码 0 ✓；`eslint .` **0 error**（153 warning）✓；`npm run typecheck` ✓；`check:imports` ✓（3 条允许的 note）；`golden` ✓（望 S3 改动已归因 + 重新生成）；`check-upstream --no-fetch` ✓（主线未动）；docs 守卫 34/34 ✓。**跑不了的两项都是本机没外网**（本机代理 `127.0.0.1:31181` 没起）：`build-data --offline`（缓存还缺 6 张官方表，`--refresh` 也 `fetch failed`；`data/` 未被改动 ✓）与 `check-delivery --live` |
 | 本机环境 | Node **v24.18.1**；本机（笔记本）**今天没有外网**：GitHub 推送 / 官方数据 CDN / 中继都不通，需要时先把代理起起来 |
@@ -57,7 +57,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `a240d9ad2df8`**（2026-10-16**难度分层**部署后重启，由 `/healthz` 实测；旧 build `90f5e7f2c477`；机器上 `data/tuning.json` md5 `da2c1d7aa5cdf836c20f9686789adfb9` 与仓库**逐字节相同**、`boost` 实读 `{"hp":1.3,"atk":1.3}`；通告记为社区 **0.4.29**，部署前备份 `/root/sp-backup-20261016-103628.tgz`）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `adea09d5e893`**（2026-10-17 00:33 部署后重启，由 `/healthz` 实测；旧 build `db7299140227` → 更早 `a240d9ad2df8` / `90f5e7f2c477`；备份 `/root/sp-backup-20261017-003107.tgz`；通告记为社区 **0.4.31**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -97,7 +97,9 @@
 > 更新日志 `0.4.25`，重启后 `build = 47c37209549a`。本次增量**内容上只有文档**（server / shared / public 与盒上
 > 逐字节一致，708 个文件比对），但**仍然必须重启** —— 旧进程启动于 10-14 12:12，而盒上文件在 10-15 00:30 被换过
 > （判定方法见第 5 步）。
-> **2026-10-16 晚 部署（owner 明确要求）**：望三技能「天下劫」的棋子触发范围订正（客户端 `sktok_wang_3.rangeId` 的 `x-6` 9 格十字 → **PRTS 原文 / owner 游戏内所见** 的 `x-1` 阵法术士 13 格菱形）。代码 `e0758c50`（源码提交 `075f160f`，golden 重算单独一个提交），更新日志 **`0.4.28`**，增量包 `sp-delta-20261016b.tgz`（9 个文件，解包后 md5 与仓库一致），重启后 `build = 90f5e7f2c477`（旧进程 395310 → 396198），线上 `data/tokens.json` 与仓库逐字节相同、对外 `/data/tokens.json` 为 `no-cache`（老客户端刷新即得新值）。同时把 `0.4.27` 那行公告里被 owner 更正的措辞「耗尽会播死亡动画」改为「**攻击敌人后消失**」（直接改线上 `var/accounts.db` 的 `changelog` 行，版本号不变）。**本次只改数据**（`server/**`、`shared/**` 未动），但 `BUILD_INPUTS` 含 `data/`（旧页面会收到「请刷新」提示），且服务器数据**启动时读入并冻结**（`server/data.js` 的 `loadData` 单例）→ **必须重启**。
+> **2026-10-16 晚 部署（owner 明确要求）**：望三技能「天下劫」的棋子触发范围订正（客户端 `sktok_wang_3.rangeId` 的 `x-6` 9 格十字 → **PRTS 原文 / owner 游戏内所见** 的 `x-1` 阵法术士 13 格菱形）。代码 `e0758c50`（源码提交 `075f160f`，golden 重算单独一个提交），更新日志 **`0.4.28`**，增量包 `sp-delta-20261016b.tgz`（9 个文件，解包后 md5 与仓库一致），重启后 `build = 90f5e7f2c477`；线上 `data/tokens.json` 与仓库逐字节相同、对外 `/data/tokens.json` 为 `no-cache`（老客户端刷新即得新值）。**本次只改数据**（`server/**`、`shared/**` 未动），但 `BUILD_INPUTS` 含 `data/`（旧页面会收到「请刷新」提示），且服务器数据**启动时读入并冻结**（`server/data.js` 的 `loadData` 单例）→ **必须重启**。
+> **2026-10-17 00:31 部署（owner 明确要求「提交仓库，服务器发通知，上线重启」）**：本批 = 官方特效的还原度修正（术士从法杖出手 `strikePose`、回环射手 `comeBack` 回收、护盾循环随护盾结束 `LOOP_BUFF_BOUND`、自研干员与全名册统一走官方特效）+ 望 S3「每次落子额外至多 3 枚跟子」（官方口径）+ **官方数据按最新表刷新**（乌尔比安/守墓人的第二模组、克莱门莎 S3 `projectile_life_time` 5→3.5、一个敌人的 `formAttackAnim`）+ 补 1 个召唤物模型（`token_10031_swire2_gdtrap`）+ 文档梳理。
+> 顺序与结果：**中继先行**（`push-assets-relay.mjs` ✓，新美术进中继）→ **github + gitee**（`push-gitee.mjs` ✓，`master = 20f3437d`）→ **通告**（署名 `d星空之下`，社区 **0.4.31**，说「约 3 分钟后重启」）→ 等 3 分钟 → 增量包 **31.8 MB**（`--exclude=./.git` 必须，笔记本单树 `.git` 带 700 MB 素材）+ 新美术 16 KB 上传 → 备份 `/root/sp-backup-20261017-003107.tgz` → 解包 + `chown www:www` + 755/644 → **重启**（`:3000` pid 448890 → `server.sh`）→ `build` `db7299140227` → **`adea09d5e893`**，且**磁盘 build tag == /healthz** ✓；线上机 `data/local-assets.json` / `data/local-fx.json`（per-machine）**未覆盖**（保持其自有 ✓，公网 `/healthz` 同 build ✓）。部署时线上有 23 人在线（18 局），通告后等了 3 分钟再重启。
 > 客户端改完**刷新即可**（`/js`、`/css` 是 `no-cache`；build 变了开着的老页面会自动重载）。
 > ⚠️ **`SP_VERIFY=sample` 只在 Windows 的 `server-start.cmd` 里设**，Linux 上没设 → 线上**服务端抽检复算 = off**。
 
