@@ -880,3 +880,9 @@ docs guards 34 pass / 0 fail.
 - **多语言配音（英语 / 韩语 / 本土语言，`8eb7f701` + `d93d6d30`）—— 卡在素材，待单独一轮。** 我们现有日语 `audio.voiceJp`（默认）+ 中文 `audio.voice` 两套（设置「语音语言」二选一）；上游这一条加 **`audio.voiceEn`（182 名）/ `audio.voiceKr`（182）/ `audio.voiceNative`** 三套，代码在 `public/js/audio.js` + 设置 UI（另加逐人试听），清单在 `data/assets.json`（`d93d6d30` 只动了这一个文件）。**本机没有可提取的语音源**（`public/assets/local/audio`、`.cache/official-voice` 均不存在）—— 得先从官方客户端提取（或拿维护者的完整素材包）并**先推中继**，然后才能落代码 + 清单；否则设置里会多出“能选却没声音”的选项。
 
 - **① 流动水面 —— 收尾已完成（2026-10-16）**：模块里抽出 `waterParamValues(info)` 与 `applyWaterParams(material, info)`，`waterMaterial`（棋盘水格）与 `sceneWaterMaterial`（场景水面）**共用同一套取参**；`scene.js` 在拿到那张图的水材质记录后，把它应用给棋盘的水格（上游 0.3.0：「棋盘上的水格和场景的水面用同一种水」）。**没有记录时逐像素不变**（棋盘水的焦散色调按默认倍率保持原样）；新增测试 `test/render/board3d-scene.test.js`（默认 → 按图 → 清空）。
+
+### 射程按敌人 0.1 碰撞箱（`5bf337a5`）—— 已试一轮，待修 4 条（2026-10-16）
+
+- 核心**全部自动合并**：`constants.js` 新增 `ENEMY_COLLIDER_RADIUS = 0.1`；`body.js` 新增 `colliderKeys` 与 `bodyInRange`（点状敌人用 0.1 半径的圆与范围格相交；巨型单位与同盟仍用 `bodyKeys` 的格子）；`battle/queries.js` 的范围桶改走 `bodyInRange`（格子判定一侧保留 `bodyInKeys`）；`Battle.js`、`battle/blocking.js`、`content/bonds/addon/battle.js` 与 11 个 kit 的 `bodyInKeys → bodyInRange` 调用点。
+- 上游的 `shared/plugins/steps.js` 依赖（`op-ifrit.js` 的一行 import）在本分支**未被使用**，已丢弃（同投石机那次的内联思路）。
+- **待修（下一轮用探针）**：全量 `test/sim` 有 4 条红 —— `test/sim/pathing.test.js` 的两条 crates（被箱子挡住的小怪不再打破箱子，`'breaks it'`）与 乌尔比安 S3 的移动/返回。**已排除**：`battle/queries.js`（单独退回后仍红）、`Battle.js`（单独退回后变成 3 条红 —— 说明它承重）。下一步盯 `body.js` 的 `colliderKeys`：箱子这类非敌非友的阻挡物在各侧取哪种键。
