@@ -22,6 +22,9 @@
 *.jpg binary
 *.webp binary
 *.skel binary
+# Spine atlases are text, but their page names are read verbatim by the loader: `* text=auto` + core.autocrlf=true
+# turned every one of them into CRLF on a Windows checkout (and any re-extraction then showed up as a dirty tree)
+*.atlas binary
 *.woff2 binary
 *.otf binary
 *.ttf binary
