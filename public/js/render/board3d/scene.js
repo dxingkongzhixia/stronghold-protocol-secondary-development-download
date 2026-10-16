@@ -30,7 +30,7 @@ import { buildBoard, objToBoard, boxProjectUV, ROWS, COLS, DEVICE_H, AREAS } fro
 import { surfaceUV } from './atlas.js';
 import {
   focusUniforms, makeTexture, boardMaterial, glassMaterial, decalMaterial, pipeMaterial, unlitMaterial, gateMaterial, glowMaterial,
-  waterMaterial, mireMaterial, infectionMaterial, smogMaterial, dashTexture, environmentMap, sceneMaterial, sceneWaterMaterial,
+  waterMaterial, applyWaterParams, mireMaterial, infectionMaterial, smogMaterial, dashTexture, environmentMap, sceneMaterial, sceneWaterMaterial,
 } from './materials.js';
 import { syncThreeCamera } from '../projection.js';
 import { mergeSceneChunks, sceneMaterialKey, splitSceneProps } from './load.js';
@@ -408,6 +408,10 @@ export class BoardScene {
       const c = mergeSceneChunks(bucket.chunks);
       const info = bucket.info;
       const water = info?.kind === 'water';
+      // The board's own water tiles follow the official scene's water parameters (upstream 0.3.0: "棋盘上的水格和场景的
+      // 水面用同一种水"). applyWaterParams only ever nudges an existing material, so a board with no scene record — or a
+      // record without water values — renders exactly as before.
+      if (water) applyWaterParams(this.mat.water, info);
       let mat = res.mats.get(mk);
       if (!mat) {
         mat = water

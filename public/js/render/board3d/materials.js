@@ -220,29 +220,75 @@ const FOCUS_GLSL = [
   'float focusMask(vec2 q) { vec2 d = max(vec2(0.0), max(uFocus.xy - q, q - uFocus.zw)); return mix(uFocusDim, 1.0, 1.0 - smoothstep(0.0, uFocusSoft, length(d))); }',
 ].join('\n');
 
+/**
+ * The per-map water parameters as plain values (upstream `waterParams`' idea): `colors._WaterSpeed` [x, y] drives the two
+ * normal-map layers; `floats._CausticsSpeed` / `_CausticsTiling` / `_CausticsBrightness` (with `_WaterColorIntensity`)
+ * the caustics and the tint; `colors._DeepWaterColor` / `_ShallowWaterColor` the body. Every value falls back to this
+ * project's own tuned constant, so a record without them (or none at all) renders exactly as before.
+ */
+function waterParamValues(info) {
+  const flt = (k, d) => (info && info.floats && typeof info.floats[k] === 'number' && Number.isFinite(info.floats[k]) ? info.floats[k] : d);
+  const sp = colorOf(info, '_WaterSpeed', [0, 0, 0, 0]);
+  const sx = Number.isFinite(sp[0]) && sp[0] !== 0 ? sp[0] : 0.03;
+  const sy = Number.isFinite(sp[1]) && sp[1] !== 0 ? sp[1] : 0.021;
+  return {
+    deep: colorOf(info, '_DeepWaterColor', [0.03, 0.2, 0.27, 0.7]),
+    shallow: colorOf(info, '_ShallowWaterColor', [0.09, 0.46, 0.55, 0.5]),
+    waterSpeed: [sx, sy], flowSpeed: [-sx * 0.83, sy * 0.81],
+    causticsTiling: flt('_CausticsTiling', 0.6), causticsSpeed: flt('_CausticsSpeed', 0.02),
+    // their tuning factor (the "no decoded cubemap" branch, upstream WATER_TUNING.causticsGain 0.35):
+    // keeps the official brightness proportional instead of 5–7× brighter.
+    causticsGain: flt('_CausticsBrightness', 0.05 / 0.35) * 0.35,
+    colorIntensity: flt('_WaterColorIntensity', 1),
+  };
+}
+
+/**
+ * Re-point an existing water material at another record's parameters: the board's water tiles follow the official scene's
+ * own water (`scene.js`, once the pack's water material is known), so both are "the same water" (upstream 0.3.0).
+ */
+export function applyWaterParams(material, info) {
+  const u = material && material.uniforms;
+  if (!u || !u.uWaterSpeed) return material;
+  const v = waterParamValues(info);
+  u.uDeep.value.set(...v.deep); u.uShallow.value.set(...v.shallow);
+  u.uWaterSpeed.value.set(...v.waterSpeed); u.uFlowSpeed.value.set(...v.flowSpeed);
+  u.uCausticsTiling.value = v.causticsTiling; u.uCausticsSpeed.value = v.causticsSpeed;
+  u.uCausticsGain.value = v.causticsGain; u.uColorIntensity.value = v.colorIntensity;
+  return material;
+}
+
 /** Deep sea: teal water with the official water normal map (two scrolling layers) and caustics. */
-export function waterMaterial(THREE, tex, focus) {
-  const uniforms = { uTime: { value: 0 }, uNormal: { value: tex.waterN || null }, uCaustics: { value: tex.caustics || null }, ...focus };
+export function waterMaterial(THREE, tex, focus, info = null) {
+  const v = waterParamValues(info);
+  const uniforms = {
+    uTime: { value: 0 }, uNormal: { value: tex.waterN || null }, uCaustics: { value: tex.caustics || null }, ...focus,
+    uDeep: { value: new THREE.Vector4(...v.deep) }, uShallow: { value: new THREE.Vector4(...v.shallow) },
+    uWaterSpeed: { value: new THREE.Vector2(...v.waterSpeed) }, uFlowSpeed: { value: new THREE.Vector2(...v.flowSpeed) },
+    uCausticsTiling: { value: v.causticsTiling }, uCausticsSpeed: { value: v.causticsSpeed },
+    uCausticsGain: { value: v.causticsGain }, uColorIntensity: { value: v.colorIntensity },
+  };
   return new THREE.ShaderMaterial({
     uniforms,
     vertexShader: TERRAIN_VERT,
     fragmentShader: [
-      'uniform float uTime; uniform sampler2D uNormal; uniform sampler2D uCaustics;',
+      'uniform float uTime; uniform sampler2D uNormal; uniform sampler2D uCaustics; uniform vec4 uDeep; uniform vec4 uShallow;',
+      'uniform vec2 uWaterSpeed; uniform vec2 uFlowSpeed; uniform float uCausticsTiling; uniform float uCausticsSpeed; uniform float uCausticsGain; uniform float uColorIntensity;',
       FOCUS_GLSL,
       'varying vec2 vUv; varying vec3 vWorld;',
       'void main() {',
       '  vec2 p = vWorld.xy * 0.45;',
-      '  vec3 n1 = texture2D(uNormal, p + vec2(uTime * 0.03, uTime * 0.021)).xyz * 2.0 - 1.0;',
-      '  vec3 n2 = texture2D(uNormal, p * 1.7 - vec2(uTime * 0.025, -uTime * 0.017)).xyz * 2.0 - 1.0;',
+      '  vec3 n1 = texture2D(uNormal, p + uTime * uWaterSpeed).xyz * 2.0 - 1.0;',
+      '  vec3 n2 = texture2D(uNormal, p * 1.7 + uTime * uFlowSpeed).xyz * 2.0 - 1.0;',
       '  vec3 n = normalize(vec3(n1.xy + n2.xy, 2.2));',
       '  vec3 L = normalize(vec3(-0.45, -0.3, 0.84));',
       '  float diff = clamp(dot(n, L), 0.0, 1.0);',
       '  vec3 V = normalize(vec3(0.0, -0.5, 0.866));',
       '  float spec = pow(clamp(dot(reflect(-L, n), V), 0.0, 1.0), 40.0);',
-      '  float ca = texture2D(uCaustics, vWorld.xy * 0.6 + n.xy * 0.08 + vec2(uTime * 0.02, 0.0)).r;',
-      '  vec3 deep = vec3(0.03, 0.2, 0.27), shallow = vec3(0.09, 0.46, 0.55);',
-      '  vec3 c = mix(deep, shallow, 0.35 + 0.45 * diff) + ca * vec3(0.18, 0.32, 0.34) + spec * vec3(0.8, 0.95, 1.0);',
-      '  c *= focusMask(vWorld.xy);',
+      '  float ca = texture2D(uCaustics, vWorld.xy * uCausticsTiling + n.xy * 0.08 + vec2(uTime * uCausticsSpeed, 0.0)).r;',
+      // the tint keeps this material's own (0.18, 0.32, 0.34) at the default gain, so a record-less board is untouched
+      '  vec3 c = mix(uDeep.rgb, uShallow.rgb, 0.35 + 0.45 * diff) + ca * uCausticsGain * vec3(3.6, 6.4, 6.8) + spec * vec3(0.8, 0.95, 1.0);',
+      '  c *= uColorIntensity * focusMask(vWorld.xy);',
       '  gl_FragColor = vec4(c, 0.9);',
       '  #include <colorspace_fragment>',
       '}',
@@ -528,26 +574,20 @@ export function sceneMaterial(THREE, o, focus) {
  * scene record without them (or none at all) renders exactly as before.
  */
 export function sceneWaterMaterial(THREE, tex, focus, info, theme) {
-  const deep = colorOf(info, '_DeepWaterColor', [0.03, 0.2, 0.27, 0.7]), shallow = colorOf(info, '_ShallowWaterColor', [0.09, 0.46, 0.55, 0.5]);
   // the theme's linear scene gain (see sceneMaterial): keeps the water in the same exposure as the scene's land.
   const gain = Number.isFinite(theme?.gain) && theme.gain > 0 ? theme.gain : 1;
-  const flt = (k, d) => (info && info.floats && typeof info.floats[k] === 'number' && Number.isFinite(info.floats[k]) ? info.floats[k] : d);
-  const mapSpeed = colorOf(info, '_WaterSpeed', [0, 0, 0, 0]);
-  const sx = Number.isFinite(mapSpeed[0]) && mapSpeed[0] !== 0 ? mapSpeed[0] : 0.03;
-  const sy = Number.isFinite(mapSpeed[1]) && mapSpeed[1] !== 0 ? mapSpeed[1] : 0.021;
+  const v = waterParamValues(info);
   const uniforms = {
     uTime: { value: 0 }, uNormal: { value: tex.waterN || null }, uCaustics: { value: tex.caustics || null },
-    uDeep: { value: new THREE.Vector4(...deep) }, uShallow: { value: new THREE.Vector4(...shallow) }, ...focus,
+    uDeep: { value: new THREE.Vector4(...v.deep) }, uShallow: { value: new THREE.Vector4(...v.shallow) }, ...focus,
     uGain: { value: gain },
     // the map's own flow: layer 1 follows _WaterSpeed, layer 2 drifts the other way (as this shader always has)
-    uWaterSpeed: { value: new THREE.Vector2(sx, sy) },
-    uFlowSpeed: { value: new THREE.Vector2(-sx * 0.83, sy * 0.81) },
-    uCausticsTiling: { value: flt('_CausticsTiling', 0.6) },
-    uCausticsSpeed: { value: flt('_CausticsSpeed', 0.02) },
-    // their tuning factor (the "no decoded cubemap" branch, WATER_TUNING.causticsGain 0.35): keeps the official
-    // brightness proportional instead of 5–7× brighter. The fallback keeps this project's own tuned 0.05.
-    uCausticsGain: { value: flt('_CausticsBrightness', 0.05 / 0.35) * 0.35 },
-    uColorIntensity: { value: flt('_WaterColorIntensity', 1) },
+    uWaterSpeed: { value: new THREE.Vector2(...v.waterSpeed) },
+    uFlowSpeed: { value: new THREE.Vector2(...v.flowSpeed) },
+    uCausticsTiling: { value: v.causticsTiling },
+    uCausticsSpeed: { value: v.causticsSpeed },
+    uCausticsGain: { value: v.causticsGain },
+    uColorIntensity: { value: v.colorIntensity },
   };
   return new THREE.ShaderMaterial({
     uniforms,

@@ -17,7 +17,7 @@ import { BoardScene, sceneGroupVisible } from '../../public/js/render/board3d/sc
 import { AREAS } from '../../public/js/render/board3d/layout.js';
 import { resolveUvTable } from '../../public/js/render/board3d/atlas.js';
 import { presetCamera } from '../../public/js/render/projection.js';
-import { sceneMaterial, sceneWaterMaterial, sceneBlend, focusUniforms, SCENE_LIGHT } from '../../public/js/render/board3d/materials.js';
+import { sceneMaterial, sceneWaterMaterial, waterMaterial, applyWaterParams, sceneBlend, focusUniforms, SCENE_LIGHT } from '../../public/js/render/board3d/materials.js';
 import { SCENE_THEMES, sceneTheme } from '../../public/js/render/board3d/theme.js';
 import {
   parseSceneChunks, sceneGroupRects, loadScenePack, sceneListed, resetBoardPack, sceneGroup, sceneMaterialKey, mergeSceneChunks, splitSceneProps,
@@ -773,4 +773,24 @@ describe('extracted scenes (when scene bundles were extracted here)', { skip: !O
       board.destroy();
     }
   });
+});
+
+test("the board water tiles take the official scene's own water parameters (applyWaterParams, upstream 0.3.0)", () => {
+  const focus = focusUniforms(THREE);
+  const m = waterMaterial(THREE, {}, focus);
+  assert.deepEqual([m.uniforms.uWaterSpeed.value.x, m.uniforms.uWaterSpeed.value.y], [0.03, 0.021], 'our own flow without a record');
+  assert.deepEqual([m.uniforms.uDeep.value.x, m.uniforms.uDeep.value.y], [0.03, 0.2], 'our own colours without a record');
+  applyWaterParams(m, {
+    colors: { _WaterSpeed: [0.73, 0.59, 0, 0], _DeepWaterColor: [0, 0.27, 0.4, 0.7], _ShallowWaterColor: [0.39, 1, 0.7, 0.5] },
+    floats: { _CausticsTiling: 0.47, _CausticsSpeed: 0.277, _CausticsBrightness: 0.377, _WaterColorIntensity: 1.15 },
+  });
+  assert.ok(Math.abs(m.uniforms.uWaterSpeed.value.x - 0.73) < 1e-9, 'the map flow');
+  assert.ok(Math.abs(m.uniforms.uFlowSpeed.value.y - 0.59 * 0.81) < 1e-9, 'layer 2 drifts the other way');
+  assert.ok(Math.abs(m.uniforms.uCausticsTiling.value - 0.47) < 1e-9);
+  assert.ok(Math.abs(m.uniforms.uCausticsGain.value - 0.377 * 0.35) < 1e-9, 'their caustics tuning factor');
+  assert.ok(Math.abs(m.uniforms.uColorIntensity.value - 1.15) < 1e-9);
+  assert.ok(Math.abs(m.uniforms.uDeep.value.y - 0.27) < 1e-9, 'the map colours');
+  // no record afterwards leaves it exactly as built
+  applyWaterParams(m, null);
+  assert.ok(Math.abs(m.uniforms.uWaterSpeed.value.x - 0.03) < 1e-9, 'back to our own defaults');
 });

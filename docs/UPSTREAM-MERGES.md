@@ -878,3 +878,5 @@ docs guards 34 pass / 0 fail.
   **数据的重建方式要留意**：本机的 `.cache/gamedata` 几乎为空，而取数地址是 `master`（没钉版本）—— 联网重建会把官方新版本的漂移一并带进来（实测：`chess.json` / `backups.json` / `enemies.json` / `tokens.json` 四个无关文件也变了）。所以只**保留了构建器自己写出的 `data/choices.json`**（差异仅一处 `also`），四个漂移文件已撤回；测试人员可在**缓存与数据同版本**的机器上跑 `node tools/build-data.mjs --offline` 复核：应为**零差异**。
 
 - **多语言配音（英语 / 韩语 / 本土语言，`8eb7f701` + `d93d6d30`）—— 卡在素材，待单独一轮。** 我们现有日语 `audio.voiceJp`（默认）+ 中文 `audio.voice` 两套（设置「语音语言」二选一）；上游这一条加 **`audio.voiceEn`（182 名）/ `audio.voiceKr`（182）/ `audio.voiceNative`** 三套，代码在 `public/js/audio.js` + 设置 UI（另加逐人试听），清单在 `data/assets.json`（`d93d6d30` 只动了这一个文件）。**本机没有可提取的语音源**（`public/assets/local/audio`、`.cache/official-voice` 均不存在）—— 得先从官方客户端提取（或拿维护者的完整素材包）并**先推中继**，然后才能落代码 + 清单；否则设置里会多出“能选却没声音”的选项。
+
+- **① 流动水面 —— 收尾已完成（2026-10-16）**：模块里抽出 `waterParamValues(info)` 与 `applyWaterParams(material, info)`，`waterMaterial`（棋盘水格）与 `sceneWaterMaterial`（场景水面）**共用同一套取参**；`scene.js` 在拿到那张图的水材质记录后，把它应用给棋盘的水格（上游 0.3.0：「棋盘上的水格和场景的水面用同一种水」）。**没有记录时逐像素不变**（棋盘水的焦散色调按默认倍率保持原样）；新增测试 `test/render/board3d-scene.test.js`（默认 → 按图 → 清空）。
