@@ -203,7 +203,7 @@ print(json.dumps({'mode': d.mode, 'px': list(d.getdata()), 'range': s.LIGHT_RANG
 
   test('scene map slots: albedo plus the normal / metallic-gloss / emission the material keywords turn on', () => {
     const out = py(`import extract as e
-print(json.dumps({'slots': list(s.SCENE_MAP_SLOTS), 'derivers': sorted(e.DERIVERS), 'same': e.derive_normal_rg is __import__('derived').derive_normal_rg}))`);
+print(json.dumps({'slots': list(s.SCENE_MAP_SLOTS), 'derivers': sorted(e.DERIVERS), 'same': s.derive_normal_rg is __import__('derived').derive_normal_rg}))`);
     assert.deepEqual(out.slots, ['_MainTex', '_BumpMap', '_MetallicGlossMap', '_EmissionMap']);
     assert.deepEqual(out.derivers, ['normal_rg', 'rough_from_gloss']);
     assert.equal(out.same, true, 'scenes.py and extract.py share one derivation');
