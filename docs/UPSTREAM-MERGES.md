@@ -46,6 +46,10 @@ reverted):
 
 | **上游把「满潜 6 / 精英2 Lv60」当默认值** | `shared/potential.js` 的 `POTENTIAL_DEFAULT` / `CULTIVATE_DEFAULT`（主线 R21P / R22-LOADOUT 的一部分；v0.2.6 整支合并 `aec85c5d` 曾带入） | **Owner 2026-10-15**: the fork's DEFAULT is **潜能 1 / 未精英化** — the official baseline for an operator the player does not own ([`docs/MATCHMAKING.md`](MATCHMAKING.md) §45). Keeping 满潜 / 满练度 made every owned operator **15–17 % stronger** in ATK (+10 % DEF / HP, −2 cost, −4 s redeploy) than that baseline — 「敌人变脆」. A merge must not restore a full-potential default; the per-operator 干员调配 setting still raises both. Self-check: `grep -n 'POTENTIAL_DEFAULT = ' shared/potential.js` ⇒ `POTENTIAL_MIN`; `grep -n 'CULTIVATE_DEFAULT = ' shared/potential.js` ⇒ `0`; `shared/loadoutRecord.js` must not return the raw record for a DEFAULT loadout (only 潜能 6 skips the composition) |
 
+| **上游对 3D 战场的实现（board3d：光照 rig / 材质层 / 高台）** | upstream `public/js/render/board3d/{scene,materials,load}.js`（v0.3.0：一个全战场共用的 `LIGHTING` 常量、trap 高台的官方模型、材质层重写） | **实现方式不同，本分支保留自己的**：按战场分级的 `theme.js`（exposure / ambient / sun / tint / 可选 `gain`）+ apron（环绕沙地）+ 地面/道具拆分 `splitSceneProps`；高台（platforms）我们**故意关闭**（不做平面假模型）。因此 `public/js/render/board3d/` **整块归本分支所有**：上游在其中的新提交**不整块合并**，需要时**手工移植**（如 `#569` 那次的设备板修复） |
+
+> **给上游的 PR 分支是中间产物，不进本分支。** 把本分支的优势提给主线时，是在一个**基于主线**的临时分支上重做的（如 `board3d-lighting`，即 PR `sganggs/Stronghold-Protocol#658`）：它**只用于向上游提交**，**不要合并进我们自己的 `master`** —— 它按上游的实现方式裁剪过，与我们这边的实现不同（见上表 board3d 行）。
+
 The self-checks for the §22 blacklist are in [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §5 and run after every merge.
 
 **Machine-readable projection.** `node tools/check-upstream.mjs` fetches the mainline and says whether any new upstream
