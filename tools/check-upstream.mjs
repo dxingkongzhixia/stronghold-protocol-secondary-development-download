@@ -133,13 +133,17 @@ export function formatReport(m) {
   return L.join('\n');
 }
 
+/** Node's default maxBuffer (1 MB) is far too small for a mainline batch: `git diff` over 764 upstream commits
+ *  printed >100 MB and the tool crashed with a truncated buffer instead of reporting. 256 MB is the ceiling. */
+const MAX_OUT = 256 * 1024 * 1024;
+
 function git(args, opts = {}) {
-  return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts }).trim();
+  return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: MAX_OUT, ...opts }).trim();
 }
 
 function gitOk(args, opts = {}) {
   try {
-    return { ok: true, out: execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts }).trim() };
+    return { ok: true, out: execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: MAX_OUT, ...opts }).trim() };
   } catch (e) {
     return { ok: false, out: String(e.stdout || '').trim(), err: String(e.stderr || e.message || '').trim() };
   }
