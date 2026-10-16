@@ -159,7 +159,9 @@ export class MatchViews {
       const s = this.sp;
       v.sp = {
         family: s.family, name: s.name, desc: s.desc, eventId: s.eventId,
-        cards: s.cards.map(c => ({ ...cardView(c), soldOut: c.kind === 'item' && !this.itemPool.canGain(c.id) })), order: s.order.slice(),
+        // a displayed card is claimable: our acquisition never refuses on the shared stock (PlayerEconomy.buy), so an
+        // item card is never greyed out here (the visible half of upstream #624, without its debt bookkeeping)
+        cards: s.cards.map(c => ({ ...cardView(c), soldOut: false })), order: s.order.slice(),
         turn: this.spTurn(), picks: { ...s.picks }, taken: { ...s.taken }, untimed: !!s.untimed,
       };
     }

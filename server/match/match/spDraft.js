@@ -38,7 +38,9 @@ export class MatchSpDraft {
     return s.order[s.idx] ?? null;
   }
 
-  spCardAvailable(card) { return !!card && this.sp?.taken[card.idx] == null && (card.kind !== 'item' || this.itemPool.canGain(card.id)); }
+  /** A card already dealt into the draft: taken indices are the only refusal (owner 2026-10-16 — an item card already
+   *  on screen stays claimable; the shared stock is not consulted, see PlayerEconomy.buy). */
+  spCardAvailable(card) { return !!card && this.sp?.taken[card.idx] == null; }
 
   startSpTurn() {
     const s = this.sp;

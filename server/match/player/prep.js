@@ -31,13 +31,14 @@ export class PlayerPrep {
     const handFull = freeSlot(this.hand) < 0;
     if (slot.kind === 'item') {
       if (!this.gd.item(slot.id)) return fail(ERR.BAD_TARGET);
-      if (!this.m.itemPool.canGain(slot.id)) return fail(ERR.SOLD_OUT);
+      // Owner decision 2026-10-16: an already displayed equipment reward survives stock exhaustion, like an operator
+      // one (#498 below). Our acquisition never checks the shared stock (see PlayerEconomy.buy), so no refusal here.
       if (handFull) return fail(ERR.HAND_FULL);
     } else if (slot.kind === 'chess') {
       const rec = this.gd.chess(slot.id);
       if (!rec || (rec.isDiy && !rec.diyFor)) return fail(ERR.BAD_TARGET);
       // Owner decision 2026-10-11 (#498): already displayed operator rewards survive stock exhaustion.
-      // acquireChess records the deficit. Item rewards above still require itemPool.canGain.
+      // acquireChess records the deficit. (Item rewards follow the same rule since 2026-10-16.)
       if (handFull) return fail(ERR.HAND_FULL);
     } else return fail(ERR.BAD_TARGET);
     const price = Number.isFinite(slot.price) && slot.price > 0 ? Math.trunc(slot.price) : 0;

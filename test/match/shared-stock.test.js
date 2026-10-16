@@ -34,7 +34,7 @@ test('four already displayed operator offers may exceed stock; selling first rep
   }
   m.dispose();
 });
-test('a duplicate draft card becomes unavailable when the preceding player exhausts equipment stock', () => {
+test('a duplicate draft card stays claimable when the preceding player exhausts equipment stock (owner 2026-10-16)', () => {
   const h = makeMatch({ mode: 'coop', humans: 2, seed: 11, fake: true }).start().toPrep();
   const m = h.m, a = h.ps('p_0'), b = h.ps('p_1');
   a.acquireItem(PACK);
@@ -42,10 +42,15 @@ test('a duplicate draft card becomes unavailable when the preceding player exhau
   m.sp = { cards: [PACK, PACK, 'chess_item_1_01_e_a'].map((id, idx) => ({ idx, id, kind: 'item' })),
     order: ['p_0', 'p_1'], idx: 0, picks: {}, taken: {}, untimed: true };
   assert.ok(m.pickCard(a, 0).ok); assert.equal(m.spTurn(), 'p_1');
-  assert.equal(m.pickCard(b, 1).error, 'SOLD_OUT'); assert.equal(m.sp.picks.p_1, undefined);
-  const card = m.publicView().sp.cards[1]; assert.equal(card.soldOut, true);
-  assert.equal(cardPickable({ turnPid: 'p_1', pickOf: new Map() }, card, { myId: 'p_1', solo: false }), false);
-  assert.ok(m.pickCard(b, 2).ok); m.dispose();
+  // Owner decision 2026-10-16: a card already on screen stays claimable — our acquisition never refuses on the shared
+  // stock (PlayerEconomy.buy / acquireItem), the pool simply goes over (invariants.js allows the deficit, GitHub #488).
+  // The generation-side filters (spDraft itemAvailable, pool shopItemsByTier) still keep an empty item out of LATER rolls.
+  assert.ok(m.pickCard(b, 1).ok); assert.ok(m.sp.picks.p_1 !== undefined);
+  assert.equal(m.itemPool.left(PACK), 0, 'left() clamps the deficit to zero');
+  assert.ok(m.itemPool.held(PACK) > m.itemPool.cap(PACK), 'the copies are tracked even over the cap');
+  const card = m.publicView().sp.cards[1]; assert.equal(card.soldOut, false);
+  assert.equal(cardPickable({ turnPid: 'p_1', pickOf: new Map() }, card, { myId: 'p_1', solo: false }), true);
+  m.dispose();
 });
 test('measured operator capacities and exceptions: co-op doubles shared stock and each player\'s private 自选 stock (#650)', () => {
   const solo = new GameData(DATA, 'mode_single_normal'), coop = new GameData(DATA, 'mode_multi_normal');
@@ -70,6 +75,25 @@ test('an operator reward shown before stock exhaustion still arrives and records
   assert.equal(m.pool.entries.get(id).left, -1); checkInvariants(m); m.dispose();
 });
 
+test('an already displayed equipment card and offer stay buyable/claimable after stock runs out (owner 2026-10-16)', () => {
+  const h = makeMatch({ mode: 'coop', humans: 2, seed: 11, fake: true }).start().toPrep();
+  const m = h.m, a = h.ps('p_0'), b = h.ps('p_1');
+  a.funds = 10;
+  const slot = a.shop.slots.findIndex((s) => s?.kind === 'item');
+  assert.ok(slot >= 0);
+  a.shop.slots[slot] = { kind: 'item', id: PACK, basePrice: 1, sold: false, frozen: true };
+  a.pushItemOffer([PACK]);
+  assert.ok(a.acquireItem(PACK) && b.acquireItem(PACK));
+  assert.equal(m.itemPool.left(PACK), 0, 'the shared stock is exhausted');
+  // upstream #624's visible half without its debt bookkeeping: a card you can see is a card you can buy
+  const money = a.funds;
+  assert.ok(a.buy(slot).ok); assert.equal(a.shop.slots[slot].sold, true); assert.equal(a.funds, money - 1);
+  assert.ok(a.pickReward(0).ok); assert.equal(a.offers.length, 0);
+  assert.ok(m.itemPool.held(PACK) > m.itemPool.cap(PACK), 'the overage is tracked, not refused (GitHub #488)');
+  assert.equal(m.itemPool.left(PACK), 0, 'left() clamps the deficit to zero');
+  checkInvariants(m); m.dispose();
+});
+
 test('shared equipment occupancy includes hand/equipped/elite, never displayed offers; destroying frees stock', () => {
   const h = makeMatch({ mode: 'coop', humans: 2, seed: 11, fake: true }).start().toPrep();
   const m = h.m, a = h.ps('p_0'), b = h.ps('p_1');
@@ -79,9 +103,8 @@ test('shared equipment occupancy includes hand/equipped/elite, never displayed o
   a.pushItemOffer([PACK]); assert.equal(m.itemPool.left(PACK), 2, 'display reserves nothing');
   const x = a.acquireItem(PACK), y = b.acquireItem(PACK); assert.ok(x && y);
   assert.equal(m.itemPool.left(PACK), 0);
-  const money = a.funds;
-  assert.equal(a.buy(slot).error, 'SOLD_OUT'); assert.equal(a.funds, money); assert.equal(a.shop.slots[slot].sold, false);
-  assert.equal(a.pickReward(0).error, 'SOLD_OUT'); assert.equal(a.offers.length, 1);
+  // Owner 2026-10-16: a displayed shop card and a displayed offer stay buyable/claimable (see the dedicated test
+  // below); the two refusals that used to be asserted here are gone, and neither of them changed any state.
   const id = [...m.pool.entries.keys()].find(id => m.gd.tierOf(id) === 1), owner = give(m, a, id);
   assert.ok(a.equip(x.uid, owner.uid).ok); assert.equal(m.itemPool.held(PACK), 2);
   assert.ok(a.sell(owner.uid).ok); assert.equal(m.itemPool.held(PACK), 2, 'selling returns equipment to hand, not to stock');

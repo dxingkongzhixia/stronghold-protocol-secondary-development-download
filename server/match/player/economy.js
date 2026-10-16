@@ -154,7 +154,11 @@ export class PlayerEconomy {
       piece = this.acquireChess(slot.id, { source: 'buy' });
     } else {
       if (!this.gd.item(slot.id)) return fail(ERR.BAD_TARGET);
-      if (!this.m.itemPool.canGain(slot.id)) return fail(ERR.SOLD_OUT);
+      // Already displayed equipment stays purchasable after stock runs out — our own rule (owner 2026-10-16: the same
+      // stance as #498 for operators, and the visible half of upstream #624). The fork's acquisition never checks the
+      // shared stock (§0 "上游道具牌库卡库存"; invariants.js allows a deficit, GitHub #488), so a card you can see is a
+      // card you can buy. The shop's own rolls still exclude an empty stock (pool.js shopItemsByTier, spDraft), so it is
+      // not re-offered later. No debt bookkeeping is kept: the deficit is simply not tracked.
       if (handFull) return fail(ERR.HAND_FULL);
       this.spend(price);
       slot.sold = true;

@@ -869,3 +869,5 @@ docs guards 34 pass / 0 fail.
 - **商店库存欠账 + 凯瑟琳定向投放可刷突变细胞**（`72ebd9f3`，#624 / #631）**暂停待决**：它的核心是给 `acquireItem` 加 `requirePool` / `itemPool.debt`（道具库存池记账），而那正是 §0「上游道具牌库把「白给装备」也卡库存」那一条的表面（我们的模型是 `acquireItem` **不做池子检查**，`invariants.js` 里写着 "the fork's model, GitHub #488"）。同时它还改了**生成数据** `data/choices.json`（不能手改，得从构建器走）。两者都不是能机械合并的东西 —— 需要 owner 定：是否改成上游的「库存池 + 欠账」模型（那会动到 §0 的立场），还是只取「已出现的装备仍可购买」这一半。
 - **打磨石投石机三连击**（`31a172e2`）：试了两次，`special.js` 里的新代码已在位，但 5 个测试仍红 —— 差的在**模拟消费端**，需单独查。
 - **射程按敌人 0.1 碰撞箱**（`5bf337a5`）：200+ 行的碰撞 / 几何重构，父提交不是我们基线 —— 按单独一轮处理。
+
+- **已按 A 落地（2026-10-16）**：商店里**已显示**的装备卡与装备奖励（机变卡、定向投放 / 见者有份）**不再因共享库存耗尽而拒绝** —— 删掉了 `player/economy.js` 的购买拒绝、`player/prep.js` 的奖励拒绝、`match/spDraft.js` `spCardAvailable` 的池子判定与 `match/views.js` 对 机变卡的置灰，**不引入任何欠账记账**（盘子可以超发 —— 本分支的 `invariants.js` 本来就允许，GitHub #488）；**不改 §0 立场**。生成侧的过滤（`spDraft` 的 `itemAvailable`、`pool.js` 的 `shopItemsByTier`）保留 —— **之后的刷新仍然不会出现空库存的装备**。测试：`test/match/shared-stock.test.js` 改写了原先钉住拒绝的两条、新增一条专测本规则。golden 未受影响。**#631（凯瑟琳【定向投放】可刷突变细胞）仍单独待办** —— 它只是 `data/choices.json` 的白名单，而 `data/` 是生成物，得从 `tools/build-data.mjs` 走 + 离线重建。
