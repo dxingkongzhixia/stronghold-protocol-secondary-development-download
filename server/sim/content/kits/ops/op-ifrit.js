@@ -50,7 +50,7 @@
 //   the stated 2 %]). 晕眩 / 冻结 (any state that stops her acting) ends it at once (PRTS 维持技能状态).
 
 import { num, talentBb, moduleBb, traitBb, skillRec, up, giveSp } from '../shared/tier1.js';
-import { bodyInKeys } from '../../../body.js';
+import { bodyInRange } from '../../../body.js';
 import { hasHp } from '../../../damage.js';
 import { hypot } from '../../../detmath.js';
 
@@ -154,7 +154,7 @@ export default {
             battle.every(AURA_IV, () => {
               if (!up(unit) || !unit.rangeKeySet) return;
               for (const e of battle.enemies) {
-                if (!e.alive || e.hidden || !bodyInKeys(e, unit.rangeKeySet)) continue;
+                if (!e.alive || e.hidden || !bodyInRange(e, unit.rangeKeySet)) continue;
                 battle.applyStrongest(e, MELT_KEY, { duration: AURA_DUR, value: v, mods: resCut, source: unit });
               }
             }, { owner: unit, immediate: true });
