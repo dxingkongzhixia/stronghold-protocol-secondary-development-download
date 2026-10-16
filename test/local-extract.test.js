@@ -14,7 +14,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TOOL = path.join(ROOT, 'tools/local-extract');
-const PY = ['python3', 'python'].find((bin) => spawnSync(bin, ['--version']).status === 0);
+const PY = [
+  path.join(ROOT, '.venv', 'Scripts', 'python.exe'),   // the repo's own venv (tools/local-extract/requirements.txt: fx.py needs Python 3.12)
+  path.join(ROOT, '.venv', 'bin', 'python'),
+  'python3', 'python',
+].find((bin) => spawnSync(bin, ['--version']).status === 0);
 const ENV = { ...process.env, PYTHONDONTWRITEBYTECODE: '1' };
 const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8')); } catch { return null; } })();
 
@@ -36,31 +40,16 @@ describe('extract.py helpers (no UnityPy needed)', { skip: !PY && 'no python3' }
     assert.deepEqual(mesh.map((j) => j.bundle), [
       'arts/maps/map_autochess/bkg_mesh.ab', 'arts/maps/common/meshes/s_background_common.ab',
       'arts/maps/common/meshes/s_common_box_01.ab', 'arts/maps/common/meshes/s_wind_device.ab',
+      // the official 射击台 model (round 40, DESIGN §32.14.10): only trap_1106_achplat of the 卫戍协议 device bundle
+      'arts/maps/common/trap/trap_110.ab',
     ]);
     for (const j of mesh) assert.deepEqual(j.kinds, ['GameObject', 'Material', 'Mesh', 'Texture2D']);
-    // the official battle-effect bundles (EFFECT_FX_BUNDLES: one per VISIBLE chess of the season read from
-    // data/chess.json, plus our custom operators — roster entries too): Texture2D only, one fx/<stem> group each (the
-    // fx kinds' optional local-art tier, docs/ASSETS.md "Battle effects")
-    const fx = jobs.filter((j) => j.sub.startsWith('fx/'));
-    const chess = JSON.parse(readFileSync(path.join(ROOT, 'data/chess.json'), 'utf8'));
-    const stems = [...new Set(Object.values(chess)
-      .filter((c) => c && c.visible !== false && !c.isGolden)
-      .map((c) => String(c.charId).split('_').pop()))].sort();
-    assert.deepEqual(fx.map((j) => j.sub.replace(/^fx\//, '')), stems, 'one fx/<stem> job per visible operator');
-    for (const j of fx) {
-      assert.deepEqual(j.kinds, ['Texture2D']);
-      assert.equal(j.sub, `fx/${j.bundle.replace(/^.*\/effects\//, '').replace(/\.ab$/, '')}`, 'one fx/<bundle> group');
-    }
-    // the external-CAB jobs (EXTERNAL_MATERIALS): their bundle's material art lives in a shared CAB (refs/fx/texture/
-    // object.ab …), so the job additionally exports the matching materials' external `_MainTex`. Only 澄闪's bundle
-    // carries the spec; every other fx job exports only its own textures.
-    const ext = fx.filter((j) => j.external);
-    assert.deepEqual(ext.map((j) => j.sub), ['fx/gdglow'], 'only the funnel bundle resolves external CABs');
-    assert.equal(ext[0].external, '^char_gdglow_\\d+$');
-    for (const j of fx) if (j.sub !== 'fx/gdglow') assert.equal(j.external, null, `${j.sub}: no external spec`);
-    for (const g of ['fx/kalts2', 'fx/makoto', 'fx/narant', 'fx/wang', 'fx/aglna2', 'fx/ascln', 'fx/gdglow']) {
-      assert.ok(fx.some((j) => j.sub === g), `${g} listed`);
-    }
+    // The per-operator official-texture jobs (our pre-0.3.0 `fx/<stem>` local-art tier) left the job table with the
+    // official fx run (fx.py, DESIGN §33): the art itself stays committed and is served by the committed manifest
+    // (tools/local-extract/committed-manifest.mjs), so a clone keeps the tier without re-extracting. Our own fx kinds
+    // remain as the procedural fallback. See docs/UPSTREAM-MERGES.md.
+    // The external-CAB jobs (EXTERNAL_MATERIALS) and the per-operator fx jobs left with the official fx work;
+    // the art they produced stays committed (served by the committed manifest).
     assert.equal(new Set(jobs.map((j) => j.sub)).size, jobs.length, 'one output dir per job');
   });
 
@@ -199,29 +188,8 @@ print(json.dumps({'mat': rel(e.dep_bundles(d, {'Texture2D', 'Material'})), 'spri
     assert.deepEqual(out, { mat: ['shaders/other.ab', 'shaders/standarddirectional.ab'], sprite: [], none: [] });
   });
 
-  test('export_external_textures: the matching material\'s external _MainTex only (job-local / _RamTex skipped)', () => {
-    const out = py(`
-from types import SimpleNamespace as NS
-import pathlib
-class Img:
-    def __init__(self): self.width, self.height, self.saved = 4, 4, None
-    def save(self, p): self.saved = str(p)
-class PPtr:
-    def __init__(self, obj=None, fid=0): self.m_FileID, self._o = fid, obj
-    def read(self): return self._o
-def tex(name, fid): return PPtr(NS(m_Name=name, image=Img()), fid)
-def mat(name, main): return NS(type=NS(name='Material'),
-  read=lambda: NS(m_Name=name, m_SavedProperties=NS(m_TexEnvs=[('_MainTex', NS(m_Texture=main)),
-                                                              ('_RamTex', NS(m_Texture=tex('ram', 9)))])))
-objs = [mat('char_gdglow_14', tex('char_gdglow_04', 15)),        # external main texture -> exported
-        mat('char_gdglow_15', tex('char_gdglow_05', 0)),         # the bundle's own texture: the Texture2D pass has it
-        mat('char_gdglow_summer#12_01', tex('flow_78', 7)),      # a skin material: not matched
-        mat('star_02_ab', tex('star_02', 8))]                    # shared material: not matched
-manifest, seen = {}, set()
-n = e.export_external_textures(objs, e.EXTERNAL_MATERIALS['fx/gdglow'], pathlib.Path('.'), 'fx/gdglow', manifest, seen, lambda *a: None)
-print(json.dumps({'n': n, 'keys': sorted(manifest.get('fx/gdglow', {})), 'saved': sorted(seen)}))`);
-    assert.deepEqual(out, { n: 1, keys: ['char_gdglow_04'], saved: ['char_gdglow_04.png'] });
-  });
+  // `export_external_textures` left extract.py with the official fx work: the external-CAB textures of the fx
+  // bundles are exported by fx.py now (test/local-extract-fx.test.js covers them).
 
   test('prefab_node: local transform, parent, mesh and materials; no -0.0 in the output', () => {
     const out = py(`

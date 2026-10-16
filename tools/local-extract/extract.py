@@ -8,10 +8,6 @@ aklz4.py registers a decoder for it. This script pulls the art the web sources l
   - the 6 in-match emoticon themes of 盟约 (activity_table autoChessData.enabledEmoticonThemeIdList; only the
     *_battle sprites, keyed by display_meta_table picId: emoticon/<dir>/<picId>.png, see data/emotes.json)
   - the autochess guidebook pages and battle projectile sprites
-  - the battle-effect textures of the per-operator effect bundles battle/prefabs/effects/<stem>.ab (fx/<stem>: one per
-    visible chess of the season, read from data/chess.json — the generated official-art table behind
-    public/js/render/fx/official.js, docs/ASSETS.md "Battle effects"); the fx kinds' procedural drawing stays the
-    fallback (each bundle is Texture2D only, ~0.3–3 MB)
   (the emotes and the guidebook pages are on the public mirror too: tools/fetch-assets.mjs downloads them, and the
   client uses these local copies first — GitHub issue #42)
   - the enemy battle Spine models no community dump carries (ENEMY_SPINES: 灼热源石虫 / 炽焰源石虫), from the enemy art
@@ -27,7 +23,8 @@ aklz4.py registers a decoder for it. This script pulls the art the web sources l
   - for the official 3D board (DESIGN §15): the map theme's Material parameters (map/<theme>/materials.json; shader
     names resolved through the shaders/*.ab bundles), the background / device meshes as Wavefront OBJ
     (mesh/<bundle>/<mesh>.obj; UnityPy's exporter, X mirrored into a right-handed frame) and their GameObject
-    placement (mesh/<bundle>/prefab.json)
+    placement (mesh/<bundle>/prefab.json); of the 卫戍协议 device bundle (arts/maps/common/trap/trap_110.ab) only the
+    射击台 (trap_1106_achplat: mesh, texture, material → mesh/trap_110), which the board draws in place of its slab
   - the standard gate / objective effects of every battle map (arts/effects/[pack]map.ab → map/fx: the [opt]start_box /
     [opt]end_box / [opt]start_fly meshes, their merged additive textures, materials and prefab), the blower's texture
     (arts/maps/common/res.ab → map/common: TX_wind_device of the s_wind_device mesh) and the shared water / noise
@@ -42,8 +39,9 @@ aklz4.py registers a decoder for it. This script pulls the art the web sources l
     scene.json + scene.bin + lightmap pages and scene/tex/ (the materials' albedo textures). The scene bundles ship
     only while the season runs: they are read from the client when it has them, else from --scenes <dir> (default
     .cache/official-scenes/*, filled by tools/local-extract/fetch_scenes.py)
-  - the official battle effects (特效) of the mode's operators, enemies and tokens (fx.py, docs/design/vfx-format.md)
-    → fx/index.json, fx/textures.json, fx/prefabs/*.json, fx/tex/**.webp, fx/mesh/*.json;
+  - the official battle effects (特效) of the mode's operators, enemies and tokens (fx.py, DESIGN §33)
+    → fx/index.json, fx/textures.json, fx/prefabs/*.json, fx/tex/**.webp, fx/mesh/*.json, listed in their own
+    data/local-fx.json (next to --manifest; data/local-assets.json has no fx group);
     only with an explicit --only fx (a plain run leaves them out): the Phase 1a sample by default, --fx-set used for
     every effect the units reference, --fx-keys <k1,k2> for named prefabs
 
@@ -63,7 +61,6 @@ manifest (every other group is kept as is).
 Everything is (c) Hypergryph; for private, non-commercial fan use only.
 """
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -72,7 +69,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scenes  # noqa: E402  (the battlefield scene table and exporter; imports UnityPy only when it runs)
-import fx  # noqa: E402  (the official battle effects, docs/design/vfx-format.md; imports UnityPy only when it runs)
+import fx  # noqa: E402  (the official battle effects, DESIGN §33; imports UnityPy only when it runs)
 
 ROOT = Path(__file__).resolve().parents[2]
 HOME = Path.home()
@@ -106,50 +103,6 @@ MESH_BUNDLES = [
     ('arts/maps/common/meshes/s_wind_device.ab', 's_wind_device'),
 ]
 
-# Per-operator battle-effect bundles: the official Texture2D of `battle/prefabs/effects/<stem>.ab`, written to the
-# manifest group `fx/<stem>`. These are the optional local official-art tier of the fx kinds (public/js/render/fx/
-# kinds.js `local`, docs/ASSETS.md "Battle effects"): a kind's `local` names layers of one of these groups, and the
-# client draws them only when the manifest lists them (else its procedural drawing). The list is every VISIBLE chess
-# of the season read from data/chess.json (one bundle per official operator, stem = the charId's trailing segment), so
-# a new season's roster is picked up without editing it; `FX_BUNDLES` (env, comma-separated) overrides it. A stem with
-# no bundle in this client is skipped at run time (e.g. 能天使 char_103_angel ships no `angel.ab` here). Each bundle is
-# ~0.3–3 MB, ~0–53 textures. A few operators' art lives in a shared EXTERNAL CAB the bundle references by name (e.g.
-# the 驭械术师 funnel drone): EXTERNAL_MATERIALS resolves those dependencies and exports the referenced `_MainTex` too.
-EFFECT_FX_BUNDLES_CUSTOM = [
-    'kalts2',   # 凯尔希·思衡托 (already wired: kalts2Heal / kalts2Damage)
-    'aglna2',   # 予愿安洁莉娜
-    'gdglow',   # 澄闪 (the funnel drone's live art is external; the bundle still carries its own effects)
-    'makoto',   # 结城理
-    'narant',   # 娜仁图亚
-    'ascln',    # 阿斯卡纶
-    'wang',     # 望
-]
-
-
-def roster_fx_bundles():
-    """The effect-bundle stems of every visible chess of the season (data/chess.json), sorted and unique: the official
-    operators' per-operator effect bundles. Empty when the data file is absent (the tool still runs on its own)."""
-    try:
-        data = json.loads((ROOT / 'data' / 'chess.json').read_text(encoding='utf-8'))
-    except Exception:
-        return []
-    stems = set()
-    for rec in data.values():
-        if not isinstance(rec, dict) or rec.get('visible') is False or rec.get('isGolden'):
-            continue
-        names = [rec.get('charId')]
-        assets = rec.get('assets')
-        if isinstance(assets, dict):
-            names.append(assets.get('spine'))
-        for name in names:
-            if isinstance(name, str) and name:
-                stems.add(name.rsplit('_', 1)[-1])
-    return sorted(stems)
-
-
-EFFECT_FX_BUNDLES = sorted(set(EFFECT_FX_BUNDLES_CUSTOM) | set(roster_fx_bundles()))
-EFFECT_FX_BUNDLES = [b.strip() for b in (os.environ.get('FX_BUNDLES') or ','.join(EFFECT_FX_BUNDLES)).split(',') if b.strip()]
-
 # (bundle path relative to the AB root, output subdir, which object types to export[, name regex to keep])
 JOBS = [
     ('arts/maps/map_autochess/res.ab', 'map/autochess', {'Texture2D', 'Material'}),
@@ -160,14 +113,13 @@ JOBS = [
     *[(f'ui/emoticon/theme/[uc]{theme}.ab', f'emoticon/{sub}', {'Sprite'}, BATTLE_EMOTE) for theme, sub in EMOTE_THEMES],
     ('arts/guidebookpages/[pack]autochess.ab', 'guide', {'Sprite', 'Texture2D'}),
     ('battle/prefabs/[uc]projectiles.ab', 'projectiles', {'Sprite', 'Texture2D'}),
-    # official battle-effect textures the web sources lack (owner rule: every fx kind has a procedural tier and an
-    # optional local-art tier, docs/ASSETS.md "Battle effects"): each per-operator effect bundle (EFFECT_FX_BUNDLES)
-    # carries its own Texture2D. Read by a kind's `local` spec (public/js/render/fx/kinds.js); the client draws them
-    # only when this manifest lists them.
-    *[(f'battle/prefabs/effects/{b}.ab', f'fx/{b}', {'Texture2D'}) for b in EFFECT_FX_BUNDLES],
     # official module (uniequip) type icons, keyed by lower-case type name (e.g. 'mar-x')
     ('spritepack/ui_equip_type_hub_h2_0.ab', 'module', {'Sprite'}),
     *[(rel, f'mesh/{sub}', {'Mesh', 'GameObject', 'Material', 'Texture2D'}) for rel, sub in MESH_BUNDLES],
+    # the official 射击台 model (GitHub round 40: 战场#03's raised tiles by the blue gate were our flat grey slab): the
+    # bundle holds every 卫戍协议 device model (red door, plane, laser, crate, 射击台); only the 射击台 is kept
+    ('arts/maps/common/trap/trap_110.ab', 'mesh/trap_110', {'Mesh', 'GameObject', 'Material', 'Texture2D'},
+     r'^((MT|TX)_)?trap_1106_achplat$'),
     ('arts/effects/[pack]map.ab', 'map/fx', {'Mesh', 'GameObject', 'Material', 'Texture2D'}),
     ('arts/maps/common/res.ab', 'map/common', {'Material', 'Texture2D'}, r'^(TX|MT)_wind_device$'),
     ('arts/maps/effect.ab', 'map/water', {'Texture2D'}, r'water_normal|Caustics|WaterNoise|noise_clouds|Water_Foam|SmoothWaves'),
@@ -243,6 +195,7 @@ WEBP = [
     ('map/water', '[ucp]TX_water_normal', 'lossless'),
     ('map/water', 'TX_Caustics256', 'lossy'),
     ('map/water', 'T_noise_clouds_01', 'lossless'),
+    ('mesh/trap_110', 'TX_trap_1106_achplat', 'lossy'),
 ]
 WEBP_OPTIONS = {
     'lossy': {'quality': 95, 'method': 6, 'alpha_quality': 100, 'exact': True},
@@ -268,19 +221,6 @@ GUIDE_WEBP_OPTIONS = {
 SHADER_DEPS = 'shaders/*.ab'
 # the root shader bundle ([uc]shaders.ab) holds the Torappu particle shaders of the map effects (map/fx)
 SHADER_DEPS_ROOT = '[uc]shaders.ab'
-
-# Jobs whose bundle references art that lives in a SHARED external CAB — another .ab of the same StreamingAssets/AB
-# tree, named in the bundle's `m_Dependencies` by its CAB name (`cab-38df…`, the serialized file inside the target
-# bundle), NOT by file name. This is how the client stores most operator effect textures: the per-operator
-# `battle/prefabs/effects/<stem>.ab` holds the prefabs/materials/its own textures, while the material's `_MainTex`
-# points into `refs/fx/texture/*.ab` (object / ray / lighting / …). Keyed by output subdir → a regex over the bundle's
-# MATERIAL names; after the dependencies are resolved (cab_index + load_dependencies), the `_MainTex` of every matching
-# material whose texture is external is exported into the same group. Only operator-specific material names match, so a
-# shared texture (star_02, flow_…, mask_…) is never copied into the group by accident. E.g. 澄闪's funnel drone:
-# material char_gdglow_14's `_MainTex` char_gdglow_04 lives in refs/fx/texture/object.ab (CAB-38dfd5…).
-EXTERNAL_MATERIALS = {
-    'fx/gdglow': re.compile(r'^char_gdglow_\d+$'),
-}
 
 SAFE = re.compile(r'[^A-Za-z0-9_.\-\[\]]+')
 
@@ -475,89 +415,22 @@ def dep_bundles(ab_root, kinds):
     return sorted(p for p in root.glob(SHADER_DEPS) if p.is_file()) + extra
 
 
-def _bundle_cabs(path):
-    """The CAB name(s) of one bundle (`BundleFile.files`, minus the `.resS` stream), lower-cased: a pool worker.
-    Unity stores the CAB name (e.g. `CAB-929d264e…`) in the bundle header; in the Unity 5.x / 2019 layout the
-    serialized file is wrapped by the bundle and UnityPy exposes it as `BundleFile.files`."""
-    import aklz4  # noqa: F401  (registers the LZ4AK decoder)
-    import UnityPy
-    try:
-        env = UnityPy.load(str(path))
-        bf = next(iter(env.files.values()))
-        return [k.lower() for k in bf.files.keys() if not k.endswith('.resS')]
-    except Exception:  # a corrupt / unsupported bundle carries no indexable art
-        return []
+_NORMAL_Z = None
 
 
-def cab_index(ab_root, log, rebuild=False):
-    """`{cab name (lower): path relative to ab_root}` for every `.ab` under the tree, cached under var/ (git-ignored).
-
-    A dependency is referenced by CAB name (`m_Dependencies` → `cab-38df…`), which is the serialized file inside the
-    target bundle, so the only way to map it back is to read each bundle's header. The first run scans the tree (one
-    header read per bundle, in parallel); the result is cached keyed on the install path and the AB root's mtime, so a
-    later run — or the next job — is instant. `--rebuild-cab-index` forces a rescan (after a client update)."""
-    root = Path(ab_root)
-    key = hashlib.sha1(str(root.resolve()).lower().encode('utf-8')).hexdigest()[:16]
-    cache = ROOT / 'var' / f'cab-index-{key}.json'
-    try:
-        stamp = f'{root.stat().st_mtime_ns}'
-    except OSError:
-        stamp = None
-    if not rebuild and cache.exists():
-        try:
-            doc = json.loads(cache.read_text(encoding='utf-8'))
-            if doc.get('stamp') == stamp and isinstance(doc.get('cabs'), dict):
-                log(f'cab index: {len(doc["cabs"])} CABs (cached {cache.name})')
-                return doc['cabs']
-        except (OSError, ValueError):
-            pass
-    files = sorted(root.rglob('*.ab'))
-    log(f'cab index: scanning {len(files)} bundles (parallel; cached after this run)')
-    cabs = {}
-    try:
-        import multiprocessing
-        with multiprocessing.Pool() as pool:
-            for rel, names in zip(files, pool.map(_bundle_cabs, files, chunksize=16)):
-                for n in names:
-                    cabs[n] = rel.relative_to(root).as_posix()
-    except Exception as e:  # a restricted host: fall back to a serial scan rather than fail the job
-        log(f'  warn cab index parallel scan failed ({e}); scanning serially')
-        for rel in files:
-            for n in _bundle_cabs(rel):
-                cabs[n] = rel.relative_to(root).as_posix()
-    cache.parent.mkdir(parents=True, exist_ok=True)
-    cache.write_text(json.dumps({'stamp': stamp, 'cabs': cabs}, separators=(',', ':')), encoding='utf-8')
-    log(f'cab index: {len(cabs)} CABs from {len(files)} bundles -> {cache.name}')
-    return cabs
-
-
-def load_dependencies(env, ab_root, cabs, log):
-    """Load the bundles a bundle references by CAB name (`m_Dependencies`) so its external material textures resolve.
-
-    The externals list of the serialized file is the bundle's dependency list (`archive:/CAB-…/CAB-…`); each is mapped
-    through `cabs` (cab_index) to the `.ab` file that carries it and joined into `env`. Built-in externals with no
-    bundle (`Library/unity default resources`) and bundles this install does not carry are skipped. Returns the
-    `(cab, relative path)` pairs actually loaded."""
-    bf = next(iter(env.files.values()))
-    sf = next((v for k, v in bf.files.items() if not k.endswith('.resS')), None)
-    loaded = []
-    for ext in getattr(sf, 'externals', None) or []:
-        path = str(getattr(ext, 'path', '') or '')
-        if '/CAB-' not in path:
-            continue  # Library/unity default resources and other built-ins live in no bundle
-        cab = 'cab-' + path.split('/CAB-', 1)[1].split('/')[0].lower()
-        rel = cabs.get(cab)
-        if not rel:
-            continue  # a bundle this install does not carry (e.g. a stripped shader)
-        fp = Path(ab_root) / rel
-        if not fp.exists():
-            continue
-        try:
-            env.load_file(str(fp))
-            loaded.append((cab, rel))
-        except Exception as e:  # a missing/broken dependency only leaves its textures unresolved
-            log(f'  warn dependency {rel}: {e}')
-    return loaded
+def _normal_z_table():
+    """Z byte of a unit normal for every (x byte, y byte) pair: 128 + 127·sqrt(max(0, 1 − x² − y²))."""
+    global _NORMAL_Z
+    if _NORMAL_Z is None:
+        t = bytearray(65536)
+        for xb in range(256):
+            x = xb / 127.5 - 1.0
+            for yb in range(256):
+                y = yb / 127.5 - 1.0
+                z = max(0.0, 1.0 - x * x - y * y) ** 0.5
+                t[(xb << 8) | yb] = min(255, int(round(127.5 + 127.5 * z)))
+        _NORMAL_Z = bytes(t)
+    return _NORMAL_Z
 
 
 def derive_normal_rg(img):
@@ -573,49 +446,16 @@ def derive_normal_rg(img):
     return Image.merge('RGB', (x, g, Image.frombytes('L', img.size, z)))
 
 
-def export_external_textures(objects, mat_re, out_dir, sub, manifest, seen, log):
-    """The `_MainTex` of a job's materials matching `mat_re` whose texture lives in a DEPENDENCY bundle
-    (`m_FileID != 0`): the operator art the bundle itself does not carry (e.g. the funnel drone's char_gdglow_04).
-    Only `_MainTex` is taken, so a shared `_RamTex` / `_DissolveTex` never leaks a whole shared bundle into the group."""
-    n = 0
-    for obj in objects:
-        if obj.type.name != 'Material':
-            continue
-        name = ''
-        try:
-            data = obj.read()
-            name = getattr(data, 'm_Name', '') or ''
-            if not mat_re.search(name):
-                continue
-            props = getattr(data, 'm_SavedProperties', None)
-            for key, envv in (getattr(props, 'm_TexEnvs', None) or []):
-                if key != '_MainTex':
-                    continue
-                t = envv.m_Texture
-                if not getattr(t, 'm_FileID', 0):
-                    continue  # the bundle's own texture: the Texture2D pass exports it
-                td = t.read()
-                tname = safe_name(getattr(td, 'm_Name', '') or '')
-                if not tname or f'{tname}.png' in seen:
-                    continue
-                img = td.image
-                if img is None or img.width < 2 or img.height < 2:
-                    continue
-                fname = f'{tname}.png'
-                img.save(out_dir / fname)
-                seen.add(fname)
-                manifest.setdefault(sub, {})[tname] = {
-                    'path': f'/assets/local/{sub}/{fname}', 'w': img.width, 'h': img.height, 'kind': 'Texture2D',
-                    'external': key, 'material': name}
-                n += 1
-        except Exception as e:
-            log(f'  warn external {name}: {e}')
-    return n
+def derive_rough_from_gloss(img):
+    """three.js roughness / metalness map (G = 1 − smoothness from Unity's A, B = metalness 0, R = 1) from a
+    Unity metallic/gloss map."""
+    from PIL import Image
+    rgba = img.convert('RGBA')
+    rough = rgba.getchannel('A').point(lambda v: 255 - v)
+    return Image.merge('RGB', (Image.new('L', rgba.size, 255), rough, Image.new('L', rgba.size, 0)))
 
 
-# The derived-map recipe (BC5/DXT5nm normal → RGB, metallic/gloss → roughness) lives in derived.py so scenes.py
-# reuses it for a scene material's own maps; re-exported here for the DERIVED table and the tests.
-from derived import DERIVERS, derive_normal_rg, derive_rough_from_gloss  # noqa: E402,F401
+DERIVERS = {'normal_rg': derive_normal_rg, 'rough_from_gloss': derive_rough_from_gloss}
 
 
 def run_derived(out_root, sub, manifest, log):
@@ -690,6 +530,15 @@ def webp_only(out_root, manifest_path, log):
     return 0 if n else 1
 
 
+def ran_groups(old_groups, new_groups, fx_ran=False):
+    """The groups a run replaces: the ones it wrote, and after an fx run the fx / fx/* groups an earlier fx run left in
+    the manifest (the fx files have their own list, data/local-fx.json, since 0.3.0's Phase 1b — DESIGN §33.1)."""
+    ran = set(new_groups)
+    if fx_ran:
+        ran |= {g for g in (old_groups or {}) if g == fx.FX_SUB or g.startswith(fx.FX_SUB + '/')}
+    return ran
+
+
 def merge_manifest(old_groups, new_groups, ran_subs):
     """Groups of the previous manifest minus the subdirs that were re-extracted, plus the new ones (sorted keys)."""
     out = {g: v for g, v in (old_groups or {}).items() if g not in ran_subs}
@@ -697,7 +546,7 @@ def merge_manifest(old_groups, new_groups, ran_subs):
     return {g: dict(sorted(out[g].items())) for g in sorted(out)}
 
 
-def export_bundle(ab_root, job, out_root, manifest, log, rebuild_cabs=False):
+def export_bundle(ab_root, job, out_root, manifest, log):
     import aklz4  # noqa: F401  (registers the LZ4AK decoder)
     import UnityPy
     rel, sub, kinds, keep = job_parts(job)
@@ -716,13 +565,6 @@ def export_bundle(ab_root, job, out_root, manifest, log, rebuild_cabs=False):
             env.load_file(str(dep))
         except Exception as e:  # a missing shader only leaves that material's shader name null
             log(f'  warn dependency {dep.name}: {e}')
-    # A bundle references art in other bundles by CAB name (`m_Dependencies`); load those before reading the job's
-    # materials so their external `_MainTex` resolves (EXTERNAL_MATERIALS, e.g. the funnel drone of 澄闪).
-    ext_re = EXTERNAL_MATERIALS.get(sub)
-    if ext_re:
-        cabs = cab_index(ab_root, log, rebuild=rebuild_cabs)
-        loaded = load_dependencies(env, ab_root, cabs, log)
-        log(f'  external CABs: {", ".join(rel for _, rel in loaded) or "none resolved"}')
     out_dir = out_root / sub
     out_dir.mkdir(parents=True, exist_ok=True)
     seen, n = set(), 0
@@ -781,11 +623,6 @@ def export_bundle(ab_root, job, out_root, manifest, log, rebuild_cabs=False):
                 gos.append(data)  # summarised after every mesh got its manifest key
         except Exception as e:
             log(f'  warn {rel} #{obj.path_id}: {e}')
-    if ext_re:  # the art the bundle references in a shared external CAB (EXTERNAL_MATERIALS)
-        k = export_external_textures(objects, ext_re, out_dir, sub, manifest, seen, log)
-        if k:
-            log(f'  {k} external texture(s) -> {sub}')
-        n += k
     for go in gos:
         try:
             prefab.append(prefab_node(go, mesh_keys))
@@ -1069,14 +906,10 @@ def main():
     ap.add_argument('--webp', action='store_true',
                     help='only write the WebP copies of the board textures and the guide pages from the PNGs already '
                          'under --out and list them in the manifest (needs Pillow, not the client)')
-    ap.add_argument('--rebuild-cab-index', action='store_true',
-                    help='rescan the AB tree for the CAB → bundle map (EXTERNAL_MATERIALS jobs) instead of using the '
-                         'cached var/cab-index-*.json (use after a client update)')
     args = ap.parse_args()
 
     if args.print_jobs:
-        jobs = [{'bundle': rel, 'sub': sub, 'kinds': sorted(kinds), 'keep': keep.pattern if keep else None,
-                 'external': EXTERNAL_MATERIALS[sub].pattern if sub in EXTERNAL_MATERIALS else None}
+        jobs = [{'bundle': rel, 'sub': sub, 'kinds': sorted(kinds), 'keep': keep.pattern if keep else None}
                 for rel, sub, kinds, keep in map(job_parts, JOBS)]
         derived = [{'sub': sub, 'from': src, 'derive': kind, 'name': name} for sub, src, kind, name in DERIVED]
         webp = [{'sub': sub, 'name': name, 'mode': mode} for sub, name, mode in WEBP]
@@ -1086,7 +919,8 @@ def main():
                                         'options': GUIDE_WEBP_OPTIONS[GUIDE_WEBP_MODE]},
                           'enemySpines': {'bundles': ENEMY_ART, 'sub': ENEMY_SPINE_SUB, 'ids': ENEMY_SPINES},
                           'tokenSpines': {'bundles': TOKEN_PACKS, 'sub': TOKEN_SPINE_SUB, 'ids': TOKEN_SPINES},
-                          'fx': {'sub': fx.FX_SUB, 'version': fx.FORMAT_VERSION, 'optIn': True,
+                          'fx': {'sub': fx.FX_SUB, 'version': fx.FORMAT_VERSION, 'indexVersion': fx.INDEX_VERSION,
+                                 'meshVersion': fx.MESH_VERSION, 'optIn': True,
                                  'sample': {'keys': fx.FX_SAMPLE_KEYS, 'units': fx.FX_SAMPLE_UNITS,
                                             'coverage': fx.FX_COVERAGE_KEYS}},
                           'scenes': {'sub': scenes.SCENE_SUB, 'tex': scenes.TEX_SUB,
@@ -1114,15 +948,16 @@ def main():
     manifest, total = {}, 0
     print(f'AB root: {ab_root}')
     for job in jobs:
-        total += export_bundle(ab_root, job, out_root, manifest, print, args.rebuild_cab_index)
+        total += export_bundle(ab_root, job, out_root, manifest, print)
     if enemy_ids:
         total += export_enemy_spines(ab_root, out_root, manifest, print, enemy_ids)
     if token_ids:
         total += export_token_spines(ab_root, out_root, manifest, print, token_ids)
     if fx_on:
-        keys = [k.strip() for k in args.fx_keys.split(',') if k.strip()]
+        keys = [k.strip().lower() for k in args.fx_keys.split(',') if k.strip()]
         total += fx.export_fx(ab_root, out_root, manifest, print, selection=args.fx_set, keys=keys or None,
-                              jobs=args.fx_jobs or None, root=ROOT)
+                              jobs=args.fx_jobs or None, root=ROOT,
+                              fx_manifest=Path(args.manifest).with_name(fx.FX_MANIFEST))
     if stage_ids:
         total += export_scenes(ab_root, out_root, manifest, print, stage_ids, scene_roots(ab_root, args.scenes))
     old = {}
@@ -1131,7 +966,7 @@ def main():
             old = json.loads(Path(args.manifest).read_text(encoding='utf-8')).get('groups') or {}
         except (OSError, ValueError) as e:
             print(f'warn: previous manifest unreadable ({e}); writing only the re-extracted groups', file=sys.stderr)
-    groups = merge_manifest(old, manifest, set(manifest))  # a missing bundle keeps its previous group
+    groups = merge_manifest(old, manifest, ran_groups(old, manifest, fx_on))  # a missing bundle keeps its previous group
     count = sum(len(v) for v in groups.values())
     doc = {'version': 1, 'source': 'local-client', 'count': count, 'groups': groups}
     Path(args.manifest).write_text(json.dumps(doc, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
