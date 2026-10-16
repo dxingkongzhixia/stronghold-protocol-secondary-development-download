@@ -241,3 +241,24 @@ Each domain file `server/sim/content/{tokens,bonds,garrisons,items,bands,enemies
 蕾缪安's wanted tiles extend both attacks and the existing content skill-trigger range (§28.4). New detection
 requires selectability; an attached timer needs continuous detection range, and each on-field source owns its timers
 and marks. Leaving clears that source's state without clearing another still-deployed source's marks.
+### Enemy passengers (§32.14.4, #564)
+
+伊利昂的木驮兽 / “越长尘” load up to 5 / 4 non-leader, non-machine ground enemy units within 0.5 tiles
+(PRTS 载客半径; ordinary and elite enemies of any faction and mass qualify). Hidden enemies cannot board. A carrier
+cannot pick up while hidden, unbalanced, stunned, frozen, sleeping or levitated. Silence does not stop it.
+Passengers disappear (existing `hidden`: omitted from the snapshot, skipped by targeting), retain their identity,
+HP and bounty, and stop moving, attacking and running their enemy-kit tick. They are pinned to the carrier so they
+do not stay on the boarding tile. [ASSUMED] While hidden they also take no new damage (`damage.js` returns 0).
+Removal (kill or leak, both `death`) unloads surviving passengers; they then walk and settle on their own. Timeout
+does not unload them: each living unit is counted once.
+The camel loses 20% movement speed per passenger, added in one `moveMul` (`max(0, 1 + n · bus.move_speed)`), then
+an absolute 0.1 floor (`unit.mem.moveSpeedFloor`, after every other modifier). It unloads inside a 0.4-side square
+at its position, drawing x then y from the battle RNG in boarding order, and gives each passenger an independent
+copy of its remaining route. “越长尘” unloads at the centre of its tile and draws nothing.
+Both skip a current wait checkpoint on unloading. [ASSUMED] That skip, the spawn-order priority when seats run
+out, and “越长尘” keeping each passenger's own remaining route (PRTS names a replacement only for the camel).
+[ASSUMED] Stun, freeze, sleep, 浮空, 失衡 and fear on the passenger do not block boarding.
+`bus.half_cnt` is the PRTS model threshold (≥2, and at the cap). No snapshot field selects a Spine skin, so it is
+not applied. No shipped stage has 云梯, so “越长尘” does not unload early and does not permanently lose pickup;
+no substitute tile is used. `enemy_10159_mntrjn_2` is not this kit.
+
