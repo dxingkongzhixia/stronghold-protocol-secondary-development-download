@@ -984,7 +984,7 @@ docs guards 34 pass / 0 fail.
 
 - **真缺陷**：官方 prefab 里「`PassiveBuffAbility` 的循环跟着它建的 buff 走」，而我们的提取看不见结束那个 buff 的脚本，于是这些模板都是 `life: { type: 'INFINITY' }` —— 循环会一直播到干员倒下。运行时本来有一道「护盾破了就停」的闸（`talentfx._inForce`：`U.broken && /shield|barrier/i.test(b.key)`），但它测的是 **binding 的 key**，在真实索引里那是**天赋下标**（空弦是 `'2'`）或能力名（卡涅利安是 `'Default'`），于是这道闸对干员**从不生效**（它其实是给敌人的 `Shield` 天赋写的）。**空弦的护盾特效因此在护盾被吃掉后仍然一直显示** —— 这才是「没护盾了还有护盾动画」的真身。sim 侧的信号是齐的：吃完那次伤害会发 `['status', id, 'talent:archet_shield', 0]` + `['fx','shieldBreak',…]`（本机实测）。
 - **修**：新增一张显式小表 `talents.js` **`LOOP_BUFF_BOUND`**（单位 → binding key → sim 的 buff/状态名），binding 上带 `follow`；`talentfx.status(v,key,on)` 记录 sim 的状态事件，`_inForce` 见到 `follow` 且该状态报过就以它为准（循环跟着 buff 起落；没报过的回放视图仍走「站着就播」的官方规则，不回归）。表里目前只有空弦这一条（名册里唯一「可消耗护盾 + 官方循环」的组合）。`test/render/vfx-buff-layers.test.js` + `test/render/vfx-skills.test.js`（对真索引的 pin）各加一条。
-- **留给 owner 的判断**：卡涅利安那条是**官方行为**（特性守卫，技能关着才播），本次**没有**改；如果你要的是「部署时不要看到它」，那是背离官方数据的自选外观，说一声再改。另外空弦部署时 sim 还会多发一次自研的 `fx('shield')`（官方客户端只播天赋循环），要不要一并压掉也等你定。
+- **owner 决定（2026-10-16）**：卡涅利安与空弦这两条**保持现状，不管了**（卡涅利安是官方行为——阵法术师特性守卫，技能关着才播；空弦部署时 sim 多发的那次自研 `fx('shield')` 也不动）。**别再"顺手修"这两处**；要改必须由 owner 重新点名。
 
 ### 1. 症状（owner 实测，本机 `localhost:3000/dev/fx-viewer.html` 可复现）
 
