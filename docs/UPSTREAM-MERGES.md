@@ -899,6 +899,31 @@ docs guards 34 pass / 0 fail.
 - `72ebd9f3` 的**另一半仍然不并**：共享库存欠账（#624，`itemPool.debt`、`player/acquire|economy|items|prep`、`invariants.js`、`test/match/shared-stock.test.js`）—— 那是 §0「上游道具牌库把白给装备也卡库存」的正题，我们按**方案 A** 自行处理（已显示的卡不再因共享库存耗尽而拒绝）。
 - 提醒：`b0adce4f` 里 `test/local-extract.test.js` 的两处期望属于 **`33bf08d0`（射击台用官方模型）**，我们不并它；已把那两处退回，等 `33bf08d0` 自己那一轮一并进来。
 
+### 官方战斗特效（`ffd6d250` 一带，2026-10-16，分支 `fx-official`）
+
+**目标（owner 2026-10-16）**：并上游 0.3.0 的官方战斗特效（`tools/local-extract/fx.py` + `public/js/render/vfx/**` + 设置「官方特效」），**把我们自研的双层特效降为兜底**，不是二选一。
+
+**已落地（分支 `fx-official`，master 不受影响）**：
+
+1. **设计文档 §32 + §33 一并携带**（`3cc1a732`）：按 owner 决定开始携带 `docs/history/0.3.0.md`（我们的 §32）；`docs/design/vfx-format.md`（§33）随之落地 —— §32 的正文自己就引用 §33，两者必须同时。`test/docs-paths.test.js` 里我先前加的 `ABSENT` 豁免表**已撤掉**，守卫恢复满强度。
+2. **提取器**（`a6be3f02` → `74d0c116`）：`fx.py` + `extract.py --only fx --fx-set used` ✓，后一条把它**追平到上游 HEAD**（清单拆成 `data/local-fx.json` ✓、`index.json` v3 ✓、四个骨骼影响 ✓）。**第一代（Phase 1a）会把清单写进 `local-assets.json` 而不写 `local-fx.json`，与稍后的运行时对不上** —— 这是升级的原因。
+3. **运行时**：`public/js/render/vfx/**` 26 个文件 / 625 KB + 19 个 vfx 测试 + `tools/vfx-skill-coverage.mjs`，**整取上游 HEAD**（`8e543cfb`）。好消息：`vfx/` 自身**自洽**（不 import 我们的模块，是别人 import 它）。
+4. **sim 侧管道**（`78eed2bc` + golden `c2d0aa36`）：`castSlot` / `cast` 事件、`layerView`/`chargeView` 进快照、`bubble`/`billro` 的 fx 载荷字段。**变化横跨两文件/多文件时单独退一个无效** ✓；这次改动让 golden 漂移，已**先归因**（只退 `server/sim` → 摘要**零漂移** ✓）再**单独重算** ✓。
+5. **设置模型**（`d175e8aa`）：`officialFx`（auto/off/lite/full）+ `OFFICIAL_FX_MODES`，与我们**只保留日/中语音**的设置并存。
+6. **`fx/numbers.js`**（`77a84592`）：加上游的 `o.noSpark`（官方特效画了这次打击时不再画火光/斩击）—— **但保住**我们自研干员手绘的身位打击（`render/fx/hits.js`，OUR-FEATURES §2）。
+7. **服务端**（`a3c204bc`）：`data/local-fx.json` 作为**独立清单**分发（`VIEW_MANIFESTS` + `UNLOADED_DATA` + 缺文件时回空清单、永不 404 ✓）。
+
+**素材（本机实测）**：`--only fx --fx-set used` → **3,565 prefabs / 3,143 textures / 1,113 meshes / 12,659 个文件 / 231.5 MB / 244 秒** ✓。上游**自己也把 fx 素材放进仓库**（只忽略 per-machine 的 `data/local-fx.json` ✓），中继是裸仓库、push 即部署 ✓ ⇒ 「先推中继」= 素材进 git ✓。少数 trail prefab 报 `AttributeError`（上游提取器的毛病，非致命）。
+
+**方法学（重要，已两次踩中）**：
+- **不要整取上游文件、也不要用 `git apply --3way` 整块应用** —— 上游的 hunk 里混着与特效无关的改动，还有**删掉我们自研功能**的地方 ✗。实测：`server/http/static.js` 用 `--3way` 把**整个插件系统（DESIGN §32）**的文档带进来（那个系统我们根本没并、模块还删了）✗，只能回退手改。
+- **可靠做法**：`git diff HEAD <上游> -- 文件`（正向）→ 关键词过滤只留特效 hunk → 逐条人工确认 → 应用。工具留在临时目录（`_fxapply.py`，含 `--check` 预演）。**混合 hunk（上游删我们东西的）必须手改** ✓。
+- **提取器测试要跑在仓库自己的 `.venv` 里**（`fx.py` 里那段 helper 用了 Python 3.12 的 f-string 语法；系统 `python` 是 3.8 ✗）—— 两个提取器测试已改成优先用 `.venv/Scripts/python.exe` ✓。
+
+**待办（下一步）**：客户端接线 4 件 —— `public/js/render/app.js`（**评审过：56 hunk / 25 像 fx，且混着我们自己的 `projSpeed`、`mysticEnergy` 等 ⇒ 必须逐 hunk 手并** ✗）、`units.js`、`spine.js`、`ui/settings.js`（设置界面）+ i18n 的「官方特效」词条；然后全量套件转绿 → **合并回 master** ✓ → 先推中继 ✓ → 再 gitee/github。
+
+
+
 ### 设计文档：§32 与 §33 一并落地（2026-10-16）
 
 - 上游把 0.3.0 的修订史写成 `docs/history/0.3.0.md`（**§32**）、把官方特效的格式写成 `docs/design/vfx-format.md`（**§33**）。我们此前删掉 0.3.0.md ✗，于是合并内容里成千条 `§32.14.*` / `§33.*` 引用全部悬空，守卫只能靠豁免兜 ✗。
