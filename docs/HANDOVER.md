@@ -373,14 +373,34 @@ Key structural facts:
   `dollkeeper`, `skywalker`, `traper` (+ `wangStone`), `funnel`, `loopshooter`, `watchman`, `primguard` —
   see [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §6.
 
-### The battle-FX system: two tiers, an allow-list, and a kill switch
-Every battle-fx **kind** has **two tiers**, resolved **per client at render time**
-([`docs/ASSETS.md`](ASSETS.md) "Battle effects", [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.1):
+### The battle-FX system: the official-effects runtime, then the two-tier fallback
 
-1. **Procedural tier — mandatory.** `public/js/render/fx/kinds.js` `FX_KINDS` (`a` + `c` + `r`) draws it at
+Three layers, resolved **per client at render time** ([`docs/ASSETS.md`](ASSETS.md) "Battle effects",
+[`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.1; the upstream design: [`docs/history/0.3.0.md`](history/0.3.0.md) §32 +
+[`docs/design/vfx-format.md`](design/vfx-format.md) §33):
+
+1. **Official battle effects — the primary path (upstream 0.3.0, in `master` since 2026-10-16).**
+   `public/js/render/vfx/**` replays the official client's own effect **prefabs** (particle systems, materials,
+   animators) for a unit's attacks, skills, talents, funnels, mount points and status loops. Its data is the fx
+   extraction (`tools/local-extract/extract.py --only fx --fx-set used` → the per-machine `data/local-fx.json` +
+   the committed art under `public/assets/local/fx/**`, index v3). Details that had to be right:
+   a shot leaves the **muzzle bone at the attack clip's OnAttack frame** (`SpineActor.strikePose`), a
+   projectile's `AdvancedMovement.comeBack` flies it back home (the 回环射手's recovery animation), and a
+   talent's shield loop ends with the buff the sim reports (`TalentFx.status` + `talents.js` `LOOP_BUFF_BOUND`).
+   - **Setting:** 官方特效 `auto | off | lite | full` (`settings.officialFx`, `OFFICIAL_FX_MODES`), shown only
+     when this client has the fx manifest. Turned off, or without an extraction, the client lays nothing new
+     out — the tiers below carry the battle as before.
+   - **See it:** `public/dev/fx-viewer.html` — `?key=<prefab>`, `?attack=<opId>` (the wiring demo: casts,
+     projectile, hits), `?skilldemo=<opId>&s=<slot>`. It draws the unit's Spine **with live bones** so an
+     effect can be judged against the weapon; `&model=0` draws without the model (the headless browser suites
+     pass it, and pin the static mount point).
+   - **Deploy:** the fx art is committed, `data/local-fx.json` is **per-machine** and gitignored — a machine
+     without it serves an empty fx list and the client falls back to the tiers below (extract there, or copy
+     that file; [`docs/DEPLOY.md`](DEPLOY.md) / [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0).
+2. **Procedural tier — mandatory fallback.** `public/js/render/fx/kinds.js` `FX_KINDS` (`a` + `c` + `r`) draws it at
    run time from the FX atlas. It is offline, needs no client, and is what a client without any local art
    sees. **Every kind must have one; a `local`-only kind is a bug.**
-2. **Optional local-art tier.** A kind's `local` spec (`{ group, layers: [{ name, scale? }], tint?, dur? }`,
+3. **Optional local-art tier (the fork's softer tier).** A kind's `local` spec (`{ group, layers: [{ name, scale? }], tint?, dur? }`,
    plus `bySkill` / `byOp` attribution) names official pictures in the local manifest;
    `public/js/render/fx/localart.js` resolves them and `simfx.js` draws them **only when the client lists
    every layer AND has loaded it**; otherwise the procedural tier is drawn. A listed-but-loading layer is
@@ -544,6 +564,9 @@ taken while they were still untracked):
 | **Item stock #488** | a free `<获得时>` / strategy grant is **not** a shop purchase: our `acquireItem` has **no** `itemPool` check. If a future merge brings the upstream shared card pool, forward `requirePool` through `grantItem` → `acquireItem` and pass `requirePool: false` at the grant sites. `grep -rn "itemPool\|canGain" server` must stay empty. |
 | **Banned-bond rule** | `config.modes[*].inactiveBondIds` only stops a bond being **offered** (pool / strategy draft / bots). A banned bond whose members still reach its threshold is **active and takes effect**; below threshold it stays inert and shows the grey 本局禁用 disc. (`drawnDisabledBonds` is a different, per-match draw.) |
 | **FX caps** | official-effect pictures only on AREA/SELF kinds, allow-listed families only, no flipbook/sheet, every layer size-capped to ≈ one body (`LOCAL_FX_MAX_R` = 1.1 tiles). See §6. |
+| **官方特效的 per-machine 清单** | the official-effects runtime reads `data/local-fx.json` (**per-machine, gitignored**) + the committed `public/assets/local/fx/**`. A machine without that file serves an **empty** fx list: the client silently keeps the fallback tiers (no error, no blank frame), so "特效没了" on one box is usually this, not code. Extract there (`tools/local-extract/extract.py --only fx --fx-set used`) or copy the file — see [`docs/DEPLOY.md`](DEPLOY.md). |
+| **`data/local-assets.json` is a union, and the tests read it directly** | the served manifest is **committed ∪ per-machine** (`server/http/static.js`), so a partial per-machine file loses only the art it alone carries (on the laptop: the extracted scenes) — but the *tests* read that file **directly** and go red (`test/render/board3d-scene.test.js`, the token canary `test/render/token-wang-stone.test.js:48`). Add missing groups with the extractor (it merges); **never** point `tools/local-extract/committed-manifest.mjs` at it (its key rule folds `scene.json` + `scene.bin` onto one key and a scene loses its JSON). [`docs/ASSETS.md`](ASSETS.md) "The committed manifest and the served manifests". |
+| **A merged hunk can reference what it did not bring** | mounting an upstream file hunk-by-hunk has twice kept a *use* while dropping its *definition*: `app.js` `NO_SPARK` (2 eslint errors) and `spine.js` `SpineActor.strikePose` (the strike-frame read silently fell back to the drawn pose — a stub in one test hid it). After mounting any upstream file, run `npx eslint .` + `npm run typecheck` **and** diff the file's *symbols* against upstream, not just its hunks. [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0. |
 | **Stats 2× caps** | the server-side statistics caps are **2×** the mainline's (`STATS_MAX_RECORDS` / `STATS_FULL_KEEP` / `STATS_MAX_CHARS` in `shared/constants.js`). Change them in one place and keep the client in step. |
 | **Merged-chunk self-shadowing limitation** | on the official 3D board, the ground (tiles + gentle dunes) is merged per material + lightmap page into one mesh, and it **does not cast a real-time shadow into itself** — its shading is baked in the lightmap's shadowmask. Only the split-out **props** (rocks, crates, cacti, grass; `load.js splitSceneProps`) cast real shadows. ([`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §8.2) |
 | **Off-season client & scene bundles** | the official scenes only ship while the season is open; an off-season client has no `scenes/activities/act1autochess` bundles. Fetch them from the official CDN (`fetch_scenes.py`) and keep the materials/textures from the client. |

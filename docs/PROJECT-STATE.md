@@ -1,7 +1,7 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-14**（数值为本地实测，见 §3）。
-> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§47）。
+> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-16 夜**（数值为**笔记本单树**本地实测；台式机的数字另见 §3 / §9）。
+> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§49；**§49 = 2026-10-16 特效批次总览**）。
 > 接手入口见 [`docs/HANDOVER.md`](HANDOVER.md)；按问题查文档见 [`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
 
 ---
@@ -40,17 +40,17 @@
 
 > ⚠️ store 里的 `.cache` / `public/assets` / `public/fonts` / `public/vendor` 是**指向工作项目的 junction**，约 600 MB 美术只有一份。**别单独删工作项目**，也别把 store 的 `public/assets` 当副本删掉。
 
-## 3. 当前状态（2026-10-14 本地实测）
+## 3. 当前状态（2026-10-16 夜 · 笔记本单树实测）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致） |
-| git store | `_merge-scratch`，分支 `ours`（tip 每次提交都在变，用 `git -C D:\DOTK\_merge-scratch rev-parse --short HEAD` 查）；工作项目与 store HEAD **零跟踪漂移** |
-| 远程同步 | `github/master` == `gitee/master` == HEAD `2618bfce`（v0.2.6 整支合并 + 素材中继 / 镜像链 + 3D 场景与高台修复 + 工具与文档；2026-10-15 追加**按实测速度选源**、中继带宽事件与**中继缓存头口径**，以及笔记本那台的**运维控制台（六视图）/ 测速页 / 单一源文件**，全部已发布）；主线 `origin/master` = `488db49f`（已整支并入） |
-| 全量测试 | `node --test --test-concurrency=2`：**6674 项 / 6659 通过 / 0 失败 / 15 跳过**（约 607 s，台式机 store，2026-10-15 实测；笔记本的数字见 §9） |
-| 其它闸门 | `build-data --offline` 数据零漂移；`kit-coverage` 307/307 技能、120/120 棋子；`i18n check en --strict` 1455/1455（100%）；`doctor` 退出码 0；`eslint` 0 error（148 warning）；`npm run typecheck` / `check:imports` 通过 |
-| 本机环境 | Node **v24.19.0** |
-| 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build） |
+| 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致；0.4.0 一节仍在累加未发布的改动） |
+| git store | 笔记本 = **本检出**（分支 `master`，HEAD `df3b1897`）；台式机 = `_merge-scratch`（分支 `ours`），工作项目与 store HEAD **零跟踪漂移** |
+| 远程同步 | **本机 `master` 领先 `github/master` 15 个提交、领先 `gitee/master` 13 个**（2026-10-16 的官方特效还原度修正 / 望 S3 跟子 / 文档梳理，**未推送**）；远程上次同步点 `github/master = 6cc99417`（0.3.0 官方特效那一批，**已上线**）；主线 `origin/master` = `76700abe`（`check-upstream` 实测：主线未动，我们领先 566） |
+| 全量测试 | **本机 `node --test`：7081 项 / 7060 通过 / 3 失败 / 18 跳过**（2026-10-16 夜，笔记本；3 个失败全是既有环境项：`test/lobby.test.js` 的两条限速桶计时 + `test/sim/robustness.test.js:739` 的重装 boss 性能阈值 —— 都只在满负载并发下红）。台式机 store 上一次实测：6674 / 6659 / 0 失败 / 15 跳过（2026-10-15） |
+| 其它闸门 | **2026-10-16 夜实测（笔记本）**：`kit-coverage --missing` 307/307 技能 + 120/120 棋子 ✓；`i18n check en --strict` 1475/1475（100%，0 missing / 0 errors）✓；`doctor` 退出码 0 ✓；`eslint .` **0 error**（153 warning）✓；`npm run typecheck` ✓；`check:imports` ✓（3 条允许的 note）；`golden` ✓（望 S3 改动已归因 + 重新生成）；`check-upstream --no-fetch` ✓（主线未动）；docs 守卫 34/34 ✓。**跑不了的两项都是本机没外网**（本机代理 `127.0.0.1:31181` 没起）：`build-data --offline`（缓存还缺 6 张官方表，`--refresh` 也 `fetch failed`；`data/` 未被改动 ✓）与 `check-delivery --live` |
+| 本机环境 | Node **v24.18.1**；本机（笔记本）**今天没有外网**：GitHub 推送 / 官方数据 CDN / 中继都不通，需要时先把代理起起来 |
+| 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
 
 ## 4. 线上
 
@@ -166,15 +166,15 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 - **全量测试 `node --test`**：**两台机器的实测不同**（计数随机器、是否有本机素材、负载变化）：
   - **台式机（`D:\DOTK` 双树，本仓库 store）**：**6658 项 / 6643 通过 / 0 失败 / 15 跳过**（`--test-concurrency=2`，约 495 s，2026-10-14 实测）。
-  - **笔记本（`masai` 单树）**：6654 项 / 6624 通过 / **4 失败** / 26 跳过。那 4 个失败**均非代码缺陷**、且与最近改动无关：
-    `test/asset-index.test.js:58`（同秒内改文件的 mtime 粒度）与 `test/lobby.test.js:560/:578`（限速桶计时）只在**满负载并发**下失败、**单跑全绿**；
-    `test/render/token-wang-stone.test.js:48` 是该机的 `data/local-assets.json` 缺该 token 模型（环境）。**要领判定门禁就单跑**
-    （`node --test --test-concurrency=1`），或直接看上面台式机的结果（0 失败）。
+  - **笔记本（`masai` 单树，2026-10-16 夜）**：**7081 项 / 7060 通过 / 3 失败 / 18 跳过**。3 个失败**均非代码缺陷**、且与最近改动无关：`test/lobby.test.js:560/:578`（限速桶计时）与 `test/sim/robustness.test.js:739`（重装 boss 性能阈值）只在**满负载并发**下失败、**单跑全绿**。**要领判定门禁就单跑**（`node --test --test-concurrency=1`），或直接看台式机的结果（0 失败）。
+  - 曾经的第 4 个失败 `test/render/token-wang-stone.test.js:48`（望的棋子模型）**已转绿**：那是该机 `data/local-assets.json`（per-machine）缺 `spine/token/*`，补回 41 个 spine 组即可；注意**服务端清单是 committed ∪ per-machine 的并集**，所以客户端其实一直能画官方棋子模型（详见 `docs/ASSETS.md`）。
+  - **本机跑不了的两个门禁**（2026-10-16 夜）：① `node tools/build-data.mjs --offline` —— 本机 `.cache/gamedata` 缺 6 张官方表（含 `skill_table.json`），而本机**没有外网**（`--refresh` 也 `fetch failed`），所以「数据零漂移」这条在笔记本上暂时**无法验证**（台式机 store 上正常）；② `node tools/check-delivery.mjs --live` —— 需要外网。`check-upstream.mjs` 用 `--no-fetch` 可跑（实测：主线未动）。
 - **github 推送** 依赖本机代理 `127.0.0.1:31181`；代理没起时 gitee 与中转机不受影响。
 - **中转机 root 密码** 曾用于开通，建议在阿里云面板重置（已装部署密钥 `~/.ssh/sp-deploy`，日常不需要密码）。
 - **充能型技能的层数未上界面**：数据里 66 个技能 `maxChargeTime > 1`，模拟算出了层数，但 `snapshot.js` 没有 `charges`、显示层也没读它 —— 这些干员的技能条只显示技力、看不到已储存层数（修法见 `docs/ASSETS.md`/待办）。
 - **冷启动页面字节**（`public/js` + `data`，约 4–6 MB）仍由游戏机提供且不限速 —— 游戏机上目前唯一的带宽大头。
 
+- [ ] **推送 / 上线今天的特效收尾**（15 个提交：官方特效的还原度修正、望 S3 每次 3 枚跟子、文档梳理）—— **等 owner 发话**（默认「先不上线」；这批没有美术文件，推送不必先走美术中继）。见 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §49。
 - [ ] **`SP_VERIFY` 在 Linux 上没开**（线上不抽检战斗结果）。要开：在宝塔的 `server.sh` 加 `export SP_VERIFY=sample`（面板重建脚本会覆盖，注意）。
 - [ ] **首屏带宽**：新访客仍要下 ~104 MB 美术（scope `all`）+ 12 MB 视频。可选：降到 `ui`（−30 MB）、或把 `public/assets` 迁 CDN / OSS。
 - [ ] **观战席可见范围**：目前房间里所有人都能看到那个下拉；可改成「仅观战者可见」。

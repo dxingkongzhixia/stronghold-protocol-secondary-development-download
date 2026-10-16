@@ -75,7 +75,9 @@ methods in a folder, installed on the prototype in a fixed order (a method name 
 `server/sim/Battle.js` with `server/sim/battle/`, `server/match/Match.js` with `server/match/match/`, and
 `server/match/PlayerState.js` with `server/match/player/`. Two client modules became barrels that re-export a folder,
 so old imports keep working: `public/js/ui/gameLogic.js` (`public/js/ui/gameLogic/`) and `public/js/render/fx.js`
-(`public/js/render/fx/`). DESIGN §2 lists every file.
+(`public/js/render/fx/`). The official battle-effects runtime (`public/js/render/vfx/**`, upstream 0.3.0) sits beside
+them and is what draws a unit's attacks / skills when the client has the fx extraction — see
+[`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.1. DESIGN §2 lists every file.
 
 ### Server and shared code
 
@@ -196,7 +198,7 @@ public/assets/ ─────────▶ public/js/render/, public/js/audio
 | a new client message | `shared/protocol.js` (`C2S`), then `server/match/match/intents.js` (or `server/lobby.js` for `room.*`) | DESIGN §8 |
 | data from the official tables | `tools/build-data.mjs` | rebuild `--offline`, JSON compare, DATA.md, golden |
 | a screen or a HUD panel | `public/js/screens/`, `public/js/ui/`; pure logic in `public/js/ui/gameLogic/` | `test/ui/` |
-| battle visuals | `public/js/render/fx/kinds.js`, `public/js/render/units.js`, `public/js/render/spine.js` | `test/render/` |
+| battle visuals | `public/js/render/vfx/**` (the official effects runtime), `public/js/render/fx/kinds.js`, `public/js/render/units.js`, `public/js/render/spine.js` | `test/render/` |
 | a UI text | `t('…')` in the code, the English in `public/i18n/en.json` | I18N.md |
 | a language | `public/i18n/<code>.json` (`node tools/i18n.mjs template <code>`), no code | I18N.md "Adding a language", PACKS.md |
 | HTTP, headers, static routes | `server/http/` | `test/version.test.js`, `test/client-static.test.js` |

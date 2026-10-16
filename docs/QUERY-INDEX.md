@@ -38,7 +38,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 | shared constants + wire contract | `shared/constants.js` (incl. `APP_VERSION`), `shared/protocol.js`, `shared/stats.js` |
 | browser client (screens) | `public/js/main.js`, `public/js/store.js`, `public/js/screens/` |
 | browser UI widgets | `public/js/ui/` |
-| 2D (PixiJS) + 3D (three.js) rendering | `public/js/render/`, `public/js/render/board3d/`, `public/js/render/fx/` |
+| 2D (PixiJS) + 3D (three.js) rendering | `public/js/render/`, `public/js/render/board3d/`, `public/js/render/fx/`, `public/js/render/vfx/` (official battle effects) |
 | client networking / preload | `public/js/net.js`, `public/js/preload.js`, `public/js/assets.js` |
 | 潜能 / 练度 per-operator settings (0.2.2) | `shared/potential.js`, `shared/loadoutRecord.js`, `server/match/player/{basics,diy}.js`, `public/js/ui/loadoutModel.js` |
 | content-hashed asset index (0.2.6) | `server/http/assetIndex.js`, `server/assetindex.js`, `shared/assetPaths.js` |
@@ -69,6 +69,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 | add a **custom operator** end-to-end (中文) | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) |
 | author a **bond / strategy (band) / bounty enemy / 3D theme** | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) |
 | operator kits — contract and registration | `server/sim/content/kits/README.md`, `server/sim/content/kits/index.js` |
+| 望's 棋子（相连激活 / 跟子 / S3 弹药与「不断下棋子」） | [`docs/MATCHMAKING.md`](MATCHMAKING.md) §30（§30.5 范围、§30.6 S3 每次 3 枚跟子）、`server/sim/content/kits/ops/chess_char_2027_wang-wang.js`、`server/sim/content/tokens.js`（`wangStone`）、`test/content/feedback-wang.test.js` |
 | difficulty model (official numbers, no custom tuning) | [`docs/BALANCE.md`](BALANCE.md) |
 
 ## 6. Client / rendering
@@ -77,7 +78,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 |---|---|
 | client architecture | [`docs/design/client.md`](design/client.md) |
 | 3D board (official scenes, 高台, props, shadows) | `public/js/render/board3d/`, [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §8 |
-| battle FX (two tiers, allow-lists, kill switches) | [`docs/ASSETS.md`](ASSETS.md), `public/js/render/fx/` |
+| battle FX — **官方特效优先**（运行时 + 提取 + dev 查看器），**然后是**本项目的两层兜底（白名单 / 开关 / 尺寸上限） | [`docs/ASSETS.md`](ASSETS.md)「Battle effects」+「The committed manifest…」, [`docs/HANDOVER.md`](HANDOVER.md) §6, [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2, [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0；代码 `public/js/render/vfx/**`（`wiring.js` / `skillfx.js` / `talentfx.js` / `funnelfx.js` / `flight.js` + `effect.js` / `library.js`）、`public/js/render/fx/**`、`tools/local-extract/fx.py`、`data/local-fx.json`、`public/dev/fx-viewer.html`、`test/render/vfx-*.test.js` |
 | picking / dragging / facing wheel | `public/js/render/pick.js`, `public/js/render/drag.js`, `public/js/ui/facingWheel.js` |
 | Spine clip bounds / impostor sizing (#542) | `public/js/render/spine.js` (`clipBounds`, `CLIP_SAMPLE_*`, `stepClipBounds`), `public/js/render/units.js` |
 | per-character voice overrides (语音语言) | `public/js/voicePrefs.js` |
@@ -94,7 +95,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 
 ## 8. Accounts, matchmaking and the community surface (fork-only)
 
-The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §1–§47. Code:
+The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §1–§48. Code:
 `server/auth.js`, `server/db.mjs` (schema v4/v5), `server/matchmaker.js`, `server/community.js`,
 `server/stats.js`, `server/admin.js`; client `public/js/screens/lobby.js`, `rooms.js`, `stats.js`,
 `public/js/ui/community.js`, `stats.js`, `chat.js`.

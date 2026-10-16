@@ -297,9 +297,19 @@ node tools/setup.mjs                                 # end-user setup (checks en
 - `data/assets.json` is a generated file but is **committed**; when a change updates it, commit it together with the
   change (the packer checks it).
 
-### 9.1 Battle-effect art: a procedural tier + an optional local tier
+### 9.1 Battle-effect art: the official-effects runtime, then a procedural + an optional local tier
 
-Every battle fx kind has **two tiers**, resolved at render time per client (`docs/ASSETS.md` "Battle effects"):
+**Primary path (upstream 0.3.0, in `master` since 2026-10-16): the official battle effects.** `public/js/render/vfx/**`
+replays the official client's own effect **prefabs** for a unit's attacks, skills, talents, funnels, mount points and
+status loops — the fx extraction (`tools/local-extract/extract.py --only fx --fx-set used`) inside
+`public/assets/local/fx/**` + the per-machine `data/local-fx.json` (index v3). Per client that is
+`settings.officialFx` (`auto | off | lite | full`), shown only when the client has the manifest; with it off (or no
+extraction) nothing new is laid out. The dev viewer is `public/dev/fx-viewer.html` (`?attack=<opId>` /
+`?skilldemo=<opId>&s=<slot>` / `?key=<prefab>`; it draws the unit's Spine with live bones, `&model=0` to turn it off).
+Our own additions inside that upstream runtime are listed in [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2 (they must
+survive merges); the batch record is [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0.
+
+**Then the fork's two tiers**, every battle fx kind resolved at render time per client (`docs/ASSETS.md` "Battle effects"):
 
 1. the **procedural tier** (`FX_KINDS` `a` + `c` + `r`, `public/js/render/fx/kinds.js`) is drawn at run time and is
    mandatory — every kind must have one, and it is what a client without any local art sees;

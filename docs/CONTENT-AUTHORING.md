@@ -68,7 +68,10 @@
   `test/golden.test.js` 的摘要不变）；把这笔行为变化记进变更的 `docs/MATCHMAKING.md` 小节。
 - **i18n**：**游戏文本**（干员名、技能、描述）走 `data/i18n/<lang>.json` 覆盖层（`tools/build-i18n.mjs` 从官方 EN 客户端生成），
   新干员的英文名会自动带上；**界面字符串**走 `public/i18n/<lang>.json` 四包（见 §5）。
-- **FX 白名单**：官方特效贴图有**准入清单**——只收软性 in-place 的 `flow/ray/glow/ring/star/light/smoke/aura/halo` 家族，
+- **特效**：干员的攻击 / 技能特效**优先走官方特效运行时**（`public/js/render/vfx/**`，按本机提取的 prefab 播放；见
+  [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.1 与 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2）——新干员只要**本机提取到**
+  对应的 `battle/prefabs/effects/<stem>.ab`，攻击与技能就有官方特效，**不需要**在客户端手写特效。**兜底**才是下面这两层。
+- **FX 白名单（兜底层）**：官方特效贴图有**准入清单**——只收软性 in-place 的 `flow/ray/glow/ring/star/light/smoke/aura/halo` 家族，
   排除动画网格（`flipbook*`/图集 `SHEET`）、排除 `char_*`/`object_*`/`bg_*`/`pattern_*` 等「像物体」的贴图，且只在
   AREA / SELF 的 kind 上生效；每层绘制**统一缩放到 ≈ 一个身位**（`render/fx/localart.js LOCAL_FX_MAX_R = 1.1` 图块，
   `render/fx/simfx.js _fxLocal`）。细节与开关见 [`docs/ASSETS.md`](ASSETS.md)（「按动作类型 / 白名单 / 尺寸封顶」几段）。

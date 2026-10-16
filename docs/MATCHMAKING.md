@@ -1544,5 +1544,23 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
   - **⚠️ 正常对战里起手仍看不到**：渲染层能提前看到 `atk` 的窗口只有 **~0.1–0.2 游戏秒**（`render/interp.js` 的 `delay` 0.1 真实秒 × `rate`），而澄闪的 begin 是 **0.33 游戏秒**（序列 1.63 s 的前 0.33）：`start = strikeSeq − lead·ts ≈ 0.5 > beginDur 0.33` ⇒ 直接从 loop 起播。**当前能看到起手的只有**：① 慢速干员（`interval ≥ seqDur` 的「整段播放」那条既有例外，起手补上，代价是出手比伤害略晚 —— 与 #246「铁球先抬起」同一取舍）；② `trigger()`（望的棋子 / 香槟炸弹那种一次性攻击）。**让每名干员都看到起手 = 攻击剪辑按攻击节奏（rhythm）提前开播 —— 已落地（owner 2026-10-16 选 A）**：`UnitView._predictWindUp()`（`public/js/render/units.js`，每帧在 `update` 里、只对绘制中的单位）从 `lastAtk + atkInterval` 预测下一次出手，提前 `strikeSeq / ts`（游戏秒）起播序列；`SpineActor.attackAhead(interval)` 给出序列参数与 `ts`。真实 `atk` 到达时 `attack()` 认出这是同一段（`wasAttacking`）只调速率、**不重播** ⇒ 出手帧仍与伤害对齐。防守：只在 `mode === 'base'`（攻击/晕/死/变形各自进行）、节奏不过期（`gameT − lastAtk ≤ 1.6·interval`）、且该单位攻击剪辑**确有 begin** 时才预测；**预测落空（单位停手）= 多挥一下**（owner 接受的取舍）。`test/render/attack-rhythm.test.js` 五条：澄闪的真实序列、`attackAhead`、提前起播 + `atk` 不重播、节奏过期不预测、无 begin 不预测。
 - **② 结城理**：官方 `_animations` 把 `Die` 键映射到 **`Stun`**（他没有 `Die` 剪辑；`SwitchOut` 是本体**离开替身**，不是被击倒）—— 我们此前按名字回退成了 `SwitchOut`，本体被击倒时播的是「下场」姿势。修：`PREFAB_SPINE_ROLES.char_4217_makoto = { die: 'Stun' }` + 数据重算。另外 **P1 → P2 是两段**（`Doll_Skill_3_P1toP2_ChangeBegin` 收 P1、`ChangeEnd` 落 P2），我们把 `doll3.end` 与 `doll3b.change` **都设成 ChangeEnd** ⇒ 同一变换剪辑在切换前后**连播两次**（即「反复播放」）。修：`shared/forms.js` 的 `doll3.end` 改为 `…ChangeBegin`（`doll3b.change` 保持 `…ChangeEnd`），于是就是官方的两段式。
 - **③ 望 S3**：**模拟侧没问题** —— 用 `test/helpers/battleHarness.js` 在 flat 与 4 张正式地图、4 个落点逐一试：S3 施放后**场上 2–6 枚棋子、库存 4–6、弹药 20 → 14**（受 铸子 `deployLimit` 6 的限制），`test/content/feedback-wang.test.js` 的 12 条也全绿。所以「不下棋子」不是 sim。最可能的两处，**待 owner 现场确认**：**(a) 棋子模型** —— `data/local-assets.json`（本机 per-machine）**没有** `spine/token/token_10064_wang_stone1`，客户端只能画头像兜底（`data/local-assets.committed.json` 里有，盒子 / 新克隆正常）；**(b) 客户端落子规则** —— S3「可部署至敌人所在位置」是否被放行。
+  - **结案（2026-10-16 夜）**：**(a) 证伪** —— 服务端 `/data/local-assets.json` 是 **committed ∪ per-machine 的并集**，所以棋子的官方模型在任何机器上都能解析到；本机实测（把 per-machine 清单**换回**只有 12 个场景组的那份）棋子依然 `local: true`、skel 指向 `/assets/local/spine/token/…`、隐藏前后像素差 7.4% ⇒ 客户端**从来没缺过**这个模型，红的只是那条**直读文件**的金丝雀测试（现已补回 41 个 spine 组、转绿）。坑与做法见 [`docs/ASSETS.md`](ASSETS.md)「The committed manifest and the served manifests」。
+  - **(b) 无关**；真正要改的是**跟子数量**：官方 S3 文案是「第一天赋额外至多部署 **3** 枚棋子并消耗等量弹药」（**每次下子**），我们此前做成了「**整局**最多 3 枚」⇒ 已按官方改为每次落子至多 3 枚（见 §30.6）。owner 2026-10-16 确认按官方口径。
 - **工具**：新增 `tools/refresh-anim-roles.mjs`（**离线**按 `resolveRoles` + 两张 fix 表重算 `data/assets.json` 的 anim 角色：只读各条自己的 `animations`，不动 URL / 哈希；`--write` 才写）。以后只改解析规则或 fix 表时不必联网重建整包素材。`test/asset-anim-roles.test.js` 锁住「已提交的角色 == 解析器 + fix 表」与澄闪的三元组。
 - **自查**：`node tools/refresh-anim-roles.mjs` ⇒ `already up to date`；`node --test test/asset-anim-roles.test.js test/render/feedback2-doll.test.js` 全绿。
+
+## 49. 2026-10-16 特效批次收尾总览（给下一位接手）
+
+> 这一天的主线是**把上游 0.3.0 的官方战斗特效接进来并收尾**，外加三条 owner 报障的修正与一轮文档梳理。本节只做**索引**，细节在各自文档里。
+
+| 主题 | 在哪 |
+|---|---|
+| 批次本身（并了什么、怎么并、素材与部署注意） | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) 的「官方战斗特效」一节（含**当日收尾提交表**）；决策点见该文件 §0 |
+| 运行时怎么工作 / 怎么调（fx-viewer、设置、per-machine 清单） | [`docs/HANDOVER.md`](HANDOVER.md) §6；[`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.1 |
+| 玩家可见的变化（官方特效、还原度修正、望 S3 跟子） | [`CHANGELOG.md`](../CHANGELOG.md) 0.4.0 的「新功能 / 规则」 |
+| 我们的增量（写在**上游文件里**、合并必须活过） | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2 的表（`LOOP_BUFF_BOUND` / `comeBack` / `strikePose` / `_predictWindUp` / fx-viewer 的模型与骨骼） |
+| 动画角色修正（澄闪起手、结城理 Die / 两段变身、按节奏起手） | 本文件 §48 |
+| 望的棋子（范围；跟子「每次至多 3 枚」；模拟侧结论） | 本文件 §30.5 / §30.6 / §48 ③ |
+| 本机清单的并集语义与踩坑 | [`docs/ASSETS.md`](ASSETS.md)「The committed manifest and the served manifests」；[`docs/HANDOVER.md`](HANDOVER.md) §9 的陷阱表 |
+
+**当天结论**：报障 ①②③ **全部结案**（③ 的本机模型疑点**证伪**——并集语义一直给到了官方石头；真问题是跟子数量，已按官方改）。**卡涅利安 / 空弦两条护盾观感**按 owner 决定**保持官方现状**，不再顺手修（[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0.2 记录）。**均未推送 / 未上线**——只在本机 `master`，等 owner 发话。

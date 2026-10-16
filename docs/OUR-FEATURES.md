@@ -217,6 +217,23 @@ Re-run it after changing the committed art.
 **Merge self-check.** `public/js/render/fx/{kinds,localart,simfx,rings,system,official}.js` and
 `tools/build-fx-official.mjs` must survive; run `node tools/build-fx-official.mjs --check`.
 
+**我们的增量在「上游自己的文件」里（合并时必须活过）.** The official-effects runtime
+(`public/js/render/vfx/**`) and the model code (`render/spine.js`, `render/units.js`) are **upstream's**
+(upstream 0.3.0); our additions inside them are small and are exactly what a hunk-by-hunk mount drops:
+
+| file | our addition | pinned by |
+|---|---|---|
+| `render/vfx/talents.js` | `LOOP_BUFF_BOUND` (+ each binding's `follow`) — a passive loop that must end with the buff the sim reports (空弦's 铁弦 shield) | `test/render/vfx-buff-layers.test.js`, `vfx-skills.test.js` |
+| `render/vfx/talentfx.js` | `status()` and the `follow` branch of `_inForce` | same |
+| `render/vfx/wiring.js` | `_fly`'s `AdvancedMovement.comeBack` return leg (the 回环射手's recovery animation) | `test/render/vfx-origins.test.js` |
+| `render/spine.js` | `SpineActor.strikePose()` (the shot leaves at the clip's OnAttack frame), `attackAhead()` and the begin → loop → end attack timing | `test/render/vfx-strike-pose.test.js`, `attack-begin.test.js` |
+| `render/units.js` | `boneOffset(..., strike)` and `_predictWindUp` (the rhythm wind-up) | `test/render/vfx-origins.test.js`, `attack-rhythm.test.js` |
+| `dev/fx-viewer.{html,js}` | draws the unit's Spine with live bones so effects can be judged against the weapon (`&model=0` off) | the browser suites pass `&model=0` |
+
+Mount those files as §6 says (hunk by hunk), then `npx eslint .` + `npm run typecheck`, **and compare the file's
+symbols against upstream** — `app.js` `NO_SPARK` and `spine.js` `strikePose` were each a *use* mounted without its
+*definition*, and one test stub hid the second (see [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0).
+
 ---
 
 ## 3. The local-art pipeline (`tools/local-extract/`)

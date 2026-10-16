@@ -903,11 +903,13 @@ docs guards 34 pass / 0 fail.
 - `72ebd9f3` 的**另一半仍然不并**：共享库存欠账（#624，`itemPool.debt`、`player/acquire|economy|items|prep`、`invariants.js`、`test/match/shared-stock.test.js`）—— 那是 §0「上游道具牌库把白给装备也卡库存」的正题，我们按**方案 A** 自行处理（已显示的卡不再因共享库存耗尽而拒绝）。
 - 提醒：`b0adce4f` 里 `test/local-extract.test.js` 的两处期望属于 **`33bf08d0`（射击台用官方模型）**，我们不并它；已把那两处退回，等 `33bf08d0` 自己那一轮一并进来。
 
-### 官方战斗特效（`ffd6d250` 一带，2026-10-16，分支 `fx-official`）
+### 官方战斗特效（上游 0.3.0 / `ffd6d250` 一带，2026-10-16 → **已并入 master 并上线**）
 
 **目标（owner 2026-10-16）**：并上游 0.3.0 的官方战斗特效（`tools/local-extract/fx.py` + `public/js/render/vfx/**` + 设置「官方特效」），**把我们自研的双层特效降为兜底**，不是二选一。
 
-**已落地（分支 `fx-official`，master 不受影响）**：
+> **状态（2026-10-16 夜补记）**：这一批**已在 `master` 上**（不是分支了）——客户端接线（`app.js` / `units.js` / `spine.js` / `ui/settings.js` + i18n）全部完成、全量套件转绿、并入 master 并部署（本文件后面「官方特效：待修清单」§0 记了随后的还原度修复）。原「分支 `fx-official`」的措辞仅保留在下面的过程记录里。
+
+**落地过程（当时在 `fx-official` 分支做，随后并入 master）**：
 
 1. **设计文档 §32 + §33 一并携带**（`3cc1a732`）：按 owner 决定开始携带 `docs/history/0.3.0.md`（我们的 §32）；`docs/design/vfx-format.md`（§33）随之落地 —— §32 的正文自己就引用 §33，两者必须同时。`test/docs-paths.test.js` 里我先前加的 `ABSENT` 豁免表**已撤掉**，守卫恢复满强度。
 2. **提取器**（`a6be3f02` → `74d0c116`）：`fx.py` + `extract.py --only fx --fx-set used` ✓，后一条把它**追平到上游 HEAD**（清单拆成 `data/local-fx.json` ✓、`index.json` v3 ✓、四个骨骼影响 ✓）。**第一代（Phase 1a）会把清单写进 `local-assets.json` 而不写 `local-fx.json`，与稍后的运行时对不上** —— 这是升级的原因。
@@ -924,15 +926,30 @@ docs guards 34 pass / 0 fail.
 - **可靠做法**：`git diff HEAD <上游> -- 文件`（正向）→ 关键词过滤只留特效 hunk → 逐条人工确认 → 应用。工具留在临时目录（`_fxapply.py`，含 `--check` 预演）。**混合 hunk（上游删我们东西的）必须手改** ✓。
 - **提取器测试要跑在仓库自己的 `.venv` 里**（`fx.py` 里那段 helper 用了 Python 3.12 的 f-string 语法；系统 `python` 是 3.8 ✗）—— 两个提取器测试已改成优先用 `.venv/Scripts/python.exe` ✓。
 
-**待办（下一步）**：客户端接线 4 件 —— `public/js/render/app.js`（**评审过：56 hunk / 25 像 fx，且混着我们自己的 `projSpeed`、`mysticEnergy` 等 ⇒ 必须逐 hunk 手并** ✗）、`units.js`、`spine.js`、`ui/settings.js`（设置界面）+ i18n 的「官方特效」词条；然后全量套件转绿 → **合并回 master** ✓ → 先推中继 ✓ → 再 gitee/github。
+**客户端接线（已全部完成，2026-10-16）**：`public/js/render/app.js`（**逐 hunk 手并**：56 hunk / 25 像 fx，混着我们自己的 `projSpeed`、`mysticEnergy` 等 ✗）、`units.js`、`spine.js`、`ui/settings.js`（「官方特效：自动 / 关闭 / 精简 / 完整」，只有本机提取过才显示）+ i18n 词条（`public/i18n/en.json` 的「官方特效」，中文为源串）✓ —— 随后全量套件转绿 → **并入 `master`** ✓ → 已上线 ✓。
 
-**收尾时的准确剩余清单（2026-10-16，分支 `fx-official` 12 个提交）**：
+**收尾清单（2026-10-16 夜复核，全部已结）**：
 
-- 已做完：运行时 ✓、sim 管道 + golden（先归因零漂移 ✓、单独重算 ✓）、设置模型 ✓、提取器升级 ✓、服务端分发 `local-fx.json` ✓、素材 196.5 MB ✓、`units.js` 骨骼挂点 ✓、**`app.js` 挂载 ✓**（上游本来就是"官方接管则跳过、否则走我们的" ⇒ 自研干员自动保留兜底 ✓，无需补丁 ✓）。
-- **剩余 3 处测试期望**（都是升级提取器带来的 ✓，同一类）：① `test/render/board3d-extract.test.js` 的 WebP 名单要补 `mesh/trap_110/TX_trap_1106_achplat`（射击台那张，`WEBP` 表里 mode `lossy`）；② `test/render/board3d-scene.test.js:204` 的 `same` 同一性断言（新版把 `derive_normal_rg` 从 `derived.py` 换成了别处的实现 ⇒ 该断言应改为**比行为**而不是比对象身份）；③ `test/render/token-wang-stone.test.js` 的望棋子模型（**既有环境问题** ✓：本机 `local-assets.json` 没有 `token_10064_wang_stone1.skel`，需要一次覆盖 `TOKEN_SPINES` 的提取）。
-- **未做**：`public/js/ui/settings.js` 的「官方特效」行（自动/关闭/精简/完整，且只有提取过才显示）+ i18n 词条（`官方特效` / `自动` / `关闭` / `精简` / `完整` —— 注意 `关闭` 与我们既有的 `"关闭": "Close"` 撞键，需改为不冲突的源串）。
-- **部署注意**：`data/local-fx.json`（9,243 条 / 1.23 MB）按设计是 per-machine + gitignored ✓；盒子上没有它 → 服务端回空清单 → 客户端看不到官方特效 ✗。部署时要在盒子上跑一次提取 ✓ 或把这份清单带上去 ✓（写进 DEPLOY 时确认）。
+- 已做完：运行时 ✓、sim 管道 + golden（先归因零漂移 ✓、单独重算 ✓）、设置模型 + 设置界面 + i18n ✓、提取器升级 ✓、服务端分发 `local-fx.json` ✓、素材 ✓、`units.js` 骨骼挂点 ✓、**`app.js` 挂载 ✓**（上游本来就是「官方接管则跳过、否则走我们的」⇒ 自研干员自动保留兜底 ✓，无需补丁 ✓）。
+- **原「剩余 3 处测试期望」已全部转绿**：① `test/render/board3d-extract.test.js` 的 WebP 名单（`mesh/trap_110/TX_trap_1106_achplat`，mode `lossy`）✓；② `test/render/board3d-scene.test.js` 的同一性断言改为**比行为**（新版把 `derive_normal_rg` 换了实现）✓；③ `test/render/token-wang-stone.test.js` 的望棋子模型 ✓ —— 本机 `data/local-assets.json` 补回 `spine/token/*` 组后转绿（并集语义与踩坑见 [`docs/ASSETS.md`](ASSETS.md)「The committed manifest and the served manifests」）。
+- **未做 → 已做**：`public/js/ui/settings.js` 的「官方特效」行与 i18n 词条 ✓（见上）。
+- **部署注意（仍然有效）**：`data/local-fx.json`（9,243 条 / 1.23 MB）按设计是 per-machine + gitignored ✓；**另一台机器没有它就看不到官方特效**（服务端回空清单、客户端静默回兜底，不报错）。部署时在那台跑一次提取，或把这份清单带上去 ✓（已写进 [`docs/DEPLOY.md`](DEPLOY.md) 与 HANDOVER §9）。
 - **两个 `.venv` 依赖**：`test/local-extract*.test.js`、`test/render/board3d-*.test.js` 都改成**优先用仓库 `.venv`** ✓（新版 helper 用了 Python 3.12 的 f-string 语法，系统 `python` 是 3.8 ✗）。
+
+**并入 master 之后的当日收尾（2026-10-16，全部在 `master` 上）**：
+
+| 提交 | 内容 |
+|---|---|
+| `7f3ae642` | `SpineActor.strikePose()`（出手帧挂点）+ `app.js` `NO_SPARK`（半个 hunk 的两个代表）+ dev `fx-viewer` 画干员模型与实时骨骼 |
+| `b28cc60e` `102e4418` `05a9fd58` | 逐人官方特效 QA：B1（术士/狙击）、B2（近卫/重装/先锋）、B3（辅助/医疗/特种/召唤物）、B4（105 个敌人 + 7 个 boss / 19 技能），结论：有官方数据的一律被官方层接管、特效落在各自挂点 |
+| `7b185854` | **自研干员全面改用官方特效**：删 `render/fx/hits.js`（`FX_HITS`）、`FX_OFFICIAL` 跳过 `CUSTOM_CHESS`（`identifier ≥ 900`）、清理各 kind 的 `local.byOp` 手写层；澄闪普攻钉成官方 `Attack_Start→Attack→Attack_End`、结城理 `Die→Stun`、S3 的 P1→P2 拆成 `ChangeBegin/ChangeEnd`；新增离线工具 `tools/refresh-anim-roles.mjs` + `test/asset-anim-roles.test.js` |
+| `dd2d60b3` | 一次攻击按 `begin → loop → end` 三段时序播放（`SpineActor._attackSeq` / `_playAttackAt`）+ `test/render/attack-begin.test.js` |
+| `0cb74a2b` | **按攻击节奏提前起手**：渲染只提前 ~0.1–0.2 游戏秒看到 `atk`，短于起手剪影 ⇒ `UnitView._predictWindUp` 在 `lastAtk + atkInterval` 前 `strikeSeq/ts` 起手 + `test/render/attack-rhythm.test.js` |
+| `7f0b598e` | **回环射手的回收动画**：`wiring._fly` 支持 `AdvancedMovement.comeBack`（命中后飞回射手挂点，`delayAfterReached` / `comeBackSpeedScale`） |
+| `ae43f70a` | **护盾循环跟着护盾结束**：`LOOP_BUFF_BOUND` + `TalentFx.status`（原「破盾就停」的闸测的是天赋下标，对干员从不生效） |
+| `f6618c32` | 文档：本机 `data/local-assets.json` 的并集语义与踩坑（见 ASSETS） |
+| `df3b1897` | 记录 owner 2026-10-16 对两条护盾报障的决定：**保持官方现状，不再顺手修** |
+| `879ea5ad` + `ea5ccf2f` | **望 S3 每次落子额外至多 3 枚跟子**（官方 S3 文案；此前做成「整局 3 枚」）+ golden 归因后重新生成 |
 
 
 

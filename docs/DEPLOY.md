@@ -331,10 +331,11 @@ services:
 | 灼热 / 炽焰源石虫的官方模型 | 染成橙色 / 红橙色的普通源石虫 |
 | 39 个召唤物的官方模型（多数自选召唤物，以及凯瑟琳的爬行号·防护单元、凛御银灰的风雪之眼；公开镜像没有） | 召唤物头像（菱形底板） |
 | 部分官方战斗特效贴图（卡尔茨 S2 的 `fx/kalts2` 组，以及本季可见阵容全体 118 名干员各自的 `fx/<charId>` 组，见 `EFFECT_FX_BUNDLES`） | 按官方配色手绘的程序化特效（始终可用，离线、无客户端也能画）；没有特效包 / 特效包为空的干员保持程序化 |
+| **官方战斗特效运行时（0.3.0 起）**：干员的普攻 / 技能 / 天赋 / 浮游单元 / 状态循环按官方 prefab 播放；需要 per-machine 的 `data/local-fx.json`（约 1.2 MB）+ `public/assets/local/fx/**`（约 200 MB，**已随仓库提交**） | 本作程序化 / 本地贴图两层（`public/js/render/fx/**`，始终可用、离线；设置里「官方特效」也只有提取到清单时才显示）—— **缺 `data/local-fx.json` 时不报错、不空白**，只是看不到官方特效 |
 
 表情（6 套 × 6 个）和「玩法说明」的 19 页教程图公开镜像也有：`node tools/setup.mjs` 会和其他素材一起下载（约 21 MB），不需要客户端；有本地素材时优先显示本地的。
 
-**没有客户端的服务器**想要上表中的官方素材：从**同一版本**的完整包（[Releases](https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download/releases)）里，把 `public/assets/local/` 文件夹和 `data/local-assets.json` 复制到服务器项目目录下的相同位置。服务器每次请求都会重新读取这两处，不必重启，玩家刷新页面即可。一定要用与服务器代码相同版本的完整包：各版本提取的内容和清单可能不同（例如灼热 / 炽焰源石虫的模型是 0.1.0 之后才加入的，召唤物模型是 0.2.0 加入的），混用其他版本的文件会缺图或用错图。复制后 `node tools/doctor.mjs` 会显示本地素材的条目数和「3D 棋盘可用」。
+**没有客户端的服务器**想要上表中的官方素材：从**同一版本**的完整包（[Releases](https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download/releases)）里，把 `public/assets/local/` 文件夹、`data/local-assets.json` **和 `data/local-fx.json`**（0.3.0 起的官方战斗特效清单；per-machine、约 1.2 MB）复制到服务器项目目录下的相同位置。服务器每次请求都会重新读取这几处，不必重启，玩家刷新页面即可。一定要用与服务器代码相同版本的完整包：各版本提取的内容和清单可能不同（例如灼热 / 炽焰源石虫的模型是 0.1.0 之后才加入的，召唤物模型是 0.2.0 加入的），混用其他版本的文件会缺图或用错图。复制后 `node tools/doctor.mjs` 会显示本地素材的条目数和「3D 棋盘可用」；**官方特效是否可用**可以直接看 `GET /data/local-fx.json` 是不是非空（空清单 → 客户端静默走本作特效）。
 
 **0.2.0 之前提取过的**：召唤物模型是 0.2.0 新增的提取项，旧的提取结果里没有（`node tools/setup.mjs` 会提示「缺少新版的自选召唤物模型」）。有客户端的电脑运行 `node tools/setup.mjs --local` 重新提取即可，只想补这一项也可以在提取用的 Python 环境里运行 `tools/local-extract/extract.py --only spine/token`（新文件写入 `public/assets/local/spine/token/`，清单里其他条目保持不变）。
 
