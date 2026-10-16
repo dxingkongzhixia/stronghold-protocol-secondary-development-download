@@ -39,6 +39,8 @@ export const NEVER_MERGE_WATCH = Object.freeze([
   { match: 'public/js/ui/settings.js', item: '设置 → 问题反馈 / DIAGNOSTICS' },
   { match: /^server\/match\/(Match|gamedata)\.js$/, item: '上游道具牌库卡库存 (itemPool / 白给装备)' },
   { match: 'server/match/match/spDraft.js', item: '上游道具牌库卡库存 (itemPool / 白给装备)' },
+  { match: 'data/assets.json', item: '上游的多语言配音 (audio.voiceEn / voiceKr / voiceNative) — owner 2026-10-16: 只保留日语 + 中文' },
+  { match: 'public/js/audio.js', item: '上游的多语言配音 (语音语言的选项表) — owner 2026-10-16: 只保留日语 + 中文' },
   { match: /^public\/js\/render\/board3d\//, item: '上游对 3D 战场的实现（board3d：光照 rig / 材质层 / 高台）' },
 ]);
 

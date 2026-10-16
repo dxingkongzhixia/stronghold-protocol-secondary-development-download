@@ -551,6 +551,7 @@ empty (rebuilt in `2cab8b6b` / `f26a4837` after the 克莱门莎 cache merge lef
 
 | Area | Files that must survive the merge |
 |---|---|
+| Voice dubs: **JP + CN only** | the owner's decision of 2026-10-16: upstream 0.3.0's English / Korean / own-language dubs (`audio.voiceEn` / `audio.voiceKr` / `audio.voiceNative`, `8eb7f701` / `d93d6d30`) are **not merged** — 设置 → 语音语言 keeps 中文 / 日本語 only (see [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0) |
 | Japanese voice | the `audio.voiceJp` wiring (`shared/` + `public/js/`), the 设置 → 语音语言 switch, `tools/package.mjs` (`FULL_ZIP_JP_VOICE`); [`docs/ASSETS.md`](ASSETS.md) "Voice" |
 | Match statistics (server-backed) | `shared/stats.js`; `shared/constants.js` (`STATS_*`); `public/js/ui/stats.js` + `public/js/ui/statsSync.js`; `public/js/screens/stats.js`; `public/css/screens/stats.css`; the title / lobby / room entries; the 在线玩家 overlay row → `openPlayerStats` (`public/js/screens/lobby.js`); `server/stats.js`; `server/db.mjs` (schema v5 `match_stats`); `server/lobby.js` (`stats.*`); `server/index.js` (StatsService wiring); `docs/MATCHMAKING.md` §40; `test/ui/stats.test.js` + `test/ui/statsSync.test.js` + `test/server-stats.test.js` |
 | Drag snap | `public/js/render/drag.js` (`dragStandTile` / `DRAG_HOLD_TILES`); `test/docs-consistency.test.js` (the pointer-tile UX) |
