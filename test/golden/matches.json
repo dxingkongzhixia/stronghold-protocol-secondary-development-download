@@ -614,7 +614,7 @@
           "title": {"id":"comment_5","name":"万事俱备","picId":"comment_icon_5","text":"装备配发数量最多"},
           "trophies": 4,
           "reward": 400,
-          "stats": {"activatedLayers":220,"bossDamage":742588,"dmgDealt":4007757,"gold":139,"itemsEquipped":22,"kills":312,"leaks":22,"lpLost":10,"merges":3,"perfectRounds":12,"refreshes":21},
+          "stats": {"activatedLayers":220,"bossDamage":826895,"dmgDealt":4092073,"gold":139,"itemsEquipped":22,"kills":312,"leaks":22,"lpLost":10,"merges":3,"perfectRounds":12,"refreshes":21},
           "lineup": ["1052_kalts2_a@12,7","5_03_a@11,8[3_01_e_b]","5_08_a@10,5[4_02_e_b+4_02_e_a]","6_07_a@10,7[4_08_e_b+3_10_e_a]","4_16_b@10,8[3_07_e_a+4_07_e_b]","2_13_a@9,3","1015_aglna2_a@9,5[4_05_e_a+4_10_e_b]","1_08_b@9,9[4_06_e_a+2_04_e_a]"],
           "bonds": ["deputShip 0/20","indomShip 0/2","maniShip 1/0","miraShip 1/2","preciShip 0/16","raidShip 0/10","sargonShip 0/10","siracusaShip 1/16","skillfulShip 1/45","soloShip 1/20","suntShip 1/14","swiftShip 1/79","victoriaShip 1/44","yanShip 0/5"]
         },
@@ -628,7 +628,7 @@
           "title": {"id":"comment_1","name":"卫戍之星","picId":"comment_icon_1","text":"对敌方领袖造成伤害最高（仅胜利时）"},
           "trophies": 4,
           "reward": 400,
-          "stats": {"activatedLayers":311,"bossDamage":1241912,"dmgDealt":4732946,"gold":133,"itemsEquipped":17,"kills":336,"leaks":8,"lpLost":3,"merges":5,"perfectRounds":9,"refreshes":22},
+          "stats": {"activatedLayers":311,"bossDamage":1157605,"dmgDealt":4648704,"gold":133,"itemsEquipped":17,"kills":338,"leaks":8,"lpLost":3,"merges":5,"perfectRounds":9,"refreshes":22},
           "lineup": ["1_06_b@11,7[2_01_e_a+1_01_e_a]","6_05_a@11,8","1_08_b@10,4[4_04_e_b+4_04_e_b]","4_10_a@10,5[3_04_e_a+4_09_e_a]","4_16_a@9,4[4_02_e_a+4_06_e_a]","2_10_a@9,7","377_gdglow_a@9,8[4_08_e_b]","4_14_b@9,9"],
           "bonds": ["arcaneShip 1/53","deputShip 1/12","kazimierzShip 0/4","kjeragShip 0/2","preciShip 2/83","sargonShip 0/16","siracusaShip 1/47","soloShip 1/12","steadShip 0/2","suntShip 1/8","swiftShip 1/73","victoriaShip 1/23"]
         }
