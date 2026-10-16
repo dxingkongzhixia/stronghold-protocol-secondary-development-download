@@ -854,7 +854,11 @@ docs guards 34 pass / 0 fail.
 
 ### 批次 B3 — 大块（各自单独评估，不轻易并）
 
-- **插件系统 + 工作台**（`plugins/`、`shared/plugins/`、`server/plugins/`、`server/studio/`、`public/studio/`、CSP、`SP_PLUGINS`/`SP_PLUGIN_SCRIPTS`、Docker）——纯新增但面大，且与我们的 8 名自造干员、客户端资源链相邻，**建议整块作为一次专项**。
+- **插件系统 + 工作台**（`plugins/`、`shared/plugins/`、`server/plugins/`、`server/studio/`、`public/studio/`、CSP、`SP_PLUGINS`/`SP_PLUGIN_SCRIPTS`、Docker）——纯新增但面大
+  - **owner 2026-10-16 决定：暂缓（服务器不需要它）。** 现状核实：这 5 个目录我们**一个文件都没有**（上游合计 126 个文件），`server|shared/plugins/identity.js` 维持删除。这一轮并官方特效时它还**两次试图溜进来** ✗：`settings.js` 的上游 hunk 带了 `content.js` / `pluginTag.js` / `uiPlugins.js` / `shared/plugins/*` 的 import（都是**未使用**，已拆掉）✓；`server/http/static.js` 用 `git apply --3way` 时把**整个插件 HTTP 文档**（`/plugins/`、`/cs/`、`/vs/`、`/p/`）拖了进来（已回退手改）✗。
+  - 若日后要并：单独一轮 + 单独分支；`SP_PLUGINS` 默认关；**先只并服务端 + 只读 `plugins/`**，工坊（studio）最后上；需要**显式改 §0**（re-add `server|shared/plugins/*`）；与我们的「本地 → 镜像 → 中继」素材链对齐是最贵的一块（`content.js` 会重写每屏读的 art manifest）。验收线：无插件时**逐字节不变**。
+  - **更轻的替代**：我们已有 `packs/`（内容 / 语言包，`docs/PACKS.md`）+ kit 约定 + `tools/package.mjs` —— 想让朋友之间分享内容，**扩展 packs 比并插件系统便宜一个数量级**。
+，且与我们的 8 名自造干员、客户端资源链相邻，**建议整块作为一次专项**。
 - **官方战斗特效**（`tools/local-extract/fx.py`、`shared/`的 fx 运行时、`public/js/render/vfx/*`、设置「官方特效」）——**与我们自己的双层特效系统（OUR-FEATURES §2）直接重叠**，逐项决定，不整块合并。
 - **统计页改版**（`946f9fb8`）——与我们自己的社区统计重叠（PROJECT-STATE §5），逐项取舍。
 - **资料下载/导入 + 素材包**（`aa8d4fc1`、`5bc36c48`）——与我们的中继 + 镜像 + SW 链重叠，不整块合并。
