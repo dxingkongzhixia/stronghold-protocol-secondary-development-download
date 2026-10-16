@@ -83,6 +83,12 @@ const dollRoles = (idle, die, attack = null) => Object.freeze({
   attackDown: null, skill: null,
 });
 export const FORMS = Object.freeze({
+
+	// 假想敌：镜膜 (GitHub #481, PR #613): its first silence drops the max-HP bonus for good; the model
+	// switches to the stopped look (停转). clipless start/end — the sim owns the rule (enemies/reflection.js).
+	enemy_9011_acrefr: Object.freeze({
+		stopped: Object.freeze({ change: null, roles: clipSet('B_Idle', 'B_Move', 'B_Die', 'B_Attack') }),
+	}),
   char_1023_ghost2: Object.freeze({
     doll: Object.freeze({ change: 'Start_B', end: 'Die_B', leave: 'Start_2', roles: dollRoles('Idle_B', 'Die_B_2') }),
   }),
