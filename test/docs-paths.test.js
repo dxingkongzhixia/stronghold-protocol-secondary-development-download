@@ -127,10 +127,6 @@ test('DESIGN: every section is a `## N.` heading exactly once in docs/design/ or
 });
 
 test('DESIGN: every "DESIGN §N" cited in the repository (code comments, tests, docs, data) is a heading of the design document', () => {
-  // Subsections that live only in an upstream per-release history doc this fork deliberately does not carry (§0 of
-  // docs/UPSTREAM-MERGES.md: docs/history/0.3.0.md and its §32 are kept deleted), so content merged from upstream may
-  // still cite them. Add the number a failure names; the list goes away once the fork has its own 0.3.0 history.
-  const ABSENT = new Set(['32.14.9', '32.14.10', '32.14.31']);
   const heads = new Set([...designText(ROOT).matchAll(/^#{2,4} (\d+(?:\.\d+)*)[. ]/gm)].map((m) => m[1]));
   const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' })
     .split('\n').filter((f) => /\.(?:m?js|cjs|md|json|html|css|ya?ml|sh|bat|ps1|py|txt)$/.test(f) && !f.startsWith('test/golden/'));
@@ -140,7 +136,7 @@ test('DESIGN: every "DESIGN §N" cited in the repository (code comments, tests, 
     if (!existsSync(join(ROOT, f))) continue;                 // deleted in the working tree, not yet in the index
     for (const m of readFileSync(join(ROOT, f), 'utf8').matchAll(/DESIGN(?:\.md)?[ ,]*§ ?(\d+(?:\.\d+)*)/g)) {
       cited++;
-      if (!heads.has(m[1]) && !ABSENT.has(m[1])) bad.push(`${f}: §${m[1]}`);
+      if (!heads.has(m[1])) bad.push(`${f}: §${m[1]}`);
     }
   }
   assert.ok(cited >= 700, `only ${cited} citations found — is the scan broken?`);

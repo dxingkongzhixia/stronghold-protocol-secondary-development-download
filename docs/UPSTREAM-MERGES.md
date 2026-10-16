@@ -596,8 +596,10 @@ hash in their `(cherry picked from commit …)` trailer):
   `sceneCache.clear()`; the scene loader is otherwise upstream's.
 - `scene.js` / `materials.js`: kept our `environmentMap` PMREM `__rt` disposal (`envRT`, which upstream lacks) —
   the merged files carry both the scene code and our `envRT` handling.
-- `CHANGELOG.md`: our 0.4.0 section kept; one scene bullet added under 新功能. Upstream's `docs/history/0.2.5.md`
-  is **not** imported (kept deleted — our fork does not carry upstream's 0.2.3–0.2.5 history docs).
+- `CHANGELOG.md`: our 0.4.0 section kept; one scene bullet added under 新功能. **Correction (2026-10-16):** this note
+  used to claim upstream's history docs are not imported — the fork **does** carry them (`docs/history/0.2.5.md` is
+  byte-identical to upstream's, 0.2.6 differs only by our own additions). Only the *in-progress* release doc had been
+  dropped; since 2026-10-16 `docs/history/0.3.0.md` is carried too (our §32) — see the §32/§33 entry at the end.
 - `docs/DESIGN.md`, `docs/DEPLOY.md`, `docs/ASSETS.md`, `docs/design/client.md`, `tools/package.mjs`, `tools/setup.mjs`:
   resolved to our docs and our JP-voice `held` logic, plus the scene row / paragraphs / `SCENE_ART_PREFIX` /
   `scenes` plan field. The stale `§30.17` citation in `docs/design/client.md` (our DESIGN stops at §29) was
@@ -897,7 +899,8 @@ docs guards 34 pass / 0 fail.
 - `72ebd9f3` 的**另一半仍然不并**：共享库存欠账（#624，`itemPool.debt`、`player/acquire|economy|items|prep`、`invariants.js`、`test/match/shared-stock.test.js`）—— 那是 §0「上游道具牌库把白给装备也卡库存」的正题，我们按**方案 A** 自行处理（已显示的卡不再因共享库存耗尽而拒绝）。
 - 提醒：`b0adce4f` 里 `test/local-extract.test.js` 的两处期望属于 **`33bf08d0`（射击台用官方模型）**，我们不并它；已把那两处退回，等 `33bf08d0` 自己那一轮一并进来。
 
-### 设计文档守卫与 §32 引用（2026-10-16）
+### 设计文档：§32 与 §33 一并落地（2026-10-16）
 
-- `test/docs-paths.test.js` 要求每个 `DESIGN §N` 引用都能在设计文档里找到标题；而 `§32.14.*` 只活在上游 `docs/history/0.3.0.md`，那份正是 §0 **保留删除**的按版本历史文档（我们只到 §31）。
-- 故在守卫里加一张**写明原因的少量豁免表**（`ABSENT = ['32.14.9', '32.14.10', '32.14.31']`）：**新的**坏引用仍会被抓住，只是不再为我们「刻意不带的历史文档」报红。等本分支自己的 0.3.0 历史落地即可删表。
+- 上游把 0.3.0 的修订史写成 `docs/history/0.3.0.md`（**§32**）、把官方特效的格式写成 `docs/design/vfx-format.md`（**§33**）。我们此前删掉 0.3.0.md ✗，于是合并内容里成千条 `§32.14.*` / `§33.*` 引用全部悬空，守卫只能靠豁免兜 ✗。
+- **决定（owner 2026-10-16「开始携带 0.3.0.md」）**：**携带 `docs/history/0.3.0.md` = 我们的 §32** ✓ —— 与我们一向携带 0.2.3–0.2.6 的做法一致 ✓。§33 必须**同时**落地（§32 的正文自己就引用 §33 ✓），`docs/DESIGN.md` 索引补 `| §32 |` 与 `| §33 |` 两行，`test/docs-paths.test.js` 里那张 `ABSENT` 豁免表**撤掉** —— 守卫恢复满强度 ✓（§32 的修订史里没有 `DESIGN §N` 形式的引用 ✓，不会连带引爆更多）。
+- 后续 0.3.0 的文档更新照此办理：该文件是**上游的修订史**，冲突时**以上游为准** ✓；我们的自研说明只写在 `docs/MATCHMAKING.md` 与 `docs/OUR-FEATURES.md` ✓。

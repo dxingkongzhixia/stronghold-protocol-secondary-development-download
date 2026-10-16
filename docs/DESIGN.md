@@ -42,3 +42,5 @@ normative lines it rewrote).
 | §29 | [history/0.2.4.md](history/0.2.4.md) | Community follow-up |
 | §30 | [history/0.2.5.md](history/0.2.5.md) | Community follow-up |
 | §31 | [history/0.2.6.md](history/0.2.6.md) | Host bandwidth (layers 0 and 1) and community follow-up |
+| §32 | [history/0.3.0.md](history/0.3.0.md) | 0.3.0 |
+| §33 | [design/vfx-format.md](design/vfx-format.md) | Official battle effects (特效): the extracted format |
