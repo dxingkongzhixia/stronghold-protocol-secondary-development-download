@@ -881,8 +881,23 @@ docs guards 34 pass / 0 fail.
 
 - **① 流动水面 —— 收尾已完成（2026-10-16）**：模块里抽出 `waterParamValues(info)` 与 `applyWaterParams(material, info)`，`waterMaterial`（棋盘水格）与 `sceneWaterMaterial`（场景水面）**共用同一套取参**；`scene.js` 在拿到那张图的水材质记录后，把它应用给棋盘的水格（上游 0.3.0：「棋盘上的水格和场景的水面用同一种水」）。**没有记录时逐像素不变**（棋盘水的焦散色调按默认倍率保持原样）；新增测试 `test/render/board3d-scene.test.js`（默认 → 按图 → 清空）。
 
-### 射程按敌人 0.1 碰撞箱（`5bf337a5`）—— 已试一轮，待修 4 条（2026-10-16）
+### 射程按敌人 0.1 碰撞箱（`5bf337a5`）—— **已落地（2026-10-16）**
 
 - 核心**全部自动合并**：`constants.js` 新增 `ENEMY_COLLIDER_RADIUS = 0.1`；`body.js` 新增 `colliderKeys` 与 `bodyInRange`（点状敌人用 0.1 半径的圆与范围格相交；巨型单位与同盟仍用 `bodyKeys` 的格子）；`battle/queries.js` 的范围桶改走 `bodyInRange`（格子判定一侧保留 `bodyInKeys`）；`Battle.js`、`battle/blocking.js`、`content/bonds/addon/battle.js` 与 11 个 kit 的 `bodyInKeys → bodyInRange` 调用点。
 - 上游的 `shared/plugins/steps.js` 依赖（`op-ifrit.js` 的一行 import）在本分支**未被使用**，已丢弃（同投石机那次的内联思路）。
-- **待修（下一轮用探针）**：全量 `test/sim` 有 4 条红 —— `test/sim/pathing.test.js` 的两条 crates（被箱子挡住的小怪不再打破箱子，`'breaks it'`）与 乌尔比安 S3 的移动/返回。**已排除**：`battle/queries.js`（单独退回后仍红）、`Battle.js`（单独退回后变成 3 条红 —— 说明它承重）。下一步盯 `body.js` 的 `colliderKeys`：箱子这类非敌非友的阻挡物在各侧取哪种键。
+- **那 4 条红不是射程造成的**：用干净 worktree 二分，锁定本会话的 **`5c650a9b`（攻击追完 / attack commitment）** —— 它的**父提交**上 `pathing` 连跑三次全绿，它自己连跑三次全红；把它的两个文件（`ai.js` + `lifecycle.js`）**一起**退回即转绿（单独退任一个仍红 ⇒ 改动横跨两文件）。这也解释了乌尔比安 S3「移动/返回」那条。
+- **真正的解药是上游紧接着的对补提交 `6aaaebbf`**（"the full-suite fixes after the round-40 merges — **a locked enemy swing still strikes its blocker whatever its range**"，正是箱子的症状），已作为 `b0adce4f` 并入 → `test/sim` **912/912 全绿**。随后射程本体完整并入（`5d75096a` + golden `5553b729`）→ `test/sim` **918/918**。
+- **方法学（已写进本文件顶部流程）**：主树里的「逐文件回退」骗过我两次（同批的测试文件把它盖掉）—— **worktree 二分才是权威**；并且**任何 sim 改动都要跑全量 `test/sim`**，这次逮到的恰好是唯一没跑的那条。
+- 同批补回的**文档半片**：`docs/design/engine.md` 的 Engine helpers 与 `docs/SIM.md` 的 helper 表都补回 `keepDir`（野鬃那次漏掉的文档侧）—— 守卫 `` `battle.push(e, force, { …, keepDir })` `` 因此转绿。
+
+### #631 的另外半片（测试与文档）—— 已补齐（2026-10-16）
+
+- 我先前只搬了 `72ebd9f3` 的**机制与数据**（`spDraft.js` 的 `also` + `build-data.mjs` + `data/choices.json`），**漏了它同批的测试与文档** → 全量套件里 `test/match/pool.test.js`（effect-only 物品不得进商店池）与 `test/match/feedback5-cathy-pool.test.js` 两条红。
+- 已补：两条测试改为「凯瑟琳的池子可刷突变细胞、其余商店池与商店格子仍然不可」；`test/content/bands.test.js` 与 `test/ui/feedback1-offers.test.js` 的同一断言同步；`docs/PLAYING.md` 的「突变细胞只来自昆图斯的策略」→「…来自昆图斯的策略，也会出现在凯瑟琳【定向投放】里（调度中心仍不出售）」，并同步 `test/docs-consistency.test.js` 的守卫。
+- `72ebd9f3` 的**另一半仍然不并**：共享库存欠账（#624，`itemPool.debt`、`player/acquire|economy|items|prep`、`invariants.js`、`test/match/shared-stock.test.js`）—— 那是 §0「上游道具牌库把白给装备也卡库存」的正题，我们按**方案 A** 自行处理（已显示的卡不再因共享库存耗尽而拒绝）。
+- 提醒：`b0adce4f` 里 `test/local-extract.test.js` 的两处期望属于 **`33bf08d0`（射击台用官方模型）**，我们不并它；已把那两处退回，等 `33bf08d0` 自己那一轮一并进来。
+
+### 设计文档守卫与 §32 引用（2026-10-16）
+
+- `test/docs-paths.test.js` 要求每个 `DESIGN §N` 引用都能在设计文档里找到标题；而 `§32.14.*` 只活在上游 `docs/history/0.3.0.md`，那份正是 §0 **保留删除**的按版本历史文档（我们只到 §31）。
+- 故在守卫里加一张**写明原因的少量豁免表**（`ABSENT = ['32.14.9', '32.14.10', '32.14.31']`）：**新的**坏引用仍会被抓住，只是不再为我们「刻意不带的历史文档」报红。等本分支自己的 0.3.0 历史落地即可删表。

@@ -23,7 +23,8 @@ test('凯瑟琳 定向投放: the level 1 → 2 offer draws from every tier, the
     assert.equal(ids.length, 3, `seed ${seed}: 3 items`);
     for (const id of ids) {
       const rec = h.m.gd.item(id);
-      assert.ok(rec && !rec.shopExcluded, `seed ${seed}: ${id} is a shop item`);
+      // 突变细胞 joined the pool on 2026-10-14 (#631): the one effect-only item the 定向投放 may offer.
+      assert.ok(rec && !rec.isGolden && (id === 'chess_item_5_08_e_a' || !rec.shopExcluded), `seed ${seed}: ${id} is a shop item or 突变细胞`);
       tiers.set(rec.tier, (tiers.get(rec.tier) || 0) + 1);
     }
   }
