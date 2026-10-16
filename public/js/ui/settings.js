@@ -309,6 +309,7 @@ export function SettingsModal({ open, onClose }) {
     return () => { live = false; };
   }, [open]);
   const fxTier = resolveOfficialFx(s.officialFx, true);
+  const gpu = gpuInfo();   // the 硬件加速 row below reads it: the declaration the upstream hunks dropped (a live outage on 2026-10-16)
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('设置')} micro="SETTINGS" width="7.4rem"
     actions=${html`<${Button} variant="secondary" icon="edit" class="set-bug" onClick=${openBugReport}>${t('bug提交')}<//>
       <${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
