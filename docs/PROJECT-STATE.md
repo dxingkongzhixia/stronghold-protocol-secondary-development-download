@@ -57,7 +57,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `90f5e7f2c477`**（2026-10-16 数据订正后重启由 `/healthz` 实测；线上 `data/tokens.json` 与仓库 md5 `2756fcc6017bea2cc8e260d2ecedc9b0` **逐字节相同**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `a240d9ad2df8`**（2026-10-16**难度分层**部署后重启，由 `/healthz` 实测；旧 build `90f5e7f2c477`；机器上 `data/tuning.json` md5 `da2c1d7aa5cdf836c20f9686789adfb9` 与仓库**逐字节相同**、`boost` 实读 `{"hp":1.3,"atk":1.3}`；通告记为社区 **0.4.29**，部署前备份 `/root/sp-backup-20261016-103628.tgz`）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |

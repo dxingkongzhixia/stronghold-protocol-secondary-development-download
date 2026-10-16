@@ -66,9 +66,14 @@ const NAME = basename(SELF_ROOT).toLowerCase();
 const DEV_ROOT = process.env.SP_DEV_TREE
   ? resolve(process.env.SP_DEV_TREE)
   : (NAME === '_merge-scratch' ? join(PARENT, 'Stronghold-Protocol') : SELF_ROOT);
+// The store is the sibling `_merge-scratch` on the two-tree DESKTOP (`D:\DOTK\...`), but the LAPTOP (AGENTS.md §2) is
+// a single tree whose checkout IS the store: when the sibling `_merge-scratch` has no `.git` and THIS checkout has one,
+// this checkout is the store (no SP_SCRATCH needed; the doc always claimed the roles are derived from the location).
+const SIBLING_SCRATCH = join(PARENT, '_merge-scratch');
+const SINGLE_TREE = NAME !== '_merge-scratch' && !existsSync(join(SIBLING_SCRATCH, '.git')) && existsSync(join(SELF_ROOT, '.git'));
 const SCRATCH_ROOT = process.env.SP_SCRATCH
   ? resolve(process.env.SP_SCRATCH)
-  : (NAME === '_merge-scratch' ? SELF_ROOT : join(PARENT, '_merge-scratch'));
+  : (NAME === '_merge-scratch' || SINGLE_TREE ? SELF_ROOT : SIBLING_SCRATCH);
 
 // ------------------------------------------------------------------ remotes
 // The publishing conventions of this fork: `github` is the PRIMARY repository, `gitee` the 国内下载镜像. The URLs are
