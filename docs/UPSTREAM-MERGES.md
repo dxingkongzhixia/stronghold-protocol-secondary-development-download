@@ -871,3 +871,6 @@ docs guards 34 pass / 0 fail.
 - **射程按敌人 0.1 碰撞箱**（`5bf337a5`）：200+ 行的碰撞 / 几何重构，父提交不是我们基线 —— 按单独一轮处理。
 
 - **已按 A 落地（2026-10-16）**：商店里**已显示**的装备卡与装备奖励（机变卡、定向投放 / 见者有份）**不再因共享库存耗尽而拒绝** —— 删掉了 `player/economy.js` 的购买拒绝、`player/prep.js` 的奖励拒绝、`match/spDraft.js` `spCardAvailable` 的池子判定与 `match/views.js` 对 机变卡的置灰，**不引入任何欠账记账**（盘子可以超发 —— 本分支的 `invariants.js` 本来就允许，GitHub #488）；**不改 §0 立场**。生成侧的过滤（`spDraft` 的 `itemAvailable`、`pool.js` 的 `shopItemsByTier`）保留 —— **之后的刷新仍然不会出现空库存的装备**。测试：`test/match/shared-stock.test.js` 改写了原先钉住拒绝的两条、新增一条专测本规则。golden 未受影响。**#631（凯瑟琳【定向投放】可刷突变细胞）仍单独待办** —— 它只是 `data/choices.json` 的白名单，而 `data/` 是生成物，得从 `tools/build-data.mjs` 走 + 离线重建。
+
+- **凯瑟琳【定向投放】刷突变细胞（#631）已落地（2026-10-16）**：机制按上游原样移植 —— `server/match/match/spDraft.js` 的 `rollItemId` 认池子的 `also` 列表（追加进该池子自己的抽取；不在 `shopItemsByTier` 里，所以商店装备格依旧不出售；它没有上限，所以总抽得到），构建器里写上 `pool_equip_kathe.also = ['chess_item_5_08_e_a']`。
+  **数据的重建方式要留意**：本机的 `.cache/gamedata` 几乎为空，而取数地址是 `master`（没钉版本）—— 联网重建会把官方新版本的漂移一并带进来（实测：`chess.json` / `backups.json` / `enemies.json` / `tokens.json` 四个无关文件也变了）。所以只**保留了构建器自己写出的 `data/choices.json`**（差异仅一处 `also`），四个漂移文件已撤回；测试人员可在**缓存与数据同版本**的机器上跑 `node tools/build-data.mjs --offline` 复核：应为**零差异**。

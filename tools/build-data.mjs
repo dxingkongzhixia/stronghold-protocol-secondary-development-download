@@ -3855,7 +3855,10 @@ function buildChoices(ctx, effects, items, chess) {
       // 凯瑟琳 定向投放 (up_shop_add_special_goods): every shop-eligible item, whatever the shop level — players' first-hand
       // report (community, 2026-10-06): 「原版凯瑟琳1升2都能有6本装备」; the pool itself is server-side, uniform [ASSUMED]
       // (until 0.2.0 it was capped at the shop level, so the 1 → 2 offer only ever showed tiers I–II)
-      pool_equip_kathe: { kind: 'equip', rule: 'shopEligible', assumed: true },
+      // 凯瑟琳【定向投放】(GitHub #631, upstream 72ebd9f3): the `also` list adds 突变细胞 at a uniform weight at any
+      // 调度中心 level. The id is not in shopItemsByTier, so the shop's own item slot still never sells it
+      // (rollItemId's `withAlso` only affects this pool's draws).
+      pool_equip_kathe: { kind: 'equip', rule: 'shopEligible', also: ['chess_item_5_08_e_a'], assumed: true },
       pool_equip_narant: { kind: 'equip', rule: 'shopEligible', maxTier: 'shopLevel', assumed: true },
       // "获得一件带有随机特殊效果的维式重锤": the 4 hammers with a special effect (never sold, SHOP_EXCLUDED_ITEMS); the
       // weights are server-side (PRTS 11-25 note: "装备【灼燃维式重锤】的出现概率调整") — uniform [ASSUMED]

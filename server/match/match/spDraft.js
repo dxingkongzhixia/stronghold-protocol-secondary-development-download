@@ -190,19 +190,29 @@ export class MatchSpDraft {
     const p = typeof pool === 'string' && Object.hasOwn(pools, pool) ? pools[pool] : null;
     const rng = this.rngMeta;
     const tierList = (lo, hi) => { const out = []; for (let t = lo; t <= hi; t++) for (const id of this.gd.shopItemsByTier[t] || []) out.push(id); return out; };
+    // A pool's `also` list (pool_equip_kathe: 突变细胞, GitHub #631) is appended to ITS draws only — the id is not in
+    // shopItemsByTier, so the shop's own item slot never sells it. `pick` still drops an id `canGain` refuses; an
+    // uncapped id (突变细胞 is not shop-eligible, so it has no cap) is always drawable.
+    const also = p && Array.isArray(p.also) ? p.also.filter((id) => typeof id === 'string' && this.gd.item(id)) : [];
+    const withAlso = (list) => {
+      const out = list.slice();
+      for (const id of also) if (!out.includes(id)) out.push(id);
+      return out;
+    };
     if (p && p.kind === 'equip') {
       if (Array.isArray(p.weighted) && p.weighted.length) {
         const pairs = p.weighted.filter((x) => Array.isArray(x) && this.gd.item(x[0]) && this.itemPool.canGain(x[0]));
+        for (const id of also) if (!pairs.some((x) => x[0] === id)) pairs.push([id, 1]);
         return this.itemPool.pick(rng, pairs.map(x => x[0]), new Map(pairs));
       }
       if (Array.isArray(p.items) && p.items.length) {
         const items = p.items.filter((id) => this.gd.item(id));
-        return this.itemPool.pick(rng, items);
+        return this.itemPool.pick(rng, withAlso(items));
       }
       let list;
       if (Array.isArray(p.tiers) && p.tiers.length) list = p.tiers.flatMap((t) => this.gd.shopItemsByTier[t] || []);
       else list = tierList(1, p.maxTier === 'shopLevel' ? Math.max(1, Math.min(6, shopLevel)) : 6);
-      return this.itemPool.pick(rng, list);
+      return this.itemPool.pick(rng, withAlso(list));
     }
     const list = Number.isInteger(tier) ? tierList(tier, tier) : tierList(1, Math.max(1, Math.min(6, maxTier)));
     return this.itemPool.pick(rng, list);
