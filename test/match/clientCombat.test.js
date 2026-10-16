@@ -12,7 +12,10 @@ import { DataSource } from '../../server/sim/simdata.js';
 import { validateClientResult, specBounds, syntheticResult } from '../../server/match/fields.js';
 import { CreditPool, SharedBossPool } from '../../server/match/finalAssault.js';
 import { FakeBattle } from './fakeBattle.js';
-import { DATA, makeMatch, checkInvariants, give, chessOfTier } from './harness.js';
+import { DATA as DATA_RAW, makeMatch, checkInvariants, give, chessOfTier } from './harness.js';
+import { withoutTuning } from '../../tools/balance.mjs';
+// Official numbers (data/tuning.json left out — OUR boost layer is covered by test/match/boost.test.js, BALANCE §8).
+const DATA = withoutTuning(DATA_RAW);
 
 /** A fresh DataSource over the raw data, like a browser that fetched /data/*.json (no research fallback). */
 const browserDs = () => new DataSource(DATA, null);
@@ -316,7 +319,7 @@ test('Final Assault: leaks and leader LP effects from b.progress drain the team 
 });
 
 test('Final Assault: the authority leaves → its partner\'s replica takes over; nobody left → the server paces the field (credits only new damage)', () => {
-  const h = makeMatch({ mode: 'coop', difficulty: 'FUNNY', humans: 2, seed: 9110, fake: true, clientCombat: true, instant: false,
+  const h = makeMatch({ data: DATA, mode: 'coop', difficulty: 'FUNNY', humans: 2, seed: 9110, fake: true, clientCombat: true, instant: false,
     script: (b) => (b.kind === 'boss' ? { bossDps: 2000 } : { duration: 2 }) }).start();
   const m = h.m;
   h.autoHumans();

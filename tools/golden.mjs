@@ -698,6 +698,31 @@ export function standInScenarios() {
       about: `${first.elite ? 'elite' : 'normal'} band ${band} as stand-ins: ${units.map((u) => `${u.chessId}→${gd.standIn(u.chessId)?.charId ?? '?'}`).join(' ')}`,
     });
   }
+  // Companion coverage battle for OUR difficulty layer (docs/BALANCE.md §8): from round 5 the enemies hit 30 % harder
+  // and the 4★ 近卫 stand-in (char_601_cguard, S2 攻击力强化·β型) can die before its SP fills — the pair would lose its
+  // cast. One extra battle on a PRE-boost round keeps the coverage without moving any other battle's digest.
+  {
+    const i = n++;
+    const modeId = 'mode_multi_normal';
+    const gd = gdFor(modeId);
+    const round = 4;                                  // below shared/constants.js BOOST_FROM_ROUND (5)
+    const stageId = STAGES[(i * 3 + 1) % STAGES.length];
+    const chunk = [{ chessId: 'chess_char_4_07_a', standIn: true, elite: 0, band: 4, items: [items.next()] }];
+    const { units } = layout(gd, stageId, chunk, { max: 12 });
+    if (!units.length) throw new Error(`standins: nothing fits on ${stageId}`);
+    const seed = deriveSeed(20261005, `standins:${i}`);
+    const wave = normalWave(gd, round, seed);
+    const pid = 'p1';
+    scenarios.push({
+      id: `standin-${String(i + 1).padStart(2, '0')}-coverage`, family: 'standins', kind: 'normal', modeId, round, stageId, seed, pass: 0,
+      rect: { ...GEO.NORMAL_RECT }, timeLimit: wave.timeLimit, routes: wave.routes, waveId: wave.templateId, enemyOverrides: wave.overrides,
+      flags: { layerGainsEnabled: true, ...gd.dp },
+      players: [playerInput(pid, 0, units, { bonds: bondsOf(gd, units, LAYER_STEPS[4]), bandId: bands.next() })],
+      spawns: [0, 1, 2].flatMap((k) => wave.spawns.map((sp) => ({ ...sp, time: sp.time + k * Math.round(wave.timeLimit / 4), ownerPlayerId: pid })))
+        .concat(extraSpawns(gd, wave.routes, Array.from({ length: 8 }, () => ground.next()), round, pid, 6, 6)),
+      about: `coverage: char_601_cguard S2 on a pre-boost round ${round} (BALANCE §8)`,
+    });
+  }
   return scenarios;
 }
 

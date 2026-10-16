@@ -118,6 +118,25 @@ export function layerGainRoom(before, n) {
  */
 export const BOSS_HIT_LIMIT = 300000;
 
+/**
+ * OUR difficulty layer (owner 2026-10-16 — docs/BALANCE.md §8, docs/MATCHMAKING.md §47). The official tables stay the
+ * BASE and this is a deliberate fork-only bump layered on top of them, because the owner wants the mid game and the
+ * leaders harder than the official data alone gives:
+ *   * enemies of round ≥ BOOST_FROM_ROUND: max HP × ENEMY_BOOST_HP, ATK × ENEMY_BOOST_ATK (DEF / RES / speed untouched);
+ *   * leaders: the shared pool × BOSS_BOOST_HP, their own ATK / DEF / RES × BOSS_BOOST_* — and their parts and
+ *     mid-fight summons take the same leader rate (they read the boss field's scale).
+ * The 8 formal modes only (`mode.inScope`; 入门协议 stays official). data/tuning.json `boost` carries the live numbers
+ * and can switch the layer off (`enabled: false`) or restore the official numbers (every factor 1); these are the
+ * built-in defaults when the file has no `boost` block. grep 'boostActive' for the live switch.
+ */
+export const BOOST_FROM_ROUND = 5;
+export const ENEMY_BOOST_HP = 1.3;
+export const ENEMY_BOOST_ATK = 1.3;
+export const BOSS_BOOST_HP = 1.4;
+export const BOSS_BOOST_ATK = 1.4;
+export const BOSS_BOOST_DEF = 1.4;
+export const BOSS_BOOST_RES = 1.4;
+
 // Snapshot unit flag bits (DESIGN §8.2)
 export const UF = Object.freeze({
   BLOCKED: 1, STUNNED: 2, FROZEN: 4, STEALTH: 8, SKILL: 16, SHIELD: 32, INVULN: 64, COLD: 128, SLEEP: 256, FLYING: 512,

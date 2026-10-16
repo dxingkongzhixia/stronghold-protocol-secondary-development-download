@@ -1,6 +1,13 @@
 {
-  "_doc": "Hand-maintained overrides layered on the generated data/config.json by server/match/gamedata.js (schema: docs/META.md §3.1). Enemy and leader numbers are the OFFICIAL ones (config.json enemyScale = the PRTS table, leader pool = bloodPoint): the custom enemyHpMul / enemyAtkMul / bossHpMul / flyPlaceholders balance was removed (research 08 §6, docs/BALANCE.md). Only result-title rules remain.",
-  "version": 2,
+  "_doc": "Hand-maintained overrides layered on the generated data/config.json by server/match/gamedata.js (schema: docs/META.md §3.1). Base enemy and leader numbers are the OFFICIAL ones (config.json enemyScale = the PRTS table, leader pool = bloodPoint) and the old enemyHpMul / enemyAtkMul / bossHpMul / flyPlaceholders balance stays removed (research 08 §6, docs/BALANCE.md §4). `boost` is OUR deliberate difficulty layer on top of those official numbers (owner 2026-10-16, docs/BALANCE.md §8 / MATCHMAKING §47) and `titles` the result-title rules.",
+  "version": 3,
+  "boost": {
+    "_why": "owner 2026-10-16: enemies from round 5 get +30 % HP / ATK, every leader +40 % (pool HP + ATK / DEF / RES, parts and mid-fight summons included). Applies to the 8 formal modes only (mode.inScope true — 入门协议 stays official). Set enabled:false (or every factor to 1) to restore the pure official numbers.",
+    "enabled": true,
+    "fromRound": 5,
+    "enemy": { "hp": 1.3, "atk": 1.3 },
+    "boss": { "hp": 1.4, "atk": 1.4, "def": 1.4, "res": 1.4 }
+  },
   "titles": {
     "comment_3": {
       "stat": "lpLost",

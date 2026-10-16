@@ -180,7 +180,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) | **问题 → 文档 → 代码文件** 查询索引 |
 | [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md) | 当前状态一页纸：线上、开关、备份、已知问题 |
 | [`docs/PLAYING.md`](docs/PLAYING.md) | 玩法指南：流程、经济、招募与晋升、摆阵、联防、盟约、最终攻势、结算称号 |
-| [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) | **我们的改动与全部决策记录**：账号 / 野排 / 观战夺舍 / 8 名自造干员（§1–§46） |
+| [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) | **我们的改动与全部决策记录**：账号 / 野排 / 观战夺舍 / 8 名自造干员（§1–§47） |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | 仓库地图与构建 / 测试 / 素材流水线 |
 | [`docs/DEV-GUIDE-ZH.md`](docs/DEV-GUIDE-ZH.md) | 同一张地图的中文版 + 二次开发手册 |
 | [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) | 我们怎么研究 / 改动 / 测试 / 合并 / 部署，以及推送约定 |

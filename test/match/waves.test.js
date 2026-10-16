@@ -8,7 +8,10 @@ import {
   isFlyKey,
 } from '../../server/match/waves.js';
 import { createRng } from '../../server/sim/rng.js';
-import { DATA } from './harness.js';
+import { DATA as DATA_RAW } from './harness.js';
+import { withoutTuning } from '../../tools/balance.mjs';
+// Official numbers (data/tuning.json left out — OUR boost layer is covered by test/match/boost.test.js, BALANCE §8).
+const DATA = withoutTuning(DATA_RAW);
 
 const TS = DATA.factions.templateSlots;
 const PLACEHOLDERS = new Set([TS.N, TS.E, TS.S, TS.NF, TS.EF, TS.SF]);

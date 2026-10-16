@@ -2,7 +2,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Battle } from '../../server/sim/Battle.js';
-import { makeMatch } from './harness.js';
+import { makeMatch, DATA as DATA_RAW } from './harness.js';
+import { withoutTuning } from '../../tools/balance.mjs';
+// Official numbers: this test follows one real enemy kill, so the official scale applies (OUR boost layer, BALANCE §8,
+// is covered by test/match/boost.test.js).
+const OFFICIAL = withoutTuning(DATA_RAW);
 
 test('Rockrock killed by a real enemy and automatically revived by Ermengard starts the same target at init', () => {
   const observed = [];
@@ -38,7 +42,7 @@ test('Rockrock killed by a real enemy and automatically revived by Ermengard sta
       });
     }
   }
-  const h = makeMatch({ mode: 'solo', seed: 8 });
+  const h = makeMatch({ data: OFFICIAL, mode: 'solo', seed: 8 });
   h.m.BattleClass = ObservedBattle; // read-only observers, no combat state writes
   const p = h.ps('p_0'), act = msg => assert.deepEqual(h.m.handle('p_0', msg), { ok: true });
   try {

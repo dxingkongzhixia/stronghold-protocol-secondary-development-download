@@ -4,7 +4,11 @@
 // (DESIGN §25.13.4, server/match/gamedata.js bossPoolShareOf).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeMatch, DATA } from './harness.js';
+import { makeMatch, DATA as DATA_RAW } from './harness.js';
+import { withoutTuning } from '../../tools/balance.mjs';
+// Official numbers: this file pins the leader pool of the OFFICIAL tables, so data/tuning.json (OUR boost layer,
+// docs/BALANCE.md §8) is left out — test/match/boost.test.js covers the layer itself.
+const DATA = withoutTuning(DATA_RAW);
 import { GameData } from '../../server/match/gamedata.js';
 import { bossPoolHp, SharedBossPool } from '../../server/match/finalAssault.js';
 import { makeBattle } from '../helpers/battleHarness.js';
@@ -25,7 +29,7 @@ test('every leader and difficulty: bloodPoint × the players alive (co-op), × 1
 
 for (const hidden of [false, true]) {
   test(`R${hidden ? 15 : 14}: the round's pool leaves out two departed players`, () => {
-    const h = makeMatch({ humans: 4, difficulty: 'HARD', fake: true, instant: false }).start();
+    const h = makeMatch({ data: DATA, humans: 4, difficulty: 'HARD', fake: true, instant: false }).start();
     h.toPrep(1);
     const m = h.m;
     m.onLeave('p_2');
@@ -45,7 +49,7 @@ for (const hidden of [false, true]) {
 }
 
 test('disconnected players (AI 托管) and bots count; an eliminated player does not', () => {
-  const h = makeMatch({ humans: 3, bots: 1, fake: true, instant: false }).start();
+  const h = makeMatch({ data: DATA, humans: 3, bots: 1, fake: true, instant: false }).start();
   h.toPrep(1);
   h.m.onDisconnect('p_1');
   h.ps('p_2').eliminate(1);

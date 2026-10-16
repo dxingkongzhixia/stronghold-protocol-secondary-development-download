@@ -306,10 +306,12 @@ kills in seconds at ≈ 2000+ layers per player is official uncapped per-layer s
 
 The previous pass layered per-round enemy HP × s / ATK × √s (all 8 modes, e.g. 同盟 险境 R13 HP × 0.55) and the solo
 标准 leader pool × 0.6 on top of the research numbers, to compensate for the old generator's 2–4× enemy counts. Research
-08 decoded the official generator, so the compensation is gone together with its cause: `data/tuning.json` keeps only
-`titles.comment_3` (坚若磐石 = least LP lost), `gamedata.js` has no multiplier layer (`enemyScale(r)` = the config table,
-`bossHpMul()` = 1, `bossPoolHp()` = the official pool). Difficulty questions are now answered by measuring (§3), not by
-tuning. `tools/balance.mjs --tuning` remains accepted and has no effect on the numbers.
+08 decoded the official generator, so the compensation is gone together with its cause: `data/tuning.json` keeps
+`titles.comment_3` (坚若磐石 = least LP lost), `gamedata.js` reads no per-round multiplier of that kind
+(`enemyScale(r)` = the config table, `bossPoolHp()` = the official pool × `bossHpMul`), and difficulty questions are
+answered by measuring (§3), not by tuning. `tools/balance.mjs --tuning off` is that measuring view (no tuning file at
+all); `--tuning on` is the SHIPPED one — which since 2026-10-16 carries our own deliberate layer on top of the official
+numbers (§8).
 
 ---
 
@@ -432,4 +434,40 @@ on a leader is cancelled (`MAX_BATTLE_DAMAGE`: 0 damage, nothing to the pool —
   hidden 胄 终极 pool is 21.6M / 28.8M at 3 / 4 players, so a drone is 432000 / 576000 — above the line; the link is a
   share, no hit, and passes it (`Battle.loseHp noHitLimit` [ASSUMED]: research 11 §2.1 checks every damage modifier, but
   which max HP the official link reads is not documented). Re-check this whenever the pool size changes (research 11 §6).
+
+---
+
+## 8. OUR difficulty layer — enemies from round 5, leaders (owner 2026-10-16)
+
+`data/tuning.json` `boost` (owner's decision of 2026-10-16, [MATCHMAKING §47](MATCHMAKING.md)) is the ONE place this
+project deliberately deviates from the official numbers, after §3/§4 had made the official tables the base:
+
+* **enemies** of round ≥ `fromRound` (5): max HP × 1.3, ATK × 1.3 — DEF, RES and speed stay official;
+* **leaders** (最终攻势 / 隐秘核心): the shared pool (`bloodPoint`) × 1.4, their own ATK / DEF / RES × 1.4 — the parts
+  and the mid-fight summons take the same leader rate (a part also gets the HP; the leader's own HP stays the pool);
+* the **8 formal modes only** (`mode.inScope` — 入门协议 / `mode_training_1` stays official), never 联防.
+
+Code: `shared/constants.js` (`BOOST_FROM_ROUND`, `ENEMY_BOOST_*`, `BOSS_BOOST_*` — the built-in defaults when the file
+has no block), `server/match/gamedata.js` (`boostOf`, `enemyBoost` / `bossBoost` / `bossEnemyScale` / `bossHpMul`),
+`server/match/waves.js` (the tag-`boss` / tag-`part` spawn mods), `server/match/match/bossRounds.js` (the boss field's
+`flags.enemyScale`), `server/sim/content/bosses.js` (`summonMods` DEF / RES). `boost.enabled = false` (or every factor 1)
+restores the official numbers; `tools/balance.mjs --tuning off` measures that view.
+
+**Measured 2026-10-16** (`node tools/balance.mjs --mode multi --difficulty HARD …`, profile 1, rehearsal 5, 6×4 boards),
+tuning off (= official) → on:
+
+| 同盟 绝境 | off | on |
+|---|---|---|
+| capped leaks per round, R5–14 | 0.57 | **1.42** (R8+ 0.78 → 1.81, worst round 1.67 → 3.04) |
+| 最终攻势 R14: pool · mean kill · victory | 6.74M · 87.9 s · 100 % | **9.43M · 181.6 s · 88 %** |
+| 隐秘核心 R15: pool · mean kill · victory | 13.70M · 127.8 s · 75 % | **19.18M · 313.1 s · 75 %** |
+
+Per leader (R14, mean kill): boss_1 73.7 → 135.1 s, boss_2 82.3 → 175.0, boss_4 111.0 → 246.2 (victory 100 → 67 %),
+boss_5 72.5 → 119.3, boss_6 67.9 → 214.0; Hidden Core boss_8 121.3 → 315.8, boss_10 160.4 → 299.9 s.
+
+Tests: `test/match/boost.test.js` covers the layer itself; the files that pin the OFFICIAL numbers run on
+`withoutTuning(DATA)` (`test/match/{waves,balance,finalAssault,boss-hp-scaling,bosshp,connection,clientCombat,funnel-redeploy}.test.js`),
+and the golden corpus was regenerated in its own commit — the `standins` family gained a pre-boost companion battle for
+`char_601_cguard` S2, whose cast the round-6/10 battles lose under the boost (the §46 precedent: keep the scenario, add
+a companion seed).
 

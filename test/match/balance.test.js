@@ -1,5 +1,6 @@
-// Balance: NO custom balance any more (research 08 §6: the official numbers only; data/tuning.json keeps result titles)
-// and the competent-board model of tools/balance.mjs, which now only MEASURES difficulty (docs/BALANCE.md).
+// Balance: the official numbers are the BASE (research 08 §6) and the competent-board model of tools/balance.mjs only
+// MEASURES difficulty (docs/BALANCE.md). data/tuning.json additionally carries OUR difficulty layer (the `boost` block,
+// docs/BALANCE.md §8 / MATCHMAKING §47) — its own tests are in test/match/boost.test.js; this file pins the official base.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GameData } from '../../server/match/gamedata.js';
@@ -49,10 +50,14 @@ test('no custom balance: legacy tuning multipliers are ignored; enemy scale = th
   for (const s of w.spawns) assert.equal(s.mods.hpMul, base.baseEnemyScale(3).hpMul);
 });
 
-test('data/tuning.json holds only title rules (the enemy / leader multipliers were removed)', () => {
+test('data/tuning.json holds the boost layer and the title rules (the legacy enemy / leader multipliers stay removed)', () => {
   const t = DATA.tuning;
   assert.ok(t && typeof t === 'object', 'data/tuning.json is loaded as data.tuning');
-  assert.deepEqual(Object.keys(t).filter((k) => !k.startsWith('_')).sort(), ['titles', 'version']);
+  assert.deepEqual(Object.keys(t).filter((k) => !k.startsWith('_')).sort(), ['boost', 'titles', 'version']);
+  // the legacy keys stay ignored: gamedata reads only `boost` (and `titles`); an old tuning object means "official"
+  const legacy = new GameData({ ...RAW, tuning: { enemyHpMul: 0.5, bossHpMul: { boss_1: 0.5 }, modes: { '*': { enemyAtkMul: 0.9 } } } }, 'mode_multi_hard');
+  assert.deepEqual(legacy.enemyScale(9), legacy.baseEnemyScale(9));
+  assert.equal(legacy.bossHpMul('boss_1'), 1);
   for (const [id, o] of Object.entries(t.titles || {})) {
     assert.ok(DATA.config.titles.some((x) => x.id === id), id);
     assert.ok(['max', 'min'].includes(o.rule));

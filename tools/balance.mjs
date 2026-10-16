@@ -369,7 +369,7 @@ export function runBoss({ data, mode, difficulty, round, seed, profile = 1, boss
   m.round = round;
   m.wave = null;
   // the boss fields are known during the prep (Match.startRound), so the boards are placed against them
-  const groups = pairPlayers(m.alivePlayers());
+  const groups = pairPlayers(m.alivePlayers(), rng);
   m.bossWaves = groups.map((g) => ({ players: g.map((p) => p.playerId), wave: buildBossWave(gd, m.rngWaves, m.factions, round, { bossId: id, solo: m.isSolo || g.length === 1 }) }));
   for (const [i, g] of groups.entries()) {
     for (const ps of g) {

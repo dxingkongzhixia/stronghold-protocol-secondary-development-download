@@ -4,7 +4,10 @@ import assert from 'node:assert/strict';
 import { PHASE, ERR } from '../../shared/constants.js';
 import { Match } from '../../server/match/Match.js';
 import { StubMatch } from '../../server/match/StubMatch.js';
-import { DATA, makeMatch, checkInvariants, give, giveItem, chessOfTier } from './harness.js';
+import { DATA as DATA_RAW, makeMatch, checkInvariants, give, giveItem, chessOfTier } from './harness.js';
+import { withoutTuning } from '../../tools/balance.mjs';
+// Official numbers (data/tuning.json left out — OUR boost layer is covered by test/match/boost.test.js, BALANCE §8).
+const DATA = withoutTuning(DATA_RAW);
 import { bossPoolHp } from '../../server/match/finalAssault.js';
 
 const STATUSES = ['acting', 'ready', 'deciding', 'combat', 'done', 'helping', 'left', 'dead'];
@@ -237,7 +240,7 @@ test("aiTakeOver (owner's rule): a departing human with another human present be
 
 test('onLeave: a quitter has no place in the Final Assault pairing or the boss pool; its draft turns pass on', () => {
   // band draft: the player on turn leaves → its pick is the default band and the turn moves on
-  const h = makeMatch({ mode: 'coop', difficulty: 'FUNNY', humans: 3, seed: 5, fake: true, script: (b) => (b.kind === 'boss' ? { bossDps: 1e9 } : {}) }).start();
+  const h = makeMatch({ data: DATA, mode: 'coop', difficulty: 'FUNNY', humans: 3, seed: 5, fake: true, script: (b) => (b.kind === 'boss' ? { bossDps: 1e9 } : {}) }).start();
   const m = h.m;
   for (const id of ['p_0', 'p_1', 'p_2']) m.handle(id, { t: 'g.infoReady' });
   h.sched.advance(1);

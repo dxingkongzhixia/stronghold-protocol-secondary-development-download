@@ -5,7 +5,10 @@ import { PHASE, GEO } from '../../shared/constants.js';
 import { pairPlayers, bossPoolHp, SharedBossPool, hiddenEligible } from '../../server/match/finalAssault.js';
 import { GameData } from '../../server/match/gamedata.js';
 import { FakeBattle } from './fakeBattle.js';
-import { DATA, makeMatch, checkInvariants } from './harness.js';
+import { DATA as DATA_RAW, makeMatch, checkInvariants } from './harness.js';
+import { withoutTuning } from '../../tools/balance.mjs';
+// Official numbers (data/tuning.json left out — OUR boost layer is covered by test/match/boost.test.js, BALANCE §8).
+const DATA = withoutTuning(DATA_RAW);
 import { createRng } from '../../server/sim/rng.js';
 
 const bossFields = () => FakeBattle.instances.filter((b) => b.kind === 'boss' || b.kind === 'hidden');
@@ -102,7 +105,7 @@ test('boss pool = bloodPoint[difficulty] × the players alive at the fight\'s st
 
 for (const n of [1, 2, 3, 4]) {
   test(`Final Assault with ${n} player(s): fields, sides, templates, merged LP, shared pool, victory`, () => {
-    const h = makeMatch({ mode: 'coop', difficulty: 'FUNNY', humans: n, seed: 40 + n, fake: true, script: (b) => (b.kind === 'boss' ? { bossDps: 1e9 } : {}) }).start();
+    const h = makeMatch({ data: DATA, mode: 'coop', difficulty: 'FUNNY', humans: n, seed: 40 + n, fake: true, script: (b) => (b.kind === 'boss' ? { bossDps: 1e9 } : {}) }).start();
     const m = h.m;
     h.drive(() => m.phase === PHASE.PREP && m.round === 14);
     const lps = [...m.players.values()].map((p) => p.lp);
@@ -119,7 +122,7 @@ for (const n of [1, 2, 3, 4]) {
       assert.equal(f.opts.modeId, 'mode_multi_funny', '#475: an unpaired field retains multiplayer mode despite its solo wave template');
       assert.equal(f.opts.timeLimit, Infinity);
       assert.equal(f.opts.flags.layerGainsEnabled, false);
-      assert.deepEqual(f.opts.flags.enemyScale, m.gd.enemyScale(14), 'the round\'s enemy effects for the leader\'s summons (PR #272)');
+      assert.deepEqual(f.opts.flags.enemyScale, m.gd.bossEnemyScale(14), 'the LEADER rate for the leaders\' summons (PR #272 + OUR boost.boss, BALANCE §8)');
       assert.ok(f.opts.players.every((p) => p.lpForBoss === m.teamLp));
       if (f.opts.players.length === 2) {
         assert.deepEqual(f.opts.players.map((p) => p.side), ['L', 'R']);

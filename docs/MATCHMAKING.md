@@ -1500,3 +1500,22 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **golden 的补位覆盖要重新选种**：信赖把商店 / 上阵的随机流又推了一次，`coop2-NORMAL-14-standins` 与原来的 `coop2-NORMAL-1-coverage-standins` **都不再派出任何替补**了。按生成器既有的做法（保留原场景的既定结果、另加 companion 种子），coverage 场景改为 **seed 26**（3 个不同替补、7 个回合；11 / 13 / 16 / 19 / 25 / 27 也可用，`tools/golden.mjs matchScenarios()` + `runMatch()` 可随时再探）。`test/golden-standins.test.js` 相应改为对 coverage 场景断言、并同时校验两个场景**零错误**。
 - **谁来守这条规则**：① 4 处「从官方表独立重算」的测试（`test/data.test.js`、`test/backups.test.js`、`test/potential.test.js`、`test/full-potential.test.js`）都带上了满信赖项——**构建里一旦丢掉 `withFavor`，它们立刻失败**；② 本节的自查 `grep`。
 - **自查**：`grep -n 'withFavor' tools/build-data.mjs` 应有两处调用点（chess + backups）；重建后 `node tools/build-data.mjs --offline` 应当**零差异**（`data/` 已提交）；`grep -n 'favorKeyFrames' tools/build-data.mjs` 只看得到 `withFavor` 内部。
+
+## 47. 敌人从第 5 回合起 +30%、领袖 +40%（owner 2026-10-16）
+
+> 起因（owner 2026-10-16 游玩反馈）：「明显感觉低层也脆，**所有敌人**都有这种感觉」。核对结果与 §45 相同：**不是敌人变弱** —— `data/enemies.json` 249 条基础数值（唯一差异是 14 条动画字段）、`config.modes[*].enemyScale` 每回合倍率、领袖血池 `bloodPoint`、伤害管线 `server/sim/damage.js` 与主线 v0.3.0 **逐字段一致**；玩家侧则**等于官方基准**（默认潜能 1 / 未精英化 + 官方同样的满信赖，见 §45 / §46），并不高于官方。数值上找不到可归因的偏离，owner 于是决定**直接加一层难度**。
+
+- **决定（owner 2026-10-16）**：「敌人从 5 回合开始全属性增加 30%，各种 boss 全属性增加 40%」。同批确认的口径：
+  - **敌人**：第 5 回合起 **生命 ×1.3、攻击 ×1.3**（防御 / 法抗 / 移速照旧 —— 与官方 `enemy_attribute_mul` 那套同口径）；
+  - **领袖**：**共享血池 ×1.4** + 本体 **攻击 / 防御 / 法抗 ×1.4**；**部件与战中召唤物同按领袖档**（它们读 boss field 的 `flags.enemyScale`）；
+  - **范围**：8 个正式模式（`mode.inScope`），**入门协议 `mode_training_1` 不动**；Boss 取 40% 一档，**不再叠加**普通敌人的 30%；
+  - 官方本就豁免领袖血池（「领袖单位于服务器的生命值加成不受上述加成影响」），这一层是**有意越过**该豁免（owner 的选择）。
+- **怎么做**：`data/tuning.json` 新增 `boost` 块（`enabled` / `fromRound` / `enemy{hp,atk}` / `boss{hp,atk,def,res}` —— 随时可改数或 `enabled:false` 关掉）；`shared/constants.js` 放内置默认值；`server/match/gamedata.js` 新增 `boostOf` 与 `enemyBoost` / `bossBoost` / `bossEnemyScale`，`enemyScale(r)` 在官方表上叠敌人层、`bossHpMul` 返回池子倍率；`server/match/waves.js` 把 `tag==='boss'` / `tag==='part'` 的 spawn 改走 `bossEnemyScale`（部件连 HP 一起）；`server/match/match/bossRounds.js` 的 boss field flags 改传 `bossEnemyScale`；`server/sim/content/bosses.js` 的 `summonMods` 带上 `defMul` / `resMul`。
+- **实测（2026-10-16，`tools/balance.mjs`，同盟·绝境，profile 1，rehearsal 5，6×4 阵）**，`--tuning off`（= 官方）→ 开启本层：
+  - 普通回合 R5–14：平均漏怪 **0.57 → 1.42**（R8+ 0.78 → 1.81，最差回合 1.67 → 3.04）；LP/回合 0.15 → 0.34；
+  - 最终攻势 R14：血池 **6.74M → 9.43M**，平均击杀 **87.9 s → 181.6 s**，胜率 100 % → 88 %；
+  - 隐秘核心 R15：血池 **13.70M → 19.18M**，平均击杀 **127.8 s → 313.1 s**，胜率 75 %（不变）；
+  - 逐领袖（R14 平均击杀）：boss_1 73.7→135.1、boss_2 82.3→175.0、boss_4 111.0→246.2（胜率 100 %→67 %）、boss_5 72.5→119.3、boss_6 67.9→214.0 s；隐秘核心 boss_8 121.3→315.8、boss_10 160.4→299.9 s。
+- **测试**：新增 `test/match/boost.test.js`（本层自身：解析、R5 起生效、8 个正式模式与入门协议、领袖档、池子、wave 的 boss/part 分流）；**钉官方数值**的测试改走 `withoutTuning(DATA)`（`test/match/{waves,balance,finalAssault,boss-hp-scaling,bosshp,connection,clientCombat,funnel-redeploy}.test.js`）；`golden` 语料**单独提交**重算 —— `standins` 家族新增一个**未加成的同伴场景**（`char_601_cguard` 的 S2 在 R6/R10 加上本层后不再放出，按 §46 先例保留原场景、另加 companion）；`test/match/balance.test.js` 的「tuning 只放标题规则」改为「放 boost + 标题规则，旧倍率键仍被忽略」。
+- **合并黑名单**：见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 —— 上游的 `gamedata.enemyScale` / `waves.js` / `bossRounds.js` 在合并时**会把这一层抹掉**，一律以我们为准（自查：`grep -n 'enemyBoost\|bossEnemyScale' server/match/gamedata.js`，以及 `data/tuning.json` 的 `boost` 块仍在）。
+- **顺带修**：`tools/balance.mjs` 的 `runBoss` 少传 rng（`pairPlayers(m.alivePlayers())` → 崩在 `rng.shuffle`）—— 与本次改动无关的既有 bug，已补成 `pairPlayers(m.alivePlayers(), rng)`；上面 boss 那几行就是修好之后量出来的。

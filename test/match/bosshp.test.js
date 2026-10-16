@@ -11,7 +11,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PHASE } from '../../shared/constants.js';
-import { makeMatch, DATA } from './harness.js';
+import { makeMatch, DATA as DATA_RAW } from './harness.js';
+import { withoutTuning } from '../../tools/balance.mjs';
+// The official leader pools: data/tuning.json (OUR boost layer, BALANCE §8) is left out — test/match/boost.test.js has it.
+const DATA = withoutTuning(DATA_RAW);
 import { aggregateMods } from '../../server/sim/buffs.js';
 import { bondBb } from '../../server/sim/content/bonds/addon/battle.js';
 import { DataSource } from '../../server/sim/simdata.js';
@@ -22,7 +25,7 @@ import { SharedBossPool } from '../../server/match/finalAssault.js';
 function toFinalAssault({ difficulty, seed, bossId, layers = 0 }) {
   const seats = [0, 1, 2, 3].map((i) => ({ seat: i, playerId: `ai_${i}`, name: `AI${i}`, isBot: true, connected: true }));
   // instant: false — the boss fields wait for the test to step them (server-run, real sim)
-  const h = makeMatch({ mode: 'coop', difficulty, seats, seed, captureFrames: false, instant: false });
+  const h = makeMatch({ data: DATA, mode: 'coop', difficulty, seats, seed, captureFrames: false, instant: false });
   const m = h.m;
   m.bossId = bossId;
   m.start();
@@ -172,7 +175,7 @@ test('终极 Final Assault vs 假想敌：胄 (seeded bot match): both players\'
 test('绝境 Hidden Core vs 假想敌：铳 (隐秘核心): a 碎铳之簧 passes every damage it takes to the pool 1:1, 无来源, credited', () => {
   // DESIGN §20.10: PRTS 碎铳之簧 "受到伤害时令…假想敌：铳受到等量的无来源生命流失" (v2.5: half); real match → Hidden Core specs
   const seats = [0, 1, 2, 3].map((i) => ({ seat: i, playerId: `ai_${i}`, name: `AI${i}`, isBot: true, connected: true }));
-  const h = makeMatch({ mode: 'coop', difficulty: 'HARD', seats, seed: 7, captureFrames: false, instant: false, clientCombat: true });
+  const h = makeMatch({ data: DATA, mode: 'coop', difficulty: 'HARD', seats, seed: 7, captureFrames: false, instant: false, clientCombat: true });
   const m = h.m;
   m.bossId = 'boss_5';
   m.hiddenBossId = 'boss_9';

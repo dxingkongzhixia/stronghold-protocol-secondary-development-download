@@ -4,16 +4,22 @@
 // unknown ids. Tunables come from data/config.json with the documented defaults (research 00-INDEX §2–§8) when a
 // key is missing, so a partial data set (tests, data being regenerated) still yields a working match.
 //
-// No custom balance (DESIGN §14 corrections, research 08 §6): enemy numbers are the official ones — the PRTS
-// per-round enemyScale table of data/config.json, the leader pool = bloodPoint per player alive at the fight's start
-// (bossPoolShareOf). data/tuning.json only overrides result titles:
-//   titles[titleId]                                                { stat?, rule? } merged over config.titles
-// (the former enemyHpMul / enemyAtkMul / enemySpeedMul / bossHpMul / flyPlaceholders knobs were removed; a tuning file
-// that still carries them is ignored).
+// Base balance is the OFFICIAL data (DESIGN §14 corrections, research 08 §6): enemy numbers are the PRTS per-round
+// enemyScale table of data/config.json and the leader pool = bloodPoint per player alive at the fight's start
+// (bossPoolShareOf). On top of that base sits OUR difficulty layer (owner 2026-10-16 — docs/BALANCE.md §8,
+// docs/MATCHMAKING.md §47), read out of data/tuning.json:
+//   boost            { enabled?, fromRound?, enemy { hp, atk }, boss { hp, atk, def, res } } — the 8 formal modes
+//                    (mode.inScope), from `fromRound` on; enemyBoost / bossBoost / bossEnemyScale below
+//   titles[titleId]  { stat?, rule? } merged over config.titles
+// (the older enemyHpMul / enemyAtkMul / enemySpeedMul / bossHpMul / flyPlaceholders knobs stay removed — the boost
+// block is the deliberate, self-contained replacement. A tuning file with the old keys is still ignored.)
 
 import { getConfig, getMode } from '../data.js';
 import { isShopItem } from '../sim/simdata.js';
 import { standInRecord } from '../../shared/standIn.js';
+import {
+  BOOST_FROM_ROUND, ENEMY_BOOST_HP, ENEMY_BOOST_ATK, BOSS_BOOST_HP, BOSS_BOOST_ATK, BOSS_BOOST_DEF, BOSS_BOOST_RES,
+} from '../../shared/constants.js';
 
 const own = (map, id) => (map && typeof map === 'object' && typeof id === 'string' && Object.hasOwn(map, id) && map[id] && typeof map[id] === 'object' ? map[id] : null);
 const numOr = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
@@ -83,6 +89,28 @@ export function bossPoolShareOf(modeScale, cfgScale, isSolo, aliveCount) {
   return pick('coop', 1) * (flag('aliveScaling', false) ? alive / full : 1);
 }
 
+/**
+ * OUR difficulty layer out of `data/tuning.json boost` (owner 2026-10-16 — docs/BALANCE.md §8, MATCHMAKING §47); null
+ * when the block is absent, `enabled: false`, or every factor is exactly 1 (then the official numbers are used verbatim).
+ * A partial block still works — every factor falls back to the shared/constants.js default:
+ *   { enabled?: boolean, fromRound?: number, enemy?: { hp?, atk? }, boss?: { hp?, atk?, def?, res? } }
+ * @param {object|null|undefined} b the tuning file's `boost`
+ * @returns {{ fromRound: number, enemy: { hp: number, atk: number }, boss: { hp: number, atk: number, def: number, res: number } } | null}
+ */
+export function boostOf(b) {
+  if (!b || typeof b !== 'object' || b.enabled === false) return null;
+  const f = (v, d) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : d);
+  const e = b.enemy && typeof b.enemy === 'object' ? b.enemy : {};
+  const s = b.boss && typeof b.boss === 'object' ? b.boss : {};
+  const out = {
+    fromRound: posIntOr(b.fromRound, BOOST_FROM_ROUND),
+    enemy: { hp: f(e.hp, ENEMY_BOOST_HP), atk: f(e.atk, ENEMY_BOOST_ATK) },
+    boss: { hp: f(s.hp, BOSS_BOOST_HP), atk: f(s.atk, BOSS_BOOST_ATK), def: f(s.def, BOSS_BOOST_DEF), res: f(s.res, BOSS_BOOST_RES) },
+  };
+  const flat = [out.enemy.hp, out.enemy.atk, out.boss.hp, out.boss.atk, out.boss.def, out.boss.res].every((v) => v === 1);
+  return flat ? null : out;
+}
+
 /** Strip the _a/_b suffix of an item id (the registry key of an item family). */
 export const itemKey = (id) => (typeof id === 'string' ? id.replace(/_[ab]$/, '') : '');
 
@@ -126,19 +154,25 @@ export class GameData {
     /** bandBondIds memo */
     this._bandBonds = new Map();
     this.inactiveEnemies = new Set(Array.isArray(this.mode.inactiveEnemyKeys) ? this.mode.inactiveEnemyKeys : []);
-    /** data/tuning.json (titles only, see the header) */
+    /** data/tuning.json (the boost block + result titles, see the header) */
     this.tuning = this.raw.tuning && typeof this.raw.tuning === 'object' ? this.raw.tuning : {};
+    /** OUR difficulty layer out of data/tuning.json `boost` (null when off — enemyBoost / bossBoost below) */
+    this._boost = boostOf(this.tuning.boost);
     /** standIn memo: chess id → composed 补位 record | null */
     this._standIns = new Map();
   }
 
   /**
-   * Leader HP pool multiplier — always 1 (no custom balance). Kept for callers written against the old tuning layer
-   * (finalAssault.bossPoolHp); use `bossPoolHp` / `bossPoolShare` for the official pool.
-   * @deprecated
+   * Leader HP pool multiplier: OUR difficulty layer's pool factor (`data/tuning.json boost.boss.hp`; 1 when the layer is
+   * off — docs/BALANCE.md §8). It multiplies the official pool (`bossPoolHp` / `bossPoolShare`; finalAssault.bossPoolHp
+   * applies it), so it is the one part of a leader the round's enemy effects never touch: "领袖单位于服务器的生命值加成
+   * 不受上述加成影响".
+   * @param {string} bossId
+   * @returns {number}
    */
   bossHpMul(bossId) { // eslint-disable-line no-unused-vars
-    return 1;
+    const b = this.bossBoost();
+    return b ? b.hp : 1;
   }
 
   /**
@@ -431,9 +465,47 @@ export class GameData {
     };
   }
 
-  /** Enemy multipliers of round r = the official table (baseEnemyScale; no custom multiplier). */
+  /** Enemy multipliers of round r = the official table (baseEnemyScale) × OUR difficulty layer (enemyBoost). */
   enemyScale(r) {
-    return this.baseEnemyScale(r);
+    const base = this.baseEnemyScale(r);
+    const e = this.enemyBoost(r);
+    return e ? { ...base, hpMul: base.hpMul * e.hp, atkMul: base.atkMul * e.atk } : base;
+  }
+
+  /**
+   * OUR enemy bump of round r (`data/tuning.json boost.enemy`; null when the layer is off, the mode is out of scope or
+   * r < boost.fromRound). HP / ATK only — DEF, RES and speed stay official (owner 2026-10-16, docs/BALANCE.md §8).
+   * @param {number} r
+   * @returns {{ hp: number, atk: number } | null}
+   */
+  enemyBoost(r) {
+    const b = this._boost;
+    if (!b || this.mode.inScope === false) return null;
+    return numOr(r, 0) >= b.fromRound ? b.enemy : null;
+  }
+
+  /**
+   * OUR leader bump (`data/tuning.json boost.boss`; null when the layer is off): the shared pool factor (`bossHpMul`)
+   * and the leader's own ATK / DEF / RES. Parts and mid-fight summons take the same rate through `bossEnemyScale`.
+   * @returns {{ hp: number, atk: number, def: number, res: number } | null}
+   */
+  bossBoost() {
+    const b = this._boost;
+    return !b || this.mode.inScope === false ? null : b.boss;
+  }
+
+  /**
+   * The enemy scale of a LEADER round: the official table (baseEnemyScale) × OUR leader layer (HP / ATK / DEF / RES).
+   * It is what a boss field passes as `flags.enemyScale` (match/bossRounds.js) and what the wave builder gives its
+   * tag-'boss' and tag-'part' spawns, so the leaders, their parts and their mid-fight summons all take the leader rate.
+   * The leader's own HP stays the shared pool (`bossPoolHp`, × bossHpMul); a part or summon uses the `hpMul` here.
+   * @param {number} r
+   */
+  bossEnemyScale(r) {
+    const base = this.baseEnemyScale(r);
+    const b = this.bossBoost();
+    if (!b) return base;
+    return { ...base, hpMul: base.hpMul * b.hp, atkMul: base.atkMul * b.atk, defMul: b.def, resMul: b.res };
   }
 
   timer(key) {

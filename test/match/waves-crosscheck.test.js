@@ -265,7 +265,7 @@ test('round multipliers hit every enemy but 炎佑 (aceffect_enemy_* enemy_exclu
     assert.ok(!leaders.some((k) => ex.includes(k)), `${id}: no leader excluded`);
   }
   const gd = new GameData(DATA, 'mode_multi_abyss');
-  const scale = gd.enemyScale(15);
+  const scale = gd.bossEnemyScale(15);
   assert.ok(scale.atkMul > 2 && scale.speedMul > 1, 'sanity: 终极 hidden round multipliers');
   const picks = [];
   picks[15] = pickOf(DATA.factions.entries.enemy_1006_shield_3, 15);
@@ -282,6 +282,6 @@ test('round multipliers hit every enemy but 炎佑 (aceffect_enemy_* enemy_exclu
   const sp = [];
   sp[9] = pickOf(DATA.factions.entries.enemy_1006_shield_3, 9);
   const sw = buildBossWave(sgd, createRng(1), { picks: sp }, 9, { bossId: 'boss_1', solo: true });
-  assert.equal(sw.spawns.find((s) => s.tag === 'boss').mods.atkMul, sgd.enemyScale(9).atkMul);
-  assert.ok(sgd.enemyScale(9).atkMul < 1);
+  assert.equal(sw.spawns.find((s) => s.tag === 'boss').mods.atkMul, sgd.bossEnemyScale(9).atkMul);
+  assert.ok(sgd.bossEnemyScale(9).atkMul < 1);
 });

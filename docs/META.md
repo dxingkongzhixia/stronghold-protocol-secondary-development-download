@@ -728,18 +728,26 @@ Any `choice:` handler whose EffectRef reuses its own key must guard like this (o
   runs and the server's verification share the rule, so digests agree.
 
 ### 3.1 Balance layer (data/tuning.json)
-`data/config.json` is generated and stays research-faithful. There is **no custom balance** any more (DESIGN §14
-corrections, research 08 §6): enemy numbers are the official ones (the PRTS `enemyScale` table, the leader table
-`bloodPoint` — × the players alive by the owner's decision of 2026-10-06, §25.13.4). `data/tuning.json` (hand-maintained, loaded as `data.tuning`, layered on the config by gamedata.js only)
-keeps just the result-title rules:
+`data/config.json` is generated and stays research-faithful. On top of it `data/tuning.json` (hand-maintained, loaded as
+`data.tuning`, layered on the config by gamedata.js only) holds **two** things:
 
 ```jsonc
-{ "titles": { "comment_3": { "stat": "lpLost", "rule": "min" } } }   // merged over config.titles
+{
+  "boost":  { "enabled": true, "fromRound": 5, "enemy": { "hp": 1.3, "atk": 1.3 },
+              "boss": { "hp": 1.4, "atk": 1.4, "def": 1.4, "res": 1.4 } },   // OUR difficulty layer (BALANCE §8)
+  "titles": { "comment_3": { "stat": "lpLost", "rule": "min" } }              // merged over config.titles
+}
 ```
-The former `enemyHpMul` / `enemyAtkMul` / `enemySpeedMul` / `bossHpMul` / `flyPlaceholders` knobs were removed; a
-tuning file that still carries them is ignored (`gd.bossHpMul()` always returns 1). `tools/balance.mjs --tuning off`
-drops the file (titles only, so the numbers are the same). Titles: `rule: 'min'` ranks the players still alive by the
-smallest stat (坚若磐石 "目标生命值损失最少" = least `lpLost`). docs/BALANCE.md has the balance measurements.
+
+`boost` is the ONE deliberate deviation from the official numbers (owner 2026-10-16, [`MATCHMAKING §47`](MATCHMAKING.md)):
+enemies of round ≥ `fromRound` take HP / ATK ×1.3 and every leader the pool ×1.4 plus ATK / DEF / RES ×1.4, in the 8
+formal modes only (`mode.inScope`; 入门协议 untouched). `enabled: false` (or every factor 1) restores the official
+numbers; `gamedata.js` `boostOf` parses it and `enemyBoost` / `bossBoost` / `bossEnemyScale` / `bossHpMul` apply it —
+[`docs/BALANCE.md`](BALANCE.md) §8 has the measurements. The former `enemyHpMul` / `enemyAtkMul` / `enemySpeedMul` /
+`bossHpMul` / `flyPlaceholders` knobs stay removed; a tuning file that still carries them is ignored (they are unrelated
+to `boost`). `tools/balance.mjs --tuning off` drops the whole file — the official numbers, the measuring view. Titles:
+`rule: 'min'` ranks the players still alive by the smallest stat (坚若磐石 "目标生命值损失最少" = least `lpLost`).
+docs/BALANCE.md has the balance measurements.
 
 ---
 

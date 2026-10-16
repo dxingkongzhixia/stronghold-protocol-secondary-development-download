@@ -636,3 +636,19 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
 |---|---|
 | Asset index (server) | `server/assetindex.js`; `server/http/static.js` (`/asset-index.json`); `server/http/files.js` (asset CORS); `test/asset-index.test.js` |
 | Local cache (client) | `public/sw.js`; `public/js/assetCache.js`; `public/js/assetSource.js`; `public/js/ui/assetMode.js`; `public/js/main.js` (the preloadArt branch); `public/js/ui/settings.js` (the row); `public/css/screens/game.css` (`.asset-*` / `.set-asset`); `public/i18n/en.json` (the strings); `test/ui/asset-cache.test.js`; `test/ui/title-surfaces.test.js` (allows `public/sw.js`) |
+## 11. OUR difficulty layer (`data/tuning.json` `boost`)
+
+The official tables stay the BASE (BALANCE §3 / §4); this layer is our own deliberate bump on top of them (owner
+2026-10-16, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §47):
+
+* enemies of round ≥ `boost.fromRound` (5): max HP × 1.3, ATK × 1.3 — DEF / RES / speed untouched;
+* leaders: the shared pool × 1.4 and their own ATK / DEF / RES × 1.4, parts and mid-fight summons included;
+* the 8 formal modes only (`mode.inScope`) — 入门协议 (`mode_training_1`) stays official. `enabled: false` (or every
+  factor 1) restores the official numbers.
+
+Where: `shared/constants.js` (`BOOST_FROM_ROUND`, `ENEMY_BOOST_*`, `BOSS_BOOST_*`), `server/match/gamedata.js`
+(`boostOf` + `enemyBoost` / `bossBoost` / `bossEnemyScale` / `bossHpMul`), `server/match/waves.js` (the tag-`boss` /
+tag-`part` spawn mods), `server/match/match/bossRounds.js` (the boss field's `flags.enemyScale`),
+`server/sim/content/bosses.js` (`summonMods` DEF / RES). Tests: `test/match/boost.test.js` (the layer itself) — every
+file that pins the OFFICIAL numbers runs on `withoutTuning(DATA)`. Measurements and the golden note:
+[`docs/BALANCE.md`](BALANCE.md) §8. **It must survive a merge**: [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0.

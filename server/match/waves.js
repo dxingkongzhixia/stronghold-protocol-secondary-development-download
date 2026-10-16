@@ -288,6 +288,9 @@ function previewInfo(gd, key, route, boss = false, leader = undefined) {
  */
 function templateSpawns(gd, tpl, round, pick) {
   const scale = scaleFor(gd, round);
+  // Leaders, their parts and their mid-fight summons take OUR leader rate (gd.bossEnemyScale: the official round table ×
+  // boost.boss — owner 2026-10-16, docs/BALANCE.md §8), not the enemy rate above.
+  const bscale = typeof gd.bossEnemyScale === 'function' ? gd.bossEnemyScale(round) : scale;
   const ph = placeholderMap(gd);
   const routes = Array.isArray(tpl.routes) ? tpl.routes : [];
   const leader = isLeaderTemplate(tpl);
@@ -335,8 +338,24 @@ function templateSpawns(gd, tpl, round, pick) {
       // the round multipliers are ENEMY effects on every enemy but 炎佑 (aceffect_enemy_1–5 `enemy_attribute_mul`,
       // enemy_exclude = enemy_9012_acloon): leader parts take them all; the leader takes ATK / speed but not HP — its HP
       // is the server pool, "领袖单位于服务器的生命值加成不受上述加成影响" (PRTS 下半). `supplyHpMul` (roundMods) rides along for
-      // the 器物 hit-count units, which 补给线 / 补给线II leave out (archetypes.js `times`; also a 频次 enemy's death spawn)
-      mods: isBoss ? { atkMul: scale.atkMul, speedMul: scale.speedMul, slot } : { ...roundMods(scale), slot },
+      // the 器物 hit-count units, which 补给线 / 补给线II leave out (archetypes.js `times`; also a 频次 enemy's death spawn).
+      // tag-'boss' / tag-'part' spawns take `bscale` instead — the same official table plus OUR leader layer (ATK / DEF /
+      // RES for the leader, HP too for a part; docs/BALANCE.md §8).
+      mods: isBoss
+        ? {
+          atkMul: bscale.atkMul, speedMul: bscale.speedMul,
+          ...(bscale.defMul != null ? { defMul: bscale.defMul } : {}),
+          ...(bscale.resMul != null ? { resMul: bscale.resMul } : {}),
+          slot,
+        }
+        : isPart
+          ? {
+            ...roundMods(bscale),
+            ...(bscale.defMul != null ? { defMul: bscale.defMul } : {}),
+            ...(bscale.resMul != null ? { resMul: bscale.resMul } : {}),
+            slot,
+          }
+          : { ...roundMods(scale), slot },
       actionIndex: i,
       preview: previewInfo(gd, key, routes[routeIndex], isBoss, leader),
     };

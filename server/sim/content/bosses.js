@@ -254,6 +254,10 @@ function summonMods(b, hpRatio = null) {
   const s = b.flags && b.flags.enemyScale;
   if (!s || typeof s !== 'object') return hpRatio ? { hpMul: hpRatio } : null;
   const m = { hpMul: (Number.isFinite(s.hpMul) && s.hpMul > 0 ? s.hpMul : 1) * (hpRatio || 1), atkMul: s.atkMul, speedMul: s.speedMul };
+  // OUR leader layer also lifts a summon's DEF / RES (docs/BALANCE.md §8): the boss field's flags.enemyScale is the
+  // leader rate (gd.bossEnemyScale), and the official table alone carries neither key
+  if (s.defMul != null) m.defMul = s.defMul;
+  if (s.resMul != null) m.resMul = s.resMul;
   if (s.supplyHpMul != null) m.supplyHpMul = s.supplyHpMul;
   return m;
 }

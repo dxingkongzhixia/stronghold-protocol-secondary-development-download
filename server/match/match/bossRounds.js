@@ -100,8 +100,9 @@ export class MatchBoss {
         spawns: this._sanitizeSpawns(spawns),
         routes: wave.routes,
         sharedBoss: this.bossPool,
-        // the round's enemy effects for the leaders' mid-fight summons (server/sim/content/bosses.js summonMods)
-        flags: { layerGainsEnabled: false, ...this.gd.dp, enemyScale: this.gd.enemyScale(this.round) },
+        // the round's enemy effects for the leaders' mid-fight summons (server/sim/content/bosses.js summonMods), at the
+        // LEADER rate: the official table × OUR boost.boss (docs/BALANCE.md §8) — parts and summons included
+        flags: { layerGainsEnabled: false, ...this.gd.dp, enemyScale: this.gd.bossEnemyScale(this.round) },
         fieldId,
         enemyOverrides: wave.overrides,
         waveId: wave.templateId,
