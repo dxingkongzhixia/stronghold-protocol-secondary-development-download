@@ -61,7 +61,16 @@ describe('the local-client summon models on the prep board (headless Chrome)', {
           const board = group.map((id, i) => ({ uid: uid++, kind: 'token', id, golden: false, tier: 1, items: [], count: 1, row: i < 5 ? 11 : 9, col: cols[i % 5], dir }));
           window.__demo.view.setPrep({ hand: Array(10).fill(null), temp: Array(5).fill(null), board, nextEnemies: [] }, { editable: false });
         }, group, dir);
-        await sleep(3000);
+        // A cold batch loads its Spine models lazily (3 files each): wait until every model of the group has drawn its
+        // actor instead of a fixed 3 s — the asserts below still fail on a model that never becomes ready.
+        await page.waitForFunction((group) => {
+          const R = window.__demo.view.debug;
+          const last = new Map();
+          for (const v of R.views.values()) if (group.includes(v?.info?.defId)) last.set(v.info.defId, v);
+          return last.size >= group.length && [...last.values()].every((v) => v.actor && v.spineReady);
+        }, { timeout: 30000, polling: 250 }, group).catch(() => {});
+        // …and two frames: the facing / pose is applied in the view's update, so read the pixels after a frame has run.
+        await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))).catch(() => {});
         const got = await page.evaluate((group) => {
           const R = window.__demo.view.debug, app = R.app, rd = app.renderer, gl = rd.gl, res = rd.resolution, H = rd.view.height;
           const out = {};
