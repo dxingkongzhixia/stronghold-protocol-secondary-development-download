@@ -864,3 +864,8 @@ docs guards 34 pass / 0 fail.
 
 - **② 回合开始的部署回放：我们早就有了。** `public/js/render/app/tune.js` 的 `DEPLOY_REPLAY_MS = 50` 与上游**逐字相同**；`render/app.js replayDeploys`、`ui/gameLogic/phases.js deployOrder` / `roundStartReplay`、`screens/game.js` 的接线、`render/units.js land()` + `LAND_VOICES` / `warmLandings` / `audio deployCue` **全部在位**。所以「官方的部署动画更好看」指的**不是回放**，而是**部署时的官方粒子 / 特效** —— 那属于上游的「官方特效」子系统（B3；它的覆盖范围里就含「部署」）。要它得拉 B3 的那个切片，不是一条能单独手植的小改动。
 - **① 流动水面：材质其实一直在动，缺的是「按每张图自己的水材质参数」。** `board3d/materials.js` 的深海水材质与上游**旧版逐行相同**（`uTime` + 两层滚动法线 `n1`/`n2` + 焦散 `uCaustics`），`board3d/scene.js:881-882` **每帧都在写 `uTime`**（`['water','mire','infection','smog']` + `this.official` 时的 `this.sceneWater`），官方水贴图（`[ucp]TX_water_normal` / `TX_Caustics256` / `T_noise_clouds_01`）本地提取里也都在。上游 0.3.0 真正新增的是**每张图自己的水参数**：`materials.js` 里带 `uTiling` / `uWaterSpeed` / `uNormalTiling` / `uFlowSpeed` / `uCausticsTiling` 的 `WATER_TUNING` 版本 + `applyWaterMaterial` / `sceneWaterInfo`，参数来自提取出的 `public/assets/local/scene/<map>/scene.json`。**这是 §0 手植**（board3d 归我们）：把我们那份旧材质升级成「按图取参」即可，不需要动别处。
+### 卡住的并入项（2026-10-16 续）
+
+- **商店库存欠账 + 凯瑟琳定向投放可刷突变细胞**（`72ebd9f3`，#624 / #631）**暂停待决**：它的核心是给 `acquireItem` 加 `requirePool` / `itemPool.debt`（道具库存池记账），而那正是 §0「上游道具牌库把「白给装备」也卡库存」那一条的表面（我们的模型是 `acquireItem` **不做池子检查**，`invariants.js` 里写着 "the fork's model, GitHub #488"）。同时它还改了**生成数据** `data/choices.json`（不能手改，得从构建器走）。两者都不是能机械合并的东西 —— 需要 owner 定：是否改成上游的「库存池 + 欠账」模型（那会动到 §0 的立场），还是只取「已出现的装备仍可购买」这一半。
+- **打磨石投石机三连击**（`31a172e2`）：试了两次，`special.js` 里的新代码已在位，但 5 个测试仍红 —— 差的在**模拟消费端**，需单独查。
+- **射程按敌人 0.1 碰撞箱**（`5bf337a5`）：200+ 行的碰撞 / 几何重构，父提交不是我们基线 —— 按单独一轮处理。
