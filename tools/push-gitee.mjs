@@ -74,6 +74,9 @@ const SINGLE_TREE = NAME !== '_merge-scratch' && !existsSync(join(SIBLING_SCRATC
 const SCRATCH_ROOT = process.env.SP_SCRATCH
   ? resolve(process.env.SP_SCRATCH)
   : (NAME === '_merge-scratch' || SINGLE_TREE ? SELF_ROOT : SIBLING_SCRATCH);
+/** Single tree (the laptop): the dev tree IS the store, so there is nothing to mirror — and "restoring" the dev tree
+ * from the store would wipe a working tree's unstaged edits. No mirror, no drift warning in that layout. */
+const SAME_TREE = resolve(DEV_ROOT) === resolve(SCRATCH_ROOT);
 
 // ------------------------------------------------------------------ remotes
 // The publishing conventions of this fork: `github` is the PRIMARY repository, `gitee` the 国内下载镜像. The URLs are
@@ -337,6 +340,10 @@ function pushToRemote(name) {
 }
 
 function mirrorIntoDev() {
+  if (SAME_TREE) {
+    console.log('[push-gitee] single tree: the dev tree IS the store — nothing to mirror.');
+    return;
+  }
   const paths = mirrorPaths();
   if (!paths.length) {
     console.log('[push-gitee] dev tree already mirrors the store.');
@@ -352,7 +359,7 @@ function main() {
   const targets = pushTargets();
   console.log(`[push-gitee] store ${SCRATCH_ROOT} @ ${head} → ${targets.join(', ')} (${BRANCH})`);
 
-  const { tracked, untracked } = devTreeDrift();
+  const { tracked, untracked } = SAME_TREE ? { tracked: [], untracked: [] } : devTreeDrift();
   const drift = [...new Set([...tracked, ...untracked])].filter(onlyMatch).sort();
 
   // (a) The dev tree is a mirror. Warn when it diverges; never commit its content unless --from-dev says so.
