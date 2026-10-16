@@ -1143,6 +1143,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **表统计**：operator 86 → **56**，layer 167 → **90**，distinct kind 106 → **71**；最大层 `scale` 1.5 → **0.9**，最大**有效**半径 3.0 → **1.1（运行时封顶）**。离开的干员 = 贴图不合规（如 德克萨斯 `jian_01`、临光 `meat_01`、望 `char_wang_05`、烈夏整包是一张 `flipbook` 动画网格）+ 只发射被拒 kind（`char_126_shotst`、`char_4145_ulpia`、`char_264_f12yin`）；它们的程序化兜底与手绘命中特效保持不变。
 - **测试**：`test/render/fx-local.test.js` 新增「贴图只许九族」「kind 只在 `KIND_ARCH` 内且不含 `IMPACT_KINDS`」「宽 kind 画出的 `r1 ≤ LOCAL_FX_MAX_R`、窄 kind 保持小半径」「手写 `aoe`（1.6）与 kalts2 S2（1.5）也被封顶」「`LOCAL_ART_ENABLED === true` 默认」；`test/render/fx-gdglow.test.js` 改钉新的 `flow_91_C_1` + `star_05`；`test/local-extract.test.js` 的 `--check` 仍保证表不过期。
 - **诚实保留**：这是**观感**修复（尺寸 / 贴图 / kind），不是逐粒子还原；被拒 kind 与不合格贴图的干员仍只有程序化近似。
+- **后续（2026-10-16）**：owner 决定**自研干员全面改用官方特效、抛弃自研**——`render/fx/hits.js`（`FX_HITS`）整体删除；8 名 `CUSTOM_CHESS` 干员不再进 `FX_OFFICIAL`（生成器按 `identifier ≥ 900` 跳过）、也不再有 `aoe` / `strike` / `takeoff` / `champagneBomb` / `kalts2Heal` / `kalts2Damage` 的 `local.byOp` 手写层；无官方特效时统一回退**程序化原型**。上文的「手绘命中」与「澄闪 pin」两处**已作废**（仅存史）。见 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2 与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)「官方特效」§0。
 
 ## 36. 大厅社区功能：更新日志 / bug 提交 / 公开房间（2026-10-09）
 
@@ -1519,3 +1520,15 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 - **测试**：新增 `test/match/boost.test.js`（本层自身：解析、R5 起生效、8 个正式模式与入门协议、领袖档、池子、wave 的 boss/part 分流）；**钉官方数值**的测试改走 `withoutTuning(DATA)`（`test/match/{waves,balance,finalAssault,boss-hp-scaling,bosshp,connection,clientCombat,funnel-redeploy}.test.js`）；`golden` 语料**单独提交**重算 —— `standins` 家族新增一个**未加成的同伴场景**（`char_601_cguard` 的 S2 在 R6/R10 加上本层后不再放出，按 §46 先例保留原场景、另加 companion）；`test/match/balance.test.js` 的「tuning 只放标题规则」改为「放 boost + 标题规则，旧倍率键仍被忽略」。
 - **合并黑名单**：见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 —— 上游的 `gamedata.enemyScale` / `waves.js` / `bossRounds.js` 在合并时**会把这一层抹掉**，一律以我们为准（自查：`grep -n 'enemyBoost\|bossEnemyScale' server/match/gamedata.js`，以及 `data/tuning.json` 的 `boost` 块仍在）。
 - **顺带修**：`tools/balance.mjs` 的 `runBoss` 少传 rng（`pairPlayers(m.alivePlayers())` → 崩在 `rng.shuffle`）—— 与本次改动无关的既有 bug，已补成 `pairPlayers(m.alivePlayers(), rng)`；上面 boss 那几行就是修好之后量出来的。
+
+
+## 48. 自研干员的动画对照官方修正（owner 报障 2026-10-16 夜）
+
+> 起因（owner 2026-10-16 游玩反馈）：① 澄闪的普攻动画有问题；② 结城理 S3 二阶段反复播放倒地动画；③ 望 S3 不出棋子。① ② 是**动画映射**问题，从官方客户端 prefab 的 `_animations`（animKey → clip）对照后修正；③ 的模拟侧**无问题**（见下，待现场确认）。
+
+- **取证**：官方 CN 客户端（本机 `...\StreamingAssets\AB\Windows`）的 `chararts/<id>.ab` 里那个 `_animations` 表就是权威的 animKey → clip 映射，用仓库 `.venv`（UnityPy 1.25.4；**必须先 `import aklz4` 注册 LZ4AK 解码器**）读出来。
+- **① 澄闪**：官方把 `Attack`（loop 0）、`Attack_Start`、`Attack_End` 作为**一次普攻的序列**，而她的骨架**没有 `Attack_Loop`** —— 全名册唯一这种形状（另外 20 名带 Start/End 的都带 `Attack_Loop`，按名字的解析器早就会取成三元组）。我们只取了 `Attack`（`end: null`），所以既没起手也没收招。修：`tools/assets/spine.mjs PREFAB_SPINE_ROLES.char_377_gdglow = { attack: { begin: 'Attack_Start', loop: 'Attack', end: 'Attack_End' } }` + `data/assets.json` 重算（前/后模型各一处）。**遗留**：`SpineActor.attack()` 至今**不播 `attack.begin`**（只有攻击窗口结束播 `clip.end`）—— `docs` 与 `units.js` 的注释都写着「attack 的 begin / end 随每次攻击播放」，实现缺了 begin。这是**全名册**的缺口（18 名带 `Attack_Loop` 的同样没起手），补它要动每次攻击的时序（出手帧对齐），**留给 owner 定**。
+- **② 结城理**：官方 `_animations` 把 `Die` 键映射到 **`Stun`**（他没有 `Die` 剪辑；`SwitchOut` 是本体**离开替身**，不是被击倒）—— 我们此前按名字回退成了 `SwitchOut`，本体被击倒时播的是「下场」姿势。修：`PREFAB_SPINE_ROLES.char_4217_makoto = { die: 'Stun' }` + 数据重算。另外 **P1 → P2 是两段**（`Doll_Skill_3_P1toP2_ChangeBegin` 收 P1、`ChangeEnd` 落 P2），我们把 `doll3.end` 与 `doll3b.change` **都设成 ChangeEnd** ⇒ 同一变换剪辑在切换前后**连播两次**（即「反复播放」）。修：`shared/forms.js` 的 `doll3.end` 改为 `…ChangeBegin`（`doll3b.change` 保持 `…ChangeEnd`），于是就是官方的两段式。
+- **③ 望 S3**：**模拟侧没问题** —— 用 `test/helpers/battleHarness.js` 在 flat 与 4 张正式地图、4 个落点逐一试：S3 施放后**场上 2–6 枚棋子、库存 4–6、弹药 20 → 14**（受 铸子 `deployLimit` 6 的限制），`test/content/feedback-wang.test.js` 的 12 条也全绿。所以「不下棋子」不是 sim。最可能的两处，**待 owner 现场确认**：**(a) 棋子模型** —— `data/local-assets.json`（本机 per-machine）**没有** `spine/token/token_10064_wang_stone1`，客户端只能画头像兜底（`data/local-assets.committed.json` 里有，盒子 / 新克隆正常）；**(b) 客户端落子规则** —— S3「可部署至敌人所在位置」是否被放行。
+- **工具**：新增 `tools/refresh-anim-roles.mjs`（**离线**按 `resolveRoles` + 两张 fix 表重算 `data/assets.json` 的 anim 角色：只读各条自己的 `animations`，不动 URL / 哈希；`--write` 才写）。以后只改解析规则或 fix 表时不必联网重建整包素材。`test/asset-anim-roles.test.js` 锁住「已提交的角色 == 解析器 + fix 表」与澄闪的三元组。
+- **自查**：`node tools/refresh-anim-roles.mjs` ⇒ `already up to date`；`node --test test/asset-anim-roles.test.js test/render/feedback2-doll.test.js` 全绿。

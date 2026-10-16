@@ -149,6 +149,15 @@ export const PREFAB_SPINE_ROLES = Object.freeze({
   enemy_1116_liprr_2: PRISONER_GREY_3,
   // operators by character id: both the front and the back model
   char_337_utage: { skill: UTAGE_S2, skills: { 0: UTAGE_S1, 1: UTAGE_S2 } },
+  // 澄闪 (char_377_gdglow): her client prefab's animation table (chararts/char_377_gdglow.ab `_animations`) maps
+  // `Attack` (loop 0), `Attack_Start` and `Attack_End` as one attack sequence, and her skeleton carries NO `Attack_Loop`
+  // (the only roster model with that shape) — the by-name resolver took the plain `Attack`, so the attack played without
+  // its wind-up or follow-through (owner report, 2026-10-16). One attack is Attack_Start → Attack → Attack_End.
+  char_377_gdglow: { attack: { begin: 'Attack_Start', loop: 'Attack', end: 'Attack_End' } },
+  // 结城理 (char_4217_makoto): his client prefab's animation table maps the `Die` key to the `Stun` clip (there is no
+  // `Die` clip; `SwitchOut` is the 本体 leaving a <替身>, not its knock-out). The by-name resolver fell back to
+  // `SwitchOut`, so the 本体 collapsed with the switch-out pose when knocked out (owner report, 2026-10-16).
+  char_4217_makoto: { die: 'Stun' },
 });
 
 /**

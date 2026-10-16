@@ -374,14 +374,11 @@ export class FxProjectiles {
     const p = cam.project(pr.tx, pr.ty, pr.tz, this._g);
     const x = p.x, y = p.y, s = p.s;
     const rich = this.rich;
-    // Our seven custom operators draw their own hand-authored, body-anchored impact here (render/fx/hits.js), read from
-    // the operator's own official `_*_hit_*` prefab; the official season roster keeps the procedural arrival burst
-    // below, because the client's official per-attack hit is a particle-system effect prefab named by the projectile
-    // prefabs (`_effectsWhenHit`, e.g. common_hit_01 / <op>_hit_01) that resolves to a cluster of ParticleSystems,
-    // textures and transforms — not one signature Texture2D (docs/ASSETS.md "Battle effects", docs/DEVELOPMENT.md §9.1).
-    const sv = pr.src, svInfo = sv && sv.info;
-    const opId = svInfo && (svInfo.spine || svInfo.defId);
-    if (opId && this._opHit(opId, x, y, s, { melee: false })) return;
+    // The arrival burst is procedural for the whole roster: the client's official per-attack hit is a particle-system
+    // effect prefab named by the projectile prefabs (`_effectsWhenHit`, e.g. common_hit_01 / <op>_hit_01) that resolves
+    // to a cluster of ParticleSystems, textures and transforms — not one signature Texture2D (docs/ASSETS.md "Battle
+    // effects", docs/DEVELOPMENT.md §9.1). With the official battle effects the official hit is drawn instead
+    // (render/vfx/wiring.js `noSpark`); without them this procedural burst is the fallback for every operator.
     switch (spec.hit) {
       case 'arts':
         this.particle('glow', x, y, { tint: pr.glow, life: 0.24, s0: (s / 128) * 0.7, s1: (s / 128) * 1.2, a0: 0.95, a1: 0 });

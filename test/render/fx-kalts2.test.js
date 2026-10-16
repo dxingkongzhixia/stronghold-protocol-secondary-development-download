@@ -2,17 +2,17 @@
 // the 医疗单元's burst is drawn in the OFFICIAL colours — ONE green heal orb (FX_KINDS.kalts2Heal) and ONE red damage orb
 // (FX_KINDS.kalts2Damage) per burst, both centred on the impact point (the sim emits one event each, see
 // test/content/chess_kalts2.test.js). Colours come from the client's own material tints in
-// battle/prefabs/effects/kalts2.ab (kalts2_skill_02_range_heal_01 green / kalts2_skill_02_range_damage_01 red). The local
-// field's radius is `r × layer.scale` (render/fx/simfx.js `_fxLocal`), so the outer layer is scale 1 at r = 1.5 — the S2
-// hit radius — and the orb spans the burst (docs/MATCHMAKING.md §35.11); the DRAWN radius is then clamped to
-// LOCAL_FX_MAX_R ≈ one body (render/fx/localart.js), so a wide S2 cluster never paints a board-wide field.
+// battle/prefabs/effects/kalts2.ab (kalts2_skill_02_range_heal_01 green / kalts2_skill_02_range_damage_01 red). These
+// kinds carry NO local art any more: 凯尔希·思衡托 is one of our custom operators and uses the official battle effects
+// (render/vfx), falling back to these plain procedural orbs (owner, 2026-10-16); the drawn radius is the kind's own
+// `r` = 1.5 — the S2 hit radius (docs/MATCHMAKING.md §35.11).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FxSystem, FX_KINDS, fxSpec } from '../../public/js/render/fx.js';
 import { presetCamera } from '../../public/js/render/projection.js';
 
-test('kalts2 S2 burst kinds: a GREEN 1.5 heal field and a RED 1.5 damage field, each its own kind', () => {
+test('kalts2 S2 burst kinds: a GREEN 1.5 heal field and a RED 1.5 damage field, each its own kind, no local art', () => {
   assert.equal(FX_KINDS.kalts2Heal.a, 'healAoe');
   assert.equal(FX_KINDS.kalts2Heal.c, 0x62f08a, 'the official green');
   assert.equal(FX_KINDS.kalts2Heal.r, 1.5, 'the 1.5 heal radius');
@@ -23,14 +23,9 @@ test('kalts2 S2 burst kinds: a GREEN 1.5 heal field and a RED 1.5 damage field, 
   assert.equal(fxSpec('kalts2Heal').a, 'healAoe');
   assert.equal(fxSpec('kalts2Damage').a, 'blast');
   assert.notEqual(FX_KINDS.kalts2Heal.c, FX_KINDS.kalts2Damage.c);
-  // the outer local layer's nominal radius is r × scale = 1.5 tiles = S2_RADIUS (render/fx/simfx.js `_fxLocal` →
-  // render/fx/rings.js `ring`), clamped to LOCAL_FX_MAX_R at draw time; the inner star core keeps the original 0.8 ratio
-  for (const kind of ['kalts2Heal', 'kalts2Damage']) {
-    const s = FX_KINDS[kind];
-    assert.equal(s.local.layers[0].scale, 1, `${kind}: the outer layer spans r (1.5)`);
-    assert.equal(s.r * s.local.layers[0].scale, 1.5, `${kind}: outer field's nominal radius = S2 hit radius`);
-    assert.equal(s.local.layers[1].scale, 0.8, `${kind}: inner core 0.8 of the field`);
-  }
+  // our custom operator: no local-art tier, the procedural archetype is the fallback
+  assert.equal(FX_KINDS.kalts2Heal.local, undefined);
+  assert.equal(FX_KINDS.kalts2Damage.local, undefined);
 });
 
 function recordingFx() {

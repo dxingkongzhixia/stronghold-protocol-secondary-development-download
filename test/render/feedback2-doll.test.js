@@ -335,7 +335,9 @@ describe('结城理\'s <替身> (FORMS doll / doll2 / doll3 / doll3b)', () => {
       assert.equal(f.leave, 'Start', `${form}: the 本体 comes back`);
     }
     assert.ok(!/Doll_/.test(JSON.stringify(assets.chars[MAK].spine.front.anims)), 'no Doll_ clip in the base roles');
-    assert.equal(assets.chars[MAK].spine.front.anims.die, 'SwitchOut', 'the 本体 "falls" by switching out');
+    // the 本体 has no `Die` clip of its own: the client prefab's animation table maps the `Die` key to the `Stun` clip
+    // (SwitchOut is leaving a <替身>, not a knock-out) — tools/assets/spine.mjs PREFAB_SPINE_ROLES
+    assert.equal(assets.chars[MAK].spine.front.anims.die, 'Stun', 'the 本体 falls on the official Die clip');
   });
 
   test('the sim publishes the selected skill\'s form; S3\'s second <替身> gets its own', () => {
@@ -404,9 +406,11 @@ describe('结城理\'s <替身> (FORMS doll / doll2 / doll3 / doll3b)', () => {
     k.die();
     assert.equal(clip(k), 'Doll_Skill_3_P2_Die', 'a knocked-out persona still plays its own Die');
 
-    // the other persona forms are untouched
+    // the other persona forms are untouched; the P1's closing clip is the transition's BEGIN (the P2 form's `change`
+    // is its END, so the two-part official transition is not the same clip played twice)
     assert.equal(FORMS[MAK].doll.end, 'Doll_Skill_1_Die');
     assert.equal(FORMS[MAK].doll2.end, 'Doll_Skill_2_Die');
-    assert.equal(FORMS[MAK].doll3.end, 'Doll_Skill_3_P1toP2_ChangeEnd');
+    assert.equal(FORMS[MAK].doll3.end, 'Doll_Skill_3_P1toP2_ChangeBegin');
+    assert.equal(FORMS[MAK].doll3b.change, 'Doll_Skill_3_P1toP2_ChangeEnd');
   });
 });

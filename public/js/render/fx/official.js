@@ -19,6 +19,9 @@
 // absent (its procedural tier stays, never a blank frame). The normal-attack impact is NOT here: the official
 // per-attack hit is a particle-system effect prefab (the projectile prefabs' _effectsWhenHit), not one texture.
 //
+// OUR custom operators (tools/build-data.mjs CUSTOM_CHESS) are deliberately absent: they use the official battle
+// effects like every operator and fall back to the plain procedural archetype (owner, 2026-10-16).
+//
 // Every layer set is ALSO size-capped at draw time: render/fx/simfx.js `_fxLocal` scales its drawn radii
 // (`r × layer.scale`) down together so the largest is at most LOCAL_FX_MAX_R (≈ one body), so one official picture is
 // an in-place effect at the anchor and never a board-wide field. render/fx/localart.js `LOCAL_ART_ENABLED` (default
@@ -795,107 +798,6 @@ export const FX_OFFICIAL = Object.freeze({
       {
         name: "star_02",
         scale: 0.9
-      }
-    ]
-  },
-  char_377_gdglow: {
-    group: "fx/gdglow",
-    kinds: [
-      "drone"
-    ],
-    layers: [
-      {
-        name: "flow_91_C_1",
-        scale: 0.9
-      },
-      {
-        name: "star_05",
-        scale: 0.6
-      }
-    ]
-  },
-  char_1015_aglna2: {
-    group: "fx/aglna2",
-    kinds: [
-      "takeoff"
-    ],
-    layers: [
-      {
-        name: "AVG_flow_71",
-        scale: 0.9
-      },
-      {
-        name: "star_289",
-        scale: 0.6
-      }
-    ]
-  },
-  char_1052_kalts2: {
-    group: "fx/kalts2",
-    kinds: [
-      "disappear",
-      "kalts2Damage",
-      "kalts2Heal",
-      "shield",
-      "takeoff"
-    ],
-    layers: [
-      {
-        name: "flow_329_8",
-        scale: 0.9
-      },
-      {
-        name: "ray_135",
-        scale: 0.6
-      }
-    ]
-  },
-  char_4138_narant: {
-    group: "fx/narant",
-    kinds: [
-      "aoe"
-    ],
-    layers: [
-      {
-        name: "AVG_flow_05",
-        scale: 0.9
-      },
-      {
-        name: "star_306",
-        scale: 0.6
-      }
-    ]
-  },
-  char_4217_makoto: {
-    group: "fx/makoto",
-    kinds: [
-      "aoe"
-    ],
-    layers: [
-      {
-        name: "AVG_flow_05",
-        scale: 0.9
-      },
-      {
-        name: "ray_136",
-        scale: 0.6
-      }
-    ]
-  },
-  char_4231_clemnt: {
-    group: "fx/clemnt",
-    kinds: [
-      "explode",
-      "zone"
-    ],
-    layers: [
-      {
-        name: "flow_175_2",
-        scale: 0.9
-      },
-      {
-        name: "star_253",
-        scale: 0.6
       }
     ]
   }

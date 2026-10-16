@@ -5,7 +5,9 @@
 // ground fields INSTEAD of the procedural archetype only when the client has every layer listed AND loaded; else the
 // procedural drawing is used. So a connected client without the art sees the procedural version — the same effect,
 // bytes neither blank nor fetched for the fallback (owner's Minecraft-shader-style graceful degradation). This file
-// pins (a) the fallback, (b) the local tier, (c) the kalts2 S2 kinds' official textures when the extraction is there.
+// pins (a) the fallback, (b) the local tier of the generated roster table (render/fx/official.js). Our own custom
+// operators are deliberately not in that table any more: they use the official battle effects and fall back to the plain
+// procedural archetype (owner, 2026-10-16), so their kinds never resolve a local spec.
 //
 // Against the headless fake PIXI (test/render/fakepixi.js), like fxflame.test.js / fx-kalts2.test.js.
 
@@ -94,7 +96,7 @@ describe('fx local-art resolver (render/fx/localart.js)', () => {
 
   test('every layer listed and loaded → the layers with their URL and picture', () => {
     const a = fakeAssets(GROUPS, LOADED);
-    const src = LA.fxLocalSource(a, FX.FX_KINDS.kalts2Heal.local);
+    const src = LA.fxLocalSource(a, { group: GROUP, layers: [{ name: 'flow_332_3' }, { name: 'star_118_7' }] });
     assert.deepEqual(src.map((l) => l.url), [URL('flow_332_3'), URL('star_118_7')]);
     assert.equal(src[0].image, PICTURE);
     assert.deepEqual(a.called, [], 'an already-loaded layer is not fetched again');
@@ -122,66 +124,13 @@ describe('fx kinds: the procedural fallback and the local tier (per client)', ()
     assert.deepEqual(a.called, []);
   });
 
-  test('with the art loaded the official layers are drawn instead of the procedural archetype', () => {
+  test('our custom operators fall back to the procedural archetype — no local spec, no fetch', () => {
     const a = fakeAssets(GROUPS, LOADED);
-    const fx = makeFx(a);
-    const atlasRing = fx.tex.ring;
-    fx.simFx('kalts2Damage', 5, 10, { id: 1 });
-    assert.equal(fx.parts.length, 0, 'the procedural explosion is skipped');
-    assert.equal(fx.rings.length, 2, 'one ground field per official layer');
-    const locals = [...fx.localTex.values()];
-    for (const r of fx.rings) {
-      assert.ok(locals.includes(r.sp.texture), 'each ring draws an official local texture');
-      assert.notEqual(r.sp.texture, atlasRing, 'not the procedural atlas ring');
-    }
-    assert.equal(fx.localTex.size, 2);
-    assert.deepEqual(a.called, []);
-    // the two layers are distinct (the field and the ray), tinted the official colour
-    assert.notEqual(fx.rings[0].sp.texture, fx.rings[1].sp.texture);
-    assert.equal(fx.rings[0].sp.tint, FX.FX_KINDS.kalts2Damage.local.tint);
-  });
-
-  test('listed but not loaded: procedural now, the official art from the next event on (never a blank frame)', () => {
-    const a = fakeAssets(GROUPS);
-    const fx = makeFx(a);
-    fx.simFx('kalts2Heal', 5, 10, { id: 1 });
-    assert.ok(fx.parts.length > 0, 'the first event draws the procedural heal field');
-    assert.deepEqual(a.called, [URL('flow_332_3'), URL('star_118_7')], 'both layers are prefetched');
-    fx.clear();
-    a.imageNow = (u) => LOADED[u] || null;   // the prefetch resolved
-    fx.simFx('kalts2Heal', 5, 10, { id: 1 });
-    assert.equal(fx.parts.length, 0, 'now the official layers are drawn');
-    assert.equal(fx.rings.length, 2);
-  });
-
-  test('settings.localFx === false opts the official tier off (procedural), like a quality tier', () => {
-    const fx = makeFx(fakeAssets(GROUPS, LOADED), { quality: 'high', damageNumbers: true, localFx: false });
-    fx.simFx('kalts2Damage', 5, 10, { id: 1 });
+    const fx = makeFx(a, undefined, new Map([[1, fakeView(5, 10, 'char_4217_makoto')]]));
+    fx.simFx('aoe', 5, 10, { id: 1 });
+    assert.ok(fx.parts.length > 0, 'the procedural blast is drawn (the official battle effects handle 结城理 instead)');
     assert.equal(fx.localTex.size, 0);
-    assert.ok(fx.parts.length > 0, 'the procedural explosion');
-  });
-});
-
-describe('kalts2 S2 official textures (when the local client was extracted)', () => {
-  const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8')); } catch { return null; } })();
-  const group = manifest?.groups?.[GROUP];
-  const skip = group ? false : 'no local extraction (data/local-assets.json has no fx/kalts2)';
-
-  test('every layer the two kinds name is in the fx/kalts2 group and on disk', { skip }, () => {
-    for (const kind of ['kalts2Heal', 'kalts2Damage']) {
-      const layers = LA.fxLocalLayers(FX.FX_KINDS[kind].local);
-      assert.ok(layers.length >= 1, `${kind} names at least one official layer`);
-      for (const ly of layers) {
-        assert.ok(group[ly.name], `${kind}: ${ly.name} extracted`);
-        assert.ok(existsSync(path.join(ROOT, 'public', group[ly.name].path)), `${ly.name} on disk`);
-      }
-    }
-  });
-
-  test('the kinds resolve their official textures when the manifest lists them', { skip }, () => {
-    const a = { localUrl: (g, n) => (g === GROUP && group[n] && group[n].path) || null, imageNow: () => PICTURE, image: () => Promise.resolve(null) };
-    assert.deepEqual(LA.fxLocalSource(a, FX.FX_KINDS.kalts2Heal.local).map((l) => l.name), ['flow_332_3', 'star_118_7']);
-    assert.deepEqual(LA.fxLocalSource(a, FX.FX_KINDS.kalts2Damage.local).map((l) => l.name), ['flow_331_2', 'star_118_7']);
+    assert.deepEqual(a.called, [], 'the fallback never consults the manifest');
   });
 });
 
@@ -225,32 +174,31 @@ describe('fx local-art attribution: render/fx/localart.js fxLocalFor', () => {
   });
 });
 
-describe('fx kinds: official art attributed by operator (aoe / strike / champagneBomb / takeoff)', () => {
-  test('a matching operator anchor draws its official layers; another operator stays procedural (no fetch)', () => {
+describe('fx kinds of our custom operators: no attributed local art any more (procedural, no fetch)', () => {
+  test('a shared kind from a custom operator stays procedural, another operator too, and nothing is fetched', () => {
     const a = fakeAssets(MK_GROUPS, MK_LOADED);
     const fx = makeFx(a, undefined, new Map([[1, fakeView(5, 10, 'char_4217_makoto')]]));
     fx.simFx('aoe', 5, 10, { id: 1 });
-    assert.equal(fx.rings.length, 2, '结城理 official aoe layers');
-    assert.equal(fx.parts.length, 0, 'the procedural blast is skipped');
-    assert.deepEqual(a.called, []);
+    assert.ok(fx.parts.length > 0, 'the procedural blast (结城理 uses the official battle effects instead)');
+    assert.equal(fx.localTex.size, 0);
     fx.clear();
-    // the same kind from another operator: no byOp entry → procedural, and never consults the manifest
     const fx2 = makeFx(a, undefined, new Map([[2, fakeView(5, 10, 'char_1234_other')]]));
     fx2.simFx('aoe', 5, 10, { id: 2 });
     assert.ok(fx2.parts.length > 0, 'the procedural blast');
-    assert.deepEqual(a.called, []);
+    assert.deepEqual(a.called, [], 'the fallback never consults the manifest');
   });
 
-  test('a `strike` anchored on the victim attributes to its `src` (结城理), not the victim', () => {
+  test('a `strike` on a custom operator is procedural too, whatever the anchor', () => {
     const a = fakeAssets(MK_GROUPS, MK_LOADED);
     const views = new Map([[7, fakeView(3, 4, 'char_4217_makoto')], [9, fakeView(5, 10, 'enemy_1001_slime')]]);
     const fx = makeFx(a, undefined, views);
     fx.simFx('strike', 5, 10, { id: 9, src: 7 });
-    assert.equal(fx.rings.length, 2);
-    assert.equal(fx.parts.length, 0);
+    assert.ok(fx.parts.length > 0, 'the procedural strike flare');
+    assert.equal(fx.localTex.size, 0);
+    assert.deepEqual(a.called, []);
   });
 
-  test('望 棋子: the token anchor picks the wang group; a missing extraction keeps the procedural blast', () => {
+  test('望 棋子: the token anchor is procedural too; a missing extraction is the same', () => {
     const WG = 'fx/wang';
     const W_URL = (n) => `/assets/local/${WG}/${n}.png`;
     const groups = { [WG]: { char_wang_05: W_URL('char_wang_05'), char_wang_03: W_URL('char_wang_03') } };
@@ -258,11 +206,11 @@ describe('fx kinds: official art attributed by operator (aoe / strike / champagn
     const views = new Map([[4, fakeView(5, 10, 'token_10064_wang_stone1')]]);
     const fx = makeFx(fakeAssets(groups, loaded), undefined, views);
     fx.simFx('champagneBomb', 5, 10, { id: 4, consumed: true });
-    assert.equal(fx.rings.length, 2);
-    fx.clear();
+    assert.ok(fx.parts.length > 0, 'the procedural blast');
+    assert.equal(fx.localTex.size, 0);
     const fx2 = makeFx(fakeAssets({}), undefined, views);
     fx2.simFx('champagneBomb', 5, 10, { id: 4 });
-    assert.ok(fx2.parts.length > 0, 'no manifest entry → the procedural explosion');
+    assert.ok(fx2.parts.length > 0, 'no manifest entry → the same procedural explosion');
   });
 });
 
@@ -412,23 +360,6 @@ describe('fx official-art drawn size: capped to ~one body (render/fx/simfx.js _f
     assert.equal(fx.rings.length, 1);
     assert.ok(Math.abs(fx.rings[0].r1 - 0.9) < 1e-9, `1 × 0.9 = 0.9, under the cap (got ${fx.rings[0].r1})`);
   });
-
-  test('the hand-written fields are capped too: 结城理 aoe (scale 1.6) and kalts2 S2 (scale 1 at r 1.5)', () => {
-    // makoto's hand-wired `aoe` layers are scale 1.6 / 1.1 at r = 1 (aoe spec) → 1.6 / 1.1, both clamped
-    const fx = makeFx(fakeAssets(MK_GROUPS, MK_LOADED), undefined, new Map([[1, fakeView(5, 10, 'char_4217_makoto')]]));
-    fx.simFx('aoe', 5, 10, { id: 1 });
-    assert.equal(fx.rings.length, 2, '结城理 aoe layers');
-    for (const r of fx.rings) assert.ok(r.r1 <= LA.LOCAL_FX_MAX_R, `makoto aoe r1 ${r.r1} ≤ cap`);
-    assert.equal(fx.rings[0].r1, LA.LOCAL_FX_MAX_R, 'the 1.6 layer is clamped to the cap');
-    // kalts2Heal: the outer flow layer is scale 1 at r = 1.5 → 1.5, the inner star 0.8 → 1.2; both scaled down
-    // together to the cap, so the outer is drawn at 1.1 and the inner keeps its 0.8 ratio (0.88)
-    const fx2 = makeFx(fakeAssets(GROUPS, LOADED), undefined, new Map([[1, fakeView(5, 10, 'char_1052_kalts2')]]));
-    fx2.simFx('kalts2Heal', 5, 10, { id: 1 });
-    assert.equal(fx2.rings.length, 2, 'kalts2 heal layers');
-    for (const r of fx2.rings) assert.ok(r.r1 <= LA.LOCAL_FX_MAX_R, `kalts2 r1 ${r.r1} ≤ cap`);
-    assert.equal(fx2.rings[0].r1, LA.LOCAL_FX_MAX_R, 'the 1.5-nominal outer layer is clamped to the cap');
-    assert.ok(fx2.rings[1].r1 < fx2.rings[0].r1, 'the 0.8 inner core stays proportionally smaller (ratio kept)');
-  });
 });
 
 // --- the normal-attack impact stays procedural (render/fx/projectiles.js _impact, render/fx/numbers.js damage) --------
@@ -512,28 +443,27 @@ describe('official fx art of our custom operators (committed manifest)', () => {
   const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.committed.json'), 'utf8')); } catch { return null; } })();
   const skip = manifest ? false : 'no data/local-assets.committed.json';
 
-  test('the operator effect groups are committed (extracted even before every one is wired)', { skip }, () => {
+  const OURS = ['char_4132_ascln', 'char_4217_makoto', 'char_1015_aglna2', 'char_377_gdglow', 'char_4138_narant', 'char_1052_kalts2', 'char_4231_clemnt', 'char_2027_wang'];
+
+  test('our custom operators are NOT in the generated table (official fx + procedural fallback)', () => {
+    for (const op of OURS) assert.equal(OFF.FX_OFFICIAL[op], undefined, `${op} has no entry`);
+  });
+
+  test('no fx kind carries a local spec for our custom operators or their summons', () => {
+    const ours = new Set([...OURS, 'token_10064_wang_stone1']);
+    for (const [kind, def] of Object.entries(FX.FX_KINDS)) {
+      const local = def && def.local;
+      if (!local) continue;
+      for (const key of [...Object.keys(local.byOp || {}), ...Object.keys(local.bySkill || {})]) {
+        assert.ok(!ours.has(key), `${kind} still wires ${key}`);
+      }
+    }
+  });
+
+  test('the operator effect groups are committed (kept for the official battle effects)', { skip }, () => {
     const groups = manifest.groups || {};
     for (const g of ['fx/kalts2', 'fx/makoto', 'fx/narant', 'fx/wang', 'fx/aglna2', 'fx/ascln', 'fx/gdglow']) {
       assert.ok(groups[g] && Object.keys(groups[g]).length, `${g} committed`);
     }
-  });
-
-  test('every layer the wired kinds name is listed and on disk', { skip }, () => {
-    const groups = manifest.groups || {};
-    let n = 0;
-    for (const def of Object.values(FX.FX_KINDS)) {
-      const local = def && def.local;
-      if (!local) continue;
-      for (const [key, entry] of [...Object.entries(local.byOp || {}), ...Object.entries(local.bySkill || {})]) {
-        for (const ly of LA.fxLocalLayers(entry)) {
-          const g = ly.group || local.group;
-          assert.ok(groups[g] && groups[g][ly.name], `${g}/${ly.name} (${key}) committed`);
-          assert.ok(existsSync(path.join(ROOT, 'public', groups[g][ly.name].path)), `${g}/${ly.name} on disk`);
-          n++;
-        }
-      }
-    }
-    assert.ok(n >= 8, 'several wired layers');
   });
 });

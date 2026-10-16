@@ -310,7 +310,7 @@ Every battle fx kind has **two tiers**, resolved at render time per client (`doc
 
 **An official picture is an in-place effect at the anchor, size-capped to ~one body.** `simfx.js` `_fxLocal` scales every
 layer's drawn radius (`r × layer.scale`) down together so the largest is at most `LOCAL_FX_MAX_R` (= 1.1 tiles,
-`localart.js`), preserving the authored ratios; `hits.js` `_opHitLocal` caps its body-anchored flash the same way.
+`localart.js`), preserving the authored ratios.
 Before this, the archetype's own area radius (a `tide` r=2, an `aoe` behind
 a wide skill) times a layer scale of 1.5 painted a 2–3-tile flat image over the board — the owner's "many operators
 paint a big flat picture" report. **The generated table (`render/fx/official.js`, `tools/build-fx-official.mjs`) only
@@ -324,17 +324,13 @@ ground field on them just litters the board. A bundle with no qualifying picture
 no entry (procedural stays).
 
 **Kill switch:** `render/fx/localart.js` exports `LOCAL_ART_ENABLED` (default `true`). Set it to `false` and the whole
-local tier goes inert in one edit — `fxLocalFor` / `fxLocalSource` return null, so the generated table, the hand-wired
-kinds and the custom-operator hit flashes all fall back to procedural (nothing is resolved or fetched). That is the
+local tier goes inert in one edit — `fxLocalFor` / `fxLocalSource` return null, so the generated table and the hand-wired kinds all fall back to procedural (nothing is resolved or fetched). That is the
 source-level switch; `settings.localFx === false` is the per-client run-time one.
 
 To add an effect the right way: write the procedural archetype first (always), then, only if the official art is
-obtainable, extract it (`tools/local-extract/extract.py`, e.g. the `fx/kalts2` job) and add the `local` layers. A
-`local`-only kind is a bug: a join without the art would show nothing. The kalts2 S2 burst is the worked example
-(`kalts2Heal` / `kalts2Damage`); the 驭械术师 浮游单元 (`PROJ.drone`) stays procedural because its textures live in
-unresolvable external CABs. `settings.localFx === false` opts the official tier off like a quality tier.
+obtainable, extract it (`tools/local-extract/extract.py`, e.g. the `fx/kalts2` job) and add the `local` layers. A `local`-only kind is a bug: a join without the art would show nothing. The 驭械术师 浮游单元 (`PROJ.drone`) stays procedural because its textures live in unresolvable external CABs. `settings.localFx === false` opts the official tier off like a quality tier.
 
-**The normal-attack impact is deliberately procedural for the roster.** It is `render/fx/projectiles.js` `_impact` (a
+**The normal-attack impact is deliberately procedural for the whole roster.** It is `render/fx/projectiles.js` `_impact` (a
 ranged shot) and `render/fx/numbers.js` `damage` (a melee blow), not a `local` kind: the official per-attack hit is a
 particle-system effect prefab each projectile prefab names in `_effectsWhenHit` (`common_hit_01` / `<op>_hit_01` …), a
 cluster of `ParticleSystem`s and transforms — **not** the operator's one signature Texture2D. An earlier design drew
@@ -342,14 +338,11 @@ that signature texture as a ground field at the victim (`render/fx/official.js` 
 removed because it was visibly misplaced (wrong texture, wrong anchor/scale). The generated table (`FX_OFFICIAL`) now
 carries only the fx kinds a kit actually emits — no `hit` or other attack / impact kind (`crit` / `strike` / `slash` /
 `beam`), and no animation-grid (flipbook / sprite-sheet) layer — and no **roster** operator's normal attack consults the
-manifest. **Our custom operators are the documented exception** (`render/fx/hits.js`): **seven** of the eight get a
-hand-authored, body-anchored hit read from their own `_*_hit_*` prefab, with an optional same-bundle official flash as
-a `local` core and the procedural composition always drawn (克莱门莎, the eighth, is **not** in `FX_HITS`: her bundle's
-signature textures feed the generated `explode` / `zone` table instead, and her normal attacks keep the procedural hit).
+manifest. **Our custom operators are no exception any more (owner, 2026-10-16):** the fork's hand-authored `FX_HITS` and their per-operator `FX_OFFICIAL` / `local.byOp` art were dropped — they take the official battle effects like every other operator and fall back to this same procedural hit.
 See `docs/OUR-FEATURES.md`, docs/ASSETS.md "Battle effects". Reproducing the
 official impacts faithfully for every operator would need a particle-system importer plus a per-operator projectile
 mapping, which the bundles do not give as a single sprite — **recorded as a planned future task** in
-`docs/OUR-FEATURES.md` §1 (docs/ASSETS.md "Battle effects"); do not start it without the owner.
+`docs/OUR-FEATURES.md` §2 (docs/ASSETS.md "Battle effects"); do not start it without the owner.
 
 ### 9.2 Browser asset delivery: the local cache first, then the relay → CDN mirrors → this server
 

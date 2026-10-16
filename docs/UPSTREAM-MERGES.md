@@ -914,7 +914,7 @@ docs guards 34 pass / 0 fail.
 3. **运行时**：`public/js/render/vfx/**` 26 个文件 / 625 KB + 19 个 vfx 测试 + `tools/vfx-skill-coverage.mjs`，**整取上游 HEAD**（`8e543cfb`）。好消息：`vfx/` 自身**自洽**（不 import 我们的模块，是别人 import 它）。
 4. **sim 侧管道**（`78eed2bc` + golden `c2d0aa36`）：`castSlot` / `cast` 事件、`layerView`/`chargeView` 进快照、`bubble`/`billro` 的 fx 载荷字段。**变化横跨两文件/多文件时单独退一个无效** ✓；这次改动让 golden 漂移，已**先归因**（只退 `server/sim` → 摘要**零漂移** ✓）再**单独重算** ✓。
 5. **设置模型**（`d175e8aa`）：`officialFx`（auto/off/lite/full）+ `OFFICIAL_FX_MODES`，与我们**只保留日/中语音**的设置并存。
-6. **`fx/numbers.js`**（`77a84592`）：加上游的 `o.noSpark`（官方特效画了这次打击时不再画火光/斩击）—— **但保住**我们自研干员手绘的身位打击（`render/fx/hits.js`，OUR-FEATURES §2）。
+6. **`fx/numbers.js`**（`77a84592`）：加上游的 `o.noSpark`（官方特效画了这次打击时不再画火光/斩击）。**更正（2026-10-16 夜）**：当时「保住我们自研干员手绘的身位打击（`render/fx/hits.js`）」已被 owner 撤销——`hits.js` 整体删除，自研干员与全名册一样：有官方特效走官方，否则走**程序化**（见本文件 §0 与 OUR-FEATURES §2）。
 7. **服务端**（`a3c204bc`）：`data/local-fx.json` 作为**独立清单**分发（`VIEW_MANIFESTS` + `UNLOADED_DATA` + 缺文件时回空清单、永不 404 ✓）。
 
 **素材（本机实测）**：`--only fx --fx-set used` → **3,565 prefabs / 3,143 textures / 1,113 meshes / 12,659 个文件 / 231.5 MB / 244 秒** ✓。上游**自己也把 fx 素材放进仓库**（只忽略 per-machine 的 `data/local-fx.json` ✓），中继是裸仓库、push 即部署 ✓ ⇒ 「先推中继」= 素材进 git ✓。少数 trail prefab 报 `AttributeError`（上游提取器的毛病，非致命）。
@@ -961,6 +961,8 @@ docs guards 34 pass / 0 fail.
 - **dev 查看器本身会误导**：`dev/fx-viewer.html` 的 `?attack=` / `?skilldemo=` **从不画干员模型**，`wiring.pose(v)` 的 fake view 也没有 `boneOffset`，于是所有特效都按**皮肤静态点**摆放、在空场里「悬空」——看起来就像「不从法杖出 / 凭空生成」。已修：查看器现在会加载并绘制该干员的 Spine，把 `UnitView.prototype.boneOffset` 接到 fake view 上（含 `strikePose` 的出手帧），并按 `?attack=` 的节奏驱动攻击剪影。**默认开启**，`&model=0` 关闭；两个 headless 浏览器套件（`vfx-skills` / `vfx-funnels`）在 URL 里显式加了 `&model=0` 以保持旧的静态点行为。
 - **另一处「半个 hunk」：`app.js` 的 `NO_SPARK` 未定义（已修）。** 官方特效接管伤害 / 治疗时，`public/js/render/app.js` 的 `dmg` / `heal` 事件分支会读 `NO_SPARK`（`fx/numbers.js` 的 `o.noSpark`：官方已画了这次打击，就不要自研的火光 / 斩击），但 `3222d54c`（挂载 `app.js`）那次**只带了引用、丢了定义** —— 这是 `npm run lint` 的 **2 个 error**，也是上一会话 `gpu is not defined` 的同型病（§6.1）。已在 `app.js` 顶部补 `const NO_SPARK = Object.freeze({ noSpark: true })`；`npx eslint .` 现在 **0 error**。（它只在官方特效开启、且有 dmg / heal 事件时触发；`npm run ci` 的 lint 步本该拦住它。）
 - **B1（术士 / 狙击）逐人实测**：33 名有官方特效的术士 / 狙击跑 `?attack=` 定点采样，**每一条弹道首帧都落在某个挂点（muzzle / SPECIAL_n）0.03–0.71 格内**（多数 ≤0.36），**没有半空生成**。**§1 的两条症状在本机、当前树上都复现不出来**；`野鬃 S2`（`char_496_wildmn`）的 buff 特效也只在脚下一个紧凑爆点。
+
+- **自研干员的特效：全面改用官方特效，自研的抛弃（owner 2026-10-16）**。8 名自研干员（阿斯卡纶 / 结城理 / 予愿安洁莉娜 / 澄闪 / 娜仁图亚 / 凯尔希·思衡托 / 克莱门莎 / 望）本就是官方角色、官方 prefab 齐全，官方层（`render/vfx/**`）已覆盖其攻击与技能。**删掉了 fork 的自研兜底**：`public/js/render/fx/hits.js`（`FX_HITS` 手绘普攻打击，7 名）整体移除（调用点 `numbers.js` / `projectiles.js` / `system.js` / `fx.js` 一并清），8 名干员从 `FX_OFFICIAL` 移除（`tools/build-fx-official.mjs` 按 `identifier ≥ 900` 跳过 `CUSTOM_CHESS`；表 56 → 50），并删掉 `aoe` / `strike` / `takeoff` / `champagneBomb` / `kalts2Heal` / `kalts2Damage` 里给自研干员的 `local.byOp` 手写层。**无官方特效时统一回退程序化原型**（与官方名册一致）。文档：OUR-FEATURES §2、ASSETS / DEVELOPMENT / HANDOVER / AI-WORKFLOW、MATCHMAKING §35.12「后续」均已更新。
 
 **给下一会话**：§2 的表格与 §3 的「重跑提取」步骤**作废**；真问题已按上文修掉。若在**盒子 / 桌面 store** 上仍看到「弹道悬空」，先确认那台机器的 `master` 是否含本修复，再按 §5 的环境注意项排查（`data/local-fx.json` 是 per-machine）。
 

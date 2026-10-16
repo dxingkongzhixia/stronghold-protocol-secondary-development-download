@@ -38,8 +38,8 @@ export class FxParticles {
   particle(tex, x, y, o = NO_OPTS) {
     if (this.parts.length >= this.maxParticles) this._freeParticle(this.parts.shift());
     const add = o.add !== false;
-    // `tex` is an atlas frame name, or a PIXI texture (the optional official-art core of a custom hit passes one:
-    // render/fx/hits.js), the same object form `ring()` accepts.
+    // `tex` is an atlas frame name, or a PIXI texture (an official local-art layer passes one: render/fx/simfx.js
+    // `_fxLocalTex`), the same object form `ring()` accepts.
     const t = (tex && typeof tex === 'object') ? tex : (this.tex[tex] || this.tex.dot);
     let p = (add ? this.freeAdd : this.freeNorm).pop();
     if (!p) {

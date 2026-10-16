@@ -62,23 +62,15 @@ export class FxNumbers {
     const big = view.maxHp > 0 && amount >= view.maxHp * 0.18;
     const melee = !!srcView && this._slashAt === srcView.id;
     // The melee blow is drawn procedurally (the attacker's slash + the victim's glow / burst). The client's official
-    // per-attack hit art is NOT used: it is a particle-system effect prefab named by the projectile prefabs
+    // per-attack hit art is NOT read here: it is a particle-system effect prefab named by the projectile prefabs
     // (`_effectsWhenHit`), not the attacker's one signature Texture2D; drawing that as a ground field at the victim was
     // visibly wrong (wrong texture, wrong anchor/scale). A correct procedural blow beats a wrong official one
-    // (docs/ASSETS.md "Battle effects", docs/DEVELOPMENT.md §9.1). The one exception (0.2.0): OUR seven custom operators
-    // draw their own hand-authored, body-anchored impact read from their official `_*_hit_*` prefab (render/fx/hits.js).
-    const info = srcView && srcView.info;
-    const opId = info && (info.spine || info.defId);
-    let custom = false;
-    if (melee && opId) {
-      const q = this._chest(srcView, this._q);
-      const dx = px - q.x, dy = py - q.y;
-      const dir = Math.abs(dx) + Math.abs(dy) > 1 ? Math.atan2(dy, dx) : (srcView.x > view.x ? Math.PI : 0);
-      custom = this._opHit(opId, px, py, s, { melee: true, dir });
-    }
+    // (docs/ASSETS.md "Battle effects", docs/DEVELOPMENT.md §9.1). Our custom operators are no exception any more: with
+    // the official battle effects they take the official hit (render/vfx/wiring.js `noSpark`), and without them they keep
+    // this same procedural blow as the rest of the roster.
     if (melee) this._slashAt = null;
     // `o.noSpark`: the official effects drew this hit (render/vfx/wiring.js) — only the number (and the splash ring) stay.
-    if (!custom && !o?.noSpark) {
+    if (!o?.noSpark) {
       this.particle('glow', px, py, { tint, life: 0.18, s0: (s / 128) * (big ? 1.0 : 0.6), s1: (s / 128) * (big ? 1.5 : 0.9), a0: 0.9, a1: 0 });
       if (melee) this._slash(view, srcView, px, py, s, style, big);
       this.burst(px, py, s, big ? 8 : melee ? 6 : 4, tint, { speed: melee ? 2.8 : 2.4, size: big ? 0.6 : 0.46 });

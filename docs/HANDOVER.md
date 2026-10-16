@@ -389,7 +389,7 @@ Every battle-fx **kind** has **two tiers**, resolved **per client at render time
 **Caps and allow-lists** (so a bad pick never litters the board):
 - **Size cap:** each drawn layer is an **in-place ground field at the anchor, scaled to ≈ one body** — the
   layer set's drawn radii (`r × layer.scale`) are scaled down together so the largest is at most
-  `LOCAL_FX_MAX_R` = **1.1 tiles** (`localart.js`); `hits.js` caps its body-anchored flash the same way.
+  `LOCAL_FX_MAX_R` = **1.1 tiles** (`localart.js`).
 - **Picture allow-list: only soft in-place effect pictures** — the `flow` / `ray` / `glow` / `ring` /
   `star` / `light` / `smoke` / `aura` / `halo` families (`EFFECT_TEX`). Walls, decals, patterns and
   object/prop/icon-looking textures (`char_*`, `object_*`, `bg_*`, `pattern_*` …) are **never** used.
@@ -401,13 +401,14 @@ Every battle-fx **kind** has **two tiers**, resolved **per client at render time
   `wall` / `chill` / `telegraph`) stay procedural.
 - **The generated roster table** `public/js/render/fx/official.js` (`FX_OFFICIAL`, built by
   `tools/build-fx-official.mjs`) maps each visible operator to its signature layers for the kinds its kit
-  emits. `--check` fails when the committed file is stale; pin an operator by hand in
-  `tools/local-extract/fx-official-overrides.json`.
-- **The normal-attack impact is procedural for the roster.** Our **seven of eight** custom operators are
-  the one hand-authored exception (`public/js/render/fx/hits.js` `FX_HITS`): their own `_*_hit_*` prefab,
-  anchored at the body. **克莱门莎** (the eighth) is **not** in `FX_HITS`. Faithful per-attack impacts for
+  emits. `--check` fails when the committed file is stale; an operator may be pinned by hand in
+  `tools/local-extract/fx-official-overrides.json` (created on demand). Our 8 `CUSTOM_CHESS` operators are
+  skipped (`identifier >= 900`), so they are absent on purpose.
+- **The normal-attack impact is procedural for the whole roster (our operators included).** The fork's
+  hand-authored `FX_HITS` was dropped (owner, 2026-10-16): our 8 `CUSTOM_CHESS` operators use the official
+  battle effects and fall back to the same procedural hit. Faithful per-attack impacts for
   the whole roster need a particle-system importer + a per-operator projectile mapping; that is a
-  **planned future task — do not start it without the owner** ([`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §1).
+  **planned future task — do not start it without the owner** ([`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2).
 - **Kill switches:** run-time `settings.localFx === false` (per client); source-level `LOCAL_ART_ENABLED`
   in `public/js/render/fx/localart.js` (default `true`).
 

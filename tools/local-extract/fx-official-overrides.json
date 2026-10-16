@@ -1,9 +1,1 @@
-{
-  "char_377_gdglow": {
-    "kinds": ["drone"],
-    "layers": [
-      { "name": "flow_91_C_1", "scale": 0.9 },
-      { "name": "star_05", "scale": 0.6 }
-    ]
-  }
-}
+{}

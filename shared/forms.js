@@ -116,10 +116,12 @@ export const FORMS = Object.freeze({
       roles: dollRoles('Doll_Skill_2_Loop', 'Doll_Skill_2_Die', 'Doll_Skill_2_Loop'),
     }),
     // 酸橙的心事 S3, first <替身> (塔纳托斯): the complete P1 set — it has no death clip of its own, it TRANSFORMS
-    // (P1toP2_ChangeEnd), which is what the sim does when it is knocked out (dollLives)
+    // (P1toP2). The transition is TWO clips in the official prefab: its `Doll_Skill_3_P1toP2_ChangeBegin` closes the P1
+    // persona and `Doll_Skill_3_P1toP2_ChangeEnd` lands in P2 (the second form's `change`, below). Using ChangeEnd for
+    // both played the same transform clip twice around the switch (owner report, 2026-10-16).
     doll3: Object.freeze({
       change: 'Doll_Skill_3_P1_SwitchIn',
-      end: 'Doll_Skill_3_P1toP2_ChangeEnd',
+      end: 'Doll_Skill_3_P1toP2_ChangeBegin',
       leave: 'Start',
       roles: dollRoles('Doll_Skill_3_P1_Idle', 'Doll_Skill_3_P1toP2_ChangeEnd', 'Doll_Skill_3_P1_Attack_A'),
     }),

@@ -26,13 +26,10 @@ export const FX_KINDS = Object.freeze({
   // blasts
   // [ASSUMED] Clementia's S3 uses the shared blast placeholder until her official effect is ported.
   blast: { a: 'blast', c: 0xffb35c },
-  // `aoe` is shared by every operator's area skill, so its official layers are keyed by the emitting operator
-  // (`local.byOp`, render/fx/localart.js fxLocalFor): 结城理's 替身换位 (S.E.E.S. 停顿) and 娜仁图亚's S3 吞日 retrieve
-  // burst. A non-listed caster (or a missing extraction) keeps the procedural blast.
-  aoe: { a: 'blast', c: 0xffb35c, local: { byOp: {
-    char_4217_makoto: { group: 'fx/makoto', tint: 0xffffff, dur: 0.7, layers: [{ name: 'flow_294_color_01', scale: 1.6 }, { name: 'star_324', scale: 1.1 }] },
-    char_4138_narant: { group: 'fx/narant', tint: 0xffd27a, dur: 0.7, layers: [{ name: 'trail_335', scale: 1.5 }, { name: 'star_305', scale: 1.1 }] },
-  } } },
+  // `aoe` is shared by every operator's area skill. It carries no local art any more: our custom operators (结城理's
+  // 替身换位, 娜仁图亚's S3 吞日 retrieve burst) use the official battle effects (render/vfx) and fall back to this plain
+  // procedural blast (owner, 2026-10-16).
+  aoe: { a: 'blast', c: 0xffb35c },
   explode: { a: 'blast', c: 0xff7a33 }, explosion: { a: 'blast', c: 0xff7a33 },
   // `pt`: always at the event's (x, y) (its `id` is the shooter); `heavy`: debris + scorch
   bombard: { a: 'blast', c: 0xffa04a, r: 1.5, pt: true, heavy: true }, bombardShell: { a: 'shell', c: 0xff5a3a, r: 1.5, pt: true },
@@ -43,11 +40,9 @@ export const FX_KINDS = Object.freeze({
   champagneBomb: { a: 'blast', c: 0xffd27a },
   // 望's 棋子 (token_10064_wang_stone1) bursting (content/tokens.js wangStone): its OWN kind, so the piece keeps its
   // normal death — the `Die` clip its spine carries and its own ON_UNIT_DEAD (`b_char_tokendead`) — instead of the
-  // `consumed` path of the kind above, which silences the death sound. The official 棋子 burst textures ride the token id
-  // here (render/fx/localart.js fxLocalFor keys the layers by the emitting piece).
-  wangStoneBlast: { a: 'blast', c: 0xffd27a, local: { byOp: {
-    token_10064_wang_stone1: { group: 'fx/wang', tint: 0xffe0a8, dur: 0.6, layers: [{ name: 'char_wang_05', scale: 1.5 }, { name: 'char_wang_03', scale: 1.2 }] },
-  } } },
+  // `consumed` path of the kind above, which silences the death sound. No local art: the official battle effects stand
+  // for the burst, and without them this plain blast is the fallback (owner, 2026-10-16).
+  wangStoneBlast: { a: 'blast', c: 0xffd27a },
   shockBlast: { a: 'blast', c: 0x9fd4ff, smoke: 0x1c2630 },
   frostNova: { a: 'blast', c: 0x9fe6ff, smoke: 0x1c2630 }, sunBurst: { a: 'blast', c: 0xffe28a }, meltdown: { a: 'blast', c: 0xff5a2a, r: 1.5, heavy: true },
   iceSpike: { a: 'blast', c: 0xbfeeff, smoke: 0x1c2630 }, rockfall: { a: 'blast', c: 0xc8a878, smoke: 0x4a3f33 }, rockslide: { a: 'blast', c: 0xc8a878, smoke: 0x4a3f33 },
@@ -65,23 +60,12 @@ export const FX_KINDS = Object.freeze({
   // support
   heal: { a: 'heal', c: 0x62f08a }, healAoe: { a: 'healAoe', c: 0x62f08a, r: 1.5 }, bandage: { a: 'heal', c: 0x62f08a }, blessing: { a: 'healAoe', c: 0xfff0a8 },
   // 凯尔希·思衡托 S2 保护性拒止's 医疗单元 burst, ONE orb per side per burst (kit chess_char_1052_kalts2-kalts2.js):
-  // one GREEN orb where allies are healed and one RED orb where enemies are struck, anchored on the impact point — the
-  // official colours, read from the client's own material tints in battle/prefabs/effects/kalts2.ab
-  // (kalts2_skill_02_range_heal_01 / _range_damage_01). When the client's local extraction lists the S2 bundle
-  // (group fx/kalts2) the official field/ray textures are drawn instead, tinted the same green / red; without it the
-  // procedural ring / explosion below is drawn (docs/ASSETS.md). The local field radius is `r × layer.scale`
-  // (render/fx/simfx.js `_fxLocal` → render/fx/rings.js `ring`), SIZE-CAPPED to LOCAL_FX_MAX_R ≈ one body
-  // (render/fx/localart.js), so the outer flow layer draws at ~1.1 tiles — an in-place orb at the burst, never a
-  // board-wide field; the inner `star_118_7` core keeps the original 0.8 ratio of that field. The procedural tiers
-  // below (r: 1.5) keep their own radius.
-  kalts2Heal: {
-    a: 'healAoe', c: 0x62f08a, r: 1.5,
-    local: { group: 'fx/kalts2', tint: 0x1c8f09, layers: [{ name: 'flow_332_3', scale: 1 }, { name: 'star_118_7', scale: 0.8 }] },
-  },
-  kalts2Damage: {
-    a: 'blast', c: 0xe03232, r: 1.5,
-    local: { group: 'fx/kalts2', tint: 0xdc2828, layers: [{ name: 'flow_331_2', scale: 1 }, { name: 'star_118_7', scale: 0.8 }] },
-  },
+  // one GREEN orb where allies are healed and one RED orb where enemies are struck, anchored on the impact point (the
+  // official colours are read from the client's own material tints in battle/prefabs/effects/kalts2.ab). No local art:
+  // the official battle effects stand for the burst, and without them these plain procedural orbs are the fallback
+  // (owner, 2026-10-16). The 'healAoe' / 'blast' archetypes keep their own radius (r: 1.5).
+  kalts2Heal: { a: 'healAoe', c: 0x62f08a, r: 1.5 },
+  kalts2Damage: { a: 'blast', c: 0xe03232, r: 1.5 },
   cleanse: { a: 'healAoe', c: 0xdfffff, r: 0.9 }, revive: { a: 'summon', c: 0xfff0a8 }, reborn: { a: 'summon', c: 0xffd45a }, hpShare: { a: 'heal', c: 0xff9aa6 },
   spGift: { a: 'sp', c: 0x6fd3ff }, spGain: { a: 'sp', c: 0x6fd3ff }, reload: { a: 'sp', c: 0xffe066 },
   shield: { a: 'shield', c: 0xdfe8ff }, catShield: { a: 'shield', c: 0xffe0a8 }, saltWard: { a: 'shield', c: 0xbfeeff }, shell: { a: 'shield', c: 0xc8b890 },
@@ -116,11 +100,9 @@ export const FX_KINDS = Object.freeze({
   // 炎佑 祛恶之焰: a continuous jet from the dragon (`id`) onto its locked target (`target`) + a burning disc (_flame)
   yanyouFlame: { a: 'flame', c: 0xff8a3d, r: 1 },
   // states
-  // 予愿安洁莉娜's 起飞 (`takeoff`, chess_char_1015_aglna2-aglna2.js) draws her official lift field; every other
-  // operator's takeoff keeps the procedural one.
-  takeoff: { a: 'lift', c: 0xcfe0ff, local: { byOp: {
-    char_1015_aglna2: { group: 'fx/aglna2', tint: 0x9fd4ff, dur: 0.6, layers: [{ name: 'char_aglna2_07', scale: 1.4 }, { name: 'star_289', scale: 1.1 }] },
-  } } },
+  // 予愿安洁莉娜's 起飞 (`takeoff`, chess_char_1015_aglna2-aglna2.js) uses the official battle effects; without them every
+  // operator's takeoff draws this plain procedural lift (owner, 2026-10-16).
+  takeoff: { a: 'lift', c: 0xcfe0ff },
   levitate: { a: 'lift', c: 0xcfe0ff }, weightless: { a: 'lift', c: 0xcfe0ff },
   sleep: { a: 'sleep', c: 0xa8b6ff }, crit: { a: 'crit', c: 0xffe066 },
   dodge: { a: 'dodge', c: 0xffffff }, riposte: { a: 'counter', c: 0xffd9a0 }, counter: { a: 'counter', c: 0xffd9a0 }, block: { a: 'counter', c: 0xdfe8ff },
@@ -139,10 +121,9 @@ export const FX_KINDS = Object.freeze({
   // beams
   beam: { a: 'beam', c: 0xff7a5a }, link: { a: 'beam', c: 0x9ff0dc }, lightning: { a: 'bolt', c: 0xc9a2ff }, tentacle: { a: 'beam', c: 0x5fe0ff },
   sandChains: { a: 'beam', c: 0xd8c8a0 }, sandChainsCharged: { a: 'beam', c: 0xffd45a },
-  // `strike` (a single-target hit flare) is shared too: 结城理's S.E.E.S. 总攻击 draws his official flare / ring.
-  strike: { a: 'strike', c: 0xffe6a8, local: { byOp: {
-    char_4217_makoto: { group: 'fx/makoto', tint: 0xbfa8ff, dur: 0.6, layers: [{ name: 'star_324', scale: 1.4 }, { name: 'ray_136', scale: 1.2 }] },
-  } } },
+  // `strike` (a single-target hit flare) is shared too: 结城理's S.E.E.S. 总攻击 uses the official battle effects; without
+  // them this plain procedural flare is the fallback (owner, 2026-10-16).
+  strike: { a: 'strike', c: 0xffe6a8 },
   // `hit` is the normal-attack / projectile impact flare (render/fx/projectiles.js `_impact`, render/fx/numbers.js
   // `damage`): the client draws it itself, the sim never emits it, so it needs no FX_KINDS entry — and it is drawn
   // procedurally, never from the operator's official bundle (docs/ASSETS.md "Battle effects").
