@@ -814,3 +814,47 @@ docs guards 34 pass / 0 fail.
    [`CHANGELOG.md`](../CHANGELOG.md) for the release.
 6. Full `node --test` in the store, then publish with the one-way helper (`node tools/push-gitee.mjs`) and mirror
    the working project. See [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (b)/(c).
+---
+
+## 12. v0.3.0 分批并入计划（进行中，owner 2026-10-16）
+
+`c24e17ee` (0.3.0) 相对我们的基线 `488db49f` (v0.2.6)：**390 个提交 / 807 个文件 / +111,918 − 9,489 行**，其中 **174 个文件我们也改过**（预测冲突）、**§0 命中 18 处**。数据面几乎未动（`data/` 仅 2 行）。先合并低风险批次（owner 2026-10-16）。
+
+**方法**：在基于我们 `master` 的合并 worktree 里**逐条 `git cherry-pick`**（对上游的 merge 提交用 `-m 1`，或挑其内层提交）→ 冲突按「两边都保留」逐块解→ **每批一次** `node --test` + `node tools/build-data.mjs --offline`（零漂移）→ golden 变动就**单独一个提交**重算（AI-WORKFLOW 的叒因规则）→ 每批推一次。**每批前后都跑** `node tools/check-upstream.mjs` 看 §0 面。
+
+### 批次 B1 — 低风险（体验 / 小规则修正）
+
+| 内容 | 上游提交 | 碰到我们的 |
+|---|---|---|
+| 作战统计（局内伤害/治疗/DPS）可选默认关 | `ea4fe48c`（+ 后续 `fbc3f522` 改成 opt-in 并在 Worker 局隐藏） | `public/js/**` |
+| 秘术师能量条可选默认关 | `c983ce7d`（+ `571577ae` 默认值决定） | `server/sim/snapshot.js` |
+| 射程按敌人 0.1 碰撞箱判定 | `5bf337a5` | `server/sim/**` |
+| 已出现的装备库存被拿空后仍可买（欠账）、凯瑟琳定向投放可刷突变细胞 | `72ebd9f3`（+ `f2af6107`） | `server/match/**` |
+| 攻击追击（出手时在范围内就打完）、投石机三连击改 3 次独立攻击、野鬃推动方向 | `9f228439` | `server/sim/**` |
+| 枯朽之种自毁改为速度 10 的弹道 | `a93a5d16`（golden `25685636`） | `server/sim/content/**` + golden |
+| 假想敌：镜膜 首次被沉默后永久失去生命加成 | `1a701241` | `server/sim/content/bosses.js` |
+| 维多利亚未激活攒到 25 层 → 激活那一刻立即发锤（远见/奇迹同规则） | `16567bbe`（+ `422b8091` 文案） | `server/sim/content/**` |
+| 伊利昂的木驮兽 / 「越长尘」载客 | `18cb28fe` / `d19dd600` | `server/sim/**` |
+| 风丸替身形态可对空（S2 召唤的替身仍不能）+ 队列奖励不消失 | `e54ac351` | `server/sim/**` |
+
+（Q/X 撤退出售、W 悬停购买、暇息期预览区、拖拽镜头、临时整备区排队等在上游的 **round-44 / round-46 整合提交**里（如 `25705cdf`），需单独拆，并入 B1 后段）
+
+### 批次 B2 — 中等（规则 + 配音）
+
+| 内容 | 上游提交 | 备注 |
+|---|---|---|
+| 同盟自选玩家私人库存随公共卡池翻倍（#650：5 阶 16 / 6 阶 10） | `843ccb57`（合并行 `25705cdf`） | `server/match/gamedata.js`（**我们刚改过它——务必保留 §8 的 boost 层**） |
+| 英语 / 韩语 / 本土配音，设置选语音 + 本土开关 + 逐人试听 | `8eb7f701`（+ `d93d6d30` data/assets.json + `f22b7129`） | `data/assets.json`、`public/js/**`；**需要对应的语音素材** |
+
+### 批次 B3 — 大块（各自单独评估，不轻易并）
+
+- **插件系统 + 工作台**（`plugins/`、`shared/plugins/`、`server/plugins/`、`server/studio/`、`public/studio/`、CSP、`SP_PLUGINS`/`SP_PLUGIN_SCRIPTS`、Docker）——纯新增但面大，且与我们的 8 名自造干员、客户端资源链相邻，**建议整块作为一次专项**。
+- **官方战斗特效**（`tools/local-extract/fx.py`、`shared/`的 fx 运行时、`public/js/render/vfx/*`、设置「官方特效」）——**与我们自己的双层特效系统（OUR-FEATURES §2）直接重叠**，逐项决定，不整块合并。
+- **统计页改版**（`946f9fb8`）——与我们自己的社区统计重叠（PROJECT-STATE §5），逐项取舍。
+- **资料下载/导入 + 素材包**（`aa8d4fc1`、`5bc36c48`）——与我们的中继 + 镜像 + SW 链重叠，不整块合并。
+- **机器人改进**（`a2e67454` 等）——与我们已合并的 feedback6/7 体系并行，需重新校准。
+
+### 手植项目（owner 2026-10-16 点名：向官方学）
+
+- **流动水面**：上游在 `public/js/render/board3d/`（`load.js` 加载 `TX_water_normal` / `TX_Caustics256` / `T_noise_clouds_01`；`scene.js` 的 `sceneWaterMaterial` 不受 lightmap；`layout.js` 区分「水面」与「动态水格平台 waterPlatform」）。**这块是 §0，我们不整块并**：用我们自己的 `theme.js`/`scene.js` 做一个**水波动材质**（法线贴图滚动 + 焦散动画），纹理走我们自己的 `tools/local-extract/` 提取。
+- **回合开始的部署回放**：上游 `public/js/render/app.js` 的 `view.replayDeploys(uids)` + `DEPLOY_REPLAY_MS`（按部署顺序逐个回放入场）、`fx.deploy` 闪光、`UnitView.land` → `audio.deployCue`。`public/js/render/app.js` **不在 §0**，可直接学/手植。
