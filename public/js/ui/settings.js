@@ -35,6 +35,8 @@ import { copyText } from './clipboard.js';
 import { toast, describeError } from './toasts.js';
 import { fxAvailable } from '../render/vfx/available.js';
 import { resolveOfficialFx } from '../render/vfx/tier.js';
+import { openBugReport } from './community.js';
+import { AssetCacheSection } from './assetMode.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
@@ -308,7 +310,8 @@ export function SettingsModal({ open, onClose }) {
   }, [open]);
   const fxTier = resolveOfficialFx(s.officialFx, true);
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('设置')} micro="SETTINGS" width="7.4rem"
-                        actions=${html`<${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
+    actions=${html`<${Button} variant="secondary" icon="edit" class="set-bug" onClick=${openBugReport}>${t('bug提交')}<//>
+      <${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
     <div class="set-list">
       <div class="set-row">
         <span class="set-row__label">${t('语言')}<${MicroLabel}>LANGUAGE<//></span>
