@@ -854,7 +854,11 @@ docs guards 34 pass / 0 fail.
 
 ### 批次 B3 — 大块（各自单独评估，不轻易并）
 
-- **插件系统 + 工作台**（`plugins/`、`shared/plugins/`、`server/plugins/`、`server/studio/`、`public/studio/`、CSP、`SP_PLUGINS`/`SP_PLUGIN_SCRIPTS`、Docker）——纯新增但面大，且与我们的 8 名自造干员、客户端资源链相邻，**建议整块作为一次专项**。
+- **插件系统 + 工作台**（`plugins/`、`shared/plugins/`、`server/plugins/`、`server/studio/`、`public/studio/`、CSP、`SP_PLUGINS`/`SP_PLUGIN_SCRIPTS`、Docker）——纯新增但面大
+  - **owner 2026-10-16 决定：暂缓（服务器不需要它）。** 现状核实：这 5 个目录我们**一个文件都没有**（上游合计 126 个文件），`server|shared/plugins/identity.js` 维持删除。这一轮并官方特效时它还**两次试图溜进来** ✗：`settings.js` 的上游 hunk 带了 `content.js` / `pluginTag.js` / `uiPlugins.js` / `shared/plugins/*` 的 import（都是**未使用**，已拆掉）✓；`server/http/static.js` 用 `git apply --3way` 时把**整个插件 HTTP 文档**（`/plugins/`、`/cs/`、`/vs/`、`/p/`）拖了进来（已回退手改）✗。
+  - 若日后要并：单独一轮 + 单独分支；`SP_PLUGINS` 默认关；**先只并服务端 + 只读 `plugins/`**，工坊（studio）最后上；需要**显式改 §0**（re-add `server|shared/plugins/*`）；与我们的「本地 → 镜像 → 中继」素材链对齐是最贵的一块（`content.js` 会重写每屏读的 art manifest）。验收线：无插件时**逐字节不变**。
+  - **更轻的替代**：我们已有 `packs/`（内容 / 语言包，`docs/PACKS.md`）+ kit 约定 + `tools/package.mjs` —— 想让朋友之间分享内容，**扩展 packs 比并插件系统便宜一个数量级**。
+，且与我们的 8 名自造干员、客户端资源链相邻，**建议整块作为一次专项**。
 - **官方战斗特效**（`tools/local-extract/fx.py`、`shared/`的 fx 运行时、`public/js/render/vfx/*`、设置「官方特效」）——**与我们自己的双层特效系统（OUR-FEATURES §2）直接重叠**，逐项决定，不整块合并。
 - **统计页改版**（`946f9fb8`）——与我们自己的社区统计重叠（PROJECT-STATE §5），逐项取舍。
 - **资料下载/导入 + 素材包**（`aa8d4fc1`、`5bc36c48`）——与我们的中继 + 镜像 + SW 链重叠，不整块合并。
@@ -898,6 +902,40 @@ docs guards 34 pass / 0 fail.
 - 已补：两条测试改为「凯瑟琳的池子可刷突变细胞、其余商店池与商店格子仍然不可」；`test/content/bands.test.js` 与 `test/ui/feedback1-offers.test.js` 的同一断言同步；`docs/PLAYING.md` 的「突变细胞只来自昆图斯的策略」→「…来自昆图斯的策略，也会出现在凯瑟琳【定向投放】里（调度中心仍不出售）」，并同步 `test/docs-consistency.test.js` 的守卫。
 - `72ebd9f3` 的**另一半仍然不并**：共享库存欠账（#624，`itemPool.debt`、`player/acquire|economy|items|prep`、`invariants.js`、`test/match/shared-stock.test.js`）—— 那是 §0「上游道具牌库把白给装备也卡库存」的正题，我们按**方案 A** 自行处理（已显示的卡不再因共享库存耗尽而拒绝）。
 - 提醒：`b0adce4f` 里 `test/local-extract.test.js` 的两处期望属于 **`33bf08d0`（射击台用官方模型）**，我们不并它；已把那两处退回，等 `33bf08d0` 自己那一轮一并进来。
+
+### 官方战斗特效（`ffd6d250` 一带，2026-10-16，分支 `fx-official`）
+
+**目标（owner 2026-10-16）**：并上游 0.3.0 的官方战斗特效（`tools/local-extract/fx.py` + `public/js/render/vfx/**` + 设置「官方特效」），**把我们自研的双层特效降为兜底**，不是二选一。
+
+**已落地（分支 `fx-official`，master 不受影响）**：
+
+1. **设计文档 §32 + §33 一并携带**（`3cc1a732`）：按 owner 决定开始携带 `docs/history/0.3.0.md`（我们的 §32）；`docs/design/vfx-format.md`（§33）随之落地 —— §32 的正文自己就引用 §33，两者必须同时。`test/docs-paths.test.js` 里我先前加的 `ABSENT` 豁免表**已撤掉**，守卫恢复满强度。
+2. **提取器**（`a6be3f02` → `74d0c116`）：`fx.py` + `extract.py --only fx --fx-set used` ✓，后一条把它**追平到上游 HEAD**（清单拆成 `data/local-fx.json` ✓、`index.json` v3 ✓、四个骨骼影响 ✓）。**第一代（Phase 1a）会把清单写进 `local-assets.json` 而不写 `local-fx.json`，与稍后的运行时对不上** —— 这是升级的原因。
+3. **运行时**：`public/js/render/vfx/**` 26 个文件 / 625 KB + 19 个 vfx 测试 + `tools/vfx-skill-coverage.mjs`，**整取上游 HEAD**（`8e543cfb`）。好消息：`vfx/` 自身**自洽**（不 import 我们的模块，是别人 import 它）。
+4. **sim 侧管道**（`78eed2bc` + golden `c2d0aa36`）：`castSlot` / `cast` 事件、`layerView`/`chargeView` 进快照、`bubble`/`billro` 的 fx 载荷字段。**变化横跨两文件/多文件时单独退一个无效** ✓；这次改动让 golden 漂移，已**先归因**（只退 `server/sim` → 摘要**零漂移** ✓）再**单独重算** ✓。
+5. **设置模型**（`d175e8aa`）：`officialFx`（auto/off/lite/full）+ `OFFICIAL_FX_MODES`，与我们**只保留日/中语音**的设置并存。
+6. **`fx/numbers.js`**（`77a84592`）：加上游的 `o.noSpark`（官方特效画了这次打击时不再画火光/斩击）—— **但保住**我们自研干员手绘的身位打击（`render/fx/hits.js`，OUR-FEATURES §2）。
+7. **服务端**（`a3c204bc`）：`data/local-fx.json` 作为**独立清单**分发（`VIEW_MANIFESTS` + `UNLOADED_DATA` + 缺文件时回空清单、永不 404 ✓）。
+
+**素材（本机实测）**：`--only fx --fx-set used` → **3,565 prefabs / 3,143 textures / 1,113 meshes / 12,659 个文件 / 231.5 MB / 244 秒** ✓。上游**自己也把 fx 素材放进仓库**（只忽略 per-machine 的 `data/local-fx.json` ✓），中继是裸仓库、push 即部署 ✓ ⇒ 「先推中继」= 素材进 git ✓。少数 trail prefab 报 `AttributeError`（上游提取器的毛病，非致命）。
+
+**方法学（重要，已两次踩中）**：
+- **不要整取上游文件、也不要用 `git apply --3way` 整块应用** —— 上游的 hunk 里混着与特效无关的改动，还有**删掉我们自研功能**的地方 ✗。实测：`server/http/static.js` 用 `--3way` 把**整个插件系统（DESIGN §32）**的文档带进来（那个系统我们根本没并、模块还删了）✗，只能回退手改。
+- **可靠做法**：`git diff HEAD <上游> -- 文件`（正向）→ 关键词过滤只留特效 hunk → 逐条人工确认 → 应用。工具留在临时目录（`_fxapply.py`，含 `--check` 预演）。**混合 hunk（上游删我们东西的）必须手改** ✓。
+- **提取器测试要跑在仓库自己的 `.venv` 里**（`fx.py` 里那段 helper 用了 Python 3.12 的 f-string 语法；系统 `python` 是 3.8 ✗）—— 两个提取器测试已改成优先用 `.venv/Scripts/python.exe` ✓。
+
+**待办（下一步）**：客户端接线 4 件 —— `public/js/render/app.js`（**评审过：56 hunk / 25 像 fx，且混着我们自己的 `projSpeed`、`mysticEnergy` 等 ⇒ 必须逐 hunk 手并** ✗）、`units.js`、`spine.js`、`ui/settings.js`（设置界面）+ i18n 的「官方特效」词条；然后全量套件转绿 → **合并回 master** ✓ → 先推中继 ✓ → 再 gitee/github。
+
+**收尾时的准确剩余清单（2026-10-16，分支 `fx-official` 12 个提交）**：
+
+- 已做完：运行时 ✓、sim 管道 + golden（先归因零漂移 ✓、单独重算 ✓）、设置模型 ✓、提取器升级 ✓、服务端分发 `local-fx.json` ✓、素材 196.5 MB ✓、`units.js` 骨骼挂点 ✓、**`app.js` 挂载 ✓**（上游本来就是"官方接管则跳过、否则走我们的" ⇒ 自研干员自动保留兜底 ✓，无需补丁 ✓）。
+- **剩余 3 处测试期望**（都是升级提取器带来的 ✓，同一类）：① `test/render/board3d-extract.test.js` 的 WebP 名单要补 `mesh/trap_110/TX_trap_1106_achplat`（射击台那张，`WEBP` 表里 mode `lossy`）；② `test/render/board3d-scene.test.js:204` 的 `same` 同一性断言（新版把 `derive_normal_rg` 从 `derived.py` 换成了别处的实现 ⇒ 该断言应改为**比行为**而不是比对象身份）；③ `test/render/token-wang-stone.test.js` 的望棋子模型（**既有环境问题** ✓：本机 `local-assets.json` 没有 `token_10064_wang_stone1.skel`，需要一次覆盖 `TOKEN_SPINES` 的提取）。
+- **未做**：`public/js/ui/settings.js` 的「官方特效」行（自动/关闭/精简/完整，且只有提取过才显示）+ i18n 词条（`官方特效` / `自动` / `关闭` / `精简` / `完整` —— 注意 `关闭` 与我们既有的 `"关闭": "Close"` 撞键，需改为不冲突的源串）。
+- **部署注意**：`data/local-fx.json`（9,243 条 / 1.23 MB）按设计是 per-machine + gitignored ✓；盒子上没有它 → 服务端回空清单 → 客户端看不到官方特效 ✗。部署时要在盒子上跑一次提取 ✓ 或把这份清单带上去 ✓（写进 DEPLOY 时确认）。
+- **两个 `.venv` 依赖**：`test/local-extract*.test.js`、`test/render/board3d-*.test.js` 都改成**优先用仓库 `.venv`** ✓（新版 helper 用了 Python 3.12 的 f-string 语法，系统 `python` 是 3.8 ✗）。
+
+
+
 
 ### 设计文档：§32 与 §33 一并落地（2026-10-16）
 

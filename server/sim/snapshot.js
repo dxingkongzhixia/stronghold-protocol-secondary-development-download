@@ -63,8 +63,8 @@ export function unitInfo(u) {
     standInFor: u.side === 'ally' && u.kind === 'op' && typeof d.standInFor === 'string' ? d.standInFor : undefined,
     // 自选: the pick of a DIY slot's piece (the detail card composes its record, shared/diy.js diyRecord)
     diy: u.side === 'ally' && u.kind === 'op' && d.diyFor && d.loadout?.diy ? { ...d.loadout.diy } : undefined,
-    // 0.2.2: an ally operator's potential when it differs from the default and its 练度 tier (a teammate's unit shows ITS
-    // owner's numbers; absent potential = the default, 潜能 1 — a 潜能 6 unit travels; a stand-in, a prototype 自选 pick)
+    // 0.2.2: an ally operator's potential below 6 and its 练度 tier (a teammate's unit shows ITS owner's numbers; absent:
+    // full potential, no 练度 — a stand-in, a prototype 自选 pick)
     potential: u.side === 'ally' && u.kind === 'op' && d.loadout?.potentialIsDefault === false ? d.loadout.potential : undefined,
     cultivate: u.side === 'ally' && u.kind === 'op' && Number.isInteger(u.cultivate) ? u.cultivate : undefined,
   };
@@ -183,6 +183,27 @@ export function negView(u) {
   if (typeof u.negFill !== 'function') return null;
   const v = u.negFill();
   return v > 0 ? Math.min(1, Math.max(0.01, r2(v))) : null;
+}
+
+/**
+ * `layerView(u)` = the hit-negating 护盾 layers a unit holds (the sum of its buffs' shieldHits — 泥岩's 沃土予身), null
+ * without any. Display only: render/vfx/talentfx.js shows the official effect of that many layers (mudrok_buff_03 / 02 /
+ * 01_start).
+ */
+export function layerView(u) {
+  let n = 0;
+  for (const b of u.buffs) if (b.shieldHits > 0) n += b.shieldHits;
+  return n >= 1 ? Math.min(999, Math.floor(n)) : null;
+}
+
+/**
+ * `chargeView(u)` = `[charges stored, the skill's maximum]` of an ally whose skill stores charges (maxCharges > 1, 卡涅利安):
+ * the 技能充能 the official sand armour shows (render/vfx/skillfx.js, the `[eff_cond]` buffs). Display only.
+ */
+export function chargeView(u) {
+  const sk = u.skill;
+  if (u.side !== 'ally' || !sk || sk.noSkill || !(sk.maxCharges > 1)) return null;
+  return [Math.max(0, Math.min(sk.maxCharges, Math.floor(sk.charges || 0))), sk.maxCharges];
 }
 
 /** Units included in a snapshot: deployed & visible, plus recently dead ones (DIE animation). */

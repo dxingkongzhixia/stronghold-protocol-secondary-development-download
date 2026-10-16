@@ -18,7 +18,11 @@ import { VENDOR_FILES } from '../../tools/vendor.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TOOL = path.join(ROOT, 'tools/local-extract');
 const ENV = { ...process.env, PYTHONDONTWRITEBYTECODE: '1' };
-const PY = ['python3', 'python'].find((bin) => spawnSync(bin, ['--version']).status === 0);
+const PY = [
+  path.join(ROOT, '.venv', 'Scripts', 'python.exe'),   // the repo's own venv (tools/local-extract/requirements.txt: fx.py needs Python 3.12)
+  path.join(ROOT, '.venv', 'bin', 'python'),
+  'python3', 'python',
+].find((bin) => spawnSync(bin, ['--version']).status === 0);
 const HAS_PIL = !!PY && spawnSync(PY, ['-c', 'import PIL'], { env: ENV }).status === 0;
 const HAS_WEBP = HAS_PIL && spawnSync(PY, ['-c', "import sys; from PIL import features; sys.exit(0 if features.check('webp') else 1)"], { env: ENV }).status === 0;
 const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8')); } catch { return null; } })();
@@ -42,7 +46,7 @@ describe('extract.py board jobs', { skip: !PY && 'no python3' }, () => {
     assert.ok(new RegExp(by['map/common'].keep).test('TX_wind_device') && !new RegExp(by['map/common'].keep).test('TX_R6_bomb'));
     assert.ok(new RegExp(by['map/water'].keep).test('[ucp]TX_water_normal'));
     // no new mesh/ groups (the board meshes of DESIGN §15 stay the four of the mesh job table)
-    assert.equal(jobs.filter((j) => j.sub.startsWith('mesh/')).length, 4);
+    assert.equal(jobs.filter((j) => j.sub.startsWith('mesh/')).length, 5);   // + mesh/trap_110 (the 射击台 model, round 40)
     assert.deepEqual(derived.map((d) => [d.sub, d.from, d.derive, d.name]), [
       ['map/autochess', 'TX_autochessi_N', 'normal_rg', 'TX_autochessi_N_rgb'],
       ['map/autochess', 'TX_autochessi_M', 'rough_from_gloss', 'TX_autochessi_M_rough'],

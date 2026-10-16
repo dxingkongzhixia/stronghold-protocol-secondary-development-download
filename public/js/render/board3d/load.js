@@ -72,6 +72,9 @@ export const PACK_IMAGES = Object.freeze({
   waterN: ['map/water', '[ucp]TX_water_normal'],
   caustics: ['map/water', 'TX_Caustics256'],
   noise: ['map/water', 'T_noise_clouds_01'],
+  // The 射击台 model's texture (round 40): the upgraded extractor lists it (fx.py/EXTERNAL), so the pack carries it —
+  // one extra small download until the 射击台's renderer half is merged (upstream 33bf08d0).
+  trap: ['mesh/trap_110', 'TX_trap_1106_achplat'],
 });
 
 export const PACK_MESHES = Object.freeze({

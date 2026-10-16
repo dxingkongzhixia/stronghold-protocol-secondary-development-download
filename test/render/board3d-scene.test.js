@@ -27,7 +27,11 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TOOL = path.join(ROOT, 'tools/local-extract');
 const ENV = { ...process.env, PYTHONDONTWRITEBYTECODE: '1' };
-const PY = ['python3', 'python'].find((bin) => spawnSync(bin, ['--version']).status === 0);
+const PY = [
+  path.join(ROOT, '.venv', 'Scripts', 'python.exe'),   // the repo's own venv (tools/local-extract/requirements.txt: fx.py needs Python 3.12)
+  path.join(ROOT, '.venv', 'bin', 'python'),
+  'python3', 'python',
+].find((bin) => spawnSync(bin, ['--version']).status === 0);
 const HAS_PIL = !!PY && spawnSync(PY, ['-c', 'import PIL'], { env: ENV }).status === 0;
 const stages = JSON.parse(readFileSync(path.join(ROOT, 'data/stages.json'), 'utf8'));
 const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8')); } catch { return null; } })();
@@ -199,7 +203,7 @@ print(json.dumps({'mode': d.mode, 'px': list(d.getdata()), 'range': s.LIGHT_RANG
 
   test('scene map slots: albedo plus the normal / metallic-gloss / emission the material keywords turn on', () => {
     const out = py(`import extract as e
-print(json.dumps({'slots': list(s.SCENE_MAP_SLOTS), 'derivers': sorted(e.DERIVERS), 'same': e.derive_normal_rg is __import__('derived').derive_normal_rg}))`);
+print(json.dumps({'slots': list(s.SCENE_MAP_SLOTS), 'derivers': sorted(e.DERIVERS), 'same': s.derive_normal_rg is __import__('derived').derive_normal_rg}))`);
     assert.deepEqual(out.slots, ['_MainTex', '_BumpMap', '_MetallicGlossMap', '_EmissionMap']);
     assert.deepEqual(out.derivers, ['normal_rg', 'rough_from_gloss']);
     assert.equal(out.same, true, 'scenes.py and extract.py share one derivation');

@@ -314,7 +314,11 @@ describe('D3 client: the official model only when data/local-assets.json lists i
   });
 });
 
-const PY = ['python3', 'python'].find((bin) => spawnSync(bin, ['--version']).status === 0);
+const PY = [
+  path.join(ROOT, '.venv', 'Scripts', 'python.exe'),   // the repo's own venv (tools/local-extract/requirements.txt: fx.py needs Python 3.12)
+  path.join(ROOT, '.venv', 'bin', 'python'),
+  'python3', 'python',
+].find((bin) => spawnSync(bin, ['--version']).status === 0);
 describe('D3: tools/local-extract/extract.py enemy Spine job (no UnityPy needed)', { skip: !PY && 'no python3' }, () => {
   const TOOL = path.join(ROOT, 'tools/local-extract');
   const ENV = { ...process.env, PYTHONDONTWRITEBYTECODE: '1' };

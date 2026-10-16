@@ -128,7 +128,8 @@ test('DESIGN: every section is a `## N.` heading exactly once in docs/design/ or
 
 test('DESIGN: every "DESIGN §N" cited in the repository (code comments, tests, docs, data) is a heading of the design document', () => {
   const heads = new Set([...designText(ROOT).matchAll(/^#{2,4} (\d+(?:\.\d+)*)[. ]/gm)].map((m) => m[1]));
-  const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' })
+  const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'],
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })   // the extracted fx set lists 12k files
     .split('\n').filter((f) => /\.(?:m?js|cjs|md|json|html|css|ya?ml|sh|bat|ps1|py|txt)$/.test(f) && !f.startsWith('test/golden/'));
   let cited = 0;
   const bad = [];
