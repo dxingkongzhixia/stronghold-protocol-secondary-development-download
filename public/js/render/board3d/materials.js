@@ -519,15 +519,35 @@ export function sceneMaterial(THREE, o, focus) {
   return m;
 }
 
-/** A water surface of an official scene (Torappu/Scene/StylizedWater): the board's water shader in the material's colours. */
+/**
+ * A water surface of an official scene (Torappu/Scene/StylizedWater): the board's water shader in the material's
+ * colours AND the map's own flow — `colors._WaterSpeed` [x, y] drives the two normal-map layers and
+ * `floats._CausticsSpeed` / `_CausticsTiling` / `_CausticsBrightness` (with `_WaterColorIntensity`) the caustics and
+ * the tint. This is the 0.3.0 upstream idea in our own material ("水面按这张图自己的水材质参数绘制"): the extracted
+ * `scene.json` of every battlefield carries them. Each value falls back to this project's own tuned constant, so a
+ * scene record without them (or none at all) renders exactly as before.
+ */
 export function sceneWaterMaterial(THREE, tex, focus, info, theme) {
   const deep = colorOf(info, '_DeepWaterColor', [0.03, 0.2, 0.27, 0.7]), shallow = colorOf(info, '_ShallowWaterColor', [0.09, 0.46, 0.55, 0.5]);
   // the theme's linear scene gain (see sceneMaterial): keeps the water in the same exposure as the scene's land.
   const gain = Number.isFinite(theme?.gain) && theme.gain > 0 ? theme.gain : 1;
+  const flt = (k, d) => (info && info.floats && typeof info.floats[k] === 'number' && Number.isFinite(info.floats[k]) ? info.floats[k] : d);
+  const mapSpeed = colorOf(info, '_WaterSpeed', [0, 0, 0, 0]);
+  const sx = Number.isFinite(mapSpeed[0]) && mapSpeed[0] !== 0 ? mapSpeed[0] : 0.03;
+  const sy = Number.isFinite(mapSpeed[1]) && mapSpeed[1] !== 0 ? mapSpeed[1] : 0.021;
   const uniforms = {
     uTime: { value: 0 }, uNormal: { value: tex.waterN || null }, uCaustics: { value: tex.caustics || null },
     uDeep: { value: new THREE.Vector4(...deep) }, uShallow: { value: new THREE.Vector4(...shallow) }, ...focus,
     uGain: { value: gain },
+    // the map's own flow: layer 1 follows _WaterSpeed, layer 2 drifts the other way (as this shader always has)
+    uWaterSpeed: { value: new THREE.Vector2(sx, sy) },
+    uFlowSpeed: { value: new THREE.Vector2(-sx * 0.83, sy * 0.81) },
+    uCausticsTiling: { value: flt('_CausticsTiling', 0.6) },
+    uCausticsSpeed: { value: flt('_CausticsSpeed', 0.02) },
+    // their tuning factor (the "no decoded cubemap" branch, WATER_TUNING.causticsGain 0.35): keeps the official
+    // brightness proportional instead of 5–7× brighter. The fallback keeps this project's own tuned 0.05.
+    uCausticsGain: { value: flt('_CausticsBrightness', 0.05 / 0.35) * 0.35 },
+    uColorIntensity: { value: flt('_WaterColorIntensity', 1) },
   };
   return new THREE.ShaderMaterial({
     uniforms,
@@ -535,22 +555,23 @@ export function sceneWaterMaterial(THREE, tex, focus, info, theme) {
     vertexShader: TERRAIN_VERT,
     fragmentShader: [
       'uniform float uTime; uniform sampler2D uNormal; uniform sampler2D uCaustics; uniform vec4 uDeep; uniform vec4 uShallow; uniform float uGain;',
+      'uniform vec2 uWaterSpeed; uniform vec2 uFlowSpeed; uniform float uCausticsTiling; uniform float uCausticsSpeed; uniform float uCausticsGain; uniform float uColorIntensity;',
       FOCUS_GLSL,
       'varying vec2 vUv; varying vec3 vWorld;',
       'void main() {',
       '  float diff = 0.5, spec = 0.0, ca = 0.0;',
       '  #ifdef WATER_MAPS',
       '    vec2 p = vWorld.xy * 0.45;',
-      '    vec3 n1 = texture2D(uNormal, p + vec2(uTime * 0.03, uTime * 0.021)).xyz * 2.0 - 1.0;',
-      '    vec3 n2 = texture2D(uNormal, p * 1.7 - vec2(uTime * 0.025, -uTime * 0.017)).xyz * 2.0 - 1.0;',
+      '    vec3 n1 = texture2D(uNormal, p + uTime * uWaterSpeed).xyz * 2.0 - 1.0;',
+      '    vec3 n2 = texture2D(uNormal, p * 1.7 + uTime * uFlowSpeed).xyz * 2.0 - 1.0;',
       '    vec3 n = normalize(vec3(n1.xy + n2.xy, 2.2));',
       '    vec3 L = normalize(vec3(-0.45, -0.3, 0.84));',
       '    diff = clamp(dot(n, L), 0.0, 1.0);',
       '    spec = pow(clamp(dot(reflect(-L, n), normalize(vec3(0.0, -0.5, 0.866))), 0.0, 1.0), 40.0);',
-      '    ca = texture2D(uCaustics, vWorld.xy * 0.6 + n.xy * 0.08 + vec2(uTime * 0.02, 0.0)).r;',
+      '    ca = texture2D(uCaustics, vWorld.xy * uCausticsTiling + n.xy * 0.08 + vec2(uTime * uCausticsSpeed, 0.0)).r;',
       '  #endif',
       '  vec4 w = mix(uDeep, uShallow, 0.08 + 0.2 * diff);',
-      '  vec3 c = pow(w.rgb, vec3(2.2)) + ca * vec3(0.03, 0.05, 0.05) + spec * vec3(0.5, 0.6, 0.65);',
+      '  vec3 c = pow(w.rgb * uColorIntensity, vec3(2.2)) + ca * uCausticsGain * vec3(0.6, 1.0, 1.0) + spec * vec3(0.5, 0.6, 0.65);',
       '  gl_FragColor = vec4(c * uGain * focusMask(vWorld.xy), clamp(w.a + 0.2, 0.0, 1.0));',
       '  #include <colorspace_fragment>',
       '}',
