@@ -161,6 +161,41 @@ test('望 S3 天下劫: ammo 20, no normal attack, expanded range; the cast gran
   checkInvariants(h.b);
 });
 
+test('望 S3 天下劫: ONE placement brings up to THREE 跟子 (第一天赋额外至多3枚), each spending a bullet', REAL, () => {
+  const h = makeBattle({
+    defs: { enemies: { e: still('e') } },
+    units: [{ chessId: WANG, row: 10, col: 4, uid: 1, potential: 6 }],
+    autoFinish: false, timeLimit: 20, hooks: ['ammoUsed'], captureNoisy: true,
+  });
+  h.step();
+  const w = h.unit(WANG);
+  w.skill.sp = w.skill.spCost;
+  assert.ok(w.skill.activate('test', { free: true }));
+  h.step();
+  assert.ok(w.skill.active, 'S3 runs');
+  // 天下劫's own refill keeps the field busy: clear it and cut its material, then make ONE placement on the sim's own path
+  for (const p of living(h)) h.b.retreat(p, { reason: 'expired', permanent: true });
+  w.mem.summonStock = {};
+  h.step();
+  const before = Math.floor(Number(w.skill.ammoLeft) || 0);
+  const placed = h.b.spawnToken(w, PIECE, 10, 7, { force: true });
+  assert.ok(placed, 'the placement');
+  const follows = living(h).filter((p) => p !== placed && p.mem.wangFollow);
+  assert.equal(follows.length, 3, '第一天赋额外至多部署 3 枚棋子');
+  for (const f of follows) assert.equal(Math.abs(f.tileR - placed.tileR) + Math.abs(f.tileC - placed.tileC), 1, 'each 跟子 is orthogonally adjacent');
+  assert.equal(new Set(follows.map((f) => `${f.tileR},${f.tileC}`)).size, 3, 'three distinct tiles');
+  assert.equal(Math.floor(Number(w.skill.ammoLeft) || 0), before - 3, 'the 3 跟子 each spent a bullet (并消耗等量弹药; the placement path spends its own)');
+  // the plain state still brings ONE 铸子 跟子 (the first test) — S3 alone raises it to 3
+  w.skill.stop();
+  h.step();
+  for (const p of living(h)) h.b.retreat(p, { reason: 'expired', permanent: true });
+  h.step();
+  const lone = h.b.spawnToken(w, PIECE, 10, 9, { force: true });
+  assert.ok(lone);
+  assert.equal(living(h).length, 2, 'without S3: the piece + one 跟子');
+  checkInvariants(h.b);
+});
+
 test('望 S3 天下劫: a consumed piece is refilled while bullets last ("有空地就不断下棋子"); the skill ends when they run out', REAL, () => {
   const h = makeBattle({
     defs: { enemies: { e: still('e') } },

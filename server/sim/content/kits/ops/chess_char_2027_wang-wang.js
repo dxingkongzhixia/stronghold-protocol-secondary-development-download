@@ -80,22 +80,20 @@ function wang(bb, chess, def) {
     battle.emit('ammoUsed', { unit, left: s.ammoLeft, skill: s });
     if (s.ammoLeft <= 0) s.end('ammo');   // 弹药耗尽后技能结束
   };
-  /** 跟子: one extra piece on the best adjacent tile of `piece` (see the priority above). */
+  /** 铸子 · 跟子: the pieces a single placement brings in on its adjacent tiles — the tapped order (上 > 右 > 下 > 左
+   *  in the piece's own facing frame) over the official priority 有敌人 > 无敌人 · 不可部署地面 > 可部署地面 > 可部署高台. */
+  const FOLLOW_DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+  /** 天下劫 S3 (skill text): 「第一天赋额外至多部署 **3** 枚棋子并消耗等量弹药」 — while S3 runs one placement brings up to
+   *  THREE 跟子 (not one), each spending a bullet; the plain state keeps 铸子's 「在相邻位置额外部署一枚」. */
+  const S3_FOLLOWS = 3;
   const spawnFollow = (battle, unit, piece) => {
     const st = wstate(battle);
     if (st.busy) return;
-    const mine = battle.allyUnits.filter((t) => t.kind === 'token' && t.defId === tok && t.ownerUnit === unit && t.mem.wangFollow && t.alive);
-    if (mine.length >= spawnCap) return;
-    if (heldPieces(battle, unit).length >= fieldCapOf(battle, unit)) return;   // a full field would just withdraw another piece for a bullet
-    // S3: 第一天赋额外至多3枚 — but a piece that is the ONLY one on the field must still get its partner, or the auto-refill
-    // would seed a lone, never-activated piece (the owner's "总有一个棋子不爆炸"). A seed follow still costs a bullet.
-    const onlyPiece = !battle.allyUnits.some((t) => t !== piece && t.alive && t.kind === 'token' && t.defId === tok && t.ownerUnit === unit);
-    if (s3Active(unit) && !onlyPiece && Math.floor(num(unit.mem.wangS3Follows, 0)) >= 3) return; // S3: 第一天赋额外至多3枚
-    // 上 > 右 > 下 > 左 in the piece's own (facing) frame — a turned board plays alike (sim/dir.js)
-    const DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
-    let best = null, bestS = null;
-    for (let i = 0; i < DIRS.length; i++) {
-      const [adr, adc] = rotateOffset(DIRS[i][0], DIRS[i][1], piece.dir ?? unit.dir);
+    const s3 = s3Active(unit);
+    const want = s3 ? S3_FOLLOWS : 1;
+    const cands = [];
+    for (let i = 0; i < FOLLOW_DIRS.length; i++) {
+      const [adr, adc] = rotateOffset(FOLLOW_DIRS[i][0], FOLLOW_DIRS[i][1], piece.dir ?? unit.dir);
       const r = piece.tileR + adr, c = piece.tileC + adc;
       if (!battle.grid.inRect(r, c) || battle.isReservedTile(r, c)) continue;
       const ally = battle.unitAt?.(r, c);
@@ -104,21 +102,24 @@ function wang(bb, chess, def) {
       const high = battle.grid.canStand(r, c, { ranged: true });
       if (!ground && !high && !battle.grid.isLow(r, c)) continue; // no void / forbidden tile
       const cls = ground ? 1 : (battle.grid.isLow(r, c) ? 0 : 2); // 不可部署地面 > 可部署地面 > 可部署高台
-      const score = [enemyOn(battle, r, c) ? 0 : 1, cls, i];
-      if (!bestS || score[0] < bestS[0] || (score[0] === bestS[0] && (score[1] < bestS[1] || (score[1] === bestS[1] && score[2] < bestS[2])))) {
-        best = [r, c]; bestS = score;
-      }
+      cands.push({ r, c, score: [enemyOn(battle, r, c) ? 0 : 1, cls, i] });
     }
-    if (!best) return;
+    cands.sort((a, b) => a.score[0] - b.score[0] || a.score[1] - b.score[1] || a.score[2] - b.score[2]);
+    if (!cands.length) return;
     st.busy = true;
-    let f = null;
-    try { f = battle.spawnToken(unit, tok, best[0], best[1], { force: true, kit: triggerKit(battle, unit) }); }
-    finally { st.busy = false; }
-    if (f) {
-      f.mem.wangFollow = true;
-      if (s3Active(unit)) { unit.mem.wangS3Follows = Math.floor(num(unit.mem.wangS3Follows, 0)) + 1; spendAmmo(battle, unit); }
-      battle.fx('summon', { x: f.x, y: f.y, id: f.id, src: unit.id });
-    }
+    try {
+      for (const t of cands.slice(0, want)) {
+        if (s3 && Math.floor(num(unit.skill?.ammoLeft, 0)) <= 0) break;          // 并消耗等量弹药
+        const mine = battle.allyUnits.filter((x) => x.kind === 'token' && x.defId === tok && x.ownerUnit === unit && x.mem.wangFollow && x.alive);
+        if (mine.length >= spawnCap) break;                                      // 铸子 跟子上限 (attack@max_spawn_cnt)
+        if (heldPieces(battle, unit).length >= fieldCapOf(battle, unit)) break;   // 可以使用6(7)枚棋子
+        const f = battle.spawnToken(unit, tok, t.r, t.c, { force: true, kit: triggerKit(battle, unit) });
+        if (!f) continue;
+        f.mem.wangFollow = true;
+        if (s3) { unit.mem.wangS3Follows = Math.floor(num(unit.mem.wangS3Follows, 0)) + 1; spendAmmo(battle, unit); }
+        battle.fx('summon', { x: f.x, y: f.y, id: f.id, src: unit.id });
+      }
+    } finally { st.busy = false; }
   };
   /** Tiles of 望's attack range a piece may take (S3: the tiles enemies stand on first), in 望's facing frame. */
   const placeTiles = (battle, unit, { enemiesFirst = false } = {}) => {
