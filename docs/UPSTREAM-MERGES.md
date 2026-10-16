@@ -972,6 +972,20 @@ docs guards 34 pass / 0 fail.
 - **根源**：官方 projectile 的 `movement` 是 `AdvancedMovement` 且 **`comeBack: 1`**（`speed` 15、`comeBackSpeedScale` 0.25 ⇒ 回旋 3.75，与 PRTS「投掷 15 / 回旋 3.75」一致、`delayAfterReached` 0.01），而 `render/vfx/wiring.js` 的 `_fly` 只画了去程（`flight.dur` 一到就 `finish`）。官方开着时**官方层接管**了这次攻击，程序化回环（`fx/projectiles.js _stepBoomerang`，自带回程）就不再画 ⇒ 去程有、回程没有。
 - **修**：`_fly` 认出 `movement.comeBack === 1` 时，命中之后（`delayAfterReached` 起）把飞行特效**飞回射手当前挂点**，速度 `speed × comeBackSpeedScale`，回到手上才 `stop`；命中仍落在目标（`dur`）。`test/render/vfx-origins.test.js` 新增一条（去程 → 命中不停 → 回程靠近 → 收回）。
 
+### 0.2 护盾动画：循环要跟着护盾一起结束（owner 报障 2026-10-16 夜）
+
+- **症状**：owner 报「有护盾的干员在没开技能的时候护盾动画显示了」，点名 **卡涅利安 `char_426_billro`** 和 **空弦 `char_332_archet`**，并说明是「刚部署 / 准备阶段」就看到。
+- **先查清了「是谁画的」**（`public/assets/local/fx/index.json` + sim 事件实测）：
+
+  | 干员 | 部署时画护盾的东西 | 官方数据怎么说的 |
+  |---|---|---|
+  | 卡涅利安 | 官方 prefab 循环 `billro_beidong_buff_03`（prefab 节点名里就有 **`hudun_01`（护盾）**），由 `Modes/Default/Trait_Eff` 与 `Modes/S1_Enhance/Trait_Eff` 的 `PassiveBuffAbility` 播 | **这是阵法术师「特性」的守卫外观**，官方就是在**技能未开启**（Default 模式）时播；我们的 sim 同态（`professions.js installPhalanx` 的 `trait:phalanxGuard` 只在技能关闭时挂着），**与官方一致，未改** |
+  | 空弦 | 天赋 2（铁弦）的循环 `archet_buff_01_start` + sim 自己的 `fx('shield')`（本地美术层 `FX_OFFICIAL` 的 `archet_glow` / `ray_70`） | 铁弦是「**部署时**获得 1 层护盾」的天赋 ⇒ 部署时就有护盾**是官方的**；但护盾被一次伤害吃掉后，循环**必须跟着停** |
+
+- **真缺陷**：官方 prefab 里「`PassiveBuffAbility` 的循环跟着它建的 buff 走」，而我们的提取看不见结束那个 buff 的脚本，于是这些模板都是 `life: { type: 'INFINITY' }` —— 循环会一直播到干员倒下。运行时本来有一道「护盾破了就停」的闸（`talentfx._inForce`：`U.broken && /shield|barrier/i.test(b.key)`），但它测的是 **binding 的 key**，在真实索引里那是**天赋下标**（空弦是 `'2'`）或能力名（卡涅利安是 `'Default'`），于是这道闸对干员**从不生效**（它其实是给敌人的 `Shield` 天赋写的）。**空弦的护盾特效因此在护盾被吃掉后仍然一直显示** —— 这才是「没护盾了还有护盾动画」的真身。sim 侧的信号是齐的：吃完那次伤害会发 `['status', id, 'talent:archet_shield', 0]` + `['fx','shieldBreak',…]`（本机实测）。
+- **修**：新增一张显式小表 `talents.js` **`LOOP_BUFF_BOUND`**（单位 → binding key → sim 的 buff/状态名），binding 上带 `follow`；`talentfx.status(v,key,on)` 记录 sim 的状态事件，`_inForce` 见到 `follow` 且该状态报过就以它为准（循环跟着 buff 起落；没报过的回放视图仍走「站着就播」的官方规则，不回归）。表里目前只有空弦这一条（名册里唯一「可消耗护盾 + 官方循环」的组合）。`test/render/vfx-buff-layers.test.js` + `test/render/vfx-skills.test.js`（对真索引的 pin）各加一条。
+- **留给 owner 的判断**：卡涅利安那条是**官方行为**（特性守卫，技能关着才播），本次**没有**改；如果你要的是「部署时不要看到它」，那是背离官方数据的自选外观，说一声再改。另外空弦部署时 sim 还会多发一次自研的 `fx('shield')`（官方客户端只播天赋循环），要不要一并压掉也等你定。
+
 ### 1. 症状（owner 实测，本机 `localhost:3000/dev/fx-viewer.html` 可复现）
 
 - **术士的普攻弹道不从法杖出，而是"半空直接生成"** ✗。

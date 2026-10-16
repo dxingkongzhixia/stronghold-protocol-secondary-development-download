@@ -59,7 +59,7 @@ describe('PauseAnotherEffect (effect.js, system.js)', () => {
 
 const LAYERS = ['lay_01', 'lay_02', 'lay_03'];
 const COND_KEYS = ['billro_skill_01_buff_01', 'billro_skill_01_buff_01_02', 'billro_skill_01_buff_02'];
-const LOOPING = new Set([...LAYERS, ...COND_KEYS, 'bar_01', 'bar_02']);
+const LOOPING = new Set([...LAYERS, ...COND_KEYS, 'bar_01', 'bar_02', 'archet_buff_01_start']);
 const KEYS = [...LOOPING, 'lay_begin', 'bubble_skill_02_hit', 'g_hit', 'g_die', 'g_birth'];
 const PAUSES = { lay_01: ['lay_02', 'lay_03'], lay_02: ['lay_03'], bar_01: ['bar_02'] };
 
@@ -87,6 +87,10 @@ function makeIndex() {
       // 泡泡's shape: S2 makes no attack, its counter hit is a blackboard effect (each.hit)
       char_903_bub: { kind: 'char', modes: [{ name: 'Default', attack: melee() }], talentKeys: { base: {} },
         skills: { skchr_bubble_2: { rootClass: 'CastSkill', uses: [{ role: 'hit', keys: ['bubble_skill_02_hit'], from: 'ActiveBuffAbility._buffs.blackboard', on: 'owner', buff: 'bubble_s_2[inverse]', bb: 'effect', by: 'name', life: { type: 'LIMITED' } }] } } },
+      // 空弦's shape: talent 2's loop is the 铁弦 shield's own effect — the sim's `talent:archet_shield` ends it
+      char_332_archet: { kind: 'char', skills: {}, modes: [{ name: 'Default', attack: melee() }], talentKeys: { base: { 1: ['2'] } },
+        talents: { 2: { nodes: [{ node: 'Talents/2', class: 'Talent', ability: 'PassiveBuffAbility', when: 'passive' }],
+          uses: [{ role: 'loop', keys: ['archet_buff_01_start'], from: 'PassiveBuffAbility._buffs', node: 'Talents/2', on: 'owner', buff: 'archet_t_2', template: 'archet_t_2', life: { type: 'INFINITY' } }] } } },
       enemy_904_foe: { kind: 'enemy', skills: {}, modes: [{ name: 'Default', attack: null, combat: melee() }] },
     },
     skills: {},
@@ -161,6 +165,28 @@ describe("a talent's per-layer loops (talentfx.js, b.snap `layers`)", () => {
     assert.deepEqual(liveSet(['bar_01', 'bar_02']), ['bar_01', 'bar_02']);
     w.simFx('shieldBreak', 5, 5, { id: 2 }); frame();
     assert.deepEqual(liveSet(['bar_01', 'bar_02']), []);
+  });
+});
+
+describe("a passive loop the sim's own buff owns (talents.js LOOP_BUFF_BOUND)", () => {
+  test("空弦's 铁弦: the talent loop that draws the shield ends with the sim's `talent:archet_shield` buff", async () => {
+    const { w, view, frame, live } = await setup();
+    const v = view(6, 'char_332_archet');
+    w.deploy(v); frame();
+    assert.equal(live('archet_buff_01_start'), 1, 'the deploy shield: the talent loop plays');
+    // the sim's status of the shield's own buff: still on
+    w.status(v, 'talent:archet_shield', true); frame();
+    assert.equal(live('archet_buff_01_start'), 1, 'the shield is still up');
+    // consumed by a hit (`['status', 1, 'talent:archet_shield', 0]` + 'shieldBreak'): the loop ends with it
+    w.status(v, 'talent:archet_shield', false); frame();
+    assert.equal(live('archet_buff_01_start'), 0, 'no shield left: no shield effect');
+    // a new shield draws it again
+    w.status(v, 'talent:archet_shield', true); frame();
+    assert.equal(live('archet_buff_01_start'), 1);
+    // a view that never saw the status keeps the mode rule (a reconnect / a watched field)
+    const mid = view(7, 'char_332_archet');
+    w.deploy(mid); frame();
+    assert.equal(live('archet_buff_01_start'), 2, 'unknown: the official table (in force while standing)');
   });
 });
 

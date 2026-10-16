@@ -79,6 +79,21 @@ export function activeTalentKeys(idx, unitKey, { rec = null } = {}) {
 const skillIndexOf = (info) => (Number.isInteger(info?.diy?.skillIndex) ? info.diy.skillIndex : Number.isInteger(info?.skillIndex) ? info.skillIndex : null);
 
 /**
+ * Official passive loops that belong to a CONSUMABLE state the sim reports, not to a mode: unit key → binding key → the
+ * sim buff (its `['status', id, key, on]` events) the loop follows. The official client ends a `PassiveBuffAbility`'s
+ * loop with the buff its template created, but the extraction cannot see the script that ends such a buff, so those
+ * templates read `life: { type: 'INFINITY' }` and the loop would play for the rest of the battle.
+ *
+ * 空弦's 铁弦 is the roster's one case: talent 2 gives a 1-hit shield at deploy (the kit's `talent:archet_shield`) and
+ * its `archet_buff_01_start` loop must end with the shield — without this the shield animation kept playing on a unit
+ * that had no shield left (owner report 2026-10-16). The sim's buff/status event is the truth while it lasts
+ * ([ASSUMED]: the buff's end is the effect's end; a view that never saw the event keeps the mode rule).
+ */
+export const LOOP_BUFF_BOUND = Object.freeze({
+  char_332_archet: Object.freeze({ 2: 'talent:archet_shield' }),
+});
+
+/**
  * Every talent node and ability of a unit as a binding (module header): talents in force only (activeTalentKeys), and
  * only the nodes valid with the equipped skill (`skills`).
  * @returns {any[]}
@@ -101,6 +116,7 @@ export function talentBindings(idx, unitKey, { info = null, rec = null } = {}) {
         when: n.when ?? null, mode: typeof n.mode === 'string' ? n.mode : null, modes: null, skills: n.skills ?? null,
         toggle: n.toggle ?? null, reborn: n.reborn ?? null, triggers: n.triggers ?? null, stops: n.stops ?? null,
         switchMode: n.switchMode ?? null, bb: typeof t.bb === 'string' ? t.bb : null, plan, uses: uses.length,
+        follow: LOOP_BUFF_BOUND[unitKey]?.[key] ?? null,   // a loop the sim's own buff ends (LOOP_BUFF_BOUND)
       });
     });
   }
@@ -113,6 +129,7 @@ export function talentBindings(idx, unitKey, { info = null, rec = null } = {}) {
       ability: a.class ?? null, when: a.when ?? null, mode: typeof a.mode === 'string' ? a.mode : null,
       modes: Array.isArray(a.modes) && a.modes.length ? a.modes : null, skills: null, toggle: a.toggle ?? null, reborn: null,
       triggers: a.triggers ?? null, stops: a.stops ?? null, switchMode: a.switchMode ?? null, bb: null, plan, uses: uses.length,
+      follow: null,   // a general ability's loops follow its mode (LOOP_BUFF_BOUND is a talent's shield)
     });
   });
   return out;

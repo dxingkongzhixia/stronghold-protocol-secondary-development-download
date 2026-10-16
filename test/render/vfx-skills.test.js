@@ -17,6 +17,7 @@ import {
   skillRecordOf, skillIdsOf, mountPointName, CHARGE_EMITTERS, UNMAPPED,
 } from '../../public/js/render/vfx/skills.js';
 import { coverage, roster } from '../../tools/vfx-skill-coverage.mjs';
+import { talentBindings, LOOP_BUFF_BOUND } from '../../public/js/render/vfx/talents.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const INDEX = path.join(ROOT, 'public/assets/local/fx/index.json');
@@ -384,6 +385,18 @@ describe('the extracted effects (when fx was extracted on this machine)', { skip
     for (const unit of Object.keys(CHARGE_EMITTERS)) {
       const refs = new Set(real.units[unit].refs);
       for (const k of chargeKeys(chargePlan(real, unit))) assert.ok(refs.has(k), `${unit} refs ${k}`);
+    }
+  });
+  test("LOOP_BUFF_BOUND stays true to the extraction: 空弦's talent 2 is the shield's loop", () => {
+    const binds = talentBindings(real, 'char_332_archet', {});
+    const b = binds.find((x) => x.key === '2');
+    assert.ok(b, 'char_332_archet talent 2');
+    assert.equal(b.follow, 'talent:archet_shield', 'the sim buff that ends the loop');
+    assert.deepEqual(b.plan.loop.map((e) => e.key), ['archet_buff_01_start']);
+    assert.ok(real.prefabs.archet_buff_01_start, 'the loop prefab is in the index');
+    for (const [unit, table] of Object.entries(LOOP_BUFF_BOUND)) {
+      const bs = talentBindings(real, unit, {});
+      for (const key of Object.keys(table)) assert.ok(bs.some((x) => x.key === key), `${unit} has binding ${key}`);
     }
   });
   test('the roster coverage: most operator skills get a plan; token and enemy skills from index version 2 on', () => {

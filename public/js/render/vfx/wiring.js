@@ -1277,10 +1277,12 @@ export class FxWiring {
 
   /**
    * b.ev 'status' on / off: the status loop follows the unit's mount point while it lasts (a skill's target loop of the
-   * same key hands over to it: SkillFx.status).
+   * same key hands over to it: SkillFx.status); a talent loop the sim's buff owns (LOOP_BUFF_BOUND, 空弦's shield)
+   * follows it too.
    */
   status(v, name, on) {
     if (!v || !this.idx) return false;
+    this.talents.status(v, name, on);
     const id = v.id ?? v.info?.id;
     const slot = `${id}|${name}`;
     const prev = this.loops.get(slot);

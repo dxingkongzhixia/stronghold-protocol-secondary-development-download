@@ -87,6 +87,7 @@ export class TalentFx {
             held: [],           // a 重生's handler loops (until the stand-up)
             post: [],           // entries the 重生 left on (INFINITY buffs) — while the unit stands
             inv: null,          // { until, entries } the 无敌 window after a 重生
+            status: new Map(),  // the sim's status keys → on (a binding's `follow` buff: LOOP_BUFF_BOUND)
           };
         }
       }
@@ -178,9 +179,20 @@ export class TalentFx {
     U.inv = null;
     U.act.clear();
     U.layerN?.clear();
+    U.status.clear();   // the next life's statuses are the sim's own events (a redeploy re-sends them)
   }
 
   // ---- signals ----------------------------------------------------------------------------------------------------
+
+  /**
+   * A sim status turned on / off (`['status', id, key, on]`, wiring.status): a binding whose `follow` names it plays
+   * while it lasts (LOOP_BUFF_BOUND — 空弦's 铁弦 shield ends the talent loop that draws it).
+   */
+  status(v, key, on) {
+    const U = this.of(v);
+    if (!U || typeof key !== 'string' || !key) return;
+    U.status.set(key, !!on);
+  }
 
   /** 'deploy' / 'spawn': the unit stands; the deploy bindings' one-shots and 'born' triggers, once per life. */
   deployed(v) {
@@ -334,6 +346,9 @@ export class TalentFx {
 
   /** Whether a binding is in force now (its loops play): passive and deploy while standing, toggles while they hold. */
   _inForce(U, b, v, now) {
+    // a loop the sim's own buff owns (LOOP_BUFF_BOUND, a talent's consumable shield): while the sim has reported that
+    // buff's status the loop follows it (it ends with the buff); a view that never saw it keeps the mode rule
+    if (b.follow && U.status?.has(b.follow)) return U.status.get(b.follow) === true;
     if (U.broken && /shield|barrier/i.test(b.key || '')) return false;
     if (b.when === 'passive' || b.when === 'deploy') return this._modeOk(U, b);
     if (b.when === 'toggle') {
