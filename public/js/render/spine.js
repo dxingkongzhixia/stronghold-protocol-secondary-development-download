@@ -8,6 +8,10 @@
 //   setBase('idle'|'move'|'stun')        the resting state from the snapshot anim code
 //   attack(interval, once)                one attack happened now (b.ev 'atk'): consumes its wind-up or starts at
 //                                         OnAttack, once; operator timeScale = loopDuration / interval;
+//                                         an attack is a SEQUENCE — the clip's own `begin` (the wind-up, its own attack
+//                                         clip's only), then `loop` (its strike at _hitTime), then `end` when the
+//                                         window closes (spine.js _attackSeq / _playAttackAt); a clip without a
+//                                         begin reads exactly as the loop alone did before;
 //                                         `once` (a one-off cast, style.js PROJ[kind].once — 暴鸰's bomb drop): the
 //                                         clip plays once at its own speed, then base; `clipPerAttack` (enemies,
 //                                         GitHub #58): every attack plays the clip once — at its own speed, faster
@@ -541,6 +545,41 @@ export class SpineActor {
   }
 
   /**
+   * The attack sequence of its clip: one attack is `begin` (the wind-up) → `loop` (the swing, its strike at
+   * `_hitTime`) → `end` (the recovery, played when the attack window closes). `seqDur` / `strikeSeq` are the sequence
+   * seconds of its end and of the strike; without a `begin` they are the loop's own (every formula below then reads as
+   * it did before the wind-up existed).
+   * @param {any} clip an attack clip ({ begin, loop, end })
+   */
+  _attackSeq(clip) {
+    const loopDur = this.dur(clip.loop);
+    const hit = this._hitTime(clip.loop, loopDur);
+    // the wind-up is the unit's OWN attack clip's begin — a skill's own Begin is the skill's activation (setSkill), not
+    // a per-attack pose, so a skill-driven attack clip (clip !== roles.attack) adds none
+    const begin = clip === this.roles.attack && this.has(clip.begin) ? clip.begin : null;
+    const bd = begin ? this.dur(begin) : 0;
+    return { begin, bd, loopDur, hit, seqDur: bd + loopDur, strikeSeq: bd + hit };
+  }
+
+  /**
+   * Start an attack at `offset` clip seconds into its sequence (spine.js `windUp` / `attack`): the wind-up `begin`
+   * plays from `offset` and the `loop` is queued after it, or — an offset past the begin (a wind-up shorter than it, a
+   * late attack) — the `loop` starts inside itself.
+   */
+  _playAttackAt(offset, ts, loop, mix, clip = null) {
+    const c = clip || this._attackClip();
+    if (!c) return;
+    const { begin, bd } = this._attackSeq(c);
+    const o = Math.max(0, offset);
+    if (begin && o < bd) {
+      this._play(begin, false, { timeScale: ts, start: o, mix });
+      this._queue(c.loop, loop, ts);
+    } else {
+      this._play(c.loop, loop, { timeScale: ts, start: bd ? o - bd : o, mix });
+    }
+  }
+
+  /**
    * An attack is due in `lead` game seconds (the renderer sees it ahead in the snapshot buffer): start the attack
    * clip from its wind-up so the strike frame lands when the attack event is rendered. Returns true once started;
    * false when it is still too early (call again next frame) or there is nothing to wind up.
@@ -551,18 +590,19 @@ export class SpineActor {
     if (!clip) return false;
     const single = once || this.clipPerAttack;
     // in rhythm: attack() re-phases; a clip-per-attack actor starts each attack's clip anew unless already wound up for it
-    if (this.mode === 'attack' && this.current === clip.loop && (!this.clipPerAttack || once || this.wound)) return false;
-    const loopDur = this.dur(clip.loop);
+    const playing = this.current === clip.loop || (this.has(clip.begin) && this.current === clip.begin);
+    if (this.mode === 'attack' && playing && (!this.clipPerAttack || once || this.wound)) return false;
+    const { seqDur, strikeSeq } = this._attackSeq(clip);
     // a one-off cast plays at the clip's own speed (one loop per clip length), whatever the attack rhythm
-    const iv = once ? loopDur : clampN(Number.isFinite(interval) && interval > 0 ? interval : this.interval, 0.08, 8);
-    const hit = this._hitTime(clip.loop, loopDur);
-    // clip per attack: its own speed, sped up only when the attacks come quicker than the clip
-    const plan = windUpPlan(loopDur, hit, this.clipPerAttack && !once ? Math.min(iv, loopDur) : iv, lead);
-    if (!(hit > 0) || lead * plan.ts > hit + 1e-6) return false;
+    const iv = once ? seqDur : clampN(Number.isFinite(interval) && interval > 0 ? interval : this.interval, 0.08, 8);
+    // clip per attack: its own speed, sped up only when the attacks come quicker than the clip (the sequence, begin
+    // included, is one attack)
+    const plan = windUpPlan(seqDur, strikeSeq, this.clipPerAttack && !once ? Math.min(iv, seqDur) : iv, lead);
+    if (!(strikeSeq > 0) || lead * plan.ts > strikeSeq + 1e-6) return false;
     if (!once) this.interval = iv;
     this.mode = 'attack';
-    this.attackUntil = this.clock + lead + (single ? Math.max(0, loopDur - hit) / plan.ts : Math.max(0.45, iv * 1.4));
-    this._play(clip.loop, !single, { timeScale: plan.tsWind, start: plan.start, mix: 0.06 });
+    this.attackUntil = this.clock + lead + (single ? Math.max(0, seqDur - strikeSeq) / plan.ts : Math.max(0.45, iv * 1.4));
+    this._playAttackAt(plan.start, plan.tsWind, !single, 0.06);
     this.windTs = plan.ts;
     this.windUntil = this.clock + lead;
     this.wound = true;
@@ -578,19 +618,19 @@ export class SpineActor {
     if (!once) this.interval = clampN(Number.isFinite(interval) && interval > 0 ? interval : this.interval, 0.08, 8);
     const clip = this._attackClip();
     if (!clip) return;
-    const loopDur = this.dur(clip.loop);
+    const { bd, loopDur, hit, seqDur, strikeSeq } = this._attackSeq(clip);
     const per = this.clipPerAttack && !once;
     // a slow operator (its attack interval outlasts the clip) plays the clip ONCE at its own speed, then goes back to
     // its resting state — stretching one swing over the whole interval read as a slow-motion slide (feedback)
-    const slowOp = !once && !per && loopDur < this.interval;
+    const slowOp = !once && !per && seqDur < this.interval;
     const single = once || per || slowOp;
     // clip per attack: its own speed (ts 1), faster only when the attacks come quicker than the clip
-    const ts = once || slowOp ? 1 : per ? clampN(loopDur / Math.min(this.interval, loopDur), 1, 4) : clampN(loopDur / this.interval, 0.35, 4);
-    const hit = this._hitTime(clip.loop, loopDur);
+    const ts = once || slowOp ? 1 : per ? clampN(seqDur / Math.min(this.interval, seqDur), 1, 4) : clampN(seqDur / this.interval, 0.35, 4);
     // (a clip-per-attack actor still playing the previous attack's clip was not wound up for this one)
-    const wasAttacking = this.mode === 'attack' && this.current === clip.loop && (!(per || slowOp) || this.wound);
+    const playing = this.current === clip.loop || (bd > 0 && this.current === clip.begin);
+    const wasAttacking = this.mode === 'attack' && playing && (!(per || slowOp) || this.wound);
     this.mode = 'attack';
-    this.attackUntil = this.clock + Math.max(0, loopDur - hit) / ts;
+    this.attackUntil = this.clock + Math.max(0, seqDur - strikeSeq) / ts;
     this.windUntil = null;
     this.wound = false;
     if (!wasAttacking) {
@@ -598,9 +638,9 @@ export class SpineActor {
       // strike frame now — unless a clip-per-attack actor's rhythm leaves room for the whole clip (interval ≥ clip):
       // then the clip plays complete from its wind-up at its own speed, the strike a little late (重犯's iron ball
       // lifts before the slam; #246 by @TsangAsuna, accepted by the owner on 2026-10-07)
-      const whole = per && this.interval >= loopDur;
-      if (whole) this.attackUntil = this.clock + loopDur / ts;
-      this._play(clip.loop, !single, { timeScale: ts, start: whole ? 0 : hit, mix: 0.06 });
+      const whole = per && this.interval >= seqDur;
+      if (whole) this.attackUntil = this.clock + seqDur / ts;
+      this._playAttackAt(whole ? 0 : strikeSeq, ts, !single, 0.06);
     } else if (single) {
       const e = this.spine.state.tracks[0];
       if (e) e.timeScale = ts;
@@ -631,12 +671,12 @@ export class SpineActor {
     if (this.dead || this.mode === 'change') return 0;
     const a = this.roles.attack;
     if (!a || !this.has(a.loop) || a.via === 'idle') return 0;   // via 'idle' = no attack clip of its own
-    const d = this.dur(a.loop);
+    const { seqDur } = this._attackSeq(a);
     this.mode = 'attack';
     this.wound = false;
-    this.attackUntil = this.clock + d;
-    this._play(a.loop, false, { mix: 0.06 });
-    return d;
+    this.attackUntil = this.clock + seqDur;
+    this._playAttackAt(0, 1, false, 0.06, a);
+    return seqDur;
   }
 
   /**
