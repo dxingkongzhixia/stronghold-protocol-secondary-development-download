@@ -1202,3 +1202,11 @@ docs guards 34 pass / 0 fail.
 - vfx 增量（62 个提交）—— 主体已手植（「官方特效」§0）；**round 46 的审计修复**（`e92880c0` fix-hits 的 `wiring.js` +255、`4d10df08` fix-plans、`aa1c847c` 固定旋转挂点）**还没并**，因为直击我们的法杖挂点代码 → 单独一批、逐 hunk 做，并跑法杖验收线。
 
 **剩余候选**（下一批）：round 46 vfx 审计修复（`wiring.js` / `skillfx.js` / `skills.js` / `mounts.js`）、`#647` 闭眼贴图（region eyeballs）、`#640` 闸门方块、`#630` 备战席溢出（§0 相邻）、`#628` 标题页全素材下载（与我们的链只挑兼容的一半）。
+
+**round 46 的 vfx 审计批 —— 核对结论：已经在我们的树里（2026-10-17 复核，无需再并）**
+
+- `e92880c0` fix-hits（R3/R4/R9/R12/R14/R15/R16）：我们的 `wiring.js` 已有 `ARRIVAL_WINDOW = 0.35`、`pendingHit` 表、`_inAir(id, time, claim)` 与 `_arrive` ✓。
+- `4d10df08` fix-plans（R7/R8/R13，"official shot's hit is claimed before a skill's kit hit"）：我们的 `_airHit` 已有 `this.skills.seen(v, false, …)` 的认领顺序 ✓。
+- `aa1c847c` 固定旋转挂点：`public/js/render/vfx/mounts.js` 与上游该提交**逐字节相同** ✓。
+- 事实上我们的 `skillfx.js` / `skills.js` 比 `aa1c847c` **更新**（带 `FX_COVER` / `COVER_AFTER_S` / `coverOf` / `BOUND_BY_SKILL` —— 那是 round 46 更后面的 fix-procedural R10/R11），说明当时的特效移植用的是更靠后的上游状态。
+- **留档原因**：这次差点再把它们并一遍（`git apply` 在 `wiring.js` 上撞出 4 处冲突，全是我们的吊环回程 / strike 出手点 / 技能认领，属于"我们已有"）。下一会话别再重复。
