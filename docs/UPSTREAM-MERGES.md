@@ -1151,3 +1151,18 @@ docs guards 34 pass / 0 fail.
 - 术士 / 狙击弹道「从法杖出」验收线（上一节）
 
 **下一步**：P1 → P3 → P2 → P4。
+
+### 13.1 批次 1（低风险）— 已并入（2026-10-17）
+
+先在 `merge-031` 分支上逐条应用，四条都过全量后并回 `ours`：
+
+| 上游 | 内容 | 落点 / 备注 |
+|---|---|---|
+| `#649` (`d7069e01`) | HEAD 忽略 `Range`（RFC 9110 §14.2）：状态 / 长度 / 编码 / ETag 按完整表示返回，也不再被 Range 逼成 identity | `server/http/files.js` 1 行（`req.method === 'GET' ? req.headers.range : undefined`）+ `test/lobby.test.js` 的 Range 用例补 4 条断言（HEAD 带 Range → 200、无 `Content-Range`、`Content-Length` / `ETag` 与普通 HEAD 相同；文本资源仍按 gzip 选编码） |
+| `#654` (`6d263fbc`) | assets-env-proxy 测试同时接受 Node 26 的 absolute-form 代理跳转与 CONNECT 隧道 | `test/assets-env-proxy.test.js` 原样应用（本机 Node 24 仍走 CONNECT，属前向兼容）；8/8 ✓ |
+| `#637` (`c2f3c5e9`) | 单独联防助战的镜头：只有一侧有玩家时开局就框在那一半，🌓 胶囊留在那一半（GitHub #635） | `public/js/battle/observe.js` 新增 `loneHalf()` 干净应用；`public/js/screens/game.js` 冲突 1 处 —— **上游 hunk 自带 `import '../ui/pluginFrame.js'`（插件系统）**，按 §12 B3 丢弃，只取 `loneHalf` |
+| `#629` (`7144acf9`) | 悬停热键：Q/X 作用于**鼠标指向**的单位、W 买**鼠标指向**的商品；旁观 / 已淘汰 / 看别人棋盘 / AI 托管时备战快捷键失效 | 9 个文件干净应用；`gameLogic/settings.js` 冲突 1 处（JSDoc 联合类型）—— **保留我们的 `voiceLang: 'cn'|'jp'`、不加 `voiceNative` / `combatMetrics`（§0）**，只加 `buy`。i18n：4 条新 msgid 按上游对应语言补进 `en/ja/ko/zh-TW`（`en --strict` 1477/1477 ✓）；README 的套件计数 6717 → 6721（`docs-consistency` 会把关）|
+
+**验收**：全量 `node --test` **7082 / 7068 通过 / 0 失败 / 14 跳过** ✓；`npm run typecheck` 无错 ✓；`npx eslint` 0 error ✓；`i18n check en --strict` 100 % ✓；`docs-consistency` / `package`（tracked tree）全绿 ✓。
+
+**下一批**：`#646`（部署折叠，纯客户端但面大）、`#618` / `#622`（opt-in，碰 `settings.js`）；`#630`（备战席溢出）**降到 P3** —— 它改 `player/acquire.js`，与 §0「道具库存池」相邻。
