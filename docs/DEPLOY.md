@@ -379,7 +379,7 @@ npm run package -- --update --from <旧版本的完整包>[,<…>] --out <目录
 | option | meaning |
 |---|---|
 | `SP_BOT_REHEARSAL=host` | offer an AI teammate's layout rehearsal to the current human host's browser (default off; the server rehearses itself otherwise) |
-| `SP_TRAINING=off` | disable the bot-rehearsal training recorder (default on; it writes `var/training.db`, its own SQLite file) |
+| `SP_TRAINING=on` | enable the bot-rehearsal training recorder (**opt-in, default off**; it writes `var/training.db`, its own SQLite file, with a 2 GB disk guard) |
 | `SP_TRAINING_SAMPLE=0.25` | fraction of bot preps kept on the server while delegation is on, so their scores (the labels) are recorded |
 
 The recorder is best-effort: a failed write, or less than 2 GB free on the DB filesystem, drops samples and never

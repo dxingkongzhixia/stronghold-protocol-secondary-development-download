@@ -508,6 +508,7 @@ changes still get a notice first.
 | Asset sources | `tools/fetch-assets.mjs`; `tools/assets/{network,sources}.mjs` |
 | Decisions | the §22 blacklist; the traits/rules in §5 (see `docs/MATCHMAKING.md` §22–§37) |
 | Publishing | `tools/push-gitee.mjs`; the notice-first deploy order |
+| Statistics page (record v2 + the official template) | `shared/stats.js` (`STATS_VERSION = 2`, `creditedKills`, `maxima`, peak-bond retention), `public/js/screens/stats.js` + `ui/stats.js`, `public/assets/ui/statistics/` (37 files), `data/assets.json` (`ui['statistics/*']`), `tools/fetch-stats-assets.mjs`; see `docs/UPSTREAM-MERGES.md` §13.9 |
 | 分血救援 (revive) | `shared/constants.js` `REVIVE`; `server/match/player/round.js` `down`/`revive`; `server/match/match/{settle,intents}.js`; the `downed/revive*` view fields; `test/match/revive.test.js` (see `docs/MATCHMAKING.md` §50) |
 
 Honour the blacklist, run the full `node --test` in the store, and only then mirror back to the working project.

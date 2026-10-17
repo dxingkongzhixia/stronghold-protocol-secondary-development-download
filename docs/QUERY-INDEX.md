@@ -53,6 +53,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 - Rules cited anywhere as `DESIGN §N` are checked against these headings (`docs-paths.test.js`):
   **do not renumber or retitle a section**.
 - Player-facing rules guide (中文): [`docs/PLAYING.md`](PLAYING.md).
+- **Co-op rescue (`分血救援`)**: [`docs/MATCHMAKING.md`](MATCHMAKING.md) §50 · code `shared/constants.js` (`REVIVE`), `server/match/player/round.js` (`down`/`revive`), `server/match/match/{settle,intents}.js` · UI `public/js/ui/teamPanel.js`, `public/js/screens/game.js` · test `test/match/revive.test.js`.
 
 ## 4. Engines (deep reference)
 
@@ -82,6 +83,8 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 | battle FX — **官方特效优先**（运行时 + 提取 + dev 查看器），**然后是**本项目的两层兜底（白名单 / 开关 / 尺寸上限） | [`docs/ASSETS.md`](ASSETS.md)「Battle effects」+「The committed manifest…」, [`docs/HANDOVER.md`](HANDOVER.md) §6, [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2, [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0；代码 `public/js/render/vfx/**`（`wiring.js` / `skillfx.js` / `talentfx.js` / `funnelfx.js` / `flight.js` + `effect.js` / `library.js`）、`public/js/render/fx/**`、`tools/local-extract/fx.py`、`data/local-fx.json`、`public/dev/fx-viewer.html`、`test/render/vfx-*.test.js` |
 | picking / dragging / facing wheel | `public/js/render/pick.js`, `public/js/render/drag.js`, `public/js/ui/facingWheel.js` |
 | Spine clip bounds / impostor sizing (#542) | `public/js/render/spine.js` (`clipBounds`, `CLIP_SAMPLE_*`, `stepClipBounds`), `public/js/render/units.js` |
+| statistics page (统计页改版: overview / 称号六边形 / 单局纪录 / 最常用盟约与策略) | `public/js/screens/stats.js`, `public/js/ui/stats.js`, `public/js/ui/titleHexagon.js`, `public/js/ui/playerName.js`, `public/css/screens/stats.css`; schema `shared/stats.js` (record v2) |
+| official statistics template art (37 files + fonts) | `public/assets/ui/statistics/`, `tools/fetch-stats-assets.mjs`, `tools/assets/stats-template.mjs`, `data/assets.json` (`ui['statistics/*']`) |
 | per-character voice overrides (语音语言) | `public/js/voicePrefs.js` |
 | 文字大小 (text-size) and 弹药数量 (ammo count) settings | `public/js/ui/gameLogic/settings.js`, `public/css/theme.css` (`--t`), `public/js/render/app.js` (`ammoCount`) |
 | device slabs on official scenes (#569) | `public/js/render/board3d/scene.js` (`M.raised`) |
@@ -96,10 +99,12 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 
 ## 8. Accounts, matchmaking and the community surface (fork-only)
 
-The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §0–§49 (the file opens with a 目录). Code:
+The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §0–§50 (the file opens with a 目录). Code:
 `server/auth.js`, `server/db.mjs` (schema v4/v5), `server/matchmaker.js`, `server/community.js`,
 `server/stats.js`, `server/admin.js`; client `public/js/screens/lobby.js`, `rooms.js`, `stats.js`,
 `public/js/ui/community.js`, `stats.js`, `chat.js`.
+
+- **公开房间目录**：`public/js/screens/rooms.js` 请求 `GET /online/api?all=1`（`server/index.js` → `server/admin.js buildPublicSnapshot({ all: true })`）——目录列**全部**公开房；主界面两排小列表仍用默认上限（12 / 4）并自己 `slice` 到 3 / 4。决策在 [`MATCHMAKING.md`](MATCHMAKING.md) §36.4。
 
 > **Trap:** the room **text chat is never persisted** — do not add a `chat` table.
 
@@ -151,7 +156,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 
 | subject | doc |
 |---|---|
-| **our** decisions §0–§49 (目录 at the top of the file) | [`docs/MATCHMAKING.md`](MATCHMAKING.md) |
+| **our** decisions §0–§50 (目录 at the top of the file) | [`docs/MATCHMAKING.md`](MATCHMAKING.md) |
 | mainline-merge log + never-merge list (§0) | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
 | fork-only mechanisms that must survive a merge | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) |
 | release notes | [`CHANGELOG.md`](../CHANGELOG.md) |

@@ -61,7 +61,7 @@ node server/index.js            # http://localhost:3000   (npm run dev = --watch
 
 # 2. Verify (this checkout has .git + node_modules, so the whole suite runs here)
 node tools/build-data.mjs --offline   # must leave data/ byte-for-byte unchanged
-node --test                            # the full suite (~6670; 0 failures on the desktop store — the laptop's environment-only failures are explained in PROJECT-STATE.md §9)
+node --test                            # the full suite (~6828 registered cases, 7193 with loops; 0 failures on the desktop store — the laptop's environment-only failures are explained in PROJECT-STATE.md §9)
 node tools/kit-coverage.mjs --missing  # every chess has a kit, every skill covered
 node tools/i18n.mjs check en --strict  # English UI pack complete
 node tools/doctor.mjs                  # environment diagnosis, exit 0
@@ -83,7 +83,7 @@ still applies on the owner's machine; in a single checkout the two are the same 
 |---|---|---|
 | 1 | Read **this file**, then [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) (the one-page state) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (question → doc → file) | ~30 minutes; you now know where everything is |
 | 2 | `npm install` then `node server/index.js` | <http://localhost:3000> serves; `GET /healthz` returns the version + build hash |
-| 3 | `node --test` (needs `.git` + `node_modules`) | 6670 tests / 6655 pass / **0 fail** / 15 skipped on the desktop store (2026-10-14); the laptop sees 4 **environment-only** failures, explained in `PROJECT-STATE.md` §9 — read that before chasing a red run |
+| 3 | `node --test` (needs `.git` + `node_modules`) | 6828 registered cases (7193 run) / 7178 pass / **0 fail** / 15 skipped on the desktop store (2026-10-18); the laptop sees 4 **environment-only** failures, explained in `PROJECT-STATE.md` §9 — read that before chasing a red run |
 | 4 | `node tools/doctor.mjs`, `node tools/kit-coverage.mjs --missing`, `node tools/i18n.mjs check en --strict` | exit 0 / no gaps (the gates in §5) |
 | 5 | `node tools/check-delivery.mjs --live` | the asset chain order + cache-first, measured in a real browser (needs the live site reachable) |
 | 6 | Read §9 (the traps) **before** touching rendering, assets or deployment | each row is a mistake that already cost a debugging session |

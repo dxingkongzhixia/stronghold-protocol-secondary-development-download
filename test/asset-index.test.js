@@ -68,6 +68,10 @@ test('createAssetIndex: rebuilds only when a source manifest changes', () => {
   fs.writeFileSync(path.join(publicDir, 'assets', 'b.png'), Buffer.alloc(7));
   assert.equal(idx.get(), first, 'no manifest change ⇒ the same cached object');
   fs.writeFileSync(path.join(dataDir, 'assets.json'), JSON.stringify({ x: '/assets/a.png', y: '/assets/b.png' }));
+  // stamp it forward: two writes inside one millisecond (or one NTFS tick) would look unchanged to stat().mtimeMs and the
+  // index would keep its cached build, which is a test race, not a behaviour
+  const later = new Date(Date.now() + 2000);
+  fs.utimesSync(path.join(dataDir, 'assets.json'), later, later);
   const next = idx.get();
   assert.notEqual(next, first, 'a manifest change rebuilds');
   assert.equal(next.count, 2);

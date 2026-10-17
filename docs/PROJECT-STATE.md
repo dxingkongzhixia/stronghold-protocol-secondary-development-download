@@ -44,7 +44,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`（`package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md` 三处一致；0.4.0 一节仍在累加未发布的改动） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `85b981d393f6`**（2026-10-18 00:35 部署后重启，由 `/healthz` 实测，且 == 磁盘 build；旧 build `adea09d5e893` → `db7299140227` → 更早 `a240d9ad2df8` / `90f5e7f2c477`；备份 `/root/sp-backup-pre-26294b7a.tgz`；社区更新日志 **0.4.34**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | git store | 笔记本 = **本检出**（分支 `master`，HEAD `df3b1897`）；台式机 = `_merge-scratch`（分支 `ours`），工作项目与 store HEAD **零跟踪漂移** |
 | 远程同步 | **已全部推送**（2026-10-17 00:2x）：`github/master` == `gitee/master` == HEAD（`20f3437d`，本批 22 个提交：官方特效收尾 / 望 S3 跟子 / 官方数据刷新 / 补召唤物模型 / 文档梳理 / `.atlas` 换行）；主线 `origin/master` = `76700abe`（`check-upstream` 实测：主线未动，我们领先 566） |
 | 全量测试 | **本机 `node --test`：7081 项 / 7060 通过 / 3 失败 / 18 跳过**（2026-10-16 夜，笔记本；3 个失败全是既有环境项：`test/lobby.test.js` 的两条限速桶计时 + `test/sim/robustness.test.js:739` 的重装 boss 性能阈值 —— 都只在满负载并发下红）。台式机 store 上一次实测：6674 / 6659 / 0 失败 / 15 跳过（2026-10-15） |
@@ -90,24 +90,26 @@
    重启即可。（2026-10-15 实测：进程 10-14 12:12 启动、盒上文件 10-15 00:30 被换，`build` 停在 `eb29e3ee0a28`
    而磁盘已是 `47c37209549a`；重启后一致。）
 
-> **先推通知、再上传 / 重启**：发布前先在 `/admin` 的「通知」面板推一条告示（署名 `d星空之下`），
-> 说清更新内容、大约多久、请刷新。**没有 owner 明确许可，不要部署**（默认「先不上线」；**2026-10-14 的
-> 上线是 owner 明确要求**，公告记为更新日志 `0.4.8`，部署前备份 `/root/sp-backup-deploy-20261014-024306.tgz`）。
-> **2026-10-15 部署（owner 明确要求）**：代码 `4e6058f8`，快照 `/root/sp-backup-20261015-102124.tgz`，
-> 更新日志 `0.4.25`，重启后 `build = 47c37209549a`。本次增量**内容上只有文档**（server / shared / public 与盒上
-> 逐字节一致，708 个文件比对），但**仍然必须重启** —— 旧进程启动于 10-14 12:12，而盒上文件在 10-15 00:30 被换过
-> （判定方法见第 5 步）。
-> **2026-10-16 晚 部署（owner 明确要求）**：望三技能「天下劫」的棋子触发范围订正（客户端 `sktok_wang_3.rangeId` 的 `x-6` 9 格十字 → **PRTS 原文 / owner 游戏内所见** 的 `x-1` 阵法术士 13 格菱形）。代码 `e0758c50`（源码提交 `075f160f`，golden 重算单独一个提交），更新日志 **`0.4.28`**，增量包 `sp-delta-20261016b.tgz`（9 个文件，解包后 md5 与仓库一致），重启后 `build = 90f5e7f2c477`；线上 `data/tokens.json` 与仓库逐字节相同、对外 `/data/tokens.json` 为 `no-cache`（老客户端刷新即得新值）。**本次只改数据**（`server/**`、`shared/**` 未动），但 `BUILD_INPUTS` 含 `data/`（旧页面会收到「请刷新」提示），且服务器数据**启动时读入并冻结**（`server/data.js` 的 `loadData` 单例）→ **必须重启**。
-> **2026-10-17 00:31 部署（owner 明确要求「提交仓库，服务器发通知，上线重启」）**：本批 = 官方特效的还原度修正（术士从法杖出手 `strikePose`、回环射手 `comeBack` 回收、护盾循环随护盾结束 `LOOP_BUFF_BOUND`、自研干员与全名册统一走官方特效）+ 望 S3「每次落子额外至多 3 枚跟子」（官方口径）+ **官方数据按最新表刷新**（乌尔比安/守墓人的第二模组、克莱门莎 S3 `projectile_life_time` 5→3.5、一个敌人的 `formAttackAnim`）+ 补 1 个召唤物模型（`token_10031_swire2_gdtrap`）+ 文档梳理。
-> 顺序与结果：**中继先行**（`push-assets-relay.mjs` ✓，新美术进中继）→ **github + gitee**（`push-gitee.mjs` ✓，`master = 20f3437d`）→ **通告**（署名 `d星空之下`，社区 **0.4.31**，说「约 3 分钟后重启」）→ 等 3 分钟 → 增量包 **31.8 MB**（`--exclude=./.git` 必须，笔记本单树 `.git` 带 700 MB 素材）+ 新美术 16 KB 上传 → 备份 `/root/sp-backup-20261017-003107.tgz` → 解包 + `chown www:www` + 755/644 → **重启**（`:3000` pid 448890 → `server.sh`）→ `build` `db7299140227` → **`adea09d5e893`**，且**磁盘 build tag == /healthz** ✓；线上机 `data/local-assets.json` / `data/local-fx.json`（per-machine）**未覆盖**（保持其自有 ✓，公网 `/healthz` 同 build ✓）。部署时线上有 23 人在线（18 局），通告后等了 3 分钟再重启。
-> 客户端改完**刷新即可**（`/js`、`/css` 是 `no-cache`；build 变了开着的老页面会自动重载）。
+> **先推通知、再上传 / 重启**：发布前先在 `/admin` 的「通知」面板推一条告示（署名 `d星空之下`），说清更新内容、大约多久、请刷新。**没有 owner 明确许可，不要部署**（默认「先不上线」）。
+> **客户端改完刷新即可**（`/js`、`/css` 是 `no-cache`；build 变了开着的老页面会自动重载）。
 > ⚠️ **`SP_VERIFY=sample` 只在 Windows 的 `server-start.cmd` 里设**，Linux 上没设 → 线上**服务端抽检复算 = off**。
-> **2026-10-17 夜 定时部署（owner：「今晚低峰重启」/「直接启用吧」）**：本批 = **统计页改版**（`02f06939`，三层：击杀归属 → 记录 schema **v2** → 新页面）+ **自动训练启用**（`SP_TRAINING=on`）。部署**不即时**：20:15 时线上有 27 局 / 47 名真人，且**旧进程内存里是 v1 schema**——新客户端提交的 v2 记录会被旧进程 `normalizeRecord` **静默降级**（丢掉 `creditedKills` / `usedBondIds`；`shared/stats.js` 是浏览器直接 import 的，所以只回退 `public/` 不够）。处理：**先把 `public/` 8 个文件 + `shared/stats.js` 回退到 `8b4fdbd2`**（还原包 `/root/sp-stats-revert.tgz`，盒子继续跑老客户端 / v1），把增量包 `/root/sp-stats-55924178.tgz`（63 个文件：新模块、schema v2、26×4 条 i18n、37 件官方素材与清单）交给 **`/root/sp-restart-tonight.sh`**：03:30 先解包 + `chown www:www` + 755/644，**再** `restart.sh`，客户端与服务端一起切到 v2；随后 04:30 / 05:30 的 `train-bot.mjs --auto` 开始填 `var/training.db`。验证：`/healthz` 的 `build` 应变化、`/shared/stats.js` 的 `STATS_VERSION = 2`、`/js/ui/playerName.js` 200、`var/training.db` 出现；日志 `/root/sp-restart-tonight.log`。**官方统计页素材 37 件**（`public/assets/ui/statistics/`，含 NovecentoWide/SourceHanSans 两套字体）与 `data/assets.json` 的 `ui['statistics/*']` 也在同一个增量包里。
-> 本机实跑又抓出两处：① 标题页 `TitleScreen` 的 `currentName` 在合并时丢了 store 选择器（**进游戏即崩**：`currentName is not defined`）；② 本地美术缓存 SW 把镜像取回的字节按源站的 `text/plain` 回放，`fonts.css` 因此被浏览器拒用（`sw.js` 现在按扩展名补 `text/css` / 字体类型，并加了单测）。两处都已修进 `55924178` 并重新打包。
+> ⚠️ 打包必须用 git blob（`git show`）**按字节**落盘：PowerShell 的 `Set-Content -Encoding utf8` 会加 **BOM**，`i18n/*.json` 直接解析失败。
 
-> **2026-10-18 00:35 部署（owner：「可以了，推仓库，上中继，发公告，上线重启」）**：本批 = **统计页改版**（schema v2、官方素材 37 件、页面改版）+ **去掉部署折叠缩放**（`#602`/`#646`，进 §0）+ **分血救援**（新的多人机制，`MATCHMAKING` §50）+ **公开房间列全部**（`/online/api?all=1`）。顺序：仓库 `26294b7a`（github + gitee，github 经多次 408/502 重试成功）→ **中继先行** `9705f67f..26294b7a`（`relay deploy done`）→ **通告**（署名 `d星空之下`，更新日志 **`0.4.34`**，在线 6 人收到）→ 上传 `sp-deploy-26294b7a.tgz` → 解包 → **重启**。结果：`build` **`85b981d393f6`**（线上 == 磁盘 ✓）、`STATS_VERSION = 2`、37 件统计素材 + 清单 `d679d790308a`、`teamPanel` 有 `onShareHp`、`game.js` 无 `deployFold`、`rooms.js` 有 `all=1`、`DONATE: 1`；`/`、`/js/screens/stats.js`、`/js/ui/teamPanel.js`、`/shared/stats.js`、`/i18n/en.json`、统计素材、`/online/api` 全 200。**03:30 的定时重启已从 cron 移除**（它会重新解包旧包），训练 cron（04:30/05:30）保留；`var/training.db` 是**懒创建**（首个采样落库时出现）。
-> ⚠️ **本次踩坑（已修）**：第一版增量包是 `git diff 8b4fdbd2..HEAD` —— 但盒上 18:52 那份树其实**早于 `8b4fdbd2`**（缺 layer 1 的 `server/sim/spec.js` 等），于是漏传了 `creditedKillsOf` → 重启时 `bossRounds.js` 报 `does not provide an export named 'creditedKillsOf'`，服务**停了约 2 分钟**。改为**全源码包**（`public/js`、`public/css`、`public/i18n`、`shared`、`server`、`data`、`tools`、`docs`、`test`，33 MB）整体覆盖后重启即恢复。**教训：盒上无 git，增量包必须相对盒上真实状态做（或直接全源码覆盖）**。
-> ⚠️ 打包必须用 git blob（`git show`）**按字节**落盘：PowerShell 的 `Set-Content -Encoding utf8` 会加 **BOM**，`i18n/*.json` 直接解析失败（本次踩过一次，已修）。
+### 最近部署（倒序）
+
+| 时间 | 代码 | build | 更新日志 | 要点 |
+|---|---|---|---|---|
+| **2026-10-18 00:35** | `26294b7a` | **`85b981d393f6`** | **`0.4.34`** | 统计页改版（记录格式 v2 + 官方素材 37 件）、去掉部署缩放、**分血救援**、公开房间列全部；**全源码包**覆盖（事故见下） |
+| 2026-10-17 00:31 | `20f3437d` | `adea09d5e893` | `0.4.31` | 官方特效还原度（`strikePose` / `comeBack` / `LOOP_BUFF_BOUND`）+ 望 S3 跟子 + 官方数据刷新 + 召唤物模型 |
+| 2026-10-16 晚 | `e0758c50` | `90f5e7f2c477` | `0.4.28` | 望 S3「天下劫」棋子范围 `x-6` → `x-1`（只改数据） |
+| 2026-10-15 | `4e6058f8` | `47c37209549a` | `0.4.25` | 内容上只有文档，**仍必须重启**（`buildTag` 进程内缓存） |
+| 2026-10-14 | — | — | `0.4.8` | 首次 0.4.x 上线（备份 `/root/sp-backup-deploy-20261014-024306.tgz`） |
+
+**2026-10-18 00:35 详情**：本批 = **统计页改版**（schema v2、官方素材 37 件、页面改版）+ **去掉部署折叠缩放**（`#602`/`#646`，进 §0）+ **分血救援**（`MATCHMAKING` §50）+ **公开房间列全部**（`/online/api?all=1`）。
+顺序：仓库 `26294b7a`（github + gitee，github 多次 408/502 后成功）→ **中继先行**（`9705f67f..26294b7a`，`relay deploy done`）→ **通告**（署名 `d星空之下`，更新日志 `0.4.34`，在线 6 人收到）→ 上传 → 解包 → **重启**。
+结果：`build 85b981d393f6`（线上 == 磁盘 ✓）、`STATS_VERSION = 2`、37 件统计素材 + 清单 `d679d790308a`、`teamPanel` 有 `onShareHp`、`game.js` 无 `deployFold`、`rooms.js` 有 `all=1`、`DONATE: 1`；首页 / 统计页 / 队伍栏 / `shared/stats.js` / i18n / 统计素材 / `/online/api` 全 200。**03:30 的定时重启已从 cron 移除**（它会重新解包旧包）；训练 cron（04:30/05:30）保留；`var/training.db` **懒创建**（首个采样落库时出现）。
+
+> ⚠️ **踩坑（已修）**：第一版增量包是 `git diff 8b4fdbd2..HEAD` —— 但盒上 18:52 那份树其实**早于 `8b4fdbd2`**（缺 layer 1 的 `server/sim/spec.js` 等），漏传 `creditedKillsOf` → 重启时 `bossRounds.js` 报 `does not provide an export named 'creditedKillsOf'`，服务**停了约 2 分钟**；改用**全源码包**（`public/js`、`public/css`、`public/i18n`、`shared`、`server`、`data`、`tools`、`docs`、`test`，33 MB）整体覆盖后恢复。**教训：盒上无 git，增量包必须相对盒上真实状态做（或直接全源码覆盖）**。
 
 ## 5. 本项目相对主线的改动（速查）
 
@@ -198,7 +200,7 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 - 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
   `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
   `tools/build-data.mjs`（`CUSTOM_CHESS`）。
-- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 6670 项 / 6655 通过 / 0 失败 / 15 跳过、`kit-coverage` 307/307 · 120/120、
+- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 **7193 项 / 7178 通过 / 0 失败 / 15 跳过**、`kit-coverage` 307/307 · 120/120、`i18n en --strict` **1511/1511**、`doctor` 退出码 0、`eslint` 0 error、`typecheck` / `check:imports` 通过、`build-data --offline` 与 `data/` 逐字节一致、工作项目相对 store HEAD 无跟踪漂移。
   `i18n en --strict` 1455/1455、`doctor` 退出码 0、`eslint` 0 error（148 warning）、`typecheck` / `check:imports` 通过、
   `build-data --offline` 与 `data/` 逐字节一致、工作项目相对 store HEAD 无跟踪漂移。
 
