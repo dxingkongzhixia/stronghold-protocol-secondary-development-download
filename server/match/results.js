@@ -94,7 +94,10 @@ export function buildResult(m, outcome) {
   const titles = assignTitles(gd, players, victory);
   const teamRounds = victory ? gd.bossRound + (hiddenCleared ? 1 : 0) : Math.max(0, Math.min(m.round, gd.bossRound) - 1);
   const rows = players.map((ps) => {
-    const roundsPassed = !ps.alive && ps.eliminatedRound != null ? Math.max(0, ps.eliminatedRound - 1) : teamRounds;
+    // a player still downed when the match ends counts as eliminated at the round he fell (his board is intact, so the
+    // lineup below is the one he had) — REVIVE
+    const outRound = ps.downed ? ps.downedRound : ps.eliminatedRound;
+    const roundsPassed = !ps.alive && outRound != null ? Math.max(0, outRound - 1) : teamRounds;
     const lineup = boardOrder(ps.board).filter((x) => x.piece.kind === 'chess').map(({ r, c, piece }) => {
       const e = { id: piece.id, golden: gd.isGolden(piece.id), tier: gd.tierOf(piece.id), row: r, col: c, items: (piece.items || []).map((i) => i.id) };
       // 0.2.0 自选编队: a DIY slot's pick — the result screen names and draws the operator (shared/diy.js diyRecord)
@@ -119,7 +122,7 @@ export function buildResult(m, outcome) {
       victory: cleared,
       roundsPassed,
       creditedKills: ps.creditedKills,
-      eliminatedRound: ps.eliminatedRound,
+      eliminatedRound: ps.downed ? ps.downedRound : ps.eliminatedRound,
       lp: Math.max(0, ps.lp),
       bandId: ps.bandId,
       lineup,

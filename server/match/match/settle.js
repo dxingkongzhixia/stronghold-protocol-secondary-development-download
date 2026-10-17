@@ -3,7 +3,7 @@
 // view carries) and RESULT (finish: m.result to every human still here, onEnd).
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
-import { PHASE, layerGainRoom } from '../../../shared/constants.js';
+import { PHASE, layerGainRoom, REVIVE } from '../../../shared/constants.js';
 import { uniteSurvivors } from '../unite.js';
 import { buildResult } from '../results.js';
 import { FLOW_TICKER_PRIORITY, DELAYS } from './common.js';
@@ -78,9 +78,16 @@ export class MatchSettle {
     for (const ps of alive) {
       if (ps.lp <= 0) {
         ps.lp = 0;
-        ps.eliminate(this.round);
-        this.toast(ps, 'error', '你的目标生命值耗尽，已被淘汰');
-        this.tickerText(msg('{name}博士的目标生命值已耗尽', { name: ps.name }), FLOW_TICKER_PRIORITY);
+        if (this._canDown(ps)) {
+          // 分血救援 (REVIVE): a living human teammate can hand LP over in the next 休整期
+          ps.down(this.round);
+          this.toast(ps, 'error', '你的目标生命值耗尽，已被击倒：队友可以分血救援你');
+          this.tickerText(msg('{name}博士的目标生命值已耗尽，等待队友救援', { name: ps.name }), FLOW_TICKER_PRIORITY);
+        } else {
+          ps.eliminate(this.round);
+          this.toast(ps, 'error', '你的目标生命值耗尽，已被淘汰');
+          this.tickerText(msg('{name}博士的目标生命值已耗尽', { name: ps.name }), FLOW_TICKER_PRIORITY);
+        }
       }
     }
     this.fields = [];
@@ -88,6 +95,21 @@ export class MatchSettle {
     this.markPublic();
     onSettle(this); // one emote per alive AI per round (enabled by default; SP_BOT_EMOTES=0 silences it)
     this.setDeadline(DELAYS.SETTLE / 1000, () => this.afterSettle(), { silent: this.soloUntimed });
+  }
+
+  /**
+   * 分血救援 (REVIVE): may this player be DOWNED instead of eliminated? Co-op, a human, rescues left, before the Final
+   * Assault (its teamLp pool is a snapshot), and at least one other HUMAN still alive — otherwise nobody could pay, so a
+   * simultaneous wipe still ends the match. Bots never down (golden neutrality).
+   * @param {import('../PlayerState.js').PlayerState} ps
+   * @returns {boolean}
+   */
+  _canDown(ps) {
+    if (!ps || ps.isBot || ps.left) return false;
+    if (this.isSolo) return false;
+    if (ps.revivesUsed >= REVIVE.MAX) return false;
+    if (this.teamLp != null || this.phase === PHASE.FINAL_ASSAULT || this.phase === PHASE.HIDDEN_CORE) return false;
+    return this.order.some((o) => o !== ps && o.alive && !o.isBot && !o.left);
   }
 
   /**

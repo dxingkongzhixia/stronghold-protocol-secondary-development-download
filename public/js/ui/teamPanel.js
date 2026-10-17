@@ -19,7 +19,7 @@
 // report, ~1 Hz).
 
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { PHASE, CHAT_BUBBLE_MS } from '../../../shared/constants.js';
+import { PHASE, CHAT_BUBBLE_MS, REVIVE } from '../../../shared/constants.js';
 import { html, Icon, Tooltip, RoleTag } from './components.js';
 import { PlayerAvatar, LpTower, GIcon, LocalSprite } from './gameComponents.js';
 import { EmoteBubble } from './emotes.js';
@@ -119,7 +119,7 @@ export function rowLpTip(lp, cap = 10) {
  *   observe?: null | { canObserve: (p:any) => { fieldId?: string, reason?: string|null, back?: boolean }, observing: boolean, onBack: () => void } }} props
  *   uniteLocal: the local 联防 replica's per-leaker counts while it is on screen (battle runner state().uniteLeft), else null
  */
-export function TeamPanel({ pub, myId, watching, bubbles, chat = null, onWatch, compact = false, observe = null, self: selfLive = null, cap = 10, uniteLocal = null }) {
+export function TeamPanel({ pub, myId, watching, bubbles, chat = null, onWatch, compact = false, observe = null, self: selfLive = null, cap = 10, uniteLocal = null, onShareHp = null }) {
   const [openPid, setOpenPid] = useState(null);
   // the playerId whose avatar just called onWatch, so the other click of a double-click does not open the view again
   const askedAt = useRef(/** @type {{ id: string|null, at: number }} */ ({ id: null, at: 0 }));
@@ -172,6 +172,15 @@ export function TeamPanel({ pub, myId, watching, bubbles, chat = null, onWatch, 
       const title = observe ? (self ? (observe.observing ? t('返回战场') : t('你自己')) : t('查看 {name} 的战场', { name: p.name })) : (self ? t('查看自己的阵地') : t('查看 {name} 的阵地', { name: p.name }));
       const lp = rowLp(p, pub, self ? selfLive : null, { uniteLocal, cap });
       const inTeam = team.has(p.playerId);
+      // 分血救援 (REVIVE): the donor needs to keep REVIVE.FLOOR, and the downed teammate's pool must still have room
+      const myRow = players.find((x) => x.playerId === myId);
+      const myLp = Number.isFinite(selfLive?.lp) ? selfLive.lp : (myRow?.lp ?? 0);
+      const pool = p.revivePool ?? 0;
+      const need = p.reviveNeed ?? REVIVE.NEED;
+      const shareOk = !!onShareHp && pub?.phase === PHASE.PREP && myLp - REVIVE.DONATE >= REVIVE.FLOOR && pool < need;
+      const shareTip = pub?.phase !== PHASE.PREP ? t('仅休整期可分血')
+        : myLp - REVIVE.DONATE < REVIVE.FLOOR ? t('目标生命不足（需保留 {n} 点）', { n: REVIVE.FLOOR })
+          : t('分给 {name} {n} 点目标生命', { name: p.name || t('博士'), n: REVIVE.DONATE });
       return html`<div key=${p.playerId} class=${cx('team__row', self && 'is-self', inTeam && 'is-team', watched && 'is-watched', p.alive === false && 'is-dead', open && 'is-open')}>
         <button type="button" class="team__btn" onClick=${() => click(p, self)} onDblClick=${(e) => dblClick(e, p, self)} title=${inTeam && !self ? `${title} · ${t('与你在同一战场')}` : title} aria-expanded=${observe && !self ? String(open) : undefined}>
           <${PlayerAvatar} player=${p} self=${self} />
@@ -195,6 +204,11 @@ export function TeamPanel({ pub, myId, watching, bubbles, chat = null, onWatch, 
             <//>
             ${watched && !self ? html`<span class="team__eye" title=${t('正在查看')}><${GIcon} name="eye" /></span>` : null}
           </div>
+          ${p.downed && !self && onShareHp ? html`<div class="team__revive">
+            <span class="team__revive-pool" title=${t('已筹目标生命')}><b class="num">${p.revivePool ?? 0}</b><span aria-hidden="true">/</span>${p.reviveNeed ?? REVIVE.NEED}</span>
+            <button type="button" class="team__revive-btn" disabled=${!shareOk} title=${shareTip}
+              onClick=${(e) => { e.stopPropagation(); if (shareOk) onShareHp(p); }}>${t('分血 −{n}', { n: REVIVE.DONATE })}</button>
+          </div>` : null}
           ${open ? html`<button type="button" class="btn btn--primary btn--sm team__ob"
             onClick=${() => { setOpenPid(null); onWatch(p); }}><span class="btn__label">${t('前往查看')}</span></button>` : null}
           ${back ? html`<button type="button" class="btn btn--secondary btn--sm team__back"

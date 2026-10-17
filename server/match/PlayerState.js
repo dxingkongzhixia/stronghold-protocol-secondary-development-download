@@ -154,6 +154,16 @@ export class PlayerState {
     this.autoplay = false;
     this.alive = true;
     this.lp = 0;
+    /**
+     * 分血救援 (shared/constants.js REVIVE, owner 2026-10-17): LP 0 in co-op downed him instead of eliminating him — the
+     * board / hand / funds stay frozen, he spectates, and the surviving humans hand over LP (`revivePool`); a full pool
+     * brings him back at the next ROUND_START. `reviveNeed` is fixed when he goes down (it grows with `revivesUsed`).
+     */
+    this.downed = false;
+    this.downedRound = null;
+    this.revivePool = 0;
+    this.reviveNeed = 0;
+    this.revivesUsed = 0;
     this.bandId = null;
     this.funds = 0;
     this.pendingFunds = 0;

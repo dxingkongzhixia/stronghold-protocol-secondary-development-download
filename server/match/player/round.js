@@ -8,6 +8,7 @@
 
 import { boardOrder, pieceDir } from '../board.js';
 import { computeBonds, bondSnapshot, activatedLayers, bondsWithGains } from '../bondsMeta.js';
+import { REVIVE } from '../../../shared/constants.js';
 
 export class PlayerRound {
   startRound(r) {
@@ -52,6 +53,9 @@ export class PlayerRound {
   // `effects` are kept: a 信标 gift still pending is delivered to the teammate at the next round start (builtin_gift is
   // flagged afterElimination — GitHub #86); nothing else of an eliminated player is dispatched.
   eliminate(round) {
+    this.downed = false;
+    this.revivePool = 0;
+    this.reviveNeed = 0;
     this.alive = false;
     this.ready = false;
     this.eliminatedRound = round;
@@ -71,6 +75,38 @@ export class PlayerRound {
     this.funds = 0;
     this.pendingFunds = 0;
     this.recompute();
+  }
+
+  /**
+   * 分血救援: LP hit 0 while another human can still fight — freeze everything (no clearing: `eliminate` does that) and
+   * wait for the survivors' pool. `reviveNeed` grows with how many times this player has already been brought back.
+   * @param {number} round
+   */
+  down(round) {
+    this.alive = false;
+    this.downed = true;
+    this.downedRound = round;
+    this.ready = false;
+    this.revivePool = 0;
+    this.reviveNeed = REVIVE.NEED + REVIVE.NEED_STEP * this.revivesUsed;
+    this.dirty();
+  }
+
+  /**
+   * The survivors filled the pool (Match._reviveDowned, at ROUND_START): back on his own board with LP = what was paid.
+   * The board / hand / funds were never cleared while downed, so he resumes exactly where he fell.
+   */
+  revive() {
+    if (!this.downed) return false;
+    this.alive = true;
+    this.downed = false;
+    this.lp = this.revivePool;
+    this.revivePool = 0;
+    this.reviveNeed = 0;
+    this.revivesUsed++;
+    this.downedRound = null;
+    this.dirty();
+    return true;
   }
 
   recompute() {

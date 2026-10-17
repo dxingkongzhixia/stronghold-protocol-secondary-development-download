@@ -38,6 +38,9 @@ const BOSS_LP_PER_GS = 1;
 
 export class MatchBoss {
   startFinalAssault(hidden) {
+    // 分血救援 is impossible once the Final Assault starts (its teamLp pool is a snapshot): whoever is still downed is out
+    // for good, credited to the round he fell
+    for (const ps of this.order) if (ps.downed) ps.eliminate(ps.downedRound ?? this.round);
     const alive = this.alivePlayers();
     if (!alive.length) { this.finish({ victory: false, reason: 'eliminated' }); return; }
     this.phase = hidden ? PHASE.HIDDEN_CORE : PHASE.FINAL_ASSAULT;

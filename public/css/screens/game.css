@@ -300,6 +300,16 @@
 .team__info { display: flex; flex-direction: column; gap: .02rem; min-width: 0; padding: .04rem .12rem .04rem .06rem; background: linear-gradient(90deg, rgba(8, 11, 10, .82), rgba(8, 11, 10, 0)); }
 .team__name { font-size: calc(.15 * var(--t)); font-weight: 500; color: var(--text-md); max-width: 1.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px #000; }
 .team__line { display: flex; align-items: center; gap: .1rem; }
+/* 分血救援 (REVIVE): a downed teammate's pool and the donation button, under his LP tower */
+.team__revive { display: flex; align-items: center; gap: .08rem; margin-top: .02rem; }
+.team__revive-pool { font-family: var(--font-num); font-size: calc(.13 * var(--t)); color: var(--text-lo); letter-spacing: .02em; }
+.team__revive-pool b { color: var(--amber); font-size: calc(.15 * var(--t)); }
+.team__revive-btn {
+  font: inherit; font-size: calc(.12 * var(--t)); font-weight: 700; line-height: 1.6; padding: 0 .1rem; cursor: pointer;
+  color: var(--text-on-mint); background: var(--mint-500); border: 1px solid var(--mint-400); border-radius: 1px;
+}
+.team__revive-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.team__revive-btn:disabled { color: var(--text-lo); background: rgba(255, 255, 255, .06); border-color: var(--line-2); cursor: not-allowed; }
 .team__status { width: .26rem; height: .26rem; display: grid; place-items: center; border: 1px solid currentColor; background: rgba(0, 0, 0, .5); }
 .team__status .icon { width: .18rem; height: .18rem; }
 .team__status .lsprite { width: .2rem; height: .2rem; object-fit: contain; }
@@ -541,6 +551,9 @@
 .gm__dead .icon { width: .22rem; height: .22rem; }
 /* a spectator seat (community report #26): the same place, the watching pill's amber — nobody was eliminated */
 .gm__dead--spectator { background: rgba(24, 16, 4, .92); border-color: rgba(246, 163, 41, .6); color: var(--amber); }
+/* 分血救援 (REVIVE): the downed player's pill carries the pool the survivors are filling */
+.gm__dead--downed { background: rgba(28, 20, 4, .92); border-color: rgba(246, 163, 41, .6); color: var(--amber); }
+.gm__dead--downed .num { font-family: var(--font-num); font-size: calc(.22 * var(--t)); color: var(--gold); }
 
 .chud { position: absolute; inset: 0; pointer-events: none; }
 .chud > * { pointer-events: auto; }

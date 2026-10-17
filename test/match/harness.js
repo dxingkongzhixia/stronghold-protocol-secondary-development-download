@@ -179,9 +179,14 @@ function legacyInvariants(m) {
     assert.ok(ps.shop.level >= 1 && ps.shop.level <= m.gd.maxShopLevel);
     assert.ok(ps.shop.upgradePrice >= 0);
     assert.ok(ps.shop.freeRefreshes >= 0);
-    if (!ps.alive) {
+    if (!ps.alive && !ps.downed) {
       assert.equal(ps.board.size, 0, 'eliminated player keeps no board');
       assert.ok(ps.hand.every((x) => x == null) && ps.temp.every((x) => x == null), 'eliminated player keeps nothing');
+    }
+    if (ps.downed) {
+      assert.equal(ps.alive, false, 'a downed player is not alive');
+      assert.equal(ps.lp, 0, 'a downed player sits at LP 0');
+      assert.ok(ps.reviveNeed > 0 && ps.revivePool >= 0 && ps.revivePool <= ps.reviveNeed, `revive pool ${ps.revivePool}/${ps.reviveNeed}`);
     }
     const chessUids = new Set();
     const diyHeld = new Map();

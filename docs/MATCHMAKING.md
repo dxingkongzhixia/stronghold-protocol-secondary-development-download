@@ -61,6 +61,7 @@
 - 47. 敌人从第 5 回合起 +30%、领袖 +40%（owner 2026-10-16）
 - 48. 自研干员的动画对照官方修正（owner 报障 2026-10-16 夜）
 - 49. 2026-10-16 特效批次收尾总览（给下一位接手）
+- 50. 分血救援：队友复活（2026-10-17）
 
 ## 0. 需求（用户确认）
 
@@ -1621,3 +1622,57 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 | 本机清单的并集语义与踩坑 | [`docs/ASSETS.md`](ASSETS.md)「The committed manifest and the served manifests」；[`docs/HANDOVER.md`](HANDOVER.md) §9 的陷阱表 |
 
 **当天结论**：报障 ①②③ **全部结案**（③ 的本机模型疑点**证伪**——并集语义一直给到了官方石头；真问题是跟子数量，已按官方改）。**卡涅利安 / 空弦两条护盾观感**按 owner 决定**保持官方现状**，不再顺手修（[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0.2 记录）。**均未推送 / 未上线**——只在本机 `master`，等 owner 发话。
+
+## 50. 分血救援：队友复活（owner 2026-10-17）
+
+**需求**（owner 原话）：「多人游玩时（同盟，野排），如果队友血量耗尽出局了，剩下的活着的队友满足条件时可以把血量分给阵亡队友使其复活」。owner 选的是**方案 A（冻结 + 分血）**，数值按 `shared/constants.js` 的 `REVIVE`。
+
+### 50.1 规则
+
+| 项 | 值 / 行为 |
+|---|---|
+| 触发 | 目标生命（`ps.lp`）在 **SETTLE** 扣到 0，且**同房间还有一名存活的真人队友**、未进入最终攻势、本人复活次数 < 2 → **击倒（downed）**，否则按原样永久出局 |
+| 击倒状态 | `alive=false`、`downed=true`、`lp=0`，**棋盘 / 手牌 / 临时区 / 资金 / 商店 / 悬赏全部冻结**（`eliminate()` 的清空不再执行），只能观战 |
+| 分血 | 备战期（`PHASE.PREP`）内，任一存活真人点「分血 −4」：付出 **4** 点目标生命，进入对方的池子；**自己不得低于 5**（`REVIVE.FLOOR`，不可能献血自杀） |
+| 复活额度 | 第 1 次 **8**；同一人第 2 次 **14**（`NEED + NEED_STEP × revivesUsed`）；**每人每局最多 2 次** |
+| 复活 | 池子一满**当场复活**（仍在同一个备战期）：`lp = 池子总额`、`revivesUsed++`、棋盘原样还给他（无需重建），并收到自己的 `m.private` |
+| 禁止救援 | 最终攻势 / 隐秘核心开始后（`teamLp` 已快照）；目标已是活人 / 是 AI；自己已倒下 |
+| 全灭 | 同一 SETTLE 里两人一起倒：先倒的那个「击倒」（另一人还活着），第二个没有人能付 → 出局，`alivePlayers()` 空 → 按原规则结束 |
+| 单人 / AI | 单人永远不击倒；**AI 队友不救人、AI 也不会被击倒**（golden 完全中立：bot 对局没有任何新分支） |
+| 断线 | 被击倒者断线走原有「离开 / 接管」路径；池子保留到他真的不在房间 |
+| 结算 | 仍然倒着结束的对局：`result.players[].eliminatedRound = downedRound`（不会算成「本局没死」） |
+
+### 50.2 协议 / 服务端
+
+| 位置 | 改动 |
+|---|---|
+| `shared/constants.js` | `REVIVE = { DONATE: 4, NEED: 8, NEED_STEP: 6, MAX: 2, FLOOR: 5 }` |
+| `server/match/player/round.js` | `down(round)`（冻结，不清理）、`revive()`（回场，`lp = pool`）、`eliminate()` 顺带清 `downed/revivePool/reviveNeed` |
+| `server/match/match/settle.js` | `_canDown(ps)` + `lp <= 0` 时 down / eliminate 二选一；ticker「…等待队友救援」 |
+| `server/match/match/intents.js` | `g.shareHp { target }` → `Match.shareHp`：校验阶段 / 存活 / 同房间 / 池子未满 / 地板 → 转账 + 满池即复活 + toast/ticker |
+| `shared/protocol.js` | 新消息 `g.shareHp`；`m.public.players[]` 与 `m.private` 增 `downed / revivePool / reviveNeed / revivesUsed` |
+| `server/match/match/views.js`、`server/match/player/views.js` | 透出上述字段 |
+| `server/match/match/bossRounds.js` | `startFinalAssault` 前把还倒着的人**永久出局**（credited 到他倒下的回合） |
+| `server/match/results.js` | 结算行用 `downedRound` 当 `eliminatedRound` |
+| 不变量 | `invariants.js`：倒着的人 `lp=0`、`0 ≤ pool ≤ need`、不算「已出局清空」；`audit.js`：SETTLE 认 downed、`shareHp` 检查「全房间 LP（血条 + 池子）守恒」与地板 |
+
+### 50.3 客户端
+
+- `ui/teamPanel.js`：倒下队友那一行显示 `已筹/所需` 与「**分血 −4**」按钮；非备战期 / 自己低于地板 / 池子已满时禁用并带原因 tooltip；`screens/game.js` 的 `shareHp` 发 `g.shareHp`。
+- `screens/game.js` + `css/screens/game.css`：倒下的人看到「**你已被击倒 · 队友可分血救援 `4/8`**」的琥珀色横幅（替代「你已被淘汰」），复活后横幅消失、棋盘原样回来。
+- i18n：13 条 msgid ×4（en 100 %）。
+
+### 50.4 测试
+
+- `test/match/revive.test.js`（7 条）：击倒而非出局（棋盘保留、公开视图 `downed`）、分血 → 满池复活（LP = 支付额、收到 `m.private`）、地板 / 溢出 / 错误目标 / 错误阶段、第二次 14 点与第三次永久出局、单人 & 无真人队友不击倒、最终攻势后拒绝、双倒全灭结束。
+- `test/match/combat.test.js` 的淘汰用例改写为「downed 保棋盘 + 全灭仍结束」；`feedback3-gift.test.js` 的信标 gift 用例：**倒下的发送者**的信标仍会送达（`dispatchEliminated` 覆盖 `!alive`）；`fuzz.test.js` 的随机意图补 `g.shareHp`。
+
+### 50.5 自检（合并时必须活过）
+
+```powershell
+grep -n "REVIVE" shared/constants.js server/match/match/settle.js server/match/match/intents.js   # 三处都在
+grep -n "downed" server/match/player/round.js server/match/match/settle.js server/match/match/views.js
+node --test test/match/revive.test.js                                                             # 7/7
+```
+
+**红线**：AI 永不参与（golden 中立）；分血只能在备战期；最终攻势后不可复活；分血者的 LP 永不低于 5。

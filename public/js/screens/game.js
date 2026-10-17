@@ -113,7 +113,7 @@ import {
   previewEnemyKey, prepCamera, prepCameraFor, foldCamera, deployFieldOf, fieldTile, panelSide, panelSlots, bondPopupPlace, unitLoadout, deployedRecord,
   mergeTarget, modeOffBonds, readyFundsPrompt, readyShopFold, ownerBandId, ownDiyRecord, ownStandIn, roundStartReplay,
 } from '../ui/gameLogic.js';
-import { toast } from '../ui/toasts.js';
+import { toast, toastError } from '../ui/toasts.js';
 import { BriefingScreen } from './briefing.js';
 import { BandDraftScreen } from './bandDraft.js';
 import { ResultScreen } from './result.js';
@@ -984,6 +984,14 @@ function MatchScreen() {
 
   const watchField = useCallback((fid) => { requestWatch(fid); }, []);
 
+  // 分血救援 (REVIVE): hand REVIVE.DONATE of the own 目标生命 to a downed teammate — the server validates the phase,
+  // the floor and the pool (g.shareHp); a refusal is a toast, never a silent no-op
+  const shareHp = useCallback((p) => {
+    if (!p?.playerId) return;
+    Promise.resolve(net.request('g.shareHp', { target: p.playerId }))
+      .catch((err) => { toastError(err); });
+  }, []);
+
   // an eliminated player or a spectator seat follows a player through every phase reset (community report of
   // 2026-10-06, item 56; the idea of PR #189): the server pushes that player's prep board (Match._followScout) — the one
   // it last watched, else the first player still in — and the screen adopts it like a 前往查看 tap, once per phase and
@@ -1630,7 +1638,7 @@ function MatchScreen() {
       </div>
 
       <div class="gm__teamcol">
-        <${TeamPanel} pub=${pub} myId=${myId} watching=${watchingNow} bubbles=${bubbles} chat=${chatBubbles} onWatch=${watchPlayer} cap=${gd.config?.lpCapPerRound ?? 10} uniteLocal=${uniteLocal}
+        <${TeamPanel} pub=${pub} myId=${myId} watching=${watchingNow} bubbles=${bubbles} chat=${chatBubbles} onWatch=${watchPlayer} cap=${gd.config?.lpCapPerRound ?? 10} uniteLocal=${uniteLocal} onShareHp=${shareHp}
           self=${Number.isFinite(priv?.lp) ? { lp: priv.lp, pending: liveLpNow.pending, unite: liveLpNow.unite, left: liveLpNow.left } : null}
           observe=${cc ? { canObserve: (p) => observeTarget(p, pub, myId, { observing: watchingOther, ownDone: localDone }), observing: watchingOther, onBack: backHome } : null} />
         ${(spectator || tookOver) ? html`<${SpecDock} room=${room} pub=${pub} myId=${myId} spectator=${spectator} canRelease=${tookOver} panel=${true} chat=${chatBubbles} />` : null}
@@ -1659,7 +1667,10 @@ function MatchScreen() {
         spectating=${!alive} spectator=${spectator} onWatch=${watchField}
         client=${cc ? { progress, observing: observingName ? { name: observingName } : null, onBack: alive ? backHome : null, layers, layer, onLayer: setLayer } : null} />` : null}
 
-      ${showDeadPill(alive, phase) ? (spectator
+      ${priv?.downed ? html`<div class="gm__dead gm__dead--downed" role="status">
+        <${Icon} name="warn" /><span>${t('你已被击倒 · 队友可分血救援')}</span>
+        <b class="num">${priv.revivePool ?? 0}<span aria-hidden="true">/</span>${priv.reviveNeed ?? 0}</b>
+      </div>` : showDeadPill(alive, phase) ? (spectator
         ? html`<div class="gm__dead gm__dead--spectator" role="status"><${GIcon} name="eye" />${t('观战中 · 点击左侧成员头像切换查看')}</div>`
         : html`<div class="gm__dead" role="status"><${Icon} name="close" />${t('你已被淘汰 · 可继续观战队友')}</div>`) : null}
 

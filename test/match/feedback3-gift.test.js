@@ -84,8 +84,10 @@ test('信标: the gift still arrives when its sender is eliminated before the ne
   assert.deepEqual(equip(giveItem(m, p0, BEACON), give(m, p0, gid, 'hand')), OK);
   knockOut(p0);
   h.toPrep(2);
-  assert.equal(p0.alive, false, 'the sender was eliminated at the R1 settle');
-  assert.equal(p0.eliminatedRound, 1);
+  assert.equal(p0.alive, false, 'the sender went out at the R1 settle');
+  // REVIVE: a co-op human with a living teammate is DOWNED, not eliminated — the queued 信标 gift still fires
+  assert.equal(p0.downed, true);
+  assert.equal(p0.downedRound, 1);
   assert.deepEqual(ofBase(m, p1, cid).map((p) => p.id), [gid], 'the teammate got the elite anyway');
   assert.equal(gifts(p0).length, 0, 'delivered, then removed');
   const line = h.allTo('p_1', 'm.ticker').find((t) => t.type === 'CHAR_GIFT');

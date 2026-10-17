@@ -41,7 +41,7 @@
 //                 silent (deadline 0)
 // Checks never throw into the match: an exception inside a check is itself recorded as a violation.
 
-import { PHASE } from '../../shared/constants.js';
+import { PHASE, REVIVE } from '../../shared/constants.js';
 import { collectViolations } from './invariants.js';
 import { mergeTile, pieceDir, canPlace, placeClass } from './board.js';
 import { bossPoolHp, hiddenEligible } from './finalAssault.js';
@@ -411,6 +411,20 @@ export function attachAudit(m, { invariants = true, limit = 200 } = {}) {
     runInvariants();
     return r;
   });
+  wrap(m, 'shareHp', function (orig, ps, targetId) {
+    // 分血救援 (REVIVE): LP moves between the two bars and into the pool — the room's LP (bars + pools) is conserved,
+    // and a donor never drops below the floor
+    const before = m.order.reduce((s, p) => s + p.lp + p.revivePool, 0);
+    const res = orig(ps, targetId);
+    check('shareHp', () => {
+      if (!res || res.ok !== true) return;
+      const after = m.order.reduce((s, p) => s + p.lp + p.revivePool, 0);
+      if (after !== before) fail(`shareHp moved LP: ${before} → ${after}`);
+      if (ps.lp < REVIVE.FLOOR) fail(`${ps.playerId}: donated down to ${ps.lp} LP (floor ${REVIVE.FLOOR})`);
+    });
+    runInvariants();
+    return res;
+  });
   wrap(m, 'settle', function (orig, plan, uniteResult) {
     check('unite trigger', () => {
       if (expectUnite && expectUnite.round === m.round && expectUnite.expect !== !!plan) fail(`联防 ${plan ? 'ran' : 'skipped'} but ${expectUnite.expect ? '≥ 1 leaker and ≥ 1 perfect player' : 'not both a leaker and a perfect player'}`);
@@ -433,6 +447,13 @@ export function attachAudit(m, { invariants = true, limit = 200 } = {}) {
           if (loss > max) fail(`${ps.playerId}: lost ${loss} LP with ${counted} counted leaks (cap ${cap})`);
           if (!uniteRan && loss !== max) fail(`${ps.playerId}: lost ${loss} LP, expected min(${cap}, ${counted})`);
           if (ps.lp <= 0) fail(`${ps.playerId}: alive with LP ${ps.lp}`);
+        } else if (ps.downed) {
+          // 分血救援: downed instead of eliminated — LP clamped to 0, pool empty, everything frozen (the invariants
+          // check the frozen board), credited to this round
+          if (lp0 > max) fail(`${ps.playerId}: downed from ${lp0} LP with only ${counted} counted leaks`);
+          if (ps.downedRound !== m.round) fail(`${ps.playerId}: downed round ${ps.downedRound} != ${m.round}`);
+          if (ps.lp !== 0) fail(`${ps.playerId}: downed with LP ${ps.lp}`);
+          if (ps.revivePool !== 0) fail(`${ps.playerId}: downed with pool ${ps.revivePool}`);
         } else {
           // eliminated: LP is clamped to 0, so the loss was ≥ lp0 and still ≤ min(cap, counted)
           if (lp0 > max) fail(`${ps.playerId}: eliminated from ${lp0} LP with only ${counted} counted leaks`);

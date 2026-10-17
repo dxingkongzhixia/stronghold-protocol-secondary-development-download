@@ -1553,5 +1553,18 @@
   "最常使用的策略": "Most Used Strategies",
   "已获得特殊标识的策略": "Strategies with special badges",
   "暂无获得特殊标识的策略": "No strategies have earned a special badge yet",
-  "最多保留最近 {max} 局，最新的 {full} 局及盟约最高叠加战绩能回看结算。": "Keeps up to {max} matches; the latest {full} and the highest alliance stack match can be replayed."
+  "最多保留最近 {max} 局，最新的 {full} 局及盟约最高叠加战绩能回看结算。": "Keeps up to {max} matches; the latest {full} and the highest alliance stack match can be replayed.",
+  "你已被击倒 · 队友可分血救援": "You are down · teammates can share HP",
+  "仅休整期可分血": "Share HP during prep only",
+  "目标生命不足（需保留 {n} 点）": "Not enough HP (keep {n})",
+  "分给 {name} {n} 点目标生命": "Give {name} {n} HP",
+  "已筹目标生命": "Pooled HP",
+  "分血 −{n}": "Share HP −{n}",
+  "{name}博士已被队友救回": "Dr. {name} was brought back by a teammate",
+  "{name}博士分给队友 {n} 点目标生命": "Dr. {name} shared {n} HP with a teammate",
+  "你的目标生命值耗尽，已被击倒：队友可以分血救援你": "Your HP is gone — you are down; a teammate can share HP to bring you back",
+  "{name}博士的目标生命值已耗尽，等待队友救援": "Dr. {name} is down and waiting for a teammate's HP",
+  "你已被队友救回": "A teammate brought you back",
+  "已分给 {name} {n} 点目标生命": "Shared {n} HP with {name}",
+  "{name} 分给你 {n} 点目标生命": "{name} shared {n} HP with you"
 }

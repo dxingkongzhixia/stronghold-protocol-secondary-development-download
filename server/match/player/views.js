@@ -63,6 +63,11 @@ export class PlayerViews {
       seat: this.seat,
       alive: this.alive,
       lp: this.lp,
+      // 分血救援 (REVIVE): the downed player's own banner (pool progress) and his revive count
+      downed: !!this.downed,
+      revivePool: this.revivePool,
+      reviveNeed: this.reviveNeed,
+      revivesUsed: this.revivesUsed,
       funds: this.funds,
       bandId: this.bandId,
       ready: this.ready,

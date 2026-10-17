@@ -73,11 +73,21 @@ export function collectViolations(m, { limit = 25 } = {}) {
       if (!(Number.isFinite(v) && v >= 0 && (!(BOND_LAYER_CAP > 0) || v <= BOND_LAYER_CAP))) fail(`${id}: ${b} layers ${v}`);
     }
 
-    if (!ps.alive) {
+    if (!ps.alive && !ps.downed) {
       if (ps.board.size) fail(`${id}: eliminated but keeps ${ps.board.size} board pieces`);
       if (ps.hand.some(Boolean) || ps.temp.some(Boolean)) fail(`${id}: eliminated but keeps hand/temp pieces`);
       if (ps.shop.slots.length || ps.offers.length || ps.bounties.length) fail(`${id}: eliminated but keeps shop/offers/bounties`);
       if (ps.funds || ps.pendingFunds) fail(`${id}: eliminated with funds ${ps.funds}+${ps.pendingFunds}`);
+    }
+    // 分血救援 (REVIVE): a downed player is not alive but keeps everything frozen, LP 0, and a pool within its need
+    if (ps.downed) {
+      if (ps.alive) fail(`${id}: downed but alive`);
+      if (ps.lp !== 0) fail(`${id}: downed with LP ${ps.lp}`);
+      if (!(ps.reviveNeed > 0)) fail(`${id}: downed with need ${ps.reviveNeed}`);
+      if (!(ps.revivePool >= 0 && ps.revivePool <= ps.reviveNeed)) fail(`${id}: downed pool ${ps.revivePool}/${ps.reviveNeed}`);
+      if (!(ps.downedRound >= 0)) fail(`${id}: downed round ${ps.downedRound}`);
+    } else if (ps.revivePool || ps.reviveNeed) {
+      fail(`${id}: revive pool ${ps.revivePool}/${ps.reviveNeed} outside a downed state`);
     }
     // 教鞭's personal choice (Match.offerBountyChoice): resolved before the prep ends — by its owner, the deadline or the bot
     const pc = ps.personalChoice;

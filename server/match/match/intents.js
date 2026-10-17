@@ -5,9 +5,10 @@
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
 import { unitStatsEntry } from '../../../shared/protocol.js';
-import { PHASE, ERR, EMOTES, EMOTE_COOLDOWN_MS, GEO } from '../../../shared/constants.js';
+import { PHASE, ERR, EMOTES, EMOTE_COOLDOWN_MS, GEO, REVIVE } from '../../../shared/constants.js';
 import { deriveSeed } from '../../sim/rng.js';
-import { OK, fail } from './common.js';
+import { msg } from '../../../shared/i18n.js';
+import { OK, fail, FLOW_TICKER_PRIORITY } from './common.js';
 import { onHumanEmote } from '../botEmotes.js';
 
 export class MatchIntents {
@@ -40,6 +41,7 @@ export class MatchIntents {
         : this.pickCard(ps, msg.idx);
       case 'g.ready': return ps.setReady(!!msg.ready);
       case 'g.emote': return this.emote(ps, msg.id);
+      case 'g.shareHp': return this.shareHp(ps, msg.target);
       // playerId: the player tapped (a shared field names two) — the watch preference (item 56)
       case 'g.watch': return this.watch(ps, msg.fieldId, msg.playerId ?? null);
       case 'g.autoplay': return this.setAutoplay(ps, !!msg.on);
@@ -54,6 +56,39 @@ export class MatchIntents {
       case 'b.rehearsalResult': this._onRehearsalResult(ps, msg); return OK;
       default: return fail(ERR.BAD_MSG);
     }
+  }
+
+  /**
+   * 分血救援 (REVIVE, owner 2026-10-17): a living human hands REVIVE.DONATE of his own LP to a DOWNED teammate. 休整期
+   * only, never after the Final Assault took its teamLp snapshot; the donor's LP must stay at or above REVIVE.FLOOR and
+   * the target's pool must still have room. The pool revives the teammate at the next ROUND_START (Match._reviveDowned).
+   * @param {import('../PlayerState.js').PlayerState} ps
+   * @param {string} targetId
+   */
+  shareHp(ps, targetId) {
+    if (this.phase !== PHASE.PREP) return fail(ERR.WRONG_PHASE);
+    if (!ps.alive) return fail(ERR.ELIMINATED);
+    const target = this.players.get(targetId);
+    if (!target || target === ps || target.isBot || target.left) return fail(ERR.BAD_TARGET);
+    if (!target.downed) return fail(ERR.BAD_TARGET, 'not downed');
+    if (this.teamLp != null || this.phase === PHASE.FINAL_ASSAULT || this.phase === PHASE.HIDDEN_CORE) return fail(ERR.WRONG_PHASE, 'final assault started');
+    if (target.revivePool >= target.reviveNeed) return fail(ERR.ALREADY, 'pool full');
+    if (ps.lp - REVIVE.DONATE < REVIVE.FLOOR) return fail(ERR.NO_FUNDS, 'insufficient HP');
+    ps.lp -= REVIVE.DONATE;
+    target.revivePool = Math.min(target.reviveNeed, target.revivePool + REVIVE.DONATE);
+    ps.dirty();
+    target.dirty();
+    const cameBack = target.revivePool >= target.reviveNeed && target.revive();
+    this.markPublic();
+    this.toast(ps, 'info', msg('已分给 {name} {n} 点目标生命', { name: target.name, n: REVIVE.DONATE }));
+    if (cameBack) {
+      this.toast(target, 'success', msg('你已被队友救回'));
+      this.tickerText(msg('{name}博士已被队友救回', { name: target.name }), FLOW_TICKER_PRIORITY);
+    } else {
+      this.toast(target, 'success', msg('{name} 分给你 {n} 点目标生命', { name: ps.name, n: REVIVE.DONATE }));
+      this.tickerText(msg('{name}博士分给队友 {n} 点目标生命', { name: ps.name, n: REVIVE.DONATE }), FLOW_TICKER_PRIORITY);
+    }
+    return OK;
   }
 
   emote(ps, id) {

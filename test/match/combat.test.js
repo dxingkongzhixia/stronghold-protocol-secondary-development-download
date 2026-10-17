@@ -87,7 +87,7 @@ test('SETTLE: LP −min(leaks, 10), bounty coins next round, IN_BATTLE layer gai
   m.dispose();
 });
 
-test('elimination: LP ≤ 0 → out, copies back to the pool; everyone out → RESULT defeat', () => {
+test('downed instead of eliminated (REVIVE): LP ≤ 0 with a living human teammate keeps the board; the wipe still ends in defeat', () => {
   // p_1 is perfect → 联防 re-fights p_0's leaks; all 10 survive and cost p_0 its last LP
   const h = makeMatch({ mode: 'coop', humans: 2, seed: 33, fake: true, script: (b) => (b.kind === 'unite' ? { survivors: { p_0: 10 } } : { leaks: Object.fromEntries(b.players.map((p) => [p, p === 'p_0' ? 10 : 0])) }) }).start();
   const m = h.m;
@@ -99,14 +99,16 @@ test('elimination: LP ≤ 0 → out, copies back to the pool; everyone out → R
   a.lp = 5;
   h.drive(() => m.phase === PHASE.SETTLE);
   assert.equal(a.alive, false);
+  assert.equal(a.downed, true, 'co-op downs him: the survivors can 分血');
   assert.equal(a.lp, 0);
-  assert.equal(a.eliminatedRound, 1);
-  assert.equal(m.pool.left(id), left + 1);
+  assert.equal(a.eliminatedRound, null, 'not out for good yet');
+  assert.equal(m.pool.left(id), left, 'the frozen board keeps its copies out of the pool');
   assert.equal(m.publicView().players.find((p) => p.playerId === 'p_0').status, 'dead');
   assert.deepEqual(m.handle('p_0', { t: 'g.refresh' }), { error: 'ELIMINATED' });
   h.drive(() => m.phase === PHASE.PREP && m.round === 2);
-  assert.equal(a.funds, 0, 'eliminated players get no income');
-  // the survivor keeps playing; now kill them too
+  assert.equal(a.ready, false, 'a downed player never holds a ready flag');
+  assert.ok([...a.board.values(), ...a.hand.filter(Boolean)].some((p) => p.id === id), 'the frozen pieces are still his');
+  // the survivor keeps playing; now kill them too — nobody is left to pay, so the match ends
   FakeBattle.script = (bt) => ({ leaks: Object.fromEntries(bt.players.map((p) => [p, 10])) });
   h.ps('p_1').lp = 3;
   const end = h.drive(() => h.ended != null);
@@ -114,7 +116,7 @@ test('elimination: LP ≤ 0 → out, copies back to the pool; everyone out → R
   assert.equal(h.ended.victory, false);
   assert.equal(h.ended.reason, 'eliminated');
   const rows = Object.fromEntries(h.ended.players.map((p) => [p.playerId, p]));
-  assert.equal(rows.p_0.roundsPassed, 0);
+  assert.equal(rows.p_0.roundsPassed, 0, 'the downed player is credited with the round he fell');
   assert.equal(rows.p_1.roundsPassed, 1);
   assert.equal(h.endedCount, 1);
   checkInvariants(m);

@@ -119,6 +119,11 @@ export class MatchViews {
         connected: ps.isBot || (ps.connected && !ps.left),
         alive: ps.alive,
         lp: Math.max(0, ps.lp),
+        // 分血救援 (REVIVE): downed instead of eliminated, waiting for the survivors' pool
+        downed: !!ps.downed,
+        revivePool: ps.downed ? ps.revivePool : 0,
+        reviveNeed: ps.downed ? ps.reviveNeed : 0,
+        revivesUsed: ps.revivesUsed,
         bandId: ps.bandId,
         shopLevel: ps.shop.level,
         boardCount: ps.deployCount,
