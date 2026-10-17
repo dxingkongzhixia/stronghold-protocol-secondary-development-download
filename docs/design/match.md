@@ -105,6 +105,19 @@ until the requested count is reached or candidates are exhausted; no retry budge
 This filtering includes pool `also` items and respects shared stock and explicit pool weights. Queued offers still
 only lose their cell, as described above.
 
+凯瑟琳 定向投放 draws three distinct items and grants one on each 调度中心 upgrade (official
+`activity_table.json`, `act2autochess.effectBuffInfoDataDict.aceffect_band_26`: `up_shop_add_special_goods`,
+`count: 3`, `choice: 1`, `pool: pool_equip_kathe`). Its pool is every shop-eligible item plus 突变细胞 at any level
+(#631; uniform [ASSUMED]). It grants 突变细胞 at most once per match per player — **maintainer decision 2026-10-17
+(official play memory)**, #677 / §34.22; the official table names the pool without exposing a cell count.
+The match-long player counter `band:cathy:cellTaken` is set only on a successful pick from a `band:band_cathy`
+item offer. Later offers exclude the cell, keeping their choices distinct. [ASSUMED] “Given” means taken, so a cell
+shown but declined or a refused pick leaves the allowance available. 昆图斯's separate R3 cell grant
+(`aceffect_band_41`) neither uses nor checks this allowance [ASSUMED source independence]. [ASSUMED] Taking the cell
+also removes it from already queued Cathy offers without rerolling their other choices; empty offers are dropped.
+The state survives round changes, item destruction, reconnects and test-console strategy switches; bots and test
+replays use the same player methods.
+
 ### 6.5 Waves (waves.js)
 
 Per match: pick stage (weighted among the mode's `config.modes[m].stages`, weight 50 each: 标准 FUNNY = 战场#01 `act1autochess_m01` only, 险境 NORMAL = 8 stages, 绝境 / 终极 = 7 without 战场#01 — `waves.js setupMatchWaves`, `test/match/stagepick.test.js`), 3 of 6 typed enemy factions, disabled bond set (3 core + 4 add-on for NORMAL+, per research), boss (weighted), hidden boss. Per round: wave template (by mode & round) → replace placeholders per research 05 §3.2 algorithm → apply stat multipliers (research 00-INDEX §5 `atk ×base×1.1^k`, `hp ×base×1.2^k`, ABYSS speed ×1.15 from R3) → `SpawnSpec[]` + routes resolved on the stage. *(Superseded by the official generator — §14 "Corrections from research 08/09" and the waves.js header.)* A player's normal battle (and the bot rehearsal) runs `withBounties(gd, round, wave, bounties, playerId)`: the bounty units inserted among their host action's own units, which are re-timed around them (client order); `previewOf` keeps one entry per action (`wave.spawns` + `bountySpawns`).
