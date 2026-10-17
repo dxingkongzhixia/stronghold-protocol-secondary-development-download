@@ -305,7 +305,7 @@ describe('extracted board-scene files (when a local client was extracted)', { sk
 
   test('mesh/*: OBJ files with their vertex counts and a prefab.json each', { skip: !Object.keys(manifest?.groups || {}).some((k) => k.startsWith('mesh/')) && 'not extracted' }, () => {
     const groups = Object.entries(manifest.groups).filter(([k]) => k.startsWith('mesh/'));
-    assert.deepEqual(groups.map(([k]) => k).sort(), ['mesh/map_autochess_bkg', 'mesh/s_background_common', 'mesh/s_common_box_01', 'mesh/s_wind_device']);
+    assert.deepEqual(groups.map(([k]) => k).sort(), ['mesh/map_autochess_bkg', 'mesh/s_background_common', 'mesh/s_common_box_01', 'mesh/s_wind_device', 'mesh/trap_110']);
     for (const [name, g] of groups) {
       assert.equal(g.prefab?.kind, 'Prefab', name);
       const meshes = Object.values(g).filter((x) => x.kind === 'Mesh');
