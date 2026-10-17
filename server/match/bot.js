@@ -85,6 +85,7 @@ import { deriveSeed } from '../sim/rng.js';
 import { ASPD_MIN } from '../sim/constants.js';
 import { rehearsalCap, RehearsalRun } from '../sim/rehearsal.js';
 import { recordRehearsal } from '../training/record.js';
+import { reloadPrior, rankPlans } from './botPrior.js';
 import { freeSlot, countFree, legalTiles, canPlace, positionClass, placeClass, basePositionClass, parseKey, tileKey, FIELD, pieceDir, boardTileOf, BOSS_MIRROR_COL } from './board.js';
 import { rotateOffset, normDir, mirrorDir, oppositeDir } from '../sim/dir.js';
 import { itemKey } from './gamedata.js';
@@ -1161,7 +1162,10 @@ export function* createRehearsalSteps(m, ps, chosen, plans, { delegate = false }
   const wave = m.wave;
   const distinct = distinctPlans(plans);
   if (!wave || distinct.length < 2 || !(m.botRehearsal > 0)) return null;
-  const cands = distinct.slice(0, m.botRehearsal);
+  // the trained prior orders the candidates (which ones the `botRehearsal` slice simulates); the simulation still
+  // decides the winner. No prior loaded → the heuristic order stands.
+  reloadPrior();
+  const cands = rankPlans(m, distinct).slice(0, m.botRehearsal);
   const byUid = new Map(chosen.map((p) => [p.uid, p]));
   const inputs = [];
   const battles = [];

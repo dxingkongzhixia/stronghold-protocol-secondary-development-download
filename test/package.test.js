@@ -94,6 +94,9 @@ test('the real tracked tree: runtime in, the rest out; every shipped import, npm
     // files a shipped script starts or reads by path.join(ROOT, 'dir', …, 'file.ext') — setup's tools, launch's setup
     for (const m of src.matchAll(/path\.join\(ROOT,\s*((?:'[^']+',\s*)*'[^']+\.[a-z]+')\)/g)) {
       const rel = [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]).join('/');
+      // machine-generated, git-ignored outputs: the trained bot prior (tools/train-bot.mjs) and the training DB are
+      // created on a box, never shipped (server/match/botPrior.js tolerates their absence)
+      if (/^(?:server\/match\/botPrior\.json|var\/)/.test(rel)) continue;
       if (/^(?:tools|scripts|server|shared|docs)\//.test(rel)) assert.ok(got.has(rel), `${f} starts ${rel}`);
     }
   }

@@ -62,3 +62,7 @@ desktop.ini
 /var/
 # tools/sim-check.mjs: the corpus and its Node traces for /dev/sim-check.html
 public/dev/simcheck/data/
+
+# machine-local trained bot prior (tools/train-bot.mjs; the loader tolerates its absence)
+server/match/botPrior.json
+server/match/botPrior.json.prev

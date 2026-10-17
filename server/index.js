@@ -43,6 +43,7 @@ import { CommunityService, bugReportsExport, bugReportsToCsv } from './community
 import { StatsService } from './stats.js';
 import { TrainingStore } from './training/store.js';
 import { setTrainingSink } from './training/record.js';
+import { configurePrior, priorStatus } from './match/botPrior.js';
 import { ADMIN_HTML, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
 import { createSpeedProbe } from './speed.js';
 import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from './mirrors.js';
@@ -184,6 +185,9 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       : null);
   // the store opens lazily on the first recorded rehearsal: a match without bots never creates the file
   setTrainingSink(training ? (row) => training.record(row) : null);
+  // The trained bot prior (server/match/botPrior.js): machine-local, re-read per bot prep; a missing file or
+  // SP_BOT_PRIOR=off leaves the heuristic candidate order untouched.
+  configurePrior({ file: path.join(ROOT, 'server', 'match', 'botPrior.json'), enabled: process.env.SP_BOT_PRIOR !== 'off', log });
   const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
   // content packs (docs/PACKS.md): scanned now — the start log names them — and again whenever their folders change
@@ -204,7 +208,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // resolves (the browser's stored session token), else the per-network key — the same scheme when the report arrives
   // over the WebSocket, so an upload and its report share an owner.
   const trustProxy = opts.trustProxy ?? parseTrustProxy(process.env.TRUST_PROXY);
-  const baseHandler = createRequestHandler({ serveStatic, health: { startedAt, network, registry, lobby, traffic, assetIndex, views }, log, trustProxy });
+  const baseHandler = createRequestHandler({ serveStatic, health: { startedAt, network, registry, lobby, traffic, assetIndex, views, prior: priorStatus() }, log, trustProxy });
   function communityKey(req) {
     const tok = req.headers['x-account-token'];
     const acc = auth && typeof tok === 'string' && tok ? auth.resolve(tok) : null;

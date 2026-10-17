@@ -9,6 +9,7 @@
 // server (it rehearses and records there), the rest are delegated as usual. The sample is stable per (seed, round,
 // seat) so re-running a match reproduces the same choice.
 import { createHash } from 'node:crypto';
+import { planFamily } from '../match/botPrior.js';
 
 /** The current sink (`setTrainingSink`), null when training is off. */
 let sink = null;
@@ -102,7 +103,7 @@ export function rehearsalRow(m, ps, job) {
     },
     candidates: plans.map((plan, i) => {
       const r = byIndex.get(i);
-      return { i, layout: layoutHash(plan), ...(r ? { leaks: r.leaks, kills: r.kills, score: r.score } : {}) };
+      return { i, layout: layoutHash(plan), family: planFamily(plan), ...(r ? { leaks: r.leaks, kills: r.kills, score: r.score } : {}) };
     }),
     chosen: chosen >= 0 ? chosen : null,
     source: 'server',

@@ -384,3 +384,14 @@ npm run package -- --update --from <旧版本的完整包>[,<…>] --out <目录
 
 The recorder is best-effort: a failed write, or less than 2 GB free on the DB filesystem, drops samples and never
 touches a match. Retention is handled by the (P2) trainer export/prune; the file is git-ignored and never served.
+
+### The nightly trainer and the prior
+
+- sh tools/install-training-cron.sh installs (idempotently) two crontab lines: 04:30 and a 05:30 retry of
+  ode tools/train-bot.mjs --auto under ice -n 19. The job skips itself while a match is running.
+- It exports rows older than 14 days to ar/training/archives/YYYY-MM.jsonl.gz (manifest with row counts + sha256),
+  prunes them, fits the family prior and publishes server/match/botPrior.json **atomically** (previous kept as
+  .prev) only when the hold-out gates pass; otherwise the previous prior stays.
+- server/match/botPrior.js re-reads the file at the next bot prep (no restart). SP_BOT_PRIOR=off disables it;
+  /healthz reports prior: { enabled, loaded, version, samples, rankCalls, applied, fallbacks }.
+- Reports: ar/training/report-YYYY-MM-DD.json; archives are pruned at 12 months or 6 GB (--months / --max-bytes).

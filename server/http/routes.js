@@ -27,7 +27,7 @@ const MAX_URL_LENGTH = 4096;
  *           views?: ReturnType<typeof import('./assetViews.js').createManifestViews> | null }} health
  * @param {boolean} [withTraffic]
  */
-export function healthReport({ startedAt, network, registry, lobby, traffic, assetIndex, views }, withTraffic = false) {
+export function healthReport({ startedAt, network, registry, lobby, traffic, assetIndex, views, prior = null }, withTraffic = false) {
   const report = {
     ok: true, version: PROTOCOL_VERSION, app: APP_VERSION, uptimeSec: Math.round((Date.now() - startedAt) / 1000),
     // the runtime the server is serving right now (public/js/ui/buildGuard.js): a page whose own build is
@@ -35,6 +35,7 @@ export function healthReport({ startedAt, network, registry, lobby, traffic, ass
     build: buildTag(),
     sockets: network.connectionCount, sessions: registry.size, ...lobby.stats(),
   };
+  if (prior) report.prior = prior;   // bot-rehearsal prior: enabled/loaded/version + its usage counters (server/match/botPrior.js)
   if (withTraffic && traffic) report.traffic = traffic.snapshot();
   // content-hashed asset URLs (assetIndex.js / assetViews.js): off, building, or ready with how many files and URLs
   if (withTraffic) report.assetHashes = assetIndex ? { ...assetIndex.stats(), views: views ? views.stats() : null } : null;

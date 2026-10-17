@@ -1271,3 +1271,17 @@ docs guards 34 pass / 0 fail.
 - 测试：`test/match/training-record.test.js` **6/6**（行构造、哈希稳定性、抽样确定性、`SP_TRAINING_SAMPLE` 解析、store 批量/计数/磁盘保护）。
 
 **P2（下一步，尚未做）**：`tools/bot-training.mjs`（导出 / 归档 / manifest）+ `tools/train-bot.mjs --auto`（夜间，子进程 `nice`）+ `server/match/botPrior.js`（mtime 热加载，按回合生效）+ `/healthz` 的 `prior` 与计数器 + cron（默认不装）。设计见与 owner 的讨论：SQLite 主存 + 月归档（6 GB 闸）、先验只用于**排序/剪枝**、绝不进 `server/sim`。
+
+### 13.8 批次 7 的 P2 — 自动训练 + 先验（2026-10-17）
+
+| 部件 | 内容 |
+|---|---|
+| `tools/bot-training.mjs` | `export`（把 14 天前的行写成 `var/training/archives/YYYY-MM.jsonl.gz`，sha256 + 行数记入 `manifest.json`，**校验后才删行**）· `prune`（12 个月 / 6 GB 上限，最旧先删）· `report` |
+| `tools/train-bot.mjs` | 读 `var/training.db` → 按 `(stage\|round)` × **布局族**（3×5 带网格签名 `planFamily`）拟合 `{n, mean}` → **按 seed 留出 1/5 对局**回测（top-1 一致率、regret）→ 达标才**原子发布** `server/match/botPrior.json`（旧的留 `.prev`）并写 `var/training/report-YYYY-MM-DD.json`；`--auto` 先跑 export/prune，**有人对局时自动跳过**（cron 4:30 + 5:30 重试） |
+| `server/match/botPrior.js` | 加载/校验（`schemaVersion`）/ **每回合 mtime 热加载**（无需重启）；`rankPlans` 只决定**哪些候选进入 `botRehearsal` 的模拟名额**，**永远保留启发式第一名**，没有数据 → 原顺序；`SP_BOT_PRIOR=off` 关闭 |
+| 接线 | `bot.js` 在 `createRehearsalSteps` 里 `reloadPrior()` + `rankPlans()`；`server/index.js` 启动时 `configurePrior`；`/healthz` 增 `prior: { enabled, loaded, version, samples, rankCalls, applied, fallbacks, lastError }` |
+| 记录器补充 | 每候选多记一个 `family`（训练键）；`SP_TRAINING=on` 才写库（默认关，测试零污染），`SP_TRAINING_SAMPLE` 默认 0.25 的备战留在服务端跑以取可信标签 |
+| 测试 | `test/match/bot-prior.test.js` **5/5**（族签名、排序规则、缺失/非法回退、`SP_BOT_PRIOR=off`）；`package` 对 `botPrior.json`（机器本地、gitignored）加豁免 |
+| 运维 | `tools/install-training-cron.sh`（幂等安装 4:30/5:30）；`.gitignore` 忽略 `botPrior.json` / `.prev`；`DEPLOY.md` 记 env 与流程 |
+
+**红线不变**：先验只参与**候选排序/剪枝**，绝不进 `server/sim`；golden 与确定性不受影响（且 rehearsal=0 的用例完全不受影响）。
