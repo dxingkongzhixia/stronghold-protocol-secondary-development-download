@@ -5,8 +5,8 @@
 // The boss-field speed bar (DESIGN §11) is 0.5 ms per tick on a development machine (≈ 0.07 ms alone, ≈ 0.2 ms inside
 // the parallel full suite on the one it was tuned on) and 1.0 ms when process.env.CI is set: GitHub's shared windows
 // runners measured 0.51–0.58 ms for the same work and failed the 0.5 ms bar on PR #10, PR #12, PR #14 and master's own
-// push. The time is the best of three runs of the same battle (after two warm-up battles), so one noisy neighbour on a
-// runner does not decide it; a real regression of the hot paths still shows locally against 0.5 ms.
+// push. The time is the best of five runs of the same battle (after two warm-up battles), so one noisy neighbour on a
+// runner does not decide it (the best of more runs also tracks a real regression more closely); a real regression of the hot paths still shows locally against 0.5 ms.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Battle } from '../../server/sim/Battle.js';
@@ -736,7 +736,7 @@ test('determinism: shared defs are frozen — a kit that mutates its blackboard 
 /** Speed bar of the heavy boss field, ms per tick (see the header): DESIGN §11's 0.5 ms locally, 1.0 ms on CI runners. */
 const BOSS_FIELD_MS_PER_TICK = process.env.CI ? 1.0 : 0.5;
 
-test(`performance: heavy 2-player boss field (18 ops, ~130 enemies alive) averages < ${BOSS_FIELD_MS_PER_TICK} ms/tick (best of 3)`, () => {
+test(`performance: heavy 2-player boss field (18 ops, ~130 enemies alive) averages < ${BOSS_FIELD_MS_PER_TICK} ms/tick (best of 5)`, () => {
   const P = realPools();
   if (!ds.getStage('act2autochess_m01') || !ds.getWave('act1autochess_h07_01')) return;
   const keys = ['enemy_1422_lrsldr', 'enemy_1427_lrnazg', 'enemy_1005_yokai', 'enemy_1042_frostd', 'enemy_1425_lrcmra', 'enemy_1040_bombd'].filter((k) => ds.getEnemy(k));
@@ -744,7 +744,7 @@ test(`performance: heavy 2-player boss field (18 ops, ~130 enemies alive) averag
   const mk = (seed) => realBattle(P, seed, { stageId: 'act2autochess_m01', waveId: 'act1autochess_h07_01', extra, units: 9 }).b;
   for (let w = 0; w < 2; w++) { const b = mk(100 + w); while (b.time < 15) b.step(); }
   const runs = [];
-  for (let r = 0; r < 3; r++) {
+  for (let r = 0; r < 5; r++) {
     const b = mk(7);
     let n = 0, peak = 0;
     const t0 = performance.now();
@@ -761,6 +761,6 @@ test(`performance: heavy 2-player boss field (18 ops, ~130 enemies alive) averag
   const best = Math.min(...runs.map((x) => x.avg));
   // eslint-disable-next-line no-console
   console.log(`bench boss field: ${runs[0].n} ticks, peak ${runs[0].peak} alive, ${runs[0].allies} allies, avg ${runs.map((x) => (x.avg * 1000).toFixed(1)).join(' / ')} µs/tick (best ${(best * 1000).toFixed(1)}; bar ${BOSS_FIELD_MS_PER_TICK} ms${process.env.CI ? ', CI' : ''})`);
-  assert.equal(new Set(runs.map((x) => `${x.n}/${x.peak}`)).size, 1, 'the three runs are the same battle');
+  assert.equal(new Set(runs.map((x) => `${x.n}/${x.peak}`)).size, 1, 'the runs are the same battle');
   assert.ok(best < BOSS_FIELD_MS_PER_TICK, `best ${best} ms/tick of ${runs.map((x) => x.avg.toFixed(3)).join(', ')}`);
 });

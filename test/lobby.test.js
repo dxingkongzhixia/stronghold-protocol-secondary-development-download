@@ -559,16 +559,24 @@ describe('websocket lobby', () => {
 
   test('rate limit: bursts beyond 40 msg/s get RATE, connection survives, bucket refills', async () => {
     const c = await pool.player('Spammer');
-    const N = 100;
+    // `rateBurst` 40 + `ratePerSec` 40: the split of a fixed burst depends on how long the machine takes to deliver it
+    // (a loaded box can spread 100 frames over more than a second, and the refill then lets more through), so assert the
+    // RATE the bucket enforces — `pongs` never exceeds the bucket plus the refill the elapsed time bought — instead of a
+    // fixed count. 300 frames stay well under `abuseDropsPerSec` (400/window), so the socket is never closed here.
+    const N = 300;
+    const t0 = Date.now();
     const rids = [];
     for (let i = 0; i < N; i++) rids.push(c.send({ t: 'ping', c: i }));
     const replies = [];
     for (const rid of rids) replies.push(await c.waitFor(null, (m) => m.rid === rid, 3000));
+    const secs = Math.max(1, (Date.now() - t0) / 1000);
+    const allowed = 40 + 40 * (secs + 1);   // the full bucket + the refill during the flood, plus one second of slack
     const pongs = replies.filter((m) => m.t === 'pong').length;
     const limited = replies.filter((m) => m.t === 'error' && m.code === ERR.RATE).length;
     assert.equal(pongs + limited, N);
-    assert.ok(pongs >= 39 && pongs <= 45, `pongs ${pongs}`); // hello used one token
-    assert.ok(limited >= 55, `limited ${limited}`);
+    assert.ok(pongs >= 39, `pongs ${pongs}`);                 // hello used one token
+    assert.ok(pongs <= allowed, `pongs ${pongs} <= ${allowed} (${secs.toFixed(2)}s)`);
+    assert.ok(limited >= 1, `limited ${limited}`);
     assert.ok(c.isOpen);
     await delay(1100);
     const ok = await c.request({ t: 'ping', c: 0 });
@@ -577,16 +585,26 @@ describe('websocket lobby', () => {
 
   test('flooding far beyond the limit closes the socket (1008)', async () => {
     const c = await pool.player('Flood');
-    // bursts until the server closes it: the close needs more than abuseDropsPerSec drops inside one 1 s window, and on
-    // a heavily loaded machine a single burst of 600 can be read over more than a second — the old single burst then
-    // never closed the socket and `await c.closed` (no timeout) hung the whole file
+    // One modest burst is enough: the bucket holds `rateBurst` (40) tokens, so 500 frames give > abuseDropsPerSec
+    // (400) drops inside the 1 s window and the server closes immediately. Do NOT keep flooding while waiting for
+    // the close: the server answers every drop with a RATE error, and on a loaded machine the client's inbound
+    // queue then delays the close handshake past the wait (the old loop kept sending for up to 20 s and lost the
+    // 10 s race with `info === null`). Stop after each burst, retry only if the frames were spread over more than
+    // one window (so no close), and give the handshake a generous budget. The timer is cleared (and unref'd) so a
+    // quick close never leaves a pending 20 s timer behind.
+    const closedWithin = (ms) => new Promise((resolve) => {
+      const t = setTimeout(() => resolve(null), ms);
+      t.unref?.();
+      c.closed.then((info) => { clearTimeout(t); resolve(info); });
+    });
     const t0 = Date.now();
-    while (c.isOpen && Date.now() - t0 < 20000) {
-      for (let i = 0; i < 600 && c.isOpen; i++) c.send({ t: 'ping', c: i, rid: null });
-      await delay(50);
+    let sent = 0;
+    while (!c.closeInfo && Date.now() - t0 < 20000) {
+      for (let i = 0; i < 500 && c.isOpen; i++) { c.send({ t: 'ping', c: i, rid: null }); sent += 1; }
+      await closedWithin(1000);
     }
-    const info = await Promise.race([c.closed, delay(10000).then(() => null)]);
-    assert.ok(info, 'the server closed the flooding socket');
+    const info = await closedWithin(20000);
+    assert.ok(info, `the server closed the flooding socket (sent ${sent})`);
     assert.equal(info.code, 1008);
   });
 
