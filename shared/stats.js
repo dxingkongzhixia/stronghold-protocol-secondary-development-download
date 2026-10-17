@@ -21,7 +21,9 @@ import {
 } from './constants.js';
 
 /** Current record-envelope version (bump + add a MIGRATIONS step when the record shape changes). */
-export const STATS_VERSION = 1;
+// v2 (PR #509): `creditedKills` — the self row's ACTUAL knock-outs (summons / traps credited to their owner); a v1 row
+// has none (the real kill total is unknown rather than guessed from the wave counter).
+export const STATS_VERSION = 2;
 /** Oldest records are dropped beyond this many matches per owner (ours = 2 × the mainline 1000). */
 export const MAX_RECORDS = STATS_MAX_RECORDS;
 /** The newest records that keep their full rows (lineups, bonds, teammates) — what the settlement replay reads. */
@@ -138,6 +140,13 @@ function normalizePlayerRow(raw, quit = false) {
     title,
     trophies: int(p.trophies, 0),
     reward: int(p.reward, 0),
+    // the ACTUAL knock-outs this player was credited with (PR #509: summons / traps credit their owner). A v1 record
+    // has none — absent, never guessed from the wave counter.
+    ...(Number.isInteger(p.creditedKills) && p.creditedKills >= 0 && p.creditedKills <= 1e9 ? { creditedKills: p.creditedKills } : {}),
+    // a compacted row names the bonds it used (PR #509: the peak-bond record is found after compaction)
+    ...(Array.isArray(p.usedBondIds)
+      ? { usedBondIds: p.usedBondIds.filter((id) => typeof id === 'string' && id.length).slice(0, MAX_BONDS).map((id) => id.slice(0, 64)) }
+      : {}),
     lineup,
     bonds,
     stats: normalizeStatBlock(p.stats),
@@ -193,7 +202,11 @@ export function normalizeRecord(raw) {
  * imported envelope walks the whole chain.
  * @type {Record<number, (stats: any) => any>}
  */
-export const MIGRATIONS = {};
+export const MIGRATIONS = {
+  // v1 → v2 (PR #509): a v1 row has no `creditedKills` — the real knock-out total is unknown, not the wave counter —
+  // and nothing else changes. Bumping the version keeps an older build from stripping what a newer one writes.
+  1: (stats) => ({ v: 2, records: (Array.isArray(stats.records) ? stats.records : []).map((r) => (isObj(r) ? { ...r } : r)) }),
+};
 
 /** Newest first (the stored order): by time, then id. */
 export const newestFirst = (a, b) => (b.t - a.t) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
@@ -244,14 +257,42 @@ const COMPACT_FRAME = ['id', 'v', 't', 'end', 'victory', 'roundsPassed', 'lastRo
  */
 export function compactRecord(rec) {
   const self = selfRowOf(rec);
+  // PR #509: the peak (highest active bond layers) record keeps its full rows, and a compacted row still names the
+  // bonds it used so the peak can be found after compaction.
+  const usedBondIds = (Array.isArray(self?.usedBondIds)
+    ? self.usedBondIds
+    : (Array.isArray(self?.bonds) ? self.bonds : []).filter((b) => b && b.active === true).map((b) => b.bondId))
+    .filter((id) => typeof id === 'string' && id.length).map((id) => id.slice(0, 64)).slice(0, MAX_BONDS);
   const out = {};
   for (const k of COMPACT_FRAME) if (rec[k] != null) out[k] = rec[k];
   out.compact = true;
   out.players = self ? [{
     playerId: self.playerId, seat: self.seat, alive: self.alive, victory: self.victory, roundsPassed: self.roundsPassed,
     eliminatedRound: self.eliminatedRound, bandId: self.bandId, title: self.title, left: self.left, stats: self.stats,
+    ...(self.creditedKills != null ? { creditedKills: self.creditedKills } : {}),
+    ...(usedBondIds.length ? { usedBondIds } : {}),
   }] : [];
   return out;
+}
+
+/**
+ * The id of the record whose self row has the highest ACTIVE bond layers (PR #509): `fitToBudget` keeps that one's full
+ * rows past the FULL_KEEP window, so the peak lineup and equipment survive compaction.
+ * @param {any[]} records
+ * @returns {string|null}
+ */
+function peakBondId(records) {
+  let bestId = null;
+  let best = 0;
+  for (const rec of records) {
+    if (!rec || rec.end === 'quit' || rec.compact) continue;
+    const self = selfRowOf(rec);
+    for (const b of self?.bonds || []) {
+      if (!b || !b.active || !Number.isFinite(b.layers) || b.layers <= 0) continue;
+      if (b.layers > best) { best = b.layers; bestId = rec.id; }
+    }
+  }
+  return bestId;
 }
 
 /**
@@ -264,8 +305,9 @@ export function compactRecord(rec) {
 export function fitToBudget(records, maxChars = MAX_CHARS) {
   const kept = [];
   let used = 40; // the envelope itself
+  const peakId = peakBondId(records.slice(0, MAX_RECORDS));
   records.slice(0, MAX_RECORDS).forEach((r, i) => {
-    const rec = i < FULL_KEEP ? r : compactRecord(r);
+    const rec = i < FULL_KEEP || r.id === peakId ? r : compactRecord(r);
     const n = JSON.stringify(rec).length + 1;
     if (kept.length && used + n > maxChars) return;
     used += n;
@@ -497,9 +539,20 @@ export function aggregateStats(records) {
     hidden: { reached: 0, cleared: 0 },
     byDifficulty: {}, byMode: { solo: 0, coop: 0 },
     titles: {}, bands: {}, sums: {},
+    // single-match maxima of the SELF row (PR #509): the highest funds / promotions / ACTUAL kills in one match —
+    // `kills` is the credited knock-outs, not the wave-owned cumulative counter (`sums.kills`), and null when a record
+    // never knew them (a migrated v1 row).
+    maxima: { gold: null, merges: null, kills: null },
   };
   for (const rec of rs) {
     const self = selfRowOf(rec);
+    // a quit record is partial data: it may count as a game, but it never sets a whole-match maximum (PR #509)
+    if (rec.end !== 'quit') {
+      const values = { gold: self?.stats?.gold, merges: self?.stats?.merges, kills: self?.creditedKills };
+      for (const [key, value] of Object.entries(values)) {
+        if (Number.isFinite(value) && value >= 0) out.maxima[key] = Math.max(out.maxima[key] ?? 0, value);
+      }
+    }
     const won = selfWon(rec, self);
     if (won) out.wins++;
     const rounds = roundsOf(rec);

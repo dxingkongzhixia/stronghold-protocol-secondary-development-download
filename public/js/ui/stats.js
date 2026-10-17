@@ -38,7 +38,7 @@
 import { PHASE } from '../../../shared/constants.js';
 import {
   STATS_VERSION, emptyStats, normalizeRecord, migrateStats, fitToBudget, appendRecord, buildRecord,
-  roomModeOf, str, num, int, isObj, fnv1a,
+  roomModeOf, str, num, int, isObj, fnv1a, selfRowOf, newestFirst, countsTowardStats, roundsOf,
 } from '../../../shared/stats.js';
 
 // The shared schema + pure logic, re-exported unchanged: the stats screens and the unit tests import them from here.
@@ -246,4 +246,61 @@ export function recordQuit(state, ctx = {}) {
   const rec = storeRecord(buildQuitRecord(state, ctx));
   live.active = false; // one record per match
   return rec;
+}
+
+
+// A record counts as WON for the self row (a quit carries no victory; a settled one does).
+const selfWon = (rec, self) => (self ? !!self.victory : !!(rec && rec.victory));
+
+// ---- PR #509 view model (stats page redesign): pure aggregates over the normalized records ----------------------
+// Ported from upstream `946f9fb8` (tools: none; they read the shared schema this module already re-exports).
+export function highestBondRecord(records) {
+  let best = null;
+  for (const record of records) {
+    if (record.end === 'quit' || record.compact) continue;
+    const player = selfRowOf(record);
+    for (const bond of player?.bonds || []) {
+      if (!bond.active || !Number.isFinite(bond.layers) || bond.layers <= 0) continue;
+      if (!best || bond.layers > best.bond.layers) best = { record, player, bond };
+    }
+  }
+  return best;
+}
+
+function usedBondIdsOf(player) {
+  const ids = Array.isArray(player?.usedBondIds) ? player.usedBondIds
+    : (Array.isArray(player?.bonds) ? player.bonds : []).filter((b) => b?.active === true).map((b) => b.bondId);
+  return [...new Set(ids.filter((id) => typeof id === 'string' && id.length).map((id) => id.slice(0, 64)))].slice(0, MAX_BONDS);
+}
+
+export function strategyBadgeIds(records, bands) {
+  const clears = new Map();
+  for (const rec of Array.isArray(records) ? records : []) {
+    if (!rec || rec.end === 'quit' || rec.difficulty === 'TRAINING' || rec.modeId === 'mode_training_1') continue;
+    const self = selfRowOf(rec);
+    if (!self?.bandId || !selfWon(rec, self)) continue;
+    clears.set(self.bandId, (clears.get(self.bandId) || 0) + 1);
+  }
+  return Object.values(bands || {}).filter((band) => Number.isInteger(band.victorCount) && band.victorCount > 0
+    && (clears.get(band.bandId) || 0) >= band.victorCount)
+    .sort((a, b) => (a.sortId || 0) - (b.sortId || 0) || a.bandId.localeCompare(b.bandId))
+    .map((band) => band.bandId);
+}
+
+export function trophyMedalOf(total, medals) {
+  const count = Number.isFinite(total) ? Math.max(0, total) : 0;
+  return (Array.isArray(medals) ? medals : []).reduce((best, medal) =>
+    Number.isFinite(medal?.count) && medal.count >= 0 && medal.count <= count && (!best || medal.count > best.count) ? medal : best, null);
+}
+
+export function bondMemberChess(chess, bondId) {
+  if (!bondId) return [];
+  const seen = new Set();
+  return (Array.isArray(chess) ? chess : []).filter((c) => {
+    if (!c || c.isGolden || c.isHidden || c.isDiy || c.visible === false || !c.bonds?.includes(bondId)) return false;
+    const key = `${c.charId}#${c.tier}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).sort((a, b) => a.tier - b.tier || (a.shopSortId || 0) - (b.shopSortId || 0) || a.chessId.localeCompare(b.chessId));
 }
