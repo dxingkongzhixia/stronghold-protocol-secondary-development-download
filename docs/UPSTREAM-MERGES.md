@@ -47,8 +47,9 @@ Conventions used below:
 - 10. 0.2.5 — the 驭械术师 funnel/drone hit fixes (upstream `e0f37718` / `a451ddcf`, ported) (2026-10-12)
 - 11. v0.2.6 — the **whole-branch** merge (2026-10-14)
 - 12. How to add the next batch to this log
-- 12. v0.3.0 分批并入计划
+- 12.1 v0.3.0 分批并入计划（2026-10-16 起，进行中）
 - 官方特效：待修清单（2026-10-16 夜，owner 报障 → 交下一会话）
+- 13. v0.3.0 / v0.3.1 续并准备（2026-10-17）
 
 ## 0. 永不合并 — the never-merge list
 
@@ -1088,3 +1089,65 @@ docs guards 34 pass / 0 fail.
 
 1. **部分 hunk = 线上事故** ✗：并上游文件时只应用了一半（带了用它的行、丢了声明它的行 ✗）→ ES 模块严格模式直接抛错 ✗ → 整站挂掉 ✓。**任何并进来的 `public/js` 文件都要过 `npm run ci`** ✓。
 2. **改 sim/com 之前先量、改完跑全量** ✓：`test/sim` 全量 + golden 先归因（只退自己的改动 → 零漂移 ✓）再单独重算 ✓。
+
+---
+
+## 13. v0.3.0 / v0.3.1 续并准备（2026-10-17）
+
+> **状态：准备完成，尚未开始并入。** 本节记录基线、缺口盘点、批次顺序与验收线；并入时在下面逐批补结果（格式同 §11）。
+
+**基线与目标**
+
+| 项 | 值 |
+|---|---|
+| 我们的 `ours`（起点） | `9fa6629a`（比上游基线多 **483** 个提交） |
+| 上次折叠的上游基线 | `488db49f` = v0.2.6（§11） |
+| 本次拉到的上游 tip | **`6ab24682`**（`v0.3.0` tag + `0.3.1` 的 CI 修复） |
+| 规模 | **406 个上游提交 / 813 个文件**；`git merge-tree --write-tree` 试合并 → **122 个冲突文件**；`check-upstream` 的 §0 命中 **20 处** |
+
+**主题盘点（406 个提交按主题）**
+
+| 主题 | 数量 | 处置 |
+|---|---|---|
+| 插件系统 / 工作台（`plugins/`、`server/studio/`、`public/studio/`、`shared/plugins/*`、DSL） | 116 | **不并**（§12 B3；owner 2026-10-16：服务器不需要）。并后核对这三块目录仍为 **0 文件** |
+| vfx / 官方特效 | 57 | 多数已手植（「官方特效：待修清单」§0）；只对**增量**逐条核，见下方验收线 |
+| 社区 PR 合并（`0.3.0: merge PR #…`） | 42 | **主体**，按 P1–P4 分批 |
+| tests / fix / feat / CI / docs | 80 | 跟随所属批次；纯 CI 的 5 条按需（我们的测试与上游已分叉） |
+| other（版本收尾、CHANGELOG、round 44/46 整合） | 111 | 逐条看；**整合提交必须拆**成单项再挑 |
+
+**候选批次（每一项都要先核「我们是否已有」）**
+
+- **P1 界面 / 操作**（风险最低、离 §0 最远，先做）：`#629` 悬停热键（Q/X 作用于悬停单位、W 买悬停商品）· `#630` 备战席溢出（15 格之外隐藏排队）· `#646` 部署折叠（拿起棋子折叠镜头 + 方向指示）· `#637` 单独联防助战单位的镜头 · `#618` 作战统计（opt-in，默认关）· `#622` 主浏览器机器人排练（opt-in）
+- **P2 画面**：`#640` 闸门方块（官方 Particles shader；脉冲用 clip 自己的曲线）· `#636`/`#633` 秘术师能量条（**已并入** `c983ce7d`）· 其余 vfx 增量逐条对照「待修清单」§0
+- **P3 规则 / 模拟**（golden 变动单独提交）：§12 B1 的剩余条目 —— 枯朽之种自毁改弹道 `a93a5d16`、攻击追击 `9f228439`、维多利亚 25 层 `16567bbe`、伊利昂木驮兽 `18cb28fe`/`d19dd600`、风丸替身对空 `e54ac351`、假想敌镜膜 `1a701241`。已落地的不再动；未落地的单独 cherry-pick
+- **P4 服务端 / HTTP**（放最后）：`#649` HEAD 忽略 Range（RFC 9110）· `#654` assets-env-proxy 测试接受 Node 26 的 absolute-form
+- **不并**：§0 的 20 处命中全部；英语 / 韩语 / 本土配音；道具库存池 + 欠账模型；`public/js/render/board3d/**`（整块归我们）；统计页改版；素材下载 / 导入包（与我们的中继 + SW 链重叠 —— 只挑「标题页全素材下载」里与我们的链**兼容**的那一半）
+
+**「术士特效必须从法杖发射」——本次合并的硬验收线（owner 2026-10-17 重申）**
+
+记录见「官方特效：待修清单」§0：真因是 **`SpineActor.strikePose()` 缺失**（`boneOffset` 读「出手帧」恒为 `null`）+ dev 查看器不画模型；修好后 B1 的 33 名术士 / 狙击逐人实测，弹道首帧落在 `MUZZLE` / `SPECIAL_n` **0.03–0.71 格**内（多数 ≤0.36），无「半空生成」。
+
+合并时以下文件的**上游 hunk 一律先看我们的实现**，不许整块覆盖：
+
+| 文件 | 必须保留的东西 |
+|---|---|
+| `public/js/render/spine.js` | `SpineActor.strikePose()`（`mode === 'attack'` → 当前攻击剪影的出手帧） |
+| `public/js/render/vfx/wiring.js` | `_fly` 的 mount 点（`MUZZLE` / `SPECIAL_n` / `follow`）、`comeBack === 1` 的回程、`_casts` 的 strike 施法点 |
+| `public/js/render/vfx/talents.js` | `LOOP_BUFF_BOUND`（循环跟着 sim 的 buff 起落） |
+| `public/js/render/units.js` | `boneOffset` 经 `strikePose()` 取出手帧 |
+| `public/js/render/app.js` | `NO_SPARK`（官方已画打击时不再叠自研火光 / 斩击） |
+| `public/js/render/fx/**` | 程序化 + 官方两层分工；`hits.js` / `FX_HITS` 与自研 `local.byOp` 层**不得回来** |
+
+每批并入后跑：`node --test test/render/vfx-*.test.js test/render/fx-local.test.js`，并用 `dev/fx-viewer.html?attack=char_377_gdglow&model=1` 手看术士普攻**从法杖出**（`&model=0` 关闭，headless 套件用它）。
+
+**方法**（同 §12）：基于 `ours` 建 `merge-031` 分支 → 逐条 `git cherry-pick`（merge 提交 `-m 1`）→ 冲突**两边都保留**逐块解（**绝不** `--ours/--theirs`）→ 每批 `node --test` 全量 + `node tools/build-data.mjs --offline`（零漂移）→ golden 变动**单独一个提交** → 每批 `git push`（美术没动就跳过中继）→ 批前批后 `node tools/check-upstream.mjs`。
+
+**每批验收线**
+
+- 全量 `node --test` 绿（当前基线：**7078 / 7064 通过 / 0 失败 / 14 跳过**）
+- §0 自检全空（`docs/OUR-FEATURES.md` §5 的命令逐条跑）
+- 默认值不回归：`POTENTIAL_DEFAULT = POTENTIAL_MIN`、`CULTIVATE_DEFAULT = 0`、`data/tuning.json` 的 `boost` 三处仍在
+- 数据可复现：`node tools/build-data.mjs --offline` **零差异**
+- 术士 / 狙击弹道「从法杖出」验收线（上一节）
+
+**下一步**：P1 → P3 → P2 → P4。
