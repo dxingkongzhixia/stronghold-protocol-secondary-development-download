@@ -1183,3 +1183,22 @@ docs guards 34 pass / 0 fail.
 **验收**：全量 `node --test` **7094 / 7080 通过 / 0 失败 / 14 跳过** ✓；`npm run typecheck` 无错 ✓；`npx eslint` 0 error ✓；`i18n check en --strict` 100 % ✓。README 的套件计数随注册用例 → 6740。
 
 > **踩坑留档**：这次一开始只取了 `public/js`，撤掉了同提交里的 `test/render/{playtest5-maps,fieldview.browser}.test.js` 等**与代码配套的视图测试** → 三条 blower 用例立刻变红（视图签名/行归属变了）。**合并上游 UI 提交时，配套测试要和代码同批取**，不能只挑 `public/js`。
+
+### 13.3 批次 3 + 盘点（2026-10-17）
+
+**已并**（代码与测试同批；golden 单独提交）：
+
+| 上游 | 内容 | 备注 |
+|---|---|---|
+| `#615` (`e5d3a25d`) | 公开状态（public-state）的间隔从**真正广播的那一刻**起算，而不是从调用开始 | `server/match/match/messaging.js` 3 行 + `test/match/connection.test.js` |
+| `#614` (`dbcc64f5`) | 突袭的落点窗口按**敌人身体**判定，而不是按位置取整后的格子（假想敌：镜膜的 hitArea dx 1 时，对手半场第 12 列的落点会丢） | `server/sim/content/bonds/addon/battle.js` + 新 `test/sim/raid-body-window.test.js`；**golden 变了 1 个场景 → 已归因**（只退这一处 → 语料零差异）→ `715a5d72` 单独重算 |
+
+**已跳过 / 押后**（记档）：
+
+- `#618` 作战统计 —— **早就有**（`f29a41ee`「B1.2: the local combat meter」，含 `battle/metrics.js`、`ui/combatMetrics*.js`、`combatMetrics` 设置项）。误应用后已 `reset --hard` 撤销。
+- `#622` 宿主浏览器代为彩排（`SP_BOT_REHEARSAL=host`）—— **押后**：默认关的实验特性，要动**线上协议**（`shared/protocol.js` +16）、重写 `server/match/bot.js`（184 行）、并依赖我们没有的 `public/js/battle/simLoader.js`。等真的需要把机器人彩排移出服务器时再单独做。
+- 插件系统 / 工作台（119 个提交）—— §12 B3 不并。
+- 统计页改版（约 150 个「other」提交，来自另一份 fork：称号 / 六边形 / 最常用策略…）—— 与我们**服务端统计**重叠（§40、MATCHMAKING §2），不整块并；只按需挑单项。
+- vfx 增量（62 个提交）—— 主体已手植（「官方特效」§0）；**round 46 的审计修复**（`e92880c0` fix-hits 的 `wiring.js` +255、`4d10df08` fix-plans、`aa1c847c` 固定旋转挂点）**还没并**，因为直击我们的法杖挂点代码 → 单独一批、逐 hunk 做，并跑法杖验收线。
+
+**剩余候选**（下一批）：round 46 vfx 审计修复（`wiring.js` / `skillfx.js` / `skills.js` / `mounts.js`）、`#647` 闭眼贴图（region eyeballs）、`#640` 闸门方块、`#630` 备战席溢出（§0 相邻）、`#628` 标题页全素材下载（与我们的链只挑兼容的一半）。
