@@ -1285,3 +1285,18 @@ docs guards 34 pass / 0 fail.
 | 运维 | `tools/install-training-cron.sh`（幂等安装 4:30/5:30）；`.gitignore` 忽略 `botPrior.json` / `.prev`；`DEPLOY.md` 记 env 与流程 |
 
 **红线不变**：先验只参与**候选排序/剪枝**，绝不进 `server/sim`；golden 与确定性不受影响（且 rehearsal=0 的用例完全不受影响）。
+
+### 13.9 批次 8 — 统计页改版（PR #509，2026-10-17）
+
+| 层 | 内容 |
+|---|---|
+| 数据 | 击杀归属 `creditedKills`：召唤物/陷阱的击倒记在主人头上（`sim/battle/lifecycle` → `spec.creditedKillsOf` → `match/settle` + `bossRounds` → `PlayerState` → `match/results` → 记录），**不进** `resultDigest`；golden 中立 |
+| schema **v2** | 每行 `creditedKills`（0…1e9 的整数，否则丢弃）、`STATS_VERSION = 2` + `MIGRATIONS[1]`（老记录**不猜**击杀）；`aggregateStats.maxima`（资金 / 晋升 / **实际击杀**，**quit 局不参与**）；`fitToBudget` 对**激活盟约层数最高**的一局不压缩（保留阵容与装备），压缩行留 `usedBondIds`（幂等） |
+| 视图模型 | `ui/stats.js`：`highestBondRecord` / `usedBondIdsOf` / `strategyBadgeIds` / `trophyMedalOf` / `bondMemberChess`（纯函数，读共享 schema） |
+| 页面 | `screens/stats.js`：`Section` / `Overview`（Dr. 代号、奖杯、独立/联合四指标、六边形称号、`BondAchievement` 峰值盟约、`MatchRecords` 单局纪录、成就干员）/ `Bands` 增最常用盟约与策略徽章 / `History` 的 `statsBodyState` 原样保留（仍读服务器）；`title.js` 的奖杯展示移到统计页 |
+| 新模块 | `ui/playerName.js`（`sanitizeName` / `isValidName` / `stripLoneSurrogates`，标题页与导入共用）、`ui/titleHexagon.js`（20 扇区六边形） |
+| 素材 | 页面会读官方页面素材（`statistics/fontStyles`、`titleMask`、`countGlow`、`headingBar`）；**没有就按我们的样式降级**（未接 `web.hycdn.cn` 模板） |
+| 弃用 | 插件时代的 `ModdedSwitch`（modded 记录本分支没有）；`#628` 仍黑名单 |
+| i18n | 26 条 msgid × 4 语言包（取自上游同一提交） |
+| 测试 | 上游 4 套件（`bond-achievement` / `bond-members` / `strategy-badges` / `match-records`）**8/8**；`test/ui/stats` 等 52/52；全量 **7182 / 7167 / 0 / 15** |
+
