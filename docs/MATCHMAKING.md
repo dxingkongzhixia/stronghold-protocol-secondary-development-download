@@ -1650,7 +1650,7 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 | 位置 | 改动 |
 |---|---|
 | `shared/constants.js` | `REVIVE = { DONATE: 1, NEED: 1, MAX: 2, FLOOR: 5, PER_TARGET: 1 }` |
-| `server/match/player/round.js` | `down(round)`（冻结，不清理）、`revive()`（回场，`lp = pool`）、`eliminate()` 顺带清 `downed/revivePool/reviveNeed` |
+| `server/match/player/round.js` | `down(round)`（冻结，不清理）、`revive()`（回场，`lp = 池子`，即 1）、`eliminate()` 顺带清 `downed/revivePool/reviveNeed/reviveGivers` |
 | `server/match/match/settle.js` | `_canDown(ps)` + `lp <= 0` 时 down / eliminate 二选一；ticker「…等待队友救援」 |
 | `server/match/match/intents.js` | `g.shareHp { target }` → `Match.shareHp`：校验阶段 / 存活 / 同房间 / 池子未满 / 地板 → 转账 + 满池即复活 + toast/ticker |
 | `shared/protocol.js` | 新消息 `g.shareHp`；`m.public.players[]` 与 `m.private` 增 `downed / revivePool / reviveNeed / revivesUsed` |
@@ -1661,13 +1661,13 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 
 ### 50.3 客户端
 
-- `ui/teamPanel.js`：倒下队友那一行显示 `已筹/所需` 与「**分血 −4**」按钮；非备战期 / 自己低于地板 / 池子已满时禁用并带原因 tooltip；`screens/game.js` 的 `shareHp` 发 `g.shareHp`。
-- `screens/game.js` + `css/screens/game.css`：倒下的人看到「**你已被击倒 · 队友可分血救援 `4/8`**」的琥珀色横幅（替代「你已被淘汰」），复活后横幅消失、棋盘原样回来。
-- i18n：13 条 msgid ×4（en 100 %）。
+- `ui/teamPanel.js`：倒下队友那一行显示 `已筹/所需` 与「**分血 −1**」按钮；非备战期 / 自己低于地板 / 池子已满时禁用并带原因 tooltip；`screens/game.js` 的 `shareHp` 发 `g.shareHp`。
+- `screens/game.js` + `css/screens/game.css`：倒下的人看到「**你已被击倒 · 队友可分血救援 `0/1`**」的琥珀色横幅（替代「你已被淘汰」），复活后横幅消失、棋盘原样回来。
+- i18n：新增 msgid 全部进 4 个语言包（en 100 %）。
 
 ### 50.4 测试
 
-- `test/match/revive.test.js`（11 条）：击倒而非出局（棋盘保留、公开视图 `downed`）、分血 → 满池复活（LP = 支付额、收到 `m.private`）、地板 / 溢出 / 错误目标 / 错误阶段、第二次同样 1 点、第三次永久出局、单人 & 无真人队友不击倒、最终攻势后拒绝、双倒全灭结束。
+- `test/match/revive.test.js`（11 条）：击倒而非出局（棋盘保留、公开视图 `downed`）、分血 1 点 → 当场复活（LP = 1、收到 `m.private`）、地板 / 溢出 / 错误目标 / 错误阶段、第二次同样 1 点、第三次永久出局、单人 & 无真人队友不击倒、最终攻势后拒绝、双倒全灭结束。
 - `test/match/combat.test.js` 的淘汰用例改写为「downed 保棋盘 + 全灭仍结束」；`feedback3-gift.test.js` 的信标 gift 用例：**倒下的发送者**的信标仍会送达（`dispatchEliminated` 覆盖 `!alive`）；`fuzz.test.js` 的随机意图补 `g.shareHp`。
 
 ### 50.5 自检（合并时必须活过）
@@ -1675,7 +1675,7 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 ```powershell
 grep -n "REVIVE" shared/constants.js server/match/match/settle.js server/match/match/intents.js   # 三处都在
 grep -n "downed" server/match/player/round.js server/match/match/settle.js server/match/match/views.js
-node --test test/match/revive.test.js                                                             # 7/7
+node --test test/match/revive.test.js                                                             # 11/11
 ```
 
 **红线**：AI 永不参与（golden 中立）；分血只能在备战期；最终攻势后不可复活；分血者的 LP 永不低于 5。
