@@ -141,6 +141,8 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | is there new upstream work, and what will it conflict with | `node tools/check-upstream.mjs` (`npm run check:upstream`), [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 |
 | release packaging | `tools/package.mjs`, `docs/WINDOWS.md` |
 
+- **A match that does not end** (no enemies, a phase that hangs): `/admin/api/state` lists each room's `phase / round / deadline / fields[{ mode, done, authority }]`; a silent client field is taken over after `FIELD_SILENCE_MS` (12 s) — [`docs/META.md`](META.md) §1.3b, `server/match/match/clientCombat.js`.
+
 ## 11. Ops: publish, deploy, backups
 
 | subject | doc |

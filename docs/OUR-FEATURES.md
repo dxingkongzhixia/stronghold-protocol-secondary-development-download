@@ -509,6 +509,7 @@ changes still get a notice first.
 | Decisions | the §22 blacklist; the traits/rules in §5 (see `docs/MATCHMAKING.md` §22–§37) |
 | Publishing | `tools/push-gitee.mjs`; the notice-first deploy order |
 | Statistics page (record v2 + the official template) | `shared/stats.js` (`STATS_VERSION = 2`, `creditedKills`, `maxima`, peak-bond retention), `public/js/screens/stats.js` + `ui/stats.js`, `public/assets/ui/statistics/` (37 files), `data/assets.json` (`ui['statistics/*']`), `tools/fetch-stats-assets.mjs`; see `docs/UPSTREAM-MERGES.md` §13.9 |
+| Field-silence watchdog (client combat) | `server/match/match/clientCombat.js` (`_armFieldWatch` / `_checkFieldSilence`, `FIELD_WATCH_MS`), `server/match/fields.js` (`FIELD_SILENCE_MS`), the `phase/round/fields` rows of `server/admin.js`; see `docs/META.md` §1.3b — a merge of upstream's client-combat code must keep the 12 s takeover |
 | 分血救援 (revive) | `shared/constants.js` `REVIVE`; `server/match/player/round.js` `down`/`revive`; `server/match/match/{settle,intents}.js`; the `downed/revive*` view fields; `test/match/revive.test.js` (see `docs/MATCHMAKING.md` §50) |
 
 Honour the blacklist, run the full `node --test` in the store, and only then mirror back to the working project.

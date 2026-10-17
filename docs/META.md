@@ -220,6 +220,18 @@ always. While paused (`m.public.paused`) the field clocks, the authority deadlin
 fields' `startAt` / `lastProgressAt` and the boss start by the paused time and re-arms the timers. A disconnect or
 `onLeave` resumes; the battle phase ending clears it (`pausedMs` totals the paused time).
 
+### 1.3b Field-silence watchdog (2026-10-18)
+A normal / 联防 client field is reported by its browser (`b.progress` / `b.result`); the old safety net was the wave
+deadline only (`startAt + timeLimit / gameSpeed + RESULT_GRACE_MS`, then a server takeover). A browser that went quiet —
+a frozen tab, a battle that never finishes, a lost `b.result` — left the phase waiting. `MatchClientCombat` now runs a
+watchdog every `FIELD_WATCH_MS` (4 s): a normal / 联防 field with no report for `FIELD_SILENCE_MS` (12 s,
+`server/match/fields.js`) is handed to the server (`_runOnServer(field, 'silent')`, logged as
+`silent client for N s — server takeover`) and settles like any other takeover. Fields whose result is already in hand
+(`verifyJob`, `heldResult`, `result != null`) are left alone, boss / hidden fields keep their own `BOSS_SILENCE_MS`
+watchdog, and a paused solo match is skipped (`_resume` shifts the clocks). For diagnosis `/admin/api/state` now lists,
+per room, `phase`, `round`, `deadline` and `fields[{ id, kind, mode, done, authority }]` — a stuck match is visible
+without a restart.
+
 ### 1.4 Watching fields
 Client-side combat (the default, DESIGN §14 Spectating; `Match._watchClient`): `g.watch` answers with the field's
 `b.start` (a display replica fast-forwarded to the field clock); an alive player may not watch another normal field
