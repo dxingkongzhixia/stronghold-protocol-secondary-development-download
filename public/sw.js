@@ -14,6 +14,31 @@ const CACHE = 'sp-assets';
 const PREFIXES = ['/assets/', '/fonts/', '/vendor/'];
 const MIRROR_TIMEOUT_MS = 15000;
 
+/**
+ * The mirrors do not always label bytes correctly: raw.githubusercontent serves `.css` / atlas text as `text/plain`,
+ * and a browser refuses a stylesheet with a non-CSS type (the official statistics page loads `fonts.css` that way).
+ * The extension is authoritative here, so a synthesized mirror response is relabelled from it.
+ */
+const MIME = Object.freeze({
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml; charset=utf-8',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+  '.otf': 'font/otf',
+  '.ttf': 'font/ttf',
+  '.atlas': 'text/plain; charset=utf-8',
+  '.skel': 'application/octet-stream',
+});
+
+/** @param {string} pathname */
+function typeOf(pathname) {
+  const dot = pathname.lastIndexOf('.');
+  return dot < 0 ? '' : MIME[pathname.slice(dot).toLowerCase()] || '';
+}
+
 // A player's own machine ('' when none): the page points us here when it runs the same app/revision.
 let localBase = '';
 // The server's asset index (sources + per-file sizes), fetched lazily on the first miss and dropped when the page
@@ -92,7 +117,10 @@ async function handle(req, url) {
       if (!r || !r.ok) continue;
       const buf = await r.arrayBuffer();
       if (want != null && buf.byteLength !== want) continue; // wrong / a lagging mirror ref → next source
-      const res = new Response(buf, { status: 200, headers: r.headers });
+      const headers = new Headers(r.headers);
+      const type = typeOf(plainPath);
+      if (type) headers.set('Content-Type', type);
+      const res = new Response(buf, { status: 200, headers });
       try { await cache.put(req, res.clone()); } catch { /* over quota: keep serving */ }
       return res;
     } catch { /* timeout / CORS / offline: next source */ }

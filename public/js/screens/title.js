@@ -50,7 +50,9 @@ function AccountBox({ name }) {
   </div>`;
 }
 
-export { stripLoneSurrogates, sanitizeName, isValidName } from '../ui/playerName.js';
+import { stripLoneSurrogates, sanitizeName, isValidName } from '../ui/playerName.js';
+
+export { stripLoneSurrogates, sanitizeName, isValidName };
 
 /**
  * Enter the game shell with a nickname (title → lobby).
@@ -214,7 +216,11 @@ export function TitleScreen() {
   const pendingJoin = useStore((s) => s.ui.pendingJoin);
   const auth = useStore((s) => s.auth, shallowEqual);
   useLang(); // re-render on a language switch
+  // Prefill only a previously entered callsign — never the provisional hello name (which is a placeholder).
+  const currentName = useStore((s) => s.me.name);
   const [name, setName] = useState(() => currentName || identity.loadName() || '');
+  // 博士代号 = the account name: keep the field in sync once logged in (and fill it after a login).
+  useEffect(() => { if (auth?.account?.name) setName(auth.account.name); }, [auth?.account?.id]);
   // An import may restore the current name while this screen remains behind the stats overlay.
   useEffect(() => {
     if (currentName) setName((draft) => draft || currentName);

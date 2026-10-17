@@ -27,7 +27,6 @@ import { fmtNum, diyRecordFor, cardStandIn } from '../ui/gameLogic.js';
 import { useDocClass } from '../ui/device.js';
 import { store, createStore, useStore, selectRoute, setOnlineOpen, consumeOnlineStatsReturn, setOnlineStatsReturn } from '../store.js';
 import { uiUrl, chessAvatarUrl, chessPortraitUrl, itemIconUrl } from '../ui/assetUrls.js';
-import { identity } from '../net.js';
 import { TITLE_HEX_SECTORS, titleSectorClip } from '../ui/titleHexagon.js';
 import { ResultView } from './result.js';
 import { toast, toastError } from '../ui/toasts.js';
@@ -581,7 +580,7 @@ function StatsScreen({ tab, view }) {
     if (file.size > IMPORT_MAX_CHARS) { toast(t('文件过大，无法导入'), 'error'); return; }
     try {
       const raw = JSON.parse(await readFileText(file));
-      const { stats: merged, added, skipped, dropped, name } = importStats(raw, loadStats());
+      const { stats: merged, added, skipped, dropped } = importStats(raw, loadStats());
       if (added && !saveStats(merged)) { toast(t('无法写入本机存储，可能已满'), 'error'); return; }
       if (added) void flushStats(net); // the imported matches are submitted like any other (deduped server-side)
       reload();

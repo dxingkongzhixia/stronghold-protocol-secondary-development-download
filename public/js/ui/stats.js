@@ -38,7 +38,7 @@
 import { PHASE } from '../../../shared/constants.js';
 import {
   STATS_VERSION, emptyStats, normalizeRecord, migrateStats, fitToBudget, appendRecord, buildRecord,
-  roomModeOf, str, num, int, isObj, fnv1a, selfRowOf, newestFirst, countsTowardStats, roundsOf,
+  roomModeOf, str, num, int, isObj, fnv1a, selfRowOf, MAX_BONDS,
 } from '../../../shared/stats.js';
 
 // The shared schema + pure logic, re-exported unchanged: the stats screens and the unit tests import them from here.
@@ -267,7 +267,7 @@ export function highestBondRecord(records) {
   return best;
 }
 
-function usedBondIdsOf(player) {
+export function usedBondIdsOf(player) {
   const ids = Array.isArray(player?.usedBondIds) ? player.usedBondIds
     : (Array.isArray(player?.bonds) ? player.bonds : []).filter((b) => b?.active === true).map((b) => b.bondId);
   return [...new Set(ids.filter((id) => typeof id === 'string' && id.length).map((id) => id.slice(0, 64)))].slice(0, MAX_BONDS);

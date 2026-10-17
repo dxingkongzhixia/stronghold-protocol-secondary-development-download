@@ -47,7 +47,7 @@ export const str = (v, max = 64) => (typeof v === 'string' && v.length ? v.slice
 const MAX_PLAYERS = 6; // the game seats 4
 const MAX_LINEUP = 12;
 const MAX_ITEMS = 4;
-const MAX_BONDS = 24;
+export const MAX_BONDS = 24;
 const MAX_STAT_KEYS = 24;
 const MAX_NAME = 24;
 

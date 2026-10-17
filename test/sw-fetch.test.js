@@ -40,7 +40,8 @@ function boot({ index = null, cached = null, respond = () => ({ ok: true }) } = 
       clients: { claim() {} },
     },
     caches: { open: async () => cache, delete: async () => true },
-    Response: class { constructor(buf) { this.buf = buf; this.status = 200; this.ok = true; } clone() { return this; } },
+    Response: class { constructor(buf, init = {}) { this.buf = buf; this.status = init.status ?? 200; this.ok = true; this.headers = new Headers(init.headers); } clone() { return this; } },
+    Headers,
     AbortController: globalThis.AbortController,
     URL,
     console,
@@ -53,7 +54,7 @@ function boot({ index = null, cached = null, respond = () => ({ ok: true }) } = 
       if (!/^https?:/.test(url.slice(0, 5)) && url.startsWith(ORIGIN)) return json(null); // the game server (last resort)
       const r = respond(url);
       if (r.ok === false) throw new Error('mirror down');
-      return { ok: true, status: 200, headers: {}, arrayBuffer: async () => new ArrayBuffer(r.size ?? 0) };
+      return { ok: true, status: 200, headers: r.headers ?? {}, arrayBuffer: async () => new ArrayBuffer(r.size ?? 0) };
     },
   };
   vm.createContext(ctx);
@@ -127,3 +128,21 @@ test('sw.js: an unhashed request is passed through unchanged', async () => {
   await sw.get(asset);
   assert.deepEqual(sw.calls, ['/asset-index.json', `${RELAY}/assets/char/avatar/a.png`]);
 });
+
+test('sw.js: a mirror-served stylesheet is relabelled from its extension (raw.githubusercontent says text/plain)', async () => {
+  const asset = `${ORIGIN}/assets/~abc1234567/ui/statistics/fonts.css`;
+  const sw = boot({
+    index: { revision: 'r1', files: { '/assets/ui/statistics/fonts.css': 241 }, sources: [GH] },
+    respond: () => ({ ok: true, size: 241, headers: { 'content-type': 'text/plain; charset=utf-8' } }),
+  });
+  const res = await sw.get(asset);
+  assert.equal(res.headers.get('content-type'), 'text/css; charset=utf-8', 'a stylesheet must not be served as text/plain');
+  const png = `${ORIGIN}/assets/~abc1234567/ui/statistics/heading-bar.png`;
+  const sw2 = boot({
+    index: { revision: 'r1', files: { '/assets/ui/statistics/heading-bar.png': 34774 }, sources: [GH] },
+    respond: () => ({ ok: true, size: 34774, headers: { 'content-type': 'image/png' } }),
+  });
+  const res2 = await sw2.get(png);
+  assert.equal(res2.headers.get('content-type'), 'image/png', 'a type the extension map does not know is left as the source sent it');
+});
+
