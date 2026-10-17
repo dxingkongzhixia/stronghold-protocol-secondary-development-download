@@ -315,6 +315,21 @@ describe('static http server', () => {
     assert.equal(textRange.status, 206, 'ranges are served identity-encoded');
     assert.equal(textRange.headers['content-encoding'], undefined);
     assert.equal(textRange.body.toString(), js.slice(0, 2));
+
+    // RFC 9110 §14.2: Range is defined for GET only — a HEAD keeps the full representation's status, length, encoding
+    // and ETag (PR #649). It also no longer forces the identity encoding.
+    const headFull = await httpReq(srv.port, '/assets/audio/bgm.mp3', { method: 'HEAD' });
+    const headWithRange = await httpReq(srv.port, '/assets/audio/bgm.mp3', { method: 'HEAD', headers: { range: 'bytes=0-9' } });
+    assert.equal(headWithRange.status, 200, 'HEAD ignores Range');
+    assert.equal(headWithRange.headers['content-range'], undefined);
+    assert.equal(headWithRange.headers['accept-ranges'], 'bytes');
+    assert.equal(headWithRange.headers['content-length'], headFull.headers['content-length']);
+    assert.equal(headWithRange.headers.etag, headFull.headers.etag);
+    const headJs = await httpReq(srv.port, '/js/app.js', { method: 'HEAD', headers: { 'accept-encoding': 'gzip' } });
+    const headJsRange = await httpReq(srv.port, '/js/app.js', { method: 'HEAD', headers: { range: 'bytes=0-1', 'accept-encoding': 'gzip' } });
+    assert.equal(headJsRange.status, 200, 'HEAD ignores Range for encoding selection too');
+    assert.equal(headJsRange.headers['content-encoding'], headJs.headers['content-encoding'], 'same encoding as a plain HEAD');
+    assert.equal(headJsRange.headers['content-length'], headJs.headers['content-length']);
   });
 
   test('extension-less /media audio route (download managers sniff .mp3 URLs)', async () => {
