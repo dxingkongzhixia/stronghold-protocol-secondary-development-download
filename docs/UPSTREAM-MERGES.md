@@ -1251,3 +1251,23 @@ docs guards 34 pass / 0 fail.
 - 新测试：上游的 `test/match/bench-overflow.test.js`（9 条）+ `test/ui/bench-overflow.e2e.test.js`（`SP_E2E`）；其中一条专测**插件 DSL**（`registerDslMeta`，我们没有插件系统）→ 改写成语义等价的**普通脚本 meta 处理器**用例。
 - 文档：`docs/PLAYING.md` §位置上限 / 装备合成两处按新规则改写（不再「满了两件都销毁」）。
 - `npm run typecheck` ✓、`npx eslint` 0 error ✓；全量 **7115 / 7099 通过 / 0 失败 / 15 跳过** ✓（README 计数 → 6762）。
+
+### 13.7 批次 7 — 宿主浏览器彩排（PR #622）+ 训练数据记录器（P1，2026-10-17）
+
+**并入**（`b2fa46dc`）：
+
+- 协议三帧：`S b.rehearsal { taskId, playerId, cap, specs }` / `C b.rehearsalResult { taskId, choice|error }` / `S b.rehearsalCancel`；`choice` 只接受 0–7（服务端自己的候选下标，客户端造不出阵型）。
+- 服务端：`MatchRehearsal`（`botRehearsalDelegate`、`botRehearsalDelegateMs` 3 s）、`createDelegatedRehearsalJob`、`server/sim/rehearsal.js` 的共享 `RehearsalRun` / `RehearsalScore`，候选改「分离棋盘 + 正常输入（含开场效果与层数增益）」。
+- 客户端：`public/js/battle/rehearsal.js`（同源 module Worker、队列、取消、断线/离开清理）+ `rehearsalWorker.js`（只 import 同源 `/sim/`，无 `blob:`/`eval`）+ `main.js` 接线。
+- **丢掉的**：上游的 **content-set / 插件**分支（`requireCs`、`installContent`、`installContentSet`、`b.result.cs`）—— 我们没插件；**`simLoader.js`**（我们的 worker 直接 import `/sim/rehearsal.js`，不需要它）。插件守卫保留（在我们这里恒为假）。
+- 测试：上游 `test/sim/rehearsal.test.js`、`test/match/rehearsal-{client,delegate}.test.js`、`rehearsal-worker.browser.test.js` + `simClient.js`/`harness.js` 配套；删掉「插件房不委托」那条（不适用）。**37/37** ✓。
+- **golden**：彩排的候选战斗改成正常输入 → AI 布局变化 → `matches.json` 重算，**单独提交** `f8928034`（归因：只源于彩排路径；其余套件不变）。
+
+**训练记录器（P1）**：
+
+- `server/training/store.js`：**独立** `var/training.db`（不吃账号库）、`bot_training` 表、批量事务、**磁盘保护**（剩余 < 2 GB 停止采样）、`SP_TRAINING=off` 关闭；**懒打开**（没有机器人彩排就不建文件，测试零污染）。
+- `server/training/record.js`：一行 = 一次**服务端**彩排（`{mode,difficulty,stage,round,seat,seed,state:{funds,level,bonds,board,hand,temp},candidates:[{i,layout,leaks,kills,score}],chosen,source}`；**不含玩家标识**）；`RehearsalScore` 现在额外保留每候选 `results`（标签）。
+- **采样门**：委托开着时，按 `(seed, round, seat)` 确定性抽取 `SP_TRAINING_SAMPLE`（默认 **0.25**）的备战**留在服务端**跑（拿标签），其余照常委托 —— 浏览器只回下标，**其分数不可信**，所以训练标签只来自服务端。
+- 测试：`test/match/training-record.test.js` **6/6**（行构造、哈希稳定性、抽样确定性、`SP_TRAINING_SAMPLE` 解析、store 批量/计数/磁盘保护）。
+
+**P2（下一步，尚未做）**：`tools/bot-training.mjs`（导出 / 归档 / manifest）+ `tools/train-bot.mjs --auto`（夜间，子进程 `nice`）+ `server/match/botPrior.js`（mtime 热加载，按回合生效）+ `/healthz` 的 `prior` 与计数器 + cron（默认不装）。设计见与 owner 的讨论：SQLite 主存 + 月归档（6 GB 闸）、先验只用于**排序/剪枝**、绝不进 `server/sim`。

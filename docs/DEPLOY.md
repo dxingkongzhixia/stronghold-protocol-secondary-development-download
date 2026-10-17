@@ -373,3 +373,14 @@ npm run package -- --update --from <旧版本的完整包>[,<…>] --out <目录
 3. **⚠️ 中继也要 HTTPS**：HTTPS 页面**不允许**明文 `http://` 子资源（mixed content），`http://123.57.150.185` 会被浏览器拦掉、客户端静默回退到免费 CDN。给中继一个**子域名**（如 `relay.strongholdprotocolcsym.top`，备案覆盖主域名）并在中继机上签证书，然后把 [`public/asset-mirrors.json`](../public/asset-mirrors.json) 的第一个源改成 `https://…`（服务器端的 `/asset-index.json` 会跟着它走，见 `server/assetindex.js` `assetSources()`）。
 4. **验证**：HTTPS 下 **Service Worker 才会注册**（本地缓存 / 增量同步那条链），`设置 → 美术资源缓存` 出现；用 `node tools/check-delivery.mjs --live` 核对链条顺序与 `fromCache`。
 5. **备案号常驻页脚**：`public/js/screens/title.js` 的 `.title-beian`（法定义务，`test/ui/title-surfaces.test.js` 钉住，别删）。
+
+## Bot rehearsal delegation and training samples
+
+| option | meaning |
+|---|---|
+| `SP_BOT_REHEARSAL=host` | offer an AI teammate's layout rehearsal to the current human host's browser (default off; the server rehearses itself otherwise) |
+| `SP_TRAINING=off` | disable the bot-rehearsal training recorder (default on; it writes `var/training.db`, its own SQLite file) |
+| `SP_TRAINING_SAMPLE=0.25` | fraction of bot preps kept on the server while delegation is on, so their scores (the labels) are recorded |
+
+The recorder is best-effort: a failed write, or less than 2 GB free on the DB filesystem, drops samples and never
+touches a match. Retention is handled by the (P2) trainer export/prune; the file is git-ignored and never served.
