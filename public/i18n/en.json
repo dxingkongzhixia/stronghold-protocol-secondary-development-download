@@ -1523,5 +1523,9 @@
   "关": "Off",
   "精简": "Lite",
   "完整": "Full",
-  "使用服主从自己的游戏客户端提取的官方战斗特效（普攻、弹道、命中、状态、阵亡、部署，干员、召唤物和敌人的技能与天赋，以及秘术师储存的能量），连到这台服务器的玩家看到的都是服主提取的这一份；提取里没有的或对战中没有时机的（如只在游戏内部条件下触发的天赋效果）仍为本作的特效。精简：半分辨率贴图、粒子减半，适合手机。只在 3D 棋盘上显示。": "Uses the official battle effects the server owner extracted from their own game client (normal attacks, projectiles, hits, statuses, deaths, deployments, the skills and talents of operators, summons and enemies, and a Mystic Caster's stored energy); every player on this server sees the owner's extraction. What it does not cover, or what the battle gives no moment for (such as talent effects that only internal game conditions trigger), stays this game's own. Lite: half-resolution textures and half the particles, suited to phones. Shown on the 3D board only."
+  "使用服主从自己的游戏客户端提取的官方战斗特效（普攻、弹道、命中、状态、阵亡、部署，干员、召唤物和敌人的技能与天赋，以及秘术师储存的能量），连到这台服务器的玩家看到的都是服主提取的这一份；提取里没有的或对战中没有时机的（如只在游戏内部条件下触发的天赋效果）仍为本作的特效。精简：半分辨率贴图、粒子减半，适合手机。只在 3D 棋盘上显示。": "Uses the official battle effects the server owner extracted from their own game client (normal attacks, projectiles, hits, statuses, deaths, deployments, the skills and talents of operators, summons and enemies, and a Mystic Caster's stored energy); every player on this server sees the owner's extraction. What it does not cover, or what the battle gives no moment for (such as talent effects that only internal game conditions trigger), stays this game's own. Lite: half-resolution textures and half the particles, suited to phones. Shown on the 3D board only.",
+  "购买鼠标指向的商品": "Buy hovered shop card",
+  "购买鼠标指向的商品 · {key}": "Buy hovered shop card · {key}",
+  "撤退鼠标指向的干员": "Retreat hovered Operator",
+  "出售鼠标指向的干员": "Sell hovered Operator"
 }
