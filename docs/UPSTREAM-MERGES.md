@@ -75,7 +75,10 @@ reverted):
 
 | **上游的多语言配音（英语 / 韩语 / 本土语言，`8eb7f701` + `d93d6d30`）** | upstream `public/js/audio.js` 的语音语言表、`public/js/ui/settings.js` 与 `public/js/audio.js` 的选项、以及 `data/assets.json` 的 `audio.voiceEn`（182 名）/ `audio.voiceKr`（182）/ `audio.voiceNative` 三套清单 | **Owner 2026-10-16：「配音只保留日语和中文，其他的不要了」** —— 本分支只提供 **中文 / 日本語** 两套（日语默认，见 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) 「The Japanese voice dub」）。上游那三套配音**不合并**（素材也不上中继）。Self-check: `grep -c "voiceEn\|voiceKr\|voiceNative" public/js/audio.js data/assets.json` 两处都应为 0；`data/assets.json` 的 `audio` 只有 `voice` / `voiceJp` | **Owner 2026-10-16**：本分支在官方表**之上**刻意加了一层难度（敌人第 5 回合起 生命 / 攻击 ×1.3；领袖 血池 ×1.4 + 攻击 / 防御 / 法抗 ×1.4，部件与战中召唤物同档；8 个正式模式，入门协议不动），见 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §47 / [`docs/BALANCE.md`](BALANCE.md) §8。上游这几个文件在合并时**会抹掉这一层**，一律以我们为准（`data/tuning.json` 的 `boost` 块是唯一真相，改数值只改它）。Self-check: `grep -n 'enemyBoost\|bossBoost\|bossEnemyScale' server/match/gamedata.js`（三处都在）；`node tools/balance.mjs --mode multi --difficulty HARD --boss-only` 的池子应含 ×1.4；`node --test test/match/boost.test.js` |
 
+| **上游的标题页「下载完整素材 / 导入素材包」（PR #628）** | upstream `aa8d4fc1`（标题页「下载完整素材」）+ `a196abd2`（并入「完整素材下载」与**本地素材包导入**：按服务端清单做哈希校验、存 Cache Storage、只对带内容哈希的 URL 由 Service Worker 供给）+ `ae916ca2`（`导入素材包` 与 `下载完整素材` 并列，`package.mjs --assets`）；代码 `public/js/assetDownload.js`、`public/js/assetPack.js`（749 行）、`public/js/ui/assetDownload.js`、标题页的两个按钮、i18n 文案与 `tools/package.mjs --assets` | **Owner 2026-10-17：不采纳。** 我们的素材链已经是「**自有中继 → CDN 镜像 → 游戏服务器兜底**」（客户端按实测速度选源，SW / IndexedDB 缓存），**不需要玩家额外提供资源**；再加一条「下载一份完整素材 / 导入素材包」只会多一条要解释、要校验、要维护的分发路径，并与我们自己的缓存层重叠。Self-check: `grep -rn --exclude=check-upstream.mjs "assetPack\|assetDownload\|下载完整素材\|导入素材包" public/js public/i18n server tools` 必须为空（`public/js/assetCache.js` 是**我们自己的**缓存层，不在此列） |
+
 > **给上游的 PR 分支是中间产物，不进本分支。** 把本分支的优势提给主线时，是在一个**基于主线**的临时分支上重做的（如 `board3d-lighting`，即 PR `sganggs/Stronghold-Protocol#658`）：它**只用于向上游提交**，**不要合并进我们自己的 `master`** —— 它按上游的实现方式裁剪过，与我们这边的实现不同（见上表 board3d 行）。
+
 
 The self-checks for the §22 blacklist are in [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §5 and run after every merge.
 

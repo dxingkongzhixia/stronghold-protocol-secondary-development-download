@@ -395,6 +395,7 @@ survive with the three sources intact.
 | **Leave → AI takeover / room disposal** | §35.5 | A human leaving a running match while others remain → seat handed to a fresh AI; only when **all** humans are gone is the room dissolved. Short disconnects use the reconnect grace, not takeover. |
 | **Notice convention** | §28 | Every restart / server-file upload is preceded by an in-game notice signed **`d星空之下`**. |
 | **Golden-attribution discipline** | §35.1 (worked example), `docs/DEVELOPMENT.md` §8 | Any `test/golden/*.json` move must be proven by reverting only your change → zero diff; never re-bless, never raise an engine guard. |
+| **素材包 / 完整素材下载（#628）** | §22, `UPSTREAM-MERGES.md` §0 | 标题页**不提供**「下载完整素材 / 导入素材包」（owner 2026-10-17）：我们的素材链是**自有中继 → CDN 镜像 → 游戏服务器兜底**，客户端按实测速度选源并缓存，不需要玩家额外提供资源。 |
 
 **The §22 self-checks (run after every upstream merge):**
 
@@ -403,11 +404,15 @@ survive with the three sources intact.
 grep -rn "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server
 # our removed 最近的同盟 must not return:
 grep -rn "recentRooms\|rememberRoom\|最近的同盟" public shared server test
-# #488: a free <获得时> / strategy grant must not be item-stock-gated (ours has no item stock):
-grep -rn "itemPool\|canGain" server
+# #488: a free <获得时> / strategy grant must not be item-stock-gated — `acquireItem` itself has no pool check
+# (the pool still filters what the SHOP / reward offers can generate: that is allowed):
+node -e "const s=require('fs').readFileSync('server/match/player/acquire.js','utf8');const i=s.indexOf('acquireItem(');const j=s.indexOf('\n  }',i);process.exit(/itemPool|canGain|requirePool/.test(s.slice(i,j))?1:0)"
+# #628: the title-screen full-asset download / asset-pack import must not return:
+grep -rn --exclude=check-upstream.mjs "assetPack\|assetDownload\|下载完整素材\|导入素材包" public/js public/i18n server tools
 ```
 
-All three must be **empty**. `git log -S bondsCollapsed -- public/js/screens/game.js` shows whether upstream re-added
+All of them must be **empty** (the last one: no file and no string; `public/js/assetCache.js` is our own cache layer and is
+not part of this). `git log -S bondsCollapsed -- public/js/screens/game.js` shows whether upstream re-added
 it. The merge procedure and the blacklist are in `docs/AI-WORKFLOW.md` (b).
 
 ---

@@ -42,6 +42,8 @@ export const NEVER_MERGE_WATCH = Object.freeze([
   { match: 'data/assets.json', item: '上游的多语言配音 (audio.voiceEn / voiceKr / voiceNative) — owner 2026-10-16: 只保留日语 + 中文' },
   { match: 'public/js/audio.js', item: '上游的多语言配音 (语音语言的选项表) — owner 2026-10-16: 只保留日语 + 中文' },
   { match: /^public\/js\/render\/board3d\//, item: '上游对 3D 战场的实现（board3d：光照 rig / 材质层 / 高台）' },
+  { match: /^public\/js\/(?:assetDownload|assetPack|ui\/assetDownload)\.js$/, item: '#628 标题页全素材下载 / 素材包导入 — owner 2026-10-17: 我们有中继 + 服务器兜底，不需要玩家自备资源' },
+  { match: 'public/js/screens/title.js', item: '#628 标题页全素材下载 / 素材包导入（标题页的两个按钮）' },
 ]);
 
 /** `git diff --name-status` output → [{ status, path }] (a rename reports its new path). */
