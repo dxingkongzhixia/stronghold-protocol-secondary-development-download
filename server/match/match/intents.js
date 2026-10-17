@@ -73,9 +73,13 @@ export class MatchIntents {
     if (!target.downed) return fail(ERR.BAD_TARGET, 'not downed');
     if (this.teamLp != null || this.phase === PHASE.FINAL_ASSAULT || this.phase === PHASE.HIDDEN_CORE) return fail(ERR.WRONG_PHASE, 'final assault started');
     if (target.revivePool >= target.reviveNeed) return fail(ERR.ALREADY, 'pool full');
+    // each living teammate may give ONE point to the same downed teammate per downing
+    if (Array.isArray(target.reviveGivers) && target.reviveGivers.filter((id) => id === ps.playerId).length >= REVIVE.PER_TARGET) return fail(ERR.ALREADY, 'already gave a point');
     if (ps.lp - REVIVE.DONATE < REVIVE.FLOOR) return fail(ERR.NO_FUNDS, 'insufficient HP');
     ps.lp -= REVIVE.DONATE;
     target.revivePool = Math.min(target.reviveNeed, target.revivePool + REVIVE.DONATE);
+    if (!Array.isArray(target.reviveGivers)) target.reviveGivers = [];
+    target.reviveGivers.push(ps.playerId);
     ps.dirty();
     target.dirty();
     const cameBack = target.revivePool >= target.reviveNeed && target.revive();

@@ -1633,11 +1633,13 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 |---|---|
 | 触发 | 目标生命（`ps.lp`）在 **SETTLE** 扣到 0，且**同房间还有一名存活的真人队友**、未进入最终攻势、本人复活次数 < 2 → **击倒（downed）**，否则按原样永久出局 |
 | 击倒状态 | `alive=false`、`downed=true`、`lp=0`，**棋盘 / 手牌 / 临时区 / 资金 / 商店 / 悬赏全部冻结**（`eliminate()` 的清空不再执行），只能观战 |
-| 分血 | 备战期（`PHASE.PREP`）内，任一存活真人点「分血 −4」：付出 **4** 点目标生命，进入对方的池子；**自己不得低于 5**（`REVIVE.FLOOR`，不可能献血自杀） |
-| 复活额度 | 第 1 次 **8**；同一人第 2 次 **14**（`NEED + NEED_STEP × revivesUsed`）；**每人每局最多 2 次** |
-| 复活 | 池子一满**当场复活**（仍在同一个备战期）：`lp = 池子总额`、`revivesUsed++`、棋盘原样还给他（无需重建），并收到自己的 `m.private` |
+| 分血 | 备战期（`PHASE.PREP`）内，任一存活真人点「分血 −1」：付出 **1** 点目标生命；**每名活着的队友对同一名倒地者最多只能给 1 点**（`REVIVE.PER_TARGET`，换人才能接着凑）；**自己不得低于 5**（`REVIVE.FLOOR`，不可能献血自杀）。**完全自愿**——没人付就一直倒着，系统不会自动扣任何人的血 |
+| 4 人局 | 每个倒下的人**各自独立**；**任意一名**存活者掏 1 点就能救回（3 个存活者都能各自救不同的倒地者）；可以**同时存在多个待救**；救援顺序/救谁完全由存活者选择 |
+| 无人可救 | 房间里一旦没有**活着的人类**（全灭，或只剩 AI），所有待救者立刻按永久出局结算（credited 到各自倒下的回合），不会留下无人可付的「倒着」状态 |
+| 复活额度 | 池子满 **1** 点即复活，**回来时 1 血**；**每人每局最多 2 次**（第二次同样 1 点；「每名队友 1 点」按**每次倒下**重新计算） |
+| 复活 | 那 1 点到账就**当场复活**（仍在同一个备战期）：`lp = 1`、`revivesUsed++`、棋盘原样还给他（无需重建），并收到自己的 `m.private` |
 | 禁止救援 | 最终攻势 / 隐秘核心开始后（`teamLp` 已快照）；目标已是活人 / 是 AI；自己已倒下 |
-| 全灭 | 同一 SETTLE 里两人一起倒：先倒的那个「击倒」（另一人还活着），第二个没有人能付 → 出局，`alivePlayers()` 空 → 按原规则结束 |
+| 全灭 | 同一 SETTLE 里多人一起倒：只要还有人活着就逐个「击倒」；最后一个没人可付（以及随后无人可救的所有待救者）出局，`alivePlayers()` 空 → 按原规则结束 |
 | 单人 / AI | 单人永远不击倒；**AI 队友不救人、AI 也不会被击倒**（golden 完全中立：bot 对局没有任何新分支） |
 | 断线 | 被击倒者断线走原有「离开 / 接管」路径；池子保留到他真的不在房间 |
 | 结算 | 仍然倒着结束的对局：`result.players[].eliminatedRound = downedRound`（不会算成「本局没死」） |
@@ -1646,7 +1648,7 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 
 | 位置 | 改动 |
 |---|---|
-| `shared/constants.js` | `REVIVE = { DONATE: 4, NEED: 8, NEED_STEP: 6, MAX: 2, FLOOR: 5 }` |
+| `shared/constants.js` | `REVIVE = { DONATE: 1, NEED: 1, MAX: 2, FLOOR: 5, PER_TARGET: 1 }` |
 | `server/match/player/round.js` | `down(round)`（冻结，不清理）、`revive()`（回场，`lp = pool`）、`eliminate()` 顺带清 `downed/revivePool/reviveNeed` |
 | `server/match/match/settle.js` | `_canDown(ps)` + `lp <= 0` 时 down / eliminate 二选一；ticker「…等待队友救援」 |
 | `server/match/match/intents.js` | `g.shareHp { target }` → `Match.shareHp`：校验阶段 / 存活 / 同房间 / 池子未满 / 地板 → 转账 + 满池即复活 + toast/ticker |
@@ -1664,7 +1666,7 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 
 ### 50.4 测试
 
-- `test/match/revive.test.js`（7 条）：击倒而非出局（棋盘保留、公开视图 `downed`）、分血 → 满池复活（LP = 支付额、收到 `m.private`）、地板 / 溢出 / 错误目标 / 错误阶段、第二次 14 点与第三次永久出局、单人 & 无真人队友不击倒、最终攻势后拒绝、双倒全灭结束。
+- `test/match/revive.test.js`（11 条）：击倒而非出局（棋盘保留、公开视图 `downed`）、分血 → 满池复活（LP = 支付额、收到 `m.private`）、地板 / 溢出 / 错误目标 / 错误阶段、第二次同样 1 点、第三次永久出局、单人 & 无真人队友不击倒、最终攻势后拒绝、双倒全灭结束。
 - `test/match/combat.test.js` 的淘汰用例改写为「downed 保棋盘 + 全灭仍结束」；`feedback3-gift.test.js` 的信标 gift 用例：**倒下的发送者**的信标仍会送达（`dispatchEliminated` 覆盖 `!alive`）；`fuzz.test.js` 的随机意图补 `g.shareHp`。
 
 ### 50.5 自检（合并时必须活过）

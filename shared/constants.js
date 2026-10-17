@@ -280,17 +280,18 @@ export const emoteArtPath = (id) => { const e = emoteInfo(id); return e ? `/asse
 export const EMOTE_COOLDOWN_MS = 1000; // activity_table autoChessData.constData.chatCD (s)
 
 /**
- * 分血救援 (revive, owner 2026-10-17). In co-op (同盟 / 野排) a teammate's 目标生命值 hitting 0 no longer eliminates him
- * while another human can still fight: he is DOWNED (board/hand/funds frozen, spectatorship) and the survivors hand over
- * their own LP in 休整期; once the pool is full he revives at the next ROUND_START with LP = the pool.
+ * 分血救援 (revive, owner 2026-10-17; retuned the same day: 1 LP is enough, one point per rescuer). In co-op
+ * (同盟 / 野排) a teammate's 目标生命值 hitting 0 no longer eliminates him while another human can still fight: he is
+ * DOWNED (board/hand/funds frozen, spectating) and a living teammate hands over ONE of his own LP in 休整期; that single
+ * point revives him on the spot with LP 1.
  *  - DONATE     LP one survivor hands over per press
- *  - NEED       the pool a first rescue needs
- *  - NEED_STEP  extra the next rescue of the SAME player costs (8 → 14)
- *  - MAX        rescues per player in one match
+ *  - NEED       the pool a rescue needs (one point: any living teammate can bring him back)
+ *  - MAX        rescues per player in one match (the same player can be rescued twice, never more)
  *  - FLOOR      a donor's LP never drops below this (no suicide gifts)
+ *  - PER_TARGET each living teammate may give at most this much to the SAME downed teammate per downing
  * No rescue once the Final Assault starts (its `teamLp` pool is a snapshot), and bots never down (golden neutrality).
  */
-export const REVIVE = Object.freeze({ DONATE: 4, NEED: 8, NEED_STEP: 6, MAX: 2, FLOOR: 5 });
+export const REVIVE = Object.freeze({ DONATE: 1, NEED: 1, MAX: 2, FLOOR: 5, PER_TARGET: 1 });
 export const EMOTE_BUBBLE_MS = 3000;   // constData.chatTime (s): how long a bubble stays up
 
 // ---- ours: room text chat (同盟等待室 + 局内, 2026-10-09) ------------------------------------------------

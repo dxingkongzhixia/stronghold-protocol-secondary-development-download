@@ -56,6 +56,7 @@ export class PlayerRound {
     this.downed = false;
     this.revivePool = 0;
     this.reviveNeed = 0;
+    this.reviveGivers = [];
     this.alive = false;
     this.ready = false;
     this.eliminatedRound = round;
@@ -79,7 +80,8 @@ export class PlayerRound {
 
   /**
    * 分血救援: LP hit 0 while another human can still fight — freeze everything (no clearing: `eliminate` does that) and
-   * wait for the survivors' pool. `reviveNeed` grows with how many times this player has already been brought back.
+   * wait for a teammate's single point. `reviveGivers` remembers who already paid for THIS downing (each teammate may
+   * give one point per downed teammate); `reviveNeed` stays 1, the match-wide cap is `revivesUsed < REVIVE.MAX`.
    * @param {number} round
    */
   down(round) {
@@ -88,13 +90,14 @@ export class PlayerRound {
     this.downedRound = round;
     this.ready = false;
     this.revivePool = 0;
-    this.reviveNeed = REVIVE.NEED + REVIVE.NEED_STEP * this.revivesUsed;
+    this.reviveNeed = REVIVE.NEED;
+    this.reviveGivers = [];
     this.dirty();
   }
 
   /**
-   * The survivors filled the pool (Match._reviveDowned, at ROUND_START): back on his own board with LP = what was paid.
-   * The board / hand / funds were never cleared while downed, so he resumes exactly where he fell.
+   * A teammate paid the single point: back on his own board with LP 1. The board / hand / funds were never cleared while
+   * downed, so he resumes exactly where he fell.
    */
   revive() {
     if (!this.downed) return false;
@@ -103,6 +106,7 @@ export class PlayerRound {
     this.lp = this.revivePool;
     this.revivePool = 0;
     this.reviveNeed = 0;
+    this.reviveGivers = [];
     this.revivesUsed++;
     this.downedRound = null;
     this.dirty();

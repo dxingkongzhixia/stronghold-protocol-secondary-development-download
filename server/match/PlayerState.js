@@ -163,6 +163,7 @@ export class PlayerState {
     this.downedRound = null;
     this.revivePool = 0;
     this.reviveNeed = 0;
+    this.reviveGivers = [];
     this.revivesUsed = 0;
     this.bandId = null;
     this.funds = 0;

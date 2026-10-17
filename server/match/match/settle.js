@@ -90,6 +90,12 @@ export class MatchSettle {
         }
       }
     }
+    // 分血救援 is VOLUNTARY: nobody is forced to pay, so a downed player simply stays downed. But once no living HUMAN
+    // is left, no rescue can ever happen again — every downed player is eliminated on the spot (credited to the round he
+    // fell), so a full wipe never ends with "downed" bodies nobody could save.
+    if (!this.order.some((p) => p.alive && !p.isBot && !p.left)) {
+      for (const ps of this.order) if (ps.downed) ps.eliminate(ps.downedRound ?? this.round);
+    }
     this.fields = [];
     this.watchers.clear();
     this.markPublic();
