@@ -1295,7 +1295,7 @@ docs guards 34 pass / 0 fail.
 | 视图模型 | `ui/stats.js`：`highestBondRecord` / `usedBondIdsOf` / `strategyBadgeIds` / `trophyMedalOf` / `bondMemberChess`（纯函数，读共享 schema） |
 | 页面 | `screens/stats.js`：`Section` / `Overview`（Dr. 代号、奖杯、独立/联合四指标、六边形称号、`BondAchievement` 峰值盟约、`MatchRecords` 单局纪录、成就干员）/ `Bands` 增最常用盟约与策略徽章 / `History` 的 `statsBodyState` 原样保留（仍读服务器）；`title.js` 的奖杯展示移到统计页 |
 | 新模块 | `ui/playerName.js`（`sanitizeName` / `isValidName` / `stripLoneSurrogates`，标题页与导入共用）、`ui/titleHexagon.js`（20 扇区六边形） |
-| 素材 | 页面会读官方页面素材（`statistics/fontStyles`、`titleMask`、`countGlow`、`headingBar`）；**没有就按我们的样式降级**（未接 `web.hycdn.cn` 模板） |
+| 素材 | **官方页面素材已接入**（`tools/fetch-stats-assets.mjs` + `tools/assets/stats-template.mjs`，与上游同一提交）：37 件写入 `public/assets/ui/statistics/`（标题六边形遮罩/计数辉光、纪录图标、盟约/策略框、成员与成就阶级 1–6、精英 0–2、标题栏、字体 CSS + `NovecentoWide` 数字字体 + `SourceHanSans` 标签字体），并登记进 `data/assets.json` 的 `ui['statistics/*']`；`validate('font')` 同时接受 woff2（上游同款修正）。**取不到也不影响页面**：组件按缺省样式降级 |
 | 弃用 | 插件时代的 `ModdedSwitch`（modded 记录本分支没有）；`#628` 仍黑名单 |
 | i18n | 26 条 msgid × 4 语言包（取自上游同一提交） |
 | 测试 | 上游 4 套件（`bond-achievement` / `bond-members` / `strategy-badges` / `match-records`）**8/8**；`test/ui/stats` 等 52/52；全量 **7182 / 7167 / 0 / 15** |
