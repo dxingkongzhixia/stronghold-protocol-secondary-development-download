@@ -175,12 +175,13 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // on the same DB — schema v5 (server/db.mjs). Null without a DB (guests-only, file-free tests): stats.* is disabled.
   const stats = db ? (opts.stats || new StatsService({ db })) : null;
   // Bot-rehearsal training samples (server/training/store.js): their OWN SQLite file, batched and best-effort, so a
-  // failure or a full disk never touches a match. `SP_TRAINING=off` disables it; tests pass no file (no-op sink).
+  // failure or a full disk never touches a match. Opt-in: `SP_TRAINING=on` (tests and a plain `node server/index.js`
+  // record nothing); the store opens lazily on the first recorded rehearsal.
   const training = opts.training !== undefined
     ? opts.training
-    : (process.env.SP_TRAINING === 'off'
-      ? null
-      : new TrainingStore({ file: opts.trainingFile || path.join(ROOT, 'var', 'training.db'), log }));
+    : (process.env.SP_TRAINING === 'on'
+      ? new TrainingStore({ file: opts.trainingFile || path.join(ROOT, 'var', 'training.db'), log })
+      : null);
   // the store opens lazily on the first recorded rehearsal: a match without bots never creates the file
   setTrainingSink(training ? (row) => training.record(row) : null);
   const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log });
