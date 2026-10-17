@@ -1166,3 +1166,20 @@ docs guards 34 pass / 0 fail.
 **验收**：全量 `node --test` **7082 / 7068 通过 / 0 失败 / 14 跳过** ✓；`npm run typecheck` 无错 ✓；`npx eslint` 0 error ✓；`i18n check en --strict` 100 % ✓；`docs-consistency` / `package`（tracked tree）全绿 ✓。
 
 **下一批**：`#646`（部署折叠，纯客户端但面大）、`#618` / `#622`（opt-in，碰 `settings.js`）；`#630`（备战席溢出）**降到 P3** —— 它改 `player/acquire.js`，与 §0「道具库存池」相邻。
+
+### 13.2 批次 2 — 部署折叠（PR #646 / GitHub #602，2026-10-17）
+
+三个上游提交（`fafa23b5` 基础折叠、`a374a1c3` round 44 的 UI + 休整期 pen、`fc241089` 跟随修正）的**代码与配套测试**一起并入；`merge-tree` 里唯一冲突是 `render/app.js` 顶部的**接口注释**（我们那行过时、缺 `mysticEnergy` / `officialFx` / `pen`），取上游那版。
+
+| 行为 | 实现 |
+|---|---|
+| **拿起棋子 → 商店收起 + 镜头拉近** | `ui/gameLogic/camera.js` 的 `foldCamera` 去掉「拖拽中不做」的门（原来 `busy` 直接返回 null），改为拾取 / 方向轮盘打开即折叠，放下后回到玩家**自己**的折叠状态；`render/app/tune.js` 的折叠飞行时长 |
+| **休整期的敌方 pen（两道红门）** | `render/app/view.js` 的 `showsPen` / `penShown` / `flightView` + `boardArea` / `fieldRows`；pen 随战斗开始消失，下一次备战随镜头带回 |
+| **镜头飞行期间每帧重判拖拽** | `render/drag.js` 的 `refresh`：手指不动时被拖的棋子 / 落点不会从手指下滑走；从 pen 返回的机位**不记得**折叠的 350 ms 飞行 |
+| 用户手册 | `docs/PLAYING.md` §4 补一句（拿起自动折叠、放下复原、官方倾斜我们不做）|
+
+**测试**：上游新增的 `test/ui/issue602-deploy-fold.test.js` + 两个 `issue5-fold-camera` / `drag` 的更新、以及 `playtest2*`（pen 归属）与 `fieldview` / `playtest5-maps`（blower 视图）的配套改动一并取；e2e 文件同时更新（opt-in）。
+
+**验收**：全量 `node --test` **7094 / 7080 通过 / 0 失败 / 14 跳过** ✓；`npm run typecheck` 无错 ✓；`npx eslint` 0 error ✓；`i18n check en --strict` 100 % ✓。README 的套件计数随注册用例 → 6740。
+
+> **踩坑留档**：这次一开始只取了 `public/js`，撤掉了同提交里的 `test/render/{playtest5-maps,fieldview.browser}.test.js` 等**与代码配套的视图测试** → 三条 blower 用例立刻变红（视图签名/行归属变了）。**合并上游 UI 提交时，配套测试要和代码同批取**，不能只挑 `public/js`。
