@@ -255,14 +255,23 @@ const COMPACT_FRAME = ['id', 'v', 't', 'end', 'victory', 'roundsPassed', 'lastRo
  * @param {any} rec a normalized record
  * @returns {any}
  */
+/**
+ * The bond ids a player used in a settlement (PR #509): the compacted row's `usedBondIds`, else the active bonds.
+ * Capped like every other bond list (MAX_BONDS, ids ≤ 64 chars, de-duplicated).
+ * @param {any} player
+ * @returns {string[]}
+ */
+export function usedBondIdsOf(player) {
+  const ids = Array.isArray(player?.usedBondIds) ? player.usedBondIds
+    : (Array.isArray(player?.bonds) ? player.bonds : []).filter((b) => b?.active === true).map((b) => b.bondId);
+  return [...new Set(ids.filter((id) => typeof id === 'string' && id.length).map((id) => id.slice(0, 64)))].slice(0, MAX_BONDS);
+}
+
 export function compactRecord(rec) {
   const self = selfRowOf(rec);
   // PR #509: the peak (highest active bond layers) record keeps its full rows, and a compacted row still names the
   // bonds it used so the peak can be found after compaction.
-  const usedBondIds = (Array.isArray(self?.usedBondIds)
-    ? self.usedBondIds
-    : (Array.isArray(self?.bonds) ? self.bonds : []).filter((b) => b && b.active === true).map((b) => b.bondId))
-    .filter((id) => typeof id === 'string' && id.length).map((id) => id.slice(0, 64)).slice(0, MAX_BONDS);
+  const usedBondIds = usedBondIdsOf(self);
   const out = {};
   for (const k of COMPACT_FRAME) if (rec[k] != null) out[k] = rec[k];
   out.compact = true;
@@ -537,8 +546,14 @@ export function aggregateStats(records) {
     rounds: { total: 0, max: 0 },
     duration: { totalMs: 0 },
     hidden: { reached: 0, cleared: 0 },
-    byDifficulty: {}, byMode: { solo: 0, coop: 0 },
+    byDifficulty: {},
+    // per-mode rows (PR #509): the overview prints games / wins / hidden clears for each mode
+    byMode: { solo: { games: 0, wins: 0, hiddenCleared: 0 }, coop: { games: 0, wins: 0, hiddenCleared: 0 } },
+    // trophies actually awarded at a settled co-op settlement (the profile medal); solo has none
+    trophies: 0,
     titles: {}, bands: {}, sums: {},
+    // how many settled matches each bond was active in (the 盟约 tab's "most used")
+    bonds: Object.create(null),
     // single-match maxima of the SELF row (PR #509): the highest funds / promotions / ACTUAL kills in one match —
     // `kills` is the credited knock-outs, not the wave-owned cumulative counter (`sums.kills`), and null when a record
     // never knew them (a migrated v1 row).
@@ -568,12 +583,25 @@ export function aggregateStats(records) {
     if (won) bd.wins++;
     if (rec.hiddenCleared) bd.hiddenCleared++;
 
-    if (rec.roomMode === 'solo' || rec.roomMode === 'coop') out.byMode[rec.roomMode]++;
+    if (rec.roomMode === 'solo' || rec.roomMode === 'coop') {
+      const mode = out.byMode[rec.roomMode];
+      mode.games++;
+      if (won) mode.wins++;
+      if (won && rec.hiddenCleared) mode.hiddenCleared++;
+    }
 
     const titleId = self?.title?.id;
     if (titleId) {
       const t = (out.titles[titleId] ||= { count: 0 });
       t.count++;
+    }
+
+    // the settlement's actual award (a quit has none, and only a co-op room pays trophies)
+    if (rec.end !== 'quit' && rec.roomMode === 'coop' && Number.isFinite(self?.trophies)) out.trophies += Math.max(0, self.trophies);
+
+    // usage = active in the self player's settlement, once per match irrespective of layers
+    if (rec.end !== 'quit') {
+      for (const id of usedBondIdsOf(self)) (out.bonds[id] ||= { games: 0 }).games++;
     }
 
     const bandId = self?.bandId;

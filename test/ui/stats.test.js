@@ -229,7 +229,7 @@ describe('local stats: the counting rule (a match entered and left right away do
     assert.equal(agg.rounds.total, 16 + 5, 'the peek adds nothing');
     assert.equal(agg.byDifficulty.HARD.games, 2);
     assert.deepEqual(agg.bands.band_amiya, { games: 2, wins: 1 });
-    assert.equal(agg.byMode.solo, 2);
+    assert.equal(agg.byMode.solo.games, 2);
   });
 
   test('combat totals read the settled records only (a quit record has no stat block)', () => {
@@ -656,8 +656,8 @@ describe('local stats: aggregation (what the page renders)', () => {
     assert.equal(agg.duration.totalMs, 952123 + 300000);
     assert.equal(agg.hidden.reached, 1);
     assert.equal(agg.hidden.cleared, 1);
-    assert.equal(agg.byMode.solo, 1);
-    assert.equal(agg.byMode.coop, 1);
+    assert.equal(agg.byMode.solo.games, 1);
+    assert.equal(agg.byMode.coop.games, 1);
   });
 
   test('per-difficulty rows; an unknown difficulty is keyed UNKNOWN (never a translated text)', () => {
@@ -726,4 +726,30 @@ describe('local stats: recordToResult (history row → settlement re-view)', () 
     assert.equal(recordToResult(null), null);
     assert.equal(recordToResult({ players: [] }), null);
   });
+});
+
+test('the overview aggregates: per-mode rows, co-op trophies and bond usage', () => {
+  const mk = (modeId, { wins = true, hidden = false, trophies = 0, bonds = [], quit = false } = {}) => {
+    const rec = buildRecord({
+      victory: wins, roundsPassed: 15, difficulty: 'HARD', modeId, durationMs: 1000,
+      players: [{
+        playerId: 'self', alive: true, victory: wins, roundsPassed: 15, trophies, creditedKills: 10,
+        stats: { gold: 100, merges: 1, kills: 5 }, bonds,
+      }],
+    }, { myId: 'self', now: 1 });
+    if (hidden) rec.hiddenCleared = true;
+    if (quit) rec.end = 'quit';
+    return rec;
+  };
+  const agg = aggregateStats([
+    mk('mode_single_hard', { hidden: true, trophies: 3, bonds: [{ bondId: 'b1', layers: 2, active: true }] }),
+    mk('mode_multi_hard', { wins: false, hidden: true, trophies: 5, bonds: [{ bondId: 'b2', layers: 3, active: true }, { bondId: 'b1', layers: 1, active: false }] }),
+    mk('mode_multi_hard', { wins: false, hidden: true, trophies: 9, quit: true, bonds: [{ bondId: 'b3', layers: 1, active: true }] }),
+  ]);
+  assert.deepEqual(agg.byMode.solo, { games: 1, wins: 1, hiddenCleared: 1 });
+  assert.deepEqual(agg.byMode.coop, { games: 2, wins: 0, hiddenCleared: 0 }, 'a lost or quit co-op match clears no hidden core');
+  assert.equal(agg.trophies, 5, 'the co-op settlement award (a loss still pays it); solo pays nothing and a quit has none');
+  assert.deepEqual(agg.bonds.b1, { games: 1 }, 'bond usage counts only ACTIVE bonds, once per settled match');
+  assert.equal(agg.bonds.b2.games, 1);
+  assert.equal(agg.bonds.b3, undefined, 'a quit has no settlement, so no bond usage');
 });

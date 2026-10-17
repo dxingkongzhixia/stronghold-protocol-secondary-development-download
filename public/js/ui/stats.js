@@ -38,7 +38,7 @@
 import { PHASE } from '../../../shared/constants.js';
 import {
   STATS_VERSION, emptyStats, normalizeRecord, migrateStats, fitToBudget, appendRecord, buildRecord,
-  roomModeOf, str, num, int, isObj, fnv1a, selfRowOf, MAX_BONDS,
+  roomModeOf, str, num, int, isObj, fnv1a, selfRowOf,
 } from '../../../shared/stats.js';
 
 // The shared schema + pure logic, re-exported unchanged: the stats screens and the unit tests import them from here.
@@ -46,7 +46,7 @@ export {
   STATS_VERSION, MAX_RECORDS, FULL_KEEP, MAX_CHARS, IMPORT_MAX_CHARS, emptyStats, normalizeStatBlock, recordId,
   normalizeRecord, MIGRATIONS, migrateStats, compactRecord, fitToBudget, roomModeOf, buildRecord, recordToResult,
   appendRecord, mergeStats, importStats, exportStats, selfRowOf, roundsOf, countsTowardStats, aggregateStats,
-  isObj, int, num, bool, str, fnv1a, newestFirst,
+  isObj, int, num, bool, str, fnv1a, newestFirst, usedBondIdsOf,
 } from '../../../shared/stats.js';
 
 /** localStorage key under the app's `sp.pref.` prefix (store.js loadPref). */
@@ -265,12 +265,6 @@ export function highestBondRecord(records) {
     }
   }
   return best;
-}
-
-export function usedBondIdsOf(player) {
-  const ids = Array.isArray(player?.usedBondIds) ? player.usedBondIds
-    : (Array.isArray(player?.bonds) ? player.bonds : []).filter((b) => b?.active === true).map((b) => b.bondId);
-  return [...new Set(ids.filter((id) => typeof id === 'string' && id.length).map((id) => id.slice(0, 64)))].slice(0, MAX_BONDS);
 }
 
 export function strategyBadgeIds(records, bands) {
