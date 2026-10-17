@@ -47,11 +47,11 @@ export async function waitForFunctionLong(page, fn, { timeout = 30000, polling =
   }
 }
 
-// ---- drags that aim after the pickup (GitHub #602, PR #646) ---------------------------------------------------------
-// Picking a piece up on the own prep board folds the shop bar and zooms the board to the shop-collapsed camera: a client
-// point read before the press lies over another tile once that camera settles (FOLD_CAMERA_MS). A drag that read its
-// target before the press therefore picks the piece up first, waits for the camera, and ends on the same ground spot
-// under the new camera — as a player aims at the board they see. No-ops on the DOM fallback (its grid does not move).
+// ---- drags that aim after the pickup (GitHub #602, PR #646 — the fold zoom itself was removed 2026-10-17, §0) ---------
+// A client point is read when the press happens, so a drag that aims must re-read the camera after the press: the
+// helpers below aim at the ground spot under the pointer at that moment (with the deploy-fold zoom gone the camera no
+// longer moves on pickup, but reading it late is still the honest model of what the player sees). No-ops on the DOM
+// fallback (its grid does not move).
 
 /** The ground spot under client point `p` (world x / y on the tile top there and its height), or null (DOM fallback, off the board). */
 export function groundAnchor(page, p) {

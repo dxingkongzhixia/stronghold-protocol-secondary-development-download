@@ -75,6 +75,8 @@ reverted):
 
 | **上游的多语言配音（英语 / 韩语 / 本土语言，`8eb7f701` + `d93d6d30`）** | upstream `public/js/audio.js` 的语音语言表、`public/js/ui/settings.js` 与 `public/js/audio.js` 的选项、以及 `data/assets.json` 的 `audio.voiceEn`（182 名）/ `audio.voiceKr`（182）/ `audio.voiceNative` 三套清单 | **Owner 2026-10-16：「配音只保留日语和中文，其他的不要了」** —— 本分支只提供 **中文 / 日本語** 两套（日语默认，见 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) 「The Japanese voice dub」）。上游那三套配音**不合并**（素材也不上中继）。Self-check: `grep -c "voiceEn\|voiceKr\|voiceNative" public/js/audio.js data/assets.json` 两处都应为 0；`data/assets.json` 的 `audio` 只有 `voice` / `voiceJp` | **Owner 2026-10-16**：本分支在官方表**之上**刻意加了一层难度（敌人第 5 回合起 生命 / 攻击 ×1.3；领袖 血池 ×1.4 + 攻击 / 防御 / 法抗 ×1.4，部件与战中召唤物同档；8 个正式模式，入门协议不动），见 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §47 / [`docs/BALANCE.md`](BALANCE.md) §8。上游这几个文件在合并时**会抹掉这一层**，一律以我们为准（`data/tuning.json` 的 `boost` 块是唯一真相，改数值只改它）。Self-check: `grep -n 'enemyBoost\|bossBoost\|bossEnemyScale' server/match/gamedata.js`（三处都在）；`node tools/balance.mjs --mode multi --difficulty HARD --boss-only` 的池子应含 ×1.4；`node --test test/match/boost.test.js` |
 
+| **上游的部署时自动收起 + 镜头拉近（PR #646 / GitHub #602）** | upstream `fafa23b5` + `a374a1c3` + `fc241089`（我们批次 2 的 `f29d0333`）：`public/js/ui/gameLogic/camera.js` 的 `deployFoldsShop`、`public/js/screens/game.js` 的 `deployFold` / `barCollapsed` 与镜头 effect 的 `if (deployFold)` 分支、`public/js/render/app/tune.js` 的 `FOLD_CAMERA_MS` 拾取飞行 | **Owner 2026-10-17：「去打boss前界面部署有个缩放的功能…去掉」。** 拿起棋子 / 打开方向轮盘时**不再**自动收起商店、也不再移镜头 —— 收起/展开只由玩家自己点（`foldCamera` 的常规路径保留）。批次 2 的**敌方 pen** 与**每帧重判拖拽**不属于缩放，保留。Self-check: `grep -rn "deployFoldsShop\|deployFold" public test` 必须为空；`game.js` 里 `const shopFolded = showShop && (pen ? penRef.current.collapsed : collapsed);`、镜头 effect 只有 `foldCamera` 一条路径 |
+
 | **上游的标题页「下载完整素材 / 导入素材包」（PR #628）** | upstream `aa8d4fc1`（标题页「下载完整素材」）+ `a196abd2`（并入「完整素材下载」与**本地素材包导入**：按服务端清单做哈希校验、存 Cache Storage、只对带内容哈希的 URL 由 Service Worker 供给）+ `ae916ca2`（`导入素材包` 与 `下载完整素材` 并列，`package.mjs --assets`）；代码 `public/js/assetDownload.js`、`public/js/assetPack.js`（749 行）、`public/js/ui/assetDownload.js`、标题页的两个按钮、i18n 文案与 `tools/package.mjs --assets` | **Owner 2026-10-17：不采纳。** 我们的素材链已经是「**自有中继 → CDN 镜像 → 游戏服务器兜底**」（客户端按实测速度选源，SW / IndexedDB 缓存），**不需要玩家额外提供资源**；再加一条「下载一份完整素材 / 导入素材包」只会多一条要解释、要校验、要维护的分发路径，并与我们自己的缓存层重叠。Self-check: `grep -rn --exclude=check-upstream.mjs "assetPack\|assetDownload\|下载完整素材\|导入素材包" public/js public/i18n server tools` 必须为空（`public/js/assetCache.js` 是**我们自己的**缓存层，不在此列） |
 
 > **给上游的 PR 分支是中间产物，不进本分支。** 把本分支的优势提给主线时，是在一个**基于主线**的临时分支上重做的（如 `board3d-lighting`，即 PR `sganggs/Stronghold-Protocol#658`）：它**只用于向上游提交**，**不要合并进我们自己的 `master`** —— 它按上游的实现方式裁剪过，与我们这边的实现不同（见上表 board3d 行）。
@@ -1176,12 +1178,14 @@ docs guards 34 pass / 0 fail.
 
 | 行为 | 实现 |
 |---|---|
-| **拿起棋子 → 商店收起 + 镜头拉近** | `ui/gameLogic/camera.js` 的 `foldCamera` 去掉「拖拽中不做」的门（原来 `busy` 直接返回 null），改为拾取 / 方向轮盘打开即折叠，放下后回到玩家**自己**的折叠状态；`render/app/tune.js` 的折叠飞行时长 |
+| ~~**拿起棋子 → 商店收起 + 镜头拉近**~~（**2026-10-17 已按 owner 要求拆除**，见下） | `ui/gameLogic/camera.js` 的 `foldCamera` 去掉「拖拽中不做」的门（原来 `busy` 直接返回 null），改为拾取 / 方向轮盘打开即折叠，放下后回到玩家**自己**的折叠状态；`render/app/tune.js` 的折叠飞行时长 |
 | **休整期的敌方 pen（两道红门）** | `render/app/view.js` 的 `showsPen` / `penShown` / `flightView` + `boardArea` / `fieldRows`；pen 随战斗开始消失，下一次备战随镜头带回 |
 | **镜头飞行期间每帧重判拖拽** | `render/drag.js` 的 `refresh`：手指不动时被拖的棋子 / 落点不会从手指下滑走；从 pen 返回的机位**不记得**折叠的 350 ms 飞行 |
 | 用户手册 | `docs/PLAYING.md` §4 补一句（拿起自动折叠、放下复原、官方倾斜我们不做）|
 
 **测试**：上游新增的 `test/ui/issue602-deploy-fold.test.js` + 两个 `issue5-fold-camera` / `drag` 的更新、以及 `playtest2*`（pen 归属）与 `fieldview` / `playtest5-maps`（blower 视图）的配套改动一并取；e2e 文件同时更新（opt-in）。
+
+> **2026-10-17 撤回（owner）**：**「拿起棋子 → 商店收起 + 镜头拉近」已整块拆除** —— owner：「打 boss 前界面部署有个缩放的功能…去掉」。本次删除 `deployFoldsShop`、`game.js` 的 `deployFold` / `barCollapsed` 折叠与镜头 effect 的拾取分支、以及 `issue602-*` 两个套件；`docs/PLAYING.md` §4 的说明改为「商店栏与镜头保持原样」；`§0` 与 `tools/check-upstream.mjs` 的 `NEVER_MERGE_WATCH` 已登记（`ui/gameLogic/camera.js`）。**pen** 与**每帧重判拖拽**保留（不属于缩放）。
 
 **验收**：全量 `node --test` **7094 / 7080 通过 / 0 失败 / 14 跳过** ✓；`npm run typecheck` 无错 ✓；`npx eslint` 0 error ✓；`i18n check en --strict` 100 % ✓。README 的套件计数随注册用例 → 6740。
 

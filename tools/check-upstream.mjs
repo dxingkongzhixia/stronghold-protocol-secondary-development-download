@@ -44,6 +44,7 @@ export const NEVER_MERGE_WATCH = Object.freeze([
   { match: /^public\/js\/render\/board3d\//, item: '上游对 3D 战场的实现（board3d：光照 rig / 材质层 / 高台）' },
   { match: /^public\/js\/(?:assetDownload|assetPack|ui\/assetDownload)\.js$/, item: '#628 标题页全素材下载 / 素材包导入 — owner 2026-10-17: 我们有中继 + 服务器兜底，不需要玩家自备资源' },
   { match: 'public/js/screens/title.js', item: '#628 标题页全素材下载 / 素材包导入（标题页的两个按钮）' },
+  { match: 'public/js/ui/gameLogic/camera.js', item: '#602 部署时自动收起 + 镜头拉近 (deployFoldsShop) — owner 2026-10-17: 去掉，不再缩放' },
 ]);
 
 /** `git diff --name-status` output → [{ status, path }] (a rename reports its new path). */
