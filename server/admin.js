@@ -97,6 +97,13 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
     difficulty: r.difficulty,
     difficultyName: DIFFICULTY_NAMES[r.difficulty] || r.difficulty,
     inMatch: !!r.match,
+    // a stuck match is diagnosable from here: its phase, round, phase deadline and live field modes
+    phase: r.match ? r.match.phase : null,
+    round: r.match ? r.match.round : null,
+    deadline: r.match ? r.match.deadline : null,
+    fields: r.match && Array.isArray(r.match.fields)
+      ? r.match.fields.map((f) => ({ id: f.fieldId, kind: f.kind, mode: f.mode || (f.cc ? '?' : 'server'), done: !!f.done, authority: f.authority || null }))
+      : null,
     auto: !!r.auto,
     humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
     bots: r.seats.filter((x) => x && !x.left && x.isBot).length,

@@ -5,8 +5,11 @@
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
 import { PHASE } from '../../../shared/constants.js';
-import { DeadBattle, syntheticResult, RESULT_GRACE_MS, HARD_CAP_SECONDS, HeadlessJob } from '../fields.js';
+import { DeadBattle, syntheticResult, RESULT_GRACE_MS, HARD_CAP_SECONDS, HeadlessJob, FIELD_SILENCE_MS } from '../fields.js';
 import { buildBattleSpec, createBattleFromSpec } from '../../sim/spec.js';
+
+/** How often the field-silence watchdog looks at the live client fields. */
+const FIELD_WATCH_MS = 4_000;
 
 export class MatchClientCombat {
   /** Stop every client-combat timer and the headless pacer (phase end, finish, dispose). */
@@ -19,6 +22,7 @@ export class MatchClientCombat {
     this._clearPause();
     if (this._poolTimer) { this.cancel(this._poolTimer); this._poolTimer = null; }
     if (this.pacer) { try { this.pacer.stop(); } catch { /* ignore */ } this.pacer = null; }
+    if (this._fieldWatch) { this.cancel(this._fieldWatch); this._fieldWatch = null; }
     for (const f of this.fields) this._clearFieldTimers(f);
   }
 
@@ -106,6 +110,7 @@ export class MatchClientCombat {
   /** Give every field its authority (a connected human) or run it on the server. */
   _launch(fields) {
     const now = this.sched.now();
+    this._armFieldWatch();
     this.fields = fields;
     for (const f of fields) { f.startAt = now; f.lastProgressAt = now; }
     for (const f of fields) {
@@ -113,6 +118,43 @@ export class MatchClientCombat {
       if (auth) this._assignClient(f, auth);
       else this._runOnServer(f, 'no-human');
     }
+  }
+
+  /**
+   * Field-silence watchdog (normal / 联防 fields): a browser that stops reporting (frozen tab, a stuck battle that never
+   * finishes, a lost b.result) used to leave the phase waiting for the wave deadline. Every FIELD_WATCH_MS this hands
+   * such a field to the server (_runOnServer 'silent'), which then settles it like any other takeover.
+   */
+  _armFieldWatch() {
+    if (this._fieldWatch) return;
+    const tick = () => {
+      this._fieldWatch = null;
+      if (this.ended || this.disposed || this.paused) return;
+      if (this.phase !== PHASE.COMBAT && this.phase !== PHASE.UNITE) return;
+      this._checkFieldSilence();
+      if (this.phase === PHASE.COMBAT || this.phase === PHASE.UNITE) this._fieldWatch = this.later(FIELD_WATCH_MS, tick);
+    };
+    this._fieldWatch = this.later(FIELD_WATCH_MS, tick);
+  }
+
+  /**
+   * Take over every client field (normal / 联防) that has said nothing for FIELD_SILENCE_MS. Returns how many.
+   * @param {number} [now]
+   */
+  _checkFieldSilence(now = this.sched.now()) {
+    let n = 0;
+    for (const f of this.fields) {
+      if (!f || !f.cc || f.done || f.mode !== 'client') continue;
+      if (f.kind === 'boss' || f.kind === 'hidden') continue; // their own silence watchdog (BOSS_SILENCE_MS)
+      // a result already in hand (verification pending, or waiting for its release) needs no takeover — the phase ends itself
+      if (f.verifyJob || f.heldResult || f.result != null) continue;
+      const last = Number.isFinite(f.lastProgressAt) ? f.lastProgressAt : f.startAt;
+      if (now - last <= FIELD_SILENCE_MS) continue;
+      this.log.warn?.(`[match ${this.roomCode}] ${f.fieldId} R${this.round}: silent client for ${Math.round((now - last) / 1000)} s — server takeover`);
+      this._runOnServer(f, 'silent');
+      n++;
+    }
+    return n;
   }
 
   _assignClient(f, pid) {

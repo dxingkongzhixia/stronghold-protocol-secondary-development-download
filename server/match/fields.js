@@ -251,6 +251,8 @@ export class FieldRunner {
 export const RESULT_GRACE_MS = 15_000;
 /** A boss field whose authoritative client sent no b.progress for this long is handed over (ms). */
 export const BOSS_SILENCE_MS = 12_000;
+/** A normal / 联防 client field silent this long (no b.progress, no b.result) is taken over by the server. */
+export const FIELD_SILENCE_MS = 12_000;
 /** Game-time spacing of the progress timeline samples of a server-run field (s). */
 export const TIMELINE_EVERY = 1;
 

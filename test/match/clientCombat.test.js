@@ -198,7 +198,7 @@ test('takeover: an authority that disconnects mid-combat loses its field; the se
   m.dispose();
 });
 
-test('takeover: a connected client that never reports is taken over at time limit + 15 s grace; departed players are settled at once', () => {
+test('takeover: a connected client that never reports is taken over by the field-silence watchdog; departed players are settled at once', () => {
   const h = makeMatch({ mode: 'coop', humans: 3, seed: 9106, captureFrames: false, clientCombat: true, instant: false, perPlayer: { p_2: { stall: true } } });
   h.autoHumans();
   const m = h.m;
@@ -210,7 +210,9 @@ test('takeover: a connected client that never reports is taken over at time limi
   h.run(() => f.mode === 'server' || m.phase !== PHASE.COMBAT, { maxTime: limitMs + 20000 });
   assert.equal(f.mode, 'server');
   const at = m.sched.now() - t0;
-  assert.ok(at >= limitMs + 15000 - 50 && at <= limitMs + 15000 + 400, `taken over at ${at} ms (limit ${limitMs} + 15000)`);
+  // the field-silence watchdog (server/match/match/clientCombat.js) hands a silent field over after FIELD_SILENCE_MS
+  // instead of waiting for the wave limit + RESULT_GRACE_MS: a stuck browser must never hold the phase
+  assert.ok(at >= 12_000 - 50 && at < limitMs + 15000, `taken over at ${at} ms (silence watchdog, limit ${limitMs})`);
   h.sched.advance(1);
   assert.ok(h.clients.get('p_2').ends.some((x) => x.reason === 'takeover'), 'the stalled client is told');
   h.run(() => m.phase !== PHASE.COMBAT);
@@ -725,5 +727,25 @@ test('Final Assault run on the server (nobody connected at its start): a human w
   assert.ok(last.acked[f.fieldId] > 0, 'the server run\'s own damage is acknowledged (the replica does not count it twice)');
   const dealt = m.bossPool.maxHp - last.hp;
   assert.ok(Math.abs(Object.values(last.acked).reduce((a, b) => a + b, 0) - dealt) <= 3000 * 2, 'Σ acked ≈ the pool damage');
+  m.dispose();
+});
+
+test('field-silence watchdog: silent normal / 联防 fields are taken over, boss fields keep their own watchdog', () => {
+  const h = makeMatch({ mode: 'coop', difficulty: 'NORMAL', humans: 1, seed: 9200, clientCombat: true, instant: false });
+  const m = h.m;
+  const now = h.sched.now();
+  m.phase = PHASE.COMBAT;
+  m.fields = [{ cc: true, fieldId: 'n:p_0', kind: 'normal', mode: 'client', authority: 'p_0', done: false, players: ['p_0'], lastProgressAt: now - 13_000, startAt: now - 20_000, spec: { timeLimit: 45 } }];
+  const calls = [];
+  const real = m._runOnServer;
+  m._runOnServer = function (field, reason) { calls.push([field.fieldId, reason]); };
+  assert.equal(m._checkFieldSilence(now), 1, '13 s of silence → takeover');
+  assert.deepEqual(calls, [['n:p_0', 'silent']]);
+  m.fields[0].lastProgressAt = now;
+  assert.equal(m._checkFieldSilence(now), 0, 'a fresh report keeps the authority');
+  m.fields[0].kind = 'boss';
+  m.fields[0].lastProgressAt = now - 60_000;
+  assert.equal(m._checkFieldSilence(now), 0, 'boss fields keep BOSS_SILENCE_MS');
+  m._runOnServer = real;
   m.dispose();
 });
