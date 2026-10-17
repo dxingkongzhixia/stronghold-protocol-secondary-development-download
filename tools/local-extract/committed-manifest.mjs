@@ -14,6 +14,16 @@
 // so a clone gets the official tier with no extraction step. Re-run it after changing the committed art
 // (`node tools/local-extract/committed-manifest.mjs`); the nightly/per-machine extraction only needs the ignored file.
 //
+// Two batches under public/assets/local are deliberately NOT in this file (they ARE committed, but they are served
+// through another list):
+//   * `scene/**` — the extracted battlefield scenes are per-machine by design: the served manifest is the UNION of this
+//     file and a machine's own data/local-assets.json, and the scene groups are exactly what that extraction adds
+//     (docs/ASSETS.md "The served manifest is the UNION of the two"). Their scene.json / scene.bin would also fold
+//     onto one key here.
+//   * `fx/tex/**` — the official battle-effect FORMAT batch (DESIGN §33: prefabs / textures / meshes) is listed by
+//     data/local-fx.json, which has its own vocabulary; `fx/<operator>` piles stay in this file (the local-art tier
+//     resolves them by name), but the format batch must not (test/render/vfx-*.test.js read the other list).
+//
 // Usage: node tools/local-extract/committed-manifest.mjs [--out data/local-assets.committed.json] [--local public/assets/local]
 
 import { readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
@@ -76,6 +86,15 @@ function keyOf(group, name) {
 }
 
 const files = walk(localDir);
+
+/**
+ * Groups this file must not carry (see the header): `scene/**` is per-machine, `fx/tex/**` is the vfx FORMAT batch
+ * (data/local-fx.json). Everything else is covered, including the `fx/<operator>` piles.
+ * @param {string} group
+ */
+const skipped = (group) => group === 'scene' || group.startsWith('scene/')
+  || group === 'fx/tex' || group.startsWith('fx/tex/');
+
 const groups = {};
 let count = 0;
 for (const rel of [...files].sort((a, b) => {
@@ -87,6 +106,7 @@ for (const rel of [...files].sort((a, b) => {
   const group = slash < 0 ? '' : rel.slice(0, slash);
   const name = slash < 0 ? rel : rel.slice(slash + 1);
   if (!group) continue; // a file loose in local/ is not part of any client group
+  if (skipped(group)) continue; // per-machine scenes / the vfx format batch (see the header)
   const entry = { path: `/assets/local/${rel}`, kind: kindOf(name) };
   if (name.toLowerCase().endsWith('.png')) {
     try {
