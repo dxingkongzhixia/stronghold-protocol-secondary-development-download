@@ -1210,3 +1210,11 @@ docs guards 34 pass / 0 fail.
 - `aa1c847c` 固定旋转挂点：`public/js/render/vfx/mounts.js` 与上游该提交**逐字节相同** ✓。
 - 事实上我们的 `skillfx.js` / `skills.js` 比 `aa1c847c` **更新**（带 `FX_COVER` / `COVER_AFTER_S` / `coverOf` / `BOUND_BY_SKILL` —— 那是 round 46 更后面的 fix-procedural R10/R11），说明当时的特效移植用的是更靠后的上游状态。
 - **留档原因**：这次差点再把它们并一遍（`git apply` 在 `wiring.js` 上撞出 4 处冲突，全是我们的吊环回程 / strike 出手点 / 技能认领，属于"我们已有"）。下一会话别再重复。
+
+### 13.4 批次 4 — 闭眼贴图（GitHub #647，2026-10-17）
+
+`43a5b571` 的**代码 `spine.js` 干净应用**（0 冲突）—— 眼皮兜底从「槽位整体隐藏」改成**按槽位落在裁剪多边形内的绘制面积占比**判定（< 1/4，或其中心在外部且 < 1/2 时隐藏）；区域的测量改走 **pixi-spine 的 `bone.matrix`**（此前从未测量过，所以区域型眼球贴图会一直显示）；完全在**凹形裁剪内**的槽位保留（予愿安洁莉娜的武器光）。附带修复：纯烬艾雅法拉的眨眼 / S3、佩佩倒地 0.10 s。
+
+- 测试：`test/render/eyemask.test.js` 16/16（含新增的合成骨架、她的骨架、佩佩倒地）+ 新增 `test/render/eyemask.browser.test.js`（`RENDER_E2E=1` 时对真 stencil 做浏览器校验）。
+- **保护区核对**：`spine.js` 的 `strikePose()` 原样保留（合并后仍在 L836），法杖验收线 48/48 ✓（`vfx-origins` + `vfx-strike-pose` + `fx-local`）。
+- `npm run typecheck` 无错 ✓；`npx eslint` 0 problem ✓；README 套件计数 → 6752。
