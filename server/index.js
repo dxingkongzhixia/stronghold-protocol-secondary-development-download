@@ -344,9 +344,11 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const parts = splitUrl(req.url || '/');
     if (!parts) return false; // the base handler answers 400
     // Public online status (server/admin.js buildPublicSnapshot): the in-game 在线 overlay polls this. Token-free.
+    // `?all=1` lifts the room-list caps for the 公开房间 directory (the lobby slices its own mini rows).
     if (parts.rawPath === '/online/api') {
       if (req.method !== 'GET' && req.method !== 'HEAD') return false;
-      sendJson(req, res, 200, buildPublicSnapshot({ registry, lobby, matchmaker: lobby.mm }));
+      const all = new URLSearchParams(parts.query).get('all') === '1';
+      sendJson(req, res, 200, buildPublicSnapshot({ registry, lobby, matchmaker: lobby.mm, all }));
       return true;
     }
     // Community (server/community.js): the lobby's 更新日志 panel reads the changelog, its bug提交 form uploads

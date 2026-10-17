@@ -137,7 +137,8 @@ export function PublicRoomsScreen({ onBack, onJoin, onSpectate }) {
     let alive = true;
     const tick = async () => {
       try {
-        const r = await fetch('/online/api', { cache: 'no-store' });
+        // ?all=1: the directory lists EVERY public room (the lobby's mini rows ask for the capped default and slice)
+        const r = await fetch('/online/api?all=1', { cache: 'no-store' });
         if (!r.ok) return;
         const j = await r.json();
         if (alive) setData(j);

@@ -132,6 +132,28 @@ test('buildPublicSnapshot.openRooms lists public hand-made 同盟 rooms, not-ful
   assert.deepEqual(snap.openRooms.map((x) => x.full), [false, false, true], 'no full room before a joinable one');
 });
 
+// 公开房间 directory (docs/MATCHMAKING.md §36, owner 2026-10-18): the screen asks `/online/api?all=1` and must see EVERY
+// public room — the lobby's mini rows keep the capped default (12 open / 4 running) and slice themselves.
+test('buildPublicSnapshot all:1 lifts the room caps for the 公开房间 screen; the default stays capped', () => {
+  const seat = (playerId, name) => ({ playerId, name, isBot: false, left: false });
+  const room = (code, over = {}) => {
+    const r = { code, mode: 'coop', public: true, match: null, auto: false, hostId: 'h', difficulty: 'NORMAL', seats: [seat('h', 'Host'), null, null, null], ...over };
+    r.seatOf = (id) => r.seats.find((s) => s && s.playerId === id) || null;
+    r.freeSeat = () => r.seats.indexOf(null);
+    return r;
+  };
+  const rooms = new Map();
+  for (let i = 0; i < 20; i++) rooms.set(`OPEN${i}`, room(`OPEN${i}`, { seats: [seat(`h${i}`, `H${i}`), null, null, null] }));
+  for (let i = 0; i < 9; i++) rooms.set(`RUN${i}`, room(`RUN${i}`, { match: {}, seats: [seat(`r${i}`, `R${i}`), null, null, null] }));
+  const base = { registry: { all: () => [] }, lobby: { rooms }, matchmaker: null, now: 0 };
+  const capped = buildPublicSnapshot(base);
+  assert.equal(capped.openRooms.length, 12, 'the default payload keeps its cap');
+  assert.equal(capped.playRooms.length, 4);
+  const all = buildPublicSnapshot({ ...base, all: true });
+  assert.equal(all.openRooms.length, 20, 'the directory sees every joinable room');
+  assert.equal(all.playRooms.length, 9, 'and every running room');
+});
+
 // 公开房间 full lobby (docs/MATCHMAKING.md §36): a full room rides the public payload with the same privacy guarantees —
 // only the public seat identity, never the internal playerId / account binding / address / token.
 test('buildPublicSnapshot: a full lobby leaks no playerId / accountId / token (privacy holds for full rooms)', () => {

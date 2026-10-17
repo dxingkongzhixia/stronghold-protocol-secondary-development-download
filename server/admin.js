@@ -131,8 +131,11 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
 /**
  * A PUBLIC, token-free view of who is online right now — for the lobby's 在线 badge link (`/online`). It deliberately
  * omits everything sensitive (no account list, no IPs, no last-login): player names are already visible in-game.
+ *
+ * `all` (the 公开房间 screen: `/online/api?all=1`) lifts the list caps — the lobby's mini rows only need a handful and it
+ * slices them itself (screens/lobby.js), while the directory screen shows every public room.
  */
-export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.now() }) {
+export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.now(), all = false }) {
   const mm = matchmaker || (lobby && lobby.mm) || null;
   const online = [...registry.all()].filter((s) => presenceOnline(s, now)).map((s) => ({
     name: s.name,
@@ -185,7 +188,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       seats: seatsOf(r),
     }))
     .sort((a, b) => (a.full - b.full) || (b.humans - a.humans))
-    .slice(0, 12);
+    .slice(0, all ? undefined : 12);
   // Rooms whose match is already running (the lobby's 正在模拟 row → enter as a spectator): 野排 first, then rooms with
   // an AI seat to 夺舍, then the fullest — at most 4.
   const playRooms = [...lobby.rooms.values()]
@@ -202,7 +205,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       seats: seatsOf(r),
     }))
     .sort((a, b) => (b.auto - a.auto) || ((b.bots > 0) - (a.bots > 0)) || (b.humans - a.humans))
-    .slice(0, 4);
+    .slice(0, all ? undefined : 4);
   return { now, counts, openRooms, playRooms, online };
 }
 

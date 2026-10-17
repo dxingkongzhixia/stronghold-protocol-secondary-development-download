@@ -4,6 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { roomSeats, roomIsFull, splitRooms } from '../../public/js/screens/rooms.js';
 import { MAX_SEATS } from '../../shared/constants.js';
 
@@ -68,4 +69,11 @@ test('splitRooms: 组队中 is not-full first (humans desc), a full lobby sinks 
     ],
   };
   assert.deepEqual(splitRooms(legacy).open.map((r) => r.code), ['O', 'F2']);
+});
+
+// Owner 2026-10-18: the directory lists EVERY public room — it asks the uncapped list, while the lobby's mini rows keep
+// the capped default and slice themselves.
+test('the directory fetches the uncapped list (/online/api?all=1)', () => {
+  const src = readFileSync(new URL('../../public/js/screens/rooms.js', import.meta.url), 'utf8');
+  assert.match(src, /fetch\('\/online\/api\?all=1'/, 'the screen asks for every room');
 });

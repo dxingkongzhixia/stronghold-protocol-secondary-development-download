@@ -1234,6 +1234,10 @@ describe('websocket lobby', () => {
     assert.ok(codes.includes(dflt.code), `openRooms has the default room: ${codes}`);
     assert.ok(!codes.includes(priv.code), `a private room stays hidden: ${codes}`);
     assert.ok(!codes.includes(solo.code), `a solo room stays hidden: ${codes}`);
+    // the 公开房间 directory asks for the uncapped list (owner 2026-10-18): same rooms, no list cap
+    const all = JSON.parse((await httpReq(srv.port, '/online/api?all=1')).body.toString());
+    const allCodes = all.openRooms.map((x) => x.code);
+    assert.deepEqual(allCodes, codes, '?all=1 returns the same public set without the cap');
 
     const bad = await pool.player('BadHost');
     await expectError(bad, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL', public: 'yes' }, ERR.BAD_MSG);
