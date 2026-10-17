@@ -1218,3 +1218,18 @@ docs guards 34 pass / 0 fail.
 - 测试：`test/render/eyemask.test.js` 16/16（含新增的合成骨架、她的骨架、佩佩倒地）+ 新增 `test/render/eyemask.browser.test.js`（`RENDER_E2E=1` 时对真 stencil 做浏览器校验）。
 - **保护区核对**：`spine.js` 的 `strikePose()` 原样保留（合并后仍在 L836），法杖验收线 48/48 ✓（`vfx-origins` + `vfx-strike-pose` + `fx-local`）。
 - `npm run typecheck` 无错 ✓；`npx eslint` 0 problem ✓；README 套件计数 → 6752。
+
+### 13.5 批次 5 — 闸门方块（PR #640 / GitHub #639，2026-10-17）
+
+`429339b9` + `f654f200` 的 `materials.js` / `scene.js` 两段**干净应用**（0 冲突；`board3d` 虽是 §0 归我们，但闸门这一段是原样继承上游的）。对照客户端 `Particles` shader 还原：
+
+| 项 | 旧（我们之前） | 现在（官方） |
+|---|---|---|
+| 颜色 | 三个材质**白 tint** | `GATE_TINT`：起点门**红 `[1,0,0]`**（α 0.134↔0.229）、终点门**蓝 `[0,0.0897,1]`**（α 0.16↔0.097）、alpha 部件白（α 1） |
+| shader | `c = texel.rgb * uTint`，`uPulse` 手调 | `c = 2·uTint·texel.rgb`、`a = clamp(2·uAlpha·texel.a, 0, 1)`（官方 2× 约定） |
+| 色彩空间 | sRGB 采样 + `colorspace_fragment` | 闸门贴图**线性**（`srgb: false`），不再二次转换 |
+| 脉冲 | 余弦 0.134↔0.229 × `GATE_GAIN 0.6` ÷0.18；终点门 `phase 0.5`；alpha 门钉死 0.9 | clip 自己的 `_TintColor.a` 曲线（**smoothstep** `x²(3−2x)`，2 s 循环），**每块材质各用各的曲线**，`GATE_GAIN` 删除 |
+
+- 测试：`test/render/board3d.test.js` 19/19（新增：起始门 `rgb == [1,0,0]`「不是白的」、`gatePulse(0/1, end.alpha) == 0.16/0.097`、`uAlpha` 会动）。
+- 纯视觉：不碰 sim / 数据 / golden；`img.gate` 用本地提取的 `map/fx` 合并图集 ✓。
+- `npm run typecheck` 无错 ✓；`npx eslint` 0 error ✓；全量 **7106 / 7091 通过 / 0 失败 / 15 跳过** ✓。
