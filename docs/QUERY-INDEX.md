@@ -47,7 +47,8 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 
 - Index: [`docs/DESIGN.md`](DESIGN.md).
 - **Current rules**: [`docs/design/`](design/) — `overview.md`, `engine.md`, `match.md`, `client.md`,
-  `network.md`, `geometry-time.md`.
+  `network.md`, `geometry-time.md`, and `vfx-format.md` (the official battle-FX format: prefabs / particle
+  systems / the importer and the runtime viewer).
 - **Per-release revisions and the evidence**: [`docs/history/`](history/).
 - Rules cited anywhere as `DESIGN §N` are checked against these headings (`docs-paths.test.js`):
   **do not renumber or retitle a section**.
@@ -95,7 +96,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 
 ## 8. Accounts, matchmaking and the community surface (fork-only)
 
-The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §1–§48. Code:
+The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) §0–§49 (the file opens with a 目录). Code:
 `server/auth.js`, `server/db.mjs` (schema v4/v5), `server/matchmaker.js`, `server/community.js`,
 `server/stats.js`, `server/admin.js`; client `public/js/screens/lobby.js`, `rooms.js`, `stats.js`,
 `public/js/ui/community.js`, `stats.js`, `chat.js`.
@@ -150,7 +151,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 
 | subject | doc |
 |---|---|
-| **our** decisions §1–§47 | [`docs/MATCHMAKING.md`](MATCHMAKING.md) |
+| **our** decisions §0–§49 (目录 at the top of the file) | [`docs/MATCHMAKING.md`](MATCHMAKING.md) |
 | mainline-merge log + never-merge list (§0) | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
 | fork-only mechanisms that must survive a merge | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) |
 | release notes | [`CHANGELOG.md`](../CHANGELOG.md) |

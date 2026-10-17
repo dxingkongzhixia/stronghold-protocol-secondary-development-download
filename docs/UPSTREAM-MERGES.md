@@ -28,6 +28,28 @@ Conventions used below:
 
 ---
 
+## 目录
+
+> 导航用；每节正文才是准的（按标题里的编号 grep 更快）。
+
+- 0. 永不合并 — the never-merge list
+- 账号与统计：与主线的设计差异（本分支独有，非上游合并）
+- 标题画面：公告 / 关于本服务器 / 添加到桌面（本分支独有，灵感来自另一部署）
+- 1. feedback5 — the full upstream merge (2026-10-07)
+- 2. feedback6 — selective (2026-10-07)
+- 3. 0.3.0 — our own feature release (2026-10-08/09, not upstream)
+- 4. feedback7 — the R22 batch (2026-10-09/10)
+- 5. Group A — the post-0.3.0 upstream combat fixes (2026-10-09/10)
+- 6. Group C — the R23 stream (2026-10-10)
+- 7. Pending: the displacement-slide + 失衡 port (`port-r22-slide`)
+- 8. 0.2.3 PWA install icons + manifest (mint rook) — the 添加到桌面 button's missing half (2026-10-11)
+- 9. 0.2.5 official battlefield scenes on the 3D board (2026-10-12)
+- 10. 0.2.5 — the 驭械术师 funnel/drone hit fixes (upstream `e0f37718` / `a451ddcf`, ported) (2026-10-12)
+- 11. v0.2.6 — the **whole-branch** merge (2026-10-14)
+- 12. How to add the next batch to this log
+- 12. v0.3.0 分批并入计划
+- 官方特效：待修清单（2026-10-16 夜，owner 报障 → 交下一会话）
+
 ## 0. 永不合并 — the never-merge list
 
 These upstream commits/features are **excluded by the owner** and must not be merged (or, if re-applied, must be

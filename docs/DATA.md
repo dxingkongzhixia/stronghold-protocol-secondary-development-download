@@ -38,6 +38,30 @@ Unknown options or a missing option value are errors (exit code 2); `--refresh` 
 - **Derived paths.** `stages.json groundPaths*` come from the sim's own `server/sim/grid.js` pathing: a change there
   needs a rebuild (the offline-rebuild test catches a stale `data/`).
 
+## 目录
+
+> 导航用；每节正文才是准的（按标题里的编号 grep 更快）。
+
+- 0. Conventions used by every file
+- 1. `config.json` — modes, economy and all global tunables
+- 2. `chess.json` — `{ [chessId]: Chess }` (266 = 133 normal + 133 golden)
+- 3. `bonds.json` — `{ [bondId]: Bond }` (23 bonds, 8 core)
+- 4. `garrisons.json` — `{ [garrisonId]: Garrison }` (249; 43 distinct `effectKey`s)
+- 5. `items.json` — `{ [itemChessId]: Item }` (115 = 56 EQUIP × 2 + 3 MAGIC)
+- 6. `bands.json` — `{ [bandId]: Band }` (40)
+- 7. `effects.json` — `{ [effectId]: Effect }` (361: every effect of the season)
+- 8. `choices.json` — 机变 draft data
+- 9. `enemies.json` — `{ [enemyKey]: Enemy }` (249 keys that can appear)
+- 10. `factions.json` — special enemies (特训敌人)
+- 11. `waves.json` — `{ [templateId]: Wave }` (38 templates)
+- 12. `stages.json` — `{ [stageId]: Stage }` (11 terrains, 8 active, + the 2 escaped-map records)
+- 13. `bosses.json` — `{ [bossId]: Boss }` (10; boss_8–10 hidden)
+- 14. `tokens.json` — `{ [tokenId]: Token }` (22)
+- 15. Anomalies found while joining (also in `.cache/build-data-report.json`)
+- 16. Counts (current build)
+- 17. Integrity guarantees (checked by the builder and `test/data.test.js`)
+- 18. `backups.json` — 补位 stand-ins and 自选 (DIY) data — `{ units, tokens, diy }`
+
 ## 0. Conventions used by every file
 
 | Convention | Meaning |

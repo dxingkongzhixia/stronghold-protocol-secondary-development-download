@@ -1,6 +1,6 @@
 # Golden results
 
-> **See also.** [`docs/HANDOVER.md`](../docs/HANDOVER.md) §5 (the golden attribution discipline) · [`docs/QUERY-INDEX.md`](../docs/QUERY-INDEX.md).
+> **See also.** [`docs/HANDOVER.md`](../../docs/HANDOVER.md) §5 (the golden attribution discipline) · [`docs/QUERY-INDEX.md`](../../docs/QUERY-INDEX.md).
 
 The simulation is deterministic: the same seed and inputs give the same battle and the same match, bit for bit. These
 files record the exact outcome of a fixed corpus of seeded scenarios, so a change that alters gameplay — even one meant

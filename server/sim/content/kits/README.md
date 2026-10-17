@@ -1,6 +1,6 @@
 # Operator kits
 
-> **See also.** The contract is enforced by `test/content/kits_layout.test.js`; the end-to-end recipe is [`docs/NEW-OPERATOR.md`](../../../docs/NEW-OPERATOR.md); lookup: [`docs/QUERY-INDEX.md`](../../../docs/QUERY-INDEX.md).
+> **See also.** The contract is enforced by `test/content/kits_layout.test.js`; the end-to-end recipe is [`docs/NEW-OPERATOR.md`](../../../../docs/NEW-OPERATOR.md); lookup: [`docs/QUERY-INDEX.md`](../../../../docs/QUERY-INDEX.md).
 
 A kit is the battle behaviour of one chess (棋子): its skills, talents, trait specifics and module effects, on top of
 the profession defaults of `server/sim/professions.js`. Kits run inside the deterministic battle simulation that the

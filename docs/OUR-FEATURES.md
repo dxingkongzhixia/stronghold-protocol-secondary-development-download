@@ -23,6 +23,23 @@ Read this together with:
 
 ---
 
+## 目录
+
+> 导航用；每节正文才是准的（按标题里的编号 grep 更快）。
+
+- 1. Custom operators (`CUSTOM_CHESS`)
+- 2. The two-tier battle-effect system (procedural + optional local art)
+- 3. The local-art pipeline (`tools/local-extract/`)
+- 4. Asset sources (mirrors) and the local-client-first rule
+- 5. Our carried decisions (the §22 blacklist, traits and rules)
+- 6. Publishing (the GitHub primary + Gitee mirror and the deploy order)
+- Appendix: fork-only surface — a merge checklist
+- 7. Lobby community data (`server/community.js`)
+- 8. Post-0.3.0 surface from the feedback7 merge (R22 / R23)
+- 9. Title-screen surfaces from another deployment (announce / about / install)
+- 10. Local asset cache (`public/sw.js` + `public/js/assetCache.js`)
+- 11. OUR difficulty layer (`data/tuning.json` `boost`)
+
 ## 1. Custom operators (`CUSTOM_CHESS`)
 
 > **我们独有，非上游；合并时不得丢失** — the eight custom shop operators and their data/kit/art wiring are added by

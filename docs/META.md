@@ -42,6 +42,19 @@ server/match/
 
 ---
 
+## 目录
+
+> 导航用；每节正文才是准的（按标题里的编号 grep 更快）。
+
+- 1. Match flow
+- 2. Effect registry (content API)
+- 3. Rules implemented (summary; details in each module header)
+- 4. 联防 (Unite)
+- 5. Views (DESIGN §8.2 / §8.3) and deviations
+- 6. Testing & tools
+- 7. Assumptions (all documented in module headers)
+- Opening rerolls and bot reactions (0.2.3)
+
 ## 1. Match flow
 
 ```

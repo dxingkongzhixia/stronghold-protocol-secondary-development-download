@@ -11,6 +11,20 @@ Everything the client needs is listed in **`data/assets.json`**. The client shou
 > **Navigation.** Running · What is downloaded · Post-processing · Manifest schema (`data/assets.json`) · Verification · **Local asset cache & CDN mirror download chain** (incl. *Without a Service Worker* and *The relay*) · 本地客户端来源 · Licensing and credits. Battle effects: see the "Battle effects" section (the two-tier FX system).
 > See also [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2 / §3 (the fork-only FX and local-art pipeline) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md).
 
+## 目录
+
+> 导航用；每节正文才是准的（按标题里的编号 grep 更快）。
+
+- Running
+- What is downloaded
+- Post-processing
+- Manifest schema (`data/assets.json`)
+- The committed manifest and the served manifests
+- Verification
+- Local asset cache & CDN mirror download chain
+- 本地客户端来源（owner 提供，2026-10-06）
+- Licensing and credits
+
 ## Running
 
 ```bash

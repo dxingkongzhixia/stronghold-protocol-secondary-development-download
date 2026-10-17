@@ -106,6 +106,30 @@ Part of [DESIGN.md](../DESIGN.md) (the index; section numbers are global).
 
 ## 33. Official battle effects — the extracted format (0.3.0, Phase 1a–1d)
 
+## 目录
+
+> 导航用；每节正文才是准的（按 §33.N grep 也行）。
+
+- 33.1 Files, the file list and the extractor run
+- 33.2 Conventions
+- 33.3 Value encodings (curves, gradients, references)
+- 33.4 The prefab descriptor (`prefabs/<file>.json`)
+- 33.5 ParticleSystem (`node.particleSystem`)
+- 33.6 Renderers
+- 33.7 Materials (`descriptor.materials[]`)
+- 33.8 Textures (`textures.json`, `tex/`)
+- 33.9 Meshes (`mesh/<key>.json`)
+- 33.10 Animation clips (`descriptor.clips[]`, `node.animator`, `node.animation`)
+- 33.11 Behaviours (`node.behaviours[]`)
+- 33.12 `index.json`
+- 33.13 The Phase 1a sample (a subset of the full set, §33.14)
+- 33.14 Phase 1b: the full set
+- 33.15 Phase 1c: index.json and the meshes version 2
+- 33.16 The runtime's skill wiring (0.3.0 Phase 3b, 3c, 3d)
+- 33.17 Phase 1d: talents, common and general abilities, the abilities' projectiles, buff lives (index.json version 3)
+- 33.18 The 驭械术士's floating units (0.3.0, round 46)
+
+
 The official battle effects (hit sparks, projectiles, cast flashes, status loops, skill effects) are Unity prefabs of
 ParticleSystems, meshes, trails and small behaviour scripts. `tools/local-extract/fx.py` (run as `extract.py --only fx`)
 reads them from the player's own client — like every local-client asset (§13), nothing of it is committed or shipped —

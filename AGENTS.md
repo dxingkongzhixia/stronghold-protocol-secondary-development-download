@@ -67,12 +67,12 @@ The table below is the **desktop (two-tree)** layout:
 | the **battle engine** (units, buffs, damage, hooks, skills) | [`docs/SIM.md`](docs/SIM.md) |
 | the **match/meta engine** (rounds, economy, 联防, views) | [`docs/META.md`](docs/META.md) |
 | **generated game data** (`data/*.json` fields) | [`docs/DATA.md`](docs/DATA.md) |
-| **assets** (sources, layout, manifest, battle-fx) | [`docs/ASSETS.md`](docs/ASSETS.md) |
+| **assets** (sources, layout, manifest, battle-fx) | [`docs/ASSETS.md`](docs/ASSETS.md) · the official FX format: [`docs/design/vfx-format.md`](docs/design/vfx-format.md) |
 | **difficulty model** | [`docs/BALANCE.md`](docs/BALANCE.md) |
 | **languages / i18n** | [`docs/I18N.md`](docs/I18N.md) |
 | player-facing rules guide (中文) | [`docs/PLAYING.md`](docs/PLAYING.md) |
 | **our fork-only mechanisms** (must survive merges) | [`docs/OUR-FEATURES.md`](docs/OUR-FEATURES.md) |
-| the **decision record** §1–§47 (accounts, matchmaking, the 8 custom operators, community) | [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) |
+| the **decision record** §0–§49 (accounts, matchmaking, the 8 custom operators, community; the file opens with a 目录) | [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) |
 | **upstream merge log** + the never-merge list (§0) | [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) |
 | **is there new upstream work, and what will it conflict with** (run before every merge) | `node tools/check-upstream.mjs` (`npm run check:upstream`) |
 | add a **custom operator** (end-to-end recipe, 中文) | [`docs/NEW-OPERATOR.md`](docs/NEW-OPERATOR.md) |

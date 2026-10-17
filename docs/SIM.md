@@ -43,6 +43,23 @@ server/sim/
 
 ---
 
+## 目录
+
+> 导航用；每节正文才是准的（按标题里的编号 grep 更快）。
+
+- 1. Driving a battle (match owner)
+- 2. Units
+- 3. Buffs, mods, statuses
+- 4. Damage & heal pipeline
+- 5. Hook bus
+- 6. Engine helpers (content must use these)
+- 7. Skills
+- 8. Professions (server/sim/professions.js)
+- 9. Wire format (snapshot.js, DESIGN §8.2)
+- 10. Testing content (test/helpers/battleHarness.js)
+- 11. Tools
+- 12. Data notes (simdata.js)
+
 ## 1. Driving a battle (match owner)
 
 ```js
