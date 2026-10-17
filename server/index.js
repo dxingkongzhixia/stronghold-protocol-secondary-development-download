@@ -41,13 +41,14 @@ import { openDb } from './db.mjs';
 import { AuthService } from './auth.js';
 import { CommunityService, bugReportsExport, bugReportsToCsv } from './community.js';
 import { StatsService } from './stats.js';
+import { TrainingStore } from './training/store.js';
+import { setTrainingSink } from './training/record.js';
 import { ADMIN_HTML, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
 import { createSpeedProbe } from './speed.js';
 import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from './mirrors.js';
 import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX } from '../shared/constants.js';
-import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';
-import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
+import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
 import { createPackRegistry } from './packs.js';
 import { MIME, COMPRESSIBLE, acceptsGzip, pickEncoding, parseRange } from './http/files.js';
@@ -173,7 +174,15 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // Match statistics (server/stats.js, docs/MATCHMAKING.md §40): every finished match, per owner (account or guest),
   // on the same DB — schema v5 (server/db.mjs). Null without a DB (guests-only, file-free tests): stats.* is disabled.
   const stats = db ? (opts.stats || new StatsService({ db })) : null;
-
+  // Bot-rehearsal training samples (server/training/store.js): their OWN SQLite file, batched and best-effort, so a
+  // failure or a full disk never touches a match. `SP_TRAINING=off` disables it; tests pass no file (no-op sink).
+  const training = opts.training !== undefined
+    ? opts.training
+    : (process.env.SP_TRAINING === 'off'
+      ? null
+      : new TrainingStore({ file: opts.trainingFile || path.join(ROOT, 'var', 'training.db'), log }));
+  // the store opens lazily on the first recorded rehearsal: a match without bots never creates the file
+  setTrainingSink(training ? (row) => training.record(row) : null);
   const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
   // content packs (docs/PACKS.md): scanned now — the start log names them — and again whenever their folders change
