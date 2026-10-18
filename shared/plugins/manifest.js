@@ -53,6 +53,8 @@
 // [ASSUMED — every limit].
 
 import { APP_VERSION, PLUGIN_API } from '../constants.js';
+import { readThemeDeclaration } from './theme.js';
+import { readNotices, capCatalogueNotices } from './notices.js';
 import { SOURCE_LANG, canonicalLang, isLangCode, languageName, langFields } from '../i18nPacks.js';
 
 /** A plugin folder's manifest file (manifest 2). */
@@ -170,7 +172,7 @@ const SETTING_TYPES = ['boolean', 'integer', 'number', 'enum'];
 /** Top-level fields of manifest 2 (anything else is warned about and ignored). */
 const V2_FIELDS = new Set(['$schema', 'manifest', 'id', 'name', 'englishName', 'description', 'version', 'app', 'api', 'class', 'scope',
   'authors', 'credits', 'license', 'homepage', 'sourceLang', 'requires', 'optional', 'conflicts', 'loadAfter', 'loadBefore', 'priority',
-  'settings', 'permissions', 'entry', 'slots', 'files', 'lang', 'base', 'fallback', 'complete', 'machineTranslated', 'numberUnits', ...Object.keys(PARTS)]);
+  'settings', 'permissions', 'entry', 'slots', 'theme', 'notices', 'files', 'lang', 'base', 'fallback', 'complete', 'machineTranslated', 'numberUnits', ...Object.keys(PARTS)]);
 /** Fields only a lang plugin has. */
 const LANG_ONLY = ['files', 'lang', 'base', 'fallback', 'complete', 'machineTranslated', 'numberUnits'];
 
@@ -698,6 +700,20 @@ export function readPluginManifest(raw, ctx) {
 
   // permissions: known, allowed for the class, one for every part and entry point
   const permissions = [];
+  // W1 (plan C): a cosmetic/ui plugin may set design tokens; any plugin may carry plain-text notices
+  let theme = null;
+  if (m.theme !== undefined) {
+    const r = readThemeDeclaration(m.theme);
+    for (const p of r.problems) problems.push(p.text);
+    theme = r.vars;
+  }
+  let notices = [];
+  if (m.notices !== undefined) {
+    const r = readNotices(m.notices);
+    for (const p of r.problems) problems.push(p.text);
+    notices = r.notices || [];
+  }
+
   if (m.permissions !== undefined) {
     if (!Array.isArray(m.permissions)) problems.push('"permissions" is not a list');
     else for (const p of m.permissions) {
@@ -727,7 +743,7 @@ export function readPluginManifest(raw, ctx) {
   const out = {
     manifest: 2, id, class: cls, type: kind.packType, name, englishName, names, description, version, app: range, compatible, api, scope,
     authors: authorsOf(m.authors), credits: str(m.credits, 500), license: str(m.license, 100), homepage, sourceLang: sourceLang || SOURCE_LANG,
-    requires, optional, conflicts, loadAfter, loadBefore, priority, settings, permissions, parts, entry, slots, files: {},
+    requires, optional, conflicts, loadAfter, loadBefore, priority, settings, permissions, parts, entry, slots, files: {}, theme, notices,
   };
   if (isLang) {
     readLangFields(m, undefined, out, problems, warnings);
@@ -872,6 +888,8 @@ export function pluginIndexEntry(p) {
   for (const k of ['loadAfter', 'loadBefore']) if (m[k].length) e[k] = [...m[k]];
   if (m.priority) e.priority = m.priority;
   if (Object.keys(m.settings).length) e.settings = JSON.parse(JSON.stringify(m.settings));
+  if (m.theme && Object.keys(m.theme).length) e.theme = { vars: { ...m.theme } };
+  if (m.notices && m.notices.length) e.notices = capCatalogueNotices(m.notices);
   if (m.permissions.length) e.permissions = [...m.permissions];
   if (Number.isFinite(p.bytes)) e.bytes = p.bytes;
   if (Number.isFinite(p.count)) e.files = p.count;

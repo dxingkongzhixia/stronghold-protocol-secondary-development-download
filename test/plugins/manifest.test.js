@@ -191,10 +191,10 @@ test('manifest 2: inline assets name art, models, audio or fonts; a theme never 
   const cos = (extra) => readPluginManifest({ manifest: 2, version: '1.0.0', app: '*', api: 1, class: 'cosmetic', permissions: ['assets.override', 'theme'], ...extra }, ctx('skin'));
   assert.match(cos({ assets: { ui: { 'top/bar': 'ui/bar.svg' } } }).problems.join(), /assets\.ui\.top\/bar: ui\/bar\.svg is not an image, a Spine file, audio or a font/);
   assert.match(cos({ assets: { chars: { c: { avatar: '../x.png' } } } }).problems.join(), /is not a path inside the plugin folder/);
-  assert.deepEqual(cos({ assets: { audio: { bgm: 'audio/b.ogg' } }, theme: { '--accent': '#f6a329' } }).problems, []);
+  assert.deepEqual(cos({ assets: { audio: { bgm: 'audio/b.ogg' } }, theme: { '--gold': '#f6a329' } }).problems, []);
   assert.deepEqual(cos({ assets: { chars: { c: { avatar: 'a.png', scale: '1.5', anims: 'auto' } } } }).manifest.parts.assets.files, ['a.png'], 'only file names count');
   assert.match(cos({ assets: { chars: { c: { avatar: 'https://cdn.example/a.png' } } } }).problems.join(), /is not a path inside the plugin folder/, 'no outside URL');
-  assert.match(cos({ assets: { audio: { bgm: 'audio/b.ogg' } }, theme: { '--bg': 'url(https://evil.example/x)' } }).problems.join(), /"theme" names a URL/);
+  assert.match(cos({ assets: { audio: { bgm: 'audio/b.ogg' } }, theme: { '--bg-0': 'url(https://evil.example/x)' } }).problems.join(), /"theme" names a URL/);
   assert.match(cos({ assets: 'assets.json', permissions: [] }).problems.join(), /"assets" needs the permission "assets\.override" or "assets\.add"/);
   const script = readPluginManifest({ manifest: 2, version: '1.0.0', app: '*', api: 1, class: 'script', permissions: ['sim.code'], entry: { sim: 'sim/index.js', meta: 'meta/index.js' } }, ctx('kit'));
   assert.match(script.problems.join(), /"entry\.meta" needs the permission "meta\.code"/);

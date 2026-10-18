@@ -51,8 +51,27 @@ import { PLUGINS_URL } from '../../shared/plugins/manifest.js';
 import { contentHashOf, csUrlPart, isContentHash, isContentHash as isVisualHash } from '../../shared/plugins/identity.js';
 import { sha256Hex } from '../../shared/sha256.js';
 import { getLang, langChain, t, N_ } from '../../shared/i18n.js';
+import { resolveThemeVars } from '../../shared/plugins/theme.js';
+import { applyThemeProperties } from './themeVars.js';
 
 /** The localStorage preference (`sp.pref.<key>`) of the personal cosmetic plugins: their ids. */
+/** The token names this page set from the personal plugins (removed when a plugin is switched off). */
+let themeSet = new Set();
+
+/**
+ * W1 (plan C): write the design tokens of the personal cosmetic plugins that are switched on. A value is checked
+ * again by shared/plugins/theme.js; the page's CSP is untouched (inline properties, no stylesheet).
+ */
+export function applyCatalogTheme() {
+  const cur = catalog.get();
+  const ids = new Set(personal.get().ids);
+  const winners = resolveThemeVars((Array.isArray(cur.plugins) ? cur.plugins : [])
+    .filter((p) => p && p.class === 'cosmetic' && ids.has(p.id) && p.theme && isObj(p.theme.vars))
+    .map((p) => ({ id: p.id, vars: p.theme.vars })));
+  const root = typeof document !== 'undefined' ? document.documentElement : null;
+  themeSet = applyThemeProperties(root, winners, themeSet);
+}
+
 export const PERSONAL_PREF = 'cosmetics';
 /** Waits (ms) before a visual set's document is fetched again after a transient failure (like data.js). */
 export const VISUAL_RETRY_MS = Object.freeze([600, 2000]);
@@ -100,6 +119,7 @@ export function loadCatalog({ force = false, fetch: doFetch = defaultFetch } = {
       const plugins = isObj(body) && Array.isArray(body.plugins) ? body.plugins.filter(isObj) : [];
       await loadPluginOrder();
       catalog.set({ status: 'ready', plugins, app: typeof body?.app === 'string' ? body.app : null, at: Date.now() });
+      applyCatalogTheme();
       return plugins;
     } catch (err) {
       console.warn(`[content] ${PLUGINS_URL}index.json unavailable (${err?.message || err})`);
@@ -145,6 +165,8 @@ export function pluginName(p) {
 /** The personal cosmetic plugins switched on in this browser: `{ ids }` (persisted as PERSONAL_PREF). */
 export const personal = createStore({ ids: (() => { const v = loadPref(PERSONAL_PREF, []); return isIds(v) ? v : []; })() });
 personal.subscribe((s) => savePref(PERSONAL_PREF, s.ids));
+// W1 (plan C): switching a personal plugin on or off re-applies the design tokens it declares.
+personal.subscribe(() => applyCatalogTheme());
 
 /** What the load order reads of a catalogue entry (shared/plugins/order.js OrderEntry). @param {any} p */
 const orderEntry = (p) => ({

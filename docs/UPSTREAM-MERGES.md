@@ -1459,3 +1459,8 @@ docs guards 34 pass / 0 fail.
 - **B**：停在 P0–P4（外观 / 数据+内容集 / DSL / UI 沙箱，均已可用），不再向上并。
 这两条是**架构级**选择，需要业主拍板；不是文件级合并。
 
+**W1-lite 已并入（计划 C，`9dd5b6...`）**：取 tip 的纯模块 `shared/plugins/{theme,notices}.js` + `public/js/themeVars.js`；`shared/plugins/manifest.js` 接受 `theme`（设计令牌，需 `theme` 权限，仅 cosmetic / trusted）与 `notices`（纯文本公告），校验后进入 **manifest 与目录条目**；客户端 `content.js` 在目录加载和「个人插件开关」变化时，把**已启用的个人外观插件**的令牌用 `applyThemeProperties` 写到 `<html>`（CSP 不变，关掉即移除）。
+**本分支适配**：`manifest.test.js` 的令牌样例从 `--accent` / `--bg` 改为本项目的 `--gold` / `--bg-0`；三处 上游 34.14 引用改指 `UPSTREAM-MERGES §13.10`。
+验收：新测试 `theme-notices-local` 4/4，插件套件 **164 / 152（12 skip）**，客户端插件套件 30/29；全量 **7606 / 7571 / 0 失败 / 33 跳过**（仅性能基线抖动，单跑 35/35），**golden 全匹配**，i18n en 100%，文档 34/34。
+**仍未做**：公告的**客户端 UI**（列表 / 已读 / 标题页与大厅入口）以及**房间主题**（房间内容集里的主题令牌）；两者都不需要 Worker 托管。
+
