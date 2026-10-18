@@ -1342,5 +1342,13 @@ docs guards 34 pass / 0 fail.
 - 只改 `public/js/render/vfx/{skills,skillfx,wiring}.js` 与两个测试文件；`docs/design/vfx-format.md` / `CHANGELOG` / history **一律取我们的**（`history/0.3.1.md` 不收）。
 - 验收：全部 **vfx 套件 251/251**（含 `vfx-strike-pose` 法杖挂点红线、`vfx-skill-fixes`、`vfx-hits`）、`vfx-audit031` + `vfx-procedural` 26/26；**golden 全部匹配**（fields 22 场景不变）；全量 `node --test` **7227 / 7210**，两条失败均为已知抖动（README 计数已更新；`test/sim/robustness` 性能基线单跑 35/35）。
 
+
+**批次 ③（isomerpoi 的 7 个 UI PR）— 进行中**：
+
+- **已并入 part 1**：`f16fd3d9`（#699「异形屏适配」四个滑条：50 = 不变、每步 2 px、±100 px，移动整个界面；只存本机）+ `51043f91`（± 按钮进 44 px 触控区）+ `7661d2a6`（机变卡文字 line-height 1.3 / 8 行 + 底部留白）；`a1ea1608`（#695 战略选择官方观感：标题栏 / 卡片 / 白色确认框，「已选 / 当前」标记改到队伍栏头像上，去掉独立顺序列表）。
+  **本分支适配**：队伍栏签名保留 `chat` / `onShareHp` 并加 `spMarks`；队伍列保留 `gm__teamcol` 包装与观战席 `SpecDock`；`.title-guide` 触控钩子**不再加入**（本分支标题页无「玩法说明」入口，`title-surfaces` 测试钉住）；卡片正文只有一条 **1.3 / 8 行** 规则（较新的 `7661d2a6` 覆盖 #695 的 1.5 / 7 行）。
+  验收：`test/ui` **947 / 943 通过 / 0 失败**（4 跳过）；i18n **1520/1520**。
+- **待做（同一批的余下 5 个 PR）**：#696 大厅 S.W.E.E.P. 战报（新文件 `screens/sweep.js` + `sweep.css` 的依赖在本分支**都齐**：`abilityLines` / `roman` / `Modal` / `guidePages` / `loadoutStore`），但 `lobby.js` 必须**手工接线**（我们的 lobby 有公开房间 / 社区 / 统计，整体取上游 hunk 会回退）；#698 结算页官方流程、#703 局内顶栏与回合提示、#704 开局 / 盟约提示、#705 最终攻势 / 作战结束 plates —— 都动 `screens/game.js`，需要逐个接、每步跑 `test/ui` 与 `test/render`。
+
 **下一批**：② 官方特效审计 R18–R21（`5209873f` `2cd8ac7b` `2ee48b8c` `d6f7ef70` + 合并 `b47b2a81`）→ ③ isomerpoi 的 7 个 UI PR（单独一批）→ ④ `#680` 音频池 / `#684` 场景去重 / `#663` 补给箱模型 / `#658` salvage / 测试基建。
 
