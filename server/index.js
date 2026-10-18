@@ -63,6 +63,7 @@ import { createVisualSets } from './plugins/visualSet.js';
 import { createPluginPolicy } from './plugins/policy.js';
 import { createContentSets } from './plugins/contentSets.js';
 import { createRoomSets } from './plugins/roomSets.js';
+import { createMatchHosts } from './match/host/index.js';
 import { MIME, COMPRESSIBLE, acceptsGzip, pickEncoding, parseRange } from './http/files.js';
 import { BUILD_INPUTS, computeBuildTag, buildTag, resetBuildTag } from './http/buildTag.js';
 import { createRequestHandler } from './http/routes.js';
@@ -223,7 +224,13 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const policy = createPluginPolicy({ pluginsDir, log });
   const contents = createContentSets({ registry: packs, vanillaData: data, log, maxSets: () => policy.get().maxSets });
   const roomSets = createRoomSets({ registry: packs, visual, contents, policy });
-  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content, plugins: roomSets });
+  // gameplay-plugin rooms simulate in a worker (server/match/host, DESIGN 32.6): one per content set
+  // the worker hosts need the newer content-set API (get / dataBytes / scripts / offers): until that is ported,
+  // a modded room stays in-process (plan B). The host files and the lobby path are in place, so this is one switch.
+  const hosts = typeof contents.get === 'function' && typeof contents.dataBytes === 'function'
+    ? createMatchHosts({ contents, log, options: { maxWorkers: Math.max(1, policy.get().maxSets), ...(opts.matchHost || {}) } })
+    : null;
+  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content, plugins: roomSets, hosts });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
   const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, packs, content, log, assetIndex, views, visual, contents });
   const startedAt = Date.now();
@@ -459,6 +466,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     if (closing) return closing;
     closing = (async () => {
       try { lobby.shutdown('shutdown'); } catch (e) { log.error('[shutdown] lobby', e); }
+      try { hosts.close(); } catch (e) { log.error('[shutdown] match hosts', e); }
       network.close();
       assetIndex?.close();
       await new Promise((resolve) => {

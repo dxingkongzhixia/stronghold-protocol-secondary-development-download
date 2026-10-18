@@ -1741,5 +1741,8 @@
   "推荐显示在房间里，是否开启由你自己决定。": "A recommendation shows in the room. You decide whether to turn it on.",
   "最多同时开启 {n} 个界面插件": "At most {n} interface plugins can be on at once",
   "界面插件发送得太快，请稍后再试": "That interface plugin is sending too fast. Try again in a moment.",
-  "有未读公告": "Unread announcements"
+  "有未读公告": "Unread announcements",
+  "房间的插件内容长时间无响应，本局模拟已结束": "The room's plugin content stopped responding; the simulation has ended",
+  "房间的插件内容无法启动模拟": "The room's plugin content could not start the simulation",
+  "房间的插件内容出错，本局模拟已结束": "The room's plugin content failed; the simulation has ended"
 }

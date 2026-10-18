@@ -1464,3 +1464,11 @@ docs guards 34 pass / 0 fail.
 验收：新测试 `theme-notices-local` 4/4，插件套件 **164 / 152（12 skip）**，客户端插件套件 30/29；全量 **7606 / 7571 / 0 失败 / 33 跳过**（仅性能基线抖动，单跑 35/35），**golden 全匹配**，i18n en 100%，文档 34/34。
 **仍未做**：公告的**客户端 UI**（列表 / 已读 / 标题页与大厅入口）以及**房间主题**（房间内容集里的主题令牌）；两者都不需要 Worker 托管。
 
+**W1 UI + 房间主题已并入（`05fb1687b`）**：`ui/notices.js`（tip 的 `NoticesButton`：`collectNotices` / `noticeView` / `readSeen` / `markSeen`，纯文本、不回服务器）接到**标题页**与**大厅**顶栏；`content.js` 的页面主题从**个人外观插件 + 房间外观插件**（`room.state.content.plugins`）一起解析，带缓存键，房间变化即重算。
+验收：客户端插件套件 30/29，i18n en 1648/1648，全量 7608/7573（docs 修复后 0 失败）。
+
+**计划 A 第 1 步（Worker 托管骨架）已并入**：取 tip 的 `server/match/host/{index,proxy,entry,childHost,ipc}.js` 与 `shared/plugins/{scriptCheck,scriptLoad}.js`；`server/index.js` 创建 `createMatchHosts` 并传给会话栈、退出时 `hosts.close()`；`websocket.js` 把 `hosts` 交给 Lobby（lobby 早已有 `hosts.create` / `queuedRoom` / `serial` / `queueEvent` 路径）。
+**当前是「装了但未通电」**：tip 的 host 需要更新版的 content-set API（`contents.get` / `dataBytes` / `set.scripts` / `set.offers`），我们的 P1c 版还没有；`index.js` 以 `typeof contents.get === 'function'` 为门，**不满足时 hosts 为 null，玩法插件房间仍按计划 B 在本进程跑**，不会回归。
+验收：`host-ipc` 3/3；全量 **7612 / 7579 / 0 失败 / 33 跳过**，**golden 全匹配**，i18n 1651/1651，文档 34/34。
+**下一步（A 第 2 步）**：把 `contentSets.js` 升级到 tip 版（`get` / `dataBytes` / `scripts` / `offers` / `bounds`），接通 hosts，跑 tip 的 `plugin-host` 测试（watchdog / OOM / 复核接管）。
+
