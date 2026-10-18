@@ -1360,5 +1360,16 @@ docs guards 34 pass / 0 fail.
   验收：`test/ui` **991 / 987 / 0 失败**；全量 **7300 / 7284**（仅性能基线抖动，单跑 35/35），golden 全匹配，i18n en **1577/1577**。
 - **批次 ③ 完成**：7 个 UI PR（#695 / #696 / #698 / #699 / #703 / #704 / #705）全部并入并各自适配；`07f650af`（旧 #643 的汇总合并）内容已由上面各 PR 覆盖，不再单独 cherry-pick；`2858360f`（#698 测试模式计数）依赖 0.3.1 的测试控制台，**不收**。
 
-**下一批**：② 官方特效审计 R18–R21（`5209873f` `2cd8ac7b` `2ee48b8c` `d6f7ef70` + 合并 `b47b2a81`）→ ③ isomerpoi 的 7 个 UI PR（单独一批）→ ④ `#680` 音频池 / `#684` 场景去重 / `#663` 补给箱模型 / `#658` salvage / 测试基建。
+**批次 ④（内容 / 工具链）— 进行中**：
+
+- **已并入**：`8ff2dbbd`（#663 官方 **阻隔工事 / 射击台** 模型上 3D 棋盘：`clientCrateGeometry` + `platformGeometry` + `trapMaterial`；缺美术时仍回落到 atlas 箱 / 布局板）。
+  **本分支适配**：`materials.js` 只**插入** `trapMaterial`，我们自己的水面 / 主题调色栈（`waterParamValues` / `applyWaterParams` / `sceneWaterMaterial` 的 theme gain）原样保留 —— 上游同一文件里的水面重构（glossMap / lightEncoding / reflection）不属于本条；`board3d-extract` 的「每个包槽都在 manifest 里」检查在**本机抽取早于包表**时改为 skip 并提示重抽（`data/local-assets.json` 是 git-ignored 的本机文件）。
+- **已并入**：`bed6cbc80`（setup / doctor **抽取新鲜度**：`tools/local-extract/expected.mjs` + `test/setup-local-freshness.test.js`，过期 / 残缺抽取会提示重跑一次）。
+  **本分支适配**：该提交的 `tools/package.mjs` 含插件簇与 update-zip 重写，**取我们的**；其余（`extract.py` / `fx.py` / `setup.mjs` / `doctor.mjs` / 测试）同批并入。
+- **已并入**：`5b2a0833`（#680 攻击 / 命中音效跟随**官方音频池**：每池 `maxSoundAllowed` / `popOldest` 与文件级 `minPitch` / `maxPitch` / `delay`，来自 `audio_data.json soundFXBanks`）。
+  **本分支适配**：`audio.js` 头部说明取我们的（两支配音），`_play` / `_playPool` / `unit()` 走上游池路径；**无插件的 `again` 回退**去掉；`data/assets.json` 用**逐单元合并**（复制 `audio.sfx.pools` 与每单位 `pools` / `attackPools` / `hitPools`）而不是整表重生成，保住本分支的 `UNIT_SFX_OVERRIDES` 与 `ui.statistics/*`，并重算 `hash`；数据测试允许我们的 override 引用**无池**（回落 160 / 45 ms 闸门），上游「插件文件回退」用例删除。
+- **已暂缓（成对）**：`1e4d2761`（#658 场景数据图与自发光）+ `a853f5a8`（#684 场景抽取去重）—— 后者建立在前者的 scene-record v2/v4、`glossMap` / `lightEncoding`、`sceneAskDefault` 等之上，而 #658 会与我们的水面 / 主题栈和 `scenes.py` 抽取流程正面相撞（冲突面：`load.js` / `scene.js` / `materials.js` / `scenes.py` / `setup.mjs` / `board3d-scene.test.js`）。等单独一批做（按「渲染器 + 抽取器 + 测试」三者一起改动）。
+- 验收：`test/render` **1000 / 991**；音频池 25/25；抽取新鲜度 19/19；全量 **7340 / 7322 / 0 失败 / 17 跳过**（性能基线抖动单跑 35/35），golden 全匹配，i18n en 100%。
+
+**下一批**：④ 剩余 `#680` 已完成、`#684` / `#658` 暂缓 → 其余 0.3.1 小修（`#700` 范围预览、`#701` 插件…按 §13.10 的表），然后回到 `#628` 之外的风险清单。
 
