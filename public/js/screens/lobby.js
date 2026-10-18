@@ -21,6 +21,7 @@ import { openStats, openPlayerStats } from './stats.js';
 import { SweepReport } from './sweep.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
+import { NoticesButton } from '../ui/notices.js';
 import { openCodex } from '../ui/codex.js';
 import { AccountDialog } from '../ui/account.js';
 import { ChangelogOverlay } from '../ui/community.js';

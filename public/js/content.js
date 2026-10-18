@@ -57,16 +57,28 @@ import { applyThemeProperties } from './themeVars.js';
 /** The localStorage preference (`sp.pref.<key>`) of the personal cosmetic plugins: their ids. */
 /** The token names this page set from the personal plugins (removed when a plugin is switched off). */
 let themeSet = new Set();
+/** the personal + room plugin ids the current theme was resolved from (skip identical recomputes) */
+let themeKey = '';
 
 /**
  * W1 (plan C): write the design tokens of the personal cosmetic plugins that are switched on. A value is checked
  * again by shared/plugins/theme.js; the page's CSP is untouched (inline properties, no stylesheet).
  */
+appStore.subscribe(() => applyCatalogTheme());
+
 export function applyCatalogTheme() {
   const cur = catalog.get();
-  const ids = new Set(personal.get().ids);
+  const state = appStore.get();
+  const personalIds = new Set(personal.get().ids);
+  // the room's cosmetic plugins (room.state.content.plugins) theme the page too, like the player's own
+  const roomIds = new Set((Array.isArray(state.room?.content?.plugins) ? state.room.content.plugins : [])
+    .map((p) => (typeof p === 'string' ? p : p && typeof p.id === 'string' ? p.id : null))
+    .filter(Boolean));
+  const key = [...personalIds].sort().join(',') + '|' + [...roomIds].sort().join(',') + '|' + cur.status;
+  if (key === themeKey) return;
+  themeKey = key;
   const winners = resolveThemeVars((Array.isArray(cur.plugins) ? cur.plugins : [])
-    .filter((p) => p && p.class === 'cosmetic' && ids.has(p.id) && p.theme && isObj(p.theme.vars))
+    .filter((p) => p && p.class === 'cosmetic' && (personalIds.has(p.id) || roomIds.has(p.id)) && p.theme && isObj(p.theme.vars))
     .map((p) => ({ id: p.id, vars: p.theme.vars })));
   const root = typeof document !== 'undefined' ? document.documentElement : null;
   themeSet = applyThemeProperties(root, winners, themeSet);

@@ -33,6 +33,7 @@ import { scriptOf } from '../../../shared/i18nPacks.js';
 import { GIcon } from '../ui/gameComponents.js';
 import { SettingsModal } from '../ui/settings.js';
 import { AnnounceBanner, AnnounceButton, AnnouncementsOverlay } from '../ui/announce.js';
+import { NoticesButton } from '../ui/notices.js';
 import { AboutServerModal } from '../ui/about.js';
 import { InstallButton } from '../ui/install.js';
 import { installedCount } from '../content.js';
@@ -339,6 +340,7 @@ export function TitleScreen() {
         </div>
       </div>
       <div class="title-about-wrap">
+        <${NoticesButton} />
         <${AnnounceButton} onClick=${() => setAnnounceOpen(true)} />
         <${Button} variant="ghost" size="sm" class="title-about-button" aria-haspopup="dialog"
           onClick=${() => setAboutOpen(true)}>${t('关于本服务器')}<//>
