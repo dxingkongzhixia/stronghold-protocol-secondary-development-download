@@ -1371,5 +1371,9 @@ docs guards 34 pass / 0 fail.
 - **已暂缓（成对）**：`1e4d2761`（#658 场景数据图与自发光）+ `a853f5a8`（#684 场景抽取去重）—— 后者建立在前者的 scene-record v2/v4、`glossMap` / `lightEncoding`、`sceneAskDefault` 等之上，而 #658 会与我们的水面 / 主题栈和 `scenes.py` 抽取流程正面相撞（冲突面：`load.js` / `scene.js` / `materials.js` / `scenes.py` / `setup.mjs` / `board3d-scene.test.js`）。等单独一批做（按「渲染器 + 抽取器 + 测试」三者一起改动）。
 - 验收：`test/render` **1000 / 991**；音频池 25/25；抽取新鲜度 19/19；全量 **7340 / 7322 / 0 失败 / 17 跳过**（性能基线抖动单跑 35/35），golden 全匹配，i18n en 100%。
 
-**下一批**：④ 剩余 `#680` 已完成、`#684` / `#658` 暂缓 → 其余 0.3.1 小修（`#700` 范围预览、`#701` 插件…按 §13.10 的表），然后回到 `#628` 之外的风险清单。
+- **已并入（部分）**：`54e55c85`（#700 **范围预览改读构建期旗标**：`passiveRange` / `rangeExpand` / `modeOnly` 写进 `data/chess.json` 与 `backups.json`，`shared/loadoutRecord.js` 不再匹配中文原文；同提交的 **#701 工作室插件 id** 与 **#693 issue 模板** 属插件簇 / 仓库模板，**不收**）。
+  **本分支适配**：`skillCarriesOwnRange` 保留 `PASSIVE` + 「攻击范围扩大」的**回退**，`tools/build-data.mjs` 对自定义干员（如予愿安洁莉娜 S1「极速送达」）也写 `passiveRange`；上游新增的 `test/match/range-locale.test.js` 2/2、我们的 `test/ui/feedback1e-range.test.js` 同步通过；`docs/DATA.md` / `docs/I18N.md` / i18n 包 / `.github` 模板取我们的。
+  验收：全量 **7342 / 7324 / 0 失败 / 17 跳过**（仅性能基线抖动），golden 全匹配，i18n en **1577/1577**。
+
+**下一批**：④ 剩余 `#680` 已完成、`#684` / `#658` 暂缓 → 其余 0.3.1 小修（`#700` 已并入，`#701` 插件不收），然后回到 `#628` 之外的风险清单。
 
