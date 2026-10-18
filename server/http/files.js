@@ -334,6 +334,9 @@ function cacheControlFor(ext, mountName, segments, query) {
  * @param {{ contentHash?: string | null, cacheControl?: string | null }} [opts] contentHash: the file's content hash
  *   (assetIndex.js) — the ETag then; cacheControl: overrides the policy of its path (a content-hashed URL)
  * @param {RateLimiter | null} [limiter] the bulk-asset pacer (SP_ASSET_RATE_KBPS)
+ * @param {{ contentHash?: string | null, cacheControl?: string | null, headers?: Record<string, string> | null }} [opts]
+ *   contentHash: the file's content hash (assetIndex.js) — the ETag then; cacheControl: overrides the policy of its
+ *   path (a content-hashed URL); headers: extra response headers (a ui plugin's Content-Security-Policy), on 200 and 304
  */
 export async function serveFile(req, res, absPath, stat, mountName, segments, query, gzipCache, log, opts = {}, limiter = null) {
   const ext = path.extname(absPath).toLowerCase();
@@ -360,6 +363,7 @@ export async function serveFile(req, res, absPath, stat, mountName, segments, qu
   // Cross-origin read for the client's local asset source (public/js/assetSource.js): a page on the public server may
   // fetch /assets|/fonts|/vendor from a player's own machine (same app) when 优先使用本机资源 is on.
   if (mountName === 'public' && segments.length && LONG_CACHE_DIRS.includes(segments[0])) headers['Access-Control-Allow-Origin'] = '*';
+  if (opts.headers) for (const [k, v] of Object.entries(opts.headers)) if (v != null && v !== '') headers[k] = v;
 
   if (isNotModified(req, etag, stat.mtime)) {
     res.writeHead(304, headers);

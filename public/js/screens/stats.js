@@ -655,6 +655,10 @@ function StatsScreen({ tab, view }) {
       : html`<p class="st-note"><${Icon} name="info" />${t('对局记录会同步到服务器，并与你的身份绑定：登录后归入账号（可在其他设备查看），游客则绑定本机游客身份。在线玩家之间可以查看彼此的公开对局数据，其中不含账号信息；同盟对局里队友的代号也会一并保存。')}</p>`}
     ${showLocalNotes && local.damaged ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('本机保存的统计数据无法读取，已另存为备份，从现在起重新记录。')}</p>` : null}
     ${showLocalNotes && local.dropped ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('有 {n} 条记录已损坏，已忽略。', { n: local.dropped })}</p>` : null}
+    <p class="st-note"><${Icon} name="info" />${t('本机数据：只保存在这个浏览器里，不会上传到服务器；同盟对局里队友的代号也会存在本机（导出文件里也有）。')}</p>
+    ${stats.damaged ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('本机保存的统计数据无法读取，已另存为备份，从现在起重新记录。')}</p>` : null}
+    ${stats.dropped ? html`<p class="st-note is-warn"><${Icon} name="warn" />${t('有 {n} 条记录已损坏，已忽略。', { n: stats.dropped })}</p>` : null}
+    <div class="ui-slot" data-ui-slot="stats.tab" aria-label=${t('界面插件')} dangerouslySetInnerHTML=${{ __html: '' }}></div>
     <main class="st-body" data-tab=${tab}>
       ${body === 'loading' ? html`<div class="st-loading"><${Spinner} size="md" />${ready ? html`<span class="st-hint">${t('正在从服务器读取对局记录…')}</span>` : null}</div>`
         : body === 'no-target' ? html`<p class="st-empty">${t('无法读取该玩家的记录（可能已离线）。')}</p>`

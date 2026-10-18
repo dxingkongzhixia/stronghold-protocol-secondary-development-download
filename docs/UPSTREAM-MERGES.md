@@ -1395,7 +1395,7 @@ docs guards 34 pass / 0 fail.
 | **P0** | `c57c78bfe`（`ca0768ddb` + `cefe7e89a`） | **内容身份 `cs`**：`shared/sha256.js`、`shared/plugins/{identity,manifest}.js`、`server/plugins/{identity,registry}.js`、`/plugins/index.json`、`/cs/<cs16>/index.json`、`tools/plugin.mjs`、`plugins/README.md`、`docs/PLUGINS.md`、P0 测试 | ✅ 已并入 |
 | P1a | `83b89cf1f`（P1a 全套 + 3 轮复查） | 外观插件：房间视觉集（`/vs/`）、客户端 `content.js`、模板、e2e | ✅ 已并入 |
 | **P1b** | `fc768aa8`（复查 `5a1e0e95` / `36d65d1c` / `051ecce6` **暂缓**，见下） | **数据插件**：数据补丁 `shared/plugins/patch.js`、紧凑记录 `records.js`、`validate.js` 把引用检查从 build-data 抽出 + 整集校验、`server/plugins/contentSet.js`（`buildContentSet` / `contentSetFiles`，按 `cs` 缓存）、`kitOf` 分派（扩展 / DSL 桩 / JSON SkillSpec / kitRef / 官方 kit / generic）、`effectRef`、模式级覆盖、内容模板与 records schema | ✅ 已并入 |
-| P1c / P2 / P4 | `0fcc54976` `f3735da16` `d8ce4cf1f` `4f82d2f83` `c1e7edaaf` `00a822ba3` `7dc4c8465`（**P2 已并**）；`ba352f1e3`（P4 待接） | 内容集（`room.setMode` / `room.contentReady`、房间内容集、客户端 `/cs/` 下载）、DSL-lite kit、沙箱 UI 插件 | 🟡 P1c + P2 已并，P4 待接 |
+| P1c / P2 / P4 | `0fcc54976` `f3735da16` `d8ce4cf1f` `4f82d2f83` `c1e7edaaf` `00a822ba3` `7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、房间内容集、客户端 `/cs/` 下载）、DSL-lite kit、沙箱 UI 插件 | ✅ 已并入 |
 | W1–W5 | `be7f89b71` `872c2a6a5` `05463f7c8` `d02a6a17c` `cbb65b8a1` | 主题变量 / 规则开关 / 新记录类型 / Forge 面板兼容层 / 特效借用 | ⏳ |
 | U1–U6 + Forge | `0f869563b` `42f9c2812` 等 | 记录格式扩展、Forge 真包导入与 e2e | ⏳ |
 | skins / 插件美术 | `58206c0b5` `a449310ac` | 每干员皮肤层、名单外插件干员的官方美术 | ⏳ |
@@ -1440,4 +1440,10 @@ docs guards 34 pass / 0 fail.
 **P2（DSL-lite）已并入** `7dc4c8465`：`server/sim/content/dsl/{vocab,validate,compile,budget}.js`（**闭合词表**、结构校验、把声明式 spec 编译成 Kit、**每场每插件动作预算**）、`server/match/dslMeta.js`（备战侧最小实现）、`schemas/dsl.schema.json`、`docs/PLUGIN-DSL.md` 与两个测试套件。
 **本分支适配**：P1b 在 `dsl/compile.js` 留的**桩**被真编译器替换（`kitOf` 的既有分派现在直达它），`contentBattle` 里「空 spec」的断言从桩的 `PLUGIN_DSL_UNAVAILABLE` 改为编译器的 `PLUGIN_DSL_VERSION`。
 验收：`dsl` 10/10、`contentBattle` 7/7；全量 **7584 / 7548 / 0 失败 / 33 跳过**（唯一失败为已知性能基线抖动，单跑 35/35），**golden 全匹配**，i18n en 100%，文档 34/34。
+
+**P4（沙箱 UI 插件）已并入** `ba352f1e3`：`shared/plugins/ui.js`（消息契约 / 意图拦截 / 槽位表 / 配额）、`public/js/ui/pluginFrame.js`（沙箱 iframe：CSP、来源校验、限流、存储配额）、插件面板的推荐与开关、设置页的 UI 插件组、`server/http/files.js` 的附加响应头、注册表把 `ui` 类从 `planned` 改为 **loaded**（客户端框架文件按目录哈希、计入目录 `vs`）、`screens/{game,result,stats}` 的插件槽位。
+**本分支适配**：内容插件自己的美术继续走外观分支（`registry.js` 的 cosmetic 分支加 `content && parts.assets`）；我们游戏/结算/统计页的槽位守卫保留；UI 意图拦截的 `isIntentType` 扩展到本分支的 `auth.*` / `mm.*` / `bug.*` / `boot.*` / `stats.*` 前缀；`content` 的类状态与 `planned` 断言更新为 `loaded`。
+验收：插件套件 **160 / 148（12 skip）**、`ui` / `plugin-frame` 12/12；全量 **7600 / 7566 / 0 失败 / 33 跳过**（仅性能基线抖动，单跑 35/35），**golden 全匹配**，i18n en **1647/1647**，文档 34/34。
+
+**插件栈至此：P0 / P1a / P1b（含复查）/ P1c / P2 / P4 全部并入。** 接下来是 W1–W5（主题变量 / 规则开关 / 新记录 / Forge 面板层 / 特效借用）、U-Forge（记录格式扩展 + 真包导入）、skins / 插件干员美术、studio / 测试控制台。
 

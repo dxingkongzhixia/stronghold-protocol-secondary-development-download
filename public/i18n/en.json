@@ -1732,5 +1732,13 @@
   "已结束": "Finished",
   "等待队友": "Waiting for teammates",
   "标识": "ID",
-  "添加": "Add"
+  "添加": "Add",
+  "只改变这个浏览器里的界面，不能替你操作对局，也不影响其他博士；插件为非官方制作。": "Changes only this browser's interface. It cannot play the match for you, and it does not affect other Doctors. Plugins are unofficial.",
+  "推荐": "Recommend",
+  "房主推荐": "Host's pick",
+  "本服务器没有可开启的界面插件": "This server has no interface plugin you can turn on",
+  "界面插件由每位博士在「设置」中自己开关。": "Each Doctor turns interface plugins on or off in Settings.",
+  "推荐显示在房间里，是否开启由你自己决定。": "A recommendation shows in the room. You decide whether to turn it on.",
+  "最多同时开启 {n} 个界面插件": "At most {n} interface plugins can be on at once",
+  "界面插件发送得太快，请稍后再试": "That interface plugin is sending too fast. Try again in a moment."
 }

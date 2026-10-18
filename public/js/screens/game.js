@@ -125,6 +125,7 @@ import { net } from '../net.js';
 import { store, useStore, shallowEqual, serverNow, isSpectating } from '../store.js';
 import { battleRunner } from '../battle/runner.js';
 import { isClientCombat, observeTarget, teammateProgress, cameraLayers, layerCamera, loneHalf, sidesOf, resumedWatch, followedScout } from '../battle/observe.js';
+import '../ui/pluginFrame.js';
 import { screenStrip, playerBonds, playerLayer, detailBondOwner, toggleBond, popupView } from '../ui/watchBonds.js';
 import { data, getMode } from '../data.js';
 import { audio, resultSpeaker, resultVoiceSlot } from '../audio.js';
@@ -1758,6 +1759,8 @@ function MatchScreen() {
         : html`<div class="gm__dead" role="status"><${Icon} name="close" />${t('你已被淘汰 · 可继续观战队友')}</div>`) : null}
 
       <${Ticker} />
+
+      <div class="ui-slot gm__ui-slot" data-ui-slot="hud.right" aria-label=${t('界面插件')} dangerouslySetInnerHTML=${{ __html: '' }}></div>
 
       <div class="gm__corner">
         <${ChatDock} class="gm-chat" disabled=${conn.status !== 'online'} />
