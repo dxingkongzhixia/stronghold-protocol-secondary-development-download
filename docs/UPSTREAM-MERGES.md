@@ -1452,3 +1452,10 @@ docs guards 34 pass / 0 fail.
 2. 按上游拓扑顺序连同 studio / 控制台一起并（大爆炸）。
 当前仓库保持绿色：`a4bdc6a95`（P0–P4），全量 7600/7566、golden 全匹配、i18n 1647/1647。
 
+**状态合并试跑结论（2026-10-18，已回退）**：把 tip 的 `shared/plugins/**` + `server/plugins/**` + `schemas/**` 整体取过来后，服务端启动链是
+`registry → artReferences → trusted → contentData → fxAssets → fxRecords → scriptPreflight → server/match/host/childHost.js`。
+也就是说：**上层插件特性（W1–W5 / Forge / studio）建立在 match host（Worker 托管）之上**，而我们在 P1c 选了计划 B（不搬 host）。所以「状态合并」并不能绕开架构，实际只有两条路：
+- **A**：补上 match host 架构（`server/match/host/*`、`Match`/lobby/net 的托管路径、客户端 `runner` 的 host 分支），再并 W1–W5 / Forge / studio；
+- **B**：停在 P0–P4（外观 / 数据+内容集 / DSL / UI 沙箱，均已可用），不再向上并。
+这两条是**架构级**选择，需要业主拍板；不是文件级合并。
+
