@@ -1395,7 +1395,7 @@ docs guards 34 pass / 0 fail.
 | **P0** | `c57c78bfe`（`ca0768ddb` + `cefe7e89a`） | **内容身份 `cs`**：`shared/sha256.js`、`shared/plugins/{identity,manifest}.js`、`server/plugins/{identity,registry}.js`、`/plugins/index.json`、`/cs/<cs16>/index.json`、`tools/plugin.mjs`、`plugins/README.md`、`docs/PLUGINS.md`、P0 测试 | ✅ 已并入 |
 | P1a | `83b89cf1f`（P1a 全套 + 3 轮复查） | 外观插件：房间视觉集（`/vs/`）、客户端 `content.js`、模板、e2e | ✅ 已并入 |
 | **P1b** | `fc768aa8`（复查 `5a1e0e95` / `36d65d1c` / `051ecce6` **暂缓**，见下） | **数据插件**：数据补丁 `shared/plugins/patch.js`、紧凑记录 `records.js`、`validate.js` 把引用检查从 build-data 抽出 + 整集校验、`server/plugins/contentSet.js`（`buildContentSet` / `contentSetFiles`，按 `cs` 缓存）、`kitOf` 分派（扩展 / DSL 桩 / JSON SkillSpec / kitRef / 官方 kit / generic）、`effectRef`、模式级覆盖、内容模板与 records schema | ✅ 已并入 |
-| P1c / P2 / P4 | `0fcc54976` `f3735da16` `d8ce4cf1f`（**步骤 1–3**）+ `4f82d2f83`（待接）`7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、房间内容集）、DSL-lite kit、沙箱 UI 插件 | 🟡 部分（1–3 已并） |
+| P1c / P2 / P4 | `0fcc54976` `f3735da16` `d8ce4cf1f` `4f82d2f83` `c1e7edaaf` `00a822ba3`（**步骤 1–5 已并**）`7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、房间内容集、客户端 `/cs/` 下载）、DSL-lite kit、沙箱 UI 插件 | 🟡 部分（1–5 已并） |
 | W1–W5 | `be7f89b71` `872c2a6a5` `05463f7c8` `d02a6a17c` `cbb65b8a1` | 主题变量 / 规则开关 / 新记录类型 / Forge 面板兼容层 / 特效借用 | ⏳ |
 | U1–U6 + Forge | `0f869563b` `42f9c2812` 等 | 记录格式扩展、Forge 真包导入与 e2e | ⏳ |
 | skins / 插件美术 | `58206c0b5` `a449310ac` | 每干员皮肤层、名单外插件干员的官方美术 | ⏳ |
@@ -1429,4 +1429,11 @@ docs guards 34 pass / 0 fail.
 - **本分支适配**：`server/index.js` 只建 `policy` + `contents`，**不建 match hosts**（我们的对局在浏览器模拟）；`createSessionStack` 仍传 `visual`（`room.setPlugins` 保持 P1a 行为），**房间暂时仍是 vanilla** —— 房间级内容选择（`roomSets` 接进 lobby）是下一步。
 - **下一步（步骤 4）**：`4f82d2f83` 的 lobby 部分 —— `room.setPlugins` 接受内容插件（房间自己的 `cs`、`vanilla:false`、`PLUGIN_BUSY`）、`seats[].content` 的 loading/ready/failed、`room.ready`/`room.start` 等所有页面校验（`CONTENT_NOT_READY`）、`room.setMode`、开局时把设置按房间数据过滤、`Match` 用房间内容集的 `data` 并带 `opts.cs` / `requireCs` / `vs`；**不要**它的 host/serial 队列部分。客户端 `content.js` 下载 `/cs/`（`c1e7edaaf` + `00a822ba3`）同批。
 验收：全量 **7561 / 7529 / 0 失败 / 32 跳过**，golden 全匹配，i18n en **1620/1620**，文档门禁 34/34。
+
+**P1c 步骤 4–5 已并入（计划 B 完成）**：
+- `4f82d2f83`（lobby）：`room.setPlugins` 接受内容插件（房间自己的 `cs`、`vanilla:false`、`PLUGIN_BUSY`、`holdContent` / `releaseContent`）、`seats[].content`（loading / ready / failed）与 `room.contentReady`、`ready` / `start` 等所有页面校验（`CONTENT_NOT_READY`）、`room.setMode`、开局把 loadout / 名单 / DIY 按房间数据过滤、`Match` 用房间内容集的 `data` 并带 `opts.cs` / `requireCs` / `vs`。**不取**它的 match host worker 与 serial 队列（我们的对局在浏览器模拟），`hosts` 恒为 null，`hosts.close()` 钩子移除。
+- `c1e7edaaf` + `00a822ba3`（客户端）：`content.js` 下载并校验内容集（`/cs/<cs16>/index.json` + 每个数据文件，**先 sha256 后解码**）、`data.js` 的 `setContent`、`runner.js` 带 `spec.cs` 且另一内容不得成为当局权威、房间页的座位内容状态 / 就绪 / 插件模式、插件标签与面板的内容标记、统计记录带内容集（`contentOf` / `aggregateStats { modded }`，概览默认不计，`withModded` 开关**暂缓**）。
+  **本轮修的两个真问题**：① `cs` 的组成含内容集的 **i18n 哈希**，服务端 `hashInput` 与页面重算都补上（否则页面永远拒绝房间的内容集）；② 我们的 runner **预加载** vanilla sim，测试按「最后一次加载」断言。
+- 验收：内容集套件 **13 / 12（1 skip：中途重连路径，runner 预加载差异，已注明）**；全量 **7574 / 7540 / 0 失败 / 33 跳过**（唯一失败为已知性能基线抖动，单跑 35/35），**golden 全匹配**，i18n en **1638/1638**，文档门禁 34/34。
+- **仍未做**：P1c 的 **DSL-lite（P2）**、**沙箱 UI 插件（P4）**，以及 `withModded` 的统计概览开关；W1–W5 / U-Forge / skins / studio / 控制台仍在其后。
 
