@@ -1395,7 +1395,7 @@ docs guards 34 pass / 0 fail.
 | **P0** | `c57c78bfe`（`ca0768ddb` + `cefe7e89a`） | **内容身份 `cs`**：`shared/sha256.js`、`shared/plugins/{identity,manifest}.js`、`server/plugins/{identity,registry}.js`、`/plugins/index.json`、`/cs/<cs16>/index.json`、`tools/plugin.mjs`、`plugins/README.md`、`docs/PLUGINS.md`、P0 测试 | ✅ 已并入 |
 | P1a | `83b89cf1f`（P1a 全套 + 3 轮复查） | 外观插件：房间视觉集（`/vs/`）、客户端 `content.js`、模板、e2e | ✅ 已并入 |
 | **P1b** | `fc768aa8`（复查 `5a1e0e95` / `36d65d1c` / `051ecce6` **暂缓**，见下） | **数据插件**：数据补丁 `shared/plugins/patch.js`、紧凑记录 `records.js`、`validate.js` 把引用检查从 build-data 抽出 + 整集校验、`server/plugins/contentSet.js`（`buildContentSet` / `contentSetFiles`，按 `cs` 缓存）、`kitOf` 分派（扩展 / DSL 桩 / JSON SkillSpec / kitRef / 官方 kit / generic）、`effectRef`、模式级覆盖、内容模板与 records schema | ✅ 已并入 |
-| P1c / P2 / P4 | `0fcc54976` `f3735da16` `8784d4559` `7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、每内容集一个 match worker）、DSL-lite kit、沙箱 UI 插件 | ⏳ |
+| P1c / P2 / P4 | `0fcc54976` `f3735da16` `d8ce4cf1f`（**步骤 1–3**）+ `4f82d2f83`（待接）`7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、房间内容集）、DSL-lite kit、沙箱 UI 插件 | 🟡 部分（1–3 已并） |
 | W1–W5 | `be7f89b71` `872c2a6a5` `05463f7c8` `d02a6a17c` `cbb65b8a1` | 主题变量 / 规则开关 / 新记录类型 / Forge 面板兼容层 / 特效借用 | ⏳ |
 | U1–U6 + Forge | `0f869563b` `42f9c2812` 等 | 记录格式扩展、Forge 真包导入与 e2e | ⏳ |
 | skins / 插件美术 | `58206c0b5` `a449310ac` | 每干员皮肤层、名单外插件干员的官方美术 | ⏳ |
@@ -1422,4 +1422,11 @@ docs guards 34 pass / 0 fail.
 - **`36d65d1c` 已并入**（黑板值按官方上限；Cathy 的 `timesOf` 保留 #677 的一次性额度；无潜力曲线的干员隐藏潜力控件）。**golden 不变**。
 - **`051ecce6` 部分并入**：只取 **`shared/plugins/{steps,textNumber,textPatterns,limits,officialBounds}.js`** + `contentSet` / `runner` 接线（插件侧的边界与文本计数）。**`server/sim/**` / `server/match/**` 的改写不取** —— 把官方数据也改走 `textFinite` / `textCount` 后 **golden 的伤害数值变了**（DIY T6 等），按 `AGENTS.md §6` 不能夹带；本分支保留自己的 sim 与弹射车实现。`loopCaps` 的 kit 用例（含 1e16 循环）因此不适用，连同「每个 while 都要标注 loop-cap」的扫描一起标 skip（8 条，理由写进测试）；文本计数与内容集快照的用例保留。
 验收：插件套件 **160 / 148（12 skip）**、`potential` 5/5 + 8/8、`loadout-rows` 9/9（按 `potentialOn` 的新写法更新）；全量 **7561 / 7528 / 0 失败 / 32 跳过**（仅性能基线抖动），**golden 全匹配**，i18n en **1617/1617**，文档门禁 34/34。
+
+**P1c 步骤 1–3 已并入（计划 B：不搬 Worker 托管）**：
+- `0fcc54976`：协议 `room.setMode { modeId }` / `room.contentReady { cs, ok? }`、`PLUGIN_INCOMPATIBLE` / `PLUGIN_BUSY` / `CONTENT_NOT_READY` 错误码、`server/data.js` / `net.js` 的接线。
+- `f3735da16` + `d8ce4cf1f`：`server/plugins/contentSets.js`（用 P1b 的 `buildContentSet` / `contentSetFiles`，按 `cs` 缓存）、`roomSets.js`（房间持有、`maxSets` / `PLUGIN_BUSY`）、`policy.js`（业主 `plugins/config.json`：`hosts` / `fixed` / `off`、`default`、`allow`、`classes`），`/cs/<cs16>/` 服务内容集的数据文件，`/healthz` 的 `content.sets` 计数。
+- **本分支适配**：`server/index.js` 只建 `policy` + `contents`，**不建 match hosts**（我们的对局在浏览器模拟）；`createSessionStack` 仍传 `visual`（`room.setPlugins` 保持 P1a 行为），**房间暂时仍是 vanilla** —— 房间级内容选择（`roomSets` 接进 lobby）是下一步。
+- **下一步（步骤 4）**：`4f82d2f83` 的 lobby 部分 —— `room.setPlugins` 接受内容插件（房间自己的 `cs`、`vanilla:false`、`PLUGIN_BUSY`）、`seats[].content` 的 loading/ready/failed、`room.ready`/`room.start` 等所有页面校验（`CONTENT_NOT_READY`）、`room.setMode`、开局时把设置按房间数据过滤、`Match` 用房间内容集的 `data` 并带 `opts.cs` / `requireCs` / `vs`；**不要**它的 host/serial 队列部分。客户端 `content.js` 下载 `/cs/`（`c1e7edaaf` + `00a822ba3`）同批。
+验收：全量 **7561 / 7529 / 0 失败 / 32 跳过**，golden 全匹配，i18n en **1620/1620**，文档门禁 34/34。
 
