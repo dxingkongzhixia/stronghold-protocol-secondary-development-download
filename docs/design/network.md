@@ -65,6 +65,28 @@ Piece = { uid, kind: 'chess'|'item'|'token', id, golden: bool, tier, items: [ { 
 `flags` bitmask: 1 blocked, 2 stunned, 4 frozen, 8 stealth (an ally's 隐匿 or 迷彩 — §20.2; an enemy's only while its 隐匿 is on: not blocked, not revealed — drawn solid otherwise, §21.4), 16 skillActive, 32 shielded, 64 invulnerable, 128 cold, 256 sleep, 512 flying.
 `anim` small int: 0 idle, 1 move, 2 attack, 3 skill, 4 die, 5 stun, 6 deploy.
 
+### 8.4 Content identity (`cs`)
+
+The served simulation (`server/sim/**`), the shared code and the game data have one **content hash** `cs` per server build:
+`shared/sha256.js` over the sorted file table (`server/plugins/identity.js` `computeVanillaContent`; the `simFiles` /
+`data` tables are what the hash covers, the shim included). It names *what the rules are*, not the art.
+
+On the wire:
+
+- `S2C welcome.content = { vanilla: cs }` — the server's own (vanilla) set.
+- `C2S room.create` / `room.setMode` and `S2C room.state.content` carry `{ cs, vanilla: bool, plugins: [{ id, class, cs? }] }`
+  once rooms can choose content plugins; a room on the vanilla set sends `{ cs, vanilla: true, plugins: [] }`.
+- `C2S b.result.cs` (optional, form-checked) — the hash the reporting browser simulated on; the server compares it with
+  the match's spec and rejects a mismatch once room content sets exist (P1c).
+- `GET /plugins/index.json` — the catalogue: `{ version, app, api: { current, min }, content: { vanilla }, plugins: [...] }`,
+  never cached.
+- `GET /cs/<cs16>/index.json` — the manifest of the vanilla set: `{ v, cs, app, vanilla: true, sim, files… }`; the full
+  hash is in `cs`, the URL carries its first 16 hex digits (`server/plugins/identity.js` `contentIndexOf`).
+
+A browser that runs a different `cs` than the room's is refused by the room's content check (client `content.js`), so a
+plugin or a stale cache can never silently change the rules of someone else's match. The registry and the plugin format
+are `docs/PLUGINS.md`; the serving rules are `server/plugins/registry.js`.
+
 ---
 
 ## 14. Client-side combat (v2 architecture — supersedes the combat-streaming parts of §4, §8.2, §9)

@@ -7,7 +7,9 @@
 //   http/websocket.js  session wiring (SessionRegistry → Lobby → Network) and the WebSocket at /ws (maxPayload 64 KB,
 //                      permessage-deflate from 1 KB; refused at upgrade with 404 / 429 per network / 503)
 //   http/static.js     the static mounts (/ → public/, /data/, /shared/, /sim/ `.js` only), the /data.js browser stand-in,
-//                      the content packs (/packs/index.json, /packs/<id>/<file> — the registry is packs.js)
+//                      the language packs (/packs/index.json, /packs/<id>/<file>), the plugin catalogue
+//                      (/plugins/index.json — the registry is plugins/registry.js) and the vanilla content set's manifest
+//                      (/cs/<cs16>/index.json — plugins/identity.js: the content hash `cs`, DESIGN §32)
 //   http/media.js      /media/bgm/act1 → public/assets/audio/bgm/act1.mp3 (audio addressed without its extension)
 //   http/files.js      one file → response: MIME, brotli / gzip + memory cache, ETag / Last-Modified / 304, Cache-Control, ranges
 //   http/assetIndex.js the content hashes of public/assets and public/fonts (built in the background, cached in
@@ -51,7 +53,8 @@ import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX } from '../shared/constants.js';
 import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
-import { createPackRegistry } from './packs.js';
+import { createPluginRegistry } from './plugins/registry.js';
+import { computeVanillaContent } from './plugins/identity.js';
 import { MIME, COMPRESSIBLE, acceptsGzip, pickEncoding, parseRange } from './http/files.js';
 import { BUILD_INPUTS, computeBuildTag, buildTag, resetBuildTag } from './http/buildTag.js';
 import { createRequestHandler } from './http/routes.js';
@@ -128,7 +131,7 @@ function cookieValue(header, name) {
  * Build and start the HTTP + WebSocket server.
  * @param {{
  *   port?: number, host?: string, quiet?: boolean, log?: object,
- *   publicDir?: string, dataDir?: string, sharedDir?: string, packsDir?: string,
+ *   publicDir?: string, dataDir?: string, sharedDir?: string, packsDir?: string, pluginsDir?: string,
  *   MatchClass?: Function, seedFn?: () => number,
  *   lobbyGraceMs?: number, reconnectWindowMs?: number, heartbeatMs?: number, helloTimeoutMs?: number,
  *   ratePerSec?: number, rateBurst?: number, maxConnections?: number, maxRooms?: number,
@@ -140,15 +143,17 @@ function cookieValue(header, name) {
  *   assetIndex: the content-hash index (default on; false or SP_ASSET_INDEX=0: off — config.js assetIndexOptionsFrom)
  * @returns {Promise<{ port: number, host: string, url: string, server: http.Server, wss: import('ws').WebSocketServer,
  *                     lobby: import('./lobby.js').Lobby, network: import('./net.js').Network,
- *                     registry: import('./net.js').SessionRegistry, packs: ReturnType<typeof createPackRegistry>,
+ *                     registry: import('./net.js').SessionRegistry, packs: ReturnType<typeof createPluginRegistry>,
  *                     db: object|null, auth: object|null, adminUrl: string|null,
+ *                     content: import('./plugins/identity.js').VanillaContent,
  *                     traffic: ReturnType<typeof createTrafficCounter>, assetIndex: ReturnType<typeof createAssetIndex> | null,
  *                     views: ReturnType<typeof createManifestViews> | null, close: () => Promise<void> }>}
  */
 export async function startServer(opts = {}) {
   const { port, host } = listenAddress(opts);
   const log = opts.log || makeLogger(!!opts.quiet);
-  const { publicDir, dataDir, sharedDir, packsDir } = serveDirs(opts);
+  const { publicDir, dataDir, sharedDir, packsDir, pluginsDir } = serveDirs(opts);
+  const simDir = path.join(ROOT, 'server', 'sim');
 
   // The process-wide singleton serves the default data dir; a custom dir (tests) gets its own copy.
   const data = opts.dataDir ? loadData(dataDir, { log }) : getData({ dir: dataDir, log });
@@ -188,16 +193,21 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // The trained bot prior (server/match/botPrior.js): machine-local, re-read per bot prep; a missing file or
   // SP_BOT_PRIOR=off leaves the heuristic candidate order untouched.
   configurePrior({ file: path.join(ROOT, 'server', 'match', 'botPrior.json'), enabled: process.env.SP_BOT_PRIOR !== 'off', log });
-  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log });
+  // the vanilla content hash `cs` (DESIGN 32): the bytes of the served sim, shared code and game data, read once
+  // now - like the data the matches use and the build tag below
+  const content = computeVanillaContent({ simDir, sharedDir, dataDir, shim: DATA_SHIM_JS, log });
+  log.info(`[content] vanilla ${content.cs.slice(0, 16)} (${Object.keys(content.simFiles).length} code files, ${Object.keys(content.data).length} data files)`);
+  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
-  // content packs (docs/PACKS.md): scanned now — the start log names them — and again whenever their folders change
-  const packs = createPackRegistry({ publicDir, dataDir, packsDir }, { log });
+  // language packs and plugins (docs/PACKS.md, docs/PLUGINS.md): scanned now - the start log names them - and again
+  // whenever their folders change
+  const packs = createPluginRegistry({ publicDir, dataDir, packsDir, pluginsDir }, { log });
   packs.refresh(true);
   // the content hashes of the art (built in the background once listening) and the manifests served with them
   const indexOptions = assetIndexOptionsFrom(opts, publicDir);
   const assetIndex = indexOptions ? createAssetIndex({ publicDir, log, ...indexOptions }) : null;
   const views = assetIndex ? createManifestViews({ dataDir, index: assetIndex, log }) : null;
-  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, packsDir, packs, log, assetIndex, views });
+  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, packs, content, log, assetIndex, views });
   const startedAt = Date.now();
   // The tag is per process (see buildTag): read the browser runtime once, here, not on every /healthz.
   resetBuildTag();
@@ -208,7 +218,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // resolves (the browser's stored session token), else the per-network key — the same scheme when the report arrives
   // over the WebSocket, so an upload and its report share an owner.
   const trustProxy = opts.trustProxy ?? parseTrustProxy(process.env.TRUST_PROXY);
-  const baseHandler = createRequestHandler({ serveStatic, health: { startedAt, network, registry, lobby, traffic, assetIndex, views, prior: priorStatus() }, log, trustProxy });
+  const baseHandler = createRequestHandler({ serveStatic, health: { startedAt, network, registry, lobby, content, traffic, assetIndex, views, prior: priorStatus() }, log, trustProxy });
   function communityKey(req) {
     const tok = req.headers['x-account-token'];
     const acc = auth && typeof tok === 'string' && tok ? auth.resolve(tok) : null;
@@ -445,7 +455,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   }
 
   const adminUrl = admin ? `${url}/admin?token=${admin.token}` : null;
-  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, db, auth, stats, adminUrl, traffic, assetIndex, views, close };
+  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, content, db, auth, stats, adminUrl, traffic, assetIndex, views, close };
 }
 
 // `node server/index.js` / npm start: listen (accounts & 野排 on), print the banner, stop on SIGINT / SIGTERM

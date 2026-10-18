@@ -56,6 +56,12 @@ Conventions used below:
 These upstream commits/features are **excluded by the owner** and must not be merged (or, if re-applied, must be
 reverted):
 
+> **2026-10-18 owner decision — the plugin cluster is back in scope.** The plugin / Forge system, the studio battle
+> sandbox / test console and the plugin operators' official art are **no longer blacklisted**: they are being merged
+> for compatibility (batches P0… in §13.10). The plugin-serving docs (`docs/PLUGINS.md`, `plugins/`) and the
+> `/plugins/index.json` + `/cs/<cs16>/index.json` routes are therefore expected in this tree again. Every **other** row
+> of this list still stands.
+
 | Item | Upstream evidence | Why never |
 |---|---|---|
 | **#149 盟约收起 (foldable bond bar)** | upstream `game.js` `bondsCollapsed` / `bonds-toggle` / `gm__bond-list` / `match-bond-strip` | The bond strip stays **permanently shown and centred**. Blacklisted in `docs/MATCHMAKING.md` §22. Self-check must stay empty: `grep -rn "bondsCollapsed\|bonds-toggle\|gm__bond-list\|match-bond-strip" public/js server`. |
@@ -1379,4 +1385,21 @@ docs guards 34 pass / 0 fail.
   验收：全量 **7342 / 7324 / 0 失败 / 17 跳过**（仅性能基线抖动），golden 全匹配，i18n en **1577/1577**。
 
 **下一批**：④ 剩余 `#680` 已完成、`#684` / `#658` 暂缓 → 其余 0.3.1 小修（`#700` 已并入，`#701` 插件不收），然后回到 `#628` 之外的风险清单。
+
+**批次 ⑤（插件兼容 — 2026-10-18 业主决定解除黑名单）**：
+
+上游的插件 / Forge 体系、studio 战斗沙箱 / 测试控制台、插件干员的官方美术**重新纳入**（§0 顶部已记录）。按上游顺序分阶段：
+
+| 阶段 | 上游 | 内容 | 状态 |
+|---|---|---|---|
+| **P0** | `c57c78bfe`（`ca0768ddb` + `cefe7e89a`） | **内容身份 `cs`**：`shared/sha256.js`、`shared/plugins/{identity,manifest}.js`、`server/plugins/{identity,registry}.js`、`/plugins/index.json`、`/cs/<cs16>/index.json`、`tools/plugin.mjs`、`plugins/README.md`、`docs/PLUGINS.md`、P0 测试 | ✅ 已并入 |
+| P1a | `83b89cf1f`（P1a 全套 + 3 轮复查） | 外观插件：房间视觉集（`/vs/`）、客户端 `content.js`、模板、e2e | ⏳ |
+| P1c / P2 / P4 | `0fcc54976` `f3735da16` `8784d4559` `7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、每内容集一个 match worker）、DSL-lite kit、沙箱 UI 插件 | ⏳ |
+| W1–W5 | `be7f89b71` `872c2a6a5` `05463f7c8` `d02a6a17c` `cbb65b8a1` | 主题变量 / 规则开关 / 新记录类型 / Forge 面板兼容层 / 特效借用 | ⏳ |
+| U1–U6 + Forge | `0f869563b` `42f9c2812` 等 | 记录格式扩展、Forge 真包导入与 e2e | ⏳ |
+| skins / 插件美术 | `58206c0b5` `a449310ac` | 每干员皮肤层、名单外插件干员的官方美术 | ⏳ |
+| studio / 控制台 | `ff1a6fd65` `1777936c2` `86dc30ff8` `7e50d4401` `4decf3ef9` `00faf3361` `b697a32b5` | studio 战斗沙箱、`SP_TEST_MODE` 测试控制台及其浏览器修复 | ⏳ |
+
+**P0 本分支适配**：`server/index.js` 保留我们的账号 / 社区 / 统计 / 训练 / 管理页，加入 `content = computeVanillaContent(...)` 与 `createPluginRegistry`（`packs` 仍导出）；`server/lobby.js` 的房间/状态/构造器同时带 `public`/`role` 与 `content`；`shared/protocol.js` 的 `b.result` 取上游带 `cs` 的版本并保留我们的 `b.rehearsalResult`；`store.js` 增 `content`；`routes.js` 健康报告加 `content`；`static.js` 同时服务资产索引与 `/plugins` / `/cs`；`websocket.js` 的 Lobby 同时拿账号/社区/统计与 `content`；`APP_VERSION` 仍 `0.4.0`；`docs/design/network.md` **新增 §8.4 内容身份**（`PACKS.md` / `PLUGINS.md` 引用的 `DESIGN 8.4` 现在有对应章节）。
+验收：插件 P0 套件 38/38（1 skip）、`/healthz` + `/plugins/index.json` + `/cs/<cs16>/index.json` 冒烟通过；全量 **7398 / 7376**（两条心跳失败为并行负载抖动，单跑 `test/lobby.test.js` 74/74；性能基线抖动同前），golden 全匹配，文档门禁 34/34。
 
