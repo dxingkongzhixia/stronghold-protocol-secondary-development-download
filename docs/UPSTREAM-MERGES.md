@@ -1334,5 +1334,13 @@ docs guards 34 pass / 0 fail.
 
 验收：全量 `node --test` **7213 / 7197 通过 / 1 失败（`test/sim/robustness` 的性能基线，单跑 35/35，属负载抖动）**；golden 全部匹配；`docs-*` 34/34；README 计数 6847。三端已推（中继 `71568046c..f4849b5a9`）。
 
+
+**批次 ②（官方特效审计 R18–R21）— 已并入**：
+
+- `5209873f` **R18**：token 的技能记录取自它主人的变体（例如某干员的 aura 在场期间循环）；`2cd8ac7b` **R19**：幻影的 buff 绑定施法行按「幻影数量」播放；`2ee48b8c` **R20**：换血类 S1 的命中打在被她换血的队友身上；`d6f7ef70` **R21**：随单位出现的技能在部署时播放自己的 start 特效。
+- 同批跟进：`ce457b3a`（token 的变体记录取第一个主人 = 基础棋子，[ASSUMED]）、`a9b092fa`（被动技能部署 0.5 s 窗口内，已有官方特效却没有可画的东西时不再补程序化爆发）、`43d05cbb`（R18 其余 token 对 sim token 定义的核对 + 被动 token 技能模式的测试）。
+- 只改 `public/js/render/vfx/{skills,skillfx,wiring}.js` 与两个测试文件；`docs/design/vfx-format.md` / `CHANGELOG` / history **一律取我们的**（`history/0.3.1.md` 不收）。
+- 验收：全部 **vfx 套件 251/251**（含 `vfx-strike-pose` 法杖挂点红线、`vfx-skill-fixes`、`vfx-hits`）、`vfx-audit031` + `vfx-procedural` 26/26；**golden 全部匹配**（fields 22 场景不变）；全量 `node --test` **7227 / 7210**，两条失败均为已知抖动（README 计数已更新；`test/sim/robustness` 性能基线单跑 35/35）。
+
 **下一批**：② 官方特效审计 R18–R21（`5209873f` `2cd8ac7b` `2ee48b8c` `d6f7ef70` + 合并 `b47b2a81`）→ ③ isomerpoi 的 7 个 UI PR（单独一批）→ ④ `#680` 音频池 / `#684` 场景去重 / `#663` 补给箱模型 / `#658` salvage / 测试基建。
 
