@@ -1394,7 +1394,7 @@ docs guards 34 pass / 0 fail.
 |---|---|---|---|
 | **P0** | `c57c78bfe`（`ca0768ddb` + `cefe7e89a`） | **内容身份 `cs`**：`shared/sha256.js`、`shared/plugins/{identity,manifest}.js`、`server/plugins/{identity,registry}.js`、`/plugins/index.json`、`/cs/<cs16>/index.json`、`tools/plugin.mjs`、`plugins/README.md`、`docs/PLUGINS.md`、P0 测试 | ✅ 已并入 |
 | P1a | `83b89cf1f`（P1a 全套 + 3 轮复查） | 外观插件：房间视觉集（`/vs/`）、客户端 `content.js`、模板、e2e | ✅ 已并入 |
-| **P1b** | `fc768aa8`（+ `5a1e0e95` / `36d65d1c` / `051ecce6` 复查待接） | **数据插件**：数据补丁 `shared/plugins/patch.js`、紧凑记录 `records.js`、`validate.js` 把引用检查从 build-data 抽出 + 整集校验、`server/plugins/contentSet.js`（`buildContentSet` / `contentSetFiles`，按 `cs` 缓存）、`kitOf` 分派（扩展 / DSL 桩 / JSON SkillSpec / kitRef / 官方 kit / generic）、`effectRef`、模式级覆盖、内容模板与 records schema | ✅ 已并入 |
+| **P1b** | `fc768aa8`（复查 `5a1e0e95` / `36d65d1c` / `051ecce6` **暂缓**，见下） | **数据插件**：数据补丁 `shared/plugins/patch.js`、紧凑记录 `records.js`、`validate.js` 把引用检查从 build-data 抽出 + 整集校验、`server/plugins/contentSet.js`（`buildContentSet` / `contentSetFiles`，按 `cs` 缓存）、`kitOf` 分派（扩展 / DSL 桩 / JSON SkillSpec / kitRef / 官方 kit / generic）、`effectRef`、模式级覆盖、内容模板与 records schema | ✅ 已并入 |
 | P1c / P2 / P4 | `0fcc54976` `f3735da16` `8784d4559` `7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、每内容集一个 match worker）、DSL-lite kit、沙箱 UI 插件 | ⏳ |
 | W1–W5 | `be7f89b71` `872c2a6a5` `05463f7c8` `d02a6a17c` `cbb65b8a1` | 主题变量 / 规则开关 / 新记录类型 / Forge 面板兼容层 / 特效借用 | ⏳ |
 | U1–U6 + Forge | `0f869563b` `42f9c2812` 等 | 记录格式扩展、Forge 真包导入与 e2e | ⏳ |
@@ -1416,4 +1416,9 @@ docs guards 34 pass / 0 fail.
 - `test/plugins/contentBattle.test.js` 的 `fs.cpSync` 过滤在 Windows 用正则匹配两种分隔符 —— 上游的 `src.endsWith('/nodeData.js')` 在 Windows 不生效，会把 `nodeData.js` 复制进浏览器式运行目录并**把测试挂死**；修好后 7/7。
 - `validate.js` 的一条构建期报错加 `i18n-ignore`（数据校验消息，非玩家文本）。
 验收：`build-data --offline` **data/ 字节不变**；插件套件 **123 / 120（3 skip）**；全量 **7535 / 7511 / 0 失败 / 23 跳过**（仅性能基线抖动），golden 全匹配，i18n en **1617/1617**，文档门禁 34/34。
+
+**P1b 复查三连（`5a1e0e95` / `36d65d1c` / `051ecce6`）— 暂时回退，需专门一批**：三条给数据插件加边界（生成 / 时长 / 卡牌授予、黑板值上限、描述计数与步骤循环上限）。逐条 cherry-pick 后：
+- `5a1e0e95`：我们的弹射车实现保留，只把投石次数接上 `boundedCount`；上游的「合成命中数」用例对不上本分支的 PRTS 精确实现，标 skip。`36d65d1c`：Cathy 的 `timesOf` 保留 + 练度默认值仍是 1 / 0。
+- 但全量跑出来**行为回归**：`enemy_10162_mnctpt`（弹射车）数据测试、雾霾/阻挡测试、以及 **golden roster 摘要不匹配**；`051ecce6` 还动了 `grid.js` / `professions.js` / `skills.js` / `tokens.js` / `traitMods.js` 等核心 sim 文件（84 个文件）。
+- 按 `AGENTS.md §6`，移动 golden 的改动必须**单独归因**（只回退该改动 → 零差异）再单独重生成，所以三条整体回退，`ours` 保持 `27f31eb63`（golden 全匹配）。下一批需要：逐条应用 → 定位弹射车/雾霾差异 → 归因 → 重生成 golden → 再合并。
 
