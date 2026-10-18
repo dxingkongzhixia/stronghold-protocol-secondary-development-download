@@ -1394,6 +1394,7 @@ docs guards 34 pass / 0 fail.
 |---|---|---|---|
 | **P0** | `c57c78bfe`（`ca0768ddb` + `cefe7e89a`） | **内容身份 `cs`**：`shared/sha256.js`、`shared/plugins/{identity,manifest}.js`、`server/plugins/{identity,registry}.js`、`/plugins/index.json`、`/cs/<cs16>/index.json`、`tools/plugin.mjs`、`plugins/README.md`、`docs/PLUGINS.md`、P0 测试 | ✅ 已并入 |
 | P1a | `83b89cf1f`（P1a 全套 + 3 轮复查） | 外观插件：房间视觉集（`/vs/`）、客户端 `content.js`、模板、e2e | ✅ 已并入 |
+| **P1b** | `fc768aa8`（+ `5a1e0e95` / `36d65d1c` / `051ecce6` 复查待接） | **数据插件**：数据补丁 `shared/plugins/patch.js`、紧凑记录 `records.js`、`validate.js` 把引用检查从 build-data 抽出 + 整集校验、`server/plugins/contentSet.js`（`buildContentSet` / `contentSetFiles`，按 `cs` 缓存）、`kitOf` 分派（扩展 / DSL 桩 / JSON SkillSpec / kitRef / 官方 kit / generic）、`effectRef`、模式级覆盖、内容模板与 records schema | ✅ 已并入 |
 | P1c / P2 / P4 | `0fcc54976` `f3735da16` `8784d4559` `7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、每内容集一个 match worker）、DSL-lite kit、沙箱 UI 插件 | ⏳ |
 | W1–W5 | `be7f89b71` `872c2a6a5` `05463f7c8` `d02a6a17c` `cbb65b8a1` | 主题变量 / 规则开关 / 新记录类型 / Forge 面板兼容层 / 特效借用 | ⏳ |
 | U1–U6 + Forge | `0f869563b` `42f9c2812` 等 | 记录格式扩展、Forge 真包导入与 e2e | ⏳ |
@@ -1407,4 +1408,12 @@ docs guards 34 pass / 0 fail.
 
 **本分支适配**：`ui/stats.js` **仍取我们的**（schema 在 `shared/stats.js`），把 `vs` 移植进去（`vsOf`、`normalizeRecord.vs`、id 哈希忽略 `vs`、`COMPACT_FRAME` 加 `vs`、`buildRecord(ctx.vs)`）；`assets.js` 保留我们的 **LRU 图片缓存**，只接上游的 `failed()` 外观层失败上报；`title.js` 仍从 `ui/playerName.js` 导入名字清洗（不取上游内置的那份），并接 `installedCount` 的插件计数；`settings.js` 同时保留我们的「美术缓存 / 屏幕适配」与上游的「外观插件 / 诊断」分组；`room.js` 保留「野排模拟」标题并加 `PluginTag`；`main.js` 接 `installContent` / `cosmetics`；模板 `app` 范围放宽到 `>=0.3.0 <0.5.0`（我们是 0.4.0）。
 验收：插件套件 **71 / 68（3 skip）**、`stats` 46/46、`tool` 5/5；全量 **7497 / 7473 / 0 失败 / 23 跳过**（仅性能基线抖动），golden 全匹配，i18n en **1617/1617**（补齐 36 条），文档门禁 34/34。
+
+**P1b 已并入 `fc768aa8`（数据插件 / 内容集）**：`shared/plugins/{patch,records,validate}.js`、`server/plugins/contentSet.js`（`buildContentSet` / `contentSetFiles`，按 `cs` 缓存）、`kitOf` 的扩展分派（DSL 桩 / JSON SkillSpec / `kitRef` / 官方 kit / generic）、`effectRef`（物品与策略）、模式级覆盖、`plugins/_template/content/` 与 records schema、DESIGN 32.5 / PLUGINS 10。
+**本分支适配**：
+- `tools/build-data.mjs` **保留我们的整套校验**（自定义干员、DIY、触发偏差等），只把 `validateAll` 的入参补齐为全部文件键；`shared/plugins/validate.js` 仍是上游的整集校验，新增 `skipStandIn` 钩子并在 `backup.charId == null` 时跳过 —— 我们 8 个自定义干员没有官方 stand-in，否则整集校验会误报 16 条。
+- 插件 `app` 范围统一放宽到 `>=0.3.0 <0.5.0`（我们 0.4.0）：模板、`plugins/README.md`、测试夹具与 manifest 测试的「不兼容」探针改成 `0.6.1`。
+- `test/plugins/contentBattle.test.js` 的 `fs.cpSync` 过滤在 Windows 用正则匹配两种分隔符 —— 上游的 `src.endsWith('/nodeData.js')` 在 Windows 不生效，会把 `nodeData.js` 复制进浏览器式运行目录并**把测试挂死**；修好后 7/7。
+- `validate.js` 的一条构建期报错加 `i18n-ignore`（数据校验消息，非玩家文本）。
+验收：`build-data --offline` **data/ 字节不变**；插件套件 **123 / 120（3 skip）**；全量 **7535 / 7511 / 0 失败 / 23 跳过**（仅性能基线抖动），golden 全匹配，i18n en **1617/1617**，文档门禁 34/34。
 

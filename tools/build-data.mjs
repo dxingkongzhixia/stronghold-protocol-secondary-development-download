@@ -35,7 +35,9 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
-import { Grid, DEPLOY_REFUSED_TILES } from '../server/sim/grid.js';
+import { DEPLOY_REFUSED_TILES } from '../server/sim/grid.js';
+import { validateReferences } from '../shared/plugins/validate.js';
+import { computeGroundPaths } from '../server/sim/groundPaths.js';
 import { bandBondIds } from '../shared/bandBonds.js';
 import { FORMS } from '../shared/forms.js';
 import { statusKey, composeUnitRecord, standInRecord, unitForm } from '../shared/standIn.js';
@@ -3102,23 +3104,6 @@ function tileGlyph(t) {
   }
 }
 
-/**
- * Official ground route (research 08 §3.4, the same code the sim runs: server/sim/grid.js flow field — 4-direction
- * SPFA from the goal, crates cost 1000, Bresenham line-of-sight smoothing) as the tiles an enemy crosses, start and goal
- * included. The whole 19×21 map is walkable like in the client.
- * @param {object} stage { rows, legend }
- * @param {Array<{pos:number[], role:string}>} devices active devices to apply (crates = cost 1000, platforms/mounds = blocked)
- */
-function officialPath(stage, devices, start, end) {
-  const g = new Grid(stage, { r0: 0, r1: 18, c0: 0, c1: 20 });
-  for (const d of devices) {
-    if (!d.pos) continue;
-    if (d.role === 'crate') g.setObstacle(d.pos[0], d.pos[1], true, 'crate');
-    else g.setObstacle(d.pos[0], d.pos[1], true);
-  }
-  return g.findPath(start[0], start[1], end[0], end[1]);
-}
-
 /** Gameplay role of known stage devices. */
 const DEVICE_ROLES = {
   trap_1105_accrate: 'crate', trap_1106_achplat: 'platform', trap_032_mound: 'mound', trap_013_blower: 'blower',
@@ -3305,22 +3290,7 @@ function buildStages(ctx, modesById) {
     };
 
     // Helper ground routes (the official flow field + smoothing, as crossed tiles), without / with the active devices.
-    const gridStage = { rows, legend: glyphTiles };
-    const pairs = [
-      [[9, 10], [9, 2]], [[12, 10], [9, 2]], [[9, 18], [9, 2]], [[12, 18], [9, 2]],
-      [[2, 10], [2, 2]], [[5, 10], [2, 2]], [[2, 10], [1, 3]], [[5, 10], [1, 3]],
-      [[2, 10], [2, 18]], [[5, 10], [2, 18]], [[2, 10], [1, 17]], [[5, 10], [1, 17]],
-    ];
-    const groundPaths = {}, groundPathsWithDevices = {};
-    for (const [a, b] of pairs) {
-      const k = `${a.join(',')}->${b.join(',')}`;
-      const passable = (p) => tileAt(p[0], p[1])?.passableMask === 'ALL';
-      if (!passable(a) || !passable(b)) continue;
-      const p1 = officialPath(gridStage, [], a, b);
-      if (p1) groundPaths[k] = p1;
-      const p2 = officialPath(gridStage, activeBlocking, a, b);
-      if (p2) groundPathsWithDevices[k] = p2;
-    }
+    const { groundPaths, groundPathsWithDevices } = computeGroundPaths({ rows, tiles: glyphTiles, devices });
     const modes = [...(sd?.mode || [])];
     const o = lv.options || {};
     out[stageId] = {
@@ -4289,27 +4259,10 @@ function attachPotential(passes) {
 
 // ===== validation ===============================================================================
 
-/** Recursively find non-finite numbers (NaN/Infinity would silently become null in JSON). */
-function findNonFinite(obj, path, out) {
-  if (typeof obj === 'number') { if (!Number.isFinite(obj)) out.push(path); return; }
-  if (!obj || typeof obj !== 'object') return;
-  if (Array.isArray(obj)) { obj.forEach((v, i) => findNonFinite(v, `${path}[${i}]`, out)); return; }
-  for (const [k, v] of Object.entries(obj)) findNonFinite(v, `${path}.${k}`, out);
-}
-
-/**
- * Cross-file referential integrity checks. Returns a list of error strings (empty = OK).
- * The same invariants are asserted by test/data.test.js.
- */
 function validateAll(f) {
-  const errors = [];
-  const err = (m) => errors.push(m);
+  const errors = validateReferences(f, { skipStandIn: (c) => CUSTOM_BASE_IDS.has(c.baseId) });
+  const err = m => errors.push(m);
   const { config, chess, bonds, garrisons, items, bands, effects, choices, enemies, factions, waves, stages, bosses, tokens, backups } = f;
-  for (const [name, obj] of Object.entries(f)) {
-    const bad = [];
-    findNonFinite(obj, name, bad);
-    bad.slice(0, 5).forEach((p) => err(`non-finite number at ${p}`));
-  }
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
@@ -4357,9 +4310,6 @@ function validateAll(f) {
       }
     }
   }
-  // 补位 / 自选 (data/backups.json, DATA.md §18): a PRESET chess is its own backup; every NORMAL chess (both forms)
-  // composes into its stand-in (shared/standIn.js standInRecord) with the chess's skill and module; every DIY slot is a
-  // DIY chess and every prototype pick of its tier has a form for both slot statuses; derived bonds exist
   if (backups) {
     for (const c of Object.values(chess)) {
       const b = c.backup;
@@ -4480,16 +4430,8 @@ function validateAll(f) {
     if (!t || t.kind !== 'summon') err(`TOKEN_POSITION_CORRECTIONS: ${id} is not a summon`);
     else if (t.position !== pos || !['MELEE', 'RANGED', 'ALL'].includes(pos)) err(`TOKEN_POSITION_CORRECTIONS: ${id}: position ${t.position}`);
   }
-  for (const t of Object.values(tokens)) {
-    if (!t.stats) err(`token ${t.tokenId}: no stats`);
-    for (const [o, v] of Object.entries(t.variants || {})) if (!Array.isArray(v.sources) || !v.sources.length) err(`token ${t.tokenId}@${o}: no sources`);
-  }
-  for (const e of Object.values(enemies)) {
-    const s = e.stats;
-    // DESIGN §5.5 contract: rangeRadius > 0 ⇔ attacks units it is not blocked by (never for MELEE).
-    if (!(s.rangeRadius >= 0) || (e.applyWay === 'MELEE' && s.rangeRadius !== 0)) err(`enemy ${e.key}: rangeRadius ${s.rangeRadius} (${e.applyWay})`);
-    // bat 0 would mean "attack every tick"; aspd 0 is official only for a few skill-driven leaders.
-    if (!(s.maxHp > 0) || !(s.bat > 0) || !(s.aspd >= 0) || !(s.moveSpeed >= 0) || !(s.lpr >= 0)) err(`enemy ${e.key}: bad core stats ${JSON.stringify({ maxHp: s.maxHp, bat: s.bat, aspd: s.aspd, moveSpeed: s.moveSpeed, lpr: s.lpr })}`);
+  for (const s of Object.values(stages)) {
+    if (s.name !== s.id && /[A-Za-z]/.test(s.name)) err(`stage ${s.id}: Latin text in player-facing name "${s.name}"`);
   }
   return errors;
 }

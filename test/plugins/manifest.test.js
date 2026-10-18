@@ -21,7 +21,7 @@ const marathon = () => ({
   id: 'marathon',
   name: { zh: '马拉松模式', en: 'Marathon' },
   version: '0.1.0',
-  app: '>=0.3.0 <0.4.0',
+  app: '>=0.3.0 <0.5.0',
   api: 1,
   class: 'content',
   scope: ['room'],
@@ -55,7 +55,7 @@ test('manifest 2: a content plugin, normalised', () => {
   assert.deepEqual(Object.keys(m.parts), ['data', 'operators', 'modes', 'i18n']);
   assert.deepEqual(m.parts.i18n, { files: ['i18n/en.json'], langs: { en: 'i18n/en.json' } });
   assert.deepEqual(declaredPaths(m).map((d) => d.rel), ['data/economy.json', 'operators/rosa.json', 'modes/marathon.json', 'i18n/en.json']);
-  assert.equal(readPluginManifest(marathon(), ctx('marathon', { app: '0.4.1' })).manifest.compatible, false);
+  assert.equal(readPluginManifest(marathon(), ctx('marathon', { app: '0.6.1' })).manifest.compatible, false);
   assert.match(warningsOf({ ...marathon(), app: '0.2.x' }), /made for app 0\.2\.x; this is 0\.3\.0/);
 });
 
@@ -204,9 +204,9 @@ test('manifest 2: inline assets name art, models, audio or fonts; a theme never 
   assert.deepEqual([trusted.problems, trusted.manifest.scope], [[], ['server']]);
 });
 
-test('the classes: lang and cosmetic load (P1a), content is planned, code is never loaded; manifest 1 types map onto them', () => {
+test('the classes: lang and cosmetic load (P1a), content loads (P1b), code is never loaded; manifest 1 types map onto them', () => {
   assert.deepEqual(Object.keys(PLUGIN_CLASSES), ['lang', 'cosmetic', 'content', 'script', 'ui', 'trusted']);
-  assert.deepEqual(Object.keys(PLUGIN_CLASSES).map(classStatus), ['loaded', 'loaded', 'planned', 'unsupported', 'unsupported', 'unsupported']);
+  assert.deepEqual(Object.keys(PLUGIN_CLASSES).map(classStatus), ['loaded', 'loaded', 'loaded', 'unsupported', 'unsupported', 'unsupported']);
   assert.deepEqual(Object.entries(PLUGIN_CLASSES).filter(([, c]) => !c.unofficial).map(([k]) => k), ['lang'], 'everything but a language is unofficial');
   assert.equal(PACK_TYPES_COMPAT, PACK_TYPES, 'shared/packs.js forwards the type table');
   assert.deepEqual(Object.entries(PACK_TYPES).map(([k, v]) => [k, v.status, v.class]), [['lang', 'supported', 'lang'], ['assets', 'planned', 'cosmetic'], ['data', 'planned', 'content']]);
@@ -214,7 +214,7 @@ test('the classes: lang and cosmetic load (P1a), content is planned, code is nev
   assert.ok(!ASSET_EXT.includes('.svg'), 'no SVG (scripts in images)');
   assert.ok(!PLUGIN_CLASSES.cosmetic.ext.includes('.js') && !PLUGIN_CLASSES.content.ext.includes('.js'), 'no code in art or data');
   assert.equal(isPackPathCompat('a/b.json'), true);
-  assert.equal(appVersionMatches('>=0.3.0 <0.4.0', '0.3.0-dev'), true);
+  assert.equal(appVersionMatches('>=0.3.0 <0.5.0', '0.3.0-dev'), true);
   assert.deepEqual(['ab', 'a-b', '0x', 'a'.repeat(32), 'a', '-a', 'A', 'a_b', 'a.b', 'a'.repeat(33)].map(isPluginId),
     [true, true, true, true, false, false, false, false, false, false]);
   assert.equal(isPackId('pt-BR'), true);
