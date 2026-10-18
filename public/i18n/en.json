@@ -1687,5 +1687,17 @@
   "重新应用": "Apply again",
   "插件的文件在服务器上更新后，重新应用才会生效。": "When a plugin's files are updated on the server, apply the plugins again to use them.",
   "房间插件「{names}」的文件在服务器上变了，请在插件面板中点「重新应用」": "The files of the room's plugin “{names}” changed on the server — open the Plugins panel and press “Apply again”",
-  "与其他已开启的插件冲突或缺少所需插件，没有生效": "Conflicts with another plugin that is on, or needs a plugin that is missing: not in effect"
+  "与其他已开启的插件冲突或缺少所需插件，没有生效": "Conflicts with another plugin that is on, or needs a plugin that is missing: not in effect",
+  "仍有博士未载入房间的插件内容": "Some Doctors have not loaded the room's plugin content yet",
+  "该插件不适配本服务器的游戏版本": "That plugin is not made for this server's game version",
+  "本服务器同时运行的插件组合已达上限，请稍后再试": "This server already runs as many plugin sets as it allows — please try again later",
+  "内容": "Content",
+  "大小": "Size",
+  "文件": "Files",
+  "问题": "Problem",
+  "中心": "Center",
+  "状态": "Status",
+  "安装": "Install",
+  "不适配": "Incompatible",
+  "选择": "Select"
 }
