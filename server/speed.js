@@ -30,7 +30,7 @@ export const SPEED_SAMPLES = Object.freeze([
 /** Mirrors RELAY_MIN_BPS: a FULL origin (the relay: files + the /media,/scene,/clip routes) must clear this to stay first. */
 export const RELAY_MIN_BPS = 1.2 * 1024 * 1024;
 /** Mirrors MIRROR_MIN_BPS: a plain-file mirror (gh-proxy / jsDelivr) must clear this to be used at all. */
-export const MIRROR_MIN_BPS = 1.0 * 1024 * 1024;
+export const MIRROR_MIN_BPS = 0.5 * 1024 * 1024;
 /** Mirrors SPEED_TIMEOUT_MS / SPEED_BYTE_CAP: per-source budget, and the per-file cap that ends a fast one early. */
 export const SPEED_BUDGET_MS = 2500;
 export const SPEED_BYTE_CAP = 400 * 1024;

@@ -28,9 +28,13 @@
 //
 // The art (DESIGN §32 P1a): every record names the room's visual set `vs` — the cosmetic plugins its host switched on
 // (room.state.content.vs; null without any). The overview does not filter on it: a match with only cosmetic plugins
-// counts as the original game (the owner's decision of 2026-10-13: its gameplay and numbers are unchanged); only matches
-// with plugins that change gameplay will be left out (P1b / P1c). A player's personal plugins never matter and are not
-// recorded.
+// counts as the original game (the owner's decision of 2026-10-13: its gameplay and numbers are unchanged). A player's
+// personal plugins never matter and are not recorded.
+// Gameplay plugins (DESIGN §32.6, P1c): every record names the room's content set when it played one — `content`
+// `{ cs, plugins: ['<id>@<version>' …] }` (room.state.content with `vanilla: false`), null for the original game
+// (cosmetic plugins only included; a record from before 0.3.0: null — format v2, MIGRATIONS[1]). Such a match is
+// unofficial: the aggregates leave it out unless asked to take it in (aggregateStats `modded` — the overview's
+// 「含插件对局」 switch); the history lists it with its mark.
 //
 // Format evolution: the envelope carries a version (`STATS_VERSION`); `migrateStats` walks records through a chain of
 // per-version steps and every loaded / imported record passes `normalizeRecord`, a strict schema. An envelope from a
@@ -204,6 +208,7 @@ export function buildQuitRecord(state, ctx = {}) {
     roomMode: roomModeOf(str(pub.modeId), state.room?.mode),
     selfId: myId,
     vs: vsOf(state.room?.content?.vs),
+    content: contentOf(state.room?.content),
     players: [{
       playerId: myId, seat: row.seat, name: row.name, isBot: false, left: true, alive, victory: false, roundsPassed,
       eliminatedRound: alive ? null : live.aliveRound, lp: row.lp, bandId: row.bandId,

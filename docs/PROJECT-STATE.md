@@ -142,7 +142,7 @@
 | `SP_ASSET_RATE_KBPS` | `1200`（服务器兜底素材下载限速 ≈1.2 MB/s；0 关闭） | `server/http/files.js` |
 | `SP_ASSET_REF` | 未设（**空串＝关闭来源层**：客户端直接走游戏机。不再用来钉 CDN 的 git ref —— ref 就写在 `public/asset-mirrors.json` 的 URL 里） | `server/assetindex.js` |
 | `SP_ASSET_RELAY` | 未设（未设时取 `public/asset-mirrors.json` 里 `fullSources` 的第一个源；**已无写死的中继 IP**，配置里没有来源就是没有）——客户端**素材链的第一源**，也由 `/asset-index.json` 的 `sources` 交给 Service Worker | `server/assetindex.js` |
-| `RELAY_MIN_BPS` / `MIRROR_MIN_BPS` | `1.2 MB/s` / `1.0 MB/s`（**按实测速度选源，中继仍是第一优先**：用**六张立绘并行**测总吞吐——先测中继，不达标才并行测其余；测量复用 2 分钟，`cacheMs: 0` 可强制每次重测） | `public/js/assetMirror.js` |
+| `RELAY_MIN_BPS` / `MIRROR_MIN_BPS` | `1.2 MB/s` / `0.5 MB/s`（**按实测速度选源，中继仍是第一优先**：用**六张立绘并行**测总吞吐——先测中继，不达标才并行测其余；测量复用 2 分钟，`cacheMs: 0` 可强制每次重测） | `public/js/assetMirror.js` |
 
 ## 7. 常用命令
 

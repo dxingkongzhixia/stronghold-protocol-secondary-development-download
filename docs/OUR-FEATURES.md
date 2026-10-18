@@ -654,7 +654,7 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
   way the boot preload pulls art — so the measured rate is the throughput a player actually gets, not one stream's
   latency (a single small file made a fixed relay look slow). **The relay is probed first** (the healthy case costs one
   round of samples; the other sources are probed in parallel only when it misses its bar) and installs the **first**
-  source that clears its bar — the owner's relay **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **1.0 MB/s**
+  source that clears its bar — the owner's relay **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **0.5 MB/s**
   (`MIRROR_MIN_BPS`) — otherwise the URLs stay on this server. A fresh reading is reused for `SPEED_CACHE_MS` (2 min,
   `cacheMs: 0` re-measures every call), and the whole list stays as the per-file error fallback. Measured 2026-10-15
   (domestic vantage): the relay's egress was ~0.05-0.4 MB/s before Aliyun lifted the restriction, then **7.1 MB/s

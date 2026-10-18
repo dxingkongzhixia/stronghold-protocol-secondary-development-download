@@ -4,7 +4,7 @@
 // module picks the origin those URLs are rewritten to (a path prefix, so a Spine atlas and its pages, or a scene and its
 // bundle, stay together — a `blob:` URL would break them) and keeps the rest of the chain behind it. Since 2026-10-15
 // the choice is by **measured throughput**, not by "who answers first": the owner's relay is kept only while it clears
-// 1.2 MB/s, otherwise a GitHub mirror gets its turn (1.0 MB/s bar), and when nobody does the page stays on this server.
+// 1.2 MB/s, otherwise a GitHub mirror gets its turn (0.5 MB/s bar), and when nobody does the page stays on this server.
 //
 // Only images are rewritten here:
 //   * the audio goes through the server's extension-less `/media/` route on purpose (download managers hook media
@@ -43,7 +43,7 @@ export const SPEED_SAMPLE_PATH = SPEED_SAMPLES[0];
 /** A FULL origin (the owner's relay: files + the /media,/scene,/clip routes) must clear this to stay first. */
 export const RELAY_MIN_BPS = 1.2 * 1024 * 1024; // 1.2 MB/s
 /** A plain-file mirror (gh-proxy / jsDelivr) must clear this to be used at all. */
-export const MIRROR_MIN_BPS = 1.0 * 1024 * 1024; // 1.0 MB/s
+export const MIRROR_MIN_BPS = 0.5 * 1024 * 1024; // 0.5 MB/s
 /** Per-source probe budget, and the per-file byte cap that ends a fast one early. */
 export const SPEED_TIMEOUT_MS = 2500;
 export const SPEED_BYTE_CAP = 400 * 1024;
@@ -295,7 +295,7 @@ export function installImageFallback({ doc = globalThis.document } = {}) {
 /**
  * Pick the origin the manifest URLs are rewritten to, by **measured throughput** instead of "who answers first": every
  * candidate is timed in parallel on one committed sample, and the first one clearing its bar wins — a FULL origin (the
- * relay) 1.2 MB/s, a plain-file mirror (gh-proxy / jsDelivr) 1.0 MB/s; when none clears its bar the page keeps using
+ * relay) 1.2 MB/s, a plain-file mirror (gh-proxy / jsDelivr) 0.5 MB/s; when none clears its bar the page keeps using
  * this server. The **relay stays the first choice**, but it is measured on **every page load** (`cacheMs = 0` by
  * default): the moment it drops under its bar, the very next visit switches away from it. The whole configured list
  * stays available for the per-file error fallback. Never throws: any failure leaves the prefix empty.

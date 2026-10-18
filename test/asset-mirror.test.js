@@ -167,17 +167,17 @@ describe('asset mirror: the origin is picked by MEASURED throughput', () => {
     assert.equal(rateOf(500, 0), 0);
   });
 
-  test('pickMirror: the FIRST candidate that clears its own bar wins (relay 1.2 MB/s, mirror 1.0 MB/s)', () => {
+  test('pickMirror: the FIRST candidate that clears its own bar wins (relay 1.2 MB/s, mirror 0.5 MB/s)', () => {
     const relay = { base: RELAY, full: true };
     const gh = { base: GH, full: false };
     assert.equal(RELAY_MIN_BPS, 1.2 * 1024 * 1024, 'the relay bar is 1.2 MB/s');
-    assert.equal(MIRROR_MIN_BPS, 1.0 * 1024 * 1024, 'a mirror bar is 1.0 MB/s');
+    assert.equal(MIRROR_MIN_BPS, 0.5 * 1024 * 1024, 'a mirror bar is 0.5 MB/s');
     // a relay that clears 1.2 MB/s keeps its first place even when a mirror is faster
     assert.equal(pickMirror([{ ...relay, bps: 1.5 * 1024 * 1024 }, { ...gh, bps: 9 * 1024 * 1024 }]), RELAY);
     // a SLOW relay (below 1.2 MB/s — what the owner's box measures) hands over to the GitHub mirror
     assert.equal(pickMirror([{ ...relay, bps: 0.4 * 1024 * 1024 }, { ...gh, bps: 2 * 1024 * 1024 }]), GH);
-    // a mirror below 1 MB/s is not used either → the chain keeps this server
-    assert.equal(pickMirror([{ ...relay, bps: 100 * 1024 }, { ...gh, bps: 0.9 * 1024 * 1024 }]), '');
+    // a mirror below 0.5 MB/s is not used either → the chain keeps this server
+    assert.equal(pickMirror([{ ...relay, bps: 100 * 1024 }, { ...gh, bps: 0.4 * 1024 * 1024 }]), '');
     // nothing measurable → this server
     assert.equal(pickMirror([{ ...relay, bps: 0 }, { ...gh, bps: 0 }]), '');
     assert.equal(pickMirror([]), '');
@@ -206,7 +206,7 @@ describe('asset mirror: the origin is picked by MEASURED throughput', () => {
     const cfg = { sources: [RELAY, GH], fullSources: [RELAY] };
     const fetchFn = async (url) => {
       if (url.endsWith(MIRRORS_URL)) return { ok: true, json: async () => cfg };
-      await new Promise((r) => setTimeout(r, 40));
+      await new Promise((r) => setTimeout(r, 120)); // 6 x 4 KB in 120 ms ≈ 0.2 MB/s, under every bar
       return { ok: true, body: null, arrayBuffer: async () => new ArrayBuffer(4 * 1024) };
     };
     const chosen = await initAssetMirror({ fetchFn, hostname: 'game.test' });

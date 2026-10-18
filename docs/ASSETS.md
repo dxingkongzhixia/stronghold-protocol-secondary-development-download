@@ -684,7 +684,7 @@ register — so the HTTPS future keeps the better chain.
   first": at boot it times the origins on **six committed portraits (~110 KB each) fetched in parallel** — the way the
   boot preload pulls art — so the rate is the throughput a player gets, not one stream's latency. **The relay is probed
   first** (the healthy case costs one round of samples) and the remaining sources are probed in parallel only when it
-  misses its bar: the relay must clear **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **1.0 MB/s**
+  misses its bar: the relay must clear **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **0.5 MB/s**
   (`MIRROR_MIN_BPS`), otherwise the manifest URLs are left on this server. A fresh reading is reused for
   `SPEED_CACHE_MS` (2 min; `cacheMs: 0` re-measures every call), and the whole list stays as the per-file error
   fallback. This is what demoted the relay when the owner's box measured ~0.05–0.4 MB/s (its plan's real egress, far
@@ -696,7 +696,7 @@ register — so the HTTPS future keeps the better chain.
   `GET /admin/api/speed`, `docs/MATCHMAKING.md` §12.2) times the same origins on the same samples and shows **two
   columns** — the game box's own view and the operator's browser, which is the vantage a player has — plus the origin
   the rule would install right now. That is the quickest way to catch a throttled relay or a dead mirror: each row has
-  a bar against the same 1.2 / 1.0 MB/s bars, and `test/speed.test.js` re-reads `assetMirror.js` and fails if the
+  a bar against the same 1.2 / 0.5 MB/s bars, and `test/speed.test.js` re-reads `assetMirror.js` and fails if the
   samples, the bars or the budgets drift apart.
 
   > ⚠️ **An HTTPS site needs an HTTPS relay.** A page served over HTTPS may not fetch `http://…` subresources (the

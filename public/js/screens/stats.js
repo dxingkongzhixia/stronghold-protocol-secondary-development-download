@@ -31,7 +31,7 @@ import { TITLE_HEX_SECTORS, titleSectorClip } from '../ui/titleHexagon.js';
 import { ResultView } from './result.js';
 import { toast, toastError } from '../ui/toasts.js';
 import {
-  loadStats, saveStats, emptyStats, importStats, exportStats, aggregateStats, countsTowardStats, selfRowOf, roundsOf,
+  loadStats, saveStats, emptyStats, importStats, exportStats, aggregateStats, countsTowardStats, selfRowOf, roundsOf, isModdedRecord,
   recordToResult, MAX_RECORDS, FULL_KEEP, IMPORT_MAX_CHARS,
   trophyMedalOf, strategyBadgeIds, bondMemberChess, highestBondRecord,
 } from '../ui/stats.js';
@@ -146,6 +146,21 @@ function Section({ children, class: cls }) {
   </section>`;
 }
 
+/**
+ * 「含插件对局」: the aggregates take in the matches with gameplay plugins too (ui/stats.js aggregateStats `modded`;
+ * DESIGN §32.6 — off by default: such a match is unofficial). Shown once there is one.
+ */
+function ModdedSwitch({ agg }) {
+  const on = useStore((s) => s.withModded, Object.is, statsStore);
+  const n = on ? null : agg.modded;
+  if (!on && !agg.modded) return null;
+  return html`<label class="st-modded" data-testid="stats-modded">
+    <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} class=${cx('set-toggle', on && 'is-on')}
+      onClick=${() => statsStore.set({ withModded: !on })}><i></i></button>
+    <span>${t('含插件对局')}${n ? html` <em class="t-dim">${t('（{n} 局未计入）', { n })}</em>` : null}</span>
+  </label>`;
+}
+
 /** 总览: cards, the per-difficulty table, the six titles, and the line about what counts. */
 function Overview({ agg, gd, nickname, records }) {
   useData('chess', 'items', 'backups');
@@ -219,7 +234,8 @@ function Overview({ agg, gd, nickname, records }) {
       </tbody>
     </table></div>` : null}
     <p class="st-rule"><${Icon} name="info" />${t('计入统计：打到结算的对局，以及中途退出前至少清完 1 个回合的对局；更早退出的对局只留在对局记录里。')}${agg.excluded
-      ? html` <b>${t('另有 {n} 局未计入统计', { n: agg.excluded })}</b>` : null}</p>
+      ? html` <b>${t('另有 {n} 局未计入统计', { n: agg.excluded })}</b>` : null}${agg.modded
+      ? html` ${t('使用改变玩法插件的对局为非官方对局，默认不计入总览。')}` : null}</p>
   <//>`;
 }
 
@@ -457,7 +473,8 @@ function HistoryRow({ rec, gd, onOpen }) {
     <td>${rec.roomMode === 'solo' ? t('单人') : rec.roomMode === 'coop' ? t('同盟') : '—'}</td>
     <td><span class="st-band">${band ? html`<${BandIcon} bandId=${band.bandId} size="xs" />${band.name}` : self?.bandId || '—'}</span></td>
     <td class="st-res">${quit ? html`<span class="t-quit">${t('中途退出')}</span>` : html`<span class=${won ? 't-win' : 't-lose'}>${won ? t('胜') : t('负')}</span>`}
-      ${!counted ? html`<em class="st-chip">${t('不计入统计')}</em>` : null}</td>
+      ${!counted ? html`<em class="st-chip">${t('不计入统计')}</em>` : null}
+      ${isModdedRecord(rec) ? html`<em class="st-chip is-modded" title=${(rec.content.plugins || []).join(', ')}>${t('非官方')}</em>` : null}</td>
     <td class="num">${known ? fmtNum(rounds) : '—'}</td>
     <td class="st-go" aria-hidden="true">${view ? html`<${Icon} name="chevronRight" />` : null}</td>
   </tr>`;
@@ -483,7 +500,8 @@ function Replay({ rec, onBack }) {
   const gd = useGameData();
   const res = useMemo(() => recordToResult(rec), [rec]);
   if (!gd.ready) return html`<div class="st-loading"><${Spinner} size="md" /></div>`;
-  return html`<${ResultView} res=${res} pub=${null} myId=${rec.selfId} backLabel=${t('返回统计')} onBack=${onBack} quiet=${true} />`;
+  return html`<${ResultView} res=${res} pub=${null} myId=${rec.selfId} backLabel=${t('返回统计')} onBack=${onBack} quiet=${true}
+    content=${rec.content ? { cs: rec.content.cs, vanilla: false, plugins: rec.content.plugins } : null} />`;
 }
 
 /**
