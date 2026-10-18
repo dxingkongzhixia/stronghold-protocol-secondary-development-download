@@ -1348,7 +1348,12 @@ docs guards 34 pass / 0 fail.
 - **已并入 part 1**：`f16fd3d9`（#699「异形屏适配」四个滑条：50 = 不变、每步 2 px、±100 px，移动整个界面；只存本机）+ `51043f91`（± 按钮进 44 px 触控区）+ `7661d2a6`（机变卡文字 line-height 1.3 / 8 行 + 底部留白）；`a1ea1608`（#695 战略选择官方观感：标题栏 / 卡片 / 白色确认框，「已选 / 当前」标记改到队伍栏头像上，去掉独立顺序列表）。
   **本分支适配**：队伍栏签名保留 `chat` / `onShareHp` 并加 `spMarks`；队伍列保留 `gm__teamcol` 包装与观战席 `SpecDock`；`.title-guide` 触控钩子**不再加入**（本分支标题页无「玩法说明」入口，`title-surfaces` 测试钉住）；卡片正文只有一条 **1.3 / 8 行** 规则（较新的 `7661d2a6` 覆盖 #695 的 1.5 / 7 行）。
   验收：`test/ui` **947 / 943 通过 / 0 失败**（4 跳过）；i18n **1520/1520**。
-- **待做（同一批的余下 5 个 PR）**：#696 大厅 S.W.E.E.P. 战报（新文件 `screens/sweep.js` + `sweep.css` 的依赖在本分支**都齐**：`abilityLines` / `roman` / `Modal` / `guidePages` / `loadoutStore`），但 `lobby.js` 必须**手工接线**（我们的 lobby 有公开房间 / 社区 / 统计，整体取上游 hunk 会回退）；#698 结算页官方流程、#703 局内顶栏与回合提示、#704 开局 / 盟约提示、#705 最终攻势 / 作战结束 plates —— 都动 `screens/game.js`，需要逐个接、每步跑 `test/ui` 与 `test/render`。
+- **已并入 part 2**：`33a8403ee`（#696 大厅只读 **S.W.E.E.P. 战报**：`screens/sweep.js` + `sweep.css`，盟约 / 策略 / 敌方三页，敌方页可开图鉴；`tools/build-data.mjs` 从 `enemy_handbook_table` 的 `levelInfoList` 生成 `factions.json` 的 **`handbookLevels`**（10 档 E…SS））。
+  **本分支适配**：`lobby.js` **手工接线**（import / `sweepOpen` / 顶栏按钮 / 弹窗挂载），公开房间 / 社区 / 统计大厅一行未动；`index.html` 同时保留 `codex.css` 与 `sweep.css`；上游测试 `test/ui/sweep.test.js` 5/5 同批并入。验收：全量 **7247 / 7232 / 0 失败 / 15 跳过**，golden 全匹配。
+- **已并入 part 3**：`1139ea0b`（#698 结算页官方流程：雷达入场、个人战报页（战果 / 回合 / 领袖 / 阵容 / 盟约 / 奖章盘 / LV 条与每日目标，均按官方表在本机计算）、队伍页；新增 `screens/settle.js` + `settle.css`，`data/config.json` 增加 `rewards.milestones`（60 级）与 `rewards.daily`）。
+  **本分支适配**：`ResultScreen` 移到 `screens/settle.js`、`ResultView` 增 `content` / `slot`；`ui/stats.js` **取我们的**（schema 仍在 `shared/stats.js`），只补 `isModdedRecord`；**`shared/stats.js` 的 `compactRecord` 增 `reward` / `trophies`**（LV 条与奖章盘要按所有保留记录求和）；插件标记（`pluginTag.js`）**替换为本地惰性实现**（本分支无玩法插件，§0）；
+  上游 `test/ui/settle.test.js` 5/5 与改写的 `stats.test.js` 同批并入。验收：`test/ui` **960 / 956 / 0 失败**，全量 **7257 / 7240**（2 条已知抖动：README 计数已更新、性能基线单跑 35/35），golden 全匹配，i18n en **1562/1562**。
+- **待做（同一批的余下 3 个 PR）**：#703 局内顶栏与回合提示、#704 开局 / 盟约提示、#705 最终攻势 / 作战结束 plates —— 都动 `screens/game.js`，需要逐个接、每步跑 `test/ui` 与 `test/render`。
 
 **下一批**：② 官方特效审计 R18–R21（`5209873f` `2cd8ac7b` `2ee48b8c` `d6f7ef70` + 合并 `b47b2a81`）→ ③ isomerpoi 的 7 个 UI PR（单独一批）→ ④ `#680` 音频池 / `#684` 场景去重 / `#663` 补给箱模型 / `#658` salvage / 测试基建。
 
