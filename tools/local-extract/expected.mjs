@@ -2,7 +2,7 @@
 // Source of truth: tools/local-extract/extract.py expected_local_groups() and fx.py,
 // printed by `python3 tools/local-extract/extract.py --print-jobs` (no game client).
 // test/setup-local-freshness.test.js fails when this copy drifts.
-// UPSTREAM-MERGES §13.10 (upstream cites a 0.3.1 history section this fork does not take)
+// UPSTREAM-MERGES §13.10
 //
 // [ASSUMED] A full extract (no --only) writes exactly these local-assets group keys. A client
 // that is missing one bundle still lacks that key, and setup asks for --local again. Extra
@@ -86,6 +86,14 @@ export const EXPECTED_LOCAL_GROUPS = Object.freeze([
   "ui/common",
   "ui/outer",
 ]);
+
+// Manifest `scene` record version (kind Scene on each scene/<stageId> group). scene.json's mesh version stays 1.
+// An extracted record whose version is not this one is stale: setup asks once (UPSTREAM-MERGES §13.10).
+// 4 removes exact redundant scene renderers (#684); older extracts still contain the source duplicates.
+// [ASSUMED] A group with no kind:Scene record is not a version problem (the group-key check still applies).
+export const EXPECTED_SCENE = Object.freeze({
+  version: 4,
+});
 
 export const EXPECTED_FX = Object.freeze({
   groups: Object.freeze(["fx", "fx/prefabs", "fx/tex", "fx/mesh"]),

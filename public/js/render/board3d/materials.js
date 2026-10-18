@@ -441,6 +441,9 @@ export function sceneMaterial(THREE, o, focus) {
   const L = o.light || { dir: [0.36, 0.45, 0.82], color: [1, 1, 1], intensity: 1 };
   const lin = (v) => Math.pow(Math.max(0, v), 2.2);   // the scene's colours are authored in gamma space
   const col = colorOf(info, '_Color');
+  // #658: new scene records say how the lightmap page is encoded; the v1 pages this fork shipped are gamma-encoded
+  // display values read with a 2.2 decode below (the theme grading was tuned on them).
+  const gamma = o.lightEncoding === 'gamma';
   const emis = colorOf(info, '_EmissionColor', [0, 0, 0, 0]);
   const theme = o.theme || null;
   const tint = theme?.tint || [1, 1, 1];
@@ -454,6 +457,9 @@ export function sceneMaterial(THREE, o, focus) {
   // every procedural board is untouched.
   const gain = Number.isFinite(theme?.gain) && theme.gain > 0 ? theme.gain : 1;
   const normalMap = o.normalMap || null, roughMap = o.roughnessMap || null, emisMap = o.emissionMap || null;
+  // #658: the raw metallic-gloss map (linear, images.data). Its alpha is smoothness; the old extraction shipped a
+  // pre-derived roughness map the renderer reads as 1 - g.
+  const glossMap = o.glossMap || null;
   const uniforms = Object.assign({}, THREE.UniformsLib.lights, {
     uMap: { value: o.map || null }, uLm: { value: o.lightMap || null },
     uColor: { value: new THREE.Vector4(lin(col[0]) * (tint[0] ?? 1), lin(col[1]) * (tint[1] ?? 1), lin(col[2]) * (tint[2] ?? 1), col[3]) },
@@ -464,6 +470,7 @@ export function sceneMaterial(THREE, o, focus) {
     uLightDir: { value: new THREE.Vector3(...L.dir).normalize() },
     uLightColor: { value: new THREE.Vector3(lin(L.color[0]) * k, lin(L.color[1]) * k, lin(L.color[2]) * k) },
     uNormalMap: { value: normalMap }, uNormalScale: { value: floatOf(info, '_BumpScale', 1) },
+    uGlossMap: { value: glossMap }, uGlossScale: { value: floatOf(info, '_GlossMapScale', 1) },
     uRoughMap: { value: roughMap },
     uEmisMap: { value: emisMap }, uEmisColor: { value: new THREE.Vector3(lin(emis[0]), lin(emis[1]), lin(emis[2])) },
     uSaturate: { value: Number.isFinite(theme?.saturate) ? theme.saturate : 1 },
@@ -479,6 +486,7 @@ export function sceneMaterial(THREE, o, focus) {
     ...(o.map ? { SCENE_MAP: 1 } : {}), ...(o.lightMap ? { SCENE_LM: 1 } : {}),
     ...(normalMap ? { SCENE_NORMAL: 1 } : {}),
     ...(roughMap ? { SCENE_ROUGH: 1 } : {}), ...(emisMap ? { SCENE_EMIS: 1 } : {}),
+    ...(glossMap ? { SCENE_GLOSS: 1 } : {}), ...(gamma && o.lightMap ? { SCENE_LM_GAMMA: 1 } : {}),
   };
   const m = new THREE.ShaderMaterial({
     uniforms,
@@ -519,7 +527,7 @@ export function sceneMaterial(THREE, o, focus) {
       'uniform sampler2D uMap; uniform sampler2D uLm; uniform vec4 uColor; uniform float uCutoff;',
       'uniform float uLmScale; uniform float uAmbient; uniform float uShadow; uniform vec3 uLightDir; uniform vec3 uLightColor;',
       'uniform sampler2D uNormalMap; uniform float uNormalScale; uniform sampler2D uRoughMap;',
-      'uniform sampler2D uEmisMap; uniform vec3 uEmisColor;',
+      'uniform sampler2D uEmisMap; uniform vec3 uEmisColor; uniform sampler2D uGlossMap; uniform float uGlossScale;',
       'uniform vec3 uSheen; uniform float uSaturate; uniform float uGain;',
       FOCUS_GLSL,
       'varying vec2 vUv; varying vec2 vLm; varying vec3 vN; varying vec3 vWorld;',
@@ -535,7 +543,12 @@ export function sceneMaterial(THREE, o, focus) {
       '  vec3 light = vec3(uAmbient); float shade = 1.0;',
       '  #ifdef SCENE_LM',
       '    vec4 lm = texture2D(uLm, vLm);',
-      '    light += pow(lm.rgb, vec3(2.2)) * uLmScale; shade = mix(1.0, lm.a, uShadow);',
+      '    #ifdef SCENE_LM_GAMMA',
+      '      light += lm.rgb * uLmScale;',
+      '    #else',
+      '      light += pow(lm.rgb, vec3(2.2)) * uLmScale;',
+      '    #endif',
+      '    shade = mix(1.0, lm.a, uShadow);',
       '  #endif',
       '  #ifdef SCENE_NORMAL',
       '    vec3 nm = texture2D(uNormalMap, vUv).rgb * 2.0 - 1.0;',
@@ -551,7 +564,10 @@ export function sceneMaterial(THREE, o, focus) {
       '  #endif',
       '  light += uLightColor * max(dot(n, uLightDir), 0.0) * shade * sceneShadow;',
       '  vec3 c = a.rgb * light;',
-      '  #ifdef SCENE_ROUGH',
+      '  #ifdef SCENE_GLOSS',
+      '    float sm = texture2D(uGlossMap, vUv).a * uGlossScale;',
+      '    c += uSheen * sm * sm;',
+      '  #elif defined(SCENE_ROUGH)',
       '    float sm = 1.0 - texture2D(uRoughMap, vUv).g;',
       '    c += uSheen * sm * sm;',
       '  #endif',
@@ -567,6 +583,8 @@ export function sceneMaterial(THREE, o, focus) {
   });
   m.userData.blend = blend;
   m.userData.normalMap = !!normalMap;
+  m.userData.glossMap = !!glossMap;
+  m.userData.lightEncoding = gamma ? 'gamma' : 'v1';
   return m;
 }
 

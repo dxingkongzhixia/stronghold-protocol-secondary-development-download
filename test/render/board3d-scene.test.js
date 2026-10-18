@@ -118,6 +118,7 @@ describe('scenes.py (no UnityPy needed)', { skip: !PY && 'no python3' }, () => {
     const { scenes } = JSON.parse(r.stdout);
     assert.equal(scenes.sub, 'scene');
     assert.equal(scenes.tex, SCENE_TEX_GROUP);
+    assert.equal(scenes.version, 4, 'manifest scene-record version; scene.json stays SCENE_VERSION');
     const ids = scenes.stages.map((x) => x.id);
     const battlefields = Object.keys(stages).filter((id) => /^act\dautochess_m\d+$/.test(id)).sort();
     assert.deepEqual([...ids].sort(), battlefields, 'every battlefield has a scene');
@@ -203,10 +204,54 @@ print(json.dumps({'mode': d.mode, 'px': list(d.getdata()), 'range': s.LIGHT_RANG
 
   test('scene map slots: albedo plus the normal / metallic-gloss / emission the material keywords turn on', () => {
     const out = py(`import extract as e
-print(json.dumps({'slots': list(s.SCENE_MAP_SLOTS), 'derivers': sorted(e.DERIVERS), 'same': s.derive_normal_rg is __import__('derived').derive_normal_rg}))`);
-    assert.deepEqual(out.slots, ['_MainTex', '_BumpMap', '_MetallicGlossMap', '_EmissionMap']);
-    assert.deepEqual(out.derivers, ['normal_rg', 'rough_from_gloss']);
-    assert.equal(out.same, true, 'scenes.py and extract.py share one derivation');
+print(json.dumps({'slots': [k for _, k in s.TEX_SLOTS], 'lossless': sorted(s.LOSSLESS_MAPS), 'version': s.SCENE_EXTRACT_VERSION,
+  'derivers': sorted(e.DERIVERS)}))`);
+    assert.deepEqual(out.slots, ['map', 'normalMap', 'glossMap', 'emissionMap']);
+    assert.deepEqual(out.lossless, ['emissionMap', 'glossMap', 'normalMap'], 'data maps and emission are lossless');
+    assert.equal(out.version, 4, 'the scene-record version the freshness check expects');
+    assert.deepEqual(out.derivers, ['normal_rg', 'rough_from_gloss'], 'extract.py still derives both data maps');
+  });
+
+  test('data maps are lossless WebP; emission is exported only with _EMISSION', { skip: !HAS_PIL && 'no Pillow' }, () => {
+    const out = py(`import tempfile, os
+from PIL import Image
+try:
+    from PIL import features
+    webp = bool(features.check('webp'))
+except Exception:
+    webp = False
+def keys(kind, kw):
+    return [k for _s, k in s.map_exports(kind, kw)]
+img = Image.new('RGBA', (2, 2))
+img.putdata([(10, 20, 30, 255), (40, 50, 60, 255), (70, 80, 90, 128), (200, 10, 240, 0)])
+with tempfile.TemporaryDirectory() as d:
+    lossless = s.save_image(img, d, 'n', 'scene/tex', True)
+    lossy = s.save_image(img, d, 'a', 'scene/tex', False)
+    match = None
+    if webp and lossless.get('webp') == 'lossless':
+        match = list(Image.open(os.path.join(d, 'n.webp')).convert('RGBA').getdata()) == list(img.getdata())
+print(json.dumps({
+  'ver': s.SCENE_EXTRACT_VERSION, 'mesh': s.SCENE_VERSION, 'webp': webp,
+  'metro': keys('lit', ['HG_LIGHTMAP', '_EMISSION', '_METALLICGLOSSMAP', '_NORMALMAP']),
+  'floor': keys('lit', ['HG_LIGHTMAP', '_METALLICGLOSSMAP', '_NORMALMAP']),
+  'cut': keys('lit', ['HG_LIGHTMAP', '_ALPHATEST_ON', '_EMISSION', '_METALLICGLOSSMAP']),
+  'water': keys('water', ['HG_LIGHTMAP', '_EMISSION', '_METALLICGLOSSMAP', '_NORMALMAP']),
+  'lossless': lossless.get('webp'), 'lossy': lossy.get('webp'), 'match': match,
+}))`);
+    assert.equal(out.mesh, SCENE_VERSION);
+    assert.equal(out.ver, 3);
+    assert.deepEqual(out.metro, ['map', 'normalMap', 'glossMap', 'emissionMap']);
+    assert.deepEqual(out.floor, ['map', 'normalMap', 'glossMap']);
+    assert.deepEqual(out.cut, ['map', 'normalMap', 'glossMap', 'emissionMap']);
+    assert.deepEqual(out.water, ['map']);
+    if (out.webp) {
+      assert.equal(out.lossless, 'lossless');
+      assert.equal(out.lossy, 'lossy');
+      assert.equal(out.match, true, 'lossless WebP keeps each texel, including chroma');
+    } else {
+      assert.equal(out.lossless, null);
+      assert.equal(out.lossy, null);
+    }
   });
 
   test('save_image: the data maps (derived normal / roughness) get a lossless WebP copy', { skip: !HAS_PIL && 'no Pillow' }, () => {
@@ -296,6 +341,49 @@ describe('scene themes (theme.js)', () => {
     for (const name of ['default', 'sand', 'city', 'kxmr', 'lmz']) {
       assert.equal(SCENE_THEMES[name].platforms, undefined, `${name} carries no platform blocks`);
       assert.equal(SCENE_THEMES[name].slab, undefined, `${name} carries no slab material`);
+    }
+  });
+
+  test('an emission map round-trips a saturated texel exactly', { skip: !HAS_PIL && 'no Pillow' }, () => {
+    const out = py(`import tempfile, os
+from PIL import Image
+try:
+    from PIL import features
+    webp = bool(features.check('webp'))
+except Exception:
+    webp = False
+# The three measured lights, plus a neighbour so 4:2:0 has something to average.
+px = [(173, 165, 12, 255), (231, 49, 49, 255), (255, 135, 2, 255), (12, 40, 220, 255)]
+img = Image.new('RGBA', (2, 2))
+img.putdata(px)
+lossless = 'emissionMap' in s.LOSSLESS_MAPS
+with tempfile.TemporaryDirectory() as d:
+    entry = s.save_image(img, d, 'E', 'scene/tex', lossless)
+    got = None
+    lossy = None
+    if webp and entry.get('webp'):
+        got = list(Image.open(os.path.join(d, 'E.webp')).convert('RGBA').getdata())
+        bad = s.save_image(img, d, 'L', 'scene/tex', False)
+        if bad.get('webp') == 'lossy':
+            lossy = list(Image.open(os.path.join(d, 'L.webp')).convert('RGBA').getdata())
+print(json.dumps({
+  'webp': webp,
+  'inSet': 'emissionMap' in s.LOSSLESS_MAPS and 'normalMap' in s.LOSSLESS_MAPS and 'glossMap' in s.LOSSLESS_MAPS,
+  'mapLossy': 'map' not in s.LOSSLESS_MAPS,
+  'mode': entry.get('webp'),
+  'match': got == px if got is not None else None,
+  'got0': got[0] if got else None,
+  'lossyDiffers': (lossy != px) if lossy is not None else None,
+}))`);
+    assert.equal(out.inSet, true);
+    assert.equal(out.mapLossy, true);
+    if (out.webp) {
+      assert.equal(out.mode, 'lossless');
+      assert.equal(out.match, true, 'lossless emission keeps each saturated texel');
+      assert.deepEqual(out.got0, [173, 165, 12, 255]);
+      assert.equal(out.lossyDiffers, true, 'quality 95 would have moved the same texels');
+    } else {
+      assert.equal(out.mode, null);
     }
   });
 });

@@ -421,11 +421,15 @@ export class BoardScene {
       if (!m || typeof m !== 'object') continue;
       if (typeof m.normalMap === 'string') linear.add(m.normalMap);
       if (typeof m.metalGlossMap === 'string') linear.add(m.metalGlossMap);
+      if (typeof m.glossMap === 'string') linear.add(m.glossMap);
     }
-    const tex = {}, lm = [];
+    // #658: the extractor splits the maps by colour space — albedo / emission in images.tex (sRGB), normal / gloss in
+    // images.data (linear). An extraction from before that split has everything in tex (the `linear` set above).
+    const tex = {}, data = {}, lm = [];
     for (const [name, img] of Object.entries(pack.images?.tex || {})) tex[name] = makeTexture(T, img, { aniso, repeat: true, srgb: !linear.has(name) });
+    for (const [name, img] of Object.entries(pack.images?.data || {})) data[name] = makeTexture(T, img, { aniso, repeat: true, srgb: false });
     for (const img of pack.images?.lm || []) lm.push(img ? makeTexture(T, img, { srgb: false }) : null);
-    res = { tex, lm, mats: new Map() };
+    res = { tex, data, lm, env: pack.images?.env || null, mats: new Map() };
     this.sceneRes.set(pack.key, res);
     return res;
   }
@@ -436,7 +440,7 @@ export class BoardScene {
     for (const m of res.mats.values()) m.dispose();
     res.apronMat?.dispose?.();
     res.platformMat?.dispose?.();
-    for (const t of [...Object.values(res.tex), ...res.lm]) t?.dispose?.();
+    for (const t of [...Object.values(res.tex), ...Object.values(res.data), ...res.lm, res.env]) t?.dispose?.();
     this.sceneRes.delete(pack.key);
   }
 
@@ -476,9 +480,12 @@ export class BoardScene {
           ? sceneWaterMaterial(T, this.tex, this.focus, info, theme)
           : sceneMaterial(T, {
             map: res.tex[info?.map] || null, lightMap: c.lightmap >= 0 ? (res.lm[c.lightmap] || null) : null,
-            normalMap: res.tex[info?.normalMap] || null, roughnessMap: res.tex[info?.metalGlossMap] || null,
+            // #658: normal / gloss live in the linear data set; the old extraction keeps them in tex.
+            normalMap: res.data[info?.normalMap] || res.tex[info?.normalMap] || null,
+            glossMap: res.data[info?.glossMap] || null,
+            roughnessMap: res.tex[info?.metalGlossMap] || res.tex[info?.roughnessMap] || null,
             emissionMap: res.tex[info?.emissionMap] || null, info, theme,
-            light: pack.doc?.light || null, lightRange: pack.doc?.lightRange,
+            light: pack.doc?.light || null, lightRange: pack.doc?.lightRange, lightEncoding: pack.doc?.lightEncoding,
           }, this.focus);
         res.mats.set(mk, mat);
       }
