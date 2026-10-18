@@ -2,7 +2,7 @@
 // Source of truth: tools/local-extract/extract.py expected_local_groups() and fx.py,
 // printed by `python3 tools/local-extract/extract.py --print-jobs` (no game client).
 // test/setup-local-freshness.test.js fails when this copy drifts.
-// DESIGN §34.3
+// UPSTREAM-MERGES §13.10 (upstream cites a 0.3.1 history section this fork does not take)
 //
 // [ASSUMED] A full extract (no --only) writes exactly these local-assets group keys. A client
 // that is missing one bundle still lacks that key, and setup asks for --local again. Extra

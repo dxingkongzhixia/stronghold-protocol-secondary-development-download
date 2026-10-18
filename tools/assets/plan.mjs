@@ -167,16 +167,23 @@ function soundLeaf(paths, sub = 'sfx', max = 4) {
  * A unit's SFX roles (pickUnitSfx) → { roles: { attack?, hit?, die?, born? } sound leaves, mix: { [role]: { p?, vol? } }
  * | null } — the official play chance / volume of each role's bank (audio.mjs bankMix; community report #30: 猎狗's
  * attack bank is 80 % silence). The caller stores `mix` last in the unit's entry (sfx.units[id].mix).
+ * Attack/hit roles also retain canonical pool references (#680); the parameters live once in sfx.pools.
  */
-function unitSounds(audio, sfx) {
+function unitSounds(audio, sfx, poolRef) {
   const roles = {};
   let mix = null;
+  const pools = {};
   for (const r of ['attack', 'hit', 'die', 'born']) {
     if (!sfx[r]) continue;
     roles[r] = soundLeaf(sfx[r]);
     const m = typeof audio.mixOf === 'function' ? audio.mixOf(sfx[r]) : null;
     if (m) (mix || (mix = {}))[r] = m;
+    if (r === 'attack' || r === 'hit') {
+      const id = poolRef(sfx[r]);
+      if (id) pools[r] = id;
+    }
   }
+  if (Object.keys(pools).length) roles.pools = pools;
   return { roles, mix };
 }
 
@@ -368,6 +375,14 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
     char_172_svrash: { attack: 'player/p_atk/p_atk_silver_n.mp3' },
     char_174_slbell: { hit: 'player/p_imp/p_imp_shakebell_n.mp3' },
   };
+  const sfxPools = {};
+  const poolRef = (paths) => {
+    const pool = audio.poolOf?.(paths);
+    if (!pool) return null;
+    const { id, ...params } = pool;
+    sfxPools[id] = literal(params);
+    return id;
+  };
   const known = assets07?.operators || {};
   const extraOps = {};
   for (const [id, x] of Object.entries(extraOperators || {})) if (/^char_\d+_[a-z0-9]+$/i.test(id) && !known[id]) extraOps[id] = patternOperator(id, x);
@@ -396,7 +411,7 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
     const sfx = pickUnitSfx(audio.unitBanks.get(id), { operator: true, projectile: {
       born: audio.bank(`battle.ON_PROJECTILE_BORN.projectile_chr_${short}`), hit: audio.bank(`battle.ON_PROJECTILE_HIT.projectile_chr_${short}`) } });
     for (const [role, path] of Object.entries(UNIT_SFX_OVERRIDES[id] || {})) if (!sfx[role]) sfx[role] = [path];
-    const { roles: u, mix } = unitSounds(audio, sfx);
+    const { roles: u, mix } = unitSounds(audio, sfx, poolRef);
     const skillSfx = {};
     // Per-skill ATTACK / IMPACT sound (audio.mjs pickModeAttacks / pickModeHits): a skill mode has its own swing and its
     // own hit sound, and neither may play as the unit's normal attack / impact (银灰, 纯烬艾雅法拉). An operator whose
@@ -411,6 +426,7 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
     const attacks = {};
     const hits = {};
     const attackMix = {}, hitMix = {};
+    const attackPools = {}, hitPools = {};
     for (const i of idx) {
       const s = (o.skills || []).find((k) => k.index === i);
       if (!s) { notes.push(`${id}: skill index ${i} missing in research data`); continue; }
@@ -425,11 +441,15 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
         attacks[String(i)] = soundLeaf(modeAttacks[letter]);
         const m = audio.mixOf?.(modeAttacks[letter]);
         if (m) attackMix[String(i)] = m;
+        const pool = poolRef(modeAttacks[letter]);
+        if (pool) attackPools[String(i)] = pool;
       }
       if (letter && modeHits[letter]) {
         hits[String(i)] = soundLeaf(modeHits[letter]);
         const m = audio.mixOf?.(modeHits[letter]);
         if (m) hitMix[String(i)] = m;
+        const pool = poolRef(modeHits[letter]);
+        if (pool) hitPools[String(i)] = pool;
       }
     }
     const primarySkill = skillSfx[String(idx[0])];
@@ -439,6 +459,8 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
     if (Object.keys(hits).length) u.hits = hits;
     if (Object.keys(attackMix).length) u.attackMix = attackMix;
     if (Object.keys(hitMix).length) u.hitMix = hitMix;
+    if (Object.keys(attackPools).length) u.attackPools = attackPools;
+    if (Object.keys(hitPools).length) u.hitPools = hitPools;
     if (mix) u.mix = mix;
     if (Object.keys(u).length) unitsSfx[id] = u;
   }
@@ -479,7 +501,7 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
       notes.push(`${id}: official Spine from the local client when extracted (spineLocal)`);
     }
     tokens[id] = entry;
-    const { roles: u, mix } = unitSounds(audio, pickUnitSfx(audio.unitBanks.get(id)));
+    const { roles: u, mix } = unitSounds(audio, pickUnitSfx(audio.unitBanks.get(id)), poolRef);
     if (mix) u.mix = mix;
     if (Object.keys(u).length) unitsSfx[id] = u;
   }
@@ -550,7 +572,7 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
       if (banks?.size) break;
       if (other) banks = audio.unitBanks.get(other);
     }
-    const { roles: u, mix } = unitSounds(audio, pickUnitSfx(banks));
+    const { roles: u, mix } = unitSounds(audio, pickUnitSfx(banks), poolRef);
     if (mix) u.mix = mix;
     if (Object.keys(u).length) unitsSfx[id] = u;
   }
@@ -701,7 +723,7 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
       bossBgm: Object.fromEntries(Object.entries(bossBgm).sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true }))),
       voice,
       ...(voiceJp ? { voiceJp: voiceTree(VOICE_JP_LANG) } : {}),
-      sfx: { ui: sfxUi, battle: sfxBattle, units: unitsSfx },
+      sfx: { ui: sfxUi, battle: sfxBattle, units: unitsSfx, pools: sfxPools },
     },
   };
   return { template, models, notes };

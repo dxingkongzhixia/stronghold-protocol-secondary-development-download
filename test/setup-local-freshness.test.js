@@ -1,5 +1,5 @@
 // A local extract that is missing groups this version writes, or whose fx catalog disagrees,
-// must be reported (GitHub #665, DESIGN §34.3). The expected set is tools/local-extract/expected.mjs,
+// must be reported (GitHub #665, UPSTREAM-MERGES §13.10). The expected set is tools/local-extract/expected.mjs,
 // kept equal to `extract.py --print-jobs` (no game client). These tests never call checkLocal(),
 // so they do not read the machine's data/local-assets.json or data/local-fx.json.
 
