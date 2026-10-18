@@ -49,6 +49,9 @@ export {
   isObj, int, num, bool, str, fnv1a, newestFirst, usedBondIdsOf,
 } from '../../../shared/stats.js';
 
+/** A record whose match carried room content (a plugin room): this fork's server never sends one (UPSTREAM-MERGES §0). */
+export const isModdedRecord = (rec) => !!(rec && typeof rec === 'object' && rec.content);
+
 /** localStorage key under the app's `sp.pref.` prefix (store.js loadPref). */
 export const STATS_PREF_KEY = 'stats';
 

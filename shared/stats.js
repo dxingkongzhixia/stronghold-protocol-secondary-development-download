@@ -278,6 +278,9 @@ export function compactRecord(rec) {
   out.players = self ? [{
     playerId: self.playerId, seat: self.seat, alive: self.alive, victory: self.victory, roundsPassed: self.roundsPassed,
     eliminatedRound: self.eliminatedRound, bandId: self.bandId, title: self.title, left: self.left, stats: self.stats,
+    // The settlement's own earnings survive compaction: the official settle flow sums `reward` (the LV bar) and
+    // `trophies` (the plate) over every kept record (PR #698).
+    trophies: self.trophies, reward: self.reward,
     ...(self.creditedKills != null ? { creditedKills: self.creditedKills } : {}),
     ...(usedBondIds.length ? { usedBondIds } : {}),
   }] : [];
