@@ -4,7 +4,16 @@ A **plugin** is a folder a server owner puts into `plugins/`: a manifest, `plugi
 it names. The interface calls them 「插件」, never 「模组」 (that word is the operators' modules). The design and its
 phases are DESIGN §32 (`docs/history/0.3.0.md`); this file is the reference.
 
-**Status — 0.3.0-dev, P1b: data compositions build and validate.** The server finds, checks and lists plugins and names its content
+> **Where this fork stands (2026-10-19).** On `ours`: P0 / P1a / P1b (+ reviews) / P1c / P2 / P4 are merged, plus
+> W1-lite (theme tokens / notices), the notices UI, room themes and the **match-host skeleton** (`server/match/host/*`,
+> installed but powered off — content rooms still simulate in this process). The **whole tip plugin stack** (W1–W5,
+> Forge, records, studio, the newer `contentSets` API that powers hosts) is on the **local WIP branch
+> `plugin-stack-tip` @ `c2010b355`**: it boots and its plugin subset is 92 / 102; the remaining 9 are the unported
+> neighbours (W2 rules, studio routes, docs table, records schema, `placeOnRanged`). Current status, the exact list
+> and the resume steps: [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10 (tail) and
+> [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §10.1. That branch is **not pushed and not merged**.
+
+**Status (upstream 0.3.0-dev text, kept for reference — see the fork note above for where we actually are)** — P1b: data compositions build and validate. The server finds, checks and lists plugins and names its content
 with a hash (P0); a room's host switches the server's cosmetic plugins on for the whole room, a player switches them on
 for themself (§9) — art, models and audio only: the battles stay the original ones and a room's `cs` stays the vanilla
 one. Language packs (`docs/PACKS.md`) are the plugin class `lang` and work as before; data plugins come next (P1b).

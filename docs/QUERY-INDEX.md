@@ -160,6 +160,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 |---|---|
 | **our** decisions §0–§50 (目录 at the top of the file) | [`docs/MATCHMAKING.md`](MATCHMAKING.md) |
 | mainline-merge log + never-merge list (§0) | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
+| **plugin stack / Worker hosting — where it is and how to resume** (WIP branch `plugin-stack-tip`, 2026-10-19) | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10 (tail) · [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §10.1 · [`docs/PLUGINS.md`](PLUGINS.md) (top note) |
 | fork-only mechanisms that must survive a merge | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) |
 | release notes | [`CHANGELOG.md`](../CHANGELOG.md) |
 
