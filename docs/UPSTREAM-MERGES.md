@@ -1417,8 +1417,9 @@ docs guards 34 pass / 0 fail.
 - `validate.js` 的一条构建期报错加 `i18n-ignore`（数据校验消息，非玩家文本）。
 验收：`build-data --offline` **data/ 字节不变**；插件套件 **123 / 120（3 skip）**；全量 **7535 / 7511 / 0 失败 / 23 跳过**（仅性能基线抖动），golden 全匹配，i18n en **1617/1617**，文档门禁 34/34。
 
-**P1b 复查三连（`5a1e0e95` / `36d65d1c` / `051ecce6`）— 暂时回退，需专门一批**：三条给数据插件加边界（生成 / 时长 / 卡牌授予、黑板值上限、描述计数与步骤循环上限）。逐条 cherry-pick 后：
-- `5a1e0e95`：我们的弹射车实现保留，只把投石次数接上 `boundedCount`；上游的「合成命中数」用例对不上本分支的 PRTS 精确实现，标 skip。`36d65d1c`：Cathy 的 `timesOf` 保留 + 练度默认值仍是 1 / 0。
-- 但全量跑出来**行为回归**：`enemy_10162_mnctpt`（弹射车）数据测试、雾霾/阻挡测试、以及 **golden roster 摘要不匹配**；`051ecce6` 还动了 `grid.js` / `professions.js` / `skills.js` / `tokens.js` / `traitMods.js` 等核心 sim 文件（84 个文件）。
-- 按 `AGENTS.md §6`，移动 golden 的改动必须**单独归因**（只回退该改动 → 零差异）再单独重生成，所以三条整体回退，`ours` 保持 `27f31eb63`（golden 全匹配）。下一批需要：逐条应用 → 定位弹射车/雾霾差异 → 归因 → 重生成 golden → 再合并。
+**P1b 复查三连（`5a1e0e95` / `36d65d1c` / `051ecce6`）**：
+- **`5a1e0e95` 已并入**（`5a1e0e95` 的边界：生成 / 时长 / 卡牌授予、插件干员的潜力校验、lobby/protocol 接线）。我们的弹射车接 `boundedCount`，练度默认仍是 1 / 0；上游「合成命中数」用例与我们的 PRTS 精确实现不符，标 skip。**golden 不变**。
+- **`36d65d1c` 已并入**（黑板值按官方上限；Cathy 的 `timesOf` 保留 #677 的一次性额度；无潜力曲线的干员隐藏潜力控件）。**golden 不变**。
+- **`051ecce6` 部分并入**：只取 **`shared/plugins/{steps,textNumber,textPatterns,limits,officialBounds}.js`** + `contentSet` / `runner` 接线（插件侧的边界与文本计数）。**`server/sim/**` / `server/match/**` 的改写不取** —— 把官方数据也改走 `textFinite` / `textCount` 后 **golden 的伤害数值变了**（DIY T6 等），按 `AGENTS.md §6` 不能夹带；本分支保留自己的 sim 与弹射车实现。`loopCaps` 的 kit 用例（含 1e16 循环）因此不适用，连同「每个 while 都要标注 loop-cap」的扫描一起标 skip（8 条，理由写进测试）；文本计数与内容集快照的用例保留。
+验收：插件套件 **160 / 148（12 skip）**、`potential` 5/5 + 8/8、`loadout-rows` 9/9（按 `potentialOn` 的新写法更新）；全量 **7561 / 7528 / 0 失败 / 32 跳过**（仅性能基线抖动），**golden 全匹配**，i18n en **1617/1617**，文档门禁 34/34。
 
