@@ -57,6 +57,9 @@ import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
 import { createPluginRegistry } from './plugins/registry.js';
 import { computeVanillaContent } from './plugins/identity.js';
 import { createVisualSets } from './plugins/visualSet.js';
+import { createPluginPolicy } from './plugins/policy.js';
+import { createContentSets } from './plugins/contentSets.js';
+import { createRoomSets } from './plugins/roomSets.js';
 import { MIME, COMPRESSIBLE, acceptsGzip, pickEncoding, parseRange } from './http/files.js';
 import { BUILD_INPUTS, computeBuildTag, buildTag, resetBuildTag } from './http/buildTag.js';
 import { createRequestHandler } from './http/routes.js';
@@ -209,9 +212,14 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const views = assetIndex ? createManifestViews({ dataDir, index: assetIndex, log }) : null;
   // the visual sets of the cosmetic plugins (DESIGN 32 P1a): what a room's host switches on, served at /vs/ and /p/
   const visual = createVisualSets({ registry: packs, log });
-  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content, plugins: visual });
+  // the server owner's policy (plugins/config.json) and the content sets of the gameplay plugins (served at
+  // /cs/<cs16>/?? a room plays one, its data patched by P1b); this fork has no match hosts: the browser simulates
+  const policy = createPluginPolicy({ pluginsDir, log });
+  const contents = createContentSets({ registry: packs, vanillaData: data, log, maxSets: () => policy.get().maxSets });
+  const roomSets = createRoomSets({ registry: packs, visual, contents, policy });
+  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content, plugins: roomSets });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
-  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, packs, content, log, assetIndex, views, visual });
+  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, packs, content, log, assetIndex, views, visual, contents });
   const startedAt = Date.now();
   // The tag is per process (see buildTag): read the browser runtime once, here, not on every /healthz.
   resetBuildTag();
