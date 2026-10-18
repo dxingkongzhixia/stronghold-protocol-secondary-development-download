@@ -1472,3 +1472,6 @@ docs guards 34 pass / 0 fail.
 验收：`host-ipc` 3/3；全量 **7612 / 7579 / 0 失败 / 33 跳过**，**golden 全匹配**，i18n 1651/1651，文档 34/34。
 **下一步（A 第 2 步）**：把 `contentSets.js` 升级到 tip 版（`get` / `dataBytes` / `scripts` / `offers` / `bounds`），接通 hosts，跑 tip 的 `plugin-host` 测试（watchdog / OOM / 复核接管）。
 
+**A 第 2 步试跑结论（2026-10-19，已回退）**：把 tip 的 `server/plugins/**` + `shared/plugins/**` + `schemas/**` + `server/sim/content/dsl/**` + `public/js/render/vfx/plugin{Format,Library,Player,Validate}.js` 整体取过来后，**服务端能正常启动**（`/healthz` / `/plugins/index.json` / `/cs/…` 全 200），说明 host 骨架 + tip 插件栈在运行时是自洽的。但 tip 的 `test/plugins/**`（与那套代码配套）大量失败：它同时依赖 tip 的 `docs/plugin-catalog.example.json`、`test/helpers/**`、studio/检查工具与**重新基线过的数据/夹具**。也就是说，**接通 host = 整套插件栈迁移**（代码 + 测试 + 夹具 + 文档 + studio），不是「改一个 contentSets」。
+因此保持 `0f42bcc92` 的绿色状态（host 骨架在、门开着但未通电，玩法插件房间仍在本进程跑）。下一次要开**独立分支**做整套迁移：tip 插件代码 + 对应测试/夹具/文档 + 我们的五处补丁（内容插件美术走外观分支、`cs` 的 i18n 哈希、UI 意图前缀、房间主题、宿主门），再全量 + golden + 数据重基线。
+
