@@ -1447,3 +1447,8 @@ docs guards 34 pass / 0 fail.
 
 **插件栈至此：P0 / P1a / P1b（含复查）/ P1c / P2 / P4 全部并入。** 接下来是 W1–W5（主题变量 / 规则开关 / 新记录 / Forge 面板层 / 特效借用）、U-Forge（记录格式扩展 + 真包导入）、skins / 插件干员美术、studio / 测试控制台。
 
+**W1 / W5 的结构性发现（2026-10-18，暂缓）**：在 0.3.1 的合并图上，每个特性合并的**第二父提交已包含后续/相邻特性** —— 例如 W5（`cbb65b8a1`）的 diff 会带进 `server/studio/*`、`public/studio/js/*`、`server/plugins/pack.js`、`overlay.schema.json`、`PLUGIN-API/GUIDE`；W1（`be7f89b71`）的 `contentData.js` 又引用 W5 才有的 `fxRecords.js` / `public/js/render/vfx/pluginFormat.js`。所以**逐特性 cherry-pick 无法隔离**。可选两条路：
+1. **状态合并（推荐）**：一次性取 tip（`d905c146`）的插件系统文件（`registry` / `contentData` / `contentSet(s)` / `manifest` / `theme` / `notices` / `errors` / `surface` / `forgeImport` / `fxRecords` / `pack` + schemas / docs / tests + studio / 控制台），再把本分支的三处补丁重放（内容插件美术走外观分支、`cs` 的 i18n 哈希、UI 意图前缀 auth/mm/bug/boot/stats），全量 + golden 验收。
+2. 按上游拓扑顺序连同 studio / 控制台一起并（大爆炸）。
+当前仓库保持绿色：`a4bdc6a95`（P0–P4），全量 7600/7566、golden 全匹配、i18n 1647/1647。
+
