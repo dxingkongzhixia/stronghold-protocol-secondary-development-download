@@ -1395,7 +1395,7 @@ docs guards 34 pass / 0 fail.
 | **P0** | `c57c78bfe`（`ca0768ddb` + `cefe7e89a`） | **内容身份 `cs`**：`shared/sha256.js`、`shared/plugins/{identity,manifest}.js`、`server/plugins/{identity,registry}.js`、`/plugins/index.json`、`/cs/<cs16>/index.json`、`tools/plugin.mjs`、`plugins/README.md`、`docs/PLUGINS.md`、P0 测试 | ✅ 已并入 |
 | P1a | `83b89cf1f`（P1a 全套 + 3 轮复查） | 外观插件：房间视觉集（`/vs/`）、客户端 `content.js`、模板、e2e | ✅ 已并入 |
 | **P1b** | `fc768aa8`（复查 `5a1e0e95` / `36d65d1c` / `051ecce6` **暂缓**，见下） | **数据插件**：数据补丁 `shared/plugins/patch.js`、紧凑记录 `records.js`、`validate.js` 把引用检查从 build-data 抽出 + 整集校验、`server/plugins/contentSet.js`（`buildContentSet` / `contentSetFiles`，按 `cs` 缓存）、`kitOf` 分派（扩展 / DSL 桩 / JSON SkillSpec / kitRef / 官方 kit / generic）、`effectRef`、模式级覆盖、内容模板与 records schema | ✅ 已并入 |
-| P1c / P2 / P4 | `0fcc54976` `f3735da16` `d8ce4cf1f` `4f82d2f83` `c1e7edaaf` `00a822ba3`（**步骤 1–5 已并**）`7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、房间内容集、客户端 `/cs/` 下载）、DSL-lite kit、沙箱 UI 插件 | 🟡 部分（1–5 已并） |
+| P1c / P2 / P4 | `0fcc54976` `f3735da16` `d8ce4cf1f` `4f82d2f83` `c1e7edaaf` `00a822ba3` `7dc4c8465`（**P2 已并**）；`ba352f1e3`（P4 待接） | 内容集（`room.setMode` / `room.contentReady`、房间内容集、客户端 `/cs/` 下载）、DSL-lite kit、沙箱 UI 插件 | 🟡 P1c + P2 已并，P4 待接 |
 | W1–W5 | `be7f89b71` `872c2a6a5` `05463f7c8` `d02a6a17c` `cbb65b8a1` | 主题变量 / 规则开关 / 新记录类型 / Forge 面板兼容层 / 特效借用 | ⏳ |
 | U1–U6 + Forge | `0f869563b` `42f9c2812` 等 | 记录格式扩展、Forge 真包导入与 e2e | ⏳ |
 | skins / 插件美术 | `58206c0b5` `a449310ac` | 每干员皮肤层、名单外插件干员的官方美术 | ⏳ |
@@ -1436,4 +1436,8 @@ docs guards 34 pass / 0 fail.
   **本轮修的两个真问题**：① `cs` 的组成含内容集的 **i18n 哈希**，服务端 `hashInput` 与页面重算都补上（否则页面永远拒绝房间的内容集）；② 我们的 runner **预加载** vanilla sim，测试按「最后一次加载」断言。
 - 验收：内容集套件 **13 / 12（1 skip：中途重连路径，runner 预加载差异，已注明）**；全量 **7574 / 7540 / 0 失败 / 33 跳过**（唯一失败为已知性能基线抖动，单跑 35/35），**golden 全匹配**，i18n en **1638/1638**，文档门禁 34/34。
 - **仍未做**：P1c 的 **DSL-lite（P2）**、**沙箱 UI 插件（P4）**，以及 `withModded` 的统计概览开关；W1–W5 / U-Forge / skins / studio / 控制台仍在其后。
+
+**P2（DSL-lite）已并入** `7dc4c8465`：`server/sim/content/dsl/{vocab,validate,compile,budget}.js`（**闭合词表**、结构校验、把声明式 spec 编译成 Kit、**每场每插件动作预算**）、`server/match/dslMeta.js`（备战侧最小实现）、`schemas/dsl.schema.json`、`docs/PLUGIN-DSL.md` 与两个测试套件。
+**本分支适配**：P1b 在 `dsl/compile.js` 留的**桩**被真编译器替换（`kitOf` 的既有分派现在直达它），`contentBattle` 里「空 spec」的断言从桩的 `PLUGIN_DSL_UNAVAILABLE` 改为编译器的 `PLUGIN_DSL_VERSION`。
+验收：`dsl` 10/10、`contentBattle` 7/7；全量 **7584 / 7548 / 0 失败 / 33 跳过**（唯一失败为已知性能基线抖动，单跑 35/35），**golden 全匹配**，i18n en 100%，文档 34/34。
 

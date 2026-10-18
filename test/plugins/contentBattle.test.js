@@ -42,7 +42,8 @@ test('JSON SkillSpec and permanent talent mods work on shop and DIY units', t =>
     const h = makeBattle({ data: new DataSource(set.data), units }); h.step(); const u = h.allies()[0];
     assert.ok(!u.kit.generic); close(u.s.atk, 300); close(u.s.def, 275); assert.equal(u.skill.spec.attack.hits, 2); checkInvariants(h.b);
   }
-  assert.throws(() => compileDsl({}), { code: 'PLUGIN_DSL_UNAVAILABLE' });
+  // P2 replaced the P1b DSL stub with the real compiler: an empty spec fails its own version/format check
+  assert.throws(() => compileDsl({}), { code: 'PLUGIN_DSL_VERSION' });
 });
 test('effectRef item reaches the id-dispatched battle effect; copied params remain concrete', t => {
   const { set } = setFor(t, { entries: [{ file: 'items', id: 'item_x_data_demo_scope', base: 'chess_item_3_02_e_a' }] });
