@@ -14,6 +14,7 @@ import {
 } from './archetypes.js';
 import { hypot } from '../../detmath.js';
 import { passengerBus } from './passengers.js';
+import { boundedCount, PLUGIN_TIMES_MAX } from '../../../../shared/plugins/limits.js';
 
 // ---------------------------------------------------------------------------------------------------------------
 // constants (numbers that exist nowhere in the data)
@@ -259,7 +260,7 @@ function catapultStone(b, e, aim, radius, forcePrimary, inPlay, bound) {
 function catapultVolley(ab, b, e, aim) {
   // upstream bounds this through the plugin layer (shared/plugins/limits.js `boundedCount(…, PLUGIN_TIMES_MAX, 1)`);
   // this fork has no plugins, where that bound is a no-op for official data, so the clamp is inlined here.
-  const n = Math.max(1, Math.floor(T(ab, 'Attack.attack@times') ?? 1));
+  const n = boundedCount(T(ab, 'Attack.attack@times') ?? 1, PLUGIN_TIMES_MAX, 1);
   const interval = T(ab, 'Attack.attack@hit_interval') ?? 0.3;
   const inPlay = catapultInPlay(e);
   const radius = inPlay ? (T(ab, 'Attack.attack@projectile_range') ?? 0.5) : CATAPULT_SPLASH;
@@ -373,7 +374,7 @@ export const SPECIAL_KITS = Object.freeze({
     const ap = ab.sk.Appear, mc = ab.sk.MultiCombat;
     return [{
       spawn(b, e) {
-        const n = ap ? ap.bb.times ?? 0 : 0;
+        const n = boundedCount(ap ? ap.bb.times ?? 0 : 0, PLUGIN_TIMES_MAX, 0);
         b.after(0.5, () => {
           if (!e.alive || !n) return;
           const lock = allTargets(b, e).sort((p, q) => q.hp - p.hp)[0];
@@ -389,7 +390,7 @@ export const SPECIAL_KITS = Object.freeze({
       },
       hitOut(c, b, e) { if (c.dmg.isAttack && c.target !== e.blockedBy) c.dmg.amount *= T(ab, 'range.attack@atk_scale_range') ?? 1; },
     }, mc ? {
-      cd: mc.cd, icd: mc.icd, fire(b, e) { e.mem.ab.multi = mc.bb.times ?? 1; },
+      cd: mc.cd, icd: mc.icd, fire(b, e) { e.mem.ab.multi = boundedCount(mc.bb.times ?? 1, PLUGIN_TIMES_MAX, 1); },
       dealt(c, b, e) {
         const m = e.mem.ab.multi;
         if (!(m > 1)) return;

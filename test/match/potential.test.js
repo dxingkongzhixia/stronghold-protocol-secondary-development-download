@@ -7,7 +7,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ERR, PHASE } from '../../shared/constants.js';
-import { validateC2S, checkLoadoutOps, isLoadoutOps, cultivationCharIds, LOADOUT_LIMITS } from '../../shared/protocol.js';
+import { validateC2S, checkLoadoutOps, isLoadoutOps, cultivationCharIds, LOADOUT_LIMITS, charPotentialChanges } from '../../shared/protocol.js';
+import { expandRecords } from '../../shared/plugins/records.js';
+import { guard } from '../helpers/contentFixtures.js';
 import { buildBattleSpec, createBattleFromSpec } from '../../server/sim/spec.js';
 import { DATA, makeMatch } from './harness.js';
 import { atPotential } from '../../shared/potential.js';
