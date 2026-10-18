@@ -1353,7 +1353,12 @@ docs guards 34 pass / 0 fail.
 - **已并入 part 3**：`1139ea0b`（#698 结算页官方流程：雷达入场、个人战报页（战果 / 回合 / 领袖 / 阵容 / 盟约 / 奖章盘 / LV 条与每日目标，均按官方表在本机计算）、队伍页；新增 `screens/settle.js` + `settle.css`，`data/config.json` 增加 `rewards.milestones`（60 级）与 `rewards.daily`）。
   **本分支适配**：`ResultScreen` 移到 `screens/settle.js`、`ResultView` 增 `content` / `slot`；`ui/stats.js` **取我们的**（schema 仍在 `shared/stats.js`），只补 `isModdedRecord`；**`shared/stats.js` 的 `compactRecord` 增 `reward` / `trophies`**（LV 条与奖章盘要按所有保留记录求和）；插件标记（`pluginTag.js`）**替换为本地惰性实现**（本分支无玩法插件，§0）；
   上游 `test/ui/settle.test.js` 5/5 与改写的 `stats.test.js` 同批并入。验收：`test/ui` **960 / 956 / 0 失败**，全量 **7257 / 7240**（2 条已知抖动：README 计数已更新、性能基线单跑 35/35），golden 全匹配，i18n en **1562/1562**。
-- **待做（同一批的余下 3 个 PR）**：#703 局内顶栏与回合提示、#704 开局 / 盟约提示、#705 最终攻势 / 作战结束 plates —— 都动 `screens/game.js`，需要逐个接、每步跑 `test/ui` 与 `test/render`。
+- **已并入 part 4**：`4eabcf65`（#703 局内顶栏与回合提示：官方**回合开始牌**、阶段胶囊场景、观战 / 已淘汰席位的变体；新增 `ui/matchPopups.js` + `match-popups.css`，`capsule-motion` / `match-popups` / `text-scale` 套件同批）。
+- **已并入 part 5**：`9805f422`（#704 开局与盟约提示：战斗检查后官方 **protocol-boot** 画面（美术就位时，否则回落到 #703 的回合牌 / 横幅）、回合弹窗场景、机变选人开场；新增 `ui/protocolBoot.js` / `turnBanner.js` / `turnPopup.js`）。
+- **已并入 part 6**：`c1c0f358`（#705 官方**最终攻势 / 作战结束**牌、服务器 RESULT 前暂停里的终局牌、自己 LP 归零而队伍继续时的 **downed 对话框**；新增 `ui/bossPlates.js` / `downedPlate.js` + `boss-plates.css`）+ `9a4fd3f0`（e2e：被淘汰的观战者在 watch-bonds 里先应答官方 downed 对话框）。
+  **本分支适配**：`game.css` **两侧都保留**（我们的 `SpecDock` / `gm__teamcol` 与上游的 `.downm` 面板）；官方终局牌以 `bossPlateArtReady()` 为门（缺美术走我们的横幅）；分血救援的按钮 / 横幅与 downed 对话框共存。
+  验收：`test/ui` **991 / 987 / 0 失败**；全量 **7300 / 7284**（仅性能基线抖动，单跑 35/35），golden 全匹配，i18n en **1577/1577**。
+- **批次 ③ 完成**：7 个 UI PR（#695 / #696 / #698 / #699 / #703 / #704 / #705）全部并入并各自适配；`07f650af`（旧 #643 的汇总合并）内容已由上面各 PR 覆盖，不再单独 cherry-pick；`2858360f`（#698 测试模式计数）依赖 0.3.1 的测试控制台，**不收**。
 
 **下一批**：② 官方特效审计 R18–R21（`5209873f` `2cd8ac7b` `2ee48b8c` `d6f7ef70` + 合并 `b47b2a81`）→ ③ isomerpoi 的 7 个 UI PR（单独一批）→ ④ `#680` 音频池 / `#684` 场景去重 / `#663` 补给箱模型 / `#658` salvage / 测试基建。
 
