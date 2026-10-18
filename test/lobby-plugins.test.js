@@ -120,7 +120,8 @@ describe('room.setPlugins (P1a: cosmetic plugins)', () => {
     const refuse = async (c, msg, code) => { const r = await c.request(msg); assert.deepEqual([r.t, r.code], ['error', code], JSON.stringify(r)); return r; };
     await refuse(guest, { t: 'room.setPlugins', plugins: [] }, ERR.NOT_HOST);
     await refuse(host, { t: 'room.setPlugins', plugins: [{ id: 'absent' }] }, ERR.PLUGIN_UNKNOWN);
-    await refuse(host, { t: 'room.setPlugins', plugins: [{ id: 'rules' }] }, ERR.PLUGIN_BLOCKED);
+    // P1c: a content plugin is selectable now (room.setPlugins takes the server's gameplay plugins), so only the
+    // scope refusal below is left for a cosmetic layer
     const scope = await refuse(host, { t: 'room.setPlugins', plugins: [{ id: 'mine' }] }, ERR.PLUGIN_BLOCKED);
     assert.match(scope.detail, /scope room/);
     await refuse(host, { t: 'room.setPlugins', plugins: [{ id: 'Texas' }] }, ERR.BAD_MSG);

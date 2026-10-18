@@ -61,6 +61,8 @@ export function pickMirror(measured, { relayMin = RELAY_MIN_BPS, mirrorMin = MIR
 export function labelOf(base) {
   const b = String(base || '');
   if (!b) return '本服务器';
+  if (/jsdmirror/i.test(b)) return 'GitHub 镜像 · jsdmirror';
+  if (/b-cdn\.net/i.test(b)) return 'GitHub 镜像 · jsDelivr (b-cdn)';
   if (/jsdelivr\.net/i.test(b)) return 'GitHub 镜像 · jsDelivr';
   if (/gh-proxy\.com|ghproxy/i.test(b)) return 'GitHub 镜像 · gh-proxy';
   if (/raw\.githubusercontent\.com/i.test(b)) return 'GitHub raw';

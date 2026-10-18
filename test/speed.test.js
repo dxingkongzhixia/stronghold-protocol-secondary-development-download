@@ -95,7 +95,7 @@ test('labelOf names the configured origins the way the console shows them', () =
 
 test('readOrigins takes the client\'s own list, best first, with the full-origin flag', () => {
   const list = readOrigins(ROOT);
-  assert.equal(list.length, 3, 'the file lists three origins');
+  assert.ok(list.length >= 3, 'the file lists the relay plus at least two mirrors');
   assert.equal(list[0].label, '中继');
   assert.equal(list[0].full, true, 'the relay is a full origin (it also serves /media, /scene, /clip)');
   assert.equal(list[0].base, 'http://123.57.150.185');
@@ -130,7 +130,7 @@ test('probeOrigins judges each origin by its own bar and says which one a client
     throw new Error('refused');
   };
   const r = await probeOrigins({ root: ROOT, fetchFn: fastRelay, now: fakeClock(50) });
-  assert.equal(r.sources.length, 3);
+  assert.equal(r.sources.length, origins.length, 'one row per configured origin');
   assert.equal(r.sources[0].ok, true, 'the relay answered');
   assert.equal(r.sources[0].pass, true, 'and cleared the relay bar');
   for (const s of r.sources.slice(1)) {

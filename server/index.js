@@ -10,7 +10,10 @@
 //                      the language packs (/packs/index.json, /packs/<id>/<file>), the plugin catalogue
 //                      (/plugins/index.json — the registry is plugins/registry.js), the vanilla content set's manifest
 //                      (/cs/<cs16>/index.json — plugins/identity.js: the content hash `cs`, DESIGN §32), the visual sets
-//                      of cosmetic plugins (/vs/<vs16>/…, plugins/visualSet.js) and their files (/p/<id>/<hash8>/…)
+//                      of cosmetic plugins (/vs/<vs16>/…, plugins/visualSet.js) and their files (/p/<id>/<hash8>/…),
+//                      the content sets of gameplay plugins (/cs/<cs16>/…, plugins/contentSets.js — DESIGN §32.6; the
+//                      server owner's plugins/config.json: plugins/policy.js; a room's plugins: plugins/roomSets.js; its
+//                      match then runs in that set's worker: match/host/)
 //   http/media.js      /media/bgm/act1 → public/assets/audio/bgm/act1.mp3 (audio addressed without its extension)
 //   http/files.js      one file → response: MIME, brotli / gzip + memory cache, ETag / Last-Modified / 304, Cache-Control, ranges
 //   http/assetIndex.js the content hashes of public/assets and public/fonts (built in the background, cached in
@@ -59,6 +62,7 @@ import { computeVanillaContent } from './plugins/identity.js';
 import { createVisualSets } from './plugins/visualSet.js';
 import { createPluginPolicy } from './plugins/policy.js';
 import { createContentSets } from './plugins/contentSets.js';
+import { createRoomSets } from './plugins/roomSets.js';
 import { MIME, COMPRESSIBLE, acceptsGzip, pickEncoding, parseRange } from './http/files.js';
 import { BUILD_INPUTS, computeBuildTag, buildTag, resetBuildTag } from './http/buildTag.js';
 import { createRequestHandler } from './http/routes.js';
@@ -143,13 +147,16 @@ function cookieValue(header, name) {
  *   heavyPerSec?: number, heavyBurst?: number, trustProxy?: 'auto' | boolean, soloReconnectWindowMs?: number,
  *   accounts?: boolean, auth?: object, db?: object, dbFile?: string, adminToken?: string,
  *   assetIndex?: boolean | { cacheFile?: string | null, delayMs?: number },
+ *   matchHost?: object,
  * }} [opts]
- *   assetIndex: the content-hash index (default on; false or SP_ASSET_INDEX=0: off — config.js assetIndexOptionsFrom)
+ *   assetIndex: the content-hash index (default on; false or SP_ASSET_INDEX=0: off — config.js assetIndexOptionsFrom);
+ *   matchHost: options of the match hosts (server/match/host/index.js — watchdogMs, matchOptions …; tests)
  * @returns {Promise<{ port: number, host: string, url: string, server: http.Server, wss: import('ws').WebSocketServer,
  *                     lobby: import('./lobby.js').Lobby, network: import('./net.js').Network,
  *                     registry: import('./net.js').SessionRegistry, packs: ReturnType<typeof createPluginRegistry>,
  *                     db: object|null, auth: object|null, adminUrl: string|null,
  *                     content: import('./plugins/identity.js').VanillaContent, visual: ReturnType<typeof createVisualSets>,
+ *                     contents: ReturnType<typeof createContentSets>, hosts: ReturnType<typeof createMatchHosts>,
  *                     traffic: ReturnType<typeof createTrafficCounter>, assetIndex: ReturnType<typeof createAssetIndex> | null,
  *                     views: ReturnType<typeof createManifestViews> | null, close: () => Promise<void> }>}
  */
@@ -212,11 +219,11 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // the visual sets of the cosmetic plugins (DESIGN 32 P1a): what a room's host switches on, served at /vs/ and /p/
   const visual = createVisualSets({ registry: packs, log });
   // the server owner's policy (plugins/config.json) and the content sets of the gameplay plugins (served at
-  // /cs/<cs16>/?? a room plays one, its data patched by P1b); this fork has no match hosts: the browser simulates
+  // /cs/<cs16>/?? a room holds one while it plays it, its data patched by P1b); no match hosts here: the browser simulates
   const policy = createPluginPolicy({ pluginsDir, log });
   const contents = createContentSets({ registry: packs, vanillaData: data, log, maxSets: () => policy.get().maxSets });
-  // room-level content selection (roomSets) needs the lobby integration (P1c step 4): until then rooms stay vanilla
-  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content, plugins: visual });
+  const roomSets = createRoomSets({ registry: packs, visual, contents, policy });
+  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content, plugins: roomSets });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
   const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, packs, content, log, assetIndex, views, visual, contents });
   const startedAt = Date.now();
@@ -466,7 +473,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   }
 
   const adminUrl = admin ? `${url}/admin?token=${admin.token}` : null;
-  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, content, visual, db, auth, stats, adminUrl, traffic, assetIndex, views, close };
+  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, content, visual, contents, db, auth, stats, adminUrl, traffic, assetIndex, views, close };
 }
 
 // `node server/index.js` / npm start: listen (accounts & 野排 on), print the banner, stop on SIGINT / SIGTERM
