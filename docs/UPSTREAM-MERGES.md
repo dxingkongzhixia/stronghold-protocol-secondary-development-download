@@ -1325,3 +1325,14 @@ docs guards 34 pass / 0 fail.
 
 **下一步**：按上表顺序分批 cherry-pick（UI 的 7 个 PR 面最大，单独一批、配套测试同批取；#675 / #677 先做，它们直接影响规则），每批过后跑全量 + `check-upstream --strict` 当门禁。
 
+**批次 ①（规则两条）— 已并入 `f4849b5a9`**：
+
+- **#675**（`fc9323c3` 作者 Misyra + 复核 `212a796e`）：联御只计「逃出的那一波」——运行时新增的分裂 / 召唤在 sim 出生时打 `uniteRuntime`，`uniteSurvivors` 与 HUD 的 N 都不再读它；客户端上报的 `uniteRuntime` 泄漏必须花掉 offspring 预算，否则拒收并服务端重算。**golden 零差异**。
+- **#677**（`f8bca717` + 复核 `83ccfcd7`）：凯瑟琳的「突破细则」每名玩家每局至多一次——成功领取才记 `band:cathy:cellTaken`，排队的凯瑟琳 offer 一并移除该格；`rollItems` / `rollItemId` / `rollPool` 增加 `exclude`，先过滤再抽样（不会把 offer 抽少）。
+  **本分支的两处适配**：① 上游的 `effectRef` 继承用例删掉——本分支 `data/bands.json` **没有** 任何 `effectRef`（0/40），sim 也没有 `bandEffectId`，直接比较 band id；② 上游测试里依赖 0.3.1 测试控制台（`testReplay` / `g.test`）的那一条删掉，其余 11 条保留。
+  **踩坑**：`docs/design/network.md` 一开始整份取了上游 → 引入本分支不存在的 `DESIGN 34.8` 引用，`docs-paths` 立刻变红；已改回我们的版本、只手工补 #675 那一句。
+
+验收：全量 `node --test` **7213 / 7197 通过 / 1 失败（`test/sim/robustness` 的性能基线，单跑 35/35，属负载抖动）**；golden 全部匹配；`docs-*` 34/34；README 计数 6847。三端已推（中继 `71568046c..f4849b5a9`）。
+
+**下一批**：② 官方特效审计 R18–R21（`5209873f` `2cd8ac7b` `2ee48b8c` `d6f7ef70` + 合并 `b47b2a81`）→ ③ isomerpoi 的 7 个 UI PR（单独一批）→ ④ `#680` 音频池 / `#684` 场景去重 / `#663` 补给箱模型 / `#658` salvage / 测试基建。
+
