@@ -163,6 +163,19 @@ function normalizePlayerRow(raw, quit = false) {
 /** A room's visual set hash (`vs`, the cosmetic plugins its host chose): 64 lowercase hex, else null. */
 export const vsOf = (v) => (typeof v === 'string' && /^[0-9a-f]{64}$/.test(v) ? v : null);
 
+/**
+ * The content set a record played (DESIGN 32): `{ cs, plugins: ['id@version'] }`, or null for the original game.
+ * A cosmetic-only match passes `vanilla: true` and is the original game's (the owner's decision of 2026-10-13).
+ */
+export function contentOf(c) {
+  if (!isObj(c) || c.vanilla === true || !vsOf(c.cs)) return null;
+  const list = (Array.isArray(c.plugins) ? c.plugins : [])
+    .map((p) => (typeof p === 'string' ? p : isObj(p) && typeof p.id === 'string'
+      ? `${p.id}@${typeof p.version === 'string' ? p.version : '?'}` : null))
+    .filter((x) => typeof x === 'string' && x.length && x.length <= 80).slice(0, 32);
+  return { cs: c.cs, plugins: list };
+}
+
 export function normalizeRecord(raw) {
   const r = isObj(raw) ? raw : {};
   // a record IS a played match — no usable players array, no record
@@ -193,6 +206,8 @@ export function normalizeRecord(raw) {
     selfId: str(r.selfId),
     // the art the match played with (cosmetic plugins only; null = the original game)
     vs: vsOf(r.vs),
+    // the content set (gameplay plugins) it played with, or null
+    content: contentOf(r.content),
     players,
   };
   if (r.compact === true) rec.compact = true;
@@ -252,7 +267,7 @@ export function migrateStats(raw) {
 }
 
 const COMPACT_FRAME = ['id', 'v', 't', 'end', 'victory', 'roundsPassed', 'lastRound', 'hiddenReached', 'hiddenCleared', 'reason', 'modeId',
-  'difficulty', 'roomMode', 'durationMs', 'selfId', 'vs'];
+  'difficulty', 'roomMode', 'durationMs', 'selfId', 'vs', 'content'];
 
 /**
  * The compact form of a record: the frame and the player's OWN row without lineup, bonds and name — everything the
@@ -383,6 +398,7 @@ export function buildRecord(res, ctx = {}) {
     roomMode: roomModeOf(str(r.modeId), ctx.roomMode),
     selfId: myId,
     vs: vsOf(ctx.vs),
+    content: contentOf(ctx.content),
     players: r.players,
   });
 }
@@ -547,10 +563,14 @@ export function countsTowardStats(rec) {
  * @param {any[]} records
  * @returns {any}
  */
-export function aggregateStats(records) {
+export function aggregateStats(records, { modded = false } = {}) {
   const all = Array.isArray(records) ? records : [];
-  const rs = all.filter(countsTowardStats);
+  const counted = all.filter(countsTowardStats);
+  const mod = counted.filter((r) => !!r.content);
+  const rs = modded ? counted : counted.filter((r) => !r.content);
   const out = {
+    // the content-modded matches left out of the overview (0 when they are counted)
+    modded: modded ? 0 : mod.length,
     total: all.length, count: rs.length, excluded: all.length - rs.length, wins: 0,
     rounds: { total: 0, max: 0 },
     duration: { totalMs: 0 },

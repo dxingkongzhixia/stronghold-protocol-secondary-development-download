@@ -48,7 +48,7 @@
 import { PHASE } from '../../../shared/constants.js';
 import {
   STATS_VERSION, emptyStats, normalizeRecord, migrateStats, fitToBudget, appendRecord, buildRecord,
-  roomModeOf, vsOf, str, num, int, isObj, fnv1a, selfRowOf,
+  roomModeOf, vsOf, contentOf, str, num, int, isObj, fnv1a, selfRowOf,
 } from '../../../shared/stats.js';
 
 // The shared schema + pure logic, re-exported unchanged: the stats screens and the unit tests import them from here.
@@ -56,7 +56,7 @@ export {
   STATS_VERSION, MAX_RECORDS, FULL_KEEP, MAX_CHARS, IMPORT_MAX_CHARS, emptyStats, normalizeStatBlock, recordId,
   normalizeRecord, MIGRATIONS, migrateStats, compactRecord, fitToBudget, roomModeOf, buildRecord, recordToResult,
   appendRecord, mergeStats, importStats, exportStats, selfRowOf, roundsOf, countsTowardStats, aggregateStats,
-  isObj, int, num, bool, str, fnv1a, newestFirst, usedBondIdsOf, vsOf,
+  isObj, int, num, bool, str, fnv1a, newestFirst, usedBondIdsOf, vsOf, contentOf,
 } from '../../../shared/stats.js';
 
 /** A record whose match carried room content (a plugin room): this fork's server never sends one (UPSTREAM-MERGES §0). */

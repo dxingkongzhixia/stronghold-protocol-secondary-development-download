@@ -98,7 +98,8 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
     for (const f of Object.values(index.i18n || {})) if (typeof f?.url === 'string' && f.url.startsWith('/cs/')) dataBytes += Number(f.bytes) || 0;
     return {
       cs: built.cs, plugins: built.plugins || [], data: built.data,
-      hashInput: { app: index.app, sim: index.sim, data, plugins: index.plugins || [], settings: index.settings || {} },
+      hashInput: { app: index.app, sim: index.sim, data, plugins: index.plugins || [], settings: index.settings || {},
+        ...(index.i18n && Object.keys(index.i18n).length ? { i18n: index.i18n } : {}) },
       modes: pluginModes(built.modes, vanillaData),
       kitted: Array.isArray(built.kitted) ? built.kitted : null,
       warnings: (Array.isArray(built.warnings) ? built.warnings : []).map((w) => (w && w.code === 'PLUGIN_PATCH_OVERRIDE'
