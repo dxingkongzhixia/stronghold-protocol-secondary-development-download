@@ -1393,7 +1393,7 @@ docs guards 34 pass / 0 fail.
 | 阶段 | 上游 | 内容 | 状态 |
 |---|---|---|---|
 | **P0** | `c57c78bfe`（`ca0768ddb` + `cefe7e89a`） | **内容身份 `cs`**：`shared/sha256.js`、`shared/plugins/{identity,manifest}.js`、`server/plugins/{identity,registry}.js`、`/plugins/index.json`、`/cs/<cs16>/index.json`、`tools/plugin.mjs`、`plugins/README.md`、`docs/PLUGINS.md`、P0 测试 | ✅ 已并入 |
-| P1a | `83b89cf1f`（P1a 全套 + 3 轮复查） | 外观插件：房间视觉集（`/vs/`）、客户端 `content.js`、模板、e2e | ⏳ |
+| P1a | `83b89cf1f`（P1a 全套 + 3 轮复查） | 外观插件：房间视觉集（`/vs/`）、客户端 `content.js`、模板、e2e | ✅ 已并入 |
 | P1c / P2 / P4 | `0fcc54976` `f3735da16` `8784d4559` `7dc4c8465` `ba352f1e3` | 内容集（`room.setMode` / `room.contentReady`、每内容集一个 match worker）、DSL-lite kit、沙箱 UI 插件 | ⏳ |
 | W1–W5 | `be7f89b71` `872c2a6a5` `05463f7c8` `d02a6a17c` `cbb65b8a1` | 主题变量 / 规则开关 / 新记录类型 / Forge 面板兼容层 / 特效借用 | ⏳ |
 | U1–U6 + Forge | `0f869563b` `42f9c2812` 等 | 记录格式扩展、Forge 真包导入与 e2e | ⏳ |
@@ -1402,4 +1402,9 @@ docs guards 34 pass / 0 fail.
 
 **P0 本分支适配**：`server/index.js` 保留我们的账号 / 社区 / 统计 / 训练 / 管理页，加入 `content = computeVanillaContent(...)` 与 `createPluginRegistry`（`packs` 仍导出）；`server/lobby.js` 的房间/状态/构造器同时带 `public`/`role` 与 `content`；`shared/protocol.js` 的 `b.result` 取上游带 `cs` 的版本并保留我们的 `b.rehearsalResult`；`store.js` 增 `content`；`routes.js` 健康报告加 `content`；`static.js` 同时服务资产索引与 `/plugins` / `/cs`；`websocket.js` 的 Lobby 同时拿账号/社区/统计与 `content`；`APP_VERSION` 仍 `0.4.0`；`docs/design/network.md` **新增 §8.4 内容身份**（`PACKS.md` / `PLUGINS.md` 引用的 `DESIGN 8.4` 现在有对应章节）。
 验收：插件 P0 套件 38/38（1 skip）、`/healthz` + `/plugins/index.json` + `/cs/<cs16>/index.json` 冒烟通过；全量 **7398 / 7376**（两条心跳失败为并行负载抖动，单跑 `test/lobby.test.js` 74/74；性能基线抖动同前），golden 全匹配，文档门禁 34/34。
+
+**P1a 已并入 `83b89cf1f`（+ 三轮复查）**：外观插件 —— 房间视觉集 `vs`（`/vs/<vs16>/overlay.json`、`/p/<id>/<hash8>/<path>`）、客户端 `content.js` / `cosmetics.js`、`ui/pluginTag.js` / `pluginPanel.js`、`plugins/_template/cosmetic/`、`server/plugins/visualSet.js`、`shared/plugins/{visual,order}.js`、`room.setPlugins`（host）与 `net` 的 heavy 限流、插件文件逐条 fallback、BGM/语音/音效随视觉集刷新。
+
+**本分支适配**：`ui/stats.js` **仍取我们的**（schema 在 `shared/stats.js`），把 `vs` 移植进去（`vsOf`、`normalizeRecord.vs`、id 哈希忽略 `vs`、`COMPACT_FRAME` 加 `vs`、`buildRecord(ctx.vs)`）；`assets.js` 保留我们的 **LRU 图片缓存**，只接上游的 `failed()` 外观层失败上报；`title.js` 仍从 `ui/playerName.js` 导入名字清洗（不取上游内置的那份），并接 `installedCount` 的插件计数；`settings.js` 同时保留我们的「美术缓存 / 屏幕适配」与上游的「外观插件 / 诊断」分组；`room.js` 保留「野排模拟」标题并加 `PluginTag`；`main.js` 接 `installContent` / `cosmetics`；模板 `app` 范围放宽到 `>=0.3.0 <0.5.0`（我们是 0.4.0）。
+验收：插件套件 **71 / 68（3 skip）**、`stats` 46/46、`tool` 5/5；全量 **7497 / 7473 / 0 失败 / 23 跳过**（仅性能基线抖动），golden 全匹配，i18n en **1617/1617**（补齐 36 条），文档门禁 34/34。
 

@@ -26,6 +26,12 @@
 // row, which is all the aggregates read. The oldest records go first when a budget is hit, and a write the browser
 // refuses shrinks the list further instead of failing. The server (server/stats.js) enforces the same caps per owner.
 //
+// The art (DESIGN §32 P1a): every record names the room's visual set `vs` — the cosmetic plugins its host switched on
+// (room.state.content.vs; null without any). The overview does not filter on it: a match with only cosmetic plugins
+// counts as the original game (the owner's decision of 2026-10-13: its gameplay and numbers are unchanged); only matches
+// with plugins that change gameplay will be left out (P1b / P1c). A player's personal plugins never matter and are not
+// recorded.
+//
 // Format evolution: the envelope carries a version (`STATS_VERSION`); `migrateStats` walks records through a chain of
 // per-version steps and every loaded / imported record passes `normalizeRecord`, a strict schema. An envelope from a
 // NEWER version than this build is refused (never downgraded and written back); an unreadable one is set aside
@@ -38,7 +44,7 @@
 import { PHASE } from '../../../shared/constants.js';
 import {
   STATS_VERSION, emptyStats, normalizeRecord, migrateStats, fitToBudget, appendRecord, buildRecord,
-  roomModeOf, str, num, int, isObj, fnv1a, selfRowOf,
+  roomModeOf, vsOf, str, num, int, isObj, fnv1a, selfRowOf,
 } from '../../../shared/stats.js';
 
 // The shared schema + pure logic, re-exported unchanged: the stats screens and the unit tests import them from here.
@@ -46,7 +52,7 @@ export {
   STATS_VERSION, MAX_RECORDS, FULL_KEEP, MAX_CHARS, IMPORT_MAX_CHARS, emptyStats, normalizeStatBlock, recordId,
   normalizeRecord, MIGRATIONS, migrateStats, compactRecord, fitToBudget, roomModeOf, buildRecord, recordToResult,
   appendRecord, mergeStats, importStats, exportStats, selfRowOf, roundsOf, countsTowardStats, aggregateStats,
-  isObj, int, num, bool, str, fnv1a, newestFirst, usedBondIdsOf,
+  isObj, int, num, bool, str, fnv1a, newestFirst, usedBondIdsOf, vsOf,
 } from '../../../shared/stats.js';
 
 /** A record whose match carried room content (a plugin room): this fork's server never sends one (UPSTREAM-MERGES §0). */
@@ -197,6 +203,7 @@ export function buildQuitRecord(state, ctx = {}) {
     teamLp: num(pub.teamLp),
     roomMode: roomModeOf(str(pub.modeId), state.room?.mode),
     selfId: myId,
+    vs: vsOf(state.room?.content?.vs),
     players: [{
       playerId: myId, seat: row.seat, name: row.name, isBot: false, left: true, alive, victory: false, roundsPassed,
       eliminatedRound: alive ? null : live.aliveRound, lp: row.lp, bandId: row.bandId,
@@ -231,7 +238,7 @@ function storeRecord(rec) {
  * Record a finished match end-to-end (load → append → save). Returns the built record, or null when
  * nothing was stored (no players / not my match / replay).
  * @param {any} res raw m.result payload
- * @param {{ myId?: string|null, roomMode?: string|null, now?: number }} [ctx]
+ * @param {{ myId?: string|null, roomMode?: string|null, vs?: string|null, now?: number }} [ctx]
  * @returns {any|null}
  */
 export function recordResult(res, ctx = {}) {

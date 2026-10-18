@@ -86,6 +86,8 @@ export const initialState = Object.freeze({
   notice: null,
   // the room's content set (server/plugins/identity.js): { cs, vanilla, plugins } or null
   content: null,
+  // how many unofficial plugins the server has (DESIGN §32 P1a: /healthz or welcome `content.plugins`; content.js)
+  installedPlugins: 0,
   session: { entered: false },
   room: null,
   match: emptyMatch(),

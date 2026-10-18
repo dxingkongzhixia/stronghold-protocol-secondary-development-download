@@ -160,6 +160,9 @@ function normalizePlayerRow(raw, quit = false) {
  * @param {any} raw
  * @returns {any|null} null when the row is not salvageable (no usable player row at all)
  */
+/** A room's visual set hash (`vs`, the cosmetic plugins its host chose): 64 lowercase hex, else null. */
+export const vsOf = (v) => (typeof v === 'string' && /^[0-9a-f]{64}$/.test(v) ? v : null);
+
 export function normalizeRecord(raw) {
   const r = isObj(raw) ? raw : {};
   // a record IS a played match — no usable players array, no record
@@ -188,11 +191,13 @@ export function normalizeRecord(raw) {
     teamLp: num(r.teamLp),
     roomMode: r.roomMode === 'solo' || r.roomMode === 'coop' ? r.roomMode : null,
     selfId: str(r.selfId),
+    // the art the match played with (cosmetic plugins only; null = the original game)
+    vs: vsOf(r.vs),
     players,
   };
   if (r.compact === true) rec.compact = true;
   // an id-less (hand-made) record gets a content id, so both copies of it land on the same key
-  if (!rec.id) rec.id = `c.${fnv1a(JSON.stringify(rec))}`;
+  if (!rec.id) rec.id = `c.${fnv1a(JSON.stringify({ ...rec, vs: undefined }))}`;
   return rec;
 }
 
@@ -247,7 +252,7 @@ export function migrateStats(raw) {
 }
 
 const COMPACT_FRAME = ['id', 'v', 't', 'end', 'victory', 'roundsPassed', 'lastRound', 'hiddenReached', 'hiddenCleared', 'reason', 'modeId',
-  'difficulty', 'roomMode', 'durationMs', 'selfId'];
+  'difficulty', 'roomMode', 'durationMs', 'selfId', 'vs'];
 
 /**
  * The compact form of a record: the frame and the player's OWN row without lineup, bonds and name — everything the
@@ -377,6 +382,7 @@ export function buildRecord(res, ctx = {}) {
     teamLp: num(r.teamLp),
     roomMode: roomModeOf(str(r.modeId), ctx.roomMode),
     selfId: myId,
+    vs: vsOf(ctx.vs),
     players: r.players,
   });
 }
