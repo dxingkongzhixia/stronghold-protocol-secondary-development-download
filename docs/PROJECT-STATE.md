@@ -205,6 +205,14 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   `i18n en --strict` 1455/1455、`doctor` 退出码 0、`eslint` 0 error（148 warning）、`typecheck` / `check:imports` 通过、
   `build-data --offline` 与 `data/` 逐字节一致、工作项目相对 store HEAD 无跟踪漂移。
 
+## 10.1 在研：插件栈整套迁移（WIP 分支 `plugin-stack-tip`，2026-10-19）
+
+- **已完成并推送**：公告客户端 UI（标题页 + 大厅的 `NoticesButton`，已读存本机）、房间主题（个人外观插件 + 房间外观插件令牌共同决定页面主题）；Worker 托管（host）骨架 `server/match/host/*` 已接进 `server/index.js` → 会话栈 → Lobby，退出时关闭 —— 但**门未开**（`contentSets` 还是 P1c 版）。
+- **在研分支**（**只在本机，未推送，不合并**）：`_merge-scratch` 的 `plugin-stack-tip` @ `c2010b355`，基线 `ours@d47f4d4c0`。已整块取入 tip 的插件栈：`server/plugins/**`、`shared/plugins/**`、`schemas/**`、`server/sim/content/dsl/**`、`server/studio/**` + `shared/studio/**` + `public/studio/**`、`public/js/render/vfx/plugin*`、`tools/plugin.mjs` + `tools/assets/official-tables.mjs`、`plugins/**`、`docs/PLUGIN-*`、`test/plugins/**` + `test/helpers/**`；并重放三处本分支补丁（插件 app 范围 → 0.4.0、自定义干员 stand-in 跳过、8 个新插件错误码 + 文案）。
+- **验证**：服务端正常启动（`/healthz` / `/plugins/index.json` / `/cs/` 全 200）；`build-data --offline` 不改 `data/`；插件测试子集 **92 / 102**（1 skip）。剩余 9 条全是**尚未接完的相邻特性**：W2 规则（5）、studio 路由（1）、文档 surface 表（1）、records schema（1）、`placeOnRanged` 紧凑记录（1）。
+- **下一步**：按 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10 末尾「明天从这里继续」的 1–7 步收尾，再合入 `ours` 并推送三端；上线仍等 owner 许可。
+- **`ours` / 三端**：`d47f4d4c0`，全量 **7612 / 7579 / 0 失败 / 33 跳过**、golden 全匹配、i18n en 1651/1651、文档门禁 34/34。
+
 ## 11. 产物
 
 - 文档：本文件、[`docs/MATCHMAKING.md`](MATCHMAKING.md)（决策记录）、[`docs/HANDOVER.md`](HANDOVER.md)（接手入口）、[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)（查询索引）。

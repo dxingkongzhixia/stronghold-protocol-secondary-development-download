@@ -1475,3 +1475,49 @@ docs guards 34 pass / 0 fail.
 **A 第 2 步试跑结论（2026-10-19，已回退）**：把 tip 的 `server/plugins/**` + `shared/plugins/**` + `schemas/**` + `server/sim/content/dsl/**` + `public/js/render/vfx/plugin{Format,Library,Player,Validate}.js` 整体取过来后，**服务端能正常启动**（`/healthz` / `/plugins/index.json` / `/cs/…` 全 200），说明 host 骨架 + tip 插件栈在运行时是自洽的。但 tip 的 `test/plugins/**`（与那套代码配套）大量失败：它同时依赖 tip 的 `docs/plugin-catalog.example.json`、`test/helpers/**`、studio/检查工具与**重新基线过的数据/夹具**。也就是说，**接通 host = 整套插件栈迁移**（代码 + 测试 + 夹具 + 文档 + studio），不是「改一个 contentSets」。
 因此保持 `0f42bcc92` 的绿色状态（host 骨架在、门开着但未通电，玩法插件房间仍在本进程跑）。下一次要开**独立分支**做整套迁移：tip 插件代码 + 对应测试/夹具/文档 + 我们的五处补丁（内容插件美术走外观分支、`cs` 的 i18n 哈希、UI 意图前缀、房间主题、宿主门），再全量 + golden + 数据重基线。
 
+**A 第 2 步整套迁移（WIP 分支 `plugin-stack-tip`，2026-10-19）**：
+
+按上面的结论开了**独立分支** `plugin-stack-tip`（基线 `ours@d47f4d4c0`），一次性取 tip（`d905c146`）的整块：
+
+| 路径 | 内容 |
+|---|---|
+| `server/plugins/**` | registry / identity / contentData / contentSet(s) / roomSets / policy / forgeImport / offers / kits / trusted / scripts … |
+| `shared/plugins/**` | manifest / theme / notices / errors / surface / rules / catalog / sdk / sandbox / scriptCheck / scriptLoad … |
+| `schemas/**` | 记录 / DSL / overlay / pack 等全部 JSON Schema |
+| `server/sim/content/dsl/**` | DSL-lite 编译器（替换我们 P2 的同名模块） |
+| `server/studio/**`、`shared/studio/**`、`public/studio/**` | studio 战斗沙箱（tip 插件测试的硬依赖：`templates/*` 反向 import `public/studio/js/gameplayModel.js`） |
+| `tools/plugin.mjs`、`tools/assets/official-tables.mjs`、`plugins/**`、`docs/PLUGIN-*.md`、`docs/PLUGINS.md`、`docs/plugin-catalog.example.json` | 插件 CLI / 模板 / 文档示例 |
+| `test/plugins/**`、`test/helpers/**` | tip 配套测试与夹具（host 测试的基准） |
+| `public/js/render/vfx/plugin{Format,Library,Player,Validate}.js` | 特效借用所需的客户端模块 |
+
+**已重放的本分支补丁**（都记在提交 `c2010b355` 里）：
+1. 插件 `app` 范围 `>=0.3.0 <0.4.0` → `>=0.3.0 <0.5.0`（我们 0.4.0）：`test/helpers/contentFixtures.js`、`plugins/_template/{content,cosmetic}/plugin.json`、`plugins/README.md`、`docs/plugin-catalog.example.json`；
+2. `shared/plugins/validate.js` 的 **自定义干员 stand-in 跳过**（`skipStandIn` 选项 + `backup.charId == null` 直接跳过）——8 名自造干员没有官方替身，否则整集校验误报 16 条；
+3. `shared/constants.js` 补 8 个新拒绝码 + 对应 `ERR_TEXT`：`PLUGIN_SCRIPT_CONFLICT` / `PLUGIN_SCRIPT_OVERRIDE` / `PLUGIN_SCRIPT_CHECK` / `PLUGIN_SCRIPTS_DISABLED` / `PLUGIN_TRUST_PIN` / `PLUGIN_TRUST_PUBLIC` / `PLUGIN_CONSENT` / `PLUGIN_RULE_CONFLICT`（`errors.test.js` 要求码表、拒绝集合与文案三处一致）。
+
+**验证（WIP 分支上）**：
+- 服务端**正常启动**：`/healthz`、`/plugins/index.json`、`/cs/<cs16>/index.json` 全 200（tip 的 `contentSets` 带 `get` / `dataBytes`，`server/index.js` 里原来的 host 门自动满足）。
+- `build-data --offline` 仍**不改 `data/`**。
+- 插件测试子集（contentSet / contentSets / registry / manifest / catalog / surface / errors / rules / order / patch / records）**92 / 102 通过**（1 skip）。
+
+**剩余 9 条 = 尚未接完的相邻特性，不是 host 本身的问题**：
+
+| 失败测试 | 归属 / 要做什么 |
+|---|---|
+| `rules-only manifests load…`、`shopBias filters…`、`the isolated match host takes prep rules…`、`Forge behaviour becomes rules…`、`Forge omitted options…` | **W2 规则开关**：`shared/plugins/rules.js` 已取，但 `contentSets` / `roomSets` / `Match` / host 的 `prepRules` / `offers` 接线未做 |
+| `STUDIO_ROUTES and the routes api() dispatches are the same set` | **studio HTTP 路由**：`server/http/routes.js` / `static.js` 还没有 `/studio` 端点 |
+| `the document table and buildSurface are the same rows` | `docs/PLUGIN-API.md` 等文档表与 `buildSurface()` 不一致 |
+| `checked-in schema equals the runtime schema…` | `schemas/records.schema.json` 需按运行时重生成 |
+| `a MELEE compact form copies placeOnRanged onto the chess and the ?form` | 记录层的 `placeOnRanged` 紧凑形态（我们的数据 / 记录路径） |
+
+**状态**：分支**只在本机**（`c2010b355`，未推送），**不合并**；`ours` 仍是 `d47f4d4c0`，全量 **7612 / 7579 / 0 失败 / 33 跳过**、golden 全匹配、i18n en 1651/1651、文档 34/34。
+
+**明天从这里继续**（按顺序，每步跑对应测试）：
+1. 接 **W2 规则**（`prepRules` 进内容集 / 房间 / `Match` / host，`shopBias`），解 5 条；
+2. 接 **studio 路由**（`STUDIO_ROUTES` → `routes.js` / `static.js`），解 1 条；
+3. 重生成 `schemas/records.schema.json` + 对齐 `PLUGIN-API` / `PLUGIN-GUIDE` 的表，解 2 条；
+4. 补 `placeOnRanged` 的紧凑记录路径，解 1 条；
+5. 跑 tip 的 `plugin-host`（watchdog / OOM / `SP_VERIFY=all`）与全量 `node --test`、`golden`、`eslint`、`i18n check en --strict`、文档门禁；
+6. 若数据/夹具需要重基线：**先归因**（只回退本条 → 零差异）再单独提交重生成；
+7. 全绿后合入 `ours`，按中继 → gitee → github 推送（**上线仍等 owner 明确许可**）。
+
