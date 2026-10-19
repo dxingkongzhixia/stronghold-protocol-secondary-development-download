@@ -23,6 +23,7 @@ restate the upstream design — it points at it:
 | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | **plugin development guide** (Chinese): manifest, classes, cosmetic/content/ui/script, local checks, pack and publish |
 | [`docs/FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) | **Forge pack development guide** (Chinese): pack layout, clean-import rules, scripts, UI panels, report and verification |
 | [`docs/FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) | the Forge compatibility matrix and the explicit unsupported list |
+| [`docs/PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | the live plugin issue list, priorities, status and suggested order of work |
 | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) | plugin architecture, security boundaries, admin console and residual risks |
 | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | how we research/change/test/deploy, the merge discipline, and the GitHub/Gitee push |
 | [`docs/DEPLOY.md`](DEPLOY.md) | upstream deployment (Windows host, Docker, proxy) |
@@ -577,3 +578,4 @@ A dedicated engineering review of this plugin stack — architecture, security b
 - **Forge packs**: read [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md). It explains the pack layout, the products an import produces, the clean-import field rules, the scripts/panels/i18n boundaries, and how to read `IMPORT-REPORT.md` / `--json`.
 - **What cannot be imported**: the field-level matrix is [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md). In short, `server` / `routes` / `assets` / `forms` / `fx` / `behaviour` / `combat` / `layer` are refused by design; modules, potentials, summons and some base fields are dropped with a report entry.
 - **Operations checks**: `/admin` → 插件与内容 shows installed plugins, compatibility, skipped plugins and warnings; the full snapshot is read-only.
+- **Open issues**: [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) tracks the remaining plugin work with P0/P1/P2 priorities and evidence.

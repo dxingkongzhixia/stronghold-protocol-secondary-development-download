@@ -185,3 +185,5 @@ plugin.json + entry.sim/meta
 2. **跑完整的 `--plugin-art` 抽取**：确认官方干员美术、VFX 和插件引用在真实客户端上能一次合并完成。
 3. **写一份面向玩家的插件风险说明**：外观 / 玩法 / 脚本 / 信任四级。
 4. **trusted 插件生产策略**：默认关闭，公网禁用，容器化运行。
+
+> 持续跟踪的插件问题、状态和排期见 [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md)。
