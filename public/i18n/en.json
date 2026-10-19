@@ -1809,5 +1809,6 @@
   "这是测试房间，不计入任何记录。确认加入？": "This is a test room and is not recorded. Join anyway?",
   "测试模式未开启": "Test mode is off",
   "这不是测试房间": "This is not a test room",
-  "测试房间": "Test room"
+  "测试房间": "Test room",
+  "测试对局不计入统计": "Test matches are not counted"
 }

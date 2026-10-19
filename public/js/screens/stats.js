@@ -48,7 +48,7 @@ export const HISTORY_PAGE = 50;
 /** The overlay's stylesheet (public/index.html links it; ensureStylesheet covers a stale index.html — see that module). */
 export const STATS_CSS = '/css/screens/stats.css';
 
-const statsStore = createStore({ open: false, tab: 'overview', view: null });
+const statsStore = createStore({ open: false, tab: 'overview', view: null, withModded: false });
 
 /** Open the stats viewer (title screen / lobby / room entry points). */
 export function openStats() {
@@ -171,6 +171,8 @@ function Overview({ agg, gd, nickname, records }) {
   const unknownMode = Math.max(0, agg.count - agg.byMode.solo.games - agg.byMode.coop.games);
   return html`<${Section} title=${t('总览')} micro="OVERVIEW">
     ${fonts ? html`<link rel="stylesheet" href=${fonts} />` : null}
+    <${ModdedSwitch} agg=${agg} />
+    ${agg.test > 0 ? html`<p class="t-dim" data-testid="stats-test-excluded">${t('测试对局不计入统计')}</p>` : null}
     <div class="st-overview-details">
       <div class="st-mode-summary">
         <div class="st-profile">
@@ -545,6 +547,7 @@ function StatsScreen({ tab, view }) {
   const readOnly = !!viewing;
   const records = remote ? remote.records : (readOnly ? [] : local.records);
   const viewerName = remote?.owner?.name || viewing;
+  const withModded = useStore((s) => s.withModded, Object.is, statsStore);
 
   // a match starting (the host pressed 开始) takes the player to its briefing: the overlay must not sit on top of it
   useEffect(() => { if (inMatch) closeStats(); }, [inMatch]);
@@ -579,7 +582,7 @@ function StatsScreen({ tab, view }) {
     return () => { alive = false; };
   }, [viewing, retry]);
 
-  const agg = useMemo(() => aggregateStats(records), [records]);
+  const agg = useMemo(() => aggregateStats(records, { modded: withModded }), [records, withModded]);
   const reload = () => { setLocal(loadStats()); setRetry((n) => n + 1); };
 
   const doExport = () => {
