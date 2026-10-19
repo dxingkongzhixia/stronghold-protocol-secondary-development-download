@@ -562,6 +562,9 @@ export class SpineActor {
 
   _idleName() {
     const sk = this.roles.skill;
+    // [ASSUMED] DESIGN §34.4.1: the resting clip of a held skill is its loop. Idle here is the stand-up a stun
+    // used to leave behind for the rest of the skill (白面鸮 S2).
+    if (this._skillLoopHeld()) return sk.loop;
     if (this.skillOn && sk && this.has(sk.idle)) return sk.idle;
     return this.has(this.roles.idle) ? this.roles.idle : (this.has('Idle') ? 'Idle' : [...this.names][0]);
   }
@@ -793,16 +796,92 @@ export class SpineActor {
       && this.has(sk.loop) && !this._skillIsBuffOnly());
   }
 
+  /**
+   * Begin / loop / end, and no idle of its own: the loop is the stance for the whole skill (DESIGN §34.4).
+   * A distinct skill.idle (折桠 Skill_2_Idle) is the stance between attacks, so the loop stays the attack clip.
+   * via:'attack' (远牙: the role is the normal attack triple) is not a skill stance.
+   */
+  _skillLoopHeld() {
+    const sk = this.roles.skill;
+    if (!this.skillOn || !sk || sk.via === 'attack') return false;
+    if (!this.has(sk.begin) || !this.has(sk.loop) || !this.has(sk.end)) return false;
+    if (sk.idle && sk.idle !== sk.loop && this.has(sk.idle)) return false;
+    return true;
+  }
+
+  /** Skill_3_Begin → Skill_3, Skill_Start → Skill, Skill1_Loop → Skill1. */
+  _skillPrefix() {
+    const sk = this.roles.skill;
+    const name = (sk && (sk.begin || sk.loop)) || '';
+    return String(name).replace(/_(?:Begin|Start|Loop|End|Idle)$/i, '').replace(/(?:Begin|Start|Loop|End|Idle)$/i, '');
+  }
+
+  /**
+   * This skill's own strike clip, which the resolver drops when a Loop exists (anim-roles skillFamily: loop =
+   * P_Loop before P_Attack). 焰影苇草 S3 is Skill_3_Attack beside Skill_3_Begin/Loop/End.
+   * [ASSUMED] (DESIGN §34.4.1): no table says which clip an atk plays during a held loop. Only a same-prefix
+   * `<prefix>_Attack` (or `<prefix>_Attack_*`, not Down / Begin / End / Idle) counts — not the normal Attack and
+   * not another skill's Attack_2 (塞雷娅). A loop that itself contains OnAttack is not a separate clip: `_attackClip`
+   * returns the skill role so the existing per-attack scale and strikePose path plays that loop.
+   */
+  _skillOwnAttack() {
+    const sk = this.roles.skill;
+    if (!sk || /attack/i.test(sk.loop || '')) return null;
+    const prefix = this._skillPrefix();
+    if (!prefix) return null;
+    const used = new Set([sk.begin, sk.loop, sk.end, sk.idle]);
+    const head = `${prefix}_Attack`;
+    const re = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}_Attack(?:_|$)`, 'i');
+    const hits = (this.entry && this.entry.hits) || {};
+    const cands = [];
+    for (const n of this.names) {
+      if (used.has(n) || /down/i.test(n) || /_(?:begin|start|end|idle)(?:_|$)/i.test(n)) continue;
+      if (!re.test(n)) continue;
+      cands.push(n);
+    }
+    if (!cands.length) return null;
+    if (cands.includes(head)) return head;
+    cands.sort();
+    const withHit = cands.find((n) => Array.isArray(hits[n]) && hits[n].length);
+    return withHit || cands[0];
+  }
+
   _attackClip() {
     const sk = this.roles.skill;
-    if (this.skillOn && sk && this.has(sk.loop) && sk.via !== 'attack' && !this._skillIsBuffOnly()) return sk;
+    const mode = this.skillOn ? this.skillAttackMode?.() : null;
+    if (this.skillOn && !this._skillLoopHeld()) {
+      if (mode?.animKey === 'Attack') {
+        const a = mode.down && this.has(this.roles.attackDown?.loop) ? this.roles.attackDown : this.roles.attack;
+        if (this.has(a?.loop)) return a;
+      } else if (this.has(mode?.animKey)) {
+        if (mode.animKey === sk?.loop) return sk; // keep a skill's own idle / End ownership
+        return { begin: null, loop: mode.animKey, end: null };
+      }
+      // [ASSUMED] A cosmetic skeleton missing the official clip retains its own roles (§34.31).
+    }
+    if (this.skillOn && sk && this.has(sk.loop) && sk.via !== 'attack' && !this._skillIsBuffOnly()) {
+      if (this._skillLoopHeld()) {
+        // A dedicated strike clip (焰影苇草 Skill_3_Attack) wins. Otherwise a loop that itself has OnAttack is
+        // the strike: return the skill role so windUp / attack scale it and strikePose is that frame. The attack
+        // end already returns to the looping loop and skips End. A loop with no OnAttack stays put — returning
+        // the normal attack would stand her up (白面鸮 S2). [ASSUMED] DESIGN §34.4.1.
+        const atk = this._skillOwnAttack();
+        if (atk) return { begin: null, loop: atk, end: null };
+        const hits = this.entry && this.entry.hits && this.entry.hits[sk.loop];
+        if (Array.isArray(hits) && hits.length) return sk;
+        return null;
+      }
+      // Without a verified mode mapping the skill clip stays the attack clip, as before §34.31: a lone clip without
+      // OnAttack is not proof of a cast (the integrator kept unverified operators unchanged, with or without the index).
+      return sk;
+    }
     const a = this.roles.attack;
     if (a && this.has(a.loop)) return a;
     return null;
   }
 
   // Skill loops that are pure stances (no OnAttack in the loop) are still valid attack visuals during a skill;
-  // only an idle-typed skill loop is treated as buff-only.
+  // only an idle-typed skill loop is treated as buff-only (a verified mode mapping wins first, §34.31).
   _skillIsBuffOnly() {
     const sk = this.roles.skill;
     return !!sk && sk.loop === this.roles.idle;
@@ -834,12 +913,11 @@ export class SpineActor {
    * @returns {{ anim: any, time: number }|null}
    */
   strikePose() {
-    if (this.dead || this.mode !== 'attack' || !this.current) return null;
-    const anim = (() => {
-      try { return this.spine ? this.spine.spineData.findAnimation(this.current) : null; } catch { return null; }
-    })();
-    if (!anim) return null;
-    return { anim, time: this._hitTime(this.current, this.dur(this.current)) };
+    if (this.mode !== 'attack' || this.dead) return null;
+    const tr = this.spine && this.spine.state ? this.spine.state.tracks[0] : null;
+    const anim = tr && tr.animation;
+    if (!anim || anim.name !== this.current) return null;
+    return { anim, time: this._hitTime(anim.name, this.dur(anim.name)) };
   }
 
   /** Skill active flag changed. */
