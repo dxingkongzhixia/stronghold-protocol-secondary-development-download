@@ -248,4 +248,14 @@ describe('room.setPlugins (P1a: cosmetic plugins)', () => {
     assert.deepEqual(lobby.getRoom(session.roomCode).toState().content, { cs: 'ab'.repeat(32), vanilla: true, plugins: [] });
     lobby.shutdown();
   });
+
+  test('a content set carries its DIY kitted operators to the page (kittedExtra)', () => {
+    const plugins = {
+      resolve: () => ({ ok: true, set: { cs: 'cd'.repeat(32), plugins: [], kitted: ['char_x_demo_guard', 7, 'char_x_demo_caster'] } }),
+    };
+    const lobby = new Lobby({ registry: new SessionRegistry(), content: { cs: 'ab'.repeat(32) }, plugins });
+    const r = lobby.resolveContent(null, ['demo']);
+    assert.deepEqual(r.content.kittedExtra, ['char_x_demo_guard', 'char_x_demo_caster']);
+    lobby.shutdown();
+  });
 });

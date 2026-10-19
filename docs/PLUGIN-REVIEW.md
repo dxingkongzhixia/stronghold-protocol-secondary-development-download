@@ -115,10 +115,11 @@ plugin.json + entry.sim/meta
 - 脚本 SDK 的冻结 API、预算、超时、拒绝路径
 - Forge 导入：皮肤、数值、混合包、脚本、ZIP、符号链接、路径穿越
 - setup / 本地官方美术提取
-- 全量 CI：**8185 tests / 8149 pass / 0 fail**
+- 全量 CI：**8186 tests / 8150 pass / 0 fail**
 
 已验证：
-- **浏览器 E2E**：`SP_E2E=1` + 真实 Chrome 跑了 `test/ui/plugins.e2e.test.js` 的 3 个 cosmetic 用例（房间插件、个人插件、局内切换），全部通过。content / ui / script 的完整链路仍需单独补用例。
+- **浏览器 E2E**：`SP_E2E=1` + 真实 Chrome 跑了 6 个插件用例，全部通过：`plugins.e2e.test.js` 的 3 个 cosmetic（房间插件、个人插件、局内切换）、`ui-plugins.e2e.test.js` 的 UI 插槽，以及 `plugins-content-script.e2e.test.js` 的 content 内容集和 sandbox script 依赖链路。
+- **E2E 发现并修复**：房间内容集的 `kittedExtra` 之前没有从 `resolveContent` 带到 `room.state.content`，导致内容插件新增的 自选 干员在页面上拿不到；`server/lobby.js` 已补上并加了单元测试。
 - **真实客户端抽取**：用 `D:\明日方舟\Hypergryph Launcher` 的 CN 客户端跑了 `extract.py --only mesh/trap_110`，成功写出 6 个文件并合并 manifest；完整的 `--plugin-art` 抽取仍需一次长跑验证。
 
 ## 6. 产品风险
@@ -134,7 +135,7 @@ plugin.json + entry.sim/meta
 
 3. **Forge 导入不是全量转换**
    - 只转换能映射的部分；脚本、服务端逻辑、召唤、部分记录类型会拒绝。
-   - 需要在导入报告里更突出“哪些没导入、为什么”，避免玩家以为完整兼容。
+   - 需要在导入报告里更突出“哪些没导入、为什么”，避免玩家以为完整兼容；完整矩阵见 [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md)。
 
 4. **本地官方美术是可选能力**
    - setup 已经能发现并提取，但依赖本机客户端和 Python / UnityPy。
@@ -180,7 +181,7 @@ plugin.json + entry.sim/meta
 
 优先级从高到低：
 
-1. **补齐 content / ui / script 的真实 E2E**：现在 cosmetic 链路已通过，下一步给内容集、UI 插槽和脚本沙箱各加一条真实浏览器用例。
+1. **扩大 content / script 覆盖**：现在 content 内容集和 sandbox 依赖链路已通过，下一步增加多插件冲突、trusted consent 和 Forge 导入内容的真实对局用例。
 2. **跑完整的 `--plugin-art` 抽取**：确认官方干员美术、VFX 和插件引用在真实客户端上能一次合并完成。
 3. **写一份面向玩家的插件风险说明**：外观 / 玩法 / 脚本 / 信任四级。
 4. **trusted 插件生产策略**：默认关闭，公网禁用，容器化运行。

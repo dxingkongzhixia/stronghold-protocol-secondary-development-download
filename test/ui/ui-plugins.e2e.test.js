@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Client, ROOT, hasChrome, startRealServer } from '../e2e/client.mjs';
+import { Client, ROOT, BOOT_TIMEOUT_MS, hasChrome, startRealServer } from '../e2e/client.mjs';
 
 const ENABLED = process.env.SP_E2E === '1' && hasChrome();
 
@@ -25,7 +25,7 @@ describe('an interface plugin in the prep slot', { skip: !ENABLED }, () => {
       await c.open();
       await c.page.evaluate(() => localStorage.setItem('sp.pref.ui-plugins', JSON.stringify(['damage-meter'])));
       await c.page.reload({ waitUntil: 'domcontentloaded' });
-      await c.page.waitForSelector('.screen', { timeout: 20000 });
+      await c.page.waitForSelector('.screen', { timeout: BOOT_TIMEOUT_MS });
       await c.enter('凯尔希');
       await c.click('.mode-card', '独立模拟');
       await c.click('.diff-card', '标准模拟');

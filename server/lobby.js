@@ -1118,7 +1118,7 @@ export class Lobby {
       return fail(ERR.INTERNAL);
     }
     if (!r || !r.ok) return fail(r && isErrCode(r.error) ? r.error : ERR.INTERNAL, r && typeof r.detail === 'string' ? r.detail.slice(0, 200) : undefined);
-    const { cs, vs, plugins: list, warnings, bytes, dataBytes, modes, trusted, execution, rules } = r.set;
+    const { cs, vs, plugins: list, warnings, bytes, dataBytes, modes, trusted, execution, rules, kitted } = r.set;
     const modded = isContentHash(cs) && cs !== this.vanilla.cs;
     const frozen = (a) => Object.freeze((Array.isArray(a) ? a : []).map((p) => Object.freeze({ ...p })));
     return {
@@ -1132,6 +1132,7 @@ export class Lobby {
         ...(rules ? { rules } : {}),
         warnings: Object.freeze([...(warnings || [])]),
         bytes: Number(bytes) || 0,
+        ...(modded && Array.isArray(kitted) && kitted.length ? { kittedExtra: Object.freeze(kitted.filter((x) => typeof x === 'string').slice(0, 200)) } : {}),
         ...(modded ? { dataBytes: Number(dataBytes) || 0, modes: frozen(modes) } : {}),
       }),
     };
