@@ -7,6 +7,8 @@ import { diySlotIds, validateDiyPicks } from './diy.js';
 import { cultivatedStats, isPotential, isCultivate, POTENTIAL_DEFAULT, CULTIVATE_DEFAULT, hasPotentialData } from './potential.js';
 import { isContentHash } from './plugins/identity.js';
 import { isPluginId } from './plugins/manifest.js';
+import { isTestCommand } from './testMode.js';
+import { PLUGIN_OFFER_SLOTS } from './plugins/limits.js';
 
 // ---- tiny validators -------------------------------------------------------
 const isInt = (v, lo = -Infinity, hi = Infinity) => Number.isInteger(v) && v >= lo && v <= hi;
@@ -16,6 +18,8 @@ const isId = (v) => typeof v === 'string' && v.length > 0 && v.length <= 64 && /
 const isUid = (v) => isInt(v, 1, 2 ** 31);
 const isNum = (v, lo = -Infinity, hi = Infinity) => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi;
 const isPlain = (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
+/** Skin selection limits (docs/SKINS.md): shared by the wire check and the picker. */
+export const SKIN_LIMITS = Object.freeze({ entries: 256, idLen: 64, charIdLen: 64 });
 const optional = (check) => (v) => v === undefined || check(v);
 const nullable = (check) => (v) => v === null || v === undefined || check(v);
 /** A plain object with at most `max` own keys, every key passing `key` and every value passing `val`. */
@@ -515,6 +519,7 @@ export const C2S = {
   // every data file's bytes against /cs/<cs16>/index.json, that manifest's composition against `cs`; `ok: false` = it
   // could not (the seat shows it). A room with gameplay plugins starts only once every player's page sent it for its cs
   'room.contentReady': { cs: isContentHash, ok: isBool, $optional: ['ok'] },
+  'room.consent': { cs: isContentHash, accept: isBool },
 
   // match
   'g.infoReady': { setupRevision: (v) => isInt(v, 0, 2 ** 31), $optional: ['setupRevision'] },
@@ -538,6 +543,10 @@ export const C2S = {
   'g.destroy': { uid: isUid },
   'g.reward': { idx: (v) => isInt(v, 0, 5) },
   'g.choice': { idx: (v) => isInt(v, 0, 5), choiceId: isId, $optional: ['choiceId'] },
+  // a plugin interaction window (PLUGIN API v2, docs/PLUGINS.md §10b): offerId is the window's declared id, idx the
+  // slot picked; g.offerRefresh redraws one slot. A plugin never receives these messages itself.
+  'g.offer': { offerId: isId, pluginId: isId, seq: (v) => isInt(v, 0, 1000000), cardId: optional(isId), idx: (v) => isInt(v, 0, PLUGIN_OFFER_SLOTS - 1) },
+  'g.offerRefresh': { offerId: isId, pluginId: isId, seq: (v) => isInt(v, 0, 1000000), cardId: optional(isId), idx: (v) => isInt(v, 0, PLUGIN_OFFER_SLOTS - 1) },
   'g.ready': { ready: isBool },
   'g.emote': { id: (v) => EMOTES.includes(v) },
   // 分血救援 (REVIVE): hand LP to a downed teammate — 休整期 only, both on the same room
@@ -552,6 +561,8 @@ export const C2S = {
   // the stats the own board's units start their next battle with (user playtest #4 item 7; prep phases): answered by
   // the push m.unitStats { seq, round, units: [unitStatsEntry] }; `seq` is echoed so the client keeps the newest answer
   'g.unitStats': { seq: (v) => isInt(v, 0, 2 ** 31), $optional: ['seq'] },
+  // match test mode (DESIGN §34.8 phase 2): only a test room's host reaches applyTestCommand
+  'g.test': { cmd: isTestCommand, args: (v) => v === undefined || (isPlain(v) && Object.keys(v).length <= 8), $optional: ['args'] },
   'g.leave': {},
 
   // client-side combat (DESIGN §14): the authoritative client of a field reports its battle; a 联防 field adds

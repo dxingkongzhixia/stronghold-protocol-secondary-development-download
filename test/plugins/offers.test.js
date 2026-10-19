@@ -263,7 +263,11 @@ test('registry rejects invalid option payloads, scripts, missing sources and esc
   fs.unlinkSync(source);
   assert.equal(readPluginFolder(dir).plugin, null);
   put(path.dirname(dir), 'outside.json', []);
-  fs.symlinkSync(path.join(path.dirname(dir), 'outside.json'), source);
+  try { fs.symlinkSync(path.join(path.dirname(dir), 'outside.json'), source); }
+  catch (e) {
+    if (['EPERM', 'EACCES', 'UNKNOWN'].includes(e?.code)) { t.skip('symbolic links need a Windows privilege this process lacks'); return; }
+    throw e;
+  }
   assert.equal(readPluginFolder(dir).plugin, null);
 });
 

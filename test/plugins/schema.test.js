@@ -19,7 +19,7 @@ import { TEMPLATES, createPlugin } from '../../server/studio/templates/index.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const v = schemaValidator(path.join(ROOT, 'schemas'));
-const C = (extra = {}) => ({ manifest: 2, version: '1.0.0', app: '>=0.3.0 <0.4.0', api: 1, class: 'cosmetic', permissions: ['assets.override'], assets: {}, ...extra });
+const C = (extra = {}) => ({ manifest: 2, version: '1.0.0', app: '>=0.3.0 <0.5.0', api: 1, class: 'cosmetic', permissions: ['assets.override'], assets: {}, ...extra });
 const without = (o, k) => { const x = { ...o }; delete x[k]; return x; };
 
 /** [name, manifest] — accepted by both, or by neither (see the header). */

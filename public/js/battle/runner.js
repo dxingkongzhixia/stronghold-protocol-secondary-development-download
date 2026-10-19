@@ -83,6 +83,7 @@ import { contentFor as appContentFor, simContent as appSimContent, contentSet as
 import { unitStatsEntry, fxForm } from '../../../shared/protocol.js';
 import { spectateEffects } from './observe.js';
 import { recordError, setBattleSource } from '../diag.js';
+import { loadBrowserSim as loadBrowserSimImpl } from './simLoader.js';
 import { trackCombat, combineCombat } from './metrics.js';
 
 const TICK = 1 / 30;
@@ -170,35 +171,17 @@ function deepFreeze(root) {
  * content bug that writes into a record fails identically on both sides). `data` (DESIGN §32.6): the files of a room's
  * content set the page checked (public/js/content.js) instead of fetching /data/; `cs` names what was loaded.
  */
-export async function loadBrowserSim({ base = '/sim/', dataBase = '/data/', fetchFn = (...a) => globalThis.fetch(...a), data = null, cs = null } = {}) {
-  const [spec, simdata, support] = await Promise.all([
-    import(`${base}spec.js`), import(`${base}simdata.js`), import(`${base}content/support/index.js`),
-  ]);
-  const fetchOnce = async (n) => {
-    try {
-      const res = await fetchFn(`${dataBase}${n}.json`, { cache: 'no-cache' });
-      return res && res.ok ? await res.json() : null;
-    } catch { return null; }
-  };
-  // (a content set's data: structured copies, frozen below like downloaded files)
-  const files = data ? SIM_DATA_FILES.map((n) => (data[n] && typeof data[n] === 'object' ? structuredClone(data[n]) : null))
-    : await Promise.all(SIM_DATA_FILES.map(async (n) => (await fetchOnce(n)) ?? fetchOnce(n)));
-  // a battle simulated without part of the data would still produce a plausible result the server accepts: never run
-  // one — the loader fails (the next b.start retries it; meanwhile the server's deadline takes the field over)
-  const missing = SIM_DATA_FILES.filter((n, i) => !files[i] || typeof files[i] !== 'object');
-  if (missing.length) throw new Error(`simulation data unavailable: ${missing.join(', ')}`);
-  const raw = {};
-  SIM_DATA_FILES.forEach((n, i) => { raw[n] = deepFreeze(files[i]); });
-  simdata.setSimData(raw);
-  if (typeof support.setGameData === 'function') support.setGameData(null); // re-read through the injected data
-  return { spec, ds: new simdata.DataSource(raw, null), cs };
+export async function loadBrowserSim(opts = {}) {
+  return loadBrowserSimImpl(opts);
 }
 
 /**
  * The same official-bounds snapshot the server validated against. A plugin set must not scan its own tables
  * (a bomb would raise its cap). Vanilla pages scan the data they loaded. [ASSUMED] DESIGN §32.5.
+ * @param {string} base @param {string} dataBase @param {Function} fetchFn @param {Record<string, any>} raw
+ * @param {any} [bounds] `undefined`: the original content (scan its tables); else the checked snapshot (or null)
  */
-async function installSimBounds(base, dataBase, fetchFn, raw) {
+async function installSimBounds(base, dataBase, fetchFn, raw, bounds) {
   let boundsMod;
   try {
     const spec = /^https?:|^file:/i.test(String(base))
@@ -206,16 +189,8 @@ async function installSimBounds(base, dataBase, fetchFn, raw) {
       : '/shared/plugins/officialBounds.js';
     boundsMod = await import(spec);
   } catch { return; }
-  const pluginSet = /\/cs\//.test(String(dataBase));
-  try {
-    const boundsUrl = String(dataBase).replace(/data\/?$/, 'bounds/official.json');
-    const res = await fetchFn(boundsUrl, { cache: 'no-cache' });
-    if (res && res.ok && typeof res.json === 'function') {
-      const snap = await res.json();
-      if (snap && snap.v === 1) { boundsMod.installOfficialBounds(snap); return; }
-    }
-  } catch { /* fall through */ }
-  if (!pluginSet) boundsMod.rememberOfficialBounds(raw);
+  if (bounds !== undefined) { boundsMod.installOfficialBounds(bounds && bounds.v === 1 ? bounds : null); return; }
+  if (!/\/cs\//.test(String(dataBase))) boundsMod.rememberOfficialBounds(raw);
 }
 
 /**

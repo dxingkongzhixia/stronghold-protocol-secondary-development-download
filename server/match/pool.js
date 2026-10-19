@@ -147,8 +147,10 @@ export class SharedPool {
   /**
    * Item roll for the shop's item slot: tier by the chess tier shares at this level, uniform item within the tier,
    * falling back to lower tiers when a tier has no item. Returns an item id or null.
+   * `bias` (shopBias bondBias): a Set of active bond ids; an item whose giveBondId is in it is preferred within
+   * the drawn tier, and an empty filtered tier falls back to the official list of that same tier.
    */
-  rollItem(rng, maxTier, stock = null) {
+  rollItem(rng, maxTier, stock = null, bias = null) {
     const shares = this.tierShares(maxTier);
     const tiers = Object.keys(shares).map(Number).sort((a, b) => a - b);
     let tier = null;
@@ -159,13 +161,26 @@ export class SharedPool {
     } else {
       tier = 1 + Math.floor(rng() * Math.max(1, maxTier));
     }
+    const useBias = bias instanceof Set && bias.size > 0;
+    const gated = (t) => (this.gd.shopItemsByTier[t] || []).filter((id) => !stock || stock.canGain(id));
+    const pick = (list) => (stock ? stock.pick(rng, list) : list[Math.floor(rng() * list.length)]);
+    const choose = (t) => {
+      const list = gated(t);
+      if (!list.length) return null;
+      if (!useBias) return pick(list);
+      const biased = list.filter((id) => {
+        const rec = this.gd.item(id);
+        return !!(rec && typeof rec.giveBondId === 'string' && bias.has(rec.giveBondId));
+      });
+      return pick(biased.length ? biased : list);
+    };
     for (let t = tier; t >= 1; t--) {
-      const list = (this.gd.shopItemsByTier[t] || []).filter(id => !stock || stock.canGain(id));
-      if (list.length) return stock ? stock.pick(rng, list) : list[Math.floor(rng() * list.length)];
+      const id = choose(t);
+      if (id) return id;
     }
     for (let t = tier + 1; t <= 6; t++) {
-      const list = (this.gd.shopItemsByTier[t] || []).filter(id => !stock || stock.canGain(id));
-      if (list.length) return stock ? stock.pick(rng, list) : list[Math.floor(rng() * list.length)];
+      const id = choose(t);
+      if (id) return id;
     }
     return null;
   }

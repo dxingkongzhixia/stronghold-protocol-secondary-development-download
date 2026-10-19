@@ -26,7 +26,7 @@ import { makeMatch } from '../match/harness.js';
 const PILOT = {
   manifest: {
     manifest: 2, id: 'pilot', name: { zh: '窗口试点', en: 'Window pilot' }, version: '1.0.0',
-    app: '>=0.3.0 <0.4.0', api: 2, class: 'content', scope: ['room'], permissions: ['offers'],
+    app: '>=0.3.0 <0.5.0', api: 2, class: 'content', scope: ['room'], permissions: ['offers'],
     offers: ['offers/before-r3.json', 'offers/before-r9.json', 'offers/every-2.json'],
   },
   files: {

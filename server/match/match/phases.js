@@ -253,7 +253,16 @@ export class MatchPhases {
     this.markPublic();
   }
 
-  startRound(r) {
+  startRound(r, afterStart = null) {
+    // Every round, including boss rounds. [ASSUMED] Expire nonblocking windows at the next round.
+    for (const w of this.offerWin) this._closeOffer(w);
+    this.offersDispose(); // A test-console round jump must discard the older continuation too.
+    const step = () => { this._startRoundAfterOffers(r); afterStart?.(); };
+    if (this.openOfferWindow('battleCheck', r) !== 'open') { step(); return; }
+    this._offerResume = step;
+  }
+
+  _startRoundAfterOffers(r) {
     this.phase = PHASE.ROUND_START;
     this.round = r;
     this.fields = [];
@@ -304,6 +313,14 @@ export class MatchPhases {
 
   afterRoundStart() {
     if (this.gd.spRounds().includes(this.round)) this.enterSpDraft();
-    else this.enterPrep();
+    else this.beforePrepOffers();
+  }
+
+  beforePrepOffers() {
+    // The official round start and its draw/draft finish first; only entering prep waits.
+    this.sp = null;
+    const step = () => this.enterPrep();
+    if (this.openOfferWindow('prep', this.round) !== 'open') { step(); return; }
+    this._offerResume = step;
   }
 }

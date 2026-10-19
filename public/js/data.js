@@ -292,7 +292,7 @@ export function createDataStore(opts = {}) {
     if (locale === 'zh' || !chain.length) return null;
     const e = entries.get(name);
     if (!e || e.status !== 'ready') return null;
-    const fileOverlays = chain.map((c) => overlays.get(c)?.files?.[name]).filter(Boolean);
+    const fileOverlays = chain.flatMap((c) => [overlays.get(c)?.pluginOverlay?.files?.[name], overlays.get(c)?.files?.[name]]).filter(Boolean);
     if (!fileOverlays.length) return null;
     let l = localized.get(name);
     if (!l || l.lang !== locale || l.base !== e.value) {
@@ -323,7 +323,7 @@ export function createDataStore(opts = {}) {
    * the language folder's data/i18n/<lang>.json, or — a content set with texts of its own for the language (setContent) —
    * the set's i18n/<lang>.json through its `overlay` loader; resolves to it, or null when unavailable.
    */
-  function loadOverlay(lang, url = `${base}i18n/${lang}.json`) {
+  function loadOverlay(lang, url = `${base}i18n/${lang}.json`, overlayUrl = null) {
     const own = content && content.overlay && content.langs.has(lang) ? content : null;
     const key = own ? `${own.id}|${lang}` : lang;
     if (overlayLoads.has(key)) return overlayLoads.get(key);
@@ -341,8 +341,17 @@ export function createDataStore(opts = {}) {
           if (!res || !res.ok) throw Object.assign(new Error(`HTTP ${res ? res.status : '???'}`), { status: res ? res.status : null });
           const json = await res.json();
           if (!json || typeof json !== 'object' || !json.files) throw Object.assign(new Error('not an overlay'), { badJson: true });
-          overlays.set(lang, json);
-          return json;
+          let pluginOverlay = null;
+          if (overlayUrl) {
+            try {
+              const extra = await doFetch(overlayUrl, { cache: 'no-cache' });
+              const value = extra?.ok ? await extra.json() : null;
+              if (value?.version === 1 && value.lang === lang && value.files) pluginOverlay = value;
+            } catch { /* [ASSUMED] A missing overlay leaves built-in text available. */ }
+          }
+          const result = pluginOverlay ? { ...json, pluginOverlay } : json;
+          overlays.set(lang, result);
+          return result;
         } catch (err) {
           if (transientFailure(err) && attempt < retryDelays.length) { await wait(retryDelays[attempt]); continue; }
           console.warn(`[data] ${url} unavailable (${err?.message || err}); its game texts are not applied`);
@@ -477,7 +486,7 @@ export function createDataStore(opts = {}) {
       const asked = want === 'zh' ? [] : items.filter((c) => c && canonicalLang(c.code) === c.code && c.code !== 'zh' && !seen.has(c.code) && seen.add(c.code));
       const ask = asked.map((c) => c.code);
       const seq = ++switches;
-      const got = await Promise.all(asked.map((c) => loadOverlay(c.code, typeof c.url === 'string' && c.url ? c.url : undefined)));
+      const got = await Promise.all(asked.map((c) => loadOverlay(c.code, typeof c.url === 'string' && c.url ? c.url : undefined, c.overlayUrl)));
       if (seq !== switches) return locale; // a later switch is under way
       // each language's overlay from the source in effect now (a content set's, or the server's again — a cached load
       // of either is not set again by loadOverlay)

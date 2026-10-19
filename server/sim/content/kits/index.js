@@ -151,6 +151,13 @@ export const OPERATOR_KIT_FILES = Object.freeze([
   'op-nasti.js',
   'op-necras.js',
   'op-monstr.js',
+  'op-narant.js',
+  'op-ascln.js',
+  'op-gdglow.js',
+  'op-wang.js',
+  'op-aglna2.js',
+  'op-kalts2.js',
+  'op-clemnt.js',
 ]);
 
 /**

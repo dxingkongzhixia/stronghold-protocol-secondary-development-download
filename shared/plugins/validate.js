@@ -8,7 +8,7 @@ function findNonFinite(obj, path, out) {
   for (const [k, v] of Object.entries(obj)) findNonFinite(v, `${path}.${k}`, out);
 }
 
-export function validateReferences(f, { officialOwnedSkills = true } = {}) {
+export function validateReferences(f, { officialOwnedSkills = true, skipStandIn = () => false } = {}) {
   const errors = [];
   const err = (m) => errors.push(m);
   const { config, chess, bonds, garrisons, items, bands, effects, choices, enemies, factions, waves, stages, bosses, tokens, backups } = f;
@@ -46,6 +46,10 @@ export function validateReferences(f, { officialOwnedSkills = true } = {}) {
       if (c.chessType === 'PRESET' && b?.charId !== c.charId) err(`chess ${c.chessId}: a PRESET chess's backup must be itself`);
       if (c.chessType === 'DIY' && b?.charId !== null) err(`chess ${c.chessId}: a DIY slot has no backup`);
       if (c.chessType !== 'NORMAL') continue;
+      // this fork's custom operators field themselves (no official stand-in): build-data passes them here
+      if (skipStandIn(c)) continue;
+      // the same shape (a NORMAL chess whose backup has no character) when a content set validates the vanilla data
+      if (b?.charId == null) continue;
       const r = standInRecord(c, backups);
       if (!r) { err(`chess ${c.chessId}: no stand-in ${b?.charId}@${statusKey(c.status)} in backups.json`); continue; }
       if (!r.stats || !Array.isArray(r.rangeGrid) || !r.trait) err(`chess ${c.chessId}: stand-in ${b.charId} without stats / range / trait`);

@@ -46,7 +46,7 @@ test('the manifest carries a theme and notices; the catalogue entry names them',
   const raw = cosmetic({ theme: { vars: { [TOKEN]: '#123456' } }, notices: [{ id: 'welcome', title: 'Hi', body: 'A plain-text notice' }] });
   const r = read(raw);
   assert.deepEqual(r.problems, []);
-  assert.equal(r.manifest.theme[TOKEN], '#123456');
+  assert.equal(r.manifest.themeVars[TOKEN], '#123456');
   assert.equal(r.manifest.notices.length, 1);
   const entry = pluginIndexEntry({ id: raw.id, class: 'cosmetic', status: 'loaded', source: 'plugin', manifest: r.manifest });
   assert.equal(entry.theme.vars[TOKEN], '#123456');

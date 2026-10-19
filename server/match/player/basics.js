@@ -62,9 +62,10 @@ export class PlayerBasics {
    * changes) when either does not fit the data; bots keep the defaults.
    * @param {any} loadout
    * @param {any} [ops]
+   * @param {{ merge?: boolean }} [opts] merge overlays the named operators onto the current loadout (prepLoadout)
    * @returns {boolean}
    */
-  setLoadout(loadout, ops = undefined) {
+  setLoadout(loadout, ops = undefined, opts = undefined) {
     if (this.isBot) return false;
     let opsRes = null;
     if (ops !== undefined) {
@@ -100,11 +101,13 @@ export class PlayerBasics {
       this.m.log?.warn?.(`[match ${this.m.roomCode}] loadout of ${this.playerId} ignored: ${res && res.detail}`);
       return false;
     }
-    const out = {};
+    const out = (opts && opts.merge) && this.loadout && typeof this.loadout === 'object' ? { ...this.loadout } : {};
+    if (opts && opts.merge) for (const id of Object.keys(entries)) delete out[id];
     for (const [id, e] of Object.entries(res.loadout)) out[id] = Object.freeze({ skill: e.skill, module: e.module ?? null });
     this.loadout = Object.freeze(out);
     if (opsRes) {
-      const o = {};
+      const o = (opts && opts.merge) && this.ops && typeof this.ops === 'object' ? { ...this.ops } : {};
+      if (opts && opts.merge) for (const id of Object.keys(ops || {})) delete o[id];
       for (const [id, e] of Object.entries(opsRes.ops)) o[id] = Object.freeze({ potential: e.potential, cultivate: e.cultivate });
       this.ops = Object.freeze(o);
     }

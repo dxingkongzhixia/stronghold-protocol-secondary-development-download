@@ -62,7 +62,7 @@ test('compiled assets merge under a private namespace and all files are pinned',
   assert.equal(index.units.char_x_fx_demo_guard.modes[0].attack.cast[0].effects[0], 'spark');
   const dir = path.join(f.root, 'fx-demo');
   fs.mkdirSync(dir); fs.renameSync(path.join(f.root, 'fx'), path.join(dir, 'fx'));
-  f.put('fx-demo/plugin.json', { manifest: 2, id: 'fx-demo', name: 'FX', version: '1.0.0', app: '>=0.3.0 <0.4.0', api: 1,
+  f.put('fx-demo/plugin.json', { manifest: 2, id: 'fx-demo', name: 'FX', version: '1.0.0', app: '>=0.3.0 <0.5.0', api: 1,
     class: 'cosmetic', permissions: ['assets.add'], assets: { fx: config } });
   const r = readPluginFolder(dir, { vanilla: { manifest: { version: 1, chars: {} }, sha256: 'a'.repeat(64) } });
   assert.deepEqual(r.problems, []); assert.equal(r.plugin.visual.ops[0].effects.index.version, 3);
@@ -141,7 +141,7 @@ test('DSL plugin action compiles to a normal fx event with a namespaced effect a
 
 test('registry, pack/check and studio findings accept fx-only cosmetics and warn for missing official keys', t => {
   const f = fxFixture(t);
-  const man = { manifest: 2, id: 'fx-demo', name: 'Effects', version: '1.0.0', app: '>=0.3.0 <0.4.0', api: 1, class: 'cosmetic', scope: ['room'], permissions: ['assets.add'], assets: { fx: { silentPhases: ['quiet'] } } };
+  const man = { manifest: 2, id: 'fx-demo', name: 'Effects', version: '1.0.0', app: '>=0.3.0 <0.5.0', api: 1, class: 'cosmetic', scope: ['room'], permissions: ['assets.add'], assets: { fx: { silentPhases: ['quiet'] } } };
   f.put('fx-demo/plugin.json', man);
   const vanilla = { manifest: {}, sha256: 'a'.repeat(64) };
   const loaded = readPluginFolder(path.join(f.root, 'fx-demo'), { vanilla });
@@ -156,7 +156,7 @@ test('saved content fx mapping and DSL action survive production content-set com
   const f = fxFixture(t), op = guard();
   op.fx = { unit: 'char_112_siege', skills: { 0: 'skchr_siege_3' } };
   op.kit = { dsl: { dsl: 1, talents: [{ when: 'deploy', do: [{ fx: { kind: 'plugin', id: 'flash', dur: 0.4 } }] }] } };
-  f.put('plugins/data-demo/plugin.json', { manifest: 2, id: 'data-demo', name: 'Demo', version: '1.0.0', app: '>=0.3.0 <0.4.0', api: 1,
+  f.put('plugins/data-demo/plugin.json', { manifest: 2, id: 'data-demo', name: 'Demo', version: '1.0.0', app: '>=0.3.0 <0.5.0', api: 1,
     class: 'content', scope: ['room'], permissions: ['data.add', 'dsl'], operators: ['op.json'] });
   f.put('plugins/data-demo/op.json', op);
   const registry = createPluginRegistry({ publicDir: path.join(f.root, 'public'), packsDir: path.join(f.root, 'packs'), pluginsDir: path.join(f.root, 'plugins'), dataDir: path.join(ROOT, 'data') });

@@ -2,6 +2,9 @@
 // (i18n-ignore-file: the error pages are bilingual by design, 中文 · English — docs/I18N.md)
 //
 //   * a URL longer than 4096 characters → 414; one that does not parse → 400;
+//   * /studio and /studio/… → the plugin studio (server/studio/index.js: for this machine and the local network only — any
+//     other client gets the 404 page; its API also takes POST / PUT / DELETE), when the server has one;
+//   * /x/… → a trusted plugin's activated server routes (server/plugins/trustedRuntime.js), when one is running;
 //   * any method but GET / HEAD → 405 with `Allow: GET, HEAD`;
 //   * GET /healthz → JSON status (protocol `version`, release `app`, uptime, the served `build`, the vanilla content
 //     hash `content.vanilla`, the modded content sets in use `content.sets` and — only when there are some — how many
@@ -26,7 +29,9 @@ const MAX_URL_LENGTH = 4096;
 function pluginCount(lobby) {
   let n;
   try { n = Number(lobby?.plugins?.unofficial?.()) || 0; } catch { n = 0; }
-  return n > 0 ? { plugins: n } : {};
+  let notices = false;
+  try { notices = lobby?.plugins?.hasNotices?.() === true; } catch { /* optional catalogue hint */ }
+  return { ...(n > 0 ? { plugins: n } : {}), ...(notices ? { notices: true } : {}) };
 }
 
 /** The content sets with gameplay plugins rooms hold now (DESIGN §32.6; 0 without any). */
@@ -44,7 +49,7 @@ function contentSets(lobby) {
  *   content: the server's vanilla content (server/plugins/identity.js)
  * @param {boolean} [withTraffic]
  */
-export function healthReport({ startedAt, network, registry, lobby, content = null, traffic, assetIndex, views, prior = null }, withTraffic = false) {
+export function healthReport({ startedAt, network, registry, lobby, content = null, traffic, assetIndex, views, prior = null, trusted }, withTraffic = false) {
   const report = {
     ok: true, version: PROTOCOL_VERSION, app: APP_VERSION, uptimeSec: Math.round((Date.now() - startedAt) / 1000),
     // the runtime the server is serving right now (public/js/ui/buildGuard.js): a page whose own build is
@@ -57,6 +62,7 @@ export function healthReport({ startedAt, network, registry, lobby, content = nu
     sockets: network.connectionCount, sessions: registry.size, ...lobby.stats(),
   };
   if (prior) report.prior = prior;   // bot-rehearsal prior: enabled/loaded/version + its usage counters (server/match/botPrior.js)
+  if (trusted && Object.keys(trusted).length) report.plugins = trusted;
   if (withTraffic && traffic) report.traffic = traffic.snapshot();
   // content-hashed asset URLs (assetIndex.js / assetViews.js): off, building, or ready with how many files and URLs
   if (withTraffic) report.assetHashes = assetIndex ? { ...assetIndex.stats(), views: views ? views.stats() : null } : null;
@@ -70,16 +76,21 @@ const wantsTraffic = (query) => /(?:^|&)traffic(?:=(?:1|true|yes))?(?:&|$)/i.tes
  * The request listener for `http.createServer`.
  * @param {{ serveStatic: (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse,
  *             rawPath: string, query: string) => Promise<void>,
- *           health: Parameters<typeof healthReport>[0], log: object, trustProxy?: 'auto' | boolean }} deps
- *   trustProxy: whose forwarding headers name the client (net.js clientAddress; the server's TRUST_PROXY)
+ *           health: Parameters<typeof healthReport>[0], log: object, trustProxy?: 'auto' | boolean,
+ *           csp?: string | null,
+ *           studio?: { handles: (rawPath: string) => boolean, handle: (req: any, res: any, rawPath: string, query: string) => Promise<void> } | null }} deps
+ *   trustProxy: whose forwarding headers name the client (net.js clientAddress; the server's TRUST_PROXY); studio: the
+ *   plugin studio (server/studio/index.js), or none; csp: the page policy (server/http/csp.js), or null when off
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => void}
  */
-export function createRequestHandler({ serveStatic, health, log, trustProxy = 'auto' }) {
+export function createRequestHandler({ serveStatic, health, log, trustProxy = 'auto', studio = null, csp = null, trustedRuntime = null }) {
   async function handleRequest(req, res) {
     const url = req.url || '/';
     if (url.length > MAX_URL_LENGTH) { sendError(req, res, 414, '请求地址过长 · URI too long'); return; }
     const parts = splitUrl(url);
     if (!parts) { sendError(req, res, 400, '请求地址无效 · Bad request'); return; }
+    if (trustedRuntime && parts.rawPath.startsWith('/x/') && await trustedRuntime.route(req, res, parts.rawPath)) return;
+    if (studio && studio.handles(parts.rawPath)) { await studio.handle(req, res, parts.rawPath, parts.query); return; }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.setHeader('Allow', 'GET, HEAD');
       sendError(req, res, 405, '不支持的请求方法 · Method not allowed');
@@ -95,6 +106,7 @@ export function createRequestHandler({ serveStatic, health, log, trustProxy = 'a
 
   return (req, res) => {
     setSecurityHeaders(res);
+    if (csp) res.setHeader('Content-Security-Policy', csp);
     if (health.traffic) health.traffic.meter(res, splitUrl(req.url || '/')?.rawPath || '/');
     handleRequest(req, res).catch((e) => {
       log.error('[http] request failed', e);

@@ -1744,5 +1744,17 @@
   "有未读公告": "Unread announcements",
   "房间的插件内容长时间无响应，本局模拟已结束": "The room's plugin content stopped responding; the simulation has ended",
   "房间的插件内容无法启动模拟": "The room's plugin content could not start the simulation",
-  "房间的插件内容出错，本局模拟已结束": "The room's plugin content failed; the simulation has ended"
+  "房间的插件内容出错，本局模拟已结束": "The room's plugin content failed; the simulation has ended",
+  "两个插件把同一个规则开关设成了不同的选项": "Two plugins set the same rule switch to different options",
+  "还有玩家未同意运行受信任插件": "A player has not consented to trusted plugins",
+  "服主没有启用脚本插件": "The server owner has not enabled script plugins",
+  "插件的锁文件或文件内容与服主钉住的哈希不符": "The plugin lock or files do not match the pinned hash",
+  "公网监听默认禁止受信任插件": "Trusted plugins are refused on a public listening address",
+  "两个插件注册了同一个效果": "Two plugins register the same effect",
+  "插件未声明要替换的官方技能": "The plugin did not declare the official kit it replaces",
+  "脚本未通过兼容性检查": "The script failed its portability check",
+  "商店装备偏向已激活盟约": "Shop equipment is biased toward active bonds",
+  "休整期可调整技能与模组": "Skills and modules can be changed during prep",
+  "变形同构体不占格，仅配对最左盟约装备": "Morphs use no slot and pair only with the leftmost bond item",
+  "可以卸下装备": "Equipment can be unequipped"
 }

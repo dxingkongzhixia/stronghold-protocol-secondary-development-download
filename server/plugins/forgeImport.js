@@ -134,7 +134,7 @@ import { isStepKey } from '../../shared/plugins/limits.js';
 import { FORGE_SHIM_TEXT, forgeDisplaySlot, forgePanelPage, planForgePanel } from './forgePanels.js';
 import { readForgeBehaviour } from '../../shared/plugins/rules.js';
 
-const APP_RANGE = '>=0.3.0 <0.4.0';
+const APP_RANGE = '>=0.3.0 <0.5.0';
 const DANGER_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 /** Raw zip bytes, headers included, before any entry is inflated. [ASSUMED] 64 KiB of central-directory room on top of the unpacked cap. */
 const ZIP_RAW_MAX = PLUGIN_LIMITS.pluginBytes + 64 * 1024;
@@ -384,7 +384,13 @@ function openValidationView({ root, dataDir, pluginsDir, stage }) {
       try { st = fs.statSync(abs); } catch { return; }
       if (!st.isDirectory()) return;
       if (!fs.existsSync(path.join(abs, PLUGIN_MANIFEST))) return;
-      fs.symlinkSync(abs, dest);
+      try { fs.symlinkSync(abs, dest); }
+      catch (e) {
+        // Windows without developer mode: a symbolic link needs a privilege this process may not have.
+        // A copy is enough here — the view is read-only and removed with the temp folder.
+        if (!['EPERM', 'EACCES', 'UNKNOWN'].includes(e?.code)) throw e;
+        fs.cpSync(abs, dest, { recursive: true });
+      }
     };
     if (pluginsDir && fs.existsSync(pluginsDir)) {
       for (const name of fs.readdirSync(pluginsDir)) take(name, path.join(pluginsDir, name));

@@ -189,14 +189,19 @@ test('https install: hash required before fetch, redirect manual, http and a bad
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 });
 
-test('a symlink id is not followed: status has no version, and --force renames the link', () => {
+test('a symlink id is not followed: status has no version, and --force renames the link', (t) => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-install-link-'));
   const plugins = path.join(tmp, 'plugins');
   const real = path.join(tmp, 'real');
   fs.mkdirSync(plugins);
   fs.mkdirSync(path.join(real, 'elsewhere'), { recursive: true });
   fs.writeFileSync(path.join(real, 'elsewhere', 'plugin.json'), JSON.stringify({ version: '9.9.9' }));
-  fs.symlinkSync(path.join(real, 'elsewhere'), path.join(plugins, 'demo-skin'));
+  try { fs.symlinkSync(path.join(real, 'elsewhere'), path.join(plugins, 'demo-skin')); }
+  catch (e) {
+    fs.rmSync(tmp, { recursive: true, force: true });
+    if (['EPERM', 'EACCES', 'UNKNOWN'].includes(e?.code)) { t.skip('symbolic links need a Windows privilege this process lacks'); return; }
+    throw e;
+  }
   const incoming = path.join(tmp, 'incoming-target');
   fs.mkdirSync(incoming);
   fs.symlinkSync(incoming, path.join(plugins, '_incoming'));

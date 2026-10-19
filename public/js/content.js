@@ -31,7 +31,8 @@
 //     (`vanilla: false`, its own cs), the page downloads /cs/<cs16>/index.json and every data file it lists — a file the
 //     set did not change at its plain /data/<file>?v=<8 hex> URL (cached for good), a patched one at /cs/<cs16>/… — and
 //     checks them: every file's BYTES hash to its entry (shared/sha256.js, before decoding: `res.text()` would drop a
-//     BOM), the manifest's composition hashes to the room's cs (shared/plugins/identity.js contentHashOf). Then data.js
+//     BOM), the manifest's composition — its data and translation files' hashes, its plugins and their settings — hashes
+//     to the room's cs (shared/plugins/identity.js contentHashOf), and it names no address but those two. Then data.js
 //     shows those files (setContent: every screen reads the room's data — its operators, its modes), the battle runner
 //     simulates on them (simContent / contentFor) and the page tells the room (room.contentReady { cs }; again whenever
 //     its seat shows it not ready — a reconnect); a check that fails is said once (a toast) and told too ({ ok: false }).
@@ -49,41 +50,13 @@ import { net as appNet } from './net.js';
 import { cosmetics, loadVisual, visualNow } from './cosmetics.js';
 import { PLUGINS_URL } from '../../shared/plugins/manifest.js';
 import { contentHashOf, csUrlPart, isContentHash, isContentHash as isVisualHash } from '../../shared/plugins/identity.js';
+import { resolveThemeVars, themeVarsOf } from '../../shared/plugins/theme.js';
+import { applyThemeProperties } from './themeVars.js';
 import { sha256Hex } from '../../shared/sha256.js';
 import { getLang, langChain, t, N_ } from '../../shared/i18n.js';
-import { resolveThemeVars } from '../../shared/plugins/theme.js';
-import { applyThemeProperties } from './themeVars.js';
+import { DEV_BUILD } from '../../shared/constants.js';
 
 /** The localStorage preference (`sp.pref.<key>`) of the personal cosmetic plugins: their ids. */
-/** The token names this page set from the personal plugins (removed when a plugin is switched off). */
-let themeSet = new Set();
-/** the personal + room plugin ids the current theme was resolved from (skip identical recomputes) */
-let themeKey = '';
-
-/**
- * W1 (plan C): write the design tokens of the personal cosmetic plugins that are switched on. A value is checked
- * again by shared/plugins/theme.js; the page's CSP is untouched (inline properties, no stylesheet).
- */
-appStore.subscribe(() => applyCatalogTheme());
-
-export function applyCatalogTheme() {
-  const cur = catalog.get();
-  const state = appStore.get();
-  const personalIds = new Set(personal.get().ids);
-  // the room's cosmetic plugins (room.state.content.plugins) theme the page too, like the player's own
-  const roomIds = new Set((Array.isArray(state.room?.content?.plugins) ? state.room.content.plugins : [])
-    .map((p) => (typeof p === 'string' ? p : p && typeof p.id === 'string' ? p.id : null))
-    .filter(Boolean));
-  const key = [...personalIds].sort().join(',') + '|' + [...roomIds].sort().join(',') + '|' + cur.status;
-  if (key === themeKey) return;
-  themeKey = key;
-  const winners = resolveThemeVars((Array.isArray(cur.plugins) ? cur.plugins : [])
-    .filter((p) => p && p.class === 'cosmetic' && (personalIds.has(p.id) || roomIds.has(p.id)) && p.theme && isObj(p.theme.vars))
-    .map((p) => ({ id: p.id, vars: p.theme.vars })));
-  const root = typeof document !== 'undefined' ? document.documentElement : null;
-  themeSet = applyThemeProperties(root, winners, themeSet);
-}
-
 export const PERSONAL_PREF = 'cosmetics';
 /** Waits (ms) before a visual set's document is fetched again after a transient failure (like data.js). */
 export const VISUAL_RETRY_MS = Object.freeze([600, 2000]);
@@ -131,7 +104,6 @@ export function loadCatalog({ force = false, fetch: doFetch = defaultFetch } = {
       const plugins = isObj(body) && Array.isArray(body.plugins) ? body.plugins.filter(isObj) : [];
       await loadPluginOrder();
       catalog.set({ status: 'ready', plugins, app: typeof body?.app === 'string' ? body.app : null, at: Date.now() });
-      applyCatalogTheme();
       return plugins;
     } catch (err) {
       console.warn(`[content] ${PLUGINS_URL}index.json unavailable (${err?.message || err})`);
@@ -162,6 +134,20 @@ export const unofficialPlugins = (plugins) => (Array.isArray(plugins) ? plugins.
 export const cosmeticPlugins = (plugins, scope) => (Array.isArray(plugins) ? plugins : [])
   .filter((p) => p && p.class === 'cosmetic' && p.status === 'loaded' && (!scope || (Array.isArray(p.scope) && p.scope.includes(scope))));
 
+/** A catalogue entry sets at least one theme variable this page would write. */
+export function hasThemeVars(p) {
+  const vars = themeVarsOf(p);
+  return !!vars && Object.keys(vars).length > 0;
+}
+
+/**
+ * A personal cosmetic the 外观插件 switch lists and this page applies: art (`vs`) or theme variables.
+ * [ASSUMED] A cosmetic that is only announcements is not listed — its switch would change nothing on the page.
+ */
+export function isPersonalCosmetic(p) {
+  return isVisualHash(p?.vs) || hasThemeVars(p);
+}
+
 /**
  * A plugin's name in the interface language: its name in the first language of the chain it has, else its own name.
  * @param {any} p a catalogue entry
@@ -177,8 +163,6 @@ export function pluginName(p) {
 /** The personal cosmetic plugins switched on in this browser: `{ ids }` (persisted as PERSONAL_PREF). */
 export const personal = createStore({ ids: (() => { const v = loadPref(PERSONAL_PREF, []); return isIds(v) ? v : []; })() });
 personal.subscribe((s) => savePref(PERSONAL_PREF, s.ids));
-// W1 (plan C): switching a personal plugin on or off re-applies the design tokens it declares.
-personal.subscribe(() => applyCatalogTheme());
 
 /** What the load order reads of a catalogue entry (shared/plugins/order.js OrderEntry). @param {any} p */
 const orderEntry = (p) => ({
@@ -193,7 +177,7 @@ const orderEntry = (p) => ({
  * header): ordered like a room's set — their requirements switched on too (`auto`) — or, when the choice as a whole is
  * refused (a conflict, a requirement gone: the server's plugins changed since), what still fits, taken by id
  * [ASSUMED]; `skipped`: the chosen ones left out that way. Ids the catalogue does not offer are ignored (kept switched on).
- * @param {string[]} ids @param {any[]} entries cosmeticPlugins(…, 'personal') with a `vs`
+ * @param {string[]} ids @param {any[]} entries all loaded personal cosmetics, including hidden notice-only dependencies
  * @returns {{ order: string[], auto: string[], skipped: string[] }}
  */
 export function personalSet(ids, entries) {
@@ -228,7 +212,7 @@ export function setPersonalPlugin(id, on) {
   if (on) {
     const cat = catalog.get();
     if (cat.status === 'ready' && orderModule) {
-      const entries = cosmeticPlugins(cat.plugins, 'personal').filter((p) => isVisualHash(p.vs));
+      const entries = cosmeticPlugins(cat.plugins, 'personal');
       if (entries.some((p) => p.id === id)) {
         const byId = new Map(entries.map((p) => [p.id, orderEntry(p)]));
         const r = orderModule.resolvePluginOrder([...new Set([...ids, id])].filter((x) => byId.has(x)).sort(), (x) => byId.get(x) || null);
@@ -328,17 +312,31 @@ export function installContent({ store = appStore, data = dataStore, layers = co
   /** @type {Map<string, Promise<{ doc: any } | { error: string }>>} */
   const overlays = new Map();
   let personalReq = 0;
+  /** Names this install wrote onto the document, so switching a plugin off removes them. */
+  let themeApplied = new Set();
+  const syncTheme = (order, offered) => {
+    const root = globalThis.document?.documentElement;
+    const winners = resolveThemeVars((order || []).map((id) => {
+      const p = offered?.find((x) => x.id === id);
+      return { id, vars: themeVarsOf(p) };
+    }));
+    themeApplied = applyThemeProperties(root, winners, themeApplied);
+  };
   const syncPersonal = async () => {
     const req = ++personalReq;
     const ids = personal.get().ids;
     // none switched on, or a server without plugins (never even asked for its catalogue)
-    if (!ids.length || !installedCount(store.get())) { layers.setPersonal([]); return; }
-    const offered = cosmeticPlugins(await loadCatalog({ fetch: doFetch }), 'personal').filter((p) => isVisualHash(p.vs));
-    // the set as a room's would be (requirements switched on, a conflict refused — what still fits), in its load order
+    if (!ids.length || !installedCount(store.get())) { layers.setPersonal([]); syncTheme([], []); return; }
+    // Keep hidden notice-only cosmetics in dependency lookup; filter switches and overlay fetches separately.
+    const offered = cosmeticPlugins(await loadCatalog({ fetch: doFetch }), 'personal');
+    if (req !== personalReq) return;
+    // the set as a room's would be (requirements switched on, a conflict refused — what still fits), in its load order.
+    // Theme variables are then taken in plugin-id order (the later id wins), on this page only.
     const set = personalSet(ids, offered);
     if (set.skipped.length) console.warn(`[content] personal plugins left out (a conflict or a missing requirement): ${set.skipped.join(', ')}`);
-    const entries = set.order.map((id) => offered.find((p) => p.id === id));
-    // side by side; applied in that order
+    syncTheme(set.order, offered);
+    const entries = set.order.map((id) => offered.find((p) => p.id === id)).filter((p) => p && isVisualHash(p.vs));
+    // side by side; applied in that order. A theme-only plugin has no overlay to fetch.
     for (const p of entries) if (!overlays.has(p.vs)) overlays.set(p.vs, fetchVisualDoc(p.vs, { fetch: doFetch, retryDelays }));
     const results = await Promise.all(entries.map((p) => overlays.get(p.vs)));
     const list = [];
@@ -364,9 +362,11 @@ export function installContent({ store = appStore, data = dataStore, layers = co
   const offCatalog = catalog.subscribe((c) => { if (c.at !== catalogAt) { catalogAt = c.at; if (personal.get().ids.length) syncPersonal(); } });
   if (personal.get().ids.length) syncPersonal();
   return () => {
+    ++personalReq; ++roomReq; // Drop in-flight answers before removing this install's properties and layers.
     offStore(); offPersonal(); offCatalog(); offLayers(); offFailed(); layers.onDrop(null);
     doc?.removeEventListener?.('error', onImgError, true);
     data.setView('assets', null); layers.setRoom(null); layers.setPersonal([]);
+    themeApplied = applyThemeProperties(globalThis.document?.documentElement, [], themeApplied);
   };
 }
 
@@ -390,10 +390,11 @@ const CONTENT_FAILED = N_('房间的插件内容未能通过校验，请刷新�
 /**
  * The room's content set as this page has it (header "The room's content set"): `cs` (null: the original content),
  * `status` 'idle' | 'loading' | 'ready' | 'failed', `loaded` / `total` bytes of its files, `error` (why it failed),
- * `kitted` (the operators a 自选 slot may field in it; null: the server's list).
+ * `kitted` (the operators its plugins add to a 自选 slot's list — room.state.content.kittedExtra; null: none, the server's
+ * list alone).
  */
 export const contentSet = createStore({ cs: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null });
-/** The checked set the page holds: { cs, index, values: Map<name, JSON> } (the runner's data), or null. */
+/** The checked set the page holds: { cs, index, values: Map<name, JSON>, bounds } (the runner's data), or null. */
 let held = null;
 /** Pages waiting for a content set (contentFor): cs → resolvers. */
 const waiting = new Map();
@@ -436,24 +437,34 @@ export async function fetchChecked(url, want, { fetch: doFetch, retryDelays = CO
 
 /**
  * Download and check a content set (header "The room's content set"): its manifest (its composition must hash to `cs`)
- * and every data file it lists (each one's bytes to its entry).
+ * and every data file it lists (each one's bytes to its entry), and the official-bounds snapshot it lists (bounds.official:
+ * the table the server validated the set against and its match host installs — the battle runner installs the same one,
+ * public/js/battle/runner.js loadBrowserSim; checked by its bytes like a data file; null when the manifest lists none).
  * @param {string} cs
  * @param {{ fetch?: typeof fetch, retryDelays?: readonly number[], wait?: (ms: number) => Promise<void>, timeoutMs?: number,
  *   onProgress?: (loaded: number, total: number) => void }} [opts]
- * @returns {Promise<{ cs: string, index: any, values: Map<string, any> }>} (rejects with the reason)
+ * @returns {Promise<{ cs: string, index: any, values: Map<string, any>, bounds: any }>} (rejects with the reason)
  */
-export async function loadContentSet(cs, { fetch: doFetch = defaultFetch, retryDelays = CONTENT_RETRY_MS, wait = sleep, timeoutMs = CONTENT_TIMEOUT_MS, onProgress = null } = {}) {
+export async function loadContentSet(cs, { fetch: doFetch = defaultFetch, retryDelays = CONTENT_RETRY_MS, wait = sleep, timeoutMs = CONTENT_TIMEOUT_MS, onProgress = null, consent = false } = {}) {
   if (!isContentHash(cs)) throw new Error('no content hash');
   const index = await fetchChecked(`/cs/${csUrlPart(cs)}/index.json`, null, { fetch: doFetch, retryDelays, wait, timeoutMs });
   if (!isObj(index) || index.cs !== cs || index.vanilla !== false || !isObj(index.data)) throw new Error('the manifest is not the room\'s content set');
-  const entries = Object.entries(index.data).filter(([, f]) => isObj(f) && typeof f.url === 'string' && isContentHash(f.sha256));
+  const listed = (files) => (isObj(files) ? Object.entries(files).filter(([, f]) => isObj(f) && typeof f.url === 'string' && isContentHash(f.sha256)) : []);
+  const entries = listed(index.data);
   const hashes = Object.fromEntries(entries.map(([name, f]) => [name, f.sha256]));
+  // its translation files (a plugin's operators named per language): the cs covers their hashes too
+  const langs = listed(index.i18n);
+  const i18n = Object.fromEntries(langs.map(([lang, f]) => [lang, f.sha256]));
   let again;
-  try { again = contentHashOf({ app: index.app, sim: index.sim, data: hashes, plugins: index.plugins, settings: index.settings, i18n: index.i18n }); } catch { again = null; }
+  try {
+    again = contentHashOf({ app: index.app, sim: index.sim, data: hashes, plugins: index.plugins, settings: index.settings, ...(langs.length ? { i18n } : {}), ...(isObj(index.rules) ? { rules: index.rules } : {}) });
+  } catch { again = null; }
   if (again !== cs) throw new Error('the manifest does not hash to the room\'s cs');
   // the URLs a manifest may name: this server's data files and this set's own files
   const own = `/cs/${csUrlPart(cs)}/`;
-  for (const [name, f] of entries) if (!(f.url.startsWith('/data/') || f.url.startsWith(own)) || f.url.includes('..')) throw new Error(`${name}: an address outside this server's data`);
+  for (const [name, f] of [...entries, ...langs]) if (!(f.url.startsWith('/data/') || f.url.startsWith(own)) || f.url.includes('..')) throw new Error(`${name}: an address outside this server's data`);
+  const official = listed(index.bounds).find(([name]) => name === 'official')?.[1] ?? null;
+  if (official && (!official.url.startsWith(own) || official.url.includes('..'))) throw new Error('bounds: an address outside this content set');
   const total = entries.reduce((n, [, f]) => n + (Number(f.bytes) || 0), 0);
   let loaded = 0;
   onProgress?.(0, total);
@@ -466,20 +477,38 @@ export async function loadContentSet(cs, { fetch: doFetch = defaultFetch, retryD
     }
   };
   await Promise.all(Array.from({ length: Math.min(CONTENT_PARALLEL, entries.length) }, worker));
-  return { cs, index, values };
+  const bounds = official ? await fetchChecked(official.url, official, { fetch: doFetch, retryDelays, wait, timeoutMs }) : null;
+  if (official && (!isObj(bounds) || bounds.v !== 1)) throw new Error('bounds: not an official-bounds snapshot');
+  const scripts = [];
+  const scriptEntries = (index.plugins || []).filter(p => p.files?.['@script']).map(p => [p.id,index.scripts?.[p.id]]);
+  if (scriptEntries.some(([,f]) => !isObj(f)) || scriptEntries.length !== listed(index.scripts).length) throw new Error('script list does not match cs');
+  const sandbox = index.execution === 'sandbox';
+  if (consent || sandbox) for (const [id,f] of scriptEntries) {
+    if (f.url !== `${own}scripts/${id}.json` || index.plugins.find(p => p.id === id)?.files?.['@script'] !== f.sha256) throw new Error('script descriptor not pinned by cs');
+    scripts.push(await fetchChecked(f.url,f,{fetch:doFetch,retryDelays,wait,timeoutMs}));
+  }
+  let nativeVerified = false;
+  if (scripts.length) {
+    const {verifyScripts,scriptExecution,checkBrowserScripts} = await import('../../shared/plugins/scriptLoad.js');
+    verifyScripts(scripts,index);
+    if (scriptExecution(scripts) !== (sandbox ? 'sandbox' : 'trusted')) throw new Error('script execution mode mismatch');
+    if (!sandbox) { await checkBrowserScripts(scripts,cs,doFetch); nativeVerified = true; }
+  }
+  return { cs, index, values, bounds, scripts, nativeVerified, canSim: !listed(index.scripts).length || consent || sandbox };
 }
 
 /**
- * The content set the battle runner simulates on now (public/js/battle/runner.js): `{ cs, data }` of the checked set the
- * page holds, or null (the original content: the runner loads /data/ itself).
+ * The content set the battle runner simulates on now (public/js/battle/runner.js): `{ cs, data, bounds }` of the checked
+ * set the page holds, or null (the original content: the runner loads /data/ itself).
  */
-export const simContent = () => (held ? { cs: held.cs, data: Object.fromEntries(held.values) } : null);
+export const simContent = () => (held && held.canSim !== false ? { scripts:held.scripts || [], hashInput:held.index, nativeVerified:held.nativeVerified,
+  cs: held.cs, data: Object.fromEntries(held.values), bounds: held.bounds ?? null } : null);
 
 /**
  * The content set `cs` once this page holds it — at once when it does, when its download is done when it is the one
  * loading; null when it failed, or when the room plays another (or none).
  * @param {string} cs
- * @returns {Promise<{ cs: string, data: Record<string, any> } | null>}
+ * @returns {Promise<{ cs: string, data: Record<string, any>, bounds: any } | null>}
  */
 export function contentFor(cs) {
   if (held && held.cs === cs) return Promise.resolve(simContent());
@@ -531,23 +560,37 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
     settleWaiting(null);
     if (contentSet.get().cs !== null || contentSet.get().status !== 'idle') contentSet.set({ cs: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null });
   };
-  const load = (cs) => {
+  const load = (cs, consent = false) => {
     const mine = ++req;
     if (held) { held = null; data.setContent(null); }
     settleWaiting(null);
     contentSet.set({ cs, status: 'loading', loaded: 0, total: 0, error: null, kitted: null });
-    loadContentSet(cs, { fetch: doFetch, retryDelays, wait, onProgress: (loaded, total) => { if (mine === req) contentSet.set({ loaded, total }); } })
-      .then((set) => {
+    loadContentSet(cs, { consent, fetch: doFetch, retryDelays, wait, onProgress: (loaded, total) => { if (mine === req) contentSet.set({ loaded, total }); } })
+      .then(async (set) => {
+        if (mine !== req) return;
+        if (consent && set.scripts.length) {
+          const {verifyScripts,scriptUrl} = await import('../../shared/plugins/scriptLoad.js');
+          verifyScripts(set.scripts,set.index);
+          for (const p of set.scripts) {
+            const m = JSON.parse(p.manifestSource);
+            if (m.entry?.client && !pageScripts.has(cs+':'+p.id)) {
+              if (!set.nativeVerified) throw new Error('page script bytes not checked');
+              await import(scriptUrl(cs,p.id,m.entry.client));
+              pageScripts.add(cs+':'+p.id);
+            }
+          }
+        }
         if (mine !== req) return;
         held = set;
         const i18n = isObj(set.index.i18n) ? set.index.i18n : {};
         // the set's own game texts per language (a plugin's operators named in it): checked like the data files
         const overlay = (lang) => (isObj(i18n[lang]) ? fetchChecked(i18n[lang].url, i18n[lang], { fetch: doFetch, retryDelays, wait }) : Promise.resolve(null));
         data.setContent({ id: cs, values: set.values, overlay, langs: Object.keys(i18n) });
-        contentSet.set({ status: 'ready', error: null, kitted: Array.isArray(set.index.kitted) ? set.index.kitted.filter((x) => typeof x === 'string') : null });
+        const extra = store.get()?.room?.content?.kittedExtra;
+        contentSet.set({ status: 'ready', error: null, kitted: Array.isArray(extra) ? extra.filter((x) => typeof x === 'string').slice(0, 200) : null });
         settleWaiting(cs);
-        tell(cs, true);
-      }, (err) => {
+        if (set.canSim || !store.get()?.room?.seats?.some(s => s?.playerId === store.get()?.me?.playerId)) tell(cs, true);
+      }).catch((err) => {
         if (mine !== req) return;
         console.warn(`[content] the room's content set ${cs.slice(0, 8)} did not load or check: ${err?.message || err}`);
         contentSet.set({ status: 'failed', error: String(err?.message || err).slice(0, 200) });
@@ -560,13 +603,39 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
     const cs = roomCs(s);
     const cur = contentSet.get();
     if (!cs) { if (cur.cs || held) drop(); return; }
-    if (cur.cs !== cs) { load(cs); return; }
+    const consent = !!s.room.content.trusted && hasScriptConsent(cs);
+    if (cur.cs !== cs || (held?.cs === cs && held.canSim === false && consent)) { load(cs,consent); return; }
     // the page holds the room's set, its seat does not show it (the room changed its set and back, a reconnect): again
     const seat = mySeat(s);
-    if (seat && cur.status === 'ready' && seat.content !== 'ready') tell(cs, true);
+    if (seat && cur.status === 'ready' && seat.content !== 'ready' && (!s.room.content.trusted || consent || !s.room.seats?.includes(seat))) tell(cs, true);
     else if (seat && cur.status === 'failed' && seat.content !== 'failed') tell(cs, false);
   };
   const off = store.subscribe((s) => sync(s));
   sync(store.get());
+  if (typeof window !== 'undefined') globalThis.__SP_CONTENT__ = contentHooks();
   return () => { off(); drop(); };
+}
+
+/**
+ * The page's introspection hooks (window.__SP_CONTENT__, like __SP_RUNNER__): `state()` — the content set as this page
+ * has it — always; `forgeHeldCs(cs)` — a page that claims to hold another set than the one it checked, so the runner's
+ * cs check can be watched refusing the authority (test/ui/plugins-content.e2e.test.js) — only in a dev build or a
+ * browser under automation (navigator.webdriver: the browser tests' Chrome), never on a release page.
+ * @param {{ dev?: boolean, nav?: { webdriver?: boolean } | null }} [opts]
+ */
+export function contentHooks({ dev = DEV_BUILD, nav = globalThis.navigator ?? null } = {}) {
+  /** @type {{ state: () => object, forgeHeldCs?: (cs: string) => void }} */
+  const hooks = { state: () => ({ ...contentSet.get(), held: held ? held.cs : null }) };
+  if (dev || nav?.webdriver === true) hooks.forgeHeldCs = (cs) => { if (held && isContentHash(cs)) held = { ...held, cs }; };
+  return hooks;
+}
+
+// Consent is this browser's explicit choice, independent of other seats and of server assertions.
+const pageScripts = new Set(), pageConsent = new Set();
+export function hasScriptConsent(cs, storage) {
+  try { return pageConsent.has(cs) || (storage ?? globalThis.localStorage)?.getItem('sp.plugin.consent.'+cs) === 'yes'; } catch { return pageConsent.has(cs); }
+}
+export function rememberScriptConsent(cs, accept, storage) {
+  if (accept) pageConsent.add(cs); else pageConsent.delete(cs);
+  try { storage ??= globalThis.localStorage; if (accept) storage?.setItem('sp.plugin.consent.'+cs,'yes'); else storage?.removeItem('sp.plugin.consent.'+cs); } catch { /* storage unavailable */ }
 }

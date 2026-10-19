@@ -353,7 +353,7 @@ export class Room {
         ? { seat: s.seat, playerId: s.playerId, name: s.name, role: s.role ?? null, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left, fromAi: !!s.fromAi, ...(this.modded && !s.isBot ? { content: s.content || 'loading' } : {}) }
         : null)),
       spectators: this.spectators.map((s) => ({ playerId: s.playerId, name: s.name, role: s.role ?? null, connected: s.connected, ...(this.modded ? { content: s.content || 'loading' } : {}) })),
-      ...(this.content ? { content: this.content } : {}),
+      ...(this.content ? { content: this.content.trusted ? { ...this.content, trusted: { ...this.content.trusted, consent: Object.fromEntries(this.seats.filter((s) => s && !s.isBot).map((s) => [s.seat, s.consentCs === this.content.cs])) } } : this.content } : {}),
     };
   }
 }
@@ -686,6 +686,7 @@ export class Lobby {
       case 'room.setPlugins': return this.setPlugins(session, msg);
       case 'room.setMode': return this.setMode(session, msg);
       case 'room.contentReady': return this.contentReady(session, msg);
+      case 'room.consent': return this.consent(session, msg);
       default:
         if (typeof msg.t === 'string' && msg.t.startsWith('g.')) return this.routeGameNow(session, msg);
         return fail(ERR.BAD_MSG, `unhandled type ${String(msg.t).slice(0, 32)}`);
@@ -1077,7 +1078,7 @@ export class Lobby {
       return fail(ERR.INTERNAL);
     }
     if (!r || !r.ok) return fail(r && isErrCode(r.error) ? r.error : ERR.INTERNAL, r && typeof r.detail === 'string' ? r.detail.slice(0, 200) : undefined);
-    const { cs, vs, plugins: list, warnings, bytes, dataBytes, modes } = r.set;
+    const { cs, vs, plugins: list, warnings, bytes, dataBytes, modes, trusted, execution, rules } = r.set;
     const modded = isContentHash(cs) && cs !== this.vanilla.cs;
     const frozen = (a) => Object.freeze((Array.isArray(a) ? a : []).map((p) => Object.freeze({ ...p })));
     return {
@@ -1086,6 +1087,9 @@ export class Lobby {
         vanilla: !modded,
         ...(vs ? { vs } : {}),
         plugins: frozen(list),
+        ...(trusted ? { trusted } : {}),
+        ...(execution ? { execution } : {}),
+        ...(rules ? { rules } : {}),
         warnings: Object.freeze([...(warnings || [])]),
         bytes: Number(bytes) || 0,
         ...(modded ? { dataBytes: Number(dataBytes) || 0, modes: frozen(modes) } : {}),
@@ -1155,6 +1159,22 @@ export class Lobby {
     return OK;
   }
 
+  /** Each live session consents only for its own seat and the current cs. Reconnect keeps the seat. */
+  consent(session, { cs, accept }) {
+    const room = this.roomOf(session);
+    if (!room) return fail(ERR.NOT_IN_ROOM);
+    const seat = room.seatOf(session.playerId);
+    if (!seat || seat.isBot) return fail(ERR.SPECTATOR);
+    if (!session.connected || !room.content?.trusted || room.content.cs !== cs) return fail(ERR.PLUGIN_CONSENT);
+    if (room.match) return fail(ERR.ROOM_STARTED);
+    const changed = (seat.consentCs === cs) !== accept;
+    seat.consentCs = accept ? cs : null;
+    if (changed) seat.content = null;
+    if (!accept) { seat.ready = false; seat.content = null; }
+    this.broadcastState(room);
+    return OK;
+  }
+
   addBot(session) {
     const room = this.roomOf(session);
     if (!room) return fail(ERR.NOT_IN_ROOM);
@@ -1216,6 +1236,7 @@ export class Lobby {
     if (room.hostId !== session.playerId) return fail(ERR.NOT_HOST);
     if (room.match) return fail(ERR.ROOM_STARTED);
     const humans = room.activeHumans();
+    if (room.content?.trusted && humans.some((s) => !s.isBot && s.consentCs !== room.content.cs)) return fail(ERR.PLUGIN_CONSENT);
     for (const s of humans) {
       if (s.playerId !== room.hostId && (!s.connected || !s.ready)) return fail(ERR.NOT_READY);
     }
@@ -1394,7 +1415,9 @@ export class Lobby {
     if (!this.vanilla) return { diyKitted: KITTED_CHARS };
     let n;
     try { n = Number(this.plugins?.unofficial?.()) || 0; } catch { n = 0; }
-    return { diyKitted: KITTED_CHARS, content: n > 0 ? { vanilla: this.vanilla.cs, plugins: n } : { vanilla: this.vanilla.cs } };
+    let notices = false;
+    try { notices = this.plugins?.hasNotices?.() === true; } catch { /* optional catalogue hint */ }
+    return { diyKitted: KITTED_CHARS, content: { vanilla: this.vanilla.cs, ...(n > 0 ? { plugins: n } : {}), ...(notices ? { notices: true } : {}) } };
   }
 
   // ---------------------------------------------------------------------------------------------------

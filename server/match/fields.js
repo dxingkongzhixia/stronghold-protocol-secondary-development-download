@@ -35,6 +35,7 @@ import { TICK, SNAPSHOT_EVERY } from '../sim/constants.js';
 import { layerGainRoom } from '../../shared/constants.js';
 import { uniteLeft } from '../sim/spec.js';
 import { diyTokenOwner, diyRecordOf } from '../../shared/diy.js';
+import { requiresTraitLayerAuthority } from './operatorTraits.js';
 
 export const MAX_TICKS_PER_INTERVAL = 8;
 export const INTERVAL_MS = 1000 / 30;
@@ -772,6 +773,7 @@ export function validateClientResult(spec, raw, { gd = null } = {}) {
   const bad = (reason) => ({ ok: false, reason });
   try {
     if (!spec || !raw || typeof raw !== 'object' || !raw.perPlayer || typeof raw.perPlayer !== 'object') return bad('shape');
+    if (requiresTraitLayerAuthority(spec, gd)) return bad('trait layers require server authority');
     const B = specBounds(spec, gd);
     const bossLike = spec.kind === 'boss' || spec.kind === 'hidden';
     if (!['cleared', 'timeout', 'forced'].includes(raw.reason)) return bad('reason');
