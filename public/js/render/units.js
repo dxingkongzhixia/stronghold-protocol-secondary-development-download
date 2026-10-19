@@ -90,6 +90,8 @@ import { COLORS, TIER_COLORS, ENEMY_FRAME, UNIT, PROJ, statusIconKey, statusIcon
 import { drawCrate, rowDepthKey, ROW_KEY, deviceBoxOf, DEVICE_BOX } from './tiles.js';
 
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+/** A one-clip animation role (the manifold form's combat override). */
+const loop = (name) => Object.freeze({ begin: null, loop: name, end: null });
 const DIRS = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
 /** Deploy direction of an ally from a UnitInfo / piece: `dir` (any case), else the legacy `facing` sign. */
 export function unitDir(info) {
@@ -837,7 +839,27 @@ export class UnitView {
   }
 
   _formSpec() {
-    return this.form ? FORMS[this.info.spine || this.info.defId]?.[this.form] || null : null;
+    const form = this.form || (isManifold(this.info) ? 'Default' : null);
+    const f = form ? FORMS[this.info.spine || this.info.defId]?.[form] || null : null;
+    if (f?.combat && this._manifoldCombat) return { ...f, roles: { ...f.roles, attack: loop(f.combat), skill: { ...f.roles.skill, loop: f.combat } } };
+    return f;
+  }
+
+  /** Existing 'copy' fx: select one official form, before its next attack (both board renderers). */
+  copyFrom(rec) {
+    if (!isManifold(this.info)) return;
+    const form = manifoldCopyForm(rec);
+    if (form) this.setForm(form);
+  }
+
+  _attackForm(kind) {
+    if (!isManifold(this.info)) return;
+    const form = manifoldAttackForm(kind);
+    const combat = kind === 'none' && !!(this.flags & UF.BLOCKED), changed = combat !== this._manifoldCombat;
+    this._manifoldCombat = combat;
+    // A late join / split clone has no copy event. Do not replay a transformation over its attack.
+    if (form && form !== this.form) this.setForm(form, { late: Infinity });
+    else if (changed && this.actor) this.actor.setForm(this._formSpec()?.roles || null);
   }
 
   /**
@@ -1158,6 +1180,7 @@ export class UnitView {
   /** An attack was made (b.ev 'atk'). `target` = view or null. */
   onAttack(target, now, kind) {
     if (!this.alive) return;
+    this._attackForm(kind);
     this._pendingDeployElapsed = null;
     // a one-off cast (PROJ[kind].once: 暴鸰's bomb drop) is no attack rhythm: its clip plays once at its own speed
     const once = !!PROJ[kind]?.once;
@@ -1190,6 +1213,7 @@ export class UnitView {
    */
   windUp(lead, kind) {
     if (!this.alive || !this.actor || !this.spineReady) return false;
+    this._attackForm(kind);
     const ok = this.actor.windUp(this.atkInterval, lead, !!PROJ[kind]?.once);
     if (ok && this.imp) this.imp.dirty = true;
     return ok;

@@ -83,6 +83,13 @@ const dollRoles = (idle, die, attack = null) => Object.freeze({
   attackDown: null, skill: null,
 });
 export const FORMS = Object.freeze({
+  // 流形 presentation only (§34.31). Official token prefab: Default is the unprefixed model,
+  // Melee / Melee_S3 replace its animation keys with A_*, Range / Range_S2 with B_*.
+  token_10030_mlyss_wtrman: Object.freeze({
+    Default: Object.freeze({ roles: { ...clipSet('Idle_1', null, 'Stun', 'Attack'), deploy: 'Start', stun: loop('Stun') } }),
+    Melee: Object.freeze({ change: 'Change_A', combat: 'A_Combat', roles: { ...clipSet('A_Idle', null, 'Die', 'A_Attack'), deploy: 'A_Start', stun: loop('A_Stun'), attackDown: null } }),
+    Range: Object.freeze({ change: 'Change_B', combat: 'B_Combat', roles: { ...clipSet('B_Idle', null, 'B_Die', 'B_Attack'), deploy: 'B_Start', stun: loop('B_Stun'), attackDown: null } }),
+  }),
 
 	// 假想敌：镜膜 (GitHub #481, PR #613): its first silence drops the max-HP bonus for good; the model
 	// switches to the stopped look (停转). clipless start/end — the sim owns the rule (enemies/reflection.js).
