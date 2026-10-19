@@ -218,6 +218,13 @@ export function compileEffect(desc, lib = {}) {
   def.maxLifetime = num(pe._maxLifetime, -1);
   def.isLoop = on(pe._isLoop);
   def.spawn = num(def.pe?._spawnLocation, 0) | 0;
+  // a ground-placed effect sits on its point: the client's Effect._InitLocationFromEntity sets the effect root's
+  // localPosition to the spawn location (Transform.set_localPosition — GameAssembly of 2026-09-13, round 46's
+  // disassembly), so the root's authored position is no offset of it. 萨卡兹枯朽战士's pool enemy_nhpbr_attack_range is
+  // saved with its root 10 tiles under the board and drew nowhere near the pool (0.3.1). Only the ground-placed roots
+  // (15 of the 199 prefabs of the used set with a root offset): the projectiles' own effects (155) and the other spawn
+  // locations keep it until each is checked [ASSUMED]
+  def.placedRoot = def.pe && !def.proj && GROUND_SPAWNS.has(def.spawn) ? rootIdx : -1;
   // ParticleEffect `_holdByOwner`: its owner holds it — the effect moves with the unit (render/vfx/wiring.js playOn)
   def.holdByOwner = on(def.pe?._holdByOwner);
   def.rotateType = num(def.pe?._rotateType, 0) | 0;
