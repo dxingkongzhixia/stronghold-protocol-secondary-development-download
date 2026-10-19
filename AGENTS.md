@@ -97,7 +97,7 @@ node server/index.js            # http://localhost:3000  (npm run dev = --watch)
 #          the full suite needs .git, so it cannot pass in a git-less dev tree)
 cd <the same directory as above, or D:\DOTK\_merge-scratch on the desktop>
 node tools/build-data.mjs --offline     # must leave data/ byte-for-byte unchanged
-node --test                             # the whole suite  (~6828 registered cases, 7193 with loops; 15 skipped on the desktop store; 0 fail — §4)
+npm test                                # the whole suite (8194 cases / 8152 pass / 0 fail / 42 skipped, desktop store 2026-10-20; `npm test`, not bare `node --test`, which also runs test/fixtures/**)
 node tools/kit-coverage.mjs --missing   # every chess has a kit, every skill covered (must be empty)
 node tools/i18n.mjs check en --strict   # English UI pack complete (0 missing, 0 errors)
 node tools/doctor.mjs                   # environment diagnosis (exit 0)

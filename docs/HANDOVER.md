@@ -61,7 +61,7 @@ node server/index.js            # http://localhost:3000   (npm run dev = --watch
 
 # 2. Verify (this checkout has .git + node_modules, so the whole suite runs here)
 node tools/build-data.mjs --offline   # must leave data/ byte-for-byte unchanged
-node --test                            # the full suite (~6828 registered cases, 7193 with loops; 0 failures on the desktop store — the laptop's environment-only failures are explained in PROJECT-STATE.md §9)
+npm test                               # the full suite (8194 cases / 8152 pass / 0 fail / 42 skipped on the desktop store, 2026-10-20; bare `node --test` would also run test/fixtures/**, use `npm test`)
 node tools/kit-coverage.mjs --missing  # every chess has a kit, every skill covered
 node tools/i18n.mjs check en --strict  # English UI pack complete
 node tools/doctor.mjs                  # environment diagnosis, exit 0
@@ -83,7 +83,7 @@ still applies on the owner's machine; in a single checkout the two are the same 
 |---|---|---|
 | 1 | Read **this file**, then [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) (the one-page state) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (question → doc → file) | ~30 minutes; you now know where everything is |
 | 2 | `npm install` then `node server/index.js` | <http://localhost:3000> serves; `GET /healthz` returns the version + build hash |
-| 3 | `node --test` (needs `.git` + `node_modules`) | 6828 registered cases (7193 run) / 7178 pass / **0 fail** / 15 skipped on the desktop store (2026-10-18); the laptop sees 4 **environment-only** failures, explained in `PROJECT-STATE.md` §9 — read that before chasing a red run |
+| 3 | `npm test` (needs `.git` + `node_modules`) | 8194 cases / 8152 pass / **0 fail** / 42 skipped on the desktop store (2026-10-20); `npm run ci` covers the same plus smoke / lint / imports / typecheck. Bare `node --test` also runs `test/fixtures/**` — don't use it |
 | 4 | `node tools/doctor.mjs`, `node tools/kit-coverage.mjs --missing`, `node tools/i18n.mjs check en --strict` | exit 0 / no gaps (the gates in §5) |
 | 5 | `node tools/check-delivery.mjs --live` | the asset chain order + cache-first, measured in a real browser (needs the live site reachable) |
 | 6 | Read §9 (the traps) **before** touching rendering, assets or deployment | each row is a mistake that already cost a debugging session |
@@ -228,6 +228,8 @@ Root layout (both trees are identical for every tracked file; §2 explains the s
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **fork-only mechanisms** (what is ours, where it lives, how to extend it, the tests that pin it, the merge "must not be lost" note). |
 | [`docs/MATCHMAKING.md`](MATCHMAKING.md) | the **decision record** §0–§49 (accounts, matchmaking, the custom operators, the community surface, the merge blacklist §22, #488 §39.2, stats §40, the 2026-10 rules §45–§47, the fx batch §48–§49). |
 | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | the chronological upstream-merge log + the **never-merge list (§0)** + the per-batch skip reasons. |
+| [`docs/PLUGINS.md`](PLUGINS.md) · [`docs/PLUGIN-API.md`](PLUGIN-API.md) · [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) · [`docs/PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | the plugin system: cosmetic / content / script / ui classes, content sets (`cs`), the studio, Forge import, the frozen API surface and the DSL. |
+| [`docs/SKINS.md`](SKINS.md) | operator skins: the cosmetic overlay, the picker, the other-players setting, and the local official-outfit extractor. |
 | [`docs/DESIGN.md`](DESIGN.md) → [`docs/design/`](design/) + [`docs/history/`](history/) | the normative game rules (index + current rules + per-release revisions). |
 | [`docs/DATA.md`](DATA.md) | every `data/*.json` field and how it is generated. |
 | [`docs/SIM.md`](SIM.md) | the battle engine reference (`server/sim`): units, buffs, damage, hooks, skills, professions. |

@@ -56,11 +56,12 @@ Conventions used below:
 These upstream commits/features are **excluded by the owner** and must not be merged (or, if re-applied, must be
 reverted):
 
-> **2026-10-18 owner decision — the plugin cluster is back in scope.** The plugin / Forge system, the studio battle
-> sandbox / test console and the plugin operators' official art are **no longer blacklisted**: they are being merged
-> for compatibility (batches P0… in §13.10). The plugin-serving docs (`docs/PLUGINS.md`, `plugins/`) and the
-> `/plugins/index.json` + `/cs/<cs16>/index.json` routes are therefore expected in this tree again. Every **other** row
-> of this list still stands.
+> **2026-10-18 owner decision — the plugin cluster is back in scope; merged 2026-10-19.** The plugin / Forge
+> system, the studio battle sandbox / test console, Worker hosting, the plugin operators' official art and **operator
+> skins** are **no longer blacklisted** and are now part of `ours` (`plugin-stack-tip` → `2e37b1407`; see §13.10 and
+> `docs/PROJECT-STATE.md` §10.1). The plugin-serving docs (`docs/PLUGINS.md`, `plugins/`) and the
+> `/plugins/index.json` + `/cs/<cs16>/index.json` routes are expected in this tree. Every **other** row of this list
+> still stands.
 
 | Item | Upstream evidence | Why never |
 |---|---|---|
