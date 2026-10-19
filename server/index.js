@@ -50,7 +50,7 @@ import { StatsService } from './stats.js';
 import { TrainingStore } from './training/store.js';
 import { setTrainingSink } from './training/record.js';
 import { configurePrior, priorStatus } from './match/botPrior.js';
-import { ADMIN_HTML, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
+import { ADMIN_HTML, ADMIN_CSP_HASH, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
 import { createSpeedProbe } from './speed.js';
 import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from './mirrors.js';
 import { clientAddress } from './net.js';
@@ -374,6 +374,11 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       return;
     }
     const body = Buffer.from(ADMIN_HTML);
+    if (sitePolicy && ADMIN_CSP_HASH) {
+      // the page's own inline script: the site policy hashes import maps only (server/http/csp.js)
+      res.setHeader('Content-Security-Policy', sitePolicy.replace(/script-src ([^;]*)/,
+        (m, v) => `script-src ${v} 'sha256-${ADMIN_CSP_HASH}'`));
+    }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
     res.end(req.method === 'HEAD' ? undefined : body);
   }

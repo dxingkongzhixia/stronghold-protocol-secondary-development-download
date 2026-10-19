@@ -10,7 +10,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { DIFFICULTY_NAMES, MAX_SEATS } from '../shared/constants.js';
 import { presenceOnline } from './net.js';
 
@@ -1404,3 +1404,13 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
 </script>
 </body></html>
 `;
+
+/**
+ * The sha256 of the page's one inline script, for its Content-Security-Policy.
+ * The site policy hashes import maps only (server/http/csp.js), so the admin route adds this hash itself —
+ * without it the browser blocks the script and the page shows empty panels.
+ */
+export const ADMIN_CSP_HASH = (() => {
+  const m = /<script>([\s\S]*?)<\/script>/.exec(ADMIN_HTML);
+  return m ? createHash('sha256').update(m[1]).digest('base64') : null;
+})();

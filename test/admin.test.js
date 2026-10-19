@@ -3,7 +3,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { statusOf, buildSnapshot, buildPluginSnapshot, buildPublicSnapshot, tokenMatches, ADMIN_HTML } from '../server/admin.js';
+import { createHash } from 'node:crypto';
+import { statusOf, buildSnapshot, buildPluginSnapshot, buildPublicSnapshot, tokenMatches, ADMIN_HTML, ADMIN_CSP_HASH } from '../server/admin.js';
 import { openMemoryDb } from '../server/db.mjs';
 import { AuthService } from '../server/auth.js';
 import { SessionRegistry } from '../server/net.js';
@@ -233,7 +234,15 @@ test('GET /admin + /admin/api/state are token-gated', async () => {
     assert.equal((await fetch(`${base}/admin/api/origins?token=nope`)).status, 403, 'so is the origins config');
     const html = await fetch(`${base}/admin?token=testtok`);
     assert.equal(html.status, 200);
-    assert.match(await html.text(), /服务器管理/);
+    const page = await html.text();
+    assert.match(page, /服务器管理/);
+    // The page's one inline script must be allowed by the response's CSP (the site policy hashes import
+    // maps only). A missing hash makes every panel render empty in a browser, while the JSON API stays fine.
+    const inline = /<script>([\s\S]*?)<\/script>/.exec(page)?.[1];
+    assert.ok(inline, 'the admin page carries its script inline');
+    const digest = createHash('sha256').update(inline).digest('base64');
+    assert.equal(ADMIN_CSP_HASH, digest);
+    assert.match(html.headers.get('content-security-policy') || '', new RegExp(`'sha256-${digest.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}'`));
     const state = await fetch(`${base}/admin/api/state?token=testtok`);
     assert.equal(state.status, 200);
     const j = await state.json();
