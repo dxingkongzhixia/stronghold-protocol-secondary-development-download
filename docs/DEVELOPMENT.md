@@ -20,6 +20,10 @@ restate the upstream design — it points at it:
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **the fork-only mechanisms catalog** (what is ours, where it lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) — see §12 |
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | the end-to-end recipe for adding a custom operator |
 | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | the authoring handbook for bonds / strategies / bounty leaders / operators and the 资料库 (CODEX) browser (Chinese) |
+| [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | **plugin development guide** (Chinese): manifest, classes, cosmetic/content/ui/script, local checks, pack and publish |
+| [`docs/FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) | **Forge pack development guide** (Chinese): pack layout, clean-import rules, scripts, UI panels, report and verification |
+| [`docs/FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) | the Forge compatibility matrix and the explicit unsupported list |
+| [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) | plugin architecture, security boundaries, admin console and residual risks |
 | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | how we research/change/test/deploy, the merge discipline, and the GitHub/Gitee push |
 | [`docs/DEPLOY.md`](DEPLOY.md) | upstream deployment (Windows host, Docker, proxy) |
 
@@ -566,3 +570,10 @@ npm run ci
 ```
 
 A dedicated engineering review of this plugin stack — architecture, security boundaries, residual risks and the verification blind spots — is in [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md).
+
+### 15.4 Plugin development and Forge-pack handbooks
+
+- **Normal plugins** (cosmetic / content / ui / script / lang): read [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md). It starts from `node tools/plugin.mjs new …`, explains the manifest and each class, the sandbox script lock/consent gates, local checks, packaging and the browser E2E.
+- **Forge packs**: read [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md). It explains the pack layout, the products an import produces, the clean-import field rules, the scripts/panels/i18n boundaries, and how to read `IMPORT-REPORT.md` / `--json`.
+- **What cannot be imported**: the field-level matrix is [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md). In short, `server` / `routes` / `assets` / `forms` / `fx` / `behaviour` / `combat` / `layer` are refused by design; modules, potentials, summons and some base fields are dropped with a report entry.
+- **Operations checks**: `/admin` → 插件与内容 shows installed plugins, compatibility, skipped plugins and warnings; the full snapshot is read-only.

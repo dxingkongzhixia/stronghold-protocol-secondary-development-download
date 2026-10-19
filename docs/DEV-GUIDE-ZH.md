@@ -40,6 +40,11 @@
 | `docs/MATCHMAKING.md` | 中 | **野排（搜寻队友）**：账号 / SQLite / 匹配池 / 协议 / 客户端改动记录（本次新增功能） |
 | `docs/DEPLOY.md` | 英 | 部署：防火墙、开机自启、反向代理、Docker |
 | `docs/research/` | 中/英 | 官方规则、数据、界面的调研原始记录（`00-INDEX.md` 起步） |
+| `docs/PLUGIN-GUIDE.md` | 中 | 面向玩家的插件工作台/命令行新手指南 |
+| `docs/PLUGIN-DEV-GUIDE.md` | 中 | **普通插件开发**：manifest、类别、内容/外观/UI/脚本、检查与打包 |
+| `docs/FORGE-PLUGIN-DEV-GUIDE.md` | 中 | **Forge 导入包开发**：包结构、可导入字段、脚本/面板、报告与验证 |
+| `docs/FORGE-COMPATIBILITY.md` | 中 | Forge 兼容矩阵与明确不支持清单 |
+| `docs/PLUGIN-REVIEW.md` | 中 | 插件体系架构、安全边界、运营台与残余风险 |
 | `shared/protocol.js` | — | **线协议即规范**（`C2S` / `S2C` 表 + 校验器） |
 | **`docs/DEV-GUIDE-ZH.md`（本文）** | 中 | 结构地图 + 二次开发手册 + 优化建议 |
 
@@ -609,3 +614,10 @@ npm run ci
 ```
 
 插件 / Forge 体系的架构、安全边界、残余风险与验证盲区，另见 [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md)。
+
+### 11.4 插件开发文档
+
+- **普通插件**：从 `node tools/plugin.mjs new …` 开始，manifest、类别、外观/内容/UI/脚本、sandbox lock、检查和打包，见 [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)。
+- **Forge 导入包**：包结构、产品拆分、干净导入字段、脚本/面板边界、`IMPORT-REPORT.md` 阅读和导入后验证，见 [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md)。
+- **Forge 兼容矩阵**：字段级支持/丢弃/拒绝清单，见 [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md)。`server` / `routes` / `assets` / `forms` / `fx` / `behaviour` / `combat` / `layer` 按设计拒绝；modules / potentials / summons 等会报告后丢弃。
+- **运营检查**：`/admin` →「插件与内容」显示兼容性、skipped 和 warnings；该页面只读。
