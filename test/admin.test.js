@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { statusOf, buildSnapshot, buildPublicSnapshot, tokenMatches, ADMIN_HTML } from '../server/admin.js';
+import { statusOf, buildSnapshot, buildPluginSnapshot, buildPublicSnapshot, tokenMatches, ADMIN_HTML } from '../server/admin.js';
 import { openMemoryDb } from '../server/db.mjs';
 import { AuthService } from '../server/auth.js';
 import { SessionRegistry } from '../server/net.js';
@@ -293,7 +293,7 @@ test('POST /admin/api/notify pushes sys.notice to the live sessions (scope, guar
 // 后台控制台 (docs/MATCHMAKING.md §12.1, 2026-10-15): the page went from one long scrolling column to a sidebar
 // console. These pin the INTERFACE only — the snapshot API, the notify / bug routes and the read-only stance are
 // unchanged (the two tests above still cover them).
-test('the admin page is a self-contained console: six views, hash routing, searchable tables', () => {
+test('the admin page is a self-contained console: nine views, hash routing, searchable tables', () => {
   const html = ADMIN_HTML;
   const count = (re) => (html.match(re) || []).length;
   // still one self-contained document — no external stylesheet, script or font
@@ -302,13 +302,13 @@ test('the admin page is a self-contained console: six views, hash routing, searc
   // the strings the route tests rely on
   assert.match(html, /服务器管理/);
   assert.match(html, /\/admin\/api\/bug\/image\//);
-  // sidebar: eight nav buttons, each with its section
-  for (const v of ['overview', 'rooms', 'accounts', 'online', 'notice', 'bugs', 'speed', 'origins']) {
+  // sidebar: nine nav buttons, each with its section
+  for (const v of ['overview', 'rooms', 'accounts', 'online', 'notice', 'bugs', 'plugins', 'speed', 'origins']) {
     assert.ok(html.includes(`id="view-${v}"`), `section #view-${v} exists`);
     assert.ok(html.includes(`data-view="${v}"`), `nav button for ${v}`);
   }
-  assert.equal(count(/<button class="nav__item" data-view="/g), 8, 'exactly eight nav buttons');
-  assert.equal(count(/class="view"/g), 8, 'exactly eight view sections');
+  assert.equal(count(/<button class="nav__item" data-view="/g), 9, 'exactly nine nav buttons');
+  assert.equal(count(/class="view"/g), 9, 'exactly nine view sections');
   // one view at a time, hash-routed (reload / bookmark / back land on the same view)
   assert.ok(html.includes('hashchange') && html.includes('setView(location.hash'), 'hash routing');
   assert.ok(html.includes("el('viewTitle')") && html.includes("el('viewSub')"), 'the header follows the view');
@@ -340,4 +340,27 @@ test('the admin page is a self-contained console: six views, hash routing, searc
   for (const route of ['/admin/api/notify', '/admin/api/bug/status']) {
     assert.ok(html.includes(route + '?token='), `${route} is wired`);
   }
+});
+
+
+test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and the owner policy', () => {
+  const registry = {
+    plugins: () => [{
+      id: 'demo', class: 'content', status: 'loaded', bytes: 2048,
+      manifest: { name: 'Demo', version: '1.2.3', api: 2, app: '>=0.3.0 <0.5.0', scope: ['room'], permissions: ['data'], notices: [{ id: 'n1', title: 'Hi', body: 'Body', date: '2026-10-19' }] },
+      content: {},
+    }],
+    report: () => ({ skipped: [{ id: 'bad', problems: ['no manifest'] }], warnings: ['one warning'] }),
+  };
+  const policy = { get: () => ({ rooms: 'host', default: [], allow: ['*'], classes: { cosmetic: true, content: true }, maxSets: 4, allowIncompatible: false }) };
+  const p = buildPluginSnapshot({ registry, policy });
+  assert.equal(p.installed[0].id, 'demo');
+  assert.equal(p.installed[0].name, 'Demo');
+  assert.equal(p.installed[0].hasContent, true);
+  assert.deepEqual(p.installed[0].notices, [{ id: 'n1', title: 'Hi', body: 'Body', date: '2026-10-19' }]);
+  assert.equal(p.skipped[0].id, 'bad');
+  assert.deepEqual(p.warnings, ['one warning']);
+  assert.equal(p.policy.rooms, 'host');
+  assert.equal(p.policy.maxSets, 4);
+  assert.deepEqual(buildPluginSnapshot(null).installed, []);
 });

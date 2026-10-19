@@ -51,9 +51,9 @@ export function statusOf(session, { lobby, matchmaker, now = Date.now() }) {
 /**
  * A JSON-serializable snapshot of accounts + live sessions + rooms.
  * @param {{ registry: any, lobby: any, matchmaker?: any, auth: any, community?: any, bugStatus?: string|null,
- *   bugSort?: string, now?: number }} deps
+ *   bugSort?: string, now?: number, plugins?: { registry?: any, policy?: any }|null }} deps
  */
-export function buildSnapshot({ registry, lobby, matchmaker, auth, community = null, bugStatus = null, bugSort = 'status', now = Date.now() }) {
+export function buildSnapshot({ registry, lobby, matchmaker, auth, community = null, bugStatus = null, bugSort = 'status', now = Date.now(), plugins = null }) {
   const mm = matchmaker || (lobby && lobby.mm) || null;
   const sessions = [...registry.all()];
   const liveByAccount = new Map();
@@ -107,6 +107,23 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
     auto: !!r.auto,
     humans: r.seats.filter((x) => x && !x.left && !x.isBot).length,
     bots: r.seats.filter((x) => x && !x.left && x.isBot).length,
+    // Operations console (read-only): what content / appearance / script set this room is playing.
+    content: r.content ? {
+      cs: r.content.cs,
+      vanilla: r.content.vanilla !== false,
+      vs: r.content.vs || null,
+      modeId: r.content.modeId || null,
+      plugins: Array.isArray(r.content.plugins)
+        ? r.content.plugins.map((p) => ({ id: p.id, version: p.version || null, class: p.class || null, hash: p.hash || null }))
+        : [],
+      trusted: !!r.content.trusted,
+      consent: r.content.trusted && r.content.trusted.consent
+        ? Object.values(r.content.trusted.consent).filter(Boolean).length
+        : null,
+      consentTotal: r.content.trusted && r.content.trusted.consent
+        ? Object.keys(r.content.trusted.consent).length
+        : null,
+    } : null,
   }));
 
   // SP_VERIFY (docs): the server re-simulates a sample of client battle results and uses its own on a mismatch —
@@ -132,7 +149,41 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
   const bugs = community && typeof community.listBugReports === 'function' ? community.listBugReports({ status: bugStatus, sort: bugSort, limit: 100 }) : [];
   const bugCounts = community && typeof community.bugReportCounts === 'function' ? community.bugReportCounts() : { new: 0, triaged: 0, fixed: 0, total: 0 };
 
-  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, bugs, bugCounts, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [] };
+  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, bugs, bugCounts, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [], plugins: buildPluginSnapshot(plugins) };
+}
+
+/** Read-only operations view of the plugin system: installed entries, skipped/warnings and the owner policy. */
+export function buildPluginSnapshot(info = {}) {
+  const { registry, policy } = info || {};
+  const list = registry && typeof registry.plugins === 'function' ? registry.plugins() : [];
+  let report = { skipped: [], warnings: [] };
+  try { report = registry?.report?.() || report; } catch { /* optional diagnostics */ }
+  let ownerPolicy = null;
+  try { ownerPolicy = policy?.get?.() || null; } catch { /* optional policy */ }
+  return {
+    installed: list.map((p) => {
+      const m = p.manifest || {};
+      const name = typeof m.name === 'string' ? m.name : (m.name && (m.name.zh || m.name.en)) || p.id;
+      const permissions = Array.isArray(m.permissions) ? m.permissions
+        : (m.permissions && typeof m.permissions === 'object' ? Object.keys(m.permissions) : []);
+      return {
+        id: p.id, name, class: p.class, status: p.status, version: m.version || null,
+        app: m.app || null, api: m.api ?? null, scope: Array.isArray(m.scope) ? m.scope : null,
+        permissions, bytes: Number.isFinite(p.bytes) ? p.bytes : null,
+        hasContent: !!p.content, hasScript: !!p.script, trusted: p.class === 'trusted',
+        missing: p.missing === true,
+        notices: Array.isArray(m.notices) ? m.notices.slice(0, 20).map((n) => ({
+          id: n?.id ?? null, title: n?.title ?? null, body: n?.body ?? null, date: n?.date ?? null,
+        })) : [],
+      };
+    }),
+    skipped: Array.isArray(report.skipped) ? report.skipped : [],
+    warnings: Array.isArray(report.warnings) ? report.warnings : [],
+    policy: ownerPolicy ? {
+      rooms: ownerPolicy.rooms, default: ownerPolicy.default || [], allow: ownerPolicy.allow || [],
+      classes: ownerPolicy.classes || {}, maxSets: ownerPolicy.maxSets, allowIncompatible: !!ownerPolicy.allowIncompatible,
+    } : null,
+  };
 }
 
 /**
@@ -493,6 +544,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       <button class="nav__item" data-view="online"><i>◎</i>在线<em id="navOnline">0</em></button>
       <button class="nav__item" data-view="notice"><i>✦</i>通知<em id="navNotice">0</em></button>
       <button class="nav__item" data-view="bugs"><i>⚑</i>反馈<em id="navBugs">0</em></button>
+      <button class="nav__item" data-view="plugins"><i>◆</i>插件与内容<em id="navPlugins">0</em></button>
       <div class="nav__sect">诊断</div>
       <button class="nav__item" data-view="speed"><i>⚡</i>测速</button>
       <button class="nav__item" data-view="origins"><i>⇄</i>来源配置</button>
@@ -544,6 +596,21 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       </section>
     </section>
 
+    <section class="view" id="view-plugins" hidden>
+      <div class="two">
+        <section class="panel"><h2>插件概览</h2><div class="panel__body" id="pluginSummary"></div></section>
+        <section class="panel"><h2>服务器策略</h2><div class="panel__body" id="pluginPolicy"></div></section>
+      </div>
+      <section class="panel">
+        <h2>已安装插件<em id="pluginCount"></em></h2>
+        <div class="tablewrap"><table><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>版本</th><th>状态</th><th>作用域</th><th>内容</th><th>脚本/信任</th><th>大小</th></tr></thead><tbody id="pluginBody"></tbody></table></div>
+      </section>
+      <section class="panel">
+        <h2>房间内容与脚本</h2>
+        <div class="tablewrap"><table><thead><tr><th>房间</th><th>内容集 cs</th><th>外观集 vs</th><th>模式</th><th>插件</th><th>脚本/信任</th><th>同意</th></tr></thead><tbody id="roomContentBody"></tbody></table></div>
+      </section>
+    </section>
+
     <section class="view" id="view-accounts" hidden>
       <section class="panel">
         <h2>注册账号<em id="acctCount">—</em></h2>
@@ -585,6 +652,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
           <div class="notice-note">发送后内容同时作为该条目摘要，记入大厅「更新日志」的下一小版本（如 0.2.1）。</div>
         </div>
         <div class="notice-hist" id="noticeHist"></div>
+      </section>
+      <section class="panel">
+        <h2>插件公告（只读）</h2>
+        <div class="notice-hist" id="pluginNotices"></div>
       </section>
     </section>
 
@@ -677,10 +748,11 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     online: ['在线','当前在线会话（含游客）'],
     notice: ['通知','向在线玩家推送公告，并保留发送历史'],
     bugs: ['反馈','玩家提交的问题报告与处理状态'],
+    plugins: ['插件与内容','已安装插件、服务器策略、房间内容集与脚本信任状态'],
     speed: ['测速','中继与 GitHub 镜像的实测速率 · 与客户端同一套口径'],
     origins: ['来源配置','中继与镜像地址 · 改完即时生效，不用重启']
   };
-  var VIEW_ORDER = ['overview','rooms','accounts','online','notice','bugs','speed','origins'];
+  var VIEW_ORDER = ['overview','rooms','accounts','online','notice','bugs','plugins','speed','origins'];
   // 表格列：[表头, 排序键]（排序键为空 = 该列不可排序，只能搜索）
   var COLS = {
     rooms: [['房间码','code'],['模式','mode'],['难度','difficulty'],['状态',''],['类型',''],['玩家','humans'],['AI','bots']],
@@ -807,6 +879,49 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     };
   }
 
+  function renderPlugins(d) {
+    var p = d.plugins || { installed: [], skipped: [], warnings: [], policy: null };
+    var list = Array.isArray(p.installed) ? p.installed : [];
+    var skipped = Array.isArray(p.skipped) ? p.skipped : [];
+    var warnings = Array.isArray(p.warnings) ? p.warnings : [];
+    var scripts = list.filter(function (x) { return x.hasScript || x.trusted; });
+    el('pluginSummary').innerHTML =
+      kv('已安装', list.length + ' 个')
+      + kv('加载失败 / 跳过', skipped.length + ' 个')
+      + kv('警告', warnings.length + ' 个')
+      + kv('房间正在使用内容集', d.rooms.filter(function (r) { return r.content && !r.content.vanilla; }).length + ' 个')
+      + kv('脚本 / 信任插件', scripts.length + ' 个');
+    el('pluginPolicy').innerHTML = p.policy ? (
+      kv('房间插件', p.policy.rooms)
+      + kv('允许范围', (p.policy.allow || []).join(', ') || '全部')
+      + kv('默认内容集', (p.policy.default || []).join(', ') || '无')
+      + kv('class 开关', Object.keys(p.policy.classes || {}).map(function (k) { return k + '=' + (p.policy.classes[k] ? '开' : '关'); }).join(' · ') || '无')
+      + kv('内容集上限', p.policy.maxSets)
+      + kv('允许不兼容', p.policy.allowIncompatible ? '是' : '否')
+    ) : '<div class="empty">无插件策略（默认）</div>';
+    el('pluginCount').textContent = ' · ' + list.length + ' 个';
+    el('pluginBody').innerHTML = list.map(function (x) {
+      return row([
+        cell(esc(x.id), 'mono'), cell(esc(x.name || x.id)), cell(esc(x.class || '')), cell(esc(x.version || '—')),
+        cell(x.status === 'loaded' ? '<span class="pill yes">已加载</span>' : '<span class="pill">' + esc(x.status || '') + '</span>'),
+        cell(esc((x.scope || []).join(', ') || '—')), cell(x.hasContent ? '是' : '—'),
+        cell(x.trusted ? '<span class="pill no">原生信任</span>' : (x.hasScript ? '<span class="pill">沙箱脚本</span>' : '—')),
+        cell(x.bytes == null ? '—' : (Math.round(x.bytes / 1024) + ' KB'))
+      ]);
+    }).join('') || '<tr><td colspan="9" class="empty">还没有安装插件</td></tr>';
+    var withContent = d.rooms.filter(function (r) { return r.content; });
+    el('roomContentBody').innerHTML = withContent.map(function (r) {
+      var c = r.content;
+      var plugs = (c.plugins || []).map(function (x) { return x.id + (x.version ? '@' + x.version : ''); }).join(', ') || '—';
+      var script = c.trusted ? '<span class="pill no">原生信任</span>' : (c.plugins || []).some(function (x) { return x.class === 'script'; }) ? '<span class="pill">沙箱脚本</span>' : '—';
+      var consent = c.trusted ? (c.consent == null ? '—' : c.consent + '/' + c.consentTotal) : '—';
+      return row([cell(esc(r.code), 'mono'), cell(c.vanilla ? '原版' : '<span class="mono" title="' + esc(c.cs) + '">' + esc(String(c.cs).slice(0, 12)) + '…</span>'),
+        cell(c.vs ? '<span class="mono" title="' + esc(c.vs) + '">' + esc(String(c.vs).slice(0, 12)) + '…</span>' : '—'),
+        cell(esc(c.modeId || r.modeName || '')), cell(esc(plugs)), cell(script), cell(consent)]);
+    }).join('') || '<tr><td colspan="7" class="empty">当前没有带内容集的房间</td></tr>';
+    el('navPlugins').textContent = list.length;
+  }
+
   function render(d) {
     var c = d.counts || {}; c.rooms = d.rooms.length;
     el('cards').innerHTML = CARD_GROUPS.map(function (g) {
@@ -851,9 +966,11 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     el('clock').textContent = new Date(d.now).toLocaleString('zh-CN');
     el('verify').textContent = v.mode ? ('校验 ' + v.mode + ' · 不一致 ' + int(v.mismatches)) : '校验 off';
     renderNotices(notices);
+    renderPluginNotices(d);
     // renderBugs FIRST: it sets bugList, which renderBugToolbar reads for the 「显示 N / 共 M 条」 count.
     renderBugs(d.bugs);
     renderBugToolbar(d.bugCounts);
+    renderPlugins(d);
   }
 
   var painted = false; // 首帧无论如何都要渲染一次（后台标签页也要有内容）；之后隐藏才暂停，切回来立刻补一次
@@ -870,6 +987,20 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   // 通知 (server/lobby.js broadcastNotice): push one notice to the live sessions; the history is the state's notices array.
   var noticeText = el('noticeText'), noticeSign = el('noticeSign'), noticeScope = el('noticeScope');
   noticeText.addEventListener('input', function () { el('noticeHint').textContent = noticeText.value.length + '/' + noticeText.maxLength; });
+  function renderPluginNotices(d) {
+    var p = d.plugins || { installed: [] };
+    var items = [];
+    (p.installed || []).forEach(function (pl) {
+      (pl.notices || []).forEach(function (n) {
+        items.push({ plugin: pl.name || pl.id, id: n.id, title: n.title, body: n.body, date: n.date });
+      });
+    });
+    el('pluginNotices').innerHTML = items.slice(0, 20).map(function (n) {
+      return '<div class="notice-item"><time>' + esc(n.date || '') + '</time><b>' + esc(n.title || n.id || '') + '</b>'
+        + '<i>— 插件：' + esc(n.plugin) + '</i><em>' + esc(n.body || '') + '</em></div>';
+    }).join('') || '<div class="empty">没有插件公告</div>';
+  }
+
   function renderNotices(list) {
     el('noticeHist').innerHTML = (Array.isArray(list) ? list : []).map(function (n) {
       return '<div class="notice-item"><time>' + ts(n.at) + '</time><b>' + esc(n.text) + '</b>'

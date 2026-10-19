@@ -141,7 +141,19 @@ plugin.json + entry.sim/meta
    - setup 已经能发现并提取，但依赖本机客户端和 Python / UnityPy。
    - 缺资源时是 fallback，不会坏，但体验不一致。
 
-## 7. 建议的下一步
+## 7. 运营台整合（Phase 1，已实现）
+
+运营台 `/admin` 已加入只读的「插件与内容」页：
+
+- 已安装插件：id / 名称 / class / 版本 / 状态 / scope / 内容 / 脚本或原生信任 / 大小
+- 服务器策略：`rooms`、`allow`、`default`、`classes`、`maxSets`、`allowIncompatible`
+- 房间内容：`cs`、`vs`、`modeId`、插件列表、脚本 / 信任状态、trusted consent
+- 通知页新增只读「插件公告」区，与服务器通知分开标记
+
+后端 `buildSnapshot` 现在携带 `plugins` 只读快照；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
+写操作、trusted pin 和插件文件仍只允许 owner 在本机处理，运营台不提供远程代码执行入口。
+
+## 8. 建议的下一步
 
 优先级从高到低：
 

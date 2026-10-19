@@ -370,7 +370,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/admin/api/state') {
       const qs = new URLSearchParams(parts.query);
-      sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth, community, bugStatus: qs.get('bugStatus'), bugSort: qs.get('bugSort') || 'status' }));
+      sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth, community, bugStatus: qs.get('bugStatus'), bugSort: qs.get('bugSort') || 'status', plugins: { registry: packs, policy } }));
       return;
     }
     const body = Buffer.from(ADMIN_HTML);
