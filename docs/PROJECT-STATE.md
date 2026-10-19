@@ -44,7 +44,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`；**已上线进程的 build `85b981d393f6`**（2026-10-18 00:35 部署后重启，由 `/healthz` 实测，且 == 磁盘 build；旧 build `adea09d5e893` → `db7299140227` → 更早 `a240d9ad2df8` / `90f5e7f2c477`；备份 `/root/sp-backup-pre-26294b7a.tgz`；社区更新日志 **0.4.34**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `808e1296c766`**（2026-10-19 23:50 部署后重启，由 `/healthz` 实测，且 == 磁盘 build；上一版 `85b981d393f6`，更早 `adea09d5e893` → `db7299140227` → `a240d9ad2df8` / `90f5e7f2c477`；备份 `/root/sp-backup-code-20261019-235029.tgz`；社区更新日志 **0.4.36**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | git store | 笔记本 = **本检出**（分支 `master`，HEAD `df3b1897`）；台式机 = `_merge-scratch`（分支 `ours`），工作项目与 store HEAD **零跟踪漂移** |
 | 远程同步 | **已全部推送**（2026-10-17 00:2x）：`github/master` == `gitee/master` == HEAD（`20f3437d`，本批 22 个提交：官方特效收尾 / 望 S3 跟子 / 官方数据刷新 / 补召唤物模型 / 文档梳理 / `.atlas` 换行）；主线 `origin/master` = `76700abe`（`check-upstream` 实测：主线未动，我们领先 566） |
 | 全量测试 | **本机 `node --test`：7081 项 / 7060 通过 / 3 失败 / 18 跳过**（2026-10-16 夜，笔记本；3 个失败全是既有环境项：`test/lobby.test.js` 的两条限速桶计时 + `test/sim/robustness.test.js:739` 的重装 boss 性能阈值 —— 都只在满负载并发下红）。台式机 store 上一次实测：6674 / 6659 / 0 失败 / 15 跳过（2026-10-15） |
@@ -57,7 +57,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `adea09d5e893`**（2026-10-17 00:33 部署后重启，由 `/healthz` 实测；旧 build `db7299140227` → 更早 `a240d9ad2df8` / `90f5e7f2c477`；备份 `/root/sp-backup-20261017-003107.tgz`；通告记为社区 **0.4.31**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `808e1296c766`**（2026-10-19 23:50 部署后重启，由 `/healthz` 实测；上一版 `85b981d393f6` → `adea09d5e893` → `db7299140227` → 更早 `a240d9ad2df8` / `90f5e7f2c477`；备份 `/root/sp-backup-code-20261019-235029.tgz`；通告记为社区 **0.4.36**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -99,6 +99,7 @@
 
 | 时间 | 代码 | build | 更新日志 | 要点 |
 |---|---|---|---|---|
+| **2026-10-19 23:50** | `582937679` | **`808e1296c766`** | **`0.4.36`** | 主线 0.3.1 / 0.3.2 追平（插件 / Forge / studio / 控制台 / Worker 托管 / 官方特效 / 统计 `withModded` / 插件干员官方美术）+ **本机抽取的 274 套官方时装**（`local-skins` + `local-skins-2`，房间默认开启，约 287 MB/set）；备份 `/root/sp-backup-code-20261019-235029.tgz` |
 | **2026-10-18 00:35** | `26294b7a` | **`85b981d393f6`** | **`0.4.34`** | 统计页改版（记录格式 v2 + 官方素材 37 件）、去掉部署缩放、**分血救援**、公开房间列全部；**全源码包**覆盖（事故见下） |
 | **2026-10-18 01:42** | `390740b2` | `85b981d393f6`（不变：BUILD_INPUTS 不含 `server/match`） | —（热修，无公告） | **字段静默看门狗**（普通 / 联防客户端字段 12 s 无上报即服务端接管）+ 管理页每房 `phase/round/deadline/fields`；**重启**结束卡住的 `RGHY` |
 | 2026-10-17 00:31 | `20f3437d` | `adea09d5e893` | `0.4.31` | 官方特效还原度（`strikePose` / `comeBack` / `LOOP_BUFF_BOUND`）+ 望 S3 跟子 + 官方数据刷新 + 召唤物模型 |
