@@ -560,3 +560,48 @@ node tools/kit-coverage.mjs --missing
 ---
 
 _整理自本仓库 0.2.0 快照。若你据此改动，请同步更新 `docs/DESIGN.md`/`docs/META.md`，并运行 `node --test`——`docs-consistency` 套件会帮你抓住文档与代码的偏差。_
+
+
+## 11. 上游 v0.3.1 / v0.3.2 插件栈追平（2026-10-19）
+
+本分支做的是**按功能追平**，不是把上游 614 个提交整包 merge。上游 0.3.1 / 0.3.2 的插件 / Forge 文件与测试按完整单元取入；账号、社区、统计、训练、8 个自造干员、3D 棋盘 / 场景栈和 0.4.0 版本仍保留本分支实现。决策全文见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10，这里是开发者速查。
+
+### 11.1 从主线合并了什么
+
+| 功能 | 主线来源 | 本仓库位置 | 测试 / 说明 |
+|---|---|---|---|
+| 插件系统 P0–P4 | P0 `c57c78b`、P1a `83b89cf`、P1b `fc768aa`、P1c `4f82d2f`、P2 `7dc4c846`、P4 `ba352f1` | `server/plugins/`、`shared/plugins/`、`schemas/`、`server/studio/`、`public/studio/`、`server/http/{routes,static}.js` | `test/plugins/`、`test/studio/`、`test/schemas/`；内容身份 `cs`、房间内容集、DSL-lite、沙箱 UI |
+| W1–W5 / U-Forge | W1–W5、U1–U6 / Forge | `shared/plugins/{theme,notices,rules,records,errors,surface}.js`、`server/plugins/{registry,contentData,forgeImport,pack}.js`、`public/js/ui/{pluginTag,pluginPanel,notices}.js` | Forge 包、规则、记录、官方技能绑定 |
+| Offers 交互窗口 | W2 offers | `public/js/ui/offerOverlay.js`、`public/js/ui/gameActions.js`（`offer`）、`public/js/screens/game.js`、`public/css/screens/game-panels.css` | `test/ui/plugin-offers.test.js` |
+| 插件设置 UI | 上游插件面板 | `public/js/ui/pluginSettings.js`、`public/js/ui/numberInput.js`、`public/js/ui/pluginPanel.js`、`public/js/ui/pluginTag.js` | 范围 / 步长校验、规则行 |
+| 测试控制台 + `SP_TEST_MODE` | 上游 0.3.1 | `public/js/ui/{testConsole,testDock,testAudit}.js`、`server/lobby.js`（`room.test` / `setTestHost`）、`server/match/{testCommands,testTrace,testReplay}.js`、`shared/testMode.js` | `test/test-mode.test.js`；加入确认、`g.test`、审计、计时、回放、测试结果不计入统计 |
+| 皮肤 | #685 / #686 | `shared/protocol.js`（`room.skins`）、`server/match/{PlayerState,player/basics,player/views,player/round,views}.js`、`public/js/assets.js`、`public/js/render/{app,units,app/info}.js`、`public/js/ui/{skins,skinPicker}.js`、`public/js/screens/{loadout,diy}.js` | `test/skins.test.js`、`test/lobby-skins.test.js`、`test/ui/{skin-picker,fieldHost-skins}.test.js`、`test/render/skin-presentation.test.js`；`docs/SKINS.md` |
+| 官方 7 个 `op-*` | 0.3.1 官方自选 | `server/sim/content/kits/ops/op-{ascln,gdglow,narant,aglna2,wang,kalts2,clemnt}.js` | 通过 `diy.officialPool` 与自造商店干员共存；`test/diy.test.js`、`test/content/{kits_layout,chess_kalts2}.test.js` |
+| 7 个 UI PR | #695 / #696 / #698 / #699 / #703 / #704 / #705 | `public/js/ui/{matchPopups,protocolBoot,turnPopup,bossPlates,downedPlate}.js`、`public/js/screens/{lobby,sweep,settle,game}.js` | 插件栈之前已并入，本轮保持绿色 |
+| VFX 剩余项 | `e7bad52b`、`094ca50a`、`2b461767`、`06e49fa7`、`f37dc893` | `public/js/render/vfx/{effect,geom,wiring,skillfx,skills,yuwall}.js`、`public/js/render/{spine,units,skillAttack,manifold}.js` | `test/render/{vfx-orient,vfx-areas,vfx-psys,vfx-reported031,skill-attack-mode}.test.js` |
+| 统计 | P1c `withModded` | `public/js/screens/stats.js` | 总览「含插件对局」开关；测试 / 非官方对局默认不计 |
+| setup / 本地抽取 | 0.3.1 插件美术 + 0.3.2 `#728` | `tools/setup.mjs`、`tools/local-extract/{operators.py,plugin-art.mjs,extract.py}`、`server/plugins/artReferences.js`、`server/http/assetViews.js` | `test/setup-plugin-art.test.js`、`test/render/plugin-official-art.test.js`、`test/local-extract-operators.test.js`、`test/setup-assets.test.js` |
+| `#670` | `043d7959` | `test/assets-env-proxy.test.js` | 首跳精确两种形式，代理只连本机 |
+
+### 11.2 本分支必须保留的适配
+
+- 插件 manifest 接受本分支 **0.4.0**：app 范围 `>=0.3.0 <0.5.0`。
+- `shared/plugins/validate.js` 保留 **`skipStandIn`**：8 个自造干员没有官方替身。
+- `shared/constants.js` 保留插件错误码表的 **8 个拒绝码**。
+- 7 个官方 `op-*` 是**同一 charId 的官方自选角色**，与自造商店角色通过 `diy.officialPool` 分离；不要合并
+  `ownedPool` / `officialPool`，也不要覆盖自造 `chess_char_*` kit。
+- `server/match/player/items.js` 保留本分支的装备库存策略（不取上游 #624 债务）。
+- 皮肤 / 本地抽取的 Windows 测试适配保留。
+- 版本元数据保持 **0.4.0**；0.3.1 / 0.3.2 的 `package.json`、README、CHANGELOG 版本行不取。
+
+### 11.3 相关测试
+
+```powershell
+node --test test/plugins test/studio test/schemas
+node --test test/test-mode.test.js
+node --test test/skins.test.js test/lobby-skins.test.js test/ui/skin-picker.test.js test/render/skin-presentation.test.js
+node --test test/ui/plugin-offers.test.js test/ui/fieldHost-skins.test.js
+node --test test/render/vfx-orient.test.js test/render/vfx-areas.test.js test/render/vfx-reported031.test.js
+node --test test/setup-plugin-art.test.js test/render/plugin-official-art.test.js test/local-extract-operators.test.js
+npm run ci
+```

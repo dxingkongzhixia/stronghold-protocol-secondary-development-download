@@ -513,3 +513,52 @@ do not revert them by accident. The full record is [`docs/UPSTREAM-MERGES.md`](U
 
 **Removed from upstream on purpose:** the standalone 克莱门莎 `op-clemnt.js` kit (we ship our own
 `chess_char_4231_clemnt-clemnt.js`) — the never-merge list, [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0.
+
+
+## 15. v0.3.1 / v0.3.2 mainline plugin-stack catch-up (2026-10-19)
+
+This branch is a **feature-level port**, not a literal whole-history merge of mainline. The mainline tip
+`d905c146` / `c9d804f4` (0.3.1 → 0.3.2) was folded in selectively: plugin/Forge files and their tests were
+taken together where they form one unit, while files owned by the fork (accounts, community, stats, training,
+the 8 custom operators, the 3D board/scene stack and the 0.4.0 version) stayed ours. The full decision log is
+`docs/UPSTREAM-MERGES.md` §13.10; this section is the developer map.
+
+### 15.1 What came from mainline
+
+| Area | Mainline source | Where it lives here | Tests / notes |
+|---|---|---|---|
+| Plugin system P0–P4 | P0 `c57c78b`, P1a `83b89cf`, P1b `fc768aa`, P1c `4f82d2f`, P2 `7dc4c846`, P4 `ba352f1` | `server/plugins/`, `shared/plugins/`, `schemas/`, `server/studio/`, `public/studio/`, `server/http/{routes,static}.js` | `test/plugins/`, `test/studio/`, `test/schemas/`; content identity `cs`, room content sets, DSL-lite, sandbox UI |
+| W1–W5 / U-Forge | W1–W5, U1–U6 / Forge | `shared/plugins/{theme,notices,rules,records,errors,surface}.js`, `server/plugins/{registry,contentData,forgeImport,pack}.js`, `public/js/ui/{pluginTag,pluginPanel,notices}.js` | `test/plugins/forgeImport.test.js`, `test/plugins/...`; Forge packs, rules, records and official-skill binding |
+| Offers | W2 offers | `public/js/ui/offerOverlay.js`, `public/js/ui/gameActions.js` (`offer`), `public/js/screens/game.js`, `public/css/screens/game-panels.css` | `test/ui/plugin-offers.test.js` |
+| Plugin settings UI | upstream plugin panel | `public/js/ui/pluginSettings.js`, `public/js/ui/numberInput.js`, `public/js/ui/pluginPanel.js`, `public/js/ui/pluginTag.js` | UI/plugin tests; range/step validation, rule line |
+| Test console + `SP_TEST_MODE` | upstream 0.3.1 test console | `public/js/ui/{testConsole,testDock,testAudit}.js`, `server/lobby.js` (`room.test`, `setTestHost`), `server/match/{testCommands,testTrace,testReplay}.js`, `shared/testMode.js` | `test/test-mode.test.js`; create/join/spectate consent, `g.test`, audit, timers, replay, results excluded from stats |
+| Skins | #685 / #686 | `shared/protocol.js` (`room.skins`, `SKIN_LIMITS`), `server/match/{PlayerState,player/basics,player/views,player/round,views}.js`, `public/js/assets.js`, `public/js/render/{app,units,app/info}.js`, `public/js/ui/{skins,skinPicker}.js`, `public/js/screens/{loadout,diy}.js` | `test/skins.test.js`, `test/lobby-skins.test.js`, `test/ui/{skin-picker,fieldHost-skins}.test.js`, `test/render/skin-presentation.test.js`; `docs/SKINS.md` |
+| Seven official 0.3.1 `op-*` kits | 0.3.1 official packs | `server/sim/content/kits/ops/op-{ascln,gdglow,narant,aglna2,wang,kalts2,clemnt}.js` | `diy.officialPool` keeps them compatible with our custom shop operators; `test/diy.test.js`, `test/content/{kits_layout,chess_kalts2}.test.js` |
+| 7 UI PRs | #695 / #696 / #698 / #699 / #703 / #704 / #705 | `public/js/ui/{matchPopups,protocolBoot,turnPopup,bossPlates,downedPlate}.js`, `public/js/screens/{lobby,sweep,settle,game}.js` | already merged before the plugin stack; this branch keeps them green |
+| VFX remainder | `e7bad52b`, `094ca50a`, `2b461767`, `06e49fa7`, `f37dc893` | `public/js/render/vfx/{effect,geom,wiring,skillfx,skills,yuwall}.js`, `public/js/render/{spine,units,skillAttack,manifold}.js` | `test/render/{vfx-orient,vfx-areas,vfx-psys,vfx-reported031,skill-attack-mode}.test.js` |
+| Stats | P1c `withModded` | `public/js/screens/stats.js` | overview switch; test results and modded matches excluded by default |
+| Setup / local extraction | 0.3.1 plugin art + 0.3.2 `#728` | `tools/setup.mjs`, `tools/local-extract/{operators.py,plugin-art.mjs,extract.py}`, `server/plugins/artReferences.js`, `server/http/assetViews.js` | `test/setup-plugin-art.test.js`, `test/render/plugin-official-art.test.js`, `test/local-extract-operators.test.js`, `test/setup-assets.test.js` |
+| `#670` | `043d7959` | `test/assets-env-proxy.test.js` | exact two first-hop forms, local-only relay |
+
+### 15.2 Fork adaptations that must survive
+
+- Plugin manifests accept our **0.4.0**: app range `>=0.3.0 <0.5.0`.
+- `shared/plugins/validate.js` has the **`skipStandIn`** hook (our custom operators have no official stand-in).
+- `shared/constants.js` carries the **8 plugin rejection codes** the fork's error table requires.
+- The seven official `op-*` packs are **official-DIY picks of the same charIds** as our custom shop operators, separated by
+  `diy.officialPool`; do not merge `ownedPool` and `officialPool`, and do not replace the custom `chess_char_*` kits.
+- `server/match/player/items.js` keeps equipment debt out of the fork; item stock tests are intentionally fork-shaped.
+- Skins/test paths and local-extraction Windows cases use the fork's Windows-safe test adaptations.
+- The fork keeps **0.4.0** version metadata; 0.3.1/0.3.2 `package.json` / README / CHANGELOG version changes are not taken.
+
+### 15.3 Run the relevant suites
+
+```powershell
+node --test test/plugins test/studio test/schemas
+node --test test/test-mode.test.js
+node --test test/skins.test.js test/lobby-skins.test.js test/ui/skin-picker.test.js test/render/skin-presentation.test.js
+node --test test/ui/plugin-offers.test.js test/ui/fieldHost-skins.test.js
+node --test test/render/vfx-orient.test.js test/render/vfx-areas.test.js test/render/vfx-reported031.test.js
+node --test test/setup-plugin-art.test.js test/render/plugin-official-art.test.js test/local-extract-operators.test.js
+npm run ci
+```
