@@ -8,10 +8,10 @@
 // fake (true → test/match/fakeBattle.js as BattleClass), script (FakeBattle.script), registry, instant (virtual
 // scheduler runs battles synchronously; default true), timerScale, battleContent, botRehearsal (default 0),
 // botSliceMs (bot rehearsal slice budget; default: unbounded in virtual time), aiPicksLast (the room option
-// AI 队友最后选择: the drafts order every human seat before every AI seat), test (DESIGN §34.8; hostId then
+// AI 队友最后选择: the drafts order every human seat before every AI seat), test (UPSTREAM-MERGES §13.10; hostId then
 // defaults to the first human), hostId / botRehearsalDelegate /
 // botRehearsalDelegateMs (the delegated bot rehearsal, DESIGN §14: test/match/rehearsal-delegate.test.js),
-// cs / vs / requireCs (a gameplay-plugin room: host rehearsal stays off), rules (DESIGN §34.15; omitted unless set).
+// cs / vs / requireCs (a gameplay-plugin room: host rehearsal stays off), rules (UPSTREAM-MERGES §13.10; omitted unless set).
 // Combat mode: clientCombat (default false here: the legacy server-run mode most suites were written for; production
 // defaults to client-side combat, DESIGN §14). With clientCombat: true every human gets a scripted browser
 // (test/match/simClient.js SimClient: h.clients) unless clients: false; pace 'instant' | 'paced', perPlayer
@@ -187,9 +187,14 @@ function legacyInvariants(m) {
     assert.ok(ps.shop.level >= 1 && ps.shop.level <= m.gd.maxShopLevel);
     assert.ok(ps.shop.upgradePrice >= 0);
     assert.ok(ps.shop.freeRefreshes >= 0);
-    if (!ps.alive) {
+    if (!ps.alive && !ps.downed) {
       assert.equal(ps.board.size, 0, 'eliminated player keeps no board');
       assert.ok(ps.hand.every((x) => x == null) && ps.temp.every((x) => x == null), 'eliminated player keeps nothing');
+    }
+    if (ps.downed) {
+      assert.equal(ps.alive, false, 'a downed player is not alive');
+      assert.equal(ps.lp, 0, 'a downed player sits at LP 0');
+      assert.ok(ps.reviveNeed > 0 && ps.revivePool >= 0 && ps.revivePool <= ps.reviveNeed, `revive pool ${ps.revivePool}/${ps.reviveNeed}`);
     }
     const chessUids = new Set();
     const diyHeld = new Map();

@@ -561,7 +561,7 @@ export const C2S = {
   // the stats the own board's units start their next battle with (user playtest #4 item 7; prep phases): answered by
   // the push m.unitStats { seq, round, units: [unitStatsEntry] }; `seq` is echoed so the client keeps the newest answer
   'g.unitStats': { seq: (v) => isInt(v, 0, 2 ** 31), $optional: ['seq'] },
-  // match test mode (DESIGN §34.8 phase 2): only a test room's host reaches applyTestCommand
+  // match test mode (UPSTREAM-MERGES §13.10 phase 2): only a test room's host reaches applyTestCommand
   'g.test': { cmd: isTestCommand, args: (v) => v === undefined || (isPlain(v) && Object.keys(v).length <= 8), $optional: ['args'] },
   'g.leave': {},
 

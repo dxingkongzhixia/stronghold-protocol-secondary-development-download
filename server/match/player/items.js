@@ -12,6 +12,12 @@ import { OK, fail } from './common.js';
 
 export class PlayerItems {
   /**
+   * Our fork did not take the 0.3.1 equipment debt (#624): destroying an item releases no stock it never owed.
+   * The upstream effectsMeta calls this on every destroyed item, so keep the method as a no-op.
+   */
+  releaseItemStock() { return 0; }
+
+  /**
    * g.equip {itemUid, targetUid, replaceUid?}. A third item on a carrier with both slots used replaces the equipped item
    * the player picked in the replace dialog (`replaceUid`, research 09 §1.2 UseEquipUp.unloadInstId; absent ⇒ the
    * oldest); the replaced item is destroyed. A `replaceUid` that is not one of the target's equipped items is refused.

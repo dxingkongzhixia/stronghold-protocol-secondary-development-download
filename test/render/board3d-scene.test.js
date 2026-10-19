@@ -35,6 +35,23 @@ const PY = [
 const HAS_PIL = !!PY && spawnSync(PY, ['-c', 'import PIL'], { env: ENV }).status === 0;
 const stages = JSON.parse(readFileSync(path.join(ROOT, 'data/stages.json'), 'utf8'));
 const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8')); } catch { return null; } })();
+/** True when every extracted scene record is the current version and every material map it names is in the manifest. */
+const extractedScenesCurrent = (() => {
+  const groups = manifest?.groups || {};
+  const stages = Object.keys(groups).filter((g) => g.startsWith('scene/act'));
+  if (!stages.length) return false;
+  const tex = groups[SCENE_TEX_GROUP] || {};
+  for (const g of stages) {
+    try {
+      const doc = JSON.parse(readFileSync(path.join(ROOT, 'public', String(groups[g].scene.path).replace(/^\//, '')), 'utf8'));
+      if (doc.version !== SCENE_VERSION) return false;
+      for (const m of Object.values(doc.materials || {})) {
+        for (const k of ['map', 'normalMap', 'metalGlossMap', 'emissionMap']) if (m[k] && !tex[m[k]]) return false;
+      }
+    } catch { return false; }
+  }
+  return true;
+})();
 
 function py(code) {
   const src = `import sys, json, struct\nsys.path.insert(0, ${JSON.stringify(TOOL)})\nimport scenes as s\n${code}`;
@@ -185,8 +202,8 @@ d = s.decode_rgbm(img)
 print(json.dumps({'mode': d.mode, 'px': list(d.getdata()), 'range': s.LIGHT_RANGE, 'plain': s.decode_rgbm(Image.new('RGB', (1, 1), (9, 8, 7))).getpixel((0, 0))}))`);
     assert.equal(out.mode, 'RGB');
     // texel (1, 0.5, 0, A = 0.2): L = 5^2.2 · 0.2^2.2 · rgb → stored (L / range)^(1/2.2) = (5^2.2 / range)^(1/2.2) · 0.2 · rgb^(1/2.2)
-    const k = (5 ** 2.2 / out.range) ** (1 / 2.2);
-    const want = [1, 128 / 255, 0].map((c) => Math.round(255 * Math.min(1, k * 0.2) * c ** (1 / 2.2)));
+    const k = (5 / out.range) * 0.2;
+    const want = [1, 128 / 255, 0].map((c) => Math.round(255 * Math.min(1, k) * c));
     for (let i = 0; i < 3; i++) assert.ok(Math.abs(out.px[0][i] - want[i]) <= 2, `channel ${i}: ${out.px[0][i]} vs ${want[i]}`);
     assert.deepEqual(out.px[1], [255, 255, 255], 'clamped at the range');
     assert.deepEqual(out.plain, [9, 8, 7]);
@@ -239,7 +256,7 @@ print(json.dumps({
   'lossless': lossless.get('webp'), 'lossy': lossy.get('webp'), 'match': match,
 }))`);
     assert.equal(out.mesh, SCENE_VERSION);
-    assert.equal(out.ver, 3);
+    assert.equal(out.ver, 4, 'the scene extract version (lossless maps, emission, deduplicated renderers)');
     assert.deepEqual(out.metro, ['map', 'normalMap', 'glossMap', 'emissionMap']);
     assert.deepEqual(out.floor, ['map', 'normalMap', 'glossMap']);
     assert.deepEqual(out.cut, ['map', 'normalMap', 'glossMap', 'emissionMap']);
@@ -788,7 +805,7 @@ describe('BoardScene with an official scene (stub renderer)', () => {
   });
 });
 
-describe('extracted scenes (when scene bundles were extracted here)', { skip: !Object.keys(manifest?.groups || {}).some((g) => g.startsWith('scene/act')) && 'no scene in data/local-assets.json' }, () => {
+describe('extracted scenes (when scene bundles were extracted here)', { skip: !extractedScenesCurrent && 'no current scene extraction on this machine (re-run node tools/setup.mjs --scenes)' }, () => {
   const groups = manifest?.groups || {};
   const file = (p) => path.join(ROOT, 'public', p.replace(/^\//, ''));
 

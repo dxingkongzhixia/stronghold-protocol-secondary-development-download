@@ -8,6 +8,10 @@ function findNonFinite(obj, path, out) {
   for (const [k, v] of Object.entries(obj)) findNonFinite(v, `${path}.${k}`, out);
 }
 
+/**
+ * @param {Record<string, any>} f
+ * @param {{ officialOwnedSkills?: boolean, skipStandIn?: (chess: any) => boolean }} [opts]
+ */
 export function validateReferences(f, { officialOwnedSkills = true, skipStandIn = () => false } = {}) {
   const errors = [];
   const err = (m) => errors.push(m);

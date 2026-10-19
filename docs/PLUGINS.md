@@ -1621,7 +1621,7 @@ enemies of owner one; use custom groups for the actual leaks. Bounties also belo
 the number of boards in this isolated field. Other fields, team LP, real-time overtime, acquisition effects, economy,
 cross-round state, arbitrary stat edits, movable devices, Arts items and plugin content sets are outside this console.
 The UI names its unsupported parts and prep-only tactics. A full match is not this page: the host test room
-(DESIGN §34.8, `SP_TEST_MODE` / `--test-mode`) is a separate lobby room. This sandbox does not create one.
+(UPSTREAM-MERGES §13.10, `SP_TEST_MODE` / `--test-mode`) is a separate lobby room. This sandbox does not create one.
 
 The run starts paused. Editing recompiles and resets; one tick / one second means 1 / 30 fixed sim ticks, up to the
 cap or the normal battle end. Empty custom waves stay open until the cap. Speed 0.25×–8× affects tick scheduling only;

@@ -1,4 +1,4 @@
-// test/match/dsl-meta.test.js — prep half of the P2 DSL (DESIGN §32.7). 老鲤's income is a MetaRegistry
+// test/match/dsl-meta.test.js �?prep half of the P2 DSL (DESIGN §32.7). 老鲤's income is a MetaRegistry
 // dispatch, not a battle, so this file does not use battleHarness. The spec is built from the band's own
 // give_coin_in_round rows. A second case checks funds / layers / gainItem on a fresh registry.
 import { test } from 'node:test';
@@ -21,7 +21,7 @@ function leeSpec() {
     dsl: 1,
     pluginId: 'rewrite-lmlee',
     meta: {
-      key: 'band:' + id,
+      key: 'effect:rewrite-lmlee:band_' + id,
       on: rows.map((b) => ({
         when: 'income',
         if: { round: Math.trunc(Number(b.p.round)) },
@@ -42,7 +42,7 @@ test('老鲤 income matches bandMetaHandler, including a round that writes 0', (
   const { spec, official } = leeSpec();
   const checked = validateDsl(spec);
   assert.equal(checked.ok, true, JSON.stringify(checked.problems));
-  const dsl = compileDslMeta(spec);
+  const dsl = compileDslMeta(spec, { pluginId: spec.pluginId });
   for (const round of [1, 2, 3, 4]) {
     assert.equal(incomeOf(dsl, round, 7), incomeOf(official, round, 7), 'round ' + round);
   }
@@ -57,7 +57,7 @@ test('funds, layers and gainItem map onto the ctx helpers', () => {
     dsl: 1,
     pluginId: 'prepdemo',
     meta: {
-      key: 'effect:dsl-prepdemo',
+      key: 'effect:prepdemo:local',
       on: [
         { when: 'roundStart', do: [{ funds: { amount: 4 } }] },
         { when: 'buy', do: [{ layers: { bond: 'lateranoShip', amount: 2 } }] },
@@ -67,8 +67,8 @@ test('funds, layers and gainItem map onto the ctx helpers', () => {
     },
   };
   const reg = new MetaRegistry();
-  const handler = registerDslMeta(reg, spec);
-  assert.equal(reg.get('effect:dsl-prepdemo'), handler);
+  const handler = registerDslMeta(reg, spec, { pluginId: 'prepdemo' });
+  assert.equal(reg.get('effect:prepdemo:local'), handler);
   const funds = [];
   const layers = [];
   const items = [];

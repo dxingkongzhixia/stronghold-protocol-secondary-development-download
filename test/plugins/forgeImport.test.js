@@ -1056,7 +1056,7 @@ test('a pack unit whose shop piece is a chess pair is written once, as that pair
   } finally { fs.rmSync(parent, { recursive: true, force: true }); }
 });
 
-test('official skills of one operator keep their ids and bind that operator\'s kit, for a 自选 unit and a shop pair', async (t) => {
+test('official skills of one operator keep their ids and bind that operator\'s kit, for a 自选 unit and a shop pair', { skip: '本分支的自造干员没有官方 op kit（不取上游 7 个 op-*）；该用例依赖官方 0.3.1 数据，UPSTREAM-MERGES §13.10' }, async (t) => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-forge-official-'));
   const ops = path.join(parent, 'ops');
   const clem = (n) => ['skchr_clemnt_1', 'skchr_clemnt_2', 'skchr_clemnt_3'].map((skillId, i) => ({ skillId, name: `技能${i + 1}`, skillType: i ? 'MANUAL' : 'AUTO',

@@ -1,4 +1,4 @@
-// Theme variables and announcements (DESIGN §34.14). Synthetic manifests only: no Forge pack, no game art.
+// Theme variables and announcements (UPSTREAM-MERGES §13.10). Synthetic manifests only: no Forge pack, no game art.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

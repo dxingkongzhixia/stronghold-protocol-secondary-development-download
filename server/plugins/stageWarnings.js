@@ -1,4 +1,4 @@
-// Plugin author diagnostics only; never alter placement or battle data (DESIGN §34.21).
+// Plugin author diagnostics only; never alter placement or battle data (UPSTREAM-MERGES §13.10).
 import fs from 'node:fs';
 import path from 'node:path';
 import { applyPatches, normalizeSettings } from '../../shared/plugins/patch.js';

@@ -367,7 +367,7 @@ export function roomModeOf(modeId, roomMode) {
  * without players (the error-path settlement) or matches the local player did not take part in (spectator
  * seats get every result pushed too — eliminated players, who ARE in players[], keep recording).
  * @param {any} res raw m.result payload
- * @param {{ myId?: string|null, roomMode?: string|null, now?: number }} ctx
+ * @param {{ myId?: string|null, roomMode?: string|null, now?: number, vs?: string|null, content?: any }} ctx
  * @returns {any|null}
  */
 export function buildRecord(res, ctx = {}) {

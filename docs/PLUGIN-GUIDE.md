@@ -192,7 +192,7 @@ cubic-bezier 四个坐标（x 为 0–1，y 为有限数）。只保存修改过
 
 预览按游戏选择器的同一 `availableSkins` 规则取图和回退，点击图片可放大；没有正面模型时标为「仅图片」，
 不会误称可穿戴。清除素材后再改名称、重命名皮肤键或保存，不会把旧素材恢复。模板声明 `assets.add` 和
-`assets.override`，兼容本机已有或其他内容插件提供的干员；只改外观，不改变内容哈希。详见 [SKINS.md](SKINS.md)。
+`assets.override`，兼容本机已有或其他内容插件提供的干员；只改外观，不改变内容哈希。详见 [UPSTREAM-MERGES.md](UPSTREAM-MERGES.md)。
 
 ## 分享和安装
 

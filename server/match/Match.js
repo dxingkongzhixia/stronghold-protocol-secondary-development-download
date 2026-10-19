@@ -80,7 +80,7 @@
 //                           checked operator loadout (and its 潜能 / 练度 `ops`, 0.2.2) from room.loadout. Accepted only
 //                           during INFO_CHECK (the briefing's 干员调配 entry); afterwards the match's loadout is locked
 //                           (WRONG_PHASE). A room whose prepLoadout rule is prep also accepts one merge during PREP
-//                           while that seat has not pressed 准备 (DESIGN §34.15).
+//                           while that seat has not pressed 准备 (UPSTREAM-MERGES §13.10).
 // onLeave(playerId)         The human quit permanently (g.leave, room.leave, or the 10-minute reconnect
 //                           window expired). They will never return under this playerId in this match;
 //                           treat as quit (AI takes over / eliminated per DESIGN). No onDisconnect follows.
@@ -290,7 +290,7 @@ export class Match {
     // [ASSUMED] Only an array is a content list. Omitting the key (every vanilla match) leaves setDiy on KITTED_CHARS.
     // A copy so a caller's freeze or later mutation cannot change the check, and so the key stays off public views.
     if (Array.isArray(opts.kitted)) this.diyKitted = Object.freeze(opts.kitted.filter((id) => typeof id === 'string'));
-    // The room's rule switches (DESIGN §34.15). Omitted on a vanilla match, so its own keys stay the same.
+    // The room's rule switches (UPSTREAM-MERGES §13.10). Omitted on a vanilla match, so its own keys stay the same.
     if (opts.rules && typeof opts.rules === 'object' && !Array.isArray(opts.rules)) this.rules = Object.freeze({ ...opts.rules });
     /**
      * The interaction windows this match's content set declares (PLUGIN API v2, docs/PLUGINS.md §10b): the normalized
@@ -335,7 +335,7 @@ export class Match {
     /** the room's current host (opts.hostId; server/lobby.js room.hostId — setHost follows a migration) */
     this.hostId = typeof opts.hostId === 'string' ? opts.hostId : null;
     /**
-     * Match test mode (DESIGN §34.8 phase 2). opts.test is only forwarded for a room created with the flag.
+     * Match test mode (UPSTREAM-MERGES §13.10 phase 2). opts.test is only forwarded for a room created with the flag.
      * The extra state exists only then, and public / result views omit the keys while this is false, so a
      * normal match stays byte-identical.
      */

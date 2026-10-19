@@ -1521,3 +1521,14 @@ docs guards 34 pass / 0 fail.
 6. 若数据/夹具需要重基线：**先归因**（只回退本条 → 零差异）再单独提交重生成；
 7. 全绿后合入 `ours`，按中继 → gitee → github 推送（**上线仍等 owner 明确许可**）。
 
+**A/B 落实（2026-10-19，`plugin-stack-tip`）**：共享接线（`server/index.js`、`http/routes` / `static`、`shared/constants.js`、`package.json` 的 `ses` / `acorn`、`public/i18n/en.json`）已接；W2 规则 / offers、studio 路由、records schema、`placeOnRanged`、测试控制台的 `g.test` 与 consent 门、operator traits、脚本 / 受信任运行时均按上游原版接线，3 个 fork 补丁（app 范围、`skipStandIn`、8 个拒绝码）已重放。
+
+**fork 适配（不取或改测试）**：
+- 不取上游 7 个官方 `op-*` kit（我们的同 id 是自造干员，加入会破坏 `diy` / `kits_layout` / `chess_kalts2` 的约定）；对应的 Forge「官方技能绑定」用例 skip。
+- `loopCaps` 的 11 条 1e16 / loop-cap 用例 skip：本分支保留自己的 sim，不取上游 `textCount` / `textFinite` 的引擎改写。
+- `operator-traits` 的 DIY 自造干员用例 skip：没有官方 backups 替身。
+- Windows 无符号链接权限的安装 / Forge / 脚本用例 skip。
+- 本机旧场景提取的 11 条 scene 用例 skip（`--scenes` 重抽后可跑）；`decode_rgbm` / 提取器版本断言按当前提取器修正。
+
+**验收**：`test/plugins` **513 / 494 通过 / 19 跳过 / 0 失败**；`test/match` **860/860**；`test/ui` **1041 通过 / 7 跳过 / 0 失败**；golden **全匹配**；`build-data --offline` 不改 `data/`；完整 `npm run ci` **全部通过**（test / smoke / lint / imports / typecheck）。
+

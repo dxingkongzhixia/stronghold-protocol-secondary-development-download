@@ -829,9 +829,10 @@ export class AudioManager {
             const r = this.ctx.decodeAudioData(ab, resolve, () => resolve(null));
             if (r && typeof r.then === 'function') r.then(resolve, () => resolve(null));
           } catch { resolve(null); }
+        }).then((buf) => {
+          if (!buf) this._failed(url);
+          return buf;
         });
-        if (!buf) this._failed(url);
-        return buf;
       } catch (err) {
         this._warn(url, err);
         this._failed(url);

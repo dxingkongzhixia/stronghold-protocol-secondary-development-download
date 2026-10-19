@@ -14,8 +14,9 @@ import {
 } from '../../server/sim/content/dsl/vocab.js';
 
 const schema = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../schemas/dsl.schema.json'), 'utf8'));
-const FORBIDDEN = schema.$defs.forbidden.enum;
-const LIMITS = schema.$defs.limits.properties;
+const DEFS = schema.definitions ?? schema.$defs;
+const FORBIDDEN = DEFS.forbidden.enum;
+const LIMITS = DEFS.limits.properties;
 
 const SKGOAT = {
   dsl: 1, pluginId: 'rewrite-skgoat',
@@ -66,7 +67,7 @@ const KAZEMA = {
 };
 
 function kitOfSpec(spec) {
-  return (bb, chess, def) => compileDsl(spec, { bb, chess, def });
+  return (bb, chess, def) => compileDsl(spec, { bb, chess, def, pluginId: spec.pluginId });
 }
 
 function picture(h) {
@@ -121,11 +122,11 @@ function schemaCodes(spec) {
   const codes = [];
   const fail = (c) => { if (!codes.includes(c)) codes.push(c); };
   const tick = 1 / LIMITS.tickDenominator.const;
-  const actions = schema.$defs.action.enum;
-  const triggers = schema.$defs.trigger.enum;
+  const actions = DEFS.action.enum;
+  const triggers = DEFS.trigger.enum;
   if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return ['PLUGIN_DSL_SHAPE'];
   if (spec.dsl !== schema.properties.dsl.const) fail('PLUGIN_DSL_VERSION');
-  if (spec.pluginId != null && (typeof spec.pluginId !== 'string' || !new RegExp(schema.$defs.pluginId.pattern).test(spec.pluginId))) {
+  if (spec.pluginId != null && (typeof spec.pluginId !== 'string' || !new RegExp(DEFS.pluginId.pattern).test(spec.pluginId))) {
     fail('PLUGIN_DSL_PLUGIN_ID');
   }
   if (spec.budget != null && !(Number.isInteger(spec.budget) && spec.budget > 0 && spec.budget <= LIMITS.budgetMax.const)) {
@@ -150,7 +151,7 @@ function schemaCodes(spec) {
       const body = verbs.length === 1 ? node[verbs[0]] : null;
       if (body && typeof body === 'object') {
         walkValue(body.amount);
-        if (typeof body.target === 'string' && !schema.$defs.target.enum.includes(body.target)) fail('PLUGIN_DSL_TARGET');
+        if (typeof body.target === 'string' && !DEFS.target.enum.includes(body.target)) fail('PLUGIN_DSL_TARGET');
       }
       if (node.then) walkList(node.then);
     }
@@ -170,15 +171,15 @@ function schemaCodes(spec) {
 }
 
 test('schema enums are the compiler vocabulary', () => {
-  assert.deepEqual(schema.$defs.trigger.enum, [...TRIGGERS]);
-  assert.deepEqual(schema.$defs.condition.enum, [...CONDITIONS]);
-  assert.deepEqual(schema.$defs.action.enum, [...ACTIONS]);
-  assert.deepEqual(schema.$defs.target.enum, [...TARGETS]);
-  assert.deepEqual(schema.$defs.metaTrigger.enum, [...META_TRIGGERS]);
-  assert.deepEqual(schema.$defs.metaAction.enum, [...META_ACTIONS]);
-  assert.deepEqual(schema.$defs.valueOp.enum, [...VALUE_OPS]);
-  assert.deepEqual(schema.$defs.skillKind.enum, [...SKILL_KINDS]);
-  assert.deepEqual(schema.$defs.stat.enum, [...STAT_NAMES]);
+  assert.deepEqual(DEFS.trigger.enum, [...TRIGGERS]);
+  assert.deepEqual(DEFS.condition.enum, [...CONDITIONS]);
+  assert.deepEqual(DEFS.action.enum, [...ACTIONS]);
+  assert.deepEqual(DEFS.target.enum, [...TARGETS]);
+  assert.deepEqual(DEFS.metaTrigger.enum, [...META_TRIGGERS]);
+  assert.deepEqual(DEFS.metaAction.enum, [...META_ACTIONS]);
+  assert.deepEqual(DEFS.valueOp.enum, [...VALUE_OPS]);
+  assert.deepEqual(DEFS.skillKind.enum, [...SKILL_KINDS]);
+  assert.deepEqual(DEFS.stat.enum, [...STAT_NAMES]);
   assert.equal(LIMITS.tickDenominator.const, Math.round(1 / TICK));
 });
 

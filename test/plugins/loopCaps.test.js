@@ -20,6 +20,8 @@ import { fixture, bondPatch } from '../helpers/contentFixtures.js';
 
 const BOMB = '10000000000000000';
 const NINES = '9'.repeat(400);
+const SKIP_SIM = '本分支保留自己的 sim（不取上游 textCount/textFinite 的引擎改写），1e16 用例不适用 — UPSTREAM-MERGES §13.10';
+const SKIP_SCAN = '本分支的 sim / match 不统一标注 loop-cap（不取上游引擎改写），扫描不适用 — UPSTREAM-MERGES §13.10';
 
 function boundProblems(op) {
   const patched = applyPatches(getData(), [op]);
@@ -46,9 +48,6 @@ test('description counts stay finite and official phrases are unchanged', { skip
   assert.equal(textFinite('持续120秒', /持续(\d+(?:\.\d+)?)秒/, 25), 120);
   assert.equal(textFinite('伤害降低80%', /伤害降低(\d+)%/, 0), 80);
 });
-
-const SKIP_SIM = '本分支保留自己的 sim（不取上游 textCount/textFinite 的引擎改写），1e16 用例不适用 — UPSTREAM-MERGES §13.10';
-const SKIP_SCAN = '本分支的 sim / match 不统一标注 loop-cap（不取上游引擎改写），扫描不适用 — UPSTREAM-MERGES §13.10';
 
 test('霍尔海雅 S2 1e16 连发 fills a capped target list', { skip: SKIP_SIM }, async () => {
   const heyak = (await import('../../server/sim/content/kits/ops/op-heyak.js')).default;

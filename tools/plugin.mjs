@@ -360,7 +360,7 @@ export async function main(argv, io = {}) {
     ];
     problems += cross.skipped.reduce((n, s) => n + s.problems.length, 0);
     warnings += cross.warnings.length;
-    // Resolve cross-folder winners before showing each folder's status (DESIGN §34.21).
+    // Resolve cross-folder winners before showing each folder's status (UPSTREAM-MERGES §13.10).
     const skippedByWhere = new Map(cross.skipped.map(s => [s.where, s]));
     for (const { dir, where, r } of checks) {
       const p = r.plugin, skipped = skippedByWhere.get(where);

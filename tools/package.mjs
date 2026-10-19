@@ -272,6 +272,9 @@ export function resolveSpecifier(fromRel, spec) {
 export function importProblems(root, files) {
   const shipped = new Set(files);
   const out = [];
+  // The studio's `golden:` trial reads a dev-only table lazily and answers 400 when the package lacks it.
+  // It is deliberately not shipped (tools/golden.mjs), so this one optional import is not a package problem.
+  const OPTIONAL = new Set(['server/studio/trialScenario.js:tools/golden.mjs']);
   for (const rel of files) {
     if (!/\.(?:m?js|cjs)$/.test(rel)) continue;
     let src;
@@ -279,6 +282,7 @@ export function importProblems(root, files) {
     for (const { spec, line } of findSpecifiers(src)) {
       const target = resolveSpecifier(rel, spec);
       if (!target || shipped.has(target) || target.startsWith('public/vendor/') || !isFile(path.join(root, target))) continue;
+      if (OPTIONAL.has(`${rel}:${target}`)) continue;
       out.push(`${rel}:${line} imports ${spec} (not shipped)`);
     }
   }

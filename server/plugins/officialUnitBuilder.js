@@ -122,7 +122,7 @@ function bestCandidate(cands, phase, level, potRank = 0) {
 
 /**
  * Potential (潜能) is a per-player runtime input (0.2.2, the owner's decision of 2026-10-08: 「调配干员里自己设置吧，默认满潜
- * 满加成」; 0.2.1 baked full potential in, DESIGN §26.14). Official: 调度手册 「卫戍协议中干员潜能由自身已持有干员潜能决定」 —
+ * 满加成」; 0.2.1 baked full potential in, DESIGN §26). Official: 调度手册 「卫戍协议中干员潜能由自身已持有干员潜能决定」 —
  * the season's chess records (activity_table charChessDataDict `status`: evolvePhase, charLevel, skillLevel, favorPoint 0,
  * equipLevel) carry no potential field; a tournament video shows 刺玫 (chess_char_1_06_a) at ATK 435 and cost 15 (her
  * E1 Lv55 413 / 17 plus 攻击力+22 and two 部署费用-1: an account at full potential). Ranks count like character_table

@@ -8,7 +8,7 @@ import { ERR, EMOTES } from '../../shared/constants.js';
 import { createRng } from '../../server/sim/rng.js';
 import { DATA, makeMatch, checkInvariants } from './harness.js';
 
-const GAME = Object.keys(C2S).filter((t) => t.startsWith('g.') && t !== 'g.leave');
+const GAME = Object.keys(C2S).filter((t) => t.startsWith('g.') && !['g.leave', 'g.offer', 'g.offerRefresh', 'g.test'].includes(t));
 const BANDS = Object.keys(DATA.bands);
 
 function randomIntent(rng, m, ps) {

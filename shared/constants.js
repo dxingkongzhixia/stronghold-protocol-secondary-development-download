@@ -230,7 +230,6 @@ export const ERR_TEXT = {
   BAD_STATS: N_('对局记录无效'),
   BAD_IMAGE: N_('图片无效：仅支持 PNG / JPG / WebP，且不要超过大小限制'), INTERNAL: N_('服务器内部错误'),
   BAD_CHAT: N_('发言内容无效'),
-  SPECTATOR: N_('观战中无法进行该操作'), INTERNAL: N_('服务器内部错误'),
   PLUGIN_UNKNOWN: N_('本服务器没有安装该插件'), PLUGIN_BLOCKED: N_('该插件不能在房间中启用'), PLUGIN_DEPENDENCY: N_('缺少该插件需要的其他插件'),
   PLUGIN_CONFLICT: N_('所选插件互相冲突'), PLUGIN_LIMIT: N_('所选插件的素材总量超出本服务器的上限'),
   PLUGIN_RULE_CONFLICT: N_('两个插件把同一个规则开关设成了不同的选项'),
