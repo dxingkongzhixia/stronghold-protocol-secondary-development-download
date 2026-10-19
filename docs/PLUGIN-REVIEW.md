@@ -155,12 +155,14 @@ plugin.json + entry.sim/meta
 | 主线插件 | 结果 |
 |---|---|
 | `lang` / `cosmetic` / `ui`，`app <0.4.0` | 加载，并使用 0.3.x 兼容判断；仍会走自己的 manifest / 文件校验 |
-| `content` / `script` / `trusted`，`app <0.4.0` | 标记 `compatible: false`，内容集不会接受；需要作者把 `app` 放宽到 `<0.5.0`，或后续由 owner 做显式兼容策略 |
+| `content` / `script` / `trusted`，`app <0.4.0` | 默认标记 `compatible: false`，内容集不会接受；owner 可在 `plugins/config.json` 设 `allowIncompatible: true` 显式放行已审查的内容/脚本，并在房间 warning 中记录；trusted 仍需原有 owner / consent 门 |
 | API level 1 / 2 | 都支持（`min: 1`, `current: 2`） |
 
-插件目录里的 `entryStatus` 也使用同一规则，因此主线 0.3.x 的 cosmetic/ui/lang 不会在安装目录里被误标为 incompatible。
+`allowIncompatible` 只改变内容集的兼容性准入，不跳过数据校验、脚本权限、trusted pin 或 consent；未显式开启时行为与之前一致。
 
-测试：`test/plugins/manifest.test.js` 的 `0.3.x app compatibility` 与 `mainline 0.3.x templates` 用例。
+插件目录的 `entryStatus` 也使用同一规则，因此主线 0.3.x 的 cosmetic/ui/lang 不会在安装目录里被误标为 incompatible。
+
+测试：`test/plugins/manifest.test.js` 的 `0.3.x app compatibility` 与 `mainline 0.3.x templates` 用例；`test/plugins/contentSet.test.js` 的 `allowIncompatible` 用例。
 
 ## 8. 运营台整合（Phase 1，已实现）
 

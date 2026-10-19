@@ -209,3 +209,15 @@ test('a wave route change recomputes ground paths of the stages that use it and 
   assert.equal(stage.groundPaths[pair.key], undefined);
   assert.deepEqual(s.data.stages[otherId].groundPaths, data.stages[otherId].groundPaths);
 });
+
+
+test('allowIncompatible is an explicit owner opt-in for reviewed 0.3.x content', t => {
+  const f = fixture(t);
+  f.put('data-demo', { data: ['patch.json'] }, { 'patch.json': bondPatch() });
+  const p = f.registry.plugin('data-demo');
+  p.manifest.compatible = false;
+  assert.ok(build(f).problems.length, 'strict by default');
+  const allowed = buildContentSet({ registry: f.registry, ids: ['data-demo'], allowIncompatible: true });
+  assert.deepEqual(allowed.problems, []);
+  assert.equal(allowed.data.bonds.deputShip.bb.base_def, 0.3);
+});

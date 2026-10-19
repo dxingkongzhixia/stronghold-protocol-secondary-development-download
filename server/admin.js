@@ -169,7 +169,7 @@ export function buildPluginSnapshot(info = {}) {
       return {
         id: p.id, name, class: p.class, status: p.status, version: m.version || null,
         app: m.app || null, api: m.api ?? null, scope: Array.isArray(m.scope) ? m.scope : null,
-        permissions, bytes: Number.isFinite(p.bytes) ? p.bytes : null,
+        compatible: m.compatible !== false, permissions, bytes: Number.isFinite(p.bytes) ? p.bytes : null,
         hasContent: !!p.content, hasScript: !!p.script, trusted: p.class === 'trusted',
         missing: p.missing === true,
         notices: Array.isArray(m.notices) ? m.notices.slice(0, 20).map((n) => ({
@@ -606,6 +606,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <div class="tablewrap"><table><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>版本</th><th>状态</th><th>作用域</th><th>内容</th><th>脚本/信任</th><th>大小</th></tr></thead><tbody id="pluginBody"></tbody></table></div>
       </section>
       <section class="panel">
+      <section class="panel">
+        <h2>兼容性与诊断<em id="pluginIssueCount"></em></h2>
+        <div class="panel__body" id="pluginIssues"></div>
+      </section>
         <h2>房间内容与脚本</h2>
         <div class="tablewrap"><table><thead><tr><th>房间</th><th>内容集 cs</th><th>外观集 vs</th><th>模式</th><th>插件</th><th>脚本/信任</th><th>同意</th></tr></thead><tbody id="roomContentBody"></tbody></table></div>
       </section>
@@ -906,6 +910,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         cell(x.status === 'loaded' ? '<span class="pill yes">已加载</span>' : '<span class="pill">' + esc(x.status || '') + '</span>'),
         cell(esc((x.scope || []).join(', ') || '—')), cell(x.hasContent ? '是' : '—'),
         cell(x.trusted ? '<span class="pill no">原生信任</span>' : (x.hasScript ? '<span class="pill">沙箱脚本</span>' : '—')),
+        cell(x.compatible ? '<span class="pill yes">兼容</span>' : '<span class="pill no" title="' + esc(x.app || '') + '">不兼容</span>'),
         cell(x.bytes == null ? '—' : (Math.round(x.bytes / 1024) + ' KB'))
       ]);
     }).join('') || '<tr><td colspan="9" class="empty">还没有安装插件</td></tr>';
@@ -919,6 +924,16 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         cell(c.vs ? '<span class="mono" title="' + esc(c.vs) + '">' + esc(String(c.vs).slice(0, 12)) + '…</span>' : '—'),
         cell(esc(c.modeId || r.modeName || '')), cell(esc(plugs)), cell(script), cell(consent)]);
     }).join('') || '<tr><td colspan="7" class="empty">当前没有带内容集的房间</td></tr>';
+    var skippedText = skipped.map(function (x) {
+      return (x.where || x.id || '') + ': ' + (Array.isArray(x.problems) ? x.problems.join(' · ') : (x.problem || JSON.stringify(x)));
+    });
+    var warningText = warnings.map(function (x) {
+      return typeof x === 'string' ? x : (x.warning || x.text || JSON.stringify(x));
+    });
+    el('pluginIssueCount').textContent = ' · ' + (skippedText.length + warningText.length) + ' 条';
+    el('pluginIssues').innerHTML = (skippedText.concat(warningText)).slice(0, 20).map(function (x) {
+      return '<div class="notice-item"><b>' + esc(x) + '</b></div>';
+    }).join('') || '<div class="empty">没有跳过项或警告</div>';
     el('navPlugins').textContent = list.length;
   }
 

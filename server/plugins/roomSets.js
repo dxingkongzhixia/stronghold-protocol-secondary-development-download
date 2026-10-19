@@ -83,7 +83,7 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     }
     let cset = null;
     if (contentIds.length) {
-      const c = contents.resolve(contentIds, { settings, replacing: replacing?.cs ?? null });
+      const c = contents.resolve(contentIds, { settings, replacing: replacing?.cs ?? null, allowIncompatible: pol?.allowIncompatible === true });
       if (!c || !c.ok) return c && c.error ? c : { error: ERR.INTERNAL, detail: 'the content set failed' };
       cset = c.set;
     }

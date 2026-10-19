@@ -119,7 +119,7 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
    * settings; null when a plugin has no content snapshot (the builder decides then).
    * @param {string[]} ids @param {Record<string, Record<string, unknown>>} norm (normalized)
    */
-  const memoKey = (ids, norm) => {
+  const memoKey = (ids, norm, allowIncompatible = false) => {
     const parts = [];
     for (const id of ids) {
       const p = registry.plugin(id);
@@ -128,6 +128,7 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
       if (manifest) delete manifest.notices; // Catalogue data cannot invalidate a room's gameplay memo.
       parts.push([id, p.content.hash, p.script?.execution ?? null, p.status, manifest, norm[id] ?? null]);
     }
+    if (allowIncompatible) parts.push(['allowIncompatible', true]);
     try { return JSON.stringify(parts); } catch { return null; }
   };
   /** Remember a kept set by what it was built from; the oldest entries of sets no room holds go first. */
@@ -199,11 +200,11 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
    * @param {{ settings?: Record<string, Record<string, unknown>>, replacing?: string | null }} [opts]
    * @returns {{ ok: true, set: ContentSet } | { error: string, detail: string }}
    */
-  function resolve(ids, { settings = {}, replacing = null } = {}) {
+  function resolve(ids, { settings = {}, replacing = null, allowIncompatible = false } = {}) {
     // the same plugins, in the same state, with the same (normalized) settings: the set built before (a build takes a few
     // hundred ms of this process — every rooms: fixed room, every 「重新应用」 and every cosmetic switch beside them asks again)
     const norm = normalized(ids, settings);
-    const mk = memoKey(ids, norm);
+    const mk = memoKey(ids, norm, allowIncompatible);
     const remembered = mk && memo.has(mk) ? sets.get(memo.get(mk)) || null : null;
     // the limit: one set more than the rooms hold now (a set already held, or the one the asking room gives up, is free)
     const limit = Math.max(0, Number(maxSets()) || 0);
@@ -219,7 +220,7 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
       let built;
       try {
         builds++;
-        built = build({ registry, ids: ids.map((id) => (norm[id] ? { id, settings: norm[id] } : id)) });
+        built = build({ registry, ids: ids.map((id) => (norm[id] ? { id, settings: norm[id] } : id)), allowIncompatible });
       } catch (e) {
         log.error?.('[plugins] content set failed to build', e);
         return { error: ERR.INTERNAL, detail: 'the content set failed to build' };

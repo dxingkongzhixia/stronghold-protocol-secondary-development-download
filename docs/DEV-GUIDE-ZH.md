@@ -583,7 +583,7 @@ _整理自本仓库 0.2.0 快照。若你据此改动，请同步更新 `docs/DE
 | setup / 本地抽取 | 0.3.1 插件美术 + 0.3.2 `#728` | `tools/setup.mjs`、`tools/local-extract/{operators.py,plugin-art.mjs,extract.py}`、`server/plugins/artReferences.js`、`server/http/assetViews.js` | `test/setup-plugin-art.test.js`、`test/render/plugin-official-art.test.js`、`test/local-extract-operators.test.js`、`test/setup-assets.test.js` |
 | `#670` | `043d7959` | `test/assets-env-proxy.test.js` | 首跳精确两种形式，代理只连本机 |
 | 运营台插件/内容只读整合（本分支改进） | 本分支 2026-10-19 | `server/admin.js`（`buildPluginSnapshot`、`rooms[].content`）、`server/index.js` | `test/admin.test.js`：已安装插件、策略、房间 `cs`/`vs`、脚本/信任、consent、插件公告 |
-| 主线 0.3.x app 范围兼容层（本分支改进） | 本分支 2026-10-19 | `shared/plugins/manifest.js`（`appVersionCompatible`、`PLUGIN_COMPAT_APP`、`PLUGIN_COMPAT_CLASSES`）、`shared/plugins/catalog.js` | `test/plugins/manifest.test.js`：lang/cosmetic/ui 接受 0.3.x 范围；content/script/trusted 保持严格 |
+| 主线 0.3.x app 范围兼容层（本分支改进） | 本分支 2026-10-19 | `shared/plugins/manifest.js`（`appVersionCompatible`、`PLUGIN_COMPAT_APP`、`PLUGIN_COMPAT_CLASSES`）、`shared/plugins/catalog.js`、`server/plugins/contentSet.js` / `roomSets.js` | `test/plugins/manifest.test.js`：lang/cosmetic/ui 接受 0.3.x 范围；content/script/trusted 默认严格，owner `allowIncompatible` 可显式放行 |
 
 ### 11.2 本分支必须保留的适配
 
