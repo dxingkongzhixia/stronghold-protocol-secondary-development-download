@@ -1099,7 +1099,18 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 全量 `node --test`：见提交记录（`_merge-scratch` 通过；真实树 `Stronghold-Protocol` 除 `docs-paths` / `package` 两条 `git ls-files` 外一致）。
 - [ ] **上线**：先问 owner → 推通知 → 重启 → 校验（静态资源需连同新棋子目录一并上传）。
 
-## 35. 本轮修复 / 决策记录（2026-10-07）
+### 34.5 官方 0.3.1 自选池兼容（2026-10-19）
+
+- **目标**：官方 `op-{ascln,gdglow,narant,aglna2,wang,kalts2,clemnt}.js` 七个 6★ 自选 kit 与我们的同 charId 自造商店干员**共存**，不覆盖任何一方。
+- **数据**：`data/backups.json` 新增 `diy.officialPool`（这 7 个 charId）。`diy.ownedPool` 仍严格是“非本局 roster 的已拥有 6★”，保持 65 人；`officialPool` 单独参与 `diyPool` / `checkDiyPick`。
+- **两种角色**：
+  - 自造商店干员：`chess_char_<id>_a/_b`，走 `kits/ops/chess_char_<id>-<codename>.js` 的自造机制；
+  - 官方自选：同一 charId，走 `kits/ops/op-<codename>.js` 的官方技能 / 天赋 / 召唤。
+- **兼容边界**：`char_4217_makoto` 不加入 `officialPool`（官方池按联动干员排除）；她的自造商店形态不变。
+- **数据尺寸**：`backupUnits 82 → 89`；`diyPool(5) 80 → 87`、`diyPool(6) 74 → 81`；`ownedPool` 仍 65。
+- **测试**：`test/diy.test.js`、`test/backups.test.js`、`test/content/kits_layout.test.js`、`test/content/chess_kalts2.test.js`、`test/plugins/forgeImport.test.js` 覆盖同 charId 双角色与官方 Forge 绑定。
+
+
 
 > 本文汇总 2026-10-07 这一批改动（`_merge-scratch` 提交 `8da64e8` → `6be1dd0` + 本次）的**决策、依据、涉及文件与诚实的保留意见**。上游文档已记录的条目只做交叉引用，不复述。
 

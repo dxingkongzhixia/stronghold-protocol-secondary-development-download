@@ -18,7 +18,7 @@ const load = (f) => JSON.parse(readFileSync(new URL(`../data/${f}.json`, import.
 const chess = load('chess');
 const backups = load('backups');
 const DATA = { chess, backups };
-const { ownedPool, prototypes } = backups.diy;
+const { ownedPool, officialPool, prototypes } = backups.diy;
 const ELITES = ['char_608_acpion', 'char_609_acguad', 'char_610_acfend', 'char_611_acnipe', 'char_612_accast', 'char_613_acmedc', 'char_614_acsupo', 'char_615_acspec', 'char_617_sharp2'];
 const RESERVES5 = ['char_601_cguard', 'char_602_cdfend', 'char_603_csnipe', 'char_604_ccast', 'char_605_cmedic', 'char_606_csuppo'];
 const COLLAB = ['char_456_ash', 'char_1029_yato2', 'char_4123_ela', 'char_4141_marcil', 'char_4182_oblvns', 'char_4217_makoto'];
@@ -35,27 +35,43 @@ test('slots: two per tier (5, 6), each with its elite twin', () => {
   assert.equal(diyTokenOwner(SIEGE, chess.chess_char_6_diy1_b.status), 'char_112_siege@2/60/7/3');
 });
 
-test('diyPool: tier 5 = 15 prototypes + 65 owned 6★, tier 6 = 9 + 65; no preset, no collab; with the kit registry only kitted operators', () => {
+test('diyPool: tier 5 = 15 prototypes + 65 owned + 7 official 6★; tier 6 = 9 + 65 + 7; no preset, no collab; with the kit registry only kitted operators', () => {
   const p5 = diyPool(5, { data: DATA }), p6 = diyPool(6, { data: DATA });
-  assert.deepEqual(p5, [...RESERVES5, ...ELITES, ...ownedPool]);
-  assert.deepEqual(p6, [...ELITES, ...ownedPool]);
-  assert.deepEqual([p5.length, p6.length], [80, 74]);
+  assert.deepEqual(p5, [...RESERVES5, ...ELITES, ...ownedPool, ...officialPool]);
+  assert.deepEqual(p6, [...ELITES, ...ownedPool, ...officialPool]);
+  assert.deepEqual([p5.length, p6.length], [87, 81]);
   const roster = new Set(Object.values(chess).map((c) => c.charId).filter(Boolean));
-  for (const id of p5) assert.ok(!roster.has(id) && !COLLAB.includes(id), id);
+  for (const id of p5) assert.ok((!roster.has(id) || officialPool.includes(id)) && !COLLAB.includes(id), id);
   assert.deepEqual(diyPool(4, { data: DATA }), [], 'no 自选 slot at tier 4');
   // the kit registry: the 预备干员 run the generic kit (exact for their skills), the nine elites their stand-in kits, the
-  // owned 6★ only with an operator kit file (kits/index.js OPERATOR_KIT_FILES), in pool order
+  // owned 6★ only with an operator kit file (kits/index.js OPERATOR_KIT_FILES), in pool order; the official-DIY pool of
+  // our custom shop operators is exactly the seven official op kits.
   assert.deepEqual(GENERIC_KIT_CHARS.filter((id) => prototypes['5'].includes(id)), RESERVES5);
   for (const id of ELITES) assert.equal(typeof STANDIN_KITS[id], 'function', `${id}: stand-in kit`);
-  const ops = ownedPool.filter((id) => typeof OPERATOR_KITS[id] === 'function');
-  assert.deepEqual([...ops].sort(), Object.keys(OPERATOR_KITS).sort(), 'every operator kit is an owned-6★ pick');
+  const ops = [...ownedPool, ...officialPool].filter((id) => typeof OPERATOR_KITS[id] === 'function');
+  assert.deepEqual([...ops].sort(), Object.keys(OPERATOR_KITS).sort(), 'every operator kit is an owned/official pick');
   assert.deepEqual(diyPool(5, { data: DATA, kitted: KITTED_CHARS }), [...RESERVES5, ...ELITES, ...ops]);
   assert.deepEqual(diyPool(6, { data: DATA, kitted: KITTED_CHARS }), [...ELITES, ...ops]);
   assert.deepEqual(diyPool(6, { data: DATA, kitted: (id) => id === SIEGE }), [SIEGE], 'a predicate works too');
   assert.deepEqual(diyPool(5, { data: DATA, kitted: [] }), [], 'nothing kitted, nothing offered');
 });
 
-test('checkDiyPick: a prototype carries its locked skill / module (与系统补位时一致) — omitted ⇒ filled in, another ⇒ refused', () => {
+test('official 0.3.1 op kits coexist with our custom shop operators: same charId, two roles', () => {
+  const expected = ['char_377_gdglow', 'char_1015_aglna2', 'char_1052_kalts2', 'char_2027_wang',
+    'char_4132_ascln', 'char_4138_narant', 'char_4231_clemnt'];
+  assert.deepEqual([...officialPool].sort(), [...expected].sort(), 'the seven official-DIY picks');
+  for (const id of officialPool) {
+    assert.ok(!ownedPool.includes(id), `${id}: not an owned-pool pick (it is a roster operator)`);
+    assert.ok(Object.values(chess).some((c) => c.charId === id && c.chessType === 'NORMAL' && !c.isGolden), `${id}: custom shop chess`);
+    assert.equal(typeof OPERATOR_KITS[id], 'function', `${id}: official op kit`);
+    assert.ok(backups.units[id], `${id}: DIY unit forms`);
+    assert.ok(KITTED_CHARS.includes(id), `${id}: kitted for a DIY pick`);
+    for (const tier of [5, 6]) assert.ok(diyPool(tier, { data: DATA, kitted: KITTED_CHARS }).includes(id), `${id}: tier ${tier}`);
+    assert.ok(validateDiyPicks({ [T5]: { charId: id, skillIndex: 0 } }, { data: DATA, kitted: KITTED_CHARS }).ok, `${id}: a legal pick`);
+  }
+});
+
+test('checkDiyPick: a prototype carries its locked skill / module (与系统补位时一致 — omitted ⇒ filled in, another ⇒ refused', () => {
   for (const [slot, tier] of [[T5, 5], [T6, 6]]) {
     for (const id of prototypes[tier]) {
       const lk = lockedSelection(DATA, tier, id);

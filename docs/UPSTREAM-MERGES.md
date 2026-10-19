@@ -1532,3 +1532,5 @@ docs guards 34 pass / 0 fail.
 
 **验收**：`test/plugins` **513 / 494 通过 / 19 跳过 / 0 失败**；`test/match` **860/860**；`test/ui` **1041 通过 / 7 跳过 / 0 失败**；golden **全匹配**；`build-data --offline` 不改 `data/`；完整 `npm run ci` **全部通过**（test / smoke / lint / imports / typecheck）。
 
+
+**官方 0.3.1 自选池与自造干员兼容（2026-10-19）**：`data/backups.json` 增加 `diy.officialPool`（7 个同 charId 的自造商店干员），官方 `op-*` kit 进入 `OPERATOR_KIT_FILES`；自造 `chess_char_*` kit 与官方 `op-*` kit 按 key 分离，互不覆盖。`diy.ownedPool` 仍为 65 人，`diyPool` 5/6 阶变为 87/81。详见 `docs/MATCHMAKING.md` §34.5。

@@ -70,7 +70,7 @@ const STAT_KEYS = ['maxHp', 'atk', 'def', 'res', 'cost', 'blockCnt', 'bat', 'asp
 test('backups: the 17 stand-in characters, each with a form for every status it fights at', () => {
   const ids = Object.keys(backups.units).filter((id) => backups.units[id].standsIn.length);
   assert.deepEqual(ids, [...RESERVES, ...ELITES]);
-  assert.deepEqual(Object.keys(backups.units), [...RESERVES, ...ELITES, ...backups.diy.ownedPool], 'the stand-ins, then the owned 6★ picks');
+  assert.deepEqual(Object.keys(backups.units), [...RESERVES, ...ELITES, ...backups.diy.ownedPool, ...backups.diy.officialPool], 'the stand-ins, then the owned 6★ picks and the official-DIY pool');
   assert.deepEqual([...new Set(ofType('NORMAL').map((c) => c.backup.charId).filter((x) => x != null))].sort(), [...ids].sort(), 'the stand-ins are exactly the NORMAL chess backups (our CUSTOM_CHESS have none)');
   const statKeys = STAT_KEYS;
   for (const id of ids) {
@@ -323,7 +323,7 @@ test('DIY: the owned-6★ pool and the faction → bond rule (mainPower + every 
     assert.ok(!roster.has(id), `${id}: a roster operator is never a pick`);
     assert.deepEqual([operators[id].rarity, operators[id].obtainable], [6, true], id);
   }
-  assert.deepEqual(Object.keys(operators).sort(), [...new Set([...ownedPool, ...prototypes['5'], ...prototypes['6']])].sort());
+  assert.deepEqual(Object.keys(operators).sort(), [...new Set([...ownedPool, ...backups.diy.officialPool, ...prototypes['5'], ...prototypes['6']])].sort());
   const core = Object.values(bonds).filter((b) => b.isCore && b.powerIdList.length);
   assert.equal(core.length, 8);
   for (const [id, o] of Object.entries(operators)) {

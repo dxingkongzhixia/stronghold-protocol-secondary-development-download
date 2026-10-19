@@ -151,6 +151,16 @@ export const OPERATOR_KIT_FILES = Object.freeze([
   'op-nasti.js',
   'op-necras.js',
   'op-monstr.js',
+  // official 0.3.1 kits of the six-star operators our fork also fields as custom shop chess
+  // (tools/build-data.mjs CUSTOM_OFFICIAL_DIY): the same charId, but a DIY pick runs this official kit
+  // while the custom chess keeps its chess_char_* kit. Both roles coexist.
+  'op-narant.js',
+  'op-ascln.js',
+  'op-gdglow.js',
+  'op-wang.js',
+  'op-aglna2.js',
+  'op-kalts2.js',
+  'op-clemnt.js',
 ]);
 
 /**

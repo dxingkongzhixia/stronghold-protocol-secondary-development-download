@@ -1074,7 +1074,7 @@ test('official skills of one operator keep their ids and bind that operator\'s k
     const records = opsOf(path.join(parent, 'rose-sea'));
     const sea = records.find((o) => o.charId === 'char_x_rose_sea_char_rose_sea');
     const saint = records.find((o) => o.charId === 'char_x_rose_sea_rose_saint');
-    assert.deepEqual(sea.kit, { ref: 'chess_char_4231_clemnt_a' });
+    assert.deepEqual(sea.kit, { ref: 'char_4231_clemnt' });
     assert.equal(sea.as, 'diy');
     assert.deepEqual(sea.forms.elite.skills.map((s) => s.skillId), ['skchr_clemnt_1', 'skchr_clemnt_2', 'skchr_clemnt_3']);
     assert.equal(sea.forms.normal.skills[0].default, true);

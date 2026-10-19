@@ -576,6 +576,19 @@ const CUSTOM_CHESS = [
 
 /** The base chess ids of CUSTOM_CHESS: always-owned — they have no official 补位 stand-in (data/backups.json). */
 const CUSTOM_BASE_IDS = new Set(CUSTOM_CHESS.map((c) => c.baseId));
+/** Summons the custom chess already writes into tokens.json (applyCustomChess): backups.json must not duplicate them. */
+const CUSTOM_TOKEN_IDS = new Set(CUSTOM_CHESS.flatMap((c) => c.tokenIds || []));
+
+/**
+ * Custom shop operators that ALSO keep the official 0.3.1 six-star 自选 (DIY) pick: the official `op-<codename>.js`
+ * kit and the custom `chess_char_<...>` kit share one charId, but resolve by different keys (operator charId vs chess
+ * id). They are added to `diy.officialPool`, never to `ownedPool` (which stays "a roster operator is never an owned
+ * pick"), so both roles coexist. `char_4217_makoto` is left out: the official pool excludes her as a collab operator.
+ */
+const CUSTOM_OFFICIAL_DIY = new Set([
+  'char_4132_ascln', 'char_377_gdglow', 'char_4138_narant', 'char_1015_aglna2',
+  'char_2027_wang', 'char_1052_kalts2', 'char_4231_clemnt',
+]);
 
 /** Merge CUSTOM_CHESS into the official season tables (idempotent). */
 function applyCustomChess(act, charTable) {
@@ -1707,10 +1720,17 @@ function buildBackups(ctx, chess) {
   const excluded = legal6.filter((id) => teamsOf(charTable[id]).some((t) => excludedTeams.has(t)) || collabNumber(charTable[id]));
   for (const t of DIY_EXCLUDED_TEAMS) if (!excluded.some((id) => teamsOf(charTable[id]).includes(t))) warn(`DIY_EXCLUDED_TEAMS: no owned-6★ pick of team ${t}`);
   const ownedPool = legal6.filter((id) => !excluded.includes(id));
+  // Official-version DIY picks of the custom shop operators (CUSTOM_OFFICIAL_DIY). Their charId is deliberately also a
+  // roster operator: the custom chess keeps its chess_char_* kit, while a DIY pick of the same operator runs the
+  // official op-<codename>.js kit. They are a pool of their own, not part of `ownedPool`.
+  const officialPool = [...CUSTOM_OFFICIAL_DIY]
+    .filter((id) => charTable[id] && requirements.has(charTable[id].rarity) && !excluded.includes(id))
+    .sort(naturalCmp);
   for (const id of ownedPool) for (const st of diyStatuses.values()) addNeed(id, st);
+  for (const id of officialPool) for (const st of diyStatuses.values()) addNeed(id, st);
 
   const units = {};
-  for (const id of [...standInIds, ...ownedPool]) {
+  for (const id of [...standInIds, ...ownedPool, ...officialPool]) {
     const unit = buildUnitHead(ctx, id);
     unit.standsIn = (standsIn.get(id) || []).sort(naturalCmp);
     unit.forms = {};
@@ -1722,12 +1742,12 @@ function buildBackups(ctx, chess) {
     units[id] = unit;
   }
   for (const id of need.keys()) if (!units[id]) warn(`unit ${id}: needed but neither a stand-in nor an owned pick`);
-  const tokens = buildDiyTokens(ctx, units, ownedPool);
+  const tokens = buildDiyTokens(ctx, units, [...ownedPool, ...officialPool], new Set(officialPool));
 
   const coreBonds = Object.values(ac.bondInfoDict || {}).filter((b) => b.isPower && (b.powerIdList || []).length);
   const fallback = act.constData.fallbackBondId;
   const operators = {};
-  for (const id of [...new Set([...ownedPool, ...Object.values(prototypes).flat()])].sort(naturalCmp)) {
+  for (const id of [...new Set([...ownedPool, ...officialPool, ...Object.values(prototypes).flat()])].sort(naturalCmp)) {
     const ch = charTable[id];
     const powers = [];
     for (const p of [ch.mainPower ?? { nationId: ch.nationId, groupId: ch.groupId, teamId: ch.teamId }, ...(ch.subPower || [])]) {
@@ -1739,7 +1759,7 @@ function buildBackups(ctx, chess) {
       obtainable: !ch.isNotObtainable, powers, bonds: hit.length ? hit : [fallback],
     };
   }
-  return { units, tokens, diy: { slots, prototypes, locked, ownedPool, excluded, operators } };
+  return { units, tokens, diy: { slots, prototypes, locked, ownedPool, officialPool, excluded, operators } };
 }
 
 /**
@@ -1982,7 +2002,7 @@ function summonRecord(ctx, tokenId, char, variants, produced, ownerTexts = []) {
  * @param {object} units backups `units`
  * @param {string[]} owned the owned-6★ picks (their forms are the DIY slot statuses)
  */
-function buildDiyTokens(ctx, units, owned) {
+function buildDiyTokens(ctx, units, owned, official = new Set()) {
   const { charTable, battleEquip } = ctx;
   const owners = new Map();   // tokenId → [{ key, variant, produced }]
   const makes = (list) => list.includes('talent') || list.includes('skill');
@@ -2008,6 +2028,9 @@ function buildDiyTokens(ctx, units, owned) {
       };
       const [first, ...alts] = form.skills;
       for (const tokenId of form.tokens) {
+        // the official-DIY role of a custom shop operator uses the token records tokens.json already builds for that
+        // operator; adding them to backups.json would duplicate an id (integrity) and change nothing a pick needs.
+        if (official.has(charId) || CUSTOM_TOKEN_IDS.has(tokenId)) continue;
         const tchar = charTable[tokenId];
         const label = `token ${tokenId}@${charId}@${key}`;
         const at = (o) => tokenVariant(ctx, tokenId, tchar, { phase, level, skillIndex: first.index, skillLevel, modulePhase: null, moduleTokenParts: [], label, potRank: ctx.potRank, ...o });
@@ -4475,6 +4498,10 @@ async function main() {
   errors.push(...attachPotential(passes));
   let total = 0;
   const sizes = {};
+  // The custom shop operators' summons are already tokens.json records (CUSTOM_CHESS + applyCustomChess). Their
+  // official-DIY forms use the same token ids, so keep the single tokens.json record rather than a duplicate in
+  // backups.json (the integrity checks require the two files to be disjoint).
+  for (const id of Object.keys(backups.tokens)) if (tokens[id]) delete backups.tokens[id];
   const texts = {};
   for (const [name, obj] of Object.entries(files)) {
     texts[name] = JSON.stringify(obj);

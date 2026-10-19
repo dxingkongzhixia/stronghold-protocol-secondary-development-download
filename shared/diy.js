@@ -6,8 +6,10 @@
 // The rules (research 0.2.0 §2; PRTS 卫戍协议, 卫戍协议：盟约 下半/PRTS盟约记录; the owner's decisions of 2026-10-05):
 // - two slots per tier, 5 and 6: chess_char_5_diy1/2_a, chess_char_6_diy1/2_a, each with its `_b` elite twin (tier,
 //   price, merge of the slot: buy 4, sell 1);
-// - the picks of a tier: the owned 6★ outside the chess pool (`diy.ownedPool`: no preset operator, no collab) and the
-//   nine 6★ prototypes at both tiers, the six 4★ reserves (not 先锋 / 特种) at tier 5 only (`diy.prototypes[tier]`);
+// - the picks of a tier: the owned 6★ outside the chess pool (`diy.ownedPool`: no preset operator, no collab), the
+//   official 0.3.1 picks of our custom shop operators (`diy.officialPool`: same charId, official op kit, while the
+//   custom chess keeps its chess kit), and the nine 6★ prototypes at both tiers, the six 4★ reserves (not 先锋 / 特种)
+//   at tier 5 only (`diy.prototypes[tier]`);
 // - a prototype may fill one tier-5 and one tier-6 slot, an owned operator one slot; the two picks of a tier differ;
 // - no 特质 (PRTS "甄选加入的干员不会拥有任何特质"); bonds from the operator's factions (`diy.operators[id].bonds`);
 // - the normal form is E2 Lv1, skill rank 4, no module; the elite E2 Lv60, rank 7, its module at stage 1 (tier 5) or 3
@@ -145,7 +147,7 @@ export function diyPool(tier, { data, kitted = null } = { data: null }) {
   const diy = diyOf(data);
   if (!diy || !DIY_TIERS.includes(tier)) return [];
   const ok = kittedTest(kitted);
-  return [...new Set([...(diy.prototypes?.[tier] ?? []), ...(diy.ownedPool ?? [])])].filter(ok);
+  return [...new Set([...(diy.prototypes?.[tier] ?? []), ...(diy.ownedPool ?? []), ...(diy.officialPool ?? [])])].filter(ok);
 }
 
 /**
@@ -164,7 +166,7 @@ export function checkDiyPick(slotId, pick, data) {
   const { charId } = pick;
   const diy = diyOf(data);
   const proto = isPrototypePick(data, slot.tier, charId);
-  if (!proto && !(diy.ownedPool ?? []).includes(charId)) return { error: `${charId} is not a tier-${slot.tier} 自选 pick` }; // i18n-ignore: developer detail
+  if (!proto && !(diy.ownedPool ?? []).includes(charId) && !(diy.officialPool ?? []).includes(charId)) return { error: `${charId} is not a tier-${slot.tier} 自选 pick` }; // i18n-ignore: developer detail
   const want = pick.skillIndex ?? null;
   const wantMod = pick.uniEquipId === undefined || pick.uniEquipId === 'none' ? null : pick.uniEquipId;
   if (want !== null && !(Number.isInteger(want) && want >= 0 && want <= 9)) return { error: `${charId}: bad skill index ${want}` };

@@ -109,14 +109,15 @@ test('her shop default skill is S2 保护性拒止 (index 1): the record\'s `ski
   }
 });
 
-test('she is a formal chess, not a 自选 pick: out of KITTED_CHARS / diy.ownedPool, never offered by diyPool, no operator kit (docs/MATCHMAKING.md §34)', () => {
+test('she is a formal chess AND keeps the official 0.3.1 自选 role: the custom shop chess stays, while the official op kit coexists (docs/MATCHMAKING.md §34)', () => {
   const data = { chess: CHESS, backups: BACKUPS };
-  assert.ok(!KITTED_CHARS.includes(KALTS2), 'not a kitted 自选 operator any more');
-  assert.equal(OPERATOR_KITS[KALTS2], undefined, 'no operator kit');
-  assert.ok(!BACKUPS.diy.ownedPool.includes(KALTS2), 'not in the 协防/自选 owned pool');
-  assert.equal(BACKUPS.units[KALTS2], undefined, 'no 自选 backup unit');
-  for (const t of [5, 6]) assert.ok(!diyPool(t, { data, kitted: KITTED_CHARS }).includes(KALTS2), `tier ${t}`);
-  assert.ok(CHESS[BASE] && CHESS[GOLD], 'she is a formal shop chess instead');
+  assert.ok(KITTED_CHARS.includes(KALTS2), 'the official op kit keeps her kitted for a DIY pick');
+  assert.equal(typeof OPERATOR_KITS[KALTS2], 'function', 'the official op-kalts2 kit');
+  assert.ok(!BACKUPS.diy.ownedPool.includes(KALTS2), 'not in the 协防/自选 owned pool: she is a roster operator');
+  assert.ok(BACKUPS.diy.officialPool.includes(KALTS2), 'in the official-DIY pool of custom shop operators');
+  assert.ok(BACKUPS.units[KALTS2], 'the backup unit for the official DIY form exists');
+  for (const t of [5, 6]) assert.ok(diyPool(t, { data, kitted: KITTED_CHARS }).includes(KALTS2), `tier ${t}`);
+  assert.ok(CHESS[BASE] && CHESS[GOLD], 'she is a formal shop chess too');
 });
 
 test('trait: her heals take 凯尔希\'s Mon3tr through its 禁疗 (her selection too); another 禁疗 summon stays out', () => {
