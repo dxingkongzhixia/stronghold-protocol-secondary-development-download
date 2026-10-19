@@ -1,5 +1,5 @@
 // test/render/vfx-orient.test.js — official effects that stand, start at the weapon or come back (the maintainer's report
-// of 2026-10-16, DESIGN §34.6): the prefab root's authored transform is no part of the effect (the client sets the root
+// of 2026-10-16, UPSTREAM-MERGES §13.10): the prefab root's authored transform is no part of the effect (the client sets the root
 // where it plays it: 安洁莉娜 S2's orbs flew 0.94 tile above their path); an effect spawned at FOOT_POINT / HIT_POINT /
 // HEAD_POINT takes the unit's Graphic tilt (荒芜拉普兰德 S3's seal and 能天使 S3's light bars stand facing the camera), the
 // ground and NONE spawns the identity, FLIP_TWO_SIDE still flips the tilted ones, a FollowMountPoint keeps or follows; a

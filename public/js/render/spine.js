@@ -562,7 +562,7 @@ export class SpineActor {
 
   _idleName() {
     const sk = this.roles.skill;
-    // [ASSUMED] DESIGN §34.4.1: the resting clip of a held skill is its loop. Idle here is the stand-up a stun
+    // [ASSUMED] UPSTREAM-MERGES §13.10: the resting clip of a held skill is its loop. Idle here is the stand-up a stun
     // used to leave behind for the rest of the skill (白面鸮 S2).
     if (this._skillLoopHeld()) return sk.loop;
     if (this.skillOn && sk && this.has(sk.idle)) return sk.idle;
@@ -797,7 +797,7 @@ export class SpineActor {
   }
 
   /**
-   * Begin / loop / end, and no idle of its own: the loop is the stance for the whole skill (DESIGN §34.4).
+   * Begin / loop / end, and no idle of its own: the loop is the stance for the whole skill (UPSTREAM-MERGES §13.10).
    * A distinct skill.idle (折桠 Skill_2_Idle) is the stance between attacks, so the loop stays the attack clip.
    * via:'attack' (远牙: the role is the normal attack triple) is not a skill stance.
    */
@@ -819,7 +819,7 @@ export class SpineActor {
   /**
    * This skill's own strike clip, which the resolver drops when a Loop exists (anim-roles skillFamily: loop =
    * P_Loop before P_Attack). 焰影苇草 S3 is Skill_3_Attack beside Skill_3_Begin/Loop/End.
-   * [ASSUMED] (DESIGN §34.4.1): no table says which clip an atk plays during a held loop. Only a same-prefix
+   * [ASSUMED] (UPSTREAM-MERGES §13.10): no table says which clip an atk plays during a held loop. Only a same-prefix
    * `<prefix>_Attack` (or `<prefix>_Attack_*`, not Down / Begin / End / Idle) counts — not the normal Attack and
    * not another skill's Attack_2 (塞雷娅). A loop that itself contains OnAttack is not a separate clip: `_attackClip`
    * returns the skill role so the existing per-attack scale and strikePose path plays that loop.
@@ -864,7 +864,7 @@ export class SpineActor {
         // A dedicated strike clip (焰影苇草 Skill_3_Attack) wins. Otherwise a loop that itself has OnAttack is
         // the strike: return the skill role so windUp / attack scale it and strikePose is that frame. The attack
         // end already returns to the looping loop and skips End. A loop with no OnAttack stays put — returning
-        // the normal attack would stand her up (白面鸮 S2). [ASSUMED] DESIGN §34.4.1.
+        // the normal attack would stand her up (白面鸮 S2). [ASSUMED] UPSTREAM-MERGES §13.10.
         const atk = this._skillOwnAttack();
         if (atk) return { begin: null, loop: atk, end: null };
         const hits = this.entry && this.entry.hits && this.entry.hits[sk.loop];
@@ -1108,6 +1108,9 @@ export class SpineActor {
         this._posed = true;               // (a first update that threw is tried again: no setup pose left on screen)
       } catch { /* a broken skeleton must not stop the frame */ }
     }
+    // the animation state may have advanced from a queued clip (Begin -> Loop / idle): the visible clip is current
+    const active = this.spine && this.spine.state && this.spine.state.tracks && this.spine.state.tracks[0];
+    if (this.mode !== 'attack' && active && active.animation && typeof active.animation.name === 'string') this.current = active.animation.name;
     if (this.clipped && !this.clipOn) this._eyeMaskFallback();
     this._applied = true;
     this._appliedTint = this.spine.tint;

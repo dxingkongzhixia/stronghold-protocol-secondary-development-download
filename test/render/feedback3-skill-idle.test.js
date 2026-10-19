@@ -92,5 +92,7 @@ test('unchanged: a loop that is the skill idle (蕾缪安 S3) and a skill withou
   u.log.length = 0;
   u.attack(1.2);
   run(u, 1.2 * 1.4 + 0.1);
-  assert.deepEqual(names(u).slice(-2), ['Skill_End', 'Idle'], 'its spell of attacks still ends as before');
+  assert.deepEqual(u.log, [], 'an attack does not replay Begin, cut to End or stand her up');
+  u.setSkill(false);
+  assert.equal(u.current, 'Skill_End', 'End only when the skill ends');
 });

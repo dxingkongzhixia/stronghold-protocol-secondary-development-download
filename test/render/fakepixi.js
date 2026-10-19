@@ -102,7 +102,7 @@ export function installFakePixi() {
       this.state = {
         tracks, timeScale: 1,
         setAnimation: (i, name, loop) => { const e = { ...track(), loop, animation: { duration: 1, name } }; tracks[i] = e; return e; },
-        addAnimation: (i, name, loop) => { const e = { ...track(), loop, animation: { duration: 1, name } }; return e; },
+        addAnimation: (i, name, loop) => { const e = { ...track(), loop, animation: { duration: 1, name } }; tracks[i] = e; return e; },
         setEmptyAnimation: () => track(), addEmptyAnimation: () => track(), clearTrack() {}, clearTracks() {}, addListener() {}, update() {}, apply() {},
       };
     }
