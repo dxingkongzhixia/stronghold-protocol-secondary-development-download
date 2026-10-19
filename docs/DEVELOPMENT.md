@@ -562,3 +562,5 @@ node --test test/render/vfx-orient.test.js test/render/vfx-areas.test.js test/re
 node --test test/setup-plugin-art.test.js test/render/plugin-official-art.test.js test/local-extract-operators.test.js
 npm run ci
 ```
+
+A dedicated engineering review of this plugin stack — architecture, security boundaries, residual risks and the verification blind spots — is in [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md).

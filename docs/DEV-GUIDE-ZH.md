@@ -605,3 +605,5 @@ node --test test/render/vfx-orient.test.js test/render/vfx-areas.test.js test/re
 node --test test/setup-plugin-art.test.js test/render/plugin-official-art.test.js test/local-extract-operators.test.js
 npm run ci
 ```
+
+插件 / Forge 体系的架构、安全边界、残余风险与验证盲区，另见 [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md)。

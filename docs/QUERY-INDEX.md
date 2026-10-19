@@ -38,6 +38,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 | shared constants + wire contract | `shared/constants.js` (incl. `APP_VERSION`), `shared/protocol.js`, `shared/stats.js` |
 | browser client (screens) | `public/js/main.js`, `public/js/store.js`, `public/js/screens/` |
 | browser UI widgets | `public/js/ui/` |
+| plugin system review / risks / verification gaps | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) |
 | plugin / Forge system, content sets, studio | `server/plugins/`, `shared/plugins/`, `schemas/`, `server/studio/`, `public/studio/`, `public/js/ui/{pluginPanel,pluginSettings,pluginTag,notices}.js` |
 | test console / `SP_TEST_MODE` | `public/js/ui/{testConsole,testDock,testAudit}.js`, `server/lobby.js` (`room.test`), `server/match/testCommands.js`, `shared/testMode.js` |
 | operator skins | `shared/protocol.js` (`room.skins`), `server/match/{PlayerState,player/basics,player/views}.js`, `public/js/ui/{skins,skinPicker}.js`, `public/js/render/{app,units}.js`, `docs/SKINS.md` |
