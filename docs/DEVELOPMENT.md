@@ -539,6 +539,7 @@ the 8 custom operators, the 3D board/scene stack and the 0.4.0 version) stayed o
 | Stats | P1c `withModded` | `public/js/screens/stats.js` | overview switch; test results and modded matches excluded by default |
 | Setup / local extraction | 0.3.1 plugin art + 0.3.2 `#728` | `tools/setup.mjs`, `tools/local-extract/{operators.py,plugin-art.mjs,extract.py}`, `server/plugins/artReferences.js`, `server/http/assetViews.js` | `test/setup-plugin-art.test.js`, `test/render/plugin-official-art.test.js`, `test/local-extract-operators.test.js`, `test/setup-assets.test.js` |
 | `#670` | `043d7959` | `test/assets-env-proxy.test.js` | exact two first-hop forms, local-only relay |
+| Admin plugin/content operations console (fork) | fork improvement, 2026-10-19 | `server/admin.js` (`buildPluginSnapshot`, `rooms[].content`), `server/index.js` | `test/admin.test.js`: read-only installed plugins, policy, room `cs`/`vs`, script/trusted, consent and plugin notices |
 
 ### 15.2 Fork adaptations that must survive
 
