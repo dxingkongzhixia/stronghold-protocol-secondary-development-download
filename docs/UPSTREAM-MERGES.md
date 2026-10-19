@@ -1534,3 +1534,5 @@ docs guards 34 pass / 0 fail.
 
 
 **官方 0.3.1 自选池与自造干员兼容（2026-10-19）**：`data/backups.json` 增加 `diy.officialPool`（7 个同 charId 的自造商店干员），官方 `op-*` kit 进入 `OPERATOR_KIT_FILES`；自造 `chess_char_*` kit 与官方 `op-*` kit 按 key 分离，互不覆盖。`diy.ownedPool` 仍为 65 人，`diyPool` 5/6 阶变为 87/81。详见 `docs/MATCHMAKING.md` §34.5。
+
+**0.3.1 / 0.3.2 全量追平收尾（2026-10-19，`plugin-stack-tip`）**：#670、#675 / #677、isomerpoi 的 7 个 UI PR、#680 / #684 / #658 / #663 / #700 已完成；本轮补上官方特效 root / 朝向 / 持续区域 / 报告特效 / 余 S3 火墙、统计 `withModded` 开关、0.3.2 的 setup / local-extract 修复，以及插件干员官方美术的发现、提取与本地合并。全量 CI **8181 / 8145 通过 / 0 失败**。0.3.1 / 0.3.2 的版本元数据仍不取（本分支保持 0.4.0），§0 的 never-merge 项继续不取。
