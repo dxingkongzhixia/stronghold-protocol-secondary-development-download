@@ -54,6 +54,8 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSource } from './assets/network.mjs';
+import { pluginArtGap } from '../server/plugins/artReferences.js';
+import { installedFxReferences, pluginFxGap } from '../server/plugins/fxReferences.js';
 import { EXPECTED_FX, EXPECTED_LOCAL_GROUPS, EXPECTED_SCENE } from './local-extract/expected.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -351,6 +353,20 @@ export function fxCatalogReport(doc) {
  * manifest's group keys are the set this version's extractor writes (enemy and token models included). Also reads
  * data/local-fx.json. Disk flags (board3d, tiles, dirPresent) are added here; assessLocal is the pure comparison.
  */
+/** Optional official art of plugin-referenced operators outside our roster (§34.28). */
+export function checkPluginArt(root = ROOT) { return pluginArtGap(root); }
+
+export function checkPluginFx(root = ROOT) {
+  let index = null;
+  try { index = JSON.parse(fs.readFileSync(path.join(root, 'public/assets/local/fx/index.json'), 'utf8')); } catch { /* optional */ }
+  return pluginFxGap(installedFxReferences(root), index);
+}
+
+/** [ASSUMED] A changed reference set may ask again; Enter/timeout never authorizes extraction. */
+export function pluginFxExtractionAllowed(opts, missing, answer = false) {
+  return !opts.check && opts.local !== 'no' && (opts.local === 'force' || missing.length > 0 && (opts.yes || answer === true));
+}
+
 export function checkLocal() {
   const assessed = assessLocal(readJson(LOCAL_MANIFEST), readJson(LOCAL_FX));
   return {
@@ -827,6 +843,17 @@ async function main() {
   // 6. local client (optional)
   const local = checkLocal();
   const state = loadState();
+  // §34.28: resolve art consent before a full run; its ordinary default-yes prompt is only for vanilla art.
+  const missingArt = checkPluginArt();
+  const artClient = opts.local === 'no' ? null : findClient(opts.game);
+  const artKey = missingArt.join(',');
+  let artAnswer = false;
+  if (missingArt.length && artClient && !opts.check && opts.local !== 'no' && opts.local !== 'force' && !opts.yes && state.pluginArtDeclined !== artKey) {
+    log(`Plugin operator art missing locally: ${missingArt.join(', ')}`);
+    artAnswer = await ask('Extract referenced official operator art from the local game now?', false);
+    if (artAnswer === false) saveState({ pluginArtDeclined: artKey });
+  }
+  const artAllowed = artClient && pluginFxExtractionAllowed(opts, missingArt, artAnswer);
   // Manifest assessments are replaced after step 7 (a scene extract in this run must not leave the art row on warn).
   let artRefresh = null;
   const pushArt = (snap, tail, verb, hasClient) => {
@@ -875,7 +902,7 @@ async function main() {
           if (!venv.ok) add('warn', '本地客户端美术（可选）', venv.why);
           else {
             log(`  ${c.cyan('▶')} 提取中（python tools/local-extract/extract.py --game …）`);
-            const r = run(venv.python, [EXTRACT_PY, '--game', client.path], { env: PY_ENV });
+            const r = run(venv.python, [EXTRACT_PY, '--game', client.path, ...(artAllowed ? ['--plugin-art'] : [])], { env: PY_ENV });
             if (r.ok) cropBoardTiles(log);
             const after = checkLocal();
             if (r.ok && after.manifest) { pushArt(after, after.board3d ? '，3D 棋盘可用' : '', '提取', true); saveState({ localDeclined: false, localExtractedFrom: client.path }); }
@@ -885,9 +912,38 @@ async function main() {
       }
     }
   }
-  // fx is opt-in (extract.py --only fx). A plain --local does not write data/local-fx.json, so this row stays
-  // on the catalog read at the start of step 6. Absent is skip and does not change the art row above.
-  add(local.fx.state, '官方特效清单（可选）', local.fx.detail);
+  // [ASSUMED] --local includes used effects. A new plugin reference is a separate opt-in gap on update/startup.
+  const missingFx = checkPluginFx();
+  const fxClient = opts.local === 'no' ? null : findClient(opts.game);
+  const gapKey = missingFx.join(',');
+  let fxAnswer = false;
+  if (missingFx.length && fxClient && !opts.check && opts.local !== 'no' && opts.local !== 'force' && !opts.yes && state.pluginFxDeclined !== gapKey) {
+    log(`Plugin effects missing locally: ${missingFx.join(', ')}`);
+    fxAnswer = await ask('Extract referenced official effects from the local game now?', false);
+    if (fxAnswer === false) saveState({ pluginFxDeclined: gapKey });
+  }
+  if (fxClient && pluginFxExtractionAllowed(opts, missingFx, fxAnswer)) {
+    const py = findPython(), venv = py && ensureVenv(py, log);
+    if (venv?.ok) {
+      const r = run(venv.python, [EXTRACT_PY, '--game', fxClient.path, '--only', 'fx', '--fx-set', 'used'], { env: PY_ENV });
+      if (r.ok) saveState({ pluginFxDeclined: '' });
+    }
+  }
+  const fxAfter = checkLocal().fx;
+  add(fxAfter.state, '官方特效清单（可选）', fxAfter.detail);
+  const fxGap = checkPluginFx();
+  if (fxGap.length) add('warn', 'Plugin official effects', `Missing ${fxGap.join(', ')}; run node tools/setup.mjs --local with a local game install.`);
+
+  // Reuse the consent resolved before full extraction; retry only remaining operator gaps.
+  if (artAllowed && checkPluginArt().length) {
+    const py = findPython(), venv = py && ensureVenv(py, log);
+    if (venv?.ok) {
+      const r = run(venv.python, [EXTRACT_PY, '--game', artClient.path, '--only', 'plugin-art'], { env: PY_ENV });
+      if (r.ok) saveState({ pluginArtDeclined: '' });
+    }
+  }
+  const artGap = checkPluginArt();
+  if (artGap.length) add('warn', 'Plugin official operator art', `Missing ${artGap.join(', ')}; run node tools/setup.mjs --local with a local game install. Plugin artwork still takes priority.`);
 
   // 7. official battlefield scenes (optional; the full zip ships them, a lite / source install may fetch them)
   if (opts.scenes !== 'no') {
