@@ -1056,7 +1056,7 @@ test('a pack unit whose shop piece is a chess pair is written once, as that pair
   } finally { fs.rmSync(parent, { recursive: true, force: true }); }
 });
 
-test('official skills of one operator keep their ids and bind that operator\'s kit, for a 自选 unit and a shop pair', { skip: '本分支的自造干员没有官方 op kit（不取上游 7 个 op-*）；该用例依赖官方 0.3.1 数据，UPSTREAM-MERGES §13.10' }, async (t) => {
+test('official skills of one operator keep their ids and bind that operator\'s kit, for a 自选 unit and a shop pair', async (t) => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-forge-official-'));
   const ops = path.join(parent, 'ops');
   const clem = (n) => ['skchr_clemnt_1', 'skchr_clemnt_2', 'skchr_clemnt_3'].map((skillId, i) => ({ skillId, name: `技能${i + 1}`, skillType: i ? 'MANUAL' : 'AUTO',
@@ -1074,7 +1074,7 @@ test('official skills of one operator keep their ids and bind that operator\'s k
     const records = opsOf(path.join(parent, 'rose-sea'));
     const sea = records.find((o) => o.charId === 'char_x_rose_sea_char_rose_sea');
     const saint = records.find((o) => o.charId === 'char_x_rose_sea_rose_saint');
-    assert.deepEqual(sea.kit, { ref: 'char_4231_clemnt' });
+    assert.deepEqual(sea.kit, { ref: 'chess_char_4231_clemnt_a' });
     assert.equal(sea.as, 'diy');
     assert.deepEqual(sea.forms.elite.skills.map((s) => s.skillId), ['skchr_clemnt_1', 'skchr_clemnt_2', 'skchr_clemnt_3']);
     assert.equal(sea.forms.normal.skills[0].default, true);

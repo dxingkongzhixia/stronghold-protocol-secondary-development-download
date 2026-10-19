@@ -1759,8 +1759,11 @@ export function planForgeImport(files, { id: idOverride, contentId, dataDir, van
     const charId = [...owners][0];
     const info = chars.get(charId) || { chess: [], op: false };
     if (as === 'diy') {
-      return info.op ? { ref: charId, charId }
-        : { ref: null, zh: `官方干员 ${charId} 在本模拟器里没有自选 kit，保留通用 kit。`, en: `The official operator ${charId} has no 自选 kit in this simulator, so the kit stays generic.` };
+      if (info.op) return { ref: charId, charId };
+      // This fork's custom operators have a chess kit but no op-*.js (no official stand-in): a Forge DIY
+      // unit can still bind the operator's own chess kit. The normal chess form is the kitRef the sim resolves.
+      if (info.chess.length === 1) return { ref: info.chess[0].key, charId };
+      return { ref: null, zh: `官方干员 ${charId} 在本模拟器里没有自选 kit，保留通用 kit。`, en: `The official operator ${charId} has no 自选 kit in this simulator, so the kit stays generic.` };
     }
     const fits = info.chess.filter((c) => ids.every((id) => c.skills.has(id)));
     const same = fits.filter((c) => c.def === defaultId);
