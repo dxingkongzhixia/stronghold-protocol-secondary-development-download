@@ -444,6 +444,8 @@ export function SettingsModal({ open, onClose }) {
       </div>
       <p class="set-hint">${t('渲染器：')}${gpu.renderer || t('未知')} · WebGL2：${gpu.webgl2 ? t('支持') : t('不支持')}${gpu.hardware ? '' : t(' · 请在浏览器设置里开启「使用硬件加速」，否则画面会明显卡顿')}</p>
       ${touchUi ? html`<p class="set-hint">${t('触屏操作：点击单位选中（撤退 / 出售）· 长按单位或卡牌查看详情 · 拖动部署后滑动选择朝向')}</p>` : null}
+      <${Toggle} label=${t('显示其他玩家的皮肤')} micro="OTHER PLAYERS' SKINS" value=${s.otherSkins !== false} onChange=${(v) => updateSettings({ otherSkins: v })} />
+      <p class="set-hint">${t('关闭后，其他博士的干员会显示默认外观；你的干员仍显示你选择的皮肤。')}</p>
       <${CosmeticSection} />
       <${UiPluginSection} />
       <${DiagSection} />

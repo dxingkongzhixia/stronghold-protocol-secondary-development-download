@@ -148,7 +148,10 @@ export class PlayerState {
     this.name = seat.name;
     /** shared/constants.js ROLES key of the bound account (null = ordinary / bot) — rides along in the player view */
     this.role = seat.role ?? null;
+    /** 皮肤 (docs/SKINS.md): frozen `{ [charId]: skinId }`, {} = every operator on its default model. */
+    this.skins = Object.freeze({});
     this.isBot = !!seat.isBot;
+    if (!this.isBot && seat.skins) this.setSkins(seat.skins);
     this.connected = this.isBot ? true : !!seat.connected;
     this.left = false;
     this.autoplay = false;

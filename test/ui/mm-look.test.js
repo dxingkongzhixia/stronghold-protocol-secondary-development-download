@@ -166,8 +166,8 @@ describe('join-by-key while queued: ALLOWED, and entering a room leaves the pool
     assert.ok(lobby.includes('disabled=${!codeOk || !online} onClick=${() => join()}'), '加入同盟 keeps its own guard');
     assert.ok(lobby.includes('disabled=${!codeOk || !online} onClick=${spectate}'), '观战 keeps its own guard');
     assert.equal((lobby.match(/if \(entryPolicy\.joinClearsQueue\) clearMmQueue\(\);/g) || []).length, 2, 'join and spectate both clear on success');
-    assert.ok(/net\.request\('room\.join', \{ code: k \}\)\.then\(\(r\) => \{[\s\S]*?if \(entryPolicy\.joinClearsQueue\) clearMmQueue\(\)/.test(lobby), 'a failed join (the .catch) keeps the queue');
-    assert.ok(/net\.request\('room\.spectate', \{ code: k \}\)\.then\(\(r\) => \{[\s\S]*?if \(entryPolicy\.joinClearsQueue\) clearMmQueue\(\)/.test(lobby), 'a failed spectate keeps the queue');
+    assert.ok(/(?:net\.request\('room\.join', \{ code: k \}\)|joinRequest\('room\.join', k\))\.then\(\(r\) => \{[\s\S]*?if \(entryPolicy\.joinClearsQueue\) clearMmQueue\(\)/.test(lobby), 'a failed join (the .catch) keeps the queue');
+    assert.ok(/(?:net\.request\('room\.spectate', \{ code: k \}\)|joinRequest\('room\.spectate', k\))\.then\(\(r\) => \{[\s\S]*?if \(entryPolicy\.joinClearsQueue\) clearMmQueue\(\)/.test(lobby), 'a failed spectate keeps the queue');
   });
 });
 

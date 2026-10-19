@@ -12,6 +12,15 @@ import { bountySpawns, previewOf } from '../waves.js';
 import { timelineAt } from '../fields.js';
 import { bossFieldPlacement } from '../finalAssault.js';
 import { battleProgress } from '../../sim/spec.js';
+import { TEST_PUBLIC_LOG } from '../../../shared/testMode.js';
+
+/** Milliseconds since the match started. A stamp before the start, or a bad stamp, is 0. The stored log keeps the epoch. */
+function auditClock(at, startedAt) {
+  const stamp = Number(at);
+  const start = Number(startedAt);
+  if (!Number.isFinite(stamp) || !Number.isFinite(start)) return 0;
+  return Math.max(0, stamp - start);
+}
 import { atPotential, cultivateMul, cultivatedStats, POTENTIAL_DEFAULT, CULTIVATE_DEFAULT } from '../../../shared/potential.js';
 
 /** A reported capsule numerator clamped to its denominator, else null (unknown — never a fabricated 0). */
@@ -138,6 +147,7 @@ export class MatchViews {
         fieldId: this.fieldOf(ps),
         status: this.statusOf(ps),
         autoplay: ps.autoplay,
+        ...(Object.keys(ps.skins).length ? { skins: ps.skins } : {}),
         // the LP this round's own battle will cost at settlement so far (COMBAT / 联防 only, omitted when 0)
         ...this._pendingLpView(ps),
       })),
@@ -178,6 +188,19 @@ export class MatchViews {
     if (this.phase === PHASE.SETTLE && this.uniteResultView) {
       const ur = this.uniteResultView;
       v.uniteResult = { through: ur.through, helpers: ur.helpers.slice(), leakers: ur.leakers.slice(), losses: { ...ur.losses } };
+    }
+    if (this.test === true) {
+      v.test = true;
+      v.testActions = this.testActions | 0;
+      v.testTimers = this.testTimers !== false;
+      const log = Array.isArray(this.testLog) ? this.testLog : [];
+      v.testLog = log.slice(-TEST_PUBLIC_LOG).map((e) => ({
+        seq: e.seq, playerId: e.playerId, cmd: e.cmd, args: e.args,
+        at: auditClock(e.at, this.startedAt),
+        ok: e.ok === true,
+        ...(e.code ? { code: e.code } : {}),
+        ...(e.detail ? { detail: e.detail } : {}),
+      }));
     }
     return v;
   }
@@ -306,12 +329,14 @@ export class MatchViews {
       // DESIGN §16: the skill / module THIS player's operator fights with (the scout's detail card shows it, like the
       // sim's UnitInfo in a shared field); moduleId only for an elite; 0.2.2 its potential (below 6) and 练度
       const lo = piece.kind === 'chess' && chess ? ps.loadoutFor(chess) : null;
+      const diy = this._diyInfo(ps, piece);
       units.push({
         id: piece.uid, uid: piece.uid, kind: piece.kind === 'token' ? 'token' : 'op', side: 'ally', ownerId: ps.playerId, defId: piece.id,
         area: 'board',
         name: rec ? rec.name : piece.id, tier: rec && Number.isInteger(rec.tier) ? rec.tier : 1, golden: !!(rec && rec.isGolden),
         spine: assets.spine || (rec && rec.charId) || piece.id, avatar: assets.avatar || (rec && rec.charId) || piece.id,
         x: c, y: r, dir: pieceDir(piece), facing: pieceDir(piece) === 'LEFT' ? -1 : 1, maxHp: shownMaxHp(gd, rec, lo),
+        skin: ps.skinFor(chess, diy ? diy.charId : null) || undefined,
         skillIndex: lo && Number.isInteger(lo.skillIndex) ? lo.skillIndex : undefined,
         moduleId: lo && typeof lo.moduleId === 'string' ? lo.moduleId : undefined,
         // the equipped items (like the sim's UnitInfo): a 变形同构体 wearer shows as a member of the bond it grants
@@ -371,12 +396,14 @@ export class MatchViews {
       const body = standIn || rec;
       const assets = (body && body.assets) || {};
       const lo = piece.kind === 'chess' && rec ? ps.loadoutFor(rec) : null;
+      const diy = this._diyInfo(ps, piece);
       units.push({
         id: piece.uid, uid: piece.uid, kind: piece.kind === 'token' ? 'token' : piece.kind === 'item' ? 'item' : 'op',
         side: 'ally', ownerId: ps.playerId, defId: piece.id, area,
         name: body ? body.name : piece.id, tier: rec && Number.isInteger(rec.tier) ? rec.tier : 1, golden: !!(rec && rec.isGolden),
         spine: assets.spine || (body && body.charId) || piece.id, avatar: assets.avatar || (body && body.charId) || piece.id,
         x: i, y, maxHp: shownMaxHp(gd, body, lo),
+        skin: ps.skinFor(rec, diy ? diy.charId : null) || undefined,
         skillIndex: lo && Number.isInteger(lo.skillIndex) ? lo.skillIndex : undefined,
         moduleId: lo && typeof lo.moduleId === 'string' ? lo.moduleId : undefined,
         items: piece.kind === 'chess' && Array.isArray(piece.items) && piece.items.length ? piece.items.map((it) => it.id) : undefined,

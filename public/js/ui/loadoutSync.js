@@ -27,6 +27,7 @@ import { LOADOUT_PREF, parseStored, parseStoredOps, toStored, sanitizeEntries, s
 import { cultivationCharIds, charPotentialChanges } from '../../../shared/protocol.js';
 import { OWNERSHIP_PREF, parseStoredOwnership, toStoredOwnership, cleanIds, sanitizeNotOwned } from './ownershipModel.js';
 import { DIY_PREF, parseStoredDiy, toStoredDiy, cleanPicks, sanitizeDiyPicks } from './diyModel.js';
+import { skinsStore, SKINS_KEY, SKINS_SYNC_KEY, parseStoredSkins } from './skins.js';
 import { toast } from './toasts.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
@@ -309,6 +310,18 @@ export function installLoadoutSync({ net, getChessReady, getBackupsReady, lookup
  * @param {{ net: any, timers?: { setTimeout: Function, clearTimeout: Function }, target?: ReturnType<typeof createStore>,
  *   notify?: (text: string) => void }} deps
  */
+/**
+ * Wire the 干员皮肤 sync once (docs/SKINS.md): `room.skins { skins }` after every welcome and edit.
+ * @param {{ net: any, timers?: { setTimeout: Function, clearTimeout: Function }, target?: ReturnType<typeof createStore>, notify?: (text: string) => void }} deps
+ */
+export function installSkinsSync({ net, timers, target = skinsStore, notify } = {}) {
+  return installPrefSync({
+    net, timers, target, notify, key: SKINS_KEY, stateKey: SKINS_SYNC_KEY, msgType: 'room.skins', field: 'skins', tag: 'skins',
+    lockedText: N_('这台服务器不接受皮肤选择，只有本机保存'),
+    prepare: async () => parseStoredSkins(target.get()[SKINS_KEY]),
+  });
+}
+
 export function installOwnershipSync({ net, timers, target = loadoutStore, notify } = {}) {
   return installPrefSync({
     net, timers, target, notify, key: 'notOwned', stateKey: 'ownSync', msgType: 'room.ownership', field: 'notOwned', tag: 'ownership',

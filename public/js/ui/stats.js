@@ -101,7 +101,7 @@ export function loadStats() {
  */
 export function saveStats(stats) {
   if (stats.newer) return false;
-  let recs = fitToBudget(stats.records);
+  let recs = fitToBudget(stats.records.filter((r) => r?.test !== true));
   for (;;) {
     try {
       const ls = globalThis.localStorage;
@@ -136,13 +136,15 @@ export const liveMatch = createLiveMatch();
 export function observeMatch(live, state, now = Date.now()) {
   const pub = state?.match?.public;
   const inMatch = !!pub && !!pub.phase && pub.phase !== PHASE.LOBBY && pub.phase !== PHASE.RESULT && !state.match.result;
-  if (!inMatch) { live.active = false; return live; }
+  if (!inMatch) { live.active = false; live.test = false; return live; }
   const round = Number(pub.round) || 0;
+  if (state.room?.test === true || pub.test === true) live.test = true;
   if (!live.active) {
     live.active = true;
     live.startedAt = now;
     live.sawStart = round <= 1;
     live.aliveRound = null;
+    live.test = state.room?.test === true || pub.test === true;
   }
   const me = Array.isArray(pub.players) ? pub.players.find((p) => isObj(p) && p.playerId === state.me?.playerId) : null;
   if (me && me.alive !== false) live.aliveRound = Math.max(live.aliveRound ?? 0, round);
@@ -179,6 +181,7 @@ export function buildQuitRecord(state, ctx = {}) {
   const pub = state?.match?.public;
   const myId = str(state?.me?.playerId);
   if (!pub || !myId || state.match.result || !live.active) return null;
+  if (live.test === true || state.room?.test === true || pub.test === true) return null;
   const row = Array.isArray(pub.players) ? pub.players.find((p) => isObj(p) && p.playerId === myId) : null;
   if (!row) return null; // a spectator seat is no player of the match
   const alive = row.alive !== false;
@@ -247,6 +250,7 @@ function storeRecord(rec) {
  * @returns {any|null}
  */
 export function recordResult(res, ctx = {}) {
+  if (liveMatch.test === true || res?.test === true) return null;
   return storeRecord(buildRecord(res, ctx));
 }
 
@@ -272,7 +276,7 @@ const selfWon = (rec, self) => (self ? !!self.victory : !!(rec && rec.victory));
 export function highestBondRecord(records) {
   let best = null;
   for (const record of records) {
-    if (record.end === 'quit' || record.compact) continue;
+    if (record.test === true || record.end === 'quit' || record.compact) continue;
     const player = selfRowOf(record);
     for (const bond of player?.bonds || []) {
       if (!bond.active || !Number.isFinite(bond.layers) || bond.layers <= 0) continue;
@@ -285,7 +289,7 @@ export function highestBondRecord(records) {
 export function strategyBadgeIds(records, bands) {
   const clears = new Map();
   for (const rec of Array.isArray(records) ? records : []) {
-    if (!rec || rec.end === 'quit' || rec.difficulty === 'TRAINING' || rec.modeId === 'mode_training_1') continue;
+    if (!rec || rec.test === true || rec.end === 'quit' || rec.difficulty === 'TRAINING' || rec.modeId === 'mode_training_1') continue;
     const self = selfRowOf(rec);
     if (!self?.bandId || !selfWon(rec, self)) continue;
     clears.set(self.bandId, (clears.get(self.bandId) || 0) + 1);

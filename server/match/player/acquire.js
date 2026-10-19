@@ -263,9 +263,19 @@ export class PlayerAcquire {
    * already equipped is taken off for the fight about to start. Overflow waits in the expandable temp queue.
    * [ASSUMED] every prep-end item grant, not only Victoria's hammer (owner's decision 2026-10-04).
    */
-  acquireItem(itemId, { source = 'grant', toTemp = false, silent = false, deferMerge = false } = {}) {
+  acquireItem(itemId, { source = 'grant', toTemp = false, silent = false, deferMerge = false, requirePool = true, displayed = false } = {}) {
     const rec = this.gd.item(itemId);
     if (!rec) return null;
+    // Only the fixed operator-gift families can overdraw. Several unrelated strategy grants also pass
+    // requirePool:false; they must retain their stock limit (for example commercial packaging).
+    const unlimitedGift = !requirePool && this.gd.isUnlimitedGiftItem(itemId);
+    const pool = this.m.itemPool;
+    const leftBefore = pool.left(itemId);
+    const need = pool.need(itemId);
+    if (this.m.test === true && !unlimitedGift && !displayed && !pool.canGain(itemId)) {
+      this.m.toast(this, 'warn', '装备库存不足，未获得该装备');
+      return null;
+    }
     let piece = this.newPiece('item', itemId);
     // A prep-end grant may sit beside an identical copy until the next prep. The invariant counts only copies
     // without this mark, so the fight that is about to start is not reported as a missed merge.
@@ -275,6 +285,10 @@ export class PlayerAcquire {
       if (!piece) return null;
     } else {
       this.stow(piece, { allowTemp: true, toTemp });
+    }
+    if (displayed && !unlimitedGift) {
+      const shortfall = leftBefore === Infinity ? 0 : Math.max(0, need - leftBefore);
+      if (shortfall > 0) pool.owe(itemId, shortfall);
     }
     this.recompute();
     if (!silent) this.m.dispatch(this, 'onGain', { piece, kind: 'item', source });

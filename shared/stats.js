@@ -94,7 +94,7 @@ export function fnv1a(s) {
  */
 export function recordId(res, myId) {
   const r = isObj(res) ? res : {};
-  return `r1.${fnv1a([r.seed ?? '-', r.durationMs ?? '-', r.modeId ?? '-', r.roundsPassed ?? '-', r.victory ? 1 : 0, myId ?? '-'].join('|'))}`;
+  return `r1.${fnv1a([r.seed ?? '-', r.durationMs ?? '-', r.modeId ?? '-', r.roundsPassed ?? '-', r.victory ? 1 : 0, r.test === true ? 't' : 'n', myId ?? '-'].join('|'))}`;
 }
 
 /**
@@ -176,6 +176,7 @@ export function contentOf(c) {
   return { cs: c.cs, plugins: list };
 }
 
+/** @returns {any} */
 export function normalizeRecord(raw) {
   const r = isObj(raw) ? raw : {};
   // a record IS a played match — no usable players array, no record
@@ -183,6 +184,7 @@ export function normalizeRecord(raw) {
   const quit = r.end === 'quit';
   const players = r.players.filter(isObj).slice(0, MAX_PLAYERS).map((p) => normalizePlayerRow(p, quit));
   if (!players.length) return null;
+  /** @type {any} */
   const rec = {
     id: str(r.id),
     v: STATS_VERSION,
@@ -206,6 +208,7 @@ export function normalizeRecord(raw) {
     selfId: str(r.selfId),
     // the art the match played with (cosmetic plugins only; null = the original game)
     vs: vsOf(r.vs),
+    ...(r.test === true ? { test: true, testActions: int(r.testActions, 0) } : {}),
     // the content set (gameplay plugins) it played with, or null
     content: contentOf(r.content),
     players,
@@ -256,7 +259,7 @@ export function migrateStats(raw) {
   const seen = new Set(); // a record listed twice (hand-merged data) counts once: the first copy
   for (const r of records) {
     const rec = normalizeRecord(r);
-    if (rec && !seen.has(rec.id)) { seen.add(rec.id); normalized.push(rec); }
+    if (rec && rec.test !== true && !seen.has(rec.id)) { seen.add(rec.id); normalized.push(rec); }
   }
   normalized.sort(newestFirst);
   const kept = normalized.slice(0, MAX_RECORDS);
@@ -294,6 +297,10 @@ export function compactRecord(rec) {
   const usedBondIds = usedBondIdsOf(self);
   const out = {};
   for (const k of COMPACT_FRAME) if (rec[k] != null) out[k] = rec[k];
+  if (rec.test === true) {
+    out.test = true;
+    out.testActions = int(rec.testActions, 0);
+  }
   out.compact = true;
   out.players = self ? [{
     playerId: self.playerId, seat: self.seat, alive: self.alive, victory: self.victory, roundsPassed: self.roundsPassed,
@@ -372,6 +379,7 @@ export function roomModeOf(modeId, roomMode) {
  */
 export function buildRecord(res, ctx = {}) {
   const r = isObj(res) ? res : {};
+  if (r.test === true) return null; // test matches are never recorded
   if (!Array.isArray(r.players) || !r.players.length) return null;
   const myId = str(ctx.myId);
   const selfRow = r.players.find((p) => isObj(p) && p.playerId === myId);
@@ -431,6 +439,10 @@ export function recordToResult(rec) {
     players: r.players,
   };
   if (Number.isFinite(r.lastRound)) res.lastRound = r.lastRound;
+  if (r.test === true) {
+    res.test = true;
+    res.testActions = int(r.testActions, 0);
+  }
   return res;
 }
 
@@ -442,6 +454,7 @@ export function recordToResult(rec) {
  */
 export function appendRecord(stats, record) {
   if (!record || !record.id) return { stats, added: false };
+  if (record.test === true) return { stats, added: false };
   if (stats.records.some((r) => r.id === record.id)) return { stats, added: false };
   const records = [record, ...stats.records].slice(0, MAX_RECORDS);
   return { stats: { v: STATS_VERSION, records }, added: true };
@@ -457,7 +470,7 @@ export function mergeStats(a, b) {
   const byId = new Map();
   for (const r of [...(Array.isArray(b?.records) ? b.records : []), ...(Array.isArray(a?.records) ? a.records : [])]) {
     const rec = normalizeRecord(r);
-    if (rec) byId.set(rec.id, rec);
+    if (rec && rec.test !== true) byId.set(rec.id, rec);
   }
   const records = [...byId.values()].sort(newestFirst).slice(0, MAX_RECORDS);
   return { v: STATS_VERSION, records };
@@ -550,6 +563,7 @@ export function roundsOf(rec) {
  */
 export function countsTowardStats(rec) {
   if (!isObj(rec)) return false;
+  if (rec.test === true) return false;
   if (rec.end !== 'quit') return true;
   const self = selfRowOf(rec);
   if (!self) return false;
@@ -571,7 +585,7 @@ export function aggregateStats(records, { modded = false } = {}) {
   const out = {
     // the content-modded matches left out of the overview (0 when they are counted)
     modded: modded ? 0 : mod.length,
-    total: all.length, count: rs.length, excluded: all.length - rs.length, wins: 0,
+    total: all.length, count: rs.length, excluded: all.length - rs.length, test: all.filter((r) => r && r.test === true).length, wins: 0,
     rounds: { total: 0, max: 0 },
     duration: { totalMs: 0 },
     hidden: { reached: 0, cleared: 0 },

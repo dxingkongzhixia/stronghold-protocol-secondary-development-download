@@ -9,7 +9,7 @@
 
 import { PHASE } from '../../../shared/constants.js';
 import { msg, dn } from '../../../shared/i18n.js';
-import { checkLoadout, checkLoadoutOps, cultivationCharIds, checkNotOwned, resolveLoadout, charPotentialChanges } from '../../../shared/protocol.js';
+import { checkLoadout, checkLoadoutOps, cultivationCharIds, checkNotOwned, resolveLoadout, charPotentialChanges, checkSkinSelection, operatorCharIds } from '../../../shared/protocol.js';
 import { cultivationOf } from '../../../shared/potential.js';
 import { tileKey, boardOrder } from '../board.js';
 
@@ -149,6 +149,44 @@ export class PlayerBasics {
    * @param {any} list base chess ids
    * @returns {boolean} false when the list is malformed (nothing changes) or the player is a bot
    */
+  /**
+   * The asset key of a chess piece's appearance: the operator's charId, else null (docs/SKINS.md).
+   * @param {any} rec a chess record, or its chess id
+   * @returns {string|null}
+   */
+  skinCharIdOf(rec) {
+    const r = this.fieldRecord(typeof rec === 'string' ? this.gd.chess(rec) : rec);
+    return r && typeof r.charId === 'string' && r.charId ? r.charId : null;
+  }
+
+  /**
+   * The appearance this player wears for a chess piece, or null. `charId`, when given, wins (a DIY slot).
+   * @param {any} rec @param {string|null} [charId]
+   * @returns {string|null}
+   */
+  skinFor(rec, charId = null) {
+    const skins = this.skins;
+    if (!skins) return null;
+    const key = (typeof charId === 'string' && charId) || this.skinCharIdOf(rec);
+    return key ? skins[key] || null : null;
+  }
+
+  /**
+   * Replace this player's skin choices. A bad map leaves the old choice; unknown operators are dropped; {} clears.
+   * @param {Record<string, string>|null} skins
+   * @returns {boolean}
+   */
+  setSkins(skins) {
+    if (this.isBot) return false;
+    const ids = operatorCharIds(this.gd?.raw);
+    const res = checkSkinSelection(skins, (id) => ids.has(id));
+    if (!res.ok) return false;
+    const out = {};
+    for (const [charId, skinId] of Object.entries(res.skins)) out[charId] = skinId;
+    this.skins = Object.freeze(out);
+    return true;
+  }
+
   setNotOwned(list) {
     if (this.isBot) return false;
     const res = checkNotOwned(list, (id) => this.gd.chess(id));

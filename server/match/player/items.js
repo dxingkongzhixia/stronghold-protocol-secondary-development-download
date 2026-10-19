@@ -15,7 +15,10 @@ export class PlayerItems {
    * Our fork did not take the 0.3.1 equipment debt (#624): destroying an item releases no stock it never owed.
    * The upstream effectsMeta calls this on every destroyed item, so keep the method as a no-op.
    */
-  releaseItemStock() { return 0; }
+  releaseItemStock(piece) {
+    if (!piece || piece.kind !== 'item' || !this.m?.itemPool) return 0;
+    return this.m.itemPool.repay(piece.id, this.m.itemPool.need(piece.id));
+  }
 
   /**
    * g.equip {itemUid, targetUid, replaceUid?}. A third item on a carrier with both slots used replaces the equipped item

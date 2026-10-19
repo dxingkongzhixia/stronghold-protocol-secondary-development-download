@@ -21,6 +21,11 @@ export class PlayerViews {
       count: p.kind === 'token' ? (p.count || 1) : 1,
       ownerUid: p.kind === 'token' ? p.ownerUid ?? null : null,
     };
+    if (p.kind === 'chess') {
+      const diy = typeof this.diyPickOf === 'function' ? this.diyPickOf(p.id) : null;
+      const skinId = this.skinFor(rec, diy ? diy.charId : null);
+      if (skinId) v.skin = skinId;
+    }
     if (rc) { v.row = rc[0]; v.col = rc[1]; v.dir = pieceDir(p); }
     return v;
   }

@@ -15,7 +15,7 @@
 import { ResumeMatchButton } from '../ui/resumeMatch.js';
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, modeIdFor, ERR, roleName } from '../../../shared/constants.js';
-import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, doctorNo, Tabs, RoleTag } from '../ui/components.js';
+import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, doctorNo, Tabs, RoleTag, confirmDialog } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { openStats, openPlayerStats } from './stats.js';
 import { SweepReport } from './sweep.js';
@@ -256,6 +256,8 @@ export function LobbyScreen() {
   const conn = useStore((s) => s.connection, shallowEqual);
   const auth = useStore((s) => s.auth, shallowEqual);
   const mm = useStore((s) => s.mm, shallowEqual);
+  const testMode = useStore((s) => s.testMode === true);
+  const [asTest, setAsTest] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
   // 在线玩家 overlay: store-level (not local state) so opening a player's stats can pop back to it (ui.onlineOpen).
   const showOnline = useStore((s) => s.ui.onlineOpen);
@@ -305,8 +307,14 @@ export function LobbyScreen() {
   const create = () => {
     // The button is disabled while blocked, but a keyboard activation or a stale click must not slip through either.
     if (entryPolicy.blocked) { if (entryPolicy.reason) toast(entryPolicy.reason, 'warn'); return; }
-    run('create', () => net.request('room.create', { mode: roomMode, difficulty, public: isPublic }));
+    run('create', () => net.request('room.create', { mode: roomMode, difficulty, public: isPublic, ...(testMode && asTest ? { test: true } : {}) }));
   };
+  /** Test rooms need an explicit acknowledgement before any seat or private state is sent. */
+  const joinRequest = (type, k) => net.request(type, { code: k }).catch((err) => {
+    if (err?.code !== ERR.TEST_CONFIRM) throw err;
+    return confirmDialog({ title: t('测试房间'), text: t('这是测试房间，不计入任何记录。确认加入？'), okText: t('加入') })
+      .then((ok) => { if (!ok) throw err; return net.request(type, { code: k, testAck: true }); });
+  });
   // 野排 (docs/MATCHMAKING.md): enter the difficulty-bucketed shared pool (a logged-in account is required).
   const mmJoin = () => run('mm', () => net.request('mm.join', { difficulty }));
   const mmCancel = () => {
@@ -322,7 +330,7 @@ export function LobbyScreen() {
     const fromRooms = remembersRoomOrigin(source);
     run('join', () => {
       if (fromRooms) setRoomsReturn(true);
-      return net.request('room.join', { code: k }).then((r) => {
+      return joinRequest('room.join', k).then((r) => {
         // Entering a room leaves the 野排 pool (server/lobby.js room.join → mm.leave): mirror that locally at once. A
         // FAILED join never reached the pool drop, so it keeps the queue (the server is the source of truth either way).
         if (entryPolicy.joinClearsQueue) clearMmQueue();
@@ -342,7 +350,7 @@ export function LobbyScreen() {
     const fromRooms = remembersRoomOrigin(source);
     run('spectate', () => {
       if (fromRooms) setRoomsReturn(true);
-      return net.request('room.spectate', { code: k }).then((r) => {
+      return joinRequest('room.spectate', k).then((r) => {
         // same as join: a spectator seat also leaves the 野排 pool (server/lobby.js room.spectate → mm.leave)
         if (entryPolicy.joinClearsQueue) clearMmQueue();
         return r;
@@ -471,6 +479,10 @@ export function LobbyScreen() {
                   ${roomMode === 'solo' ? t('开始独立模拟') : t('创建同盟')}
                 <//>
               <//>
+              ${testMode ? html`<label class="create-box__test" data-testid="create-test">
+                <input type="checkbox" checked=${asTest} onChange=${(e) => setAsTest(!!e.currentTarget.checked)} />
+                <span>${t('测试房间')}</span>
+              </label>` : null}
               <div class="create-box__hint">
                 ${entryPolicy.reason
                   ? html`<span class="create-box__blocked">${entryPolicy.reason}</span>`

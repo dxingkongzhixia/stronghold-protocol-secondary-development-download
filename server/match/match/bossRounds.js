@@ -143,6 +143,16 @@ export class MatchBoss {
     this.runner.start();
   }
 
+  /**
+   * Merged team LP at the moment a Final Assault first opens. A test jump straight into the hidden round
+   * calls it once when the assault that would have opened the pool was skipped.
+   */
+  _openTeamLp() {
+    const alive = this.alivePlayers();
+    this.teamLp = alive.reduce((s, p) => s + Math.max(0, p.lp), 0);
+    for (const ps of alive) ps.lpAtFinal = Math.max(0, ps.lp);
+  }
+
   _startFinalClient(hidden) {
     const pool = this.bossPool;
     const recs = this.fields.map((x) => this._ccField({ fieldId: x.fieldId, kind: x.kind, players: x.players, opts: x.opts, boss: { poolHp: pool.hp, poolMax: pool.maxHp } }));

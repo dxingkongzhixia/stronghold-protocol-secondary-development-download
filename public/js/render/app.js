@@ -348,6 +348,60 @@ export async function createFieldView(host, options = {}) {
   // prep field (render/prepfield.js): identity on the own board, the boss-field half in the Final Assault prep
   let prepXf = IDENTITY;
   let lastPrep = null;        // { ps, o } of the last setPrep (re-applied when the prep field changes)
+  settings.otherSkins = settings.otherSkins !== false;
+  /** The appearance a view of this unit draws, from a given preference. */
+  const skinOf = (info, myId, otherSkins) => {
+    // Keep the received choice intact across settings changes. The latest public choice wins for operator bodies.
+    let skin = info.sourceSkin === undefined ? info.skin : info.sourceSkin;
+    if (info.kind === 'op' && playerSkins.has(info.ownerId)) {
+      skin = playerSkins.get(info.ownerId)[info.diy?.charId || info.spine] || null;
+    }
+    if (!skin) return null;
+    if (info.ownerId == null || !myId || info.ownerId === myId) return skin;
+    return otherSkins ? skin : null;
+  };
+  const playerSkins = new Map();
+  let skinSelectionKey = null;
+  const shownSkin = (info) => skinOf(info, ctx.myPlayerId, settings.otherSkins);
+
+  /** Register a battle unit's info and keep its view honest when its appearance changes. */
+  function applyInfo(u) {
+    const info = renderInfo(u);
+    if (!info) return null;
+    info.sourceSkin = u.sourceSkin === undefined ? info.skin : u.sourceSkin;
+    const skin = shownSkin(info);
+    const prev = infos.get(info.id);
+    if (prev && prev.skin !== skin) dropView(info.id);
+    info.skin = skin;
+    infos.set(info.id, info);
+    return info;
+  }
+
+  /** The player whose pieces are this page's own: late (the view may be built before welcome). */
+  function setMe(playerId) {
+    const id = typeof playerId === 'string' && playerId ? playerId : null;
+    if (ctx.myPlayerId === id) return;
+    ctx.myPlayerId = id;
+    refreshSkins();
+  }
+
+  /** Apply public choices to existing and future units without changing the battle or restarting playback. */
+  function setSkins(players) {
+    const key = JSON.stringify((players || []).map((p) => [p.playerId, p.skins || {}]));
+    if (key === skinSelectionKey) return;
+    skinSelectionKey = key;
+    playerSkins.clear();
+    for (const p of players || []) if (p?.playerId) playerSkins.set(p.playerId, p.skins || {});
+    refreshSkins();
+  }
+
+  function refreshSkins() {
+    for (const [id, info] of infos) {
+      const next = shownSkin(info);
+      if (next !== info.skin) { dropView(id); info.skin = next; }
+    }
+    if (mode === 'prep' && lastPrep) setPrep(lastPrep.ps, lastPrep.o);
+  }
   const hlReq = new Map();    // highlight group → { tiles (board space), style } requested through highlightTiles
   // enemy preview pen (render/pen.js): figure key → UnitView (own map: never touched by the battle sync)
   const penViews = new Map();
@@ -363,6 +417,7 @@ export async function createFieldView(host, options = {}) {
 
   const heightAt = (r, c) => (tiles ? tiles.heightAt(r, c) : 0);
   const ctx = {
+    myPlayerId: typeof opts.myPlayerId === 'string' ? opts.myPlayerId : null,
     P, layers, assets, settings, fx: null, shadowTex: shadowTexture(),
     audio: opts.audio || null,   // the prep landings' sound (UnitView.land → audio.deployCue)
     cam: () => cam, heightAt,
@@ -785,6 +840,7 @@ export async function createFieldView(host, options = {}) {
       kind: 'op', side: 'ally', defId: piece.id,
       spine: rec?.assets?.spine || rec?.charId || null, avatar: rec?.assets?.avatar || rec?.charId || null,
       tier: chess?.tier || piece.tier || 1, golden: !!(piece.golden || chess?.isGolden), dir,
+      skin: piece.skin || null,
       ...(si ? { standInFor: si.standInFor } : null),
       ...(dr ? { diy: { charId: pick.charId, skillIndex: pick.skillIndex ?? null, uniEquipId: pick.uniEquipId ?? null } } : null),
     };
@@ -868,7 +924,7 @@ export async function createFieldView(host, options = {}) {
       e.key = key;
       const info = pieceInfo(e.piece, e.area);
       // (the model is part of it: a piece whose body changes — a merge, an own 补位 / 自选 setting arriving — is rebuilt)
-      const sig = `${info.kind}|${info.defId}|${info.golden ? 1 : 0}|${info.spine || ''}`;
+      const sig = `${info.kind}|${info.defId}|${info.golden ? 1 : 0}|${info.spine || ''}` + (info.skin ? `|${info.skin}` : '');
       let v = views.get(key);
       if (v && v._sig !== sig) { dropView(key); v = null; }
       const w = slotWorld(e);
@@ -994,8 +1050,9 @@ export async function createFieldView(host, options = {}) {
     for (const u of units) {
       const info = u && Number.isInteger(u.uid) ? renderInfo({ ...u, id: `m:${u.uid}` }) : null;
       if (!info) continue;
+      info.skin = shownSkin(info);
       keep.add(info.id);
-      const sig = `${info.defId}|${info.golden ? 1 : 0}|${info.spine || ''}|${info.x},${info.y}|${info.dir || ''}|${(info.items || []).join(',')}`;
+      const sig = `${info.defId}|${info.golden ? 1 : 0}|${info.spine || ''}|${info.skin || ''}|${info.x},${info.y}|${info.dir || ''}|${(info.items || []).join(',')}`;
       let v = views.get(info.id);
       if (v && v._sig !== sig) { dropView(info.id); v = null; }
       if (v) continue;
@@ -1520,7 +1577,12 @@ export async function createFieldView(host, options = {}) {
 
   function addInfo(u) {
     const info = renderInfo(u);
-    if (info) infos.set(info.id, info);
+    if (!info) return null;
+    info.sourceSkin = u.sourceSkin === undefined ? info.skin : u.sourceSkin;
+    info.skin = shownSkin(info);
+    const prev = infos.get(info.id);
+    if (prev && prev.skin !== info.skin) dropView(info.id);
+    infos.set(info.id, info);
     return info;
   }
 
@@ -2046,6 +2108,8 @@ export async function createFieldView(host, options = {}) {
 
   view = {
     setStage,
+    setMe,
+    setSkins,
     setCamera,
     setPrep,
     replayDeploys,
@@ -2159,6 +2223,10 @@ export async function createFieldView(host, options = {}) {
       if (typeof s.officialDamageNumbers === 'boolean') settings.officialDamageNumbers = s.officialDamageNumbers;
       if (typeof s.ammoCount === 'boolean') settings.ammoCount = s.ammoCount;   // the units read it every frame (ctx.settings)
       if (typeof s.mysticEnergy === 'boolean') settings.mysticEnergy = s.mysticEnergy;   // likewise
+      if (typeof s.otherSkins === 'boolean' && s.otherSkins !== settings.otherSkins) {
+        settings.otherSkins = s.otherSkins;
+        refreshSkins();
+      }
       if (s.quality === 'high' || s.quality === 'medium' || s.quality === 'low') settings.quality = s.quality;
       if (typeof s.officialFx === 'string' && s.officialFx !== settings.officialFx) { settings.officialFx = s.officialFx; syncOfficialFx(); }
       if (q !== settings.quality) { board3d?.setQuality?.(settings.quality); resize(); }

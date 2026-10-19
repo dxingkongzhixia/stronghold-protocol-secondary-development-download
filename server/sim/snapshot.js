@@ -36,6 +36,7 @@ export function unitInfo(u) {
     golden: !!d.golden,
     spine: d.spine ?? d.charId ?? u.defId,
     avatar: d.avatar ?? d.charId ?? u.defId,
+    skin: u.skin ?? undefined,
     x: r2(u.x),
     y: r2(u.y),
     facing: u.facing ?? 1,

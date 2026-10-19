@@ -204,7 +204,12 @@ export class SharedPool {
  * experiment BV1eLXXBqEgF, 1:30 and 2:30. [ASSUMED] An item that is consumed/destroyed or removed by elimination no
  * longer occupies stock, consistently with the video's ownership model; this is not a per-match purchase limit. */
 export class SharedItemPool {
-  constructor(gd, players) { this.gd = gd; this.players = players; }
+  constructor(gd, players) {
+    this.gd = gd;
+    this.players = players;
+    /** @type {Map<string, number>} base id → copies taken past the cap by an already-displayed card */
+    this.debt = new Map();
+  }
   cap(id) { return this.gd.itemPoolCopies(id); }
   need(id) { return this.gd.isGolden(id) ? 2 : 1; }
   held(id) {
@@ -224,6 +229,26 @@ export class SharedItemPool {
   }
   left(id) { const cap = this.cap(id); return cap == null ? Infinity : Math.max(0, cap - this.held(id)); }
   canGain(id) { return this.left(id) >= this.need(id); }
+  debtOf(id) { return this.debt.get(this.gd.baseIdOf(id)) || 0; }
+  /** Record `copies` of debt on the base item. Uncapped items and non-positive counts record nothing. */
+  owe(id, copies) {
+    const n = Math.floor(Number(copies));
+    const base = this.gd.baseIdOf(id);
+    if (!(n > 0) || this.cap(base) == null) return 0;
+    this.debt.set(base, (this.debt.get(base) || 0) + n);
+    return n;
+  }
+  /** Repay up to `copies` of debt. Returns how many were repaid. */
+  repay(id, copies) {
+    const n = Math.floor(Number(copies));
+    const base = this.gd.baseIdOf(id);
+    const cur = this.debt.get(base) || 0;
+    if (!(n > 0) || cur <= 0) return 0;
+    const k = Math.min(cur, n);
+    if (cur === k) this.debt.delete(base);
+    else this.debt.set(base, cur - k);
+    return k;
+  }
   /** Stock gates eligibility, not probability: retain the existing uniform item draw or explicit data weights.
    * The measured stock table alone does not establish shop probabilities. */
   pick(rng, ids, weights = null) {

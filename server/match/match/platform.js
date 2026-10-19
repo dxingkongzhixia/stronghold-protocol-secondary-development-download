@@ -37,6 +37,15 @@ export class MatchPlatform {
   handle(playerId, msg) {
     const ps = this.players.get(playerId) || this.spectators.get(playerId);
     if (!ps || ps.isBot || ps.left) return fail(ERR.NOT_IN_ROOM);
+    if (msg?.t === 'g.test' && !this.test) return fail(ERR.TEST_FORBIDDEN);
+    // match test mode: the host's commands go straight to the match's own primitives
+    if (this.test && msg?.t === 'g.test') {
+      let res;
+      try { res = this.applyTestCommand(ps, msg); }
+      catch (e) { this.reportError('handle g.test', e); res = fail(ERR.INTERNAL); }
+      try { this.flush(); } catch (e) { this.reportError('flush', e); }
+      return res && res.error ? res : OK;
+    }
     // a spectator seat only watches (the platform routes nothing else of it)
     if (ps.spectator && (!msg || msg.t !== 'g.watch')) return fail(ERR.SPECTATOR);
     if (this.disposed || this.ended) {
@@ -80,6 +89,22 @@ export class MatchPlatform {
         if (typeof ps._reconcileTokensFor === 'function') for (const owner of ps.allChess()) ps._reconcileTokensFor(owner);
         ps.recompute();
       } else this.markPrivate(ps);
+    });
+    return res;
+  }
+
+  /**
+   * room.skins during the match: accepted in any phase (cosmetic and public), marks the owner's private view and
+   * publishes the new public selection.
+   */
+  setSkins(playerId, skins) {
+    const ps = this.players.get(playerId);
+    if (!ps || ps.isBot || ps.left) return fail(ERR.NOT_IN_ROOM);
+    let res = OK;
+    this.guard(() => {
+      if (!ps.setSkins(skins)) { res = fail(ERR.BAD_MSG, 'bad skin selection'); return; }
+      this.markPrivate(ps);
+      this.markPublic();
     });
     return res;
   }

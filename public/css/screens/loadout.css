@@ -650,3 +650,32 @@
 }
 
 .diy-choice__tags { display: flex; flex-wrap: wrap; gap: .08rem; color: var(--text-lo); font-size: max(calc(.12 * var(--t)), 10px); }
+
+/* 干员皮肤 (docs/SKINS.md): picker tiles and the enlarged illust */
+.lo-skins { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .1rem; align-items: start; }
+.lo-skin {
+  position: relative; min-width: 0; display: flex; flex-direction: column; gap: .04rem; padding: .06rem;
+  font: inherit; color: var(--text-md); text-align: left; cursor: pointer;
+  background: rgba(255, 255, 255, .025); border: 1px solid var(--line);
+  transition: background var(--t-fast), border-color var(--t-fast); touch-action: manipulation;
+}
+.lo-skin:hover { border-color: var(--line-3); }
+.lo-skin:active { transform: scale(.98); }
+.lo-skin:focus-visible { outline: 2px solid var(--mint-400); outline-offset: 2px; }
+.lo-skin.is-on { color: var(--text-hi); background: linear-gradient(180deg, rgba(78, 216, 175, .14), rgba(78, 216, 175, .02) 75%); border-color: rgba(78, 216, 175, .7); }
+.lo-skin__art {
+  position: relative; aspect-ratio: 1 / 2; min-height: max(1.5rem, 130px); overflow: hidden;
+  background: rgba(0, 0, 0, .35); border: 1px solid var(--line);
+}
+.lo-skin__art img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+/* the appearance's 1:1 avatar of the same tile, drawn only where the 1:2 box does not fit (the media query at the end) */
+.lo-skin__art > .lo-skin__art--faceimg { display: none; }
+.lo-skin__art--none { position: absolute; inset: 0; background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .06) 0 3px, transparent 3px 7px); }
+/* the art shown is the operator's own (the skin ships none): the name and the series still say which skin this is */
+.lo-skin--fallback .lo-skin__art { opacity: .72; }
+.lo-skin__text { min-width: 0; display: flex; flex-direction: column; gap: .01rem; }
+.lo-skin__name { font-size: max(.16rem, 11px); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lo-skin__group { font-family: var(--font-num); font-size: max(.12rem, 9px); letter-spacing: .06em; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the enlarged view: the 立绘 (whole, not the cropped tile), as large as the modal allows */
+.lo-skin-preview { display: flex; align-items: center; justify-content: center; }
+.lo-skin-preview img { display: block; max-width: 100%; max-height: 65dvh; object-fit: contain; }

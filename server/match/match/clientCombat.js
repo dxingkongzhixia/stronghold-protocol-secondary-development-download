@@ -8,6 +8,7 @@ import { PHASE } from '../../../shared/constants.js';
 import { requiresTraitLayerAuthority } from '../operatorTraits.js';
 import { DeadBattle, syntheticResult, RESULT_GRACE_MS, HARD_CAP_SECONDS, HeadlessJob, FIELD_SILENCE_MS } from '../fields.js';
 import { buildBattleSpec, createBattleFromSpec } from '../../sim/spec.js';
+import { testSlice } from '../testTrace.js';
 
 /** How often the field-silence watchdog looks at the live client fields. */
 const FIELD_WATCH_MS = 4_000;
@@ -229,8 +230,9 @@ export class MatchClientCombat {
       f.endGt = Number(run.battle.time) || 0;
       this._armRelease(f);
     };
+    const sliceCtl = testSlice(this);
     if (!Number.isFinite(this.headlessSliceMs)) {
-      job.run(Infinity);
+      job.run(Infinity, undefined, sliceCtl);
       complete();
     } else {
       // a real host: wall-clock-bounded slices in callbacks of their own (3 bot fields at combat start would otherwise
@@ -238,7 +240,7 @@ export class MatchClientCombat {
       const slice = () => {
         f.sliceTimer = null;
         if (f.job !== job || f.done) return;
-        if (job.run(this.headlessSliceMs)) complete();
+        if (job.run(this.headlessSliceMs, undefined, sliceCtl)) complete();
         else f.sliceTimer = this.later(0, slice);
       };
       f.sliceTimer = this.later(0, slice);

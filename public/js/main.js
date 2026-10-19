@@ -64,7 +64,7 @@ import { AssetModePrompt } from './ui/assetMode.js';
 import { recordResult, installStatsRecorder, setStatsUploader } from './ui/stats.js';
 import { installStatsSync } from './ui/statsSync.js';
 import { installRehearsal } from './battle/rehearsal.js';
-import { installLoadoutSync, installOwnershipSync, installDiySync } from './ui/loadoutSync.js';
+import { installLoadoutSync, installOwnershipSync, installDiySync, installSkinsSync } from './ui/loadoutSync.js';
 import { startBuildGuard } from './ui/buildGuard.js';
 import { ensureManifestLink } from './ui/ensureManifest.js';
 import { initLang, useLang, tickerText } from './ui/lang.js';
@@ -193,6 +193,7 @@ function onWelcome(msg) {
     content: msg.content && typeof msg.content.vanilla === 'string' ? { vanilla: msg.content.vanilla } : null,
     // how many unofficial plugins it has (P1a — absent: none; content.js fetches the catalogue only when there are some)
     installedPlugins: pluginCount(msg.content),
+    testMode: msg.testMode === true,
   });
   welcomeAt = Date.now();
 
@@ -701,6 +702,7 @@ async function boot() {
   installLoadoutSync({ net });
   installOwnershipSync({ net });
   installDiySync({ net });
+  installSkinsSync({ net });
   // A bot prep's layout rehearsal the server offers this host's browser (DESIGN §14, SP_BOT_REHEARSAL=host on the
   // server): a same-origin module Worker simulates the candidates off the main thread and answers with its pick; a
   // browser that cannot run one answers `error` and the server rehearses itself. Nothing happens while the server
