@@ -205,13 +205,14 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   `i18n en --strict` 1455/1455、`doctor` 退出码 0、`eslint` 0 error（148 warning）、`typecheck` / `check:imports` 通过、
   `build-data --offline` 与 `data/` 逐字节一致、工作项目相对 store HEAD 无跟踪漂移。
 
-## 10.1 在研：插件栈整套迁移（WIP 分支 `plugin-stack-tip`，2026-10-19）
+## 10.1 已完成：插件栈整套迁移 / Worker 托管（`plugin-stack-tip`，2026-10-19 合入）
 
-- **已完成并推送**：公告客户端 UI（标题页 + 大厅的 `NoticesButton`，已读存本机）、房间主题（个人外观插件 + 房间外观插件令牌共同决定页面主题）；Worker 托管（host）骨架 `server/match/host/*` 已接进 `server/index.js` → 会话栈 → Lobby，退出时关闭 —— 但**门未开**（`contentSets` 还是 P1c 版）。
-- **在研分支**（**只在本机，未推送，不合并**）：`_merge-scratch` 的 `plugin-stack-tip` @ `c2010b355`，基线 `ours@d47f4d4c0`。已整块取入 tip 的插件栈：`server/plugins/**`、`shared/plugins/**`、`schemas/**`、`server/sim/content/dsl/**`、`server/studio/**` + `shared/studio/**` + `public/studio/**`、`public/js/render/vfx/plugin*`、`tools/plugin.mjs` + `tools/assets/official-tables.mjs`、`plugins/**`、`docs/PLUGIN-*`、`test/plugins/**` + `test/helpers/**`；并重放三处本分支补丁（插件 app 范围 → 0.4.0、自定义干员 stand-in 跳过、8 个新插件错误码 + 文案）。
-- **验证**：服务端正常启动（`/healthz` / `/plugins/index.json` / `/cs/` 全 200）；`build-data --offline` 不改 `data/`；插件测试子集 **92 / 102**（1 skip）。剩余 9 条全是**尚未接完的相邻特性**：W2 规则（5）、studio 路由（1）、文档 surface 表（1）、records schema（1）、`placeOnRanged` 紧凑记录（1）。
-- **下一步**：按 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10 末尾「明天从这里继续」的 1–7 步收尾，再合入 `ours` 并推送三端；上线仍等 owner 许可。
-- **`ours` / 三端**：`d47f4d4c0`，全量 **7612 / 7579 / 0 失败 / 33 跳过**、golden 全匹配、i18n en 1651/1651、文档门禁 34/34。
+- **已合入 `ours`**（`2e37b1407`，由 gitee 拉取；分支 `plugin-stack-tip` 已作为祖先 `797481bf9` 并入）。里面是 tip 的整套插件栈：`server/plugins/**`、`shared/plugins/**`、`schemas/**`、`server/sim/content/dsl/**`、**studio**（`server/studio/**` + `shared/studio/**` + `public/studio/**`）、`public/js/render/vfx/plugin*`、`tools/plugin.mjs` + `tools/assets/official-tables.mjs`、`plugins/**`、`docs/PLUGIN-*`、`test/plugins/**` + `test/helpers/**`。
+- **能力**：内容集（`cs`，`contentSets` 的 `get` / `dataBytes` / `scripts` / `offers` / `bounds`）、**match host（Worker 托管）**、W1–W5（主题变量 / 规则开关 / 新记录 / Forge 面板 / 特效借用）、Forge 真包导入、脚本沙箱（SES / `--permission`）、studio 战斗沙箱与 `/studio/` 工作台、`SP_TEST_MODE` 测试控制台、插件干员官方美术（发现 / 提取 / 本地合并）、`withModded` 统计开关。
+- **本分支适配**（都保留）：插件 app 范围接受主线 0.3.x，但 content / script / trusted 仍严格；自定义干员 stand-in 跳过；8 个新插件拒绝码 + `ERR_TEXT`；官方 0.3.1 `op-*` 与自造干员共存（`diy.officialPool`）。
+- **验收**（2026-10-19 本机拉取后实测）：`npm test` **8194 项 / 8151 通过 / 1 失败 / 42 跳过**，唯一失败是已知性能基线抖动（`test/sim/robustness` 单跑 **35/35**）；golden **20 + 11 + 129 场景全匹配**；`build-data --offline` 不改 `data/`；`/healthz` / `/plugins/index.json` / `/cs/` 全 200；文档门禁 34/34。
+- **注意**：本机 `node_modules` 需 `npm install`（新增 `ses` 2.3.0）；`node --test` 裸跑会把 `test/fixtures/**/*.js` 当测试，统一用 `npm test`。
+- **未做**：上线（默认「先不上线」，等 owner 明确许可）；0.3.1 / 0.3.2 的版本元数据不取（本分支保持 0.4.0）。
 
 ## 11. 产物
 

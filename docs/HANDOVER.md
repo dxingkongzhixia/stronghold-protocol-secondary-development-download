@@ -456,13 +456,12 @@ Three layers, resolved **per client at render time** ([`docs/ASSETS.md`](ASSETS.
 Full procedure: [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (b); per-batch records:
 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) (append a new `## N.` section for every batch).
 
-> **In flight (2026-10-19): the plugin stack / Worker hosting.** The owner lifted the plugin blacklist (UPSTREAM-MERGES
-> §0), and the whole tip plugin stack — W1–W5, Forge, records, studio, the newer `contentSets` that powers match hosts —
-> sits on the **local, unmerged** branch `plugin-stack-tip` (`c2010b355`, based on `ours@d47f4d4c0`). It boots; the
-> plugin subset is 92 / 102, and the remaining 9 failures are the unported neighbours (W2 rules, studio routes, docs
-> table, records schema, `placeOnRanged`). `ours` is still green. Read the status and the 1–7 resume plan in
-> [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10 (tail) and [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §10.1
-> before touching plugin files, and keep this branch local until that plan is green.
+> **Plugin stack / Worker hosting — landed (2026-10-19).** The whole tip plugin stack (W1–W5, Forge, records,
+> scripts/SES sandbox, studio + `/studio/`, `SP_TEST_MODE` console, the newer `contentSets` that powers match hosts)
+> is merged into `ours` at `2e37b1407`; `plugin-stack-tip` (`797481bf9`) is an ancestor. It is **not deployed** —
+> the live build is unchanged. Status, the fork adaptations and the test numbers: [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)
+> §13.10 (tail) and [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §10.1. Plugin files land on top of this stack now;
+> re-read [`docs/PLUGINS.md`](PLUGINS.md) and `plugins/AGENTS.md` before changing them.
 
 **The default for a feedback batch is the selective cherry-pick, not a whole-branch merge:**
 1. Make both trees agree first (`node tools/push-gitee.mjs --no-push`, or the `git --work-tree` check).
