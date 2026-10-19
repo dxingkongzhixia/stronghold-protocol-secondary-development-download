@@ -8,7 +8,7 @@ function findNonFinite(obj, path, out) {
   for (const [k, v] of Object.entries(obj)) findNonFinite(v, `${path}.${k}`, out);
 }
 
-export function validateReferences(f, { officialOwnedSkills = true, skipStandIn = () => false } = {}) {
+export function validateReferences(f, { officialOwnedSkills = true } = {}) {
   const errors = [];
   const err = (m) => errors.push(m);
   const { config, chess, bonds, garrisons, items, bands, effects, choices, enemies, factions, waves, stages, bosses, tokens, backups } = f;
@@ -31,8 +31,11 @@ export function validateReferences(f, { officialOwnedSkills = true, skipStandIn 
     // DESIGN §16 loadout choices
     if (!Array.isArray(c.skills) || c.skills.filter((s) => s.isDefault).length !== 1 || c.skills.find((s) => s.isDefault)?.skillId !== c.skill?.skillId) err(`chess ${c.chessId}: skills[] without exactly one default = skill`);
     if (c.modules && (c.modules.filter((m) => m.isDefault).length !== (c.module?.active ? 1 : 0) || !c.statsBase || !c.traitBase || !c.talentsBase)) err(`chess ${c.chessId}: inconsistent module choices`);
-    // 高台 legality is read from the trait text at place time (shared/highGround.js), never a field on the record
+    // The old `placement` string is not a field. 高台 is the boolean `placeOnRanged` (build-data, from the Chinese
+    // trait), read by shared/highGround.js, which still matches the Simplified line when the flag is absent.
     if (c.placement !== undefined) err(`chess ${c.chessId}: placement is not a data field`);
+    if (c.placeOnRanged !== undefined && c.placeOnRanged !== true) err(`chess ${c.chessId}: placeOnRanged must be true when present`);
+    if (c.placeOnRanged === true && c.position !== 'MELEE') err(`chess ${c.chessId}: placeOnRanged on a non-MELEE record`);
   }
   // 补位 / 自选 (data/backups.json, DATA.md §18): a PRESET chess is its own backup; every NORMAL chess (both forms)
   // composes into its stand-in (shared/standIn.js standInRecord) with the chess's skill and module; every DIY slot is a
@@ -43,10 +46,6 @@ export function validateReferences(f, { officialOwnedSkills = true, skipStandIn 
       if (c.chessType === 'PRESET' && b?.charId !== c.charId) err(`chess ${c.chessId}: a PRESET chess's backup must be itself`);
       if (c.chessType === 'DIY' && b?.charId !== null) err(`chess ${c.chessId}: a DIY slot has no backup`);
       if (c.chessType !== 'NORMAL') continue;
-      // this fork's custom operators field themselves (no official stand-in): build-data passes them here
-      if (skipStandIn(c)) continue;
-      // the same shape (a NORMAL chess whose backup has no character) when a content set validates the vanilla data
-      if (b?.charId == null) continue;
       const r = standInRecord(c, backups);
       if (!r) { err(`chess ${c.chessId}: no stand-in ${b?.charId}@${statusKey(c.status)} in backups.json`); continue; }
       if (!r.stats || !Array.isArray(r.rangeGrid) || !r.trait) err(`chess ${c.chessId}: stand-in ${b.charId} without stats / range / trait`);
@@ -118,7 +117,7 @@ export function validateReferences(f, { officialOwnedSkills = true, skipStandIn 
   }
   // the escaped level of 1 / 2 helpers (config.unite.templates) has its map record (kind 'unite'; no field uses it)
   for (const [n, id] of Object.entries(config.unite.templates)) {
-    if (stages[id]?.kind !== 'unite' || stages[id].helpers !== Number(n) || stages[id].active) err(`unite template ${id}: no inactive 联防 stage for ${n} helper(s)`); // i18n-ignore: build-time data validation message
+    if (stages[id]?.kind !== 'unite' || stages[id].helpers !== Number(n) || stages[id].active) err(`unite template ${id}: no inactive 联防 stage for ${n} helper(s)`); // i18n-ignore
   }
   for (const m of Object.values(config.modes)) {
     for (const [r, rd] of Object.entries(m.rounds)) {
@@ -190,7 +189,7 @@ function checkBlackboards(rec, path, bad) {
   if (Array.isArray(rec.abilities)) rec.abilities.forEach((a, i) => checkTimesMap(a?.bb, `${path}.abilities[${i}].bb`, bad));
 }
 
-function checkData(data, { kitExists = null, vanilla = null } = {}) {
+function checkData(data, { kitExists = null, vanilla = null, owners = null, validateDsl = null } = {}) {
   const problems = jsonProblems(data, 'data', { bounded: false });
   const bad = (path, message, code = 'PLUGIN_DATA_REQUIRED') => problems.push(problem(code, path, message));
   const array = (v, path) => { if (!Array.isArray(v)) bad(path, 'array required'); };
@@ -202,7 +201,7 @@ function checkData(data, { kitExists = null, vanilla = null } = {}) {
     if (!object(rec) || rec[key] !== id) bad(`${file}.${id}`, `record must have ${key} = its map key`);
   }
   if (problems.length) return problems;
-  const checkSkills = (rec, at, defaults) => {
+  const checkSkills = (rec, at, defaults, ownerPath) => {
     if (!object(rec.stats) || !['maxHp', 'atk', 'def', 'res', 'aspd', 'bat', 'blockCnt', 'cost', 'respawnTime'].every(k => typeof rec.stats[k] === 'number' && Number.isFinite(rec.stats[k]))
       || !(rec.stats.maxHp > 0) || !(rec.stats.bat > 0)) bad(at + '.stats', 'numeric core stats and positive maxHp/bat required');
     if (!matchesSchema(rec.rangeGrid, GRID_SCHEMA)) bad(at + '.rangeGrid', 'range grid required');
@@ -227,19 +226,30 @@ function checkData(data, { kitExists = null, vanilla = null } = {}) {
     if (rec.skillSpec != null) problems.push(...validateSkillSpec(rec.skillSpec, at + '.skillSpec'));
     if (rec.talentMods != null && !matchesSchema(rec.talentMods, MODS_SCHEMA)) bad(at, 'invalid talentMods', 'PLUGIN_SKILL_SPEC');
     if (rec.kitRef != null && rec.talentMods != null) bad(at, 'talentMods belong with a JSON SkillSpec, not kitRef', 'PLUGIN_SKILL_SPEC');
-    if (rec.dsl != null) bad(at, 'DSL is unavailable in P1b', 'PLUGIN_DSL_UNAVAILABLE');
+    if (rec.dsl != null) {
+      // (the sim's DSL validator, handed in by the content-set builder — shared code does not import the engine; a record
+      // with DSL checked without one is refused)
+      const checked = typeof validateDsl === 'function' ? validateDsl(rec.dsl, { bounds: true })
+        : { ok: false, problems: [{ code: 'PLUGIN_DSL_SHAPE', path: '', zh: 'a DSL record needs the content-set builder to check it (no validator given)' }] };
+      if (!checked.ok) for (const p of checked.problems) bad(p.path ? `${at}.${p.path}` : at, p.zh, p.code);
+      else if (typeof rec.pluginId !== 'string' || !rec.pluginId) bad(`${at}.pluginId`, 'DSL record needs the contributing plugin id', 'PLUGIN_DSL_PLUGIN_ID');
+      else if (rec.dsl.pluginId != null && rec.dsl.pluginId !== rec.pluginId) bad(`${at}.pluginId`, 'spec pluginId differs from the record pluginId', 'PLUGIN_DSL_PLUGIN_ID');
+      else if (owners && owners.get(ownerPath) !== rec.pluginId) bad(`${at}.pluginId`, 'pluginId is not the plugin that contributed this record', 'PLUGIN_DSL_PLUGIN_ID');
+    }
     if (rec.kitRef != null && (typeof rec.kitRef !== 'string' || kitExists && !kitExists(rec.kitRef))) bad(at, 'unknown official kitRef', 'PLUGIN_KIT_REF');
   };
   for (const [id, c] of Object.entries(data.chess)) {
     for (const k of ['bonds', 'garrisonIds', 'tokens']) array(c[k], `chess.${id}.${k}`);
     const a = data.chess[c.baseId], b = data.chess[c.goldenId];
-    if (!a || !b || c.baseId !== id.replace(/_[ab]$/, '_a') || c.goldenId !== id.replace(/_[ab]$/, '_b')
-      || a.isGolden || !b.isGolden || a.charId !== b.charId || a.tier !== b.tier || c.isGolden !== id.endsWith('_b')) bad(id, 'inconsistent _a/_b pair', 'PLUGIN_DATA_PAIR');
-    if (!c.isDiy) checkSkills(c, `chess.${id}`, true);
+    if (c.chessId !== id || (id !== c.baseId && id !== c.goldenId) || !a || !b || a === b || a.chessId !== c.baseId || b.chessId !== c.goldenId
+      || a.baseId !== c.baseId || b.baseId !== c.baseId || a.goldenId !== c.goldenId || b.goldenId !== c.goldenId
+      || a.isGolden || !b.isGolden || a.charId !== b.charId || a.tier !== b.tier || c.isGolden !== (id === c.goldenId)
+      || a.upgradeChessId !== b.chessId || b.upgradeChessId != null) bad(id, 'inconsistent normal/elite pair', 'PLUGIN_DATA_PAIR');
+    if (!c.isDiy) checkSkills(c, `chess.${id}`, true, `chess.${id}`);
   }
   for (const [id, u] of Object.entries(data.backups.units ?? {})) {
     if (!object(u?.forms)) { bad(id, 'unit forms required'); continue; }
-    for (const [key, f] of Object.entries(u.forms)) checkSkills({ ...f, ...Object.fromEntries(['kitRef', 'skillSpec', 'talentMods', 'dsl'].filter(k => own(u, k)).map(k => [k, u[k]])) }, `${id}@${key}`, false);
+    for (const [key, f] of Object.entries(u.forms)) checkSkills({ ...f, ...Object.fromEntries(['kitRef', 'skillSpec', 'talentMods', 'dsl', 'pluginId'].filter(k => own(f, k) || own(u, k)).map(k => [k, f[k] ?? u[k]])) }, `${id}@${key}`, false, `units.${id}`);
   }
   for (const b of Object.values(data.bonds)) for (const k of ['members', 'thresholds']) array(b[k], `bonds.${b.bondId}.${k}`);
   for (const w of Object.values(data.waves)) {

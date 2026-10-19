@@ -21,7 +21,7 @@ const marathon = () => ({
   id: 'marathon',
   name: { zh: '马拉松模式', en: 'Marathon' },
   version: '0.1.0',
-  app: '>=0.3.0 <0.5.0',
+  app: '>=0.3.0 <0.4.0',
   api: 1,
   class: 'content',
   scope: ['room'],
@@ -55,7 +55,7 @@ test('manifest 2: a content plugin, normalised', () => {
   assert.deepEqual(Object.keys(m.parts), ['data', 'operators', 'modes', 'i18n']);
   assert.deepEqual(m.parts.i18n, { files: ['i18n/en.json'], langs: { en: 'i18n/en.json' } });
   assert.deepEqual(declaredPaths(m).map((d) => d.rel), ['data/economy.json', 'operators/rosa.json', 'modes/marathon.json', 'i18n/en.json']);
-  assert.equal(readPluginManifest(marathon(), ctx('marathon', { app: '0.6.1' })).manifest.compatible, false);
+  assert.equal(readPluginManifest(marathon(), ctx('marathon', { app: '0.4.1' })).manifest.compatible, false);
   assert.match(warningsOf({ ...marathon(), app: '0.2.x' }), /made for app 0\.2\.x; this is 0\.3\.0/);
 });
 
@@ -191,10 +191,10 @@ test('manifest 2: inline assets name art, models, audio or fonts; a theme never 
   const cos = (extra) => readPluginManifest({ manifest: 2, version: '1.0.0', app: '*', api: 1, class: 'cosmetic', permissions: ['assets.override', 'theme'], ...extra }, ctx('skin'));
   assert.match(cos({ assets: { ui: { 'top/bar': 'ui/bar.svg' } } }).problems.join(), /assets\.ui\.top\/bar: ui\/bar\.svg is not an image, a Spine file, audio or a font/);
   assert.match(cos({ assets: { chars: { c: { avatar: '../x.png' } } } }).problems.join(), /is not a path inside the plugin folder/);
-  assert.deepEqual(cos({ assets: { audio: { bgm: 'audio/b.ogg' } }, theme: { '--gold': '#f6a329' } }).problems, []);
+  assert.deepEqual(cos({ assets: { audio: { bgm: 'audio/b.ogg' } }, theme: { '--amber': '#f6a329' } }).problems, []);
   assert.deepEqual(cos({ assets: { chars: { c: { avatar: 'a.png', scale: '1.5', anims: 'auto' } } } }).manifest.parts.assets.files, ['a.png'], 'only file names count');
   assert.match(cos({ assets: { chars: { c: { avatar: 'https://cdn.example/a.png' } } } }).problems.join(), /is not a path inside the plugin folder/, 'no outside URL');
-  assert.match(cos({ assets: { audio: { bgm: 'audio/b.ogg' } }, theme: { '--bg-0': 'url(https://evil.example/x)' } }).problems.join(), /"theme" names a URL/);
+  assert.match(cos({ assets: { audio: { bgm: 'audio/b.ogg' } }, theme: { '--bg': 'url(https://evil.example/x)' } }).problems.join(), /"theme" names a URL/);
   assert.match(cos({ assets: 'assets.json', permissions: [] }).problems.join(), /"assets" needs the permission "assets\.override" or "assets\.add"/);
   const script = readPluginManifest({ manifest: 2, version: '1.0.0', app: '*', api: 1, class: 'script', permissions: ['sim.code'], entry: { sim: 'sim/index.js', meta: 'meta/index.js' } }, ctx('kit'));
   assert.match(script.problems.join(), /"entry\.meta" needs the permission "meta\.code"/);
@@ -204,9 +204,9 @@ test('manifest 2: inline assets name art, models, audio or fonts; a theme never 
   assert.deepEqual([trusted.problems, trusted.manifest.scope], [[], ['server']]);
 });
 
-test('the classes: lang and cosmetic load (P1a), content loads (P1b), code is never loaded; manifest 1 types map onto them', () => {
+test('the classes: lang and cosmetic load (P1a), content loads (P1b), ui loads (P4), code is supported behind owner gates; manifest 1 types map onto them', () => {
   assert.deepEqual(Object.keys(PLUGIN_CLASSES), ['lang', 'cosmetic', 'content', 'script', 'ui', 'trusted']);
-  assert.deepEqual(Object.keys(PLUGIN_CLASSES).map(classStatus), ['loaded', 'loaded', 'loaded', 'unsupported', 'loaded', 'unsupported']);
+  assert.deepEqual(Object.keys(PLUGIN_CLASSES).map(classStatus), ['loaded', 'loaded', 'loaded', 'loaded', 'loaded', 'loaded']);
   assert.deepEqual(Object.entries(PLUGIN_CLASSES).filter(([, c]) => !c.unofficial).map(([k]) => k), ['lang'], 'everything but a language is unofficial');
   assert.equal(PACK_TYPES_COMPAT, PACK_TYPES, 'shared/packs.js forwards the type table');
   assert.deepEqual(Object.entries(PACK_TYPES).map(([k, v]) => [k, v.status, v.class]), [['lang', 'supported', 'lang'], ['assets', 'planned', 'cosmetic'], ['data', 'planned', 'content']]);
@@ -214,7 +214,7 @@ test('the classes: lang and cosmetic load (P1a), content loads (P1b), code is ne
   assert.ok(!ASSET_EXT.includes('.svg'), 'no SVG (scripts in images)');
   assert.ok(!PLUGIN_CLASSES.cosmetic.ext.includes('.js') && !PLUGIN_CLASSES.content.ext.includes('.js'), 'no code in art or data');
   assert.equal(isPackPathCompat('a/b.json'), true);
-  assert.equal(appVersionMatches('>=0.3.0 <0.5.0', '0.3.0-dev'), true);
+  assert.equal(appVersionMatches('>=0.3.0 <0.4.0', '0.3.0-dev'), true);
   assert.deepEqual(['ab', 'a-b', '0x', 'a'.repeat(32), 'a', '-a', 'A', 'a_b', 'a.b', 'a'.repeat(33)].map(isPluginId),
     [true, true, true, true, false, false, false, false, false, false]);
   assert.equal(isPackId('pt-BR'), true);
@@ -281,6 +281,10 @@ test('JSON limits: nesting, numbers finite and within ±1e9', () => {
   assert.equal(checkJsonLimits({ a: [1, 2, { b: -1e9 }], s: 'x' }), null);
   assert.equal(checkJsonLimits(JSON.parse('{ "x": [0, 1e999] }')), '$.x[1]: a number that is not finite');
   assert.equal(checkJsonLimits({ hp: 2e9 }), '$.hp: 2000000000 is beyond ±1000000000');
+  assert.equal(checkJsonLimits({ start: 1745674200 }, { numbers: 'safe' }), null);
+  assert.equal(checkJsonLimits({ hp: 2e9 }, { numbers: 'safe' }), null);
+  assert.match(checkJsonLimits({ hp: 1e20 }, { numbers: 'safe' }), /not a safe integer/);
+  assert.match(checkJsonLimits({ hp: 1.5e16 }, { numbers: 'safe' }), /not a safe integer/);
   let deep = 0;
   for (let i = 0; i < PLUGIN_LIMITS.jsonDepth; i++) deep = [deep];
   assert.equal(checkJsonLimits(deep), null, 'exactly 64 levels');

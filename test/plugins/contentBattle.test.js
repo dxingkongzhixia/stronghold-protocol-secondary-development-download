@@ -42,8 +42,8 @@ test('JSON SkillSpec and permanent talent mods work on shop and DIY units', t =>
     const h = makeBattle({ data: new DataSource(set.data), units }); h.step(); const u = h.allies()[0];
     assert.ok(!u.kit.generic); close(u.s.atk, 300); close(u.s.def, 275); assert.equal(u.skill.spec.attack.hits, 2); checkInvariants(h.b);
   }
-  // P2 replaced the P1b DSL stub with the real compiler: an empty spec fails its own version/format check
-  assert.throws(() => compileDsl({}), { code: 'PLUGIN_DSL_VERSION' });
+  // P2's compiler stands at the C2 seam since claude/030-int was merged (the stub is gone): an invalid spec is a coded refusal
+  assert.throws(() => compileDsl({}), (e) => /^PLUGIN_DSL_/.test(e.code));
 });
 test('effectRef item reaches the id-dispatched battle effect; copied params remain concrete', t => {
   const { set } = setFor(t, { entries: [{ file: 'items', id: 'item_x_data_demo_scope', base: 'chess_item_3_02_e_a' }] });
@@ -70,17 +70,26 @@ test('merged data reaches every support lookup and a real battle, through Node a
   }
   assert.equal(gameData(), set.data);
   const runtime = path.join(dir, 'runtime'); fs.mkdirSync(path.join(runtime, 'server'), { recursive: true });
-  fs.cpSync('server/sim', path.join(runtime,'server/sim'), { recursive: true, filter: src => !/[\\/]nodeData\.js$/.test(src) });
+  // as the browser gets /sim/: no Node loader (by file name — cpSync passes paths with the OS separator, `\` on
+  // Windows). With it simdata.js → nodeData.js → this data.js shim → simdata.js would deadlock the imports below.
+  fs.cpSync('server/sim', path.join(runtime,'server/sim'), { recursive: true, filter: src => path.basename(src) !== 'nodeData.js' });
+  assert.equal(fs.existsSync(path.join(runtime, 'server/sim/nodeData.js')), false);
   fs.cpSync('shared', path.join(runtime,'shared'), { recursive: true });
   fs.writeFileSync(path.join(runtime,'package.json'), '{"type":"module"}');
   fs.writeFileSync(path.join(runtime,'server/data.js'), DATA_SHIM_JS);
   const table = contentSetFiles(set), base = pathToFileURL(path.join(runtime,'server/sim')).href + '/';
-  const loaded = await loadBrowserSim({ base, dataBase: '/cs/test/data/', fetchFn: async url => {
-    const name = url.split('/').at(-1);
-    const rel = String(url).includes('/bounds/') ? `bounds/${name}` : `data/${name}`;
-    const f = table.get(rel);
-    return { ok: !!f, json: async () => JSON.parse(f.body.toString('utf8')) };
-  } });
+  // as the page does (public/js/content.js loadContentSet → simContent): the set's checked files and its official-bounds
+  // snapshot, never a fetch of /data/
+  const files = Object.fromEntries([...table].filter(([rel]) => /^data\/[^/]+\.json$/.test(rel)).map(([rel, f]) => [rel.slice(5, -5), JSON.parse(f.body.toString('utf8'))]));
+  const bounds = JSON.parse(table.get('bounds/official.json').body.toString('utf8'));
+  const caps = await import(new URL('../../shared/plugins/officialBounds.js', base).href);
+  const noFetch = async (url) => assert.fail(`no fetch for a content set (${url})`);
+  // without its snapshot the set runs on the floor — never on a scan of its own tables (a scan would give 10 × 12)
+  await loadBrowserSim({ base, data: files, cs: set.cs, fetchFn: noFetch });
+  assert.equal(caps.bbCap('times'), 64);
+  const loaded = await loadBrowserSim({ base, data: files, cs: set.cs, bounds, fetchFn: noFetch });
+  assert.equal(loaded.cs, set.cs);
+  assert.equal(caps.bbCap('times'), 120, 'the snapshot the server validated against (and its match host installs)');
   const support = await import(base + 'content/support/index.js');
   for (const file of ['bonds','items','bands','garrisons','effects','chess']) assert.deepEqual(support.gameData()[file], set.data[file]);
   const h = makeBattle({ data: new DataSource(set.data), stageId: 'act1autochess_m01', timeLimit: 2, units: [{ chessId: 'chess_x_data_demo_guard_a', row: 9, col: 5 }], bonds: { deputShip: { active: true, tier: 1, layers: 0 } } });

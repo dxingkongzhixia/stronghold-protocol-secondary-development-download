@@ -36,8 +36,7 @@ test('description counts stay finite and official phrases are unchanged', () => 
   getData();
   assert.equal(officialTextMax('burst'), 9);
   assert.equal(officialTextMax('attack-times'), 15);
-  // this fork's texts carry no 偷取 phrase: the maximum is absent and textCount clamps to the floor
-  assert.equal(officialTextMax('steal'), null);
+  assert.equal(officialTextMax('steal'), 2);
   assert.equal(officialTextMax('combo'), 10);
   assert.equal(officialTextMax('chain-attack'), 2);
   assert.equal(textCount('9连发', /(\d+)连发/, 1, 'burst'), 9);
@@ -48,7 +47,7 @@ test('description counts stay finite and official phrases are unchanged', () => 
   assert.equal(textFinite('伤害降低80%', /伤害降低(\d+)%/, 0), 80);
 });
 
-test('霍尔海雅 S2 1e16 连发 fills a capped target list', { skip: 'this fork keeps its own sim (the official-data rerouting moves golden); the upstream kit loop-cap cases do not apply yet' }, async () => {
+test('霍尔海雅 S2 1e16 连发 fills a capped target list', async () => {
   const heyak = (await import('../../server/sim/content/kits/ops/op-heyak.js')).default;
   const form = structuredClone(getData().backups.units.char_4027_heyak.forms['2/1/4/0']);
   setDesc(form, 'skchr_heyak_2', `${BOMB}连发`);
@@ -79,7 +78,7 @@ test('霍尔海雅 S2 1e16 连发 fills a capped target list', { skip: 'this for
   assert.ok(Date.now() - t0 < 1000, `heyak ${Date.now() - t0}ms`);
 });
 
-test('阿 爆发剂 1e16 攻击次数 with zero damage finishes', { skip: 'this fork keeps its own sim (the official-data rerouting moves golden); the upstream kit loop-cap cases do not apply yet' }, async () => {
+test('阿 爆发剂 1e16 攻击次数 with zero damage finishes', async () => {
   const haak = (await import('../../server/sim/content/kits/ops/op-haak.js')).default;
   const form = structuredClone(getData().backups.units.char_225_haak.forms['2/1/4/0']);
   setDesc(form, 'skchr_haak_2', `攻击${BOMB}次`);
@@ -119,7 +118,7 @@ test('阿 爆发剂 1e16 攻击次数 with zero damage finishes', { skip: 'this 
   assert.ok(Date.now() - t0 < 1000, `haak ${Date.now() - t0}ms`);
 });
 
-test('娜仁图亚 偷取触发 1e16 次 finishes', { skip: 'this fork keeps its own sim (the official-data rerouting moves golden); the upstream kit loop-cap cases do not apply yet' }, async () => {
+test('娜仁图亚 偷取触发 1e16 次 finishes', async () => {
   const narant = (await import('../../server/sim/content/kits/ops/op-narant.js')).default;
   const form = structuredClone(getData().backups.units.char_4138_narant.forms['2/1/4/0']);
   form.talents[0].desc = `偷取触发${BOMB}次`;
@@ -149,7 +148,7 @@ test('娜仁图亚 偷取触发 1e16 次 finishes', { skip: 'this fork keeps its
   assert.ok(Date.now() - t0 < 1000, `narant ${Date.now() - t0}ms`);
 });
 
-test('纯烬艾雅法拉 连发 of 1e16 and of 400 nines both clamp', { skip: 'this fork keeps its own sim (the official-data rerouting moves golden); the upstream kit loop-cap cases do not apply yet' }, async () => {
+test('纯烬艾雅法拉 连发 of 1e16 and of 400 nines both clamp', async () => {
   const agoat = (await import('../../server/sim/content/kits/ops/chess_char_6_20-agoat2.js')).default;
   const fire = (text) => {
     const chess = structuredClone(getData().chess.chess_char_6_20_a);
@@ -181,7 +180,7 @@ test('纯烬艾雅法拉 连发 of 1e16 and of 400 nines both clamp', { skip: 't
   }
 });
 
-test('雪猎 1e16 连击 with zero attack finishes', { skip: 'this fork keeps its own sim (the official-data rerouting moves golden); the upstream kit loop-cap cases do not apply yet' }, async () => {
+test('雪猎 1e16 连击 with zero attack finishes', async () => {
   const snhunt = (await import('../../server/sim/content/kits/ops/chess_char_3_11-snhunt.js')).default;
   const chess = structuredClone(getData().chess.chess_char_3_11_a);
   chess.stats = { ...chess.stats, atk: 0 };
@@ -213,7 +212,7 @@ test('雪猎 1e16 连击 with zero attack finishes', { skip: 'this fork keeps it
   assert.ok(Date.now() - t0 < 1000, `snhunt ${Date.now() - t0}ms`);
 });
 
-test('至简 1e16 连续攻击 writes a capped hit count and resolveHit finishes', { skip: 'this fork keeps its own sim (the official-data rerouting moves golden); the upstream kit loop-cap cases do not apply yet' }, async () => {
+test('至简 1e16 连续攻击 writes a capped hit count and resolveHit finishes', async () => {
   const malist = (await import('../../server/sim/content/kits/ops/chess_char_3_13-malist.js')).default;
   const chess = structuredClone(getData().chess.chess_char_3_13_a);
   chess.stats = { ...chess.stats, atk: 0 };
@@ -245,7 +244,7 @@ test('至简 1e16 连续攻击 writes a capped hit count and resolveHit finishes
   assert.ok(Date.now() - t0 < 1000, `malist ${Date.now() - t0}ms`);
 });
 
-test('tiny positive step keys are PLUGIN_DATA_BOUND and the named loops still finish', { skip: 'this fork keeps its own sim (the official-data rerouting moves golden); the upstream kit loop-cap cases do not apply yet' }, async () => {
+test('tiny positive step keys are PLUGIN_DATA_BOUND and the named loops still finish', async () => {
   const jedi = boundProblems({
     op: 'set', file: 'enemies', id: 'enemy_1328_cbjedi',
     path: ['talents', 'bb', 'unbalanced_bleed.interval'], value: 1e-18,
@@ -372,7 +371,7 @@ test('three times an official interval still validates, and the shared bounds sn
   assert.equal(STEP_TICK, TICK);
 });
 
-test('every while in the sim and the match names its loop cap', { skip: 'this fork keeps its own sim (the official-data rerouting moves golden); the upstream kit loop-cap cases do not apply yet' }, () => {
+test('every while in the sim and the match names its loop cap', () => {
   const missing = [];
   const walk = (dir) => {
     for (const name of fs.readdirSync(dir)) {
@@ -418,4 +417,100 @@ test('a content selection ships the same vanilla bounds the engine installs', (t
   } finally {
     rememberOfficialBounds(getData());
   }
+});
+
+test('factions: the numbers the wave generator reads as counts and weights are bounded like a blackboard (integration note 11)', () => {
+  const op = (id, p, value) => ({ op: 'set', file: 'factions', id, path: p, value });
+  const g = getData().factions.generation;
+  assert.deepEqual([g.maxLevelCnt, g.minReplacedEnemyCount, g.maxReplacedEnemyCount, g.typeSlots.FLY], [15, 1, 5, 3], 'the official numbers');
+  // the official table and a creative one (3 × official) are clean
+  assert.deepEqual(boundProblems(op('generation', ['maxLevelCnt'], 45)), []);
+  assert.deepEqual(boundProblems(op('generation', ['maxReplacedEnemyCount'], 15)), []);
+  // far past the rule: refused at the path that says so
+  const cases = [
+    [op('generation', ['maxLevelCnt'], 1e9), 'factions.generation.maxLevelCnt', 150],
+    [op('generation', ['minReplacedEnemyCount'], 4e7), 'factions.generation.minReplacedEnemyCount', 50],
+    [op('generation', ['typeSlots', 'FLY'], 1e6), 'factions.generation.typeSlots.FLY', 64],
+    [op('types', ['FLY', 'count'], 1e9), 'factions.types.FLY.count', 64],
+  ];
+  for (const [o, where, cap] of cases) {
+    const problems = boundProblems(o);
+    assert.equal(problems.length, 1, `${where}: ${JSON.stringify(problems)}`);
+    assert.match(problems[0].path, new RegExp(where.replace(/\./g, '\\.')));
+    assert.match(problems[0].message, new RegExp(`上限 ${cap}`));
+  }
+  // the replaced counts stay within the generator's own clamp (PLUGIN_ACTION_UNITS): 51 is refused though 10 × 5 is 50
+  // and the floor is 64 — what passes is what the generator plays
+  assert.equal(boundProblems(op('generation', ['maxReplacedEnemyCount'], 51)).length, 1);
+  assert.deepEqual(boundProblems(op('generation', ['maxReplacedEnemyCount'], 50)), []);
+});
+
+test('the wolf pack: its text counts are capped, and an attack on a target that takes no damage still returns (count-limit regression)', async () => {
+  // the review's repro: 至多 1e16 只 on the pack's texts, 初始 1e16 只 on its owner's talents, every attack 0 — all of it passes
+  // the data check; the pack used to read both with a raw regex and resolveHit looped 1e16 times on a target that never fell
+  const { makeBattle } = await import('../helpers/battleHarness.js');
+  const { resolveHit: hit } = await import('../../server/sim/ai.js');
+  const { PLUGIN_TIMES_MAX } = await import('../../shared/plugins/limits.js');
+  const base = getData();
+  const tid = 'token_10028_vigil_wolf';
+  const owner = Object.keys(base.chess).find((id) => id.includes('3_19') && id.endsWith('_a'));
+  assert.ok(owner && base.tokens[tid], 'the pack and its owner exist');
+  const paths = (node, re, at = [], out = []) => {
+    if (typeof node === 'string') { if (re.test(node)) out.push({ at, text: node }); return out; }
+    if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) paths(v, re, at.concat(Array.isArray(node) ? Number(k) : k), out);
+    return out;
+  };
+  const atks = (node, at = [], out = []) => {
+    if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) {
+      if (k === 'atk' && typeof v === 'number') out.push(at.concat(k));
+      else atks(v, at.concat(Array.isArray(node) ? Number(k) : k), out);
+    }
+    return out;
+  };
+  const ops = [
+    ...paths(base.tokens[tid], /至多\d+只/).map((h) => ({ op: 'set', file: 'tokens', id: tid, path: h.at, value: h.text.replace(/至多\d+只/, `至多${BOMB}只`) })),
+    ...paths(base.chess[owner], /初始(两|二|\d+)只/).map((h) => ({ op: 'set', file: 'chess', id: owner, path: h.at, value: h.text.replace(/初始(两|二|\d+)只/, `初始${BOMB}只`) })),
+    ...atks(base.tokens[tid]).map((p) => ({ op: 'set', file: 'tokens', id: tid, path: p, value: 0 })),
+  ];
+  assert.ok(ops.length >= 3, `${ops.length} writes`);
+  const patched = applyPatches(base, ops);
+  assert.deepEqual(patched.problems, []);
+  assert.deepEqual(validateData(patched.data, { vanilla: base }).filter((p) => p.code === 'PLUGIN_DATA_BOUND'), [], 'text is not a number the check bounds: the engine caps it');
+  const h = makeBattle({
+    content: 'full', timeLimit: 5, autoFinish: false, enemies: [],
+    logger: { error() {}, warn() {}, info() {}, log() {}, debug() {} },
+    defs: { tokens: { [tid]: patched.data.tokens[tid] }, chess: { [owner]: patched.data.chess[owner] } },
+    units: [{ chessId: owner, row: 10, col: 4, uid: 1 }, { kind: 'token', tokenId: tid, ownerUid: 1, row: 10, col: 5, uid: 2 }],
+  });
+  h.battle.start();
+  const wolf = h.battle.allyUnits.find((u) => u.defId === tid);
+  assert.ok(wolf && typeof wolf.profile?.hitsFn === 'function', 'the pack is on the field');
+  const cap = dataBound(officialTextMax('at-most-pack'));
+  assert.ok(wolf.mem.wolfCapacity <= cap && wolf.mem.shadows <= cap, `capacity ${wolf.mem.wolfCapacity}, shadows ${wolf.mem.shadows} ≤ ${cap}`);
+  const foe = h.spawn('enemy_1000_gopro_2', { pos: [wolf.y, wolf.x] });
+  const t0 = Date.now();
+  hit(h.battle, wolf, wolf.profile, foe, { index: 0, attackId: 1 }, wolf.x, wolf.y);
+  assert.ok(Date.now() - t0 < 1000, 'the attack returned');
+  assert.ok(foe.alive, 'nothing hurt it (atk 0): only the cap ended the loop');
+  assert.ok(PLUGIN_TIMES_MAX >= 64, 'the hit cap sits above the pack\'s');
+});
+
+test('the pick-one offer: its count stays within the slots an offer shows, in the game data and in the check (offer-limit regression)', async () => {
+  const { GameData } = await import('../../server/match/gamedata.js');
+  const { MAX_OFFER_SLOTS } = await import('../../server/match/player/common.js');
+  const { PLUGIN_OFFER_SLOTS } = await import('../../shared/plugins/limits.js');
+  assert.equal(PLUGIN_OFFER_SLOTS, MAX_OFFER_SLOTS, 'the check\'s cap is the game\'s');
+  assert.equal(getData().config.economy.rewardOffer.count, 3, 'the official count');
+  const op = (value) => ({ op: 'set', file: 'config', id: 'economy', path: ['rewardOffer', 'count'], value });
+  assert.deepEqual(boundProblems(op(MAX_OFFER_SLOTS)), []);
+  for (const bad of [1e9, MAX_OFFER_SLOTS + 1, 0, 2.5]) {
+    const problems = boundProblems(op(bad));
+    assert.equal(problems.length, 1, `${bad}: ${JSON.stringify(problems)}`);
+    assert.equal(problems[0].path, 'config.economy.rewardOffer.count');
+  }
+  // a game data that was never checked (a direct GameData): the count is capped all the same — the 松果 and promotion loops
+  // roll at most a few times the slots
+  const data = applyPatches(getData(), [op(1e9)]).data;
+  assert.equal(new GameData(data, 'mode_single_normal').rewardOffer().count, MAX_OFFER_SLOTS);
+  assert.equal(new GameData(getData(), 'mode_single_normal').rewardOffer().count, 3);
 });

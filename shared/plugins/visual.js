@@ -10,12 +10,25 @@
 //
 // The overlay (`assets`, inline in plugin.json or a .json file of the plugin) — the record containers of data/assets.json
 // a plugin may write (ASSET_CONTAINERS), each record in the manifest's own shape:
-//   chars[charId]            { avatar, avatarE2, portrait, portraitE2: image, spine: { front, back: Spine } }
+//   chars[charId]            { avatar, avatarE2, portrait, portraitE2, illust: image, spine: { front, back: Spine },
+//                              skins: { <skin id>: { name, group: text, avatar, avatarE2, portrait, portraitE2, illust:
+//                              image, spine: { front, back: Spine } } } }
 //   enemies[key]             { icon: image, spine: Spine }          tokens[id]  { avatar: image, spine: Spine }
 //   bonds / items / bands / skills / modules / ui[key], prof.icon / large / battlecard / sub[key]     image
 //   audio.bgm[lobby|prep|combat|unite|boss], audio.bossBgm[bossId]     a track { loop, intro? }: replaced as a whole
-//   audio.voice / voiceJp[charId]  { <slot>: audio or a list of 1–16 }      audio.sfx.ui / battle[key]  audio
+//   audio.voice / voiceJp / voiceEn / voiceKr / voiceNative[charId]  { <slot>: audio or a list of 1–16 }      audio.sfx.ui / battle[key]  audio
 //   audio.sfx.units[id]      { attack, hit, skill, die, born: audio, skills / attacks / hits: { <index>: audio } }
+// A skin's key (under `chars[charId].skins`) is the installation's own skin id — where its manifest has one, e.g.
+// char_003_kalts@boc#6, else a name the plugin introduces (whatever wears a skin and the plugin have to agree on that
+// key) — wider than an entry key by '@' '#' '+', narrower by '/', and at most 64 characters where an entry key takes 128,
+// never a name of Object.prototype; a key shaped like an entry key (the stem form
+// char_102_texas_epoque_7) is taken too, for an installation that has no skin id for it [ASSUMED]. One operator's record
+// takes at most 64 skins; `name` is a text of 1–64 characters (the skin's name) and `group` one of 0–64 (its series, as
+// that file writes them — an outfit the plugin itself adds may have no series; every operator skin of the official table
+// has one, so this is room for a plugin's own entry, not the state of the manifest), the rest of a skin's record the
+// operator's own kinds and fields. A reference from a skin is resolved against the entry's own skin of the same key, so
+// it means something only once the installation's manifest carries `skins` itself (the committed data/assets.json of this
+// version has none); until then only the operator's own record can be referenced.
 // A value is a path inside the plugin folder (an image .png .jpg .webp, audio .mp3 .ogg), a Spine object
 // `{ skel, atlas, textures?, pma? }` (.skel and .atlas side by side with one name — pixi-spine finds the atlas next to the
 // skeleton —, the pages inside the atlas's folder, default `<name>.png`; its clip roles, durations, events, hits and
@@ -32,9 +45,9 @@
 // model `spineLocal` — the client would draw that one first (public/js/assets.js spineEntry) [ASSUMED].
 //
 // The ops: the overlay as a list of writes `{ at: [path…], … }` in the order the plugin wrote them — a plugin file
-// (`file` / `files`), a BGM track (`track`), a Spine model (`spine`, with its clip data from the lock: `meta`), a reference
-// (`ref`, `from`: the path it reads), an implied clear (`clear`: an enemy's or a token's `spineLocal`). They name paths of
-// the plugin folder, never a URL.
+// (`file` / `files`), a BGM track (`track`), a Spine model (`spine`, with its clip data from the lock: `meta`), a line of
+// the manifest (`text`: a skin's name or series), a reference (`ref`, `from`: the path it reads), an implied clear
+// (`clear`: an enemy's or a token's `spineLocal`). They name paths of the plugin folder, never a URL.
 //
 //   vs = sha256(canonical({ v: 2, assets: <SHA-256 of data/assets.json>, overlays: [{ id, version, files, writes }] }))
 //   files: { <path>: SHA-256 } — every file that shapes the plugin's overlay: plugin.json, plugin.lock.json, the
@@ -64,6 +77,7 @@
 import { sha256Hex } from '../sha256.js';
 import { canonicalJson, isContentHash } from './identity.js';
 import { isPackPath, extOf, PLUGIN_IMAGE_EXTS, PLUGIN_AUDIO_EXTS } from './manifest.js';
+import { issueList } from './errors.js';
 
 /** The version of the `vs` composition above (a change of it changes every `vs`; 2: the `writes` of each overlay). */
 export const VISUAL_HASH_VERSION = 2;
@@ -113,20 +127,36 @@ const short = (v) => { try { return String(JSON.stringify(v)).slice(0, 40); } ca
 
 /**
  * A field's kind: 'image' | 'audio' | 'audioList' (one audio file or a list) | 'track' (a BGM `{ loop, intro? }`, written
- * whole) | 'spine' — or an object of named fields `{ fields }`, or one whose keys are free `{ each, key }` (a voice slot,
- * a skill index).
- * @typedef {'image' | 'audio' | 'audioList' | 'track' | 'spine' | { fields: Record<string, any> } | { each: any, key: RegExp }} AssetKind
+ * whole) | 'spine' | 'text' (a line of the manifest, 0–TEXT_MAX characters — 1 at least for a `name`, a skin's series
+ * may be empty —, written as it is) — or an object of named
+ * fields `{ fields }`, or one whose keys are free `{ each, key, max? }` (a voice slot, a skill index, an operator's
+ * skins; `max` the most keys it takes).
+ * @typedef {'image' | 'audio' | 'audioList' | 'track' | 'spine' | 'text' | { fields: Record<string, any> } | { each: any, key: RegExp, max?: number }} AssetKind
  * @typedef {{ path: string[], record: AssetKind, keys?: string[] }} AssetContainer
  */
 
 const SLOT = /^[A-Za-z][A-Za-z0-9]{0,31}$/;
 const INDEX = /^\d{1,2}$/;
+/**
+ * A skin key (see the header): the installation's own skin id, wider than an entry key by '@' '#' '+' '.', at most 64
+ * characters. The length is part of this one pattern (and of `$defs.skinKey`): the reader tests it with `test` alone —
+ * in readFields and in locateAssetPath —, so a limit written beside the call would be the one place that forgets it.
+ */
+const SKIN_KEY = /^[A-Za-z0-9_][A-Za-z0-9_@#+.-]{0,63}$/;
+/** The longest text a plugin writes into the manifest (a skin's name or its series). */
+const TEXT_MAX = 64;
+/** The most skins one operator's record takes (the overlay schema's maxProperties). */
+const SKINS_MAX = 64;
+/** One skin of an operator: the pictures and models the operator's own record has, under its key, and its name. */
+const SKIN_RECORD = { fields: { name: 'text', group: 'text', avatar: 'image', avatarE2: 'image', portrait: 'image',
+  portraitE2: 'image', illust: 'image', spine: { fields: { front: 'spine', back: 'spine' } } } };
 const SFX_UNIT = { fields: { attack: 'audio', hit: 'audio', skill: 'audio', die: 'audio', born: 'audio',
   skills: { each: 'audio', key: INDEX }, attacks: { each: 'audio', key: INDEX }, hits: { each: 'audio', key: INDEX } } };
 
 /** @type {readonly AssetContainer[]} the record containers a cosmetic plugin writes (see the header) */
 export const ASSET_CONTAINERS = Object.freeze(/** @type {AssetContainer[]} */ ([
-  { path: ['chars'], record: { fields: { avatar: 'image', avatarE2: 'image', portrait: 'image', portraitE2: 'image', spine: { fields: { front: 'spine', back: 'spine' } } } } },
+  { path: ['chars'], record: { fields: { avatar: 'image', avatarE2: 'image', portrait: 'image', portraitE2: 'image', illust: 'image',
+      spine: { fields: { front: 'spine', back: 'spine' } }, skins: { each: SKIN_RECORD, key: SKIN_KEY, max: SKINS_MAX, keyName: 'key (letters, digits, _ @ # + . -, at most 64 characters)', keyProblem: true } } } },
   { path: ['enemies'], record: { fields: { icon: 'image', spine: 'spine' } } },
   { path: ['tokens'], record: { fields: { avatar: 'image', spine: 'spine' } } },
   ...['bonds', 'items', 'bands', 'skills', 'modules', 'ui'].map((k) => ({ path: [k], record: 'image' })),
@@ -136,6 +166,10 @@ export const ASSET_CONTAINERS = Object.freeze(/** @type {AssetContainer[]} */ ([
   { path: ['audio', 'bossBgm'], record: 'track' },
   { path: ['audio', 'voice'], record: { each: 'audioList', key: SLOT } },
   { path: ['audio', 'voiceJp'], record: { each: 'audioList', key: SLOT } },
+  // the other official dubs of round 40 (DESIGN §32.14.11): English, Korean, the operator's own-language dub
+  { path: ['audio', 'voiceEn'], record: { each: 'audioList', key: SLOT } },
+  { path: ['audio', 'voiceKr'], record: { each: 'audioList', key: SLOT } },
+  { path: ['audio', 'voiceNative'], record: { each: 'audioList', key: SLOT } },
   { path: ['audio', 'sfx', 'ui'], record: 'audio' },
   { path: ['audio', 'sfx', 'battle'], record: 'audio' },
   { path: ['audio', 'sfx', 'units'], record: SFX_UNIT },
@@ -157,6 +191,9 @@ const TREE = (() => {
 /** A record key of the manifest (an id, a 'group/key' of `ui`): plain characters, never a name of Object.prototype. @param {unknown} k */
 export const isAssetKey = (k) => typeof k === 'string' && k.length > 0 && k.length <= 128 && /^[A-Za-z0-9_][A-Za-z0-9_./-]*$/.test(k) && !FORBIDDEN.has(k);
 
+/** A skin key of an operator's record (see the header): wider than isAssetKey by '@' '#' '+', at most 64 characters. @param {unknown} k */
+export const isSkinKey = (k) => typeof k === 'string' && k.length > 0 && k.length <= 64 && SKIN_KEY.test(k) && !FORBIDDEN.has(k);
+
 /** The value at `path` of a plain-data tree (own properties only), or undefined. @param {any} obj @param {string[]} path */
 export function getPath(obj, path) {
   let node = obj;
@@ -173,13 +210,15 @@ export function getPath(obj, path) {
  *   what plugin.lock.json holds of a skeleton (tools/assets/skel.mjs, anim-roles.mjs — the fields of a manifest Spine)
  * @typedef {{ skel: string, atlas: string, textures: string[], pma: boolean, meta?: SpineMeta }} SpineOp
  * @typedef {{ at: string[], file?: string, files?: string[], track?: { loop: string, intro?: string }, spine?: SpineOp,
- *   ref?: string, from?: string[], clear?: true, implied?: true }} AssetOp
+ *   text?: string, ref?: string, from?: string[], clear?: true, implied?: true }} AssetOp
  *   one write of an overlay (see the header); `clear`: the entry's value taken away (an enemy's or a token's
  *   `spineLocal` when its model is written — `implied`: a consequence of another write, never an override of its own)
  * @typedef {{ at: string[], value: any }} ResolvedOp
  *   a write with its value (applyOps): `undefined` takes the entry away
- * @typedef {{ ops: AssetOp[], files: string[], models: string[][], copyBytes: number, problems: string[], warnings: string[] }} AssetOverlay
- *   copyBytes: what its references copy out of the installation's manifest (JSON text; 0 without the manifest)
+ * @typedef {{ ops: AssetOp[], files: string[], models: string[][], copyBytes: number, problems: string[], warnings: string[],
+ *   issues: import('./errors.js').PluginIssue[] }} AssetOverlay
+ *   copyBytes: what its references copy out of the installation's manifest (JSON text; 0 without the manifest); issues: the
+ *   problems and warnings with their codes (shared/plugins/errors.js; `at` the path in the manifest: ['assets', …])
  */
 
 const pathText = (at) => `assets.${at.join('.')}`;
@@ -199,20 +238,25 @@ const localModelClear = (loc) => (LOCAL_MODELS.has(loc.container[0]) && loc.fiel
  * @returns {AssetOverlay}
  */
 export function readAssetOverlay(assets, { vanilla = null, permissions = null, has: hasFile = null } = {}) {
-  /** @type {string[]} */ const problems = [];
-  /** @type {string[]} */ const warnings = [];
+  const list = issueList();
+  const { problems, warnings, issues } = list;
   /** @type {AssetOp[]} */ const ops = [];
   /** @type {string[]} */ const files = [];
   /** @type {string[][]} */ const models = [];
   let copyBytes = 0;
   const addFile = (rel) => { if (!files.includes(rel)) files.push(rel); };
-  if (!isObj(assets)) return { ops, files, models, copyBytes, problems: ['"assets" is not an object in the shape of data/assets.json'], warnings };
+  /** The path of an overlay location in the manifest (an issue's `at`). @param {string[]} at */
+  const where = (at) => ['assets', ...at];
+  if (!isObj(assets)) {
+    list.problem('PLUGIN_ASSETS_SHAPE', '"assets" is not an object in the shape of data/assets.json', { at: ['assets'] });
+    return { ops, files, models, copyBytes, problems, warnings, issues };
+  }
 
   /** A plugin file of an allowed extension (else a problem, false). */
   const fileOk = (rel, exts, at) => {
-    if (typeof rel !== 'string' || !isPackPath(rel)) { problems.push(`${pathText(at)}: ${short(rel)} is not a path inside the plugin folder`); return false; }
-    if (!exts.includes(extOf(rel))) { problems.push(`${pathText(at)}: ${rel} is not ${exts.join(' / ')}`); return false; }
-    if (hasFile && !hasFile(rel)) { problems.push(`${pathText(at)}: ${rel} is missing`); return false; }
+    if (typeof rel !== 'string' || !isPackPath(rel)) { list.problem('PLUGIN_ASSET_FILE', `${pathText(at)}: ${short(rel)} is not a path inside the plugin folder`, { at: where(at) }); return false; }
+    if (!exts.includes(extOf(rel))) { list.problem('PLUGIN_ASSET_FILE', `${pathText(at)}: ${rel} is not ${exts.join(' / ')}`, { at: where(at), file: rel, exts }); return false; }
+    if (hasFile && !hasFile(rel)) { list.problem('PLUGIN_FILE_MISSING', `${pathText(at)}: ${rel} is missing`, { at: where(at), file: rel }); return false; }
     return true;
   };
 
@@ -220,22 +264,22 @@ export function readAssetOverlay(assets, { vanilla = null, permissions = null, h
   const readSpine = (v, at) => {
     for (const k of Object.keys(v)) {
       if (k === 'anims' && v.anims === 'auto') continue;
-      if (['animations', 'events', 'hits', 'bounds', 'anims'].includes(k)) { problems.push(`${pathText(at)}.${k}: a plugin's Spine clips come from ${LOCK_FILE} (node tools/plugin.mjs pack), never by hand — write "anims": "auto" or leave it out`); return null; }
-      if (!['skel', 'atlas', 'textures', 'pma'].includes(k)) warnings.push(`${pathText(at)}.${k} is not a field of a Spine model (ignored)`);
+      if (['animations', 'events', 'hits', 'bounds', 'anims'].includes(k)) { list.problem('PLUGIN_SPINE', `${pathText(at)}.${k}: a plugin's Spine clips come from ${LOCK_FILE} (node tools/plugin.mjs pack), never by hand — write "anims": "auto" or leave it out`, { at: where([...at, k]) }); return null; }
+      if (!['skel', 'atlas', 'textures', 'pma'].includes(k)) list.warning('PLUGIN_ASSET_IGNORED', `${pathText(at)}.${k} is not a field of a Spine model (ignored)`, { at: where([...at, k]) });
     }
     if (!fileOk(v.skel, ['.skel'], [...at, 'skel'])) return null;
     const dir = v.skel.replace(/[^/]*$/, '');
     const name = v.skel.slice(dir.length, -'.skel'.length);
     const atlas = v.atlas === undefined ? `${dir}${name}.atlas` : v.atlas;
     if (!fileOk(atlas, ['.atlas'], [...at, 'atlas'])) return null;
-    if (atlas !== `${dir}${name}.atlas`) { problems.push(`${pathText(at)}.atlas: ${atlas} — the atlas sits next to its skeleton with the same name (${dir}${name}.atlas): pixi-spine looks for it there`); return null; }
+    if (atlas !== `${dir}${name}.atlas`) { list.problem('PLUGIN_SPINE', `${pathText(at)}.atlas: ${atlas} — the atlas sits next to its skeleton with the same name (${dir}${name}.atlas): pixi-spine looks for it there`, { at: where([...at, 'atlas']), file: atlas }); return null; }
     const textures = v.textures === undefined ? [`${dir}${name}.png`] : v.textures;
-    if (!Array.isArray(textures) || !textures.length || textures.length > 64) { problems.push(`${pathText(at)}.textures: not a list of 1–64 page images`); return null; }
+    if (!Array.isArray(textures) || !textures.length || textures.length > 64) { list.problem('PLUGIN_SPINE', `${pathText(at)}.textures: not a list of 1–64 page images`, { at: where([...at, 'textures']) }); return null; }
     for (const [i, t] of textures.entries()) {
       if (!fileOk(t, IMAGE, [...at, 'textures', String(i)])) return null;
-      if (!t.startsWith(dir)) { problems.push(`${pathText(at)}.textures: ${t} is outside the atlas's folder (${dir || 'the plugin folder'}) — its pages are found next to it`); return null; }
+      if (!t.startsWith(dir)) { list.problem('PLUGIN_SPINE', `${pathText(at)}.textures: ${t} is outside the atlas's folder (${dir || 'the plugin folder'}) — its pages are found next to it`, { at: where([...at, 'textures', String(i)]), file: t }); return null; }
     }
-    if (v.pma !== undefined && typeof v.pma !== 'boolean') { problems.push(`${pathText(at)}.pma: not true or false`); return null; }
+    if (v.pma !== undefined && typeof v.pma !== 'boolean') { list.problem('PLUGIN_SPINE', `${pathText(at)}.pma: not true or false`, { at: where([...at, 'pma']) }); return null; }
     const model = [v.skel, atlas, ...new Set(textures)];
     for (const rel of model) addFile(rel);
     models.push(model);
@@ -248,14 +292,27 @@ export function readAssetOverlay(assets, { vanilla = null, permissions = null, h
    */
   const readValue = (kind, v, loc) => {
     const at = [...loc.container, loc.key, ...loc.field];
-    if (ops.length >= VISUAL_LIMITS.ops) { if (ops.length === VISUAL_LIMITS.ops) problems.push(`more than ${VISUAL_LIMITS.ops} writes`); return; }
+    if (ops.length >= VISUAL_LIMITS.ops) { if (ops.length === VISUAL_LIMITS.ops) list.problem('PLUGIN_LIMIT', `more than ${VISUAL_LIMITS.ops} writes`, { detail: `more than ${VISUAL_LIMITS.ops} writes` }); return; }
+    if (kind === 'text') {
+      // a line of the manifest (a skin's name or series): never a reference, never anything but a short text.
+      // A skin's series may be empty (an outfit a plugin itself adds may have no series; every operator skin of the
+      // official table has one); its name may not.
+      const min = loc.field[loc.field.length - 1] === 'group' ? 0 : 1;
+      const n = typeof v === 'string' ? [...v].length : -1;
+      if (n < min || n > TEXT_MAX) {
+        list.problem('PLUGIN_ASSETS_SHAPE', `${pathText(at)}: not a text of ${min}–${TEXT_MAX} characters`, { at: where(at) });
+        return;
+      }
+      ops.push({ at, text: /** @type {string} */ (v) });
+      return;
+    }
     if (isObj(v) && has(v, 'ref')) {
       const key = /** @type {any} */ (v).ref;
-      if (!isAssetKey(key)) { problems.push(`${pathText(at)}: { "ref": ${short(key)} } does not name an entry`); return; }
+      if (!isAssetKey(key)) { list.problem('PLUGIN_REF', `${pathText(at)}: { "ref": ${short(key)} } does not name an entry`, { at: where(at) }); return; }
       const from = [...loc.container, key, ...loc.field];
       const target = vanilla ? getPath(vanilla, from) : undefined;
       if (vanilla && target === undefined) {
-        problems.push(`${pathText(at)}: { "ref": "${key}" } — this installation's art manifest (data/assets.json) has no ${from.join('.')}`);
+        list.problem('PLUGIN_REF', `${pathText(at)}: { "ref": "${key}" } — this installation's art manifest (data/assets.json) has no ${from.join('.')}`, { at: where(at), ref: key });
         return;
       }
       // measured until the plugin is over the budget (then it is refused anyway: no need to measure the rest)
@@ -265,7 +322,7 @@ export function readAssetOverlay(assets, { vanilla = null, permissions = null, h
       if (clear) ops.push(clear);
       const rest = Object.keys(v).filter((k) => k !== 'ref');
       if (!rest.length) return;
-      if (typeof kind === 'string') { problems.push(`${pathText(at)}: a reference to a ${kindName(kind)} takes no other key (${rest.join(', ')})`); return; }
+      if (typeof kind === 'string') { list.problem('PLUGIN_REF', `${pathText(at)}: a reference to ${kind === 'audioList' ? 'an' : 'a'} ${kindName(kind)} takes no other key (${rest.join(', ')})`, { at: where(at) }); return; }
       readFields(kind, Object.fromEntries(rest.map((k) => [k, v[k]])), loc);
       return;
     }
@@ -275,14 +332,14 @@ export function readAssetOverlay(assets, { vanilla = null, permissions = null, h
     }
     if (kind === 'audioList') {
       if (typeof v === 'string') { if (fileOk(v, AUDIO, at)) { ops.push({ at, file: v }); addFile(v); } return; }
-      if (!Array.isArray(v) || !v.length || v.length > VISUAL_LIMITS.listFiles) { problems.push(`${pathText(at)}: not an audio file or a list of 1–${VISUAL_LIMITS.listFiles}`); return; }
+      if (!Array.isArray(v) || !v.length || v.length > VISUAL_LIMITS.listFiles) { list.problem('PLUGIN_ASSETS_SHAPE', `${pathText(at)}: not an audio file or a list of 1–${VISUAL_LIMITS.listFiles}`, { at: where(at) }); return; }
       if (v.every((rel, i) => fileOk(rel, AUDIO, [...at, String(i)]))) { ops.push({ at, files: [...v] }); for (const rel of v) addFile(rel); }
       return;
     }
     if (kind === 'track') {
       const tr = /** @type {any} */ (v);
-      if (!isObj(tr) || tr.loop === undefined) { problems.push(`${pathText(at)}: not a track { "loop", "intro"? } or a reference`); return; }
-      for (const k of Object.keys(tr)) if (k !== 'loop' && k !== 'intro') warnings.push(`${pathText(at)}.${k} is not a field of a track (ignored)`);
+      if (!isObj(tr) || tr.loop === undefined) { list.problem('PLUGIN_ASSETS_SHAPE', `${pathText(at)}: not a track { "loop", "intro"? } or a reference`, { at: where(at) }); return; }
+      for (const k of Object.keys(tr)) if (k !== 'loop' && k !== 'intro') list.warning('PLUGIN_ASSET_IGNORED', `${pathText(at)}.${k} is not a field of a track (ignored)`, { at: where([...at, k]) });
       if (!fileOk(tr.loop, AUDIO, [...at, 'loop']) || (tr.intro !== undefined && !fileOk(tr.intro, AUDIO, [...at, 'intro']))) return;
       ops.push({ at, track: { loop: tr.loop, ...(tr.intro !== undefined ? { intro: tr.intro } : {}) } });
       addFile(tr.loop);
@@ -290,7 +347,7 @@ export function readAssetOverlay(assets, { vanilla = null, permissions = null, h
       return;
     }
     if (kind === 'spine') {
-      if (!isObj(v) || typeof /** @type {any} */ (v).skel !== 'string') { problems.push(`${pathText(at)}: not a Spine model { "skel", "atlas", "textures" } or a reference`); return; }
+      if (!isObj(v) || typeof /** @type {any} */ (v).skel !== 'string') { list.problem('PLUGIN_SPINE', `${pathText(at)}: not a Spine model { "skel", "atlas", "textures" } or a reference`, { at: where(at) }); return; }
       const spine = readSpine(v, at);
       if (spine) {
         ops.push({ at, spine });
@@ -299,18 +356,35 @@ export function readAssetOverlay(assets, { vanilla = null, permissions = null, h
       }
       return;
     }
-    if (!isObj(v)) { problems.push(`${pathText(at)}: ${short(v)} is not an object of fields (${'fields' in kind ? Object.keys(kind.fields).join(', ') : 'keyed entries'})`); return; }
+    if (!isObj(v)) { list.problem('PLUGIN_ASSETS_SHAPE', `${pathText(at)}: ${short(v)} is not an object of fields (${'fields' in kind ? Object.keys(kind.fields).join(', ') : 'keyed entries'})`, { at: where(at) }); return; }
     readFields(kind, /** @type {Record<string, unknown>} */ (v), loc);
   };
 
   /** The fields of an object kind. @param {any} kind @param {Record<string, unknown>} obj @param {{ container: string[], key: string, field: string[] }} loc */
   const readFields = (kind, obj, loc) => {
-    for (const [k, x] of Object.entries(obj)) {
-      const at = [...loc.container, loc.key, ...loc.field, k];
-      const sub = kind.fields ? (has(kind.fields, k) ? kind.fields[k] : undefined) : kind.key.test(k) && !FORBIDDEN.has(k) ? kind.each : undefined;
-      if (!sub) { warnings.push(`${pathText(at)} is not a field a cosmetic plugin changes (ignored)`); continue; }
-      readValue(sub, x, { ...loc, field: [...loc.field, k] });
+    if (kind.max !== undefined && Object.keys(obj).length > kind.max) {
+      const at = [...loc.container, loc.key, ...loc.field];
+      const text = `more than ${kind.max} entries under ${pathText(at)}`;
+      list.problem('PLUGIN_LIMIT', text, { at: where(at), detail: text });
+      return;
     }
+      for (const [k, x] of Object.entries(obj)) {
+        const at = [...loc.container, loc.key, ...loc.field, k];
+        let sub;
+        if (kind.fields) sub = has(kind.fields, k) ? kind.fields[k] : undefined;
+        else if (!kind.key.test(k) || FORBIDDEN.has(k)) {
+          // a free-key map (a skin's key, a voice slot, a skill index): a key of the wrong shape addresses nothing
+          // the game can look up. This batch's `skins` map refuses it; the older maps keep their warning, so the
+          // change stays inside one container.
+          const at2 = where(at);
+          const text = `${pathText(at)} is not a ${kind.keyName || 'key'}`;
+          if (kind.keyProblem) list.problem('PLUGIN_ASSET_KEY', text, { at: at2, where: String(k) });
+          else list.warning('PLUGIN_ASSET_IGNORED', `${pathText(at)} is not a field a cosmetic plugin changes (ignored)`, { at: at2 });
+          continue;
+        } else sub = kind.each;
+        if (!sub) { list.warning('PLUGIN_ASSET_IGNORED', `${pathText(at)} is not a field a cosmetic plugin changes (ignored)`, { at: where(at) }); continue; }
+        readValue(sub, x, { ...loc, field: [...loc.field, k] });
+      }
   };
 
   /** The tree of sections down to the containers. */
@@ -318,20 +392,21 @@ export function readAssetOverlay(assets, { vanilla = null, permissions = null, h
     for (const [k, x] of Object.entries(obj)) {
       const at = [...path, k];
       const next = has(node, k) ? node[k] : null;
-      if (!next) { warnings.push(`${pathText(at)} is not something a cosmetic plugin changes (ignored)`); continue; }
-      if (!isObj(x)) { problems.push(`${pathText(at)}: not an object`); continue; }
+      if (!next) { list.warning('PLUGIN_ASSET_IGNORED', `${pathText(at)} is not something a cosmetic plugin changes (ignored)`, { at: where(at) }); continue; }
+      if (!isObj(x)) { list.problem('PLUGIN_ASSETS_SHAPE', `${pathText(at)}: not an object`, { at: where(at) }); continue; }
       const c = /** @type {AssetContainer | undefined} */ (next.$container);
       if (!c) { walk(next, x, at); continue; }
       for (const [key, v] of Object.entries(x)) {
-        if (!isAssetKey(key)) { problems.push(`${pathText(at)}: ${short(key)} is not an entry key (letters, digits, _ . / -)`); continue; }
-        if (c.keys && !c.keys.includes(key)) { warnings.push(`${pathText([...at, key])} is not one of ${c.keys.join(', ')} (ignored)`); continue; }
+        if (!isAssetKey(key)) { list.problem('PLUGIN_ASSET_KEY', `${pathText(at)}: ${short(key)} is not an entry key (letters, digits, _ . / -)`, { at: where([...at, String(key)]), where: String(key) }); continue; }
+        if (c.keys && !c.keys.includes(key)) { list.warning('PLUGIN_ASSET_IGNORED', `${pathText([...at, key])} is not one of ${c.keys.join(', ')} (ignored)`, { at: where([...at, key]) }); continue; }
         readValue(c.record, v, { container: c.path, key, field: [] });
       }
     }
   };
   walk(TREE, assets, []);
   if (copyBytes > VISUAL_LIMITS.copyBytes) {
-    problems.push(`its references copy more than ${VISUAL_LIMITS.copyBytes / 1048576} MB of this installation's manifest`);
+    const text = `its references copy more than ${VISUAL_LIMITS.copyBytes / 1048576} MB of this installation's manifest`;
+    list.problem('PLUGIN_LIMIT', text, { at: ['assets'], detail: text });
   }
 
   // what the writes need: an entry of the installation's manifest → assets.override, a new one → assets.add
@@ -344,11 +419,11 @@ export function readAssetOverlay(assets, { vanilla = null, permissions = null, h
       const need = exists ? 'assets.override' : 'assets.add';
       if (!permissions.includes(need) && !told.has(need)) {
         told.add(need);
-        problems.push(`${pathText(op.at)}: ${exists ? 'changes an entry of this installation\'s manifest' : 'adds an entry'} — needs the permission "${need}"`);
+        list.problem('PLUGIN_PERMISSION_MISSING', `${pathText(op.at)}: ${exists ? 'changes an entry of this installation\'s manifest' : 'adds an entry'} — needs the permission "${need}"`, { at: where(op.at), need, needs: [need] });
       }
     }
   }
-  return { ops, files, models, copyBytes, problems, warnings };
+  return { ops, files, models, copyBytes, problems, warnings, issues };
 }
 
 // ---- plugin.lock.json -------------------------------------------------------------------------------------------------
@@ -473,11 +548,11 @@ function readLockSpine(v) {
  * reaches a browser; the maps have no prototype. A broken lock is a problem; it is only ever needed for Spine models
  * (attachSpineMeta). The server never parses the skeleton itself: the lock is tied to it by its SHA-256 [ASSUMED].
  * @param {unknown} raw
- * @returns {{ lock: PluginLock | null, problems: string[] }}
+ * @returns {{ lock: PluginLock | null, problems: string[], issues: import('./errors.js').PluginIssue[] }}
  */
 export function readPluginLock(raw) {
-  const problems = [];
-  const bad = (why) => { problems.push(`${LOCK_FILE}: ${why} — write it again with node tools/plugin.mjs pack`); return { lock: null, problems }; };
+  const list = issueList();
+  const bad = (why) => { list.problem('PLUGIN_LOCK', `${LOCK_FILE}: ${why} — write it again with node tools/plugin.mjs pack`, { file: LOCK_FILE }); return { lock: null, problems: list.problems, issues: list.issues }; };
   if (!isObj(raw)) return bad('not a JSON object');
   const r = /** @type {any} */ (raw);
   if (r.lock !== LOCK_VERSION) return bad(`"lock": ${short(r.lock)} is not ${LOCK_VERSION}`);
@@ -492,7 +567,7 @@ export function readPluginLock(raw) {
     if (!meta) return bad(`spine.${short(rel)} is not the clip data of a skeleton (roles, animations, events, hits, bounds) within its limits`);
     lock.spine[rel] = meta;
   }
-  return { lock, problems };
+  return { lock, problems: list.problems, issues: list.issues };
 }
 
 /**
@@ -501,19 +576,19 @@ export function readPluginLock(raw) {
  * @param {AssetOp[]} ops
  * @param {PluginLock | null} lock
  * @param {(rel: string) => string | null} sha the SHA-256 of a file of the plugin
- * @returns {{ ops: AssetOp[], problems: string[] }}
+ * @returns {{ ops: AssetOp[], problems: string[], issues: import('./errors.js').PluginIssue[] }}
  */
 export function attachSpineMeta(ops, lock, sha) {
-  const problems = [];
+  const list = issueList();
   const out = ops.map((op) => {
     if (!op.spine) return op;
     const e = lock?.spine?.[op.spine.skel];
-    if (!e) { problems.push(`${pathText(op.at)}: ${LOCK_FILE} has no clip data for ${op.spine.skel} — run node tools/plugin.mjs pack`); return op; }
-    if (e.sha256 !== sha(op.spine.skel)) { problems.push(`${pathText(op.at)}: ${LOCK_FILE} was made from another ${op.spine.skel} — run node tools/plugin.mjs pack again`); return op; }
+    if (!e) { list.problem('PLUGIN_LOCK_MISSING', `${pathText(op.at)}: ${LOCK_FILE} has no clip data for ${op.spine.skel} — run node tools/plugin.mjs pack`, { at: ['assets', ...op.at], file: op.spine.skel }); return op; }
+    if (e.sha256 !== sha(op.spine.skel)) { list.problem('PLUGIN_LOCK_STALE', `${pathText(op.at)}: ${LOCK_FILE} was made from another ${op.spine.skel} — run node tools/plugin.mjs pack again`, { at: ['assets', ...op.at], file: op.spine.skel }); return op; }
     const { anims, animations, events, hits, bounds } = e;
     return { ...op, spine: { ...op.spine, meta: { anims, animations, events, hits, bounds } } };
   });
-  return { ops: out, problems };
+  return { ops: out, problems: list.problems, issues: list.issues };
 }
 
 // ---- URLs, resolution, merge ------------------------------------------------------------------------------------------
@@ -643,6 +718,15 @@ export function prepareVisualDoc(doc) {
       if (op.files !== undefined) {
         const list2 = kind === 'audioList' && Array.isArray(op.files) && op.files.length && op.files.length <= VISUAL_LIMITS.listFiles ? op.files.map((rel) => fileUrl(rel, AUDIO)) : null;
         if (list2 && list2.every(Boolean)) { ops.push({ at: [...at], value: list2, urls: list2 }); for (const u of list2) urls.add(u); } else drop(at, 'not a list of audio files of the set');
+        return;
+      }
+      if (op.text !== undefined) {
+        // a line of the manifest (a skin's name or series): written as it is, no URL of the set.
+        // An empty series is written too (an outfit a plugin adds may have none).
+        const emptyOk = at[at.length - 1] === 'group';
+        const value = kind === 'text' && typeof op.text === 'string'
+          && (op.text.length > 0 || emptyOk) && [...op.text].length <= TEXT_MAX ? op.text : null;
+        if (value !== null) ops.push({ at: [...at], value, urls: [] }); else drop(at, 'not a text of the set');
         return;
       }
       if (op.track !== undefined) {

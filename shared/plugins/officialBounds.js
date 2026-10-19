@@ -6,7 +6,7 @@
 // Minima of step keys and maxima of description-text counts live in the same cache. A content set ships the
 // snapshot (`bounds`) so a worker or a page that never calls getData() installs the same numbers.
 
-import { dataBound, isStepKey } from './limits.js';
+import { PLUGIN_ACTION_UNITS, PLUGIN_OFFER_SLOTS, dataBound, isStepKey } from './limits.js';
 import { TEXT_COUNT_PATTERNS } from './textPatterns.js';
 import { textFinite } from './textNumber.js';
 
@@ -174,6 +174,11 @@ export function forgetOfficialBounds() {
   cached = null;
 }
 
+/** True after rememberOfficialBounds or installOfficialBounds. An empty cache is not installed. */
+export function officialBoundsReady() {
+  return cached != null;
+}
+
 /**
  * Plain snapshot of a bounds cache. Sorted keys, so the served file is stable.
  * @param {{ bb: Map<string, number>, fields: Map<string, number>, bbMin: Map<string, number>,
@@ -267,6 +272,14 @@ function boundMessage(label, key, value, cap, known, officialMax) {
   return `${label} ${key} 的值 ${value} 超过上限 ${cap}（${tail}）`;
 }
 
+/** Editor and admission bounds for one blackboard key, from the same official snapshot. */
+export function officialBbRange(key) {
+  const max = officialBbMax(key);
+  return { max: dataBound(max), min: -dataBound(max), officialMax: max ?? 0,
+    positiveMin: isStepKey(key) ? minimumStep(officialPositiveMin(key)) : 0 };
+}
+const minimumStep = officialMin => officialMin > 0 ? officialMin / 10 : STEP_TICK / 10;
+
 function exceed(bad, ev, map, minMap, label, key) {
   const known = map.has(key);
   const officialMax = known ? map.get(key) : null;
@@ -274,7 +287,7 @@ function exceed(bad, ev, map, minMap, label, key) {
   if (Math.abs(ev.value) > cap) bad(ev.path, boundMessage(label, key, ev.value, cap, known, officialMax), 'PLUGIN_DATA_BOUND');
   if (!(ev.value > 0) || !isStepKey(key)) return;
   const officialMin = minMap && minMap.has(key) ? minMap.get(key) : 0;
-  const tenth = officialMin > 0 ? officialMin / 10 : STEP_TICK / 10;
+  const tenth = minimumStep(officialMin);
   if (ev.value < tenth) {
     const tail = officialMin > 0 ? `原版最小正值 ${officialMin}` : '原版没有这个键的正值';
     bad(ev.path, `${label} ${key} 的值 ${ev.value} 低于最小步长 ${tenth}（${tail}）`, 'PLUGIN_DATA_BOUND');
@@ -296,4 +309,63 @@ export function appendOfficialBounds(data, vanilla, bad) {
       else exceed(bad, ev, bounds.fields, bounds.fieldMin, '字段', ev.field);
     });
   }
+  appendFactionBounds(data, vanilla, bad);
+  appendConfigBounds(data, bad);
+}
+
+/**
+ * The numbers of `config` the game reads as counts (DESIGN §32.5): the pick-one offer's count — at most the slots
+ * an offer shows (PLUGIN_OFFER_SLOTS, the game data's own cap), a positive whole number.
+ * @param {object} data @param {(path: string, message: string, code?: string) => void} bad
+ */
+function appendConfigBounds(data, bad) {
+  const offer = data?.config?.economy?.rewardOffer;
+  if (!isPlain(offer) || offer.count === undefined) return;
+  const v = offer.count;
+  if (!Number.isInteger(v) || v < 1 || v > PLUGIN_OFFER_SLOTS) {
+    bad('config.economy.rewardOffer.count', `字段 config.economy.rewardOffer.count 的值 ${v} 不是 1 到 ${PLUGIN_OFFER_SLOTS} 的整数（一次招募最多显示 ${PLUGIN_OFFER_SLOTS} 个）`, 'PLUGIN_DATA_BOUND');
+  }
+}
+
+/**
+ * The numbers of `factions` the wave generator reads as counts and weights (server/match/waves.js): every number of
+ * `generation` (maxLevelCnt, specialEnemyNum, the typeSlots, the replaced counts, beFactors …), each type's count and
+ * weight, each entry's weight — the same rule, from the official `factions` (integration note 11, DESIGN §32.5). The
+ * replaced counts also stay within PLUGIN_ACTION_UNITS, the generator's own clamp. A value that is not a finite number
+ * is out of bounds too (a patch can write 1e400).
+ * @param {object} data @param {object} vanilla @param {(path: string, message: string, code?: string) => void} bad
+ */
+function appendFactionBounds(data, vanilla, bad) {
+  const f = data?.factions;
+  if (!isPlain(f)) return;
+  const v = isPlain(vanilla?.factions) ? vanilla.factions : {};
+  const maxOf = (values) => {
+    let m = null;
+    for (const x of values) if (typeof x === 'number' && Number.isFinite(x)) m = Math.max(m ?? 0, Math.abs(x));
+    return m;
+  };
+  const check = (path, key, value, official, hard = Infinity) => {
+    if (typeof value !== 'number') return;
+    const cap = Math.min(dataBound(official), hard);
+    if (!Number.isFinite(value) || Math.abs(value) > cap) bad(path, boundMessage('字段', key, value, cap, official != null, official), 'PLUGIN_DATA_BOUND');
+  };
+  const g = isPlain(f.generation) ? f.generation : {};
+  const vg = isPlain(v.generation) ? v.generation : {};
+  for (const [k, val] of Object.entries(g)) {
+    if (isPlain(val)) {
+      const official = maxOf(Object.values(isPlain(vg[k]) ? vg[k] : {}));
+      for (const [sub, n] of Object.entries(val)) check(`factions.generation.${k}.${sub}`, `factions.generation.${k}`, n, official);
+      continue;
+    }
+    const hard = k === 'minReplacedEnemyCount' || k === 'maxReplacedEnemyCount' ? PLUGIN_ACTION_UNITS : Infinity;
+    check(`factions.generation.${k}`, `factions.generation.${k}`, val, maxOf([vg[k]]), hard);
+  }
+  const vTypes = Object.values(isPlain(v.types) ? v.types : {}).filter(isPlain);
+  const vEntries = Object.values(isPlain(v.entries) ? v.entries : {}).filter(isPlain);
+  for (const field of ['count', 'weight']) {
+    const official = maxOf(vTypes.map((t) => t[field]));
+    for (const [id, t] of Object.entries(isPlain(f.types) ? f.types : {})) if (isPlain(t)) check(`factions.types.${id}.${field}`, `factions.types.${field}`, t[field], official);
+  }
+  const officialWeight = maxOf(vEntries.map((e) => e.weight));
+  for (const [id, e] of Object.entries(isPlain(f.entries) ? f.entries : {})) if (isPlain(e)) check(`factions.entries.${id}.weight`, 'factions.entries.weight', e.weight, officialWeight);
 }

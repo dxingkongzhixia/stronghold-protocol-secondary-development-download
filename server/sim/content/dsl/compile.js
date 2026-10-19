@@ -1,7 +1,7 @@
 // server/sim/content/dsl/compile.js — compile a P2 DSL spec into a Kit (DESIGN §32.7).
 //
-// C2: compileDsl(spec, { bb, chess, def }) → Kit, the same shape a kit function returns. WP-A dispatches
-// def.raw.dsl from kitOf and may leave a stub at this path; this module is the real compiler. Tests call
+// C2: compileDsl(spec, { bb, chess, def }) → Kit, the same shape a kit function returns. kitOf dispatches
+// def.raw.dsl to this compiler. Tests call
 // compileDsl directly and inject the kit with makeBattle({ kits }). This file does not edit kitOf.
 //
 // Values inside SkillSpec fields (mods, ammo, attack, targeting) are resolved when the kit is built, because the
@@ -11,14 +11,42 @@
 
 import { num } from '../kits/shared/tier1.js';
 import { validateDsl, formatProblems } from './validate.js';
+import { clampDsl } from './bounds.js';
 import {
-  resolveValue, resolveMods, skillCallback, installTrigger, DEFAULT_BUDGET,
+  resolveValue, resolveMods, skillCallback, installTrigger, DEFAULT_BUDGET, PLUGIN_ID_RE,
 } from './vocab.js';
 
 export { DEFAULT_BUDGET };
 
-function pluginIdOf(spec, opts) {
-  return (spec && spec.pluginId) || (opts && opts.pluginId) || (opts && opts.def && opts.def.raw && opts.def.raw.pluginId) || 'dsl';
+/**
+ * The host's plugin id wins. [ASSUMED] `opts.pluginId` and `opts.def.raw.pluginId` are the trusted sources
+ * (the content set writes the second). The author's `spec.pluginId` cannot override either. If both trusted
+ * sources are set and differ, or the author id differs from the host, or no host id was given, compilation
+ * stops with PLUGIN_DSL_PLUGIN_ID. There is no shared `"dsl"` bucket: omitting the id must not put every
+ * spec on one budget slot.
+ * @param {object} spec
+ * @param {{ pluginId?: string, def?: { raw?: { pluginId?: string } } }} [opts]
+ * @returns {{ ok: true, pluginId: string } | { ok: false, zh: string }}
+ */
+export function hostPluginId(spec, opts) {
+  const optId = opts && typeof opts.pluginId === 'string' ? opts.pluginId : '';
+  const raw = opts && opts.def && opts.def.raw;
+  const defId = raw && typeof raw.pluginId === 'string' ? raw.pluginId : '';
+  if (optId && defId && optId !== defId) return { ok: false, zh: '宿主 pluginId 与内容组合写入的 pluginId 不一致' };
+  const host = optId || defId;
+  if (!host || !PLUGIN_ID_RE.test(host)) {
+    return { ok: false, zh: '编译需要宿主给出的插件 id，不能省略，也不能默认合成共用的 dsl' };
+  }
+  if (spec && spec.pluginId != null && spec.pluginId !== host) {
+    return { ok: false, zh: '规格里的 pluginId 与宿主不一致，不能用来占用别的插件的预算' };
+  }
+  return { ok: true, pluginId: host };
+}
+
+function throwHost(host) {
+  const err = new Error('PLUGIN_DSL_PLUGIN_ID pluginId: ' + host.zh);
+  err.code = 'PLUGIN_DSL_PLUGIN_ID';
+  throw err;
 }
 
 function rangeGridOf(v, env) {
@@ -26,6 +54,11 @@ function rangeGridOf(v, env) {
   if (v === 'own') return env.def ? env.def.rangeGrid ?? null : null;
   if (Array.isArray(v)) return v;
   return null;
+}
+
+function baked(path, value, env) {
+  const n = typeof value === 'number' ? value : resolveValue(value, env, null);
+  return clampDsl(path, n);
 }
 
 function compileTargeting(tg, env) {
@@ -36,7 +69,7 @@ function compileTargeting(tg, env) {
     if (g) out.rangeGrid = g;
   }
   if (typeof tg.priority === 'string') out.priority = tg.priority;
-  if (tg.maxTargets != null) out.maxTargets = resolveValue(tg.maxTargets, env, null);
+  if (tg.maxTargets != null) out.maxTargets = baked('skill.targeting.maxTargets', tg.maxTargets, env);
   if (tg.rangeExtend != null) out.rangeExtend = resolveValue(tg.rangeExtend, env, null);
   if (tg.noRangeExtend) out.noRangeExtend = true;
   if (tg.showOwnRange) out.showOwnRange = true;
@@ -48,7 +81,7 @@ function compileAttack(atk, env) {
   if (!atk || typeof atk !== 'object') return null;
   const out = {};
   for (const k of ['atkScale', 'splashRadius', 'maxTargets']) {
-    if (atk[k] != null) out[k] = typeof atk[k] === 'number' ? atk[k] : resolveValue(atk[k], env, null);
+    if (atk[k] != null) out[k] = baked(`skill.attack.${k}`, atk[k], env);
   }
   if (typeof atk.dmgType === 'string') out.dmgType = atk.dmgType;
   if (atk.onHitStatus && typeof atk.onHitStatus === 'object') {
@@ -65,9 +98,10 @@ function compileSkill(sk, env) {
   if (sk.kind) spec.kind = sk.kind;
   if (typeof sk.id === 'string') spec.id = sk.id;
   for (const k of ['duration', 'ammo', 'spCost', 'initSp']) {
-    if (sk[k] != null) spec[k] = typeof sk[k] === 'number' ? sk[k] : resolveValue(sk[k], env, null);
+    if (sk[k] != null) spec[k] = baked(`skill.${k}`, sk[k], env);
   }
-  if (sk.charges != null) spec.charges = typeof sk.charges === 'number' ? sk.charges : resolveValue(sk.charges, env, null);
+  if (sk.charges != null) spec.charges = baked('skill.charges', sk.charges, env);
+  if (sk.maxCharges != null) spec.maxCharges = baked('skill.maxCharges', sk.maxCharges, env);
   if (typeof sk.spType === 'string') spec.spType = sk.spType;
   if (sk.trigger != null) spec.trigger = sk.trigger;
   if (sk.heal != null) spec.heal = !!sk.heal;
@@ -110,17 +144,20 @@ function compileTrait(tr, env) {
  * @returns {object} Kit
  */
 export function compileDsl(spec, opts = {}) {
-  const checked = validateDsl(spec);
+  const checked = validateDsl(spec, { bounds: true });
   if (!checked.ok) {
     const err = new Error(formatProblems(checked.problems));
     err.code = checked.problems[0] && checked.problems[0].code;
     throw err;
   }
+  // Structural codes win over a missing host id, so compileDsl(badSpec, {}) still throws the shape error.
+  const host = hostPluginId(spec, opts);
+  if (!host.ok) throwHost(host);
   const env = {
     bb: opts.bb || {},
     chess: opts.chess || null,
     def: opts.def || null,
-    pluginId: pluginIdOf(spec, opts),
+    pluginId: host.pluginId,
     // [ASSUMED] default 8000, overridable by spec.budget.
     budget: spec.budget != null ? spec.budget : DEFAULT_BUDGET,
     spec,

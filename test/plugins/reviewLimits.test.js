@@ -44,7 +44,7 @@ test('one branch count on an empty field spawns at most MAX_ALIVE_ENEMIES', () =
   assert.ok(Date.now() - t0 < 2000, `spawn took ${Date.now() - t0}ms`);
 });
 
-test('catapult extra hits stop at PLUGIN_TIMES_MAX', { skip: 'this fork ships its own PRTS-accurate catapult, bounded through boundedCount; the upstream synthetic hit count does not apply' }, () => {
+test('catapult extra hits stop at PLUGIN_TIMES_MAX', () => {
   const src = getData().enemies.enemy_10162_mnctpt;
   const enemy = structuredClone(src);
   assert.equal(typeof enemy.talents.bb['Attack.attack@times'], 'number');
