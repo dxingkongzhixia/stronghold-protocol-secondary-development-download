@@ -199,6 +199,50 @@ exists) gets no section rather than an empty grid.
   `@media (orientation: portrait) and (max-width: 1024px) { .sp-rotatable .rotate-hint { display: grid } }` for the
   `sp-rotatable` that `public/js/ui/device.js` sets on a coarse pointer whose screen is not landscape).
 
+## Extracting official outfits locally (本机抽取)
+
+The repository never carries skin art, but an installation can turn the official client it already has into a
+normal cosmetic plugin — the same `chars[<charId>].skins` overlay documented above, so nothing in the server or
+the client changes.
+
+```powershell
+# 1. the outfits (writes plugins/local-skins/; plugins/* is git-ignored)
+python tools/local-extract/skins.py `
+  --game "<Arknights>/Arknights_Data/StreamingAssets/AB/Windows" `
+  --out plugins/local-skins --id local-skins
+
+# 2. keep a full pack inside a room's 300 MB set (Spine pages -> lossless WebP, atlas + overlay rewritten)
+python tools/local-extract/spine-webp.py plugins/local-skins --lossless
+
+# 3. the lock (clip roles / hashes) and the check
+node tools/plugin.mjs pack  plugins/local-skins
+node tools/plugin.mjs check plugins/local-skins
+```
+
+| flag | meaning |
+|---|---|
+| `--only <charId,...>` / `--limit N` | a pilot |
+| `--illust-max` (1024) / `--illust-quality` (80) / `--quality` (88) | picture size and WebP quality |
+| `--lossless` | exact pixels for the pictures |
+
+- **Where it reads**: `skinpack/<charId>.ab` (battle Spine prefab + illustration), `spritepack/char_portrait_*.ab`
+  (half-body), `spritepack/ui_char_avatar_*.ab` (avatar), and `excel/skin_table.json` from the official-data cache
+  (`build-data` downloads it; `.cache/gamedata/excel/skin_table.json`).
+- **What it takes**: alternative outfits only (`<charId>@<series>#<n>`), for operators in this installation's
+  roster (`shared/protocol.js operatorCharIds`: chess, `backups.units`, the DIY pools). On 2026-10-19 that is
+  **277 outfits of 175 operators**.
+- **Re-running resumes**: pictures and complete Spine models already on disk are kept; a character whose skins are
+  not all complete is extracted again (its files are overwritten).
+- **Default on for everyone**: an owner's `plugins/config.json` (git-ignored, `server/plugins/policy.js`) can start
+  every room with the plugin — `{ "rooms": "host", "default": ["local-skins"] }`. The plugin's scope is
+  `room` + `personal`, so a room's set serves it to every member and a player may also switch it on alone. The
+  picker appears only while the composed manifest has a wear-able skin (`hasAnySkinChoices`), so a room without the
+  plugin looks exactly as before.
+- **Windows + a non-ASCII install path**: pass the AssetBundle root through an ASCII junction if a shell drops the
+  CJK characters on the way to Python (e.g. `New-Item -ItemType Junction -Path $env:TEMP\akab -Target "<…>\AB\Windows"`).
+- **No install channel**: the server still never downloads or writes art; this is an owner-side extraction into
+  `plugins/`, exactly like a hand-made cosmetic plugin (`docs/PLUGINS.md` §9, §17).
+
 ## Known limitations
 
 - **Bots always wear the default model** (`PlayerState.setSkins` refuses a bot, as `setLoadout` does).
