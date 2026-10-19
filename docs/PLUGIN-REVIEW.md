@@ -115,12 +115,11 @@ plugin.json + entry.sim/meta
 - 脚本 SDK 的冻结 API、预算、超时、拒绝路径
 - Forge 导入：皮肤、数值、混合包、脚本、ZIP、符号链接、路径穿越
 - setup / 本地官方美术提取
-- 全量 CI：**8181 tests / 8145 pass / 0 fail**
+- 全量 CI：**8185 tests / 8149 pass / 0 fail**
 
-两个验证盲区：
-
-1. **浏览器 E2E 是 opt-in**（`SP_E2E=1`），当前没有在真实 Chrome 中跑完整插件链路。
-2. **真实客户端资源抽取**没有在本机用 `D:\明日方舟\Hypergryph Launcher` 做冒烟，只跑了合成夹具。
+已验证：
+- **浏览器 E2E**：`SP_E2E=1` + 真实 Chrome 跑了 `test/ui/plugins.e2e.test.js` 的 3 个 cosmetic 用例（房间插件、个人插件、局内切换），全部通过。content / ui / script 的完整链路仍需单独补用例。
+- **真实客户端抽取**：用 `D:\明日方舟\Hypergryph Launcher` 的 CN 客户端跑了 `extract.py --only mesh/trap_110`，成功写出 6 个文件并合并 manifest；完整的 `--plugin-art` 抽取仍需一次长跑验证。
 
 ## 6. 产品风险
 
@@ -168,9 +167,10 @@ plugin.json + entry.sim/meta
 
 运营台 `/admin` 已加入只读的「插件与内容」页：
 
-- 已安装插件：id / 名称 / class / 版本 / 状态 / scope / 内容 / 脚本或原生信任 / 大小
+- 已安装插件：id / 名称 / class / 版本 / 兼容 / app / api / 状态 / scope / 内容 / 脚本或原生信任 / 大小
 - 服务器策略：`rooms`、`allow`、`default`、`classes`、`maxSets`、`allowIncompatible`
 - 房间内容：`cs`、`vs`、`modeId`、插件列表、脚本 / 信任状态、trusted consent
+- 「兼容性与诊断」区：列出 skipped 插件和 warnings，兼容列直接显示 `compatible`，悬停可看 `app` 范围
 - 通知页新增只读「插件公告」区，与服务器通知分开标记
 
 后端 `buildSnapshot` 现在携带 `plugins` 只读快照；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
@@ -180,8 +180,7 @@ plugin.json + entry.sim/meta
 
 优先级从高到低：
 
-1. **做一次真实 E2E**：Chrome + 一个 cosmetic + 一个 content + 一个 ui + 一个 script 插件，跑 `SP_E2E=1`。
-2. **用 `D:\明日方舟\Hypergryph Launcher` 跑一次真实抽取冒烟**，确认 `--plugin-art` 和官方美术合并。
+1. **补齐 content / ui / script 的真实 E2E**：现在 cosmetic 链路已通过，下一步给内容集、UI 插槽和脚本沙箱各加一条真实浏览器用例。
+2. **跑完整的 `--plugin-art` 抽取**：确认官方干员美术、VFX 和插件引用在真实客户端上能一次合并完成。
 3. **写一份面向玩家的插件风险说明**：外观 / 玩法 / 脚本 / 信任四级。
 4. **trusted 插件生产策略**：默认关闭，公网禁用，容器化运行。
-5. **插件可观测性**：面板显示插件加载失败、预算超限、内容集不一致的具体原因。

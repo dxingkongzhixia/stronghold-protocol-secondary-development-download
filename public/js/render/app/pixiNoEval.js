@@ -149,10 +149,12 @@ export function syncUniforms(group, uniformData, ud, uv, renderer) {
 }
 
 export function installPixiNoEval(PIXI) {
+  if (!PIXI || !PIXI.ShaderSystem) return false;
   Object.assign(PIXI.ShaderSystem.prototype, {
     systemCheck() {},
     syncUniforms(group, glProgram) {
       syncUniforms(group, this.shader.program.uniformData, glProgram.uniformData, group.uniforms, this.renderer);
     },
   });
+  return true;
 }

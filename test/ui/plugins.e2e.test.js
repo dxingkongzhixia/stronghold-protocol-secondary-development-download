@@ -203,6 +203,7 @@ describe('cosmetic plugins in the browser (P1a)', { skip: !ENABLED && 'set SP_E2
     try {
       await c.open();
       await c.enter('凯尔希');
+      await c.page.waitForFunction(() => !!globalThis.__SP__.data.get('assets'), { timeout: 60000 });
       await c.click('.mode-card', '独立模拟');
       await c.click('.diff-card', '标准模拟');
       await c.click('.create-box button', '开始独立模拟');
@@ -217,7 +218,7 @@ describe('cosmetic plugins in the browser (P1a)', { skip: !ENABLED && 'set SP_E2
       const piece = (await c.boardPieces()).find((p) => p.id === chess.chessId);
       assert.ok(piece, 'the kit operator stands on the board');
       // the board drew the installation's picture for it
-      await c.page.waitForFunction((u) => !!globalThis.__SP_VIEW__?.raw?.pieceArt?.(u)?.picture, { timeout: 20000 }, piece.uid);
+      await c.page.waitForFunction((u) => !!globalThis.__SP_VIEW__?.raw?.pieceArt?.(u)?.picture, { timeout: 60000 }, piece.uid);
       const before = await art(piece.uid);
       assert.doesNotMatch(before.picture, /^\/p\//);
       // switched on during the match (设置 → 外观插件 — that switch is the first test's): the view already drawn follows

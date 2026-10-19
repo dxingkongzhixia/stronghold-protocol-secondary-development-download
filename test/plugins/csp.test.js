@@ -81,6 +81,7 @@ test('actual static responses: Worker CSP on 200/206/304 and encoded aliases, in
 });
 test('Pixi CSP adapter uploads matrices, samplers, arrays and scalars without code generation', () => {
   class ShaderSystem {}
+  assert.equal(installPixiNoEval({}), false);
   installPixiNoEval({ ShaderSystem });
   const calls = [], gl = new Proxy({}, { get: (_, key) => (...args) => calls.push([key, ...args]) });
   const s = new ShaderSystem();

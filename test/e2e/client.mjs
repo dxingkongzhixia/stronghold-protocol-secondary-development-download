@@ -13,9 +13,13 @@ export const OUT = path.join(ROOT, 'test/e2e/out');
 export const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const hasChrome = () => existsSync(CHROME);
+/** How long the first screen may take on a slow machine (a cold 1 GB asset cache can exceed the old 30 s). */
+export const BOOT_TIMEOUT_MS = Math.max(30000, Number(process.env.SP_E2E_BOOT_MS) || 30000);
 
 const CHROME_ARGS = ['--no-sandbox', '--no-first-run', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling',
-  '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--mute-audio', '--force-device-scale-factor=1'];
+  '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--mute-audio', '--force-device-scale-factor=1',
+  // Headless Chrome has no GPU on CI/most servers; SwiftShader gives the field view its WebGL2 context instead of the 2D fallback.
+  '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 /** The CDP protocol timeout of every Client's browser: one DevTools call that takes longer fails (a hung page fails fast). */
 export const PROTOCOL_TIMEOUT_MS = 90000;
 
@@ -225,19 +229,23 @@ export class Client {
     const page = first || await this.browser.newPage();
     this.page = page;
     await page.setViewport({ width: this.w, height: this.h });
+    // Tests drive the game, not the first-visit art-mode modal: choose stream before any app script runs.
+    await page.evaluateOnNewDocument(() => {
+      try { globalThis.localStorage?.setItem('sp.pref.assetMode', JSON.stringify('stream')); } catch { /* ignore */ }
+    });
     page.on('console', (m) => {
       if (m.type() === 'error') this.problems.push(`console: ${m.text()} @ ${m.location()?.url || ''}`);
     });
     page.on('pageerror', (e) => this.problems.push(`pageerror: ${e.message}`));
     page.on('requestfailed', (r) => {
       const err = r.failure()?.errorText || '';
-      if (err === 'net::ERR_ABORTED' && /\.(mp3|ogg|wav|m4a)(\?|$)/.test(r.url())) return; // media element swaps
+      if (err === 'net::ERR_ABORTED' && (r.resourceType() === 'media' || /\.(mp3|ogg|wav|m4a)(\?|$)/.test(r.url()))) return; // media element swaps
       this.problems.push(`requestfailed: ${r.url()} ${err}`);
     });
     page.on('response', (r) => { if (r.status() >= 400) this.problems.push(`http ${r.status()}: ${r.url()}`); });
     page.on('dialog', (d) => d.dismiss().catch(() => {}));
     await page.goto(`${this.base}/${query}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(() => !!globalThis.__SP__ && !!document.querySelector('.screen'), { timeout: 30000 });
+    await page.waitForFunction(() => !!globalThis.__SP__ && !!document.querySelector('.screen'), { timeout: BOOT_TIMEOUT_MS });
   }
 
   note(msg) { this.log.push(`[${this.label}] ${msg}`); }
