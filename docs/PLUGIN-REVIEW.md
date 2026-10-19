@@ -141,7 +141,28 @@ plugin.json + entry.sim/meta
    - setup 已经能发现并提取，但依赖本机客户端和 Python / UnityPy。
    - 缺资源时是 fallback，不会坏，但体验不一致。
 
-## 7. 运营台整合（Phase 1，已实现）
+## 7. 主线 0.3.x 兼容层（2026-10-19）
+
+主线 0.3.1 的插件模板通常写 `"app": ">=0.3.0 <0.4.0"`，而本分支是 0.4.0。为兼容主线插件，manifest 兼容检查增加了一层**按 class 限定**的兼容：
+
+- `PLUGIN_COMPAT_APP = '0.3.2'`
+- `PLUGIN_COMPAT_CLASSES = { lang, cosmetic, ui }`
+- 对这三个 class：`app` 范围匹配 0.4.0 **或** 0.3.2 都算兼容
+- `content` / `script` / `trusted`：仍然严格要求匹配 0.4.0，避免 0.3.x 的数据或执行代码未经审查直接进入对局
+
+实际效果：
+
+| 主线插件 | 结果 |
+|---|---|
+| `lang` / `cosmetic` / `ui`，`app <0.4.0` | 加载，并使用 0.3.x 兼容判断；仍会走自己的 manifest / 文件校验 |
+| `content` / `script` / `trusted`，`app <0.4.0` | 标记 `compatible: false`，内容集不会接受；需要作者把 `app` 放宽到 `<0.5.0`，或后续由 owner 做显式兼容策略 |
+| API level 1 / 2 | 都支持（`min: 1`, `current: 2`） |
+
+插件目录里的 `entryStatus` 也使用同一规则，因此主线 0.3.x 的 cosmetic/ui/lang 不会在安装目录里被误标为 incompatible。
+
+测试：`test/plugins/manifest.test.js` 的 `0.3.x app compatibility` 与 `mainline 0.3.x templates` 用例。
+
+## 8. 运营台整合（Phase 1，已实现）
 
 运营台 `/admin` 已加入只读的「插件与内容」页：
 
@@ -153,7 +174,7 @@ plugin.json + entry.sim/meta
 后端 `buildSnapshot` 现在携带 `plugins` 只读快照；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
 写操作、trusted pin 和插件文件仍只允许 owner 在本机处理，运营台不提供远程代码执行入口。
 
-## 8. 建议的下一步
+## 9. 建议的下一步
 
 优先级从高到低：
 

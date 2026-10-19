@@ -5,10 +5,11 @@
 // names), the JSON limits, and the catalogue entries (no server path, every class but lang marked unofficial).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { APP_VERSION, PLUGIN_API } from '../../shared/constants.js';
 import {
   PLUGIN_CLASSES, PACK_TYPES, PERMISSIONS, PLUGIN_LIMITS, ASSET_EXT, isPluginId, isPackId, isSemver, readPluginManifest, readPackManifest,
-  declaredPaths, checkPluginFiles, checkJsonLimits, classStatus, pluginIndexEntry, buildPluginIndex,
+  declaredPaths, checkPluginFiles, checkJsonLimits, classStatus, pluginIndexEntry, buildPluginIndex, appVersionCompatible,
 } from '../../shared/plugins/manifest.js';
 import { normalizeManifest, PACK_TYPES as PACK_TYPES_COMPAT, isPackPath as isPackPathCompat, appVersionMatches } from '../../shared/packs.js';
 
@@ -316,4 +317,29 @@ test('the catalogue: entries by class then id, unofficial marks, no server paths
   const oe = pluginIndexEntry({ ...plugins[0], manifest: ordered });
   assert.deepEqual([oe.loadAfter, oe.loadBefore, oe.priority], [['base'], ['late'], 3]);
   assert.deepEqual([e.loadAfter, e.loadBefore, e.priority], [undefined, undefined, undefined], 'none set: none listed');
+});
+
+
+test('0.3.x app compatibility: cosmetic/ui/lang run on the fork, content/script/trusted stay strict', () => {
+  const old = '>=0.3.0 <0.4.0';
+  const current = '>=0.4.0 <0.5.0';
+  for (const cls of ['lang', 'cosmetic', 'ui']) {
+    assert.equal(appVersionCompatible(old, '0.4.0', cls), true, cls + ': a mainline 0.3.x range is allowed');
+    assert.equal(appVersionCompatible(current, '0.4.0', cls), true, cls + ': the fork range stays allowed');
+  }
+  for (const cls of ['content', 'script', 'trusted']) {
+    assert.equal(appVersionCompatible(old, '0.4.0', cls), false, cls + ': needs review on this fork');
+    assert.equal(appVersionCompatible(current, '0.4.0', cls), true, cls + ': a fork-targeted range is allowed');
+  }
+  assert.equal(appVersionCompatible(old, '0.3.2', 'content'), true, 'the original 0.3.x build still matches');
+});
+
+
+test('mainline 0.3.x templates: cosmetic loads with the compat range, content stays strict', () => {
+  const cosmetic = JSON.parse(readFileSync(new URL('../../plugins/_template/cosmetic/plugin.json', import.meta.url), 'utf8'));
+  cosmetic.app = '>=0.3.0 <0.4.0';
+  assert.equal(readPluginManifest(cosmetic, { id: 'cosmetic-template', app: '0.4.0' }).manifest.compatible, true);
+  const content = JSON.parse(readFileSync(new URL('../../plugins/_template/content/plugin.json', import.meta.url), 'utf8'));
+  content.app = '>=0.3.0 <0.4.0';
+  assert.equal(readPluginManifest(content, { id: 'content-template', app: '0.4.0' }).manifest.compatible, false);
 });
