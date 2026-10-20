@@ -50,7 +50,7 @@ import { StatsService } from './stats.js';
 import { TrainingStore } from './training/store.js';
 import { setTrainingSink } from './training/record.js';
 import { configurePrior, priorStatus } from './match/botPrior.js';
-import { ADMIN_HTML, ADMIN_CSP_HASH, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches } from './admin.js';
+import { ADMIN_HTML, ADMIN_CSP_HASH, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches, writePluginPolicy } from './admin.js';
 import { createSpeedProbe } from './speed.js';
 import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from './mirrors.js';
 import { clientAddress } from './net.js';
@@ -278,6 +278,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const bugExport = parts.rawPath === '/admin/api/bug/export';
     const speed = parts.rawPath === '/admin/api/speed';
     const origins = parts.rawPath === '/admin/api/origins';
+    const pluginPolicy = parts.rawPath === '/admin/api/plugin-policy';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -326,6 +327,16 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       // Every notice is also logged as the running 更新日志's next minor version (server/community.js recordNotice),
       // so report the created version back to the admin page; a failed write leaves `changelog` null, the push stands.
       sendJson(req, res, 200, { ok: true, sent: r.sent, notice: r.notice, changelog: r.changelog || null });
+      return;
+    }
+    // owner plugin policy (Phase 2): the safe fields of plugins/config.json, never plugin files, pins or code.
+    if (pluginPolicy) {
+      if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
+      const body = await readJsonBody(req);
+      if (!body || typeof body !== 'object' || Array.isArray(body)) { sendJson(req, res, 400, { error: '请求体需要是 JSON 对象' }); return; }
+      const r = writePluginPolicy({ pluginsDir, body });
+      if (r.error) { sendJson(req, res, 400, { error: r.error }); return; }
+      sendJson(req, res, 200, { ok: true, policy: r.policy });
       return;
     }
     // bug report status (server/community.js): POST { id, status } marks a report 待处理 / 已受理 / 已修复.
@@ -420,7 +431,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       return true;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
-      || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins'
+      || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;

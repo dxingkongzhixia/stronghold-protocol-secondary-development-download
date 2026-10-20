@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { statusOf, buildSnapshot, buildPluginSnapshot, buildPublicSnapshot, tokenMatches, ADMIN_HTML, ADMIN_CSP_HASH } from '../server/admin.js';
+import { statusOf, buildSnapshot, buildPluginSnapshot, buildPublicSnapshot, tokenMatches, writePluginPolicy, ADMIN_HTML, ADMIN_CSP_HASH } from '../server/admin.js';
 import { openMemoryDb } from '../server/db.mjs';
 import { AuthService } from '../server/auth.js';
 import { SessionRegistry } from '../server/net.js';
@@ -389,4 +389,46 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
   assert.equal(typeof p.probe.requests, 'number');
   assert.deepEqual(p.contentSets, { sets: 2, held: 1, builds: 3 });
   assert.deepEqual(buildPluginSnapshot(null).installed, []);
+});
+
+test('writePluginPolicy: safe fields only, preserves trusted pins, records an audit line', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-admin-policy-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'config.json');
+  fs.writeFileSync(file, JSON.stringify({ trusted: { demo: 'pin' }, allowDownloadHosts: ['example.test'] }));
+  const r = writePluginPolicy({ pluginsDir: dir, root: dir, now: Date.UTC(2026, 9, 20), body: {
+    rooms: 'fixed', default: ['demo'], allow: ['demo'], classes: { content: true },
+    limits: { maxSets: 2 }, allowIncompatible: ['demo'],
+  } });
+  assert.equal(r.ok, true);
+  const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(saved.rooms, 'fixed');
+  assert.deepEqual(saved.default, ['demo']);
+  assert.deepEqual(saved.allowIncompatible, ['demo']);
+  assert.deepEqual(saved.trusted, { demo: 'pin' }, 'trusted pins are not editable here');
+  assert.deepEqual(saved.allowDownloadHosts, ['example.test']);
+  assert.match(fs.readFileSync(path.join(dir, 'var', 'admin-audit.log'), 'utf8'), /plugin-policy/);
+  assert.match(writePluginPolicy({ pluginsDir: dir, body: { trusted: {} } }).error, /unsupported/);
+  assert.match(writePluginPolicy({ pluginsDir: dir, body: { limits: { maxSets: 999 } } }).error, /maxSets/);
+});
+
+test('POST /admin/api/plugin-policy writes the safe policy fields and refuses trusted edits', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-admin-policy-http-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ trusted: { demo: 'pin' } }));
+  const srv = await startServer({ port: 0, quiet: true, pluginsDir: dir, adminToken: 'testtok', accounts: true, db: openMemoryDb() });
+  t.after(() => srv.close());
+  const base = srv.url;
+  const post = (body, token = 'testtok') => fetch(`${base}/admin/api/plugin-policy?token=${token}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  assert.equal((await fetch(`${base}/admin/api/plugin-policy`)).status, 403);
+  assert.equal((await fetch(`${base}/admin/api/plugin-policy?token=testtok`)).status, 405);
+  assert.equal((await post({ trusted: {} })).status, 400, 'trusted pins are owner-local');
+  const ok = await post({ rooms: 'fixed', default: ['demo'], allow: ['demo'], classes: { content: true }, limits: { maxSets: 1 }, allowIncompatible: true });
+  assert.equal(ok.status, 200);
+  const saved = JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8'));
+  assert.equal(saved.rooms, 'fixed');
+  assert.deepEqual(saved.trusted, { demo: 'pin' });
+  assert.equal(saved.allowIncompatible, true);
 });

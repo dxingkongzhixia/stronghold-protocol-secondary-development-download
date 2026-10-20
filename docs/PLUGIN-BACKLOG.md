@@ -2,7 +2,7 @@
 
 > 快照日期：2026-10-20
 > 代码基线：`master` `ae9e2ae3c`（插件文档提交后）
-> 状态：普通插件链路可用；全量 CI **8191 tests / 8155 pass / 0 fail**；真实浏览器插件 E2E **10 / 10 pass**。
+> 状态：普通插件链路可用；全量 CI **8194 tests / 8158 pass / 0 fail**；真实浏览器插件 E2E **10 / 10 pass**。
 > 本文件记录**仍未解决**的问题，不把已修项写成待办。
 
 ## 状态标记
@@ -233,7 +233,8 @@
 
 ### P2-1 `/admin` 仍然是只读 Phase 1
 
-- 状态：`WATCH` / 设计选择
+- 状态：`PARTIAL`
+- 已完成：`POST /admin/api/plugin-policy` 可修改 `rooms` / `default` / `allow` / `classes` / `limits` / `allowIncompatible`，保留 `trusted` pin 和下载白名单，并写 `var/admin-audit.log`；仍不提供远程安装/卸载/更新。
 - 目前能看：
   - 已安装插件
   - 兼容性
@@ -268,7 +269,9 @@
 
 ### P2-3 大插件 / 多房间的扫描与构建成本
 
-- 状态：`WATCH`
+- 状态：`WATCH`（已缓解）
+- 已有：registry 按 size / mtime / inode / ctime 复用文件 hash；content set 按 manifest / 文件 hash / settings 记忆；`/admin` 显示 sets / held / builds。
+- 仍缺：首次大插件全量扫描、下载并发 / 进度、构建排队；这些需要压测数据后再调参。
 - 现有上限：
   - 单插件 200 MB
   - 2000 文件
@@ -289,7 +292,8 @@
 
 ### P2-4 官方 `op-*` 与自造商店干员同 charId
 
-- 状态：`WATCH` / 已设计
+- 状态：`DONE`
+- 完成：自选面板把 `officialPool` 标为「官方自选」，普通非原型标为「已持有」；新增 `diy-tag--official` 和 `pickOptions().official` 测试。
 - 现状：
   - 通过 `diy.officialPool` 与 `diy.ownedPool` 分离
   - 功能正确
@@ -301,7 +305,8 @@
 
 ### P2-5 插件类别对玩家仍然复杂
 
-- 状态：`WATCH`
+- 状态：`DONE`
+- 完成：面板固定「外观 / 改变玩法 / 沙箱脚本 / 原生信任」标签；玩家风险说明见 [`PLUGIN-RISKS.md`](PLUGIN-RISKS.md)。
 - 风险：
   - 外观 / 改变玩法 / 脚本 / 信任混在一个设置体系
   - 玩家难以判断公平性和风险
@@ -311,7 +316,8 @@
 
 ### P2-6 非官方对局默认不计入统计
 
-- 状态：`WATCH` / 有意设计
+- 状态：`DONE`
+- 完成：插件面板已提示「改变玩法...非官方对局，不计入统计总览」；玩家风险说明再次说明。
 - 现状：内容插件对局默认排除统计，`withModded` 可切换
 - 风险：
   - 玩家可能误以为战绩丢失
@@ -336,7 +342,7 @@
 - 0.3.x `lang` / `cosmetic` / `ui` 自动兼容
 - 真实浏览器插件 E2E：10 / 10（cosmetic 3、UI 1、content 1、sandbox script 2、Forge 1、trusted consent 1、冲突/重新应用 1）
 - 字体 CSP 已允许 `fonts.gstatic.cn`
-- 全量 CI：8191 / 8155 / 0
+- 全量 CI：8194 / 8158 / 0
 
 ---
 

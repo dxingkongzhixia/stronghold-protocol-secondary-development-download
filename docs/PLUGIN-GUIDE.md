@@ -906,3 +906,8 @@ item/chess 为一个记录 id。省略卡片 apply 时继承窗口 apply。引�
 联机显示「等待队友」、未选人数和倒计时，观战只读，大字与触屏可以滚动。断线重连恢复完整窗口；测试日志记录
 `g.offer`/`g.offerRefresh` 并可回放。声明及候选文件都会改变插件内容哈希，未使用 offers 的插件不会增加哈希输入。
 协议及完整规则见 [PLUGINS §10b](PLUGINS.md#10b-offers--interaction-windows)。
+
+
+## 插件风险说明
+
+外观 / 改变玩法 / 脚本沙箱 / 原生信任四级风险、同意流程和统计说明见 [PLUGIN-RISKS.md](PLUGIN-RISKS.md)。

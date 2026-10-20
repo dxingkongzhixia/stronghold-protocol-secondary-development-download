@@ -382,3 +382,11 @@ describe('match UI of a 自选 piece', () => {
     assert.match(readFileSync(path.join(ROOT, 'public/js/render/app/info.js'), 'utf8'), /diy: u\.diy && typeof u\.diy === 'object'/);
   });
 });
+
+test('pickOptions marks official-pool picks separately from owned shop forms', () => {
+  const official = D.backups.diy.officialPool[0];
+  const opt = M.pickOptions(T5A, {}, D, [official]).find((x) => x.charId === official);
+  assert.ok(opt, 'the official pick is offered');
+  assert.equal(opt.official, true);
+  assert.equal(opt.proto, false);
+});

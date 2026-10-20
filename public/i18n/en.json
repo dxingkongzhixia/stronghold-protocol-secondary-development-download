@@ -1817,5 +1817,6 @@
   "已拒绝。开始模拟前仍需要你的同意。": "Declined. Your consent is still required before the match can start.",
   "同意并继续": "Accept and continue",
   "沙箱脚本": "Sandbox script",
-  "原生信任": "Native trusted"
+  "原生信任": "Native trusted",
+  "官方自选": "Official pick"
 }

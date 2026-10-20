@@ -8,12 +8,13 @@
 // 单人游玩) plus every connected session (guests included) and every room. Access needs a token: `var/admin-token.txt`
 // (created on first boot, printed in the startup banner). Keep the server behind a firewall if the LAN should not see it.
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { DIFFICULTY_NAMES, MAX_SEATS } from '../shared/constants.js';
 import { presenceOnline } from './net.js';
 import { scriptProbeStats } from './plugins/scriptPreflight.js';
+import { readPolicy, POLICY_FILE } from './plugins/policy.js';
 
 /** The status vocabulary shown in the page (order = how the columns are grouped). */
 export const STATUS = Object.freeze({
@@ -211,6 +212,35 @@ export function buildPluginSnapshot(info = {}) {
       allowIncompatible: ownerPolicy.allowIncompatible === true ? true : Array.isArray(ownerPolicy.allowIncompatible) ? ownerPolicy.allowIncompatible.slice(0, 64) : false,
     } : null,
   };
+}
+
+/**
+ * Write the safe subset of `plugins/config.json` from the owner console (Phase 2). It never edits plugin files,
+ * trusted pins or code: unknown fields are rejected, and `trusted` / `allowDownloadHosts` already in the file survive.
+ * @param {{ pluginsDir: string|null, body: unknown, now?: number, root?: string }} opts
+ */
+export function writePluginPolicy({ pluginsDir, body, now = Date.now(), root = process.cwd() }) {
+  if (!pluginsDir) return { error: 'plugins are disabled' };
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return { error: 'a JSON object is required' };
+  const allowed = new Set(['rooms', 'default', 'allow', 'classes', 'limits', 'allowIncompatible']);
+  for (const key of Object.keys(body)) if (!allowed.has(key)) return { error: `unsupported field: ${key}` };
+  if (!Object.keys(body).length) return { error: 'no policy field supplied' };
+  const file = join(pluginsDir, POLICY_FILE);
+  let current = {};
+  try { current = JSON.parse(readFileSync(file, 'utf8')); } catch { /* absent or broken: start from empty */ }
+  if (!current || typeof current !== 'object' || Array.isArray(current)) current = {};
+  const next = { ...current };
+  for (const key of Object.keys(body)) next[key] = body[key];
+  const checked = readPolicy(next, { env: {} });
+  if (checked.problems.length) return { error: checked.problems.join('; ') };
+  try {
+    writeFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
+    mkdirSync(join(root, 'var'), { recursive: true });
+    appendFileSync(join(root, 'var', 'admin-audit.log'), `${JSON.stringify({ at: new Date(now).toISOString(), action: 'plugin-policy', fields: Object.keys(body) })}\n`);
+  } catch (e) {
+    return { error: `could not write plugins/${POLICY_FILE}: ${e?.code || e?.message || e}` };
+  }
+  return { ok: true, policy: checked.policy };
 }
 
 /**
@@ -626,7 +656,11 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     <section class="view" id="view-plugins" hidden>
       <div class="two">
         <section class="panel"><h2>插件概览</h2><div class="panel__body" id="pluginSummary"></div></section>
-        <section class="panel"><h2>服务器策略</h2><div class="panel__body" id="pluginPolicy"></div></section>
+        <section class="panel"><h2>服务器策略</h2><div class="panel__body">
+          <div id="pluginPolicy"></div>
+          <textarea id="pluginPolicyJson" spellcheck="false" aria-label="插件策略 JSON" style="width:100%;min-height:7rem;margin-top:.08rem;font-family:monospace;font-size:.12rem;background:#101816;color:var(--text-hi);border:1px solid var(--line);padding:.06rem"></textarea>
+          <div class="tools"><button type="button" id="pluginPolicySave">保存插件策略</button><span id="pluginPolicyMsg" class="hint"></span></div>
+        </div></section>
       </div>
       <section class="panel">
         <h2>已安装插件<em id="pluginCount"></em></h2>
@@ -938,6 +972,9 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       + kv('内容集上限', p.policy.maxSets)
       + kv('允许不兼容', p.policy.allowIncompatible === true ? '全部' : Array.isArray(p.policy.allowIncompatible) ? p.policy.allowIncompatible.join(', ') : '否')
     ) : '<div class="empty">无插件策略（默认）</div>';
+    var pj = p.policy ? { rooms: p.policy.rooms, default: p.policy.default || [], allow: p.policy.allow || [], classes: p.policy.classes || {}, limits: { maxSets: p.policy.maxSets }, allowIncompatible: p.policy.allowIncompatible === true ? true : Array.isArray(p.policy.allowIncompatible) ? p.policy.allowIncompatible : false } : {};
+    var policyArea = el('pluginPolicyJson');
+    if (policyArea && document.activeElement !== policyArea) policyArea.value = JSON.stringify(pj, null, 2);
     el('pluginCount').textContent = ' · ' + list.length + ' 个';
     el('pluginBody').innerHTML = list.map(function (x) {
       return row([
@@ -984,6 +1021,27 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     }).join('') || '<div class="empty">没有跳过项或警告</div>';
     el('navPlugins').textContent = list.length;
   }
+
+  el('pluginPolicySave').addEventListener('click', function () {
+    var area = el('pluginPolicyJson');
+    var msg = el('pluginPolicyMsg');
+    var btn = el('pluginPolicySave');
+    var body;
+    try { body = JSON.parse(area.value); } catch (e) { msg.textContent = 'JSON 解析失败：' + e.message; return; }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) { msg.textContent = '需要一个 JSON 对象'; return; }
+    btn.disabled = true;
+    msg.textContent = '保存中…';
+    fetch('/admin/api/plugin-policy?token=' + encodeURIComponent(token), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error((res.j && res.j.error) || 'HTTP');
+        msg.textContent = '已保存 · 下一次读取策略时生效';
+        tick();
+      })
+      .catch(function (e) { msg.textContent = '保存失败：' + e.message; })
+      .then(function () { btn.disabled = false; });
+  });
 
   function render(d) {
     var c = d.counts || {}; c.rooms = d.rooms.length;

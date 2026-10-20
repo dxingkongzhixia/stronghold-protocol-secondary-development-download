@@ -115,7 +115,7 @@ plugin.json + entry.sim/meta
 - 脚本 SDK 的冻结 API、预算、超时、拒绝路径
 - Forge 导入：皮肤、数值、混合包、脚本、ZIP、符号链接、路径穿越
 - setup / 本地官方美术提取
-- 全量 CI：**8191 tests / 8155 pass / 0 fail**
+- 全量 CI：**8194 tests / 8158 pass / 0 fail**
 
 已验证：
 - **浏览器 E2E**：`SP_E2E=1` + 真实 Chrome 跑了 10 个插件用例，全部通过：`plugins.e2e.test.js` 的 3 个 cosmetic（房间插件、个人插件、局内切换）、`ui-plugins.e2e.test.js` 的 UI 插槽，以及 `plugins-content-script.e2e.test.js` 的 content 内容集、sandbox script 依赖、独立 script 直接选择、多插件冲突/重新应用、真实 Forge 包导入和 trusted consent 链路。
@@ -164,7 +164,7 @@ plugin.json + entry.sim/meta
 
 测试：`test/plugins/manifest.test.js` 的 `0.3.x app compatibility` 与 `mainline 0.3.x templates` 用例；`test/plugins/contentSet.test.js` 的 `allowIncompatible` 用例。
 
-## 8. 运营台整合（Phase 1，已实现）
+## 8. 运营台整合（Phase 2：只读诊断 + 策略写入）
 
 运营台 `/admin` 已加入只读的「插件与内容」页：
 
@@ -174,9 +174,10 @@ plugin.json + entry.sim/meta
 - 「兼容性与诊断」区：列出 skipped 插件和 warnings，兼容列直接显示 `compatible`，悬停可看 `app` 范围
 - 「Forge 导入」区：来源包、产品、skipped / assumed 数量、是否部分导入、导入时间（只读）
 - 通知页新增只读「插件公告」区，与服务器通知分开标记
+- 服务器策略 JSON 编辑器：写入 `plugins/config.json` 的 `rooms` / `default` / `allow` / `classes` / `limits` / `allowIncompatible`，保留 trusted pin 和下载白名单，并写 `var/admin-audit.log`
 
 后端 `buildSnapshot` 现在携带 `plugins` 只读快照；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
-写操作、trusted pin 和插件文件仍只允许 owner 在本机处理，运营台不提供远程代码执行入口。
+写操作仅限上述安全策略字段；插件文件、trusted pin、安装/卸载/更新仍只允许 owner 在本机处理，运营台不提供远程代码执行入口。
 
 ## 9. 建议的下一步
 

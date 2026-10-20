@@ -34,8 +34,10 @@ const classLine = (u) => `${t(PROF_NAME[u?.profession] || '') || ''}${u?.subProf
 const bondName = (id) => data.lookup('bonds', id)?.name || id;
 
 /** The 原型 / 已持有 tag of a pick. */
-function KindTag({ proto }) {
-  return html`<span class=${cx('diy-tag', proto ? 'diy-tag--proto' : 'diy-tag--own')}>${proto ? t('原型') : t('已持有')}</span>`;
+function KindTag({ proto, official = false }) {
+  const cls = proto ? 'diy-tag--proto' : official ? 'diy-tag--official' : 'diy-tag--own';
+  const text = proto ? t('原型') : official ? t('官方自选') : t('已持有');
+  return html`<span class=${cx('diy-tag', cls)}>${text}</span>`;
 }
 
 /** Bond chips (the bonds derived from the operator's factions; 协防 when none matches). */
@@ -61,12 +63,13 @@ function SlotCard({ m, slot, pick, illegal, onOpen, onClear, ops = {}, onOps = n
     </div>`;
   }
   const proto = !!pick && D.backups?.diy?.prototypes?.[slot.tier]?.includes(pick.charId);
+  const official = !!pick && D.backups?.diy?.officialPool?.includes(pick.charId);
   const sk = rec.skill;
   const mod = elite?.module?.active ? elite.module : null;
   return html`<div class=${cx('diy-slot', `diy-slot--t${slot.tier}`, illegal && 'is-bad')} data-slot=${slot.slotId} data-char=${rec.charId}>
     <div class="diy-slot__art"><${Img} src=${chessPortraitUrl(m, elite || rec)} fallback=${html`<b>${[...(rec.name || '?')][0]}</b>`} /></div>
     <div class="diy-slot__body">
-      <div class="diy-slot__head"><${TierChip} tier=${slot.tier} size="sm" /><span class="diy-slot__label">${label}</span><${KindTag} proto=${proto} /></div>
+      <div class="diy-slot__head"><${TierChip} tier=${slot.tier} size="sm" /><span class="diy-slot__label">${label}</span><${KindTag} proto=${proto} official=${official} /></div>
       <b class="diy-slot__name">${rec.name}</b>
       <small class="diy-slot__class">${classLine(rec)}</small>
       <${Bonds} bonds=${rec.bonds} />
@@ -100,7 +103,7 @@ function OptionCard({ m, opt, selected, onSel }) {
       title=${takenBy ? t('已在{tier}阶自选中', { tier: takenBy.tier }) : name}>
     <span class="diy-opt__ava"><${Img} src=${avatarOf(m, u)} fallback=${html`<b>${[...name][0]}</b>`} /></span>
     <span class="diy-opt__txt">
-      <span class="diy-opt__top"><b class="diy-opt__name">${name}</b><${KindTag} proto=${opt.proto} /></span>
+      <span class="diy-opt__top"><b class="diy-opt__name">${name}</b><${KindTag} proto=${opt.proto} official=${opt.official} /></span>
       <small class="diy-opt__class"><${Img} src=${profIconUrl(m, u?.profession)} class="diy-opt__prof" />${classLine(u)}</small>
       <${Bonds} bonds=${opt.bonds} />
     </span>
@@ -190,6 +193,7 @@ export function DiyPickerView({ m, slot, picks, kitted, onDone, onClose, filter,
   const modOn = ch ? (ch.proto ? lk?.uniEquipId ?? null : draft.uniEquipId ?? null) : null;
   const unit = draft ? D.backups?.units?.[draft.charId] : null;
   const label = t('{tier}阶 自选', { tier: slot.tier });
+  const official = !!draft && D.backups?.diy?.officialPool?.includes(draft.charId);
   const potential = ops[draft?.charId]?.potential ?? 6;
   const base = draft ? slotRecord(slot.slotId, draft, D, { potential }) : null;
   const golden = draft ? slotRecord(slot.slotId, draft, D, { elite: true, potential }) : null;
@@ -220,7 +224,7 @@ export function DiyPickerView({ m, slot, picks, kitted, onDone, onClose, filter,
           <div class="diy-pick__who">
             <span class="diy-pick__ava"><${Img} src=${avatarOf(m, unit, true)} fallback=${html`<b>${[...(unit.name || '?')][0]}</b>`} /></span>
             <span class="diy-pick__wtxt"><b>${unit.name}</b><small>${classLine(unit)}</small></span>
-            <${KindTag} proto=${ch.proto} />
+            <${KindTag} proto=${ch.proto} official=${official} />
           </div>
           <${SkinSection} charId=${draft.charId} />
           ${!ch.proto && onOps ? html`<section class="lo-sec"><header class="lo-sec__head"><h3>${t('潜能与练度')}</h3></header><${CultivationSelects} charId=${draft.charId} ops=${ops} onSet=${onOps} /></section>` : null}

@@ -122,7 +122,7 @@ export function defaultPick(charId, slotId, data) {
  * operator fills one slot; the two picks of a tier differ).
  * @param {string} slotId @param {Record<string, any>} picks the current roster @param {any} data
  * @param {Iterable<string>|null} kitted
- * @returns {Array<{ charId: string, unit: any, bonds: string[], proto: boolean, taken: string|null }>}
+ * @returns {Array<{ charId: string, unit: any, bonds: string[], proto: boolean, official: boolean, taken: string|null }>}
  */
 export function pickOptions(slotId, picks, data, kitted) {
   const slot = diySlot(slotId, data);
@@ -139,7 +139,7 @@ export function pickOptions(slotId, picks, data, kitted) {
       // the same tier: never twice; another tier: an owned operator only once (a prototype may repeat across tiers)
       if (tierOf(other) === slot.tier || !isPrototypePick(data, tierOf(other), charId)) { taken = other; break; }
     }
-    return { charId, unit: backups.units?.[charId] ?? null, bonds: backups.diy?.operators?.[charId]?.bonds ?? [], proto, taken };
+    return { charId, unit: backups.units?.[charId] ?? null, bonds: backups.diy?.operators?.[charId]?.bonds ?? [], proto, official: !!backups.diy?.officialPool?.includes(charId), taken };
   });
 }
 

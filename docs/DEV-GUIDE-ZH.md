@@ -45,6 +45,7 @@
 | `docs/FORGE-PLUGIN-DEV-GUIDE.md` | 中 | **Forge 导入包开发**：包结构、可导入字段、脚本/面板、报告与验证 |
 | `docs/FORGE-COMPATIBILITY.md` | 中 | Forge 兼容矩阵与明确不支持清单 |
 | `docs/PLUGIN-BACKLOG.md` | 中 | 插件问题清单、优先级、状态和建议排期 |
+| `docs/PLUGIN-RISKS.md` | 中 | 玩家版插件风险说明（外观 / 玩法 / 脚本 / 信任） |
 | `docs/UPSTREAM-DEV-TRIAGE.md` | 英/中 | 上游 `dev` 26 个提交的筛选与移植记录 |
 | `docs/TRUSTED-DEPLOY.md` | 中 | trusted 插件生产部署基线（非 root、只读 rootfs、cap、pin、consent） |
 | `docs/PLUGIN-REVIEW.md` | 中 | 插件体系架构、安全边界、运营台与残余风险 |
