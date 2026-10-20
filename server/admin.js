@@ -612,6 +612,11 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .drawer__check{display:flex;align-items:center;gap:7px;color:var(--text);font-size:12px}
 .drawer__check input{accent-color:var(--mint);width:15px;height:15px}
 .drawer__compat{display:flex;align-items:center;gap:5px 9px;flex-wrap:wrap;padding:10px 11px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.015)}
+.drawer__history{display:flex;flex-direction:column;gap:6px;font-size:11.5px;color:var(--dim)}
+.drawer__history:empty{display:none}
+.drawer__history b{color:var(--text);font-size:12px}
+.drawer-history-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px}
+.drawer-history-row button{padding:2px 7px;font-size:11px;border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:5px;cursor:pointer}
 .drawer__foot{display:flex;align-items:center;gap:7px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
 .drawer__foot .spacer{flex:1}
 .drawer__foot button{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:7px;padding:6px 11px;font:inherit;font-size:12px;cursor:pointer}
@@ -900,6 +905,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
             <label class="plugin-field" id="drawerRelatedRow"><span>关联插件（可多选）</span><select id="drawerRelated" multiple size="5"></select></label>
             <label class="drawer__check" id="drawerListedRow"><input id="drawerListed" type="checkbox"><span>上架到商城</span></label>
             <div id="drawerCompat" class="drawer__compat"></div>
+            <div id="drawerHistory" class="drawer__history"></div>
             <p id="drawerMsg" class="hint"></p>
           </div>
           <footer class="drawer__foot">
@@ -1266,7 +1272,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     };
     el('marketBody').innerHTML = market.filter(hit).map(function (x) {
       var listed = x.listed !== false;
-      var state = x.status === 'active' ? (listed ? '已上架' : '已下架') : (statusLabels[x.status] || x.status || '—');
+      var state = x.needsReview ? '需重新审核' : x.pendingUpdate ? ('新版本 v' + x.pendingUpdate.version + ' 待审') : x.status === 'active' ? (listed ? '已上架' : '已下架') : (statusLabels[x.status] || x.status || '—');
       var kind = x.kind === 'forge' ? 'Forge 包' : '普通插件';
       var cls = CLASS_LABELS[x.class] || x.class || '未声明';
       var compat = compatPills(x);
@@ -1275,7 +1281,8 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         + '<td><div class="plugin-badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span></div><div class="plugin-sub">' + esc(state) + '</div></td>'
         + '<td><div class="plugin-compat">' + compat.own + compat.main + '</div></td>'
         + '<td><div class="plugin-desc">' + esc(x.description || '—') + '</div><div class="plugin-sub">' + esc(x.author || '未填写作者') + '</div>'
-        + ((x.relatedPlugins || []).length ? '<div class="plugin-related">关联：<span>' + esc(x.relatedPlugins.map(function (r) { return r.name; }).join('、')) + '</span></div>' : '') + '</td>'
+        + ((x.relatedPlugins || []).length ? '<div class="plugin-related">关联：<span>' + esc(x.relatedPlugins.map(function (r) { return r.name; }).join('、')) + '</span></div>' : '')
+        + ((x.relatedBy || []).length ? '<div class="plugin-related">被关联：<span>' + esc(x.relatedBy.map(function (r) { return r.name; }).join('、')) + '</span></div>' : '') + '</td>'
         + '<td><label class="switch" title="上架 / 下架"><input type="checkbox" data-quick-listed' + (listed ? ' checked' : '') + '><span></span></label></td>'
         + '<td><div class="plugin-actions"><button type="button" class="row-action row-action--icon" data-move="up" title="上移">↑</button><button type="button" class="row-action row-action--icon" data-move="down" title="下移">↓</button><button type="button" class="row-action" data-edit>编辑</button></div></td>'
         + '</tr>';
@@ -1395,6 +1402,14 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     }).join('') || '<option disabled>没有其它插件可关联</option>';
     var compat = compatPills(item);
     el('drawerCompat').innerHTML = '<span class="compat-k">' + (mode === 'installed' ? '本机展示' : '商城展示') + '</span>' + compat.own + compat.main;
+    var history = Array.isArray(item.history) ? item.history : [];
+    var pending = item.pendingUpdate;
+    var relatedBy = Array.isArray(item.relatedBy) ? item.relatedBy : [];
+    el('drawerHistory').innerHTML = (pending ? '<b>待审核新版本 v' + esc(pending.version) + '</b>' : '')
+      + (relatedBy.length ? '<b>被这些插件关联</b><div>' + esc(relatedBy.map(function (r) { return r.name; }).join('、')) + '</div>' : '')
+      + (history.length ? '<b>历史版本</b>' + history.slice().reverse().map(function (h) {
+        return '<div class="drawer-history-row"><span>v' + esc(h.version) + ' · ' + esc(h.uploadedAt ? new Date(h.uploadedAt).toLocaleDateString() : '') + '</span><button type="button" data-rollback="' + esc(h.version) + '">回滚</button></div>';
+      }).join('') : '');
     el('drawerTest').hidden = mode === 'installed';
     el('drawerApprove').hidden = mode === 'installed';
     el('drawerReject').hidden = mode === 'installed';
@@ -1467,6 +1482,11 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
 
   el('pluginDrawer').addEventListener('click', function (e) {
     if (e.target.closest('[data-drawer-close]')) closePluginDrawer();
+    var rb = e.target.closest('[data-rollback]');
+    if (!rb || !pluginDrawerItem) return;
+    postMarket({ action: 'rollback', kind: pluginDrawerItem.kind, id: pluginDrawerItem.id, version: rb.dataset.rollback }, el('drawerMsg')).then(function (res) {
+      if (res && res.ok) closePluginDrawer();
+    });
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !el('pluginDrawer').hidden) closePluginDrawer();

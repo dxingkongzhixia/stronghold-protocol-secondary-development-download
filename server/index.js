@@ -42,7 +42,7 @@
 import http from 'node:http';
 import path from 'node:path';
 import { getData, loadData } from './data.js';
-import { readFileSync } from 'node:fs';
+import { createReadStream, readFileSync } from 'node:fs';
 import { openDb } from './db.mjs';
 import { AuthService } from './auth.js';
 import { CommunityService, bugReportsExport, bugReportsToCsv } from './community.js';
@@ -271,9 +271,63 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     return { key: `net:${key || ip || 'unknown'}`, accountId: null, name: null };
   }
 
+  /** Send a zip with Content-Length, Range and streaming (used by installed downloads; cached after the first). */
+  function sendZip(req, res, got) {
+    const total = Number(got.size || (got.bytes && got.bytes.length) || 0);
+    if (!total) { sendJson(req, res, 404, { error: 'zip not found' }); return; }
+    let start = 0;
+    let end = total - 1;
+    let status = 200;
+    const range = String(req.headers.range || '');
+    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (m && (m[1] || m[2])) {
+      if (m[1]) {
+        start = Number(m[1]);
+        if (m[2]) end = Math.min(Number(m[2]), total - 1);
+      } else {
+        const suffix = Number(m[2]);
+        start = Math.max(0, total - suffix);
+      }
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= total) {
+        res.writeHead(416, { 'Content-Range': `bytes */${total}`, 'Accept-Ranges': 'bytes' });
+        res.end();
+        return;
+      }
+      status = 206;
+    }
+    const headers = {
+      'Content-Type': 'application/zip',
+      'Content-Length': end - start + 1,
+      'Content-Disposition': `attachment; filename="${String(got.filename || 'plugin.zip').replace(/[^A-Za-z0-9._-]/g, '_')}"`,
+      'Cache-Control': 'no-store',
+      'Accept-Ranges': 'bytes',
+    };
+    if (status === 206) headers['Content-Range'] = `bytes ${start}-${end}/${total}`;
+    res.writeHead(status, headers);
+    if (req.method === 'HEAD') { res.end(); return; }
+    if (got.path && !got.bytes) {
+      createReadStream(got.path, { start, end }).pipe(res);
+      return;
+    }
+    res.end(Buffer.from(got.bytes).subarray(start, end + 1));
+  }
+
+  // Public upload throttle: five accepted zip uploads per network/account in ten minutes. Admin import is separate.
+  const marketUploadTimes = new Map();
+  function marketUploadAllowed(key) {
+    const now = Date.now();
+    const recent = (marketUploadTimes.get(key) || []).filter((t) => now - t < 10 * 60 * 1000);
+    if (recent.length >= 5) { marketUploadTimes.set(key, recent); return false; }
+    recent.push(now);
+    marketUploadTimes.set(key, recent);
+    if (marketUploadTimes.size > 500) {
+      for (const [k, times] of marketUploadTimes) if (!times.some((t) => now - t < 10 * 60 * 1000)) marketUploadTimes.delete(k);
+    }
+    return true;
+  }
+
   /** Public plugin marketplace: list/download active entries, raw-zip upload, admin review under /admin/api/market. */
-  async function marketRoute(req, res, parts) {
-    if (parts.rawPath === '/market/api/list') {
+  async function marketRoute(req, res, parts) {    if (parts.rawPath === '/market/api/list') {
       if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
       sendJson(req, res, 200, { now: Date.now(), plugins: market.list({ status: 'active' }), installed: market.installed() });
       return;
@@ -284,13 +338,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       let id; try { id = decodeURIComponent(installedDl[1]); } catch { sendJson(req, res, 400, { error: 'bad id' }); return; }
       const got = market.downloadInstalled(id);
       if (!got) { sendJson(req, res, 404, { error: 'installed plugin not found' }); return; }
-      res.writeHead(200, {
-        'Content-Type': 'application/zip',
-        'Content-Length': got.bytes.length,
-        'Content-Disposition': `attachment; filename="${got.filename.replace(/[^A-Za-z0-9._-]/g, '_')}"`,
-        'Cache-Control': 'no-store',
-      });
-      res.end(req.method === 'HEAD' ? undefined : got.bytes);
+      sendZip(req, res, got);
       return;
     }
     const dl = /^\/market\/api\/download\/(ordinary|forge)\/([^/]+)$/.exec(parts.rawPath);
@@ -310,10 +358,11 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/market/api/upload') {
       if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
+      const who = communityKey(req);
+      if (!marketUploadAllowed(who.key)) { sendJson(req, res, 429, { error: 'too many uploads; try again later' }); return; }
       const kind = new URLSearchParams(parts.query).get('kind');
       const bytes = await readRawBody(req, PLUGIN_LIMITS.pluginBytes + 1);
       if (bytes == null) { sendJson(req, res, 413, { error: 'zip is over the plugin size limit' }); return; }
-      const who = communityKey(req);
       try {
         const entry = await market.upload({ kind, bytes, filename: req.headers['x-plugin-filename'], uploadedBy: who.name || who.key });
         sendJson(req, res, 201, { ok: true, plugin: entry });
@@ -441,6 +490,11 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
         }
         if (action === 'move') {
           const r = market.move(kind, id, String(body.direction || ''));
+          sendJson(req, res, 200, r);
+          return;
+        }
+        if (action === 'rollback') {
+          const r = await market.rollback(kind, id, String(body.version || ''), { reviewer: 'admin' });
           sendJson(req, res, 200, r);
           return;
         }

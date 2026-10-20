@@ -63,9 +63,20 @@ POST /admin/api/market?token=...
 - `edit`：修改 `description` / `author` / `app` / `api` / `listed` / `related`；只改商城元数据，不碰 zip 或插件代码
 - `publish`：把 `plugins/<id>/` 打包为新的普通插件条目（`pending`），再由管理员测试 / 通过
 - `move`：调整同类条目的展示顺序（`direction: up | down`）
+- `rollback`：回滚到 `history` 中已审核过的版本（`{ version }`）
 - `POST /admin/api/market/import?kind=ordinary|forge`：后台直接导入 zip，进入待审核状态
 
-`related` 是其它插件 id 的列表（最多 16 个，不能含自己）。公开列表会解析为 `relatedPlugins`（名称 / 类型 / 状态），商城和后台都会显示「关联：…」。
+`related` 是其它插件 id 的列表（最多 16 个，不能含自己，必须存在于商城或本机插件中）。公开列表会解析为 `relatedPlugins`（名称 / 类型 / 状态）和 `relatedBy`（谁关联了本条），商城和后台都会显示。
+
+### 版本与重新审核
+
+已上架插件再次上传同 id 的新版本时，旧版本继续服务，新版本进入 `pendingUpdate`：
+
+- 公开列表和下载仍使用当前 active 版本
+- 管理员测试 / 通过后，旧版本进入 `history`（最多 10 个），新版本切换为 active
+- 可以从 `history` 回滚
+- 修改已上架条目的 `app` / `api` 会把 `needsReview` 置为 true：条目暂时从公开列表和下载接口移除，重新测试 / 通过后恢复
+- 所有商城编辑、审核、移动、回滚和本机元数据修改都会写入 `var/admin-audit.log`
 
 审核不会把插件放进游戏服务器的 `plugins/`，也不会执行插件脚本。
 
@@ -87,7 +98,9 @@ GET /market/api/download/<ordinary|forge>/<id>
 ```
 
 只有 `active` 可下载，返回 zip；每次下载计数加一。
-已安装但未上架的本机插件通过 `/market/api/installed/<id>/download` 按需打包下载；它们不计入商城下载数。
+已安装但未上架的本机插件通过 `/market/api/installed/<id>/download` 按需打包下载；它们不计入商城下载数。第一次打包会按 `id-version-bytes` 缓存到 `var/plugin-market/installed/`，之后直接以流式 + HTTP Range 返回，支持断点续传和 HEAD。
+
+公开上传有基础限流：同一网络/账号 10 分钟内最多 5 次成功提交；管理员后台导入不受此限制。所有商城写操作（编辑、审核、移动、回滚、本机元数据）写入 `var/admin-audit.log`。
 
 ### 不影响主服务带宽
 

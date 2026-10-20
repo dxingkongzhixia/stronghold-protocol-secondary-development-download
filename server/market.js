@@ -83,6 +83,12 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     fs.renameSync(tmp, indexFile);
   };
   const keyOf = (kind, id) => `${kind}:${id}`;
+  const audit = (action, detail) => {
+    try {
+      fs.mkdirSync(path.join(root, 'var'), { recursive: true });
+      fs.appendFileSync(path.join(root, 'var', 'admin-audit.log'), `${JSON.stringify({ at: new Date().toISOString(), action, ...detail })}\n`);
+    } catch { /* audit must not break the operation */ }
+  };
   const relatedOf = (ids) => (Array.isArray(ids) ? ids : []).slice(0, 16).map((id) => {
     const m = index.entries.find((x) => x.id === id);
     if (m) return { id, name: m.name || id, kind: m.kind, class: m.class || null, status: m.status };
@@ -100,9 +106,18 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       description: e.description || null, class: e.class || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
       uploadedAt: e.uploadedAt, uploadedBy: e.uploadedBy || null, reviewedAt: e.reviewedAt || null,
       downloads: e.downloads || 0, app: compat.app, api: compat.api, compat, listed: e.listed !== false,
-      order: Number.isFinite(e.order) ? e.order : 0,
+      order: Number.isFinite(e.order) ? e.order : 0, needsReview: e.needsReview === true,
+      pendingUpdate: e.pending ? {
+        version: e.pending.version, bytes: e.pending.bytes, sha256: e.pending.sha256,
+        uploadedAt: e.pending.uploadedAt, uploadedBy: e.pending.uploadedBy || null, filename: e.pending.filename || null,
+      } : null,
+      history: (Array.isArray(e.history) ? e.history : []).slice(-10).map((h) => ({
+        version: h.version, bytes: h.bytes, sha256: h.sha256, uploadedAt: h.uploadedAt,
+      })),
       related: Array.isArray(e.related) ? [...e.related] : [], relatedPlugins: relatedOf(e.related),
-      download: e.status === 'active' && e.listed !== false ? `/market/api/download/${e.kind}/${encodeURIComponent(e.id)}` : null,
+      relatedBy: index.entries.filter((x) => x.id !== e.id && Array.isArray(x.related) && x.related.includes(e.id))
+        .map((x) => ({ id: x.id, name: x.name || x.id, kind: x.kind, class: x.class || null })),
+      download: e.status === 'active' && e.listed !== false && e.needsReview !== true ? `/market/api/download/${e.kind}/${encodeURIComponent(e.id)}` : null,
       sources: mirrors,
       reviewNote: e.reviewNote || null,
     };
@@ -138,23 +153,48 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     const meta = await inspect(kind, bytes);
     const key = keyOf(kind, meta.id);
     const existing = index.entries.find((e) => keyOf(e.kind, e.id) === key);
-    if (existing && existing.status !== 'rejected') throw new Error(`plugin ${meta.id} is already ${existing.status}`);
+    const now = Date.now();
+    const file = `${kind}/${safePart(meta.id)}-${safePart(meta.version)}.zip`;
+    const incoming = {
+      version: meta.version, file, bytes: bytes.length, sha256: sha256(bytes),
+      filename: String(filename || '').slice(0, 120), uploadedAt: now, uploadedBy: uploadedBy || null,
+      name: meta.name || meta.id, author: meta.author || null, description: meta.description || null,
+      class: meta.class || null, app: meta.app || null, api: meta.api ?? null,
+    };
+    if (existing && existing.status === 'active') {
+      if (meta.version === existing.version) throw new Error(`plugin ${meta.id}@${meta.version} is already active`);
+      fs.writeFileSync(path.join(base, file), bytes);
+      existing.pending = incoming;
+      existing.updatedAt = now;
+      existing.updatedBy = uploadedBy || null;
+      save();
+      audit('market-stage-update', { kind, id: meta.id, version: meta.version, by: uploadedBy || null });
+      log.info?.(`[market] staged update ${kind}/${meta.id}@${meta.version} (pending; active ${existing.version} kept)`);
+      return publicEntry(existing);
+    }
+    if (existing && existing.status === 'pending') {
+      try { fs.rmSync(path.join(base, existing.file), { force: true }); } catch { /* ignore */ }
+      fs.writeFileSync(path.join(base, file), bytes);
+      Object.assign(existing, incoming, { status: 'pending', pending: null, needsReview: false });
+      save();
+      log.info?.(`[market] replaced pending ${kind}/${meta.id}@${meta.version}`);
+      return publicEntry(existing);
+    }
     if (existing) {
       try { fs.rmSync(path.join(base, existing.file), { force: true }); } catch { /* ignore */ }
       index.entries = index.entries.filter((e) => e !== existing);
     }
-    const file = `${kind}/${safePart(meta.id)}-${safePart(meta.version)}.zip`;
     fs.writeFileSync(path.join(base, file), bytes);
     const entry = {
-      kind, id: meta.id, name: meta.name || meta.id, version: meta.version, author: meta.author || null,
-      description: meta.description || null, class: meta.class || null, app: meta.app || null, api: meta.api ?? null,
-      file, bytes: bytes.length, sha256: sha256(bytes),
-      status: 'pending', listed: true, order: Math.max(0, ...index.entries.map((x) => Number(x.order) || 0)) + 1,
-      related: [], uploadedAt: Date.now(), uploadedBy: uploadedBy || null, reviewedAt: null, reviewedBy: null,
-      reviewNote: null, downloads: 0, filename: String(filename || '').slice(0, 120),
+      ...incoming,
+      kind, id: meta.id, status: 'pending', listed: true,
+      order: Math.max(0, ...index.entries.map((x) => Number(x.order) || 0)) + 1,
+      related: [], reviewedAt: null, reviewedBy: null, reviewNote: null, downloads: 0,
+      pending: null, history: [], needsReview: false,
     };
     index.entries.push(entry);
     save();
+    audit('market-upload', { kind, id: meta.id, version: meta.version, by: uploadedBy || null });
     log.info?.(`[market] uploaded ${kind}/${meta.id}@${meta.version} (${bytes.length} bytes, pending)`);
     return publicEntry(entry);
   }
@@ -166,7 +206,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
   async function test(kind, id, log = noopLog) {
     const e = get(kind, id);
     if (!e) throw new Error('plugin not found');
-    const zip = path.join(base, e.file);
+    const zip = path.join(base, (e.pending && e.pending.file) || e.file);
     if (!fs.existsSync(zip)) throw new Error('stored zip is missing');
     const tmp = fs.mkdtempSync(path.join(root, 'var', 'market-test-'));
     const pluginsDir = path.join(tmp, 'plugins');
@@ -225,13 +265,21 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
         || fields.related.some((x) => typeof x !== 'string' || !isPluginId(x) || x === id)) {
         throw new Error('related must be a list of other plugin ids (max 16)');
       }
+      const known = new Set(index.entries.map((x) => x.id));
+      if (registry && typeof registry.plugins === 'function') for (const p of registry.plugins()) known.add(p.id);
+      const missing = fields.related.filter((x) => !known.has(x));
+      if (missing.length) throw new Error(`related plugin not found: ${missing.join(', ')}`);
       next.related = [...new Set(fields.related)];
     }
     if (!Object.keys(next).length) throw new Error('no editable field supplied');
+    const beforeApp = e.app ?? null;
+    const beforeApi = e.api ?? null;
     Object.assign(e, next);
+    if (e.status === 'active' && (beforeApp !== (e.app ?? null) || beforeApi !== (e.api ?? null))) e.needsReview = true;
     e.updatedAt = Date.now();
     e.updatedBy = reviewer || null;
     save();
+    audit('market-edit', { kind, id, fields: Object.keys(next), by: reviewer || null, needsReview: e.needsReview === true });
     log.info?.(`[market] edited ${kind}/${id}: ${Object.keys(next).join(', ')}`);
     return publicEntry(e);
   }
@@ -251,6 +299,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     rows[i].order = rows[j].order;
     rows[j].order = tmp;
     save();
+    audit('market-move', { kind, id, direction });
     return { ok: true, moved: true, entry: publicEntry(rows[i]) };
   }
 
@@ -262,24 +311,75 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       const r = await test(kind, id, log);
       e.reviewedAt = Date.now(); e.reviewedBy = reviewer; e.reviewNote = String(note || '').slice(0, 500);
       save();
+      audit('market-test', { kind, id, by: reviewer || null });
       return { ok: true, action, result: r, entry: publicEntry(e) };
     }
     if (action === 'reject') {
+      if (e.pending) {
+        e.pending = null;
+        e.reviewedAt = Date.now(); e.reviewedBy = reviewer;
+        e.reviewNote = String(note || '').slice(0, 500); save();
+        audit('market-reject-update', { kind, id, by: reviewer || null });
+        return { ok: true, action, entry: publicEntry(e) };
+      }
       e.status = 'rejected'; e.reviewedAt = Date.now(); e.reviewedBy = reviewer;
       e.reviewNote = String(note || '').slice(0, 500); save();
+      audit('market-reject', { kind, id, by: reviewer || null });
       return { ok: true, action, entry: publicEntry(e) };
     }
-    if (e.status === 'active') return { ok: true, action, entry: publicEntry(e) };
+    if (e.status === 'active' && !e.pending && e.needsReview !== true) return { ok: true, action, entry: publicEntry(e) };
     const result = await test(kind, id, log);
-    e.status = 'active'; e.reviewedAt = Date.now(); e.reviewedBy = reviewer;
+    if (e.pending) {
+      const current = {
+        version: e.version, file: e.file, bytes: e.bytes, sha256: e.sha256, uploadedAt: e.uploadedAt,
+        name: e.name, author: e.author, description: e.description, class: e.class, app: e.app, api: e.api,
+      };
+      e.history = [...(Array.isArray(e.history) ? e.history : []), current].slice(-10);
+      const next = e.pending;
+      e.version = next.version; e.file = next.file; e.bytes = next.bytes; e.sha256 = next.sha256;
+      e.uploadedAt = next.uploadedAt; e.uploadedBy = next.uploadedBy || null;
+      e.name = next.name || e.name; e.author = next.author || e.author;
+      e.description = next.description || e.description; e.class = next.class || e.class;
+      e.app = next.app || null; e.api = next.api ?? null;
+      e.pending = null;
+    }
+    e.status = 'active'; e.needsReview = false;
+    e.reviewedAt = Date.now(); e.reviewedBy = reviewer;
     e.reviewNote = String(note || '').slice(0, 500); e.test = { at: Date.now(), warnings: result.warnings || 0 };
     save();
+    audit('market-approve', { kind, id, version: e.version, by: reviewer || null });
     log.info?.(`[market] approved ${kind}/${id}${reviewer ? ` by ${reviewer}` : ''}`);
     return { ok: true, action, result, entry: publicEntry(e) };
   }
 
+  /** Restore an archived active version and archive the current one (the archived version was reviewed before). */
+  async function rollback(kind, id, version, { reviewer = null } = {}) {
+    const e = get(kind, id);
+    if (!e || e.status !== 'active') throw new Error('active plugin not found');
+    const history = Array.isArray(e.history) ? e.history : [];
+    const target = history.find((h) => h.version === version);
+    if (!target) throw new Error('version not found in history');
+    const zip = path.join(base, target.file);
+    if (!fs.existsSync(zip)) throw new Error('archived zip is missing');
+    const previous = {
+      version: e.version, file: e.file, bytes: e.bytes, sha256: e.sha256, uploadedAt: e.uploadedAt,
+      name: e.name, author: e.author, description: e.description, class: e.class, app: e.app, api: e.api,
+    };
+    e.version = target.version; e.file = target.file; e.bytes = target.bytes; e.sha256 = target.sha256;
+    e.uploadedAt = target.uploadedAt; e.name = target.name || e.name; e.author = target.author || e.author;
+    e.description = target.description || e.description; e.class = target.class || e.class;
+    e.app = target.app || null; e.api = target.api ?? null;
+    e.history = [...history.filter((h) => h !== target), previous].slice(-10);
+    e.pending = null; e.needsReview = false; e.status = 'active';
+    e.reviewedAt = Date.now(); e.reviewedBy = reviewer;
+    save();
+    audit('market-rollback', { kind, id, version, by: reviewer || null });
+    log.info?.(`[market] rolled back ${kind}/${id} to ${version}${reviewer ? ` by ${reviewer}` : ''}`);
+    return { ok: true, entry: publicEntry(e) };
+  }
+
   function list({ status = 'active', admin = false } = {}) {
-    const rows = index.entries.filter((e) => admin || (e.status === status && e.listed !== false));
+    const rows = index.entries.filter((e) => admin || (e.status === status && e.listed !== false && e.needsReview !== true));
     return rows.map(publicEntry).sort((a, b) => (a.order || 0) - (b.order || 0) || (b.uploadedAt || 0) - (a.uploadedAt || 0));
   }
 
@@ -310,6 +410,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     if (!Object.keys(next).length) throw new Error('no editable field supplied');
     installedMeta[id] = { ...next, updatedAt: Date.now(), updatedBy: reviewer || null };
     saveInstalledMeta();
+    audit('installed-meta-edit', { id, fields: Object.keys(next), by: reviewer || null });
     log.info?.(`[market] edited installed/${id}: ${Object.keys(next).join(', ')}`);
     return installed().find((x) => x.id === id) || null;
   }
@@ -358,14 +459,25 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return entries.length ? { p, entries } : null;
   }
 
-  /** Zip an installed plugin folder on demand (the marketplace's download for a live plugins/<id>). */
+  /** Zip an installed plugin folder on demand; reuse a cached archive for the same version/byte count. */
   function downloadInstalled(id) {
     const got = installedFiles(id);
     if (!got) return null;
+    const version = got.p.manifest?.version || '1.0.0';
+    const cacheDir = path.join(base, 'installed');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    const cacheFile = path.join(cacheDir, `${safePart(id)}-${safePart(version)}-${got.p.bytes || 0}.zip`);
+    try {
+      const st = fs.statSync(cacheFile);
+      if (st.isFile() && st.size > 0) {
+        return { entry: { id: got.p.id, version }, path: cacheFile, size: st.size, filename: `${got.p.id}-${version}.zip` };
+      }
+    } catch { /* build it */ }
+    const bytes = zipFiles(got.entries);
+    try { fs.writeFileSync(cacheFile, bytes); } catch { /* serve from memory if the cache is read-only */ }
     return {
-      entry: { id: got.p.id, version: got.p.manifest?.version || '1.0.0' },
-      bytes: zipFiles(got.entries),
-      filename: `${got.p.id}-${got.p.manifest?.version || '1.0.0'}.zip`,
+      entry: { id: got.p.id, version }, bytes, size: bytes.length, path: cacheFile,
+      filename: `${got.p.id}-${version}.zip`,
     };
   }
 
@@ -397,7 +509,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
 
   function download(kind, id) {
     const e = get(kind, id);
-    if (!e || e.status !== 'active' || e.listed === false) return null;
+    if (!e || e.status !== 'active' || e.listed === false || e.needsReview === true) return null;
     const file = path.join(base, e.file);
     if (!fs.existsSync(file)) return null;
     e.downloads = (e.downloads || 0) + 1;
@@ -405,5 +517,5 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return { entry: e, bytes: fs.readFileSync(file), filename: `${e.id}-${e.version}.zip` };
   }
 
-  return { base, upload, test, review, edit, editInstalled, move, list, installed, download, downloadInstalled, publishInstalled, get, indexFile };
+  return { base, upload, test, review, edit, editInstalled, move, rollback, list, installed, download, downloadInstalled, publishInstalled, get, indexFile };
 }

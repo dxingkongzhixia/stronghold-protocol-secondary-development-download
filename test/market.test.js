@@ -30,7 +30,8 @@ test('market: upload pending, review/test/approve, active download, duplicate an
   assert.equal(uploaded.kind, 'ordinary');
   assert.equal(market.list({ status: 'active' }).length, 0);
   assert.equal(market.list({ admin: true }).length, 1);
-  await assert.rejects(() => market.upload({ kind: 'ordinary', bytes: ordinary }), /already pending/);
+  const replaced = await market.upload({ kind: 'ordinary', bytes: ordinary });
+  assert.equal(replaced.status, 'pending', 'a pending entry can be replaced before approval');
   const tested = await market.review('ordinary', 'data-demo', 'test', { reviewer: 'admin' });
   assert.equal(tested.ok, true);
   const approved = await market.review('ordinary', 'data-demo', 'approve', { reviewer: 'admin' });
@@ -46,7 +47,11 @@ test('market: upload pending, review/test/approve, active download, duplicate an
   assert.equal(market.list({ status: 'active' }).length, 0, 'an unlisted entry leaves the public list');
   assert.equal(market.download('ordinary', 'data-demo'), null);
   const listed = market.edit('ordinary', 'data-demo', { listed: true }, { reviewer: 'admin' });
-  assert.equal(listed.download, '/market/api/download/ordinary/data-demo');
+  assert.equal(listed.needsReview, true, 'changing app/API asks for a new review');
+  assert.equal(listed.download, null);
+  await market.review('ordinary', 'data-demo', 'test', { reviewer: 'admin' });
+  const restored = await market.review('ordinary', 'data-demo', 'approve', { reviewer: 'admin' });
+  assert.equal(restored.entry.download, '/market/api/download/ordinary/data-demo');
   assert.equal(market.download('ordinary', 'data-demo').bytes.length, ordinary.length);
   assert.throws(() => market.edit('ordinary', 'data-demo', { app: 'not a range' }), /version range/);
   assert.equal(market.download('ordinary', 'missing'), null);
@@ -86,6 +91,33 @@ test('market: compatibility says whether mainline 0.3.x / this 0.4.x build can u
   assert.deepEqual([unrestricted.compat.unrestricted, unrestricted.compat.ok], [true, true]);
   const forged = await market.upload({ kind: 'forge', bytes: zipDir(path.join(ROOT, 'test/fixtures/forge/numbers-pack')) });
   assert.equal(forged.compat.ok, null, 'a Forge pack is accepted only after its import test');
+});
+
+test('market: active plugins can stage a new version, approve it and roll back', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-version-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const market = createPluginMarket({ root });
+  const dir = path.join(ROOT, 'plugins/_template/cosmetic');
+  const versionZip = (version) => zipFiles(entriesOf(dir).map((e) => {
+    if (e.name !== 'plugin.json') return e;
+    const man = JSON.parse(Buffer.from(e.data).toString('utf8'));
+    man.id = 'demo-update';
+    man.version = version;
+    man.app = '>=0.4.0 <0.5.0';
+    return { name: e.name, data: Buffer.from(JSON.stringify(man, null, 2)) };
+  }));
+  await market.upload({ kind: 'ordinary', bytes: versionZip('1.0.0') });
+  await market.review('ordinary', 'demo-update', 'approve', { reviewer: 'admin' });
+  const staged = await market.upload({ kind: 'ordinary', bytes: versionZip('2.0.0') });
+  assert.equal(staged.version, '1.0.0', 'the active version stays live');
+  assert.equal(staged.pendingUpdate.version, '2.0.0');
+  assert.equal(market.download('ordinary', 'demo-update').entry.version, '1.0.0');
+  const approved = await market.review('ordinary', 'demo-update', 'approve', { reviewer: 'admin' });
+  assert.equal(approved.entry.version, '2.0.0');
+  assert.equal(approved.entry.history[0].version, '1.0.0');
+  const back = await market.rollback('ordinary', 'demo-update', '1.0.0', { reviewer: 'admin' });
+  assert.equal(back.entry.version, '1.0.0');
+  assert.equal(back.entry.history[0].version, '2.0.0');
 });
 
 test('market: order, move and related plugin bindings', async (t) => {
@@ -129,6 +161,8 @@ test('market lists live installed plugins separately from store entries', async 
     );
     const zip = market.downloadInstalled('local-skin');
     assert.ok(zip && zip.bytes.length > 0);
+    const cached = market.downloadInstalled('local-skin');
+    assert.ok(cached && cached.path && !cached.bytes && cached.size === zip.size);
     const edited = market.editInstalled('local-skin', { description: '本机说明', author: 'owner', app: '>=0.4.0 <0.5.0', api: 2 }, { reviewer: 'admin' });
     assert.deepEqual([edited.description, edited.author, edited.app, edited.api, edited.compat.own], ['本机说明', 'owner', '>=0.4.0 <0.5.0', 2, true]);
     const published = await market.publishInstalled('local-skin', { reviewer: 'admin' });

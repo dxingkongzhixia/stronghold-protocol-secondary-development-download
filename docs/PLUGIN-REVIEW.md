@@ -174,6 +174,10 @@ plugin.json + entry.sim/meta
 - **诊断与内容**：房间 `cs` / `vs` / `modeId`、插件列表、脚本 / 信任状态、trusted consent、Forge 导入和 skipped / warnings
 - **浅色 / 深色模式**：只影响运营台外观，不改变服务端数据
 - **AI 接管预留接口**：`GET/POST /admin/api/plugins/ai` 与人类后台共用 admin token；GET 返回能力声明，POST 当前 501，未启用执行器
+- **版本生命周期**：已上架插件的新版本进入 `pendingUpdate`，旧版本继续服务；通过后旧版本进入 `history`，可回滚
+- **重新审核**：修改已上架条目的 `app` / `api` 会置 `needsReview`，暂时从公开列表/下载移除，测试通过后恢复
+- **下载与限流**：本机插件 zip 按版本缓存，使用流式 + HTTP Range；公开上传按网络/账号限流
+- **审计**：商城编辑、审核、排序、回滚和本机元数据修改写入 `var/admin-audit.log`
 
 后端 `buildSnapshot` 携带 `plugins` 快照（含商城条目、安装元数据和策略）；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
 
