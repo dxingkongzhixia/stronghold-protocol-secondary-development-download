@@ -339,7 +339,21 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   /** Public plugin marketplace: list/download active entries, raw-zip upload, admin review under /admin/api/market. */
   async function marketRoute(req, res, parts) {    if (parts.rawPath === '/market/api/list') {
       if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
-      sendJson(req, res, 200, { now: Date.now(), plugins: market.list({ status: 'active' }), installed: market.installed() });
+      const qs = new URLSearchParams(parts.query);
+      const q = qs.get('q') || '';
+      const kind = qs.get('kind') || '';
+      const cls = qs.get('class') || '';
+      const page = Number(qs.get('page') || 1);
+      const limit = Number(qs.get('limit') || 20);
+      const paged = q || kind || cls || page > 1 || qs.has('limit')
+        ? market.listPage({ q, kind, cls, page, limit })
+        : null;
+      sendJson(req, res, 200, {
+        now: Date.now(),
+        plugins: paged ? paged.items : market.list({ status: 'active' }),
+        installed: market.installed(),
+        pagination: paged ? { total: paged.total, page: paged.page, pages: paged.pages, limit: paged.limit, counts: paged.counts } : null,
+      });
       return;
     }
     const installedDl = /^\/market\/api\/installed\/([^/]+)\/download$/.exec(parts.rawPath);
@@ -550,7 +564,19 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (marketAdmin) {
       if (req.method === 'GET' || req.method === 'HEAD') {
-        sendJson(req, res, 200, { plugins: market.list({ admin: true }) });
+        const qs = new URLSearchParams(parts.query);
+        const q = qs.get('q') || '';
+        const kind = qs.get('kind') || '';
+        const cls = qs.get('class') || '';
+        const page = Number(qs.get('page') || 1);
+        const limit = Number(qs.get('limit') || 20);
+        const paged = q || kind || cls || page > 1 || qs.has('limit')
+          ? market.listPage({ admin: true, q, kind, cls, page, limit })
+          : null;
+        sendJson(req, res, 200, {
+          plugins: paged ? paged.items : market.list({ admin: true }),
+          pagination: paged ? { total: paged.total, page: paged.page, pages: paged.pages, limit: paged.limit } : null,
+        });
         return;
       }
       if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); sendJson(req, res, 405, { error: 'GET or POST required' }); return; }

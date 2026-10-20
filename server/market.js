@@ -572,6 +572,26 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return rows.map(publicEntry).sort((a, b) => (a.order || 0) - (b.order || 0) || (b.uploadedAt || 0) - (a.uploadedAt || 0));
   }
 
+  /** Paged/filtered listing for API clients; `list()` remains the unpaged compatibility form. */
+  function listPage({ status = 'active', admin = false, q = '', kind = '', cls = '', page = 1, limit = 20 } = {}) {
+    const query = String(q || '').trim().toLowerCase();
+    const rows = index.entries.filter((e) => {
+      if (!admin && (e.status !== status || e.listed === false || e.needsReview === true)) return false;
+      if (kind && e.kind !== kind) return false;
+      if (cls && e.class !== cls) return false;
+      if (!query) return true;
+      return [e.id, e.name, e.author, e.description, e.class, e.kind]
+        .some((x) => String(x || '').toLowerCase().includes(query));
+    }).map(publicEntry).sort((a, b) => (a.order || 0) - (b.order || 0) || (b.uploadedAt || 0) - (a.uploadedAt || 0));
+    const size = Math.min(100, Math.max(1, Number(limit) || 20));
+    const pages = Math.max(1, Math.ceil(rows.length / size));
+    const at = Math.min(pages, Math.max(1, Number(page) || 1));
+    const counts = { ordinary: 0, forge: 0, installed: 0 };
+    for (const e of index.entries) if (e.status === 'active' && e.listed !== false && e.needsReview !== true && e.kind in counts) counts[e.kind]++;
+    counts.installed = installed().length;
+    return { items: rows.slice((at - 1) * size, at * size), total: rows.length, page: at, pages, limit: size, counts };
+  }
+
   /** Edit display-only metadata for an installed plugin (never touches the files in plugins/). */
   function editInstalled(id, fields, { reviewer = null } = {}) {
     if (!fields || typeof fields !== 'object' || Array.isArray(fields)) throw new Error('fields object required');
@@ -706,5 +726,5 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return { entry: e, bytes: fs.readFileSync(file), filename: `${e.id}-${e.version}.zip` };
   }
 
-  return { base, upload, test, review, edit, editInstalled, move, reorder, rollback, gc, list, installed, download, downloadInstalled, publishInstalled, get, indexFile, publicKeys, addSigningKey, revokeSigningKey, setSignaturePolicy };
+  return { base, upload, test, review, edit, editInstalled, move, reorder, rollback, gc, list, listPage, installed, download, downloadInstalled, publishInstalled, get, indexFile, publicKeys, addSigningKey, revokeSigningKey, setSignaturePolicy };
 }

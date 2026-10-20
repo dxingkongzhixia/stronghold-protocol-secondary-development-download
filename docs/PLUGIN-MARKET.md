@@ -28,7 +28,7 @@ var/plugin-market/
 
 只有 `active` 出现在公开列表和下载接口。
 
-`GET /market/api/list` 同时返回 `installed`：游戏服务器 `plugins/` 目录里已加载、但尚未上架商城的插件。页面会把它们显示在「本机已安装」区，并可通过 `/market/api/installed/<id>/download` 下载服务器上的当前安装目录。
+`GET /market/api/list` 同时返回 `installed`。可带 `q` / `kind` / `class` / `page` / `limit` 做服务端搜索分页，返回 `pagination: { total, page, pages, limit, counts }`；不带这些参数时保持原来的全量兼容响应。`installed` 是本机 `plugins/` 目录里已加载、但尚未上架商城的插件；页面显示在「本机已安装」区，并可通过 `/market/api/installed/<id>/download` 下载服务器上的当前安装目录。
 
 每个条目还带 `app`（声明的游戏版本范围）、`api`（插件 API level）和 `compat`（`ok` / `own` / `mainline` / `auto` / `unrestricted`），用于页面直接显示主线 0.3.x / 本服 0.4.x 的兼容性。
 
