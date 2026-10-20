@@ -187,7 +187,11 @@ export async function startServer(opts = {}) {
   const db = accounts ? (opts.db || openDb(opts.dbFile || process.env.SP_DB || path.join(ROOT, 'var', 'accounts.db'))) : null;
   const auth = accounts ? (opts.auth || new AuthService({ db })) : null;
   // Operations page (server/admin.js): enabled with accounts; the token file is `var/admin-token.txt`.
-  const admin = auth ? { token: opts.adminToken || loadAdminToken(ROOT) } : null;
+  const admin = auth ? {
+    token: opts.adminToken || loadAdminToken(ROOT),
+    readonlyToken: opts.adminReadonlyToken || process.env.SP_ADMIN_READONLY_TOKEN || '',
+    reviewerToken: opts.adminReviewerToken || process.env.SP_ADMIN_REVIEWER_TOKEN || '',
+  } : null;
 // 测速 (server/speed.js, docs/MATCHMAKING.md §12.2): the console times the art origins from here on demand. Created
 // only with the admin page; the cooldown inside the probe keeps a refresh-happy operator off the free mirrors.
 const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
@@ -403,8 +407,20 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
     const provided = queryToken || req.headers['x-admin-token'] || cookieValue(req.headers.cookie, 'sp_admin') || '';
-    if (!tokenMatches(provided, admin.token)) {
+    const adminRole = tokenMatches(provided, admin.token) ? 'owner'
+      : tokenMatches(provided, admin.reviewerToken) ? 'reviewer'
+        : tokenMatches(provided, admin.readonlyToken) ? 'readonly' : null;
+    if (!adminRole) {
       sendError(req, res, 403, '需要管理令牌 · Admin token required', '令牌见 var/admin-token.txt（或启动日志的 Admin 链接）');
+      return;
+    }
+    const adminWrite = req.method !== 'GET' && req.method !== 'HEAD';
+    if (adminWrite && adminRole === 'readonly') {
+      sendJson(req, res, 403, { error: 'read-only admin token' });
+      return;
+    }
+    if (adminWrite && adminRole === 'reviewer' && !marketAdmin) {
+      sendJson(req, res, 403, { error: 'reviewer token can only write marketplace review endpoints' });
       return;
     }
     // Remember a valid ?token= in a cookie for 30 days, so plain /admin links (the lobby's 在线 badge) work.

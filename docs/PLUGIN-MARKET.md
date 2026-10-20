@@ -126,6 +126,14 @@ X-Plugin-Signature: <base64 Ed25519 signature over the raw zip bytes>
 - 签名只证明 zip 来源和完整性，不替代管理员测试、沙箱或 review
 - 后台「诊断与内容 → 签名密钥」可添加/撤销公钥，并设置哪些 class 必须签名；信任根仍只由 owner 的 admin token 管理
 
+### 管理员 token 角色
+
+- `var/admin-token.txt`：owner，全部后台写操作
+- `SP_ADMIN_REVIEWER_TOKEN`：只能写商城审核/编辑类接口，不能安装/卸载/通知/策略/密钥
+- `SP_ADMIN_READONLY_TOKEN`：只能 GET/HEAD
+
+token 文件和环境变量都不进仓库。
+
 ### 后台安装 / 卸载
 
 ```http

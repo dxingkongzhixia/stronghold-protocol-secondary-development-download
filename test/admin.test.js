@@ -404,6 +404,18 @@ test('POST /admin/api/plugins/install and /uninstall move a plugin folder', asyn
   }
 });
 
+test('read-only admin token can read but not write', async () => {
+  const srv = await startServer({ port: 0, quiet: true, accounts: true, db: openMemoryDb(), adminToken: 'testtok', adminReadonlyToken: 'readtok' });
+  try {
+    const base = `http://localhost:${srv.port}`;
+    assert.equal((await fetch(`${base}/admin/api/state?token=readtok`)).status, 200);
+    assert.equal((await fetch(`${base}/admin/api/notify?token=readtok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"text":"x","sign":"x"}' })).status, 403);
+    assert.equal((await fetch(`${base}/admin/api/state?token=testtok`)).status, 200);
+  } finally {
+    await srv.close();
+  }
+});
+
 test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and the owner policy', (t) => {
   const forgeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-admin-forge-'));
   t.after(() => fs.rmSync(forgeDir, { recursive: true, force: true }));
