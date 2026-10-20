@@ -344,11 +344,12 @@ function assertNameSet(fileNames, dirNames = []) {
  * would not be one atomic commit. [ASSUMED]
  * @returns {{ code: string, detail: string } | null}
  */
-function commitProducts(stage, parent, products, primaryId, markdown, repack = null) {
+function commitProducts(stage, parent, products, primaryId, markdown, repack = null, provenance = null) {
   /** @type {string[]} */
   const created = [];
   try {
     fs.writeFileSync(path.join(stage, primaryId, 'IMPORT-REPORT.md'), markdown);
+    if (provenance) fs.writeFileSync(path.join(stage, primaryId, 'forge-import.json'), JSON.stringify(provenance, null, 2));
     // A script plugin runs only with a lock that lists every file, the report included (registry readScripts).
     if (repack) repack(path.join(stage, primaryId));
     for (const p of products) {
@@ -3299,7 +3300,14 @@ export async function importForge(source, opts = {}) {
           const again = packPlugin(dir, { vanilla: vanilla || undefined, where: `plugins/${primary.id}/` });
           if (!again.wrote) throw new ForgeImportError('PLUGIN_FORGE_ZIP', `${primary.id}: the lock could not be written again`);
         } : null;
-        const committed = commitProducts(stage, parent, built.products, primary.id, md, repack);
+        const provenance = {
+          version: 1, pack: report.pack, primary: report.primary,
+          products: report.products.map((p) => ({ id: p.id, class: p.class, dir: p.dir })),
+          skipped: report.skipped.length, assumed: report.assumed.length,
+          partial: !!report.partial, manualReasons: report.manualReasons?.length || 0,
+          dropped: report.dropped || null, report: 'IMPORT-REPORT.md', importedAt: new Date().toISOString(),
+        };
+        const committed = commitProducts(stage, parent, built.products, primary.id, md, repack, provenance);
         if (committed) {
           issues.push(committed);
           const failed = publicReport({

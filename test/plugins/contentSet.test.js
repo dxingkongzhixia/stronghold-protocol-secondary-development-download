@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildContentSet, contentSetFiles } from '../../server/plugins/contentSet.js';
+import { readPolicy } from '../../server/plugins/policy.js';
 import { computeVanillaContent, nodeSha256 } from '../../server/plugins/identity.js';
 import { DATA_SHIM_JS } from '../../server/http/static.js';
 import { contentHashOf } from '../../shared/plugins/identity.js';
@@ -220,4 +221,9 @@ test('allowIncompatible is an explicit owner opt-in for reviewed 0.3.x content',
   const allowed = buildContentSet({ registry: f.registry, ids: ['data-demo'], allowIncompatible: true });
   assert.deepEqual(allowed.problems, []);
   assert.equal(allowed.data.bonds.deputShip.bb.base_def, 0.3);
+  assert.ok(buildContentSet({ registry: f.registry, ids: ['data-demo'], allowIncompatible: ['another-plugin'] }).problems.length, 'a list only admits its own ids');
+  assert.deepEqual(buildContentSet({ registry: f.registry, ids: ['data-demo'], allowIncompatible: ['data-demo'] }).problems, []);
+  const pol = readPolicy({ allowIncompatible: ['data-demo'] }, { env: {} });
+  assert.deepEqual(pol.policy.allowIncompatible, ['data-demo']);
+  assert.match(readPolicy({ allowIncompatible: ['Bad Id'] }, { env: {} }).problems.join('\n'), /allowIncompatible/);
 });

@@ -3,6 +3,23 @@
    ========================================================================================== */
 
 .room-screen .topbar { height: 1.36rem; }
+/* trusted-plugin consent: a blocking notice above the seats; only the local seat can answer it */
+.trusted-consent {
+  margin: .1rem .2rem 0;
+  padding: .1rem .16rem;
+  border: 1px solid var(--warn, #d9a441);
+  background: rgba(60, 39, 10, .78);
+  color: var(--text-hi);
+  font-size: calc(.14 * var(--t));
+}
+.trusted-consent__title { display: flex; align-items: center; gap: .07rem; color: var(--warn, #f0bf5b); }
+.trusted-consent__title .icon { width: .18rem; height: .18rem; }
+.trusted-consent p { margin: .05rem 0; line-height: 1.45; }
+.trusted-consent ul { margin: .04rem 0 .05rem; padding-left: .2rem; }
+.trusted-consent__perms { color: var(--text-lo); }
+.trusted-consent__declined { color: var(--warn, #f0bf5b); }
+.trusted-consent__actions { display: flex; justify-content: flex-end; gap: .08rem; margin-top: .06rem; }
+
 .room-ping { display: flex; flex-direction: column; align-items: flex-start; gap: .04rem; }
 
 /* ---- invite key ---------------------------------------------------------------------------------------- */

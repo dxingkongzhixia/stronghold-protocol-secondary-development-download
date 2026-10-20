@@ -1,8 +1,8 @@
 # 插件问题与待办清单
 
-> 快照日期：2026-10-19  
-> 代码基线：`master` `ae9e2ae3c`（插件文档提交后）  
-> 状态：普通插件链路可用；全量 CI **8186 tests / 8150 pass / 0 fail**；真实浏览器插件 E2E **6 / 6 pass**。  
+> 快照日期：2026-10-20
+> 代码基线：`master` `ae9e2ae3c`（插件文档提交后）
+> 状态：普通插件链路可用；全量 CI **8186 tests / 8150 pass / 0 fail**；真实浏览器插件 E2E **8 / 8 pass**。
 > 本文件记录**仍未解决**的问题，不把已修项写成待办。
 
 ## 状态标记
@@ -65,7 +65,8 @@
 
 ### P0-2 trusted consent 缺少真实浏览器 E2E
 
-- 状态：`TODO`
+- 状态：`DONE`
+- 完成：`test/ui/plugins-content-script.e2e.test.js` trusted 用例，覆盖拒绝、同意、开始前阻断。
 - 现状：consent 逻辑和单元测试存在，但没有完整真实浏览器流程
 - 下一步：
   - 覆盖同意、拒绝、断线重连、房主开始前的 `PLUGIN_CONSENT`
@@ -105,7 +106,8 @@
 
 ### P1-2 没有真实 Forge 包的浏览器对局 E2E
 
-- 状态：`TODO`
+- 状态：`DONE`
+- 完成：真实 Forge fixture 导入 + 浏览器 content/cosmetic/script/`PREP` 用例。
 - 现状：`forgeImport` 有大量单元/夹具测试，真实浏览器 E2E 只有普通 content/script
 - 下一步：
   - 用一个受控 Forge 包导入
@@ -115,7 +117,8 @@
 
 ### P1-3 Forge 导入报告没有进入运营台
 
-- 状态：`TODO`
+- 状态：`DONE`
+- 完成：`importForge` 写 `forge-import.json`；`/admin` 显示来源包、产品、skipped/assumed、部分导入和导入时间。
 - 现状：
   - 报告只在 `IMPORT-REPORT.md` 和 `--json`
   - `/admin` 只显示插件结果，不显示来源包、丢弃字段、assumed 项
@@ -144,7 +147,8 @@
 
 ### P1-5 `allowIncompatible` 是全局开关
 
-- 状态：`TODO`
+- 状态：`DONE`
+- 完成：`allowIncompatible` 支持 `true` 或插件 id 列表；contentSet 与 `/admin` 均已区分。
 - 现状：owner 打开后，所有旧 `content` / `script` / `trusted` 都可能进入候选
 - 风险：
   - 缺少按插件 id 的白名单
@@ -200,23 +204,22 @@
 ## P1：测试盲区
 
 ### P1-9 插件 E2E 覆盖仍偏窄
-
-- 状态：`TODO`
+- 状态：`WATCH`（第一批盲区已补）
 - 已覆盖：
   - cosmetic 3 条
   - UI 插槽 1 条
   - content 内容集 1 条
   - sandbox 脚本依赖 1 条
+  - 真实 Forge 导入包 1 条
+  - trusted consent 1 条
 - 未覆盖：
-  - trusted consent 全流程
-  - 真实 Forge 导入包
   - 多插件冲突 / 自动依赖 / 重新应用
   - 内容集下载失败、锁失败、脚本超时
   - 房间内容切换后的缓存与重连
   - Firefox / Safari
 - 下一步：
   - 按风险补用例，不追求数量
-  - 优先 trusted consent 和 Forge pack
+  - 优先多插件冲突和失败恢复
 
 ### P1-10 真实客户端抽取只做了定向冒烟
 
@@ -330,9 +333,13 @@
   - `FORGE-PLUGIN-DEV-GUIDE.md`
   - `FORGE-COMPATIBILITY.md`
 - `kittedExtra` 已从 `resolveContent` 带到 `room.state.content`，内容插件新增的自选干员可见
+- trusted consent 页面已实现：拒绝 / 同意、开始前阻断、seat consent 写回；真实浏览器 E2E 覆盖
+- 真实 Forge fixture 导入 + content/cosmetic/script/PREP E2E 通过
+- Forge 导入来源与 skipped/assumed 摘要已写入 `forge-import.json`，`/admin` 新增「Forge 导入」只读表
+- `allowIncompatible` 支持 `true` 或插件 id 列表，contentSet 与 `/admin` 均区分
 - Pixi 的 CSP no-eval 适配器已接入，真实浏览器不再退回 simplified view
 - 0.3.x `lang` / `cosmetic` / `ui` 自动兼容
-- 真实浏览器插件 E2E：6 / 6
+- 真实浏览器插件 E2E：8 / 8（cosmetic 3、UI 1、content 1、sandbox script 1、Forge 1、trusted consent 1）
 - 字体 CSP 已允许 `fonts.gstatic.cn`
 - 全量 CI：8186 / 8150 / 0
 
@@ -340,14 +347,13 @@
 
 ## 建议排期
 
-1. **P0-2** trusted consent 真实 E2E
-2. **P1-2** 真实 Forge pack 浏览器 E2E
-3. **P1-3** Forge 导入报告进入运营台
-4. **P1-6** 上游 `dev` 26 个提交筛选
-5. **P1-5** `allowIncompatible` per-plugin 白名单
-6. **P1-7** 独立脚本插件选择体验
-7. **P2-1 / P2-2** 运营台 Phase 2 与指标
-8. **P2-3** 性能
-9. **P2-4 / P2-5 / P2-6** 玩家体验与风险说明
+1. **P1-6** 上游 `dev` 26 个提交筛选
+2. **P1-7** 独立脚本插件选择体验
+3. **P1-8** 脚本 probe 预热与耗时指标
+4. **P1-9 剩余部分** 多插件冲突 / 失败恢复 / 重连
+5. **P0-1** trusted 生产容器化
+6. **P2-1 / P2-2** 运营台 Phase 2 与指标
+7. **P2-3** 性能
+8. **P2-4 / P2-5 / P2-6** 玩家体验与风险说明
 
 > 每次完成一项，把状态改为 `DONE` 或在提交说明里引用本文件编号；不要直接删除历史记录。

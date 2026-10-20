@@ -47,6 +47,7 @@ export function createRoomSets({ registry, visual, contents, policy }) {
   function resolve(ids, { scope = 'room', settings = {}, replacing = null } = {}) {
     const pol = policy?.get();
     if (pol && pol.rooms === 'off') return { error: ERR.PLUGIN_BLOCKED, detail: 'this server\'s rooms play the original game (plugins/config.json rooms: off)' };
+    const compatAllowed = (p) => pol?.allowIncompatible === true || (Array.isArray(pol?.allowIncompatible) && pol.allowIncompatible.includes(p.id));
     if (pol && pol.rooms === 'fixed') {
       const want = [...pol.default].sort().join(',');
       if ([...ids].sort().join(',') !== want) return { error: ERR.PLUGIN_BLOCKED, detail: 'this server fixes every room\'s plugins (plugins/config.json rooms: fixed)' };
@@ -72,7 +73,7 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     const warnings = [];
     for (const p of entries) {
       if (!['content','script','trusted'].includes(p.class) || p.manifest.compatible !== false) continue;
-      if (!pol?.allowIncompatible) return { error: ERR.PLUGIN_INCOMPATIBLE, detail: `${p.id} is made for ${p.manifest.app || 'other versions'} (api ${p.manifest.api ?? '?'})` };
+      if (!compatAllowed(p)) return { error: ERR.PLUGIN_INCOMPATIBLE, detail: `${p.id} is made for ${p.manifest.app || 'other versions'} (api ${p.manifest.api ?? '?'})` };
       warnings.push({ code: 'app', params: { id: p.id, app: p.manifest.app } });
     }
     let vset = null;
@@ -83,7 +84,7 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     }
     let cset = null;
     if (contentIds.length) {
-      const c = contents.resolve(contentIds, { settings, replacing: replacing?.cs ?? null, allowIncompatible: pol?.allowIncompatible === true });
+      const c = contents.resolve(contentIds, { settings, replacing: replacing?.cs ?? null, allowIncompatible: pol?.allowIncompatible ?? false });
       if (!c || !c.ok) return c && c.error ? c : { error: ERR.INTERNAL, detail: 'the content set failed' };
       cset = c.set;
     }

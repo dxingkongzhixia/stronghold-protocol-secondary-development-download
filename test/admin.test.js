@@ -3,6 +3,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { statusOf, buildSnapshot, buildPluginSnapshot, buildPublicSnapshot, tokenMatches, ADMIN_HTML, ADMIN_CSP_HASH } from '../server/admin.js';
 import { openMemoryDb } from '../server/db.mjs';
@@ -352,24 +355,36 @@ test('the admin page is a self-contained console: nine views, hash routing, sear
 });
 
 
-test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and the owner policy', () => {
+test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and the owner policy', (t) => {
+  const forgeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-admin-forge-'));
+  t.after(() => fs.rmSync(forgeDir, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(forgeDir, 'forge-import.json'), JSON.stringify({
+    version: 1, pack: { id: 'rose-pack', name: 'Rose pack', version: '1.0.0' }, primary: 'demo',
+    products: [{ id: 'demo', class: 'content', dir: 'plugins/demo' }], skipped: 2, assumed: 1, partial: true,
+    importedAt: '2026-10-20T00:00:00.000Z',
+  }));
   const registry = {
     plugins: () => [{
-      id: 'demo', class: 'content', status: 'loaded', bytes: 2048,
+      id: 'demo', class: 'content', status: 'loaded', bytes: 2048, where: forgeDir,
       manifest: { name: 'Demo', version: '1.2.3', api: 2, app: '>=0.3.0 <0.5.0', scope: ['room'], permissions: ['data'], notices: [{ id: 'n1', title: 'Hi', body: 'Body', date: '2026-10-19' }] },
       content: {},
     }],
     report: () => ({ skipped: [{ id: 'bad', problems: ['no manifest'] }], warnings: ['one warning'] }),
   };
-  const policy = { get: () => ({ rooms: 'host', default: [], allow: ['*'], classes: { cosmetic: true, content: true }, maxSets: 4, allowIncompatible: false }) };
+  const policy = { get: () => ({ rooms: 'host', default: [], allow: ['*'], classes: { cosmetic: true, content: true }, maxSets: 4, allowIncompatible: ['demo'] }) };
   const p = buildPluginSnapshot({ registry, policy });
   assert.equal(p.installed[0].id, 'demo');
   assert.equal(p.installed[0].name, 'Demo');
   assert.equal(p.installed[0].hasContent, true);
   assert.deepEqual(p.installed[0].notices, [{ id: 'n1', title: 'Hi', body: 'Body', date: '2026-10-19' }]);
+  assert.deepEqual(p.installed[0].forge.pack, { id: 'rose-pack', name: 'Rose pack', version: '1.0.0' });
+  assert.equal(p.installed[0].forge.skipped, 2);
+  assert.equal(p.installed[0].forge.assumed, 1);
+  assert.equal(p.installed[0].forge.partial, true);
   assert.equal(p.skipped[0].id, 'bad');
   assert.deepEqual(p.warnings, ['one warning']);
   assert.equal(p.policy.rooms, 'host');
   assert.equal(p.policy.maxSets, 4);
+  assert.deepEqual(p.policy.allowIncompatible, ['demo']);
   assert.deepEqual(buildPluginSnapshot(null).installed, []);
 });

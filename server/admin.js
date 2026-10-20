@@ -153,6 +153,28 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
 }
 
 /** Read-only operations view of the plugin system: installed entries, skipped/warnings and the owner policy. */
+/**
+ * The import report summary a Forge product keeps beside its plugin (forgeImport's `forge-import.json`).
+ * Missing for hand-written plugins; a broken file is ignored rather than failing the operations page.
+ * @param {any} p a registry plugin
+ */
+function forgeProvenance(p) {
+  if (!p?.where) return null;
+  try {
+    const j = JSON.parse(readFileSync(join(p.where, 'forge-import.json'), 'utf8'));
+    return {
+      pack: j.pack && typeof j.pack === 'object' ? { id: j.pack.id ?? null, name: j.pack.name ?? null, version: j.pack.version ?? null } : null,
+      primary: typeof j.primary === 'string' ? j.primary : null,
+      products: Array.isArray(j.products) ? j.products.slice(0, 32).map((x) => ({ id: x?.id ?? null, class: x?.class ?? null, dir: x?.dir ?? null })) : [],
+      skipped: Math.max(0, Number(j.skipped) || 0),
+      assumed: Math.max(0, Number(j.assumed) || 0),
+      partial: j.partial === true,
+      report: typeof j.report === 'string' ? j.report : 'IMPORT-REPORT.md',
+      importedAt: typeof j.importedAt === 'string' ? j.importedAt : null,
+    };
+  } catch { return null; }
+}
+
 export function buildPluginSnapshot(info = {}) {
   const { registry, policy } = info || {};
   const list = registry && typeof registry.plugins === 'function' ? registry.plugins() : [];
@@ -171,6 +193,7 @@ export function buildPluginSnapshot(info = {}) {
         app: m.app || null, api: m.api ?? null, scope: Array.isArray(m.scope) ? m.scope : null,
         compatible: m.compatible !== false, permissions, bytes: Number.isFinite(p.bytes) ? p.bytes : null,
         hasContent: !!p.content, hasScript: !!p.script, trusted: p.class === 'trusted',
+        forge: forgeProvenance(p),
         missing: p.missing === true,
         notices: Array.isArray(m.notices) ? m.notices.slice(0, 20).map((n) => ({
           id: n?.id ?? null, title: n?.title ?? null, body: n?.body ?? null, date: n?.date ?? null,
@@ -181,7 +204,8 @@ export function buildPluginSnapshot(info = {}) {
     warnings: Array.isArray(report.warnings) ? report.warnings : [],
     policy: ownerPolicy ? {
       rooms: ownerPolicy.rooms, default: ownerPolicy.default || [], allow: ownerPolicy.allow || [],
-      classes: ownerPolicy.classes || {}, maxSets: ownerPolicy.maxSets, allowIncompatible: !!ownerPolicy.allowIncompatible,
+      classes: ownerPolicy.classes || {}, maxSets: ownerPolicy.maxSets,
+      allowIncompatible: ownerPolicy.allowIncompatible === true ? true : Array.isArray(ownerPolicy.allowIncompatible) ? ownerPolicy.allowIncompatible.slice(0, 64) : false,
     } : null,
   };
 }
@@ -606,10 +630,14 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <div class="tablewrap"><table><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>版本</th><th>状态</th><th>作用域</th><th>内容</th><th>脚本/信任</th><th>大小</th></tr></thead><tbody id="pluginBody"></tbody></table></div>
       </section>
       <section class="panel">
+        <h2>Forge 导入<em id="forgeCount"></em></h2>
+        <div class="tablewrap"><table><thead><tr><th>插件</th><th>来源包</th><th>版本</th><th>产品</th><th>跳过</th><th>假设</th><th>部分</th><th>导入时间</th></tr></thead><tbody id="forgeBody"></tbody></table></div>
+      </section>
       <section class="panel">
         <h2>兼容性与诊断<em id="pluginIssueCount"></em></h2>
         <div class="panel__body" id="pluginIssues"></div>
       </section>
+      <section class="panel">
         <h2>房间内容与脚本</h2>
         <div class="tablewrap"><table><thead><tr><th>房间</th><th>内容集 cs</th><th>外观集 vs</th><th>模式</th><th>插件</th><th>脚本/信任</th><th>同意</th></tr></thead><tbody id="roomContentBody"></tbody></table></div>
       </section>
@@ -889,10 +917,12 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     var skipped = Array.isArray(p.skipped) ? p.skipped : [];
     var warnings = Array.isArray(p.warnings) ? p.warnings : [];
     var scripts = list.filter(function (x) { return x.hasScript || x.trusted; });
+    var forged = list.filter(function (x) { return x.forge; });
     el('pluginSummary').innerHTML =
       kv('已安装', list.length + ' 个')
       + kv('加载失败 / 跳过', skipped.length + ' 个')
       + kv('警告', warnings.length + ' 个')
+      + kv('Forge 导入', forged.length + ' 个')
       + kv('房间正在使用内容集', d.rooms.filter(function (r) { return r.content && !r.content.vanilla; }).length + ' 个')
       + kv('脚本 / 信任插件', scripts.length + ' 个');
     el('pluginPolicy').innerHTML = p.policy ? (
@@ -901,7 +931,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       + kv('默认内容集', (p.policy.default || []).join(', ') || '无')
       + kv('class 开关', Object.keys(p.policy.classes || {}).map(function (k) { return k + '=' + (p.policy.classes[k] ? '开' : '关'); }).join(' · ') || '无')
       + kv('内容集上限', p.policy.maxSets)
-      + kv('允许不兼容', p.policy.allowIncompatible ? '是' : '否')
+      + kv('允许不兼容', p.policy.allowIncompatible === true ? '全部' : Array.isArray(p.policy.allowIncompatible) ? p.policy.allowIncompatible.join(', ') : '否')
     ) : '<div class="empty">无插件策略（默认）</div>';
     el('pluginCount').textContent = ' · ' + list.length + ' 个';
     el('pluginBody').innerHTML = list.map(function (x) {
@@ -914,6 +944,19 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         cell(x.bytes == null ? '—' : (Math.round(x.bytes / 1024) + ' KB'))
       ]);
     }).join('') || '<tr><td colspan="9" class="empty">还没有安装插件</td></tr>';
+    el('forgeCount').textContent = ' · ' + forged.length + ' 个';
+    el('forgeBody').innerHTML = forged.map(function (x) {
+      var f = x.forge || {};
+      var pack = f.pack || {};
+      var products = (f.products || []).map(function (p) { return p.id; }).filter(Boolean).join(', ') || '—';
+      return row([
+        cell(esc(x.id), 'mono'), cell(esc(pack.name || pack.id || '—') + (pack.id && pack.name ? ' <span class="t-dim mono">' + esc(pack.id) + '</span>' : '')),
+        cell(esc(pack.version || '—')), cell(esc(products)),
+        cell(String(f.skipped || 0)), cell(String(f.assumed || 0)),
+        cell(f.partial ? '<span class="pill">部分</span>' : '<span class="pill yes">完整</span>'),
+        cell(esc(f.importedAt || '—')),
+      ]);
+    }).join('') || '<tr><td colspan="8" class="empty">没有 Forge 导入记录</td></tr>';
     var withContent = d.rooms.filter(function (r) { return r.content; });
     el('roomContentBody').innerHTML = withContent.map(function (r) {
       var c = r.content;

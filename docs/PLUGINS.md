@@ -981,7 +981,7 @@ are served from memory with `Cache-Control: immutable` while a room holds the se
 [ASSUMED]; the vanilla `/cs/<vanilla cs16>/index.json` is unchanged. `/healthz` counts the content sets in use
 (`content.sets`).
 
-**Remaining limitation**: `allowIncompatible` cannot override the builder's incompatible-plugin refusal (DESIGN §32.6). Settings controls and changed-file notices are implemented (§15); DSL in data plugins is §12.
+**Fork behavior**: `allowIncompatible` (a boolean or a list of plugin ids) is honored by the builder for reviewed old gameplay plugins in this fork; data validation, script permissions, trusted pins and consent still apply. Settings controls and changed-file notices are implemented (§15); DSL in data plugins is §12.
 
 ## 10b. Offers — interaction windows
 
@@ -2284,7 +2284,7 @@ Implemented features are documented in §9–§17: cosmetics, data, room content
 the studio and trial bench, Forge import, and catalogue/address installs. The following remain unavailable:
 
 - Plugin fonts are not applied. Theme variables of the allowlist are applied on this player's page only (§9.1).
-- `allowIncompatible` does not bypass the content builder (§11).
+- `allowIncompatible` (boolean or plugin-id list) admits reviewed old gameplay plugins in this fork; it never bypasses data validation, script permissions, trusted pins or consent.
 - Additional mode-code hooks and plugin-specific `golden` / `simcheck` / balance-tool switches have not been added.
   A plugin declares interaction windows at the host's existing moments instead (`offers`, §10b); a window with a phase
   of its own, and a window whose pick carries plugin code, are not part of that part.

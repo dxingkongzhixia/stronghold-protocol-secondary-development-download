@@ -14,7 +14,7 @@
 //     "limits": { "maxSets": 4 },   content sets with gameplay plugins rooms may hold at once (each running match of one
 //                                   is a worker: server/match/host/)
 //     "allowIncompatible": false    a gameplay plugin made for other game versions or another plugin API: refused
-//                                   (PLUGIN_INCOMPATIBLE) unless true (a cosmetic one is only a warning, P1a)
+//                                   (PLUGIN_INCOMPATIBLE) unless true, or a list of plugin ids to admit
 //   }
 //
 // The environment wins over the file for `rooms`: SP_PLUGINS=off | host | fixed. A missing file is the defaults above; a
@@ -72,10 +72,14 @@ export function readPolicy(json, { env = process.env } = {}) {
     if (n === undefined) { /* other limits are the plugins' own (P0 / P1a) */ } else if (Number.isInteger(n) && n >= 0 && n <= 64) p.maxSets = n;
     else problems.push('"limits.maxSets" must be an integer 0–64');
   }
-  if (o.allowIncompatible !== undefined) { if (typeof o.allowIncompatible === 'boolean') p.allowIncompatible = o.allowIncompatible; else problems.push('"allowIncompatible" must be true or false'); }
+  if (o.allowIncompatible !== undefined) {
+    if (typeof o.allowIncompatible === 'boolean') p.allowIncompatible = o.allowIncompatible;
+    else if (Array.isArray(o.allowIncompatible) && o.allowIncompatible.length <= 64 && o.allowIncompatible.every(isPluginId)) p.allowIncompatible = [...new Set(o.allowIncompatible)];
+    else problems.push('"allowIncompatible" must be true, false or a list of plugin ids');
+  }
   const e = String(env?.SP_PLUGINS ?? '').trim().toLowerCase();
   if (e) { if (ROOMS.includes(e)) p.rooms = e; else problems.push(`SP_PLUGINS=${e} is not one of ${ROOMS.join(', ')}`); }
-  return { policy: Object.freeze({ ...p, default: Object.freeze(p.default), allow: Object.freeze(p.allow), classes: Object.freeze(p.classes) }), problems };
+  return { policy: Object.freeze({ ...p, default: Object.freeze(p.default), allow: Object.freeze(p.allow), classes: Object.freeze(p.classes), allowIncompatible: Array.isArray(p.allowIncompatible) ? Object.freeze([...p.allowIncompatible]) : p.allowIncompatible }), problems };
 }
 
 /**

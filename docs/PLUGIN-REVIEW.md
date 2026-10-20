@@ -118,7 +118,7 @@ plugin.json + entry.sim/meta
 - 全量 CI：**8186 tests / 8150 pass / 0 fail**
 
 已验证：
-- **浏览器 E2E**：`SP_E2E=1` + 真实 Chrome 跑了 6 个插件用例，全部通过：`plugins.e2e.test.js` 的 3 个 cosmetic（房间插件、个人插件、局内切换）、`ui-plugins.e2e.test.js` 的 UI 插槽，以及 `plugins-content-script.e2e.test.js` 的 content 内容集和 sandbox script 依赖链路。
+- **浏览器 E2E**：`SP_E2E=1` + 真实 Chrome 跑了 8 个插件用例，全部通过：`plugins.e2e.test.js` 的 3 个 cosmetic（房间插件、个人插件、局内切换）、`ui-plugins.e2e.test.js` 的 UI 插槽，以及 `plugins-content-script.e2e.test.js` 的 content 内容集、sandbox script 依赖、真实 Forge 包导入和 trusted consent 链路。
 - **E2E 发现并修复**：房间内容集的 `kittedExtra` 之前没有从 `resolveContent` 带到 `room.state.content`，导致内容插件新增的 自选 干员在页面上拿不到；`server/lobby.js` 已补上并加了单元测试。
 - **真实客户端抽取**：用 `D:\明日方舟\Hypergryph Launcher` 的 CN 客户端跑了 `extract.py --only mesh/trap_110`，成功写出 6 个文件并合并 manifest；完整的 `--plugin-art` 抽取仍需一次长跑验证。
 
@@ -155,10 +155,10 @@ plugin.json + entry.sim/meta
 | 主线插件 | 结果 |
 |---|---|
 | `lang` / `cosmetic` / `ui`，`app <0.4.0` | 加载，并使用 0.3.x 兼容判断；仍会走自己的 manifest / 文件校验 |
-| `content` / `script` / `trusted`，`app <0.4.0` | 默认标记 `compatible: false`，内容集不会接受；owner 可在 `plugins/config.json` 设 `allowIncompatible: true` 显式放行已审查的内容/脚本，并在房间 warning 中记录；trusted 仍需原有 owner / consent 门 |
+| `content` / `script` / `trusted`，`app <0.4.0` | 默认标记 `compatible: false`，内容集不会接受；owner 可在 `plugins/config.json` 设 `allowIncompatible: true` 或插件 id 列表显式放行已审查的内容/脚本，并在房间 warning 中记录；trusted 仍需原有 owner / consent 门 |
 | API level 1 / 2 | 都支持（`min: 1`, `current: 2`） |
 
-`allowIncompatible` 只改变内容集的兼容性准入，不跳过数据校验、脚本权限、trusted pin 或 consent；未显式开启时行为与之前一致。
+`allowIncompatible`（全局布尔或按插件 id 列表）只改变内容集的兼容性准入，不跳过数据校验、脚本权限、trusted pin 或 consent；未显式开启时行为与之前一致。
 
 插件目录的 `entryStatus` 也使用同一规则，因此主线 0.3.x 的 cosmetic/ui/lang 不会在安装目录里被误标为 incompatible。
 
@@ -172,6 +172,7 @@ plugin.json + entry.sim/meta
 - 服务器策略：`rooms`、`allow`、`default`、`classes`、`maxSets`、`allowIncompatible`
 - 房间内容：`cs`、`vs`、`modeId`、插件列表、脚本 / 信任状态、trusted consent
 - 「兼容性与诊断」区：列出 skipped 插件和 warnings，兼容列直接显示 `compatible`，悬停可看 `app` 范围
+- 「Forge 导入」区：来源包、产品、skipped / assumed 数量、是否部分导入、导入时间（只读）
 - 通知页新增只读「插件公告」区，与服务器通知分开标记
 
 后端 `buildSnapshot` 现在携带 `plugins` 只读快照；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
@@ -181,7 +182,7 @@ plugin.json + entry.sim/meta
 
 优先级从高到低：
 
-1. **扩大 content / script 覆盖**：现在 content 内容集和 sandbox 依赖链路已通过，下一步增加多插件冲突、trusted consent 和 Forge 导入内容的真实对局用例。
+1. **扩大 content / script 覆盖**：content、sandbox script、trusted consent 和真实 Forge 导入包都已通过真实浏览器用例；下一步增加多插件冲突、失败恢复和重连。
 2. **跑完整的 `--plugin-art` 抽取**：确认官方干员美术、VFX 和插件引用在真实客户端上能一次合并完成。
 3. **写一份面向玩家的插件风险说明**：外观 / 玩法 / 脚本 / 信任四级。
 4. **trusted 插件生产策略**：默认关闭，公网禁用，容器化运行。

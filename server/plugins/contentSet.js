@@ -213,12 +213,14 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
   let base;
   try { base = baseFor(registry); } catch (e) { return { problems: [problem('PLUGIN_CONTENT_FILE', 'data', e.message)] }; }
   const selected = ids.map(v => typeof v === 'string' ? { id: v } : v);
+  const compat = (p) => p.manifest.compatible !== false || allowIncompatible === true
+    || (Array.isArray(allowIncompatible) && allowIncompatible.includes(p.id));
   const usable = id => {
     const p = registry.plugin(id);
     // Data-only checks may read a script dependency's JSON without granting it execution permission.
     const readable = p?.status === 'loaded' || checkDataOnly && p?.status === 'disabled' && p.script && p.content;
     return readable && p.manifest.scope.includes('room')
-      && (['content','script','trusted'].includes(p.class) && (p.manifest.compatible !== false || allowIncompatible) && p.content || p.class === 'cosmetic' && p.visual) ? p : null;
+      && (['content','script','trusted'].includes(p.class) && compat(p) && p.content || p.class === 'cosmetic' && p.visual) ? p : null;
   };
   const resolved = resolvePluginOrder(selected.map(v => v?.id), id => usable(id)?.manifest ?? null);
   if ('error' in resolved) return { problems: [problem(resolved.error, 'ids', resolved.detail)] };

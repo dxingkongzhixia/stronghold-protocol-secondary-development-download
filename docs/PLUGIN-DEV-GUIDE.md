@@ -290,7 +290,7 @@ node tools/plugin.mjs pack my-script
 
 - `lang` / `cosmetic` / `ui`：`app` 范围匹配 `0.3.2` 也算兼容
 - `content` / `script` / `trusted`：默认严格要求 `0.4.0`
-- owner 可在 `plugins/config.json` 设 `"allowIncompatible": true`，显式放行已审查的旧内容/脚本；仍走数据校验和脚本权限
+- owner 可在 `plugins/config.json` 设 `"allowIncompatible": true`，或用插件 id 列表（如 `["old-content"]`）显式放行已审查的旧内容/脚本；仍走数据校验和脚本权限
 - 房间内容插件会产生 `cs`；外观插件只产生 `vs`，不改变对局
 - 插件文件改动后，房间需要“重新应用”才生效
 

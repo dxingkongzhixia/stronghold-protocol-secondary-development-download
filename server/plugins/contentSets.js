@@ -128,7 +128,7 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
       if (manifest) delete manifest.notices; // Catalogue data cannot invalidate a room's gameplay memo.
       parts.push([id, p.content.hash, p.script?.execution ?? null, p.status, manifest, norm[id] ?? null]);
     }
-    if (allowIncompatible) parts.push(['allowIncompatible', true]);
+    if (allowIncompatible !== false && allowIncompatible != null) parts.push(['allowIncompatible', allowIncompatible]);
     try { return JSON.stringify(parts); } catch { return null; }
   };
   /** Remember a kept set by what it was built from; the oldest entries of sets no room holds go first. */

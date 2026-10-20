@@ -28,6 +28,7 @@ import { openStats } from './stats.js';
 import { LoadoutButton } from './loadout.js';
 import { ChatDock, ChatBubble, activeChatBubbles } from '../ui/chat.js';
 import { PluginTag, isModdedRoom } from '../ui/pluginTag.js';
+import { rememberScriptConsent } from '../content.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, emptyMatch, isSpectating } from '../store.js';
 import { difficultyInfo } from './lobby.js';
@@ -110,6 +111,47 @@ export function inviteLink(code) {
  * @returns {Promise<boolean>}
  */
 export { copyText };
+
+/**
+ * The trusted-plugin consent gate (DESIGN §32.13). Each seat accepts only for itself and only for the current
+ * `cs`; the server keeps the decision on the seat across a reconnect. Nothing trusted runs until the page has
+ * remembered the choice and sent `room.consent`.
+ */
+function TrustedConsentBar({ room, mine }) {
+  const [busy, setBusy] = useState(null);
+  const [declined, setDeclined] = useState(false);
+  const trusted = room?.content?.trusted;
+  const cs = room?.content?.cs;
+  if (!trusted || !Array.isArray(trusted.plugins) || !trusted.plugins.length || !mine || !cs) return null;
+  if (trusted.consent?.[mine.seat]) return null;
+  const decide = async (accept) => {
+    setBusy(accept ? 'accept' : 'reject');
+    rememberScriptConsent(cs, accept);
+    try {
+      await net.request('room.consent', { cs, accept });
+      setDeclined(!accept);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setBusy(null);
+    }
+  };
+  const perms = [...new Set(trusted.plugins.flatMap((p) => Array.isArray(p.permissions) ? p.permissions : []))];
+  return html`<section class="trusted-consent" data-testid="trusted-consent" role="alert">
+    <div class="trusted-consent__title"><${Icon} name="shield" /><b>${t('受信任插件')}</b><${MicroLabel}>TRUSTED PLUGINS<//></div>
+    <p>${t('本房间启用了受信任插件。它可以完全控制你的游戏页面。只有在你信任插件作者和服务器时才同意。')}</p>
+    <ul>
+      ${trusted.plugins.map((p) => html`<li key=${p.id}><b>${p.id}</b>${p.version ? html` <span class="num t-dim">v${p.version}</span>` : null}
+        ${Array.isArray(p.permissions) && p.permissions.length ? html`<span class="t-dim"> · ${p.permissions.join(', ')}</span>` : null}</li>`)}
+    </ul>
+    ${perms.length ? html`<p class="trusted-consent__perms">${t('权限')}：${perms.join(', ')}</p>` : null}
+    ${declined ? html`<p class="trusted-consent__declined" data-testid="trusted-declined">${t('已拒绝。开始模拟前仍需要你的同意。')}</p>` : null}
+    <div class="trusted-consent__actions">
+      <${Button} variant="secondary" size="sm" data-testid="trusted-reject" loading=${busy === 'reject'} onClick=${() => decide(false)}>${t('拒绝')}<//>
+      <${Button} variant="primary" size="sm" data-testid="trusted-accept" loading=${busy === 'accept'} onClick=${() => decide(true)}>${t('同意并继续')}<//>
+    </div>
+  </section>`;
+}
 
 function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRemoveBot, onKick }) {
   const coop = room.mode !== 'solo';
@@ -380,6 +422,8 @@ export function RoomScreen() {
       </div>
     </header>
 
+    <${TrustedConsentBar} room=${room} mine=${facts.mine} />
+
     <main class=${`seats${coop ? '' : ' seats--solo'}`}>
       ${facts.seats.map((s, i) => html`<${SeatCard} key=${s ? `p${s.playerId}` : `e${i}`} seat=${s} index=${i} room=${room} facts=${facts}
         myId=${me.playerId} busy=${busy} bubble=${s ? bubbles.get(s.playerId) : undefined} onAddBot=${addBot} onRemoveBot=${removeBot} onKick=${kick} />`)}
@@ -419,7 +463,7 @@ export function RoomScreen() {
         <${LoadoutButton} from="room" size="lg" class="room-loadout" label=${t('干员调配')} />
         ${facts.isHost
           ? html`<${Tooltip} text=${facts.canStart ? null : !facts.contentReady ? t('仍有博士未载入房间的插件内容') : t('仍有博士未准备就绪')}>
-              <${Button} variant="primary" size="xl" icon="play" loading=${busy === 'start'} disabled=${!facts.canStart || !online} onClick=${start}>${t('开始模拟')}<//>
+              <${Button} variant="primary" size="xl" icon="play" data-testid="room-start" loading=${busy === 'start'} disabled=${!facts.canStart || !online} onClick=${start}>${t('开始模拟')}<//>
             <//>`
           : facts.spectating
             ? html`<${Button} variant="secondary" size="xl" icon="eye" disabled=${true}>${t('观战中')}<//>`
