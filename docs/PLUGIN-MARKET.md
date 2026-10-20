@@ -89,7 +89,7 @@ GET  /admin/api/plugins/ai?token=...
 POST /admin/api/plugins/ai?token=...
 ```
 
-`GET` 返回固定的能力声明（`reserved: true`、`executor: false`、可执行动作列表）；`POST` 当前返回 **501**，没有启用任何执行器。这个接口和人类管理员共用 `/admin/api/market` 的 `admin-token` 边界；将来接入 AI 时必须由 owner 显式启用，AI 不能绕过测试 / 通过 / 上架流程。接口目前只预留，不做写入。
+`GET` 返回固定的能力声明（`reserved: true`、`executor: false`、可执行动作列表）；`POST` 在没有执行器时返回 **501**。唯一的只读例外是 `{ "dryRun": true, "action": "edit", ... }`：它只返回当前条目和提案字段，不做校验/写入，供 AI 或后台预览。这个接口和人类管理员共用 `/admin/api/market` 的 `admin-token` 边界；将来接入 AI 时必须由 owner 显式启用，AI 不能绕过测试 / 通过 / 上架流程。
 
 ### 后台安装 / 卸载
 

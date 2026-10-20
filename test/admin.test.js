@@ -373,7 +373,7 @@ test('GET /admin/api/plugins/ai reserves the AI takeover surface behind the admi
     const doc = await cap.json();
     assert.equal(doc.reserved, true);
     assert.equal(doc.executor, false);
-    assert.deepEqual(doc.actions, ['edit', 'publish', 'test', 'approve', 'reject']);
+    assert.deepEqual(doc.actions, ['preview', 'edit', 'publish', 'test', 'approve', 'reject']);
     const post = await fetch(`${base}/admin/api/plugins/ai?token=testtok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     assert.equal(post.status, 501, 'no AI executor is enabled by default');
   } finally {

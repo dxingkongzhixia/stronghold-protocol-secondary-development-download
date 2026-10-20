@@ -570,8 +570,21 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       if (req.method === 'GET' || req.method === 'HEAD') {
         sendJson(req, res, 200, {
           ok: true, reserved: true, version: 1, auth: 'admin-token', executor: false,
-          actions: ['edit', 'publish', 'test', 'approve', 'reject'],
-          note: 'Reserved for an owner-approved AI plugin manager; no executor is enabled in this build.',
+          actions: ['preview', 'edit', 'publish', 'test', 'approve', 'reject'],
+          note: 'Reserved for an owner-approved AI plugin manager; preview is read-only, no executor is enabled in this build.',
+        });
+        return;
+      }
+      const body = await readJsonBody(req);
+      if (body && body.dryRun === true && body.action === 'edit') {
+        const kind = String(body.kind || '');
+        const id = String(body.id || '');
+        const before = market.list({ admin: true }).find((x) => x.kind === kind && x.id === id);
+        if (!before) { sendJson(req, res, 404, { error: 'plugin not found' }); return; }
+        sendJson(req, res, 200, {
+          ok: true, dryRun: true, before: before,
+          proposal: body.fields && typeof body.fields === 'object' ? body.fields : {},
+          note: 'Preview only: no validation or write was performed. Owner approval is required.',
         });
         return;
       }
