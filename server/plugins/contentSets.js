@@ -97,6 +97,11 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
   const memo = new Map();
   /** build() calls so far (stats: a burst of requests for one set builds it once) */
   let builds = 0;
+  let requests = 0;
+  let memoHits = 0;
+  let refused = 0;
+  let lastBuildMs = 0;
+  let maxBuildMs = 0;
   /**
    * Each plugin's settings as the builder reads them (shared/plugins/patch.js normalizeSettings over its manifest's
    * declared settings — an undeclared key dropped, a bad value its default): what a set is made of, so what the memo
@@ -201,11 +206,13 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
    * @returns {{ ok: true, set: ContentSet } | { error: string, detail: string }}
    */
   function resolve(ids, { settings = {}, replacing = null, allowIncompatible = false } = {}) {
+    requests++;
     // the same plugins, in the same state, with the same (normalized) settings: the set built before (a build takes a few
     // hundred ms of this process — every rooms: fixed room, every 「重新应用」 and every cosmetic switch beside them asks again)
     const norm = normalized(ids, settings);
     const mk = memoKey(ids, norm, allowIncompatible);
     const remembered = mk && memo.has(mk) ? sets.get(memo.get(mk)) || null : null;
+    if (remembered) memoHits++;
     // the limit: one set more than the rooms hold now (a set already held, or the one the asking room gives up, is free)
     const limit = Math.max(0, Number(maxSets()) || 0);
     const freed = replacing && isContentHash(replacing) && held.get(csUrlPart(replacing)) === 1 ? 1 : 0;
@@ -216,12 +223,14 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
       // refused before anything is built while the limit is reached: a set some room holds is remembered (its entry is
       // never the one dropped), so what is not remembered would be one set more [ASSUMED: a held set whose plugin's
       // manifest changed on disk since — same files, same cs — is refused here rather than built to find out]
-      if (full) return busy();
+      if (full) { refused++; return busy(); }
       let built;
+      const started = Date.now();
       try {
         builds++;
         built = build({ registry, ids: ids.map((id) => (norm[id] ? { id, settings: norm[id] } : id)), allowIncompatible });
       } catch (e) {
+        refused++;
         log.error?.('[plugins] content set failed to build', e);
         return { error: ERR.INTERNAL, detail: 'the content set failed to build' };
       }
@@ -232,18 +241,22 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
         // a load-order problem keeps its own code (PLUGIN_DEPENDENCY / PLUGIN_CONFLICT); any other problem of the data is
         // a set this server cannot make
         const code = list.find((p) => p && Object.hasOwn(ERR, p.code))?.code;
+        refused++;
         return { error: code || ERR.PLUGIN_BLOCKED, detail: why.slice(0, 200) };
       }
       const k = csUrlPart(built.cs);
       set = sets.get(k) || null;
       if (!set || set.cs !== built.cs) set = adopt(built);
       if (!set) {
+        refused++;
         log.error?.(`[plugins] content set ${built.cs.slice(0, 8)}: its manifest does not hash to its cs`);
         return { error: ERR.INTERNAL, detail: 'the content set\'s manifest does not hash to its cs' };
       }
+      lastBuildMs = Date.now() - started;
+      maxBuildMs = Math.max(maxBuildMs, lastBuildMs);
     }
     const key = csUrlPart(set.cs);
-    if (!held.has(key) && full) return busy();
+    if (!held.has(key) && full) { refused++; return busy(); }
     keep(key, set);
     // remembered only once kept (a refused set is not)
     if (mk && !remembered) remember(mk, key);
@@ -305,6 +318,6 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
     },
     /** Content sets rooms hold now (/healthz content.sets). */
     inUse: () => held.size,
-    stats: () => ({ sets: sets.size, held: held.size, builds }),
+    stats: () => ({ sets: sets.size, held: held.size, builds, requests, memoHits, refused, lastBuildMs, maxBuildMs, dataBytes: [...sets.values()].reduce((n, s) => n + (Number(s.dataBytes) || 0), 0) }),
   };
 }
