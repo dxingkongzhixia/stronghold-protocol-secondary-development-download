@@ -8,7 +8,7 @@ import { useState } from '../../vendor/hooks.module.js';
 import { html, Button, Modal, PingPill, DifficultyTag, Countdown, MicroLabel } from './components.js';
 import { actions } from './gameActions.js';
 import { toastError } from './toasts.js';
-import { net } from '../net.js';
+import { net, identity } from '../net.js';
 import { store, useStore, shallowEqual, emptyMatch, createStore, isSpectating } from '../store.js';
 import { GIcon } from './gameComponents.js';
 import { GuideButton } from './guide.js';
@@ -38,29 +38,55 @@ export const awayEnds = (s, prev) => (!!prev?.match?.public && !s?.match?.public
 store.subscribe((s, prev) => { if (awayStore.get().away && awayEnds(s, prev)) awayStore.set({ away: false }); });
 
 /**
+ * How long each leave request may take. A browser tab that slept for a while can hold a half-open socket: the
+ * request is "sent" but no reply ever arrives. The exit must not wait for the 8 s request timeout (the page looks
+ * stuck), so the two leaves get a short budget and the local state is cleared regardless.
+ */
+export const LEAVE_REQUEST_TIMEOUT_MS = 1500;
+
+/**
  * Leave the match for good (g.leave → room.leave), then drop local room/match state. The server sends a leaver no
  * settlement, so the page records the match itself before it is cleared (本机统计, ui/stats.js recordQuit: a 中途退出
- * entry of the history; it counts only when a round had been cleared) — once the leave went through.
+ * entry of the history; it counts only when a round had been cleared).
+ *
+ * The exits are best effort: after a tab has been asleep the socket may be dead without the client knowing yet, so
+ * neither request can be allowed to hold the page. If neither was confirmed, the tab's reconnect token is dropped and
+ * the socket is replaced — otherwise the next hello would resume the very seat the player asked to leave.
  * @returns {Promise<void>}
  */
 export async function quitMatch() {
   const before = store.get();
-  let left = false;
-  try {
-    try { await net.request('g.leave', {}); } catch (err) {
-      if (err?.code !== 'NOT_IN_ROOM' && err?.code !== 'WRONG_PHASE' && err?.code !== 'OFFLINE') throw err;
+  const attempt = async (t) => {
+    try {
+      await net.request(t, {}, { timeout: LEAVE_REQUEST_TIMEOUT_MS });
+      return 'ok';
+    } catch (err) {
+      if (err?.code === 'NOT_IN_ROOM') return 'gone';
+      if (err?.code === 'WRONG_PHASE' && t === 'g.leave') return 'skipped';
+      if (err?.code === 'OFFLINE' || err?.code === 'TIMEOUT' || err?.code === 'DISCONNECTED') return 'offline';
+      toastError(err);
+      return 'error';
     }
-    try { await net.request('room.leave', {}); } catch (err) { if (err?.code !== 'NOT_IN_ROOM' && err?.code !== 'OFFLINE') throw err; }
-    left = true;
-  } catch (err) {
-    toastError(err);
-  } finally {
-    // (a settlement that arrived while the leave was in flight is the match's record already)
-    if (left && !store.get().match.result) {
-      try { recordQuit(before); } catch (err) { console.warn('[stats] quit record failed', err); }
-    }
-    store.set({ room: null, match: emptyMatch() });
+  };
+  const g = await attempt('g.leave');
+  const room = await attempt('room.leave');
+  const left = g === 'ok' || g === 'gone' || room === 'ok' || room === 'gone';
+  // (a settlement that arrived while the leave was in flight is the match's record already)
+  if (!store.get().match.result) {
+    try { recordQuit(before); } catch (err) { console.warn('[stats] quit record failed', err); }
   }
+  identity.rememberMatch(null);
+  if (!left) {
+    // No confirmation (a dead socket, or the tab was frozen): a hello with this token would restore the room and
+    // the game screen would come back. One last fire-and-forget leaves the seat when the socket still accepts it,
+    // then a fresh session guarantees the next hello cannot resume it; the old seat is left to the server's grace/AI.
+    try { net.send('room.leave', {}); } catch { /* offline */ }
+    try {
+      identity.clearToken();
+      net.reconnectNow();
+    } catch (err) { console.warn('[net] leave reconnect failed', err); }
+  }
+  store.set({ room: null, match: emptyMatch() });
 }
 
 /**
@@ -73,9 +99,7 @@ export function ExitModal({ open, onClose, solo, onAway }) {
   const spectator = useStore((s) => isSpectating(s.room, s.me.playerId));
   const quit = async () => {
     setBusy('quit');
-    await quitMatch();
-    setBusy(null);
-    onClose();
+    try { await quitMatch(); } finally { setBusy(null); onClose(); }
   };
   if (spectator) {
     return html`<${Modal} open=${open} onClose=${onClose} tone="red" title=${t('离开观战')} micro="LEAVE SPECTATING" width="6.8rem"
