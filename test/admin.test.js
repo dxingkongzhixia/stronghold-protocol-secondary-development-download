@@ -372,7 +372,7 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
     report: () => ({ skipped: [{ id: 'bad', problems: ['no manifest'] }], warnings: ['one warning'] }),
   };
   const policy = { get: () => ({ rooms: 'host', default: [], allow: ['*'], classes: { cosmetic: true, content: true }, maxSets: 4, allowIncompatible: ['demo'] }) };
-  const p = buildPluginSnapshot({ registry, policy });
+  const p = buildPluginSnapshot({ registry, policy, contents: { stats: () => ({ sets: 2, held: 1, builds: 3 }) } });
   assert.equal(p.installed[0].id, 'demo');
   assert.equal(p.installed[0].name, 'Demo');
   assert.equal(p.installed[0].hasContent, true);
@@ -387,5 +387,6 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
   assert.equal(p.policy.maxSets, 4);
   assert.deepEqual(p.policy.allowIncompatible, ['demo']);
   assert.equal(typeof p.probe.requests, 'number');
+  assert.deepEqual(p.contentSets, { sets: 2, held: 1, builds: 3 });
   assert.deepEqual(buildPluginSnapshot(null).installed, []);
 });

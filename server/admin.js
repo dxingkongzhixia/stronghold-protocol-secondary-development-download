@@ -177,7 +177,7 @@ function forgeProvenance(p) {
 }
 
 export function buildPluginSnapshot(info = {}) {
-  const { registry, policy } = info || {};
+  const { registry, policy, contents } = info || {};
   const list = registry && typeof registry.plugins === 'function' ? registry.plugins() : [];
   let report = { skipped: [], warnings: [] };
   try { report = registry?.report?.() || report; } catch { /* optional diagnostics */ }
@@ -204,6 +204,7 @@ export function buildPluginSnapshot(info = {}) {
     skipped: Array.isArray(report.skipped) ? report.skipped : [],
     warnings: Array.isArray(report.warnings) ? report.warnings : [],
     probe: scriptProbeStats(),
+    contentSets: contents && typeof contents.stats === 'function' ? contents.stats() : null,
     policy: ownerPolicy ? {
       rooms: ownerPolicy.rooms, default: ownerPolicy.default || [], allow: ownerPolicy.allow || [],
       classes: ownerPolicy.classes || {}, maxSets: ownerPolicy.maxSets,
@@ -926,6 +927,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       + kv('警告', warnings.length + ' 个')
       + kv('Forge 导入', forged.length + ' 个')
       + kv('脚本 probe', p.probe ? (p.probe.childRuns + ' 次 / 缓存 ' + p.probe.cacheHits + ' / 磁盘 ' + p.probe.diskHits + ' / 最近 ' + p.probe.lastMs + ' ms / 超时 ' + p.probe.timeouts + ' 次') : '—')
+      + kv('内容集缓存', p.contentSets ? (p.contentSets.sets + ' sets / ' + p.contentSets.held + ' held / ' + p.contentSets.builds + ' builds') : '—')
       + kv('房间正在使用内容集', d.rooms.filter(function (r) { return r.content && !r.content.vanilla; }).length + ' 个')
       + kv('脚本 / 信任插件', scripts.length + ' 个');
     el('pluginPolicy').innerHTML = p.policy ? (

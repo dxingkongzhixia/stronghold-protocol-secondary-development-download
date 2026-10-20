@@ -237,4 +237,51 @@ describe('cosmetic plugins in the browser (P1a)', { skip: !ENABLED && 'set SP_E2
       fs.rmSync(tmp, { recursive: true, force: true });
     }
   });
+
+  test('two room plugins that change the same art warn, and reapply picks up a changed file', { timeout: 4 * 60 * 1000 }, async () => {
+    const [[chess, avatarId]] = twoOperators();
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-plugins-conflict-'));
+    const art = (color) => png(8, 8, color);
+    writePlugin(path.join(tmp, 'red-a'), cosmetic({ name: { zh: '红色A', en: 'Red A' }, assets: { chars: { [avatarId]: { avatar: 'art/red.png' } } } }), { 'art/red.png': art([255, 0, 0, 255]) });
+    writePlugin(path.join(tmp, 'blue-b'), cosmetic({ name: { zh: '蓝色B', en: 'Blue B' }, assets: { chars: { [avatarId]: { avatar: 'art/blue.png' } } } }), { 'art/blue.png': art([0, 0, 255, 255]) });
+    const srv = await startRealServer({ fast: { timerScale: 1, combatSpeed: 2, startRound: 1 }, pluginsDir: tmp });
+    const P = (await import('puppeteer-core')).default;
+    const c = new Client(P, srv.base, 'conflict', { prefix: 'plugins-conflict', w: 1600, h: 900 });
+    try {
+      await c.open();
+      await c.enter('凯尔希');
+      await c.click('.mode-card', '独立模拟');
+      await c.click('.diff-card', '标准模拟');
+      await c.click('.create-box button', '开始独立模拟');
+      await c.waitFor((s) => !!s.room, 'solo room');
+      await c.click('[data-testid="plugin-tag"]');
+      await c.page.waitForSelector('[data-plugin="red-a"]', { timeout: 15000 });
+      await c.page.waitForSelector('[data-plugin="blue-b"]', { timeout: 15000 });
+      for (const id of ['red-a', 'blue-b']) {
+        await c.click(`[data-plugin="${id}"] button[role="switch"]`);
+        await c.page.waitForFunction((sel) => document.querySelector(sel)?.getAttribute('aria-checked') === 'true', { timeout: 10000 }, `[data-plugin="${id}"] button[role="switch"]`);
+      }
+      const first = await c.page.evaluate(() => globalThis.__SP__.store.get().room.content);
+      assert.equal(first.vanilla, true, 'cosmetic plugins never change the battle cs');
+      assert.ok(first.vs, 'the room has a visual set');
+      assert.deepEqual(first.plugins.map((p) => p.id), ['blue-b', 'red-a'], 'load order, later one wins');
+      const warning = await c.page.$eval('[data-testid="plugin-panel"] .plugpanel__warnings', (e) => e.textContent);
+      assert.match(warning, /红色A/);
+      assert.match(warning, /蓝色B/);
+      await c.page.waitForFunction((k) => /^\/p\/red-a\//.test(globalThis.__SP__.data.get('assets')?.chars?.[k]?.avatar || ''), { timeout: 20000 }, avatarId);
+      // a file changes on disk: the same choice (重新应用) rebuilds the vs from the files as they are now
+      fs.writeFileSync(path.join(tmp, 'red-a', 'art/red.png'), art([255, 128, 0, 255]));
+      await sleep(1200);
+      await c.click('[data-testid="plugin-reapply"]');
+      await c.page.waitForFunction((vs) => globalThis.__SP__.store.get().room.content.vs !== vs, { timeout: 20000 }, first.vs);
+      const second = await c.page.evaluate(() => globalThis.__SP__.store.get().room.content);
+      assert.notEqual(second.vs, first.vs);
+      assert.deepEqual(second.plugins.map((p) => p.id), ['blue-b', 'red-a']);
+      assert.deepEqual(problemsOf([c]).filter((p) => !/fonts|woff2/.test(p)), []);
+    } finally {
+      await c.close().catch(() => {});
+      await srv.stop().catch(() => {});
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
 });

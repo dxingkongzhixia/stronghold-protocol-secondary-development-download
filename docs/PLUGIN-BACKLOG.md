@@ -2,7 +2,7 @@
 
 > 快照日期：2026-10-20
 > 代码基线：`master` `ae9e2ae3c`（插件文档提交后）
-> 状态：普通插件链路可用；全量 CI **8191 tests / 8155 pass / 0 fail**；真实浏览器插件 E2E **9 / 9 pass**。
+> 状态：普通插件链路可用；全量 CI **8191 tests / 8155 pass / 0 fail**；真实浏览器插件 E2E **10 / 10 pass**。
 > 本文件记录**仍未解决**的问题，不把已修项写成待办。
 
 ## 状态标记
@@ -203,10 +203,10 @@
   - content 内容集 1 条
   - sandbox 脚本依赖 1 条
   - 独立 script 直接选择 1 条
+  - 多插件冲突 + 重新应用 1 条
   - 真实 Forge 导入包 1 条
   - trusted consent 1 条
 - 未覆盖：
-  - 多插件冲突 / 重新应用
   - 内容集下载失败、锁失败、脚本超时
   - 房间内容切换后的缓存与重连
   - Firefox / Safari
@@ -251,7 +251,9 @@
 
 ### P2-2 缺少插件生命周期指标
 
-- 状态：`TODO`
+- 状态：`PARTIAL`
+- 已完成：脚本 probe 的请求 / 缓存 / 子进程 / 失败 / 超时 / 耗时；内容集缓存 sets / held / builds；`/admin` 显示。
+- 未完成：下载字节 / 失败率、房间重新应用次数、持久化历史。
 - 需要：
   - 加载耗时
   - 内容集构建耗时
@@ -332,7 +334,7 @@
 - `allowIncompatible` 支持 `true` 或插件 id 列表，contentSet 与 `/admin` 均区分
 - Pixi 的 CSP no-eval 适配器已接入，真实浏览器不再退回 simplified view
 - 0.3.x `lang` / `cosmetic` / `ui` 自动兼容
-- 真实浏览器插件 E2E：9 / 9（cosmetic 3、UI 1、content 1、sandbox script 2、Forge 1、trusted consent 1）
+- 真实浏览器插件 E2E：10 / 10（cosmetic 3、UI 1、content 1、sandbox script 2、Forge 1、trusted consent 1、冲突/重新应用 1）
 - 字体 CSP 已允许 `fonts.gstatic.cn`
 - 全量 CI：8191 / 8155 / 0
 

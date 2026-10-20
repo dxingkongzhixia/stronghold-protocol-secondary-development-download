@@ -118,7 +118,7 @@ plugin.json + entry.sim/meta
 - 全量 CI：**8191 tests / 8155 pass / 0 fail**
 
 已验证：
-- **浏览器 E2E**：`SP_E2E=1` + 真实 Chrome 跑了 9 个插件用例，全部通过：`plugins.e2e.test.js` 的 3 个 cosmetic（房间插件、个人插件、局内切换）、`ui-plugins.e2e.test.js` 的 UI 插槽，以及 `plugins-content-script.e2e.test.js` 的 content 内容集、sandbox script 依赖、独立 script 直接选择、真实 Forge 包导入和 trusted consent 链路。
+- **浏览器 E2E**：`SP_E2E=1` + 真实 Chrome 跑了 10 个插件用例，全部通过：`plugins.e2e.test.js` 的 3 个 cosmetic（房间插件、个人插件、局内切换）、`ui-plugins.e2e.test.js` 的 UI 插槽，以及 `plugins-content-script.e2e.test.js` 的 content 内容集、sandbox script 依赖、独立 script 直接选择、多插件冲突/重新应用、真实 Forge 包导入和 trusted consent 链路。
 - **E2E 发现并修复**：房间内容集的 `kittedExtra` 之前没有从 `resolveContent` 带到 `room.state.content`，导致内容插件新增的 自选 干员在页面上拿不到；`server/lobby.js` 已补上并加了单元测试。
 - **真实客户端抽取**：用 `D:\明日方舟\Hypergryph Launcher` 的 CN 客户端跑了 `extract.py --only mesh/trap_110`，成功写出 6 个文件并合并 manifest；完整的 `--plugin-art` 抽取仍需一次长跑验证。
 
