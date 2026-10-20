@@ -278,6 +278,21 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       sendJson(req, res, 200, { now: Date.now(), plugins: market.list({ status: 'active' }), installed: market.installed() });
       return;
     }
+    const installedDl = /^\/market\/api\/installed\/([^/]+)\/download$/.exec(parts.rawPath);
+    if (installedDl) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      let id; try { id = decodeURIComponent(installedDl[1]); } catch { sendJson(req, res, 400, { error: 'bad id' }); return; }
+      const got = market.downloadInstalled(id);
+      if (!got) { sendJson(req, res, 404, { error: 'installed plugin not found' }); return; }
+      res.writeHead(200, {
+        'Content-Type': 'application/zip',
+        'Content-Length': got.bytes.length,
+        'Content-Disposition': `attachment; filename="${got.filename.replace(/[^A-Za-z0-9._-]/g, '_')}"`,
+        'Cache-Control': 'no-store',
+      });
+      res.end(req.method === 'HEAD' ? undefined : got.bytes);
+      return;
+    }
     const dl = /^\/market\/api\/download\/(ordinary|forge)\/([^/]+)$/.exec(parts.rawPath);
     if (dl) {
       if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
@@ -488,7 +503,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       communityUploadRoute(req, res).catch((e) => { log.error('[community] upload failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;
     }
-    if (parts.rawPath === '/market/api/list' || parts.rawPath === '/market/api/upload' || parts.rawPath.startsWith('/market/api/download/')) {
+    if (parts.rawPath === '/market/api/list' || parts.rawPath === '/market/api/upload' || parts.rawPath.startsWith('/market/api/download/') || parts.rawPath.startsWith('/market/api/installed/')) {
       marketRoute(req, res, parts).catch((e) => { log.error('[market] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;
     }

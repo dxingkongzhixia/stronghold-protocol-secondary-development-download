@@ -55,12 +55,18 @@ test('market: upload pending, review/test/approve, active download, duplicate an
 test('market lists live installed plugins separately from store entries', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-installed-'));
   try {
+    const pluginDir = path.join(root, 'plugins', 'local-skin');
+    fs.mkdirSync(pluginDir, { recursive: true });
+    fs.writeFileSync(path.join(pluginDir, 'plugin.json'), '{}');
+    fs.writeFileSync(path.join(pluginDir, 'x.png'), Buffer.from([1, 2, 3]));
     const registry = { plugins: () => [
-      { id: 'local-skin', source: 'plugins', class: 'cosmetic', status: 'loaded', bytes: 123, manifest: { name: { zh: '本机外观' }, version: '1.0.0' } },
+      { id: 'local-skin', source: 'plugins', class: 'cosmetic', status: 'loaded', bytes: 123, where: pluginDir, manifest: { name: { zh: '本机外观' }, version: '1.0.0' } },
       { id: 'en', source: 'i18n', class: 'lang', status: 'loaded', manifest: { version: '0.2.0' } },
     ] };
     const market = createPluginMarket({ root, registry });
-    assert.deepEqual(market.installed().map((p) => [p.id, p.status, p.download]), [['local-skin', 'installed', null]]);
+    assert.deepEqual(market.installed().map((p) => [p.id, p.status, p.download]), [['local-skin', 'installed', '/market/api/installed/local-skin/download']]);
     assert.deepEqual(market.installed()[0].name, '本机外观');
+    const zip = market.downloadInstalled('local-skin');
+    assert.ok(zip && zip.bytes.length > 0);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

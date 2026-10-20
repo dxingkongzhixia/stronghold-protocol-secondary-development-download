@@ -1,33 +1,63 @@
-// i18n-ignore-file: standalone market page (Chinese-only first version; a language pack can wrap it later)
-// Public plugin marketplace. Raw zip uploads go to /market/api/upload; only approved entries are listed/downloaded.
+// Plugin store: themed list/search/download for ordinary, Forge and live installed plugins.
+// i18n-ignore-file: standalone market page (Chinese-first; a language pack can wrap it later)
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const token = new URLSearchParams(location.search).get('token') || '';
-let kind = 'ordinary';
-let plugins = [];
+const KIND = { ordinary: '普通插件', forge: 'Forge 包', installed: '本机插件' };
+const CLASS = { cosmetic: '外观', content: '玩法', ui: '界面', script: '脚本', trusted: '信任', lang: '语言', forge: 'Forge 转换' };
+const STATUS = { active: '使用中', pending: '未审核', rejected: '已拒绝', installed: '使用中' };
+let tab = 'ordinary';
+let data = { plugins: [], installed: [] };
+let adminRows = [];
 
-function pill(status) {
-  const label = status === 'active' ? '使用中' : status === 'pending' ? '未审核' : status === 'rejected' ? '已拒绝' : status === 'installed' ? '已安装' : status;
-  return `<span class="pill ${esc(status)}">${esc(label)}</span>`;
+const bytes = (n) => {
+  const v = Number(n) || 0;
+  if (v >= 1 << 30) return `${(v / (1 << 30)).toFixed(2)} GB`;
+  if (v >= 1 << 20) return `${(v / (1 << 20)).toFixed(1)} MB`;
+  if (v >= 1 << 10) return `${Math.round(v / (1 << 10))} KB`;
+  return `${v} B`;
+};
+const row = (p, admin = false) => {
+  const kindLabel = KIND[p.kind] || p.kind || '插件';
+  const clsLabel = CLASS[p.class] || p.class || '未声明';
+  const status = STATUS[p.status] || p.status || '';
+  const description = p.installed ? '本机已安装，未上架商城。' : (p.description || '没有填写描述。');
+  const actions = admin
+    ? `<button class="mc-btn" data-act="test" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">测试</button>
+       <button class="mc-btn mc-btn--primary" data-act="approve" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">通过</button>
+       <button class="mc-btn mc-btn--danger" data-act="reject" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">拒绝</button>`
+    : p.download ? `<button class="mc-btn mc-btn--primary" data-download="${esc(p.download)}" data-id="${esc(p.id)}">下载</button>` : '';
+  return `<article class="market-row">
+    <div>
+      <div class="market-row__name"><b>${esc(p.name || p.id)}</b><span class="market-row__version">v${esc(p.version || '—')}</span></div>
+      <div class="market-row__badges">
+        <span class="mc-badge mc-badge--kind">${esc(kindLabel)}</span>
+        <span class="mc-badge mc-badge--class">${esc(clsLabel)}</span>
+        <span class="mc-badge mc-badge--${esc(p.status)}">${esc(status)}</span>
+      </div>
+    </div>
+    <div>
+      <p class="market-row__desc">${esc(description)}</p>
+      <div class="market-row__meta">${esc(p.author ? `作者：${p.author}` : '作者：未填写')} · ${bytes(p.bytes)} · 下载 ${esc(p.downloads || 0)}</div>
+    </div>
+    <div class="market-row__action">${actions}</div>
+  </article>`;
+};
+
+function currentRows() {
+  if (tab === 'installed') return data.installed || [];
+  return (data.plugins || []).filter((p) => p.kind === tab);
 }
 
-function card(p, admin = false) {
-  const actions = admin
-    ? `<div class="actions">
-         <button class="act alt" data-act="test" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">测试</button>
-         <button class="act" data-act="approve" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">通过</button>
-         <button class="act bad" data-act="reject" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">拒绝</button>
-       </div>`
-    : p.download ? `<div class="actions"><button class="act" data-download="${esc(p.download)}" data-id="${esc(p.id)}">下载</button></div>` : '';
-  return `<article class="card">
-    <h3>${esc(p.name || p.id)} <span class="meta">v${esc(p.version)}</span></h3>
-    <div>${pill(p.status)} <span class="meta">${esc(p.kind === 'forge' ? 'Forge' : '普通')}</span></div>
-    <p class="meta">${esc(p.description || '')}</p>
-    <div class="meta">作者：${esc(p.author || '未填写')} · ${Math.round(Number(p.bytes || 0) / 1024)} KB · 下载 ${esc(p.downloads || 0)}</div>
-    ${p.uploadedBy ? `<div class="meta">上传者：${esc(p.uploadedBy)}</div>` : ''}
-    ${p.reviewNote ? `<div class="meta">审核备注：${esc(p.reviewNote)}</div>` : ''}
-    ${actions}
-  </article>`;
+function render() {
+  const q = $('search').value.trim().toLowerCase();
+  const rows = currentRows().filter((p) => !q || [p.id, p.name, p.author, p.description, p.class, p.kind]
+    .some((x) => String(x || '').toLowerCase().includes(q)));
+  $('list').innerHTML = rows.length ? rows.map((p) => row(p)).join('') : '<div class="market-empty">没有符合条件的插件。</div>';
+  $('count-ordinary').textContent = data.plugins.filter((p) => p.kind === 'ordinary').length;
+  $('count-forge').textContent = data.plugins.filter((p) => p.kind === 'forge').length;
+  $('count-installed').textContent = data.installed.length;
+  $('listMsg').textContent = '';
 }
 
 async function load() {
@@ -36,24 +66,22 @@ async function load() {
     const r = await fetch('/market/api/list', { cache: 'no-store' });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-    plugins = (j.plugins || []).filter((p) => p.kind === kind);
-    $('list').innerHTML = plugins.map((p) => card(p)).join('') || '<p class="msg">这一分类还没有使用中的插件。</p>';
-    const installed = Array.isArray(j.installed) ? j.installed : [];
-    $('installedPanel').classList.toggle('hidden', !installed.length);
-    $('installedList').innerHTML = installed.map((p) => card(p)).join('');
-    $('listMsg').textContent = '';
+    data = { plugins: Array.isArray(j.plugins) ? j.plugins : [], installed: Array.isArray(j.installed) ? j.installed : [] };
+    render();
   } catch (e) {
     $('listMsg').textContent = `加载失败：${e.message}`;
-    $('listMsg').className = 'msg bad';
+    $('listMsg').classList.add('is-bad');
   }
 }
 
 async function download(url, id) {
   try {
-    const mod = await import('/js/assetCache.js');
-    const entry = plugins.find((p) => p.id === id);
-    const sources = Array.isArray(entry?.sources) ? entry.sources : [];
-    const urls = mod.candidatesFor(url, sources);
+    const entry = [...(data.plugins || []), ...(data.installed || [])].find((p) => p.id === id);
+    let urls = [url];
+    if (entry && Array.isArray(entry.sources) && entry.sources.length) {
+      const mod = await import('/js/assetCache.js');
+      urls = mod.candidatesFor(url, entry.sources);
+    }
     for (const u of urls) {
       const r = await fetch(u);
       if (!r.ok) continue;
@@ -68,61 +96,41 @@ async function download(url, id) {
     throw new Error('所有下载源都失败');
   } catch (e) {
     $('listMsg').textContent = `下载失败：${e.message}`;
-    $('listMsg').className = 'msg bad';
+    $('listMsg').classList.add('is-bad');
   }
 }
-
-document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
-  document.querySelectorAll('.tabs button').forEach((x) => x.classList.remove('on'));
-  b.classList.add('on');
-  kind = b.dataset.kind;
-  load();
-}));
 
 $('list').addEventListener('click', (e) => {
   const b = e.target.closest('[data-download]');
   if (b) download(b.dataset.download, b.dataset.id);
 });
-
-$('upload').addEventListener('click', async () => {
-  const file = $('zip').files?.[0];
-  const k = $('kind').value;
-  if (!file) { $('uploadMsg').textContent = '请选择 zip 文件'; return; }
-  const btn = $('upload');
-  btn.disabled = true;
-  $('uploadMsg').textContent = '上传中…';
+document.querySelectorAll('.market-tab').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.market-tab').forEach((x) => x.classList.remove('is-on'));
+  b.classList.add('is-on');
+  tab = b.dataset.tab;
+  render();
+}));
+$('search').addEventListener('input', render);
+$('back').addEventListener('click', () => {
+  if (window.opener && !window.opener.closed) { window.close(); return; }
   try {
-    const r = await fetch(`/market/api/upload?kind=${encodeURIComponent(k)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/zip', 'X-Plugin-Filename': file.name },
-      body: file,
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-    $('uploadMsg').textContent = `已上传：${j.plugin.name || j.plugin.id} v${j.plugin.version}，等待管理员审核。`;
-    $('zip').value = '';
-    kind = k;
-    document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x.dataset.kind === k));
-    await load();
-  } catch (e) {
-    $('uploadMsg').textContent = `上传失败：${e.message}`;
-    $('uploadMsg').className = 'msg bad';
-  } finally {
-    btn.disabled = false;
-  }
+    if (history.length > 1 && document.referrer && new URL(document.referrer).origin === location.origin) { history.back(); return; }
+  } catch { /* ignore */ }
+  location.assign('/');
 });
 
 async function loadAdmin() {
   if (!token) return;
-  $('admin').classList.remove('hidden');
+  $('admin').hidden = false;
   try {
     const r = await fetch(`/admin/api/market?token=${encodeURIComponent(token)}`, { cache: 'no-store' });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-    $('adminList').innerHTML = (j.plugins || []).map((p) => card(p, true)).join('') || '<p class="msg">没有待审核插件。</p>';
+    adminRows = Array.isArray(j.plugins) ? j.plugins : [];
+    $('adminList').innerHTML = adminRows.map((p) => row(p, true)).join('') || '<div class="market-empty">没有插件。</div>';
   } catch (e) {
     $('adminMsg').textContent = `审核列表加载失败：${e.message}`;
-    $('adminMsg').className = 'msg bad';
+    $('adminMsg').classList.add('is-bad');
   }
 }
 
@@ -130,7 +138,7 @@ $('adminList').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   b.disabled = true;
-  $('adminMsg').textContent = '处理中…';
+  $('adminMsg').textContent = `${b.dataset.act} 处理中…`;
   try {
     const r = await fetch(`/admin/api/market?token=${encodeURIComponent(token)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -138,11 +146,11 @@ $('adminList').addEventListener('click', async (e) => {
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-    $('adminMsg').textContent = `${b.dataset.act} 完成：${j.entry?.status || ''}`;
+    $('adminMsg').textContent = `完成：${j.entry?.status || ''}`;
     await Promise.all([load(), loadAdmin()]);
   } catch (err) {
     $('adminMsg').textContent = `处理失败：${err.message}`;
-    $('adminMsg').className = 'msg bad';
+    $('adminMsg').classList.add('is-bad');
   } finally {
     b.disabled = false;
   }

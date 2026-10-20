@@ -2,7 +2,8 @@
 
 插件商城是一个独立的玩家页面，不是游戏内的插件面板：
 
-- `/market/`：浏览、上传、下载
+- `/market/`：浏览、搜索、下载
+- `/market/upload/`：单独的上传页面
 - `/admin/api/market`：管理员审核（需要 `/admin` token）
 
 ## 存储
@@ -27,7 +28,7 @@ var/plugin-market/
 
 只有 `active` 出现在公开列表和下载接口。
 
-`GET /market/api/list` 同时返回 `installed`：游戏服务器 `plugins/` 目录里已加载、但尚未上架商城的插件。页面会把它们显示在「本机已安装」区，没有下载按钮。
+`GET /market/api/list` 同时返回 `installed`：游戏服务器 `plugins/` 目录里已加载、但尚未上架商城的插件。页面会把它们显示在「本机已安装」区，并可通过 `/market/api/installed/<id>/download` 下载服务器上的当前安装目录。
 
 ## 上传
 
@@ -67,6 +68,7 @@ GET /market/api/download/<ordinary|forge>/<id>
 ```
 
 只有 `active` 可下载，返回 zip；每次下载计数加一。
+已安装但未上架的本机插件通过 `/market/api/installed/<id>/download` 按需打包下载；它们不计入商城下载数。
 
 ### 不影响主服务带宽
 
@@ -91,6 +93,15 @@ node tools/plugin.mjs check <id> --strict
 ```
 
 下载 zip 的 `sha256` 和大小在列表里可见，建议安装前核对。
+
+## 页面
+
+- 插件使用条形列表，不使用方块卡片
+- 支持按名称 / 作者 / 描述 / 类型搜索
+- 普通插件 / Forge 包 / 本机已安装分栏
+- 每一条显示 `kind` 和 `class` 两个类型标签
+- 上传是独立页面 `/market/upload/`
+- 从标题页打开商城会使用新标签页；「返回游戏」优先关闭该标签页，避免重新加载游戏资源
 
 ## 边界
 

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { PLUGIN_LIMITS, isPluginId } from '../shared/plugins/manifest.js';
-import { readPluginZip } from './plugins/zip.js';
+import { readPluginZip, zipFiles } from './plugins/zip.js';
 import { readUntrustedZip, importForge, forgeIdToPluginId } from './plugins/forgeImport.js';
 import { installFromFile } from './plugins/install.js';
 import { readPluginFolder, readVanillaAssets } from './plugins/registry.js';
@@ -55,7 +55,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
   const keyOf = (kind, id) => `${kind}:${id}`;
   const publicEntry = (e) => ({
     id: e.id, kind: e.kind, name: e.name, version: e.version, author: e.author || null,
-    description: e.description || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
+    description: e.description || null, class: e.class || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
     uploadedAt: e.uploadedAt, uploadedBy: e.uploadedBy || null, reviewedAt: e.reviewedAt || null,
     downloads: e.downloads || 0,
     download: e.status === 'active' ? `/market/api/download/${e.kind}/${encodeURIComponent(e.id)}` : null,
@@ -174,8 +174,35 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return list.filter((p) => p && p.source === 'plugins' && p.class !== 'lang').map((p) => ({
       id: p.id, kind: 'installed', name: (typeof p.manifest?.name === 'string' ? p.manifest.name : (p.manifest?.name?.zh || p.manifest?.name?.en)) || p.id,
       version: p.manifest?.version || null, class: p.class, status: 'installed', bytes: p.bytes || null,
-      description: 'Installed locally; not published to the store', download: null, sources: [], installed: true,
+      description: 'Installed locally; not published to the store', sources: [], installed: true,
+      download: p.status === 'loaded' ? `/market/api/installed/${encodeURIComponent(p.id)}/download` : null,
     }));
+  }
+
+  /** Zip an installed plugin folder on demand (the marketplace's download for a live plugins/<id>). */
+  function downloadInstalled(id) {
+    const p = (registry && typeof registry.plugin === 'function' ? registry.plugin(id) : null)
+      || (registry && typeof registry.plugins === 'function' ? registry.plugins().find((x) => x.id === id) : null);
+    if (!p || p.source !== 'plugins' || p.class === 'lang' || p.status !== 'loaded' || !p.where) return null;
+    const dir = path.isAbsolute(p.where) ? p.where : path.join(root, p.where);
+    const out = [];
+    const walk = (abs, rel = '') => {
+      let names;
+      try { names = fs.readdirSync(abs); } catch { return; }
+      for (const name of names) {
+        if (name.startsWith('.')) continue;
+        const at = path.join(abs, name);
+        const next = rel ? `${rel}/${name}` : name;
+        let st;
+        try { st = fs.lstatSync(at); } catch { continue; }
+        if (st.isSymbolicLink()) continue;
+        if (st.isDirectory()) walk(at, next);
+        else if (st.isFile()) out.push({ name: next, data: fs.readFileSync(at) });
+      }
+    };
+    walk(dir);
+    if (!out.length) return null;
+    return { entry: { id: p.id, version: p.manifest?.version || '1.0.0' }, bytes: zipFiles(out), filename: `${p.id}-${p.manifest?.version || '1.0.0'}.zip` };
   }
 
   function download(kind, id) {
@@ -188,5 +215,5 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return { entry: e, bytes: fs.readFileSync(file), filename: `${e.id}-${e.version}.zip` };
   }
 
-  return { base, upload, test, review, list, installed, download, get, indexFile };
+  return { base, upload, test, review, list, installed, download, downloadInstalled, get, indexFile };
 }
