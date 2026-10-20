@@ -215,6 +215,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return {
       id: e.id, kind: e.kind, name: e.name, version: e.version, author: e.author || null,
       description: e.description || null, class: e.class || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
+      license: e.license || null, homepage: e.homepage || null,
       uploadedAt: e.uploadedAt, uploadedBy: e.uploadedBy || null, reviewedAt: e.reviewedAt || null,
       downloads: e.downloads || 0, app: compat.app, api: compat.api, compat, listed: e.listed !== false,
       order: Number.isFinite(e.order) ? e.order : 0, needsReview: e.needsReview === true,
@@ -246,6 +247,8 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       return {
         id: man.id, version: man.version, name: nameOf(man.name), author: nameOf(man.author), description: nameOf(man.description),
         class: man.class || null, app: appRangeOf(man.app), api: apiLevelOf(man.api),
+        license: typeof man.license === 'string' ? man.license.slice(0, 120) : null,
+        homepage: typeof man.homepage === 'string' ? man.homepage.slice(0, 300) : null,
         requires: depMap(man.requires), optional: depMap(man.optional), conflicts: depMap(man.conflicts),
       };
     }
@@ -258,6 +261,8 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return {
       id, version: String(pack.version || '0.0.0'), name: nameOf(pack.name) || raw, author: nameOf(pack.author),
       description: nameOf(pack.description), class: 'forge', app: appRangeOf(pack.app), api: apiLevelOf(pack.api),
+      license: typeof pack.license === 'string' ? pack.license.slice(0, 120) : null,
+      homepage: typeof pack.homepage === 'string' ? pack.homepage.slice(0, 300) : null,
       requires: depMap(pack.dependencies), optional: {}, conflicts: depMap(pack.conflicts),
     };
   }
@@ -279,6 +284,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       signature: verifiedSignature,
       name: meta.name || meta.id, author: meta.author || null, description: meta.description || null,
       class: meta.class || null, app: meta.app || null, api: meta.api ?? null,
+      license: meta.license || null, homepage: meta.homepage || null,
       requires: meta.requires || {}, optional: meta.optional || {}, conflicts: meta.conflicts || {},
     };
     if (existing && existing.status === 'active') {
@@ -478,6 +484,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
         name: e.name, author: e.author, description: e.description, class: e.class, app: e.app, api: e.api,
         requires: e.requires || {}, optional: e.optional || {}, conflicts: e.conflicts || {},
         signature: e.signature || null,
+        license: e.license || null, homepage: e.homepage || null,
       };
       e.history = [...(Array.isArray(e.history) ? e.history : []), current].slice(-10);
       const next = e.pending;
@@ -488,6 +495,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       e.app = next.app || null; e.api = next.api ?? null;
       e.requires = next.requires || {}; e.optional = next.optional || {}; e.conflicts = next.conflicts || {};
       e.signature = next.signature || null;
+      e.license = next.license || null; e.homepage = next.homepage || null;
       e.pending = null;
     }
     e.status = 'active'; e.needsReview = false;

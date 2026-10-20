@@ -71,6 +71,27 @@
 .market-row__related { color: var(--text-lo); font-size: 11.5px; margin-top: 4px; }
 .market-row__related span { color: var(--mint-400); }
 .market-row__related--bad { color: #ff9aa2; }
+.market-detail { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; }
+.market-detail__backdrop { position: absolute; inset: 0; background: rgba(3, 8, 6, .72); backdrop-filter: blur(3px); }
+.market-detail__card { position: relative; width: min(680px, 94vw); max-height: 90vh; overflow: auto; padding: 20px 22px; border: 1px solid var(--line); background: linear-gradient(180deg, #101a17, #0b1210); box-shadow: 0 28px 90px rgba(0,0,0,.55); }
+.market-detail__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.market-detail__head h2 { margin: 3px 0 2px; font-size: 24px; }
+.market-detail__id { color: var(--text-lo); font: 11px var(--font-mono, monospace); }
+.market-detail__close { background: transparent; border: 0; color: var(--text-lo); font-size: 26px; line-height: 1; cursor: pointer; }
+.market-detail__badges { display: flex; gap: 5px; flex-wrap: wrap; margin: 12px 0; }
+.market-detail__desc { color: var(--text-lo); line-height: 1.7; white-space: pre-wrap; }
+.market-detail__kv { display: grid; grid-template-columns: 110px 1fr; gap: 0; margin: 14px 0; font-size: 12.5px; }
+.market-detail__kv dt, .market-detail__kv dd { margin: 0; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.market-detail__kv dt { color: var(--text-lo); }
+.market-detail__kv dd { color: var(--text-hi); overflow-wrap: anywhere; }
+.market-detail__bad { color: #ff9aa2; }
+.market-detail__sha { font-family: var(--font-mono, monospace); font-size: 10.5px; }
+.market-detail h3 { margin: 16px 0 7px; font-size: 13px; color: var(--text-lo); }
+.market-detail__history { border: 1px solid var(--line); }
+.market-detail__history-row { display: flex; justify-content: space-between; padding: 7px 9px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.market-detail__history-row:last-child { border-bottom: 0; }
+.market-detail__muted { display: block; padding: 9px; color: var(--text-lo); font-size: 12px; }
+.market-detail__foot { display: flex; justify-content: flex-end; margin-top: 16px; }
 .market-row__compat { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 11.5px; }
 .compat-chip { display: inline-flex; align-items: center; min-height: 21px; padding: 0 7px; border: 1px solid var(--line); color: var(--text-lo); font-size: 11px; }
 .compat-chip.is-ok { color: var(--mint-400); border-color: var(--mint-a35); }

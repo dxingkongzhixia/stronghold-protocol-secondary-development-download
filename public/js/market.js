@@ -66,6 +66,7 @@ const row = (p, admin = false) => {
         ? `<a class="mc-btn mc-btn--primary" href="${esc(p.download)}" download="${esc(p.id)}.zip">下载</a>`
         : `<button class="mc-btn mc-btn--primary" data-download="${esc(p.download)}" data-id="${esc(p.id)}">下载</button>`)
       : '';
+  const detailButton = `<button class="mc-btn" data-detail="${esc(p.id)}">详情</button>`;
   return `<article class="market-row">
     <div>
       <div class="market-row__name"><b>${esc(p.name || p.id)}</b><span class="market-row__version">v${esc(p.version || '—')}</span></div>
@@ -89,7 +90,7 @@ const row = (p, admin = false) => {
       </div>
       ${compat.note ? `<div class="market-row__compat-note">${esc(compat.note)}</div>` : ''}
     </div>
-    <div class="market-row__action">${actions}</div>
+    <div class="market-row__action">${detailButton}${actions}</div>
   </article>`;
 };
 
@@ -129,6 +130,44 @@ async function load() {
   }
 }
 
+function showDetail(id) {
+  const p = [...(data.plugins || []), ...(data.installed || [])].find((x) => x.id === id);
+  if (!p) return;
+  const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u) ? u : null);
+  const related = (p.relatedPlugins || []).map((r) => r.name).join('、') || '—';
+  const relatedBy = (p.relatedBy || []).map((r) => r.name).join('、') || '—';
+  const deps = p.dependencyCheck;
+  const depText = !deps ? '未检查' : deps.ok ? '依赖完整' : `依赖不完整：${[...(deps.missing || []), ...(deps.mismatched || []), ...(deps.conflicts || [])].map((x) => x.id).join('、')}`;
+  const history = (p.history || []).length
+    ? p.history.map((h) => `<div class="market-detail__history-row"><span>v${esc(h.version)}</span><span>${esc(h.uploadedAt ? new Date(h.uploadedAt).toLocaleDateString() : '')}</span></div>`).join('')
+    : '<span class="market-detail__muted">无历史版本</span>';
+  const home = safeUrl(p.homepage);
+  const box = document.createElement('div');
+  box.className = 'market-detail';
+  box.innerHTML = `<div class="market-detail__backdrop" data-detail-close></div>
+    <section class="market-detail__card" role="dialog" aria-modal="true" aria-label="插件详情">
+      <header class="market-detail__head"><div><div class="market-kicker">PLUGIN DETAIL</div><h2>${esc(p.name || p.id)}</h2><div class="market-detail__id">${esc(p.id)} · v${esc(p.version || '—')}</div></div><button class="market-detail__close" data-detail-close aria-label="关闭">×</button></header>
+      <div class="market-detail__badges"><span class="mc-badge">${esc(KIND[p.kind] || p.kind || '插件')}</span><span class="mc-badge">${esc(classLabel(p.class))}</span><span class="mc-badge">${esc(STATUS[p.status] || p.status || '')}</span>${p.signature ? `<span class="mc-badge mc-badge--active">签名 · ${esc(p.signature.keyId)}</span>` : '<span class="mc-badge">未签名</span>'}</div>
+      <p class="market-detail__desc">${esc(p.installed ? (p.description || '本机已安装，未上架商城。') : (p.description || '没有填写描述。'))}</p>
+      <dl class="market-detail__kv">
+        <dt>作者</dt><dd>${esc(p.author || '未填写')}</dd>
+        <dt>大小</dt><dd>${bytes(p.bytes)}</dd>
+        <dt>兼容性</dt><dd>本服 0.4.0 ${esc(compatibilityLine(p).own)} · 主线 0.3.x ${esc(compatibilityLine(p).main)}</dd>
+        <dt>app / API</dt><dd>${esc(p.app || '未声明')} / ${esc(p.api ?? '未声明')}</dd>
+        <dt>依赖</dt><dd class="${deps && !deps.ok ? 'market-detail__bad' : ''}">${esc(depText)}</dd>
+        <dt>关联</dt><dd>${esc(related)}</dd>
+        <dt>被关联</dt><dd>${esc(relatedBy)}</dd>
+        <dt>许可证</dt><dd>${esc(p.license || '未填写')}</dd>
+        <dt>主页</dt><dd>${home ? `<a href="${esc(home)}" target="_blank" rel="noopener">${esc(home)}</a>` : '未填写'}</dd>
+        <dt>SHA-256</dt><dd class="market-detail__sha">${esc(p.sha256 || '—')}</dd>
+      </dl>
+      <h3>历史版本</h3><div class="market-detail__history">${history}</div>
+      <footer class="market-detail__foot"><button class="mc-btn" data-detail-close>关闭</button></footer>
+    </section>`;
+  box.addEventListener('click', (e) => { if (e.target.closest('[data-detail-close]')) box.remove(); });
+  document.body.appendChild(box);
+}
+
 async function download(url, id) {
   try {
     const entry = [...(data.plugins || []), ...(data.installed || [])].find((p) => p.id === id);
@@ -156,6 +195,8 @@ async function download(url, id) {
 }
 
 $('list').addEventListener('click', (e) => {
+  const detail = e.target.closest('[data-detail]');
+  if (detail) { showDetail(detail.dataset.detail); return; }
   const b = e.target.closest('[data-download]');
   if (b) download(b.dataset.download, b.dataset.id);
 });
