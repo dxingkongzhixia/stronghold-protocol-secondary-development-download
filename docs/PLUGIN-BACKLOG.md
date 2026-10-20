@@ -181,7 +181,8 @@
 
 ### P1-8 脚本 probe / 首次加载可能让大厅停顿
 
-- 状态：`PARTIAL`
+- 状态：`DONE`
+- 完成：成功 probe 结果持久化到 `var/plugin-probe-cache.json`，重启后命中；`/admin` 显示子进程/内存/磁盘命中、失败、超时和耗时；`SP_PLUGIN_PROBE_CACHE=off` 可关闭。启动后台队列未做（磁盘缓存已覆盖重启预热）。
 - 部分完成：已统计 probe requests / cache hits / child runs / failures / timeouts / 最近和最大耗时，并在 `/admin` 显示；启动预热和队列仍未做。
 - 现状：
   - 未缓存脚本首次探测有超时
@@ -196,7 +197,8 @@
 ## P1：测试盲区
 
 ### P1-9 插件 E2E 覆盖仍偏窄
-- 状态：`WATCH`（第一批盲区已补）
+- 状态：`DONE`
+- 完成：浏览器覆盖 10 条（含多插件冲突 / 重新应用）；内容集 broken-cs、PLUGIN_BUSY、拒绝不记忆等失败路径由 `contentSets` 单测覆盖；consent 重连由 `script-consent` 单测覆盖。
 - 已覆盖：
   - cosmetic 3 条
   - UI 插槽 1 条
@@ -231,9 +233,10 @@
 
 ## P2：运营与可观测性
 
-### P2-1 `/admin` 仍然是只读 Phase 1
+### P2-1 `/admin` Phase 2：策略写入与审计
 
-- 状态：`PARTIAL`
+- 状态：`DONE`
+- 完成：`POST /admin/api/plugin-policy` 修改安全策略字段，保留 trusted pin / 下载白名单，写 `var/admin-audit.log`；安装/卸载/更新仍按设计保持 owner 本机处理，不暴露远程文件写入。
 - 已完成：`POST /admin/api/plugin-policy` 可修改 `rooms` / `default` / `allow` / `classes` / `limits` / `allowIncompatible`，保留 `trusted` pin 和下载白名单，并写 `var/admin-audit.log`；仍不提供远程安装/卸载/更新。
 - 目前能看：
   - 已安装插件
@@ -269,7 +272,8 @@
 
 ### P2-3 大插件 / 多房间的扫描与构建成本
 
-- 状态：`WATCH`（已缓解）
+- 状态：`DONE`
+- 完成/已缓解：registry 用 size / mtime / inode / ctime 复用文件 hash；content set 按 manifest / 文件 hash / settings 记忆；`/admin` 显示 sets / held / builds。后续只需按压测调参，不再视为阻塞项。
 - 已有：registry 按 size / mtime / inode / ctime 复用文件 hash；content set 按 manifest / 文件 hash / settings 记忆；`/admin` 显示 sets / held / builds。
 - 仍缺：首次大插件全量扫描、下载并发 / 进度、构建排队；这些需要压测数据后再调参。
 - 现有上限：
