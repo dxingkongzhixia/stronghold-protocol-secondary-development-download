@@ -102,22 +102,30 @@ node tools/plugin.mjs check <id> --strict
 - 支持按名称 / 作者 / 描述 / 类型搜索
 - **来源**分栏：普通插件（`plugin.json`）/ Forge 包（`pack.json`）/ 本机已安装
 - **插件类型**筛选：外观 / 玩法 / 界面 / 脚本 / 信任 / 语言 / Forge 转换
-- 每一条显示 `来源`、`类型（class）`、`状态` 三个标签，不只显示存储格式
-- 每一条显示兼容性：`app` 范围、`API` 版本，以及「兼容本服 0.4.x / 兼容主线 0.3.x / 不兼容」的判断
+- 每一条显示**本服 0.4.0** 与**主线 0.3.x** 两个独立的兼容标签，再附 `app` 范围 / `API` 版本
+- 本机插件和没有镜像的插件使用浏览器原生下载链接；大文件不再先 `fetch` 成 blob 再保存
 - 上传是独立页面 `/market/upload/`
 - 从标题页打开商城会使用新标签页；「返回游戏」优先关闭该标签页，避免重新加载游戏资源
 
 ## 兼容性
 
-商城条目的 `compat` 字段直接回答「主线版本能不能用」：
+商城的兼容性分成两栏，不合并成一个结论：
 
-| 插件 class | `app` 只匹配主线 0.3.x | 结果 |
+| 标签 | 判断 |
+|---|---|
+| 本服 0.4.0 | `app` 范围是否包含 0.4.0 |
+| 主线 0.3.x | `app` 范围是否包含 0.3.2（本分支兼容层使用的判定点） |
+
+再看插件 class 决定「主线兼容」能不能直接用：
+
+| 插件 class | 主线 0.3.x 兼容 | 本服 0.4.0 不兼容时的处理 |
 |---|---|---|
-| `lang` / `cosmetic` / `ui` | 是 | `compat.ok: true`，显示「兼容主线 0.3.x（自动兼容）」 |
-| `content` / `script` / `trusted` | 是 | `compat.ok: false`，显示「不兼容本服 0.4.0」；owner 可用 `allowIncompatible` 显式放行 |
-| 任意 class | 匹配本服 0.4.x 或未限制 | `compat.ok: true`，显示「兼容本服 0.4.x」/「未限制 app 版本」 |
+| `lang` / `cosmetic` / `ui` | 是 | 自动按 0.3.x 兼容加载 |
+| `content` / `script` / `trusted` | 是 | 仍严格；owner 需用 `allowIncompatible` 显式放行 |
 
-`compat` 还带 `app`、`api`、`own`、`mainline`、`auto`、`unrestricted`。Forge 包的 `compat.ok` 为 `null`：商城只把它标成「已通过本服导入测试 / 待导入测试」，最终以 `importForge` 的转换结果为准。兼容层细节见 [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) §7 和 `shared/plugins/manifest.js` 的 `appVersionCompatible()`。
+Forge 包不直接按这两个标签下结论：页面显示「本服导入测试：已通过 / 待测试」和「主线：以导入结果为准」，最终看 `importForge` 的转换结果。
+
+API 的 `compat` 字段保留 `own`（本服）、`mainline`（主线）、`auto`（class 是否自动兼容）、`unrestricted`（未声明 app）四个判断，页面不再把它们压成一个「兼容 / 不兼容」。
 
 ## 边界
 

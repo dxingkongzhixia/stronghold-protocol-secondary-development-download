@@ -21,26 +21,34 @@ const bytes = (n) => {
 };
 const classLabel = (key) => CLASS[key] || key || '未声明';
 const versionDetail = (c) => `app ${c.app || '未声明'} · API ${c.api ?? '未声明'}`;
+const strictClass = (cls) => cls === 'content' || cls === 'script' || cls === 'trusted';
 function compatibilityLine(p, c = p.compat || {}) {
   if (p.kind === 'forge') {
     return {
-      tone: p.status === 'active' ? 'ok' : 'maybe',
-      text: p.status === 'active' ? '已通过本服导入测试' : '待管理员导入测试',
-      detail: `${versionDetail(c)} · Forge 包以转换结果为准`,
+      ownTone: p.status === 'active' ? 'ok' : 'maybe',
+      own: p.status === 'active' ? '已通过导入测试' : '待导入测试',
+      mainTone: 'neutral',
+      main: '以导入结果为准',
+      detail: `${versionDetail(c)} · Forge 包不直接按 app 范围判定`,
+      note: '',
     };
   }
-  if (c.ok === false) {
-    const onlyMainline = c.mainline && !c.own;
-    return {
-      tone: 'no',
-      text: onlyMainline ? '不兼容本服 0.4.0（仅声明主线 0.3.x）' : '不兼容本服 0.4.0',
-      detail: `${versionDetail(c)}${onlyMainline && !c.auto ? ' · 需 owner 在 allowIncompatible 放行' : ''}`,
-    };
-  }
-  if (c.unrestricted || !c.app) return { tone: 'ok', text: '兼容（未限制 app 版本）', detail: versionDetail(c) };
-  if (c.own) return { tone: 'ok', text: '兼容本服 0.4.x', detail: versionDetail(c) };
-  if (c.auto && c.mainline) return { tone: 'ok', text: '兼容主线 0.3.x（自动兼容）', detail: versionDetail(c) };
-  return { tone: 'maybe', text: '兼容性未确定', detail: versionDetail(c) };
+  const unrestricted = c.unrestricted || !c.app;
+  const own = unrestricted ? '未限制' : c.own ? '兼容' : '不兼容';
+  const main = unrestricted ? '未限制' : c.mainline ? '兼容' : '不兼容';
+  const note = c.mainline && !c.auto && strictClass(p.class)
+    ? '本服 0.4.0 仍严格；需 owner 在 allowIncompatible 放行'
+    : c.mainline && c.auto && !c.own
+      ? '外观 / 界面 / 语言按主线 0.3.x 兼容层自动加载'
+      : '';
+  return {
+    ownTone: unrestricted || c.own ? 'ok' : 'no',
+    own,
+    mainTone: unrestricted || c.mainline ? 'ok' : 'no',
+    main,
+    detail: versionDetail(c),
+    note,
+  };
 }
 const row = (p, admin = false) => {
   const kindLabel = KIND[p.kind] || p.kind || '插件';
@@ -48,11 +56,16 @@ const row = (p, admin = false) => {
   const status = STATUS[p.status] || p.status || '';
   const description = p.installed ? '本机已安装，未上架商城。' : (p.description || '没有填写描述。');
   const compat = compatibilityLine(p);
+  const direct = p.download && (!Array.isArray(p.sources) || !p.sources.length);
   const actions = admin
     ? `<button class="mc-btn" data-act="test" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">测试</button>
        <button class="mc-btn mc-btn--primary" data-act="approve" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">通过</button>
        <button class="mc-btn mc-btn--danger" data-act="reject" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">拒绝</button>`
-    : p.download ? `<button class="mc-btn mc-btn--primary" data-download="${esc(p.download)}" data-id="${esc(p.id)}">下载</button>` : '';
+    : p.download
+      ? (direct
+        ? `<a class="mc-btn mc-btn--primary" href="${esc(p.download)}" download="${esc(p.id)}.zip">下载</a>`
+        : `<button class="mc-btn mc-btn--primary" data-download="${esc(p.download)}" data-id="${esc(p.id)}">下载</button>`)
+      : '';
   return `<article class="market-row">
     <div>
       <div class="market-row__name"><b>${esc(p.name || p.id)}</b><span class="market-row__version">v${esc(p.version || '—')}</span></div>
@@ -65,7 +78,12 @@ const row = (p, admin = false) => {
     <div>
       <p class="market-row__desc">${esc(description)}</p>
       <div class="market-row__meta">${esc(p.author ? `作者：${p.author}` : '作者：未填写')} · ${bytes(p.bytes)} · 下载 ${esc(p.downloads || 0)}</div>
-      <div class="market-row__compat is-${compat.tone}">兼容性：<b>${esc(compat.text)}</b><span>${esc(compat.detail)}</span></div>
+      <div class="market-row__compat">
+        <span class="compat-chip is-${compat.ownTone}">本服 0.4.0 · ${esc(compat.own)}</span>
+        <span class="compat-chip is-${compat.mainTone}">主线 0.3.x · ${esc(compat.main)}</span>
+        <span class="market-row__compat-detail">${esc(compat.detail)}</span>
+      </div>
+      ${compat.note ? `<div class="market-row__compat-note">${esc(compat.note)}</div>` : ''}
     </div>
     <div class="market-row__action">${actions}</div>
   </article>`;
