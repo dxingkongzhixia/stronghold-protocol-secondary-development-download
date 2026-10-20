@@ -221,3 +221,17 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 - 文档：本文件、[`docs/MATCHMAKING.md`](MATCHMAKING.md)（决策记录）、[`docs/HANDOVER.md`](HANDOVER.md)（接手入口）、[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)（查询索引）。
 - 宣传片：`docs/promo/`（B 站宣传视频脚本 + 成片）。
 - 发布：GitHub 主仓库 + Gitee 国内镜像（见 §5 发布一条与 [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md)）。
+
+## 12. 2026-10-20 上线记录
+
+- 代码：`c78842932`（插件商城、运营台策略写入/审计、脚本 probe 磁盘缓存/指标、自选官方标签、玩家风险说明、标题页设置/全屏样式）
+- 生产：`/www/wwwroot/Stronghold-Protocol`
+- 备份：`/root/sp-backup-code-20261020-125947.tgz`
+- 重启后 build：`74e95a248cb0`（== 磁盘 build）
+- 社区更新日志：`0.4.37`
+- 验证：
+  - 内网 `http://127.0.0.1:3000/healthz` OK
+  - 外网 `http://183.66.27.19:20522/healthz` OK
+  - `/market/` 200，`/market/api/list` 200
+  - 管理员通知已推送（6 人在线收到）
+- 上线时间：2026-10-20 13:00（CST）
