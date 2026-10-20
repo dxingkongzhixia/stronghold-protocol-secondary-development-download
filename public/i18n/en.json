@@ -1815,5 +1815,7 @@
   "本房间启用了受信任插件。它可以完全控制你的游戏页面。只有在你信任插件作者和服务器时才同意。": "This room has trusted plugins enabled. They can fully control your game page. Only accept if you trust the plugin authors and the server.",
   "权限": "Permissions",
   "已拒绝。开始模拟前仍需要你的同意。": "Declined. Your consent is still required before the match can start.",
-  "同意并继续": "Accept and continue"
+  "同意并继续": "Accept and continue",
+  "沙箱脚本": "Sandbox script",
+  "原生信任": "Native trusted"
 }

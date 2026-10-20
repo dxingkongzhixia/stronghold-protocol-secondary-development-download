@@ -386,5 +386,6 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
   assert.equal(p.policy.rooms, 'host');
   assert.equal(p.policy.maxSets, 4);
   assert.deepEqual(p.policy.allowIncompatible, ['demo']);
+  assert.equal(typeof p.probe.requests, 'number');
   assert.deepEqual(buildPluginSnapshot(null).installed, []);
 });

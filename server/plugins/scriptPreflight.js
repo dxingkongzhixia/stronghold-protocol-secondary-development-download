@@ -13,12 +13,23 @@ const probeEnv = Number.parseInt(process.env.SP_SCRIPT_PROBE_MS ?? '', 10);
 export const SCRIPT_PROBE_TIMEOUT_MS = Number.isInteger(probeEnv) && probeEnv >= 500 && probeEnv <= 60000 ? probeEnv : 5000;
 const caches = new WeakMap();
 const failure = message => ({code:'PLUGIN_SCRIPT_CHECK',message});
+/** Cumulative, read-only probe telemetry for the operations console (one process; no player data). */
+const stats = { requests: 0, cacheHits: 0, childRuns: 0, failures: 0, timeouts: 0, totalMs: 0, lastMs: 0, maxMs: 0 };
+export function scriptProbeStats() { return { ...stats }; }
+
 
 export function preflightScripts(registry, scripts, hashInput) {
+  const started = Date.now();
   const cache = caches.get(registry) ?? new Map();
   caches.set(registry,cache);
   const owners = new Map();
+  const finish = (result) => {
+    const elapsed = Date.now() - started;
+    stats.lastMs = elapsed; stats.totalMs += elapsed; stats.maxMs = Math.max(stats.maxMs, elapsed);
+    return result;
+  };
   for (const script of scripts) {
+    stats.requests++;
     const part = hashInput.plugins.find(p => p.id === script.id);
     const settings = hashInput.settings[script.id];
     // Lock identity plus the actual descriptor protects CLI tests with an absent/stale lock too.
@@ -26,6 +37,7 @@ export function preflightScripts(registry, scripts, hashInput) {
     const key = canonicalJson([script.id,script.hash,part.files['@script'],nodeSha256(canonicalJson(settings))]);
     let report = cache.get(key);
     if (!report) {
+      stats.childRuns++;
       const { execArgv = [], ...processOptions } = script.execution === 'sandbox' ? sandboxProcessOptions(128) : {};
       const probe = spawnSync(process.execPath,[...execArgv,fileURLToPath(new URL('./scriptProbe.js',import.meta.url))],{
         ...processOptions,
@@ -40,16 +52,17 @@ export function preflightScripts(registry, scripts, hashInput) {
         ? `script setup exceeded ${SCRIPT_PROBE_TIMEOUT_MS} ms; child terminated (${probe.signal})`
         : 'script setup process failed: '+(probe.error?.message || probe.signal));
       else if (probe.status !== 0 && !report?.code) report = failure('script setup failed');
+      if (probe.error?.code === 'ETIMEDOUT') stats.timeouts++;
       if (!report?.code && (!Array.isArray(report?.registrations) || report.registrations.some(r =>
         typeof r?.key !== 'string' || r.pluginId !== script.id))) report = failure('invalid script registration report');
       cache.set(key,report);
       if (cache.size > 256) cache.delete(cache.keys().next().value);
-    }
-    if (report.code) return report;
+    } else stats.cacheHits++;
+    if (report.code) { stats.failures++; return finish(report); }
     for (const {key,pluginId} of report.registrations) {
-      if (owners.has(key)) return {code:'PLUGIN_SCRIPT_CONFLICT',message:`${key}: ${owners.get(key)} and ${pluginId} both register this id`};
+      if (owners.has(key)) { stats.failures++; return finish({code:'PLUGIN_SCRIPT_CONFLICT',message:`${key}: ${owners.get(key)} and ${pluginId} both register this id`}); }
       owners.set(key,pluginId);
     }
   }
-  return null;
+  return finish(null);
 }

@@ -24,6 +24,7 @@ import { splitUrl } from '../../server/http/common.js';
 import { ERR } from '../../shared/constants.js';
 import { writePlugin, cosmetic } from '../helpers/pluginFixtures.js';
 import { setUiPlugin, toggleRecommend, uiPlugins, uiRecommend, visibleRecommend } from '../../public/js/ui/uiPlugins.js';
+import { roomPlugins } from '../../public/js/ui/pluginPanel.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const sha = (buf) => createHash('sha256').update(buf).digest('hex');
@@ -530,4 +531,15 @@ test('an empty slots list warns and still reads; a missing client page does not'
   assert.ok(missing.problems.some((p) => /entry\.client/.test(p)));
   const hash = sha(Buffer.from('x'));
   assert.equal(typeof hash, 'string');
+});
+
+test('roomPlugins offers loaded script and trusted plugins directly, not disabled ones', () => {
+  const list = [
+    { id: 'content-a', class: 'content', status: 'loaded', scope: ['room'] },
+    { id: 'script-a', class: 'script', status: 'loaded', scope: ['room'] },
+    { id: 'trusted-a', class: 'trusted', status: 'loaded', scope: ['room'] },
+    { id: 'script-off', class: 'script', status: 'disabled', scope: ['room'] },
+    { id: 'personal-script', class: 'script', status: 'loaded', scope: ['personal'] },
+  ];
+  assert.deepEqual(roomPlugins(list).map((p) => p.id), ['content-a', 'script-a', 'trusted-a']);
 });

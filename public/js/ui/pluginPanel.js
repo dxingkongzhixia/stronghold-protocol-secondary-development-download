@@ -2,7 +2,7 @@
 // Loaded only when one of them opens (the room's tag, ui/pluginTag.js; the title screen's button, screens/title.js), so
 // the title page and the room carry none of it:
 //
-//   * PluginPanel — the cosmetic and (P1c, DESIGN §32.6) content plugins this server has for rooms (the catalogue:
+//   * PluginPanel — the cosmetic, content and (when the owner enabled them) script/trusted plugins this server has for rooms (the catalogue:
 //     content.js loadCatalog — fetched when the panel opens, and only on a server that has plugins: content.plugins > 0),
 //     each with its
 //     switch for the host and its state for everybody else (the other players and the spectators read it), its version,
@@ -51,10 +51,10 @@ export function nextChoice(chosen, id, on, offered = null) {
   return out;
 }
 
-/** The plugins a room may switch on: the loaded cosmetic and content plugins of scope `room` (the catalogue's order). */
+/** The plugins a room may switch on: loaded cosmetic, content, script and trusted plugins of scope `room`. */
 export const roomPlugins = (plugins) => [
   ...cosmeticPlugins(plugins, 'room'),
-  ...(Array.isArray(plugins) ? plugins : []).filter((p) => p && p.class === 'content' && p.status === 'loaded' && Array.isArray(p.scope) && p.scope.includes('room')),
+  ...(Array.isArray(plugins) ? plugins : []).filter((p) => p && ['content', 'script', 'trusted'].includes(p.class) && p.status === 'loaded' && Array.isArray(p.scope) && p.scope.includes('room')),
 ].sort((a, b) => (String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0));
 
 /** One warning of the room's set as a sentence (room.state.content.warnings, server/plugins/visualSet.js / roomSets.js). */
@@ -115,7 +115,7 @@ export function PluginPanel({ open, room, myId, onClose }) {
   const rows = [...offered, ...f.plugins.filter((p) => !offered.some((o) => o.id === p.id)).map((p) => ({ id: p.id, version: p.version, missing: true }))];
   const nameOf = (id) => { const p = cat.plugins.find((x) => x.id === id); return p ? pluginName(p) : String(id ?? ''); };
   const classOf = (id) => cat.plugins.find((x) => x.id === id)?.class || f.plugins.find((x) => x.id === id)?.class || 'cosmetic';
-  const anyContent = f.modded || offered.some((p) => p.class === 'content');
+  const anyContent = f.modded || offered.some((p) => ['content', 'script', 'trusted'].includes(p.class));
   /** room.setPlugins with these ids (one request at a time; `what`: the row — or 'reapply' — that shows it busy). */
   const send = async (ids, what, change = null) => {
     if (inFlight.current || !f.editable) return;
@@ -160,17 +160,19 @@ export function PluginPanel({ open, room, myId, onClose }) {
         ${rows.map((p) => {
           const on = f.on.has(p.id);
           const auto = f.auto.has(p.id);
-          const content = (p.class || classOf(p.id)) === 'content';
+          const cls = p.class || classOf(p.id);
+          const content = cls === 'content';
+          const code = cls === 'script' || cls === 'trusted';
           // a gameplay plugin made for other game versions is refused (PLUGIN_INCOMPATIBLE): its switch only turns it off
-          const blocked = content && p.compatible === false && !on;
-          return html`<li key=${p.id} class=${cx('plugrow', on && 'is-on', content && 'is-content')} data-plugin=${p.id}>
+          const blocked = (content || code) && p.compatible === false && !on;
+          return html`<li key=${p.id} class=${cx('plugrow', on && 'is-on', (content || code) && 'is-content')} data-plugin=${p.id}>
             <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} class=${cx('set-toggle plugrow__switch', on && 'is-on')}
               disabled=${!f.editable || !!busy || (p.missing && !on) || (auto && on && !p.missing) || blocked} aria-label=${pluginName(p)}
               onClick=${() => toggle(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
             <div class="plugrow__body">
               <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
                 ${auto ? html`<span class="plugrow__badge">${t('自动')}</span>` : null}
-                <span class=${cx('plugrow__badge', content && 'is-gameplay')}>${content ? t('改变玩法') : t('外观')}</span><span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
+                <span class=${cx('plugrow__badge', content && 'is-gameplay')}>${code ? (cls === 'trusted' ? t('原生信任') : t('沙箱脚本')) : content ? t('改变玩法') : t('外观')}</span><span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
               <div class="plugrow__meta t-dim">
                 ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
                 ${Number.isFinite(p.artBytes) ? html`<span class="num">${sizeText(p.artBytes)}</span>` : null}
@@ -178,7 +180,7 @@ export function PluginPanel({ open, room, myId, onClose }) {
               </div>
               ${on && p.settings ? html`<${PluginSettings} definitions=${p.settings} values=${f.plugins.find((x) => x.id === p.id)?.settings || {}}
                 disabled=${!f.editable || !!busy || p.missing} onSave=${(settings) => send([...new Set([...f.chosen, p.id])], p.id, { id: p.id, settings })} />` : null}
-              ${p.compatible === false ? html`<div class="plugrow__warn">${content
+              ${p.compatible === false ? html`<div class="plugrow__warn">${(content || code)
                 ? t('适配 {app}，本服务器是 {version}（改变玩法的插件不能启用）', { app: p.app || '', version: APP_VERSION })
                 : t('适配 {app}，本服务器是 {version}（外观插件，仍可使用）', { app: p.app || '', version: APP_VERSION })}</div>` : null}
             </div>

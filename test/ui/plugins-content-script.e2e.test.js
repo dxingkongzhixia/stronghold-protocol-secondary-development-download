@@ -129,6 +129,48 @@ describe('content and script plugins in the browser', { skip: !ENABLED }, () => 
     }
   });
 
+  test('a standalone sandbox script is selectable directly in the room panel', { timeout: 5 * 60 * 1000 }, async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-script-direct-'));
+    fs.cpSync(path.join(ROOT, 'plugins/_template/script'), path.join(tmp, 'script-direct'), { recursive: true });
+    const mp = path.join(tmp, 'script-direct', 'plugin.json');
+    const m = JSON.parse(fs.readFileSync(mp, 'utf8'));
+    m.id = 'script-direct';
+    m.name = { zh: '直接脚本', en: 'Direct script' };
+    fs.writeFileSync(mp, JSON.stringify(m, null, 2));
+    for (const rel of ['guard.json', 'sim/index.js']) {
+      const f = path.join(tmp, 'script-direct', ...rel.split('/'));
+      fs.writeFileSync(f, fs.readFileSync(f, 'utf8')
+        .replaceAll('char_x_script_demo_guard', 'char_x_script_direct_guard')
+        .replaceAll('skx_script_demo_guard', 'skx_script_direct_guard'));
+    }
+    assert.ok(packPlugin(path.join(tmp, 'script-direct')).wrote);
+    const srv = await startRealServer({
+      fast: { timerScale: 1, combatSpeed: 2, startRound: 1, autoPlace: true },
+      pluginsDir: tmp,
+      env: { SP_PLUGIN_SCRIPTS: 'sandbox' },
+    });
+    const P = (await import('puppeteer-core')).default;
+    const c = new Client(P, srv.base, 'direct', { prefix: 'script-direct', w: 1600, h: 900 });
+    try {
+      await openRoom(c);
+      await c.click('[data-testid="plugin-tag"]');
+      await c.page.waitForSelector('[data-plugin="script-direct"]', { timeout: 30000 });
+      assert.match(await c.page.$eval('[data-plugin="script-direct"]', (e) => e.textContent), /沙箱脚本/);
+      await c.click('[data-plugin="script-direct"] button[role="switch"]');
+      await c.page.waitForFunction(() => document.querySelector('[data-plugin="script-direct"] button[role="switch"]')?.getAttribute('aria-checked') === 'true', { timeout: 15000 });
+      await c.click('.modal__actions button', '完成');
+      await waitContentReady(c);
+      const room = await c.page.evaluate(() => globalThis.__SP__.store.get().room.content);
+      assert.ok(room.plugins.some((p) => p.id === 'script-direct' && p.class === 'script' && p.execution === 'sandbox'));
+      await startMatch(c);
+      assert.equal((await c.st()).phase, 'PREP');
+    } finally {
+      await c.close().catch(() => {});
+      await srv.stop().catch(() => {});
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   test('a real Forge pack imports into content + cosmetic + sandbox script and reaches PREP', { timeout: 8 * 60 * 1000 }, async () => {
     const work = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-forge-e2e-'));
     const plugins = path.join(work, 'plugins');

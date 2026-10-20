@@ -269,6 +269,7 @@ node tools/plugin.mjs pack my-script
 
 - 服务器设置 `SP_PLUGIN_SCRIPTS=sandbox`（或 trusted 模式）
 - 房间选中该插件，或内容插件通过 `requires` 带入
+- 房间面板现在会直接列出已加载的 `script` / `trusted` 插件；选中 `script` 显示「沙箱脚本」，选中 `trusted` 会先触发风险同意
 - 锁文件 `plugin.lock.json` 有效
 - `sandbox` 不需要 owner pin 或玩家 consent；`trusted` 需要 owner pin 和每个玩家的 consent
 

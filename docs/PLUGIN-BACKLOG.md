@@ -2,7 +2,7 @@
 
 > 快照日期：2026-10-20
 > 代码基线：`master` `ae9e2ae3c`（插件文档提交后）
-> 状态：普通插件链路可用；全量 CI **8186 tests / 8150 pass / 0 fail**；真实浏览器插件 E2E **8 / 8 pass**。
+> 状态：普通插件链路可用；全量 CI **8191 tests / 8155 pass / 0 fail**；真实浏览器插件 E2E **9 / 9 pass**。
 > 本文件记录**仍未解决**的问题，不把已修项写成待办。
 
 ## 状态标记
@@ -39,7 +39,7 @@
 ### 结论
 
 - **可以直接做**：P0-2、P1-2、P1-3、P1-5、P1-7、P1-8、P1-9、P1-10、P2-2、P2-4、P2-5、P2-6。
-- **需要部署/产品决策**：P0-1、P1-4、P1-6、P2-1。
+- **需要部署/产品决策**：P0-1、P1-4、P2-1。
 - **只能缓解、不能彻底解决**：P1-1（Forge 任意服务端逻辑）、P2-3（规模与性能）。
 - 建议第一批：**P0-2 → P1-2 → P1-3 → P1-5**；这四项能显著提高可信度和运营可用性。
 
@@ -158,25 +158,15 @@
   - 或在 `/admin` 显示“哪些插件因此被放行”
 
 ### P1-6 上游 `dev` 有未筛选提交
-
-- 状态：`WATCH`
-- 快照：
-  - 上游 `master`：`c9d804f47`（0.3.2，未变）
-  - 上游 `dev`：`23dfa3d79`，比 master 多 26 个提交
-- 风险：
-  - 其中可能包含插件相邻修复（技能动画、时装、buff、removeBuff 等）
-  - 当前未按插件影响面筛选
-- 下一步：
-  - 逐提交标记：必须移植 / 可选 / 不需要 / 与 fork 冲突
-  - 不整分支 merge
-
----
-
-## P1：脚本插件可用性
+- 状态：`DONE`（已筛选，选中 1 个移植）
+- 快照：上游 `master` `c9d804f47`；上游 `dev` `23dfa3d79`，多 26 个提交
+- 结果：`removeBuff` 重入修复已移植并带上游合成测试；`#725` 素材计数不适用；picture-only outfits / skill clips / bond timer 列为后续候选；external AI、bot strategies、野鬃 push 不进入本批
+- 详见 [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md)
 
 ### P1-7 独立脚本插件不能直接在房间面板选择
 
-- 状态：`TODO`
+- 状态：`DONE`
+- 完成：`roomPlugins` 现在列出 loaded 的 script/trusted；房间面板显示「沙箱脚本 / 原生信任」，并有直接选择 E2E。
 - 现状：
   - 房间面板只列 cosmetic / content
   - 脚本 / trusted 只能通过 content `requires` 或 `plugins/config.json` `default` 进入
@@ -190,7 +180,8 @@
 
 ### P1-8 脚本 probe / 首次加载可能让大厅停顿
 
-- 状态：`WATCH`
+- 状态：`PARTIAL`
+- 部分完成：已统计 probe requests / cache hits / child runs / failures / timeouts / 最近和最大耗时，并在 `/admin` 显示；启动预热和队列仍未做。
 - 现状：
   - 未缓存脚本首次探测有超时
   - 多个插件并发时可能排队
@@ -210,10 +201,11 @@
   - UI 插槽 1 条
   - content 内容集 1 条
   - sandbox 脚本依赖 1 条
+  - 独立 script 直接选择 1 条
   - 真实 Forge 导入包 1 条
   - trusted consent 1 条
 - 未覆盖：
-  - 多插件冲突 / 自动依赖 / 重新应用
+  - 多插件冲突 / 重新应用
   - 内容集下载失败、锁失败、脚本超时
   - 房间内容切换后的缓存与重连
   - Firefox / Safari
@@ -339,21 +331,19 @@
 - `allowIncompatible` 支持 `true` 或插件 id 列表，contentSet 与 `/admin` 均区分
 - Pixi 的 CSP no-eval 适配器已接入，真实浏览器不再退回 simplified view
 - 0.3.x `lang` / `cosmetic` / `ui` 自动兼容
-- 真实浏览器插件 E2E：8 / 8（cosmetic 3、UI 1、content 1、sandbox script 1、Forge 1、trusted consent 1）
+- 真实浏览器插件 E2E：9 / 9（cosmetic 3、UI 1、content 1、sandbox script 2、Forge 1、trusted consent 1）
 - 字体 CSP 已允许 `fonts.gstatic.cn`
-- 全量 CI：8186 / 8150 / 0
+- 全量 CI：8191 / 8155 / 0
 
 ---
 
 ## 建议排期
 
-1. **P1-6** 上游 `dev` 26 个提交筛选
-2. **P1-7** 独立脚本插件选择体验
-3. **P1-8** 脚本 probe 预热与耗时指标
-4. **P1-9 剩余部分** 多插件冲突 / 失败恢复 / 重连
-5. **P0-1** trusted 生产容器化
-6. **P2-1 / P2-2** 运营台 Phase 2 与指标
-7. **P2-3** 性能
-8. **P2-4 / P2-5 / P2-6** 玩家体验与风险说明
+1. **P1-8 剩余部分** 脚本 probe 启动预热和排队进度
+2. **P1-9 剩余部分** 多插件冲突 / 失败恢复 / 重连
+3. **P0-1** trusted 生产容器化
+4. **P2-1 / P2-2** 运营台 Phase 2 与指标
+5. **P2-3** 性能
+6. **P2-4 / P2-5 / P2-6** 玩家体验与风险说明
 
 > 每次完成一项，把状态改为 `DONE` 或在提交说明里引用本文件编号；不要直接删除历史记录。

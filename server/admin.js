@@ -13,6 +13,7 @@ import { join, dirname } from 'node:path';
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { DIFFICULTY_NAMES, MAX_SEATS } from '../shared/constants.js';
 import { presenceOnline } from './net.js';
+import { scriptProbeStats } from './plugins/scriptPreflight.js';
 
 /** The status vocabulary shown in the page (order = how the columns are grouped). */
 export const STATUS = Object.freeze({
@@ -202,6 +203,7 @@ export function buildPluginSnapshot(info = {}) {
     }),
     skipped: Array.isArray(report.skipped) ? report.skipped : [],
     warnings: Array.isArray(report.warnings) ? report.warnings : [],
+    probe: scriptProbeStats(),
     policy: ownerPolicy ? {
       rooms: ownerPolicy.rooms, default: ownerPolicy.default || [], allow: ownerPolicy.allow || [],
       classes: ownerPolicy.classes || {}, maxSets: ownerPolicy.maxSets,
@@ -923,6 +925,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       + kv('加载失败 / 跳过', skipped.length + ' 个')
       + kv('警告', warnings.length + ' 个')
       + kv('Forge 导入', forged.length + ' 个')
+      + kv('脚本 probe', p.probe ? (p.probe.childRuns + ' 次 / 最近 ' + p.probe.lastMs + ' ms / 超时 ' + p.probe.timeouts + ' 次') : '—')
       + kv('房间正在使用内容集', d.rooms.filter(function (r) { return r.content && !r.content.vanilla; }).length + ' 个')
       + kv('脚本 / 信任插件', scripts.length + ' 个');
     el('pluginPolicy').innerHTML = p.policy ? (
