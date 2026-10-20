@@ -1547,11 +1547,16 @@ docs guards 34 pass / 0 fail.
 | `ea2548c4b` + `9e57431a` + `38a1eb84` | #561 战略选人时可查看本局敌人信息（`ui/matchEnemies.js`，briefing / matchInfo 共用） | `1c55157a7` |
 | `a26ffab3f` | #782 野鬃 S2 把身后的敌人径向推开（`PUSH_TILES_EFFECT`，约 0.09 格 @ weight 1） | `1b58cdd7b` + golden `e6aafeeff`（归因：只回退该改动 → 零差异）+ 注释 `c2f91f2a9` |
 
+**不取（owner 决定，2026-10-20）**：
+
+| 上游 | 内容 | 原因 |
+|---|---|---|
+| `77b91081c` | picture-only outfits 可穿戴（37 个文件） | **完全没必要**：Spine 模型制作门槛不高，外观插件应当带模型；本分支的 274 套官方时装也全部有模型。取下只会增加 20 多个 UI 接触点，收益为零 |
+
 **暂缓**（记录原因，未整支合并）：
 
 | 上游 | 内容 | 原因 |
 |---|---|---|
-| `77b91081c` | picture-only outfits 可穿戴（37 个文件） | 依赖 0.3.2 的 UI 链（`assetUrls` / detail / bond popup / result），与我们的 `SpecDock`、boss plates、插件标签冲突面大；需要单独一批适配 |
 | `60d182c3d` | 6 个技能剪辑 | 新测试依赖 0.3.2 的 `spine.js` 攻击序列重构（222 行），只取 `skillAttack.js` 会红 |
 | `84fbd1cb9` | 盟约剩余时间（默认关） | settings / i18n / detailPanel 冲突，收益小 |
 | `ca185d064` | #725 素材下载计数 | 依赖 #628 的整包下载（§0 黑名单），本分支没有该功能 |

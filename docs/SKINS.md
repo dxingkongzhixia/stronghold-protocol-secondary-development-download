@@ -106,8 +106,10 @@ The preserved 0.3.1 order is 皮肤 → 潜能与练度 → 特质 → 技能 �
    no skin turns the section on nowhere, and this picker then shows none of its pictures. That is deliberate — the
    section exists to choose a 时装 and its note counts 套外观, so one replaced 立绘 must not put a `0 套外观` box on every
    operator of the installation. A plugin whose 立绘 has to be seen has to give some operator a wear-able skin (then every
-   operator's 默认 tile draws the 立绘 it has, per the rule below), or needs a surface of its own. Should the gate ever be
-   meant to count a 立绘 as well, the one line that changes is the body of `hasAnySkinChoices`.
+   operator's 默认 tile draws the 立绘 it has, per the rule below), or needs a surface of its own.
+   **Owner decision (2026-10-20): picture-only outfits stay non-wearable here — an appearance plugin must ship a Spine
+   model. The upstream B6 change (`77b91081c`, 0.3.2 `pictureOnly`) is deliberately not merged; the one line that would
+   change the rule is the body of `hasAnySkinChoices`.**
 2. **A missing layer falls back to the operator's own art** — a skin with no `portrait` shows the operator's portrait
    (its `illust`, then the portrait), never a slash or a placeholder; the tile is dimmed (`.lo-skin--fallback`) so the
    replacement is legible. The enlarged preview (`.lo-skin-preview`, a `Modal`) shows the skin's 立绘.
