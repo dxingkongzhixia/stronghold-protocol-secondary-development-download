@@ -682,19 +682,19 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
           <button type="button" id="publishBtn">把本机插件打包上架</button>
           <span id="publishMsg" class="hint"></span>
         </div>
-        <div class="tablewrap"><table><thead><tr><th>ID</th><th>来源 / 类型</th><th>状态</th><th>描述</th><th>作者</th><th>app</th><th>API</th><th>上架</th><th>操作</th></tr></thead><tbody id="marketBody"></tbody></table></div>
+        <div class="tablewrap"><table><thead><tr><th>ID</th><th>来源 / 类型</th><th>状态</th><th>本服 0.4</th><th>主线 0.3.x</th><th>描述</th><th>作者</th><th>app</th><th>API</th><th>上架</th><th>操作</th></tr></thead><tbody id="marketBody"></tbody></table></div>
         <div class="panel__body"><span id="marketMsg" class="hint"></span></div>
         <div class="panel__body hint">AI 接管接口（预留）：<code>GET /admin/api/plugins/ai</code> 返回能力声明；当前 POST 返回 501，未启用执行器，不会自行改动商城。</div>
       </section>
       <section class="panel">
         <h2>本机插件元数据<em id="installedMetaCount"></em></h2>
         <div class="panel__body hint">只改商城展示用的描述 / 作者 / 兼容范围，不改 plugins/ 里的文件；要真正上架请用上方「打包上架」。</div>
-        <div class="tablewrap"><table><thead><tr><th>ID</th><th>描述</th><th>作者</th><th>app</th><th>API</th><th>操作</th></tr></thead><tbody id="installedMetaBody"></tbody></table></div>
+        <div class="tablewrap"><table><thead><tr><th>ID</th><th>本服 0.4</th><th>主线 0.3.x</th><th>描述</th><th>作者</th><th>app</th><th>API</th><th>操作</th></tr></thead><tbody id="installedMetaBody"></tbody></table></div>
         <div class="panel__body"><span id="installedMetaMsg" class="hint"></span></div>
       </section>
       <section class="panel">
         <h2>已安装插件<em id="pluginCount"></em></h2>
-        <div class="tablewrap"><table><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>版本</th><th>状态</th><th>作用域</th><th>内容</th><th>脚本/信任</th><th>兼容</th><th>大小</th></tr></thead><tbody id="pluginBody"></tbody></table></div>
+        <div class="tablewrap"><table><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>版本</th><th>状态</th><th>作用域</th><th>内容</th><th>脚本/信任</th><th>本服 0.4</th><th>主线 0.3.x</th><th>大小</th></tr></thead><tbody id="pluginBody"></tbody></table></div>
       </section>
       <section class="panel">
         <h2>Forge 导入<em id="forgeCount"></em></h2>
@@ -979,6 +979,26 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     };
   }
 
+  function compatPills(x) {
+    var c = x.compat || {};
+    if (x.kind === 'forge' || x.class === 'forge') {
+      return {
+        own: '<span class="pill ' + (x.status === 'active' ? 'yes' : '') + '">' + (x.status === 'active' ? '已通过测试' : '待导入测试') + '</span>',
+        main: '<span class="pill">以导入结果为准</span>',
+      };
+    }
+    var unrestricted = c.unrestricted || !c.app;
+    var ownOk = unrestricted || c.own;
+    var mainOk = unrestricted || c.mainline;
+    var own = unrestricted ? '未限制' : c.own ? '兼容' : '不兼容';
+    var main = unrestricted ? '未限制' : c.mainline ? '兼容' : '不兼容';
+    var strict = c.mainline && !c.auto && (x.class === 'content' || x.class === 'script' || x.class === 'trusted');
+    return {
+      own: '<span class="pill ' + (ownOk ? 'yes' : 'no') + '">' + own + '</span>',
+      main: '<span class="pill ' + (mainOk ? 'yes' : 'no') + '"' + (strict ? ' title="版本兼容；内容 / 脚本 / 信任仍需 owner allowIncompatible"' : '') + '>' + main + '</span>',
+    };
+  }
+
   function renderPlugins(d) {
     var p = d.plugins || { installed: [], skipped: [], warnings: [], policy: null };
     var list = Array.isArray(p.installed) ? p.installed : [];
@@ -1024,10 +1044,13 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
           : '<span class="pill' + (x.status === 'rejected' ? ' no' : '') + '">' + esc(state) + '</span>';
         var kind = x.kind === 'forge' ? 'Forge' : '普通';
         var cls = CLASS_LABELS[x.class] || x.class || '未声明';
+        var compat = compatPills(x);
         return '<tr data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
           + cell(esc(x.id), 'mono')
           + cell(esc(kind + ' / ' + cls))
           + cell(statePill)
+          + cell(compat.own)
+          + cell(compat.main)
           + cell('<input class="market-input market-input--wide" data-field="description" value="' + esc(x.description || '') + '" placeholder="描述">')
           + cell('<input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者">')
           + cell('<input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0">')
@@ -1035,7 +1058,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
           + cell('<input class="market-check" data-field="listed" type="checkbox"' + (listed ? ' checked' : '') + '>')
           + cell('<div class="market-actions"><button type="button" data-mact="save">保存</button><button type="button" data-mact="test">测试</button><button type="button" data-mact="approve">通过</button><button type="button" data-mact="reject">拒绝</button></div>')
           + '</tr>';
-      }).join('') || '<tr><td colspan="9" class="empty">商城还没有条目</td></tr>';
+      }).join('') || '<tr><td colspan="11" class="empty">商城还没有条目</td></tr>';
     }
     var published = new Set(market.map(function (x) { return x.id; }));
     var installable = list.filter(function (x) { return x.class !== 'lang' && !published.has(x.id); });
@@ -1054,26 +1077,30 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       && /^(INPUT|SELECT|TEXTAREA)$/.test(focusMeta.tagName || '');
     if (metaBody && !editingMeta) {
       metaBody.innerHTML = metaList.map(function (x) {
+        var compat = compatPills(x);
         return '<tr data-id="' + esc(x.id) + '">'
           + cell(esc(x.id), 'mono')
+          + cell(compat.own)
+          + cell(compat.main)
           + cell('<input class="market-input market-input--wide" data-field="description" value="' + esc(x.description || '') + '" placeholder="描述">')
           + cell('<input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者">')
           + cell('<input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0">')
           + cell('<input class="market-input" data-field="api" type="number" min="1" max="99" value="' + esc(x.api == null ? '' : String(x.api)) + '" placeholder="API">')
           + cell('<div class="market-actions"><button type="button" data-mact="edit-installed">保存</button></div>')
           + '</tr>';
-      }).join('') || '<tr><td colspan="6" class="empty">没有可编辑的本机插件</td></tr>';
+      }).join('') || '<tr><td colspan="8" class="empty">没有可编辑的本机插件</td></tr>';
     }
     el('pluginBody').innerHTML = list.map(function (x) {
+      var compat = compatPills(x);
       return row([
         cell(esc(x.id), 'mono'), cell(esc(x.name || x.id)), cell(esc(x.class || '')), cell(esc(x.version || '—')),
         cell(x.status === 'loaded' ? '<span class="pill yes">已加载</span>' : '<span class="pill">' + esc(x.status || '') + '</span>'),
         cell(esc((x.scope || []).join(', ') || '—')), cell(x.hasContent ? '是' : '—'),
         cell(x.trusted ? '<span class="pill no">原生信任</span>' : (x.hasScript ? '<span class="pill">沙箱脚本</span>' : '—')),
-        cell(x.compatible ? '<span class="pill yes">兼容</span>' : '<span class="pill no" title="' + esc(x.app || '') + '">不兼容</span>'),
+        cell(compat.own), cell(compat.main),
         cell(x.bytes == null ? '—' : (Math.round(x.bytes / 1024) + ' KB'))
       ]);
-    }).join('') || '<tr><td colspan="10" class="empty">还没有安装插件</td></tr>';
+    }).join('') || '<tr><td colspan="11" class="empty">还没有安装插件</td></tr>';
     el('forgeCount').textContent = ' · ' + forged.length + ' 个';
     el('forgeBody').innerHTML = forged.map(function (x) {
       var f = x.forge || {};
