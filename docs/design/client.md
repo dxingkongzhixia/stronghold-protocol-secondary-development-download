@@ -217,3 +217,26 @@ restarts (a new match / a rewound round); a new round's prep clears only 当前�
 enters b.progress / b.result, and a tracked battle's result and rendered events are byte-identical to an untracked one
 (test/match/combat-metrics.test.js, test/match/runner.test.js). Ported from [xinhai-ai/Stronghold-Protocol](https://github.com/xinhai-ai/Stronghold-Protocol)
 (其公开部署分支，作者 @临夏俨然) with thanks.
+### Forge compact metadata (0.3.1)
+
+Forge import (CLI and the studio's explicit preview/import) and setup's startup/update gap preparation fetch missing
+official tables only when out-of-roster operators need them (maintainer decision 2026-10-17, §34.33). The cache uses
+the voice indexes' source/mirror policy; offline flags refuse downloads and failures retain the reported local fallback.
+The studio's offline box clears the previous report and applies to preview and confirm. Gameplay never fetches tables.
+The table set, validation limits and installation options are specified in [PLUGINS §16](../PLUGINS.md#16-forge-import).
+
+Compact operators may declare `chess.hidden`, explicit `chess.ids.normal/elite`, exact `art.assets` and official
+`origin` references ([PLUGINS §16](../PLUGINS.md#16-forge-import)). Hidden records remain addressable for grants,
+but never enter shops, visible handbook/loadout lists or owned DIY selection. Explicit pair IDs drive upgrades.
+[ASSUMED] Provenance is descriptive only, hiding applies to both forms and both identities, and borrowed voice
+preferences belong to the borrowed bank. Evidence and migration: [0.3.1 history](../history/0.3.1.md).
+
+[ASSUMED] One installed lang plugin may overlay each built-in language, in sorted plugin order; supplied UI/game-text
+keys override and missing/invalid entries retain built-in text. Scope remains browser-local choice, independent of
+room content and simulation. Pure geometry SDK helpers return frozen values and accept at most 1024 range cells.
+Forge UI mounts without an equivalent slot require an explicit manual-adaptation report, separate from script copying.
+Art/audio templates ship original CC0 sample media; the studio fills the target's first editable slot [ASSUMED].
+
+### Finished battle presentation
+
+The field view receives an explicit completion signal (`finishBattle`): the local runner's `done`, or the server's public field `live: false`. Missing snapshots and solo pause never imply completion. After rendering the final buffered snapshot/events, surviving units return to idle with temporary crowd-control and skill pose flags cleared for presentation only, retaining flight, stealth-driven forms and other persistent flags; knocked-out/dead poses remain. Official and plugin persistent effects stop, while one-shot effects advance on the presentation clock and are removed after at most two presentation seconds [ASSUMED]. Studio playback continues to use its external clock, including zero-time paused frames. This does not tick the simulation, delay results, or change golden outcomes.
