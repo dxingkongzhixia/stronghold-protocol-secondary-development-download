@@ -160,16 +160,35 @@ GET /market/api/download/<ordinary|forge>/<id>
 
 ### 不影响主服务带宽
 
-公开列表返回 `sources`，来源是 `var/plugin-market/mirrors.json`：
+公开列表为每个 active 条目返回 `mirror`：它是 `var/plugin-market/mirrors.json` 第一个前缀 + 条目的真实 zip 路径。
 
 ```json
 [
-  "https://cdn.example.test/plugin-market/",
-  "https://mirror.example.test/plugin-market/"
+  "http://123.57.150.185/plugin-market/"
 ]
 ```
 
-客户端优先按这些前缀请求同一路径（走和美术资源相同的 mirror/candidate 逻辑），全部失败才回落到游戏服务器。镜像需要由 owner 自行同步 `ordinary/`、`forge/` 文件。
+商城按钮因此变成：
+
+- **高速下载**：直接走 relay/镜像 zip
+- **服务器**：主服务器兜底
+
+本机插件在第一次生成缓存 zip 后，如果 `mirrors.json` 已配置且缓存文件被发布到 `plugin-market/installed/`，也会出现同样的「高速下载」按钮。
+
+发布到资源中继：
+
+```bash
+node tools/push-plugin-market.mjs --root var/plugin-market --key ~/.ssh/sp-deploy
+```
+
+它会上传 active 商城 zip 和 `installed/` 缓存；之后 relay 地址可直接用：
+
+```text
+http://123.57.150.185/plugin-market/ordinary/<id>-<version>.zip
+http://123.57.150.185/plugin-market/installed/<id>-<version>-<bytes>.zip
+```
+
+镜像文件不由服务器自动同步；审核通过后需要 owner 跑一次上面的发布命令。`sources` 字段仍保留给兼容客户端，但当前商城 UI 使用 `mirror` + 服务端兜底。
 
 ## 安装
 

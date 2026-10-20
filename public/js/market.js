@@ -63,11 +63,14 @@ const row = (p, admin = false) => {
     ? `<button class="mc-btn" data-act="test" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">测试</button>
        <button class="mc-btn mc-btn--primary" data-act="approve" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">通过</button>
        <button class="mc-btn mc-btn--danger" data-act="reject" data-kind="${esc(p.kind)}" data-id="${esc(p.id)}">拒绝</button>`
-    : p.download
-      ? (direct
-        ? `<a class="mc-btn mc-btn--primary" href="${esc(p.download)}" download="${esc(p.id)}.zip">下载</a>`
-        : `<button class="mc-btn mc-btn--primary" data-download="${esc(p.download)}" data-id="${esc(p.id)}">下载</button>`)
-      : '';
+    : p.mirror
+      ? `<a class="mc-btn mc-btn--primary" href="${esc(p.mirror)}" download="${esc(p.id)}.zip">高速下载</a>
+         <a class="mc-btn" href="${esc(p.download)}" download="${esc(p.id)}.zip">服务器</a>`
+      : p.download
+        ? (direct
+          ? `<a class="mc-btn mc-btn--primary" href="${esc(p.download)}" download="${esc(p.id)}.zip">下载</a>`
+          : `<button class="mc-btn mc-btn--primary" data-download="${esc(p.download)}" data-id="${esc(p.id)}">下载</button>`)
+        : '';
   const detailButton = `<button class="mc-btn" data-detail="${esc(p.id)}">详情</button>`;
   return `<article class="market-row">
     <div>

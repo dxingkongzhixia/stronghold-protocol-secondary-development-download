@@ -212,6 +212,9 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       requires: e.requires || {}, optional: e.optional || {}, conflicts: e.conflicts || {},
     };
     const dependencyCheck = dependencyCheckOf({ id: e.id, version: e.version, ...dependencies });
+    const mirrorBase = mirrors.length ? mirrors[0].replace(/\/$/, '') : '';
+    const mirror = mirrorBase && e.status === 'active' && e.listed !== false && e.needsReview !== true && e.file
+      ? `${mirrorBase}/${e.file.replace(/\\/g, '/')}` : null;
     return {
       id: e.id, kind: e.kind, name: e.name, version: e.version, author: e.author || null,
       description: e.description || null, class: e.class || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
@@ -219,7 +222,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       uploadedAt: e.uploadedAt, uploadedBy: e.uploadedBy || null, reviewedAt: e.reviewedAt || null,
       downloads: e.downloads || 0, app: compat.app, api: compat.api, compat, listed: e.listed !== false,
       order: Number.isFinite(e.order) ? e.order : 0, needsReview: e.needsReview === true,
-      signature: e.signature || null,
+      signature: e.signature || null, mirror,
       dependencies, dependencyCheck,
       pendingUpdate: e.pending ? {
         version: e.pending.version, bytes: e.pending.bytes, sha256: e.pending.sha256,
@@ -632,6 +635,10 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       const app = Object.prototype.hasOwnProperty.call(meta, 'app') ? meta.app : p.manifest?.app;
       const api = Object.prototype.hasOwnProperty.call(meta, 'api') ? meta.api : p.manifest?.api;
       const compat = compatibilityOf('installed', p.class, app, api);
+      const version = p.manifest?.version || '1.0.0';
+      const cacheName = `${safePart(p.id)}-${safePart(version)}-${p.bytes || 0}.zip`;
+      const cached = path.join(base, 'installed', cacheName);
+      const mirrorBase = mirrors.length ? mirrors[0].replace(/\/$/, '') : '';
       return {
         id: p.id, kind: 'installed', name: (typeof p.manifest?.name === 'string' ? p.manifest.name : (p.manifest?.name?.zh || p.manifest?.name?.en)) || p.id,
         version: p.manifest?.version || null, class: p.class, status: 'installed', bytes: p.bytes || null,
@@ -639,6 +646,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
         description: typeof meta.description === 'string' ? meta.description : null,
         author: typeof meta.author === 'string' ? meta.author : null,
         sources: [], installed: true, overridden: Object.keys(meta).length > 0,
+        mirror: mirrorBase && fs.existsSync(cached) ? `${mirrorBase}/installed/${encodeURIComponent(cacheName)}` : null,
         download: p.status === 'loaded' ? `/market/api/installed/${encodeURIComponent(p.id)}/download` : null,
       };
     });
