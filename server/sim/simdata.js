@@ -308,6 +308,7 @@ export function normalizeEnemy(key, e) {
     abilities: e.abilities ?? [],
     skills: e.skills ?? [],
     talent: e.talents?.bb ?? e.talent ?? {},
+    protocol: e.protocol ?? null,
     spine: e.spine ?? key,
     avatar: e.iconId ?? e.avatar ?? key,
     raw: e,

@@ -9,6 +9,7 @@ export const BOSS_PROTOCOL_LIMITS = Object.freeze({
   linkId: 64,
   reviveCount: 10,
   reviveAtk: 10000,
+  reviveDown: 60,
   shortenSeconds: 10,
   shortenMin: 30,
   clearAt: 600,
@@ -81,16 +82,24 @@ export function readBossProtocol(raw) {
     const r = raw.revive;
     if (!isObj(r)) problems.push('protocol.revive: expected an object');
     else {
-      for (const k of Object.keys(r)) if (!['count', 'atk', 'hpReset', 'shortenOnHit'].includes(k)) problems.push(`protocol.revive: unknown field "${k}"`);
+      for (const k of Object.keys(r)) if (!['count', 'atk', 'hpReset', 'down', 'shortenOnHit'].includes(k)) problems.push(`protocol.revive: unknown field "${k}"`);
       const count = int(r.count, 0, BOSS_PROTOCOL_LIMITS.reviveCount, 'protocol.revive.count', problems);
       const atk = num(r.atk ?? 0, 0, BOSS_PROTOCOL_LIMITS.reviveAtk, 'protocol.revive.atk', problems, 0);
-      const out = { count: count ?? 0, atk: atk ?? 0, hpReset: bool(r.hpReset, 'protocol.revive.hpReset', problems, true) };
+      const out = {
+        count: count ?? 0,
+        atk: atk ?? 0,
+        hpReset: bool(r.hpReset, 'protocol.revive.hpReset', problems, true),
+        down: num(r.down ?? 8, 1, BOSS_PROTOCOL_LIMITS.reviveDown, 'protocol.revive.down', problems, 8),
+      };
       if (r.shortenOnHit !== undefined) {
         const s = r.shortenOnHit;
         if (!isObj(s)) problems.push('protocol.revive.shortenOnHit: expected an object');
         else {
-          for (const k of Object.keys(s)) if (!['seconds', 'min'].includes(k)) problems.push(`protocol.revive.shortenOnHit: unknown field "${k}"`);
+          for (const k of Object.keys(s)) if (!['target', 'seconds', 'min'].includes(k)) problems.push(`protocol.revive.shortenOnHit: unknown field "${k}"`);
+          const target = s.target ?? 'boss';
+          if (target !== 'boss') problems.push('protocol.revive.shortenOnHit.target: expected "boss"');
           out.shortenOnHit = {
+            target,
             seconds: num(s.seconds ?? 1, 0, BOSS_PROTOCOL_LIMITS.shortenSeconds, 'protocol.revive.shortenOnHit.seconds', problems, 1),
             min: num(s.min ?? 0, 0, BOSS_PROTOCOL_LIMITS.shortenMin, 'protocol.revive.shortenOnHit.min', problems, 0),
           };
@@ -104,12 +113,15 @@ export function readBossProtocol(raw) {
     const c = raw.clearProtocol;
     if (!isObj(c)) problems.push('protocol.clearProtocol: expected an object');
     else {
-      for (const k of Object.keys(c)) if (!['at', 'warning', 'lp'].includes(k)) problems.push(`protocol.clearProtocol: unknown field "${k}"`);
-      p.clearProtocol = {
+      for (const k of Object.keys(c)) if (!['at', 'warning', 'lp', 'hiddenAt', 'hiddenLp'].includes(k)) problems.push(`protocol.clearProtocol: unknown field "${k}"`);
+      const out = {
         at: num(c.at ?? 90, 10, BOSS_PROTOCOL_LIMITS.clearAt, 'protocol.clearProtocol.at', problems, 90),
         warning: num(c.warning ?? 10, 0, BOSS_PROTOCOL_LIMITS.clearWarning, 'protocol.clearProtocol.warning', problems, 10),
         lp: int(c.lp ?? 10, 1, BOSS_PROTOCOL_LIMITS.clearLp, 'protocol.clearProtocol.lp', problems, 10),
       };
+      if (c.hiddenAt !== undefined) out.hiddenAt = num(c.hiddenAt, 10, BOSS_PROTOCOL_LIMITS.clearAt, 'protocol.clearProtocol.hiddenAt', problems, out.at);
+      if (c.hiddenLp !== undefined) out.hiddenLp = int(c.hiddenLp, 1, BOSS_PROTOCOL_LIMITS.clearLp, 'protocol.clearProtocol.hiddenLp', problems, out.lp);
+      p.clearProtocol = out;
     }
   }
 

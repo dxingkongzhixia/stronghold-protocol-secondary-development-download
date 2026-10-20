@@ -1,0 +1,343 @@
+// Generic boss protocol runtime (docs/PRTS-SOURCE-CODE.md §3). Attached to a spawned enemy whose data record carries
+// `protocol`; the contract lives in shared/plugins/bossProtocol.js. It implements the linked guard, the down/revive
+// cycle, the clear-protocol timer, DP acceleration, the decay projectile, the first-revive fly window, the line beam
+// and deploy-lock events. Effects that live outside the battle (the hand lock, match LP) consume the emitted events.
+import { readBossProtocol } from '../../../shared/plugins/bossProtocol.js';
+import { attach, lpLoss } from './enemies/helpers.js';
+import { hypot } from '../detmath.js';
+
+const STATE = new WeakMap();
+const GUARD = 'protocol:guard';
+const DOWN = 'protocol:down';
+const LINK_GRACE = 5; // give up the guard when a declared link never spawns (5 s of game time)
+
+const stateOf = (e) => e && STATE.get(e);
+
+function addGuard(b, st) {
+  if (!st.protocol.link?.guard || st.guard) return;
+  b.addBuff(st.boss, { key: GUARD, flags: { untargetable: true, invulnerable: true }, persist: true, allowDead: true });
+  st.guard = true;
+}
+
+function removeGuard(b, st) {
+  if (!st.guard) return;
+  b.removeBuff(st.boss, GUARD);
+  st.guard = false;
+}
+
+function scheduleClear(b, st) {
+  const c = st.protocol.clearProtocol;
+  if (!c) return;
+  const hidden = b.kind === 'hidden';
+  const at = hidden ? (c.hiddenAt ?? c.at) : c.at;
+  const lp = hidden ? (c.hiddenLp ?? c.lp) : c.lp;
+  if (c.warning > 0) {
+    st.warning = b.after(Math.max(0, at - c.warning), () => {
+      if (!st.dead) b.emit('protocolWarning', { boss: st.boss, kind: 'clear', seconds: c.warning });
+    });
+  }
+  st.clear = b.after(at, () => {
+    if (st.dead) return;
+    st.cleared = true;
+    // "每名玩家 目标生命 -lp": the merged boss LP is one pool, so the team loses lp per player on the field.
+    const players = Math.max(1, b.players?.length || 1);
+    lpLoss(b, lp * players, 'clearProtocol', st.boss);
+    b.emit('protocolClear', { boss: st.boss, lp, perPlayer: lp, players });
+  });
+}
+
+function startDpRegen(b, st) {
+  const d = st.protocol.dpRegen;
+  if (!d || !(d.duration > 0) || !(b.flags.dpPerSec > 0)) return;
+  const extra = Math.max(0, d.multiplier - 1) * b.flags.dpPerSec;
+  if (!(extra > 0)) return;
+  st.dpTimer?.cancel?.();
+  const until = b.time + d.duration;
+  let last = b.time;
+  st.dpTimer = b.every(0.1, (battle, timer) => {
+    const now = Math.min(battle.time, until);
+    const dt = Math.max(0, now - last);
+    last = now;
+    if (dt > 0) for (const ps of battle.players) battle.addDp(ps.playerId, extra * dt);
+    if (battle.time >= until - 1e-9) timer.cancel();
+  }, { owner: st.boss });
+  b.emit('protocolDpRegen', { boss: st.boss, multiplier: d.multiplier, duration: d.duration });
+}
+
+function fireOrb(b, st) {
+  const p = st.protocol.projectile;
+  if (!p || !st.boss.alive) return;
+  const from = st.boss;
+  let target = null;
+  let best = Infinity;
+  for (const a of b.allies()) {
+    if (!a || !a.alive || a.hidden || a.s.flags.untargetable) continue;
+    const d = hypot(a.x - from.x, a.y - from.y);
+    if (d < best) { best = d; target = a; }
+  }
+  if (!target) return;
+  const atk = from.s.atk;
+  const start = { x: from.x, y: from.y };
+  const dist = Math.max(0.01, hypot(target.x - start.x, target.y - start.y));
+  b.addProjectile({
+    from, target, speed: 8, visual: 'orb', source: from, hitDead: true,
+    onHit: ({ x, y }) => {
+      const k = Math.min(1, hypot(x - start.x, y - start.y) / dist);
+      const dmg = atk * (p.damage[0] + (p.damage[1] - p.damage[0]) * k);
+      const radius = p.radius[0] + (p.radius[1] - p.radius[0]) * k;
+      for (const a of b.allies()) {
+        if (!a || !a.alive || a.hidden || a.s.flags.untargetable) continue;
+        if (hypot(a.x - x, a.y - y) > radius) continue;
+        b.dealDamage(from, a, { amount: dmg, type: 'arts', tags: ['enemyAbility', 'protocolProjectile'] });
+      }
+      b.emit('protocolProjectile', { boss: from, x, y, radius, damage: dmg });
+    },
+  });
+  b.emit('protocolProjectileFire', { boss: from, target });
+}
+
+function startProjectile(b, st) {
+  const p = st.protocol.projectile;
+  if (!p) return;
+  st.projTimer = b.every(p.cooldown, () => fireOrb(b, st), { owner: st.boss });
+}
+
+function emitDeployLock(b, st, afterRevive) {
+  const d = st.protocol.deployLock;
+  const l = afterRevive ? d?.afterRevive : d;
+  if (!l) return;
+  b.emit('protocolDeployLock', { boss: st.boss, count: l.count, duration: l.duration, afterRevive: !!afterRevive });
+}
+
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const vx = x2 - x1, vy = y2 - y1;
+  const wx = px - x1, wy = py - y1;
+  const vv = vx * vx + vy * vy;
+  const t = vv > 0 ? Math.max(0, Math.min(1, (wx * vx + wy * vy) / vv)) : 0;
+  return hypot(px - (x1 + vx * t), py - (y1 + vy * t));
+}
+
+function interruptBeam(b, st) {
+  if (!st.beamPending) return;
+  st.beamResolve?.cancel?.();
+  st.beamPending = null;
+  st.beamResolve = null;
+  st.beamDamage = 0;
+  b.emit('protocolBeamInterrupt', { boss: st.boss, link: st.link });
+}
+
+function resolveBeam(b, st) {
+  const pending = st.beamPending;
+  const source = st.link;
+  st.beamPending = null;
+  st.beamResolve = null;
+  st.beamDamage = 0;
+  if (!pending || !source || !source.alive || st.dead) return;
+  const p = st.protocol.beam;
+  const dmg = p.damageScale * source.s.atk;
+  const hit = new Set();
+  for (const shot of pending) {
+    for (const a of b.allies()) {
+      if (!a || !a.alive || a.hidden || a.s.flags.untargetable || hit.has(a)) continue;
+      if (distToSegment(a.x, a.y, source.x, source.y, shot.x, shot.y) > p.width / 2) continue;
+      hit.add(a);
+      b.dealDamage(source, a, { amount: dmg, type: 'arts', tags: ['enemyAbility', 'protocolBeam'] });
+    }
+  }
+  b.emit('protocolBeam', { boss: st.boss, link: source, targets: pending.length, hit: hit.size });
+}
+
+function fireBeam(b, st) {
+  if (st.dead || st.down || st.beamPending || !st.link?.alive) return;
+  const p = st.protocol.beam;
+  const shots = b.allies()
+    .filter((a) => a && a.alive && !a.hidden && !a.s.flags.untargetable)
+    .sort((a, b2) => b2.hp - a.hp)
+    .slice(0, p.targets)
+    .map((a) => ({ target: a, x: a.x, y: a.y }));
+  if (!shots.length) return;
+  st.beamPending = shots;
+  st.beamDamage = 0;
+  b.emit('protocolBeamWindup', { boss: st.boss, link: st.link, targets: shots.length, seconds: p.windup });
+  st.beamResolve = b.after(p.windup, () => resolveBeam(b, st), { owner: st.link });
+}
+
+function startBeam(b, st) {
+  const p = st.protocol.beam;
+  if (!p || st.beamTimer) return;
+  st.beamTimer = b.every(p.interval, () => fireBeam(b, st), { owner: st.link });
+}
+
+function endFly(b, st, early) {
+  const f = st.fly;
+  if (!f) return;
+  st.fly = null;
+  f.timer?.cancel?.();
+  b.removeBuff(st.boss, 'protocol:fly');
+  if (st.boss.base.rangeRadius === f.range) st.boss.base.rangeRadius = f.origRange;
+  st.boss.markDirty?.();
+  if (early && f.knockDownDamage > 0) {
+    for (const a of b.allies()) {
+      if (!a || !a.alive || a.hidden || a.s.flags.untargetable) continue;
+      if (hypot(a.x - st.boss.x, a.y - st.boss.y) > 1.5) continue;
+      b.dealDamage(st.boss, a, { amount: f.knockDownDamage, type: 'arts', tags: ['enemyAbility', 'protocolFly'] });
+    }
+  }
+  b.emit('protocolFlyEnd', { boss: st.boss, early: !!early });
+}
+
+function startFly(b, st) {
+  const p = st.protocol.fly;
+  if (!p || st.fly || !st.boss.alive) return;
+  const boss = st.boss;
+  const baseBat = Math.max(0.1, boss.base.bat);
+  const newBat = Math.max(0.1, baseBat + p.intervalDelta);
+  const origRange = boss.base.rangeRadius;
+  boss.base.rangeRadius = origRange + p.range;
+  boss.markDirty?.();
+  b.addBuff(boss, {
+    key: 'protocol:fly', duration: p.duration, persist: true, visible: true,
+    mods: { maxTargets: Math.max(0, p.targets - 1), batPct: newBat / baseBat - 1 },
+  });
+  const f = {
+    timer: b.after(p.duration, () => endFly(b, st, false), { owner: boss }),
+    origRange, range: boss.base.rangeRadius,
+    threshold: p.hpLoss * boss.s.maxHp, damage: 0,
+    knockDownDamage: p.knockDownDamage * boss.s.atk,
+  };
+  st.fly = f;
+  b.emit('protocolFly', { boss, duration: p.duration, targets: p.targets, range: p.range });
+}
+
+function enterDown(b, st, e) {
+  const p = st.protocol.revive;
+  st.down = true;
+  e.hp = e.s.maxHp;
+  b.addBuff(e, { key: DOWN, flags: { untargetable: true, invulnerable: true, stun: true, noBlock: true, noMove: true }, persist: true, allowDead: true });
+  removeGuard(b, st);
+  interruptBeam(b, st);
+  startDpRegen(b, st);
+  st.timer = b.after(p.down, () => {
+    if (!e.alive || st.dead) return;
+    b.removeBuff(e, DOWN);
+    e.hp = e.s.maxHp;
+    if (p.atk) {
+      e.base.atk += p.atk;
+      e.s.atk += p.atk;
+      e.markDirty?.();
+    }
+    st.down = false;
+    addGuard(b, st);
+    if (!st.revivedOnce) {
+      st.revivedOnce = true;
+      startBeam(b, st);
+      startFly(b, st);
+      emitDeployLock(b, st, true);
+    }
+    b.emit('protocolRevive', { boss: st.boss, link: e, left: st.revivesLeft });
+  }, { owner: e });
+}
+
+/** The linked unit's ability: knocked down → down window → revive, until the count is used up. */
+function linkAbility(st) {
+  return {
+    spawn(b, e) { st.link = e; },
+    killed(c, b, e) {
+      if (st.dead || !st.boss?.alive) return false;
+      if (st.down) return true; // already in its down window
+      const p = st.protocol.revive;
+      if (!p || st.revivesLeft <= 0) { removeGuard(b, st); return false; }
+      st.revivesLeft--;
+      enterDown(b, st, e);
+      return true;
+    },
+    taken(c, b, e) {
+      if (!st.beamPending || !(c.amount > 0)) return;
+      st.beamDamage += c.amount;
+      if (st.beamDamage >= st.protocol.beam.interruptHp * e.s.maxHp) interruptBeam(b, st);
+    },
+    death(c, b, e) {
+      // final death: no guard any more
+      if (st.link === e) {
+        removeGuard(b, st);
+        st.beamTimer?.cancel?.();
+        interruptBeam(b, st);
+      }
+    },
+  };
+}
+
+/**
+ * The boss-side ability.
+ * @param {unknown} raw the record's `protocol` fields
+ * @returns {object|null}
+ */
+export function protocolAbility(raw) {
+  const { protocol } = readBossProtocol(raw);
+  if (!protocol) return null;
+  return {
+    spawn(b, e) {
+      const st = {
+        protocol, boss: e, link: null, revivesLeft: protocol.revive?.count ?? 0, down: false,
+        timer: null, warning: null, clear: null, guard: false, cleared: false, dead: false, at: b.time,
+        dpTimer: null, projTimer: null, beamTimer: null, beamResolve: null, beamPending: null, beamDamage: 0,
+        revivedOnce: false, fly: null,
+      };
+      STATE.set(e, st);
+      addGuard(b, st);
+      scheduleClear(b, st);
+      startProjectile(b, st);
+      emitDeployLock(b, st, false);
+      b.emit('protocolStart', { boss: e, protocol });
+    },
+    tick(b, e) {
+      const st = stateOf(e);
+      if (!st || st.dead) return;
+      const linkKey = protocol.link?.enemy;
+      if (!st.link && linkKey) {
+        const link = (b.enemies || []).find((x) => x && x.alive && x.defId === linkKey);
+        if (link) {
+          st.link = link;
+          attach(b, link, [linkAbility(st)]);
+          if (!st.down) addGuard(b, st);
+        } else if (b.time - st.at > LINK_GRACE && st.guard) {
+          // a declared link that never spawned must not leave the boss untargetable forever
+          removeGuard(b, st);
+        }
+      }
+      if (st.link && !st.link.alive && !st.down) removeGuard(b, st);
+    },
+    taken(c, b, e) {
+      const st = stateOf(e);
+      if (!st) return;
+      if (st.fly && c.amount > 0) {
+        st.fly.damage += c.amount;
+        if (st.fly.damage >= st.fly.threshold) endFly(b, st, true);
+      }
+      if (!st.down || !st.timer || st.timer.cancelled) return;
+      const s = st.protocol.revive?.shortenOnHit;
+      if (!s) return;
+      const floor = b.time + (s.min ?? 0);
+      st.timer.due = Math.max(floor, st.timer.due - s.seconds);
+      b.emit('protocolShorten', { boss: e, seconds: s.seconds });
+    },
+    death(c, b, e) {
+      const st = stateOf(e);
+      if (!st) return;
+      st.dead = true;
+      st.warning?.cancel?.();
+      st.clear?.cancel?.();
+      st.timer?.cancel?.();
+      st.dpTimer?.cancel?.();
+      st.projTimer?.cancel?.();
+      st.beamTimer?.cancel?.();
+      interruptBeam(b, st);
+      if (st.fly) endFly(b, st, false);
+      if (st.link?.alive) {
+        if (st.down) { b.removeBuff(st.link, DOWN); st.down = false; }
+        b.kill(st.link, e);
+      }
+      removeGuard(b, st);
+    },
+  };
+}

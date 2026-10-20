@@ -118,6 +118,11 @@ export class MatchBoss {
         battle.on('enemyLeak', (ctx) => this._bossLeak(ctx && ctx.enemy), { priority: -1000, owner: 'match' });
         // leader "扣除目标生命" effects (boss_7 Doom, 斥退 …: server/sim/content/bosses.js lpLoss) hit the team pool
         battle.on('lpLoss', (ctx) => this._teamLpLoss(ctx && ctx.amount), { priority: -1000, owner: 'match' });
+        // a post-revive 限制写入 waits for the next prep (no hand actions during combat)
+        battle.on('protocolDeployLock', (ctx) => {
+          if (!ctx || !ctx.afterRevive) return;
+          for (const ps of g) ps.queueDeployLock(ctx.count, ctx.duration);
+        }, { priority: -1000, owner: 'match' });
       } catch (e) { this.reportError('boss leak hook', e); }
       return { fieldId, kind: hidden ? 'hidden' : 'boss', players: g.map((p) => p.playerId), battle, live: true };
     });
@@ -291,6 +296,10 @@ export class MatchBoss {
     try {
       battle.on('enemyLeak', (ctx) => { const e = ctx && ctx.enemy; if (e) this._creditLp(f, Number.isFinite(e.lpr) && e.lpr >= 0 ? e.lpr : 1); }, { priority: -1000, owner: 'match' });
       battle.on('lpLoss', (ctx) => this._creditLp(f, ctx && ctx.amount), { priority: -1000, owner: 'match' });
+      battle.on('protocolDeployLock', (ctx) => {
+        if (!ctx || !ctx.afterRevive) return;
+        for (const pid of f.players) this.players.get(pid)?.queueDeployLock(ctx.count, ctx.duration);
+      }, { priority: -1000, owner: 'match' });
     } catch (e) { this.reportError('boss leak hook', e); }
     if (!this.pacer) this.pacer = new HeadlessPacer(this);
     const entry = this.pacer.add({

@@ -295,11 +295,15 @@ plugins/prts-source-code/
 | E | 测试 / 平衡 / 文档 / 插件打包 | 1 天 |
 | **合计** | | **约 6 个工作日** |
 
-**进度（2026-10-20）**：
+**进度（2026-10-21）**：
 
 - ✅ **A1 合约与校验**：`shared/plugins/bossProtocol.js`、`shared/plugins/bandGrants.js`，配 `test/plugins/{bossProtocol,bandGrants}.test.js`（7/7）；
-- ⏳ A2 运行时：Boss 链接守护 / 拟态复活 / 清除协议 / DP / 锁部署 / 弹道 / 悬浮 / 光束；
-- 尚未接入插件数据与 UI。
+- ✅ **A2 运行时**（`server/sim/content/bossProtocol.js`）：
+  - 链接守护、拟态倒地/复活/加攻、受击缩短复活、清除协议、DP 倍率、衰减光球、链式光束、悬浮；
+  - 限制写入：Boss 轮备战开始时按 Boss 记录锁定待部署区费用最高的干员；第一次复活后的强化锁写入下一次备战；
+  - 清除协议按“每名玩家 -X LP”折算到合并团队 LP；
+  - `test/sim/boss-protocol.test.js` 与 `test/match/deploy-lock.test.js` 覆盖上述运行时；
+- ⏳ 尚未接入插件数据与 UI。
 
 ---
 

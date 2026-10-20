@@ -240,6 +240,10 @@ export class PlayerState {
     this.round = { refreshes: 0, buys: 0, sells: 0, spent: 0, gainedChess: 0, arts: 0 };
     this.deployCapBonus = 0;
     this.deployCapMin = 0;
+    /** locked hand pieces: chess uid → scheduler time (ms) until which it may not be deployed */
+    this.deployLocks = new Map();
+    /** deploy locks a boss protocol queued during a battle, applied at the next prep (afterRevive) */
+    this.pendingDeployLocks = [];
     this.deviceOverrides = {};
     this.tileOverrides = {};
     this.stats = {

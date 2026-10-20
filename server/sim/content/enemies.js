@@ -119,6 +119,7 @@ import { REFLECTION_KITS } from './enemies/reflection.js';
 import { FLY_KITS } from './enemies/fly.js';
 import { SPECIAL_KITS } from './enemies/special.js';
 import { LEADER_KITS } from './enemies/leaders.js';
+import { protocolAbility } from './bossProtocol.js';
 import { hypot } from '../detmath.js';
 
 export {
@@ -173,11 +174,16 @@ export function registerMeta() {}
 // global dispatchers
 
 function onSpawn(b, e) {
+  const list = [];
   const kit = KITS[e.def.raw?.effectRef ?? e.defId];
-  if (typeof kit !== 'function') return;
-  const ab = abOf(b, e);
-  const list = safe(b, e, () => kit(ab, e, b)) || [];
-  attach(b, e, list);
+  if (typeof kit === 'function') {
+    const ab = abOf(b, e);
+    const res = safe(b, e, () => kit(ab, e, b)) || [];
+    if (Array.isArray(res)) list.push(...res);
+  }
+  const proto = protocolAbility(e.def.protocol ?? e.def.raw?.protocol);
+  if (proto) list.push(proto);
+  if (list.length) attach(b, e, list);
 }
 
 function onHitOut(b, c) {

@@ -4,8 +4,8 @@ import { readBossProtocol, BOSS_PROTOCOL_LIMITS } from '../../shared/plugins/bos
 
 const FULL = {
   link: { enemy: 'enemy_1565_mpprme' },
-  revive: { count: 3, atk: 100, hpReset: true, shortenOnHit: { seconds: 1, min: 3 } },
-  clearProtocol: { at: 90, warning: 10, lp: 10 },
+  revive: { count: 3, atk: 100, hpReset: true, down: 8, shortenOnHit: { target: 'boss', seconds: 1, min: 3 } },
+  clearProtocol: { at: 90, warning: 10, lp: 10, hiddenAt: 75, hiddenLp: 15 },
   dpRegen: { multiplier: 3, duration: 10 },
   deployLock: { count: 4, duration: 10, afterRevive: { count: 6, duration: 15 } },
   projectile: { cooldown: 12, damage: [2.4, 1], radius: [1.5, 0.45] },
@@ -17,8 +17,8 @@ test('the full PRTS protocol normalises, applies defaults and keeps every field'
   const { protocol, problems } = readBossProtocol(FULL);
   assert.deepEqual(problems, []);
   assert.deepEqual(protocol.link, { enemy: 'enemy_1565_mpprme', guard: true });
-  assert.deepEqual(protocol.revive, { count: 3, atk: 100, hpReset: true, shortenOnHit: { seconds: 1, min: 3 } });
-  assert.deepEqual(protocol.clearProtocol, { at: 90, warning: 10, lp: 10 });
+  assert.deepEqual(protocol.revive, { count: 3, atk: 100, hpReset: true, down: 8, shortenOnHit: { target: 'boss', seconds: 1, min: 3 } });
+  assert.deepEqual(protocol.clearProtocol, { at: 90, warning: 10, lp: 10, hiddenAt: 75, hiddenLp: 15 });
   assert.deepEqual(protocol.dpRegen, { multiplier: 3, duration: 10 });
   assert.deepEqual(protocol.deployLock, { count: 4, duration: 10, afterRevive: { count: 6, duration: 15 } });
   assert.deepEqual(protocol.projectile, { cooldown: 12, damage: [2.4, 1], radius: [1.5, 0.45] });

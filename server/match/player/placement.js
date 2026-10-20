@@ -26,6 +26,7 @@ export class PlayerPlacement {
     const piece = loc.piece;
     if (to.area === 'board') {
       if (piece.kind === 'item') return fail(ERR.BAD_TARGET, 'items are equipped, not placed');
+      if (loc.area !== 'board' && this.deployLocked(piece)) return fail(ERR.BAD_TARGET, 'deploy locked');
       const d = parseDir(dir !== undefined ? dir : to.dir);
       if (!d) return fail(ERR.BAD_TARGET, 'bad dir');
       return piece.kind === 'token' ? this._moveTokenToBoard(loc, to.row, to.col, d) : this._moveChessToBoard(loc, to.row, to.col, d);
@@ -35,6 +36,64 @@ export class PlayerPlacement {
       return this._moveToHand(loc, to.idx);
     }
     return fail(ERR.BAD_TARGET);
+  }
+
+  /**
+   * Deploy lock (PRTS 限制写入): lock the `count` highest-cost chess pieces currently in the hand / temp
+   * for `duration` seconds of the match clock. Only placing them on the board is refused; moving them inside the
+   * hand, withdrawing them, merging or selling them stays legal, and pieces already on the board are untouched.
+   * @param {number} count
+   * @param {number} duration seconds
+   * @param {number} [now] scheduler time in ms (defaults to the match clock)
+   * @returns {number[]} the locked piece uids
+   */
+  lockDeployTopCost(count, duration, now = this.m.sched.now()) {
+    const n = Math.max(0, Math.floor(Number(count) || 0));
+    const secs = Number(duration);
+    if (!(n > 0) || !(secs > 0)) return [];
+    this._pruneDeployLocks(now);
+    const candidates = [...this.hand, ...this.temp]
+      .filter((p) => p && p.kind === 'chess')
+      .map((p) => ({ p, cost: Number(this.gd.chess(p.id)?.stats?.cost) || 0 }))
+      .sort((a, b) => b.cost - a.cost || a.p.uid - b.p.uid)
+      .slice(0, n);
+    if (!candidates.length) return [];
+    const until = now + Math.round(secs * 1000);
+    for (const { p } of candidates) this.deployLocks.set(p.uid, Math.max(this.deployLocks.get(p.uid) ?? 0, until));
+    this.dirty();
+    return candidates.map(({ p }) => p.uid);
+  }
+
+  /** Is this hand/temp piece still locked out of the battlefield? Expired entries are dropped on read. */
+  deployLocked(piece, now = this.m.sched.now()) {
+    if (!piece) return false;
+    const until = this.deployLocks.get(piece.uid);
+    if (until == null) return false;
+    if (until > now) return true;
+    this.deployLocks.delete(piece.uid);
+    return false;
+  }
+
+  _pruneDeployLocks(now) {
+    for (const [uid, until] of this.deployLocks) if (!(until > now)) this.deployLocks.delete(uid);
+  }
+
+  /** A battle event's post-revive lock waits for the next prep (there is no hand action during combat). */
+  queueDeployLock(count, duration) {
+    const n = Math.floor(Number(count) || 0);
+    const secs = Number(duration);
+    if (!(n > 0) || !(secs > 0)) return;
+    this.pendingDeployLocks.push({ count: n, duration: secs });
+  }
+
+  /** Apply locks queued by a battle that ended since the previous prep. */
+  applyPendingDeployLocks(now = this.m.sched.now()) {
+    if (!this.pendingDeployLocks.length) return [];
+    const list = this.pendingDeployLocks;
+    this.pendingDeployLocks = [];
+    const out = [];
+    for (const l of list) out.push(...this.lockDeployTopCost(l.count, l.duration, now));
+    return out;
   }
 
   _placementOf(piece) {

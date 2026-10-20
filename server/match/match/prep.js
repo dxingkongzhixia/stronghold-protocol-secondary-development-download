@@ -4,6 +4,7 @@
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
 import { PHASE } from '../../../shared/constants.js';
+import { readBossProtocol } from '../../../shared/plugins/bossProtocol.js';
 import { botPrepBeginSteps, botPrepEndSteps } from '../bot.js';
 import { testSlice } from '../testTrace.js';
 import { DELAYS } from './common.js';
@@ -22,7 +23,9 @@ export class MatchPrep {
       ps.recompute();
       this.dispatch(ps, 'onPrepStart', { round: this.round });
       ps.recompute();
+      ps.applyPendingDeployLocks();
     }
+    this.applyBossDeployLocks(alive);
     // solo / single-human matches: untimed (soloUntimed); co-op: the round's prepTime
     const secs = this.soloUntimed ? null : this.gd.prepTime(this.round);
     this.setDeadline(secs, () => this.prepDeadline());
@@ -31,6 +34,26 @@ export class MatchPrep {
     this.markPublic();
     this.maybeEndPrep();
   }
+
+  /**
+   * The boss record's `deployLock`: at the start of the boss round's prep, lock each player's highest-cost hand
+   * pieces for the configured time. The after-first-revive lock is queued by the battle event and applied here on
+   * the next prep (there are no hand actions during combat). The hidden round reads `hiddenBossId`.
+   */
+  applyBossDeployLocks(alive = this.alivePlayers()) {
+    const bossRound = this.round === this.gd.bossRound;
+    const hiddenRound = this.round === this.gd.hiddenRound && this.round !== this.gd.bossRound;
+    if (!bossRound && !hiddenRound) return;
+    const bossId = hiddenRound ? this.hiddenBossId : this.bossId;
+    const recorder = bossId ? this.gd.boss(bossId) : null;
+    const enemyKey = recorder?.enemyKey;
+    const rec = enemyKey ? this.gd.enemy(enemyKey) : null;
+    const { protocol } = readBossProtocol(rec?.protocol ?? recorder?.protocol);
+    const lock = protocol?.deployLock;
+    if (!lock) return;
+    for (const ps of alive) ps.lockDeployTopCost(lock.count, lock.duration);
+  }
+
 
   /**
    * The bot plays a prep in three stages, every one in slices of ≤ botSliceMs wall-clock ms (one scheduler callback
