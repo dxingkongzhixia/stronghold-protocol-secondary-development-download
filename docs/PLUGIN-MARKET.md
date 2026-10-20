@@ -30,6 +30,8 @@ var/plugin-market/
 
 `GET /market/api/list` 同时返回 `installed`：游戏服务器 `plugins/` 目录里已加载、但尚未上架商城的插件。页面会把它们显示在「本机已安装」区，并可通过 `/market/api/installed/<id>/download` 下载服务器上的当前安装目录。
 
+每个条目还带 `app`（声明的游戏版本范围）、`api`（插件 API level）和 `compat`（`ok` / `own` / `mainline` / `auto` / `unrestricted`），用于页面直接显示主线 0.3.x / 本服 0.4.x 的兼容性。
+
 ## 上传
 
 ```http
@@ -98,10 +100,24 @@ node tools/plugin.mjs check <id> --strict
 
 - 插件使用条形列表，不使用方块卡片
 - 支持按名称 / 作者 / 描述 / 类型搜索
-- 普通插件 / Forge 包 / 本机已安装分栏
-- 每一条显示 `kind` 和 `class` 两个类型标签
+- **来源**分栏：普通插件（`plugin.json`）/ Forge 包（`pack.json`）/ 本机已安装
+- **插件类型**筛选：外观 / 玩法 / 界面 / 脚本 / 信任 / 语言 / Forge 转换
+- 每一条显示 `来源`、`类型（class）`、`状态` 三个标签，不只显示存储格式
+- 每一条显示兼容性：`app` 范围、`API` 版本，以及「兼容本服 0.4.x / 兼容主线 0.3.x / 不兼容」的判断
 - 上传是独立页面 `/market/upload/`
 - 从标题页打开商城会使用新标签页；「返回游戏」优先关闭该标签页，避免重新加载游戏资源
+
+## 兼容性
+
+商城条目的 `compat` 字段直接回答「主线版本能不能用」：
+
+| 插件 class | `app` 只匹配主线 0.3.x | 结果 |
+|---|---|---|
+| `lang` / `cosmetic` / `ui` | 是 | `compat.ok: true`，显示「兼容主线 0.3.x（自动兼容）」 |
+| `content` / `script` / `trusted` | 是 | `compat.ok: false`，显示「不兼容本服 0.4.0」；owner 可用 `allowIncompatible` 显式放行 |
+| 任意 class | 匹配本服 0.4.x 或未限制 | `compat.ok: true`，显示「兼容本服 0.4.x」/「未限制 app 版本」 |
+
+`compat` 还带 `app`、`api`、`own`、`mainline`、`auto`、`unrestricted`。Forge 包的 `compat.ok` 为 `null`：商城只把它标成「已通过本服导入测试 / 待导入测试」，最终以 `importForge` 的转换结果为准。兼容层细节见 [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) §7 和 `shared/plugins/manifest.js` 的 `appVersionCompatible()`。
 
 ## 边界
 

@@ -16,6 +16,7 @@
         <div class="market-kicker">STRONGHOLD PROTOCOL // PLUGIN STORE</div>
         <h1 class="market-title">插件商城</h1>
         <p class="market-sub">普通插件与 Forge 包分开存储；上传后待审核，使用中的插件才开放下载。</p>
+        <p class="market-compat-help">兼容性：本服 0.4.0 · 主线 0.3.x 的外观 / 界面 / 语言插件自动兼容；内容 / 脚本 / 信任插件默认严格，需 owner 在 allowIncompatible 中放行。</p>
       </div>
       <div class="market-actions">
         <button type="button" class="mc-btn" id="back">返回游戏</button>
@@ -25,11 +26,23 @@
 
     <div class="market-toolbar">
       <div class="market-tabs" role="tablist">
+        <span class="market-tabs__label">来源</span>
         <button class="market-tab is-on" data-tab="ordinary" role="tab">普通插件 <em id="count-ordinary">0</em></button>
         <button class="market-tab" data-tab="forge" role="tab">Forge 包 <em id="count-forge">0</em></button>
         <button class="market-tab" data-tab="installed" role="tab">本机已安装 <em id="count-installed">0</em></button>
       </div>
       <input id="search" class="market-search" type="search" placeholder="搜索名称 / 作者 / 描述 / 类型" aria-label="搜索插件">
+    </div>
+    <div class="market-types" role="group" aria-label="插件类型">
+      <span class="market-types__label">插件类型</span>
+      <button class="market-type is-on" data-type="">全部 <em id="type-all">0</em></button>
+      <button class="market-type" data-type="cosmetic">外观 <em id="type-cosmetic">0</em></button>
+      <button class="market-type" data-type="content">玩法 <em id="type-content">0</em></button>
+      <button class="market-type" data-type="ui">界面 <em id="type-ui">0</em></button>
+      <button class="market-type" data-type="script">脚本 <em id="type-script">0</em></button>
+      <button class="market-type" data-type="trusted">信任 <em id="type-trusted">0</em></button>
+      <button class="market-type" data-type="lang">语言 <em id="type-lang">0</em></button>
+      <button class="market-type" data-type="forge">Forge 转换 <em id="type-forge">0</em></button>
     </div>
     <div id="list" class="market-list"></div>
     <p id="listMsg" class="market-status"></p>

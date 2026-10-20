@@ -15,9 +15,10 @@
       <p class="market-crumbs"><a href="/market/">插件商城</a> / 上传</p>
       <h1>上传插件</h1>
       <p class="market-sub">上传后状态为「未审核」。管理员测试通过后才会变为「使用中」并开放下载。</p>
+      <p class="market-compat-help">兼容性：本服 0.4.0 · 主线 0.3.x 的外观 / 界面 / 语言插件自动兼容；内容 / 脚本 / 信任插件默认严格，需 owner 在 allowIncompatible 中放行。插件类型由 plugin.json 的 class 决定。</p>
       <form class="market-form" id="uploadForm">
         <div>
-          <label for="kind">类型</label>
+          <label for="kind">来源格式</label>
           <select id="kind" name="kind">
             <option value="ordinary">普通插件（plugin.json）</option>
             <option value="forge">Forge 包（pack.json）</option>

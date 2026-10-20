@@ -52,6 +52,34 @@ test('market: upload pending, review/test/approve, active download, duplicate an
   assert.equal(market.download('forge', forged.id), null);
 });
 
+test('market: compatibility says whether mainline 0.3.x / this 0.4.x build can use a plugin', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-compat-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const market = createPluginMarket({ root });
+  const make = (id, cls, app, api = 1) => zipFiles([{
+    name: 'plugin.json',
+    data: Buffer.from(JSON.stringify({ manifest: 2, id, name: id, version: '1.0.0', class: cls, app, api })),
+  }]);
+  const cosmetic = await market.upload({ kind: 'ordinary', bytes: make('mainline-skin', 'cosmetic', '>=0.3.0 <0.4.0') });
+  assert.deepEqual(
+    [cosmetic.compat.own, cosmetic.compat.mainline, cosmetic.compat.auto, cosmetic.compat.ok],
+    [false, true, true, true],
+    'a mainline 0.3.x cosmetic plugin is auto-compatible',
+  );
+  const content = await market.upload({ kind: 'ordinary', bytes: make('mainline-content', 'content', '>=0.3.0 <0.4.0') });
+  assert.deepEqual(
+    [content.compat.own, content.compat.mainline, content.compat.auto, content.compat.ok],
+    [false, true, false, false],
+    'a mainline 0.3.x content plugin is strict by default',
+  );
+  const current = await market.upload({ kind: 'ordinary', bytes: make('current-content', 'content', '>=0.4.0 <0.5.0') });
+  assert.deepEqual([current.compat.own, current.compat.ok], [true, true]);
+  const unrestricted = await market.upload({ kind: 'ordinary', bytes: make('no-range', 'ui', '') });
+  assert.deepEqual([unrestricted.compat.unrestricted, unrestricted.compat.ok], [true, true]);
+  const forged = await market.upload({ kind: 'forge', bytes: zipDir(path.join(ROOT, 'test/fixtures/forge/numbers-pack')) });
+  assert.equal(forged.compat.ok, null, 'a Forge pack is accepted only after its import test');
+});
+
 test('market lists live installed plugins separately from store entries', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-installed-'));
   try {
@@ -60,12 +88,17 @@ test('market lists live installed plugins separately from store entries', () => 
     fs.writeFileSync(path.join(pluginDir, 'plugin.json'), '{}');
     fs.writeFileSync(path.join(pluginDir, 'x.png'), Buffer.from([1, 2, 3]));
     const registry = { plugins: () => [
-      { id: 'local-skin', source: 'plugins', class: 'cosmetic', status: 'loaded', bytes: 123, where: pluginDir, manifest: { name: { zh: '本机外观' }, version: '1.0.0' } },
+      { id: 'local-skin', source: 'plugins', class: 'cosmetic', status: 'loaded', bytes: 123, where: pluginDir, manifest: { name: { zh: '本机外观' }, version: '1.0.0', app: '>=0.3.0 <0.4.0', api: 1 } },
       { id: 'en', source: 'i18n', class: 'lang', status: 'loaded', manifest: { version: '0.2.0' } },
     ] };
     const market = createPluginMarket({ root, registry });
     assert.deepEqual(market.installed().map((p) => [p.id, p.status, p.download]), [['local-skin', 'installed', '/market/api/installed/local-skin/download']]);
     assert.deepEqual(market.installed()[0].name, '本机外观');
+    assert.deepEqual(
+      [market.installed()[0].compat.own, market.installed()[0].compat.mainline, market.installed()[0].compat.auto],
+      [false, true, true],
+      'the installed list carries the same mainline compatibility answer',
+    );
     const zip = market.downloadInstalled('local-skin');
     assert.ok(zip && zip.bytes.length > 0);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }

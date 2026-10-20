@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { PLUGIN_LIMITS, isPluginId } from '../shared/plugins/manifest.js';
+import { PLUGIN_LIMITS, PLUGIN_COMPAT_APP, PLUGIN_COMPAT_CLASSES, appVersionMatches, isPluginId } from '../shared/plugins/manifest.js';
 import { readPluginZip, zipFiles } from './plugins/zip.js';
 import { readUntrustedZip, importForge, forgeIdToPluginId } from './plugins/forgeImport.js';
 import { installFromFile } from './plugins/install.js';
@@ -14,6 +14,25 @@ const KINDS = new Set(['ordinary', 'forge']);
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 const safePart = (s, max = 64) => String(s || '').replace(/[^0-9A-Za-z._-]/g, '_').slice(0, max) || 'plugin';
 const nameOf = (n) => (typeof n === 'string' ? n : n && (n.zh || n.en)) || '';
+const appRangeOf = (v) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 120) : null);
+const apiLevelOf = (v) => (Number.isInteger(v) ? v : null);
+
+/**
+ * What the marketplace says about a plugin's target game versions. Presentation-only classes also accept the mainline
+ * 0.3.x contract (shared/plugins/manifest.js appVersionCompatible); gameplay classes stay strict unless the owner opts in.
+ */
+function compatibilityOf(kind, cls, app, api) {
+  const range = appRangeOf(app);
+  const apiLevel = apiLevelOf(api);
+  if (kind === 'forge') {
+    // A Forge pack is converted and tested on this server; its app range is advice, not a load decision.
+    return { app: range, api: apiLevel, ok: null, own: null, mainline: null, auto: false, unrestricted: !range };
+  }
+  const own = appVersionMatches(range);
+  const mainline = appVersionMatches(range, PLUGIN_COMPAT_APP);
+  const auto = PLUGIN_COMPAT_CLASSES.has(cls);
+  return { app: range, api: apiLevel, own, mainline, auto, unrestricted: !range, ok: !range || own || (auto && mainline) };
+}
 
 function readIndex(file) {
   try {
@@ -53,15 +72,18 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     fs.renameSync(tmp, indexFile);
   };
   const keyOf = (kind, id) => `${kind}:${id}`;
-  const publicEntry = (e) => ({
-    id: e.id, kind: e.kind, name: e.name, version: e.version, author: e.author || null,
-    description: e.description || null, class: e.class || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
-    uploadedAt: e.uploadedAt, uploadedBy: e.uploadedBy || null, reviewedAt: e.reviewedAt || null,
-    downloads: e.downloads || 0,
-    download: e.status === 'active' ? `/market/api/download/${e.kind}/${encodeURIComponent(e.id)}` : null,
-    sources: mirrors,
-    reviewNote: e.reviewNote || null,
-  });
+  const publicEntry = (e) => {
+    const compat = compatibilityOf(e.kind, e.class, e.app, e.api);
+    return {
+      id: e.id, kind: e.kind, name: e.name, version: e.version, author: e.author || null,
+      description: e.description || null, class: e.class || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
+      uploadedAt: e.uploadedAt, uploadedBy: e.uploadedBy || null, reviewedAt: e.reviewedAt || null,
+      downloads: e.downloads || 0, app: compat.app, api: compat.api, compat,
+      download: e.status === 'active' ? `/market/api/download/${e.kind}/${encodeURIComponent(e.id)}` : null,
+      sources: mirrors,
+      reviewNote: e.reviewNote || null,
+    };
+  };
 
   async function inspect(kind, bytes) {
     if (kind === 'ordinary') {
@@ -69,7 +91,10 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       const man = rootJson(entries, 'plugin.json');
       if (!isPluginId(man.id)) throw new Error('plugin.json has no valid id');
       if (!man.version || typeof man.version !== 'string') throw new Error('plugin.json has no version');
-      return { id: man.id, version: man.version, name: nameOf(man.name), author: nameOf(man.author), description: nameOf(man.description), class: man.class || null };
+      return {
+        id: man.id, version: man.version, name: nameOf(man.name), author: nameOf(man.author), description: nameOf(man.description),
+        class: man.class || null, app: appRangeOf(man.app), api: apiLevelOf(man.api),
+      };
     }
     const files = await readUntrustedZip(bytes);
     const pack = rootJson([...files].map(([name, data]) => ({ name, data })), 'pack.json');
@@ -77,7 +102,10 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     const raw = String(pack.id);
     const id = forgeIdToPluginId(raw);
     if (!isPluginId(id)) throw new Error('pack.json id cannot become a plugin id');
-    return { id, version: String(pack.version || '0.0.0'), name: nameOf(pack.name) || raw, author: nameOf(pack.author), description: nameOf(pack.description), class: 'forge' };
+    return {
+      id, version: String(pack.version || '0.0.0'), name: nameOf(pack.name) || raw, author: nameOf(pack.author),
+      description: nameOf(pack.description), class: 'forge', app: appRangeOf(pack.app), api: apiLevelOf(pack.api),
+    };
   }
 
   async function upload({ kind, bytes, filename = '', uploadedBy = null }) {
@@ -96,7 +124,8 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     fs.writeFileSync(path.join(base, file), bytes);
     const entry = {
       kind, id: meta.id, name: meta.name || meta.id, version: meta.version, author: meta.author || null,
-      description: meta.description || null, class: meta.class || null, file, bytes: bytes.length, sha256: sha256(bytes),
+      description: meta.description || null, class: meta.class || null, app: meta.app || null, api: meta.api ?? null,
+      file, bytes: bytes.length, sha256: sha256(bytes),
       status: 'pending', uploadedAt: Date.now(), uploadedBy: uploadedBy || null, reviewedAt: null, reviewedBy: null,
       reviewNote: null, downloads: 0, filename: String(filename || '').slice(0, 120),
     };
@@ -171,12 +200,16 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
   /** Loaded plugins in the live plugins/ folder (not store entries). */
   function installed() {
     const list = registry && typeof registry.plugins === 'function' ? registry.plugins() : [];
-    return list.filter((p) => p && p.source === 'plugins' && p.class !== 'lang').map((p) => ({
-      id: p.id, kind: 'installed', name: (typeof p.manifest?.name === 'string' ? p.manifest.name : (p.manifest?.name?.zh || p.manifest?.name?.en)) || p.id,
-      version: p.manifest?.version || null, class: p.class, status: 'installed', bytes: p.bytes || null,
-      description: 'Installed locally; not published to the store', sources: [], installed: true,
-      download: p.status === 'loaded' ? `/market/api/installed/${encodeURIComponent(p.id)}/download` : null,
-    }));
+    return list.filter((p) => p && p.source === 'plugins' && p.class !== 'lang').map((p) => {
+      const compat = compatibilityOf('installed', p.class, p.manifest?.app, p.manifest?.api);
+      return {
+        id: p.id, kind: 'installed', name: (typeof p.manifest?.name === 'string' ? p.manifest.name : (p.manifest?.name?.zh || p.manifest?.name?.en)) || p.id,
+        version: p.manifest?.version || null, class: p.class, status: 'installed', bytes: p.bytes || null,
+        app: compat.app, api: compat.api, compat,
+        description: 'Installed locally; not published to the store', sources: [], installed: true,
+        download: p.status === 'loaded' ? `/market/api/installed/${encodeURIComponent(p.id)}/download` : null,
+      };
+    });
   }
 
   /** Zip an installed plugin folder on demand (the marketplace's download for a live plugins/<id>). */
