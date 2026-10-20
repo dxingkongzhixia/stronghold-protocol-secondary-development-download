@@ -12,7 +12,10 @@
 <body class="market-page">
   <main class="market-shell">
     <div class="market-upload">
-      <p class="market-crumbs"><a href="/market/">插件商城</a> / 上传</p>
+      <div class="market-upload__bar">
+        <p class="market-crumbs"><a href="/market/">插件商城</a> / 上传</p>
+        <button type="button" class="mc-btn" id="themeToggle">浅色</button>
+      </div>
       <h1>上传插件</h1>
       <p class="market-sub">上传后状态为「未审核」。管理员测试通过后才会变为「使用中」并开放下载。</p>
       <p class="market-compat-help">本服兼容：<code>app</code> 范围包含 0.4.0；主线兼容：<code>app</code> 范围包含 0.3.2。外观 / 界面 / 语言在主线兼容时自动加载；内容 / 脚本 / 信任即使主线兼容，仍需 owner 在 allowIncompatible 中放行。插件类型由 plugin.json 的 class 决定。</p>

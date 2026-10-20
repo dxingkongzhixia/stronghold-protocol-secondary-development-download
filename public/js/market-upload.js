@@ -1,5 +1,7 @@
 // i18n-ignore-file: standalone market upload page (Chinese-first; a language pack can wrap it later)
 // Standalone upload form for the plugin market (keeps the list page free of the upload UI).
+import { initMarketTheme } from './market-theme.js';
+initMarketTheme();
 const $ = (id) => document.getElementById(id);
 const say = (text, bad = false) => {
   $('msg').textContent = text;

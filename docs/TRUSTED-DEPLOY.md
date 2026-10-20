@@ -88,6 +88,11 @@ docker compose logs --tail=100
 # 3. 健康检查
 curl -fsS http://127.0.0.1:3000/healthz
 
+# 4. 容器基线检查（只检查已运行容器，不执行插件）
+node tools/trusted-container-check.mjs --container <name>
+# 或：npm run check:trusted -- --container <name>
+# 检查非 root、只读 rootfs、cap_drop ALL、no-new-privileges、资源上限、非 host 网络、端口仅回环
+
 # 4. 运营台确认
 # /admin → 插件与内容 → trusted / probe / 房间 consent
 ```

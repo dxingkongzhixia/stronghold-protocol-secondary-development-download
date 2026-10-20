@@ -1,5 +1,7 @@
 // Plugin store: themed list/search/download for ordinary, Forge and live installed plugins.
 // i18n-ignore-file: standalone market page (Chinese-first; a language pack can wrap it later)
+import { initMarketTheme } from './market-theme.js';
+initMarketTheme();
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const token = new URLSearchParams(location.search).get('token') || '';

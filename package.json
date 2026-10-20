@@ -38,6 +38,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit --checkJs -p jsconfig.json",
     "check:imports": "node tools/check-imports.mjs",
+    "check:trusted": "node tools/trusted-container-check.mjs",
     "check:upstream": "node tools/check-upstream.mjs",
     "check:delivery": "node tools/check-delivery.mjs",
     "push:relay": "node tools/push-assets-relay.mjs",
