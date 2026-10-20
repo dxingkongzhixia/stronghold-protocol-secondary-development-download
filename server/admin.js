@@ -506,6 +506,71 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .plugin-fold .panel__body{padding:11px 16px 0}
 .plugin-fold .plugin-grid{padding-top:12px}
 @media (max-width:900px){.plugin-grid{grid-template-columns:1fr}.plugin-card__fields{grid-template-columns:1fr}.plugin-card__field--wide{grid-column:auto}}
+.plugin-admin__head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.plugin-admin__head h2{margin:0 0 4px}
+.plugin-admin__head .hint{max-width:560px}
+.plugin-admin__tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.plugin-admin__tools .search{min-width:220px;max-width:320px}
+.plugin-tabs{display:flex;gap:4px;padding:10px 16px 0;border-bottom:1px solid var(--line)}
+.plugin-tab{border:1px solid transparent;border-bottom:0;background:transparent;color:var(--dim);padding:7px 12px 9px;border-radius:7px 7px 0 0;font:inherit;font-size:12px;cursor:pointer}
+.plugin-tab em{font-style:normal;opacity:.7;margin-left:3px}
+.plugin-tab:hover{color:var(--text)}
+.plugin-tab.is-on{color:var(--mint);background:var(--panel2);border-color:var(--line)}
+.plugin-table td{white-space:normal;vertical-align:middle;padding:11px 12px}
+.plugin-table table{table-layout:fixed;min-width:760px}
+.plugin-table th:nth-child(1){width:24%}
+.plugin-table th:nth-child(2){width:15%}
+.plugin-table th:nth-child(3){width:20%}
+.plugin-table th:nth-child(4){width:29%}
+.plugin-table th:nth-child(5){width:6%}
+.plugin-table th:nth-child(6){width:6%}
+.plugin-table td:last-child{text-align:right}
+.plugin-name{display:flex;align-items:center;gap:9px;min-width:0}
+.plugin-name b{display:block;font-size:13px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plugin-name small{display:block;color:var(--dim);font-size:11px;font-family:ui-monospace,Consolas,monospace;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plugin-badges{display:flex;gap:4px;flex-wrap:wrap}
+.plugin-badges .pill{white-space:nowrap}
+.plugin-sub{color:var(--dim);font-size:11px;margin-top:4px;white-space:nowrap}
+.plugin-desc{color:var(--text);font-size:12px;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plugin-compat{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.plugin-compat .compat-k{font-size:10px;white-space:nowrap}
+.plugin-compat .pill{font-size:10px;min-height:18px;white-space:nowrap}
+.switch{position:relative;display:inline-flex;width:32px;height:18px;vertical-align:middle}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;border-radius:999px;background:#24302c;border:1px solid var(--line2);transition:.15s}
+.switch span:after{content:"";position:absolute;width:12px;height:12px;left:2px;top:2px;border-radius:50%;background:#8a9b95;transition:.15s}
+.switch input:checked + span{background:rgba(78,216,175,.28);border-color:var(--mint-dim)}
+.switch input:checked + span:after{left:16px;background:var(--mint)}
+.row-action{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:6px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer}
+.row-action:hover{border-color:var(--mint-dim);color:var(--mint)}
+.drawer-wrap{position:fixed;inset:0;z-index:70;display:flex;justify-content:flex-end}
+.drawer-wrap[hidden]{display:none}
+.drawer-backdrop{position:absolute;inset:0;background:rgba(3,7,6,.62);backdrop-filter:blur(2px)}
+.drawer{position:relative;width:min(460px,94vw);height:100%;display:flex;flex-direction:column;background:#0d1513;border-left:1px solid var(--line2);box-shadow:-18px 0 50px rgba(0,0,0,.35)}
+.drawer__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.drawer__kicker{color:var(--mint);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:4px}
+.drawer__head h3{margin:0;font-size:18px}
+.drawer__x{background:transparent;border:0;color:var(--dim);font-size:22px;line-height:1;cursor:pointer;padding:2px 5px}
+.drawer__x:hover{color:var(--text)}
+.drawer__body{padding:16px 18px;overflow:auto;display:flex;flex-direction:column;gap:13px}
+.drawer__meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.drawer-id{color:var(--dim);font-size:11px;font-family:ui-monospace,Consolas,monospace;margin-left:2px}
+.drawer__grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.plugin-field{display:flex;flex-direction:column;gap:5px;color:var(--dim);font-size:11px}
+.plugin-field--wide{grid-column:1 / -1}
+.plugin-field input,.plugin-field textarea{width:100%;box-sizing:border-box;background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:7px;padding:7px 9px;font:inherit;font-size:12px}
+.plugin-field textarea{resize:vertical;min-height:74px;line-height:1.5}
+.plugin-field input:focus,.plugin-field textarea:focus{outline:none;border-color:var(--mint-dim)}
+.drawer__check{display:flex;align-items:center;gap:7px;color:var(--text);font-size:12px}
+.drawer__check input{accent-color:var(--mint);width:15px;height:15px}
+.drawer__compat{display:flex;align-items:center;gap:5px 9px;flex-wrap:wrap;padding:10px 11px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.015)}
+.drawer__foot{display:flex;align-items:center;gap:7px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.drawer__foot .spacer{flex:1}
+.drawer__foot button{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:7px;padding:6px 11px;font:inherit;font-size:12px;cursor:pointer}
+.drawer__foot button:hover{border-color:var(--mint-dim)}
+.drawer__foot button.primary{background:var(--mint);border-color:var(--mint);color:#082019;font-weight:700}
+.drawer__foot button.danger{color:#ff9a9a;border-color:rgba(224,108,117,.4)}
+@media (max-width:700px){.plugin-admin__tools{width:100%}.plugin-admin__tools .search{max-width:none;flex:1}.plugin-desc{max-width:220px}}
 .tools .hint{color:var(--dim2);font-size:12px}
 .tablewrap{overflow:auto;max-height:66vh}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -708,16 +773,30 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     </section>
 
     <section class="view" id="view-plugins" hidden>
-      <section class="panel">
-        <h2>商城插件管理<em id="marketCount"></em></h2>
-        <div class="panel__body hint">描述、作者、兼容性（app/API）和上架状态可直接编辑；保存只改商城元数据，不改插件文件。测试 / 通过后才开放下载。</div>
-        <div class="tools plugin-publish">
-          <select id="publishSelect" aria-label="选择本机插件"></select>
-          <button type="button" id="publishBtn">把本机插件打包上架</button>
-          <span id="publishMsg" class="hint"></span>
+      <section class="panel plugin-admin">
+        <div class="plugin-admin__head">
+          <div>
+            <h2>插件管理<em id="marketCount"></em></h2>
+            <p class="hint">描述、作者、兼容性和上架状态都在右侧抽屉里编辑；保存只改商城元数据，不改插件文件。</p>
+          </div>
+          <div class="plugin-admin__tools">
+            <input class="search" id="pluginSearch" placeholder="搜索 ID / 名称 / 作者"/>
+            <select id="publishSelect" aria-label="选择本机插件"></select>
+            <button type="button" id="publishBtn" class="primary">上架本机插件</button>
+          </div>
         </div>
-        <div id="marketBody" class="plugin-grid"></div>
-        <div class="panel__body"><span id="marketMsg" class="hint"></span></div>
+        <div class="plugin-tabs" role="tablist">
+          <button type="button" class="plugin-tab is-on" data-ptab="market">商城条目 <em id="marketTabCount">0</em></button>
+          <button type="button" class="plugin-tab" data-ptab="installed">本机插件 <em id="installedMetaCount">0</em></button>
+        </div>
+        <div id="marketPane" class="plugin-pane">
+          <div class="tablewrap plugin-table"><table><thead><tr><th>插件</th><th>类型 / 状态</th><th>兼容性</th><th>描述 / 作者</th><th>上架</th><th></th></tr></thead><tbody id="marketBody"></tbody></table></div>
+          <div class="panel__body"><span id="marketMsg" class="hint"></span></div>
+        </div>
+        <div id="installedPane" class="plugin-pane" hidden>
+          <div class="tablewrap plugin-table"><table><thead><tr><th>插件</th><th>类型</th><th>兼容性</th><th>描述 / 作者</th><th></th></tr></thead><tbody id="installedMetaBody"></tbody></table></div>
+          <div class="panel__body"><span id="installedMetaMsg" class="hint"></span></div>
+        </div>
         <div class="panel__body hint">AI 接管接口（预留）：<code>GET /admin/api/plugins/ai</code> 返回能力声明；当前 POST 返回 501，未启用执行器，不会自行改动商城。</div>
       </section>
       <div class="two">
@@ -728,16 +807,6 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
           <div class="tools"><button type="button" id="pluginPolicySave">保存插件策略</button><span id="pluginPolicyMsg" class="hint"></span></div>
         </div></section>
       </div>
-      <details class="panel plugin-fold">
-        <summary>本机插件元数据<em id="installedMetaCount"></em><span class="hint">展开编辑展示信息</span></summary>
-        <div class="panel__body hint">只改商城展示用的描述 / 作者 / 兼容范围，不改 plugins/ 里的文件；要真正上架请用上方「打包上架」。</div>
-        <div id="installedMetaBody" class="plugin-grid"></div>
-        <div class="panel__body"><span id="installedMetaMsg" class="hint"></span></div>
-      </details>
-      <section class="panel">
-        <h2>已安装插件<em id="pluginCount"></em></h2>
-        <div id="pluginBody" class="plugin-grid"></div>
-      </section>
       <section class="panel">
         <h2>Forge 导入<em id="forgeCount"></em></h2>
         <div class="tablewrap"><table><thead><tr><th>插件</th><th>来源包</th><th>版本</th><th>产品</th><th>跳过</th><th>假设</th><th>部分</th><th>导入时间</th></tr></thead><tbody id="forgeBody"></tbody></table></div>
@@ -750,6 +819,36 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <h2>房间内容与脚本</h2>
         <div class="tablewrap"><table><thead><tr><th>房间</th><th>内容集 cs</th><th>外观集 vs</th><th>模式</th><th>插件</th><th>脚本/信任</th><th>同意</th></tr></thead><tbody id="roomContentBody"></tbody></table></div>
       </section>
+
+      <div id="pluginDrawer" class="drawer-wrap" hidden>
+        <div class="drawer-backdrop" data-drawer-close></div>
+        <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+          <header class="drawer__head">
+            <div><div class="drawer__kicker" id="drawerKicker">商城条目</div><h3 id="drawerTitle">编辑插件</h3></div>
+            <button type="button" class="drawer__x" data-drawer-close aria-label="关闭">×</button>
+          </header>
+          <div class="drawer__body">
+            <div id="drawerMeta" class="drawer__meta"></div>
+            <label class="plugin-field plugin-field--wide"><span>描述</span><textarea id="drawerDescription" rows="3" placeholder="商城描述"></textarea></label>
+            <div class="drawer__grid">
+              <label class="plugin-field"><span>作者</span><input id="drawerAuthor" placeholder="作者"></label>
+              <label class="plugin-field"><span>兼容范围 app</span><input id="drawerApp" placeholder=">=0.4.0 <0.5.0"></label>
+              <label class="plugin-field"><span>API level</span><input id="drawerApi" type="number" min="1" max="99" placeholder="API"></label>
+            </div>
+            <label class="drawer__check" id="drawerListedRow"><input id="drawerListed" type="checkbox"><span>上架到商城</span></label>
+            <div id="drawerCompat" class="drawer__compat"></div>
+            <p id="drawerMsg" class="hint"></p>
+          </div>
+          <footer class="drawer__foot">
+            <button type="button" data-drawer-close>取消</button>
+            <span class="spacer"></span>
+            <button type="button" id="drawerReject" class="danger">拒绝</button>
+            <button type="button" id="drawerTest">测试</button>
+            <button type="button" id="drawerApprove">通过</button>
+            <button type="button" id="drawerSave" class="primary">保存</button>
+          </footer>
+        </aside>
+      </div>
     </section>
 
     <section class="view" id="view-accounts" hidden>
@@ -872,6 +971,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
 <script>
 (function () {
   var token = new URLSearchParams(location.search).get('token') || '';
+  var lastAdminData = null;
+  var pluginTab = 'market';
+  var pluginDrawerItem = null;
+  var pluginDrawerMode = 'market';
   var COLORS = { offline:'#8a8f8c', online:'#4ed8af', room:'#5cc8ff', queue:'#ffd089', mmplay:'#ffa94d', alliance:'#b28cff', solo:'#7bd88f' };
   var LABELS = { offline:'离线', online:'在线', room:'组队中', queue:'野排排队', mmplay:'野排游玩', alliance:'同盟游玩', solo:'单人游玩' };
   var ROLE_LABELS = { admin:'管理员', dev:'开发者' };
@@ -1073,42 +1176,50 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     var pj = p.policy ? { rooms: p.policy.rooms, default: p.policy.default || [], allow: p.policy.allow || [], classes: p.policy.classes || {}, limits: { maxSets: p.policy.maxSets }, allowIncompatible: p.policy.allowIncompatible === true ? true : Array.isArray(p.policy.allowIncompatible) ? p.policy.allowIncompatible : false } : {};
     var policyArea = el('pluginPolicyJson');
     if (policyArea && document.activeElement !== policyArea) policyArea.value = JSON.stringify(pj, null, 2);
-    el('pluginCount').textContent = ' · ' + list.length + ' 个';
-    // 商城条目：描述 / 作者 / app / API / 上架都可编辑；保存只写商城元数据，不动插件文件。
+    // 商城条目与本机插件共用一张表；描述 / 作者 / app / API / 上架在右侧抽屉编辑。
     var market = Array.isArray(p.market) ? p.market : [];
-    el('marketCount').textContent = ' · ' + market.length + ' 个';
     var statusLabels = { active: '通过', pending: '待审核', rejected: '已拒绝' };
-    var marketBody = el('marketBody');
-    var focusNow = document.activeElement;
-    var editingMarket = marketBody && focusNow && marketBody.contains(focusNow)
-      && /^(INPUT|SELECT|TEXTAREA)$/.test(focusNow.tagName || '');
-    if (marketBody && !editingMarket) {
-      marketBody.innerHTML = market.map(function (x) {
-        var listed = x.listed !== false;
-        var state = x.status === 'active' ? (listed ? '已上架' : '已下架') : (statusLabels[x.status] || x.status || '—');
-        var statePill = x.status === 'active'
-          ? (listed ? '<span class="pill yes">已上架</span>' : '<span class="pill no">已下架</span>')
-          : '<span class="pill' + (x.status === 'rejected' ? ' no' : '') + '">' + esc(state) + '</span>';
-        var kind = x.kind === 'forge' ? 'Forge 包' : '普通插件';
-        var cls = CLASS_LABELS[x.class] || x.class || '未声明';
-        var compat = compatPills(x);
-        return '<article class="plugin-card" data-plugin-card data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
-          + '<div class="plugin-card__head"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div class="plugin-card__main">'
-          + '<div class="plugin-card__title">' + esc(x.name || x.id) + '</div>'
-          + '<div class="plugin-card__id">' + esc(x.id) + ' · v' + esc(x.version || '—') + '</div>'
-          + '<div class="plugin-card__badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span>' + statePill + '</div>'
-          + '</div><label class="plugin-card__listed"><input class="market-check" data-field="listed" type="checkbox"' + (listed ? ' checked' : '') + '>上架</label></div>'
-          + '<div class="plugin-card__fields">'
-          + '<div class="plugin-card__field plugin-card__field--wide"><label>描述</label><input class="market-input" data-field="description" value="' + esc(x.description || '') + '" placeholder="商城描述"></div>'
-          + '<div class="plugin-card__field"><label>作者</label><input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者"></div>'
-          + '<div class="plugin-card__field"><label>兼容范围 app</label><input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0"></div>'
-          + '<div class="plugin-card__field"><label>API level</label><input class="market-input" data-field="api" type="number" min="1" max="99" value="' + esc(x.api == null ? '' : String(x.api)) + '" placeholder="API"></div>'
-          + '</div>'
-          + '<div class="plugin-card__compat"><span class="plugin-card__compat-label">兼容性</span>' + compat.own + compat.main + '</div>'
-          + '<div class="plugin-card__actions"><button type="button" data-mact="save">保存</button><button type="button" data-mact="test">测试</button><button type="button" data-mact="approve">通过</button><button type="button" class="danger" data-mact="reject">拒绝</button></div>'
-          + '</article>';
-      }).join('') || '<div class="plugin-empty">商城还没有条目。可先用上方「把本机插件打包上架」创建待审核条目。</div>';
-    }
+    var metaList = list.filter(function (x) { return x.class !== 'lang'; });
+    el('marketCount').textContent = ' · ' + market.length + ' 个';
+    el('marketTabCount').textContent = String(market.length);
+    el('installedMetaCount').textContent = String(metaList.length);
+    var q = (el('pluginSearch') && el('pluginSearch').value || '').trim().toLowerCase();
+    var hit = function (x) {
+      return !q || [x.id, x.name, x.author, x.description, x.class].some(function (v) {
+        return String(v || '').toLowerCase().indexOf(q) >= 0;
+      });
+    };
+    el('marketBody').innerHTML = market.filter(hit).map(function (x) {
+      var listed = x.listed !== false;
+      var state = x.status === 'active' ? (listed ? '已上架' : '已下架') : (statusLabels[x.status] || x.status || '—');
+      var kind = x.kind === 'forge' ? 'Forge 包' : '普通插件';
+      var cls = CLASS_LABELS[x.class] || x.class || '未声明';
+      var compat = compatPills(x);
+      return '<tr data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
+        + '<td><div class="plugin-name"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div><b>' + esc(x.name || x.id) + '</b><small>' + esc(x.id) + ' · v' + esc(x.version || '—') + '</small></div></div></td>'
+        + '<td><div class="plugin-badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span></div><div class="plugin-sub">' + esc(state) + '</div></td>'
+        + '<td><div class="plugin-compat">' + compat.own + compat.main + '</div></td>'
+        + '<td><div class="plugin-desc">' + esc(x.description || '—') + '</div><div class="plugin-sub">' + esc(x.author || '未填写作者') + '</div></td>'
+        + '<td><label class="switch" title="上架 / 下架"><input type="checkbox" data-quick-listed' + (listed ? ' checked' : '') + '><span></span></label></td>'
+        + '<td><button type="button" class="row-action" data-edit>编辑</button></td>'
+        + '</tr>';
+    }).join('') || '<tr><td colspan="6" class="empty">没有商城条目</td></tr>';
+    el('installedMetaBody').innerHTML = metaList.filter(hit).map(function (x) {
+      var cls = CLASS_LABELS[x.class] || x.class || '未声明';
+      var compat = compatPills(x);
+      return '<tr data-installed data-id="' + esc(x.id) + '">'
+        + '<td><div class="plugin-name"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div><b>' + esc(x.name || x.id) + '</b><small>' + esc(x.id) + ' · v' + esc(x.version || '—') + '</small></div></div></td>'
+        + '<td><div class="plugin-badges"><span class="pill">本机</span><span class="pill">' + esc(cls) + '</span></div><div class="plugin-sub">已加载</div></td>'
+        + '<td><div class="plugin-compat">' + compat.own + compat.main + '</div></td>'
+        + '<td><div class="plugin-desc">' + esc(x.description || '未填写描述') + '</div><div class="plugin-sub">' + esc(x.author || '未填写作者') + '</div></td>'
+        + '<td><button type="button" class="row-action" data-edit>编辑</button></td>'
+        + '</tr>';
+    }).join('') || '<tr><td colspan="5" class="empty">没有本机插件</td></tr>';
+    el('marketPane').hidden = pluginTab !== 'market';
+    el('installedPane').hidden = pluginTab !== 'installed';
+    document.querySelectorAll('.plugin-tab').forEach(function (b) {
+      b.classList.toggle('is-on', (b.dataset.ptab || '') === pluginTab);
+    });
     var published = new Set(market.map(function (x) { return x.id; }));
     var installable = list.filter(function (x) { return x.class !== 'lang' && !published.has(x.id); });
     var pubSelect = el('publishSelect');
@@ -1118,54 +1229,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         : '<option value="">没有可上架的本机插件</option>';
     }
     el('publishBtn').disabled = !installable.length;
-    var metaList = list.filter(function (x) { return x.class !== 'lang'; });
-    el('installedMetaCount').textContent = ' · ' + metaList.length + ' 个';
-    var metaBody = el('installedMetaBody');
-    var focusMeta = document.activeElement;
-    var editingMeta = metaBody && focusMeta && metaBody.contains(focusMeta)
-      && /^(INPUT|SELECT|TEXTAREA)$/.test(focusMeta.tagName || '');
-    if (metaBody && !editingMeta) {
-      metaBody.innerHTML = metaList.map(function (x) {
-        var compat = compatPills(x);
-        var cls = CLASS_LABELS[x.class] || x.class || '未声明';
-        return '<article class="plugin-card" data-plugin-card data-id="' + esc(x.id) + '">'
-          + '<div class="plugin-card__head"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div class="plugin-card__main">'
-          + '<div class="plugin-card__title">' + esc(x.name || x.id) + '</div>'
-          + '<div class="plugin-card__id">' + esc(x.id) + ' · v' + esc(x.version || '—') + '</div>'
-          + '<div class="plugin-card__badges"><span class="pill">本机插件</span><span class="pill">' + esc(cls) + '</span></div>'
-          + '</div></div>'
-          + '<div class="plugin-card__fields">'
-          + '<div class="plugin-card__field plugin-card__field--wide"><label>描述</label><input class="market-input" data-field="description" value="' + esc(x.description || '') + '" placeholder="商城描述"></div>'
-          + '<div class="plugin-card__field"><label>作者</label><input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者"></div>'
-          + '<div class="plugin-card__field"><label>兼容范围 app</label><input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0"></div>'
-          + '<div class="plugin-card__field"><label>API level</label><input class="market-input" data-field="api" type="number" min="1" max="99" value="' + esc(x.api == null ? '' : String(x.api)) + '" placeholder="API"></div>'
-          + '</div>'
-          + '<div class="plugin-card__compat"><span class="plugin-card__compat-label">兼容性</span>' + compat.own + compat.main + '</div>'
-          + '<div class="plugin-card__actions"><button type="button" data-mact="edit-installed">保存</button></div>'
-          + '</article>';
-      }).join('') || '<div class="plugin-empty">没有可编辑的本机插件。</div>';
-    }
-    el('pluginBody').innerHTML = list.map(function (x) {
-      var compat = compatPills(x);
-      var cls = CLASS_LABELS[x.class] || x.class || '未声明';
-      var state = x.status === 'loaded' ? '<span class="pill yes">已加载</span>' : '<span class="pill">' + esc(x.status || '') + '</span>';
-      var script = x.trusted ? '<span class="pill no">原生信任</span>' : (x.hasScript ? '<span class="pill">沙箱脚本</span>' : '—');
-      return '<article class="plugin-card">'
-        + '<div class="plugin-card__head"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div class="plugin-card__main">'
-        + '<div class="plugin-card__title">' + esc(x.name || x.id) + '</div>'
-        + '<div class="plugin-card__id">' + esc(x.id) + ' · v' + esc(x.version || '—') + '</div>'
-        + '<div class="plugin-card__badges"><span class="pill">' + esc(cls) + '</span>' + state + '</div>'
-        + '</div></div>'
-        + '<div class="plugin-card__facts">'
-        + '<span>作用域 <b>' + esc((x.scope || []).join(', ') || '—') + '</b></span>'
-        + '<span>内容 <b>' + (x.hasContent ? '有' : '—') + '</b></span>'
-        + '<span>脚本/信任 <b>' + script + '</b></span>'
-        + '<span>大小 <b>' + (x.bytes == null ? '—' : (Math.round(x.bytes / 1024) + ' KB')) + '</b></span>'
-        + '</div>'
-        + '<div class="plugin-card__compat"><span class="plugin-card__compat-label">兼容性</span>' + compat.own + compat.main + '</div>'
-        + '</article>';
-    }).join('') || '<div class="plugin-empty">还没有安装插件</div>';
-    el('forgeCount').textContent = ' · ' + forged.length + ' 个';
+    el('navPlugins').textContent = list.length;
     el('forgeBody').innerHTML = forged.map(function (x) {
       var f = x.forge || {};
       var pack = f.pack || {};
@@ -1218,54 +1282,123 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       .catch(function (e) { if (msg) { msg.textContent = '失败：' + e.message; msg.style.color = '#ff9a9a'; } });
   }
 
+  function openPluginDrawer(mode, id) {
+    var p = (lastAdminData && lastAdminData.plugins) || {};
+    var item = (mode === 'installed' ? (p.installed || []) : (p.market || [])).find(function (x) { return x.id === id; });
+    if (!item) return;
+    pluginDrawerItem = item;
+    pluginDrawerMode = mode;
+    var cls = CLASS_LABELS[item.class] || item.class || '未声明';
+    var kind = mode === 'installed' ? '本机插件' : (item.kind === 'forge' ? 'Forge 包' : '普通插件');
+    el('drawerKicker').textContent = mode === 'installed' ? '本机插件 · 展示元数据' : '商城条目';
+    el('drawerTitle').textContent = item.name || item.id;
+    el('drawerMeta').innerHTML = '<span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span>'
+      + (mode === 'installed' ? '<span class="pill yes">已加载</span>' : '<span class="pill">' + esc(item.listed === false ? '已下架' : (item.status === 'active' ? '已上架' : (item.status || ''))) + '</span>')
+      + '<span class="drawer-id">' + esc(item.id) + ' · v' + esc(item.version || '—') + '</span>';
+    el('drawerDescription').value = item.description || '';
+    el('drawerAuthor').value = item.author || '';
+    el('drawerApp').value = item.app || '';
+    el('drawerApi').value = item.api == null ? '' : String(item.api);
+    el('drawerListed').checked = item.listed !== false;
+    el('drawerListedRow').hidden = mode === 'installed';
+    var compat = compatPills(item);
+    el('drawerCompat').innerHTML = '<span class="compat-k">' + (mode === 'installed' ? '本机展示' : '商城展示') + '</span>' + compat.own + compat.main;
+    el('drawerTest').hidden = mode === 'installed';
+    el('drawerApprove').hidden = mode === 'installed';
+    el('drawerReject').hidden = mode === 'installed';
+    el('drawerMsg').textContent = '';
+    el('pluginDrawer').hidden = false;
+  }
+
+  function closePluginDrawer() {
+    el('pluginDrawer').hidden = true;
+    pluginDrawerItem = null;
+  }
+
+  function drawerPayload() {
+    var apiRaw = el('drawerApi').value.trim();
+    var fields = {
+      description: el('drawerDescription').value,
+      author: el('drawerAuthor').value,
+      app: el('drawerApp').value.trim() || null,
+      api: apiRaw === '' ? null : Number(apiRaw),
+    };
+    if (pluginDrawerMode === 'market') fields.listed = el('drawerListed').checked;
+    return {
+      action: pluginDrawerMode === 'installed' ? 'edit-installed' : 'edit',
+      id: pluginDrawerItem && pluginDrawerItem.id,
+      kind: pluginDrawerItem && pluginDrawerItem.kind,
+      fields: fields,
+    };
+  }
+
+  el('pluginSearch').addEventListener('input', function () {
+    if (lastAdminData) renderPlugins(lastAdminData);
+  });
+
+  document.querySelectorAll('.plugin-tab').forEach(function (b) {
+    b.addEventListener('click', function () {
+      pluginTab = b.dataset.ptab || 'market';
+      if (lastAdminData) renderPlugins(lastAdminData);
+    });
+  });
+
   el('marketBody').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-mact]');
-    if (!b) return;
-    var card = b.closest('[data-plugin-card]');
-    if (!card) return;
-    var kind = card.dataset.kind;
-    var id = card.dataset.id;
-    var action = b.dataset.mact;
-    if (action === 'save') {
-      var field = function (f) { return card.querySelector('[data-field="' + f + '"]'); };
-      var apiRaw = field('api') ? field('api').value.trim() : '';
-      postMarket({
-        action: 'edit', kind: kind, id: id,
-        fields: {
-          description: field('description') ? field('description').value : '',
-          author: field('author') ? field('author').value : '',
-          app: field('app') ? field('app').value.trim() || null : null,
-          api: apiRaw === '' ? null : Number(apiRaw),
-          listed: !!(field('listed') && field('listed').checked),
-        },
-      });
-      return;
-    }
-    postMarket({ action: action, kind: kind, id: id });
+    var edit = e.target.closest('[data-edit]');
+    if (!edit) return;
+    var tr = edit.closest('tr');
+    if (tr) openPluginDrawer('market', tr.dataset.id);
+  });
+
+  el('installedMetaBody').addEventListener('click', function (e) {
+    var edit = e.target.closest('[data-edit]');
+    if (!edit) return;
+    var tr = edit.closest('tr');
+    if (tr) openPluginDrawer('installed', tr.dataset.id);
+  });
+
+  el('marketBody').addEventListener('change', function (e) {
+    if (!e.target.matches('[data-quick-listed]')) return;
+    var tr = e.target.closest('tr');
+    if (!tr) return;
+    postMarket({ action: 'edit', kind: tr.dataset.kind, id: tr.dataset.id, fields: { listed: e.target.checked } }, el('marketMsg'));
+  });
+
+  el('pluginDrawer').addEventListener('click', function (e) {
+    if (e.target.closest('[data-drawer-close]')) closePluginDrawer();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !el('pluginDrawer').hidden) closePluginDrawer();
+  });
+  el('drawerSave').addEventListener('click', function () {
+    if (!pluginDrawerItem) return;
+    postMarket(drawerPayload(), el('drawerMsg')).then(function (res) {
+      if (res && res.ok) closePluginDrawer();
+    });
+  });
+  el('drawerTest').addEventListener('click', function () {
+    if (!pluginDrawerItem) return;
+    postMarket({ action: 'test', kind: pluginDrawerItem.kind, id: pluginDrawerItem.id }, el('drawerMsg'));
+  });
+  el('drawerApprove').addEventListener('click', function () {
+    if (!pluginDrawerItem) return;
+    postMarket({ action: 'approve', kind: pluginDrawerItem.kind, id: pluginDrawerItem.id }, el('drawerMsg')).then(function (res) {
+      if (res && res.ok) closePluginDrawer();
+    });
+  });
+  el('drawerReject').addEventListener('click', function () {
+    if (!pluginDrawerItem) return;
+    postMarket({ action: 'reject', kind: pluginDrawerItem.kind, id: pluginDrawerItem.id }, el('drawerMsg')).then(function (res) {
+      if (res && res.ok) closePluginDrawer();
+    });
   });
 
   el('publishBtn').addEventListener('click', function () {
     var id = el('publishSelect').value;
     if (!id) return;
-    postMarket({ action: 'publish', id: id }, el('publishMsg'));
-  });
-
-  el('installedMetaBody').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-mact="edit-installed"]');
-    if (!b) return;
-    var card = b.closest('[data-plugin-card]');
-    if (!card) return;
-    var field = function (f) { return card.querySelector('[data-field="' + f + '"]'); };
-    var apiRaw = field('api') ? field('api').value.trim() : '';
-    postMarket({
-      action: 'edit-installed', id: card.dataset.id,
-      fields: {
-        description: field('description') ? field('description').value : '',
-        author: field('author') ? field('author').value : '',
-        app: field('app') ? field('app').value.trim() || null : null,
-        api: apiRaw === '' ? null : Number(apiRaw),
-      },
-    }, el('installedMetaMsg'));
+    postMarket({ action: 'publish', id: id }, el('marketMsg')).then(function (res) {
+      if (res && res.ok) pluginTab = 'market';
+    });
   });
 
   el('pluginPolicySave').addEventListener('click', function () {
@@ -1290,6 +1423,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   });
 
   function render(d) {
+    lastAdminData = d;
     var c = d.counts || {}; c.rooms = d.rooms.length;
     el('cards').innerHTML = CARD_GROUPS.map(function (g) {
       return '<div class="cards-group"><h3>' + g[0] + '</h3><div class="cards">' + g[1].map(function (it) {

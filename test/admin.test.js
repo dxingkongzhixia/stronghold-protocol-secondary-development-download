@@ -350,6 +350,8 @@ test('the admin page is a self-contained console: nine views, hash routing, sear
   assert.ok(html.includes('/admin/api/origins?token='), 'it reads and writes the origins config');
   // 商城管理: metadata/listing edits and packaging an installed plugin
   assert.ok(html.includes('id="marketBody"') && html.includes('id="publishBtn"'), 'the market manager is wired');
+  assert.ok(html.includes('id="pluginDrawer"') && html.includes('id="drawerSave"'), 'metadata edits use the side drawer');
+  assert.ok(html.includes('id="pluginSearch"') && html.includes('data-ptab="installed"'), 'search and the installed tab are wired');
   assert.ok(html.includes('/admin/api/market?token='), 'it writes marketplace metadata through the admin API');
   assert.ok(html.includes('/admin/api/plugins/ai'), 'the reserved AI surface is documented in the page');
   for (const route of ['/admin/api/notify', '/admin/api/bug/status']) {
