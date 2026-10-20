@@ -1494,7 +1494,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         el('keyCount').textContent = ' · ' + (data.keys || []).length + ' 个';
         el('keyBody').innerHTML = (data.keys || []).map(function (k) {
           return row([cell(esc(k.id), 'mono'), cell(esc(k.label || '—')), cell(k.revokedAt ? '<span class="pill no">已撤销</span>' : '<span class="pill yes">有效</span>'),
-            cell('<span class="mono" title="' + esc(k.publicKey) + '">' + esc(String(k.publicKey).split('\n')[0]) + '…</span>'),
+            cell('<span class="mono" title="' + esc(k.publicKey) + '">' + esc(String(k.publicKey).split(String.fromCharCode(10))[0]) + '…</span>'),
             cell('<button type="button" class="row-action" data-key-revoke="' + esc(k.id) + '" data-revoked="' + (k.revokedAt ? '1' : '0') + '">' + (k.revokedAt ? '恢复' : '撤销') + '</button>')]);
         }).join('') || '<tr><td colspan="5" class="empty">还没有签名密钥</td></tr>';
         var required = new Set(data.requireSigned || []);
