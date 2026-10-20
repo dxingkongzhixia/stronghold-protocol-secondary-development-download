@@ -45,10 +45,10 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`；**已上线进程的 build `e7f0b543f53f`**（2026-10-20 14:23 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `5c406322128a` → `34fe0b4a137b` → `4d2bc20b9b13` → `808e1296c766`；备份 `/root/sp-backup-code-20261020-142112.tgz`；社区更新日志 **0.4.40**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
-| git store | **笔记本** = 单树检出（分支 `master`，HEAD **`573fc0095`**）；**台式机** = `_merge-scratch`（分支 `ours`，最后记录 `13760cf56`），开发树 `D:\DOTK\Stronghold-Protocol` 与 store 只差两个未跟踪测试文件 |
-| 远程同步 | **已全部推送（2026-10-20）**：`github/master` == `gitee/master` == HEAD（`573fc0095`）；GitHub 直连被重置时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=… push --no-thin`）。主线 `origin/master` = `d905c146`（0.3.1） |
-| 全量测试 | **相关 633 项通过 / 0 失败**（2026-10-20，插件商城、管理后台、文档、i18n、静态资源与界面测试；`test/admin.test.js` / `test/market.test.js` 全过）。全量套件上次 8200 项 / 8163 通过 / 1 个性能基线抖动 / 36 跳过；该性能用例单跑 35/35 通过 |
+| 版本 | `app 0.4.0`；**已上线进程的 build `949f04c8f51b`**（2026-10-20 15:03 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `e7f0b543f53f` → `5c406322128a` → `34fe0b4a137b` → `4d2bc20b9b13`；备份 `/root/sp-backup-code-20261020-150248.tgz`；社区更新日志 **0.4.41**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| git store | **笔记本** = 单树检出（分支 `master`，HEAD **`e557fdcac`**）；**台式机** = `_merge-scratch`（分支 `ours`，最后记录 `13760cf56`），开发树 `D:\DOTK\Stronghold-Protocol` 与 store 只差两个未跟踪测试文件 |
+| 远程同步 | **已全部推送（2026-10-20）**：`github/master` == `gitee/master` == HEAD（`e557fdcac`）；GitHub 直连被重置时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=… push --no-thin`）。主线 `origin/master` = `d905c146`（0.3.1） |
+| 全量测试 | **相关 634 项通过 / 0 失败**（2026-10-20，插件商城、管理后台、文档、i18n、静态资源与界面测试；`test/admin.test.js` / `test/market.test.js` 全过）。全量套件上次 8200 项 / 8163 通过 / 1 个性能基线抖动 / 36 跳过；该性能用例单跑 35/35 通过 |
 | 其它闸门 | **2026-10-20 实测（笔记本单树）**：`lint` 0 error（187 warning）✓；`typecheck` ✓；`i18n check en --strict` **1732/1732**（100%，0 missing / 0 errors）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 60/60 ✓。`check:imports` 仍有 3 条既有 `sim-node` 边界记录（`server/sim/nodeData.js`，非本次改动）；`check-delivery --live` 未跑（需外网 / 中继） |
 | 本机环境 | Node **v24.19.0**（v26 也可，线上是 v26.10.0）；**GitHub 直连 `:443` 会被重置** —— 推送时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=http://127.0.0.1:31181 push --no-thin …`）；官方数据 CDN 同理需要代理 |
 | 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
@@ -58,7 +58,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `e7f0b543f53f`**（2026-10-20 14:23 部署后重启，由 `/healthz` 实测；上一版 `5c406322128a` → `34fe0b4a137b` → `4d2bc20b9b13` → `808e1296c766` → `85b981d393f6`；备份 `/root/sp-backup-code-20261020-142112.tgz`；通告记为社区 **0.4.40**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `949f04c8f51b`**（2026-10-20 15:03 部署后重启，由 `/healthz` 实测；上一版 `e7f0b543f53f` → `5c406322128a` → `34fe0b4a137b` → `4d2bc20b9b13` → `808e1296c766`；备份 `/root/sp-backup-code-20261020-150248.tgz`；通告记为社区 **0.4.41**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -100,6 +100,7 @@
 
 | 时间 | 代码 | build | 更新日志 | 要点 |
 |---|---|---|---|---|
+| **2026-10-20 15:03** | `e557fdcac` | **`949f04c8f51b`** | **`0.4.41`** | 插件后台二级导航、紧凑表格 + 编辑抽屉、浅色模式、后台导入、位置排序、关联插件绑定；商城显示关联插件；后台 API 空响应不再抛原始 JSON 错误；备份 `/root/sp-backup-code-20261020-150248.tgz` |
 | **2026-10-20 14:23** | `573fc0095` | **`e7f0b543f53f`** | **`0.4.40`** | 插件商城与后台管理：本服/主线兼容分栏、原生大文件下载、描述/作者/app/API/上架后台编辑、本机插件元数据、打包上架、AI 接管预留接口；插件管理改卡片布局；备份 `/root/sp-backup-code-20261020-142112.tgz` |
 | **2026-10-20 13:56** | `48756d408` | **`5c406322128a`** | **`0.4.39`** | 商城显示插件类型（class）与兼容性：`app` / `api` / `compat`；主线 0.3.x 的外观 / 界面 / 语言自动兼容，内容 / 脚本 / 信任显示严格并提示 owner `allowIncompatible`；增加类型筛选；备份 `/root/sp-backup-code-20261020-135448.tgz` |
 | **2026-10-20 13:51** | `7119323f1` | **`34fe0b4a137b`** | **`0.4.38`** | 插件商城改版：条形列表、搜索、普通 / Forge / 本机分栏与类型徽章；上传独立为 `/market/upload/`；本机已安装插件可下载；标题页改用新标签打开商城，返回不再重载游戏；备份 `/root/sp-backup-code-20261020-134501.tgz` |
