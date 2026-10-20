@@ -178,6 +178,8 @@ plugin.json + entry.sim/meta
 - **重新审核**：修改已上架条目的 `app` / `api` 会置 `needsReview`，暂时从公开列表/下载移除，测试通过后恢复
 - **下载与限流**：本机插件 zip 按版本缓存，使用流式 + HTTP Range；公开上传按网络/账号限流
 - **审计**：商城编辑、审核、排序、回滚和本机元数据修改写入 `var/admin-audit.log`
+- **中继下载**：active 商城 zip 和本机缓存 zip 可发布到资源中继；商城显示「高速下载 / 服务器」两个入口
+- **签名与依赖**：Ed25519 上传签名、密钥 registry、签名策略；`requires` / `optional` / `conflicts` 在 approve 前递归检查
 
 后端 `buildSnapshot` 携带 `plugins` 快照（含商城条目、安装元数据和策略）；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
 
