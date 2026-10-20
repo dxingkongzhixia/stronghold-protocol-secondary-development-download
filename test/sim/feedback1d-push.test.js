@@ -9,7 +9,7 @@
 // full force, so an enemy behind her centre — one that walked through her tile while her block was full and that she
 // grabbed once a push freed it (the hand-over, DESIGN §19.2), or one coming at her back — was thrown 1.7–2.14 tiles
 // the other way, towards the protection objective. The maintainer's 2026-10-19 decision and official recordings
-// (#782, DESIGN §35.10) supersede round 40 (§32.14.9): behind targets DO move away radially at reduced force.
+// (#782, UPSTREAM-MERGES §13.10) supersede round 40 (§32.14.9): behind targets DO move away radially at reduced force.
 // Audit (direction only): 琳琅诗怀雅 S3's coin push "向前推开" is radial — PRTS 备注 "推开效果为径向推动"; client
 // swire2_s_3[knockback] of template knockback[relative] (_useSourceDirection false) — and the remake pushed it along her
 // facing (and at −2 off the 45° cone); now radial from her centre, full force.
