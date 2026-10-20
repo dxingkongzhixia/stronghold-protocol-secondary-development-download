@@ -88,6 +88,26 @@ test('market: compatibility says whether mainline 0.3.x / this 0.4.x build can u
   assert.equal(forged.compat.ok, null, 'a Forge pack is accepted only after its import test');
 });
 
+test('market: order, move and related plugin bindings', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-order-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const market = createPluginMarket({ root });
+  const make = (id) => zipFiles([{
+    name: 'plugin.json',
+    data: Buffer.from(JSON.stringify({ manifest: 2, id, name: id, version: '1.0.0', class: 'ui', app: '>=0.4.0 <0.5.0', api: 1 })),
+  }]);
+  await market.upload({ kind: 'ordinary', bytes: make('alpha') });
+  await market.upload({ kind: 'ordinary', bytes: make('beta') });
+  assert.deepEqual(market.list({ status: 'pending', admin: true }).map((x) => x.id), ['alpha', 'beta']);
+  market.move('ordinary', 'beta', 'up');
+  assert.deepEqual(market.list({ status: 'pending', admin: true }).map((x) => x.id), ['beta', 'alpha']);
+  const edited = market.edit('ordinary', 'alpha', { related: ['beta'] });
+  assert.deepEqual(edited.related, ['beta']);
+  assert.deepEqual(edited.relatedPlugins.map((x) => [x.id, x.name]), [['beta', 'beta']]);
+  assert.throws(() => market.edit('ordinary', 'alpha', { related: ['alpha'] }), /related/);
+  assert.throws(() => market.edit('ordinary', 'alpha', { related: ['bad id'] }), /related/);
+});
+
 test('market lists live installed plugins separately from store entries', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-installed-'));
   try {

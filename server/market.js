@@ -83,6 +83,16 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     fs.renameSync(tmp, indexFile);
   };
   const keyOf = (kind, id) => `${kind}:${id}`;
+  const relatedOf = (ids) => (Array.isArray(ids) ? ids : []).slice(0, 16).map((id) => {
+    const m = index.entries.find((x) => x.id === id);
+    if (m) return { id, name: m.name || id, kind: m.kind, class: m.class || null, status: m.status };
+    const p = registry && typeof registry.plugins === 'function' ? registry.plugins().find((x) => x.id === id) : null;
+    if (p) {
+      const name = (typeof p.manifest?.name === 'string' ? p.manifest.name : (p.manifest?.name?.zh || p.manifest?.name?.en)) || p.id;
+      return { id, name, kind: 'installed', class: p.class || null, status: 'installed' };
+    }
+    return { id, name: id, kind: null, class: null, status: null };
+  });
   const publicEntry = (e) => {
     const compat = compatibilityOf(e.kind, e.class, e.app, e.api);
     return {
@@ -90,6 +100,8 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       description: e.description || null, class: e.class || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
       uploadedAt: e.uploadedAt, uploadedBy: e.uploadedBy || null, reviewedAt: e.reviewedAt || null,
       downloads: e.downloads || 0, app: compat.app, api: compat.api, compat, listed: e.listed !== false,
+      order: Number.isFinite(e.order) ? e.order : 0,
+      related: Array.isArray(e.related) ? [...e.related] : [], relatedPlugins: relatedOf(e.related),
       download: e.status === 'active' && e.listed !== false ? `/market/api/download/${e.kind}/${encodeURIComponent(e.id)}` : null,
       sources: mirrors,
       reviewNote: e.reviewNote || null,
@@ -137,7 +149,8 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       kind, id: meta.id, name: meta.name || meta.id, version: meta.version, author: meta.author || null,
       description: meta.description || null, class: meta.class || null, app: meta.app || null, api: meta.api ?? null,
       file, bytes: bytes.length, sha256: sha256(bytes),
-      status: 'pending', listed: true, uploadedAt: Date.now(), uploadedBy: uploadedBy || null, reviewedAt: null, reviewedBy: null,
+      status: 'pending', listed: true, order: Math.max(0, ...index.entries.map((x) => Number(x.order) || 0)) + 1,
+      related: [], uploadedAt: Date.now(), uploadedBy: uploadedBy || null, reviewedAt: null, reviewedBy: null,
       reviewNote: null, downloads: 0, filename: String(filename || '').slice(0, 120),
     };
     index.entries.push(entry);
@@ -207,6 +220,13 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       if (typeof fields.listed !== 'boolean') throw new Error('listed must be true or false');
       next.listed = fields.listed;
     }
+    if (Object.prototype.hasOwnProperty.call(fields, 'related')) {
+      if (!Array.isArray(fields.related) || fields.related.length > 16
+        || fields.related.some((x) => typeof x !== 'string' || !isPluginId(x) || x === id)) {
+        throw new Error('related must be a list of other plugin ids (max 16)');
+      }
+      next.related = [...new Set(fields.related)];
+    }
     if (!Object.keys(next).length) throw new Error('no editable field supplied');
     Object.assign(e, next);
     e.updatedAt = Date.now();
@@ -214,6 +234,24 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     save();
     log.info?.(`[market] edited ${kind}/${id}: ${Object.keys(next).join(', ')}`);
     return publicEntry(e);
+  }
+
+  /** Move an entry within its kind (up/down) by swapping the persisted order. */
+  function move(kind, id, direction) {
+    if (!KINDS.has(kind)) throw new Error('kind must be ordinary or forge');
+    if (direction !== 'up' && direction !== 'down') throw new Error('direction must be up or down');
+    const rows = index.entries.filter((e) => e.kind === kind)
+      .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0) || (b.uploadedAt || 0) - (a.uploadedAt || 0));
+    const i = rows.findIndex((e) => e.id === id);
+    if (i < 0) throw new Error('plugin not found');
+    const j = direction === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= rows.length) return { ok: true, moved: false, entry: publicEntry(rows[i]) };
+    rows.forEach((e, k) => { e.order = k + 1; });
+    const tmp = rows[i].order;
+    rows[i].order = rows[j].order;
+    rows[j].order = tmp;
+    save();
+    return { ok: true, moved: true, entry: publicEntry(rows[i]) };
   }
 
   async function review(kind, id, action, { reviewer = null, note = '' } = {}) {
@@ -242,7 +280,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
 
   function list({ status = 'active', admin = false } = {}) {
     const rows = index.entries.filter((e) => admin || (e.status === status && e.listed !== false));
-    return rows.map(publicEntry).sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+    return rows.map(publicEntry).sort((a, b) => (a.order || 0) - (b.order || 0) || (b.uploadedAt || 0) - (a.uploadedAt || 0));
   }
 
   /** Edit display-only metadata for an installed plugin (never touches the files in plugins/). */
@@ -367,5 +405,5 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return { entry: e, bytes: fs.readFileSync(file), filename: `${e.id}-${e.version}.zip` };
   }
 
-  return { base, upload, test, review, edit, editInstalled, list, installed, download, downloadInstalled, publishInstalled, get, indexFile };
+  return { base, upload, test, review, edit, editInstalled, move, list, installed, download, downloadInstalled, publishInstalled, get, indexFile };
 }

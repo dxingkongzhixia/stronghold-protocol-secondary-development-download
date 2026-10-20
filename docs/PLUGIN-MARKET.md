@@ -60,8 +60,12 @@ POST /admin/api/market?token=...
 - `test`：在临时目录安装/导入并做真实检查，不改变状态
 - `approve`：先 `test`，通过后变为 `active`
 - `reject`：变为 `rejected`
-- `edit`：修改 `description` / `author` / `app` / `api` / `listed`；只改商城元数据，不碰 zip 或插件代码
+- `edit`：修改 `description` / `author` / `app` / `api` / `listed` / `related`；只改商城元数据，不碰 zip 或插件代码
 - `publish`：把 `plugins/<id>/` 打包为新的普通插件条目（`pending`），再由管理员测试 / 通过
+- `move`：调整同类条目的展示顺序（`direction: up | down`）
+- `POST /admin/api/market/import?kind=ordinary|forge`：后台直接导入 zip，进入待审核状态
+
+`related` 是其它插件 id 的列表（最多 16 个，不能含自己）。公开列表会解析为 `relatedPlugins`（名称 / 类型 / 状态），商城和后台都会显示「关联：…」。
 
 审核不会把插件放进游戏服务器的 `plugins/`，也不会执行插件脚本。
 
@@ -117,6 +121,8 @@ node tools/plugin.mjs check <id> --strict
 - **插件类型**筛选：外观 / 玩法 / 界面 / 脚本 / 信任 / 语言 / Forge 转换
 - 每一条显示**本服 0.4.0** 与**主线 0.3.x** 两个独立的兼容标签，再附 `app` 范围 / `API` 版本
 - 本机插件和没有镜像的插件使用浏览器原生下载链接；大文件不再先 `fetch` 成 blob 再保存
+- 后台支持浅色 / 深色切换，以及直接导入 zip
+- 支持调整同类条目的展示顺序；关联插件在后台和商城都会显示
 - 上传是独立页面 `/market/upload/`
 - 从标题页打开商城会使用新标签页；「返回游戏」优先关闭该标签页，避免重新加载游戏资源
 

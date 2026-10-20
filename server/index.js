@@ -336,6 +336,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const origins = parts.rawPath === '/admin/api/origins';
     const pluginPolicy = parts.rawPath === '/admin/api/plugin-policy';
     const marketAdmin = parts.rawPath === '/admin/api/market';
+    const marketImport = parts.rawPath === '/admin/api/market/import';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -396,6 +397,21 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       sendJson(req, res, 200, { ok: true, policy: r.policy });
       return;
     }
+    if (marketImport) {
+      if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
+      const kind = new URLSearchParams(parts.query).get('kind') || 'ordinary';
+      const bytes = await readRawBody(req, PLUGIN_LIMITS.pluginBytes + 1);
+      if (bytes == null) { sendJson(req, res, 413, { error: 'zip is over the plugin size limit' }); return; }
+      try {
+        const r = await market.upload({
+          kind, bytes, filename: String(req.headers['x-plugin-filename'] || '').slice(0, 120), uploadedBy: 'admin',
+        });
+        sendJson(req, res, 201, { ok: true, plugin: r });
+      } catch (e) {
+        sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300) });
+      }
+      return;
+    }
     if (marketAdmin) {
       if (req.method === 'GET' || req.method === 'HEAD') {
         sendJson(req, res, 200, { plugins: market.list({ admin: true }) });
@@ -421,6 +437,11 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
         if (action === 'publish') {
           const r = await market.publishInstalled(id, { reviewer: 'admin' });
           sendJson(req, res, 200, { ok: true, action, entry: r });
+          return;
+        }
+        if (action === 'move') {
+          const r = market.move(kind, id, String(body.direction || ''));
+          sendJson(req, res, 200, r);
           return;
         }
         const r = await market.review(kind, id, action, { reviewer: 'admin', note: body.note });
@@ -542,7 +563,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
       || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
-      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/plugins/ai'
+      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/plugins/ai'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;

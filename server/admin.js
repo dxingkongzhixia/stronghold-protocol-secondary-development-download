@@ -366,6 +366,23 @@ export const ADMIN_HTML = `<!doctype html><html lang="zh"><head><meta charset="u
   --bg:#070b0a;--side:#0a100e;--panel:#0d1412;--panel2:#0a100e;--line:#1b2823;--line2:#263630;
   --text:#e6f2ec;--dim:#8a9b94;--dim2:#64736c;--mint:#4ed8af;--mint-dim:#2f7f68;
   --amber:#ffd089;--blue:#5cc8ff;--violet:#b28cff;--orange:#ffa94d;--grey:#8a8f8c;--green:#7bd88f}
+html[data-theme=light]{color-scheme:light;
+  --bg:#f3f7f5;--side:#ffffff;--panel:#ffffff;--panel2:#f6f9f7;--line:#dfe7e3;--line2:#cbd8d2;
+  --text:#18231f;--dim:#5f7069;--dim2:#7c8c85;--mint:#0b8f6f;--mint-dim:#6bbfa8;
+  --amber:#a66c00;--blue:#137ab3;--violet:#6e4bb5;--orange:#b35f00;--grey:#7a8781;--green:#2f8f52}
+html[data-theme=light] body{background:radial-gradient(1100px 620px at 8% -10%,rgba(11,143,111,.08),transparent 60%),radial-gradient(900px 520px at 100% -6%,rgba(19,122,179,.05),transparent 55%),var(--bg)}
+html[data-theme=light] .side{background:#fff}
+html[data-theme=light] .side__mark{background:linear-gradient(180deg,#f3fbf7,#e8f5ef);box-shadow:inset 0 0 16px rgba(11,143,111,.08)}
+html[data-theme=light] .head{background:linear-gradient(180deg,rgba(243,247,245,.98),rgba(243,247,245,.84) 72%,transparent)}
+html[data-theme=light] .btn,html[data-theme=light] .theme-toggle,html[data-theme=light] .row-action,html[data-theme=light] .drawer__foot button,html[data-theme=light] kbd{background:#fff;color:var(--text)}
+html[data-theme=light] thead th{background:#f4f8f6}
+html[data-theme=light] .drawer{background:#fff}
+html[data-theme=light] .drawer-backdrop{background:rgba(24,48,38,.28)}
+html[data-theme=light] .plugin-avatar{background:#eef7f3}
+html[data-theme=light] .plugin-stat{background:linear-gradient(180deg,#f8fbf9,transparent)}
+html[data-theme=light] .switch span{background:#d9e3de}
+html[data-theme=light] .switch span:after{background:#879991}
+html[data-theme=light] .plugin-compat .pill,html[data-theme=light] .plugin-badges .pill{background:#f8fbf9}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:radial-gradient(1100px 620px at 8% -10%,rgba(78,216,175,.09),transparent 60%),
@@ -518,6 +535,7 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .plugin-admin__head .hint{max-width:560px}
 .plugin-admin__tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .plugin-admin__tools .search{min-width:220px;max-width:320px}
+.plugin-admin__tools select{background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:7px;padding:6px 8px;font:inherit;font-size:12px}
 .plugin-tabs{display:flex;gap:4px;padding:10px 16px 0;border-bottom:1px solid var(--line)}
 .plugin-tab{border:1px solid transparent;border-bottom:0;background:transparent;color:var(--dim);padding:7px 12px 9px;border-radius:7px 7px 0 0;font:inherit;font-size:12px;cursor:pointer}
 .plugin-tab em{font-style:normal;opacity:.7;margin-left:3px}
@@ -528,10 +546,32 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .plugin-table th:nth-child(1){width:24%}
 .plugin-table th:nth-child(2){width:15%}
 .plugin-table th:nth-child(3){width:20%}
-.plugin-table th:nth-child(4){width:29%}
+.plugin-table th:nth-child(4){width:21%}
 .plugin-table th:nth-child(5){width:6%}
-.plugin-table th:nth-child(6){width:6%}
+.plugin-table th:nth-child(6){width:14%}
+.plugin-table--installed th:nth-child(1){width:21%}
+.plugin-table--installed th:nth-child(4){width:30%}
+.plugin-table--installed th:nth-child(5){width:14%}
 .plugin-table td:last-child{text-align:right}
+.plugin-actions{display:flex;gap:4px;justify-content:flex-end;flex-wrap:nowrap}
+.row-action--icon{padding:4px 7px;font-family:ui-monospace,Consolas,monospace}
+.plugin-related{margin-top:4px;color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plugin-related span{color:var(--mint)}
+.plugin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px}
+.plugin-stat{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:linear-gradient(180deg,var(--panel2),transparent)}
+.plugin-stat__icon{float:right;color:var(--mint);opacity:.65;font-size:14px}
+.plugin-stat b{display:block;font-size:20px;line-height:1.2;font-variant-numeric:tabular-nums}
+.plugin-stat span{color:var(--dim);font-size:11px}
+.policy-kv{display:grid;grid-template-columns:minmax(96px,auto) 1fr;gap:0;font-size:13px;margin:0}
+.policy-kv dt,.policy-kv dd{padding:7px 2px;border-bottom:1px dashed var(--line);margin:0}
+.policy-kv dt{color:var(--dim)}
+.policy-kv dt::before{content:"▸";color:var(--mint);margin-right:6px;font-size:10px}
+.policy-kv dd{color:var(--text);text-align:right}
+.policy-editor{width:100%;min-height:280px;margin-top:10px;box-sizing:border-box;font:13px/1.65 ui-monospace,Consolas,monospace;
+  background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:8px;padding:12px;resize:vertical}
+.policy-editor:focus{outline:none;border-color:var(--mint-dim)}
+.theme-toggle{border:1px solid var(--line2);background:var(--panel2);color:var(--dim);border-radius:7px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer}
+.theme-toggle:hover{color:var(--mint);border-color:var(--mint-dim)}
 .plugin-name{display:flex;align-items:center;gap:9px;min-width:0}
 .plugin-name b{display:block;font-size:13px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plugin-name small{display:block;color:var(--dim);font-size:11px;font-family:ui-monospace,Consolas,monospace;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -565,7 +605,8 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .drawer__grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .plugin-field{display:flex;flex-direction:column;gap:5px;color:var(--dim);font-size:11px}
 .plugin-field--wide{grid-column:1 / -1}
-.plugin-field input,.plugin-field textarea{width:100%;box-sizing:border-box;background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:7px;padding:7px 9px;font:inherit;font-size:12px}
+.plugin-field input,.plugin-field textarea,.plugin-field select{width:100%;box-sizing:border-box;background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:7px;padding:7px 9px;font:inherit;font-size:12px}
+.plugin-field select{min-height:100px;padding:4px}
 .plugin-field textarea{resize:vertical;min-height:74px;line-height:1.5}
 .plugin-field input:focus,.plugin-field textarea:focus{outline:none;border-color:var(--mint-dim)}
 .drawer__check{display:flex;align-items:center;gap:7px;color:var(--text);font-size:12px}
@@ -744,7 +785,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   <main class="main">
     <header class="head">
       <div><h2 id="viewTitle">概览</h2><p id="viewSub">服务器实时状态</p></div>
-      <div class="head__right"><span>服务器时间</span><span class="clock" id="clock">—</span></div>
+      <div class="head__right"><button type="button" id="themeToggle" class="theme-toggle">浅色</button><span>服务器时间</span><span class="clock" id="clock">—</span></div>
     </header>
 
     <section class="view" id="view-overview">
@@ -797,6 +838,9 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
               <input class="search" id="pluginSearch" placeholder="搜索 ID / 名称 / 作者"/>
               <select id="publishSelect" aria-label="选择本机插件"></select>
               <button type="button" id="publishBtn" class="primary">上架本机插件</button>
+              <select id="pluginImportKind" aria-label="导入格式"><option value="ordinary">普通 zip</option><option value="forge">Forge zip</option></select>
+              <button type="button" id="pluginImportBtn">导入插件</button>
+              <input id="pluginImportFile" type="file" accept=".zip,application/zip" hidden>
             </div>
           </div>
           <div class="tablewrap plugin-table"><table><thead><tr><th>插件</th><th>类型 / 状态</th><th>兼容性</th><th>描述 / 作者</th><th>上架</th><th></th></tr></thead><tbody id="marketBody"></tbody></table></div>
@@ -809,7 +853,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
           <div class="plugin-admin__head">
             <div><h2>本机插件</h2><p class="hint">只改商城展示用的描述 / 作者 / 兼容范围，不改 <code>plugins/</code> 里的文件；要真正上架请用「商城插件 → 上架本机插件」。</p></div>
           </div>
-          <div class="tablewrap plugin-table"><table><thead><tr><th>插件</th><th>类型</th><th>兼容性</th><th>描述 / 作者</th><th></th></tr></thead><tbody id="installedMetaBody"></tbody></table></div>
+          <div class="tablewrap plugin-table plugin-table--installed"><table><thead><tr><th>插件</th><th>类型</th><th>兼容性</th><th>描述 / 作者</th><th></th></tr></thead><tbody id="installedMetaBody"></tbody></table></div>
           <div class="panel__body"><span id="installedMetaMsg" class="hint"></span></div>
         </section>
       </div>
@@ -818,7 +862,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
           <section class="panel"><h2>插件概览</h2><div class="panel__body" id="pluginSummary"></div></section>
           <section class="panel"><h2>服务器策略</h2><div class="panel__body">
             <div id="pluginPolicy"></div>
-            <textarea id="pluginPolicyJson" spellcheck="false" aria-label="插件策略 JSON" style="width:100%;min-height:7rem;margin-top:.08rem;font-family:monospace;font-size:.12rem;background:#101816;color:var(--text-hi);border:1px solid var(--line);padding:.06rem"></textarea>
+            <textarea id="pluginPolicyJson" class="policy-editor" spellcheck="false" aria-label="插件策略 JSON"></textarea>
             <div class="tools"><button type="button" id="pluginPolicySave">保存插件策略</button><span id="pluginPolicyMsg" class="hint"></span></div>
           </div></section>
         </div>
@@ -853,6 +897,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
               <label class="plugin-field"><span>兼容范围 app</span><input id="drawerApp" placeholder=">=0.4.0 <0.5.0"></label>
               <label class="plugin-field"><span>API level</span><input id="drawerApi" type="number" min="1" max="99" placeholder="API"></label>
             </div>
+            <label class="plugin-field" id="drawerRelatedRow"><span>关联插件（可多选）</span><select id="drawerRelated" multiple size="5"></select></label>
             <label class="drawer__check" id="drawerListedRow"><input id="drawerListed" type="checkbox"><span>上架到商城</span></label>
             <div id="drawerCompat" class="drawer__compat"></div>
             <p id="drawerMsg" class="hint"></p>
@@ -993,6 +1038,13 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   var pluginSection = 'market';
   var pluginDrawerItem = null;
   var pluginDrawerMode = 'market';
+  function applyAdminTheme(theme) {
+    var t = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('sp_admin_theme', t); } catch (e) { /* private mode */ }
+    if (el('themeToggle')) el('themeToggle').textContent = t === 'light' ? '深色' : '浅色';
+  }
+  try { applyAdminTheme(localStorage.getItem('sp_admin_theme') || 'dark'); } catch (e) { applyAdminTheme('dark'); }
   var COLORS = { offline:'#8a8f8c', online:'#4ed8af', room:'#5cc8ff', queue:'#ffd089', mmplay:'#ffa94d', alliance:'#b28cff', solo:'#7bd88f' };
   var LABELS = { offline:'离线', online:'在线', room:'组队中', queue:'野排排队', mmplay:'野排游玩', alliance:'同盟游玩', solo:'单人游玩' };
   var ROLE_LABELS = { admin:'管理员', dev:'开发者' };
@@ -1031,6 +1083,9 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   function cell(html, cls) { return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' + html + '</td>'; }
   function row(cells) { return '<tr>' + cells.join('') + '</tr>'; }
   function kv(k, v) { return '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>'; }
+  function stat(icon, value, label) {
+    return '<div class="plugin-stat"><span class="plugin-stat__icon">' + esc(icon) + '</span><b>' + esc(String(value)) + '</b><span>' + esc(label) + '</span></div>';
+  }
   function int(v) { return v == null || isNaN(v) ? 0 : Number(v); }
 
   // ---------------- 视图切换：hash 路由（刷新后仍在同一页）+ 侧栏高亮 ----------------
@@ -1174,22 +1229,25 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     var warnings = Array.isArray(p.warnings) ? p.warnings : [];
     var scripts = list.filter(function (x) { return x.hasScript || x.trusted; });
     var forged = list.filter(function (x) { return x.forge; });
-    el('pluginSummary').innerHTML =
-      kv('已安装', list.length + ' 个')
-      + kv('加载失败 / 跳过', skipped.length + ' 个')
-      + kv('警告', warnings.length + ' 个')
-      + kv('Forge 导入', forged.length + ' 个')
-      + kv('脚本 probe', p.probe ? (p.probe.childRuns + ' 次 / 缓存 ' + p.probe.cacheHits + ' / 磁盘 ' + p.probe.diskHits + ' / 最近 ' + p.probe.lastMs + ' ms / 超时 ' + p.probe.timeouts + ' 次') : '—')
-      + kv('内容集缓存', p.contentSets ? (p.contentSets.sets + ' sets / ' + p.contentSets.held + ' held / ' + p.contentSets.builds + ' builds · ' + p.contentSets.requests + ' req / ' + p.contentSets.memoHits + ' hit / ' + p.contentSets.refused + ' refused · ' + p.contentSets.lastBuildMs + ' ms · ' + (Math.round((p.contentSets.dataBytes || 0) / 1024)) + ' KB') : '—')
-      + kv('房间正在使用内容集', d.rooms.filter(function (r) { return r.content && !r.content.vanilla; }).length + ' 个')
-      + kv('脚本 / 信任插件', scripts.length + ' 个');
+    el('pluginSummary').innerHTML = '<div class="plugin-stats">'
+      + stat('▣', list.length, '已安装')
+      + stat('⚠', skipped.length, '加载失败 / 跳过')
+      + stat('⚑', warnings.length, '警告')
+      + stat('◈', forged.length, 'Forge 导入')
+      + stat('⌘', scripts.length, '脚本 / 信任')
+      + stat('▤', p.contentSets ? p.contentSets.sets : 0, '内容集')
+      + stat('◉', d.rooms.filter(function (r) { return r.content && !r.content.vanilla; }).length, '房间正在使用')
+      + stat('⚡', p.probe ? p.probe.childRuns : 0, '脚本 probe 次')
+      + '</div>';
     el('pluginPolicy').innerHTML = p.policy ? (
-      kv('房间插件', p.policy.rooms)
+      '<dl class="policy-kv">'
+      + kv('房间插件', p.policy.rooms)
       + kv('允许范围', (p.policy.allow || []).join(', ') || '全部')
       + kv('默认内容集', (p.policy.default || []).join(', ') || '无')
       + kv('class 开关', Object.keys(p.policy.classes || {}).map(function (k) { return k + '=' + (p.policy.classes[k] ? '开' : '关'); }).join(' · ') || '无')
       + kv('内容集上限', p.policy.maxSets)
       + kv('允许不兼容', p.policy.allowIncompatible === true ? '全部' : Array.isArray(p.policy.allowIncompatible) ? p.policy.allowIncompatible.join(', ') : '否')
+      + '</dl>'
     ) : '<div class="empty">无插件策略（默认）</div>';
     var pj = p.policy ? { rooms: p.policy.rooms, default: p.policy.default || [], allow: p.policy.allow || [], classes: p.policy.classes || {}, limits: { maxSets: p.policy.maxSets }, allowIncompatible: p.policy.allowIncompatible === true ? true : Array.isArray(p.policy.allowIncompatible) ? p.policy.allowIncompatible : false } : {};
     var policyArea = el('pluginPolicyJson');
@@ -1216,9 +1274,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         + '<td><div class="plugin-name"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div><b>' + esc(x.name || x.id) + '</b><small>' + esc(x.id) + ' · v' + esc(x.version || '—') + '</small></div></div></td>'
         + '<td><div class="plugin-badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span></div><div class="plugin-sub">' + esc(state) + '</div></td>'
         + '<td><div class="plugin-compat">' + compat.own + compat.main + '</div></td>'
-        + '<td><div class="plugin-desc">' + esc(x.description || '—') + '</div><div class="plugin-sub">' + esc(x.author || '未填写作者') + '</div></td>'
+        + '<td><div class="plugin-desc">' + esc(x.description || '—') + '</div><div class="plugin-sub">' + esc(x.author || '未填写作者') + '</div>'
+        + ((x.relatedPlugins || []).length ? '<div class="plugin-related">关联：<span>' + esc(x.relatedPlugins.map(function (r) { return r.name; }).join('、')) + '</span></div>' : '') + '</td>'
         + '<td><label class="switch" title="上架 / 下架"><input type="checkbox" data-quick-listed' + (listed ? ' checked' : '') + '><span></span></label></td>'
-        + '<td><button type="button" class="row-action" data-edit>编辑</button></td>'
+        + '<td><div class="plugin-actions"><button type="button" class="row-action row-action--icon" data-move="up" title="上移">↑</button><button type="button" class="row-action row-action--icon" data-move="down" title="下移">↓</button><button type="button" class="row-action" data-edit>编辑</button></div></td>'
         + '</tr>';
     }).join('') || '<tr><td colspan="6" class="empty">没有商城条目</td></tr>';
     el('installedMetaBody').innerHTML = metaList.filter(hit).map(function (x) {
@@ -1319,6 +1378,15 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     el('drawerApi').value = item.api == null ? '' : String(item.api);
     el('drawerListed').checked = item.listed !== false;
     el('drawerListedRow').hidden = mode === 'installed';
+    el('drawerRelatedRow').hidden = mode === 'installed';
+    var relatedSel = el('drawerRelated');
+    var selected = new Set(Array.isArray(item.related) ? item.related : []);
+    var candidates = (p.market || []).concat(p.installed || []).filter(function (x) {
+      return x.id !== item.id && x.class !== 'lang';
+    });
+    relatedSel.innerHTML = candidates.map(function (x) {
+      return '<option value="' + esc(x.id) + '"' + (selected.has(x.id) ? ' selected' : '') + '>' + esc(x.name || x.id) + ' · ' + esc(x.id) + '</option>';
+    }).join('') || '<option disabled>没有其它插件可关联</option>';
     var compat = compatPills(item);
     el('drawerCompat').innerHTML = '<span class="compat-k">' + (mode === 'installed' ? '本机展示' : '商城展示') + '</span>' + compat.own + compat.main;
     el('drawerTest').hidden = mode === 'installed';
@@ -1341,7 +1409,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       app: el('drawerApp').value.trim() || null,
       api: apiRaw === '' ? null : Number(apiRaw),
     };
-    if (pluginDrawerMode === 'market') fields.listed = el('drawerListed').checked;
+    if (pluginDrawerMode === 'market') {
+      fields.listed = el('drawerListed').checked;
+      fields.related = Array.from(el('drawerRelated').selectedOptions || []).map(function (o) { return o.value; });
+    }
     return {
       action: pluginDrawerMode === 'installed' ? 'edit-installed' : 'edit',
       id: pluginDrawerItem && pluginDrawerItem.id,
@@ -1362,10 +1433,16 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   });
 
   el('marketBody').addEventListener('click', function (e) {
+    var mv = e.target.closest('[data-move]');
+    if (mv) {
+      var tr = mv.closest('tr');
+      if (tr) postMarket({ action: 'move', kind: tr.dataset.kind, id: tr.dataset.id, direction: mv.dataset.move }, el('marketMsg'));
+      return;
+    }
     var edit = e.target.closest('[data-edit]');
     if (!edit) return;
-    var tr = edit.closest('tr');
-    if (tr) openPluginDrawer('market', tr.dataset.id);
+    var row = edit.closest('tr');
+    if (row) openPluginDrawer('market', row.dataset.id);
   });
 
   el('installedMetaBody').addEventListener('click', function (e) {
@@ -1417,6 +1494,29 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     postMarket({ action: 'publish', id: id }, el('marketMsg')).then(function (res) {
       if (res && res.ok) pluginSection = 'market';
     });
+  });
+
+  el('pluginImportBtn').addEventListener('click', function () { el('pluginImportFile').click(); });
+  el('pluginImportFile').addEventListener('change', function () {
+    var file = el('pluginImportFile').files && el('pluginImportFile').files[0];
+    if (!file) return;
+    var kind = el('pluginImportKind').value || 'ordinary';
+    var msg = el('marketMsg');
+    msg.textContent = '导入中…'; msg.style.color = 'var(--dim)';
+    fetch('/admin/api/market/import?token=' + encodeURIComponent(token) + '&kind=' + encodeURIComponent(kind), {
+      method: 'POST', headers: { 'Content-Type': 'application/zip', 'X-Plugin-Filename': file.name }, body: file,
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        msg.textContent = res.ok ? ('已导入：' + (res.j.plugin && (res.j.plugin.name || res.j.plugin.id)) + '，等待审核') : ('导入失败：' + ((res.j && res.j.error) || 'HTTP'));
+        msg.style.color = res.ok ? 'var(--mint)' : '#ff9a9a';
+        el('pluginImportFile').value = '';
+        if (res.ok) { pluginSection = 'market'; tick(); }
+      })
+      .catch(function (e) { msg.textContent = '导入失败：' + e.message; msg.style.color = '#ff9a9a'; });
+  });
+
+  el('themeToggle').addEventListener('click', function () {
+    applyAdminTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
   });
 
   el('pluginPolicySave').addEventListener('click', function () {

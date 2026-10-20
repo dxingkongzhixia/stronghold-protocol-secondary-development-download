@@ -78,6 +78,7 @@ const row = (p, admin = false) => {
     <div>
       <p class="market-row__desc">${esc(description)}</p>
       <div class="market-row__meta">${esc(p.author ? `作者：${p.author}` : '作者：未填写')} · ${bytes(p.bytes)} · 下载 ${esc(p.downloads || 0)}</div>
+      ${(p.relatedPlugins || []).length ? `<div class="market-row__related">关联：<span>${esc(p.relatedPlugins.map((r) => r.name).join('、'))}</span></div>` : ''}
       <div class="market-row__compat">
         <span class="compat-chip is-${compat.ownTone}">本服 0.4.0 · ${esc(compat.own)}</span>
         <span class="compat-chip is-${compat.mainTone}">主线 0.3.x · ${esc(compat.main)}</span>

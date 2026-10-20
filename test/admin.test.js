@@ -351,6 +351,8 @@ test('the admin page is a self-contained console: nine views, hash routing, sear
   // 商城管理: metadata/listing edits and packaging an installed plugin
   assert.ok(html.includes('id="marketBody"') && html.includes('id="publishBtn"'), 'the market manager is wired');
   assert.ok(html.includes('id="pluginDrawer"') && html.includes('id="drawerSave"'), 'metadata edits use the side drawer');
+  assert.ok(html.includes('id="drawerRelated"') && html.includes('id="themeToggle"'), 'related bindings and the theme switch are wired');
+  assert.ok(html.includes('id="pluginImportBtn"') && html.includes('/admin/api/market/import'), 'the admin import surface is wired');
   assert.ok(html.includes('id="pluginSearch"') && html.includes('data-psub="installed"'), 'search and the installed subview are wired');
   assert.ok(html.includes('/admin/api/market?token='), 'it writes marketplace metadata through the admin API');
   assert.ok(html.includes('/admin/api/plugins/ai'), 'the reserved AI surface is documented in the page');
