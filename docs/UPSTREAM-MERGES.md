@@ -1562,4 +1562,4 @@ docs guards 34 pass / 0 fail.
 | `ca185d064` | #725 素材下载计数 | 依赖 #628 的整包下载（§0 黑名单），本分支没有该功能 |
 | `4908a73b2` / `ba3f86bd8` / `868cd6e07` | 第三方 AI / 外部顾问模式 | 体量大，需要产品决策与外部服务 |
 
-验收：`npm test` **8227 / 8185 通过 / 0 失败 / 42 跳过**；golden 全匹配。`check-upstream.mjs` 的远端名是 `origin`（不是默认的 `upstream`），用 `node tools/check-upstream.mjs --no-fetch --upstream origin`。
+验收：`npm test` **8231 / 8189 通过 / 0 失败 / 42 跳过**；golden 全匹配。`check-upstream.mjs` 的远端名是 `origin`（不是默认的 `upstream`），用 `node tools/check-upstream.mjs --no-fetch --upstream origin`。
