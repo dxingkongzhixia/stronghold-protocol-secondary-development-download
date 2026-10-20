@@ -115,7 +115,7 @@ plugin.json + entry.sim/meta
 - 脚本 SDK 的冻结 API、预算、超时、拒绝路径
 - Forge 导入：皮肤、数值、混合包、脚本、ZIP、符号链接、路径穿越
 - setup / 本地官方美术提取
-- 全量 CI：**8197 tests / 8161 pass / 0 fail**
+- 全量 CI：**8198 tests / 8162 pass / 0 fail**
 
 已验证：
 - **浏览器 E2E**：`SP_E2E=1` + 真实 Chrome 跑了 10 个插件用例，全部通过：`plugins.e2e.test.js` 的 3 个 cosmetic（房间插件、个人插件、局内切换）、`ui-plugins.e2e.test.js` 的 UI 插槽，以及 `plugins-content-script.e2e.test.js` 的 content 内容集、sandbox script 依赖、独立 script 直接选择、多插件冲突/重新应用、真实 Forge 包导入和 trusted consent 链路。

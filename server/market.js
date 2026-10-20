@@ -33,7 +33,7 @@ function rootJson(entries, file) {
 /**
  * @param {{ root: string, log?: object }} opts
  */
-export function createPluginMarket({ root, log = noopLog } = {}) {
+export function createPluginMarket({ root, log = noopLog, registry = null } = {}) {
   if (!root) throw new Error('market root required');
   const base = path.join(root, 'var', 'plugin-market');
   const dirs = { ordinary: path.join(base, 'ordinary'), forge: path.join(base, 'forge') };
@@ -168,6 +168,16 @@ export function createPluginMarket({ root, log = noopLog } = {}) {
     return rows.map(publicEntry).sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
   }
 
+  /** Loaded plugins in the live plugins/ folder (not store entries). */
+  function installed() {
+    const list = registry && typeof registry.plugins === 'function' ? registry.plugins() : [];
+    return list.filter((p) => p && p.source === 'plugins' && p.class !== 'lang').map((p) => ({
+      id: p.id, kind: 'installed', name: (p.manifest && (p.manifest.name?.zh || p.manifest.name?.en)) || p.id,
+      version: p.manifest?.version || null, class: p.class, status: 'installed', bytes: p.bytes || null,
+      description: 'Installed locally; not published to the store', download: null, sources: [], installed: true,
+    }));
+  }
+
   function download(kind, id) {
     const e = get(kind, id);
     if (!e || e.status !== 'active') return null;
@@ -178,5 +188,5 @@ export function createPluginMarket({ root, log = noopLog } = {}) {
     return { entry: e, bytes: fs.readFileSync(file), filename: `${e.id}-${e.version}.zip` };
   }
 
-  return { base, upload, test, review, list, download, get, indexFile };
+  return { base, upload, test, review, list, installed, download, get, indexFile };
 }

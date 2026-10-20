@@ -27,6 +27,8 @@ var/plugin-market/
 
 只有 `active` 出现在公开列表和下载接口。
 
+`GET /market/api/list` 同时返回 `installed`：游戏服务器 `plugins/` 目录里已加载、但尚未上架商城的插件。页面会把它们显示在「本机已安装」区，没有下载按钮。
+
 ## 上传
 
 ```http

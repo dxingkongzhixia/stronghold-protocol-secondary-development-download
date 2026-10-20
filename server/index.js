@@ -232,7 +232,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // /cs/<cs16>/?? a room holds one while it plays it, its data patched by P1b); no match hosts here: the browser simulates
   const policy = createPluginPolicy({ pluginsDir, log });
   const contents = createContentSets({ registry: packs, vanillaData: data, log, maxSets: () => policy.get().maxSets });
-  const market = createPluginMarket({ root: ROOT, log });
+  const market = createPluginMarket({ root: ROOT, log, registry: packs });
   const roomSets = createRoomSets({ registry: packs, visual, contents, policy });
   // gameplay-plugin rooms simulate in a host (server/match/host, DESIGN §32.6): one per content set; a child process
   // by default, a worker thread when SP_MATCH_HOST=worker asks for it
@@ -275,7 +275,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   async function marketRoute(req, res, parts) {
     if (parts.rawPath === '/market/api/list') {
       if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
-      sendJson(req, res, 200, { now: Date.now(), plugins: market.list({ status: 'active' }) });
+      sendJson(req, res, 200, { now: Date.now(), plugins: market.list({ status: 'active' }), installed: market.installed() });
       return;
     }
     const dl = /^\/market\/api\/download\/(ordinary|forge)\/([^/]+)$/.exec(parts.rawPath);

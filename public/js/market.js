@@ -7,7 +7,7 @@ let kind = 'ordinary';
 let plugins = [];
 
 function pill(status) {
-  const label = status === 'active' ? '使用中' : status === 'pending' ? '未审核' : status === 'rejected' ? '已拒绝' : status;
+  const label = status === 'active' ? '使用中' : status === 'pending' ? '未审核' : status === 'rejected' ? '已拒绝' : status === 'installed' ? '已安装' : status;
   return `<span class="pill ${esc(status)}">${esc(label)}</span>`;
 }
 
@@ -38,6 +38,9 @@ async function load() {
     if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
     plugins = (j.plugins || []).filter((p) => p.kind === kind);
     $('list').innerHTML = plugins.map((p) => card(p)).join('') || '<p class="msg">这一分类还没有使用中的插件。</p>';
+    const installed = Array.isArray(j.installed) ? j.installed : [];
+    $('installedPanel').classList.toggle('hidden', !installed.length);
+    $('installedList').innerHTML = installed.map((p) => card(p)).join('');
     $('listMsg').textContent = '';
   } catch (e) {
     $('listMsg').textContent = `加载失败：${e.message}`;

@@ -2,7 +2,7 @@
 
 > 快照日期：2026-10-20
 > 代码基线：`master` `ae9e2ae3c`（插件文档提交后）
-> 状态：普通插件链路可用；全量 CI **8197 tests / 8161 pass / 0 fail**；真实浏览器插件 E2E **10 / 10 pass**。
+> 状态：普通插件链路可用；全量 CI **8198 tests / 8162 pass / 0 fail**；真实浏览器插件 E2E **10 / 10 pass**。
 > 本文件记录**仍未解决**的问题，不把已修项写成待办。
 
 ## 状态标记
@@ -372,7 +372,7 @@
 - 0.3.x `lang` / `cosmetic` / `ui` 自动兼容
 - 真实浏览器插件 E2E：10 / 10（cosmetic 3、UI 1、content 1、sandbox script 2、Forge 1、trusted consent 1、冲突/重新应用 1）
 - 字体 CSP 已允许 `fonts.gstatic.cn`
-- 全量 CI：8197 / 8161 / 0
+- 全量 CI：8198 / 8162 / 0
 
 ---
 

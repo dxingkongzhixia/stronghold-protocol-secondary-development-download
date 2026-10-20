@@ -23,6 +23,7 @@
     .pill.active { color:var(--mint); border-color:var(--mint); }
     .pill.pending { color:var(--warn); border-color:var(--warn); }
     .pill.rejected { color:var(--bad); border-color:var(--bad); }
+    .pill.installed { color:var(--lo); border-color:var(--line); }
     .actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
     button.act { background:transparent; color:var(--mint); border:1px solid var(--mint); padding:5px 10px; cursor:pointer; }
     button.act.alt { color:var(--lo); border-color:var(--line); }
@@ -52,6 +53,12 @@
     </section>
     <div id="list" class="grid"></div>
     <p id="listMsg" class="msg"></p>
+
+    <section id="installedPanel" class="panel hidden">
+      <h2>本机已安装</h2>
+      <p class="meta">这些插件在游戏服务器的 <code>plugins/</code> 目录里，尚未上架商城，因此没有下载按钮。</p>
+      <div id="installedList" class="grid"></div>
+    </section>
 
     <section class="panel">
       <h2>上传插件</h2>
