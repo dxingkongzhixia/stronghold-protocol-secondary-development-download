@@ -507,6 +507,13 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .plugin-fold .plugin-grid{padding-top:12px}
 @media (max-width:900px){.plugin-grid{grid-template-columns:1fr}.plugin-card__fields{grid-template-columns:1fr}.plugin-card__field--wide{grid-column:auto}}
 .plugin-admin__head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.plugin-subnav{display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin:0 0 12px;border-bottom:1px solid var(--line)}
+.plugin-subnav__item{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--dim);padding:8px 11px 9px;font:inherit;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.plugin-subnav__item em{font-style:normal;color:var(--dim);background:rgba(255,255,255,.06);border-radius:999px;padding:1px 6px;font-size:10px}
+.plugin-subnav__item:hover{color:var(--text)}
+.plugin-subnav__item.is-on{color:var(--mint);border-bottom-color:var(--mint)}
+.plugin-subnav__item.is-on em{color:#082019;background:var(--mint)}
+.plugin-subview[hidden]{display:none}
 .plugin-admin__head h2{margin:0 0 4px}
 .plugin-admin__head .hint{max-width:560px}
 .plugin-admin__tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -773,52 +780,63 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     </section>
 
     <section class="view" id="view-plugins" hidden>
-      <section class="panel plugin-admin">
-        <div class="plugin-admin__head">
-          <div>
-            <h2>插件管理<em id="marketCount"></em></h2>
-            <p class="hint">描述、作者、兼容性和上架状态都在右侧抽屉里编辑；保存只改商城元数据，不改插件文件。</p>
+      <div class="plugin-subnav" role="tablist">
+        <button type="button" class="plugin-subnav__item is-on" data-psub="market">商城插件 <em id="marketCount">0</em></button>
+        <button type="button" class="plugin-subnav__item" data-psub="installed">本机插件 <em id="installedMetaCount">0</em></button>
+        <button type="button" class="plugin-subnav__item" data-psub="policy">服务策略</button>
+        <button type="button" class="plugin-subnav__item" data-psub="diagnostics">诊断与内容</button>
+      </div>
+      <div class="plugin-subview" data-pview="market">
+        <section class="panel plugin-admin">
+          <div class="plugin-admin__head">
+            <div>
+              <h2>商城插件</h2>
+              <p class="hint">描述、作者、兼容性和上架状态在右侧抽屉里编辑；保存只改商城元数据，不改插件文件。</p>
+            </div>
+            <div class="plugin-admin__tools">
+              <input class="search" id="pluginSearch" placeholder="搜索 ID / 名称 / 作者"/>
+              <select id="publishSelect" aria-label="选择本机插件"></select>
+              <button type="button" id="publishBtn" class="primary">上架本机插件</button>
+            </div>
           </div>
-          <div class="plugin-admin__tools">
-            <input class="search" id="pluginSearch" placeholder="搜索 ID / 名称 / 作者"/>
-            <select id="publishSelect" aria-label="选择本机插件"></select>
-            <button type="button" id="publishBtn" class="primary">上架本机插件</button>
-          </div>
-        </div>
-        <div class="plugin-tabs" role="tablist">
-          <button type="button" class="plugin-tab is-on" data-ptab="market">商城条目 <em id="marketTabCount">0</em></button>
-          <button type="button" class="plugin-tab" data-ptab="installed">本机插件 <em id="installedMetaCount">0</em></button>
-        </div>
-        <div id="marketPane" class="plugin-pane">
           <div class="tablewrap plugin-table"><table><thead><tr><th>插件</th><th>类型 / 状态</th><th>兼容性</th><th>描述 / 作者</th><th>上架</th><th></th></tr></thead><tbody id="marketBody"></tbody></table></div>
           <div class="panel__body"><span id="marketMsg" class="hint"></span></div>
-        </div>
-        <div id="installedPane" class="plugin-pane" hidden>
+          <div class="panel__body hint">AI 接管接口（预留）：<code>GET /admin/api/plugins/ai</code> 返回能力声明；当前 POST 返回 501，未启用执行器，不会自行改动商城。</div>
+        </section>
+      </div>
+      <div class="plugin-subview" data-pview="installed" hidden>
+        <section class="panel">
+          <div class="plugin-admin__head">
+            <div><h2>本机插件</h2><p class="hint">只改商城展示用的描述 / 作者 / 兼容范围，不改 <code>plugins/</code> 里的文件；要真正上架请用「商城插件 → 上架本机插件」。</p></div>
+          </div>
           <div class="tablewrap plugin-table"><table><thead><tr><th>插件</th><th>类型</th><th>兼容性</th><th>描述 / 作者</th><th></th></tr></thead><tbody id="installedMetaBody"></tbody></table></div>
           <div class="panel__body"><span id="installedMetaMsg" class="hint"></span></div>
-        </div>
-        <div class="panel__body hint">AI 接管接口（预留）：<code>GET /admin/api/plugins/ai</code> 返回能力声明；当前 POST 返回 501，未启用执行器，不会自行改动商城。</div>
-      </section>
-      <div class="two">
-        <section class="panel"><h2>插件概览</h2><div class="panel__body" id="pluginSummary"></div></section>
-        <section class="panel"><h2>服务器策略</h2><div class="panel__body">
-          <div id="pluginPolicy"></div>
-          <textarea id="pluginPolicyJson" spellcheck="false" aria-label="插件策略 JSON" style="width:100%;min-height:7rem;margin-top:.08rem;font-family:monospace;font-size:.12rem;background:#101816;color:var(--text-hi);border:1px solid var(--line);padding:.06rem"></textarea>
-          <div class="tools"><button type="button" id="pluginPolicySave">保存插件策略</button><span id="pluginPolicyMsg" class="hint"></span></div>
-        </div></section>
+        </section>
       </div>
-      <section class="panel">
-        <h2>Forge 导入<em id="forgeCount"></em></h2>
-        <div class="tablewrap"><table><thead><tr><th>插件</th><th>来源包</th><th>版本</th><th>产品</th><th>跳过</th><th>假设</th><th>部分</th><th>导入时间</th></tr></thead><tbody id="forgeBody"></tbody></table></div>
-      </section>
-      <section class="panel">
-        <h2>兼容性与诊断<em id="pluginIssueCount"></em></h2>
-        <div class="panel__body" id="pluginIssues"></div>
-      </section>
-      <section class="panel">
-        <h2>房间内容与脚本</h2>
-        <div class="tablewrap"><table><thead><tr><th>房间</th><th>内容集 cs</th><th>外观集 vs</th><th>模式</th><th>插件</th><th>脚本/信任</th><th>同意</th></tr></thead><tbody id="roomContentBody"></tbody></table></div>
-      </section>
+      <div class="plugin-subview" data-pview="policy" hidden>
+        <div class="two">
+          <section class="panel"><h2>插件概览</h2><div class="panel__body" id="pluginSummary"></div></section>
+          <section class="panel"><h2>服务器策略</h2><div class="panel__body">
+            <div id="pluginPolicy"></div>
+            <textarea id="pluginPolicyJson" spellcheck="false" aria-label="插件策略 JSON" style="width:100%;min-height:7rem;margin-top:.08rem;font-family:monospace;font-size:.12rem;background:#101816;color:var(--text-hi);border:1px solid var(--line);padding:.06rem"></textarea>
+            <div class="tools"><button type="button" id="pluginPolicySave">保存插件策略</button><span id="pluginPolicyMsg" class="hint"></span></div>
+          </div></section>
+        </div>
+      </div>
+      <div class="plugin-subview" data-pview="diagnostics" hidden>
+        <section class="panel">
+          <h2>Forge 导入<em id="forgeCount"></em></h2>
+          <div class="tablewrap"><table><thead><tr><th>插件</th><th>来源包</th><th>版本</th><th>产品</th><th>跳过</th><th>假设</th><th>部分</th><th>导入时间</th></tr></thead><tbody id="forgeBody"></tbody></table></div>
+        </section>
+        <section class="panel">
+          <h2>兼容性与诊断<em id="pluginIssueCount"></em></h2>
+          <div class="panel__body" id="pluginIssues"></div>
+        </section>
+        <section class="panel">
+          <h2>房间内容与脚本</h2>
+          <div class="tablewrap"><table><thead><tr><th>房间</th><th>内容集 cs</th><th>外观集 vs</th><th>模式</th><th>插件</th><th>脚本/信任</th><th>同意</th></tr></thead><tbody id="roomContentBody"></tbody></table></div>
+        </section>
+      </div>
 
       <div id="pluginDrawer" class="drawer-wrap" hidden>
         <div class="drawer-backdrop" data-drawer-close></div>
@@ -972,7 +990,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
 (function () {
   var token = new URLSearchParams(location.search).get('token') || '';
   var lastAdminData = null;
-  var pluginTab = 'market';
+  var pluginSection = 'market';
   var pluginDrawerItem = null;
   var pluginDrawerMode = 'market';
   var COLORS = { offline:'#8a8f8c', online:'#4ed8af', room:'#5cc8ff', queue:'#ffd089', mmplay:'#ffa94d', alliance:'#b28cff', solo:'#7bd88f' };
@@ -1180,8 +1198,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     var market = Array.isArray(p.market) ? p.market : [];
     var statusLabels = { active: '通过', pending: '待审核', rejected: '已拒绝' };
     var metaList = list.filter(function (x) { return x.class !== 'lang'; });
-    el('marketCount').textContent = ' · ' + market.length + ' 个';
-    el('marketTabCount').textContent = String(market.length);
+    el('marketCount').textContent = String(market.length);
     el('installedMetaCount').textContent = String(metaList.length);
     var q = (el('pluginSearch') && el('pluginSearch').value || '').trim().toLowerCase();
     var hit = function (x) {
@@ -1215,10 +1232,11 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         + '<td><button type="button" class="row-action" data-edit>编辑</button></td>'
         + '</tr>';
     }).join('') || '<tr><td colspan="5" class="empty">没有本机插件</td></tr>';
-    el('marketPane').hidden = pluginTab !== 'market';
-    el('installedPane').hidden = pluginTab !== 'installed';
-    document.querySelectorAll('.plugin-tab').forEach(function (b) {
-      b.classList.toggle('is-on', (b.dataset.ptab || '') === pluginTab);
+    document.querySelectorAll('[data-pview]').forEach(function (v) {
+      v.hidden = (v.dataset.pview || '') !== pluginSection;
+    });
+    document.querySelectorAll('[data-psub]').forEach(function (b) {
+      b.classList.toggle('is-on', (b.dataset.psub || '') === pluginSection);
     });
     var published = new Set(market.map(function (x) { return x.id; }));
     var installable = list.filter(function (x) { return x.class !== 'lang' && !published.has(x.id); });
@@ -1336,9 +1354,9 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     if (lastAdminData) renderPlugins(lastAdminData);
   });
 
-  document.querySelectorAll('.plugin-tab').forEach(function (b) {
+  document.querySelectorAll('[data-psub]').forEach(function (b) {
     b.addEventListener('click', function () {
-      pluginTab = b.dataset.ptab || 'market';
+      pluginSection = b.dataset.psub || 'market';
       if (lastAdminData) renderPlugins(lastAdminData);
     });
   });
@@ -1397,7 +1415,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     var id = el('publishSelect').value;
     if (!id) return;
     postMarket({ action: 'publish', id: id }, el('marketMsg')).then(function (res) {
-      if (res && res.ok) pluginTab = 'market';
+      if (res && res.ok) pluginSection = 'market';
     });
   });
 
