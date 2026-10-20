@@ -465,12 +465,21 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .market-actions{display:flex;gap:5px;flex-wrap:wrap}
 .market-actions button{padding:3px 7px;font-size:12px}
 .plugin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;padding:12px 16px}
-.plugin-card{border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,rgba(18,28,25,.96),rgba(12,20,18,.92));padding:13px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.plugin-card{border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,rgba(18,28,25,.96),rgba(12,20,18,.92));padding:13px 14px;display:flex;flex-direction:column;gap:10px;min-width:0;transition:border-color .15s,box-shadow .15s}
+.plugin-card:hover{border-color:var(--mint-dim);box-shadow:0 8px 28px rgba(0,0,0,.18)}
 .plugin-card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.plugin-card__main{flex:1;min-width:0}
+.plugin-avatar{width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;font-weight:700;font-size:15px;border:1px solid var(--line2);background:#16221e;color:var(--mint);margin-top:2px}
+.plugin-avatar.av-content{color:#ffd089;border-color:rgba(217,164,65,.35);background:#221d12}
+.plugin-avatar.av-ui{color:#5cc8ff;border-color:rgba(92,200,255,.3);background:#101d22}
+.plugin-avatar.av-script{color:#b28cff;border-color:rgba(178,140,255,.3);background:#1a1526}
+.plugin-avatar.av-trusted{color:#ff9a9a;border-color:rgba(224,108,117,.35);background:#241416}
+.plugin-avatar.av-forge{color:#e7c987;border-color:rgba(217,164,65,.35);background:#221d12}
+.plugin-avatar.av-unknown{color:var(--dim)}
 .plugin-card__title{font-weight:700;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
 .plugin-card__id{font-family:ui-monospace,Consolas,monospace;color:var(--dim);font-size:11px;margin-top:2px}
 .plugin-card__badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
-.plugin-card__fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.plugin-card__fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 10px}
 .plugin-card__field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .plugin-card__field--wide{grid-column:1 / -1}
 .plugin-card__field label{color:var(--dim);font-size:11px;letter-spacing:.03em}
@@ -489,6 +498,13 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .plugin-publish{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line)}
 .plugin-publish select{min-width:240px;max-width:360px;background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:7px;padding:6px 9px;font:inherit;font-size:13px}
 .plugin-publish button{padding:6px 11px;border-radius:7px;font-size:12px}
+.plugin-fold{padding:0}
+.plugin-fold summary{cursor:pointer;padding:12px 16px;font-weight:600;font-size:13px;color:var(--text);display:flex;align-items:baseline;gap:8px;list-style-position:inside}
+.plugin-fold summary em{font-style:normal;color:var(--mint);font-size:12px}
+.plugin-fold summary .hint{font-weight:400;margin-left:auto}
+.plugin-fold[open] summary{border-bottom:1px solid var(--line)}
+.plugin-fold .panel__body{padding:11px 16px 0}
+.plugin-fold .plugin-grid{padding-top:12px}
 @media (max-width:900px){.plugin-grid{grid-template-columns:1fr}.plugin-card__fields{grid-template-columns:1fr}.plugin-card__field--wide{grid-column:auto}}
 .tools .hint{color:var(--dim2);font-size:12px}
 .tablewrap{overflow:auto;max-height:66vh}
@@ -692,14 +708,6 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     </section>
 
     <section class="view" id="view-plugins" hidden>
-      <div class="two">
-        <section class="panel"><h2>插件概览</h2><div class="panel__body" id="pluginSummary"></div></section>
-        <section class="panel"><h2>服务器策略</h2><div class="panel__body">
-          <div id="pluginPolicy"></div>
-          <textarea id="pluginPolicyJson" spellcheck="false" aria-label="插件策略 JSON" style="width:100%;min-height:7rem;margin-top:.08rem;font-family:monospace;font-size:.12rem;background:#101816;color:var(--text-hi);border:1px solid var(--line);padding:.06rem"></textarea>
-          <div class="tools"><button type="button" id="pluginPolicySave">保存插件策略</button><span id="pluginPolicyMsg" class="hint"></span></div>
-        </div></section>
-      </div>
       <section class="panel">
         <h2>商城插件管理<em id="marketCount"></em></h2>
         <div class="panel__body hint">描述、作者、兼容性（app/API）和上架状态可直接编辑；保存只改商城元数据，不改插件文件。测试 / 通过后才开放下载。</div>
@@ -712,12 +720,20 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <div class="panel__body"><span id="marketMsg" class="hint"></span></div>
         <div class="panel__body hint">AI 接管接口（预留）：<code>GET /admin/api/plugins/ai</code> 返回能力声明；当前 POST 返回 501，未启用执行器，不会自行改动商城。</div>
       </section>
-      <section class="panel">
-        <h2>本机插件元数据<em id="installedMetaCount"></em></h2>
+      <div class="two">
+        <section class="panel"><h2>插件概览</h2><div class="panel__body" id="pluginSummary"></div></section>
+        <section class="panel"><h2>服务器策略</h2><div class="panel__body">
+          <div id="pluginPolicy"></div>
+          <textarea id="pluginPolicyJson" spellcheck="false" aria-label="插件策略 JSON" style="width:100%;min-height:7rem;margin-top:.08rem;font-family:monospace;font-size:.12rem;background:#101816;color:var(--text-hi);border:1px solid var(--line);padding:.06rem"></textarea>
+          <div class="tools"><button type="button" id="pluginPolicySave">保存插件策略</button><span id="pluginPolicyMsg" class="hint"></span></div>
+        </div></section>
+      </div>
+      <details class="panel plugin-fold">
+        <summary>本机插件元数据<em id="installedMetaCount"></em><span class="hint">展开编辑展示信息</span></summary>
         <div class="panel__body hint">只改商城展示用的描述 / 作者 / 兼容范围，不改 plugins/ 里的文件；要真正上架请用上方「打包上架」。</div>
         <div id="installedMetaBody" class="plugin-grid"></div>
         <div class="panel__body"><span id="installedMetaMsg" class="hint"></span></div>
-      </section>
+      </details>
       <section class="panel">
         <h2>已安装插件<em id="pluginCount"></em></h2>
         <div id="pluginBody" class="plugin-grid"></div>
@@ -1005,6 +1021,11 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     };
   }
 
+  function classAvatar(x) {
+    var label = CLASS_LABELS[x.class] || '?';
+    return label.slice(0, 1);
+  }
+
   function compatPills(x) {
     var c = x.compat || {};
     if (x.kind === 'forge' || x.class === 'forge') {
@@ -1072,7 +1093,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         var cls = CLASS_LABELS[x.class] || x.class || '未声明';
         var compat = compatPills(x);
         return '<article class="plugin-card" data-plugin-card data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
-          + '<div class="plugin-card__head"><div>'
+          + '<div class="plugin-card__head"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div class="plugin-card__main">'
           + '<div class="plugin-card__title">' + esc(x.name || x.id) + '</div>'
           + '<div class="plugin-card__id">' + esc(x.id) + ' · v' + esc(x.version || '—') + '</div>'
           + '<div class="plugin-card__badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span>' + statePill + '</div>'
@@ -1108,7 +1129,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         var compat = compatPills(x);
         var cls = CLASS_LABELS[x.class] || x.class || '未声明';
         return '<article class="plugin-card" data-plugin-card data-id="' + esc(x.id) + '">'
-          + '<div class="plugin-card__head"><div>'
+          + '<div class="plugin-card__head"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div class="plugin-card__main">'
           + '<div class="plugin-card__title">' + esc(x.name || x.id) + '</div>'
           + '<div class="plugin-card__id">' + esc(x.id) + ' · v' + esc(x.version || '—') + '</div>'
           + '<div class="plugin-card__badges"><span class="pill">本机插件</span><span class="pill">' + esc(cls) + '</span></div>'
@@ -1130,7 +1151,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       var state = x.status === 'loaded' ? '<span class="pill yes">已加载</span>' : '<span class="pill">' + esc(x.status || '') + '</span>';
       var script = x.trusted ? '<span class="pill no">原生信任</span>' : (x.hasScript ? '<span class="pill">沙箱脚本</span>' : '—');
       return '<article class="plugin-card">'
-        + '<div class="plugin-card__head"><div>'
+        + '<div class="plugin-card__head"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div class="plugin-card__main">'
         + '<div class="plugin-card__title">' + esc(x.name || x.id) + '</div>'
         + '<div class="plugin-card__id">' + esc(x.id) + ' · v' + esc(x.version || '—') + '</div>'
         + '<div class="plugin-card__badges"><span class="pill">' + esc(cls) + '</span>' + state + '</div>'
