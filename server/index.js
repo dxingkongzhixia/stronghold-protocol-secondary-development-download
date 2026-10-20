@@ -395,6 +395,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const pluginPolicy = parts.rawPath === '/admin/api/plugin-policy';
     const marketAdmin = parts.rawPath === '/admin/api/market';
     const marketImport = parts.rawPath === '/admin/api/market/import';
+    const marketKeys = parts.rawPath === '/admin/api/market/keys';
     const pluginInstall = parts.rawPath === '/admin/api/plugins/install';
     const pluginUninstall = parts.rawPath === '/admin/api/plugins/uninstall';
     const auditLog = parts.rawPath === '/admin/api/audit';
@@ -513,6 +514,21 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
         sendJson(req, res, 200, { ok: true, id, moved });
       } catch (e) {
         sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300), code: e?.code || null });
+      }
+      return;
+    }
+    if (marketKeys) {
+      if (req.method === 'GET' || req.method === 'HEAD') { sendJson(req, res, 200, market.publicKeys()); return; }
+      if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); sendJson(req, res, 405, { error: 'GET or POST required' }); return; }
+      const body = await readJsonBody(req);
+      try {
+        const action = String(body?.action || '');
+        if (action === 'add') sendJson(req, res, 200, { ok: true, ...market.addSigningKey({ id: body.id, publicKey: body.publicKey, label: body.label }) });
+        else if (action === 'revoke') sendJson(req, res, 200, { ok: true, ...market.revokeSigningKey(String(body.id || ''), body.revoked !== false) });
+        else if (action === 'policy') sendJson(req, res, 200, { ok: true, ...market.setSignaturePolicy(Array.isArray(body.requireSigned) ? body.requireSigned : []) });
+        else sendJson(req, res, 400, { error: 'action must be add, revoke or policy' });
+      } catch (e) {
+        sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300) });
       }
       return;
     }
@@ -694,7 +710,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
       || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
-      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/audit' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/ai'
+      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/market/keys' || parts.rawPath === '/admin/api/audit' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/ai'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;

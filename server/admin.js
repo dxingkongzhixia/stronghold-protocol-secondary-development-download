@@ -850,6 +850,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
               <select id="pluginImportKind" aria-label="导入格式"><option value="ordinary">普通 zip</option><option value="forge">Forge zip</option></select>
               <button type="button" id="pluginImportBtn">导入插件</button>
               <input id="pluginImportFile" type="file" accept=".zip,application/zip" hidden>
+              <progress id="pluginImportProgress" max="100" value="0" hidden style="width:110px;height:7px;accent-color:var(--mint)"></progress>
               <button type="button" id="pluginGcBtn">清理缓存</button>
             </div>
           </div>
@@ -889,6 +890,20 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <section class="panel">
           <h2>兼容性与诊断<em id="pluginIssueCount"></em></h2>
           <div class="panel__body" id="pluginIssues"></div>
+        </section>
+        <section class="panel">
+          <h2>签名密钥<em id="keyCount"></em></h2>
+          <div class="panel__body hint">信任根：owner 维护的 Ed25519 公钥。插件上传时带 key id + 签名；未签名是否允许由下面的 class 策略决定。</div>
+          <div class="tablewrap"><table><thead><tr><th>ID</th><th>标签</th><th>状态</th><th>公钥</th><th></th></tr></thead><tbody id="keyBody"></tbody></table></div>
+          <div class="panel__body">
+            <div class="drawer__grid">
+              <label class="plugin-field"><span>Key ID</span><input id="keyId" placeholder="owner-2026"></label>
+              <label class="plugin-field"><span>标签</span><input id="keyLabel" placeholder="owner"></label>
+            </div>
+            <label class="plugin-field" style="margin-top:8px"><span>Ed25519 公钥 PEM</span><textarea id="keyPem" rows="4" placeholder="-----BEGIN PUBLIC KEY-----"></textarea></label>
+            <div class="tools"><button type="button" id="keyAdd">添加密钥</button><span id="keyMsg" class="hint"></span></div>
+            <div class="tools" id="keyPolicyBox"></div>
+          </div>
         </section>
         <section class="panel">
           <h2>审计日志<em id="auditCount"></em></h2>
@@ -1468,8 +1483,55 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     b.addEventListener('click', function () {
       pluginSection = b.dataset.psub || 'market';
       if (lastAdminData) renderPlugins(lastAdminData);
-      if (pluginSection === 'diagnostics') loadAudit();
+      if (pluginSection === 'diagnostics') { loadAudit(); loadKeys(); }
     });
+  });
+
+  function loadKeys() {    fetch('/admin/api/market/keys?token=' + encodeURIComponent(token), { cache: 'no-store' })
+      .then(function (r) { return r.text().then(function (text) { var j = {}; try { j = text ? JSON.parse(text) : {}; } catch (e) { j = {}; } return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        var data = (res.ok && res.j) || { keys: [], requireSigned: [] };
+        el('keyCount').textContent = ' · ' + (data.keys || []).length + ' 个';
+        el('keyBody').innerHTML = (data.keys || []).map(function (k) {
+          return row([cell(esc(k.id), 'mono'), cell(esc(k.label || '—')), cell(k.revokedAt ? '<span class="pill no">已撤销</span>' : '<span class="pill yes">有效</span>'),
+            cell('<span class="mono" title="' + esc(k.publicKey) + '">' + esc(String(k.publicKey).split('\n')[0]) + '…</span>'),
+            cell('<button type="button" class="row-action" data-key-revoke="' + esc(k.id) + '" data-revoked="' + (k.revokedAt ? '1' : '0') + '">' + (k.revokedAt ? '恢复' : '撤销') + '</button>')]);
+        }).join('') || '<tr><td colspan="5" class="empty">还没有签名密钥</td></tr>';
+        var required = new Set(data.requireSigned || []);
+        el('keyPolicyBox').innerHTML = '<span class="hint">必须签名：</span>'
+          + ['cosmetic', 'content', 'ui', 'script', 'trusted', 'forge'].map(function (c) {
+            return '<label class="drawer__check"><input type="checkbox" data-key-class="' + c + '"' + (required.has(c) ? ' checked' : '') + '> ' + c + '</label>';
+          }).join('')
+          + '<button type="button" class="row-action" id="keyPolicySave">保存策略</button>';
+        el('keyPolicySave').addEventListener('click', function () {
+          var classes = Array.from(document.querySelectorAll('[data-key-class]')).filter(function (x) { return x.checked; }).map(function (x) { return x.dataset.keyClass; });
+          fetch('/admin/api/market/keys?token=' + encodeURIComponent(token), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'policy', requireSigned: classes }) })
+            .then(function (r) { return r.json(); }).then(function () { el('keyMsg').textContent = '签名策略已保存'; loadKeys(); })
+            .catch(function (e) { el('keyMsg').textContent = '保存失败：' + e.message; });
+        });
+      })
+      .catch(function () { el('keyBody').innerHTML = '<tr><td colspan="5" class="empty">密钥加载失败</td></tr>'; });
+  }
+
+  el('keyAdd').addEventListener('click', function () {
+    fetch('/admin/api/market/keys?token=' + encodeURIComponent(token), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'add', id: el('keyId').value.trim(), label: el('keyLabel').value.trim(), publicKey: el('keyPem').value }),
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      el('keyMsg').textContent = j.error ? ('失败：' + j.error) : '密钥已添加';
+      if (!j.error) { el('keyId').value = ''; el('keyLabel').value = ''; el('keyPem').value = ''; loadKeys(); }
+    }).catch(function (e) { el('keyMsg').textContent = '失败：' + e.message; });
+  });
+  el('keyBody').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-key-revoke]');
+    if (!b) return;
+    fetch('/admin/api/market/keys?token=' + encodeURIComponent(token), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'revoke', id: b.dataset.keyRevoke, revoked: b.dataset.revoked !== '1' }),
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      el('keyMsg').textContent = j.error ? ('失败：' + j.error) : '密钥状态已更新';
+      loadKeys();
+    }).catch(function (e) { el('keyMsg').textContent = '失败：' + e.message; });
   });
 
   function loadAudit() {
@@ -1628,23 +1690,29 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     if (!file) return;
     var kind = el('pluginImportKind').value || 'ordinary';
     var msg = el('marketMsg');
+    var progress = el('pluginImportProgress');
     msg.textContent = '导入中…'; msg.style.color = 'var(--dim)';
-    fetch('/admin/api/market/import?token=' + encodeURIComponent(token) + '&kind=' + encodeURIComponent(kind), {
-      method: 'POST', headers: { 'Content-Type': 'application/zip', 'X-Plugin-Filename': file.name }, body: file,
-    }).then(function (r) {
-      return r.text().then(function (text) {
-        var j = {};
-        try { j = text ? JSON.parse(text) : {}; } catch (e) { j = { error: '服务返回了非 JSON 响应（HTTP ' + r.status + '）' }; }
-        return { ok: r.ok, status: r.status, j: j };
-      });
-    })
-      .then(function (res) {
-        msg.textContent = res.ok ? ('已导入：' + (res.j.plugin && (res.j.plugin.name || res.j.plugin.id)) + '，等待审核') : ('导入失败：' + ((res.j && res.j.error) || ('HTTP ' + res.status)));
-        msg.style.color = res.ok ? 'var(--mint)' : '#ff9a9a';
-        el('pluginImportFile').value = '';
-        if (res.ok) { pluginSection = 'market'; tick(); }
-      })
-      .catch(function (e) { msg.textContent = '导入失败：' + e.message; msg.style.color = '#ff9a9a'; });
+    progress.hidden = false; progress.value = 0;
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/admin/api/market/import?token=' + encodeURIComponent(token) + '&kind=' + encodeURIComponent(kind));
+    xhr.setRequestHeader('Content-Type', 'application/zip');
+    xhr.setRequestHeader('X-Plugin-Filename', file.name);
+    xhr.upload.onprogress = function (e) {
+      if (!e.lengthComputable) return;
+      progress.value = Math.round((e.loaded / e.total) * 100);
+      msg.textContent = '导入中… ' + progress.value + '%';
+    };
+    xhr.onload = function () {
+      var j = {};
+      try { j = xhr.responseText ? JSON.parse(xhr.responseText) : {}; } catch (e) { j = { error: '服务返回了非 JSON 响应（HTTP ' + xhr.status + '）' }; }
+      var ok = xhr.status >= 200 && xhr.status < 300;
+      msg.textContent = ok ? ('已导入：' + (j.plugin && (j.plugin.name || j.plugin.id)) + '，等待审核') : ('导入失败：' + (j.error || ('HTTP ' + xhr.status)));
+      msg.style.color = ok ? 'var(--mint)' : '#ff9a9a';
+      el('pluginImportFile').value = '';
+      if (ok) { progress.value = 100; pluginSection = 'market'; tick(); }
+    };
+    xhr.onerror = function () { msg.textContent = '导入失败：网络错误'; msg.style.color = '#ff9a9a'; };
+    xhr.send(file);
   });
 
   el('pluginGcBtn').addEventListener('click', function () {

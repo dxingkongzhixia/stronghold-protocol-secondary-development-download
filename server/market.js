@@ -2,7 +2,7 @@
 // Files live under var/plugin-market/{ordinary,forge}; the JSON index is server-local and git-ignored.
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash, verify } from 'node:crypto';
+import { createHash, verify, createPublicKey } from 'node:crypto';
 import { PLUGIN_LIMITS, PLUGIN_COMPAT_APP, PLUGIN_COMPAT_CLASSES, appVersionMatches, isPluginId, isVersionRange } from '../shared/plugins/manifest.js';
 import { readPluginZip, zipFiles } from './plugins/zip.js';
 import { readUntrustedZip, importForge, forgeIdToPluginId } from './plugins/forgeImport.js';
@@ -66,10 +66,51 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
   const mirrorsFile = path.join(base, 'mirrors.json');
   const keysFile = path.join(base, 'keys.json');
   let signingKeys = [];
-  try {
-    const k = JSON.parse(fs.readFileSync(keysFile, 'utf8'));
-    signingKeys = (Array.isArray(k) ? k : k.keys || []).filter((x) => x && typeof x.id === 'string' && typeof x.publicKey === 'string').slice(0, 64);
-  } catch { /* unsigned marketplace */ }
+  let requiredSigned = new Set();
+  const loadKeys = () => {
+    try {
+      const k = JSON.parse(fs.readFileSync(keysFile, 'utf8'));
+      signingKeys = (Array.isArray(k) ? k : k.keys || []).filter((x) => x && typeof x.id === 'string' && typeof x.publicKey === 'string').slice(0, 64);
+      requiredSigned = new Set(Array.isArray(k.requireSigned) ? k.requireSigned.filter((x) => typeof x === 'string') : []);
+    } catch { signingKeys = []; requiredSigned = new Set(); }
+  };
+  loadKeys();
+  const saveKeys = () => {
+    fs.mkdirSync(base, { recursive: true });
+    const tmp = `${keysFile}.tmp-${process.pid}`;
+    fs.writeFileSync(tmp, `${JSON.stringify({ keys: signingKeys, requireSigned: [...requiredSigned] }, null, 2)}\n`);
+    fs.renameSync(tmp, keysFile);
+  };
+  const publicKeys = () => ({
+    keys: signingKeys.map((k) => ({
+      id: k.id, label: k.label || null, algorithm: k.algorithm || 'ed25519',
+      addedAt: k.addedAt || null, revokedAt: k.revokedAt || null, publicKey: k.publicKey,
+    })),
+    requireSigned: [...requiredSigned],
+  });
+  const addSigningKey = ({ id, publicKey, label = '' }) => {
+    if (!/^[A-Za-z0-9._-]{1,80}$/.test(String(id || ''))) throw new Error('key id must be 1..80 letters, digits, dot, dash or underscore');
+    if (typeof publicKey !== 'string' || publicKey.length < 40) throw new Error('publicKey must be a PEM public key');
+    try { createPublicKey(publicKey); } catch { throw new Error('publicKey is not a valid PEM key'); }
+    signingKeys = signingKeys.filter((k) => k.id !== id);
+    signingKeys.push({ id, publicKey, label: String(label || '').slice(0, 120), algorithm: 'ed25519', addedAt: new Date().toISOString(), revokedAt: null });
+    saveKeys();
+    return publicKeys();
+  };
+  const revokeSigningKey = (id, revoked = true) => {
+    const key = signingKeys.find((k) => k.id === id);
+    if (!key) throw new Error('key not found');
+    key.revokedAt = revoked ? new Date().toISOString() : null;
+    saveKeys();
+    return publicKeys();
+  };
+  const setSignaturePolicy = (classes) => {
+    const allowed = new Set(['lang', 'cosmetic', 'content', 'ui', 'script', 'trusted', 'forge']);
+    if (!Array.isArray(classes) || classes.some((x) => !allowed.has(x))) throw new Error('requireSigned must be a list of plugin classes');
+    requiredSigned = new Set(classes);
+    saveKeys();
+    return publicKeys();
+  };
   const verifySignature = (bytes, signature) => {
     if (!signature || typeof signature !== 'object' || !signature.keyId || !signature.value) return null;
     const key = signingKeys.find((x) => x.id === signature.keyId && !x.revokedAt);
@@ -227,6 +268,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     if (bytes.length > PLUGIN_LIMITS.pluginBytes) throw new Error('zip is over the plugin size limit');
     const verifiedSignature = verifySignature(bytes, signature);
     const meta = await inspect(kind, bytes);
+    if (requiredSigned.has(meta.class) && !verifiedSignature) throw new Error(`a verified signature is required for ${meta.class} plugins`);
     const key = keyOf(kind, meta.id);
     const existing = index.entries.find((e) => keyOf(e.kind, e.id) === key);
     const now = Date.now();
@@ -656,5 +698,5 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return { entry: e, bytes: fs.readFileSync(file), filename: `${e.id}-${e.version}.zip` };
   }
 
-  return { base, upload, test, review, edit, editInstalled, move, reorder, rollback, gc, list, installed, download, downloadInstalled, publishInstalled, get, indexFile };
+  return { base, upload, test, review, edit, editInstalled, move, reorder, rollback, gc, list, installed, download, downloadInstalled, publishInstalled, get, indexFile, publicKeys, addSigningKey, revokeSigningKey, setSignaturePolicy };
 }

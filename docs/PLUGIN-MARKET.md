@@ -124,7 +124,7 @@ X-Plugin-Signature: <base64 Ed25519 signature over the raw zip bytes>
 - 未知/撤销 key、签名无效：上传被拒绝
 - 未带签名：允许上传，但商城和后台显示「未签名」
 - 签名只证明 zip 来源和完整性，不替代管理员测试、沙箱或 review
-- key registry 目前由 owner 直接维护；后台 key 管理 UI 属于后续项
+- 后台「诊断与内容 → 签名密钥」可添加/撤销公钥，并设置哪些 class 必须签名；信任根仍只由 owner 的 admin token 管理
 
 ### 后台安装 / 卸载
 
