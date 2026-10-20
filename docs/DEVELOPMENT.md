@@ -25,6 +25,7 @@ restate the upstream design — it points at it:
 | [`docs/FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) | the Forge compatibility matrix and the explicit unsupported list |
 | [`docs/PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | the live plugin issue list, priorities, status and suggested order of work |
 | [`docs/UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | the 2026-10-20 triage of the 26 upstream `dev` commits and the selected port |
+| [`docs/TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) | the hardened deployment baseline for trusted plugins (non-root, read-only rootfs, caps, pins, consent) |
 | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) | plugin architecture, security boundaries, admin console and residual risks |
 | [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) | how we research/change/test/deploy, the merge discipline, and the GitHub/Gitee push |
 | [`docs/DEPLOY.md`](DEPLOY.md) | upstream deployment (Windows host, Docker, proxy) |

@@ -925,7 +925,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       + kv('加载失败 / 跳过', skipped.length + ' 个')
       + kv('警告', warnings.length + ' 个')
       + kv('Forge 导入', forged.length + ' 个')
-      + kv('脚本 probe', p.probe ? (p.probe.childRuns + ' 次 / 最近 ' + p.probe.lastMs + ' ms / 超时 ' + p.probe.timeouts + ' 次') : '—')
+      + kv('脚本 probe', p.probe ? (p.probe.childRuns + ' 次 / 缓存 ' + p.probe.cacheHits + ' / 磁盘 ' + p.probe.diskHits + ' / 最近 ' + p.probe.lastMs + ' ms / 超时 ' + p.probe.timeouts + ' 次') : '—')
       + kv('房间正在使用内容集', d.rooms.filter(function (r) { return r.content && !r.content.vanilla; }).length + ' 个')
       + kv('脚本 / 信任插件', scripts.length + ' 个');
     el('pluginPolicy').innerHTML = p.policy ? (

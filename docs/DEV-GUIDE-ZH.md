@@ -46,6 +46,7 @@
 | `docs/FORGE-COMPATIBILITY.md` | 中 | Forge 兼容矩阵与明确不支持清单 |
 | `docs/PLUGIN-BACKLOG.md` | 中 | 插件问题清单、优先级、状态和建议排期 |
 | `docs/UPSTREAM-DEV-TRIAGE.md` | 英/中 | 上游 `dev` 26 个提交的筛选与移植记录 |
+| `docs/TRUSTED-DEPLOY.md` | 中 | trusted 插件生产部署基线（非 root、只读 rootfs、cap、pin、consent） |
 | `docs/PLUGIN-REVIEW.md` | 中 | 插件体系架构、安全边界、运营台与残余风险 |
 | `shared/protocol.js` | — | **线协议即规范**（`C2S` / `S2C` 表 + 校验器） |
 | **`docs/DEV-GUIDE-ZH.md`（本文）** | 中 | 结构地图 + 二次开发手册 + 优化建议 |

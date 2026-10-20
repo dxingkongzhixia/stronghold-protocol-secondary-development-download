@@ -49,7 +49,8 @@
 
 ### P0-1 trusted 生产隔离未完成
 
-- 状态：`TODO`
+- 状态：`PARTIAL`
+- 方案：[`TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) 已给出只读 rootfs / 非 root / cap_drop / 网络边界 / pin+consent 的 Compose 基线；容器化实测仍需在部署机完成。
 - 现状：
   - `trusted` 默认关闭
   - 公网 / 通配监听默认拒绝
