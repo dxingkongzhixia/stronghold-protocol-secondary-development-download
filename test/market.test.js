@@ -41,6 +41,14 @@ test('market: upload pending, review/test/approve, active download, duplicate an
   const dl = market.download('ordinary', 'data-demo');
   assert.ok(dl && dl.bytes.length === ordinary.length);
   assert.equal(market.list({ status: 'active' })[0].downloads, 1);
+  const hidden = market.edit('ordinary', 'data-demo', { description: 'edited', author: 'owner', app: '>=0.4.0 <0.5.0', api: 2, listed: false }, { reviewer: 'admin' });
+  assert.deepEqual([hidden.description, hidden.author, hidden.app, hidden.api, hidden.listed, hidden.download], ['edited', 'owner', '>=0.4.0 <0.5.0', 2, false, null]);
+  assert.equal(market.list({ status: 'active' }).length, 0, 'an unlisted entry leaves the public list');
+  assert.equal(market.download('ordinary', 'data-demo'), null);
+  const listed = market.edit('ordinary', 'data-demo', { listed: true }, { reviewer: 'admin' });
+  assert.equal(listed.download, '/market/api/download/ordinary/data-demo');
+  assert.equal(market.download('ordinary', 'data-demo').bytes.length, ordinary.length);
+  assert.throws(() => market.edit('ordinary', 'data-demo', { app: 'not a range' }), /version range/);
   assert.equal(market.download('ordinary', 'missing'), null);
   const forge = zipDir(path.join(ROOT, 'test/fixtures/forge/numbers-pack'));
   const forged = await market.upload({ kind: 'forge', bytes: forge, uploadedBy: 'tester' });
@@ -80,12 +88,12 @@ test('market: compatibility says whether mainline 0.3.x / this 0.4.x build can u
   assert.equal(forged.compat.ok, null, 'a Forge pack is accepted only after its import test');
 });
 
-test('market lists live installed plugins separately from store entries', () => {
+test('market lists live installed plugins separately from store entries', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-installed-'));
   try {
     const pluginDir = path.join(root, 'plugins', 'local-skin');
     fs.mkdirSync(pluginDir, { recursive: true });
-    fs.writeFileSync(path.join(pluginDir, 'plugin.json'), '{}');
+    fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({ manifest: 2, name: '本机外观', version: '1.0.0', class: 'cosmetic', app: '>=0.3.0 <0.4.0', api: 1 }));
     fs.writeFileSync(path.join(pluginDir, 'x.png'), Buffer.from([1, 2, 3]));
     const registry = { plugins: () => [
       { id: 'local-skin', source: 'plugins', class: 'cosmetic', status: 'loaded', bytes: 123, where: pluginDir, manifest: { name: { zh: '本机外观' }, version: '1.0.0', app: '>=0.3.0 <0.4.0', api: 1 } },
@@ -101,5 +109,9 @@ test('market lists live installed plugins separately from store entries', () => 
     );
     const zip = market.downloadInstalled('local-skin');
     assert.ok(zip && zip.bytes.length > 0);
+    const edited = market.editInstalled('local-skin', { description: '本机说明', author: 'owner', app: '>=0.4.0 <0.5.0', api: 2 }, { reviewer: 'admin' });
+    assert.deepEqual([edited.description, edited.author, edited.app, edited.api, edited.compat.own], ['本机说明', 'owner', '>=0.4.0 <0.5.0', 2, true]);
+    const published = await market.publishInstalled('local-skin', { reviewer: 'admin' });
+    assert.deepEqual([published.kind, published.status, published.id, published.compat.ok], ['ordinary', 'pending', 'local-skin', true]);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

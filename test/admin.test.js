@@ -348,12 +348,33 @@ test('the admin page is a self-contained console: nine views, hash routing, sear
   // 来源配置 (docs/MATCHMAKING.md §12.3): the origins edited in place, saved through the API
   assert.ok(html.includes('id="originsList"') && html.includes('id="originsSave"') && html.includes('id="originsRevert"'), 'the origins view is wired');
   assert.ok(html.includes('/admin/api/origins?token='), 'it reads and writes the origins config');
-  // read-only still: the write endpoints are exactly notify + bug status
+  // 商城管理: metadata/listing edits and packaging an installed plugin
+  assert.ok(html.includes('id="marketBody"') && html.includes('id="publishBtn"'), 'the market manager is wired');
+  assert.ok(html.includes('/admin/api/market?token='), 'it writes marketplace metadata through the admin API');
+  assert.ok(html.includes('/admin/api/plugins/ai'), 'the reserved AI surface is documented in the page');
   for (const route of ['/admin/api/notify', '/admin/api/bug/status']) {
     assert.ok(html.includes(route + '?token='), `${route} is wired`);
   }
 });
 
+
+test('GET /admin/api/plugins/ai reserves the AI takeover surface behind the admin token', async () => {
+  const srv = await startServer({ port: 0, quiet: true, accounts: true, db: openMemoryDb(), adminToken: 'testtok' });
+  try {
+    const base = `http://localhost:${srv.port}`;
+    assert.equal((await fetch(`${base}/admin/api/plugins/ai`)).status, 403);
+    const cap = await fetch(`${base}/admin/api/plugins/ai?token=testtok`);
+    assert.equal(cap.status, 200);
+    const doc = await cap.json();
+    assert.equal(doc.reserved, true);
+    assert.equal(doc.executor, false);
+    assert.deepEqual(doc.actions, ['edit', 'publish', 'test', 'approve', 'reject']);
+    const post = await fetch(`${base}/admin/api/plugins/ai?token=testtok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    assert.equal(post.status, 501, 'no AI executor is enabled by default');
+  } finally {
+    await srv.close();
+  }
+});
 
 test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and the owner policy', (t) => {
   const forgeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-admin-forge-'));
@@ -372,7 +393,7 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
     report: () => ({ skipped: [{ id: 'bad', problems: ['no manifest'] }], warnings: ['one warning'] }),
   };
   const policy = { get: () => ({ rooms: 'host', default: [], allow: ['*'], classes: { cosmetic: true, content: true }, maxSets: 4, allowIncompatible: ['demo'] }) };
-  const p = buildPluginSnapshot({ registry, policy, contents: { stats: () => ({ sets: 2, held: 1, builds: 3 }) } });
+  const p = buildPluginSnapshot({ registry, policy, contents: { stats: () => ({ sets: 2, held: 1, builds: 3 }) }, market: { list: () => [{ id: 'demo', status: 'active' }] } });
   assert.equal(p.installed[0].id, 'demo');
   assert.equal(p.installed[0].name, 'Demo');
   assert.equal(p.installed[0].hasContent, true);
@@ -388,6 +409,7 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
   assert.deepEqual(p.policy.allowIncompatible, ['demo']);
   assert.equal(typeof p.probe.requests, 'number');
   assert.deepEqual(p.contentSets, { sets: 2, held: 1, builds: 3 });
+  assert.deepEqual(p.market, [{ id: 'demo', status: 'active' }]);
   assert.deepEqual(buildPluginSnapshot(null).installed, []);
 });
 

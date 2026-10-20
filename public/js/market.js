@@ -54,7 +54,7 @@ const row = (p, admin = false) => {
   const kindLabel = KIND[p.kind] || p.kind || '插件';
   const clsLabel = classLabel(p.class);
   const status = STATUS[p.status] || p.status || '';
-  const description = p.installed ? '本机已安装，未上架商城。' : (p.description || '没有填写描述。');
+  const description = p.installed ? (p.description || '本机已安装，未上架商城。') : (p.description || '没有填写描述。');
   const compat = compatibilityLine(p);
   const direct = p.download && (!Array.isArray(p.sources) || !p.sources.length);
   const actions = admin

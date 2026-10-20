@@ -405,11 +405,44 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       const body = await readJsonBody(req);
       if (!body || typeof body !== 'object' || Array.isArray(body)) { sendJson(req, res, 400, { error: '请求体需要是 JSON 对象' }); return; }
       try {
-        const r = await market.review(String(body.kind || ''), String(body.id || ''), String(body.action || ''), { reviewer: 'admin', note: body.note });
+        const action = String(body.action || '');
+        const kind = String(body.kind || '');
+        const id = String(body.id || '');
+        if (action === 'edit') {
+          const r = market.edit(kind, id, body.fields && typeof body.fields === 'object' ? body.fields : {}, { reviewer: 'admin' });
+          sendJson(req, res, 200, { ok: true, action, entry: r });
+          return;
+        }
+        if (action === 'edit-installed') {
+          const r = market.editInstalled(id, body.fields && typeof body.fields === 'object' ? body.fields : {}, { reviewer: 'admin' });
+          sendJson(req, res, 200, { ok: true, action, entry: r });
+          return;
+        }
+        if (action === 'publish') {
+          const r = await market.publishInstalled(id, { reviewer: 'admin' });
+          sendJson(req, res, 200, { ok: true, action, entry: r });
+          return;
+        }
+        const r = await market.review(kind, id, action, { reviewer: 'admin', note: body.note });
         sendJson(req, res, 200, r);
       } catch (e) {
         sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300) });
       }
+      return;
+    }
+    // Reserved AI takeover surface: the same admin-token boundary, a stable capability document today, and a 501
+    // executor until an operator explicitly configures one. Kept separate so a future agent can be added without
+    // changing the human admin API.
+    if (parts.rawPath === '/admin/api/plugins/ai') {
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        sendJson(req, res, 200, {
+          ok: true, reserved: true, version: 1, auth: 'admin-token', executor: false,
+          actions: ['edit', 'publish', 'test', 'approve', 'reject'],
+          note: 'Reserved for an owner-approved AI plugin manager; no executor is enabled in this build.',
+        });
+        return;
+      }
+      sendJson(req, res, 501, { ok: false, error: 'AI plugin takeover is reserved but no executor is configured' });
       return;
     }
     // bug report status (server/community.js): POST { id, status } marks a report 待处理 / 已受理 / 已修复.
@@ -454,7 +487,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/admin/api/state') {
       const qs = new URLSearchParams(parts.query);
-      sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth, community, bugStatus: qs.get('bugStatus'), bugSort: qs.get('bugSort') || 'status', plugins: { registry: packs, policy, contents } }));
+      sendJson(req, res, 200, buildSnapshot({ registry, lobby, matchmaker: lobby.mm, auth, community, bugStatus: qs.get('bugStatus'), bugSort: qs.get('bugSort') || 'status', plugins: { registry: packs, policy, contents, market } }));
       return;
     }
     const body = Buffer.from(ADMIN_HTML);
@@ -509,7 +542,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
       || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
-      || parts.rawPath === '/admin/api/market'
+      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/plugins/ai'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;

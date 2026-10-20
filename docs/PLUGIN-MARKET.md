@@ -60,8 +60,21 @@ POST /admin/api/market?token=...
 - `test`：在临时目录安装/导入并做真实检查，不改变状态
 - `approve`：先 `test`，通过后变为 `active`
 - `reject`：变为 `rejected`
+- `edit`：修改 `description` / `author` / `app` / `api` / `listed`；只改商城元数据，不碰 zip 或插件代码
+- `publish`：把 `plugins/<id>/` 打包为新的普通插件条目（`pending`），再由管理员测试 / 通过
 
 审核不会把插件放进游戏服务器的 `plugins/`，也不会执行插件脚本。
+
+`/admin` 的「插件与内容 → 商城插件管理」直接编辑这些字段：描述、作者、`app` 兼容范围、API level 和「上架」开关。`listed: false` 的条目即使已通过审核也不会出现在公开列表或下载接口。
+
+### AI 接管接口（预留）
+
+```http
+GET  /admin/api/plugins/ai?token=...
+POST /admin/api/plugins/ai?token=...
+```
+
+`GET` 返回固定的能力声明（`reserved: true`、`executor: false`、可执行动作列表）；`POST` 当前返回 **501**，没有启用任何执行器。这个接口和人类管理员共用 `/admin/api/market` 的 `admin-token` 边界；将来接入 AI 时必须由 owner 显式启用，AI 不能绕过测试 / 通过 / 上架流程。
 
 ## 下载
 

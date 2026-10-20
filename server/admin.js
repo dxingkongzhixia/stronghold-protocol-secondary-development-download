@@ -178,22 +178,27 @@ function forgeProvenance(p) {
 }
 
 export function buildPluginSnapshot(info = {}) {
-  const { registry, policy, contents } = info || {};
+  const { registry, policy, contents, market } = info || {};
   const list = registry && typeof registry.plugins === 'function' ? registry.plugins() : [];
   let report = { skipped: [], warnings: [] };
   try { report = registry?.report?.() || report; } catch { /* optional diagnostics */ }
   let ownerPolicy = null;
   try { ownerPolicy = policy?.get?.() || null; } catch { /* optional policy */ }
+  const marketInstalled = new Map(
+    (market && typeof market.installed === 'function' ? market.installed() : []).map((x) => [x.id, x]),
+  );
   return {
     installed: list.map((p) => {
       const m = p.manifest || {};
       const name = typeof m.name === 'string' ? m.name : (m.name && (m.name.zh || m.name.en)) || p.id;
       const permissions = Array.isArray(m.permissions) ? m.permissions
         : (m.permissions && typeof m.permissions === 'object' ? Object.keys(m.permissions) : []);
+      const meta = marketInstalled.get(p.id) || {};
       return {
         id: p.id, name, class: p.class, status: p.status, version: m.version || null,
-        app: m.app || null, api: m.api ?? null, scope: Array.isArray(m.scope) ? m.scope : null,
+        app: meta.app ?? m.app ?? null, api: meta.api ?? m.api ?? null, scope: Array.isArray(m.scope) ? m.scope : null,
         compatible: m.compatible !== false, permissions, bytes: Number.isFinite(p.bytes) ? p.bytes : null,
+        description: meta.description ?? null, author: meta.author ?? null, compat: meta.compat || null,
         hasContent: !!p.content, hasScript: !!p.script, trusted: p.class === 'trusted',
         forge: forgeProvenance(p),
         missing: p.missing === true,
@@ -206,6 +211,7 @@ export function buildPluginSnapshot(info = {}) {
     warnings: Array.isArray(report.warnings) ? report.warnings : [],
     probe: scriptProbeStats(),
     contentSets: contents && typeof contents.stats === 'function' ? contents.stats() : null,
+    market: market && typeof market.list === 'function' ? market.list({ admin: true }) : [],
     policy: ownerPolicy ? {
       rooms: ownerPolicy.rooms, default: ownerPolicy.default || [], allow: ownerPolicy.allow || [],
       classes: ownerPolicy.classes || {}, maxSets: ownerPolicy.maxSets,
@@ -452,6 +458,12 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .search{flex:1;min-width:170px;max-width:360px;background:var(--panel2);color:var(--text);border:1px solid var(--line2);
   border-radius:8px;padding:6px 11px;font:inherit;font-size:13px}
 .search:focus{outline:none;border-color:var(--mint-dim)}
+.market-input{width:100%;min-width:100px;max-width:220px;background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:6px;padding:4px 7px;font:inherit;font-size:12px}
+.market-input:focus{outline:none;border-color:var(--mint-dim)}
+.market-input--wide{min-width:180px;max-width:300px}
+.market-check{width:15px;height:15px;accent-color:var(--mint)}
+.market-actions{display:flex;gap:5px;flex-wrap:wrap}
+.market-actions button{padding:3px 7px;font-size:12px}
 .tools .hint{color:var(--dim2);font-size:12px}
 .tablewrap{overflow:auto;max-height:66vh}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -663,8 +675,26 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         </div></section>
       </div>
       <section class="panel">
+        <h2>商城插件管理<em id="marketCount"></em></h2>
+        <div class="panel__body hint">描述、作者、兼容性（app/API）和上架状态可直接编辑；保存只改商城元数据，不改插件文件。测试 / 通过后才开放下载。</div>
+        <div class="tools">
+          <select id="publishSelect" aria-label="选择本机插件"></select>
+          <button type="button" id="publishBtn">把本机插件打包上架</button>
+          <span id="publishMsg" class="hint"></span>
+        </div>
+        <div class="tablewrap"><table><thead><tr><th>ID</th><th>来源 / 类型</th><th>状态</th><th>描述</th><th>作者</th><th>app</th><th>API</th><th>上架</th><th>操作</th></tr></thead><tbody id="marketBody"></tbody></table></div>
+        <div class="panel__body"><span id="marketMsg" class="hint"></span></div>
+        <div class="panel__body hint">AI 接管接口（预留）：<code>GET /admin/api/plugins/ai</code> 返回能力声明；当前 POST 返回 501，未启用执行器，不会自行改动商城。</div>
+      </section>
+      <section class="panel">
+        <h2>本机插件元数据<em id="installedMetaCount"></em></h2>
+        <div class="panel__body hint">只改商城展示用的描述 / 作者 / 兼容范围，不改 plugins/ 里的文件；要真正上架请用上方「打包上架」。</div>
+        <div class="tablewrap"><table><thead><tr><th>ID</th><th>描述</th><th>作者</th><th>app</th><th>API</th><th>操作</th></tr></thead><tbody id="installedMetaBody"></tbody></table></div>
+        <div class="panel__body"><span id="installedMetaMsg" class="hint"></span></div>
+      </section>
+      <section class="panel">
         <h2>已安装插件<em id="pluginCount"></em></h2>
-        <div class="tablewrap"><table><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>版本</th><th>状态</th><th>作用域</th><th>内容</th><th>脚本/信任</th><th>大小</th></tr></thead><tbody id="pluginBody"></tbody></table></div>
+        <div class="tablewrap"><table><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>版本</th><th>状态</th><th>作用域</th><th>内容</th><th>脚本/信任</th><th>兼容</th><th>大小</th></tr></thead><tbody id="pluginBody"></tbody></table></div>
       </section>
       <section class="panel">
         <h2>Forge 导入<em id="forgeCount"></em></h2>
@@ -803,6 +833,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   var COLORS = { offline:'#8a8f8c', online:'#4ed8af', room:'#5cc8ff', queue:'#ffd089', mmplay:'#ffa94d', alliance:'#b28cff', solo:'#7bd88f' };
   var LABELS = { offline:'离线', online:'在线', room:'组队中', queue:'野排排队', mmplay:'野排游玩', alliance:'同盟游玩', solo:'单人游玩' };
   var ROLE_LABELS = { admin:'管理员', dev:'开发者' };
+  var CLASS_LABELS = { cosmetic:'外观', content:'玩法', ui:'界面', script:'脚本', trusted:'信任', lang:'语言', forge:'Forge 转换' };
   // 概览卡片：分组呈现。数值全部来自 /admin/api/state 的 counts（账号按状态计数，游客是会话数，另计）。
   var CARD_GROUPS = [
     ['玩家', [['accounts','注册账号','#4ed8af'],['connected','当前在线','#4ed8af'],['guests','游客在线','#ffd089'],['offline','离线','#8a8f8c']]],
@@ -976,6 +1007,63 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     var policyArea = el('pluginPolicyJson');
     if (policyArea && document.activeElement !== policyArea) policyArea.value = JSON.stringify(pj, null, 2);
     el('pluginCount').textContent = ' · ' + list.length + ' 个';
+    // 商城条目：描述 / 作者 / app / API / 上架都可编辑；保存只写商城元数据，不动插件文件。
+    var market = Array.isArray(p.market) ? p.market : [];
+    el('marketCount').textContent = ' · ' + market.length + ' 个';
+    var statusLabels = { active: '通过', pending: '待审核', rejected: '已拒绝' };
+    var marketBody = el('marketBody');
+    var focusNow = document.activeElement;
+    var editingMarket = marketBody && focusNow && marketBody.contains(focusNow)
+      && /^(INPUT|SELECT|TEXTAREA)$/.test(focusNow.tagName || '');
+    if (marketBody && !editingMarket) {
+      marketBody.innerHTML = market.map(function (x) {
+        var listed = x.listed !== false;
+        var state = x.status === 'active' ? (listed ? '已上架' : '已下架') : (statusLabels[x.status] || x.status || '—');
+        var statePill = x.status === 'active'
+          ? (listed ? '<span class="pill yes">已上架</span>' : '<span class="pill no">已下架</span>')
+          : '<span class="pill' + (x.status === 'rejected' ? ' no' : '') + '">' + esc(state) + '</span>';
+        var kind = x.kind === 'forge' ? 'Forge' : '普通';
+        var cls = CLASS_LABELS[x.class] || x.class || '未声明';
+        return '<tr data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
+          + cell(esc(x.id), 'mono')
+          + cell(esc(kind + ' / ' + cls))
+          + cell(statePill)
+          + cell('<input class="market-input market-input--wide" data-field="description" value="' + esc(x.description || '') + '" placeholder="描述">')
+          + cell('<input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者">')
+          + cell('<input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0">')
+          + cell('<input class="market-input" data-field="api" type="number" min="1" max="99" value="' + esc(x.api == null ? '' : String(x.api)) + '" placeholder="API">')
+          + cell('<input class="market-check" data-field="listed" type="checkbox"' + (listed ? ' checked' : '') + '>')
+          + cell('<div class="market-actions"><button type="button" data-mact="save">保存</button><button type="button" data-mact="test">测试</button><button type="button" data-mact="approve">通过</button><button type="button" data-mact="reject">拒绝</button></div>')
+          + '</tr>';
+      }).join('') || '<tr><td colspan="9" class="empty">商城还没有条目</td></tr>';
+    }
+    var published = new Set(market.map(function (x) { return x.id; }));
+    var installable = list.filter(function (x) { return x.class !== 'lang' && !published.has(x.id); });
+    var pubSelect = el('publishSelect');
+    if (pubSelect && document.activeElement !== pubSelect) {
+      pubSelect.innerHTML = installable.length
+        ? installable.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name || x.id) + ' (' + esc(x.class || '?') + ')</option>'; }).join('')
+        : '<option value="">没有可上架的本机插件</option>';
+    }
+    el('publishBtn').disabled = !installable.length;
+    var metaList = list.filter(function (x) { return x.class !== 'lang'; });
+    el('installedMetaCount').textContent = ' · ' + metaList.length + ' 个';
+    var metaBody = el('installedMetaBody');
+    var focusMeta = document.activeElement;
+    var editingMeta = metaBody && focusMeta && metaBody.contains(focusMeta)
+      && /^(INPUT|SELECT|TEXTAREA)$/.test(focusMeta.tagName || '');
+    if (metaBody && !editingMeta) {
+      metaBody.innerHTML = metaList.map(function (x) {
+        return '<tr data-id="' + esc(x.id) + '">'
+          + cell(esc(x.id), 'mono')
+          + cell('<input class="market-input market-input--wide" data-field="description" value="' + esc(x.description || '') + '" placeholder="描述">')
+          + cell('<input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者">')
+          + cell('<input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0">')
+          + cell('<input class="market-input" data-field="api" type="number" min="1" max="99" value="' + esc(x.api == null ? '' : String(x.api)) + '" placeholder="API">')
+          + cell('<div class="market-actions"><button type="button" data-mact="edit-installed">保存</button></div>')
+          + '</tr>';
+      }).join('') || '<tr><td colspan="6" class="empty">没有可编辑的本机插件</td></tr>';
+    }
     el('pluginBody').innerHTML = list.map(function (x) {
       return row([
         cell(esc(x.id), 'mono'), cell(esc(x.name || x.id)), cell(esc(x.class || '')), cell(esc(x.version || '—')),
@@ -985,7 +1073,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         cell(x.compatible ? '<span class="pill yes">兼容</span>' : '<span class="pill no" title="' + esc(x.app || '') + '">不兼容</span>'),
         cell(x.bytes == null ? '—' : (Math.round(x.bytes / 1024) + ' KB'))
       ]);
-    }).join('') || '<tr><td colspan="9" class="empty">还没有安装插件</td></tr>';
+    }).join('') || '<tr><td colspan="10" class="empty">还没有安装插件</td></tr>';
     el('forgeCount').textContent = ' · ' + forged.length + ' 个';
     el('forgeBody').innerHTML = forged.map(function (x) {
       var f = x.forge || {};
@@ -1021,6 +1109,73 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     }).join('') || '<div class="empty">没有跳过项或警告</div>';
     el('navPlugins').textContent = list.length;
   }
+
+  function postMarket(body, msgEl) {
+    var msg = msgEl || el('marketMsg');
+    if (msg) { msg.textContent = '处理中…'; msg.style.color = 'var(--dim)'; }
+    return fetch('/admin/api/market?token=' + encodeURIComponent(token), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (msg) {
+          msg.textContent = res.ok ? ('完成：' + ((res.j && res.j.entry && (res.j.entry.name || res.j.entry.id)) || '已更新')) : ('失败：' + ((res.j && res.j.error) || 'HTTP'));
+          msg.style.color = res.ok ? 'var(--mint)' : '#ff9a9a';
+        }
+        if (res.ok && typeof tick === 'function') tick();
+        return res;
+      })
+      .catch(function (e) { if (msg) { msg.textContent = '失败：' + e.message; msg.style.color = '#ff9a9a'; } });
+  }
+
+  el('marketBody').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-mact]');
+    if (!b) return;
+    var tr = b.closest('tr');
+    if (!tr) return;
+    var kind = tr.dataset.kind;
+    var id = tr.dataset.id;
+    var action = b.dataset.mact;
+    if (action === 'save') {
+      var field = function (f) { return tr.querySelector('[data-field="' + f + '"]'); };
+      var apiRaw = field('api') ? field('api').value.trim() : '';
+      postMarket({
+        action: 'edit', kind: kind, id: id,
+        fields: {
+          description: field('description') ? field('description').value : '',
+          author: field('author') ? field('author').value : '',
+          app: field('app') ? field('app').value.trim() || null : null,
+          api: apiRaw === '' ? null : Number(apiRaw),
+          listed: !!(field('listed') && field('listed').checked),
+        },
+      });
+      return;
+    }
+    postMarket({ action: action, kind: kind, id: id });
+  });
+
+  el('publishBtn').addEventListener('click', function () {
+    var id = el('publishSelect').value;
+    if (!id) return;
+    postMarket({ action: 'publish', id: id }, el('publishMsg'));
+  });
+
+  el('installedMetaBody').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-mact="edit-installed"]');
+    if (!b) return;
+    var tr = b.closest('tr');
+    if (!tr) return;
+    var field = function (f) { return tr.querySelector('[data-field="' + f + '"]'); };
+    var apiRaw = field('api') ? field('api').value.trim() : '';
+    postMarket({
+      action: 'edit-installed', id: tr.dataset.id,
+      fields: {
+        description: field('description') ? field('description').value : '',
+        author: field('author') ? field('author').value : '',
+        app: field('app') ? field('app').value.trim() || null : null,
+        api: apiRaw === '' ? null : Number(apiRaw),
+      },
+    }, el('installedMetaMsg'));
+  });
 
   el('pluginPolicySave').addEventListener('click', function () {
     var area = el('pluginPolicyJson');
