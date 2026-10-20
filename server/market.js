@@ -172,7 +172,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
   function installed() {
     const list = registry && typeof registry.plugins === 'function' ? registry.plugins() : [];
     return list.filter((p) => p && p.source === 'plugins' && p.class !== 'lang').map((p) => ({
-      id: p.id, kind: 'installed', name: (p.manifest && (p.manifest.name?.zh || p.manifest.name?.en)) || p.id,
+      id: p.id, kind: 'installed', name: (typeof p.manifest?.name === 'string' ? p.manifest.name : (p.manifest?.name?.zh || p.manifest?.name?.en)) || p.id,
       version: p.manifest?.version || null, class: p.class, status: 'installed', bytes: p.bytes || null,
       description: 'Installed locally; not published to the store', download: null, sources: [], installed: true,
     }));
