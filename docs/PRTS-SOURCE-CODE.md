@@ -1,6 +1,6 @@
 # PRTS「源代码」玩法插件 — 开发文档（评审稿）
 
-> 状态：**A1 已完成（通用合约与校验），运行时尚未接入**（2026-10-20）。
+> 状态：**A1 + A2 已完成**（2026-10-21）；B–E 见[剩余开发计划](PRTS-SOURCE-CODE-REMAINING.md)。
 > 性质：**本 fork 独有**的内容插件 + fork 引擎能力，不承诺主线可用。
 > 流程：讨论 → **本文档** → 开发（A→E）。
 
@@ -303,7 +303,7 @@ plugins/prts-source-code/
   - 限制写入：Boss 轮备战开始时按 Boss 记录锁定待部署区费用最高的干员；第一次复活后的强化锁写入下一次备战；
   - 清除协议按“每名玩家 -X LP”折算到合并团队 LP；
   - `test/sim/boss-protocol.test.js` 与 `test/match/deploy-lock.test.js` 覆盖上述运行时；
-- ⏳ 尚未接入插件数据与 UI。
+- ⏳ 尚未接入插件数据与 UI；B–E 的分步任务、依赖和验收见 [`PRTS-SOURCE-CODE-REMAINING.md`](PRTS-SOURCE-CODE-REMAINING.md)。
 
 ---
 
