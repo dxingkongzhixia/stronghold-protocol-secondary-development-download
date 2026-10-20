@@ -1347,10 +1347,16 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     if (msg) { msg.textContent = '处理中…'; msg.style.color = 'var(--dim)'; }
     return fetch('/admin/api/market?token=' + encodeURIComponent(token), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    }).then(function (r) {
+      return r.text().then(function (text) {
+        var j = {};
+        try { j = text ? JSON.parse(text) : {}; } catch (e) { j = { error: '服务返回了非 JSON 响应（HTTP ' + r.status + '）' }; }
+        return { ok: r.ok, status: r.status, j: j };
+      });
+    })
       .then(function (res) {
         if (msg) {
-          msg.textContent = res.ok ? ('完成：' + ((res.j && res.j.entry && (res.j.entry.name || res.j.entry.id)) || '已更新')) : ('失败：' + ((res.j && res.j.error) || 'HTTP'));
+          msg.textContent = res.ok ? ('完成：' + ((res.j && res.j.entry && (res.j.entry.name || res.j.entry.id)) || '已更新')) : ('失败：' + ((res.j && res.j.error) || ('HTTP ' + res.status)));
           msg.style.color = res.ok ? 'var(--mint)' : '#ff9a9a';
         }
         if (res.ok && typeof tick === 'function') tick();
@@ -1505,9 +1511,15 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     msg.textContent = '导入中…'; msg.style.color = 'var(--dim)';
     fetch('/admin/api/market/import?token=' + encodeURIComponent(token) + '&kind=' + encodeURIComponent(kind), {
       method: 'POST', headers: { 'Content-Type': 'application/zip', 'X-Plugin-Filename': file.name }, body: file,
-    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    }).then(function (r) {
+      return r.text().then(function (text) {
+        var j = {};
+        try { j = text ? JSON.parse(text) : {}; } catch (e) { j = { error: '服务返回了非 JSON 响应（HTTP ' + r.status + '）' }; }
+        return { ok: r.ok, status: r.status, j: j };
+      });
+    })
       .then(function (res) {
-        msg.textContent = res.ok ? ('已导入：' + (res.j.plugin && (res.j.plugin.name || res.j.plugin.id)) + '，等待审核') : ('导入失败：' + ((res.j && res.j.error) || 'HTTP'));
+        msg.textContent = res.ok ? ('已导入：' + (res.j.plugin && (res.j.plugin.name || res.j.plugin.id)) + '，等待审核') : ('导入失败：' + ((res.j && res.j.error) || ('HTTP ' + res.status)));
         msg.style.color = res.ok ? 'var(--mint)' : '#ff9a9a';
         el('pluginImportFile').value = '';
         if (res.ok) { pluginSection = 'market'; tick(); }
