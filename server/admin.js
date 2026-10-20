@@ -464,6 +464,32 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .market-check{width:15px;height:15px;accent-color:var(--mint)}
 .market-actions{display:flex;gap:5px;flex-wrap:wrap}
 .market-actions button{padding:3px 7px;font-size:12px}
+.plugin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;padding:12px 16px}
+.plugin-card{border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,rgba(18,28,25,.96),rgba(12,20,18,.92));padding:13px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.plugin-card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.plugin-card__title{font-weight:700;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+.plugin-card__id{font-family:ui-monospace,Consolas,monospace;color:var(--dim);font-size:11px;margin-top:2px}
+.plugin-card__badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.plugin-card__fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.plugin-card__field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.plugin-card__field--wide{grid-column:1 / -1}
+.plugin-card__field label{color:var(--dim);font-size:11px;letter-spacing:.03em}
+.plugin-card__field .market-input{width:100%;max-width:none;box-sizing:border-box}
+.plugin-card__compat{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:2px}
+.plugin-card__compat-label{color:var(--dim);font-size:11px;margin-right:2px}
+.plugin-card__compat .pill{font-size:11px}
+.compat-k{color:var(--dim);font-size:11px;margin-right:3px}
+.plugin-card__actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:2px}
+.plugin-card__actions button{padding:5px 10px;font-size:12px;border-radius:6px}
+.plugin-card__actions .danger{color:#ff9a9a;border-color:rgba(224,108,117,.45)}
+.plugin-card__facts{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;color:var(--dim);font-size:12px}
+.plugin-card__facts b{color:var(--text);font-weight:500}
+.plugin-card__listed{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:12px;white-space:nowrap}
+.plugin-empty{padding:26px 16px;border:1px dashed var(--line);border-radius:10px;color:var(--dim);text-align:center}
+.plugin-publish{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line)}
+.plugin-publish select{min-width:240px;max-width:360px;background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:7px;padding:6px 9px;font:inherit;font-size:13px}
+.plugin-publish button{padding:6px 11px;border-radius:7px;font-size:12px}
+@media (max-width:900px){.plugin-grid{grid-template-columns:1fr}.plugin-card__fields{grid-template-columns:1fr}.plugin-card__field--wide{grid-column:auto}}
 .tools .hint{color:var(--dim2);font-size:12px}
 .tablewrap{overflow:auto;max-height:66vh}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -677,24 +703,24 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       <section class="panel">
         <h2>商城插件管理<em id="marketCount"></em></h2>
         <div class="panel__body hint">描述、作者、兼容性（app/API）和上架状态可直接编辑；保存只改商城元数据，不改插件文件。测试 / 通过后才开放下载。</div>
-        <div class="tools">
+        <div class="tools plugin-publish">
           <select id="publishSelect" aria-label="选择本机插件"></select>
           <button type="button" id="publishBtn">把本机插件打包上架</button>
           <span id="publishMsg" class="hint"></span>
         </div>
-        <div class="tablewrap"><table><thead><tr><th>ID</th><th>来源 / 类型</th><th>状态</th><th>本服 0.4</th><th>主线 0.3.x</th><th>描述</th><th>作者</th><th>app</th><th>API</th><th>上架</th><th>操作</th></tr></thead><tbody id="marketBody"></tbody></table></div>
+        <div id="marketBody" class="plugin-grid"></div>
         <div class="panel__body"><span id="marketMsg" class="hint"></span></div>
         <div class="panel__body hint">AI 接管接口（预留）：<code>GET /admin/api/plugins/ai</code> 返回能力声明；当前 POST 返回 501，未启用执行器，不会自行改动商城。</div>
       </section>
       <section class="panel">
         <h2>本机插件元数据<em id="installedMetaCount"></em></h2>
         <div class="panel__body hint">只改商城展示用的描述 / 作者 / 兼容范围，不改 plugins/ 里的文件；要真正上架请用上方「打包上架」。</div>
-        <div class="tablewrap"><table><thead><tr><th>ID</th><th>本服 0.4</th><th>主线 0.3.x</th><th>描述</th><th>作者</th><th>app</th><th>API</th><th>操作</th></tr></thead><tbody id="installedMetaBody"></tbody></table></div>
+        <div id="installedMetaBody" class="plugin-grid"></div>
         <div class="panel__body"><span id="installedMetaMsg" class="hint"></span></div>
       </section>
       <section class="panel">
         <h2>已安装插件<em id="pluginCount"></em></h2>
-        <div class="tablewrap"><table><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>版本</th><th>状态</th><th>作用域</th><th>内容</th><th>脚本/信任</th><th>本服 0.4</th><th>主线 0.3.x</th><th>大小</th></tr></thead><tbody id="pluginBody"></tbody></table></div>
+        <div id="pluginBody" class="plugin-grid"></div>
       </section>
       <section class="panel">
         <h2>Forge 导入<em id="forgeCount"></em></h2>
@@ -983,8 +1009,8 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     var c = x.compat || {};
     if (x.kind === 'forge' || x.class === 'forge') {
       return {
-        own: '<span class="pill ' + (x.status === 'active' ? 'yes' : '') + '">' + (x.status === 'active' ? '已通过测试' : '待导入测试') + '</span>',
-        main: '<span class="pill">以导入结果为准</span>',
+        own: '<span class="compat-k">本服导入测试</span><span class="pill ' + (x.status === 'active' ? 'yes' : '') + '">' + (x.status === 'active' ? '已通过' : '待测试') + '</span>',
+        main: '<span class="compat-k">主线 0.3.x</span><span class="pill">以导入结果为准</span>',
       };
     }
     var unrestricted = c.unrestricted || !c.app;
@@ -994,8 +1020,8 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     var main = unrestricted ? '未限制' : c.mainline ? '兼容' : '不兼容';
     var strict = c.mainline && !c.auto && (x.class === 'content' || x.class === 'script' || x.class === 'trusted');
     return {
-      own: '<span class="pill ' + (ownOk ? 'yes' : 'no') + '">' + own + '</span>',
-      main: '<span class="pill ' + (mainOk ? 'yes' : 'no') + '"' + (strict ? ' title="版本兼容；内容 / 脚本 / 信任仍需 owner allowIncompatible"' : '') + '>' + main + '</span>',
+      own: '<span class="compat-k">本服 0.4</span><span class="pill ' + (ownOk ? 'yes' : 'no') + '">' + own + '</span>',
+      main: '<span class="compat-k">主线 0.3.x</span><span class="pill ' + (mainOk ? 'yes' : 'no') + '"' + (strict ? ' title="版本兼容；内容 / 脚本 / 信任仍需 owner allowIncompatible"' : '') + '>' + main + '</span>',
     };
   }
 
@@ -1042,23 +1068,25 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         var statePill = x.status === 'active'
           ? (listed ? '<span class="pill yes">已上架</span>' : '<span class="pill no">已下架</span>')
           : '<span class="pill' + (x.status === 'rejected' ? ' no' : '') + '">' + esc(state) + '</span>';
-        var kind = x.kind === 'forge' ? 'Forge' : '普通';
+        var kind = x.kind === 'forge' ? 'Forge 包' : '普通插件';
         var cls = CLASS_LABELS[x.class] || x.class || '未声明';
         var compat = compatPills(x);
-        return '<tr data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
-          + cell(esc(x.id), 'mono')
-          + cell(esc(kind + ' / ' + cls))
-          + cell(statePill)
-          + cell(compat.own)
-          + cell(compat.main)
-          + cell('<input class="market-input market-input--wide" data-field="description" value="' + esc(x.description || '') + '" placeholder="描述">')
-          + cell('<input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者">')
-          + cell('<input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0">')
-          + cell('<input class="market-input" data-field="api" type="number" min="1" max="99" value="' + esc(x.api == null ? '' : String(x.api)) + '" placeholder="API">')
-          + cell('<input class="market-check" data-field="listed" type="checkbox"' + (listed ? ' checked' : '') + '>')
-          + cell('<div class="market-actions"><button type="button" data-mact="save">保存</button><button type="button" data-mact="test">测试</button><button type="button" data-mact="approve">通过</button><button type="button" data-mact="reject">拒绝</button></div>')
-          + '</tr>';
-      }).join('') || '<tr><td colspan="11" class="empty">商城还没有条目</td></tr>';
+        return '<article class="plugin-card" data-plugin-card data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
+          + '<div class="plugin-card__head"><div>'
+          + '<div class="plugin-card__title">' + esc(x.name || x.id) + '</div>'
+          + '<div class="plugin-card__id">' + esc(x.id) + ' · v' + esc(x.version || '—') + '</div>'
+          + '<div class="plugin-card__badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span>' + statePill + '</div>'
+          + '</div><label class="plugin-card__listed"><input class="market-check" data-field="listed" type="checkbox"' + (listed ? ' checked' : '') + '>上架</label></div>'
+          + '<div class="plugin-card__fields">'
+          + '<div class="plugin-card__field plugin-card__field--wide"><label>描述</label><input class="market-input" data-field="description" value="' + esc(x.description || '') + '" placeholder="商城描述"></div>'
+          + '<div class="plugin-card__field"><label>作者</label><input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者"></div>'
+          + '<div class="plugin-card__field"><label>兼容范围 app</label><input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0"></div>'
+          + '<div class="plugin-card__field"><label>API level</label><input class="market-input" data-field="api" type="number" min="1" max="99" value="' + esc(x.api == null ? '' : String(x.api)) + '" placeholder="API"></div>'
+          + '</div>'
+          + '<div class="plugin-card__compat"><span class="plugin-card__compat-label">兼容性</span>' + compat.own + compat.main + '</div>'
+          + '<div class="plugin-card__actions"><button type="button" data-mact="save">保存</button><button type="button" data-mact="test">测试</button><button type="button" data-mact="approve">通过</button><button type="button" class="danger" data-mact="reject">拒绝</button></div>'
+          + '</article>';
+      }).join('') || '<div class="plugin-empty">商城还没有条目。可先用上方「把本机插件打包上架」创建待审核条目。</div>';
     }
     var published = new Set(market.map(function (x) { return x.id; }));
     var installable = list.filter(function (x) { return x.class !== 'lang' && !published.has(x.id); });
@@ -1078,29 +1106,44 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     if (metaBody && !editingMeta) {
       metaBody.innerHTML = metaList.map(function (x) {
         var compat = compatPills(x);
-        return '<tr data-id="' + esc(x.id) + '">'
-          + cell(esc(x.id), 'mono')
-          + cell(compat.own)
-          + cell(compat.main)
-          + cell('<input class="market-input market-input--wide" data-field="description" value="' + esc(x.description || '') + '" placeholder="描述">')
-          + cell('<input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者">')
-          + cell('<input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0">')
-          + cell('<input class="market-input" data-field="api" type="number" min="1" max="99" value="' + esc(x.api == null ? '' : String(x.api)) + '" placeholder="API">')
-          + cell('<div class="market-actions"><button type="button" data-mact="edit-installed">保存</button></div>')
-          + '</tr>';
-      }).join('') || '<tr><td colspan="8" class="empty">没有可编辑的本机插件</td></tr>';
+        var cls = CLASS_LABELS[x.class] || x.class || '未声明';
+        return '<article class="plugin-card" data-plugin-card data-id="' + esc(x.id) + '">'
+          + '<div class="plugin-card__head"><div>'
+          + '<div class="plugin-card__title">' + esc(x.name || x.id) + '</div>'
+          + '<div class="plugin-card__id">' + esc(x.id) + ' · v' + esc(x.version || '—') + '</div>'
+          + '<div class="plugin-card__badges"><span class="pill">本机插件</span><span class="pill">' + esc(cls) + '</span></div>'
+          + '</div></div>'
+          + '<div class="plugin-card__fields">'
+          + '<div class="plugin-card__field plugin-card__field--wide"><label>描述</label><input class="market-input" data-field="description" value="' + esc(x.description || '') + '" placeholder="商城描述"></div>'
+          + '<div class="plugin-card__field"><label>作者</label><input class="market-input" data-field="author" value="' + esc(x.author || '') + '" placeholder="作者"></div>'
+          + '<div class="plugin-card__field"><label>兼容范围 app</label><input class="market-input" data-field="app" value="' + esc(x.app || '') + '" placeholder=">=0.4.0 <0.5.0"></div>'
+          + '<div class="plugin-card__field"><label>API level</label><input class="market-input" data-field="api" type="number" min="1" max="99" value="' + esc(x.api == null ? '' : String(x.api)) + '" placeholder="API"></div>'
+          + '</div>'
+          + '<div class="plugin-card__compat"><span class="plugin-card__compat-label">兼容性</span>' + compat.own + compat.main + '</div>'
+          + '<div class="plugin-card__actions"><button type="button" data-mact="edit-installed">保存</button></div>'
+          + '</article>';
+      }).join('') || '<div class="plugin-empty">没有可编辑的本机插件。</div>';
     }
     el('pluginBody').innerHTML = list.map(function (x) {
       var compat = compatPills(x);
-      return row([
-        cell(esc(x.id), 'mono'), cell(esc(x.name || x.id)), cell(esc(x.class || '')), cell(esc(x.version || '—')),
-        cell(x.status === 'loaded' ? '<span class="pill yes">已加载</span>' : '<span class="pill">' + esc(x.status || '') + '</span>'),
-        cell(esc((x.scope || []).join(', ') || '—')), cell(x.hasContent ? '是' : '—'),
-        cell(x.trusted ? '<span class="pill no">原生信任</span>' : (x.hasScript ? '<span class="pill">沙箱脚本</span>' : '—')),
-        cell(compat.own), cell(compat.main),
-        cell(x.bytes == null ? '—' : (Math.round(x.bytes / 1024) + ' KB'))
-      ]);
-    }).join('') || '<tr><td colspan="11" class="empty">还没有安装插件</td></tr>';
+      var cls = CLASS_LABELS[x.class] || x.class || '未声明';
+      var state = x.status === 'loaded' ? '<span class="pill yes">已加载</span>' : '<span class="pill">' + esc(x.status || '') + '</span>';
+      var script = x.trusted ? '<span class="pill no">原生信任</span>' : (x.hasScript ? '<span class="pill">沙箱脚本</span>' : '—');
+      return '<article class="plugin-card">'
+        + '<div class="plugin-card__head"><div>'
+        + '<div class="plugin-card__title">' + esc(x.name || x.id) + '</div>'
+        + '<div class="plugin-card__id">' + esc(x.id) + ' · v' + esc(x.version || '—') + '</div>'
+        + '<div class="plugin-card__badges"><span class="pill">' + esc(cls) + '</span>' + state + '</div>'
+        + '</div></div>'
+        + '<div class="plugin-card__facts">'
+        + '<span>作用域 <b>' + esc((x.scope || []).join(', ') || '—') + '</b></span>'
+        + '<span>内容 <b>' + (x.hasContent ? '有' : '—') + '</b></span>'
+        + '<span>脚本/信任 <b>' + script + '</b></span>'
+        + '<span>大小 <b>' + (x.bytes == null ? '—' : (Math.round(x.bytes / 1024) + ' KB')) + '</b></span>'
+        + '</div>'
+        + '<div class="plugin-card__compat"><span class="plugin-card__compat-label">兼容性</span>' + compat.own + compat.main + '</div>'
+        + '</article>';
+    }).join('') || '<div class="plugin-empty">还没有安装插件</div>';
     el('forgeCount').textContent = ' · ' + forged.length + ' 个';
     el('forgeBody').innerHTML = forged.map(function (x) {
       var f = x.forge || {};
@@ -1157,13 +1200,13 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   el('marketBody').addEventListener('click', function (e) {
     var b = e.target.closest('[data-mact]');
     if (!b) return;
-    var tr = b.closest('tr');
-    if (!tr) return;
-    var kind = tr.dataset.kind;
-    var id = tr.dataset.id;
+    var card = b.closest('[data-plugin-card]');
+    if (!card) return;
+    var kind = card.dataset.kind;
+    var id = card.dataset.id;
     var action = b.dataset.mact;
     if (action === 'save') {
-      var field = function (f) { return tr.querySelector('[data-field="' + f + '"]'); };
+      var field = function (f) { return card.querySelector('[data-field="' + f + '"]'); };
       var apiRaw = field('api') ? field('api').value.trim() : '';
       postMarket({
         action: 'edit', kind: kind, id: id,
@@ -1189,12 +1232,12 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   el('installedMetaBody').addEventListener('click', function (e) {
     var b = e.target.closest('[data-mact="edit-installed"]');
     if (!b) return;
-    var tr = b.closest('tr');
-    if (!tr) return;
-    var field = function (f) { return tr.querySelector('[data-field="' + f + '"]'); };
+    var card = b.closest('[data-plugin-card]');
+    if (!card) return;
+    var field = function (f) { return card.querySelector('[data-field="' + f + '"]'); };
     var apiRaw = field('api') ? field('api').value.trim() : '';
     postMarket({
-      action: 'edit-installed', id: tr.dataset.id,
+      action: 'edit-installed', id: card.dataset.id,
       fields: {
         description: field('description') ? field('description').value : '',
         author: field('author') ? field('author').value : '',
