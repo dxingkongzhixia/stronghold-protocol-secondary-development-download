@@ -29,6 +29,7 @@
           <input id="zip" name="zip" type="file" accept=".zip,application/zip" required>
         </div>
         <button class="mc-btn mc-btn--primary" type="submit" id="submit">上传并提交审核</button>
+        <progress id="uploadProgress" max="100" value="0" hidden></progress>
         <p id="msg" class="market-status"></p>
       </form>
       <p class="market-note">不要上传官方游戏文件；Forge 包只支持部分转换。安装 zip 时请注意来源和校验值。</p>

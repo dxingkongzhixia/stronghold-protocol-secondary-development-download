@@ -133,6 +133,8 @@ test('market: order, move and related plugin bindings', async (t) => {
   assert.deepEqual(market.list({ status: 'pending', admin: true }).map((x) => x.id), ['alpha', 'beta']);
   market.move('ordinary', 'beta', 'up');
   assert.deepEqual(market.list({ status: 'pending', admin: true }).map((x) => x.id), ['beta', 'alpha']);
+  market.reorder('ordinary', ['alpha', 'beta']);
+  assert.deepEqual(market.list({ status: 'pending', admin: true }).map((x) => x.id), ['alpha', 'beta']);
   const edited = market.edit('ordinary', 'alpha', { related: ['beta'] });
   assert.deepEqual(edited.related, ['beta']);
   assert.deepEqual(edited.relatedPlugins.map((x) => [x.id, x.name]), [['beta', 'beta']]);

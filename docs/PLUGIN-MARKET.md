@@ -89,7 +89,20 @@ GET  /admin/api/plugins/ai?token=...
 POST /admin/api/plugins/ai?token=...
 ```
 
-`GET` 返回固定的能力声明（`reserved: true`、`executor: false`、可执行动作列表）；`POST` 当前返回 **501**，没有启用任何执行器。这个接口和人类管理员共用 `/admin/api/market` 的 `admin-token` 边界；将来接入 AI 时必须由 owner 显式启用，AI 不能绕过测试 / 通过 / 上架流程。
+`GET` 返回固定的能力声明（`reserved: true`、`executor: false`、可执行动作列表）；`POST` 当前返回 **501**，没有启用任何执行器。这个接口和人类管理员共用 `/admin/api/market` 的 `admin-token` 边界；将来接入 AI 时必须由 owner 显式启用，AI 不能绕过测试 / 通过 / 上架流程。接口目前只预留，不做写入。
+
+### 后台安装 / 卸载
+
+```http
+POST /admin/api/plugins/install?token=...
+Content-Type: application/zip
+<zip bytes>
+
+POST /admin/api/plugins/uninstall?token=...
+{ "id": "plugin-id" }
+```
+
+安装/更新会把旧目录移到 `plugins/_replaced/`，卸载会移到 `plugins/_removed/`，不会直接删除；操作后刷新 registry。只允许拥有 admin token 的 owner 使用。
 
 ## 下载
 
@@ -135,7 +148,10 @@ node tools/plugin.mjs check <id> --strict
 - 每一条显示**本服 0.4.0** 与**主线 0.3.x** 两个独立的兼容标签，再附 `app` 范围 / `API` 版本
 - 本机插件和没有镜像的插件使用浏览器原生下载链接；大文件不再先 `fetch` 成 blob 再保存
 - 后台支持浅色 / 深色切换，以及直接导入 zip
-- 支持调整同类条目的展示顺序；关联插件在后台和商城都会显示
+- 支持调整同类条目的展示顺序；支持拖拽排序
+- 关联插件在后台和商城都会显示
+- 本机插件支持后台安装/更新 zip、卸载（旧目录移入 `_removed/`）
+- 公开上传显示进度条
 - 上传是独立页面 `/market/upload/`
 - 从标题页打开商城会使用新标签页；「返回游戏」优先关闭该标签页，避免重新加载游戏资源
 

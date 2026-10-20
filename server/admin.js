@@ -553,6 +553,8 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .plugin-table--installed th:nth-child(4){width:30%}
 .plugin-table--installed th:nth-child(5){width:14%}
 .plugin-table td:last-child{text-align:right}
+.plugin-table tr[draggable="true"]{cursor:grab}
+.plugin-table tr[draggable="true"]:active{cursor:grabbing}
 .plugin-actions{display:flex;gap:4px;justify-content:flex-end;flex-wrap:nowrap}
 .row-action--icon{padding:4px 7px;font-family:ui-monospace,Consolas,monospace}
 .plugin-related{margin-top:4px;color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -590,6 +592,7 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .switch input:checked + span:after{left:16px;background:var(--mint)}
 .row-action{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:6px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer}
 .row-action:hover{border-color:var(--mint-dim);color:var(--mint)}
+.row-action.danger{color:#ff9a9a;border-color:rgba(224,108,117,.35)}
 .drawer-wrap{position:fixed;inset:0;z-index:70;display:flex;justify-content:flex-end}
 .drawer-wrap[hidden]{display:none}
 .drawer-backdrop{position:absolute;inset:0;background:rgba(3,7,6,.62);backdrop-filter:blur(2px)}
@@ -857,6 +860,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <section class="panel">
           <div class="plugin-admin__head">
             <div><h2>本机插件</h2><p class="hint">只改商城展示用的描述 / 作者 / 兼容范围，不改 <code>plugins/</code> 里的文件；要真正上架请用「商城插件 → 上架本机插件」。</p></div>
+            <div class="plugin-admin__tools">
+              <button type="button" id="localInstallBtn">安装 / 更新 zip</button>
+              <input id="localInstallFile" type="file" accept=".zip,application/zip" hidden>
+            </div>
           </div>
           <div class="tablewrap plugin-table plugin-table--installed"><table><thead><tr><th>插件</th><th>类型</th><th>兼容性</th><th>描述 / 作者</th><th></th></tr></thead><tbody id="installedMetaBody"></tbody></table></div>
           <div class="panel__body"><span id="installedMetaMsg" class="hint"></span></div>
@@ -1276,7 +1283,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       var kind = x.kind === 'forge' ? 'Forge 包' : '普通插件';
       var cls = CLASS_LABELS[x.class] || x.class || '未声明';
       var compat = compatPills(x);
-      return '<tr data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
+      return '<tr draggable="true" data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
         + '<td><div class="plugin-name"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div><b>' + esc(x.name || x.id) + '</b><small>' + esc(x.id) + ' · v' + esc(x.version || '—') + '</small></div></div></td>'
         + '<td><div class="plugin-badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span></div><div class="plugin-sub">' + esc(state) + '</div></td>'
         + '<td><div class="plugin-compat">' + compat.own + compat.main + '</div></td>'
@@ -1295,7 +1302,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         + '<td><div class="plugin-badges"><span class="pill">本机</span><span class="pill">' + esc(cls) + '</span></div><div class="plugin-sub">已加载</div></td>'
         + '<td><div class="plugin-compat">' + compat.own + compat.main + '</div></td>'
         + '<td><div class="plugin-desc">' + esc(x.description || '未填写描述') + '</div><div class="plugin-sub">' + esc(x.author || '未填写作者') + '</div></td>'
-        + '<td><button type="button" class="row-action" data-edit>编辑</button></td>'
+        + '<td><div class="plugin-actions"><button type="button" class="row-action" data-edit>编辑</button><button type="button" class="row-action danger" data-uninstall>卸载</button></div></td>'
         + '</tr>';
     }).join('') || '<tr><td colspan="5" class="empty">没有本机插件</td></tr>';
     document.querySelectorAll('[data-pview]').forEach(function (v) {
@@ -1467,10 +1474,50 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   });
 
   el('installedMetaBody').addEventListener('click', function (e) {
+    var un = e.target.closest('[data-uninstall]');
+    if (un) {
+      var ur = un.closest('tr');
+      if (!ur || !confirm('确定卸载本机插件 ' + ur.dataset.id + '？旧文件夹会移到 plugins/_removed/。')) return;
+      fetch('/admin/api/plugins/uninstall?token=' + encodeURIComponent(token), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: ur.dataset.id }),
+      }).then(function (r) {
+        return r.text().then(function (text) {
+          var j = {}; try { j = text ? JSON.parse(text) : {}; } catch (err) { j = { error: '服务返回了非 JSON 响应（HTTP ' + r.status + '）' }; }
+          return { ok: r.ok, status: r.status, j: j };
+        });
+      }).then(function (res) {
+        var msg = el('installedMetaMsg');
+        msg.textContent = res.ok ? ('已卸载：' + ur.dataset.id) : ('卸载失败：' + ((res.j && res.j.error) || ('HTTP ' + res.status)));
+        msg.style.color = res.ok ? 'var(--mint)' : '#ff9a9a';
+        if (res.ok) tick();
+      }).catch(function (err) { el('installedMetaMsg').textContent = '卸载失败：' + err.message; });
+      return;
+    }
     var edit = e.target.closest('[data-edit]');
     if (!edit) return;
     var tr = edit.closest('tr');
     if (tr) openPluginDrawer('installed', tr.dataset.id);
+  });
+
+  el('localInstallBtn').addEventListener('click', function () { el('localInstallFile').click(); });
+  el('localInstallFile').addEventListener('change', function () {
+    var file = el('localInstallFile').files && el('localInstallFile').files[0];
+    if (!file) return;
+    var msg = el('installedMetaMsg');
+    msg.textContent = '安装中…'; msg.style.color = 'var(--dim)';
+    fetch('/admin/api/plugins/install?token=' + encodeURIComponent(token), {
+      method: 'POST', headers: { 'Content-Type': 'application/zip', 'X-Plugin-Filename': file.name }, body: file,
+    }).then(function (r) {
+      return r.text().then(function (text) {
+        var j = {}; try { j = text ? JSON.parse(text) : {}; } catch (err) { j = { error: '服务返回了非 JSON 响应（HTTP ' + r.status + '）' }; }
+        return { ok: r.ok, status: r.status, j: j };
+      });
+    }).then(function (res) {
+      msg.textContent = res.ok ? ('已安装：' + (res.j.installed && res.j.installed.id ? res.j.installed.id : '插件')) : ('安装失败：' + ((res.j && res.j.error) || ('HTTP ' + res.status)));
+      msg.style.color = res.ok ? 'var(--mint)' : '#ff9a9a';
+      el('localInstallFile').value = '';
+      if (res.ok) tick();
+    }).catch(function (err) { msg.textContent = '安装失败：' + err.message; msg.style.color = '#ff9a9a'; });
   });
 
   el('marketBody').addEventListener('change', function (e) {
@@ -1479,6 +1526,32 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     if (!tr) return;
     postMarket({ action: 'edit', kind: tr.dataset.kind, id: tr.dataset.id, fields: { listed: e.target.checked } }, el('marketMsg'));
   });
+
+  var dragRow = null;
+  el('marketBody').addEventListener('dragstart', function (e) {
+    var tr = e.target.closest('tr[data-id]');
+    if (!tr || (el('pluginSearch').value || '').trim()) return;
+    dragRow = tr;
+    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', tr.dataset.id); } catch (err) { /* ignore */ }
+  });
+  el('marketBody').addEventListener('dragover', function (e) {
+    if (!dragRow) return;
+    var tr = e.target.closest('tr[data-id]');
+    if (tr && tr !== dragRow) e.preventDefault();
+  });
+  el('marketBody').addEventListener('drop', function (e) {
+    if (!dragRow) return;
+    var target = e.target.closest('tr[data-id]');
+    if (!target || target === dragRow) { dragRow = null; return; }
+    e.preventDefault();
+    target.parentNode.insertBefore(dragRow, target);
+    var rows = Array.from(el('marketBody').querySelectorAll('tr[data-id]'));
+    var kind = rows[0] && rows[0].dataset.kind;
+    var ids = rows.map(function (r) { return r.dataset.id; });
+    dragRow = null;
+    if (kind) postMarket({ action: 'reorder', kind: kind, ids: ids }, el('marketMsg'));
+  });
+  el('marketBody').addEventListener('dragend', function () { dragRow = null; });
 
   el('pluginDrawer').addEventListener('click', function (e) {
     if (e.target.closest('[data-drawer-close]')) closePluginDrawer();

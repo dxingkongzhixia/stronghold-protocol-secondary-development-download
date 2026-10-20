@@ -284,6 +284,21 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return publicEntry(e);
   }
 
+  /** Reorder all entries of one kind from an ordered id list (drag/drop). */
+  function reorder(kind, ids) {
+    if (!KINDS.has(kind)) throw new Error('kind must be ordinary or forge');
+    if (!Array.isArray(ids) || !ids.length) throw new Error('ids required');
+    const rows = index.entries.filter((e) => e.kind === kind);
+    const wanted = new Set(ids);
+    if (wanted.size !== ids.length || rows.some((e) => !wanted.has(e.id)) || ids.some((id) => !rows.some((e) => e.id === id))) {
+      throw new Error('ids must list every plugin of this kind once');
+    }
+    ids.forEach((id, i) => { const e = get(kind, id); if (e) e.order = i + 1; });
+    save();
+    audit('market-reorder', { kind, ids });
+    return list({ admin: true });
+  }
+
   /** Move an entry within its kind (up/down) by swapping the persisted order. */
   function move(kind, id, direction) {
     if (!KINDS.has(kind)) throw new Error('kind must be ordinary or forge');
@@ -517,5 +532,5 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return { entry: e, bytes: fs.readFileSync(file), filename: `${e.id}-${e.version}.zip` };
   }
 
-  return { base, upload, test, review, edit, editInstalled, move, rollback, list, installed, download, downloadInstalled, publishInstalled, get, indexFile };
+  return { base, upload, test, review, edit, editInstalled, move, reorder, rollback, list, installed, download, downloadInstalled, publishInstalled, get, indexFile };
 }

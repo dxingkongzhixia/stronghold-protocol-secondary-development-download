@@ -12,6 +12,7 @@ import { openMemoryDb } from '../server/db.mjs';
 import { AuthService } from '../server/auth.js';
 import { SessionRegistry } from '../server/net.js';
 import { startServer } from '../server/index.js';
+import { zipFiles } from '../server/plugins/zip.js';
 import { MAX_SEATS } from '../shared/constants.js';
 
 test('tokenMatches is exact and rejects empty / missing', () => {
@@ -375,6 +376,28 @@ test('GET /admin/api/plugins/ai reserves the AI takeover surface behind the admi
     assert.deepEqual(doc.actions, ['edit', 'publish', 'test', 'approve', 'reject']);
     const post = await fetch(`${base}/admin/api/plugins/ai?token=testtok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     assert.equal(post.status, 501, 'no AI executor is enabled by default');
+  } finally {
+    await srv.close();
+  }
+});
+
+test('POST /admin/api/plugins/install and /uninstall move a plugin folder', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-admin-install-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const zip = zipFiles([{
+    name: 'plugin.json',
+    data: Buffer.from(JSON.stringify({ manifest: 2, id: 'installed-demo', name: 'Demo', version: '1.0.0', class: 'cosmetic', app: '>=0.4.0 <0.5.0', api: 1 })),
+  }]);
+  const srv = await startServer({ port: 0, quiet: true, pluginsDir: dir, adminToken: 'testtok', accounts: true, db: openMemoryDb() });
+  try {
+    const base = `http://localhost:${srv.port}`;
+    const install = await fetch(`${base}/admin/api/plugins/install?token=testtok`, { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: zip });
+    assert.equal(install.status, 200, await install.text());
+    assert.ok(fs.existsSync(path.join(dir, 'installed-demo', 'plugin.json')));
+    const uninstall = await fetch(`${base}/admin/api/plugins/uninstall?token=testtok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 'installed-demo' }) });
+    assert.equal(uninstall.status, 200);
+    assert.equal(fs.existsSync(path.join(dir, 'installed-demo')), false);
+    assert.ok(fs.readdirSync(path.join(dir, '_removed')).length > 0);
   } finally {
     await srv.close();
   }

@@ -59,6 +59,7 @@ import { PLUGIN_LIMITS } from '../shared/plugins/manifest.js';
 import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
 import { createPluginRegistry } from './plugins/registry.js';
+import { installPluginBytes, movePluginAside } from './plugins/install.js';
 import { computeVanillaContent } from './plugins/identity.js';
 import { createVisualSets } from './plugins/visualSet.js';
 import { createPluginPolicy } from './plugins/policy.js';
@@ -386,6 +387,8 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const pluginPolicy = parts.rawPath === '/admin/api/plugin-policy';
     const marketAdmin = parts.rawPath === '/admin/api/market';
     const marketImport = parts.rawPath === '/admin/api/market/import';
+    const pluginInstall = parts.rawPath === '/admin/api/plugins/install';
+    const pluginUninstall = parts.rawPath === '/admin/api/plugins/uninstall';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -461,6 +464,34 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       }
       return;
     }
+    if (pluginInstall) {
+      if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
+      if (!pluginsDir) { sendJson(req, res, 404, { error: 'plugins are disabled' }); return; }
+      const bytes = await readRawBody(req, PLUGIN_LIMITS.pluginBytes + 1);
+      if (bytes == null) { sendJson(req, res, 413, { error: 'zip is over the plugin size limit' }); return; }
+      try {
+        const r = installPluginBytes(bytes, { pluginsDir, force: true });
+        packs.refresh(true);
+        sendJson(req, res, 200, { ok: true, installed: r });
+      } catch (e) {
+        sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300), code: e?.code || null });
+      }
+      return;
+    }
+    if (pluginUninstall) {
+      if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
+      if (!pluginsDir) { sendJson(req, res, 404, { error: 'plugins are disabled' }); return; }
+      const body = await readJsonBody(req);
+      const id = String(body?.id || '');
+      try {
+        const moved = movePluginAside(pluginsDir, id, '_removed');
+        packs.refresh(true);
+        sendJson(req, res, 200, { ok: true, id, moved });
+      } catch (e) {
+        sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300), code: e?.code || null });
+      }
+      return;
+    }
     if (marketAdmin) {
       if (req.method === 'GET' || req.method === 'HEAD') {
         sendJson(req, res, 200, { plugins: market.list({ admin: true }) });
@@ -491,6 +522,11 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
         if (action === 'move') {
           const r = market.move(kind, id, String(body.direction || ''));
           sendJson(req, res, 200, r);
+          return;
+        }
+        if (action === 'reorder') {
+          const r = market.reorder(kind, Array.isArray(body.ids) ? body.ids : []);
+          sendJson(req, res, 200, { ok: true, plugins: r });
           return;
         }
         if (action === 'rollback') {
@@ -617,7 +653,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
       || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
-      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/plugins/ai'
+      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/ai'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;

@@ -92,6 +92,7 @@
 .market-form label { color: var(--text-lo); font-size: 12px; }
 .market-form select, .market-form input[type=file] { width: 100%; min-height: 38px; padding: 7px 10px; border: 1px solid var(--line); background: #0b1311; color: var(--text-hi); font: inherit; }
 .market-form .mc-btn { align-self: flex-start; }
+.market-form progress { width: 100%; height: 8px; accent-color: var(--mint-500); }
 .market-crumbs { color: var(--text-lo); font-size: 12px; margin: 12px 0 0; }
 .market-crumbs a { color: var(--mint-400); }
 @media (max-width: 760px) {
