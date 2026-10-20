@@ -42,7 +42,7 @@
 import http from 'node:http';
 import path from 'node:path';
 import { getData, loadData } from './data.js';
-import { createReadStream, readFileSync } from 'node:fs';
+import { appendFileSync, createReadStream, readFileSync } from 'node:fs';
 import { openDb } from './db.mjs';
 import { AuthService } from './auth.js';
 import { CommunityService, bugReportsExport, bugReportsToCsv } from './community.js';
@@ -315,6 +315,11 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
 
   // Public upload throttle: five accepted zip uploads per network/account in ten minutes. Admin import is separate.
   const marketUploadTimes = new Map();
+  function auditAdmin(action, detail) {
+    try {
+      appendFileSync(path.join(ROOT, 'var', 'admin-audit.log'), `${JSON.stringify({ at: new Date().toISOString(), action, ...detail })}\n`);
+    } catch { /* audit is best effort */ }
+  }
   function marketUploadAllowed(key) {
     const now = Date.now();
     const recent = (marketUploadTimes.get(key) || []).filter((t) => now - t < 10 * 60 * 1000);
@@ -389,6 +394,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const marketImport = parts.rawPath === '/admin/api/market/import';
     const pluginInstall = parts.rawPath === '/admin/api/plugins/install';
     const pluginUninstall = parts.rawPath === '/admin/api/plugins/uninstall';
+    const auditLog = parts.rawPath === '/admin/api/audit';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -464,6 +470,16 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       }
       return;
     }
+    if (auditLog) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      let entries = [];
+      try {
+        entries = readFileSync(path.join(ROOT, 'var', 'admin-audit.log'), 'utf8').trim().split('\n').filter(Boolean).slice(-300)
+          .map((line) => { try { return JSON.parse(line); } catch { return { at: null, action: 'unreadable', detail: line.slice(0, 300) }; } });
+      } catch { /* no audit yet */ }
+      sendJson(req, res, 200, { entries: entries.reverse() });
+      return;
+    }
     if (pluginInstall) {
       if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
       if (!pluginsDir) { sendJson(req, res, 404, { error: 'plugins are disabled' }); return; }
@@ -472,6 +488,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       try {
         const r = installPluginBytes(bytes, { pluginsDir, force: true });
         packs.refresh(true);
+        auditAdmin('plugin-install', { id: r.id, version: r.version || null });
         sendJson(req, res, 200, { ok: true, installed: r });
       } catch (e) {
         sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300), code: e?.code || null });
@@ -486,6 +503,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       try {
         const moved = movePluginAside(pluginsDir, id, '_removed');
         packs.refresh(true);
+        auditAdmin('plugin-uninstall', { id, moved });
         sendJson(req, res, 200, { ok: true, id, moved });
       } catch (e) {
         sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300), code: e?.code || null });
@@ -532,6 +550,10 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
         if (action === 'rollback') {
           const r = await market.rollback(kind, id, String(body.version || ''), { reviewer: 'admin' });
           sendJson(req, res, 200, r);
+          return;
+        }
+        if (action === 'gc') {
+          sendJson(req, res, 200, market.gc());
           return;
         }
         const r = await market.review(kind, id, action, { reviewer: 'admin', note: body.note });
@@ -653,7 +675,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
       || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
-      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/ai'
+      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/audit' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/ai'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;

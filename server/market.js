@@ -393,6 +393,36 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return { ok: true, entry: publicEntry(e) };
   }
 
+  /** Delete stored zips no longer referenced by an entry/pending/history, and clear installed download caches. */
+  function gc() {
+    const keep = new Set();
+    for (const e of index.entries) {
+      if (e.file) keep.add(e.file);
+      if (e.pending && e.pending.file) keep.add(e.pending.file);
+      for (const h of (Array.isArray(e.history) ? e.history : [])) if (h.file) keep.add(h.file);
+    }
+    let removed = 0;
+    for (const kind of ['ordinary', 'forge']) {
+      const dir = dirs[kind];
+      let names = [];
+      try { names = fs.readdirSync(dir); } catch { continue; }
+      for (const name of names) {
+        const rel = `${kind}/${name}`;
+        if (keep.has(rel)) continue;
+        try { fs.rmSync(path.join(dir, name), { force: true }); removed++; } catch { /* ignore */ }
+      }
+    }
+    const cacheDir = path.join(base, 'installed');
+    let cached = 0;
+    try {
+      for (const name of fs.readdirSync(cacheDir)) {
+        try { fs.rmSync(path.join(cacheDir, name), { force: true }); cached++; } catch { /* ignore */ }
+      }
+    } catch { /* no cache */ }
+    audit('market-gc', { removed, cached });
+    return { ok: true, removed, cached };
+  }
+
   function list({ status = 'active', admin = false } = {}) {
     const rows = index.entries.filter((e) => admin || (e.status === status && e.listed !== false && e.needsReview !== true));
     return rows.map(publicEntry).sort((a, b) => (a.order || 0) - (b.order || 0) || (b.uploadedAt || 0) - (a.uploadedAt || 0));
@@ -532,5 +562,5 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return { entry: e, bytes: fs.readFileSync(file), filename: `${e.id}-${e.version}.zip` };
   }
 
-  return { base, upload, test, review, edit, editInstalled, move, reorder, rollback, list, installed, download, downloadInstalled, publishInstalled, get, indexFile };
+  return { base, upload, test, review, edit, editInstalled, move, reorder, rollback, gc, list, installed, download, downloadInstalled, publishInstalled, get, indexFile };
 }

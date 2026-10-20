@@ -849,6 +849,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
               <select id="pluginImportKind" aria-label="导入格式"><option value="ordinary">普通 zip</option><option value="forge">Forge zip</option></select>
               <button type="button" id="pluginImportBtn">导入插件</button>
               <input id="pluginImportFile" type="file" accept=".zip,application/zip" hidden>
+              <button type="button" id="pluginGcBtn">清理缓存</button>
             </div>
           </div>
           <div class="tablewrap plugin-table"><table><thead><tr><th>插件</th><th>类型 / 状态</th><th>兼容性</th><th>描述 / 作者</th><th>上架</th><th></th></tr></thead><tbody id="marketBody"></tbody></table></div>
@@ -887,6 +888,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <section class="panel">
           <h2>兼容性与诊断<em id="pluginIssueCount"></em></h2>
           <div class="panel__body" id="pluginIssues"></div>
+        </section>
+        <section class="panel">
+          <h2>审计日志<em id="auditCount"></em></h2>
+          <div class="tablewrap"><table><thead><tr><th>时间</th><th>动作</th><th>详情</th></tr></thead><tbody id="auditBody"></tbody></table></div>
         </section>
         <section class="panel">
           <h2>房间内容与脚本</h2>
@@ -1457,8 +1462,24 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     b.addEventListener('click', function () {
       pluginSection = b.dataset.psub || 'market';
       if (lastAdminData) renderPlugins(lastAdminData);
+      if (pluginSection === 'diagnostics') loadAudit();
     });
   });
+
+  function loadAudit() {
+    fetch('/admin/api/audit?token=' + encodeURIComponent(token), { cache: 'no-store' })
+      .then(function (r) { return r.text().then(function (text) { var j = {}; try { j = text ? JSON.parse(text) : {}; } catch (e) { j = {}; } return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        var rows = (res.ok && Array.isArray(res.j.entries)) ? res.j.entries : [];
+        el('auditCount').textContent = ' · ' + rows.length + ' 条';
+        el('auditBody').innerHTML = rows.map(function (x) {
+          var detail = Object.keys(x).filter(function (k) { return k !== 'at' && k !== 'action'; })
+            .map(function (k) { return k + '=' + (typeof x[k] === 'object' ? JSON.stringify(x[k]) : x[k]); }).join(' · ');
+          return row([cell(esc(x.at || '—')), cell(esc(x.action || '—')), cell(esc(detail))]);
+        }).join('') || '<tr><td colspan="3" class="empty">还没有审计记录</td></tr>';
+      })
+      .catch(function () { el('auditBody').innerHTML = '<tr><td colspan="3" class="empty">审计日志加载失败</td></tr>'; });
+  }
 
   el('marketBody').addEventListener('click', function (e) {
     var mv = e.target.closest('[data-move]');
@@ -1618,6 +1639,13 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         if (res.ok) { pluginSection = 'market'; tick(); }
       })
       .catch(function (e) { msg.textContent = '导入失败：' + e.message; msg.style.color = '#ff9a9a'; });
+  });
+
+  el('pluginGcBtn').addEventListener('click', function () {
+    if (!confirm('清理没有被商城条目、待审版本或历史版本引用的 zip，以及本机下载缓存？')) return;
+    postMarket({ action: 'gc' }, el('marketMsg')).then(function (res) {
+      if (res && res.ok) el('marketMsg').textContent = '已清理：zip ' + (res.j.removed || 0) + ' 个，本机缓存 ' + (res.j.cached || 0) + ' 个';
+    });
   });
 
   el('themeToggle').addEventListener('click', function () {

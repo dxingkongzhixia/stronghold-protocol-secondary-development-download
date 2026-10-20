@@ -118,6 +118,10 @@ test('market: active plugins can stage a new version, approve it and roll back',
   const back = await market.rollback('ordinary', 'demo-update', '1.0.0', { reviewer: 'admin' });
   assert.equal(back.entry.version, '1.0.0');
   assert.equal(back.entry.history[0].version, '2.0.0');
+  fs.writeFileSync(path.join(root, 'var/plugin-market/ordinary/orphan.zip'), 'x');
+  const cleaned = market.gc();
+  assert.ok(cleaned.removed >= 1);
+  assert.equal(fs.existsSync(path.join(root, 'var/plugin-market/ordinary/orphan.zip')), false);
 });
 
 test('market: order, move and related plugin bindings', async (t) => {
