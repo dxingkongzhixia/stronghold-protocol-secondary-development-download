@@ -75,7 +75,25 @@ def our_chars():
     return ids
 
 
-def plan(table, chars, ab_root, only=None, limit=None):
+def first_bundle(roots, rel):
+    """The hot-updated file when there is one, else the base install's (roots: updates first, base last)."""
+    for root in roots:
+        p = Path(root) / rel
+        if p.is_file():
+            return p
+    return None
+
+
+def list_bundles(roots, pattern):
+    """Every bundle matching `pattern` across the roots, one per file name (the update shadows the base)."""
+    found = {}
+    for root in roots:
+        for p in sorted(Path(root).glob(pattern)):
+            found.setdefault(p.name, p)
+    return [found[k] for k in sorted(found)]
+
+
+def plan(table, chars, roots, only=None, limit=None):
     """The alternative outfits (`<charId>@<series>#<n>`) this install can wear.
 
     Default skins (`<charId>#1`), token outfits and operators absent from the manifest are
@@ -103,7 +121,7 @@ def plan(table, chars, ab_root, only=None, limit=None):
         if char_id not in chars:
             skipped['not-ours'] += 1
             continue
-        if not (Path(ab_root) / 'skinpack' / f'{char_id}.ab').is_file():
+        if not first_bundle(roots, f'skinpack/{char_id}.ab'):
             skipped['no-bundle'] += 1
             continue
         battle = (skin.get('battleSkin') or {}).get('skinOrPrefabId')
@@ -150,7 +168,7 @@ def save_image(img, target, quality=88, lossless=False, max_side=0):
         return target
 
 
-def pictures(ab_root, jobs, out, log, quality, lossless):
+def pictures(roots, jobs, out, log, quality, lossless):
     """Write each skin's portrait and avatar; returns {skinId: {'avatar': rel, 'portrait': rel}}."""
     import aklz4  # noqa: F401  (the local-client decoder must be registered first)
     import UnityPy
@@ -165,7 +183,7 @@ def pictures(ab_root, jobs, out, log, quality, lossless):
         keys = {k: v for k, v in wanted.items() if k[1] == kind}
         if not keys:
             continue
-        for bundle in sorted(Path(ab_root).glob(pattern)):
+        for bundle in list_bundles(roots, pattern):
             if not keys:
                 break
             try:
@@ -265,7 +283,7 @@ def write_model(objects, sda, out_dir, rel_dir, name, log):
             'textures': [f'{rel_dir}/{p}' for p in sorted(pages)]}
 
 
-def models(ab_root, jobs, out, log, quality, lossless, illust_quality=None, illust_max=0):
+def models(roots, jobs, out, log, quality, lossless, illust_quality=None, illust_max=0):
     """Write the battle Spine models and illustrations from skinpack (<charId>.ab, one load per operator)."""
     import aklz4  # noqa: F401
     import UnityPy
@@ -279,7 +297,9 @@ def models(ab_root, jobs, out, log, quality, lossless, illust_quality=None, illu
         by_char.setdefault(job['charId'], []).append(job)
     found = {}
     for char_id, char_jobs in sorted(by_char.items()):
-        bundle = Path(ab_root) / 'skinpack' / f'{char_id}.ab'
+        bundle = first_bundle(roots, f'skinpack/{char_id}.ab')
+        if bundle is None:
+            continue
         try:
             env = UnityPy.load(str(bundle))
         except Exception as err:
@@ -416,6 +436,8 @@ def write_plugin(out, plugin_id, jobs, pics, models_found, log):
 def main(argv=None):
     ap = argparse.ArgumentParser(description='Extract official outfits into a local cosmetic plugin.')
     ap.add_argument('--game', required=True, help='AssetBundle root (…/Arknights_Data/StreamingAssets/AB/Windows)')
+    ap.add_argument('--update', action='append', default=[], metavar='DIR',
+                    help='hot-updated bundle root to overlay on the base (repeatable; e.g. Arknights_Data/PersistentData/Bundles)')
     ap.add_argument('--table', default=str(ROOT / '.cache' / 'gamedata' / 'excel' / 'skin_table.json'))
     ap.add_argument('--out', default=None, help='plugin folder (default plugins/<id>)')
     ap.add_argument('--id', default='local-skins', help='plugin id (default local-skins)')
@@ -431,9 +453,14 @@ def main(argv=None):
     ab_root = Path(args.game)
     if not (ab_root / 'skinpack').is_dir():
         sys.exit(f'not an AssetBundle root: {ab_root}')
+    updates = [Path(p) for p in args.update]
+    missing = [str(p) for p in updates if not p.is_dir()]
+    if missing:
+        sys.exit(f'not a bundle root: {missing[0]}')
+    roots = [*updates, ab_root]  # updates shadow the base install
     table = load_json(args.table)
     only = {c.strip() for c in args.only.split(',') if c.strip()}
-    jobs, skipped = plan(table, our_chars(), ab_root, only, args.limit or None)
+    jobs, skipped = plan(table, our_chars(), roots, only, args.limit or None)
     print(f'skins: {len(jobs)}  skipped: {", ".join(f"{k} {v}" for k, v in skipped.items() if v) or "none"}')
     if args.dry_run:
         for job in jobs:
@@ -445,7 +472,7 @@ def main(argv=None):
         print(f'resume: {len(pics)} skins with pictures, {len(model_data)} with models already on disk')
     need_pics = [job for job in jobs if job['skinId'] not in pics]
     if need_pics:
-        pics.update(pictures(ab_root, need_pics, out, print, args.quality, args.lossless))
+        pics.update(pictures(roots, need_pics, out, print, args.quality, args.lossless))
     by_char = {}
     for job in jobs:
         by_char.setdefault(job['charId'], []).append(job)
@@ -453,7 +480,7 @@ def main(argv=None):
             if not all(model_data.get(j['skinId'], {}).get('spine') for j in char_jobs)}
     if todo:
         print(f'models: {len(by_char) - len(todo)} operators already done, {len(todo)} to extract')
-        model_data.update(models(ab_root, [j for j in jobs if j['charId'] in todo], out, print,
+        model_data.update(models(roots, [j for j in jobs if j['charId'] in todo], out, print,
                                  args.quality, args.lossless, args.illust_quality, args.illust_max))
     written = write_plugin(out, args.id, jobs, pics, model_data, print)
     print(f'wrote {written} skins to {out}')

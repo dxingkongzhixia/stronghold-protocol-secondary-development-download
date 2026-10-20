@@ -211,6 +211,7 @@ the client changes.
 # 1. the outfits (writes plugins/local-skins/; plugins/* is git-ignored)
 python tools/local-extract/skins.py `
   --game "<Arknights>/Arknights_Data/StreamingAssets/AB/Windows" `
+  --update "<Arknights>/Arknights_Data/PersistentData/Bundles" `
   --out plugins/local-skins --id local-skins
 
 # 2. keep a full pack inside a room's 300 MB set (Spine pages -> lossless WebP, atlas + overlay rewritten)
@@ -223,13 +224,16 @@ node tools/plugin.mjs check plugins/local-skins
 
 | flag | meaning |
 |---|---|
+| `--update <dir>` | a hot-updated bundle root laid over `--game` (repeatable; updates shadow the base). New outfits often exist **only** under `Arknights_Data/PersistentData/Bundles` until the launcher rewrites the base |
 | `--only <charId,...>` / `--limit N` | a pilot |
 | `--illust-max` (1024) / `--illust-quality` (80) / `--quality` (88) | picture size and WebP quality |
 | `--lossless` | exact pixels for the pictures |
 
 - **Where it reads**: `skinpack/<charId>.ab` (battle Spine prefab + illustration), `spritepack/char_portrait_*.ab`
   (half-body), `spritepack/ui_char_avatar_*.ab` (avatar), and `excel/skin_table.json` from the official-data cache
-  (`build-data` downloads it; `.cache/gamedata/excel/skin_table.json`).
+  (`build-data` downloads it; `.cache/gamedata/excel/skin_table.json`). It reads the base install
+  (`StreamingAssets/AB/Windows`) and every `--update` root — the client's hot updates live in
+  `Arknights_Data/PersistentData/Bundles`, and their files shadow the base ones.
 - **What it takes**: alternative outfits only (`<charId>@<series>#<n>`), for operators in this installation's
   roster (`shared/protocol.js operatorCharIds`: chess, `backups.units`, the DIY pools). On 2026-10-19 that is
   **277 outfits of 175 operators**.

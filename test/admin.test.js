@@ -303,6 +303,14 @@ test('POST /admin/api/notify pushes sys.notice to the live sessions (scope, guar
   }
 });
 
+// The page is one inline script: a template-literal `\n` in a JS string (the signing-key row) used to arrive as a real
+// newline, so the browser refused the whole script and every panel stayed empty while the API was fine.
+test('the admin page inline script parses', () => {
+  const m = /<script>([\s\S]*?)<\/script>/.exec(ADMIN_HTML);
+  assert.ok(m, 'the page carries one inline script');
+  assert.doesNotThrow(() => new Function(m[1]));
+});
+
 // 后台控制台 (docs/MATCHMAKING.md §12.1, 2026-10-15): the page went from one long scrolling column to a sidebar
 // console. These pin the INTERFACE only — the snapshot API, the notify / bug routes and the read-only stance are
 // unchanged (the two tests above still cover them).
