@@ -47,7 +47,7 @@
 | `docs/PLUGIN-BACKLOG.md` | 中 | 插件问题清单、优先级、状态和建议排期 |
 | `docs/PLUGIN-RISKS.md` | 中 | 玩家版插件风险说明（外观 / 玩法 / 脚本 / 信任） |
 | docs/PLUGIN-SUPPLY-CHAIN.md | 中 | 插件安装/更新校验、sha256、catalogue 边界 |
-| docs/PLUGIN-MARKET.md | 中 | 插件商城：普通/Forge 分目录、待审核、使用中下载与镜像源 |
+| docs/PLUGIN-MARKET.md | 中 | 插件商城：普通/Forge 分目录、审核、元数据/上架/排序/关联、后台导入与镜像下载 |
 | `docs/UPSTREAM-DEV-TRIAGE.md` | 英/中 | 上游 `dev` 26 个提交的筛选与移植记录 |
 | `docs/TRUSTED-DEPLOY.md` | 中 | trusted 插件生产部署基线（非 root、只读 rootfs、cap、pin、consent） |
 | `docs/PLUGIN-REVIEW.md` | 中 | 插件体系架构、安全边界、运营台与残余风险 |
@@ -593,7 +593,7 @@ _整理自本仓库 0.2.0 快照。若你据此改动，请同步更新 `docs/DE
 | 统计 | P1c `withModded` | `public/js/screens/stats.js` | 总览「含插件对局」开关；测试 / 非官方对局默认不计 |
 | setup / 本地抽取 | 0.3.1 插件美术 + 0.3.2 `#728` | `tools/setup.mjs`、`tools/local-extract/{operators.py,plugin-art.mjs,extract.py}`、`server/plugins/artReferences.js`、`server/http/assetViews.js` | `test/setup-plugin-art.test.js`、`test/render/plugin-official-art.test.js`、`test/local-extract-operators.test.js`、`test/setup-assets.test.js` |
 | `#670` | `043d7959` | `test/assets-env-proxy.test.js` | 首跳精确两种形式，代理只连本机 |
-| 运营台插件/内容只读整合（本分支改进） | 本分支 2026-10-19 | `server/admin.js`（`buildPluginSnapshot`、`rooms[].content`）、`server/index.js` | `test/admin.test.js`：已安装插件、策略、房间 `cs`/`vs`、脚本/信任、consent、插件公告 |
+| 运营台插件/内容管理（本分支改进） | 本分支 2026-10-19；商城管理 2026-10-20 | `server/admin.js`（`buildPluginSnapshot`、二级导航、抽屉、浅色模式）、`server/index.js`（`/admin/api/market`、`/admin/api/market/import`、`/admin/api/plugins/ai`）、`server/market.js`（`edit`、`editInstalled`、`move`、`publishInstalled`、`related`） | `test/admin.test.js`、`test/market.test.js`：已安装插件、策略、房间 `cs`/`vs`、脚本/信任、consent、商城元数据/导入/排序/关联与 AI 预留接口 |
 | 主线 0.3.x app 范围兼容层（本分支改进） | 本分支 2026-10-19 | `shared/plugins/manifest.js`（`appVersionCompatible`、`PLUGIN_COMPAT_APP`、`PLUGIN_COMPAT_CLASSES`）、`shared/plugins/catalog.js`、`server/plugins/contentSet.js` / `roomSets.js` | `test/plugins/manifest.test.js`：lang/cosmetic/ui 接受 0.3.x 范围；content/script/trusted 默认严格，owner `allowIncompatible` 可显式放行 |
 
 ### 11.2 本分支必须保留的适配
@@ -626,5 +626,5 @@ npm run ci
 - **普通插件**：从 `node tools/plugin.mjs new …` 开始，manifest、类别、外观/内容/UI/脚本、sandbox lock、检查和打包，见 [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)。
 - **Forge 导入包**：包结构、产品拆分、干净导入字段、脚本/面板边界、`IMPORT-REPORT.md` 阅读和导入后验证，见 [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md)。
 - **Forge 兼容矩阵**：字段级支持/丢弃/拒绝清单，见 [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md)。`server` / `routes` / `assets` / `forms` / `fx` / `behaviour` / `combat` / `layer` 按设计拒绝；modules / potentials / summons 等会报告后丢弃。
-- **运营检查**：`/admin` →「插件与内容」显示兼容性、skipped 和 warnings；该页面只读。
+- **运营检查**：`/admin` →「插件与内容」分成二级导航：商城插件（列表、导入、排序、关联、元数据抽屉）、本机插件、服务策略、诊断与内容；该页面不会修改插件文件、trusted pin 或代码。
 - **问题清单**：[`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) 持续跟踪剩余插件问题、优先级、证据和排期。

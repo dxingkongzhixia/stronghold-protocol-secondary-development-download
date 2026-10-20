@@ -164,20 +164,20 @@ plugin.json + entry.sim/meta
 
 测试：`test/plugins/manifest.test.js` 的 `0.3.x app compatibility` 与 `mainline 0.3.x templates` 用例；`test/plugins/contentSet.test.js` 的 `allowIncompatible` 用例。
 
-## 8. 运营台整合（Phase 2：只读诊断 + 策略写入）
+## 8. 运营台整合（Phase 2：诊断 + 商城元数据 + 策略写入）
 
-运营台 `/admin` 已加入只读的「插件与内容」页：
+运营台 `/admin` 的「插件与内容」页使用二级导航：
 
-- 已安装插件：id / 名称 / class / 版本 / 兼容 / app / api / 状态 / scope / 内容 / 脚本或原生信任 / 大小
-- 服务器策略：`rooms`、`allow`、`default`、`classes`、`maxSets`、`allowIncompatible`
-- 房间内容：`cs`、`vs`、`modeId`、插件列表、脚本 / 信任状态、trusted consent
-- 「兼容性与诊断」区：列出 skipped 插件和 warnings，兼容列直接显示 `compatible`，悬停可看 `app` 范围
-- 「Forge 导入」区：来源包、产品、skipped / assumed 数量、是否部分导入、导入时间（只读）
-- 通知页新增只读「插件公告」区，与服务器通知分开标记
-- 服务器策略 JSON 编辑器：写入 `plugins/config.json` 的 `rooms` / `default` / `allow` / `classes` / `limits` / `allowIncompatible`，保留 trusted pin 和下载白名单，并写 `var/admin-audit.log`
+- **商城插件**：列表、搜索、上架开关、导入 zip、上下移动排序、关联插件绑定；描述 / 作者 / `app` / `api` / `listed` / `related` 在右侧抽屉编辑
+- **本机插件**：只改商城展示用的描述 / 作者 / 兼容范围，写入 `var/plugin-market/installed-meta.json`，不改 `plugins/` 文件
+- **服务策略**：`rooms`、`allow`、`default`、`classes`、`maxSets`、`allowIncompatible`，以及统计卡片
+- **诊断与内容**：房间 `cs` / `vs` / `modeId`、插件列表、脚本 / 信任状态、trusted consent、Forge 导入和 skipped / warnings
+- **浅色 / 深色模式**：只影响运营台外观，不改变服务端数据
+- **AI 接管预留接口**：`GET/POST /admin/api/plugins/ai` 与人类后台共用 admin token；GET 返回能力声明，POST 当前 501，未启用执行器
 
-后端 `buildSnapshot` 现在携带 `plugins` 只读快照；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
-写操作仅限上述安全策略字段；插件文件、trusted pin、安装/卸载/更新仍只允许 owner 在本机处理，运营台不提供远程代码执行入口。
+后端 `buildSnapshot` 携带 `plugins` 快照（含商城条目、安装元数据和策略）；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
+
+写操作只允许：服务器策略的安全字段、商城元数据（描述 / 作者 / `app` / `api` / `listed` / `related`）、后台导入 zip、测试 / 通过 / 拒绝、调整排序和打包本机插件。**插件文件、trusted pin、安装/卸载/更新仍只允许 owner 在本机处理，运营台不提供远程代码执行入口。**
 
 ## 9. 建议的下一步
 

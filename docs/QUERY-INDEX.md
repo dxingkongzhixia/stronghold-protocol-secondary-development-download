@@ -140,7 +140,10 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | the art relay (address, ssh, routes, how to deploy it) | `node tools/push-assets-relay.mjs` (`npm run push:relay`), [`docs/ASSETS.md`](ASSETS.md) "The relay" |
 | change the relay / mirror addresses (no deploy, no restart) | the operations page (`/admin`) → **来源配置**, `GET/POST /admin/api/origins`, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12.3, `server/mirrors.js` |
 | is the relay throttled? which origin would a client install right now? | the operations page → **测速**, `GET /admin/api/speed`, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12.2, `server/speed.js` |
-| what the operations page (`/admin`) covers | accounts / rooms / online / notices / reports / 测速 / 来源配置, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12 |
+| what the operations page (`/admin`) covers | accounts / rooms / online / notices / reports / 插件与内容 / 测速 / 来源配置; 插件与内容 has second-level 商城插件 / 本机插件 / 服务策略 / 诊断与内容, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
+| plugin marketplace / admin plugin management | `server/market.js`, `server/admin.js`, `server/index.js` (`/market/api/*`, `/admin/api/market`, `/admin/api/market/import`, `/admin/api/plugins/ai`), `public/market/**`, `public/js/market.js`, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
+| plugin compatibility (this fork vs mainline 0.3.x) | `shared/plugins/manifest.js` (`appVersionCompatible`, `PLUGIN_COMPAT_APP`, `PLUGIN_COMPAT_CLASSES`), [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) §7 |
+| plugin ordering / related bindings / import | `server/market.js` (`move`, `related`, `upload`), `/admin/api/market` `move` + `edit.related`, `/admin/api/market/import`, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
 | where the art origins are written down (the only place) | `public/asset-mirrors.json`, [`docs/ASSETS.md`](ASSETS.md) "sources", `public/js/assetMirror.js` |
 | where is the project / how do I take it over | [`docs/HANDOVER.md`](HANDOVER.md) §0, [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §2 |
 | is there new upstream work, and what will it conflict with | `node tools/check-upstream.mjs` (`npm run check:upstream`), [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 |

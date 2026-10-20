@@ -26,7 +26,7 @@ restate the upstream design — it points at it:
 | [`docs/PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | the live plugin issue list, priorities, status and suggested order of work |
 | [`docs/PLUGIN-RISKS.md`](PLUGIN-RISKS.md) | the player-facing plugin risk levels, consent and statistics note |
 | [docs/PLUGIN-SUPPLY-CHAIN.md](PLUGIN-SUPPLY-CHAIN.md) | plugin install/update checks, sha256, catalogue limits and the current signing boundary |
-| [docs/PLUGIN-MARKET.md](PLUGIN-MARKET.md) | the plugin marketplace: separate ordinary/Forge uploads, pending review, active downloads and mirror sources |
+| [docs/PLUGIN-MARKET.md](PLUGIN-MARKET.md) | the plugin marketplace: separate ordinary/Forge uploads, review, metadata/listing/order/related bindings, admin import and mirror downloads |
 | [`docs/UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | the 2026-10-20 triage of the 26 upstream `dev` commits and the selected port |
 | [`docs/TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) | the hardened deployment baseline for trusted plugins (non-root, read-only rootfs, caps, pins, consent) |
 | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) | plugin architecture, security boundaries, admin console and residual risks |
@@ -549,7 +549,7 @@ the 8 custom operators, the 3D board/scene stack and the 0.4.0 version) stayed o
 | Stats | P1c `withModded` | `public/js/screens/stats.js` | overview switch; test results and modded matches excluded by default |
 | Setup / local extraction | 0.3.1 plugin art + 0.3.2 `#728` | `tools/setup.mjs`, `tools/local-extract/{operators.py,plugin-art.mjs,extract.py}`, `server/plugins/artReferences.js`, `server/http/assetViews.js` | `test/setup-plugin-art.test.js`, `test/render/plugin-official-art.test.js`, `test/local-extract-operators.test.js`, `test/setup-assets.test.js` |
 | `#670` | `043d7959` | `test/assets-env-proxy.test.js` | exact two first-hop forms, local-only relay |
-| Admin plugin/content operations console (fork) | fork improvement, 2026-10-19 | `server/admin.js` (`buildPluginSnapshot`, `rooms[].content`), `server/index.js` | `test/admin.test.js`: read-only installed plugins, policy, room `cs`/`vs`, script/trusted, consent and plugin notices |
+| Admin plugin/content operations console (fork) | fork improvement, 2026-10-19; marketplace management 2026-10-20 | `server/admin.js` (`buildPluginSnapshot`, plugin subnav/drawer, light theme), `server/index.js` (`/admin/api/market`, `/admin/api/market/import`, `/admin/api/plugins/ai`), `server/market.js` (`edit`, `editInstalled`, `move`, `publishInstalled`, `related`) | `test/admin.test.js`, `test/market.test.js`: installed plugins, policy, room `cs`/`vs`, script/trusted, consent, marketplace metadata/import/order/related and the reserved AI surface |
 | Mainline 0.3.x app-range compatibility (fork) | 2026-10-19 | `shared/plugins/manifest.js` (`appVersionCompatible`, `PLUGIN_COMPAT_APP`, `PLUGIN_COMPAT_CLASSES`), `shared/plugins/catalog.js`, `server/plugins/contentSet.js` / `roomSets.js` | `test/plugins/manifest.test.js`: lang/cosmetic/ui accept 0.3.x ranges; content/script/trusted strict by default, owner `allowIncompatible` opt-in |
 
 ### 15.2 Fork adaptations that must survive
@@ -582,5 +582,6 @@ A dedicated engineering review of this plugin stack — architecture, security b
 - **Normal plugins** (cosmetic / content / ui / script / lang): read [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md). It starts from `node tools/plugin.mjs new …`, explains the manifest and each class, the sandbox script lock/consent gates, local checks, packaging and the browser E2E.
 - **Forge packs**: read [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md). It explains the pack layout, the products an import produces, the clean-import field rules, the scripts/panels/i18n boundaries, and how to read `IMPORT-REPORT.md` / `--json`.
 - **What cannot be imported**: the field-level matrix is [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md). In short, `server` / `routes` / `assets` / `forms` / `fx` / `behaviour` / `combat` / `layer` are refused by design; modules, potentials, summons and some base fields are dropped with a report entry.
-- **Operations checks**: `/admin` → 插件与内容 shows installed plugins, compatibility, skipped plugins and warnings; the full snapshot is read-only.
+- **Operations checks**: `/admin` → 插件与内容 is split into second-level sections: 商城插件 (market list, import, order, related bindings, metadata drawer), 本机插件 (display metadata), 服务策略 and 诊断与内容. Installed plugin files, trusted pins and code are never edited from this page.
+- **Marketplace management**: description / author / `app` / `api` / `listed` / `related` are written through `/admin/api/market`; `/admin/api/market/import` accepts an admin zip; `/admin/api/plugins/ai` is a reserved, token-gated capability surface (POST 501 until an executor is enabled).
 - **Open issues**: [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) tracks the remaining plugin work with P0/P1/P2 priorities and evidence.
