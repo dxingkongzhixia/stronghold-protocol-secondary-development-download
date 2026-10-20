@@ -1540,12 +1540,13 @@ docs guards 34 pass / 0 fail.
 
 **上游复查（2026-10-20）**：`origin/master` 从 `d905c146` 前进到 **`c9d804f47`**（8 个提交，0.3.2 的 Windows / CI 修复：#728、#739、#743、#744 及三个测试提交）。逐条核对后**全部已在本分支**：`ce0aff59c` 即 #728（`test/setup-assets.test.js` 73 行同款、`tools/setup.mjs` 的 `!st.isFile() || !st.size`）；local-extract 的 `PY` 回退与 `replace('\\\\','/')`、`fx.py` 的 Python 3.8 `.format`、operator-traits 的 `fileURLToPath`、skins 的路径分隔（我们使用 `replaceAll('\\','/')`）都已适配。**master 无需再取**。
 
-`origin/dev` 领先 **34 个提交**（0.3.2 预发布），17 个与本地不等价。**本轮已取 2 个**：
+`origin/dev` 领先 **34 个提交**（0.3.2 预发布），17 个与本地不等价。**本轮已取 3 个**：
 
 | 上游 | 内容 | 本地提交 |
 |---|---|---|
 | `ea2548c4b` + `9e57431a` + `38a1eb84` | #561 战略选人时可查看本局敌人信息（`ui/matchEnemies.js`，briefing / matchInfo 共用） | `1c55157a7` |
 | `a26ffab3f` | #782 野鬃 S2 把身后的敌人径向推开（`PUSH_TILES_EFFECT`，约 0.09 格 @ weight 1） | `1b58cdd7b` + golden `e6aafeeff`（归因：只回退该改动 → 零差异）+ 注释 `c2f91f2a9` |
+| `60d182c3d` | 7 组技能剪辑改播普通攻击（德克萨斯 S1/S2、伺夜 S1/S2、归溟幽灵鲨 S1、焰影苇草 S2、耀骑士临光 S2） | `c38adb532`：只取 `skillAttack.js` 的映射与 `skill-attack-mode.test.js` 的一处更新；新测试改为**角色选择**断言（不依赖 0.3.2 的 `spine.js` 攻击序列重构） |
 
 **不取（owner 决定，2026-10-20）**：
 
@@ -1557,7 +1558,6 @@ docs guards 34 pass / 0 fail.
 
 | 上游 | 内容 | 原因 |
 |---|---|---|
-| `60d182c3d` | 6 个技能剪辑 | 新测试依赖 0.3.2 的 `spine.js` 攻击序列重构（222 行），只取 `skillAttack.js` 会红 |
 | `84fbd1cb9` | 盟约剩余时间（默认关） | settings / i18n / detailPanel 冲突，收益小 |
 | `ca185d064` | #725 素材下载计数 | 依赖 #628 的整包下载（§0 黑名单），本分支没有该功能 |
 | `4908a73b2` / `ba3f86bd8` / `868cd6e07` | 第三方 AI / 外部顾问模式 | 体量大，需要产品决策与外部服务 |
