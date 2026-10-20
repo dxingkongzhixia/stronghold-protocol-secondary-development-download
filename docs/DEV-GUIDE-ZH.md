@@ -47,6 +47,7 @@
 | `docs/PLUGIN-BACKLOG.md` | 中 | 插件问题清单、优先级、状态和建议排期 |
 | `docs/PLUGIN-RISKS.md` | 中 | 玩家版插件风险说明（外观 / 玩法 / 脚本 / 信任） |
 | docs/PLUGIN-SUPPLY-CHAIN.md | 中 | 插件安装/更新校验、sha256、catalogue 边界 |
+| docs/PLUGIN-MARKET.md | 中 | 插件商城：普通/Forge 分目录、待审核、使用中下载与镜像源 |
 | `docs/UPSTREAM-DEV-TRIAGE.md` | 英/中 | 上游 `dev` 26 个提交的筛选与移植记录 |
 | `docs/TRUSTED-DEPLOY.md` | 中 | trusted 插件生产部署基线（非 root、只读 rootfs、cap、pin、consent） |
 | `docs/PLUGIN-REVIEW.md` | 中 | 插件体系架构、安全边界、运营台与残余风险 |

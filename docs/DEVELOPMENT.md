@@ -26,6 +26,7 @@ restate the upstream design — it points at it:
 | [`docs/PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | the live plugin issue list, priorities, status and suggested order of work |
 | [`docs/PLUGIN-RISKS.md`](PLUGIN-RISKS.md) | the player-facing plugin risk levels, consent and statistics note |
 | [docs/PLUGIN-SUPPLY-CHAIN.md](PLUGIN-SUPPLY-CHAIN.md) | plugin install/update checks, sha256, catalogue limits and the current signing boundary |
+| [docs/PLUGIN-MARKET.md](PLUGIN-MARKET.md) | the plugin marketplace: separate ordinary/Forge uploads, pending review, active downloads and mirror sources |
 | [`docs/UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | the 2026-10-20 triage of the 26 upstream `dev` commits and the selected port |
 | [`docs/TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) | the hardened deployment baseline for trusted plugins (non-root, read-only rootfs, caps, pins, consent) |
 | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) | plugin architecture, security boundaries, admin console and residual risks |

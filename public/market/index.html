@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>插件商城 · Stronghold Protocol</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0c1110; --panel:#121a18; --line:#2b3a36; --text:#e6efec; --lo:#8fa49e; --mint:#4ed8af; --warn:#d9a441; --bad:#e06c75; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui,"Noto Sans SC",sans-serif; }
+    header { padding:28px 5vw 18px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:26px; letter-spacing:.04em; }
+    .sub { color:var(--lo); margin-top:6px; }
+    main { max-width:1100px; margin:0 auto; padding:24px 5vw 60px; }
+    .tabs { display:flex; gap:8px; margin:18px 0; }
+    .tabs button { background:var(--panel); color:var(--lo); border:1px solid var(--line); padding:8px 16px; cursor:pointer; }
+    .tabs button.on { color:var(--bg); background:var(--mint); border-color:var(--mint); font-weight:700; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+    .card { background:var(--panel); border:1px solid var(--line); padding:14px; }
+    .card h3 { margin:0 0 6px; font-size:17px; }
+    .meta { color:var(--lo); font-size:12px; }
+    .pill { display:inline-block; padding:2px 7px; border:1px solid var(--line); color:var(--lo); font-size:12px; }
+    .pill.active { color:var(--mint); border-color:var(--mint); }
+    .pill.pending { color:var(--warn); border-color:var(--warn); }
+    .pill.rejected { color:var(--bad); border-color:var(--bad); }
+    .actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    button.act { background:transparent; color:var(--mint); border:1px solid var(--mint); padding:5px 10px; cursor:pointer; }
+    button.act.alt { color:var(--lo); border-color:var(--line); }
+    button.act.bad { color:var(--bad); border-color:var(--bad); }
+    button:disabled { opacity:.5; cursor:wait; }
+    .panel { background:var(--panel); border:1px solid var(--line); padding:16px; margin:22px 0; }
+    .panel h2 { margin:0 0 10px; font-size:18px; }
+    input[type=file] { max-width:100%; color:var(--lo); }
+    select, input[type=text] { background:#0d1513; color:var(--text); border:1px solid var(--line); padding:7px; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+    .msg { color:var(--lo); min-height:1.4em; }
+    .msg.bad { color:var(--bad); }
+    .hidden { display:none; }
+    a { color:var(--mint); }
+    footer { color:var(--lo); font-size:12px; margin-top:30px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>插件商城</h1>
+    <div class="sub">普通插件与 Forge 包分开上传、审核、下载。使用中的插件才可下载。</div>
+  </header>
+  <main>
+    <section class="tabs" role="tablist">
+      <button data-kind="ordinary" class="on" role="tab">普通插件</button>
+      <button data-kind="forge" role="tab">Forge 包</button>
+    </section>
+    <div id="list" class="grid"></div>
+    <p id="listMsg" class="msg"></p>
+
+    <section class="panel">
+      <h2>上传插件</h2>
+      <p class="meta">上传后为「未审核」；管理员测试通过后才会变为「使用中」并开放下载。</p>
+      <div class="row">
+        <select id="kind">
+          <option value="ordinary">普通插件</option>
+          <option value="forge">Forge 包</option>
+        </select>
+        <input id="zip" type="file" accept=".zip,application/zip">
+        <button class="act" id="upload">上传</button>
+      </div>
+      <p id="uploadMsg" class="msg"></p>
+    </section>
+
+    <section id="admin" class="panel hidden">
+      <h2>审核</h2>
+      <p class="meta">当前 URL 带管理员 token；测试通过后才能批准。</p>
+      <div id="adminList" class="grid"></div>
+      <p id="adminMsg" class="msg"></p>
+    </section>
+
+    <footer>
+      插件为非官方内容。下载的 zip 请按服务器说明安装；Forge 包只支持部分转换。
+      <a href="/">返回游戏</a>
+    </footer>
+  </main>
+  <script type="module" src="/js/market.js"></script>
+</body>
+</html>

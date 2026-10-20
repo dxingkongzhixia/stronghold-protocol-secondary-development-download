@@ -55,6 +55,7 @@ import { createSpeedProbe } from './speed.js';
 import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from './mirrors.js';
 import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX } from '../shared/constants.js';
+import { PLUGIN_LIMITS } from '../shared/plugins/manifest.js';
 import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
 import { createPluginRegistry } from './plugins/registry.js';
@@ -62,6 +63,7 @@ import { computeVanillaContent } from './plugins/identity.js';
 import { createVisualSets } from './plugins/visualSet.js';
 import { createPluginPolicy } from './plugins/policy.js';
 import { createContentSets } from './plugins/contentSets.js';
+import { createPluginMarket } from './market.js';
 import { createRoomSets } from './plugins/roomSets.js';
 import { createMatchHosts } from './match/host/index.js';
 import { createTrustedRuntime } from './plugins/trustedRuntime.js';
@@ -230,6 +232,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // /cs/<cs16>/?? a room holds one while it plays it, its data patched by P1b); no match hosts here: the browser simulates
   const policy = createPluginPolicy({ pluginsDir, log });
   const contents = createContentSets({ registry: packs, vanillaData: data, log, maxSets: () => policy.get().maxSets });
+  const market = createPluginMarket({ root: ROOT, log });
   const roomSets = createRoomSets({ registry: packs, visual, contents, policy });
   // gameplay-plugin rooms simulate in a host (server/match/host, DESIGN §32.6): one per content set; a child process
   // by default, a worker thread when SP_MATCH_HOST=worker asks for it
@@ -268,6 +271,44 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     return { key: `net:${key || ip || 'unknown'}`, accountId: null, name: null };
   }
 
+  /** Public plugin marketplace: list/download active entries, raw-zip upload, admin review under /admin/api/market. */
+  async function marketRoute(req, res, parts) {
+    if (parts.rawPath === '/market/api/list') {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      sendJson(req, res, 200, { now: Date.now(), plugins: market.list({ status: 'active' }) });
+      return;
+    }
+    const dl = /^\/market\/api\/download\/(ordinary|forge)\/([^/]+)$/.exec(parts.rawPath);
+    if (dl) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      let id; try { id = decodeURIComponent(dl[2]); } catch { sendJson(req, res, 400, { error: 'bad id' }); return; }
+      const got = market.download(dl[1], id);
+      if (!got) { sendJson(req, res, 404, { error: 'plugin not found or not active' }); return; }
+      res.writeHead(200, {
+        'Content-Type': 'application/zip',
+        'Content-Length': got.bytes.length,
+        'Content-Disposition': `attachment; filename="${got.filename.replace(/[^A-Za-z0-9._-]/g, '_')}"`,
+        'Cache-Control': 'no-store',
+      });
+      res.end(req.method === 'HEAD' ? undefined : got.bytes);
+      return;
+    }
+    if (parts.rawPath === '/market/api/upload') {
+      if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
+      const kind = new URLSearchParams(parts.query).get('kind');
+      const bytes = await readRawBody(req, PLUGIN_LIMITS.pluginBytes + 1);
+      if (bytes == null) { sendJson(req, res, 413, { error: 'zip is over the plugin size limit' }); return; }
+      const who = communityKey(req);
+      try {
+        const entry = await market.upload({ kind, bytes, filename: req.headers['x-plugin-filename'], uploadedBy: who.name || who.key });
+        sendJson(req, res, 201, { ok: true, plugin: entry });
+      } catch (e) {
+        sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300) });
+      }
+      return;
+    }
+  }
+
   /**
    * Token-gated operations routes (server/admin.js). notify pushes an operator notice to the live sessions
    * (lobby.broadcastNotice). Security headers are already set by the caller.
@@ -279,6 +320,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const speed = parts.rawPath === '/admin/api/speed';
     const origins = parts.rawPath === '/admin/api/origins';
     const pluginPolicy = parts.rawPath === '/admin/api/plugin-policy';
+    const marketAdmin = parts.rawPath === '/admin/api/market';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -337,6 +379,22 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       const r = writePluginPolicy({ pluginsDir, body });
       if (r.error) { sendJson(req, res, 400, { error: r.error }); return; }
       sendJson(req, res, 200, { ok: true, policy: r.policy });
+      return;
+    }
+    if (marketAdmin) {
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        sendJson(req, res, 200, { plugins: market.list({ admin: true }) });
+        return;
+      }
+      if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); sendJson(req, res, 405, { error: 'GET or POST required' }); return; }
+      const body = await readJsonBody(req);
+      if (!body || typeof body !== 'object' || Array.isArray(body)) { sendJson(req, res, 400, { error: '请求体需要是 JSON 对象' }); return; }
+      try {
+        const r = await market.review(String(body.kind || ''), String(body.id || ''), String(body.action || ''), { reviewer: 'admin', note: body.note });
+        sendJson(req, res, 200, r);
+      } catch (e) {
+        sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300) });
+      }
       return;
     }
     // bug report status (server/community.js): POST { id, status } marks a report 待处理 / 已受理 / 已修复.
@@ -430,8 +488,13 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       communityUploadRoute(req, res).catch((e) => { log.error('[community] upload failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;
     }
+    if (parts.rawPath === '/market/api/list' || parts.rawPath === '/market/api/upload' || parts.rawPath.startsWith('/market/api/download/')) {
+      marketRoute(req, res, parts).catch((e) => { log.error('[market] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
+      return true;
+    }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
       || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
+      || parts.rawPath === '/admin/api/market'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;
