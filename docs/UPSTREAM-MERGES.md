@@ -1537,3 +1537,19 @@ docs guards 34 pass / 0 fail.
 **官方 0.3.1 自选池与自造干员兼容（2026-10-19）**：`data/backups.json` 增加 `diy.officialPool`（7 个同 charId 的自造商店干员），官方 `op-*` kit 进入 `OPERATOR_KIT_FILES`；自造 `chess_char_*` kit 与官方 `op-*` kit 按 key 分离，互不覆盖。`diy.ownedPool` 仍为 65 人，`diyPool` 5/6 阶变为 87/81。详见 `docs/MATCHMAKING.md` §34.5。
 
 **0.3.1 / 0.3.2 全量追平收尾（2026-10-19，`plugin-stack-tip`）**：#670、#675 / #677、isomerpoi 的 7 个 UI PR、#680 / #684 / #658 / #663 / #700 已完成；本轮补上官方特效 root / 朝向 / 持续区域 / 报告特效 / 余 S3 火墙、统计 `withModded` 开关、0.3.2 的 setup / local-extract 修复，以及插件干员官方美术的发现、提取与本地合并。全量 CI **8181 / 8145 通过 / 0 失败**。0.3.1 / 0.3.2 的版本元数据仍不取（本分支保持 0.4.0），§0 的 never-merge 项继续不取。
+
+**上游复查（2026-10-20）**：`origin/master` 从 `d905c146` 前进到 **`c9d804f47`**（8 个提交，0.3.2 的 Windows / CI 修复：#728、#739、#743、#744 及三个测试提交）。逐条核对后**全部已在本分支**：`ce0aff59c` 即 #728（`test/setup-assets.test.js` 73 行同款、`tools/setup.mjs` 的 `!st.isFile() || !st.size`）；local-extract 的 `PY` 回退与 `replace('\\\\','/')`、`fx.py` 的 Python 3.8 `.format`、operator-traits 的 `fileURLToPath`、skins 的路径分隔（我们使用 `replaceAll('\\','/')`）都已适配。**master 无需再取**。
+
+`origin/dev` 领先 **34 个提交**（0.3.2 预发布），其中 17 个与本地不等价。候选（按与我们的相关度）：
+
+| 上游 | 内容 | 备注 |
+|---|---|---|
+| `77b91081c` | **picture-only outfits 可穿戴**（只给立绘、没有模型的时装也能选） | 与我们的皮肤系统直接相关；当前 `hasAnySkinChoices` 只认可穿戴模型 |
+| `60d182c3d` | 0.3.1 留下的 7 个技能剪辑候选里 6 个改播官方攻击剪辑 | 我们目前只有 `ad6eaf491` 的陈 S2 |
+| `ea2548c4b` / `9e57431a` / `38a1eb84` | #561 战略选人时可查看本局敌人信息 | 玩法 / UI |
+| `ca185d064` | #725 素材下载就绪数包含已下载与已导入 | 客户端计数 |
+| `a26ffab3f` | #782 缄默 S2 把身后的敌人径向推开（约 0.09 格 @ weight 1） | 规则修正，需 golden 归因 |
+| `84fbd1cb9` | 选中单位卡片显示盟约剩余时间（默认关） | 小功能 |
+| `4908a73b2` / `ba3f86bd8` / `868cd6e07` | 第三方 AI 接口 + 外部顾问模式（HTTP / stdio、计划与知识包） | 体量大，需产品决策；不整支取 |
+
+**结论**：master 的 8 个提交全部已有，**不再开合并批次**；dev 是预发布，按 §12 的纪律**逐条 triage**，不整支合并。`check-upstream.mjs` 的远端名是 `origin`（不是默认的 `upstream`），用 `node tools/check-upstream.mjs --no-fetch --upstream origin`。
