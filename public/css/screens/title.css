@@ -243,6 +243,24 @@
 .title-invite .icon { width: .2rem; height: .2rem; }
 .title-invite b { font-size: calc(.2 * var(--t)); letter-spacing: .2em; color: #ffd08a; }
 .title-conn { display: flex; align-items: center; justify-content: center; gap: .1rem; min-height: .32rem; font-size: calc(.14 * var(--t)); color: var(--text-lo); }
+/* title-screen settings + fullscreen: raw buttons otherwise fall back to the browser's gray default */
+.title-conn .title-settings,
+.title-conn .fsbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max(.3rem, 1.55em);
+  height: max(.3rem, 1.55em);
+  padding: 0;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--line);
+  color: var(--text-lo);
+  cursor: pointer;
+}
+.title-conn .title-settings:hover,
+.title-conn .fsbtn:hover { color: var(--mint-400); border-color: var(--mint-a35); }
+.title-conn .title-settings .icon,
+.title-conn .fsbtn .icon { width: .16rem; height: .16rem; }
 /* 统计 (the local stats page) beside the language menu in the top-right corner */
 .title-corner__tools { display: flex; align-items: center; justify-content: flex-end; gap: .1rem; margin-bottom: .1rem; }
 .title-corner__tools .title-lang { margin-bottom: 0; }
