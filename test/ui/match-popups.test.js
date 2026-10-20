@@ -49,7 +49,7 @@ test("phasePopupOf: 联防 gets the plate (the official faces) with the banner's
 test('the round plate fits inside 回合开始 (server DELAYS.ROUND_START)', () => {
   const delay = Number(read('server/match/match/common.js').match(/ROUND_START:\s*(\d+)/)?.[1]);
   assert.ok(delay > 0);
-  assert.ok(P.ROUND_POPUP_MS + 280 <= delay, `${P.ROUND_POPUP_MS} + the fold within ${delay} ms`);
+  assert.ok(P.ROUND_POPUP_MS + P.LEAVE_MS <= delay, `${P.ROUND_POPUP_MS} + the ${P.LEAVE_MS} ms retract within ${delay} ms`);
 });
 
 test('the official roundStartDialog sprites it draws are in the asset list', () => {

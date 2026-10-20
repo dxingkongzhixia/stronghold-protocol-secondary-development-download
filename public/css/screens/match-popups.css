@@ -2,9 +2,11 @@
    match-popups.css — the round / phase plates in the middle of the field (js/ui/matchPopups.js), built from the
    official roundStartDialog sprites. Sizes are design px ÷ 100 (theme.css root scale: a sprite of N px is N/100 rem);
    text follows 设置 → 文字大小 (calc(k * var(--t))). The arrangement of the parts is [ASSUMED] (the official layout is
-   not in the sources). It fades in, the parts arrive one after another, and it folds away from the right;
-   pointer-events: none — the field stays usable under it. Every final state is the default one, so with
-   prefers-reduced-motion (no animation) the plate simply shows.
+   not in the sources). The timing follows the client's own clips: round_start_dialog_in (0.17 s fade, the panel grows
+   over 0.33 s, the corners/brackets fly out and the robot assembles by ~0.45 s, the number turns at 0.42–0.67 s, the
+   funds at 0.8–1.17 s), round_start_dialog_emoji_loop (a 1 s pixel-step bob) and round_start_dialog_out (a 0.33 s
+   retract — the parts return to the middle, the panel narrows to a bar). pointer-events: none — the field stays usable
+   under it. Every final state is the default one, so with prefers-reduced-motion (no animation) the plate simply shows.
    ========================================================================================== */
 
 .mpop { --mp: var(--mint-500); --mp-hi: var(--mint-400); --mp-glow: rgba(23, 249, 183, .35);
@@ -16,7 +18,10 @@
 .mpop--gold { --mp: var(--gold); --mp-hi: #ffd75e; --mp-glow: rgba(255, 198, 0, .38); }
 
 .mpop__panel { position: relative; display: flex; align-items: center; gap: .3rem; min-height: 2.48rem; padding: .3rem .4rem .3rem .36rem;
-  background: rgba(36, 38, 38, .9); box-shadow: 0 .1rem .5rem rgba(0, 0, 0, .45); animation: mpop-in 200ms var(--ease-out) backwards; }
+  background: transparent; box-shadow: none; isolation: isolate; animation: mpop-panel-fade 170ms var(--ease-out) both; }
+/* the official panel grows out of a thin bar (round_start_dialog_in: bg height 120 -> 299 over 0.33 s) */
+.mpop__panel::before { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(36, 38, 38, .9);
+  box-shadow: 0 .1rem .5rem rgba(0, 0, 0, .45); transform-origin: center; animation: mpop-panel-grow 340ms var(--ease-out) both; }
 .mpop--phase .mpop__panel { min-width: 7.2rem; }
 /* round_bg_line (496×168): the contour lines over the panel */
 .mpop__lines { position: absolute; left: 0; top: 50%; width: 4.96rem; height: 1.68rem; transform: translateY(-50%); opacity: .35; pointer-events: none; }
@@ -27,31 +32,35 @@
 .mpop__artbg { position: absolute; left: .38rem; top: .08rem; width: 1.85rem; height: 1.73rem; opacity: .7; }
 .mpop__artbg--css { background: radial-gradient(closest-side, rgba(0, 0, 0, .55), rgba(0, 0, 0, .15)); }
 /* round_cross through a mask in the plate's colour (teal; orange for 联防), else a CSS + */
-.mpop__x { position: absolute; width: .24rem; height: .24rem; color: var(--mp); opacity: .6; animation: mpop-fade 220ms 330ms both;
+.mpop__x { --x-op: .6; --ix: 0rem; --iy: 0rem; position: absolute; width: .24rem; height: .24rem; color: var(--mp);
+  animation: mpop-cross-in 380ms 180ms var(--ease-out) both;
   background: linear-gradient(currentColor, currentColor) center / 100% 2px no-repeat, linear-gradient(currentColor, currentColor) center / 2px 100% no-repeat; }
-.mpop.has-frame .mpop__x { opacity: 1; background: currentColor; -webkit-mask: var(--mpop-cross) center / 100% 100% no-repeat; mask: var(--mpop-cross) center / 100% 100% no-repeat; }
-.mpop__x--tl { left: -.12rem; top: -.12rem; }
-.mpop__x--tr { right: -.12rem; top: -.12rem; }
-.mpop__x--bl { left: -.12rem; bottom: -.12rem; }
-.mpop__x--br { right: -.12rem; bottom: -.12rem; }
-.mpop__brk { position: absolute; top: 50%; width: .06rem; height: 1.15rem; margin-top: -.575rem; color: var(--mp); --brk-a: .55; animation: mpop-fade 220ms 220ms both; }
+.mpop.has-frame .mpop__x { --x-op: 1; background: currentColor; -webkit-mask: var(--mpop-cross) center / 100% 100% no-repeat; mask: var(--mpop-cross) center / 100% 100% no-repeat; }
+/* the corners fly out from the plate's middle with a short overshoot (in: x -48 -> -80 -> -86) */
+.mpop__x--tl { --ix: .38rem; --iy: -.31rem; left: -.12rem; top: -.12rem; }
+.mpop__x--tr { --ix: -.38rem; --iy: -.31rem; right: -.12rem; top: -.12rem; }
+.mpop__x--bl { --ix: .38rem; --iy: .31rem; left: -.12rem; bottom: -.12rem; }
+.mpop__x--br { --ix: -.38rem; --iy: .31rem; right: -.12rem; bottom: -.12rem; }
+.mpop__brk { position: absolute; top: 50%; width: .06rem; height: 1.15rem; margin-top: -.575rem; color: var(--mp); --brk-a: .55; --brk-op: .6;
+  animation: mpop-brk-in 440ms 40ms var(--ease-out) both; }
 .mpop__brk--l { left: -.08rem; }
 .mpop__brk--r { right: -.08rem; transform: scaleX(-1); }
 /* the brackets (box and labels): round_frame through a mask in the element's colour, else a CSS 「[」 */
 .mpop__brk, .mpop__k::before, .mpop__k::after { border: 2px solid currentColor; border-right: 0; opacity: .6; }
-.mpop.has-frame .mpop__brk, .mpop.has-frame .mpop__k::before, .mpop.has-frame .mpop__k::after { border: 0; opacity: var(--brk-a, 1); background: currentColor;
+.mpop.has-frame .mpop__brk, .mpop.has-frame .mpop__k::before, .mpop.has-frame .mpop__k::after { border: 0; opacity: var(--brk-a, 1); --brk-op: var(--brk-a, 1); background: currentColor;
   -webkit-mask: var(--mpop-frame) center / 100% 100% no-repeat; mask: var(--mpop-frame) center / 100% 100% no-repeat; }
-/* the robot from its parts (head 104×81, body 46×54, book 44×61, hand 28×21), placed as in the footage */
-.mpop__bot { position: absolute; inset: 0; animation: mpop-pop 380ms 110ms var(--ease-out) both; }
+/* the robot from its parts (head 104×81, body 46×54, book 44×61, hand 28×21), placed as in the footage;
+   it assembles over ~0.45 s and then breathes on the official 1 s emoji loop */
+.mpop__bot { position: absolute; inset: 0; animation: mpop-bob 1s 1.2s steps(2, end) infinite; }
 .mpop__part { position: absolute; }
-.mpop__part--head { left: .85rem; top: .28rem; width: 1.04rem; height: .81rem; }
-.mpop__part--body { left: 1.1rem; top: 1.06rem; width: .46rem; height: .54rem; }
-.mpop__part--book { left: .58rem; top: .77rem; width: .44rem; height: .61rem; transform: rotate(-10deg); }
-.mpop__part--hand { left: 1.61rem; top: 1.1rem; width: .28rem; height: .21rem; }
+.mpop__part--head { left: .85rem; top: .28rem; width: 1.04rem; height: .81rem; animation: mpop-head-in 420ms 100ms var(--ease-out) both; }
+.mpop__part--body { left: 1.1rem; top: 1.06rem; width: .46rem; height: .54rem; animation: mpop-part-in 360ms 160ms var(--ease-out) both; }
+.mpop__part--book { left: .58rem; top: .77rem; width: .44rem; height: .61rem; transform: rotate(-10deg); animation: mpop-book-in 380ms 80ms var(--ease-out) both; }
+.mpop__part--hand { left: 1.61rem; top: 1.1rem; width: .28rem; height: .21rem; animation: mpop-hand-in 360ms 220ms var(--ease-out) both; }
 /* 联防: the two official faces (trans_coop4 / trans_coop3, 31×33) scaled up as pixel art, side by side */
 .mpop__bot--faces { display: flex; align-items: center; justify-content: center; gap: .04rem; padding-bottom: .1rem; }
-.mpop__face { width: .9rem; height: .96rem; image-rendering: pixelated; }
-.mpop__face--2 { animation: mpop-pop 380ms 120ms var(--ease-out) both; }
+.mpop__face { width: .9rem; height: .96rem; image-rendering: pixelated; animation: mpop-face-in 380ms 120ms var(--ease-out) both; }
+.mpop__face--2 { animation-delay: 200ms; }
 .mpop__face--css { background: #f2a01c; clip-path: polygon(12% 0, 88% 0, 100% 12%, 100% 70%, 70% 70%, 70% 100%, 30% 100%, 30% 70%, 0 70%, 0 12%); }
 .mpop__face--2.mpop__face--css { background: #ee6a2a; }
 /* the pixel dots around the head (the footage's twinkling squares; plain CSS) */
@@ -70,7 +79,8 @@
 
 /* 回合 / 获得 */
 .mpop__cell { position: relative; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem;
-  min-width: 1.65rem; min-height: 1.58rem; padding: .1rem .14rem; background: rgba(255, 255, 255, .06); }
+  min-width: 1.65rem; min-height: 1.58rem; padding: .1rem .14rem; background: rgba(255, 255, 255, .06);
+  animation: mpop-cell-in 300ms 110ms var(--ease-out) both; }
 .mpop__k { position: relative; padding: 0 .16rem; font-size: calc(.3 * var(--t)); line-height: 1.2; letter-spacing: .06em; color: #d6dada; }
 .mpop__k::before, .mpop__k::after { content: ''; position: absolute; top: .02rem; bottom: .02rem; width: .06rem; }
 .mpop__k::before { left: 0; }
@@ -79,24 +89,24 @@
 .mpop__cell--gold .mpop__k { color: var(--gold); }
 .mpop__roll { display: grid; height: 1.15em; overflow: hidden; font-family: var(--font-display); font-size: calc(.56 * var(--t)); line-height: 1.15em; color: #eef1f1; }
 .mpop__roll b { grid-area: 1 / 1; font-weight: 500; }
-.mpop__old { opacity: 0; animation: mpop-drop 170ms 400ms ease-in backwards; }
-.mpop__new { animation: mpop-fall 220ms 440ms var(--ease-out) both; }
+.mpop__old { opacity: 0; animation: mpop-drop 250ms 420ms ease-in both; }
+.mpop__new { animation: mpop-fall 260ms 430ms cubic-bezier(.2, .85, .25, 1.15) both; }
 .mpop__gain { position: relative; display: flex; align-items: center; gap: .08rem; height: .42rem; font-size: calc(.42 * var(--t)); color: var(--gold); }
 /* round_sources_icon (48×37) */
-.mpop__coin { position: relative; width: .48rem; height: .37rem; animation: mpop-coin 420ms 600ms ease-out both; }
+.mpop__coin { position: relative; width: .48rem; height: .37rem; animation: mpop-coin 420ms 700ms ease-out both; }
 .mpop__coin--css { width: .42rem; height: .42rem; fill: currentColor; }
 .mpop__flare { position: absolute; left: -.34rem; right: -.34rem; top: 50%; height: .28rem; opacity: 0; transform: translateY(-50%) scaleX(.2);
-  background: radial-gradient(closest-side, rgba(255, 244, 190, .95), rgba(255, 198, 0, 0)); animation: mpop-flare 460ms 600ms ease-out; }
-.mpop__plus { font-family: var(--font-display); font-weight: 600; color: #ffcc33; animation: mpop-slide 240ms 760ms var(--ease-out) both; }
+  background: radial-gradient(closest-side, rgba(255, 244, 190, .95), rgba(255, 198, 0, 0)); animation: mpop-flare 460ms 700ms ease-out; }
+.mpop__plus { font-family: var(--font-display); font-weight: 600; color: #ffcc33; animation: mpop-slide 240ms 840ms var(--ease-out) both; }
 /* round_plus (20×19) sparks flying off the icon */
 .mpop__spark { position: absolute; left: 50%; top: 66%; width: .2rem; height: .19rem; opacity: 0;
-  --a: calc(var(--i) * 60deg - 20deg); animation: mpop-spark 720ms calc(780ms + var(--i) * 34ms) ease-out; }
+  --a: calc(var(--i) * 60deg - 20deg); animation: mpop-spark 720ms calc(860ms + var(--i) * 30ms) ease-out; }
 .mpop__spark img, .mpop__spark--css { display: block; width: 100%; height: 100%; }
 .mpop__spark--css { background: linear-gradient(#ffe27a, #ffe27a) center / 100% 30% no-repeat, linear-gradient(#ffe27a, #ffe27a) center / 30% 100% no-repeat; }
 
 /* 剩余 N 回合: round_countdown_bg (322×64, drawn ×1.35 as in the footage) on top while the final assault is near */
 .mpop__head { position: absolute; left: 50%; bottom: calc(100% - .16rem); display: flex; align-items: center; justify-content: center;
-  width: 4.35rem; height: .86rem; transform: translateX(-50%); animation: mpop-wipe 280ms 140ms var(--ease-out) both; }
+  width: 4.35rem; height: .86rem; transform: translateX(-50%); animation: mpop-wipe 300ms 70ms var(--ease-out) both; }
 .mpop__headbg { position: absolute; inset: 0; width: 4.35rem; height: .86rem; }
 .mpop__headbg--css { inset: .14rem .27rem; width: auto; height: auto; background: rgba(40, 14, 8, .92); border: 2px solid #e2541e; border-radius: .06rem; }
 .mpop__headtxt { position: relative; padding-left: .5rem; white-space: nowrap; color: #f2e6e0; font-size: calc(.26 * var(--t)); letter-spacing: .08em; }
@@ -104,14 +114,14 @@
 
 /* the line under the plate: 资金已到账 / 观战中 (phaseBanner's sub, GitHub #236 / #237) */
 .mpop__line { padding: .04rem .24rem; background: rgba(24, 26, 26, .78); color: #c9cfcf; font-size: calc(.19 * var(--t)); letter-spacing: .06em;
-  animation: mpop-fade 220ms 400ms both; }
+  animation: mpop-fade 300ms 200ms both; }
 
 /* the phase words */
 .mpop__text { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; gap: .06rem; min-width: 0; padding-right: .3rem; }
 .mpop__title { font-size: calc(.5 * var(--t)); font-weight: 900; letter-spacing: .08em; line-height: 1.15; white-space: nowrap; color: var(--mp-hi);
-  text-shadow: 0 0 .16rem var(--mp-glow); animation: mpop-wipe 300ms 200ms var(--ease-out) both; }
+  text-shadow: 0 0 .16rem var(--mp-glow); animation: mpop-wipe 320ms 120ms var(--ease-out) both; }
 .mpop__sub { max-width: 3.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(.19 * var(--t)); color: #c9cfcf;
-  animation: mpop-wipe 300ms 300ms var(--ease-out) both; }
+  animation: mpop-wipe 320ms 200ms var(--ease-out) both; }
 .mpop__chevs { position: absolute; top: 0; bottom: 0; right: 0; width: 3.2rem; overflow: hidden; pointer-events: none; }
 .mpop__chevs i { position: absolute; top: 0; bottom: 0; left: calc(var(--k) * .66rem + .3rem); width: .86rem; opacity: 0;
   background: linear-gradient(90deg, transparent, var(--mp));
@@ -120,16 +130,42 @@
 .mpop__chevs i:nth-child(2) { --k: 1; }
 .mpop__chevs i:nth-child(3) { --k: 2; }
 
-.mpop.is-leaving .mpop__panel, .mpop.is-leaving .mpop__line { animation: mpop-out 280ms ease-in forwards; }
-.mpop.is-leaving .mpop__bot { animation: mpop-shrink 200ms ease-in forwards; }
-@keyframes mpop-in { from { opacity: 0; transform: scaleY(.84); } }
-@keyframes mpop-out { to { clip-path: inset(0 100% 0 0); opacity: .3; } }
+.mpop.is-leaving .mpop__panel { animation: mpop-panel-fade-out 330ms ease-in forwards; }
+.mpop.is-leaving .mpop__panel::before { animation: mpop-panel-out 330ms ease-in forwards; }
+.mpop.is-leaving .mpop__bot { animation: mpop-bot-out 280ms ease-in forwards; }
+.mpop.is-leaving .mpop__x { animation: mpop-cross-out 260ms ease-in forwards; }
+.mpop.is-leaving .mpop__brk { animation: mpop-brk-out 260ms ease-in forwards; }
+.mpop.is-leaving .mpop__cell, .mpop.is-leaving .mpop__line, .mpop.is-leaving .mpop__text, .mpop.is-leaving .mpop__head {
+  animation: mpop-text-out 280ms ease-in forwards; }
+@keyframes mpop-panel-fade { from { opacity: 0; } }
+@keyframes mpop-panel-grow { from { opacity: .2; transform: scaleY(.4); } 60% { opacity: 1; transform: scaleY(1.02); } to { transform: none; } }
+@keyframes mpop-panel-fade-out { to { opacity: 0; } }
+@keyframes mpop-panel-out { 40% { transform: scaleY(.9); } to { opacity: 0; transform: scaleY(.13); } }
+@keyframes mpop-cross-in { 0% { opacity: 0; transform: translate(var(--ix), var(--iy)) scale(.9); }
+  55% { opacity: var(--x-op); transform: translate(calc(var(--ix) * -.08), calc(var(--iy) * -.08)); }
+  100% { opacity: var(--x-op); transform: none; } }
+@keyframes mpop-cross-out { to { opacity: 0; transform: translate(calc(var(--ix) * .5), calc(var(--iy) * .5)) scale(.8); } }
+@keyframes mpop-brk-in { 0% { clip-path: inset(50% 0 50% 0); opacity: 0; }
+  55%, 100% { clip-path: inset(0 0 0 0); opacity: var(--brk-op, .6); } }
+@keyframes mpop-brk-out { to { clip-path: inset(50% 0 50% 0); opacity: 0; } }
+@keyframes mpop-cell-in { from { opacity: 0; transform: translateY(.06rem); } }
 @keyframes mpop-fade { from { opacity: 0; } }
 @keyframes mpop-blink { 50% { opacity: .25; } }
-@keyframes mpop-pop { 0% { transform: scale(.22); opacity: 0; filter: brightness(3); } 55% { transform: scale(1.08); opacity: 1; } }
-@keyframes mpop-shrink { to { transform: scale(.22); filter: brightness(2.6); } }
-@keyframes mpop-drop { from { opacity: 1; transform: none; } to { transform: translateY(70%) scaleY(.4); opacity: 0; } }
-@keyframes mpop-fall { from { transform: translateY(-60%); opacity: 0; } }
+@keyframes mpop-bob { 0%, 49% { transform: none; } 50%, 100% { transform: translateY(.014rem); } }
+@keyframes mpop-head-in { 0% { opacity: 0; transform: scale(.35); filter: brightness(2.4); }
+  60% { opacity: 1; transform: scale(1.06); } 100% { transform: none; filter: none; } }
+@keyframes mpop-face-in { 0% { opacity: 0; transform: scale(.35); } 60% { opacity: 1; transform: scale(1.06); } 100% { transform: none; } }
+@keyframes mpop-part-in { 0% { opacity: 0; transform: scale(.45); } 60% { opacity: 1; transform: scale(1.04); } 100% { transform: none; } }
+@keyframes mpop-book-in { 0% { opacity: 0; transform: rotate(-18deg) translateX(-.12rem) scale(.7); }
+  65% { opacity: 1; transform: rotate(-9deg) scale(1.03); } 100% { transform: rotate(-10deg); } }
+@keyframes mpop-hand-in { 0% { opacity: 0; transform: translateX(-.16rem) scale(.6); }
+  60% { opacity: 1; transform: translateX(.02rem) scale(1.04); } 100% { transform: none; } }
+@keyframes mpop-bot-out { to { opacity: 0; transform: scale(.25); filter: brightness(1.8); } }
+@keyframes mpop-text-out { 0% { opacity: 1; } 35% { opacity: .35; } 55% { opacity: .85; } 100% { opacity: 0; } }
+@keyframes mpop-drop { 0% { opacity: 1; transform: none; } 55% { opacity: .85; transform: translateY(.07rem) scale(.73); }
+  100% { opacity: 0; transform: translateY(.095rem) scale(.64); } }
+@keyframes mpop-fall { 0% { opacity: 0; transform: translateY(-.34rem) scale(.44); }
+  55% { opacity: 1; transform: translateY(-.10rem) scale(.855); } 100% { opacity: 1; transform: none; } }
 @keyframes mpop-coin { 40% { transform: scale(1.25); filter: brightness(1.8); } }
 @keyframes mpop-flare { 0% { opacity: 0; transform: translateY(-50%) scaleX(.2); } 40% { opacity: 1; transform: translateY(-50%) scaleX(1); } 100% { opacity: 0; transform: translateY(-50%) scaleX(1.1); } }
 @keyframes mpop-slide { from { transform: translateX(.3rem); opacity: 0; } }
@@ -137,5 +173,6 @@
 @keyframes mpop-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes mpop-chev { 0% { opacity: 0; transform: translateX(-1.1rem); } 25% { opacity: 1; } 70% { opacity: .9; transform: translateX(.5rem); } 100% { opacity: 0; transform: translateX(1.3rem); } }
 @media (prefers-reduced-motion: reduce) {
-  .mpop *, .mpop.is-leaving .mpop__panel, .mpop.is-leaving .mpop__line, .mpop.is-leaving .mpop__bot { animation: none; }
+  .mpop *, .mpop__panel::before, .mpop.is-leaving .mpop__panel, .mpop.is-leaving .mpop__panel::before,
+  .mpop.is-leaving .mpop__line, .mpop.is-leaving .mpop__bot { animation: none; }
 }

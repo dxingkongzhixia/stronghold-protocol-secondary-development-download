@@ -28,8 +28,8 @@ const cx = (...p) => p.flat().filter(Boolean).join(' ');
  * How long the round popup holds before it folds away (ms), and the fold: together inside 回合开始's 2 s
  * (server/match/match/common.js DELAYS.ROUND_START), so the 休整期 banner after it never waits or overlaps.
  */
-export const ROUND_POPUP_MS = 1700;
-const LEAVE_MS = 280;
+export const ROUND_POPUP_MS = 1650;
+export const LEAVE_MS = 330;
 
 /** Two-digit round number as the plate shows it (00 before the first round). */
 export const roundDigits = (n) => String(Math.max(0, Math.trunc(Number(n) || 0)) % 100).padStart(2, '0');
