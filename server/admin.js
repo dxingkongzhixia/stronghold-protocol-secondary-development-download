@@ -559,6 +559,7 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .row-action--icon{padding:4px 7px;font-family:ui-monospace,Consolas,monospace}
 .plugin-related{margin-top:4px;color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .plugin-related span{color:var(--mint)}
+.plugin-related.is-bad{color:#ff9a9a}
 .plugin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px}
 .plugin-stat{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:linear-gradient(180deg,var(--panel2),transparent)}
 .plugin-stat__icon{float:right;color:var(--mint);opacity:.65;font-size:14px}
@@ -1284,17 +1285,18 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     };
     el('marketBody').innerHTML = market.filter(hit).map(function (x) {
       var listed = x.listed !== false;
-      var state = x.needsReview ? '需重新审核' : x.pendingUpdate ? ('新版本 v' + x.pendingUpdate.version + ' 待审') : x.status === 'active' ? (listed ? '已上架' : '已下架') : (statusLabels[x.status] || x.status || '—');
+      var state = x.needsReview ? '需重新审核' : x.dependencyCheck && x.dependencyCheck.ok === false ? '依赖不完整' : x.pendingUpdate ? ('新版本 v' + x.pendingUpdate.version + ' 待审') : x.status === 'active' ? (listed ? '已上架' : '已下架') : (statusLabels[x.status] || x.status || '—');
       var kind = x.kind === 'forge' ? 'Forge 包' : '普通插件';
       var cls = CLASS_LABELS[x.class] || x.class || '未声明';
       var compat = compatPills(x);
       return '<tr draggable="true" data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
         + '<td><div class="plugin-name"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div><b>' + esc(x.name || x.id) + '</b><small>' + esc(x.id) + ' · v' + esc(x.version || '—') + '</small></div></div></td>'
-        + '<td><div class="plugin-badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span></div><div class="plugin-sub">' + esc(state) + '</div></td>'
+        + '<td><div class="plugin-badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span>' + (x.signature ? '<span class="pill yes">已签名</span>' : '<span class="pill">未签名</span>') + '</div><div class="plugin-sub">' + esc(state) + '</div></td>'
         + '<td><div class="plugin-compat">' + compat.own + compat.main + '</div></td>'
         + '<td><div class="plugin-desc">' + esc(x.description || '—') + '</div><div class="plugin-sub">' + esc(x.author || '未填写作者') + '</div>'
         + ((x.relatedPlugins || []).length ? '<div class="plugin-related">关联：<span>' + esc(x.relatedPlugins.map(function (r) { return r.name; }).join('、')) + '</span></div>' : '')
-        + ((x.relatedBy || []).length ? '<div class="plugin-related">被关联：<span>' + esc(x.relatedBy.map(function (r) { return r.name; }).join('、')) + '</span></div>' : '') + '</td>'
+        + ((x.relatedBy || []).length ? '<div class="plugin-related">被关联：<span>' + esc(x.relatedBy.map(function (r) { return r.name; }).join('、')) + '</span></div>' : '')
+        + (x.dependencyCheck && x.dependencyCheck.ok === false ? '<div class="plugin-related is-bad">依赖不完整：' + esc([...(x.dependencyCheck.missing || []), ...(x.dependencyCheck.mismatched || []), ...(x.dependencyCheck.conflicts || [])].map(function (r) { return r.id; }).join('、')) + '</div>' : '') + '</td>'
         + '<td><label class="switch" title="上架 / 下架"><input type="checkbox" data-quick-listed' + (listed ? ' checked' : '') + '><span></span></label></td>'
         + '<td><div class="plugin-actions"><button type="button" class="row-action row-action--icon" data-move="up" title="上移">↑</button><button type="button" class="row-action row-action--icon" data-move="down" title="下移">↓</button><button type="button" class="row-action" data-edit>编辑</button></div></td>'
         + '</tr>';
@@ -1396,6 +1398,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     el('drawerTitle').textContent = item.name || item.id;
     el('drawerMeta').innerHTML = '<span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span>'
       + (mode === 'installed' ? '<span class="pill yes">已加载</span>' : '<span class="pill">' + esc(item.listed === false ? '已下架' : (item.status === 'active' ? '已上架' : (item.status || ''))) + '</span>')
+      + (item.signature ? '<span class="pill yes">签名 ' + esc(item.signature.keyId) + '</span>' : '<span class="pill">未签名</span>')
       + '<span class="drawer-id">' + esc(item.id) + ' · v' + esc(item.version || '—') + '</span>';
     el('drawerDescription').value = item.description || '';
     el('drawerAuthor').value = item.author || '';
@@ -1417,7 +1420,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     var history = Array.isArray(item.history) ? item.history : [];
     var pending = item.pendingUpdate;
     var relatedBy = Array.isArray(item.relatedBy) ? item.relatedBy : [];
-    el('drawerHistory').innerHTML = (pending ? '<b>待审核新版本 v' + esc(pending.version) + '</b>' : '')
+    var dep = item.dependencyCheck;
+    var depText = dep ? (dep.ok ? '依赖完整' : '依赖不完整：' + [...(dep.missing || []), ...(dep.mismatched || []), ...(dep.conflicts || [])].map(function (x) { return x.id; }).join('、')) : '';
+    el('drawerHistory').innerHTML = (dep ? '<b>依赖检查</b><div class="' + (dep.ok ? '' : 'is-bad') + '">' + esc(depText) + '</div>' : '')
+      + (pending ? '<b>待审核新版本 v' + esc(pending.version) + '</b>' : '')
       + (relatedBy.length ? '<b>被这些插件关联</b><div>' + esc(relatedBy.map(function (r) { return r.name; }).join('、')) + '</div>' : '')
       + (history.length ? '<b>历史版本</b>' + history.slice().reverse().map(function (h) {
         return '<div class="drawer-history-row"><span>v' + esc(h.version) + ' · ' + esc(h.uploadedAt ? new Date(h.uploadedAt).toLocaleDateString() : '') + '</span><button type="button" data-rollback="' + esc(h.version) + '">回滚</button></div>';

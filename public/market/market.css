@@ -70,6 +70,7 @@
 .market-row__meta { color: var(--text-lo); font-size: 11.5px; margin-top: 5px; }
 .market-row__related { color: var(--text-lo); font-size: 11.5px; margin-top: 4px; }
 .market-row__related span { color: var(--mint-400); }
+.market-row__related--bad { color: #ff9aa2; }
 .market-row__compat { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 11.5px; }
 .compat-chip { display: inline-flex; align-items: center; min-height: 21px; padding: 0 7px; border: 1px solid var(--line); color: var(--text-lo); font-size: 11px; }
 .compat-chip.is-ok { color: var(--mint-400); border-color: var(--mint-a35); }

@@ -2,7 +2,7 @@
 // Files live under var/plugin-market/{ordinary,forge}; the JSON index is server-local and git-ignored.
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, verify } from 'node:crypto';
 import { PLUGIN_LIMITS, PLUGIN_COMPAT_APP, PLUGIN_COMPAT_CLASSES, appVersionMatches, isPluginId, isVersionRange } from '../shared/plugins/manifest.js';
 import { readPluginZip, zipFiles } from './plugins/zip.js';
 import { readUntrustedZip, importForge, forgeIdToPluginId } from './plugins/forgeImport.js';
@@ -14,6 +14,12 @@ const KINDS = new Set(['ordinary', 'forge']);
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 const safePart = (s, max = 64) => String(s || '').replace(/[^0-9A-Za-z._-]/g, '_').slice(0, max) || 'plugin';
 const nameOf = (n) => (typeof n === 'string' ? n : n && (n.zh || n.en)) || '';
+const depMap = (v) => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+  return Object.fromEntries(Object.entries(v)
+    .filter(([k, val]) => typeof k === 'string' && isPluginId(k) && typeof val === 'string')
+    .slice(0, 32));
+};
 const appRangeOf = (v) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 120) : null);
 const apiLevelOf = (v) => (Number.isInteger(v) ? v : null);
 
@@ -58,6 +64,21 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
   const dirs = { ordinary: path.join(base, 'ordinary'), forge: path.join(base, 'forge') };
   const indexFile = path.join(base, 'index.json');
   const mirrorsFile = path.join(base, 'mirrors.json');
+  const keysFile = path.join(base, 'keys.json');
+  let signingKeys = [];
+  try {
+    const k = JSON.parse(fs.readFileSync(keysFile, 'utf8'));
+    signingKeys = (Array.isArray(k) ? k : k.keys || []).filter((x) => x && typeof x.id === 'string' && typeof x.publicKey === 'string').slice(0, 64);
+  } catch { /* unsigned marketplace */ }
+  const verifySignature = (bytes, signature) => {
+    if (!signature || typeof signature !== 'object' || !signature.keyId || !signature.value) return null;
+    const key = signingKeys.find((x) => x.id === signature.keyId && !x.revokedAt);
+    if (!key) throw new Error('unknown or revoked signing key');
+    let ok = false;
+    try { ok = verify(null, Buffer.from(bytes), key.publicKey, Buffer.from(String(signature.value), 'base64')); } catch { ok = false; }
+    if (!ok) throw new Error('plugin signature does not verify');
+    return { keyId: key.id, verified: true, algorithm: 'ed25519', label: key.label || null };
+  };
   let mirrors = [];
   try {
     const m = JSON.parse(fs.readFileSync(mirrorsFile, 'utf8'));
@@ -99,17 +120,69 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     }
     return { id, name: id, kind: null, class: null, status: null };
   });
+  const pluginRecord = (id) => {
+    const m = index.entries.find((x) => x.id === id && x.status === 'active' && x.listed !== false);
+    if (m) return { id, version: m.version, requires: m.requires || {}, optional: m.optional || {}, conflicts: m.conflicts || {}, kind: m.kind };
+    const p = registry && typeof registry.plugins === 'function' ? registry.plugins().find((x) => x.id === id) : null;
+    if (p) return { id, version: p.manifest?.version || '0.0.0', requires: p.manifest?.requires || {}, optional: p.manifest?.optional || {}, conflicts: p.manifest?.conflicts || {}, kind: 'installed' };
+    return null;
+  };
+  const dependencyCheckOf = (root) => {
+    const missing = new Map();
+    const mismatched = new Map();
+    const conflicts = new Map();
+    const optionalMissing = new Map();
+    const cycles = new Map();
+    const resolved = new Set();
+    const visit = (node, depth, stack) => {
+      if (depth > 8) return;
+      const reqs = node.requires && typeof node.requires === 'object' ? node.requires : {};
+      for (const [id, range] of Object.entries(reqs)) {
+        const hit = pluginRecord(id);
+        if (!hit) { missing.set(id, { id, range, by: node.id }); continue; }
+        if (range && !appVersionMatches(range, hit.version)) { mismatched.set(id, { id, range, version: hit.version, by: node.id }); continue; }
+        resolved.add(id);
+        if (stack.has(id)) { cycles.set(id, { id, by: node.id }); continue; }
+        visit(hit, depth + 1, new Set([...stack, id]));
+      }
+      const opts = node.optional && typeof node.optional === 'object' ? node.optional : {};
+      for (const [id, range] of Object.entries(opts)) {
+        const hit = pluginRecord(id);
+        if (!hit) optionalMissing.set(id, { id, range, by: node.id });
+        else if (range && !appVersionMatches(range, hit.version)) optionalMissing.set(id, { id, range, version: hit.version, by: node.id });
+        else resolved.add(id);
+      }
+      const conf = node.conflicts && typeof node.conflicts === 'object' ? node.conflicts : {};
+      for (const [id, range] of Object.entries(conf)) {
+        const hit = pluginRecord(id);
+        if (hit && (!range || appVersionMatches(range, hit.version))) conflicts.set(id, { id, range, version: hit.version, by: node.id });
+      }
+    };
+    visit(root, 0, new Set([root.id]));
+    return {
+      ok: missing.size === 0 && mismatched.size === 0 && conflicts.size === 0 && cycles.size === 0,
+      missing: [...missing.values()], mismatched: [...mismatched.values()], conflicts: [...conflicts.values()],
+      optionalMissing: [...optionalMissing.values()], cycles: [...cycles.values()], resolved: [...resolved],
+    };
+  };
   const publicEntry = (e) => {
     const compat = compatibilityOf(e.kind, e.class, e.app, e.api);
+    const dependencies = {
+      requires: e.requires || {}, optional: e.optional || {}, conflicts: e.conflicts || {},
+    };
+    const dependencyCheck = dependencyCheckOf({ id: e.id, version: e.version, ...dependencies });
     return {
       id: e.id, kind: e.kind, name: e.name, version: e.version, author: e.author || null,
       description: e.description || null, class: e.class || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
       uploadedAt: e.uploadedAt, uploadedBy: e.uploadedBy || null, reviewedAt: e.reviewedAt || null,
       downloads: e.downloads || 0, app: compat.app, api: compat.api, compat, listed: e.listed !== false,
       order: Number.isFinite(e.order) ? e.order : 0, needsReview: e.needsReview === true,
+      signature: e.signature || null,
+      dependencies, dependencyCheck,
       pendingUpdate: e.pending ? {
         version: e.pending.version, bytes: e.pending.bytes, sha256: e.pending.sha256,
         uploadedAt: e.pending.uploadedAt, uploadedBy: e.pending.uploadedBy || null, filename: e.pending.filename || null,
+        signature: e.pending.signature || null,
       } : null,
       history: (Array.isArray(e.history) ? e.history : []).slice(-10).map((h) => ({
         version: h.version, bytes: h.bytes, sha256: h.sha256, uploadedAt: h.uploadedAt,
@@ -132,6 +205,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       return {
         id: man.id, version: man.version, name: nameOf(man.name), author: nameOf(man.author), description: nameOf(man.description),
         class: man.class || null, app: appRangeOf(man.app), api: apiLevelOf(man.api),
+        requires: depMap(man.requires), optional: depMap(man.optional), conflicts: depMap(man.conflicts),
       };
     }
     const files = await readUntrustedZip(bytes);
@@ -143,13 +217,15 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return {
       id, version: String(pack.version || '0.0.0'), name: nameOf(pack.name) || raw, author: nameOf(pack.author),
       description: nameOf(pack.description), class: 'forge', app: appRangeOf(pack.app), api: apiLevelOf(pack.api),
+      requires: depMap(pack.dependencies), optional: {}, conflicts: depMap(pack.conflicts),
     };
   }
 
-  async function upload({ kind, bytes, filename = '', uploadedBy = null }) {
+  async function upload({ kind, bytes, filename = '', uploadedBy = null, signature = null }) {
     if (!KINDS.has(kind)) throw new Error('kind must be ordinary or forge');
     if (!Buffer.isBuffer(bytes) || !bytes.length) throw new Error('empty zip');
     if (bytes.length > PLUGIN_LIMITS.pluginBytes) throw new Error('zip is over the plugin size limit');
+    const verifiedSignature = verifySignature(bytes, signature);
     const meta = await inspect(kind, bytes);
     const key = keyOf(kind, meta.id);
     const existing = index.entries.find((e) => keyOf(e.kind, e.id) === key);
@@ -158,8 +234,10 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     const incoming = {
       version: meta.version, file, bytes: bytes.length, sha256: sha256(bytes),
       filename: String(filename || '').slice(0, 120), uploadedAt: now, uploadedBy: uploadedBy || null,
+      signature: verifiedSignature,
       name: meta.name || meta.id, author: meta.author || null, description: meta.description || null,
       class: meta.class || null, app: meta.app || null, api: meta.api ?? null,
+      requires: meta.requires || {}, optional: meta.optional || {}, conflicts: meta.conflicts || {},
     };
     if (existing && existing.status === 'active') {
       if (meta.version === existing.version) throw new Error(`plugin ${meta.id}@${meta.version} is already active`);
@@ -324,10 +402,11 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     if (!['test', 'approve', 'reject'].includes(action)) throw new Error('action must be test, approve or reject');
     if (action === 'test') {
       const r = await test(kind, id, log);
+      const dependencyCheck = dependencyCheckOf({ id: e.id, version: e.version, requires: e.requires || {}, optional: e.optional || {}, conflicts: e.conflicts || {} });
       e.reviewedAt = Date.now(); e.reviewedBy = reviewer; e.reviewNote = String(note || '').slice(0, 500);
       save();
       audit('market-test', { kind, id, by: reviewer || null });
-      return { ok: true, action, result: r, entry: publicEntry(e) };
+      return { ok: true, action, result: r, dependencyCheck, entry: publicEntry(e) };
     }
     if (action === 'reject') {
       if (e.pending) {
@@ -343,11 +422,20 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       return { ok: true, action, entry: publicEntry(e) };
     }
     if (e.status === 'active' && !e.pending && e.needsReview !== true) return { ok: true, action, entry: publicEntry(e) };
+    const dep = e.pending || e;
+    const dependencyCheck = dependencyCheckOf({ id: e.id, version: dep.version, requires: dep.requires || {}, optional: dep.optional || {}, conflicts: dep.conflicts || {} });
+    if (!dependencyCheck.ok) {
+      const detail = [...dependencyCheck.missing, ...dependencyCheck.mismatched, ...dependencyCheck.conflicts, ...dependencyCheck.cycles]
+        .map((x) => x.id).join(', ');
+      throw new Error(`dependency check failed: ${detail}`);
+    }
     const result = await test(kind, id, log);
     if (e.pending) {
       const current = {
         version: e.version, file: e.file, bytes: e.bytes, sha256: e.sha256, uploadedAt: e.uploadedAt,
         name: e.name, author: e.author, description: e.description, class: e.class, app: e.app, api: e.api,
+        requires: e.requires || {}, optional: e.optional || {}, conflicts: e.conflicts || {},
+        signature: e.signature || null,
       };
       e.history = [...(Array.isArray(e.history) ? e.history : []), current].slice(-10);
       const next = e.pending;
@@ -356,6 +444,8 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       e.name = next.name || e.name; e.author = next.author || e.author;
       e.description = next.description || e.description; e.class = next.class || e.class;
       e.app = next.app || null; e.api = next.api ?? null;
+      e.requires = next.requires || {}; e.optional = next.optional || {}; e.conflicts = next.conflicts || {};
+      e.signature = next.signature || null;
       e.pending = null;
     }
     e.status = 'active'; e.needsReview = false;
@@ -379,11 +469,15 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     const previous = {
       version: e.version, file: e.file, bytes: e.bytes, sha256: e.sha256, uploadedAt: e.uploadedAt,
       name: e.name, author: e.author, description: e.description, class: e.class, app: e.app, api: e.api,
+      requires: e.requires || {}, optional: e.optional || {}, conflicts: e.conflicts || {},
+      signature: e.signature || null,
     };
     e.version = target.version; e.file = target.file; e.bytes = target.bytes; e.sha256 = target.sha256;
     e.uploadedAt = target.uploadedAt; e.name = target.name || e.name; e.author = target.author || e.author;
     e.description = target.description || e.description; e.class = target.class || e.class;
     e.app = target.app || null; e.api = target.api ?? null;
+    e.requires = target.requires || {}; e.optional = target.optional || {}; e.conflicts = target.conflicts || {};
+    e.signature = target.signature || null;
     e.history = [...history.filter((h) => h !== target), previous].slice(-10);
     e.pending = null; e.needsReview = false; e.status = 'active';
     e.reviewedAt = Date.now(); e.reviewedBy = reviewer;

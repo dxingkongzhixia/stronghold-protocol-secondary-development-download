@@ -68,6 +68,16 @@ POST /admin/api/market?token=...
 
 `related` 是其它插件 id 的列表（最多 16 个，不能含自己，必须存在于商城或本机插件中）。公开列表会解析为 `relatedPlugins`（名称 / 类型 / 状态）和 `relatedBy`（谁关联了本条），商城和后台都会显示。
 
+### 依赖检查
+
+商城从 manifest 读取 `requires` / `optional` / `conflicts`，并递归检查依赖链（最多 8 层）：
+
+- 必需依赖缺失、版本不匹配、循环依赖或冲突时，`dependencyCheck.ok: false`
+- `approve` 会拒绝 `ok: false` 的条目
+- `optional` 缺失只进入 `optionalMissing`
+- 后台抽屉和商城条目显示缺失/冲突的插件 id
+- `related` 仍是展示关系，不参与依赖判断
+
 ### 版本与重新审核
 
 已上架插件再次上传同 id 的新版本时，旧版本继续服务，新版本进入 `pendingUpdate`：
@@ -90,6 +100,31 @@ POST /admin/api/plugins/ai?token=...
 ```
 
 `GET` 返回固定的能力声明（`reserved: true`、`executor: false`、可执行动作列表）；`POST` 在没有执行器时返回 **501**。唯一的只读例外是 `{ "dryRun": true, "action": "edit", ... }`：它只返回当前条目和提案字段，不做校验/写入，供 AI 或后台预览。这个接口和人类管理员共用 `/admin/api/market` 的 `admin-token` 边界；将来接入 AI 时必须由 owner 显式启用，AI 不能绕过测试 / 通过 / 上架流程。
+
+### 签名（可选，Ed25519）
+
+商城的信任根是 `var/plugin-market/keys.json`（owner 本机维护，不进仓库）：
+
+```json
+{
+  "keys": [
+    { "id": "owner-2026", "publicKey": "-----BEGIN PUBLIC KEY-----...", "label": "owner", "revokedAt": null }
+  ]
+}
+```
+
+上传时带：
+
+```http
+X-Plugin-Key-Id: owner-2026
+X-Plugin-Signature: <base64 Ed25519 signature over the raw zip bytes>
+```
+
+- 签名验证通过：条目保存 `signature.verified: true`
+- 未知/撤销 key、签名无效：上传被拒绝
+- 未带签名：允许上传，但商城和后台显示「未签名」
+- 签名只证明 zip 来源和完整性，不替代管理员测试、沙箱或 review
+- key registry 目前由 owner 直接维护；后台 key 管理 UI 属于后续项
 
 ### 后台安装 / 卸载
 

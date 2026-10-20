@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import { createPluginMarket } from '../server/market.js';
 import { zipFiles } from '../server/plugins/zip.js';
 
@@ -122,6 +123,47 @@ test('market: active plugins can stage a new version, approve it and roll back',
   const cleaned = market.gc();
   assert.ok(cleaned.removed >= 1);
   assert.equal(fs.existsSync(path.join(root, 'var/plugin-market/ordinary/orphan.zip')), false);
+});
+
+test('market: signed zips verify against the owner key registry', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-sign-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const base = path.join(root, 'var', 'plugin-market');
+  fs.mkdirSync(base, { recursive: true });
+  fs.writeFileSync(path.join(base, 'keys.json'), JSON.stringify({
+    keys: [{ id: 'owner-test', publicKey: publicKey.export({ type: 'spki', format: 'pem' }), label: 'test' }],
+  }));
+  const market = createPluginMarket({ root });
+  const bytes = zipFiles([{
+    name: 'plugin.json',
+    data: Buffer.from(JSON.stringify({ manifest: 2, id: 'signed-demo', name: 'Signed', version: '1.0.0', class: 'cosmetic', app: '>=0.4.0 <0.5.0', api: 1 })),
+  }]);
+  const signature = { keyId: 'owner-test', value: sign(null, bytes, privateKey).toString('base64') };
+  const signed = await market.upload({ kind: 'ordinary', bytes, signature });
+  assert.deepEqual([signed.signature.keyId, signed.signature.verified], ['owner-test', true]);
+  await assert.rejects(
+    () => market.upload({ kind: 'ordinary', bytes: zipFiles([{ name: 'plugin.json', data: Buffer.from('{"manifest":2,"id":"bad","version":"1.0.0","class":"cosmetic"}') }]), signature }),
+    /signature/,
+  );
+});
+
+test('market: required dependencies block approval until present', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-deps-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const market = createPluginMarket({ root });
+  const make = (id, requires = {}) => zipFiles([{
+    name: 'plugin.json',
+    data: Buffer.from(JSON.stringify({ manifest: 2, id, name: id, version: '1.0.0', class: 'cosmetic', app: '>=0.4.0 <0.5.0', api: 1, requires })),
+  }]);
+  const alpha = await market.upload({ kind: 'ordinary', bytes: make('alpha', { beta: '*' }) });
+  assert.equal(alpha.dependencyCheck.ok, false);
+  assert.deepEqual(alpha.dependencyCheck.missing.map((x) => x.id), ['beta']);
+  await assert.rejects(() => market.review('ordinary', 'alpha', 'approve', { reviewer: 'admin' }), /dependency/);
+  await market.upload({ kind: 'ordinary', bytes: make('beta') });
+  await market.review('ordinary', 'beta', 'approve', { reviewer: 'admin' });
+  const approved = await market.review('ordinary', 'alpha', 'approve', { reviewer: 'admin' });
+  assert.equal(approved.entry.dependencyCheck.ok, true);
 });
 
 test('market: order, move and related plugin bindings', async (t) => {

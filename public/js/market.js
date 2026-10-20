@@ -78,8 +78,10 @@ const row = (p, admin = false) => {
     <div>
       <p class="market-row__desc">${esc(description)}</p>
       <div class="market-row__meta">${esc(p.author ? `作者：${p.author}` : '作者：未填写')} · ${bytes(p.bytes)} · 下载 ${esc(p.downloads || 0)}</div>
+      <div class="market-row__related">${p.signature ? `签名：<span>${esc(p.signature.keyId)}</span>` : '签名：未签名'}</div>
       ${(p.relatedPlugins || []).length ? `<div class="market-row__related">关联：<span>${esc(p.relatedPlugins.map((r) => r.name).join('、'))}</span></div>` : ''}
       ${(p.relatedBy || []).length ? `<div class="market-row__related">被关联：<span>${esc(p.relatedBy.map((r) => r.name).join('、'))}</span></div>` : ''}
+      ${p.dependencyCheck && p.dependencyCheck.ok === false ? `<div class="market-row__related market-row__related--bad">依赖不完整：${esc([...(p.dependencyCheck.missing || []), ...(p.dependencyCheck.mismatched || []), ...(p.dependencyCheck.conflicts || [])].map((r) => r.id).join('、'))}</div>` : ''}
       <div class="market-row__compat">
         <span class="compat-chip is-${compat.ownTone}">本服 0.4.0 · ${esc(compat.own)}</span>
         <span class="compat-chip is-${compat.mainTone}">主线 0.3.x · ${esc(compat.main)}</span>

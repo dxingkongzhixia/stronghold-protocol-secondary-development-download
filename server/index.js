@@ -369,8 +369,11 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       const kind = new URLSearchParams(parts.query).get('kind');
       const bytes = await readRawBody(req, PLUGIN_LIMITS.pluginBytes + 1);
       if (bytes == null) { sendJson(req, res, 413, { error: 'zip is over the plugin size limit' }); return; }
+      const signature = req.headers['x-plugin-key-id'] && req.headers['x-plugin-signature']
+        ? { keyId: String(req.headers['x-plugin-key-id']).slice(0, 80), value: String(req.headers['x-plugin-signature']) }
+        : null;
       try {
-        const entry = await market.upload({ kind, bytes, filename: req.headers['x-plugin-filename'], uploadedBy: who.name || who.key });
+        const entry = await market.upload({ kind, bytes, filename: req.headers['x-plugin-filename'], uploadedBy: who.name || who.key, signature });
         sendJson(req, res, 201, { ok: true, plugin: entry });
       } catch (e) {
         sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300) });
@@ -460,9 +463,12 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       const kind = new URLSearchParams(parts.query).get('kind') || 'ordinary';
       const bytes = await readRawBody(req, PLUGIN_LIMITS.pluginBytes + 1);
       if (bytes == null) { sendJson(req, res, 413, { error: 'zip is over the plugin size limit' }); return; }
+      const signature = req.headers['x-plugin-key-id'] && req.headers['x-plugin-signature']
+        ? { keyId: String(req.headers['x-plugin-key-id']).slice(0, 80), value: String(req.headers['x-plugin-signature']) }
+        : null;
       try {
         const r = await market.upload({
-          kind, bytes, filename: String(req.headers['x-plugin-filename'] || '').slice(0, 120), uploadedBy: 'admin',
+          kind, bytes, filename: String(req.headers['x-plugin-filename'] || '').slice(0, 120), uploadedBy: 'admin', signature,
         });
         sendJson(req, res, 201, { ok: true, plugin: r });
       } catch (e) {
