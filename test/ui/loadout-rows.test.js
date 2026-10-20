@@ -48,6 +48,12 @@ test('a row: portrait / name pick, three skill slots (an empty one for a two-ski
   const pick = find(r, (v) => hasClass(v, 'lo-card__pick'))[0];
   pick.props.onClick();
   assert.deepEqual(picks, [INSIDE]);
+  // the rest of the row is a pick target too (the blank area beside 潜能 / 练度 used to do nothing)
+  assert.equal(typeof r.props.onClick, 'function');
+  r.props.onClick({ target: { closest: () => null } });
+  assert.deepEqual(picks, [INSIDE, INSIDE]);
+  r.props.onClick({ target: { closest: (sel) => (String(sel).includes('select') ? {} : null) } });
+  assert.deepEqual(picks, [INSIDE, INSIDE], 'a click inside a select stays with the select');
   const skills = find(r, (v) => hasClass(v, 'lo-q--skill'));
   assert.deepEqual(skills.map((b) => [b.props['data-skill'], b.props['aria-pressed']]), [[0, 'false'], [1, 'true']], 'S2 is the default');
   assert.equal(find(r, (v) => hasClass(v, 'lo-q--empty')).length, 1, 'the third slot stays empty');

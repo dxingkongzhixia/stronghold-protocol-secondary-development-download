@@ -163,7 +163,7 @@
 
 .lo .lo-card {
   --tc: var(--tier-1);
-  position: relative; min-width: 0; padding: max(.05rem, 4px) .1rem max(.05rem, 4px) .07rem;
+  position: relative; min-width: 0; padding: max(.05rem, 4px) .1rem max(.05rem, 4px) .07rem; cursor: pointer;
   background: rgba(255, 255, 255, .025); border: 1px solid var(--line); border-left: 3px solid var(--tc);
   transition: background var(--t-fast), border-color var(--t-fast);
 }
