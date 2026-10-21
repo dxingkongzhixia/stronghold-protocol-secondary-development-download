@@ -63,6 +63,7 @@ test('an amedicSlot grant starts on Touch\'s stage slot instead of in the hand',
   assert.ok(slot, 'the stage has the reserve-medic slot');
   const key = `${slot.pos[0]},${slot.pos[1]}`;
   assert.equal(ps.board.get(key)?.meta?.special, 'band:band_x_test_touch');
+  assert.equal(ps.deployCount, 0, 'the granted special does not use a normal deployment slot');
   ps.recompute();
   assert.equal(ps.board.get(key)?.meta?.special, 'band:band_x_test_touch', 'the stage slot is exempt from eviction');
   assert.equal([...ps.hand, ...ps.temp].some((p) => p?.meta?.special === 'band:band_x_test_touch'), false);

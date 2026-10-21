@@ -28,7 +28,14 @@ export class PlayerBasics {
   get botControlled() { return this.isBot || this.left || this.autoplay; }
 
   get deployCap() { return Math.max(1, this.gd.deployCap + this.deployCapBonus, this.deployCapMin); }
-  get deployCount() { let n = 0; for (const p of this.board.values()) if (p.kind === 'chess') n++; return n; }
+  get deployCount() {
+    let n = 0;
+    for (const p of this.board.values()) {
+      // Band-granted special operators (Kal'tsit on Touch's slot) stand outside the normal deployment cap.
+      if (p.kind === 'chess' && !(typeof p.meta?.special === 'string' && p.meta.special.startsWith('band:'))) n++;
+    }
+    return n;
+  }
   get tempEmpty() { return this.temp.every((x) => x == null); }
 
   /**
