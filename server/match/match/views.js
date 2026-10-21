@@ -72,6 +72,9 @@ export class MatchViews {
     try { text = JSON.stringify(value); } catch { return false; }
     if (typeof text !== 'string' || text.length > 16 * 1024) return false;
     this.pluginViews.set(pluginId, JSON.parse(text));
+    // A rules hook may publish from a timer or a battle callback, not only while a phase view is
+    // already being flushed; mark the match view dirty so the next flush carries the new value.
+    this.markPublic();
     return true;
   }
 
