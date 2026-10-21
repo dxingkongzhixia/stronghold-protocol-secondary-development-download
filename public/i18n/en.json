@@ -1819,5 +1819,9 @@
   "沙箱脚本": "Sandbox script",
   "原生信任": "Native trusted",
   "官方自选": "Official pick",
-  "插件商城": "Plugin store"
+  "插件商城": "Plugin store",
+  "重构中 {s}s": "Reforming {s}s",
+  "重构 {left}/{max}": "Reforms {left}/{max}",
+  "协议已执行": "Protocol executed",
+  "清除协议 {s}s": "Clear protocol {s}s"
 }

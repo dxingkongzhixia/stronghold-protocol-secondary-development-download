@@ -31,7 +31,9 @@ function scheduleClear(b, st) {
   const hidden = b.kind === 'hidden';
   const at = hidden ? (c.hiddenAt ?? c.at) : c.at;
   const lp = hidden ? (c.hiddenLp ?? c.lp) : c.lp;
+  st.clearAt = b.time + at;
   if (c.warning > 0) {
+    st.warningAt = b.time + Math.max(0, at - c.warning);
     st.warning = b.after(Math.max(0, at - c.warning), () => {
       if (!st.dead) b.emit('protocolWarning', { boss: st.boss, kind: 'clear', seconds: c.warning });
     });
@@ -212,6 +214,7 @@ function startFly(b, st) {
 function enterDown(b, st, e) {
   const p = st.protocol.revive;
   st.down = true;
+  st.downUntil = b.time + p.down;
   e.hp = e.s.maxHp;
   b.addBuff(e, { key: DOWN, flags: { untargetable: true, invulnerable: true, stun: true, noBlock: true, noMove: true }, persist: true, allowDead: true });
   removeGuard(b, st);
@@ -227,6 +230,7 @@ function enterDown(b, st, e) {
       e.markDirty?.();
     }
     st.down = false;
+    st.downUntil = null;
     addGuard(b, st);
     if (!st.revivedOnce) {
       st.revivedOnce = true;
@@ -272,13 +276,34 @@ function linkAbility(st) {
  * @param {unknown} raw the record's `protocol` fields
  * @returns {object|null}
  */
+/** The live HUD state of the first protocol boss on the field, or null (b.snapshot → snap.protocol). */
+export function protocolSnapshot(b) {
+  for (const e of b.enemies || []) {
+    const st = stateOf(e);
+    if (!st || st.dead) continue;
+    return {
+      boss: e.id,
+      bossId: e.defId,
+      down: !!st.down,
+      downIn: st.downUntil == null ? null : Math.max(0, Math.round((st.downUntil - b.time) * 10) / 10),
+      revivesLeft: st.revivesLeft,
+      revivesMax: st.revivesMax,
+      clearIn: st.clearAt == null ? null : Math.max(0, Math.round((st.clearAt - b.time) * 10) / 10),
+      warning: st.warningAt != null && b.time >= st.warningAt,
+      cleared: !!st.cleared,
+    };
+  }
+  return null;
+}
+
 export function protocolAbility(raw) {
   const { protocol } = readBossProtocol(raw);
   if (!protocol) return null;
   return {
     spawn(b, e) {
       const st = {
-        protocol, boss: e, link: null, revivesLeft: protocol.revive?.count ?? 0, down: false,
+        protocol, boss: e, link: null, revivesLeft: protocol.revive?.count ?? 0, revivesMax: protocol.revive?.count ?? 0, down: false,
+        downUntil: null, clearAt: null, warningAt: null,
         timer: null, warning: null, clear: null, guard: false, cleared: false, dead: false, at: b.time,
         dpTimer: null, projTimer: null, beamTimer: null, beamResolve: null, beamPending: null, beamDamage: 0,
         revivedOnce: false, fly: null,

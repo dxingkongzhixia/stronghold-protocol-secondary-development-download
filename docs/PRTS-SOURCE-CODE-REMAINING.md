@@ -49,7 +49,8 @@ B–E 全部完成后，应满足：
 - [x] B1：PRTS / 拟态 enemy、普通/隐藏 boss、PRTS 专属波次（普通/隐藏/单双人）、modes bossWeights 与 rounds.bossTemplates 已加入；实际组合与 `buildBossWave` 已验证，普通/隐藏波次都生成 PRTS + 拟态；凯尔希改用真实 `char_003_kalts` kit；
 - [x] C1：`band_x_prts_source_code_touch` 记录和 `grantUnit` / `eliteGate` / `restEndBondLayers` 已写入；M3 20 秒击倒复活、最多 2 次已实现并验证（第 3 次永久退场）；
 - [x] 素材：从本机官方客户端提取 PRTS `enemy_1564_mpprts` / 拟态 `enemy_1565_mpprme` Spine（`public/assets/local/spine/enemy/`），已写 `data/assets.json` + `data/local-assets.committed.json` + `tools/assets/local-enemy-spines.json`；
-- [ ] B0-2 / B0-7 仍待做：协议客户端视图（清除倒计时、重构次数、预警）；Boss HUD。
+- [x] B0-7：`b.snapshot().protocol` 已输出重构剩余次数、倒地倒计时、清除协议倒计时与预警；Boss 胶囊 HUD 已消费（`protocol-hud`）。
+- [ ] B0-2 仍待做：命名空间方案的 owner 最终确认。
 
 ---
 

@@ -33,7 +33,22 @@ export function snapHud(snap) {
   let boss = null;
   if (isObj(snap.boss) && Number.isFinite(snap.boss.hp)) boss = { hp: snap.boss.hp, max: n(snap.boss.max) ?? n(snap.boss.maxHp) };
   const killed = n(snap.killed);
-  return { killed, resolved: n(snap.resolved) ?? killed, total: n(snap.total), dp: n(snap.dp), boss };
+  let protocol = null;
+  if (isObj(snap.protocol)) {
+    const p = snap.protocol;
+    protocol = {
+      down: p.down === true,
+      downIn: n(p.downIn),
+      revivesLeft: n(p.revivesLeft),
+      revivesMax: n(p.revivesMax),
+      clearIn: n(p.clearIn),
+      warning: p.warning === true,
+      cleared: p.cleared === true,
+    };
+  }
+  const out = { killed, resolved: n(snap.resolved) ?? killed, total: n(snap.total), dp: n(snap.dp), boss };
+  if (protocol) out.protocol = protocol;
+  return out;
 }
 
 /** Boss HP fraction 0..1 (null when unknown). */

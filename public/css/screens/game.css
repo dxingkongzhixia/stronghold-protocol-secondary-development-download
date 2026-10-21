@@ -136,6 +136,11 @@
 .capsule__kills { font-size: calc(.26 * var(--t)); color: var(--text-lo); letter-spacing: .04em; }
 .capsule__kills b { color: #fff; font-size: calc(.3 * var(--t)); }
 .capsule__tag { font-size: calc(.14 * var(--t)); padding: .01rem .08rem; background: var(--orange); color: #1a0800; font-weight: 700; letter-spacing: .1em; }
+/* PRTS protocol: reforms left / down countdown / clear-protocol countdown (boss snowball HUD) */
+.capsule__protocol { font-size: calc(.14 * var(--t)); padding: .01rem .08rem; background: rgba(0, 0, 0, .45); border: 1px solid var(--orange-hi); color: var(--text-hi); font-weight: 700; letter-spacing: .04em; flex: none; }
+.capsule__protocol.is-warn { border-color: #ff3b30; color: #ffb3ae; animation: protocol-warn 900ms ease-in-out infinite alternate; }
+.capsule__protocol.is-down { border-color: #ffb020; color: #ffd28a; }
+@keyframes protocol-warn { from { box-shadow: 0 0 0 rgba(255, 59, 48, 0); } to { box-shadow: 0 0 .14rem rgba(255, 59, 48, .8); } }
 /* 联防: a leaker's enemies still standing (MissTag, user playtest #6 item 7) — the official bg_miss_enemy pill (runner ×
    on its left 3/5, the number on the rest) or an orange look-alike */
 .misstag {

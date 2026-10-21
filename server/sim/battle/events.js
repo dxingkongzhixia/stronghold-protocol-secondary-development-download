@@ -5,6 +5,7 @@
 import { EVENT_BUFFER_CAP } from '../constants.js';
 import { elementView } from '../damage.js';
 import { unitInfo, snapshotUnits, ammoView, wolfView, negView, coinView, mysticView, layerView, chargeView } from '../snapshot.js';
+import { protocolSnapshot } from '../content/bossProtocol.js';
 
 export class BattleEvents {
   fx(kind, params = {}) {
@@ -81,6 +82,8 @@ export class BattleEvents {
       for (const p of this.players) snap.dps[p.playerId] = Math.floor(p.dp);
     }
     if (this.sharedBoss) snap.boss = { hp: Math.max(0, Math.round(this.sharedBoss.hp)), max: Math.round(this.sharedBoss.maxHp) };
+    const protocol = protocolSnapshot(this);
+    if (protocol) snap.protocol = protocol;
     const r2 = (v) => Math.round(v * 100) / 100;
     let down = null;
     for (const u of this.allyUnits) {

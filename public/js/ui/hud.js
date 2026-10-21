@@ -93,6 +93,12 @@ export function PhaseCapsule({ pub, hud, miss = null }) {
     // server's b.pool, or the server's 20 Hz stream); m.public.bossHp refreshes at ~1 Hz and lags the leader's death
     const boss = hud?.boss || pub.bossHp || null;
     const frac = bossFrac(boss);
+    const p = hud?.protocol || null;
+    const prot = [];
+    if (p?.down) prot.push(t('重构中 {s}s', { s: Math.max(0, Math.ceil(p.downIn ?? 0)) }));
+    else if (p?.revivesMax) prot.push(t('重构 {left}/{max}', { left: Math.max(0, p.revivesLeft ?? 0), max: p.revivesMax }));
+    if (p?.cleared) prot.push(t('协议已执行'));
+    else if (p?.clearIn != null) prot.push(t('清除协议 {s}s', { s: Math.max(0, Math.ceil(p.clearIn)) }));
     return html`<div class="capsule capsule--boss" role="status">
       <${Sprite} k="hudPanel/icon_boss" class="capsule__icon" fallback=${html`<${GIcon} name="skull" class="capsule__icon" />`} />
       ${hud?.total != null ? html`<span class="capsule__kills num"><b>${hud.resolved ?? hud.killed ?? 0}</b>/${hud.total}</span>` : null}
@@ -100,6 +106,7 @@ export function PhaseCapsule({ pub, hud, miss = null }) {
         <div class="bossbar__fill" style=${`width:${frac == null ? 100 : frac * 100}%`}></div>
         <span class="bossbar__txt num">${frac == null ? t('敌方领袖') : bossPctText(frac)}</span>
       </div>
+      ${prot.length ? html`<span class=${cx('capsule__protocol', p?.down && 'is-down', p?.warning && 'is-warn')} data-testid="protocol-hud">${prot.join(' · ')}</span>` : null}
     </div>`;
   }
   if (isCombatPhase(phase) || (phase === PHASE.SETTLE && hud?.total != null)) {

@@ -42,6 +42,10 @@ test('the linked mimic guards the boss while alive, then revives it three times'
   assert.ok(boss && mimic, 'both spawned');
   assert.equal(guard(h, boss), true, 'boss untargetable while the mimic lives');
   assert.ok(mimic.mem.ab.list.some((a) => a.killed), 'the mimic got the link ability');
+  const view = h.b.snapshot().protocol;
+  assert.equal(view.revivesLeft, 3);
+  assert.equal(view.revivesMax, 3);
+  assert.equal(view.clearIn, 89.9);
 
   const atk0 = mimic.s.atk;
   for (let i = 1; i <= 3; i++) {
@@ -49,6 +53,8 @@ test('the linked mimic guards the boss while alive, then revives it three times'
     h.step(1);
     assert.equal(mimic.alive, true, `revive ${i}: still on the field`);
     assert.equal(down(mimic), true, `revive ${i}: down window`);
+    assert.equal(h.b.snapshot().protocol.down, true, `revive ${i}: the HUD says down`);
+    assert.equal(h.b.snapshot().protocol.revivesLeft, 3 - i);
     assert.equal(guard(h, boss), false, `revive ${i}: the boss is targetable`);
     h.run(8.2);
     assert.equal(down(mimic), false, `revive ${i}: back up`);
