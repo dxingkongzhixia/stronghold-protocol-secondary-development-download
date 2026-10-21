@@ -757,11 +757,22 @@ const BS_BREATH_TIME = 30.5, BS_BREATH_START = 50, BS_BREATH_END = 230;
 const BS_IGNITE_CD = 19, BS_DETONATE_CD = 35, BS_INFERNO_WAVES = 10, BS_INFERNO_INTERVAL = 2;
 const BS_INFERNO_TIME = 28, BS_AGGREGATE_TIME = 12, BS_AGGREGATE_DAMAGE = 1000;
 
+/** Official compiled effects of the local black-snake plugin (assets/fx), namespaced by PluginFxPlayer. */
+const BS_FX = (key) => `plugin:black-snake:${key}`;
+function bsFx(b, key, x, y, extra = {}) {
+  b.fx?.('plugin', { skill: BS_FX(key), x, y, ...extra });
+}
+
 /** Apply/refresh 烈焚灼息 on an ally; one instance per ally, ramping 50 -> 230 true damage over 30 s. */
-function bsBreath(b, boss, u) {
+function bsBreath(b, boss, u, fx = true) {
   if (!u || !u.alive || u.side !== 'ally') return;
+  // 烈焚灼息 is a resistible enemy status: 抵抗 removes its share of the duration (same rule as the
+  // catalogue statuses in Battle.applyStatus; the ramp itself stays on the 30 s clock).
+  const duration = BS_BREATH_TIME * (1 - b.resistOf(u));
+  if (!(duration > 0.05)) return;
+  if (fx) bsFx(b, 'enemy_bsnake_buff_03_start_a', u.x, u.y, { dur: 1 });
   b.addBuff(u, {
-    key: BS_BREATH, source: boss, duration: BS_BREATH_TIME, refresh: 'replace', visible: true, interval: 1,
+    key: BS_BREATH, source: boss, duration, refresh: 'replace', visible: true, interval: 1,
     onTick: ({ battle, unit, buff }) => {
       const elapsed = Math.max(0, BS_BREATH_TIME - (Number.isFinite(buff.timeLeft) ? buff.timeLeft : BS_BREATH_TIME));
       const dps = BS_BREATH_START + (BS_BREATH_END - BS_BREATH_START) * Math.min(1, elapsed / 30);
@@ -776,17 +787,28 @@ function bsInfernoWave(b, boss, a) {
   const rows = [...new Set(b.allies().filter((u) => u && u.alive && !u.hidden && !u.s.flags.untargetable)
     .map((u) => Math.round(u.y)))];
   for (const row of rows) {
+    // A wave is one fireball per occupied lane, fired from the enemy side and homing on the FIRST operator it meets.
+    // The projectile itself supplies the flight (and the renderer's trail / impact); damage lands only on its hit.
     const hit = b.allies().filter((u) => u && u.alive && !u.hidden && !u.s.flags.untargetable && Math.round(u.y) === row)
-      .sort((u, v) => u.x - v.x)[0];
+      .sort((u, v) => v.x - u.x)[0];
     if (!hit) continue;
-    b.fx('explode', { x: hit.x, y: hit.y, r: 0.55, kind: 'bsnakeFire' });
-    b.dealDamage(boss, hit, { amount: boss.s.atk, type: 'arts', canDodge: false, tags: ['enemyAbility', 'bsnakeInferno'] });
+    b.addProjectile({
+      from: { x: b.rect.c1 + 0.5, y: row }, target: hit, speed: 10, visual: 'enemy', source: boss,
+      hitDead: true, maxAge: 3,
+      onHit: ({ target }) => {
+        if (!a.inferno || !target || !target.alive) return;
+        bsFx(b, 'enemy_bsnake_skill_03_trail_hit', target.x, target.y, { dur: 1.2 });
+        b.dealDamage(boss, target, { amount: boss.s.atk, type: 'arts', canDodge: false, tags: ['enemyAbility', 'bsnakeInferno'] });
+      },
+    });
   }
 }
 
 function bsStartInferno(b, boss, a, first) {
   a.inferno = true;
   a.wave = 0;
+  if (first) b.fx('bgm', { key: 'boss:boss_x_black_snake_bsnake_hard' });
+  bsFx(b, 'enemy_bsnake_buff_03_start_b', boss.x, boss.y, { dur: 2 });
   b.addBuff(boss, {
     key: BS_INFERNO, duration: BS_INFERNO_TIME, persist: true, visible: true,
     flags: { invulnerable: true, untargetable: true, unblockable: true, noMove: true, stun: true },
@@ -822,15 +844,19 @@ function kitBlackSnake() {
       b.every(BS_IGNITE_CD, () => {
         if (a.busy || a.inferno || !e.alive) return;
         const targets = b.allies().filter((u) => u && u.alive && !u.hidden && !u.findBuff?.(BS_BREATH)).slice(0, 2);
+        if (targets.length) bsFx(b, 'enemy_bsnake_skill_01_start', e.x, e.y, { dur: 1 });
         for (const u of targets) {
           bsBreath(b, e, u);
-          b.fx('phase', { x: u.x, y: u.y, id: u.id, kind: 'bsnakeIgnite' });
+          bsFx(b, 'enemy_bsnake_skill_01_hit', u.x, u.y, { dur: 1 });
         }
       }, { owner: e });
       b.every(BS_DETONATE_CD, () => {
         if (a.busy || a.inferno || !e.alive) return;
-        for (const u of b.allies().filter((v) => v && v.alive && v.findBuff?.(BS_BREATH))) {
+        const afflicted = b.allies().filter((v) => v && v.alive && v.findBuff?.(BS_BREATH));
+        if (afflicted.length) bsFx(b, 'enemy_bsnake_skill_02_start_02', e.x, e.y, { dur: 1 });
+        for (const u of afflicted) {
           b.dealDamage(e, u, { amount: e.s.atk, type: 'arts', isSkill: true, tags: ['enemyAbility', 'bsnakeDetonate'] });
+          bsFx(b, 'enemy_bsnake_skill_02_hit', u.x, u.y, { dur: 1 });
           b.removeBuff(u, BS_BREATH);
           // 引爆 consumes the mark on the target and re-applies it to the target plus its four neighbours.
           bsBreath(b, e, u);
@@ -844,7 +870,10 @@ function kitBlackSnake() {
       }, { owner: e });
     },
     attack(c, b, e) {
-      for (const u of c.targets || []) bsBreath(b, e, u);
+      for (const u of c.targets || []) {
+        bsBreath(b, e, u);
+        bsFx(b, 'enemy_bsnake_attack_01_hit', u.x, u.y, { dur: 1 });
+      }
     },
     hitIn(c) {
       // A unit under 烈焚灼息 deals only half damage to the Black Snake.
@@ -875,6 +904,7 @@ function kitBlackSnake() {
         },
       });
       b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'bsnakeDown', dur: 5 });
+      bsFx(b, 'enemy_bsnake_buff_03_start_a', e.x, e.y, { dur: 5 });
       return true;
     },
   }];
@@ -886,6 +916,7 @@ function kitEnergyAggregate() {
     a.done = true;
     b.removeBuff(e, BS_AGGREGATE);
     b.fx('explode', { x: e.x, y: e.y, r: 1.5, kind: 'bsnakeAggregate' });
+    bsFx(b, 'enemy_bsnake_skill_02_hit_02', e.x, e.y, { dur: 1 });
     for (const u of areaAlliesInTiles(b, e, e.y, e.x, 'plus', 1)) {
       b.dealDamage(e, u, { amount: BS_AGGREGATE_DAMAGE, type: 'arts', isSkill: true, tags: ['enemyAbility', 'bsnakeAggregate'] });
       bsBreath(b, e, u);
