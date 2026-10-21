@@ -470,6 +470,24 @@ lives, how to extend it, the tests that pin it, and an explicit **我们独有�
 | 5 | Our carried decisions (the §22 blacklist, funnel hits, 望's pieces, kalts2, 克莱门莎, leave→AI, the notice convention, golden attribution) |
 | 6 | Publishing (the GitHub primary + Gitee mirror, the byte-for-byte tree discipline, the notice-first deploy order) |
 
+### 12.1 Plugin assets never write the installation's asset trees (required for the plugin platform)
+
+This is a **merge-critical engine rule**, not a PRTS-only preference:
+
+- Every plugin's models, icons, audio and FX belong under `plugins/<id>/assets/**`.
+- A plugin must **not** write or reference new entries in `public/assets/**`, `data/assets.json`,
+  `data/local-assets*.json` or `data/local-fx.json` as its installation step.
+- The plugin asset overlay resolves those files at room/content-set composition; uninstalling the plugin removes
+  the assets with its folder.
+- Referencing a vanilla installation asset is allowed (`ref`), but copying a plugin's own art into the vanilla
+  trees is not.
+- A content plugin may declare `assets.add` and an `assets` part; the overlay supports enemy/token Spine, enemy
+  icons, BGM and the existing image containers. FX needs the plugin `fx` container added by the platform work
+  (`docs/PLUGIN-PLATFORM-PLAN.md` §4.7/§6.1); until that exists, do not add new global FX entries for a plugin.
+
+Status: **required for every new plugin**. The existing PRTS plugin is the first migration target and is
+transitional until its Spine, icons, BGM and FX are under `plugins/prts-source-code/assets/`.
+
 It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§41 (the decision record) and
 [`docs/ASSETS.md`](ASSETS.md) (the asset detail). Its appendix is the merge checklist of fork-only files.
 
