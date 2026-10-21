@@ -45,7 +45,8 @@ B–E 全部完成后，应满足：
 - [x] 隐藏 Boss 配对测试：普通 Boss 的 `hiddenBossId` 会强制配对，其他房间不受影响（`test/match/prts-engine.test.js`）；
 - [x] 以上各有单元测试（`test/plugins/records.test.js`、`test/match/prts-engine.test.js`）；
 - [x] B0-4：`grantUnit` 团队授予/去重/不可出售、战斗开始 `eliteGate`、休整期 `restEndBondLayers` 已接入并有测试；
-- [ ] B0-2 / B0-5 / B0-7 仍待做：数据插件骨架、凯尔希/M3 记录、协议客户端视图。
+- [x] B0-5：`plugins/prts-source-code` 骨架已建立；凯尔希从 `data/backups.json` 的官方记录生成，M3 token 生成 namespaced 记录；`plugin check --strict` 通过；
+- [ ] B0-2 / B0-7 仍待做：Boss/band 数据骨架、协议客户端视图。
 
 ---
 
