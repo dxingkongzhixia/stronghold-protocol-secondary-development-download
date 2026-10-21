@@ -381,7 +381,10 @@ export function officialCamera(param, viewport, opts) {
   const t = clamp(pitch, 1, 80) * DEG;
   const dist = height / Math.cos(t);
   const focal = (H / 2) / Math.tan((clamp(fovY, 5, 150) * DEG) / 2);
-  return new Camera({ tx: cx, ty: cy + height * Math.tan(t), tz: 0, tilt: pitch, dist, scale: focal / dist, cx: W / 2, cy: H / 2 });
+  // a phone's 20:9 field leaves the operators tiny with the official 16:9 framing: a small centre zoom (default
+  // 1 = the official camera) enlarges the board without changing the projection model or picking.
+  const zoom = clamp(finite(o.zoom, 1), 0.5, 1.5);
+  return new Camera({ tx: cx, ty: cy + height * Math.tan(t), tz: 0, tilt: pitch, dist, scale: (focal * zoom) / dist, cx: W / 2, cy: H / 2 });
 }
 
 /** Overlap (px) between the kept band and a HUD band that still counts as clear (float noise). */
@@ -427,6 +430,15 @@ export function clearHud(cam, hud, keep, viewport) {
 
 const sameRect = (a, b) => !!a && !!b && a.r0 === b.r0 && a.r1 === b.r1 && a.c0 === b.c0 && a.c1 === b.c1;
 
+/** Centre zoom of an already-framed camera (1 = untouched); the HUD clearance has been applied first. */
+function zoomCamera(cam, zoom) {
+  const z = clamp(finite(zoom, 1), 0.5, 1.5);
+  if (!cam || z === 1) return cam;
+  const out = cam.clone();
+  out.scale = cam.scale * z;
+  return out.update();
+}
+
 /**
  * Preset camera for a field kind: 'prep' | 'normal' | 'unite' | 'boss' ('hidden') | 'bossPrep' | 'pen'.
  * Official framing (configBlackBoard params, `opts.config` = stage.config overrides the defaults) unless the
@@ -455,8 +467,9 @@ export function presetCamera(kind, viewport, options) {
     const key = table[side];
     const cfg = opts.config && typeof opts.config === 'object' ? opts.config : null;
     const param = (cfg && parseCameraParam(cfg[key])) || parseCameraParam(OFFICIAL_PARAMS[key]);
-    const cam = officialCamera(param, { width: W, height: H }, opts);
-    return preset.keep && opts.hud ? clearHud(cam, opts.hud, preset.keep, { width: W, height: H }) : cam;
+    const cam = officialCamera(param, { width: W, height: H }, { ...opts, zoom: 1 });
+    const fitted = preset.keep && opts.hud ? clearHud(cam, opts.hud, preset.keep, { width: W, height: H }) : cam;
+    return zoomCamera(fitted, opts.zoom);
   }
   if (!rect) {
     rect = { ...preset.rect };
@@ -471,11 +484,11 @@ export function presetCamera(kind, viewport, options) {
   // a narrow rect (e.g. a solo boss half) keeps the normal optics; wide ones use the preset's wider lens
   const wide = rect.c1 - rect.c0 >= 14;
   const base = wide ? preset : CAMERA_PRESETS[k === 'prep' || k === 'bossPrep' ? 'prep' : 'normal'];
-  return fitCamera(rect, viewport, {
+  return zoomCamera(fitCamera(rect, viewport, {
     tilt: finite(opts.tilt, base.tilt), dist: finite(opts.dist, base.dist),
     margin: finite(opts.margin, preset.margin), headroom: finite(opts.headroom, preset.headroom),
     maxTilePx: opts.maxTilePx, minTilePx: opts.minTilePx,
-  });
+  }), opts.zoom);
 }
 
 /**

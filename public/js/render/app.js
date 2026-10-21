@@ -219,6 +219,9 @@ export async function createFieldView(host, options = {}) {
   const qualityRes = (q) => (coarse && q === 'high' ? 3 : (QUALITY_RES[q] || 2));
   const dpr = () => Math.min(globalThis.devicePixelRatio || 1, qualityRes(settings.quality) * renderScale);
   const boardDpr = () => Math.min(globalThis.devicePixelRatio || 1, (coarse && settings.quality === 'high' ? 2.5 : (BOARD_RES[settings.quality] || 2)) * renderScale);
+  // Phones in landscape: the official 16:9 camera is framed for a desktop and leaves the operators tiny on a
+  // 20:9 screen. A mild centre zoom keeps the board readable; tablets / touch laptops keep the official view.
+  const mobileZoom = () => (coarse && size().height <= 600 ? 1.2 : 1);
   const s0 = size();
   // Construction is synchronous until the complete view can own cancellation. If setup throws,
   // dispose only the resources acquired by this attempt, never another view's host contents.
@@ -679,7 +682,7 @@ export async function createFieldView(host, options = {}) {
     const vk = viewKind(kind, o); // (a 'prep' camera on the boss rows = the Final Assault prep)
     return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || defaultPadding(k, sz) }, {
       rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit, config: stageRec?.config || null,
-      hud: hudBands(vk, sz, { shop: o.shop !== false }),
+      hud: hudBands(vk, sz, { shop: o.shop !== false }), zoom: o.zoom ?? mobileZoom(),
     });
   }
 

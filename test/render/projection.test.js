@@ -149,6 +149,15 @@ describe('framing', () => {
     assert.ok(inView(bp, 15, 3) && bp.tx > 14 && !inView(bp, 3, 3), 'right boss prep camera frames the right half');
   });
 
+  test('a mobile zoom scales the framed camera around its principal point', () => {
+    const base = presetCamera('prep', vp);
+    const zoomed = presetCamera('prep', vp, { zoom: 1.2 });
+    assert.ok(near(zoomed.scale, base.scale * 1.2));
+    assert.equal(zoomed.cx, base.cx);
+    assert.equal(zoomed.cy, base.cy);
+    assert.equal(zoomed.tx, base.tx);
+  });
+
   test('official cameras reproduce the official screenshots (tile seams of a 1920×1079 shop view)', () => {
     // act1autochess_m06 (上半, same configBlackBoard), shop panel open → left_shop_camera_param; seams measured by
     // eye on the official screenshot (bahamut a7a712…): (x = col boundary, y = row boundary) → screen px
