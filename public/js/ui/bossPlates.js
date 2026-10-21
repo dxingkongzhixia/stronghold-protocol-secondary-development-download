@@ -130,7 +130,11 @@ const NODE_Y = 202;
 /** A leader's portrait (the enemy icon of bosses.json's enemyKey), or null. */
 export function bossIconOf(bossId) {
   const b = bossId ? getBoss(bossId) : null;
-  return b?.enemyKey ? enemyIconUrl(data.get('assets'), b.enemyKey) : null;
+  if (!b) return null;
+  const assets = data.get('assets');
+  return enemyIconUrl(assets, b.enemyKey)
+    || enemyIconUrl(assets, b.handbookId)
+    || null;
 }
 
 function Art({ k, class: cls }) {
