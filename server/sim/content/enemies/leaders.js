@@ -979,6 +979,12 @@ function kitEnergyAggregate() {
 export const PLUGIN_KITS = Object.freeze({
   enemy_x_black_snake_bsnake: kitBlackSnake,           // “不死的黑蛇” · 烈焚灼息 / 引爆 / 狂暴 / 不息恶火
   enemy_x_black_snake_aggregate: kitEnergyAggregate,   // 能量聚合体 · 25 s 自爆，四方向火球
+  // H8-4 escorts: their official data uses only stats / normal attacks; an empty kit prevents the base record's kit
+  // (the data records inherit from enemy_1500_skulsr only to reuse fields the plugin does not override).
+  enemy_x_black_snake_uoffcr: () => [],
+  enemy_x_black_snake_uterer: () => [],
+  enemy_x_black_snake_uamord: () => [],
+  enemy_x_black_snake_upeopl: () => [],
 });
 
 // ---------------------------------------------------------------------------------------------------------------
