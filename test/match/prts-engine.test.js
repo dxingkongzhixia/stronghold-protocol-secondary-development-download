@@ -48,6 +48,50 @@ test('a band grantUnit grants one special chess to every human, once, and it can
   m.dispose();
 });
 
+test('eliteGate upgrades a granted special unit only with enough other elites', () => {
+  const data = structuredClone(getData());
+  data.bands.band_x_test_touch = {
+    ...data.bands.band_amiya, bandId: 'band_x_test_touch',
+    grants: { team: false, grantUnit: { charId: 'char_1052_kalts2' }, eliteGate: { others: 2, at: 'battleStart' } },
+  };
+  const h = makeMatch({ mode: 'coop', humans: 1, data }).start();
+  const m = h.m, ps = h.ps('p_0');
+  m.handle('p_0', { t: 'g.infoReady' });
+  h.run(() => m.phase === PHASE.BAND_DRAFT);
+  m._applyBand(ps, 'band_x_test_touch');
+  const special = [...ps.hand, ...ps.temp].find((x) => x?.meta?.special === 'band:band_x_test_touch');
+  assert.ok(special);
+  ps.board.set('9,3', special);
+  ps.board.set('9,4', ps.newPiece('chess', 'chess_char_1052_kalts2_b'));
+  m.applyBandEliteGate(ps);
+  assert.equal(special.id, 'chess_char_1052_kalts2_a', 'one other elite is not enough');
+  ps.board.set('9,5', ps.newPiece('chess', 'chess_char_1052_kalts2_b'));
+  m.applyBandEliteGate(ps);
+  assert.equal(special.id, 'chess_char_1052_kalts2_b');
+  m.dispose();
+});
+
+test('restEndBondLayers grants active-bond layers once and respects maxCount', () => {
+  const data = structuredClone(getData());
+  data.bands.band_x_test_touch = {
+    ...data.bands.band_amiya, bandId: 'band_x_test_touch',
+    grants: { team: false, grantUnit: { charId: 'char_1052_kalts2' }, restEndBondLayers: { layers: 3, activeOnly: true, cap: 'maxCount' } },
+  };
+  const h = makeMatch({ mode: 'coop', humans: 1, data }).start();
+  const m = h.m, ps = h.ps('p_0');
+  m.handle('p_0', { t: 'g.infoReady' });
+  h.run(() => m.phase === PHASE.BAND_DRAFT);
+  m._applyBand(ps, 'band_x_test_touch');
+  const special = [...ps.hand, ...ps.temp].find((x) => x?.meta?.special === 'band:band_x_test_touch');
+  ps.board.set('9,3', special);
+  ps.bonds = { deputShip: { active: true } };
+  ps.layers = { deputShip: 0 };
+  m.applyBandRestLayers(ps);
+  const cap = data.bonds.deputShip.maxCount;
+  assert.equal(ps.layers.deputShip, Math.min(3, cap ?? 3));
+  m.dispose();
+});
+
 test('a band with bossIds is offered only in the matching leader room', () => {
   const data = structuredClone(getData());
   const band = data.bands.band_amiya;

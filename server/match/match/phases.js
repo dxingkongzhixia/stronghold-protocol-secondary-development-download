@@ -239,6 +239,46 @@ export class MatchPhases {
     return piece;
   }
 
+  /**
+   * `grants.eliteGate`: at battle start only, a band's special chess switches to its elite record when at least
+   * `others` OTHER elite operators are deployed. The check excludes every special band unit, so Kal'tsit/M3 cannot
+   * satisfy their own gate. Idempotent; the same special piece stays elite for the rest of the match.
+   */
+  applyBandEliteGate(ps) {
+    if (!ps) return;
+    const specials = [...ps.board.values()].filter((p) => p && p.kind === 'chess' && typeof p.meta?.special === 'string' && p.meta.special.startsWith('band:'));
+    if (!specials.length) return;
+    const others = [...ps.board.values()].filter((p) => p && p.kind === 'chess' && p.meta?.special == null && this.gd.isGolden(p.id)).length;
+    for (const piece of specials) {
+      const bandId = piece.meta.special.slice('band:'.length);
+      const { grants } = readBandGrants(this.gd.band(bandId)?.grants);
+      const gate = grants?.eliteGate;
+      if (!gate || others < gate.others) continue;
+      const elite = this.gd.goldenIdOf(piece.id);
+      if (elite && this.gd.chess(elite)) piece.id = elite;
+    }
+  }
+
+  /**
+   * `grants.restEndBondLayers`: at a rest end (the next round's start), a deployed special band operator grants
+   * layers to its own ACTIVE bonds only, capped by each bond's maxCount. Once per round.
+   */
+  applyBandRestLayers(ps) {
+    if (!ps || !ps.alive || ps.downed) return;
+    const specials = [...ps.board.values()].filter((p) => p && p.kind === 'chess' && typeof p.meta?.special === 'string' && p.meta.special.startsWith('band:'));
+    for (const piece of specials) {
+      const bandId = piece.meta.special.slice('band:'.length);
+      const { grants } = readBandGrants(this.gd.band(bandId)?.grants);
+      const rest = grants?.restEndBondLayers;
+      if (!rest) continue;
+      for (const [bondId, state] of Object.entries(ps.bonds || {})) {
+        if (rest.activeOnly && !state?.active) continue;
+        const cap = Number.isInteger(this.gd.bond(bondId)?.maxCount) ? this.gd.bond(bondId).maxCount : null;
+        ps.addLayers(bondId, rest.layers, { requireActive: rest.activeOnly, cap });
+      }
+    }
+  }
+
   skipBand(ps) {
     if (this.phase !== PHASE.BAND_DRAFT || !this.draft) return fail(ERR.WRONG_PHASE);
     const d = this.draft;

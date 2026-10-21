@@ -13,6 +13,8 @@ import { REVIVE } from '../../../shared/constants.js';
 export class PlayerRound {
   startRound(r) {
     this.round = { refreshes: 0, buys: 0, sells: 0, spent: 0, gainedChess: 0, arts: 0 };
+    // a rest end is the next round's start: a band's special operator grants its active-bond layers here
+    if (r > 1) this.m?.applyBandRestLayers?.(this);
     this.pendingLayerGains = null; // settled (or lapsed) at the last SETTLE
     if (r > 1) this.shop.upgradePrice = Math.max(0, this.shop.upgradePrice - 1);
     // onIncome handlers may rewrite ev.income / ev.pending (e.g. 老鲤 withholds R1–R2 income until R3)
@@ -176,6 +178,8 @@ export class PlayerRound {
    * state includes those layers, as the strip shows them). The gains stay pending: settle() adds them once.
    */
   battleInput({ side = 'L', colOffset = 0, carry = null, reached = false } = {}) {
+    // a band elite gate is checked once at battle start (a preview uses the same input and reports the same stats)
+    this.m?.applyBandEliteGate?.(this);
     // a terrain change not yet followed by a recompute (a content hook at the prep end) never fields an illegal board
     this.deployMap();
     if (this._legalityStale) this.recompute();

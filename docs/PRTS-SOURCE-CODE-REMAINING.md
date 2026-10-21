@@ -44,7 +44,7 @@ B–E 全部完成后，应满足：
 - [x] band 的 `bossIds` 过滤在草稿、默认选择、bot 三处一致（`gd.bandAllowed` / `bandDraft.allowedBands` / `defaultBand`）；
 - [x] 隐藏 Boss 配对测试：普通 Boss 的 `hiddenBossId` 会强制配对，其他房间不受影响（`test/match/prts-engine.test.js`）；
 - [x] 以上各有单元测试（`test/plugins/records.test.js`、`test/match/prts-engine.test.js`）；
-- [~] B0-4：`grantUnit` 的团队授予、去重和不可出售已接进 band 应用；`eliteGate` / `restEndBondLayers` 仍待接；
+- [x] B0-4：`grantUnit` 团队授予/去重/不可出售、战斗开始 `eliteGate`、休整期 `restEndBondLayers` 已接入并有测试；
 - [ ] B0-2 / B0-5 / B0-7 仍待做：数据插件骨架、凯尔希/M3 记录、协议客户端视图。
 
 ---
