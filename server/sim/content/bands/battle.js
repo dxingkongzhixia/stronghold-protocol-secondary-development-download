@@ -234,6 +234,32 @@ export function amedicCharsFor(elites, variants = amedicVariants()) {
   return [];
 }
 
+/**
+ * A token flagged `shareOwnerBonds` (M3) mirrors its owner's active `bond:*` passive buffs. This is deliberately a
+ * copy of the owner's bond buffs, not bond membership: M3 does not count toward a bond's members or tiers, it only
+ * receives the same stat mods (助力 DEF / 坚守 HP / 精准 ATK and the other passive bond bonuses).
+ */
+function installOwnerBondShare(battle) {
+  const sync = () => {
+    for (const u of battle.allyUnits) {
+      if (!u || u.kind !== 'token' || u.removed || !u.def?.shareOwnerBonds) continue;
+      const owner = u.ownerUnit;
+      if (!owner || owner.removed) continue;
+      const source = new Map();
+      for (const b of owner.buffs || []) {
+        if (typeof b.key === 'string' && b.key.startsWith('bond:') && (b.mods || b.flags)) source.set(b.key, b);
+      }
+      for (const [key, b] of source) {
+        battle.addBuff(u, { key, mods: b.mods, flags: b.flags, persist: true, allowDead: true, refresh: 'replace' });
+      }
+      for (const b of [...u.buffs]) if (typeof b.key === 'string' && b.key.startsWith('bond:') && !source.has(b.key)) battle.removeBuff(u, b.key);
+    }
+  };
+  battle.on('battleStart', sync);
+  battle.on('layerGain', sync);
+  battle.every(1, sync);
+}
+
 function installMapChars(battle) {
   const variants = amedicVariants();
   if (!variants.length) return;
@@ -277,4 +303,5 @@ export function install(battle) {
     }
   }
   installMapChars(battle);
+  installOwnerBondShare(battle);
 }

@@ -77,10 +77,10 @@ export function underframeRect(g, rem = 100) {
 }
 
 /**
- * @param {{ view: any, uid?: number|null, row: number, col: number, actions: { retreat: boolean, sell: number|null, destroy: boolean },
- *   name?: string, busy?: boolean, onRetreat?: () => void, onSell?: () => void, onDestroy?: () => void }} props
+ * @param {{ view: any, uid?: number|null, row: number, col: number, actions: { retreat: boolean, sell: number|null, destroy: boolean, rotate?: boolean },
+ *   name?: string, busy?: boolean, onRetreat?: () => void, onSell?: () => void, onDestroy?: () => void, onRotate?: () => void }} props
  */
-export function Underframe({ view, uid = null, row, col, actions, name = '', busy = false, onRetreat, onSell, onDestroy }) {
+export function Underframe({ view, uid = null, row, col, actions, name = '', busy = false, onRetreat, onSell, onDestroy, onRotate }) {
   const g = useTileScreen(view, row, col);
   if (!g || !actions) return null;
   const s = g.s > 0 ? g.s : 64;
@@ -107,6 +107,11 @@ export function Underframe({ view, uid = null, row, col, actions, name = '', bus
         onClick=${(e) => { stop(e); onDestroy?.(); }} title=${t('销毁道具')} aria-label=${t('销毁')}>
       <${PlateIcon} sprite="icon_destory" glyph="trash" tone="destroy" />
       <span class="uframe__label">${t('销毁')}</span>
+    </button>` : null}
+    ${actions.rotate ? html`<button type="button" class=${cx('uframe__btn', 'uframe__btn--rotate')} disabled=${busy} onPointerDown=${stop}
+        onClick=${(e) => { stop(e); onRotate?.(); }} title=${t('朝向')} aria-label=${t('朝向')}>
+      <span class="uframe__plate uframe__plate--rotate is-glyph"><${GIcon} name="target" class="uframe__pglyph" /></span>
+      <span class="uframe__label">${t('朝向')}</span>
     </button>` : null}
   </div>`;
 }

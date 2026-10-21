@@ -1143,6 +1143,7 @@ function MatchScreen() {
       setFacing({ uid: piece.uid, piece, row: t.row, col: t.col, grid: previewGrid(lookups, piece), name: rec?.name || '' });
       audio.sfx('pick', { volume: 0.5 });
     };
+    openFacingRef.current = openFacing;
     const offs = [
       view.on('pieceDragStart', (e) => {
         const L = live.current;
@@ -1318,6 +1319,7 @@ function MatchScreen() {
   }, [detail, bondOpen, drawer]);
 
   // ---- direction step (research 09 §1.2) and the selected piece's underframe ------------------------------------
+  const openFacingRef = useRef(null);                    // the drag handler's openFacing (the underframe rotate action)
   const heldRef = useRef(new Map());                     // uid → { row, col, t } committed placements awaiting m.private
   const faceTimers = useRef(new Set());                  // pending commitFacing release timers (cleared on unmount)
   useEffect(() => () => { for (const t of faceTimers.current) clearTimeout(t); faceTimers.current.clear(); }, []);
@@ -1802,7 +1804,8 @@ function MatchScreen() {
       ${selEntry && editable && !facing && !drag && showPrep ? html`<${Underframe} key=${sel.uid} view=${view} uid=${sel.uid}
         row=${pieceTile(selEntry)?.row} col=${pieceTile(selEntry)?.col} actions=${underframeActions(placeCtx, sel.uid)} busy=${selBusy}
         name=${(selEntry.piece.kind === 'item' ? gd.item(selEntry.piece.id) : selEntry.piece.kind === 'token' ? gd.token(selEntry.piece.id) : ownShown(selEntry.piece.id))?.name || ''}
-        onRetreat=${retreatSel} onSell=${sellSel} onDestroy=${sellSel} />` : null}
+        onRetreat=${retreatSel} onSell=${sellSel} onDestroy=${sellSel}
+        onRotate=${() => { const pt = selEntry && pieceTile(selEntry); if (pt) openFacingRef.current?.(selEntry, { area: 'board', row: pt.row, col: pt.col }); }} />` : null}
     </div>
 
     ${hasOffers && !sp && !personalChoice ? html`<${OfferOverlay} pub=${pub} myId=${myId} readOnly=${spectator || !alive} onAction=${actions.offer} />` : null}

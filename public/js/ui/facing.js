@@ -220,7 +220,7 @@ export function underframeActions(ctx, uid) {
   // only a loose item (bench / temp) can be destroyed: an equipped one is locked (the server refuses g.destroy —
   // research 04 §2; replacing it is the equip-replace dialog's job, g.equip replaceUid)
   if (p.kind === 'item') return itemDestroyable(ctx, uid) ? { retreat: false, sell: null, destroy: true } : null;
-  if (p.kind === 'token') return onBoard ? { retreat: true, sell: null, destroy: false } : null;
+  if (p.kind === 'token') return onBoard ? { retreat: true, sell: null, destroy: false, rotate: true } : null;
   if (p.kind !== 'chess') return null;
   const price = ctx.getChess?.(p.id)?.sellPrice;
   return { retreat: onBoard, sell: Number.isFinite(price) ? price : 1, destroy: false };

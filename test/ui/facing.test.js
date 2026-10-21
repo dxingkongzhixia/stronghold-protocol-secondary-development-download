@@ -150,7 +150,7 @@ describe('underframe (research 09 §5): 撤退 / 出售 +N / 销毁', () => {
     assert.deepEqual(underframeActions(ctx, b.uid), { retreat: true, sell, destroy: false }, 'board operator');
     assert.deepEqual(underframeActions(ctx, h.uid), { retreat: false, sell: chess[RANGED].sellPrice, destroy: false }, 'bench operator: 出售 only');
     assert.deepEqual(underframeActions(ctx, it.uid), { retreat: false, sell: null, destroy: true }, 'items: 销毁 only');
-    assert.deepEqual(underframeActions(ctx, bt.uid), { retreat: true, sell: null, destroy: false }, 'board summon: 撤退 only');
+    assert.deepEqual(underframeActions(ctx, bt.uid), { retreat: true, sell: null, destroy: false, rotate: true }, 'board summon: 撤退 + 朝向');
     assert.equal(underframeActions(ctx, ht.uid), null, 'bench summon: nothing');
     assert.equal(underframeActions(ctx, 999999), null);
   });

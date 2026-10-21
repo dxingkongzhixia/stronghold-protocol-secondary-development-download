@@ -350,6 +350,9 @@ export function normalizeToken(id, t0, ownerChessId = null, variantOverride = nu
     immune: immuneSet(t.immunities),
     trait: desc,
     traitBb: t.trait && typeof t.trait === 'object' ? { ...(t.trait.bb || {}) } : {},
+    // A token that receives the owner operator's active-bond stat bonuses (M3). Generic content flag; no bond
+    // membership is implied — it only mirrors the owner's `bond:*` buffs.
+    shareOwnerBonds: !!(t.shareOwnerBonds ?? t0.shareOwnerBonds),
     skill,
     // chess/token records carry a talent array; enemy-shaped records (炎佑 enemy_9012_acloon) one `{ bb, bbStr }` object
     talents: (Array.isArray(t.talents) ? t.talents : t.talents && typeof t.talents === 'object' ? [t.talents] : [])
