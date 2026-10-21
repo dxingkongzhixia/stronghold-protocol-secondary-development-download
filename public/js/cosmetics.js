@@ -80,7 +80,14 @@ export function createCosmeticLayers() {
   // what was set while shared/plugins/visual.js was still loading (the last one wins)
   let pendingRoom;
   let pendingPersonal;
-  const prepared = new WeakMap(); // document → its PreparedSet (a document never changes)
+  const prepared = new WeakMap();
+  let fxLib = null, fxLoad = null;
+  const effectPrepared = new WeakMap();
+  const hasEffects = (doc) => (doc?.writes || []).some(w => (w.ops || []).some(op => op && op.effects));
+  const ensureFx = () => {
+    if (fxLib || fxLoad) return;
+    fxLoad = import('./render/vfx/pluginLibrary.js').then((m) => { fxLib = m; changed(); }, () => {});
+  }; // document → its PreparedSet (a document never changes)
   const prepare = (doc) => {
     let p = prepared.get(doc);
     if (!p) {
@@ -89,6 +96,12 @@ export function createCosmeticLayers() {
       if (p.droppedCount) { try { dropFn?.(p.dropped, p.droppedCount); } catch { /* the listener's own trouble */ } }
     }
     return p;
+  };
+  const effectsOf = (doc) => {
+    if (!fxLib || !hasEffects(doc)) return [];
+    let list = effectPrepared.get(doc);
+    if (!list) { list = fxLib.preparePluginFx(doc, visual); effectPrepared.set(doc, list); }
+    return list;
   };
   const changed = () => {
     gen++;
@@ -104,6 +117,7 @@ export function createCosmeticLayers() {
       pendingRoom = undefined;
       if (next === (room ? room.doc : null)) return;
       room = next ? { doc: next, prep: prepare(next) } : null;
+      if (next && hasEffects(next)) ensureFx();
       changed();
     },
     /** The player's personal plugins: `[{ id, doc }]` — each its checked document —, in the order they apply. */
@@ -113,6 +127,7 @@ export function createCosmeticLayers() {
       pendingPersonal = undefined;
       if (next.length === personal.length && next.every((p, i) => p.id === personal[i].id && p.doc === personal[i].doc)) return;
       personal = next.map((p) => ({ id: p.id, doc: p.doc, prep: prepare(p.doc) }));
+      if (next.some((p) => hasEffects(p.doc))) ensureFx();
       changed();
     },
     /** The room's document, or null. */
@@ -152,8 +167,14 @@ export function createCosmeticLayers() {
         toldLay = gen;
         try { dropFn?.(dropped, dropped.length); } catch { /* the listener's own trouble */ }
       }
-      memo.set(key, { gen, value: manifest });
-      return manifest;
+      let value = manifest;
+      if (fxLib) {
+        const fx = {};
+        for (const layer of [...(room ? [room] : []), ...personal]) for (const op of effectsOf(layer.doc)) fx[op.at[1]] = op.value;
+        if (Object.keys(fx).length) value = { ...manifest, fx: { ...(manifest.fx || {}), ...fx } };
+      }
+      memo.set(key, { gen, value });
+      return value;
     },
     /** `fn()` after every change; returns the unsubscribe. */
     subscribe(fn) {

@@ -1,0 +1,359 @@
+{
+  "format": "fx-index",
+  "version": 3,
+  "units": {},
+  "skills": {},
+  "prefabs": {
+    "enemy_mpprme_attack_hit_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_attack_hit_01.json",
+      "looping": false
+    },
+    "enemy_mpprme_attack_trail_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_attack_trail_01.json",
+      "looping": true
+    },
+    "enemy_mpprme_buff_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_buff_01.json",
+      "looping": true
+    },
+    "enemy_mpprme_buff_icon_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_buff_icon_01.json",
+      "looping": true
+    },
+    "enemy_mpprme_die_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_die_01.json",
+      "looping": false
+    },
+    "enemy_mpprme_line_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_line_01.json",
+      "looping": true
+    },
+    "enemy_mpprme_line_hit_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_line_hit_01.json",
+      "looping": true
+    },
+    "enemy_mpprme_line_start_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_line_start_01.json",
+      "looping": true
+    },
+    "enemy_mpprme_skill_01_hit_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_skill_01_hit_01.json",
+      "looping": false
+    },
+    "enemy_mpprme_skill_01_start_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_skill_01_start_01.json",
+      "looping": false
+    },
+    "enemy_mpprme_skill_01_trail_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_skill_01_trail_01.json",
+      "looping": true
+    },
+    "enemy_mpprme_skill_02_hit_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_skill_02_hit_01.json",
+      "looping": false
+    },
+    "enemy_mpprme_skill_02_trail_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_skill_02_trail_01.json",
+      "looping": true
+    },
+    "enemy_mpprme_skill_02_trail_start_01": {
+      "file": "assets/fx/prefabs/enemy_mpprme_skill_02_trail_start_01.json",
+      "looping": false
+    },
+    "enemy_mpprts_buff_01": {
+      "file": "assets/fx/prefabs/enemy_mpprts_buff_01.json",
+      "looping": true
+    },
+    "enemy_mpprts_buff_02": {
+      "file": "assets/fx/prefabs/enemy_mpprts_buff_02.json",
+      "looping": true
+    },
+    "enemy_mpprts_buff_icon_01": {
+      "file": "assets/fx/prefabs/enemy_mpprts_buff_icon_01.json",
+      "looping": true
+    },
+    "enemy_mpprts_c_trail_01": {
+      "file": "assets/fx/prefabs/enemy_mpprts_c_trail_01.json",
+      "looping": true
+    },
+    "enemy_mpprts_die_01": {
+      "file": "assets/fx/prefabs/enemy_mpprts_die_01.json",
+      "looping": false
+    },
+    "enemy_mpprts_die_02": {
+      "file": "assets/fx/prefabs/enemy_mpprts_die_02.json",
+      "looping": false
+    }
+  },
+  "textures": {
+    "default-particle-4350037b": {
+      "file": "assets/fx/tex/default-particle-4350037b.png"
+    },
+    "ela_trail_02-c01e4189": {
+      "file": "assets/fx/tex/ela_trail_02-c01e4189.png"
+    },
+    "eltrsm_7-3a211309": {
+      "file": "assets/fx/tex/eltrsm_7-3a211309.png"
+    },
+    "enemy_mpprhd_01-83738c8f": {
+      "file": "assets/fx/tex/enemy_mpprhd_01-83738c8f.png"
+    },
+    "enemy_mpprhd_02-fa08f7e4": {
+      "file": "assets/fx/tex/enemy_mpprhd_02-fa08f7e4.png"
+    },
+    "enemy_mpprme_01-1a7e1c48": {
+      "file": "assets/fx/tex/enemy_mpprme_01-1a7e1c48.png"
+    },
+    "enemy_mpprts_01-40d7f056": {
+      "file": "assets/fx/tex/enemy_mpprts_01-40d7f056.png"
+    },
+    "enemy_mpprts_02-f344db45": {
+      "file": "assets/fx/tex/enemy_mpprts_02-f344db45.png"
+    },
+    "excu2_wangge_01-b9ca2ccb": {
+      "file": "assets/fx/tex/excu2_wangge_01-b9ca2ccb.png"
+    },
+    "fire_62-4f85517a": {
+      "file": "assets/fx/tex/fire_62-4f85517a.png"
+    },
+    "flipbook_236-b2a8bb50": {
+      "file": "assets/fx/tex/flipbook_236-b2a8bb50.png"
+    },
+    "flow_02_ab-28e09d2e": {
+      "file": "assets/fx/tex/flow_02_ab-28e09d2e.png"
+    },
+    "flow_102-5bc39624": {
+      "file": "assets/fx/tex/flow_102-5bc39624.png"
+    },
+    "flow_103-1df21cdb": {
+      "file": "assets/fx/tex/flow_103-1df21cdb.png"
+    },
+    "flow_104-69bab45c": {
+      "file": "assets/fx/tex/flow_104-69bab45c.png"
+    },
+    "flow_11-28b7ce9e": {
+      "file": "assets/fx/tex/flow_11-28b7ce9e.png"
+    },
+    "flow_110-e7566c5c": {
+      "file": "assets/fx/tex/flow_110-e7566c5c.png"
+    },
+    "flow_127-605cfe8b": {
+      "file": "assets/fx/tex/flow_127-605cfe8b.png"
+    },
+    "flow_133-206b1ddc": {
+      "file": "assets/fx/tex/flow_133-206b1ddc.png"
+    },
+    "flow_141-98407532": {
+      "file": "assets/fx/tex/flow_141-98407532.png"
+    },
+    "flow_287_1-9a1c1066": {
+      "file": "assets/fx/tex/flow_287_1-9a1c1066.png"
+    },
+    "flow_38-3622a5b0": {
+      "file": "assets/fx/tex/flow_38-3622a5b0.png"
+    },
+    "flow_40-77c07788": {
+      "file": "assets/fx/tex/flow_40-77c07788.png"
+    },
+    "flow_57-747270c6": {
+      "file": "assets/fx/tex/flow_57-747270c6.png"
+    },
+    "flow_69-1f455999": {
+      "file": "assets/fx/tex/flow_69-1f455999.png"
+    },
+    "flow_69-f892a29d": {
+      "file": "assets/fx/tex/flow_69-f892a29d.png"
+    },
+    "flow_71_3-1c124ced": {
+      "file": "assets/fx/tex/flow_71_3-1c124ced.png"
+    },
+    "flow_78-206b1ddc": {
+      "file": "assets/fx/tex/flow_78-206b1ddc.png"
+    },
+    "flow_80-509a3984": {
+      "file": "assets/fx/tex/flow_80-509a3984.png"
+    },
+    "flow_94_clamp_02-14d89ae0": {
+      "file": "assets/fx/tex/flow_94_clamp_02-14d89ae0.png"
+    },
+    "flow_99-994a5d6e": {
+      "file": "assets/fx/tex/flow_99-994a5d6e.png"
+    },
+    "mask_08-3c300872": {
+      "file": "assets/fx/tex/mask_08-3c300872.png"
+    },
+    "mask_108-c777dd28": {
+      "file": "assets/fx/tex/mask_108-c777dd28.png"
+    },
+    "mask_128-960ea3fd": {
+      "file": "assets/fx/tex/mask_128-960ea3fd.png"
+    },
+    "mask_14-d8cae092": {
+      "file": "assets/fx/tex/mask_14-d8cae092.png"
+    },
+    "mask_15-4c8ded09": {
+      "file": "assets/fx/tex/mask_15-4c8ded09.png"
+    },
+    "mask_37_c_02-c906fa8b": {
+      "file": "assets/fx/tex/mask_37_c_02-c906fa8b.png"
+    },
+    "mask_67-93f075a5": {
+      "file": "assets/fx/tex/mask_67-93f075a5.png"
+    },
+    "pattern_06-04a4494e": {
+      "file": "assets/fx/tex/pattern_06-04a4494e.png"
+    },
+    "ray_48-2137523b": {
+      "file": "assets/fx/tex/ray_48-2137523b.png"
+    },
+    "recttp_sk_01-2fe053cd": {
+      "file": "assets/fx/tex/recttp_sk_01-2fe053cd.png"
+    },
+    "rosmon_xxx_02-72860532": {
+      "file": "assets/fx/tex/rosmon_xxx_02-72860532.png"
+    },
+    "shangdian_05-ad303166": {
+      "file": "assets/fx/tex/shangdian_05-ad303166.png"
+    },
+    "shangdian_18-b0f7beb0": {
+      "file": "assets/fx/tex/shangdian_18-b0f7beb0.png"
+    },
+    "shangdian_21-30ac83ae": {
+      "file": "assets/fx/tex/shangdian_21-30ac83ae.png"
+    },
+    "smoke_47_2-d491e058": {
+      "file": "assets/fx/tex/smoke_47_2-d491e058.png"
+    },
+    "smoke_49-14b5f5d4": {
+      "file": "assets/fx/tex/smoke_49-14b5f5d4.png"
+    },
+    "smoke_63-5d93e506": {
+      "file": "assets/fx/tex/smoke_63-5d93e506.png"
+    },
+    "star_02-76db3d03": {
+      "file": "assets/fx/tex/star_02-76db3d03.png"
+    },
+    "star_05-7ed23d22": {
+      "file": "assets/fx/tex/star_05-7ed23d22.png"
+    },
+    "star_10-32989830": {
+      "file": "assets/fx/tex/star_10-32989830.png"
+    },
+    "star_109-99922b0b": {
+      "file": "assets/fx/tex/star_109-99922b0b.png"
+    },
+    "star_11-03b0b5ba": {
+      "file": "assets/fx/tex/star_11-03b0b5ba.png"
+    },
+    "star_119-31aab497": {
+      "file": "assets/fx/tex/star_119-31aab497.png"
+    },
+    "star_19-70940cd0": {
+      "file": "assets/fx/tex/star_19-70940cd0.png"
+    },
+    "star_23-2d546c2a": {
+      "file": "assets/fx/tex/star_23-2d546c2a.png"
+    },
+    "star_67_4-f6e0df6b": {
+      "file": "assets/fx/tex/star_67_4-f6e0df6b.png"
+    },
+    "star_74-56b72db9": {
+      "file": "assets/fx/tex/star_74-56b72db9.png"
+    },
+    "stone_01-01cd46c1": {
+      "file": "assets/fx/tex/stone_01-01cd46c1.png"
+    },
+    "trail_01-611c3631": {
+      "file": "assets/fx/tex/trail_01-611c3631.png"
+    },
+    "trail_121-2286fd16": {
+      "file": "assets/fx/tex/trail_121-2286fd16.png"
+    },
+    "trail_15-90bbd501": {
+      "file": "assets/fx/tex/trail_15-90bbd501.png"
+    },
+    "trail_15_1-90bbd501": {
+      "file": "assets/fx/tex/trail_15_1-90bbd501.png"
+    },
+    "trail_194-ee3ae247": {
+      "file": "assets/fx/tex/trail_194-ee3ae247.png"
+    },
+    "trail_197_1-93162e7d": {
+      "file": "assets/fx/tex/trail_197_1-93162e7d.png"
+    },
+    "trail_241-c2ce5c94": {
+      "file": "assets/fx/tex/trail_241-c2ce5c94.png"
+    },
+    "trail_26-fda8b222": {
+      "file": "assets/fx/tex/trail_26-fda8b222.png"
+    },
+    "trail_34-b96b4a2a": {
+      "file": "assets/fx/tex/trail_34-b96b4a2a.png"
+    },
+    "trail_91-55757be9": {
+      "file": "assets/fx/tex/trail_91-55757be9.png"
+    },
+    "typhon_trail02_summer-530c246e": {
+      "file": "assets/fx/tex/typhon_trail02_summer-530c246e.png"
+    },
+    "vigil_awj_12-a93bbadb": {
+      "file": "assets/fx/tex/vigil_awj_12-a93bbadb.png"
+    },
+    "water_38_2-c0d64234": {
+      "file": "assets/fx/tex/water_38_2-c0d64234.png"
+    },
+    "x_5-48f75492": {
+      "file": "assets/fx/tex/x_5-48f75492.png"
+    }
+  },
+  "meshes": {
+    "char_swire2_mesh_01-09d5b6db": {
+      "file": "assets/fx/mesh/char_swire2_mesh_01-09d5b6db.json"
+    },
+    "char_swire2_mesh_06-992ccecd": {
+      "file": "assets/fx/mesh/char_swire2_mesh_06-992ccecd.json"
+    },
+    "cone001-5a9e0be9": {
+      "file": "assets/fx/mesh/cone001-5a9e0be9.json"
+    },
+    "cone002-61641464": {
+      "file": "assets/fx/mesh/cone002-61641464.json"
+    },
+    "fanny_smoke01-77d2c8dd": {
+      "file": "assets/fx/mesh/fanny_smoke01-77d2c8dd.json"
+    },
+    "fx_m_circle_01-a2119303": {
+      "file": "assets/fx/mesh/fx_m_circle_01-a2119303.json"
+    },
+    "fx_m_flash_02-3ef8df44": {
+      "file": "assets/fx/mesh/fx_m_flash_02-3ef8df44.json"
+    },
+    "fx_m_plane_03-30f45d4b": {
+      "file": "assets/fx/mesh/fx_m_plane_03-30f45d4b.json"
+    },
+    "general_ring_03-2ddaa907": {
+      "file": "assets/fx/mesh/general_ring_03-2ddaa907.json"
+    },
+    "general_ring_03_3-fe35fbba": {
+      "file": "assets/fx/mesh/general_ring_03_3-fe35fbba.json"
+    },
+    "general_ring_70-5989c1a1": {
+      "file": "assets/fx/mesh/general_ring_70-5989c1a1.json"
+    },
+    "plane002-23193625": {
+      "file": "assets/fx/mesh/plane002-23193625.json"
+    },
+    "spark_002-6b102d54": {
+      "file": "assets/fx/mesh/spark_002-6b102d54.json"
+    },
+    "sphere001-8b2194b6": {
+      "file": "assets/fx/mesh/sphere001-8b2194b6.json"
+    },
+    "sphere001-a2705ef8": {
+      "file": "assets/fx/mesh/sphere001-a2705ef8.json"
+    },
+    "x002-9fd11aeb": {
+      "file": "assets/fx/mesh/x002-9fd11aeb.json"
+    }
+  }
+}

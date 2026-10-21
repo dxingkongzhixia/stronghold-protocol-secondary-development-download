@@ -6,7 +6,7 @@
 >
 > **2026-10-21 方向修订：插件资产包提前为硬约束。**  
 > PRTS 的模型、图标、BGM、FX 不再写入主程序的 `public/assets` / `data/assets.json` / `data/local-assets*.json`，而是放进 `plugins/prts-source-code/assets/`，由插件资产覆盖层解析；卸载插件即移除素材。  
-> 现有 manifest 的 `assets` part 已能承载 enemy/token Spine、图标和 BGM；FX 需要新增插件 FX 容器后才能完全迁入，不能把 FX 继续硬塞进全局清单。
+> 现有 manifest 的 `assets` part 已能承载 enemy/token Spine、图标、BGM 与 `fx` 容器；官方提取 FX 使用 `official: true`，保留网格和完整粒子模块，不能把 FX 继续硬塞进全局清单。
 
 ---
 
@@ -503,7 +503,7 @@ gameplayApi: 1
 
 - 恶意插件无法访问 fs/network/process
 - 超限插件被拒绝
-- 插件异常不拖垮房间
+- 插件异常不影响房间
 - 可一键回退 vanilla
 
 ---
@@ -549,7 +549,7 @@ gameplayApi: 1
    ```
 4. 插件敌人 `spine` / token `assets.spine` 改为引用插件记录 id。
 5. 删除主程序里的 PRTS 全局 entries 和素材副本，只保留 vanilla 资产。
-6. FX 单独处理：先在插件 `assets/fx/` 存放，平台补 `fx` 容器后接入；在此之前不新增全局 FX 引用。
+6. FX 已接入插件 `assets/fx/`：`assets.fx.index` 指向编译后的 index，官方提取的 prefab 使用 `official: true` 以保留网格和完整粒子模块；插件文件由 visual set 的 `/p/...` URL 提供，不再进入 `data/local-fx.json`。
 
 验收：
 
@@ -558,7 +558,7 @@ gameplayApi: 1
 - 不启用插件时，`data/assets.json` 与 vanilla 一致。
 - `plugin check --strict` 和 `plugin pack` 包含资产并校验通过。
 
-当前进度：Spine、图标、M3 模型、BGM 已迁入插件资产包；FX 仍留在本地 FX 清单，等待插件 FX 容器迁移。
+当前进度：Spine、图标、M3 模型、BGM 已迁入插件资产包；PRTS / 拟态 20 个官方 FX prefab、贴图和网格也已迁入 `plugins/prts-source-code/assets/fx/`，并从全局 `data/local-fx.json` 与本地提取索引中移除。
 
 ---
 

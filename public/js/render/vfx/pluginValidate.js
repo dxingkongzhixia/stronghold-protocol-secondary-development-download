@@ -23,7 +23,44 @@ export function boundedFxJson(value) {
   walk(value, 0);
 }
 
-export function validateFxPrefab(d, textures) {
+/** The full extracted official prefab shape, checked for bounds and obvious code injection only. */
+export function validateOfficialFxPrefab(d, textures, meshes = {}) {
+  boundedFxJson(d);
+  const hasMesh = (k) => Object.hasOwn(meshes, k) || (typeof k === 'string' && k.startsWith('builtin:'));
+  check(allowed(d, ['format', 'version', 'key', 'root', 'nodes', 'materials', 'textures', 'meshes', 'refs', 'clips', 'stats', 'bundle']) && d.format === 'fx-prefab' && d.version === 1 && fxId(d.key), 'fx-prefab version 1 required');
+  check(Array.isArray(d.nodes) && d.nodes.length > 0 && d.nodes.length <= CAP.nodes && (d.root ?? 0) === 0, 'prefab node/root limit');
+  check(d.refs === undefined || Array.isArray(d.refs) && d.refs.length <= 32 && d.refs.every(v => typeof v === 'string'), 'invalid chained effects');
+  check(d.meshes === undefined || Array.isArray(d.meshes) && d.meshes.length <= 32 && d.meshes.every(hasMesh), 'undeclared prefab mesh');
+  check(d.clips === undefined || Array.isArray(d.clips) && d.clips.length <= 8 && d.clips.every(c => obj(c)), 'clip limit');
+  check(Array.isArray(d.textures) && d.textures.every(t => Object.hasOwn(textures, t)), 'undeclared prefab texture');
+  check(Array.isArray(d.materials) && d.materials.length <= 32, 'material limit');
+  for (const m of d.materials) {
+    check(obj(m) && typeof m.shader === 'string' && m.shader.length > 0 && m.shader.length <= 128, 'invalid material');
+    check(m.textures === undefined || obj(m.textures) && Object.values(m.textures).every(t => allowed(t, ['tex', 'st', 'default']) &&
+      (t.tex === null && typeof t.default === 'string' || Object.hasOwn(textures, t.tex))), 'invalid material texture');
+    check(m.passes === undefined || Array.isArray(m.passes) && m.passes.length <= 4 && m.passes.every(p => obj(p)), 'material pass limit');
+  }
+  const nodeKeys = ['id', 'name', 'parent', 'children', 'active', 'pos', 'rot', 'scale', 'behaviours', 'particleSystem',
+    'particleSystemRenderer', 'trailRenderer', 'lineRenderer', 'animator', 'meshFilter', 'meshRenderer', 'skinnedMeshRenderer', 'ignored'];
+  const behaviours = new Set(['ParticleEffect', 'ProjectileEffect', 'FollowMountPoint', 'FxDelay', 'EmptyEffect', 'FlyToPredefinedLocation', 'FxLODSetting']);
+  for (const [i, n] of d.nodes.entries()) {
+    check(allowed(n, nodeKeys) && n.id === i && (i === 0 ? n.parent == null : Number.isInteger(n.parent) && n.parent >= 0 && n.parent < i), 'nodes must be a parent-first tree');
+    check(n.children === undefined || Array.isArray(n.children) && n.children.every(c => Number.isInteger(c) && c > i && c < d.nodes.length && d.nodes[c].parent === i), 'invalid child reference');
+    for (const [k, size] of [['pos', 3], ['rot', 4], ['scale', 3]]) check(n[k] === undefined || Array.isArray(n[k]) && n[k].length === size && n[k].every(Number.isFinite), `invalid ${k}`);
+    check(n.behaviours === undefined || Array.isArray(n.behaviours) && n.behaviours.length <= 4 && n.behaviours.every(b => obj(b) && behaviours.has(b.class) && (b.fields === undefined || obj(b.fields))), 'unsupported behaviour');
+    check(n.particleSystem === undefined || obj(n.particleSystem), 'invalid particle system');
+    for (const r of [n.particleSystemRenderer, n.trailRenderer, n.lineRenderer, n.meshRenderer, n.skinnedMeshRenderer].filter(Boolean)) {
+      check(obj(r) && (r.materials === undefined || Array.isArray(r.materials) && r.materials.length <= 8 && r.materials.every(m => m === null || Number.isInteger(m) && m >= 0 && m < d.materials.length)), 'invalid renderer/material reference');
+    }
+    check(n.meshFilter === undefined || typeof n.meshFilter === 'string' && hasMesh(n.meshFilter) || obj(n.meshFilter) && hasMesh(n.meshFilter.mesh ?? n.meshFilter.builtin), 'undeclared mesh filter');
+    check(n.animator === undefined || obj(n.animator), 'invalid animator');
+    check(n.ignored === undefined || typeof n.ignored === 'boolean' || Array.isArray(n.ignored) && n.ignored.length <= 16 && n.ignored.every(v => typeof v === 'string'), 'invalid ignored flag');
+  }
+  return d;
+}
+
+export function validateFxPrefab(d, textures, opts = {}) {
+  if (opts.official) return validateOfficialFxPrefab(d, textures, opts.meshes || {});
   boundedFxJson(d);
   check(allowed(d, ['format', 'version', 'key', 'root', 'nodes', 'materials', 'textures', 'meshes', 'refs', 'clips', 'stats', 'bundle']) && d.format === 'fx-prefab' && d.version === 1 && fxId(d.key), 'fx-prefab version 1 required');
   check(Array.isArray(d.nodes) && d.nodes.length > 0 && d.nodes.length <= CAP.nodes && (d.root ?? 0) === 0, 'prefab node/root limit');

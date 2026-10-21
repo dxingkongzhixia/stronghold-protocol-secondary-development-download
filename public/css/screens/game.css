@@ -257,7 +257,7 @@
 .plugin-hud--top { top: .52rem; left: 50%; transform: translateX(-50%); align-items: center; }
 .plugin-hud--boss { top: .52rem; left: 50%; transform: translateX(-50%); align-items: center; }
 .plugin-hud--overlay { right: .18rem; bottom: 1.15rem; align-items: flex-end; }
-.plugin-hud__block { display: inline-flex; align-items: center; gap: .08rem; max-width: 3.6rem; padding: .03rem .08rem; border: 1px solid color-mix(in srgb, var(--orange-hi) 55%, transparent); background: rgba(0, 0, 0, .62); color: var(--text-hi); font-size: calc(.14 * var(--t)); line-height: 1.25; }
+.plugin-hud__block { display: inline-flex; align-items: center; gap: .08rem; max-width: 3.6rem; padding: .03rem .08rem; border: 1px solid rgba(255, 179, 92, .55); border: 1px solid color-mix(in srgb, var(--orange-hi) 55%, transparent); background: rgba(0, 0, 0, .62); color: var(--text-hi); font-size: calc(.14 * var(--t)); line-height: 1.25; }
 .plugin-hud__label { color: var(--orange-hi); font-weight: 700; }
 .plugin-hud__bar { display: inline-block; width: .9rem; height: .1rem; background: rgba(255, 255, 255, .18); overflow: hidden; }
 .plugin-hud__bar i { display: block; height: 100%; background: var(--orange-hi); }

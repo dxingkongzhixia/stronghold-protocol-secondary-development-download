@@ -4,7 +4,7 @@ export const PLUGIN_FX_LIMITS = Object.freeze({ files: 256, bytes: 32 * 1024 * 1
 export const FX_PHASES = Object.freeze(['skillStart', 'skillLoop', 'skillEnd', 'attack', 'hit', 'projectile']);
 export const fxObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
 export const fxId = v => typeof v === 'string' && /^[a-z0-9][a-z0-9_-]{0,95}$/.test(v) && !['constructor', 'prototype', '__proto__'].includes(v);
-export const fxPath = v => typeof v === 'string' && /^fx\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*\.(json|png)$/.test(v);
+export const fxPath = v => typeof v === 'string' && /^(?:assets\/)?fx\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*\.(json|png)$/.test(v);
 const keys = (v, allowed) => fxObject(v) && Object.keys(v).every(k => allowed.includes(k));
 const num = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
 const integer = (v, min, max) => Number.isInteger(v) && num(v, min, max);
@@ -27,9 +27,11 @@ export function flipbookProblems(b) {
 }
 
 export function pluginFxProblems(fx, owners) {
-  if (!keys(fx, ['index', 'flipbooks', 'bind', 'silentPhases'])) return ['unknown fx field'];
+  if (!keys(fx, ['index', 'flipbooks', 'bind', 'silentPhases', 'official'])) return ['unknown fx field'];
   const out = [];
-  if (fx.index !== undefined && fx.index !== 'fx/index.json') out.push('compiled index must be fx/index.json');
+  if (fx.index !== undefined && !['fx/index.json', 'assets/fx/index.json'].includes(fx.index)) out.push('compiled index must be fx/index.json or assets/fx/index.json');
+  if (fx.official !== undefined && typeof fx.official !== 'boolean') out.push('official must be a boolean');
+  if (fx.official && fx.index === undefined) out.push('official effects need the compiled fx/index.json');
   if (fx.flipbooks !== undefined) {
     if (!fxObject(fx.flipbooks) || Object.keys(fx.flipbooks).length > 128) out.push('at most 128 flipbooks');
     else for (const [id, b] of Object.entries(fx.flipbooks)) {

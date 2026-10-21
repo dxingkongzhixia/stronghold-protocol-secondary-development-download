@@ -18,12 +18,12 @@ function protocolFx(b, unit, key, extra = {}) {
   if (!unit) return;
   // A downed linked unit still has its tile: its buff/clip effect must play even though `alive` is false
   // for the first tick of the down window.
-  b.fx('official', { x: unit.x, y: unit.y, id: unit.id, officialKey: key, ...extra });
+  b.fx('plugin', { x: unit.x, y: unit.y, id: unit.id, skill: `plugin:prts-source-code:${key}`, ...extra });
 }
 
 /** Play an official prefab on a ground point (a beam's target tile). */
 function protocolFxAt(b, x, y, key, extra = {}) {
-  b.fx('official', { x, y, officialKey: key, ...extra });
+  b.fx('plugin', { x, y, skill: `plugin:prts-source-code:${key}`, ...extra });
 }
 
 /** Publish the protocol's live HUD through the generic plugin view (no core PRTS branch). */

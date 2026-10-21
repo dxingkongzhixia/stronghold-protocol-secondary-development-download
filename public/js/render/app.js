@@ -496,6 +496,7 @@ export async function createFieldView(host, options = {}) {
   function syncOfficialFx() {
     ofx.setTier(board3d ? resolveOfficialFx(settings.officialFx, ofx.available) : 'off');
   }
+  ofx.lib.onLoad(() => { if (!destroyed) syncOfficialFx(); });
   ofx.init().then((ok) => { if (!destroyed && ok) { syncOfficialFx(); wiring.ready(); } }, () => {});
   // battle devices (crates / turrets as sim units): the official crate mesh in the 3D scene, else a Pixi box
   ctx.createBox = (spec) => switchableBox({ board: () => board3d, pixi: () => tiles.createBox(), spec });

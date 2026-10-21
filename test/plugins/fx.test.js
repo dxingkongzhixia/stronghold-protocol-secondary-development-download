@@ -36,6 +36,41 @@ test('official effect format and optional expansion preserve legacy records', ()
   r.fx.unit = '../bad'; assert.equal(expandFxRecords(base, [r], opts).data, base);
 });
 
+test('an official extracted effect keeps its meshes and full particle modules inside the plugin', t => {
+  const f = fxFixture(t);
+  const prefab = {
+    format: 'fx-prefab', version: 1, key: 'official', root: 0, bundle: 'pkgrps/test.ab',
+    textures: ['sheet'], meshes: ['mesh1'], refs: [], clips: [{ name: 'clip', curves: [] }],
+    nodes: [{ id: 0, parent: null, name: 'root', children: [], meshFilter: 'mesh1',
+      particleSystem: { lengthInSec: 1, looping: false, InitialModule: { maxNumParticles: 4 }, EmissionModule: {} },
+      particleSystemRenderer: { materials: [0] }, ignored: ['SphereCollider'],
+      behaviours: [{ class: 'ParticleEffect', fields: { _isLoop: 0 } }] }],
+    materials: [{ name: 'm', shader: 'Legacy Shaders/Particles/Alpha Blended Premultiply',
+      textures: { _MainTex: { tex: 'sheet', st: [1, 1, 0, 0] } } }],
+  };
+  f.put('fx/prefabs/official.json', prefab);
+  f.put('fx/mesh/mesh1.json', { positions: [0, 0, 0], submeshes: [[0]] });
+  f.put('fx/sheet.png', png(8, 8));
+  f.put('fx/index.json', { format: 'fx-index', version: 3, units: {}, skills: {}, prefabs: { official: { file: 'fx/prefabs/official.json', looping: false } },
+    textures: { sheet: { file: 'fx/sheet.png' } }, meshes: { mesh1: { file: 'fx/mesh/mesh1.json' } } });
+  const got = readFxAssets(f.root, { index: 'fx/index.json', official: true }, ['fx-official'], listPluginFiles(f.root));
+  assert.equal(got.files.length, 4);
+  assert.deepEqual(got.value.prefabs.official.meshes, ['mesh1']);
+  assert.deepEqual(Object.keys(got.value.meshes), ['mesh1']);
+  const ops = [{ at: ['fx', 'fx-official'], effects: got.value }];
+  const files = Object.fromEntries(got.files.map(rel => [rel, nodeSha256(fs.readFileSync(path.join(f.root, rel)))]));
+  const v = { v: 2, assets: 'a'.repeat(64), overlays: [{ id: 'fx-official', version: '1.0.0', files, writes: visual.writesHashOf(ops) }] };
+  v.vs = visual.visualHashOf(v);
+  const prepared = preparePluginFx({ visual: v, writes: [{ id: 'fx-official', ops }] }, visual);
+  assert.equal(prepared.length, 1);
+  assert.match(prepared[0].value.meshes.mesh1.url, /^\/p\/fx-official\/[a-f0-9]{8}\/fx\/mesh\/mesh1\.json$/);
+  const merged = mergePluginFx(null, { 'fx-official': prepared[0].value });
+  assert.equal(merged.descriptors.size, 1);
+  assert.equal(merged.meshes['plugin:fx-official:mesh1'], prepared[0].value.meshes.mesh1.url);
+  assert.deepEqual(merged.descriptors.get('plugin:fx-official:official').meshes, ['plugin:fx-official:mesh1']);
+  assert.throws(() => readFxAssets(f.root, { index: 'fx/index.json' }, ['fx-official'], listPluginFiles(f.root)), /meshes are unsupported/);
+});
+
 test('editor schemas describe official mappings and cosmetic effects', () => {
   const v = schemaValidator(path.join(ROOT, 'schemas'));
   const fx = { flipbooks: { flash: book() }, bind: { char_x_fx_demo_guard: { 0: { skillStart: 'flash' } } }, silentPhases: ['quiet'] };

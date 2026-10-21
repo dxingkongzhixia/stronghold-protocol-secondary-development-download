@@ -14,7 +14,10 @@ export class PluginFxPlayer {
   }
   refresh() {
     const source = this.assets?.manifest?.fx;
-    if (source !== this.source) { this.clear(); this.clearTextures(); this.source = source; this.catalog = mergePluginFx(null, source); }
+    if (source !== this.source) {
+      this.clear(); this.clearTextures(); this.source = source; this.catalog = mergePluginFx(null, source);
+      this.ofx.lib?.addPluginFx?.(this.catalog);
+    }
   }
   binding(v) {
     const rec = this.record(v?.info), idx = v?.info?.diy?.skillIndex ?? v?.info?.skillIndex ?? rec?.skill?.index;
@@ -93,7 +96,11 @@ export class PluginFxPlayer {
     if (kind === 'phase' && this.catalog.silent.has(extra?.kind)) return true;
     if (kind !== 'plugin') return false;
     // A missing/disabled plugin effect is a silent visual no-op, never a procedural fallback.
-    if (typeof extra?.skill === 'string') this.play(extra.skill, { x, y }, { duration: Number.isFinite(extra.dur) ? Math.max(0, Math.min(30, extra.dur)) : null });
+    if (typeof extra?.skill === 'string') {
+      const loop = extra.loop === true;
+      const duration = Number.isFinite(extra.dur) ? Math.max(0, Math.min(30, extra.dur)) : loop ? 600 : null;
+      this.play(extra.skill, { x, y }, { duration, loop });
+    }
     return true;
   }
   update(dt) {

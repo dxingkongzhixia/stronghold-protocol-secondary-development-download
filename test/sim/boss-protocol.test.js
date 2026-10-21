@@ -45,15 +45,15 @@ test('protocol.ui publishes the live boss HUD through the battle plugin view', (
   assert.ok(h.b.snapshot().pluginView['demo-boss'].hud.boss.some((b) => b.type === 'countdown'));
 });
 
-test('protocol events name the official PRTS / mimic effect prefabs', () => {
+test('protocol events name the plugin-owned PRTS / mimic effect prefabs', () => {
   const h = battle({ p: protocol({ clearProtocol: { at: 10, warning: 0.5, lp: 10 } }), autoFinish: false, timeLimit: 12 });
-  const keys = () => h.eventsOf('fx').filter((e) => e[1] === 'official').map((e) => e[4]?.officialKey);
+  const keys = () => h.eventsOf('fx').filter((e) => e[1] === 'plugin').map((e) => e[4]?.skill);
   const mimic = h.b.enemies.find((e) => e.defId === MIMIC);
   kill(h, mimic);
   h.step(1);
-  assert.ok(keys().includes('enemy_mpprme_buff_01'), 'down');
+  assert.ok(keys().includes('plugin:prts-source-code:enemy_mpprme_buff_01'), 'down');
   h.run(9.6);
-  assert.ok(keys().includes('enemy_mpprts_buff_02'), 'clear warning');
+  assert.ok(keys().includes('plugin:prts-source-code:enemy_mpprts_buff_02'), 'clear warning');
 });
 
 test('the linked mimic guards the boss while alive, then revives it three times', () => {

@@ -482,12 +482,14 @@ This is a **merge-critical engine rule**, not a PRTS-only preference:
 - Referencing a vanilla installation asset is allowed (`ref`), but copying a plugin's own art into the vanilla
   trees is not.
 - A content plugin may declare `assets.add` and an `assets` part; the overlay supports enemy/token Spine, enemy
-  icons, BGM and the existing image containers. FX needs the plugin `fx` container added by the platform work
-  (`docs/PLUGIN-PLATFORM-PLAN.md` §4.7/§6.1); until that exists, do not add new global FX entries for a plugin.
+  icons, BGM, the existing image containers and the compiled `fx` container (`assets.fx.index`, with
+  `assets.fx.official: true` for extracted official prefabs that use meshes and the full particle modules).
+  The client loads those effects from the visual set; they never enter `data/local-fx.json`.
 
-Status: **required for every new plugin**. The PRTS plugin's Spine, icons, M3 model and BGM are now under
-`plugins/prts-source-code/assets/`; its FX is the remaining transitional piece until the platform's plugin FX
-container is finished.
+Status: **required for every new plugin**. The PRTS plugin's Spine, icons, M3 model, BGM and all 20 PRTS/mimic
+official FX prefabs (textures and meshes) are under `plugins/prts-source-code/assets/`; the global PRTS FX entries
+were removed from `data/local-fx.json` and the per-machine extraction index. `b.fx('plugin', { skill })` addresses
+the namespaced prefabs, so a room without the plugin has no PRTS effects to load.
 
 It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§41 (the decision record) and
 [`docs/ASSETS.md`](ASSETS.md) (the asset detail). Its appendix is the merge checklist of fork-only files.

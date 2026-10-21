@@ -5,8 +5,448 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "e577183ddc82f314c4711ebb82db813e451c1b45d3ce59d1ebeade8fcc5fbb3e",
-      "bytes": 1671
+      "sha256": "008f87e1070f4f7fde3a3d506faa39eefaa23de4d64b5424115df5932f4db729",
+      "bytes": 1678
+    },
+    "assets/fx/index.json": {
+      "sha256": "09f5e4b76f77cc3b328d9a91a85a7eb8b0bc403d988b598e4c107a59b8117bef",
+      "bytes": 10742
+    },
+    "assets/fx/mesh/char_swire2_mesh_01-09d5b6db.json": {
+      "sha256": "01585180a3330f5a1b0691fb351646a5bd4647704aa7303e3834114f3f400330",
+      "bytes": 8441
+    },
+    "assets/fx/mesh/char_swire2_mesh_06-992ccecd.json": {
+      "sha256": "92bca2c1e4fbb4a94651178e5fe4a0328c1f88475b12f1a62959c58a374583ad",
+      "bytes": 1848
+    },
+    "assets/fx/mesh/cone001-5a9e0be9.json": {
+      "sha256": "f3612707669b4739c6437930fb666dd09b2ff0cb2b8f0636888928c58af4d9c2",
+      "bytes": 14272
+    },
+    "assets/fx/mesh/cone002-61641464.json": {
+      "sha256": "5f1ebddbfa56f0ee06a2bdabb55a04d35a479cb90d6f8d96da4144c74895f1a8",
+      "bytes": 14644
+    },
+    "assets/fx/mesh/fanny_smoke01-77d2c8dd.json": {
+      "sha256": "d8e83fe3ad56542123c8170477cd315cd94a64e04fd34282153b6926668aa87e",
+      "bytes": 5538
+    },
+    "assets/fx/mesh/fx_m_circle_01-a2119303.json": {
+      "sha256": "77e8a5008380d7f94d6bfd7c0f6dd0377852f4c35ee3076bc7c1de1725225899",
+      "bytes": 25706
+    },
+    "assets/fx/mesh/fx_m_flash_02-3ef8df44.json": {
+      "sha256": "63a19a16f887bc71f7a43655e812b8de2b7c8d0ae0aedf8af3ec81dae482b4dc",
+      "bytes": 9844
+    },
+    "assets/fx/mesh/fx_m_plane_03-30f45d4b.json": {
+      "sha256": "692a72ec35d6de313cab97e29d4b36a82e75f57570c0a484b3e72b8afe8e87b4",
+      "bytes": 5079
+    },
+    "assets/fx/mesh/general_ring_03-2ddaa907.json": {
+      "sha256": "657f8a4a9171e27a00c4ca38ff9fd36aa094aa0d767f0a726fb2fcd356823276",
+      "bytes": 15908
+    },
+    "assets/fx/mesh/general_ring_03_3-fe35fbba.json": {
+      "sha256": "7c5519128b00042992de6041ec79571c2bf23f85cb50a78edc86cae591413894",
+      "bytes": 13124
+    },
+    "assets/fx/mesh/general_ring_70-5989c1a1.json": {
+      "sha256": "d444ab0768824afafa6271d255afddce5e07bfbedf685341cf9e71648687d7b2",
+      "bytes": 6963
+    },
+    "assets/fx/mesh/plane002-23193625.json": {
+      "sha256": "cd6d58bc6f541ed376d0a2e14367e034335afecff44fe15e3ef756890f46331d",
+      "bytes": 236
+    },
+    "assets/fx/mesh/spark_002-6b102d54.json": {
+      "sha256": "f1b0a38fc9cf7ece98b05111a18307bc9d7485e7e529ddb6e90d0bde34532a80",
+      "bytes": 1093
+    },
+    "assets/fx/mesh/sphere001-8b2194b6.json": {
+      "sha256": "89de8f4339fbba9ec2f938791c89845409f4d828b29a8b5cbd2842a857d1e4d1",
+      "bytes": 28270
+    },
+    "assets/fx/mesh/sphere001-a2705ef8.json": {
+      "sha256": "d7cf2d0a1c4b28515db7ad525be9dc2875eefacd2e9aad6be2cb2d9b5b80eec5",
+      "bytes": 66264
+    },
+    "assets/fx/mesh/x002-9fd11aeb.json": {
+      "sha256": "ce268b5d77ae17ff017fa4b9be48cc334e82943b3c52a7880aed5f7906319ede",
+      "bytes": 17202
+    },
+    "assets/fx/prefabs/enemy_mpprme_attack_hit_01.json": {
+      "sha256": "be5cd435fc262a82a1edc81166b0a571ff3cb865c4cb64df67259254bd747feb",
+      "bytes": 35910
+    },
+    "assets/fx/prefabs/enemy_mpprme_attack_trail_01.json": {
+      "sha256": "59551a7a9b7516bc995d8890c055eadf6dd1341f15010d732492b46f49ea336a",
+      "bytes": 15743
+    },
+    "assets/fx/prefabs/enemy_mpprme_buff_01.json": {
+      "sha256": "04b8a1152361acc42d5c827e175b4132df2373d276e2ce177324cd65ad49c836",
+      "bytes": 9264
+    },
+    "assets/fx/prefabs/enemy_mpprme_buff_icon_01.json": {
+      "sha256": "d61518ca9b4698ade70e4365a03b7f8105b17f4beac8aed52bd00be32175b074",
+      "bytes": 14817
+    },
+    "assets/fx/prefabs/enemy_mpprme_die_01.json": {
+      "sha256": "0f527cd7556e1b553a1910b5dafe87e992c9e6b6e8fadc97c08313900642ef97",
+      "bytes": 46646
+    },
+    "assets/fx/prefabs/enemy_mpprme_line_01.json": {
+      "sha256": "d6cb16f489cab3b35aca0942222eabcc960c34f6bcc3e332536c3b25e96b84f2",
+      "bytes": 11888
+    },
+    "assets/fx/prefabs/enemy_mpprme_line_hit_01.json": {
+      "sha256": "f1a987802dd8b4c47836ff81b8a4013c71d1a85e2717a2c2b0a98301126d08fd",
+      "bytes": 30140
+    },
+    "assets/fx/prefabs/enemy_mpprme_line_start_01.json": {
+      "sha256": "2eae228ef7ad94e56718107740682fc0ae28563d586e2433bd181d0e8623ba80",
+      "bytes": 27649
+    },
+    "assets/fx/prefabs/enemy_mpprme_skill_01_hit_01.json": {
+      "sha256": "4ee70c7416c8d4a9deac03d73c88d9874ac0016344d4ac5692640d7571a8755e",
+      "bytes": 46566
+    },
+    "assets/fx/prefabs/enemy_mpprme_skill_01_start_01.json": {
+      "sha256": "207a95e3557f018b11b222264826d41397e6203d970b4f85cad89d7c6556f482",
+      "bytes": 30764
+    },
+    "assets/fx/prefabs/enemy_mpprme_skill_01_trail_01.json": {
+      "sha256": "cd43c68ff908eab853d7cf906498151b289f6fcf2ec76a45e20f3f289842b3a0",
+      "bytes": 15869
+    },
+    "assets/fx/prefabs/enemy_mpprme_skill_02_hit_01.json": {
+      "sha256": "ab9dadeca74f1a761f7612df4a2ccff0793beb1605959d7070b3068e008c916f",
+      "bytes": 88268
+    },
+    "assets/fx/prefabs/enemy_mpprme_skill_02_trail_01.json": {
+      "sha256": "207dfc307cff1c8367128857bdabfa93deffc041c978e9ad571b863f0c2963e4",
+      "bytes": 29004
+    },
+    "assets/fx/prefabs/enemy_mpprme_skill_02_trail_start_01.json": {
+      "sha256": "2f5990546745e8a22b13e6ab5d163b01d1ddae81f2ae54a665031abee032019b",
+      "bytes": 32545
+    },
+    "assets/fx/prefabs/enemy_mpprts_buff_01.json": {
+      "sha256": "985fbe3eac8ab6c8f5fb78be9911f483937769505679c8e1798593f8c4c69c66",
+      "bytes": 20162
+    },
+    "assets/fx/prefabs/enemy_mpprts_buff_02.json": {
+      "sha256": "057260583c793df6f1f98cf37269d7e3173a1b98992000a8de0f057a3d340750",
+      "bytes": 46311
+    },
+    "assets/fx/prefabs/enemy_mpprts_buff_icon_01.json": {
+      "sha256": "3890460cfa9689f450fa386ec1bf0ef8c527eb60b5b5968d53a2d37af8df5319",
+      "bytes": 10951
+    },
+    "assets/fx/prefabs/enemy_mpprts_c_trail_01.json": {
+      "sha256": "d7513ebea6feb37664801eda75990dcd48bfdd3d040ee7bb0fb959c838cb88e1",
+      "bytes": 17684
+    },
+    "assets/fx/prefabs/enemy_mpprts_die_01.json": {
+      "sha256": "9fb33ac03b1d5572a45ee5cf6075671360ba804b0dcd2099661f2afdc8879b09",
+      "bytes": 100786
+    },
+    "assets/fx/prefabs/enemy_mpprts_die_02.json": {
+      "sha256": "b6d65cc3e450b047751811d53faea408cc6c7c37a909a06ab41900d020fc19fe",
+      "bytes": 52443
+    },
+    "assets/fx/tex/default-particle-4350037b.png": {
+      "sha256": "922ad583a91a5aed437b19b01494fdc148fa26174fe169aa5987aa4ea62cfdfa",
+      "bytes": 4095
+    },
+    "assets/fx/tex/ela_trail_02-c01e4189.png": {
+      "sha256": "11b550e79011b019aefdb4683c4f3e0e2dec435449be9b7ac1898589dd88f5c4",
+      "bytes": 4393
+    },
+    "assets/fx/tex/eltrsm_7-3a211309.png": {
+      "sha256": "ff1c1f298a35603a2d8b17394a65c2f14810c66cde858a0c57e5e06887a21e3c",
+      "bytes": 2295
+    },
+    "assets/fx/tex/enemy_mpprhd_01-83738c8f.png": {
+      "sha256": "f5dee2ce92606931b34794119c722ced954cf8a86de9ae0152e11b60d52644a2",
+      "bytes": 10195
+    },
+    "assets/fx/tex/enemy_mpprhd_02-fa08f7e4.png": {
+      "sha256": "018993b6e41f6fbcd3ab8aa2e0c97ab1b7d93c458ea06b68f79935a7dcd5d0e2",
+      "bytes": 18480
+    },
+    "assets/fx/tex/enemy_mpprme_01-1a7e1c48.png": {
+      "sha256": "e7e24f207d6bc27d9a34b3416b1b03879597b7e0782b3172e0aae3c4fe6975fb",
+      "bytes": 19277
+    },
+    "assets/fx/tex/enemy_mpprts_01-40d7f056.png": {
+      "sha256": "a5fbcec2369443e03bc959ca4f4e0de317682cf933c6b6c14a64420d56c35d76",
+      "bytes": 50086
+    },
+    "assets/fx/tex/enemy_mpprts_02-f344db45.png": {
+      "sha256": "8a96172cbfa971563e9509e7f7c8f2eed7d790cca0b988cfa058aa766b9050ef",
+      "bytes": 51758
+    },
+    "assets/fx/tex/excu2_wangge_01-b9ca2ccb.png": {
+      "sha256": "ec83a479f11b40b1f00c31bb66387c4b081cdea63087f776dcc9aff9da01b359",
+      "bytes": 4602
+    },
+    "assets/fx/tex/fire_62-4f85517a.png": {
+      "sha256": "835dc69a883b93f5fd09249826338bddd4c5ad4b8883a5ada6c521be3d665122",
+      "bytes": 42693
+    },
+    "assets/fx/tex/flipbook_236-b2a8bb50.png": {
+      "sha256": "71bed81aeef425f88e993e4f60c63e1adcbebc11455255010aa280f060aa8bba",
+      "bytes": 56053
+    },
+    "assets/fx/tex/flow_02_ab-28e09d2e.png": {
+      "sha256": "ddd66c80fbca56f8e93b03f05c61c786e44c8919d257d63b26a5b2025641438b",
+      "bytes": 36138
+    },
+    "assets/fx/tex/flow_102-5bc39624.png": {
+      "sha256": "63a9f878a1266537575ccfc2ffdb7a400493ef1f620140fad18057d799138c51",
+      "bytes": 151512
+    },
+    "assets/fx/tex/flow_103-1df21cdb.png": {
+      "sha256": "51dedb13de127c9d88d2cc5c08caaacef46a716b5f12439b96173fffdf04093b",
+      "bytes": 279624
+    },
+    "assets/fx/tex/flow_104-69bab45c.png": {
+      "sha256": "4ef626080c6f33f671249fc806add637074af9f0da12be68ea0dc5d56f608c4d",
+      "bytes": 53633
+    },
+    "assets/fx/tex/flow_11-28b7ce9e.png": {
+      "sha256": "19e628615835e7e3196fa462d01c3b97c00313203a52e10566a317d06ff6b6ab",
+      "bytes": 15398
+    },
+    "assets/fx/tex/flow_110-e7566c5c.png": {
+      "sha256": "b7f8877c8456abec34d9ce1af212adfc694f7ff7b0f8e031e1056c822a17e81c",
+      "bytes": 33396
+    },
+    "assets/fx/tex/flow_127-605cfe8b.png": {
+      "sha256": "ae5f8e7e8ad671d600f09e5f5215a1ef7b30d0df816d7a90e32eff84b0ec05d6",
+      "bytes": 33627
+    },
+    "assets/fx/tex/flow_133-206b1ddc.png": {
+      "sha256": "7d5d7b1f05f6fbb24ee65630190dade492a2bfb6c0a143e18c8c8992fb256be2",
+      "bytes": 107369
+    },
+    "assets/fx/tex/flow_141-98407532.png": {
+      "sha256": "a57b32f944391944e60bc200e7364e0d1fd07e2ba81692abc1155292b2158e5d",
+      "bytes": 85344
+    },
+    "assets/fx/tex/flow_287_1-9a1c1066.png": {
+      "sha256": "fe899ed3ecfc4e09967af24fcae2f372f018f6d0f5ff12b6c66a3ee3518082fe",
+      "bytes": 19306
+    },
+    "assets/fx/tex/flow_38-3622a5b0.png": {
+      "sha256": "3607d22f9c3f30a9f3f7f3277ea2ee50d183bbcc934aa665ba76596e94313836",
+      "bytes": 17926
+    },
+    "assets/fx/tex/flow_40-77c07788.png": {
+      "sha256": "3bdd0cfae2e1746906f4473620428d897813a3336ea59436aaaf531887aa02c0",
+      "bytes": 17808
+    },
+    "assets/fx/tex/flow_57-747270c6.png": {
+      "sha256": "48e3915d48db7a5165abb4a193a3a69046a5a23eeb7f4bdddcee6295016ad062",
+      "bytes": 16578
+    },
+    "assets/fx/tex/flow_69-1f455999.png": {
+      "sha256": "b73bcb16e264b071c4416a3187b937b2a1481ebd406bdac632a105c5b181026b",
+      "bytes": 43684
+    },
+    "assets/fx/tex/flow_69-f892a29d.png": {
+      "sha256": "3b04451afe8c67b82fb5459b48cfbf204c609a6214b90ee7f843de33dcb9d291",
+      "bytes": 73952
+    },
+    "assets/fx/tex/flow_71_3-1c124ced.png": {
+      "sha256": "48bbcde0414f41bd99c704ed5a72dafd865a1b4441ccae79c7842cfae2e26b18",
+      "bytes": 41619
+    },
+    "assets/fx/tex/flow_78-206b1ddc.png": {
+      "sha256": "7d5d7b1f05f6fbb24ee65630190dade492a2bfb6c0a143e18c8c8992fb256be2",
+      "bytes": 107369
+    },
+    "assets/fx/tex/flow_80-509a3984.png": {
+      "sha256": "b365ab76e7de6a0cada36fe36aea1f6cd2d975906c9407574e6b89bcc67f6565",
+      "bytes": 81820
+    },
+    "assets/fx/tex/flow_94_clamp_02-14d89ae0.png": {
+      "sha256": "0207d54caefd8d5493b0108d2262da6bda026907c7df198fa7fe41a3d2240379",
+      "bytes": 12009
+    },
+    "assets/fx/tex/flow_99-994a5d6e.png": {
+      "sha256": "130fb1e2d65d25cc975be8fa9d99b90831b0ee68edfdbd153471b02abc9e109b",
+      "bytes": 51389
+    },
+    "assets/fx/tex/mask_08-3c300872.png": {
+      "sha256": "447d012358468ad14cc1fbfb501f1a508f828de68b5d004ed960a7682f138d31",
+      "bytes": 649
+    },
+    "assets/fx/tex/mask_108-c777dd28.png": {
+      "sha256": "484a702d267f690cf548819c4cea7701485f7e55a739dd36852d64035cc4c2ae",
+      "bytes": 51706
+    },
+    "assets/fx/tex/mask_128-960ea3fd.png": {
+      "sha256": "abe975146e43adf863affc6479c42e4dea3ec153f59ca6704d501e48a4fa9e51",
+      "bytes": 44752
+    },
+    "assets/fx/tex/mask_14-d8cae092.png": {
+      "sha256": "4ba42a8dd1a03f0b274e04634f86215b5b532b1a7aee9587cc3cddee32f21d29",
+      "bytes": 611
+    },
+    "assets/fx/tex/mask_15-4c8ded09.png": {
+      "sha256": "fb31a99b57d986db47fd635ea303f1b759dae7f6cd2367385b06aee369248c2d",
+      "bytes": 1027
+    },
+    "assets/fx/tex/mask_37_c_02-c906fa8b.png": {
+      "sha256": "b5a739c6619748958692f022ad530ab5c022b41c8608c9c4497430b79c467bcf",
+      "bytes": 3814
+    },
+    "assets/fx/tex/mask_67-93f075a5.png": {
+      "sha256": "4bd65802a9e379d9850405aa96ac38167c4090003ea992625164b03bfbcfc2d5",
+      "bytes": 7654
+    },
+    "assets/fx/tex/pattern_06-04a4494e.png": {
+      "sha256": "7c850eee22fd93cce03ae4ee220fadd23eac56b2f2fd2ae6396a85be2bacfd5a",
+      "bytes": 23936
+    },
+    "assets/fx/tex/ray_48-2137523b.png": {
+      "sha256": "5edc5ad456c5cf498796375fc42fa5f0cdc0096c8c7c3e881cdd0bdf8b645cad",
+      "bytes": 44412
+    },
+    "assets/fx/tex/recttp_sk_01-2fe053cd.png": {
+      "sha256": "6a9148284f330385cd3dc4718c9187ccbba961b58e62d96891928584eae6e9e3",
+      "bytes": 15985
+    },
+    "assets/fx/tex/rosmon_xxx_02-72860532.png": {
+      "sha256": "71ea9386c6c01995f6503375fa77bcb9c17f72aa7ec7107381292d9225c57876",
+      "bytes": 3980
+    },
+    "assets/fx/tex/shangdian_05-ad303166.png": {
+      "sha256": "b966bc0075c61f460de3e33fff6d889162608b2a6bd9dad21725206e134924cc",
+      "bytes": 22609
+    },
+    "assets/fx/tex/shangdian_18-b0f7beb0.png": {
+      "sha256": "97df24730e83103ee9f3a5090dab29b135b949d2f3681686abf1cb602012874c",
+      "bytes": 12902
+    },
+    "assets/fx/tex/shangdian_21-30ac83ae.png": {
+      "sha256": "7c5b458479d84fec2a1c65ce24f0c27ef0d568b6be9108d2b530d9aa77e9eddf",
+      "bytes": 2928
+    },
+    "assets/fx/tex/smoke_47_2-d491e058.png": {
+      "sha256": "908f1f1cc1ee24bf0109312cbb44c12f32295ffe65e3af014fc0be7452f9a270",
+      "bytes": 70862
+    },
+    "assets/fx/tex/smoke_49-14b5f5d4.png": {
+      "sha256": "ed9795f39f8cbc2e9468cd01b531b11e1e1917b3afbfdff6d0ebd69fd6db64ae",
+      "bytes": 291395
+    },
+    "assets/fx/tex/smoke_63-5d93e506.png": {
+      "sha256": "e426d5a2718d551aadd56c9dd52d64b70ecb7460f6421484969ffad5821d9a3f",
+      "bytes": 76298
+    },
+    "assets/fx/tex/star_02-76db3d03.png": {
+      "sha256": "7cf5013fa6d91189992350bea75df694c3517d231c519cf260723b8970808238",
+      "bytes": 6003
+    },
+    "assets/fx/tex/star_05-7ed23d22.png": {
+      "sha256": "a782fc137d64903da9374b7dff02c9d8eb43cc999c20f4cba295cc8f95804615",
+      "bytes": 4714
+    },
+    "assets/fx/tex/star_10-32989830.png": {
+      "sha256": "976c5e204bd2079140c81ef859abac3bfb9834e45b9a2cd32b77f66cafc4ea20",
+      "bytes": 1522
+    },
+    "assets/fx/tex/star_109-99922b0b.png": {
+      "sha256": "a16b077e299b908afeeca47c18bd7c78558c6e7d9a1764f7eef4f8826661c2aa",
+      "bytes": 3939
+    },
+    "assets/fx/tex/star_11-03b0b5ba.png": {
+      "sha256": "ae69bbd2d26c666808971bba515402da3ae03a3fa2db70e523084de3fd853074",
+      "bytes": 7315
+    },
+    "assets/fx/tex/star_119-31aab497.png": {
+      "sha256": "151a526b9df4b8596d68dccf9d4cc9abe13fcf88eac844feaa64819edaa6918a",
+      "bytes": 21287
+    },
+    "assets/fx/tex/star_19-70940cd0.png": {
+      "sha256": "6e8e9a4afb2ec2e673b5ff83755be6f50138a80fbf76bad91d58b676210cdffd",
+      "bytes": 10883
+    },
+    "assets/fx/tex/star_23-2d546c2a.png": {
+      "sha256": "9ff6b0a2351c4ebc83043bae92b36fef08b7a2d9b7b224ccb412c588c7026fd4",
+      "bytes": 26134
+    },
+    "assets/fx/tex/star_67_4-f6e0df6b.png": {
+      "sha256": "6f55566aeb43bc0077f65f21f8dd9a9f5bd706996a015ebc32bdd9bb0d2ae930",
+      "bytes": 8344
+    },
+    "assets/fx/tex/star_74-56b72db9.png": {
+      "sha256": "fc52da37d6fb348170f0adb8d102faeb62e08411caf75c2812c3c15da37ec1aa",
+      "bytes": 17735
+    },
+    "assets/fx/tex/stone_01-01cd46c1.png": {
+      "sha256": "6dc45f5acb43f85caef176cb2485545d7bec84dba09fc18526ab7b4d17ddabb9",
+      "bytes": 7444
+    },
+    "assets/fx/tex/trail_01-611c3631.png": {
+      "sha256": "34383f3832b1cfb59ad5c860ad23e6ca31910b42f037a5f56162c61167c957c4",
+      "bytes": 5651
+    },
+    "assets/fx/tex/trail_121-2286fd16.png": {
+      "sha256": "d2a230c548e0cf11a12bcf88bdf10c4f217703060f095ec31c88f1aabecac662",
+      "bytes": 12812
+    },
+    "assets/fx/tex/trail_15-90bbd501.png": {
+      "sha256": "9555d01cfc1004a84bc1662ae4540241dcca8993e5f643a6cd7e3dfe77307d56",
+      "bytes": 81962
+    },
+    "assets/fx/tex/trail_15_1-90bbd501.png": {
+      "sha256": "9555d01cfc1004a84bc1662ae4540241dcca8993e5f643a6cd7e3dfe77307d56",
+      "bytes": 81962
+    },
+    "assets/fx/tex/trail_194-ee3ae247.png": {
+      "sha256": "6ba7ab5b0a4bccc83ca91d13d981d6567d73272d7fd864e4cef478fa8333f2c4",
+      "bytes": 13892
+    },
+    "assets/fx/tex/trail_197_1-93162e7d.png": {
+      "sha256": "65e0435cc6cfd34edc4513d2a5456ae7bd1133ce1857e23096ea3720927b0609",
+      "bytes": 3919
+    },
+    "assets/fx/tex/trail_241-c2ce5c94.png": {
+      "sha256": "efb14aef4d2520517d907fd6bb1338c7782a922950783ec6f21590031014d938",
+      "bytes": 12494
+    },
+    "assets/fx/tex/trail_26-fda8b222.png": {
+      "sha256": "8982a55610f10885ce1ef246911ef6d0512a021a1c069dbe02770c045328e7af",
+      "bytes": 7268
+    },
+    "assets/fx/tex/trail_34-b96b4a2a.png": {
+      "sha256": "c5ebf4bc2f8865a7c76129876b90de24b01ad1ad7ac18d27ea9c3e56637db4bd",
+      "bytes": 6895
+    },
+    "assets/fx/tex/trail_91-55757be9.png": {
+      "sha256": "6e3bc4078bd18c32dfa56073e5961d79eade5b5b92b1a4bd50d86a782148901d",
+      "bytes": 8893
+    },
+    "assets/fx/tex/typhon_trail02_summer-530c246e.png": {
+      "sha256": "701d25b1debfdcdf035c571387aa9b65fa963eecf4bd8fe12c0e1c4fa4cb5b2a",
+      "bytes": 6728
+    },
+    "assets/fx/tex/vigil_awj_12-a93bbadb.png": {
+      "sha256": "f1b5d24874d4fe70a01f3edcc46322697dd3be9203db6282b48f4080a563556a",
+      "bytes": 9873
+    },
+    "assets/fx/tex/water_38_2-c0d64234.png": {
+      "sha256": "81bc96c85bbe41e79c09ff19be5a379ea181c0fbc5957e3bd07ce5d5902a39a0",
+      "bytes": 29435
+    },
+    "assets/fx/tex/x_5-48f75492.png": {
+      "sha256": "e250b33fe5fff6d3acddc49fe97b8b584003405a2ce314f06190db13fb0f395c",
+      "bytes": 1489
     },
     "assets/images/enemy_x_prts_source_code_mimic.png": {
       "sha256": "9e02b827f9a1c5d9a0c426212cdceed889eca05870f9bb4c2d0375e053d3569e",
@@ -89,8 +529,8 @@
       "bytes": 34235
     },
     "plugin.json": {
-      "sha256": "f6123ff406e74578448fdcad2a9824d5d0e00ace90c2a4c3e4af86cfcb47d2ce",
-      "bytes": 588
+      "sha256": "3e036d549a57375dab80ecbbf79d77e679d4832fb44fed196a55183108d142ec",
+      "bytes": 2756
     }
   },
   "spine": {

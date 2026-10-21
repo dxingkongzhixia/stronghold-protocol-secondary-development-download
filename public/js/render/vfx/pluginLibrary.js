@@ -18,7 +18,7 @@ function validPluginFx(id, e) {
     if (!fxObject(prefabs) || Object.keys(prefabs).length > CAP.effects) return false;
     for (const [key, d] of Object.entries(prefabs)) {
       if (!fxId(key) || key !== d?.key) return false;
-      validateFxPrefab(d, e.textures || {});
+      validateFxPrefab(d, e.textures || {}, { official: !!e.config.official, meshes: e.meshes || {} });
     }
     return true;
   } catch { return false; }
@@ -35,7 +35,7 @@ export function preparePluginFx(doc, visual) {
     const e = op.effects;
     // Hash validation proves which payload arrived; ownership and prefab budgets must still hold in the browser.
     if (!validPluginFx(id, e) || !e.images) continue;
-    const urls = [], images = {};
+    const urls = [], images = {}, meshes = {};
     let bad = false;
     for (const rel of Object.keys(e.images)) {
       const hash = files[rel];
@@ -43,7 +43,13 @@ export function preparePluginFx(doc, visual) {
       const url = `/p/${id}/${hash.slice(0, 8)}/${rel}`;
       images[rel] = { ...e.images[rel], url }; urls.push(url);
     }
-    if (!bad) out.push({ at: ['fx', id], value: { ...e, id, images }, urls });
+    for (const [key, m] of Object.entries(e.meshes || {})) {
+      const hash = files[m.path];
+      if (!fxPath(m.path) || !/^[a-f0-9]{64}$/.test(hash)) { bad = true; break; }
+      const url = `/p/${id}/${hash.slice(0, 8)}/${m.path}`;
+      meshes[key] = { ...m, url }; urls.push(url);
+    }
+    if (!bad) out.push({ at: ['fx', id], value: { ...e, id, images, meshes }, urls });
   }
   return out;
 }
@@ -52,11 +58,11 @@ export function preparePluginFx(doc, visual) {
 export function mergePluginFx(index, effects) {
   const idx = { ...(index || { format: 'fx-index', version: 3 }), units: { ...index?.units }, skills: { ...index?.skills },
     prefabs: { ...index?.prefabs }, skins: { ...index?.skins }, projectiles: { ...index?.projectiles }, pluginUnits: {} };
-  const descriptors = new Map(), textures = {}, books = new Map(), bindings = {}, silent = new Set();
+  const descriptors = new Map(), textures = {}, meshes = {}, books = new Map(), bindings = {}, silent = new Set();
   for (const [id, e] of Object.entries(effects || {})) {
     if (!validPluginFx(id, e)) continue;
     const ns = fxNamespace(id), ix = e.index;
-    const names = new Set([...Object.keys(ix?.prefabs || {}), ...Object.keys(ix?.skills || {}), ...Object.keys(e.textures || {})]);
+    const names = new Set([...Object.keys(ix?.prefabs || {}), ...Object.keys(ix?.skills || {}), ...Object.keys(e.textures || {}), ...Object.keys(e.meshes || {})]);
     const rewrite = (v, key = '') => {
       if (typeof v === 'string') return names.has(v) && !['name', 'class', 'role', 'kind', 'from', 'ability', 'rootClass'].includes(key) ? ns + v : v;
       if (Array.isArray(v)) return v.map(x => rewrite(x, key));
@@ -68,11 +74,12 @@ export function mergePluginFx(index, effects) {
     for (const [key, p] of Object.entries(ix?.prefabs || {})) idx.prefabs[ns + key] = { ...p };
     for (const [key, d] of Object.entries(e.prefabs || {})) descriptors.set(ns + key, rewrite(d));
     for (const [key, t] of Object.entries(e.textures || {})) if (e.images[t.path]) textures[ns + key] = { path: e.images[t.path].url };
+    for (const [key, m] of Object.entries(e.meshes || {})) if (m.url) meshes[ns + key] = m.url;
     for (const [key, b] of Object.entries(e.config.flipbooks || {})) if (e.images[b.image]) books.set(ns + key, { ...b, ...e.images[b.image] });
     for (const [unit, skills] of Object.entries(e.config.bind || {})) {
       bindings[unit] = Object.fromEntries(Object.entries(skills).map(([s, phases]) => [s, Object.fromEntries(Object.entries(phases).map(([phase, key]) => [phase, ns + key]))]));
     }
     for (const phase of e.config.silentPhases || []) silent.add(phase);
   }
-  return { index: idx, descriptors, textures, books, bindings, silent };
+  return { index: idx, descriptors, textures, meshes, books, bindings, silent };
 }

@@ -28,5 +28,68 @@
   "operators": [
     "data/operator.json"
   ],
-  "assets": "assets/overlay.json"
+  "assets": {
+    "enemies": {
+      "enemy_x_prts_source_code_prts": {
+        "icon": "assets/images/enemy_x_prts_source_code_prts.png",
+        "spine": {
+          "skel": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel",
+          "atlas": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.atlas",
+          "textures": [
+            "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.png"
+          ],
+          "pma": true
+        }
+      },
+      "enemy_x_prts_source_code_prts_hidden": {
+        "icon": "assets/images/enemy_x_prts_source_code_prts.png",
+        "spine": {
+          "skel": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel",
+          "atlas": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.atlas",
+          "textures": [
+            "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.png"
+          ],
+          "pma": true
+        }
+      },
+      "enemy_x_prts_source_code_mimic": {
+        "icon": "assets/images/enemy_x_prts_source_code_mimic.png",
+        "spine": {
+          "skel": "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.skel",
+          "atlas": "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.atlas",
+          "textures": [
+            "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.png"
+          ],
+          "pma": true
+        }
+      }
+    },
+    "tokens": {
+      "token_x_prts_source_code_mon3tr": {
+        "avatar": "assets/images/token_x_prts_source_code_mon3tr.png",
+        "spine": {
+          "skel": "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.skel",
+          "atlas": "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.atlas",
+          "textures": [
+            "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.png"
+          ],
+          "pma": true
+        }
+      }
+    },
+    "audio": {
+      "bossBgm": {
+        "boss_x_prts_source_code_prts": {
+          "ref": "boss_8"
+        },
+        "boss_x_prts_source_code_prts_hidden": {
+          "ref": "boss_8"
+        }
+      }
+    },
+    "fx": {
+      "index": "assets/fx/index.json",
+      "official": true
+    }
+  }
 }

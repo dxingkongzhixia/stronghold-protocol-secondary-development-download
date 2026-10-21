@@ -53,19 +53,29 @@ export function readFxAssets(dir, config, owners, listed) {
     const im = image(b.image);
     check(im.w % b.cols === 0 && im.h % Math.ceil(b.frames / b.cols) === 0, 'flipbook cells must divide the image');
   }
-  const prefabs = {}, textures = {};
+  const prefabs = {}, textures = {}, meshes = {};
   let index = null;
   if (config.index) {
     index = json(config.index);
-    check(allowed(index, ['format', 'version', 'units', 'skills', 'prefabs', 'textures', 'projectiles']) && index.format === 'fx-index' && index.version === 3, 'fx-index version 3 required');
-    for (const [k, cap] of [['units', CAP.units], ['skills', CAP.effects], ['prefabs', CAP.effects], ['textures', CAP.effects]]) check(table(index[k], cap), `invalid index ${k}`);
+    check(allowed(index, ['format', 'version', 'units', 'skills', 'prefabs', 'textures', 'meshes', 'projectiles']) && index.format === 'fx-index' && index.version === 3, 'fx-index version 3 required');
+    for (const [k, cap] of [['units', CAP.units], ['skills', CAP.effects], ['prefabs', CAP.effects], ['textures', CAP.effects], ['meshes', 32]]) {
+      if (k === 'meshes' && index[k] === undefined) continue;
+      check(table(index[k], cap), `invalid index ${k}`);
+    }
     check(index.projectiles === undefined || obj(index.projectiles) && !Object.keys(index.projectiles).length, 'use fx.bind.projectile for plugin projectiles');
     for (const id of Object.keys(index.units)) check(ownsFxUnit(id, owners), 'compiled units must belong to the plugin or a declared dependency');
     for (const [id, t] of Object.entries(index.textures)) { check(allowed(t, ['file']) && fxPath(t.file), 'invalid texture entry'); textures[id] = { path: t.file, ...image(t.file) }; }
+    if (index.meshes !== undefined && !config.official) check(Object.keys(index.meshes).length === 0, 'meshes are unsupported in author prefabs');
+    for (const [id, m] of Object.entries(index.meshes || {})) {
+      check(allowed(m, ['file']) && fxPath(m.file) && m.file.endsWith('.json'), 'invalid mesh entry');
+      const d = json(m.file);
+      check(obj(d) && Array.isArray(d.positions) && Array.isArray(d.submeshes), 'invalid mesh data');
+      meshes[id] = { path: m.file };
+    }
     for (const [id, p] of Object.entries(index.prefabs)) {
       check(allowed(p, ['file', 'looping', 'spawn', 'follow']) && fxPath(p.file) && p.file.endsWith('.json'), 'invalid prefab entry');
       check(!Object.hasOwn(config.flipbooks || {}, id), 'prefab and flipbook ids must differ');
-      const d = validateFxPrefab(json(p.file), textures);
+      const d = validateFxPrefab(json(p.file), textures, { official: !!config.official, meshes });
       check(d.key === id, 'prefab key differs from index'); prefabs[id] = d;
     }
     // Only the bounded subset the renderer can reliably place is admitted. Unknown fields fail closed.
@@ -82,5 +92,5 @@ export function readFxAssets(dir, config, owners, listed) {
     }
   }
   for (const skills of Object.values(config.bind || {})) for (const phases of Object.values(skills)) for (const id of Object.values(phases)) check(Object.hasOwn(prefabs, id) || Object.hasOwn(config.flipbooks || {}, id), `missing bound effect ${id}`);
-  return { files: [...used], value: { config, index, prefabs, textures, images, owners: [...owners] } };
+  return { files: [...used], value: { config, index, prefabs, textures, meshes, images, owners: [...owners] } };
 }

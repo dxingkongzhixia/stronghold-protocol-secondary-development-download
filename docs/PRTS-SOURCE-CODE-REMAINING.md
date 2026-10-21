@@ -49,9 +49,9 @@ B–E 全部完成后，应满足：
 - [x] B1：PRTS / 拟态 enemy、普通/隐藏 boss、PRTS 专属波次（普通/隐藏/单双人）、modes bossWeights 与 rounds.bossTemplates 已加入；实际组合与 `buildBossWave` 已验证，普通/隐藏波次都生成 PRTS + 拟态；凯尔希改用真实 `char_003_kalts` kit；
 - [x] C1：`band_x_prts_source_code_touch` 记录和 `grantUnit` / `eliteGate` / `restEndBondLayers` 已写入；M3 20 秒击倒复活、最多 2 次已实现并验证（第 3 次永久退场）；
 - [x] 素材：PRTS / 拟态 Spine、敌人图标、M3 模型和 Boss BGM 已迁入 `plugins/prts-source-code/assets/`，主程序只保留 vanilla 素材；
-- [x] 客户端特效：已提取 PRTS / 拟态 20 个官方 FX prefab 及其贴图/网格；FX 迁移到插件 `assets/fx/` 仍待平台 FX 容器完成；Boss BGM 已通过插件资产覆盖层引用官方 PRTS 战场音乐；
+- [x] 客户端特效：PRTS / 拟态 20 个官方 FX prefab、73 张贴图和 16 个网格已迁入 `plugins/prts-source-code/assets/fx/`，由 `official: true` 的插件 FX 容器加载；全局 PRTS FX 条目已移除；Boss BGM 通过插件资产覆盖层引用官方 PRTS 战场音乐；
 - [x] 敌人图标：PRTS / 拟态 158×158 官方头像已补齐（`public/assets/enemy/icon/`），Boss 结算头像会通过 `handbookId` 回退；
-- [x] 官方 FX 接线：`b.fx('official', { officialKey })` 由 `FxWiring.simFx` 播放提取的 prefab；协议已接 start / buff / die / line / skill / projectile / deploy-lock / warning；
+- [x] 官方 FX 接线：协议通过 `b.fx('plugin', { skill: 'plugin:prts-source-code:<prefab>' })` 播放插件 FX，客户端 `PluginFxPlayer` 把插件目录下的 prefab / 纹理 / 网格装入官方 FX 库；协议已接 start / buff / die / line / skill / projectile / deploy-lock / warning；
 - [x] 隐藏 PRTS：`tint` 字段 + `UnitView` 原始记录染色，普通 PRTS 保持原色；
 - [x] 协议 HUD 迁移：`protocol.ui` 由 boss protocol 运行时发布为 `b.snap.pluginView`，客户端通用 `PluginHud` 渲染；核心协议条只在没有 pluginView 时回退；
 - [x] B0-7：`b.snapshot().protocol` 已输出重构剩余次数、倒地倒计时、清除协议倒计时与预警；Boss 胶囊 HUD 已消费（`protocol-hud`）。

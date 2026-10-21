@@ -97,6 +97,8 @@ export class FxLibrary {
     this.meshLoads = new Map(); // key → Promise
     this.images = new Map();    // `${key}|${half}` → { image, flipped, info } | null
     this.imageLoads = new Map();
+    this.pluginTex = new Map();
+    this.pluginMesh = new Map();
     this.onGpu = new Set();     // the same ids once FxGL holds them (their images were let go: not decoded again)
     this.queue = [];
     this.active = 0;
@@ -133,16 +135,27 @@ export class FxLibrary {
     return this._init;
   }
 
-  /** Effects were extracted (the file list names prefabs). */
+  /** Effects were extracted (the file list names prefabs), or a plugin supplied validated ones. */
   get available() { return !!this._available; }
+
+  /** Install a plugin's checked catalog: descriptors, texture URLs and mesh URLs, all namespaced by its id. */
+  addPluginFx(catalog) {
+    if (!catalog) return;
+    for (const [key, d] of catalog.descriptors || []) if (d) this.descs.set(key, Promise.resolve(d));
+    for (const [key, t] of Object.entries(catalog.textures || {})) if (isObj(t) && typeof t.path === 'string') this.pluginTex.set(key, t.path);
+    for (const [key, url] of Object.entries(catalog.meshes || {})) if (typeof url === 'string') this.pluginMesh.set(key, url);
+    if ((catalog.descriptors && catalog.descriptors.size) || this.pluginTex.size || this.pluginMesh.size) this._available = true;
+    this._notify();
+  }
 
   /** URL of a file-list entry. */
   url(group, key) {
+    if (group === 'fx/mesh' && this.pluginMesh.has(key)) return this.pluginMesh.get(key);
     const e = this.groups?.[group]?.[key];
     return isObj(e) && typeof e.path === 'string' ? e.path : null;
   }
 
-  has(key) { return !!this.url('fx/prefabs', String(key || '').toLowerCase()); }
+  has(key) { const k = String(key || '').toLowerCase(); return this.descs.has(k) || !!this.url('fx/prefabs', k); }
 
   async _json(url) {
     if (!url || !this.fetch) return null;
@@ -247,7 +260,7 @@ export class FxLibrary {
     if (!p) {
       p = Promise.all([this.init(), this.texInfo()]).then(async ([, infos]) => {
         const e = this.groups?.['fx/tex']?.[key];
-        const url = isObj(e) ? (half && typeof e.half === 'string' ? e.half : e.path) : null;
+        const url = this.pluginTex.get(key) || (isObj(e) ? (half && typeof e.half === 'string' ? e.half : e.path) : null);
         if (!url) return null;
         const img = await this._limit(() => this._image(url));
         return img ? { image: img.image, flipped: img.flipped, info: infos[key] || {} } : null;

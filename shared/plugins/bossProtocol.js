@@ -4,6 +4,7 @@
 // The module is pure: it validates, applies defaults and reports problems. It never mutates the record and never
 // touches gameplay. Runtime hooks consume `readBossProtocol(...).protocol`.
 
+
 /** [ASSUMED] bounds: above every official boss and far below values that can stall a battle. */
 export const BOSS_PROTOCOL_LIMITS = Object.freeze({
   linkId: 64,
@@ -34,6 +35,7 @@ export const BOSS_PROTOCOL_LIMITS = Object.freeze({
 const ID = /^[A-Za-z0-9_]{1,64}$/;
 const PLUGIN_ID = /^[a-z0-9][a-z0-9-]{1,31}$/;
 const KEYS = new Set(['link', 'revive', 'clearProtocol', 'dpRegen', 'deployLock', 'projectile', 'fly', 'beam', 'ui']);
+const UI_TEXT = Object.freeze({ revives: 'Revive', clear: 'Clear Protocol', down: 'Reviving', cleared: 'Protocol executed' });
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 const int = (v, lo, hi, path, problems, fallback = null) => {
@@ -220,10 +222,10 @@ export function readBossProtocol(raw) {
         p.ui = {
           id,
           slot: u.slot === 'overlay' ? 'overlay' : 'boss',
-          revivesLabel: text(u.revivesLabel, '重构', 'revivesLabel'),
-          clearLabel: text(u.clearLabel, '清除协议', 'clearLabel'),
-          downLabel: text(u.downLabel, '重构中', 'downLabel'),
-          clearedLabel: text(u.clearedLabel, '协议已执行', 'clearedLabel'),
+          revivesLabel: text(u.revivesLabel, UI_TEXT.revives, 'revivesLabel'),
+          clearLabel: text(u.clearLabel, UI_TEXT.clear, 'clearLabel'),
+          downLabel: text(u.downLabel, UI_TEXT.down, 'downLabel'),
+          clearedLabel: text(u.clearedLabel, UI_TEXT.cleared, 'clearedLabel'),
         };
       }
     }

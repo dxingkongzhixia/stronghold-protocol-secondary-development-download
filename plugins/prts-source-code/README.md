@@ -18,7 +18,7 @@
 - `band_x_prts_source_code_touch` 策略卡和 Boss 过滤
 - 清除协议、拟态重构、M3 击倒复活
 - PRTS / 拟态 Spine、敌人图标、M3 模型和 Boss BGM 已放进插件自己的 `assets/`，由插件资产覆盖层加载
-- 已从本机官方客户端提取 20 个官方 FX prefab、贴图与网格；FX 仍暂留在本地 FX 清单，等插件 FX 容器迁移
+- 已从本机官方客户端提取 20 个官方 FX prefab、73 张贴图与 16 个网格，全部放进 `assets/fx/`，由插件 FX 容器加载
 - Boss 结算头像可用
 - 普通/隐藏 PRTS 的协议事件已接官方 FX：start / buff / die / line / skill / projectile / deploy-lock
 - 隐藏 PRTS 使用独立紫色染色
