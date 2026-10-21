@@ -1771,6 +1771,8 @@ export async function createFieldView(host, options = {}) {
       }
       case 'status': { const v = views.get(e[1]); if (v) { v.onStatus?.(e[2], !!e[3]); wiring.status(v, e[2], !!e[3]); } break; }
       case 'fx': {
+        // a music switch is consumed by audio.handleBattleEvents; it has no visual.
+        if (e[1] === 'bgm') break;
         if (e[1] === 'copy' && e[4]?.id != null && e[4]?.src != null) {
           const src = infos.get(e[4].src);
           if (src) (views.get(e[4].id) || battleView(e[4].id))?.copyFrom?.(ctx.lookupDef(src));
@@ -1808,8 +1810,10 @@ export async function createFieldView(host, options = {}) {
           // the unit's attack mode from now on and its talents' 重生 rows (render/vfx/wiring.js form, talentfx.js)
           if (fv) officialForm = wiring.form(fv, form, x);
         }
-        // a kit fx the official skill / talent effects stand for (render/vfx/skillfx.js, talentfx.js) is not drawn procedurally
-        const official = !(late > 0) && wiring.simFx(e[1], Number(e[2]), Number(e[3]), e[4]);
+        // a compiled plugin effect (`b.fx('plugin', …, { skill })`) is played by PluginFxPlayer before the procedural tier;
+        // then a kit fx the official skill / talent effects stand for (render/vfx/skillfx.js, talentfx.js) is not drawn procedurally
+        const plugin = !(late > 0) && pluginFx.simFx(e[1], Number(e[2]), Number(e[3]), e[4]);
+        const official = plugin || (!(late > 0) && wiring.simFx(e[1], Number(e[2]), Number(e[3]), e[4]));
         if (!(late > 0) && !official && !officialForm) fx.simFx(e[1], Number(e[2]), Number(e[3]), e[4]);
         break;
       }
@@ -2025,6 +2029,7 @@ export async function createFieldView(host, options = {}) {
           ofxPrevT = renderT;
           wiring.sync(views.values());
           if (ofx.active) { wiring.tick(); ofx.update(gdt); }
+          pluginFx.update(gdt);
         }
       } else if (mode === 'prep') {
         for (const [key, pd] of pending) {

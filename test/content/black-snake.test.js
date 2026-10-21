@@ -64,6 +64,27 @@ test('black-snake: the boss applies Burning Breath and survives its first phase'
   assert.ok(boss.buffs.some((b) => b.key === 'bsnake:enraged'), 'the rebirth enters Enraged State');
   h.run(30);
   assert.ok(boss.buffs.some((b) => b.key === 'bsnake:return'), 'Deathless Inferno returns the boss with invulnerability');
+  assert.ok(h.eventsOf('fx').some((e) => e[1] === 'bgm' && e[4]?.key === 'boss:boss_x_black_snake_bsnake_hard'),
+    'the first inferno switches to the hard-phase track');
+  assert.equal(h.b.errors.length, 0);
+});
+
+test('black-snake: 抵抗 shortens Burning Breath, and the inferno fires real lane projectiles', { skip }, () => {
+  const h = battle(content());
+  h.step();
+  const boss = h.enemies()[0];
+  const ally = h.unit('chess_char_1_01_a');
+  ally.base.maxHp = 1e8;
+  ally.hp = 1e8;
+  h.b.addBuff(ally, { key: 'resist', status: 'resist', duration: 30, data: { value: 0.5 } });
+  h.run(5);
+  const breath = ally.findBuff('bsnake:breath');
+  assert.ok(breath, 'the boss attack still applies the status');
+  assert.ok(breath.timeLeft < 20, '抵抗 removes half of the 30.5 s duration');
+
+  h.b.dealDamage(ally, boss, { amount: 1e9, type: 'true' });
+  assert.ok(h.runUntil(() => h.b.projectiles.list.some((p) => p.visual === 'enemy' && p.source === boss), 8),
+    'the inferno spawns a flying fireball rather than dealing damage at the target');
   assert.equal(h.b.errors.length, 0);
 });
 
