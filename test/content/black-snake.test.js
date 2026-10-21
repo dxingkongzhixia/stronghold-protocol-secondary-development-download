@@ -85,7 +85,10 @@ test('black-snake: 抵抗 shortens Burning Breath, and the inferno fires real la
   assert.ok(breath.timeLeft < 20, '抵抗 removes half of the 30.5 s duration');
 
   h.b.dealDamage(ally, boss, { amount: 1e9, type: 'true' });
-  assert.ok(h.runUntil(() => h.b.projectiles.list.some((p) => p.visual === 'enemy' && p.source === boss), 8),
+  assert.ok(h.runUntil(() => h.eventsOf('fx').some((e) => e[1] === 'pluginProjectile'
+    && e[4]?.skill === 'plugin:black-snake:enemy_bsnake_reborn_01_trail'), 10),
+  'the projectile carries the official compiled trail');
+  assert.ok(h.b.projectiles.list.some((p) => p.visual === 'enemy' && p.source === boss),
     'the inferno spawns a flying fireball rather than dealing damage at the target');
   assert.equal(h.b.errors.length, 0);
 });

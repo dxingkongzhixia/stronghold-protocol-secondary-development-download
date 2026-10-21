@@ -85,6 +85,9 @@ export const FX_KINDS = Object.freeze({
   plugin: { a: 'none', c: 0xffffff },
   // A content boss's music switch (`b.fx('bgm', { key })`): the audio layer consumes it, nothing is drawn.
   bgm: { a: 'none', c: 0xffffff },
+  // A plugin-owned flying effect (`b.fx('pluginProjectile', { skill, hitSkill, x, y, tx, ty, dur })`):
+  // PluginFxPlayer draws it; the generic projectile layer stays silent.
+  pluginProjectile: { a: 'none', c: 0xffffff },
   ulpiaReturn: { a: 'blink', c: 0x9ff0dc }, manifoldSplit: { a: 'blink', c: 0xd8b0ff },
   // displacement
   pull: { a: 'move', c: 0x9fd4ff }, push: { a: 'move', c: 0xffd9a0 }, displace: { a: 'move', c: 0xd0c0a0 }, lure: { a: 'move', c: 0xffb3ec },
