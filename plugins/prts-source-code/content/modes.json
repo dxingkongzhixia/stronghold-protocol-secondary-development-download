@@ -1,0 +1,197 @@
+{
+  "patch": 1,
+  "ops": [
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_funny",
+        "bossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": 6
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_funny",
+        "hiddenBossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_normal",
+        "bossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": 6
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_normal",
+        "hiddenBossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_hard",
+        "bossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": 6
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_hard",
+        "hiddenBossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_abyss",
+        "bossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": 6
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_abyss",
+        "hiddenBossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_funny",
+        "bossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": 6
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_funny",
+        "hiddenBossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_normal",
+        "bossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": 6
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_normal",
+        "hiddenBossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_hard",
+        "bossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": 6
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_hard",
+        "hiddenBossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_abyss",
+        "bossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": 6
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_abyss",
+        "hiddenBossWeights"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": 50
+      }
+    }
+  ]
+}

@@ -13,10 +13,14 @@
     "room"
   ],
   "permissions": [
-    "data.add"
+    "data.add",
+    "data.patch"
   ],
   "data": [
-    "data/tokens.json"
+    "data/tokens.json",
+    "content/enemies.json",
+    "content/bosses.json",
+    "content/modes.json"
   ],
   "operators": [
     "data/operator.json"

@@ -1,0 +1,178 @@
+{
+  "records": 1,
+  "entries": [
+    {
+      "file": "enemies",
+      "id": "enemy_x_prts_source_code_prts",
+      "base": "enemy_9013_acstmk",
+      "set": {
+        "name": "PRTS，“源代码”",
+        "stats": {
+          "maxHp": 50000,
+          "atk": 1000,
+          "def": 3000,
+          "res": 75,
+          "bat": 4,
+          "blockCnt": 0
+        },
+        "abilities": []
+      }
+    },
+    {
+      "file": "enemies",
+      "id": "enemy_x_prts_source_code_prts_hidden",
+      "base": "enemy_9013_acstmk",
+      "set": {
+        "name": "PRTS，“源代码”（隐藏）",
+        "stats": {
+          "maxHp": 50000,
+          "atk": 1000,
+          "def": 3000,
+          "res": 75,
+          "bat": 4,
+          "blockCnt": 0
+        },
+        "abilities": [],
+        "protocol": {
+          "link": {
+            "enemy": "enemy_x_prts_source_code_mimic",
+            "guard": true
+          },
+          "revive": {
+            "count": 5,
+            "atk": 150,
+            "hpReset": true,
+            "down": 8,
+            "shortenOnHit": {
+              "target": "boss",
+              "seconds": 1,
+              "min": 3
+            }
+          },
+          "clearProtocol": {
+            "at": 75,
+            "warning": 10,
+            "lp": 15
+          },
+          "dpRegen": {
+            "multiplier": 3,
+            "duration": 10
+          },
+          "deployLock": {
+            "count": 4,
+            "duration": 10,
+            "afterRevive": {
+              "count": 6,
+              "duration": 15
+            }
+          },
+          "projectile": {
+            "cooldown": 12,
+            "damage": [
+              2.4,
+              1
+            ],
+            "radius": [
+              1.5,
+              0.45
+            ]
+          },
+          "fly": {
+            "duration": 25,
+            "targets": 2,
+            "range": 3.5,
+            "intervalDelta": -0.5,
+            "hpLoss": 0.3,
+            "knockDownDamage": 0.15
+          },
+          "beam": {
+            "interval": 24,
+            "targets": 5,
+            "damageScale": 0.6,
+            "width": 1,
+            "windup": 3,
+            "interruptHp": 0.15
+          }
+        }
+      }
+    },
+    {
+      "file": "enemies",
+      "id": "enemy_x_prts_source_code_mimic",
+      "base": "enemy_9013_acstmk",
+      "set": {
+        "name": "拟态机械",
+        "stats": {
+          "maxHp": 25000,
+          "atk": 600,
+          "def": 3000,
+          "res": 75,
+          "bat": 4,
+          "blockCnt": 0
+        },
+        "abilities": [],
+        "protocol": {
+          "link": {
+            "enemy": "enemy_x_prts_source_code_mimic",
+            "guard": true
+          },
+          "revive": {
+            "count": 3,
+            "atk": 100,
+            "hpReset": true,
+            "down": 8,
+            "shortenOnHit": {
+              "target": "boss",
+              "seconds": 1,
+              "min": 3
+            }
+          },
+          "clearProtocol": {
+            "at": 90,
+            "warning": 10,
+            "lp": 10
+          },
+          "dpRegen": {
+            "multiplier": 3,
+            "duration": 10
+          },
+          "deployLock": {
+            "count": 4,
+            "duration": 10,
+            "afterRevive": {
+              "count": 6,
+              "duration": 15
+            }
+          },
+          "projectile": {
+            "cooldown": 12,
+            "damage": [
+              2.4,
+              1
+            ],
+            "radius": [
+              1.5,
+              0.45
+            ]
+          },
+          "fly": {
+            "duration": 25,
+            "targets": 2,
+            "range": 3.5,
+            "intervalDelta": -0.5,
+            "hpLoss": 0.3,
+            "knockDownDamage": 0.15
+          },
+          "beam": {
+            "interval": 30,
+            "targets": 3,
+            "damageScale": 0.5,
+            "width": 1,
+            "windup": 3,
+            "interruptHp": 0.15
+          }
+        }
+      }
+    }
+  ]
+}

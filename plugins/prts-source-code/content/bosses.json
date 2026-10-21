@@ -1,0 +1,186 @@
+{
+  "records": 1,
+  "entries": [
+    {
+      "file": "bosses",
+      "id": "boss_x_prts_source_code_prts",
+      "value": {
+        "bossId": "boss_x_prts_source_code_prts",
+        "enemyKey": "enemy_x_prts_source_code_prts",
+        "handbookId": "enemy_1564_mpprts",
+        "name": "PRTS，“源代码”",
+        "sortId": 11,
+        "weight": 6,
+        "hidden": false,
+        "bloodPoint": {
+          "FUNNY": 260000,
+          "NORMAL": 720000,
+          "HARD": 1950000,
+          "ABYSS": 3900000
+        },
+        "lpr": 2,
+        "templates": {
+          "mode_single_funny": {
+            "round": 9,
+            "template": "act1autochess_h07_01_s"
+          },
+          "mode_single_normal": {
+            "round": 14,
+            "template": "act1autochess_h07_01_s"
+          },
+          "mode_single_hard": {
+            "round": 14,
+            "template": "act1autochess_h07_01_s"
+          },
+          "mode_single_abyss": {
+            "round": 14,
+            "template": "act1autochess_h07_01_s"
+          },
+          "mode_multi_funny": {
+            "round": 14,
+            "template": "act1autochess_h07_01"
+          },
+          "mode_multi_normal": {
+            "round": 14,
+            "template": "act1autochess_h07_01"
+          },
+          "mode_multi_hard": {
+            "round": 14,
+            "template": "act1autochess_h07_01"
+          },
+          "mode_multi_abyss": {
+            "round": 14,
+            "template": "act1autochess_h07_01"
+          }
+        },
+        "escortsByTemplate": {
+          "act1autochess_h07_01_s": [
+            {
+              "key": "enemy_1427_lrnazg",
+              "slot": "E",
+              "count": 2
+            },
+            {
+              "key": "enemy_1042_frostd",
+              "slot": "EF",
+              "count": 3
+            },
+            {
+              "key": "enemy_1006_shield_2",
+              "slot": null,
+              "count": 9
+            }
+          ],
+          "act1autochess_h07_01": [
+            {
+              "key": "enemy_1427_lrnazg",
+              "slot": "E",
+              "count": 2
+            },
+            {
+              "key": "enemy_1042_frostd",
+              "slot": "EF",
+              "count": 3
+            },
+            {
+              "key": "enemy_1006_shield_2",
+              "slot": null,
+              "count": 14
+            }
+          ]
+        },
+        "hiddenBossId": "boss_x_prts_source_code_prts_hidden"
+      }
+    },
+    {
+      "file": "bosses",
+      "id": "boss_x_prts_source_code_prts_hidden",
+      "value": {
+        "bossId": "boss_x_prts_source_code_prts_hidden",
+        "enemyKey": "enemy_x_prts_source_code_prts_hidden",
+        "handbookId": "enemy_1564_mpprts",
+        "name": "PRTS，“源代码”（隐藏）",
+        "sortId": 11,
+        "weight": 50,
+        "hidden": true,
+        "bloodPoint": {
+          "FUNNY": 800000,
+          "NORMAL": 1100000,
+          "HARD": 4000000,
+          "ABYSS": 8000000
+        },
+        "lpr": 2,
+        "templates": {
+          "mode_single_funny": {
+            "round": 9,
+            "template": "act1autochess_h07_01_s"
+          },
+          "mode_single_normal": {
+            "round": 14,
+            "template": "act1autochess_h07_01_s"
+          },
+          "mode_single_hard": {
+            "round": 14,
+            "template": "act1autochess_h07_01_s"
+          },
+          "mode_single_abyss": {
+            "round": 14,
+            "template": "act1autochess_h07_01_s"
+          },
+          "mode_multi_funny": {
+            "round": 14,
+            "template": "act1autochess_h07_01"
+          },
+          "mode_multi_normal": {
+            "round": 14,
+            "template": "act1autochess_h07_01"
+          },
+          "mode_multi_hard": {
+            "round": 14,
+            "template": "act1autochess_h07_01"
+          },
+          "mode_multi_abyss": {
+            "round": 14,
+            "template": "act1autochess_h07_01"
+          }
+        },
+        "escortsByTemplate": {
+          "act1autochess_h07_01_s": [
+            {
+              "key": "enemy_1427_lrnazg",
+              "slot": "E",
+              "count": 2
+            },
+            {
+              "key": "enemy_1042_frostd",
+              "slot": "EF",
+              "count": 3
+            },
+            {
+              "key": "enemy_1006_shield_2",
+              "slot": null,
+              "count": 9
+            }
+          ],
+          "act1autochess_h07_01": [
+            {
+              "key": "enemy_1427_lrnazg",
+              "slot": "E",
+              "count": 2
+            },
+            {
+              "key": "enemy_1042_frostd",
+              "slot": "EF",
+              "count": 3
+            },
+            {
+              "key": "enemy_1006_shield_2",
+              "slot": null,
+              "count": 14
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

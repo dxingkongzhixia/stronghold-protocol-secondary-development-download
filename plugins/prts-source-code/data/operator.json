@@ -219,7 +219,6 @@
           },
           "bbStr": {},
           "rangeGrid": null,
-          "tokenKey": "token_10002_kalts_mon3tr",
           "hidden": false,
           "fromModule": false
         },
@@ -231,7 +230,6 @@
           "bb": {},
           "bbStr": {},
           "rangeGrid": null,
-          "tokenKey": null,
           "hidden": false,
           "fromModule": false,
           "potMin": 4,
@@ -445,7 +443,6 @@
           },
           "bbStr": {},
           "rangeGrid": null,
-          "tokenKey": "token_10002_kalts_mon3tr",
           "hidden": false,
           "fromModule": false
         },
@@ -457,7 +454,6 @@
           "bb": {},
           "bbStr": {},
           "rangeGrid": null,
-          "tokenKey": null,
           "hidden": false,
           "fromModule": false,
           "potMin": 4,
@@ -570,7 +566,7 @@
     }
   ],
   "kit": {
-    "ref": "char_003_kalts"
+    "ref": "char_1052_kalts2"
   },
   "art": {
     "ref": "char_003_kalts"
