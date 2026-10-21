@@ -94,6 +94,7 @@ export function PhaseCapsule({ pub, hud, miss = null }) {
     const boss = hud?.boss || pub.bossHp || null;
     const frac = bossFrac(boss);
     const p = hud?.protocol || null;
+    const pluginBoss = !!hud?.pluginView && Object.values(hud.pluginView).some((v) => Array.isArray(v?.hud?.boss) && v.hud.boss.length);
     const prot = [];
     if (p?.down) prot.push(t('重构中 {s}s', { s: Math.max(0, Math.ceil(p.downIn ?? 0)) }));
     else if (p?.revivesMax) prot.push(t('重构 {left}/{max}', { left: Math.max(0, p.revivesLeft ?? 0), max: p.revivesMax }));
@@ -106,7 +107,7 @@ export function PhaseCapsule({ pub, hud, miss = null }) {
         <div class="bossbar__fill" style=${`width:${frac == null ? 100 : frac * 100}%`}></div>
         <span class="bossbar__txt num">${frac == null ? t('敌方领袖') : bossPctText(frac)}</span>
       </div>
-      ${prot.length ? html`<span class=${cx('capsule__protocol', p?.down && 'is-down', p?.warning && 'is-warn')} data-testid="protocol-hud">${prot.join(' · ')}</span>` : null}
+      ${!pluginBoss && prot.length ? html`<span class=${cx('capsule__protocol', p?.down && 'is-down', p?.warning && 'is-warn')} data-testid="protocol-hud">${prot.join(' · ')}</span>` : null}
     </div>`;
   }
   if (isCombatPhase(phase) || (phase === PHASE.SETTLE && hud?.total != null)) {

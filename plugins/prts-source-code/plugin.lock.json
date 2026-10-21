@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "70797fd5663e07f4ec6a627ffbda13d91da664f6bfb502c2734a5664a8b0b98c",
-      "bytes": 1551
+      "sha256": "e577183ddc82f314c4711ebb82db813e451c1b45d3ce59d1ebeade8fcc5fbb3e",
+      "bytes": 1671
     },
     "assets/images/enemy_x_prts_source_code_mimic.png": {
       "sha256": "9e02b827f9a1c5d9a0c426212cdceed889eca05870f9bb4c2d0375e053d3569e",
@@ -69,8 +69,8 @@
       "bytes": 5093
     },
     "content/enemies.json": {
-      "sha256": "44ef2a1c4be2945c20a0cb5cc0065646228fc9ac8777dbc66e42dc507c86024f",
-      "bytes": 4209
+      "sha256": "49436e096a1ace8e970143579deb633aafba7e106255f3f8663aa01dcc4dd4e2",
+      "bytes": 6159
     },
     "content/modes.json": {
       "sha256": "9803b0754c89fc8e9c717ef6e5d82f4ab878ed098fe4bca85f72eacee6a5b16d",

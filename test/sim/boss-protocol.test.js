@@ -35,6 +35,16 @@ const guard = (h, e) => e.buffs.some((b) => b.key === 'protocol:guard');
 const down = (e) => e.buffs.some((b) => b.key === 'protocol:down');
 const kill = (h, e) => h.b.loseHp(e, 1e9);
 
+test('protocol.ui publishes the live boss HUD through the battle plugin view', () => {
+  const h = battle({ p: protocol({ ui: { id: 'demo-boss', revivesLabel: '重构', clearLabel: '清除' } }), autoFinish: false, timeLimit: 12 });
+  const view = h.b.snapshot().pluginView['demo-boss'];
+  assert.equal(view.hud.boss[0].type, 'text');
+  assert.match(view.hud.boss[0].text, /3\/3/);
+  assert.equal(view.hud.boss[1].type, 'countdown');
+  h.run(1);
+  assert.ok(h.b.snapshot().pluginView['demo-boss'].hud.boss.some((b) => b.type === 'countdown'));
+});
+
 test('protocol events name the official PRTS / mimic effect prefabs', () => {
   const h = battle({ p: protocol({ clearProtocol: { at: 10, warning: 0.5, lp: 10 } }), autoFinish: false, timeLimit: 12 });
   const keys = () => h.eventsOf('fx').filter((e) => e[1] === 'official').map((e) => e[4]?.officialKey);

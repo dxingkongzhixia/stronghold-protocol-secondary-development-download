@@ -32,7 +32,8 @@ export const BOSS_PROTOCOL_LIMITS = Object.freeze({
 });
 
 const ID = /^[A-Za-z0-9_]{1,64}$/;
-const KEYS = new Set(['link', 'revive', 'clearProtocol', 'dpRegen', 'deployLock', 'projectile', 'fly', 'beam']);
+const PLUGIN_ID = /^[a-z0-9][a-z0-9-]{1,31}$/;
+const KEYS = new Set(['link', 'revive', 'clearProtocol', 'dpRegen', 'deployLock', 'projectile', 'fly', 'beam', 'ui']);
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 const int = (v, lo, hi, path, problems, fallback = null) => {
@@ -200,6 +201,31 @@ export function readBossProtocol(raw) {
         windup: num(b.windup ?? 3, 0, BOSS_PROTOCOL_LIMITS.beamWindup, 'protocol.beam.windup', problems, 3),
         interruptHp: num(b.interruptHp ?? 0.15, 0, 1, 'protocol.beam.interruptHp', problems, 0.15),
       };
+    }
+  }
+
+  if (raw.ui !== undefined) {
+    const u = raw.ui;
+    if (!isObj(u)) problems.push('protocol.ui: expected an object');
+    else {
+      for (const k of Object.keys(u)) if (!['id', 'slot', 'revivesLabel', 'clearLabel', 'downLabel', 'clearedLabel'].includes(k)) problems.push(`protocol.ui: unknown field "${k}"`);
+      const id = typeof u.id === 'string' ? u.id : '';
+      if (!PLUGIN_ID.test(id)) problems.push('protocol.ui.id: expected a plugin id');
+      else {
+        const text = (v, fallback, key) => {
+          if (v === undefined) return fallback;
+          if (typeof v !== 'string' || !v.trim() || [...v].length > 40) { problems.push(`protocol.ui.${key}: expected a text of 1..40 characters`); return fallback; }
+          return v.trim();
+        };
+        p.ui = {
+          id,
+          slot: u.slot === 'overlay' ? 'overlay' : 'boss',
+          revivesLabel: text(u.revivesLabel, '重构', 'revivesLabel'),
+          clearLabel: text(u.clearLabel, '清除协议', 'clearLabel'),
+          downLabel: text(u.downLabel, '重构中', 'downLabel'),
+          clearedLabel: text(u.clearedLabel, '协议已执行', 'clearedLabel'),
+        };
+      }
     }
   }
 

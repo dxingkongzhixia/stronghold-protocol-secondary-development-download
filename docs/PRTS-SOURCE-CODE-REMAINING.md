@@ -53,6 +53,7 @@ B–E 全部完成后，应满足：
 - [x] 敌人图标：PRTS / 拟态 158×158 官方头像已补齐（`public/assets/enemy/icon/`），Boss 结算头像会通过 `handbookId` 回退；
 - [x] 官方 FX 接线：`b.fx('official', { officialKey })` 由 `FxWiring.simFx` 播放提取的 prefab；协议已接 start / buff / die / line / skill / projectile / deploy-lock / warning；
 - [x] 隐藏 PRTS：`tint` 字段 + `UnitView` 原始记录染色，普通 PRTS 保持原色；
+- [x] 协议 HUD 迁移：`protocol.ui` 由 boss protocol 运行时发布为 `b.snap.pluginView`，客户端通用 `PluginHud` 渲染；核心协议条只在没有 pluginView 时回退；
 - [x] B0-7：`b.snapshot().protocol` 已输出重构剩余次数、倒地倒计时、清除协议倒计时与预警；Boss 胶囊 HUD 已消费（`protocol-hud`）。
 - [ ] B0-2 仍待做：命名空间方案的 owner 最终确认。
 

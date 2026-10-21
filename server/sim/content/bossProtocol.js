@@ -26,6 +26,24 @@ function protocolFxAt(b, x, y, key, extra = {}) {
   b.fx('official', { x, y, officialKey: key, ...extra });
 }
 
+/** Publish the protocol's live HUD through the generic plugin view (no core PRTS branch). */
+function publishProtocolView(b, st) {
+  const ui = st?.protocol?.ui;
+  if (!ui || typeof b.setPluginView !== 'function') return;
+  const blocks = [];
+  if (st.down && st.downUntil != null) {
+    blocks.push({ type: 'countdown', label: ui.downLabel, seconds: Math.max(0, st.downUntil - b.time) });
+  } else if (st.revivesMax > 0) {
+    blocks.push({ type: 'text', label: ui.revivesLabel, text: `${st.revivesLeft}/${st.revivesMax}` });
+  }
+  if (st.cleared) blocks.push({ type: 'text', text: ui.clearedLabel });
+  else if (st.clearAt != null) blocks.push({ type: 'countdown', label: ui.clearLabel, seconds: Math.max(0, st.clearAt - b.time) });
+  const key = JSON.stringify(blocks);
+  if (key === st.lastView) return;
+  st.lastView = key;
+  b.setPluginView(ui.id, { hud: { [ui.slot]: blocks } });
+}
+
 function addGuard(b, st) {
   if (!st.protocol.link?.guard || st.guard) return;
   b.addBuff(st.boss, { key: GUARD, flags: { untargetable: true, invulnerable: true }, persist: true, allowDead: true });
@@ -59,6 +77,7 @@ function scheduleClear(b, st) {
     // "每名玩家 目标生命 -lp": the merged boss LP is one pool, so the team loses lp per player on the field.
     const players = Math.max(1, b.players?.length || 1);
     protocolFx(b, st.boss, 'enemy_mpprts_die_02');
+    publishProtocolView(b, st);
     lpLoss(b, lp * players, 'clearProtocol', st.boss);
     b.emit('protocolClear', { boss: st.boss, lp, perPlayer: lp, players });
   });
@@ -360,11 +379,13 @@ export function protocolAbility(raw) {
       startProjectile(b, st);
       emitDeployLock(b, st, false);
       protocolFx(b, e, 'enemy_mpprts_buff_01');
+      publishProtocolView(b, st);
       b.emit('protocolStart', { boss: e, protocol });
     },
     tick(b, e) {
       const st = stateOf(e);
       if (!st || st.dead) return;
+      publishProtocolView(b, st);
       const linkKey = protocol.link?.enemy;
       if (!st.link && linkKey) {
         const link = (b.enemies || []).find((x) => x && x.alive && x.defId === linkKey);
@@ -398,6 +419,9 @@ export function protocolAbility(raw) {
       if (!st) return;
       st.dead = true;
       protocolFx(b, e, 'enemy_mpprts_die_01');
+      if (st.protocol.ui && typeof b.setPluginView === 'function') {
+        b.setPluginView(st.protocol.ui.id, { hud: { [st.protocol.ui.slot]: [] } });
+      }
       st.warning?.cancel?.();
       st.clear?.cancel?.();
       st.timer?.cancel?.();

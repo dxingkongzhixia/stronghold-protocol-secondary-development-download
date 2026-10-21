@@ -22,6 +22,7 @@
 - Boss 结算头像可用
 - 普通/隐藏 PRTS 的协议事件已接官方 FX：start / buff / die / line / skill / projectile / deploy-lock
 - 隐藏 PRTS 使用独立紫色染色
+- 协议 HUD 通过插件的 `protocol.ui` 发布到 `b.snap.pluginView`，核心 HUD 不再绘制 PRTS 专用协议条
 
 ## 尚未完成
 

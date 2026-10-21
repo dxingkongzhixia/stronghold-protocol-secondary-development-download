@@ -16,7 +16,76 @@
           "bat": 4,
           "blockCnt": 0
         },
-        "abilities": []
+        "abilities": [],
+        "protocol": {
+          "link": {
+            "enemy": "enemy_x_prts_source_code_mimic",
+            "guard": true
+          },
+          "revive": {
+            "count": 3,
+            "atk": 100,
+            "hpReset": true,
+            "down": 8,
+            "shortenOnHit": {
+              "target": "boss",
+              "seconds": 1,
+              "min": 3
+            }
+          },
+          "clearProtocol": {
+            "at": 90,
+            "warning": 10,
+            "lp": 10
+          },
+          "dpRegen": {
+            "multiplier": 3,
+            "duration": 10
+          },
+          "deployLock": {
+            "count": 4,
+            "duration": 10,
+            "afterRevive": {
+              "count": 6,
+              "duration": 15
+            }
+          },
+          "projectile": {
+            "cooldown": 12,
+            "damage": [
+              2.4,
+              1
+            ],
+            "radius": [
+              1.5,
+              0.45
+            ]
+          },
+          "fly": {
+            "duration": 25,
+            "targets": 2,
+            "range": 3.5,
+            "intervalDelta": -0.5,
+            "hpLoss": 0.3,
+            "knockDownDamage": 0.15
+          },
+          "beam": {
+            "interval": 30,
+            "targets": 3,
+            "damageScale": 0.5,
+            "width": 1,
+            "windup": 3,
+            "interruptHp": 0.15
+          },
+          "ui": {
+            "id": "prts-source-code",
+            "slot": "boss",
+            "revivesLabel": "重构",
+            "clearLabel": "清除协议",
+            "downLabel": "重构中",
+            "clearedLabel": "协议已执行"
+          }
+        }
       }
     },
     {
@@ -94,6 +163,14 @@
             "width": 1,
             "windup": 3,
             "interruptHp": 0.15
+          },
+          "ui": {
+            "id": "prts-source-code",
+            "slot": "boss",
+            "revivesLabel": "重构",
+            "clearLabel": "清除协议",
+            "downLabel": "重构中",
+            "clearedLabel": "协议已执行"
           }
         },
         "tint": 10189823
