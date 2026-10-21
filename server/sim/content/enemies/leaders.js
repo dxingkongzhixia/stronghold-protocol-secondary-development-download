@@ -929,6 +929,7 @@ function kitEnergyAggregate() {
     a.done = true;
     b.removeBuff(e, BS_AGGREGATE);
     b.fx('explode', { x: e.x, y: e.y, r: 1.5, kind: 'bsnakeAggregate' });
+    bsFx(b, 'map_fire_crystal_die_01_start', e.x, e.y, { dur: 1 });
     bsFx(b, 'enemy_bsnake_skill_02_hit_02', e.x, e.y, { dur: 1 });
     const allies = b.allies().filter((u) => u && u.alive && !u.hidden && !u.s.flags.untargetable);
     for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
@@ -958,6 +959,7 @@ function kitEnergyAggregate() {
   return [{
     spawn(b, e, a) {
       a.done = false;
+      bsFx(b, 'map_fire_crystal_birth_01_start', e.x, e.y, { dur: 1 });
       b.addBuff(e, {
         key: BS_AGGREGATE, duration: BS_AGGREGATE_TIME, persist: true, visible: true,
         onExpire: ({ battle }) => explode(battle, e, a),
