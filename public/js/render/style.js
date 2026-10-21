@@ -170,7 +170,7 @@ export const STATUS_ICON = Object.freeze({
   artsFragile: 'fragile', physFragile: 'fragile', elemFragile: 'fragile', sleep: 'sleep', invulnerable: 'invuln',
   silence: 'silence', slow: 'slow', sluggish: 'slow', bind: 'bind', groundbind: 'bind', fear: 'fear', tremble: 'fear', weaken: 'weaken',
   levitate: 'levitate', taunt: 'taunt', defDown: 'weaken', resDown: 'weaken', aspdDown: 'slow', disarm: 'silence',
-  burn: 'burn', burnBurst: 'burn', neural: 'neural', neuralBurst: 'neural', necrosis: 'necrosis', apoptosis: 'necrosis',
+  burn: 'burn', burnBurst: 'burn', burningBreath: 'burn', neural: 'neural', neuralBurst: 'neural', necrosis: 'necrosis', apoptosis: 'necrosis',
   // a 傀儡师 fighting as its <替身> (sim professions.js buff 'trait:substitute', the 20 s form)
   substitute: 'doll',
   // 禁疗 (sim status 'healFree': 史尔特尔's 余烬 — no heal reaches her until she leaves)
