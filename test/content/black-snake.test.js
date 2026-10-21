@@ -66,6 +66,8 @@ test('black-snake: the boss applies Burning Breath and survives its first phase'
   assert.ok(boss.buffs.some((b) => b.key === 'bsnake:return'), 'Deathless Inferno returns the boss with invulnerability');
   assert.ok(h.eventsOf('fx').some((e) => e[1] === 'bgm' && e[4]?.key === 'boss:boss_x_black_snake_bsnake_hard'),
     'the first inferno switches to the hard-phase track');
+  assert.ok(h.eventsOf('fx').some((e) => e[1] === 'phase' && e[4]?.kind === 'bsnakeInferno'),
+    'the first inferno emits its generic phase effect');
   assert.equal(h.b.errors.length, 0);
 });
 
@@ -101,5 +103,7 @@ test('black-snake: the second defeat runs the final Deathless Inferno and remove
   h.b.dealDamage(ally, boss, { amount: 1e9, type: 'true' });
   h.run(6 + 30);
   assert.equal(boss.alive, false, 'the second inferno leaves the field');
+  assert.ok(h.eventsOf('fx').some((e) => e[1] === 'phase' && e[4]?.kind === 'bsnakeFinal'),
+    'the final inferno emits its generic phase effect');
   assert.equal(h.b.errors.length, 0);
 });
