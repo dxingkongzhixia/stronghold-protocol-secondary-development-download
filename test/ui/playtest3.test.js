@@ -417,6 +417,8 @@ describe('9: busy indicators and data loading', () => {
     const css = read('public/css/screens/game.css');
     assert.doesNotMatch(css, /hg-flip/);
     assert.match(css, /\.chud__msg \.icon \{ width: \.22rem; height: \.22rem; color: var\(--gold\); \}/);
+    // the full-screen combat-HUD layer must not swallow the field's pointer events (battle-unit detail, issue #7)
+    assert.match(css, /\.gm__hud > \.chud \{ pointer-events: none; \}/);
   });
 
   test('data store: a transient failure is retried (the file stays loading), a 404 / bad JSON is not; a superseded retry stays silent', async () => {

@@ -657,6 +657,9 @@
 .gm__dead--downed .num { font-family: var(--font-num); font-size: calc(.22 * var(--t)); color: var(--gold); }
 
 .chud { position: absolute; inset: 0; pointer-events: none; }
+/* `.gm__hud > *` (specificity 0,1,1) otherwise makes this full-screen layer catch every click; it must stay
+   transparent to the field so a battle unit can be picked (the HUD's own chips re-enable pointer events). */
+.gm__hud > .chud { pointer-events: none; }
 .chud > * { pointer-events: auto; }
 .dpbox {
   position: absolute; right: .3rem; top: 50%; transform: translateY(-50%);
