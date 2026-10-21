@@ -72,6 +72,21 @@ test('black-snake: the boss applies Burning Breath and survives its first phase'
   assert.equal(h.b.errors.length, 0);
 });
 
+test('black-snake: the energy aggregate self-destructs after 25 s with directional fireballs', { skip }, () => {
+  const h = battle(content());
+  h.step();
+  const ally = h.unit('chess_char_1_01_a');
+  ally.base.maxHp = 1e8;
+  ally.hp = 1e8;
+  const aggregate = h.spawn('enemy_x_black_snake_aggregate', { pos: [10, 9], routeIndex: 0 });
+  assert.ok(aggregate);
+  h.run(25.2);
+  assert.equal(aggregate.alive, false, 'the timed energy crystal leaves the field');
+  assert.ok(h.eventsOf('fx').some((e) => e[1] === 'pluginProjectile'),
+    'its directional fireballs use the compiled trail');
+  assert.equal(h.b.errors.length, 0);
+});
+
 test('black-snake: 抵抗 shortens Burning Breath, and the inferno fires real lane projectiles', { skip }, () => {
   const h = battle(content());
   h.step();

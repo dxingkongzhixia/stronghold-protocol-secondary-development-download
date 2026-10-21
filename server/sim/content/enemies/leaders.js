@@ -755,7 +755,7 @@ const BS_RETURN = 'bsnake:return';
 const BS_AGGREGATE = 'bsnake:aggregate';
 const BS_BREATH_TIME = 30.5, BS_BREATH_START = 50, BS_BREATH_END = 230;
 const BS_IGNITE_CD = 19, BS_DETONATE_CD = 35, BS_INFERNO_WAVES = 10, BS_INFERNO_INTERVAL = 2;
-const BS_INFERNO_TIME = 28, BS_AGGREGATE_TIME = 12, BS_AGGREGATE_DAMAGE = 1000;
+const BS_INFERNO_TIME = 28, BS_AGGREGATE_TIME = 25, BS_AGGREGATE_DAMAGE = 1000;
 /** projectile_enemy_bsnake `_speed` (official projectile prefab). */
 const BS_FIREBALL_SPEED = 2.5;
 
@@ -930,10 +930,30 @@ function kitEnergyAggregate() {
     b.removeBuff(e, BS_AGGREGATE);
     b.fx('explode', { x: e.x, y: e.y, r: 1.5, kind: 'bsnakeAggregate' });
     bsFx(b, 'enemy_bsnake_skill_02_hit_02', e.x, e.y, { dur: 1 });
-    for (const u of areaAlliesInTiles(b, e, e.y, e.x, 'plus', 1)) {
-      b.dealDamage(e, u, { amount: BS_AGGREGATE_DAMAGE, type: 'arts', isSkill: true, tags: ['enemyAbility', 'bsnakeAggregate'] });
-      bsBreath(b, e, u);
+    const allies = b.allies().filter((u) => u && u.alive && !u.hidden && !u.s.flags.untargetable);
+    for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+      // 能量聚合体: four directional fireballs, each hitting the first operator on that ray.
+      const target = allies.filter((u) => {
+        const dx = u.x - e.x, dy = u.y - e.y;
+        return dc ? Math.abs(dy) < 0.6 && dx * dc > 0 : Math.abs(dx) < 0.6 && dy * dr > 0;
+      }).sort((u, v) => hypot(u.x - e.x, u.y - e.y) - hypot(v.x - e.x, v.y - e.y))[0];
+      if (!target) continue;
+      const dur = Math.max(0.05, hypot(target.x - e.x, target.y - e.y) / 10);
+      b.fx('pluginProjectile', {
+        x: e.x, y: e.y, tx: target.x, ty: target.y, dur,
+        skill: BS_FX('enemy_bsnake_reborn_01_trail'),
+        hitSkill: BS_FX('enemy_bsnake_reborn_01_trail_hit_01'),
+      });
+      b.addProjectile({
+        from: e, target, speed: 10, visual: 'enemy', source: e, hitDead: true, maxAge: 3,
+        onHit: ({ target: hit }) => {
+          if (!hit || !hit.alive) return;
+          b.dealDamage(e, hit, { amount: BS_AGGREGATE_DAMAGE, type: 'arts', isSkill: true, tags: ['enemyAbility', 'bsnakeAggregate'] });
+          bsBreath(b, e, hit);
+        },
+      });
     }
+    b.kill(e, null);
   };
   return [{
     spawn(b, e, a) {
@@ -943,7 +963,11 @@ function kitEnergyAggregate() {
         onExpire: ({ battle }) => explode(battle, e, a),
       });
     },
-    death(c, b, e, a) { explode(b, e, a); },
+    death(c, b, e, a) {
+      // The official 能量结晶 is a timed self-destruct; a unit killed before 25 s leaves no blast.
+      a.done = true;
+      b.removeBuff(e, BS_AGGREGATE);
+    },
   }];
 }
 
@@ -954,7 +978,7 @@ function kitEnergyAggregate() {
 
 export const PLUGIN_KITS = Object.freeze({
   enemy_x_black_snake_bsnake: kitBlackSnake,           // “不死的黑蛇” · 烈焚灼息 / 引爆 / 狂暴 / 不息恶火
-  enemy_x_black_snake_aggregate: kitEnergyAggregate,   // 能量聚合体 · 定时或死亡爆炸
+  enemy_x_black_snake_aggregate: kitEnergyAggregate,   // 能量聚合体 · 25 s 自爆，四方向火球
 });
 
 // ---------------------------------------------------------------------------------------------------------------
