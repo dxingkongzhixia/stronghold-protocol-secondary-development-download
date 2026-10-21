@@ -223,7 +223,11 @@ export class BattleStatus {
       this._applyValuedStatus(target, key, tpl, duration, value ?? tpl.valued, source, opts.stackAs);
     } else {
       const mods = tpl.enemyOnlyMods && target.side !== 'enemy' ? null : typeof tpl.mods === 'function' ? tpl.mods(value) : (tpl.mods || null);
-      const b = this.addBuff(target, { key, duration, refresh: opts.refresh ?? 'extend', mods, flags: tpl.flags || null, status: key, visible: true, source });
+      const extra = tpl.buff && typeof tpl.buff === 'object' ? tpl.buff : null;
+      const b = this.addBuff(target, {
+        key, duration, refresh: opts.refresh ?? 'extend', mods, flags: tpl.flags || null, status: key, visible: true, source,
+        data: opts.data, ...(extra || {}),
+      });
       if (tpl.attract && b) this._setAttractPoint(target, b, opts.point ?? value, source);
       // 恐惧: the hit position and the source's position of every application (fear.js — the fan of reachable tiles)
       if (key === 'fear' && b && target.side === 'enemy') stampFear(this, target, b, source);

@@ -35,6 +35,7 @@ function battle(data) {
     enemies: [{ key: BOSS, pos: [10, 10] }],
     timeLimit: 160,
     autoFinish: false,
+    hooks: ['statusApplied'],
   });
 }
 
@@ -56,7 +57,7 @@ test('black-snake: the boss applies Burning Breath and survives its first phase'
   ally.base.maxHp = 1e8;
   ally.hp = 1e8;
   h.run(6);
-  assert.ok(ally.findBuff('bsnake:breath'), 'the attack applied Burning Breath');
+  assert.ok(ally.findBuff('burningBreath'), 'the attack applied Burning Breath');
   h.b.dealDamage(ally, boss, { amount: 1e9, type: 'true' });
   assert.equal(boss.buffs.some((b) => b.key === 'bsnake:down'), true, 'the first defeat starts the down window');
   h.run(6);
@@ -80,9 +81,11 @@ test('black-snake: 抵抗 shortens Burning Breath, and the inferno fires real la
   ally.hp = 1e8;
   h.b.addBuff(ally, { key: 'resist', status: 'resist', duration: 30, data: { value: 0.5 } });
   h.run(5);
-  const breath = ally.findBuff('bsnake:breath');
+  const breath = ally.findBuff('burningBreath');
   assert.ok(breath, 'the boss attack still applies the status');
   assert.ok(breath.timeLeft < 20, '抵抗 removes half of the 30.5 s duration');
+  assert.ok(h.hooksOf('statusApplied').some((c) => c.target === ally && c.status === 'burningBreath'),
+    'the catalogue status reports statusApplied');
 
   h.b.dealDamage(ally, boss, { amount: 1e9, type: 'true' });
   assert.ok(h.runUntil(() => h.eventsOf('fx').some((e) => e[1] === 'pluginProjectile'

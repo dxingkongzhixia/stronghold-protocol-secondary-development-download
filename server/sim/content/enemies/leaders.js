@@ -747,7 +747,7 @@ function kitElk(ab) {
 // level-0 values (PRTS / Terra Wiki); the mode's enemyScale still applies to the stats. The two helpers below are
 // generic enough for another burning/phase boss, but this first version keeps the constants local to the kit.
 
-const BS_BREATH = 'bsnake:breath';
+const BS_BREATH = 'burningBreath';
 const BS_DOWN = 'bsnake:down';
 const BS_ENRAGED = 'bsnake:enraged';
 const BS_INFERNO = 'bsnake:inferno';
@@ -765,22 +765,14 @@ function bsFx(b, key, x, y, extra = {}) {
   b.fx?.('plugin', { skill: BS_FX(key), x, y, ...extra });
 }
 
-/** Apply/refresh 烈焚灼息 on an ally; one instance per ally, ramping 50 -> 230 true damage over 30 s. */
+/** Apply/refresh 烈焚灼息 on an ally through the catalogue status (resist, visibility and statusApplied included). */
 function bsBreath(b, boss, u, fx = true) {
   if (!u || !u.alive || u.side !== 'ally') return;
-  // 烈焚灼息 is a resistible enemy status: 抵抗 removes its share of the duration (same rule as the
-  // catalogue statuses in Battle.applyStatus; the ramp itself stays on the 30 s clock).
-  const duration = BS_BREATH_TIME * (1 - b.resistOf(u));
-  if (!(duration > 0.05)) return;
-  if (fx) bsFx(b, 'enemy_bsnake_buff_03_start_a', u.x, u.y, { dur: 1 });
-  b.addBuff(u, {
-    key: BS_BREATH, source: boss, duration, refresh: 'replace', visible: true, interval: 1,
-    onTick: ({ battle, unit, buff }) => {
-      const elapsed = Math.max(0, BS_BREATH_TIME - (Number.isFinite(buff.timeLeft) ? buff.timeLeft : BS_BREATH_TIME));
-      const dps = BS_BREATH_START + (BS_BREATH_END - BS_BREATH_START) * Math.min(1, elapsed / 30);
-      battle.dealDamage(buff.source, unit, { amount: dps, type: 'true', canDodge: false, tags: ['enemyAbility', 'bsnakeBreath'] });
-    },
+  const applied = b.applyStatus(u, BS_BREATH, {
+    duration: BS_BREATH_TIME, source: boss, refresh: 'replace',
+    data: { maxDuration: BS_BREATH_TIME, start: BS_BREATH_START, end: BS_BREATH_END },
   });
+  if (applied && fx) bsFx(b, 'enemy_bsnake_buff_03_start_a', u.x, u.y, { dur: 1 });
 }
 
 /** The two direct fire-phase helpers are kept here rather than in the core: the boss owns their lifecycle. */
