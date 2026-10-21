@@ -30,6 +30,48 @@
       "file": "config",
       "path": [
         "modes",
+        "mode_single_funny",
+        "rounds",
+        "9",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_funny",
+        "rounds",
+        "14",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_funny",
+        "rounds",
+        "15",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": "wave_x_prts_source_code_hidden"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
         "mode_single_normal",
         "bossWeights"
       ],
@@ -47,6 +89,48 @@
       ],
       "value": {
         "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_normal",
+        "rounds",
+        "9",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_normal",
+        "rounds",
+        "14",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_normal",
+        "rounds",
+        "15",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": "wave_x_prts_source_code_hidden"
       }
     },
     {
@@ -78,6 +162,48 @@
       "file": "config",
       "path": [
         "modes",
+        "mode_single_hard",
+        "rounds",
+        "9",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_hard",
+        "rounds",
+        "14",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_hard",
+        "rounds",
+        "15",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": "wave_x_prts_source_code_hidden"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
         "mode_single_abyss",
         "bossWeights"
       ],
@@ -95,6 +221,48 @@
       ],
       "value": {
         "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_abyss",
+        "rounds",
+        "9",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_abyss",
+        "rounds",
+        "14",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_single_abyss",
+        "rounds",
+        "15",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": "wave_x_prts_source_code_hidden"
       }
     },
     {
@@ -126,6 +294,48 @@
       "file": "config",
       "path": [
         "modes",
+        "mode_multi_funny",
+        "rounds",
+        "9",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_funny",
+        "rounds",
+        "14",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_funny",
+        "rounds",
+        "15",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": "wave_x_prts_source_code_hidden"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
         "mode_multi_normal",
         "bossWeights"
       ],
@@ -143,6 +353,48 @@
       ],
       "value": {
         "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_normal",
+        "rounds",
+        "9",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_normal",
+        "rounds",
+        "14",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_normal",
+        "rounds",
+        "15",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": "wave_x_prts_source_code_hidden"
       }
     },
     {
@@ -174,6 +426,48 @@
       "file": "config",
       "path": [
         "modes",
+        "mode_multi_hard",
+        "rounds",
+        "9",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_hard",
+        "rounds",
+        "14",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_hard",
+        "rounds",
+        "15",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": "wave_x_prts_source_code_hidden"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
         "mode_multi_abyss",
         "bossWeights"
       ],
@@ -191,6 +485,48 @@
       ],
       "value": {
         "boss_x_prts_source_code_prts_hidden": 50
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_abyss",
+        "rounds",
+        "9",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_abyss",
+        "rounds",
+        "14",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts": "wave_x_prts_source_code_boss"
+      }
+    },
+    {
+      "op": "merge",
+      "file": "config",
+      "path": [
+        "modes",
+        "mode_multi_abyss",
+        "rounds",
+        "15",
+        "bossTemplates"
+      ],
+      "value": {
+        "boss_x_prts_source_code_prts_hidden": "wave_x_prts_source_code_hidden"
       }
     }
   ]

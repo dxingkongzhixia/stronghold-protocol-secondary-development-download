@@ -1,0 +1,337 @@
+{
+  "records": 1,
+  "entries": [
+    {
+      "file": "waves",
+      "id": "wave_x_prts_source_code_boss",
+      "base": "act1autochess_h07_01",
+      "set": {
+        "kind": "boss",
+        "spawns": [
+          {
+            "time": 3,
+            "key": "enemy_1427_lrnazg",
+            "count": 1,
+            "interval": 20,
+            "routeIndex": 0,
+            "slot": "E"
+          },
+          {
+            "time": 5,
+            "key": "enemy_1427_lrnazg",
+            "count": 1,
+            "interval": 20,
+            "routeIndex": 1,
+            "slot": "E"
+          },
+          {
+            "time": 3,
+            "key": "enemy_1042_frostd",
+            "count": 1,
+            "interval": 25,
+            "routeIndex": 2,
+            "slot": "EF"
+          },
+          {
+            "time": 5,
+            "key": "enemy_1042_frostd",
+            "count": 2,
+            "interval": 25,
+            "routeIndex": 3,
+            "slot": "EF"
+          },
+          {
+            "time": 7,
+            "key": "enemy_1006_shield_2",
+            "count": 2,
+            "interval": 35,
+            "routeIndex": 4
+          },
+          {
+            "time": 25,
+            "key": "enemy_1006_shield_2",
+            "count": 2,
+            "interval": 20,
+            "routeIndex": 5
+          },
+          {
+            "time": 42,
+            "key": "enemy_1006_shield_2",
+            "count": 3,
+            "interval": 35,
+            "routeIndex": 6
+          },
+          {
+            "time": 7,
+            "key": "enemy_1006_shield_2",
+            "count": 2,
+            "interval": 35,
+            "routeIndex": 7
+          },
+          {
+            "time": 25,
+            "key": "enemy_1006_shield_2",
+            "count": 2,
+            "interval": 35,
+            "routeIndex": 8
+          },
+          {
+            "time": 42,
+            "key": "enemy_1006_shield_2",
+            "count": 3,
+            "interval": 20,
+            "routeIndex": 9
+          },
+          {
+            "time": 0,
+            "key": "enemy_x_prts_source_code_prts",
+            "count": 1,
+            "interval": 1,
+            "routeIndex": 10,
+            "tag": "boss"
+          },
+          {
+            "time": 0,
+            "key": "enemy_x_prts_source_code_mimic",
+            "count": 1,
+            "interval": 1,
+            "routeIndex": 10,
+            "tag": "part",
+            "countInTotal": false
+          }
+        ]
+      }
+    },
+    {
+      "file": "waves",
+      "id": "wave_x_prts_source_code_boss_s",
+      "base": "act1autochess_h07_01_s",
+      "set": {
+        "kind": "boss",
+        "spawns": [
+          {
+            "time": 3,
+            "key": "enemy_1427_lrnazg",
+            "count": 1,
+            "interval": 20,
+            "routeIndex": 0,
+            "slot": "E"
+          },
+          {
+            "time": 5,
+            "key": "enemy_1427_lrnazg",
+            "count": 1,
+            "interval": 20,
+            "routeIndex": 1,
+            "slot": "E"
+          },
+          {
+            "time": 10,
+            "key": "enemy_1042_frostd",
+            "count": 3,
+            "interval": 20,
+            "routeIndex": 2,
+            "slot": "EF"
+          },
+          {
+            "time": 7,
+            "key": "enemy_1006_shield_2",
+            "count": 5,
+            "interval": 18,
+            "routeIndex": 3
+          },
+          {
+            "time": 25,
+            "key": "enemy_1006_shield_2",
+            "count": 4,
+            "interval": 20,
+            "routeIndex": 4
+          },
+          {
+            "time": 0,
+            "key": "enemy_x_prts_source_code_prts",
+            "count": 1,
+            "interval": 1,
+            "routeIndex": 5,
+            "tag": "boss"
+          },
+          {
+            "time": 0,
+            "key": "enemy_x_prts_source_code_mimic",
+            "count": 1,
+            "interval": 1,
+            "routeIndex": 5,
+            "tag": "part",
+            "countInTotal": false
+          }
+        ]
+      }
+    },
+    {
+      "file": "waves",
+      "id": "wave_x_prts_source_code_hidden",
+      "base": "act1autochess_h07_01",
+      "set": {
+        "kind": "hidden",
+        "spawns": [
+          {
+            "time": 3,
+            "key": "enemy_1427_lrnazg",
+            "count": 1,
+            "interval": 20,
+            "routeIndex": 0,
+            "slot": "E"
+          },
+          {
+            "time": 5,
+            "key": "enemy_1427_lrnazg",
+            "count": 1,
+            "interval": 20,
+            "routeIndex": 1,
+            "slot": "E"
+          },
+          {
+            "time": 3,
+            "key": "enemy_1042_frostd",
+            "count": 1,
+            "interval": 25,
+            "routeIndex": 2,
+            "slot": "EF"
+          },
+          {
+            "time": 5,
+            "key": "enemy_1042_frostd",
+            "count": 2,
+            "interval": 25,
+            "routeIndex": 3,
+            "slot": "EF"
+          },
+          {
+            "time": 7,
+            "key": "enemy_1006_shield_2",
+            "count": 2,
+            "interval": 35,
+            "routeIndex": 4
+          },
+          {
+            "time": 25,
+            "key": "enemy_1006_shield_2",
+            "count": 2,
+            "interval": 20,
+            "routeIndex": 5
+          },
+          {
+            "time": 42,
+            "key": "enemy_1006_shield_2",
+            "count": 3,
+            "interval": 35,
+            "routeIndex": 6
+          },
+          {
+            "time": 7,
+            "key": "enemy_1006_shield_2",
+            "count": 2,
+            "interval": 35,
+            "routeIndex": 7
+          },
+          {
+            "time": 25,
+            "key": "enemy_1006_shield_2",
+            "count": 2,
+            "interval": 35,
+            "routeIndex": 8
+          },
+          {
+            "time": 42,
+            "key": "enemy_1006_shield_2",
+            "count": 3,
+            "interval": 20,
+            "routeIndex": 9
+          },
+          {
+            "time": 0,
+            "key": "enemy_x_prts_source_code_prts_hidden",
+            "count": 1,
+            "interval": 1,
+            "routeIndex": 10,
+            "tag": "boss"
+          },
+          {
+            "time": 0,
+            "key": "enemy_x_prts_source_code_mimic",
+            "count": 1,
+            "interval": 1,
+            "routeIndex": 10,
+            "tag": "part",
+            "countInTotal": false
+          }
+        ]
+      }
+    },
+    {
+      "file": "waves",
+      "id": "wave_x_prts_source_code_hidden_s",
+      "base": "act1autochess_h07_01_s",
+      "set": {
+        "kind": "hidden",
+        "spawns": [
+          {
+            "time": 3,
+            "key": "enemy_1427_lrnazg",
+            "count": 1,
+            "interval": 20,
+            "routeIndex": 0,
+            "slot": "E"
+          },
+          {
+            "time": 5,
+            "key": "enemy_1427_lrnazg",
+            "count": 1,
+            "interval": 20,
+            "routeIndex": 1,
+            "slot": "E"
+          },
+          {
+            "time": 10,
+            "key": "enemy_1042_frostd",
+            "count": 3,
+            "interval": 20,
+            "routeIndex": 2,
+            "slot": "EF"
+          },
+          {
+            "time": 7,
+            "key": "enemy_1006_shield_2",
+            "count": 5,
+            "interval": 18,
+            "routeIndex": 3
+          },
+          {
+            "time": 25,
+            "key": "enemy_1006_shield_2",
+            "count": 4,
+            "interval": 20,
+            "routeIndex": 4
+          },
+          {
+            "time": 0,
+            "key": "enemy_x_prts_source_code_prts_hidden",
+            "count": 1,
+            "interval": 1,
+            "routeIndex": 5,
+            "tag": "boss"
+          },
+          {
+            "time": 0,
+            "key": "enemy_x_prts_source_code_mimic",
+            "count": 1,
+            "interval": 1,
+            "routeIndex": 5,
+            "tag": "part",
+            "countInTotal": false
+          }
+        ]
+      }
+    }
+  ]
+}

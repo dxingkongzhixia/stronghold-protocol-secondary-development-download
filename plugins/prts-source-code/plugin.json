@@ -20,6 +20,7 @@
     "data/tokens.json",
     "content/enemies.json",
     "content/bosses.json",
+    "content/waves.json",
     "content/modes.json"
   ],
   "operators": [
