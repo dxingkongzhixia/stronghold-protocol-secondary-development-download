@@ -51,7 +51,14 @@ export class MatchMessaging {
     this.broadcast({ t: 'm.ticker', ...w, text: w.text.slice(0, 200), id: null, type: 'CUSTOM', priority: Number(priority) || 0, playerId: null });
   }
 
-  markPublic() { this._pubDirty = true; }
+  markPublic() {
+    if (this._lastPhase !== this.phase) {
+      const from = this._lastPhase;
+      this._lastPhase = this.phase;
+      if (from !== undefined) this.dispatchGameplay('onPhase', { from, to: this.phase, round: this.round });
+    }
+    this._pubDirty = true;
+  }
   /**
    * A player's state changed: its m.private and (throttled, deduplicated) m.public (level, board, bonds…) — in a boss
    * round's prep also its pair partner's m.private, which shows this board on its other half (bossMate, item 51).

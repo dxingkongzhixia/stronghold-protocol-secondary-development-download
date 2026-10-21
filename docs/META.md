@@ -371,6 +371,7 @@ Every handler method is `(ctx, ev)`; `ev` is shared by all handlers of one dispa
 |---|---|---|
 | `onIncome` | ROUND_START, before the income is credited | `{ round, income, pending }` — write `ev.income` / `ev.pending` (e.g. 老鲤 withholds R1–R2 income until R3) |
 | onMatchStart | after the match enters INFO_CHECK (once per player) | { round: 0 } |
+| onPhase | any observed phase change (markPublic sees the new phase) | { from, to, round } |
 | `onRoundStart` | ROUND_START, after income / shop roll | `{ round }` |
 | onRoundEnd | SETTLE, after LP/eliminations, before the next round | { round, unite? } |
 | onMatchEnd | match over, before m.result is built (every non-left player) | { outcome } |

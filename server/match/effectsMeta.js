@@ -54,7 +54,7 @@ import { previewContext } from './preview.js';
 export const HOOKS = Object.freeze([
   'onMatchStart', 'onRoundStart', 'onIncome', 'onPrepStart', 'onPrepEnd', 'onGain', 'onSold', 'onRefresh', 'onPrice', 'onBuy',
   'onSpend', 'onMerge', 'onLevelUp', 'onBattleStart', 'onBattleResult', 'onRoundEnd', 'onMatchEnd', 'onChoicePick', 'onEquip', 'onArt',
-  'onDestroy', 'onLayers', 'onActiveBonds', 'checkEnd',
+  'onDestroy', 'onLayers', 'onActiveBonds', 'onPhase', 'checkEnd',
 ]);
 /** Non-hook members a handler object may carry. */
 const HANDLER_EXTRAS = new Set(['run', 'garrisonHooks']);
