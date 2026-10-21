@@ -47,7 +47,8 @@ B–E 全部完成后，应满足：
 - [x] B0-4：`grantUnit` 团队授予/去重/不可出售、战斗开始 `eliteGate`、休整期 `restEndBondLayers` 已接入并有测试；
 - [x] B0-5：`plugins/prts-source-code` 骨架已建立；凯尔希从 `data/backups.json` 的官方记录生成，M3 token 生成 namespaced 记录；`plugin check --strict` 通过；
 - [x] B1 骨架：PRTS / 拟态 enemy、普通/隐藏 boss、PRTS 专属波次（普通/隐藏/单双人）、modes bossWeights 与 rounds.bossTemplates 已加入；凯尔希 kit 暂用 `char_1052_kalts2` 占位；
-- [ ] B0-2 / B0-7 仍待做：协议客户端视图；凯尔希真实 kit / M3 downed 复活、band 策略卡。
+- [~] C1：`band_x_prts_source_code_touch` 记录和 `grantUnit` / `eliteGate` / `restEndBondLayers` 已写入；M3 的 downed/复活和真实 kit 仍待接；
+- [ ] B0-2 / B0-7 仍待做：协议客户端视图；凯尔希真实 kit / M3 downed 复活、Boss HUD。
 
 ---
 

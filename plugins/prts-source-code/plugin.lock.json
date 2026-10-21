@@ -8,6 +8,10 @@
       "sha256": "94a7b0527d79015a3495885124c68ef6cdb7ff2aa19257e83161374d2790c378",
       "bytes": 828
     },
+    "content/bands.json": {
+      "sha256": "c526bf0f27cf8e376ddf7ada72d8afd0afe80dc312594703a67ee58475067a59",
+      "bytes": 1251
+    },
     "content/bosses.json": {
       "sha256": "dcb43efc3f2022ceab0802941537919d4688c551b714fabeb5e6e796be6afa5f",
       "bytes": 4913
@@ -33,8 +37,8 @@
       "bytes": 1579
     },
     "plugin.json": {
-      "sha256": "476410e54aa729bfd03c27af19e2b504cfff4b9b2653b68a261c1aae26c985ff",
-      "bytes": 509
+      "sha256": "d218497b853a76351769ce0c8e35729f5f50914e9f7ce9e4297daa5be316904a",
+      "bytes": 535
     }
   },
   "spine": {}

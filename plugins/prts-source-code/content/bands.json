@@ -1,0 +1,52 @@
+{
+  "records": 1,
+  "entries": [
+    {
+      "file": "bands",
+      "id": "band_x_prts_source_code_touch",
+      "base": "band_amedic",
+      "set": {
+        "bandId": "band_x_prts_source_code_touch",
+        "name": "PRTS：源代码",
+        "sortId": 41,
+        "modeTypeList": [
+          "SINGLE",
+          "MULTI"
+        ],
+        "totalHp": 10,
+        "bossIds": [
+          "boss_x_prts_source_code_prts",
+          "boss_x_prts_source_code_prts_hidden"
+        ],
+        "grants": {
+          "team": true,
+          "grantUnit": {
+            "charId": "char_x_prts_source_code_one",
+            "tier": 3,
+            "elite": false,
+            "skill": 2,
+            "skillLocked": true,
+            "bonds": [
+              "deputShip",
+              "steadShip",
+              "preciShip"
+            ],
+            "token": "token_x_prts_source_code_mon3tr",
+            "tokenOnDeath": "downed",
+            "reviveMs": 20000,
+            "maxRevives": 2
+          },
+          "eliteGate": {
+            "others": 2,
+            "at": "battleStart"
+          },
+          "restEndBondLayers": {
+            "layers": 3,
+            "activeOnly": true,
+            "cap": "maxCount"
+          }
+        }
+      }
+    }
+  ]
+}
