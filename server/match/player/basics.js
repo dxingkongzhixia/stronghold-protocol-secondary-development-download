@@ -12,6 +12,7 @@ import { msg, dn } from '../../../shared/i18n.js';
 import { checkLoadout, checkLoadoutOps, cultivationCharIds, checkNotOwned, resolveLoadout, charPotentialChanges, checkSkinSelection, operatorCharIds } from '../../../shared/protocol.js';
 import { cultivationOf } from '../../../shared/potential.js';
 import { tileKey, boardOrder } from '../board.js';
+import { outsideDeployCap, specialUnitOf } from './special.js';
 
 /** The charIds a player may set a potential / 练度 for, per game-data object (shared/protocol.js cultivationCharIds). */
 const OPS_IDS = new WeakMap();
@@ -32,7 +33,7 @@ export class PlayerBasics {
     let n = 0;
     for (const p of this.board.values()) {
       // Band-granted special operators (Kal'tsit on Touch's slot) stand outside the normal deployment cap.
-      if (p.kind === 'chess' && !(typeof p.meta?.special === 'string' && p.meta.special.startsWith('band:'))) n++;
+      if (p.kind === 'chess' && !outsideDeployCap(p)) n++;
     }
     return n;
   }
@@ -272,7 +273,9 @@ export class PlayerBasics {
       for (const { r, c, piece } of boardOrder(this.board)) {
         if (piece.kind !== kind || this._legal(piece, r, c)) continue;
         // A Touch-style band grant lives on the reserve medic's stage slot, which is not a deploy tile.
-        const slot = piece.kind === 'chess' && piece.meta?.special?.startsWith('band:') ? this.m?.amedicSlot?.() : null;
+        const special = piece.kind === 'chess' ? specialUnitOf(piece) : null;
+        const slot = special && (special.placement === 'amedicSlot' || (!special.placement && piece.meta?.special?.startsWith('band:')))
+          ? this.m?.amedicSlot?.() : null;
         if (slot && r === slot.pos[0] && c === slot.pos[1]) continue;
         const key = tileKey(r, c);
         this.board.delete(key);
