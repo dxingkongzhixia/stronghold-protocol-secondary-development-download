@@ -33,7 +33,7 @@ test('mainline 0.3.1 content and offers plugins load, then compose under allowIn
     assert.ok(blocked.problems?.length, `${id} is refused without the owner policy`);
   }
 
-  const data = buildContentSet({ registry: reg, ids: ['data-demo'], allowIncompatible: true });
+  const data = buildContentSet({ registry: reg, ids: ['data-demo'], allowIncompatible: ['data-demo'] });
   assert.deepEqual(data.problems, []);
   const demoId = Object.keys(data.data.chess).find((id) => id.includes('data_demo_guard'));
   assert.ok(demoId, 'the content operator is composed');
@@ -51,7 +51,7 @@ test('mainline 0.3.1 content and offers plugins load, then compose under allowIn
   h.v?.destroy?.();
   h.b?.dispose?.();
 
-  const offers = buildContentSet({ registry: reg, ids: ['offers-demo'], allowIncompatible: true });
+  const offers = buildContentSet({ registry: reg, ids: ['offers-demo'], allowIncompatible: ['offers-demo'] });
   assert.deepEqual(offers.problems, []);
   assert.ok(JSON.stringify(offers.offers || []).includes('supplies'), 'the offers part reaches the content set');
 });
