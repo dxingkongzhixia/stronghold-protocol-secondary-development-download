@@ -54,7 +54,7 @@ import { previewContext } from './preview.js';
 export const HOOKS = Object.freeze([
   'onMatchStart', 'onRoundStart', 'onIncome', 'onPrepStart', 'onPrepEnd', 'onGain', 'onSold', 'onRefresh', 'onPrice', 'onBuy',
   'onSpend', 'onMerge', 'onLevelUp', 'onBattleStart', 'onBattleResult', 'onRoundEnd', 'onMatchEnd', 'onChoicePick', 'onEquip', 'onArt',
-  'onDestroy', 'onLayers', 'onActiveBonds',
+  'onDestroy', 'onLayers', 'onActiveBonds', 'checkEnd',
 ]);
 /** Non-hook members a handler object may carry. */
 const HANDLER_EXTRAS = new Set(['run', 'garrisonHooks']);
@@ -69,7 +69,7 @@ export const GARRISON_HOOK = Object.freeze({
   SERVER_REFRESH_SHOP: 'onRefresh',
 });
 
-const KEY_RE = /^(garrison|band|bond|item|choice|effect|global):[A-Za-z0-9_\-.:#]+$/;
+const KEY_RE = /^(garrison|band|bond|item|choice|effect|global|gameplay):[A-Za-z0-9_\-.:#]+$/;
 export const MAX_DEPTH = 6;
 
 export class MetaRegistry {
@@ -115,6 +115,13 @@ export class MetaRegistry {
   globals() {
     const out = [];
     for (const [k, h] of this._h) if (k.startsWith('global:')) out.push([k, h]);
+    return out;
+  }
+
+  /** Match-level rules handlers (`gameplay:<id>`), called once per hook, not once per player. */
+  gameplayHandlers() {
+    const out = [];
+    for (const [k, h] of this._h) if (k.startsWith('gameplay:')) out.push([k, h]);
     return out;
   }
 }
@@ -419,6 +426,51 @@ export class EffectDispatcher {
       this.depth--;
     }
     return ev;
+  }
+
+  /**
+   * Match-level rules hooks (`gameplay:<id>`): called once per hook, not once per player. A handler can
+   * read the match through a small read-only context, publish its own `pluginView`, and end the match
+   * through `ctx.finish`. The engine keeps the phase machine; this is an observation/decision layer.
+   */
+  dispatchGameplay(hook, ev = {}) {
+    if (this.depth >= MAX_DEPTH) return ev;
+    this.depth++;
+    try {
+      for (const [key, h] of this.registry.gameplayHandlers()) {
+        const fn = typeof h[hook] === 'function' ? h[hook] : null;
+        if (!fn) continue;
+        if (!this._allowScript(h, hook)) continue;
+        try {
+          const ctx = makeGameplayCtx(this.m, h, hook, ev);
+          fn.call(h, ctx, ev);
+        } catch (e) { this._report(key, hook, e); }
+      }
+    } finally { this.depth--; }
+    return ev;
+  }
+
+  /** Ask every rules handler whether this round ends the match; first explicit result wins. */
+  checkGameplayEnd(ev = {}) {
+    if (this.depth >= MAX_DEPTH) return null;
+    this.depth++;
+    try {
+      for (const [key, h] of this.registry.gameplayHandlers()) {
+        if (typeof h.checkEnd !== 'function' || !this._allowScript(h, 'checkEnd')) continue;
+        try {
+          const out = h.checkEnd(makeGameplayCtx(this.m, h, 'checkEnd', ev), ev);
+          if (out && typeof out === 'object' && out.finish !== false
+            && (out.victory === true || out.victory === false || typeof out.reason === 'string')) {
+            return {
+              victory: out.victory === true,
+              reason: typeof out.reason === 'string' ? out.reason.slice(0, 120) : (out.victory === true ? 'victory' : 'defeat'),
+              ...(out.hiddenCleared === true ? { hiddenCleared: true } : {}),
+            };
+          }
+        } catch (e) { this._report(key, 'checkEnd', e); }
+      }
+    } finally { this.depth--; }
+    return null;
   }
 
   /** Run one registry handler directly (choice cards). Returns true when a handler existed. */
@@ -767,4 +819,44 @@ export function makeCtx(m, ps, source, hook, ev = null, preview = null) {
     teammates: () => m.alivePlayers().filter((p) => p.playerId !== ps.playerId).map(forPlayer),
     player: (id) => { const p = m.players.get(id); return p?.alive ? forPlayer(p) : null; },
   });
+}
+
+/**
+ * Read-only match context for a `gameplay:<id>` rules handler. It deliberately exposes no raw Match,
+ * no player mutation and no engine internals: the rules layer can observe, publish `pluginView`, and
+ * ask the match to finish; everything else stays in the battle/data APIs.
+ */
+function makeGameplayCtx(m, handler, hook, ev) {
+  const pluginId = extensionMetaOwner(handler);
+  const view = (ps) => ps && ({
+    playerId: ps.playerId, seat: ps.seat, name: ps.name, alive: !!ps.alive, downed: !!ps.downed,
+    lp: ps.lp, funds: ps.funds, bandId: ps.bandId, isBot: !!ps.isBot, left: !!ps.left,
+    bonds: Object.fromEntries(Object.entries(ps.bonds || {}).map(([k, v]) => [k, { ...v }])),
+  });
+  return {
+    hook,
+    pluginId,
+    get round() { return m.round; },
+    get phase() { return m.phase; },
+    modeId: m.modeId,
+    difficulty: m.difficulty,
+    isSolo: m.isSolo,
+    isCoop: !m.isSolo,
+    data: m.gd.raw,
+    gd: m.gd,
+    players: () => m.order.map(view),
+    player: (playerId) => view(m.players.get(playerId)),
+    alive: () => m.alivePlayers().map(view),
+    publicView: () => m.publicView(),
+    log: (msg) => m.log.info?.(`[gameplay ${m.roomCode}] ${pluginId || '?'}: ${msg}`),
+    setView: (value) => m.setPluginView(pluginId, value),
+    finish: (outcome = {}) => {
+      if (m.ended || m.disposed) return false;
+      const victory = outcome.victory === true;
+      const reason = typeof outcome.reason === 'string' && outcome.reason.trim()
+        ? outcome.reason.trim().slice(0, 120) : (victory ? 'victory' : 'defeat');
+      m.finish({ victory, reason, hiddenCleared: outcome.hiddenCleared === true });
+      return true;
+    },
+  };
 }

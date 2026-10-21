@@ -26,7 +26,10 @@ export class MatchPlatform {
         return;
       }
       this.enterInfoCheck();
-      if (!this.ended) this.dispatchAlive('onMatchStart', { round: 0 });
+      if (!this.ended) {
+        this.dispatchAlive('onMatchStart', { round: 0 });
+        this.dispatchGameplay('onMatchStart', { round: 0 });
+      }
     });
   }
 
@@ -35,6 +38,18 @@ export class MatchPlatform {
     for (const ps of this.alivePlayers()) {
       try { this.dispatch(ps, hook, ev); } catch (e) { this.reportError(`dispatch ${hook}`, e); }
     }
+  }
+
+  /** Run a match-level `gameplay:` hook once, if its plugin registered one. */
+  dispatchGameplay(hook, ev = {}) {
+    try { this.dispatcher.dispatchGameplay(hook, ev); }
+    catch (e) { this.reportError(`dispatch gameplay ${hook}`, e); }
+  }
+
+  /** Ask rules plugins for an explicit end-of-match decision. */
+  checkGameplayEnd(ev = {}) {
+    try { return this.dispatcher.checkGameplayEnd(ev); }
+    catch (e) { this.reportError('check gameplay end', e); return null; }
   }
 
   /**

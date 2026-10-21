@@ -97,6 +97,7 @@ export class MatchSettle {
       for (const ps of this.order) if (ps.downed) ps.eliminate(ps.downedRound ?? this.round);
     }
     this.dispatchAlive('onRoundEnd', { round: this.round, unite: uniteResult || null });
+    this.dispatchGameplay('onRoundEnd', { round: this.round, unite: uniteResult || null });
     this.fields = [];
     this.watchers.clear();
     this.markPublic();
@@ -157,7 +158,10 @@ export class MatchSettle {
   }
 
   afterSettle() {
+    if (this.ended || this.disposed) return;
     if (!this.alivePlayers().length) { this.finish({ victory: false, reason: 'eliminated' }); return; }
+    const rulesEnd = this.checkGameplayEnd({ round: this.round, nextRound: this.round + 1 });
+    if (rulesEnd) { this.finish(rulesEnd); return; }
     resetRoundCounters(this); // AI bot merge-counter resets each round (server/match/botEmotes.js)
     this.startRound(this.round + 1);
   }
@@ -183,6 +187,7 @@ export class MatchSettle {
       try { this.dispatch(ps, 'onMatchEnd', { outcome: { ...this.outcome } }); }
       catch (e) { this.reportError('dispatch onMatchEnd', e); }
     }
+    this.dispatchGameplay('onMatchEnd', { outcome: { ...this.outcome } });
     let result;
     try {
       result = buildResult(this, this.outcome);
