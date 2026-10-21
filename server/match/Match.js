@@ -317,6 +317,8 @@ export class Match {
     this.sched = opts.scheduler || new RealScheduler({ now: opts.now || Date.now, onError: (e) => this.reportError('timer', e) });
     this.registry = opts.registry || getDefaultRegistry();
     this.dispatcher = new EffectDispatcher(this, this.registry);
+    /** Script plugins' JSON presentation state (m.public.pluginView); set only through ctx.setView. */
+    this.pluginViews = new Map();
     this.BattleClass = typeof opts.BattleClass === 'function' ? opts.BattleClass : Battle;
     this.battleContent = opts.battleContent || 'full';
     this.timerScale = Number.isFinite(opts.timerScale) && opts.timerScale >= 0 ? opts.timerScale : 1;

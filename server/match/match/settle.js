@@ -96,6 +96,7 @@ export class MatchSettle {
     if (!this.order.some((p) => p.alive && !p.isBot && !p.left)) {
       for (const ps of this.order) if (ps.downed) ps.eliminate(ps.downedRound ?? this.round);
     }
+    this.dispatchAlive('onRoundEnd', { round: this.round, unite: uniteResult || null });
     this.fields = [];
     this.watchers.clear();
     this.markPublic();
@@ -177,6 +178,11 @@ export class MatchSettle {
     this.deadline = 0;
     for (const f of this.fields) f.live = false;
     this.outcome = { victory: !!victory, hiddenReached: this.hiddenReached, hiddenCleared: !!hiddenCleared, reason };
+    for (const ps of this.order) {
+      if (ps.left) continue;
+      try { this.dispatch(ps, 'onMatchEnd', { outcome: { ...this.outcome } }); }
+      catch (e) { this.reportError('dispatch onMatchEnd', e); }
+    }
     let result;
     try {
       result = buildResult(this, this.outcome);

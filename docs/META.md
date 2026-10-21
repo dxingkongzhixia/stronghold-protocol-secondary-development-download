@@ -370,7 +370,10 @@ Every handler method is `(ctx, ev)`; `ev` is shared by all handlers of one dispa
 | hook | when | `ev` |
 |---|---|---|
 | `onIncome` | ROUND_START, before the income is credited | `{ round, income, pending }` — write `ev.income` / `ev.pending` (e.g. 老鲤 withholds R1–R2 income until R3) |
+| onMatchStart | after the match enters INFO_CHECK (once per player) | { round: 0 } |
 | `onRoundStart` | ROUND_START, after income / shop roll | `{ round }` |
+| onRoundEnd | SETTLE, after LP/eliminations, before the next round | { round, unite? } |
+| onMatchEnd | match over, before m.result is built (every non-left player) | { outcome } |
 | `onPrepStart` | PREP opens (after 机变) | `{ round }` |
 | `onPrepEnd` | prep end, before funds are cleared | `{ round }` |
 | `onGain` | a chess / item was acquired (buy, reward, grant, merge result) | `{ piece, kind:'chess'|'item', source }` |
@@ -440,6 +443,8 @@ bought, granted, transformed, or an elite merged this round (GitHub #169, the ow
 keeps it; `PlayerState.pieceRoundCount`; prefix keys with your module too) — 拉普兰德's "本回合首次主动刷新" is the
 first manual refresh that copy witnesses (player feedback after 0.1.0: "获得该干员后该回合的首次刷新" also stacks; a copy
 bought after selling one this round is a new copy and fires on its own first refresh [ASSUMED]).
+
+For .js content modules the context also carries pluginId and setView(value) (JSON data, at most 16 KiB): the value is published as m.public.pluginView[pluginId] at the next view flush. It is presentation state only; it does not change the battle, and preview dispatches cannot write it.
 
 Writes (validated, never throw on bad input; funds and available stock stay non-negative; authorized operator overdraw records an internal deficit):
 

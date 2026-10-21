@@ -52,8 +52,8 @@ import { onGiftTicker } from './botEmotes.js';
 import { previewContext } from './preview.js';
 
 export const HOOKS = Object.freeze([
-  'onRoundStart', 'onIncome', 'onPrepStart', 'onPrepEnd', 'onGain', 'onSold', 'onRefresh', 'onPrice', 'onBuy',
-  'onSpend', 'onMerge', 'onLevelUp', 'onBattleStart', 'onBattleResult', 'onChoicePick', 'onEquip', 'onArt',
+  'onMatchStart', 'onRoundStart', 'onIncome', 'onPrepStart', 'onPrepEnd', 'onGain', 'onSold', 'onRefresh', 'onPrice', 'onBuy',
+  'onSpend', 'onMerge', 'onLevelUp', 'onBattleStart', 'onBattleResult', 'onRoundEnd', 'onMatchEnd', 'onChoicePick', 'onEquip', 'onArt',
   'onDestroy', 'onLayers', 'onActiveBonds',
 ]);
 /** Non-hook members a handler object may carry. */
@@ -193,6 +193,11 @@ export class EffectDispatcher {
       try { ctx = makeCtx(this.m, ps, source, hook, ev, this.preview); }
       catch (e) { this._report(key, hook, e); return; }
     } else ctx = makeCtx(this.m, ps, source, hook, ev);
+    const pluginId = extensionMetaOwner(handler);
+    if (pluginId) {
+      ctx.pluginId = pluginId;
+      if (!this.preview) ctx.setView = (value) => this.m.setPluginView(pluginId, value);
+    }
     for (let i = 0; i < repeat; i++) {
       if (!this._allowScript(handler,hook)) break;
       try { fn.call(handler, ctx, ev); } catch (e) { this._report(key, hook, e); }

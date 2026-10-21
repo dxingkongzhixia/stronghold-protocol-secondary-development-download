@@ -26,7 +26,15 @@ export class MatchPlatform {
         return;
       }
       this.enterInfoCheck();
+      if (!this.ended) this.dispatchAlive('onMatchStart', { round: 0 });
     });
+  }
+
+  /** Run a lifecycle hook for every alive player (script plugins see it once per player). */
+  dispatchAlive(hook, ev = {}) {
+    for (const ps of this.alivePlayers()) {
+      try { this.dispatch(ps, hook, ev); } catch (e) { this.reportError(`dispatch ${hook}`, e); }
+    }
   }
 
   /**

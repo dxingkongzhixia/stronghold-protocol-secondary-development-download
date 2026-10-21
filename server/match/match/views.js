@@ -60,6 +60,21 @@ function shownMaxHp(gd, rec, lo) {
 }
 
 export class MatchViews {
+  /**
+   * Store a script plugin's read-only presentation state. The value must be JSON data (no functions, cycles or
+   * huge payloads); it is published as `m.public.pluginView[pluginId]` at the next view flush. Preview dispatches
+   * never reach this method (the dispatcher skips it).
+   */
+  setPluginView(pluginId, value) {
+    if (!this.pluginViews) this.pluginViews = new Map();
+    if (typeof pluginId !== 'string' || !pluginId || value === undefined) return false;
+    let text;
+    try { text = JSON.stringify(value); } catch { return false; }
+    if (typeof text !== 'string' || text.length > 16 * 1024) return false;
+    this.pluginViews.set(pluginId, JSON.parse(text));
+    return true;
+  }
+
   statusOf(ps) {
     if (ps.left) return 'left';
     if (!ps.alive) return 'dead';
@@ -158,6 +173,7 @@ export class MatchViews {
         return v;
       }),
     };
+    if (this.pluginViews?.size) v.pluginView = Object.fromEntries(this.pluginViews);
     if (this.offers.length) v.offers = this.offerViews();
     if (this.teamLp != null) v.teamLp = Math.max(0, Math.round(this.teamLp));
     // 最终攻势 / 隐秘核心: when the overtime drain starts (ms epoch; `deadline` is the level's 120 s countdown)
