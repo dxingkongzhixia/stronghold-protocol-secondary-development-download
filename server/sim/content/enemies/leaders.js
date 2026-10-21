@@ -808,10 +808,10 @@ function bsStartInferno(b, boss, a, first) {
   a.inferno = true;
   a.wave = 0;
   if (first) b.fx('bgm', { key: 'boss:boss_x_black_snake_bsnake_hard' });
-  // The extracted official reborn/die prefabs use behaviours the plugin renderer rejects; the compiled phase FX
-  // plus these generic phase events are the fallback (the available buff_03 prefab carries the official flavour).
   b.fx('phase', { x: boss.x, y: boss.y, id: boss.id, kind: first ? 'bsnakeInferno' : 'bsnakeFinal', dur: 1 });
   bsFx(b, 'enemy_bsnake_buff_03_start_b', boss.x, boss.y, { dur: 2 });
+  // The official trail is looping; its source prefab is now accepted (FxUVTweener is cosmetic).
+  bsFx(b, 'enemy_bsnake_skill_03_trail', boss.x, boss.y, { loop: true, dur: BS_INFERNO_TIME });
   b.addBuff(boss, {
     key: BS_INFERNO, duration: BS_INFERNO_TIME, persist: true, visible: true,
     flags: { invulnerable: true, untargetable: true, unblockable: true, noMove: true, stun: true },
@@ -824,7 +824,9 @@ function bsStartInferno(b, boss, a, first) {
       if (first) {
         battle.addBuff(boss, { key: BS_RETURN, duration: 15, visible: true, flags: { invulnerable: true } });
         battle.fx('phase', { x: boss.x, y: boss.y, id: boss.id, kind: 'bsnakeReturn' });
+        bsFx(battle, 'enemy_bsnake_reborn_01_end', boss.x, boss.y, { dur: 2 });
       } else {
+        bsFx(battle, 'enemy_bsnake_die_01_end', boss.x, boss.y, { dur: 2 });
         battle.kill(boss, null);
       }
     },
@@ -856,9 +858,13 @@ function kitBlackSnake() {
       b.every(BS_DETONATE_CD, () => {
         if (a.busy || a.inferno || !e.alive) return;
         const afflicted = b.allies().filter((v) => v && v.alive && v.findBuff?.(BS_BREATH));
-        if (afflicted.length) bsFx(b, 'enemy_bsnake_skill_02_start_02', e.x, e.y, { dur: 1 });
+        if (afflicted.length) {
+          bsFx(b, a.deaths > 0 ? 'enemy_bsnake_skill_02_start_04_reborn' : 'enemy_bsnake_skill_02_start_02',
+            e.x, e.y, { dur: 1 });
+        }
         for (const u of afflicted) {
           b.dealDamage(e, u, { amount: e.s.atk, type: 'arts', isSkill: true, tags: ['enemyAbility', 'bsnakeDetonate'] });
+          bsFx(b, 'enemy_bsnake_skill_02_range', u.x, u.y, { dur: 1 });
           bsFx(b, 'enemy_bsnake_skill_02_hit', u.x, u.y, { dur: 1 });
           b.removeBuff(u, BS_BREATH);
           // 引爆 consumes the mark on the target and re-applies it to the target plus its four neighbours.
@@ -900,6 +906,8 @@ function kitBlackSnake() {
             a.phase = 2;
             battle.addBuff(e, { key: BS_ENRAGED, persist: true, visible: true, mods: { hpPct: 0.5, atkPct: 0.5 } });
             e.hp = e.s.maxHp;
+            bsFx(battle, 'enemy_bsnake_buff_04_start_reborn', e.x, e.y, { dur: 2 });
+            bsFx(battle, 'enemy_bsnake_reborn_01_start', e.x, e.y, { dur: 2 });
             bsStartInferno(battle, e, a, true);
           } else {
             bsStartInferno(battle, e, a, false);
@@ -908,6 +916,8 @@ function kitBlackSnake() {
       });
       b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'bsnakeDown', dur: 5 });
       bsFx(b, 'enemy_bsnake_buff_03_start_a', e.x, e.y, { dur: 5 });
+      bsFx(b, 'enemy_bsnake_die_01_start', e.x, e.y, { dur: 5 });
+      bsFx(b, 'enemy_bsnake_reborn_01_buff', e.x, e.y, { dur: 5 });
       return true;
     },
   }];
