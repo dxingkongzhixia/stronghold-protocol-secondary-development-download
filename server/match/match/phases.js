@@ -9,6 +9,7 @@ import { buildNormalWave, buildBossWave } from '../waves.js';
 import { pairPlayers } from '../finalAssault.js';
 import { createRng, deriveSeed } from '../../sim/rng.js';
 import { botPickBand } from '../bot.js';
+import { readBandGrants } from '../../../shared/plugins/bandGrants.js';
 import { OK, fail, DELAYS, BAND_TURN_SECONDS } from './common.js';
 
 export class MatchPhases {
@@ -203,9 +204,39 @@ export class MatchPhases {
     d.picks[ps.playerId] = id;
     ps.bandId = id;
     ps.lp = this.gd.startLp(id);
+    this.applyBandGrants(ps, id);
     this.markPrivate(ps);
     this.markPublic();
     this.startDraftTurn();
+  }
+
+  /**
+   * Apply a band's generic grant block (PRTS Touch contract): the special unit is a normal chess record found by its
+   * `charId`, so a content plugin can ship it without new engine code. The unit is marked special/unsellable and is
+   * returned by the next prep after a knockout (the latter is consumed by the prep recovery hook).
+   */
+  applyBandGrants(ps, bandId) {
+    const band = this.gd.band(bandId);
+    const { grants } = readBandGrants(band?.grants);
+    if (!grants?.grantUnit) return;
+    const targets = grants.team
+      ? this.alivePlayers().filter((p) => !p.isBot)
+      : (ps && !ps.isBot ? [ps] : []);
+    for (const target of targets) this.grantBandUnit(target, grants.grantUnit, bandId);
+  }
+
+  grantBandUnit(ps, unit, bandId) {
+    const owns = (p) => [...p.hand, ...p.temp, ...p.board.values()].some((x) => x && x.kind === 'chess' && x.meta?.special === `band:${bandId}`);
+    if (owns(ps)) return null;
+    const chess = Object.values(this.gd.raw.chess || {}).find((c) => c && c.charId === unit.charId && !c.isGolden && c.visible !== false);
+    if (!chess) return null;
+    const piece = ps.newPiece('chess', chess.chessId);
+    piece.meta = { ...(piece.meta || {}), special: `band:${bandId}` };
+    piece.unsellable = true;
+    piece.returnNextPrep = true;
+    ps.stow(piece, { allowTemp: true });
+    ps.recompute();
+    return piece;
   }
 
   skipBand(ps) {

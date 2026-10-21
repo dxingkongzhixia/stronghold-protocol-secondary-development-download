@@ -4,6 +4,8 @@ import { getData } from '../../server/data.js';
 import { GameData } from '../../server/match/gamedata.js';
 import { setupMatchWaves } from '../../server/match/waves.js';
 import { createRng } from '../../server/sim/rng.js';
+import { PHASE } from '../../shared/constants.js';
+import { makeMatch } from './harness.js';
 
 const boss = (id, enemyKey, extra = {}) => ({ bossId: id, enemyKey, name: id, weight: 1, bloodPoint: { NORMAL: 1000 }, ...extra });
 
@@ -20,6 +22,30 @@ test('a content boss can own its hidden variant, overriding the random hidden dr
   const setup = setupMatchWaves(gd, createRng(1234));
   assert.equal(setup.bossId, 'boss_x_test_prts');
   assert.equal(setup.hiddenBossId, 'boss_x_test_prts_hidden');
+});
+
+test('a band grantUnit grants one special chess to every human, once, and it cannot be sold', () => {
+  const data = structuredClone(getData());
+  data.bands.band_x_test_touch = {
+    ...data.bands.band_amiya, bandId: 'band_x_test_touch', name: 'Test Touch',
+    grants: { team: true, grantUnit: { charId: 'char_1052_kalts2', skill: 2, skillLocked: true } },
+  };
+  const h = makeMatch({ mode: 'coop', humans: 2, data }).start();
+  const m = h.m;
+  for (const ps of m.players.values()) if (!ps.isBot) m.handle(ps.playerId, { t: 'g.infoReady' });
+  h.run(() => m.phase === PHASE.BAND_DRAFT);
+  assert.equal(m.phase, PHASE.BAND_DRAFT);
+  const p0 = h.ps('p_0'), p1 = h.ps('p_1');
+  assert.deepEqual(m._applyBand(p0, 'band_x_test_touch'), undefined);
+  const special = (ps) => [...ps.hand, ...ps.temp, ...ps.board.values()].filter((x) => x?.meta?.special === 'band:band_x_test_touch');
+  assert.equal(special(p0).length, 1);
+  assert.equal(special(p1).length, 1);
+  assert.equal(special(p0)[0].id, 'chess_char_1052_kalts2_a');
+  assert.equal(special(p0)[0].unsellable, true);
+  m._applyBand(p1, 'band_x_test_touch');
+  assert.equal(special(p0).length, 1);
+  assert.equal(special(p1).length, 1);
+  m.dispose();
 });
 
 test('a band with bossIds is offered only in the matching leader room', () => {

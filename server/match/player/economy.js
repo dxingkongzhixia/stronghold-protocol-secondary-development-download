@@ -245,6 +245,7 @@ export class PlayerEconomy {
     const loc = this.find(uid);
     if (!loc) return fail(ERR.BAD_TARGET);
     if (loc.piece.kind !== 'chess') return fail(ERR.BAD_TARGET, loc.piece.kind === 'item' ? 'items cannot be sold' : 'tokens cannot be sold');
+    if (loc.piece.unsellable) return fail(ERR.BAD_TARGET, 'a band-granted operator cannot be sold');
     const piece = loc.piece;
     // Returned equipment can always wait in the overflow queue, even when all fifteen visible slots are occupied.
     this._detach(loc);
