@@ -45,6 +45,7 @@ import {
 } from '../support/index.js';
 import { weaknessRetype, addShieldLayer, PRIO_RESPAWN, reviveNow } from '../items/battle.js';
 import { spawnMapChar } from '../tokens.js';
+import { readBandGrants } from '../../../../shared/plugins/bandGrants.js';
 
 export const AMEDIC_BAND = 'band_amedic';
 /**
@@ -236,7 +237,8 @@ export function amedicCharsFor(elites, variants = amedicVariants()) {
 function installMapChars(battle) {
   const variants = amedicVariants();
   if (!variants.length) return;
-  const holders = battle.players.filter((ps) => matchBands(battle, ps.playerId).includes(AMEDIC_BAND));
+  const holders = battle.players.filter((ps) => matchBands(battle, ps.playerId).includes(AMEDIC_BAND)
+    && readBandGrants(bandRecord(ps.bandId)?.grants).grants?.grantUnit?.placement !== 'amedicSlot');
   if (!holders.length) return;
   battle.on('battleStart', () => {
     const chars = [];

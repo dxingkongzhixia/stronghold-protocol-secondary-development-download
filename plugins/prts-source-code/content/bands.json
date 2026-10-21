@@ -34,7 +34,8 @@
             "token": "token_x_prts_source_code_mon3tr",
             "tokenOnDeath": "downed",
             "reviveMs": 20000,
-            "maxRevives": 2
+            "maxRevives": 2,
+            "placement": "amedicSlot"
           },
           "eliteGate": {
             "others": 2,

@@ -324,6 +324,8 @@ export class MatchViews {
       && m.pos[1] >= 0 && m.pos[1] <= 10 && !/multi_only/.test(String(m.alias)));
     const rec = this.gd.token(id);
     if (!slot || !rec) return [];
+    // The PRTS Touch-style grant places Kal'tsit on this slot; never draw the reserve medic under her.
+    if (ps.board?.has(`${slot.pos[0]},${slot.pos[1]}`)) return [];
     const dir = slot.dir || 'RIGHT';
     return [{
       id: -ps.seat - 1, uid: -ps.seat - 1, kind: 'token', side: 'ally', ownerId: ps.playerId, defId: id,

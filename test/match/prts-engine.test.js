@@ -48,6 +48,27 @@ test('a band grantUnit grants one special chess to every human, once, and it can
   m.dispose();
 });
 
+test('an amedicSlot grant starts on Touch\'s stage slot instead of in the hand', () => {
+  const data = structuredClone(getData());
+  data.bands.band_x_test_touch = {
+    ...data.bands.band_amiya, bandId: 'band_x_test_touch', name: 'Test Touch slot',
+    grants: { team: false, grantUnit: { charId: 'char_1052_kalts2', placement: 'amedicSlot' } },
+  };
+  const h = makeMatch({ mode: 'coop', humans: 1, data }).start();
+  const m = h.m, ps = h.ps('p_0');
+  m.handle('p_0', { t: 'g.infoReady' });
+  h.run(() => m.phase === PHASE.BAND_DRAFT);
+  assert.equal(m._applyBand(ps, 'band_x_test_touch'), undefined);
+  const slot = m.amedicSlot();
+  assert.ok(slot, 'the stage has the reserve-medic slot');
+  const key = `${slot.pos[0]},${slot.pos[1]}`;
+  assert.equal(ps.board.get(key)?.meta?.special, 'band:band_x_test_touch');
+  ps.recompute();
+  assert.equal(ps.board.get(key)?.meta?.special, 'band:band_x_test_touch', 'the stage slot is exempt from eviction');
+  assert.equal([...ps.hand, ...ps.temp].some((p) => p?.meta?.special === 'band:band_x_test_touch'), false);
+  m.dispose();
+});
+
 test('eliteGate upgrades a granted special unit only with enough other elites', () => {
   const data = structuredClone(getData());
   data.bands.band_x_test_touch = {

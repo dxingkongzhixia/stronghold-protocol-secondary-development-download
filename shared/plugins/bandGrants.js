@@ -40,7 +40,7 @@ export function readBandGrants(raw) {
     const u = raw.grantUnit;
     if (!isObj(u)) problems.push('grants.grantUnit: expected an object');
     else {
-      const allowed = ['charId', 'tier', 'elite', 'skill', 'skillLocked', 'bonds', 'token', 'tokenOnDeath', 'reviveMs', 'maxRevives'];
+      const allowed = ['charId', 'tier', 'elite', 'skill', 'skillLocked', 'bonds', 'token', 'tokenOnDeath', 'reviveMs', 'maxRevives', 'placement'];
       for (const k of Object.keys(u)) if (!allowed.includes(k)) problems.push(`grants.grantUnit: unknown field "${k}"`);
       const out = {};
       if (typeof u.charId !== 'string' || !ID.test(u.charId)) problems.push('grants.grantUnit.charId: expected a char id');
@@ -62,6 +62,8 @@ export function readBandGrants(raw) {
       if (!['remove', 'downed'].includes(out.tokenOnDeath)) problems.push('grants.grantUnit.tokenOnDeath: expected "remove" or "downed"');
       out.reviveMs = int(u.reviveMs ?? 20000, 0, BAND_GRANT_LIMITS.reviveMs, 'grants.grantUnit.reviveMs', problems, 20000);
       out.maxRevives = int(u.maxRevives ?? 2, 0, BAND_GRANT_LIMITS.maxRevives, 'grants.grantUnit.maxRevives', problems, 2);
+      out.placement = u.placement === undefined ? 'hand' : u.placement;
+      if (!['hand', 'amedicSlot'].includes(out.placement)) problems.push('grants.grantUnit.placement: expected "hand" or "amedicSlot"');
       g.grantUnit = out;
     }
   }

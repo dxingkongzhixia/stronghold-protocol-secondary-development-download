@@ -10,6 +10,7 @@ import { pairPlayers } from '../finalAssault.js';
 import { createRng, deriveSeed } from '../../sim/rng.js';
 import { botPickBand } from '../bot.js';
 import { readBandGrants } from '../../../shared/plugins/bandGrants.js';
+import { tileKey } from '../board.js';
 import { OK, fail, DELAYS, BAND_TURN_SECONDS } from './common.js';
 
 export class MatchPhases {
@@ -215,6 +216,12 @@ export class MatchPhases {
    * `charId`, so a content plugin can ship it without new engine code. The unit is marked special/unsellable and is
    * returned by the next prep after a knockout (the latter is consumed by the prep recovery hook).
    */
+  /** The stage slot of the reserve medic Touch replaces at battle start. */
+  amedicSlot() {
+    return this.stage?.mapChars?.find((m) => m?.key === 'char_605_cmedic' && Array.isArray(m.pos) && m.pos[0] >= 9
+      && m.pos[0] <= 12 && m.pos[1] >= 0 && m.pos[1] <= 10 && !/multi_only/.test(String(m.alias))) || null;
+  }
+
   applyBandGrants(ps, bandId) {
     const band = this.gd.band(bandId);
     const { grants } = readBandGrants(band?.grants);
@@ -234,6 +241,19 @@ export class MatchPhases {
     piece.meta = { ...(piece.meta || {}), special: `band:${bandId}` };
     piece.unsellable = true;
     piece.returnNextPrep = true;
+    // A Touch-style band replaces the reserve medic at its stage slot. The special chess is a real board
+    // piece there (not a hand piece): the client hides the reserve map character while the tile is occupied.
+    const slot = unit.placement === 'amedicSlot' ? this.amedicSlot() : null;
+    if (slot) {
+      const key = tileKey(slot.pos[0], slot.pos[1]);
+      if (!ps.board.has(key)) {
+        piece.dir = slot.dir || 'RIGHT';
+        ps.board.set(key, piece);
+        ps.grantTokensFor(piece);
+        ps.recompute();
+        return piece;
+      }
+    }
     ps.stow(piece, { allowTemp: true });
     ps.recompute();
     return piece;

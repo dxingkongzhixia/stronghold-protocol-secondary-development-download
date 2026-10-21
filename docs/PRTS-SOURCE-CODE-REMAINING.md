@@ -311,7 +311,7 @@ node --test test/plugins
 2. 已有该特殊单位时不重复授予；
 3. 授予时写 `piece.meta.special = 'band:prts_touch'`、`unsellable`、`returnNextPrep`；
 4. `PlayerState.sell` 拒绝不可出售；`move` 正常；
-5. 备战结束前玩家可把它放在空闲格；
+5. 授予时直接占据 Touch 的预备医疗固定格（`placement: "amedicSlot"`），替换该占位；玩家仍可在备战中移动；
 6. 被击倒后下一备战期回到场上（沿用现有 `isDown` / 返还逻辑或新增专用字段）。
 
 验收：

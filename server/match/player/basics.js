@@ -264,6 +264,9 @@ export class PlayerBasics {
     for (const kind of ['chess', 'token']) {
       for (const { r, c, piece } of boardOrder(this.board)) {
         if (piece.kind !== kind || this._legal(piece, r, c)) continue;
+        // A Touch-style band grant lives on the reserve medic's stage slot, which is not a deploy tile.
+        const slot = piece.kind === 'chess' && piece.meta?.special?.startsWith('band:') ? this.m?.amedicSlot?.() : null;
+        if (slot && r === slot.pos[0] && c === slot.pos[1]) continue;
         const key = tileKey(r, c);
         this.board.delete(key);
         const ok = kind === 'chess' ? !!this.stow(piece, { allowTemp: true }) : this._returnToken(piece);

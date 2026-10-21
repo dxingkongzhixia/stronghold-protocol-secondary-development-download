@@ -26,6 +26,7 @@ test('the Kal\'tsit grant normalises with defaults and keeps the three bonds', (
   assert.equal(grants.grantUnit.tokenOnDeath, 'downed');
   assert.equal(grants.grantUnit.reviveMs, 20000);
   assert.equal(grants.grantUnit.maxRevives, 2);
+  assert.equal(grants.grantUnit.placement, 'hand');
   assert.deepEqual(grants.eliteGate, { others: 2, at: 'battleStart' });
   assert.deepEqual(grants.restEndBondLayers, { scope: 'self', layers: 3, activeOnly: true, cap: 'maxCount' });
 });
@@ -51,6 +52,7 @@ test('invalid scopes, bonds, skills and token states are refused whole', () => {
     { grantUnit: { charId: 'char_003_kalts', skill: 3 } },
     { grantUnit: { charId: 'char_003_kalts', tokenOnDeath: 'forever' } },
     { grantUnit: { charId: 'char_003_kalts', reviveMs: -1 } },
+    { grantUnit: { charId: 'char_003_kalts', placement: 'board' } },
     { eliteGate: { others: 0 } },
     { eliteGate: { at: 'prep' } },
     { unknown: true },
