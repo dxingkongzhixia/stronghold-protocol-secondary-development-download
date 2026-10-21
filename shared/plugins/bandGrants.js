@@ -8,6 +8,7 @@ export const BAND_GRANT_LIMITS = Object.freeze({
   reviveMs: 600000,
   maxRevives: 10,
   restLayers: 10,
+  restRandomCount: 4,
   eliteOthers: 6,
 });
 
@@ -33,7 +34,7 @@ export function readBandGrants(raw) {
   const problems = [];
   if (raw === undefined || raw === null) return { grants: null, problems };
   if (!isObj(raw)) return { grants: null, problems: ['grants: expected an object'] };
-  for (const k of Object.keys(raw)) if (!['grantUnit', 'eliteGate', 'restEndBondLayers', 'team'].includes(k)) problems.push(`grants: unknown field "${k}"`);
+  for (const k of Object.keys(raw)) if (!['grantUnit', 'eliteGate', 'restEndBondLayers', 'restEndRandomChess', 'team'].includes(k)) problems.push(`grants: unknown field "${k}"`);
   const g = { team: bool(raw.team, 'grants.team', problems, true) };
 
   if (raw.grantUnit !== undefined) {
@@ -96,5 +97,21 @@ export function readBandGrants(raw) {
     }
   }
 
-  return { grants: problems.length || !['grantUnit', 'eliteGate', 'restEndBondLayers'].some((k) => raw[k] !== undefined) ? null : g, problems };
+  if (raw.restEndRandomChess !== undefined) {
+    const r = raw.restEndRandomChess;
+    if (!isObj(r)) problems.push('grants.restEndRandomChess: expected an object');
+    else {
+      for (const k of Object.keys(r)) if (!['minTier', 'maxTier', 'count'].includes(k)) problems.push(`grants.restEndRandomChess: unknown field "${k}"`);
+      const minTier = int(r.minTier ?? 1, 1, 6, 'grants.restEndRandomChess.minTier', problems, 1);
+      const maxTier = int(r.maxTier ?? 4, 1, 6, 'grants.restEndRandomChess.maxTier', problems, 4);
+      if (minTier !== null && maxTier !== null && minTier > maxTier) problems.push('grants.restEndRandomChess: minTier must not exceed maxTier');
+      g.restEndRandomChess = {
+        minTier,
+        maxTier,
+        count: int(r.count ?? 1, 1, BAND_GRANT_LIMITS.restRandomCount, 'grants.restEndRandomChess.count', problems, 1),
+      };
+    }
+  }
+
+  return { grants: problems.length || !['grantUnit', 'eliteGate', 'restEndBondLayers', 'restEndRandomChess'].some((k) => raw[k] !== undefined) ? null : g, problems };
 }

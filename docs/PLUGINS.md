@@ -933,7 +933,10 @@ protocol increments are listed in `docs/design/network.md` §8.
 
 **Download and check** (`public/js/content.js`). `/cs/<cs16>/index.json` is the set's manifest (§10): enough to
 recompute `cs`. The page fetches it and every file it lists: an unchanged one at its plain `/data/<file>?v=<8 hex>` URL
-(cached for good), a patched one at `/cs/<cs16>/data/<table>.json`, the set's translations at their URLs. Every body is
+(cached for good; when the page already warmed that file in `data.js`, as a room that started on the original content
+did, it reuses the loaded value instead of downloading it again), a patched one at `/cs/<cs16>/data/<table>.json`, the
+set's translations at their URLs. With a browser that has switched the same content plugin off and back on, the checked
+set is laid again without a request. Every fetched body is
 read as bytes and checked before it is decoded: its size and SHA-256 against its manifest entry (a BOM is part of the
 bytes). The manifest's composition (the data and translation hashes, the plugins and their settings) must hash to the
 room's `cs`, and the manifest may name no address but this server's `/data/` and the set's own `/cs/<cs16>/`. Then

@@ -1,5 +1,6 @@
 // ui/pluginTag.js — the room's plugin tag and the small facts the screens show of plugins (DESIGN §32 P1a): kept apart
-// from the 插件 panel (ui/pluginPanel.js), which loads only when it opens, so the title page and the room carry just this.
+// from the 插件 panel (ui/pluginPanel.js), which stays a lazy chunk — a room with plugins warms it on idle so the first
+// tap opens it at once — so the title page and a room without plugins carry just this.
 //
 //   * PluginTag — the tag at the top of the room (screens/room.js): 「原版」, or 「插件 ×N」 once its host switched plugins
 //     on — marked unofficial (「非官方」) when they change gameplay (a content set of its own, DESIGN §32.6); a tap loads
@@ -9,12 +10,16 @@
 //     result; DESIGN §32.6, the design study's §7.4); nothing for the original game (cosmetic plugins only included).
 // Texts go through t() (docs/I18N.md).
 
-import { useState } from '../../vendor/hooks.module.js';
+import { useEffect, useState } from '../../vendor/hooks.module.js';
 import { html, Icon } from './components.js';
 import { t } from '../../../shared/i18n.js';
 import { rulePhrases } from '../../../shared/plugins/rules.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
+
+/** The panel is still a lazy chunk, but the tag starts it once the room is idle so the first tap opens it at once. */
+let panelLoad = null;
+const loadPanel = () => panelLoad || (panelLoad = import('./pluginPanel.js'));
 
 /** A size in KB / MB. @param {number} n */
 export const sizeText = (n) => (!Number.isFinite(n) ? '' : n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
@@ -86,8 +91,21 @@ export function PluginTag({ room, myId }) {
   const [Panel, setPanel] = useState(null);
   const f = roomPluginFacts(room, myId);
   const rulesText = ruleLine(f.rules);
+  // A plugin room will very likely open this panel: warm its chunk and the small catalogue on idle, so the first tap
+  // does not wait for a dozen module requests. The code is still loaded only in a room that has plugins.
+  useEffect(() => {
+    if (!f.count) return undefined;
+    let alive = true;
+    const go = () => { loadPanel().then((m) => { if (alive) m.preloadPluginPanel?.(); }).catch(() => {}); };
+    if (typeof globalThis.requestIdleCallback === 'function') {
+      const id = globalThis.requestIdleCallback(go, { timeout: 2500 });
+      return () => { alive = false; globalThis.cancelIdleCallback?.(id); };
+    }
+    const id = setTimeout(go, 800);
+    return () => { alive = false; clearTimeout(id); };
+  }, [f.count]);
   const open = () => {
-    import('./pluginPanel.js').then((m) => setPanel(() => m.PluginPanel), (err) => console.warn('[plugins] the panel did not load', err));
+    loadPanel().then((m) => setPanel(() => m.PluginPanel), (err) => console.warn('[plugins] the panel did not load', err));
   };
   return html`<button type="button" class=${cx('plugtag', f.count && 'is-modded', f.modded && 'is-unofficial', rulesText && 'plugtag--rules')} data-testid="plugin-tag" onClick=${open}
       title=${f.modded ? t('本房间使用了改变玩法的插件（非官方）') : t('插件')} aria-label=${f.count ? t('插件 ×{n}', { n: f.count }) : t('原版')}>

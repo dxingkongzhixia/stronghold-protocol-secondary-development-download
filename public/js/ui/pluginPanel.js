@@ -1,6 +1,6 @@
-// ui/pluginPanel.js — the room's 插件 panel (DESIGN §32 P1a; the design study's §7.1) and the list of a server's plugins.
-// Loaded only when one of them opens (the room's tag, ui/pluginTag.js; the title screen's button, screens/title.js), so
-// the title page and the room carry none of it:
+// ui/pluginPanel.js - the room's 插件 panel (DESIGN §32 P1a; the design study's §7.1) and the list of a server's plugins.
+// Still loaded only for a plugin interface (the room's tag, ui/pluginTag.js, warms it on idle; the title screen's button,
+// screens/title.js, loads it when opened), so the title page and a room without plugins carry none of it:
 //
 //   * PluginPanel — the cosmetic, content and (when the owner enabled them) script/trusted plugins this server has for rooms (the catalogue:
 //     content.js loadCatalog — fetched when the panel opens, and only on a server that has plugins: content.plugins > 0),
@@ -28,7 +28,7 @@ import { PluginSettings, settingsSelection } from './pluginSettings.js';
 import { toastError } from './toasts.js';
 import { net } from '../net.js';
 import { useStore } from '../store.js';
-import { catalog, contentSet, loadCatalog, cosmeticPlugins, installedCount, pluginName, unofficialPlugins } from '../content.js';
+import { catalog, contentSet, loadCatalog, cosmeticPlugins, installedCount, pluginName, pluginDescription, unofficialPlugins } from '../content.js';
 import { toggleRecommend, uiPluginEntries, uiRecommend, visibleRecommend } from './uiPlugins.js';
 import { t, tc, N_ } from '../../../shared/i18n.js';
 import { sizeText, roomPluginFacts, pluginTagText, pluginMicro } from './pluginTag.js';
@@ -36,6 +36,9 @@ import { sizeText, roomPluginFacts, pluginTagText, pluginMicro } from './pluginT
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
 export { sizeText, roomPluginFacts, pluginTagText, pluginMicro };
+
+/** Warm the catalogue while the panel's chunk is preloaded (ui/pluginTag.js); a no-op once it is there. */
+export const preloadPluginPanel = () => { loadCatalog().catch(() => {}); };
 
 /**
  * The ids room.setPlugins sends when the host switches `id` on or off: the plugins the host chose, without the
@@ -163,6 +166,7 @@ export function PluginPanel({ open, room, myId, onClose }) {
           const cls = p.class || classOf(p.id);
           const content = cls === 'content';
           const code = cls === 'script' || cls === 'trusted';
+          const desc = pluginDescription(p);
           // a gameplay plugin made for other game versions is refused (PLUGIN_INCOMPATIBLE): its switch only turns it off
           const blocked = (content || code) && p.compatible === false && !on;
           return html`<li key=${p.id} class=${cx('plugrow', on && 'is-on', (content || code) && 'is-content')} data-plugin=${p.id}>
@@ -178,6 +182,7 @@ export function PluginPanel({ open, room, myId, onClose }) {
                 ${Number.isFinite(p.artBytes) ? html`<span class="num">${sizeText(p.artBytes)}</span>` : null}
                 ${p.missing ? html`<span>${t('本服务器已不再提供')}</span>` : null}
               </div>
+              ${desc ? html`<p class="plugrow__desc">${desc}</p>` : null}
               ${on && p.settings ? html`<${PluginSettings} definitions=${p.settings} values=${f.plugins.find((x) => x.id === p.id)?.settings || {}}
                 disabled=${!f.editable || !!busy || p.missing} onSave=${(settings) => send([...new Set([...f.chosen, p.id])], p.id, { id: p.id, settings })} />` : null}
               ${p.compatible === false ? html`<div class="plugrow__warn">${(content || code)
@@ -241,6 +246,7 @@ export function InstalledPlugins({ open, onClose }) {
               <span>${p.status === 'loaded' ? t('可以使用') : t('本版本不支持')}</span>
               ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
             </div>
+            ${pluginDescription(p) ? html`<p class="plugrow__desc">${pluginDescription(p)}</p>` : null}
           </div>
         </li>`)}
       </ul>

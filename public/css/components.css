@@ -1162,6 +1162,7 @@
 .plugrow__badge { padding: 0 .06rem; border: 1px solid var(--line-2); color: var(--text-lo); font-size: calc(.12 * var(--t)); }
 .plugrow__badge.is-unofficial { color: #ffb066; border-color: rgba(255, 159, 67, .5); }
 .plugrow__meta { display: flex; flex-wrap: wrap; gap: .12rem; font-size: calc(.13 * var(--t)); }
+.plugrow__desc { margin: .02rem 0 0; color: var(--text-md); font-size: calc(.13 * var(--t)); line-height: 1.6; }
 .plugrow__warn, .plugpanel__warnings li { color: #ffb066; font-size: calc(.13 * var(--t)); line-height: 1.6; }
 .plugpanel__warnings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .04rem; }
 .plugpanel__warnings .icon { width: .15rem; height: .15rem; margin-right: .06rem; vertical-align: -.02rem; }

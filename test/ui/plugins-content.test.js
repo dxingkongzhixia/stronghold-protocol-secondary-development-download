@@ -105,6 +105,16 @@ describe('loading and checking a room\'s content set (public/js/content.js)', ()
     assert.ok(total > 1e6 && loaded === total, `progress ${loaded}/${total}`);
   });
 
+  test('loadContentSet reuses an unchanged file the page already holds; a changed file still comes from /cs/', async () => {
+    const { fetchFn, seen } = serverFetch();
+    const base = { getRaw: (name) => (name === 'chess' ? JSON.parse(fs.readFileSync(path.join(ROOT, 'data/chess.json'), 'utf8')) : null) };
+    const set = await loadContentSet(CS, { fetch: fetchFn, wait: noWait, base });
+    assert.equal(set.values.get('bonds').deputShip.bb.base_def, 0.3);
+    assert.ok(set.values.get('chess') && Object.keys(set.values.get('chess')).length > 100);
+    assert.ok(!seen.some((u) => u.startsWith('/data/chess.json')), 'the warmed unchanged file is not downloaded again');
+    assert.ok(seen.includes(`/cs/${CS16}/data/bonds.json`), 'the changed file is still checked');
+  });
+
   test('loadContentSet refuses: a changed byte, a manifest of another cs or one that does not hash to it, an address outside the server\'s data', async () => {
     const flip = (target) => (p, b) => { if (p === target) b[b.length - 3] ^= 1; return b; };
     await assert.rejects(loadContentSet(CS, { fetch: serverFetch({ edit: flip(`/cs/${CS16}/data/bonds.json`) }).fetchFn, wait: noWait }), /do not hash/);
@@ -122,7 +132,8 @@ describe('loading and checking a room\'s content set (public/js/content.js)', ()
     const requests = [];
     const net = { request: async (t, fields) => { const msg = { t, ...fields }; assert.equal(validateC2S(msg), null); requests.push(msg); return { t: 'ok' }; } };
     const toasts = [];
-    const stop = installContentSet({ store, data, net, fetch: serverFetch().fetchFn, toast: (text, kind) => toasts.push([text, kind]), wait: noWait });
+    const server = serverFetch();
+    const stop = installContentSet({ store, data, net, fetch: server.fetchFn, toast: (text, kind) => toasts.push([text, kind]), wait: noWait });
     try {
       // the original content: nothing is fetched, nothing told
       store.set({ me: { playerId: 'p1', name: 'A', token: null }, room: { code: 'ABCD', seats: [{ seat: 0, playerId: 'p1' }], content: { cs: 'ab'.repeat(32), vanilla: true, plugins: [] } } });
@@ -155,6 +166,13 @@ describe('loading and checking a room\'s content set (public/js/content.js)', ()
       assert.equal(data.get('bonds').vanilla, true);
       assert.equal(simContent(), null);
       assert.deepEqual(toasts, []);
+      // the host switches the same plugin back on: the checked set is laid again without a request
+      const before = server.seen.length;
+      store.set({ room });
+      await until(() => contentSet.get().status === 'ready', 'the checked set laid again');
+      assert.equal(server.seen.length, before, 'no download for a set this page already checked');
+      assert.equal(data.contentId(), CS);
+      assert.equal(data.get('bonds').deputShip.bb.base_def, 0.3);
     } finally { stop(); }
   });
 

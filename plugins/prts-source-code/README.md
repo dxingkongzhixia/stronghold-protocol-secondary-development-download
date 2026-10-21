@@ -15,8 +15,9 @@
 - PRTS / 拟态 Boss 数据
 - 隐藏 Boss 与强制配对
 - PRTS 专属普通 / 隐藏 / 单双人波次
-- `band_x_prts_source_code_touch` 策略卡和 Boss 过滤
+- `band_x_prts_source_code_touch`「凯尔希」策略卡、凯尔希头像与 Boss 过滤
 - 清除协议、拟态重构、M3 击倒复活
+- 每回合休整期随机获得 1 名 1–4 本干员（`grants.restEndRandomChess`）
 - PRTS / 拟态 Spine、敌人图标、M3 模型和 Boss BGM 已放进插件自己的 `assets/`，由插件资产覆盖层加载
 - 已从本机官方客户端提取 20 个官方 FX prefab、73 张贴图与 16 个网格，全部放进 `assets/fx/`，由插件 FX 容器加载
 - Boss 结算头像可用
@@ -31,7 +32,7 @@
 
 ## 美术
 
-使用本安装已有的官方凯尔希素材（`art.ref: char_003_kalts`）和官方客户端提取的 PRTS / 拟态 Spine；不复制官方资源到插件包。
+使用本安装已有的官方凯尔希素材（`art.ref: char_003_kalts`）和官方客户端提取的 PRTS / 拟态 Spine；策略头像复制为插件自己的 `assets/images/band_x_prts_source_code_touch.png`。
 
 正式发布前仍需按 `docs/PRTS-SOURCE-CODE.md` 完成授权和回退模型检查。
 

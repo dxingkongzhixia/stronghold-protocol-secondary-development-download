@@ -346,6 +346,29 @@ export class MatchPhases {
     }
   }
 
+  /**
+   * `grants.restEndRandomChess`: at each round start (a rest period) the band grants `count` random operators
+   * between `minTier` and `maxTier` from the shared pool. Independent of the band's special unit: every player
+   * who picked the band gets it, once per round.
+   */
+  applyBandRestRandomChess(ps) {
+    if (!ps || !ps.alive || !ps.bandId) return [];
+    const { grants } = readBandGrants(this.gd.band(ps.bandId)?.grants);
+    const cfg = grants?.restEndRandomChess;
+    if (!cfg) return [];
+    const got = [];
+    for (let i = 0; i < cfg.count; i++) {
+      const id = this.pool.roll(this.rngMeta, {
+        maxTier: cfg.maxTier,
+        filter: (chessId) => this.gd.tierOf(chessId) >= cfg.minTier && !String(chessId).startsWith('char_x_'),
+      });
+      if (!id) break;
+      const piece = ps.acquireChess(id, { source: 'band' });
+      if (piece) got.push(piece);
+    }
+    return got;
+  }
+
   skipBand(ps) {
     if (this.phase !== PHASE.BAND_DRAFT || !this.draft) return fail(ERR.WRONG_PHASE);
     const d = this.draft;

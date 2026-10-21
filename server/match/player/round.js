@@ -13,7 +13,9 @@ import { REVIVE } from '../../../shared/constants.js';
 export class PlayerRound {
   startRound(r) {
     this.round = { refreshes: 0, buys: 0, sells: 0, spent: 0, gainedChess: 0, arts: 0 };
-    // a rest end is the next round's start: a band's special operator grants its active-bond layers here
+    // a rest end is the next round's start: a band's special operator grants its active-bond layers here; a band
+    // with restEndRandomChess grants its random 1-4 tier operators at every rest start (including round 1).
+    this.m?.applyBandRestRandomChess?.(this);
     if (r > 1) this.m?.applyBandRestLayers?.(this);
     this.pendingLayerGains = null; // settled (or lapsed) at the last SETTLE
     if (r > 1) this.shop.upgradePrice = Math.max(0, this.shop.upgradePrice - 1);

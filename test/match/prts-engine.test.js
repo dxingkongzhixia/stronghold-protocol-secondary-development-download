@@ -113,6 +113,26 @@ test('restEndBondLayers grants active-bond layers once and respects maxCount', (
   m.dispose();
 });
 
+test('restEndRandomChess grants count random operators in the 1-4 tier range', () => {
+  const data = structuredClone(getData());
+  data.bands.band_x_test_touch = {
+    ...data.bands.band_amiya, bandId: 'band_x_test_touch',
+    grants: { team: false, restEndRandomChess: { minTier: 1, maxTier: 4, count: 1 } },
+  };
+  const h = makeMatch({ mode: 'coop', humans: 1, data }).start();
+  const m = h.m, ps = h.ps('p_0');
+  m.handle('p_0', { t: 'g.infoReady' });
+  h.run(() => m.phase === PHASE.BAND_DRAFT);
+  m._applyBand(ps, 'band_x_test_touch');
+  const before = ps.allChess().length;
+  const got = m.applyBandRestRandomChess(ps);
+  assert.equal(got.length, 1);
+  assert.ok(ps.allChess().length >= before + 1);
+  assert.ok(ps.gd.tierOf(got[0].id) >= 1 && ps.gd.tierOf(got[0].id) <= 4, 'tier 1-4 only');
+  assert.ok(!String(got[0].id).startsWith('char_x_'), 'the plugin special unit is not in the random pool');
+  m.dispose();
+});
+
 test('a band with bossIds is offered only in the matching leader room', () => {
   const data = structuredClone(getData());
   const band = data.bands.band_amiya;

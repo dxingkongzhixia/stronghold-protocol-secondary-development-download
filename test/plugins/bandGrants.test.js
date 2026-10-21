@@ -11,6 +11,7 @@ const KALTSIT = {
   },
   eliteGate: { others: 2, at: 'battleStart' },
   restEndBondLayers: { scope: 'self', layers: 3, activeOnly: true, cap: 'maxCount' },
+  restEndRandomChess: { minTier: 1, maxTier: 4, count: 1 },
 };
 
 test('the Kal\'tsit grant normalises with defaults and keeps the three bonds', () => {
@@ -29,6 +30,7 @@ test('the Kal\'tsit grant normalises with defaults and keeps the three bonds', (
   assert.equal(grants.grantUnit.placement, 'hand');
   assert.deepEqual(grants.eliteGate, { others: 2, at: 'battleStart' });
   assert.deepEqual(grants.restEndBondLayers, { scope: 'self', layers: 3, activeOnly: true, cap: 'maxCount' });
+  assert.deepEqual(grants.restEndRandomChess, { minTier: 1, maxTier: 4, count: 1 });
 });
 
 test('a minimal grant gets the safe defaults', () => {
@@ -55,6 +57,9 @@ test('invalid scopes, bonds, skills and token states are refused whole', () => {
     { grantUnit: { charId: 'char_003_kalts', placement: 'board' } },
     { eliteGate: { others: 0 } },
     { eliteGate: { at: 'prep' } },
+    { restEndRandomChess: { minTier: 5, maxTier: 4 } },
+    { restEndRandomChess: { count: 0 } },
+    { restEndRandomChess: { maxTier: 7 } },
     { unknown: true },
   ];
   for (const bad of cases) {

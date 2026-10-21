@@ -7,13 +7,13 @@
       "base": "band_amedic",
       "set": {
         "bandId": "band_x_prts_source_code_touch",
-        "name": "PRTS：源代码",
+        "name": "凯尔希",
         "sortId": 41,
         "modeTypeList": [
           "SINGLE",
           "MULTI"
         ],
-        "totalHp": 10,
+        "totalHp": 28,
         "bossIds": [
           "boss_x_prts_source_code_prts",
           "boss_x_prts_source_code_prts_hidden"
@@ -41,12 +41,17 @@
             "others": 2,
             "at": "battleStart"
           },
-          "restEndBondLayers": {
-            "layers": 3,
-            "activeOnly": true,
-            "cap": "maxCount"
+          "restEndRandomChess": {
+            "minTier": 1,
+            "maxTier": 4,
+            "count": 1
           }
-        }
+        },
+        "effectName": "创伤小组",
+        "desc": "【创伤小组】所有玩家场地上出现一名<凯尔希>；战斗开始时，若场上至少有两名精锐干员，则替换为精锐<凯尔希>。每回合进入休整期随机获得一个干员（1-4本）",
+        "descRaw": "【创伤小组】所有玩家场地上出现一名<凯尔希>；战斗开始时，若场上至少有两名精锐干员，则替换为精锐<凯尔希>。每回合进入休整期随机获得一个干员（1-4本）",
+        "buffs": [],
+        "params": {}
       }
     }
   ]

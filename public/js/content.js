@@ -29,10 +29,12 @@
 //     server has it).
 //   * The room's content set (DESIGN §32.6, P1c): when room.state.content names a content set with gameplay plugins
 //     (`vanilla: false`, its own cs), the page downloads /cs/<cs16>/index.json and every data file it lists — a file the
-//     set did not change at its plain /data/<file>?v=<8 hex> URL (cached for good), a patched one at /cs/<cs16>/… — and
-//     checks them: every file's BYTES hash to its entry (shared/sha256.js, before decoding: `res.text()` would drop a
-//     BOM), the manifest's composition — its data and translation files' hashes, its plugins and their settings — hashes
-//     to the room's cs (shared/plugins/identity.js contentHashOf), and it names no address but those two. Then data.js
+//     set did not change at its plain /data/<file>?v=<8 hex> URL, a patched one at /cs/<cs16>/… — and checks them: every
+//     fetched file's BYTES hash to its entry (shared/sha256.js, before decoding: `res.text()` would drop a BOM), the
+//     manifest's composition — its data and translation files' hashes, its plugins and their settings — hashes
+//     to the room's cs (shared/plugins/identity.js contentHashOf), and it names no address but those two. An unchanged
+//     file the page already warmed in data.js is reused instead of fetched again (loadContentSet `base`); a checked set
+//     is laid again without a request when the same cs comes back. Then data.js
 //     shows those files (setContent: every screen reads the room's data — its operators, its modes), the battle runner
 //     simulates on them (simContent / contentFor) and the page tells the room (room.contentReady { cs }; again whenever
 //     its seat shows it not ready — a reconnect); a check that fails is said once (a toast) and told too ({ ok: false }).
@@ -156,6 +158,13 @@ export function pluginName(p) {
   const names = isObj(p?.names) ? p.names : {};
   for (const code of [...langChain(getLang()), 'zh']) if (typeof names[code] === 'string' && names[code]) return names[code];
   return typeof p?.name === 'string' && p.name ? p.name : String(p?.id ?? '');
+}
+
+/** A catalogue entry's description in the interface language, or '' when it has none. @param {any} p */
+export function pluginDescription(p) {
+  const desc = isObj(p?.description) ? p.description : {};
+  for (const code of [...langChain(getLang()), 'zh']) if (typeof desc[code] === 'string' && desc[code]) return desc[code];
+  return '';
 }
 
 // ---- personal plugins -----------------------------------------------------------------------------------------------
@@ -440,12 +449,17 @@ export async function fetchChecked(url, want, { fetch: doFetch, retryDelays = CO
  * and every data file it lists (each one's bytes to its entry), and the official-bounds snapshot it lists (bounds.official:
  * the table the server validated the set against and its match host installs — the battle runner installs the same one,
  * public/js/battle/runner.js loadBrowserSim; checked by its bytes like a data file; null when the manifest lists none).
+ *
+ * `base` is the page's already-loaded server data (data.js: `getRaw`). An unchanged file (its URL is the plain
+ * `/data/<file>?v=…` one) is taken from it instead of downloaded and hashed again; a changed file and a file the page
+ * does not hold yet are always fetched and checked. The room's own copy wins: this only avoids fetching the same bytes
+ * twice when a room switches a content plugin on in a page that already warmed the vanilla files.
  * @param {string} cs
  * @param {{ fetch?: typeof fetch, retryDelays?: readonly number[], wait?: (ms: number) => Promise<void>, timeoutMs?: number,
- *   onProgress?: (loaded: number, total: number) => void }} [opts]
+ *   onProgress?: (loaded: number, total: number) => void, base?: { getRaw?: (name: string) => any } | ((name: string) => any) | null }} [opts]
  * @returns {Promise<{ cs: string, index: any, values: Map<string, any>, bounds: any }>} (rejects with the reason)
  */
-export async function loadContentSet(cs, { fetch: doFetch = defaultFetch, retryDelays = CONTENT_RETRY_MS, wait = sleep, timeoutMs = CONTENT_TIMEOUT_MS, onProgress = null, consent = false } = {}) {
+export async function loadContentSet(cs, { fetch: doFetch = defaultFetch, retryDelays = CONTENT_RETRY_MS, wait = sleep, timeoutMs = CONTENT_TIMEOUT_MS, onProgress = null, consent = false, base = null } = {}) {
   if (!isContentHash(cs)) throw new Error('no content hash');
   const index = await fetchChecked(`/cs/${csUrlPart(cs)}/index.json`, null, { fetch: doFetch, retryDelays, wait, timeoutMs });
   if (!isObj(index) || index.cs !== cs || index.vanilla !== false || !isObj(index.data)) throw new Error('the manifest is not the room\'s content set');
@@ -468,11 +482,25 @@ export async function loadContentSet(cs, { fetch: doFetch = defaultFetch, retryD
   const total = entries.reduce((n, [, f]) => n + (Number(f.bytes) || 0), 0);
   let loaded = 0;
   onProgress?.(0, total);
+  const baseValue = (name) => {
+    if (!base) return undefined;
+    const v = typeof base === 'function' ? base(name) : base.getRaw?.(name);
+    return v === null || v === undefined ? undefined : v;
+  };
   const values = new Map();
   let next = 0;
   const worker = async () => {
     while (next < entries.length) {
       const [name, f] = entries[next++];
+      // An unchanged file at /data/ is already in the page's data store: reuse it instead of downloading the same
+      // bytes again. A changed file (or one this page has not warmed) still goes through fetchChecked.
+      const cached = f.url.startsWith('/data/') ? baseValue(name) : undefined;
+      if (cached !== undefined) {
+        values.set(name, cached);
+        loaded += Number(f.bytes) || 0;
+        onProgress?.(loaded, total);
+        continue;
+      }
       values.set(name, await fetchChecked(f.url, f, { fetch: doFetch, retryDelays, wait, timeoutMs, onBytes: (n) => { loaded += n; onProgress?.(loaded, total); } }));
     }
   };
@@ -536,6 +564,13 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
   retryDelays = CONTENT_RETRY_MS, wait = sleep } = {}) {
   let req = 0;
   let told = false;
+  /** The last two checked sets of this page, by cs: switching a content plugin off and back does not download it again. */
+  const checked = new Map();
+  const remember = (set) => {
+    checked.delete(set.cs);
+    checked.set(set.cs, set);
+    while (checked.size > 2) checked.delete(checked.keys().next().value);
+  };
   /** room.contentReady on its way (one at a time) and the cs it named */
   let telling = null;
   const roomCs = (s) => (s?.room?.content && s.room.content.vanilla === false && isContentHash(s.room.content.cs) ? s.room.content.cs : null);
@@ -560,12 +595,27 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
     settleWaiting(null);
     if (contentSet.get().cs !== null || contentSet.get().status !== 'idle') contentSet.set({ cs: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null });
   };
+  const apply = (set) => {
+    held = set;
+    const i18n = isObj(set.index.i18n) ? set.index.i18n : {};
+    // the set's own game texts per language (a plugin's operators named in it): checked like the data files
+    const overlay = (lang) => (isObj(i18n[lang]) ? fetchChecked(i18n[lang].url, i18n[lang], { fetch: doFetch, retryDelays, wait }) : Promise.resolve(null));
+    data.setContent({ id: set.cs, values: set.values, overlay, langs: Object.keys(i18n) });
+    const extra = store.get()?.room?.content?.kittedExtra;
+    contentSet.set({ status: 'ready', error: null, kitted: Array.isArray(extra) ? extra.filter((x) => typeof x === 'string').slice(0, 200) : null });
+    settleWaiting(set.cs);
+    if (set.canSim || !store.get()?.room?.seats?.some(s => s?.playerId === store.get()?.me?.playerId)) tell(set.cs, true);
+  };
   const load = (cs, consent = false) => {
     const mine = ++req;
     if (held) { held = null; data.setContent(null); }
     settleWaiting(null);
     contentSet.set({ cs, status: 'loading', loaded: 0, total: 0, error: null, kitted: null });
-    loadContentSet(cs, { consent, fetch: doFetch, retryDelays, wait, onProgress: (loaded, total) => { if (mine === req) contentSet.set({ loaded, total }); } })
+    // A set without scripts is self-contained: its checked values can be laid again when the host switches the same
+    // plugin back on. (Script sets stay on the consent/import path above.)
+    const cached = checked.get(cs);
+    if (cached && !cached.scripts.length) { apply(cached); return; }
+    loadContentSet(cs, { consent, base: data, fetch: doFetch, retryDelays, wait, onProgress: (loaded, total) => { if (mine === req) contentSet.set({ loaded, total }); } })
       .then(async (set) => {
         if (mine !== req) return;
         if (consent && set.scripts.length) {
@@ -581,15 +631,8 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
           }
         }
         if (mine !== req) return;
-        held = set;
-        const i18n = isObj(set.index.i18n) ? set.index.i18n : {};
-        // the set's own game texts per language (a plugin's operators named in it): checked like the data files
-        const overlay = (lang) => (isObj(i18n[lang]) ? fetchChecked(i18n[lang].url, i18n[lang], { fetch: doFetch, retryDelays, wait }) : Promise.resolve(null));
-        data.setContent({ id: cs, values: set.values, overlay, langs: Object.keys(i18n) });
-        const extra = store.get()?.room?.content?.kittedExtra;
-        contentSet.set({ status: 'ready', error: null, kitted: Array.isArray(extra) ? extra.filter((x) => typeof x === 'string').slice(0, 200) : null });
-        settleWaiting(cs);
-        if (set.canSim || !store.get()?.room?.seats?.some(s => s?.playerId === store.get()?.me?.playerId)) tell(cs, true);
+        if (!set.scripts.length) remember(set);
+        apply(set);
       }).catch((err) => {
         if (mine !== req) return;
         console.warn(`[content] the room's content set ${cs.slice(0, 8)} did not load or check: ${err?.message || err}`);
