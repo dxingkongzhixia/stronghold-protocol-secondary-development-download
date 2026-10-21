@@ -808,6 +808,9 @@ function bsStartInferno(b, boss, a, first) {
   a.inferno = true;
   a.wave = 0;
   if (first) b.fx('bgm', { key: 'boss:boss_x_black_snake_bsnake_hard' });
+  // The extracted official reborn/die prefabs use behaviours the plugin renderer rejects; the compiled phase FX
+  // plus these generic phase events are the fallback (the available buff_03 prefab carries the official flavour).
+  b.fx('phase', { x: boss.x, y: boss.y, id: boss.id, kind: first ? 'bsnakeInferno' : 'bsnakeFinal', dur: 1 });
   bsFx(b, 'enemy_bsnake_buff_03_start_b', boss.x, boss.y, { dur: 2 });
   b.addBuff(boss, {
     key: BS_INFERNO, duration: BS_INFERNO_TIME, persist: true, visible: true,
