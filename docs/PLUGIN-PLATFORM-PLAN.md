@@ -508,7 +508,7 @@ gameplayApi: 1
 
 ---
 
-## 6. PRTS 迁移映射
+## 5.1 已开工记录\n\n- 2026-10-21：content 插件资产打包（server/plugins/pack.js）与 PRTS 模型/图标/BGM 迁移完成。\n- 2026-10-21：比赛生命周期 onMatchStart / onRoundEnd / onMatchEnd 与 m.public.pluginView 完成。\n- 2026-10-21：gameplay:<id> 规则处理器、只读 match ctx、ctx.setView、ctx.finish 和 checkEnd 完成；规则运行时进入第一阶段。\n\n## 6. PRTS 迁移映射
 
 | 当前实现 | 迁移目标 |
 |---|---|
