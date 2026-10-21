@@ -756,6 +756,8 @@ const BS_AGGREGATE = 'bsnake:aggregate';
 const BS_BREATH_TIME = 30.5, BS_BREATH_START = 50, BS_BREATH_END = 230;
 const BS_IGNITE_CD = 19, BS_DETONATE_CD = 35, BS_INFERNO_WAVES = 10, BS_INFERNO_INTERVAL = 2;
 const BS_INFERNO_TIME = 28, BS_AGGREGATE_TIME = 12, BS_AGGREGATE_DAMAGE = 1000;
+/** projectile_enemy_bsnake `_speed` (official projectile prefab). */
+const BS_FIREBALL_SPEED = 2.5;
 
 /** Official compiled effects of the local black-snake plugin (assets/fx), namespaced by PluginFxPlayer. */
 const BS_FX = (key) => `plugin:black-snake:${key}`;
@@ -793,14 +795,14 @@ function bsInfernoWave(b, boss, a) {
       .sort((u, v) => v.x - u.x)[0];
     if (!hit) continue;
     const from = { x: b.rect.c1 + 0.5, y: row };
-    const dur = Math.max(0.05, hypot(hit.x - from.x, hit.y - from.y) / 10);
+    const dur = Math.max(0.05, hypot(hit.x - from.x, hit.y - from.y) / BS_FIREBALL_SPEED);
     b.fx('pluginProjectile', {
       x: from.x, y: from.y, tx: hit.x, ty: hit.y, dur,
       skill: BS_FX('enemy_bsnake_reborn_01_trail'),
       hitSkill: BS_FX('enemy_bsnake_reborn_01_trail_hit_01'),
     });
     b.addProjectile({
-      from, target: hit, speed: 10, visual: 'enemy', source: boss,
+      from, target: hit, speed: BS_FIREBALL_SPEED, visual: 'enemy', source: boss,
       hitDead: true, maxAge: 3,
       onHit: ({ target }) => {
         if (!a.inferno || !target || !target.alive) return;
