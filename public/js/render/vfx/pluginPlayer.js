@@ -91,9 +91,25 @@ export class PluginFxPlayer {
     // suppress this event's spark; estimated arrivals cannot claim unrelated ranged, husk or paired damage.
     return src ? !!this.phase(src, 'hit', target) : false;
   }
+  /** A compiled effect carried along a sim projectile (`b.fx('pluginProjectile', …)`). */
+  flight(extra) {
+    if (!extra || typeof extra.skill !== 'string') return false;
+    const x = Number(extra.x), y = Number(extra.y), tx = Number(extra.tx), ty = Number(extra.ty);
+    if (![x, y, tx, ty].every(Number.isFinite)) return false;
+    const dur = Math.max(0.05, Math.min(5, Number(extra.dur) || 0.5));
+    const target = { x: tx, y: ty };
+    const hit = typeof extra.hitSkill === 'string' ? extra.hitSkill : null;
+    this.play(extra.skill, { x, y }, {
+      target, flight: dur, duration: dur, loop: false,
+      done: hit ? () => { this.play(hit, target, { duration: 1 }); } : null,
+    });
+    return true;
+  }
+
   simFx(kind, x, y, extra) {
     this.refresh();
     if (kind === 'phase' && this.catalog.silent.has(extra?.kind)) return true;
+    if (kind === 'pluginProjectile') return this.flight(extra);
     if (kind !== 'plugin') return false;
     // A missing/disabled plugin effect is a silent visual no-op, never a procedural fallback.
     if (typeof extra?.skill === 'string') {

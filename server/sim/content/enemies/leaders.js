@@ -792,12 +792,18 @@ function bsInfernoWave(b, boss, a) {
     const hit = b.allies().filter((u) => u && u.alive && !u.hidden && !u.s.flags.untargetable && Math.round(u.y) === row)
       .sort((u, v) => v.x - u.x)[0];
     if (!hit) continue;
+    const from = { x: b.rect.c1 + 0.5, y: row };
+    const dur = Math.max(0.05, hypot(hit.x - from.x, hit.y - from.y) / 10);
+    b.fx('pluginProjectile', {
+      x: from.x, y: from.y, tx: hit.x, ty: hit.y, dur,
+      skill: BS_FX('enemy_bsnake_reborn_01_trail'),
+      hitSkill: BS_FX('enemy_bsnake_reborn_01_trail_hit_01'),
+    });
     b.addProjectile({
-      from: { x: b.rect.c1 + 0.5, y: row }, target: hit, speed: 10, visual: 'enemy', source: boss,
+      from, target: hit, speed: 10, visual: 'enemy', source: boss,
       hitDead: true, maxAge: 3,
       onHit: ({ target }) => {
         if (!a.inferno || !target || !target.alive) return;
-        bsFx(b, 'enemy_bsnake_skill_03_trail_hit', target.x, target.y, { dur: 1.2 });
         b.dealDamage(boss, target, { amount: boss.s.atk, type: 'arts', canDodge: false, tags: ['enemyAbility', 'bsnakeInferno'] });
       },
     });
