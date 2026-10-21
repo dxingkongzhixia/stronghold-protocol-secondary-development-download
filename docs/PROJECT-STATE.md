@@ -45,9 +45,9 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`；**已上线进程的 build `ef0c9d7486c6`**（2026-10-21 10:55 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `8a8994f8ec2f` → `d9f6e307b41e` → `9f31f769a4a8`；备份 `/root/sp-backup-mobile-20261021-105448.tgz`；社区更新日志 **0.4.47**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
-| git store | **笔记本** = 单树检出（分支 `master`，HEAD **`9d831c040`**）；**台式机** = `_merge-scratch`（分支 `ours`，最后记录 `13760cf56`），开发树 `D:\DOTK\Stronghold-Protocol` 与 store 只差两个未跟踪测试文件 |
-| 远程同步 | **已全部推送（2026-10-21）**：`github/master` == `gitee/master` == HEAD（`9d831c040`）；GitHub 直连被重置时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=… push --no-thin`）。主线 `origin/master` = `d905c146`（0.3.1） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `275f096dcd2e`**（2026-10-21 11:10 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `ef0c9d7486c6` → `8a8994f8ec2f` → `d9f6e307b41e`；备份 `/root/sp-backup-zoom-20261021-110922.tgz`；社区更新日志 **0.4.48**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| git store | **笔记本** = 单树检出（分支 `master`，HEAD **`c294705f2`**）；**台式机** = `_merge-scratch`（分支 `ours`，最后记录 `13760cf56`），开发树 `D:\DOTK\Stronghold-Protocol` 与 store 只差两个未跟踪测试文件 |
+| 远程同步 | **已全部推送（2026-10-21）**：`github/master` == `gitee/master` == HEAD（`c294705f2`）；GitHub 直连被重置时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=… push --no-thin`）。主线 `origin/master` = `d905c146`（0.3.1） |
 | 全量测试 | **相关 655 项通过 / 0 失败**（2026-10-20，插件商城、管理后台、文档、i18n、静态资源与界面测试；`test/admin.test.js` / `test/market.test.js` 全过）。全量套件上次 8200 项 / 8163 通过 / 1 个性能基线抖动 / 36 跳过；该性能用例单跑 35/35 通过 |
 | 其它闸门 | **2026-10-20 实测（笔记本单树）**：`lint` 0 error（187 warning）✓；`typecheck` ✓；`i18n check en --strict` **1732/1732**（100%，0 missing / 0 errors）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 60/60 ✓。`check:imports` 仍有 3 条既有 `sim-node` 边界记录（`server/sim/nodeData.js`，非本次改动）；`check-delivery --live` 未跑（需外网 / 中继） |
 | 本机环境 | Node **v24.19.0**（v26 也可，线上是 v26.10.0）；**GitHub 直连 `:443` 会被重置** —— 推送时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=http://127.0.0.1:31181 push --no-thin …`）；官方数据 CDN 同理需要代理 |
@@ -58,7 +58,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `ef0c9d7486c6`**（2026-10-21 10:55 部署后重启，由 `/healthz` 实测；上一版 `8a8994f8ec2f` → `d9f6e307b41e` → `9f31f769a4a8`；备份 `/root/sp-backup-mobile-20261021-105448.tgz`；通告记为社区 **0.4.47**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `275f096dcd2e`**（2026-10-21 11:10 部署后重启，由 `/healthz` 实测；上一版 `ef0c9d7486c6` → `8a8994f8ec2f` → `d9f6e307b41e`；备份 `/root/sp-backup-zoom-20261021-110922.tgz`；通告记为社区 **0.4.48**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -100,6 +100,7 @@
 
 | 时间 | 代码 | build | 更新日志 | 要点 |
 |---|---|---|---|---|
+| **2026-10-21 11:10** | `c294705f2` | **`275f096dcd2e`** | **`0.4.48`** | 手机横屏棋盘相机居中放大 20%，棋盘和干员更大；备份 `/root/sp-backup-zoom-20261021-110922.tgz` |
 | **2026-10-21 10:55** | `9d831c040` | **`ef0c9d7486c6`** | **`0.4.47`** | 手机端短屏按可视高度缩放、修复 44px 触控点击区、移动端清晰度提升、全屏不再重复锁定已横屏方向；备份 `/root/sp-backup-mobile-20261021-105448.tgz` |
 | **2026-10-21 09:37** | `87d238556` | **`8a8994f8ec2f`** | **`0.4.46`** | 修复战斗 HUD 全屏层拦截画布点击，战斗中点干员可正常打开详情；备份 `/root/sp-backup-game-css-20261021-093733.tgz` |
 | **2026-10-20 17:39** | `9b84a1314` | **`d9f6e307b41e`** | **`0.4.43`** | 插件 zip 发布到资源中继，商城和本机插件显示「高速下载/服务器」；服务端搜索分页、浅色商城、RBAC、trusted 容器检查工具；备份 `/root/sp-backup-code-20261020-173702.tgz` |
