@@ -57,6 +57,22 @@ test('pack writes plugin.lock.json: the files\' hashes and each model\'s clip da
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('a content plugin packs its own enemy Spine beside its gameplay data', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-pack-content-'));
+  try {
+    const p = writePlugin(path.join(dir, 'data-assets'), cosmetic({
+      id: 'data-assets', class: 'content', scope: ['room'], permissions: ['assets.add', 'data.add'], data: ['data/empty.json'],
+      assets: { enemies: { enemy_x_owned: { spine: { skel: 's/t.skel' } } } },
+    }), {
+      's/t.skel': skel(), 's/t.atlas': atlas(['t.png']), 's/t.png': png(),
+      'data/empty.json': { records: 1, entries: [] },
+    });
+    const r = buildPluginLock(p);
+    assert.deepEqual(r.problems, []);
+    assert.ok(r.lock.spine['s/t.skel'], 'the content plugin gets clip data like a cosmetic one');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('pack refuses an atlas page the model does not list, a skeleton the client cannot read, and a folder without plugin.json', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-pack-'));
   try {

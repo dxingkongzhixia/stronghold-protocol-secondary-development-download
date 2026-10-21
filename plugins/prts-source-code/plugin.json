@@ -14,7 +14,8 @@
   ],
   "permissions": [
     "data.add",
-    "data.patch"
+    "data.patch",
+    "assets.add"
   ],
   "data": [
     "data/tokens.json",
@@ -26,5 +27,6 @@
   ],
   "operators": [
     "data/operator.json"
-  ]
+  ],
+  "assets": "assets/overlay.json"
 }

@@ -485,8 +485,9 @@ This is a **merge-critical engine rule**, not a PRTS-only preference:
   icons, BGM and the existing image containers. FX needs the plugin `fx` container added by the platform work
   (`docs/PLUGIN-PLATFORM-PLAN.md` §4.7/§6.1); until that exists, do not add new global FX entries for a plugin.
 
-Status: **required for every new plugin**. The existing PRTS plugin is the first migration target and is
-transitional until its Spine, icons, BGM and FX are under `plugins/prts-source-code/assets/`.
+Status: **required for every new plugin**. The PRTS plugin's Spine, icons, M3 model and BGM are now under
+`plugins/prts-source-code/assets/`; its FX is the remaining transitional piece until the platform's plugin FX
+container is finished.
 
 It points at — and does not duplicate — [`docs/MATCHMAKING.md`](MATCHMAKING.md) §22–§41 (the decision record) and
 [`docs/ASSETS.md`](ASSETS.md) (the asset detail). Its appendix is the merge checklist of fork-only files.

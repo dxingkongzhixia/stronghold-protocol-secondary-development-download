@@ -48,8 +48,8 @@ B–E 全部完成后，应满足：
 - [x] B0-5：`plugins/prts-source-code` 骨架已建立；凯尔希从 `data/backups.json` 的官方记录生成，M3 token 生成 namespaced 记录；`plugin check --strict` 通过；
 - [x] B1：PRTS / 拟态 enemy、普通/隐藏 boss、PRTS 专属波次（普通/隐藏/单双人）、modes bossWeights 与 rounds.bossTemplates 已加入；实际组合与 `buildBossWave` 已验证，普通/隐藏波次都生成 PRTS + 拟态；凯尔希改用真实 `char_003_kalts` kit；
 - [x] C1：`band_x_prts_source_code_touch` 记录和 `grantUnit` / `eliteGate` / `restEndBondLayers` 已写入；M3 20 秒击倒复活、最多 2 次已实现并验证（第 3 次永久退场）；
-- [x] 素材：从本机官方客户端提取 PRTS `enemy_1564_mpprts` / 拟态 `enemy_1565_mpprme` Spine（`public/assets/local/spine/enemy/`），已写 `data/assets.json` + `data/local-assets.committed.json` + `tools/assets/local-enemy-spines.json`；
-- [x] 客户端特效：已提取 PRTS / 拟态 20 个官方 FX prefab 及其贴图/网格（`public/assets/local/fx/`），Boss BGM 已指向官方 PRTS 战场音乐；
+- [x] 素材：PRTS / 拟态 Spine、敌人图标、M3 模型和 Boss BGM 已迁入 `plugins/prts-source-code/assets/`，主程序只保留 vanilla 素材；
+- [x] 客户端特效：已提取 PRTS / 拟态 20 个官方 FX prefab 及其贴图/网格；FX 迁移到插件 `assets/fx/` 仍待平台 FX 容器完成；Boss BGM 已通过插件资产覆盖层引用官方 PRTS 战场音乐；
 - [x] 敌人图标：PRTS / 拟态 158×158 官方头像已补齐（`public/assets/enemy/icon/`），Boss 结算头像会通过 `handbookId` 回退；
 - [x] 官方 FX 接线：`b.fx('official', { officialKey })` 由 `FxWiring.simFx` 播放提取的 prefab；协议已接 start / buff / die / line / skill / projectile / deploy-lock / warning；
 - [x] 隐藏 PRTS：`tint` 字段 + `UnitView` 原始记录染色，普通 PRTS 保持原色；

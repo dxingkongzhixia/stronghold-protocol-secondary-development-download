@@ -5,8 +5,60 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "5081b90275c74d5881a31aaf36d80c9ec16adcc51c60d6edee6fa50393888890",
-      "bytes": 1497
+      "sha256": "70797fd5663e07f4ec6a627ffbda13d91da664f6bfb502c2734a5664a8b0b98c",
+      "bytes": 1551
+    },
+    "assets/images/enemy_x_prts_source_code_mimic.png": {
+      "sha256": "9e02b827f9a1c5d9a0c426212cdceed889eca05870f9bb4c2d0375e053d3569e",
+      "bytes": 43692
+    },
+    "assets/images/enemy_x_prts_source_code_prts.png": {
+      "sha256": "abe0954f8c7ede2e006472cec47af7e860e5ebf10988fed21308833cf4da60d5",
+      "bytes": 42401
+    },
+    "assets/images/token_x_prts_source_code_mon3tr.png": {
+      "sha256": "85af808fb575529addfe2a80f43fa0a162cb60537e7c86fd1cb47fb474a04652",
+      "bytes": 41496
+    },
+    "assets/overlay.json": {
+      "sha256": "404a492d6b65b49ba6ee24c877f8dd36164edf319477aed1c2c18de76eb82365",
+      "bytes": 1991
+    },
+    "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.atlas": {
+      "sha256": "188f5eb9b9b7e7e87a3690e35395a8378cf3deb5d437642ad70cfa2830406cd4",
+      "bytes": 7088
+    },
+    "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.png": {
+      "sha256": "be962c76fc709da83c40f6dd211f46c4cfe123557c03230b2867c1a69a30b0ea",
+      "bytes": 373810
+    },
+    "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel": {
+      "sha256": "4184676548d99f285b6e211c74e8fb9a262607cb0b4cea8fe68e339a74d11fe4",
+      "bytes": 216485
+    },
+    "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.atlas": {
+      "sha256": "8b73927a6c05875be98837dff5c4fdf2604ad45c8096bf2278a4d9516010e1e2",
+      "bytes": 5311
+    },
+    "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.png": {
+      "sha256": "e41af94985f7de10a0554b0c738c7776e2dc5605f22e1881129c6f9c8afdf558",
+      "bytes": 89162
+    },
+    "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.skel": {
+      "sha256": "dfc6bd5f24bfecbaf204512c8f8c6d3cceb6ac5360a545fc3e7ed77f92fe6fcb",
+      "bytes": 226079
+    },
+    "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.atlas": {
+      "sha256": "dad62edab38832f7189e7127d2ee7c61949d0d66b423576f76b27d56940560b1",
+      "bytes": 2560
+    },
+    "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.png": {
+      "sha256": "28b94d2e01261f1552d534e8455bc90398a1424b027ac3c563b85b3a699de24d",
+      "bytes": 71319
+    },
+    "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.skel": {
+      "sha256": "05741d06435144ac2537788b0ced779c654d22ef2a984fc7a7af911d5c359bbb",
+      "bytes": 46958
     },
     "content/bands.json": {
       "sha256": "c526bf0f27cf8e376ddf7ada72d8afd0afe80dc312594703a67ee58475067a59",
@@ -17,8 +69,8 @@
       "bytes": 5093
     },
     "content/enemies.json": {
-      "sha256": "8bf58e89574c75e0caf3734e124a121b49dcc7efa94c3200930376c16a7a23eb",
-      "bytes": 4165
+      "sha256": "44ef2a1c4be2945c20a0cb5cc0065646228fc9ac8777dbc66e42dc507c86024f",
+      "bytes": 4209
     },
     "content/modes.json": {
       "sha256": "9803b0754c89fc8e9c717ef6e5d82f4ab878ed098fe4bca85f72eacee6a5b16d",
@@ -33,13 +85,198 @@
       "bytes": 17080
     },
     "data/tokens.json": {
-      "sha256": "ce9b8f5dfb9522c14c7eb71cb24bdcb55b238c283cd967479a0f31b44906da4a",
-      "bytes": 34220
+      "sha256": "e7935791a9fec47ca24eeae7b1a89ab8fdd0f1a1b30c4af02cb72dbc208e750c",
+      "bytes": 34235
     },
     "plugin.json": {
-      "sha256": "d218497b853a76351769ce0c8e35729f5f50914e9f7ce9e4297daa5be316904a",
-      "bytes": 535
+      "sha256": "f6123ff406e74578448fdcad2a9824d5d0e00ace90c2a4c3e4af86cfcb47d2ce",
+      "bytes": 588
     }
   },
-  "spine": {}
+  "spine": {
+    "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel": {
+      "sha256": "4184676548d99f285b6e211c74e8fb9a262607cb0b4cea8fe68e339a74d11fe4",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Idle",
+        "attack": {
+          "begin": null,
+          "loop": "Idle",
+          "end": null,
+          "via": "idle"
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Idle",
+          "end": null,
+          "via": "attack",
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": {
+          "begin": "Dizzy_Begin",
+          "loop": "Dizzy_Loop",
+          "end": "Dizzy_End"
+        }
+      },
+      "animations": {
+        "Default": 0,
+        "Die": 2.567,
+        "Dizzy_Begin": 2.667,
+        "Dizzy_Die": 1,
+        "Dizzy_End": 1.867,
+        "Dizzy_Loop": 6.667,
+        "Idle": 9.333
+      },
+      "events": [],
+      "hits": {},
+      "bounds": null
+    },
+    "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.skel": {
+      "sha256": "dfc6bd5f24bfecbaf204512c8f8c6d3cceb6ac5360a545fc3e7ed77f92fe6fcb",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Idle",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": {
+          "begin": null,
+          "loop": "Move",
+          "end": null
+        },
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": null,
+            "loop": "Skill_2",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "3": {
+            "begin": null,
+            "loop": "Skill_4_Loop",
+            "end": "Skill_4_End",
+            "index": 3,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.667,
+        "B_Attack": 1.5,
+        "B_Idle": 1.2,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 5.333,
+        "Landing": 1.667,
+        "Move": 1.733,
+        "Revive_End": 1.733,
+        "Revive_Loop": 9.033,
+        "Skill_1": 4.833,
+        "Skill_2": 6.833,
+        "Skill_4_End": 1.667,
+        "Skill_4_Loop": 4,
+        "Skill_4_TakeOff_Begin": 1.9,
+        "Skill_4_TakeOff_End": 0.267,
+        "Skill_4_TakeOff_Loop": 0.367,
+        "TakeOff_Begin": 1.167,
+        "TakeOff_End": 0.267,
+        "TakeOff_Loop": 1.2
+      },
+      "events": [
+        "OnAttack"
+      ],
+      "hits": {
+        "Attack": [
+          1
+        ],
+        "B_Attack": [
+          0.767
+        ],
+        "Skill_1": [
+          2.633
+        ],
+        "Skill_2": [
+          4.567
+        ]
+      },
+      "bounds": null
+    },
+    "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.skel": {
+      "sha256": "05741d06435144ac2537788b0ced779c654d22ef2a984fc7a7af911d5c359bbb",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null
+      },
+      "animations": {
+        "Attack": 0.933,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 1.333,
+        "Skill": 1,
+        "Skill_2": 1.267,
+        "Start": 1.667
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.233
+        ],
+        "Skill": [
+          0.367
+        ],
+        "Skill_2": [
+          0.667
+        ]
+      },
+      "bounds": {
+        "x": -518.63,
+        "y": 13.1,
+        "width": 744.033,
+        "height": 561.75
+      }
+    }
+  }
 }

@@ -556,6 +556,8 @@ gameplayApi: 1
 - 不启用插件时，`data/assets.json` 与 vanilla 一致。
 - `plugin check --strict` 和 `plugin pack` 包含资产并校验通过。
 
+当前进度：Spine、图标、M3 模型、BGM 已迁入插件资产包；FX 仍留在本地 FX 清单，等待插件 FX 容器迁移。
+
 ---
 
 ## 7. 文件级影响（预估）

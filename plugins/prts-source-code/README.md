@@ -17,9 +17,9 @@
 - PRTS 专属普通 / 隐藏 / 单双人波次
 - `band_x_prts_source_code_touch` 策略卡和 Boss 过滤
 - 清除协议、拟态重构、M3 击倒复活
-- 从本机官方客户端提取 PRTS / 拟态 Spine、20 个官方特效 prefab、特效贴图与网格，并写入本地素材清单
-- PRTS / 拟态敌人图标已补齐，Boss 结算头像可用
-- Boss 音乐使用官方 PRTS 战场 BGM
+- PRTS / 拟态 Spine、敌人图标、M3 模型和 Boss BGM 已放进插件自己的 `assets/`，由插件资产覆盖层加载
+- 已从本机官方客户端提取 20 个官方 FX prefab、贴图与网格；FX 仍暂留在本地 FX 清单，等插件 FX 容器迁移
+- Boss 结算头像可用
 - 普通/隐藏 PRTS 的协议事件已接官方 FX：start / buff / die / line / skill / projectile / deploy-lock
 - 隐藏 PRTS 使用独立紫色染色
 
