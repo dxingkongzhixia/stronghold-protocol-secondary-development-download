@@ -252,6 +252,19 @@
 .bossbar__fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #b8340d, var(--orange-hi)); box-shadow: 0 0 .1rem rgba(255, 110, 40, .8); transition: width 300ms var(--ease-out); }
 .bossbar__txt { position: absolute; inset: 0; display: grid; place-items: center; font-size: .14rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000; }
 
+/* Plugin HUD slots (ui/pluginHud.js): bounded, declarative, never plugin DOM or URLs. */
+.plugin-hud { position: absolute; z-index: 6; display: flex; flex-direction: column; gap: .06rem; max-width: 3.6rem; pointer-events: none; }
+.plugin-hud--top { top: .52rem; left: 50%; transform: translateX(-50%); align-items: center; }
+.plugin-hud--boss { top: .52rem; left: 50%; transform: translateX(-50%); align-items: center; }
+.plugin-hud--overlay { right: .18rem; bottom: 1.15rem; align-items: flex-end; }
+.plugin-hud__block { display: inline-flex; align-items: center; gap: .08rem; max-width: 3.6rem; padding: .03rem .08rem; border: 1px solid color-mix(in srgb, var(--orange-hi) 55%, transparent); background: rgba(0, 0, 0, .62); color: var(--text-hi); font-size: calc(.14 * var(--t)); line-height: 1.25; }
+.plugin-hud__label { color: var(--orange-hi); font-weight: 700; }
+.plugin-hud__bar { display: inline-block; width: .9rem; height: .1rem; background: rgba(255, 255, 255, .18); overflow: hidden; }
+.plugin-hud__bar i { display: block; height: 100%; background: var(--orange-hi); }
+.plugin-hud__block--list { align-items: flex-start; flex-direction: column; }
+.plugin-hud__block--list ul { margin: 0; padding-left: .22rem; }
+.plugin-hud__block--list li { white-space: nowrap; }
+
 /* LP tower */
 .lp { display: inline-flex; align-items: center; gap: .05rem; color: var(--mint-400); white-space: nowrap; }
 .lp__icon { width: 1.1em; height: 1.1em; object-fit: contain; flex: none; }
