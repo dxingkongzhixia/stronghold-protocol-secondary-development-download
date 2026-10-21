@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "daf68af678d534456ea6f57d0c800ac6eef83b6d3f850b06795bfa568a72a312",
-      "bytes": 1858
+      "sha256": "86713083bd689ab419c395cd0c3896d27c7428ed2b83de841c37d8318120b767",
+      "bytes": 1908
     },
     "assets/fx/index.json": {
       "sha256": "09f5e4b76f77cc3b328d9a91a85a7eb8b0bc403d988b598e4c107a59b8117bef",
@@ -449,8 +449,8 @@
       "bytes": 1489
     },
     "assets/images/band_x_prts_source_code_touch.png": {
-      "sha256": "398f32e2ff78d9e6fcee8cb9b49979aca2457f47f8d7ce5e15c589ff317c17c0",
-      "bytes": 56617
+      "sha256": "c7d1b1e2d746f3fc1117f2ba79527d715a696f1cb44eba9d9a4265e015caad42",
+      "bytes": 176908
     },
     "assets/images/enemy_x_prts_source_code_mimic.png": {
       "sha256": "9e02b827f9a1c5d9a0c426212cdceed889eca05870f9bb4c2d0375e053d3569e",
@@ -505,8 +505,8 @@
       "bytes": 46958
     },
     "content/bands.json": {
-      "sha256": "ba370b1434715be99a7043f1e05a4611adf17515f9aa048fbdb54d2bb9cea314",
-      "bytes": 1824
+      "sha256": "3e9a8b8b312b5ce43ac33d0938e36707ca7cf30edd5ace78544487f04958af22",
+      "bytes": 1702
     },
     "content/bosses.json": {
       "sha256": "d0f79d404a08c468d79a71a43f70639a0804d1de2a2f384c602e4d5e59507f5a",
@@ -529,12 +529,12 @@
       "bytes": 17080
     },
     "data/tokens.json": {
-      "sha256": "8c4627aca377698110d7f23791fa68cd3267780d21f2b61a1a5c1ec0323281da",
-      "bytes": 34268
+      "sha256": "7dd7533dc5cd5a10825a0b251e19282940e1bca8c8dd5c3f529dd65e41534c31",
+      "bytes": 34300
     },
     "plugin.json": {
-      "sha256": "9ba1208e9a1ecdd3c7942214b7da5843209b5b434988e80b8fc8c9fed8a4d373",
-      "bytes": 3248
+      "sha256": "3a0c43e55347c6a13b01d24fa877531ead41dc26e97d6c58a0fd230d505ff7d6",
+      "bytes": 3273
     }
   },
   "spine": {
