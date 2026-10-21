@@ -66,6 +66,10 @@ test('an amedicSlot grant starts on Touch\'s stage slot instead of in the hand',
   ps.recompute();
   assert.equal(ps.board.get(key)?.meta?.special, 'band:band_x_test_touch', 'the stage slot is exempt from eviction');
   assert.equal([...ps.hand, ...ps.temp].some((p) => p?.meta?.special === 'band:band_x_test_touch'), false);
+  assert.deepEqual(m.prepMapChars(ps), [], 'the reserve medic is not drawn under the grant');
+  ps.board.delete(key);
+  ps.recompute();
+  assert.deepEqual(m.prepMapChars(ps), [], 'moving the grant does not bring the reserve medic back');
   m.dispose();
 });
 
