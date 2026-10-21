@@ -26,7 +26,7 @@ import { AccountForm, AccountWho } from '../ui/account.js';
 import { net, identity, randomGuestName } from '../net.js';
 import { store, useStore, shallowEqual } from '../store.js';
 import { data, useData } from '../data.js';
-import { FullscreenButton, PwaInstallButton, detectFeatures } from '../ui/device.js';
+import { FullscreenButton, detectFeatures } from '../ui/device.js';
 import { LangToggle, useLang } from '../ui/lang.js';
 import { t, N_ } from '../../../shared/i18n.js';
 import { scriptOf } from '../../../shared/i18nPacks.js';
@@ -356,7 +356,6 @@ export function TitleScreen() {
 
     <footer class="title-foot">
       <${ResumeMatchButton} />
-      <${PwaInstallButton} />
       ${installed ? html`<button type="button" class="title-plugins" data-testid="title-plugins" onClick=${openPlugins}>
         <${Icon} name="info" />${t('本服务器安装了 {n} 个插件', { n: installed })}</button>` : null}
       <span>${t('非官方同人复刻 · 游戏素材版权归 上海鹰角网络 / Yostar 所有')}</span>

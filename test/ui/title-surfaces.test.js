@@ -142,6 +142,7 @@ test('标题画面左下角：添加到桌面 / 反馈群 / 服务器说明在�
   const css = src('public/css/screens/title.css');
   assert.ok(title.includes('class="title-rail"'), 'the install button and the feedback group share one rail');
   assert.ok(title.includes('class="title-install"') && title.includes('<${InstallButton}'), '添加到桌面 is mounted in the rail');
+  assert.ok(!title.includes('<${PwaInstallButton}'), 'the footer does not mount a second 添加到桌面 button');
   assert.ok(title.includes('<${FeedbackGroup}'), '反馈群 is mounted in the rail');
   // the rail is a normal-flow flex column, so its rows stack instead of one riding over another
   const rail = (css.match(/\.title-rail\s*\{([^}]*)\}/) || [])[1] || '';
