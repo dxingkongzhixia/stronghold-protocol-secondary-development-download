@@ -6,7 +6,7 @@ import { aggroCmp, areaSelectable } from '../../targeting.js';
 import { periodicDamage } from '../../damage.js';
 import {
   nthOf, T, hurt, alliesInTiles, targetsNear, allTargets, areaAllies, areaAlliesInTiles, auraAllies, targetAndArea,
-  byPriority, setForm, auraBuff, watchDeaths, unbalancedNow,
+  byPriority, setForm, auraBuff, watchDeaths, unbalancedNow, spawnChildren,
 } from './helpers.js';
 import {
   unblockable, maxTargets, onHitStatus, splashAttack, pathKeysAhead, noAirTargets, resist, nthAttackStatus, lowHpBuff,
@@ -741,6 +741,177 @@ function kitElk(ab) {
     b.fx('telegraph', { x: e.blockedBy.x, y: e.blockedBy.y, r: 0.5, dur, kind: 'elkCharge', id: e.id });
   }, { cond: (b, e) => !P.ch && !!(e.blockedBy && e.blockedBy.alive) })];
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// “不死的黑蛇” (enemy_1515_bsnake) — the Episode 08 leader's data-driven-ish kit. The numbers are the official
+// level-0 values (PRTS / Terra Wiki); the mode's enemyScale still applies to the stats. The two helpers below are
+// generic enough for another burning/phase boss, but this first version keeps the constants local to the kit.
+
+const BS_BREATH = 'bsnake:breath';
+const BS_DOWN = 'bsnake:down';
+const BS_ENRAGED = 'bsnake:enraged';
+const BS_INFERNO = 'bsnake:inferno';
+const BS_RETURN = 'bsnake:return';
+const BS_AGGREGATE = 'bsnake:aggregate';
+const BS_BREATH_TIME = 30.5, BS_BREATH_START = 50, BS_BREATH_END = 230;
+const BS_IGNITE_CD = 19, BS_DETONATE_CD = 35, BS_INFERNO_WAVES = 10, BS_INFERNO_INTERVAL = 2;
+const BS_INFERNO_TIME = 28, BS_AGGREGATE_TIME = 12, BS_AGGREGATE_DAMAGE = 1000;
+
+/** Apply/refresh 烈焚灼息 on an ally; one instance per ally, ramping 50 -> 230 true damage over 30 s. */
+function bsBreath(b, boss, u) {
+  if (!u || !u.alive || u.side !== 'ally') return;
+  b.addBuff(u, {
+    key: BS_BREATH, source: boss, duration: BS_BREATH_TIME, refresh: 'replace', visible: true, interval: 1,
+    onTick: ({ battle, unit, buff }) => {
+      const elapsed = Math.max(0, BS_BREATH_TIME - (Number.isFinite(buff.timeLeft) ? buff.timeLeft : BS_BREATH_TIME));
+      const dps = BS_BREATH_START + (BS_BREATH_END - BS_BREATH_START) * Math.min(1, elapsed / 30);
+      battle.dealDamage(buff.source, unit, { amount: dps, type: 'true', canDodge: false, tags: ['enemyAbility', 'bsnakeBreath'] });
+    },
+  });
+}
+
+/** The two direct fire-phase helpers are kept here rather than in the core: the boss owns their lifecycle. */
+function bsInfernoWave(b, boss, a) {
+  if (!a.inferno || !boss.alive) return;
+  const rows = [...new Set(b.allies().filter((u) => u && u.alive && !u.hidden && !u.s.flags.untargetable)
+    .map((u) => Math.round(u.y)))];
+  for (const row of rows) {
+    const hit = b.allies().filter((u) => u && u.alive && !u.hidden && !u.s.flags.untargetable && Math.round(u.y) === row)
+      .sort((u, v) => u.x - v.x)[0];
+    if (!hit) continue;
+    b.fx('explode', { x: hit.x, y: hit.y, r: 0.55, kind: 'bsnakeFire' });
+    b.dealDamage(boss, hit, { amount: boss.s.atk, type: 'arts', canDodge: false, tags: ['enemyAbility', 'bsnakeInferno'] });
+  }
+}
+
+function bsStartInferno(b, boss, a, first) {
+  a.inferno = true;
+  a.wave = 0;
+  b.addBuff(boss, {
+    key: BS_INFERNO, duration: BS_INFERNO_TIME, persist: true, visible: true,
+    flags: { invulnerable: true, untargetable: true, unblockable: true, noMove: true, stun: true },
+    onExpire: ({ battle }) => {
+      a.inferno = false;
+      a.waveTimer?.cancel?.();
+      battle.removeBuff(boss, BS_INFERNO);
+      boss.profile.noAttack = a.noAtk;
+      if (!boss.alive) return;
+      if (first) {
+        battle.addBuff(boss, { key: BS_RETURN, duration: 15, visible: true, flags: { invulnerable: true } });
+        battle.fx('phase', { x: boss.x, y: boss.y, id: boss.id, kind: 'bsnakeReturn' });
+      } else {
+        battle.kill(boss, null);
+      }
+    },
+  });
+  boss.profile.noAttack = true;
+  a.waveTimer = b.every(BS_INFERNO_INTERVAL, () => {
+    if (!a.inferno) return;
+    bsInfernoWave(b, boss, a);
+    if (++a.wave >= BS_INFERNO_WAVES) a.waveTimer?.cancel?.();
+  }, { owner: boss });
+}
+
+function kitBlackSnake() {
+  return [{
+    spawn(b, e, a) {
+      a.deaths = 0;
+      a.noAtk = e.profile.noAttack;
+      a.inferno = false;
+      a.phase = 1;
+      b.every(BS_IGNITE_CD, () => {
+        if (a.busy || a.inferno || !e.alive) return;
+        const targets = b.allies().filter((u) => u && u.alive && !u.hidden && !u.findBuff?.(BS_BREATH)).slice(0, 2);
+        for (const u of targets) {
+          bsBreath(b, e, u);
+          b.fx('phase', { x: u.x, y: u.y, id: u.id, kind: 'bsnakeIgnite' });
+        }
+      }, { owner: e });
+      b.every(BS_DETONATE_CD, () => {
+        if (a.busy || a.inferno || !e.alive) return;
+        for (const u of b.allies().filter((v) => v && v.alive && v.findBuff?.(BS_BREATH))) {
+          b.dealDamage(e, u, { amount: e.s.atk, type: 'arts', isSkill: true, tags: ['enemyAbility', 'bsnakeDetonate'] });
+          b.removeBuff(u, BS_BREATH);
+          // 引爆 consumes the mark on the target and re-applies it to the target plus its four neighbours.
+          bsBreath(b, e, u);
+          for (const v of areaAlliesInTiles(b, e, u.tileR, u.tileC, 'plus', 1)) if (v !== u) bsBreath(b, e, v);
+          b.fx('explode', { x: u.x, y: u.y, r: 1, kind: 'bsnakeDetonate' });
+        }
+      }, { owner: e });
+      b.every(75, () => {
+        if (a.busy || a.phase < 2 || a.inferno || !e.alive) return;
+        spawnChildren(b, e, 'enemy_x_black_snake_aggregate', 1, { pos: [e.y, e.x + 1], tag: 'bsnakeAdd' });
+      }, { owner: e });
+    },
+    attack(c, b, e) {
+      for (const u of c.targets || []) bsBreath(b, e, u);
+    },
+    hitIn(c) {
+      // A unit under 烈焚灼息 deals only half damage to the Black Snake.
+      if (c.source?.findBuff?.(BS_BREATH)) c.dmg.mul *= 0.5;
+    },
+    killed(c, b, e, a) {
+      if (a.inferno || a.busy) return true;
+      if (a.deaths >= 2) return false;
+      a.deaths++;
+      a.busy = true;
+      a.inferno = false;
+      e.hp = Math.max(1, e.s.maxHp * 0.01);
+      e.profile.noAttack = true;
+      b.addBuff(e, {
+        key: BS_DOWN, duration: 5, persist: true, visible: true,
+        flags: { invulnerable: true, untargetable: true, unblockable: true, noMove: true, stun: true },
+        onExpire: ({ battle }) => {
+          a.busy = false;
+          if (!e.alive) return;
+          if (a.deaths === 1) {
+            a.phase = 2;
+            battle.addBuff(e, { key: BS_ENRAGED, persist: true, visible: true, mods: { hpPct: 0.5, atkPct: 0.5 } });
+            e.hp = e.s.maxHp;
+            bsStartInferno(battle, e, a, true);
+          } else {
+            bsStartInferno(battle, e, a, false);
+          }
+        },
+      });
+      b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'bsnakeDown', dur: 5 });
+      return true;
+    },
+  }];
+}
+
+function kitEnergyAggregate() {
+  const explode = (b, e, a) => {
+    if (a.done) return;
+    a.done = true;
+    b.removeBuff(e, BS_AGGREGATE);
+    b.fx('explode', { x: e.x, y: e.y, r: 1.5, kind: 'bsnakeAggregate' });
+    for (const u of areaAlliesInTiles(b, e, e.y, e.x, 'plus', 1)) {
+      b.dealDamage(e, u, { amount: BS_AGGREGATE_DAMAGE, type: 'arts', isSkill: true, tags: ['enemyAbility', 'bsnakeAggregate'] });
+      bsBreath(b, e, u);
+    }
+  };
+  return [{
+    spawn(b, e, a) {
+      a.done = false;
+      b.addBuff(e, {
+        key: BS_AGGREGATE, duration: BS_AGGREGATE_TIME, persist: true, visible: true,
+        onExpire: ({ battle }) => explode(battle, e, a),
+      });
+    },
+    death(c, b, e, a) { explode(b, e, a); },
+  }];
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Kits for plugin-defined enemies. These ids are deliberately outside `data/enemies.json`, so they must not
+// appear in the core KITS/STATS_ONLY coverage map; content.js looks them up before the base `effectRef` kit.
+// The first pair is the fork's original Episode 08 boss and its summoned add.
+
+export const PLUGIN_KITS = Object.freeze({
+  enemy_x_black_snake_bsnake: kitBlackSnake,           // “不死的黑蛇” · 烈焚灼息 / 引爆 / 狂暴 / 不息恶火
+  enemy_x_black_snake_aggregate: kitEnergyAggregate,   // 能量聚合体 · 定时或死亡爆炸
+});
 
 // ---------------------------------------------------------------------------------------------------------------
 // this family's part of KITS (content/enemies.js spreads the parts in this order)
