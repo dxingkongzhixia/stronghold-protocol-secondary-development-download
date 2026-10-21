@@ -87,6 +87,18 @@ test('black-snake: the energy aggregate self-destructs after 25 s with direction
   assert.equal(h.b.errors.length, 0);
 });
 
+test('black-snake: a civilian killed by an enemy costs one team LP', { skip }, () => {
+  const h = battle(content());
+  h.step();
+  const boss = h.enemies()[0];
+  const civilian = h.spawn('enemy_x_black_snake_upeopl', { pos: [10, 7], routeIndex: 0 });
+  let loss = 0;
+  h.b.on('lpLoss', (c) => { loss += Number(c?.amount) || 0; });
+  h.b.kill(civilian, boss);
+  assert.equal(loss, 1, 'an enemy kill emits one LP loss');
+  assert.equal(h.b.errors.length, 0);
+});
+
 test('black-snake: 抵抗 shortens Burning Breath, and the inferno fires real lane projectiles', { skip }, () => {
   const h = battle(content());
   h.step();

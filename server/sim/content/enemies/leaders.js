@@ -986,7 +986,12 @@ export const PLUGIN_KITS = Object.freeze({
   enemy_x_black_snake_uoffcr: () => [],
   enemy_x_black_snake_uterer: () => [],
   enemy_x_black_snake_uamord: () => [],
-  enemy_x_black_snake_upeopl: () => [],
+  // H8-4 civilian: killed by an enemy costs one team LP; a player kill is just a kill.
+  enemy_x_black_snake_upeopl: () => [{
+    death(c, b, e) {
+      if (c?.killer?.side === 'enemy') b.emit('lpLoss', { amount: 1, enemy: e, source: c.killer });
+    },
+  }],
 });
 
 // ---------------------------------------------------------------------------------------------------------------
