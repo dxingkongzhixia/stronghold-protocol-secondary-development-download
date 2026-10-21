@@ -54,7 +54,7 @@ import { previewContext } from './preview.js';
 export const HOOKS = Object.freeze([
   'onMatchStart', 'onRoundStart', 'onIncome', 'onPrepStart', 'onPrepEnd', 'onGain', 'onSold', 'onRefresh', 'onPrice', 'onBuy',
   'onSpend', 'onMerge', 'onLevelUp', 'onBattleStart', 'onBattleResult', 'onRoundEnd', 'onMatchEnd', 'onChoicePick', 'onEquip', 'onArt',
-  'onDestroy', 'onLayers', 'onActiveBonds', 'onPhase', 'checkEnd',
+  'onDestroy', 'onLayers', 'onActiveBonds', 'onPhase', 'onCustomPhaseStart', 'onCustomPhaseEnd', 'checkEnd',
 ]);
 /** Non-hook members a handler object may carry. */
 const HANDLER_EXTRAS = new Set(['run', 'garrisonHooks']);
@@ -838,6 +838,9 @@ function makeGameplayCtx(m, handler, hook, ev) {
     pluginId,
     get round() { return m.round; },
     get phase() { return m.phase; },
+    get customPhase() { return m.customPhase ? { name: m.customPhase.name, phase: m.customPhase.phase, data: m.customPhase.data, until: m.customPhase.until } : null; },
+    startPhase: (name, options = {}) => m.enterCustomPhase(pluginId, name, options),
+    endPhase: (name = null, reason = 'end') => m.endCustomPhase(pluginId, name, reason),
     modeId: m.modeId,
     difficulty: m.difficulty,
     isSolo: m.isSolo,

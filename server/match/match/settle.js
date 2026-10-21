@@ -176,6 +176,9 @@ export class MatchSettle {
     this._stopClientCombat();
     this.cancel(this._phaseTimer);
     this.cancel(this._turnTimer);
+    this.cancel(this._customPhaseTimer);
+    this._customPhaseTimer = null;
+    this.customPhase = null;
     for (const h of this._timers) { try { this.sched.clearTimeout(h); } catch { /* ignore */ } }
     this._timers.clear();
     this.phase = PHASE.RESULT;

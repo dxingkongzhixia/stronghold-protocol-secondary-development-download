@@ -319,6 +319,9 @@ export class Match {
     this.dispatcher = new EffectDispatcher(this, this.registry);
     /** Script plugins' JSON presentation state (m.public.pluginView); set only through ctx.setView. */
     this.pluginViews = new Map();
+    /** A rules plugin's bounded custom phase (MatchPhases.enterCustomPhase); null in the core flow. */
+    this.customPhase = null;
+    this._customPhaseTimer = null;
     this.BattleClass = typeof opts.BattleClass === 'function' ? opts.BattleClass : Battle;
     this.battleContent = opts.battleContent || 'full';
     this.timerScale = Number.isFinite(opts.timerScale) && opts.timerScale >= 0 ? opts.timerScale : 1;

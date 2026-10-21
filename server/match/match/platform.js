@@ -12,6 +12,8 @@ import { msg } from '../../../shared/i18n.js';
 import { ruleOption } from '../../../shared/plugins/rules.js';
 
 const GAME_TYPES = new Set(Object.keys(C2S).filter((t) => Object.hasOwn(C2S, t) && (t.startsWith('g.') || t.startsWith('b.'))));
+/** Intents the platform may still accept while a plugin-owned custom phase has the floor. */
+const CUSTOM_PHASE_INTENTS = new Set(['g.watch', 'g.leave', 'g.emote', 'b.rehearsalResult']);
 
 export class MatchPlatform {
   start() {
@@ -69,6 +71,7 @@ export class MatchPlatform {
       try { this.flush(); } catch (e) { this.reportError('flush', e); }
       return res && res.error ? res : OK;
     }
+    if (this.customPhase && (!msg || !CUSTOM_PHASE_INTENTS.has(msg.t))) return fail(ERR.WRONG_PHASE, 'plugin phase');
     // a spectator seat only watches (the platform routes nothing else of it)
     if (ps.spectator && (!msg || msg.t !== 'g.watch')) return fail(ERR.SPECTATOR);
     if (this.disposed || this.ended) {

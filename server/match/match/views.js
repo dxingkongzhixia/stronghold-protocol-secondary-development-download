@@ -109,6 +109,10 @@ export class MatchViews {
     const v = {
       t: 'm.public',
       phase: this.phase,
+      ...(this.customPhase ? { customPhase: {
+        pluginId: this.customPhase.pluginId, name: this.customPhase.name, data: this.customPhase.data,
+        startedAt: this.customPhase.startedAt, until: this.customPhase.until,
+      } } : {}),
       round: this.round,
       lastRound: this.gd.lastRound,
       deadline: this.deadline,

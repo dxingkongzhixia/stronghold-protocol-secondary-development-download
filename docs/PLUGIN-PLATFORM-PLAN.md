@@ -510,6 +510,7 @@ gameplayApi: 1
 
 ## 5.1 已开工记录\n\n- 2026-10-21：content 插件资产打包（server/plugins/pack.js）与 PRTS 模型/图标/BGM 迁移完成。\n- 2026-10-21：比赛生命周期 onMatchStart / onRoundEnd / onMatchEnd 与 m.public.pluginView 完成。\n- 2026-10-21：gameplay:<id> 规则处理器、只读 match ctx、ctx.setView、ctx.finish 和 checkEnd 完成；规则运行时进入第一阶段。\n- 2026-10-21：新增 onPhase 阶段变化钩子（from/to/round），规则层可观察固定阶段机。
 - 2026-10-21：通用声明式 HUD（text/bar/countdown/list）与战斗快照 .snap.pluginView 已接入客户端 PluginHud。
+- 2026-10-21: custom phase machine: ctx.startPhase / ctx.endPhase, a suspended core deadline, m.public.customPhase, and onCustomPhaseStart / onCustomPhaseEnd.
 - 2026-10-21：PRTS 协议 HUD 通过 protocol.ui 发布到 Battle pluginView；核心协议条只作为无插件视图时的回退。\n\n## 6. PRTS 迁移映射
 
 | 当前实现 | 迁移目标 |

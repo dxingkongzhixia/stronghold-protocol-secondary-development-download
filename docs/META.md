@@ -372,6 +372,8 @@ Every handler method is `(ctx, ev)`; `ev` is shared by all handlers of one dispa
 | `onIncome` | ROUND_START, before the income is credited | `{ round, income, pending }` — write `ev.income` / `ev.pending` (e.g. 老鲤 withholds R1–R2 income until R3) |
 | onMatchStart | after the match enters INFO_CHECK (once per player) | { round: 0 } |
 | onPhase | any observed phase change (markPublic sees the new phase) | { from, to, round } |
+| `onCustomPhaseStart` | a gameplay handler entered its bounded custom phase | `{ name, data, phase }` |
+| `onCustomPhaseEnd` | that custom phase ended (early or by its timer) | `{ name, data, phase, reason }` |
 | `onRoundStart` | ROUND_START, after income / shop roll | `{ round }` |
 | onRoundEnd | SETTLE, after LP/eliminations, before the next round | { round, unite? } |
 | onMatchEnd | match over, before m.result is built (every non-left player) | { outcome } |
@@ -446,6 +448,8 @@ first manual refresh that copy witnesses (player feedback after 0.1.0: "获得�
 bought after selling one this round is a new copy and fires on its own first refresh [ASSUMED]).
 
 For .js content modules the context also carries pluginId and setView(value) (JSON data, at most 16 KiB): the value is published as m.public.pluginView[pluginId] at the next view flush. It is presentation state only; it does not change the battle, and preview dispatches cannot write it.
+
+A `gameplay:<id>` handler additionally has `ctx.startPhase(name, { seconds?, data? })`, `ctx.endPhase(name?, reason?)` and `ctx.customPhase`. A custom phase is server-authoritative and bounded: it keeps the current core phase suspended, clears its deadline, closes every match intent except `g.watch` / `g.leave` / `g.emote`, publishes `m.public.customPhase`, and resumes the suspended deadline with its remaining time when it ends. `seconds` is required and ends it automatically; the owner may end it earlier with `ctx.endPhase`. `onCustomPhaseStart` / `onCustomPhaseEnd` receive `{ name, data, phase }` (an end also carries `reason`). This is an interstitial phase, not a replacement for the core round/phase machine.
 
 Writes (validated, never throw on bad input; funds and available stock stay non-negative; authorized operator overdraw records an internal deficit):
 

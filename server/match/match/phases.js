@@ -216,6 +216,53 @@ export class MatchPhases {
    * `charId`, so a content plugin can ship it without new engine code. The unit is marked special/unsellable and is
    * returned by the next prep after a knockout (the latter is consumed by the prep recovery hook).
    */
+  /**
+   * A bounded, server-authoritative custom phase owned by one gameplay plugin. Core actions are closed while it
+   * runs; the core phase timer is suspended and re-armed with its remaining time when the custom phase ends. A
+   * plugin may end it through ctx.endPhase or let the declared duration do it. The core phase enum is unchanged:
+   * m.public.customPhase names the extension, and plugin HUD/views present it.
+   */
+  enterCustomPhase(pluginId, name, opts = {}) {
+    if (this.disposed || this.ended || this.customPhase) return false;
+    if (typeof pluginId !== 'string' || !pluginId || typeof name !== 'string' || !/^[a-z][a-z0-9_-]{0,31}$/.test(name)) return false;
+    if (this.phase === PHASE.LOBBY || this.phase === PHASE.RESULT) return false;
+    let data = {};
+    if (opts.data !== undefined) {
+      try { data = JSON.parse(JSON.stringify(opts.data)); } catch { return false; }
+      if (JSON.stringify(data).length > 8192) return false;
+    }
+    const milliseconds = Number.isFinite(opts.seconds) && opts.seconds > 0 ? this.scaled(opts.seconds * 1000) : 0;
+    if (!milliseconds) return false;
+    const resume = this._phaseFn && this._phaseEndsAt
+      ? { phase: this.phase, fn: this._phaseFn, endsAt: this._phaseEndsAt, silent: this._phaseSilent }
+      : null;
+    const cp = { pluginId, name, phase: this.phase, data, resume, startedAt: this.sched.now(), until: milliseconds ? this.sched.now() + milliseconds : 0 };
+    this.customPhase = cp;
+    this.setDeadline(0);
+    this.markPublic();
+    this.dispatchGameplay('onCustomPhaseStart', { name, data, phase: this.phase });
+    if (this.customPhase === cp && milliseconds) {
+      this._customPhaseTimer = this.later(milliseconds, () => this.endCustomPhase(pluginId, name, 'timeout'));
+    }
+    return true;
+  }
+
+  /** End the custom phase `pluginId` owns (optionally only the named one); resumes the suspended core deadline. */
+  endCustomPhase(pluginId, name = null, reason = 'end') {
+    const cp = this.customPhase;
+    if (!cp || (pluginId && cp.pluginId !== pluginId) || (name && cp.name !== name)) return false;
+    this.cancel(this._customPhaseTimer);
+    this._customPhaseTimer = null;
+    this.customPhase = null;
+    if (cp.resume && cp.resume.phase === this.phase) {
+      const left = Math.max(0, cp.resume.endsAt - this.sched.now());
+      if (left > 0) this.setDeadline(left / 1000, cp.resume.fn, { silent: cp.resume.silent });
+    }
+    this.markPublic();
+    this.dispatchGameplay('onCustomPhaseEnd', { name: cp.name, data: cp.data, phase: cp.phase, reason });
+    return true;
+  }
+
   /** The stage slot of the reserve medic Touch replaces at battle start. */
   amedicSlot() {
     return this.stage?.mapChars?.find((m) => m?.key === 'char_605_cmedic' && Array.isArray(m.pos) && m.pos[0] >= 9

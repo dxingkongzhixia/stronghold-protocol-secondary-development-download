@@ -49,6 +49,9 @@ export class MatchInfra {
   setDeadline(seconds, fn, { silent = false } = {}) {
     this.cancel(this._phaseTimer);
     this._phaseTimer = null;
+    this._phaseFn = null;
+    this._phaseEndsAt = 0;
+    this._phaseSilent = false;
     if (this.test === true) { this._testHeld = null; this._testArmed = null; }
     if (this.test === true && this.testTimers === false && seconds > 0 && typeof fn === 'function') {
       this.deadline = 0;
@@ -64,7 +67,14 @@ export class MatchInfra {
     }
     const ms = this.scaled(seconds * 1000);
     this.deadline = silent ? 0 : this.sched.now() + ms;
-    this._phaseTimer = this.later(ms, () => { this._phaseTimer = null; if (this.test === true) { this._testArmed = null; this._testHeld = null; } fn(); });
+    this._phaseFn = fn;
+    this._phaseEndsAt = this.sched.now() + ms;
+    this._phaseSilent = !!silent;
+    this._phaseTimer = this.later(ms, () => {
+      this._phaseTimer = null; this._phaseFn = null; this._phaseEndsAt = 0;
+      if (this.test === true) { this._testArmed = null; this._testHeld = null; }
+      fn();
+    });
     if (this.test === true) this._testArmed = { seconds, fn, silent: !!silent };
   }
 
