@@ -22,39 +22,39 @@
         "templates": {
           "mode_single_funny": {
             "round": 9,
-            "template": "act1autochess_h07_01_s"
+            "template": "wave_x_prts_source_code_boss_s"
           },
           "mode_single_normal": {
             "round": 14,
-            "template": "act1autochess_h07_01_s"
+            "template": "wave_x_prts_source_code_boss_s"
           },
           "mode_single_hard": {
             "round": 14,
-            "template": "act1autochess_h07_01_s"
+            "template": "wave_x_prts_source_code_boss_s"
           },
           "mode_single_abyss": {
             "round": 14,
-            "template": "act1autochess_h07_01_s"
+            "template": "wave_x_prts_source_code_boss_s"
           },
           "mode_multi_funny": {
             "round": 14,
-            "template": "act1autochess_h07_01"
+            "template": "wave_x_prts_source_code_boss"
           },
           "mode_multi_normal": {
             "round": 14,
-            "template": "act1autochess_h07_01"
+            "template": "wave_x_prts_source_code_boss"
           },
           "mode_multi_hard": {
             "round": 14,
-            "template": "act1autochess_h07_01"
+            "template": "wave_x_prts_source_code_boss"
           },
           "mode_multi_abyss": {
             "round": 14,
-            "template": "act1autochess_h07_01"
+            "template": "wave_x_prts_source_code_boss"
           }
         },
         "escortsByTemplate": {
-          "act1autochess_h07_01_s": [
+          "wave_x_prts_source_code_boss_s": [
             {
               "key": "enemy_1427_lrnazg",
               "slot": "E",
@@ -71,7 +71,7 @@
               "count": 9
             }
           ],
-          "act1autochess_h07_01": [
+          "wave_x_prts_source_code_boss": [
             {
               "key": "enemy_1427_lrnazg",
               "slot": "E",
@@ -113,39 +113,39 @@
         "templates": {
           "mode_single_funny": {
             "round": 9,
-            "template": "act1autochess_h07_01_s"
+            "template": "wave_x_prts_source_code_hidden_s"
           },
           "mode_single_normal": {
             "round": 14,
-            "template": "act1autochess_h07_01_s"
+            "template": "wave_x_prts_source_code_hidden_s"
           },
           "mode_single_hard": {
             "round": 14,
-            "template": "act1autochess_h07_01_s"
+            "template": "wave_x_prts_source_code_hidden_s"
           },
           "mode_single_abyss": {
             "round": 14,
-            "template": "act1autochess_h07_01_s"
+            "template": "wave_x_prts_source_code_hidden_s"
           },
           "mode_multi_funny": {
             "round": 14,
-            "template": "act1autochess_h07_01"
+            "template": "wave_x_prts_source_code_hidden"
           },
           "mode_multi_normal": {
             "round": 14,
-            "template": "act1autochess_h07_01"
+            "template": "wave_x_prts_source_code_hidden"
           },
           "mode_multi_hard": {
             "round": 14,
-            "template": "act1autochess_h07_01"
+            "template": "wave_x_prts_source_code_hidden"
           },
           "mode_multi_abyss": {
             "round": 14,
-            "template": "act1autochess_h07_01"
+            "template": "wave_x_prts_source_code_hidden"
           }
         },
         "escortsByTemplate": {
-          "act1autochess_h07_01_s": [
+          "wave_x_prts_source_code_hidden_s": [
             {
               "key": "enemy_1427_lrnazg",
               "slot": "E",
@@ -162,7 +162,7 @@
               "count": 9
             }
           ],
-          "act1autochess_h07_01": [
+          "wave_x_prts_source_code_hidden": [
             {
               "key": "enemy_1427_lrnazg",
               "slot": "E",

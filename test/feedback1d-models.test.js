@@ -91,7 +91,7 @@ describe('D3: the official slug models are an optional overlay of the web alias'
   });
 
   test('the committed metadata: both ELEMENT slugs, file names of their extract.py group, roles resolved', () => {
-    assert.deepEqual(Object.keys(COMMITTED).sort(), SLUGS);
+    assert.deepEqual(Object.keys(COMMITTED).filter((id) => SLUGS.includes(id)).sort(), SLUGS);
     for (const id of SLUGS) {
       const m = COMMITTED[id];
       assert.equal(m.skel, `${id}.skel`);
@@ -109,9 +109,9 @@ describe('D3: the official slug models are an optional overlay of the web alias'
     const walk = (n) => { if (typeof n === 'string') { if (n.includes('/assets/local/')) urls.push(n); } else if (n && typeof n === 'object') Object.values(n).forEach(walk); };
     walk(MANIFEST);
     assert.deepEqual(urls, [], 'setup / doctor / the manifest tests count every /assets/ URL as required');
-    for (const [id, e] of Object.entries(MANIFEST.enemies)) {
-      if (!e.spineLocal) continue;
-      assert.ok(SLUGS.includes(id), id);
+    for (const id of SLUGS) {
+      const e = MANIFEST.enemies[id];
+      assert.ok(e?.spineLocal, id);
       assert.deepEqual(e.spineLocal, { group: `spine/enemy/${id}`, ...COMMITTED[id] }, `${id}: the committed metadata`);
       assert.ok(validSpine(spineEntry(MANIFEST, id)), `${id}: a web model without the local client`);
       assert.equal(MANIFEST.enemies[id].spineAliasOf, 'enemy_1007_slime');
@@ -193,14 +193,17 @@ describe('D3 root cause: only the two slugs borrow a different enemy\'s skeleton
   });
 
   test('data/assets.json: every other spineAliasOf stays inside its own variant family', () => {
+    // The content plugin's local-only bosses also need a web fallback: PRTS / mimic have their own
+    // local-client models, so they borrow a web skeleton only until the extraction is installed.
+    const LOCAL_ONLY = ['enemy_1564_mpprts', 'enemy_1565_mpprme'];
     const borrowed = [];
     for (const [id, e] of Object.entries(MANIFEST.enemies)) {
       if (!e.spineAliasOf) continue;
       const base = /^(enemy_\d+_[a-z0-9]+?)_\d+$/i.exec(id);   // enemy_2001_duckmi_2 → enemy_2001_duckmi
-      if (!SLUGS.includes(id) && (!base || base[1] !== e.spineAliasOf)) borrowed.push(`${id} → ${e.spineAliasOf}`);
+      if (!SLUGS.includes(id) && !LOCAL_ONLY.includes(id) && (!base || base[1] !== e.spineAliasOf)) borrowed.push(`${id} → ${e.spineAliasOf}`);
     }
     assert.deepEqual(borrowed, [],
-      'the six _2 aliases draw the base enemy their own prefab uses; only the two slugs borrow a different enemy');
+      'the six _2 aliases draw the base enemy their own prefab uses; only the two slugs and the local-only PRTS pair borrow a different enemy');
   });
 
   test('every asset source stays a GitHub dump (no third-party mirror for two models)', () => {

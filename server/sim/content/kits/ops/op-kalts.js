@@ -76,7 +76,11 @@ const BIND_KEY = 'kalts:binding';
 const TAG_RATTLE = 'kalts:rattle';
 
 const bbOf = (chess, id) => skillRec(chess, id)?.bb ?? {};
-const isMon3trOf = (t, unit) => !!t && t.kind === 'token' && t.defId === MON3TR && t.ownerUnit === unit;
+// The official token, or a content plugin's namespaced Mon3tr token whose owners name this Kal'tsit
+// (`owners` is the token table's `charId@phase/level/skill/module` list). The latter keeps the
+// content plugin's own token stats/revive fields while sharing this kit.
+const isMon3trOf = (t, unit) => !!t && t.kind === 'token' && t.ownerUnit === unit
+  && (t.defId === MON3TR || (unit.def?.charId && (t.def?.owners ?? t.def?.raw?.owners ?? []).some((o) => String(o).startsWith(`${unit.def.charId}@`))));
 const mon3trsOf = (battle, unit) => battle.allyUnits.filter((t) => isMon3trOf(t, unit));
 const skillOn = (unit, id) => !!(unit.skill && unit.skill.active && unit.skill.id === id);
 /** Keep buff `key` with `mods` on `u` while `want`; replace it when the mods changed. */
@@ -156,7 +160,13 @@ function mon3trKit(owner, { t0, b1, b2, b3 }) {
       }
       battle.on('death', (c) => {
         if (c.unit !== m || battle.finished) return;
-        if (c.reason === 'killed') rattle(battle, m, blast);   // 被击倒后（不包括撤退）
+        if (c.reason === 'killed') {
+          // `reviveLimit` is a content-plugin token field (the PRTS Mon3tr: two downs). The official
+          // token has no field and keeps its unlimited 25 s return.
+          m.mem.downs = (m.mem.downs ?? 0) + 1;
+          if (m.mem.downs > num(m.def?.reviveLimit ?? m.def?.raw?.reviveLimit, Infinity)) return;
+          rattle(battle, m, blast);   // 被击倒后（不包括撤退）
+        }
         // the piece stays (退场时返还1个可部署的Mon3tr): back on its tile once ready, while she stands
         m.removed = false;
         m.mem.readyAt = battle.time + Math.max(0, num(m.base.respawnTime));
@@ -208,9 +218,12 @@ export default {
       talents: [
         { install(battle, unit) { // Mon3tr: her pieces run Mon3tr's kit; withdrawn with her, readied by her deployment
           for (const t of battle.allyUnits) {
-            if (!isMon3trOf(t, unit) || t.alive || t.deployed) continue;
+            if (!isMon3trOf(t, unit) || t.mem?.kaltsKit) continue;
+            // A hand piece is usually still undeployed here, but a token already on the board still
+            // needs her summon kit (the content-plugin Mon3tr is a placed piece, not a skill summon).
             if (t.kit) battle.offOwner(t);
             battle._setupUnit(t, mon3trKit(unit, { t0, b1, b2, b3 }));
+            t.mem.kaltsKit = true;
           }
           battle.on('death', (c) => {
             if (c.unit !== unit) return;

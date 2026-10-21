@@ -7,6 +7,7 @@
       "base": "enemy_9013_acstmk",
       "set": {
         "name": "PRTS，“源代码”",
+        "spine": "enemy_1564_mpprts",
         "stats": {
           "maxHp": 50000,
           "atk": 1000,
@@ -24,6 +25,7 @@
       "base": "enemy_9013_acstmk",
       "set": {
         "name": "PRTS，“源代码”（隐藏）",
+        "spine": "enemy_1564_mpprts",
         "stats": {
           "maxHp": 50000,
           "atk": 1000,
@@ -102,6 +104,7 @@
       "base": "enemy_9013_acstmk",
       "set": {
         "name": "拟态机械",
+        "spine": "enemy_1565_mpprme",
         "stats": {
           "maxHp": 25000,
           "atk": 600,

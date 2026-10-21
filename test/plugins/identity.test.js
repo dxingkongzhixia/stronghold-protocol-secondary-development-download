@@ -200,14 +200,19 @@ describe('the wire: welcome, room.state, the match, /healthz, /cs/, BattleSpec, 
     constructor(o) { super(o); RecordingStub.last = o; }
   }
   let srv;
+  let pluginsDir;
   const clients = [];
   before(async () => {
     const { startServer } = await import('../../server/index.js');
-    srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, MatchClass: RecordingStub });
+    // This suite asserts the vanilla wire: point the server at an empty plugin directory so a
+    // developer's own installed plugins (or this fork's PRTS plugin) do not change the counts.
+    pluginsDir = tmpdir('plugins');
+    srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, MatchClass: RecordingStub, pluginsDir });
   });
   after(async () => {
     await Promise.all(clients.map((c) => c.terminate().catch(() => {})));
     await srv.close();
+    fs.rmSync(pluginsDir, { recursive: true, force: true });
   });
 
   test('welcome.content, room.state.content (always the vanilla set) and the match\'s opts.cs', async () => {

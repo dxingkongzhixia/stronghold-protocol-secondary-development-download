@@ -238,6 +238,9 @@
             "descRaw": "Mon3tr在被击倒后（不包括撤退）使周围8格内所有敌人<$ba.stun>晕眩</>3秒并对其造成1200点真实伤害"
           }
         }
+      ],
+      "tokens": [
+        "token_x_prts_source_code_mon3tr"
       ]
     },
     "elite": {
@@ -462,6 +465,9 @@
             "descRaw": "Mon3tr在被击倒后（不包括撤退）使周围8格内所有敌人<$ba.stun>晕眩</>3秒并对其造成1200点真实伤害"
           }
         }
+      ],
+      "tokens": [
+        "token_x_prts_source_code_mon3tr"
       ]
     }
   },
@@ -566,7 +572,7 @@
     }
   ],
   "kit": {
-    "ref": "char_1052_kalts2"
+    "ref": "char_003_kalts"
   },
   "art": {
     "ref": "char_003_kalts"
