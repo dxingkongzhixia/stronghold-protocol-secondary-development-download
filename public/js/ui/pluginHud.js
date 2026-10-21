@@ -16,10 +16,13 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
  * @param {'top'|'boss'|'overlay'} slot
  * @returns {{ pluginId: string, type: string, label: string|null, text: string|null, value: number|null, max: number|null, items: string[] }[]}
  */
-export function pluginHudBlocks(pub, slot = 'overlay') {
-  if (!PLUGIN_HUD_SLOTS.includes(slot) || !pub || typeof pub !== 'object') return [];
+export function pluginHudBlocks(pub, slot = 'overlay', hud = null) {
+  if (!PLUGIN_HUD_SLOTS.includes(slot)) return [];
+  // `pub.pluginView` is match state; `hud.pluginView` is the live battle snapshot and wins for the
+  // same plugin (the battle view is newer while a field runs).
+  const views = { ...(pub && typeof pub === 'object' ? pub.pluginView || {} : {}), ...(hud && typeof hud === 'object' ? hud.pluginView || {} : {}) };
   const out = [];
-  for (const [pluginId, view] of Object.entries(pub.pluginView || {})) {
+  for (const [pluginId, view] of Object.entries(views)) {
     if (!view || typeof view !== 'object' || Array.isArray(view)) continue;
     const blocks = view.hud && view.hud[slot];
     if (!Array.isArray(blocks)) continue;
@@ -68,8 +71,8 @@ function Block({ b }) {
 }
 
 /** Draw one bounded plugin HUD slot; null when no plugin published anything for it. */
-export function PluginHud({ pub, slot = 'overlay' }) {
-  const blocks = pluginHudBlocks(pub, slot);
+export function PluginHud({ pub, hud = null, slot = 'overlay' }) {
+  const blocks = pluginHudBlocks(pub, slot, hud);
   if (!blocks.length) return null;
   return html`<div class=${`plugin-hud plugin-hud--${slot}`} data-testid=${`plugin-hud-${slot}`} role="status">
     ${blocks.map((b, i) => html`<${Block} key=${`${b.pluginId}:${i}`} b=${b} />`)}

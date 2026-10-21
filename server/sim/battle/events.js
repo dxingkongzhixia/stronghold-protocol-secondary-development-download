@@ -65,6 +65,17 @@ export class BattleEvents {
    * ammo / wolves / neg / energy / layers / charges / stand / standCut are display only: no sim state reads them, and the
    * nine-field unit tuples are unchanged.
    */
+  /** Store a script plugin's read-only battle HUD state (published as b.snap.pluginView). */
+  setPluginView(pluginId, value) {
+    if (!this._pluginViews) this._pluginViews = new Map();
+    if (typeof pluginId !== 'string' || !pluginId || value === undefined) return false;
+    let text;
+    try { text = JSON.stringify(value); } catch { return false; }
+    if (typeof text !== 'string' || text.length > 16 * 1024) return false;
+    this._pluginViews.set(pluginId, JSON.parse(text));
+    return true;
+  }
+
   snapshot() {
     const snap = {
       fieldId: this.fieldId,
@@ -77,6 +88,7 @@ export class BattleEvents {
       // `killed` above counts every counted knock-out (runtime splits / summons too) and may exceed `total`.
       resolved: this.resolved,
     };
+    if (this._pluginViews?.size) snap.pluginView = Object.fromEntries(this._pluginViews);
     if (this.players.length > 1) {
       snap.dps = {};
       for (const p of this.players) snap.dps[p.playerId] = Math.floor(p.dp);

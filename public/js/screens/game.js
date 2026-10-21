@@ -1720,8 +1720,8 @@ function MatchScreen() {
         live=${liveLpNow} spectator=${spectator}
         spectators=${specFacts.list} myId=${myId} isHost=${specFacts.isHost} onRemoveSpectator=${removeSpectator} room=${modRoom} />
 
-      <${PluginHud} pub=${pub} slot="overlay" />
-      <${PluginHud} pub=${pub} slot="boss" />
+      <${PluginHud} pub=${pub} hud=${hud} slot="overlay" />
+      <${PluginHud} pub=${pub} hud=${hud} slot="boss" />
 
       <div class="gm__bonds">
         <${BondStrip} bonds=${stripBonds} layersDisabled=${layersDisabled} openId=${bondPop && bondPop.ownerId === strip.ownerId ? bondPop.bondId : null}

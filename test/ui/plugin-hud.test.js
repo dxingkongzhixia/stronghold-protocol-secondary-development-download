@@ -18,4 +18,5 @@ test('plugin HUD accepts only the bounded declarative blocks', () => {
   assert.deepEqual(pluginHudBlocks(pub, 'boss').map((b) => b.text), ['BOSS']);
   assert.deepEqual(pluginHudBlocks(pub, 'top'), []);
   assert.deepEqual(pluginHudBlocks(null, 'overlay'), []);
+  assert.deepEqual(pluginHudBlocks(pub, 'overlay', { pluginView: { demo: { hud: { overlay: [{ type: 'text', text: 'live' }] } } } }).map((b) => b.text), ['live']);
 });

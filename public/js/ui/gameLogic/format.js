@@ -48,6 +48,7 @@ export function snapHud(snap) {
   }
   const out = { killed, resolved: n(snap.resolved) ?? killed, total: n(snap.total), dp: n(snap.dp), boss };
   if (protocol) out.protocol = protocol;
+  if (isObj(snap.pluginView)) out.pluginView = snap.pluginView;
   return out;
 }
 
