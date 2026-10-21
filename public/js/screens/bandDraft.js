@@ -52,11 +52,13 @@ export function BandOffNote({ names = [] }) {
  * Bands selectable in a mode (modeTypeList contains the mode's type), sorted by sortId.
  * @param {any[]} bands
  * @param {string|null} modeType 'SINGLE'|'MULTI'
+ * @param {string|null} [bossId] the room's selected leader (a band may be tied to it)
  */
-export function allowedBands(bands, modeType) {
+export function allowedBands(bands, modeType, bossId = null) {
   const sid = (b) => (Number.isFinite(b.sortId) ? b.sortId : 99);
   return (Array.isArray(bands) ? bands : [])
     .filter((b) => b && (!modeType || !Array.isArray(b.modeTypeList) || b.modeTypeList.includes(modeType)))
+    .filter((b) => !bossId || !Array.isArray(b.bossIds) || !b.bossIds.length || b.bossIds.includes(bossId))
     .sort((a, b) => sid(a) - sid(b) || (a.bandId < b.bandId ? -1 : a.bandId > b.bandId ? 1 : 0));
 }
 
@@ -183,7 +185,7 @@ export function BandDraftScreen() {
   const mode = gd.config?.modes?.[pub?.modeId];
   const offBonds = modeOffBonds(mode); // the bonds this mode never activates (标准: 10 of 23)
   const solo = roomSolo || mode?.type === 'SINGLE' || String(pub?.modeId || '').includes('single');
-  const bands = useMemo(() => allowedBands(gd.list('bands'), mode?.type || (solo ? 'SINGLE' : 'MULTI')), [gd.ready, mode?.type, solo, data.locale()]);
+  const bands = useMemo(() => allowedBands(gd.list('bands'), mode?.type || (solo ? 'SINGLE' : 'MULTI'), pub?.bossId || null), [gd.ready, mode?.type, solo, pub?.bossId, data.locale()]);
   const players = sortedPlayers(pub);
   const draft = normalizeDraft(pub?.draft, players);
   const myPick = draft.picks.get(myId) || priv?.bandId || null;

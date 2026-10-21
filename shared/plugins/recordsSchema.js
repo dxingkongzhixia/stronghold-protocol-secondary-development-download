@@ -29,7 +29,7 @@ export const RECORD_SCHEMA = {
         nationId: { anyOf: [str, { type: 'null' }] }, powers: ids, dmgType: str, attackKind: str, projectile: str, canHitFly: { type: 'boolean' }, targetPriority: str,
       } },
     { type: 'object', required: ['file', 'id'], additionalProperties: false, properties: {
-      file: { enum: ['enemies', 'waves', 'stages', 'modes', 'items', 'bands', 'garrisons', 'effects', 'choices', 'tokens'] },
+      file: { enum: ['enemies', 'waves', 'stages', 'modes', 'items', 'bands', 'garrisons', 'effects', 'choices', 'tokens', 'bosses'] },
       id: { ...str, maxLength: 64, pattern: '^[A-Za-z0-9_-]+$' }, base: str, set: obj, value: obj, special: str,
       kind: { enum: ['bounty', 'tactic'] }, effect: obj,
     } },

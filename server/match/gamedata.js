@@ -598,8 +598,11 @@ export class GameData {
     const b = this.band(bandId);
     if (!b) return false;
     const list = Array.isArray(b.modeTypeList) ? b.modeTypeList : null;
-    if (!list) return true;
-    return list.includes(this.isSolo ? 'SINGLE' : 'MULTI');
+    if (list && !list.includes(this.isSolo ? 'SINGLE' : 'MULTI')) return false;
+    // A content plugin may tie a strategy to the room's selected leader (e.g. the PRTS Touch band).
+    const bosses = Array.isArray(b.bossIds) ? b.bossIds.filter((id) => typeof id === 'string') : null;
+    if (bosses && bosses.length && !bosses.includes(this.bossId)) return false;
+    return true;
   }
 
   bandIds() {

@@ -1,6 +1,6 @@
 # PRTS「源代码」B–E 开发计划
 
-> 状态：**A1 + A2 已完成**。A2 提交为 `c31aa81a4`。
+> 状态：**A1 + A2 已完成**。A2 提交为 `c31aa81a4`。**B0 第一批（B0-1 / B0-3 / B0-6）已完成**，见下方进度。  
 > 本文只覆盖剩余阶段 **B / C / D / E**，不改变 [`PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) 的已批准决策。
 > 性质：本 fork 独有内容插件 + fork 引擎能力；默认关闭，不部署、不改线上。
 
@@ -37,11 +37,14 @@ B–E 全部完成后，应满足：
 
 ### B0 验收
 
-- [ ] `bosses` 记录可以由插件新增，且旧数据/旧 golden 不变；
-- [ ] 命名空间方案有最终 owner 决定（默认 namespaced id）；
-- [ ] band 的 `bossIds` 过滤在草稿、默认选择、bot 三处一致；
-- [ ] 隐藏 Boss 配对测试：PRTS 房间隐藏必选 PRTS 隐藏；其他房间不受影响；
-- [ ] 以上各有单元测试，单独提交。
+**2026-10-21 进度：**
+
+- [x] `bosses` 记录可以由插件新增（`RECORD_MAPS` + schema + `records.test`）；
+- [ ] 命名空间方案有最终 owner 决定（默认 namespaced id；本批仍按 namespaced id 实现）；
+- [x] band 的 `bossIds` 过滤在草稿、默认选择、bot 三处一致（`gd.bandAllowed` / `bandDraft.allowedBands` / `defaultBand`）；
+- [x] 隐藏 Boss 配对测试：普通 Boss 的 `hiddenBossId` 会强制配对，其他房间不受影响（`test/match/prts-engine.test.js`）；
+- [x] 以上各有单元测试（`test/plugins/records.test.js`、`test/match/prts-engine.test.js`）；
+- [ ] B0-2 / B0-4 / B0-5 / B0-7 仍待做：数据插件骨架、band 运行时授予、凯尔希/M3 记录、协议客户端视图。
 
 ---
 

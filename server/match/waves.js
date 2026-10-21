@@ -199,7 +199,11 @@ export function setupMatchWaves(gd, rng) {
   const bw = gd.bossWeights(false);
   const bossId = bw.length ? weightedPick(rng, bw) : null;
   const hw = gd.bossWeights(true);
-  const hiddenBossId = hw.length && gd.hiddenRound ? weightedPick(rng, hw) : null;
+  let hiddenBossId = hw.length && gd.hiddenRound ? weightedPick(rng, hw) : null;
+  // A leader may own its hidden variant (PRTS): entering the hidden core must pair with that variant, never
+  // another leader's hidden record. The draw above still consumes the same random values as before.
+  const forcedHidden = bossId && gd.boss(bossId)?.hiddenBossId;
+  if (gd.hiddenRound && typeof forcedHidden === 'string' && gd.boss(forcedHidden)) hiddenBossId = forcedHidden;
   // the 15-round schedule and picks (own rng stream derived from the setup rng's state: the draws above and whatever
   // the caller draws next from `rng` are unchanged)
   const srng = scheduleRng(rng);

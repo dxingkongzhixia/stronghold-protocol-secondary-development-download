@@ -434,6 +434,9 @@ export class Match {
     this.factions = setup.factions;
     this.bossId = setup.bossId;
     this.hiddenBossId = setup.hiddenBossId;
+    // Band filtering sees the room's leader (content plugins may add boss-specific bands).
+    this.gd.bossId = this.bossId;
+    this.gd.hiddenBossId = this.hiddenBossId;
     const bans = drawDisabledBonds(this.gd, this.rngSetup);
     this.disabledBonds = bans.drawn;
     this.staticInactiveBonds = bans.staticOff;

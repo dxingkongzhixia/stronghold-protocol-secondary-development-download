@@ -44,6 +44,25 @@ test('new enemies, waves, stages, modes, items, bands, garrisons and choices reu
   assert.equal(r.data.config.modes.mode_x_data_demo_one.lastRound, base.config.modes.mode_single_normal.lastRound);
   assert.equal(r.data.items.item_x_data_demo_one.effectRef, 'chess_item_3_02_e_a');
 });
+test('content plugins can add boss records; the enemy reference and namespace are checked', () => {
+  const record = {
+    file: 'bosses', id: 'boss_x_data_demo_prts',
+    value: { enemyKey: 'enemy_1422_lrsldr', name: 'Demo leader', weight: 6, bloodPoint: { NORMAL: 100 } },
+  };
+  const r = expandRecords(base, [record], context);
+  assert.deepEqual(r.problems, []);
+  assert.deepEqual(validateData(r.data), []);
+  assert.equal(r.data.bosses.boss_x_data_demo_prts.bossId, 'boss_x_data_demo_prts');
+  assert.equal(base.bosses.boss_x_data_demo_prts, undefined, 'input data stays untouched');
+
+  const bad = expandRecords(base, [{ ...record, id: 'boss_prts' }], context);
+  assert.equal(bad.data, base);
+  assert.equal(bad.problems[0].code, 'PLUGIN_RECORD_ID');
+  const missing = expandRecords(base, [{ ...record, value: { ...record.value, enemyKey: 'enemy_missing' } }], context);
+  assert.deepEqual(missing.problems, []);
+  assert.ok(validateData(missing.data).some((p) => p.code === 'PLUGIN_DATA_REFERENCE' && /enemy missing/.test(p.message)));
+});
+
 test('record expansion errors are coded and atomic', () => {
   for (const [r, want] of [
     [{ ...guard(), charId: 'char_x_another_guard' }, 'PLUGIN_RECORD_ID'],

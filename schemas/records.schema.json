@@ -2468,7 +2468,8 @@
                 "garrisons",
                 "effects",
                 "choices",
-                "tokens"
+                "tokens",
+                "bosses"
               ]
             },
             "id": {
@@ -5252,7 +5253,8 @@
                   "garrisons",
                   "effects",
                   "choices",
-                  "tokens"
+                  "tokens",
+                  "bosses"
                 ]
               },
               "id": {
@@ -8050,7 +8052,8 @@
                       "garrisons",
                       "effects",
                       "choices",
-                      "tokens"
+                      "tokens",
+                      "bosses"
                     ]
                   },
                   "id": {

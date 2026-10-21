@@ -60,4 +60,5 @@ export const RECORD_MAPS = Object.freeze({
   chess: ['chess_x', 'chessId'], enemies: ['enemy_x', 'key'], items: ['item_x', 'id'],
   bands: ['band_x', 'bandId'], garrisons: ['garrison_x', 'garrisonId'], effects: ['effect_x', 'effectId'],
   waves: ['wave_x', 'id'], stages: ['stage_x', 'id'], tokens: ['token_x', 'tokenId'],
+  bosses: ['boss_x', 'bossId'],
 });

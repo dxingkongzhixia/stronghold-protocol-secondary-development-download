@@ -100,6 +100,8 @@ export class MatchSetupVote {
     this.factions = setup.factions;
     this.bossId = setup.bossId;
     this.hiddenBossId = setup.hiddenBossId;
+    this.gd.bossId = this.bossId;
+    this.gd.hiddenBossId = this.hiddenBossId;
     this.disabledBonds = bans.drawn;
     this.staticInactiveBonds = bans.staticOff;
     this.bannedChess = bans.banned;
