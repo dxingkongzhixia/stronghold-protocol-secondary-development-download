@@ -69,6 +69,30 @@ test('an amedicSlot grant starts on Touch\'s stage slot instead of in the hand',
   m.dispose();
 });
 
+test('a hidden grantUnit chess is not in the shop pool but still fills the stage slot', () => {
+  const data = structuredClone(getData());
+  const base = data.chess.chess_char_1052_kalts2_a;
+  data.chess.chess_char_hidden_test_a = {
+    ...base, chessId: 'chess_char_hidden_test_a', baseId: 'chess_char_hidden_test_a', goldenId: 'chess_char_hidden_test_b',
+    charId: 'char_hidden_test', name: 'Hidden special', isGolden: false, visible: false, isHidden: true, isDiy: false,
+    backup: { ...base.backup, charId: 'char_hidden_test' },
+  };
+  data.bands.band_x_test_hidden = {
+    ...data.bands.band_amiya, bandId: 'band_x_test_hidden', name: 'Test hidden grant',
+    grants: { team: false, grantUnit: { charId: 'char_hidden_test', placement: 'amedicSlot' } },
+  };
+  const h = makeMatch({ mode: 'coop', humans: 1, data }).start();
+  const m = h.m, ps = h.ps('p_0');
+  m.handle('p_0', { t: 'g.infoReady' });
+  h.run(() => m.phase === PHASE.BAND_DRAFT);
+  assert.equal(m._applyBand(ps, 'band_x_test_hidden'), undefined);
+  const slot = m.amedicSlot();
+  assert.equal(ps.board.get(`${slot.pos[0]},${slot.pos[1]}`)?.id, 'chess_char_hidden_test_a', 'the hidden grant still reaches the stage slot');
+  assert.equal(m.gd.visibleChess.includes('chess_char_hidden_test_a'), false, 'the hidden grant is not a shop-pool chess');
+  assert.equal([...ps.hand, ...ps.temp].some((p) => p?.id === 'chess_char_hidden_test_a'), false);
+  m.dispose();
+});
+
 test('eliteGate upgrades a granted special unit only with enough other elites', () => {
   const data = structuredClone(getData());
   data.bands.band_x_test_touch = {

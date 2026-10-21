@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "86713083bd689ab419c395cd0c3896d27c7428ed2b83de841c37d8318120b767",
-      "bytes": 1908
+      "sha256": "8e8214eb6e5d16a0877e4d0af4edceb1ed4e9ed4b52f6da94b76b3a617608c30",
+      "bytes": 1998
     },
     "assets/fx/index.json": {
       "sha256": "09f5e4b76f77cc3b328d9a91a85a7eb8b0bc403d988b598e4c107a59b8117bef",
@@ -525,8 +525,8 @@
       "bytes": 8080
     },
     "data/operator.json": {
-      "sha256": "1c44f787da86b900459c55fcbfbdd5c38c844b1078fc3fb8adab14d55bb3804b",
-      "bytes": 17080
+      "sha256": "c6bfdfb2f243e97444cc9a8ecb5f8cc912ff66ac4190af7a78964af888a18a44",
+      "bytes": 17101
     },
     "data/tokens.json": {
       "sha256": "7dd7533dc5cd5a10825a0b251e19282940e1bca8c8dd5c3f529dd65e41534c31",

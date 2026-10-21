@@ -282,7 +282,7 @@ export class MatchPhases {
   grantBandUnit(ps, unit, bandId) {
     const owns = (p) => [...p.hand, ...p.temp, ...p.board.values()].some((x) => x && x.kind === 'chess' && x.meta?.special === `band:${bandId}`);
     if (owns(ps)) return null;
-    const chess = Object.values(this.gd.raw.chess || {}).find((c) => c && c.charId === unit.charId && !c.isGolden && c.visible !== false);
+    const chess = Object.values(this.gd.raw.chess || {}).find((c) => c && c.charId === unit.charId && !c.isGolden);
     if (!chess) return null;
     const piece = ps.newPiece('chess', chess.chessId);
     piece.meta = { ...(piece.meta || {}), special: `band:${bandId}` };
