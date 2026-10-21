@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "6766cf97a402c4dda840be34a076ec78ad666ff77e6b78567fa8f2cc703d20cb",
-      "bytes": 1280
+      "sha256": "1b442f45e2ed8e7dbb5706da9b4c4a10cc03c9af570af81cda96dc36d32c983c",
+      "bytes": 1343
     },
     "content/bands.json": {
       "sha256": "c526bf0f27cf8e376ddf7ada72d8afd0afe80dc312594703a67ee58475067a59",

@@ -18,6 +18,7 @@
 - `band_x_prts_source_code_touch` 策略卡和 Boss 过滤
 - 清除协议、拟态重构、M3 击倒复活
 - 从本机官方客户端提取 PRTS / 拟态 Spine、20 个官方特效 prefab、特效贴图与网格，并写入本地素材清单
+- PRTS / 拟态敌人图标已补齐，Boss 结算头像可用
 - Boss 音乐使用官方 PRTS 战场 BGM
 
 ## 尚未完成
