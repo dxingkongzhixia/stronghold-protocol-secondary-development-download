@@ -34,7 +34,7 @@
   ],
   "assets": {
     "bands": {
-      "band_x_prts_source_code_touch": "assets/images/band_x_prts_source_code_touch.png"
+      "band_x_prts_source_code_touch": { "ref": "band_amedic" }
     },
     "enemies": {
       "enemy_x_prts_source_code_prts": {

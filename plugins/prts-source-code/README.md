@@ -32,7 +32,7 @@
 
 ## 美术
 
-使用本安装已有的官方凯尔希素材（`art.ref: char_003_kalts`）和官方客户端提取的 PRTS / 拟态 Spine；策略头像复制为插件自己的 `assets/images/band_x_prts_source_code_touch.png`。
+使用本安装已有的官方凯尔希素材（`art.ref: char_003_kalts`）和官方客户端提取的 PRTS / 拟态 Spine；策略头像引用默认的 `band_amedic` 图标，保持和原版策略头像一致的风格。
 
 正式发布前仍需按 `docs/PRTS-SOURCE-CODE.md` 完成授权和回退模型检查。
 
