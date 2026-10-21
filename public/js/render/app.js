@@ -212,8 +212,13 @@ export async function createFieldView(host, options = {}) {
   // Adaptive render scale (adaptLoad): under sustained load the RENDER RESOLUTION drops to hold the frame rate — and
   // so the animations stay smooth — instead of only raising the unit refresh interval (which read as stutter).
   let renderScale = 1;
-  const dpr = () => Math.min(globalThis.devicePixelRatio || 1, (QUALITY_RES[settings.quality] || 2) * renderScale);
-  const boardDpr = () => Math.min(globalThis.devicePixelRatio || 1, (BOARD_RES[settings.quality] || 2) * renderScale);
+  // A phone/tablet usually has DPR 2.5-3, while the desktop resolution cap is 2: on a coarse pointer keep the
+  // high-quality cap at the device's own DPR so the small units (and their names) are not upscaled from a
+  // 1560 px buffer to a 2048 px screen. Desktops keep the existing 2 cap (and therefore their performance).
+  const coarse = (() => { try { return globalThis.matchMedia?.('(pointer: coarse)')?.matches === true; } catch { return false; } })();
+  const qualityRes = (q) => (coarse && q === 'high' ? 3 : (QUALITY_RES[q] || 2));
+  const dpr = () => Math.min(globalThis.devicePixelRatio || 1, qualityRes(settings.quality) * renderScale);
+  const boardDpr = () => Math.min(globalThis.devicePixelRatio || 1, (coarse && settings.quality === 'high' ? 2.5 : (BOARD_RES[settings.quality] || 2)) * renderScale);
   const s0 = size();
   // Construction is synchronous until the complete view can own cancellation. If setup throws,
   // dispose only the resources acquired by this attempt, never another view's host contents.

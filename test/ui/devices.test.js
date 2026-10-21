@@ -128,6 +128,17 @@ describe('ui/device.js feature detection', () => {
     assert.equal(fullscreen.supported(none.win), false);
     assert.equal(await fullscreen.enter(none.win), false);
   });
+  test('fullscreen does not repeat the current landscape orientation lock (the mobile freeze report)', async () => {
+    const f = fakeWindow();
+    let locked = null;
+    f.win.screen = { orientation: { type: 'landscape-primary', lock: async (o) => { locked = o; } } };
+    assert.equal(await fullscreen.enter(f.win), true);
+    assert.equal(locked, null, 'already landscape: no lock during the fullscreen transition');
+    const portrait = fakeWindow();
+    portrait.win.screen = { orientation: { type: 'portrait-primary', lock: async (o) => { locked = o; } } };
+    assert.equal(await fullscreen.enter(portrait.win), true);
+    assert.equal(locked, 'landscape', 'a portrait page still asks for landscape');
+  });
 });
 
 describe('ui/device.js installDeviceSupport', () => {

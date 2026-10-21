@@ -97,3 +97,14 @@ describe('hudBands from the board\'s host', () => {
       withDom({ fieldTop: 0, hudTop: 0, hudBottom: 1000 }, () => hudBands('prep', size)));
   });
 });
+
+test('short coarse screens scale below the desktop 40 px floor and keep valid touch hit areas', () => {
+  const css = readFileSync(path.join(ROOT, 'public/css/devices.css'), 'utf8');
+  assert.match(css, /@media \(max-height: 340px\) and \(pointer: coarse\), \(max-height: 340px\) and \(any-pointer: coarse\) \{\n  html \{ font-size: clamp\(24px,/,
+    'a phone landscape with browser bars scales from the visible height');
+  assert.match(css, /html\[data-fit\] \{\n    font-size: clamp\(24px,/,
+    'the screen-fit root keeps the same low floor on a short phone');
+  // the touch-target selector list must be one valid selector, not a duplicated nested fragment (the 2026-10-21 mobile fix)
+  assert.match(css, /\.set-seg button, \.set-fit__step\) \{/);
+  assert.doesNotMatch(css, /\.set-seg button\) \{\n  \.modal__close/);
+});

@@ -128,7 +128,14 @@ export const fullscreen = {
       else return false;
     } catch { return false; }
     // Android Chrome: a landscape game may lock the orientation while fullscreen (refused elsewhere — ignored)
-    try { await win.screen?.orientation?.lock?.('landscape'); } catch { /* not allowed here */ }
+    // Do not re-assert landscape when the page is already there: some Android browsers freeze their fullscreen
+    // transition when the orientation lock repeats the current orientation (the mobile "fullscreen stuck" report).
+    try {
+      const type = win.screen?.orientation?.type;
+      if (typeof type === 'string' && type && !type.startsWith('landscape')) {
+        await win.screen.orientation.lock?.('landscape');
+      }
+    } catch { /* not allowed here */ }
     return true;
   },
   async exit(win = globalThis) {

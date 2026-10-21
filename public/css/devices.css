@@ -58,13 +58,11 @@ html:not(.sp-in-match) .toast-host { margin-top: var(--sa-t); }
    control, no layout change. Only controls that do not use ::before themselves are listed. */
 :where(.sp-coarse) :where(.tapx, .gtop__exit, .gtop__iconbtn, .enemybtn, .readybtn, .gm__gear, .fsbtn, .ewheel__btn, .ewheel__nav,
   .toolbtn, .funds__collapse, .team__btn, .effect, .bslot .bond, .vswitch__arrow, .edrawer__close, .dpanel__close, .bpop__close,
-  .modal__close, .uf__btn, .chud__back, .tabs__tab, .btn, .pill-btn, .stephead__guide, .set-toggle, .set-seg button) {
   .modal__close, .uf__btn, .chud__back, .tabs__tab, .btn, .pill-btn, .stephead__guide, .set-toggle, .set-seg button, .set-fit__step) {
   position: relative;
 }
 .sp-coarse :is(.tapx, .gtop__exit, .gtop__iconbtn, .enemybtn, .readybtn, .gm__gear, .fsbtn, .ewheel__btn, .ewheel__nav,
   .toolbtn, .funds__collapse, .team__btn, .effect, .bslot .bond, .vswitch__arrow, .edrawer__close, .dpanel__close, .bpop__close,
-  .modal__close, .uf__btn, .chud__back, .tabs__tab, .btn, .pill-btn, .stephead__guide, .set-toggle, .set-seg button)::before {
   .modal__close, .uf__btn, .chud__back, .tabs__tab, .btn, .pill-btn, .stephead__guide, .set-toggle, .set-seg button, .set-fit__step)::before {
   content: '';
   position: absolute; left: 50%; top: 50%; z-index: 0;
@@ -174,6 +172,19 @@ html[data-fit] {
    干员调配, 玩法说明) */
 html[data-fit] :is(.app-root, .st, .lo, .guide) {
   left: var(--fit-l, 0px); right: var(--fit-r, 0px); top: var(--fit-t, 0px); bottom: var(--fit-b, 0px);
+}
+/* Short touch screens (phone landscape with the browser bars showing) cannot honour the 40 px desktop floor:
+   10.8 × 40 = 432 px of layout would be clipped at a 288–360 px visual viewport. Scale from the visible height
+   instead, with a 24 px floor so the official 16:9 layout stays whole; the touch hit areas keep their 44 px size. */
+@media (max-height: 340px) and (pointer: coarse), (max-height: 340px) and (any-pointer: coarse) {
+  html { font-size: clamp(24px, min(calc(100vw / 19.2), calc(100svh / 10.8)), 240px); }
+  html[data-fit] {
+    font-size: clamp(24px, min(calc((100vw - var(--fit-l, 0px) - var(--fit-r, 0px)) / 19.2), calc((100svh - var(--fit-t, 0px) - var(--fit-b, 0px)) / 10.8)), 240px);
+  }
+  /* the layout is smaller, but the most-used HUD controls keep a 40 px finger target */
+  .gtop__exit, .gtop__iconbtn, .enemybtn, .readybtn, .toolbtn, .gm__gear, .fsbtn, .ewheel__btn, .ewheel__nav {
+    min-width: 40px; min-height: 40px;
+  }
 }
 .set-fit { display: flex; flex-direction: column; gap: .06rem; }
 .set-fit__row { grid-template-columns: minmax(0, 1.5rem) auto minmax(.8rem, 1fr) auto minmax(.36rem, auto); gap: .1rem; }
