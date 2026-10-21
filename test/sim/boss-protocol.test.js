@@ -35,6 +35,17 @@ const guard = (h, e) => e.buffs.some((b) => b.key === 'protocol:guard');
 const down = (e) => e.buffs.some((b) => b.key === 'protocol:down');
 const kill = (h, e) => h.b.loseHp(e, 1e9);
 
+test('protocol events name the official PRTS / mimic effect prefabs', () => {
+  const h = battle({ p: protocol({ clearProtocol: { at: 10, warning: 0.5, lp: 10 } }), autoFinish: false, timeLimit: 12 });
+  const keys = () => h.eventsOf('fx').filter((e) => e[1] === 'official').map((e) => e[4]?.officialKey);
+  const mimic = h.b.enemies.find((e) => e.defId === MIMIC);
+  kill(h, mimic);
+  h.step(1);
+  assert.ok(keys().includes('enemy_mpprme_buff_01'), 'down');
+  h.run(9.6);
+  assert.ok(keys().includes('enemy_mpprts_buff_02'), 'clear warning');
+});
+
 test('the linked mimic guards the boss while alive, then revives it three times', () => {
   const h = battle();
   const boss = h.b.enemies.find((e) => e.defId === BOSS);

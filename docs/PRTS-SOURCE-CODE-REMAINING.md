@@ -51,6 +51,8 @@ B–E 全部完成后，应满足：
 - [x] 素材：从本机官方客户端提取 PRTS `enemy_1564_mpprts` / 拟态 `enemy_1565_mpprme` Spine（`public/assets/local/spine/enemy/`），已写 `data/assets.json` + `data/local-assets.committed.json` + `tools/assets/local-enemy-spines.json`；
 - [x] 客户端特效：已提取 PRTS / 拟态 20 个官方 FX prefab 及其贴图/网格（`public/assets/local/fx/`），Boss BGM 已指向官方 PRTS 战场音乐；
 - [x] 敌人图标：PRTS / 拟态 158×158 官方头像已补齐（`public/assets/enemy/icon/`），Boss 结算头像会通过 `handbookId` 回退；
+- [x] 官方 FX 接线：`b.fx('official', { officialKey })` 由 `FxWiring.simFx` 播放提取的 prefab；协议已接 start / buff / die / line / skill / projectile / deploy-lock / warning；
+- [x] 隐藏 PRTS：`tint` 字段 + `UnitView` 原始记录染色，普通 PRTS 保持原色；
 - [x] B0-7：`b.snapshot().protocol` 已输出重构剩余次数、倒地倒计时、清除协议倒计时与预警；Boss 胶囊 HUD 已消费（`protocol-hud`）。
 - [ ] B0-2 仍待做：命名空间方案的 owner 最终确认。
 

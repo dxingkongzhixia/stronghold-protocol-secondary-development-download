@@ -803,7 +803,11 @@ export class UnitView {
       if (swap) this._dropActor();
       this.actor = actor;
       this._actorEntry = entry;
-      this.baseTint = (!entry.local && ALIAS_TINT[id]) || 0xffffff;   // the web alias of a local-only model
+      // content records may name a colour (`tint`, read from the raw data record); the hidden PRTS uses it
+      const rawTint = this.ctx.lookupDef?.(this.info)?.raw?.tint;
+      const tint = Number(rawTint);
+      this.baseTint = Number.isFinite(tint) && tint >= 0 && tint <= 0xffffff ? tint
+        : (!entry.local && ALIAS_TINT[id]) || 0xffffff;   // the web alias of a local-only model
       this.body.addChild(this.actor.spine);
       this.spineReady = true;
       this.swapT = swap ? 1 : 0;

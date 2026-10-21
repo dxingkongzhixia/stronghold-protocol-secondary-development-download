@@ -1514,6 +1514,20 @@ export class FxWiring {
    */
   simFx(kind, x, y, extra) {
     if (!this.idx) return false;
+    const ex = extra && typeof extra === 'object' ? extra : {};
+    // Content bosses may name an official prefab directly (`b.fx('official', …, { officialKey })`);
+    // this keeps a content plugin's protocol effects on the client's own FX library without a unit
+    // index entry (the PRTS / mimic prefabs are extracted with --fx-keys).
+    const officialKey = lc(ex.officialKey ?? (kind === 'official' ? ex.key : null));
+    if (officialKey) {
+      const v = this.view(ex.id);
+      const at = v || { x, y, z: 0, visFacing: 1 };
+      const h = this.playOn(officialKey, at, { follow: !!v, loop: !!ex.loop, toward: ex.toward, important: true });
+      if (h) {
+        if (Number.isFinite(ex.dur) && ex.dur > 0) setTimeout0(this.ofx, h, ex.dur);
+        return true;
+      }
+    }
     const t = this.talents.fx(kind, extra);
     // the floating units stand for the kit's 'drone' / 'drones' / 'droneLock' / 'overload' (render/vfx/funnelfx.js)
     const f = this.funnels.simFx(kind, x, y, extra);

@@ -20,6 +20,8 @@
 - 从本机官方客户端提取 PRTS / 拟态 Spine、20 个官方特效 prefab、特效贴图与网格，并写入本地素材清单
 - PRTS / 拟态敌人图标已补齐，Boss 结算头像可用
 - Boss 音乐使用官方 PRTS 战场 BGM
+- 普通/隐藏 PRTS 的协议事件已接官方 FX：start / buff / die / line / skill / projectile / deploy-lock
+- 隐藏 PRTS 使用独立紫色染色
 
 ## 尚未完成
 

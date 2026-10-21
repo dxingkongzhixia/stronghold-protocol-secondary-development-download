@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "1b442f45e2ed8e7dbb5706da9b4c4a10cc03c9af570af81cda96dc36d32c983c",
-      "bytes": 1343
+      "sha256": "5081b90275c74d5881a31aaf36d80c9ec16adcc51c60d6edee6fa50393888890",
+      "bytes": 1497
     },
     "content/bands.json": {
       "sha256": "c526bf0f27cf8e376ddf7ada72d8afd0afe80dc312594703a67ee58475067a59",
@@ -17,8 +17,8 @@
       "bytes": 5093
     },
     "content/enemies.json": {
-      "sha256": "0a1b49c8ba2bb128f46f7e8bf08d829776c2fd031090a6e81f5f328bf959e3cc",
-      "bytes": 4139
+      "sha256": "8bf58e89574c75e0caf3734e124a121b49dcc7efa94c3200930376c16a7a23eb",
+      "bytes": 4165
     },
     "content/modes.json": {
       "sha256": "9803b0754c89fc8e9c717ef6e5d82f4ab878ed098fe4bca85f72eacee6a5b16d",

@@ -13,6 +13,19 @@ const LINK_GRACE = 5; // give up the guard when a declared link never spawns (5 
 
 const stateOf = (e) => e && STATE.get(e);
 
+/** Play one of the official PRTS/mimic effect prefabs at a unit (client FxWiring.simFx 'official'). */
+function protocolFx(b, unit, key, extra = {}) {
+  if (!unit) return;
+  // A downed linked unit still has its tile: its buff/clip effect must play even though `alive` is false
+  // for the first tick of the down window.
+  b.fx('official', { x: unit.x, y: unit.y, id: unit.id, officialKey: key, ...extra });
+}
+
+/** Play an official prefab on a ground point (a beam's target tile). */
+function protocolFxAt(b, x, y, key, extra = {}) {
+  b.fx('official', { x, y, officialKey: key, ...extra });
+}
+
 function addGuard(b, st) {
   if (!st.protocol.link?.guard || st.guard) return;
   b.addBuff(st.boss, { key: GUARD, flags: { untargetable: true, invulnerable: true }, persist: true, allowDead: true });
@@ -35,7 +48,9 @@ function scheduleClear(b, st) {
   if (c.warning > 0) {
     st.warningAt = b.time + Math.max(0, at - c.warning);
     st.warning = b.after(Math.max(0, at - c.warning), () => {
-      if (!st.dead) b.emit('protocolWarning', { boss: st.boss, kind: 'clear', seconds: c.warning });
+      if (st.dead) return;
+      protocolFx(b, st.boss, 'enemy_mpprts_buff_02', { loop: true, dur: c.warning });
+      b.emit('protocolWarning', { boss: st.boss, kind: 'clear', seconds: c.warning });
     });
   }
   st.clear = b.after(at, () => {
@@ -43,6 +58,7 @@ function scheduleClear(b, st) {
     st.cleared = true;
     // "每名玩家 目标生命 -lp": the merged boss LP is one pool, so the team loses lp per player on the field.
     const players = Math.max(1, b.players?.length || 1);
+    protocolFx(b, st.boss, 'enemy_mpprts_die_02');
     lpLoss(b, lp * players, 'clearProtocol', st.boss);
     b.emit('protocolClear', { boss: st.boss, lp, perPlayer: lp, players });
   });
@@ -80,6 +96,7 @@ function fireOrb(b, st) {
   if (!target) return;
   const atk = from.s.atk;
   const start = { x: from.x, y: from.y };
+  protocolFx(b, from, 'enemy_mpprts_c_trail_01');
   const dist = Math.max(0.01, hypot(target.x - start.x, target.y - start.y));
   b.addProjectile({
     from, target, speed: 8, visual: 'orb', source: from, hitDead: true,
@@ -92,6 +109,8 @@ function fireOrb(b, st) {
         if (hypot(a.x - x, a.y - y) > radius) continue;
         b.dealDamage(from, a, { amount: dmg, type: 'arts', tags: ['enemyAbility', 'protocolProjectile'] });
       }
+      protocolFxAt(b, x, y, 'enemy_mpprme_skill_01_hit_01');
+      protocolFxAt(b, x, y, 'enemy_mpprme_skill_01_trail_01');
       b.emit('protocolProjectile', { boss: from, x, y, radius, damage: dmg });
     },
   });
@@ -108,6 +127,8 @@ function emitDeployLock(b, st, afterRevive) {
   const d = st.protocol.deployLock;
   const l = afterRevive ? d?.afterRevive : d;
   if (!l) return;
+  protocolFx(b, st.boss, 'enemy_mpprts_buff_icon_01', { dur: l.duration });
+  if (st.link) protocolFx(b, st.link, 'enemy_mpprme_buff_icon_01', { dur: l.duration });
   b.emit('protocolDeployLock', { boss: st.boss, count: l.count, duration: l.duration, afterRevive: !!afterRevive });
 }
 
@@ -139,6 +160,12 @@ function resolveBeam(b, st) {
   const dmg = p.damageScale * source.s.atk;
   const hit = new Set();
   for (const shot of pending) {
+    protocolFxAt(b, shot.x, shot.y, 'enemy_mpprme_line_hit_01');
+    protocolFxAt(b, shot.x, shot.y, 'enemy_mpprme_skill_02_hit_01');
+    if (st.link) {
+      protocolFx(b, st.link, 'enemy_mpprme_line_01', { toward: { x: shot.x, y: shot.y }, loop: true, dur: 0.35 });
+      protocolFx(b, st.link, 'enemy_mpprme_skill_02_trail_01', { toward: { x: shot.x, y: shot.y }, loop: true, dur: 0.35 });
+    }
     for (const a of b.allies()) {
       if (!a || !a.alive || a.hidden || a.s.flags.untargetable || hit.has(a)) continue;
       if (distToSegment(a.x, a.y, source.x, source.y, shot.x, shot.y) > p.width / 2) continue;
@@ -160,6 +187,8 @@ function fireBeam(b, st) {
   if (!shots.length) return;
   st.beamPending = shots;
   st.beamDamage = 0;
+  protocolFx(b, st.link, 'enemy_mpprme_line_start_01', { toward: { x: shots[0].x, y: shots[0].y } });
+  protocolFx(b, st.link, 'enemy_mpprme_skill_02_trail_start_01', { toward: { x: shots[0].x, y: shots[0].y } });
   b.emit('protocolBeamWindup', { boss: st.boss, link: st.link, targets: shots.length, seconds: p.windup });
   st.beamResolve = b.after(p.windup, () => resolveBeam(b, st), { owner: st.link });
 }
@@ -208,6 +237,7 @@ function startFly(b, st) {
     knockDownDamage: p.knockDownDamage * boss.s.atk,
   };
   st.fly = f;
+  protocolFx(b, boss, 'enemy_mpprts_c_trail_01', { loop: true, dur: p.duration });
   b.emit('protocolFly', { boss, duration: p.duration, targets: p.targets, range: p.range });
 }
 
@@ -216,6 +246,7 @@ function enterDown(b, st, e) {
   st.down = true;
   st.downUntil = b.time + p.down;
   e.hp = e.s.maxHp;
+  protocolFx(b, e, 'enemy_mpprme_buff_01', { loop: true, dur: p.down });
   b.addBuff(e, { key: DOWN, flags: { untargetable: true, invulnerable: true, stun: true, noBlock: true, noMove: true }, persist: true, allowDead: true });
   removeGuard(b, st);
   interruptBeam(b, st);
@@ -231,6 +262,8 @@ function enterDown(b, st, e) {
     }
     st.down = false;
     st.downUntil = null;
+    protocolFx(b, e, 'enemy_mpprme_skill_01_start_01');
+    protocolFx(b, st.boss, 'enemy_mpprts_buff_01');
     addGuard(b, st);
     if (!st.revivedOnce) {
       st.revivedOnce = true;
@@ -245,7 +278,19 @@ function enterDown(b, st, e) {
 /** The linked unit's ability: knocked down → down window → revive, until the count is used up. */
 function linkAbility(st) {
   return {
-    spawn(b, e) { st.link = e; },
+    spawn(b, e) {
+      st.link = e;
+      // The mimic's own blows: its official trail / hit prefabs (the unit index is not part of the
+      // --fx-keys extraction, so wire them from the protocol's link events instead).
+      b.on('attack', (c) => {
+        if (c.attacker !== e) return;
+        protocolFx(b, e, 'enemy_mpprme_attack_trail_01');
+      }, { owner: e });
+      b.on('hit', (c) => {
+        if (c.source !== e || !c.dmg?.isAttack || !c.target) return;
+        protocolFxAt(b, c.target.x, c.target.y, 'enemy_mpprme_attack_hit_01');
+      }, { owner: e });
+    },
     killed(c, b, e) {
       if (st.dead || !st.boss?.alive) return false;
       if (st.down) return true; // already in its down window
@@ -263,6 +308,7 @@ function linkAbility(st) {
     death(c, b, e) {
       // final death: no guard any more
       if (st.link === e) {
+        protocolFx(b, e, 'enemy_mpprme_die_01');
         removeGuard(b, st);
         st.beamTimer?.cancel?.();
         interruptBeam(b, st);
@@ -313,6 +359,7 @@ export function protocolAbility(raw) {
       scheduleClear(b, st);
       startProjectile(b, st);
       emitDeployLock(b, st, false);
+      protocolFx(b, e, 'enemy_mpprts_buff_01');
       b.emit('protocolStart', { boss: e, protocol });
     },
     tick(b, e) {
@@ -350,6 +397,7 @@ export function protocolAbility(raw) {
       const st = stateOf(e);
       if (!st) return;
       st.dead = true;
+      protocolFx(b, e, 'enemy_mpprts_die_01');
       st.warning?.cancel?.();
       st.clear?.cancel?.();
       st.timer?.cancel?.();
