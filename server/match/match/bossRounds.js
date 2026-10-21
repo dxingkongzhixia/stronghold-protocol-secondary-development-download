@@ -567,6 +567,8 @@ export class MatchBoss {
     this.deadline = 0;
     this.overtimeAt = 0;
     this.markPublic();
+    this.dispatchAlive('onRoundEnd', { round: this.round, boss: true, hidden: !!hidden, victory });
+    this.dispatchGameplay('onRoundEnd', { round: this.round, boss: true, hidden: !!hidden, victory });
     this.runner = null;
     if (!hidden) {
       const eligible = victory && !!this.hiddenBossId && hiddenEligible(this.gd, { layerSum: this.hiddenLayerSum, teamLp: this.teamLp });
