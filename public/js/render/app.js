@@ -489,7 +489,7 @@ export async function createFieldView(host, options = {}) {
   // Read the index only after the existing effects path loads it; role selection never calls ready()/index().
   ctx.skillAttackIndex = () => wiring.index;
   const pluginFx = new PluginFxPlayer({ P, layer: layers.vfxOver, assets, cam: () => cam, enabled: () => settings.officialFx !== 'off',
-    record: info => info ? ctx.lookupDef(info) : null, speed: projSpeed, ofx });
+    record: info => info ? ctx.lookupDef(info) : null, speed: projSpeed, ofx, wiring });
   setupCleanup.push(() => pluginFx.destroy());
   let ofxPrevT = null;        // renderT of the last effects step (the battle clock)
   /** The tier the effects run at now: the setting (auto: 精简 on touch devices) while the 3D board draws. */

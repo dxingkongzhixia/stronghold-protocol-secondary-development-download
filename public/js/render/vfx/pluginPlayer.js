@@ -5,8 +5,8 @@ import { skillRecordOf } from './skills.js';
 import { UF } from '../../../../shared/constants.js';
 
 export class PluginFxPlayer {
-  constructor({ P, layer, assets, cam, enabled, record, speed, ofx }) {
-    Object.assign(this, { P, layer, assets, cam, enabled, record, speed, ofx });
+  constructor({ P, layer, assets, cam, enabled, record, speed, ofx, wiring = null }) {
+    Object.assign(this, { P, layer, assets, cam, enabled, record, speed, ofx, wiring });
     this.live = new Set(); this.loops = new Map(); this.time = 0; this.textures = new Map();
     // Per-shot arrivals, keyed by the shot object; never a target-wide claim on damage events.
     this.hitClaims = new Map();
@@ -41,6 +41,13 @@ export class PluginFxPlayer {
       e.sprite.anchor.set(...(b.anchor || [0.5, 0.5]));
       e.sprite.blendMode = b.blend === 'add' ? this.P.BLEND_MODES.ADD : this.P.BLEND_MODES.NORMAL;
       this.layer.addChild(e.sprite);
+    } else if (this.wiring?.idx && owner && at === owner && !flight) {
+      // The wiring owns FollowMountPoint, the spawn location, the owner's facing and the point's live bone. Keeping
+      // the plugin player's own placement for target/point effects (a hit, a kit fx) avoids moving those off the
+      // target they named.
+      e.wired = true;
+      e.handle = this.wiring.playOn(key, owner, { loop, follow: loop, important: loop });
+      if (!e.handle) return null;
     } else {
       e.handle = this.ofx.spawn(key, { pos: [pos.x - 10, pos.y - 9, -pos.z] }, { owner, loop });
       if (!e.handle) return null;
@@ -118,7 +125,7 @@ export class PluginFxPlayer {
       const age = this.time - e.start;
       let pos = e.loop && e.owner ? e.owner : e.pos;
       if (e.flight && e.target) { const f = Math.min(1, age / e.flight); pos = { x: e.pos.x + (e.target.x - e.pos.x) * f, y: e.pos.y + (e.target.y - e.pos.y) * f, z: (e.pos.z || 0) + 0.4 }; }
-      e.handle?.place({ pos: [pos.x - 10, pos.y - 9, -(pos.z || 0)] });
+      if (!e.wired) e.handle?.place({ pos: [pos.x - 10, pos.y - 9, -(pos.z || 0)] });
       if (!e.b) continue;
       const frame = flipbookFrame({ ...e.b, loop: e.loop || !!e.flight || e.b.loop }, age);
       if (!frame) { e.stop(); continue; }

@@ -54,11 +54,53 @@ export function preparePluginFx(doc, visual) {
   return out;
 }
 
+/** A power-of-two-ish shelf keeps plugin textures on one GPU texture when they fit; null keeps them separate. */
+const ATLAS_MAX = 2048;
+const ATLAS_PAD = 2;
+export function planPluginAtlas(ns, effects) {
+  const parts = [];
+  for (const [key, t] of Object.entries(effects?.textures || {})) {
+    const img = effects.images?.[t.path];
+    const w = Number(img?.w), h = Number(img?.h);
+    if (!img?.url || !Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1 || w > ATLAS_MAX || h > ATLAS_MAX) return null;
+    parts.push({ key: ns + key, url: img.url, w, h });
+  }
+  if (parts.length < 2) return null;
+  parts.sort((a, b) => b.h - a.h || b.w - a.w || a.key.localeCompare(b.key));
+  let x = ATLAS_PAD, y = ATLAS_PAD, row = 0, width = 0, height = 0;
+  for (const part of parts) {
+    if (x + part.w + ATLAS_PAD > ATLAS_MAX) { x = ATLAS_PAD; y += row + ATLAS_PAD; row = 0; }
+    if (y + part.h + ATLAS_PAD > ATLAS_MAX) return null;
+    part.x = x; part.y = y;
+    x += part.w + ATLAS_PAD; row = Math.max(row, part.h); width = Math.max(width, x); height = Math.max(height, y + part.h + ATLAS_PAD);
+  }
+  return { key: ns + '__atlas', w: Math.max(1, width), h: Math.max(1, height), parts };
+}
+
+/** Point a prefab's material slots at the atlas and combine each slot's own ST with the atlas rectangle. */
+function useAtlas(d, atlas) {
+  const parts = new Map(atlas.parts.map(p => [p.key, p]));
+  if (Array.isArray(d.textures) && d.textures.some(k => !parts.has(k))) return false;
+  for (const m of d.materials || []) {
+    for (const t of Object.values(m.textures || {})) {
+      if (!t || typeof t.tex !== 'string') continue;
+      const p = parts.get(t.tex);
+      if (!p) continue;
+      const st = Array.isArray(t.st) && t.st.length === 4 && t.st.every(Number.isFinite) ? t.st : [1, 1, 0, 0];
+      t.tex = atlas.key;
+      t.st = [st[0] * p.w / atlas.w, st[1] * p.h / atlas.h,
+        (p.x + st[2] * p.w) / atlas.w, (atlas.h - p.y - p.h + st[3] * p.h) / atlas.h];
+    }
+  }
+  d.textures = [atlas.key];
+  return true;
+}
+
 /** Merge a fragment without mutating the official index, or replacing any official key. */
 export function mergePluginFx(index, effects) {
   const idx = { ...(index || { format: 'fx-index', version: 3 }), units: { ...index?.units }, skills: { ...index?.skills },
     prefabs: { ...index?.prefabs }, skins: { ...index?.skins }, projectiles: { ...index?.projectiles }, pluginUnits: {} };
-  const descriptors = new Map(), textures = {}, meshes = {}, books = new Map(), bindings = {}, silent = new Set();
+  const descriptors = new Map(), textures = {}, meshes = {}, books = new Map(), bindings = {}, silent = new Set(), atlases = {};
   for (const [id, e] of Object.entries(effects || {})) {
     if (!validPluginFx(id, e)) continue;
     const ns = fxNamespace(id), ix = e.index;
@@ -72,8 +114,20 @@ export function mergePluginFx(index, effects) {
     for (const [key, u] of Object.entries(ix?.units || {})) { idx.units[ns + key] = rewrite(u); idx.pluginUnits[key] = ns + key; }
     for (const [key, s] of Object.entries(ix?.skills || {})) idx.skills[ns + key] = rewrite(s);
     for (const [key, p] of Object.entries(ix?.prefabs || {})) idx.prefabs[ns + key] = { ...p };
-    for (const [key, d] of Object.entries(e.prefabs || {})) descriptors.set(ns + key, rewrite(d));
-    for (const [key, t] of Object.entries(e.textures || {})) if (e.images[t.path]) textures[ns + key] = { path: e.images[t.path].url };
+    const planned = e.config.atlas ? planPluginAtlas(ns, e) : null;
+    // Only use the page when every prefab names textures it contains; an unexpected key keeps the individual files.
+    const atlasKeys = new Set((planned?.parts || []).map(p => p.key));
+    const atlas = planned && Object.values(e.prefabs || {}).every(d => (d.textures || []).every(k => atlasKeys.has(ns + k))) ? planned : null;
+    if (atlas) atlases[atlas.key] = atlas;
+    for (const [key, d] of Object.entries(e.prefabs || {})) {
+      const def = rewrite(d);
+      if (atlas) useAtlas(def, atlas);
+      descriptors.set(ns + key, def);
+    }
+    if (!atlas) for (const [key, t] of Object.entries(e.textures || {})) {
+      const img = e.images[t.path];
+      if (img) textures[ns + key] = { path: img.url, w: img.w, h: img.h };
+    }
     for (const [key, m] of Object.entries(e.meshes || {})) if (m.url) meshes[ns + key] = m.url;
     for (const [key, b] of Object.entries(e.config.flipbooks || {})) if (e.images[b.image]) books.set(ns + key, { ...b, ...e.images[b.image] });
     for (const [unit, skills] of Object.entries(e.config.bind || {})) {
@@ -81,5 +135,5 @@ export function mergePluginFx(index, effects) {
     }
     for (const phase of e.config.silentPhases || []) silent.add(phase);
   }
-  return { index: idx, descriptors, textures, meshes, books, bindings, silent };
+  return { index: idx, descriptors, textures, meshes, books, bindings, silent, atlases };
 }

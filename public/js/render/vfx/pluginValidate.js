@@ -88,18 +88,33 @@ export function validateFxPrefab(d, textures, opts = {}) {
     check(n.children === undefined || Array.isArray(n.children) && n.children.every(c => Number.isInteger(c) && c > i && c < d.nodes.length && d.nodes[c].parent === i), 'invalid child reference');
     check(flag(n.active), 'invalid node active flag');
     for (const [k, size] of [['pos', 3], ['rot', 4], ['scale', 3]]) check(n[k] === undefined || Array.isArray(n[k]) && n[k].length === size && n[k].every(Number.isFinite), `invalid ${k}`);
-    check(n.behaviours === undefined || Array.isArray(n.behaviours) && n.behaviours.length <= 1 && n.behaviours.every(b => allowed(b, ['class', 'enabled', 'fields']) && b.class === 'ParticleEffect' && allowed(b.fields, ['_isLoop', '_maxLifetime', '_spawnLocation', '_delayToPlay', '_delayToFinish', '_rotateType'])), 'unsupported behaviour');
-    for (const b of n.behaviours || []) { const f = b.fields;
-      check(flag(b.enabled) && flag(f._isLoop) && optional(f._maxLifetime, -1, 30) && optional(f._delayToPlay, 0, 30) && optional(f._delayToFinish, 0, 30) && optional(f._spawnLocation, 0, 20) && optional(f._rotateType, 0, 20), 'invalid ParticleEffect fields');
+    // A root may carry its ParticleEffect and one FollowMountPoint (the same pairing official prefabs use); keeping
+    // the list short leaves no room for chained emitters or script-like behaviour.
+    const behaviourClasses = new Set(['ParticleEffect', 'FollowMountPoint']);
+    check(n.behaviours === undefined || Array.isArray(n.behaviours) && n.behaviours.length <= 2 && n.behaviours.every(b => allowed(b, ['class', 'enabled', 'fields']) && behaviourClasses.has(b.class)), 'unsupported behaviour');
+    for (const b of n.behaviours || []) { const f = b.fields || {};
+      check(flag(b.enabled) && obj(f), 'invalid behaviour fields');
+      if (b.class === 'ParticleEffect') {
+        check(allowed(f, ['_isLoop', '_maxLifetime', '_spawnLocation', '_delayToPlay', '_delayToFinish', '_rotateType', '_holdByOwner']), 'unsupported ParticleEffect fields');
+        check(flag(f._isLoop) && optional(f._maxLifetime, -1, 30) && optional(f._delayToPlay, 0, 30) && optional(f._delayToFinish, 0, 30) && optional(f._spawnLocation, 0, 20) && optional(f._rotateType, 0, 20) && flag(f._holdByOwner), 'invalid ParticleEffect fields');
+      } else {
+        check(allowed(f, ['_mountPointType', '_keepOriginRotation', '_followScale', '_followScaleSign', '_scaleMultiplier', '_pauseWhenMountPointInvalid', '_onlyPauseWhenMountPointInvalid', '_useBehaviourPause']), 'unsupported FollowMountPoint fields');
+        check(Number.isInteger(f._mountPointType) && f._mountPointType >= 0 && f._mountPointType <= 29 && flag(f._keepOriginRotation) && flag(f._followScale) && flag(f._followScaleSign) && optional(f._scaleMultiplier, 0, 1000) && flag(f._pauseWhenMountPointInvalid) && flag(f._onlyPauseWhenMountPointInvalid) && flag(f._useBehaviourPause), 'invalid FollowMountPoint fields');
+      }
     }
     if (n.meshFilter !== undefined) check(n.meshFilter?.builtin === 'Quad' && Object.keys(n.meshFilter).length === 1, 'only builtin Quad meshes');
     for (const r of [n.meshRenderer, n.particleSystemRenderer].filter(Boolean)) {
       check(allowed(r, ['m_Enabled', 'renderMode', 'renderAlignment', 'materials', 'm_SortingOrder', 'm_SortingLayer',
-        'm_Pivot', 'm_LengthScale', 'm_VelocityScale', 'm_CameraVelocityScale']) && Array.isArray(r.materials) && r.materials.length <= 4 && r.materials.every(m => Number.isInteger(m) && m >= 0 && m < d.materials.length), 'invalid renderer/material reference');
+        'm_Pivot', 'm_Flip', 'm_LengthScale', 'm_VelocityScale', 'm_CameraVelocityScale', 'm_MinParticleSize',
+        'm_MaxParticleSize', 'm_SortMode', 'm_SortingFudge']) && Array.isArray(r.materials) && r.materials.length <= 4 && r.materials.every(m => Number.isInteger(m) && m >= 0 && m < d.materials.length), 'invalid renderer/material reference');
       check(r.renderMode === undefined || ['billboard', 'stretch', 'horizontal', 'vertical'].includes(r.renderMode), 'unsupported particle render mode');
-      check(flag(r.m_Enabled) && (r.renderAlignment === undefined || ['view', 'world', 'local', 'facing', 'velocity'].includes(r.renderAlignment)) && optional(r.m_SortingOrder, -100, 100) && optional(r.m_SortingLayer, 0, 100) &&
+      check(flag(r.m_Enabled) && (r.renderAlignment === undefined || ['view', 'world', 'local', 'facing', 'velocity'].includes(r.renderAlignment)) && optional(r.m_SortingOrder, -100, 100) && optional(r.m_SortingLayer, -100, 100) &&
         (r.m_Pivot === undefined || Array.isArray(r.m_Pivot) && r.m_Pivot.length === 3 && r.m_Pivot.every(v => scalar(v, -1000, 1000))) &&
-        optional(r.m_LengthScale, 0, 1000) && optional(r.m_VelocityScale, 0, 1000) && optional(r.m_CameraVelocityScale, 0, 1000), 'invalid renderer fields');
+        (r.m_Flip === undefined || Array.isArray(r.m_Flip) && r.m_Flip.length === 2 && r.m_Flip.every(v => scalar(v, 0, 1))) &&
+        optional(r.m_LengthScale, 0, 1000) && optional(r.m_VelocityScale, 0, 1000) && optional(r.m_CameraVelocityScale, 0, 1000) &&
+        optional(r.m_MinParticleSize, 0, 1000) && optional(r.m_MaxParticleSize, 0, 1000) &&
+        (r.m_SortMode === undefined || Number.isInteger(r.m_SortMode) && r.m_SortMode >= 0 && r.m_SortMode <= 3) &&
+        optional(r.m_SortingFudge, -1000, 1000), 'invalid renderer fields');
     }
     if (n.particleSystem) {
       const p = n.particleSystem, init = p.InitialModule, em = p.EmissionModule;

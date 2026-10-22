@@ -6,7 +6,7 @@ import { readFxAssets, validateFxPrefab } from '../../server/plugins/fxAssets.js
 import { listPluginFiles, readPluginFolder } from '../../server/plugins/registry.js';
 import { expandFxRecords, compilePluginFxDsl } from '../../server/plugins/fxRecords.js';
 import { operatorFxProblems, pluginFxProblems } from '../../public/js/render/vfx/pluginFormat.js';
-import { preparePluginFx, mergePluginFx } from '../../public/js/render/vfx/pluginLibrary.js';
+import { preparePluginFx, mergePluginFx, planPluginAtlas } from '../../public/js/render/vfx/pluginLibrary.js';
 import * as visual from '../../shared/plugins/visual.js';
 import { getData } from '../../server/data.js';
 import { guard } from '../helpers/contentFixtures.js';
@@ -111,6 +111,8 @@ test('reject hostile paths, foreign units, dangling bindings, file and texture b
     { bind: { char_112_siege: { 0: { hit: 'spark' } } } }, { bind: { char_x_fx_demo_guard: { 0: { hit: 'absent' } } } } ]) assert.throws(() => read(config));
   assert.ok(pluginFxProblems({ flipbooks: { bad: { ...book(), frames: 257 } } }, ['fx-demo']).length);
   assert.ok(pluginFxProblems({ flipbooks: { bad: { ...book(), fps: 0 } } }, ['fx-demo']).length);
+  assert.ok(pluginFxProblems({ atlas: 'yes' }, ['fx-demo']).length);
+  assert.equal(pluginFxProblems({ atlas: true }, ['fx-demo']).length, 0);
   const b = fs.readFileSync(path.join(f.root, 'fx/sheet.png')); b.writeUInt32BE(2049, 16); f.put('fx/sheet.png', b);
   assert.throws(() => read({ flipbooks: { flash: book() } }), /2048/);
   assert.throws(() => readFxAssets(f.root, { index: 'fx/index.json' }, ['fx-demo'], [{ rel: 'fx/index.json', bytes: 33 * 1024 * 1024 }]), /byte/);
@@ -140,15 +142,50 @@ test('author prefabs may use stretched billboards and a pivot, still without cus
     };
     return d;
   };
-  assert.equal(validateFxPrefab(stretch(), { sheet: {} }).key, 'spark');
+  const full = () => {
+    const d = stretch();
+    d.nodes[0].particleSystemRenderer = { ...d.nodes[0].particleSystemRenderer,
+      m_Flip: [0.5, 1], m_MinParticleSize: 0.01, m_MaxParticleSize: 0.5, m_SortMode: 2, m_SortingFudge: -2, m_SortingLayer: -1 };
+    d.nodes[0].behaviours.push({ class: 'FollowMountPoint', enabled: true,
+      fields: { _mountPointType: 5, _keepOriginRotation: 1, _followScale: 1, _followScaleSign: 0, _scaleMultiplier: 1,
+        _pauseWhenMountPointInvalid: 1, _onlyPauseWhenMountPointInvalid: 0, _useBehaviourPause: 1 } });
+    return d;
+  };
+  assert.equal(validateFxPrefab(full(), { sheet: {} }).key, 'spark');
   const bad = [
     d => d.nodes[0].particleSystemRenderer.renderMode = 'mesh',
     d => d.nodes[0].particleSystemRenderer.m_Pivot = [0, 1],
     d => d.nodes[0].particleSystemRenderer.m_Pivot = [0, Infinity, 0],
     d => d.nodes[0].particleSystemRenderer.m_LengthScale = -1,
     d => d.nodes[0].particleSystemRenderer.m_VelocityScale = 'fast',
+    d => d.nodes[0].particleSystemRenderer.m_Flip = [0.5],
+    d => d.nodes[0].particleSystemRenderer.m_SortMode = 4,
+    d => d.nodes[0].behaviours[1].fields._mountPointType = 30,
+    d => d.nodes[0].behaviours[1].class = 'OnPlayEmitter',
+    d => d.nodes[0].behaviours[1].fields._scaleMultiplier = -1,
   ];
-  for (const change of bad) { const d = stretch(); change(d); assert.throws(() => validateFxPrefab(d, { sheet: {} })); }
+  for (const change of bad) { const d = full(); change(d); assert.throws(() => validateFxPrefab(d, { sheet: {} })); }
+});
+
+test('a plugin may pack its textures into one checked atlas page', t => {
+  const f = fxFixture(t); compiled(f);
+  const { value } = readFxAssets(f.root, { index: 'fx/index.json' }, ['fx-demo'], listPluginFiles(f.root));
+  value.config.atlas = true;
+  value.images['fx/sheet.png'] = { ...value.images['fx/sheet.png'], url: '/p/fx-demo/12345678/fx/sheet.png' };
+  value.images['fx/sheet2.png'] = { w: 4, h: 4, url: '/p/fx-demo/12345678/fx/sheet2.png' };
+  value.textures.sheet2 = { path: 'fx/sheet2.png' };
+  value.prefabs.spark.textures.push('sheet2');
+  value.prefabs.spark.materials[0].textures._Mask = { tex: 'sheet2', st: [1, 1, 0, 0] };
+  const atlas = planPluginAtlas('plugin:fx-demo:', value);
+  assert.ok(atlas && atlas.parts.length === 2);
+  const merged = mergePluginFx(null, { 'fx-demo': value });
+  const key = 'plugin:fx-demo:__atlas';
+  assert.ok(merged.atlases[key]);
+  assert.deepEqual(merged.descriptors.get('plugin:fx-demo:spark').textures, [key]);
+  const mats = merged.descriptors.get('plugin:fx-demo:spark').materials[0].textures;
+  assert.equal(mats._MainTex.tex, key); assert.equal(mats._Mask.tex, key);
+  assert.ok(mats._MainTex.st[0] > 0 && mats._MainTex.st[0] < 1);
+  assert.ok(mats._Mask.st[0] > 0 && mats._Mask.st[0] < 1);
 });
 
 test('visual document pins effect data and refuses unlisted texture URLs', t => {

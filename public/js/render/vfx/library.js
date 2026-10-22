@@ -97,7 +97,8 @@ export class FxLibrary {
     this.meshLoads = new Map(); // key → Promise
     this.images = new Map();    // `${key}|${half}` → { image, flipped, info } | null
     this.imageLoads = new Map();
-    this.pluginTex = new Map();
+    this.pluginTex = new Map();   // key -> { path, w, h }
+    this.pluginAtlas = new Map(); // key -> { key, w, h, parts }
     this.pluginMesh = new Map();
     this.onGpu = new Set();     // the same ids once FxGL holds them (their images were let go: not decoded again)
     this.queue = [];
@@ -142,9 +143,10 @@ export class FxLibrary {
   addPluginFx(catalog) {
     if (!catalog) return;
     for (const [key, d] of catalog.descriptors || []) if (d) this.descs.set(key, Promise.resolve(d));
-    for (const [key, t] of Object.entries(catalog.textures || {})) if (isObj(t) && typeof t.path === 'string') this.pluginTex.set(key, t.path);
+    for (const [key, t] of Object.entries(catalog.textures || {})) if (isObj(t) && typeof t.path === 'string') this.pluginTex.set(key, t);
+    for (const [key, a] of Object.entries(catalog.atlases || {})) if (isObj(a) && isObj(a.parts)) this.pluginAtlas.set(key, a);
     for (const [key, url] of Object.entries(catalog.meshes || {})) if (typeof url === 'string') this.pluginMesh.set(key, url);
-    if ((catalog.descriptors && catalog.descriptors.size) || this.pluginTex.size || this.pluginMesh.size) this._available = true;
+    if ((catalog.descriptors && catalog.descriptors.size) || this.pluginTex.size || this.pluginAtlas.size || this.pluginMesh.size) this._available = true;
     this._notify();
   }
 
@@ -258,30 +260,73 @@ export class FxLibrary {
     if (this.onGpu.has(id)) return Promise.resolve(null);
     let p = this.imageLoads.get(id);
     if (!p) {
-      p = Promise.all([this.init(), this.texInfo()]).then(async ([, infos]) => {
-        const e = this.groups?.['fx/tex']?.[key];
-        const url = this.pluginTex.get(key) || (isObj(e) ? (half && typeof e.half === 'string' ? e.half : e.path) : null);
-        if (!url) return null;
-        const img = await this._limit(() => this._image(url));
-        return img ? { image: img.image, flipped: img.flipped, info: infos[key] || {} } : null;
-      }).then((r) => { this.images.set(id, r); this._notify(); return r; }, (err) => {
-        console.warn('[fx] texture failed', key, err?.message || err);
-        this.images.set(id, null);
-        return null;
-      });
+      const atlas = this.pluginAtlas.get(key);
+      if (atlas) {
+        p = this._loadAtlas(atlas, half).then((r) => { this.images.set(id, r); this._notify(); return r; }, (err) => {
+          console.warn('[fx] atlas failed', key, err?.message || err);
+          this.images.set(id, null);
+          return null;
+        });
+      } else {
+        p = Promise.all([this.init(), this.texInfo()]).then(async ([, infos]) => {
+          const e = this.groups?.['fx/tex']?.[key];
+          const plugin = this.pluginTex.get(key);
+          const url = plugin?.path || (isObj(e) ? (half && typeof e.half === 'string' ? e.half : e.path) : null);
+          if (!url) return null;
+          const size = half && plugin && plugin.w > 0 && plugin.h > 0
+            ? { w: Math.max(1, Math.round(plugin.w / 2)), h: Math.max(1, Math.round(plugin.h / 2)) } : null;
+          const img = await this._limit(() => this._image(url, size ? { resize: size } : undefined));
+          return img ? { image: img.image, flipped: img.flipped, info: infos[key] || {} } : null;
+        }).then((r) => { this.images.set(id, r); this._notify(); return r; }, (err) => {
+          console.warn('[fx] texture failed', key, err?.message || err);
+          this.images.set(id, null);
+          return null;
+        });
+      }
       this.imageLoads.set(id, p);
     }
     return p;
   }
 
+  /** Build one canvas page from a plugin's checked texture set; half draws it at half resolution. */
+  async _loadAtlas(atlas, half) {
+    const k = half ? 0.5 : 1;
+    const W = Math.max(1, Math.round(atlas.w * k)), H = Math.max(1, Math.round(atlas.h * k));
+    const canvas = typeof document !== 'undefined'
+      ? Object.assign(document.createElement('canvas'), { width: W, height: H })
+      : typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(W, H) : null;
+    const ctx = canvas?.getContext?.('2d');
+    if (!ctx) return null;
+    const parts = await Promise.all((atlas.parts || []).map((p) => this._limit(() => this._image(p.url, { flip: false }))));
+    for (let i = 0; i < parts.length; i++) {
+      const part = atlas.parts[i], img = parts[i]?.image;
+      if (!img) return null;
+      ctx.drawImage(img, 0, 0, img.width || part.w, img.height || part.h,
+        Math.round(part.x * k), Math.round(part.y * k), Math.max(1, Math.round(part.w * k)), Math.max(1, Math.round(part.h * k)));
+    }
+    return { image: canvas, flipped: false, info: {} };
+  }
+
   /** Decode an image: an ImageBitmap flipped for GL (v = 0 at the bottom row), else an HTMLImageElement. */
-  async _image(url) {
+  async _image(url, o = {}) {
+    const flip = o.flip !== false;
     if (typeof createImageBitmap === 'function' && this.fetch) {
       const res = await this.fetch(url);
       if (!res.ok) throw new Error(`fx ${res.status} ${url}`);
       const blob = await res.blob();
-      const image = await createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
-      return { image, flipped: true };
+      const opts = { imageOrientation: flip ? 'flipY' : 'none', premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
+      if (o.resize) {
+        opts.resizeWidth = o.resize.w; opts.resizeHeight = o.resize.h; opts.resizeQuality = 'low';
+      }
+      let image;
+      try { image = await createImageBitmap(blob, opts); }
+      catch (err) {
+        // A browser without resize options falls back to the full texture rather than losing the effect.
+        if (!o.resize) throw err;
+        const plain = { imageOrientation: opts.imageOrientation, premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
+        image = await createImageBitmap(blob, plain);
+      }
+      return { image, flipped: flip };
     }
     if (typeof Image === 'undefined') return null;
     const image = await new Promise((resolve, reject) => {
@@ -291,7 +336,12 @@ export class FxLibrary {
       im.onerror = () => reject(new Error(`fx image ${url}`));
       im.src = url;
     });
-    return { image, flipped: false };
+    if (!o.resize || typeof document === 'undefined') return { image, flipped: false };
+    const canvas = Object.assign(document.createElement('canvas'), { width: o.resize.w, height: o.resize.h });
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return { image, flipped: false };
+    ctx.drawImage(image, 0, 0, o.resize.w, o.resize.h);
+    return { image: canvas, flipped: false };
   }
 
   /** Load prefabs (and the effects they chain), their meshes and textures. */

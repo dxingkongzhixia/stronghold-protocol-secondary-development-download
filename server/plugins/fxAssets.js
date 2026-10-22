@@ -73,7 +73,9 @@ export function readFxAssets(dir, config, owners, listed) {
       meshes[id] = { path: m.file };
     }
     for (const [id, p] of Object.entries(index.prefabs)) {
-      check(allowed(p, ['file', 'looping', 'spawn', 'follow']) && fxPath(p.file) && p.file.endsWith('.json'), 'invalid prefab entry');
+      check(allowed(p, ['file', 'looping', 'spawn', 'follow']) && fxPath(p.file) && p.file.endsWith('.json') &&
+        (p.spawn === undefined || Number.isInteger(p.spawn) && p.spawn >= 0 && p.spawn <= 20) &&
+        (p.follow === undefined || Number.isInteger(p.follow) && p.follow >= 0 && p.follow <= 29), 'invalid prefab entry');
       check(!Object.hasOwn(config.flipbooks || {}, id), 'prefab and flipbook ids must differ');
       const d = validateFxPrefab(json(p.file), textures, { official: !!config.official, meshes });
       check(d.key === id, 'prefab key differs from index'); prefabs[id] = d;

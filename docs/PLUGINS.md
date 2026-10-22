@@ -594,10 +594,17 @@ following [the extracted format](design/vfx-format.md), with this validated subs
 - Skills: uses (`keys`, role, from, optional ability/oneshot), optional mode/rootClass. Roles: start/loop/end/hit/cast.
   Mode attacks have cast/hit rows (`effects`, optional oneshot/startEvent/endEvent).
 - Parent-first nodes, transforms, built-in Quad meshes or particle systems, renderer material indices, and optional
-  ParticleEffect behaviour (`_isLoop`, `_maxLifetime`, `_spawnLocation`, `_delayToPlay`, `_delayToFinish`, `_rotateType`).
+  ParticleEffect behaviour (`_isLoop`, `_maxLifetime`, `_spawnLocation`, `_delayToPlay`, `_delayToFinish`, `_rotateType`,
+  `_holdByOwner`). A node may also carry one FollowMountPoint (`_mountPointType` 0-29, `_keepOriginRotation`,
+  `_followScale`, `_followScaleSign`, `_scaleMultiplier`, `_pauseWhenMountPointInvalid`,
+  `_onlyPauseWhenMountPointInvalid`, `_useBehaviourPause`), so a weapon glow rides the unit's live bone.
 - Renderers: `billboard`, `stretch`, `horizontal` and `vertical`; optional `m_Pivot` (three particle-size units, each
-  within ±1,000) and `m_LengthScale` / `m_VelocityScale` / `m_CameraVelocityScale` (0–1,000). A negative
-  `m_SortingOrder` draws behind the units, as the official renderer does.
+  within -1,000..1,000), `m_Flip` (two 0-1 shares), `m_LengthScale` / `m_VelocityScale` / `m_CameraVelocityScale`
+  (0-1,000), `m_MinParticleSize` / `m_MaxParticleSize` (0-1,000 of the viewport), `m_SortMode` (0-3),
+  `m_SortingFudge` (-1,000..1,000) and `m_SortingLayer` (-100..100). A negative layer or `m_SortingOrder` draws behind
+  the units.
+- `atlas: true` in `assets.fx` packs the plugin's PNG set into one checked texture page when it fits 2048x2048 (the
+  client combines their UVs); the lite tier decodes plugin textures at half size and halves particle emission.
 - Scalar InitialModule lifetime/speed/size/color/capacity and EmissionModule rate/bursts. Built-in additive/alpha
   particle materials only. No prewarm, scripts, shader source, URLs, custom meshes, clips, subemitters or effect chains.
 

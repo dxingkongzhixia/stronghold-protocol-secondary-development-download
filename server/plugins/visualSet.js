@@ -141,13 +141,15 @@ export function createVisualSets({ registry, log = noopLog, limits = VISUAL_LIMI
     };
   }
 
-  /** The set a vs16 names: a remembered one, or the set of one loaded cosmetic plugin alone (the catalogue's `vs`). */
+  /** The set a vs16 names: a remembered one, or the set of one loaded cosmetic/content plugin alone (the catalogue's `vs`). */
   function known(vs16) {
     const hit = sets.get(vs16);
     if (hit) { remember(vs16, hit); return hit; }
     const art = registry.vanillaAssets();
-    for (const p of registry.plugins('cosmetic')) {
-      if (!usable(p) || !p.visual.vs || vsUrlPart(p.visual.vs) !== vs16 || !art?.sha256) continue;
+    // The catalogue's per-plugin vs is the set of that plugin alone. A content (or script) plugin with its
+    // own art has one too (its rooms may use it); the dev FX viewer reads it without a room.
+    for (const p of registry.plugins()) {
+      if (!usable(p) || !p.visual?.vs || vsUrlPart(p.visual.vs) !== vs16 || !art?.sha256) continue;
       const set = { vs: p.visual.vs, assets: art.sha256, overlays: [p.visual.composition], plugins: [snapshot(p)] };
       remember(vs16, set);
       return set;

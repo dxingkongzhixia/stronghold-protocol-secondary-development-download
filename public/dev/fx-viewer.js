@@ -1,11 +1,12 @@
-// public/dev/fx-viewer.js — dev viewer of the official battle effects (render/vfx, DESIGN §33): plays any extracted
-// prefab key on the board camera (the official battle camera of render/projection.js) with play / pause / step, 1× / 2×
+// public/dev/fx-viewer.js - dev viewer of the battle effects (render/vfx, DESIGN 33): plays any extracted or plugin
+// prefab key on the board camera (the official battle camera of render/projection.js) with play / pause / step, 1x / 2x
 // (the battle clock), the 完整 / 精简 tiers, a left / right facing and an optional unit whose skin's mount points place
-// the effect (its `_spawnLocation`) — markers show the points. A 2D canvas under the transparent Pixi canvas stands in
+// the effect (its `_spawnLocation` / `FollowMountPoint`); markers show the points.
 // for the 3D board, so the effects composite onto it as they do in the game.
 //
 // Query: ?key=<prefab> &unit=<unit id> &speed=1|2 &tier=full|lite &face=L|R &panel=0 &seed=<n> &bg=<css colour>
 //        &grid=0 (a flat background without the tiles: the browser test measures the blending on it)
+//        &plugin=<plugin id>|&vs=<visual hash> (load a checked plugin visual set into the same library)
 //        &stress=<loops>,<hits per s> (a crowd: that many status loops on a 11 × 5 tile area and hits every second —
 //        the particle budget's perf check; window.__fx.sample(ms) → { fps, p95, cpuMs, particles, effects, draws })
 //        &attack=<unit id> (the wiring demo: that unit attacks a dummy 3 tiles away every second — its casts,
@@ -27,7 +28,7 @@
 import { OfficialFx } from '../js/render/vfx/system.js';
 import { FxWiring } from '../js/render/vfx/wiring.js';
 import { projSpeed } from '../js/render/fx.js';
-import { spawnPoint, unitPoint, spawnRotation, graphicRotation, mountRotation } from '../js/render/vfx/mounts.js';
+import { spawnPoint, mountPoint, mountKind, unitPoint, spawnRotation, graphicRotation, mountRotation } from '../js/render/vfx/mounts.js';
 import { fallbackLog } from '../js/render/vfx/materials.js';
 import { presetCamera } from '../js/render/projection.js';
 import { SpineActor } from '../js/render/spine.js';
@@ -36,6 +37,8 @@ import { UNIT } from '../js/render/style.js';
 import { assets } from '../js/assets.js';
 import { ensurePixi } from '../js/render/app/pixi.js';
 import { UF, ANIM } from '../../shared/constants.js';
+import { preparePluginFx, mergePluginFx } from '../js/render/vfx/pluginLibrary.js';
+import * as visual from '../../shared/plugins/visual.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -47,7 +50,7 @@ const UNIT_TILE = { row: 10, col: 5 };
 // On by default; `&model=0` turns it off for the headless browser suites, which drive the demos programmatically and
 // pin the skin's static-point placement (they pass no unit of the model's own).
 const MODELS = q.get('model') !== '0';
-const state = { key: q.get('key') || 'common_hit_01', speed: Number(q.get('speed')) === 1 ? 1 : 2, paused: false, loop: true, left: q.get('face') === 'L', unit: q.get('unit') || '', handle: null };
+const state = { key: q.get('key') || 'common_hit_01', speed: Number(q.get('speed')) === 1 ? 1 : 2, paused: false, loop: true, left: q.get('face') === 'L', unit: q.get('unit') || '', plugin: q.get('plugin') || '', vs: q.get('vs') || '', handle: null };
 
 function drawBoard(cam, w, h) {
   const c = $('board');
@@ -90,20 +93,70 @@ async function main() {
   const unitLayer = new P.Container();   // the operator / enemy model the effects sit on (below the markers)
   app.stage.addChild(ofx.ground, unitLayer, markers, ofx.over);
   api.ofx = ofx; api.lib = ofx.lib; api.app = app;
-  const ok = await ofx.init();
-  if (!ok) { $('stats').textContent = 'no extracted effects (data/local-fx.json)'; api.error = 'no effects'; api.ready = true; return; }
-  const index = await ofx.lib.index();
-  const keys = Object.keys(ofx.lib.groups['fx/prefabs']).sort();
+  await ofx.init();
+  let index = await ofx.lib.index();
+  let pluginCatalog = null;
+  const officialKeys = () => Object.keys(ofx.lib.groups?.['fx/prefabs'] || {});
+  let keys = officialKeys().sort();
+
+  /** Load a plugin's checked visual set into the same library (plugin id or a full visual hash). */
+  async function loadPluginFx(id = state.plugin, vs = state.vs) {
+    let hash = vs;
+    if (!hash && id) {
+      const cat = await (await fetch('/plugins/index.json', { cache: 'no-store' })).json();
+      const entry = (cat?.plugins || []).find((p) => p?.id === id);
+      hash = entry?.vs || entry?.visual?.vs || null;
+      if (!hash) throw new Error(`plugin ${id} has no visual set`);
+    }
+    if (!hash) throw new Error('plugin id or visual hash required');
+    const res = await fetch(`/vs/${String(hash).slice(0, 16)}/overlay.json`, { cache: 'no-store' });
+    if (!res?.ok) throw new Error(`visual set HTTP ${res ? res.status : '???'}`);
+    const doc = await res.json();
+    const bad = visual.checkVisualDoc(doc, hash);
+    if (bad) throw new Error(bad);
+    const effects = {};
+    for (const w of preparePluginFx(doc, visual)) if (w.at?.[0] === 'fx') effects[w.at[1]] = w.value;
+    pluginCatalog = mergePluginFx(null, effects);
+    ofx.lib.addPluginFx(pluginCatalog);
+    state.plugin = id || state.plugin;
+    state.vs = hash;
+    keys = [...new Set([...officialKeys(), ...pluginCatalog.descriptors.keys()])].sort();
+    const list = $('keys');
+    list.replaceChildren(...keys.map((k) => new Option(k)));
+    if (!q.get('key') && !officialKeys().length && pluginCatalog.descriptors.size) state.key = [...pluginCatalog.descriptors.keys()][0];
+    if (!ofx.active) ofx.setTier(q.get('tier') === 'lite' ? 'lite' : 'full');
+    return pluginCatalog;
+  }
+
+  if (state.plugin || state.vs) {
+    try { await loadPluginFx(); } catch (err) {
+      console.warn('[fx-viewer] plugin failed', err?.message || err);
+      $('stats').textContent = `plugin: ${err?.message || err}`;
+    }
+  }
+  if (!ofx.available) {
+    $('stats').textContent = 'no extracted effects (data/local-fx.json) and no plugin set';
+    api.error = 'no effects'; api.ready = true; return;
+  }
   const dl = $('keys');
-  for (const k of keys) dl.append(new Option(k));
+  dl.replaceChildren(...keys.map((k) => new Option(k)));
   const units = index ? Object.keys(index.units || {}).sort() : [];
   for (const u of units) $('unit').append(new Option(u, u));
   $('key').value = state.key;
   $('unit').value = state.unit;
+  $('plugin').value = state.plugin || state.vs || '';
 
   let demo = { on: false, t: 0, src: null, tgt: null, kind: q.get('kind') || 'arrow' };
   let demoStep = () => {};
-  const unitAt = () => ({ x: UNIT_TILE.col, y: UNIT_TILE.row, z: 0, left: state.left, back: false });
+  // The preview pose carries the drawn model (its live bones) and the skin's points. A fake view without a model
+  // still places effects on the skin's static points, as before.
+  const previewView = { x: UNIT_TILE.col, y: UNIT_TILE.row, z: 0, visFacing: 1, info: null };
+  previewView.view = previewView;
+  const unitAt = () => {
+    previewView.visFacing = state.left ? -1 : 1;
+    return { ...previewView, x: UNIT_TILE.col, y: UNIT_TILE.row, z: 0, left: state.left, back: false, view: previewView,
+      info: state.unit ? { id: 'preview', spine: state.unit, defId: state.unit, side: 'ally', kind: 'op' } : null };
+  };
   const skinOf = () => {
     const u = index?.units?.[state.unit];
     return u && u.skin ? index.skins?.[u.skin] : null;
@@ -185,7 +238,7 @@ async function main() {
 
   function tickModels(dt) {
     const seen = new Set();
-    if (preview && !demo.on && !sk.on) { placeRec(preview, { x: UNIT_TILE.col, y: UNIT_TILE.row, visFacing: state.left ? -1 : 1 }, dt); seen.add(preview); }
+    if (preview && !demo.on && !sk.on) { placeRec(preview, unitAt(), dt); seen.add(preview); }
     for (const { view, rec } of modelViews) if (rec) { placeRec(rec, view, dt); seen.add(rec); }
     for (const rec of models.values()) if (rec && !seen.has(rec)) rec.holder.visible = false;
   }
@@ -209,23 +262,35 @@ async function main() {
   async function setPreviewUnit(unitKey) {
     const rec = unitKey && MODELS ? await loadModel(unitKey) : null;
     preview = rec;
+    if (rec) attachModel(previewView, rec, false);
+    else { previewView.boneOffset = undefined; previewView.__probe = null; previewView.__rec = null; }
+    previewView.info = unitKey ? { id: 'preview', spine: unitKey, defId: unitKey, side: 'ally', kind: 'op' } : null;
     for (const r of models.values()) if (r && r !== rec) r.holder.visible = false;
     return rec;
   }
 
+  /** A plugin's own prefab key may be typed without its private namespace. */
+  const resolveKey = (key) => {
+    const k = String(key || state.key).toLowerCase();
+    if (ofx.lib.descs.has(k)) return k;
+    const hit = keys.find((x) => x.endsWith(`:${k}`));
+    return hit || k;
+  };
+
   async function play(key, o = {}) {
-    state.key = String(key || state.key).toLowerCase();
+    state.key = resolveKey(key);
     if (state.handle) state.handle.kill();
     const def = await ofx.lib.load(state.key);
     if (!def) { $('stats').textContent = `no prefab ${state.key}`; return null; }
     await ofx.lib.preload([state.key], { half: ofx.lite });
-    const u = unitAt();
-    const pos = spawnPoint(skinOf(), def.spawn, u);
+    const u = unitAt(), skin = skinOf();
+    const fmp = def.follow && !def.follow.owner ? def.follow : null;
+    const pos = fmp ? mountPoint(skin, fmp.mount, u) : spawnPoint(skin, def.spawn, u);
     // the rotation its spawn location gives it on a unit (render/vfx/wiring.js _rotate): FOOT / HIT / HEAD the Graphic
     // tilt, MUZZLE / a Special point the point's (it faces with the unit: no FLIP_TWO_SIDE of its own), else the identity
-    const rk = def.proj ? null : spawnRotation(def.spawn);
-    const mountRot = rk && rk !== 'graphic' ? mountRotation(skinOf(), rk, u) : null;
-    const rootRot = rk === 'graphic' ? graphicRotation(skinOf()) : mountRot || def.proj ? null : [0, 0, 0, 1];
+    const rk = fmp ? (fmp.keepRot ? spawnRotation(def.spawn) : (fmp.mount === 0 ? 'foot' : mountKind(fmp.mount))) : def.proj ? null : spawnRotation(def.spawn);
+    const mountRot = fmp && !fmp.keepRot ? mountRotation(skin, rk, u) : rk && rk !== 'graphic' ? mountRotation(skin, rk, u) : null;
+    const rootRot = fmp && !fmp.keepRot ? null : rk === 'graphic' ? graphicRotation(skin) : mountRot || def.proj ? null : [0, 0, 0, 1];
     const flip = (def.rotateType === 1 && !mountRot && (u.left !== def.leftIsDefault)) || (!!def.proj && u.left);
     const mirror = flip && !(def.rotateType === 1 && def.rotY >= 0), flipY = flip && def.rotateType === 1 && def.rotY >= 0;
     const yaw = def.rotateType === 2 || def.rotateType === 4 ? (u.left ? Math.PI : 0) : 0;
@@ -241,6 +306,16 @@ async function main() {
         fx.anchor[2] = from[2];
         fx.yaw = (k <= 1) === (dir > 0) ? 0 : Math.PI;
         fx.mirror = false;
+      };
+    } else if (fmp) {
+      // FollowMountPoint: every frame read the point from the model as drawn now (its live bone when loaded).
+      track = (fx) => {
+        const p = unitAt(), sk = skinOf();
+        mountPoint(sk, fmp.mount, p, fx.anchor);
+        if (!fmp.keepRot) {
+          const r = mountRotation(sk, fmp.mount === 0 ? 'foot' : mountKind(fmp.mount), p, fx.mountRot || [0, 0, 0, 1]);
+          if (r) fx.mountRot = r;
+        }
       };
     }
     state.handle = ofx.spawn(state.key, { pos, yaw, mirror: def.proj ? false : mirror, flipY, groundZ: 0, mountRot, rootRot }, { loop: true, track, seed: o.seed ?? (Number(q.get('seed')) || 1) });
@@ -291,6 +366,22 @@ async function main() {
   const toggle = (on, off) => { $(on).classList.add('is-on'); $(off).classList.remove('is-on'); };
   $('play').onclick = () => play($('key').value);
   $('key').onchange = () => play($('key').value);
+  const loadPluginFromPanel = async () => {
+    const v = $('plugin').value.trim();
+    if (!v) return null;
+    try {
+      const hash = /^[0-9a-f]{64}$/i.test(v);
+      await loadPluginFx(hash ? state.plugin : v, hash ? v : '');
+      $('stats').textContent = `plugin loaded: ${keys.length - officialKeys().length} prefabs`;
+      if (state.key) await play(state.key);
+      return pluginCatalog;
+    } catch (err) {
+      $('stats').textContent = `plugin: ${err?.message || err}`;
+      return null;
+    }
+  };
+  $('loadPlugin').onclick = loadPluginFromPanel;
+  $('plugin').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); loadPluginFromPanel(); } };
   $('pause').onclick = () => { state.paused = !state.paused; $('pause').classList.toggle('is-on', state.paused); };
   $('step').onclick = () => { state.paused = true; $('pause').classList.add('is-on'); step(1, 1 / 60); };
   $('speed1').onclick = () => { state.speed = 1; toggle('speed1', 'speed2'); };
@@ -501,6 +592,8 @@ async function main() {
     }),
     stopDemo: () => { demo.on = false; sk.on = false; },
     wiring,
+    loadPlugin: loadPluginFromPanel,
+    pluginCatalog: () => pluginCatalog,
     render: () => app.renderer.render(app.stage),
     clear: () => { ofx.clear(); state.handle = null; },
     stats: () => ofx.stats(),

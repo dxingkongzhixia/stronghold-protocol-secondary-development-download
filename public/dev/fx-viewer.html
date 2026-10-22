@@ -34,7 +34,12 @@
   <canvas id="board"></canvas>
   <div id="field"></div>
   <div class="fv-panel" id="panel">
-    <div class="fv-row"><span class="fv-micro">OFFICIAL FX VIEWER</span></div>
+    <div class="fv-row"><span class="fv-micro">FX VIEWER</span></div>
+    <div class="fv-row">
+      <span class="fv-micro">PLUGIN</span>
+      <input id="plugin" type="text" placeholder="plugin id / visual hash" spellcheck="false" />
+      <button id="loadPlugin" type="button">Load</button>
+    </div>
     <div class="fv-row">
       <input id="key" type="text" list="keys" placeholder="prefab key" spellcheck="false" />
       <datalist id="keys"></datalist>

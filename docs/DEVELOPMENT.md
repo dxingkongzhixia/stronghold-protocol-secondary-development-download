@@ -315,7 +315,7 @@ status loops — the fx extraction (`tools/local-extract/extract.py --only fx --
 `public/assets/local/fx/**` + the per-machine `data/local-fx.json` (index v3). Per client that is
 `settings.officialFx` (`auto | off | lite | full`), shown only when the client has the manifest; with it off (or no
 extraction) nothing new is laid out. The dev viewer is `public/dev/fx-viewer.html` (`?attack=<opId>` /
-`?skilldemo=<opId>&s=<slot>` / `?key=<prefab>`; it draws the unit's Spine with live bones, `&model=0` to turn it off).
+`?skilldemo=<opId>&s=<slot>` / `?key=<prefab>` / `?plugin=<id>` (a checked plugin visual set); it draws the unit's Spine with live bones, `&model=0` to turn it off).
 Our own additions inside that upstream runtime are listed in [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2 (they must
 survive merges); the batch record is [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0.
 
