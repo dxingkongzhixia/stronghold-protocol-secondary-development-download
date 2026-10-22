@@ -126,6 +126,31 @@ test('compiled descriptors reject cycles, scripts, arbitrary meshes and particle
   }
 });
 
+test('author prefabs may use stretched billboards and a pivot, still without custom meshes', () => {
+  const stretch = () => {
+    const d = prefab();
+    d.nodes[0].meshRenderer = undefined;
+    d.nodes[0].particleSystem = {
+      lengthInSec: 1, looping: false, InitialModule: { startLifetime: 1, startSpeed: 4, startSize: 2, startColor: [1, 1, 1, 1], maxNumParticles: 16 },
+      EmissionModule: { rateOverTime: 0, m_Bursts: [{ time: 0, countCurve: 2, cycleCount: 1, repeatInterval: 0.01, probability: 1 }] },
+    };
+    d.nodes[0].particleSystemRenderer = {
+      m_Enabled: true, renderMode: 'stretch', renderAlignment: 'velocity', materials: [0], m_SortingOrder: -3,
+      m_Pivot: [0, 0.5, 0], m_LengthScale: 4, m_VelocityScale: 0,
+    };
+    return d;
+  };
+  assert.equal(validateFxPrefab(stretch(), { sheet: {} }).key, 'spark');
+  const bad = [
+    d => d.nodes[0].particleSystemRenderer.renderMode = 'mesh',
+    d => d.nodes[0].particleSystemRenderer.m_Pivot = [0, 1],
+    d => d.nodes[0].particleSystemRenderer.m_Pivot = [0, Infinity, 0],
+    d => d.nodes[0].particleSystemRenderer.m_LengthScale = -1,
+    d => d.nodes[0].particleSystemRenderer.m_VelocityScale = 'fast',
+  ];
+  for (const change of bad) { const d = stretch(); change(d); assert.throws(() => validateFxPrefab(d, { sheet: {} })); }
+});
+
 test('visual document pins effect data and refuses unlisted texture URLs', t => {
   const f = fxFixture(t); compiled(f);
   const got = readFxAssets(f.root, { index: 'fx/index.json' }, ['fx-demo'], listPluginFiles(f.root));

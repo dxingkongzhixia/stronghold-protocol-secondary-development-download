@@ -595,6 +595,9 @@ following [the extracted format](design/vfx-format.md), with this validated subs
   Mode attacks have cast/hit rows (`effects`, optional oneshot/startEvent/endEvent).
 - Parent-first nodes, transforms, built-in Quad meshes or particle systems, renderer material indices, and optional
   ParticleEffect behaviour (`_isLoop`, `_maxLifetime`, `_spawnLocation`, `_delayToPlay`, `_delayToFinish`, `_rotateType`).
+- Renderers: `billboard`, `stretch`, `horizontal` and `vertical`; optional `m_Pivot` (three particle-size units, each
+  within ±1,000) and `m_LengthScale` / `m_VelocityScale` / `m_CameraVelocityScale` (0–1,000). A negative
+  `m_SortingOrder` draws behind the units, as the official renderer does.
 - Scalar InitialModule lifetime/speed/size/color/capacity and EmissionModule rate/bursts. Built-in additive/alpha
   particle materials only. No prewarm, scripts, shader source, URLs, custom meshes, clips, subemitters or effect chains.
 

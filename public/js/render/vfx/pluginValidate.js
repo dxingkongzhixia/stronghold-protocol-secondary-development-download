@@ -64,7 +64,9 @@ export function validateFxPrefab(d, textures, opts = {}) {
   boundedFxJson(d);
   check(allowed(d, ['format', 'version', 'key', 'root', 'nodes', 'materials', 'textures', 'meshes', 'refs', 'clips', 'stats', 'bundle']) && d.format === 'fx-prefab' && d.version === 1 && fxId(d.key), 'fx-prefab version 1 required');
   check(Array.isArray(d.nodes) && d.nodes.length > 0 && d.nodes.length <= CAP.nodes && (d.root ?? 0) === 0, 'prefab node/root limit');
-  // [ASSUMED] First author format: particles and built-in quads, no chained effects, custom meshes or animation clips.
+  // [ASSUMED] Author format: particles and built-in quads, no chained effects, custom meshes or animation clips. The
+  // shared renderer accepts stretched billboards and a pivot (the same rules as official prefabs); exposing them here
+  // lets an author make streaks and ground-pivoted flames without a custom mesh.
   for (const k of ['refs', 'meshes', 'clips']) check(d[k] === undefined || Array.isArray(d[k]) && d[k].length === 0, `${k} are unsupported in plugin prefabs`);
   check(Array.isArray(d.textures) && d.textures.every(t => Object.hasOwn(textures, t)), 'undeclared prefab texture');
   check(Array.isArray(d.materials) && d.materials.length <= 16, 'material limit');
@@ -92,9 +94,12 @@ export function validateFxPrefab(d, textures, opts = {}) {
     }
     if (n.meshFilter !== undefined) check(n.meshFilter?.builtin === 'Quad' && Object.keys(n.meshFilter).length === 1, 'only builtin Quad meshes');
     for (const r of [n.meshRenderer, n.particleSystemRenderer].filter(Boolean)) {
-      check(allowed(r, ['m_Enabled', 'renderMode', 'renderAlignment', 'materials', 'm_SortingOrder', 'm_SortingLayer']) && Array.isArray(r.materials) && r.materials.length <= 4 && r.materials.every(m => Number.isInteger(m) && m >= 0 && m < d.materials.length), 'invalid renderer/material reference');
-      check(r.renderMode === undefined || ['billboard', 'horizontal', 'vertical'].includes(r.renderMode), 'unsupported particle render mode');
-      check(flag(r.m_Enabled) && (r.renderAlignment === undefined || ['view', 'world', 'local', 'facing', 'velocity'].includes(r.renderAlignment)) && optional(r.m_SortingOrder, -100, 100) && optional(r.m_SortingLayer, 0, 100), 'invalid renderer fields');
+      check(allowed(r, ['m_Enabled', 'renderMode', 'renderAlignment', 'materials', 'm_SortingOrder', 'm_SortingLayer',
+        'm_Pivot', 'm_LengthScale', 'm_VelocityScale', 'm_CameraVelocityScale']) && Array.isArray(r.materials) && r.materials.length <= 4 && r.materials.every(m => Number.isInteger(m) && m >= 0 && m < d.materials.length), 'invalid renderer/material reference');
+      check(r.renderMode === undefined || ['billboard', 'stretch', 'horizontal', 'vertical'].includes(r.renderMode), 'unsupported particle render mode');
+      check(flag(r.m_Enabled) && (r.renderAlignment === undefined || ['view', 'world', 'local', 'facing', 'velocity'].includes(r.renderAlignment)) && optional(r.m_SortingOrder, -100, 100) && optional(r.m_SortingLayer, 0, 100) &&
+        (r.m_Pivot === undefined || Array.isArray(r.m_Pivot) && r.m_Pivot.length === 3 && r.m_Pivot.every(v => scalar(v, -1000, 1000))) &&
+        optional(r.m_LengthScale, 0, 1000) && optional(r.m_VelocityScale, 0, 1000) && optional(r.m_CameraVelocityScale, 0, 1000), 'invalid renderer fields');
     }
     if (n.particleSystem) {
       const p = n.particleSystem, init = p.InitialModule, em = p.EmissionModule;
