@@ -39,19 +39,52 @@ function battle(data) {
   });
 }
 
-test('prts: the real mimic is targetable and the boss is guarded by the link', { skip }, () => {
+test('prts: the real mimic is targetable and the boss uses an HP shield instead of invincibility', { skip }, () => {
   const h = battle(content());
   h.step();
   const boss = h.enemies().find((e) => e.defId === BOSS);
   const mimic = h.enemies().find((e) => e.defId === MIMIC);
   assert.ok(boss && mimic, 'both the boss and its mimic spawned');
-  assert.equal(boss.buffs.some((b) => b.key === 'protocol:guard'), true, 'the boss is guarded while the mimic lives');
-  assert.equal(mimic.buffs.some((b) => b.key === 'protocol:guard'), false, 'the mimic must not guard itself');
+  const shield = boss.buffs.find((b) => b.key === 'protocol:shield');
+  assert.ok(shield, 'the boss starts with its link shield');
+  assert.equal(shield.shield, boss.s.maxHp, 'the shield is 100% of the boss max HP');
+  assert.equal(boss.buffs.some((b) => b.key === 'protocol:guard'), false, 'the boss is not hard-guarded');
+  assert.equal(!!boss.s.flags.untargetable, false, 'the boss can be selected');
+  assert.equal(!!boss.s.flags.invulnerable, false, 'the boss can be damaged through its shield');
+  assert.equal(mimic.buffs.some((b) => b.key === 'protocol:guard' || b.key === 'protocol:shield'), false, 'the mimic carries neither guard nor shield');
   assert.equal(!!mimic.s.flags.untargetable, false, 'the mimic is targetable');
   assert.equal(!!mimic.s.flags.invulnerable, false, 'the mimic can take damage');
-  const hp = mimic.hp;
+
+  const mimicHp = mimic.hp;
   h.b.dealDamage(null, mimic, { amount: 100, type: 'true' });
-  assert.equal(mimic.hp < hp, true, 'normal damage reaches the mimic');
+  assert.equal(mimic.hp < mimicHp, true, 'normal damage reaches the mimic');
+
+  const bossHp = boss.hp;
+  h.b.dealDamage(null, boss, { amount: 100, type: 'true' });
+  assert.equal(boss.hp, bossHp, 'the shield takes the hit before the boss HP');
+  assert.equal(shield.shield, boss.s.maxHp - 100, 'the shield value went down');
+  assert.equal(h.b.errors.length, 0);
+});
+
+test('prts: the shield breaks once and is never restored by a revive', { skip }, () => {
+  const h = battle(content());
+  h.step();
+  const boss = h.enemies().find((e) => e.defId === BOSS);
+  const mimic = h.enemies().find((e) => e.defId === MIMIC);
+  const hp = boss.hp;
+  const breaks = [];
+  h.b.on('protocolShieldBreak', (c) => breaks.push(c));
+  h.b.dealDamage(null, boss, { amount: boss.s.maxHp + 1234, type: 'true' });
+  assert.equal(boss.hp, hp - 1234, 'damage beyond the shield reaches boss HP');
+  assert.equal(breaks.length, 1, 'the shield break fired once');
+  assert.equal(boss.buffs.some((b) => b.key === 'protocol:shield'), false, 'the shield is gone');
+  assert.equal(h.b.snapshot().protocol.shield, 0);
+
+  h.b.loseHp(mimic, 1e9);
+  h.run(9.2);
+  assert.equal(mimic.alive, true, 'the mimic revived');
+  assert.equal(boss.buffs.some((b) => b.key === 'protocol:shield'), false, 'the revive does not restore the shield');
+  assert.equal(boss.s.flags.untargetable, undefined, 'the boss remains targetable after the shield broke');
   assert.equal(h.b.errors.length, 0);
 });
 

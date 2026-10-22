@@ -32,6 +32,7 @@ function battle({ p = protocol(), bossSpeed = 0, mimicSpeed = 0, autoFinish = tr
 }
 
 const guard = (h, e) => e.buffs.some((b) => b.key === 'protocol:guard');
+const shield = (e) => e.buffs.find((b) => b.key === 'protocol:shield');
 const down = (e) => e.buffs.some((b) => b.key === 'protocol:down');
 const kill = (h, e) => h.b.loseHp(e, 1e9);
 
@@ -43,6 +44,17 @@ test('protocol.ui publishes the live boss HUD through the battle plugin view', (
   assert.equal(view.hud.boss[1].type, 'countdown');
   h.run(1);
   assert.ok(h.b.snapshot().pluginView['demo-boss'].hud.boss.some((b) => b.type === 'countdown'));
+});
+
+test('a link shield publishes a bounded boss HUD bar', () => {
+  const p = protocol({
+    link: { enemy: MIMIC, guard: true, shieldRatio: 0.5 },
+    clearProtocol: undefined,
+    ui: { id: 'demo-shield', revivesLabel: '重构', shieldLabel: '庇护护盾' },
+  });
+  const h = battle({ p, autoFinish: false, timeLimit: 12 });
+  const bar = h.b.snapshot().pluginView['demo-shield'].hud.boss.find((b) => b.type === 'bar');
+  assert.deepEqual({ label: bar.label, value: bar.value, max: bar.max }, { label: '庇护护盾', value: 25000, max: 25000 });
 });
 
 test('protocol events name the plugin-owned PRTS / mimic effect prefabs', () => {
@@ -87,6 +99,34 @@ test('the linked mimic guards the boss while alive, then revives it three times'
   h.step(2);
   assert.equal(mimic.alive, false, 'the fourth knock-out is final');
   assert.equal(guard(h, boss), false, 'the boss stays targetable');
+});
+
+test('a link shield replaces invincibility: it absorbs damage, then exposes the boss for good', () => {
+  const h = battle({ p: protocol({ link: { enemy: MIMIC, guard: true, shieldRatio: 1 } }) });
+  const boss = h.b.enemies.find((e) => e.defId === BOSS);
+  const mimic = h.b.enemies.find((e) => e.defId === MIMIC);
+  assert.ok(shield(boss), 'the boss starts with a shield');
+  assert.equal(shield(boss).shield, boss.s.maxHp);
+  assert.equal(guard(h, boss), false, 'the boss is not hard-guarded');
+  assert.equal(!!boss.s.flags.untargetable, false, 'the shield does not make the boss untargetable');
+  assert.equal(!!boss.s.flags.invulnerable, false, 'the shield does not make the boss invulnerable');
+
+  const breaks = [];
+  h.b.on('protocolShieldBreak', (c) => breaks.push(c));
+  const hp = boss.hp;
+  h.b.dealDamage(null, boss, { amount: boss.s.maxHp - 1, type: 'true' });
+  assert.equal(boss.hp, hp, 'the shield absorbs the hit');
+  assert.equal(shield(boss).shield, 1);
+  h.b.dealDamage(null, boss, { amount: 1234, type: 'true' });
+  assert.equal(boss.hp, hp - 1233, 'only the overkill reaches HP');
+  assert.equal(shield(boss), undefined, 'the shield is gone');
+  assert.equal(breaks.length, 1, 'the break fires once');
+
+  kill(h, mimic);
+  h.run(8.2);
+  assert.equal(mimic.alive, true, 'the mimic revived');
+  assert.equal(shield(boss), undefined, 'a revive never restores the broken shield');
+  assert.equal(guard(h, boss), false, 'the boss stays exposed');
 });
 
 test('damage to the boss during the down window shortens the revive, never below the floor', () => {

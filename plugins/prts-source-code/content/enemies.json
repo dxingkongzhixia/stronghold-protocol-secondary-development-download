@@ -18,8 +18,8 @@
         },
         "abilities": [
           {
-            "text": "【安全待机模式】未击倒场上的<拟态机械>时，<PRTS，“源代码”>不可被攻击。",
-            "textRaw": "【安全待机模式】未击倒场上的<拟态机械>时，<PRTS，“源代码”>不可被攻击。",
+            "text": "【安全待机模式】未击倒场上的<拟态机械>时，<PRTS，“源代码”>获得等同自身生命值的庇护护盾；护盾优先承受伤害，护盾破碎后可被攻击。",
+            "textRaw": "【安全待机模式】未击倒场上的<拟态机械>时，<PRTS，“源代码”>获得等同自身生命值的庇护护盾；护盾优先承受伤害，护盾破碎后可被攻击。",
             "format": "NORMAL"
           },
           {
@@ -41,7 +41,8 @@
         "protocol": {
           "link": {
             "enemy": "enemy_x_prts_source_code_mimic",
-            "guard": true
+            "guard": true,
+            "shieldRatio": 1
           },
           "revive": {
             "count": 3,
@@ -102,6 +103,7 @@
             "id": "prts-source-code",
             "slot": "boss",
             "revivesLabel": "重构",
+            "shieldLabel": "庇护护盾",
             "clearLabel": "清除协议",
             "downLabel": "重构中",
             "clearedLabel": "协议已执行"
@@ -128,8 +130,8 @@
         },
         "abilities": [
           {
-            "text": "【安全待机模式】未击倒场上的<拟态机械>时，<PRTS，“源代码”>不可被攻击。",
-            "textRaw": "【安全待机模式】未击倒场上的<拟态机械>时，<PRTS，“源代码”>不可被攻击。",
+            "text": "【安全待机模式】未击倒场上的<拟态机械>时，<PRTS，“源代码”>获得等同自身生命值的庇护护盾；护盾优先承受伤害，护盾破碎后可被攻击。",
+            "textRaw": "【安全待机模式】未击倒场上的<拟态机械>时，<PRTS，“源代码”>获得等同自身生命值的庇护护盾；护盾优先承受伤害，护盾破碎后可被攻击。",
             "format": "NORMAL"
           },
           {
@@ -151,7 +153,8 @@
         "protocol": {
           "link": {
             "enemy": "enemy_x_prts_source_code_mimic",
-            "guard": true
+            "guard": true,
+            "shieldRatio": 1
           },
           "revive": {
             "count": 5,
@@ -212,6 +215,7 @@
             "id": "prts-source-code",
             "slot": "boss",
             "revivesLabel": "重构",
+            "shieldLabel": "庇护护盾",
             "clearLabel": "清除协议",
             "downLabel": "重构中",
             "clearedLabel": "协议已执行"

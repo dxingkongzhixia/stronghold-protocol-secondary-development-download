@@ -26,6 +26,12 @@ test('the full PRTS protocol normalises, applies defaults and keeps every field'
   assert.deepEqual(protocol.beam, { interval: 30, targets: 3, damageScale: 0.5, width: 1, windup: 3, interruptHp: 0.15 });
 });
 
+test('a link can replace the hard guard with an HP-ratio shield', () => {
+  const { protocol, problems } = readBossProtocol({ link: { enemy: 'enemy_1565_mpprme', shieldRatio: 1 } });
+  assert.deepEqual(problems, []);
+  assert.deepEqual(protocol.link, { enemy: 'enemy_1565_mpprme', guard: true, shieldRatio: 1 });
+});
+
 test('defaults are conservative and a partial record needs only the fields it has', () => {
   const { protocol, problems } = readBossProtocol({ clearProtocol: {} });
   assert.deepEqual(problems, []);
@@ -39,6 +45,7 @@ test('invalid values and unknown fields are reported and produce no protocol', (
   const cases = [
     { link: { enemy: 'not a valid id!' } },
     { link: { enemy: 'enemy_1', guard: 'yes' } },
+    { link: { enemy: 'enemy_1', shieldRatio: -1 } },
     { revive: { count: BOSS_PROTOCOL_LIMITS.reviveCount + 1 } },
     { revive: { shortenOnHit: { seconds: 99 } } },
     { clearProtocol: { at: 1 } },

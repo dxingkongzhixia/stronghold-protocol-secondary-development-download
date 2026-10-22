@@ -132,7 +132,7 @@ plugins/prts-source-code/
 
 ```json
 {
-  "link": { "enemy": "enemy_x_prts_source_code_mimic", "guard": true },
+  "link": { "enemy": "enemy_x_prts_source_code_mimic", "guard": true, "shieldRatio": 1 },
   "revive": {
     "count": 3,
     "atk": 100,

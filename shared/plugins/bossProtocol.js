@@ -30,12 +30,13 @@ export const BOSS_PROTOCOL_LIMITS = Object.freeze({
   beamScale: 5,
   beamWidth: 3,
   beamWindup: 10,
+  shieldRatio: 5,
 });
 
 const ID = /^[A-Za-z0-9_]{1,64}$/;
 const PLUGIN_ID = /^[a-z0-9][a-z0-9-]{1,31}$/;
 const KEYS = new Set(['link', 'revive', 'clearProtocol', 'dpRegen', 'deployLock', 'projectile', 'fly', 'beam', 'ui']);
-const UI_TEXT = Object.freeze({ revives: 'Revive', clear: 'Clear Protocol', down: 'Reviving', cleared: 'Protocol executed' });
+const UI_TEXT = Object.freeze({ revives: 'Revive', clear: 'Clear Protocol', down: 'Reviving', cleared: 'Protocol executed', shield: 'Shield' });
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 const int = (v, lo, hi, path, problems, fallback = null) => {
@@ -75,9 +76,14 @@ export function readBossProtocol(raw) {
     const l = raw.link;
     if (!isObj(l)) problems.push('protocol.link: expected an object');
     else {
-      for (const k of Object.keys(l)) if (k !== 'enemy' && k !== 'guard') problems.push(`protocol.link: unknown field "${k}"`);
+      for (const k of Object.keys(l)) if (!['enemy', 'guard', 'shieldRatio'].includes(k)) problems.push(`protocol.link: unknown field "${k}"`);
       if (typeof l.enemy !== 'string' || !ID.test(l.enemy)) problems.push('protocol.link.enemy: expected an enemy id');
-      else p.link = { enemy: l.enemy, guard: bool(l.guard, 'protocol.link.guard', problems, true) };
+      else {
+        p.link = { enemy: l.enemy, guard: bool(l.guard, 'protocol.link.guard', problems, true) };
+        if (l.shieldRatio !== undefined) {
+          p.link.shieldRatio = num(l.shieldRatio, 0, BOSS_PROTOCOL_LIMITS.shieldRatio, 'protocol.link.shieldRatio', problems, 0);
+        }
+      }
     }
   }
 
@@ -210,7 +216,7 @@ export function readBossProtocol(raw) {
     const u = raw.ui;
     if (!isObj(u)) problems.push('protocol.ui: expected an object');
     else {
-      for (const k of Object.keys(u)) if (!['id', 'slot', 'revivesLabel', 'clearLabel', 'downLabel', 'clearedLabel'].includes(k)) problems.push(`protocol.ui: unknown field "${k}"`);
+      for (const k of Object.keys(u)) if (!['id', 'slot', 'revivesLabel', 'clearLabel', 'downLabel', 'clearedLabel', 'shieldLabel'].includes(k)) problems.push(`protocol.ui: unknown field "${k}"`);
       const id = typeof u.id === 'string' ? u.id : '';
       if (!PLUGIN_ID.test(id)) problems.push('protocol.ui.id: expected a plugin id');
       else {
@@ -226,6 +232,7 @@ export function readBossProtocol(raw) {
           clearLabel: text(u.clearLabel, UI_TEXT.clear, 'clearLabel'),
           downLabel: text(u.downLabel, UI_TEXT.down, 'downLabel'),
           clearedLabel: text(u.clearedLabel, UI_TEXT.cleared, 'clearedLabel'),
+          shieldLabel: text(u.shieldLabel, UI_TEXT.shield, 'shieldLabel'),
         };
       }
     }

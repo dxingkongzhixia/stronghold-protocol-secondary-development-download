@@ -8,6 +8,7 @@ import { hypot } from '../detmath.js';
 
 const STATE = new WeakMap();
 const GUARD = 'protocol:guard';
+const SHIELD = 'protocol:shield';
 const DOWN = 'protocol:down';
 const LINK_GRACE = 5; // give up the guard when a declared link never spawns (5 s of game time)
 
@@ -31,6 +32,10 @@ function publishProtocolView(b, st) {
   const ui = st?.protocol?.ui;
   if (!ui || typeof b.setPluginView !== 'function') return;
   const blocks = [];
+  const shield = st.shieldBuff?.shield > 0 ? st.shieldBuff.shield : 0;
+  if (shield > 0 && st.shieldMax > 0) {
+    blocks.push({ type: 'bar', label: ui.shieldLabel, value: Math.ceil(shield), max: st.shieldMax });
+  }
   if (st.down && st.downUntil != null) {
     blocks.push({ type: 'countdown', label: ui.downLabel, seconds: Math.max(0, st.downUntil - b.time) });
   } else if (st.revivesMax > 0) {
@@ -44,15 +49,57 @@ function publishProtocolView(b, st) {
   b.setPluginView(ui.id, { hud: { [ui.slot]: blocks } });
 }
 
+/**
+ * The link guard is either the legacy hard guard or, with `link.shieldRatio > 0`, a one-time HP
+ * barrier: the boss stays targetable but the barrier eats damage first. A broken barrier never
+ * comes back, including across the mimic's revives.
+ */
 function addGuard(b, st) {
   if (!st.protocol.link?.guard || st.guard) return;
-  b.addBuff(st.boss, { key: GUARD, flags: { untargetable: true, invulnerable: true }, persist: true, allowDead: true });
+  const ratio = st.protocol.link.shieldRatio ?? 0;
+  if (ratio <= 0) {
+    b.addBuff(st.boss, { key: GUARD, flags: { untargetable: true, invulnerable: true }, persist: true, allowDead: true });
+    st.guard = true;
+    return;
+  }
+  if (st.shieldBroken) return;
+  const current = st.shieldBuff?.shield > 0 ? st.shieldBuff.shield : 0;
+  if (current > 0) {
+    st.shield = current;
+    st.guard = true;
+    return;
+  }
+  const amount = Math.max(1, Math.round(st.boss.s.maxHp * ratio));
+  st.shieldMax = amount;
+  st.shield = amount;
+  st.shieldBuff = b.addBuff(st.boss, {
+    key: SHIELD, shield: amount, persist: true, allowDead: true, visible: true,
+    onRemove: ({ unit, buff }) => {
+      // A manual drop (boss defeat / final link death) is not a shield break.
+      if (st.droppingShield || st.dead || buff.shield > 1e-9) return;
+      st.shieldBuff = null;
+      st.shield = 0;
+      st.shieldBroken = true;
+      st.guard = false;
+      b.fx?.('shieldBreak', { x: unit.x, y: unit.y, id: unit.id });
+      b.emit('protocolShieldBreak', { boss: st.boss, max: st.shieldMax });
+      publishProtocolView(b, st);
+    },
+  });
+  b.fx?.('shield', { x: st.boss.x, y: st.boss.y, id: st.boss.id, n: amount });
   st.guard = true;
 }
 
-function removeGuard(b, st) {
-  if (!st.guard) return;
-  b.removeBuff(st.boss, GUARD);
+function removeGuard(b, st, dropShield = true) {
+  if (!st.guard && !st.shieldBuff) return;
+  if (dropShield && st.shieldBuff) {
+    const buff = st.shieldBuff;
+    st.shieldBuff = null;
+    st.shield = 0;
+    st.droppingShield = true;
+    try { b.removeBuff(st.boss, buff); } finally { st.droppingShield = false; }
+  }
+  if (!st.shieldBuff) b.removeBuff(st.boss, GUARD);
   st.guard = false;
 }
 
@@ -269,7 +316,8 @@ function enterDown(b, st, e) {
   e.hp = e.s.maxHp;
   protocolFx(b, e, 'enemy_mpprme_buff_01', { loop: true, dur: p.down });
   b.addBuff(e, { key: DOWN, flags: { untargetable: true, invulnerable: true, stun: true, noBlock: true, noMove: true }, persist: true, allowDead: true });
-  removeGuard(b, st);
+  // A shield barrier is boss protection, not a link-phase buff: keep it through the down window.
+  removeGuard(b, st, st.shieldMax <= 0);
   interruptBeam(b, st);
   startDpRegen(b, st);
   st.timer = b.after(p.down, () => {
@@ -359,6 +407,9 @@ export function protocolSnapshot(b) {
       downIn: st.downUntil == null ? null : Math.max(0, Math.round((st.downUntil - b.time) * 10) / 10),
       revivesLeft: st.revivesLeft,
       revivesMax: st.revivesMax,
+      shield: st.shieldBuff?.shield > 0 ? Math.ceil(st.shieldBuff.shield) : 0,
+      shieldMax: st.shieldMax ?? 0,
+      shieldBroken: !!st.shieldBroken,
       clearIn: st.clearAt == null ? null : Math.max(0, Math.round((st.clearAt - b.time) * 10) / 10),
       warning: st.warningAt != null && b.time >= st.warningAt,
       cleared: !!st.cleared,
@@ -377,7 +428,7 @@ export function protocolAbility(raw) {
         downUntil: null, clearAt: null, warningAt: null,
         timer: null, warning: null, clear: null, guard: false, cleared: false, dead: false, at: b.time,
         dpTimer: null, projTimer: null, beamTimer: null, beamResolve: null, beamPending: null, beamDamage: 0,
-        revivedOnce: false, fly: null,
+        revivedOnce: false, fly: null, shieldBuff: null, shield: 0, shieldMax: 0, shieldBroken: false, droppingShield: false,
       };
       STATE.set(e, st);
       addGuard(b, st);
