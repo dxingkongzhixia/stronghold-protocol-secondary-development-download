@@ -37,7 +37,7 @@
 // moveFeared; a self-inflicted fear flutters inside its own tile); an `attract` (诱导) status walks it to the status
 // point instead (moveAttracted); both re-plan the route when released (恐惧 outranks 诱导).
 
-import { ATTACK_PAUSE, ALLY_COLLIDER_RADIUS, MOVE_SCALE, PROJECTILE_SPEEDS, PROJECTILE_SPEED, BOOMERANG_RETURN_SPEED, COLS, CHAIN_RADIUS } from './constants.js';
+import { ATTACK_PAUSE, ALLY_COLLIDER_RADIUS, MOVE_SCALE, PROJECTILE_SPEEDS, PROJECTILE_SPEED, BOOMERANG_RETURN_SPEED, COLS, CHAIN_RADIUS, BLOCK_RADIUS } from './constants.js';
 import { sortEnemyTargets, sortAllyTargets, canTargetEnemy, canTargetAlly, tileKeyOf } from './targeting.js';
 import { reduceElement } from './damage.js';
 import { straightClear } from './grid.js';
@@ -665,9 +665,12 @@ export function updateEnemy(b, e, dt) {
     // stunned/sleeping blocker — noBlock — lets go)
     const ef = e.s.flags;
     if (!bl.alive || !bl.deployed || bl.hidden || bl.s.flags.noBlock || bl.s.flags.sleep || ef.unblockable || ef.levitate || ef.fear) b._unblock(e);
-    else return;
+    else if (!e.profile?.moveWhileBlocked) return;
   }
-  if (!e.hidden && b._checkBlock(e)) return;
+  // A movable boss (`moveWhileBlocked`: the Deathless Black Snake) is still held by the blocker — it takes the block
+  // slot and the blocker may hit it — but keeps walking its route. A normal enemy returns here, as before.
+  const blockedMove = !!e.profile?.moveWhileBlocked;
+  if (!e.hidden && b._checkBlock(e) && !blockedMove) return;
   if (b.time < e.pauseUntil) return;
   // standing for an attack clip (attackStand, GitHub #58): only the walking waits — a checkpoint's WAIT keeps running
   // and DISAPPEAR / APPEAR legs still happen (advanceRoute); drawn idle (the client plays the clip, then Move again);
@@ -682,6 +685,13 @@ export function updateEnemy(b, e, dt) {
   // 诱导 (ba.attract "无法被阻挡并向目标位置移动"): walks to the attract point instead of following its route
   if (e.s.flags.attract) { if (standing) e.moving = false; else moveAttracted(b, e, dt); return; }
   advanceRoute(b, e, dt, R, standing);
+  // A movable boss that has walked out of its blocker's radius is no longer held by it; the next contact blocks it
+  // again. Keep the block while it is still in contact, so the blocker's slot and the boss's blocked state are real.
+  if (blockedMove && e.blockedBy && !e.hidden) {
+    const bl = e.blockedBy;
+    const radius = e.isFlying ? BLOCK_RADIUS.fly : BLOCK_RADIUS.ground;
+    if (hypot(e.x - bl.x, e.y - bl.y) > radius + 1e-9) b._unblock(e);
+  }
 }
 
 /**

@@ -23,7 +23,6 @@
             "skill": 2,
             "skillLocked": true,
             "bonds": [
-              "deputShip",
               "steadShip",
               "preciShip"
             ],

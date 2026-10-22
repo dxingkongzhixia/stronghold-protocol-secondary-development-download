@@ -47,6 +47,30 @@ test('black-snake: the NORMAL boss wave spawns the boss and its escorts', { skip
   assert.equal(h.b.errors.length, 0);
 });
 
+test('black-snake: the boss is blockable but keeps moving, unlike the civilians', { skip }, () => {
+  const h = battle(content());
+  h.step();
+  const boss = h.enemies().find((e) => e.defId === BOSS);
+  const ally = h.unit('chess_char_1_01_a');
+  assert.ok(boss && ally, 'the boss and its operator are on the field');
+  assert.equal(boss.profile.moveWhileBlocked, true, 'the boss carries the movable-boss rule');
+  // Put the boss inside the operator's block radius. It is held (blockedBy set) and still walks its route.
+  boss.x = ally.x + 0.5;
+  boss.y = ally.y;
+  const x0 = boss.x, y0 = boss.y;
+  h.step();
+  assert.ok(boss.blockedBy, 'the operator blocks the boss');
+  assert.equal(!!boss.s.flags.unblockable, false, 'it is not made unblockable like a civilian');
+  assert.notEqual(`${boss.x},${boss.y}`, `${x0},${y0}`, 'the blocked boss keeps moving');
+
+  const civilian = h.spawn('enemy_x_black_snake_upeopl', { pos: [10, 9], routeIndex: 0 });
+  assert.equal(civilian.s.flags.unblockable, true, 'H8-4 civilians are not held by operators');
+  assert.ok(civilian.findBuff('civilian:unblockable'), 'the civilian uses its own rule');
+  h.step();
+  assert.equal(civilian.blockedBy, null, 'an operator in contact cannot stop the civilian');
+  assert.equal(h.b.errors.length, 0);
+});
+
 test('black-snake: the boss applies Burning Breath and survives its first phase', { skip }, () => {
   const h = battle(content());
   h.step();
@@ -78,7 +102,7 @@ test('black-snake: the energy aggregate self-destructs after 25 s with direction
   const ally = h.unit('chess_char_1_01_a');
   ally.base.maxHp = 1e8;
   ally.hp = 1e8;
-  const aggregate = h.spawn('enemy_x_black_snake_aggregate', { pos: [10, 9], routeIndex: 0 });
+  const aggregate = h.spawn('enemy_x_black_snake_aggregate', { pos: [10, 4], routeIndex: 0 });
   assert.ok(aggregate);
   h.run(25.2);
   assert.equal(aggregate.alive, false, 'the timed energy crystal leaves the field');

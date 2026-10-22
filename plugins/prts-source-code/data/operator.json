@@ -10,7 +10,6 @@
   "chess": {
     "tier": 3,
     "bonds": [
-      "deputShip",
       "steadShip",
       "preciShip"
     ],

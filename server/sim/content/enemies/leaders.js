@@ -846,6 +846,11 @@ function kitBlackSnake() {
       a.noAtk = e.profile.noAttack;
       a.inferno = false;
       a.phase = 1;
+      // The Deathless Black Snake is the movable boss: an operator can block it (it takes the block slot and
+      // fights its blocker), but it keeps walking its route. Civilians have their own unblockable rule in their
+      // kit below — this is not a generic `blockCnt: 0` engine rule.
+      e.profile.moveWhileBlocked = true;
+      e.profile.attackMoves = true;
       b.every(BS_IGNITE_CD, () => {
         if (a.busy || a.inferno || !e.alive) return;
         const targets = b.allies().filter((u) => u && u.alive && !u.hidden && !u.findBuff?.(BS_BREATH)).slice(0, 2);
@@ -990,6 +995,11 @@ export const PLUGIN_KITS = Object.freeze({
   enemy_x_black_snake_uamord: () => [],
   // H8-4 civilian: killed by an enemy costs one team LP; a player kill is just a kill.
   enemy_x_black_snake_upeopl: () => [{
+    // The civilian is not a combat unit and is not held by operators; this is its own rule,
+    // separate from the boss's `moveWhileBlocked` rule.
+    spawn(b, e) {
+      b.addBuff(e, { key: 'civilian:unblockable', persist: true, flags: { unblockable: true } });
+    },
     death(c, b, e) {
       if (c?.killer?.side === 'enemy') b.emit('lpLoss', { amount: 1, enemy: e, source: c.killer });
     },
