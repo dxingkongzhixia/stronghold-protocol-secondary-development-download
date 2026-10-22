@@ -47,7 +47,7 @@ test('prts: the real mimic is targetable and the boss uses an HP shield instead 
   assert.ok(boss && mimic, 'both the boss and its mimic spawned');
   const shield = boss.buffs.find((b) => b.key === 'protocol:shield');
   assert.ok(shield, 'the boss starts with its link shield');
-  assert.equal(shield.shield, boss.s.maxHp, 'the shield is 100% of the boss max HP');
+  assert.equal(shield.shield, boss.s.maxHp * 0.5, 'the shield is 50% of the boss max HP');
   assert.equal(boss.buffs.some((b) => b.key === 'protocol:guard'), false, 'the boss is not hard-guarded');
   assert.equal(!!boss.s.flags.untargetable, false, 'the boss can be selected');
   assert.equal(!!boss.s.flags.invulnerable, false, 'the boss can be damaged through its shield');
@@ -62,7 +62,7 @@ test('prts: the real mimic is targetable and the boss uses an HP shield instead 
   const bossHp = boss.hp;
   h.b.dealDamage(null, boss, { amount: 100, type: 'true' });
   assert.equal(boss.hp, bossHp, 'the shield takes the hit before the boss HP');
-  assert.equal(shield.shield, boss.s.maxHp - 100, 'the shield value went down');
+  assert.equal(shield.shield, boss.s.maxHp * 0.5 - 100, 'the shield value went down');
   assert.equal(h.b.errors.length, 0);
 });
 
@@ -74,7 +74,7 @@ test('prts: the shield breaks once and is never restored by a revive', { skip },
   const hp = boss.hp;
   const breaks = [];
   h.b.on('protocolShieldBreak', (c) => breaks.push(c));
-  h.b.dealDamage(null, boss, { amount: boss.s.maxHp + 1234, type: 'true' });
+  h.b.dealDamage(null, boss, { amount: boss.s.maxHp * 0.5 + 1234, type: 'true' });
   assert.equal(boss.hp, hp - 1234, 'damage beyond the shield reaches boss HP');
   assert.equal(breaks.length, 1, 'the shield break fired once');
   assert.equal(boss.buffs.some((b) => b.key === 'protocol:shield'), false, 'the shield is gone');
