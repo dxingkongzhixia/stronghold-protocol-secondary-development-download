@@ -970,14 +970,14 @@ export class SpineActor {
     }
   }
 
-  deploy() {
+  deploy(timeScale = 1) {
     if (this.dead) return;
     const d = this.roles.deploy;
     if (this.has(d) && d !== this.roles.idle) {
       this.mode = 'deploy';
-      this._play(d, false, { mix: 0 });
+      this._play(d, false, { mix: 0, timeScale });
       this.deployAt = this.clock;
-      this.deployUntil = this.clock + this.dur(d);
+      this.deployUntil = this.clock + this.dur(d) / timeScale;
     }
   }
 

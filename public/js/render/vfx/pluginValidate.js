@@ -42,7 +42,9 @@ export function validateOfficialFxPrefab(d, textures, meshes = {}) {
   }
   const nodeKeys = ['id', 'name', 'parent', 'children', 'active', 'pos', 'rot', 'scale', 'behaviours', 'particleSystem',
     'particleSystemRenderer', 'trailRenderer', 'lineRenderer', 'animator', 'meshFilter', 'meshRenderer', 'skinnedMeshRenderer', 'ignored'];
-  const behaviours = new Set(['ParticleEffect', 'ProjectileEffect', 'FollowMountPoint', 'FxDelay', 'EmptyEffect', 'FlyToPredefinedLocation', 'FxLODSetting']);
+  // FxUVTweener (scrolling mask / dissolve UVs) and PauseAnotherEffect (a chained effect's pause) are already
+  // implemented by the compiled renderer (effect.js); they occur in the official black-snake death / rebirth prefabs.
+  const behaviours = new Set(['ParticleEffect', 'ProjectileEffect', 'FollowMountPoint', 'FxDelay', 'EmptyEffect', 'FlyToPredefinedLocation', 'FxLODSetting', 'FxUVTweener', 'PauseAnotherEffect']);
   for (const [i, n] of d.nodes.entries()) {
     check(allowed(n, nodeKeys) && n.id === i && (i === 0 ? n.parent == null : Number.isInteger(n.parent) && n.parent >= 0 && n.parent < i), 'nodes must be a parent-first tree');
     check(n.children === undefined || Array.isArray(n.children) && n.children.every(c => Number.isInteger(c) && c > i && c < d.nodes.length && d.nodes[c].parent === i), 'invalid child reference');

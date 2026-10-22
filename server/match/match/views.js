@@ -13,6 +13,7 @@ import { timelineAt } from '../fields.js';
 import { bossFieldPlacement } from '../finalAssault.js';
 import { battleProgress } from '../../sim/spec.js';
 import { TEST_PUBLIC_LOG } from '../../../shared/testMode.js';
+import { readBandGrants } from '../../../shared/plugins/bandGrants.js';
 
 /** Milliseconds since the match started. A stamp before the start, or a bad stamp, is 0. The stored log keeps the epoch. */
 function auditClock(at, startedAt) {
@@ -323,6 +324,10 @@ export class MatchViews {
    * normal-board slot is transformed to the correct half of a boss field by _onBossHalf / the client prep camera. */
   prepMapChars(ps) {
     if (!ps?.alive || this.phase !== PHASE.PREP || !this.teamMedicGranted()) return [];
+    // A Touch-style band grant replaces the reserve medic for the whole match. Do not bring it back merely because
+    // the granted piece was moved off the stage slot during prep.
+    const grants = readBandGrants(this.gd.band(ps.bandId)?.grants).grants;
+    if (grants?.grantUnit?.placement === 'amedicSlot') return [];
     const id = 'char_605_cmedic';
     const slot = this.stage?.mapChars?.find((m) => m?.key === id && Array.isArray(m.pos) && m.pos[0] >= 9 && m.pos[0] <= 12
       && m.pos[1] >= 0 && m.pos[1] <= 10 && !/multi_only/.test(String(m.alias)));

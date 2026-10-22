@@ -109,6 +109,33 @@ test('风暴潮 S2: range + ASPD, the 放逐舱 carries enemies and leaves a 漩
   checkInvariants(h.b);
 });
 
+test('风暴潮 S2: the 放逐舱 leaves hidden and teleport-immune enemies behind', () => {
+  const h = makeBattle({
+    units: [{ chessId: CLEM, row: 10, col: 5, skillIndex: IDX(CLEM, 'skchr_clemnt_2'), dir: 'RIGHT', potential: 6 }],
+    defs: {
+      enemies: {
+        enemy_ok: dummy('enemy_ok'),
+        enemy_hidden: dummy('enemy_hidden'),
+        enemy_imm: dummy('enemy_imm', { otherImmunities: ['teleport'] }),
+      },
+    },
+    enemies: [
+      { key: 'enemy_ok', pos: [10, 6] },
+      { key: 'enemy_hidden', pos: [10, 6] },
+      { key: 'enemy_imm', pos: [10, 7] },
+    ],
+    autoFinish: false,
+  });
+  h.step();
+  h.enemy('enemy_hidden').hidden = true;
+  assert.ok(h.unit(CLEM).skill.activate('test', { free: true }));
+  h.run(0.2);
+  assert.ok(h.enemy('enemy_ok').findBuff('banish'), 'a normal ground enemy is carried');
+  assert.equal(h.enemy('enemy_hidden').findBuff('banish'), null, 'a hidden enemy is left behind');
+  assert.equal(h.enemy('enemy_imm').findBuff('banish'), null, 'a teleport-immune enemy is left behind');
+  checkInvariants(h.b);
+});
+
 test('与海为敌 S3: an 侵蚀 burst anywhere spends one bullet on the bursting enemy + its 4 neighbours, 3 hits each', () => {
   const h = makeBattle({
     units: [{ chessId: CLEM, row: 10, col: 5, skillIndex: IDX(CLEM, 'skchr_clemnt_3'), potential: 6 }],
@@ -121,14 +148,18 @@ test('与海为敌 S3: an 侵蚀 burst anywhere spends one bullet on the burstin
   assert.ok(u.skill.activate('test', { free: true }));
   const ammo0 = u.skill.ammoLeft;
   assert.ok(ammo0 > 0, 'the skill carries bullets');
+  h.b.forceAttack(u);
+  assert.equal(u.skill.ammoLeft, ammo0, 'normal attacks do not spend ammunition');
   const e = h.enemy('enemy_d'), n = h.enemy('enemy_n');
-  const hpE = e.hp, hpN = n.hp;
-  // any enemy's 侵蚀 损伤 burst (here forced) triggers the spend
+  const hpN = n.hp;
+  // any enemy's 侵蚀 损伤 burst (here forced) marks the target; the next skill tick spends one bullet
   h.b.dealDamage(u, e, { type: 'element', element: 'erosion', amount: 5000 });
-  assert.equal(u.skill.ammoLeft, ammo0 - 1, 'one bullet spent');
+  h.run(0.1);
+  assert.equal(u.skill.ammoLeft, ammo0 - 1, 'one bullet spent by the burst');
   assert.ok(h.hooksOf('ammoUsed').length >= 1);
-  assert.ok(e.hp < hpE, 'the bursting enemy was struck');
-  assert.ok(n.hp < hpN, 'a neighbour (the 4 tiles around) was struck too');
+  // the bombard is delayed: the first blast lands at 0.5 s, not in the same tick
+  h.run(0.5);
+  assert.ok(n.hp < hpN, 'a neighbour (the 4 tiles around) was struck by the delayed blast');
   checkInvariants(h.b);
 });
 

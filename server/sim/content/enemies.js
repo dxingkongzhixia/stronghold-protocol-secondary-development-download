@@ -118,7 +118,7 @@ import { DOT_KITS } from './enemies/dot.js';
 import { REFLECTION_KITS } from './enemies/reflection.js';
 import { FLY_KITS } from './enemies/fly.js';
 import { SPECIAL_KITS } from './enemies/special.js';
-import { LEADER_KITS } from './enemies/leaders.js';
+import { LEADER_KITS, PLUGIN_KITS } from './enemies/leaders.js';
 import { protocolAbility } from './bossProtocol.js';
 import { hypot } from '../detmath.js';
 
@@ -175,7 +175,7 @@ export function registerMeta() {}
 
 function onSpawn(b, e) {
   const list = [];
-  const kit = KITS[e.def.raw?.effectRef ?? e.defId];
+  const kit = PLUGIN_KITS[e.defId] ?? KITS[e.def.raw?.effectRef] ?? KITS[e.defId];
   if (typeof kit === 'function') {
     const ab = abOf(b, e);
     const res = safe(b, e, () => kit(ab, e, b)) || [];
