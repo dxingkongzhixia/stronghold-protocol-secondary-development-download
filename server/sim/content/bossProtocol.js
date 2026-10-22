@@ -103,8 +103,8 @@ function startDpRegen(b, st) {
 
 function fireOrb(b, st) {
   const p = st.protocol.projectile;
-  if (!p || !st.boss.alive) return;
-  const from = st.boss;
+  const from = st.link ?? st.boss;
+  if (!p || !from?.alive || !st.boss?.alive) return;
   let target = null;
   let best = Infinity;
   for (const a of b.allies()) {
@@ -130,10 +130,10 @@ function fireOrb(b, st) {
       }
       protocolFxAt(b, x, y, 'enemy_mpprme_skill_01_hit_01');
       protocolFxAt(b, x, y, 'enemy_mpprme_skill_01_trail_01');
-      b.emit('protocolProjectile', { boss: from, x, y, radius, damage: dmg });
+      b.emit('protocolProjectile', { boss: st.boss, source: from, x, y, radius, damage: dmg });
     },
   });
-  b.emit('protocolProjectileFire', { boss: from, target });
+  b.emit('protocolProjectileFire', { boss: st.boss, source: from, target });
 }
 
 function startProjectile(b, st) {
@@ -221,43 +221,45 @@ function startBeam(b, st) {
 function endFly(b, st, early) {
   const f = st.fly;
   if (!f) return;
+  const unit = f.unit || st.link || st.boss;
   st.fly = null;
   f.timer?.cancel?.();
-  b.removeBuff(st.boss, 'protocol:fly');
-  if (st.boss.base.rangeRadius === f.range) st.boss.base.rangeRadius = f.origRange;
-  st.boss.markDirty?.();
+  b.removeBuff(unit, 'protocol:fly');
+  if (unit.base.rangeRadius === f.range) unit.base.rangeRadius = f.origRange;
+  unit.markDirty?.();
   if (early && f.knockDownDamage > 0) {
     for (const a of b.allies()) {
       if (!a || !a.alive || a.hidden || a.s.flags.untargetable) continue;
-      if (hypot(a.x - st.boss.x, a.y - st.boss.y) > 1.5) continue;
-      b.dealDamage(st.boss, a, { amount: f.knockDownDamage, type: 'arts', tags: ['enemyAbility', 'protocolFly'] });
+      if (hypot(a.x - unit.x, a.y - unit.y) > 1.5) continue;
+      b.dealDamage(unit, a, { amount: f.knockDownDamage, type: 'arts', tags: ['enemyAbility', 'protocolFly'] });
     }
   }
-  b.emit('protocolFlyEnd', { boss: st.boss, early: !!early });
+  b.emit('protocolFlyEnd', { boss: st.boss, link: unit, early: !!early });
 }
 
 function startFly(b, st) {
   const p = st.protocol.fly;
-  if (!p || st.fly || !st.boss.alive) return;
-  const boss = st.boss;
-  const baseBat = Math.max(0.1, boss.base.bat);
+  const unit = st.link;
+  if (!p || st.fly || !unit?.alive || !st.boss?.alive) return;
+  const baseBat = Math.max(0.1, unit.base.bat);
   const newBat = Math.max(0.1, baseBat + p.intervalDelta);
-  const origRange = boss.base.rangeRadius;
-  boss.base.rangeRadius = origRange + p.range;
-  boss.markDirty?.();
-  b.addBuff(boss, {
+  const origRange = unit.base.rangeRadius;
+  unit.base.rangeRadius = origRange + p.range;
+  unit.markDirty?.();
+  b.addBuff(unit, {
     key: 'protocol:fly', duration: p.duration, persist: true, visible: true,
     mods: { maxTargets: Math.max(0, p.targets - 1), batPct: newBat / baseBat - 1 },
   });
   const f = {
-    timer: b.after(p.duration, () => endFly(b, st, false), { owner: boss }),
-    origRange, range: boss.base.rangeRadius,
-    threshold: p.hpLoss * boss.s.maxHp, damage: 0,
-    knockDownDamage: p.knockDownDamage * boss.s.atk,
+    unit,
+    timer: b.after(p.duration, () => endFly(b, st, false), { owner: unit }),
+    origRange, range: unit.base.rangeRadius,
+    threshold: p.hpLoss * unit.s.maxHp, damage: 0,
+    knockDownDamage: p.knockDownDamage * unit.s.atk,
   };
   st.fly = f;
-  protocolFx(b, boss, 'enemy_mpprts_c_trail_01', { loop: true, dur: p.duration });
-  b.emit('protocolFly', { boss, duration: p.duration, targets: p.targets, range: p.range });
+  protocolFx(b, unit, 'enemy_mpprts_c_trail_01', { loop: true, dur: p.duration });
+  b.emit('protocolFly', { boss: st.boss, link: unit, duration: p.duration, targets: p.targets, range: p.range });
 }
 
 function enterDown(b, st, e) {
@@ -320,6 +322,10 @@ function linkAbility(st) {
       return true;
     },
     taken(c, b, e) {
+      if (st.fly && c.amount > 0) {
+        st.fly.damage += c.amount;
+        if (st.fly.damage >= st.fly.threshold) endFly(b, st, true);
+      }
       if (!st.beamPending || !(c.amount > 0)) return;
       st.beamDamage += c.amount;
       if (st.beamDamage >= st.protocol.beam.interruptHp * e.s.maxHp) interruptBeam(b, st);
@@ -403,10 +409,6 @@ export function protocolAbility(raw) {
     taken(c, b, e) {
       const st = stateOf(e);
       if (!st) return;
-      if (st.fly && c.amount > 0) {
-        st.fly.damage += c.amount;
-        if (st.fly.damage >= st.fly.threshold) endFly(b, st, true);
-      }
       if (!st.down || !st.timer || st.timer.cancelled) return;
       const s = st.protocol.revive?.shortenOnHit;
       if (!s) return;

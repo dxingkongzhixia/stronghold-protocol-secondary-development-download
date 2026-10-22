@@ -209,25 +209,22 @@ test('the first revive unlocks the fly window and enough damage lands it early',
     fly: { duration: 25, targets: 2, range: 2, intervalDelta: -0.5, hpLoss: 0.3, knockDownDamage: 0.15 },
   });
   const h = battle({ p });
-  const boss = h.b.enemies.find((e) => e.defId === BOSS);
   const mimic = h.b.enemies.find((e) => e.defId === MIMIC);
   const ends = [];
   h.b.on('protocolFlyEnd', (c) => ends.push(c));
-  const range0 = boss.base.rangeRadius;
+  const range0 = mimic.base.rangeRadius;
   kill(h, mimic);
   h.run(1.3);
-  assert.ok(boss.buffs.some((b) => b.key === 'protocol:fly'), 'flying after the first revive');
-  assert.equal(boss.base.rangeRadius, range0 + 2, 'range +2');
-  assert.equal(boss.s.maxTargets, 1, 'one extra target');
+  assert.ok(mimic.buffs.some((b) => b.key === 'protocol:fly'), 'the mimic flies after the first revive');
+  assert.equal(mimic.base.rangeRadius, range0 + 2, 'mimic range +2');
+  assert.equal(mimic.s.maxTargets, 1, 'the mimic gains one extra target');
 
-  kill(h, mimic); // final knock-out: the boss is targetable again
-  h.run(0.1);
-  h.b.dealDamage(null, boss, { amount: boss.s.maxHp * 0.3, type: 'true' });
+  h.b.dealDamage(null, mimic, { amount: mimic.s.maxHp * 0.3, type: 'true' });
   h.run(0.1);
   assert.equal(ends.length, 1);
-  assert.equal(ends[0].early, true, 'landed early');
-  assert.equal(boss.base.rangeRadius, range0, 'range restored');
-  assert.equal(boss.buffs.some((b) => b.key === 'protocol:fly'), false, 'fly buff gone');
+  assert.equal(ends[0].early, true, 'the mimic landed early');
+  assert.equal(mimic.base.rangeRadius, range0, 'mimic range restored');
+  assert.equal(mimic.buffs.some((b) => b.key === 'protocol:fly'), false, 'fly buff gone');
 });
 
 test('deploy-lock events fire on appearance and after the first revive', () => {
