@@ -148,7 +148,7 @@ npm run golden        # 黄金结果：固定种子的整套战斗与人机对�
 
 ### 插件 / Forge / studio / 官方皮肤
 
-- 主线 0.3.1 / 0.3.2 的**插件体系**已完整并入：外观（图片 / 模型 / 音频）、数据内容集（`cs`）、沙箱脚本（SES）、界面插件，以及 **Worker 托管的对局**、Forge 工作包导入、浏览器 **插件工作台 `/studio/`** 与 `SP_TEST_MODE` 测试控制台。规范见 [`docs/PLUGINS.md`](docs/PLUGINS.md)，API 表见 [`docs/PLUGIN-API.md`](docs/PLUGIN-API.md)。
+- 主线 0.3.1 / 0.3.2 的**插件体系**已完整并入：外观（图片 / 模型 / 音频）、数据内容集（`cs`）、沙箱脚本（SES）、界面插件，以及 **Worker 托管的对局**、Forge 工作包导入、浏览器 **插件工作台 `/studio/`** 与 `SP_TEST_MODE` 测试控制台。规范见 [`docs/PLUGINS.md`](docs/PLUGINS.md)，开发流程见 [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md)，API 表见 [`docs/PLUGIN-API.md`](docs/PLUGIN-API.md)。
 - **官方干员皮肤**：皮肤来自外观插件的 `chars[<charId>].skins` 覆盖层；每个玩家自己选（`room.skins`），设置里的「显示其他玩家的皮肤」默认开。**仓库不保存皮肤美术**，服务器也从不自己下载；服务器主人可以用 [`docs/SKINS.md`](docs/SKINS.md) 的 `tools/local-extract/skins.py` 从本机客户端抽成 `plugins/` 下的本机外观插件（`plugins/*` 不进 git）。本线上服已抽出 **274 套 / 175 名干员**，分两个插件（单插件 200 MB 上限）并在房间默认开启。
 
 ### 我们携带的修复与决策

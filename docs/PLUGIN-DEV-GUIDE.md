@@ -10,6 +10,29 @@
 
 面向玩家、用工作台点鼠标做插件的说明见 [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)。
 
+## 0. 文档地图：先看哪一篇
+
+| 你要做的事 | 先看 | 需要查字段 / 细节时 |
+|---|---|---|
+| 不写代码，换立绘 / 模型 / 语音 / 主题 | [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | [`PLUGINS.md`](PLUGINS.md) §9 |
+| 第一次写一个可加载的插件 | 本文 §1–§4 | `schemas/plugin.schema.json` |
+| 做数值、新干员、新棋子、新羁绊、波次 / Boss | 本文 §5，[`CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | [`PLUGINS.md`](PLUGINS.md) §10、`records.schema.json` |
+| 给新干员写技能 / 天赋 | 本文 §5.2–§5.3，[`PLUGIN-DSL.md`](PLUGIN-DSL.md) | [`PLUGIN-API.md`](PLUGIN-API.md)（脚本时才需要） |
+| 写沙箱脚本、SDK kit、prep 钩子 | 本文 §7 | [`PLUGIN-API.md`](PLUGIN-API.md) |
+| 做对局内界面 | 本文 §6 | [`PLUGINS.md`](PLUGINS.md) §14、`schemas/ui.schema.json` |
+| 导入 Forge 工坊包 | [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) | [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) |
+| 做插件特效（FX / 粒子 / FollowMountPoint / atlas） | 本文 §4.4 | [`PLUGINS.md`](PLUGINS.md) §10（FX）、[`design/vfx-format.md`](design/vfx-format.md) |
+| 上架、签名、运营台 | [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md) | [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md)、[`PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md) |
+| 让 AI 代理做插件 | [`plugins/AGENTS.md`](../plugins/AGENTS.md) | 本文和 `PLUGINS.md` 的对应章节 |
+
+**最短路线：**
+
+1. **外观插件**：`new art` → 放图片 / 模型 → `check` → `pack --zip` → 游戏里开启。
+2. **内容 / 干员插件**：`new operator`（或从内容模板开始）→ 写记录 / DSL → `check --strict` → 工作室或测试服试一场 → `pack`。
+3. **脚本 / UI 插件**：从 `new script` / `new ui` 开始 → `check` → `test`（脚本）→ 打包；脚本还需要服务器运行模式、锁文件和房间选择。
+
+**三条原则：** 原版默认；插件不直接改 `data/*.json`；不要放入官方游戏素材。内容插件影响房间 `cs`，外观插件影响 `vs`，二者不要混在同一个插件里。
+
 ## 1. 开发前准备
 
 ```bash
@@ -138,6 +161,43 @@ Spine 必须导出 **3.8 二进制 `.skel`**，`.skel`、`.atlas` 和贴图放�
 - 公告：`notices`，纯文本；与房间是否选中无关，所有已加载插件公告都会显示
 - 皮肤：`skins`，具体字段见 `docs/SKINS.md`
 
+### 4.4 特效（FX）
+
+插件特效放在 `assets.fx`（外观插件，或内容插件自己的 `assets`）。两种常见做法：
+
+1. **Flipbook**（序列帧）：`assets.fx.flipbooks` + `assets.fx.bind`，适合不需要官方粒子系统的简单技能 / 命中特效。
+2. **编译特效**：`"index": "fx/index.json"`，格式是官方提取格式的受控子集；支持粒子、billboard / stretch 渲染、`FollowMountPoint` 跟随骨骼、`atlas: true` 纹理图集，以及 Lite 档半尺寸纹理。
+
+```json
+{
+  "assets": {
+    "fx": {
+      "flipbooks": {
+        "flash": {
+          "image": "fx/sheet.png",
+          "frames": 8,
+          "cols": 4,
+          "fps": 16,
+          "anchor": [0.5, 0.5],
+          "scale": 1,
+          "blend": "add",
+          "loop": false
+        }
+      },
+      "bind": {
+        "char_x_my_pack_guard": {
+          "0": { "skillStart": "flash", "hit": "flash" }
+        }
+      }
+    }
+  }
+}
+```
+
+绑定位置：`skillStart` / `skillLoop` / `skillEnd` / `attack` / `hit` / `projectile`。效果 id 必须在同一个插件的 FX bundle 里；单位必须是本插件或声明依赖的单位，不能覆盖官方单位。Lite 档会自动使用半尺寸纹理和一半粒子量，不需要作者另做一套。
+
+`FollowMountPoint` 让武器光效 / 粒子跟随单位骨骼；`atlas: true` 只在能装进 2048×2048 时生效。完整字段、限制和校验规则见 [`PLUGINS.md`](PLUGINS.md) §10 的 FX 部分与 [`design/vfx-format.md`](design/vfx-format.md)；改完一定重新 `check --strict` 和 `pack`。
+
 ## 5. 内容插件
 
 内容插件通过声明式数据进入 `cs`，不要直接改 `data/*.json`。
@@ -195,6 +255,13 @@ DSL 用于不写 JavaScript 的技能/天赋：
 ```
 
 干员记录里用 `"kit": { "dsl": true }` 或模板生成的结构。DSL 必须通过 `validateDsl` 和内容集构建；不要在失败时偷偷换成 generic kit。
+
+### 5.4 Boss、波次和移动逻辑
+
+- Boss / 波次 / 敌人分别写 `bosses`、`waves`、`enemies` 记录；字段和引用检查见 `PLUGINS.md` §10。
+- **移动、阻挡、技能状态机是模拟引擎行为，不是普通数据字段。** 例如黑蛇的“可被阻挡但仍移动”是引擎 kit 里的 `profile.moveWhileBlocked`，不是插件 JSON 能声明的字段；平民的不可阻挡也是独立规则。
+- 需要新机制时：优先用现有字段；其次写 `script` 插件（SDK 限定的钩子）；最后才是在 fork 引擎中加通用能力。不要在 `content` 插件里塞服务端逻辑。
+- 新 Boss 必须实际跑一场：路线、共享 Boss 血量、波次、阻挡、召唤物、BGM / FX 都要看；Boss 轮和普通轮的事件不同。
 
 ## 6. UI 插件
 

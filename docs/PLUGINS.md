@@ -17,7 +17,7 @@ Both modes are off by default; all gameplay plugin simulations run in browser Wo
 Authors make, preview, trial and pack cosmetic, data, DSL, script and interface plugins in the browser at `/studio/` — the plugin studio 插件工作台 — or with
 `node tools/plugin.mjs new / check / pack`; findings come in plain words (the error catalogue), and the JSON Schemas
 `schemas/plugin.schema.json` and `schemas/overlay.schema.json` help editors and AI agents (§15; a beginner's guide in
-Chinese: [PLUGIN-GUIDE.md](PLUGIN-GUIDE.md), an AI agent's: `plugins/AGENTS.md`). A Forge workshop pack, a folder or a
+Chinese: [PLUGIN-GUIDE.md](PLUGIN-GUIDE.md), a developer's workflow: [PLUGIN-DEV-GUIDE.md](PLUGIN-DEV-GUIDE.md), an AI agent's: `plugins/AGENTS.md`). A Forge workshop pack, a folder or a
 zip, can be imported as the plugins it can become (§16). Install local zips or hash-pinned HTTPS downloads, including entries in a community catalogue (§17); the frozen API table is [PLUGIN-API.md](PLUGIN-API.md).
 
 | File | Role |

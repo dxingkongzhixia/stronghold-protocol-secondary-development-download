@@ -27,7 +27,8 @@ folders (manifest, file types, sizes, paths, JSON).
 **Make one in the browser:** open `/studio/` of the running server — the plugin studio 插件工作台 (this machine and the local
 network only): pick a template, find what to change by its official name, drop your files on their places, compare with
 the original in the game's own preview, try gameplay changes with the battle comparison and replay, then press 打包并下载 for the zip. Templates include numbers, operators, DSL/prep effects, modes, UI and scripts; the script source is edited in an external editor. The beginner's guide (Chinese):
-[docs/PLUGIN-GUIDE.md](../docs/PLUGIN-GUIDE.md); for AI agents: [AGENTS.md](AGENTS.md).
+[docs/PLUGIN-GUIDE.md](../docs/PLUGIN-GUIDE.md); the developer's guide (workflow, classes, testing, packaging):
+[docs/PLUGIN-DEV-GUIDE.md](../docs/PLUGIN-DEV-GUIDE.md); for AI agents: [AGENTS.md](AGENTS.md).
 
 On the command line: `node tools/plugin.mjs new art my-skin --target 德克萨斯` makes a folder from a template, `check` explains
 every finding in plain words, `pack <dir> --zip` writes the `plugin.lock.json` a plugin with Spine models needs and the zip.

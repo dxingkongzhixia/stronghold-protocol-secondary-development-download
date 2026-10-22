@@ -39,6 +39,9 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 | browser client (screens) | `public/js/main.js`, `public/js/store.js`, `public/js/screens/` |
 | browser UI widgets | `public/js/ui/` |
 | plugin system review / risks / verification gaps | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) |
+| **plugin development guide (workflow, classes, testing, packaging)** | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
+| plugin content authoring (records, bonds, bands, enemies) | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md), [`docs/PLUGINS.md`](PLUGINS.md) §10 |
+| plugin DSL (skills / talents / prep) | [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) |
 | **PRTS「源代码」玩法插件（设计稿：Boss/拟态/凯尔希 band，fork 独有）** | [`docs/PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) |
 | plugin / Forge system, content sets, studio | `server/plugins/`, `shared/plugins/`, `schemas/`, `server/studio/`, `public/studio/`, `public/js/ui/{pluginPanel,pluginSettings,pluginTag,notices}.js` |
 | test console / `SP_TEST_MODE` | `public/js/ui/{testConsole,testDock,testAudit}.js`, `server/lobby.js` (`room.test`), `server/match/testCommands.js`, `shared/testMode.js` |
