@@ -959,6 +959,8 @@ function kitEnergyAggregate() {
   return [{
     spawn(b, e, a) {
       a.done = false;
+      // The aggregate uses a small one-region Spine model (hand-drawn crystal texture), with the official birth /
+      // death effects around it.
       bsFx(b, 'map_fire_crystal_birth_01_start', e.x, e.y, { dur: 1 });
       b.addBuff(e, {
         key: BS_AGGREGATE, duration: BS_AGGREGATE_TIME, persist: true, visible: true,

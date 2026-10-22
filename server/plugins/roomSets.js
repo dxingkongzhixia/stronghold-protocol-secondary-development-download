@@ -26,6 +26,7 @@
 import { ERR } from '../../shared/constants.js';
 import { normalizeSettings } from '../../shared/plugins/patch.js';
 import { resolvePluginOrder } from '../../shared/plugins/order.js';
+import { allowsIncompatible } from './compat.js';
 
 /**
  * @param {{ registry: { plugin: (id: string) => any, plugins?: () => any[] }, visual: ReturnType<typeof import('./visualSet.js').createVisualSets> | null,
@@ -47,7 +48,7 @@ export function createRoomSets({ registry, visual, contents, policy }) {
   function resolve(ids, { scope = 'room', settings = {}, replacing = null } = {}) {
     const pol = policy?.get();
     if (pol && pol.rooms === 'off') return { error: ERR.PLUGIN_BLOCKED, detail: 'this server\'s rooms play the original game (plugins/config.json rooms: off)' };
-    const compatAllowed = (p) => pol?.allowIncompatible === true || (Array.isArray(pol?.allowIncompatible) && pol.allowIncompatible.includes(p.id));
+    const compatAllowed = (p) => allowsIncompatible(pol?.allowIncompatible, p.id);
     if (pol && pol.rooms === 'fixed') {
       const want = [...pol.default].sort().join(',');
       if ([...ids].sort().join(',') !== want) return { error: ERR.PLUGIN_BLOCKED, detail: 'this server fixes every room\'s plugins (plugins/config.json rooms: fixed)' };

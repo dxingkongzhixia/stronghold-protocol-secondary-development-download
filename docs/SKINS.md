@@ -214,7 +214,7 @@ python tools/local-extract/skins.py `
   --update "<Arknights>/Arknights_Data/PersistentData/Bundles" `
   --out plugins/local-skins --id local-skins
 
-# 2. keep a full pack inside a room's 300 MB set (Spine pages -> lossless WebP, atlas + overlay rewritten)
+# 2. keep a full pack inside a room's 512 MB set (Spine pages -> lossless WebP, atlas + overlay rewritten)
 python tools/local-extract/spine-webp.py plugins/local-skins --lossless
 
 # 3. the lock (clip roles / hashes) and the check

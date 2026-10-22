@@ -13,7 +13,8 @@
       "deputShip",
       "steadShip",
       "preciShip"
-    ]
+    ],
+    "hidden": true
   },
   "forms": {
     "normal": {
