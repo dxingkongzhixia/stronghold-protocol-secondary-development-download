@@ -229,6 +229,26 @@ describe('content.js', () => {
     assert.equal(data.get('assets'), data.getRaw('assets'), 'uninstalled: the file as downloaded');
   });
 
+  test('installContent: outside a room the welcome default visual set is the lobby preview; a room without vs clears it', async () => {
+    const red = roomDoc('red');
+    const app = createStore({ room: null, content: { vanilla: 'ab'.repeat(32), defaultVs: red.visual.vs } });
+    const data = createDataStore({ fetch: async () => res(200, BASE), retryDelays: [], timeoutMs: 0 });
+    await data.load('assets');
+    const layers = createCosmeticLayers();
+    const pending = new Map();
+    const off = installContent({ store: app, data, layers, fetch: (u) => new Promise((resolve) => pending.set(u, resolve)), retryDelays: [] });
+    const url = `/vs/${red.visual.vs.slice(0, 16)}/overlay.json`;
+    assert.ok(pending.has(url), 'the default set is fetched in the lobby');
+    pending.get(url)(res(200, red));
+    await until(() => data.get('assets').chars.char_102_texas.avatar === urlOf('red', 'a.png'), 'the lobby preview');
+    assert.equal(layers.room.visual.vs, red.visual.vs);
+    app.set({ room: { content: { cs: 'ee'.repeat(32), vanilla: true, plugins: [] } } });
+    await tick();
+    assert.equal(layers.room, null, 'a room without a visual set does not fall back to the lobby default');
+    assert.equal(data.get('assets').chars.char_102_texas.avatar, BASE.chars.char_102_texas.avatar);
+    off();
+  });
+
   test('installContent: a document of the room\'s vs whose writes were changed (the same file table) → the installation\'s art, one toast, nothing thrown', async () => {
     const app = createStore({ room: null });
     const data = createDataStore({ fetch: async () => res(200, BASE), retryDelays: [], timeoutMs: 0 });

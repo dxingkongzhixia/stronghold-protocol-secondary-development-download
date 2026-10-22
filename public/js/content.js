@@ -301,11 +301,15 @@ export function installContent({ store = appStore, data = dataStore, layers = co
   const onImgError = (e) => { const el = e?.target; if (el && el.tagName === 'IMG') layers.fail?.(el.currentSrc || el.src); };
   doc?.addEventListener?.('error', onImgError, true);
 
-  // the room's visual set
+  // The room's visual set; outside a room the owner's default room art gives the lobby loadout
+  // its skin picker and preview. A room that names no vs never falls back to that default.
   let roomVs = null;
   let roomReq = 0;
   const syncRoom = (s) => {
-    const vs = isVisualHash(s?.room?.content?.vs) ? s.room.content.vs : null;
+    const room = s?.room;
+    const vs = room
+      ? (isVisualHash(room.content?.vs) ? room.content.vs : null)
+      : (isVisualHash(s?.content?.defaultVs) ? s.content.defaultVs : null);
     if (vs === roomVs) return;
     roomVs = vs;
     const req = ++roomReq;

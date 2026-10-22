@@ -59,6 +59,13 @@ A room's **host is not part of it**: an appearance a player wears comes from *th
 `scope: ["personal"]` never appears in the room's 插件 panel and no room setting can force a skin on anyone. Two players
 of the same co-op match may therefore see different models for the same piece — see the switch below.
 
+**Lobby preview**: before a player is in a room, the lobby's 干员调配 also shows the server owner's default room cosmetics
+(`plugins/config.json` `default`). The server sends that set's visual hash as `welcome.content.defaultVs`; `content.js`
+lays it exactly like a room's set, but only while no room is joined. Joining a room replaces it with the room's own `vs`
+(and a room that names no visual set deliberately shows no preview, rather than falling back to the lobby's). Personal
+plugins still apply on top in either place. This is what makes the skin section appear in the lobby with the owner's
+`local-skins`; it changes no battle content.
+
 ## 设置「显示其他玩家的皮肤」 (default on)
 
 A pure client preference (`settings.otherSkins`, `sp.pref.settings`; **never sent**):

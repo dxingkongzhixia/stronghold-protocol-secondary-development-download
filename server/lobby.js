@@ -1482,7 +1482,14 @@ export class Lobby {
     try { n = Number(this.plugins?.unofficial?.()) || 0; } catch { n = 0; }
     let notices = false;
     try { notices = this.plugins?.hasNotices?.() === true; } catch { /* optional catalogue hint */ }
-    return { diyKitted: KITTED_CHARS, content: { vanilla: this.vanilla.cs, ...(n > 0 ? { plugins: n } : {}), ...(notices ? { notices: true } : {}) },
+    // The lobby's loadout preview uses the owner's default room art (the skin picker before a room
+    // exists); a room, when joined, still names its own vs and wins on the page.
+    let defaultVs = null;
+    try {
+      const vs = this.plugins?.defaultVisual?.();
+      if (typeof vs === 'string') defaultVs = vs;
+    } catch { /* a broken default set must not break the welcome */ }
+    return { diyKitted: KITTED_CHARS, content: { vanilla: this.vanilla.cs, ...(n > 0 ? { plugins: n } : {}), ...(notices ? { notices: true } : {}), ...(defaultVs ? { defaultVs } : {}) },
       ...(this.testEnabled === true ? { testMode: true } : {}) };
   }
 

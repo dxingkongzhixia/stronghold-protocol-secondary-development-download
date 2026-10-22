@@ -190,7 +190,9 @@ function onWelcome(msg) {
   store.set({
     me: { playerId: msg.playerId ?? null, name, token: typeof msg.token === 'string' ? msg.token : null },
     // the server's content identity (DESIGN §32): the diagnostics name it (diag.js contentLine)
-    content: msg.content && typeof msg.content.vanilla === 'string' ? { vanilla: msg.content.vanilla } : null,
+    content: msg.content && typeof msg.content.vanilla === 'string'
+      ? { vanilla: msg.content.vanilla, ...(typeof msg.content.defaultVs === 'string' ? { defaultVs: msg.content.defaultVs } : {}) }
+      : null,
     // how many unofficial plugins it has (P1a — absent: none; content.js fetches the catalogue only when there are some)
     installedPlugins: pluginCount(msg.content),
     testMode: msg.testMode === true,

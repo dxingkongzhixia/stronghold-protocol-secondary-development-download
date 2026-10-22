@@ -72,6 +72,17 @@ describe('room.setPlugins (P1a: cosmetic plugins)', () => {
     lobby.shutdown();
   });
 
+  test('the welcome carries the owner default visual set for the lobby preview', () => {
+    const vs = 'cd'.repeat(32);
+    const lobby = new Lobby({
+      registry: new SessionRegistry(),
+      content: { cs: 'ab'.repeat(32) },
+      plugins: { resolve: () => null, unofficial: () => 0, defaultVisual: () => vs },
+    });
+    assert.deepEqual(lobby.welcomeInfo().content, { vanilla: 'ab'.repeat(32), defaultVs: vs });
+    lobby.shutdown();
+  });
+
   test('the host switches plugins on: room.state.content names the set, cs stays the vanilla one, the others are un-readied', async () => {
     const host = await player('Kal\'tsit');
     const guest = await player('Amiya');

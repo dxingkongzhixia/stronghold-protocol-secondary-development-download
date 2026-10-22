@@ -115,6 +115,31 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     };
   }
 
+  /** The ids a new room starts with (the policy's `default`; [] for the original game). */
+  const defaults = () => { const p = policy?.get(); return p && p.rooms !== 'off' ? [...p.default] : []; };
+
+  /**
+   * The visual set a lobby preview draws with: the owner's default room plugins' art, when there is
+   * no room yet. Only the art part is resolved — a lobby never downloads a gameplay set just to show
+   * the skin picker. Null when the policy has no defaults, rooms are off, or the set cannot load.
+   */
+  function defaultVisual() {
+    if (!visual) return null;
+    const ids = defaults();
+    if (!ids.length) return null;
+    const lookup = (id) => {
+      const p = registry.plugin(id);
+      return p && p.status === 'loaded' && allowed(p) && Array.isArray(p.manifest?.scope) && p.manifest.scope.includes('room')
+        && (p.class === 'cosmetic' || p.visual) ? { id: p.id, ...p.manifest } : null;
+    };
+    const r = resolvePluginOrder(ids, lookup);
+    if ('error' in r) return null;
+    const list = r.order.map((id) => registry.plugin(id)).filter((p) => p && (p.class === 'cosmetic' || p.visual));
+    if (!list.length) return null;
+    const v = visual.resolve(list.map((p) => p.id), { scope: 'room' });
+    return v?.ok ? (v.set.vs || null) : null;
+  }
+
   return {
     resolve,
     hold: (vs) => visual?.hold?.(vs),
@@ -126,7 +151,8 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     unofficial: () => (visual?.unofficial ? visual.unofficial() : 0),
     // Catalogue hint only: language plugins can publish notices even when the unofficial count is zero.
     hasNotices: () => registry.plugins?.().some((p) => p.status === 'loaded' && p.manifest?.notices?.length > 0) || false,
-    defaults: () => { const p = policy?.get(); return p && p.rooms !== 'off' ? [...p.default] : []; },
+    defaults,
+    defaultVisual,
     /** The plugins every room must play (plugins/config.json rooms: fixed), else null. */
     fixed: () => { const p = policy?.get(); return p && p.rooms === 'fixed' ? [...p.default] : null; },
     /** The merged data of a content set (the lobby's checks of loadouts and 自选 picks in its rooms), or null. */
