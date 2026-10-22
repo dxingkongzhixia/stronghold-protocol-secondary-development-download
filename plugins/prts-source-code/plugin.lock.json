@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "8e8214eb6e5d16a0877e4d0af4edceb1ed4e9ed4b52f6da94b76b3a617608c30",
-      "bytes": 1998
+      "sha256": "b0f660d98671d1d70a01cbdf68994ba053ee649fd280fa6785ca66a359784148",
+      "bytes": 2043
     },
     "assets/fx/index.json": {
       "sha256": "09f5e4b76f77cc3b328d9a91a85a7eb8b0bc403d988b598e4c107a59b8117bef",
@@ -505,16 +505,16 @@
       "bytes": 46958
     },
     "content/bands.json": {
-      "sha256": "3e9a8b8b312b5ce43ac33d0938e36707ca7cf30edd5ace78544487f04958af22",
-      "bytes": 1702
+      "sha256": "e5b553688666f8dfddeaba3dcc080e7548bcfa75124443c8b6bc20f8fa649227",
+      "bytes": 1675
     },
     "content/bosses.json": {
       "sha256": "d0f79d404a08c468d79a71a43f70639a0804d1de2a2f384c602e4d5e59507f5a",
       "bytes": 5959
     },
     "content/enemies.json": {
-      "sha256": "d030c8abaee41f66b232894c73902ce7299f2e8488d806712f3dd0c56e1b8323",
-      "bytes": 12317
+      "sha256": "b47b0d8cd0e35a21261f2b87dd3467e93c4398c0721dee8154e6a3ebd0e163f0",
+      "bytes": 11411
     },
     "content/modes.json": {
       "sha256": "9803b0754c89fc8e9c717ef6e5d82f4ab878ed098fe4bca85f72eacee6a5b16d",
@@ -525,8 +525,8 @@
       "bytes": 8080
     },
     "data/operator.json": {
-      "sha256": "c6bfdfb2f243e97444cc9a8ecb5f8cc912ff66ac4190af7a78964af888a18a44",
-      "bytes": 17101
+      "sha256": "5e515ce4f233080cb110de153c35b504e71207f7575a0f8e748781484adc1eb9",
+      "bytes": 17082
     },
     "data/tokens.json": {
       "sha256": "77befa51e3569ed5b3842c32a374afa056e2df980f5670f63f0423c98af99da2",
