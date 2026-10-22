@@ -988,11 +988,17 @@ function MatchScreen() {
       if (!ok || now.pub?.phase !== PHASE.PREP || now.priv?.ready) return;
     }
     setReadyBusy(true);
-    await actions.ready(r);
-    setReadyBusy(false);
+    try {
+      await actions.ready(r);
+    } finally {
+      // actions.ready catches transport errors, but a thrown callback must never leave the HUD's ready button locked.
+      setReadyBusy(false);
+    }
   }, []);
   // the prep ended (timer) while the question was open: drop it — the funds are gone either way
   useEffect(() => { if (phase !== PHASE.PREP && askingReady.current) closeAllDialogs(); }, [phase]);
+  // a new phase/round owns the prep controls: a ready request from the previous one must not leave the next button busy
+  useEffect(() => { setReadyBusy(false); }, [phase, pub?.round]);
 
   /** 出售 (operators, underframe +N) / 销毁 (items and Arts, confirmed: they cannot be sold). */
   const sellPiece = useCallback(async (piece) => {

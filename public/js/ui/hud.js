@@ -365,7 +365,11 @@ export function ReadyToggle({ priv, onToggle, busy, readyCount, total }) {
   const choice = !!priv?.personalChoice;
   const reason = !ready ? (choice ? shopBlockReason('ready', { priv, editable: true }) : tempReadyReason(priv) || shopBlockReason('ready', { priv, editable: true })) : null;
   const why = !ready && (choice || temp.count > 0);
-  const btn = html`<button type="button" class=${cx('readybtn', 'tapx', ready && 'is-on', busy && 'is-busy')} disabled=${!!reason || busy}
+  // Keep the button operable even when a stale private state says it is blocked: the server is the authority for
+  // g.ready, and a refused request is toasted. A disabled native button, by contrast, swallows the click entirely —
+  // while the Space shortcut still reaches toggleReady (the user-visible mismatch this fixes).
+  const btn = html`<button type="button" class=${cx('readybtn', 'tapx', ready && 'is-on', busy && 'is-busy', reason && 'is-blocked')}
+      aria-disabled=${reason ? 'true' : 'false'} aria-busy=${busy ? 'true' : undefined}
       aria-pressed=${ready ? 'true' : 'false'} aria-describedby=${why ? 'readywrap-why' : undefined} onClick=${() => onToggle(!ready)}>
     <span class="readybtn__box">${ready ? html`<${Icon} name="check" />` : null}</span>
     <span class="readybtn__label">${ready ? t('取消准备') : t('准备就绪')}</span>

@@ -344,6 +344,11 @@
 .readybtn.is-on:hover:not(:disabled) { background: var(--mint-400); color: var(--text-on-mint); box-shadow: 0 0 .3rem rgba(23, 249, 183, .45); }
 .readybtn:disabled { border-color: var(--line-2); color: var(--text-dim); box-shadow: none; cursor: not-allowed; }
 .readybtn:disabled .readybtn__box { border-color: var(--line-2); }
+/* A blocked-looking Ready stays a real button: the handler reports the server's refusal instead of a native
+   disabled control swallowing the click. */
+.readybtn.is-blocked { border-color: var(--line-2); color: var(--text-dim); box-shadow: none; cursor: help; }
+.readybtn.is-blocked .readybtn__box { border-color: var(--line-2); }
+.readybtn.is-blocked:hover { background: rgba(10, 14, 12, .9); box-shadow: none; }
 .readybtn.is-busy { opacity: .7; }
 
 /* ---- bond strip ---------------------------------------------------------------------------------------- */
