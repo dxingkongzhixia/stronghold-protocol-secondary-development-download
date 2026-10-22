@@ -23,6 +23,7 @@ import { bossCentreWarnings } from './stageWarnings.js';
 import { validateDsl, validatePrepSpec } from '../sim/content/dsl/validate.js';
 import { composeRules } from '../../shared/plugins/rules.js';
 import { offerReferenceProblems } from './offerData.js';
+import { allowsIncompatible } from './compat.js';
 
 const bases = new WeakMap(), buffers = new WeakMap(), caches = new WeakMap();
 function baseFor(registry) {
@@ -213,8 +214,7 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
   let base;
   try { base = baseFor(registry); } catch (e) { return { problems: [problem('PLUGIN_CONTENT_FILE', 'data', e.message)] }; }
   const selected = ids.map(v => typeof v === 'string' ? { id: v } : v);
-  const compat = (p) => p.manifest.compatible !== false || allowIncompatible === true
-    || (Array.isArray(allowIncompatible) && allowIncompatible.includes(p.id));
+  const compat = (p) => p.manifest.compatible !== false || allowsIncompatible(allowIncompatible, p.id);
   const usable = id => {
     const p = registry.plugin(id);
     // Data-only checks may read a script dependency's JSON without granting it execution permission.

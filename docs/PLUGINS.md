@@ -453,7 +453,7 @@ spectators, and during a match), versions, authors, sizes, 非官方 marks, 「�
 it, a note for one made for other game versions (a cosmetic plugin is still usable) and the override warnings. A switch
 sends `room.setPlugins { plugins: [{ id }] }` (host, before the match; like a difficulty change it un-readies the others —
 not when only the 「自动」 marks change; the heavy rate-limit bucket): the server closes the set over the plugins'
-`requires`, refuses conflicts, a cycle, a plugin of another class or scope, and a set over 300 MB of art or whose
+`requires`, refuses conflicts, a cycle, a plugin of another class or scope, and a set over 512 MB of art or whose
 references copy over 4 MB of the art manifest [ASSUMED] (`PLUGIN_UNKNOWN`, `PLUGIN_BLOCKED`, `PLUGIN_DEPENDENCY`,
 `PLUGIN_CONFLICT`, `PLUGIN_LIMIT`), sorts it (`shared/plugins/order.js`: requires / optional / loadAfter / loadBefore, then priority, then
 id) and the room's content becomes `{ cs, vanilla: true, vs, plugins: [{ id, version, class, hash, auto? }], warnings,
@@ -513,7 +513,7 @@ record names the room's visual set (`vs`, null without cosmetic plugins — a pl
 plugins=id@version(hash),… personal=id,…`. BattleSpecs may carry the room's `vs` for diagnostics (§11); the sim
 never reads it. A standalone replay does not restore those cosmetic files automatically.
 
-**Limits** [ASSUMED]: 300 MB of art per set, 20 000 writes per plugin, 16 files per voice slot, 64 skins per operator's
+**Limits** [ASSUMED]: 512 MB of art per set, 20 000 writes per plugin, 16 files per voice slot, 64 skins per operator's
 record, 64 characters for a skin key (an entry key takes 128, §9), 1–64 characters for a skin's `name` (0–64 for its
 `group`), 32 override warnings per set, 2 MB copied by references per plugin and 4 MB per set, the lock's limits above; the
 plugin limits of §5 apply too.

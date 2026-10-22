@@ -96,13 +96,14 @@ export const LOCK_FILE = 'plugin.lock.json';
 /** The version of plugin.lock.json. */
 export const LOCK_VERSION = 1;
 /**
- * [ASSUMED] limits: writes per plugin, files of one voice slot, the art a set may serve in all (the design study's 300 MB
- * per room), the override warnings one set reports, and what references may copy out of the installation's manifest —
- * per plugin and per set (as JSON text: a whole-record reference copies a record, so a few thousand of them would make a
+ * [ASSUMED] limits: writes per plugin, files of one voice slot, the art a set may serve in all (the design study's
+ * 512 MB per room, raised from 300 MB for the owner's full local plugin set), the override warnings one set reports, and
+ * what references may copy out of the installation's manifest — per plugin and per set (as JSON text: a whole-record
+ * reference copies a record, so a few thousand of them would make a
  * room's effective manifest tens of MB without a byte of art).
  */
 export const VISUAL_LIMITS = Object.freeze({
-  ops: 20000, listFiles: 16, setBytes: 300 * 1024 * 1024, warnings: 32, copyBytes: 2 * 1024 * 1024, setCopyBytes: 4 * 1024 * 1024,
+  ops: 20000, listFiles: 16, setBytes: 512 * 1024 * 1024, warnings: 32, copyBytes: 2 * 1024 * 1024, setCopyBytes: 4 * 1024 * 1024,
 });
 /**
  * [ASSUMED] limits of the clip data plugin.lock.json gives a Spine model (what tools/assets/skel.mjs and anim-roles.mjs

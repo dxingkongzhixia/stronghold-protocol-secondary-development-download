@@ -828,7 +828,7 @@ export class UnitView {
       } else {
         if (this.flags & UF.SKILL) this.actor.setSkill(true);
         this.actor.setBase(this._baseFromAnim());
-        if (deployed != null) { this.actor.deploy(); if (deployed > 0) this.actor.update(deployed); }
+        if (deployed != null) { this.actor.deploy(this._deployScale()); if (deployed > 0) this.actor.update(deployed); }
         // a stealth-driven form (STEALTH_FORMS): the pose of the clip set in force now, even under a frozen stun
         if (STEALTH_FORMS[id]) this.actor.syncFormPose();
       }
@@ -1270,7 +1270,7 @@ export class UnitView {
     this.fadeIn = 0;
     if (!this.alive) this.revive();
     this._pendingDeployElapsed = this.actor ? null : 0;
-    if (this.actor) this.actor.deploy();
+    if (this.actor) this.actor.deploy(this._deployScale());
   }
 
   /**
@@ -1308,7 +1308,16 @@ export class UnitView {
     const e = this.entry;
     const name = e && e.anims && typeof e.anims.deploy === 'string' ? e.anims.deploy : null;
     const d = name && e.animations && Object.hasOwn(e.animations, name) ? Number(e.animations[name]) : NaN;
-    return Number.isFinite(d) && d > 0 ? d : START_CLIP_FALLBACK;
+    return (Number.isFinite(d) && d > 0 ? d : START_CLIP_FALLBACK) / this._deployScale();
+  }
+
+  /**
+   * Playback speed of the deploy (Start) clip. A content token may name `deployTimeScale` on its raw record
+   * (M3's Start clip is 1.667 s); the clip, its mode window and the landing sound all use the same speed.
+   */
+  _deployScale() {
+    const v = Number(this.ctx.lookupDef?.(this.info)?.raw?.deployTimeScale);
+    return Number.isFinite(v) && v > 0 ? Math.min(3, v) : 1;
   }
 
   onStatus(key, on) {

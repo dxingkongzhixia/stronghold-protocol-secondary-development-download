@@ -20,7 +20,7 @@
 // back to the installation's art for what will not load). A set a room uses is held (hold / release:
 // server/lobby.js) and never dropped; of the others the 256 most recently used are kept, and the documents of the last
 // 8 built, one build of a document at a time [ASSUMED]. A set holds only loaded cosmetic plugins of the scope it is for
-// (room / personal), serves VISUAL_LIMITS.setBytes (300 MB) of art at most and copies VISUAL_LIMITS.setCopyBytes (4 MB)
+// (room / personal), serves VISUAL_LIMITS.setBytes (512 MB) of art at most and copies VISUAL_LIMITS.setCopyBytes (4 MB)
 // of the installation's manifest through references at most [ASSUMED]. Nothing here changes a battle: a room's `cs`
 // stays the vanilla one whatever its visual set.
 

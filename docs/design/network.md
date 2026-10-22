@@ -90,7 +90,7 @@ gameplay `data/*.json` — not `assets`, `local-assets`, `emotes`, `data/i18n/`)
   un-readying). The server closes the set over the plugins' `requires` and sorts it (requires / optional / loadAfter /
   loadBefore, priority, id: `shared/plugins/order.js`); refused with `PLUGIN_UNKNOWN` (not installed), `PLUGIN_BLOCKED`
   (not a loaded cosmetic plugin of scope `room` in this version), `PLUGIN_DEPENDENCY` (a requirement missing or out of
-  range, a load-order cycle), `PLUGIN_CONFLICT`, `PLUGIN_LIMIT` (over 300 MB of art, or references copying over 4 MB of
+  range, a load-order cycle), `PLUGIN_CONFLICT`, `PLUGIN_LIMIT` (over 512 MB of art, or references copying over 4 MB of
   the art manifest) (`server/lobby.js setPlugins`, `server/plugins/visualSet.js resolve`). The host's result replay is
   dropped only when the set (its `vs` or its 「自动」 marks) changed;
 - S→C `m.toast { kind: 'warn', msgid: '房间插件「{names}」的文件在服务器上变了，请在插件面板中点「重新应用」', params:

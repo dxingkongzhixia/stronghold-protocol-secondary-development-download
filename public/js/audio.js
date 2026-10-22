@@ -1593,6 +1593,8 @@ export class AudioManager {
           if (!unitSoundPlays(mix, this.random())) continue;
           this._playUnitUrl(url, own ? `${e[1]}:born` : 'deploy', own ? unitGain(0.8, mix) : 0.5);
         } else if (kind === 'fx') {
+          // A boss phase may switch its track (`b.fx('bgm', { key: 'boss:<id>' })`); visual renderers ignore the event.
+          if (e[1] === 'bgm' && typeof e[4]?.key === 'string') { this.playBgm(e[4].key); continue; }
           // a summon used up by its own effect (香槟炸弹 exploding: `consumed`): its impact sound now, no death sound
           const ex = e[4];
           if (!ex || typeof ex !== 'object' || !ex.consumed || ex.id == null) continue;

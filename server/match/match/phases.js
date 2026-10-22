@@ -10,6 +10,7 @@ import { pairPlayers } from '../finalAssault.js';
 import { createRng, deriveSeed } from '../../sim/rng.js';
 import { botPickBand } from '../bot.js';
 import { readBandGrants } from '../../../shared/plugins/bandGrants.js';
+import { bandSpecial, isBandGrant, bandIdOf } from '../player/special.js';
 import { tileKey } from '../board.js';
 import { OK, fail, DELAYS, BAND_TURN_SECONDS } from './common.js';
 
@@ -282,10 +283,14 @@ export class MatchPhases {
   grantBandUnit(ps, unit, bandId) {
     const owns = (p) => [...p.hand, ...p.temp, ...p.board.values()].some((x) => x && x.kind === 'chess' && x.meta?.special === `band:${bandId}`);
     if (owns(ps)) return null;
-    const chess = Object.values(this.gd.raw.chess || {}).find((c) => c && c.charId === unit.charId && !c.isGolden && c.visible !== false);
+    const chess = Object.values(this.gd.raw.chess || {}).find((c) => c && c.charId === unit.charId && !c.isGolden);
     if (!chess) return null;
     const piece = ps.newPiece('chess', chess.chessId);
-    piece.meta = { ...(piece.meta || {}), special: `band:${bandId}` };
+    piece.meta = {
+      ...(piece.meta || {}),
+      special: `band:${bandId}`, // legacy serialized shape; specialUnit is the descriptor every rule reads
+      specialUnit: bandSpecial(bandId, { placement: unit.placement }),
+    };
     piece.unsellable = true;
     piece.returnNextPrep = true;
     // A Touch-style band replaces the reserve medic at its stage slot. The special chess is a real board
@@ -313,11 +318,11 @@ export class MatchPhases {
    */
   applyBandEliteGate(ps) {
     if (!ps) return;
-    const specials = [...ps.board.values()].filter((p) => p && p.kind === 'chess' && typeof p.meta?.special === 'string' && p.meta.special.startsWith('band:'));
+    const specials = [...ps.board.values()].filter((p) => p && p.kind === 'chess' && isBandGrant(p));
     if (!specials.length) return;
-    const others = [...ps.board.values()].filter((p) => p && p.kind === 'chess' && p.meta?.special == null && this.gd.isGolden(p.id)).length;
+    const others = [...ps.board.values()].filter((p) => p && p.kind === 'chess' && !isBandGrant(p) && this.gd.isGolden(p.id)).length;
     for (const piece of specials) {
-      const bandId = piece.meta.special.slice('band:'.length);
+      const bandId = bandIdOf(piece);
       const { grants } = readBandGrants(this.gd.band(bandId)?.grants);
       const gate = grants?.eliteGate;
       if (!gate || others < gate.others) continue;
@@ -332,9 +337,9 @@ export class MatchPhases {
    */
   applyBandRestLayers(ps) {
     if (!ps || !ps.alive || ps.downed) return;
-    const specials = [...ps.board.values()].filter((p) => p && p.kind === 'chess' && typeof p.meta?.special === 'string' && p.meta.special.startsWith('band:'));
+    const specials = [...ps.board.values()].filter((p) => p && p.kind === 'chess' && isBandGrant(p));
     for (const piece of specials) {
-      const bandId = piece.meta.special.slice('band:'.length);
+      const bandId = bandIdOf(piece);
       const { grants } = readBandGrants(this.gd.band(bandId)?.grants);
       const rest = grants?.restEndBondLayers;
       if (!rest) continue;

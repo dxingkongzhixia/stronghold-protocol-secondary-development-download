@@ -141,6 +141,24 @@ export const STATUS = Object.freeze({
   // 同名效果不叠加 — several sources never compound (strongest value wins, a weaker one resumes if it outlasts it);
   // a resisting unit also loses one 麻痹 stack every RESIST_PALSY_DECAY s (Battle.applyStatus)
   resist: { resist: true, mods: () => null, valued: RESIST_DEFAULT, buff: Object.freeze({ interval: RESIST_PALSY_DECAY, onTick: resistPalsyDecay }) },
+  // 烈焚灼息 (the Black Snake's burning breath): a content status with a ramp carried in the buff's own data. It is a
+  // catalogue status so 抵抗, `statusApplied`, visibility, and the standard status icon work like every other status;
+  // the tick stays generic (maxDuration / start / end from `data`), not a boss-specific engine branch.
+  burningBreath: {
+    flags: { burningBreath: true },
+    buff: {
+      interval: 1,
+      onTick: ({ battle, unit, buff }) => {
+        const cfg = buff.data || {};
+        const max = Number.isFinite(cfg.maxDuration) ? cfg.maxDuration : 30.5;
+        const elapsed = Math.max(0, max - (Number.isFinite(buff.timeLeft) ? buff.timeLeft : max));
+        const start = Number.isFinite(cfg.start) ? cfg.start : 50;
+        const end = Number.isFinite(cfg.end) ? cfg.end : 230;
+        const dps = start + (end - start) * Math.min(1, elapsed / Math.max(1, max - 0.5));
+        battle.dealDamage(buff.source, unit, { amount: dps, type: 'true', canDodge: false, tags: ['enemyAbility', 'burningBreath'] });
+      },
+    },
+  },
   // element burst states (engine-managed; listed for immunity/visibility)
   burnBurst: { flags: { burstLock: true } },
   neuralBurst: { flags: { burstLock: true } },
@@ -155,7 +173,7 @@ export const STATUS = Object.freeze({
  * stack-based: it decays instead (RESIST_PALSY_DECAY).
  */
 export const RESIST_STATUSES = Object.freeze(new Set(['stun', 'freeze', 'cold', 'sleep', 'fear', 'tremble', 'attract', 'levitate',
-  'bind', 'silence', 'disarm', 'sluggish', 'slow', 'groundbind']));
+  'bind', 'silence', 'disarm', 'sluggish', 'slow', 'groundbind', 'burningBreath']));
 
 /** Statuses that should be reported to clients as `['status', id, key, on]`. */
 export const VISIBLE_STATUS = new Set(Object.keys(STATUS));
