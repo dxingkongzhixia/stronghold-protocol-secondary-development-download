@@ -125,3 +125,31 @@ test('the stylesheet keeps to the project\'s rules', () => {
   assert.equal(js.match(/data-ui-slot="result\.tab"/g)?.length, 1, 'one 结算 tab plugin slot (the team page); the detail view drops its own');
   assert.match(js, /slot=\$\{false\}/);
 });
+
+test('#745: translated titles fit both dimensions without enlarging a short title', () => {
+  assert.equal(S.titleScale(780, 104, 360, 104), 1);
+  assert.equal(S.titleScale(780, 104, 1200, 104), .65);
+  assert.equal(S.titleScale(280, 90, 840, 90), 1 / 3);
+  assert.equal(S.titleScale(280, 90, 280, 180), .5, 'enlarged text also stays within the height');
+  assert.equal(S.titleScale(280, 90, 0, 0), 1, 'an empty label never produces Infinity');
+});
+
+test('#745: official buttons supply decoration only through the missing/failed Sprite fallback', () => {
+  for (const ghost of [false, true]) {
+    const v = S.SettleButtonArt({ ghost });
+    assert.equal(v.type.name, 'Sprite');
+    assert.equal(v.props.k, ghost ? 'settle/btn_bg_02' : 'settle/btn_next_bg');
+    assert.equal(v.props.fallback.type, 'span');
+    assert.equal(v.props.fallback.props.class, `settle__btnbg settle__btnbg--${ghost ? 'ghost' : 'primary'}`);
+    assert.equal(v.props.children, undefined, 'the decoration is not an always-visible sibling');
+  }
+});
+
+test('#745: item slots and the fallback button looks are bounded by the stylesheet', () => {
+  const css = readFileSync(path.join(ROOT, 'public/css/screens/settle.css'), 'utf8');
+  assert.match(css, /\.settle__title \{ position: relative; overflow: hidden; \}/);
+  assert.match(css, /\.settle__btnbg--ghost \{ background: #2a2f2e;/);
+  assert.match(css, /\.settle__btnbg--primary \{ background: linear-gradient/);
+  assert.match(css, /\.sop__slot \{[^}]*min-width: 0;[^}]*min-height: 0;[^}]*minmax\(0, 1fr\)/);
+  assert.match(css, /\.sop__slot img \{[^}]*max-width: 100%;[^}]*max-height: 100%;[^}]*object-fit: contain/);
+});
