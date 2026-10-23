@@ -187,7 +187,7 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 **2026-10-23 上线记录（已部署）**
 
-- 本地分支 `prts-plugin`；代码 HEAD `2f350258f`（后续文档提交另计）。
+- 本地分支 `master`（原 `prts-plugin` 批次已快进合入）；PRTS 修复代码 HEAD `2f350258f`，文档提交另计。
 - **2026-10-23 已上线（PRTS 修复）**：生产 `/www/wwwroot/Stronghold-Protocol` 重启后 `build = 50c63310f468`，`/healthz` 200；`/admin`、`/admin/docs`、`/admin/api/docs`、`/js/adminDocs.js` 均 200；4 个插件加载。
 - 本次发布通知：版本 `0.4.69`，签名 `d星空之下`，在线 11 人收到；备份：`/root/sp-backup-prts-20261023-152924.tgz`。
 - **2026-10-23 早先上线（管理员文档链）**：`build = 43ea86680ef5`；发布通知 `0.4.67`，备份：`/root/sp-backup-admin-docs-20261023-122942.tgz`。
