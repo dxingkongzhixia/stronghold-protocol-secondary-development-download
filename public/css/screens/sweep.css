@@ -106,16 +106,16 @@
   color: #eef2f1; background: rgba(0, 0, 0, .5); border: 1px solid rgba(255, 255, 255, .22); border-radius: 999px; cursor: pointer; }
 .sw-look:hover { border-color: var(--mint-500); color: var(--mint-300, #8ff0d2); }
 .sw-look .icon { width: max(.2rem, 12px); height: max(.2rem, 12px); }
-/* 对应干员 (owner 2026-10-24): four columns × two rows = eight faces visible; more members scroll inside this box
-   instead of pushing the bond description off-screen. 100cqw = the .sw-box content width (container-type above), so
-   the cap is exactly two rows + the row gap on every screen. */
+/* 对应干员 (owner 2026-10-24): five columns × two rows, the tiles compact as the reference; more members scroll
+   inside this box instead of pushing the bond description off-screen. 100cqw = the .sw-box content width
+   (container-type above), so the cap is exactly two rows + the row gap on every screen. */
 .sw-ops {
   display: flex; flex-wrap: wrap; align-content: flex-start; gap: .1rem;
-  max-height: 3.4rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  max-height: 2.8rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
   padding-right: .04rem;
 }
-.sw-ops .sw-op { flex: none; width: calc((100% - .3rem) / 4); }
-@supports (height: 1cqw) { .sw-ops { max-height: calc(2 * ((100cqw - .3rem) / 4) + .1rem); } }
+.sw-ops .sw-op { flex: none; width: calc((100% - .4rem) / 5); }
+@supports (height: 1cqw) { .sw-ops { max-height: calc(2 * ((100cqw - .4rem) / 5) + .1rem); } }
 .sw-op { --tc: var(--tier-1); position: relative; aspect-ratio: 1; padding: 0; overflow: hidden;
   background: linear-gradient(180deg, #d7dcda, #a9b1ae); border: 1px solid rgba(255, 255, 255, .5); }
 .sw-op--t2 { --tc: var(--tier-2); }
@@ -259,7 +259,7 @@ button.sw-eth:hover { border-color: #fff; }
   .sw-hero__name { font-size: max(calc(0.375 * var(--t)), 15px); }
   .sw-sec__grid { gap: 8px; padding: 10px 10px 0; }
   .sw-tile__cap { display: none; }
-  .sw-ops .sw-op { width: calc((100% - .3rem) / 4); }
+  .sw-ops .sw-op { width: calc((100% - .4rem) / 5); }
   .sw-cd__name { font-size: max(calc(0.4 * var(--t)), 16px); }
 }
 @media (max-aspect-ratio: 1/1) {
