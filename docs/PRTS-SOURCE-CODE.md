@@ -1,6 +1,7 @@
 # PRTS「源代码」玩法插件 — 开发文档（评审稿）
 
-> 状态：**A1 + A2 已完成**（2026-10-21）；B–E 见[剩余开发计划](PRTS-SOURCE-CODE-REMAINING.md)。
+> 状态：**A1/A2 + B–D 主体已实现并上线**（2026-10-23）；E 的实战验收项见[剩余开发计划](PRTS-SOURCE-CODE-REMAINING.md)。
+> 2026-10-23 线上修复：team grant 覆盖 AI 队友；队友把凯尔希移出预备医疗格后不再恢复 Touch 的预备医疗；策略效果/图鉴图标改用插件自带的凯尔希图标。
 > 性质：**本 fork 独有**的内容插件 + fork 引擎能力，不承诺主线可用。
 > 流程：讨论 → **本文档** → 开发（A→E）。
 
@@ -222,7 +223,7 @@ plugins/prts-source-code/
 ### 6.1 触发
 
 - band：`band_x_prts_source_code_touch`（显示名「凯尔希」，初始生命值 28，图标为插件自带的凯尔希策略卡）；
-- 仅在**房间 Boss 为 PRTS** 时进入策略卡池；
+- 仅在启用 PRTS 内容集的房间进入策略卡池；当前数据未把这张卡绑定到具体 Boss（房间是否选 PRTS 由房主/Boss 池决定）；
 - 任意一名玩家选中后，**全队生效**（参照 Touch 的 team grant；人类与 AI 队友都包括）；
 - 队友的凯尔希同样占用该玩家的预备医疗格；战斗开始不会再额外生成 Touch 的预备医疗地图角色；凯尔希被移出该格后，也不会重新显示 Touch 的预备医疗；
 - 策略效果 / 图鉴图标使用 `iconId = band_x_prts_source_code_touch`，不再沿用 Touch 的 `icon_amedic`；
@@ -266,7 +267,7 @@ plugins/prts-source-code/
 ## 7. UI / 接入
 
 - 房间创建：Boss/模式选择中加入 PRTS；隐藏 Boss 沿用现有隐藏机制；
-- 策略卡：PRTS 房间出现 `band_x_prts_source_code_touch`，Touch 风格；
+- 策略卡：PRTS 内容集房间出现 `band_x_prts_source_code_touch`，使用插件自带的凯尔希图标；
 - Boss HUD：清除协议倒计时、拟态复活层数、PRTS 可攻击状态；
 - 预警：复用 `matchPopups` 红色 PhasePopup + 屏幕边缘；
 - 图鉴/插件面板：PRTS、拟态、凯尔希策略的说明；标注“非官方玩法插件”。
@@ -279,8 +280,8 @@ plugins/prts-source-code/
 |---|---|
 | primitives | 链接守护、复活计数/加攻、缩短复活、DP 倍率、清除计时、部署锁、衰减弹道、悬浮、光束 |
 | Boss 状态机 | 普通 3 次 / 隐藏 5 次完整循环、不可选中→可选中→最终击杀 |
-| 凯尔希 band | 全队授予、固定 S3、坚守/精准两盟约（无助力叠层）、2 名场上精锐、M3 击倒/复活、休整期随机增援/上限 |
-| 插件 | `plugin check`、manifest、Boss/band 数据校验 |
+| 凯尔希 band | 全队授予（含 AI 队友）、固定 S3、坚守/精准两盟约（无助力叠层）、2 名场上精锐、M3 击倒/复活、休整期随机增援/上限、移出预备医疗格后不恢复 Touch |
+| 插件 | `plugin check`、manifest、Boss/band 数据校验；策略图标使用插件自带凯尔希卡 |
 | 回归 | 全量 `npm test`；默认 golden 不变（插件 opt-in） |
 | UI | 房间选择、策略卡、HUD 倒计时、预警 |
 
@@ -326,3 +327,4 @@ plugins/prts-source-code/
 | 日期 | 内容 |
 |---|---|
 | 2026-10-20 | 初稿：owner 决策 1–9、通用引擎、Boss/拟态、凯尔希 band、测试与里程碑 |
+| 2026-10-23 | 线上修复：team grant 含 AI 队友；队友移动凯尔希后不再恢复 Touch 预备医疗；策略图标改用插件自带凯尔希卡；补回归测试 |

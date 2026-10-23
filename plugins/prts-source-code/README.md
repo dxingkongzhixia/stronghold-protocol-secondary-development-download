@@ -15,7 +15,8 @@
 - PRTS / 拟态 Boss 数据
 - 隐藏 Boss 与强制配对
 - PRTS 专属普通 / 隐藏 / 单双人波次
-- `band_x_prts_source_code_touch`「凯尔希」公共策略卡（不绑定 Boss）、凯尔希头像；凯尔希是隐藏特殊干员，不进商店池 / 图鉴 / 自选，只由策略授予
+- `band_x_prts_source_code_touch`「凯尔希」公共策略卡（不写死 Boss 绑定）、插件自带的凯尔希策略图标；全队授予（人类和 AI 队友都包括）；凯尔希是隐藏特殊干员，不进商店池 / 图鉴 / 自选，只由策略授予
+- 队友的凯尔希占用预备医疗格；移出该格后不会重新生成 Touch 的预备医疗
 - 清除协议、拟态重构、M3 击倒复活
 - 每回合休整期随机获得 1 名 1–3 本干员（`grants.restEndRandomChess`）
 - PRTS / 拟态 Spine、敌人图标、M3 模型和 Boss BGM 已放进插件自己的 `assets/`，由插件资产覆盖层加载

@@ -388,10 +388,16 @@ touches a match. Retention is handled by the (P2) trainer export/prune; the file
 ### The nightly trainer and the prior
 
 - sh tools/install-training-cron.sh installs (idempotently) two crontab lines: 04:30 and a 05:30 retry of
-  ode tools/train-bot.mjs --auto under ice -n 19. The job skips itself while a match is running.
-- It exports rows older than 14 days to ar/training/archives/YYYY-MM.jsonl.gz (manifest with row counts + sha256),
+  node tools/train-bot.mjs --auto under nice -n 19. The job skips itself while a match is running.
+- It exports rows older than 14 days to var/training/archives/YYYY-MM.jsonl.gz (manifest with row counts + sha256),
   prunes them, fits the family prior and publishes server/match/botPrior.json **atomically** (previous kept as
   .prev) only when the hold-out gates pass; otherwise the previous prior stays.
 - server/match/botPrior.js re-reads the file at the next bot prep (no restart). SP_BOT_PRIOR=off disables it;
   /healthz reports prior: { enabled, loaded, version, samples, rankCalls, applied, fallbacks }.
-- Reports: ar/training/report-YYYY-MM-DD.json; archives are pruned at 12 months or 6 GB (--months / --max-bytes).
+- Reports: var/training/report-YYYY-MM-DD.json; archives are pruned at 12 months or 6 GB (--months / --max-bytes).
+- To audit the current data without publishing, run `node tools/train-bot.mjs --dry-run` (it writes the report and
+  never replaces the prior). To publish immediately, back up `server/match/botPrior.json`, then run
+  `node tools/train-bot.mjs` **without** `--auto`; the gate must pass, the old prior is kept as `.prev`, and the
+  running server picks up the new version at the next bot prep. `--auto` deliberately skips while a match is active,
+  so it is not the command to use for a manual publish. The candidate priors only rank layouts for rehearsal;
+  the rehearsal simulation still chooses the winner, and the heuristic first plan is always retained.

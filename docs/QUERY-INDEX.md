@@ -44,7 +44,8 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/README.m
 | **plugin development guide (workflow, classes, testing, packaging)** | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
 | plugin content authoring (records, bonds, bands, enemies) | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md), [`docs/PLUGINS.md`](PLUGINS.md) §10 |
 | plugin DSL (skills / talents / prep) | [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) |
-| **PRTS「源代码」玩法插件（设计稿：Boss/拟态/凯尔希 band，fork 独有）** | [`docs/PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) |
+| **PRTS「源代码」玩法插件（已上线：Boss/拟态/凯尔希 band，fork 独有）** | [`docs/PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) |
+| **AI 机器人训练 / 布局先验** | [`docs/DEPLOY.md`](DEPLOY.md)（Bot rehearsal / training）, `server/match/botPrior.js`, `tools/train-bot.mjs`, `server/training/` |
 | plugin / Forge system, content sets, studio | `server/plugins/`, `shared/plugins/`, `schemas/`, `server/studio/`, `public/studio/`, `public/js/ui/{pluginPanel,pluginSettings,pluginTag,notices}.js` |
 | test console / `SP_TEST_MODE` | `public/js/ui/{testConsole,testDock,testAudit}.js`, `server/lobby.js` (`room.test`), `server/match/testCommands.js`, `shared/testMode.js` |
 | operator skins | `shared/protocol.js` (`room.skins`), `server/match/{PlayerState,player/basics,player/views}.js`, `public/js/ui/{skins,skinPicker}.js`, `public/js/render/{app,units}.js`, `docs/SKINS.md` |

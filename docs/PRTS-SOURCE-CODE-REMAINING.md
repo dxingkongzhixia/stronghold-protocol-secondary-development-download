@@ -1,8 +1,9 @@
 # PRTS「源代码」B–E 开发计划
 
-> 状态：**A1 + A2 已完成**。A2 提交为 `c31aa81a4`。**B0 第一批（B0-1 / B0-3 / B0-6）已完成**，见下方进度。  
-> 本文只覆盖剩余阶段 **B / C / D / E**，不改变 [`PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) 的已批准决策。
-> 性质：本 fork 独有内容插件 + fork 引擎能力；默认关闭，不部署、不改线上。
+> 状态（2026-10-23）：**B–D 主体已实现并上线**；本文保留为验收 / 回归底稿，下方未勾选项不再等同于“尚未开始”。当前实现与决策见 [`PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md)、插件 [`README.md`](../plugins/prts-source-code/README.md) 和 [`PROJECT-STATE.md`](PROJECT-STATE.md)。
+> **2026-10-23 线上修复**：C2 的 team grant 现在覆盖 AI 队友；队友把凯尔希移出预备医疗格后不再恢复 Touch 预备医疗。回归见 `test/match/prts-engine.test.js`。
+> 本文只覆盖阶段 **B / C / D / E**，不改变 [`PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) 的已批准决策。
+> 性质：本 fork 独有内容插件 + fork 引擎能力；按房间内容集启用，未启用时不改变原版；该插件已于 2026-10-23 在生产启用。
 
 ---
 
@@ -17,7 +18,7 @@ B–E 全部完成后，应满足：
 - [ ] 凯尔希 / M3 的全队授予、精锐门槛、击倒复活、休整期 +3 全部通过；
 - [ ] 房间选择、策略卡、Boss HUD、清除协议预警可用；
 - [ ] `npm test`、插件 `check`、i18n、默认 golden 全绿；
-- [ ] 只有 owner 明确同意后才部署。
+- [x] 只有 owner 明确同意后才部署（2026-10-23 已批准并上线）。
 
 ---
 
@@ -299,28 +300,30 @@ node --test test/plugins
 
 数据：
 
-- `content/operators/kalts.json`：`charId: char_003_kalts`，`tier 3`，normal / elite 两形态；
+- `plugins/prts-source-code/data/operator.json`：`charId: char_003_kalts`，`tier 3`，normal / elite 两形态；
 - 固定 S3：`skill: 2`、`skillLocked: true`；
-- 默认盟约：`deputShip` / `steadShip` / `preciShip`；
+- 默认盟约：`steadShip` / `preciShip`（`deputShip` 已由 owner 于 2026-10-22 移除）；
 - token：`token_x_prts_source_code_mon3tr`，normal / elite 变体；
 - 凯尔希不可出售，可在备战移动，击倒后下一备战期满血回归。
 
 运行时应做：
 
-1. 任意玩家选中 `band_prts_touch` 后，对所有存活玩家执行一次 `grantUnit`；
+1. 任意玩家选中 `band_x_prts_source_code_touch` 后，对所有存活玩家（含 AI 队友）执行一次 `grantUnit`；
 2. 已有该特殊单位时不重复授予；
-3. 授予时写 `piece.meta.special = 'band:prts_touch'`、`unsellable`、`returnNextPrep`；
+3. 授予时写 `piece.meta.special = 'band:band_x_prts_source_code_touch'`、`unsellable`、`returnNextPrep`；
 4. `PlayerState.sell` 拒绝不可出售；`move` 正常；
 5. 授予时直接占据 Touch 的预备医疗固定格（`placement: "amedicSlot"`），替换该占位；玩家仍可在备战中移动；
-6. 被击倒后下一备战期回到场上（沿用现有 `isDown` / 返还逻辑或新增专用字段）。
+6. 被击倒后下一备战期回到场上（沿用现有 `isDown` / 返还逻辑或新增专用字段）；
+7. 凯尔希被移出预备医疗格后，准备视图和战斗开始都不能恢复 Touch 的地图角色。
 
 验收：
 
-- [ ] 4 人房间任一玩家选 band，四人都得到；
-- [ ] 未选 band 的房间不生成；
-- [ ] 不可出售；可移动；
-- [ ] 重复选择/重连不重复授予；
-- [ ] 凯尔希被击倒后下一备战回归。
+- [x] 任一玩家选 band，所有存活人类和 AI 队友都得到（`test/match/prts-engine.test.js`）；
+- [x] 未选 band 的房间不生成；
+- [x] 不可出售；可移动；
+- [x] 重复选择/重连不重复授予；
+- [x] 凯尔希被击倒后下一备战回归；
+- [x] 移出预备医疗格后不再生成 Touch 的预备医疗。
 
 ### C3. 精锐门槛
 
