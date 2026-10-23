@@ -86,7 +86,11 @@ test('the report is read-only and a full-screen Modal; the lobby opens it (sourc
   const src = read('public/js/screens/sweep.js');
   assert.match(src, /<\$\{Modal\} open=\$\{true\} onClose=\$\{onClose\} class="sw"/);
   assert.match(src, /<\$\{Modal\} open=\$\{true\} onClose=\$\{onClose\} class="sw-codex"/);
-  assert.doesNotMatch(src, /openLoadout|savePref\((?!TAB_PREF)|net\.|room\./, 'nothing but the remembered tab is written');
+  assert.doesNotMatch(src, /savePref\((?!TAB_PREF)|net\.|room\./, 'nothing but the remembered tab is written');
+  // 对应干员 → 干员调配 (owner 2026-10-24): a reversible jump through the shared loadout store
+  assert.match(src, /openLoadout\('sweep', c\.chessId, 'loadout'\)/);
+  assert.match(src, /const loadoutOpen = useStore\(\(s\) => s\.open/, 'the report steps aside while the overlay is open');
+  assert.match(src, /if \(loadoutOpen\) return null;/, 'closing the overlay restores the report');
   assert.doesNotMatch(src, /name="box"|name="dice"/, 'only icons of the project\'s set');
   const lobby = read('public/js/screens/lobby.js');
   assert.match(lobby, /import \{ SweepReport \} from '\.\/sweep\.js';/);

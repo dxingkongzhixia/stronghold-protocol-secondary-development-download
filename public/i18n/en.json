@@ -1900,5 +1900,7 @@
   "在每张卡旁直接切换技能、模组、潜能与练度": "Switch skills, modules, potential and training beside each card",
   "切换为卡片视图（物资调配处）": "Switch to the card view (supply dispatch)",
   "卡片视图": "Card view",
-  "收起 (Esc)": "Collapse (Esc)"
+  "收起 (Esc)": "Collapse (Esc)",
+  "点击干员前往干员调配": "Click an operator to open the loadout",
+  "{name} · 前往干员调配": "{name} · Open loadout"
 }

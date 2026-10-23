@@ -76,7 +76,7 @@ https://<host>/?ui=classic
 | `public/css/screens/hub.css` | Hub 布局、协议页、背景、主题、响应式 |
 | `public/js/screens/lobbyData.js` | 两套大厅共用的模式 / 难度 / 房间码纯函数 |
 | `public/js/screens/online.js` | 两套大厅共用的在线玩家浮层 |
-| `public/js/screens/loadoutDeck.js` | Hub 的干员调配（物资调配处卡片 / 快速配置 / 详情抽屉），移植自特殊版 |
+| `public/js/screens/loadoutDeck.js` | Hub 的干员调配（物资调配处卡片 / 快速配置 / **右侧**详情抽屉），移植自特殊版 |
 | `public/css/screens/loadout-deck.css` | Hub 干员调配样式；经典界面仍加载 `loadout.css` |
 | `public/js/ui/operatorPortrait.js` | 卡片立绘跟随本机皮肤选择 |
 | `public/js/ui/transitions.js` | 浮层淡出 / 保留挂载 |
@@ -97,6 +97,7 @@ https://<host>/?ui=classic
 | 加入同盟 / 观战 / 最近密钥 | 左侧「加入同盟」弹窗 |
 | S.W.E.E.P.、干员调配、统计 | 右侧功能砖 |
 | 资料库、作战提示 | **Hub 不提供**；仍保留在经典大厅 |
+| S.W.E.E.P. 对应干员 | 点击干员打开干员调配并选中该干员；关闭调配（返回 / Esc）回到原来的 S.W.E.E.P. 页 |
 | 三个模式 | 右下大入口 |
 | 难度、公开可见性、测试房间、创建 | 全屏「选择模拟协议」 |
 | 野排队列 / 退出 | 模式入口上方的队列条 |

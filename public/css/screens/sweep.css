@@ -116,8 +116,12 @@
 }
 .sw-ops .sw-op { flex: none; width: calc((100% - .4rem) / 5); }
 @supports (height: 1cqw) { .sw-ops { max-height: calc(2 * ((100cqw - .4rem) / 5) + .1rem); } }
-.sw-op { --tc: var(--tier-1); position: relative; aspect-ratio: 1; padding: 0; overflow: hidden;
-  background: linear-gradient(180deg, #d7dcda, #a9b1ae); border: 1px solid rgba(255, 255, 255, .5); }
+.sw-op { --tc: var(--tier-1); position: relative; aspect-ratio: 1; padding: 0; overflow: hidden; cursor: pointer;
+  background: linear-gradient(180deg, #d7dcda, #a9b1ae); border: 1px solid rgba(255, 255, 255, .5);
+  font: inherit; color: inherit; text-align: left; touch-action: manipulation;
+  transition: border-color var(--t-fast), filter var(--t-fast); }
+.sw-op:hover { border-color: var(--mint-400); filter: brightness(1.08); }
+.sw-op:focus-visible { outline: 2px solid var(--mint-400); outline-offset: 2px; }
 .sw-op--t2 { --tc: var(--tier-2); }
 .sw-op--t3 { --tc: var(--tier-3); }
 .sw-op--t4 { --tc: var(--tier-4); }

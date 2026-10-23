@@ -21,7 +21,7 @@ import { attackInterval, fmtNum } from '../ui/gameLogic.js';
 import { abilityRows } from '../ui/abilityLines.js';
 import { data, useData } from '../data.js';
 import { useStore, loadPref, savePref } from '../store.js';
-import { loadoutStore } from '../ui/loadoutSync.js';
+import { loadoutStore, openLoadout } from '../ui/loadoutSync.js';
 import { openGuide, guidePages } from '../ui/guide.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
@@ -149,14 +149,14 @@ function BondPanel({ bond, m, notOwned }) {
     ${members.length ? html`<div class="sw-box">
       <div class="sw-box__head">
         <span class="sw-box__k"><${Icon} name="user" />${t('对应干员')}<small class="num">${members.length}</small></span>
-        ${anyOff ? html`<span class="sw-box__note"><span class="sw-box__swap" aria-hidden="true">⇄</span>${t('未持有的干员由替补干员上场')}</span>` : null}
+        <span class="sw-box__note">${anyOff ? html`<span class="sw-box__swap" aria-hidden="true">⇄</span>${t('未持有的干员由替补干员上场')}` : t('点击干员前往干员调配')}</span>
       </div>
-      <div class="sw-ops">${members.map((c) => html`<span key=${c.chessId} class=${cx('sw-op', `sw-op--t${c.tier}`, off.has(c.chessId) && 'is-standin')}
-          title=${c.name}>
+      <div class="sw-ops">${members.map((c) => html`<button key=${c.chessId} type="button" class=${cx('sw-op', `sw-op--t${c.tier}`, off.has(c.chessId) && 'is-standin')}
+          onClick=${() => openLoadout('sweep', c.chessId, 'loadout')} title=${t('{name} · 前往干员调配', { name: c.name })}>
         <${Img} src=${chessAvatarUrl(m, c)} fallback=${html`<span class="sw-op__txt">${[...(c.name || '?')][0]}</span>`} />
         <span class="sw-op__tier">${roman(c.tier)}</span>
         ${off.has(c.chessId) ? html`<span class="sw-op__sub">${t('替补')}</span>` : null}
-      </span>`)}</div>
+      </button>`)}</div>
     </div>` : null}
   </div>`;
 }
@@ -397,6 +397,9 @@ export function SweepReport({ onClose }) {
   useData('local');
   const m = data.get('assets');
   const notOwned = useStore((s) => s.notOwned, Object.is, loadoutStore);
+  // 对应干员 → 干员调配: the report steps aside while the loadout overlay is open and comes back (with its tab, selected
+  // bond and scroll intact) when the overlay closes. The parent keeps `sweepOpen`, so this is a nested, reversible jump.
+  const loadoutOpen = useStore((s) => s.open, Object.is, loadoutStore);
   const [tab, setTabState] = useState(() => { const v = loadPref(TAB_PREF, 'bonds'); return TABS.some((x) => x.id === v) ? v : 'bonds'; });
   const setTab = (v) => { setTabState(v); savePref(TAB_PREF, v); };
   const [bondSel, setBondSel] = useState(null);
@@ -427,6 +430,9 @@ export function SweepReport({ onClose }) {
     right = html`<${EnemiesTab} m=${m} sel=${eSel || {}} onSel=${setEnemySel} onCodex=${setCodex} />`;
   }
 
+  // the loadout overlay (z 55) must own the screen while it is open; keep this component mounted so closing it restores
+  // the same report (tab / selection / scroll) instead of dropping the player back on the lobby.
+  if (loadoutOpen) return null;
   // the codex is the report's sibling, not its child: the report's body lifts its children over the backdrop
   // (position: relative), which would pull a nested Modal out of its fixed layer
   return html`<${Modal} open=${true} onClose=${onClose} class="sw" closeOnBackdrop=${false}>

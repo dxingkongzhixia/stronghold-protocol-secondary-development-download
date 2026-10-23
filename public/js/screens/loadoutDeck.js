@@ -880,18 +880,11 @@ function LoadoutScreen({ st, leaving = false }) {
     const el = (view === 'deck' ? deckRef : gridRef).current?.querySelector(`[data-chess="${selId}"]`);
     if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [selId]);
-  // the drawer: the deck makes room on its left (.has-drawer) and scrolls by the same width, so nothing jumps; the
-  // selected card then comes into view beside the drawer (scroll-padding-left)
-  const drawerW = useRef(0);
-  const wasDrawer = useRef(false);
+  // the drawer sits on the RIGHT: the deck reserves its width with padding-right (scroll-padding-right), and the selected
+  // card is scrolled clear of it. No manual scrollLeft shift is needed (and would move the deck the wrong way).
   useLayoutEffect(() => {
     const d = deckRef.current;
     const open = view === 'deck' && drawer && !!base;
-    if (d && open !== wasDrawer.current) {
-      if (open) drawerW.current = d.parentElement?.querySelector('.lo-drawer')?.offsetWidth || 0;
-      d.scrollLeft += open ? drawerW.current : -drawerW.current;
-    }
-    wasDrawer.current = open;
     if (d && open) d.querySelector(`[data-chess="${selId}"]`)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }, [drawer, selId, view]);
   // the lobby chat (z 180) floats above the overlay: it steps aside while the overlay is open
@@ -1044,7 +1037,7 @@ function LoadoutScreen({ st, leaving = false }) {
         <${DeckView} m=${m} list=${list} getChess=${getChess} st=${st} selId=${selId} quick=${quick} onPick=${pick} onChange=${quickChange} onOps=${setOpsOf}
               onDiy=${() => setTab('diy')} diySlots=${diySlots} diyPicks=${diyLegal} deckRef=${deckRef} drawer=${drawer && !!base} onTier=${setActiveTier} filtered=${nFilters > 0} />
             ${drawer && base ? html`<div class="lo-drawer" data-testid="loadout-drawer">
-              <button type="button" class="lo-drawer__close" onClick=${() => setDrawer(false)} title=${t('收起 (Esc)')}><${Icon} name="chevronLeft" />${t('收起')}</button>
+              <button type="button" class="lo-drawer__close" onClick=${() => setDrawer(false)} title=${t('收起 (Esc)')}><${Icon} name="chevronRight" />${t('收起')}</button>
               ${loadoutDetail}
             </div>` : null}
       </main>
