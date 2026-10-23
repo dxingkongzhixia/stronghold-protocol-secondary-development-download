@@ -274,9 +274,9 @@ export class MatchPhases {
     const band = this.gd.band(bandId);
     const { grants } = readBandGrants(band?.grants);
     if (!grants?.grantUnit) return;
-    const targets = grants.team
-      ? this.alivePlayers().filter((p) => !p.isBot)
-      : (ps && !ps.isBot ? [ps] : []);
+    // A team grant is "every player", AI teammates included: a bot's field must show the same
+    // Kal'tsit instead of falling back to Touch's reserve-medic map character.
+    const targets = grants.team ? this.alivePlayers() : (ps ? [ps] : []);
     for (const target of targets) this.grantBandUnit(target, grants.grantUnit, bandId);
   }
 

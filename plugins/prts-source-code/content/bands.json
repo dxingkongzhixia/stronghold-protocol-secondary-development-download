@@ -7,6 +7,7 @@
       "base": "band_amedic",
       "set": {
         "bandId": "band_x_prts_source_code_touch",
+        "iconId": "band_x_prts_source_code_touch",
         "name": "凯尔希",
         "sortId": 41,
         "modeTypeList": [

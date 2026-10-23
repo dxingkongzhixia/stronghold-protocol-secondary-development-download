@@ -30,6 +30,7 @@ export function registerSupportMeta(registry) {
       // [ASSUMED] 外勤医疗 is a team grant for this match, not an aura revoked when its holder is eliminated.
       // Other team strategies and the teammate contexts still require a living player.
       if (ctx.teamMedicGranted?.() && !matchBands.includes('band_amedic')) matchBands.push('band_amedic');
+      const mapCharSuppressed = !!ctx.suppressMapChar?.();
       ev.input.contentInfo = {
         round: ctx.round,
         kind: ev.kind ?? null,
@@ -43,6 +44,7 @@ export function registerSupportMeta(registry) {
         },
         matchBands,
         teammates: mates.map((t) => ({ playerId: t.playerId, bandId: t.bandId() })),
+        ...(mapCharSuppressed ? { mapCharSuppressed: true } : {}),
       };
     },
   });

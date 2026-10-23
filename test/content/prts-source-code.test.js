@@ -26,6 +26,18 @@ function content() {
   }, getDefaultSource());
 }
 
+test('prts: the Kal\'tsit band keeps its own icon while inheriting Touch mechanics', { skip }, () => {
+  const registry = createPluginRegistry({
+    publicDir: 'public', dataDir: 'data', packsDir: 'packs', pluginsDir: 'plugins',
+  }, { app: '0.4.0', log: { info() {}, warn() {} } });
+  const set = buildContentSet({ registry, ids: ['prts-source-code'] });
+  assert.deepEqual(set.problems, []);
+  const band = set.data.bands.band_x_prts_source_code_touch;
+  assert.ok(band);
+  assert.equal(band.effectRef, 'band_amedic', 'the Touch team-grant mechanics stay inherited');
+  assert.equal(band.iconId, 'band_x_prts_source_code_touch', 'the strategy uses its own Kal\'tsit art, not Touch\'s');
+});
+
 function battle(data) {
   return makeBattle({
     data,

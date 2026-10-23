@@ -42,6 +42,7 @@
 import { dispatchOperatorTraits, operatorTraitHandler } from './operatorTraits.js';
 import { itemKey } from './gamedata.js';
 import { boardOrder, parseKey, tileKey } from './board.js';
+import { suppressesMapChar } from './player/special.js';
 import { pieceBonds as bondsOfPiece } from './bondsMeta.js';
 import { charge } from '../sim/content/dsl/budget.js';
 import { registerExtensionMeta, extensionMetaOwner } from '../sim/content/extensions.js';
@@ -586,6 +587,8 @@ export function makeCtx(m, ps, source, hook, ev = null, preview = null) {
     alive: () => ps.alive,
     bandId: () => ps.bandId,
     teamMedicGranted: () => m.teamMedicGranted(),
+    /** A Touch-style special unit owns the reserve-medic slot, so Touch's map character must not also spawn. */
+    suppressMapChar: () => [...ps.board.values(), ...ps.hand, ...ps.temp].some((p) => suppressesMapChar(p)),
     shopLevel: () => ps.shop.level,
     bond: (id) => (ps.bonds[id] ? { ...ps.bonds[id] } : null),
     bonds: () => Object.fromEntries(Object.entries(ps.bonds).map(([k, v]) => [k, { ...v }])),

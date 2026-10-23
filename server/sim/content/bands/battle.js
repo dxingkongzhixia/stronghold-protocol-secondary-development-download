@@ -41,7 +41,7 @@
 
 import {
   num, buffsOf, bandRecord, isOp, onField, isElite, tierOf, unitBonds, activeBondIds, playerOps, passiveBuff, fxOn,
-  matchBands, gainLayers, alliesAround, N4, baseChessId, isGroundOp, directMods,
+  matchBands, contentInfo, gainLayers, alliesAround, N4, baseChessId, isGroundOp, directMods,
 } from '../support/index.js';
 import { weaknessRetype, addShieldLayer, PRIO_RESPAWN, reviveNow } from '../items/battle.js';
 import { spawnMapChar } from '../tokens.js';
@@ -264,6 +264,10 @@ function installMapChars(battle) {
   const variants = amedicVariants();
   if (!variants.length) return;
   const holders = battle.players.filter((ps) => matchBands(battle, ps.playerId).includes(AMEDIC_BAND)
+    // A Touch-style team grant reaches every ally, including an AI teammate whose own band is not
+    // band_amedic. Its grant replaces the reserve medic for that player too (contentInfo flag set by
+    // support/meta.js from the special piece), so do not spawn a second Touch map character.
+    && !contentInfo(battle, ps.playerId).mapCharSuppressed
     && readBandGrants(bandRecord(ps.bandId)?.grants).grants?.grantUnit?.placement !== 'amedicSlot');
   if (!holders.length) return;
   battle.on('battleStart', () => {

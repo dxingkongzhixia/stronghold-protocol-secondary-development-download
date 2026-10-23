@@ -4,6 +4,8 @@ import { getData } from '../../server/data.js';
 import { GameData } from '../../server/match/gamedata.js';
 import { setupMatchWaves } from '../../server/match/waves.js';
 import { createRng } from '../../server/sim/rng.js';
+import { Battle } from '../../server/sim/Battle.js';
+import { getDefaultSource } from '../../server/sim/simdata.js';
 import { PHASE } from '../../shared/constants.js';
 import { makeMatch } from './harness.js';
 
@@ -72,6 +74,40 @@ test('an amedicSlot grant starts on Touch\'s stage slot instead of in the hand',
   ps.recompute();
   assert.deepEqual(m.prepMapChars(ps), [], 'moving the grant does not bring the reserve medic back');
   m.dispose();
+});
+
+test('a team amedicSlot grant suppresses Touch map characters for human and AI teammates', () => {
+  const MAP_MEDICS = new Set(['char_605_cmedic', 'char_613_acmedc']);
+  for (const seats of [{ humans: 2, bots: 0, receiver: 'p_1' }, { humans: 1, bots: 1, receiver: 'ai_0' }]) {
+    const data = structuredClone(getData());
+    data.bands.band_x_test_touch = {
+      ...data.bands.band_amiya, bandId: 'band_x_test_touch', name: 'Test team Touch', effectRef: 'band_amedic',
+      grants: { team: true, grantUnit: { charId: 'char_1052_kalts2', placement: 'amedicSlot' } },
+    };
+    const h = makeMatch({ mode: 'coop', ...seats, data, seed: 334411 }).start();
+    const m = h.m;
+    for (const ps of m.players.values()) if (!ps.isBot) m.handle(ps.playerId, { t: 'g.infoReady' });
+    h.run(() => m.phase === PHASE.BAND_DRAFT);
+    assert.equal(m.phase, PHASE.BAND_DRAFT);
+    assert.equal(m._applyBand(h.ps('p_0'), 'band_x_test_touch'), undefined);
+    h.toPrep(1);
+    h.setStage('act2autochess_m01');
+
+    const receiver = h.ps(seats.receiver);
+    assert.ok(receiver, 'the receiver seat exists');
+    const special = [...receiver.board.values(), ...receiver.hand, ...receiver.temp]
+      .find((p) => p?.meta?.special === 'band:band_x_test_touch');
+    assert.ok(special, `${seats.receiver} receives the team grant`);
+    assert.deepEqual(m.prepMapChars(receiver), [], `${seats.receiver} does not draw Touch's reserve medic`);
+
+    const opts = m._normalOpts(receiver);
+    const b = new Battle({ ...opts, data: getDefaultSource(), spawns: [], timeLimit: 300, autoFinish: false });
+    b.start();
+    const input = b.players.find((p) => p.playerId === receiver.playerId);
+    assert.equal(input.input.contentInfo.mapCharSuppressed, true, 'the battle carries the suppression flag');
+    assert.equal(b.allyUnits.some((u) => MAP_MEDICS.has(u.defId)), false, 'no Touch map character spawns next to Kal\'tsit');
+    m.dispose();
+  }
 });
 
 test('a hidden grantUnit chess is not in the shop pool but still fills the stage slot', () => {
