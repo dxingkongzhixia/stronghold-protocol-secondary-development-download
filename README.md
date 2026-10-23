@@ -91,7 +91,7 @@ node server/index.js   # 启动服务器：http://localhost:3000
 也可以使用启动脚本：Windows `scripts\start-windows.bat`，macOS / Linux `./scripts/start.sh`。浏览器会自动打开 `http://localhost:3000`，窗口里列出的局域网地址可直接发给同一网络的朋友。
 
 - **换端口 / 绑定**：`PORT`（默认 `3000`）、`HOST`（默认 `::`，一个双栈 socket 同时服务 IPv6 与 IPv4）环境变量，或启动脚本加 `--port`。健康检查：`GET /healthz`。
-- **管理页**：`http://localhost:3000/admin?token=<var/admin-token.txt>`。令牌在服务器的 `var/admin-token.txt`（启动日志里也会打印），**只在本机保存，不写进仓库**。
+- **管理页**：`http://localhost:3000/admin?token=<var/admin-token.txt>`；同一令牌下的**文档链**在 `http://localhost:3000/admin/docs`。令牌在服务器的 `var/admin-token.txt`（启动日志里也会打印），**只在本机保存，不写进仓库**。
 - **战斗模式**：`SP_COMBAT=client`（默认，浏览器模拟）或 `server`；`SP_VERIFY=off|sample|all` 控制服务器是否复算客户端结果。
 
 ### 测试

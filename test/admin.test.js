@@ -256,6 +256,34 @@ test('GET /admin + /admin/api/state are token-gated', async () => {
   }
 });
 
+test('admin documentation viewer: token-gated index, Markdown, assets and the docs shell', async () => {
+  const srv = await startServer({ port: 0, quiet: true, accounts: true, db: openMemoryDb(), adminToken: 'testtok' });
+  try {
+    const base = `http://localhost:${srv.port}`;
+    assert.equal((await fetch(`${base}/admin/docs`)).status, 403);
+    assert.equal((await fetch(`${base}/admin/api/docs`)).status, 403);
+    assert.equal((await fetch(`${base}/admin/api/docs/file?path=docs/README.md`)).status, 403);
+    const page = await fetch(`${base}/admin/docs?token=testtok`);
+    assert.equal(page.status, 200);
+    assert.match(await page.text(), /\/js\/adminDocs\.js/);
+    const index = await (await fetch(`${base}/admin/api/docs?token=testtok`)).json();
+    assert.ok(index.ok && index.count > 20);
+    assert.ok(index.files.some((f) => f.path === 'docs/README.md'));
+    const doc = await (await fetch(`${base}/admin/api/docs/file?path=docs/README.md&token=testtok`)).json();
+    assert.equal(doc.path, 'docs/README.md');
+    assert.match(doc.markdown, /文档系统/);
+    assert.equal((await fetch(`${base}/admin/api/docs/file?path=server/index.js&token=testtok`)).status, 404);
+    assert.equal((await fetch(`${base}/admin/api/docs/file?path=docs/../README.md&token=testtok`)).status, 404);
+    const image = await fetch(`${base}/admin/api/docs/asset?path=${encodeURIComponent('docs/img/band-draft.jpg')}&token=testtok`);
+    assert.equal(image.status, 200);
+    assert.equal(image.headers.get('content-type'), 'image/jpeg');
+    const admin = await (await fetch(`${base}/admin?token=testtok`)).text();
+    assert.match(admin, /href="\/admin\/docs"/);
+  } finally {
+    await srv.close();
+  }
+});
+
 // 通知 (docs/MATCHMAKING.md §28): POST /admin/api/notify pushes a sys.notice to the LIVE sessions — every logged-in
 // account by default (`scope: 'all'` reaches guests too) — and keeps the broadcast in the state's `notices` history.
 test('POST /admin/api/notify pushes sys.notice to the live sessions (scope, guards, history)', async () => {

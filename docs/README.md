@@ -146,7 +146,25 @@
 
 ---
 
-## 6. 文档维护规则
+## 6. 管理后台查看
+
+部署并启用管理账号后，打开：
+
+```text
+/admin/docs
+```
+
+登录 `/admin` 后使用左侧「文档链」入口即可；它读取的是：
+
+```text
+/admin/api/docs          文档索引（标题、路径、分组、大小）
+/admin/api/docs/file     选中文档的原始 Markdown
+/admin/api/docs/asset    docs/ 内的图片
+```
+
+页面只读、需要 `/admin` 的同一个管理令牌；不会暴露 `server/`、`data/` 或 `public/` 里的代码文件。根目录只开放 `README.md`、`AGENTS.md`、`CHANGELOG.md`、`CONTRIBUTING.md`、`NOTICE.md`，另加 `plugins/README.md` 和 `plugins/AGENTS.md`，以及 `docs/` 下的 Markdown。
+
+## 7. 文档维护规则
 
 ### 修改代码时
 

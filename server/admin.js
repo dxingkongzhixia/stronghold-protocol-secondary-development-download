@@ -2,6 +2,10 @@
 // (i18n-ignore-file: the operations page and its strings are developer-facing, never shown to players — docs/I18N.md)
 //
 //   GET /admin?token=…            → a self-contained page (polls the JSON every 2 s)
+//   GET /admin/docs?token=…       → the read-only documentation viewer (server/adminDocs.js)
+//   GET /admin/api/docs?token=…   → the documentation index (server/docs.js)
+//   GET /admin/api/docs/file?…    → one Markdown document
+//   GET /admin/api/docs/asset?…   → a docs/ image
 //   GET /admin/api/state?token=…  → { now, counts, queue, rooms, accounts, online }
 //
 // It lists every registered account with its live status (离线 / 在线 / 组队中 / 野排排队 / 野排游玩 / 同盟游玩 /
@@ -406,6 +410,7 @@ body{background:radial-gradient(1100px 620px at 8% -10%,rgba(78,216,175,.09),tra
   transition:background .14s,color .14s,border-color .14s}
 .nav__item:hover{background:rgba(78,216,175,.06);color:var(--text)}
 .nav__item.is-on{background:rgba(78,216,175,.10);border-color:rgba(78,216,175,.28);color:var(--mint)}
+.nav__link{text-decoration:none}
 .nav__item i{font-style:normal;width:15px;text-align:center;opacity:.85}
 .nav__item em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--dim2);font-variant-numeric:tabular-nums}
 .nav__item.is-on em{color:var(--mint)}
@@ -779,6 +784,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       <button class="nav__item" data-view="bugs"><i>⚑</i>反馈<em id="navBugs">0</em></button>
       <button class="nav__item" data-view="plugins"><i>◆</i>插件与内容<em id="navPlugins">0</em></button>
       <div class="nav__sect">诊断</div>
+      <a class="nav__item nav__link" href="/admin/docs"><i>▤</i>文档链</a>
       <button class="nav__item" data-view="speed"><i>⚡</i>测速</button>
       <button class="nav__item" data-view="origins"><i>⇄</i>来源配置</button>
     </nav>
@@ -1144,7 +1150,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   }
   el('nav').addEventListener('click', function (e) {
     var b = e.target && e.target.closest ? e.target.closest('.nav__item') : null;
-    if (b) setView(b.dataset.view);
+    if (b && b.dataset.view) setView(b.dataset.view);
   });
   window.addEventListener('hashchange', function () { setView(location.hash.slice(1), true); });
 

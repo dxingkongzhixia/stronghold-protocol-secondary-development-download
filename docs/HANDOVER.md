@@ -57,6 +57,7 @@ deploy), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) (the repository map) and
 cd D:\Git本地库\stronghold-protocol-secondary-development-download
 node server/index.js            # http://localhost:3000   (npm run dev = --watch)
 #    admin: http://localhost:3000/admin?token=<contents of var/admin-token.txt>
+#    docs:  http://localhost:3000/admin/docs (same admin token / cookie)
 #    the dev pages (3D board, sim check) live under /dev/, e.g. /dev/render-demo.html?scene=prep&stage=act1autochess_m01&board=3d
 
 # 2. Verify (this checkout has .git + node_modules, so the whole suite runs here)

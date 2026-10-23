@@ -30,8 +30,9 @@
 //                      SIGTERM
 //
 // Accounts & 野排 (docs/MATCHMAKING.md, opt-in with `accounts: true`): db.mjs / auth.js / admin.js, and the extra
-// routes startServer() serves itself — GET /online/api (public online status) and the token-gated /admin page +
-// /admin/api/state + POST /admin/api/notify (an operator notice pushed to the live sessions).
+// routes startServer() serves itself — GET /online/api (public online status) and the token-gated /admin page,
+// /admin/docs documentation viewer, /admin/api/state + POST /admin/api/notify (an operator notice pushed to the
+// live sessions), and the read-only /admin/api/docs index/file/asset routes.
 //
 // Per-network limits for internet clients (see net.js clientAddress; local/LAN peers are exempt): open sockets
 // (maxConnectionsPerAddr, refused at upgrade with 429), rooms and running matches (lobby.js).
@@ -51,6 +52,8 @@ import { TrainingStore } from './training/store.js';
 import { setTrainingSink } from './training/record.js';
 import { configurePrior, priorStatus } from './match/botPrior.js';
 import { ADMIN_HTML, ADMIN_CSP_HASH, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches, writePluginPolicy } from './admin.js';
+import { docIndex, readDoc, readDocAsset } from './docs.js';
+import { DOCS_HTML } from './adminDocs.js';
 import { createSpeedProbe } from './speed.js';
 import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from './mirrors.js';
 import { clientAddress } from './net.js';
@@ -417,6 +420,10 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const pluginInstall = parts.rawPath === '/admin/api/plugins/install';
     const pluginUninstall = parts.rawPath === '/admin/api/plugins/uninstall';
     const auditLog = parts.rawPath === '/admin/api/audit';
+    const docsPage = parts.rawPath === '/admin/docs' || parts.rawPath === '/admin/docs/';
+    const docsIndex = parts.rawPath === '/admin/api/docs';
+    const docsFile = parts.rawPath === '/admin/api/docs/file';
+    const docsAsset = parts.rawPath === '/admin/api/docs/asset';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -439,6 +446,37 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     // Remember a valid ?token= in a cookie for 30 days, so plain /admin links (the lobby's 在线 badge) work.
     if (queryToken) res.setHeader('Set-Cookie', `sp_admin=${encodeURIComponent(admin.token)}; HttpOnly; SameSite=Strict; Path=/admin; Max-Age=2592000`);
+    // Read-only documentation chain for the admin page (server/docs.js): only docs/, root README/AGENTS/
+    // CHANGELOG/CONTRIBUTING/NOTICE and plugins/{README,AGENTS}.md; paths are re-resolved and checked.
+    if (docsPage) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      const body = Buffer.from(DOCS_HTML);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
+      res.end(req.method === 'HEAD' ? undefined : body);
+      return;
+    }
+    if (docsIndex) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      sendJson(req, res, 200, { ok: true, ...docIndex(ROOT) });
+      return;
+    }
+    if (docsFile) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      const rel = new URLSearchParams(parts.query).get('path') || '';
+      const doc = readDoc(ROOT, rel);
+      if (!doc) { sendJson(req, res, 404, { error: 'document not found' }); return; }
+      sendJson(req, res, 200, { ok: true, ...doc });
+      return;
+    }
+    if (docsAsset) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      const rel = new URLSearchParams(parts.query).get('path') || '';
+      const asset = readDocAsset(ROOT, rel);
+      if (!asset) { sendJson(req, res, 404, { error: 'asset not found' }); return; }
+      res.writeHead(200, { 'Content-Type': asset.type, 'Content-Length': asset.bytes.length, 'Cache-Control': 'private, max-age=300' });
+      res.end(req.method === 'HEAD' ? undefined : asset.bytes);
+      return;
+    }
     // 测速 (server/speed.js, docs/MATCHMAKING.md §12.2): time every configured art origin (the relay + the GitHub
     // mirrors) and report which one a client would install right now. GET only; the probe's own cooldown keeps a
     // refresh-happy operator from hammering the free mirrors (?force=1 skips it, used by the button).
@@ -753,7 +791,9 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
       || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
       || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/market/keys' || parts.rawPath === '/admin/api/audit' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/ai'
-      || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')) {
+      || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')
+      || parts.rawPath === '/admin/docs' || parts.rawPath === '/admin/docs/'
+      || parts.rawPath === '/admin/api/docs' || parts.rawPath === '/admin/api/docs/file' || parts.rawPath === '/admin/api/docs/asset') {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;
     }

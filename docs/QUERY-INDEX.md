@@ -145,6 +145,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | architecture, risks, trusted isolation | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) · [`docs/PLUGIN-RISKS.md`](PLUGIN-RISKS.md) · [`docs/TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) |
 | current plugin gaps / roadmap | [`docs/PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) · [`docs/PLUGIN-PLATFORM-PLAN.md`](PLUGIN-PLATFORM-PLAN.md) |
 | AI authoring rules inside `plugins/` | [`plugins/AGENTS.md`](../plugins/AGENTS.md) |
+| **read the documentation chain in the admin page** | `/admin/docs` (same token/cookie as `/admin`; source: [`docs/README.md`](README.md)) |
 
 ## 10. Build, test and tooling
 
