@@ -995,6 +995,20 @@ function MatchScreen() {
   const toggleReady = useCallback(async (r) => {
     const L = live.current;
     const me = Array.isArray(L.pub?.players) ? L.pub.players.find((p) => p && p.playerId === L.myId) : null;
+    const temp = r ? tempInfo(L.priv) : { count: 0 };
+    if (temp.count > 0) {
+      // A full hand can leave overflow items behind the bench models. Offer to clear the temporary row explicitly
+      // instead of leaving Ready dead with no visible way forward; the player chooses whether to discard it.
+      const ok = await confirmDialog({
+        title: t('临时整备区'),
+        text: t('临时整备区还有 {n} 件物品或角色。清空后会出售角色、销毁物品，然后准备就绪。', { n: temp.count }),
+        okText: t('清空并准备'),
+        cancelText: t('继续整备'),
+        danger: true,
+      });
+      if (!ok) return;
+      if (!(await actions.clearTemp())) return;
+    }
     const ask = r ? readyFundsPrompt(L.priv, { keptBands: data.get('config')?.economy?.leftoverFundsKeptByBands, autoplay: !!me?.autoplay }) : null;
     if (ask) {
       if (askingReady.current) return;

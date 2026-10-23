@@ -81,6 +81,7 @@ export const actions = {
   freeze: () => act('g.freeze'),
   levelUp: () => act('g.levelUp'),
   sell: (uid) => act('g.sell', { uid }),
+  clearTemp: () => act('g.clearTemp'),
   // `dir` (UP|RIGHT|DOWN|LEFT): the direction chosen with the deploy wheel (research 09 §6.1 — g.move / g.art carry it;
   // the server defaults to RIGHT when absent)
   move: (uid, to, dir) => act('g.move', dir ? { uid, to, dir } : { uid, to }),

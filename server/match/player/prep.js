@@ -79,6 +79,31 @@ export class PlayerPrep {
   }
 
   /**
+   * Explicitly clear the temporary staging row during prep. This is the owner action behind the ready-button
+   * confirmation: a full hand can hide temp items behind the bench models, and a native disabled button used to
+   * leave the player with no visible way to clear them. Chess and summons return their pool copies, items are
+   * discarded, and the prep's ready check can then proceed.
+   */
+  clearTemp() {
+    if (!this.alive) return fail(ERR.ELIMINATED);
+    if (this.m.phase !== PHASE.PREP) return fail(ERR.WRONG_PHASE);
+    let changed = false;
+    for (let i = 0; i < this.temp.length; i++) {
+      const p = this.temp[i];
+      if (!p) continue;
+      this.temp[i] = null;
+      this._tempDue.delete(p.uid);
+      changed = true;
+      if (p.kind === 'chess') {
+        this.removeTokensOf(p.uid);
+        this.returnCopies(p);
+      }
+    }
+    if (changed) this.recompute();
+    return OK;
+  }
+
+  /**
    * Prep deadline: every temp piece due at this prep (tempDue ≤ prepsEnded) is resolved — a chess is sold back (its
    * pool copies return, its summons are removed), items are destroyed, the summon stack of an owner still on the board
    * is removed and comes back at the next round start (startRound → grantTokensFor; PRTS "干员所属召唤物会于下一回合
