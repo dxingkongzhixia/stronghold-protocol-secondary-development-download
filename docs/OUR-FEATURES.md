@@ -68,9 +68,10 @@ garrisons, tokens, counts) applies unchanged.
 - **Data injection** — `tools/build-data.mjs`:
   - `CUSTOM_CHESS` (the table, ~line 303): one record per operator (`charId`, `baseId`/`goldenId`, `tier`,
     `identifier`/`shopLevelSortId`, `defaultSkillIndex`, `defaultUniEquipId`, `bonds`, `normal`/`golden` status,
-    `garrison`/`garrisons`, optional `tokenIds`). The golden form's 盟约/整备 trait is `eliteGarrison` /
-    `eliteGarrisons`; it doubles the effect values (not the trigger conditions), so the elite text and blackboard
-    agree. `applyCustomChess` writes the separate `_a` / `_b` garrison records.
+    `garrison`/`garrisons`, optional `tokenIds`). The golden form's 盟约/属性类 trait is `eliteGarrison` /
+    `eliteGarrisons`; it doubles those effect values (not the trigger conditions), so the elite text and blackboard
+    agree. Non-bond prep effects (澄闪's purchase price, 凯尔希·思衡托's equipment count) keep the normal value.
+    `applyCustomChess` writes the separate `_a` / `_b` garrison records.
   - `applyCustomChess(act, charTable)` (~line 494) merges each record into `charChessDataDict`,
     `charShopChessDatas`, `chessNormalIdLookupDict`, `bondInfoDict.chessIdList` and `garrisonDataDict`, and injects
     the `tokenIds` summon records.

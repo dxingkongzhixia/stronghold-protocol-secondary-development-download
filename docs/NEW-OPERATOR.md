@@ -86,7 +86,7 @@ fs.writeFileSync('.cache/gamedata/excel/skill_table.json', JSON.stringify(st));
 ```
 
 - `normal`/`golden` 的 `charLevel`/`skillLevel`：照**同阶现有干员**取（普通多为 E2L1 / 技能 4；精锐 E2L60 / 技能 7 / 模组 Lv1）；`evolvePhase` = `PHASE_0/1/2`。
-- 精锐的盟约/整备特性写 `eliteGarrison`（多个写 `eliteGarrisons`）。按当前自造干员规则，**效果数值取普通形态的 2 倍，触发条件不变**（例如 +1% → +2%；每 3 层仍是每 3 层）。不写 `eliteGarrison` 时精锐会沿用普通配置。
+- 精锐的盟约/属性类特性写 `eliteGarrison`（多个写 `eliteGarrisons`）。按当前自造干员规则，**效果数值取普通形态的 2 倍，触发条件不变**（例如 +1% → +2%；每 3 层仍是每 3 层）。价格、装备数量这类非盟约整备效果不翻倍，精锐沿用普通配置；不写 `eliteGarrison` 时精锐会沿用普通配置。
 - 改完**重建**：`node tools/build-data.mjs`。
 - 名册数量变了要同步**两处**：`tools/build-data.mjs` 里 `validateAll` 的 `expected N visible …`，
   以及测试里写死的计数（见 §5）。

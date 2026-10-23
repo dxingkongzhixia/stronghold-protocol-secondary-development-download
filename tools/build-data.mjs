@@ -531,15 +531,6 @@ const CUSTOM_CHESS = [
         { key: 'price', value: 2 },   // the discount off the tier price: 3 → 1
       ],
     },
-    eliteGarrison: {
-      eventType: 'SERVER_PRICE',
-      effectType: 'SERVER_CHESS_PRICE',
-      eventTypeDesc: '整备能力',
-      desc: '购买价格为0',
-      blackboard: [
-        { key: 'price', value: 4 },   // doubled discount: 3 → 0 (the price is clamped at 0)
-      ],
-    },
   },
   {
     // 娜仁图亚 (docs/MATCHMAKING.md §32, custom): 6★ 狙击·回环射手 (loopshooter), not in the season's roster. 3 阶;
@@ -601,18 +592,6 @@ const CUSTOM_CHESS = [
       blackboard: [
         { key: 'pool', valueStr: 'pool_equip_all' },
         { key: 'count', value: 2 },
-      ],
-    },
-    eliteGarrison: {
-      eventType: 'SERVER_GAIN',
-      effectType: 'SERVER_POOL_EQUIP',
-      eventTypeDesc: '整备能力',
-      eventTypeIcon: 'icon_gold',
-      eventTypeSmallIcon: 's_icon_gold',
-      desc: '获得时，随机获取4件装备（无品阶限制）',
-      blackboard: [
-        { key: 'pool', valueStr: 'pool_equip_all' },
-        { key: 'count', value: 4 },
       ],
     },
   },

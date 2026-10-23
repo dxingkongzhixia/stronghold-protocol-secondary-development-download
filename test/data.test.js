@@ -169,9 +169,7 @@ test('custom operators: the elite 盟约/整备 trait doubles the effect values'
     'chess_char_4217_makoto': [['bond_add_count_swap', 2], ['bond_add_count_swap', 4]],
     'chess_char_1015_aglna2': [['bond_add_count', 2], ['bond_add_count', 4]],
     'chess_char_2027_wang': [['atk', 0.01], ['atk', 0.02]],
-    'chess_char_377_gdglow': [['price', 2], ['price', 4]],
     'chess_char_4138_narant': [['count', 6], ['count', 12]],
-    'chess_char_1052_kalts2': [['count', 2], ['count', 4]],
     'chess_char_4231_clemnt': [['def', 0.01], ['def', 0.02]],
   };
   const one = (id) => {
@@ -186,6 +184,13 @@ test('custom operators: the elite 盟约/整备 trait doubles the effect values'
     assert.equal(a.bb[normalKey], normal, `${base}: normal ${normalKey}`);
     assert.equal(b.bb[eliteKey], elite, `${base}: elite ${eliteKey}`);
     assert.notEqual(a.desc, b.desc, `${base}: elite text describes the doubled value`);
+  }
+  // Non-bond prep effects keep the normal values: the owner's scope excludes price and equipment count.
+  for (const base of ['chess_char_377_gdglow', 'chess_char_1052_kalts2']) {
+    const a = one(`${base}_a`);
+    const b = one(`${base}_b`);
+    assert.deepEqual(b.bb, a.bb, `${base}: elite keeps the normal ${JSON.stringify(a.bb)}`);
+    assert.equal(b.desc, a.desc, `${base}: same text`);
   }
 });
 
