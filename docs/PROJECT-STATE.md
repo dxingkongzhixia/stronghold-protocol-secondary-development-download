@@ -41,13 +41,13 @@
 
 > ⚠️ store 里的 `.cache` / `public/assets` / `public/fonts` / `public/vendor` 是**指向工作项目的 junction**，约 600 MB 美术只有一份。**别单独删工作项目**，也别把 store 的 `public/assets` 当副本删掉。
 
-## 3. 当前状态（2026-10-20 · 笔记本单树实测）
+## 3. 当前状态（2026-10-23 19:57 · 部署后实测）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`；**已上线进程的 build `275f096dcd2e`**（2026-10-21 11:10 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `ef0c9d7486c6` → `8a8994f8ec2f` → `d9f6e307b41e`；备份 `/root/sp-backup-zoom-20261021-110922.tgz`；社区更新日志 **0.4.48**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `3586e9a2570f`**（2026-10-23 19:57 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `e70a15e1be0a` → `a6914a5d83db`；备份 `/root/sp-backup-code-20261023-195733.tgz`；社区更新日志 **0.4.71**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | git store | **笔记本** = 单树检出（分支 `master`，HEAD **`c294705f2`**）；**台式机** = `_merge-scratch`（分支 `ours`，最后记录 `13760cf56`），开发树 `D:\DOTK\Stronghold-Protocol` 与 store 只差两个未跟踪测试文件 |
-| 远程同步 | **已全部推送（2026-10-21）**：`github/master` == `gitee/master` == HEAD（`c294705f2`）；GitHub 直连被重置时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=… push --no-thin`）。主线 `origin/master` = `d905c146`（0.3.1） |
+| 远程同步 | **已全部推送（2026-10-23）**：`github/master` == `gitee/master` == 中继 `master` == HEAD（`2adf3c7ee`）；GitHub 直连 `:443` 仍会间歇失败，恢复后补推成功。主线 `origin/master` = `d905c146`（0.3.1） |
 | 全量测试 | **相关 655 项通过 / 0 失败**（2026-10-20，插件商城、管理后台、文档、i18n、静态资源与界面测试；`test/admin.test.js` / `test/market.test.js` 全过）。全量套件上次 8200 项 / 8163 通过 / 1 个性能基线抖动 / 36 跳过；该性能用例单跑 35/35 通过 |
 | 其它闸门 | **2026-10-20 实测（笔记本单树）**：`lint` 0 error（187 warning）✓；`typecheck` ✓；`i18n check en --strict` **1732/1732**（100%，0 missing / 0 errors）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 60/60 ✓。`check:imports` 仍有 3 条既有 `sim-node` 边界记录（`server/sim/nodeData.js`，非本次改动）；`check-delivery --live` 未跑（需外网 / 中继） |
 | 本机环境 | Node **v24.19.0**（v26 也可，线上是 v26.10.0）；**GitHub 直连 `:443` 会被重置** —— 推送时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=http://127.0.0.1:31181 push --no-thin …`）；官方数据 CDN 同理需要代理 |
@@ -58,11 +58,12 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `275f096dcd2e`**（2026-10-21 11:10 部署后重启，由 `/healthz` 实测；上一版 `ef0c9d7486c6` → `8a8994f8ec2f` → `d9f6e307b41e`；备份 `/root/sp-backup-zoom-20261021-110922.tgz`；通告记为社区 **0.4.48**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `3586e9a2570f`**（2026-10-23 19:57 部署后重启，由 `/healthz` 实测；上一版 `e70a15e1be0a` → `a6914a5d83db`；备份 `/root/sp-backup-code-20261023-195733.tgz`；通告记为社区 **0.4.71**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
 | **资源中转** | **http://123.57.150.185**（阿里云轻量 · 华北2 北京 · 200 Mbps · 流量不限）：nginx 服务 `/srv/sp/public`，裸仓库 `/srv/sp.git` + `post-receive` 钩子（**推即部署**）。发布顺序：**先** `node tools/push-assets-relay.mjs`，**再** gitee/github。资源加载链：中转机 → GitHub 及其镜像 → 游戏服务器兜底。**缓存头（2026-10-15）**：带内容哈希的 URL（`~<hash>` 路径、客户端镜像前缀写出的 `?h=`）一年 `immutable`，普通路径与无扩展名路由（`/media`、`/scene`、`/clip`）一周（`map $arg_h`）——常客不再每周重下 135 MB 美术。接入与运维见 [`docs/ASSETS.md`](ASSETS.md)「The relay」 |
+| **客户端缓存** | `public/index.html`、`public/js/**`、`public/css/**` 统一 `Cache-Control: no-store`（2026-10-23 起），保证部署后打开页面拿到新代码；`public/assets`、`public/fonts`、`public/vendor` 继续长期缓存。不要再给应用 JS/CSS 加 `?v=` 的 immutable 缓存。 |
 | 管理页 | `/admin?token=<var/admin-token.txt>`（令牌 + 30 天 cookie）；公开只读 `/online/api` |
 | 进程管理 | 宝塔「Node项目」脚本 `/www/server/nodejs/vhost/scripts/server.sh`（`setsid` 启动）；日志 `/www/wwwlogs/nodejs/server.log` |
 | **域名 / 备案（2026-10-14 放弃）** | **owner 决定彻底不办备案**：不用域名（`strongholdprotocolcsym.top` 虽已 ICP 通过 **浙ICP备2026085059号-1**，但不解析、不使用）、不上 HTTPS、页脚的 ICP 号与站点名**已回退**（站点名回到「卫戍协议：盟约」）。域名/证书/HTTPS 的完整步骤保留在下面一行，将来想捡随时能捡。线上仍走 `http://183.66.27.19:20522`（纯 HTTP、本地缓存 + 中继那套，owner 认为已够用） |
@@ -92,7 +93,7 @@
    而磁盘已是 `47c37209549a`；重启后一致。）
 
 > **先推通知、再上传 / 重启**：发布前先在 `/admin` 的「通知」面板推一条告示（署名 `d星空之下`），说清更新内容、大约多久、请刷新。**没有 owner 明确许可，不要部署**（默认「先不上线」）。
-> **客户端改完刷新即可**（`/js`、`/css` 是 `no-cache`；build 变了开着的老页面会自动重载）。
+> **客户端改完刷新即可**（`/js`、`/css` 是 `no-store`，图片、字体和 `/vendor` 仍长缓存；build 变了开着的老页面会自动重载）。
 > ⚠️ **`SP_VERIFY=sample` 只在 Windows 的 `server-start.cmd` 里设**，Linux 上没设 → 线上**服务端抽检复算 = off**。
 > ⚠️ 打包必须用 git blob（`git show`）**按字节**落盘：PowerShell 的 `Set-Content -Encoding utf8` 会加 **BOM**，`i18n/*.json` 直接解析失败。
 
@@ -100,6 +101,8 @@
 
 | 时间 | 代码 | build | 更新日志 | 要点 |
 |---|---|---|---|---|
+| **2026-10-23 19:57** | `2adf3c7ee` | **`3586e9a2570f`** | **`0.4.71`** | 修复准备按钮点击与临时整备区：按钮不再使用原生 `disabled`，忙碌/过期状态不再锁死；临时整备区非空时点击准备会提示「清空并准备」（出售角色、销毁物品后继续）。**缓存策略改为 app shell / JS / CSS `no-store`**；`/assets`、`/fonts`、`/vendor` 继续长缓存。Gitee / GitHub / 中继均为 `2adf3c7ee`；备份 `/root/sp-backup-code-20261023-195733.tgz` |
+| **2026-10-23 19:34** | `42f77f6a7` | **`e70a15e1be0a`** | **`0.4.70`** | 准备按钮不再被原生 disabled 吞掉点击；新增临时整备区清空动作；同批同步 Gitee 585d 的 PRTS / 黑蛇 / FX / 大厅改动；通知 11 人，备份 `/root/sp-backup-code-20261023-194809.tgz` |
 | **2026-10-21 11:10** | `c294705f2` | **`275f096dcd2e`** | **`0.4.48`** | 手机横屏棋盘相机居中放大 20%，棋盘和干员更大；备份 `/root/sp-backup-zoom-20261021-110922.tgz` |
 | **2026-10-21 10:55** | `9d831c040` | **`ef0c9d7486c6`** | **`0.4.47`** | 手机端短屏按可视高度缩放、修复 44px 触控点击区、移动端清晰度提升、全屏不再重复锁定已横屏方向；备份 `/root/sp-backup-mobile-20261021-105448.tgz` |
 | **2026-10-21 09:37** | `87d238556` | **`8a8994f8ec2f`** | **`0.4.46`** | 修复战斗 HUD 全屏层拦截画布点击，战斗中点干员可正常打开详情；备份 `/root/sp-backup-game-css-20261021-093733.tgz` |
@@ -117,6 +120,8 @@
 | 2026-10-16 晚 | `e0758c50` | `90f5e7f2c477` | `0.4.28` | 望 S3「天下劫」棋子范围 `x-6` → `x-1`（只改数据） |
 | 2026-10-15 | `4e6058f8` | `47c37209549a` | `0.4.25` | 内容上只有文档，**仍必须重启**（`buildTag` 进程内缓存） |
 | 2026-10-14 | — | — | `0.4.8` | 首次 0.4.x 上线（备份 `/root/sp-backup-deploy-20261014-024306.tgz`） |
+
+**2026-10-23 19:57 详情**：准备按钮修复 + 缓存策略调整。按钮不再使用原生 `disabled`，`toggleReady` 用 `try/finally` 清理 busy，阶段/回合切换时重置；临时整备区非空时点击准备会提示 **「清空并准备」**（角色出售、物品销毁后继续）。应用外壳/JS/CSS 改为 `no-store`，避免 `?v=` immutable 一年导致旧代码不更新；`public/assets`、`public/fonts`、`public/vendor` 仍长缓存。生产 `build 3586e9a2570f`，通知 9 人，备份 `/root/sp-backup-code-20261023-195733.tgz`；Gitee / GitHub / 中继 `master` 均为 `2adf3c7ee`。
 
 **2026-10-18 00:35 详情**：本批 = **统计页改版**（schema v2、官方素材 37 件、页面改版）+ **去掉部署折叠缩放**（`#602`/`#646`，进 §0）+ **分血救援**（`MATCHMAKING` §50）+ **公开房间列全部**（`/online/api?all=1`）。
 顺序：仓库 `26294b7a`（github + gitee，github 多次 408/502 后成功）→ **中继先行**（`9705f67f..26294b7a`，`relay deploy done`）→ **通告**（署名 `d星空之下`，更新日志 `0.4.34`，在线 6 人收到）→ 上传 → 解包 → **重启**。
