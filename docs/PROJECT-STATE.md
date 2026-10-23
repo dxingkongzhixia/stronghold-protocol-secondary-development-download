@@ -185,11 +185,13 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 ## 9. 已知问题 / 待办
 
-**2026-10-23 本地复核（待上线批次）**
+**2026-10-23 上线记录（已部署）**
 
-- 本地分支 `prts-plugin`；代码批次 HEAD `22e18faae`，相对生产基线 `59614de55` 有 12 个代码提交（文档整理提交另计）；**生产未同步、未重启**。
-- 本批已包含：0.3.2 战斗结束待机 / 特效清理、冷启动与重连自动恢复、手机横屏作战统计、结算页 #745、bond timer #746；Wild Mane #782 与 0.3.1 VFX 已在更早提交中。
-- 当前本机全量：**8339 tests / 8298 pass / 1 known performance flake / 40 skipped**；性能测试单跑通过。
+- 本地分支 `prts-plugin`；代码批次 HEAD `79620e636`，相对生产基线 `59614de55` 有 15 个提交（其中 12 个代码提交，文档 / 测试收尾另计）。
+- **2026-10-23 已上线**：生产 `/www/wwwroot/Stronghold-Protocol` 重启后 `build = 43ea86680ef5`，`/healthz` 200；`/admin`、`/admin/docs`、`/admin/api/docs`、`/js/adminDocs.js` 均 200；4 个插件加载。
+- 发布前通知：版本 `0.4.67`，签名 `d星空之下`，在线 7 人收到；备份：`/root/sp-backup-admin-docs-20261023-122942.tgz`。
+- 本批已包含：管理员文档链、0.3.2 战斗结束待机 / 特效清理、冷启动与重连自动恢复、手机横屏作战统计、结算页 #745、bond timer #746；Wild Mane #782 与 0.3.1 VFX 已在更早提交中。
+- 当前本机全量：**8346 tests / 8305 pass / 1 known performance flake / 40 skipped**；性能测试单跑通过。
 - **仍未修：** `public/js/screens/settle.js` 仍保留旧占位 `UnofficialMark = () => null` / `isModdedRoom = () => false`。改变玩法插件的对局在结算页不显示「非官方」，且 `levelProgress.counted` 会被当成官方对局；详见 `PLUGIN-BACKLOG.md` P2-6。
 - 充能层数已接入 `server/sim/snapshot.js` 的 `charges` / `chargeView`，不再是“只有技力、没有层数”的旧状态。
 - trusted 原生插件的生产隔离、安装 CLI 签名 / pin、跨浏览器插件 E2E、首屏素材带宽仍是既有未完成项。
