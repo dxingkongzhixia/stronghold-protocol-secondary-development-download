@@ -243,7 +243,7 @@ Compact operators may declare `chess.hidden`, explicit `chess.ids.normal/elite`,
 `origin` references ([PLUGINS §16](../PLUGINS.md#16-forge-import)). Hidden records remain addressable for grants,
 but never enter shops, visible handbook/loadout lists or owned DIY selection. Explicit pair IDs drive upgrades.
 [ASSUMED] Provenance is descriptive only, hiding applies to both forms and both identities, and borrowed voice
-preferences belong to the borrowed bank. Evidence and migration: [0.3.1 history](../history/0.3.1.md).
+preferences belong to the borrowed bank. Evidence and migration: [UPSTREAM-MERGES](../UPSTREAM-MERGES.md).
 
 [ASSUMED] One installed lang plugin may overlay each built-in language, in sorted plugin order; supplied UI/game-text
 keys override and missing/invalid entries retain built-in text. Scope remains browser-local choice, independent of
