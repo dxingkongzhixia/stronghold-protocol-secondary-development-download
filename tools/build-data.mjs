@@ -378,6 +378,15 @@ const CUSTOM_CHESS = [
         { key: 'def', value: 0.01 },
       ],
     },
+    eliteGarrison: {
+      desc: '【助力】【灵巧】每叠加3层，本干员防御力+2%',
+      blackboard: [
+        { key: 'key', valueStr: 'act1autochess_gar_eff_attrByBond' },
+        { key: 'divide_num', value: 3 },
+        { key: 'bond_id', valueStr: 'deputShip,skillfulShip' },
+        { key: 'def', value: 0.02 },
+      ],
+    },
   },
   {
     charId: 'char_4217_makoto',
@@ -400,6 +409,17 @@ const CUSTOM_CHESS = [
         { key: 'bond_id_dead', valueStr: 'indomShip' },
         { key: 'bond_add_count_swap', value: 2 },
         { key: 'bond_add_count_dead', value: 1 },
+      ],
+    },
+    eliteGarrison: {
+      eventTypeDesc: '持续叠加',
+      desc: '每转换一次替身，使已激活的【拉特兰】层数+4，【不屈】层数+4；干员被击倒时【不屈】层数+2',
+      blackboard: [
+        { key: 'key', valueStr: 'act1autochess_gar_event_dollswap_self' },
+        { key: 'bond_id_swap', valueStr: 'lateranoShip,indomShip' },
+        { key: 'bond_id_dead', valueStr: 'indomShip' },
+        { key: 'bond_add_count_swap', value: 4 },
+        { key: 'bond_add_count_dead', value: 2 },
       ],
     },
   },
@@ -431,6 +451,22 @@ const CUSTOM_CHESS = [
         ],
       },
     ],
+    eliteGarrisons: [
+      {
+        id: 'garrison_custom_char_1015_aglna2',
+        eventTypeDesc: '持续叠加',
+        desc: '攻击范围内每有3名敌方单位处于缚地、浮空或恐惧状态：使已激活的【叙拉古】层数+4，【迅捷】层数+2，【灵巧】层数+2\n每消耗8发子弹：使已激活的【迅捷】层数+2，【灵巧】层数+2',
+        blackboard: [
+          { key: 'key', valueStr: 'act1autochess_gar_event_airweight_fear_ammo' },
+          { key: 'bond_id', valueStr: 'siracusaShip' },
+          { key: 'bond_id_2', valueStr: 'swiftShip,skillfulShip' },
+          { key: 'check_count', value: 3 },
+          { key: 'bond_add_count', value: 4 },
+          { key: 'bond_add_count_2', value: 2 },
+          { key: 'consume_count', value: 8 },
+        ],
+      },
+    ],
   },
   {
     // 望 (2026 春节限定, 6★ 特种·陷阱师 traper): his 棋子 pieces are a NEW mechanic — deployable traps that LINK to
@@ -455,6 +491,16 @@ const CUSTOM_CHESS = [
         { key: 'divide_num', value: 3 },
         { key: 'bond_id', valueStr: 'yanShip,arcaneShip' },
         { key: 'atk', value: 0.01 },
+      ],
+    },
+    eliteGarrison: {
+      eventTypeDesc: '作战能力',
+      desc: '【炎】【奥术】每叠加3层，自身与召唤物攻击力+2%',
+      blackboard: [
+        { key: 'key', valueStr: 'act1autochess_gar_eff_attrByBond' },
+        { key: 'divide_num', value: 3 },
+        { key: 'bond_id', valueStr: 'yanShip,arcaneShip' },
+        { key: 'atk', value: 0.02 },
       ],
     },
     tokenIds: ['token_10064_wang_stone1'],
@@ -485,6 +531,15 @@ const CUSTOM_CHESS = [
         { key: 'price', value: 2 },   // the discount off the tier price: 3 → 1
       ],
     },
+    eliteGarrison: {
+      eventType: 'SERVER_PRICE',
+      effectType: 'SERVER_CHESS_PRICE',
+      eventTypeDesc: '整备能力',
+      desc: '购买价格为0',
+      blackboard: [
+        { key: 'price', value: 4 },   // doubled discount: 3 → 0 (the price is clamped at 0)
+      ],
+    },
   },
   {
     // 娜仁图亚 (docs/MATCHMAKING.md §32, custom): 6★ 狙击·回环射手 (loopshooter), not in the season's roster. 3 阶;
@@ -508,6 +563,14 @@ const CUSTOM_CHESS = [
       eventTypeIcon: 'icon_bond',
       desc: '<获得时>自身所属盟约层数+6（无需激活盟约）',
       blackboard: [{ key: 'count', value: 6 }],
+    },
+    eliteGarrison: {
+      eventType: 'SERVER_GAIN',
+      effectType: 'SERVER_ADD_BOND_CHESS_ALL',
+      eventTypeDesc: '单次叠加',
+      eventTypeIcon: 'icon_bond',
+      desc: '<获得时>自身所属盟约层数+12（无需激活盟约）',
+      blackboard: [{ key: 'count', value: 12 }],
     },
   },
   {
@@ -538,6 +601,18 @@ const CUSTOM_CHESS = [
       blackboard: [
         { key: 'pool', valueStr: 'pool_equip_all' },
         { key: 'count', value: 2 },
+      ],
+    },
+    eliteGarrison: {
+      eventType: 'SERVER_GAIN',
+      effectType: 'SERVER_POOL_EQUIP',
+      eventTypeDesc: '整备能力',
+      eventTypeIcon: 'icon_gold',
+      eventTypeSmallIcon: 's_icon_gold',
+      desc: '获得时，随机获取4件装备（无品阶限制）',
+      blackboard: [
+        { key: 'pool', valueStr: 'pool_equip_all' },
+        { key: 'count', value: 4 },
       ],
     },
   },
@@ -571,6 +646,16 @@ const CUSTOM_CHESS = [
         { key: 'def', value: 0.01 },
       ],
     },
+    eliteGarrison: {
+      eventTypeDesc: '作战能力',
+      desc: '【阿戈尔】【不屈】每叠加3层，本干员防御力+2%',
+      blackboard: [
+        { key: 'key', valueStr: 'act1autochess_gar_eff_attrByBond' },
+        { key: 'divide_num', value: 3 },
+        { key: 'bond_id', valueStr: 'egirShip,indomShip' },
+        { key: 'def', value: 0.02 },
+      ],
+    },
   },
 ];
 
@@ -599,15 +684,22 @@ function applyCustomChess(act, charTable) {
   act.garrisonDataDict ||= {};
   for (const c of CUSTOM_CHESS) {
     if (!charTable?.[c.charId]) { warn(`custom chess ${c.baseId}: char ${c.charId} missing from character_table`); continue; }
-    // one or more 特质 (a chess may carry several: each is its own record with its own effectKey)
-    const garrisonDefs = Array.isArray(c.garrisons) ? c.garrisons
+    // one or more 特质 (a chess may carry several: each is its own record with its own effectKey).
+    // The elite copy may carry its own 盟约/整备 trait (eliteGarrison / eliteGarrisons): the
+    // build's custom operators double the effect values there, while trigger conditions stay.
+    const normalDefs = Array.isArray(c.garrisons) ? c.garrisons
       : (c.garrison ? [{ id: `garrison_custom_${c.charId}`, ...c.garrison }] : []);
-    const gidsFor = (suffix) => garrisonDefs.map((g) => `${g.id}_${suffix}`);
+    const eliteDefs = Array.isArray(c.eliteGarrisons) ? c.eliteGarrisons
+      : (c.eliteGarrison ? [{ id: normalDefs[0]?.id ?? `garrison_custom_${c.charId}`, ...c.eliteGarrison }] : normalDefs);
+    if (eliteDefs.length !== normalDefs.length) {
+      warn(`custom chess ${c.baseId}: ${normalDefs.length} normal / ${eliteDefs.length} elite garrisons`);
+    }
+    const gidsFor = (defs, suffix) => defs.map((g) => `${g.id}_${suffix}`);
     const pair = [
-      { chessId: c.baseId, isGolden: false, st: c.normal, gids: gidsFor('a') },
-      { chessId: c.goldenId, isGolden: true, st: c.golden, gids: gidsFor('b') },
+      { chessId: c.baseId, isGolden: false, st: c.normal, defs: normalDefs, gids: gidsFor(normalDefs, 'a') },
+      { chessId: c.goldenId, isGolden: true, st: c.golden, defs: eliteDefs, gids: gidsFor(eliteDefs, 'b') },
     ];
-    for (const { chessId, isGolden, st, gids } of pair) {
+    for (const { chessId, isGolden, st, defs, gids } of pair) {
       act.charChessDataDict[chessId] = {
         chessId, identifier: c.identifier + (isGolden ? 1 : 0), isGolden,
         status: { evolvePhase: st.evolvePhase, charLevel: st.charLevel, skillLevel: st.skillLevel, favorPoint: 0, equipLevel: st.equipLevel },
@@ -617,7 +709,7 @@ function applyCustomChess(act, charTable) {
         garrisonIds: gids,
       };
       act.chessNormalIdLookupDict[chessId] = c.baseId;
-      garrisonDefs.forEach((g, i) => {
+      defs.forEach((g, i) => {
         const etDesc = g.eventTypeDesc ?? '作战能力';
         const eventType = g.eventType ?? 'IN_BATTLE';
         const bondTrait = etDesc === '持续叠加';
