@@ -228,7 +228,7 @@ function EnemyPanel({ sel, m, onCodex }) {
           <span class="sw-box__k"><${GIcon} name="skull" />${t('敌方领袖')}</span>
           <button type="button" class="sw-look" onClick=${() => onCodex({ title: boss.name, keys: bossEnemyKeys(boss), key: boss.enemyKey })}><${Icon} name="search" />${t('查看')}</button>
         </div>
-        <div class="sw-ethumbs">
+        <div class="sw-ethumbs sw-ethumbs--boss">
           ${e ? html`<${EnemyThumb} e=${e} m=${m} onClick=${() => onCodex({ title: boss.name, keys: bossEnemyKeys(boss), key: e.key })} />` : null}
           ${escorts.length ? html`<span class="sw-ethumbs__sep">${t('护卫')}</span>` : null}
           ${escorts.map((x) => html`<${EnemyThumb} key=${x.key} e=${x} m=${m} onClick=${() => onCodex({ title: boss.name, keys: bossEnemyKeys(boss), key: x.key })} />`)}

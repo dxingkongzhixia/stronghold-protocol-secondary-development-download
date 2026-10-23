@@ -145,6 +145,12 @@
 }
 .sw-ethumbs--grid .sw-eth { flex: none; width: calc((100% - .4rem) / 5); height: auto; aspect-ratio: 1; }
 @supports (height: 1cqw) { .sw-ethumbs--grid { max-height: calc(2 * ((100cqw - .4rem) / 5) + .1rem); } }
+
+/* 敌方领袖 (owner 2026-10-24): the boss and its escorts get the same large faces as 敌方情报, the 护卫 label rides
+   between them; more escorts wrap into a second row. */
+.sw-ethumbs--boss { align-items: center; }
+.sw-ethumbs--boss .sw-eth { flex: 0 0 19%; width: 19%; height: auto; aspect-ratio: 1; }
+.sw-ethumbs--boss .sw-ethumbs__sep { flex: 0 0 auto; align-self: center; }
 .sw-ethumbs__sep { padding: 0 .04rem 0 .08rem; font-size: max(calc(.14 * var(--t)), 10px); color: #aab4b1; border-left: 1px solid rgba(255, 255, 255, .18); }
 .sw-eth { position: relative; display: block; flex: none; padding: 0; overflow: hidden; background: #3a3f3e; border: 1px solid rgba(255, 255, 255, .28); }
 button.sw-eth { cursor: pointer; }
