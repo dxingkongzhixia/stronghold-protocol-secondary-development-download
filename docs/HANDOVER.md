@@ -218,6 +218,7 @@ Root layout (both trees are identical for every tracked file; §2 explains the s
 |---|---|
 | [`README.md`](../README.md) | player/host facing intro: what it is, how to run, the fork's features, the doc index. |
 | [`AGENTS.md`](../AGENTS.md) | machine entry point (OpenCode reads it): the one rule, the lookup table, the guardrails. |
+| [`docs/README.md`](README.md) | **documentation system map**: audience paths, authoritative docs, status labels and update rules. |
 | [`docs/HANDOVER.md`](HANDOVER.md) | **this file** — the entry point and map. |
 | [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) | **question → doc → code file** lookup table. |
 | [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) | the one-page current state (中文): what's deployed, env switches, backups, known issues. Start here for "where are we now". |
@@ -228,7 +229,10 @@ Root layout (both trees are identical for every tracked file; §2 explains the s
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | **fork-only mechanisms** (what is ours, where it lives, how to extend it, the tests that pin it, the merge "must not be lost" note). |
 | [`docs/MATCHMAKING.md`](MATCHMAKING.md) | the **decision record** §0–§49 (accounts, matchmaking, the custom operators, the community surface, the merge blacklist §22, #488 §39.2, stats §40, the 2026-10 rules §45–§47, the fx batch §48–§49). |
 | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | the chronological upstream-merge log + the **never-merge list (§0)** + the per-batch skip reasons. |
-| [`docs/PLUGINS.md`](PLUGINS.md) · [`docs/PLUGIN-API.md`](PLUGIN-API.md) · [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) · [`docs/PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | the plugin system: cosmetic / content / script / ui classes, content sets (`cs`), the studio, Forge import, the frozen API surface and the DSL. |
+| [`docs/PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) · [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | plugin tutorials: no-code studio workflow / developer workflow. |
+| [`docs/PLUGINS.md`](PLUGINS.md) · [`docs/PLUGIN-API.md`](PLUGIN-API.md) · [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) | the plugin system: cosmetic / content / script / ui classes, content sets (`cs`), the studio, Forge import, the frozen API surface and the DSL. |
+| [`docs/FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) · [`docs/FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) | Forge pack authoring and its compatibility matrix. |
+| [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) · [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) · [`docs/PLUGIN-RISKS.md`](PLUGIN-RISKS.md) · [`docs/PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md) · [`docs/PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | marketplace, architecture review, player risks, supply chain and the current plugin backlog. |
 | [`docs/SKINS.md`](SKINS.md) | operator skins: the cosmetic overlay, the picker, the other-players setting, and the local official-outfit extractor. |
 | [`docs/DESIGN.md`](DESIGN.md) → [`docs/design/`](design/) + [`docs/history/`](history/) | the normative game rules (index + current rules + per-release revisions). |
 | [`docs/DATA.md`](DATA.md) | every `data/*.json` field and how it is generated. |

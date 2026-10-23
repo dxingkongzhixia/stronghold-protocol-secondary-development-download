@@ -185,6 +185,16 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 ## 9. 已知问题 / 待办
 
+**2026-10-23 本地复核（待上线批次）**
+
+- 本地分支 `prts-plugin`；代码批次 HEAD `22e18faae`，相对生产基线 `59614de55` 有 12 个代码提交（文档整理提交另计）；**生产未同步、未重启**。
+- 本批已包含：0.3.2 战斗结束待机 / 特效清理、冷启动与重连自动恢复、手机横屏作战统计、结算页 #745、bond timer #746；Wild Mane #782 与 0.3.1 VFX 已在更早提交中。
+- 当前本机全量：**8339 tests / 8298 pass / 1 known performance flake / 40 skipped**；性能测试单跑通过。
+- **仍未修：** `public/js/screens/settle.js` 仍保留旧占位 `UnofficialMark = () => null` / `isModdedRoom = () => false`。改变玩法插件的对局在结算页不显示「非官方」，且 `levelProgress.counted` 会被当成官方对局；详见 `PLUGIN-BACKLOG.md` P2-6。
+- 充能层数已接入 `server/sim/snapshot.js` 的 `charges` / `chargeView`，不再是“只有技力、没有层数”的旧状态。
+- trusted 原生插件的生产隔离、安装 CLI 签名 / pin、跨浏览器插件 E2E、首屏素材带宽仍是既有未完成项。
+- 旧记录（2026-10-20）如下，保留作对照：
+
 **接手须知（2026-10-20 复核）**
 
 - **全量测试用 `npm test`**（裸 `node --test` 会把 `test/fixtures/**/*.js` 也当测试）：
@@ -194,7 +204,7 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   - **需要外网的门禁**：`check-delivery --live`（中继 / 镜像）与 `build-data --refresh`；台式机 store 的 `build-data --offline` 已通过（`data/` 零漂移）。
 - **github 推送** 直连 `:443` 可能被重置，走本机代理 `127.0.0.1:31181`：`git -c http.proxy=http://127.0.0.1:31181 push --no-thin github HEAD:refs/heads/master`；gitee 与中转机不受影响。
 - **中转机 root 密码** 曾用于开通，建议在阿里云面板重置（已装部署密钥 `~/.ssh/sp-deploy`，日常不需要密码）。
-- **充能型技能的层数未上界面**：数据里 66 个技能 `maxChargeTime > 1`，模拟算出了层数，但 `snapshot.js` 没有 `charges`、显示层也没读它 —— 这些干员的技能条只显示技力、看不到已储存层数（修法见 `docs/ASSETS.md`/待办）。
+- **充能型技能的层数（2026-10-23 已修）**：`server/sim/snapshot.js` 的 `charges` / `chargeView` 已进入快照，客户端 `render/interp.js` 也读取；不再是“只有技力、没有层数”。
 - **冷启动页面字节**（`public/js` + `data`，约 4–6 MB）仍由游戏机提供且不限速 —— 游戏机上目前唯一的带宽大头。
 
 - [ ] **推送 / 上线今天的特效收尾**（15 个提交：官方特效的还原度修正、望 S3 每次 3 枚跟子、文档梳理）—— **等 owner 发话**（默认「先不上线」；这批没有美术文件，推送不必先走美术中继）。见 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §49。

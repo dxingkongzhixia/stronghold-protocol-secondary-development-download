@@ -52,7 +52,9 @@ The loop, in order. Do not skip research; do not skip verification.
      `docs/DEVELOPMENT.md` §8). Update the count assertions the change moves.
    - If the golden corpus moves, apply the attribution rule below.
 5. **Docs + record.** Update the affected doc(s) and add a `docs/MATCHMAKING.md` section for anything non-obvious,
-   with the decision, the evidence and an honest "保留意见" where a piece is approximated.
+   with the decision, the evidence and an honest "保留意见" where a piece is approximated. The documentation map and
+   authority order are in [`docs/README.md`](README.md); update it when a doc is added, moved or superseded, and keep
+   [`PROJECT-STATE.md`](PROJECT-STATE.md) / [`QUERY-INDEX.md`](QUERY-INDEX.md) current when status or discoverability changes.
 6. **Commit & push** (see (c)), and deploy if the owner asked (see (d)).
 
 Checklist by task type:

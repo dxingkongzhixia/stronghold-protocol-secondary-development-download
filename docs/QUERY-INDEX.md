@@ -3,8 +3,9 @@
 A **lookup table** for an agent or a newcomer: start from the question you have, land on the owning
 document or code file. The authoritative docs are still the ones linked here; this file only points.
 
-Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER.md`](HANDOVER.md)
-(newcomer entry) → [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) (where are we now).
+Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/README.md`](README.md)
+(documentation system) → [`docs/HANDOVER.md`](HANDOVER.md) (newcomer entry) →
+[`docs/PROJECT-STATE.md`](PROJECT-STATE.md) (where are we now).
 
 > **Pinned vs free docs.** `test/docs-consistency.test.js` pins exact wording in `DESIGN` / `design/` /
 > `history/` / `SIM.md` / `META.md` / `DATA.md` / `README.md` / `DEPLOY.md` / `PLAYING.md`;
@@ -18,6 +19,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/HANDOVER
 | question | file |
 |---|---|
 | What is this project? How do I run it? What can players do? | [`README.md`](../README.md) |
+| Which documents exist, which are authoritative, and which should I read first? | [`docs/README.md`](README.md) |
 | I just inherited this — where do I even start? | [`docs/HANDOVER.md`](HANDOVER.md) |
 | What is deployed right now, which switches, which backups, known issues? | [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) |
 | Which file implements feature X? | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md), [`docs/DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) |
@@ -129,12 +131,27 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | content-pack format | [`docs/PACKS.md`](PACKS.md) |
 | local-client extraction (official art/voice/Spine) | `tools/local-extract/`, [`docs/HANDOVER.md`](HANDOVER.md) §3 |
 
+## 9.1 Plugin development and operations
+
+| subject | doc |
+|---|---|
+| no-code / studio plugin workflow | [`docs/PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) |
+| developer workflow (manifest, categories, debug, pack) | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
+| complete plugin specification | [`docs/PLUGINS.md`](PLUGINS.md) |
+| script SDK | [`docs/PLUGIN-API.md`](PLUGIN-API.md) |
+| data-plugin DSL | [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) |
+| Forge pack authoring / compatibility | [`docs/FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) · [`docs/FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) |
+| marketplace / upload / signature | [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) · [`docs/PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md) |
+| architecture, risks, trusted isolation | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) · [`docs/PLUGIN-RISKS.md`](PLUGIN-RISKS.md) · [`docs/TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) |
+| current plugin gaps / roadmap | [`docs/PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) · [`docs/PLUGIN-PLATFORM-PLAN.md`](PLUGIN-PLATFORM-PLAN.md) |
+| AI authoring rules inside `plugins/` | [`plugins/AGENTS.md`](../plugins/AGENTS.md) |
+
 ## 10. Build, test and tooling
 
 | subject | command / doc |
 |---|---|
 | rebuild `data/*.json` deterministically | `node tools/build-data.mjs --offline` |
-| the whole test suite (run in the store) | `node --test` |
+| the whole test suite (run in the store) | `npm test` (not bare `node --test`; that also runs `test/fixtures/**`) |
 | golden corpus | `node tools/golden.mjs`, `test/golden/README.md` |
 | kit coverage | `node tools/kit-coverage.mjs --missing` |
 | i18n completeness | `node tools/i18n.mjs check en --strict` |

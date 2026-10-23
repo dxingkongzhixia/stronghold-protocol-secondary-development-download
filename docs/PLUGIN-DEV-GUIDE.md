@@ -2,13 +2,17 @@
 
 本文写给**写插件的人**：从插件目录、manifest、各插件类别，到本地调试、测试、打包和发布。它不替代完整规范；字段和错误码的权威来源是：
 
-- [`PLUGINS.md`](PLUGINS.md)：manifest、权限、文件、各插件类、Forge 导入、工作室与工具
-- [`PLUGIN-API.md`](PLUGIN-API.md)：脚本 SDK 的稳定/实验 API
-- [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md)：插件体系架构、安全边界和运营台
+- [`PLUGINS.md`](PLUGINS.md)：manifest、权限、文件、各插件类、Forge 导入、工作室与工具（**完整规范**）
+- [`PLUGIN-API.md`](PLUGIN-API.md)：脚本 SDK 的稳定/实验 API（**接口规范**）
+- [`PLUGIN-DSL.md`](PLUGIN-DSL.md)：数据插件 DSL（**DSL 规范**）
+- [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md)：插件体系架构、安全边界和运营台（评审，不是规范）
 - [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md)：Forge 包开发与导入
 - [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md)：Forge 兼容矩阵和不支持清单
+- [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md) / [`PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md) / [`PLUGIN-RISKS.md`](PLUGIN-RISKS.md)：商城、供应链、玩家风险
+- [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md)：仍未解决的问题和当前状态
+- [`PLUGIN-PLATFORM-PLAN.md`](PLUGIN-PLATFORM-PLAN.md)：平台改造草案，不能当作已承诺行为
 
-面向玩家、用工作台点鼠标做插件的说明见 [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)。
+面向玩家、用工作台点鼠标做插件的说明见 [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)。全项目的文档入口和权威顺序见 [`docs/README.md`](README.md)。
 
 ## 0. 文档地图：先看哪一篇
 

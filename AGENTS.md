@@ -59,6 +59,7 @@ The table below is the **desktop (two-tree)** layout:
 | I need … | go to |
 |---|---|
 | what this is / how to run / player features | [`README.md`](README.md) |
+| **the documentation system** — audiences, authoritative docs, status and update rules | [`docs/README.md`](docs/README.md) |
 | **start here for anything** — repo map, run, build, test, merge, deploy, traps | [`docs/HANDOVER.md`](docs/HANDOVER.md) |
 | **where are we now** — deployed build, env switches, backups, known issues | [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md) |
 | **a topic → doc → code-file index** | [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) |
@@ -77,6 +78,11 @@ The table below is the **desktop (two-tree)** layout:
 | **is there new upstream work, and what will it conflict with** (run before every merge) | `node tools/check-upstream.mjs` (`npm run check:upstream`) |
 | add a **custom operator** (end-to-end recipe, 中文) | [`docs/NEW-OPERATOR.md`](docs/NEW-OPERATOR.md) |
 | author **content** (bonds / strategies / bounty enemies / CODEX / 3D themes) | [`docs/CONTENT-AUTHORING.md`](docs/CONTENT-AUTHORING.md) |
+| **plugin author entry** — no-code / developer workflow | [`docs/PLUGIN-GUIDE.md`](docs/PLUGIN-GUIDE.md) · [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md) |
+| **plugin specification / script SDK / DSL** | [`docs/PLUGINS.md`](docs/PLUGINS.md) · [`docs/PLUGIN-API.md`](docs/PLUGIN-API.md) · [`docs/PLUGIN-DSL.md`](docs/PLUGIN-DSL.md) |
+| **Forge import / compatibility** | [`docs/FORGE-PLUGIN-DEV-GUIDE.md`](docs/FORGE-PLUGIN-DEV-GUIDE.md) · [`docs/FORGE-COMPATIBILITY.md`](docs/FORGE-COMPATIBILITY.md) |
+| **plugin market / review / risks / supply chain** | [`docs/PLUGIN-MARKET.md`](docs/PLUGIN-MARKET.md) · [`docs/PLUGIN-REVIEW.md`](docs/PLUGIN-REVIEW.md) · [`docs/PLUGIN-RISKS.md`](docs/PLUGIN-RISKS.md) · [`docs/PLUGIN-SUPPLY-CHAIN.md`](docs/PLUGIN-SUPPLY-CHAIN.md) |
+| **plugin status / backlog** | [`docs/PLUGIN-BACKLOG.md`](docs/PLUGIN-BACKLOG.md) · [`docs/UPSTREAM-DEV-TRIAGE.md`](docs/UPSTREAM-DEV-TRIAGE.md) |
 | **how we work**: research → change → merge → push → deploy | [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) |
 | **deployment** (firewall, autostart, reverse proxy, Docker) | [`docs/DEPLOY.md`](docs/DEPLOY.md) |
 | zero-install **Windows portable bundle** | [`docs/WINDOWS.md`](docs/WINDOWS.md) |
@@ -97,7 +103,7 @@ node server/index.js            # http://localhost:3000  (npm run dev = --watch)
 #          the full suite needs .git, so it cannot pass in a git-less dev tree)
 cd <the same directory as above, or D:\DOTK\_merge-scratch on the desktop>
 node tools/build-data.mjs --offline     # must leave data/ byte-for-byte unchanged
-npm test                                # the whole suite (8194 cases / 8152 pass / 0 fail / 42 skipped, desktop store 2026-10-20; `npm test`, not bare `node --test`, which also runs test/fixtures/**)
+npm test                                # the whole suite (current local baseline: 8339 cases / 8298 pass / 1 performance flake / 40 skipped; `npm test`, not bare `node --test`, which also runs test/fixtures/**)
 node tools/kit-coverage.mjs --missing   # every chess has a kit, every skill covered (must be empty)
 node tools/i18n.mjs check en --strict   # English UI pack complete (0 missing, 0 errors)
 node tools/doctor.mjs                   # environment diagnosis (exit 0)
@@ -110,7 +116,11 @@ node tools/check-delivery.mjs --live    # the asset chain + the cache-first path
 - More gates: `npx eslint .` · `npm run check:imports` · `npm run typecheck` · `npm run ci` (local CI mirror).
 - Browser / E2E suites are opt-in: `SP_E2E=1`, `SP_REAL_E2E=1`, `RENDER_E2E=1`, `SIM_E2E=1`.
 - **Docs guards** (keep green for any docs change):
-  `node --test test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js`.
+  `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js`.
+- **Docs are part of the change.** When behavior, status or commands change, update the owning reference doc,
+  [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md) when current state moved, [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md)
+  when discoverability moved, and [`docs/README.md`](docs/README.md) when a document is added, moved or superseded.
+  Do not rewrite `docs/history/` to describe the present; add a current section to the owning doc.
 
 ## 5. Publishing and deploying
 

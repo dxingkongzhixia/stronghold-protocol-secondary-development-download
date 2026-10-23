@@ -97,7 +97,7 @@ node server/index.js   # 启动服务器：http://localhost:3000
 ### 测试
 
 ```bash
-npm test              # 完整测试套件（约 8198 项；缺素材 / 浏览器的用例会自动跳过）
+npm test              # 完整测试套件（约 8339 项；缺素材 / 浏览器的用例会自动跳过）
 npm run golden        # 黄金结果：固定种子的整套战斗与人机对局摘要（改动玩法后按规则更新）
 ```
 
@@ -186,6 +186,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | **AI agent 入口**：唯一规则、查询表、守则 |
 | [`docs/HANDOVER.md`](docs/HANDOVER.md) | **接手入口**：仓库地图、本地运行、构建 / 测试、内容制作、主线合并、发布与部署、已知坑 |
+| [`docs/README.md`](docs/README.md) | **文档系统总索引**：不同角色的阅读顺序、主体 / 插件 / 历史 / 运维文档的权威入口与维护规则 |
 | [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) | **问题 → 文档 → 代码文件** 查询索引 |
 | [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md) | 当前状态一页纸：线上、开关、备份、已知问题 |
 | [`docs/PLAYING.md`](docs/PLAYING.md) | 玩法指南：流程、经济、招募与晋升、摆阵、联防、盟约、最终攻势、结算称号 |
@@ -202,6 +203,10 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/DEPLOY.md`](docs/DEPLOY.md) | 部署指南：防火墙、开机自启、反向代理与 HTTPS、Docker |
 | [`docs/NEW-OPERATOR.md`](docs/NEW-OPERATOR.md) | 新增自造干员的端到端配方 |
 | [`docs/CONTENT-AUTHORING.md`](docs/CONTENT-AUTHORING.md) | 内容制作手册：新盟约 / 新策略 / 新悬赏敌人 / 新干员，及资料库与 3D 板主题 |
+| [`docs/PLUGIN-GUIDE.md`](docs/PLUGIN-GUIDE.md) · [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md) | 插件教程（不写代码 / 写代码） |
+| [`docs/PLUGINS.md`](docs/PLUGINS.md) · [`docs/PLUGIN-API.md`](docs/PLUGIN-API.md) · [`docs/PLUGIN-DSL.md`](docs/PLUGIN-DSL.md) | 插件规范、脚本 SDK、DSL |
+| [`docs/FORGE-PLUGIN-DEV-GUIDE.md`](docs/FORGE-PLUGIN-DEV-GUIDE.md) · [`docs/FORGE-COMPATIBILITY.md`](docs/FORGE-COMPATIBILITY.md) | Forge 导入开发与兼容矩阵 |
+| [`docs/PLUGIN-MARKET.md`](docs/PLUGIN-MARKET.md) · [`docs/PLUGIN-REVIEW.md`](docs/PLUGIN-REVIEW.md) · [`docs/PLUGIN-RISKS.md`](docs/PLUGIN-RISKS.md) · [`docs/PLUGIN-SUPPLY-CHAIN.md`](docs/PLUGIN-SUPPLY-CHAIN.md) | 插件商城、评审、风险、供应链 |
 | [CHANGELOG.md](CHANGELOG.md) | 更新记录 |
 
 ## 七、目录结构

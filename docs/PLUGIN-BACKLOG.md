@@ -1,8 +1,8 @@
 # 插件问题与待办清单
 
-> 快照日期：2026-10-20
-> 代码基线：`master` `ae9e2ae3c`（插件文档提交后）
-> 状态：普通插件链路可用；全量 CI **8198 tests / 8162 pass / 0 fail**；真实浏览器插件 E2E **10 / 10 pass**。
+> 快照日期：2026-10-23
+> 代码基线：本地 `22e18faae`（0.3.2 UI / 稳定性批次后；生产未同步）
+> 状态：普通插件链路可用；最近一次本机全量 **8339 tests / 8298 pass / 1 known performance flake / 40 skipped**；真实浏览器插件 E2E **10 / 10 pass**。
 > 本文件记录**仍未解决**的问题，不把已修项写成待办。
 
 ## 状态标记
@@ -30,7 +30,7 @@
 | R-09 | 更多真实 Forge 包 E2E | P2 | `TODO` | 不同记录类型、面板、kits、失败包和真实社区样本 |
 | R-10 | Firefox / Safari / 移动端 | P2 | `TODO` | 插件 E2E 跨浏览器；移动端 consent / 插件面板布局 |
 | R-11 | 玩家风险入口前移 | P2 | `TODO` | 标题页/设置入口、首次开启二次确认、结算页非官方对局提示 |
-| R-12 | 上游候选功能 | P3 | `TODO` | picture-only outfits、skill clips、bond timer readout |
+| R-12 | 上游候选功能 | P3 | `PARTIAL` | skill clips、bond timer 已移植；picture-only outfits 仍按 owner 2026-10-20 决定不采用 |
 
 ### 当前结论
 
@@ -60,7 +60,7 @@
 | P2-3 | 增量扫描 + 内容集构建缓存 + 下载并发/进度 + 大目录分页 | L | 先测量再优化；不要用缓存掩盖失效检测 |
 | P2-4 | UI 明确区分“商店形态 / 官方自选形态”，在详情和公告解释 | S | 主要是文案和展示，不动 `officialPool` / `ownedPool` |
 | P2-5 | 固定四级风险标签（外观 / 改变玩法 / 脚本沙箱 / 原生信任）+ 玩家版风险说明 | S | 需要产品文案，不涉及权限模型 |
-| P2-6 | 插件面板和结算页提示“非官方对局不计入统计总览” | S | 与 `withModded` 开关保持一致 |
+| P2-6 | 插件面板和结算页提示“非官方对局不计入统计总览” | S | `PARTIAL` | 插件面板已提示；`screens/settle.js` 仍用 `UnofficialMark = () => null` / `isModdedRoom = () => false`，结算页会误把插件局算官方 |
 
 ### 结论
 
@@ -185,9 +185,9 @@
   - 或在 `/admin` 显示“哪些插件因此被放行”
 
 ### P1-6 上游 `dev` 有未筛选提交
-- 状态：`DONE`（已筛选，选中 1 个移植）
+- 状态：`DONE`（已筛选；后续批次继续移植）
 - 快照：上游 `master` `c9d804f47`；上游 `dev` `23dfa3d79`，多 26 个提交
-- 结果：`removeBuff` 重入修复已移植并带上游合成测试；`#725` 素材计数不适用；picture-only outfits / skill clips / bond timer 列为后续候选；external AI、bot strategies、野鬃 push 不进入本批
+- 结果：`removeBuff`、Wild Mane #782、skill clips、bond timer、结算页 #745 已移植；picture-only outfits 按 owner 2026-10-20 决定不采用；external AI / bot strategies 仍单独评估
 - 详见 [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md)
 
 ### P1-7 独立脚本插件不能直接在房间面板选择
@@ -346,8 +346,9 @@
 
 ### P2-6 非官方对局默认不计入统计
 
-- 状态：`DONE`
+- 状态：`PARTIAL`
 - 完成：插件面板已提示「改变玩法...非官方对局，不计入统计总览」；玩家风险说明再次说明。
+- 未完成：`screens/settle.js` 仍保留旧占位 `UnofficialMark = () => null` / `isModdedRoom = () => false`；结算页的非官方标记和 `levelProgress.counted` 仍错误。
 - 现状：内容插件对局默认排除统计，`withModded` 可切换
 - 风险：
   - 玩家可能误以为战绩丢失
