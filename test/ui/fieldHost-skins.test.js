@@ -20,6 +20,7 @@ test('mounted fields adopt public skins, follow updates and identity, and unsubs
   `, { store, settingsStore, raw, AbortController, console, window: events, document: events,
     useState: (s) => [s, () => {}], useRef: (s) => ({ current: s }),
     useEffect: (fn) => cleanups.push(fn()),
+    setTimeout: () => 1, clearTimeout: () => {},
   });
   await Promise.resolve();
   assert.deepEqual(calls, [['me', 'p_0'], ['skins', players]]);
