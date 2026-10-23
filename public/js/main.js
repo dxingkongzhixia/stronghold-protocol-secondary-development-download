@@ -50,7 +50,7 @@ import { GAME_FILES } from './ui/gameComponents.js';
 import { TitleScreen, sanitizeName } from './screens/title.js';
 import { LobbyScreen, parseRoomParam } from './screens/lobby.js';
 import { RoomScreen } from './screens/room.js';
-import { GameScreen } from './screens/game.js';
+import { GameScreen } from './screens/game.js?v=42f77f6a7';
 import { chatMessage } from './ui/chat.js';
 import { audio, installAudio } from './audio.js';
 import { settingsStore } from './ui/settings.js';
