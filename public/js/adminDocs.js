@@ -1,3 +1,4 @@
+// (i18n-ignore-file: developer-facing admin documentation viewer)
 // Admin documentation viewer. The page shell is server/adminDocs.js; this file only consumes the
 // token-gated /admin/api/docs APIs and renders Markdown with a small dependency-free parser.
 (function () {

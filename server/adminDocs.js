@@ -1,3 +1,4 @@
+// (i18n-ignore-file: the admin documentation viewer is developer-facing)
 // server/adminDocs.js — the self-contained shell of the admin documentation viewer.
 // The page itself contains no documentation or script logic: /js/adminDocs.js fetches the
 // token-gated /admin/api/docs index and renders the selected Markdown locally.
