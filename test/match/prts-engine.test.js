@@ -100,6 +100,16 @@ test('a team amedicSlot grant suppresses Touch map characters for human and AI t
     assert.ok(special, `${seats.receiver} receives the team grant`);
     assert.deepEqual(m.prepMapChars(receiver), [], `${seats.receiver} does not draw Touch's reserve medic`);
 
+    // The grant is movable: taking Kal'tsit off the reserve-medic tile must not bring Touch back, even
+    // though the teammate's own band is not the PRTS band that granted her.
+    const slot = m.amedicSlot();
+    const slotKey = `${slot.pos[0]},${slot.pos[1]}`;
+    assert.equal(receiver.board.get(slotKey), special);
+    receiver.board.delete(slotKey);
+    receiver.board.set('9,4', special);
+    receiver.recompute();
+    assert.deepEqual(m.prepMapChars(receiver), [], `${seats.receiver} keeps Touch suppressed after moving Kal'tsit`);
+
     const opts = m._normalOpts(receiver);
     const b = new Battle({ ...opts, data: getDefaultSource(), spawns: [], timeLimit: 300, autoFinish: false });
     b.start();

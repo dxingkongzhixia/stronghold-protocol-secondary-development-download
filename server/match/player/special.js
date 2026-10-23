@@ -68,3 +68,7 @@ export const outsideDeployCap = (piece) => specialUnitOf(piece)?.outsideDeployCa
 export const isUnsellable = (piece) => piece?.unsellable === true || specialUnitOf(piece)?.unsellable === true;
 /** Whether a Touch-style grant suppresses the stage's reserve medic for the whole match. */
 export const suppressesMapChar = (piece) => specialUnitOf(piece)?.suppressMapChar === true;
+
+/** Whether any of the player's owned pieces (board, hand or temp) suppresses the reserve medic. */
+export const suppressesMapCharFor = (ps) => [...(ps?.board?.values?.() ?? []), ...(ps?.hand ?? []), ...(ps?.temp ?? [])]
+  .some((p) => suppressesMapChar(p));

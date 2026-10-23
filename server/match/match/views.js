@@ -14,6 +14,7 @@ import { bossFieldPlacement } from '../finalAssault.js';
 import { battleProgress } from '../../sim/spec.js';
 import { TEST_PUBLIC_LOG } from '../../../shared/testMode.js';
 import { readBandGrants } from '../../../shared/plugins/bandGrants.js';
+import { suppressesMapCharFor } from '../player/special.js';
 
 /** Milliseconds since the match started. A stamp before the start, or a bad stamp, is 0. The stored log keeps the epoch. */
 function auditClock(at, startedAt) {
@@ -325,7 +326,9 @@ export class MatchViews {
   prepMapChars(ps) {
     if (!ps?.alive || this.phase !== PHASE.PREP || !this.teamMedicGranted()) return [];
     // A Touch-style band grant replaces the reserve medic for the whole match. Do not bring it back merely because
-    // the granted piece was moved off the stage slot during prep.
+    // the granted piece was moved off the stage slot during prep — the teammate's own band may not be the one that
+    // granted it, so inspect the owned special piece itself, not only ps.bandId.
+    if (suppressesMapCharFor(ps)) return [];
     const grants = readBandGrants(this.gd.band(ps.bandId)?.grants).grants;
     if (grants?.grantUnit?.placement === 'amedicSlot') return [];
     const id = 'char_605_cmedic';

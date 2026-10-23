@@ -224,7 +224,7 @@ plugins/prts-source-code/
 - band：`band_x_prts_source_code_touch`（显示名「凯尔希」，初始生命值 28，图标为插件自带的凯尔希策略卡）；
 - 仅在**房间 Boss 为 PRTS** 时进入策略卡池；
 - 任意一名玩家选中后，**全队生效**（参照 Touch 的 team grant；人类与 AI 队友都包括）；
-- 队友的凯尔希同样占用该玩家的预备医疗格；战斗开始不会再额外生成 Touch 的预备医疗地图角色；
+- 队友的凯尔希同样占用该玩家的预备医疗格；战斗开始不会再额外生成 Touch 的预备医疗地图角色；凯尔希被移出该格后，也不会重新显示 Touch 的预备医疗；
 - 策略效果 / 图鉴图标使用 `iconId = band_x_prts_source_code_touch`，不再沿用 Touch 的 `icon_amedic`；
 - 未选中则不生成凯尔希。
 
