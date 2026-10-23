@@ -40,6 +40,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/README.m
 | shared constants + wire contract | `shared/constants.js` (incl. `APP_VERSION`), `shared/protocol.js`, `shared/stats.js` |
 | browser client (screens) | `public/js/main.js`, `public/js/store.js`, `public/js/screens/` |
 | browser UI widgets | `public/js/ui/` |
+| **main interface switch (classic lobby / Hub)** | [`docs/UI-HUB.md`](UI-HUB.md) · `server/uiMode.js` · `public/js/screens/hub/` · `public/css/screens/hub.css` |
 | plugin system review / risks / verification gaps | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) |
 | **plugin development guide (workflow, classes, testing, packaging)** | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
 | plugin content authoring (records, bonds, bands, enemies) | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md), [`docs/PLUGINS.md`](PLUGINS.md) §10 |

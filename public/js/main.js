@@ -48,7 +48,8 @@ import { localSourceEnabled, probeLocalBase } from './assetSource.js';
 import { data } from './data.js';
 import { GAME_FILES } from './ui/gameComponents.js';
 import { TitleScreen, sanitizeName } from './screens/title.js';
-import { LobbyScreen, parseRoomParam } from './screens/lobby.js';
+import { parseRoomParam } from './screens/lobbyData.js';
+import { effectiveUiMode, previewUiMode } from './ui/uiMode.js';
 import { RoomScreen } from './screens/room.js';
 import { GameScreen } from './screens/game.js';
 import { chatMessage } from './ui/chat.js';
@@ -74,6 +75,15 @@ import { initAssetMirror, installImageFallback, mirrorRouteUrl, mirrorCandidates
 import { idbSupported, setIdbEnabled } from './assetIdb.js';
 import { installContent, installContentSet } from './content.js';
 import { cosmetics } from './cosmetics.js';
+
+// Main interface (server/uiMode.js + /ui-config.js): only the chosen lobby is downloaded. Both screens share the same
+// store, net actions and overlays; `?ui=` previews the other one in this tab without changing the server setting.
+const UI_MODE = effectiveUiMode();
+const UI_PREVIEW = previewUiMode();
+if (UI_PREVIEW) console.info(`[ui] preview: ${UI_PREVIEW}`);
+const { LobbyScreen } = UI_MODE === 'classic'
+  ? await import('./screens/lobby.js')
+  : await import('./screens/hub/lobby.js');
 
 const RESTORE_GRACE_MS = 1500;
 

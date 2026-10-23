@@ -323,13 +323,14 @@ function ifRangeMatches(req, etag, lastModified) {
 }
 
 function cacheControlFor(ext, mountName, segments, query) {
-  // The content-hashed asset/font/vendor tree keeps its long cache.
-  if (mountName === 'public' && segments.length > 1 && LONG_CACHE_DIRS.includes(segments[0])) return LONG_CACHE;
   // The app shell and its native ES-module graph are not fingerprinted. A query-string cache-buster is not enough:
   // once a browser has an immutable response under that URL it never asks again. Keep the executable shell and code
   // re-fetched on every navigation.
   if (ext === '.html' || ext === '.htm' || ext === '.js' || ext === '.mjs' || ext === '.css') return 'no-store';
+  // Non-code media may still be marked immutable by an explicit ?v= (clip URLs, older asset links).
   if (/(^|&)v=/.test(query)) return IMMUTABLE_CACHE;
+  // The asset/font/vendor tree keeps its long cache.
+  if (mountName === 'public' && segments.length > 1 && LONG_CACHE_DIRS.includes(segments[0])) return LONG_CACHE;
   return 'no-cache';
 }
 

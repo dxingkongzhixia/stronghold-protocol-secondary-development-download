@@ -152,11 +152,11 @@ describe('static http server', () => {
     fs.rmSync(tmp, { recursive: true, force: true });
   });
 
-  test('serves index.html at / with no-cache', async () => {
+  test('serves index.html at / without client caching', async () => {
     const r = await httpReq(srv.port, '/');
     assert.equal(r.status, 200);
     assert.match(r.headers['content-type'], /^text\/html/);
-    assert.equal(r.headers['cache-control'], 'no-cache');
+    assert.equal(r.headers['cache-control'], 'no-store');
     assert.match(r.body.toString(), /hello/);
     assert.equal(r.headers['x-content-type-options'], 'nosniff');
     const sub = await httpReq(srv.port, '/sub/');
@@ -243,7 +243,7 @@ describe('static http server', () => {
     const { etag } = first.headers;
     assert.match(etag, /^"[0-9a-f]+-[0-9a-f]+"$/);
     assert.ok(first.headers['last-modified']);
-    assert.equal(first.headers['cache-control'], 'no-cache');
+    assert.equal(first.headers['cache-control'], 'no-store');
     const revalidated = await httpReq(srv.port, '/js/app.js', { headers: { 'if-none-match': etag } });
     assert.equal(revalidated.status, 304);
     assert.equal(revalidated.body.length, 0);
@@ -272,9 +272,9 @@ describe('static http server', () => {
     const assetRoot = await httpReq(srv.port, '/assets');
     assert.equal(assetRoot.status, 301, 'directory redirect, not cached content');
     const versioned = await httpReq(srv.port, '/js/app.js?v=123');
-    assert.match(versioned.headers['cache-control'], /immutable/);
+    assert.equal(versioned.headers['cache-control'], 'no-store', 'a ?v= query does not make the app shell immutable');
     const html = await httpReq(srv.port, '/index.html?v=1');
-    assert.equal(html.headers['cache-control'], 'no-cache');
+    assert.equal(html.headers['cache-control'], 'no-store');
   });
 
   test('byte ranges for audio (206 / 416 / If-Range)', async () => {

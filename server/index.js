@@ -52,6 +52,7 @@ import { TrainingStore } from './training/store.js';
 import { setTrainingSink } from './training/record.js';
 import { configurePrior, priorStatus } from './match/botPrior.js';
 import { ADMIN_HTML, ADMIN_CSP_HASH, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches, writePluginPolicy } from './admin.js';
+import { readUiMode, writeUiMode, uiConfigScript } from './uiMode.js';
 import { docIndex, readDoc, readDocAsset } from './docs.js';
 import { DOCS_HTML } from './adminDocs.js';
 import { createSpeedProbe } from './speed.js';
@@ -424,6 +425,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const docsIndex = parts.rawPath === '/admin/api/docs';
     const docsFile = parts.rawPath === '/admin/api/docs/file';
     const docsAsset = parts.rawPath === '/admin/api/docs/asset';
+    const uiApi = parts.rawPath === '/admin/api/ui';
     const imageMatch = /^\/admin\/api\/bug\/image\/(\d+)$/.exec(parts.rawPath);
     if (!admin) { sendError(req, res, 404, '管理页未启用 · Admin disabled'); return; }
     const queryToken = new URLSearchParams(parts.query).get('token');
@@ -446,6 +448,20 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     // Remember a valid ?token= in a cookie for 30 days, so plain /admin links (the lobby's 在线 badge) work.
     if (queryToken) res.setHeader('Set-Cookie', `sp_admin=${encodeURIComponent(admin.token)}; HttpOnly; SameSite=Strict; Path=/admin; Max-Age=2592000`);
+    // 主界面开关 (server/uiMode.js): GET returns the effective mode, POST { main: 'hub'|'classic' } saves it.
+    if (uiApi) {
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        sendJson(req, res, 200, { ok: true, main: readUiMode(ROOT) });
+        return;
+      }
+      if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); sendJson(req, res, 405, { error: 'GET or POST required' }); return; }
+      const body = await readJsonBody(req);
+      const saved = writeUiMode(ROOT, body?.main);
+      if (!saved) { sendJson(req, res, 400, { error: 'main must be "hub" or "classic"' }); return; }
+      log.info(`[ui] main interface set to ${saved}`);
+      sendJson(req, res, 200, { ok: true, main: saved });
+      return;
+    }
     // Read-only documentation chain for the admin page (server/docs.js): only docs/, root README/AGENTS/
     // CHANGELOG/CONTRIBUTING/NOTICE and plugins/{README,AGENTS}.md; paths are re-resolved and checked.
     if (docsPage) {
@@ -775,6 +791,17 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     // Community (server/community.js): the lobby's 更新日志 panel reads the changelog, its bug提交 form uploads
     // images. Token-free reads (the changelog is public), rate-limited uploads; the report itself goes over the
     // WebSocket (`bug.report`), so it carries the session identity.
+    // Main-interface switch (server/uiMode.js): a tiny no-store script loaded before main.js. The admin page writes
+    // var/ui.json; no restart is needed, only the next page load.
+    if (parts.rawPath === '/ui-config.js') {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET, HEAD'); sendJson(req, res, 405, { error: 'GET required' }); return true; }
+      const body = Buffer.from(uiConfigScript(readUiMode(ROOT)));
+      res.writeHead(200, {
+        'Content-Type': 'text/javascript; charset=utf-8', 'Content-Length': body.length, 'Cache-Control': 'no-store',
+      });
+      res.end(req.method === 'HEAD' ? undefined : body);
+      return true;
+    }
     if (parts.rawPath === '/community/api/changelog') {
       if (req.method !== 'GET' && req.method !== 'HEAD') return false;
       sendJson(req, res, 200, { now: Date.now(), changelog: community ? community.listChangelog() : [] });
@@ -790,7 +817,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
       || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
-      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/market/keys' || parts.rawPath === '/admin/api/audit' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/ai'
+      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/market/keys' || parts.rawPath === '/admin/api/audit' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/ai' || parts.rawPath === '/admin/api/ui'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')
       || parts.rawPath === '/admin/docs' || parts.rawPath === '/admin/docs/'
       || parts.rawPath === '/admin/api/docs' || parts.rawPath === '/admin/api/docs/file' || parts.rawPath === '/admin/api/docs/asset') {

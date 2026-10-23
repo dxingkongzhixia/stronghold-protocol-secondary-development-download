@@ -54,8 +54,9 @@ test('the server rule stays: readying with funds is accepted and the prep end wi
 
 test('game.js asks through readyFundsPrompt before g.ready (button and Space share toggleReady)', () => {
   const src = readFileSync(path.join(ROOT, 'public/js/screens/game.js'), 'utf8');
-  const body = src.slice(src.indexOf('const toggleReady = useCallback('), src.indexOf('const toggleReady = useCallback(') + 900);
-  assert.match(body, /readyFundsPrompt\(L\.priv, \{ keptBands: data\.get\('config'\)\?\.economy\?\.leftoverFundsKeptByBands, autoplay: !!me\?\.autoplay \}\)/);
+  const body = src.slice(src.indexOf('const toggleReady = useCallback('), src.indexOf('const toggleReady = useCallback(') + 2200);
+  assert.match(body, /readyFundsPrompt\(L\.priv, \{ keptBands: data\.get\('config'\)\?\.economy\?\.leftoverFundsKeptByBands, autoplay: !!me\?\.autoplay \}\)/,
+    'the funds prompt still gets the config/autoplay context (it may ride a ternary after the temp-row check)');
   assert.ok(body.indexOf('confirmDialog(ask)') < body.indexOf('actions.ready(r)'), 'confirmed before the request');
   assert.match(src, /onReady=\$\{toggleReady\}/);
   assert.match(src, /toggleReady\(!L\.priv\.ready\)/, 'Space');

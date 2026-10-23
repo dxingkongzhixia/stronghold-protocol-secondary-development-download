@@ -50,6 +50,7 @@
 | [`../AGENTS.md`](../AGENTS.md) | AI agent 入口：工作规则、查询表、护栏 | 当前 |
 | [`HANDOVER.md`](HANDOVER.md) | 接手入口：仓库地图、运行、构建、合并、发布、坑 | 当前 |
 | [`PROJECT-STATE.md`](PROJECT-STATE.md) | 当前部署、开关、备份、已知问题 | **当前状态** |
+| [`UI-HUB.md`](UI-HUB.md) | 主界面：经典大厅 / Hub 新大厅、后台开关、`?ui=` 预览、文件与功能对照 | 当前 |
 | [`QUERY-INDEX.md`](QUERY-INDEX.md) | 问题 → 文档 / 代码文件查询表 | 当前 |
 | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) | 研究 → 修改 → 测试 → 合并 → 发布 → 部署的操作契约 | 当前 |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | 仓库地图、数据 / 素材流水线、测试 | 参考 |

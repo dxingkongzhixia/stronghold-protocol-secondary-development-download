@@ -342,7 +342,7 @@ test('the admin page inline script parses', () => {
 // 后台控制台 (docs/MATCHMAKING.md §12.1, 2026-10-15): the page went from one long scrolling column to a sidebar
 // console. These pin the INTERFACE only — the snapshot API, the notify / bug routes and the read-only stance are
 // unchanged (the two tests above still cover them).
-test('the admin page is a self-contained console: nine views, hash routing, searchable tables', () => {
+test('the admin page is a self-contained console: ten views, hash routing, searchable tables', () => {
   const html = ADMIN_HTML;
   const count = (re) => (html.match(re) || []).length;
   // still one self-contained document — no external stylesheet, script or font
@@ -351,13 +351,13 @@ test('the admin page is a self-contained console: nine views, hash routing, sear
   // the strings the route tests rely on
   assert.match(html, /服务器管理/);
   assert.match(html, /\/admin\/api\/bug\/image\//);
-  // sidebar: nine nav buttons, each with its section
-  for (const v of ['overview', 'rooms', 'accounts', 'online', 'notice', 'bugs', 'plugins', 'speed', 'origins']) {
+  // sidebar: ten nav buttons, each with its section (界面 = the classic/Hub main-interface switch)
+  for (const v of ['overview', 'rooms', 'accounts', 'online', 'notice', 'bugs', 'plugins', 'speed', 'origins', 'ui']) {
     assert.ok(html.includes(`id="view-${v}"`), `section #view-${v} exists`);
     assert.ok(html.includes(`data-view="${v}"`), `nav button for ${v}`);
   }
-  assert.equal(count(/<button class="nav__item" data-view="/g), 9, 'exactly nine nav buttons');
-  assert.equal(count(/class="view"/g), 9, 'exactly nine view sections');
+  assert.equal(count(/<button class="nav__item" data-view="/g), 10, 'exactly ten nav buttons');
+  assert.equal(count(/class="view"/g), 10, 'exactly ten view sections');
   // one view at a time, hash-routed (reload / bookmark / back land on the same view)
   assert.ok(html.includes('hashchange') && html.includes('setView(location.hash'), 'hash routing');
   assert.ok(html.includes("el('viewTitle')") && html.includes("el('viewSub')"), 'the header follows the view');

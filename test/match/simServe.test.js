@@ -16,7 +16,7 @@ test('/sim/ serves the simulation modules read-only; nothing else of server/ is 
     const r = await get(p);
     assert.equal(r.status, 200, p);
     assert.match(r.headers.get('content-type'), /^text\/javascript/, p);
-    assert.equal(r.headers.get('cache-control'), 'no-cache', `${p} revalidates (ETag)`);
+    assert.equal(r.headers.get('cache-control'), 'no-store', `${p} is executable code and is re-fetched`);
     assert.ok(r.headers.get('etag'));
     const body = await r.text();
     assert.ok(!/from ['"]node:/.test(body), `${p}: no static node: import`);

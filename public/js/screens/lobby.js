@@ -12,174 +12,27 @@
 // Texts go through t() (docs/I18N.md); the module-level tables hold msgids (N_) translated where they are shown, the
 // config.json mode texts come localized from data.js.
 
-import { ResumeMatchButton } from '../ui/resumeMatch.js';
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, modeIdFor, ERR, roleName } from '../../../shared/constants.js';
+import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, ERR, roleName } from '../../../shared/constants.js';
 import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Tooltip, Spinner, DifficultyIcon, doctorNo, Tabs, RoleTag, confirmDialog } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
-import { openStats, openPlayerStats } from './stats.js';
+import { openStats } from './stats.js';
 import { SweepReport } from './sweep.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
-import { NoticesButton } from '../ui/notices.js';
 import { openCodex } from '../ui/codex.js';
 import { AccountDialog } from '../ui/account.js';
 import { ChangelogOverlay } from '../ui/community.js';
 import { PublicRoomsScreen } from './rooms.js';
 import { net, identity } from '../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn, setOnlineOpen, setOnlineFilter, setOnlineStatsReturn } from '../store.js';
-import { getConfig, getMode, getStage, useData } from '../data.js';
+import { getConfig, useData } from '../data.js';
 import { t, tc, N_ } from '../../../shared/i18n.js';
 
-/** Official mode texts (activity_table act2autochess.modeDataDict), fallback when config.json is absent. */
-export const MODE_TEXT = {
-  single: {
-    FUNNY: { code: 'AC-1', desc: N_('时长较短的模拟训练'), effects: [N_('可以快速完成作战'), N_('常规奖励')] },
-    NORMAL: { code: 'AC-2', desc: N_('敌方攻击强度较高的模拟训练'), effects: [N_('可使用盟约数增加'), N_('大幅增加奖励')] },
-    HARD: { code: 'AC-3', desc: N_('敌方攻击强度极高的模拟训练'), effects: [N_('作战环境困难'), N_('出现更加危险的敌人')] },
-    ABYSS: { code: 'AC-4', desc: N_('敌方攻击强度到达极限的模拟训练'), effects: [N_('作战环境无比困难'), N_('出现极度危险的敌人')] },
-  },
-  multi: {
-    FUNNY: { code: 'AC-1', desc: N_('敌方攻击强度较低的模拟训练'), effects: [N_('作战环境较为温和'), N_('常规奖励')] },
-    NORMAL: { code: 'AC-2', desc: N_('敌方攻击强度较高的模拟训练'), effects: [N_('可使用盟约数增加'), N_('大幅增加奖励')] },
-    HARD: { code: 'AC-3', desc: N_('敌方攻击强度极高的模拟训练'), effects: [N_('作战环境困难'), N_('出现更加危险的敌人')] },
-    ABYSS: { code: 'AC-4', desc: N_('敌方攻击强度到达极限的模拟训练'), effects: [N_('作战环境无比困难'), N_('出现极度危险的敌人')] },
-  },
-};
-
-/** Battlefield pool per difficulty when config.json is absent (the modes' `stages` lists; same for solo and co-op). */
-export const STAGE_POOL = { FUNNY: ['act1autochess_m01'], NORMAL: 8, HARD: 7, ABYSS: 7 };
-
-/**
- * Display name of a stage: stages.json when it is loaded, else derived from the id (act1 m0N → 战场#0N, act2 m0N → 战场#0(N+4)).
- * From the data name only its 战场#NN part (with a (上半) / (下半) mark) — 'Battlefield #NN (First Half)' in English.
- * @param {string} id e.g. 'act1autochess_m01'
- */
-export function stageLabel(id) {
-  const rec = getStage(id);
-  if (rec && typeof rec.name === 'string' && rec.name) {
-    const m = rec.name.match(/^(.*?#\d+(?:\s*[(（][^)）]*[)）])?)/);
-    return m ? m[1] : rec.name.split(/\s+/)[0];
-  }
-  const m = String(id || '').match(/^act(\d)autochess_m(\d+)$/);
-  return m ? t('战场#{no}', { no: String(Number(m[2]) + (m[1] === '2' ? 4 : 0)).padStart(2, '0') }) : '';
-}
-
-/**
- * The battlefield note of a difficulty (official wording): a single-stage pool is fixed ("战场固定为 战场#01"), a larger
- * one is drawn at random ("战场随机（共8张）").
- * @param {string[] | number | null | undefined} stages the mode's `stages` list (or a count)
- * @returns {string} '' when unknown
- */
-export function stageNote(stages) {
-  if (Array.isArray(stages)) {
-    const ids = stages.filter((s) => typeof s === 'string' && s);
-    if (ids.length === 1) { const name = stageLabel(ids[0]); return name ? t('战场固定为 {name}', { name }) : t('战场固定'); }
-    return ids.length > 1 ? t('战场随机（共{n}张）', { n: ids.length }) : '';
-  }
-  return Number.isInteger(stages) && stages > 1 ? t('战场随机（共{stages}张）', { stages }) : '';
-}
-
-export const MODE_CARDS = [
-  {
-    id: 'solo', name: N_('独立模拟'), en: 'SOLO SIMULATION', icon: 'user',
-    desc: N_('独自调配资金与干员，以自己的节奏完成整场模拟。'),
-    points: [N_('1 名博士'), N_('休整期与机变阶段不限时')],
-  },
-  {
-    id: 'coop', name: N_('同盟模拟'), en: 'ALLIANCE SIMULATION', icon: 'users',
-    desc: N_('与至多 {n} 名博士组成同盟，共享干员池，联防协作抵御敌潮。'), params: { n: MAX_SEATS - 1 },
-    points: [N_('1–{n} 名博士 · 可由 AI 队友补位'), N_('联防阶段 · 最终攻势合并生命值')], pointParams: { n: MAX_SEATS },
-  },
-  // 野排 (docs/MATCHMAKING.md): the third mode card is the matchmaker, not a room mode — it never creates a room.
-  // Its bullets describe OUR rules (shared pool, AI backfill, an account is required), never the reference's wording.
-  {
-    id: 'mm', name: N_('同盟匹配'), en: 'ALLIANCE MATCHMAKING', icon: 'signal',
-    desc: N_('单人进入共享池，自动匹配队友组成同盟。'),
-    points: [N_('1 名博士 · 单人即可加入'), N_('最多 5 分钟 · 不足由 AI 队友补位')],
-  },
-];
-
-/**
- * Text for a difficulty card, preferring data/config.json.
- * @param {'solo'|'coop'} roomMode
- * @param {string} difficulty
- * @returns {{ code: string, desc: string, effects: string[], rounds: number, hidden: boolean, stageNote: string }}
- */
-export function difficultyInfo(roomMode, difficulty) {
-  const fallback = MODE_TEXT[roomMode === 'solo' ? 'single' : 'multi'][difficulty] || { code: '', desc: '', effects: [] };
-  // modeIdFor() lower-cases the difficulty: never call it with a value the server did not validate.
-  const m = DIFFICULTIES.includes(difficulty) ? getMode(modeIdFor(roomMode, difficulty)) : null;
-  const effects = Array.isArray(m?.effectDescList)
-    ? m.effectDescList.map((e) => String(e).replace(/^[·•・･\s]+/, '')).filter(Boolean)
-    : fallback.effects.map((e) => t(e));
-  const rounds = Number.isFinite(m?.lastRound) ? m.lastRound : roomMode === 'solo' && difficulty === 'FUNNY' ? 9 : 14;
-  return {
-    code: typeof m?.code === 'string' ? m.code : fallback.code,
-    desc: typeof m?.desc === 'string' ? m.desc : t(fallback.desc),
-    effects,
-    rounds,
-    hidden: difficulty !== 'FUNNY',
-    stageNote: stageNote(Array.isArray(m?.stages) && m.stages.length ? m.stages : STAGE_POOL[difficulty]),
-  };
-}
-
-const CODE_RE = new RegExp(`^[A-Z0-9]{${ROOM_CODE_LEN}}$`);
-/**
- * Normalise user input into a room code: accepts a pasted invite link (`…?room=ABCD`), keeps
- * upper-cased alphanumerics and clamps to the code length.
- * @param {string} v
- * @returns {string}
- */
-export function normalizeCode(v) {
-  let s = String(v ?? '');
-  const m = s.match(/[?&]room=([A-Za-z0-9]+)/);
-  if (m) s = m[1];
-  return s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, ROOM_CODE_LEN);
-}
-
-/**
- * A handler that Preact binds as `onClick=${fn}` receives the click EVENT as its first argument, and a default
- * parameter only applies to `undefined` — so `fn(c = code)` would normalise the event target into a nonsense code
- * (`String(el)` → `"[object HTMLElement]"` → "OBJE"). Only a string is ever a code; anything else falls back to the
- * input field. Returns null when neither yields a well-formed code.
- * @param {unknown} arg the argument a handler was called with
- * @param {string} field the current input-field value
- * @returns {string|null}
- */
-export function codeArg(arg, field) {
-  const k = normalizeCode(typeof arg === 'string' ? arg : field);
-  return CODE_RE.test(k) ? k : null;
-}
-
-/**
- * Whether a room entry initiated from `source` remembers the 公开房间 origin, so an intentional leave returns there
- * (owner 2026-10-09; docs/MATCHMAKING.md §36.4). ONLY the 公开房间 screen itself passes `'rooms'`: 创建同盟, the 密钥
- * field, the inline 公开同盟 / 正在模拟 chips and the `?room=` deep link all keep today's plain-lobby behaviour.
- * @param {string|null|undefined} source
- * @returns {boolean}
- */
-export function remembersRoomOrigin(source) {
-  return source === 'rooms';
-}
-
-/**
- * Room code from a deep link query string (`?room=CODE`), or null when absent/malformed.
- * Accepts ROOM_CODE_LEN..ROOM_CODE_LEN+2 alphanumerics (the protocol's join limit).
- * @param {string} search e.g. location.search
- * @returns {string|null}
- */
-export function parseRoomParam(search) {
-  try {
-    const raw = new URLSearchParams(search || '').get('room');
-    if (!raw) return null;
-    const code = raw.trim().toUpperCase();
-    if (!/^[A-Z0-9]+$/.test(code)) return null;
-    return code.length >= ROOM_CODE_LEN && code.length <= ROOM_CODE_LEN + 2 ? code : null;
-  } catch {
-    return null;
-  }
-}
+import { MODE_CARDS, difficultyInfo, CODE_RE, normalizeCode, codeArg, remembersRoomOrigin } from './lobbyData.js';
+import { OnlineOverlay } from './online.js';
+export { MODE_TEXT, STAGE_POOL, stageLabel, stageNote, MODE_CARDS, difficultyInfo, CODE_RE, normalizeCode, codeArg, remembersRoomOrigin, parseRoomParam } from './lobbyData.js';
+export { onlineStatsTarget, filterOnlinePlayers, openOnlineStats } from './online.js';
 
 const FALLBACK_TIPS = [
   N_('联合模拟在选择策略时可以进行一次跳过'),
@@ -654,137 +507,4 @@ function OnlineBadge({ onOpen }) {
   return html`<button type="button" class="online-badge" title=${t('查看在线玩家')} onClick=${onOpen}>
     <${Icon} name="users" /><span>${t('在线')}</span><b class="num">${n == null ? '—' : n}</b>
   </button>`;
-}
-
-/** Status key → label + tone (distinct hues, all from the theme tokens; mirrors server/admin.js STATUS). */
-const ONLINE_STATUS = {
-  online: { label: N_('在线'), c: 'mint' }, room: { label: N_('组队中'), c: 'ice' }, queue: { label: N_('野排排队'), c: 'gold' },
-  mmplay: { label: N_('野排游玩'), c: 'amber' }, alliance: { label: N_('同盟游玩'), c: 'violet' }, solo: { label: N_('单人游玩'), c: 'green' },
-  offline: { label: N_('离线'), c: 'dim' },
-};
-
-/**
- * The public stats target of an /online/api online row: a registered player's callsign, else null. Guests have no
- * account-bound identity others can key on (server/stats.js `stats.view` resolves by public callsign), so their row
- * stays a plain row — and so does a nameless entry.
- * @param {any} p an /online/api `online[]` entry
- * @returns {string|null}
- */
-export function onlineStatsTarget(p) {
-  return p && !p.guest && typeof p.name === 'string' && p.name.length > 0 ? p.name : null;
-}
-
-/**
- * Filter the online list by a free-text query: a case-insensitive substring of the callsign, the room code, or the
- * status (its key like `queue`, or its translated label like 野排排队), so any of those find a row. An empty / blank
- * query keeps the list as it is (the same array reference — no needless re-render).
- * @param {any[]} list /online/api `online[]`
- * @param {string} query the search field's text
- * @returns {any[]}
- */
-export function filterOnlinePlayers(list, query) {
-  const arr = Array.isArray(list) ? list : [];
-  const q = String(query ?? '').trim().toLowerCase();
-  if (!q) return arr;
-  return arr.filter((p) => {
-    const status = ONLINE_STATUS[p?.status];
-    const hay = [p?.name, p?.roomCode, p?.status, status ? t(status.label) : '', p?.guest ? t('游客') : t('已登录')];
-    return hay.some((s) => typeof s === 'string' && s.toLowerCase().includes(q));
-  });
-}
-
-/**
- * A 在线玩家 row click on a viewable player: hide the list and open their public records, remembering the online-list
- * origin so closing the stats pops back here with the search still in place (ui.onlineStatsReturn, one-shot). Split
- * out so the row → stats wiring is testable without a browser; `deps.open` defaults to the real `openPlayerStats`.
- * @param {any} p an /online/api `online[]` entry
- * @param {{ open?: (name: string) => void }} [deps]
- * @returns {boolean} whether a viewable row opened the stats
- */
-export function openOnlineStats(p, deps = {}) {
-  const name = onlineStatsTarget(p);
-  if (!name) return false;
-  setOnlineStatsReturn(true);
-  setOnlineOpen(false);
-  (deps.open || openPlayerStats)(name);
-  return true;
-}
-
-/**
- * The in-game online-players overlay: server data via /online/api (token-free), refreshed every 4 s. Opened from the
- * 在线 badge — no separate page. Rows list 名字 / 是否登录 / 状态 / 房间; a registered player's row (the `>` chevron)
- * opens their public records (server/stats.js stats.view) and returns here on close. A search box filters the list by
- * callsign / room code / status. Styled with the game's own components (docs/MATCHMAKING.md §8).
- */
-function OnlineOverlay({ onClose }) {
-  const [data, setData] = useState(null);
-  const query = useStore((s) => s.ui.onlineFilter);
-  const list = (data && data.online) || [];
-  const shown = filterOnlinePlayers(list, query);
-  const st = (s) => ONLINE_STATUS[s] || { label: s, c: 'dim' };
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const r = await fetch('/online/api', { cache: 'no-store' });
-        if (!r.ok) return;
-        const j = await r.json();
-        if (alive) setData(j);
-      } catch { /* keep the last snapshot */ }
-    };
-    tick();
-    const h = setInterval(tick, 4000);
-    return () => { alive = false; clearInterval(h); };
-  }, []);
-  // Esc closes the overlay — but a confirm dialog on top takes the Esc. The stats viewer this overlay opens consumes
-  // the first Esc (popping back here); this listener is mounted only then, so the second Esc closes the list.
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key !== 'Escape' || document.querySelector('.modal')) return;
-      e.preventDefault(); e.stopPropagation();
-      closeRef.current?.();
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, []);
-  return html`<div class="online-modal" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
-    <div class="online-modal__card brackets">
-      <div class="online-modal__head">
-        <div class="online-modal__title"><${MicroLabel} tone="mint">ONLINE DOCTORS<//>
-          <h2>${t('在线玩家')}<span class="num">${data ? data.counts.online : '—'}</span></h2></div>
-        <button type="button" class="online-modal__close" onClick=${onClose} aria-label=${t('关闭')}><${Icon} name="close" /><//>
-      </div>
-      <div class="online-modal__meta"><span><i class="online-dot"></i>${t('实时')}</span><span>${t('游客')} ${data ? data.counts.guests : '—'}</span><span>${t('每 4 秒刷新')}</span></div>
-      <div class="online-modal__search">
-        <${TextField} size="sm" icon="search" value=${query} placeholder=${t('搜索玩家代号 / 房间号')}
-          onInput=${setOnlineFilter} class="online-modal__search-field" />
-        <span class="online-modal__count num" title=${t('显示 {shown} / {total}', { shown: shown.length, total: list.length })}>
-          <b>${shown.length}</b><span>/${list.length}</span></span>
-        ${query ? html`<button type="button" class="online-modal__clear" aria-label=${t('清除搜索')} title=${t('清除搜索')}
-          onClick=${() => setOnlineFilter('')}><${Icon} name="close" /><//>` : null}
-      </div>
-      <div class="online-modal__list">
-        ${shown.length ? shown.map((p, i) => {
-          // a registered player's row opens their public match records (server/stats.js stats.view) and returns here;
-          // guests have no account-bound identity others can key on, so their row stays a plain row
-          const target = onlineStatsTarget(p);
-          const open = target ? () => openOnlineStats(p) : undefined;
-          return html`<div class=${`online-row${target ? ' is-viewable' : ''}`} key=${`${p.name}-${i}`}
-            role=${target ? 'button' : undefined} tabIndex=${target ? 0 : undefined}
-            title=${target ? t('查看其对局记录') : undefined}
-            onClick=${target ? open : undefined}
-            onKeyDown=${target ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } } : undefined}>
-          <${AvatarFrame} size="sm" name=${p.name} seat=${i} offline=${p.status === 'offline'} />
-          <span class="online-row__name">${p.name}<${RoleTag} role=${p.role} /></span>
-          ${p.guest ? html`<span class="online-row__tag">${t('游客')}</span>` : html`<span class="online-row__tag is-acc">${t('已登录')}</span>`}
-          <span class=${`online-row__status is-${st(p.status).c}`}>${t(st(p.status).label)}</span>
-          <span class="online-row__room num">${p.roomCode || '—'}</span>
-          ${target ? html`<span class="online-row__go" aria-hidden="true"><${Icon} name="chevronRight" /></span>` : null}
-        </div>`;
-        }) : html`<div class="online-modal__empty">${!data ? t('加载中…') : list.length ? t('没有匹配的玩家') : t('暂无在线玩家')}</div>`}
-      </div>
-    </div>
-  </div>`;
 }

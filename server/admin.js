@@ -766,6 +766,13 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   .two{grid-template-columns:1fr}
   .main{padding:0 14px 40px}
 }
+.ui-choice{display:grid;gap:10px;margin:12px 0}
+.ui-opt{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+.ui-opt:hover{border-color:var(--mint)}
+.ui-opt input{margin-top:3px;accent-color:var(--mint)}
+.ui-opt span{display:flex;flex-direction:column;gap:4px}
+.ui-opt b{font-size:14px}
+.ui-opt em{font-style:normal;color:var(--dim);font-size:12.5px;line-height:1.5}
 </style></head><body>
 <div class="app">
   <aside class="side">
@@ -783,6 +790,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       <button class="nav__item" data-view="notice"><i>✦</i>通知<em id="navNotice">0</em></button>
       <button class="nav__item" data-view="bugs"><i>⚑</i>反馈<em id="navBugs">0</em></button>
       <button class="nav__item" data-view="plugins"><i>◆</i>插件与内容<em id="navPlugins">0</em></button>
+      <button class="nav__item" data-view="ui"><i>◈</i>界面</button>
       <div class="nav__sect">诊断</div>
       <a class="nav__item nav__link" href="/admin/docs"><i>▤</i>文档链</a>
       <button class="nav__item" data-view="speed"><i>⚡</i>测速</button>
@@ -833,6 +841,32 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         </div>
         <div class="tablewrap"><table data-table="rooms"><thead id="roomsHead"></thead><tbody id="roomsBody"></tbody></table></div>
       </section>
+    </section>
+
+    <section class="view" id="view-ui" hidden>
+      <div class="two">
+        <section class="panel">
+          <h2>主界面</h2>
+          <div class="panel__body">
+            <p class="hint">选择玩家默认看到的<strong>大厅</strong>。旧界面不会删除，保存后玩家下次刷新页面生效；不需要重启服务。</p>
+            <div class="ui-choice">
+              <label class="ui-opt"><input type="radio" name="mainUi" value="hub" />
+                <span><b>Hub 大厅（新）</b><em>要塞背景、中央徽记、右下三个模式入口，点击后进入全屏协议选择页。</em></span></label>
+              <label class="ui-opt"><input type="radio" name="mainUi" value="classic" />
+                <span><b>经典大厅（旧）</b><em>现有的一屏式大厅：模式卡、难度卡、加入同盟和提示都在同一页。</em></span></label>
+            </div>
+            <div class="tools"><button type="button" id="uiSave" class="primary">保存界面设置</button><span id="uiMsg" class="hint"></span></div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>预览与对比</h2>
+          <div class="panel__body">
+            <p class="hint">保存后打开：<a id="uiPreview" href="/" target="_blank" rel="noopener">/</a></p>
+            <p class="hint">本机临时对比（不影响其他人）：在地址后加 <code>?ui=hub</code> 或 <code>?ui=classic</code>。</p>
+            <p class="hint">切换只影响大厅外观；房间、备战、战斗、结算的代码完全不变。</p>
+          </div>
+        </section>
+      </div>
     </section>
 
     <section class="view" id="view-plugins" hidden>
@@ -1105,9 +1139,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     bugs: ['反馈','玩家提交的问题报告与处理状态'],
     plugins: ['插件与内容','已安装插件、服务器策略、房间内容集与脚本信任状态'],
     speed: ['测速','中继与 GitHub 镜像的实测速率 · 与客户端同一套口径'],
-    origins: ['来源配置','中继与镜像地址 · 改完即时生效，不用重启']
+    origins: ['来源配置','中继与镜像地址 · 改完即时生效，不用重启'],
+    ui: ['界面', '玩家看到的主界面 · Hub 或经典大厅'],
   };
-  var VIEW_ORDER = ['overview','rooms','accounts','online','notice','bugs','plugins','speed','origins'];
+  var VIEW_ORDER = ['overview','rooms','accounts','online','notice','bugs','plugins','speed','origins','ui'];
   // 表格列：[表头, 排序键]（排序键为空 = 该列不可排序，只能搜索）
   var COLS = {
     rooms: [['房间码','code'],['模式','mode'],['难度','difficulty'],['状态',''],['类型',''],['玩家','humans'],['AI','bots']],
@@ -1128,6 +1163,43 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   }
   function int(v) { return v == null || isNaN(v) ? 0 : Number(v); }
 
+  // ---------------- 主界面开关（server/uiMode.js / GET|POST /admin/api/ui） ----------------
+  var uiLoaded = false, uiBusy = false;
+  function loadUi() {
+    if (uiBusy) return;
+    uiBusy = true;
+    fetch('/admin/api/ui?token=' + encodeURIComponent(token), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var m = j && j.main === 'classic' ? 'classic' : 'hub';
+        var radios = document.querySelectorAll('input[name="mainUi"]');
+        for (var i = 0; i < radios.length; i++) radios[i].checked = radios[i].value === m;
+        el('uiPreview').href = '/?ui=' + m;
+        el('uiMsg').textContent = '当前：' + (m === 'hub' ? 'Hub 大厅' : '经典大厅');
+        uiLoaded = true;
+      })
+      .catch(function () { el('uiMsg').textContent = '读取失败'; })
+      .then(function () { uiBusy = false; });
+  }
+  function saveUi() {
+    var picked = document.querySelector('input[name="mainUi"]:checked');
+    if (!picked) return;
+    el('uiMsg').textContent = '保存中…';
+    fetch('/admin/api/ui?token=' + encodeURIComponent(token), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ main: picked.value }),
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.ok) {
+        uiLoaded = true;
+        el('uiPreview').href = '/?ui=' + j.main;
+        el('uiMsg').textContent = '已保存：' + (j.main === 'hub' ? 'Hub 大厅' : '经典大厅') + '（玩家刷新后生效）';
+      } else {
+        el('uiMsg').textContent = '保存失败：' + ((j && j.error) || '未知错误');
+      }
+    }).catch(function () { el('uiMsg').textContent = '保存失败'; });
+  }
+  el('uiSave').addEventListener('click', saveUi);
+
   // ---------------- 视图切换：hash 路由（刷新后仍在同一页）+ 侧栏高亮 ----------------
   var view = 'overview';
   function setView(id, silent) {
@@ -1146,6 +1218,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     if (!silent && location.hash.slice(1) !== id) location.hash = id;
     if (id === 'speed' && !speedLoaded && !speedRunning) runSpeed(false);
     if (id === 'origins' && !originsLoaded && !originsBusy) loadOrigins();
+    if (id === 'ui' && !uiLoaded && !uiBusy) loadUi();
     if (id !== 'bugs') closeViewer();
   }
   el('nav').addEventListener('click', function (e) {
