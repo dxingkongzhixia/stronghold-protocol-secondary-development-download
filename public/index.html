@@ -64,7 +64,7 @@
   <link rel="modulepreload" href="/vendor/preact.module.js" />
   <link rel="modulepreload" href="/vendor/hooks.module.js" />
   <link rel="modulepreload" href="/vendor/htm.module.js" />
-  <link rel="modulepreload" href="/js/main.js?v=a59eef1db" />
+  <link rel="modulepreload" href="/js/main.js" />
   <!-- Battlefield renderer libs (classic scripts, injected by js/render/app.js when a match view mounts): warm the cache
        at low priority so entering the match doesn't wait on ~800 KB of script. -->
   <link rel="prefetch" href="/vendor/pixi.min.js" as="script" />
@@ -96,7 +96,7 @@
   <noscript><p style="color:#c3cbc7;text-align:center;padding:40px">需要启用 JavaScript 才能运行本游戏。</p></noscript>
 
   <script src="/js/boot.js"></script>
-  <script type="module" src="/js/main.js?v=a59eef1db" id="sp-main"></script>
+  <script type="module" src="/js/main.js" id="sp-main"></script>
   <script nomodule src="/js/bootLegacy.js"></script>
 </body>
 </html>
