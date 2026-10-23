@@ -3,9 +3,10 @@
 // full-screen 选择模拟协议 page (isometric scene + difficulty cards). The classic lobby (screens/lobby.js) is kept
 // intact; both screens share the same store, net actions and feature overlays.
 //
-// Every existing lobby feature is reachable here: 公开房间, 更新日志, 资料库, 加入同盟/观战, 最近密钥, 野排队列,
-// 测试房间, 公开可见性, S.W.E.E.P., 干员调配, 统计, 账号, 设置, 玩法说明, 大厅背景. `?room=` deep links and
-// room-state routing are handled by main.js and never touched by the skin.
+// Every Hub feature is reachable here: 公开房间, 更新日志, 加入同盟/观战, 最近密钥, 野排队列,
+// 测试房间, 公开可见性, S.W.E.E.P., 干员调配, 统计, 账号, 设置, 玩法说明, 大厅背景. The Hub deliberately drops
+// 作战提示 and 资料库 (they stay in the classic lobby). `?room=` deep links and room-state routing are handled by
+// main.js and never touched by the skin.
 //
 // Styles: css/screens/hub.css (ported from the fork with its GPL attribution; classic styles untouched).
 
@@ -19,14 +20,13 @@ import { LoadoutButton } from '../loadout.js';
 import { SettingsButton } from '../../ui/settings.js';
 import { GuideButton } from '../../ui/guide.js';
 import { NoticesButton } from '../../ui/notices.js';
-import { openCodex } from '../../ui/codex.js';
 import { AccountDialog } from '../../ui/account.js';
 import { ChangelogOverlay } from '../../ui/community.js';
 import { OnlineOverlay } from '../online.js';
 import { PublicRoomsScreen } from '../rooms.js';
 import { net, identity } from '../../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn, setOnlineOpen, setOnlineFilter, setOnlineStatsReturn } from '../../store.js';
-import { getConfig, useData } from '../../data.js';
+import { useData } from '../../data.js';
 import { t } from '../../../../shared/i18n.js';
 import { MODE_CARDS, difficultyInfo, normalizeCode, codeArg, remembersRoomOrigin } from '../lobbyData.js';
 import { Emblem } from '../title.js';
@@ -58,31 +58,6 @@ function SweepPlate({ onClick }) {
     <span class="hub-plate__glyph"><${Icon} name="book" /></span>
     <span class="hub-plate__label">${t('S.W.E.E.P.报告')}</span><span class="hub-plate__tag">REPORT</span>
   </button>`;
-}
-
-/** Rotating tactical tips + a compact 1/21 counter, matching the classic lobby's content source. */
-function HubTips() {
-  const cfg = getConfig();
-  const tips = (Array.isArray(cfg?.tips) ? cfg.tips : [])
-    .map((x) => (typeof x === 'string' ? x : x?.tip))
-    .filter((x) => typeof x === 'string' && x);
-  const list = tips.length ? tips : [t('联合模拟在选择策略时可以进行一次跳过')];
-  const [idx, setIdx] = useState(() => Math.floor(Math.random() * list.length));
-  useEffect(() => {
-    const id = setInterval(() => setIdx((n) => n + 1), 5000);
-    return () => clearInterval(id);
-  }, []);
-  const i = ((idx % list.length) + list.length) % list.length;
-  return html`<div class="tips brackets hub-tips">
-    <div class="tips__head">
-      <${Icon} name="info" /><span>${t('作战提示')}</span>
-      <${MicroLabel}>TACTICAL TIPS<//>
-      <span class="tips__idx num">${String(i + 1).padStart(2, '0')}<span class="t-dim">/${String(list.length).padStart(2, '0')}</span></span>
-      <button type="button" class="tips__nav" onClick=${() => setIdx(i - 1 + list.length)} aria-label=${t('上一条')}><${Icon} name="chevronLeft" /></button>
-      <button type="button" class="tips__nav" onClick=${() => setIdx(i + 1)} aria-label=${t('下一条')}><${Icon} name="chevronRight" /></button>
-    </div>
-    <p key=${i} class="tips__text">${list[i]}</p>
-  </div>`;
 }
 
 /** Server-side online count (the header badge; clicking opens the player list). */
@@ -395,8 +370,6 @@ export function LobbyScreen() {
         <${HubTile} icon="users" label=${t('公开房间')} en="PUBLIC ALLIANCES" onClick=${() => setShowCommunity('rooms')} />
         <${HubTile} icon="key" label=${t('加入同盟')} en="ALLIANCE KEY" onClick=${() => setShowJoin(true)} />
         <${HubTile} icon="book" label=${t('更新日志')} en="CHANGELOG" onClick=${() => setShowCommunity('changelog')} />
-        <${HubTile} icon="info" label=${t('资料库')} en="ARCHIVE" onClick=${() => openCodex('bonds')} />
-        <${HubTips} />
       </aside>
 
       <aside class="hub-right">

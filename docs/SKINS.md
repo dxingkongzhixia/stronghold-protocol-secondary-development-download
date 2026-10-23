@@ -1,28 +1,27 @@
 # 干员皮肤 (Operator skins)
 
 An operator's Spine model and its pictures can be replaced by one of its official alternative outfits (时装). This
-document is the normative reference for that feature; the art itself is **never** downloaded or written by the server —
-it comes from a **cosmetic plugin's overlay** (docs/PLUGINS.md §9), which the server's owner installs in `plugins/` and
-each player switches on for themself.
+document is the normative reference for that feature. The skin system is a **core feature of this project**, not a
+plugin: the catalogue is tracked, the local art sets are served by the server, and every player can choose an outfit
+without installing or switching on anything.
 
-> 上游 #652 被关闭的原因写在这里，因为它是这个设计的出发点：**服务器不提供安装通道**。当时的 `room.skin.install`
-> 让任何已连接的客户端都能让服务器去网上下载文件并改写所有客户端共读的 `data/assets.json`，而随包发布的
-> `data/skins-installed.json` 又会让更新校验对不上。本实现没有安装报文、不写 `data/` 下的任何文件、不随包发布任何
-> 安装状态：皮肤属于插件，插件怎么落地是 `plugins/` 目录（安装、studio、ZIP）本来就有的问题。
+> 上游 #652 被关闭的原因仍然是这个设计的边界：**服务器不提供安装通道**。本项目没有让客户端触发服务器下载或改写
+> `data/assets.json` 的报文，也不随包发布安装状态。核心皮肤只读取本机已经存在的 `skins/sets/`，并由
+> `node tools/skins.mjs` 从本机抽取结果生成目录。
 
-## The data: one overlay, no catalogue file
+## The data: a core catalogue + local art sets
 
 ```
-plugins/<id>/plugin.json
-  └── assets (or a .json file):  chars[<charId>].illust ……     the operator's own 立绘 (one picture)
-                                 chars[<charId>].skins[<skinKey>] = { name, group, avatar, avatarE2,
-                                                                      portrait, portraitE2, illust,
-                                                                      spine: { front, back? } }
+skins/
+  catalogue.json                     tracked: version, set names, chars[<charId>] { illust?, skins[<skinKey>] }
+  sets/<set>/overlay.json            local extraction (git-ignored, same shape as the old cosmetic plugin overlay)
+  sets/<set>/media/…  spine/…        local official art (git-ignored; never redistributed)
         │
-        ├── the server checks the overlay (shared/plugins/visual.js, docs/PLUGINS.md §9) and serves it as a document:
-        │   /vs/<vs16>/overlay.json — composed on the INSTALLATION's manifest, never on a copy of it
+        ├── the server serves /skins/catalogue.json (no-cache) and /skins/sets/… (long media cache)
         │
-        └── the browser composes it (public/js/cosmetics.js cosmetics.apply) on the manifest it already loaded
+        ├── public/js/coreSkins.js fetches the catalogue once and calls cosmetics.setCore(chars)
+        │
+        └── public/js/cosmetics.js merges the catalogue UNDER every room / personal cosmetic layer
                  │
                  └── data.get('assets') — what every screen reads (public/js/data.js setView)
                           │
@@ -30,41 +29,50 @@ plugins/<id>/plugin.json
                           └── chars[<charId>].skins[<skinKey>].spine  →  the model (public/js/assets.js spineEntry { skin })
 ```
 
+The catalogue's art paths are absolute (`/skins/sets/<set>/…`). A missing catalogue, a missing art file or an old
+selection falls back to the operator's own appearance; nothing becomes a placeholder.
+
 Three properties are load-bearing:
 
 - **A skin key is the KEY, and it is data.** It carries `@` `#` `+` `.` (`char_002_amiya@winter#1`), so it is **not** an
-  `isId` (shared/protocol.js `isSkinId`). A plugin that has no official id for a skin may write the stem form
-  (`char_102_texas_epoque_7`) [ASSUMED: docs/PLUGINS.md §9]. Whatever writes a skin and whatever wears it must agree on
-  that exact string.
+  `isId` (shared/protocol.js `isSkinId`). A set with no official id for a skin may write the stem form
+  (`char_102_texas_epoque_7`). Whatever writes a skin and whatever wears it must agree on that exact string.
 - **The choice is keyed by OPERATOR (charId), not by chess.** `chars[<charId>].skins` is the manifest's own grouping, so
   one entry covers an operator's normal piece, its elite (the merge) and a 自选 slot fielding it. The renderer agrees:
   a unit's skin resolves through `d.spine ?? d.charId ?? u.defId` (server/sim/snapshot.js), i.e. the charId.
   Every owner/scout board, hand, temp and battle input resolves the **effective body** with `PlayerState.fieldRecord`:
-  a stand-in uses `backup.charId`, a 自选 slot its pick. Official source:
-  `activity_table.activity.AUTOCHESS_SEASON.act2autochess.charShopChessDatas` `backupCharId` (for example
-  `chess_char_3_01_a`: `char_103_angel` → `char_603_csnipe`). [ASSUMED] Skin choices follow that body too, so an original
-  operator's selected outfit never dresses its stand-in; the official table specifies bodies, not this cosmetic UI.
+  a stand-in uses `backup.charId`, a 自选 slot its pick. Skin choices follow that body too, so an original operator's
+  selected outfit never dresses its stand-in.
 - **A missing piece falls back; nothing is ever a placeholder.** `spineEntry(m, id, { skin })` draws the operator's own
   model when the skin (or its model) is not in the manifest; `avatarUrl` / `portraitUrl` / `illustUrl` fall back to the
   operator's own pictures. The picker shows the operator's portrait on a skin that ships none.
 
-## The switch model: the owner installs, each player switches on
+### Importing a local extraction
 
-| Who | What they do | Where it is stored |
-|---|---|---|
-| The server's owner | Drops the plugin folder into `plugins/` (the studio, a ZIP, or by hand), and switches it on for the **room** if they want a set everyone in that room sees | `plugins/`, a room's `vs` |
-| A player | Switches a `scope: ["personal"]` cosmetic plugin on for **themself** — a skin of their own choosing | `sp.pref.cosmetics` (this browser only, never sent) |
+The old cosmetic-plugin layout can be moved into the core layout without copying the 300 MB of art:
 
-A room's **host is not part of it**: an appearance a player wears comes from *their* browser's layers, so a plugin with
-`scope: ["personal"]` never appears in the room's 插件 panel and no room setting can force a skin on anyone. Two players
-of the same co-op match may therefore see different models for the same piece — see the switch below.
+```bash
+node tools/skins.mjs import plugins/local-skins --id local-skins --move
+node tools/skins.mjs import plugins/local-skins-2 --id local-skins-2 --move
+node tools/skins.mjs import path/to/another-set --id my-set          # copy instead of --move
+node tools/skins.mjs build                                         # rebuild skins/catalogue.json
+```
 
-**Lobby preview**: before a player is in a room, the lobby's 干员调配 also shows the server owner's default room cosmetics
-(`plugins/config.json` `default`). The server sends that set's visual hash as `welcome.content.defaultVs`; `content.js`
-lays it exactly like a room's set, but only while no room is joined. Joining a room replaces it with the room's own `vs`
-(and a room that names no visual set deliberately shows no preview, rather than falling back to the lobby's). Personal
-plugins still apply on top in either place. This is what makes the skin section appear in the lobby with the owner's
-`local-skins`; it changes no battle content.
+`build` merges every `skins/sets/*/overlay.json` in name order and rewrites relative paths. The generated catalogue is
+tracked; `skins/sets/` is in `.gitignore` because the official art must not be redistributed.
+
+### Plugins can still override
+
+A cosmetic plugin (docs/PLUGINS.md §9) may still write `chars[…].skins` / `illust`; its layer is applied **above** the
+core catalogue, so it can add or replace an outfit for a room or for one player. The default plugin list no longer
+contains the skin sets (`plugins/config.json` `default` is empty for skins): a fresh installation has skins through
+the core catalogue alone.
+
+### Official presets are no longer required
+
+The 干员调配 screen's skin section appears whenever the composed manifest offers at least one wear-able skin. Before,
+that required the owner's `local-skins` cosmetic plugin and the lobby's default visual set; now it is simply the core
+catalogue. A server without `skins/sets/` has no skin section, exactly like an installation without outfits.
 
 ## 设置「显示其他玩家的皮肤」 (default on)
 
@@ -134,11 +142,15 @@ exists) gets no section rather than an empty grid.
 | Path | What |
 |---|---|
 | `public/js/ui/skins.js` | The client store (`sp.pref.skins`, `{ [charId]: skinId }`, at most `SKIN_LIMITS.entries` pairs: `parseStoredSkins` is the one parse of a stored selection — the store's initial state, every edit and what the sync sends — so the wire's own limit is applied where the selection is read), `availableSkins` (the composed manifest's rows, with `playable` and with art already resolved and fallen back; the 默认 row exists for every operator the manifest holds, also one with no `skins`), `hasAnySkinChoices` (the section's global rule), `hasSkinChoices` (the single-operator criterion, kept for tests and future rules), `chosenSkin` (a stored entry that is not one of this operator's wear-able skins counts as 默认), `setSkin` / `clearSkin` |
+| `public/css/screens/loadout-deck.css` | The Hub 干员调配 deck (docs/UI-HUB.md); the classic screen keeps `loadout.css` |
 | `public/js/ui/skinPicker.js` | The 皮肤 section itself: `SkinSection` (nothing while `hasAnySkinChoices` is false — for every operator alike; the 默认 tile alone for an operator without a skin), `SkinPreview` (the enlarged 立绘), the five-tile grid's markup |
 | `test/skins.test.js` | The wire shape (`isSkinId` / `isSkinSelection`), the lobby → Match → PlayerState chain, the public view, reconnect, the sim's UnitInfo, the client's fallbacks, and the absence of the install channel |
 | `test/lobby-skins.test.js` | `room.skins` over WebSocket: validation, session and seat storage, the seats handed to the Match, bots, the change made mid-match |
 | `test/ui/skin-picker.test.js` | The picker's rules against a composed manifest: the rows, `playable`, the art fallbacks, the global `hasAnySkinChoices` and the per-operator `hasSkinChoices`, `chosenSkin`, and that the section's gate is the global one |
 | `docs/SKINS.md` | This document |
+| `skins/catalogue.json` | Core catalogue (tracked): `{ version, source, sets, chars }`; art paths are absolute `/skins/sets/…` |
+| `public/js/coreSkins.js` | Loads `/skins/catalogue.json` once and calls `cosmetics.setCore(chars)` |
+| `tools/skins.mjs` | `import <dir> --id … [--move]` / `build`: turn a local extraction into `skins/sets/` and rebuild the catalogue |
 
 ## Edits to existing files
 
@@ -176,10 +188,10 @@ exists) gets no section rather than an empty grid.
   seeded battle run with and without a skin returns the same `Battle.result()` (`test/skins.test.js`), and
   `test/golden/*.json` is unchanged. `skin` is listed with the sim fields in `docs/design/engine.md` §5.2 and
   `docs/SIM.md` §2 as display-only.
-- **No `data/` write.** Nothing in this feature writes a data file; a plugin's own files are served from
-  `plugins/<id>/` under `/p/<id>/<hash>/…` (docs/PLUGINS.md §9).
-- **No game art in git.** As ever: skin art belongs to a plugin (or to a locally extracted client), never to this
-  repository.
+- **No `data/` write.** Nothing in this feature writes a data file; the catalogue is `skins/catalogue.json` and the
+  art is served from `skins/sets/` under `/skins/sets/…`. A cosmetic plugin's own files still come from `/p/…`.
+- **No game art in git.** `skins/catalogue.json` (names / groups / paths) is tracked; `skins/sets/` is ignored and
+  must be extracted locally, exactly like the old plugin art.
 - **A bad map is refused whole.** `isSkinSelection` / `validateC2S` (`room.skins`), the lobby (`freezeSkins` / `skins()`)
   and `PlayerState.setSkins` all require a plain object, a charId key (`isCharId`: official `char_<digits>_<token>` or
   a plugin `char_x_…`, never a chess id) and a skinId value (`isSkinId`). An array, a null-prototype object, one bad
@@ -211,22 +223,21 @@ exists) gets no section rather than an empty grid.
 ## Extracting official outfits locally (本机抽取)
 
 The repository never carries skin art, but an installation can turn the official client it already has into a
-normal cosmetic plugin — the same `chars[<charId>].skins` overlay documented above, so nothing in the server or
-the client changes.
+core skin set — the same `chars[<charId>].skins` overlay documented above, served from `skins/sets/` and merged by the
+core catalogue.
 
 ```powershell
-# 1. the outfits (writes plugins/local-skins/; plugins/* is git-ignored)
+# 1. the outfits (writes skins/sets/local-skins/; skins/sets/ is git-ignored)
 python tools/local-extract/skins.py `
   --game "<Arknights>/Arknights_Data/StreamingAssets/AB/Windows" `
   --update "<Arknights>/Arknights_Data/PersistentData/Bundles" `
-  --out plugins/local-skins --id local-skins
+  --out skins/sets/local-skins --id local-skins
 
 # 2. keep a full pack inside a room's 512 MB set (Spine pages -> lossless WebP, atlas + overlay rewritten)
-python tools/local-extract/spine-webp.py plugins/local-skins --lossless
+python tools/local-extract/spine-webp.py skins/sets/local-skins --lossless
 
-# 3. the lock (clip roles / hashes) and the check
-node tools/plugin.mjs pack  plugins/local-skins
-node tools/plugin.mjs check plugins/local-skins
+# 3. rebuild the core catalogue (skins/catalogue.json is tracked)
+node tools/skins.mjs build
 ```
 
 | flag | meaning |
@@ -246,15 +257,13 @@ node tools/plugin.mjs check plugins/local-skins
   **277 outfits of 175 operators**.
 - **Re-running resumes**: pictures and complete Spine models already on disk are kept; a character whose skins are
   not all complete is extracted again (its files are overwritten).
-- **Default on for everyone**: an owner's `plugins/config.json` (git-ignored, `server/plugins/policy.js`) can start
-  every room with the plugin — `{ "rooms": "host", "default": ["local-skins"] }`. The plugin's scope is
-  `room` + `personal`, so a room's set serves it to every member and a player may also switch it on alone. The
-  picker appears only while the composed manifest has a wear-able skin (`hasAnySkinChoices`), so a room without the
-  plugin looks exactly as before.
+- **Always available**: the core catalogue is installed for every page (`public/js/coreSkins.js`), so the picker
+  appears wherever the catalogue has a wear-able skin (`hasAnySkinChoices`). A server without `skins/sets/` has no
+  skin section, exactly like an installation without outfits; a cosmetic plugin can still add or override an entry.
 - **Windows + a non-ASCII install path**: pass the AssetBundle root through an ASCII junction if a shell drops the
   CJK characters on the way to Python (e.g. `New-Item -ItemType Junction -Path $env:TEMP\akab -Target "<…>\AB\Windows"`).
 - **No install channel**: the server still never downloads or writes art; this is an owner-side extraction into
-  `plugins/`, exactly like a hand-made cosmetic plugin (`docs/PLUGINS.md` §9, §17).
+  `skins/sets/`, served read-only at `/skins/`.
 
 ## Known limitations
 

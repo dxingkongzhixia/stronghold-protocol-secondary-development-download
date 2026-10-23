@@ -68,6 +68,8 @@ export function serveDirs(opts) {
     sharedDir: opts.sharedDir || path.join(ROOT, 'shared'),
     packsDir,
     pluginsDir: opts.pluginsDir || path.join(path.dirname(path.resolve(packsDir)), 'plugins'),
+    // Core skin art + catalogue (docs/SKINS.md): a local extraction, never shipped in the repository. Served at /skins/.
+    skinsDir: opts.skinsDir || path.join(ROOT, 'skins'),
   };
 }
 

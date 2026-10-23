@@ -72,3 +72,6 @@ public/dev/simcheck/data/
 # machine-local trained bot prior (tools/train-bot.mjs; the loader tolerates its absence)
 server/match/botPrior.json
 server/match/botPrior.json.prev
+
+# 核心皮肤 (docs/SKINS.md): skins/catalogue.json is tracked metadata; the extracted official art under skins/sets/ is not.
+/skins/sets/

@@ -178,7 +178,7 @@ function cookieValue(header, name) {
 export async function startServer(opts = {}) {
   const { port, host } = listenAddress(opts);
   const log = opts.log || makeLogger(!!opts.quiet);
-  const { publicDir, dataDir, sharedDir, packsDir, pluginsDir } = serveDirs(opts);
+  const { publicDir, dataDir, sharedDir, packsDir, pluginsDir, skinsDir } = serveDirs(opts);
   const simDir = path.join(ROOT, 'server', 'sim');
 
   // The process-wide singleton serves the default data dir; a custom dir (tests) gets its own copy.
@@ -249,7 +249,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const hosts = createMatchHosts({ contents, log, options: { transport, maxWorkers: Math.max(1, policy.get().maxSets), ...(opts.matchHost || {}) } });
   const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content, plugins: roomSets, hosts });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
-  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, packs, content, log, assetIndex, views, visual, contents });
+  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, skinsDir, packs, content, log, assetIndex, views, visual, contents });
   // the plugin studio (DESIGN §32.9): its page and API for this machine and the local network; it watches plugins/ only
   // once it is used (hot reload), and rooms whose host is the author or alone follow a plugin's changes by themselves
   const studio = opts.studio === false ? null : createStudio({ publicDir, pluginsDir, dataDir, registry: packs, lobby, sessions: registry, log, fetch: opts.fetch });

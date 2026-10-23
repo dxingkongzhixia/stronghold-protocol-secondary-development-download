@@ -329,6 +329,8 @@ function cacheControlFor(ext, mountName, segments, query) {
   if (ext === '.html' || ext === '.htm' || ext === '.js' || ext === '.mjs' || ext === '.css') return 'no-store';
   // Non-code media may still be marked immutable by an explicit ?v= (clip URLs, older asset links).
   if (/(^|&)v=/.test(query)) return IMMUTABLE_CACHE;
+  // Core skin art (docs/SKINS.md): the catalogue revalidates, the pictures / Spine files are content-stable media.
+  if (mountName === 'skins') return ext === '.json' ? 'no-cache' : LONG_CACHE;
   // The asset/font/vendor tree keeps its long cache.
   if (mountName === 'public' && segments.length > 1 && LONG_CACHE_DIRS.includes(segments[0])) return LONG_CACHE;
   return 'no-cache';

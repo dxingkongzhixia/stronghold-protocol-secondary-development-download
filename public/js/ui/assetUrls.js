@@ -37,10 +37,17 @@ export function chessAvatarUrl(m, chess) {
  * @param {any} m
  * @param {any} chess
  */
-export function chessPortraitUrl(m, chess) {
+export function chessPortraitUrl(m, chess, opts = null) {
   const chars = obj(obj(m)?.chars);
   const id = str(chess?.assets?.portrait);
   if (!chars) return null;
+  // A chosen outfit's portrait, when the composed manifest carries one; the operator's own portrait is the fallback.
+  const skin = opts && typeof opts.skin === 'string' ? opts.skin : '';
+  if (skin && chess?.charId) {
+    const chosen = obj(chars[chess.charId]?.skins)?.[skin];
+    const art = str(chosen?.portrait) || str(chosen?.illust);
+    if (art) return art;
+  }
   if (id) {
     // A golden piece whose portrait id is the character key uses portraitE2 when the entry has one.
     // An entry with only `portrait` (a custom golden URL included) keeps that URL. Official ids are

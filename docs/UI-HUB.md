@@ -9,7 +9,7 @@
 | `classic` | 旧大厅 | 一屏式：三个模式卡 + 四张难度卡 + 加入同盟 + 提示 | [`../public/js/screens/lobby.js`](../public/js/screens/lobby.js) |
 | `hub` | 新大厅 | 程序化要塞背景 + 中央徽记 / 雷达 + 左右功能砖 + 右下三个大入口；点模式进入全屏「选择模拟协议」 | [`../public/js/screens/hub/lobby.js`](../public/js/screens/hub/lobby.js) |
 
-标题页两种模式共用（[`../public/js/screens/title.js`](../public/js/screens/title.js)）。Hub 只是大厅与协议选择页的皮肤，**不复制业务逻辑**：两套界面共用 `store`、`net`、`screens/online.js`、`screens/rooms.js`、`screens/stats.js`、`screens/sweep.js`、`screens/loadout.js` 和全部 `room.*` / `mm.*` 动作。
+标题页两种模式共用（[`../public/js/screens/title.js`](../public/js/screens/title.js)）。Hub 只是大厅、协议选择页和干员调配的皮肤，**不复制业务逻辑**：两套界面共用 `store`、`net`、`screens/online.js`、`screens/rooms.js`、`screens/stats.js`、`screens/sweep.js` 和全部 `room.*` / `mm.*` 动作。干员调配的**数据与同步**共用 `ui/loadoutSync.js` / `ui/loadoutModel.js`，只有界面不同：Hub 用 `screens/loadoutDeck.js`（特殊版的物资调配处卡片），经典大厅继续用 `screens/loadout.js`。
 
 Hub 的来源是 owner 的特殊 0.3.0 分支（Hub UI `b2bd17af` / Stardust-minus `d6e96f4`，GPL-3.0-or-later），移植时保留了原注释和授权说明；本项目整体仍是 GPL-3.0-or-later。
 
@@ -76,6 +76,13 @@ https://<host>/?ui=classic
 | `public/css/screens/hub.css` | Hub 布局、协议页、背景、主题、响应式 |
 | `public/js/screens/lobbyData.js` | 两套大厅共用的模式 / 难度 / 房间码纯函数 |
 | `public/js/screens/online.js` | 两套大厅共用的在线玩家浮层 |
+| `public/js/screens/loadoutDeck.js` | Hub 的干员调配（物资调配处卡片 / 快速配置 / 详情抽屉），移植自特殊版 |
+| `public/css/screens/loadout-deck.css` | Hub 干员调配样式；经典界面仍加载 `loadout.css` |
+| `public/js/ui/operatorPortrait.js` | 卡片立绘跟随本机皮肤选择 |
+| `public/js/ui/transitions.js` | 浮层淡出 / 保留挂载 |
+| `public/js/coreSkins.js` | 读取核心皮肤目录并交给 `cosmetics.setCore` |
+| `skins/catalogue.json` | 核心皮肤目录（tracked；美术在忽略的 `skins/sets/`） |
+| `tools/skins.mjs` | `import` / `build` 核心皮肤目录 |
 
 `lobbyData.js` 与 `online.js` 是从 `screens/lobby.js` 抽出的纯模块；`lobby.js` 继续 re-export 原有名字，旧的 import 和测试不需要改。
 
@@ -86,10 +93,10 @@ https://<host>/?ui=classic
 | 返回标题、ping、在线人数、公告 | 顶栏左 |
 | 大厅背景 / 设置 / 玩法说明 | 顶栏工具 |
 | 登录 / 注册、账号、统计 | 顶栏右 |
-| 公开房间、更新日志、资料库 | 左侧功能砖 |
+| 公开房间、更新日志 | 左侧功能砖 |
 | 加入同盟 / 观战 / 最近密钥 | 左侧「加入同盟」弹窗 |
-| 操作提示 | 左侧底部 |
 | S.W.E.E.P.、干员调配、统计 | 右侧功能砖 |
+| 资料库、作战提示 | **Hub 不提供**；仍保留在经典大厅 |
 | 三个模式 | 右下大入口 |
 | 难度、公开可见性、测试房间、创建 | 全屏「选择模拟协议」 |
 | 野排队列 / 退出 | 模式入口上方的队列条 |

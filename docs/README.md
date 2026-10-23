@@ -67,7 +67,7 @@
 | [`PLAYING.md`](PLAYING.md) | 玩家规则指南 | 当前 |
 | [`NEW-OPERATOR.md`](NEW-OPERATOR.md) | 新自造干员端到端配方 | 指南 |
 | [`CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | 盟约 / 策略 / 悬赏 / CODEX / 3D 主题 | 指南 |
-| [`SKINS.md`](SKINS.md) | 皮肤覆盖层、选择器、本地时装提取 | 参考 |
+| [`SKINS.md`](SKINS.md) | **核心皮肤**：目录、选择器、本地时装提取、渲染回退 | 当前 |
 | [`DEPLOY.md`](DEPLOY.md) | 防火墙、自启、反代、Docker | 参考 |
 | [`WINDOWS.md`](WINDOWS.md) | Windows 便携包 | 参考 |
 | [`RELAY.md`](RELAY.md) | 外部服务器目录站（非部署链路） | 参考 |

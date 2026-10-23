@@ -134,7 +134,7 @@ const CS_FILE = /^\/cs\/([0-9a-f]{16})\/([A-Za-z0-9._\/-]{1,200})$/;
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, rawPath: string, query: string) => Promise<void>}
  */
 export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = path.join(ROOT, 'server', 'sim'), packsDir = path.join(ROOT, 'packs'),
-  pluginsDir = path.join(path.dirname(path.resolve(packsDir)), 'plugins'), packs = null, content = null, log = noopLog,
+  pluginsDir = path.join(path.dirname(path.resolve(packsDir)), 'plugins'), skinsDir = path.join(ROOT, 'skins'), packs = null, content = null, log = noopLog,
   assetIndex = null, views = null, visual = null, contents = null }) {
   const registry = packs || createPluginRegistry({ publicDir, dataDir, packsDir, pluginsDir }, { log: /** @type {any} */ (log) });
   const sets = visual || (typeof registry.pluginFile === 'function' ? createVisualSets({ registry, log }) : null);
@@ -145,6 +145,9 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     { prefix: '/shared/', name: 'shared', dir: path.resolve(sharedDir) },
     // the simulation: ES modules only (no directory listings, no other file types, no Node-only loader)
     { prefix: '/sim/', name: 'sim', dir: path.resolve(simDir), only: new Set(['.js']), deny: SIM_PRIVATE },
+    // Core skin art (docs/SKINS.md): a local extraction under skins/sets/, plus the tracked catalogue. No directory
+    // listings; the catalogue is JSON and revalidates, the art keeps the long media cache.
+    { prefix: '/skins/', name: 'skins', dir: path.resolve(skinsDir) },
     { prefix: '/', name: 'public', dir: path.resolve(publicDir) },
   ];
   // the real path of public/studio/ (the plugin studio's page — never a static file, in whatever spelling the disk folds:

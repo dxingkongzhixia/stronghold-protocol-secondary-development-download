@@ -29,6 +29,28 @@ const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 export const EMPTY_MANIFEST = Object.freeze({});
 
 /**
+ * Core skins (docs/SKINS.md): merge `chars[<charId>].skins` (and the operator `illust`) of skins/catalogue.json into the
+ * page's own manifest. Unlike a plugin layer there is no document to compose: the catalogue already carries absolute
+ * /skins/… URLs, so the merge is a shallow record merge with a skins map. The input manifest is never mutated; the same
+ * object comes back when there is nothing to add (or the manifest is not loaded yet).
+ * @param {any} base @param {Record<string, any>} coreChars
+ */
+function mergeCoreSkins(base, coreChars) {
+  if (!isObj(base) || !isObj(base.chars) || !isObj(coreChars)) return base;
+  let touched = false;
+  const chars = { ...base.chars };
+  for (const [charId, rec] of Object.entries(coreChars)) {
+    if (!isObj(rec)) continue;
+    const prev = isObj(chars[charId]) ? chars[charId] : {};
+    const next = { ...prev, ...rec };
+    if (isObj(prev.skins) || isObj(rec.skins)) next.skins = { ...(prev.skins || {}), ...(rec.skins || {}) };
+    chars[charId] = next;
+    touched = true;
+  }
+  return touched ? { ...base, chars } : base;
+}
+
+/**
  * A URL as the layers keep it: a same-origin path (with its query), whatever form a loader reports it in (an `<img>`'s
  * absolute `src`, the manifest's own path); null for another origin or no URL.
  * @param {unknown} url
@@ -66,6 +88,8 @@ export function createCosmeticLayers() {
   /** @typedef {{ doc: any, prep: import('../../shared/plugins/visual.js').PreparedSet }} Layer */
   /** @type {Layer | null} */
   let room = null;
+  /** Core skins (skins/catalogue.json `chars`) — a plain record merge, no visual document. @type {Record<string, any>|null} */
+  let core = null;
   /** @type {(Layer & { id: string })[]} */
   let personal = [];
   /** @type {Set<string>} plugin URLs that failed to load */
@@ -110,6 +134,18 @@ export function createCosmeticLayers() {
   };
   const later = (what) => loadVisual().then(what, (err) => console.warn('[cosmetics] shared/plugins/visual.js did not load', err));
   return {
+    /**
+     * Core skins: the `chars` map of skins/catalogue.json. Applied under every room/personal layer, so a plugin may
+     * still override an entry. `null` clears them.
+     */
+    setCore(chars) {
+      const next = isObj(chars) ? chars : null;
+      if (next === core) return;
+      core = next;
+      changed();
+    },
+    /** The core skins applied, or null. */
+    get core() { return core; },
     /** The room's visual set: its checked document (/vs/<vs16>/overlay.json), or null (no room, a room without plugins). */
     setRoom(doc) {
       const next = isObj(doc) ? doc : null;
@@ -134,8 +170,8 @@ export function createCosmeticLayers() {
     get room() { return room ? room.doc : null; },
     /** The personal plugins applied: `[{ id, doc }]`. */
     get personal() { return personal; },
-    /** Is any layer on (a room set or a personal plugin)? */
-    get active() { return !!room || personal.length > 0; },
+    /** Is any layer on (core skins, a room set or a personal plugin)? */
+    get active() { return !!core || !!room || personal.length > 0; },
     /**
      * A file of a layer failed to load (an image, a Spine model — any of its files —, a sound): its writes are left out
      * from now on and the listeners are told (the entry draws the art beneath it). Whether it was one of the layers'.
@@ -156,22 +192,26 @@ export function createCosmeticLayers() {
     /** `fn(reasons, count)` when writes had to be left out (see above); one listener. */
     onDrop(fn) { dropFn = typeof fn === 'function' ? fn : null; },
     apply(base) {
-      if (!room && !personal.length) return base;
+      if (!core && !room && !personal.length) return base;
       const key = isObj(base) ? base : EMPTY_MANIFEST;
       const hit = memo.get(key);
       if (hit && hit.gen === gen) return hit.value;
-      // (a layer is only ever set with shared/plugins/visual.js there)
-      const { manifest, dropped } = visual.layVisualOps(key, [...(room ? [room.prep] : []), ...personal.map((p) => p.prep)], { failed });
-      // a reference the page's manifest lacks (told once per change, for a manifest that is loaded)
-      if (dropped.length && key !== EMPTY_MANIFEST && toldLay !== gen) {
-        toldLay = gen;
-        try { dropFn?.(dropped, dropped.length); } catch { /* the listener's own trouble */ }
-      }
-      let value = manifest;
-      if (fxLib) {
-        const fx = {};
-        for (const layer of [...(room ? [room] : []), ...personal]) for (const op of effectsOf(layer.doc)) fx[op.at[1]] = op.value;
-        if (Object.keys(fx).length) value = { ...manifest, fx: { ...(manifest.fx || {}), ...fx } };
+      // core skins first: an installation-level layer every page has, under the room's and the player's plugin layers
+      let value = core ? mergeCoreSkins(key, core) : key;
+      if (room || personal.length) {
+        // (a plugin layer is only ever set with shared/plugins/visual.js there)
+        const { manifest, dropped } = visual.layVisualOps(value, [...(room ? [room.prep] : []), ...personal.map((p) => p.prep)], { failed });
+        // a reference the page's manifest lacks (told once per change, for a manifest that is loaded)
+        if (dropped.length && key !== EMPTY_MANIFEST && toldLay !== gen) {
+          toldLay = gen;
+          try { dropFn?.(dropped, dropped.length); } catch { /* the listener's own trouble */ }
+        }
+        value = manifest;
+        if (fxLib) {
+          const fx = {};
+          for (const layer of [...(room ? [room] : []), ...personal]) for (const op of effectsOf(layer.doc)) fx[op.at[1]] = op.value;
+          if (Object.keys(fx).length) value = { ...manifest, fx: { ...(manifest.fx || {}), ...fx } };
+        }
       }
       memo.set(key, { gen, value });
       return value;

@@ -112,5 +112,22 @@ describe('both main interfaces keep shipping', () => {
     const html = read('public/index.html');
     assert.ok(html.indexOf('/ui-config.js') < html.indexOf('src="/js/main.js"'), 'the switch is read before the module entry');
     assert.match(html, /\/css\/screens\/hub\.css/);
+    assert.doesNotMatch(html, /\/css\/screens\/loadout\.css/, 'the loadout stylesheet is picked at boot (deck vs classic)');
+  });
+
+  test('作战提示 and 资料库 stay in the classic lobby only', () => {
+    const hub = read('public/js/screens/hub/lobby.js');
+    const classic = read('public/js/screens/lobby.js');
+    assert.doesNotMatch(hub, /HubTips|openCodex|ARCHIVE/);
+    assert.match(classic, /TACTICAL TIPS/);
+    assert.match(classic, /openCodex/);
+  });
+
+  test('the Hub also switches the loadout renderer', () => {
+    const main = read('public/js/main.js');
+    assert.match(main, /import\('\.\/screens\/loadoutDeck\.js'\)/);
+    assert.match(main, /ClassicLoadoutHost/);
+    assert.match(read('public/js/screens/loadoutDeck.js'), /export function LoadoutHost\(/);
+    assert.match(read('public/js/screens/loadout.js'), /export function LoadoutHost\(/);
   });
 });

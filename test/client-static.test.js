@@ -1353,11 +1353,16 @@ describe('public/index.html stylesheet links', () => {
   const index = readFileSync(path.join(PUBLIC, 'index.html'), 'utf8');
   const sheets = [...index.matchAll(/<link rel="stylesheet" href="(\/css\/[^"]+)"/g)].map((x) => x[1]);
 
-  test('links every stylesheet under public/css', () => {
+  test('links every stylesheet under public/css (the two loadout variants are chosen at boot)', () => {
+    // 干员调配 has one stylesheet per main interface (docs/UI-HUB.md); main.js appends the right one for `UI_MODE`.
+    const conditional = new Set(['/css/screens/loadout.css', '/css/screens/loadout-deck.css']);
     for (const file of CSS_FILES) {
       const href = fileToUrlPath(file);
+      if (conditional.has(href)) continue;
       assert.ok(sheets.includes(href), `index.html does not link ${href}`);
     }
+    const main = readFileSync(path.join(PUBLIC, 'js', 'main.js'), 'utf8');
+    for (const href of conditional) assert.ok(main.includes(href), `main.js does not choose ${href}`);
   });
 
   test('links the 统计数据 overlay stylesheet (`.st` is only position:fixed with it)', () => {

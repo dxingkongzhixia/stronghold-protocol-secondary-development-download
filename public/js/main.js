@@ -59,7 +59,7 @@ import { GuideHost } from './ui/guide.js';
 import { CodexHost } from './ui/codex.js';
 import { BugReportHost } from './ui/community.js';
 import { installDeviceSupport } from './ui/device.js';
-import { LoadoutHost } from './screens/loadout.js';
+import { LoadoutHost as ClassicLoadoutHost } from './screens/loadout.js';
 import { StatsHost } from './screens/stats.js';
 import { AssetModePrompt } from './ui/assetMode.js';
 import { recordResult, installStatsRecorder, setStatsUploader } from './ui/stats.js';
@@ -74,7 +74,7 @@ import { recordError, installTrafficMeter } from './diag.js';
 import { initAssetMirror, installImageFallback, mirrorRouteUrl, mirrorCandidates } from './assetMirror.js';
 import { idbSupported, setIdbEnabled } from './assetIdb.js';
 import { installContent, installContentSet } from './content.js';
-import { cosmetics } from './cosmetics.js';
+import { installCoreSkins } from './coreSkins.js';
 
 // Main interface (server/uiMode.js + /ui-config.js): only the chosen lobby is downloaded. Both screens share the same
 // store, net actions and overlays; `?ui=` previews the other one in this tab without changing the server setting.
@@ -84,6 +84,19 @@ if (UI_PREVIEW) console.info(`[ui] preview: ${UI_PREVIEW}`);
 const { LobbyScreen } = UI_MODE === 'classic'
   ? await import('./screens/lobby.js')
   : await import('./screens/hub/lobby.js');
+// 干员调配 follows the same switch: the Hub uses the special fork's 物资调配处 deck (screens/loadoutDeck.js), the classic
+// lobby keeps our list/detail screen. Both open through the same loadout store and sync; only the renderer differs.
+const { LoadoutHost } = UI_MODE === 'hub'
+  ? await import('./screens/loadoutDeck.js')
+  : { LoadoutHost: ClassicLoadoutHost };
+// One stylesheet per variant (they share the `.lo*` namespace, so loading both would let the deck's base rules override
+// the classic screen). Appended before the first render; the overlay is opened later, so this is not render-blocking.
+try {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = UI_MODE === 'hub' ? '/css/screens/loadout-deck.css' : '/css/screens/loadout.css';
+  document.head.appendChild(link);
+} catch { /* no DOM in tests */ }
 
 const RESTORE_GRACE_MS = 1500;
 
@@ -722,6 +735,8 @@ async function boot() {
   rehearsal = installRehearsal({ net });
   // the room's cosmetic plugins and the player's own over the art manifest (content.js; nothing is fetched without them)
   installContent({ toast });
+  // 核心皮肤：skins/catalogue.json is laid under the plugin layers (docs/SKINS.md); a missing catalogue is harmless.
+  installCoreSkins();
   // a room with gameplay plugins: its content set downloaded, checked and shown (content.js — DESIGN §32.6)
   installContentSet({ toast });
   net.attachBrowserHooks();
