@@ -159,6 +159,7 @@ import { IDENTITY, bossPrepField, tilesToDisp, leaderStand } from './prepfield.j
 import { pickOnTile, pickBattle, hitTiles } from './pick.js';
 import { promotionsOf } from './promote.js';
 import { ensurePixi } from './app/pixi.js';
+import { advanceEffectClock } from './app/playback.js';
 import { pieceDirOf, pickUnitOf } from './app/pick.js';
 import { CAMERA_MS, BOARD3D_STABLE_MS, BOARD3D_RETRY_MS, PEN_CAMERA_MS, RANGE_GROUPS, LEADER_HIT_STYLE, DRAG_HOLD_TILES, CHAIN_KINDS, DROP_PENDING_MS, DEPLOY_REPLAY_MS } from './app/tune.js';
 import { boardPreference, switchableBox, bandFor, fieldRows, boardArea, viewKind, restView, flightView } from './app/view.js';
