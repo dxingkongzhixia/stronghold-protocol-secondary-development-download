@@ -135,14 +135,16 @@
 .sw-op.is-standin img { filter: saturate(.55); }
 /* enemy thumbnails */
 .sw-ethumbs { display: flex; flex-wrap: wrap; align-items: center; gap: .08rem; }
-/* 敌方情报 (owner 2026-10-24): the type's enemies at the 敌方图鉴's size — four columns of large square faces, the
-   rest scrolls inside the box instead of shrinking to the old 74 px thumbnails. */
+/* 敌方情报 (owner 2026-10-24): the type's enemies at the 敌方图鉴's size — five large square faces per row, two rows in
+   the box, the rest scrolls. flex (not grid) so the rows never compress/overlap when max-height is smaller than the
+   content; 100cqw is .sw-box's content width, so the cap is exactly two rows + the row gap. */
 .sw-ethumbs--grid {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .1rem;
-  max-height: min(4.2rem, 34vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  display: flex; flex-wrap: wrap; align-content: flex-start; gap: .1rem;
+  max-height: 3.2rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
   padding-right: .04rem;
 }
-.sw-ethumbs--grid .sw-eth { width: 100%; height: auto; aspect-ratio: 1; }
+.sw-ethumbs--grid .sw-eth { flex: none; width: calc((100% - .4rem) / 5); height: auto; aspect-ratio: 1; }
+@supports (height: 1cqw) { .sw-ethumbs--grid { max-height: calc(2 * ((100cqw - .4rem) / 5) + .1rem); } }
 .sw-ethumbs__sep { padding: 0 .04rem 0 .08rem; font-size: max(calc(.14 * var(--t)), 10px); color: #aab4b1; border-left: 1px solid rgba(255, 255, 255, .18); }
 .sw-eth { position: relative; display: block; flex: none; padding: 0; overflow: hidden; background: #3a3f3e; border: 1px solid rgba(255, 255, 255, .28); }
 button.sw-eth { cursor: pointer; }
