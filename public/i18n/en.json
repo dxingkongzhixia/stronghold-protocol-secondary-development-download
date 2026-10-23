@@ -1823,5 +1823,13 @@
   "重构中 {s}s": "Reforming {s}s",
   "重构 {left}/{max}": "Reforms {left}/{max}",
   "协议已执行": "Protocol executed",
-  "清除协议 {s}s": "Clear protocol {s}s"
+  "清除协议 {s}s": "Clear protocol {s}s",
+  "盟约效果剩余时间": "Bond effect timers",
+  "在选中单位的详情中显示叙拉古、萨尔贡效果的剩余时间；萨尔贡显示层数与下一层到期时间。官方界面没有这些数字。": "Show remaining Siracusa and Sargon effect times in the selected unit’s details. Sargon shows the stack count and next expiry. These numbers are not in the official interface.",
+  "萨尔贡·技能增益": "Sargon · Skill buff",
+  "叙拉古·部署攻速": "Siracusa · Deployment ASPD",
+  "叙拉古·部署隐匿": "Siracusa · Deployment stealth",
+  "叙拉古·脱隐后触发窗口": "Siracusa · Post-stealth proc window",
+  "{n} 层 · 下一层 {s} 秒": "{n} stacks · Next expiry in {s}s",
+  "剩余 {s} 秒": "{s}s remaining"
 }

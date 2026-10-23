@@ -8,9 +8,9 @@ Decision rule: do not merge the branch; port only what this fork needs, with its
 
 | Decision | Count / scope |
 |---|---|
-| Ported | `removeBuff` re-entrancy fix; Wild Mane S2 rear radial push (#782); settlement title/button/item-slot fixes (#745) |
+| Ported | `removeBuff` re-entrancy fix; Wild Mane S2 rear radial push (#782); settlement title/button/item-slot fixes (#745); bond-timer readout (#746) |
 | Not applicable to this fork | asset-download readiness count (`#725`) |
-| Candidates, later | picture-only outfits, bond-timer readout |
+| Candidates, later | picture-only outfits |
 | Deferred, not plugin core | external AI / bot strategies |
 | Docs / merge commits | no code by themselves |
 
@@ -22,7 +22,7 @@ Decision rule: do not merge the branch; port only what this fork needs, with its
 | `ca185d064` `72bef87c0` | asset download ready count (`#725`) | **Not applicable** | This fork has no `public/js/ui/assetDownload.js`; its asset-cache UI is different. |
 | `77b91081c` `3f6c07863` | picture-only outfits (avatar/portrait, default battle model) | **Candidate** | Plugin/skin-adjacent, but a large client-wide feature. Owner decision 2026-10-20 keeps it out; an appearance plugin must ship a Spine model. |
 | `60d182c3d` `a3190a4e7` | skill-clip mappings for six operators | **Ported** (`c38adb532`) | VFX quality improvement; only the mapping and one test assertion were adapted to this fork. |
-| `84fbd1cb9` `30089aac5` | bond-timer readout on the selected unit card | **Deferred** | UI/gameplay convenience; not a plugin compatibility blocker. |
+| `84fbd1cb9` `30089aac5` | bond-timer readout on the selected unit card (`#746`) | **Ported** | Optional, off-by-default HUD backed by simulation snapshots; labels translated in all shipped packs and covered by `test/content/bond-timers.test.js`, `test/match/bond-timers.test.js` and `test/ui/bond-timers.test.js`. |
 | `ea2548c4b` `9e57431ae` `38a1eb840` | strategy pick opens enemy information (`#484`) | **Ported** (`1c55157a7`) | `ui/matchEnemies.js` is shared by the briefing, the draft dialog and match info; `test/ui/match-info.test.js` passes. |
 | `a1b6b86d1` | result-screen translated titles, CSS button fallback, item-slot bounds (#745) | **Ported (settlement only)** | Took `settle.js` / `settle.css` and the unit tests; the unrelated Python 3.8 CI and docs history were not merged. |
 | `6da62da73` | late-entry test accepts the re-entry block form | **Not needed** | Test-only adaptation for the `#746` merge; no matching code here. |
