@@ -95,7 +95,7 @@
   background: rgba(24, 29, 28, .8); border: 1px solid rgba(255, 255, 255, .12); text-shadow: none; }
 .sw-chip img { width: max(.22rem, 14px); height: max(.22rem, 14px); object-fit: contain; }
 .sw-box { flex: none; display: flex; flex-direction: column; gap: .1rem; padding: .1rem .14rem .14rem; background: var(--sw-panel); border-top: 1px solid rgba(255, 255, 255, .1);
-  box-shadow: 0 .05rem .2rem rgba(0, 0, 0, .3); }
+  box-shadow: 0 .05rem .2rem rgba(0, 0, 0, .3); container-type: inline-size; }
 .sw-box__head { display: flex; align-items: center; justify-content: space-between; gap: .12rem; min-height: max(.4rem, 26px); }
 .sw-box__k { display: inline-flex; align-items: center; gap: .08rem; font-size: max(calc(.2 * var(--t)), 12px); font-weight: 800; }
 .sw-box__k .icon { width: max(.22rem, 14px); height: max(.22rem, 14px); color: #c7cfcd; }
@@ -106,7 +106,16 @@
   color: #eef2f1; background: rgba(0, 0, 0, .5); border: 1px solid rgba(255, 255, 255, .22); border-radius: 999px; cursor: pointer; }
 .sw-look:hover { border-color: var(--mint-500); color: var(--mint-300, #8ff0d2); }
 .sw-look .icon { width: max(.2rem, 12px); height: max(.2rem, 12px); }
-.sw-ops { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .1rem; }
+/* 对应干员 (owner 2026-10-24): four columns × two rows = eight faces visible; more members scroll inside this box
+   instead of pushing the bond description off-screen. 100cqw = the .sw-box content width (container-type above), so
+   the cap is exactly two rows + the row gap on every screen. */
+.sw-ops {
+  display: flex; flex-wrap: wrap; align-content: flex-start; gap: .1rem;
+  max-height: 3.4rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  padding-right: .04rem;
+}
+.sw-ops .sw-op { flex: none; width: calc((100% - .3rem) / 4); }
+@supports (height: 1cqw) { .sw-ops { max-height: calc(2 * ((100cqw - .3rem) / 4) + .1rem); } }
 .sw-op { --tc: var(--tier-1); position: relative; aspect-ratio: 1; padding: 0; overflow: hidden;
   background: linear-gradient(180deg, #d7dcda, #a9b1ae); border: 1px solid rgba(255, 255, 255, .5); }
 .sw-op--t2 { --tc: var(--tier-2); }
@@ -250,7 +259,7 @@ button.sw-eth:hover { border-color: #fff; }
   .sw-hero__name { font-size: max(calc(0.375 * var(--t)), 15px); }
   .sw-sec__grid { gap: 8px; padding: 10px 10px 0; }
   .sw-tile__cap { display: none; }
-  .sw-ops { grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); }
+  .sw-ops .sw-op { width: calc((100% - .3rem) / 4); }
   .sw-cd__name { font-size: max(calc(0.4 * var(--t)), 16px); }
 }
 @media (max-aspect-ratio: 1/1) {

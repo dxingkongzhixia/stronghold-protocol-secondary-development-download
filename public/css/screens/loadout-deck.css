@@ -939,3 +939,52 @@
 @media (prefers-reduced-motion: reduce) {
   .lo, .lo *, .own *, .diy * { animation-delay: 0ms !important; }
 }
+
+/* 皮膚圖鑑 (owner 2026-10-24): the Hub deck keeps the classic picker's tall 5-column tiles and its large preview,
+   instead of the fork's compact list-like rows. Scoped to the deck root so the classic screen's own rules win there. */
+.lo--deck .lo-skins {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .1rem; align-items: start; width: 100%;
+}
+.lo--deck .lo-skin {
+  position: relative; flex: none; width: auto; max-width: none; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; align-items: stretch; gap: .04rem; padding: .06rem;
+  font: inherit; color: var(--text-md); text-align: left; cursor: pointer;
+  background: rgba(255, 255, 255, .025); border: 1px solid var(--line);
+  transition: background var(--t-fast), border-color var(--t-fast); touch-action: manipulation;
+}
+.lo--deck .lo-skin:hover:not(:disabled) { border-color: var(--line-3); }
+.lo--deck .lo-skin:active { transform: scale(.98); }
+.lo--deck .lo-skin:focus-visible { outline: 2px solid var(--mint-400); outline-offset: 2px; }
+.lo--deck .lo-skin.is-on {
+  color: var(--text-hi); background: linear-gradient(180deg, rgba(78, 216, 175, .14), rgba(78, 216, 175, .02) 75%);
+  border-color: rgba(78, 216, 175, .7);
+}
+.lo--deck .lo-skin__art {
+  position: relative; flex: none; width: 100%; height: auto; aspect-ratio: 1 / 2;
+  min-height: max(1.5rem, 130px); display: block; overflow: hidden;
+  background: rgba(0, 0, 0, .35); border: 1px solid var(--line); border-radius: 0;
+}
+.lo--deck .lo-skin__art img {
+  position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top;
+}
+.lo--deck .lo-skin__art > .lo-skin__art--faceimg { display: none; }
+.lo--deck .lo-skin__art--none {
+  position: absolute; inset: 0; width: auto; height: auto;
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .06) 0 3px, transparent 3px 7px);
+}
+.lo--deck .lo-skin--fallback .lo-skin__art { opacity: .72; }
+.lo--deck .lo-skin__text { flex: none; min-width: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: .01rem; }
+.lo--deck .lo-skin__name { font-size: max(.16rem, 11px); line-height: 1.2; font-weight: 700; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lo--deck .lo-skin__group { font-family: var(--font-num); font-size: max(.12rem, 9px); line-height: 1.2; letter-spacing: .06em; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the enlarged view is a modal portal, outside .lo--deck: the classic preview's size (65dvh, centred) */
+.lo-skin-preview { display: flex; align-items: center; justify-content: center; }
+.lo-skin-preview img { display: block; max-width: 100%; max-height: 65dvh; object-fit: contain; }
+
+/* phones in landscape: the classic picker's fallback from its tall 1:2 box to the 1:1 avatar */
+@media (max-height: 560px) and (max-aspect-ratio: 3/2) {
+  .lo--deck .lo-skins { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .lo--deck .lo-skin__art { aspect-ratio: 1 / 1; min-height: max(.9rem, 78px); }
+  .lo--deck .lo-skin__art img { display: none; }
+  .lo--deck .lo-skin__art > .lo-skin__art--faceimg { display: block; }
+}
