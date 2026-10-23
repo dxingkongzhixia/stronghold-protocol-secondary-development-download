@@ -8,10 +8,10 @@ Decision rule: do not merge the branch; port only what this fork needs, with its
 
 | Decision | Count / scope |
 |---|---|
-| Ported | `removeBuff` re-entrancy fix |
+| Ported | `removeBuff` re-entrancy fix; Wild Mane S2 rear radial push (#782) |
 | Not applicable to this fork | asset-download readiness count (`#725`) |
 | Candidates, later | picture-only outfits, skill-clip mappings, bond-timer readout |
-| Deferred, not plugin core | strategy-info popup, result-screen CSS, external AI / bot strategies, 野鬃 behind push |
+| Deferred, not plugin core | strategy-info popup, result-screen CSS, external AI / bot strategies |
 | Docs / merge commits | no code by themselves |
 
 ## Commit groups
@@ -27,7 +27,7 @@ Decision rule: do not merge the branch; port only what this fork needs, with its
 | `a1b6b86d1` | result-screen translated titles/CSS, Python 3.8 CI, 0.3.2 notes | **Deferred** | UI/CI cleanup; no plugin behavior. |
 | `6da62da73` | late-entry test accepts the re-entry block form | **Not needed** | Test-only adaptation for the `#746` merge; no matching code here. |
 | `4908a73b2` `ba3f86bd8` `835f2dbfd` `868cd6e07` `81fb9611d` | bot-strategy hooks, external AI, advisor mode | **Deferred / separate** | This is an AI/ops feature, not plugin compatibility. It needs a product decision, config, transports and tests. |
-| `a26ffab3f` `23dfa3d79` | 野鬃 S2 radial behind push (`#782`) | **Deferred** | Gameplay/sim change; port only with a dedicated sim validation batch. |
+| `a26ffab3f` `23dfa3d79` | Wild Mane S2 radial behind push (`#782`) | **Ported** (`1b58cdd7b`, golden `e6aafeeff`) | Gameplay accuracy; behind targets move radially away at the reduced force row, with the dedicated sim regression tests. Canonical record: `UPSTREAM-MERGES` 13.10. |
 | `20807cb5d` `35ded423b` `b1cea7417` `bf7af482e` | strategy-info merge/docs | **Deferred** | Merge/documentation commits; no plugin work. |
 
 ## Ported change
