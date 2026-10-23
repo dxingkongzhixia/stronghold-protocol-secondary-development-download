@@ -214,7 +214,8 @@ describe('3: the temp overflow row (临时整备区)', () => {
     assert.ok(why, 'visible reason');
     assert.equal(textOf(why), '临时整备区 2 个单位待处理');
     const btn = [...walk(v)].find((n) => n.type === 'button');
-    assert.equal(btn.props.disabled, true);
+    assert.equal(btn.props['aria-disabled'], 'true');
+    assert.equal(btn.props.disabled, undefined);
     // empty temp: no reason, enabled
     const ok = ReadyToggle({ priv: priv([null, null, null, null, null]), onToggle() {} });
     assert.equal([...walk(ok)].find((n) => hasClass(n, 'readywrap__why')), undefined);
@@ -227,7 +228,8 @@ describe('3: the temp overflow row (临时整备区)', () => {
       const v = ReadyToggle({ priv: { ...priv(temp), canReady: false, personalChoice: { id: 'choice.1' } }, onToggle() {} });
       const nodes = [...walk(v)];
       const btn = nodes.find((n) => n.type === 'button');
-      assert.equal(btn.props.disabled, true);
+      assert.equal(btn.props['aria-disabled'], 'true');
+    assert.equal(btn.props.disabled, undefined);
       assert.equal(btn.props['aria-describedby'], 'readywrap-why');
       assert.equal(textOf(nodes.find((n) => hasClass(n, 'readywrap__why'))), '请先完成教鞭选择');
       assert.equal(nodes.find((n) => n.type?.name === 'Tooltip').props.text, '请先完成教鞭选择');
