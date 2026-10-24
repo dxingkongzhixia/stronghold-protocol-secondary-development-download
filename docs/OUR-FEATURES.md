@@ -63,6 +63,14 @@ Read this together with:
 > full-body art (`chars[charId].illust`, `tools/illust.mjs`) and every **core skin's** `illust` (the catalogue in
 > `docs/SKINS.md`); the stored value is a charId or a `charId@skinKey`, and it changes the card picture only, never the
 > battle model (`room.skins`).
+>
+> **2026-10-25 — 主界面音乐 (Hub music picker).** The Hub's topbar carries a music chip; its dialog lists the game's
+> official 主界面 music catalogue (24 tracks: 主题 / 活动 / 联动 / 危机合约 from `excel/audio_data.json` `musics[]`,
+> `tools/assets/lobby-music.mjs`), with tabs, search and a BGM volume slider. Files are local
+> (`audio/music/<id>_{intro,loop}.mp3`, `tools/lobby-music.mjs`), the pick is per browser
+> (`settings.lobbyMusic`), and it applies to the Hub route only — a room's lobby, the title and every battle keep their
+> own tracks (`public/js/audio.js` installAudio). `resolveBgm` falls back to `bgm.lobby` if the manifest lacks the id.
+> Absent upstream — `public/js/ui/musicPicker.js` + `public/css/screens/hub.css` are the wiring.
 
 **What it is.** Eight operators not in the official season roster are injected into the generated season tables as
 formal shop chess, each with a data entry, a hand-written kit, and (usually) art/voice. They are added through

@@ -78,6 +78,8 @@ https://<host>/?ui=classic
 | `public/js/screens/online.js` | 两套大厅共用的在线玩家浮层 |
 | `public/js/screens/loadoutDeck.js` | Hub 的干员调配（物资调配处卡片 / 快速配置 / **右侧**详情抽屉），移植自特殊版 |
 | `public/css/screens/loadout-deck.css` | Hub 干员调配样式；经典界面仍加载 `loadout.css` |
+| `public/js/ui/musicPicker.js` | 顶栏音乐芯片 +「主界面音乐」弹窗（官方曲库、分类、搜索、音量） |
+| `tools/lobby-music.mjs` · `tools/assets/lobby-music.mjs` | 主界面音乐下载 / 清单与曲目 id 表（`docs/ASSETS.md`） |
 | `public/js/ui/operatorPortrait.js` | 卡片立绘跟随本机皮肤选择 |
 | `public/js/ui/transitions.js` | 浮层淡出 / 保留挂载 |
 | `public/js/ui/achievements.js` | 成就统计：左侧成就卡 + 全屏面板（两套大厅共用，各自接线） |
@@ -94,7 +96,7 @@ https://<host>/?ui=classic
 | 现有功能 | Hub 位置 |
 |---|---|
 | 返回标题、ping、在线人数、公告 | 顶栏左 |
-| 大厅背景 / 设置 / 玩法说明 | 顶栏工具 |
+| 大厅背景 / 主界面音乐 / 设置 / 玩法说明 | 顶栏工具（音乐芯片显示当前曲名；窄屏只留音符图标） |
 | 登录 / 注册、账号、统计 | 顶栏右 |
 | 公开房间 | 右侧「公开房间」实时面板（最多 3 个，组队中优先；正在模拟按有 AI、观战人数排序；组队中→加入、正在模拟→观战；标注 原版 / MOD；全部 → 完整目录） |
 | 更新日志 | 左侧功能砖 |
@@ -107,6 +109,7 @@ https://<host>/?ui=classic
 | 三个模式 | 右下大入口 |
 | 难度、公开可见性、测试房间、创建 | 全屏「选择模拟协议」 |
 | 野排队列 / 退出 | 在「选择模拟协议」页点「搜寻队友」后**留在该页**，按钮变成「退出匹配」并显示 n/4、已等待与 AI 补位倒计时；退出后仍在该页。返回 Hub 时队列条显示在模式入口上方 |
+| 主界面音乐 | 顶栏音符芯片 → 弹窗：默认主题 + 24 首官方主界面 / 活动 / 联动 / 危机合约曲目，按分类分页、可搜索；点选即播，选择存在本机 `settings.lobbyMusic`。只替换 Hub 的 BGM——标题、房间大厅与作战仍用各自曲目，不影响队友 |
 | 深度链接 `?room=` | 由 `main.js` 处理，与界面无关 |
 | 离开同盟后的返回 | 从完整公开房间目录进入 → 公开房间；从「选择模拟协议」创建 → 协议选择页；从主界面公开房间面板进入 → 主界面 |
 
@@ -123,4 +126,5 @@ https://<host>/?ui=classic
 - Hub CSS 依赖 `--ui-unit` / `--utility-text`（在 `hub.css` 的 `:root` 中定义，未定义时有 fallback）。不要把这两个变量删掉。
 - `hub.css` 在 `index.html` 中始终加载（约 58 KB，gzip 后很小），这样切到 Hub 时首屏不会闪无样式；经典界面不受 `.hub-*` 选择器影响。
 - 主题 / 自定义背景是**每个浏览器**的偏好，存在本机 IndexedDB / localStorage，不跟账号走，也不上传。
+- 主界面音乐同理：`settings.lobbyMusic` 只在本机，进房间 / 作战时不生效。Hub 的 `lobby` 路由才换成 `lobby:<id>`；标题页与房间大厅仍是模式默认曲（`public/js/audio.js` installAudio 的路由同步）。清单缺少所选 id 时 `resolveBgm` 回退到 `bgm.lobby`，不会静音。
 - 新增大厅功能时，两套界面都要接线；共用逻辑优先放进 `lobbyData.js` / `online.js` / `rooms.js`，不要再复制一份。

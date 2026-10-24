@@ -24,6 +24,7 @@
 import { RAW, joinUrl, safeName, urlBase, urlDir } from './sources.mjs';
 import { kindOf } from './formats.mjs';
 import { pickUnitSfx, pickModeAttacks, pickModeHits, skillModeLetter, SLOT_MODE_LETTER, UI_SFX, BATTLE_SFX, resolveSpec, indexVoice, VOICE_DIRS, VOICE_BATTLE_SLOTS } from './audio.mjs';
+import { LOBBY_MUSIC } from './lobby-music.mjs';
 import { literal } from './manifest.mjs';
 import { EMOTE_CATALOG } from '../../shared/constants.js';
 
@@ -671,6 +672,18 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
     ...(combatAlts.length ? { combatAlts } : {}),
     ...(unite ? { unite } : {}),
   };
+  // 主界面音乐 (the Hub's picker, tools/assets/lobby-music.mjs): the official 音乐鉴赏 `musics[]` entries, one intro /
+  // loop pair each. The id is the catalogue id, so the client's saved pick survives a manifest rebuild; a track whose
+  // bank is missing from this audio dump is skipped and the client falls back to `bgm.lobby`.
+  const lobbyMusic = {};
+  for (const item of LOBBY_MUSIC) {
+    const m = typeof audio.music === 'function' ? audio.music(item.id) : null;
+    if (!m) { notes.push(`lobby music ${item.id} not in audio_data (skipped)`); continue; }
+    const entry = { name: m.name, group: item.group };
+    if (m.intro) entry.intro = leaf(alt(`audio/music/${item.id}_intro.mp3`, joinUrl(RAW.aa2voice, m.intro)));
+    entry.loop = leaf(alt(`audio/music/${item.id}_loop.mp3`, joinUrl(RAW.aa2voice, m.loop)));
+    lobbyMusic[item.id] = entry;
+  }
   const bossBgm = {};
   for (const lv of Object.values(maps05?.roundLevels || {})) {
     if (typeof lv?.bgm !== 'string') continue;
@@ -730,6 +743,7 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
     audio: {
       bgm,
       bossBgm: Object.fromEntries(Object.entries(bossBgm).sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true }))),
+      lobbyMusic,
       voice,
       ...(voiceJp ? { voiceJp: voiceTree(VOICE_JP_LANG) } : {}),
       sfx: { ui: sfxUi, battle: sfxBattle, units: unitsSfx, pools: sfxPools },

@@ -2037,5 +2037,20 @@
   "选择后，同盟里的博士都会看到这个头像。": "Once chosen, every doctor in the alliance sees this avatar.",
   "上传图片，或从干员头像里选一个；同盟里的博士都会看到。": "Upload an image, or pick an operator avatar; every doctor in the alliance sees it.",
   "正在寻找同盟队友 {waiting}/{need} · 已等待 {elapsed} · {left}": "Searching for alliance teammates {waiting}/{need} · waited {elapsed} · {left}",
-  "{left} 后由 AI 补位": "AI fills in {left}"
+  "{left} 后由 AI 补位": "AI fills in {left}",
+  "主界面音乐：{name}": "Lobby music: {name}",
+  "主界面音乐": "Lobby music",
+  "正在播放 · 主界面": "Now playing · Main interface",
+  "进入作战后仍使用房间的对战音乐；选择只保存在当前浏览器。": "Battles still use the room's combat music; your choice is saved in this browser only.",
+  "搜索曲目": "Search tracks",
+  "默认主题（卫戍协议）": "Default theme (Stronghold Protocol)",
+  "原版主界面": "Original lobby",
+  "主题": "Themes",
+  "活动": "Events",
+  "联动": "Crossovers",
+  "危机合约": "Contingency Contract",
+  "没有匹配的曲目": "No matching tracks",
+  "资源清单尚未加载；请稍后再试。": "The asset manifest has not loaded yet; please try again.",
+  "音乐音量": "Music volume",
+  "曲目来自明日方舟游戏内「音乐鉴赏」的主界面音乐；版权归鹰角网络 / 塞壬唱片所有。": "Tracks come from Arknights' in-game Music Gallery lobby themes; all rights belong to Hypergryph / Monster Siren Records."
 }

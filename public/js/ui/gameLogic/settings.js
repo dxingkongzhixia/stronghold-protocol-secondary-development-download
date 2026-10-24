@@ -26,8 +26,9 @@ export const TEXT_SIZES = Object.freeze(['sm', 'md', 'lg', 'xl']);
  *  such number (the maintainer's decision of 2026-10-13). officialDamageNumbers: show only the numbers the official game shows.
  *  bondTimers: selected-unit timed bond readouts (#746), off by default: a convenience HUD absent from the official game.
  *  officialFx: 设置「官方特效」 (0.3.0, render/vfx): 'auto' (完整 on a desktop, 精简 on a touch device — render/vfx/tier.js),
- *  'off', 'lite' (精简), 'full' (完整); only shown when effects were extracted from the local client. */
-export const DEFAULT_SETTINGS = Object.freeze({ bgm: 0.6, sfx: 0.8, voice: 0.8, voiceLang: 'jp', voiceOverrides: Object.freeze({}), muted: false, damageNumbers: true, officialDamageNumbers: false, ammoCount: false, bondTimers: false, otherSkins: true, quality: 'high', officialFx: 'auto', textSize: 'sm', keys: DEFAULT_HOTKEYS });
+ *  'off', 'lite' (精简), 'full' (完整); only shown when effects were extracted from the local client.
+ *  lobbyMusic: 主界面音乐 — a manifest `audio.lobbyMusic` id, '' = the mode's own lobby theme (Hub → 音乐, docs/UI-HUB.md). */
+export const DEFAULT_SETTINGS = Object.freeze({ bgm: 0.6, sfx: 0.8, voice: 0.8, voiceLang: 'jp', voiceOverrides: Object.freeze({}), muted: false, damageNumbers: true, officialDamageNumbers: false, ammoCount: false, bondTimers: false, otherSkins: true, quality: 'high', officialFx: 'auto', textSize: 'sm', lobbyMusic: '', keys: DEFAULT_HOTKEYS });
 const QUALITIES = ['high', 'medium', 'low'];
 /** The values of 设置「官方特效」 (render/vfx/tier.js OFFICIAL_FX). */
 export const OFFICIAL_FX_MODES = Object.freeze(['auto', 'off', 'lite', 'full']);
@@ -36,7 +37,7 @@ export const OFFICIAL_FX_MODES = Object.freeze(['auto', 'off', 'lite', 'full']);
  * Sanitize persisted settings.
  * @param {any} raw
  * @returns {{ bgm: number, sfx: number, voice: number, voiceLang: 'cn'|'jp', voiceOverrides: Record<string, string>, muted: boolean, damageNumbers: boolean, officialDamageNumbers: boolean, ammoCount: boolean, bondTimers: boolean, quality: 'high'|'medium'|'low',
- *   textSize: 'sm'|'md'|'lg'|'xl', keys: Record<'buy'|'refresh'|'freeze'|'levelUp'|'retreat'|'sell'|'ready', string> }}
+ *   textSize: 'sm'|'md'|'lg'|'xl', lobbyMusic: string, keys: Record<'buy'|'refresh'|'freeze'|'levelUp'|'retreat'|'sell'|'ready', string> }}
  */
 export function sanitizeSettings(raw) {
   const r = isObj(raw) ? raw : {};
@@ -56,6 +57,7 @@ export function sanitizeSettings(raw) {
     quality: QUALITIES.includes(r.quality) ? r.quality : DEFAULT_SETTINGS.quality,
     officialFx: OFFICIAL_FX_MODES.includes(r.officialFx) ? r.officialFx : DEFAULT_SETTINGS.officialFx,
     textSize: TEXT_SIZES.includes(r.textSize) ? r.textSize : DEFAULT_SETTINGS.textSize,
+    lobbyMusic: typeof r.lobbyMusic === 'string' && /^music_[a-z0-9_]+$/.test(r.lobbyMusic) ? r.lobbyMusic : DEFAULT_SETTINGS.lobbyMusic,
     keys: sanitizeHotkeys(r.keys),
   };
 }

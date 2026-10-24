@@ -461,7 +461,42 @@
 .lobby-music__track { display: flex; flex-direction: column; gap: calc(0.1 * var(--ui-unit, 1rem)); padding: calc(0.2 * var(--ui-unit, 1rem)); border: 1px solid var(--mint-400); background: rgba(30, 90, 75, .12); overflow-wrap: anywhere; }
 .lobby-music__track strong { font-size: max(calc(.2 * var(--utility-text, var(--t))), calc(0.14 * var(--ui-unit, 1rem))); }
 .lobby-music__track :is(span, small) { font-size: max(calc(.15 * var(--utility-text, var(--t))), calc(0.12 * var(--ui-unit, 1rem))); color: var(--mint-400); }
+.lobby-music__now { display: inline-flex; align-items: center; gap: calc(0.06 * var(--ui-unit, 1rem)); font-weight: 700; letter-spacing: .04em; }
+.lobby-music__now .icon { width: max(calc(.18 * var(--ui-unit, 1rem)), 12px); height: max(calc(.18 * var(--ui-unit, 1rem)), 12px); }
+.lobby-music__list { display: flex; flex-direction: column; min-height: 0; max-height: min(36vh, calc(6 * var(--ui-unit, 1rem))); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border: 1px solid rgba(223, 230, 226, .12); background: rgba(8, 14, 13, .55); }
+.lobby-music__empty { margin: 0; padding: calc(0.18 * var(--ui-unit, 1rem)); font-size: max(calc(.14 * var(--utility-text, var(--t))), 10px); color: var(--text-dim); }
+.lobby-music .lobby-music__vol { grid-template-columns: max-content minmax(0, 1fr) max-content; margin-top: calc(0.04 * var(--ui-unit, 1rem)); }
 .lobby-media-error { color: #ff9393; overflow-wrap: anywhere; }
+
+/* 主界面音乐 chip (topbar) + rows (picker). The chip keeps the square tool's height; its label hides on a phone. */
+.music-chip { display: flex; align-items: center; gap: calc(0.08 * var(--ui-unit, 1rem)); height: calc(0.46 * var(--ui-unit, 1rem));
+  max-width: calc(2.9 * var(--ui-unit, 1rem)); padding: 0 calc(0.12 * var(--ui-unit, 1rem)); color: var(--text-hi); font: inherit; text-align: left;
+  background: rgba(8, 14, 13, .74); border: 1px solid rgba(89, 244, 202, .24); cursor: pointer; transition: border-color var(--t-fast); }
+.music-chip:hover { border-color: var(--mint-400); }
+.music-chip .icon { flex: none; width: max(calc(.2 * var(--ui-unit, 1rem)), 14px); height: max(calc(.2 * var(--ui-unit, 1rem)), 14px); color: var(--mint-400); }
+.music-chip__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.05; }
+.music-chip__en { font: 700 calc(.07 * var(--utility-text, var(--t)))/1 ui-monospace, Consolas, monospace; letter-spacing: .14em; color: var(--text-dim); }
+.music-chip b { overflow: hidden; font-size: max(calc(.13 * var(--utility-text, var(--t))), 10px); font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
+.music-row { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; align-items: center; gap: calc(0.14 * var(--ui-unit, 1rem));
+  padding: calc(0.11 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); color: inherit; font: inherit; text-align: left;
+  background: none; border: 0; border-top: 1px solid rgba(223, 230, 226, .09); cursor: pointer; }
+.music-row:first-child { border-top: 0; }
+.music-row:hover { background: rgba(78, 216, 175, .06); }
+.music-row.is-on { background: rgba(78, 216, 175, .1); box-shadow: inset 2px 0 0 var(--mint-400); }
+.music-row__idx { font-size: max(calc(.14 * var(--utility-text, var(--t))), 10px); color: var(--text-dim); }
+.music-row__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.music-row__main b { font-size: max(calc(.16 * var(--utility-text, var(--t))), 11px); font-weight: 800; overflow-wrap: anywhere; }
+.music-row__main em { font-style: normal; font-size: max(calc(.11 * var(--utility-text, var(--t))), 9px); color: var(--text-dim); }
+.music-row.is-on :is(.music-row__idx, .music-row__main em, .music-row__main b, .music-row__mark) { color: var(--mint-400); }
+.music-row__mark { display: inline-flex; color: var(--text-dim); }
+.music-row__mark .icon { width: max(calc(.18 * var(--ui-unit, 1rem)), 12px); height: max(calc(.18 * var(--ui-unit, 1rem)), 12px); }
+@media (max-width: 900px) {
+  .music-chip { width: calc(0.46 * var(--ui-unit, 1rem)); padding: 0; justify-content: center; }
+  .music-chip__text { display: none; }
+  /* the phone root clamps 1rem at 40 px, which leaves the default 6.4rem box at 256 px — too narrow for a track list */
+  .lobby-music-panel { width: min(94vw, 20rem); max-height: 92vh; }
+  .lobby-music__list { max-height: 52vh; }
+}
 .hub-backdrop-panel .bgset__row, .lobby-music-panel .bgset__row { flex-wrap: wrap; }
 .hub-backdrop-panel .bgset__theme { min-height: calc(0.44 * var(--ui-unit, 1rem)); }
 .hub-backdrop-panel .bgset__name { white-space: normal; font-size: max(calc(.15 * var(--utility-text, var(--t))), calc(0.12 * var(--ui-unit, 1rem))); }

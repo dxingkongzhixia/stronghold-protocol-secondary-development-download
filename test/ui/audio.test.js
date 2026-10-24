@@ -92,6 +92,12 @@ describe('bgm selection', () => {
     assert.equal(resolveBgm(null, 'lobby'), null);
     assert.equal(resolveBgm(manifest, null), null);
     assert.equal(resolveBgm(manifest, 'nope'), null);
+    // 主界面音乐: lobby:<id> → audio.lobbyMusic[id] (the Hub's picker), and an id the manifest no longer carries
+    // must fall back to the mode's own lobby theme instead of going silent
+    const first = Object.entries(manifest.audio.lobbyMusic || {})[0];
+    assert.ok(first, 'the manifest carries the 主界面音乐 catalogue');
+    assert.equal(resolveBgm(manifest, `lobby:${first[0]}`).loop, first[1].loop);
+    assert.equal(resolveBgm({ audio: { bgm: { lobby: { loop: '/lobby.mp3' } } } }, 'lobby:gone').loop, '/lobby.mp3');
   });
   test('installAudio: the round\'s own 开战 track, fixed per round and the same on every client', () => {
     const calls = [];

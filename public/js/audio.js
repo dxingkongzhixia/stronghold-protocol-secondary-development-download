@@ -173,8 +173,9 @@ export function bgmKeyFor(route, pub, combatTrack = null) {
 
 /**
  * Resolve a BGM key to { intro?, loop } URLs from the manifest: `boss:<id>` falls back to the generic boss track,
- * `combat:<i>` to the i-th `bgm.combatAlts` entry (and to `bgm.combat` when the manifest has none), and `unite`
- * (联防's own track) to `bgm.combat` when the manifest predates it.
+ * `combat:<i>` to the i-th `bgm.combatAlts` entry (and to `bgm.combat` when the manifest has none), `unite`
+ * (联防's own track) to `bgm.combat` when the manifest predates it, and `lobby:<id>` (主界面音乐) to the catalogue
+ * entry `audio.lobbyMusic[id]`, falling back to the mode's own `bgm.lobby` when the manifest lacks the pick.
  * @param {any} manifest
  * @param {string|null} key
  * @returns {{ intro: string|null, loop: string }|null}
@@ -182,10 +183,11 @@ export function bgmKeyFor(route, pub, combatTrack = null) {
 export function resolveBgm(manifest, key) {
   const a = manifest?.audio;
   if (!a || !key) return null;
-  let t = null;
+  let t;
   if (key.startsWith('boss:')) t = a.bossBgm?.[key.slice(5)] || a.bgm?.boss;
   else if (key.startsWith('combat:')) t = a.bgm?.combatAlts?.[Number(key.slice('combat:'.length))] || a.bgm?.combat;
   else if (key === 'unite') t = a.bgm?.unite || a.bgm?.combat;
+  else if (key.startsWith('lobby:')) t = a.lobbyMusic?.[key.slice('lobby:'.length)] || a.bgm?.lobby;
   else t = a.bgm?.[key];
   if (!t || typeof t.loop !== 'string') return null;
   return { intro: typeof t.intro === 'string' ? t.intro : null, loop: t.loop };
@@ -612,6 +614,8 @@ export class AudioManager {
     this.uiVoices = 0;
     this.wantBgm = null;      // desired key (kept while locked)
     this.lastBgmKey = null;   // the key the screen asked for last (refreshBgm)
+    this.lobbyTrack = '';     // settings 主界面音乐: a manifest `audio.lobbyMusic` id, '' = the mode's own lobby theme
+    this.lobbyActive = false; // the main interface is on screen (installAudio's route sync)
     this.bgm = null;          // { key, loopUrl, nodes: [{src, gain}], gain }
     this.bgmToken = 0;
     this.units = new Map();   // battle unit id → defId
@@ -876,6 +880,32 @@ export class AudioManager {
   }
 
   // ---- BGM ------------------------------------------------------------------------------------------------
+
+  /**
+   * The main interface's BGM key: the saved 主界面音乐 (`lobby:<id>`, manifest audio.lobbyMusic) or plain `lobby`
+   * (the mode's own theme). Only the Hub route reads it — title, room and battle keep their own keys.
+   * @returns {string}
+   */
+  lobbyKey() {
+    return this.lobbyTrack ? `lobby:${this.lobbyTrack}` : 'lobby';
+  }
+
+  /** Route sync: whether the main interface is on screen (installAudio). @param {boolean} active */
+  setLobbyActive(active) {
+    this.lobbyActive = active === true;
+  }
+
+  /**
+   * The saved 主界面音乐 id (settings.lobbyMusic, '' = default). ui/settings.js calls this on boot and on every change;
+   * while the Hub is on screen the new track starts at once, elsewhere it waits for the next Hub visit.
+   * @param {string|null} id
+   */
+  setLobbyTrack(id) {
+    const next = typeof id === 'string' ? id : '';
+    if (next === this.lobbyTrack) return;
+    this.lobbyTrack = next;
+    if (this.lobbyActive) this.playBgm(this.lobbyKey());
+  }
 
   /**
    * Switch BGM (null stops). Same loop URL ⇒ no restart. Before the first gesture, or while the music is silent
@@ -1626,11 +1656,17 @@ export function installAudio(deps) {
     manifestGetter = typeof deps?.getManifest === 'function' ? deps.getManifest : manifestGetter;
     if (typeof deps?.onFailed === 'function') audio.onFailed = deps.onFailed;
     audio.install();
-    if (deps?.settings) { audio.setVolumes(deps.settings); audio.setVoiceLang(deps.settings.voiceLang, deps.settings.voiceOverrides); }
+    if (deps?.settings) {
+      audio.setVolumes(deps.settings);
+      audio.setVoiceLang(deps.settings.voiceLang, deps.settings.voiceOverrides);
+      audio.setLobbyTrack(deps.settings.lobbyMusic);
+    }
     if (typeof deps?.subscribe === 'function' && typeof deps?.getState === 'function') {
       const sync = (s) => {
         try {
           const pub = s.match?.public ?? null;
+          const route = deps.selectRoute(s);
+          audio.setLobbyActive(route === 'lobby');
           if (deps.selectRoute(s) !== 'game') audio.stopBondCue();
           else if (![PHASE.COMBAT, PHASE.UNITE, PHASE.FINAL_ASSAULT, PHASE.HIDDEN_CORE].includes(pub?.phase)) {
             // A new prep gain can precede its m.public phase update. Cancel only the previous battle's cue.
@@ -1639,7 +1675,9 @@ export function installAudio(deps) {
           // 开战 BGM: the round's own track out of bgm.combatAlts (骑士之日 / 无畏者 are fixed per round, not drawn),
           // so every client of a room hears the same one, a mid-fight re-render (or a teammate view) never switches,
           // and the next round moves on by the table. 联防 shares its round ⇒ same key ⇒ the loop keeps playing.
-          audio.playBgm(bgmKeyFor(deps.selectRoute(s), pub, combatTrackFor(pub?.round)));
+          // The Hub is the one place the player's own 主界面音乐 replaces `lobby` (audio.lobbyKey); a room's own lobby
+          // phase and the title screen keep the mode's theme, so the pick never changes what a party hears.
+          audio.playBgm(route === 'lobby' ? audio.lobbyKey() : bgmKeyFor(route, pub, combatTrackFor(pub?.round)));
         } catch { /* ignore */ }
       };
       sync(deps.getState());

@@ -79,6 +79,7 @@ export function bankPool(bank) {
  * Index an audio_data.json object.
  * @param {any} audioData parsed excel/audio_data.json
  * @returns {{ bank: (name:string)=>string[], bgm: (name:string)=>({intro:string|null, loop:string}|null),
+ *   music: (id:string)=>({name:string, intro:string|null, loop:string}|null),
  *   unitBanks: Map<string, Map<string, string[]>>, skillBanks: Map<string, Map<string,string[]>>,
  *   mixOf: (paths: string[]|null|undefined) => ({ p?: number, vol?: number }|null),
  *   poolOf: (paths: string[]|null|undefined) => (ReturnType<typeof bankPool>|null) }}
@@ -113,6 +114,18 @@ export function indexAudio(audioData) {
     if (depth < 4 && typeof alias[name] === 'string') return bgm(alias[name], depth + 1);
     return null;
   };
+  // 音乐鉴赏 catalogue (excel/audio_data.json `musics`): the official 主界面音乐 entries the Hub's picker offers
+  // (tools/assets/lobby-music.mjs). A bank may be an alias (`bankAlias`), which bgm() follows.
+  const musics = new Map();
+  for (const m of Array.isArray(audioData?.musics) ? audioData.musics : []) {
+    if (m && typeof m.id === 'string' && typeof m.bank === 'string') musics.set(m.id, { name: String(m.name ?? ''), bank: m.bank });
+  }
+  const music = (id) => {
+    const m = musics.get(id);
+    if (!m) return null;
+    const b = bgm(m.bank);
+    return b?.loop ? { name: m.name, intro: b.intro, loop: b.loop } : null;
+  };
   // Per-unit and per-skill bank tables.
   const unitBanks = new Map();
   const skillBanks = new Map();
@@ -135,7 +148,7 @@ export function indexAudio(audioData) {
   for (const name of Object.keys(alias)) if (!banks.has(name)) { const p = bank(name); if (p.length) addUnit(name, p); }
   const mixOf = (paths) => (paths && typeof paths === 'object' && mixes.get(paths)) || null;
   const poolOf = (paths) => (paths && typeof paths === 'object' && pools.get(paths)) || null;
-  return { bank, bgm, unitBanks, skillBanks, mixOf, poolOf };
+  return { bank, bgm, music, unitBanks, skillBanks, mixOf, poolOf };
 }
 
 /** Sort key for ability sub-keys: plain first, then numeric suffixes ascending. */

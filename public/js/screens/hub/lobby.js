@@ -20,6 +20,7 @@ import { AchievementEntry, AchievementPanel } from '../../ui/achievements.js';
 import { PreviewPluginPanel } from '../../ui/previewPlugins.js';
 import { LoadoutButton } from '../loadout.js';
 import { SettingsButton } from '../../ui/settings.js';
+import { MusicButton, MusicPanel } from '../../ui/musicPicker.js';
 import { GuideButton } from '../../ui/guide.js';
 import { NoticesButton } from '../../ui/notices.js';
 import { AccountDialog } from '../../ui/account.js';
@@ -286,6 +287,7 @@ export function LobbyScreen() {
   const [protocol, setProtocol] = useState(() => (consumeProtocolReturn() && roomMode !== 'mm' ? roomMode : null));
   const [showJoin, setShowJoin] = useState(false);
   const [bgOpen, setBgOpen] = useState(false);
+  const [musicOpen, setMusicOpen] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
   const [showCommunity, setShowCommunity] = useState(() => (consumeRoomsReturn() ? 'rooms' : null));
   const [sweepOpen, setSweepOpen] = useState(false);
@@ -416,6 +418,7 @@ export function LobbyScreen() {
           <${NoticesButton} />
         </div>
         <div class="topbar__tools">
+          <${MusicButton} onClick=${() => setMusicOpen(true)} />
           <${Button} variant="secondary" size="sm" square=${true} title=${t('大厅背景')} aria-label=${t('大厅背景')}
             onClick=${() => setBgOpen(true)}><${BackdropGlyph} /><//>
           <${SettingsButton} class="hub-settings" variant="secondary" size="sm" square=${true} />
@@ -489,6 +492,8 @@ export function LobbyScreen() {
 
     <${Modal} open=${bgOpen} utility=${true} class="hub-backdrop-panel" title=${t('大厅背景')} micro="LOBBY BACKDROP"
       onClose=${() => setBgOpen(false)}><${BackdropSettings} bg=${bg} /><//>
+
+    <${MusicPanel} open=${musicOpen} onClose=${() => setMusicOpen(false)} />
 
     ${showAccount ? html`<${AccountDialog} defaultName=${me.name} onClose=${() => setShowAccount(false)} />` : null}
     ${showOnline ? html`<${OnlineOverlay} onClose=${() => setOnlineOpen(false)} />` : null}
