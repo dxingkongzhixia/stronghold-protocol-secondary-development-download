@@ -580,4 +580,3 @@
   .proto-foot { gap: calc(0.06 * var(--ui-unit, 1rem)); }
   .proto-start { min-height: max(calc(0.56 * var(--ui-unit, 1rem)), calc(0.32 * var(--ui-unit, 1rem))); }
 }
-
