@@ -252,6 +252,9 @@ export function cultivationCharIds(chess, backups = null) {
     if (c && !c.isGolden && !c.isDiy && c.visible !== false && !c.isHidden && (!c.baseId || c.baseId === c.chessId) && isId(c.charId)) out.add(c.charId);
   }
   for (const id of Array.isArray(backups?.diy?.ownedPool) ? backups.diy.ownedPool : []) if (isId(id)) out.add(id);
+  // the official 自选 pool (fork operators that keep an official pick role) is set up the same way: potential /
+  // 练度 may be chosen for a pick even when its shop form belongs to a built-in 阵营加强 plugin and is hidden
+  for (const id of Array.isArray(backups?.diy?.officialPool) ? backups.diy.officialPool : []) if (isId(id)) out.add(id);
   return out;
 }
 

@@ -62,3 +62,11 @@ node tools/golden.mjs --twice                   # determinism: the corpus twice 
   the corpus there (the roster family enumerates `data/chess.json`).
 
 After the measured shared-stock update (DESIGN §29.8), the original stand-in / DIY seeds remain as outcome regressions even when they field no such operator. Companion seeds `coop2-NORMAL-1-coverage-standins` and `coop2-NORMAL-5-coverage-diy` exercise those full paths; the corpus now contains 287 scenarios.
+
+2026-10-24 — **阵营加强 built-ins** (`tools/build-data.mjs` `splitCustomShop`, `server/plugins/builtin.js`): the 8
+self-made shop operators (阿斯卡纶, 结城理, 予愿安洁莉娜, 望, 澄闪, 娜仁图亚, 凯尔希·思衡托, 克莱门莎) are hidden in the
+vanilla data (`visible: false`, no bond membership) and only restored by a faction's built-in plugin. The roster family
+therefore no longer enumerates them (112 visible chess instead of 120) and every roster/bond snapshot changed; the bot
+matches' shop draws, boards and RNG moved because the shared pool lost those 16 records (co-op / solo bot scenarios in
+`matches`, leader/bond scenarios in `fields` / `bonds`). The 自选 family is unchanged (the official picks and their
+`backups` data did not move), as are the stand-in scenarios. Run in a commit on its own: no engine rule changed.

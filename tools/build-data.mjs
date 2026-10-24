@@ -30,7 +30,7 @@
 // chess · backups · tokens · bonds · garrisons · items · bands · effects · choices · enemies · factions ·
 // waves · stages · bosses · config · validation · main.
 
-import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rename, readdir, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -653,6 +653,97 @@ const CUSTOM_OFFICIAL_DIY = new Set([
   'char_4132_ascln', 'char_377_gdglow', 'char_4138_narant', 'char_1015_aglna2',
   'char_2027_wang', 'char_1052_kalts2', 'char_4231_clemnt',
 ]);
+
+/**
+ * 阵营加强 (owner 2026-10-24): these custom shop operators are a BUILT-IN content plugin of this project, not part of
+ * the vanilla game. The base data keeps their records with `visible: false` and without their bond membership (so the
+ * original game never offers them in the shop, the shared pool or a random bond ban); the operators that have an
+ * official 自选 role (CUSTOM_OFFICIAL_DIY) stay pickable there. Each faction's built-in plugin restores `visible` and
+ * the bond member lists through a generated `data/builtin/faction-<id>.json` patch, switched on per room by its host.
+ *
+ * The faction is the operator's nation; 结城理 is a collab operator without one, so he sits in 拉特兰 (his 盟约).
+ */
+const CUSTOM_FACTION_OF = new Map([
+  ['char_4132_ascln', 'rhodes'],
+  ['char_1015_aglna2', 'rhodes'],
+  ['char_1052_kalts2', 'rhodes'],
+  ['char_4217_makoto', 'laterano'],
+  ['char_2027_wang', 'yan'],
+  ['char_377_gdglow', 'victoria'],
+  ['char_4138_narant', 'sargon'],
+  ['char_4231_clemnt', 'egir'],
+]);
+/** The built-in 阵营加强 plugins, in the panel's order, with the text a player reads. */
+const CUSTOM_FACTIONS = [
+  { id: 'rhodes', name: { zh: '罗德岛', en: 'Rhodes Island' } },
+  { id: 'laterano', name: { zh: '拉特兰', en: 'Laterano' } },
+  { id: 'yan', name: { zh: '炎', en: 'Yan' } },
+  { id: 'victoria', name: { zh: '维多利亚', en: 'Victoria' } },
+  { id: 'sargon', name: { zh: '萨尔贡', en: 'Sargon' } },
+  { id: 'egir', name: { zh: '阿戈尔', en: 'Ægir' } },
+];
+
+/**
+ * Split the custom shop operators out of the vanilla tables (see CUSTOM_FACTION_OF): hide every record, drop it from
+ * its bonds' member lists, and return one `data/builtin/faction-<id>.json` patch per faction that restores both when a
+ * room switches that built-in plugin on. Mutates `files` (chess, bonds) in place; run it after everything is built and
+ * before the integrity checks, so the checks see the vanilla state.
+ * @param {{ chess: Record<string, any>, bonds: Record<string, any> }} files
+ * @returns {Record<string, any>} relative file name -> patch document
+ */
+function splitCustomShop(files) {
+  const { chess, bonds } = files;
+  /** every custom shop record (normal + elite): hidden in the vanilla data, restored by a faction plugin */
+  const ids = new Set(CUSTOM_CHESS.flatMap((c) => [c.baseId, c.goldenId]));
+  /** bond -> member key -> the custom ids the vanilla bond list had, restored per faction by append */
+  const had = new Map();
+  for (const bond of Object.values(bonds)) {
+    for (const key of ['members', 'visibleMembers']) {
+      if (!Array.isArray(bond[key])) continue;
+      const listed = bond[key].filter((id) => ids.has(id));
+      if (listed.length) had.set(`${bond.bondId}:${key}`, listed);
+    }
+  }
+  // the original game: no custom shop record is offered anywhere, and no bond counts it as a member
+  for (const c of CUSTOM_CHESS) {
+    const base = chess[c.baseId], golden = chess[c.goldenId];
+    if (!base || !golden) { warn(`custom chess ${c.baseId}: built record missing from chess.json`); continue; }
+    base.visible = false;
+    golden.visible = false;
+  }
+  for (const bond of Object.values(bonds)) {
+    for (const key of ['members', 'visibleMembers']) {
+      if (Array.isArray(bond[key])) bond[key] = bond[key].filter((id) => !ids.has(id));
+    }
+  }
+  // one patch per faction: restore the visible flag of its operators and append its ids to the bonds it belonged to
+  const byFaction = new Map(CUSTOM_FACTIONS.map((f) => [f.id, []]));
+  for (const c of CUSTOM_CHESS) {
+    const faction = CUSTOM_FACTION_OF.get(c.charId);
+    if (!faction || !chess[c.baseId]) { warn(`custom chess ${c.baseId}: no faction (not in a 阵营加强 plugin)`); continue; }
+    byFaction.get(faction).push(c);
+  }
+  const out = {};
+  for (const [faction, list] of byFaction) {
+    if (!list.length) continue;
+    const ops = [];
+    for (const c of list) {
+      for (const id of [c.baseId, c.goldenId]) ops.push({ op: 'set', file: 'chess', id, path: ['visible'], value: true });
+      for (const b of c.bonds) {
+        if (!bonds[b]) continue;
+        const mine = [c.baseId, c.goldenId];
+        for (const key of ['members', 'visibleMembers']) {
+          const listed = (had.get(`${b}:${key}`) ?? []).filter((id) => mine.includes(id));
+          if (listed.length) ops.push({ op: 'append', file: 'bonds', id: b, path: [key], value: listed });
+        }
+      }
+    }
+    // deterministic bytes: one order whatever the JSON object order
+    ops.sort((a, b) => `${a.file}.${a.id}.${a.path.join('.')}`.localeCompare(`${b.file}.${b.id}.${b.path.join('.')}`));
+    out[`builtin/faction-${faction}.json`] = { patch: 1, ops };
+  }
+  return out;
+}
 
 /** Merge CUSTOM_CHESS into the official season tables (idempotent). */
 function applyCustomChess(act, charTable) {
@@ -4360,7 +4451,9 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  if (visible.length !== 120) err(`expected 120 visible non-DIY chess, got ${visible.length}`);
+  // 112: the 8 custom shop operators (CUSTOM_CHESS) are hidden in the vanilla data — a built-in 阵营加强 plugin offers
+  // them per room (splitCustomShop); their records stay in chess.json so the official 自选 picks keep working
+  if (visible.length !== 112) err(`expected 112 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);
@@ -4563,6 +4656,9 @@ async function main() {
   for (const b of Object.values(bands)) b.bondIds = bandBondIds(b, { bonds, pools: choices.pools });
   const config = buildConfig(ctx, waves, stages, bands, chess, items);
   const files = { config, chess, bonds, garrisons, items, bands, effects, choices, enemies, factions, waves, stages, bosses, tokens, backups };
+  // 阵营加强 (owner 2026-10-24): the custom shop operators leave the vanilla tables; each faction's built-in plugin
+  // restores its own records through one data patch (data/builtin/faction-<id>.json, written below).
+  const builtinFiles = splitCustomShop(files);
 
   // the unit forms rebuild every PRESET chess at every rank (before the annotation: each pass as built)
   const errors = [...validateAll(files), ...passes.flatMap((p) => checkUnitFormParity(p.ctx, p.chess).map((e) => `${e} (potential rank ${p.ctx.potRank})`))];
@@ -4590,6 +4686,21 @@ async function main() {
       const tmp = `${dest}.tmp-${process.pid}`;
       await writeFile(tmp, text);
       await rename(tmp, dest);
+    }
+    // the built-in 阵营加强 patches (data/builtin/<faction>.json; not served as table data — the content set serves the
+    // composed result). A stale faction file from a previous operator list is removed.
+    const builtinDir = join(OPTS.out, 'builtin');
+    await mkdir(builtinDir, { recursive: true });
+    for (const [rel, doc] of Object.entries(builtinFiles)) {
+      const dest = join(OPTS.out, ...rel.split('/'));
+      await mkdir(dirname(dest), { recursive: true });
+      const tmp = `${dest}.tmp-${process.pid}`;
+      await writeFile(tmp, JSON.stringify(doc));
+      await rename(tmp, dest);
+    }
+    for (const name of await readdir(builtinDir).catch(() => [])) {
+      if (!name.endsWith('.json') || Object.hasOwn(builtinFiles, `builtin/${name}`)) continue;
+      await unlink(join(builtinDir, name));
     }
   }
   const report = {

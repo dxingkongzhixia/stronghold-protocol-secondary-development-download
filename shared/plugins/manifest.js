@@ -916,6 +916,7 @@ export function pluginIndexEntry(p) {
   const m = p.manifest;
   /** @type {Record<string, unknown>} */
   const e = { id: p.id, class: p.class, status: p.status, source: p.source, manifest: m.manifest, name: m.name, englishName: m.englishName };
+  if (p.builtin) e.builtin = true;
   if (PLUGIN_CLASSES[p.class]?.unofficial) e.unofficial = true;
   if (Object.keys(m.names).length) e.names = { ...m.names };
   if (Object.keys(m.description).length) e.description = { ...m.description };

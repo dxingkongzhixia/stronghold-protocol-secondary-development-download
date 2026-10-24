@@ -64,9 +64,10 @@ describe('room.setPlugins (P1a: cosmetic plugins)', () => {
 
   test('/healthz and welcome count the server\'s unofficial plugins (the title screen\'s N; a server without any sends no count)', async () => {
     const c = await player('Closure');
-    // texas-red, texas-blue, mine, base, top, fresh, later (cosmetic) and rules (content, planned): every class but a language
-    assert.deepEqual(c.welcome.content, { vanilla: srv.content.cs, plugins: 8 });
-    assert.deepEqual((await (await fetch(`${srv.url}/healthz`)).json()).content, { vanilla: srv.content.cs, sets: 0, plugins: 8 }, 'before any hello: the title screen');
+    // texas-red, texas-blue, mine, base, top, fresh, later (cosmetic) and rules (content, planned): every class but a language,
+    // plus the project's 6 built-in 阵营加强 plugins (server/plugins/builtin.js, off by default but installed)
+    assert.deepEqual(c.welcome.content, { vanilla: srv.content.cs, plugins: 14 });
+    assert.deepEqual((await (await fetch(`${srv.url}/healthz`)).json()).content, { vanilla: srv.content.cs, sets: 0, plugins: 14 }, 'before any hello: the title screen');
     const lobby = new Lobby({ registry: new SessionRegistry(), content: { cs: 'ab'.repeat(32) }, plugins: { resolve: () => null, unofficial: () => 0 } });
     assert.deepEqual(lobby.welcomeInfo().content, { vanilla: 'ab'.repeat(32) }, 'none: exactly the welcome of a server without plugins');
     lobby.shutdown();
@@ -119,6 +120,20 @@ describe('room.setPlugins (P1a: cosmetic plugins)', () => {
     // during the match: refused
     const busy = await host.request({ t: 'room.setPlugins', plugins: [] });
     assert.deepEqual([busy.t, busy.code], ['error', ERR.ROOM_STARTED]);
+  });
+
+  test('the built-in 阵营加强 plugin is a room choice like any content plugin (off = vanilla, on = non-vanilla)', async () => {
+    const host = await player('Wang');
+    const s0 = await room(host);
+    assert.deepEqual(s0.content, { cs: srv.content.cs, vanilla: true, plugins: [] }, 'default off: the original game');
+    assert.equal((await host.request({ t: 'room.setPlugins', plugins: [{ id: 'faction-yan' }] })).t, 'ok');
+    const s1 = await host.waitFor('room.state', (s) => s.content?.vanilla === false && Array.isArray(s.content.plugins) && s.content.plugins.length > 0);
+    assert.deepEqual(s1.content.plugins.map((p) => [p.id, p.version, p.class]), [['faction-yan', '0.4.0', 'content']]);
+    assert.notEqual(s1.content.cs, srv.content.cs, 'a faction boost changes the gameplay data');
+    // and off again: exactly the vanilla shape, so the next match is the original game
+    assert.equal((await host.request({ t: 'room.setPlugins', plugins: [] })).t, 'ok');
+    const s2 = await host.waitFor('room.state', (s) => s.content?.vanilla === true && Array.isArray(s.content.plugins) && s.content.plugins.length === 0);
+    assert.deepEqual(s2.content, { cs: srv.content.cs, vanilla: true, plugins: [] });
   });
 
   test('an empty list brings back exactly the vanilla shape; refused: not the host, unknown, another class or scope, malformed', async () => {

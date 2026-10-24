@@ -51,6 +51,7 @@ import { readFxAssets, readFxManifest as readPluginManifest } from './fxAssets.j
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { APP_VERSION, PLUGIN_API } from '../../shared/constants.js';
+import { builtinPlugins } from './builtin.js';
 import { PACK_TYPES, PACK_MANIFEST, PACKS_URL, normalizeManifest, packIndexEntry, buildPackIndex } from '../../shared/packs.js';
 import { SOURCE_LANG, isLangCode, countStrings } from '../../shared/i18nPacks.js';
 import {
@@ -927,6 +928,9 @@ export function createPluginRegistry(dirs, { log = { info: noop, warn: noop }, a
   const tag = (where) => (where.startsWith('plugins/') ? '[plugins]' : '[packs]');
   /** @type {Set<() => void>} told after every scan that read the folders (onScan) */
   const scanListeners = new Set();
+  // the project's built-in content plugins (阵营加强): generated data patches, not folders. Read once: a deployment
+  // restarts the server, and a room only sees them through the catalogue.
+  const builtin = builtinPlugins({ dataDir: dirs.dataDir, app, log });
 
   function refresh(force = false) {
     const now = Date.now();
@@ -942,11 +946,14 @@ export function createPluginRegistry(dirs, { log = { info: noop, warn: noop }, a
     for (const abs of [...hashCache.keys()]) if (!kept.some((d) => abs.startsWith(d))) hashCache.delete(abs);
     sig = s; // after the scan: a scan that throws is tried again on the next look
     const packs = scan.plugins.filter((p) => p.supported);
-    state = { ...scan, packs, index: packIndexOf(packs, { app }), byId: new Map(scan.plugins.map((p) => [p.id, p])) };
+    // built-in plugins join the same lists as folders: catalogue, lookup, room choice, policy, content sets
+    const all = builtin.length ? [...scan.plugins, ...builtin] : scan.plugins;
+    state = { ...scan, plugins: all, packs, index: packIndexOf(packs, { app }), byId: new Map(all.map((p) => [p.id, p])) };
     const line = `[packs] ${packs.length ? packs.map((p) => `${p.type} ${p.type === 'lang' ? p.manifest.lang : p.id} (${p.manifest.name})`).join(', ') : 'none'}`;
     if (first || packs.length) tell((m) => log.info(m), line);
-    const plugins = scan.plugins.filter((p) => p.source === 'plugins');
+    const plugins = all.filter((p) => p.source === 'plugins');
     if (plugins.length) tell((m) => log.info(m), `[plugins] ${plugins.map((p) => `${p.id} ${p.manifest.version} (${p.class}, ${p.status})`).join(', ')}`);
+    if (builtin.length && first) tell((m) => log.info(m), `[plugins] built-in ${builtin.map((p) => p.id).join(', ')} (off by default, the room host switches one on)`);
     // the plain words of the first coded problem (shared/plugins/errors.js) after the technical lines
     for (const k of scan.skipped) {
       const first = k.issues?.[0];

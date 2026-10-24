@@ -54,9 +54,15 @@ fs.writeFileSync('.cache/gamedata/excel/skill_table.json', JSON.stringify(st));
   `charword_table`（若要补语音槽）按同样方式只插她的行。克莱门莎：无模组、`4-1`/`3-2` 与
   `subProfDict.primguard` 缓存已有 → 只需上面两张表。
 - **新克隆 / CI 无需此步**：缓存缺失时构建会下载**当前**上游表，已含新干员。
-- 合并后 `node tools/build-data.mjs --offline`，核对名册**恰好 +1 名干员**（`chess=282 / visible=120`）。
+- 合并后 `node tools/build-data.mjs --offline`，核对名册**恰好 +1 名干员**（`chess=282`；新增的自造干员默认在基础数据里是隐藏的，`visible` 不会因此增加）。
 
 ## 2. 在 `tools/build-data.mjs` 的 `CUSTOM_CHESS` 表里加一条
+
+> **2026-10-24 起：自造干员是内置「阵营加强」插件的内容**（owner 决定，见 `docs/PLAYING.md` §13）。构建时
+> `splitCustomShop()` 把 `CUSTOM_CHESS` 的商店形态在基础数据里标成 `visible: false`、从盟约成员列表里摘掉，并按
+> `CUSTOM_FACTION_OF` 生成 `data/builtin/faction-<阵营>.json`；房主在房间的「插件 → 阵营加强」里打开该阵营后，这些
+> 干员才以商店形态加入本房间。未开启时他们只保留官方**自选**形态（`CUSTOM_OFFICIAL_DIY` / `diy.officialPool`）。
+> 因此新增一位自造干员时还要：在 `CUSTOM_FACTION_OF` 里写他的阵营、在 `CUSTOM_FACTIONS` 里确认该阵营存在，并重建数据。
 
 `applyCustomChess()` 会在构建**之前**把这些记录并进官方赛季表，于是 `data/chess.json` / `bonds.json` /
 `garrisons.json` 都自然生成（`data/` 仍是构建产物，`test/data.test.js` 的离线重建逐字节复现照常通过）。

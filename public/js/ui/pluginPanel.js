@@ -179,6 +179,7 @@ export function PluginPanel({ open, room, myId, onClose }) {
         onClick=${() => toggle(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
       <div class="plugrow__body">
         <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
+          ${p.builtin ? html`<span class="plugrow__badge">${t('内置')}</span>` : null}
           ${auto ? html`<span class="plugrow__badge">${t('自动')}</span>` : null}
           ${code ? html`<span class="plugrow__badge is-gameplay">${cls === 'trusted' ? t('原生信任') : t('沙箱脚本')}</span>` : null}<span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
         <div class="plugrow__meta t-dim">

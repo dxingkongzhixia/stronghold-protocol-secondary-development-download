@@ -89,10 +89,12 @@ describe('盟约 (bonds) mapping', () => {
     }
   });
 
-  test('members: bond.members and chess.json `bonds` carry the same operators (base-deduped)', () => {
+  test('members: bond.members and chess.json `bonds` carry the same operators (base-deduped, visible roster)', () => {
     for (const b of bonds) {
       const fromBond = baseSet(bondMembers(b, chess));
-      const fromChess = baseSet(chessCarryingBond(chess, b.bondId));
+      // the 8 custom shop operators are hidden in vanilla (their built-in 阵营加强 plugin adds them back), so compare
+      // against every non-custom record (hidden official chess stay listed, as before)
+      const fromChess = baseSet(chessCarryingBond(chess.filter((c) => !chessIsCustom(c)), b.bondId));
       assert.deepEqual([...fromBond].sort(), [...fromChess].sort(), b.bondId);
     }
   });
@@ -241,15 +243,14 @@ describe('悬赏决策 card draft pools', () => {
 });
 
 describe('干员 (operators) mapping', () => {
-  test('chessRoster is the visible base roster (no golden, no hidden, no 甄选), custom included', () => {
+  test('chessRoster is the visible base roster (no golden, no hidden, no 甄选)', () => {
     const roster = chessRoster(chess);
     assert.ok(roster.length > 0);
     assert.ok(roster.every((c) => c.visible && !c.isGolden && !c.isDiy && !c.isHidden));
     assert.equal(new Set(roster.map((c) => c.chessId)).size, roster.length, 'no duplicate operator');
-    // our CUSTOM_CHESS entries (identifier ≥ 900) are visible, so they are in the roster
-    const custom = roster.filter((c) => chessIsCustom(c));
-    assert.equal(custom.length, 8, 'the 8 CUSTOM_CHESS base operators');
-    assert.ok(custom.every((c) => c.identifier >= 900));
+    // the 8 custom shop operators are a built-in 阵营加强 plugin: hidden in vanilla, so not in the roster until a room
+    // turns their faction on (the data records still exist for the official 自选 picks)
+    assert.equal(roster.filter((c) => chessIsCustom(c)).length, 0);
     const tiers = roster.map((c) => c.tier);
     assert.deepEqual(tiers, [...tiers].sort((a, b) => a - b), 'sorted by tier');
   });
@@ -271,12 +272,14 @@ describe('干员 (operators) mapping', () => {
     assert.ok(t3.length > 0 && t3.every((c) => c.tier === 3));
     const prof = chessRosterFacets(chess).professions[0].id;
     assert.ok(filterChess(chess, { profession: prof }).every((c) => c.profession === prof));
-    assert.equal(filterChess(chess, { custom: true }).length, 8);
-    assert.equal(filterChess(chess, { custom: true }).length + filterChess(chess, { custom: false }).length, all.length);
+    // the 8 custom shop operators are hidden in vanilla (built-in 阵营加强 plugins), so no operator is "custom" yet
+    assert.equal(filterChess(chess, { custom: true }).length, 0);
+    assert.equal(filterChess(chess, { custom: false }).length, all.length);
     const bondId = 'lateranoShip';
     assert.ok(filterChess(chess, { bondId }).every((c) => (c.bonds || []).includes(bondId)));
     assert.ok(chessMatches(byChess.get('chess_char_4132_ascln_a'), 'ascalon'), 'an English appellation matches');
-    assert.ok(filterChess(chess, { query: '阿斯卡纶' }).some((c) => c.chessId === 'chess_char_4132_ascln_a'));
+    assert.deepEqual(filterChess(chess, { query: '阿斯卡纶' }), [], 'a hidden custom operator is not in the roster');
+    assert.ok(filterChess(chess, { query: '隐现' }).some((c) => c.chessId === 'chess_char_1_01_a'));
     assert.deepEqual(filterChess(chess, { query: 'zzz-no-such-operator' }), []);
   });
 

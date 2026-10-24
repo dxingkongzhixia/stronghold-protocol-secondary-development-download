@@ -12,16 +12,33 @@ import { ERR } from '../../shared/constants.js';
 import { FIELD, canPlace, placeClass, tileKey, parseKey } from '../../server/match/board.js';
 import { placementContext, canPlace as clientCanPlace, diyGetter } from '../../public/js/ui/gameLogic.js';
 import { DATA, makeMatch, checkInvariants } from './harness.js';
+import { createPluginRegistry } from '../../server/plugins/registry.js';
+import { buildContentSet } from '../../server/plugins/contentSet.js';
 
 const T5A = 'chess_char_5_diy1_a';
 const MONSTR = 'char_4179_monstr';
 const PROSTS = 'token_10050_monstr_prosts';
 const ANCHOR = 'token_10068_kalts2_mtship';
 
+/**
+ * The vanilla data plus the built-in 罗德岛 阵营加强 plugin: 凯尔希·思衡托 is shop/hidden in the original game, so her
+ * S3 (the 战术锚点) can only be selected in a room that switched her faction on. Cached (one content-set composition).
+ */
+let rhodesDataCache = null;
+function rhodesData() {
+  if (rhodesDataCache) return rhodesDataCache;
+  const registry = createPluginRegistry({ publicDir: 'public', dataDir: 'data', packsDir: 'packs', pluginsDir: 'plugins' },
+    { app: '0.4.0', log: { info() {}, warn() {} } });
+  const set = buildContentSet({ registry, ids: ['faction-rhodes'] });
+  if (!set.data) throw new Error(`faction-rhodes content set: ${JSON.stringify(set.problems ?? [])}`);
+  rhodesDataCache = set.data;
+  return rhodesDataCache;
+}
+
 /** A solo match whose human slots `picks`, in its first prep on `stage` (战场#01: 3 高台 tiles) with an empty board and hand. */
-function prep(picks, seed = 2101, stage = 'act2autochess_m01', loadout = null) {
+function prep(picks, seed = 2101, stage = 'act2autochess_m01', loadout = null, data = DATA) {
   const seats = [{ seat: 0, playerId: 'p_0', name: 'P0', isBot: false, connected: true, diy: picks, ...(loadout ? { loadout } : null) }];
-  const h = makeMatch({ mode: 'solo', difficulty: 'NORMAL', seats, seed }).start();
+  const h = makeMatch({ mode: 'solo', difficulty: 'NORMAL', seats, seed, data }).start();
   h.toPrep(1);
   h.setStage(stage);
   const ps = h.ps('p_0');
@@ -105,7 +122,7 @@ test('#26 凯尔希·思衡托\'s 战术锚点 (S3): only on a ranged tile outsi
   assert.deepEqual([rec.position, rec.ownerRangeOutside, rec.rangedTilesOnly, rec.ownerRange], ['RANGED', true, true, false]);
   // act1 m03: 高台 at (10, 3), (10, 4), (11, 7), (11, 8); she stands on the ground at (12, 5), facing RIGHT — her y-6 takes
   // (11, 7) in and leaves the other three out
-  const { h, m, ps } = prep({}, 2102, 'act1autochess_m03', { chess_char_1052_kalts2_a: { skill: 2, module: null } });
+  const { h, m, ps } = prep({}, 2102, 'act1autochess_m03', { chess_char_1052_kalts2_a: { skill: 2, module: null } }, rhodesData());
   const map = ps.deployMap();
   const highs = [...map].filter(([, v]) => v === 'ranged').map(([k]) => parseKey(k));
   assert.ok(highs.length >= 2, 'the stage has 高台 tiles');

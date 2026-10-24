@@ -49,7 +49,7 @@ test('50: two 空弦 made 阿戈尔 (变形同构体 + 阿戈尔重刃) in a row
   }
 });
 
-test('45: 寻呼模块 / 简易通讯机 on 缪尔赛思 give an operator sharing 调和, never above the 调度中心 level (凯尔希·思衡托 tier IV is the one below 6)', REAL, () => {
+test('45: 寻呼模块 / 简易通讯机 on 缪尔赛思 give an operator sharing 调和, never above the 调度中心 level (the only vanilla 调和 operator is 缪尔赛思 at tier 6)', REAL, () => {
   for (const itemId of ['chess_item_4_01_e_a', 'chess_item_2_06_e_a']) {
     for (const level of [5, 6]) {
       const h = makeMatch({ mode: 'solo', difficulty: 'NORMAL', humans: 1, seed: 7, fake: true }).start();
@@ -66,7 +66,13 @@ test('45: 寻呼模块 / 简易通讯机 on 缪尔赛思 give an operator sharin
       const granted = held().filter((p) => !before.has(p.uid)).map((p) => p.id);
       const offered = ps.offers.slice(offers0).flatMap((o) => o.slots.map((s) => s.id));
       const got = [...granted, ...offered];
-      assert.ok(got.length >= 1, `${itemId} @${level}: an operator sharing 调和 (${got})`);
+      if (level < 6) {
+        // 凯尔希·思衡托 (tier IV, 调和) belongs to the built-in 阵营加强 plugin and is off in the original game, so
+        // below shop 6 there is no eligible 调和 operator: the item is consumed and grants nothing (official behaviour)
+        assert.deepEqual(got, [], `${itemId} @${level}: no 调和 operator below tier 6 in vanilla`);
+      } else {
+        assert.ok(got.length >= 1, `${itemId} @${level}: an operator sharing 调和 (${got})`);
+      }
       for (const id of got) {
         const c = DATA.chess[id];
         assert.ok(c.bonds.includes('maniShip'), `${itemId} @${level}: ${id} shares 调和`);

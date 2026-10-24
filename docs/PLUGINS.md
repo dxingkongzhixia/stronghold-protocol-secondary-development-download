@@ -103,6 +103,14 @@ the label the player reads; the `class` above is still what the game does with t
 by its class (cosmetic/ui/lang → 外观音乐, everything that changes the room → 新增玩法). A plugin that adds two unrelated
 kinds of content should be split into two plugins (PRTS is: `prts-kaltsit` = 新增策略, `prts-source-code` = 新增敌人).
 
+**Built-in plugins.** The project ships a few content plugins of its own, above all the 阵营加强 set
+(`server/plugins/builtin.js`): one per faction, whose generated `data/builtin/faction-<faction>.json` data patch restores
+that faction's self-made shop operators (the vanilla data hides them; off is the default). They are listed in
+`/plugins/index.json` with `"builtin": true`, can be switched on per room by the host and obey the same content-set,
+policy, unofficial-match and statistics rules as an installed plugin — but they have no folder, no files of their own, no
+install/update path and no lock: they are part of the game. `plugins/config.json` `default` stays `[]`, so a server that
+changes nothing is the original game; the owner may put a `faction-<faction>` id there to start rooms with it on.
+
 Nothing of a plugin folder is served except the files a `lang` manifest names, the files a loaded `cosmetic`plugin's overlay names, and the frame files of a loaded `ui` plugin (`.html`, `.js`, `.css`, `.png` under its
 `entry.client`, §14) — never `plugin.json`, the lock file, a document or any other file of the folder. A ui plugin's
 `/p/` responses carry a frame Content-Security-Policy; cosmetic art does not. Content-set snapshots are separate:

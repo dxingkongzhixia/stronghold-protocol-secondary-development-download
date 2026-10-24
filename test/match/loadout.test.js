@@ -33,7 +33,8 @@ function place(m, ps, chessId, row, col) {
 // ---- shared checks -------------------------------------------------------------------------------------------------
 
 test('data carries the §16 choices every visible chess needs (skills at both statuses, elite modules + none)', () => {
-  assert.equal(visible.length, 120);
+  // 112: the 8 custom shop operators belong to the built-in 阵营加强 plugins, not the vanilla shop
+  assert.equal(visible.length, 112);
   for (const c of visible) {
     const g = chess(c.goldenId);
     const o = loadoutOptions(c, g);
