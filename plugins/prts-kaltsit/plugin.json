@@ -1,0 +1,50 @@
+{
+  "$schema": "../../schemas/plugin.schema.json",
+  "manifest": 2,
+  "id": "prts-kaltsit",
+  "name": {
+    "zh": "PRTS：凯尔希",
+    "en": "PRTS: Kal'tsit"
+  },
+  "description": {
+    "zh": "PRTS 主题的策略插件：公共策略「凯尔希」——全队获得凯尔希与 M3；凯尔希固定使用 S3，携带坚毅 / 精准盟约，不进商店与自选；M3 被击倒后 20 秒回到原格，最多 2 次。选择本插件后即可在策略选择中使用这张策略。",
+    "en": "A PRTS-themed strategy plugin: the shared strategy \"Kal'tsit\" — the whole team gains Kal'tsit and M3. Fixed S3, 坚毅 / 精准 bonds, never in the shop or 自选; a downed M3 returns to its tile after 20 s, at most twice. Switch it on to offer this strategy in the strategy draft."
+  },
+  "version": "0.1.0",
+  "app": ">=0.4.0 <0.5.0",
+  "api": 2,
+  "class": "content",
+  "category": "strategy",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "data.add",
+    "assets.add"
+  ],
+  "data": [
+    "data/tokens.json",
+    "content/bands.json"
+  ],
+  "operators": [
+    "data/operator.json"
+  ],
+  "assets": {
+    "bands": {
+      "band_x_prts_kaltsit_touch": "assets/images/band_x_prts_kaltsit_touch.png"
+    },
+    "tokens": {
+      "token_x_prts_kaltsit_mon3tr": {
+        "avatar": "assets/images/token_x_prts_kaltsit_mon3tr.png",
+        "spine": {
+          "skel": "assets/spine/token/token_x_prts_kaltsit_mon3tr/token_10002_kalts_mon3tr.skel",
+          "atlas": "assets/spine/token/token_x_prts_kaltsit_mon3tr/token_10002_kalts_mon3tr.atlas",
+          "textures": [
+            "assets/spine/token/token_x_prts_kaltsit_mon3tr/token_10002_kalts_mon3tr.png"
+          ],
+          "pma": true
+        }
+      }
+    }
+  }
+}

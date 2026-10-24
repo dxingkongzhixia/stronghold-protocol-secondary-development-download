@@ -24,6 +24,10 @@
     "anchor": "shared/plugins/manifest.js#MANIFEST_FIELDS"
   },
   {
+    "name": "manifest.field.category",
+    "anchor": "shared/plugins/manifest.js#MANIFEST_FIELDS"
+  },
+  {
     "name": "manifest.field.class",
     "anchor": "shared/plugins/manifest.js#MANIFEST_FIELDS"
   },
@@ -1281,6 +1285,10 @@
   },
   {
     "name": "error.PLUGIN_HOMEPAGE",
+    "anchor": "shared/plugins/errors.js#PLUGIN_ERRORS"
+  },
+  {
+    "name": "error.PLUGIN_CATEGORY",
     "anchor": "shared/plugins/errors.js#PLUGIN_ERRORS"
   },
   {

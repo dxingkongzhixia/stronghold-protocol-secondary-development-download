@@ -58,6 +58,7 @@ import { issueList } from './errors.js';
 import { THEME_VAR_LIMIT, readThemeDeclaration } from './theme.js';
 import { NOTICE_LIMITS, readNotices, capCatalogueNotices } from './notices.js';
 import { readDeclaredRules } from './rules.js';
+import { parsePluginCategory } from './category.js';
 
 /** A plugin folder's manifest file (manifest 2). */
 export const PLUGIN_MANIFEST = 'plugin.json';
@@ -182,7 +183,7 @@ const ENTRIES = Object.freeze({
 const SETTING_TYPES = ['boolean', 'integer', 'number', 'enum'];
 /** Top-level fields of manifest 2 (anything else is warned about and ignored). */
 const V2_FIELDS = new Set(['$schema', 'manifest', 'id', 'name', 'englishName', 'description', 'version', 'app', 'api', 'class', 'scope',
-  'authors', 'credits', 'license', 'homepage', 'sourceLang', 'requires', 'optional', 'conflicts', 'loadAfter', 'loadBefore', 'priority',
+  'category', 'authors', 'credits', 'license', 'homepage', 'sourceLang', 'requires', 'optional', 'conflicts', 'loadAfter', 'loadBefore', 'priority',
   'settings', 'permissions', 'overrides', 'rules', 'entry', 'slots', 'notices', 'files', 'lang', 'base', 'fallback', 'complete', 'machineTranslated', 'numberUnits', ...Object.keys(PARTS)]);
 /** Those fields, sorted, for the frozen API table (docs/PLUGIN-API.md). */
 export const MANIFEST_FIELDS = Object.freeze([...V2_FIELDS].sort());
@@ -303,7 +304,7 @@ export function appVersionCompatible(range, version = APP_VERSION, cls = '') {
  * @typedef {{ id: string, title: string, body: string, date?: string, i18n?: Record<string, { title: string, body: string }> }} PluginNotice
  * @typedef {{ manifest: number, id: string, class: string, type: string, name: string, englishName: string,
  *   names: Record<string, string>, description: Record<string, string>, version: string, app: string,
- *   compatible: boolean, api: number | null, scope: string[], authors: string[], credits: string, license: string,
+ *   compatible: boolean, api: number | null, scope: string[], category?: string, authors: string[], credits: string, license: string,
  *   homepage: string, sourceLang: string, requires: Record<string, string>, optional: Record<string, string>,
  *   conflicts: Record<string, string>, loadAfter: string[], loadBefore: string[], priority: number,
  *   settings: Record<string, PluginSetting>, permissions: string[], parts: Record<string, PluginPart>,
@@ -651,6 +652,12 @@ export function readPluginManifest(raw, ctx) {
     if (!s.length || bad.length || new Set(s).size !== s.length) list.problem('PLUGIN_SCOPE', `"scope": ${short(m.scope)} — a ${cls} plugin's scope is ${kind.scopes.map((x) => `"${x}"`).join(' and/or ')}`, { at: ['scope'] });
     else scope = kind.scopes.filter((x) => s.includes(x));
   }
+  // 外观音乐 / 阵营加强 / 新增策略 / 新增敌人 / 新增玩法: the plugin list's section (shared/plugins/category.js). A
+  // display grouping only — nothing in a room, a match or the content set reads it.
+  const category = m.category === undefined ? null : parsePluginCategory(m.category);
+  if (m.category !== undefined && !category) {
+    list.problem('PLUGIN_CATEGORY', `"category": ${short(m.category)} is not one of appearance, faction, strategy, enemy, gameplay`, { at: ['category'] });
+  }
   let homepage = '';
   if (m.homepage !== undefined) {
     const h = str(m.homepage, 300);
@@ -769,6 +776,7 @@ export function readPluginManifest(raw, ctx) {
   /** @type {PluginManifest} */
   const out = {
     manifest: 2, id, class: cls, type: kind.packType, name, englishName, names, description, version, app: range, compatible, api, scope,
+    ...(category ? { category } : {}),
     authors: authorsOf(m.authors), credits: str(m.credits, 500), license: str(m.license, 100), homepage, sourceLang: sourceLang || SOURCE_LANG,
     requires, optional, conflicts, loadAfter, loadBefore, priority, settings, permissions, parts, entry, slots, files: {},
     ...(m.overrides !== undefined ? { overrides } : {}),
@@ -916,6 +924,7 @@ export function pluginIndexEntry(p) {
   e.compatible = m.compatible;
   if (m.api !== null) e.api = m.api;
   e.scope = [...m.scope];
+  if (m.category) e.category = m.category;
   if (m.authors.length) e.authors = [...m.authors];
   if (m.credits) e.credits = m.credits;
   if (m.license) e.license = m.license;

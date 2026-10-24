@@ -11,32 +11,59 @@ import { makeBattle } from '../helpers/battleHarness.js';
 const BOSS = 'enemy_x_prts_source_code_prts';
 const MIMIC = 'enemy_x_prts_source_code_mimic';
 const PLUGIN = path.resolve('plugins/prts-source-code');
+const KALTSIT = path.resolve('plugins/prts-kaltsit');
 const skip = fs.existsSync(PLUGIN) ? false : 'plugins/prts-source-code is not installed in this checkout';
+const skipKaltsit = fs.existsSync(KALTSIT) ? false : 'plugins/prts-kaltsit is not installed in this checkout';
 
-function content() {
-  const registry = createPluginRegistry({
+function registry() {
+  return createPluginRegistry({
     publicDir: 'public', dataDir: 'data', packsDir: 'packs', pluginsDir: 'plugins',
   }, { app: '0.4.0', log: { info() {}, warn() {} } });
-  const set = buildContentSet({ registry, ids: ['prts-source-code'] });
+}
+
+function composed(ids) {
+  const set = buildContentSet({ registry: registry(), ids });
   assert.deepEqual(set.problems, []);
-  if (!set.data) throw new Error('prts-source-code content set was not composed');
+  if (!set.data) throw new Error(`${ids.join('+')} content set was not composed`);
+  return set;
+}
+
+test('prts: the Kal\'tsit band keeps its own icon while inheriting Touch mechanics (its own plugin)', { skip: skipKaltsit }, () => {
+  const set = composed(['prts-kaltsit']);
+  const band = set.data.bands.band_x_prts_kaltsit_touch;
+  assert.ok(band);
+  assert.equal(band.effectRef, 'band_amedic', 'the Touch team-grant mechanics stay inherited');
+  assert.equal(band.iconId, 'band_x_prts_kaltsit_touch', 'the strategy uses its own Kal\'tsit art, not Touch\'s');
+  assert.equal(band.grants.grantUnit.charId, 'char_x_prts_kaltsit_one');
+  assert.equal(band.grants.grantUnit.token, 'token_x_prts_kaltsit_mon3tr');
+});
+
+test('prts: the strategy and the bosses are separate plugins (the 2026-10-24 split)', { skip }, () => {
+  const bosses = composed(['prts-source-code']);
+  const strategy = skipKaltsit ? null : composed(['prts-kaltsit']);
+  // the boss half no longer carries Kal'tsit, her token or the strategy
+  assert.equal(bosses.data.chess.chess_x_prts_source_code_one_a, undefined);
+  assert.equal(bosses.data.tokens.token_x_prts_source_code_mon3tr, undefined);
+  assert.equal(bosses.data.bands.band_x_prts_source_code_touch, undefined);
+  assert.ok(bosses.data.bosses.boss_x_prts_source_code_prts);
+  assert.ok(bosses.data.enemies[BOSS]);
+  // the strategy half carries no boss record and no boss waves
+  if (strategy) {
+    assert.ok(strategy.data.chess.chess_x_prts_kaltsit_one_a);
+    assert.ok(strategy.data.chess.chess_x_prts_kaltsit_one_b);
+    assert.ok(strategy.data.tokens.token_x_prts_kaltsit_mon3tr);
+    assert.equal(strategy.data.bosses.boss_x_prts_source_code_prts, undefined);
+    assert.equal(strategy.data.enemies[BOSS], undefined);
+  }
+});
+
+function content() {
+  const set = composed(['prts-source-code']);
   return new DataSource({
     chess: set.data.chess, enemies: set.data.enemies, tokens: set.data.tokens,
     stages: set.data.stages, waves: set.data.waves,
   }, getDefaultSource());
 }
-
-test('prts: the Kal\'tsit band keeps its own icon while inheriting Touch mechanics', { skip }, () => {
-  const registry = createPluginRegistry({
-    publicDir: 'public', dataDir: 'data', packsDir: 'packs', pluginsDir: 'plugins',
-  }, { app: '0.4.0', log: { info() {}, warn() {} } });
-  const set = buildContentSet({ registry, ids: ['prts-source-code'] });
-  assert.deepEqual(set.problems, []);
-  const band = set.data.bands.band_x_prts_source_code_touch;
-  assert.ok(band);
-  assert.equal(band.effectRef, 'band_amedic', 'the Touch team-grant mechanics stay inherited');
-  assert.equal(band.iconId, 'band_x_prts_source_code_touch', 'the strategy uses its own Kal\'tsit art, not Touch\'s');
-});
 
 function battle(data) {
   return makeBattle({

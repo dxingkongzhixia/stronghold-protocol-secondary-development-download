@@ -415,6 +415,7 @@ unequip（official／allow）；每项下面显示作用说明。选「继承」
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_API` | 插件接口级别 "api" 没写、不是整数，或者本游戏不支持 | 写 "api": {current}（本游戏支持 {min}–{current}）。（工作台可一键修复） |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_SCOPE` | 作用范围 "scope" 写得不对 | 外观插件写 ["room", "personal"]：room 是房主给整个房间开，personal 是玩家在设置里只给自己开。（工作台可一键修复） |
 | 插件能用，但检查时有提示 | `PLUGIN_HOMEPAGE` | 主页 "homepage" 不是 http(s) 网址，被忽略了 | 写完整的网址，例如 https://example.com/my-plugin，或者删掉它。 |
+| 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_CATEGORY` | 分类 "category" 不是外观音乐 / 阵营加强 / 新增策略 / 新增敌人 / 新增玩法之一 | 写 "category": "enemy"（新增敌人）等五个值之一；不写则列表按插件类别归类。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_DEPS` | 依赖关系（requires / optional / conflicts）写得不对：{where} | 写成 { "其他插件的 id": "版本范围" }，例如 { "base-skin": ">=1.0.0" }；不能写自己，同一个插件不能既需要又冲突，最多 32 个。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_ORDER_HINTS` | 加载顺序（loadAfter / loadBefore / priority）写得不对：{where} | loadAfter 和 loadBefore 是插件 id 的列表（同一个 id 不能两边都写，也不能写自己）；priority 是 -1000 到 1000 的整数，默认 0。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_SETTING` | 设置项 "settings" 写得不对：{where} | 每个设置项写 { "type": … }：boolean（开关）、integer / number（要写 min 和 max）、enum（要写 options 列表）；默认值要在范围内；最多 32 个，不能是自由文字。 |

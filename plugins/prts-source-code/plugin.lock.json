@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "b0f660d98671d1d70a01cbdf68994ba053ee649fd280fa6785ca66a359784148",
-      "bytes": 2043
+      "sha256": "b05d48c5c24e0ea58e50134b8c326e0986ed15f53025d8e7d5f1c4ab29482817",
+      "bytes": 2220
     },
     "assets/fx/index.json": {
       "sha256": "09f5e4b76f77cc3b328d9a91a85a7eb8b0bc403d988b598e4c107a59b8117bef",
@@ -448,10 +448,6 @@
       "sha256": "e250b33fe5fff6d3acddc49fe97b8b584003405a2ce314f06190db13fb0f395c",
       "bytes": 1489
     },
-    "assets/images/band_x_prts_source_code_touch.png": {
-      "sha256": "c7d1b1e2d746f3fc1117f2ba79527d715a696f1cb44eba9d9a4265e015caad42",
-      "bytes": 176908
-    },
     "assets/images/enemy_x_prts_source_code_mimic.png": {
       "sha256": "9e02b827f9a1c5d9a0c426212cdceed889eca05870f9bb4c2d0375e053d3569e",
       "bytes": 43692
@@ -459,10 +455,6 @@
     "assets/images/enemy_x_prts_source_code_prts.png": {
       "sha256": "abe0954f8c7ede2e006472cec47af7e860e5ebf10988fed21308833cf4da60d5",
       "bytes": 42401
-    },
-    "assets/images/token_x_prts_source_code_mon3tr.png": {
-      "sha256": "85af808fb575529addfe2a80f43fa0a162cb60537e7c86fd1cb47fb474a04652",
-      "bytes": 41496
     },
     "assets/overlay.json": {
       "sha256": "404a492d6b65b49ba6ee24c877f8dd36164edf319477aed1c2c18de76eb82365",
@@ -492,22 +484,6 @@
       "sha256": "dfc6bd5f24bfecbaf204512c8f8c6d3cceb6ac5360a545fc3e7ed77f92fe6fcb",
       "bytes": 226079
     },
-    "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.atlas": {
-      "sha256": "dad62edab38832f7189e7127d2ee7c61949d0d66b423576f76b27d56940560b1",
-      "bytes": 2560
-    },
-    "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.png": {
-      "sha256": "28b94d2e01261f1552d534e8455bc90398a1424b027ac3c563b85b3a699de24d",
-      "bytes": 71319
-    },
-    "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.skel": {
-      "sha256": "05741d06435144ac2537788b0ced779c654d22ef2a984fc7a7af911d5c359bbb",
-      "bytes": 46958
-    },
-    "content/bands.json": {
-      "sha256": "e5b553688666f8dfddeaba3dcc080e7548bcfa75124443c8b6bc20f8fa649227",
-      "bytes": 1675
-    },
     "content/bosses.json": {
       "sha256": "d0f79d404a08c468d79a71a43f70639a0804d1de2a2f384c602e4d5e59507f5a",
       "bytes": 5959
@@ -524,17 +500,9 @@
       "sha256": "42527bd6fc016c3bd860af20a2636b4bcdcd6b736722d49261c82694e7a5449d",
       "bytes": 8080
     },
-    "data/operator.json": {
-      "sha256": "5e515ce4f233080cb110de153c35b504e71207f7575a0f8e748781484adc1eb9",
-      "bytes": 17082
-    },
-    "data/tokens.json": {
-      "sha256": "77befa51e3569ed5b3842c32a374afa056e2df980f5670f63f0423c98af99da2",
-      "bytes": 34298
-    },
     "plugin.json": {
-      "sha256": "3a0c43e55347c6a13b01d24fa877531ead41dc26e97d6c58a0fd230d505ff7d6",
-      "bytes": 3273
+      "sha256": "5c1a82de527f76ddeb3ec116b0375fbebf2d2b13c8f3e6481d98a396eb73b2d6",
+      "bytes": 2595
     }
   },
   "spine": {
@@ -668,59 +636,6 @@
         ]
       },
       "bounds": null
-    },
-    "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.skel": {
-      "sha256": "05741d06435144ac2537788b0ced779c654d22ef2a984fc7a7af911d5c359bbb",
-      "anims": {
-        "idle": "Idle",
-        "deploy": "Start",
-        "attack": {
-          "begin": null,
-          "loop": "Attack",
-          "end": null
-        },
-        "attackDown": null,
-        "skill": {
-          "begin": null,
-          "loop": "Skill",
-          "end": null,
-          "index": 0,
-          "idle": null
-        },
-        "die": "Die",
-        "move": null,
-        "stun": null
-      },
-      "animations": {
-        "Attack": 0.933,
-        "Default": 0,
-        "Die": 1,
-        "Idle": 1.333,
-        "Skill": 1,
-        "Skill_2": 1.267,
-        "Start": 1.667
-      },
-      "events": [
-        "OnAttack",
-        "OnStart"
-      ],
-      "hits": {
-        "Attack": [
-          0.233
-        ],
-        "Skill": [
-          0.367
-        ],
-        "Skill_2": [
-          0.667
-        ]
-      },
-      "bounds": {
-        "x": -518.63,
-        "y": 13.1,
-        "width": 744.033,
-        "height": 561.75
-      }
     }
   }
 }

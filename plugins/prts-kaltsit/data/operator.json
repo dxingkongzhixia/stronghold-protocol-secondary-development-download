@@ -1,6 +1,6 @@
 {
   "op": 1,
-  "charId": "char_x_prts_source_code_one",
+  "charId": "char_x_prts_kaltsit_one",
   "name": "凯尔希",
   "profession": "MEDIC",
   "subProfessionId": "physician",
@@ -240,7 +240,7 @@
         }
       ],
       "tokens": [
-        "token_x_prts_source_code_mon3tr"
+        "token_x_prts_kaltsit_mon3tr"
       ]
     },
     "elite": {
@@ -467,7 +467,7 @@
         }
       ],
       "tokens": [
-        "token_x_prts_source_code_mon3tr"
+        "token_x_prts_kaltsit_mon3tr"
       ]
     }
   },

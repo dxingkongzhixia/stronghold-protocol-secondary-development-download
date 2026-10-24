@@ -70,6 +70,7 @@ replacement. No route or frozen plugin grammar member is added; the stable surfa
 | `manifest.field.assets` | stable | 0.3.0 | `shared/plugins/manifest.js#MANIFEST_FIELDS` |
 | `manifest.field.authors` | stable | 0.3.0 | `shared/plugins/manifest.js#MANIFEST_FIELDS` |
 | `manifest.field.base` | stable | 0.3.0 | `shared/plugins/manifest.js#MANIFEST_FIELDS` |
+| `manifest.field.category` | stable | 0.3.0 | `shared/plugins/manifest.js#MANIFEST_FIELDS` |
 | `manifest.field.class` | stable | 0.3.0 | `shared/plugins/manifest.js#MANIFEST_FIELDS` |
 | `manifest.field.complete` | stable | 0.3.0 | `shared/plugins/manifest.js#MANIFEST_FIELDS` |
 | `manifest.field.conflicts` | stable | 0.3.0 | `shared/plugins/manifest.js#MANIFEST_FIELDS` |
@@ -393,6 +394,7 @@ replacement. No route or frozen plugin grammar member is added; the stable surfa
 | `error.PLUGIN_API` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_SCOPE` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_HOMEPAGE` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
+| `error.PLUGIN_CATEGORY` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_DEPS` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_ORDER_HINTS` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_SETTING` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |

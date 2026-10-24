@@ -30,8 +30,9 @@ import { net } from '../net.js';
 import { useStore } from '../store.js';
 import { catalog, contentSet, loadCatalog, cosmeticPlugins, installedCount, pluginName, pluginDescription, unofficialPlugins } from '../content.js';
 import { toggleRecommend, uiPluginEntries, uiRecommend, visibleRecommend } from './uiPlugins.js';
-import { t, tc, N_ } from '../../../shared/i18n.js';
+import { t, tc } from '../../../shared/i18n.js';
 import { sizeText, roomPluginFacts, pluginTagText, pluginMicro } from './pluginTag.js';
+import { PLUGIN_CATEGORIES, pluginCategory } from '../../../shared/plugins/category.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
@@ -59,6 +60,24 @@ export const roomPlugins = (plugins) => [
   ...cosmeticPlugins(plugins, 'room'),
   ...(Array.isArray(plugins) ? plugins : []).filter((p) => p && ['content', 'script', 'trusted'].includes(p.class) && p.status === 'loaded' && Array.isArray(p.scope) && p.scope.includes('room')),
 ].sort((a, b) => (String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0));
+
+/**
+ * The panel's five sections (外观音乐 / 阵营加强 / 新增策略 / 新增敌人 / 新增玩法), in that order, each with the rows
+ * that belong to it — empty sections are left out. A plugin's `category` (manifest 2, shared/plugins/category.js)
+ * decides; without one its class does. `classOf(id)` resolves a row of the room whose catalogue entry is gone.
+ * @template {{ id: string, class?: string, category?: string }} T
+ * @param {T[]} rows
+ * @param {(id: string) => string} [classOf]
+ * @returns {{ id: string, name: string, micro: string, rows: T[] }[]}
+ */
+export function pluginGroups(rows, classOf = (id) => (rows.find((p) => p.id === id) || {}).class) {
+  const by = new Map(PLUGIN_CATEGORIES.map((c) => [c.id, []]));
+  for (const p of Array.isArray(rows) ? rows : []) {
+    const id = pluginCategory({ category: p.category, class: p.class || classOf(p.id) });
+    (by.get(id) || by.get('gameplay')).push(p);
+  }
+  return PLUGIN_CATEGORIES.map((c) => ({ ...c, rows: by.get(c.id) })).filter((g) => g.rows.length);
+}
 
 /** One warning of the room's set as a sentence (room.state.content.warnings, server/plugins/visualSet.js / roomSets.js). */
 function warningText(w, nameOf, classOf = () => 'cosmetic') {
@@ -144,6 +163,38 @@ export function PluginPanel({ open, room, myId, onClose }) {
   };
   // the same choice again (without a plugin the server no longer offers): the set of the files as they are now
   const reapply = () => send(f.chosen.filter((x) => !offeredIds || offeredIds.has(x)), 'reapply');
+  /** One switchable plugin row (the category is the section it sits in, not a badge on the row). */
+  const renderRow = (p) => {
+    const on = f.on.has(p.id);
+    const auto = f.auto.has(p.id);
+    const cls = p.class || classOf(p.id);
+    const content = cls === 'content';
+    const code = cls === 'script' || cls === 'trusted';
+    const desc = pluginDescription(p);
+    // a gameplay plugin made for other game versions is refused (PLUGIN_INCOMPATIBLE): its switch only turns it off
+    const blocked = (content || code) && p.compatible === false && !on;
+    return html`<li key=${p.id} class=${cx('plugrow', on && 'is-on', (content || code) && 'is-content')} data-plugin=${p.id}>
+      <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} class=${cx('set-toggle plugrow__switch', on && 'is-on')}
+        disabled=${!f.editable || !!busy || (p.missing && !on) || (auto && on && !p.missing) || blocked} aria-label=${pluginName(p)}
+        onClick=${() => toggle(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
+      <div class="plugrow__body">
+        <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
+          ${auto ? html`<span class="plugrow__badge">${t('自动')}</span>` : null}
+          ${code ? html`<span class="plugrow__badge is-gameplay">${cls === 'trusted' ? t('原生信任') : t('沙箱脚本')}</span>` : null}<span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
+        <div class="plugrow__meta t-dim">
+          ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
+          ${Number.isFinite(p.artBytes) ? html`<span class="num">${sizeText(p.artBytes)}</span>` : null}
+          ${p.missing ? html`<span>${t('本服务器已不再提供')}</span>` : null}
+        </div>
+        ${desc ? html`<p class="plugrow__desc">${desc}</p>` : null}
+        ${on && p.settings ? html`<${PluginSettings} definitions=${p.settings} values=${f.plugins.find((x) => x.id === p.id)?.settings || {}}
+          disabled=${!f.editable || !!busy || p.missing} onSave=${(settings) => send([...new Set([...f.chosen, p.id])], p.id, { id: p.id, settings })} />` : null}
+        ${p.compatible === false ? html`<div class="plugrow__warn">${(content || code)
+          ? t('适配 {app}，本服务器是 {version}（改变玩法的插件不能启用）', { app: p.app || '', version: APP_VERSION })
+          : t('适配 {app}，本服务器是 {version}（外观插件，仍可使用）', { app: p.app || '', version: APP_VERSION })}</div>` : null}
+      </div>
+    </li>`;
+  };
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('插件')} micro="PLUGINS" width="7.4rem"
       actions=${html`<${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
     <div class="plugpanel" data-testid="plugin-panel">
@@ -159,39 +210,10 @@ export function PluginPanel({ open, room, myId, onClose }) {
       ${installed && cat.status === 'loading' && !rows.length ? html`<p class="set-hint">${t('正在读取插件列表…')}</p>` : null}
       ${installed && cat.status === 'failed' && !rows.length ? html`<p class="set-hint is-warn">${t('无法读取插件列表')}</p>` : null}
       ${(!installed || cat.status === 'ready') && !rows.length ? html`<p class="set-hint">${t('本服务器没有可在房间中使用的插件')}</p>` : null}
-      ${rows.length ? html`<ul class="plugpanel__list">
-        ${rows.map((p) => {
-          const on = f.on.has(p.id);
-          const auto = f.auto.has(p.id);
-          const cls = p.class || classOf(p.id);
-          const content = cls === 'content';
-          const code = cls === 'script' || cls === 'trusted';
-          const desc = pluginDescription(p);
-          // a gameplay plugin made for other game versions is refused (PLUGIN_INCOMPATIBLE): its switch only turns it off
-          const blocked = (content || code) && p.compatible === false && !on;
-          return html`<li key=${p.id} class=${cx('plugrow', on && 'is-on', (content || code) && 'is-content')} data-plugin=${p.id}>
-            <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} class=${cx('set-toggle plugrow__switch', on && 'is-on')}
-              disabled=${!f.editable || !!busy || (p.missing && !on) || (auto && on && !p.missing) || blocked} aria-label=${pluginName(p)}
-              onClick=${() => toggle(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
-            <div class="plugrow__body">
-              <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
-                ${auto ? html`<span class="plugrow__badge">${t('自动')}</span>` : null}
-                <span class=${cx('plugrow__badge', content && 'is-gameplay')}>${code ? (cls === 'trusted' ? t('原生信任') : t('沙箱脚本')) : content ? t('改变玩法') : t('外观')}</span><span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
-              <div class="plugrow__meta t-dim">
-                ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
-                ${Number.isFinite(p.artBytes) ? html`<span class="num">${sizeText(p.artBytes)}</span>` : null}
-                ${p.missing ? html`<span>${t('本服务器已不再提供')}</span>` : null}
-              </div>
-              ${desc ? html`<p class="plugrow__desc">${desc}</p>` : null}
-              ${on && p.settings ? html`<${PluginSettings} definitions=${p.settings} values=${f.plugins.find((x) => x.id === p.id)?.settings || {}}
-                disabled=${!f.editable || !!busy || p.missing} onSave=${(settings) => send([...new Set([...f.chosen, p.id])], p.id, { id: p.id, settings })} />` : null}
-              ${p.compatible === false ? html`<div class="plugrow__warn">${(content || code)
-                ? t('适配 {app}，本服务器是 {version}（改变玩法的插件不能启用）', { app: p.app || '', version: APP_VERSION })
-                : t('适配 {app}，本服务器是 {version}（外观插件，仍可使用）', { app: p.app || '', version: APP_VERSION })}</div>` : null}
-            </div>
-          </li>`;
-        })}
-      </ul>` : null}
+      ${pluginGroups(rows, classOf).map((g) => html`<section key=${g.id} class="plugpanel__group" data-category=${g.id}>
+        <h4 class="plugpanel__grouphead"><span>${t(g.name)}</span><em>${g.micro}</em><b class="num">${g.rows.length}</b></h4>
+        <ul class="plugpanel__list">${g.rows.map(renderRow)}</ul>
+      </section>`)}
       ${f.editable && f.count ? html`<div class="plugpanel__reapply">
         <${Button} variant="secondary" size="sm" icon="refresh" data-testid="plugin-reapply" disabled=${!!busy} onClick=${reapply}>${t('重新应用')}<//>
         <span class="set-hint">${t('插件的文件在服务器上更新后，重新应用才会生效。')}</span>
@@ -223,9 +245,6 @@ export function PluginPanel({ open, room, myId, onClose }) {
   <//>`;
 }
 
-/** What a class is called in the list (msgids). */
-const CLASS_NAMES = { cosmetic: N_('外观'), content: N_('改变玩法'), script: N_('代码'), trusted: N_('代码'), ui: N_('界面'), lang: N_('语言') };
-
 /** The title screen's list of a server's unofficial plugins (see the header): the catalogue, fetched when it opens. */
 export function InstalledPlugins({ open, onClose }) {
   const cat = useStore((s) => s, Object.is, catalog);
@@ -237,19 +256,22 @@ export function InstalledPlugins({ open, onClose }) {
       <p class="plugpanel__lead">${t('插件为非官方制作，不属于原版游戏；原版内容始终是默认。')}</p>
       ${cat.status === 'loading' && !plugins.length ? html`<p class="set-hint">${t('正在读取插件列表…')}</p>` : null}
       ${cat.status === 'failed' && !plugins.length ? html`<p class="set-hint is-warn">${t('无法读取插件列表')}</p>` : null}
-      <ul class="plugpanel__list">
-        ${plugins.map((p) => html`<li key=${p.id} class="plugrow" data-plugin=${p.id}>
-          <div class="plugrow__body">
-            <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
-              <span class="plugrow__badge">${t(CLASS_NAMES[p.class] || '插件')}</span><span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
-            <div class="plugrow__meta t-dim">
-              <span>${p.status === 'loaded' ? t('可以使用') : t('本版本不支持')}</span>
-              ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
+      ${pluginGroups(plugins).map((g) => html`<section key=${g.id} class="plugpanel__group" data-category=${g.id}>
+        <h4 class="plugpanel__grouphead"><span>${t(g.name)}</span><em>${g.micro}</em><b class="num">${g.rows.length}</b></h4>
+        <ul class="plugpanel__list">
+          ${g.rows.map((p) => html`<li key=${p.id} class="plugrow" data-plugin=${p.id}>
+            <div class="plugrow__body">
+              <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
+                <span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
+              <div class="plugrow__meta t-dim">
+                <span>${p.status === 'loaded' ? t('可以使用') : t('本版本不支持')}</span>
+                ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
+              </div>
+              ${pluginDescription(p) ? html`<p class="plugrow__desc">${pluginDescription(p)}</p>` : null}
             </div>
-            ${pluginDescription(p) ? html`<p class="plugrow__desc">${pluginDescription(p)}</p>` : null}
-          </div>
-        </li>`)}
-      </ul>
+          </li>`)}
+        </ul>
+      </section>`)}
     </div>
   <//>`;
 }

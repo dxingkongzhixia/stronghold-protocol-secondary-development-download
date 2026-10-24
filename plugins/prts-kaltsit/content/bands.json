@@ -3,11 +3,11 @@
   "entries": [
     {
       "file": "bands",
-      "id": "band_x_prts_source_code_touch",
+      "id": "band_x_prts_kaltsit_touch",
       "base": "band_amedic",
       "set": {
-        "bandId": "band_x_prts_source_code_touch",
-        "iconId": "band_x_prts_source_code_touch",
+        "bandId": "band_x_prts_kaltsit_touch",
+        "iconId": "band_x_prts_kaltsit_touch",
         "name": "凯尔希",
         "sortId": 41,
         "modeTypeList": [
@@ -18,7 +18,7 @@
         "grants": {
           "team": true,
           "grantUnit": {
-            "charId": "char_x_prts_source_code_one",
+            "charId": "char_x_prts_kaltsit_one",
             "tier": 3,
             "elite": false,
             "skill": 2,
@@ -27,7 +27,7 @@
               "steadShip",
               "preciShip"
             ],
-            "token": "token_x_prts_source_code_mon3tr",
+            "token": "token_x_prts_kaltsit_mon3tr",
             "tokenOnDeath": "downed",
             "reviveMs": 20000,
             "maxRevives": 2,

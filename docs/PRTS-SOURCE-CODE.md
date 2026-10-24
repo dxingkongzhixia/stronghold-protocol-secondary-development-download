@@ -126,23 +126,28 @@
 
 ## 4. 插件结构
 
+2026-10-24 起拆成两个插件（同一个主题、各自一个分类，可单独开关）：
+
 ```
-plugins/prts-source-code/
-  plugin.json
-  content/
-    bosses.json
-    enemies.json
-    bands.json
-    offers.json
-    modes.json
-  i18n/{zh,en}.json
+plugins/prts-source-code/          分类：新增敌人
+  plugin.json                     category: "enemy"
+  content/{bosses,enemies,waves,modes}.json
+  assets/{images,spine,audio,fx}
+  README.md
+
+plugins/prts-kaltsit/              分类：新增策略
+  plugin.json                     category: "strategy"
+  content/bands.json
+  data/{operator,tokens}.json
+  assets/{images,spine/token}
   README.md
 ```
 
-- `plugin.json`：`class: content`、`scope: ["room"]`、`app: ">=0.4.0 <0.5.0"`；
-- 不申请 `trusted` / `script`；
-- 插件启用后才把 Boss/band 加入房间池；
-- 默认不改变原版内容。
+- 两者都是 `class: content`、`scope: ["room"]`、`app: ">=0.4.0 <0.5.0"`；凯尔希插件不申请 `data.patch`；
+- 记录命名空间随文件夹名：Boss 侧仍是 `prts_source_code`（`server/sim/content/bossProtocol.js` 的
+  `plugin:prts-source-code:` FX 键与 `protocol.ui.id` 依赖它，不能改名），策略侧改为 `prts_kaltsit`；
+- 插件启用后才把 Boss / 策略加入房间池；默认不改变原版内容；
+- 两个插件之间没有数据引用（策略不绑定 Boss），可以只开其中一个。
 
 ---
 

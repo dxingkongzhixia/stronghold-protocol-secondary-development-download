@@ -117,6 +117,16 @@
         }
       ]
     },
+    "category": {
+      "enum": [
+        "appearance",
+        "faction",
+        "strategy",
+        "enemy",
+        "gameplay"
+      ],
+      "description": "The plugin list's section: appearance (外观音乐), faction (阵营加强), strategy (新增策略), enemy (新增敌人), gameplay (新增玩法). Display grouping only; without it the class decides."
+    },
     "authors": {
       "anyOf": [
         {

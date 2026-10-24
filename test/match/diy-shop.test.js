@@ -455,3 +455,17 @@ test('a DIY 鸿雪 (her operator kit): her 打字机 piece comes to the hand in 
   h.invariants();
   m.dispose();
 });
+
+test('the room content set kitted list reaches the match (a plugin-added 自选 pick survives only where the set allows it)', () => {
+  const seats = (diy) => [{ seat: 0, playerId: 'p_0', name: 'P0', isBot: false, connected: true, diy }];
+  // the room's list (lobby.kittedFor -> room.content.kittedExtra) is what the picks are checked against
+  const allowed = makeMatch({ seats: seats({ [T5A]: SIEGE_PICK }), kitted: [SIEGE] });
+  assert.deepEqual(allowed.m.players.get('p_0').diy, { [T5A]: SIEGE_PICK });
+  assert.deepEqual(allowed.m.diyKitted, [SIEGE]);
+  allowed.m.dispose();
+  // a set that does not offer the operator drops the pick instead of silently falling back to the core KITTED_CHARS
+  const refused = makeMatch({ seats: seats({ [T5A]: SIEGE_PICK }), kitted: [] });
+  assert.deepEqual(refused.m.players.get('p_0').diy, {}, 'the pick is not in the room list');
+  assert.deepEqual(refused.m.players.get('p_0').diyStock.snapshot(), {}, 'no stock either');
+  refused.m.dispose();
+});

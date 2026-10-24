@@ -97,8 +97,13 @@ What this version does with each class:
 | `ui` | an interface widget: an html page in a sandboxed frame | **loaded** (P4, §14) — a player switches it on for this browser; its frame files served at `/p/<id>/<hash8>/<path>` with a frame CSP |
 | `trusted` | page or server code with full trust | **off by default** — trusted/trusted-force only; pinning, address gates and room consent (§13) |
 
-Nothing of a plugin folder is served except the files a `lang` manifest names, the files a loaded `cosmetic`
-plugin's overlay names, and the frame files of a loaded `ui` plugin (`.html`, `.js`, `.css`, `.png` under its
+The room's 插件 panel groups what a room may switch on into five sections — **外观音乐 / 阵营加强 / 新增策略 / 新增敌人 /
+新增玩法** — by the optional `category` field (§3): `appearance`, `faction`, `strategy`, `enemy`, `gameplay`. The category is
+the label the player reads; the `class` above is still what the game does with the plugin. A plugin without one is grouped
+by its class (cosmetic/ui/lang → 外观音乐, everything that changes the room → 新增玩法). A plugin that adds two unrelated
+kinds of content should be split into two plugins (PRTS is: `prts-kaltsit` = 新增策略, `prts-source-code` = 新增敌人).
+
+Nothing of a plugin folder is served except the files a `lang` manifest names, the files a loaded `cosmetic`plugin's overlay names, and the frame files of a loaded `ui` plugin (`.html`, `.js`, `.css`, `.png` under its
 `entry.client`, §14) — never `plugin.json`, the lock file, a document or any other file of the folder. A ui plugin's
 `/p/` responses carry a frame Content-Security-Policy; cosmetic art does not. Content-set snapshots are separate:
 `/cs/<cs16>/` serves checked data/descriptors and, for native trusted sets, only the retained sim/meta/client script
@@ -141,6 +146,7 @@ classes and the content sets running at once — §11 and `docs/DEPLOY.md`.
 | `api` | the plugin API level, within `shared/constants.js` `PLUGIN_API` (`{ current: 2, min: 1 }`); required but for `lang`. A manifest that uses a part of level 2 (today `offers`, §10b) states `"api": 2` |
 | `class` | §2; every part the manifest names must belong to it |
 | `scope` | `room` (the host's choice for the whole room), `personal` (the player's own setting), `server` (trusted code only), as the class allows — `cosmetic`: room and/or personal; `content`, `script`: room; `ui`, `lang`: personal; `trusted`: server or room |
+| `category` | optional, display only: `appearance` (外观音乐), `faction` (阵营加强), `strategy` (新增策略), `enemy` (新增敌人), `gameplay` (新增玩法) — the section of the 插件 panel (§2); nothing in a room, a match or a content set reads it; without it the class decides |
 | `authors`, `credits`, `license`, `homepage` (http/https), `sourceLang` (default `zh`) | free text |
 | `requires`, `optional`, `conflicts` | `{ "<plugin id>": "<version range>" }`; a missing or out-of-range requirement is a warning of the registry now, a refusal when rooms choose plugins |
 | `loadAfter`, `loadBefore`, `priority` | ordering hints (lists of ids; an integer within ±1000, default 0) |
@@ -1773,6 +1779,7 @@ lacks). The table below is generated from it (`node tools/plugin.mjs errors --wr
 | The plugin is not listed (skipped); the start log and check say why | `PLUGIN_API` | The plugin API level "api" is missing, not an integer, or not supported | Write "api": {current} (this game supports {min}–{current}). (the studio fixes it in one click) |
 | The plugin is not listed (skipped); the start log and check say why | `PLUGIN_SCOPE` | "scope" is not one this class allows | A cosmetic plugin has ["room", "personal"]: room — the host switches it on for the whole room; personal — a player for themself in 设置. (the studio fixes it in one click) |
 | The plugin works, with a note in the check | `PLUGIN_HOMEPAGE` | "homepage" is not an http(s) address and is ignored | Write a full address such as https://example.com/my-plugin, or remove it. |
+| The plugin is not listed (skipped); the start log and check say why | `PLUGIN_CATEGORY` | "category" is not one of appearance, faction, strategy, enemy, gameplay | Write one of "appearance" \| "faction" \| "strategy" \| "enemy" \| "gameplay"; leave it out to group by class. |
 | The plugin is not listed (skipped); the start log and check say why | `PLUGIN_DEPS` | A dependency (requires / optional / conflicts) is not right: {where} | Write { "<plugin id>": "<version range>" }, e.g. { "base-skin": ">=1.0.0" }; never the plugin itself, never one both required and in conflict, at most 32. |
 | The plugin is not listed (skipped); the start log and check say why | `PLUGIN_ORDER_HINTS` | A load-order hint (loadAfter / loadBefore / priority) is not right: {where} | loadAfter and loadBefore are lists of plugin ids (never one in both, never the plugin itself); priority is an integer within ±1000, default 0. |
 | The plugin is not listed (skipped); the start log and check say why | `PLUGIN_SETTING` | A setting is not right: {where} | Each setting is { "type": … }: boolean, integer / number (with min and max), enum (with options); its default within them; at most 32, no free text. |

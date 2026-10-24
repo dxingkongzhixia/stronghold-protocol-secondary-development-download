@@ -73,6 +73,7 @@ export function makeMatch(o = {}) {
     scheduler: sched,
     registry: o.registry,
     offers: o.offers,
+    kitted: o.kitted,
     BattleClass: o.fake ? FakeBattle : undefined,
     battleContent: o.battleContent,
     timerScale: o.timerScale,

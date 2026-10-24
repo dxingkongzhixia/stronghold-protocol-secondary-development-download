@@ -6,13 +6,14 @@
     "en": "PRTS: Source Code"
   },
   "description": {
-    "zh": "PRTS 主题内容插件：新增 PRTS / 拟态机械 Boss、隐藏协议，以及凯尔希与 M3 的「凯尔希」策略。选择 PRTS 作为对手后可在策略选择中使用。",
-    "en": "A PRTS-themed content plugin: the PRTS / mimic bosses, the hidden protocol, and Kal'tsit with M3 in the Emergency Reinforcement strategy. Pick PRTS as the opponent to use it."
+    "zh": "PRTS 主题的敌人插件：新增 PRTS / 拟态机械 Boss、隐藏协议与专属波次，并把这些 Boss 加入各模式的对手池。凯尔希策略已拆到「PRTS：凯尔希」插件。",
+    "en": "A PRTS-themed enemy plugin: the PRTS / mimic bosses, the hidden protocol and their waves, added to every mode's boss pool. The Kal'tsit strategy now lives in the separate “PRTS: Kal'tsit” plugin."
   },
   "version": "0.1.0",
   "app": ">=0.4.0 <0.5.0",
   "api": 2,
   "class": "content",
+  "category": "enemy",
   "scope": [
     "room"
   ],
@@ -22,20 +23,12 @@
     "assets.add"
   ],
   "data": [
-    "data/tokens.json",
     "content/enemies.json",
     "content/bosses.json",
     "content/waves.json",
-    "content/bands.json",
     "content/modes.json"
   ],
-  "operators": [
-    "data/operator.json"
-  ],
   "assets": {
-    "bands": {
-      "band_x_prts_source_code_touch": "assets/images/band_x_prts_source_code_touch.png"
-    },
     "enemies": {
       "enemy_x_prts_source_code_prts": {
         "icon": "assets/images/enemy_x_prts_source_code_prts.png",
@@ -66,19 +59,6 @@
           "atlas": "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.atlas",
           "textures": [
             "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.png"
-          ],
-          "pma": true
-        }
-      }
-    },
-    "tokens": {
-      "token_x_prts_source_code_mon3tr": {
-        "avatar": "assets/images/token_x_prts_source_code_mon3tr.png",
-        "spine": {
-          "skel": "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.skel",
-          "atlas": "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.atlas",
-          "textures": [
-            "assets/spine/token/token_x_prts_source_code_mon3tr/token_10002_kalts_mon3tr.png"
           ],
           "pma": true
         }

@@ -1,44 +1,27 @@
-# PRTS：源代码
+# PRTS：源代码 / PRTS: Source Code
 
-这是一个 fork 独有的内容插件原型。
+PRTS 主题的**敌人**插件（分类：新增敌人）：PRTS / 拟态机械 Boss、隐藏协议与专属波次。凯尔希策略已拆到
+[`../prts-kaltsit/`](../prts-kaltsit/)（分类：新增策略），两个插件可以同时开启。
 
-## 当前内容
+## 内容
 
-- 凯尔希（来自本机官方数据的 `char_003_kalts` 记录）
-- 2 盟约、默认非精锐
-- 固定 S3（技能的默认标记已切到第 3 个技能）
-- 默认盟约：坚守 / 精准（不再带助力；自身不再通过助力叠层）
-- 凯尔希使用真实 `char_003_kalts` kit；M3 被击倒后 20 秒回到原格，最多 2 次，第 3 次永久退场
+- 普通 Boss `boss_x_prts_source_code_prts`（PRTS）与隐藏 Boss `boss_x_prts_source_code_prts_hidden`（拟态重构）
+- 拟态机械 `enemy_x_prts_source_code_mimic`，以及三只 Boss 敌人的协议逻辑（链接 / 复活 / 清除协议 / DP 回复 /
+  部署锁定 / 弹道 / 飞行 / 光束 / HUD）
+- 普通 / 隐藏、单人 / 多人的专属波次（`wave_x_prts_source_code_*`）
+- 把上面这些 Boss 并入八个官方模式的对手池与隐藏对手池（`content/modes.json`，只做 merge，不新增模式）
+- Boss 音乐（官方 `boss_8` 引用）、Spine、图标、20 个官方 FX prefab + 贴图 + 网格
 
-## 已完成
+## 启用
 
-- PRTS / 拟态 Boss 数据
-- 隐藏 Boss 与强制配对
-- PRTS 专属普通 / 隐藏 / 单双人波次
-- `band_x_prts_source_code_touch`「凯尔希」公共策略卡（不写死 Boss 绑定）、插件自带的凯尔希策略图标；全队授予（人类和 AI 队友都包括）；凯尔希是隐藏特殊干员，不进商店池 / 图鉴 / 自选，只由策略授予
-- 队友的凯尔希占用预备医疗格；移出该格后不会重新生成 Touch 的预备医疗
-- 清除协议、拟态重构、M3 击倒复活
-- 每回合休整期随机获得 1 名 1–3 本干员（`grants.restEndRandomChess`）
-- PRTS / 拟态 Spine、敌人图标、M3 模型和 Boss BGM 已放进插件自己的 `assets/`，由插件资产覆盖层加载
-- 已从本机官方客户端提取 20 个官方 FX prefab、73 张贴图与 16 个网格，全部放进 `assets/fx/`，由插件 FX 容器加载
-- Boss 结算头像可用
-- 普通/隐藏 PRTS 的协议事件已接官方 FX：start / buff / die / line / skill / projectile / deploy-lock
-- 隐藏 PRTS 使用独立紫色染色
-- 协议 HUD 通过插件的 `protocol.ui` 发布到 `b.snap.pluginView`，核心 HUD 不再绘制 PRTS 专用协议条
+房主在房间的「插件」面板 → **新增敌人** 分组里打开本插件；PRTS 随后出现在对应难度/模式的 Boss 池中。
 
-## 尚未完成
+## 维护
 
-- 实际房间联机回归
-- 清除协议的全屏演出（当前为 Boss 胶囊 HUD 计数与预警）
-
-## 美术
-
-使用本安装已有的官方凯尔希素材（`art.ref: char_003_kalts`）和官方客户端提取的 PRTS / 拟态 Spine；策略头像使用凯尔希官方立绘做默认策略卡风格化（保留原色、薄荷青渐变、扫描线、策略卡文字）。
-
-正式发布前仍需按 `docs/PRTS-SOURCE-CODE.md` 完成授权和回退模型检查。
-
-## 检查
+记录 id 的命名空间是 `prts_source_code`（来自文件夹名）。`server/sim/content/bossProtocol.js` 里的 FX 键
+`plugin:prts-source-code:<key>` 与 `enemies.json` 的 `protocol.ui.id` 依赖文件夹 id，**不要改文件夹名**。改过 Spine 后运行：
 
 ```bash
 node tools/plugin.mjs check prts-source-code --strict
+node tools/plugin.mjs pack prts-source-code --zip
 ```

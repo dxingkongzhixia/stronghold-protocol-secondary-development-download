@@ -1,0 +1,99 @@
+{
+  "lock": 1,
+  "id": "prts-kaltsit",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "assets/images/band_x_prts_kaltsit_touch.png": {
+      "sha256": "c7d1b1e2d746f3fc1117f2ba79527d715a696f1cb44eba9d9a4265e015caad42",
+      "bytes": 176908
+    },
+    "assets/images/token_x_prts_kaltsit_mon3tr.png": {
+      "sha256": "85af808fb575529addfe2a80f43fa0a162cb60537e7c86fd1cb47fb474a04652",
+      "bytes": 41496
+    },
+    "assets/spine/token/token_x_prts_kaltsit_mon3tr/token_10002_kalts_mon3tr.atlas": {
+      "sha256": "dad62edab38832f7189e7127d2ee7c61949d0d66b423576f76b27d56940560b1",
+      "bytes": 2560
+    },
+    "assets/spine/token/token_x_prts_kaltsit_mon3tr/token_10002_kalts_mon3tr.png": {
+      "sha256": "28b94d2e01261f1552d534e8455bc90398a1424b027ac3c563b85b3a699de24d",
+      "bytes": 71319
+    },
+    "assets/spine/token/token_x_prts_kaltsit_mon3tr/token_10002_kalts_mon3tr.skel": {
+      "sha256": "05741d06435144ac2537788b0ced779c654d22ef2a984fc7a7af911d5c359bbb",
+      "bytes": 46958
+    },
+    "content/bands.json": {
+      "sha256": "bdff2091d5e7d6feafa692022591140d50841c0076c6155a229b6d8ed2cb6555",
+      "bytes": 1706
+    },
+    "data/operator.json": {
+      "sha256": "62c58f8eca52a0420addae8a2c452df3c8ae7a6943f9ff624b14199f1071d702",
+      "bytes": 17070
+    },
+    "data/tokens.json": {
+      "sha256": "07f9ca6b2c25c370f622ff40cbeb9f397b6a3c091e4241fdbb135ee59ec06382",
+      "bytes": 34258
+    },
+    "plugin.json": {
+      "sha256": "0aaf286c27a097618d8c8be48e5102b07d199dc0e65b60ff4bd5fb4610479949",
+      "bytes": 1733
+    }
+  },
+  "spine": {
+    "assets/spine/token/token_x_prts_kaltsit_mon3tr/token_10002_kalts_mon3tr.skel": {
+      "sha256": "05741d06435144ac2537788b0ced779c654d22ef2a984fc7a7af911d5c359bbb",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null
+      },
+      "animations": {
+        "Attack": 0.933,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 1.333,
+        "Skill": 1,
+        "Skill_2": 1.267,
+        "Start": 1.667
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.233
+        ],
+        "Skill": [
+          0.367
+        ],
+        "Skill_2": [
+          0.667
+        ]
+      },
+      "bounds": {
+        "x": -518.63,
+        "y": 13.1,
+        "width": 744.033,
+        "height": 561.75
+      }
+    }
+  }
+}

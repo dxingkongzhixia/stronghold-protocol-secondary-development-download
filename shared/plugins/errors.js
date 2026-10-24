@@ -225,6 +225,11 @@ export const PLUGIN_ERRORS = Object.freeze({
     zh: '主页 "homepage" 不是 http(s) 网址，被忽略了', en: '"homepage" is not an http(s) address and is ignored',
     fix: { zh: '写完整的网址，例如 https://example.com/my-plugin，或者删掉它。', en: 'Write a full address such as https://example.com/my-plugin, or remove it.' },
   },
+  PLUGIN_CATEGORY: {
+    level: 'problem', doc: D.manifest,
+    zh: '分类 "category" 不是外观音乐 / 阵营加强 / 新增策略 / 新增敌人 / 新增玩法之一', en: '"category" is not one of appearance, faction, strategy, enemy, gameplay',
+    fix: { zh: '写 "category": "enemy"（新增敌人）等五个值之一；不写则列表按插件类别归类。', en: 'Write one of "appearance" | "faction" | "strategy" | "enemy" | "gameplay"; leave it out to group by class.' },
+  },
   PLUGIN_DEPS: {
     level: 'problem', doc: D.manifest,
     zh: '依赖关系（requires / optional / conflicts）写得不对：{where}', en: 'A dependency (requires / optional / conflicts) is not right: {where}',

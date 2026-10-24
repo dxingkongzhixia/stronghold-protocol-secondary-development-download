@@ -22,7 +22,7 @@ import {
   pluginName, PERSONAL_PREF,
 } from '../../public/js/content.js';
 import { ERR } from '../../shared/constants.js';
-import { roomPluginFacts, nextChoice, sizeText, pluginTagText, pluginMicro } from '../../public/js/ui/pluginPanel.js';
+import { roomPluginFacts, nextChoice, sizeText, pluginTagText, pluginMicro, pluginGroups } from '../../public/js/ui/pluginPanel.js';
 import { visualHashOf, writesHashOf, VISUAL_HASH_VERSION } from '../../shared/plugins/visual.js';
 import { sha256Hex } from '../../shared/sha256.js';
 
@@ -434,6 +434,24 @@ describe('the 插件 panel (ui/pluginPanel.js) and the room screen', () => {
     assert.equal(pluginTagText(room({ plugins: [] })), '原版');
     assert.deepEqual([sizeText(2048), sizeText(3 * 1048576), sizeText(NaN)], ['2 KB', '3.0 MB', '']);
     assert.equal(pluginMicro({ id: 'a', version: '1.0.0', artBytes: 4096 }), 'a · v1.0.0 · 4 KB');
+  });
+
+  test('the five sections: a declared category first, else the class decides', () => {
+    const rows = [
+      { id: 'a', class: 'content', category: 'enemy' },
+      { id: 'b', class: 'content', category: 'strategy' },
+      { id: 'c', class: 'content' },
+      { id: 'd', class: 'cosmetic' },
+      { id: 'e', class: 'script' },
+      { id: 'f', class: 'content', category: 'faction' },
+    ];
+    const groups = pluginGroups(rows);
+    assert.deepEqual(groups.map((g) => g.id), ['appearance', 'faction', 'strategy', 'enemy', 'gameplay']);
+    assert.deepEqual(groups.map((g) => g.rows.map((r) => r.id)), [['d'], ['f'], ['b'], ['a'], ['c', 'e']]);
+    assert.deepEqual(groups.map((g) => g.name), ['外观音乐', '阵营加强', '新增策略', '新增敌人', '新增玩法']);
+    // a room row whose catalogue entry is gone still lands in its class's section
+    assert.deepEqual(pluginGroups([{ id: 'gone', missing: true }], (id) => (id === 'gone' ? 'cosmetic' : 'content')).map((g) => g.id), ['appearance']);
+    assert.deepEqual(pluginGroups([]), [], 'no rows, no sections');
   });
 
   test('a vanilla page loads none of the panel, the asset store or what composes a set at start (the import graph of main.js)', () => {
