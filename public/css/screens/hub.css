@@ -559,12 +559,6 @@
   border-top: 1px solid rgba(223, 230, 226, .09);
 }
 .hub-public__row:first-child { border-top: 0; }
-/* 组队中 (owner 2026-10-24): the mint of the 在线玩家 list, on the row as well as its pill — the color was too easy
-   to miss when it only tinted a border. A 正在模拟 row keeps the neutral panel. */
-.hub-public__row.is-lobby {
-  background: linear-gradient(90deg, rgba(78, 216, 175, .12), transparent 68%);
-  box-shadow: inset 2px 0 0 var(--mint-400);
-}
 .hub-public__rowhead { display: flex; align-items: center; justify-content: space-between; gap: calc(0.08 * var(--ui-unit, 1rem)); }
 .hub-public__name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: max(calc(.16 * var(--utility-text, var(--t))), 11px); font-weight: 800; color: var(--text-hi); }
 .hub-public__meta { display: flex; flex-wrap: wrap; align-items: center; gap: calc(0.05 * var(--ui-unit, 1rem)); }
@@ -572,12 +566,13 @@
   padding: 0 calc(0.05 * var(--ui-unit, 1rem)); font-size: max(calc(.1 * var(--utility-text, var(--t))), 8px);
   line-height: max(calc(.18 * var(--ui-unit, 1rem)), 13px); border: 1px solid rgba(223, 230, 226, .18); color: var(--text-dim);
 }
+/* exactly the 在线玩家 list's status pill: text + 1px currentColor border, transparent inside */
 .hub-public__state {
-  padding: 0 calc(0.09 * var(--ui-unit, 1rem)); line-height: max(calc(.21 * var(--ui-unit, 1rem)), 15px);
-  font-weight: 800; color: var(--mint-400); border: 1px solid var(--mint-400);
-  border-radius: 999px; background: rgba(78, 216, 175, .18);
+  padding: calc(0.02 * var(--ui-unit, 1rem)) calc(0.1 * var(--ui-unit, 1rem));
+  font-size: max(calc(.14 * var(--utility-text, var(--t))), 10px); font-weight: 600; line-height: 1.4;
+  color: var(--mint-400); border: 1px solid currentColor; border-radius: 999px; background: none;
 }
-.hub-public__state.is-live { color: var(--amber, #f6a329); border-color: rgba(246, 163, 41, .55); background: rgba(246, 163, 41, .1); }
+.hub-public__state.is-live { color: var(--amber, #f6a329); border-color: currentColor; background: none; }
 .hub-public__mod.is-mod { color: var(--amber, #f6a329); border-color: rgba(246, 163, 41, .55); }
 .hub-public__seats { display: inline-flex; align-items: center; gap: 2px; font-size: max(calc(.11 * var(--utility-text, var(--t))), 9px); color: var(--text-dim); }
 .hub-public__seats .icon { width: 1em; height: 1em; }
