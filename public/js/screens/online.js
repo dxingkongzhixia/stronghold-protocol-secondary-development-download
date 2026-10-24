@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { html, Icon, MicroLabel, TextField, AvatarFrame, RoleTag } from '../ui/components.js';
 import { useStore, setOnlineOpen, setOnlineStatsReturn, setOnlineFilter } from '../store.js';
 import { openPlayerStats } from './stats.js';
-import { data as dataset } from '../data.js';
+import { data as dataset, useData } from '../data.js';
 import { avatarUrl } from '../ui/assetUrls.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
@@ -71,6 +71,7 @@ export function openOnlineStats(p, deps = {}) {
  * callsign / room code / status. Styled with the game's own components (docs/MATCHMAKING.md §8).
  */
 export function OnlineOverlay({ onClose }) {
+  useData('assets');
   const [data, setData] = useState(null);
   const query = useStore((s) => s.ui.onlineFilter);
   const list = (data && data.online) || [];

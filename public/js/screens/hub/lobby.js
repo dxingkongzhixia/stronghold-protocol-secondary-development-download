@@ -282,7 +282,7 @@ export function LobbyScreen() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const alive = useRef(true);
   const inFlight = useRef(false);
-  useData('config');
+  useData('config', 'assets');
   useEffect(() => () => { alive.current = false; }, []);
 
   const online = conn.status === 'online';

@@ -16,6 +16,8 @@ import { useEffect, useMemo, useRef, useState } from '../../vendor/hooks.module.
 import { html, AvatarFrame, Icon, MicroLabel } from './components.js';
 import { makeLookups, BandIcon, BondGlyph, UnitThumb, Img } from './gameComponents.js';
 import { data, useData } from '../data.js';
+import { useStore, shallowEqual } from '../store.js';
+import { avatarUrl } from './assetUrls.js';
 import { loadStats, subscribeStats, STATS_PREF_KEY } from './stats.js';
 import { fetchStats } from './statsSync.js';
 import { net } from '../net.js';
@@ -177,9 +179,11 @@ export function TrophyBadge({ count }) {
 
 function Plate({ me, s }) {
   const name = me?.name || t('博士');
+  const auth = useStore((st) => st.auth, shallowEqual);
+  const avatar = avatarUrl(auth?.account?.avatar, data.get('assets'));
   return html`<div class="ach-plate">
     <div class="ach-card">
-      <span class="ach-card__ava"><${AvatarFrame} name=${name} size="lg" seat=${0} self=${true} /></span>
+      <span class="ach-card__ava"><${AvatarFrame} src=${avatar} name=${name} size="lg" seat=${0} self=${true} /></span>
       <span class="ach-card__who"><b class="ach-card__name">${name}</b><span class="ach-card__id">${t('对局记录')}</span></span>
       <span class="ach-card__brand" aria-hidden="true">STRONGHOLD<br />PROTOCOL</span>
     </div>

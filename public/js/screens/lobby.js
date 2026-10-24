@@ -121,7 +121,7 @@ export function LobbyScreen() {
   // return (ui.roomsReturn, set by this screen's own 加入 / 观战) opens the rooms view at once — consumed here, once.
   // (bug提交 left this top bar on 2026-10-11 — it is reached from the 设置 dialog now, ui/settings.js.)
   const [showCommunity, setShowCommunity] = useState(() => (consumeRoomsReturn() ? 'rooms' : null));
-  useData('config');
+  useData('config', 'assets');
   const [roomMode, setRoomMode] = useState(() => {
     const m = loadPref('lobby.mode', 'coop');
     return m === 'solo' || m === 'mm' ? m : 'coop';

@@ -766,8 +766,9 @@ async function boot() {
   net.attachBrowserHooks();
   // Audio: unlock on first gesture, BGM follows the route / match phase (js/audio.js).
   installAudio({ getManifest: () => data.get('assets'), subscribe: store.subscribe, getState: store.get, selectRoute, settings: settingsStore.get() });
-  // Warm the data cache in the background (missing files are tolerated).
-  data.loadAll('config').catch(() => {});
+  // Warm the data cache in the background (missing files are tolerated): config + the asset manifest the profile
+  // avatars (operator charIds) and every icon resolve from.
+  data.loadAll('config', 'assets').catch(() => {});
   // Optional local-client art manifest (emotes, tutorial pages, official UI sprites; DESIGN §13).
   data.load('local').catch(() => {});
 
