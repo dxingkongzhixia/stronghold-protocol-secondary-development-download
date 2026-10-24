@@ -393,6 +393,8 @@ test('the admin page is a self-contained console: ten views, hash routing, searc
   assert.ok(html.includes('id="pluginImportBtn"') && html.includes('/admin/api/market/import'), 'the admin import surface is wired');
   assert.ok(html.includes('id="keyBody"') && html.includes('id="keyAdd"'), 'the signing-key registry is wired');
   assert.ok(html.includes('id="pluginSearch"') && html.includes('data-psub="installed"'), 'search and the installed subview are wired');
+  assert.ok(html.includes('id="pluginCats"') && html.includes('插件分类'), 'the category filter row is wired');
+  assert.ok(html.includes('id="drawerCategory"') && html.includes('id="drawerCategoryRow"'), 'the drawer can regroup an entry');
   assert.ok(html.includes('/admin/api/market?token='), 'it writes marketplace metadata through the admin API');
   assert.ok(html.includes('/admin/api/plugins/ai'), 'the reserved AI surface is documented in the page');
   for (const route of ['/admin/api/notify', '/admin/api/bug/status']) {
@@ -464,7 +466,11 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
   const registry = {
     plugins: () => [{
       id: 'demo', class: 'content', status: 'loaded', bytes: 2048, where: forgeDir,
-      manifest: { name: 'Demo', version: '1.2.3', api: 2, app: '>=0.3.0 <0.5.0', scope: ['room'], permissions: ['data'], notices: [{ id: 'n1', title: 'Hi', body: 'Body', date: '2026-10-19' }] },
+      manifest: { name: 'Demo', version: '1.2.3', api: 2, app: '>=0.3.0 <0.5.0', scope: ['room'], category: 'enemy', permissions: ['data'], notices: [{ id: 'n1', title: 'Hi', body: 'Body', date: '2026-10-19' }] },
+      content: {},
+    }, {
+      id: 'faction-yan', class: 'content', status: 'loaded', builtin: true, source: 'builtin',
+      manifest: { name: '炎', version: '1.0.0', category: 'faction', scope: ['room'] },
       content: {},
     }],
     report: () => ({ skipped: [{ id: 'bad', problems: ['no manifest'] }], warnings: ['one warning'] }),
@@ -474,6 +480,8 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
   assert.equal(p.installed[0].id, 'demo');
   assert.equal(p.installed[0].name, 'Demo');
   assert.equal(p.installed[0].hasContent, true);
+  assert.deepEqual([p.installed[0].category, p.installed[0].declaredCategory, p.installed[0].builtin], ['enemy', 'enemy', false]);
+  assert.deepEqual([p.installed[1].category, p.installed[1].builtin], ['faction', true], 'the built-in faction plugin is marked and grouped');
   assert.deepEqual(p.installed[0].notices, [{ id: 'n1', title: 'Hi', body: 'Body', date: '2026-10-19' }]);
   assert.deepEqual(p.installed[0].forge.pack, { id: 'rose-pack', name: 'Rose pack', version: '1.0.0' });
   assert.equal(p.installed[0].forge.skipped, 2);

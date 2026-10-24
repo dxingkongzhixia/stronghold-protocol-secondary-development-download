@@ -18,6 +18,7 @@ html[data-theme="light"] .market-row { background: #fff; }
 html[data-theme="light"] .market-row:hover { background: #fbfdfc; }
 html[data-theme="light"] .market-tab,
 html[data-theme="light"] .market-type,
+html[data-theme="light"] .market-cat,
 html[data-theme="light"] .mc-btn,
 html[data-theme="light"] .market-search,
 html[data-theme="light"] .market-form,
@@ -62,14 +63,21 @@ html[data-theme="light"] .market-detail__history-row { border-color: var(--line)
 .market-tab em { font-style: normal; opacity: .75; font-size: 11px; }
 .market-types { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; }
 .market-types__label { color: var(--text-lo); font-size: 12px; margin-right: 2px; }
-.market-type {
+.market-type,
+.market-cat {
   display: inline-flex; align-items: center; gap: 5px; min-height: 27px; padding: 0 9px;
   border: 1px solid var(--line); background: transparent; color: var(--text-lo);
   font: inherit; font-size: 12px; cursor: pointer;
 }
-.market-type:hover { color: var(--mint-400); border-color: var(--mint-a35); }
-.market-type.is-on { color: var(--mint-400); border-color: var(--mint-500); background: rgba(78, 216, 175, .08); }
-.market-type em { font-style: normal; opacity: .7; font-size: 11px; }
+.market-type:hover,
+.market-cat:hover { color: var(--mint-400); border-color: var(--mint-a35); }
+.market-type.is-on,
+.market-cat.is-on { color: var(--mint-400); border-color: var(--mint-500); background: rgba(78, 216, 175, .08); }
+.market-type em,
+.market-cat em { font-style: normal; opacity: .7; font-size: 11px; }
+/* 插件分类 = the game's five sections (shared/plugins/category.js), beside the loader class axis */
+.market-cats { margin-top: -2px; }
+.market-cats .market-types__label { color: var(--mint-400); }
 .market-search { min-width: min(320px, 100%); height: 34px; padding: 0 12px; border: 1px solid var(--line); background: rgba(0, 0, 0, .26); color: var(--text-hi); font: inherit; font-size: 13px; }
 .market-search:focus { outline: none; border-color: var(--mint-500); }
 .market-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
@@ -85,6 +93,7 @@ html[data-theme="light"] .market-detail__history-row { border-color: var(--line)
 .mc-badge { display: inline-flex; align-items: center; min-height: 19px; padding: 0 6px; border: 1px solid var(--line); color: var(--text-lo); font-size: 11px; }
 .mc-badge--kind { color: var(--mint-400); border-color: var(--mint-a35); }
 .mc-badge--class { color: #e7c987; border-color: rgba(217, 164, 65, .45); }
+.mc-badge--category { color: #9fd7ff; border-color: rgba(92, 200, 255, .4); }
 .mc-badge--installed { color: #9db9b0; }
 .mc-badge--active { color: var(--mint-400); border-color: var(--mint-a35); }
 .mc-badge--pending { color: #e7c987; border-color: rgba(217, 164, 65, .5); }

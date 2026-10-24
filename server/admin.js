@@ -19,6 +19,7 @@ import { DIFFICULTY_NAMES, MAX_SEATS } from '../shared/constants.js';
 import { presenceOnline } from './net.js';
 import { scriptProbeStats } from './plugins/scriptPreflight.js';
 import { readPolicy, POLICY_FILE } from './plugins/policy.js';
+import { pluginCategory, parsePluginCategory } from '../shared/plugins/category.js';
 
 /** The status vocabulary shown in the page (order = how the columns are grouped). */
 export const STATUS = Object.freeze({
@@ -200,6 +201,9 @@ export function buildPluginSnapshot(info = {}) {
       const meta = marketInstalled.get(p.id) || {};
       return {
         id: p.id, name, class: p.class, status: p.status, version: m.version || null,
+        category: pluginCategory({ category: m.category, class: p.class }),
+        declaredCategory: parsePluginCategory(m.category),
+        builtin: p.builtin === true || p.source === 'builtin',
         app: meta.app ?? m.app ?? null, api: meta.api ?? m.api ?? null, scope: Array.isArray(m.scope) ? m.scope : null,
         compatible: m.compatible !== false, permissions, bytes: Number.isFinite(p.bytes) ? p.bytes : null,
         description: meta.description ?? null, author: meta.author ?? null, compat: meta.compat || null,
@@ -541,6 +545,13 @@ kbd{font:inherit;font-size:10.5px;color:var(--dim);border:1px solid var(--line2)
 .plugin-subnav__item.is-on{color:var(--mint);border-bottom-color:var(--mint)}
 .plugin-subnav__item.is-on em{color:#082019;background:var(--mint)}
 .plugin-subview[hidden]{display:none}
+.plugin-cats{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.plugin-cats__label{color:var(--dim);font-size:12px;margin-right:2px}
+.plugin-cat{border:1px solid var(--line);background:transparent;color:var(--dim);padding:4px 9px;border-radius:999px;font:inherit;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.plugin-cat em{font-style:normal;opacity:.7;font-size:11px}
+.plugin-cat:hover{color:var(--text);border-color:var(--mint-a35,rgba(78,216,175,.35))}
+.plugin-cat.is-on{color:var(--mint);border-color:var(--mint);background:rgba(78,216,175,.08)}
+.plugin-cats[hidden]{display:none}
 .plugin-admin__head h2{margin:0 0 4px}
 .plugin-admin__head .hint{max-width:560px}
 .plugin-admin__tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -881,6 +892,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <button type="button" class="plugin-subnav__item" data-psub="policy">服务策略</button>
         <button type="button" class="plugin-subnav__item" data-psub="diagnostics">诊断与内容</button>
       </div>
+      <div class="plugin-cats" id="pluginCats" role="group" aria-label="插件分类" hidden></div>
       <div class="plugin-subview" data-pview="market">
         <section class="panel plugin-admin">
           <div class="plugin-admin__head">
@@ -974,6 +986,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
               <label class="plugin-field"><span>作者</span><input id="drawerAuthor" placeholder="作者"></label>
               <label class="plugin-field"><span>兼容范围 app</span><input id="drawerApp" placeholder=">=0.4.0 <0.5.0"></label>
               <label class="plugin-field"><span>API level</span><input id="drawerApi" type="number" min="1" max="99" placeholder="API"></label>
+              <label class="plugin-field" id="drawerCategoryRow"><span>分类（游戏内显示）</span><select id="drawerCategory"></select></label>
             </div>
             <label class="plugin-field" id="drawerRelatedRow"><span>关联插件（可多选）</span><select id="drawerRelated" multiple size="5"></select></label>
             <label class="drawer__check" id="drawerListedRow"><input id="drawerListed" type="checkbox"><span>上架到商城</span></label>
@@ -1117,6 +1130,20 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   var pluginSection = 'market';
   var pluginDrawerItem = null;
   var pluginDrawerMode = 'market';
+  var pluginCategory = '';
+  // the game's five plugin sections (shared/plugins/category.js) — the same order the in-game panel and the store use
+  var PLUGIN_CATS = [
+    { id: 'appearance', label: '外观音乐' },
+    { id: 'faction', label: '阵营加强' },
+    { id: 'strategy', label: '新增策略' },
+    { id: 'enemy', label: '新增敌人' },
+    { id: 'gameplay', label: '新增玩法' },
+  ];
+  var PLUGIN_CAT_LABELS = {};
+  PLUGIN_CATS.forEach(function (c) { PLUGIN_CAT_LABELS[c.id] = c.label; });
+  function pluginCatLabel(x) {
+    return PLUGIN_CAT_LABELS[x && x.category] || (x && x.category) || '新增玩法';
+  }
   function applyAdminTheme(theme) {
     var t = theme === 'light' ? 'light' : 'dark';
     document.documentElement.dataset.theme = t;
@@ -1378,10 +1405,22 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     el('installedMetaCount').textContent = String(metaList.length);
     var q = (el('pluginSearch') && el('pluginSearch').value || '').trim().toLowerCase();
     var hit = function (x) {
-      return !q || [x.id, x.name, x.author, x.description, x.class].some(function (v) {
+      if (pluginCategory && (x.category || 'gameplay') !== pluginCategory) return false;
+      return !q || [x.id, x.name, x.author, x.description, x.class, pluginCatLabel(x)].some(function (v) {
         return String(v || '').toLowerCase().indexOf(q) >= 0;
       });
     };
+    // the five sections as a filter row, the same taxonomy as the in-game panel and the store (only the two plugin tables)
+    var sectionRows = pluginSection === 'market' ? market : metaList;
+    var catCounts = {};
+    sectionRows.forEach(function (x) { var k = x.category || 'gameplay'; catCounts[k] = (catCounts[k] || 0) + 1; });
+    var catBox = el('pluginCats');
+    catBox.hidden = pluginSection !== 'market' && pluginSection !== 'installed';
+    catBox.innerHTML = '<span class="plugin-cats__label">插件分类</span>'
+      + [{ id: '', label: '全部' }].concat(PLUGIN_CATS).map(function (c) {
+        return '<button type="button" class="plugin-cat' + ((pluginCategory || '') === c.id ? ' is-on' : '') + '" data-cat="' + esc(c.id) + '">'
+          + esc(c.label) + ' <em>' + (c.id ? (catCounts[c.id] || 0) : sectionRows.length) + '</em></button>';
+      }).join('');
     el('marketBody').innerHTML = market.filter(hit).map(function (x) {
       var listed = x.listed !== false;
       var state = x.needsReview ? '需重新审核' : x.dependencyCheck && x.dependencyCheck.ok === false ? '依赖不完整' : x.pendingUpdate ? ('新版本 v' + x.pendingUpdate.version + ' 待审') : x.status === 'active' ? (listed ? '已上架' : '已下架') : (statusLabels[x.status] || x.status || '—');
@@ -1390,7 +1429,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       var compat = compatPills(x);
       return '<tr draggable="true" data-kind="' + esc(x.kind) + '" data-id="' + esc(x.id) + '">'
         + '<td><div class="plugin-name"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div><b>' + esc(x.name || x.id) + '</b><small>' + esc(x.id) + ' · v' + esc(x.version || '—') + '</small></div></div></td>'
-        + '<td><div class="plugin-badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span>' + (x.signature ? '<span class="pill yes">已签名</span>' : '<span class="pill">未签名</span>') + '</div><div class="plugin-sub">' + esc(state) + '</div></td>'
+        + '<td><div class="plugin-badges"><span class="pill">' + esc(kind) + '</span><span class="pill">' + esc(cls) + '</span><span class="pill">' + esc(pluginCatLabel(x)) + '</span>' + (x.signature ? '<span class="pill yes">已签名</span>' : '<span class="pill">未签名</span>') + '</div><div class="plugin-sub">' + esc(state) + '</div></td>'
         + '<td><div class="plugin-compat">' + compat.own + compat.main + '</div></td>'
         + '<td><div class="plugin-desc">' + esc(x.description || '—') + '</div><div class="plugin-sub">' + esc(x.author || '未填写作者') + '</div>'
         + ((x.relatedPlugins || []).length ? '<div class="plugin-related">关联：<span>' + esc(x.relatedPlugins.map(function (r) { return r.name; }).join('、')) + '</span></div>' : '')
@@ -1403,12 +1442,15 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     el('installedMetaBody').innerHTML = metaList.filter(hit).map(function (x) {
       var cls = CLASS_LABELS[x.class] || x.class || '未声明';
       var compat = compatPills(x);
+      var actions = x.builtin
+        ? '<div class="plugin-actions"><span class="plugin-sub">随项目发布，不可卸载</span></div>'
+        : '<div class="plugin-actions"><button type="button" class="row-action" data-edit>编辑</button><button type="button" class="row-action danger" data-uninstall>卸载</button></div>';
       return '<tr data-installed data-id="' + esc(x.id) + '">'
         + '<td><div class="plugin-name"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div><b>' + esc(x.name || x.id) + '</b><small>' + esc(x.id) + ' · v' + esc(x.version || '—') + '</small></div></div></td>'
-        + '<td><div class="plugin-badges"><span class="pill">本机</span><span class="pill">' + esc(cls) + '</span></div><div class="plugin-sub">已加载</div></td>'
+        + '<td><div class="plugin-badges"><span class="pill">' + (x.builtin ? '内置' : '本机') + '</span><span class="pill">' + esc(cls) + '</span><span class="pill">' + esc(pluginCatLabel(x)) + '</span></div><div class="plugin-sub">已加载</div></td>'
         + '<td><div class="plugin-compat">' + compat.own + compat.main + '</div></td>'
         + '<td><div class="plugin-desc">' + esc(x.description || '未填写描述') + '</div><div class="plugin-sub">' + esc(x.author || '未填写作者') + '</div></td>'
-        + '<td><div class="plugin-actions"><button type="button" class="row-action" data-edit>编辑</button><button type="button" class="row-action danger" data-uninstall>卸载</button></div></td>'
+        + '<td>' + actions + '</td>'
         + '</tr>';
     }).join('') || '<tr><td colspan="5" class="empty">没有本机插件</td></tr>';
     document.querySelectorAll('[data-pview]').forEach(function (v) {
@@ -1418,7 +1460,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       b.classList.toggle('is-on', (b.dataset.psub || '') === pluginSection);
     });
     var published = new Set(market.map(function (x) { return x.id; }));
-    var installable = list.filter(function (x) { return x.class !== 'lang' && !published.has(x.id); });
+    var installable = list.filter(function (x) { return x.class !== 'lang' && !x.builtin && !published.has(x.id); });
     var pubSelect = el('publishSelect');
     if (pubSelect && document.activeElement !== pubSelect) {
       pubSelect.innerHTML = installable.length
@@ -1503,6 +1545,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     el('drawerAuthor').value = item.author || '';
     el('drawerApp').value = item.app || '';
     el('drawerApi').value = item.api == null ? '' : String(item.api);
+    el('drawerCategory').innerHTML = '<option value="">未声明（按类型）</option>'
+      + PLUGIN_CATS.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.label) + '</option>'; }).join('');
+    el('drawerCategory').value = item.declaredCategory || '';
+    el('drawerCategoryRow').hidden = mode === 'installed';
     el('drawerListed').checked = item.listed !== false;
     el('drawerListedRow').hidden = mode === 'installed';
     el('drawerRelatedRow').hidden = mode === 'installed';
@@ -1548,6 +1594,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       api: apiRaw === '' ? null : Number(apiRaw),
     };
     if (pluginDrawerMode === 'market') {
+      fields.category = el('drawerCategory').value || null;
       fields.listed = el('drawerListed').checked;
       fields.related = Array.from(el('drawerRelated').selectedOptions || []).map(function (o) { return o.value; });
     }
@@ -1560,6 +1607,14 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   }
 
   el('pluginSearch').addEventListener('input', function () {
+    if (lastAdminData) renderPlugins(lastAdminData);
+  });
+
+  // the category chips (re-rendered by renderPlugins, so the handler is delegated)
+  el('pluginCats').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-cat]');
+    if (!b) return;
+    pluginCategory = b.dataset.cat || '';
     if (lastAdminData) renderPlugins(lastAdminData);
   });
 

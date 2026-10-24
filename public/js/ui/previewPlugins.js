@@ -11,6 +11,7 @@
 import { useEffect, useState } from '../../vendor/hooks.module.js';
 import { createStore, loadPref, savePref, store, useStore } from '../store.js';
 import { html, Button, Modal } from './components.js';
+import { PluginCategoryTabs } from './pluginTabs.js';
 import { catalog, installedCount, loadCatalog, pluginDescription, pluginName } from '../content.js';
 import { pluginGroups } from '../../../shared/plugins/category.js';
 import { net } from '../net.js';
@@ -108,6 +109,7 @@ export function PreviewPluginPanel({ open, onClose }) {
   const state = useStore((s) => s, Object.is, previewStore);
   const installed = useStore(installedCount);
   const [busy, setBusy] = useState(false);
+  const [group, setGroup] = useState(null);
   useEffect(() => {
     if (!open) return;
     if (installed) loadCatalog({ force: true }).catch(() => {});
@@ -115,6 +117,8 @@ export function PreviewPluginPanel({ open, onClose }) {
     // one refresh per open (the state it reads is a snapshot at open time)
   }, [open]);
   const rows = previewPlugins(cat.plugins);
+  const groups = pluginGroups(rows);
+  const shown = groups.find((g) => g.id === group) || groups[0];
   const chosen = new Set(state.ids);
   const toggle = (id, on) => {
     const next = on ? [...state.ids, id] : state.ids.filter((x) => x !== id);
@@ -132,22 +136,21 @@ export function PreviewPluginPanel({ open, onClose }) {
       ${installed && cat.status === 'loading' && !rows.length ? html`<p class="set-hint">${t('正在读取插件列表…')}</p>` : null}
       ${installed && cat.status === 'failed' && !rows.length ? html`<p class="set-hint is-warn">${t('无法读取插件列表')}</p>` : null}
       ${!installed ? html`<p class="set-hint">${t('本服务器没有可在房间中使用的插件')}</p>` : null}
-      ${rows.length ? pluginGroups(rows).map((g) => html`<section key=${g.id} class="plugpanel__group" data-category=${g.id}>
-        <h4 class="plugpanel__grouphead"><span>${t(g.name)}</span><em>${g.micro}</em><b class="num">${g.rows.length}</b></h4>
-        <ul class="plugpanel__list">${g.rows.map((p) => {
-          const on = chosen.has(p.id);
-          const desc = pluginDescription(p);
-          return html`<li key=${p.id} class=${`plugrow${on ? ' is-on' : ''}`} data-plugin=${p.id}>
-            <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} class=${`set-toggle plugrow__switch${on ? ' is-on' : ''}`}
-              disabled=${busy} aria-label=${pluginName(p)} onClick=${() => toggle(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
-            <div class="plugrow__body">
-              <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
-                ${p.builtin ? html`<span class="plugrow__badge">${t('内置')}</span>` : null}<span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
-              ${desc ? html`<p class="plugrow__desc">${desc}</p>` : null}
-            </div>
-          </li>`;
-        })}</ul>
-      </section>`) : null}
+      ${shown ? html`<${PluginCategoryTabs} groups=${groups} active=${shown.id} onPick=${setGroup} />` : null}
+      ${shown && groups.length === 1 ? html`<h4 class="plugpanel__grouphead"><span>${t(shown.name)}</span><em>${shown.micro}</em><b class="num">${shown.rows.length}</b></h4>` : null}
+      ${shown ? html`<ul class="plugpanel__list">${shown.rows.map((p) => {
+        const on = chosen.has(p.id);
+        const desc = pluginDescription(p);
+        return html`<li key=${p.id} class=${`plugrow${on ? ' is-on' : ''}`} data-plugin=${p.id}>
+          <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} class=${`set-toggle plugrow__switch${on ? ' is-on' : ''}`}
+            disabled=${busy} aria-label=${pluginName(p)} onClick=${() => toggle(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
+          <div class="plugrow__body">
+            <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
+              ${p.builtin ? html`<span class="plugrow__badge">${t('内置')}</span>` : null}<span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
+            ${desc ? html`<p class="plugrow__desc">${desc}</p>` : null}
+          </div>
+        </li>`;
+      })}</ul>` : null}
     </div>
   <//>`;
 }

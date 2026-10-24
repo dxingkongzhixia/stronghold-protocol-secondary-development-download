@@ -60,13 +60,15 @@ POST /admin/api/market?token=...
 - `test`：在临时目录安装/导入并做真实检查，不改变状态
 - `approve`：先 `test`，通过后变为 `active`
 - `reject`：变为 `rejected`
-- `edit`：修改 `description` / `author` / `app` / `api` / `listed` / `related`；只改商城元数据，不碰 zip 或插件代码
+- `edit`：修改 `description` / `author` / `app` / `api` / `category` / `listed` / `related`；只改商城元数据，不碰 zip 或插件代码
 - `publish`：把 `plugins/<id>/` 打包为新的普通插件条目（`pending`），再由管理员测试 / 通过
 - `move`：调整同类条目的展示顺序（`direction: up | down`）
 - `rollback`：回滚到 `history` 中已审核过的版本（`{ version }`）
 - `POST /admin/api/market/import?kind=ordinary|forge`：后台直接导入 zip，进入待审核状态
 
 `related` 是其它插件 id 的列表（最多 16 个，不能含自己，必须存在于商城或本机插件中）。公开列表会解析为 `relatedPlugins`（名称 / 类型 / 状态）和 `relatedBy`（谁关联了本条），商城和后台都会显示。
+
+`category`（外观音乐 / 阵营加强 / 新增策略 / 新增敌人 / 新增玩法）在普通插件上传时从 `plugin.json` 读取（`shared/plugins/category.js`，非法值忽略），商城条目用 `category` 给出归组结果、`declaredCategory` 给出插件自己声明的值；Forge 包与未声明的插件按加载类型回退。owner 可以在后台抽屉里重新归组（`edit` 的 `category`，传 `null` 恢复回退）。`/market/` 的「插件分类」一排按钮与页面里的分类徽章都用它，和游戏内插件面板、后台的同一个分类轴。
 
 ### 依赖检查
 

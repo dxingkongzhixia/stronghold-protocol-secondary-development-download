@@ -9,10 +9,16 @@ const KIND = { ordinary: '普通插件', forge: 'Forge 包', installed: '本机�
 const CLASS = { cosmetic: '外观', content: '玩法', ui: '界面', script: '脚本', trusted: '信任', lang: '语言', forge: 'Forge 转换' };
 const STATUS = { active: '已上架', pending: '未审核', rejected: '已拒绝', installed: '使用中' };
 const TYPE_IDS = { '': 'type-all', cosmetic: 'type-cosmetic', content: 'type-content', ui: 'type-ui', script: 'type-script', trusted: 'type-trusted', lang: 'type-lang', forge: 'type-forge' };
+// the game's five sections (shared/plugins/category.js): the same taxonomy as the in-game plugin panel and the admin console
+const CATEGORY = { appearance: '外观音乐', faction: '阵营加强', strategy: '新增策略', enemy: '新增敌人', gameplay: '新增玩法' };
+const CAT_IDS = { '': 'cat-all', appearance: 'cat-appearance', faction: 'cat-faction', strategy: 'cat-strategy', enemy: 'cat-enemy', gameplay: 'cat-gameplay' };
 let tab = 'ordinary';
 let classFilter = '';
+let catFilter = '';
 let data = { plugins: [], installed: [] };
 let adminRows = [];
+const categoryOf = (p) => (p && CATEGORY[p.category] ? p.category : 'gameplay');
+const categoryLabel = (p) => CATEGORY[categoryOf(p)];
 
 const bytes = (n) => {
   const v = Number(n) || 0;
@@ -78,6 +84,7 @@ const row = (p, admin = false) => {
       <div class="market-row__badges">
         <span class="mc-badge mc-badge--kind">来源 · ${esc(kindLabel)}</span>
         <span class="mc-badge mc-badge--class">类型 · ${esc(clsLabel)}${p.class ? `（${esc(p.class)}）` : ''}</span>
+        <span class="mc-badge mc-badge--category">分类 · ${esc(categoryLabel(p))}</span>
         <span class="mc-badge mc-badge--${esc(p.status)}">状态 · ${esc(status)}</span>
       </div>
     </div>
@@ -107,8 +114,8 @@ function currentRows() {
 function render() {
   const q = $('search').value.trim().toLowerCase();
   const base = currentRows();
-  const typed = base.filter((p) => !classFilter || (p.class || '') === classFilter);
-  const rows = typed.filter((p) => !q || [p.id, p.name, p.author, p.description, p.class, classLabel(p.class), KIND[p.kind], p.app]
+  const typed = base.filter((p) => !classFilter || (p.class || '') === classFilter).filter((p) => !catFilter || categoryOf(p) === catFilter);
+  const rows = typed.filter((p) => !q || [p.id, p.name, p.author, p.description, p.class, classLabel(p.class), KIND[p.kind], p.app, categoryLabel(p)]
     .some((x) => String(x || '').toLowerCase().includes(q)));
   $('list').innerHTML = rows.length ? rows.map((p) => row(p)).join('') : '<div class="market-empty">没有符合条件的插件。</div>';
   $('count-ordinary').textContent = data.plugins.filter((p) => p.kind === 'ordinary').length;
@@ -117,7 +124,11 @@ function render() {
   const counts = new Map();
   for (const p of base) counts.set(p.class || '', (counts.get(p.class || '') || 0) + 1);
   for (const [key, id] of Object.entries(TYPE_IDS)) $(id).textContent = key ? (counts.get(key) || 0) : base.length;
+  const catCounts = new Map();
+  for (const p of base) catCounts.set(categoryOf(p), (catCounts.get(categoryOf(p)) || 0) + 1);
+  for (const [key, id] of Object.entries(CAT_IDS)) $(id).textContent = key ? (catCounts.get(key) || 0) : base.length;
   document.querySelectorAll('.market-type').forEach((b) => b.classList.toggle('is-on', (b.dataset.type || '') === classFilter));
+  document.querySelectorAll('.market-cat').forEach((b) => b.classList.toggle('is-on', (b.dataset.cat || '') === catFilter));
   $('listMsg').textContent = '';
 }
 
@@ -152,7 +163,7 @@ function showDetail(id) {
   box.innerHTML = `<div class="market-detail__backdrop" data-detail-close></div>
     <section class="market-detail__card" role="dialog" aria-modal="true" aria-label="插件详情">
       <header class="market-detail__head"><div><div class="market-kicker">PLUGIN DETAIL</div><h2>${esc(p.name || p.id)}</h2><div class="market-detail__id">${esc(p.id)} · v${esc(p.version || '—')}</div></div><button class="market-detail__close" data-detail-close aria-label="关闭">×</button></header>
-      <div class="market-detail__badges"><span class="mc-badge">${esc(KIND[p.kind] || p.kind || '插件')}</span><span class="mc-badge">${esc(classLabel(p.class))}</span><span class="mc-badge">${esc(STATUS[p.status] || p.status || '')}</span>${p.signature ? `<span class="mc-badge mc-badge--active">签名 · ${esc(p.signature.keyId)}</span>` : '<span class="mc-badge">未签名</span>'}</div>
+      <div class="market-detail__badges"><span class="mc-badge">${esc(KIND[p.kind] || p.kind || '插件')}</span><span class="mc-badge">${esc(classLabel(p.class))}</span><span class="mc-badge">${esc(categoryLabel(p))}</span><span class="mc-badge">${esc(STATUS[p.status] || p.status || '')}</span>${p.signature ? `<span class="mc-badge mc-badge--active">签名 · ${esc(p.signature.keyId)}</span>` : '<span class="mc-badge">未签名</span>'}</div>
       <p class="market-detail__desc">${esc(p.installed ? (p.description || '本机已安装，未上架商城。') : (p.description || '没有填写描述。'))}</p>
       <dl class="market-detail__kv">
         <dt>作者</dt><dd>${esc(p.author || '未填写')}</dd>
@@ -214,6 +225,10 @@ document.querySelectorAll('.market-tab').forEach((b) => b.addEventListener('clic
 }));
 document.querySelectorAll('.market-type').forEach((b) => b.addEventListener('click', () => {
   classFilter = b.dataset.type || '';
+  render();
+}));
+document.querySelectorAll('.market-cat').forEach((b) => b.addEventListener('click', () => {
+  catFilter = b.dataset.cat || '';
   render();
 }));
 $('search').addEventListener('input', render);

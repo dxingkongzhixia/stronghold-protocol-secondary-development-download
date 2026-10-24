@@ -103,6 +103,12 @@ the label the player reads; the `class` above is still what the game does with t
 by its class (cosmetic/ui/lang → 外观音乐, everything that changes the room → 新增玩法). A plugin that adds two unrelated
 kinds of content should be split into two plugins (PRTS is: `prts-kaltsit` = 新增策略, `prts-source-code` = 新增敌人).
 
+The panel shows those five sections as **tabs**, the same subnav pattern as the admin console's 插件与内容 view
+(`public/js/ui/pluginTabs.js`): one non-empty section at a time, its count on the tab, the section's rows below. The main
+interface's 插件预览 dialog and the title screen's 本服务器的插件 list use the same tabs. The admin console and the plugin
+store carry the same taxonomy: `/admin` shows a 插件分类 filter row and a category pill on every row (built-in plugins are
+marked 内置 and cannot be uninstalled or published), and `/market/` filters by category beside its loader-class axis.
+
 **Built-in plugins.** The project ships a few content plugins of its own, above all the 阵营加强 set
 (`server/plugins/builtin.js`): one per faction, whose generated `data/builtin/faction-<faction>.json` data patch restores
 that faction's self-made shop operators (the vanilla data hides them; off is the default). They are listed in

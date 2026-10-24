@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, verify, createPublicKey } from 'node:crypto';
 import { PLUGIN_LIMITS, PLUGIN_COMPAT_APP, PLUGIN_COMPAT_CLASSES, appVersionMatches, isPluginId, isVersionRange } from '../shared/plugins/manifest.js';
+import { pluginCategory, parsePluginCategory } from '../shared/plugins/category.js';
 import { readPluginZip, zipFiles } from './plugins/zip.js';
 import { readUntrustedZip, importForge, forgeIdToPluginId } from './plugins/forgeImport.js';
 import { installFromFile } from './plugins/install.js';
@@ -218,6 +219,8 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return {
       id: e.id, kind: e.kind, name: e.name, version: e.version, author: e.author || null,
       description: e.description || null, class: e.class || null, status: e.status, bytes: e.bytes, sha256: e.sha256,
+      // the five-section category the game lists it under (shared/plugins/category.js): the manifest's own, else the class
+      category: pluginCategory({ category: e.category, class: e.class }), declaredCategory: parsePluginCategory(e.category),
       license: e.license || null, homepage: e.homepage || null,
       uploadedAt: e.uploadedAt, uploadedBy: e.uploadedBy || null, reviewedAt: e.reviewedAt || null,
       downloads: e.downloads || 0, app: compat.app, api: compat.api, compat, listed: e.listed !== false,
@@ -249,7 +252,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       if (!man.version || typeof man.version !== 'string') throw new Error('plugin.json has no version');
       return {
         id: man.id, version: man.version, name: nameOf(man.name), author: nameOf(man.author), description: nameOf(man.description),
-        class: man.class || null, app: appRangeOf(man.app), api: apiLevelOf(man.api),
+        class: man.class || null, category: parsePluginCategory(man.category), app: appRangeOf(man.app), api: apiLevelOf(man.api),
         license: typeof man.license === 'string' ? man.license.slice(0, 120) : null,
         homepage: typeof man.homepage === 'string' ? man.homepage.slice(0, 300) : null,
         requires: depMap(man.requires), optional: depMap(man.optional), conflicts: depMap(man.conflicts),
@@ -286,7 +289,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       filename: String(filename || '').slice(0, 120), uploadedAt: now, uploadedBy: uploadedBy || null,
       signature: verifiedSignature,
       name: meta.name || meta.id, author: meta.author || null, description: meta.description || null,
-      class: meta.class || null, app: meta.app || null, api: meta.api ?? null,
+      class: meta.class || null, category: meta.category || null, app: meta.app || null, api: meta.api ?? null,
       license: meta.license || null, homepage: meta.homepage || null,
       requires: meta.requires || {}, optional: meta.optional || {}, conflicts: meta.conflicts || {},
     };
@@ -388,6 +391,10 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     if (Object.prototype.hasOwnProperty.call(fields, 'listed')) {
       if (typeof fields.listed !== 'boolean') throw new Error('listed must be true or false');
       next.listed = fields.listed;
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'category')) {
+      if (fields.category != null && !parsePluginCategory(fields.category)) throw new Error('category must be null or one of appearance, faction, strategy, enemy, gameplay');
+      next.category = fields.category == null ? null : parsePluginCategory(fields.category);
     }
     if (Object.prototype.hasOwnProperty.call(fields, 'related')) {
       if (!Array.isArray(fields.related) || fields.related.length > 16
@@ -642,6 +649,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       return {
         id: p.id, kind: 'installed', name: (typeof p.manifest?.name === 'string' ? p.manifest.name : (p.manifest?.name?.zh || p.manifest?.name?.en)) || p.id,
         version: p.manifest?.version || null, class: p.class, status: 'installed', bytes: p.bytes || null,
+        category: pluginCategory({ category: p.manifest?.category, class: p.class }),
         app: compat.app, api: compat.api, compat,
         description: typeof meta.description === 'string' ? meta.description : null,
         author: typeof meta.author === 'string' ? meta.author : null,

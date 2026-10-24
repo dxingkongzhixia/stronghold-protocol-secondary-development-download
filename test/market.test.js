@@ -219,3 +219,24 @@ test('market lists live installed plugins separately from store entries', async 
     assert.deepEqual([published.kind, published.status, published.id, published.compat.ok], ['ordinary', 'pending', 'local-skin', true]);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('market: a plugin.json category is carried into the store and stays editable', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-category-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const market = createPluginMarket({ root });
+  const manifest = (id, category) => zipFiles([{
+    name: 'plugin.json',
+    data: Buffer.from(JSON.stringify({ manifest: 2, id, name: id, version: '1.0.0', class: 'content', app: '>=0.4.0 <0.5.0', api: 1, ...(category ? { category } : {}) })),
+  }]);
+  const enemy = await market.upload({ kind: 'ordinary', bytes: manifest('prts-like', 'enemy') });
+  assert.deepEqual([enemy.category, enemy.declaredCategory], ['enemy', 'enemy']);
+  // no declared category: the class decides, exactly as the in-game panel groups (content → 新增玩法)
+  const plain = await market.upload({ kind: 'ordinary', bytes: manifest('plain-demo', null) });
+  assert.deepEqual([plain.category, plain.declaredCategory], ['gameplay', null]);
+  // an owner may regroup an entry; an unknown id is refused
+  const moved = market.edit('ordinary', 'prts-like', { category: 'strategy' }, { reviewer: 'admin' });
+  assert.deepEqual([moved.category, moved.declaredCategory], ['strategy', 'strategy']);
+  const cleared = market.edit('ordinary', 'prts-like', { category: null }, { reviewer: 'admin' });
+  assert.deepEqual([cleared.category, cleared.declaredCategory], ['gameplay', null], 'null falls back to the class');
+  assert.throws(() => market.edit('ordinary', 'plain-demo', { category: 'nope' }), /category must be/);
+});

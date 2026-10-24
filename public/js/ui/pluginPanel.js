@@ -24,6 +24,7 @@
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { APP_VERSION } from '../../../shared/constants.js';
 import { html, Modal, Button, Icon } from './components.js';
+import { PluginCategoryTabs } from './pluginTabs.js';
 import { PluginSettings, settingsSelection } from './pluginSettings.js';
 import { toastError } from './toasts.js';
 import { net } from '../net.js';
@@ -113,6 +114,7 @@ export function PluginPanel({ open, room, myId, onClose }) {
   const cat = useStore((s) => s, Object.is, catalog);
   const installed = useStore(installedCount);
   const [busy, setBusy] = useState(null);
+  const [group, setGroup] = useState(null);
   const inFlight = useRef(false);
   const alive = useRef(true);
   // the catalogue — again each time the panel opens (a plugin dropped in meanwhile shows), never on a server without any
@@ -155,6 +157,9 @@ export function PluginPanel({ open, room, myId, onClose }) {
   };
   // the same choice again (without a plugin the server no longer offers): the set of the files as they are now
   const reapply = () => send(f.chosen.filter((x) => !offeredIds || offeredIds.has(x)), 'reapply');
+  // the panel's five sections as tabs (the admin console's pattern): one non-empty section at a time, its count on the tab
+  const groups = pluginGroups(rows, classOf);
+  const shown = groups.find((g) => g.id === group) || groups[0];
   /** One switchable plugin row (the category is the section it sits in, not a badge on the row). */
   const renderRow = (p) => {
     const on = f.on.has(p.id);
@@ -203,10 +208,9 @@ export function PluginPanel({ open, room, myId, onClose }) {
       ${installed && cat.status === 'loading' && !rows.length ? html`<p class="set-hint">${t('正在读取插件列表…')}</p>` : null}
       ${installed && cat.status === 'failed' && !rows.length ? html`<p class="set-hint is-warn">${t('无法读取插件列表')}</p>` : null}
       ${(!installed || cat.status === 'ready') && !rows.length ? html`<p class="set-hint">${t('本服务器没有可在房间中使用的插件')}</p>` : null}
-      ${pluginGroups(rows, classOf).map((g) => html`<section key=${g.id} class="plugpanel__group" data-category=${g.id}>
-        <h4 class="plugpanel__grouphead"><span>${t(g.name)}</span><em>${g.micro}</em><b class="num">${g.rows.length}</b></h4>
-        <ul class="plugpanel__list">${g.rows.map(renderRow)}</ul>
-      </section>`)}
+      ${shown ? html`<${PluginCategoryTabs} groups=${groups} active=${shown.id} onPick=${setGroup} />` : null}
+      ${shown && groups.length === 1 ? html`<h4 class="plugpanel__grouphead"><span>${t(shown.name)}</span><em>${shown.micro}</em><b class="num">${shown.rows.length}</b></h4>` : null}
+      ${shown ? html`<ul class="plugpanel__list">${shown.rows.map(renderRow)}</ul>` : null}
       ${f.editable && f.count ? html`<div class="plugpanel__reapply">
         <${Button} variant="secondary" size="sm" icon="refresh" data-testid="plugin-reapply" disabled=${!!busy} onClick=${reapply}>${t('重新应用')}<//>
         <span class="set-hint">${t('插件的文件在服务器上更新后，重新应用才会生效。')}</span>
@@ -241,30 +245,32 @@ export function PluginPanel({ open, room, myId, onClose }) {
 /** The title screen's list of a server's unofficial plugins (see the header): the catalogue, fetched when it opens. */
 export function InstalledPlugins({ open, onClose }) {
   const cat = useStore((s) => s, Object.is, catalog);
+  const [group, setGroup] = useState(null);
   useEffect(() => { loadCatalog({ force: true }); }, []);
   const plugins = unofficialPlugins(cat.plugins);
+  const groups = pluginGroups(plugins);
+  const shown = groups.find((g) => g.id === group) || groups[0];
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('本服务器的插件')} micro="PLUGINS" width="6.8rem"
       actions=${html`<${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
     <div class="plugpanel" data-testid="installed-plugins">
       <p class="plugpanel__lead">${t('插件为非官方制作，不属于原版游戏；原版内容始终是默认。')}</p>
       ${cat.status === 'loading' && !plugins.length ? html`<p class="set-hint">${t('正在读取插件列表…')}</p>` : null}
       ${cat.status === 'failed' && !plugins.length ? html`<p class="set-hint is-warn">${t('无法读取插件列表')}</p>` : null}
-      ${pluginGroups(plugins).map((g) => html`<section key=${g.id} class="plugpanel__group" data-category=${g.id}>
-        <h4 class="plugpanel__grouphead"><span>${t(g.name)}</span><em>${g.micro}</em><b class="num">${g.rows.length}</b></h4>
-        <ul class="plugpanel__list">
-          ${g.rows.map((p) => html`<li key=${p.id} class="plugrow" data-plugin=${p.id}>
-            <div class="plugrow__body">
-              <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
-                <span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
-              <div class="plugrow__meta t-dim">
-                <span>${p.status === 'loaded' ? t('可以使用') : t('本版本不支持')}</span>
-                ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
-              </div>
-              ${pluginDescription(p) ? html`<p class="plugrow__desc">${pluginDescription(p)}</p>` : null}
+      ${shown ? html`<${PluginCategoryTabs} groups=${groups} active=${shown.id} onPick=${setGroup} />` : null}
+      ${shown && groups.length === 1 ? html`<h4 class="plugpanel__grouphead"><span>${t(shown.name)}</span><em>${shown.micro}</em><b class="num">${shown.rows.length}</b></h4>` : null}
+      ${shown ? html`<ul class="plugpanel__list">
+        ${shown.rows.map((p) => html`<li key=${p.id} class="plugrow" data-plugin=${p.id}>
+          <div class="plugrow__body">
+            <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
+              ${p.builtin ? html`<span class="plugrow__badge">${t('内置')}</span>` : null}<span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
+            <div class="plugrow__meta t-dim">
+              <span>${p.status === 'loaded' ? t('可以使用') : t('本版本不支持')}</span>
+              ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
             </div>
-          </li>`)}
-        </ul>
-      </section>`)}
+            ${pluginDescription(p) ? html`<p class="plugrow__desc">${pluginDescription(p)}</p>` : null}
+          </div>
+        </li>`)}
+      </ul>` : null}
     </div>
   <//>`;
 }
