@@ -192,9 +192,16 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
       <span class="seat__no num">P${index + 1}</span>
     </header>
     <div class=${`seat__art${art ? ' has-art' : ''}`}>
-      ${art ? html`<img class="seat__art-img" src=${art} alt="" draggable=${false} />` : html`<div class="seat__artwho">
+      ${art ? html`<img class="seat__art-img" src=${art} alt="" draggable=${false} onError=${(e) => {
+        const box = e.currentTarget.parentElement;
+        e.currentTarget.remove();
+        box?.classList.remove('has-art');
+        const fallback = box?.querySelector('.seat__artwho');
+        if (fallback) fallback.hidden = false;
+      }} />` : null}
+      <div class="seat__artwho" hidden=${!!art}>
         <${AvatarFrame} size="xl" src=${avatar} name=${seat.name} seat=${index} bot=${seat.isBot} self=${isMe} ready=${state === 'ready'} offline=${offline} />
-      </div>`}
+      </div>
       <div class="seat__artshade" aria-hidden="true"></div>
       ${isHostSeat ? html`<span class="seat__host"><${Icon} name="crown" />${t('创建者')}</span>` : null}
       ${!seat.isBot ? html`<button type="button" class="seat__artbtn" onClick=${() => onPickArt?.(index)}>

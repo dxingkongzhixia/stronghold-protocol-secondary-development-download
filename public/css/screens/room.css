@@ -476,3 +476,4 @@
 /* no Á¢»æ chosen: the avatar stands in for the art (the card is never an empty panel) */
 .seat__artwho { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .08rem; }
 .seat__artwho .avatar { --av: 2.1rem; }
+.seat__artwho[hidden] { display: none; }
