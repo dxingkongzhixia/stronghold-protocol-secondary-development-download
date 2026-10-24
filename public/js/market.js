@@ -44,7 +44,7 @@ function compatibilityLine(p, c = p.compat || {}) {
   const unrestricted = c.unrestricted || !c.app;
   const own = unrestricted ? '未限制' : c.own ? '兼容' : '不兼容';
   const main = unrestricted ? '未限制' : c.mainline ? '兼容' : '不兼容';
-  const note = c.mainline && !c.auto && strictClass(p.class)
+  const note = c.mainline && !c.auto && !c.own && strictClass(p.class)
     ? '本服 0.4.0 仍严格；需 owner 在 allowIncompatible 放行'
     : c.mainline && c.auto && !c.own
       ? '外观 / 界面 / 语言按主线 0.3.x 兼容层自动加载'
@@ -62,7 +62,7 @@ const row = (p, admin = false) => {
   const kindLabel = KIND[p.kind] || p.kind || '插件';
   const clsLabel = classLabel(p.class);
   const status = STATUS[p.status] || p.status || '';
-  const description = p.installed ? (p.description || '本机已安装，未上架商城。') : (p.description || '没有填写描述。');
+  const description = p.installed ? (p.description || (p.builtin ? '随项目发布的内置插件，没有单独的 zip。' : '本机已安装，未上架商城。')) : (p.description || '没有填写描述。');
   const compat = compatibilityLine(p);
   const direct = p.download && (!Array.isArray(p.sources) || !p.sources.length);
   const actions = admin
@@ -85,12 +85,13 @@ const row = (p, admin = false) => {
         <span class="mc-badge mc-badge--kind">来源 · ${esc(kindLabel)}</span>
         <span class="mc-badge mc-badge--class">类型 · ${esc(clsLabel)}${p.class ? `（${esc(p.class)}）` : ''}</span>
         <span class="mc-badge mc-badge--category">分类 · ${esc(categoryLabel(p))}</span>
+        ${p.builtin ? '<span class="mc-badge mc-badge--builtin">内置</span>' : ''}
         <span class="mc-badge mc-badge--${esc(p.status)}">状态 · ${esc(status)}</span>
       </div>
     </div>
     <div>
       <p class="market-row__desc">${esc(description)}</p>
-      <div class="market-row__meta">${esc(p.author ? `作者：${p.author}` : '作者：未填写')} · ${bytes(p.bytes)} · 下载 ${esc(p.downloads || 0)}</div>
+      <div class="market-row__meta">${p.builtin ? '随项目发布 · 无独立 zip' : `${esc(p.author ? `作者：${p.author}` : '作者：未填写')} · ${bytes(p.bytes)} · 下载 ${esc(p.downloads || 0)}`}</div>
       <div class="market-row__related">${p.signature ? `签名：<span>${esc(p.signature.keyId)}</span>` : '签名：未签名'}</div>
       ${(p.relatedPlugins || []).length ? `<div class="market-row__related">关联：<span>${esc(p.relatedPlugins.map((r) => r.name).join('、'))}</span></div>` : ''}
       ${(p.relatedBy || []).length ? `<div class="market-row__related">被关联：<span>${esc(p.relatedBy.map((r) => r.name).join('、'))}</span></div>` : ''}
@@ -132,8 +133,8 @@ function render() {
   $('listMsg').textContent = '';
 }
 
-async function load() {
-  $('listMsg').textContent = '加载中…';
+async function load({ silent = false } = {}) {
+  if (!silent) $('listMsg').textContent = '加载中…';
   try {
     const r = await fetch('/market/api/list', { cache: 'no-store' });
     const j = await r.json();
@@ -163,7 +164,7 @@ function showDetail(id) {
   box.innerHTML = `<div class="market-detail__backdrop" data-detail-close></div>
     <section class="market-detail__card" role="dialog" aria-modal="true" aria-label="插件详情">
       <header class="market-detail__head"><div><div class="market-kicker">PLUGIN DETAIL</div><h2>${esc(p.name || p.id)}</h2><div class="market-detail__id">${esc(p.id)} · v${esc(p.version || '—')}</div></div><button class="market-detail__close" data-detail-close aria-label="关闭">×</button></header>
-      <div class="market-detail__badges"><span class="mc-badge">${esc(KIND[p.kind] || p.kind || '插件')}</span><span class="mc-badge">${esc(classLabel(p.class))}</span><span class="mc-badge">${esc(categoryLabel(p))}</span><span class="mc-badge">${esc(STATUS[p.status] || p.status || '')}</span>${p.signature ? `<span class="mc-badge mc-badge--active">签名 · ${esc(p.signature.keyId)}</span>` : '<span class="mc-badge">未签名</span>'}</div>
+      <div class="market-detail__badges"><span class="mc-badge">${esc(KIND[p.kind] || p.kind || '插件')}</span>${p.builtin ? '<span class="mc-badge mc-badge--builtin">内置</span>' : ''}<span class="mc-badge">${esc(classLabel(p.class))}</span><span class="mc-badge">${esc(categoryLabel(p))}</span><span class="mc-badge">${esc(STATUS[p.status] || p.status || '')}</span>${p.signature ? `<span class="mc-badge mc-badge--active">签名 · ${esc(p.signature.keyId)}</span>` : '<span class="mc-badge">未签名</span>'}</div>
       <p class="market-detail__desc">${esc(p.installed ? (p.description || '本机已安装，未上架商城。') : (p.description || '没有填写描述。'))}</p>
       <dl class="market-detail__kv">
         <dt>作者</dt><dd>${esc(p.author || '未填写')}</dd>
@@ -279,3 +280,10 @@ $('adminList').addEventListener('click', async (e) => {
 
 await load();
 await loadAdmin();
+
+// Follow the server while the page is open (a plugin folder installed, a review, a new entry): the admin console
+// already polls, and the store should not show yesterday's list until someone presses F5.
+$('refresh').addEventListener('click', () => Promise.all([load(), loadAdmin()]));
+const poll = () => { if (document.visibilityState === 'visible') Promise.all([load({ silent: true }), loadAdmin()]).catch(() => {}); };
+setInterval(poll, 30000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') poll(); });

@@ -94,6 +94,7 @@ html[data-theme="light"] .market-detail__history-row { border-color: var(--line)
 .mc-badge--kind { color: var(--mint-400); border-color: var(--mint-a35); }
 .mc-badge--class { color: #e7c987; border-color: rgba(217, 164, 65, .45); }
 .mc-badge--category { color: #9fd7ff; border-color: rgba(92, 200, 255, .4); }
+.mc-badge--builtin { color: #4ed8af; border-color: rgba(78, 216, 175, .5); }
 .mc-badge--installed { color: #9db9b0; }
 .mc-badge--active { color: var(--mint-400); border-color: var(--mint-a35); }
 .mc-badge--pending { color: #e7c987; border-color: rgba(217, 164, 65, .5); }

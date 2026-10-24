@@ -157,6 +157,7 @@ GET /market/api/download/<ordinary|forge>/<id>
 
 只有 `active` 可下载，返回 zip；每次下载计数加一。
 已安装但未上架的本机插件通过 `/market/api/installed/<id>/download` 按需打包下载；它们不计入商城下载数。第一次打包会按 `id-version-bytes` 缓存到 `var/plugin-market/installed/`，之后直接以流式 + HTTP Range 返回，支持断点续传和 HEAD。
+项目的**内置插件**（阵营加强，`server/plugins/builtin.js`）也出现在「本机已安装」里，带 `builtin: true` 和「内置」徽章：它们没有 `plugins/` 文件夹，也没有 zip，因此 `download` / `mirror` 为 `null`、不能修改展示元数据，但仍按 `category` 归组（例如 7 个阵营加强），和游戏内插件面板、后台看到的是同一批插件。商城页每 30 秒以及切回标签页时自动重新读取列表（也可点「刷新」），所以服务器上新装 / 审核的插件不需要手动 F5。
 
 公开上传有基础限流：同一网络/账号 10 分钟内最多 5 次成功提交；管理员后台导入不受此限制。所有商城写操作（编辑、审核、移动、回滚、本机元数据）写入 `var/admin-audit.log`。
 

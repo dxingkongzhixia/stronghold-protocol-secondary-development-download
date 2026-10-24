@@ -220,8 +220,7 @@ test('market lists live installed plugins separately from store entries', async 
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('market: a plugin.json category is carried into the store and stays editable', async (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-category-'));
+test('market: a plugin.json category is carried into the store and stays editable', async (t) => {  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-category-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const market = createPluginMarket({ root });
   const manifest = (id, category) => zipFiles([{
@@ -239,4 +238,23 @@ test('market: a plugin.json category is carried into the store and stays editabl
   const cleared = market.edit('ordinary', 'prts-like', { category: null }, { reviewer: 'admin' });
   assert.deepEqual([cleared.category, cleared.declaredCategory], ['gameplay', null], 'null falls back to the class');
   assert.throws(() => market.edit('ordinary', 'plain-demo', { category: 'nope' }), /category must be/);
+});
+
+test('market: built-in plugins are listed under 本机已安装, marked and without a download', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-builtin-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const registry = { plugins: () => [
+    { id: 'faction-yan', source: 'builtin', builtin: true, class: 'content', status: 'loaded',
+      manifest: { name: { zh: '阵营加强：炎' }, description: { zh: '内置阵营加强' }, version: '0.4.0', category: 'faction', authors: ['Stronghold Protocol'] } },
+    { id: 'local-skin', source: 'plugins', class: 'cosmetic', status: 'loaded', where: root, bytes: 12,
+      manifest: { name: '皮肤', version: '1.0.0' } },
+  ] };
+  const market = createPluginMarket({ root, registry });
+  const rows = market.installed();
+  assert.deepEqual(rows.map((p) => p.id), ['faction-yan', 'local-skin']);
+  const faction = rows[0];
+  assert.deepEqual([faction.builtin, faction.category, faction.description, faction.download, faction.mirror],
+    [true, 'faction', '内置阵营加强', null, null], 'no folder, no zip, still listed');
+  assert.deepEqual([rows[1].builtin, rows[1].category], [false, 'appearance'], 'a folder plugin is unchanged');
+  assert.equal(market.downloadInstalled('faction-yan'), null);
 });

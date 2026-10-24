@@ -634,10 +634,16 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     return installed().find((x) => x.id === id) || null;
   }
 
-  /** Loaded plugins in the live plugins/ folder (not store entries). */
+  /**
+   * Loaded plugins the installation has: the live `plugins/` folders and the project's built-in content plugins
+   * (`server/plugins/builtin.js`, no folder). The store's 本机已安装 tab lists both, so a built-in faction boost is not
+   * missing from the page that lists everything the server can offer; a built-in has no zip to download and its
+   * metadata comes from its manifest (there is no installed-meta override for it).
+   */
   function installed() {
     const list = registry && typeof registry.plugins === 'function' ? registry.plugins() : [];
-    return list.filter((p) => p && p.source === 'plugins' && p.class !== 'lang').map((p) => {
+    return list.filter((p) => p && (p.source === 'plugins' || p.source === 'builtin') && p.class !== 'lang').map((p) => {
+      const builtin = p.source === 'builtin';
       const meta = installedMeta[p.id] && typeof installedMeta[p.id] === 'object' ? installedMeta[p.id] : {};
       const app = Object.prototype.hasOwnProperty.call(meta, 'app') ? meta.app : p.manifest?.app;
       const api = Object.prototype.hasOwnProperty.call(meta, 'api') ? meta.api : p.manifest?.api;
@@ -646,16 +652,19 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
       const cacheName = `${safePart(p.id)}-${safePart(version)}-${p.bytes || 0}.zip`;
       const cached = path.join(base, 'installed', cacheName);
       const mirrorBase = mirrors.length ? mirrors[0].replace(/\/$/, '') : '';
+      const manifestDescription = typeof p.manifest?.description === 'string'
+        ? p.manifest.description
+        : (p.manifest?.description?.zh || p.manifest?.description?.en || null);
       return {
         id: p.id, kind: 'installed', name: (typeof p.manifest?.name === 'string' ? p.manifest.name : (p.manifest?.name?.zh || p.manifest?.name?.en)) || p.id,
         version: p.manifest?.version || null, class: p.class, status: 'installed', bytes: p.bytes || null,
         category: pluginCategory({ category: p.manifest?.category, class: p.class }),
         app: compat.app, api: compat.api, compat,
-        description: typeof meta.description === 'string' ? meta.description : null,
-        author: typeof meta.author === 'string' ? meta.author : null,
-        sources: [], installed: true, overridden: Object.keys(meta).length > 0,
-        mirror: mirrorBase && fs.existsSync(cached) ? `${mirrorBase}/installed/${encodeURIComponent(cacheName)}` : null,
-        download: p.status === 'loaded' ? `/market/api/installed/${encodeURIComponent(p.id)}/download` : null,
+        description: builtin ? manifestDescription : (typeof meta.description === 'string' ? meta.description : null),
+        author: builtin ? (Array.isArray(p.manifest?.authors) && p.manifest.authors.length ? p.manifest.authors.join(', ') : null) : (typeof meta.author === 'string' ? meta.author : null),
+        sources: [], installed: true, builtin, overridden: !builtin && Object.keys(meta).length > 0,
+        mirror: !builtin && mirrorBase && fs.existsSync(cached) ? `${mirrorBase}/installed/${encodeURIComponent(cacheName)}` : null,
+        download: !builtin && p.status === 'loaded' ? `/market/api/installed/${encodeURIComponent(p.id)}/download` : null,
       };
     });
   }
