@@ -123,6 +123,14 @@ describe('both main interfaces keep shipping', () => {
     assert.match(classic, /openCodex/);
   });
 
+  test('公开房间 is the live right-hand panel, not a second left tile', () => {
+    const hub = read('public/js/screens/hub/lobby.js');
+    assert.match(hub, /function PublicRoomsPanel/);
+    assert.match(hub, /data-testid="hub-public-rooms"/);
+    assert.match(hub, /<\$\{PublicRoomsPanel\} onAll=/, 'the panel is mounted in the Hub');
+    assert.doesNotMatch(hub, /PUBLIC ALLIANCES/, 'the old left tile with the same destination is gone');
+  });
+
   test('the Hub also switches the loadout renderer', () => {
     const main = read('public/js/main.js');
     assert.match(main, /import\('\.\/screens\/loadoutDeck\.js'\)/);

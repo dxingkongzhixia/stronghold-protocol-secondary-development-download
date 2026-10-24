@@ -60,6 +60,48 @@ function SweepPlate({ onClick }) {
   </button>`;
 }
 
+/**
+ * 公开房间 (adapted from the reference hub's RECRUITING panel): the live public co-op rooms of /online/api, the host
+ * name, difficulty and occupied seats, with 加入 on each row and 全部 for the full directory. Token-free and read-only;
+ * the same endpoint the classic lobby's 公开同盟 chips and the 在线 overlay use.
+ */
+function PublicRoomsPanel({ onAll, onJoin }) {
+  const [rooms, setRooms] = useState(null);
+  const [total, setTotal] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const r = await fetch('/online/api', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        const all = (Array.isArray(j.openRooms) ? j.openRooms : []).filter((x) => !x.full);
+        if (alive) { setRooms(all.slice(0, 3)); setTotal(all.length); }
+      } catch { /* keep the last list */ }
+    };
+    tick();
+    const id = setInterval(tick, 4000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+  const list = rooms || [];
+  return html`<section class="hub-public" aria-label=${t('公开房间')} data-testid="hub-public-rooms">
+    <div class="hub-public__head">
+      <span class="hub-public__title"><${Icon} name="users" />${t('公开房间')}<b class="num">${total}</b></span>
+      <button type="button" class="hub-public__all" onClick=${onAll}>${t('全部')}<${Icon} name="chevronRight" /></button>
+    </div>
+    <div class="hub-public__list">
+      ${list.length ? list.map((r) => html`<div key=${r.code} class="hub-public__row">
+        <span class="hub-public__name" title=${r.host || ''}>${t('{host}的同盟', { host: r.host || t('博士') })}</span>
+        <span class="hub-public__meta">
+          <span class="hub-public__diff">${r.difficultyName || ''}</span>
+          <span class="hub-public__seats num"><${Icon} name="users" />${r.humans}/${MAX_SEATS}</span>
+        </span>
+        <button type="button" class="hub-public__join" onClick=${() => onJoin(r.code)}>${t('加入')}</button>
+      </div>`) : html`<p class="hub-public__empty">${rooms ? t('暂无公开房间') : t('正在连接…')}</p>`}
+    </div>
+  </section>`;
+}
+
 /** Server-side online count (the header badge; clicking opens the player list). */
 function OnlineBadge({ onOpen }) {
   const [n, setN] = useState(null);
@@ -367,12 +409,12 @@ export function LobbyScreen() {
       </div>
 
       <aside class="hub-side">
-        <${HubTile} icon="users" label=${t('公开房间')} en="PUBLIC ALLIANCES" onClick=${() => setShowCommunity('rooms')} />
         <${HubTile} icon="key" label=${t('加入同盟')} en="ALLIANCE KEY" onClick=${() => setShowJoin(true)} />
         <${HubTile} icon="book" label=${t('更新日志')} en="CHANGELOG" onClick=${() => setShowCommunity('changelog')} />
       </aside>
 
       <aside class="hub-right">
+        <${PublicRoomsPanel} onAll=${() => setShowCommunity('rooms')} onJoin=${(code) => join(code)} />
         <${SweepPlate} onClick=${() => setSweepOpen(true)} />
         <${LoadoutButton} from="lobby" size="lg" class="lobby-loadout hub-plate hub-plate--loadout" label=${t('干员调配')} />
         <${HubTile} icon="chart" label=${t('统计数据')} en="LOCAL RECORDS" onClick=${openStats} />
