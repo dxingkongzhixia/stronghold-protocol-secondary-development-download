@@ -310,6 +310,8 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       humans: humansOf(r),
       full: r.freeSeat() < 0,
       freeSeats: freeSeatsOf(r),
+      // gameplay mods (a content set with its own cs), not cosmetic-only rooms: the directory's 原版 / mod badge
+      modded: r.modded,
       seats: seatsOf(r),
     }))
     .sort((a, b) => (a.full - b.full) || (b.humans - a.humans))
@@ -327,6 +329,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       humans: humansOf(r),
       bots: r.seats.filter((x) => x && !x.left && x.isBot).length,
       auto: !!r.auto,
+      modded: r.modded,
       seats: seatsOf(r),
     }))
     .sort((a, b) => (b.auto - a.auto) || ((b.bots > 0) - (a.bots > 0)) || (b.humans - a.humans))

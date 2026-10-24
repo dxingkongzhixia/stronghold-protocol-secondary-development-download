@@ -106,8 +106,9 @@ test('buildPublicSnapshot.openRooms lists public hand-made 同盟 rooms, not-ful
   const seat = (playerId, name, over = {}) => ({ playerId, name, isBot: false, left: false, ...over });
   const room = (over) => {
     const r = {
-      mode: 'coop', public: true, match: null, auto: false, hostId: 'h', difficulty: 'NORMAL',
+      mode: 'coop', public: true, match: null, auto: false, hostId: 'h', difficulty: 'NORMAL', content: null,
       seats: [seat('h', 'Host'), null, null, null], ...over,
+      get modded() { return this.content?.vanilla === false; },
     };
     r.seatOf = (id) => r.seats.find((s) => s && s.playerId === id) || null;
     r.freeSeat = () => r.seats.indexOf(null);
@@ -126,7 +127,7 @@ test('buildPublicSnapshot.openRooms lists public hand-made 同盟 rooms, not-ful
   assert.deepEqual(snap.openRooms.map((x) => x.code), ['PUB', 'BOT', 'FULL'], 'public hand-made co-op rooms, not-full first, humans desc');
   assert.deepEqual(snap.openRooms[0], {
     code: 'PUB', difficulty: 'NORMAL', difficultyName: '险境模拟', host: 'Host', hostRole: null, humans: 1,
-    full: false, freeSeats: 3,
+    full: false, freeSeats: 3, modded: false,
     seats: [{ name: 'Host', role: null, guest: true, isBot: false, isHost: true }, null, null, null],
   });
   assert.equal(snap.openRooms[1].humans, 1, 'bots are not counted as humans');

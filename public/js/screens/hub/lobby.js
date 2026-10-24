@@ -61,11 +61,12 @@ function SweepPlate({ onClick }) {
 }
 
 /**
- * 公开房间 (adapted from the reference hub's RECRUITING panel): the live public co-op rooms of /online/api, the host
- * name, difficulty and occupied seats, with 加入 on each row and 全部 for the full directory. Token-free and read-only;
- * the same endpoint the classic lobby's 公开同盟 chips and the 在线 overlay use.
+ * 公开房间 (adapted from the reference hub's RECRUITING panel): the live public co-op rooms of /online/api — the
+ * waiting ones (组队中, 加入) and the ones already playing (正在模拟, 观战), four at most, each with 原版 / MOD and the
+ * occupied seats; 全部 opens the full directory. Token-free and read-only; the same endpoint the classic lobby's
+ * 公开同盟 chips and the 在线 overlay use.
  */
-function PublicRoomsPanel({ onAll, onJoin }) {
+function PublicRoomsPanel({ onAll, onJoin, onSpectate }) {
   const [rooms, setRooms] = useState(null);
   const [total, setTotal] = useState(0);
   useEffect(() => {
@@ -75,8 +76,11 @@ function PublicRoomsPanel({ onAll, onJoin }) {
         const r = await fetch('/online/api', { cache: 'no-store' });
         if (!r.ok) return;
         const j = await r.json();
-        const all = (Array.isArray(j.openRooms) ? j.openRooms : []).filter((x) => !x.full);
-        if (alive) { setRooms(all.slice(0, 3)); setTotal(all.length); }
+        const waiting = (Array.isArray(j.openRooms) ? j.openRooms : [])
+          .filter((x) => !x.full).map((x) => ({ ...x, state: 'lobby' }));
+        const playing = (Array.isArray(j.playRooms) ? j.playRooms : []).map((x) => ({ ...x, state: 'playing' }));
+        const all = [...waiting, ...playing];
+        if (alive) { setRooms(all.slice(0, 4)); setTotal(all.length); }
       } catch { /* keep the last list */ }
     };
     tick();
@@ -91,12 +95,19 @@ function PublicRoomsPanel({ onAll, onJoin }) {
     </div>
     <div class="hub-public__list">
       ${list.length ? list.map((r) => html`<div key=${r.code} class="hub-public__row">
-        <span class="hub-public__name" title=${r.host || ''}>${t('{host}的同盟', { host: r.host || t('博士') })}</span>
-        <span class="hub-public__meta">
+        <div class="hub-public__rowhead">
+          <span class="hub-public__name" title=${r.host || ''}>${t('{host}的同盟', { host: r.host || t('博士') })}</span>
+          <button type="button" class=${`hub-public__join${r.state === 'playing' ? ' is-watch' : ''}`}
+            onClick=${() => (r.state === 'playing' ? onSpectate(r.code) : onJoin(r.code))}>
+            ${r.state === 'playing' ? t('观战') : t('加入')}
+          </button>
+        </div>
+        <div class="hub-public__meta">
+          <span class=${`hub-public__state${r.state === 'playing' ? ' is-live' : ''}`}>${r.state === 'playing' ? t('正在模拟') : t('组队中')}</span>
+          <span class=${`hub-public__mod${r.modded ? ' is-mod' : ''}`}>${r.modded ? 'MOD' : t('原版')}</span>
           <span class="hub-public__diff">${r.difficultyName || ''}</span>
           <span class="hub-public__seats num"><${Icon} name="users" />${r.humans}/${MAX_SEATS}</span>
-        </span>
-        <button type="button" class="hub-public__join" onClick=${() => onJoin(r.code)}>${t('加入')}</button>
+        </div>
       </div>`) : html`<p class="hub-public__empty">${rooms ? t('暂无公开房间') : t('正在连接…')}</p>`}
     </div>
   </section>`;
@@ -414,7 +425,8 @@ export function LobbyScreen() {
       </aside>
 
       <aside class="hub-right">
-        <${PublicRoomsPanel} onAll=${() => setShowCommunity('rooms')} onJoin=${(code) => join(code)} />
+        <${PublicRoomsPanel} onAll=${() => setShowCommunity('rooms')} onJoin=${(code) => join(code)}
+          onSpectate=${(code) => spectate(code)} />
         <${SweepPlate} onClick=${() => setSweepOpen(true)} />
         <${LoadoutButton} from="lobby" size="lg" class="lobby-loadout hub-plate hub-plate--loadout" label=${t('干员调配')} />
         <${HubTile} icon="chart" label=${t('统计数据')} en="LOCAL RECORDS" onClick=${openStats} />

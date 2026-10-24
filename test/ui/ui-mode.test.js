@@ -129,6 +129,10 @@ describe('both main interfaces keep shipping', () => {
     assert.match(hub, /data-testid="hub-public-rooms"/);
     assert.match(hub, /<\$\{PublicRoomsPanel\} onAll=/, 'the panel is mounted in the Hub');
     assert.doesNotMatch(hub, /PUBLIC ALLIANCES/, 'the old left tile with the same destination is gone');
+    assert.match(hub, /playRooms/, 'running matches are listed too');
+    assert.match(hub, /slice\(0, 4\)/, 'at most four entries');
+    assert.match(hub, /onSpectate/, 'a running room offers 观战');
+    assert.match(hub, /r\.modded/, 'the row names 原版 / MOD');
   });
 
   test('the Hub also switches the loadout renderer', () => {
