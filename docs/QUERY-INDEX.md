@@ -97,6 +97,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/README.m
 | picking / dragging / facing wheel | `public/js/render/pick.js`, `public/js/render/drag.js`, `public/js/ui/facingWheel.js` |
 | Spine clip bounds / impostor sizing (#542) | `public/js/render/spine.js` (`clipBounds`, `CLIP_SAMPLE_*`, `stepClipBounds`), `public/js/render/units.js` |
 | statistics page (统计页改版: overview / 称号六边形 / 单局纪录 / 最常用盟约与策略) | `public/js/screens/stats.js`, `public/js/ui/stats.js`, `public/js/ui/titleHexagon.js`, `public/js/ui/playerName.js`, `public/css/screens/stats.css`; schema `shared/stats.js` (record v2) |
+| 成就统计 (achievements: card + panel, seven groups, 战果纪录, 盟约 / 策略 records) | `public/js/ui/achievements.js`, `public/js/ui/achievementModel.js`, `public/css/screens/achievements.css`; entries in `public/js/screens/lobby.js` and `screens/hub/lobby.js`; records from `ui/stats.js` + `ui/statsSync.js` (`stats.list`) |
 | official statistics template art (37 files + fonts) | `public/assets/ui/statistics/`, `tools/fetch-stats-assets.mjs`, `tools/assets/stats-template.mjs`, `data/assets.json` (`ui['statistics/*']`) |
 | per-character voice overrides (语音语言) | `public/js/voicePrefs.js` |
 | 文字大小 (text-size) and 弹药数量 (ammo count) settings | `public/js/ui/gameLogic/settings.js`, `public/css/theme.css` (`--t`), `public/js/render/app.js` (`ammoCount`) |

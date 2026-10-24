@@ -80,6 +80,9 @@ https://<host>/?ui=classic
 | `public/css/screens/loadout-deck.css` | Hub 干员调配样式；经典界面仍加载 `loadout.css` |
 | `public/js/ui/operatorPortrait.js` | 卡片立绘跟随本机皮肤选择 |
 | `public/js/ui/transitions.js` | 浮层淡出 / 保留挂载 |
+| `public/js/ui/achievements.js` | 成就统计：左侧成就卡 + 全屏面板（两套大厅共用，各自接线） |
+| `public/js/ui/achievementModel.js` | 成就进度与战果 / 盟约 / 策略纪录的纯聚合（无 DOM、无存储） |
+| `public/css/screens/achievements.css` | 成就卡与成就面板样式（`index.html` 加载） |
 | `public/js/coreSkins.js` | 读取核心皮肤目录并交给 `cosmetics.setCore` |
 | `skins/catalogue.json` | 核心皮肤目录（tracked；美术在忽略的 `skins/sets/`） |
 | `tools/skins.mjs` | `import` / `build` 核心皮肤目录 |
@@ -97,6 +100,7 @@ https://<host>/?ui=classic
 | 更新日志 | 左侧功能砖 |
 | 加入同盟 / 观战 / 最近密钥 | 左侧「加入同盟」弹窗 |
 | S.W.E.E.P.、干员调配、统计 | 右侧功能砖 |
+| 成就统计 | 左侧顶部的成就卡（场景条 + 战果奖杯数）；经典大厅左栏同一张卡 |
 | 资料库、作战提示 | **Hub 不提供**；仍保留在经典大厅 |
 | S.W.E.E.P. 对应干员 | 点击干员打开干员调配并选中该干员；关闭调配（返回 / Esc）回到原来的 S.W.E.E.P. 页 |
 | 三个模式 | 右下大入口 |
@@ -108,8 +112,9 @@ https://<host>/?ui=classic
 ## 5. 测试
 
 - `node --test test/ui/ui-mode.test.js`：开关存储、校验、`?ui=`、两套大厅都存在。
+- `node --test test/ui/achievements.test.js`：成就聚合口径（有效对局、MOD / 测试 / 空退出排除）、战果 / 盟约 / 策略纪录与服务端 + 本机记录合并。
 - `node --test test/ui/mm-look.test.js test/ui/online-overlay.test.js test/ui/room-origin.test.js`：抽取后旧行为不变。
-- 浏览器实测（1600×900 / 844×390）：标题 → Hub 大厅 → 协议选择 → 创建同盟 → 房间；背景面板、加入同盟弹窗、经典界面回退。
+- 浏览器实测（1600×900 / 844×390）：标题 → Hub 大厅 → 协议选择 → 创建同盟 → 房间；背景面板、加入同盟弹窗、成就面板、经典界面回退。
 - 部署前按 [`AI-WORKFLOW.md`](AI-WORKFLOW.md) 跑完整闸门。
 
 ## 6. 注意

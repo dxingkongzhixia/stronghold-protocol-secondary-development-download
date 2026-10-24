@@ -18,6 +18,7 @@ import { html, Button, Icon, MicroLabel, Panel, TextField, PingPill, AvatarFrame
 import { toast, toastError } from '../ui/toasts.js';
 import { openStats } from './stats.js';
 import { SweepReport } from './sweep.js';
+import { AchievementEntry, AchievementPanel } from '../ui/achievements.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
 import { openCodex } from '../ui/codex.js';
@@ -132,6 +133,7 @@ export function LobbyScreen() {
   // 公开同盟 (lobby 03 → server /online/api `openRooms`): whether a new 同盟 room is listed publicly. Persisted.
   const [isPublic, setIsPublic] = useState(() => loadPref('lobby.public', true) !== false);
   const [sweepOpen, setSweepOpen] = useState(false);
+  const [achOpen, setAchOpen] = useState(false);
   const alive = useRef(true);
   const inFlight = useRef(false); // synchronous guard against double clicks (state updates are async)
   useEffect(() => () => { alive.current = false; }, []);
@@ -308,6 +310,8 @@ export function LobbyScreen() {
           <${PublicAlliances} onJoin=${(c) => { setCode(c); join(c); }} onSpectate=${(c) => { setCode(c); spectate(c); }} />
         <//>
         <${TipsPanel} />
+        <div class="section-label"><span class="section-label__idx num">04</span>${t('成就统计')}<${MicroLabel}>ACHIEVEMENTS<//></div>
+        <${AchievementEntry} onOpen=${() => setAchOpen(true)} />
       </section>
 
       <section class="lobby-right">
@@ -353,6 +357,7 @@ export function LobbyScreen() {
     ${showOnline ? html`<${OnlineOverlay} onClose=${() => setOnlineOpen(false)} />` : null}
     ${showCommunity === 'changelog' ? html`<${ChangelogOverlay} onClose=${() => setShowCommunity(null)} />` : null}
     ${sweepOpen ? html`<${SweepReport} onClose=${() => setSweepOpen(false)} />` : null}
+    ${achOpen ? html`<${AchievementPanel} me=${me} onClose=${() => setAchOpen(false)} />` : null}
   </div>`;
 }
 

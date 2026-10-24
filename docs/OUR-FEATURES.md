@@ -564,6 +564,17 @@ guest keeps uploading under its own identity), and the cross-player view (`stats
 **only** the record's own in-game fields plus the owner's public `{ name, role, guest }` — never an account id, email,
 token or session key. Fork-only; see `docs/MATCHMAKING.md` §40 (schema, owner rule, privacy rules).
 
+**The achievements page (成就统计).** `public/js/ui/achievements.js` (card + full-screen panel) over the pure
+aggregates in `public/js/ui/achievementModel.js`; the design is the owner's 0.3.0 fork's port of Stardust-minus
+`d6e96f4` / `70875f41` (GPL-3.0-or-later), restyled onto this tree's `--ui-unit` / `--utility-text` in
+`public/css/screens/achievements.css`. Progress is **derived from the same match records** the statistics page
+reads — `countsTowardStats` / `selfRowOf` / `roundsOf` from `shared/stats.js`, gameplay-plugin records excluded —
+so nothing is persisted twice and clearing 统计数据 clears the progress. Records come from `stats.list` merged with
+the local `sp.pref.stats` copy by record id (server rows not on this device, local rows not uploaded yet), with the
+local copy as the offline answer; `ui/stats.js` `subscribeStats` notifies the panel after every successful write.
+The 0.3.0 fork's player card / avatar picker does not exist here: the plate uses the lobby `AvatarFrame`. Entries:
+the Hub's left rail and the classic lobby's left column; the footer's 统计数据 link opens `screens/stats.js`.
+
 **The drag-snap rule (R23-DRAGSNAP).** `public/js/render/drag.js` (`dragStandTile`, `DRAG_HOLD_TILES`): a dragged
 operator stands on the tile under the pointer while it is a legal target (a board tile or a bench slot) and is held
 under the pointer elsewhere; the pick / highlight / tileHover / wheel / drop all stay the pointer's tile. The

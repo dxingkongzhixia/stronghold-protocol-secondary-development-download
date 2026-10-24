@@ -68,6 +68,29 @@ export const STATS_PREF_KEY = 'stats';
 const FULL_KEY = `sp.pref.${STATS_PREF_KEY}`;
 const DAMAGED_KEY = `${FULL_KEY}.damaged`;
 
+// ---- change notification -------------------------------------------------------------------------------------------
+// The achievements panel (ui/achievements.js) derives everything from this same record list; a finished match, an
+// import, a clear or a migration all end in saveStats, so that is the one place a listener has to hear about.
+const statsListeners = new Set();
+
+/**
+ * Call `listener` after every successful write to the stored record list. Returns the unsubscribe function.
+ * @param {() => void} listener
+ * @returns {() => void}
+ */
+export function subscribeStats(listener) {
+  if (typeof listener !== 'function') return () => {};
+  statsListeners.add(listener);
+  return () => { statsListeners.delete(listener); };
+}
+
+/** Notify the listeners (a listener that throws must not stop the others or the write). */
+function notifyStats() {
+  for (const fn of [...statsListeners]) {
+    try { fn(); } catch (err) { console.warn('[stats] listener failed', err); }
+  }
+}
+
 /** Read the raw stored string (null when absent or unreadable). */
 function readRaw() {
   try { return globalThis.localStorage?.getItem(FULL_KEY) ?? null; } catch { return null; }
@@ -107,6 +130,7 @@ export function saveStats(stats) {
       const ls = globalThis.localStorage;
       if (!ls) return false; // no storage at all (disabled by the browser)
       ls.setItem(FULL_KEY, JSON.stringify({ v: STATS_VERSION, records: recs }));
+      notifyStats();
       return true;
     } catch { /* quota or storage disabled — fall through to shrinking */ }
     if (recs.length <= 8) return false; // a small history that still does not fit is foreign quota pressure

@@ -16,6 +16,7 @@ import { html, Button, Icon, MicroLabel, Modal, TextField, PingPill, AvatarFrame
 import { toast, toastError } from '../../ui/toasts.js';
 import { openStats } from '../stats.js';
 import { SweepReport } from '../sweep.js';
+import { AchievementEntry, AchievementPanel } from '../../ui/achievements.js';
 import { LoadoutButton } from '../loadout.js';
 import { SettingsButton } from '../../ui/settings.js';
 import { GuideButton } from '../../ui/guide.js';
@@ -275,6 +276,7 @@ export function LobbyScreen() {
   const [showAccount, setShowAccount] = useState(false);
   const [showCommunity, setShowCommunity] = useState(() => (consumeRoomsReturn() ? 'rooms' : null));
   const [sweepOpen, setSweepOpen] = useState(false);
+  const [achOpen, setAchOpen] = useState(false);
   const alive = useRef(true);
   const inFlight = useRef(false);
   useData('config');
@@ -427,6 +429,7 @@ export function LobbyScreen() {
       </div>
 
       <aside class="hub-side">
+        <${AchievementEntry} onOpen=${() => setAchOpen(true)} />
         <${HubTile} icon="key" label=${t('加入同盟')} en="ALLIANCE KEY" onClick=${() => setShowJoin(true)} />
         <${HubTile} icon="book" label=${t('更新日志')} en="CHANGELOG" onClick=${() => setShowCommunity('changelog')} />
       </aside>
@@ -476,5 +479,6 @@ export function LobbyScreen() {
     ${showOnline ? html`<${OnlineOverlay} onClose=${() => setOnlineOpen(false)} />` : null}
     ${showCommunity === 'changelog' ? html`<${ChangelogOverlay} onClose=${() => setShowCommunity(null)} />` : null}
     ${sweepOpen ? html`<${SweepReport} onClose=${() => setSweepOpen(false)} />` : null}
+    ${achOpen ? html`<${AchievementPanel} me=${me} onClose=${() => setAchOpen(false)} />` : null}
   </div>`;
 }
