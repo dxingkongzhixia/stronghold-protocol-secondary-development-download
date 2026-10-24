@@ -86,8 +86,17 @@ export function setPreviewPlugins(ids) {
 export function initPreviewPlugins() {
   const ids = loadPreviewIds();
   void resolvePreview(ids);
+  // Warm the catalogue as soon as the server has told us it has plugins. Opening the dialog used to be the first
+  // request: the panel rendered empty (only the lead) and then grew to its full height when the rows arrived — the
+  // owner's 2026-10-25 「打开插件一闪一闪」 report. `force` on open still refreshes it, but the rows are already there.
+  const ensureCatalog = () => { if (installedCount(store.get())) loadCatalog().catch(() => {}); };
+  ensureCatalog();
   const off = typeof net?.on === 'function'
-    ? net.on('welcome', () => { const again = loadPreviewIds(); if (again.length) void resolvePreview(again); })
+    ? net.on('welcome', () => {
+      const again = loadPreviewIds();
+      if (again.length) void resolvePreview(again);
+      ensureCatalog();
+    })
     : null;
   return () => off?.();
 }
@@ -112,9 +121,12 @@ export function PreviewPluginPanel({ open, onClose }) {
   const [group, setGroup] = useState(null);
   useEffect(() => {
     if (!open) return;
-    if (installed) loadCatalog({ force: true }).catch(() => {});
+    // initPreviewPlugins warms this at boot / on welcome: opening the dialog renders its rows immediately. A forced
+    // refetch here used to replace every row object (and, on the first open, grow the dialog from empty to full) —
+    // the 2026-10-25 flicker. `loadCatalog()` still fetches when the warm-up has not happened yet.
+    if (installed) loadCatalog().catch(() => {});
     if (state.ids.length && !state.cs && state.status !== 'loading' && state.status !== 'failed') void resolvePreview(state.ids);
-    // one refresh per open (the state it reads is a snapshot at open time)
+    // one resolve per open (the state it reads is a snapshot at open time)
   }, [open]);
   const rows = previewPlugins(cat.plugins);
   const groups = pluginGroups(rows);
