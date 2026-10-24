@@ -86,6 +86,7 @@ export function MusicPanel({ open, onClose }) {
         <span class="lobby-music__now"><${Icon} name="play" />${t('正在播放 · 主界面')}</span>
         <strong>${currentTrackName(settings)}</strong>
         <small>${t('进入作战后仍使用房间的对战音乐；选择只保存在当前浏览器。')}</small>
+        <small>${t('仅点选时加载当前曲目（约 2–6 MB），不会预载全部音乐。')}</small>
         ${rows.length > 24 ? html`<small>${t('已加载本地音乐包：共 {n} 首', { n: rows.length })}</small>` : null}
       </div>
       <${Tabs} size="sm" value=${active} onChange=${setGroup}
