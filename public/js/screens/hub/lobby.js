@@ -185,13 +185,24 @@ function ProtocolCard({ roomMode, difficulty, selected, onSelect }) {
  * create/queue actions and receives `onStart`.
  */
 function ProtocolPage({ mode, difficulty, onDifficulty, onClose, online, busy, isPublic, onPublic, testMode, asTest, onTest,
-  blockedReason, needAccount, onStart }) {
+  blockedReason, needAccount, onStart, queued = false, mm = null, onCancel }) {
   const card = MODE_CARDS.find((c) => c.id === mode) || MODE_CARDS[0];
   const info = difficultyInfo(mode === 'mm' ? 'coop' : mode, difficulty);
   const color = DIFFICULTY_COLORS[difficulty];
-  const startLabel = mode === 'solo' ? t('开始独立模拟') : mode === 'mm' ? t('搜寻队友（野排）') : t('创建同盟');
-  const blocked = !online || !!busy || !!blockedReason || (mode === 'mm' && needAccount);
-  const hint = !online ? t('正在连接服务器…') : needAccount ? t('需先在标题页登录 / 注册账号') : blockedReason
+  const startLabel = queued ? t('退出匹配')
+    : mode === 'solo' ? t('开始独立模拟') : mode === 'mm' ? t('搜寻队友（野排）') : t('创建同盟');
+  const blocked = !online || !!busy || (!queued && (!!blockedReason || (mode === 'mm' && needAccount)));
+  const clock = (s) => s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const queueHint = (() => {
+    if (!queued) return null;
+    const need = Number.isFinite(mm?.need) && mm.need > 0 ? mm.need : MAX_SEATS;
+    const waiting = Number.isFinite(mm?.waiting) ? Math.max(0, mm.waiting) : 0;
+    const left = Math.max(0, Math.ceil(((mm?.deadlineMs || 0) - Date.now()) / 1000));
+    return t('正在寻找同盟队友 {waiting}/{need} · 已等待 {elapsed} · {left}', {
+      waiting, need, elapsed: clock(Math.max(0, Math.floor((mm?.elapsedMs || 0) / 1000))), left: left > 0 ? t('{left} 后由 AI 补位', { left: clock(left) }) : t('正在组队…'),
+    });
+  })();
+  const hint = queued ? queueHint : !online ? t('正在连接服务器…') : needAccount ? t('需先在标题页登录 / 注册账号') : blockedReason
     || (mode === 'coop' ? (isPublic ? t('公开：其他博士可在大厅「公开房间」直接加入')
       : t('不公开：仅凭同盟密钥加入')) : mode === 'mm' ? t('进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位')
       : t('创建后即可开始模拟'));
@@ -237,7 +248,7 @@ function ProtocolPage({ mode, difficulty, onDifficulty, onClose, online, busy, i
               <span>${t('测试房间')}</span>
             </label>` : null}
             <p class="proto-hint">${hint}</p>
-            <button type="button" class="proto-start" disabled=${blocked} onClick=${onStart}>
+            <button type="button" class="proto-start" disabled=${blocked} onClick=${queued ? onCancel : onStart}>
               <span class="proto-start__mark" aria-hidden="true"><span class="proto-start__rook"><${Icon} name="rook" /></span></span>
               <span class="proto-start__label">${busy ? html`<${Spinner} size="sm" />` : null}${startLabel}</span>
               <span class="proto-start__deco" aria-hidden="true"></span>
@@ -354,7 +365,7 @@ export function LobbyScreen() {
       });
     });
   };
-  const mmJoin = () => run('mm', () => net.request('mm.join', { difficulty }).then(() => setProtocol(null)));
+  const mmJoin = () => run('mm', () => net.request('mm.join', { difficulty }));
   const mmCancel = () => {
     // optimistic local clear; a real mm.state re-syncs
     store.patch('mm', { queued: false, difficulty: null });
@@ -390,6 +401,7 @@ export function LobbyScreen() {
       onClose=${() => setProtocol(null)} online=${online} busy=${busy} isPublic=${isPublic} onPublic=${pickPublic}
       testMode=${testMode} asTest=${asTest} onTest=${setAsTest}
       blockedReason=${protocol === 'mm' ? '' : entryBlocked} needAccount=${protocol === 'mm' && !auth?.account}
+      queued=${queued} mm=${mm} onCancel=${mmCancel}
       onStart=${startProtocol} />`;
   }
 
