@@ -1,13 +1,14 @@
-// tools/illust.mjs — download the operator full-body illustrations the seat card shows (the default 立绘), convert
-// them to WebP and leave them under public/assets/char/illust/. The manifest is generated from the plan
-// (tools/assets/plan.mjs), so run `node tools/fetch-assets.mjs --offline` afterwards to add the `chars[id].illust`
-// entries. Skins use the core skin catalogue's own `illust` files (skins/catalogue.json, docs/SKINS.md).
+// tools/illust.mjs — download the operator full-body illustrations the seat card shows (the default 立绘), crop them to
+// the card's head-and-torso 3:5 window, convert them to WebP and leave them under public/assets/char/illust/. The
+// manifest is generated from the plan (tools/assets/plan.mjs), so run `node tools/fetch-assets.mjs --offline`
+// afterwards to add the `chars[id].illust` entries. Skins use the core skin catalogue's own `illust` files
+// (skins/catalogue.json, docs/SKINS.md).
 //
 // Usage: node tools/illust.mjs [--force] [--only=char_003_kalts,…] [--concurrency=6] [--max-height=1100] [--dry-run]
 //
-// The source is Aceship/Arknight-Images (E2 art first, then E0/E1); a missing dump file is a miss the card falls back
-// from (portraitE2 / portrait), never an error. Pillow is required to encode WebP (same optional dependency as
-// tools/local-extract).
+// The source is Aceship/Arknight-Images (E0/E1 first — the E2 art often has a huge effect that a card crop cannot use —
+// then E2); a missing dump file is a miss the card falls back from (portraitE2 / portrait), never an error. Pillow is
+// required to encode WebP (same optional dependency as tools/local-extract).
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,7 +40,7 @@ function parseArgs(argv) {
 }
 
 async function fetchOne(id) {
-  for (const suffix of ['_2', '_1']) {
+  for (const suffix of ['_1', '_2']) {
     for (const source of SOURCES) {
       const url = source(id, suffix);
       for (let attempt = 1; attempt <= 2; attempt++) {

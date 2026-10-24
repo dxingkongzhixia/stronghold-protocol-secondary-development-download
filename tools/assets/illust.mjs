@@ -19,6 +19,26 @@ for item in json.load(open(sys.argv[1])):
     src, dst = item
     try:
         im = Image.open(src).convert('RGBA')
+        # The card wants a head-and-torso crop, not the whole square illustration: take the top ~65% of the
+        # character's alpha box, in a 3:5 window centred on it. A wide/effect-heavy art still gets a portrait crop;
+        # an image with no alpha box falls back to a centred crop.
+        bbox = im.getbbox()
+        w, h = im.size
+        if bbox:
+            x0, y0, x1, y1 = bbox
+            bw, bh = max(1, x1 - x0), max(1, y1 - y0)
+            ch = int(min(bh * 0.65, bw / 0.6))
+            ch = max(ch, min(bh, int(bw * 1.2)))
+            ch = min(ch, bh)
+            cw = int(ch * 0.6)
+            cx = (x0 + x1) // 2
+            left = max(0, min(w - cw, cx - cw // 2))
+            top = max(0, min(h - ch, y0 - int(bh * 0.02)))
+            im = im.crop((left, top, left + cw, top + ch))
+        else:
+            ch = int(h * 0.75); cw = int(ch * 0.6)
+            left = (w - cw) // 2; top = 0
+            im = im.crop((left, top, left + cw, top + ch))
         w, h = im.size
         if h > max_h:
             w = max(1, round(w * max_h / h))
