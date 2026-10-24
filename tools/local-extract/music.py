@@ -61,6 +61,7 @@ import UnityPy  # noqa: E402
 
 DATA = ROOT / '.cache' / 'gamedata' / 'excel' / 'audio_data.json'
 ASSETS = ROOT / 'data' / 'assets.json'
+TITLES = ROOT / 'tools' / 'assets' / 'music-titles.json'
 OUT_DEFAULT = ROOT / 'var' / 'music'
 CLIENT_MUSIC = 'audio/sound_beta_2/music'
 CLIENT_AUDIO = 'audio/sound_beta_2'
@@ -117,8 +118,24 @@ def group_of(mid: str, bank: str, loop_rel: str) -> str:
     return 'other'
 
 
+def load_titles() -> dict[str, str]:
+    """The display names of catalogue entries whose official `musics[]` name is empty.
+
+    PRTS's 音乐鉴赏 table (Template:音乐一览, 2026-10-25) supplies 85 of them; the remaining 21 are the
+    act29side camp variants (Misty Memory 快乐/愤怒/悲伤/不安, solo + instrumentals), the act45side ED
+    sizes and two internal event themes. Keeping the map beside the tool makes `index.json` reproducible
+    without a network call; the client never has to show a raw `music_…` id.
+    """
+    try:
+        raw = json.loads(TITLES.read_text(encoding='utf-8'))
+        return {str(k): str(v) for k, v in raw.items() if str(v).strip()}
+    except Exception:
+        return {}
+
+
 def load_catalogue(path: Path):
     data = json.loads(path.read_text(encoding='utf-8'))
+    titles = load_titles()
     banks = {b['name']: b for b in data.get('bgmBanks', []) if isinstance(b, dict) and b.get('name')}
     alias = data.get('bankAlias') or {}
 
@@ -138,9 +155,10 @@ def load_catalogue(path: Path):
             continue
         loop_rel = norm_rel(b['loop'])
         intro_rel = norm_rel(b['intro']) if b.get('intro') else None
+        mid = str(m['id'])
         by_rel.setdefault(loop_rel, []).append({
-            'id': str(m['id']),
-            'name': clean_name(m.get('name')),
+            'id': mid,
+            'name': clean_name(m.get('name')) or titles.get(mid, ''),
             'bank': str(m.get('bank') or ''),
             'intro_rel': intro_rel,
             'loop_rel': loop_rel,

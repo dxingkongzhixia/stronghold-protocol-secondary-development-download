@@ -29,9 +29,17 @@ const GROUP_LABEL = {
   default: N_('默认'),
 };
 
-/** The current 主界面音乐's name (the default row when nothing is chosen or the catalogue lacks the pick). */
+/** A catalogue title, or '' for an id-like / empty name (never show `music_act…` to a player). */
+function cleanName(x) {
+  const name = String(x?.name || '').trim();
+  return name && !/^music_/i.test(name) ? name : '';
+}
+
+/** The current 主界面音乐's name (the default row when nothing is chosen). */
 function currentTrackName(settings) {
-  return (settings.lobbyMusic && musicTrack(settings.lobbyMusic)?.name) || t('默认主题（卫戍协议）');
+  if (!settings.lobbyMusic) return t('默认主题（卫戍协议）');
+  const entry = musicTrack(settings.lobbyMusic);
+  return cleanName(entry) || t('未命名曲目');
 }
 
 /**
@@ -61,7 +69,7 @@ export function MusicPanel({ open, onClose }) {
   const [group, setGroup] = useState('all');
   const [q, setQ] = useState('');
   const current = settings.lobbyMusic || '';
-  const rows = Object.entries(entries || {}).map(([id, x]) => ({ id, name: String(x?.name || id), group: x?.group || 'theme' }));
+  const rows = Object.entries(entries || {}).map(([id, x]) => ({ id, name: cleanName(x), group: x?.group || 'theme' }));
   const present = new Set(rows.map((r) => r.group));
   const tabIds = GROUPS.filter((id) => id === 'all' || present.has(id));
   const active = tabIds.includes(group) ? group : 'all';
@@ -96,7 +104,8 @@ export function MusicPanel({ open, onClose }) {
           aria-pressed=${current === r.id} class=${`music-row${current === r.id ? ' is-on' : ''}`}
           onClick=${() => pick(r.id)}>
           <span class="music-row__idx num">${String(i + 1).padStart(2, '0')}</span>
-          <span class="music-row__main"><b>${r.name}</b><em>${t(GROUP_LABEL[r.group] || '主题')}</em></span>
+          <span class="music-row__main"><b>${r.name || `${t(GROUP_LABEL[r.group] || '其他')} ${i + 1}`}</b>
+            <em>${t(GROUP_LABEL[r.group] || '主题')}</em></span>
           <span class="music-row__mark"><${Icon} name=${current === r.id ? 'play' : 'music'} /></span>
         </button>`)}
         ${visible.length || showDefault ? null : html`<p class="lobby-music__empty">${t('没有匹配的曲目')}</p>`}

@@ -2057,5 +2057,6 @@
   "生息演算": "Reclamation",
   "剧情": "Story",
   "其他": "Other",
-  "已加载本地音乐包：共 {n} 首": "Local music pack loaded: {n} tracks"
+  "已加载本地音乐包：共 {n} 首": "Local music pack loaded: {n} tracks",
+  "未命名曲目": "Untitled track"
 }

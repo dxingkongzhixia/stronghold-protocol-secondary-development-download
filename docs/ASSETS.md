@@ -185,8 +185,10 @@ py -3.14 tools/local-extract/music.py --game "<client>/Arknights_Data/StreamingA
 ```
 
 It writes `var/music/index.json` (`{ entries: { [id]: { name, group, intro?, loop } } }`, group = theme / event /
-collab / contract / rogue / sandbox / story / other) and is resumable (`--only=…`, `--force`). The pack is **not in
-the repository** (~580 MB, and the repo is already ~1 GB); `var/` is git-ignored. `server/index.js` serves it at
+collab / contract / rogue / sandbox / story / other) and is resumable (`--only=…`, `--force`). Empty official names
+(the act29side camp variants, internal story/activity themes, ED sizes) are filled from
+`tools/assets/music-titles.json` — PRTS's 音乐鉴赏 titles plus the camp variants — so the picker never shows a raw
+`music_…` id. The pack is **not in the repository** (~580 MB, and the repo is already ~1 GB); `var/` is git-ignored. `server/index.js` serves it at
 `/music/index.json` and `/music/<id>_{intro,loop}.mp3`; `public/js/ui/musicLibrary.js` merges it over the committed
 `audio.lobbyMusic` for the picker (pack wins for the same id). Without the pack the Hub keeps the 24 committed tracks.
 
