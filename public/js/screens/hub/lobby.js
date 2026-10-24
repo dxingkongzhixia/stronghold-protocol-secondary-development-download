@@ -17,6 +17,7 @@ import { toast, toastError } from '../../ui/toasts.js';
 import { openStats } from '../stats.js';
 import { SweepReport } from '../sweep.js';
 import { AchievementEntry, AchievementPanel } from '../../ui/achievements.js';
+import { PreviewPluginPanel } from '../../ui/previewPlugins.js';
 import { LoadoutButton } from '../loadout.js';
 import { SettingsButton } from '../../ui/settings.js';
 import { GuideButton } from '../../ui/guide.js';
@@ -277,6 +278,7 @@ export function LobbyScreen() {
   const [showCommunity, setShowCommunity] = useState(() => (consumeRoomsReturn() ? 'rooms' : null));
   const [sweepOpen, setSweepOpen] = useState(false);
   const [achOpen, setAchOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const alive = useRef(true);
   const inFlight = useRef(false);
   useData('config');
@@ -439,6 +441,7 @@ export function LobbyScreen() {
           onSpectate=${(code) => spectate(code)} />
         <${SweepPlate} onClick=${() => setSweepOpen(true)} />
         <${LoadoutButton} from="lobby" size="lg" class="lobby-loadout hub-plate hub-plate--loadout" label=${t('干员调配')} />
+        <${HubTile} icon="gear" label=${t('插件')} en="PLUGINS" onClick=${() => setPreviewOpen(true)} />
       </aside>
 
       <section class="hub-entries" aria-label=${t('模拟方式')}>
@@ -479,5 +482,6 @@ export function LobbyScreen() {
     ${showCommunity === 'changelog' ? html`<${ChangelogOverlay} onClose=${() => setShowCommunity(null)} />` : null}
     ${sweepOpen ? html`<${SweepReport} onClose=${() => setSweepOpen(false)} />` : null}
     ${achOpen ? html`<${AchievementPanel} me=${me} onClose=${() => setAchOpen(false)} />` : null}
+    <${PreviewPluginPanel} open=${previewOpen} onClose=${() => setPreviewOpen(false)} />
   </div>`;
 }

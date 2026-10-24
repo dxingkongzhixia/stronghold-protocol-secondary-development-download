@@ -99,7 +99,7 @@ export const initialState = Object.freeze({
   // (ui/chat.js activeChatBubbles); nothing is displayed as a list and nothing is persisted.
   chat: [],
   clock: { offset: 0, rtt: null, synced: false },
-  ui: { pendingJoin: null, restoring: false, buildStale: false, roomsReturn: false, protocolReturn: false, onlineOpen: false, onlineFilter: '', onlineStatsReturn: false },
+  ui: { pendingJoin: null, restoring: false, buildStale: false, roomsReturn: false, protocolReturn: false, onlineOpen: false, onlineFilter: '', onlineStatsReturn: false, previewCs: null },
 });
 
 /** The app-wide store singleton. */

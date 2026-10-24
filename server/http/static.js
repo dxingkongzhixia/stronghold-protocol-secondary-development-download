@@ -286,6 +286,27 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
       sendJson(req, res, 200, typeof registry.pluginIndex === 'function' ? registry.pluginIndex({ vanilla }) : buildPluginIndex([], { vanilla }));
       return;
     }
+    // The main interface's personal plugin preview (owner 2026-10-24): the browser stores which content plugins it wants
+    // to see in 干员调配 / S.W.E.E.P outside a room; the server composes that set and answers its cs, which the page loads
+    // from /cs/<cs>/ like a room's own set. Read-only and personal — a match always uses its room's set (or vanilla),
+    // and scripts/trusted plugins are never previewed (they need the room's consent path).
+    if (decoded === `${PLUGINS_URL}preview`) {
+      const raw = new URLSearchParams(String(query || '').replace(/^\?/, '')).get('ids') || '';
+      const ids = [...new Set(raw.split(',').map((s) => s.trim()).filter(Boolean))].slice(0, 8);
+      if (!ids.length) { sendJson(req, res, 200, { cs: null }); return; }
+      const known = (id) => {
+        const p = typeof registry.plugin === 'function' ? registry.plugin(id) : null;
+        return p && p.status === 'loaded' && p.class === 'content' && p.content && p.builtin !== false
+          && Array.isArray(p.manifest?.scope) && p.manifest.scope.includes('room') && p.manifest.compatible !== false;
+      };
+      const bad = ids.filter((id) => !known(id));
+      if (bad.length) { sendJson(req, res, 400, { error: 'PLUGIN_UNKNOWN', ids: bad }); return; }
+      if (!contents) { sendJson(req, res, 200, { cs: null }); return; }
+      const r = contents.resolve(ids);
+      if (!r || !r.ok) { sendJson(req, res, 409, { error: r?.error || 'PLUGIN_BLOCKED', detail: r?.detail || '' }); return; }
+      sendJson(req, res, 200, { cs: r.set.cs });
+      return;
+    }
     if (decoded.startsWith('/cs/')) {
       const c = vanillaContent();
       if (decoded !== `/cs/${csUrlPart(c.cs)}/index.json`) {

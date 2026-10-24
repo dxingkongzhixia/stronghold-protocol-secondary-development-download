@@ -111,6 +111,14 @@ policy, unofficial-match and statistics rules as an installed plugin — but the
 install/update path and no lock: they are part of the game. `plugins/config.json` `default` stays `[]`, so a server that
 changes nothing is the original game; the owner may put a `faction-<faction>` id there to start rooms with it on.
 
+**The main interface's preview.** Outside a room, a player may browse a content set of their own: the 插件预览 dialog
+(on the Hub, and the classic lobby's 插件 button) stores up to 8 content-plugin ids in this browser and asks
+`GET /plugins/preview?ids=<id,…>` → `{ cs }` (no-store); the page then loads `/cs/<cs>/…` exactly like a room's set, so
+干员调配, the S.W.E.E.P report and the codex show those operators / enemies / bosses. Only loaded, compatible `content`
+plugins of room scope are accepted (scripts/trusted never: they need a room's consent path), and the set is this
+browser's only — a match always uses its room's set (or vanilla), and entering a room drops the preview
+(`ui/previewCs` in `public/js/content.js`). The choice is `sp.pref.previewPlugins`.
+
 Nothing of a plugin folder is served except the files a `lang` manifest names, the files a loaded `cosmetic`plugin's overlay names, and the frame files of a loaded `ui` plugin (`.html`, `.js`, `.css`, `.png` under its
 `entry.client`, §14) — never `plugin.json`, the lock file, a document or any other file of the folder. A ui plugin's
 `/p/` responses carry a frame Content-Security-Policy; cosmetic art does not. Content-set snapshots are separate:

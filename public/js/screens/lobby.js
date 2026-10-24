@@ -19,6 +19,7 @@ import { toast, toastError } from '../ui/toasts.js';
 import { openStats } from './stats.js';
 import { SweepReport } from './sweep.js';
 import { AchievementEntry, AchievementPanel } from '../ui/achievements.js';
+import { PreviewPluginPanel } from '../ui/previewPlugins.js';
 import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
 import { openCodex } from '../ui/codex.js';
@@ -134,6 +135,7 @@ export function LobbyScreen() {
   const [isPublic, setIsPublic] = useState(() => loadPref('lobby.public', true) !== false);
   const [sweepOpen, setSweepOpen] = useState(false);
   const [achOpen, setAchOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const alive = useRef(true);
   const inFlight = useRef(false); // synchronous guard against double clicks (state updates are async)
   useEffect(() => () => { alive.current = false; }, []);
@@ -275,6 +277,8 @@ export function LobbyScreen() {
         <${Button} variant="secondary" size="sm" icon="info" class="codex-entry" onClick=${() => openCodex('bonds')} title=${t('资料库')} aria-label=${t('资料库')}>${t('资料库')}<//>
         <${Button} variant="secondary" size="sm" icon="book" class="lobby-sweep" onClick=${() => setSweepOpen(true)}
           title=${t('S.W.E.E.P.')}>S.W.E.E.P.<//>
+        <${Button} variant="secondary" size="sm" icon="gear" class="lobby-preview-plugins"
+          onClick=${() => setPreviewOpen(true)} title=${t('插件预览')}>${t('插件')}<//>
         <${LoadoutButton} from="lobby" size="sm" class="lobby-loadout" label=${t('干员调配')} />
         ${auth?.account ? null : html`<${Button} variant="secondary" size="sm" icon="user" class="lobby-account"
           onClick=${() => setShowAccount(true)}>${t('登录 / 注册')}<//>`}
@@ -358,6 +362,7 @@ export function LobbyScreen() {
     ${showCommunity === 'changelog' ? html`<${ChangelogOverlay} onClose=${() => setShowCommunity(null)} />` : null}
     ${sweepOpen ? html`<${SweepReport} onClose=${() => setSweepOpen(false)} />` : null}
     ${achOpen ? html`<${AchievementPanel} me=${me} onClose=${() => setAchOpen(false)} />` : null}
+    <${PreviewPluginPanel} open=${previewOpen} onClose=${() => setPreviewOpen(false)} />
   </div>`;
 }
 

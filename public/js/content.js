@@ -587,7 +587,7 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
   };
   /** Tell the room what this page made of its content set — again when its seat does not show it (a reconnect). */
   const tell = (cs, ok) => {
-    if (!net || telling === cs) return;
+    if (!net || telling === cs || !store.get()?.room) return;
     telling = cs;
     Promise.resolve().then(() => net.request('room.contentReady', ok ? { cs } : { cs, ok: false }))
       .catch((err) => console.warn('[content] room.contentReady', err?.code || err))
@@ -649,7 +649,14 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
   const sync = (s) => {
     const cs = roomCs(s);
     const cur = contentSet.get();
-    if (!cs) { if (cur.cs || held) drop(); return; }
+    if (!cs) {
+      // No room content. Outside a room the main interface's personal preview set (ui/previewCs, the 插件预览 dialog)
+      // may be laid instead; a room — even a vanilla one — always drops it, so a match never sees preview data.
+      const preview = !s?.room && typeof s?.ui?.previewCs === 'string' && isContentHash(s.ui.previewCs) ? s.ui.previewCs : null;
+      if (!preview) { if (cur.cs || held) drop(); return; }
+      if (cur.cs !== preview) { load(preview); return; }
+      return;
+    }
     const consent = !!s.room.content.trusted && hasScriptConsent(cs);
     if (cur.cs !== cs || (held?.cs === cs && held.canSim === false && consent)) { load(cs,consent); return; }
     // the page holds the room's set, its seat does not show it (the room changed its set and back, a reconnect): again

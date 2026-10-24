@@ -74,6 +74,7 @@ import { recordError, installTrafficMeter } from './diag.js';
 import { initAssetMirror, installImageFallback, mirrorRouteUrl, mirrorCandidates } from './assetMirror.js';
 import { idbSupported, setIdbEnabled } from './assetIdb.js';
 import { installContent, installContentSet } from './content.js';
+import { initPreviewPlugins } from './ui/previewPlugins.js';
 import { installCoreSkins } from './coreSkins.js';
 
 // Main interface (server/uiMode.js + /ui-config.js): only the chosen lobby is downloaded. Both screens share the same
@@ -739,6 +740,8 @@ async function boot() {
   installCoreSkins();
   // a room with gameplay plugins: its content set downloaded, checked and shown (content.js — DESIGN §32.6)
   installContentSet({ toast });
+  // the main interface's personal plugin preview (no room): the 插件预览 switches, a personal content set
+  initPreviewPlugins();
   net.attachBrowserHooks();
   // Audio: unlock on first gesture, BGM follows the route / match phase (js/audio.js).
   installAudio({ getManifest: () => data.get('assets'), subscribe: store.subscribe, getState: store.get, selectRoute, settings: settingsStore.get() });

@@ -32,7 +32,10 @@ import { catalog, contentSet, loadCatalog, cosmeticPlugins, installedCount, plug
 import { toggleRecommend, uiPluginEntries, uiRecommend, visibleRecommend } from './uiPlugins.js';
 import { t, tc } from '../../../shared/i18n.js';
 import { sizeText, roomPluginFacts, pluginTagText, pluginMicro } from './pluginTag.js';
-import { PLUGIN_CATEGORIES, pluginCategory } from '../../../shared/plugins/category.js';
+import { pluginGroups } from '../../../shared/plugins/category.js';
+
+// the panel's section helper lives in the shared category module (the main interface's preview panel uses it too)
+export { pluginGroups };
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
@@ -65,19 +68,8 @@ export const roomPlugins = (plugins) => [
  * The panel's five sections (外观音乐 / 阵营加强 / 新增策略 / 新增敌人 / 新增玩法), in that order, each with the rows
  * that belong to it — empty sections are left out. A plugin's `category` (manifest 2, shared/plugins/category.js)
  * decides; without one its class does. `classOf(id)` resolves a row of the room whose catalogue entry is gone.
- * @template {{ id: string, class?: string, category?: string }} T
- * @param {T[]} rows
- * @param {(id: string) => string} [classOf]
- * @returns {{ id: string, name: string, micro: string, rows: T[] }[]}
+ * (The implementation is shared/plugins/category.js `pluginGroups`, also used by the main interface's preview panel.)
  */
-export function pluginGroups(rows, classOf = (id) => (rows.find((p) => p.id === id) || {}).class) {
-  const by = new Map(PLUGIN_CATEGORIES.map((c) => [c.id, []]));
-  for (const p of Array.isArray(rows) ? rows : []) {
-    const id = pluginCategory({ category: p.category, class: p.class || classOf(p.id) });
-    (by.get(id) || by.get('gameplay')).push(p);
-  }
-  return PLUGIN_CATEGORIES.map((c) => ({ ...c, rows: by.get(c.id) })).filter((g) => g.rows.length);
-}
 
 /** One warning of the room's set as a sentence (room.state.content.warnings, server/plugins/visualSet.js / roomSets.js). */
 function warningText(w, nameOf, classOf = () => 'cosmetic') {

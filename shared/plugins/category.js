@@ -48,3 +48,21 @@ export function pluginCategory(p) {
 export function pluginCategoryInfo(id) {
   return PLUGIN_CATEGORIES.find((c) => c.id === id) || PLUGIN_CATEGORIES[PLUGIN_CATEGORIES.length - 1];
 }
+
+/**
+ * The list's sections, in the panel's order, each with the rows that belong to it — empty sections are left out. A
+ * plugin's declared `category` decides; without one its class does. `classOf(id)` resolves a row whose catalogue entry
+ * is gone (a room still naming a plugin this server no longer offers).
+ * @template {{ id: string, class?: string, category?: string }} T
+ * @param {T[]} rows
+ * @param {(id: string) => string} [classOf]
+ * @returns {{ id: string, name: string, micro: string, rows: T[] }[]}
+ */
+export function pluginGroups(rows, classOf = (id) => (rows.find((p) => p.id === id) || {}).class) {
+  const by = new Map(PLUGIN_CATEGORIES.map((c) => [c.id, []]));
+  for (const p of Array.isArray(rows) ? rows : []) {
+    const id = pluginCategory({ category: p.category, class: p.class || classOf(p.id) });
+    (by.get(id) || by.get('gameplay')).push(p);
+  }
+  return PLUGIN_CATEGORIES.map((c) => ({ ...c, rows: by.get(c.id) })).filter((g) => g.rows.length);
+}
