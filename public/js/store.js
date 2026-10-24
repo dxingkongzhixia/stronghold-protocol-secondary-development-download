@@ -99,7 +99,7 @@ export const initialState = Object.freeze({
   // (ui/chat.js activeChatBubbles); nothing is displayed as a list and nothing is persisted.
   chat: [],
   clock: { offset: 0, rtt: null, synced: false },
-  ui: { pendingJoin: null, restoring: false, buildStale: false, roomsReturn: false, onlineOpen: false, onlineFilter: '', onlineStatsReturn: false },
+  ui: { pendingJoin: null, restoring: false, buildStale: false, roomsReturn: false, protocolReturn: false, onlineOpen: false, onlineFilter: '', onlineStatsReturn: false },
 });
 
 /** The app-wide store singleton. */
@@ -140,6 +140,23 @@ export function setRoomsReturn(on) {
 export function consumeRoomsReturn() {
   const on = !!store.get().ui.roomsReturn;
   if (on) store.patch('ui', { roomsReturn: false });
+  return on;
+}
+
+/**
+ * Remember that the room was created from the Hub's 「选择模拟协议」 page, so leaving it returns to that page (with the
+ * mode stored in `lobby.mode`) instead of the main Hub (owner 2026-10-24). Like `ui.roomsReturn` this is transient UI
+ * intent, one-shot, set only by a successful protocol create and cleared by every other room entry / title return.
+ * @param {boolean} on
+ */
+export function setProtocolReturn(on) {
+  store.patch('ui', { protocolReturn: !!on });
+}
+
+/** Read and clear the 选择模拟协议 return flag in one step (one-shot). @returns {boolean} */
+export function consumeProtocolReturn() {
+  const on = !!store.get().ui.protocolReturn;
+  if (on) store.patch('ui', { protocolReturn: false });
   return on;
 }
 

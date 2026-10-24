@@ -7,7 +7,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { store, initialState, setRoomsReturn, consumeRoomsReturn } from '../../public/js/store.js';
+import { store, initialState, setRoomsReturn, consumeRoomsReturn, setProtocolReturn, consumeProtocolReturn } from '../../public/js/store.js';
 import { remembersRoomOrigin } from '../../public/js/screens/lobby.js';
 
 const clear = () => store.patch('ui', { roomsReturn: false });
@@ -64,5 +64,22 @@ describe('公开房间 origin flag (ui.roomsReturn)', () => {
     store.set({ room: { code: 'WXYZ' } });
     store.set({ room: null });
     assert.equal(consumeRoomsReturn(), false, 'plain lobby');
+  });
+});
+
+describe('选择模拟协议 origin flag (ui.protocolReturn)', () => {
+  test('defaults off and is one-shot', () => {
+    assert.equal(initialState.ui.protocolReturn, false);
+    setProtocolReturn(true);
+    assert.equal(store.get().ui.protocolReturn, true);
+    assert.equal(consumeProtocolReturn(), true);
+    assert.equal(store.get().ui.protocolReturn, false);
+    assert.equal(consumeProtocolReturn(), false, 'a later lobby mount starts on the Hub');
+  });
+
+  test('cleared by any other room entry / title return (the flag is set only by a protocol create)', () => {
+    setProtocolReturn(true);
+    store.patch('ui', { protocolReturn: false }); // Hub join/spectate/backToTitle path
+    assert.equal(consumeProtocolReturn(), false);
   });
 });

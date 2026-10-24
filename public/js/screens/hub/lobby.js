@@ -25,7 +25,7 @@ import { ChangelogOverlay } from '../../ui/community.js';
 import { OnlineOverlay } from '../online.js';
 import { PublicRoomsScreen } from '../rooms.js';
 import { net, identity } from '../../net.js';
-import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn, setOnlineOpen, setOnlineFilter, setOnlineStatsReturn } from '../../store.js';
+import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn, setProtocolReturn, consumeProtocolReturn, setOnlineOpen, setOnlineFilter, setOnlineStatsReturn } from '../../store.js';
 import { useData } from '../../data.js';
 import { t } from '../../../../shared/i18n.js';
 import { MODE_CARDS, difficultyInfo, normalizeCode, codeArg, remembersRoomOrigin } from '../lobbyData.js';
@@ -268,7 +268,8 @@ export function LobbyScreen() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(null);
   const [asTest, setAsTest] = useState(false);
-  const [protocol, setProtocol] = useState(null);
+  // a room created from 选择模拟协议 returns there on leave; any other entry starts on the main Hub
+  const [protocol, setProtocol] = useState(() => (consumeProtocolReturn() && roomMode !== 'mm' ? roomMode : null));
   const [showJoin, setShowJoin] = useState(false);
   const [bgOpen, setBgOpen] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
@@ -302,7 +303,7 @@ export function LobbyScreen() {
     const mode = protocol || roomMode;
     run('create', () => net.request('room.create', {
       mode, difficulty, public: isPublic, ...(testMode && asTest && mode !== 'mm' ? { test: true } : {}),
-    }));
+    }).then((r) => { setProtocolReturn(true); return r; }));
   };
   const joinRequest = (type, k) => net.request(type, { code: k }).catch((err) => {
     if (err?.code !== ERR.TEST_CONFIRM) throw err;
@@ -314,7 +315,8 @@ export function LobbyScreen() {
     if (!k) { toast(t('同盟密钥为 {ROOM_CODE_LEN} 位字母或数字', { ROOM_CODE_LEN }), 'warn'); return; }
     const fromRooms = remembersRoomOrigin(source);
     run('join', () => {
-      if (fromRooms) setRoomsReturn(true);
+      setProtocolReturn(false);
+      if (fromRooms) setRoomsReturn(true); else setRoomsReturn(false);
       return joinRequest('room.join', k).then((r) => {
         if (queued) store.patch('mm', { queued: false, difficulty: null });
         setShowJoin(false);
@@ -327,7 +329,8 @@ export function LobbyScreen() {
     if (!k) { toast(t('同盟密钥为 {ROOM_CODE_LEN} 位字母或数字', { ROOM_CODE_LEN }), 'warn'); return; }
     const fromRooms = remembersRoomOrigin(source);
     run('spectate', () => {
-      if (fromRooms) setRoomsReturn(true);
+      setProtocolReturn(false);
+      if (fromRooms) setRoomsReturn(true); else setRoomsReturn(false);
       return joinRequest('room.spectate', k).then((r) => {
         if (queued) mmCancel();
         setShowJoin(false);
@@ -362,6 +365,7 @@ export function LobbyScreen() {
   const backToTitle = () => {
     if (mm.queued) mmCancel();
     setRoomsReturn(false);
+    setProtocolReturn(false);
     setOnlineOpen(false);
     setOnlineFilter('');
     setOnlineStatsReturn(false);
