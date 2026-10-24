@@ -566,11 +566,12 @@
   padding: 0 calc(0.05 * var(--ui-unit, 1rem)); font-size: max(calc(.1 * var(--utility-text, var(--t))), 8px);
   line-height: max(calc(.18 * var(--ui-unit, 1rem)), 13px); border: 1px solid rgba(223, 230, 226, .18); color: var(--text-dim);
 }
-/* exactly the 在线玩家 list's status pill: text + 1px currentColor border, transparent inside */
+/* exactly the 在线玩家 list's status pill: 组队中 is `is-ice` there (`--ice`), not the mint of 在线; text + 1px
+   currentColor border, transparent inside */
 .hub-public__state {
   padding: calc(0.02 * var(--ui-unit, 1rem)) calc(0.1 * var(--ui-unit, 1rem));
   font-size: max(calc(.14 * var(--utility-text, var(--t))), 10px); font-weight: 600; line-height: 1.4;
-  color: var(--mint-400); border: 1px solid currentColor; border-radius: 999px; background: none;
+  color: var(--ice); border: 1px solid currentColor; border-radius: 999px; background: none;
 }
 .hub-public__state.is-live { color: var(--amber, #f6a329); border-color: currentColor; background: none; }
 .hub-public__mod.is-mod { color: var(--amber, #f6a329); border-color: rgba(246, 163, 41, .55); }
