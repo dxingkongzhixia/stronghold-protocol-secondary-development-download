@@ -23,7 +23,8 @@ import { readPluginManifest } from '../../shared/plugins/manifest.js';
  * the source of truth); keep the text in sync with `CUSTOM_CHESS` in tools/build-data.mjs.
  */
 export const BUILTIN_FACTIONS = Object.freeze([
-  { id: 'rhodes', name: { zh: '罗德岛', en: 'Rhodes Island' }, operators: { zh: '阿斯卡纶、予愿安洁莉娜、凯尔希·思衡托', en: "Ascalon, Virtuosa, Kal'tsit the Shaper" } },
+  { id: 'rhodes', name: { zh: '罗德岛', en: 'Rhodes Island' }, operators: { zh: '阿斯卡纶、凯尔希·思衡托', en: "Ascalon, Kal'tsit the Shaper" } },
+  { id: 'siracusa', name: { zh: '叙拉古', en: 'Siracusa' }, operators: { zh: '予愿安洁莉娜', en: 'Virtuosa' } },
   { id: 'laterano', name: { zh: '拉特兰', en: 'Laterano' }, operators: { zh: '结城理', en: 'Makoto Yuki' } },
   { id: 'yan', name: { zh: '炎', en: 'Yan' }, operators: { zh: '望', en: 'Wang' } },
   { id: 'victoria', name: { zh: '维多利亚', en: 'Victoria' }, operators: { zh: '澄闪', en: 'Goldenglow' } },

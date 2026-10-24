@@ -665,7 +665,7 @@ const CUSTOM_OFFICIAL_DIY = new Set([
  */
 const CUSTOM_FACTION_OF = new Map([
   ['char_4132_ascln', 'rhodes'],
-  ['char_1015_aglna2', 'rhodes'],
+  ['char_1015_aglna2', 'siracusa'],
   ['char_1052_kalts2', 'rhodes'],
   ['char_4217_makoto', 'laterano'],
   ['char_2027_wang', 'yan'],
@@ -676,6 +676,7 @@ const CUSTOM_FACTION_OF = new Map([
 /** The built-in 阵营加强 plugins, in the panel's order, with the text a player reads. */
 const CUSTOM_FACTIONS = [
   { id: 'rhodes', name: { zh: '罗德岛', en: 'Rhodes Island' } },
+  { id: 'siracusa', name: { zh: '叙拉古', en: 'Siracusa' } },
   { id: 'laterano', name: { zh: '拉特兰', en: 'Laterano' } },
   { id: 'yan', name: { zh: '炎', en: 'Yan' } },
   { id: 'victoria', name: { zh: '维多利亚', en: 'Victoria' } },

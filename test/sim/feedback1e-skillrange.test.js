@@ -292,7 +292,9 @@ const BY_HAND = new Map([
 function rangeSkills() {
   const out = [];
   for (const c of Object.values(C)) {
-    if (!(c.visible || (c.isGolden && C[c.baseId]?.visible))) continue;
+    // the 8 custom shop operators are hidden in vanilla (built-in 阵营加强 plugins) but their kits are still audited
+    // here: the range table must stay complete for a room that switches their faction on
+    if (!(c.visible || (c.isGolden && C[c.baseId]?.visible) || (c.identifier >= 900 && !c.isDiy))) continue;
     for (const s of c.skills || []) {
       const ext = s.bb?.ability_range_forward_extend ?? s.bb?.['attack@ability_range_forward_extend'] ?? null;
       const text = RANGE_TEXT.test(s.desc || '');
