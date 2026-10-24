@@ -328,6 +328,8 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       hostRole: (r.seatOf(r.hostId) || {}).role ?? null,
       humans: humansOf(r),
       bots: r.seats.filter((x) => x && !x.left && x.isBot).length,
+      // the directory's playing-room order: AI-backed rooms first, then the most watchers
+      spectators: Array.isArray(r.spectators) ? r.spectators.length : 0,
       auto: !!r.auto,
       modded: r.modded,
       seats: seatsOf(r),

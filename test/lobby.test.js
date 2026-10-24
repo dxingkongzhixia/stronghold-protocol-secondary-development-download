@@ -715,17 +715,14 @@ describe('websocket lobby', () => {
       await expectError(s1, msg, ERR.NOT_HOST);
     }
     await expectError(s1, { t: 'g.ready', ready: true }, ERR.WRONG_PHASE);
-    // the cap; spectators never count toward the players: two player seats still free
+    // spectators never count toward the players: two player seats still free
     const s2 = await pool.player('Watcher2');
     await expectOk(s2, { t: 'room.spectate', code: st.code });
-    assert.equal(MAX_SPECTATORS, 2);
-    const s3 = await pool.player('Watcher3');
-    await expectError(s3, { t: 'room.spectate', code: st.code }, ERR.ROOM_FULL);
-    await joinRoom(s3, st.code);
+    assert.equal(MAX_SPECTATORS, 10);
+    await expectOk(host, { t: 'room.addBot' });
     await expectOk(host, { t: 'room.addBot' });
     const full = await host.waitFor('room.state', (s) => s.seats.every(Boolean));
     assert.equal(full.spectators.length, 2);
-    await expectOk(s3, { t: 'room.ready', ready: true });
     await expectOk(guest, { t: 'room.ready', ready: true });
     // a spectator in the lobby takes a free player seat with room.join of the same code
     await expectError(s2, { t: 'room.join', code: st.code }, ERR.ROOM_FULL);
@@ -772,6 +769,18 @@ describe('websocket lobby', () => {
     await expectOk(lone, { t: 'room.leave' });
     assert.equal((await s4.waitFor('room.closed')).reason, 'empty');
     await expectError(s4, { t: 'room.spectate', code: loneSt.code }, ERR.ROOM_NOT_FOUND);
+  });
+
+  test('the spectator cap is ten; an eleventh watcher is refused', async () => {
+    const host = await pool.player('Host');
+    const st = await createRoom(host);
+    for (let i = 1; i <= MAX_SPECTATORS; i++) {
+      const w = await pool.player(`Watcher${i}`);
+      await expectOk(w, { t: 'room.spectate', code: st.code });
+    }
+    await host.waitFor('room.state', (s) => s.spectators.length === MAX_SPECTATORS);
+    const extra = await pool.player('Watcher11');
+    await expectError(extra, { t: 'room.spectate', code: st.code }, ERR.ROOM_FULL);
   });
 
   test('spectators during a match: broadcasts but no private view, join mid-match, only watching, reconnect gets the seat back', async () => {
@@ -1448,21 +1457,27 @@ describe('lobby timers and match interface', () => {
     const host = await pool.player('Host');
     const st = await createRoom(host);
     await expectOk(host, { t: 'room.start' });           // the match runs
-    const a = await pool.player('W1');
-    const b = await pool.player('W2');
-    await expectOk(a, { t: 'room.spectate', code: st.code });
-    await expectOk(b, { t: 'room.spectate', code: st.code });
-    const d = await pool.player('W3');
+    const watchers = [];
+    for (let i = 1; i <= MAX_SPECTATORS; i++) {
+      const w = await pool.player(`W${i}`);
+      await expectOk(w, { t: 'room.spectate', code: st.code });
+      watchers.push(w);
+    }
+    const [a, b] = watchers;
+    const d = await pool.player('W11');
     await expectError(d, { t: 'room.spectate', code: st.code }, ERR.ROOM_FULL);
     host.clearInbox();
     await a.terminate();                                  // drop while the match runs
     await host.waitFor('room.state', (s) => s.spectators.find((x) => x.playerId === a.id)?.connected === false);
     // the grace frees the seat even though the match runs (it used to hold it for the whole reconnect window)
     const gone = await host.waitFor('room.state', (s) => !s.spectators.some((x) => x.playerId === a.id), GRACE + 1500);
-    assert.deepEqual(gone.spectators.map((x) => x.playerId), [b.id], 'the dropped watcher was freed mid-match');
+    assert.ok(!gone.spectators.some((x) => x.playerId === a.id), 'the dropped watcher was freed mid-match');
+    assert.ok(gone.spectators.some((x) => x.playerId === b.id), 'the live watcher keeps its seat');
+    assert.equal(gone.spectators.length, MAX_SPECTATORS - 1);
     await expectOk(d, { t: 'room.spectate', code: st.code });
     const s = await host.waitFor('room.state', (s) => s.spectators.some((x) => x.playerId === d.id));
-    assert.deepEqual(s.spectators.map((x) => x.playerId).sort(), [b.id, d.id].sort(), 'the freed seat is taken by the new watcher');
+    assert.ok(s.spectators.some((x) => x.playerId === b.id) && s.spectators.some((x) => x.playerId === d.id), 'the freed seat is taken by the new watcher');
+    assert.equal(s.spectators.length, MAX_SPECTATORS);
   });
 
   test('all humans dropping mid-match disposes the room after the grace; a live party keeps the dropped seat', async () => {

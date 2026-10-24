@@ -552,7 +552,7 @@
 .hub-public__all { display: inline-flex; align-items: center; gap: 1px; padding: 0; font: inherit; font-size: max(calc(.13 * var(--utility-text, var(--t))), 10px); color: var(--text-dim); background: none; border: 0; cursor: pointer; }
 .hub-public__all:hover { color: var(--mint-400); }
 .hub-public__all .icon { width: max(calc(.13 * var(--ui-unit, 1rem)), 10px); height: max(calc(.13 * var(--ui-unit, 1rem)), 10px); }
-.hub-public__list { min-height: 0; max-height: calc(4 * 0.86 * var(--ui-unit, 1rem)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.hub-public__list { min-height: 0; max-height: calc(3 * 0.86 * var(--ui-unit, 1rem)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .hub-public__row {
   display: flex; flex-direction: column; gap: calc(0.04 * var(--ui-unit, 1rem));
   min-height: calc(0.8 * var(--ui-unit, 1rem)); padding: calc(0.06 * var(--ui-unit, 1rem)) calc(0.1 * var(--ui-unit, 1rem));
@@ -566,8 +566,12 @@
   padding: 0 calc(0.05 * var(--ui-unit, 1rem)); font-size: max(calc(.1 * var(--utility-text, var(--t))), 8px);
   line-height: max(calc(.18 * var(--ui-unit, 1rem)), 13px); border: 1px solid rgba(223, 230, 226, .18); color: var(--text-dim);
 }
-.hub-public__state { color: var(--mint-400); border-color: rgba(89, 244, 202, .4); }
-.hub-public__state.is-live { color: var(--amber, #f6a329); border-color: rgba(246, 163, 41, .55); }
+.hub-public__state {
+  padding: 0 calc(0.08 * var(--ui-unit, 1rem)); line-height: max(calc(.2 * var(--ui-unit, 1rem)), 15px);
+  font-weight: 700; color: var(--mint-300, #8ff0d2); border: 1px solid rgba(89, 244, 202, .55);
+  border-radius: 999px; background: rgba(89, 244, 202, .12);
+}
+.hub-public__state.is-live { color: var(--amber, #f6a329); border-color: rgba(246, 163, 41, .55); background: rgba(246, 163, 41, .1); }
 .hub-public__mod.is-mod { color: var(--amber, #f6a329); border-color: rgba(246, 163, 41, .55); }
 .hub-public__seats { display: inline-flex; align-items: center; gap: 2px; font-size: max(calc(.11 * var(--utility-text, var(--t))), 9px); color: var(--text-dim); }
 .hub-public__seats .icon { width: 1em; height: 1em; }

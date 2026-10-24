@@ -78,9 +78,12 @@ function PublicRoomsPanel({ onAll, onJoin, onSpectate }) {
         const j = await r.json();
         const waiting = (Array.isArray(j.openRooms) ? j.openRooms : [])
           .filter((x) => !x.full).map((x) => ({ ...x, state: 'lobby' }));
-        const playing = (Array.isArray(j.playRooms) ? j.playRooms : []).map((x) => ({ ...x, state: 'playing' }));
+        const playing = (Array.isArray(j.playRooms) ? j.playRooms : [])
+          .sort((a, b) => (Number(b.bots > 0) - Number(a.bots > 0)) || ((b.spectators || 0) - (a.spectators || 0)) || (b.humans - a.humans))
+          .map((x) => ({ ...x, state: 'playing' }));
+        // 组队中 first (they can still take a player), then the 模拟中 rooms with AI, then the most watchers; three at most.
         const all = [...waiting, ...playing];
-        if (alive) { setRooms(all.slice(0, 4)); setTotal(all.length); }
+        if (alive) { setRooms(all.slice(0, 3)); setTotal(all.length); }
       } catch { /* keep the last list */ }
     };
     tick();

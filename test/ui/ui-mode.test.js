@@ -130,9 +130,11 @@ describe('both main interfaces keep shipping', () => {
     assert.match(hub, /<\$\{PublicRoomsPanel\} onAll=/, 'the panel is mounted in the Hub');
     assert.doesNotMatch(hub, /PUBLIC ALLIANCES/, 'the old left tile with the same destination is gone');
     assert.match(hub, /playRooms/, 'running matches are listed too');
-    assert.match(hub, /slice\(0, 4\)/, 'at most four entries');
+    assert.match(hub, /slice\(0, 3\)/, 'at most three entries');
     assert.match(hub, /onSpectate/, 'a running room offers 观战');
     assert.match(hub, /r\.modded/, 'the row names 原版 / MOD');
+    assert.match(hub, /Number\(b\.bots > 0\) - Number\(a\.bots > 0\)/, 'AI-backed playing rooms come first');
+    assert.match(hub, /b\.spectators \|\| 0/, 'then the most watchers');
   });
 
   test('the Hub also switches the loadout renderer', () => {

@@ -23,7 +23,7 @@ export const MAX_SEATS = 4;
  * A spectator never counts as a player, may not act, and watches like an eliminated player (server/lobby.js spectate,
  * server/match/match/watch.js addSpectator).
  */
-export const MAX_SPECTATORS = 2;
+export const MAX_SPECTATORS = 10; // owner 2026-10-24: up to ten watchers per co-op room
 export const ROOM_CODE_LEN = 4;
 export const NAME_MAX_LEN = 12;
 
