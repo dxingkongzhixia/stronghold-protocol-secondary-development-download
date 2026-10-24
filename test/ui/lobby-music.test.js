@@ -28,7 +28,8 @@ describe('主界面音乐', () => {
     assert.equal(DEFAULT_SETTINGS.lobbyMusic, '', 'default = the mode’s own lobby theme');
     assert.equal(sanitizeSettings(null).lobbyMusic, '');
     assert.equal(sanitizeSettings({ lobbyMusic: 'music_bg_default' }).lobbyMusic, 'music_bg_default');
-    for (const bad of ['', 'bg_default', 'music_BG', 1, true, null, {}, []]) {
+    assert.equal(sanitizeSettings({ lobbyMusic: 'music_furniture_musicBox' }).lobbyMusic, 'music_furniture_musicBox');
+    for (const bad of ['', 'bg_default', 'music bg', 1, true, null, {}, []]) {
       assert.equal(sanitizeSettings({ lobbyMusic: bad }).lobbyMusic, '', JSON.stringify(bad));
     }
     const saved = sanitizeSettings({ lobbyMusic: 'music_bg_yan' });

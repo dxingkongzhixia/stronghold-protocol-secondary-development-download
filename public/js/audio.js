@@ -178,17 +178,22 @@ export function bgmKeyFor(route, pub, combatTrack = null) {
  * entry `audio.lobbyMusic[id]`, falling back to the mode's own `bgm.lobby` when the manifest lacks the pick.
  * @param {any} manifest
  * @param {string|null} key
+ * @param {Record<string, {intro?: string, loop: string}> | ((id: string) => ({intro?: string, loop: string}|null)) | null} [library]
+ *   the optional music pack (ui/musicLibrary.js) for a `lobby:<id>` the committed manifest does not list
  * @returns {{ intro: string|null, loop: string }|null}
  */
-export function resolveBgm(manifest, key) {
+export function resolveBgm(manifest, key, library = null) {
   const a = manifest?.audio;
   if (!a || !key) return null;
   let t;
   if (key.startsWith('boss:')) t = a.bossBgm?.[key.slice(5)] || a.bgm?.boss;
   else if (key.startsWith('combat:')) t = a.bgm?.combatAlts?.[Number(key.slice('combat:'.length))] || a.bgm?.combat;
   else if (key === 'unite') t = a.bgm?.unite || a.bgm?.combat;
-  else if (key.startsWith('lobby:')) t = a.lobbyMusic?.[key.slice('lobby:'.length)] || a.bgm?.lobby;
-  else t = a.bgm?.[key];
+  else if (key.startsWith('lobby:')) {
+    const id = key.slice('lobby:'.length);
+    const packed = typeof library === 'function' ? library(id) : library?.[id];
+    t = (packed && typeof packed.loop === 'string' ? packed : null) || a.lobbyMusic?.[id] || a.bgm?.lobby;
+  } else t = a.bgm?.[key];
   if (!t || typeof t.loop !== 'string') return null;
   return { intro: typeof t.intro === 'string' ? t.intro : null, loop: t.loop };
 }
@@ -616,6 +621,7 @@ export class AudioManager {
     this.lastBgmKey = null;   // the key the screen asked for last (refreshBgm)
     this.lobbyTrack = '';     // settings 主界面音乐: a manifest `audio.lobbyMusic` id, '' = the mode's own lobby theme
     this.lobbyActive = false; // the main interface is on screen (installAudio's route sync)
+    this.musicLibrary = null; // optional full pack (ui/musicLibrary.js): id → { intro?, loop } beyond the committed 24
     this.bgm = null;          // { key, loopUrl, nodes: [{src, gain}], gain }
     this.bgmToken = 0;
     this.units = new Map();   // battle unit id → defId
@@ -780,8 +786,10 @@ export class AudioManager {
     try {
       const t = this.ctx.currentTime;
       this.master.gain.setTargetAtTime(this.volumes.muted ? 0 : 1, t, 0.03);
-      // perceptual curve
-      this.bgmGain.gain.setTargetAtTime(this.volumes.bgm ** 2 * 0.55, t, 0.05);
+      // Perceptual curve. BGM used to be `v² * 0.55` — about 0.20 at the default 0.6, roughly 3× quieter than
+      // SFX (0.58), which is the owner's 2026-10-25 「音量好小」 report. The music files are also loudness-normalised
+      // to -14 LUFS by the pack (tools/local-extract/music.py); 0.8 at the same slider gives ~0.37.
+      this.bgmGain.gain.setTargetAtTime(this.volumes.bgm ** 1.5 * 0.8, t, 0.05);
       this.sfxGain.gain.setTargetAtTime(this.volumes.sfx ** 2 * 0.9, t, 0.03);
       // no 0.9: a voice line is already mastered as loud as the rest of the official mix (settings 干员语音 tunes it)
       this.voiceGain.gain.setTargetAtTime(this.volumes.voice ** 2, t, 0.03);
@@ -815,9 +823,13 @@ export class AudioManager {
         if (!ab) {
           // The owner's chain: the relay's /media route, then GitHub and its mirrors (their plain file), then this
           // server's own extension-less route (a download manager leaves it alone), then the plain /assets file.
+          // The optional 主界面音乐 pack (/music/…) is served by this server only (var/music): asking the art mirrors
+          // first would add a timeout to every track.
           const media = mediaUrl(url);
           const fileTiers = mirrorCandidates(url).slice(1, -1);       // the CDN tiers of the file behind the route
-          const targets = [...new Set([mirrorRouteUrl(media), ...fileTiers, media, url])].filter(Boolean);
+          const targets = url.startsWith('/music/')
+            ? [url]
+            : [...new Set([mirrorRouteUrl(media), ...fileTiers, media, url])].filter(Boolean);
           let res = null;
           for (const target of targets) {
             const r = await fetch(target);
@@ -896,6 +908,16 @@ export class AudioManager {
   }
 
   /**
+   * The optional full music pack's lookup (ui/musicLibrary.js): id → { intro?, loop }, or null for the committed
+   * catalogue only. The pack's files live outside the repository (`var/music`, served at /music/), so it stays
+   * optional; the committed 24 remain the fallback.
+   * @param {Record<string, {intro?: string, loop: string}> | ((id: string) => ({intro?: string, loop: string}|null)) | null} lib
+   */
+  setMusicLibrary(lib) {
+    this.musicLibrary = typeof lib === 'function' || (lib && typeof lib === 'object') ? lib : null;
+  }
+
+  /**
    * The saved 主界面音乐 id (settings.lobbyMusic, '' = default). ui/settings.js calls this on boot and on every change;
    * while the Hub is on screen the new track starts at once, elsewhere it waits for the next Hub visit.
    * @param {string|null} id
@@ -919,14 +941,14 @@ export class AudioManager {
       if (!this.ctx) { this.wantBgm = key; return; }
       if (this.bgmSilent) {
         this.wantBgm = key;
-        const silentTrack = resolveBgm(this.getManifest(), key);
+        const silentTrack = resolveBgm(this.getManifest(), key, this.musicLibrary);
         if (this.bgm && silentTrack && this.bgm.loopUrl === silentTrack.loop) { this.bgm.key = key; return; }
         ++this.bgmToken; // a start still waiting for its download stays silent too
         this._fadeOutBgm();
         return;
       }
       this.wantBgm = null;
-      const track = resolveBgm(this.getManifest(), key);
+      const track = resolveBgm(this.getManifest(), key, this.musicLibrary);
       if (this.bgm && track && this.bgm.loopUrl === track.loop) { this.bgm.key = key; return; }
       if (!track && !this.bgm) return;
       const token = ++this.bgmToken;
@@ -949,7 +971,7 @@ export class AudioManager {
     if (token !== this.bgmToken || !this.ctx) return;
     // a cosmetic plugin's track that would not load: the track the manifest names now (its entry fell back)
     if ((!loop && this.fellBack.has(track.loop)) || (track.intro && !intro && this.fellBack.has(track.intro))) {
-      const again = resolveBgm(this.getManifest(), key);
+      const again = resolveBgm(this.getManifest(), key, this.musicLibrary);
       if (again && (again.loop !== track.loop || again.intro !== track.intro)) { this._startBgm(key, again, token); return; }
     }
     if (!loop) return;

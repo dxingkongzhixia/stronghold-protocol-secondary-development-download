@@ -57,7 +57,7 @@ export function sanitizeSettings(raw) {
     quality: QUALITIES.includes(r.quality) ? r.quality : DEFAULT_SETTINGS.quality,
     officialFx: OFFICIAL_FX_MODES.includes(r.officialFx) ? r.officialFx : DEFAULT_SETTINGS.officialFx,
     textSize: TEXT_SIZES.includes(r.textSize) ? r.textSize : DEFAULT_SETTINGS.textSize,
-    lobbyMusic: typeof r.lobbyMusic === 'string' && /^music_[a-z0-9_]+$/.test(r.lobbyMusic) ? r.lobbyMusic : DEFAULT_SETTINGS.lobbyMusic,
+    lobbyMusic: typeof r.lobbyMusic === 'string' && /^music_[A-Za-z0-9_]+$/.test(r.lobbyMusic) ? r.lobbyMusic : DEFAULT_SETTINGS.lobbyMusic,
     keys: sanitizeHotkeys(r.keys),
   };
 }

@@ -457,6 +457,7 @@
 
 .hub-bg__photo { position: absolute; inset: calc(-0.32 * var(--ui-unit, 1rem)); background: #0b1110 center / cover no-repeat; }
 .hub-bg__shade { position: absolute; inset: 0; background: #000; }
+.lobby-music-panel { width: min(7.2rem, 94vw); }
 .lobby-music { display: flex; flex-direction: column; gap: calc(0.22 * var(--ui-unit, 1rem)); min-width: 0; }
 .lobby-music__track { display: flex; flex-direction: column; gap: calc(0.1 * var(--ui-unit, 1rem)); padding: calc(0.2 * var(--ui-unit, 1rem)); border: 1px solid var(--mint-400); background: rgba(30, 90, 75, .12); overflow-wrap: anywhere; }
 .lobby-music__track strong { font-size: max(calc(.2 * var(--utility-text, var(--t))), calc(0.14 * var(--ui-unit, 1rem))); }
@@ -464,6 +465,8 @@
 .lobby-music__now { display: inline-flex; align-items: center; gap: calc(0.06 * var(--ui-unit, 1rem)); font-weight: 700; letter-spacing: .04em; }
 .lobby-music__now .icon { width: max(calc(.18 * var(--ui-unit, 1rem)), 12px); height: max(calc(.18 * var(--ui-unit, 1rem)), 12px); }
 .lobby-music__list { display: flex; flex-direction: column; min-height: 0; max-height: min(36vh, calc(6 * var(--ui-unit, 1rem))); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border: 1px solid rgba(223, 230, 226, .12); background: rgba(8, 14, 13, .55); }
+/* up to eight catalogue tabs (主题 … 剧情): wrap rather than overflow on a phone */
+.lobby-music-panel .tabs { flex-wrap: wrap; }
 .lobby-music__empty { margin: 0; padding: calc(0.18 * var(--ui-unit, 1rem)); font-size: max(calc(.14 * var(--utility-text, var(--t))), 10px); color: var(--text-dim); }
 .lobby-music .lobby-music__vol { grid-template-columns: max-content minmax(0, 1fr) max-content; margin-top: calc(0.04 * var(--ui-unit, 1rem)); }
 .lobby-media-error { color: #ff9393; overflow-wrap: anywhere; }

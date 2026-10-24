@@ -256,6 +256,9 @@ Production: `http://183.66.27.19:20522` (NAT → internal `:3000`) on a RainYun 
    tree has no `.git`, which is why the original command omitted it.
    On the host: unpack into `/www/wwwroot/Stronghold-Protocol`, `chown -R www:www .`, dirs 755 / files 644. (Assets
    are the exception: new art/voice/Spine must be uploaded too — for a new operator, all files its manifest lists.)
+   The optional **主界面音乐 pack** is `var/music/` (~580 MB, deliberately git-ignored and excluded by the tar above):
+   when it exists locally, upload it separately (`rsync -a var/music root@…:/www/wwwroot/Stronghold-Protocol/var/`)
+   before the restart; without it the Hub keeps the 24 committed tracks (`docs/ASSETS.md` "Music pack").
 4. **Restart** (only when server/shared changed): find the `:3000` pid (`ss -ltnp`) and `kill -TERM` it, then
    `su -s /bin/bash www -c 'setsid /www/server/nodejs/vhost/scripts/server.sh'`.
 5. **Verify**: `curl http://127.0.0.1:3000/healthz` (and the public URL), then spot-check the changed endpoints:

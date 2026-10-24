@@ -848,6 +848,40 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     createReadStream(path.join(ROOT, 'var', 'avatars', file)).pipe(res);
   }
 
+  // 主界面音乐 pack (owner 2026-10-25): the optional full catalogue (218 tracks, ~580 MB) lives OUTSIDE the repository
+  // in var/music (git-ignored; tools/local-extract/music.py, docs/ASSETS.md "Music pack"). /music/index.json tells the
+  // picker which tracks exist; /music/<id>_{intro,loop}.mp3 serves them. A missing pack is normal: an empty index and
+  // the committed 24 in data/assets.json remain the picker's catalogue.
+  // Catalogue ids are lower-case except two furniture themes (music_furniture_audioPlayer / musicBox).
+  const MUSIC_FILE = /^music_[A-Za-z0-9_]+_(intro|loop)\.mp3$/;
+  function serveMusic(req, res, rawPath) {
+    const name = rawPath.slice('/music/'.length);
+    if (name === 'index.json') {
+      const file = path.join(ROOT, 'var', 'music', 'index.json');
+      let st;
+      try { st = statSync(file); } catch { sendJson(req, res, 200, { version: 1, entries: {} }); return; }
+      if (!st.isFile()) { sendJson(req, res, 200, { version: 1, entries: {} }); return; }
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8', 'Content-Length': st.size, 'Cache-Control': 'no-store',
+      });
+      if (req.method === 'HEAD') { res.end(); return; }
+      createReadStream(file).pipe(res);
+      return;
+    }
+    if (!MUSIC_FILE.test(name)) { sendJson(req, res, 404, { error: 'not found' }); return; }
+    const file = path.join(ROOT, 'var', 'music', name);
+    let st;
+    try { st = statSync(file); } catch { sendJson(req, res, 404, { error: 'not found' }); return; }
+    if (!st.isFile()) { sendJson(req, res, 404, { error: 'not found' }); return; }
+    res.writeHead(200, {
+      'Content-Type': 'audio/mpeg', 'Content-Length': st.size,
+      'Cache-Control': 'public, max-age=86400',
+      ETag: `"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`,
+    });
+    if (req.method === 'HEAD') { res.end(); return; }
+    createReadStream(file).pipe(res);
+  }
+
   /** Our extra routes (online status, /admin); true when it took the request (or will). */
   function specialRoute(req, res) {
     const parts = splitUrl(req.url || '/');
@@ -891,6 +925,12 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     if (parts.rawPath.startsWith('/avatar/')) {
       if (req.method !== 'GET' && req.method !== 'HEAD') { sendJson(req, res, 405, { error: 'GET required' }); return true; }
       serveAvatar(req, res, parts.rawPath);
+      return true;
+    }
+    // optional 主界面音乐 pack (var/music, never committed; docs/ASSETS.md "Music pack")
+    if (parts.rawPath === '/music/index.json' || parts.rawPath.startsWith('/music/')) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { sendJson(req, res, 405, { error: 'GET required' }); return true; }
+      serveMusic(req, res, parts.rawPath);
       return true;
     }
     if (parts.rawPath === '/market/api/list' || parts.rawPath === '/market/api/upload' || parts.rawPath.startsWith('/market/api/download/') || parts.rawPath.startsWith('/market/api/installed/')) {

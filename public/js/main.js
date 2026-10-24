@@ -55,6 +55,7 @@ import { GameScreen } from './screens/game.js';
 import { chatMessage } from './ui/chat.js';
 import { audio, installAudio } from './audio.js';
 import { settingsStore } from './ui/settings.js';
+import { loadMusicLibrary } from './ui/musicLibrary.js';
 import { GuideHost } from './ui/guide.js';
 import { CodexHost } from './ui/codex.js';
 import { BugReportHost } from './ui/community.js';
@@ -768,7 +769,7 @@ async function boot() {
   installAudio({ getManifest: () => data.get('assets'), subscribe: store.subscribe, getState: store.get, selectRoute, settings: settingsStore.get() });
   // Warm the data cache in the background (missing files are tolerated): config + the asset manifest the profile
   // avatars (operator charIds) and every icon resolve from.
-  data.loadAll('config', 'assets').catch(() => {});
+  data.loadAll('config', 'assets').then(() => loadMusicLibrary()).catch(() => {});
   // Optional local-client art manifest (emotes, tutorial pages, official UI sprites; DESIGN §13).
   data.load('local').catch(() => {});
 

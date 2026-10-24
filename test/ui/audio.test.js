@@ -98,6 +98,11 @@ describe('bgm selection', () => {
     assert.ok(first, 'the manifest carries the 主界面音乐 catalogue');
     assert.equal(resolveBgm(manifest, `lobby:${first[0]}`).loop, first[1].loop);
     assert.equal(resolveBgm({ audio: { bgm: { lobby: { loop: '/lobby.mp3' } } } }, 'lobby:gone').loop, '/lobby.mp3');
+    // the optional full pack (ui/musicLibrary.js, /music/): a map or a lookup function wins over the committed entry
+    const pack = { [first[0]]: { name: 'pack', loop: '/music/music_bg_default_loop.mp3' } };
+    assert.equal(resolveBgm(manifest, `lobby:${first[0]}`, pack).loop, '/music/music_bg_default_loop.mp3');
+    assert.equal(resolveBgm(manifest, `lobby:${first[0]}`, (id) => pack[id]).loop, '/music/music_bg_default_loop.mp3');
+    assert.equal(resolveBgm(manifest, 'lobby:not-in-pack', pack).loop, manifest.audio.bgm.lobby.loop, 'a missing id falls back to the mode theme');
   });
   test('installAudio: the round\'s own 开战 track, fixed per round and the same on every client', () => {
     const calls = [];

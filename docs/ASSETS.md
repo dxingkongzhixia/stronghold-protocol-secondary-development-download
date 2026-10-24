@@ -171,6 +171,30 @@ own sources) into `public/assets/audio/music/`, verifies the MP3 frame, writes `
 manifest hash; `--offline` only rewrites the manifest from files on disk. The plan declares the same leaves, so a later
 `node tools/fetch-assets.mjs` keeps them. The default Hub theme is the mode's own `bgm.lobby` and is not duplicated here.
 
+### Music pack (optional, not committed)
+
+The PC client's `Arknights_Data/StreamingAssets/AB/Windows/audio/sound_beta_2/music/<act>/<stem>.ab` holds the whole
+official 音乐鉴赏 catalogue as one Unity AssetBundle per recording (client-specific LZ4AK compression; `aklz4.py`
+registers the decoder). `tools/local-extract/music.py` extracts all **218 unique recordings / 241 catalogue entries**
+(8.4 h, 349 intro+loop AudioClips, 44.1 kHz stereo PCM), loudness-normalises each to **-14 LUFS / -1 dBTP**
+(`ffmpeg loudnorm`, the owner's 2026-10-25 音量 report) and encodes MP3 160 kbps into `var/music/`:
+
+```
+py -3.14 tools/local-extract/music.py --game "<client>/Arknights_Data/StreamingAssets/AB/Windows" \
+  --out "<run tree>/var/music"
+```
+
+It writes `var/music/index.json` (`{ entries: { [id]: { name, group, intro?, loop } } }`, group = theme / event /
+collab / contract / rogue / sandbox / story / other) and is resumable (`--only=…`, `--force`). The pack is **not in
+the repository** (~580 MB, and the repo is already ~1 GB); `var/` is git-ignored. `server/index.js` serves it at
+`/music/index.json` and `/music/<id>_{intro,loop}.mp3`; `public/js/ui/musicLibrary.js` merges it over the committed
+`audio.lobbyMusic` for the picker (pack wins for the same id). Without the pack the Hub keeps the 24 committed tracks.
+
+**Deploying the pack:** upload `var/music/` beside the code (it is excluded from the usual `tar` — docs/AI-WORKFLOW.md
+(d)). The app server serves it at `/music/`; `audio.js` treats that route as server-local (it does not try the art
+relay/CDN first) — add a `/music/` route to the relay only if you also point the client there.
+`py -3.14 -m pip install --user UnityPy lz4 imageio-ffmpeg` are the optional local-extract requirements.
+
 The `stem` of a Spine model is the upstream file name. Two examples: `char_107_liskam` has the stem `char_107_liskarm`, and `enemy_9032_aclionk` uses `enemy_1559_vtlionk`. The skel and atlas of a model always share one stem. pixi-spine locates the atlas by swapping the extension, so this matters.
 
 ### Id scope

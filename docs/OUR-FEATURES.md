@@ -65,12 +65,15 @@ Read this together with:
 > battle model (`room.skins`).
 >
 > **2026-10-25 — 主界面音乐 (Hub music picker).** The Hub's topbar carries a music chip; its dialog lists the game's
-> official 主界面 music catalogue (24 tracks: 主题 / 活动 / 联动 / 危机合约 from `excel/audio_data.json` `musics[]`,
-> `tools/assets/lobby-music.mjs`), with tabs, search and a BGM volume slider. Files are local
-> (`audio/music/<id>_{intro,loop}.mp3`, `tools/lobby-music.mjs`), the pick is per browser
-> (`settings.lobbyMusic`), and it applies to the Hub route only — a room's lobby, the title and every battle keep their
-> own tracks (`public/js/audio.js` installAudio). `resolveBgm` falls back to `bgm.lobby` if the manifest lacks the id.
-> Absent upstream — `public/js/ui/musicPicker.js` + `public/css/screens/hub.css` are the wiring.
+> official 主界面 music catalogue (24 committed tracks from `excel/audio_data.json` `musics[]`,
+> `tools/assets/lobby-music.mjs`), with tabs, search and a BGM volume slider. The optional **full pack** adds the other
+> 194 recordings (218 unique in all) extracted from the owner's local client by `tools/local-extract/music.py`, loudness
+> normalised to -14 LUFS into `var/music/` (git-ignored; `/music/index.json` + `/music/<id>_*.mp3`,
+> `public/js/ui/musicLibrary.js`). The 24 committed files stay the fallback when the pack is absent. The pick is per
+> browser (`settings.lobbyMusic`) and applies to the Hub route only — a room's lobby, the title and every battle keep
+> their own tracks (`public/js/audio.js` installAudio); `resolveBgm` falls back to `bgm.lobby` if both catalogues lack
+> the id. The BGM bus was also raised (0.8 × `v^1.5` instead of 0.55 × `v²`) after the owner's 音量 report. Absent
+> upstream — `public/js/ui/musicPicker.js`, `public/js/ui/musicLibrary.js` + `public/css/screens/hub.css` are the wiring.
 
 **What it is.** Eight operators not in the official season roster are injected into the generated season tables as
 formal shop chess, each with a data entry, a hand-written kit, and (usually) art/voice. They are added through

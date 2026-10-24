@@ -1,38 +1,37 @@
-// ui/musicPicker.js — 主界面音乐 (owner 2026-10-25): the Hub's music chip and picker. The player chooses one of the
-// official 主界面音乐 tracks (manifest `audio.lobbyMusic`, tools/lobby-music.mjs, docs/ASSETS.md "Lobby music"); the
-// choice is this browser's own (settings.lobbyMusic, localStorage) and only changes the Hub's BGM — the title screen,
-// a room's lobby and every battle keep their own tracks, so a pick never affects what a party hears.
+// ui/musicPicker.js — 主界面音乐 (owner 2026-10-25): the Hub's music chip and picker. The player chooses from the
+// committed 24 official tracks (`audio.lobbyMusic`, tools/lobby-music.mjs) plus, when the optional pack is present, the
+// rest of the 218-recording 音乐鉴赏 catalogue (`ui/musicLibrary.js`, tools/local-extract/music.py, docs/ASSETS.md
+// "Music pack"); the choice is this browser's own (settings.lobbyMusic, localStorage) and only changes the Hub's BGM —
+// the title screen, a room's lobby and every battle keep their own tracks, so a pick never affects what a party hears.
 //
 // The default row ('') is the mode's own `audio.bgm.lobby` theme. A manifest that predates the catalogue (or a server
 // without the files) simply shows the default: resolveBgm falls back to `bgm.lobby` for an unknown id.
 
 import { useState } from '../../vendor/hooks.module.js';
 import { html, Modal, Icon, TextField, Tabs } from './components.js';
-import { data, useData } from '../data.js';
+import { useData } from '../data.js';
+import { musicTrack, useMusicLibrary } from './musicLibrary.js';
 import { updateSettings, useSettings } from './settings.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
-/** Tab id → label (the manifest carries `group`; `all` is the picker's default). N_: module-level msgids. */
-const GROUPS = ['all', 'theme', 'event', 'collab', 'contract'];
+/** Tab id → label (the pack's `group`; `all` is the picker's default). N_: module-level msgids. */
+const GROUPS = ['all', 'theme', 'event', 'collab', 'contract', 'rogue', 'sandbox', 'story', 'other'];
 const GROUP_LABEL = {
   all: N_('全部'),
   theme: N_('主题'),
   event: N_('活动'),
   collab: N_('联动'),
   contract: N_('危机合约'),
+  rogue: N_('肉鸽'),
+  sandbox: N_('生息演算'),
+  story: N_('剧情'),
+  other: N_('其他'),
   default: N_('默认'),
 };
 
-function library() {
-  const m = data.get('assets');
-  const lib = m?.audio?.lobbyMusic;
-  return lib && typeof lib === 'object' ? lib : null;
-}
-
-/** The current 主界面音乐's name (the default row when nothing is chosen or the manifest lacks the pick). */
+/** The current 主界面音乐's name (the default row when nothing is chosen or the catalogue lacks the pick). */
 function currentTrackName(settings) {
-  const lib = library();
-  return (settings.lobbyMusic && lib?.[settings.lobbyMusic]?.name) || t('默认主题（卫戍协议）');
+  return (settings.lobbyMusic && musicTrack(settings.lobbyMusic)?.name) || t('默认主题（卫戍协议）');
 }
 
 /**
@@ -41,6 +40,7 @@ function currentTrackName(settings) {
  */
 export function MusicButton({ onClick }) {
   useData('assets');
+  useMusicLibrary();
   const settings = useSettings();
   const name = currentTrackName(settings);
   return html`<button type="button" class="music-chip" onClick=${onClick}
@@ -56,18 +56,19 @@ export function MusicButton({ onClick }) {
  */
 export function MusicPanel({ open, onClose }) {
   useData('assets');
+  const entries = useMusicLibrary();
   const settings = useSettings();
   const [group, setGroup] = useState('all');
   const [q, setQ] = useState('');
-  const lib = library();
   const current = settings.lobbyMusic || '';
-  const rows = lib
-    ? Object.entries(lib).map(([id, x]) => ({ id, name: String(x?.name || id), group: x?.group || 'theme' }))
-    : [];
+  const rows = Object.entries(entries || {}).map(([id, x]) => ({ id, name: String(x?.name || id), group: x?.group || 'theme' }));
+  const present = new Set(rows.map((r) => r.group));
+  const tabIds = GROUPS.filter((id) => id === 'all' || present.has(id));
+  const active = tabIds.includes(group) ? group : 'all';
   const needle = q.trim().toLowerCase();
-  const visible = rows.filter((r) => (group === 'all' || r.group === group)
+  const visible = rows.filter((r) => (active === 'all' || r.group === active)
     && (!needle || r.name.toLowerCase().includes(needle) || r.id.includes(needle)));
-  const showDefault = group === 'all' || group === 'theme';
+  const showDefault = active === 'all' || active === 'theme';
   const pick = (id) => updateSettings({ lobbyMusic: id });
 
   return html`<${Modal} open=${open} utility=${true} class="lobby-music-panel" title=${t('主界面音乐')} micro="LOBBY MUSIC"
@@ -77,12 +78,13 @@ export function MusicPanel({ open, onClose }) {
         <span class="lobby-music__now"><${Icon} name="play" />${t('正在播放 · 主界面')}</span>
         <strong>${currentTrackName(settings)}</strong>
         <small>${t('进入作战后仍使用房间的对战音乐；选择只保存在当前浏览器。')}</small>
+        ${rows.length > 24 ? html`<small>${t('已加载本地音乐包：共 {n} 首', { n: rows.length })}</small>` : null}
       </div>
-      <${Tabs} size="sm" value=${group} onChange=${setGroup}
-        items=${GROUPS.map((id) => ({ id, label: t(GROUP_LABEL[id]) }))} />
+      <${Tabs} size="sm" value=${active} onChange=${setGroup}
+        items=${tabIds.map((id) => ({ id, label: t(GROUP_LABEL[id]) }))} />
       <${TextField} icon="search" value=${q} onInput=${setQ} maxLength=${40}
         placeholder=${t('搜索曲目')} />
-      ${lib ? html`<div class="lobby-music__list" role="list">
+      ${rows.length ? html`<div class="lobby-music__list" role="list">
         ${showDefault ? html`<button type="button" role="listitem" aria-pressed=${current === ''}
           class=${`music-row${current === '' ? ' is-on' : ''}`} onClick=${() => pick('')}>
           <span class="music-row__idx num">00</span>
