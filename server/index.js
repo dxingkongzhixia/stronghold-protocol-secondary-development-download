@@ -43,10 +43,11 @@
 import http from 'node:http';
 import path from 'node:path';
 import { getData, loadData } from './data.js';
-import { appendFileSync, createReadStream, readFileSync } from 'node:fs';
+import { appendFileSync, createReadStream, readFileSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { openDb } from './db.mjs';
 import { AuthService } from './auth.js';
-import { CommunityService, bugReportsExport, bugReportsToCsv } from './community.js';
+import { CommunityService, bugReportsExport, bugReportsToCsv, sniffImageType } from './community.js';
 import { StatsService } from './stats.js';
 import { TrainingStore } from './training/store.js';
 import { setTrainingSink } from './training/record.js';
@@ -58,7 +59,7 @@ import { DOCS_HTML } from './adminDocs.js';
 import { createSpeedProbe } from './speed.js';
 import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from './mirrors.js';
 import { clientAddress } from './net.js';
-import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX } from '../shared/constants.js';
+import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX, AVATAR_MAX_BYTES, AVATAR_MIMES, AVATAR_RATE_WINDOW_MS, AVATAR_UPLOAD_LIMIT } from '../shared/constants.js';
 import { PLUGIN_LIMITS } from '../shared/plugins/manifest.js';
 import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
@@ -776,6 +777,77 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     sendJson(req, res, 200, { ok: true, ...r.upload });
   }
 
+  // Account profile images (schema v6, owner 2026-10-24): an authenticated raster upload, content-addressed under
+  // var/avatars and served publicly at /avatar/<file>. The account's `avatar` column names that file; the session /
+  // seat picks it up through lobby.applyProfile and every client redraws.
+  const avatarUploadTimes = new Map();
+  function avatarUploadAllowed(accountId) {
+    const now = Date.now();
+    const recent = (avatarUploadTimes.get(accountId) || []).filter((t) => now - t < AVATAR_RATE_WINDOW_MS);
+    if (recent.length >= AVATAR_UPLOAD_LIMIT) { avatarUploadTimes.set(accountId, recent); return false; }
+    recent.push(now);
+    avatarUploadTimes.set(accountId, recent);
+    if (avatarUploadTimes.size > 1000) {
+      for (const [id, times] of avatarUploadTimes) if (!times.some((t) => now - t < AVATAR_RATE_WINDOW_MS)) avatarUploadTimes.delete(id);
+    }
+    return true;
+  }
+  const AVATAR_FILE = /^[0-9a-f]{32}\.(png|jpg|webp)$/;
+  const AVATAR_MIME = Object.freeze({ png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' });
+
+  async function avatarRoute(req, res) {
+    if (!auth) { sendJson(req, res, 404, { error: 'accounts disabled' }); return; }
+    const tok = req.headers['x-account-token'];
+    const acc = typeof tok === 'string' && tok ? auth.resolve(tok) : null;
+    if (!acc) { sendJson(req, res, 401, { error: 'AUTH_REQUIRED' }); return; }
+    if (req.method === 'POST') {
+      if (!avatarUploadAllowed(acc.id)) { sendJson(req, res, 429, { error: 'RATE' }); return; }
+      const bytes = await readRawBody(req, AVATAR_MAX_BYTES + 1);
+      if (bytes == null) { sendJson(req, res, 413, { error: 'image too large' }); return; }
+      const mime = sniffImageType(bytes);
+      if (!bytes.length || !mime || !AVATAR_MIMES.includes(mime)) { sendJson(req, res, 400, { error: 'BAD_IMAGE' }); return; }
+      const ext = mime === 'image/png' ? 'png' : mime === 'image/jpeg' ? 'jpg' : 'webp';
+      const file = `${createHash('sha256').update(bytes).digest('hex').slice(0, 32)}.${ext}`;
+      const dir = path.join(ROOT, 'var', 'avatars');
+      try {
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(path.join(dir, file), bytes);
+      } catch (e) {
+        log.error('[avatar] write failed', e);
+        sendJson(req, res, 500, { error: 'internal error' });
+        return;
+      }
+      const account = auth.setAvatar(acc.id, file);
+      lobby?.applyProfile?.(acc.id, { avatar: file });
+      sendJson(req, res, 200, { ok: true, avatar: file, url: `/avatar/${file}`, account });
+      return;
+    }
+    if (req.method === 'DELETE') {
+      const account = auth.setAvatar(acc.id, null);
+      lobby?.applyProfile?.(acc.id, { avatar: null });
+      sendJson(req, res, 200, { ok: true, avatar: null, account });
+      return;
+    }
+    res.setHeader('Allow', 'POST, DELETE');
+    sendJson(req, res, 405, { error: 'POST or DELETE required' });
+  }
+
+  /** GET/HEAD /avatar/<32 hex>.<png|jpg|webp>: a public avatar file, immutable because its name is its hash. */
+  function serveAvatar(req, res, rawPath) {
+    const file = rawPath.slice('/avatar/'.length);
+    if (!AVATAR_FILE.test(file)) { sendJson(req, res, 404, { error: 'not found' }); return; }
+    let st;
+    try { st = statSync(path.join(ROOT, 'var', 'avatars', file)); } catch { sendJson(req, res, 404, { error: 'not found' }); return; }
+    if (!st.isFile()) { sendJson(req, res, 404, { error: 'not found' }); return; }
+    const ext = file.slice(file.lastIndexOf('.') + 1);
+    res.writeHead(200, {
+      'Content-Type': AVATAR_MIME[ext], 'Content-Length': st.size,
+      'Cache-Control': 'public, max-age=31536000, immutable', ETag: `"${file}"`,
+    });
+    if (req.method === 'HEAD') { res.end(); return; }
+    createReadStream(path.join(ROOT, 'var', 'avatars', file)).pipe(res);
+  }
+
   /** Our extra routes (online status, /admin); true when it took the request (or will). */
   function specialRoute(req, res) {
     const parts = splitUrl(req.url || '/');
@@ -809,6 +881,16 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/community/api/bug/upload') {
       communityUploadRoute(req, res).catch((e) => { log.error('[community] upload failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
+      return true;
+    }
+    // account profile images (schema v6): upload / clear with the account token, public immutable read
+    if (parts.rawPath === '/api/account/avatar') {
+      avatarRoute(req, res).catch((e) => { log.error('[avatar] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
+      return true;
+    }
+    if (parts.rawPath.startsWith('/avatar/')) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { sendJson(req, res, 405, { error: 'GET required' }); return true; }
+      serveAvatar(req, res, parts.rawPath);
       return true;
     }
     if (parts.rawPath === '/market/api/list' || parts.rawPath === '/market/api/upload' || parts.rawPath.startsWith('/market/api/download/') || parts.rawPath.startsWith('/market/api/installed/')) {

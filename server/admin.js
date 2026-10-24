@@ -272,6 +272,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
     guest: s.accountId == null,
     status: statusOf(s, { lobby, matchmaker: mm, now }),
     roomCode: s.roomCode ?? null,
+    ...(typeof s.avatar === 'string' && s.avatar ? { avatar: s.avatar } : {}),
   }));
   const counts = { online: online.length, guests: online.filter((x) => x.guest).length };
   // The account binding of a seat is the only private bit behind `seats` below; playerId is an internal id, so it is

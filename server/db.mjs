@@ -10,7 +10,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 /**
  * `node:sqlite` is experimental and prints an ExperimentalWarning on import; suppress just that one (it is expected).
@@ -151,6 +151,18 @@ function migrate(db) {
       CREATE INDEX idx_match_stats_guest_ended   ON match_stats(guest_id, ended_at DESC, id DESC);
     `);
     db.exec('PRAGMA user_version = 5');
+  }
+  if (v < 6) {
+    // The player profile (owner 2026-10-24): the seat card's 立绘 and an uploaded avatar.
+    //   * art    — the operator charId a logged-in player wants on every seat card (NULL = the card's default look);
+    //   * avatar — the file name under `var/avatars/` (`<sha256 32 hex>.<png|jpg|webp>`, content-addressed and
+    //              written by POST /api/account/avatar); NULL = the initials/glyph the client draws.
+    // Both are public (they are drawn for everyone in the room) and copied onto the session / seat by server/lobby.js.
+    db.exec(`
+      ALTER TABLE accounts ADD COLUMN art    TEXT;
+      ALTER TABLE accounts ADD COLUMN avatar TEXT;
+    `);
+    db.exec('PRAGMA user_version = 6');
   }
 }
 

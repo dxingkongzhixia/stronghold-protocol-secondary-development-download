@@ -58,8 +58,16 @@ export function passwordError(pw) {
   return pw.length >= AUTH_PASS_MIN && pw.length <= AUTH_PASS_MAX ? null : 'BAD_PASSWORD';
 }
 
-/** The account fields sent to the client (never the hash). `role` is a shared/constants.js ROLES key, or null. */
-export const publicAccount = (row) => ({ id: row.id, name: row.name, role: row.role ?? null });
+/**
+ * The account fields sent to the client (never the hash). `role` is a shared/constants.js ROLES key, or null. `art` and
+ * `avatar` (schema v6) ride along only when set, so an ordinary account's payload stays the shape older tests and
+ * clients expect; a client reads a missing field as "default".
+ */
+export const publicAccount = (row) => ({
+  id: row.id, name: row.name, role: row.role ?? null,
+  ...(typeof row.art === 'string' && row.art ? { art: row.art } : {}),
+  ...(typeof row.avatar === 'string' && row.avatar ? { avatar: row.avatar } : {}),
+});
 
 /**
  * Accounts + sessions over the SQLite connection from server/db.mjs. All methods are synchronous (the statements are
@@ -83,6 +91,8 @@ export class AuthService {
       purge: db.prepare('DELETE FROM sessions WHERE expires_at < ?'),
       list: db.prepare('SELECT id, name, created_at, last_login, banned, role FROM accounts ORDER BY id'),
       setRole: db.prepare('UPDATE accounts SET role = ? WHERE id = ?'),
+      setArt: db.prepare('UPDATE accounts SET art = ? WHERE id = ?'),
+      setAvatar: db.prepare('UPDATE accounts SET avatar = ? WHERE id = ?'),
     };
   }
 
@@ -103,6 +113,28 @@ export class AuthService {
     if (next != null && !Object.prototype.hasOwnProperty.call(ROLES, next)) return { error: 'BAD_ROLE' };
     this.q.setRole.run(next, row.id);
     return { account: publicAccount(this.q.byId.get(row.id)) };
+  }
+
+  /**
+   * Store the account's default seat-card art (`shared/protocol.js` isCharId; null clears it). The lobby validates the
+   * id against the operator assets before calling. @returns {{id:number,name:string,role:string|null}|null}
+   */
+  setArt(accountId, art) {
+    if (!Number.isInteger(accountId)) return null;
+    this.q.setArt.run(art == null ? null : String(art), accountId);
+    const row = this.q.byId.get(accountId);
+    return row ? publicAccount(row) : null;
+  }
+
+  /**
+   * Store the account's uploaded avatar file name (`<hash>.<ext>` under var/avatars; null clears it). The HTTP route
+   * validates the bytes and writes the file before calling. @returns {{id:number,name:string,role:string|null}|null}
+   */
+  setAvatar(accountId, file) {
+    if (!Number.isInteger(accountId)) return null;
+    this.q.setAvatar.run(file == null ? null : String(file), accountId);
+    const row = this.q.byId.get(accountId);
+    return row ? publicAccount(row) : null;
   }
 
   /** @returns {{ account: {id:number,name:string}, token: string } | { error: string }} */

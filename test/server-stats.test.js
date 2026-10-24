@@ -38,16 +38,18 @@ function addAccount(db, name) {
   return Number(db.prepare('INSERT INTO accounts (name, name_lower, pass_hash, created_at) VALUES (?, ?, ?, ?)').run(name, name.toLowerCase(), 'x', 0).lastInsertRowid);
 }
 
-// ---- schema v5 -------------------------------------------------------------------------------------------------------
+// ---- schema v5 / v6 --------------------------------------------------------------------------------------------------
 
-test('db migration v5: match_stats + its per-owner indexes exist', () => {
+test('db migration v5→v6: match_stats, its indexes and the profile columns exist', () => {
   const db = openMemoryDb();
-  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 5);
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 6);
   const names = db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table','index')").all().map((r) => r.name);
   assert.ok(names.includes('match_stats'), 'match_stats table');
   for (const idx of ['idx_match_stats_account_record', 'idx_match_stats_guest_record', 'idx_match_stats_account_ended', 'idx_match_stats_guest_ended']) {
     assert.ok(names.includes(idx), `${idx} index`);
   }
+  const cols = db.prepare('PRAGMA table_info(accounts)').all().map((c) => c.name);
+  assert.ok(cols.includes('art') && cols.includes('avatar'), 'the v6 profile columns');
 });
 
 // ---- the service -----------------------------------------------------------------------------------------------------

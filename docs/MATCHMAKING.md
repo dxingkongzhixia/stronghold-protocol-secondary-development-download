@@ -101,12 +101,20 @@
 - **会话**：`sessions(token PK, account_id, created_at, expires_at)`，TTL **30 天**。客户端把 token 存 localStorage，`hello` 时作为 `accountToken` 发送；服务端在 `Lobby.onHello` 里 `auth.resolve(accountToken)` 绑定账号并回 `auth.ok`。
 - **登出 / 过期**：`auth.error { code: SESSION_EXPIRED }` → 客户端清 token 并回退游客。
 - **游客**：不登录仍可独立模拟 / 私房；**野排（`mm.join`）要求已绑定账号**（否则 `AUTH_REQUIRED`）。
+- **个人资料（schema v6，2026-10-24）**：
+  - `accounts.art` 是这个账号的**默认立绘**：一个干员 `charId`（NULL = 座位卡默认外观）。新座位创建 / 账号绑定时由 `Lobby.humanSeat` 带进 `seats[].art`，所以同盟里的其他博士都能看到。
+  - `accounts.avatar` 是**上传头像**的文件名：`var/avatars/<sha256 前 32 位>.<png|jpg|webp>`（内容寻址）。`seats[].avatar` / `spectators[].avatar` 只带这个文件名，客户端用 `/avatar/<file>` 取图。
+  - `room.setArt { art, save? }`：改当前座位的立绘（座位 / 观战席都行，服务端按 `data/assets.json` 的 `chars` 校验）；`save: true` 且已登录时同时写入账号默认值。游客可以换，但只影响本会话。
+  - `account.setArt { art }`：只改账号默认立绘（需要登录），同时应用到当前座位。
+  - `POST /api/account/avatar`（头 `x-account-token`，**≤2 MiB**，PNG / JPEG / WebP 由**字节**嗅探，SVG/HTML 拒绝；每账号 10 次 / 10 分钟）→ `{ avatar, url, account }`；`DELETE` 恢复默认头像；`GET /avatar/<file>` 公开、`immutable` 缓存。成功后 `Lobby.applyProfile` 更新该账号的在线会话与座位并广播 `room.state`，同时推 `auth.profile { account }`。
+  - 头像文件不随账号删除清理（内容寻址，可能被其他账号复用）；`var/avatars/` 与 `var/` 一样不入库。
+
 
 ## 3. 存储（SQLite）
 
 - **驱动**：Node 内置 **`node:sqlite`（`DatabaseSync`）**，零依赖；导入时抑制其 Experimental 警告。
 - **位置**：默认 `var/accounts.db`（`SP_DB` 覆盖），**不在被公开静态服务的 `data/` 目录**；`var/` 已加入 `.gitignore`。
-- **表**：`accounts`、`sessions`（见 §2），索引 `idx_sessions_account` / `idx_sessions_expires`；`PRAGMA user_version` 做迁移（当前 v1）。
+- **表**：`accounts`、`sessions`（见 §2），索引 `idx_sessions_account` / `idx_sessions_expires`；`PRAGMA user_version` 做迁移（当前 **v6**：v2 角色、v3 社区、v4 变更日志、v5 对局统计、v6 个人资料 `art` / `avatar`）。
 - **测试**：`openMemoryDb()` 提供内存库。
 
 ## 4. 匹配池

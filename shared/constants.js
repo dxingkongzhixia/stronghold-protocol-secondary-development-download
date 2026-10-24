@@ -379,6 +379,14 @@ export const BUG_IMAGE_MIMES = Object.freeze(['image/png', 'image/jpeg', 'image/
 export const BUG_RATE_WINDOW_MS = 30 * 60 * 1000;
 export const BUG_REPORT_LIMIT = 5;  // reports per window per account / guest network
 export const BUG_UPLOAD_LIMIT = 20; // image uploads per window per account / guest network (≤4 per report)
+// ---- ours: account profile images (owner 2026-10-24) ---------------------------------------------------------------
+// A logged-in player's avatar (the seat card, me chip and online list) is one raster image uploaded through
+// POST /api/account/avatar: sniffed from the bytes (png / jpeg / webp, never svg), capped, content-addressed and stored
+// under `var/avatars/<sha256>.<ext>`, then served publicly at /avatar/<file>. Rate limited per account.
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // 2 MiB, enforced while reading the body
+export const AVATAR_MIMES = Object.freeze(['image/png', 'image/jpeg', 'image/webp']);
+export const AVATAR_RATE_WINDOW_MS = 10 * 60 * 1000;
+export const AVATAR_UPLOAD_LIMIT = 10; // uploads per window per account
 export const BUG_STATUSES = Object.freeze(['new', 'triaged', 'fixed']);
 /** Status labels of the admin page (`t()` where shown; the server sends the key, the page its label). */
 export const BUG_STATUS_NAMES = Object.freeze({ new: N_('待处理'), triaged: N_('已受理'), fixed: N_('已修复') });

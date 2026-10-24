@@ -12,6 +12,23 @@ export function uiUrl(m, key) {
 }
 
 /**
+ * The half-body portrait of a raw operator charId (the seat card's 立绘 choice: `room.setArt` / `account.setArt`
+ * store a charId, not a chess id). E2 is preferred when the manifest has it — the same art the shop card shows.
+ * @param {any} m manifest (data/assets.json)
+ * @param {string|null} charId
+ */
+export function charPortraitUrl(m, charId) {
+  const entry = obj(obj(m)?.chars)?.[str(charId)];
+  return str(entry?.portraitE2) || str(entry?.portrait) || null;
+}
+
+/** An uploaded avatar's URL from the account/seat field (`<32 hex>.<png|jpg|webp>`), or null. */
+export function avatarUrl(avatar) {
+  const file = str(avatar);
+  return file && /^[0-9a-f]{32}\.(png|jpg|webp)$/.test(file) ? `/avatar/${file}` : null;
+}
+
+/**
  * Operator avatar for a chess record (golden → E2 art when present).
  * @param {any} m manifest
  * @param {any} chess chess.json record (or { assets: { avatar } })

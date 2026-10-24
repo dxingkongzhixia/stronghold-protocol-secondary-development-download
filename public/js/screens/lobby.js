@@ -24,6 +24,7 @@ import { LoadoutButton } from './loadout.js';
 import { SettingsButton } from '../ui/settings.js';
 import { openCodex } from '../ui/codex.js';
 import { AccountDialog } from '../ui/account.js';
+import { avatarUrl } from '../ui/assetUrls.js';
 import { ChangelogOverlay } from '../ui/community.js';
 import { PublicRoomsScreen } from './rooms.js';
 import { net, identity } from '../net.js';
@@ -280,11 +281,11 @@ export function LobbyScreen() {
         <${Button} variant="secondary" size="sm" icon="gear" class="lobby-preview-plugins"
           onClick=${() => setPreviewOpen(true)} title=${t('插件预览')}>${t('插件')}<//>
         <${LoadoutButton} from="lobby" size="sm" class="lobby-loadout" label=${t('干员调配')} />
-        ${auth?.account ? null : html`<${Button} variant="secondary" size="sm" icon="user" class="lobby-account"
-          onClick=${() => setShowAccount(true)}>${t('登录 / 注册')}<//>`}
+        ${html`<${Button} variant="secondary" size="sm" icon="user" class="lobby-account"
+          onClick=${() => setShowAccount(true)}>${auth?.account ? t('账号') : t('登录 / 注册')}<//>`}
         <${SettingsButton} class="lobby-settings" variant="secondary" label=${t('设置')} />
         <button type="button" class="me-chip me-chip--btn" onClick=${openStats} title=${t('统计数据')} aria-label=${t('统计数据')}>
-          <${AvatarFrame} size="sm" name=${me.name} seat=${0} self=${true} />
+          <${AvatarFrame} size="sm" src=${avatarUrl(auth?.account?.avatar)} name=${me.name} seat=${0} self=${true} />
           <div class="me-chip__text">
             <span class="me-chip__name">${me.name || t('博士')}<${RoleTag} role=${auth?.account?.role} />${auth?.account ? null : html`<em class="me-chip__guest">${t('游客')}</em>`}</span>
             <${MicroLabel}>${me.playerId != null ? `DOCTOR #${doctorNo(me.playerId)}` : 'DOCTOR'}<//>

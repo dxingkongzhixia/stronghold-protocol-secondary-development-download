@@ -53,6 +53,13 @@ Read this together with:
 > seven with an official 自选 role stay selectable there in both states (`diy.officialPool`); vanilla statistics,
 > roster, codex and random bond bans see 112 visible chess instead of 120. The kits stay in core code (the built-in
 > plugin adds the data, not a second kit registry).
+>
+> **2026-10-24 — seat-card 立绘, default artwork and uploaded avatars.** A room seat card shows the player's chosen
+> operator art (`room.setArt`, charId validated against `data/assets.json`); a logged-in account keeps a default in the
+> new `accounts.art` column (schema **v6**) and may upload an avatar (`accounts.avatar`, raster bytes sniffed, stored
+> under `var/avatars/`, served at `/avatar/<file>`, `auth.profile` pushes live). Guests can change art per session but
+> have no default. UI: `public/js/ui/artPicker.js`, the seat art block in `public/js/screens/room.js`, `ProfilePanel` in
+> `public/js/ui/account.js`. Absent upstream — keep it through merges.
 
 **What it is.** Eight operators not in the official season roster are injected into the generated season tables as
 formal shop chess, each with a data entry, a hand-written kit, and (usually) art/voice. They are added through

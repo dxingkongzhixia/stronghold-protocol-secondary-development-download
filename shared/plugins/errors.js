@@ -720,7 +720,7 @@ export const PLUGIN_ERRORS = Object.freeze({
   PLUGIN_INTENT: {
     level: 'frame', doc: D.ui,
     zh: '界面插件想发对局操作，被拒绝了', en: 'The ui plugin tried to send a match action, which is refused',
-    fix: { zh: '界面插件只能看，不能操作对局（它不能成为自动操作或作弊工具）：不要发 hello、ping、room.*、g.*、b.* 这类消息，也不要把它们夹在别的消息里。', en: 'A ui plugin watches and never plays (it cannot become a bot or a cheat): do not send hello, ping, room.*, g.* or b.* messages, nor carry one inside another message.' },
+    fix: { zh: '界面插件只能看，不能操作对局（它不能成为自动操作或作弊工具）：不要发 hello、ping、room.*、account.*、auth.*、g.*、b.* 这类消息，也不要把它们夹在别的消息里。', en: 'A ui plugin watches and never plays (it cannot become a bot or a cheat): do not send hello, ping, room.*, account.*, auth.*, g.* or b.* messages, nor carry one inside another message.' },
   },
   PLUGIN_SHAPE: {
     level: 'frame', doc: D.ui,

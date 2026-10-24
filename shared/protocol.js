@@ -513,6 +513,11 @@ export const C2S = {
   // The lobby strips control characters, rate-limits per session and broadcasts m.chat to the whole room (seats +
   // spectators, waiting lobby AND while the match runs). The client renders it as text.
   'room.chat': { text: (v) => isStr(v, CHAT_MAX) && v.trim().length > 0 },
+  // seat-card 立绘 (owner 2026-10-24): the operator charId this seat shows, or null = the default look. `save` stores it
+  // as the bound account's default too (ignored for a guest). The server checks the id against the operator assets.
+  'room.setArt': { $optional: ['art', 'save'], art: nullable(isCharId), save: (v) => v === undefined || v === true || v === false },
+  // the logged-in player's default 立绘 outside a room (the 账号 / 个人资料 dialog); also applied to the current seat
+  'account.setArt': { $optional: ['art'], art: nullable(isCharId) },
 
   // accounts (server/auth.js; docs/MATCHMAKING.md): 野排 requires one. Both answer with auth.ok { account, token }
   'auth.register': { name: (v) => isStr(v, AUTH_NAME_MAX) && v.trim().length >= AUTH_NAME_MIN, password: (v) => isStr(v, AUTH_PASS_MAX) && v.length >= AUTH_PASS_MIN },

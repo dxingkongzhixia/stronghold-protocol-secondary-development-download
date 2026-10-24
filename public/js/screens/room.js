@@ -31,6 +31,9 @@ import { PluginTag, isModdedRoom } from '../ui/pluginTag.js';
 import { rememberScriptConsent } from '../content.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, emptyMatch, isSpectating } from '../store.js';
+import { data, useData } from '../data.js';
+import { charPortraitUrl, avatarUrl } from '../ui/assetUrls.js';
+import { ArtPicker } from '../ui/artPicker.js';
 import { difficultyInfo } from './lobby.js';
 import { t, tc } from '../../../shared/i18n.js';
 
@@ -153,7 +156,8 @@ function TrustedConsentBar({ room, mine }) {
   </section>`;
 }
 
-function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRemoveBot, onKick }) {
+function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRemoveBot, onKick, onPickArt }) {
+  useData('assets');
   const coop = room.mode !== 'solo';
   if (!seat) {
     const canAdd = coop && facts.isHost;
@@ -176,6 +180,9 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
   const offline = seat.connected === false && !seat.isBot;
   // The host never needs to toggle ready: starting the match readies them (server rule).
   const state = offline ? 'offline' : seat.ready || seat.isBot ? 'ready' : isHostSeat ? 'host' : 'waiting';
+  // the player's profile (schema v6, server/lobby.js): their chosen 立绘 charId and uploaded avatar file
+  const art = !seat.isBot ? charPortraitUrl(data.get('assets'), seat.art) : null;
+  const avatar = !seat.isBot ? avatarUrl(seat.avatar) : null;
   return html`<article class=${`seat brackets${isMe ? ' is-me' : ''}${isHostSeat ? ' is-host' : ''}${seat.isBot ? ' is-bot' : ''} is-${state}`}
       style=${`--seat-i:${index}`}>
     ${bubble ? html`<div class="seat__chat"><${ChatBubble} key=${bubble.seq} name=${bubble.name} text=${bubble.text} own=${isMe} at=${bubble.at} ttl=${CHAT_BUBBLE_MS} /></div>` : null}
@@ -184,10 +191,15 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
       <${MicroLabel}>SEAT ${String(index + 1).padStart(2, '0')}<//>
       ${isHostSeat ? html`<span class="seat__host"><${Icon} name="crown" />${t('创建者')}</span>` : null}
     </header>
-    <div class="seat__art">
+    <div class=${`seat__art${art ? ' has-art' : ''}`}>
+      ${art ? html`<img class="seat__art-img" src=${art} alt="" draggable=${false} />` : null}
       <div class="seat__stripes" aria-hidden="true"></div>
-      <${AvatarFrame} size="xl" name=${seat.name} seat=${index} bot=${seat.isBot} self=${isMe} ready=${state === 'ready'} offline=${offline} />
-      ${seat.isBot ? html`<span class="seat__bot-label"><${Icon} name="robot" />${t('AI 队友')}</span>` : null}
+      ${isMe && !seat.isBot ? html`<button type="button" class="seat__artbtn" onClick=${() => onPickArt?.(index)}>
+        <${Icon} name="edit" />${t('更换立绘')}</button>` : null}
+      <div class="seat__artwho">
+        <${AvatarFrame} size=${art ? 'md' : 'xl'} src=${avatar} name=${seat.name} seat=${index} bot=${seat.isBot} self=${isMe} ready=${state === 'ready'} offline=${offline} />
+        ${seat.isBot ? html`<span class="seat__bot-label"><${Icon} name="robot" />${t('AI 队友')}</span>` : null}
+      </div>
     </div>
     <div class="seat__who">
       <span class="seat__name">${seat.name || t('博士')}<${RoleTag} role=${seat.role} /></span>
@@ -318,6 +330,9 @@ export function RoomScreen() {
   const bubbles = activeChatBubbles(chat, Date.now(), CHAT_BUBBLE_MS);
   useTicker(bubbles.size ? 500 : 0); // re-render only while a bubble is showing (to expire it)
   const [busy, setBusy] = useState(null);
+  const [artSeat, setArtSeat] = useState(null);
+  const [saveDefault, setSaveDefault] = useState(true);
+  const auth = useStore((s) => s.auth, shallowEqual);
   const alive = useRef(true);
   const inFlight = useRef(false); // synchronous guard against double clicks (state updates are async)
   useEffect(() => () => { alive.current = false; }, []);
@@ -344,6 +359,15 @@ export function RoomScreen() {
   const start = () => run('start', () => net.request('room.start', {}));
   const addBot = () => run('add', () => net.request('room.addBot', {}));
   const removeBot = (seat) => run(`rm${seat}`, () => net.request('room.removeBot', { seat }));
+  // seat-card 立绘 (owner 2026-10-24): the picker's choice rides room.setArt; a bound account may also keep it as the
+  // default for every later room (server-side accounts.art, applied when a seat is created / the account binds).
+  const pickArt = (art) => {
+    const seat = artSeat != null ? facts.seats[artSeat] : null;
+    setArtSeat(null);
+    if (!seat || seat.playerId !== me.playerId) return;
+    const save = !!auth?.account && saveDefault;
+    run('art', () => net.request('room.setArt', { art, save }));
+  };
   // the host removes a human before the match (community report #17): asked first; the player may join again. The
   // confirmed player's id goes along: if they left and someone else took the seat meanwhile, the server refuses it.
   const kick = async (seat, name, playerId) => {
@@ -426,7 +450,8 @@ export function RoomScreen() {
 
     <main class=${`seats${coop ? '' : ' seats--solo'}`}>
       ${facts.seats.map((s, i) => html`<${SeatCard} key=${s ? `p${s.playerId}` : `e${i}`} seat=${s} index=${i} room=${room} facts=${facts}
-        myId=${me.playerId} busy=${busy} bubble=${s ? bubbles.get(s.playerId) : undefined} onAddBot=${addBot} onRemoveBot=${removeBot} onKick=${kick} />`)}
+        myId=${me.playerId} busy=${busy} bubble=${s ? bubbles.get(s.playerId) : undefined} onAddBot=${addBot} onRemoveBot=${removeBot} onKick=${kick}
+        onPickArt=${setArtSeat} />`)}
       ${coop ? null : html`<aside class="solo-brief brackets">
         <${MicroLabel} tone="mint">BRIEFING<//>
         <h2>${DIFFICULTY_NAMES[room.difficulty] ? t(DIFFICULTY_NAMES[room.difficulty]) : ''}<span class="num t-dim"> ${info.code}</span></h2>
@@ -473,5 +498,8 @@ export function RoomScreen() {
             <//>`}
       </div>
     </footer>
+    <${ArtPicker} open=${artSeat != null} current=${artSeat != null ? (facts.seats[artSeat]?.art ?? null) : null}
+      canSaveDefault=${!!auth?.account} saveDefault=${saveDefault} onSaveDefaultChange=${setSaveDefault}
+      onPick=${pickArt} onClose=${() => setArtSeat(null)} busy=${busy === 'art'} />
   </div>`;
 }

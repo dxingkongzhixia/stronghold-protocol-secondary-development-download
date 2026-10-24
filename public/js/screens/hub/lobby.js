@@ -23,6 +23,7 @@ import { SettingsButton } from '../../ui/settings.js';
 import { GuideButton } from '../../ui/guide.js';
 import { NoticesButton } from '../../ui/notices.js';
 import { AccountDialog } from '../../ui/account.js';
+import { avatarUrl } from '../../ui/assetUrls.js';
 import { ChangelogOverlay } from '../../ui/community.js';
 import { OnlineOverlay } from '../online.js';
 import { PublicRoomsScreen } from '../rooms.js';
@@ -410,10 +411,10 @@ export function LobbyScreen() {
         </div>
       </div>
       <div class="topbar__right">
-        ${auth?.account ? null : html`<${Button} variant="secondary" size="sm" icon="user" class="hub-account"
-          onClick=${() => setShowAccount(true)}>${t('登录 / 注册')}<//>`}
+        ${html`<${Button} variant="secondary" size="sm" icon="user" class="hub-account"
+          onClick=${() => setShowAccount(true)}>${auth?.account ? t('账号') : t('登录 / 注册')}<//>`}
         <button type="button" class="me-chip me-chip--btn" onClick=${openStats} title=${t('统计数据')} aria-label=${t('统计数据')}>
-          <${AvatarFrame} size="sm" name=${me.name} seat=${0} self=${true} />
+          <${AvatarFrame} size="sm" src=${avatarUrl(auth?.account?.avatar)} name=${me.name} seat=${0} self=${true} />
           <span class="me-chip__text">
             <span class="me-chip__name">${me.name || t('博士')}<${RoleTag} role=${auth?.account?.role} />${auth?.account ? null : html`<em class="me-chip__guest">${t('游客')}</em>`}</span>
             <${MicroLabel}>${me.playerId != null ? `DOCTOR #${doctorNo(me.playerId)}` : 'DOCTOR'}<//>

@@ -37,6 +37,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/README.m
 | match / meta engine (rounds, economy, views) | `server/match/` (`Match.js`, `match/`, `player/`, `unite.js`, `board.js`, `choices.js`, `waves.js`, `finalAssault.js`) |
 | battle engine (units, buffs, damage, skills) | `server/sim/` (`Battle.js`, `battle/`, `units.js`, `buffs.js`, `damage.js`, `skills.js`, `targeting.js`, `professions.js`, `content/`) |
 | fork-only persistence (accounts, community, stats) | `server/db.mjs`, `server/auth.js`, `server/community.js`, `server/stats.js`, `server/admin.js` |
+| account profile: default seat artwork + uploaded avatars | `accounts.art` / `accounts.avatar` (schema v6, `server/db.mjs`), `server/auth.js` (`setArt` / `setAvatar`), `server/lobby.js` (`setArt` / `accountSetArt` / `applyProfile`), `POST /api/account/avatar` + `GET /avatar/<file>` in `server/index.js`, `public/js/ui/artPicker.js`, `public/js/ui/account.js` (`ProfilePanel`), `public/js/screens/room.js` (seat art) |
 | shared constants + wire contract | `shared/constants.js` (incl. `APP_VERSION`), `shared/protocol.js`, `shared/stats.js` |
 | browser client (screens) | `public/js/main.js`, `public/js/store.js`, `public/js/screens/` |
 | browser UI widgets | `public/js/ui/` |

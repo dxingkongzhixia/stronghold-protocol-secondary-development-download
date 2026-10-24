@@ -311,11 +311,32 @@ function wireNet() {
     if (typeof msg.token === 'string' && msg.token) savePref('authToken', msg.token);
     const acc = msg.account;
     if (acc && Number.isFinite(acc.id)) {
-      // role: shared/constants.js ROLES (null = ordinary) — a 管理员 / 开发者 tag rides next to the name everywhere
-      store.patch('auth', { account: { id: acc.id, name: String(acc.name || ''), role: typeof acc.role === 'string' ? acc.role : null }, error: null });
+      // role: shared/constants.js ROLES (null = ordinary) — a 管理员 / 开发者 tag rides next to the name everywhere;
+      // art / avatar are the schema-v6 profile (a seat card's 立绘 and the uploaded avatar), absent = default
+      store.patch('auth', {
+        account: {
+          id: acc.id, name: String(acc.name || ''), role: typeof acc.role === 'string' ? acc.role : null,
+          art: typeof acc.art === 'string' && acc.art ? acc.art : null,
+          avatar: typeof acc.avatar === 'string' && acc.avatar ? acc.avatar : null,
+        },
+        error: null,
+      });
       // 博士代号 = the account name: the server renamed the session, so follow it locally too.
       if (acc.name) store.patch('me', { name: String(acc.name) });
     }
+  });
+  // the account's profile changed (a saved default 立绘 / an uploaded avatar): the server pushes the fresh account
+  net.on('auth.profile', (msg) => {
+    const acc = msg.account;
+    if (!acc || !Number.isFinite(acc.id)) return;
+    store.patch('auth', {
+      account: {
+        id: acc.id, name: String(acc.name || ''), role: typeof acc.role === 'string' ? acc.role : null,
+        art: typeof acc.art === 'string' && acc.art ? acc.art : null,
+        avatar: typeof acc.avatar === 'string' && acc.avatar ? acc.avatar : null,
+      },
+      error: null,
+    });
   });
   net.on('auth.error', (msg) => {
     const code = typeof msg.code === 'string' ? msg.code : 'INTERNAL';

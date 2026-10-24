@@ -361,9 +361,9 @@ export class Room {
       public: !!this.public,
       ...(this.test ? { test: true } : {}),
       seats: this.seats.map((s) => (s
-        ? { seat: s.seat, playerId: s.playerId, name: s.name, role: s.role ?? null, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left, fromAi: !!s.fromAi, ...(this.modded && !s.isBot ? { content: s.content || 'loading' } : {}) }
+        ? { seat: s.seat, playerId: s.playerId, name: s.name, role: s.role ?? null, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left, fromAi: !!s.fromAi, ...(s.art ? { art: s.art } : {}), ...(s.avatar ? { avatar: s.avatar } : {}), ...(this.modded && !s.isBot ? { content: s.content || 'loading' } : {}) }
         : null)),
-      spectators: this.spectators.map((s) => ({ playerId: s.playerId, name: s.name, role: s.role ?? null, connected: s.connected, ...(this.modded ? { content: s.content || 'loading' } : {}) })),
+      spectators: this.spectators.map((s) => ({ playerId: s.playerId, name: s.name, role: s.role ?? null, connected: s.connected, ...(s.art ? { art: s.art } : {}), ...(s.avatar ? { avatar: s.avatar } : {}), ...(this.modded ? { content: s.content || 'loading' } : {}) })),
       ...(this.content ? { content: this.content.trusted ? { ...this.content, trusted: { ...this.content.trusted, consent: Object.fromEntries(this.seats.filter((s) => s && !s.isBot).map((s) => [s.seat, s.consentCs === this.content.cs])) } } : this.content } : {}),
     };
   }
@@ -566,12 +566,16 @@ export class Lobby {
         session.accountToken = accountToken;
         session.name = acc.name;
         session.role = acc.role ?? null;
+        session.art = acc.art ?? null;
+        session.avatar = acc.avatar ?? null;
         this.kickOtherSessions(session, acc.id);
         sendSession(session, { t: 'auth.ok', account: acc, token: accountToken });
       } else if (session.accountToken) {
         session.accountId = null;
         session.accountToken = null;
         session.role = null;
+        session.art = null;
+        session.avatar = null;
         sendSession(session, { t: 'auth.error', code: 'SESSION_EXPIRED' });
       }
     }
@@ -687,6 +691,7 @@ export class Lobby {
       case 'auth.register': return this.register(session, msg);
       case 'auth.login': return this.login(session, msg);
       case 'auth.logout': return this.logout(session);
+      case 'account.setArt': return this.accountSetArt(session, msg);
       case 'mm.join': return this.mmJoin(session, msg);
       case 'mm.cancel': return this.mmCancel(session);
       // player bug report (server/community.js, docs/MATCHMAKING.md §36): TEXT + already-uploaded image ids
@@ -704,6 +709,7 @@ export class Lobby {
       case 'room.spectate': return this.spectate(session, msg);
       case 'room.removeSpectator': return this.removeSpectator(session, msg);
       case 'room.chat': return this.chat(session, msg);
+      case 'room.setArt': return this.setArt(session, msg);
       case 'room.takeOver': return this.takeOver(session, msg);
       case 'room.releaseSeat': return this.releaseSeat(session);
       case 'room.setPlugins': return this.setPlugins(session, msg);
@@ -882,7 +888,7 @@ export class Lobby {
     if (room.mode === 'solo') return fail(ERR.ROOM_FULL, 'solo room');
     if (room.spectators.length >= MAX_SPECTATORS) return fail(ERR.ROOM_FULL, 'no free spectator seat');
     if (cur) this.removeMember(cur, session.playerId);
-    room.spectators.push({ playerId: session.playerId, name: session.name, role: session.role ?? null, connected: session.connected });
+    room.spectators.push({ playerId: session.playerId, name: session.name, role: session.role ?? null, connected: session.connected, art: session.art ?? null, avatar: session.avatar ?? null });
     session.roomCode = room.code;
     session.notice = null;
     session.pendingResult = null;
@@ -955,7 +961,7 @@ export class Lobby {
     seat.ready = true;
     seat.fromAi = false;
     delete seat.loadout;
-    room.spectators.push({ playerId: session.playerId, name: session.name, role: session.role ?? null, connected: session.connected });
+    room.spectators.push({ playerId: session.playerId, name: session.name, role: session.role ?? null, connected: session.connected, art: session.art ?? null, avatar: session.avatar ?? null });
     session.roomCode = room.code;
     if (room.activeHumans().length === 0) {
       // no human player is left (spectators are not players): the last player released its seat → destroy the room
@@ -995,6 +1001,77 @@ export class Lobby {
    * replay). A spectator may chat here (unlike g.* intents); the message is plain text — escaping is not enough, so it
    * is sanitised server-side and the client renders it as text.
    */
+  /**
+   * room.setArt / account.setArt (owner 2026-10-24): the seat card's 立绘 — an operator charId, or null for the
+   * default look. The charId must exist in the installation's operator assets (so a stale or hand-made id never
+   * reaches other clients). `save` on room.setArt (and account.setArt itself) also stores it as the bound account's
+   * default, so every later room opens with it; a guest's choice lasts for the session only.
+   */
+  setArt(session, { art, save = false }) {
+    const value = this._cleanArt(art);
+    if (value === undefined) return fail(ERR.BAD_MSG, 'unknown operator art');
+    session.art = value;
+    this._applyArtToSeat(session, value, { broadcast: true });
+    if (save && session.accountId && this.auth) {
+      const account = this.auth.setArt(session.accountId, value);
+      if (account) sendSession(session, { t: 'auth.profile', account });
+    }
+    return OK;
+  }
+
+  /** account.setArt: the default for future seats, applied to the current one too (a logged-in account is required). */
+  accountSetArt(session, { art }) {
+    if (!this.auth || !session.accountId) return fail(ERR.AUTH_REQUIRED);
+    const value = this._cleanArt(art);
+    if (value === undefined) return fail(ERR.BAD_MSG, 'unknown operator art');
+    const account = this.auth.setArt(session.accountId, value);
+    if (!account) return fail(ERR.AUTH_REQUIRED);
+    session.art = value;
+    this._applyArtToSeat(session, value, { broadcast: true });
+    sendSession(session, { t: 'auth.profile', account });
+    return OK;
+  }
+
+  /** null, or a charId the installation has art for; undefined when it is neither (the caller refuses it). */
+  _cleanArt(art) {
+    if (art == null) return null;
+    if (typeof art !== 'string') return undefined;
+    const chars = this.safeData()?.assets?.chars;
+    return chars && Object.prototype.hasOwnProperty.call(chars, art) ? art : undefined;
+  }
+
+  /** Put a session's art on its player seat (and spectator record) and tell the room. */
+  _applyArtToSeat(session, art, { broadcast = false } = {}) {
+    const room = this.roomOf(session);
+    if (!room) return;
+    const seat = room.seatOf(session.playerId);
+    const spectator = room.spectatorOf(session.playerId);
+    if (seat) seat.art = art;
+    if (spectator) spectator.art = art;
+    if (broadcast && (seat || spectator)) this.broadcastState(room);
+  }
+
+  /**
+   * An account's uploaded avatar changed (server/index.js POST/DELETE /api/account/avatar after auth.setAvatar):
+   * push it onto every live session of that account and the seat it occupies, so the room redraws without a reconnect.
+   */
+  applyProfile(accountId, { avatar } = {}) {
+    if (!Number.isInteger(accountId) || avatar === undefined) return;
+    for (const s of this.registry.all()) {
+      if (s.accountId !== accountId) continue;
+      s.avatar = avatar ?? null;
+      const room = this.roomOf(s);
+      if (room) {
+        const seat = room.seatOf(s.playerId);
+        const spectator = room.spectatorOf(s.playerId);
+        if (seat) seat.avatar = s.avatar;
+        if (spectator) spectator.avatar = s.avatar;
+        if (seat || spectator) this.broadcastState(room);
+      }
+      sendSession(s, { t: 'auth.profile', account: { id: s.accountId, name: s.name, role: s.role ?? null, art: s.art ?? null, avatar: s.avatar ?? null } });
+    }
+  }
+
   chat(session, { text }) {
     const room = this.roomOf(session);
     if (!room) return fail(ERR.NOT_IN_ROOM);
@@ -1519,11 +1596,19 @@ export class Lobby {
     session.accountId = null;
     session.accountToken = null;
     session.role = null;
+    // the profile is the account's: back to the guest look (no 立绘 / avatar) on the session and its seat
+    session.art = null;
+    session.avatar = null;
     if (token && this.auth) this.auth.logout(token);
     // the display name stays (that is the existing behaviour); a room seat drops the role badge with it
     const room = this.roomOf(session);
     const seat = room ? (room.seatOf(session.playerId) || room.spectatorOf(session.playerId)) : null;
-    if (seat && seat.role && !room.match) { seat.role = null; this.broadcastState(room); }
+    if (seat && !room.match) {
+      seat.role = null;
+      seat.art = null;
+      seat.avatar = null;
+      this.broadcastState(room);
+    }
     return OK;
   }
 
@@ -1550,14 +1635,18 @@ export class Lobby {
     session.accountToken = token;
     session.name = account.name;
     session.role = account.role ?? null;
+    session.art = account.art ?? null;
+    session.avatar = account.avatar ?? null;
     this.kickOtherSessions(session, account.id);
     sendSession(session, { t: 'auth.ok', account, token });
     const room = this.roomOf(session);
     if (room) {
       const seat = room.seatOf(session.playerId);
-      if (seat && !room.match && (seat.name !== account.name || (seat.role ?? null) !== (account.role ?? null))) {
+      if (seat && !room.match) {
         seat.name = account.name;
         seat.role = account.role ?? null;
+        seat.art = session.art;
+        seat.avatar = session.avatar;
         this.broadcastState(room);
       }
     }
@@ -2068,6 +2157,9 @@ export class Lobby {
   humanSeat(idx, session) {
     return {
       seat: idx, playerId: session.playerId, name: session.name, role: session.role ?? null, isBot: false, ready: false, connected: session.connected, left: false,
+      // the player's profile (schema v6): the seat card's 立绘 charId and uploaded avatar file, or null
+      art: session.art ?? null,
+      avatar: session.avatar ?? null,
       loadout: session.loadout || null,
       ops: session.ops || null,
       notOwned: session.notOwned || null,
