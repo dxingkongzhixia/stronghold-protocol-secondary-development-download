@@ -1152,6 +1152,12 @@
 .plugtag.is-modded { color: #ffb066; border-color: rgba(255, 159, 67, .6); background: rgba(255, 159, 67, .1); }
 .plugtag--static { cursor: default; }
 .plugpanel { display: flex; flex-direction: column; gap: .12rem; }
+/* The preview set's status lives in the dialog footer (PLUGIN PREVIEW · 完成): keeping it out of the body means the
+   loading text can never push the plugin rows down (owner 2026-10-25). */
+.plugpanel__foot { flex: 1 1 auto; display: flex; align-items: center; justify-content: space-between; gap: .12rem; min-width: 0; }
+.plugpanel__foot-status { min-width: 0; font-size: calc(.14 * var(--t)); line-height: 1.4; color: var(--text-md); overflow-wrap: anywhere; }
+.plugpanel__foot-status.is-warn { color: #ffb066; }
+.plugpanel__foot .btn { flex: none; }
 .plugpanel__lead { display: flex; align-items: center; flex-wrap: wrap; gap: .1rem; color: var(--text-md); font-size: calc(.15 * var(--t)); line-height: 1.7; }
 .plugpanel__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .08rem; max-height: none; overflow: visible; }
 /* the list's five sections (shared/plugins/category.js) as tabs, the admin console's subnav pattern: one non-empty

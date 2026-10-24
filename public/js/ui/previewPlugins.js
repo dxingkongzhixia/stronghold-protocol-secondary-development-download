@@ -138,13 +138,21 @@ export function PreviewPluginPanel({ open, onClose }) {
     setPreviewPlugins(next.slice(0, PREVIEW_LIMIT));
     setTimeout(() => setBusy(false), 350);
   };
+  // The preview set's status sits in the dialog footer (the owner's 2026-10-25 request): a line above the list pushed
+  // every row down while it appeared, which read as a flash. Loading / failure / the current count never move the body.
+  const status = state.status === 'loading'
+    ? t('正在准备预览内容…')
+    : state.status === 'failed'
+      ? t('预览内容加载失败：{error}', { error: state.error || '' })
+      : state.ids.length ? t('正在预览内容：{n} 个插件', { n: state.ids.length }) : '';
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('插件预览')} micro="PLUGIN PREVIEW" width="7.4rem"
-      actions=${html`<${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
+      actions=${html`<div class="plugpanel__foot">
+        <span class=${`plugpanel__foot-status${state.status === 'failed' ? ' is-warn' : ''}`} role="status" aria-live="polite">${status}</span>
+        <${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>
+      </div>`}>
     <div class="plugpanel" data-testid="preview-plugins">
       <p class="plugpanel__lead">${t('这里的开关只影响主界面的预览（干员调配、S.W.E.E.P 等）；对局内容仍由房间创建者决定。')}</p>
       <p class="set-hint">${t('默认全部关闭 = 原版；开启后可以浏览插件里的干员、敌人和 Boss，离开房间也不会改变对局。')}</p>
-      ${state.status === 'failed' ? html`<p class="set-hint is-warn">${t('预览内容加载失败：{error}', { error: state.error || '' })}</p>` : null}
-      ${state.status === 'loading' ? html`<p class="set-hint">${t('正在准备预览内容…')}</p>` : null}
       ${installed && cat.status === 'loading' && !rows.length ? html`<p class="set-hint">${t('正在读取插件列表…')}</p>` : null}
       ${installed && cat.status === 'failed' && !rows.length ? html`<p class="set-hint is-warn">${t('无法读取插件列表')}</p>` : null}
       ${!installed ? html`<p class="set-hint">${t('本服务器没有可在房间中使用的插件')}</p>` : null}
