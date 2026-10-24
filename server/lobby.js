@@ -692,6 +692,7 @@ export class Lobby {
       case 'auth.login': return this.login(session, msg);
       case 'auth.logout': return this.logout(session);
       case 'account.setArt': return this.accountSetArt(session, msg);
+      case 'account.setAvatar': return this.accountSetAvatar(session, msg);
       case 'mm.join': return this.mmJoin(session, msg);
       case 'mm.cancel': return this.mmCancel(session);
       // player bug report (server/community.js, docs/MATCHMAKING.md §36): TEXT + already-uploaded image ids
@@ -1029,6 +1030,23 @@ export class Lobby {
     session.art = value;
     this._applyArtToSeat(session, value, { broadcast: true });
     sendSession(session, { t: 'auth.profile', account });
+    return OK;
+  }
+
+  /**
+   * account.setAvatar: the profile picture from an operator's own avatar (a charId; null restores the initials).
+   * The upload route writes the same accounts.avatar column as a file name; this clears that with a charId.
+   */
+  accountSetAvatar(session, { art }) {
+    if (!this.auth || !session.accountId) return fail(ERR.AUTH_REQUIRED);
+    const value = art == null ? null : String(art);
+    if (value != null) {
+      const chars = this.safeData()?.assets?.chars;
+      if (!chars || !Object.prototype.hasOwnProperty.call(chars, value)) return fail(ERR.BAD_MSG, 'unknown operator avatar');
+    }
+    const account = this.auth.setAvatar(session.accountId, value);
+    if (!account) return fail(ERR.AUTH_REQUIRED);
+    this.applyProfile(session.accountId, { avatar: value });
     return OK;
   }
 

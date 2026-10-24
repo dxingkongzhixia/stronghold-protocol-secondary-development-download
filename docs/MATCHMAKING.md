@@ -103,10 +103,10 @@
 - **游客**：不登录仍可独立模拟 / 私房；**野排（`mm.join`）要求已绑定账号**（否则 `AUTH_REQUIRED`）。
 - **个人资料（schema v6，2026-10-24）**：
   - `accounts.art` 是这个账号的**默认立绘**：一个干员 `charId`（默认全身立绘）或核心皮肤键 `charId@skinKey`（该皮肤的 `illust`，docs/SKINS.md），NULL = 座位卡默认外观。新座位创建 / 账号绑定时由 `Lobby.humanSeat` 带进 `seats[].art`，所以同盟里的其他博士都能看到。
-  - `accounts.avatar` 是**上传头像**的文件名：`var/avatars/<sha256 前 32 位>.<png|jpg|webp>`（内容寻址）。`seats[].avatar` / `spectators[].avatar` 只带这个文件名，客户端用 `/avatar/<file>` 取图。
+  - `accounts.avatar` 是**头像**：上传图片时是 `var/avatars/<sha256 前 32 位>.<png|jpg|webp>`（内容寻址，`GET /avatar/<file>` 取图），或一个干员 `charId`（用该干员的官方头像，客户端从 `data/assets.json` 解析；`account.setAvatar { art: charId | null }` 设置/清除，`null` 回到首字母）。`seats[].avatar` / `spectators[].avatar` 带同一个值。
   - `room.setArt { art, save? }`：改当前座位的立绘（座位 / 观战席都行，服务端按 `data/assets.json` 的 `chars` 校验）；`save: true` 且已登录时同时写入账号默认值。游客可以换，但只影响本会话。
   - `account.setArt { art }`：只改账号默认立绘（需要登录），同时应用到当前座位。
-  - `POST /api/account/avatar`（头 `x-account-token`，**≤2 MiB**，PNG / JPEG / WebP 由**字节**嗅探，SVG/HTML 拒绝；每账号 10 次 / 10 分钟）→ `{ avatar, url, account }`；`DELETE` 恢复默认头像；`GET /avatar/<file>` 公开、`immutable` 缓存。成功后 `Lobby.applyProfile` 更新该账号的在线会话与座位并广播 `room.state`，同时推 `auth.profile { account }`。
+  - `POST /api/account/avatar`（头 `x-account-token`，**≤2 MiB**，PNG / JPEG / WebP 由**字节**嗅探，SVG/HTML 拒绝；每账号 10 次 / 10 分钟）→ `{ avatar, url, account }`；`DELETE` 恢复默认头像；`GET /avatar/<file>` 公开、`immutable` 缓存。成功后 `Lobby.applyProfile` 更新该账号的在线会话与座位并广播 `room.state`，同时推 `auth.profile { account }`。**头像也可以直接用干员头像**（`account.setAvatar { art: charId | null }`，同一列存 charId，客户端按 `data/assets.json` 取图）；上传图片与选择干员头像互相覆盖，`DELETE` / `null` 清除。
   - 头像文件不随账号删除清理（内容寻址，可能被其他账号复用）；`var/avatars/` 与 `var/` 一样不入库。
 
 

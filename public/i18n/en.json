@@ -2031,5 +2031,9 @@
   "返回干员列表": "Back to operators",
   "暂无可用的皮肤立绘": "No skin artwork available",
   "邀请": "Invite",
-  "复制同盟密钥以邀请队友": "Copy the alliance key to invite teammates"
+  "复制同盟密钥以邀请队友": "Copy the alliance key to invite teammates",
+  "选择头像": "Choose avatar",
+  "选择干员头像": "Choose an operator avatar",
+  "选择后，同盟里的博士都会看到这个头像。": "Once chosen, every doctor in the alliance sees this avatar.",
+  "上传图片，或从干员头像里选一个；同盟里的博士都会看到。": "Upload an image, or pick an operator avatar; every doctor in the alliance sees it."
 }

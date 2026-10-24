@@ -182,7 +182,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
   const state = offline ? 'offline' : seat.ready || seat.isBot ? 'ready' : isHostSeat ? 'host' : 'waiting';
   // the player's profile (schema v6, server/lobby.js): their chosen 立绘 (charId or charId@skin) and uploaded avatar file
   const art = !seat.isBot ? seatArtUrl(data.get('assets'), seat.art) : null;
-  const avatar = !seat.isBot ? avatarUrl(seat.avatar) : null;
+  const avatar = !seat.isBot ? avatarUrl(seat.avatar, data.get('assets')) : null;
   const stateText = state === 'ready' ? t('已就绪') : state === 'offline' ? t('连接中断') : state === 'host' ? t('待命中') : t('准备中');
   return html`<article class=${`seat brackets${isMe ? ' is-me' : ''}${isHostSeat ? ' is-host' : ''}${seat.isBot ? ' is-bot' : ''} is-${state}`}
       style=${`--seat-i:${index}`}>

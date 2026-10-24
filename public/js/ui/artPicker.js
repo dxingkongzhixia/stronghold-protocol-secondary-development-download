@@ -27,10 +27,12 @@ const charOf = (art) => (typeof art === 'string' && art ? art.split('@')[0] : nu
  * @param {{
  *   open: boolean, current?: string|null, onPick: (art: string|null) => void, onClose: () => void,
  *   canSaveDefault?: boolean, saveDefault?: boolean, onSaveDefaultChange?: (v: boolean) => void, busy?: boolean,
- * }} props
+ *   mode?: 'art'|'avatar',
+ * }} props `mode: 'avatar'` is the profile picture picker: one step, the operator's own avatar, no default-art step.
  */
-export function ArtPicker({ open, current = null, onPick, onClose, canSaveDefault = false, saveDefault = false, onSaveDefaultChange, busy = false }) {
+export function ArtPicker({ open, current = null, onPick, onClose, canSaveDefault = false, saveDefault = false, onSaveDefaultChange, busy = false, mode = 'art' }) {
   useData('chess', 'assets', 'backups');
+  const avatarMode = mode === 'avatar';
   const [q, setQ] = useState('');
   const [rarity, setRarity] = useState(0);
   const [charId, setCharId] = useState(null);
@@ -67,7 +69,7 @@ export function ArtPicker({ open, current = null, onPick, onClose, canSaveDefaul
     key, name: skin?.name || key, group: skin?.group || '', art: seatArtUrl(m, key),
   })).filter((s) => s.art), [entry, m]);
   const choose = (art) => { if (!busy) onPick(art); };
-  const title = t('更换立绘');
+  const title = avatarMode ? t('选择头像') : t('更换立绘');
   return html`<${Modal} open=${open} onClose=${onClose} title=${title} micro="SEAT CARD" width="8.4rem"
       actions=${html`<${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
     <div class="artpick" data-testid="art-picker" data-step=${charId ? 'arts' : 'operators'}>
@@ -107,7 +109,7 @@ export function ArtPicker({ open, current = null, onPick, onClose, canSaveDefaul
         </button>
         ${rows.map((c) => html`<button key=${c.charId} type="button" role="option" aria-selected=${charOf(current) === c.charId ? 'true' : 'false'}
           class=${`artpick__tile${charOf(current) === c.charId ? ' is-on' : ''}`} data-art=${c.charId} title=${c.name} disabled=${busy}
-          onClick=${() => { setCharId(c.charId); }}>
+          onClick=${() => { if (avatarMode) choose(c.charId); else setCharId(c.charId); }}>
           ${c.avatar ? html`<img class="artpick__img" src=${c.avatar} alt="" loading="lazy" draggable=${false} />` : html`<span class="artpick__glyph">${[...c.name][0] || '?'}</span>`}
           <span class="artpick__rarity num">${c.rarity || ''}${c.rarity ? '★' : ''}</span>
           <span class="artpick__name">${c.name}</span>
@@ -115,8 +117,8 @@ export function ArtPicker({ open, current = null, onPick, onClose, canSaveDefaul
       </div>`}
       ${!charId && !rows.length ? html`<p class="set-hint">${t('没有符合条件的干员。')}</p>` : null}
       <div class="artpick__foot">
-        <span class="set-hint">${t('选择后，同盟里的博士都会看到这张立绘。')}</span>
-        ${canSaveDefault ? html`<label class="artpick__save"><input type="checkbox" checked=${saveDefault}
+        <span class="set-hint">${avatarMode ? t('选择后，同盟里的博士都会看到这个头像。') : t('选择后，同盟里的博士都会看到这张立绘。')}</span>
+        ${canSaveDefault && !avatarMode ? html`<label class="artpick__save"><input type="checkbox" checked=${saveDefault}
           onChange=${(e) => onSaveDefaultChange?.(e.currentTarget.checked)} /> ${t('同时设为我的默认立绘')}</label>` : null}
       </div>
     </div>

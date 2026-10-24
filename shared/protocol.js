@@ -522,6 +522,9 @@ export const C2S = {
   'room.setArt': { $optional: ['art', 'save'], art: nullable(isArtKey), save: (v) => v === undefined || v === true || v === false },
   // the logged-in player's default 立绘 outside a room (the 账号 / 个人资料 dialog); also applied to the current seat
   'account.setArt': { $optional: ['art'], art: nullable(isArtKey) },
+  // the logged-in player's avatar from an operator (charId; null = back to the initials/glyph) — the upload route
+  // (POST /api/account/avatar) is the other source and writes the same accounts.avatar column as a file name
+  'account.setAvatar': { $optional: ['art'], art: nullable(isCharId) },
 
   // accounts (server/auth.js; docs/MATCHMAKING.md): 野排 requires one. Both answer with auth.ok { account, token }
   'auth.register': { name: (v) => isStr(v, AUTH_NAME_MAX) && v.trim().length >= AUTH_NAME_MIN, password: (v) => isStr(v, AUTH_PASS_MAX) && v.length >= AUTH_PASS_MIN },

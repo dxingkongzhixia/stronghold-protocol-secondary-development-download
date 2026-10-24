@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  uiUrl, chessAvatarUrl, chessPortraitUrl, seatArtUrl, skillIconUrl, profIconUrl, subProfIconUrl, bondIconUrl, bandIconUrl, itemIconUrl,
+  uiUrl, chessAvatarUrl, chessPortraitUrl, seatArtUrl, avatarUrl, skillIconUrl, profIconUrl, subProfIconUrl, bondIconUrl, bandIconUrl, itemIconUrl,
   enemyIconUrl, tokenAvatarUrl, factionIconUrl, titleIconUrl, effectIconUrl,
 } from '../../public/js/ui/assetUrls.js';
 
@@ -87,5 +87,13 @@ describe('assetUrls', () => {
     assert.equal(seatArtUrl({ chars: { char_y: { portrait: '/p.png', portraitE2: '/p2.png' } } }, 'char_y'), '/p2.png');
     assert.equal(seatArtUrl({ chars: { char_z: { portrait: '/p.png' } } }, 'char_z'), '/p.png');
     assert.equal(seatArtUrl(fake, 'char_nope'), null);
+  });
+  test('avatarUrl: an uploaded file, an operator charId, and nothing else', () => {
+    const file = `${'ab'.repeat(16)}.webp`;
+    assert.equal(avatarUrl(file), `/avatar/${file}`);
+    assert.equal(avatarUrl('char_003_kalts', m), m.chars.char_003_kalts.avatarE2 || m.chars.char_003_kalts.avatar);
+    assert.equal(avatarUrl('char_003_kalts', null), null, 'the charId form needs the manifest');
+    assert.equal(avatarUrl('not-an-avatar'), null);
+    assert.equal(avatarUrl(null), null);
   });
 });

@@ -29,7 +29,7 @@ import { OnlineOverlay } from '../online.js';
 import { PublicRoomsScreen } from '../rooms.js';
 import { net, identity } from '../../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn, setProtocolReturn, consumeProtocolReturn, setOnlineOpen, setOnlineFilter, setOnlineStatsReturn } from '../../store.js';
-import { useData } from '../../data.js';
+import { data, useData } from '../../data.js';
 import { t } from '../../../../shared/i18n.js';
 import { MODE_CARDS, difficultyInfo, normalizeCode, codeArg, remembersRoomOrigin } from '../lobbyData.js';
 import { Emblem } from '../title.js';
@@ -414,7 +414,7 @@ export function LobbyScreen() {
         ${html`<${Button} variant="secondary" size="sm" icon="user" class="hub-account"
           onClick=${() => setShowAccount(true)}>${auth?.account ? t('账号') : t('登录 / 注册')}<//>`}
         <button type="button" class="me-chip me-chip--btn" onClick=${openStats} title=${t('统计数据')} aria-label=${t('统计数据')}>
-          <${AvatarFrame} size="sm" src=${avatarUrl(auth?.account?.avatar)} name=${me.name} seat=${0} self=${true} />
+          <${AvatarFrame} size="sm" src=${avatarUrl(auth?.account?.avatar, data.get('assets'))} name=${me.name} seat=${0} self=${true} />
           <span class="me-chip__text">
             <span class="me-chip__name">${me.name || t('博士')}<${RoleTag} role=${auth?.account?.role} />${auth?.account ? null : html`<em class="me-chip__guest">${t('游客')}</em>`}</span>
             <${MicroLabel}>${me.playerId != null ? `DOCTOR #${doctorNo(me.playerId)}` : 'DOCTOR'}<//>

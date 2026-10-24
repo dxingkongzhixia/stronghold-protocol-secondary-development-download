@@ -127,6 +127,38 @@ test('account.setArt: the default can be set outside a room; guests are refused'
   }
 });
 
+test('account.setAvatar: an operator avatar can replace the uploaded image', async () => {
+  const srv = await startServer({ port: 0, quiet: true, accounts: true, db: openMemoryDb() });
+  const guest = await TestClient.connect(`ws://127.0.0.1:${srv.port}/ws`);
+  const user = await TestClient.connect(`ws://127.0.0.1:${srv.port}/ws`);
+  try {
+    await guest.hello('AvatarGuest');
+    const denied = await guest.request({ t: 'account.setAvatar', art: 'char_003_kalts' });
+    assert.equal(denied.t, 'error');
+    assert.equal(denied.code, 'AUTH_REQUIRED');
+
+    await user.hello('AvatarUser2');
+    await user.request({ t: 'auth.register', name: 'AvatarUser2', password: 'secret1' });
+    await user.waitFor('auth.ok');
+    const ok = await user.request({ t: 'account.setAvatar', art: 'char_003_kalts' });
+    assert.equal(ok.t, 'ok');
+    const prof = await user.waitFor('auth.profile', (m) => m.account?.avatar === 'char_003_kalts', 4000);
+    assert.equal(prof.account.avatar, 'char_003_kalts');
+    // the seat payload carries the same charId; every client resolves it from the asset manifest
+    await user.request({ t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
+    const state = await user.waitFor('room.state', (s) => s.seats?.[0]?.avatar === 'char_003_kalts', 4000);
+    assert.equal(state.seats[0].avatar, 'char_003_kalts');
+    const bad = await user.request({ t: 'account.setAvatar', art: 'char_999_nope' });
+    assert.equal(bad.t, 'error');
+    await user.request({ t: 'account.setAvatar', art: null });
+    await user.waitFor('auth.profile', (m) => m.account && !m.account.avatar, 4000);
+  } finally {
+    await guest.close();
+    await user.close();
+    await srv.close();
+  }
+});
+
 test('POST /api/account/avatar: auth, sniffing, immutable serving and DELETE', async () => {
   const srv = await startServer({ port: 0, quiet: true, accounts: true, db: openMemoryDb() });
   const c = await TestClient.connect(`ws://127.0.0.1:${srv.port}/ws`);
@@ -183,4 +215,7 @@ test('validateC2S: the art messages accept a charId or null and refuse anything 
   assert.equal(validateC2S({ t: 'account.setArt', art: ART }), null);
   assert.equal(validateC2S({ t: 'account.setArt', art: 'char_291_aglina@boc#1' }), null);
   assert.notEqual(validateC2S({ t: 'account.setArt', art: 'chess_char_1_01_a' }), null);
+  assert.equal(validateC2S({ t: 'account.setAvatar', art: ART }), null);
+  assert.equal(validateC2S({ t: 'account.setAvatar', art: null }), null);
+  assert.notEqual(validateC2S({ t: 'account.setAvatar', art: 'char_291_aglina@boc#1' }), null, 'an avatar is an operator, not a skin key');
 });

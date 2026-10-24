@@ -22,10 +22,22 @@ export function charPortraitUrl(m, charId) {
   return str(entry?.portraitE2) || str(entry?.portrait) || null;
 }
 
-/** An uploaded avatar's URL from the account/seat field (`<32 hex>.<png|jpg|webp>`), or null. */
-export function avatarUrl(avatar) {
-  const file = str(avatar);
-  return file && /^[0-9a-f]{32}\.(png|jpg|webp)$/.test(file) ? `/avatar/${file}` : null;
+/**
+ * An avatar's URL from the account/seat field. The field is either an uploaded file (`<32 hex>.<png|jpg|webp>`,
+ * served at /avatar/<file>) or an operator charId (the built-in operator avatar from the manifest). Pass `m` for the
+ * charId form; without it only uploaded files resolve.
+ * @param {string|null|undefined} avatar
+ * @param {any} [m] data/assets.json
+ */
+export function avatarUrl(avatar, m = null) {
+  const v = str(avatar);
+  if (!v) return null;
+  if (/^[0-9a-f]{32}\.(png|jpg|webp)$/.test(v)) return `/avatar/${v}`;
+  if (/^char_/.test(v)) {
+    const entry = obj(obj(m)?.chars)?.[v];
+    return str(entry?.avatarE2) || str(entry?.avatar) || null;
+  }
+  return null;
 }
 
 /**

@@ -94,8 +94,9 @@ export function AccountForm({ name, onDone }) {
 
 /** The logged-in summary + 退出 (shared by the title panel and the dialog). */
 export function AccountWho({ account }) {
+  useData('assets');
   return html`<div class="account-who">
-    <${AvatarFrame} size="sm" src=${avatarUrl(account.avatar)} name=${account.name} seat=${0} self=${true} />
+    <${AvatarFrame} size="sm" src=${avatarUrl(account.avatar, data.get('assets'))} name=${account.name} seat=${0} self=${true} />
     <span class="account-who__line"><${Icon} name="user" />${t('已登录 ·')} <b>${account.name}</b><${RoleTag} role=${account.role} /></span>
     <${Button} variant="secondary" onClick=${logoutAccount}>${t('退出登录')}<//>
   </div>`;
@@ -124,9 +125,10 @@ export function ProfilePanel() {
   const acc = auth?.account;
   const [busy, setBusy] = useState(false);
   const [artOpen, setArtOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const fileRef = useRef(null);
   if (!acc) return null;
-  const avatar = avatarUrl(acc.avatar);
+  const avatar = avatarUrl(acc.avatar, data.get('assets'));
   const art = acc.art ? seatArtUrl(data.get('assets'), acc.art) : null;
   const call = async (method, file = null) => {
     const token = net.accountToken;
@@ -161,13 +163,22 @@ export function ProfilePanel() {
       .then(() => toast(t('默认立绘已保存'), 'success'))
       .catch(toastError);
   };
+  const pickAvatar = (next) => {
+    setAvatarOpen(false);
+    net.request('account.setAvatar', { art: next })
+      .then(() => toast(t('头像已更新'), 'success'))
+      .catch(toastError);
+  };
   return html`<div class="profile" data-testid="profile">
     <div class="profile__row">
-      <${AvatarFrame} size="lg" src=${avatar} name=${acc.name} seat=${0} self=${true} />
+      <button type="button" class="profile__avatar" onClick=${() => setAvatarOpen(true)} aria-label=${t('选择干员头像')} title=${t('选择干员头像')}>
+        <${AvatarFrame} size="lg" src=${avatar} name=${acc.name} seat=${0} self=${true} />
+      </button>
       <div class="profile__body">
         <b class="profile__title">${t('头像')}</b>
-        <span class="set-hint">${t('PNG / JPEG / WebP，最大 {MB} MB；同盟里的博士都会看到。', { MB: Math.round(AVATAR_MAX_BYTES / 1024 / 1024) })}</span>
+        <span class="set-hint">${t('上传图片，或从干员头像里选一个；同盟里的博士都会看到。')}</span>
         <div class="profile__actions">
+          <${Button} variant="secondary" size="sm" icon="user" disabled=${busy} onClick=${() => setAvatarOpen(true)}>${t('选择干员头像')}<//>
           <${Button} variant="secondary" size="sm" icon="user" disabled=${busy} onClick=${() => fileRef.current?.click()}>${t('上传头像')}<//>
           ${acc.avatar ? html`<${Button} variant="ghost" size="sm" disabled=${busy} onClick=${removeAvatar}>${t('移除头像')}<//>` : null}
         </div>
@@ -187,6 +198,9 @@ export function ProfilePanel() {
       </div>
     </div>
     <${ArtPicker} open=${artOpen} current=${acc.art ?? null} onPick=${pickArt} onClose=${() => setArtOpen(false)} />
+    <${ArtPicker} mode="avatar" open=${avatarOpen}
+      current=${typeof acc.avatar === 'string' && acc.avatar.startsWith('char_') ? acc.avatar : null}
+      onPick=${pickAvatar} onClose=${() => setAvatarOpen(false)} />
   </div>`;
 }
 

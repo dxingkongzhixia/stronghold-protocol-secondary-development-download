@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { html, Icon, MicroLabel, TextField, AvatarFrame, RoleTag } from '../ui/components.js';
 import { useStore, setOnlineOpen, setOnlineStatsReturn, setOnlineFilter } from '../store.js';
 import { openPlayerStats } from './stats.js';
+import { data as dataset } from '../data.js';
 import { avatarUrl } from '../ui/assetUrls.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
@@ -129,7 +130,7 @@ export function OnlineOverlay({ onClose }) {
             title=${target ? t('查看其对局记录') : undefined}
             onClick=${target ? open : undefined}
             onKeyDown=${target ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } } : undefined}>
-          <${AvatarFrame} size="sm" src=${avatarUrl(p.avatar)} name=${p.name} seat=${i} offline=${p.status === 'offline'} />
+          <${AvatarFrame} size="sm" src=${avatarUrl(p.avatar, dataset.get('assets'))} name=${p.name} seat=${i} offline=${p.status === 'offline'} />
           <span class="online-row__name">${p.name}<${RoleTag} role=${p.role} /></span>
           ${p.guest ? html`<span class="online-row__tag">${t('游客')}</span>` : html`<span class="online-row__tag is-acc">${t('已登录')}</span>`}
           <span class=${`online-row__status is-${st(p.status).c}`}>${t(st(p.status).label)}</span>
