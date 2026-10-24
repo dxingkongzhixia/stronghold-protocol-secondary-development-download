@@ -152,6 +152,8 @@ const QUALITY = [['high', N_('高')], ['medium', N_('中')], ['low', N_('低')]]
  * left out when no effects were extracted (data/local-fx.json lists none).
  */
 const OFFICIAL_FX = [['off', N_('关')], ['lite', N_('精简')], ['full', N_('完整')]];
+/** 显示伤害数字: one control instead of a toggle plus a second "official only" toggle. */
+const DAMAGE_MODES = [['off', N_('关闭')], ['all', N_('全部')], ['official', N_('官方')]];
 /**
  * 文字大小: one step of TEXT_SIZES (ui/gameLogic/settings.js) with its label — 小 is the design's own sizes, the others
  * raise the text root `--t` (css/theme.css) and with it every readable font-size; the board and the HUD's boxes stay.
@@ -385,7 +387,8 @@ export function SettingsModal({ open, onClose }) {
     return () => { live = false; };
   }, [open]);
   const fxTier = resolveOfficialFx(s.officialFx, true);
-  const gpu = gpuInfo();   // the 硬件加速 row below reads it: the declaration the upstream hunks dropped (a live outage on 2026-10-16)
+  const damageMode = !s.damageNumbers ? 'off' : s.officialDamageNumbers ? 'official' : 'all';
+  const pickDamageMode = (mode) => updateSettings({ damageNumbers: mode !== 'off', officialDamageNumbers: mode === 'official' });
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('设置')} micro="SETTINGS" width="7.4rem"
     actions=${html`<${Button} variant="secondary" icon="edit" class="set-bug" onClick=${openBugReport}>${t('bug提交')}<//>
       <${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
@@ -407,9 +410,15 @@ export function SettingsModal({ open, onClose }) {
       <${Slider} label=${t('音效')} micro="SFX" icon="signal" value=${s.sfx}
                  onInput=${(v) => { updateSettings({ sfx: v }); if (!tested) { setTested(true); setTimeout(() => setTested(false), 400); audio.sfx('click'); } }} />
       <${Toggle} label=${t('静音')} micro="MUTE" value=${s.muted} onChange=${(v) => updateSettings({ muted: v })} />
-      <${Toggle} label=${t('显示伤害数字')} micro="DAMAGE NUMBERS" value=${s.damageNumbers} onChange=${(v) => updateSettings({ damageNumbers: v })} />
-      <${Toggle} label=${t('官方伤害数字')} micro="OFFICIAL NUMBERS" value=${s.officialDamageNumbers} onChange=${(v) => updateSettings({ officialDamageNumbers: v })} />
-      <p class="set-hint">${t('只显示达到官方暴击条件的红色数字。关闭时仍显示每一次命中。')}</p>
+      <div class="set-row">
+        <span class="set-row__label">${t('显示伤害数字')}<${MicroLabel}>DAMAGE NUMBERS<//></span>
+        <div class="set-seg" role="radiogroup" aria-label=${t('显示伤害数字')} data-testid="damage-mode">
+          ${DAMAGE_MODES.map(([id, label]) => html`<button key=${id} type="button" role="radio"
+            aria-checked=${damageMode === id ? 'true' : 'false'} class=${damageMode === id ? 'is-on' : ''}
+            onClick=${() => pickDamageMode(id)}>${t(label)}</button>`)}
+        </div>
+      </div>
+      <p class="set-hint">${t('「全部」显示每一次命中；「官方」只显示达到官方暴击条件的红色数字。')}</p>
       <${Toggle} label=${t('弹药数量')} micro="AMMO COUNT" value=${s.ammoCount} onChange=${(v) => updateSettings({ ammoCount: v })} />
       <p class="set-hint">${t('弹药类技能开启时，在弹药条下方显示剩余弹药 / 总弹药数（如 13/14）。官方界面没有这个数字。')}</p>
 
@@ -438,15 +447,9 @@ export function SettingsModal({ open, onClose }) {
         </div>
       </div>
       <p class="set-hint set-textsize-note">${t('调整界面文字大小，棋盘保持原比例。')}</p>
-      <${ScreenFitSection} />
+      ${touchUi ? html`<${ScreenFitSection} />` : null}
       <${HotkeySection} keys=${s.keys} touchUi=${touchUi} />
       <${AssetCacheSection} />
-      <div class="set-row">
-        <span class="set-row__label">${t('硬件加速')}<${MicroLabel}>GPU ACCELERATION<//></span>
-        <span class="set-row__val" style=${`color:${gpu.hardware ? '#4ed8af' : '#ff7a5c'}`}>${gpu.hardware ? t('已开启') : t('未开启')}</span>
-      </div>
-      <p class="set-hint">${t('渲染器：')}${gpu.renderer || t('未知')} · WebGL2：${gpu.webgl2 ? t('支持') : t('不支持')}${gpu.hardware ? '' : t(' · 请在浏览器设置里开启「使用硬件加速」，否则画面会明显卡顿')}</p>
-      ${touchUi ? html`<p class="set-hint">${t('触屏操作：点击单位选中（撤退 / 出售）· 长按单位或卡牌查看详情 · 拖动部署后滑动选择朝向')}</p>` : null}
       <${Toggle} label=${t('显示其他玩家的皮肤')} micro="OTHER PLAYERS' SKINS" value=${s.otherSkins !== false} onChange=${(v) => updateSettings({ otherSkins: v })} />
       <p class="set-hint">${t('关闭后，其他博士的干员会显示默认外观；你的干员仍显示你选择的皮肤。')}</p>
       <${CosmeticSection} />

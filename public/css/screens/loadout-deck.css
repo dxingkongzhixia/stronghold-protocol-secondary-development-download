@@ -974,8 +974,8 @@
 }
 .lo--deck .lo-skin--fallback .lo-skin__art { opacity: .72; }
 .lo--deck .lo-skin__text { flex: none; min-width: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: .01rem; }
-.lo--deck .lo-skin__name { font-size: max(.16rem, 11px); line-height: 1.2; font-weight: 700; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lo--deck .lo-skin__group { font-family: var(--font-num); font-size: max(.12rem, 9px); line-height: 1.2; letter-spacing: .06em; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lo--deck .lo-skin__name { font-size: max(calc(.16 * var(--t)), 11px); line-height: 1.2; font-weight: 700; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lo--deck .lo-skin__group { font-family: var(--font-num); font-size: max(calc(.12 * var(--t)), 9px); line-height: 1.2; letter-spacing: .06em; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* the enlarged view is a modal portal, outside .lo--deck: the classic preview's size (65dvh, centred) */
 .lo-skin-preview { display: flex; align-items: center; justify-content: center; }

@@ -95,7 +95,7 @@
   background: rgba(24, 29, 28, .8); border: 1px solid rgba(255, 255, 255, .12); text-shadow: none; }
 .sw-chip img { width: max(.22rem, 14px); height: max(.22rem, 14px); object-fit: contain; }
 .sw-box { flex: none; display: flex; flex-direction: column; gap: .1rem; padding: .1rem .14rem .14rem; background: var(--sw-panel); border-top: 1px solid rgba(255, 255, 255, .1);
-  box-shadow: 0 .05rem .2rem rgba(0, 0, 0, .3); container-type: inline-size; }
+  box-shadow: 0 .05rem .2rem rgba(0, 0, 0, .3); }
 .sw-box__head { display: flex; align-items: center; justify-content: space-between; gap: .12rem; min-height: max(.4rem, 26px); }
 .sw-box__k { display: inline-flex; align-items: center; gap: .08rem; font-size: max(calc(.2 * var(--t)), 12px); font-weight: 800; }
 .sw-box__k .icon { width: max(.22rem, 14px); height: max(.22rem, 14px); color: #c7cfcd; }
@@ -140,11 +140,13 @@
    content; 100cqw is .sw-box's content width, so the cap is exactly two rows + the row gap. */
 .sw-ethumbs--grid {
   display: flex; flex-wrap: wrap; align-content: flex-start; gap: .1rem;
-  max-height: 3.2rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  /* two rows of 5: the left panel is ~40vw wide, so a tile is ~7.8vw and two rows ≈15.6vw (no container query needed:
+     the CSS gate forbids them). */
+  max-height: 15.6vw; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
   padding-right: .04rem;
 }
 .sw-ethumbs--grid .sw-eth { flex: none; width: calc((100% - .4rem) / 5); height: auto; aspect-ratio: 1; }
-@supports (height: 1cqw) { .sw-ethumbs--grid { max-height: calc(2 * ((100cqw - .4rem) / 5) + .1rem); } }
+@media (max-aspect-ratio: 1/1) { .sw-ethumbs--grid { max-height: 38vw; } }
 
 /* 敌方领袖 (owner 2026-10-24): the boss and its escorts get the same large faces as 敌方情报, the 护卫 label rides
    between them; more escorts wrap into a second row. */

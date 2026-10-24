@@ -1902,5 +1902,7 @@
   "卡片视图": "Card view",
   "收起 (Esc)": "Collapse (Esc)",
   "点击干员前往干员调配": "Click an operator to open the loadout",
-  "{name} · 前往干员调配": "{name} · Open loadout"
+  "{name} · 前往干员调配": "{name} · Open loadout",
+  "官方": "Official",
+  "「全部」显示每一次命中；「官方」只显示达到官方暴击条件的红色数字。": "All shows every hit; Official shows only the red numbers that meet the official critical condition."
 }

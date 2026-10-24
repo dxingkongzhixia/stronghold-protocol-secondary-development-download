@@ -71,7 +71,7 @@ test('the stylesheet: the inset box and its layout root only under [data-fit]', 
   assert.doesNotMatch(sec, /!important/);
   assert.doesNotMatch(sec, /--t\s*:/, 'the text size setting is left alone');
   const settings = readFileSync(path.join(ROOT, 'public/js/ui/settings.js'), 'utf8');
-  assert.match(settings, /<\$\{ScreenFitSection\} \/>/, 'the section is in the settings modal');
+  assert.match(settings, /touchUi \? html`<\$\{ScreenFitSection\} \/>` : null/, 'the touch-only section is in the settings modal');
 });
 
 describe('hudBands from the board\'s host', () => {

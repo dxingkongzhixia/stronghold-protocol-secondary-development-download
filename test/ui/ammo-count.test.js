@@ -32,7 +32,7 @@ test('the settings dialog has the toggle and a hint that the official interface 
   const src = read('public/js/ui/settings.js');
   assert.match(src, /<\$\{Toggle\} label=\$\{t\('弹药数量'\)\} micro="AMMO COUNT" value=\$\{s\.ammoCount\} onChange=\$\{\(v\) => updateSettings\(\{ ammoCount: v \}\)\} \/>/);
   assert.ok(src.includes(`t('${HINT}')`), 'the hint under it');
-  assert.ok(src.indexOf("t('官方伤害数字')") < src.indexOf(`t('${LABEL}')`), 'beside the damage-number options');
+  assert.ok(src.indexOf('const DAMAGE_MODES') < src.indexOf(`t('${LABEL}')`), 'beside the damage-number options');
   for (const lang of ['en', 'ja', 'ko', 'zh-TW']) {
     const pack = JSON.parse(read(`public/i18n/${lang}.json`));
     for (const id of [LABEL, HINT]) assert.ok(typeof pack[id] === 'string' && pack[id].length > 0, `${lang}: ${id}`);

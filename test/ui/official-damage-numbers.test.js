@@ -22,7 +22,8 @@ test('official damage numbers default off and only a real boolean is kept', () =
 
 test('the settings screen, the field view and the simplified board follow the same flag', () => {
   const settings = read('public/js/ui/settings.js');
-  assert.match(settings, /t\('官方伤害数字'\)/);
+  // one tri-state control (关闭 / 全部 / 官方) instead of two overlapping toggles
+  assert.match(settings, /const DAMAGE_MODES = \[\['off', N_\('关闭'\)\], \['all', N_\('全部'\)\], \['official', N_\('官方'\)\]\]/);
   assert.match(settings, /officialDamageNumbers/);
   const app = read('public/js/render/app.js');
   assert.match(app, /officialDamageNumbers/);

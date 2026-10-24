@@ -204,11 +204,12 @@ treating every raw `Attack` key as the normal skeleton clip. Held loops (§34.4/
 Connection recovery sits above the AI-away overlay and below global modals (§30.8), so a replaced session can
 be reclaimed by pointer while away. This does not change the stacking behavior of modals nested inside a screen.
 
-§30.17: 设置 →「官方伤害数字」 defaults off. Off, damage numbers stay the typed every-hit popups. On, and only
-while 「显示伤害数字」 is also on, the field draws a red integer for a `dmg` tuple marked `'r'` and a yellow MISS
-for a dodge fx whose payload is `num: 'm'` (PRTS 作战机制 「伤害红字（暴击）」). Ordinary hits and heals draw no
-digits in that mode. The mark is computed in the sim; the random offset above the model is client-side. The
-simplified board uses the same mark with a fixed slot. The title footer links the project repository in a new tab.
+§30.17: 设置 →「显示伤害数字」 is one tri-state control (关闭 / 全部 / 官方), replacing the old pair of toggles. 关闭
+draws nothing; 全部 draws the typed every-hit / heal popups; 官方 draws a red integer only for a `dmg` tuple marked
+`'r'` and a yellow MISS for a dodge fx whose payload is `num: 'm'` (PRTS 作战机制 「伤害红字（暴击）」), with
+ordinary hits and heals left blank. The mark is computed in the sim; the random offset above the model is
+client-side. The simplified board uses the same mark with a fixed slot. The title footer links the project repository
+in a new tab.
 ### Combat metrics (作战统计) — ported from the xinhai-ai fork
 
 The corner's 作战统计 button (`gm__metrics`, `ui/combatMetrics.js`) opens a modeless panel over the running battle: the
