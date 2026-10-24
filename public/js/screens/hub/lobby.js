@@ -97,7 +97,7 @@ function PublicRoomsPanel({ onAll, onJoin, onSpectate }) {
       <button type="button" class="hub-public__all" onClick=${onAll}>${t('全部')}<${Icon} name="chevronRight" /></button>
     </div>
     <div class="hub-public__list">
-      ${list.length ? list.map((r) => html`<div key=${r.code} class="hub-public__row">
+      ${list.length ? list.map((r) => html`<div key=${r.code} class=${`hub-public__row${r.state === 'lobby' ? ' is-lobby' : ''}`}>
         <div class="hub-public__rowhead">
           <span class="hub-public__name" title=${r.host || ''}>${t('{host}的同盟', { host: r.host || t('博士') })}</span>
           <button type="button" class=${`hub-public__join${r.state === 'playing' ? ' is-watch' : ''}`}
