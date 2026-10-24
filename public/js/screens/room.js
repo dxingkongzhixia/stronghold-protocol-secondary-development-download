@@ -32,7 +32,7 @@ import { rememberScriptConsent } from '../content.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, emptyMatch, isSpectating } from '../store.js';
 import { data, useData } from '../data.js';
-import { charPortraitUrl, avatarUrl } from '../ui/assetUrls.js';
+import { avatarUrl, seatArtUrl } from '../ui/assetUrls.js';
 import { ArtPicker } from '../ui/artPicker.js';
 import { difficultyInfo } from './lobby.js';
 import { t, tc } from '../../../shared/i18n.js';
@@ -162,11 +162,11 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
   if (!seat) {
     const canAdd = coop && facts.isHost;
     return html`<article class="seat seat--empty" style=${`--seat-i:${index}`}>
-      <header class="seat__head"><span class="seat__no num">P${index + 1}</span><${MicroLabel}>SEAT ${String(index + 1).padStart(2, '0')}<//></header>
+      <header class="seat__head"><span class="seat__grip" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="seat__no num">P${index + 1}</span></header>
       <div class="seat__art seat__art--empty">
-        <div class="seat__radar" aria-hidden="true"></div>
-        <span class="seat__wait">${t('等待博士加入')}</span>
-        <${MicroLabel}>AWAITING DOCTOR<//>
+        <span class="seat__plus" aria-hidden="true">+</span>
+        <b class="seat__invite">${t('邀请')}</b>
+        <span class="seat__wait">${canAdd ? t('复制同盟密钥以邀请队友') : t('等待博士加入')}</span>
       </div>
       <footer class="seat__foot">
         ${canAdd
@@ -180,48 +180,50 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
   const offline = seat.connected === false && !seat.isBot;
   // The host never needs to toggle ready: starting the match readies them (server rule).
   const state = offline ? 'offline' : seat.ready || seat.isBot ? 'ready' : isHostSeat ? 'host' : 'waiting';
-  // the player's profile (schema v6, server/lobby.js): their chosen 立绘 charId and uploaded avatar file
-  const art = !seat.isBot ? charPortraitUrl(data.get('assets'), seat.art) : null;
+  // the player's profile (schema v6, server/lobby.js): their chosen 立绘 (charId or charId@skin) and uploaded avatar file
+  const art = !seat.isBot ? seatArtUrl(data.get('assets'), seat.art) : null;
   const avatar = !seat.isBot ? avatarUrl(seat.avatar) : null;
+  const stateText = state === 'ready' ? t('已就绪') : state === 'offline' ? t('连接中断') : state === 'host' ? t('待命中') : t('准备中');
   return html`<article class=${`seat brackets${isMe ? ' is-me' : ''}${isHostSeat ? ' is-host' : ''}${seat.isBot ? ' is-bot' : ''} is-${state}`}
       style=${`--seat-i:${index}`}>
     ${bubble ? html`<div class="seat__chat"><${ChatBubble} key=${bubble.seq} name=${bubble.name} text=${bubble.text} own=${isMe} at=${bubble.at} ttl=${CHAT_BUBBLE_MS} /></div>` : null}
     <header class="seat__head">
+      <span class="seat__grip" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       <span class="seat__no num">P${index + 1}</span>
-      <${MicroLabel}>SEAT ${String(index + 1).padStart(2, '0')}<//>
-      ${isHostSeat ? html`<span class="seat__host"><${Icon} name="crown" />${t('创建者')}</span>` : null}
     </header>
     <div class=${`seat__art${art ? ' has-art' : ''}`}>
-      ${art ? html`<img class="seat__art-img" src=${art} alt="" draggable=${false} />` : null}
-      <div class="seat__stripes" aria-hidden="true"></div>
-      ${isMe && !seat.isBot ? html`<button type="button" class="seat__artbtn" onClick=${() => onPickArt?.(index)}>
+      ${art ? html`<img class="seat__art-img" src=${art} alt="" draggable=${false} />` : html`<div class="seat__artwho">
+        <${AvatarFrame} size="xl" src=${avatar} name=${seat.name} seat=${index} bot=${seat.isBot} self=${isMe} ready=${state === 'ready'} offline=${offline} />
+      </div>`}
+      <div class="seat__artshade" aria-hidden="true"></div>
+      ${isHostSeat ? html`<span class="seat__host"><${Icon} name="crown" />${t('创建者')}</span>` : null}
+      ${!seat.isBot ? html`<button type="button" class="seat__artbtn" onClick=${() => onPickArt?.(index)}>
         <${Icon} name="edit" />${t('更换立绘')}</button>` : null}
-      <div class="seat__artwho">
-        <${AvatarFrame} size=${art ? 'md' : 'xl'} src=${avatar} name=${seat.name} seat=${index} bot=${seat.isBot} self=${isMe} ready=${state === 'ready'} offline=${offline} />
-        ${seat.isBot ? html`<span class="seat__bot-label"><${Icon} name="robot" />${t('AI 队友')}</span>` : null}
+      ${seat.isBot ? html`<span class="seat__bot-label"><${Icon} name="robot" />${t('AI 队友')}</span>` : null}
+      <div class=${`seat__statebox is-${state}`}>
+        <span class="seat__stateicon">${state === 'ready' ? html`<${Icon} name="check" />` : state === 'offline' ? html`<${Icon} name="wifiOff" />` : state === 'host' ? html`<${Icon} name="check" />` : html`<${Icon} name="hourglass" />`}</span>
+        <b>${stateText}</b>
       </div>
     </div>
-    <div class="seat__who">
-      <span class="seat__name">${seat.name || t('博士')}<${RoleTag} role=${seat.role} /></span>
-      ${isMe ? html`<span class="seat__you">${t('你')}</span>` : null}
-    </div>
-    <${MicroLabel}>${seat.isBot ? 'AUTONOMOUS UNIT' : `DOCTOR #${doctorNo(seat.playerId)}`}<//>
-    ${facts.modded && !seat.isBot ? html`<span class=${`seat__content is-${seat.content || 'loading'}`} data-testid="seat-content">
-      ${seat.content === 'ready' ? t('插件内容就绪') : seat.content === 'failed' ? t('插件内容校验失败') : t('插件内容载入中')}
-    </span>` : null}
     <footer class="seat__foot">
-      <span class=${`seat__state seat__state--${state}`}>
-        ${state === 'ready' ? html`<${Icon} name="check" />${t('已就绪')}`
-          : state === 'offline' ? html`<${Icon} name="wifiOff" />${t('连接中断')}`
-          : state === 'host' ? html`<${Icon} name="crown" />${t('待命中')}`
-          : html`<${Icon} name="hourglass" />${t('准备中')}`}
-      </span>
-      ${seat.isBot && facts.isHost ? html`<${Tooltip} text=${t('移除该 AI 队友')}>
-        <${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `rm${index}`} onClick=${() => onRemoveBot(index)} aria-label=${t('移除 AI 队友')} />
-      <//>` : null}
-      ${!seat.isBot && !isMe && facts.isHost ? html`<${Tooltip} text=${t('将该博士移出同盟')}>
-        <${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `kick${index}`} onClick=${() => onKick(index, seat.name, seat.playerId)} aria-label=${t('移出该博士')} />
-      <//>` : null}
+      <div class="seat__id">
+        <${AvatarFrame} size="sm" src=${avatar} name=${seat.name} seat=${index} bot=${seat.isBot} self=${isMe} ready=${state === 'ready'} offline=${offline} />
+        <div class="seat__idtext">
+          <span class="seat__name">${seat.name || t('博士')}<${RoleTag} role=${seat.role} />${isMe ? html`<span class="seat__you">${t('你')}</span>` : null}</span>
+          <${MicroLabel}>${seat.isBot ? 'AUTONOMOUS UNIT' : `DOCTOR #${doctorNo(seat.playerId)}`}<//>
+        </div>
+      </div>
+      <div class="seat__footact">
+        ${facts.modded && !seat.isBot ? html`<span class=${`seat__content is-${seat.content || 'loading'}`} data-testid="seat-content">
+          ${seat.content === 'ready' ? t('插件内容就绪') : seat.content === 'failed' ? t('插件内容校验失败') : t('插件内容载入中')}
+        </span>` : null}
+        ${seat.isBot && facts.isHost ? html`<${Tooltip} text=${t('移除该 AI 队友')}>
+          <${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `rm${index}`} onClick=${() => onRemoveBot(index)} aria-label=${t('移除 AI 队友')} />
+        <//>` : null}
+        ${!seat.isBot && !isMe && facts.isHost ? html`<${Tooltip} text=${t('将该博士移出同盟')}>
+          <${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `kick${index}`} onClick=${() => onKick(index, seat.name, seat.playerId)} aria-label=${t('移出该博士')} />
+        <//>` : null}
+      </div>
     </footer>
   </article>`;
 }

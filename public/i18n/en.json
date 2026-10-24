@@ -2026,5 +2026,10 @@
   "选择默认立绘": "Choose default artwork",
   "默认立绘": "Default artwork",
   "登录后每个房间的座位都先显示这张立绘；房间里的「更换立绘」只改当前座位。": "After logging in, every room's seat starts with this artwork; 「Change artwork」 in a room changes only that seat.",
-  "更换默认立绘": "Change default artwork"
+  "更换默认立绘": "Change default artwork",
+  "选择立绘": "Choose artwork",
+  "返回干员列表": "Back to operators",
+  "暂无可用的皮肤立绘": "No skin artwork available",
+  "邀请": "Invite",
+  "复制同盟密钥以邀请队友": "Copy the alliance key to invite teammates"
 }

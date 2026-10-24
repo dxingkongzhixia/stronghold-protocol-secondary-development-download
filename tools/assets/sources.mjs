@@ -94,6 +94,7 @@ export function downloadUrls(url, { source = 'direct', proxyPrefix = DEFAULT_GIT
 /** Raw base URLs (always end with '/'). */
 export const RAW = Object.freeze({
   yuanyan: 'https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/',
+  aceship: 'https://raw.githubusercontent.com/Aceship/Arknight-Images/main/',
   fexli: 'https://raw.githubusercontent.com/fexli/ArknightsResource/main/',
   arkModels: 'https://raw.githubusercontent.com/isHarryh/Ark-Models/main/',
   aa2: 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/',

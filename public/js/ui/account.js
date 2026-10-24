@@ -15,7 +15,7 @@ import { toast, toastError } from './toasts.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, savePref } from '../store.js';
 import { data, useData } from '../data.js';
-import { avatarUrl, charPortraitUrl } from './assetUrls.js';
+import { avatarUrl, seatArtUrl } from './assetUrls.js';
 import { ArtPicker } from './artPicker.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
@@ -127,7 +127,7 @@ export function ProfilePanel() {
   const fileRef = useRef(null);
   if (!acc) return null;
   const avatar = avatarUrl(acc.avatar);
-  const art = acc.art ? charPortraitUrl(data.get('assets'), acc.art) : null;
+  const art = acc.art ? seatArtUrl(data.get('assets'), acc.art) : null;
   const call = async (method, file = null) => {
     const token = net.accountToken;
     if (!token) throw new Error(t('登录已过期，请重新登录'));

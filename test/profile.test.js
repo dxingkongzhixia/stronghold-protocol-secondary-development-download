@@ -175,9 +175,12 @@ test('POST /api/account/avatar: auth, sniffing, immutable serving and DELETE', a
 test('validateC2S: the art messages accept a charId or null and refuse anything else', async () => {
   const { validateC2S } = await import('../shared/protocol.js');
   assert.equal(validateC2S({ t: 'room.setArt', art: ART }), null);
+  assert.equal(validateC2S({ t: 'room.setArt', art: 'char_291_aglina@boc#1', save: true }), null);
   assert.equal(validateC2S({ t: 'room.setArt', art: null, save: true }), null);
   assert.equal(validateC2S({ t: 'room.setArt' }), null);
   assert.notEqual(validateC2S({ t: 'room.setArt', art: 'not a char' }), null);
+  assert.notEqual(validateC2S({ t: 'room.setArt', art: 'char_291_aglina@' }), null);
   assert.equal(validateC2S({ t: 'account.setArt', art: ART }), null);
+  assert.equal(validateC2S({ t: 'account.setArt', art: 'char_291_aglina@boc#1' }), null);
   assert.notEqual(validateC2S({ t: 'account.setArt', art: 'chess_char_1_01_a' }), null);
 });

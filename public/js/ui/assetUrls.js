@@ -29,6 +29,25 @@ export function avatarUrl(avatar) {
 }
 
 /**
+ * The seat card's 立绘 for an art choice: a charId (the operator's default full-body illustration, `chars[id].illust`)
+ * or a core-skin key (`char_x@skin`, whose own `illust` sits under `chars[charId].skins[key]`, docs/SKINS.md). Falls
+ * back to the half-body portrait when the full-body file is absent, so an installation without the illust assets still
+ * draws something.
+ * @param {any} m manifest (data/assets.json, core skins merged in)
+ * @param {string|null|undefined} art charId or skin key
+ */
+export function seatArtUrl(m, art) {
+  const key = str(art);
+  if (!key) return null;
+  const at = key.indexOf('@');
+  const charId = at >= 0 ? key.slice(0, at) : key;
+  const entry = obj(obj(m)?.chars)?.[charId];
+  if (!entry) return null;
+  const skin = at >= 0 ? obj(entry.skins)?.[key] : null;
+  return str(skin?.illust) || str(entry.illust) || str(entry.portraitE2) || str(entry.portrait) || null;
+}
+
+/**
  * Operator avatar for a chess record (golden → E2 art when present).
  * @param {any} m manifest
  * @param {any} chess chess.json record (or { assets: { avatar } })

@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  uiUrl, chessAvatarUrl, chessPortraitUrl, skillIconUrl, profIconUrl, subProfIconUrl, bondIconUrl, bandIconUrl, itemIconUrl,
+  uiUrl, chessAvatarUrl, chessPortraitUrl, seatArtUrl, skillIconUrl, profIconUrl, subProfIconUrl, bondIconUrl, bandIconUrl, itemIconUrl,
   enemyIconUrl, tokenAvatarUrl, factionIconUrl, titleIconUrl, effectIconUrl,
 } from '../../public/js/ui/assetUrls.js';
 
@@ -73,5 +73,19 @@ describe('assetUrls', () => {
     assert.equal(profIconUrl(m, 'NOPE'), null);
     assert.equal(uiUrl(undefined, 'x'), null);
     assert.equal(tokenAvatarUrl(m, null), null);
+    assert.equal(seatArtUrl(null, 'char_003_kalts'), null);
+    assert.equal(seatArtUrl(m, null), null);
+  });
+  test('seatArtUrl: the default full body, a core skin key, and the portrait fallback', () => {
+    const fake = { chars: { char_x: {
+      illust: '/assets/i.webp', portrait: '/assets/p.png', portraitE2: '/assets/p2.png',
+      skins: { 'char_x@skin#1': { illust: '/skins/s.webp' } },
+    } } };
+    assert.equal(seatArtUrl(fake, 'char_x'), '/assets/i.webp');
+    assert.equal(seatArtUrl(fake, 'char_x@skin#1'), '/skins/s.webp');
+    assert.equal(seatArtUrl(fake, 'char_x@missing'), '/assets/i.webp', 'an unknown skin falls back to the default art');
+    assert.equal(seatArtUrl({ chars: { char_y: { portrait: '/p.png', portraitE2: '/p2.png' } } }, 'char_y'), '/p2.png');
+    assert.equal(seatArtUrl({ chars: { char_z: { portrait: '/p.png' } } }, 'char_z'), '/p.png');
+    assert.equal(seatArtUrl(fake, 'char_nope'), null);
   });
 });

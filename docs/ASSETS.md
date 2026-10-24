@@ -122,6 +122,7 @@ The research JSONs in `docs/research/` (03, 05, 07) define **which** ids are nee
 |---|---|---|
 | Operator avatars, 180×180. Base, plus E2 when it exists. | yuanyan3060/ArknightsGameResource `avatar/` | `char/avatar/{charId}.png`, `char/avatar/{charId}_2.png` |
 | Operator half-body portraits, 180×360 | yuanyan `portrait/` | `char/portrait/{charId}_1.png`, `_2.png` |
+| Operator full-body illustrations, the seat card's 立绘 (owner 2026-10-24). E2 first, E0/E1 fallback; resized to 1100 px high and encoded as WebP. A dump miss is a normal fallback to `portraitE2`. | Aceship/Arknight-Images `characters/{charId}_2.png` / `_1.png` (jsDelivr first, then the GitHub proxy; `tools/illust.mjs`) | `char/illust/{charId}.webp` |
 | Skill icons: every skill index of every planned operator (DESIGN §16 loadouts, 自选 picks) | yuanyan `skill/` | `skill/{iconId sanitized}.png` |
 | Module type icons: the `typeIcon` of every module of `data/chess.json` and `data/backups.json` (the 干员调配 / 自选 module tiles when the local-client art lacks them) | AA2 `cn` `arts/ui/uniequiptype/{typeIcon}.png` (else its lower-case name: `WAH-Y` → `wah-y.png`) | `module/{typeIcon in lower case}.png` — one file per type: the official data spells one DEC X module `dec-X` and the others `dec-x`, and paths that differ only in case are one file on Windows / macOS and in a release zip |
 | Enemy icons | yuanyan `enemy/`. Fallbacks: the handbook id, then the base id. | `enemy/icon/{enemyId}.png` |
@@ -151,6 +152,13 @@ The operator avatars, operator portraits, skill icons and the enemy/token icons 
 `https://raw.gitcode.com/gh_mirrors/ar/ArknightsGameResource/raw/main/…` when direct GitHub is blocked and the gh-proxy
 prefix is not wanted (`docs/DEVELOPMENT.md` §9, "Mirror selection"). It is a read-only anonymous mirror; the file is
 byte-identical to the GitHub raw copy (`avatar/char_377_gdglow.png`, 58,987 B, checked 2026-10-08).
+
+The **full-body seat art** (`chars[charId].illust`, owner 2026-10-24) comes from **Aceship/Arknight-Images**
+`characters/{charId}_2.png` (E2 first, `_1` as the fallback). `node tools/illust.mjs` downloads it through jsDelivr (the
+GitHub proxy and direct raw are fallbacks), resizes it to 1100 px high and encodes WebP with Pillow, then updates the
+manifest's `illust` entries and its hash. `fetch-assets` plans the same leaf (`char/illust/<charId>.webp`), converts the
+newly downloaded PNG in place and drops a file Pillow could not encode — the card then falls back to `portraitE2` /
+`portrait`. The core skin catalogue's own `illust` files are separate (`docs/SKINS.md`).
 
 The `stem` of a Spine model is the upstream file name. Two examples: `char_107_liskam` has the stem `char_107_liskarm`, and `enemy_9032_aclionk` uses `enemy_1559_vtlionk`. The skel and atlas of a model always share one stem. pixi-spine locates the atlas by swapping the extension, so this matters.
 
@@ -219,7 +227,7 @@ All paths are URL paths relative to the site root, for example `/assets/char/ava
   generator: 'tools/fetch-assets.mjs',
   stats: { files, bytes, chars, charsWithBack, enemies, enemiesWithSpine, tokens, tokensWithSpine,
            spineModels, bonds, items, bands, skills, modules, ui, sfxUnits, voiceChars, voiceJpChars },
-  chars:   { [charId]: { avatar, avatarE2?, portrait, portraitE2?, spine: { front: Spine, back?: Spine } } },
+  chars:   { [charId]: { avatar, avatarE2?, portrait, portraitE2?, illust?, spine: { front: Spine, back?: Spine } } },
   enemies: { [enemyId]: { icon, spine?: Spine, spineAliasOf?: enemyId,
                           spineLocal?: { group, skel, atlas, textures, …Spine } } },
                           // spineLocal: an optional local-client model; file names in a data/local-assets.json group,

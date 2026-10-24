@@ -104,6 +104,12 @@ The preserved 0.3.1 order is 皮肤 → 潜能与练度 → 特质 → 技能 �
 皮肤 → 潜能与练度 → 局内数值 → 技能 → 模组 in 自选编队 (prototype picks omit cultivation).
 [ASSUMED] This is the existing remake panel order; official tables do not prescribe a skin picker layout.
 
+The room's **seat card** uses a separate picker (`public/js/ui/artPicker.js`, 更换立绘): step 1 picks the operator, step 2
+lists that operator's **default full-body illustration** (`chars[charId].illust`) and every core skin's own `illust`
+(name + group, `skins/catalogue.json`); the choice travels as `room.setArt` / `account.setArt` — a charId or a skin key —
+and only changes the card's picture. It does **not** change the battle model: the model choice is still `room.skins`
+(`SkinSection` above), so a card may show one outfit while the unit fights in another.
+
 1. **The section is GLOBAL: every operator shows it, or none does.** The one question `SkinSection` asks is
    `public/js/ui/skins.js hasAnySkinChoices()` — **at least one** operator of the composed manifest has one **wear-able**
    skin (`chars[<charId>].skins[<skinKey>]` with a model this client resolves). While that is false — no plugin at all,

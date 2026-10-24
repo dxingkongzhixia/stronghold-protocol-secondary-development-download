@@ -112,6 +112,7 @@ export function validate(kind, buf) {
 export function kindOf(name) {
   const ext = String(name).toLowerCase().split('.').pop();
   if (ext === 'png') return 'png';
+  if (ext === 'webp') return 'webp';
   if (ext === 'mp3') return 'mp3';
   if (ext === 'otf' || ext === 'ttf' || ext === 'woff2') return 'font';
   if (ext === 'atlas') return 'atlas';

@@ -59,7 +59,10 @@ Read this together with:
 > new `accounts.art` column (schema **v6**) and may upload an avatar (`accounts.avatar`, raster bytes sniffed, stored
 > under `var/avatars/`, served at `/avatar/<file>`, `auth.profile` pushes live). Guests can change art per session but
 > have no default. UI: `public/js/ui/artPicker.js`, the seat art block in `public/js/screens/room.js`, `ProfilePanel` in
-> `public/js/ui/account.js`. Absent upstream — keep it through merges.
+> `public/js/ui/account.js`. Absent upstream — keep it through merges. The picker's second step lists the default
+> full-body art (`chars[charId].illust`, `tools/illust.mjs`) and every **core skin's** `illust` (the catalogue in
+> `docs/SKINS.md`); the stored value is a charId or a `charId@skinKey`, and it changes the card picture only, never the
+> battle model (`room.skins`).
 
 **What it is.** Eight operators not in the official season roster are injected into the generated season tables as
 formal shop chess, each with a data entry, a hand-written kit, and (usually) art/voice. They are added through

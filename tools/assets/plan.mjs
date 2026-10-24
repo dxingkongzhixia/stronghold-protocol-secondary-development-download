@@ -399,6 +399,15 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
     if (o.avatar?.e2?.url) c.avatarE2 = leaf(alt(`char/avatar/${id}_2.png`, o.avatar.e2.url, o.avatar.e2.bytes));
     c.portrait = leaf(alt(`char/portrait/${id}_1.png`, o.portrait?.e0e1?.url, o.portrait?.e0e1?.bytes));
     if (o.portrait?.e2?.url) c.portraitE2 = leaf(alt(`char/portrait/${id}_2.png`, o.portrait.e2.url, o.portrait.e2.bytes));
+    // The seat card's default 立绘 (owner 2026-10-24): the operator's full-body official art. Aceship carries every
+    // official operator (E2 first, then E0/E1); the file is stored as WebP (tools/illust.mjs / the fetch-assets
+    // post-step resizes and re-encodes it — the plan's URL is the PNG source). Operators the dump lacks simply have
+    // no leaf here and the card falls back to portraitE2 / portrait. Skins keep their own `illust` in the core skin
+    // catalogue (skins/catalogue.json), not in this manifest field.
+    c.illust = leaf(alt(`char/illust/${id}.webp`, [
+      `${RAW.aceship}characters/${id}_2.png`,
+      `${RAW.aceship}characters/${id}_1.png`,
+    ]));
     c.spine = {};
     const front = fexliModel(`op:${id}:front`, 'op', `spine/op/${id}/front/`, o.battleSpine?.front, idx);
     if (front) c.spine.front = front; else notes.push(`${id}: no Front battle Spine in research data`);

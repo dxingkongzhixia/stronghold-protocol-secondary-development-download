@@ -54,6 +54,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/README.m
 | test console / `SP_TEST_MODE` | `public/js/ui/{testConsole,testDock,testAudit}.js`, `server/lobby.js` (`room.test`), `server/match/testCommands.js`, `shared/testMode.js` |
 | operator skins | `shared/protocol.js` (`room.skins`), `server/match/{PlayerState,player/basics,player/views}.js`, `public/js/ui/{skins,skinPicker}.js`, `public/js/render/{app,units}.js`, `docs/SKINS.md` |
 | extract official outfits from a local client into a plugin | `tools/local-extract/skins.py`, `tools/local-extract/spine-webp.py`, `docs/SKINS.md` (Extracting official outfits locally) |
+| operator full-body seat art (default 立绘, WebP) | `tools/illust.mjs`, `tools/assets/illust.mjs` (resize + encode), `data/assets.json` `chars[].illust`, `docs/ASSETS.md` |
 | 2D (PixiJS) + 3D (three.js) rendering | `public/js/render/`, `public/js/render/board3d/`, `public/js/render/fx/`, `public/js/render/vfx/` (official battle effects) |
 | client networking / preload | `public/js/net.js`, `public/js/preload.js`, `public/js/assets.js` |
 | 潜能 / 练度 per-operator settings (0.2.2) | `shared/potential.js`, `shared/loadoutRecord.js`, `server/match/player/{basics,diy}.js`, `public/js/ui/loadoutModel.js` |

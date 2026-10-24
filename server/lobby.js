@@ -1032,12 +1032,13 @@ export class Lobby {
     return OK;
   }
 
-  /** null, or a charId the installation has art for; undefined when it is neither (the caller refuses it). */
+  /** null, or a charId / skin key the installation has art for; undefined when it is neither (the caller refuses it). */
   _cleanArt(art) {
     if (art == null) return null;
     if (typeof art !== 'string') return undefined;
+    const charId = art.includes('@') ? art.slice(0, art.indexOf('@')) : art;
     const chars = this.safeData()?.assets?.chars;
-    return chars && Object.prototype.hasOwnProperty.call(chars, art) ? art : undefined;
+    return chars && Object.prototype.hasOwnProperty.call(chars, charId) ? art : undefined;
   }
 
   /** Put a session's art on its player seat (and spectator record) and tell the room. */

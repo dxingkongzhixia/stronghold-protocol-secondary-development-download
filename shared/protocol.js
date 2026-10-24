@@ -35,6 +35,9 @@ export const isSkinId = (v) => typeof v === 'string' && v.length > 0 && v.length
 /** An operator charId (`char_<digits>_<token>` or a plugin operator `char_x_<id>`), never a chess id. */
 export const CHAR_ID = /^char_(?:x_[A-Za-z0-9_-]+|[0-9]+_[A-Za-z0-9_]+)$/;
 export const isCharId = (v) => typeof v === 'string' && v.length <= SKIN_LIMITS.charIdLen && CHAR_ID.test(v);
+/** A seat-card 立绘 choice: a charId, or `charId@skinKey` (the core skin catalogue's own key, docs/SKINS.md). */
+export const ART_KEY = /^char_(?:x_[A-Za-z0-9_-]+|[0-9]+_[A-Za-z0-9_]+)(?:@[A-Za-z0-9_@#+.\-]{1,64})?$/;
+export const isArtKey = (v) => typeof v === 'string' && v.length <= 128 && ART_KEY.test(v);
 /** Structural check of `room.skins.skins`: at most 256 charId → skinId pairs, refused whole on any bad entry. */
 export const isSkinSelection = (v) => isMap(v, SKIN_LIMITS.entries, isCharId, isSkinId);
 
@@ -513,11 +516,12 @@ export const C2S = {
   // The lobby strips control characters, rate-limits per session and broadcasts m.chat to the whole room (seats +
   // spectators, waiting lobby AND while the match runs). The client renders it as text.
   'room.chat': { text: (v) => isStr(v, CHAT_MAX) && v.trim().length > 0 },
-  // seat-card 立绘 (owner 2026-10-24): the operator charId this seat shows, or null = the default look. `save` stores it
-  // as the bound account's default too (ignored for a guest). The server checks the id against the operator assets.
-  'room.setArt': { $optional: ['art', 'save'], art: nullable(isCharId), save: (v) => v === undefined || v === true || v === false },
+  // seat-card 立绘 (owner 2026-10-24): the operator charId (default full-body) or a core-skin key (charId@skin) this
+  // seat shows, or null = the default look. `save` stores it as the bound account's default too (ignored for a guest).
+  // The server checks the charId against the operator assets.
+  'room.setArt': { $optional: ['art', 'save'], art: nullable(isArtKey), save: (v) => v === undefined || v === true || v === false },
   // the logged-in player's default 立绘 outside a room (the 账号 / 个人资料 dialog); also applied to the current seat
-  'account.setArt': { $optional: ['art'], art: nullable(isCharId) },
+  'account.setArt': { $optional: ['art'], art: nullable(isArtKey) },
 
   // accounts (server/auth.js; docs/MATCHMAKING.md): 野排 requires one. Both answer with auth.ok { account, token }
   'auth.register': { name: (v) => isStr(v, AUTH_NAME_MAX) && v.trim().length >= AUTH_NAME_MIN, password: (v) => isStr(v, AUTH_PASS_MAX) && v.length >= AUTH_PASS_MIN },

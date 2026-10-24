@@ -68,6 +68,7 @@ import { normalizeProxyPrefix } from './assets/sources.mjs';
 import { loadIndexes } from './assets/cache.mjs';
 import { indexAudio, VOICE_DIRS } from './assets/audio.mjs';
 import { buildPlan } from './assets/plan.mjs';
+import { convertIllust, isWebp } from './assets/illust.mjs';
 import {
   processModels, findLocalEnemyModels, findLocalTokenModels, localSpineMeta, loadLocalSpines, LOCAL_ENEMY_SPINES_FILE,
   LOCAL_TOKEN_SPINES_FILE, LOCAL_ENEMY_SPINE_DIR, LOCAL_TOKEN_SPINE_DIR,
@@ -433,6 +434,19 @@ async function main() {
   });
   await dl.loadLedger();
   const downloadErrors = opts.offline ? [] : await downloadLeaves(leaves, dl, ASSETS, 'files');
+
+  // The seat-card 立绘 (plan: char/illust/<id>.webp) is downloaded from a PNG dump and stored as WebP: encode the
+  // newly downloaded files (and any PNG left by an interrupted run) in place before the manifest reads the disk.
+  // A file Pillow could not encode is removed, so the manifest omits it and the client falls back to the portrait.
+  const illustPaths = leaves
+    .filter((l) => Array.isArray(l.leaf?.alts) && l.leaf.alts.some((a) => a.rel.startsWith('char/illust/') && a.rel.endsWith('.webp')))
+    .map((l) => join(ASSETS, l.leaf.alts[0].rel))
+    .filter((f) => existsSync(f) && !isWebp(f));
+  if (illustPaths.length) {
+    const r = convertIllust(illustPaths.map((f) => ({ src: f, dst: f })), { log });
+    if (r.failed.length) log(`[assets] ${r.failed.length} illustration(s) could not be encoded to WebP (Pillow missing?); the card falls back to the portrait`);
+    else log(`[assets] encoded ${r.converted.length} illustration(s) to WebP`);
+  }
 
   let current = null;
   if (existsSync(MANIFEST)) {
