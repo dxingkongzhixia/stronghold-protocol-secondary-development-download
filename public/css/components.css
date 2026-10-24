@@ -473,7 +473,7 @@
 }
 .modal__head { display: flex; flex-direction: column; gap: .04rem; padding: .22rem .3rem .04rem; }
 .modal__title { font-size: calc(.26 * var(--t)); font-weight: 700; letter-spacing: .04em; }
-.modal__body { padding: .14rem .3rem .26rem; color: var(--text-md); overflow: auto; }
+.modal__body { padding: .14rem .3rem .26rem; color: var(--text-md); overflow: auto; flex: 1 1 auto; min-height: 0; text-align: left; }
 .modal__text { font-size: calc(.18 * var(--t)); line-height: 1.7; }
 .modal__actions {
   flex: none;
@@ -1020,7 +1020,7 @@
 /* ---- shared screen chrome: top bar, section labels, player chip, crash screen ------------------------ */
 .topbar {
   position: relative;
-  z-index: 3;
+  z-index: 10;
   flex: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -1153,7 +1153,7 @@
 .plugtag--static { cursor: default; }
 .plugpanel { display: flex; flex-direction: column; gap: .12rem; }
 .plugpanel__lead { display: flex; align-items: center; flex-wrap: wrap; gap: .1rem; color: var(--text-md); font-size: calc(.15 * var(--t)); line-height: 1.7; }
-.plugpanel__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .08rem; max-height: 4.6rem; overflow: auto; }
+.plugpanel__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .08rem; max-height: none; overflow: visible; }
 /* the list's five sections (shared/plugins/category.js) as tabs, the admin console's subnav pattern: one non-empty
    section at a time, its count on the tab, the rows below (ui/pluginTabs.js) */
 .plugtabs { display: flex; align-items: center; flex-wrap: wrap; gap: 0 .02rem; margin: 0 0 .02rem; border-bottom: 1px solid var(--line); }
@@ -1220,7 +1220,7 @@
 .plugin-settings input, .plugin-settings select { color: var(--text-hi); background: var(--bg-2); border: 1px solid var(--line-2); padding: .03rem .06rem; max-width: 2rem; }
 .plugin-settings input[aria-invalid="true"] { border-color: var(--orange); }
 
-/* ---- seat card art + ¸ü»»Á¢»æ (owner 2026-10-24; ui/artPicker.js, screens/room.js) ---- */
+/* ---- seat card art + ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (owner 2026-10-24; ui/artPicker.js, screens/room.js) ---- */
 .seat__art.has-art { justify-content: flex-end; }
 .seat__art-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; opacity: .94; }
 .seat__art.has-art::after {
@@ -1285,7 +1285,7 @@
 .profile__art:hover { border-color: var(--mint-500); }
 .profile__art img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
 
-/* ¸ü»»Á¢»æ step 2: the operator's default full-body art + its core skins (docs/SKINS.md) */
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ step 2: the operator's default full-body art + its core skins (docs/SKINS.md) */
 .artpick__head { display: flex; align-items: center; gap: .12rem; font-size: calc(.16 * var(--t)); color: var(--text-dim); }
 .artpick__head b { color: var(--text-hi); font-size: calc(.18 * var(--t)); }
 .artpick__head span { letter-spacing: .04em; }

@@ -74,6 +74,7 @@
   --bk-c: var(--line-3);
   --bk-l: .18rem;
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -226,7 +227,7 @@
 .seat__content.is-failed { color: var(--orange-hi); }
 /* empty seat: the reference invite card */
 .seat__art--empty { align-items: center; justify-content: center; gap: .06rem; }
-.seat__plus { font-size: 1.1rem; line-height: .8; font-weight: 200; color: rgba(255, 255, 255, .9); }
+.seat__plus { font-size: calc(1.1 * var(--t)); line-height: .8; font-weight: 200; color: rgba(255, 255, 255, .9); }
 .seat__invite { font-size: calc(.26 * var(--t)); font-weight: 700; letter-spacing: .08em; color: var(--text-hi); }
 .seat--empty .seat__wait { color: var(--text-lo); font-size: calc(.13 * var(--t)); text-align: center; padding: 0 .16rem; }
 .room-mode { margin-left: .1rem; padding: 0 .08rem; border: 1px solid rgba(255, 106, 61, .6); color: #ff8a5c; font-size: calc(.16 * var(--t)); vertical-align: middle; }
@@ -473,7 +474,7 @@
 /* a spectator has no seat: the bubble rides their row in the è§‚æˆ˜å¸­ dropdown (aligned to the end of the row, no scroll) */
 .specdock__chat { flex: 1; display: flex; justify-content: flex-end; overflow: visible; }
 
-/* no Á¢»æ chosen: the avatar stands in for the art (the card is never an empty panel) */
+/* no ï¿½ï¿½ï¿½ï¿½ chosen: the avatar stands in for the art (the card is never an empty panel) */
 .seat__artwho { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .08rem; }
 .seat__artwho .avatar { --av: 2.1rem; }
 .seat__artwho[hidden] { display: none; }
