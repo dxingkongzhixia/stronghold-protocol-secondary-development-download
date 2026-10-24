@@ -13,7 +13,7 @@
 // codex first, then the report; the focus returns to the lobby's button). The tab is remembered (sp.pref).
 // Styles: css/screens/sweep.css (sw-*).
 
-import { useMemo, useState } from '../../vendor/hooks.module.js';
+import { useLayoutEffect, useMemo, useRef, useState } from '../../vendor/hooks.module.js';
 import { html, Icon, Modal, roman } from '../ui/components.js';
 import { Img, RichText, GIcon } from '../ui/gameComponents.js';
 import { bondIconUrl, bandIconUrl, enemyIconUrl, factionIconUrl, chessAvatarUrl } from '../ui/assetUrls.js';
@@ -26,6 +26,39 @@ import { openGuide, guidePages } from '../ui/guide.js';
 import { t, N_ } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
+
+/**
+ * Cap a wrapping face grid at exactly two rows. CSS cannot express "two row heights" without a container query (the
+ * project's CSS gate forbids those), and a fixed rem/vw height either cuts a row or lets a third one peek through at
+ * another viewport. Measure the first cell and set the max height: 2 × cell + the row gap; a ResizeObserver keeps it
+ * right through window/panel changes. `dep` is the member list length so a new bond re-measures after its cells mount.
+ */
+function useTwoRowCap(dep) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const fit = () => {
+      const cell = el.firstElementChild;
+      if (!cell) return;
+      const cs = getComputedStyle(el);
+      const gap = parseFloat(cs.rowGap || cs.gap) || 0;
+      el.style.maxHeight = `${Math.round(cell.getBoundingClientRect().height * 2 + gap)}px`;
+    };
+    fit();
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+    ro?.observe(el);
+    window.addEventListener('resize', fit);
+    return () => { ro?.disconnect(); window.removeEventListener('resize', fit); };
+  }, [dep]);
+  return ref;
+}
+
+/** The same two-row cap for a grid rendered in a branch where a hook cannot be called directly. */
+function TwoRowGrid({ className, dep, children }) {
+  const ref = useTwoRowCap(dep);
+  return html`<div class=${className} ref=${ref}>${children}</div>`;
+}
 const TAB_PREF = 'sweep.tab';
 const TABS = [
   { id: 'bonds', name: N_('盟约报告'), icon: () => html`<${Icon} name="link" />` },
@@ -135,6 +168,7 @@ function BondPanel({ bond, m, notOwned }) {
   const ids = Array.isArray(bond.visibleMembers) && bond.visibleMembers.length ? bond.visibleMembers : (bond.members || []);
   const members = ids.map((id) => data.lookup('chess', id)).filter(Boolean)
     .sort((a, b) => (b.tier - a.tier) || ((a.shopSortId ?? 0) - (b.shopSortId ?? 0)));
+  const gridRef = useTwoRowCap(members.length);
   const anyOff = members.some((c) => off.has(c.chessId));
   const steps = Array.isArray(bond.thresholds) ? bond.thresholds.filter((n) => Number.isFinite(n)) : [];
   return html`<div class="sw-detail">
@@ -151,7 +185,7 @@ function BondPanel({ bond, m, notOwned }) {
         <span class="sw-box__k"><${Icon} name="user" />${t('对应干员')}<small class="num">${members.length}</small></span>
         <span class="sw-box__note">${anyOff ? html`<span class="sw-box__swap" aria-hidden="true">⇄</span>${t('未持有的干员由替补干员上场')}` : t('点击干员前往干员调配')}</span>
       </div>
-      <div class="sw-ops">${members.map((c) => html`<button key=${c.chessId} type="button" class=${cx('sw-op', `sw-op--t${c.tier}`, off.has(c.chessId) && 'is-standin')}
+      <div class="sw-ops" ref=${gridRef}>${members.map((c) => html`<button key=${c.chessId} type="button" class=${cx('sw-op', `sw-op--t${c.tier}`, off.has(c.chessId) && 'is-standin')}
           onClick=${() => openLoadout('sweep', c.chessId, 'loadout')} title=${t('{name} · 前往干员调配', { name: c.name })}>
         <${Img} src=${chessAvatarUrl(m, c)} fallback=${html`<span class="sw-op__txt">${[...(c.name || '?')][0]}</span>`} />
         <span class="sw-op__tier">${roman(c.tier)}</span>
@@ -249,9 +283,9 @@ function EnemyPanel({ sel, m, onCodex }) {
         <span class="sw-box__k"><${GIcon} name="target" />${t('敌方情报')}<small class="num">${shown.length}</small></span>
         <button type="button" class="sw-look" onClick=${() => onCodex({ title: f.name, keys, key: keys[0] })}><${Icon} name="search" />${t('查看')}</button>
       </div>
-      <div class="sw-ethumbs sw-ethumbs--grid">
+      <${TwoRowGrid} className="sw-ethumbs sw-ethumbs--grid" dep=${shown.length}>
         ${shown.map((x) => html`<${EnemyThumb} key=${x.key} e=${x} m=${m} onClick=${() => onCodex({ title: f.name, keys, key: x.key })} />`)}
-      </div>
+      <//>
     </div>
   </div>`;
 }
