@@ -153,6 +153,8 @@ plugins/prts-kaltsit/              分类：新增策略
 
 ## 5. Boss 设计
 
+> 本节的所有时间（倒地、DP 加速、清除协议、弹幕、光束、悬浮、限制写入）都是**真实秒**。战斗以 2× 跑，引擎按 spec 的 `flags.timeScale` 换算成 sim 的游戏秒；HUD 上的倒计时也换算回真实秒，所以和秒表一致。
+
 ### 5.1 数值
 
 | 难度 | `boss_prts` 普通 | `boss_prts_hidden` 隐藏 |

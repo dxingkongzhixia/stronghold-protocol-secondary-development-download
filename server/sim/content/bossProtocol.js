@@ -37,7 +37,7 @@ function publishProtocolView(b, st) {
     blocks.push({ type: 'bar', label: ui.shieldLabel, value: Math.ceil(shield), max: st.shieldMax });
   }
   if (st.down && st.downUntil != null) {
-    blocks.push({ type: 'countdown', label: ui.downLabel, seconds: Math.max(0, st.downUntil - b.time) });
+    blocks.push({ type: 'countdown', label: ui.downLabel, seconds: Math.max(0, (st.downUntil - b.time) / timeScaleOf(b)) });
   } else if (st.revivesMax > 0) {
     blocks.push({ type: 'text', label: ui.revivesLabel, text: `${st.revivesLeft}/${st.revivesMax}` });
   }
@@ -166,7 +166,7 @@ function startDpRegen(b, st) {
   const extra = Math.max(0, d.multiplier - 1) * b.flags.dpPerSec;
   if (!(extra > 0)) return;
   st.dpTimer?.cancel?.();
-  const until = b.time + d.duration;
+  const until = b.time + d.duration * timeScaleOf(b);
   let last = b.time;
   st.dpTimer = b.every(0.1, (battle, timer) => {
     const now = Math.min(battle.time, until);
@@ -216,7 +216,7 @@ function fireOrb(b, st) {
 function startProjectile(b, st) {
   const p = st.protocol.projectile;
   if (!p) return;
-  st.projTimer = b.every(p.cooldown, () => fireOrb(b, st), { owner: st.boss });
+  st.projTimer = b.every(p.cooldown * timeScaleOf(b), () => fireOrb(b, st), { owner: st.boss });
 }
 
 function emitDeployLock(b, st, afterRevive) {
@@ -286,13 +286,13 @@ function fireBeam(b, st) {
   protocolFx(b, st.link, 'enemy_mpprme_line_start_01', { toward: { x: shots[0].x, y: shots[0].y } });
   protocolFx(b, st.link, 'enemy_mpprme_skill_02_trail_start_01', { toward: { x: shots[0].x, y: shots[0].y } });
   b.emit('protocolBeamWindup', { boss: st.boss, link: st.link, targets: shots.length, seconds: p.windup });
-  st.beamResolve = b.after(p.windup, () => resolveBeam(b, st), { owner: st.link });
+  st.beamResolve = b.after(p.windup * timeScaleOf(b), () => resolveBeam(b, st), { owner: st.link });
 }
 
 function startBeam(b, st) {
   const p = st.protocol.beam;
   if (!p || st.beamTimer) return;
-  st.beamTimer = b.every(p.interval, () => fireBeam(b, st), { owner: st.link });
+  st.beamTimer = b.every(p.interval * timeScaleOf(b), () => fireBeam(b, st), { owner: st.link });
 }
 
 function endFly(b, st, early) {
@@ -323,34 +323,36 @@ function startFly(b, st) {
   const origRange = unit.base.rangeRadius;
   unit.base.rangeRadius = origRange + p.range;
   unit.markDirty?.();
+  const flyGame = p.duration * timeScaleOf(b);
   b.addBuff(unit, {
-    key: 'protocol:fly', duration: p.duration, persist: true, visible: true,
+    key: 'protocol:fly', duration: flyGame, persist: true, visible: true,
     mods: { maxTargets: Math.max(0, p.targets - 1), batPct: newBat / baseBat - 1 },
   });
   const f = {
     unit,
-    timer: b.after(p.duration, () => endFly(b, st, false), { owner: unit }),
+    timer: b.after(flyGame, () => endFly(b, st, false), { owner: unit }),
     origRange, range: unit.base.rangeRadius,
     threshold: p.hpLoss * unit.s.maxHp, damage: 0,
     knockDownDamage: p.knockDownDamage * unit.s.atk,
   };
   st.fly = f;
-  protocolFx(b, unit, 'enemy_mpprts_c_trail_01', { loop: true, dur: p.duration });
+  protocolFx(b, unit, 'enemy_mpprts_c_trail_01', { loop: true, dur: flyGame });
   b.emit('protocolFly', { boss: st.boss, link: unit, duration: p.duration, targets: p.targets, range: p.range });
 }
 
 function enterDown(b, st, e) {
   const p = st.protocol.revive;
+  const downGame = p.down * timeScaleOf(b);
   st.down = true;
-  st.downUntil = b.time + p.down;
+  st.downUntil = b.time + downGame;
   e.hp = e.s.maxHp;
-  protocolFx(b, e, 'enemy_mpprme_buff_01', { loop: true, dur: p.down });
+  protocolFx(b, e, 'enemy_mpprme_buff_01', { loop: true, dur: downGame });
   b.addBuff(e, { key: DOWN, flags: { untargetable: true, invulnerable: true, stun: true, noBlock: true, noMove: true }, persist: true, allowDead: true });
   // A shield barrier is boss protection, not a link-phase buff: keep it through the down window.
   removeGuard(b, st, st.shieldMax <= 0);
   interruptBeam(b, st);
   startDpRegen(b, st);
-  st.timer = b.after(p.down, () => {
+  st.timer = b.after(downGame, () => {
     if (!e.alive || st.dead) return;
     b.removeBuff(e, DOWN);
     e.hp = e.s.maxHp;
@@ -496,8 +498,9 @@ export function protocolAbility(raw) {
       if (!st.down || !st.timer || st.timer.cancelled) return;
       const s = st.protocol.revive?.shortenOnHit;
       if (!s) return;
-      const floor = b.time + (s.min ?? 0);
-      st.timer.due = Math.max(floor, st.timer.due - s.seconds);
+      const ts = timeScaleOf(b);
+      const floor = b.time + (s.min ?? 0) * ts;
+      st.timer.due = Math.max(floor, st.timer.due - s.seconds * ts);
       b.emit('protocolShorten', { boss: e, seconds: s.seconds });
     },
     death(c, b, e) {
