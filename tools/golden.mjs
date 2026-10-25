@@ -24,12 +24,13 @@
 //   fields   22 battles: every Final Assault / Hidden Core leader on its pair and its solo template (a shared boss pool,
 //            ended at 200 game s) and 联防 fields (1 and 2 helpers on a battle stage, both halves, carried HP / SP, a
 //            knocked-out operator, two leakers' enemies with a summoned-only kind and a bounty)
-//   matches  18 matches run to the end in virtual time with the match's default bot rehearsal: 16 bot-only (solo 标准 /
+//   matches  19 matches run to the end in virtual time with the match's default bot rehearsal: 16 bot-only (solo 标准 /
 //            险境 / 绝境 / 终极 ×2 seeds, co-op 2 / 3 / 4, one server-run combat match, two with LP and layers raised at the
-//            first prep so they reach the Hidden Core), one co-op match whose human seat (AI 托管, offline: its
-//            battles run on the server) does not own a few NORMAL chess — they fight as their 补位 stand-ins (0.2.0) — and
-//            one whose human seat slots 自选 picks (推进之王 and prototypes; its 调度中心 at level 5 from the first prep):
-//            its shop sells them and its AI fields them (0.2.0 自选编队, the digest's `diy`)
+//            first prep so they reach the Hidden Core), three co-op matches whose human seat (AI 托管, offline: its
+//            battles run on the server) does not own a few NORMAL chess — they fight as their 补位 stand-ins (0.2.0;
+//            seeds 14 / 26 / 4, the last the coverage one) — and one whose human seat slots 自选 picks (推进之王 and
+//            prototypes; its 调度中心 at level 5 from the first prep): its shop sells them and its AI fields them
+//            (0.2.0 自选编队, the digest's `diy`)
 //   standins 10 battles: every NORMAL chess record (normal + elite, 110) fielded as its 补位 stand-in (PlayerBattleInput
 //            standIn: true — DATA.md §18: the stand-in's body, its backup skill / module, its kit by charId; all 17
 //            stand-ins and every skill a chess names for them), 12 per battle by strength band, laid out by the stand-in's
@@ -751,10 +752,16 @@ export function matchScenarios() {
   // The measured shared-stock changes leave the original seeds without a fielded DIY/stand-in operator. Keep those
   // original outcomes, and add companion seeds that still exercise the complete shop → deployment → battle path.
   // The 满信赖 data rebuild (2026-10-15, MATCHMAKING §46) shifted the shop / deployment stream again: seed 1 (this
-  // scenario's old seed) and seed 14 now field NO stand-in at all, so the companion seed is 26 — three distinct
-  // stand-ins over 7 rounds. (Seeds 11 / 13 / 16 / 19 / 25 / 27 also field stand-ins; re-probe with the exported
-  // matchScenarios() + runMatch() if this moves again.)
-  out.push({ id: 'coop2-NORMAL-26-coverage-standins', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 26, human: { notOwned: MATCH_NOT_OWNED } });
+  // scenario's old seed) and seed 14 now fielded NO stand-in at all, so the companion seed became 26 — three distinct
+  // stand-ins over 7 rounds.
+  // 2026-10-25: the built-in faction boost plugins (00cb38d02) reordered the shop / draft content pool and moved the
+  // stream again — seed 26 now fields none either, so its outcome is kept as `-standins` and the coverage moved to
+  // seed 4, which fields chess_char_6_03_a → char_610_acfend (a prototype seed 14 never fields, so the two matches
+  // together cover two of the three). Re-probed over seeds 1–20 + 25: the most any seed now fields is one distinct
+  // stand-in (2 / 3 / 13 / 14 / 16 / 18 → 3_05_a, 4 → 6_03_a, 25 → 5_02_a; 1 / 5–12 / 15 / 17 / 19 / 20 / 26 / 27 →
+  // none). Re-probe with the exported matchScenarios() + runMatch() if this moves again.
+  out.push({ id: 'coop2-NORMAL-26-standins', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 26, human: { notOwned: MATCH_NOT_OWNED } });
+  out.push({ id: 'coop2-NORMAL-4-coverage-standins', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 4, human: { notOwned: MATCH_NOT_OWNED } });
   out.push({ id: 'coop2-NORMAL-5-coverage-diy', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 5, human: { diy: MATCH_DIY, shopLevel: 5 } });
   const humanAbout = (h) => (h.notOwned ? ` + 1 human seat (AI 托管) without ${h.notOwned.length} operators (补位 stand-ins)`
     : ` + 1 human seat (AI 托管) with ${Object.keys(h.diy || {}).length} 自选 picks${h.shopLevel ? ` and its 调度中心 at level ${h.shopLevel} from the first prep` : ''}`);

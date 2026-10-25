@@ -53,12 +53,16 @@ test('standins: every active skill a chess names for its stand-in is cast; passi
 
 test('matches: the 补位 match\'s human seat fields stand-ins (listed per round) and the match ends without errors', () => {
   // The stand-in coverage lives in the `-coverage-standins` scenario: the 满信赖 data rebuild (2026-10-15, MATCHMAKING
-  // §46) shifted the shop / deployment stream, so the original seed 14 (kept for its own recorded outcome) now fields
-  // none. tools/golden.mjs matchScenarios() carries the seed probe that picked 26. Both matches must run without errors.
+  // §46) shifted the shop / deployment stream, so the original seed 14 (kept for its own recorded outcome) fields none.
+  // 2026-10-25: the built-in faction boost plugins (00cb38d02) moved that stream again — seed 26 fields none either, so
+  // its outcome is kept as `-standins` and the coverage moved to seed 4 (chess_char_6_03_a → char_610_acfend, a
+  // prototype seed 14 never fields). tools/golden.mjs matchScenarios() carries the seed probe. All three must run
+  // without errors.
   const dg14 = MATCHES.scenarios['coop2-NORMAL-14-standins'];
-  const dg = MATCHES.scenarios['coop2-NORMAL-26-coverage-standins'];
-  assert.ok(dg && dg14, 'both scenarios present');
-  for (const s of [dg, dg14]) assert.deepEqual(s.errors, { engine: 0, logged: 0, sim: 0, dispatcher: 0 });
+  const dg26 = MATCHES.scenarios['coop2-NORMAL-26-standins'];
+  const dg = MATCHES.scenarios['coop2-NORMAL-4-coverage-standins'];
+  assert.ok(dg && dg14 && dg26, 'all three scenarios present');
+  for (const s of [dg, dg14, dg26]) assert.deepEqual(s.errors, { engine: 0, logged: 0, sim: 0, dispatcher: 0 });
   const fielded = dg.standIns.rounds.filter(([, s]) => s).flatMap(([, s]) => s.split(' '));
   // (≥ 2 since a level-up leaves its new slot empty — GitHub #332, PR #333 by @2321Robin: this match's shop rolls, and with
   // them which stand-ins the human seat fields, part from the stream in which the upgrade drew a card into the new slot)
