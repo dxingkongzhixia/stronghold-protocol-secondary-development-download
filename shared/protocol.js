@@ -661,7 +661,8 @@ export const S2C = [
   // accounts & matchmaking: auth.ok { account: { id, name, role }, token } · auth.error { code } ·
   // mm.state { queued, difficulty, waiting, need, elapsedMs, deadlineMs } (pushed ~1 Hz while queueing)
   'auth.ok', 'auth.error', 'mm.state',
-  // operator notice (the admin page's 通知): sys.notice { id, text, sign, at } — pushed to the live sessions
+  // operator notice (the admin page's 通知): sys.notice { id, text, sign, at, kind?, origin? } — pushed to the live
+  // sessions; kind 'plain' | 'changelog'; origin true = the private "use the official address" reminder (also on title)
   'sys.notice',
   // room text chat (docs/MATCHMAKING.md §38): m.chat { from, name, text, at } — one live message broadcast to every
   // member of the room (seats + spectators), shown as a transient bubble. Never stored / replayed.

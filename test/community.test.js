@@ -69,7 +69,7 @@ test('db migration v4: the community tables + the notice-log columns exist', () 
   const db = openMemoryDb();
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((r) => r.name);
   for (const t of ['changelog', 'bug_reports', 'bug_uploads']) assert.ok(tables.includes(t), `${t} exists`);
-  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 5); // v5 adds match_stats (test/server-stats.test.js)
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 6); // v5 match_stats, v6 accounts.art / avatar
   const cols = db.prepare('PRAGMA table_info(changelog)').all().map((r) => r.name);
   for (const c of ['summary', 'source', 'minor_seq']) assert.ok(cols.includes(c), `changelog.${c} exists`);
 });
@@ -139,7 +139,7 @@ test('broadcastNotice: a failing changelog write is logged and never stops the p
   const doctor = registry.create('Doctor');
   doctor.connected = true; doctor.accountId = 7;
   doctor.ws = { readyState: 1, bufferedAmount: 0, sent: [], send(d) { this.sent.push(d); } };
-  const r = lobby.broadcastNotice({ text: '马上重启', sign: 'd星空之下' });
+  const r = lobby.broadcastNotice({ text: '马上重启', sign: 'd星空之下', changelog: true });
   assert.equal(r.ok, true);
   assert.equal(r.sent, 1, 'the push went out');
   assert.equal(r.changelog, null, 'no version when the write failed');
@@ -278,16 +278,17 @@ test('HTTP: changelog, upload, bug.report, admin list / status / image', async (
     const html = await (await fetch(`${base}/admin?token=tok`)).text();
     assert.match(html, /玩家反馈/);
     assert.match(html, /\/admin\/api\/bug\/image\//);
-    assert.match(html, /记入「更新日志」的下一小版本/, 'the notice form hints the changelog entry');
+    assert.match(html, /写入「更新日志」/, 'the notice form offers the changelog kind');
+    assert.match(html, /普通通知（不写入日志）/, 'the plain kind is the default');
 
     const post = (body) => fetch(`${base}/admin/api/bug/status?token=tok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     assert.equal((await post({ id: st.bugs[0].id, status: 'fixed' })).status, 200);
     assert.equal((await (await fetch(`${base}/admin/api/state?token=tok`)).json()).bugs[0].status, 'fixed');
     assert.equal((await post({ id: st.bugs[0].id, status: 'nope' })).status, 400);
 
-    // ④ an operator notice is pushed AND logged as the next minor changelog entry (docs/MATCHMAKING.md §36)
+    // ④ a CHANGELOG notice is pushed AND logged as the next minor changelog entry (docs/MATCHMAKING.md §36)
     const notify = (body) => fetch(`${base}/admin/api/notify?token=tok`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const n = await (await notify({ text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下' })).json();
+    const n = await (await notify({ text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下', changelog: true })).json();
     assert.equal(n.ok, true);
     const mm = APP_VERSION.split(/[.-]/).slice(0, 2).join('\\.');
     assert.ok(n.changelog && new RegExp(`^${mm}\\.\\d+$`).test(n.changelog.version), `the notice is logged as a minor version (${n.changelog && n.changelog.version})`);
@@ -300,7 +301,7 @@ test('HTTP: changelog, upload, bug.report, admin list / status / image', async (
     const seeded = after.changelog.find((e) => e.version === '0.2.0');
     assert.equal(seeded.source, 'release', 'the seeded release is untouched');
     // a second notice takes the next minor version, never reusing one
-    const n2 = await (await notify({ text: '又一条通知' })).json();
+    const n2 = await (await notify({ text: '又一条通知', changelog: true })).json();
     assert.notEqual(n2.changelog.version, n.changelog.version);
     assert.ok(n2.changelog.version > n.changelog.version, 'monotonic');
   } finally {

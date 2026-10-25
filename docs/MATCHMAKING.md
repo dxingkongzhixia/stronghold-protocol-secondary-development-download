@@ -759,9 +759,9 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 > 需求：管理页除了看用户，还要能把消息**推送给所有登录用户**；并且**每次更新 / 重启服务前都先推一条通知**，署名为 **d星空之下**。
 
-- **入口**：`/admin?token=…`（令牌见 `var/admin-token.txt`，启动日志里也有 Admin 链接）。页首新增「**通知**」面板：内容（≤300 字，带实时字数）、**署名**（默认 `d星空之下`）、范围（**仅已登录账号** / 全部在线含游客）、**发送通知**；下面是**发送历史**（时间 / 内容 / 署名 / 送达人数）。
-- **接口**：`POST /admin/api/notify?token=…`，body `{ text, sign?, scope? }` → `{ ok, sent, notice }`。令牌校验与 `/admin`、`/admin/api/state` 完全相同（query / `x-admin-token` / `sp_admin` cookie）；**只接受 POST**（其余 405），body 上限 16 KB（超出直接销毁连接），空内容 → 400。
-- **推送**：`Lobby.broadcastNotice()`（`server/lobby.js`）把 `sys.notice { id, text, sign, at }` 发给**当前在线**的会话 —— 默认只发 `accountId != null`（已登录账号），`scope:'all'` 连游客一起发。历史保留最近 20 条（`this.notices`），并随 `buildSnapshot` 出现在 `/admin/api/state` 的 `notices` 里。
+- **入口**：`/admin?token=…`（令牌见 `var/admin-token.txt`，启动日志里也有 Admin 链接）。页首新增「**通知**」面板：内容（≤300 字，带实时字数）、**署名**（默认 `d星空之下`）、范围（**仅已登录账号** / 全部在线含游客）、**类型**（**普通通知** / **通知 + 写入更新日志**）、**发送通知**；下面是**发送历史**（时间 / 内容 / 署名 / 送达人数 / 类型）。
+- **接口**：`POST /admin/api/notify?token=…`，body `{ text, sign?, scope?, changelog? }` → `{ ok, sent, notice, changelog }`。令牌校验与 `/admin`、`/admin/api/state` 完全相同（query / `x-admin-token` / `sp_admin` cookie）；**只接受 POST**（其余 405），body 上限 16 KB（超出直接销毁连接），空内容 → 400。
+- **推送**：`Lobby.broadcastNotice()`（`server/lobby.js`）把 `sys.notice { id, text, sign, at, kind }` 发给**当前在线**的会话 —— 默认只发 `accountId != null`（已登录账号），`scope:'all'` 连游客一起发。历史保留最近 20 条（`this.notices`），并随 `buildSnapshot` 出现在 `/admin/api/state` 的 `notices` 里。`changelog` 缺省为 `false`：普通通知不写更新日志；`changelog: true` 才记录（见 §36.2.1）。
 - **客户端**：`main.js` 收到 `sys.notice` → 写入 `store.notice` + 弹一条 toast；`ui/notice.js` 的 `<NoticeBanner>`（挂在 App 根部，`ConnectionBanner` 旁）在**顶部居中**显示一条可关闭的通知条（内容 + `—— 署名` + 知道了），大厅与对局内都能看到；`z-index` 在连接条之上、弹窗之下（`calc(var(--z-conn) + 2)`）。
 - **常量**：`shared/constants.js` 的 `NOTICE_MAX_LEN = 300` / `NOTICE_HISTORY = 20`；`sys.notice` 已登记进 `shared/protocol.js` 的 S2C 列表。
 - **运维约定（重要）**：
@@ -773,6 +773,16 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
     `curl -s -X POST "http://127.0.0.1:3000/admin/api/notify?token=$(cat var/admin-token.txt)" -H 'Content-Type: application/json' -d '{"text":"服务器将在 5 分钟后重启更新，请尽快结束当前对局","sign":"d星空之下"}'`
 - 测试：`test/admin.test.js`（令牌 / 方法 / 空内容拦截、默认只发已登录、`scope:'all'` 含游客、`sys.notice` 帧内容、历史顺序与人数）。
 - 结果：全量 `node --test` **exit=0**。
+
+### 28.1 两种通知与「非官方地址」来源提醒（2026-10-25）
+
+- **普通通知**：只推送当前在线玩家，不写更新日志（`changelog` 缺省 `false`）。部署 / 重启提醒用这一种。
+- **更新日志通知**：管理员在面板里选择「通知 + 写入更新日志」，或接口传 `changelog: true`；推送成功后仍按 §36.2.1 追加下一小版本，历史里显示「日志 0.4.N」。
+- **来源检测**：`server/net.js` 在 WebSocket 升级时读取浏览器的 `Origin`，归一化后存到 `Session.origin`；`Lobby.onHello()` 对**非官方来源**（且不是 localhost / 回环）发一条**仅该会话可见**的普通 `sys.notice`，提醒改用官方地址登录。每次新连接发一次；同一个 socket 的重复 `hello` 不重复提醒。
+- **官方地址**：`shared/origins.js` 的 `OFFICIAL_ORIGIN = https://strongholdprotocolcsym.top:10785`；部署到别的地址时可用环境变量 `SP_OFFICIAL_ORIGIN`（或 `startServer({ officialOrigin })`）覆盖。`localhost` / `127.0.0.1` / `::1` / `0.0.0.0` 永远不提醒，避免本地开发被弹窗。
+- **客户端**：该提醒带 `origin: true`，即使还在标题页（尚未进入大厅）也会显示；普通管理员通知仍只在进入后显示。玩家点「知道了」关闭。
+- **管理页**：在线表新增「来源」列（官方 / 本地 / 其他，悬停显示原始 origin）；通知面板显示「在线来源：官方 N · 其他 N · 本地 N · 未知 N」，直接回答“是否有玩家不是从官方地址进入”。`/admin/api/state` 新增 `origins` 汇总与每行 `originKind`，不向普通玩家暴露。
+- 测试：`test/lobby.test.js`（来源提醒、官方 / 本地 / 无 Origin 的静默、自定义官方地址、Origin 保存到 Session）、`test/admin.test.js`（普通通知不写日志、`changelog: true` 写日志、来源列与汇总）。
 
 ## 29. 结城理〈替身〉动画（2026-10-07）
 
@@ -1255,12 +1265,12 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **入口**（§36.4）：更新日志 / 公开房间 由 `screens/lobby.js` 的 `.topbar__left` 打开；**bug提交 自 2026-10-11 起移入「设置」对话框**（与玩法说明同列，见 §36.8）。`ui/community.js` 不再导出 `CommunityBar` / `COMMUNITY_PANELS`，左侧社区列（`.lobby-tools`）已删除，左侧现在从 `01 模拟方式` 开始。三块面板（changelog / bug / rooms）功能不变。
 - 管理页的写入入口留作可选（服务端已提供 `addChangelog()`）。
 
-### 36.2.1 每次推送通知 = 下一小版本（来源 notice）
+### 36.2.1 推送通知 = 下一小版本（来源 notice；仅“写入更新日志”类型）
 
-- owner：「每次小更新推送通知也要记录进来（小版本）」。`Lobby.broadcastNotice()`（§28）在**推送成功之后**调用 `CommunityService.recordNotice()`，把这条通知**追加**为更新日志的一条**小版本**：内容同时作为 `body` 与 `summary`，`released_at` = 推送时间，`source: 'notice'`。
+- owner：「每次小更新推送通知也要记录进来（小版本）」。2026-10-25 起通知分为**普通**与**写入更新日志**两种（§28.1）：只有 `Lobby.broadcastNotice({ changelog: true })`（管理页面板选择「通知 + 写入更新日志」，或接口 `changelog: true`）在**推送成功之后**调用 `CommunityService.recordNotice()`，把这条通知**追加**为更新日志的一条**小版本**：内容同时作为 `body` 与 `summary`，`released_at` = 推送时间，`source: 'notice'`。普通通知只推送、不写日志。
 - **版本号**：`_nextMinorVersion()` = `<APP_VERSION 的 major.minor>.<seq>`（如 `0.2.1`、`0.2.2`…，`package.json` / `shared/constants.js` 的 `APP_VERSION` 为 `0.2.0`）。`seq` = 已存 `minor_seq` 的最大值 + 1（**单调、绝不重编号**）；若算出的版本已被某条种子发布占用，则继续 +1 直到不冲突（`never collide with a seeded release version`）。
 - **失败隔离**：写入包在 try/catch 里（`this.community.recordNotice` 抛错只 `log.warn`），**推送永远先发出、绝不被日志写入阻断或破坏**；返回体带 `changelog: { id, version, minor_seq } | null`。
-- **接口**：`POST /admin/api/notify` 的响应新增 `changelog`（创建的小版本，写入失败为 `null`）；管理页「通知」表单下方提示「发送后……记入大厅「更新日志」的下一小版本」，成功提示里显示「记入日志 0.2.N」。
+- **接口**：`POST /admin/api/notify` 的响应带 `changelog`（创建的小版本；普通通知或写入失败为 `null`）；管理页「通知」表单的类型选择为「普通通知（不写入日志）」/「通知 + 写入更新日志」，成功提示里显示「记入日志 0.4.N」或「普通通知（未写入日志）」。
 
 ### 36.3 bug 提交（文字 + 图片）
 

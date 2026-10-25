@@ -6,7 +6,7 @@
 //   GET /admin/api/docs?token=…   → the documentation index (server/docs.js)
 //   GET /admin/api/docs/file?…    → one Markdown document
 //   GET /admin/api/docs/asset?…   → a docs/ image
-//   GET /admin/api/state?token=…  → { now, counts, queue, rooms, accounts, online }
+//   GET /admin/api/state?token=…  → { now, counts, queue, rooms, accounts, online, origins }
 //
 // It lists every registered account with its live status (离线 / 在线 / 组队中 / 野排排队 / 野排游玩 / 同盟游玩 /
 // 单人游玩) plus every connected session (guests included) and every room. Access needs a token: `var/admin-token.txt`
@@ -16,6 +16,7 @@ import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path';
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { DIFFICULTY_NAMES, MAX_SEATS } from '../shared/constants.js';
+import { isLocalOrigin } from '../shared/origins.js';
 import { presenceOnline } from './net.js';
 import { scriptProbeStats } from './plugins/scriptPreflight.js';
 import { readPolicy, POLICY_FILE } from './plugins/policy.js';
@@ -66,6 +67,14 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
   const liveByAccount = new Map();
   for (const s of sessions) if (presenceOnline(s, now) && s.accountId != null) liveByAccount.set(s.accountId, s);
 
+  const officialOrigin = lobby?.officialOrigin || null;
+  const originKindOf = (s) => {
+    const origin = typeof s.origin === 'string' && s.origin ? s.origin : null;
+    if (!origin) return null;
+    if (officialOrigin && origin === officialOrigin) return 'official';
+    return isLocalOrigin(origin) ? 'local' : 'other';
+  };
+
   const online = sessions.filter((s) => presenceOnline(s, now)).map((s) => ({
     playerId: s.playerId,
     name: s.name,
@@ -74,8 +83,23 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
     status: statusOf(s, { lobby, matchmaker: mm, now }),
     roomCode: s.roomCode ?? null,
     addr: s.addr ?? null,
+    // where this page was opened: official / local (dev) / other (mirror, IP, http), null when no Origin header
+    origin: s.origin ?? null,
+    originKind: originKindOf(s),
     lastSeen: s.lastSeen ?? null,
   }));
+
+  // A quick answer to "is anyone on a non-official address?" for the admin page; the per-session column has the detail.
+  const origins = { official: 0, local: 0, unknown: 0, other: [] };
+  const otherOrigins = new Map();
+  for (const s of online) {
+    if (s.originKind === 'official') origins.official += 1;
+    else if (s.originKind === 'local') origins.local += 1;
+    else if (s.originKind === 'other') otherOrigins.set(s.origin, (otherOrigins.get(s.origin) || 0) + 1);
+    else origins.unknown += 1;
+  }
+  origins.other = [...otherOrigins].map(([origin, count]) => ({ origin, count }))
+    .sort((a, b) => b.count - a.count || a.origin.localeCompare(b.origin)).slice(0, 8);
 
   const accounts = (auth && typeof auth.listAccounts === 'function' ? auth.listAccounts() : []).map((a) => {
     const s = liveByAccount.get(a.id) || null;
@@ -156,7 +180,7 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
   const bugs = community && typeof community.listBugReports === 'function' ? community.listBugReports({ status: bugStatus, sort: bugSort, limit: 100 }) : [];
   const bugCounts = community && typeof community.bugReportCounts === 'function' ? community.bugReportCounts() : { new: 0, triaged: 0, fixed: 0, total: 0 };
 
-  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, bugs, bugCounts, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [], plugins: buildPluginSnapshot(plugins) };
+  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, origins, bugs, bugCounts, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [], plugins: buildPluginSnapshot(plugins) };
 }
 
 /** Read-only operations view of the plugin system: installed entries, skipped/warnings and the owner policy. */
@@ -1031,7 +1055,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
 
     <section class="view" id="view-notice" hidden>
       <section class="panel">
-        <h2>通知<em>推送给在线玩家 · 署名建议 d星空之下 · 每次发送同时记入「更新日志」的下一小版本</em></h2>
+        <h2>通知<em>推送给在线玩家 · 署名建议 d星空之下 · 可选是否写入「更新日志」</em></h2>
         <div class="notice-form">
           <textarea id="noticeText" maxlength="300" placeholder="通知内容（例如：服务器将在 5 分钟后重启更新，请尽快结束当前对局；更新完成后刷新页面即可）"></textarea>
           <div class="notice-row">
@@ -1041,11 +1065,16 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
               <option value="accounts">仅已登录账号</option>
               <option value="all">全部在线（含游客）</option>
             </select>
+            <select id="noticeKind">
+              <option value="plain">普通通知（不写入日志）</option>
+              <option value="changelog">通知 + 写入更新日志</option>
+            </select>
             <span class="grow"></span>
             <span class="pill" id="noticeHint">0/300</span>
             <button class="btn btn--primary" id="noticeSend">发送通知</button>
           </div>
-          <div class="notice-note">发送后内容同时作为该条目摘要，记入大厅「更新日志」的下一小版本（如 0.2.1）。</div>
+          <div class="notice-note">普通通知只推送给当前在线玩家，不写入「更新日志」；选择「通知 + 写入更新日志」时，内容同时作为该条目摘要，记入下一小版本（如 0.4.1）。</div>
+          <div class="notice-note" id="originStats"></div>
         </div>
         <div class="notice-hist" id="noticeHist"></div>
       </section>
@@ -1180,7 +1209,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   var COLS = {
     rooms: [['房间码','code'],['模式','mode'],['难度','difficulty'],['状态',''],['类型',''],['玩家','humans'],['AI','bots']],
     accounts: [['ID','id'],['代号','name'],['身份','role'],['状态','status'],['房间',''],['playerId',''],['注册时间','createdAt'],['最后登录','lastLogin']],
-    online: [['名字','name'],['账号','accountId'],['状态','status'],['房间',''],['地址',''],['最近活动','lastSeen']]
+    online: [['名字','name'],['账号','accountId'],['状态','status'],['房间',''],['地址',''],['来源','originKind'],['最近活动','lastSeen']]
   };
 
   function el(id) { return document.getElementById(id); }
@@ -1323,13 +1352,16 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     };
   }
   function onlineRow(s) {
+    var origin = s.originKind === 'official' ? '<span class="pill yes" title="' + esc(s.origin) + '">官方</span>'
+      : s.originKind === 'local' ? '<span class="pill" title="' + esc(s.origin) + '">本地</span>'
+      : s.originKind === 'other' ? '<span class="pill" title="' + esc(s.origin) + '">其他</span>' : '—';
     return {
-      text: [s.name, s.accountId, LABELS[s.status] || s.status, s.roomCode, s.addr, ts(s.lastSeen)].join(' ').toLowerCase(),
-      v: { name: s.name, accountId: int(s.accountId), status: LABELS[s.status] || s.status || '', lastSeen: s.lastSeen },
+      text: [s.name, s.accountId, LABELS[s.status] || s.status, s.roomCode, s.addr, s.origin, ts(s.lastSeen)].join(' ').toLowerCase(),
+      v: { name: s.name, accountId: int(s.accountId), status: LABELS[s.status] || s.status || '', originKind: s.originKind || '', lastSeen: s.lastSeen },
       cells: [cell(esc(s.name) + rolePill(s.role)),
         cell(s.accountId == null ? '<span class="pill guest">游客</span>' : '<span class="mono">#' + s.accountId + '</span>'),
         cell(badge(s.status)), cell(s.roomCode ? esc(s.roomCode) : '—', 'mono'),
-        cell(s.addr ? esc(s.addr) : '—', 'mono'), cell(ts(s.lastSeen))]
+        cell(s.addr ? esc(s.addr) : '—', 'mono'), cell(origin), cell(ts(s.lastSeen))]
     };
   }
   function roomRow(r) {
@@ -1932,6 +1964,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     el('clock').textContent = new Date(d.now).toLocaleString('zh-CN');
     el('verify').textContent = v.mode ? ('校验 ' + v.mode + ' · 不一致 ' + int(v.mismatches)) : '校验 off';
     renderNotices(notices);
+    renderOriginStats(d.origins);
     renderPluginNotices(d);
     // renderBugs FIRST: it sets bugList, which renderBugToolbar reads for the 「显示 N / 共 M 条」 count.
     renderBugs(d.bugs);
@@ -1951,8 +1984,15 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   el('refresh').addEventListener('click', tick);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
   // 通知 (server/lobby.js broadcastNotice): push one notice to the live sessions; the history is the state's notices array.
-  var noticeText = el('noticeText'), noticeSign = el('noticeSign'), noticeScope = el('noticeScope');
+  var noticeText = el('noticeText'), noticeSign = el('noticeSign'), noticeScope = el('noticeScope'), noticeKind = el('noticeKind');
   noticeText.addEventListener('input', function () { el('noticeHint').textContent = noticeText.value.length + '/' + noticeText.maxLength; });
+  function renderOriginStats(o) {
+    if (!o) { el('originStats').textContent = ''; return; }
+    var other = (o.other || []).map(function (x) { return x.origin + ' ×' + x.count; }).join('，');
+    var otherCount = (o.other || []).reduce(function (n, x) { return n + (Number(x.count) || 0); }, 0);
+    el('originStats').textContent = '在线来源：官方 ' + int(o.official) + ' 人 · 其他 ' + otherCount + ' 人'
+      + (other ? '（' + other + '）' : '') + ' · 本地 ' + int(o.local) + ' 人 · 未知 ' + int(o.unknown) + ' 人';
+  }
   function renderPluginNotices(d) {
     var p = d.plugins || { installed: [] };
     var items = [];
@@ -1969,8 +2009,9 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
 
   function renderNotices(list) {
     el('noticeHist').innerHTML = (Array.isArray(list) ? list : []).map(function (n) {
+      var kind = n.kind === 'changelog' ? ('日志 ' + (n.version || '?')) : '普通';
       return '<div class="notice-item"><time>' + ts(n.at) + '</time><b>' + esc(n.text) + '</b>'
-        + (n.sign ? '<i>—— ' + esc(n.sign) + '</i>' : '') + '<em>' + int(n.sent) + ' 人</em></div>';
+        + (n.sign ? '<i>—— ' + esc(n.sign) + '</i>' : '') + '<em>' + int(n.sent) + ' 人 · ' + esc(kind) + '</em></div>';
     }).join('') || '<div class="empty">还没有发过通知</div>';
   }
   el('noticeSend').addEventListener('click', function () {
@@ -1981,14 +2022,20 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     fetch('/admin/api/notify?token=' + encodeURIComponent(token), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text, sign: noticeSign.value, scope: noticeScope.value })
+      body: JSON.stringify({
+        text: text, sign: noticeSign.value, scope: noticeScope.value,
+        changelog: noticeKind.value === 'changelog',
+      })
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         if (!res.ok) throw new Error((res.j && (res.j.error || res.j.message)) || 'HTTP');
         noticeText.value = '';
         el('noticeHint').textContent = '0/300';
         var ver = res.j.changelog && res.j.changelog.version;
-        el('updated').textContent = '已推送 ' + res.j.sent + ' 人' + (ver ? ' · 记入日志 ' + ver : ' · 日志写入失败（通知已发出）') + ' · ' + new Date().toLocaleTimeString('zh-CN');
+        var kind = res.j.notice && res.j.notice.kind;
+        el('updated').textContent = '已推送 ' + res.j.sent + ' 人'
+          + (ver ? ' · 记入日志 ' + ver : kind === 'changelog' ? ' · 日志写入失败（通知已发出）' : ' · 普通通知（未写入日志）')
+          + ' · ' + new Date().toLocaleTimeString('zh-CN');
         tick();
       })
       .catch(function (e) { el('updated').textContent = '推送失败：' + e.message; })

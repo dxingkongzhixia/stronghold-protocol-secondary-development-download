@@ -7,11 +7,12 @@ import { html, Button, Icon } from './components.js';
 import { store, useStore } from '../store.js';
 import { t } from '../../../shared/i18n.js';
 
-/** The dismissable notice strip (nothing when there is no notice / before entry). */
+/** The dismissable notice strip (nothing when there is no notice / before entry, except an address reminder, which is
+ * useful on the title screen where the player is about to log in). */
 export function NoticeBanner() {
   const notice = useStore((s) => s.notice);
   const entered = useStore((s) => s.session.entered);
-  if (!notice || !entered) return null;
+  if (!notice || (!entered && notice.origin !== true)) return null;
   return html`<div class="notice-banner" role="alert">
     <${Icon} name="info" class="notice-banner__icon" />
     <div class="notice-banner__text">

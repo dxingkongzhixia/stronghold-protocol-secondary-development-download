@@ -14,8 +14,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { startServer, parseRange, acceptsGzip, pickEncoding, parseTrustProxy } from '../server/index.js';
 import { loadData, lookup, getChess, getBond, getBand, getMode, getConfig, INDEXED_FILES } from '../server/data.js';
 import * as dataModule from '../server/data.js';
-import { CODE_ALPHABET, BOT_NAMES } from '../server/lobby.js';
-import { sanitizeName, TokenBucket, SessionRegistry, clientAddress, normalizeIp, isLocalIp, limitKeyOf } from '../server/net.js';
+import { CODE_ALPHABET, BOT_NAMES, Lobby } from '../server/lobby.js';
+import { sanitizeName, TokenBucket, SessionRegistry, Network, clientAddress, normalizeIp, isLocalIp, limitKeyOf } from '../server/net.js';
+import { OFFICIAL_ORIGIN } from '../shared/origins.js';
 import { StubMatch as Match } from '../server/match/StubMatch.js';
 import { Match as RealMatch } from '../server/match/Match.js';
 import { TestClient } from './helpers/wsClient.js';
@@ -2420,5 +2421,80 @@ describe('platform units', () => {
     now += 5000;
     assert.deepEqual(reg.sweep(), [solo]);
     assert.equal(reg.size, 0);
+  });
+});
+
+// The official-address reminder (docs/MATCHMAKING.md §28.1): a page opened somewhere other than the official origin
+// gets ONE private plain `sys.notice` per new connection; localhost / loopback and the official origin stay quiet.
+describe('official-address reminder', () => {
+  function seat(registry, name, origin) {
+    const s = registry.create(name);
+    s.connected = true;
+    s.ws = { readyState: 1, bufferedAmount: 0, sent: [], send(raw) { this.sent.push(JSON.parse(raw)); } };
+    s.origin = origin;
+    return s;
+  }
+
+  test('a foreign origin gets a private plain notice on each new connection', (t) => {
+    const registry = new SessionRegistry({ now: () => 0 });
+    const lobby = new Lobby({ registry, now: () => 1000 });
+    t.after(() => lobby.shutdown());
+    const s = seat(registry, 'Mirror', 'https://mirror.example');
+    lobby.onHello(s, { resumed: false, repeat: false });
+    assert.equal(s.ws.sent.length, 1);
+    const frame = s.ws.sent[0];
+    assert.equal(frame.t, 'sys.notice');
+    assert.equal(frame.kind, 'plain');
+    assert.match(frame.text, /mirror\.example/);
+    assert.ok(frame.text.includes(OFFICIAL_ORIGIN), 'the reminder names the official address');
+    lobby.onHello(s, { resumed: false, repeat: false });
+    assert.equal(s.ws.sent.length, 2, 'a later entry reminds again');
+    lobby.onHello(s, { resumed: true, repeat: true });
+    assert.equal(s.ws.sent.length, 2, 'a repeated hello on the same socket does not nag');
+  });
+
+  test('the official origin, localhost and a missing Origin header are silent', (t) => {
+    const registry = new SessionRegistry({ now: () => 0 });
+    const lobby = new Lobby({ registry, now: () => 1000 });
+    t.after(() => lobby.shutdown());
+    const cases = [
+      seat(registry, 'Official', OFFICIAL_ORIGIN),
+      seat(registry, 'Local', 'http://127.0.0.1:3000'),
+      seat(registry, 'LocalName', 'http://localhost:3000'),
+      seat(registry, 'Unknown', null),
+    ];
+    for (const s of cases) lobby.onHello(s, { resumed: false, repeat: false });
+    for (const s of cases) assert.equal(s.ws.sent.length, 0, `${s.name} stays quiet`);
+  });
+
+  test('a custom official origin is honoured', (t) => {
+    const registry = new SessionRegistry({ now: () => 0 });
+    const lobby = new Lobby({ registry, now: () => 1000, options: { officialOrigin: 'https://game.example' } });
+    t.after(() => lobby.shutdown());
+    const official = seat(registry, 'A', 'https://game.example');
+    const other = seat(registry, 'B', 'https://old.example');
+    lobby.onHello(official, { resumed: false, repeat: false });
+    lobby.onHello(other, { resumed: false, repeat: false });
+    assert.equal(official.ws.sent.length, 0);
+    assert.equal(other.ws.sent.length, 1);
+    assert.ok(other.ws.sent[0].text.includes('https://game.example'));
+  });
+
+  test('the WebSocket Origin header is kept on the session', () => {
+    const registry = new SessionRegistry();
+    const network = new Network({ registry, handler: { onMessage() {} } });
+    const frames = [];
+    const ws = {
+      readyState: 1, bufferedAmount: 0, on() {}, close() {},
+      send(raw) { frames.push(JSON.parse(raw)); },
+    };
+    network.handleConnection(ws, { headers: { origin: 'https://mirror.example' }, socket: { remoteAddress: '8.8.8.8' } });
+    clearInterval(network.heartbeatTimer);
+    clearInterval(network.sweepTimer);
+    const conn = network.conns.get(ws);
+    assert.equal(conn.origin, 'https://mirror.example');
+    network.onHelloMsg(conn, { t: 'hello', name: 'Header' }, 0);
+    assert.equal(conn.session.origin, 'https://mirror.example');
+    assert.equal(frames[0].t, 'welcome');
   });
 });

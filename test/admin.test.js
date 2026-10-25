@@ -304,29 +304,57 @@ test('POST /admin/api/notify pushes sys.notice to the live sessions (scope, guar
     assert.equal((await fetch(`${base}/admin/api/notify?token=testtok`)).status, 405, 'POST only');
     assert.equal((await post({ text: '   ' })).status, 400, 'empty text refused');
 
-    // the default scope reaches logged-in accounts only
+    // the default scope reaches logged-in accounts only; a plain notice does NOT enter the changelog
+    const clog0 = await (await fetch(`${base}/community/api/changelog`)).json();
     const r1 = await post({ text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下' });
     assert.equal(r1.status, 200);
     const j1 = await r1.json();
     assert.equal(j1.sent, 1);
     assert.equal(j1.notice.sign, 'd星空之下');
+    assert.equal(j1.notice.kind, 'plain');
+    assert.equal(j1.changelog, null, 'a plain notice is not written to the changelog');
     assert.equal(doctor.ws.sent.length, 1);
     assert.equal(guest.ws.sent.length, 0, 'a guest is skipped for scope accounts');
     const frame = JSON.parse(doctor.ws.sent[0]);
     assert.deepEqual(
-      { t: frame.t, text: frame.text, sign: frame.sign },
-      { t: 'sys.notice', text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下' },
+      { t: frame.t, text: frame.text, sign: frame.sign, kind: frame.kind },
+      { t: 'sys.notice', text: '服务器将在 5 分钟后重启更新', sign: 'd星空之下', kind: 'plain' },
     );
+    const clog1 = await (await fetch(`${base}/community/api/changelog`)).json();
+    assert.equal(clog1.changelog.length, clog0.changelog.length, 'plain notices leave the log untouched');
 
     // scope 'all' reaches guests too
     const j2 = await (await post({ text: '全部在线', sign: 'd星空之下', scope: 'all' })).json();
     assert.equal(j2.sent, 2);
     assert.equal(guest.ws.sent.length, 1);
 
-    // the history rides in /admin/api/state, newest first
+    // the changelog kind additionally appends the next minor version (source: notice)
+    const j3 = await (await post({ text: '新增凯尔希策略调整', sign: 'd星空之下', changelog: true })).json();
+    assert.match(j3.changelog.version, /^0\.4\.\d+$/);
+    assert.equal(j3.notice.kind, 'changelog');
+    assert.equal(j3.notice.version, j3.changelog.version);
+    const clog2 = await (await fetch(`${base}/community/api/changelog`)).json();
+    assert.equal(clog2.changelog.length, clog1.changelog.length + 1);
+    assert.equal(clog2.changelog[0].version, j3.changelog.version);
+    assert.equal(clog2.changelog[0].source, 'notice');
+    assert.equal(clog2.changelog[0].body, '新增凯尔希策略调整');
+
+    // where each session came from: the admin can see official / local / other, and a compact summary
+    doctor.origin = 'https://mirror.example';
+    guest.origin = 'https://strongholdprotocolcsym.top:10785';
     const st = await (await fetch(`${base}/admin/api/state?token=testtok`)).json();
-    assert.deepEqual(st.notices.map((n) => n.text), ['全部在线', '服务器将在 5 分钟后重启更新']);
-    assert.equal(st.notices[0].sent, 2);
+    assert.deepEqual(st.notices.map((n) => n.text), ['新增凯尔希策略调整', '全部在线', '服务器将在 5 分钟后重启更新']);
+    assert.equal(st.notices[0].sent, 1);
+    assert.equal(st.notices[0].kind, 'changelog');
+    assert.equal(st.notices[2].kind, 'plain');
+    const drow = st.online.find((s) => s.playerId === doctor.playerId);
+    const grow = st.online.find((s) => s.playerId === guest.playerId);
+    assert.equal(drow.originKind, 'other', 'a mirror origin is visible in the online table');
+    assert.equal(grow.originKind, 'official');
+    assert.deepEqual(st.origins, {
+      official: 1, local: 0, unknown: 0,
+      other: [{ origin: 'https://mirror.example', count: 1 }],
+    }, 'the summary answers "is anyone off the official address?"');
   } finally {
     await srv.close();
   }

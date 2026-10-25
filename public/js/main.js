@@ -361,7 +361,7 @@ function wireNet() {
     const id = msg.id ?? null;
     const cur = store.get().notice;
     if (id && cur && cur.id === id) return;   // the same notice, already on screen
-    store.patch('notice', { id, text, sign, at: Number(msg.at) || Date.now() });
+    store.patch('notice', { id, text, sign, at: Number(msg.at) || Date.now(), origin: msg.origin === true });
   });
   net.on('room.state', onRoomState);
   net.on('room.closed', (msg) => {

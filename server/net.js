@@ -43,6 +43,7 @@
 import { randomBytes } from 'node:crypto';
 import { isIP } from 'node:net';
 import { C2S, validateC2S } from '../shared/protocol.js';
+import { normalizeOrigin } from '../shared/origins.js';
 import { ERR, ERR_TEXT, NAME_MAX_LEN, PRESENCE_GRACE_MS, PROTOCOL_VERSION } from '../shared/constants.js';
 
 /** Tunables (all overridable through the Network / SessionRegistry constructors). */
@@ -128,6 +129,8 @@ export class Session {
     this.skins = null;
     /** @type {string} client address of the latest connection (logging) */
     this.addr = '?';
+    /** @type {string | null} normalized page origin of the latest connection (the WebSocket Origin header; lobby reminder) */
+    this.origin = null;
     /** @type {string | null} per-network limit key of the latest connection (null = not limited), see clientAddress */
     this.limitKey = null;
     /**
@@ -502,12 +505,14 @@ export function clientAddress(req, trustProxy = NET_DEFAULTS.trustProxy) {
 
 /** Per-socket state. */
 class Connection {
-  /** @param {import('ws').WebSocket} ws @param {{ ip: string, key: string | null }} addr @param {number} now @param {typeof NET_DEFAULTS} opts */
+  /** @param {import('ws').WebSocket} ws @param {{ ip: string, key: string | null, origin?: string | null }} addr @param {number} now @param {typeof NET_DEFAULTS} opts */
   constructor(ws, addr, now, opts) {
     this.ws = ws;
     this.ip = addr.ip;
     /** @type {string | null} per-network limit key (see clientAddress) */
     this.key = addr.key;
+    /** @type {string | null} normalized page origin of this socket (Origin header) */
+    this.origin = addr.origin ?? null;
     this.openedAt = now;
     this.alive = true;
     /** @type {Session | null} */
@@ -583,7 +588,9 @@ export class Network {
    */
   handleConnection(ws, req) {
     if (this.closed) { try { ws.close(CLOSE.SHUTDOWN, 'server shutdown'); } catch { /* ignore */ } return; }
-    const conn = new Connection(ws, clientAddress(req, this.opts.trustProxy), this.now(), this.opts);
+    const addr = clientAddress(req, this.opts.trustProxy);
+    addr.origin = normalizeOrigin(req?.headers?.origin);
+    const conn = new Connection(ws, addr, this.now(), this.opts);
     this.conns.set(ws, conn);
     if (conn.key) this.connsPerKey.set(conn.key, (this.connsPerKey.get(conn.key) || 0) + 1);
     ws.on('message', (data, isBinary) => {
@@ -715,6 +722,7 @@ export class Network {
     session.lastSeen = now;
     session.addr = conn.ip;
     session.limitKey = conn.key;
+    session.origin = conn.origin ?? null;
 
     let extra = null;
     try { extra = this.handler.welcomeInfo?.() ?? null; } catch (e) { this.log.error('[net] welcomeInfo crashed', e); }

@@ -173,6 +173,7 @@ import { BootGate } from './bootgate.js';
 import { KITTED_CHARS } from './sim/content/kits/index.js';
 import { parseTestModeEnv, testModeGate, unrecognizedTestMode } from './testMode.js';
 import { isContentHash } from '../shared/plugins/identity.js';
+import { OFFICIAL_ORIGIN, isLocalOrigin, normalizeOrigin } from '../shared/origins.js';
 import { msg, wireMessage } from '../shared/i18n.js';
 
 /** Room code alphabet: uppercase letters without I and O (and no digits, so no 0/1). */
@@ -190,6 +191,7 @@ export const LOBBY_DEFAULTS = Object.freeze({
   bootHoldMs: 180_000,    // a slot is freed this long after a claim with no release (a tab that never finished)
   chatRateLimit: CHAT_RATE_LIMIT,       // room.chat (docs/MATCHMAKING.md §38): messages per session per window
   chatRateWindowMs: CHAT_RATE_WINDOW_MS, // ...the sliding window a session's chat messages are counted over
+  officialOrigin: OFFICIAL_ORIGIN,      // where players should log in (a foreign page origin gets a plain reminder)
 });
 
 /** Official `singleReconnectTime` (s) when the data lacks it (constData, research 01 §1). */
@@ -407,6 +409,8 @@ export class Lobby {
     this.now = now;
     this.seedFn = seedFn || (() => randomInt(2 ** 32));
     this.opts = { ...LOBBY_DEFAULTS, ...options };
+    /** The public origin players should use; a page opened on another origin gets a plain reminder. */
+    this.officialOrigin = normalizeOrigin(options.officialOrigin ?? process.env.SP_OFFICIAL_ORIGIN) || OFFICIAL_ORIGIN;
     const testModeOpt = options.testMode;
     const testHostOpt = options.testHost;
     delete this.opts.testMode;
@@ -490,10 +494,13 @@ export class Lobby {
    * logged-in account by default, everyone (guests included) with `scope: 'all'`. The notice is kept in `this.notices`
    * (newest first, ≤ NOTICE_HISTORY) so the admin page can show what was sent. Deploys / restarts announce themselves
    * this way (docs/MATCHMAKING.md §28), signed `d星空之下`.
-   * @param {{ text: string, sign?: string|null, scope?: 'accounts'|'all' }} opts
+   *
+   * Two kinds (2026-10-25): a PLAIN notice only reaches the live sessions; a CHANGELOG notice additionally becomes the
+   * running 更新日志's next minor version. `changelog` defaults to false, so operational notices stay out of the log.
+   * @param {{ text: string, sign?: string|null, scope?: 'accounts'|'all', changelog?: boolean }} opts
    * @returns {{ ok: true, notice: object, sent: number, changelog: object|null } | { error: string }}
    */
-  broadcastNotice({ text, sign = null, scope = 'accounts' } = {}) {
+  broadcastNotice({ text, sign = null, scope = 'accounts', changelog = false } = {}) {
     const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
     const body = clean(text, NOTICE_MAX_LEN);
     if (!body) return { error: 'BAD_NOTICE' };
@@ -504,9 +511,11 @@ export class Lobby {
       sign: clean(sign, NAME_MAX_LEN) || null,
       at,
       scope: scope === 'all' ? 'all' : 'accounts',
+      kind: changelog === true ? 'changelog' : 'plain',
+      version: null,
       sent: 0,
     };
-    const frame = { t: 'sys.notice', id: notice.id, text: notice.text, sign: notice.sign, at: notice.at };
+    const frame = { t: 'sys.notice', id: notice.id, text: notice.text, sign: notice.sign, at: notice.at, kind: notice.kind };
     for (const session of this.registry.all()) {
       if (!session.connected) continue;
       if (notice.scope === 'accounts' && session.accountId == null) continue;
@@ -514,20 +523,22 @@ export class Lobby {
     }
     this.notices.unshift(notice);
     if (this.notices.length > NOTICE_HISTORY) this.notices.length = NOTICE_HISTORY;
-    // Every pushed notice also becomes the running 更新日志's next minor version (docs/MATCHMAKING.md §36.2/§36.3): this
+    // A CHANGELOG notice also becomes the running 更新日志's next minor version (docs/MATCHMAKING.md §36.2/§36.3): this
     // write must NEVER block or break the broadcast, so a failure is only logged and the push above still stands.
-    let changelog = null;
-    if (this.community && typeof this.community.recordNotice === 'function') {
+    let entry = null;
+    if (notice.kind === 'changelog' && this.community && typeof this.community.recordNotice === 'function') {
       try {
         const c = this.community.recordNotice({ text: notice.text, releasedAt: at });
-        if (c && c.ok) changelog = { id: c.id, version: c.version, minor_seq: c.minor_seq };
-        else this.log.warn?.(`[lobby] notice changelog skipped: ${c && c.error}`);
+        if (c && c.ok) {
+          entry = { id: c.id, version: c.version, minor_seq: c.minor_seq };
+          notice.version = c.version;
+        } else this.log.warn?.(`[lobby] notice changelog skipped: ${c && c.error}`);
       } catch (e) {
         this.log.warn?.(`[lobby] notice changelog failed: ${e?.message}`);
       }
     }
-    this.log.info(`[lobby] notice → ${notice.sent} session(s) (${notice.scope}): ${notice.text.slice(0, 40)}`);
-    return { ok: true, notice, sent: notice.sent, changelog };
+    this.log.info(`[lobby] notice (${notice.kind}) → ${notice.sent} session(s) (${notice.scope}): ${notice.text.slice(0, 40)}`);
+    return { ok: true, notice, sent: notice.sent, changelog: entry };
   }
 
   /** Counters for /healthz. */
@@ -551,6 +562,26 @@ export class Lobby {
   // ---------------------------------------------------------------------------------------------------
   // net.js handler interface
   // ---------------------------------------------------------------------------------------------------
+
+  /**
+   * Remind a player who opened the game on an address other than `officialOrigin` (an IP, a mirror, http instead of
+   * https): one private PLAIN `sys.notice` per new connection. Localhost / loopback is exempt so the owner's dev
+   * server stays quiet. This never touches the admin history or the changelog.
+   * @param {import('./net.js').Session | null | undefined} session
+   * @returns {boolean} true when the reminder was sent
+   */
+  warnForeignOrigin(session) {
+    const origin = normalizeOrigin(session?.origin);
+    if (!origin || origin === this.officialOrigin || isLocalOrigin(origin)) return false;
+    const shown = origin.length > 120 ? `${origin.slice(0, 117)}...` : origin;
+    const text = wireMessage(msg(
+      '检测到你正在通过 {origin} 进入游戏，请改用官方地址 {official}/ 登录；其他地址可能无法同步账号与更新。',
+      { origin: shown, official: this.officialOrigin },
+    )).text.slice(0, NOTICE_MAX_LEN);
+    const sent = sendSession(session, { t: 'sys.notice', id: `origin:${session.playerId}`, text, sign: null, at: this.now(), kind: 'plain', origin: true });
+    if (sent) this.log.info?.(`[lobby] non-official origin ${origin} (${session.name}); reminded to use ${this.officialOrigin}/`);
+    return sent;
+  }
 
   /**
    * After `welcome`: resend room state / match state for resumed (or repeated) hellos.
@@ -579,6 +610,7 @@ export class Lobby {
         sendSession(session, { t: 'auth.error', code: 'SESSION_EXPIRED' });
       }
     }
+    if (!repeat) this.warnForeignOrigin(session);
     if (!resumed && !repeat) return;
     const room = this.roomOf(session);
     if (!room) {

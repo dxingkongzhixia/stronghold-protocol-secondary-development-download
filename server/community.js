@@ -288,9 +288,10 @@ export class CommunityService {
   }
 
   /**
-   * Record an operator notice as a MINOR-version changelog entry (docs/MATCHMAKING.md §36.3): every notice pushed from
-   * the admin page (`lobby.broadcastNotice` → `POST /admin/api/notify`) becomes the running 更新日志's next `0.2.N`.
-   * The notice text is both the body and the summary, `source` is `'notice'`, and `released_at` is the push time.
+   * Record an operator notice as a MINOR-version changelog entry (docs/MATCHMAKING.md §36.3): a notice pushed from
+   * the admin page with `changelog: true` (`lobby.broadcastNotice` → `POST /admin/api/notify`) becomes the running
+   * 更新日志's next `0.4.N`. The notice text is both the body and the summary, `source` is `'notice'`, and
+   * `released_at` is the push time. A plain notice never calls this.
    * @param {{ text?: unknown, releasedAt?: number|null }} [input]
    * @returns {{ ok: true, id:number, version:string, minor_seq:number } | { error: string }}
    */
