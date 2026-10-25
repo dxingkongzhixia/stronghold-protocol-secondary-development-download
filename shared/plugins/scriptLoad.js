@@ -26,7 +26,7 @@ export function browserScriptSources(p) {
 export const scriptUrl = (cs, id, rel) => `/cs/${csUrlPart(cs)}/scripts/${id}/${rel}`;
 
 /** Page-side byte check before native import; Workers use this already checked, immutable snapshot. */
-export async function checkBrowserScripts(scripts, cs, fetchFn = (...args) => globalThis.fetch(...args)) {
+export async function checkBrowserScripts(scripts, cs, fetchFn = (url, init) => globalThis.fetch(url, init)) {
   for (const p of scripts) {
     const m = JSON.parse(p.manifestSource);
     for (const rel of new Set([m.entry?.sim, m.entry?.meta, m.entry?.client].filter(Boolean))) {

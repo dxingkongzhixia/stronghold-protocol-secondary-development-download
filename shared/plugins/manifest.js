@@ -895,6 +895,7 @@ export function classStatus(cls) {
  * @typedef {{ id: string, class: string, status: string, source: string, manifest: PluginManifest, bytes?: number,
  *   count?: number, visual?: { vs: string | null, bytes: number, ops?: unknown[] },
  *   script?: { sandboxable: boolean, lockHash: string | null, execution?: string }, disabled?: { code: string },
+ *   builtin?: boolean,
  *   ui?: { vs: string | null, bytes: number, slots: string[], entry: string, frameFiles: Record<string, string> } }} PluginEntry
  *   what the registry knows of one plugin or pack (server/plugins/registry.js; `visual`: a loaded cosmetic plugin's own
  *   visual set and the bytes of art it serves; `ui`: a loaded interface plugin's frame — its own `vs`, the bytes it

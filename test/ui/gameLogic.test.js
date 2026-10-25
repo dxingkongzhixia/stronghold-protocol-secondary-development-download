@@ -722,7 +722,7 @@ describe('keyboard & settings', () => {
   test('sanitizeSettings', () => {
     assert.deepEqual(sanitizeSettings(null), { ...DEFAULT_SETTINGS });
     assert.deepEqual(sanitizeSettings({ bgm: 3, sfx: -1, voice: 2, muted: 'yes', damageNumbers: false, quality: 'ultra' }),
-      { bgm: 1, sfx: 0, voice: 1, voiceLang: 'jp', voiceOverrides: {}, muted: false, damageNumbers: false, officialDamageNumbers: false, ammoCount: false, bondTimers: false, otherSkins: true, quality: 'high', officialFx: 'auto', textSize: 'sm', keys: { ...DEFAULT_SETTINGS.keys } },
+      { bgm: 1, sfx: 0, voice: 1, voiceLang: 'jp', voiceOverrides: {}, muted: false, damageNumbers: false, officialDamageNumbers: false, ammoCount: false, bondTimers: false, otherSkins: true, quality: 'high', officialFx: 'auto', textSize: 'sm', lobbyMusic: '', keys: { ...DEFAULT_SETTINGS.keys } },
       'a saved profile without `keys` (before 0.2.0) gets the default key map (test/ui/feedback5-hotkeys.test.js)');
     assert.equal(sanitizeSettings({ bgm: 0.5 }).voice, DEFAULT_SETTINGS.voice, 'a saved profile without `voice` gets the default');
     // 语音语言 (0.2.2): 日本語 by default (the owner's JP-first rule) — a profile saved before it, or any other value,

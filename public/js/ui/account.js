@@ -213,7 +213,7 @@ export function AccountDialog({ onClose, defaultName = '' }) {
   const auth = useStore((s) => s.auth, shallowEqual);
   const [name, setName] = useState(defaultName);
   return html`<div class="account-modal" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
-    <div class="account-modal__card brackets">
+    <div class=${`account-modal__card brackets${auth?.account ? ' account-modal__card--profile' : ''}`}>
       <div class="account-modal__head"><span>${t('账号')}</span>
         <button type="button" class="account-modal__close" onClick=${onClose} aria-label=${t('关闭')}>✕</button></div>
       ${auth?.account

@@ -10,7 +10,7 @@
 1. **确认布局**（桌面双树 / 笔记本单树）：
 
    ```powershell
-   git rev-parse --abbrev-ref HEAD   # ours = 桌面 store；master = 笔记本单树
+   git rev-parse --abbrev-ref HEAD   # prts-plugin = 桌面 store；master = 笔记本单树
    ```
 
 2. **确认唯一真相**：桌面是 `D:\DOTK\_merge-scratch`（store，有 `.git`）；`D:\DOTK\Stronghold-Protocol` 只是运行镜像。提交、合并、推送都在 store。

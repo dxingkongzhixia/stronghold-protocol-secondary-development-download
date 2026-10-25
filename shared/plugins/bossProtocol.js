@@ -37,6 +37,10 @@ const ID = /^[A-Za-z0-9_]{1,64}$/;
 const PLUGIN_ID = /^[a-z0-9][a-z0-9-]{1,31}$/;
 const KEYS = new Set(['link', 'revive', 'clearProtocol', 'dpRegen', 'deployLock', 'projectile', 'fly', 'beam', 'ui']);
 const UI_TEXT = Object.freeze({ revives: 'Revive', clear: 'Clear Protocol', down: 'Reviving', cleared: 'Protocol executed', shield: 'Shield' });
+/**
+ * @param {unknown} v
+ * @returns {v is Record<string, any>}
+ */
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 const int = (v, lo, hi, path, problems, fallback = null) => {

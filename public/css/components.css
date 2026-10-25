@@ -1248,7 +1248,7 @@
   position: absolute; z-index: 3; top: .08rem; right: .08rem;
   display: inline-flex; align-items: center; gap: .05rem; padding: .03rem .09rem;
   border: 1px solid rgba(78, 216, 175, .45); background: rgba(6, 12, 10, .72); color: var(--mint-400);
-  font: inherit; font-size: calc(.13 * var(--t)); cursor: pointer; backdrop-filter: blur(2px);
+  font: inherit; font-size: calc(.13 * var(--t)); cursor: pointer; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
 }
 .seat__artbtn:hover { border-color: var(--mint-500); color: var(--mint-400); }
 .seat__artbtn .icon { width: .15rem; height: .15rem; }
@@ -1283,7 +1283,7 @@
 .artpick__save { display: inline-flex; align-items: center; gap: .06rem; color: var(--text-md); font-size: calc(.13 * var(--t)); cursor: pointer; }
 
 /* ---- account profile (schema v6, owner 2026-10-24; ui/account.js ProfilePanel + ui/artPicker.js) ---- */
-.account-modal__card:has(.profile) { width: min(6.6rem, 94vw); }
+.account-modal__card--profile { width: min(6.6rem, 94vw); }
 .profile { display: flex; flex-direction: column; gap: .1rem; padding-top: .1rem; border-top: 1px solid var(--line); }
 .profile__row { display: flex; align-items: center; gap: .14rem; }
 .profile__body { display: flex; flex-direction: column; gap: .04rem; min-width: 0; }

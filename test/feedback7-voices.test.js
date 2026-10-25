@@ -53,7 +53,7 @@ test('plan: audio.voiceJp is the JP dub (ArknightsAssets2 voice/) of the very sl
   assert.equal(jp.start.alts[0].rel, 'audio/voice/jp/char_263_skadi/cn_019.mp3');
   assert.equal(t.audio.voiceJp.char_602_cdfend, undefined, 'an operator the game does not field (a stand-in) gets neither tree');
   assert.equal(t.audio.voice.char_602_cdfend, undefined);
-  assert.deepEqual(Object.keys(t.audio), ['bgm', 'bossBgm', 'voice', 'voiceJp', 'sfx'], 'voiceJp right after voice');
+  assert.deepEqual(Object.keys(t.audio), ['bgm', 'bossBgm', 'lobbyMusic', 'voice', 'voiceJp', 'sfx'], 'voiceJp right after voice');
   // --voice-lang puts another dub in audio.voice; voiceJp stays the JP one; voiceJp: false plans no JP tree
   const en = plan({ voiceLang: 'en' });
   assert.equal(en.audio.voice.char_263_skadi.start.alts[0].rel, 'audio/voice/en/char_263_skadi/cn_019.mp3');

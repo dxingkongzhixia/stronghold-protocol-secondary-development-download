@@ -16,6 +16,10 @@ export const BAND_GRANT_LIMITS = Object.freeze({
 });
 
 const ID = /^[A-Za-z0-9_]{1,64}$/;
+/**
+ * @param {unknown} v
+ * @returns {v is Record<string, any>}
+ */
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 const int = (v, lo, hi, path, problems, fallback = null) => {
