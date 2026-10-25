@@ -114,10 +114,10 @@ function Scene({ theme }) {
 export function HubBackdrop({ bg }) {
   const scene = backdropScene(bg), { pref } = bg;
   return html`<div class="hub-bg" data-scene=${scene} data-motion=${pref.motion ? 'on' : 'off'} aria-hidden="true">
-    ${scene === 'photo' ? html`<div class="hub-bg__photo" style=${{ backgroundImage: `url("${bg.imageUrl}")`, filter: `blur(${pref.blur}px)` }}></div>
+    ${scene === 'photo' || scene === 'story' ? html`<div class="hub-bg__photo" style=${{ backgroundImage: `url("${scene === 'story' ? bg.storyUrl : bg.imageUrl}")`, filter: `blur(${pref.blur}px)` }}></div>
       <div class="hub-bg__shade" style=${{ opacity: pref.dim / 100 }}></div>`
       : scene === 'blank' ? html`<div class="hub-bg__sky"></div>` : html`<${Scene} theme=${scene} />`}
-    ${scene !== 'photo' || pref.overlay ? html`<div class="hub-bg__grid"></div><div class="hub-bg__dots"></div>` : null}
+    ${(scene !== 'photo' && scene !== 'story') || pref.overlay ? html`<div class="hub-bg__grid"></div><div class="hub-bg__dots"></div>` : null}
     <div class="hub-bg__vignette"></div></div>`;
 }
 export function HubRadar({ bg }) {
@@ -138,7 +138,11 @@ export function BackdropGlyph() {
   </svg>`;
 }
 
-function Swatch({ theme }) {
+function Swatch({ theme, storyUrl }) {
+  if (theme === 'story') {
+    return html`<span class="bgset__swatch bgset__swatch--story" data-hub-theme="story"
+      style=${storyUrl ? { backgroundImage: `url("${storyUrl}")` } : null} aria-hidden="true"></span>`;
+  }
   return html`<span class="bgset__swatch" data-hub-theme=${theme} aria-hidden="true">
     <svg viewBox="0 0 160 90" preserveAspectRatio="none">
       <path class="sw-far" d="M0 56L18 49L34 53L56 38L76 47L98 36L122 49L142 42L160 51V90H0Z" />
@@ -155,7 +159,7 @@ export function BackdropSettings({ bg }) {
     <div class="bgset__themes" role="group" aria-label=${t('背景主题')}>
       ${HUB_THEMES.map((x) => html`<button key=${x.id} type="button" aria-pressed=${pref.theme === x.id}
         class=${`bgset__theme${pref.theme === x.id ? ' is-selected' : ''}`} onClick=${() => update({ theme: x.id })}>
-        <${Swatch} theme=${x.id} /><span class="bgset__name">${t(x.name)}</span><span class="bgset__en">${x.en}</span></button>`)}
+        <${Swatch} theme=${x.id} storyUrl=${bg.storyUrl} /><span class="bgset__name">${t(x.name)}</span><span class="bgset__en">${x.en}</span></button>`)}
       <button type="button" disabled=${busy} aria-pressed=${pref.theme === 'custom'} class=${`bgset__theme${pref.theme === 'custom' ? ' is-selected' : ''}`}
         onClick=${() => imageUrl ? update({ theme: 'custom' }) : fileRef.current?.click()}>
         <span class="bgset__swatch bgset__swatch--custom" style=${imageUrl ? { backgroundImage: `url("${imageUrl}")` } : null} aria-hidden="true">
@@ -169,14 +173,18 @@ export function BackdropSettings({ bg }) {
     ${imageUrl ? html`<div class="bgset__row">
       <button type="button" class="btn btn--secondary btn--sm" disabled=${busy} onClick=${() => fileRef.current?.click()}>${t('更换背景')}</button>
       <button type="button" class="btn btn--ghost btn--sm" disabled=${busy} onClick=${() => action(bg.clearImage)}>${t('移除背景')}</button></div>` : null}
-    ${pref.theme === 'custom' ? html`<div class="bgset__custom">
+    ${pref.theme === 'story' ? html`<div class="bgset__story-row">
+      <button type="button" class="btn btn--secondary btn--sm" onClick=${() => bg.nextStory()}>${t('换一张')}</button>
+      <span class="bgset__note">${t('每次进入主界面随机一张剧情 CG；也可以手动换一张。')}</span>
+    </div>` : null}
+    ${pref.theme === 'custom' || pref.theme === 'story' ? html`<div class="bgset__custom">
       <label class="bgset__slider"><span>${t('暗化')}</span><input type="range" min="0" max="85" value=${pref.dim}
         onInput=${(e) => update({ dim: Number(e.currentTarget.value) })} /><b class="num">${pref.dim}%</b></label>
       <label class="bgset__slider"><span>${t('模糊')}</span><input type="range" min="0" max="16" value=${pref.blur}
         onInput=${(e) => update({ blur: Number(e.currentTarget.value) })} /><b class="num">${pref.blur}px</b></label>
       <label class="bgset__check"><input type="checkbox" checked=${pref.overlay} onChange=${(e) => update({ overlay: e.currentTarget.checked })} />${t('叠加战术网格')}</label></div>` : null}
     <label class="bgset__check"><input type="checkbox" checked=${pref.motion} onChange=${(e) => update({ motion: e.currentTarget.checked })} />${t('动态效果（云层、粒子、雷达扫描）')}</label>
-    <p class="bgset__note">${t('图片上限 30MB，自动缩放至最长边 2560px，仅保存在当前浏览器。')}</p>
+    ${pref.theme === 'custom' ? html`<p class="bgset__note">${t('图片上限 30MB，自动缩放至最长边 2560px，仅保存在当前浏览器。')}</p>` : null}
     ${busy ? html`<p role="status">${t('图片处理中…')}</p>` : null}
     ${error ? html`<p class="lobby-media-error" role="alert">${t(error)}</p>` : null}
   </div>`;

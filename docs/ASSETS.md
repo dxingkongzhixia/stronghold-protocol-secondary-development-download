@@ -197,6 +197,12 @@ collab / contract / rogue / sandbox / story / other) and is resumable (`--only=�
 relay/CDN first) — add a `/music/` route to the relay only if you also point the client there.
 `py -3.14 -m pip install --user UnityPy lz4 imageio-ffmpeg` are the optional local-extract requirements.
 
+The Hub's **剧情背景** theme (owner 2026-10-25) uses 54 story CGs from the owner's folder. `tools/assets/hub-story.py
+--src <folder>` resizes them to ≤1920 px, encodes WebP q85 (~7.7 MB total) into `public/assets/ui/hub/story/story-NN.webp`
+and writes the list `public/js/ui/hub/storyImages.js`; the dialog offers one tile and 「换一张」, never a gallery. These
+files are deliberately **not in `data/assets.json`** — the boot art preloader would fetch all of them otherwise; the Hub
+asks for only the chosen image (`docs/UI-HUB.md`).
+
 The `stem` of a Spine model is the upstream file name. Two examples: `char_107_liskam` has the stem `char_107_liskarm`, and `enemy_9032_aclionk` uses `enemy_1559_vtlionk`. The skel and atlas of a model always share one stem. pixi-spine locates the atlas by swapping the extension, so this matters.
 
 ### Id scope

@@ -2,13 +2,14 @@
 import { useEffect, useState } from '../../../vendor/hooks.module.js';
 import { createStore, useStore, loadPref, savePref } from '../../store.js';
 import { createLocalMedia, mediaStorage } from './localMedia.js';
+import { STORY_IMAGES } from './storyImages.js';
 import { t, N_ } from '../../../../shared/i18n.js';
 
 export const HUB_THEMES = Object.freeze([
   { id: 'night', name: N_('夜巡'), en: 'NIGHT WATCH' },
-  { id: 'frost', name: N_('霜原'), en: 'FROSTLINE' },
-  { id: 'ember', name: N_('烬野'), en: 'EMBERFIELD' },
-  { id: 'calm', name: N_('静默'), en: 'SILENT' },
+  // One tile, many CGs: the chosen image is picked per visit and 「换一张」 cycles, so the dialog never lists the
+  // whole folder (owner 2026-10-25).
+  { id: 'story', name: N_('剧情背景'), en: 'STORY' },
 ]);
 export const MAX_IMAGE_BYTES = 30 * 1024 * 1024;
 const MAX_EDGE = 2560;
@@ -58,9 +59,13 @@ const images = createLocalMedia({ storage: mediaStorage('sp-hub-backdrop', 'kv',
 const preferences = createStore(sanitizeBackdrop(loadPref(PREF_KEY, null)));
 preferences.subscribe((pref) => savePref(PREF_KEY, pref));
 
+// A story CG is chosen per visit (not stored in the preference): the tile stays one entry, the set is never listed.
+const storyAt = (i) => STORY_IMAGES.length ? STORY_IMAGES[((i % STORY_IMAGES.length) + STORY_IMAGES.length) % STORY_IMAGES.length] : null;
+
 export function useHubBackdrop() {
   const pref = useStore((s) => s, Object.is, preferences);
   const [image, setImage] = useState(images.get);
+  const [story, setStory] = useState(() => storyAt(Math.floor(Math.random() * Math.max(1, STORY_IMAGES.length))));
   useEffect(() => {
     const off = images.subscribe(setImage);
     setImage(images.get()); images.load();
@@ -68,13 +73,20 @@ export function useHubBackdrop() {
   }, []);
   // A file import can finish after navigating away; its choice must still be available on the next visit.
   const update = (patch) => preferences.set(sanitizeBackdrop({ ...preferences.get(), ...patch }));
+  const currentIndex = () => {
+    const i = STORY_IMAGES.findIndex((x) => x.file === story?.file);
+    return i < 0 ? 0 : i;
+  };
   return { pref, update, imageUrl: image.url, ready: image.ready, busy: image.busy,
+    storyUrl: story?.file || null, storyName: story?.name || '',
+    nextStory() { if (STORY_IMAGES.length > 1) setStory(storyAt(currentIndex() + 1)); },
     async setImage(file) { if (await images.change(() => prepareBackdrop(file))) update({ theme: 'custom' }); },
     async clearImage() { if (await images.change(() => null)) update({ theme: 'night', dim: 45, blur: 0 }); },
   };
 }
 
 export function backdropScene(bg) {
+  if (bg.pref.theme === 'story') return bg.storyUrl ? 'story' : 'night';
   return bg.pref.theme !== 'custom' ? bg.pref.theme : bg.imageUrl ? 'photo' : bg.ready ? 'night' : 'blank';
 }
 export function backdropTheme(bg) {

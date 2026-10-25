@@ -23,6 +23,8 @@
 .lobby-hub { --hub-entry-w: calc(2.4 * var(--ui-unit, 1rem)); --hub-gap: calc(0.16 * var(--ui-unit, 1rem)); }
 .lobby-hub > .hub-topbar { grid-template-columns: minmax(0, 1fr) auto; }
 .lobby-hub > .hub-topbar > .topbar__right { grid-column: 2; }
+/* ping / 在线 / notices were plain inline buttons with no gap — the two pills touched (owner 2026-10-25). */
+.connection-status { display: inline-flex; align-items: center; gap: .2rem; min-width: 0; }
 .hub-entries > .match-queue { width: min(100%, calc(7.5 * var(--ui-unit, 1rem))); box-sizing: border-box; }
 .hub-entry--amber { border-color: var(--amber); }
 .hub-entry--amber .hub-entry__en { color: var(--amber); }
@@ -508,7 +510,7 @@
 .hub-backdrop-panel .bgset__check input { width: max(calc(0.16 * var(--ui-unit, 1rem)), calc(0.18 * var(--ui-unit, 1rem))); height: max(calc(0.16 * var(--ui-unit, 1rem)), calc(0.18 * var(--ui-unit, 1rem))); flex: none; }
 .hub-backdrop-panel .bgset__check { min-height: calc(0.36 * var(--ui-unit, 1rem)); }
 .hub-backdrop-panel :is(.bgset__note, .bgset__slider, .bgset__check), .lobby-music-panel .bgset__note { font-size: max(calc(.14 * var(--utility-text, var(--t))), calc(0.12 * var(--ui-unit, 1rem))); line-height: 1.6; }
-.lobby-hub, [data-hub-theme="night"], [data-hub-theme="custom"] {
+.lobby-hub, [data-hub-theme="night"], [data-hub-theme="story"], [data-hub-theme="custom"] {
   --sky-0: #03080a; --sky-1: #08141a; --sky-2: #12262a; --sky-3: #050909;
   --haze: rgba(92, 168, 156, .17); --cloud: rgba(140, 196, 186, .055);
   --ridge-far: #122022; --ridge-mid: #0b1516; --ridge-near: #060b0b;
@@ -543,7 +545,7 @@
 [data-hub-theme="custom"] { --radar: rgba(235, 245, 240, .14); }
 
 .bgset { display: flex; flex-direction: column; gap: calc(0.16 * var(--ui-unit, 1rem)); }
-.bgset__themes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: calc(0.1 * var(--ui-unit, 1rem)); }
+.bgset__themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(0.12 * var(--ui-unit, 1rem)); }
 .bgset__theme { display: flex; flex-direction: column; align-items: flex-start; gap: calc(0.05 * var(--ui-unit, 1rem)); min-width: 0; padding: calc(0.06 * var(--ui-unit, 1rem)); color: var(--text-hi);
   background: rgba(223, 230, 226, .04); border: 1px solid rgba(223, 230, 226, .14); cursor: pointer; text-align: left;
   transition: border-color var(--t-fast), box-shadow var(--t-fast); }
@@ -557,6 +559,8 @@
 .bgset__swatch .sw-near { fill: var(--ridge-near); }
 .bgset__swatch .sw-beacon { fill: var(--beacon); }
 .bgset__swatch--custom { display: grid; place-items: center; background: #0b1110 center / cover no-repeat; outline: 1px dashed rgba(223, 230, 226, .2); outline-offset: -1px; }
+.bgset__swatch--story { display: block; background: #0b1110 center / cover no-repeat; }
+.bgset__story-row { display: flex; align-items: center; flex-wrap: wrap; gap: calc(0.1 * var(--ui-unit, 1rem)); }
 .bgset__plus { font-size: calc(.34 * var(--utility-text, var(--t))); line-height: 1; color: rgba(223, 230, 226, .5); }
 .bgset__name { font-size: calc(.15 * var(--utility-text, var(--t))); font-weight: 800; white-space: nowrap; }
 .bgset__en { font: 700 calc(0.09 * var(--utility-text, var(--t)))/1 ui-monospace, Consolas, monospace; letter-spacing: .14em; color: var(--text-dim); white-space: nowrap; }

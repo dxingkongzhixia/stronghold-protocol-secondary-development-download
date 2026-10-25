@@ -2060,5 +2060,8 @@
   "已加载本地音乐包：共 {n} 首": "Local music pack loaded: {n} tracks",
   "未命名曲目": "Untitled track",
   "仅点选时加载当前曲目（约 2–6 MB），不会预载全部音乐。": "Only the selected track is downloaded (about 2–6 MB); the whole library is never preloaded.",
-  "正在预览内容：{n} 个插件": "Previewing: {n} plugins"
+  "正在预览内容：{n} 个插件": "Previewing: {n} plugins",
+  "剧情背景": "Story",
+  "换一张": "Another",
+  "每次进入主界面随机一张剧情 CG；也可以手动换一张。": "A random story CG on every visit; switch to another anytime."
 }
