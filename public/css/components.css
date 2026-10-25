@@ -1105,6 +1105,13 @@
 .notice-banner__icon { width: .18rem; height: .18rem; color: var(--mint-400); flex: none; margin-top: .02rem; }
 .notice-banner__text { display: flex; flex-direction: column; gap: .02rem; min-width: 0; }
 .notice-banner__msg { font-size: calc(.15 * var(--t)); line-height: 1.45; color: #e6f2ec; word-break: break-word; }
+.notice-banner__link { color: var(--mint-400); text-decoration: underline; text-underline-offset: .02rem; word-break: break-all; }
+.notice-banner__link:hover, .notice-banner__link:focus-visible { color: #b8ffe9; outline: none; }
+.notice-banner__actions { display: flex; align-items: center; gap: .06rem; margin-top: .02rem; }
+.notice-banner__copy { font: inherit; font-size: calc(.12 * var(--t)); line-height: 1.2; color: var(--text-md);
+  background: rgba(78, 216, 175, .08); border: 1px solid var(--mint-a35); border-radius: .04rem;
+  padding: .02rem .07rem; cursor: pointer; }
+.notice-banner__copy:hover, .notice-banner__copy:focus-visible { color: var(--mint-400); border-color: var(--mint-400); outline: none; }
 .notice-banner__sign { font-size: calc(.12 * var(--t)); color: var(--mint-400); align-self: flex-end; }
 .notice-banner .btn { flex: none; }
 

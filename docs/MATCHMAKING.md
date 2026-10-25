@@ -780,7 +780,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - **更新日志通知**：管理员在面板里选择「通知 + 写入更新日志」，或接口传 `changelog: true`；推送成功后仍按 §36.2.1 追加下一小版本，历史里显示「日志 0.4.N」。
 - **来源检测**：`server/net.js` 在 WebSocket 升级时读取浏览器的 `Origin`，归一化后存到 `Session.origin`；`Lobby.onHello()` 对**非官方来源**（且不是 localhost / 回环）发一条**仅该会话可见**的普通 `sys.notice`，提醒改用官方地址登录。每次新连接发一次；同一个 socket 的重复 `hello` 不重复提醒。
 - **官方地址**：`shared/origins.js` 的 `OFFICIAL_ORIGIN = https://strongholdprotocolcsym.top:10785`；部署到别的地址时可用环境变量 `SP_OFFICIAL_ORIGIN`（或 `startServer({ officialOrigin })`）覆盖。`localhost` / `127.0.0.1` / `::1` / `0.0.0.0` 永远不提醒，避免本地开发被弹窗。
-- **客户端**：该提醒带 `origin: true`，即使还在标题页（尚未进入大厅）也会显示；普通管理员通知仍只在进入后显示。玩家点「知道了」关闭。
+- **客户端**：该提醒带 `origin: true`，即使还在标题页（尚未进入大厅）也会显示；普通管理员通知仍只在进入后显示。提醒中的官方地址会渲染成**可点击链接**（新标签打开）并带**复制**按钮；`navigator.clipboard` 不可用时回退到 `execCommand('copy')`。玩家点「知道了」关闭。
 - **管理页**：在线表新增「来源」列（官方 / 本地 / 其他，悬停显示原始 origin）；通知面板显示「在线来源：官方 N · 其他 N · 本地 N · 未知 N」，直接回答“是否有玩家不是从官方地址进入”。`/admin/api/state` 新增 `origins` 汇总与每行 `originKind`，不向普通玩家暴露。
 - 测试：`test/lobby.test.js`（来源提醒、官方 / 本地 / 无 Origin 的静默、自定义官方地址、Origin 保存到 Session）、`test/admin.test.js`（普通通知不写日志、`changelog: true` 写日志、来源列与汇总）。
 

@@ -2069,5 +2069,6 @@
   "共 {n} 张，点击选择": "{n} images — click to choose",
   "当前：{name}": "Current: {name}",
   "未选择": "Not selected",
-  "检测到你正在通过 {origin} 进入游戏，请改用官方地址 {official}/ 登录；其他地址可能无法同步账号与更新。": "You opened the game via {origin}. Please sign in at the official address {official}/ instead; other addresses may not sync your account or updates."
+  "检测到你正在通过 {origin} 进入游戏，请改用官方地址 {official}/ 登录；其他地址可能无法同步账号与更新。": "You opened the game via {origin}. Please sign in at the official address {official}/ instead; other addresses may not sync your account or updates.",
+  "已复制": "Copied"
 }
