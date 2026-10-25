@@ -2,9 +2,10 @@
 
 Audience: the AI agent(s) working on this fork with the owner (`d星空之下`). This is the operational contract:
 how a request is handled, how the upstream is merged, how commits and the GitHub/Gitee push work, how production is
-deployed, and **when to stop and ask the owner**. It complements [`docs/MATCHMAKING.md`](MATCHMAKING.md) (the
-decision record, including the merge blacklist §22) and [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) (the repository map).
-Read `docs/DEVELOPMENT.md` first if you do not know the layout. The **fork-only mechanisms** (what is ours, where it
+deployed, and **when to stop and ask the owner**. Start with [`AI-AGENT.md`](AI-AGENT.md) for the current workflow;
+this file goes deeper on the release / deploy mechanics. It complements [`docs/MATCHMAKING.md`](MATCHMAKING.md) (the
+decision record, including the merge blacklist §22) and [`docs/DEVELOPER.md`](DEVELOPER.md) (the developer handbook).
+Read `docs/DEVELOPER.md` first if you do not know the layout. The **fork-only mechanisms** (what is ours, where it
 lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) are catalogued in
 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) — consult it during every upstream merge (see (b)).
 

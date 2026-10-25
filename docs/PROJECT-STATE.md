@@ -2,8 +2,10 @@
 
 > 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-20**（台式机 `_merge-scratch` 实测）。插件 / Forge / studio / 控制台见
 > [`docs/PLUGINS.md`](PLUGINS.md) 与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10。
+> 文档入口（2026-10-25 重新梳理）：人类 [`DEVELOPER.md`](DEVELOPER.md)、AI [`AI-AGENT.md`](AI-AGENT.md)、
+> 规则 [`RULES.md`](RULES.md)、插件 [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)。
 > 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§49；**§49 = 2026-10-16 特效批次总览**）。
-> 接手入口见 [`docs/HANDOVER.md`](HANDOVER.md)；按问题查文档见 [`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
+> 按问题查文档见 [`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
 
 ---
 

@@ -1,4 +1,7 @@
-# Development guide
+# Development guide (detailed code map)
+
+> **Maintained entry:** start with [`DEVELOPER.md`](DEVELOPER.md). This file is the detailed code-map / pipeline
+> reference behind it; AI agents should start with [`../AGENTS.md`](../AGENTS.md) + [`AI-AGENT.md`](AI-AGENT.md).
 
 Who this is for: anyone (human or AI) changing this fork. It is the map of **how the repository, the build, the
 content, the server, the tests and the asset pipeline fit together**, plus where our own content lives. It does not
@@ -9,7 +12,10 @@ restate the upstream design — it points at it:
 
 | Read this | For |
 |---|---|
-| [`docs/HANDOVER.md`](HANDOVER.md) | **the entry point / handover** (repo map, run locally, build/verify, content, upstream merges, publish/deploy, known issues) — read this first |
+| [`docs/DEVELOPER.md`](DEVELOPER.md) | **the maintained human entry** (setup, architecture, workflows, tests, deploy, doc map) — read this first |
+| [`docs/AI-AGENT.md`](AI-AGENT.md) | the AI agent's expanded operating manual |
+| [`docs/RULES.md`](RULES.md) | the rules entry and authority order |
+| [`docs/HANDOVER.md`](HANDOVER.md) | the detailed handover / operations reference |
 | [`README.md`](../README.md) | what the game is, how to run it |
 | [`docs/DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) | the same map in Chinese, plus recipes and a prioritized optimization list |
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | the module overview and import boundaries |

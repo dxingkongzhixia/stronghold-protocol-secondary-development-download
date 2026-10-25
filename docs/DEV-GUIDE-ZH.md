@@ -1,6 +1,6 @@
 # 卫戍协议：盟约 · 二次开发指南（中文）
 
-> 对应版本 **0.4.0**（`package.json` / `shared/constants.js APP_VERSION`）；接手入口见 [`docs/HANDOVER.md`](HANDOVER.md)。
+> 对应版本 **0.4.0**（`package.json` / `shared/constants.js APP_VERSION`）；**维护中的入口**见 [`DEVELOPER.md`](DEVELOPER.md)（人类）与 [`AI-AGENT.md`](AI-AGENT.md)（AI）。本文保留为**中文详细配方参考**。
 > 本文基于本仓库快照整理，`文件:行号` 为整理时的位置，重构后可能漂移，**一切以代码为准**。
 > 代码/注释/标识符用英文，面向玩家的文案用简体中文——沿用项目既有约定。
 

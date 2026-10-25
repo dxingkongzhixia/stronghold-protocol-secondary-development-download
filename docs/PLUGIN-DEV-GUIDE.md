@@ -1,68 +1,83 @@
-# 普通插件开发指南
+# 插件开发指南
 
-本文写给**写插件的人**：从插件目录、manifest、各插件类别，到本地调试、测试、打包和发布。它不替代完整规范；字段和错误码的权威来源是：
+> **这是插件开发的单一入口。** 写给**写插件的人**：从选模板、写 manifest、调试、测试到打包发布。
+> 不写代码、只想换图 / 模型 / 语音的读者看 [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)；完整字段规范看 [`PLUGINS.md`](PLUGINS.md)。
+> **最后核对**：2026-10-25，游戏版本 `0.4.0`，插件 API `current: 2 / min: 1`。
 
-- [`PLUGINS.md`](PLUGINS.md)：manifest、权限、文件、各插件类、Forge 导入、工作室与工具（**完整规范**）
-- [`PLUGIN-API.md`](PLUGIN-API.md)：脚本 SDK 的稳定/实验 API（**接口规范**）
-- [`PLUGIN-DSL.md`](PLUGIN-DSL.md)：数据插件 DSL（**DSL 规范**）
-- [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md)：插件体系架构、安全边界和运营台（评审，不是规范）
-- [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md)：Forge 包开发与导入
-- [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md)：Forge 兼容矩阵和不支持清单
-- [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md) / [`PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md) / [`PLUGIN-RISKS.md`](PLUGIN-RISKS.md)：商城、供应链、玩家风险
-- [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md)：仍未解决的问题和当前状态
-- [`PLUGIN-PLATFORM-PLAN.md`](PLUGIN-PLATFORM-PLAN.md)：平台改造草案，不能当作已承诺行为
+---
 
-面向玩家、用工作台点鼠标做插件的说明见 [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)。全项目的文档入口和权威顺序见 [`docs/README.md`](README.md)。
+## 0. 先选路径
 
-## 0. 文档地图：先看哪一篇
-
-| 你要做的事 | 先看 | 需要查字段 / 细节时 |
+| 你要做 | 从这里开始 | 规范 / 细节 |
 |---|---|---|
-| 不写代码，换立绘 / 模型 / 语音 / 主题 | [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | [`PLUGINS.md`](PLUGINS.md) §9 |
-| 第一次写一个可加载的插件 | 本文 §1–§4 | `schemas/plugin.schema.json` |
-| 做数值、新干员、新棋子、新羁绊、波次 / Boss | 本文 §5，[`CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | [`PLUGINS.md`](PLUGINS.md) §10、`records.schema.json` |
-| 给新干员写技能 / 天赋 | 本文 §5.2–§5.3，[`PLUGIN-DSL.md`](PLUGIN-DSL.md) | [`PLUGIN-API.md`](PLUGIN-API.md)（脚本时才需要） |
-| 写沙箱脚本、SDK kit、prep 钩子 | 本文 §7 | [`PLUGIN-API.md`](PLUGIN-API.md) |
-| 做对局内界面 | 本文 §6 | [`PLUGINS.md`](PLUGINS.md) §14、`schemas/ui.schema.json` |
+| 换立绘、模型、语音、主题、UI 主题 | [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)（工作台，不写代码） | `PLUGINS.md` §9 |
+| 做数值、新干员、新棋子、盟约、波次、Boss | 本文 §4–§5 | `PLUGINS.md` §10、`schemas/records.schema.json` |
+| 给干员写技能 / 天赋 / 休整期效果，不写 JS | 本文 §6 | [`PLUGIN-DSL.md`](PLUGIN-DSL.md) |
+| 写沙箱脚本 / SDK kit / prep 钩子 | 本文 §7 | [`PLUGIN-API.md`](PLUGIN-API.md) |
+| 做对局内界面 | 本文 §8 | `PLUGINS.md` §14、`schemas/ui.schema.json` |
 | 导入 Forge 工坊包 | [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) | [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) |
-| 做插件特效（FX / 粒子 / FollowMountPoint / atlas） | 本文 §4.4 | [`PLUGINS.md`](PLUGINS.md) §10（FX）、[`design/vfx-format.md`](design/vfx-format.md) |
-| 上架、签名、运营台 | [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md) | [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md)、[`PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md) |
-| 让 AI 代理做插件 | [`plugins/AGENTS.md`](../plugins/AGENTS.md) | 本文和 `PLUGINS.md` 的对应章节 |
+| 做插件特效（FX / 粒子 / 骨骼跟随 / atlas） | 本文 §4.4 | `PLUGINS.md` §10（FX）、[`design/vfx-format.md`](design/vfx-format.md) |
+| 上架 / 签名 / 运营台 | [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md) | `PLUGIN-REVIEW.md`、`PLUGIN-SUPPLY-CHAIN.md` |
+| 让 AI 代理做插件 | [`../plugins/AGENTS.md`](../plugins/AGENTS.md) | 本文 + `PLUGINS.md` 对应章节 |
 
-**最短路线：**
+**三条总原则：**
 
-1. **外观插件**：`new art` → 放图片 / 模型 → `check` → `pack --zip` → 游戏里开启。
-2. **内容 / 干员插件**：`new operator`（或从内容模板开始）→ 写记录 / DSL → `check --strict` → 工作室或测试服试一场 → `pack`。
-3. **脚本 / UI 插件**：从 `new script` / `new ui` 开始 → `check` → `test`（脚本）→ 打包；脚本还需要服务器运行模式、锁文件和房间选择。
+1. **原版默认**：不选插件就是原版；插件不能偷偷改变原版对局。
+2. **插件不改 `data/*.json`**：内容通过声明式数据 / DSL / 脚本进入内容集。
+3. **不把官方游戏素材打进插件**：需要时用 `{ "ref": "<official key>" }` 借用本安装已有的条目。
 
-**三条原则：** 原版默认；插件不直接改 `data/*.json`；不要放入官方游戏素材。内容插件影响房间 `cs`，外观插件影响 `vs`，二者不要混在同一个插件里。
+---
 
-## 1. 开发前准备
+## 1. 十分钟跑通第一个插件
+
+### 1.1 准备
 
 ```bash
 npm install
-npm run setup      # 素材（可中断续传）
-npm start          # http://localhost:3000
+npm run setup          # 可选：素材，可中断续传
+npm start              # http://localhost:3000
 ```
 
-插件放在服务器的 `plugins/<id>/`，文件夹名就是插件 id：
+插件放在服务器的 `plugins/<id>/`：
 
-- `^[a-z0-9][a-z0-9-]{1,31}$`
+- 文件夹名就是插件 id：`^[a-z0-9][a-z0-9-]{1,31}$`
 - 一个文件夹一个插件
-- 不要把官方游戏素材放进插件；需要时用 `{ "ref": "<official key>" }` 借用本安装已有的条目
+- 仓库只跟踪 `plugins/README.md`、`plugins/AGENTS.md` 和 `plugins/_template/`；**服务器自己的插件不要提交**
 
-推荐从模板开始，不要从空文件开始：
+### 1.2 从模板开始
 
 ```bash
-node tools/plugin.mjs new            # 列出模板
-node tools/plugin.mjs new art my-texas --target 德克萨斯 --name "我的德克萨斯" --author 你的名字
+node tools/plugin.mjs new                 # 列出全部模板
+node tools/plugin.mjs new art my-texas --target 德克萨斯 --name "我的德克萨斯"
 node tools/plugin.mjs new operator my-operator --target 德克萨斯
 node tools/plugin.mjs new dsl my-income
 node tools/plugin.mjs new script my-script
 node tools/plugin.mjs new ui my-ui
 ```
 
-`plugins/<id>/plugin.json` 开头的 `"$schema": "../../schemas/plugin.schema.json"` 能让 VS Code 自动补全和标错。
+模板会生成合法的 `plugin.json`、示例文件和 README。`plugin.json` 首行保留：
+
+```json
+"$schema": "../../schemas/plugin.schema.json"
+```
+
+这样 VS Code 能自动补全和标错。
+
+### 1.3 最短循环
+
+```bash
+node tools/plugin.mjs check my-plugin --strict --json
+node tools/plugin.mjs test my-plugin        # 脚本 / 作者测试
+node tools/plugin.mjs pack my-plugin --zip  # 生成 lock + zip
+```
+
+在游戏里：
+
+- 服务器启动后，房间的「插件」面板 / 主界面「插件预览」会列出已加载插件；
+- 房主选内容插件（改变 `cs`），玩家选个人插件（外观 / UI / 语言）；
+- 改动插件文件后，房间需要「重新应用」才生效。
+
+---
 
 ## 2. Manifest 最小结构
 
@@ -73,56 +88,82 @@ node tools/plugin.mjs new ui my-ui
   "id": "my-plugin",
   "name": { "zh": "我的插件", "en": "My plugin" },
   "version": "1.0.0",
-  "app": ">=0.3.0 <0.5.0",
-  "api": 1,
+  "app": ">=0.4.0 <0.5.0",
+  "api": 2,
   "class": "cosmetic",
   "scope": ["room", "personal"],
   "sourceLang": "zh",
   "authors": ["你的名字"],
   "license": "CC-BY-4.0",
   "permissions": ["assets.override"],
-  "assets": { "chars": { "char_102_texas": { "avatar": "art/texas/avatar.png" } } }
+  "assets": {
+    "chars": {
+      "char_102_texas": { "avatar": "art/texas/avatar.png" }
+    }
+  }
 }
 ```
 
 要点：
 
-- `manifest` 固定为 `2`
-- `app` 是游戏版本范围；本分支版本是 `0.4.0`
-- `api` 当前支持 `1` 和 `2`（`2` 才有 offers 等新能力）
-- `class` 决定插件能做什么
-- `scope` 决定谁能开关：`room` 房主给整个房间开，`personal` 玩家只给自己开
-- `permissions` 必须与实际使用的能力一致；声明了没用会报 `PLUGIN_PERMISSION_UNUSED`
-- 路径必须是插件文件夹内的相对路径：不能 `..`、不能以 `/` 开头、不能是 URL 或隐藏路径
+- `manifest` 固定为 `2`；`id` 必须与文件夹名一致（不一致至少是 warning，脚本 / trusted 会拒绝）。
+- `app` 是游戏版本范围；本分支当前 `0.4.0`。
+- `api` 当前支持 `1` 和 `2`；用到 `offers` 等 level 2 能力时必须写 `2`。
+- `class` 决定插件能做什么；`scope` 决定谁能开关：`room`（房主给全房间开）/ `personal`（玩家给自己开）。
+- `permissions` 必须与实际使用的能力对应；声明了没用会报 `PLUGIN_PERMISSION_UNUSED`。
+- 路径必须是插件文件夹内的相对路径：不能 `..`、不能以 `/` 开头、不能是 URL 或隐藏路径。
+- 一个插件只选一个 `class`；外观 + 玩法请拆成两个插件，用 `requires` 组合。
 
-## 3. 类别怎么选
+### 2.1 类别怎么选
 
-| 类别 | 用途 | 典型权限 / 字段 | 会影响对局吗 |
+| 类别 | 用途 | 典型权限 / 字段 | 影响对局 |
 |---|---|---|---|
-| `cosmetic` | 头像、立绘、模型、图标、语音、音效、音乐、主题、皮肤 | `assets.override` / `assets.add` / `theme` | 不影响数值，但房间 `vs` 会变 |
-| `content` | 数据补丁、新干员、新棋子、新羁绊、DSL、规则开关 | `data.patch` / `data.add` / `dsl` | 会，房间 `cs` 变 |
-| `ui` | 对局内界面插槽 | `ui` | 不影响对局 |
-| `script` | 沙箱脚本、SDK kit、meta/prep 钩子 | `sim.code` / `meta.code` | 会，需要 `SP_PLUGIN_SCRIPTS` |
-| `trusted` | 原生信任代码 | 由 owner 审查和 pin | 会，风险最高 |
+| `cosmetic` | 头像、立绘、模型、图标、语音、音效、音乐、主题、皮肤 | `assets.override` / `assets.add` / `theme` | 数值不变，但房间 `vs` 会变 |
+| `content` | 数据补丁、新干员、新棋子、新盟约、DSL、规则开关 | `data.patch` / `data.add` / `dsl` / `offers` | 会，房间 `cs` 变 |
+| `ui` | 对局内界面插槽 | `ui.frame` | 不影响对局 |
+| `script` | 沙箱脚本、SDK kit、meta / prep 钩子 | `sim.code` / `meta.code` / `mode.code` | 会，需 `SP_PLUGIN_SCRIPTS` |
+| `trusted` | 原生信任代码 | `trusted.page` / `trusted.server` | 会，风险最高 |
 | `lang` | 语言包 | 语言文件 | 不影响对局 |
 
-一个插件只选一个类别。一个作品想同时带外观和玩法时，拆成多个插件，用 `requires` 组合，不要混类别。
-
-### 3.1 插件面板里的五个分类
-
-房间的「插件」面板按 `plugin.json` 的可选字段 `category` 分成五组（只影响列表怎么分组，不影响加载和玩法）：
+### 2.2 面板分类（只影响列表分组）
 
 | `category` | 面板标题 | 放什么 |
 |---|---|---|
-| `appearance` | 外观音乐 | 画面、模型、头像、语音、音效、音乐、主题（通常是 `class: cosmetic`） |
-| `faction` | 阵营加强 | 新干员、新棋子、盟约 / 自选池的补充、数值与规则加强 |
+| `appearance` | 外观音乐 | 画面、模型、头像、语音、音效、音乐、主题 |
+| `faction` | 阵营加强 | 新干员、新棋子、盟约 / 自选池补充、数值与规则加强 |
 | `strategy` | 新增策略 | 新策略卡（`bands`）、策略授予的干员 |
-| `enemy` | 新增敌人 | 新 Boss、敌人、波次（PRTS、不死的黑蛇） |
-| `gameplay` | 新增玩法 | 新模式、新阶段、脚本 / DSL 玩法、其它改变规则的内容 |
+| `enemy` | 新增敌人 | 新 Boss、敌人、波次 |
+| `gameplay` | 新增玩法 | 新模式、新阶段、脚本 / DSL 玩法 |
 
-不写 `category` 时按 `class` 归组：`cosmetic` / `ui` / `lang` → 外观音乐，其余 → 新增玩法。同时带两类内容的作品
-（例如 PRTS 的凯尔希策略和 PRTS Boss）拆成两个插件，各自写自己的 `category`，玩家就能分别在「新增策略」「新增敌人」
-里开关。
+不写 `category` 时按 `class` 归组：`cosmetic` / `ui` / `lang` → 外观音乐；其余 → 新增玩法。一个作品同时带两类内容时拆成两个插件（例：PRTS 的凯尔希策略与 PRTS Boss 分开）。
+
+---
+
+## 3. 权限与文件
+
+| 权限 | 允许的类别 | 用途 |
+|---|---|---|
+| `assets.override` / `assets.add` | cosmetic、content、script、trusted | 覆盖 / 新增素材条目 |
+| `theme` | cosmetic、trusted | 主题变量 |
+| `data.patch` / `data.add` | content、script、trusted | 数据补丁 / 新记录 |
+| `dsl` | content、script、trusted | DSL 技能 / 天赋 |
+| `offers` | content、script、trusted | 交互窗口（level 2） |
+| `sim.code` / `meta.code` / `mode.code` | script、trusted | 脚本入口 |
+| `ui.frame` | ui | iframe 界面 |
+| `trusted.page` / `trusted.server` | trusted | 页面 / 服务器原生代码 |
+
+文件类型：
+
+- 图片 `.png` / `.jpg` / `.webp`（不支持 SVG）
+- Spine `.skel` / `.atlas` / 贴图；导出 **3.8 二进制 `.skel`**
+- 音频 `.mp3` / `.ogg`；字体 `.woff2`
+- 数据 `.json`；脚本 `.js` 只在 `script` / `trusted`
+- UI 页面 `.html` / `.js` / `.css` / `.png`，只在 `ui` 的入口目录
+- 文档（`.md` / `.txt` / `README` / `LICENSE` / `NOTICE`）可以放在旁边，但永远不会被服务
+
+不要放符号链接到插件目录里；不要放官方游戏素材。
+
+---
 
 ## 4. 外观插件
 
@@ -152,14 +193,10 @@ plugins/my-texas/
 }
 ```
 
-- 图片：`.png` / `.jpg` / `.webp`，不支持 SVG
-- 音频：`.mp3` / `.ogg`
-- 新条目用 `assets.add`，改已有条目用 `assets.override`
-- 借用安装里已有的图：`{ "ref": "char_102_texas" }` 这类引用，不复制文件
+- 改已有条目用 `assets.override`；新增条目用 `assets.add`。
+- 借用已有素材：`{ "ref": "char_102_texas" }`。
 
 ### 4.2 Spine
-
-Spine 必须导出 **3.8 二进制 `.skel`**，`.skel`、`.atlas` 和贴图放在同一目录：
 
 ```json
 {
@@ -173,20 +210,22 @@ Spine 必须导出 **3.8 二进制 `.skel`**，`.skel`、`.atlas` 和贴图放�
 }
 ```
 
-不要手写 `animations` / `events` / `hits` / `bounds`；`pack` 会从模型里读。改模型后必须重新 `pack`。
+- `.skel`、`.atlas` 和贴图放同一目录。
+- **不要手写** `animations` / `events` / `hits` / `bounds`；`pack` 会从模型读取。
+- 改过模型 / 皮肤后必须重新 `pack`。
 
 ### 4.3 主题 / 公告 / 皮肤
 
-- 主题：`permissions: ["theme"]` + `theme.vars`，只允许本安装定义过的颜色、时间和缓动 token
-- 公告：`notices`，纯文本；与房间是否选中无关，所有已加载插件公告都会显示
-- 皮肤：`skins`，具体字段见 `docs/SKINS.md`
+- 主题：`permissions: ["theme"]` + `theme.vars`；只能使用本安装定义过的颜色、时间和缓动 token。
+- 公告：`notices`，纯文本；所有已加载插件的公告都会显示，与房间是否选中无关。
+- 皮肤：`skins`，字段见 [`SKINS.md`](SKINS.md)。
 
 ### 4.4 特效（FX）
 
-插件特效放在 `assets.fx`（外观插件，或内容插件自己的 `assets`）。两种常见做法：
+两种做法：
 
-1. **Flipbook**（序列帧）：`assets.fx.flipbooks` + `assets.fx.bind`，适合不需要官方粒子系统的简单技能 / 命中特效。
-2. **编译特效**：`"index": "fx/index.json"`，格式是官方提取格式的受控子集；支持粒子、billboard / stretch 渲染、`FollowMountPoint` 跟随骨骼、`atlas: true` 纹理图集，以及 Lite 档半尺寸纹理。
+1. **Flipbook**：`assets.fx.flipbooks` + `assets.fx.bind`，适合简单的技能 / 命中特效。
+2. **编译特效**：`"index": "fx/index.json"`，官方提取格式的受控子集，支持粒子、billboard / stretch、`FollowMountPoint` 骨骼跟随、`atlas: true` 和 Lite 半尺寸纹理。
 
 ```json
 {
@@ -214,13 +253,15 @@ Spine 必须导出 **3.8 二进制 `.skel`**，`.skel`、`.atlas` 和贴图放�
 }
 ```
 
-绑定位置：`skillStart` / `skillLoop` / `skillEnd` / `attack` / `hit` / `projectile`。效果 id 必须在同一个插件的 FX bundle 里；单位必须是本插件或声明依赖的单位，不能覆盖官方单位。Lite 档会自动使用半尺寸纹理和一半粒子量，不需要作者另做一套。
+- 绑定位置：`skillStart` / `skillLoop` / `skillEnd` / `attack` / `hit` / `projectile`。
+- 效果 id 必须在同一个插件的 FX bundle 里；单位必须是本插件或声明依赖的单位，不能覆盖官方单位。
+- 改完必须 `check --strict` 和 `pack`。完整字段见 `PLUGINS.md` §10 与 [`design/vfx-format.md`](design/vfx-format.md)。
 
-`FollowMountPoint` 让武器光效 / 粒子跟随单位骨骼；`atlas: true` 只在能装进 2048×2048 时生效。完整字段、限制和校验规则见 [`PLUGINS.md`](PLUGINS.md) §10 的 FX 部分与 [`design/vfx-format.md`](design/vfx-format.md)；改完一定重新 `check --strict` 和 `pack`。
+---
 
 ## 5. 内容插件
 
-内容插件通过声明式数据进入 `cs`，不要直接改 `data/*.json`。
+内容插件通过声明式数据进入房间内容集（`cs`），**不要直接改 `data/*.json`**。
 
 ### 5.1 数据补丁
 
@@ -242,7 +283,7 @@ Spine 必须导出 **3.8 二进制 `.skel`**，`.skel`、`.atlas` 和贴图放�
 }
 ```
 
-支持的数据文件以 `PLUGINS.md` 的补丁表为准。数值会做官方边界检查；超界、未知 id、跨插件命名空间写入会被拒绝。
+支持的文件、补丁操作与边界检查以 `PLUGINS.md` 的补丁表为准。超界、未知 id、跨插件命名空间写入会被拒绝。
 
 ### 5.2 新干员
 
@@ -250,7 +291,7 @@ Spine 必须导出 **3.8 二进制 `.skel`**，`.skel`、`.atlas` 和贴图放�
 node tools/plugin.mjs new operator my-operator --target 德克萨斯
 ```
 
-模板会生成 `operators/*.json`，常见字段：
+模板生成 `operators/*.json`，常见字段：
 
 - `charId`：`char_x_<namespace>_<name>` 这类插件命名空间 id
 - `profession` / `subProfessionId` / `position` / `rarity`
@@ -260,11 +301,11 @@ node tools/plugin.mjs new operator my-operator --target 德克萨斯
 - `kit`：`generic`、`{ "ref": "<official kit>" }` 或 `{ "dsl": ... }`
 - `art`：`{ "ref": "<official art key>" }` 借用安装里的美术
 
-6★ 且声明在 `operators` 里的单位按自选处理；低星按商店棋子处理。具体规则和字段保留表见 `PLUGINS.md`。
+6★ 且声明在 `operators` 里的单位按自选处理；低星按商店棋子处理。完整规则见 `PLUGINS.md` 与 [`NEW-OPERATOR.md`](NEW-OPERATOR.md)（自造干员端到端）。
 
 ### 5.3 DSL
 
-DSL 用于不写 JavaScript 的技能/天赋：
+DSL 用于不写 JavaScript 的技能 / 天赋：
 
 ```json
 {
@@ -274,41 +315,36 @@ DSL 用于不写 JavaScript 的技能/天赋：
 }
 ```
 
-干员记录里用 `"kit": { "dsl": true }` 或模板生成的结构。DSL 必须通过 `validateDsl` 和内容集构建；不要在失败时偷偷换成 generic kit。
+干员记录里用 `"kit": { "dsl": true }` 或模板生成的结构。DSL 必须通过 `validateDsl` 和内容集构建；失败时**不要**偷偷换成 generic kit。字段见 [`PLUGIN-DSL.md`](PLUGIN-DSL.md)。
 
-### 5.4 Boss、波次和移动逻辑
+### 5.4 Boss / 波次 / 移动逻辑
 
 - Boss / 波次 / 敌人分别写 `bosses`、`waves`、`enemies` 记录；字段和引用检查见 `PLUGINS.md` §10。
-- **移动、阻挡、技能状态机是模拟引擎行为，不是普通数据字段。** 例如黑蛇的“可被阻挡但仍移动”是引擎 kit 里的 `profile.moveWhileBlocked`，不是插件 JSON 能声明的字段；平民的不可阻挡也是独立规则。
-- 需要新机制时：优先用现有字段；其次写 `script` 插件（SDK 限定的钩子）；最后才是在 fork 引擎中加通用能力。不要在 `content` 插件里塞服务端逻辑。
-- 新 Boss 必须实际跑一场：路线、共享 Boss 血量、波次、阻挡、召唤物、BGM / FX 都要看；Boss 轮和普通轮的事件不同。
+- **移动、阻挡、技能状态机是模拟引擎行为，不是普通数据字段。** 例如“可被阻挡但仍移动”属于引擎 kit 的 `profile.moveWhileBlocked`，不是插件 JSON 字段。
+- 需要新机制时：优先用现有字段 → 其次写 `script` 插件 → 最后才是在 fork 引擎里加通用能力。
+- 新 Boss 必须实际开一局：路线、共享 Boss 血量、波次、阻挡、召唤物、BGM / FX 都要看。
 
-## 6. UI 插件
+### 5.5 规则开关 / 新模式
 
-```text
-plugins/my-ui/
-├─ plugin.json
-└─ ui/index.html
-```
+- 规则开关、模式、阶段、波次等属于 content / DSL / script，不要在客户端硬编码。
+- `offers`（交互窗口）需要 `"api": 2` 和 `permissions: ["offers"]`。
+- 修改房间 `cs` 的内容插件必须在真实房间里验证，不只看工作室试跑。
 
-```json
-{
-  "class": "ui",
-  "scope": ["personal"],
-  "permissions": ["ui.frame"],
-  "entry": { "client": "ui/index.html" },
-  "slots": ["hud.right"]
-}
-```
+---
 
-- iframe 页面必须在 `<html>` 上写 `color-scheme: dark`
-- 页面只能通过只读 postMessage 接口读状态；不能直接发对局意图
-- 同一个槽位有多个插件时，对局里用标签切换
-- 支持的位置和 API 见 `PLUGINS.md` §32.8 / `PLUGIN-API.md`
+## 6. DSL（不写 JS）
+
+- 用途：技能、天赋、休整期效果、数值修正等声明式行为。
+- 位置：`dsl/` 下的 JSON，manifest 的 `dsl` 列表。
+- 校验：`validateDsl` + 内容集构建；`check --strict` 必须干净。
+- 失败时不要用 generic kit 掩盖；修 DSL 或改用脚本。
+- 字段、目标、取值和限制见 [`PLUGIN-DSL.md`](PLUGIN-DSL.md)。
+
+---
 
 ## 7. 脚本插件
 
-脚本插件是沙箱代码，不是普通数据插件。
+脚本是沙箱代码，不是普通数据。
 
 ```text
 plugins/my-script/
@@ -354,35 +390,68 @@ node tools/plugin.mjs pack my-script
 
 运行条件：
 
-- 服务器设置 `SP_PLUGIN_SCRIPTS=sandbox`（或 trusted 模式）
-- 房间选中该插件，或内容插件通过 `requires` 带入
-- 房间面板现在会直接列出已加载的 `script` / `trusted` 插件；选中 `script` 显示「沙箱脚本」，选中 `trusted` 会先触发风险同意
-- 锁文件 `plugin.lock.json` 有效
-- `sandbox` 不需要 owner pin 或玩家 consent；`trusted` 需要 owner pin 和每个玩家的 consent
+- 服务器设置 `SP_PLUGIN_SCRIPTS=sandbox`（或 trusted 模式）；
+- 房间选中该插件，或内容插件通过 `requires` 带入；
+- 锁文件 `plugin.lock.json` 有效；
+- `sandbox` 不需要 owner pin / 玩家 consent；`trusted` 需要 owner pin 和每个玩家的 consent。
 
 注意：
 
-- 入口只能 import `sp:sdk@1`
-- 状态必须按 battle 保存，使用 seeded RNG 和确定性数学
-- 回调预算不能中断无限循环；服务器和 Worker 有 watchdog，但不要依赖它
-- 不要手改 `plugin.lock.json`
-- 脚本不会被 `check` 或 `import-forge` 执行
+- 入口只能 import `sp:sdk@1`；
+- 状态必须按 battle 保存，使用 seeded RNG 和确定性数学；
+- 回调预算不能中断无限循环；服务器 / Worker 有 watchdog，但不要依赖它；
+- 不要手改 `plugin.lock.json`；
+- `check` / `import-forge` 不会执行脚本；
+- API 见 [`PLUGIN-API.md`](PLUGIN-API.md)。
 
-## 8. 语言包
+---
 
-语言包是独立类别的个人插件，通常由 `tools/build-i18n` / 语言包流程生成。普通插件需要自己的文案时优先用 `i18n` 字段，不要为每个插件造一个语言包。
+## 8. UI 插件
 
-## 9. 兼容性
+```text
+plugins/my-ui/
+├─ plugin.json
+└─ ui/index.html
+```
 
-本分支版本是 `0.4.0`。
+```json
+{
+  "class": "ui",
+  "scope": ["personal"],
+  "permissions": ["ui.frame"],
+  "entry": { "client": "ui/index.html" },
+  "slots": ["hud.right"]
+}
+```
 
-- `lang` / `cosmetic` / `ui`：`app` 范围匹配 `0.3.2` 也算兼容
-- `content` / `script` / `trusted`：默认严格要求 `0.4.0`
-- owner 可在 `plugins/config.json` 设 `"allowIncompatible": true`，或用插件 id 列表（如 `["old-content"]`）显式放行已审查的旧内容/脚本；仍走数据校验和脚本权限
-- 房间内容插件会产生 `cs`；外观插件只产生 `vs`，不改变对局
-- 插件文件改动后，房间需要“重新应用”才生效
+- iframe 页面必须在 `<html>` 上写 `color-scheme: dark`；
+- 只能通过只读 postMessage 接口读状态；不能直接发对局意图；
+- 同一槽位多个插件在对局里用标签切换；
+- 槽位和消息格式见 `PLUGINS.md` §14 / `schemas/ui.schema.json`。
 
-## 10. 调试与测试
+---
+
+## 9. 语言包与兼容性
+
+### 9.1 语言包
+
+- 语言包是 `class: "lang"` 的个人插件，manifest 2 或旧的 `pack.json` 均可；格式见 [`PACKS.md`](PACKS.md) 与 [`I18N.md`](I18N.md)。
+- 普通插件需要自己的文案时，优先用 manifest 的 `i18n` 字段，不要为每个插件单独造语言包。
+- UI 文案的通用 msgid 仍应进入 `public/i18n/*.json`；语言包只提供覆盖。
+
+### 9.2 兼容性
+
+本分支当前版本是 `0.4.0`：
+
+- `lang` / `cosmetic` / `ui`：`app` 范围匹配 `0.3.2` 也算兼容；
+- `content` / `script` / `trusted`：默认严格要求 `0.4.0`；
+- owner 可在 `plugins/config.json` 设 `"allowIncompatible": true`，或用插件 id 列表显式放行已审查的旧内容 / 脚本；仍走数据校验和脚本权限；
+- 内容插件改变房间 `cs`；外观插件只改变 `vs`，不改变对局；
+- 插件文件改动后，房间需要「重新应用」才生效。
+
+---
+
+## 10. 测试与调试
 
 ```bash
 node tools/plugin.mjs list
@@ -392,18 +461,22 @@ node tools/plugin.mjs test my-script
 node tools/plugin.mjs pack my-plugin --zip
 ```
 
-服务端：
+服务端 / 浏览器：
 
-- `/admin` →「插件与内容」：只读兼容性、skipped、warnings、房间 `cs` / `vs`
-- `/studio/`：浏览器工作台，可预览、试跑、打包
-- `SP_TEST_MODE=1`：测试控制台，测试对局默认不计入统计
+- `/admin` →「插件与内容」：兼容性、skipped、warnings、房间 `cs` / `vs`；
+- `/studio/`：浏览器工作台，可预览、试跑、打包（本机 / 局域网）；
+- `SP_TEST_MODE=1`：测试控制台，测试对局默认不计入统计。
 
 测试建议：
 
-- 数据/DSL：`test/plugins/` 下的内容集、规则、DSL 测试
-- UI：`test/ui/*.e2e.test.js`
-- 脚本：`test/plugins/script*.test.js` + `tools/plugin.mjs test`
-- 真实浏览器：`SP_E2E=1` + `test/ui/plugins.e2e.test.js`、`ui-plugins.e2e.test.js`、`plugins-content-script.e2e.test.js`
+- 数据 / DSL：`test/plugins/` 下的内容集、规则、DSL 测试；
+- UI：`test/ui/*.e2e.test.js`；
+- 脚本：`test/plugins/script*.test.js` + `node tools/plugin.mjs test`；
+- 真实浏览器：`SP_E2E=1` + `test/ui/plugins.e2e.test.js`、`ui-plugins.e2e.test.js`、`plugins-content-script.e2e.test.js`。
+
+**两遍同种子**：工作室试跑 / 脚本测试要比较相同 seed 的两次结果，确认确定性。
+
+---
 
 ## 11. 打包与发布
 
@@ -419,31 +492,58 @@ node tools/plugin.mjs pack my-plugin --zip
 
 发布前确认：
 
-- 版本号已递增
-- 作者、许可证、素材来源已填
-- 没有官方游戏素材
-- `check --strict` 干净
-- 脚本插件已重新 pack
-- 在测试服务器上实际开一局
+- [ ] 版本号已递增
+- [ ] 作者、许可证、素材来源已填
+- [ ] 没有官方游戏素材
+- [ ] `check --strict` 干净
+- [ ] 脚本插件已重新 `pack`
+- [ ] 在测试服务器上实际开一局
+- [ ] 需要时更新 README / 公告 / 截图
 
-## 12. 常见问题
+安装 / 上架 / 签名 / 审核见 [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md)、[`PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md)、[`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md)。
+
+---
+
+## 12. 错误码与排查
 
 | 现象 | 常见原因 | 处理 |
 |---|---|---|
 | `PLUGIN_CLASS` | `class` 缺失或拼错 | 只用允许的类别 |
 | `PLUGIN_PERMISSION_UNUSED` | 声明了没用的权限 | 删掉权限或补上对应内容 |
 | `PLUGIN_FILE_OUTSIDE` | 路径 `..` / 绝对路径 / URL | 改成插件内相对路径 |
-| `PLUGIN_ASSET_*` | 图片/音频/Spine 类型或路径不对 | 对照模板和 `PLUGINS.md` |
+| `PLUGIN_ASSET_*` | 图片 / 音频 / Spine 类型或路径不对 | 对照模板和 `PLUGINS.md` |
 | `PLUGIN_SCRIPT_*` | 脚本未启用、锁无效、SDK import 不合法 | 看错误码 + `PLUGIN-API.md` |
-| 房间看不到内容插件 | 类/scope/权限/兼容性不对 | 看 `/admin` 的 skipped 和 warnings |
-| 改了文件房间没变 | 房间持有旧内容集 | 房主点“重新应用” |
-| 内容集构建失败 | 数据补丁/干员/DSL 有问题 | 先 `check`，再看 contentSet 错误 |
+| 房间看不到内容插件 | 类别 / scope / 权限 / 兼容性不对 | 看 `/admin` 的 skipped 和 warnings |
+| 改了文件房间没变 | 房间持有旧内容集 | 房主点「重新应用」 |
+| 内容集构建失败 | 数据补丁 / 干员 / DSL 有问题 | 先 `check`，再看 contentSet 错误 |
+
+完整错误目录：`shared/plugins/errors.js`，或 `node tools/plugin.mjs errors`。
+
+---
 
 ## 13. 不要做
 
-- 不要把 `data/*.json` 当插件输入直接改
-- 不要把官方游戏素材打进插件
-- 不要手写锁文件
-- 不要用 `trusted` 绕过数据校验
-- 不要在 `content` 插件里塞任意服务端逻辑；需要逻辑就用 DSL，或明确写 `script` 并接受沙箱/信任审查
-- 不要让一个插件同时承担外观和玩法；拆开用 `requires` 组合
+- 不要把 `data/*.json` 当插件输入直接改；
+- 不要把官方游戏素材打进插件；
+- 不要手写 `plugin.lock.json`；
+- 不要用 `trusted` 绕过数据校验；
+- 不要在 `content` 插件里塞任意服务端逻辑；需要逻辑就用 DSL，或明确写 `script` 并接受沙箱 / 信任审查；
+- 不要让一个插件同时承担外观和玩法；拆开用 `requires` 组合；
+- 不要在一个插件文件夹里放符号链接 / 隐藏路径 / 超大文件树。
+
+---
+
+## 14. 文档地图
+
+| 文档 | 用途 |
+|---|---|
+| 本文 | 开发者工作流（单一入口） |
+| [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | 不写代码的工作台指南 |
+| [`PLUGINS.md`](PLUGINS.md) | 完整规范（manifest / 权限 / 各类插件 / content set / studio / Forge） |
+| [`PLUGIN-API.md`](PLUGIN-API.md) | 脚本 SDK 稳定 / 实验 API |
+| [`PLUGIN-DSL.md`](PLUGIN-DSL.md) | DSL 字段与行为 |
+| [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) | Forge 包开发 |
+| [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) | Forge 兼容矩阵 |
+| [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md) | 商城 / 上架 |
+| [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | 当前未解决事项 |
+| [`../plugins/AGENTS.md`](../plugins/AGENTS.md) | AI 代理在 `plugins/` 内的规则 |

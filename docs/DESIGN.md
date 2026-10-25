@@ -1,6 +1,10 @@
 # 卫戍协议：盟约 — Web Remake · Architecture & Contracts (DESIGN.md)
 
-This is the **single source of truth** for every implementer. Research lives in `docs/research/` (start with `00-INDEX.md`; where a research file's body and its "Addendum (critic)" disagree, the addendum wins). When this document and research disagree, **this document wins**; when this document is silent, follow research; when both are silent, choose the simplest faithful behaviour and write it down in the module's header comment.
+> **Reading order:** start with [`RULES.md`](RULES.md) for the rules entry and authority order. This file is the
+> **permanent section registry** (§0–§49) and points to the current rules in [`design/`](design/) and the per-release
+> evidence in [`history/`](history/). Section numbers never change.
+
+This index + the current rules in [`design/`](design/) are the **normative source** for every implementer. Research lives in `docs/research/` (start with `00-INDEX.md`; where a research file's body and its "Addendum (critic)" disagree, the addendum wins). When this document and research disagree, **this document wins**; when this document is silent, follow research; when both are silent, choose the simplest faithful behaviour and write it down in the module's header comment.
 
 Language: player-facing text is **Simplified Chinese** by default, with an English switch since 0.2.0 (§25.2, docs/I18N.md: UI strings through `t('中文')`, game texts from the official Chinese data or the official EN client's). Code, comments and identifiers are English.
 

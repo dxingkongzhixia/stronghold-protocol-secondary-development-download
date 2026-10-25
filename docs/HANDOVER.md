@@ -1,4 +1,7 @@
-# HANDOVER — read this first
+# HANDOVER — detailed handover & operations reference
+
+> **Maintained entry:** humans start with [`DEVELOPER.md`](DEVELOPER.md); AI agents start with [`../AGENTS.md`](../AGENTS.md)
+> + [`AI-AGENT.md`](AI-AGENT.md). This file remains the long-form handover and operations reference.
 
 Audience: **the next maintainer** of this project, human or AI agent. This is the entry point: read it
 top-to-bottom and you can run, change, verify, merge and (when the owner says so) deploy this fork safely.

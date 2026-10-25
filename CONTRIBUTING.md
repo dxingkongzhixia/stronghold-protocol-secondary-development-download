@@ -1,9 +1,9 @@
 # 参与贡献
 
 欢迎提 Issue 和 Pull Request：bug、和官方规则不一致的地方、新干员的战斗逻辑、翻译、文档都可以。动手之前先看一眼
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)（代码地图：哪个规则在哪个文件）。English summary at the end.
+[docs/DEVELOPER.md](docs/DEVELOPER.md)（开发入口）和 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)（代码地图：哪个规则在哪个文件）。English summary at the end.
 
-> **Sections.** §1 准备环境 · §2 运行测试 · §3 忠实原则 · §4 提交与 PR · §5 添加干员（自选） · English summary at the end. See also [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) (lookup) and [`docs/HANDOVER.md`](docs/HANDOVER.md) (the entry point).
+> **Sections.** §1 准备环境 · §2 运行测试 · §3 忠实原则 · §4 提交与 PR · §5 添加干员（自选） · English summary at the end. See also [`docs/RULES.md`](docs/RULES.md) (rules), [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md) (plugins), [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) (lookup).
 
 ## 1. 准备环境
 

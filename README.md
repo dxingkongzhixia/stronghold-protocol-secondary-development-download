@@ -9,7 +9,7 @@
 - **这是什么**：明日方舟「卫戍协议」的非官方同人**网页复刻**，1–4 人合作，浏览器里玩。
 - **在哪儿**：这里是二次开发版**主仓库**（GitHub），另有 **Gitee 国内镜像**；**我们是基于主线开发的分支项目**，不是主线项目本身。
 - **怎么跑**：装 Node 22/24 → `npm install` → `node server/index.js` → 打开 `http://localhost:3000`。
-- **第一次接手**：先读 [`docs/HANDOVER.md`](docs/HANDOVER.md)；按问题查文档用 [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md)。
+- **第一次接手**：先读 [`docs/DEVELOPER.md`](docs/DEVELOPER.md)（人类开发者）或 [`AGENTS.md`](AGENTS.md)（AI 代理）；按问题查文档用 [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md)。
 
 English one-liner: the **primary repository** (GitHub) of our independently maintained secondary-development build of the browser co-op fan mode *Stronghold Protocol: Alliance*, with a **Gitee mirror for downloads from mainland China**. This is **not the mainline project** — we are a **branch project** forked from the mainline [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which is credited as the original source.
 
@@ -25,8 +25,8 @@ English one-liner: the **primary repository** (GitHub) of our independently main
 - [八、致谢与许可](#八致谢与许可)
 - [English](#english)
 
-> **第一次接手本仓库？** 先读 [`docs/HANDOVER.md`](docs/HANDOVER.md)——接手入口：仓库地图、本地运行、构建 / 测试、内容制作、主线合并、发布与部署、已知坑。
-> 想按主题直接跳到某份文档，用 [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md)。
+> **第一次接手本仓库？** 人类开发者先读 [`docs/DEVELOPER.md`](docs/DEVELOPER.md)；AI 代理先读 [`AGENTS.md`](AGENTS.md) 与 [`docs/AI-AGENT.md`](docs/AI-AGENT.md)。
+> 规则看 [`docs/RULES.md`](docs/RULES.md)，插件看 [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md)；想按主题直接跳转，用 [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md)。
 
 ## 一、这是什么仓库
 
@@ -184,8 +184,12 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 
 | 文档 | 内容 |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | **AI agent 入口**：唯一规则、查询表、守则 |
-| [`docs/HANDOVER.md`](docs/HANDOVER.md) | **接手入口**：仓库地图、本地运行、构建 / 测试、内容制作、主线合并、发布与部署、已知坑 |
+| [`AGENTS.md`](AGENTS.md) | **AI agent 入口**：硬规则、布局、命令、护栏 |
+| [`docs/AI-AGENT.md`](docs/AI-AGENT.md) | **AI agent 展开手册**：工作循环、任务配方、测试矩阵、常见陷阱 |
+| [`docs/DEVELOPER.md`](docs/DEVELOPER.md) | **人类开发者入口**：启动、架构、开发流程、调试、发布、文档地图 |
+| [`docs/RULES.md`](docs/RULES.md) | **游戏规则入口**：权威顺序、规则总览、规范文档地图、改规则流程 |
+| [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md) | **插件开发入口**：模板、manifest、类别、测试、打包、发布 |
+| [`docs/HANDOVER.md`](docs/HANDOVER.md) | 详细接手 / 运维参考（入口以 `DEVELOPER.md` 为准） |
 | [`docs/README.md`](docs/README.md) | **文档系统总索引**：不同角色的阅读顺序、主体 / 插件 / 历史 / 运维文档的权威入口与维护规则 |
 | [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) | **问题 → 文档 → 代码文件** 查询索引 |
 | [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md) | 当前状态一页纸：线上、开关、备份、已知问题 |
@@ -236,7 +240,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 
 ## English
 
-The **primary repository** (GitHub) of our independently maintained secondary-development build of Arknights' seasonal auto-chess tower-defense mode *Stronghold Protocol: Alliance*, played in the browser: solo, or 1–4 player co-op — with a **Gitee mirror for downloads from mainland China**. **This is not the upstream project** — the original source is [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which we credit and periodically merge. Our additions include account/matchmaking/spectate features, **eight** custom shop operators, and a set of rule decisions recorded in [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md). New here? Start with [`docs/HANDOVER.md`](docs/HANDOVER.md).
+The **primary repository** (GitHub) of our independently maintained secondary-development build of Arknights' seasonal auto-chess tower-defense mode *Stronghold Protocol: Alliance*, played in the browser: solo, or 1–4 player co-op — with a **Gitee mirror for downloads from mainland China**. **This is not the upstream project** — the original source is [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which we credit and periodically merge. Our additions include account/matchmaking/spectate features, **eight** custom shop operators, and a set of rule decisions recorded in [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md). New here? Start with [`docs/DEVELOPER.md`](docs/DEVELOPER.md) (humans) or [`AGENTS.md`](AGENTS.md) (AI agents).
 
 - **Run:** Node.js 22 or 24; `git clone` this repository (the runtime art under `public/assets`, `public/fonts` and `public/vendor` is tracked, so a clone runs without fetching art), then `npm install` and `node server/index.js` → <http://localhost:3000>. The admin panel is at `/admin?token=…` (token in `var/admin-token.txt`). Tests: `node --test` and `npm run golden`.
 - **Updates:** `node tools/push-gitee.mjs -m "…"` commits what you staged in the git store, pushes it to every configured remote (the **GitHub primary** then the **Gitee mirror**), then mirrors the store back into the working tree (one-way: store → remotes → working tree; it never overwrites the store with the working tree); see [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) for the notice-then-deploy convention.

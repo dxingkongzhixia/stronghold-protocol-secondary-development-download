@@ -3,16 +3,16 @@
 A **lookup table** for an agent or a newcomer: start from the question you have, land on the owning
 document or code file. The authoritative docs are still the ones linked here; this file only points.
 
-Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/README.md`](README.md)
-(documentation system) → [`docs/HANDOVER.md`](HANDOVER.md) (newcomer entry) →
-[`docs/PROJECT-STATE.md`](PROJECT-STATE.md) (where are we now).
+Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (AI agent),
+[`DEVELOPER.md`](DEVELOPER.md) (human) → [`docs/README.md`](README.md) (documentation system) →
+[`docs/RULES.md`](RULES.md) (rules) → [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) (where are we now).
 
 > **Pinned vs free docs.** `test/docs-consistency.test.js` pins exact wording in `DESIGN` / `design/` /
 > `history/` / `SIM.md` / `META.md` / `DATA.md` / `README.md` / `DEPLOY.md` / `PLAYING.md`;
 > `test/docs-paths.test.js` checks every path and link in `ARCHITECTURE.md` and `CONTRIBUTING.md`;
 > `test/docs-mojibake.test.js` checks encoding for every `.md`. Reorganise freely only in the
-> **free** docs (`HANDOVER`, `PROJECT-STATE`, `MATCHMAKING`, `OUR-FEATURES`, `UPSTREAM-MERGES`,
-> `AI-WORKFLOW`, this file, `AGENTS.md`).
+> **free** docs (`AI-AGENT`, `DEVELOPER`, `RULES`, `PLUGIN-DEV-GUIDE`, `HANDOVER`, `PROJECT-STATE`,
+> `MATCHMAKING`, `OUR-FEATURES`, `UPSTREAM-MERGES`, `AI-WORKFLOW`, this file, `AGENTS.md`).
 
 ## 1. Orientation and current state
 
@@ -20,7 +20,9 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/README.m
 |---|---|
 | What is this project? How do I run it? What can players do? | [`README.md`](../README.md) |
 | Which documents exist, which are authoritative, and which should I read first? | [`docs/README.md`](README.md) |
-| I just inherited this — where do I even start? | [`docs/HANDOVER.md`](HANDOVER.md) |
+| I just inherited this — where do I even start? | [`docs/DEVELOPER.md`](DEVELOPER.md) (human) / [`docs/AI-AGENT.md`](AI-AGENT.md) (AI) |
+| Where are the game rules, and which document wins? | [`docs/RULES.md`](RULES.md) → [`docs/DESIGN.md`](DESIGN.md) |
+| I want to develop a plugin — where do I start? | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
 | What is deployed right now, which switches, which backups, known issues? | [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) |
 | Which file implements feature X? | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md), [`docs/DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) |
 | What changed in each release? | [`CHANGELOG.md`](../CHANGELOG.md) |
@@ -63,6 +65,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) (agent entry) → [`docs/README.m
 
 ## 3. Game rules (the design document)
 
+- **Rules entry**: [`docs/RULES.md`](RULES.md) — authority order, topic table, core numbers, change flow.
 - Index: [`docs/DESIGN.md`](DESIGN.md).
 - **Current rules**: [`docs/design/`](design/) — `overview.md`, `engine.md`, `match.md`, `client.md`,
   `network.md`, `geometry-time.md`, and `vfx-format.md` (the official battle-FX format: prefabs / particle
