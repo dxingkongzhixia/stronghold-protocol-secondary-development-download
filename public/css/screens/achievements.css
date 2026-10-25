@@ -112,6 +112,14 @@
 .ach-modes__cell { height: calc(1.2 * var(--ui-unit, 1rem)); display: flex; flex-direction: column; justify-content: center; padding-left: calc(0.3 * var(--ui-unit, 1rem)); }
 .ach-modes__cell b { font-family: var(--font-display); font-size: calc(.42 * var(--utility-text, var(--t))); line-height: 1.05; color: #4af2c4; font-weight: 500; }
 .ach-modes__cell small { font-size: calc(.25 * var(--utility-text, var(--t))); color: #a9b3b0; white-space: nowrap; }
+/* 「含插件对局」 (DESIGN §32.6): the same preference the 统计 page's switch writes (screens/stats.js). Styled here so the
+   panel keeps its own stylesheet; shown only once a record is governed by it or the switch is on. */
+.ach-modded { display: inline-flex; align-items: center; gap: calc(0.14 * var(--ui-unit, 1rem)); margin-top: calc(0.18 * var(--ui-unit, 1rem)); color: #a9b3b0; font-size: calc(.26 * var(--utility-text, var(--t))); cursor: pointer; }
+.ach-modded em { font-style: normal; color: #6f7a77; }
+.ach-modded__sw { display: inline-flex; align-items: center; width: calc(0.9 * var(--ui-unit, 1rem)); height: calc(0.46 * var(--ui-unit, 1rem)); padding: 0; background: #16201e; border: 1px solid rgba(220, 230, 226, .22); cursor: pointer; }
+.ach-modded__sw i { display: block; width: calc(0.34 * var(--ui-unit, 1rem)); height: calc(0.34 * var(--ui-unit, 1rem)); margin-left: calc(0.06 * var(--ui-unit, 1rem)); background: #8a9490; transition: transform var(--t-fast, 150ms), background var(--t-fast, 150ms); }
+.ach-modded__sw.is-on { border-color: rgba(78, 216, 175, .55); background: rgba(28, 92, 80, .55); }
+.ach-modded__sw.is-on i { transform: translateX(calc(0.42 * var(--ui-unit, 1rem))); background: #4af2c4; }
 .ach-hex { position: relative; min-height: calc(4.4 * var(--ui-unit, 1rem)); }
 /* the reference's hexagon: six solid mint triangles, dark gaps, a ruler inside each outer edge, a dark hub, a soft glow */
 .ach-hex__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 calc(0.14 * var(--ui-unit, 1rem)) rgba(74, 242, 196, .3)); }

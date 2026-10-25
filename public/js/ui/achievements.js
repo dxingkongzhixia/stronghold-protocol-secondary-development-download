@@ -26,7 +26,7 @@ import { useLeave } from './transitions.js';
 import { uiUrl } from './assetUrls.js';
 import { Emblem } from '../screens/title.js';
 import { OpCard } from '../screens/settle.js';
-import { openStats } from '../screens/stats.js';
+import { openStats, useWithModded, setWithModded } from '../screens/stats.js';
 import { ensureStylesheet } from './ensureStylesheet.js';
 import { t } from '../../../shared/i18n.js';
 
@@ -73,9 +73,9 @@ function useAchievementRecords() {
   return { records, local };
 }
 
-function useAchievements(hiddenLayers) {
+function useAchievements(hiddenLayers, withModded) {
   const { records, local } = useAchievementRecords();
-  const s = useMemo(() => achievementStats(records, { hiddenLayers }), [records, hiddenLayers]);
+  const s = useMemo(() => achievementStats(records, { hiddenLayers, withModded }), [records, hiddenLayers, withModded]);
   return { s, local };
 }
 
@@ -332,7 +332,9 @@ export function AchievementPanel({ me, onClose }) {
   const ready = useData('config', 'assets', 'chess', 'bonds', 'bands', 'items', 'backups');
   const gd = useMemo(() => makeLookups(ready), [ready, data.locale()]);
   const hidden = useMemo(() => (id) => !!gd.bond(id)?.noStack, [gd]);
-  const { s, local } = useAchievements(hidden);
+  // the same 「含插件对局」 switch the 统计 page reads (one preference, so the two views agree)
+  const withModded = useWithModded();
+  const { s, local } = useAchievements(hidden, withModded);
   const boxRef = useRef(null);
   const [closing, close] = useLeave(onClose, 180);
   const [shown, setShown] = useState(false);
@@ -346,11 +348,12 @@ export function AchievementPanel({ me, onClose }) {
   usePanelFocus(close, boxRef);
   useEffect(() => { if (shown) boxRef.current?.querySelector('.ach__close')?.focus(); }, [shown]);
   return html`<${AchievementView} me=${me} onClose=${close} gd=${gd} ready=${shown} s=${s} local=${local} boxRef=${boxRef} closing=${closing}
+    withModded=${withModded} onModded=${setWithModded}
     onStats=${() => { onClose(); openStats(); }} />`;
 }
 
 /** Hook-free content of the local achievements panel. */
-export function AchievementView({ me, onClose, gd, ready, s, local, boxRef, closing = false, onStats }) {
+export function AchievementView({ me, onClose, gd, ready, s, local, boxRef, closing = false, onStats, withModded = false, onModded = () => {} }) {
   const icons = Object.fromEntries(ACHIEVEMENT_GROUPS.map(([id, , icon]) => [id, icon]));
   return html`<div class=${cx('ach', closing && 'is-closing')} role="presentation"
     onMouseDown=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -369,7 +372,13 @@ export function AchievementView({ me, onClose, gd, ready, s, local, boxRef, clos
       <div class="ach__body">
         ${local.newer ? html`<p role="alert">${t('战绩由更新版本保存，请使用对应版本查看')}</p>` : html`
         <section class="ach-top-area">
-          <div class="ach-top-area__left"><${Plate} me=${me} s=${s} /><${ModeTable} modes=${s.modes} /></div>
+          <div class="ach-top-area__left"><${Plate} me=${me} s=${s} /><${ModeTable} modes=${s.modes} />
+            ${s.modded > 0 || withModded ? html`<label class="ach-modded" data-testid="ach-modded">
+              <button type="button" role="switch" aria-checked=${withModded ? 'true' : 'false'}
+                class=${cx('ach-modded__sw', withModded && 'is-on')} onClick=${() => onModded(!withModded)}><i></i></button>
+              <span>${t('含插件对局')}${!withModded && s.modded ? html` <em>${t('（{n} 局未计入）', { n: s.modded })}</em>` : null}</span>
+            </label>` : null}
+          </div>
           <${TitleHex} titles=${s.titles} gd=${gd} />
         </section>
         <${SectionBar} title=${t('成就')} micro="ACHIEVEMENTS" />

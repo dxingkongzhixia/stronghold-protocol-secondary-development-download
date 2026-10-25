@@ -87,12 +87,14 @@ export function mergeRecords(local, remote) {
  * Everything the panel shows, from the match records (any order). `hiddenLayers(bondId)`: a bond whose layers the
  * game never shows (bonds.json noStack) cannot be the 战果纪录.
  * @param {any[]} records
- * @param {{ hiddenLayers?: (bondId: string) => boolean }} [o]
+ * @param {{ hiddenLayers?: (bondId: string) => boolean, withModded?: boolean }} [o] `withModded`: count the matches with
+ * gameplay plugins too (the panel's 「含插件对局」 switch, the same preference the 统计 page reads); `out.modded` is how
+ * many records that switch governs.
  */
-export function achievementStats(records, { hiddenLayers = () => false } = {}) {
+export function achievementStats(records, { hiddenLayers = () => false, withModded = false } = {}) {
   const num = (v) => (Number.isFinite(v) ? v : 0);
   const out = {
-    trophies: 0, bestRound: 0, count: 0, detailed: 0,
+    trophies: 0, bestRound: 0, count: 0, detailed: 0, modded: 0,
     modes: { solo: { games: 0, wins: 0, hard: 0 }, coop: { games: 0, wins: 0, hard: 0 } },
     titles: Object.create(null), best: null, maxima: { gold: 0, merges: 0, kills: 0 },
     topBonds: [], topBands: [], markedBands: [],
@@ -106,7 +108,11 @@ export function achievementStats(records, { hiddenLayers = () => false } = {}) {
     const self = rec ? selfRowOf(rec) : null;
     if (!self || (rec.id && seen.has(rec.id))) continue;
     if (rec.id) seen.add(rec.id);
-    if (!countsTowardStats(rec) || isModdedRecord(rec)) continue;
+    if (!countsTowardStats(rec)) continue;
+    if (isModdedRecord(rec)) {
+      out.modded++;
+      if (!withModded) continue; // unofficial (DESIGN §32.6): counted only when the panel's switch asks for it
+    }
     out.count++;
     if (!rec.compact) out.detailed++;
     out.trophies += Math.max(0, num(self.trophies));

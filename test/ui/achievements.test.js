@@ -59,6 +59,17 @@ describe('成就统计 aggregates (achievementStats)', () => {
     assert.equal(s.modes.coop.wins, 1);
   });
 
+  test('the 含插件对局 switch: the modded count is reported, and withModded counts it', () => {
+    const rows = [rec(1), rec(2, { content: { cs: 'cs_1', plugins: ['x@1'] } })];
+    const off = achievementStats(rows);
+    assert.equal(off.count, 1, 'unofficial matches stay out by default');
+    assert.equal(off.modded, 1, 'the switch reports how many matches it governs');
+    const on = achievementStats(rows, { withModded: true });
+    assert.equal(on.count, 2, 'the switch takes them in');
+    assert.equal(on.modded, 1);
+    assert.equal(on.modes.coop.games, 2);
+  });
+
   test('wins, clears per difficulty, hours, hidden core and hidden-core-in-ABYSS', () => {
     const s = achievementStats([
       rec(1, { difficulty: 'HARD', hiddenCleared: true, durationMs: 7.2e6 }, { victory: true }),

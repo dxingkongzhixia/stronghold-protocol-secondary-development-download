@@ -147,16 +147,24 @@ function Section({ children, class: cls }) {
 }
 
 /**
+ * The 「含插件对局」 preference: one switch state for the 统计 overview and the 成就 panel (ui/achievements.js), so the
+ * two views never disagree about which matches count.
+ */
+export function useWithModded() { return useStore((s) => s.withModded, Object.is, statsStore); }
+/** Change it from either surface. */
+export function setWithModded(on) { statsStore.set({ withModded: !!on }); }
+
+/**
  * 「含插件对局」: the aggregates take in the matches with gameplay plugins too (ui/stats.js aggregateStats `modded`;
  * DESIGN §32.6 — off by default: such a match is unofficial). Shown once there is one.
  */
 function ModdedSwitch({ agg }) {
-  const on = useStore((s) => s.withModded, Object.is, statsStore);
+  const on = useWithModded();
   const n = on ? null : agg.modded;
   if (!on && !agg.modded) return null;
   return html`<label class="st-modded" data-testid="stats-modded">
     <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} class=${cx('set-toggle', on && 'is-on')}
-      onClick=${() => statsStore.set({ withModded: !on })}><i></i></button>
+      onClick=${() => setWithModded(!on)}><i></i></button>
     <span>${t('含插件对局')}${n ? html` <em class="t-dim">${t('（{n} 局未计入）', { n })}</em>` : null}</span>
   </label>`;
 }
