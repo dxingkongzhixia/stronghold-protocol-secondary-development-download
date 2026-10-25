@@ -200,7 +200,8 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 - 两处过期测试期望跟上新增的 `lobbyMusic` 设置（`test/ui/gameLogic.test.js`、`test/feedback7-voices.test.js`）。
 - 补位语料：`00cb38d02`（内置阵营加强插件）重排内容池后，`coop2-NORMAL-26-coverage-standins` 不再出补位 —— 保留为 `coop2-NORMAL-26-standins`，覆盖场景改用种子 4（`6_03_a → char_610_acfend`，与种子 14 的 `3_05_a` 不同）；`test/golden/matches.json` 按 `--family matches --update` 重新生成，未手改。
 - `npm test` 固定 `--test-concurrency=4`：本机 16 核时默认并行会互相抢核，10.4 min 且稳定 4–6 个超时假失败；限到 4 后 7.6 min、0 失败。
-- 未处理：`D:\DOTK\Stronghold-Protocol` 里两个未入库的 `test/ui/issue602-deploy-fold*.test.js`（待 owner 确认去留）；`build-data` 的 2 条既有 warning（`DIY_EXCLUDED_TEAMS` 空配置、`act1autochess_m01` 舞台名丢失研究注解）。
+- 已清理：`test/ui/issue602-deploy-fold*.test.js` 两个孤儿副本（2026-10-17 回退 #602 时从 git 删掉、镜像不删未跟踪文件所以留在项目本体；跑的 10 项里 5 项失败于 `deployFoldsShop is not a function`。内容仍可从 `f29d0333c` 取回）。
+- 未处理：`build-data` 的 2 条既有 warning（`DIY_EXCLUDED_TEAMS` 空配置、`act1autochess_m01` 舞台名丢失研究注解）。
 
 **2026-10-23 上线记录（已部署）**
 
