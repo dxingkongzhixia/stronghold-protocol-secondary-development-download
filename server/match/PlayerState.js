@@ -138,7 +138,7 @@ import { PlayerDiy, DiyStock } from './player/diy.js';
 export class PlayerState {
   /**
    * @param {import('./Match.js').Match} m owning match
-   * @param {{ seat: number, playerId: string, name: string, isBot: boolean, connected: boolean, loadout?: any, notOwned?: any, diy?: any }} seat
+   * @param {{ seat: number, playerId: string, name: string, role?: string|null, avatar?: string|null, isBot: boolean, connected: boolean, loadout?: any, notOwned?: any, diy?: any }} seat
    */
   constructor(m, seat) {
     this.m = m;
@@ -146,6 +146,8 @@ export class PlayerState {
     this.playerId = seat.playerId;
     this.seat = seat.seat;
     this.name = seat.name;
+    /** the account's picture (schema v6): an operator charId or a var/avatars file name; null = band icon/initials */
+    this.avatar = typeof seat.avatar === 'string' && seat.avatar ? seat.avatar : null;
     /** shared/constants.js ROLES key of the bound account (null = ordinary / bot) — rides along in the player view */
     this.role = seat.role ?? null;
     /** 皮肤 (docs/SKINS.md): frozen `{ [charId]: skinId }`, {} = every operator on its default model. */

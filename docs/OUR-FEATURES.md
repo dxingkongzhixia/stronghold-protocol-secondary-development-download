@@ -64,6 +64,12 @@ Read this together with:
 > `docs/SKINS.md`); the stored value is a charId or a `charId@skinKey`, and it changes the card picture only, never the
 > battle model (`room.skins`).
 >
+> The same account picture reaches the match's public player rows: `Lobby.startMatch` copies the room seat's
+> `avatar` into the match seats, `PlayerState` / `m.public.players` / `m.result.players` carry it, and
+> `ui/gameComponents.js` `PlayerAvatar` draws it instead of the band icon / initials (owner 2026-10-25: the band
+> check, 「协议启动！」 cards, the in-match P1 card, boss plates and the result screen all show the account avatar;
+> a player without one keeps the band icon, then the initial/robot fallback).
+>
 > **2026-10-25 — 主界面音乐 (Hub music picker).** The Hub's topbar carries a music chip; its dialog lists the game's
 > official 主界面 music catalogue (24 committed tracks from `excel/audio_data.json` `musics[]`,
 > `tools/assets/lobby-music.mjs`), with tabs, search and a BGM volume slider. The optional **full pack** adds the other

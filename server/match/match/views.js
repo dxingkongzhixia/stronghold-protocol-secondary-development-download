@@ -148,6 +148,7 @@ export class MatchViews {
         seat: ps.seat,
         name: ps.name,
         role: ps.role ?? null,
+        ...(ps.avatar ? { avatar: ps.avatar } : {}),
         isBot: ps.isBot,
         connected: ps.isBot || (ps.connected && !ps.left),
         alive: ps.alive,

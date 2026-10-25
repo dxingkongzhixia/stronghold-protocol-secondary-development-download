@@ -116,6 +116,7 @@ export function buildResult(m, outcome) {
       seat: ps.seat,
       name: ps.name,
       role: ps.role ?? null,
+      ...(ps.avatar ? { avatar: ps.avatar } : {}),
       isBot: ps.isBot,
       left: ps.left,
       alive: ps.alive,

@@ -1851,6 +1851,9 @@ export class Lobby {
       const own = s.isBot ? null : this.seatSettings(room, s, data);
       return {
         seat: s.seat, playerId: s.playerId, name: s.name, role: s.role ?? null, isBot: s.isBot, connected: s.connected,
+        // the account picture (schema v6): the match's PlayerState / player view carry it so the band check, the
+        // protocol-boot cards and the in-match team panel draw the same avatar as the room seats (owner 2026-10-25)
+        ...(s.avatar ? { avatar: s.avatar } : {}),
         // DESIGN §16: the human's checked operator loadout and (0.2.2) per-operator 潜能 / 练度 (bots fight with the defaults)
         loadout: own ? own.loadout : null,
         ops: own ? own.ops : null,

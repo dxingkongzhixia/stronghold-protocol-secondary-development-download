@@ -148,6 +148,10 @@ test('account.setAvatar: an operator avatar can replace the uploaded image', asy
     await user.request({ t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
     const state = await user.waitFor('room.state', (s) => s.seats?.[0]?.avatar === 'char_003_kalts', 4000);
     assert.equal(state.seats[0].avatar, 'char_003_kalts');
+    // the match's public player view carries it too (band check / protocol boot / team panel / results)
+    await user.request({ t: 'room.start' });
+    const pub = await user.waitFor('m.public', (m) => m.players?.some((p) => p.avatar === 'char_003_kalts'), 4000);
+    assert.equal(pub.players.find((p) => p.playerId === pub.players[0].playerId).avatar, 'char_003_kalts');
     const bad = await user.request({ t: 'account.setAvatar', art: 'char_999_nope' });
     assert.equal(bad.t, 'error');
     await user.request({ t: 'account.setAvatar', art: null });
