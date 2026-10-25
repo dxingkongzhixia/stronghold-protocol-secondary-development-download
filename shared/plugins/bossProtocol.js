@@ -123,6 +123,8 @@ export function readBossProtocol(raw) {
     }
   }
 
+  // 清除协议: every time below is REAL seconds — the runtime multiplies by the battle speed (flags.timeScale, 2 in a
+  // match) before it joins the sim's game clock, so a "90" reads 90 seconds on a stopwatch.
   if (raw.clearProtocol !== undefined) {
     const c = raw.clearProtocol;
     if (!isObj(c)) problems.push('protocol.clearProtocol: expected an object');

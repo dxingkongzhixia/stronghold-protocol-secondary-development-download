@@ -334,6 +334,33 @@ test('击杀换时间: every revive postpones the clear by extendPerRevive', () 
   assert.equal(cleared, 0, 'the original deadline no longer fires');
 });
 
+test('the clear protocol is authored in real seconds while the battle runs at timeScale 2', () => {
+  const boss = { ...enemyRec({ key: BOSS, hp: 50000, speed: 0 }), protocol: protocol({ clearProtocol: { at: 10, warning: 3, lp: 5 } }), rank: 'BOSS' };
+  const mimic = enemyRec({ key: MIMIC, hp: 25000, speed: 0 });
+  const h = makeBattle({
+    enemies: [{ key: BOSS, time: 0, pos: [10, 6] }, { key: MIMIC, time: 0, pos: [10, 10] }],
+    defs: { enemies: { [BOSS]: boss, [MIMIC]: mimic } },
+    autoFinish: false,
+    timeLimit: 60,
+    flags: { timeScale: 2 },
+  });
+  let cleared = 0;
+  const warned = [];
+  h.b.on('protocolClear', () => { cleared++; });
+  h.b.on('protocolWarning', (c) => warned.push(c.seconds));
+  h.run(0.1); // 10 real seconds at 2× = 20 game seconds; the HUD counts real seconds
+  assert.ok(Math.abs(h.b.snapshot().protocol.clearIn - 9.95) < 0.1, 'the HUD shows 10 real seconds');
+  h.run(2); // 2 more game seconds = 1 real second
+  const left = h.b.snapshot().protocol.clearIn;
+  assert.ok(Math.abs(left - 8.95) < 0.15, `one real second passed: ${left} ≈ 8.95`);
+  h.run(11.5); // 13.6 game seconds in: the 6-game-second warning lead is not due yet
+  assert.deepEqual(warned, []);
+  h.run(1); // 14.6 game seconds: the warning fires, still 3 REAL seconds ahead
+  assert.deepEqual(warned, [3], 'the warning keeps its real-second lead');
+  h.run(6); // past 20 game seconds
+  assert.equal(cleared, 1, 'it fires after 10 real seconds, not 10 game seconds');
+});
+
 test('the hidden variant uses hiddenAt / hiddenLp', () => {
   const boss = {
     ...enemyRec({ key: BOSS, hp: 50000, speed: 0 }),

@@ -42,7 +42,8 @@ function publishProtocolView(b, st) {
     blocks.push({ type: 'text', label: ui.revivesLabel, text: `${st.revivesLeft}/${st.revivesMax}` });
   }
   if (st.cleared) blocks.push({ type: 'text', text: ui.clearedLabel });
-  else if (st.clearAt != null) blocks.push({ type: 'countdown', label: ui.clearLabel, seconds: Math.max(0, st.clearAt - b.time) });
+  // the HUD counts REAL seconds (the clear protocol is authored that way): divide the game-time remainder by the speed
+  else if (st.clearAt != null) blocks.push({ type: 'countdown', label: ui.clearLabel, seconds: Math.max(0, (st.clearAt - b.time) / timeScaleOf(b)) });
   const key = JSON.stringify(blocks);
   if (key === st.lastView) return;
   st.lastView = key;
@@ -103,21 +104,28 @@ function removeGuard(b, st, dropShield = true) {
   st.guard = false;
 }
 
-/** Arm (or re-arm) the clear-protocol countdown so it fires `delay` seconds from now. */
+/**
+ * Real seconds → game seconds. A match runs its battles at `flags.timeScale` (COMBAT_TIME_SCALE, 2×) while the protocol
+ * data — like the round's maxPlayTime — is authored in real seconds; a virtual-time harness has no flag and runs 1×.
+ */
+const timeScaleOf = (b) => (Number(b?.flags?.timeScale) > 0 ? Number(b.flags.timeScale) : 1);
+
+/** Arm (or re-arm) the clear-protocol countdown so it fires `delay` GAME seconds from now. */
 function armClear(b, st, delay) {
   const c = st.protocol.clearProtocol;
+  const warnGame = c.warning * timeScaleOf(b);
   st.clear?.cancel?.();
   st.warning?.cancel?.();
   st.clear = null;
   st.warning = null;
   st.warningAt = null;
   st.clearAt = b.time + delay;
-  if (c.warning > 0) {
-    const warnDelay = Math.max(0, delay - c.warning);
+  if (warnGame > 0) {
+    const warnDelay = Math.max(0, delay - warnGame);
     st.warningAt = b.time + warnDelay;
     st.warning = b.after(warnDelay, () => {
       if (st.dead || st.cleared) return;
-      protocolFx(b, st.boss, 'enemy_mpprts_buff_02', { loop: true, dur: Math.min(c.warning, Math.max(0, delay)) });
+      protocolFx(b, st.boss, 'enemy_mpprts_buff_02', { loop: true, dur: Math.min(warnGame, Math.max(0, delay)) });
       b.emit('protocolWarning', { boss: st.boss, kind: 'clear', seconds: c.warning });
     });
   }
@@ -137,7 +145,7 @@ function scheduleClear(b, st) {
   if (!c) return;
   const hidden = b.kind === 'hidden';
   st.clearLp = hidden ? (c.hiddenLp ?? c.lp) : c.lp;
-  armClear(b, st, hidden ? (c.hiddenAt ?? c.at) : c.at);
+  armClear(b, st, (hidden ? (c.hiddenAt ?? c.at) : c.at) * timeScaleOf(b));
 }
 
 /**
@@ -148,7 +156,7 @@ function extendClear(b, st) {
   const c = st.protocol.clearProtocol;
   const add = c?.extendPerRevive ?? 0;
   if (!(add > 0) || st.cleared || st.dead) return;
-  armClear(b, st, Math.max(0, st.clearAt - b.time) + add);
+  armClear(b, st, Math.max(0, st.clearAt - b.time) + add * timeScaleOf(b));
   b.emit('protocolClearExtended', { boss: st.boss, seconds: add, clearAt: st.clearAt });
 }
 
@@ -420,6 +428,8 @@ function linkAbility(st) {
  */
 /** The live HUD state of the first protocol boss on the field, or null (b.snapshot → snap.protocol). */
 export function protocolSnapshot(b) {
+  // the HUD counts real seconds (protocol data is authored that way) while b.time is game time: divide by the speed
+  const ts = timeScaleOf(b);
   for (const e of b.enemies || []) {
     const st = stateOf(e);
     if (!st || st.dead) continue;
@@ -427,13 +437,13 @@ export function protocolSnapshot(b) {
       boss: e.id,
       bossId: e.defId,
       down: !!st.down,
-      downIn: st.downUntil == null ? null : Math.max(0, Math.round((st.downUntil - b.time) * 10) / 10),
+      downIn: st.downUntil == null ? null : Math.max(0, Math.round(((st.downUntil - b.time) / ts) * 10) / 10),
       revivesLeft: st.revivesLeft,
       revivesMax: st.revivesMax,
       shield: st.shieldBuff?.shield > 0 ? Math.ceil(st.shieldBuff.shield) : 0,
       shieldMax: st.shieldMax ?? 0,
       shieldBroken: !!st.shieldBroken,
-      clearIn: st.clearAt == null ? null : Math.max(0, Math.round((st.clearAt - b.time) * 10) / 10),
+      clearIn: st.clearAt == null ? null : Math.max(0, Math.round(((st.clearAt - b.time) / ts) * 10) / 10),
       warning: st.warningAt != null && b.time >= st.warningAt,
       cleared: !!st.cleared,
     };
