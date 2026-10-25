@@ -6,6 +6,9 @@ import path from 'node:path';
 import { createPluginRegistry } from '../../server/plugins/registry.js';
 import { buildContentSet } from '../../server/plugins/contentSet.js';
 import { DataSource, getDefaultSource } from '../../server/sim/simdata.js';
+import { getData } from '../../server/data.js';
+import { PHASE } from '../../shared/constants.js';
+import { makeMatch } from '../match/harness.js';
 import { makeBattle } from '../helpers/battleHarness.js';
 
 const BOSS = 'enemy_x_prts_source_code_prts';
@@ -60,6 +63,29 @@ test('prts: the strategy and the bosses are separate plugins (the 2026-10-24 spl
     assert.equal(strategy.data.bosses.boss_x_prts_source_code_prts, undefined);
     assert.equal(strategy.data.enemies[BOSS], undefined);
   }
+});
+
+test('prts: the team grant reaches every player while the rest grant stays with the picker', { skip: skipKaltsit }, () => {
+  const set = composed(['prts-kaltsit']);
+  const data = structuredClone(getData());
+  Object.assign(data.chess, set.data.chess);
+  Object.assign(data.tokens, set.data.tokens);
+  Object.assign(data.bands, set.data.bands);
+  const h = makeMatch({ mode: 'coop', humans: 2, data }).start();
+  const m = h.m;
+  for (const ps of m.players.values()) if (!ps.isBot) m.handle(ps.playerId, { t: 'g.infoReady' });
+  h.run(() => m.phase === PHASE.BAND_DRAFT);
+  const p0 = h.ps('p_0'), p1 = h.ps('p_1');
+  m._applyBand(p0, 'band_x_prts_kaltsit_touch');
+  m._applyBand(p1, 'band_amiya');
+  const special = (ps) => [...ps.hand, ...ps.temp, ...ps.board.values()].filter((x) => x?.meta?.special === 'band:band_x_prts_kaltsit_touch');
+  assert.equal(special(p0).length, 1, 'the picker gets Kal\'tsit');
+  assert.equal(special(p1).length, 1, 'a teammate on another strategy still gets the team-granted Kal\'tsit');
+  const teammateBefore = p1.allChess().length;
+  assert.equal(m.applyBandRestRandomChess(p0, 2).length, 1, 'the picker gets the rest-phase operator');
+  assert.equal(m.applyBandRestRandomChess(p1, 2).length, 0, 'the teammate does not');
+  assert.equal(p1.allChess().length, teammateBefore);
+  m.dispose();
 });
 
 function content() {
