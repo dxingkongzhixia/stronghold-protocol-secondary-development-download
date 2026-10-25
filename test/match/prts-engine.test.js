@@ -240,6 +240,38 @@ test('restEndRandomChess.rounds gates the grant and maxTierByRound caps an early
   m.dispose();
 });
 
+test('the per-round grant follows the picker only, while the team unit still reaches teammates', () => {
+  const data = structuredClone(getData());
+  data.bands.band_x_test_touch = {
+    ...data.bands.band_amiya, bandId: 'band_x_test_touch', name: 'Test Touch',
+    grants: {
+      team: true,
+      grantUnit: { charId: 'char_1052_kalts2', skill: 2, skillLocked: true },
+      restEndRandomChess: {
+        minTier: 1, maxTier: 6, count: 1,
+        rounds: [2, 4, 6, 8, 10, 12],
+        maxTierByRound: { 2: 3, 4: 3, 6: 3 },
+      },
+    },
+  };
+  const h = makeMatch({ mode: 'coop', humans: 2, bots: 1, data }).start();
+  const m = h.m;
+  for (const ps of m.players.values()) if (!ps.isBot) m.handle(ps.playerId, { t: 'g.infoReady' });
+  h.run(() => m.phase === PHASE.BAND_DRAFT);
+  const p0 = h.ps('p_0'), p1 = h.ps('p_1'), ai = h.ps('ai_0');
+  m._applyBand(p0, 'band_x_test_touch');
+  m._applyBand(p1, 'band_amiya');
+  const special = (ps) => [...ps.hand, ...ps.temp, ...ps.board.values()].filter((x) => x?.meta?.special === 'band:band_x_test_touch');
+  assert.equal(special(p0).length, 1);
+  assert.equal(special(p1).length, 1, 'team: true still gives the unit to a teammate');
+  const teammateBefore = p1.allChess().length;
+  assert.equal(m.applyBandRestRandomChess(p0, 2).length, 1, 'the picker gets the operator');
+  assert.equal(m.applyBandRestRandomChess(p1, 2).length, 0, 'a teammate on another strategy gets nothing');
+  assert.equal(m.applyBandRestRandomChess(ai, 2).length, 0, 'an AI teammate on another strategy gets nothing');
+  assert.equal(p1.allChess().length, teammateBefore, 'the teammate\'s chess count is unchanged');
+  m.dispose();
+});
+
 test('a band with bossIds is offered only in the matching leader room', () => {
   const data = structuredClone(getData());
   const band = data.bands.band_amiya;

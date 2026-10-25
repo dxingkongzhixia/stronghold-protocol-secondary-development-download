@@ -355,8 +355,8 @@ export class MatchPhases {
    * `grants.restEndRandomChess`: at a round start (a rest period) the band grants `count` random operators
    * between `minTier` and `maxTier` from the shared pool. `rounds` limits the grant to those rounds (round 1
    * included when listed) and `maxTierByRound` lowers the cap for a named round — the Kal'tsit strategy gains on
-   * rounds 2/4/6/8/10/12, with rounds 2/4/6 capped at tier 3. Independent of the band's special unit: every player
-   * who picked the band gets it, once per listed round.
+   * rounds 2/4/6/8/10/12, with rounds 2/4/6 capped at tier 3. It follows the player's OWN strategy (`ps.bandId`):
+   * a teammate who only received the band's unit through `team: true` never triggers this grant.
    */
   applyBandRestRandomChess(ps, round = this.round) {
     if (!ps || !ps.alive || !ps.bandId) return [];
