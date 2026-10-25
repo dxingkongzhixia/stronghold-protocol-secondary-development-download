@@ -39,16 +39,22 @@
 
 ### 2.1 桌面双树（`D:\DOTK`）
 
+> **项目本体 / 运行树是 `D:\DOTK\Stronghold-Protocol`**；它自己**没有 `.git`**。`D:\DOTK\_merge-scratch` 是
+> **独立的 git store**（提交历史 + 跟踪文件镜像），不是临时目录。`D:\DOTK\.git` 是空的父级仓库，别在项目本体里提交。
+
 | 路径 | 角色 | `.git` |
 |---|---|---|
-| `D:\DOTK\_merge-scratch` | git store：唯一历史与已提交文件，分支 `ours` | 有 |
-| `D:\DOTK\Stronghold-Protocol` | 运行树：store 的逐字节镜像，`node server/index.js` 在这里跑 | 无 |
+| `D:\DOTK\Stronghold-Protocol` | **项目本体 / 运行树**：`node server/index.js` 在这里跑，看代码也在这里 | 无自己的 |
+| `D:\DOTK\_merge-scratch` | **git store**：提交历史 + 跟踪文件镜像，当前分支 `prts-plugin` | 有 |
+| `D:\DOTK` | 空父级仓库，不要使用 | 有（master 无提交） |
 
-- store 里的 `.cache`、`public/assets`、`public/fonts`、`public/vendor` 是指向 dev tree 的 junction；**不要单独删 dev tree**。
+- store 里的 `.cache`、`public/assets`、`public/fonts`、`public/vendor` 是指向项目本体的 junction；**不要单独删项目本体**。
+- 提交/推送后，`node tools/push-gitee.mjs` 会把 store 的跟踪文件镜像回项目本体；也可以手动 `Copy-Item`。
 - 镜像校验（在 store 内执行，空输出 = 一致）：
   ```powershell
   git --work-tree=D:\DOTK\Stronghold-Protocol status --short --untracked-files=all
   ```
+- 本地部署临时文件放 `%TEMP%`，完成后删除；远端暂存 `/root/sp-stage-*` 也删除，`/root/sp-backup-*` 保留。
 
 ### 2.2 笔记本单树
 

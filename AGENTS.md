@@ -22,18 +22,21 @@ you are in before committing:
 
 | layout | machine | what it is | `.git` |
 |---|---|---|---|
-| **two-tree** | owner's **desktop** (`D:\DOTK`) | a **git store** plus a byte-for-byte **mirror** the app runs from | store `D:\DOTK\_merge-scratch` (branch `ours`); dev tree `D:\DOTK\Stronghold-Protocol` (no `.git`) |
+| **two-tree** | owner's **desktop** (`D:\DOTK`) | **project body** `D:\DOTK\Stronghold-Protocol` + a separate **git store** `D:\DOTK\_merge-scratch` | store has `.git` (current branch `prts-plugin`); project body has none of its own |
 | **single-tree** | owner's **laptop** | **one tree** that is both the store and the run tree | `.git` at its root, branch `master` |
 
-Both are the same repository. `tools/push-gitee.mjs` derives both roles from its own location: the store's
-`ours` ↔ the single checkout's `master`. **On the laptop, read every `D:\DOTK\...` path as *store ↔ this checkout*,
-*dev tree ↔ this checkout*.** Quick check: `git rev-parse --abbrev-ref HEAD` prints `ours` on the desktop and
-`master` on the laptop.
+**`Stronghold-Protocol` is the project body / run tree. `_merge-scratch` is only its git store** — it holds the
+commit history and a tracked-file mirror, and is not a temporary folder to delete. `D:\DOTK\.git` is an **empty
+parent repository**; do not commit from inside `Stronghold-Protocol` (git would walk up to it).
 
-- **Commit, merge and push in the store.** The dev tree follows.
-- Direction is **one-way: store → remotes → dev tree**. Never overwrite the store from the dev tree.
-- Inside the store, `.cache`, `public/assets`, `public/fonts` and `public/vendor` are **junctions** into the dev tree.
-  **Never delete the dev tree on its own**, and do not `rmdir` the store's `public/assets`.
+Both layouts are the same repository. `tools/push-gitee.mjs` derives both roles from its own location. **On the
+laptop, read every `D:\DOTK\...` path as *store ↔ this checkout*, *dev tree ↔ this checkout*.** Quick check:
+`git rev-parse --abbrev-ref HEAD` prints the store's branch (`prts-plugin` on the desktop, `master` on the laptop).
+
+- **Commit, merge and push in the git store.** The project body follows.
+- Direction is **one-way: store → remotes → project body**. Never overwrite the store from the project body.
+- Inside the store, `.cache`, `public/assets`, `public/fonts` and `public/vendor` are **junctions** into the project body.
+  **Never delete the project body on its own**, and do not `rmdir` the store's `public/assets`.
 - Verify the mirror without copying (run inside the store; empty output = in sync):
 
   ```powershell
@@ -41,6 +44,8 @@ Both are the same repository. `tools/push-gitee.mjs` derives both roles from its
   ```
 
 - **Stage only your own paths** (`git add -- <paths>`); the store is shared and may hold unrelated work.
+- Local deploy artefacts belong under `%TEMP%` and are disposable; a finished deploy removes its staging folder.
+  Remote staging is `/root/sp-stage-*`; code/DB backups (`/root/sp-backup-*`) stay.
 
 ## 3. Where to look things up
 

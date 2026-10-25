@@ -40,12 +40,17 @@ node server/index.js   # http://localhost:3000
 
 ### 桌面双树 vs 笔记本单树
 
+> **项目本体是 `D:\DOTK\Stronghold-Protocol`** —— 启动、运行、看代码都在这里；它自己**没有 `.git`**。
+> `D:\DOTK\_merge-scratch` 是**单独的 git store**（提交历史 + 被跟踪文件的镜像），不是临时目录，也不是运行目录。
+> `D:\DOTK\.git` 是一个空的父级仓库，别在 `Stronghold-Protocol` 里直接 `git commit`（会走到它）。
+
 | 布局 | 路径 | 说明 |
 |---|---|---|
-| 桌面双树 | store：`D:\DOTK\_merge-scratch`（有 `.git`，分支 `ours`）<br>运行树：`D:\DOTK\Stronghold-Protocol`（无 `.git`） | 提交在 store；运行树是镜像，`:3000` 在这里跑 |
+| 桌面双树 | **项目本体 / 运行树**：`D:\DOTK\Stronghold-Protocol`（无自己的 `.git`）<br>**git store**：`D:\DOTK\_merge-scratch`（有 `.git`，当前分支 `prts-plugin`） | 提交在 store；store 的跟踪文件镜像到项目本体；`:3000` 在项目本体里跑 |
 | 笔记本单树 | 检出目录（`.git` 在根，分支 `master`） | 同一棵树既是 store 也是运行树 |
 
-- 桌面方向：**store → remotes → dev tree**。不要让 dev tree 覆盖 store。
+- 桌面方向：**store → remotes → 项目本体**。不要让项目本体覆盖 store。
+- 提交并推送后，运行 `node tools/push-gitee.mjs` 会把 store 的跟踪文件镜像回项目本体；也可以手动 `Copy-Item`。
 - 镜像校验（在 store 内执行，空输出 = 一致）：
   ```powershell
   git --work-tree=D:\DOTK\Stronghold-Protocol status --short --untracked-files=all

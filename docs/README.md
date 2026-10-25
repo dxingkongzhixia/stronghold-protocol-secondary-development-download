@@ -25,6 +25,10 @@
 > 不写代码、只想换图 / 模型 / 语音的读者看 [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)；Forge 包作者看
 > [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md)。
 
+> **目录角色先说清楚：** `D:\DOTK\Stronghold-Protocol` 是**项目本体 / 运行目录**；`D:\DOTK\_merge-scratch` 是
+> **单独的 git store**（提交历史 + 跟踪文件镜像），不是临时目录。桌面双树的同步方向是
+> **store → remotes → 项目本体**；`D:\DOTK\.git` 是空的父级仓库，不要在项目本体里直接提交。
+
 ---
 
 ## 2. 按角色选择阅读顺序

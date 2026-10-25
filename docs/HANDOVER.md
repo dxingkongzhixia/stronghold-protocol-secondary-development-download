@@ -51,10 +51,10 @@ deploy), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) (the repository map) and
 # THE TWO MACHINES — use the one you are on (details in §2):
 #   laptop  — ONE tree: .git at the root, branch `master`, remotes `github` (primary) + `gitee`
 #             D:\Git本地库\stronghold-protocol-secondary-development-download
-#   desktop — TWO trees: the store D:\DOTK\_merge-scratch (branch `ours`) + the git-less run tree
-#             D:\DOTK\Stronghold-Protocol
+#   desktop — TWO trees: the project body D:\DOTK\Stronghold-Protocol (no own .git)
+#             + the git store D:\DOTK\_merge-scratch (branch `prts-plugin`)
 # Every D:\DOTK\... path in these docs assumes the desktop; on the laptop translate them as
-# store <-> this checkout, dev tree <-> this checkout.
+# store <-> this checkout, project body <-> this checkout.
 
 # 1. Run it locally
 cd D:\Git本地库\stronghold-protocol-secondary-development-download
@@ -175,15 +175,18 @@ git worktree add --detach D:\Git本地库\stronghold-protocol-mainline FETCH_HEA
 
 **The desktop** — the same repository kept as a **store + mirror pair**, which is what `tools/push-gitee.mjs` is
 written for (it derives both trees from its own location; `SP_SCRATCH` / `SP_DEV_TREE` override). On the laptop,
-translate *store ↔ this checkout*, *dev tree ↔ this checkout*, *branch `ours` ↔ `master`*:
+translate *store ↔ this checkout*, *project body ↔ this checkout*, *store branch ↔ `master`*:
 
 | tree | role | `.git` |
 |---|---|---|
-| `D:\DOTK\_merge-scratch` | **the git store — the single source of truth** (history *and* the committed files; branch `ours`) | **yes** |
-| `D:\DOTK\Stronghold-Protocol` | **the working project — a byte-for-byte mirror of the store**; the app runs here | **no** |
+| `D:\DOTK\Stronghold-Protocol` | **the project body / run tree** — the app runs here and this is the folder to open when reading code | **no own** |
+| `D:\DOTK\_merge-scratch` | **the git store** — commit history and a tracked-file mirror of the project body (current branch `prts-plugin`) | **yes** |
 
-- Commit, merge and push **in the store**; the dev tree follows. The direction is **one-way: store →
-  remotes → dev tree**. `tools/push-gitee.mjs` never overwrites the store with the dev tree
+> `Stronghold-Protocol` is the project; `_merge-scratch` is only its version-control store, not a scratch folder to
+> delete. `D:\DOTK\.git` is an empty parent repository — do not commit from inside the project body.
+
+- Commit, merge and push **in the store**; the project body follows. The direction is **one-way: store →
+  remotes → project body**. `tools/push-gitee.mjs` never overwrites the store with the project body
   (`--from-dev` is the explicit, off-by-default reverse sync).
 - **Shared asset junctions (do not duplicate):** inside the store, `.cache`, `public/assets`,
   `public/fonts` and `public/vendor` are **junctions into the dev tree**
