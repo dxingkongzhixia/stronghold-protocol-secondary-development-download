@@ -100,7 +100,7 @@ when current state or discoverability moved.
 ## 5. Publishing and deploying
 
 - **Publish (every change)**: the **art relay first** — `node tools/push-assets-relay.mjs` deploys
-  `123.57.150.185`, the box clients load art from first — then `node tools/push-gitee.mjs -m "what changed"`
+  `103.205.254.40` (ssh `-p 57435`), the box clients load art from first — then `node tools/push-gitee.mjs -m "what changed"`
   commits what *you* staged → pushes to the **`github` primary** → the **`gitee` mirror** → mirrors tracked files
   into the dev tree.
 - Remotes: `github` = primary, `gitee` = 国内镜像, `origin` = the **mainline** (`sganggs/Stronghold-Protocol`).

@@ -61,6 +61,23 @@ node tools/skins.mjs build                                         # rebuild ski
 `build` merges every `skins/sets/*/overlay.json` in name order and rewrites relative paths. The generated catalogue is
 tracked; `skins/sets/` is in `.gitignore` because the official art must not be redistributed.
 
+#### Switching a live server off the old plugin
+
+A server that installed the outfits as cosmetic plugins keeps showing them in the plugin list as 非官方 mods. Move them
+into the core layout once and the plugins are gone (and so is the mod mark), with no art copied:
+
+```powershell
+# on the server, after the build that serves /skins/ is running
+node tools/skins.mjs import plugins/local-skins   --id local-skins   --move
+node tools/skins.mjs import plugins/local-skins-2 --id local-skins-2 --move
+node tools/skins.mjs build
+# restart once (skins/catalogue.json is read at boot on some paths; /skins/ is served either way)
+```
+
+Check it took: `GET /skins/catalogue.json` answers with the sets and every operator's outfits, and `plugins/` no longer
+contains the skin folders — the room's plugin list drops back to the real plugins. A room that still lists a removed
+cosmetic set simply loses that layer (the core catalogue stays underneath), so no player needs to re-pick their outfit.
+
 ### Plugins can still override
 
 A cosmetic plugin (docs/PLUGINS.md §9) may still write `chars[…].skins` / `illust`; its layer is applied **above** the
