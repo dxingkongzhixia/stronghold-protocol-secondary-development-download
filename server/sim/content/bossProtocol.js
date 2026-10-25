@@ -103,31 +103,53 @@ function removeGuard(b, st, dropShield = true) {
   st.guard = false;
 }
 
+/** Arm (or re-arm) the clear-protocol countdown so it fires `delay` seconds from now. */
+function armClear(b, st, delay) {
+  const c = st.protocol.clearProtocol;
+  st.clear?.cancel?.();
+  st.warning?.cancel?.();
+  st.clear = null;
+  st.warning = null;
+  st.warningAt = null;
+  st.clearAt = b.time + delay;
+  if (c.warning > 0) {
+    const warnDelay = Math.max(0, delay - c.warning);
+    st.warningAt = b.time + warnDelay;
+    st.warning = b.after(warnDelay, () => {
+      if (st.dead || st.cleared) return;
+      protocolFx(b, st.boss, 'enemy_mpprts_buff_02', { loop: true, dur: Math.min(c.warning, Math.max(0, delay)) });
+      b.emit('protocolWarning', { boss: st.boss, kind: 'clear', seconds: c.warning });
+    });
+  }
+  st.clear = b.after(delay, () => {
+    if (st.dead) return;
+    st.cleared = true;
+    protocolFx(b, st.boss, 'enemy_mpprts_die_02');
+    publishProtocolView(b, st);
+    // One team pool: the protocol costs the team `lp`, not `lp` per player on the field (4-player co-op lost 60 at once).
+    lpLoss(b, st.clearLp, 'clearProtocol', st.boss);
+    b.emit('protocolClear', { boss: st.boss, lp: st.clearLp });
+  });
+}
+
 function scheduleClear(b, st) {
   const c = st.protocol.clearProtocol;
   if (!c) return;
   const hidden = b.kind === 'hidden';
-  const at = hidden ? (c.hiddenAt ?? c.at) : c.at;
-  const lp = hidden ? (c.hiddenLp ?? c.lp) : c.lp;
-  st.clearAt = b.time + at;
-  if (c.warning > 0) {
-    st.warningAt = b.time + Math.max(0, at - c.warning);
-    st.warning = b.after(Math.max(0, at - c.warning), () => {
-      if (st.dead) return;
-      protocolFx(b, st.boss, 'enemy_mpprts_buff_02', { loop: true, dur: c.warning });
-      b.emit('protocolWarning', { boss: st.boss, kind: 'clear', seconds: c.warning });
-    });
-  }
-  st.clear = b.after(at, () => {
-    if (st.dead) return;
-    st.cleared = true;
-    // "每名玩家 目标生命 -lp": the merged boss LP is one pool, so the team loses lp per player on the field.
-    const players = Math.max(1, b.players?.length || 1);
-    protocolFx(b, st.boss, 'enemy_mpprts_die_02');
-    publishProtocolView(b, st);
-    lpLoss(b, lp * players, 'clearProtocol', st.boss);
-    b.emit('protocolClear', { boss: st.boss, lp, perPlayer: lp, players });
-  });
+  st.clearLp = hidden ? (c.hiddenLp ?? c.lp) : c.lp;
+  armClear(b, st, hidden ? (c.hiddenAt ?? c.at) : c.at);
+}
+
+/**
+ * 击杀换时间: every revive the team forces the boss through postpones the clear by `extendPerRevive` seconds — the
+ * protocol punishes stalling, not progress, so a long fight that keeps killing it must not end in a wipe.
+ */
+function extendClear(b, st) {
+  const c = st.protocol.clearProtocol;
+  const add = c?.extendPerRevive ?? 0;
+  if (!(add > 0) || st.cleared || st.dead) return;
+  armClear(b, st, Math.max(0, st.clearAt - b.time) + add);
+  b.emit('protocolClearExtended', { boss: st.boss, seconds: add, clearAt: st.clearAt });
 }
 
 function startDpRegen(b, st) {
@@ -366,6 +388,7 @@ function linkAbility(st) {
       const p = st.protocol.revive;
       if (!p || st.revivesLeft <= 0) { removeGuard(b, st); return false; }
       st.revivesLeft--;
+      extendClear(b, st);
       enterDown(b, st, e);
       return true;
     },

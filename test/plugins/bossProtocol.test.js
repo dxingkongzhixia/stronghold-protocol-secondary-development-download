@@ -5,7 +5,7 @@ import { readBossProtocol, BOSS_PROTOCOL_LIMITS } from '../../shared/plugins/bos
 const FULL = {
   link: { enemy: 'enemy_1565_mpprme' },
   revive: { count: 3, atk: 100, hpReset: true, down: 8, shortenOnHit: { target: 'boss', seconds: 1, min: 3 } },
-  clearProtocol: { at: 90, warning: 10, lp: 10, hiddenAt: 75, hiddenLp: 15 },
+  clearProtocol: { at: 90, warning: 10, lp: 10, hiddenAt: 75, hiddenLp: 15, extendPerRevive: 30 },
   dpRegen: { multiplier: 3, duration: 10 },
   deployLock: { count: 4, duration: 10, afterRevive: { count: 6, duration: 15 } },
   projectile: { cooldown: 12, damage: [2.4, 1], radius: [1.5, 0.45] },
@@ -18,7 +18,7 @@ test('the full PRTS protocol normalises, applies defaults and keeps every field'
   assert.deepEqual(problems, []);
   assert.deepEqual(protocol.link, { enemy: 'enemy_1565_mpprme', guard: true });
   assert.deepEqual(protocol.revive, { count: 3, atk: 100, hpReset: true, down: 8, shortenOnHit: { target: 'boss', seconds: 1, min: 3 } });
-  assert.deepEqual(protocol.clearProtocol, { at: 90, warning: 10, lp: 10, hiddenAt: 75, hiddenLp: 15 });
+  assert.deepEqual(protocol.clearProtocol, { at: 90, warning: 10, lp: 10, extendPerRevive: 30, hiddenAt: 75, hiddenLp: 15 });
   assert.deepEqual(protocol.dpRegen, { multiplier: 3, duration: 10 });
   assert.deepEqual(protocol.deployLock, { count: 4, duration: 10, afterRevive: { count: 6, duration: 15 } });
   assert.deepEqual(protocol.projectile, { cooldown: 12, damage: [2.4, 1], radius: [1.5, 0.45] });
@@ -35,7 +35,7 @@ test('a link can replace the hard guard with an HP-ratio shield', () => {
 test('defaults are conservative and a partial record needs only the fields it has', () => {
   const { protocol, problems } = readBossProtocol({ clearProtocol: {} });
   assert.deepEqual(problems, []);
-  assert.deepEqual(protocol.clearProtocol, { at: 90, warning: 10, lp: 10 });
+  assert.deepEqual(protocol.clearProtocol, { at: 90, warning: 10, lp: 10, extendPerRevive: 0 });
   assert.equal(protocol.link, undefined);
   assert.equal(readBossProtocol(undefined).protocol, null);
   assert.equal(readBossProtocol({}).protocol, null, 'an empty object has no protocol');

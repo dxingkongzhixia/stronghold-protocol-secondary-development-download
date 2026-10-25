@@ -294,7 +294,7 @@ test('deploy-lock events fire on appearance and after the first revive', () => {
   assert.equal(locks[1].afterRevive, true);
 });
 
-test('the clear protocol charges every player on the field', () => {
+test('the clear protocol charges one team pool, not lp per player', () => {
   const boss = { ...enemyRec({ key: BOSS, hp: 50000, speed: 0 }), protocol: protocol({ clearProtocol: { at: 10, warning: 0.5, lp: 10 } }), rank: 'BOSS' };
   const mimic = enemyRec({ key: MIMIC, hp: 25000, speed: 0 });
   const h = makeBattle({
@@ -310,10 +310,28 @@ test('the clear protocol charges every player on the field', () => {
   let clear = null;
   h.b.on('protocolClear', (c) => { clear = c; });
   h.run(10.5);
-  assert.equal(clear?.players, 2);
-  assert.equal(clear?.perPlayer, 10);
+  assert.equal(clear?.lp, 10, 'the payload carries the flat team loss');
   h.runToEnd(5);
-  assert.equal(h.b.result().lpLoss, 20, 'two players × 10 LP');
+  assert.equal(h.b.result().lpLoss, 10, 'one team pool: 10 LP — not 10 × 2 players (co-op used to lose double)');
+});
+
+test('击杀换时间: every revive postpones the clear by extendPerRevive', () => {
+  const h = battle({ p: protocol({ clearProtocol: { at: 10, warning: 2, lp: 5, extendPerRevive: 20 } }) });
+  const mimic = h.b.enemies.find((e) => e.defId === MIMIC);
+  let extended = null;
+  h.b.on('protocolClearExtended', (c) => { extended = c; });
+  assert.equal(h.b.snapshot().protocol.clearIn, 9.9);
+  kill(h, mimic);
+  h.step(0.2);
+  assert.equal(extended?.seconds, 20);
+  const left = h.b.snapshot().protocol.clearIn;
+  assert.ok(left > 29 && left <= 30, `the countdown jumps by 20 s: ${left} ≈ 30`);
+  h.run(8.5); // the down window ends and the mimic is back
+  assert.ok(h.b.snapshot().protocol.clearIn > 20, 'still postponed after the revive');
+  let cleared = 0;
+  h.b.on('protocolClear', () => { cleared++; });
+  h.run(2); // past the original 10 s deadline
+  assert.equal(cleared, 0, 'the original deadline no longer fires');
 });
 
 test('the hidden variant uses hiddenAt / hiddenLp', () => {

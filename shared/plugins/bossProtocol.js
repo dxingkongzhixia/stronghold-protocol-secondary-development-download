@@ -16,6 +16,7 @@ export const BOSS_PROTOCOL_LIMITS = Object.freeze({
   clearAt: 600,
   clearWarning: 60,
   clearLp: 30,
+  clearExtend: 300,
   dpMultiplier: 5,
   dpDuration: 60,
   lockCount: 12,
@@ -126,11 +127,13 @@ export function readBossProtocol(raw) {
     const c = raw.clearProtocol;
     if (!isObj(c)) problems.push('protocol.clearProtocol: expected an object');
     else {
-      for (const k of Object.keys(c)) if (!['at', 'warning', 'lp', 'hiddenAt', 'hiddenLp'].includes(k)) problems.push(`protocol.clearProtocol: unknown field "${k}"`);
+      for (const k of Object.keys(c)) if (!['at', 'warning', 'lp', 'hiddenAt', 'hiddenLp', 'extendPerRevive'].includes(k)) problems.push(`protocol.clearProtocol: unknown field "${k}"`);
       const out = {
         at: num(c.at ?? 90, 10, BOSS_PROTOCOL_LIMITS.clearAt, 'protocol.clearProtocol.at', problems, 90),
         warning: num(c.warning ?? 10, 0, BOSS_PROTOCOL_LIMITS.clearWarning, 'protocol.clearProtocol.warning', problems, 10),
         lp: int(c.lp ?? 10, 1, BOSS_PROTOCOL_LIMITS.clearLp, 'protocol.clearProtocol.lp', problems, 10),
+        // each revive the boss goes through buys the team this many seconds: the protocol punishes stalling, not progress
+        extendPerRevive: num(c.extendPerRevive ?? 0, 0, BOSS_PROTOCOL_LIMITS.clearExtend, 'protocol.clearProtocol.extendPerRevive', problems, 0),
       };
       if (c.hiddenAt !== undefined) out.hiddenAt = num(c.hiddenAt, 10, BOSS_PROTOCOL_LIMITS.clearAt, 'protocol.clearProtocol.hiddenAt', problems, out.at);
       if (c.hiddenLp !== undefined) out.hiddenLp = int(c.hiddenLp, 1, BOSS_PROTOCOL_LIMITS.clearLp, 'protocol.clearProtocol.hiddenLp', problems, out.lp);
