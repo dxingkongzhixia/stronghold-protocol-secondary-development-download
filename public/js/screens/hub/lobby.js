@@ -38,9 +38,9 @@ import { HubBackdrop, HubRadar, BackdropGlyph, BackdropSettings } from '../../ui
 import { useHubBackdrop, backdropTheme } from '../../ui/hub/appearance.js';
 import { ProtocolScene } from '../../ui/hub/protocolScene.js';
 
-/** A hub mode entry (bottom-right): the fork's big bracket button. */
-function HubEntry({ card, tone = 'mint', disabled = false, onClick }) {
-  return html`<button type="button" class=${`hub-entry hub-entry--${tone}`} disabled=${disabled} onClick=${onClick}>
+/** A hub mode entry (bottom-right): the fork's big bracket button, laid out like the official three-card row. */
+function HubEntry({ card, tone = 'mint', disabled = false, featured = false, onClick }) {
+  return html`<button type="button" class=${`hub-entry hub-entry--${tone}${featured ? ' is-featured' : ''}`} disabled=${disabled} onClick=${onClick}>
     <span class="hub-entry__icon"><${Icon} name=${card.icon} /></span>
     <span class="hub-entry__en">${card.en}</span>
     <span class="hub-entry__name">${t(card.name)}</span>
@@ -462,9 +462,13 @@ export function LobbyScreen() {
 
       <section class="hub-entries" aria-label=${t('模拟方式')}>
         ${queued ? html`<${QueuePanel} mm=${mm} onCancel=${mmCancel} />` : null}
+        <div class="hub-entries__groups" aria-hidden="true">
+          <span class="hub-entry__group hub-entry__group--solo"><${Icon} name="user" />${t('独立模拟')}</span>
+          <span class="hub-entry__group hub-entry__group--union"><${Icon} name="users" />${t('联合模拟')}</span>
+        </div>
         <div class="hub-entries__row">
           ${MODE_CARDS.map((c) => html`<${HubEntry} key=${c.id} card=${c} tone=${c.id === 'mm' ? 'amber' : 'mint'}
-            disabled=${queued} onClick=${() => setProtocol(c.id)} />`)}
+            featured=${c.id === 'mm'} disabled=${queued} onClick=${() => setProtocol(c.id)} />`)}
         </div>
       </section>
     </main>

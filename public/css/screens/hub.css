@@ -25,7 +25,7 @@
 .lobby-hub > .hub-topbar > .topbar__right { grid-column: 2; }
 /* ping / 在线 / notices were plain inline buttons with no gap — the two pills touched (owner 2026-10-25). */
 .connection-status { display: inline-flex; align-items: center; gap: .2rem; min-width: 0; }
-.hub-entries > .match-queue { width: min(100%, calc(7.5 * var(--ui-unit, 1rem))); box-sizing: border-box; }
+.hub-entries > .match-queue { width: min(100%, calc(var(--hub-entry-w) * 3 + var(--hub-gap) * 2)); box-sizing: border-box; }
 .hub-entry--amber { border-color: var(--amber); }
 .hub-entry--amber .hub-entry__en { color: var(--amber); }
 .lobby-hub {
@@ -154,24 +154,51 @@
 .hub-plate--sweep:hover, .hub-plate--loadout:not(:disabled):hover { filter: brightness(1.05); }
 .hub-plate--sweep:focus-visible { outline: 2px solid var(--mint-400); outline-offset: 2px; }
 
-.hub-entries { grid-column: 2 / -1; grid-row: 2; display: flex; flex-direction: column; align-items: flex-end; gap: calc(0.12 * var(--ui-unit, 1rem)); }
-.hub-entries__row { display: flex; align-items: flex-end; gap: var(--hub-gap); transform: translateY(calc(-0.12 * var(--ui-unit, 1rem))); }
-.hub-entry-wrap { display: flex; flex-direction: column; gap: calc(0.05 * var(--ui-unit, 1rem)); }
-.hub-entry__group { display: flex; align-items: center; gap: calc(0.06 * var(--ui-unit, 1rem)); height: calc(0.2 * var(--ui-unit, 1rem)); padding-left: calc(0.04 * var(--ui-unit, 1rem)); font-size: calc(.13 * var(--utility-text, var(--t))); color: rgba(223, 230, 226, .7); }
+.hub-entries { grid-column: 2 / -1; grid-row: 2; display: flex; flex-direction: column; align-items: flex-end; gap: calc(0.1 * var(--ui-unit, 1rem)); }
+/* The queue strip and the mode row share one width and one right edge, so the queue can never overlap the cards
+   (owner 2026-10-25). */
+.hub-entries__groups { display: flex; align-items: center; gap: var(--hub-gap);
+  width: calc(var(--hub-entry-w) * 3 + var(--hub-gap) * 2); }
+.hub-entry__group { display: flex; align-items: center; justify-content: center; gap: calc(0.07 * var(--ui-unit, 1rem));
+  height: calc(0.22 * var(--ui-unit, 1rem)); font-size: calc(.14 * var(--utility-text, var(--t))); color: rgba(223, 230, 226, .78); }
+.hub-entry__group .icon { width: calc(.17 * var(--ui-unit, 1rem)); height: calc(.17 * var(--ui-unit, 1rem)); color: var(--mint-400); }
+.hub-entry__group--solo { width: var(--hub-entry-w); }
+.hub-entry__group--union { flex: 1 1 auto; }
+.hub-entries__row { display: flex; align-items: flex-end; gap: var(--hub-gap); }
 .hub-entry {
-  position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start;
-  width: var(--hub-entry-w); height: calc(1.34 * var(--ui-unit, 1rem)); padding: calc(0.14 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: left; color: var(--text-hi);
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+  width: var(--hub-entry-w); height: calc(1.34 * var(--ui-unit, 1rem)); padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.15 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: center; color: var(--text-hi);
   background: linear-gradient(160deg, rgba(30, 46, 42, .94), rgba(9, 15, 14, .96)); border: 1px solid rgba(223, 230, 226, .26);
   box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .5); transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
 .hub-entry:hover:not(:disabled) { transform: translateY(calc(-0.04 * var(--ui-unit, 1rem))); border-color: var(--mint-400); box-shadow: 0 calc(0.08 * var(--ui-unit, 1rem)) calc(0.3 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .55), 0 0 calc(0.2 * var(--ui-unit, 1rem)) var(--mint-a20); }
 .hub-entry:disabled { opacity: .5; cursor: default; }
-.hub-entry__icon { position: absolute; right: calc(0.14 * var(--ui-unit, 1rem)); top: calc(0.12 * var(--ui-unit, 1rem)); font-size: calc(.42 * var(--utility-text, var(--t))); color: var(--mint-a35); }
-.hub-entry__en { font: 700 calc(.11 * var(--utility-text, var(--t)))/1 ui-monospace, Consolas, monospace; letter-spacing: .22em; color: var(--mint-400); }
-.hub-entry__name { display: flex; align-items: center; gap: calc(0.08 * var(--ui-unit, 1rem)); margin-top: calc(0.04 * var(--ui-unit, 1rem)); font-size: calc(.3 * var(--utility-text, var(--t))); font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
+.hub-entry__icon { display: flex; align-items: center; justify-content: center; margin: calc(0.02 * var(--ui-unit, 1rem)) 0 auto;
+  font-size: calc(.56 * var(--utility-text, var(--t))); color: var(--mint-a35); }
+.hub-entry__icon .icon { width: 1em; height: 1em; }
+.hub-entry__en { font: 700 calc(.105 * var(--utility-text, var(--t)))/1 ui-monospace, Consolas, monospace; letter-spacing: .18em; color: var(--mint-400); }
+.hub-entry__name { display: flex; align-items: center; justify-content: center; gap: calc(0.08 * var(--ui-unit, 1rem)); margin-top: calc(0.05 * var(--ui-unit, 1rem)); font-size: calc(.3 * var(--utility-text, var(--t))); font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
 .hub-entry__name .mode-beta { font-size: calc(.12 * var(--utility-text, var(--t))); }
 .hub-entry__count { position: absolute; left: calc(0.16 * var(--ui-unit, 1rem)); top: calc(0.12 * var(--ui-unit, 1rem)); }
 .hub-entry__corner { position: absolute; right: 0; bottom: 0; width: calc(0.3 * var(--ui-unit, 1rem)); height: calc(0.3 * var(--ui-unit, 1rem));
   background: linear-gradient(135deg, transparent 50%, var(--mint-500) 50%); opacity: .8; }
+/* 同盟匹配 is the featured entry (the official row fills the matchmaking card): bright mint, dark ink. */
+.hub-entry.is-featured { background: linear-gradient(160deg, #58e6c5, #1f8d72); border-color: #9ff6df; color: #071e18;
+  box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .45), 0 0 calc(0.2 * var(--ui-unit, 1rem)) rgba(89, 244, 202, .28); }
+.hub-entry.is-featured .hub-entry__icon { color: rgba(7, 30, 24, .72); }
+.hub-entry.is-featured .hub-entry__en { color: rgba(7, 30, 24, .62); }
+.hub-entry.is-featured .hub-entry__corner { background: linear-gradient(135deg, transparent 50%, #0d2a23 50%); opacity: .5; }
+/* the 野排 queue: same width as the card row, a compact status panel above it */
+.match-queue { display: flex; flex-direction: column; gap: calc(0.08 * var(--ui-unit, 1rem)); padding: calc(0.1 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem));
+  background: rgba(8, 14, 13, .86); border: 1px solid var(--mint-a35); box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .45); }
+.match-queue__head { display: flex; align-items: center; gap: calc(0.08 * var(--ui-unit, 1rem)); min-width: 0; }
+.match-queue__head > .icon { flex: none; width: calc(.2 * var(--ui-unit, 1rem)); height: calc(.2 * var(--ui-unit, 1rem)); color: var(--mint-400); }
+.match-queue__head > div { display: flex; flex-direction: column; gap: calc(0.02 * var(--ui-unit, 1rem)); min-width: 0; }
+.match-queue__head b { font-size: calc(.18 * var(--utility-text, var(--t))); line-height: 1.2; }
+.match-queue__head > .num { margin-left: auto; flex: none; font-size: calc(.2 * var(--utility-text, var(--t))); color: var(--mint-400); }
+.match-queue__meta { display: flex; flex-wrap: wrap; align-items: center; gap: calc(0.04 * var(--ui-unit, 1rem)) calc(0.12 * var(--ui-unit, 1rem));
+  font-size: calc(.13 * var(--utility-text, var(--t))); color: var(--text-md); }
+.match-queue__meta b { color: var(--mint-400); font-weight: 700; }
+.match-queue > .btn { align-self: flex-end; }
 
 @media (prefers-reduced-motion: reduce) {
   .hub-bg *, .hub-radar__sweep { animation: none !important; }
@@ -184,6 +211,8 @@
   .hub-right { justify-self: end; width: min(100%, calc(var(--hub-entry-w) * 2 + var(--hub-gap))); }
   .hub-side { justify-self: start; width: min(100%, calc(3.2 * var(--ui-unit, 1rem))); }
   .hub-entries { align-items: stretch; }
+  .hub-entries__groups { display: none; }
+  .hub-entries > .match-queue { width: 100%; }
   .hub-entries__row { flex-wrap: wrap; }
 }
 @keyframes sw-in { from { opacity: 0; } }
