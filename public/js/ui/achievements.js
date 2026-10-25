@@ -21,7 +21,7 @@ import { avatarUrl } from './assetUrls.js';
 import { loadStats, subscribeStats, STATS_PREF_KEY } from './stats.js';
 import { fetchStats } from './statsSync.js';
 import { net } from '../net.js';
-import { achievementStats, bondOperators, recordBonds, mergeRecords, HEX_TITLES, ACHIEVEMENT_GROUPS } from './achievementModel.js';
+import { achievementStats, bondOperators, recordBonds, HEX_TITLES, ACHIEVEMENT_GROUPS } from './achievementModel.js';
 import { useLeave } from './transitions.js';
 import { uiUrl } from './assetUrls.js';
 import { Emblem } from '../screens/title.js';
@@ -66,7 +66,10 @@ function useAchievementRecords() {
       globalThis.removeEventListener?.('storage', storage);
     };
   }, []);
-  const records = useMemo(() => mergeRecords(local.newer ? [] : local.records, remote), [local, remote]);
+  // Same source rule as the 统计 page (screens/stats.js: `remote ? remote.records : local.records`): once the server has
+  // answered, its list is the account's history — unioning the local copy in here counted records this device still
+  // keeps but the account no longer has, so 成就 read 3 matches where 统计 read 1 (and 4 trophies where it read 1).
+  const records = useMemo(() => (remote ? remote : local.newer ? [] : local.records), [local, remote]);
   return { records, local };
 }
 
