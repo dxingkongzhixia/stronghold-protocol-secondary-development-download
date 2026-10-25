@@ -1013,8 +1013,9 @@ function MatchScreen() {
     if (ask) {
       if (askingReady.current) return;
       askingReady.current = true;
-      const ok = await confirmDialog(ask);
-      askingReady.current = false;
+      // The dialog can reject (openDialog renders through its host listeners), and a latched flag would then turn every
+      // later press into a silent no-op — the dead 准备就绪 button users report. Clear it on either outcome.
+      const ok = await confirmDialog(ask).catch(() => false).finally(() => { askingReady.current = false; });
       const now = live.current;
       if (!ok || now.pub?.phase !== PHASE.PREP || now.priv?.ready) return;
     }
@@ -1028,8 +1029,9 @@ function MatchScreen() {
   }, []);
   // the prep ended (timer) while the question was open: drop it — the funds are gone either way
   useEffect(() => { if (phase !== PHASE.PREP && askingReady.current) closeAllDialogs(); }, [phase]);
-  // a new phase/round owns the prep controls: a ready request from the previous one must not leave the next button busy
-  useEffect(() => { setReadyBusy(false); }, [phase, pub?.round]);
+  // a new phase/round owns the prep controls: a ready request from the previous one must not leave the next button busy,
+  // and a latch left by a dialog that never settled must not swallow the new prep's presses
+  useEffect(() => { setReadyBusy(false); askingReady.current = false; }, [phase, pub?.round]);
 
   /** 出售 (operators, underframe +N) / 销毁 (items and Arts, confirmed: they cannot be sold). */
   const sellPiece = useCallback(async (piece) => {

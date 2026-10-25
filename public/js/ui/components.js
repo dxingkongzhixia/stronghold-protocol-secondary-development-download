@@ -475,7 +475,9 @@ export function Modal({ open, title, micro, tone = 'mint', onClose, actions, wid
 let dialogSeq = 0;
 let dialogs = [];
 const dialogListeners = new Set();
-const emitDialogs = () => { for (const fn of [...dialogListeners]) fn(); };
+// A host listener that throws while rendering (an unmounted screen, a bad option) must not reject openDialog's promise:
+// its caller awaits the answer, and a rejection there used to latch that caller's own "a dialog is open" flag forever.
+const emitDialogs = () => { for (const fn of [...dialogListeners]) { try { fn(); } catch { /* ignore */ } } };
 
 function openDialog(opts, kind) {
   return new Promise((resolve) => {
