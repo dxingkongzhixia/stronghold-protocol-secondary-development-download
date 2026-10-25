@@ -194,7 +194,7 @@ export function PluginPanel({ open, room, myId, onClose }) {
     </li>`;
   };
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('插件')} micro="PLUGINS" width="7.4rem"
-      actions=${html`<${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
+      actions=${html`<div class="modal__actions-note"><${ContentState} cs=${f.modded ? f.cs : null} /></div><${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
     <div class="plugpanel" data-testid="plugin-panel">
       <p class="plugpanel__lead">
         <span class=${cx('plugtag plugtag--static', f.count && 'is-modded', f.modded && 'is-unofficial')}>${f.count ? t('插件 ×{n}', { n: f.count }) : t('原版')}</span>
@@ -237,7 +237,6 @@ export function PluginPanel({ open, room, myId, onClose }) {
         </ul>
       </section>` : null}
       <div class="ui-slot" data-ui-slot="room.panel" aria-label=${t('界面插件')} dangerouslySetInnerHTML=${{ __html: '' }}></div>
-      <${ContentState} cs=${f.modded ? f.cs : null} />
     </div>
   <//>`;
 }

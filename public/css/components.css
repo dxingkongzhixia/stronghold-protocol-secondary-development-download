@@ -484,6 +484,13 @@
   border-top: 1px solid var(--line);
   background: rgba(0, 0, 0, .22);
 }
+/* A status line that belongs to the footer row, left of the buttons (the plugin panel's content check). */
+.modal__actions-note {
+  display: flex;
+  align-items: center;
+  margin-right: auto;
+  min-width: 0;
+}
 @keyframes modal-fade { from { opacity: 0; } }
 @keyframes modal-in { from { opacity: 0; transform: translateY(.14rem) scale(.985); } }
 
