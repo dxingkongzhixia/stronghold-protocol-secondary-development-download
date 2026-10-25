@@ -6,7 +6,7 @@ import os from 'node:os';
 import { Writable } from 'node:stream';
 import { once } from 'node:events';
 import { createHash } from 'node:crypto';
-import { siteCsp, SIM_WORKER_CSP } from '../../server/http/csp.js';
+import { siteCsp, artOrigins, SIM_WORKER_CSP } from '../../server/http/csp.js';
 import { createRequestHandler } from '../../server/http/routes.js';
 import { createStaticHandler } from '../../server/http/static.js';
 import { installPixiNoEval } from '../../public/js/render/app/pixiNoEval.js';
@@ -34,7 +34,12 @@ function handler(csp = siteCsp(publicDir)) {
 test('page import maps hash exact bytes; no inline executable script/events; page forbids eval', () => {
   const csp = siteCsp(publicDir);
   assert.ok(!csp.includes('unsafe-eval')); assert.match(csp, /worker-src 'self' blob:/);
-  assert.match(csp,/connect-src 'self';/);assert.ok(!/script-src[^;]*(?:data:|blob:)/.test(csp));
+  assert.match(csp,/connect-src 'self'/);assert.ok(!/script-src[^;]*(?:data:|blob:)/.test(csp));
+  // the art mirrors must be reachable from the page: probe (connect), rewritten images (img), relayed /media (media)
+  const mirrors = artOrigins(publicDir);
+  assert.ok(mirrors.length > 0, 'public/asset-mirrors.json names at least one origin');
+  const img = /img-src ([^;]*)/.exec(csp)[1], conn = /connect-src ([^;]*)/.exec(csp)[1], media = /media-src ([^;]*)/.exec(csp)[1];
+  for (const o of mirrors) for (const dir of [img, conn, media]) assert.ok(dir.includes(o), `${o} missing from a directive`);
   for (const file of ['index.html', 'studio/index.html', 'studio/console.html', 'dev/game-mock.html', 'dev/render-demo.html', 'dev/battle-perf.html', 'dev/uikit.html']) {
     const html = fs.readFileSync(path.join(publicDir, file), 'utf8');
     assert.ok(!/<[^>]+\son(?:load|error|click)=/i.test(html), file);
