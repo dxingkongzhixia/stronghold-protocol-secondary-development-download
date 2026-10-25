@@ -1,6 +1,6 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-20**（台式机 `_merge-scratch` 实测）。插件 / Forge / studio / 控制台见
+> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-25**（台式机 `_merge-scratch` + 线上实测）。插件 / Forge / studio / 控制台见
 > [`docs/PLUGINS.md`](PLUGINS.md) 与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10。
 > 文档入口（2026-10-25 重新梳理）：人类 [`DEVELOPER.md`](DEVELOPER.md)、AI [`AI-AGENT.md`](AI-AGENT.md)、
 > 规则 [`RULES.md`](RULES.md)、插件 [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)。
@@ -43,24 +43,25 @@
 
 > ⚠️ store 里的 `.cache` / `public/assets` / `public/fonts` / `public/vendor` 是**指向工作项目的 junction**，约 600 MB 美术只有一份。**别单独删工作项目**，也别把 store 的 `public/assets` 当副本删掉。
 
-## 3. 当前状态（2026-10-23 19:57 · 部署后实测）
+## 3. 当前状态（2026-10-25 17:17 · 部署后实测）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`；**已上线进程的 build `3586e9a2570f`**（2026-10-23 19:57 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `e70a15e1be0a` → `a6914a5d83db`；备份 `/root/sp-backup-code-20261023-195733.tgz`；社区更新日志 **0.4.71**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
-| git store | **笔记本** = 单树检出（分支 `master`，HEAD **`c294705f2`**）；**台式机** = `_merge-scratch`（分支 `ours`，最后记录 `13760cf56`），开发树 `D:\DOTK\Stronghold-Protocol` 与 store 只差两个未跟踪测试文件 |
-| 远程同步 | **已全部推送（2026-10-23）**：`github/master` == `gitee/master` == 中继 `master` == HEAD（`2adf3c7ee`）；GitHub 直连 `:443` 仍会间歇失败，恢复后补推成功。主线 `origin/master` = `d905c146`（0.3.1） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `1ea3ea8bca21`**（2026-10-25 17:17 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `3586e9a2570f`；备份 `/root/sp-backup-code-20261025-171515.tgz` / `/root/sp-backup-accounts-20261025-171515.db`；社区更新日志 **0.4.73**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| git store | **台式机** = `_merge-scratch`（分支 `ours`，HEAD **`f15464723`**），开发树 `D:\DOTK\Stronghold-Protocol` 已镜像；本轮部署含文档重组与通知 / 地址提醒 / 凯尔希策略 / 音乐与剧情背景 |
+| 远程同步 | **已全部推送（2026-10-25）**：`github/master` == `gitee/master` == 中继 `master` == HEAD（`f15464723`）；GitHub 直连 `:443` 仍会间歇失败，恢复后补推成功 |
 | 全量测试 | **相关 655 项通过 / 0 失败**（2026-10-20，插件商城、管理后台、文档、i18n、静态资源与界面测试；`test/admin.test.js` / `test/market.test.js` 全过）。全量套件上次 8200 项 / 8163 通过 / 1 个性能基线抖动 / 36 跳过；该性能用例单跑 35/35 通过 |
 | 其它闸门 | **2026-10-20 实测（笔记本单树）**：`lint` 0 error（187 warning）✓；`typecheck` ✓；`i18n check en --strict` **1732/1732**（100%，0 missing / 0 errors）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 60/60 ✓。`check:imports` 仍有 3 条既有 `sim-node` 边界记录（`server/sim/nodeData.js`，非本次改动）；`check-delivery --live` 未跑（需外网 / 中继） |
 | 本机环境 | Node **v24.19.0**（v26 也可，线上是 v26.10.0）；**GitHub 直连 `:443` 会被重置** —— 推送时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=http://127.0.0.1:31181 push --no-thin …`）；官方数据 CDN 同理需要代理 |
 | 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
+| 线上新增内容 | 插件 **12** 个（含 `prts-kaltsit:loaded`，未改 `plugins/config.json` 默认列表）；主界面音乐 **218** 条（`var/music`，351 个文件）；内置音乐 24 条；剧情背景 **54** 张；DB schema **v6**；`var/avatars` 已创建 |
 
 ## 4. 线上
 
 | 项 | 值 |
 |---|---|
-| 地址 | **http://183.66.27.19:20522**（NAT：内网 3000 → 外网 20522） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `3586e9a2570f`**（2026-10-23 19:57 部署后重启，由 `/healthz` 实测；上一版 `e70a15e1be0a` → `a6914a5d83db`；备份 `/root/sp-backup-code-20261023-195733.tgz`；通告记为社区 **0.4.71**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**，所以纯文档改动不影响线上 build；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 地址 | **https://strongholdprotocolcsym.top:10785/**（官方 HTTPS；NAT：内网 3000 → 外网 20522；旧的 `http://183.66.27.19:20522` 仍可访问，但会收到“改用官方地址”的普通通知） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `1ea3ea8bca21`**（2026-10-25 17:17 部署后重启，由 `/healthz` 实测且 == 磁盘 build；上一版 `3586e9a2570f`；备份 `/root/sp-backup-code-20261025-171515.tgz` / `/root/sp-backup-accounts-20261025-171515.db`；社区更新日志 **0.4.73**）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -68,7 +69,7 @@
 | **客户端缓存** | `public/index.html`、`public/js/**`、`public/css/**` 统一 `Cache-Control: no-store`（2026-10-23 起），保证部署后打开页面拿到新代码；`public/assets`、`public/fonts`、`public/vendor` 继续长期缓存。不要再给应用 JS/CSS 加 `?v=` 的 immutable 缓存。 |
 | 管理页 | `/admin?token=<var/admin-token.txt>`（令牌 + 30 天 cookie）；公开只读 `/online/api` |
 | 进程管理 | 宝塔「Node项目」脚本 `/www/server/nodejs/vhost/scripts/server.sh`（`setsid` 启动）；日志 `/www/wwwlogs/nodejs/server.log` |
-| **域名 / 备案（2026-10-14 放弃）** | **owner 决定彻底不办备案**：不用域名（`strongholdprotocolcsym.top` 虽已 ICP 通过 **浙ICP备2026085059号-1**，但不解析、不使用）、不上 HTTPS、页脚的 ICP 号与站点名**已回退**（站点名回到「卫戍协议：盟约」）。域名/证书/HTTPS 的完整步骤保留在下面一行，将来想捡随时能捡。线上仍走 `http://183.66.27.19:20522`（纯 HTTP、本地缓存 + 中继那套，owner 认为已够用） |
+| **域名 / 备案** | **官方 HTTPS 地址 `https://strongholdprotocolcsym.top:10785/` 已启用**（ICP **浙ICP备2026085059号-1**）；旧的 `http://183.66.27.19:20522` 仍可访问，但非官方地址会被提醒改用官方地址。域名/证书/HTTPS 的完整步骤保留在下面一行。 |
 | **HTTPS / SW 的前置** | ① 域名 A 记录指向生产机；② 签证书并在反代上启用 HTTPS；③ **中继也必须 HTTPS** —— HTTPS 页面不允许明文 `http://` 子资源（mixed content），`http://123.57.150.185` 会被浏览器拦掉、客户端静默回退到免费 CDN；给中继一个子域名（如 `relay.strongholdprotocolcsym.top`）签证书，再把 `public/asset-mirrors.json` 的第一个源改成 `https://…`；④ 之后 SW 自动注册，`设置 → 美术资源缓存` 生效，用 `node tools/check-delivery.mjs --live` 核对 |
 | **公安联网备案（2026-10-14 放弃）** | 已在「全国互联网安全管理服务平台」提交过（主体 马赛 + 网站 我的接口，曾处于待审核），随 owner「彻底不办备案」的决定一并放弃；数据码属敏感凭据、**不进仓库**。将来若重启备案，需要：域名 + 可访问的 HTTPS 站点 + 页脚公示号 |
 | **备用 / 测试机（阿里云 ECS）** | **`121.43.140.85`**（华东1 杭州 · 2 vCPU / 2 GiB / 40 GiB **3 Mbps** · Alibaba Cloud Linux 3 + 宝塔面板）。2026-10-14 部署完成：代码 `/www/wwwroot/Stronghold-Protocol`（gitee 浅克隆，`git fetch --depth 1 origin master && git reset --hard origin/master` 更新）、Node `/www/server/nodejs/v26.10.0`、**systemd 服务 `stronghold`**（`User=www`、开机自启、崩溃自重启、日志 `/var/log/stronghold.log`）、监听 `:3000`；**本机 admin token 与旧机不同**（`var/admin-token.txt`）。**定位：备用 / 测试机，不承担生产** —— owner 2026-10-14 决定**不做域名与 HTTPS**（本地缓存 + 中继那套在纯 HTTP 下已够用），生产仍留在雨云那台（上行 20 Mbps，比本机 3 Mbps 更适合对外）。阿里云**安全组未放行 80/443/3000**，外部只能经临时隧道看（`cftunnel` 服务，quick-tunnel 地址随机、重启会变；`systemctl stop cftunnel` 即可撤）。上面的「域名与 HTTPS」步骤保留备用 |
