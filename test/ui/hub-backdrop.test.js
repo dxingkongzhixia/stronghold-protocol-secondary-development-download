@@ -17,11 +17,16 @@ describe('Hub backdrop themes', () => {
     assert.deepEqual(HUB_THEMES.map((x) => x.name), ['夜巡', '剧情背景']);
   });
 
-  test('old procedural themes fall back to 夜巡; story and custom survive', () => {
+  test('old procedural themes fall back to 夜巡; story, its chosen file and custom survive', () => {
     for (const old of ['frost', 'ember', 'calm']) assert.equal(sanitizeBackdrop({ theme: old }).theme, 'night', old);
     assert.equal(sanitizeBackdrop({ theme: 'story' }).theme, 'story');
     assert.equal(sanitizeBackdrop({ theme: 'custom' }).theme, 'custom');
     assert.equal(sanitizeBackdrop({ theme: 'nope' }).theme, 'night');
+    const file = STORY_IMAGES[0].file;
+    assert.equal(sanitizeBackdrop({ theme: 'story', story: file }).story, file);
+    assert.equal(sanitizeBackdrop({ theme: 'night', story: file }).story, file, 'switching themes keeps the chosen CG');
+    assert.equal(sanitizeBackdrop({ theme: 'story', story: '/assets/ui/hub/story/nope.webp' }).story, null);
+    assert.equal(sanitizeBackdrop({ theme: 'story', story: 42 }).story, null);
   });
 
   test('a story theme renders the photo layer only with an image, else the night scene', () => {
@@ -38,6 +43,7 @@ describe('Hub backdrop themes', () => {
     assert.equal(new Set(files).size, files.length);
     for (const x of STORY_IMAGES) {
       assert.match(x.file, /^\/assets\/ui\/hub\/story\/story-\d{2}\.webp$/);
+      assert.ok(x.name.trim(), `${x.file}: the source image name is shown in the chooser`);
       assert.ok(existsSync(path.join(ROOT, 'public', x.file)), x.file);
     }
   });

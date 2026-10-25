@@ -1,7 +1,8 @@
 // Procedural lobby artwork adapted from isomerpoi UI b2bd17af; no new storage or services.
 import { html } from '../components.js';
-import { useRef, useState } from '../../../vendor/hooks.module.js';
+import { useEffect, useRef, useState } from '../../../vendor/hooks.module.js';
 import { HUB_THEMES, backdropScene } from './appearance.js';
+import { STORY_IMAGES } from './storyImages.js';
 import { t } from '../../../../shared/i18n.js';
 function rng(seed) {
   let s = seed >>> 0;
@@ -138,6 +139,29 @@ export function BackdropGlyph() {
   </svg>`;
 }
 
+/**
+ * A story chooser thumbnail that loads only when scrolled into view. `loading="lazy"` alone fetched 45 of the 54
+ * images on opening (Chrome's lazy threshold is far larger than the grid), which defeats "one tile, not a gallery";
+ * this observer starts with the visible rows and fetches more as the owner scrolls.
+ */
+function StoryThumb({ file }) {
+  const ref = useRef(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    if (typeof IntersectionObserver !== 'function') { setShown(true); return undefined; }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { setShown(true); io.disconnect(); }
+    }, { rootMargin: '120px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [file]);
+  return html`<span class="bgset__storythumb" ref=${ref}>
+    ${shown ? html`<img src=${file} alt="" loading="lazy" decoding="async" />` : null}
+  </span>`;
+}
+
 function Swatch({ theme, storyUrl }) {
   if (theme === 'story') {
     return html`<span class="bgset__swatch bgset__swatch--story" data-hub-theme="story"
@@ -153,12 +177,33 @@ function Swatch({ theme, storyUrl }) {
 
 export function BackdropSettings({ bg }) {
   const fileRef = useRef(null), [error, setError] = useState('');
+  const [storyOpen, setStoryOpen] = useState(false);
   const { pref, update, imageUrl, busy } = bg;
   const action = async (fn) => { setError(''); try { await fn(); } catch (e) { setError(e.message || t('操作失败')); } };
+  const pickStory = (file) => { update({ theme: 'story', story: file }); setStoryOpen(false); };
+  // 剧情背景 is one tile that opens this chooser: all 54 CGs are never listed in the main settings body.
+  if (storyOpen) {
+    return html`<div class="bgset bgset--storypick">
+      <div class="bgset__storypick-head">
+        <button type="button" class="btn btn--secondary btn--sm" onClick=${() => setStoryOpen(false)}>${t('返回')}</button>
+        <b>${t('剧情背景')}</b>
+        <span class="bgset__note">${t('共 {n} 张，点击选择', { n: STORY_IMAGES.length })}</span>
+      </div>
+      <div class="bgset__storygrid" role="listbox" aria-label=${t('剧情背景')}>
+        ${STORY_IMAGES.map((x) => html`<button key=${x.file} type="button" role="option" aria-selected=${bg.storyUrl === x.file ? 'true' : 'false'}
+          class=${`bgset__storycard${bg.storyUrl === x.file ? ' is-selected' : ''}`} onClick=${() => pickStory(x.file)}>
+          <${StoryThumb} file=${x.file} />
+          <span class="bgset__storyname">${x.name}</span>
+        </button>`)}
+      </div>
+    </div>`;
+  }
   return html`<div class="bgset">
     <div class="bgset__themes" role="group" aria-label=${t('背景主题')}>
       ${HUB_THEMES.map((x) => html`<button key=${x.id} type="button" aria-pressed=${pref.theme === x.id}
-        class=${`bgset__theme${pref.theme === x.id ? ' is-selected' : ''}`} onClick=${() => update({ theme: x.id })}>
+        title=${x.id === 'story' ? t('点击选择剧情图片') : undefined}
+        class=${`bgset__theme${pref.theme === x.id ? ' is-selected' : ''}`}
+        onClick=${() => (x.id === 'story' ? setStoryOpen(true) : update({ theme: x.id }))}>
         <${Swatch} theme=${x.id} storyUrl=${bg.storyUrl} /><span class="bgset__name">${t(x.name)}</span><span class="bgset__en">${x.en}</span></button>`)}
       <button type="button" disabled=${busy} aria-pressed=${pref.theme === 'custom'} class=${`bgset__theme${pref.theme === 'custom' ? ' is-selected' : ''}`}
         onClick=${() => imageUrl ? update({ theme: 'custom' }) : fileRef.current?.click()}>
@@ -170,12 +215,12 @@ export function BackdropSettings({ bg }) {
       const file = e.currentTarget.files?.[0]; e.currentTarget.value = '';
       if (file) action(() => bg.setImage(file));
     }} />
-    ${imageUrl ? html`<div class="bgset__row">
+    ${imageUrl && pref.theme === 'custom' ? html`<div class="bgset__row">
       <button type="button" class="btn btn--secondary btn--sm" disabled=${busy} onClick=${() => fileRef.current?.click()}>${t('更换背景')}</button>
       <button type="button" class="btn btn--ghost btn--sm" disabled=${busy} onClick=${() => action(bg.clearImage)}>${t('移除背景')}</button></div>` : null}
     ${pref.theme === 'story' ? html`<div class="bgset__story-row">
-      <button type="button" class="btn btn--secondary btn--sm" onClick=${() => bg.nextStory()}>${t('换一张')}</button>
-      <span class="bgset__note">${t('每次进入主界面随机一张剧情 CG；也可以手动换一张。')}</span>
+      <button type="button" class="btn btn--secondary btn--sm" onClick=${() => setStoryOpen(true)}>${t('选择图片')}</button>
+      <span class="bgset__note">${t('当前：{name}', { name: bg.storyName || t('未选择') })}</span>
     </div>` : null}
     ${pref.theme === 'custom' || pref.theme === 'story' ? html`<div class="bgset__custom">
       <label class="bgset__slider"><span>${t('暗化')}</span><input type="range" min="0" max="85" value=${pref.dim}

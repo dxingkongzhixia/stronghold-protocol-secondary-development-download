@@ -2063,5 +2063,10 @@
   "正在预览内容：{n} 个插件": "Previewing: {n} plugins",
   "剧情背景": "Story",
   "换一张": "Another",
-  "每次进入主界面随机一张剧情 CG；也可以手动换一张。": "A random story CG on every visit; switch to another anytime."
+  "每次进入主界面随机一张剧情 CG；也可以手动换一张。": "A random story CG on every visit; switch to another anytime.",
+  "点击选择剧情图片": "Click to choose a story CG",
+  "选择图片": "Choose image",
+  "共 {n} 张，点击选择": "{n} images — click to choose",
+  "当前：{name}": "Current: {name}",
+  "未选择": "Not selected"
 }

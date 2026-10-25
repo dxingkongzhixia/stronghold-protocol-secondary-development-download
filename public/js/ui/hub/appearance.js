@@ -17,8 +17,10 @@ const PREF_KEY = 'hub.backdrop';
 export function sanitizeBackdrop(raw) {
   const r = raw && typeof raw === 'object' ? raw : {};
   const num = (n, fallback, max) => Number.isFinite(n) ? Math.max(0, Math.min(max, n)) : fallback;
+  const story = STORY_IMAGES.some((x) => x.file === r.story) ? r.story : null;
   return {
     theme: r.theme === 'custom' || HUB_THEMES.some((x) => x.id === r.theme) ? r.theme : 'night',
+    story,
     dim: num(r.dim, 45, 85), blur: num(r.blur, 0, 16), overlay: r.overlay !== false, motion: r.motion !== false,
   };
 }
@@ -59,13 +61,9 @@ const images = createLocalMedia({ storage: mediaStorage('sp-hub-backdrop', 'kv',
 const preferences = createStore(sanitizeBackdrop(loadPref(PREF_KEY, null)));
 preferences.subscribe((pref) => savePref(PREF_KEY, pref));
 
-// A story CG is chosen per visit (not stored in the preference): the tile stays one entry, the set is never listed.
-const storyAt = (i) => STORY_IMAGES.length ? STORY_IMAGES[((i % STORY_IMAGES.length) + STORY_IMAGES.length) % STORY_IMAGES.length] : null;
-
 export function useHubBackdrop() {
   const pref = useStore((s) => s, Object.is, preferences);
   const [image, setImage] = useState(images.get);
-  const [story, setStory] = useState(() => storyAt(Math.floor(Math.random() * Math.max(1, STORY_IMAGES.length))));
   useEffect(() => {
     const off = images.subscribe(setImage);
     setImage(images.get()); images.load();
@@ -73,13 +71,10 @@ export function useHubBackdrop() {
   }, []);
   // A file import can finish after navigating away; its choice must still be available on the next visit.
   const update = (patch) => preferences.set(sanitizeBackdrop({ ...preferences.get(), ...patch }));
-  const currentIndex = () => {
-    const i = STORY_IMAGES.findIndex((x) => x.file === story?.file);
-    return i < 0 ? 0 : i;
-  };
+  // The picker stores the chosen file (`pref.story`); without a choice the first CG is the preview/effective one.
+  const story = STORY_IMAGES.find((x) => x.file === pref.story) || STORY_IMAGES[0] || null;
   return { pref, update, imageUrl: image.url, ready: image.ready, busy: image.busy,
     storyUrl: story?.file || null, storyName: story?.name || '',
-    nextStory() { if (STORY_IMAGES.length > 1) setStory(storyAt(currentIndex() + 1)); },
     async setImage(file) { if (await images.change(() => prepareBackdrop(file))) update({ theme: 'custom' }); },
     async clearImage() { if (await images.change(() => null)) update({ theme: 'night', dim: 45, blur: 0 }); },
   };
