@@ -349,7 +349,7 @@
 .readybtn.is-blocked { border-color: var(--line-2); color: var(--text-dim); box-shadow: none; cursor: help; }
 .readybtn.is-blocked .readybtn__box { border-color: var(--line-2); }
 .readybtn.is-blocked:hover { background: rgba(10, 14, 12, .9); box-shadow: none; }
-.readybtn.is-busy { opacity: .7; }
+.readybtn.is-busy { opacity: .55; }
 
 /* ---- bond strip ---------------------------------------------------------------------------------------- */
 .gm__bonds { position: absolute; left: 0; right: 0; top: .80rem; display: flex; justify-content: center; pointer-events: none; }

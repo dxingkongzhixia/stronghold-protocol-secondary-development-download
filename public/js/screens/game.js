@@ -1013,9 +1013,18 @@ function MatchScreen() {
     if (ask) {
       if (askingReady.current) return;
       askingReady.current = true;
-      // The dialog can reject (openDialog renders through its host listeners), and a latched flag would then turn every
-      // later press into a silent no-op — the dead 准备就绪 button users report. Clear it on either outcome.
-      const ok = await confirmDialog(ask).catch(() => false).finally(() => { askingReady.current = false; });
+      // The prompt is the press's whole outcome: without a visible pending state the button looks untouched while a
+      // modal is up, and a click that only opened it reads as "the button does nothing" (the report this fixes).
+      setReadyBusy(true);
+      let ok = false;
+      try {
+        ok = await confirmDialog(ask);
+      } catch {
+        ok = false; // the dialog can reject (openDialog renders through its host listeners); never leave the press unanswered
+      } finally {
+        askingReady.current = false;
+        setReadyBusy(false);
+      }
       const now = live.current;
       if (!ok || now.pub?.phase !== PHASE.PREP || now.priv?.ready) return;
     }
