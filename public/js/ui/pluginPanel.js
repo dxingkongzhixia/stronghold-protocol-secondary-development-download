@@ -201,7 +201,6 @@ export function PluginPanel({ open, room, myId, onClose }) {
         ${t('房间的外观插件只改变画面和声音，不影响战斗；插件为非官方制作。')}
       </p>
       ${anyContent ? html`<p class="set-hint">${t('改变玩法的插件会改变本房间的数据与规则；这样的对局为非官方对局，不计入统计总览。')}</p>` : null}
-      <${ContentState} cs=${f.modded ? f.cs : null} />
       <${ModePicker} room=${room} f=${f} busy=${busy} onPick=${pickMode} />
       ${f.inMatch ? html`<p class="set-hint">${t('模拟进行中，插件不能更改')}</p>`
         : f.editable ? null : html`<p class="set-hint">${t('由创建者设置')}</p>`}
@@ -238,6 +237,7 @@ export function PluginPanel({ open, room, myId, onClose }) {
         </ul>
       </section>` : null}
       <div class="ui-slot" data-ui-slot="room.panel" aria-label=${t('界面插件')} dangerouslySetInnerHTML=${{ __html: '' }}></div>
+      <${ContentState} cs=${f.modded ? f.cs : null} />
     </div>
   <//>`;
 }
