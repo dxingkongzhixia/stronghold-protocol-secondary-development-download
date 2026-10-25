@@ -52,7 +52,7 @@ export const SKIPPED_CI_STEPS = [
  */
 export const STEPS = [
   { id: 'setup', ci: { job: 'test', name: 'Setup check (no downloads)' }, describe: 'node tools/setup.mjs --check --no-local' },
-  { id: 'test', ci: { job: 'test', name: 'Unit & integration tests' }, describe: "node --test \"test/**/*.test.js\" \"test/e2e/coop.e2e.mjs\" \"plugins/_template/**/*.test.js\"" },
+  { id: 'test', ci: { job: 'test', name: 'Unit & integration tests' }, describe: "node --test --test-concurrency=4 \"test/**/*.test.js\" \"test/e2e/coop.e2e.mjs\" \"plugins/_template/**/*.test.js\"" },
   { id: 'smoke', ci: { job: 'test', name: 'Server smoke test (boot, /healthz, index.html, doctor)' },
     describe: `server on a free port: GET ${SMOKE_PATHS.join(', ')}; node tools/doctor.mjs` },
   { id: 'lint', ci: { job: 'tooling', name: 'Lint (warnings allowed)' }, npm: 'lint', describe: 'eslint .' },

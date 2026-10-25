@@ -212,7 +212,7 @@ node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-path
 | 文档 | 四个 docs 测试 | 碰文档 |
 | 上游 | `node tools/check-upstream.mjs` | 合并前 |
 
-已知基线：`test/sim/robustness.test.js` 有性能波动；`test/lobby-plugins` 偶发心跳超时；两者单独跑通常通过。不要为了让套件变绿而放宽断言。
+已知基线：`test/sim/robustness.test.js` 有性能波动。`npm test` 固定 `--test-concurrency=4`（2026-10-25）：`node --test` 默认按核数并行，16 核机器上几十个 CPU 密集的 match 模拟互相抢核，lobby / 心跳 / 限流类用例会超时（整轮也更慢：10.4 min → 7.8 min，8479 项全过）。单跑某个套件想更稳可以再加 `--test-concurrency=1`。不要为了让套件变绿而放宽断言。
 
 ---
 
