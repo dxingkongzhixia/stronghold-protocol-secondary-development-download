@@ -10,14 +10,15 @@ import path from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import {
-  DEFAULT_RELAY_DIR, DEFAULT_RELAY_HOST, expandKey, parseArgs, pushToRelay, relayUrl, sshCommand,
+  DEFAULT_RELAY_DIR, DEFAULT_RELAY_HOST, DEFAULT_RELAY_PORT, expandKey, parseArgs, pushToRelay, relayUrl, sshCommand,
 } from '../tools/push-assets-relay.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-test('the relay URL names the owner’s box and the bare repo the hook deploys from', () => {
-  assert.equal(relayUrl(), `root@${DEFAULT_RELAY_HOST}:${DEFAULT_RELAY_DIR}`);
-  assert.equal(relayUrl('10.0.0.1', '/srv/x.git'), 'root@10.0.0.1:/srv/x.git');
+test('the relay URL names the owner’s box, its NAT ssh port and the bare repo the hook deploys from', () => {
+  assert.equal(relayUrl(), `ssh://root@${DEFAULT_RELAY_HOST}:${DEFAULT_RELAY_PORT}${DEFAULT_RELAY_DIR}`);
+  assert.equal(relayUrl('10.0.0.1', '/srv/x.git', 22), 'root@10.0.0.1:/srv/x.git', 'the default port keeps the scp form');
+  assert.equal(relayUrl('10.0.0.1', '/srv/x.git', 2222), 'ssh://root@10.0.0.1:2222/srv/x.git');
 });
 
 test('the key expands (~ resolves on Windows too) and never rides as a password', () => {
@@ -37,7 +38,7 @@ test('arguments and their environment fallbacks', () => {
   assert.equal(d.branch, 'master');
   assert.equal(d.host, DEFAULT_RELAY_HOST);
   assert.equal(d.key, '~/.ssh/sp-deploy');
-  assert.equal(d.url, relayUrl(DEFAULT_RELAY_HOST));
+  assert.equal(d.url, relayUrl(DEFAULT_RELAY_HOST, DEFAULT_RELAY_DIR, DEFAULT_RELAY_PORT));
   assert.equal(d.dry, false);
   const o = parseArgs(['--dry-run', '--branch', 'release', '--host', 'relay.example', '--key', '/k', '--url', 'u']);
   assert.deepEqual([o.dry, o.branch, o.host, o.key, o.url], [true, 'release', 'relay.example', '/k', 'u']);

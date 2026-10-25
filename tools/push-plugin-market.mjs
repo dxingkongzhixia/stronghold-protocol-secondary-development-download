@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Publish active marketplace zips and cached installed-plugin zips to the asset relay.
-// The relay serves /srv/sp/public at http://123.57.150.185; after this, set
-// var/plugin-market/mirrors.json to ["http://123.57.150.185/plugin-market/"].
+// The relay serves /srv/sp/public at http://103.205.254.40; after this, set
+// var/plugin-market/mirrors.json to ["http://103.205.254.40/plugin-market/"].
 //
-// Usage: node tools/push-plugin-market.mjs [--root var/plugin-market] [--host 123.57.150.185]
+// Usage: node tools/push-plugin-market.mjs [--root var/plugin-market] [--host 103.205.254.40] [--port 57435]
 //        [--key ~/.ssh/sp-deploy] [--remote /srv/sp/public/plugin-market] [--dry-run]
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -16,7 +16,8 @@ const val = (name, fallback) => {
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 };
 const root = path.resolve(val('--root', path.join('var', 'plugin-market')));
-const host = val('--host', process.env.SP_RELAY_HOST || '123.57.150.185');
+const host = val('--host', process.env.SP_RELAY_HOST || '103.205.254.40');
+const port = val('--port', process.env.SP_RELAY_PORT || '57435');
 const key = val('--key', process.env.SP_RELAY_KEY || path.join(os.homedir(), '.ssh', 'sp-deploy'));
 const remote = val('--remote', '/srv/sp/public/plugin-market');
 const dry = args.includes('--dry-run');
@@ -42,14 +43,16 @@ try {
   }
 } catch { /* none cached */ }
 if (!files.length) { console.log('nothing to publish'); process.exit(0); }
+const SSH_PORT = String(port) === '22' ? [] : ['-p', String(port)];
+const SCP_PORT = String(port) === '22' ? [] : ['-P', String(port)];
 const ssh = (cmd) => {
   if (dry) { console.log(`[dry] ssh ${host} ${cmd}`); return; }
-  execFileSync('ssh', ['-i', key, '-o', 'BatchMode=yes', `root@${host}`, cmd], { stdio: 'inherit' });
+  execFileSync('ssh', ['-i', key, '-o', 'BatchMode=yes', ...SSH_PORT, `root@${host}`, cmd], { stdio: 'inherit' });
 };
 const scp = (local, rel) => {
   const target = `root@${host}:${remote}/${rel}`;
   if (dry) { console.log(`[dry] scp ${local} ${target}`); return; }
-  execFileSync('scp', ['-i', key, '-B', local, target], { stdio: 'inherit' });
+  execFileSync('scp', ['-i', key, '-B', ...SCP_PORT, local, target], { stdio: 'inherit' });
 };
 ssh(`mkdir -p ${remote}/ordinary ${remote}/forge ${remote}/installed`);
 for (const f of files) scp(f.local, f.rel);

@@ -778,15 +778,15 @@ over:
 
 | | |
 |---|---|
-| host | `123.57.150.185` — Aliyun lightweight, **Beijing** (华北2), Ubuntu 24.04, 2 vCPU / 1 GB / 30 GB, **200 Mbps peak**, traffic unmetered (owner + Aliyun support, 2026-10-14) |
-| ssh | `ssh root@123.57.150.185` (port 22), authorised by the owner's deploy key `~/.ssh/sp-deploy` (also the key the game box uses). The box was first reached with a password — **rotate it** in the Aliyun panel; the key is the supported way in |
-| serves | `/srv/sp/public` through nginx: config `/etc/nginx/sites-available/sp-relay` (enabled in `sites-enabled`), port 80, `Access-Control-Allow-Origin: *`, `Timing-Allow-Origin: *`. **Cache (2026-10-15): anything that carries the content hash is immutable for a year** — the `/…/~<hash>/…` paths, and the plain paths the client's mirror prefix rewrites (they carry the hash as `?h=`, `map $arg_h`); a plain path and the extension-less routes stay at the conservative week. Rationale in the "slows down" note below: the old blanket week made a regular player re-download the ~135 MB cold set whenever the copy lapsed |
+| host | `103.205.254.40` — 宿迁云 KVM, **Debian 12** (bookworm), 4 GB RAM / 30 GB disk, nginx from 宝塔 (1.26.3); **moved here on 2026-10-26** from the old Aliyun Beijing box `123.57.150.185` (that instance is gone) |
+| ssh | `ssh -p 57435 root@103.205.254.40` — the box has **no direct public IP**: the provider's NAT maps `57435 → 22`. Authorised by the deploy key `~/.ssh/sp-deploy`. The password was used once at provisioning; the key is the supported way in |
+| serves | `/srv/sp/public` through 宝塔's nginx: config `/www/server/panel/vhost/nginx/sp-relay.conf` (included by `/www/server/nginx/conf/nginx.conf`), port 80, `Access-Control-Allow-Origin: *`, `Timing-Allow-Origin: *`. **Cache (2026-10-15): anything that carries the content hash is immutable for a year** — the `/…/~<hash>/…` paths, and the plain paths the client's mirror prefix rewrites (they carry the hash as `?h=`, `map $arg_h`); a plain path and the extension-less routes stay at the conservative week. Rationale in the "slows down" note below: the old blanket week made a regular player re-download the ~135 MB cold set whenever the copy lapsed |
 | repo | `/srv/sp.git` — a **bare** repository whose `hooks/post-receive` checks the pushed branch out into `/srv/sp` (`git --work-tree=/srv/sp … checkout -f`), so **a push IS the deploy**. `/srv/sp` is that checkout, not a clone: do not `git pull` in it |
-| history | fetched from gitee once (678 MB), so a push from the dev machine carries only the new objects. There is **no cron** — the push is the deploy |
-| deploy | from the dev machine: `node tools/push-assets-relay.mjs` |
+| history | fetched from gitee once (913 MB), so a push from the dev machine carries only the new objects. There is **no cron** — the push is the deploy |
+| deploy | from the dev machine: `node tools/push-assets-relay.mjs` (host and NAT ssh port are the tool's defaults; `--host` / `--port` or `SP_RELAY_HOST` / `SP_RELAY_PORT` override) |
 | config | versioned at [`tools/relay/sp-relay.nginx.conf`](../tools/relay/sp-relay.nginx.conf) **and installed by the
-  hook**: a push copies it to `/etc/nginx/sites-available/sp-relay` when it differs, runs `nginx -t` and reloads only
-  when nginx accepts it (a rejected config leaves the previous one in place and says so). Editing the live file
+  hook**: a push copies it to `/www/server/panel/vhost/nginx/sp-relay.conf` when it differs, runs `nginx -t` and reloads
+  only when nginx accepts it (a rejected config is restored from the `.bak` and says so). Editing the live file
   directly therefore drifts and is lost on the next push — edit the repository copy and push |
 
 **Routes.** nginx answers the same paths the game server does, so any asset URL can be prefixed with the origin:

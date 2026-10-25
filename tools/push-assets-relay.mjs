@@ -23,7 +23,9 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const DEFAULT_RELAY_HOST = '123.57.150.185';
+export const DEFAULT_RELAY_HOST = '103.205.254.40';
+/** The relay reaches ssh on a NAT-mapped port (宿迁云 box, 2026-10-26), so the git URL is an `ssh://` one. */
+export const DEFAULT_RELAY_PORT = 57435;
 /** The bare repo the post-receive hook deploys from (`git --work-tree=/srv/sp`). */
 export const DEFAULT_RELAY_DIR = '/srv/sp.git';
 export const DEFAULT_KEY = '~/.ssh/sp-deploy';
@@ -31,11 +33,11 @@ export const DEFAULT_BRANCH = 'master';
 
 /**
  * The relay's git URL. `root` because the relay takes the owner's deploy key (docs/ASSETS.md "The relay").
- * @param {string} [host]
- * @param {string} [dir]
+ * @param {string} [host] @param {string} [dir] @param {number|string} [port]
  */
-export function relayUrl(host = DEFAULT_RELAY_HOST, dir = DEFAULT_RELAY_DIR) {
-  return `root@${host}:${dir}`;
+export function relayUrl(host = DEFAULT_RELAY_HOST, dir = DEFAULT_RELAY_DIR, port = DEFAULT_RELAY_PORT) {
+  const p = Number(port) || 22;
+  return p === 22 ? `root@${host}:${dir}` : `ssh://root@${host}:${p}${dir}`;
 }
 
 /** `~` → the home directory, so the key resolves on Windows too (ssh does not expand it there). */
@@ -55,24 +57,26 @@ export function sshCommand(key) {
   return parts.join(' ');
 }
 
-/** @param {string[]} argv @returns {{ help: boolean, dry: boolean, branch: string, host: string, key: string, url: string }} */
+/** @param {string[]} argv @returns {{ help: boolean, dry: boolean, branch: string, host: string, port: string, key: string, url: string }} */
 export function parseArgs(argv = []) {
   const val = (f, d) => {
     const i = argv.indexOf(f);
     return i >= 0 && argv[i + 1] ? argv[i + 1] : d;
   };
   const host = val('--host', process.env.SP_RELAY_HOST || DEFAULT_RELAY_HOST);
+  const port = val('--port', process.env.SP_RELAY_PORT || String(DEFAULT_RELAY_PORT));
   return {
     help: argv.includes('--help') || argv.includes('-h'),
     dry: argv.includes('--dry-run'),
     branch: val('--branch', process.env.SP_RELAY_BRANCH || DEFAULT_BRANCH),
     host,
+    port,
     key: val('--key', process.env.SP_RELAY_KEY || DEFAULT_KEY),
-    url: val('--url', process.env.SP_RELAY_URL || relayUrl(host)),
+    url: val('--url', process.env.SP_RELAY_URL || relayUrl(host, DEFAULT_RELAY_DIR, port)),
   };
 }
 
-const USAGE = 'usage: node tools/push-assets-relay.mjs [--dry-run] [--branch <b>] [--host <h>] [--key <path>] [--url <git-url>]';
+const USAGE = 'usage: node tools/push-assets-relay.mjs [--dry-run] [--branch <b>] [--host <h>] [--port <p>] [--key <path>] [--url <git-url>]';
 
 /**
  * Push HEAD to the relay's bare repo. The hook there checks the branch out, so the push deploys it.

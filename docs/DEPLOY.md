@@ -364,7 +364,7 @@ npm run package -- --update --from <旧版本的完整包>[,<…>] --out <目录
 - **玩家包里的脚本和文档链接**：临时目录里的 `package.json` 只留下每条 `node <文件>` 都指向包内文件、并且至少指出一个文件的脚本（`start`、`dev`、`setup`、`doctor`、`launch`、`postinstall`、`vendor`、`assets`）。`test`、`golden`、数据构建、lint、本工具等不留，避免玩家运行 `npm test` 时在没有测试文件的情况下得到「0 个测试、成功退出」。`README.md`、`CHANGELOG.md`、`NOTICE.md`、`THIRD-PARTY-NOTICES.md`、`docs/PLAYING.md` 和本文里，指向包内没有的文件的相对链接改成该版本 GitHub 标签上的同一路径（版本号去掉末尾的 `-dev` 后加 `v`；图片用 `raw`，其余用 `blob`）；`../../releases/latest` 改为仓库的 Releases 地址。源码仓库里的这些文件仍是相对链接。
 - **需要**：已下载素材的仓库（完整包）——打包前先联网运行一次 `node tools/fetch-assets.mjs`，补齐清单计划但本机还没有的素材（清单只列出磁盘上有的文件，打包工具看不出缺了哪些；`data/assets.json` 有变化就先提交）；能访问 npm 的网络（`npm ci`）；`zip`（或 bsdtar 的 `tar`，Windows 10 起自带）。`--out` 默认是系统临时目录下的 `stronghold-protocol-release`，不能在仓库里面；`--force` 覆盖已有的 zip，`--keep-stage` 保留打包用的目录供检查。
 
-**资源中继（发布顺序的第一步）**：本项目自己的素材源在中继机 `123.57.150.185` 上，**先** `node tools/push-assets-relay.mjs`（推即部署），**再** `node tools/push-gitee.mjs` 推 github 主仓 + gitee 镜像。中继机的接入、路由与 nginx 配置见 [`docs/ASSETS.md`](ASSETS.md)「The relay」，发布顺序见 [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (c)。
+**资源中继（发布顺序的第一步）**：本项目自己的素材源在中继机 `103.205.254.40` 上（ssh `-p 57435`，2026-10-26 从旧阿里云北京机迁来），**先** `node tools/push-assets-relay.mjs`（推即部署），**再** `node tools/push-gitee.mjs` 推 github 主仓 + gitee 镜像。中继机的接入、路由与 nginx 配置见 [`docs/ASSETS.md`](ASSETS.md)「The relay」，发布顺序见 [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (c)。
 
 **域名与 HTTPS（备案后）**：生产域名 `strongholdprotocolcsym.top`（备案 **浙ICP备2026085059号-1**，页脚展示）。要启用 HTTPS 与本地缓存：
 
