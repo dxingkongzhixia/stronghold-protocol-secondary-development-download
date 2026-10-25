@@ -36,6 +36,11 @@ test('prts: the Kal\'tsit band keeps its own icon while inheriting Touch mechani
   assert.equal(band.iconId, 'band_x_prts_kaltsit_touch', 'the strategy uses its own Kal\'tsit art, not Touch\'s');
   assert.equal(band.grants.grantUnit.charId, 'char_x_prts_kaltsit_one');
   assert.equal(band.grants.grantUnit.token, 'token_x_prts_kaltsit_mon3tr');
+  assert.deepEqual(band.grants.restEndRandomChess, {
+    minTier: 1, maxTier: 6, count: 1,
+    rounds: [2, 4, 6, 8, 10, 12],
+    maxTierByRound: { 2: 3, 4: 3, 6: 3 },
+  }, 'rounds 2/4/6/8/10/12 grant one operator; 2/4/6 cap at tier 3');
 });
 
 test('prts: the strategy and the bosses are separate plugins (the 2026-10-24 split)', { skip }, () => {

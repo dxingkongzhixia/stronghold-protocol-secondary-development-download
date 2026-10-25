@@ -9,6 +9,9 @@ export const BAND_GRANT_LIMITS = Object.freeze({
   maxRevives: 10,
   restLayers: 10,
   restRandomCount: 4,
+  /** A rest grant may name at most this many rounds; round numbers run 1..roundMax. */
+  restRounds: 24,
+  roundMax: 99,
   eliteOthers: 6,
 });
 
@@ -101,15 +104,59 @@ export function readBandGrants(raw) {
     const r = raw.restEndRandomChess;
     if (!isObj(r)) problems.push('grants.restEndRandomChess: expected an object');
     else {
-      for (const k of Object.keys(r)) if (!['minTier', 'maxTier', 'count'].includes(k)) problems.push(`grants.restEndRandomChess: unknown field "${k}"`);
+      for (const k of Object.keys(r)) if (!['minTier', 'maxTier', 'count', 'rounds', 'maxTierByRound'].includes(k)) problems.push(`grants.restEndRandomChess: unknown field "${k}"`);
       const minTier = int(r.minTier ?? 1, 1, 6, 'grants.restEndRandomChess.minTier', problems, 1);
       const maxTier = int(r.maxTier ?? 4, 1, 6, 'grants.restEndRandomChess.maxTier', problems, 4);
       if (minTier !== null && maxTier !== null && minTier > maxTier) problems.push('grants.restEndRandomChess: minTier must not exceed maxTier');
-      g.restEndRandomChess = {
+      const out = {
         minTier,
         maxTier,
         count: int(r.count ?? 1, 1, BAND_GRANT_LIMITS.restRandomCount, 'grants.restEndRandomChess.count', problems, 1),
       };
+      if (r.rounds !== undefined) {
+        if (!Array.isArray(r.rounds) || r.rounds.length === 0 || r.rounds.length > BAND_GRANT_LIMITS.restRounds) {
+          problems.push(`grants.restEndRandomChess.rounds: expected 1..${BAND_GRANT_LIMITS.restRounds} round numbers`);
+        } else {
+          const rounds = [];
+          for (const v of r.rounds) {
+            if (!Number.isInteger(v) || v < 1 || v > BAND_GRANT_LIMITS.roundMax) {
+              problems.push(`grants.restEndRandomChess.rounds: expected integers in 1..${BAND_GRANT_LIMITS.roundMax}`);
+              rounds.length = 0;
+              break;
+            }
+            rounds.push(v);
+          }
+          if (rounds.length) out.rounds = [...new Set(rounds)].sort((a, b) => a - b);
+        }
+      }
+      if (r.maxTierByRound !== undefined) {
+        if (!isObj(r.maxTierByRound)) problems.push('grants.restEndRandomChess.maxTierByRound: expected an object');
+        else {
+          const keys = Object.keys(r.maxTierByRound);
+          if (keys.length > BAND_GRANT_LIMITS.restRounds) problems.push(`grants.restEndRandomChess.maxTierByRound: at most ${BAND_GRANT_LIMITS.restRounds} rounds`);
+          const caps = {};
+          for (const k of keys) {
+            const round = Number(k);
+            if (!/^\d+$/.test(k) || !Number.isInteger(round) || round < 1 || round > BAND_GRANT_LIMITS.roundMax) {
+              problems.push(`grants.restEndRandomChess.maxTierByRound: "${k}" is not a round number`);
+              continue;
+            }
+            const tier = int(r.maxTierByRound[k], 1, 6, `grants.restEndRandomChess.maxTierByRound.${k}`, problems, null);
+            if (tier === null) continue;
+            if (minTier !== null && tier < minTier) {
+              problems.push(`grants.restEndRandomChess.maxTierByRound.${k}: must not be below minTier`);
+              continue;
+            }
+            if (out.rounds && !out.rounds.includes(round)) {
+              problems.push(`grants.restEndRandomChess.maxTierByRound.${k}: round is not listed in rounds`);
+              continue;
+            }
+            caps[round] = tier;
+          }
+          out.maxTierByRound = caps;
+        }
+      }
+      g.restEndRandomChess = out;
     }
   }
 

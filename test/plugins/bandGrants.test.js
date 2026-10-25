@@ -11,7 +11,11 @@ const KALTSIT = {
   },
   eliteGate: { others: 2, at: 'battleStart' },
   restEndBondLayers: { scope: 'self', layers: 3, activeOnly: true, cap: 'maxCount' },
-  restEndRandomChess: { minTier: 1, maxTier: 4, count: 1 },
+  restEndRandomChess: {
+    minTier: 1, maxTier: 6, count: 1,
+    rounds: [12, 2, 8, 4, 10, 6], // the reader sorts and de-duplicates
+    maxTierByRound: { 2: 3, 4: 3, 6: 3 },
+  },
 };
 
 test('the Kal\'tsit grant normalises with defaults and keeps the three bonds', () => {
@@ -30,7 +34,11 @@ test('the Kal\'tsit grant normalises with defaults and keeps the three bonds', (
   assert.equal(grants.grantUnit.placement, 'hand');
   assert.deepEqual(grants.eliteGate, { others: 2, at: 'battleStart' });
   assert.deepEqual(grants.restEndBondLayers, { scope: 'self', layers: 3, activeOnly: true, cap: 'maxCount' });
-  assert.deepEqual(grants.restEndRandomChess, { minTier: 1, maxTier: 4, count: 1 });
+  assert.deepEqual(grants.restEndRandomChess, {
+    minTier: 1, maxTier: 6, count: 1,
+    rounds: [2, 4, 6, 8, 10, 12],
+    maxTierByRound: { 2: 3, 4: 3, 6: 3 },
+  });
 });
 
 test('a minimal grant gets the safe defaults', () => {
@@ -60,6 +68,12 @@ test('invalid scopes, bonds, skills and token states are refused whole', () => {
     { restEndRandomChess: { minTier: 5, maxTier: 4 } },
     { restEndRandomChess: { count: 0 } },
     { restEndRandomChess: { maxTier: 7 } },
+    { restEndRandomChess: { rounds: [] } },
+    { restEndRandomChess: { rounds: [2, 100] } },
+    { restEndRandomChess: { rounds: [2], maxTierByRound: { 4: 3 } } },
+    { restEndRandomChess: { maxTierByRound: { 2: 0 } } },
+    { restEndRandomChess: { maxTierByRound: { 2: 7 } } },
+    { restEndRandomChess: { maxTierByRound: { x: 3 } } },
     { unknown: true },
   ];
   for (const bad of cases) {

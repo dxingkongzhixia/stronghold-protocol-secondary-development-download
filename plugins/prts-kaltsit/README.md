@@ -9,7 +9,7 @@ PRTS 主题的**策略**插件（分类：新增策略）。它只带一张公�
 - 隐藏干员 `char_x_prts_kaltsit_one`：凯尔希，固定 S3，坚毅 / 精准，**不进商店 / 图鉴 / 自选**，只由策略授予
 - M3 `token_x_prts_kaltsit_mon3tr`：被击倒后 20 秒回到原格，最多 2 次，第 3 次永久退场
 - 队友的凯尔希占用预备医疗格；移出该格后不会重新生成
-- 每回合休整期随机获得 1 名 1–3 星本干员（`grants.restEndRandomChess`）
+- 第 2、4、6、8、10、12 回合进入休整期时随机获得 1 名 1–6 本干员（第 2、4、6 回合最高 3 本，`grants.restEndRandomChess.rounds` + `maxTierByRound`）
 - 凯尔希使用官方 `char_003_kalts` 的 kit 与立绘/语音（`kit.ref` / `art.ref`），策略图标与 M3 模型在插件自己的 `assets/`
 
 ## 启用

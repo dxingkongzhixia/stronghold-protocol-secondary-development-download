@@ -208,6 +208,38 @@ test('restEndRandomChess grants count random operators in the 1-4 tier range', (
   m.dispose();
 });
 
+test('restEndRandomChess.rounds gates the grant and maxTierByRound caps an early round', () => {
+  const data = structuredClone(getData());
+  data.bands.band_x_test_touch = {
+    ...data.bands.band_amiya, bandId: 'band_x_test_touch',
+    grants: {
+      team: false,
+      restEndRandomChess: {
+        minTier: 1, maxTier: 6, count: 1,
+        rounds: [2, 4, 6, 8, 10, 12],
+        maxTierByRound: { 2: 3, 4: 3, 6: 3 },
+      },
+    },
+  };
+  const h = makeMatch({ mode: 'coop', humans: 1, data }).start();
+  const m = h.m, ps = h.ps('p_0');
+  m.handle('p_0', { t: 'g.infoReady' });
+  h.run(() => m.phase === PHASE.BAND_DRAFT);
+  m._applyBand(ps, 'band_x_test_touch');
+  const caps = [];
+  const roll = m.pool.roll.bind(m.pool);
+  m.pool.roll = (rng, opts = {}) => { caps.push(opts.maxTier); return roll(rng, opts); };
+  assert.equal(m.applyBandRestRandomChess(ps, 1).length, 0, 'round 1 is not a grant round');
+  assert.equal(m.applyBandRestRandomChess(ps, 3).length, 0, 'odd rounds are not grant rounds');
+  assert.equal(m.applyBandRestRandomChess(ps, 2).length, 1);
+  assert.equal(m.applyBandRestRandomChess(ps, 8).length, 1);
+  assert.equal(m.applyBandRestRandomChess(ps, 12).length, 1);
+  assert.equal(m.applyBandRestRandomChess(ps, 14).length, 0, 'the grant stops after round 12');
+  assert.deepEqual(caps, [3, 6, 6], 'rounds 2/4/6 roll at most tier 3, 8/10/12 at most tier 6');
+  m.pool.roll = roll;
+  m.dispose();
+});
+
 test('a band with bossIds is offered only in the matching leader room', () => {
   const data = structuredClone(getData());
   const band = data.bands.band_amiya;

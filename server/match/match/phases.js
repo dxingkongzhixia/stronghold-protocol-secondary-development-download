@@ -352,19 +352,23 @@ export class MatchPhases {
   }
 
   /**
-   * `grants.restEndRandomChess`: at each round start (a rest period) the band grants `count` random operators
-   * between `minTier` and `maxTier` from the shared pool. Independent of the band's special unit: every player
-   * who picked the band gets it, once per round.
+   * `grants.restEndRandomChess`: at a round start (a rest period) the band grants `count` random operators
+   * between `minTier` and `maxTier` from the shared pool. `rounds` limits the grant to those rounds (round 1
+   * included when listed) and `maxTierByRound` lowers the cap for a named round — the Kal'tsit strategy gains on
+   * rounds 2/4/6/8/10/12, with rounds 2/4/6 capped at tier 3. Independent of the band's special unit: every player
+   * who picked the band gets it, once per listed round.
    */
-  applyBandRestRandomChess(ps) {
+  applyBandRestRandomChess(ps, round = this.round) {
     if (!ps || !ps.alive || !ps.bandId) return [];
     const { grants } = readBandGrants(this.gd.band(ps.bandId)?.grants);
     const cfg = grants?.restEndRandomChess;
     if (!cfg) return [];
+    if (cfg.rounds && !cfg.rounds.includes(round)) return [];
+    const maxTier = cfg.maxTierByRound?.[round] ?? cfg.maxTier;
     const got = [];
     for (let i = 0; i < cfg.count; i++) {
       const id = this.pool.roll(this.rngMeta, {
-        maxTier: cfg.maxTier,
+        maxTier,
         filter: (chessId) => this.gd.tierOf(chessId) >= cfg.minTier && !String(chessId).startsWith('char_x_'),
       });
       if (!id) break;

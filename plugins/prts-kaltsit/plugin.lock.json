@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "generator": "tools/plugin.mjs pack",
   "files": {
+    "README.md": {
+      "sha256": "8e58231f0a6058103d1be71a357d712179f835423eda9423e8e34354e75bec7a",
+      "bytes": 1487
+    },
     "assets/images/band_x_prts_kaltsit_touch.png": {
       "sha256": "c7d1b1e2d746f3fc1117f2ba79527d715a696f1cb44eba9d9a4265e015caad42",
       "bytes": 176908
@@ -25,8 +29,8 @@
       "bytes": 46958
     },
     "content/bands.json": {
-      "sha256": "bdff2091d5e7d6feafa692022591140d50841c0076c6155a229b6d8ed2cb6555",
-      "bytes": 1706
+      "sha256": "4aa221ac876f1bdf5f3de6581600070a6f2621f4155fb516dae7e78637b4fa3d",
+      "bytes": 2086
     },
     "data/operator.json": {
       "sha256": "62c58f8eca52a0420addae8a2c452df3c8ae7a6943f9ff624b14199f1071d702",
