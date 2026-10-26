@@ -906,3 +906,6 @@
 .hub-entry:hover:not(:disabled) { border-color: var(--mint-400); filter: saturate(1.12) brightness(1.08); }
 .hub-entry__name { font-size: calc(0.25 * var(--ui-unit, 1rem)); }
 .hub-entry__group { font-size: calc(0.24 * var(--ui-unit, 1rem)); }
+/* The wrapper must not draw a frame at all (the light box read as a mistake): both containers are forced borderless. */
+.hub-entries { border: 0 !important; box-shadow: none !important; }
+.hub-entries__row { border: 0 !important; box-shadow: none !important; background: none !important; }
