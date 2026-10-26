@@ -852,3 +852,30 @@
 .hub-entries__groups {
   grid-template-columns: calc(3.7 * var(--ui-unit, 1rem)) calc(4.2 * var(--ui-unit, 1rem)) calc(4.95 * var(--ui-unit, 1rem));
 }
+/* Measured off the reference at 1920 wide: cards 228 / 270 / 340 px wide, 160 px tall, gap 22, label 30 px, caption
+   20 px. rem = px / 100 at this design size, so these are the numbers. */
+.hub-entry--solo { width: calc(2.28 * var(--ui-unit, 1rem)); }
+.hub-entry--coop { width: calc(2.7 * var(--ui-unit, 1rem)); }
+.hub-entry--mm { width: calc(3.4 * var(--ui-unit, 1rem)); }
+.hub-entry { height: calc(1.6 * var(--ui-unit, 1rem)); }
+.hub-entry__name { font-size: calc(0.3 * var(--ui-unit, 1rem)); margin-bottom: calc(0.04 * var(--ui-unit, 1rem)); }
+.hub-entries__row { gap: calc(0.22 * var(--ui-unit, 1rem)); }
+.hub-entry__group { font-size: calc(0.2 * var(--ui-unit, 1rem)); }
+.hub-entry__group .icon { width: calc(.2 * var(--ui-unit, 1rem)); height: calc(.2 * var(--ui-unit, 1rem)); }
+.hub-entries__groups {
+  grid-template-columns: calc(2.28 * var(--ui-unit, 1rem)) calc(2.7 * var(--ui-unit, 1rem)) calc(3.4 * var(--ui-unit, 1rem));
+  gap: calc(0.22 * var(--ui-unit, 1rem));
+}
+/* Exact scale from their ui_root.gd: REFERENCE 1280x720, UI_SCALE 0.9 → at this 1920 design width the row is
+   188/214/252 × 1.35 = 254/289/340 px wide, 162 tall, gaps 39 and 16 px (1rem = 100 px here). */
+.hub-entry--solo { width: calc(2.54 * var(--ui-unit, 1rem)); margin-right: calc(0.39 * var(--ui-unit, 1rem)); }
+.hub-entry--coop { width: calc(2.89 * var(--ui-unit, 1rem)); margin-right: calc(0.16 * var(--ui-unit, 1rem)); }
+.hub-entry--mm { width: calc(3.4 * var(--ui-unit, 1rem)); margin-right: 0; }
+.hub-entry { height: calc(1.62 * var(--ui-unit, 1rem)); }
+.hub-entries__row { gap: 0; }
+.hub-entry__name { font-size: calc(0.29 * var(--ui-unit, 1rem)); }
+.hub-entry__group { font-size: calc(0.26 * var(--ui-unit, 1rem)); }
+.hub-entries__groups {
+  grid-template-columns: calc(2.54 * var(--ui-unit, 1rem) + 0.39 * var(--ui-unit, 1rem)) calc(2.89 * var(--ui-unit, 1rem) + 0.16 * var(--ui-unit, 1rem)) calc(3.4 * var(--ui-unit, 1rem));
+  gap: 0;
+}
