@@ -766,3 +766,13 @@
 .hub-entries { padding: 0; background: none; border: 0; box-shadow: none; }
 .hub-entries__row { padding: calc(0.1 * var(--ui-unit, 1rem)) calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)); background: rgba(6, 11, 10, .62); border: 1px solid rgba(79, 227, 193, .3); }
 .hub-entry::before, .hub-entry::after { display: none; }
+/* The official bar wraps BOTH the group captions and the three cards, and hugs them; the mint corner triangle and the
+   extra inner frame belong to no official card. */
+.hub-entries {
+  width: fit-content; margin-left: auto;
+  padding: calc(0.08 * var(--ui-unit, 1rem)) calc(0.12 * var(--ui-unit, 1rem)) calc(0.12 * var(--ui-unit, 1rem));
+  background: rgba(6, 11, 10, .62); border: 1px solid rgba(79, 227, 193, .3);
+}
+.hub-entries__row { padding: 0; background: none; border: 0; }
+.hub-entry__corner { display: none; }
+.hub-entries__groups { width: auto; gap: calc(0.2 * var(--ui-unit, 1rem)); padding: 0 calc(0.06 * var(--ui-unit, 1rem)); }
