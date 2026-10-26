@@ -167,14 +167,14 @@
 .hub-entries__row { display: flex; align-items: flex-end; gap: var(--hub-gap); }
 .hub-entry {
   position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
-  width: var(--hub-entry-w); height: calc(1.58 * var(--ui-unit, 1rem)); padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: center; color: var(--text-hi);
+  width: var(--hub-entry-w); height: calc(1.7 * var(--ui-unit, 1rem)); padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: center; color: var(--text-hi);
   background: linear-gradient(180deg, #18231f, #0b1211); border: 1px solid rgba(120, 200, 175, .3);
   box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .5); transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
 .hub-entry:hover:not(:disabled) { transform: translateY(calc(-0.04 * var(--ui-unit, 1rem))); border-color: var(--mint-400); box-shadow: 0 calc(0.08 * var(--ui-unit, 1rem)) calc(0.3 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .55), 0 0 calc(0.2 * var(--ui-unit, 1rem)) var(--mint-a20); }
 .hub-entry:disabled { opacity: .5; cursor: default; }
-.hub-entry__icon { display: flex; align-items: center; justify-content: center; margin: calc(0.02 * var(--ui-unit, 1rem)) 0 auto;
+.hub-entry__art { display: block; width: calc(1.12 * var(--ui-unit, 1rem)); height: calc(1.12 * var(--ui-unit, 1rem)); margin: calc(0.1 * var(--ui-unit, 1rem)) auto auto;
   font-size: calc(.86 * var(--utility-text, var(--t))); color: var(--mint-a35); }
-.hub-entry__icon .icon { width: 1em; height: 1em; }
+.hub-entry__art { color: var(--mint-a60); }
 .hub-entry__en { font: 700 calc(.115 * var(--utility-text, var(--t)))/1 ui-monospace, Consolas, monospace; letter-spacing: .16em; white-space: nowrap; color: var(--mint-400); }
 .hub-entry__name { display: flex; align-items: center; justify-content: center; gap: calc(0.08 * var(--ui-unit, 1rem)); margin-top: calc(0.07 * var(--ui-unit, 1rem)); font-size: calc(.37 * var(--utility-text, var(--t))); font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
 .hub-entry__name .mode-beta { font-size: calc(.12 * var(--utility-text, var(--t))); }
@@ -182,11 +182,11 @@
 .hub-entry__corner { position: absolute; right: 0; bottom: 0; width: calc(0.3 * var(--ui-unit, 1rem)); height: calc(0.3 * var(--ui-unit, 1rem));
   background: linear-gradient(135deg, transparent 50%, var(--mint-500) 50%); opacity: .8; }
 /* 同盟匹配 is the featured entry (the official row fills the matchmaking card): bright mint, dark ink. */
-.hub-entry.is-featured { background: #4fe3c1; border-color: #8ff0d8; color: #06241d;
+.hub-entry.is-featured { background: linear-gradient(180deg, rgba(46, 190, 152, .58), rgba(7, 22, 18, .94)); border-color: var(--mint-400); color: #eafff9;
   box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .45), 0 0 calc(0.2 * var(--ui-unit, 1rem)) rgba(89, 244, 202, .28); }
-.hub-entry.is-featured .hub-entry__icon { color: rgba(7, 30, 24, .72); }
-.hub-entry.is-featured .hub-entry__en { color: rgba(7, 30, 24, .62); }
-.hub-entry.is-featured .hub-entry__corner { background: linear-gradient(135deg, transparent 50%, #0d2a23 50%); opacity: .5; }
+.hub-entry.is-featured .hub-entry__art { color: var(--mint-400); }
+.hub-entry.is-featured .hub-entry__en { color: rgba(150, 255, 228, .78); }
+.hub-entry.is-featured .hub-entry__corner { background: linear-gradient(135deg, transparent 50%, var(--mint-400) 50%); opacity: .55; }
 /* the 野排 queue: same width as the card row, a compact status panel above it */
 .match-queue { display: flex; flex-direction: column; gap: calc(0.08 * var(--ui-unit, 1rem)); padding: calc(0.1 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem));
   background: rgba(8, 14, 13, .86); border: 1px solid var(--mint-a35); box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .45); }
@@ -695,3 +695,17 @@
 }
 .hub-entry.is-featured::before { background: radial-gradient(120% 100% at 50% 0%, rgba(7, 30, 24, .2), transparent 72%); }
 .hub-entry > * { position: relative; }
+/* Corner ticks + an inner hairline: the reference row frames each card instead of only outlining it (2026-10-26). */
+.hub-entry::before, .hub-entry::after {
+  content: ''; position: absolute; width: calc(0.16 * var(--ui-unit, 1rem)); height: calc(0.16 * var(--ui-unit, 1rem));
+  border: 1px solid var(--mint-a35); pointer-events: none;
+}
+.hub-entry::before { left: 0; top: 0; border-right: 0; border-bottom: 0; }
+.hub-entry::after { right: 0; bottom: 0; border-left: 0; border-top: 0; }
+.hub-entry:hover:not(:disabled)::before, .hub-entry:hover:not(:disabled)::after { border-color: var(--mint-400); }
+/* the whole row is pressed onto one dark strip, as in the reference */
+.hub-entries__row {
+  padding: calc(0.08 * var(--ui-unit, 1rem)) calc(0.12 * var(--ui-unit, 1rem)) calc(0.12 * var(--ui-unit, 1rem));
+  background: linear-gradient(180deg, rgba(9, 15, 14, .72), rgba(5, 9, 8, .86));
+  border-top: 1px solid rgba(120, 200, 175, .18);
+}

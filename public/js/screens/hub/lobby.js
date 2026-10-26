@@ -38,10 +38,35 @@ import { HubBackdrop, HubRadar, BackdropGlyph, BackdropSettings } from '../../ui
 import { useHubBackdrop, backdropTheme } from '../../ui/hub/appearance.js';
 import { ProtocolScene } from '../../ui/hub/protocolScene.js';
 
+/** The card's own picture (the reference row carries art, not a wire icon): one drawing per mode. */
+function ModeArt({ id }) {
+  const common = { class: 'hub-entry__art', viewBox: '0 0 64 64', 'aria-hidden': 'true', fill: 'none' };
+  if (id === 'solo') {
+    return html`<svg ...${common}>
+      <circle cx="32" cy="21" r="9.5" stroke="currentColor" stroke-width="2.6" />
+      <path d="M12 56c0-11.3 9-19.5 20-19.5S52 44.7 52 56" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
+    </svg>`;
+  }
+  if (id === 'coop') {
+    return html`<svg ...${common}>
+      <path d="M32 4c1.6 14.6 7.4 22.4 22 24.4C39.4 30.4 33.6 38.2 32 52.8 30.4 38.2 24.6 30.4 10 28.4 24.6 26.4 30.4 18.6 32 4z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" />
+      <rect x="27.5" y="24" width="9" height="9" fill="currentColor" />
+      <path d="M18 44h28" stroke="currentColor" stroke-width="1.6" opacity=".5" />
+    </svg>`;
+  }
+  return html`<svg ...${common}>
+    <circle cx="32" cy="32" r="25" stroke="currentColor" stroke-width="1.5" opacity=".45" />
+    <circle cx="32" cy="32" r="17" stroke="currentColor" stroke-width="1.5" opacity=".7" />
+    <circle cx="32" cy="32" r="9" stroke="currentColor" stroke-width="1.8" />
+    <path d="M32 32 53 17" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
+    <circle cx="43" cy="42" r="2.6" fill="currentColor" />
+  </svg>`;
+}
+
 /** A hub mode entry (bottom-right): the fork's big bracket button, laid out like the official three-card row. */
 function HubEntry({ card, tone = 'mint', disabled = false, featured = false, onClick }) {
   return html`<button type="button" class=${`hub-entry hub-entry--${tone}${featured ? ' is-featured' : ''}`} disabled=${disabled} onClick=${onClick}>
-    <span class="hub-entry__icon"><${Icon} name=${card.icon} /></span>
+    <${ModeArt} id=${card.id} />
     <span class="hub-entry__en">${card.en}</span>
     <span class="hub-entry__name">${t(card.name)}</span>
     <span class="hub-entry__corner" aria-hidden="true"></span>
