@@ -1,6 +1,6 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-25**（台式机 `_merge-scratch` + 线上实测）。插件 / Forge / studio / 控制台见
+> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-26**（台式机 `_merge-scratch` + 线上实测）。插件 / Forge / studio / 控制台见
 > [`docs/PLUGINS.md`](PLUGINS.md) 与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10。
 > 文档入口（2026-10-25 重新梳理）：人类 [`DEVELOPER.md`](DEVELOPER.md)、AI [`AI-AGENT.md`](AI-AGENT.md)、
 > 规则 [`RULES.md`](RULES.md)、插件 [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)。
@@ -43,16 +43,17 @@
 
 > ⚠️ store 里的 `.cache` / `public/assets` / `public/fonts` / `public/vendor` 是**指向工作项目的 junction**，约 600 MB 美术只有一份。**别单独删工作项目**，也别把 store 的 `public/assets` 当副本删掉。
 
-## 3. 当前状态（2026-10-25 17:17 · 部署后实测）
+## 3. 当前状态（2026-10-26 23:5x · 部署后实测）
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`；**已上线进程的 build `1ea3ea8bca21`**（2026-10-25 17:17 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `3586e9a2570f`；备份 `/root/sp-backup-code-20261025-171515.tgz` / `/root/sp-backup-accounts-20261025-171515.db`；社区更新日志 **0.4.73**）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
-| git store | **台式机** = `_merge-scratch`（分支 `prts-plugin`，HEAD 见 `git log`），开发树 `D:\DOTK\Stronghold-Protocol` 已镜像；本轮部署含文档重组与通知 / 地址提醒 / 凯尔希策略 / 音乐与剧情背景 |
-| 远程同步 | **已全部推送（2026-10-25）**：`github/master` == `gitee/master` == 中继 `master` == HEAD（`f15464723`）；GitHub 直连 `:443` 仍会间歇失败，恢复后补推成功 |
-| 全量测试 | **8479 项 / 8442 通过 / 0 失败 / 37 跳过，7.6 min**（2026-10-25 台式机 store 实测，连续两次全绿）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6）：默认按 16 核并行时同一套件要 10.4 min，且稳定出现 4–6 个心跳 / 限流超时的假失败 |
-| 其它闸门 | **2026-10-25 台式机 store 复测**：`lint` 0 error（185 warning）✓；`typecheck` ✓（此前 30 个错已修到 0）；`i18n check en --strict` **1966/1966**（100%，0 missing / 0 errors）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 **35/35** ✓；kit 覆盖 **283/283** 技能、**112/112** 棋子 ✓；golden matches **21** 个场景重算一致 ✓。`check:imports` 仍有 3 条既有 `sim-node` 边界记录（`server/sim/nodeData.js`，非本次改动）；`check-delivery --live` 未跑（需外网 / 中继） |
-| 本机环境 | Node **v24.19.0**（v26 也可，线上是 v26.10.0）；**GitHub 直连 `:443` 会被重置** —— 推送时走本机代理 `127.0.0.1:31181`（`git -c http.proxy=http://127.0.0.1:31181 push --no-thin …`）；官方数据 CDN 同理需要代理 |
+| 版本 | `app 0.4.0`；**已上线进程的 build `0f7d2bf7a522`**（2026-10-26 部署后重启，`/healthz` 实测且 == 磁盘 build；备份 `/root/sp-backup-20261026-233231.tgz`）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 2026-10-26 上线批次 | ① **插件组合上限** `4 → 12 → 128`（`plugins/config.json` 的 `limits.maxSets: 128`，策略天花板从 0–64 放到 0–128；代码默认 `DEFAULT_MAX_SETS = 32`、空闲缓存 `MAX_KEPT = 12`）—— 之前 4 个就是玩家看到的「插件已达上限」；② 房间加载插件卡顿：内容集文件校验改用浏览器原生 `crypto.subtle.digest`，纯 JS SHA-256 仅作回退；③ `server/speed.js` 的 `readOrigins` 按**位置**把第一个源标为「中继」（域名中继不再被误判为镜像）；④ 主界面模式选择三张卡改用官方纹理（`btn_single/btn_team/btn_match`）；⑤ 按键音关闭 |
+| git store | **台式机** = `_merge-scratch`（分支 `prts-plugin`，HEAD 见 `git log`），开发树 `D:\DOTK\Stronghold-Protocol` 已镜像；本轮 HEAD `fce35d298` |
+| 远程同步 | **已全部推送（2026-10-26）**：`github/master` == `gitee/master` == 中继 `master` == HEAD（`fce35d298`）。GitHub 直连会失败，本机走 Steam++ 加速器（hosts 把 github 域名指到 `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`（已写进本仓库 local config，非仓库文件） |
+| 全量测试 | **8485 项 / 8448 通过 / 0 失败 / 37 跳过，8.4 min**（2026-10-26 台式机 store 实测）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6） |
+| 其它闸门 | **2026-10-26 台式机 store 复测**：`lint` 0 error（186 warning）✓；`typecheck` ✓；`i18n check en --strict` **1966/1966**（100%）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 **35/35** ✓；kit 覆盖 **283/283** 技能、**112/112** 棋子 ✓；`check:imports` 3 条既有 `sim-node` 边界记录 |
+| 本机环境 | Node **v24.19.0**（线上是 v26.10.0）；GitHub 经 Steam++（hosts → `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`；官方数据 CDN 需要代理 |
 | 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
 | 线上新增内容 | 插件 **12** 个（含 `prts-kaltsit:loaded`，未改 `plugins/config.json` 默认列表）；主界面音乐 **218** 条（`var/music`，351 个文件）；内置音乐 24 条；剧情背景 **54** 张；DB schema **v6**；`var/avatars` 已创建 |
 

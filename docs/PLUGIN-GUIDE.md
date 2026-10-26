@@ -397,7 +397,7 @@ unequip（official／allow）；每项下面显示作用说明。选「继承」
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_RULES` | 清单里的 rules 写错了：开关或选项不在规定的四种里，或者这个类别的插件不能声明规则 | rules 只能写 shopBias、prepLoadout、morphPairing、unequip，每个用规定的两个选项；只有 content、script、trusted 可以写。 |
 | 房间里开不了这个插件，面板弹出提示 | `PLUGIN_LIMIT` | 超出了本服务器的上限：{detail} | 少开几个插件，或者让插件小一点（压缩图片和声音、删掉没用到的文件、少用整条引用）。 |
 | 房间里开不了这个插件，面板弹出提示 | `PLUGIN_INCOMPATIBLE` | 这个玩法插件不适配本服务器的游戏版本（或插件接口版本） | 换一个适配本版本的插件版本（清单的 "app" 写着它适配的游戏版本），或者请作者更新。 |
-| 房间里开不了这个插件，面板弹出提示 | `PLUGIN_BUSY` | 本服务器同时运行的插件组合已达上限 | 稍后再试，或者和正在用插件的房间选同样的插件；服主可以在 plugins/config.json 里调高 maxSets。 |
+| 房间里开不了这个插件，面板弹出提示 | `PLUGIN_BUSY` | 本服务器同时运行的插件组合已达上限 | 稍后再试，或者和正在用插件的房间选同样的插件（同一套组合是共享的，不占新名额）；服主可以在 plugins/config.json 里调高 `limits.maxSets`（0–128，改完 1 秒生效、不用重启；默认 32，线上设为 128）。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_NO_MANIFEST` | 插件文件夹里没有 plugin.json | 每个插件文件夹都要有一个 plugin.json（插件的清单）。在工作台点「新建插件」，或运行 node tools/plugin.mjs new，就会生成一个。旧式的 pack.json 是 packs/ 文件夹里的语言包用的。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_JSON` | {where} 读不出来：它不是有效的 JSON，或者太大 | 检查有没有多写或少写逗号、引号、括号（最后一项后面不能有逗号）；单个 JSON 文件不能超过 8 MB。用工作台编辑可以避免手写出错。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_JSON_LIMIT` | {where} 超出了 JSON 的限制（嵌套太深，或数字太大） | 嵌套不要超过 64 层，数字要是正常的有限数字，绝对值不超过 10 亿。 |

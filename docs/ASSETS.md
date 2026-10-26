@@ -763,6 +763,10 @@ register — so the HTTPS future keeps the better chain.
   a bar against the same 1.2 / 0.5 MB/s bars, and `test/speed.test.js` re-reads `assetMirror.js` and fails if the
   samples, the bars or the budgets drift apart.
 
+  The console labels the relay by **position** (the first entry of `public/asset-mirrors.json`), not by the origin's
+  shape: `labelOf` recognised a relay only as a bare IP, which stopped matching when the relay moved to
+  `relay.strongholdprotocolcsym.top:56148` (2026-10-26) and the TLS site needed an `https://` origin first.
+
   > ⚠️ **An HTTPS site needs an HTTPS relay.** A page served over HTTPS may not fetch `http://…` subresources (the
   > browser blocks them as **mixed content**, silently), so on the filed domain `strongholdprotocolcsym.top` the chain's
   > first tier (`http://123.57.150.185`) would be dropped and every client would fall back to the CDN mirrors. Before the

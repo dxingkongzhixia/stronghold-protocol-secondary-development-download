@@ -80,6 +80,16 @@ Read this together with:
 > their own tracks (`public/js/audio.js` installAudio); `resolveBgm` falls back to `bgm.lobby` if both catalogues lack
 > the id. The BGM bus was also raised (0.8 × `v^1.5` instead of 0.55 × `v²`) after the owner's 音量 report. Absent
 > upstream — `public/js/ui/musicPicker.js`, `public/js/ui/musicLibrary.js` + `public/css/screens/hub.css` are the wiring.
+>
+> **2026-10-26 — 主界面模式卡 (Hub mode cards).** The three mode buttons (独立模拟 / 同盟模拟 / 同盟匹配) use the
+> official textures lifted from the reference game's packs (`btn_single.png` 201×121, `btn_team.png` 233×122,
+> `btn_match.png` 267×120 → `public/assets/ui/hub/card_solo|coop|mm.png`), and each card is **sized to its own
+> picture** (`background-size: 100% 100%`, one shared height, width = height × the texture's aspect) so nothing is
+> cropped or stretched. The near-black background of those three PNGs is knocked out to alpha 0, so the card shows
+> the grouping panel behind it. The row is two panels — one per group, each with its caption and its card(s) — in the
+> sampled teal `rgb(24,55,45)` fading to transparent downwards; the caption's icon and the card's label are the only
+> DOM over the art (`public/js/screens/hub/lobby.js` `HubEntry` + `public/css/screens/hub.css`). The UI click sounds
+> added the day before (`public/js/ui/uiSfx.js`) are **switched off** — the owner reported them as broken.
 
 **What it is.** Eight operators not in the official season roster are injected into the generated season tables as
 formal shop chess, each with a data entry, a hand-written kit, and (usually) art/voice. They are added through

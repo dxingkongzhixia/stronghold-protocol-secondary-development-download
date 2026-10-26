@@ -32,7 +32,7 @@ zip, can be imported as the plugins it can become (§16). Install local zips or 
 | `plugins/_template/ui/` | the interface-plugin template: a damage tally |
 | `schemas/ui.schema.json` | the plugin→host messages (C7) |
 | `shared/plugins/errors.js` | the error catalogue (§15): every `PLUGIN_*` code with its plain words in Chinese and English, what to do, its document; the coded `issues` every check returns beside its text; the symptom table |
-| `shared/sha256.js` | SHA-256 in plain JavaScript (the same digest in Node and every browser, no `crypto.subtle`) |
+| `shared/sha256.js` | SHA-256 — `sha256HexAsync` uses the browser's native `crypto.subtle.digest` (off the main thread; the content loader verifies every `/cs/` file with it) and falls back to the plain-JavaScript digest in Node, an insecure context or a browser without SubtleCrypto |
 | `server/plugins/registry.js` | the registry: the language folders, `packs/` and `plugins/` — discovery, validation (a cosmetic plugin's overlay too, its files hashed), `/packs/index.json`, `/plugins/index.json`, what may be served |
 | `server/plugins/identity.js` | this server's vanilla content and its `cs`, the manifest at `/cs/<cs16>/index.json` |
 | `shared/plugins/patch.js`, `records.js`, `validate.js` | pure patches, compact records and merged-data validation (§10) |
@@ -1016,6 +1016,12 @@ plugins (`rooms: "host"`, the default), every room plays a fixed set (`"fixed"`)
 use (`classes`: overrides individual defaults — cosmetic/content on, script also on in sandbox/trusted modes, trusted also on in trusted modes; other classes denied); the concurrent content sets (`limits.maxSets`, 0–128, default 32); whether gameplay plugins made for other versions may be
 used (`allowIncompatible`). `SP_PLUGINS=off|host|fixed` overrides `rooms`. The file is read again when it changes;
 a bad field keeps its default and is reported in the log. `docs/DEPLOY.md` has an example.
+
+`limits.maxSets` counts **distinct content sets held at once across the whole server** — two rooms on the same
+plugin combination share one (free); different combinations take one each. A set is the patched data a room plays
+(a few MB: the plugin `data/` payloads are tens of KB, the vanilla `data/` is ~19 MB and a set carries only the files
+it touches), not the plugin's art. Raising it is a **live** change: edit the file and the next room request uses the
+new value — no restart (the relay/production box runs 128 since 2026-10-26).
 
 **HTTP.** `/cs/<cs16>/index.json`, `/cs/<cs16>/data/<table>.json` and `/cs/<cs16>/i18n/<lang>.json` of a gameplay set
 are served from memory with `Cache-Control: immutable` while a room holds the set, and for the last 8 sets nobody holds
