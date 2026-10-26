@@ -167,7 +167,7 @@
 .hub-entries__row { display: flex; align-items: flex-end; gap: var(--hub-gap); }
 .hub-entry {
   position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
-  width: var(--hub-entry-w); height: calc(1.7 * var(--ui-unit, 1rem)); padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: center; color: var(--text-hi);
+  width: var(--hub-entry-w); height: calc(1.26 * var(--ui-unit, 1rem)); padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: center; color: var(--text-hi);
   background: linear-gradient(180deg, #18231f, #0b1211); border: 1px solid rgba(120, 200, 175, .3);
   box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .5); transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
 .hub-entry:hover:not(:disabled) { transform: translateY(calc(-0.04 * var(--ui-unit, 1rem))); border-color: var(--mint-400); box-shadow: 0 calc(0.08 * var(--ui-unit, 1rem)) calc(0.3 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .55), 0 0 calc(0.2 * var(--ui-unit, 1rem)) var(--mint-a20); }
@@ -709,3 +709,12 @@
   background: linear-gradient(180deg, rgba(9, 15, 14, .72), rgba(5, 9, 8, .86));
   border-top: 1px solid rgba(120, 200, 175, .18);
 }
+/* Official card art (2026-10-26): the alliance and matchmaking cards ARE the official textures (233×122 and 267×120),
+   drawn at the card's own aspect ratio instead of being stretched over a taller box. 独立模拟 keeps the drawn figure
+   on the dark panel because the reference's solo card has no separate texture of its own. */
+.hub-entry--coop, .hub-entry--coop.is-featured { background: #0b1211 url('/assets/ui/hub/card_coop.png') center / cover no-repeat; }
+.hub-entry--mm, .hub-entry--mm.is-featured { background: #0b1211 url('/assets/ui/hub/card_mm.png') center / cover no-repeat; border-color: var(--mint-400); }
+.hub-entry--coop .hub-entry__art, .hub-entry--mm .hub-entry__art { display: none; }
+.hub-entry--coop .hub-entry__name, .hub-entry--mm .hub-entry__name { text-shadow: 0 1px calc(0.07 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .92); }
+.hub-entry--coop .hub-entry__en, .hub-entry--mm .hub-entry__en { display: none; }
+.hub-entry--coop .hub-entry__name, .hub-entry--mm .hub-entry__name { width: 100%; margin: 0; padding: calc(0.07 * var(--ui-unit, 1rem)) 0 calc(0.05 * var(--ui-unit, 1rem)); background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .62)); }

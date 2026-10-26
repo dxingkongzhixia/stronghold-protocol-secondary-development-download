@@ -65,7 +65,7 @@ function ModeArt({ id }) {
 
 /** A hub mode entry (bottom-right): the fork's big bracket button, laid out like the official three-card row. */
 function HubEntry({ card, tone = 'mint', disabled = false, featured = false, onClick }) {
-  return html`<button type="button" class=${`hub-entry hub-entry--${tone}${featured ? ' is-featured' : ''}`} disabled=${disabled} onClick=${onClick}>
+  return html`<button type="button" class=${`hub-entry hub-entry--${tone} hub-entry--${card.id}${featured ? ' is-featured' : ''}`} disabled=${disabled} onClick=${onClick}>
     <${ModeArt} id=${card.id} />
     <span class="hub-entry__en">${card.en}</span>
     <span class="hub-entry__name">${t(card.name)}</span>
