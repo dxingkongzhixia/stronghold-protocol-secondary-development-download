@@ -765,7 +765,7 @@
    so drop the outer box and the earlier corner ticks. */
 .hub-entries { padding: 0; background: none; border: 0; box-shadow: none; }
 .hub-entries__row { padding: calc(0.1 * var(--ui-unit, 1rem)) calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)); background: rgba(6, 11, 10, .62); border: 1px solid rgba(79, 227, 193, .3); }
-.hub-entry::before, .hub-entry::after { display: none; }
+.hub-entry::before { display: none; }
 /* The official bar wraps BOTH the group captions and the three cards, and hugs them; the mint corner triangle and the
    extra inner frame belong to no official card. */
 .hub-entries {
@@ -796,3 +796,59 @@
 .hub-entry__group--solo { grid-column: 1; padding-left: calc(0.06 * var(--ui-unit, 1rem)); }
 .hub-entry__group--union { grid-column: 2 / 4; justify-content: flex-start; padding-left: calc(0.06 * var(--ui-unit, 1rem)); }
 .hub-entry__name { font-size: calc(0.4 * var(--ui-unit, 1rem)); }
+/* The reference cards read brighter than the raw normal-state texture: a mint frame and a soft glow around each card,
+   the whole bar a touch roomier. */
+.hub-entries { padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); }
+.hub-entry {
+  border-color: rgba(79, 227, 193, .55);
+  box-shadow: inset 0 0 0 1px rgba(79, 227, 193, .45), 0 0 calc(0.14 * var(--ui-unit, 1rem)) rgba(79, 227, 193, .16);
+}
+.hub-entry--mm { border-color: var(--mint-400); box-shadow: inset 0 0 0 1px rgba(79, 227, 193, .6), 0 0 calc(0.18 * var(--ui-unit, 1rem)) rgba(79, 227, 193, .3); }
+.hub-entry:hover:not(:disabled) { border-color: var(--mint-400); box-shadow: inset 0 0 0 1px rgba(79, 227, 193, .7), 0 0 calc(0.22 * var(--ui-unit, 1rem)) rgba(79, 227, 193, .35); }
+.hub-entry__name { margin-bottom: calc(0.06 * var(--ui-unit, 1rem)); }
+/* Match the reference's read: cards float on the scene (no boxed bar), each one carries a mint glow over its texture,
+   and the label is a heavy white line at the bottom. */
+.hub-entries { padding: 0; background: none; border: 0; box-shadow: none; }
+.hub-entries__row { padding: 0; background: none; border: 0; }
+.hub-entry {
+  border: 1px solid rgba(214, 226, 221, .55);
+  box-shadow: 0 0 calc(0.2 * var(--ui-unit, 1rem)) rgba(60, 214, 175, .3), inset 0 0 calc(0.16 * var(--ui-unit, 1rem)) rgba(60, 214, 175, .22);
+  filter: saturate(1.12) brightness(1.06);
+}
+.hub-entry--mm { border-color: var(--mint-400); box-shadow: 0 0 calc(0.26 * var(--ui-unit, 1rem)) rgba(60, 214, 175, .45), inset 0 0 calc(0.18 * var(--ui-unit, 1rem)) rgba(60, 214, 175, .3); }
+.hub-entry:hover:not(:disabled) { filter: saturate(1.2) brightness(1.12); border-color: var(--mint-400); }
+.hub-entry__name { font-size: calc(0.38 * var(--ui-unit, 1rem)); font-weight: 900; letter-spacing: .02em; }
+.hub-entries__groups { margin-bottom: calc(0.04 * var(--ui-unit, 1rem)); }
+/* The reference panels glow green from the bottom; the raw textures are the normal (unlit) state, so tint them. */
+.hub-entry::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(130% 95% at 50% 115%, rgba(47, 200, 158, .3), rgba(47, 200, 158, 0) 70%);
+}
+.hub-entry__name { position: relative; z-index: 1; }
+.hub-entries__groups { font-size: calc(0.22 * var(--ui-unit, 1rem)); }
+/* (the ::after layer is the green bottom tint, so only ::before is disabled above) */
+.hub-entry__group { font-size: calc(0.26 * var(--ui-unit, 1rem)); }
+/* Scale: the reference row is ~1.45x the layout's raw pixels (it reads large on a normal window), so scale the whole
+   block rather than shrinking it to the 1280 layout units. */
+.hub-entry__group { font-size: calc(0.3 * var(--ui-unit, 1rem)); }
+.hub-entry__group .icon { width: calc(.3 * var(--ui-unit, 1rem)); height: calc(.3 * var(--ui-unit, 1rem)); }
+.hub-entry--solo { width: calc(4.1 * var(--ui-unit, 1rem)); }
+.hub-entry--coop { width: calc(4.65 * var(--ui-unit, 1rem)); }
+.hub-entry--mm { width: calc(5.5 * var(--ui-unit, 1rem)); }
+.hub-entry { height: calc(2.6 * var(--ui-unit, 1rem)); }
+.hub-entry__name { font-size: calc(0.55 * var(--ui-unit, 1rem)); }
+.hub-entries__row { gap: calc(0.3 * var(--ui-unit, 1rem)); }
+.hub-entries__groups {
+  grid-template-columns: calc(4.1 * var(--ui-unit, 1rem)) calc(4.65 * var(--ui-unit, 1rem)) calc(5.5 * var(--ui-unit, 1rem));
+  gap: calc(0.3 * var(--ui-unit, 1rem));
+}
+/* keep a margin from the right edge and pull the scale back a notch so the row never touches the screen edge */
+.hub-entries { margin-right: calc(0.24 * var(--ui-unit, 1rem)); margin-left: auto; }
+.hub-entry--solo { width: calc(3.7 * var(--ui-unit, 1rem)); }
+.hub-entry--coop { width: calc(4.2 * var(--ui-unit, 1rem)); }
+.hub-entry--mm { width: calc(4.95 * var(--ui-unit, 1rem)); }
+.hub-entry { height: calc(2.34 * var(--ui-unit, 1rem)); }
+.hub-entry__name { font-size: calc(0.5 * var(--ui-unit, 1rem)); }
+.hub-entries__groups {
+  grid-template-columns: calc(3.7 * var(--ui-unit, 1rem)) calc(4.2 * var(--ui-unit, 1rem)) calc(4.95 * var(--ui-unit, 1rem));
+}
