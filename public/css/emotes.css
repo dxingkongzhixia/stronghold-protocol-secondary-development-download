@@ -82,7 +82,7 @@
 .ewheel__item:hover:not(:disabled) { background-color: rgba(255, 255, 255, .26); filter: brightness(1.12); transform: none; border-color: transparent; }
 /* the official cell is a rounded plate with transparent corners: brighten it, never fill its square box */
 .ewheel__panel.has-cell .ewheel__item:hover:not(:disabled) { background-color: transparent; filter: brightness(1.35); }
-.ewheel__item:active:not(:disabled) { transform: scale(.9); }
+.ewheel__item:active:not(:disabled) { transform: scale(.9); filter: brightness(var(--press-bright)); }
 .ewheel__item:focus-visible { outline: 2px solid var(--mint-500); outline-offset: 1px; }
 .ewheel__item:disabled { opacity: .45; cursor: default; }
 

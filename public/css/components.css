@@ -66,7 +66,7 @@
 .btn:focus-visible::after { opacity: 1; transform: scale(1); }
 /* touch screens have no hover: a tap must not leave the hover glow stuck on */
 @media (hover: none) { .btn:not(:disabled):hover::after { opacity: 0; transform: none; } }
-.btn:not(:disabled):active { transform: translateY(1px); filter: brightness(.94); }
+.btn:not(:disabled):active { transform: translateY(1px); filter: brightness(var(--press-bright)); }
 .btn:focus-visible { outline: none; }
 
 .btn__icon { width: 1.15em; height: 1.15em; }
@@ -1085,7 +1085,7 @@
   transition: border-color var(--t-fast) var(--ease-out), background-color var(--t-fast) var(--ease-out);
 }
 .me-chip--btn:hover { border-color: var(--mint-700); background: rgba(34, 42, 38, .6); }
-.me-chip--btn:active { transform: translateY(1px); }
+.me-chip--btn:active { transform: translateY(1px); filter: brightness(var(--press-bright)); }
 .me-chip__stats { flex: none; width: .2rem; height: .2rem; margin-left: .04rem; color: var(--mint-500); opacity: .7; }
 .me-chip--btn:hover .me-chip__stats { opacity: 1; }
 /* guest tag (docs/MATCHMAKING.md): shown when no account is bound */

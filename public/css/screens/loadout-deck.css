@@ -953,7 +953,7 @@
   transition: background var(--t-fast), border-color var(--t-fast); touch-action: manipulation;
 }
 .lo--deck .lo-skin:hover:not(:disabled) { border-color: var(--line-3); }
-.lo--deck .lo-skin:active { transform: scale(.98); }
+.lo--deck .lo-skin:active { transform: scale(.98); filter: brightness(var(--press-bright)); }
 .lo--deck .lo-skin:focus-visible { outline: 2px solid var(--mint-400); outline-offset: 2px; }
 .lo--deck .lo-skin.is-on {
   color: var(--text-hi); background: linear-gradient(180deg, rgba(78, 216, 175, .14), rgba(78, 216, 175, .02) 75%);

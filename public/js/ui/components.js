@@ -19,6 +19,7 @@ import { t } from '../../../shared/i18n.js';
 import { serverNow } from '../store.js';
 import { data, useData, localAsset } from '../data.js';
 import { uiUrl } from './assetUrls.js';
+import { playUiSfx } from './uiSfx.js';
 
 /**
  * h() for htm with its static-subtree cache switched off. htm keeps the vnode it built for a fully static subtree in
@@ -132,18 +133,18 @@ export function Chevrons({ count = 3, dir = 'right', tone = 'mint', animated = t
  * the server" (user playtest #3 item 9); the icon stays.
  * @param {{ variant?: 'primary'|'secondary'|'danger'|'amber'|'ice'|'ghost', size?: 'sm'|'md'|'lg'|'xl',
  *   icon?: string, iconRight?: string, loading?: boolean, disabled?: boolean, block?: boolean, square?: boolean,
- *   active?: boolean, onClick?: Function, type?: string, title?: string, class?: string, children?: any }} props
+ *   active?: boolean, onClick?: Function, type?: string, title?: string, class?: string, sfx?: string|boolean, children?: any }} props
  */
 export function Button({
   variant = 'secondary', size = 'md', icon, iconRight, loading = false, disabled = false, block = false,
-  square = false, active = false, onClick, type = 'button', title, class: cls, children, ...rest
+  square = false, active = false, onClick, type = 'button', title, class: cls, sfx = 'click', children, ...rest
 }) {
   const isDisabled = disabled || loading;
   return html`<button type=${type} title=${title}
     class=${cx('btn', `btn--${variant}`, `btn--${size}`, block && 'btn--block', square && 'btn--square',
       active && 'is-active', loading && 'is-loading', cls)}
     disabled=${isDisabled} aria-busy=${loading ? 'true' : undefined} aria-pressed=${active ? 'true' : undefined}
-    onClick=${(e) => { if (!isDisabled && onClick) onClick(e); }} ...${rest}>
+    onClick=${(e) => { if (!isDisabled) { playUiSfx(sfx === false ? null : sfx); if (onClick) onClick(e); } }} ...${rest}>
     ${icon ? html`<${Icon} name=${icon} class="btn__icon" />` : null}
     ${children != null && children !== false ? html`<span class="btn__label">${children}</span>` : null}
     ${iconRight ? html`<${Icon} name=${iconRight} class="btn__icon btn__icon--right" />` : null}

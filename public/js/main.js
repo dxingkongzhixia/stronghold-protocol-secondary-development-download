@@ -37,6 +37,7 @@ import './ui/compat.js';
 import { render } from '../vendor/preact.module.js';
 import { useErrorBoundary } from '../vendor/hooks.module.js';
 import { html, UiHosts, Button, MicroLabel, closeAllDialogs } from './ui/components.js';
+import { installUiSfx } from './ui/uiSfx.js';
 import { ConnectionBanner } from './ui/connBanner.js';
 import { NoticeBanner } from './ui/notice.js';
 import { ToastHost, toast, toastError, describeError } from './ui/toasts.js';
@@ -767,6 +768,8 @@ async function boot() {
   net.attachBrowserHooks();
   // Audio: unlock on first gesture, BGM follows the route / match phase (js/audio.js).
   installAudio({ getManifest: () => data.get('assets'), subscribe: store.subscribe, getState: store.get, selectRoute, settings: settingsStore.get() });
+  // UI sounds for elements carrying `data-sfx` (js/ui/uiSfx.js); the shared Button plays its own on press.
+  installUiSfx();
   // Warm the data cache in the background (missing files are tolerated): config + the asset manifest the profile
   // avatars (operator charIds) and every icon resolve from.
   data.loadAll('config', 'assets').then(() => loadMusicLibrary()).catch(() => {});

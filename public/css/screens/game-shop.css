@@ -31,7 +31,7 @@
   transition: background var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
 }
 .toolbtn:hover:not(:disabled) { background: rgba(8, 11, 10, .9); background: color-mix(in srgb, var(--tb) 16%, rgba(8, 11, 10, .9)); box-shadow: 0 0 .18rem transparent; box-shadow: 0 0 .18rem color-mix(in srgb, var(--tb) 40%, transparent); }
-.toolbtn:active:not(:disabled) { transform: translateY(1px); }
+.toolbtn:active:not(:disabled) { transform: translateY(1px); filter: brightness(var(--press-bright)); }
 .toolbtn:disabled { --tb: var(--line-3); color: var(--text-dim); cursor: not-allowed; }
 .toolbtn__img { width: .4rem; height: .4rem; object-fit: contain; }
 .toolbtn .icon { width: .28rem; height: .28rem; }
@@ -66,7 +66,7 @@
   transition: filter var(--t-fast), transform var(--t-fast);
 }
 .lvcard:hover:not(.is-disabled) { filter: brightness(1.08); }
-.lvcard:active:not(.is-disabled) { transform: translateY(1px); }
+.lvcard:active:not(.is-disabled) { transform: translateY(1px); filter: brightness(var(--press-bright)); }
 .lvcard__price { position: absolute; top: .08rem; left: 50%; transform: translateX(-50%); }
 .lvcard__frame { position: relative; display: flex; flex-direction: column; align-items: center; padding: .04rem .16rem .02rem; border: 2px solid rgba(6, 17, 13, .75); }
 .lvcard__frame::before, .lvcard__frame::after { content: ''; position: absolute; width: .1rem; height: .1rem; border: 2px solid var(--text-on-mint); }
@@ -144,7 +144,7 @@
 .scard__diy { position: absolute; z-index: 3; left: 0; top: .38rem; font-size: calc(.12 * var(--t)); font-weight: 700; padding: .01rem .06rem;
   background: var(--mint-500); color: var(--text-on-mint); letter-spacing: .08em; white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
 .scard:not(.is-disabled):not(.scard--sold):hover { transform: translateY(-.08rem); border-color: var(--mint-400); box-shadow: 0 0 0 1px var(--mint-400), 0 .1rem .24rem rgba(23, 249, 183, .22); }
-.scard:not(.is-disabled):not(.scard--sold):active { transform: translateY(-.04rem); }
+.scard:not(.is-disabled):not(.scard--sold):active { transform: translateY(-.04rem); filter: brightness(var(--press-bright)); }
 .scard.is-disabled { cursor: not-allowed; }
 .shopbar.is-locked .scard:not(.scard--sold) { cursor: help; } /* not editable: a tap opens the detail */
 .scard.is-disabled .scard__art, .scard.is-disabled .scard__itemart { filter: grayscale(.7) brightness(.6); }

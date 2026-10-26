@@ -112,7 +112,7 @@
 }
 .mode-card__check .icon { width: .16rem; height: .16rem; }
 .mode-card:hover { border-color: var(--line-3); --bk-c: var(--line-3); }
-.mode-card:active { transform: translateY(1px); }
+.mode-card:active { transform: translateY(1px); filter: brightness(var(--press-bright)); }
 .mode-card.is-selected {
   --bk-c: var(--mint-400);
   border-color: var(--mint-700);

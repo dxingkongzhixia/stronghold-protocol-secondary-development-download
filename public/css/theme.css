@@ -10,6 +10,11 @@
 :root {
   color-scheme: dark;
 
+  /* motion + interaction */
+  /* Pressed feedback: one value for every pressable thing (docs/AI-AGENT.md "UI"), the way the reference build's
+     ui_node.gd dims a pressed control to a single PRESSED_TINT instead of each widget inventing its own. */
+  --press-bright: .82;
+
   /* surfaces */
   --bg-0: #0c0f0e;
   --bg-1: #141816;
