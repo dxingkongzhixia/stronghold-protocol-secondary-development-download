@@ -733,3 +733,36 @@
 }
 .hub-entry--coop .hub-entry__name { color: #d8d8d8; }
 .hub-entry--mm .hub-entry__name { color: #f2fffb; text-shadow: 0 calc(0.02 * var(--ui-unit, 1rem)) calc(0.08 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .85); }
+/* Look pass (2026-10-26): the reference cards are teal panels with a bright inner line and a centred label, inside one
+   outlined strip — not black boxes. */
+.hub-entries {
+  padding: calc(0.1 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.12 * var(--ui-unit, 1rem));
+  background: linear-gradient(180deg, rgba(13, 34, 29, .84), rgba(5, 11, 10, .92));
+  border: 1px solid rgba(79, 227, 193, .34);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .45);
+}
+.hub-entry {
+  background: linear-gradient(180deg, rgba(28, 68, 58, .92), rgba(7, 18, 16, .96));
+  border: 1px solid rgba(79, 227, 193, .5);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .5), 0 calc(0.05 * var(--ui-unit, 1rem)) calc(0.18 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .5);
+}
+.hub-entry__name {
+  justify-content: center; padding: 0; font-weight: 900; letter-spacing: .04em;
+  font-size: calc(0.33 * var(--ui-unit, 1rem)); text-align: center; width: 100%; margin: 0 0 calc(0.03 * var(--ui-unit, 1rem));
+}
+.hub-entry--coop .hub-entry__name, .hub-entry--mm .hub-entry__name { color: #eafff9; text-shadow: 0 1px calc(0.07 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .92); }
+.hub-entry--coop .hub-entry__art, .hub-entry--mm .hub-entry__art { display: none; }
+.hub-entry--solo .hub-entry__art { width: calc(1.3 * var(--ui-unit, 1rem)); height: calc(1.3 * var(--ui-unit, 1rem)); margin: calc(0.12 * var(--ui-unit, 1rem)) auto auto; color: rgba(150, 255, 228, .9); }
+/* All three cards are the official textures (btn_single 201×121, btn_team 233×122, btn_match 267×120), full bleed at
+   the layout's own size; the label is centred on the bottom edge like text_single_mode. */
+.hub-entry--solo { background: #0b1211 url('/assets/ui/hub/card_solo.png') center / cover no-repeat; }
+.hub-entry--coop { background: #0b1211 url('/assets/ui/hub/card_coop.png') center / cover no-repeat; }
+.hub-entry--mm { background: #0b1211 url('/assets/ui/hub/card_mm.png') center / cover no-repeat; }
+.hub-entry--solo.is-featured, .hub-entry--coop.is-featured, .hub-entry--mm.is-featured { border-color: var(--mint-400); }
+.hub-entry .hub-entry__art { display: none; }
+.hub-entry .hub-entry__name { color: #f2fffb; text-shadow: 0 1px calc(0.08 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .95); }
+/* The strip hugs the row (the official bar is the width of the three cards), and the cards bring their own frames —
+   so drop the outer box and the earlier corner ticks. */
+.hub-entries { padding: 0; background: none; border: 0; box-shadow: none; }
+.hub-entries__row { padding: calc(0.1 * var(--ui-unit, 1rem)) calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)); background: rgba(6, 11, 10, .62); border: 1px solid rgba(79, 227, 193, .3); }
+.hub-entry::before, .hub-entry::after { display: none; }
