@@ -81,7 +81,10 @@ export function labelOf(base) {
  */
 export function readOrigins(root) {
   const { sources, fullSources } = readMirrors(join(root, 'public'));
-  return sources.map((base) => ({ base, label: labelOf(base), full: fullSources.includes(base) }));
+  // The list is "best first" and the owner's relay is always its first entry (public/asset-mirrors.json), so it is
+  // labelled by POSITION: labelOf recognised a relay by its bare-IP shape, which stopped matching when the relay moved to
+  // a domain behind a NAT port (2026-10-26, relay.strongholdprotocolcsym.top:56148).
+  return sources.map((base, i) => ({ base, label: i === 0 ? '中继' : labelOf(base), full: fullSources.includes(base) }));
 }
 
 /**

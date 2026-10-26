@@ -17,8 +17,10 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 test('it reads the same origin list the client does, order preserved', () => {
   const cfg = parseMirrorConfig(JSON.parse(readFileSync(path.join(ROOT, 'public/asset-mirrors.json'), 'utf8')));
   assert.ok(cfg.sources.length >= 2, 'the relay plus at least one CDN mirror');
-  assert.equal(cfg.sources[0], 'http://123.57.150.185', 'the relay stays first');
-  assert.ok(cfg.fullSources.includes(cfg.sources[0]), 'and is declared a full origin (it answers the routes)');
+  // the relay's address is deployment state, not part of the contract: what matters is that it is first and is the
+  // one full origin (it answers /media, /scene and /clip).
+  assert.equal(cfg.fullSources.length, 1, 'exactly one full origin');
+  assert.equal(cfg.sources[0], cfg.fullSources[0], 'the relay stays first');
   for (const s of cfg.sources.slice(1)) assert.equal(cfg.fullSources.includes(s), false, 'the CDNs are plain-file only');
   assert.deepEqual(parseMirrorConfig(null), { sources: [], fullSources: [] });
   assert.deepEqual(parseMirrorConfig({ sources: ['a', 2, '', 'b'], fullSources: ['b', 3] }), { sources: ['a', 'b'], fullSources: ['b'] });

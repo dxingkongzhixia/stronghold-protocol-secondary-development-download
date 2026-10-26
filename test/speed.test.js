@@ -8,7 +8,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readMirrors } from '../server/mirrors.js';
 import {
   SPEED_SAMPLES, RELAY_MIN_BPS, MIRROR_MIN_BPS, SPEED_BUDGET_MS, SPEED_BYTE_CAP, SPEED_COOLDOWN_MS,
   rateOf, pickMirror, labelOf, readOrigins, readCapped, measureOrigin, probeOrigins, createSpeedProbe,
@@ -87,7 +89,9 @@ test('pickMirror is the client rule: the first origin that clears its own bar, e
 });
 
 test('labelOf names the configured origins the way the console shows them', () => {
-  assert.equal(labelOf('http://123.57.150.185'), '中继');
+  // a bare-IP origin is the relay shape labelOf still recognises (the deployed relay is a domain now, and readOrigins
+  // labels it by position — see below).
+  assert.equal(labelOf('http://1.2.3.4:8080'), '中继');
   assert.equal(labelOf('https://gh-proxy.com/https://raw.githubusercontent.com/o/r/master/public'), 'GitHub 镜像 · gh-proxy');
   assert.equal(labelOf('https://cdn.jsdelivr.net/gh/o/r@master/public'), 'GitHub 镜像 · jsDelivr');
   assert.equal(labelOf(''), '本服务器');
@@ -98,7 +102,9 @@ test('readOrigins takes the client\'s own list, best first, with the full-origin
   assert.ok(list.length >= 3, 'the file lists the relay plus at least two mirrors');
   assert.equal(list[0].label, '中继');
   assert.equal(list[0].full, true, 'the relay is a full origin (it also serves /media, /scene, /clip)');
-  assert.equal(list[0].base, 'http://123.57.150.185');
+  // its address is deployment state: assert the shape, not a literal IP/domain
+  assert.match(list[0].base, /^https?:\/\//, 'the relay is an absolute origin');
+  assert.equal(list[0].base, readMirrors(path.join(ROOT, 'public')).sources[0], "the first entry is the file's first source");
   for (const o of list.slice(1)) assert.equal(o.full, false, 'the CDN mirrors serve plain files only');
   // a missing / malformed file yields an empty list rather than throwing
   assert.deepEqual(readOrigins(ROOT + '/does-not-exist'), []);

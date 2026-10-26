@@ -219,7 +219,7 @@ export async function sha256HexAsync(bytes) {
   try {
     const subtle = globalThis.crypto && globalThis.crypto.subtle;
     if (subtle) {
-      const digest = await subtle.digest('SHA-256', bytes);
+      const digest = await subtle.digest('SHA-256', /** @type {any} */ (bytes));
       let out = '';
       for (const b of new Uint8Array(digest)) out += b.toString(16).padStart(2, '0');
       return out;
