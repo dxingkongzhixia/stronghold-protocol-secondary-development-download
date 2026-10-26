@@ -944,3 +944,15 @@
 .hub-entries {
   background: linear-gradient(180deg, rgba(24, 55, 45, .96) 0%, rgba(21, 49, 40, .88) 52%, rgba(16, 40, 33, 0) 100%) !important;
 }
+/* Two separate frames, one per group (独立模拟 / 联合模拟): each group carries its caption and its card(s) inside its own
+   teal panel that fades downwards. */
+.hub-entries { background: none !important; padding: 0 !important; }
+.hub-entries__row { display: flex; align-items: flex-end; gap: calc(0.14 * var(--ui-unit, 1rem)); }
+.hub-group {
+  display: flex; flex-direction: column; gap: calc(0.06 * var(--ui-unit, 1rem));
+  padding: calc(0.08 * var(--ui-unit, 1rem)) calc(0.1 * var(--ui-unit, 1rem)) calc(0.1 * var(--ui-unit, 1rem));
+  background: linear-gradient(180deg, rgba(24, 55, 45, .96) 0%, rgba(21, 49, 40, .82) 55%, rgba(16, 40, 33, 0) 100%);
+}
+.hub-group__cards { display: flex; align-items: flex-end; gap: calc(0.16 * var(--ui-unit, 1rem)); }
+.hub-entry--solo, .hub-entry--coop, .hub-entry--mm { margin: 0 !important; }
+.hub-entries__groups { display: none !important; }

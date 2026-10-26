@@ -487,13 +487,20 @@ export function LobbyScreen() {
 
       <section class="hub-entries" aria-label=${t('模拟方式')}>
         ${queued ? html`<${QueuePanel} mm=${mm} onCancel=${mmCancel} />` : null}
-        <div class="hub-entries__groups" aria-hidden="true">
-          <span class="hub-entry__group hub-entry__group--solo"><${Icon} name="user" />${t('独立模拟')}</span>
-          <span class="hub-entry__group hub-entry__group--union"><${Icon} name="users" />${t('联合模拟')}</span>
-        </div>
         <div class="hub-entries__row">
-          ${MODE_CARDS.map((c) => html`<${HubEntry} key=${c.id} card=${c} tone=${c.id === 'mm' ? 'amber' : 'mint'}
-            featured=${c.id === 'mm'} disabled=${queued} onClick=${() => setProtocol(c.id)} />`)}
+          <div class="hub-group hub-group--solo">
+            <span class="hub-entry__group"><${Icon} name="user" />${t('独立模拟')}</span>
+            <${HubEntry} card=${MODE_CARDS.find((c) => c.id === 'solo')} tone="mint"
+              disabled=${queued} onClick=${() => setProtocol('solo')} />
+          </div>
+          <div class="hub-group hub-group--union">
+            <span class="hub-entry__group"><${Icon} name="users" />${t('联合模拟')}</span>
+            <div class="hub-group__cards">
+              ${['coop', 'mm'].map((id) => MODE_CARDS.find((c) => c.id === id)).map((c) => html`<${HubEntry} key=${c.id} card=${c}
+                tone=${c.id === 'mm' ? 'amber' : 'mint'} featured=${c.id === 'mm'} disabled=${queued}
+                onClick=${() => setProtocol(c.id)} />`)}
+            </div>
+          </div>
         </div>
       </section>
     </main>
