@@ -889,3 +889,20 @@
 .hub-entry__group { color: #c3ccc8; font-weight: 600; font-size: calc(0.22 * var(--ui-unit, 1rem)); }
 .hub-entry__group .icon { color: #c3ccc8; width: calc(.18 * var(--ui-unit, 1rem)); height: calc(.18 * var(--ui-unit, 1rem)); }
 .hub-entry__name { font-size: calc(0.27 * var(--ui-unit, 1rem)); }
+/* No frame on the backing panel — only the cards are outlined (the nested box read as a mistake). The panel stays as a
+   soft dark wash so the captions still have something to sit on. */
+.hub-entries {
+  background: linear-gradient(180deg, rgba(9, 15, 14, .55), rgba(6, 10, 9, .62));
+  border: 0; box-shadow: none;
+  padding: calc(0.1 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem));
+}
+.hub-entry__group { color: #d7e0dc; }
+/* The reference outlines cards with a light grey hairline, not a mint glow (only the matchmaking card is green). */
+.hub-entry {
+  border: 1px solid rgba(216, 226, 222, .6);
+  box-shadow: none; filter: saturate(1.06) brightness(1.04);
+}
+.hub-entry--mm { border-color: var(--mint-400); box-shadow: 0 0 calc(0.16 * var(--ui-unit, 1rem)) rgba(60, 214, 175, .28); }
+.hub-entry:hover:not(:disabled) { border-color: var(--mint-400); filter: saturate(1.12) brightness(1.08); }
+.hub-entry__name { font-size: calc(0.25 * var(--ui-unit, 1rem)); }
+.hub-entry__group { font-size: calc(0.24 * var(--ui-unit, 1rem)); }
