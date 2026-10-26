@@ -879,3 +879,13 @@
   grid-template-columns: calc(2.54 * var(--ui-unit, 1rem) + 0.39 * var(--ui-unit, 1rem)) calc(2.89 * var(--ui-unit, 1rem) + 0.16 * var(--ui-unit, 1rem)) calc(3.4 * var(--ui-unit, 1rem));
   gap: 0;
 }
+/* From the side-by-side: the reference keeps a dark backing panel behind the row, its captions are smaller and grey
+   (not mint), and the card labels are one size down from ours. */
+.hub-entries {
+  padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.18 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem));
+  background: rgba(8, 13, 12, .55); border: 1px solid rgba(120, 200, 175, .18);
+  width: fit-content; margin-left: auto; margin-right: calc(0.2 * var(--ui-unit, 1rem));
+}
+.hub-entry__group { color: #c3ccc8; font-weight: 600; font-size: calc(0.22 * var(--ui-unit, 1rem)); }
+.hub-entry__group .icon { color: #c3ccc8; width: calc(.18 * var(--ui-unit, 1rem)); height: calc(.18 * var(--ui-unit, 1rem)); }
+.hub-entry__name { font-size: calc(0.27 * var(--ui-unit, 1rem)); }
