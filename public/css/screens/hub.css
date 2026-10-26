@@ -928,3 +928,7 @@
   margin: 0; padding: 0; text-align: center;
 }
 .hub-entry--mm { box-shadow: none !important; }
+/* The card is the untouched texture: no filter, no tint overlay, no outline — only the label on top. */
+.hub-entry { filter: none !important; outline: 0 !important; }
+.hub-entry::after { display: none !important; }
+.hub-entry:hover:not(:disabled) { filter: none !important; }
