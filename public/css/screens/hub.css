@@ -718,3 +718,18 @@
 .hub-entry--coop .hub-entry__name, .hub-entry--mm .hub-entry__name { text-shadow: 0 1px calc(0.07 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .92); }
 .hub-entry--coop .hub-entry__en, .hub-entry--mm .hub-entry__en { display: none; }
 .hub-entry--coop .hub-entry__name, .hub-entry--mm .hub-entry__name { width: 100%; margin: 0; padding: calc(0.07 * var(--ui-unit, 1rem)) 0 calc(0.05 * var(--ui-unit, 1rem)); background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .62)); }
+/* Exact geometry from the official layout (act2autochess_activity_stage.tscn, 1280-wide design units → rem = x1.5/100):
+   btn_single 188×120, btn_team 214×120, btn_match 252×120, bottoms at y=-13, gaps 29 and 12; the label inside a card
+   is right-aligned, 180×40 with a 12.5 right inset (text_team #d8d8d8, text_match near-black on the green card). */
+.hub-entry { height: calc(1.8 * var(--ui-unit, 1rem)); }
+.hub-entry--solo { width: calc(2.82 * var(--ui-unit, 1rem)); }
+.hub-entry--coop { width: calc(3.21 * var(--ui-unit, 1rem)); }
+.hub-entry--mm { width: calc(3.78 * var(--ui-unit, 1rem)); }
+.hub-entries__row { gap: calc(0.19 * var(--ui-unit, 1rem)); }
+.hub-entry__en { display: none; }
+.hub-entry__name {
+  justify-content: flex-end; width: 100%; padding-right: calc(0.19 * var(--ui-unit, 1rem));
+  font-size: calc(0.3 * var(--ui-unit, 1rem)); text-align: right;
+}
+.hub-entry--coop .hub-entry__name { color: #d8d8d8; }
+.hub-entry--mm .hub-entry__name { color: #f2fffb; text-shadow: 0 calc(0.02 * var(--ui-unit, 1rem)) calc(0.08 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .85); }
