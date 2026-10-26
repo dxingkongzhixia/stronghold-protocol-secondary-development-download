@@ -937,3 +937,5 @@
 .hub-entries__row { background: none !important; }
 /* The panel was too black — lift it a couple of steps and let a little of the scene through. */
 .hub-entries { background: rgba(30, 36, 34, .88) !important; }
+/* The textures' black background is knocked out, so the button lets the panel colour show through — no black box. */
+.hub-entry { background-color: transparent !important; }
