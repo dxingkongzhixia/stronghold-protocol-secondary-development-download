@@ -956,3 +956,7 @@
 .hub-group__cards { display: flex; align-items: flex-end; gap: calc(0.16 * var(--ui-unit, 1rem)); }
 .hub-entry--solo, .hub-entry--coop, .hub-entry--mm { margin: 0 !important; }
 .hub-entries__groups { display: none !important; }
+/* Tighter card row: smaller gaps inside a group and between the two groups, and less panel padding. */
+.hub-entries__row { gap: calc(0.05 * var(--ui-unit, 1rem)) !important; }
+.hub-group { padding: calc(0.06 * var(--ui-unit, 1rem)) calc(0.06 * var(--ui-unit, 1rem)) calc(0.08 * var(--ui-unit, 1rem)) !important; }
+.hub-group__cards { gap: calc(0.05 * var(--ui-unit, 1rem)) !important; }
