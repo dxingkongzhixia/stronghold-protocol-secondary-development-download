@@ -167,16 +167,16 @@
 .hub-entries__row { display: flex; align-items: flex-end; gap: var(--hub-gap); }
 .hub-entry {
   position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
-  width: var(--hub-entry-w); height: calc(1.34 * var(--ui-unit, 1rem)); padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.15 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: center; color: var(--text-hi);
+  width: var(--hub-entry-w); height: calc(1.52 * var(--ui-unit, 1rem)); padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: center; color: var(--text-hi);
   background: linear-gradient(160deg, rgba(30, 46, 42, .94), rgba(9, 15, 14, .96)); border: 1px solid rgba(223, 230, 226, .26);
   box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .5); transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
 .hub-entry:hover:not(:disabled) { transform: translateY(calc(-0.04 * var(--ui-unit, 1rem))); border-color: var(--mint-400); box-shadow: 0 calc(0.08 * var(--ui-unit, 1rem)) calc(0.3 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .55), 0 0 calc(0.2 * var(--ui-unit, 1rem)) var(--mint-a20); }
 .hub-entry:disabled { opacity: .5; cursor: default; }
 .hub-entry__icon { display: flex; align-items: center; justify-content: center; margin: calc(0.02 * var(--ui-unit, 1rem)) 0 auto;
-  font-size: calc(.56 * var(--utility-text, var(--t))); color: var(--mint-a35); }
+  font-size: calc(.72 * var(--utility-text, var(--t))); color: var(--mint-a35); }
 .hub-entry__icon .icon { width: 1em; height: 1em; }
-.hub-entry__en { font: 700 calc(.105 * var(--utility-text, var(--t)))/1 ui-monospace, Consolas, monospace; letter-spacing: .18em; color: var(--mint-400); }
-.hub-entry__name { display: flex; align-items: center; justify-content: center; gap: calc(0.08 * var(--ui-unit, 1rem)); margin-top: calc(0.05 * var(--ui-unit, 1rem)); font-size: calc(.3 * var(--utility-text, var(--t))); font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
+.hub-entry__en { font: 700 calc(.112 * var(--utility-text, var(--t)))/1 ui-monospace, Consolas, monospace; letter-spacing: .2em; color: var(--mint-400); }
+.hub-entry__name { display: flex; align-items: center; justify-content: center; gap: calc(0.08 * var(--ui-unit, 1rem)); margin-top: calc(0.06 * var(--ui-unit, 1rem)); font-size: calc(.33 * var(--utility-text, var(--t))); font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
 .hub-entry__name .mode-beta { font-size: calc(.12 * var(--utility-text, var(--t))); }
 .hub-entry__count { position: absolute; left: calc(0.16 * var(--ui-unit, 1rem)); top: calc(0.12 * var(--ui-unit, 1rem)); }
 .hub-entry__corner { position: absolute; right: 0; bottom: 0; width: calc(0.3 * var(--ui-unit, 1rem)); height: calc(0.3 * var(--ui-unit, 1rem));
@@ -686,3 +686,12 @@
   .proto-foot { gap: calc(0.06 * var(--ui-unit, 1rem)); }
   .proto-start { min-height: max(calc(0.56 * var(--ui-unit, 1rem)), calc(0.32 * var(--ui-unit, 1rem))); }
 }
+
+/* The icon band (2026-10-26): a faint glow behind the glyph, the way the reference row lets its art strip carry the
+   top third of each card; the featured (matchmaking) card keeps its dark ink glow so it still reads as the raised one. */
+.hub-entry::before {
+  content: ''; position: absolute; inset: 0 0 auto; height: 46%; pointer-events: none;
+  background: radial-gradient(120% 100% at 50% 0%, rgba(89, 244, 202, .14), transparent 70%);
+}
+.hub-entry.is-featured::before { background: radial-gradient(120% 100% at 50% 0%, rgba(7, 30, 24, .2), transparent 72%); }
+.hub-entry > * { position: relative; }
