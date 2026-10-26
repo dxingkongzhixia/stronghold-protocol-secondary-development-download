@@ -54,7 +54,7 @@ import { PLUGINS_URL } from '../../shared/plugins/manifest.js';
 import { contentHashOf, csUrlPart, isContentHash, isContentHash as isVisualHash } from '../../shared/plugins/identity.js';
 import { resolveThemeVars, themeVarsOf } from '../../shared/plugins/theme.js';
 import { applyThemeProperties } from './themeVars.js';
-import { sha256Hex } from '../../shared/sha256.js';
+import { sha256HexAsync } from '../../shared/sha256.js';
 import { getLang, langChain, t, N_ } from '../../shared/i18n.js';
 import { DEV_BUILD } from '../../shared/constants.js';
 
@@ -436,7 +436,7 @@ export async function fetchChecked(url, want, { fetch: doFetch, retryDelays = CO
       const bytes = new Uint8Array(buf);
       if (want) {
         if (Number.isFinite(want.bytes) && bytes.length !== want.bytes) throw new Error(`${url}: ${bytes.length} bytes, not ${want.bytes}`);
-        if (sha256Hex(bytes) !== want.sha256) throw new Error(`${url}: its bytes do not hash to the content set's entry`);
+        if (await sha256HexAsync(bytes) !== want.sha256) throw new Error(`${url}: its bytes do not hash to the content set's entry`);
       }
       onBytes?.(bytes.length);
       // decoded after the check (a BOM is part of the bytes, not of the JSON)

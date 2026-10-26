@@ -208,3 +208,22 @@ export const sha256 = (input) => createSha256().update(input).digest();
  * @returns {string}
  */
 export const sha256Hex = (input) => createSha256().update(input).hex();
+
+/**
+ * The same digest, computed by the browser's native SubtleCrypto when there is one (off the main thread, far faster on a
+ * multi-megabyte content file), falling back to the pure-JS implementation (an insecure context, or no SubtleCrypto).
+ * @param {Uint8Array} bytes
+ * @returns {Promise<string>}
+ */
+export async function sha256HexAsync(bytes) {
+  try {
+    const subtle = globalThis.crypto && globalThis.crypto.subtle;
+    if (subtle) {
+      const digest = await subtle.digest('SHA-256', bytes);
+      let out = '';
+      for (const b of new Uint8Array(digest)) out += b.toString(16).padStart(2, '0');
+      return out;
+    }
+  } catch { /* fall through to the JS implementation */ }
+  return sha256Hex(bytes);
+}
