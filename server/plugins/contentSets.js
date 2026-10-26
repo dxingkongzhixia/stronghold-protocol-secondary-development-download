@@ -32,12 +32,13 @@ import { buildContentSet, contentSetFiles } from './contentSet.js';
 
 const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
 /** Content sets kept that no room holds (their /cs/ files stay servable a while). [ASSUMED] */
-export const MAX_KEPT = 8;
+export const MAX_KEPT = 12;
 /** Concurrent content sets with gameplay plugins rooms may hold (plugins/config.json limits.maxSets).
- *  Raised from 4 to 12 on 2026-10-26: players hit PLUGIN_BUSY ("reached the limit") with only a few rooms on plugins,
- *  because the cap counts every set a room HOLDS across the server, not per room. The built-set cache (MAX_KEPT) and
- *  the per-set data size keep this bounded — the expensive thing is a running match's worker, not a held set. */
-export const DEFAULT_MAX_SETS = 12;
+ *  History: 4 (original) → 12 on 2026-10-26 noon → 32 the same evening: the cap counts every set a room HOLDS across the
+ *  server, not per room, so a busy evening (7+ rooms, several plugin combos) hit it. A set is the patched data a room
+ *  plays (a few MB — data/ is 19 MB in total), so 32 holds are far cheaper than they look; the expensive thing is a
+ *  running match's worker, which this does not cap. The owner can retune it live in plugins/config.json (0–64). */
+export const DEFAULT_MAX_SETS = 32;
 /** Builds remembered by what they were built from (resolve). */
 const MEMO_MAX = 32;
 
