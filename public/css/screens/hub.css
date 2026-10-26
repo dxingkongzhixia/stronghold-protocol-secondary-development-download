@@ -37,7 +37,7 @@
   --mote: rgba(170, 245, 225, .7); --radar: rgba(89, 244, 202, .15);
 }
 
-.lobby-hub { --hub-entry-w: calc(2.1 * var(--ui-unit, 1rem)); --hub-gap: calc(0.14 * var(--ui-unit, 1rem)); display: flex; flex-direction: column; overflow: hidden; background: #050909; }
+.lobby-hub { --hub-entry-w: calc(2.36 * var(--ui-unit, 1rem)); --hub-gap: calc(0.14 * var(--ui-unit, 1rem)); display: flex; flex-direction: column; overflow: hidden; background: #050909; }
 .hub-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: var(--sky-3); }
 .hub-bg__sky { position: absolute; inset: 0;
   background: linear-gradient(180deg, var(--sky-0) 0%, var(--sky-1) 36%, var(--sky-2) 63%, var(--sky-3) 100%); }
@@ -167,22 +167,22 @@
 .hub-entries__row { display: flex; align-items: flex-end; gap: var(--hub-gap); }
 .hub-entry {
   position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
-  width: var(--hub-entry-w); height: calc(1.72 * var(--ui-unit, 1rem)); padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: center; color: var(--text-hi);
-  background: #0d1412 url('/assets/local/ui/outer/mode_bg.png') center / 100% 100% no-repeat; border: 1px solid rgba(223, 230, 226, .26);
+  width: var(--hub-entry-w); height: calc(1.58 * var(--ui-unit, 1rem)); padding: calc(0.12 * var(--ui-unit, 1rem)) calc(0.14 * var(--ui-unit, 1rem)) calc(0.16 * var(--ui-unit, 1rem)); overflow: hidden; cursor: pointer; text-align: center; color: var(--text-hi);
+  background: linear-gradient(180deg, #18231f, #0b1211); border: 1px solid rgba(120, 200, 175, .3);
   box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .5); transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
 .hub-entry:hover:not(:disabled) { transform: translateY(calc(-0.04 * var(--ui-unit, 1rem))); border-color: var(--mint-400); box-shadow: 0 calc(0.08 * var(--ui-unit, 1rem)) calc(0.3 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .55), 0 0 calc(0.2 * var(--ui-unit, 1rem)) var(--mint-a20); }
 .hub-entry:disabled { opacity: .5; cursor: default; }
 .hub-entry__icon { display: flex; align-items: center; justify-content: center; margin: calc(0.02 * var(--ui-unit, 1rem)) 0 auto;
   font-size: calc(.86 * var(--utility-text, var(--t))); color: var(--mint-a35); }
 .hub-entry__icon .icon { width: 1em; height: 1em; }
-.hub-entry__en { font: 700 calc(.12 * var(--utility-text, var(--t)))/1 ui-monospace, Consolas, monospace; letter-spacing: .2em; color: var(--mint-400); }
+.hub-entry__en { font: 700 calc(.115 * var(--utility-text, var(--t)))/1 ui-monospace, Consolas, monospace; letter-spacing: .16em; white-space: nowrap; color: var(--mint-400); }
 .hub-entry__name { display: flex; align-items: center; justify-content: center; gap: calc(0.08 * var(--ui-unit, 1rem)); margin-top: calc(0.07 * var(--ui-unit, 1rem)); font-size: calc(.37 * var(--utility-text, var(--t))); font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
 .hub-entry__name .mode-beta { font-size: calc(.12 * var(--utility-text, var(--t))); }
 .hub-entry__count { position: absolute; left: calc(0.16 * var(--ui-unit, 1rem)); top: calc(0.12 * var(--ui-unit, 1rem)); }
 .hub-entry__corner { position: absolute; right: 0; bottom: 0; width: calc(0.3 * var(--ui-unit, 1rem)); height: calc(0.3 * var(--ui-unit, 1rem));
   background: linear-gradient(135deg, transparent 50%, var(--mint-500) 50%); opacity: .8; }
 /* 同盟匹配 is the featured entry (the official row fills the matchmaking card): bright mint, dark ink. */
-.hub-entry.is-featured { background: #3fd3b0 url('/assets/local/ui/outer/btn_match_normal.png') center / 100% 100% no-repeat; border-color: #9ff6df; color: #071e18;
+.hub-entry.is-featured { background: #4fe3c1; border-color: #8ff0d8; color: #06241d;
   box-shadow: 0 calc(0.06 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .45), 0 0 calc(0.2 * var(--ui-unit, 1rem)) rgba(89, 244, 202, .28); }
 .hub-entry.is-featured .hub-entry__icon { color: rgba(7, 30, 24, .72); }
 .hub-entry.is-featured .hub-entry__en { color: rgba(7, 30, 24, .62); }
