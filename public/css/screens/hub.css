@@ -921,3 +921,10 @@
     calc(1.5 * 233 / 122 * var(--ui-unit, 1rem) + 0.16 * var(--ui-unit, 1rem))
     calc(1.5 * 267 / 120 * var(--ui-unit, 1rem));
 }
+/* The card is exactly its picture: no extra border, no extra band — the label is laid over the image. */
+.hub-entry { border: 0 !important; box-shadow: none !important; }
+.hub-entry__name {
+  position: absolute; left: 0; right: 0; bottom: calc(0.12 * var(--ui-unit, 1rem));
+  margin: 0; padding: 0; text-align: center;
+}
+.hub-entry--mm { box-shadow: none !important; }
