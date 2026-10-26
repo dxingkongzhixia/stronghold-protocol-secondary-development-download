@@ -953,7 +953,7 @@ normalised by the manifest's declared settings (§3) and are part of `cs`. Refus
 | `PLUGIN_BLOCKED` | a class or scope rooms cannot take, the server owner's policy (rooms off or fixed, not in `allow`, the class off), or a set whose merged data does not validate (the builder's first problems are the detail) |
 | `PLUGIN_DEPENDENCY` / `PLUGIN_CONFLICT` | a requirement is missing, or two plugins conflict |
 | `PLUGIN_INCOMPATIBLE` | a gameplay plugin made for other game versions or another plugin API (a cosmetic one is only a warning, §9) |
-| `PLUGIN_BUSY` | one content set more than the server runs at once (`limits.maxSets`, default 4 [ASSUMED]) |
+| `PLUGIN_BUSY` | one content set more than the server runs at once (`limits.maxSets`, default 32, configurable 0–128) |
 
 A change of the content set (or of the mode) un-readies the other players, like a difficulty change. Switching
 everything off brings back the vanilla shape of `room.state.content` exactly.
@@ -1013,7 +1013,7 @@ diagnostics line reads `MODDED cs=… plugins=…` and the bug template asks whe
 **Server owner's policy** (`plugins/config.json`, git-ignored like the plugins): whether a room's host chooses its
 plugins (`rooms: "host"`, the default), every room plays a fixed set (`"fixed"`) or rooms play the original game
 (`"off"`); the plugins a new room starts with (`default`); the plugins rooms may use (`allow`); the classes rooms may
-use (`classes`: overrides individual defaults — cosmetic/content on, script also on in sandbox/trusted modes, trusted also on in trusted modes; other classes denied); the concurrent content sets (`limits.maxSets`); whether gameplay plugins made for other versions may be
+use (`classes`: overrides individual defaults — cosmetic/content on, script also on in sandbox/trusted modes, trusted also on in trusted modes; other classes denied); the concurrent content sets (`limits.maxSets`, 0–128, default 32); whether gameplay plugins made for other versions may be
 used (`allowIncompatible`). `SP_PLUGINS=off|host|fixed` overrides `rooms`. The file is read again when it changes;
 a bad field keeps its default and is reported in the log. `docs/DEPLOY.md` has an example.
 

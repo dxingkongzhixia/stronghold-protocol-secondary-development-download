@@ -11,7 +11,7 @@
 //     "classes": { "cosmetic": true, "content": true },   a class switched off here is never offered to rooms, and a
 //                                   class not listed (script, ui, trusted …) is denied too; the file's list is laid over
 //                                   these two defaults
-//     "limits": { "maxSets": 4 },   content sets with gameplay plugins rooms may hold at once (each running match of one
+//     "limits": { "maxSets": 128 }, content sets with gameplay plugins rooms may hold at once (each running match of one
 //                                   is a worker: server/match/host/)
 //     "allowIncompatible": false    a gameplay plugin made for other game versions or another plugin API: refused
 //                                   (PLUGIN_INCOMPATIBLE) unless true, or a list of plugin ids to admit
@@ -69,8 +69,8 @@ export function readPolicy(json, { env = process.env } = {}) {
   }
   if (o.limits !== undefined) {
     const n = o.limits && typeof o.limits === 'object' ? o.limits.maxSets : undefined;
-    if (n === undefined) { /* other limits are the plugins' own (P0 / P1a) */ } else if (Number.isInteger(n) && n >= 0 && n <= 64) p.maxSets = n;
-    else problems.push('"limits.maxSets" must be an integer 0–64');
+    if (n === undefined) { /* other limits are the plugins' own (P0 / P1a) */ } else if (Number.isInteger(n) && n >= 0 && n <= 128) p.maxSets = n;
+    else problems.push('"limits.maxSets" must be an integer 0–128');
   }
   if (o.allowIncompatible !== undefined) {
     if (typeof o.allowIncompatible === 'boolean') p.allowIncompatible = o.allowIncompatible;
