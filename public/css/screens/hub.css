@@ -932,3 +932,6 @@
 .hub-entry { filter: none !important; outline: 0 !important; }
 .hub-entry::after { display: none !important; }
 .hub-entry:hover:not(:disabled) { filter: none !important; }
+/* The backing panel takes the cards' own black edge (sampled from the textures: rgb(19,21,21)) so the seam disappears. */
+.hub-entries { background: rgb(19, 21, 21) !important; border: 0 !important; box-shadow: none !important; }
+.hub-entries__row { background: none !important; }
