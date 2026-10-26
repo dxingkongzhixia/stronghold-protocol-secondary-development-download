@@ -909,3 +909,15 @@
 /* The wrapper must not draw a frame at all (the light box read as a mistake): both containers are forced borderless. */
 .hub-entries { border: 0 !important; box-shadow: none !important; }
 .hub-entries__row { border: 0 !important; box-shadow: none !important; background: none !important; }
+/* The button IS the image: each card keeps its texture's own aspect ratio (btn_single 201×121, btn_team 233×122,
+   btn_match 267×120) so nothing is stretched or cropped. One shared height, width derived from it. */
+.hub-entry { height: calc(1.5 * var(--ui-unit, 1rem)); background-size: 100% 100% !important; }
+.hub-entry--solo { width: calc(1.5 * 201 / 121 * var(--ui-unit, 1rem)); }
+.hub-entry--coop { width: calc(1.5 * 233 / 122 * var(--ui-unit, 1rem)); }
+.hub-entry--mm { width: calc(1.5 * 267 / 120 * var(--ui-unit, 1rem)); }
+.hub-entries__groups {
+  grid-template-columns:
+    calc(1.5 * 201 / 121 * var(--ui-unit, 1rem) + 0.2 * var(--ui-unit, 1rem))
+    calc(1.5 * 233 / 122 * var(--ui-unit, 1rem) + 0.16 * var(--ui-unit, 1rem))
+    calc(1.5 * 267 / 120 * var(--ui-unit, 1rem));
+}
