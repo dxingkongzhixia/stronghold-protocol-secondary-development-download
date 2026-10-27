@@ -198,6 +198,23 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 ## 9. 已知问题 / 待办
 
+**2026-10-27 音效与立绘：从国服客户端补齐（已改，未上线）**
+
+- **症状**：部分干员（尤其新干员）技能期间没有对应音效 —— 烛煌 S3「众恶的焚场」（弹药类）只有开技能那声通用
+  `b_char_atkboost`，技能期间的枪声/命中声一次不响。
+- **原因**：客户端放技能期间攻击/命中音用的是清单里的 `audio.sfx.units[干员].attacks[技能槽]` / `hits[技能槽]`
+  （`public/js/audio.js` 的 `unit()`），而发布的 `data/assets.json` 里**只有 1 个单位有 `attacks`、0 个有 `hits`**：
+  生成器（`tools/assets/plan.mjs` 的 `pickModeAttacks/pickModeHits`）本来能给出 351 个，但对应 mp3 不在镜像里 →
+  `fetch-assets` 把 leaf 丢掉了。烛煌 S3 的官方音是 `p_skill_hcnsrfrsr` / `p_atk_hcnsrfr_s` / `p_imp_hcnsrfr_s`。
+- **改法**：新增 `tools/local-extract/sfx.py`（从 B 站国服客户端的 `audio/sound_beta_2/{player,enemy}` 抽 AudioClip，
+  ffmpeg 转 96 kbps mp3）与 `tools/local-extract/illust.py`（`chararts/<charId>.ab` 的立绘精灵 → 3:5 卡面 WebP）；
+  实抽 **331 个音效 + 71 张立绘**，再 `fetch-assets --offline --allow-shrink` + `tools/fetch-stats-assets.mjs` 重建清单。
+  结果：**84 个干员有 `attacks`、57 个有 `hits`**（此前 1 / 0），`chars[].illust` 211 张；敌方仍有 **49 个音效**国服
+  客户端也没有（敌方技能音，不影响干员）。详见 [`ASSETS.md`](ASSETS.md) 的「本地客户端来源」。
+- **动画（未做）**：主人 2026-10-27 报告的「目标被打死后攻击动画直接回落、一卡一卡」还需要一个具体复现（哪个干员、
+  普攻还是技能、目标是被别人打死还是走出范围）——现有 `_predictWindUp` 的预测起手在没等到 `atk` 时会走完 begin+loop
+  再淡回（0.15 s 混合），与官方「动画走完才离开攻击状态」一致，所以症状可能来自别的路径（形态切换 / end clip）。
+
 **2026-10-27 内存：插件内容集缓存（已改，未上线）**
 
 - **症状**：线上主进程 17 人时 **1.03 GB**（部署后约 400 MB，一路涨到 1 GB 才平稳），另有 3 个比赛 host 子进程

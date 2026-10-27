@@ -58,8 +58,9 @@ test('every generated attack/hit reference resolves to a valid pool and its sele
   }
   // This fork's manifest has fewer unit-sound entries than the mainline's; a few references are its own overrides.
   assert.ok(refs >= 660, `refs ${refs}`);
-  assert.equal(Object.keys(pools).length, 937);
-  const p = pools[units.char_4064_mlynar.attackPools[2]];
+  // 939: the 2026-10-27 local-client extraction added the per-skill attack/hit banks (attacks/hits on 84 / 57 units)\n  assert.equal(Object.keys(pools).length, 939);
+  // 2026-10-27: the mode mapping is the official file's own letter (_d/_h/_s = 技能1/2/3), so mlynar's _h bank is S2 (index 1)
+  const p = pools[units.char_4064_mlynar.attackPools[1]];
   assert.equal(p.sounds['player/p_imp/p_imp_loyalsword_h.mp3'].delay, 0.1);
 });
 

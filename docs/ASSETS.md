@@ -898,6 +898,19 @@ primary repo with `ACAO: *`.)
   ```
   `--dub`（`cn` 默认 / `jp`）选清单里的树；客户端的 `voice` 是**日配**、`voice_cn` 是**中配**（英配 `voice_en`）。播放时**选中的语言优先，缺则逐条回退另一套**——中文⇒CN 否则 JP；日本語⇒JP 否则 CN——两套都没有才不出声（`public/js/audio.js voiceLine`），所以本地客户端没有的（新干员）不影响它上线。
 - **BGM / SFX**：`extract.py` / `extract-voice.py` 都不管；本地这个日服客户端也**没有**上游新增的 `m_bat_kazimierz2_*` / `m_bat_corrosion_*` / `b_ui_alarmenter`。→ 走镜像（见下），或以后有更新的客户端再抽。
+- **战斗音效与立绘（B 站国服客户端，2026-10-27）**：国服装的这个客户端（`D:\本地网络游戏中心\B站鹰角启动器\Arknights bilibili\games\Arknights\Arknights_Data\StreamingAssets\AB\Windows`）带着整包战斗音效与全部立绘，镜像缺的（上游只列了部分文件）直接从它抽：
+  ```
+  # 技能形态的攻击/命中音效（p_atk_*/p_imp_*/p_skill_* …；AB 里是 WAV，ffmpeg 转 96 kbps mp3）
+  py -3.14 tools/local-extract/sfx.py --game "<client>\Arknights_Data\StreamingAssets\AB\Windows" --wanted <wanted.json>
+  # 立绘（chararts/<charId>.ab 的 <charId>_1 精灵 → 3:5 头胸构图 WebP，与 tools/illust.mjs 的卡面一致）
+  py -3.14 tools/local-extract/illust.py --game "<client>\Arknights_Data\StreamingAssets\AB\Windows" --wanted <ids.json>
+  ```
+  `--wanted` 就是 `node tools/fetch-assets.mjs --offline` 报的 dropped leaves（`audio/sfx/...` 相对路径 / charId 列表，见 `.cache/assets-report.json` 的 `droppedLeaves`）。2026-10-27 实抽：**331 个技能音效**（清单从此有了 `sfx.units[].attacks/hits/attackMix/attackPools`：84 个干员有 `attacks`、57 个有 `hits`，此前分别只有 1 / 0 —— 烛煌 S3「众恶的焚场」的 `p_atk_hcnsrfr_s`、`p_imp_hcnsrfr_s` 就是这样补回来的）+ **71 张立绘**（此前 `chars[].illust` 缺 71 个新干员，清单重建会因此丢 103 个条目）。**49 个敌方音效国服客户端里也没有**，仍缺（那部分是敌方技能音，不影响干员）。
+  重建清单的顺序（缺了第二步会丢掉 `ui.statistics/*` 那 37 张统计页图 —— 它们不是 `fetch-assets` 生成的）：
+  ```
+  node tools/fetch-assets.mjs --offline --allow-shrink   # 只有本机确实缺文件时才允许缩；缺文件会先报 droppedLeaves
+  node tools/fetch-stats-assets.mjs                      # 把 ui.statistics/* 补回清单
+  ```
 - ✅ **远程镜像其实能用**：本机直连 `raw.githubusercontent` / `jsDelivr` 被墙，但 `fetch-assets` 带 **`--asset-source=mirror`**（#24 的 gh-proxy 镜像）就正常：
   ```
   node tools\fetch-assets.mjs --asset-source=mirror
