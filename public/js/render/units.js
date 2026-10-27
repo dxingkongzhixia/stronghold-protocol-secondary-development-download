@@ -83,6 +83,7 @@
 
 import { UF, ANIM } from '../../../shared/constants.js';
 import { SpineActor } from './spine.js';
+import { MoteRing } from './motes.js';
 import { skillAttackMode } from './skillAttack.js';
 import { MANIFOLD, isManifold, manifoldCopyForm, manifoldAttackForm } from './manifold.js';
 import { diamondTexture, shadowTexture, fxAtlas, tierChip, statusTexture, itemTexture, hudRings, ringArc, downLabel, HUD_DISC, ELEMENT_RING } from './textures.js';
@@ -590,6 +591,8 @@ export class UnitView {
     this.body.addChild(this.fallback);
     this.actor = null;
     this.spineReady = false;
+    this.motes = null;            // 魔王's orbiting 「微尘」: { n, wide } | null (sync; b.snap `motes`, render/motes.js)
+    this.moteRing = null;
     this._modelDirty = false;            // died / stood up since the last frame: update() checks Front ⇄ Back (_syncModel)
     this._pendingDeployElapsed = null;  // elapsed game seconds until a late model can continue Start
     this._landUntil = 0;                 // a prep landing (land) owns the Start clip until then (ms, performance clock)
@@ -1000,6 +1003,7 @@ export class UnitView {
     this.hp = hp;
     this.sp = s.sp; this.spMax = s.spMax;
     this.ammo = s.ammo || null; this.wolves = s.wolves || null; this.neg = s.neg > 0 ? Math.min(1, s.neg) : 0;
+    this.motes = s.motes && s.motes.n > 0 ? s.motes : null;
     this.coins = s.coins || null;
     this.energy = s.energy || null;
     const prevFlags = this.flags;
@@ -1165,6 +1169,32 @@ export class UnitView {
 
   _releaseEntry(entry) {
     try { this.ctx.assets?.spine?.release(entry); } catch { /* ignore */ }
+  }
+
+  /**
+   * 魔王 T1 过往尘埃 的「微尘」: b.snap `motes` → { n, wide } (sync). render/motes.js draws `n` sprites of her model's
+   * own `C_Eff_Moire_B` region circling her (the official slots `C_Eff_Moire_B` / `B2` / `B3` are attached at runtime in
+   * the real client, and every animation leaves them empty); the ring lives inside the spine container so it inherits
+   * the model's scale, facing and alpha. Orbit: the hidden 5★'s parameters (1.15 tiles, 30°/s), S2's wider
+   * `outside_radius` (2 tiles) comes as `wide`. `n` drops when a mote touches an operator (it comes back 6 s later).
+   * The 4★'s ring is decoration only: her collision is a whole-circle check, so the drawn positions do not decide
+   * anything. The hidden 5★'s ring is not drawn yet (its kit publishes no `motes`). No state, no model or no motes:
+   * nothing is drawn (and the ring is torn down).
+   */
+  _syncMotes(dt) {
+    const st = this.motes;
+    if (!st || !(st.n > 0)) {
+      if (this.moteRing) { this.moteRing.destroy(); this.moteRing = null; }
+      return;
+    }
+    const spine = this.actor && this.spineReady ? this.actor.spine : null;
+    if (!spine) return;                               // no model yet (or the fallback picture): nothing to circle
+    if (!this.moteRing) {
+      this.moteRing = new MoteRing({ PIXI: this.P, getTexture: () => this.actor?.effectTexture?.('C_Eff_Moire_B', 'C_Eff_Moire_B') });
+      spine.addChild(this.moteRing.root);
+    }
+    this.moteRing.setState(st.n, st.wide);
+    this.moteRing.update(dt);
   }
 
   /** Destroy the current Spine actor (and its impostor) and release its asset entry (model swap / destroy). */
@@ -1435,6 +1465,7 @@ export class UnitView {
   /** @param {number} dt real seconds @param {any} cam camera @param {number} t real clock */
   update(dt, cam, t) {
     if (this.destroyed) return;
+    this._syncMotes(dt);
     if (this._pendingDeployElapsed != null) this._pendingDeployElapsed += dt * (this.ctx.animRate?.() || 1);
     // a displacement's slide (slideTo): held where it stood until the snapshot with the destination is shown, then
     // eased into the sampled position (sync keeps `lx, ly` current) under a constant deceleration
@@ -2270,6 +2301,7 @@ export class UnitView {
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
+    if (this.moteRing) { this.moteRing.destroy(); this.moteRing = null; }
     this._dropActor();
     this.shadow.destroy();
     this.blockIcon.destroy();
