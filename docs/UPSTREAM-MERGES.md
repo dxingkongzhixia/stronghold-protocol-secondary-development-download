@@ -1054,6 +1054,35 @@ docs guards 34 pass / 0 fail.
 - `node tools/golden.mjs`：roster 49 / bonds 46 / fields 22 / matches 21 / standins 11 / diy 129 **全匹配**；每次 golden 变更都做过「撤掉本项 → 零差异」归因。
 - `npx eslint .` 0 error；`typecheck` / `check:imports` 通过；docs 守卫 **35/35**。
 
+---
+
+## 15. 魔王的「微尘」光环（#576，2026-10-27）
+
+> 上游 `6dd16c67a` / 合并 `c9480045d`（PR #576）。本批只取这一个外观功能；它是“模拟只给枚数、客户端自己画位置”的范例，和 §14 的战斗修正分开记录。
+
+| 层 | 文件 | 做什么 |
+|---|---|---|
+| 模拟 | `server/sim/content/kits/ops/chess_char_4_25-cetsyr.js` | 已有 `unit.mem.motes`（每枚的可用时间）；新增一行 `unit.moteRing = () => [可用枚数, S2 宽半径 ? 1 : 0]` |
+| 快照 | `server/sim/snapshot.js` | 新增 `moteView(u)`（能力探测 + clamp 到 9）与 `MOTE_MAX` |
+| 快照 | `server/sim/battle/events.js` | `snap.motes = [[id, count, wide]]`，只在非空时下发；**放在循环外**（上游写在循环体内，能工作但不整洁） |
+| 解析 | `public/js/render/interp.js` | `normalizeSnapshot` 解析成 Map，`sample().motes = { n, wide } \| null`；缺表即清空 |
+| 渲染 | `public/js/render/motes.js` | 新增：`moteOffsets()` 均分圆周 + `MoteRing` 精灵池（增删、旋转、懒取贴图） |
+| 渲染 | `public/js/render/spine.js` | 新增 `attachmentTexture()` / `SpineActor.effectTexture()`，从她图集的 `C_Eff_Moire_B` 区域取图并缓存 |
+| 渲染 | `public/js/render/units.js` | 新增 `_syncMotes(dt)`：挂在 `actor.spine` 里继承缩放/朝向/alpha；无模型或状态消失即拆 |
+
+**本分支适配**
+
+- `interp.js` 已有 #869 的 `face`，`motes` 与它并列添加；`units.js` 的 `UnitView` 结构（`this.P` / `spineReady` / `actor.spine`）与上游一致，`_syncMotes` 基本原样。
+- 套件是 fork 版，但变量名（`baseCnt` / `S2` / `skillActive` / `unit.mem.motes`）与上游一致，只加一行。
+- 测试：`test/render/motes.test.js` 直接使用本分支的 `test/render/fakepixi.js`；`test/sim/hud-readouts.test.js` 的三条服务端用例干净应用。
+
+**验收**
+
+- `test/render/motes.test.js` 7/7；`test/sim/hud-readouts.test.js` 12/12。
+- `npm test`：**8510 项 / 8470 通过 / 0 失败 / 40 跳过，11.2 min**。
+- `node tools/golden.mjs`：六个家族全匹配（只加只读展示字段，9 元组与 golden 不变）。
+- `npx eslint .` 0 error；`typecheck` / `check:imports` 通过。
+
 ### 0.1 运行时补齐：回环射手的回程（owner 报障 2026-10-16 夜）
 
 - **症状**：回环射手（跃跃 `char_4100_caper` / 娜仁图亚 `char_4138_narant`）的**攻击物没有回收动画** —— 飞出去就没回来。

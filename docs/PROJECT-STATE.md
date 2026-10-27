@@ -51,7 +51,7 @@
 | 2026-10-26 上线批次 | ① **插件组合上限** `4 → 12 → 128`（`plugins/config.json` 的 `limits.maxSets: 128`，策略天花板从 0–64 放到 0–128；代码默认 `DEFAULT_MAX_SETS = 32`、空闲缓存 `MAX_KEPT = 12`）—— 之前 4 个就是玩家看到的「插件已达上限」；② 房间加载插件卡顿：内容集文件校验改用浏览器原生 `crypto.subtle.digest`，纯 JS SHA-256 仅作回退；③ `server/speed.js` 的 `readOrigins` 按**位置**把第一个源标为「中继」（域名中继不再被误判为镜像）；④ 主界面模式选择三张卡改用官方纹理（`btn_single/btn_team/btn_match`）；⑤ 按键音关闭 |
 | git store | **台式机** = `_merge-scratch`（分支 `prts-plugin`，HEAD 见 `git log`），开发树 `D:\DOTK\Stronghold-Protocol` 已镜像；本轮 HEAD `fce35d298` |
 | 远程同步 | **已全部推送（2026-10-26）**：`github/master` == `gitee/master` == 中继 `master` == HEAD（`fce35d298`）。GitHub 直连会失败，本机走 Steam++ 加速器（hosts 把 github 域名指到 `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`（已写进本仓库 local config，非仓库文件） |
-| 全量测试 | **8498 项 / 8458 通过 / 0 失败 / 40 跳过，11.3 min**（2026-10-27 笔记本实测；0.3.2 战斗修正批 A 之后）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6） |
+| 全量测试 | **8510 项 / 8470 通过 / 0 失败 / 40 跳过，11.2 min**（2026-10-27 笔记本实测；0.3.2 战斗修正批 A + 魔王微尘之后）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6） |
 | 其它闸门 | **2026-10-26 台式机 store 复测**：`lint` 0 error（186 warning）✓；`typecheck` ✓；`i18n check en --strict` **1966/1966**（100%）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 **35/35** ✓；kit 覆盖 **283/283** 技能、**112/112** 棋子 ✓；`check:imports` 3 条既有 `sim-node` 边界记录 |
 | 本机环境 | Node **v24.19.0**（线上是 v26.10.0）；GitHub 经 Steam++（hosts → `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`；官方数据 CDN 需要代理 |
 | 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
