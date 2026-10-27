@@ -125,7 +125,7 @@ test('SIGTERM-catching setup hits the probe\'s SIGKILL ceiling, returns no set a
   for (const ms of [1000,2000,4000,8000]) {
     const result = await runComposition(f.registry.contentDirs,['loop'],ms);
     assert.equal(result.cs,undefined);assert.equal(result.problems[0].code,'PLUGIN_SCRIPT_CHECK');
-    assert.match(result.problems[0].message,new RegExp(`${ms} ms.*SIGKILL`));
+    assert.match(result.problems[0].message,new RegExp(`${ms} ms.*SIGKILL.*SP_SCRIPT_PROBE_MS`));
     if (fs.existsSync(file)) break;
   }
   assert.ok(fs.existsSync(file),'the setup started within one of the ceilings');assertDead(file);
