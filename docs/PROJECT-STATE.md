@@ -64,7 +64,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **https://strongholdprotocolcsym.top:10785/**（官方 HTTPS；NAT：内网 3000 → 外网 20522；旧的 `http://183.66.27.19:20522` 仍可访问，但会收到“改用官方地址”的普通通知） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `379fd659d3ff`**（2026-10-27 22:56 部署后重启，由 `/healthz` 实测且 == 磁盘 build；上一版 `b8f6defd0d1b`；备份 `/root/sp-backup-20261027-225328.tgz`；社区更新日志仍为 **0.4.73**，本批未写日志）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `379fd659d3ff`**（2026-10-27 22:56 部署后重启，由 `/healthz` 实测且 == 磁盘 build；上一版 `b8f6defd0d1b`；备份 `/root/sp-backup-20261027-225328.tgz`；社区更新日志 **0.4.75**，2026-10-27 23:05 由完成通知写入）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -109,7 +109,7 @@
 
 | 时间 | 代码 | build | 更新日志 | 要点 |
 |---|---|---|---|---|
-| **2026-10-27 22:56** | `80a46958e` | **`379fd659d3ff`** | —（未发更新日志） | 技能音效补全 331 条 + 71 张新立绘（本地 CN 客户端抽取）、攻击收尾 `MIN_ATTACK_TAIL`、内存优化（content set 释放 / `MAX_KEPT` 6 / `MAX_HOSTS` 6 / 512 MB heap）；相对 `d62b97ad1` 6 个提交 / 423 个文件，增量包 9.07 MB、0 删除；先推通知（14 人）→ 备份 `/root/sp-backup-20261027-225328.tgz` → 解包 → 重启；中继 `master` 同为 `80a46958e`；`/healthz` 线上 == 磁盘 `379fd659d3ff` |
+| **2026-10-27 22:56** | `80a46958e` | **`379fd659d3ff`** | **`0.4.75`**（23:05 完成通知写入；部署前那条**只发了通知、没勾「写入更新日志」**，所以当时日志停在 0.4.74） | 技能音效补全 331 条 + 71 张新立绘（本地 CN 客户端抽取）、攻击收尾 `MIN_ATTACK_TAIL`、内存优化（content set 释放 / `MAX_KEPT` 6 / `MAX_HOSTS` 6 / 512 MB heap）；相对 `d62b97ad1` 6 个提交 / 423 个文件，增量包 9.07 MB、0 删除；先推通知（14 人）→ 备份 `/root/sp-backup-20261027-225328.tgz` → 解包 → 重启 → 完成通知（7 人，`changelog: true` → 更新日志 **0.4.75**）；中继 `master` 同为 `80a46958e`；`/healthz` 线上 == 磁盘 `379fd659d3ff` |
 | **2026-10-27 17:02** | `d62b97ad1` | **`b8f6defd0d1b`** | —（未发更新日志） | 皮肤修复（`build` 补回 `plugin.lock.json` 的 `anims`）+ 主线 0.3.2 战斗修正批 A 12 项 + 魔王微尘光环；相对 `fce35d298` 34 个提交 / 63 个文件，增量包 1.07 MB；先推通知（4 人）→ 备份 `/root/sp-backup-20261027-165902.tgz` → 解包 → 重启 → 再补一条完成通知（3 人）；`/healthz` 线上 == 磁盘 `b8f6defd0d1b` |
 | **2026-10-23 19:57** | `2adf3c7ee` | **`3586e9a2570f`** | **`0.4.71`** | 修复准备按钮点击与临时整备区：按钮不再使用原生 `disabled`，忙碌/过期状态不再锁死；临时整备区非空时点击准备会提示「清空并准备」（出售角色、销毁物品后继续）。**缓存策略改为 app shell / JS / CSS `no-store`**；`/assets`、`/fonts`、`/vendor` 继续长缓存。Gitee / GitHub / 中继均为 `2adf3c7ee`；备份 `/root/sp-backup-code-20261023-195733.tgz` |
 | **2026-10-23 19:34** | `42f77f6a7` | **`e70a15e1be0a`** | **`0.4.70`** | 准备按钮不再被原生 disabled 吞掉点击；新增临时整备区清空动作；同批同步 Gitee 585d 的 PRTS / 黑蛇 / FX / 大厅改动；通知 11 人，备份 `/root/sp-backup-code-20261023-194809.tgz` |
