@@ -523,7 +523,7 @@ test('战术决策 E2E (co-op 3): team cards reach every teammate (AI included),
   for (const c of view) assert.equal(c.team, DATA.choices.cards.tactic.find((x) => x.effectId === c.id).team, `${c.id} team flag`);
   const all = [...m.players.values()];
   const before = new Map(all.map((ps) => [ps.playerId, { funds: ps.funds, free: ps.shop.freeRefreshes, yan: ps.layers.yanShip || 0, invest: ps.layers.investShip || 0,
-    items: new Set(ownedItems(ps).map((p) => p.uid)), chess: [...ps.hand, ...ps.temp].filter((p) => p && p.kind === 'chess').length }]));
+    items: ownedItems(ps).map((p) => ({ uid: p.uid, id: p.id })), chess: [...ps.hand, ...ps.temp].filter((p) => p && p.kind === 'chess').length }]));
   // the humans take 列装 (team) and 整备 (personal); the AI picks what it likes
   draftPicks(h, { p_0: 'allybuff_select_1', p_1: 'allybuff_select_5' });
   const aiIdx = sp.picks.ai_0;
@@ -533,12 +533,16 @@ test('战术决策 E2E (co-op 3): team cards reach every teammate (AI included),
   // 列装: 2 random tier-I items for everyone (pool_equip_shop_1)
   for (const ps of all) {
     const had = before.get(ps.playerId).items;
+    const hadUids = new Set(had.map((it) => it.uid));
     const now = new Set(itemsOf(ps).map((p) => p.uid));
-    const fresh = itemsOf(ps).filter((p) => !had.has(p.uid));
+    const fresh = itemsOf(ps).filter((p) => !hadUids.has(p.uid));
+    // 列装's pool is tier-I. A band's R3 prep-start grant (昆图斯) lands after the draft since #851 and is not the card.
+    const freshT1 = fresh.filter((p) => DATA.items[p.id].tier === 1);
+    const consumedT1 = had.filter((it) => DATA.items[it.id]?.tier === 1 && !now.has(it.uid)).length;
     // an identical normal pair merges into the 进阶 item (counts 2); an owned copy consumed by a merge counts −1
-    const n = fresh.reduce((k, p) => k + (DATA.items[p.id].isGolden ? 2 : 1), 0) - [...had].filter((u) => !now.has(u)).length;
-    assert.equal(n, 2, `${ps.playerId}: 列装 gives 2 items`);
-    for (const it of fresh) assert.equal(DATA.items[it.id].tier, 1, `${ps.playerId}: tier-I item ${it.id}`);
+    const n = freshT1.reduce((k, p) => k + (DATA.items[p.id].isGolden ? 2 : 1), 0) - consumedT1;
+    assert.equal(n, 2, `${ps.playerId}: 列装 gives 2 tier-I items`);
+    for (const it of freshT1) assert.equal(DATA.items[it.id].tier, 1, `${ps.playerId}: tier-I item ${it.id}`);
   }
   // 整备: personal EffectRef on p_1 only
   assert.ok(h.ps('p_1').effects.some((e) => e.key === BUILTIN_REFS.goldenItem && e.counter === 1));
