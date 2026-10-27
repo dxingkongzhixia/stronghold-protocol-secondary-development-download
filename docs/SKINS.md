@@ -54,6 +54,7 @@ The old cosmetic-plugin layout can be moved into the core layout without copying
 ```bash
 node tools/skins.mjs import plugins/local-skins --id local-skins --move
 node tools/skins.mjs import plugins/local-skins-2 --id local-skins-2 --move
+node tools/skins.mjs import plugins/skins-update --id skins-update --move   # if the old layout has it
 node tools/skins.mjs import path/to/another-set --id my-set          # copy instead of --move
 node tools/skins.mjs build                                         # rebuild skins/catalogue.json
 ```
@@ -70,6 +71,7 @@ into the core layout once and the plugins are gone (and so is the mod mark), wit
 # on the server, after the build that serves /skins/ is running
 node tools/skins.mjs import plugins/local-skins   --id local-skins   --move
 node tools/skins.mjs import plugins/local-skins-2 --id local-skins-2 --move
+node tools/skins.mjs import plugins/skins-update --id skins-update --move   # if the old layout has it
 node tools/skins.mjs build
 # restart once (skins/catalogue.json is read at boot on some paths; /skins/ is served either way)
 ```
@@ -306,6 +308,7 @@ node tools/skins.mjs check
 # on the machine that has the old plugin layout / the official client
 node tools/skins.mjs import plugins/local-skins   --id local-skins   --move
 node tools/skins.mjs import plugins/local-skins-2 --id local-skins-2 --move
+node tools/skins.mjs import plugins/skins-update --id skins-update --move   # if the old layout has it
 node tools/skins.mjs build
 node tools/skins.mjs check
 # restart the server once

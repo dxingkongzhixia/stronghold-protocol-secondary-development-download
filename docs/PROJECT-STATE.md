@@ -194,6 +194,20 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 ## 9. 已知问题 / 待办
 
+**2026-10-27 核心皮肤美术缺失（代码已核心化，待服务器迁移数据）**
+
+- `skins/catalogue.json` 已 tracked：3 套、175 名干员、277 套外观（257 可穿戴 / 20 仅图片）。但本机与运行树
+  `D:\stronghold-protocol-secondary-development-download` 的 `skins/sets/` **都是空的**；`node tools/skins.mjs check`
+  实测 **2358 个 `/skins/…` 文件里 0 个存在**。所有皮肤因此回退干员默认模型 —— 房间里看起来就是“没有按全局皮肤设置显示”。
+- 代码链路本身已核对：`room.skins` → 座位 / `PlayerState.skins` → `m.public.players[].skins` + `UnitInfo.skin` →
+  `render/app.js skinOf`；`skins/catalogue.json` 由 `coreSkins.installCoreSkins` 加载并 **合并在所有房间/个人插件层之下**。
+  房间只携带“选择”，美术来自核心目录；缺的只是 `skins/sets/` 的本地抽取。
+- 服务器上执行：`node tools/skins.mjs import plugins/local-skins --id local-skins --move`（`local-skins-2` 同样）→
+  `node tools/skins.mjs build` → `node tools/skins.mjs check`（应为 0 missing）→ 重启一次；再从
+  `plugins/config.json` 的 `default` 和房间插件里移除 `local-skins*`。
+- 若服务器 `check` 已是 0 missing 且房间仍显示默认，按 `docs/SKINS.md` 的排查项收集：干员 / 皮肤键、自己还是队友、
+  `settings.otherSkins`、房间是否 modded、浏览器里 `/skins/sets/…` 的请求状态。
+
 **2026-10-25 代码健康维护（未上线，store `prts-plugin`）**
 
 - `typecheck` 从 30 个错修到 0：`jsconfig.json` 缺 `DOM` lib（`shared/origins.js` 的 `new URL()`）、`shared/plugins/*` 的 `isObj` 没有类型谓词、`PluginEntry` 少 `builtin`、`scriptLoad.js` 的默认 fetch 用展开参数。CI 的 tooling job 此前一直在红。
