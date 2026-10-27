@@ -48,6 +48,16 @@
 
 const clampN = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
+/**
+ * Seconds of clip an attack's strike is always followed by (at the clip's own speed). The official client leaves the
+ * attack state when the CLIP ends, so every attack shows its strike and a recovery; a model whose OnAttack frame sits at
+ * (or near) the end of its loop would otherwise end the attack in the very frame it started — the flash-then-idle that
+ * reads as a stutter (owner report 2026-10-27; reproduced in a live solo battle: `attack` and `attackEnd` in one frame,
+ * the same track time).
+ */
+const MIN_ATTACK_TAIL = 0.15;
+
+
 /** Longest wind-up compression (× the rhythm speed) when the look-ahead is shorter than the natural wind-up. */
 export const MAX_WIND_SPEEDUP = 2.5;
 
@@ -733,7 +743,9 @@ export class SpineActor {
     if (!(strikeSeq > 0) || lead * plan.ts > strikeSeq + 1e-6) return false;
     if (!once) this.interval = iv;
     this.mode = 'attack';
-    this.attackUntil = this.clock + lead + (single ? Math.max(0, seqDur - strikeSeq) / plan.ts : Math.max(0.45, iv * 1.4));
+    // never a flash: the window always covers at least MIN_ATTACK_TAIL (see there)
+    this.attackUntil = this.clock + Math.max(MIN_ATTACK_TAIL,
+      lead + (single ? Math.max(0, seqDur - strikeSeq) / plan.ts : Math.max(0.45, iv * 1.4)));
     this._playAttackAt(plan.start, plan.tsWind, !single, 0.06);
     this.windTs = plan.ts;
     this.windUntil = this.clock + lead;
@@ -761,8 +773,10 @@ export class SpineActor {
     // (a clip-per-attack actor still playing the previous attack's clip was not wound up for this one)
     const playing = this.current === clip.loop || (bd > 0 && this.current === clip.begin);
     const wasAttacking = this.mode === 'attack' && playing && (!(per || slowOp) || this.wound);
+    // the swing after the strike (a clip whose OnAttack frame is the loop's last gets a floor: see MIN_ATTACK_TAIL)
+    const tail = Math.max(0, seqDur - strikeSeq) / ts;
     this.mode = 'attack';
-    this.attackUntil = this.clock + Math.max(0, seqDur - strikeSeq) / ts;
+    this.attackUntil = this.clock + Math.max(tail, MIN_ATTACK_TAIL);
     this.windUntil = null;
     this.wound = false;
     if (!wasAttacking) {
@@ -772,7 +786,10 @@ export class SpineActor {
       // lifts before the slam; #246 by @TsangAsuna, accepted by the owner on 2026-10-07)
       const whole = per && this.interval >= seqDur;
       if (whole) this.attackUntil = this.clock + seqDur / ts;
-      this._playAttackAt(whole ? 0 : strikeSeq, ts, !single, 0.06);
+      // ...and a clip with no room left after its strike starts a little earlier, so the strike frame plus the floor
+      // above are what plays (never a one-frame flash)
+      const from = whole ? 0 : tail < MIN_ATTACK_TAIL ? Math.max(0, seqDur - MIN_ATTACK_TAIL * ts) : strikeSeq;
+      this._playAttackAt(from, ts, !single, 0.06);
     } else if (single) {
       const e = this.spine.state.tracks[0];
       if (e) e.timeScale = ts;

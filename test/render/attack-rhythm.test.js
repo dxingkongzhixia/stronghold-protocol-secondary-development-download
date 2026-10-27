@@ -109,4 +109,19 @@ describe('the rhythm wind-up (render/units.js _predictWindUp)', () => {
     run(v, 1.4);
     assert.notEqual(v.actor.mode, 'attack', 'nothing to predict without a begin');
   });
+
+  test('an attack never ends in the same frame it starts: the strike keeps a visible tail', async () => {
+    // A model whose OnAttack frame sits at the end of its loop had `seqDur - strikeSeq` = 0, so attack() set the window
+    // to "now": the swing flashed for one frame and the model snapped back to idle (owner report 2026-10-27, reproduced
+    // in a live solo battle as attack + attackEnd in the same frame). MIN_ATTACK_TAIL floors both paths.
+    const v = await op(GDGLOW);
+    v.onAttack(null, 1.0, 'arrow');                       // a late attack, no wind-up
+    const late = v.actor.attackUntil - v.actor.clock;
+    assert.ok(late >= 0.15 - 1e-9, `late attack window ${late}`);
+    // and the wind-up path (a predicted swing whose attack never comes) is floored too
+    const w = await op(GDGLOW);
+    assert.equal(w.actor.windUp(w.atkInterval, 0.01), true, 'a last-moment wind-up still starts');
+    const wound = w.actor.attackUntil - w.actor.clock;
+    assert.ok(wound >= 0.15 - 1e-9, `wind-up attack window ${wound}`);
+  });
 });
