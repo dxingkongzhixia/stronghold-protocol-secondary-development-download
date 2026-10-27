@@ -27,7 +27,8 @@
 // operator carries — the operator's name and portrait with the 「自选」 tag, dimmed until owned (not bought, or not in the
 // shop yet), ✕ when all its bonds are off this match (m.private.diyBanned) — and opens the operator's card; a watched
 // teammate's 自选 pieces on the field are rows too (their picks are not sent), opening THEIR operator's card (the unit's
-// pick goes with onMember: never the empty 甄选干员 slot's card).
+// pick goes with onMember: never the empty 甄选干员 slot's card). A 自选 piece that is a member through 变形同构体 shows its
+// operator too, with the 「同构」 tag (#846: it showed the empty slot's 「甄」).
 
 import { html, BondDisc, Icon, MicroLabel, Tooltip } from './components.js';
 import { RichText, UnitThumb, BondGlyph, GIcon } from './gameComponents.js';
@@ -125,7 +126,7 @@ export function BondPopup({ bondId, entry, priv, banned = [], onClose, onMember,
   const members = bondMembers(b, priv, banned, getChess, (id) => data.lookup('items', id), pieceRecord);
   // 补位: the stand-in a row shows (a 自选 row is its operator already)
   const rawChess = (id) => data.lookup('chess', id);
-  const siOf = (mb) => (mb.diy ? null : memberStandIn(priv, rawChess(mb.id), data.get('backups'), rawChess));
+  const siOf = (mb) => (mb.diy || mb.rec ? null : memberStandIn(priv, rawChess(mb.id), data.get('backups'), rawChess));
   // operators the match bans (gameLogic bondMembers `banned` — the match's bannedChess) are not listed: the popup
   // shows the bond's AVAILABLE operators only (user request 2026-10-06), with a note for the hidden ones
   const shown = members.filter((mb) => !mb.banned);
@@ -185,10 +186,10 @@ export function BondPopup({ bondId, entry, priv, banned = [], onClose, onMember,
           const name = si ? si.name : mb.name;
           const items = mb.granted && Array.isArray(mb.items) ? mb.items : null;
           return html`<button key=${mb.id} type="button" class=${cx('bpop__member', mb.onBoard && 'is-on', mb.owned && !mb.onBoard && 'is-owned', mb.granted && 'is-granted', si && 'is-standin')}
-              onClick=${() => (si ? onMember?.(mb.id, items, si.standInFor) : onMember?.(mb.id, items))}
+              onClick=${() => (si ? onMember?.(mb.id, items, si.standInFor) : mb.pick ? onMember?.(mb.id, items, null, mb.pick) : onMember?.(mb.id, items))}
               data-granted=${mb.granted ? '1' : null} data-standin=${si ? si.charId : null}
               title=${`${name}${si ? t('（{note}）', { note: standInForText(mb.name) }) : ''}${mb.granted ? t('（变形同构体：视为本盟约成员）') : mb.onBoard ? t('（在场）') : mb.owned ? t('（整备区）') : ''}`}>
-            <${UnitThumb} kind="chess" id=${mb.id} size="sm" dim=${!mb.owned} rec=${si || (mb.diy ? mb.rec : null)} title=${name} />
+            <${UnitThumb} kind="chess" id=${mb.id} size="sm" dim=${!mb.owned} rec=${si || mb.rec || null} title=${name} />
             <span class="bpop__mname">${name}</span>
             ${mb.granted ? html`<span class="bpop__iso" aria-hidden="true">${t('同构')}</span>` : null}
             ${mb.diy ? html`<span class="bpop__iso bpop__diy" data-diy="1" aria-hidden="true">${t('自选')}</span>` : null}
