@@ -41,8 +41,11 @@ function assetPath(set, value) {
   return `/skins/sets/${set}/${rel.replace(/^\.\//, '')}`;
 }
 
+/** One skin's model metadata the client needs besides the files (`anims` etc.): from the set's plugin.lock.json. */
+const CLIP_FIELDS = ['sha256', 'anims', 'animations', 'events', 'hits', 'bounds'];
+
 /** Rewrite one skin's art paths; returns a new record (the source record is never mutated). */
-function rewriteSkin(set, skin) {
+function rewriteSkin(set, skin, lock = null) {
   const out = { ...skin };
   for (const field of IMAGE_FIELDS) {
     const p = assetPath(set, skin[field]);
@@ -62,6 +65,10 @@ function rewriteSkin(set, skin) {
         const textures = model.textures.map((t) => assetPath(set, t)).filter(Boolean);
         if (textures.length) next.textures = textures;
       }
+      // Clip roles / durations / events / hits / bounds come from the old plugin's lock (the Spine parser's output).
+      // validSpine (public/js/assets.js) requires `anims`, so a catalogue without it draws the default model.
+      const meta = isObj(lock?.spine) ? lock.spine[model.skel] : null;
+      if (isObj(meta)) for (const field of CLIP_FIELDS) if (meta[field] !== undefined) next[field] = meta[field];
       if (next.skel && next.atlas) spine[side] = next;
     }
     if (Object.keys(spine).length) out.spine = spine; else delete out.spine;
@@ -75,6 +82,13 @@ function readSet(set) {
   let raw;
   try { raw = JSON.parse(readFileSync(file, 'utf8')); } catch (e) { fail(`${set}/overlay.json: ${e.message}`); return null; }
   if (!isObj(raw?.chars)) { fail(`${set}/overlay.json: no chars object`); return null; }
+  // The old cosmetic plugin's lock: per-skeleton clip roles and durations. Keep it in the core set (import copies the
+  // whole folder) — without it every skin falls back to the operator's own model.
+  let lock = null;
+  const lockFile = join(SETS, set, 'plugin.lock.json');
+  if (existsSync(lockFile)) {
+    try { lock = JSON.parse(readFileSync(lockFile, 'utf8')); } catch (e) { fail(`${set}/plugin.lock.json: ${e.message}`); }
+  } else fail(`${set}/plugin.lock.json is missing: its skins would have no clip roles (run node tools/plugin.mjs pack before importing)`);
   const chars = {};
   for (const [charId, rec] of Object.entries(raw.chars)) {
     if (!isObj(rec)) continue;
@@ -82,7 +96,7 @@ function readSet(set) {
     if (isObj(rec.skins)) {
       next.skins = {};
       for (const [skinKey, skin] of Object.entries(rec.skins)) {
-        if (isObj(skin)) next.skins[skinKey] = rewriteSkin(set, skin);
+        if (isObj(skin)) next.skins[skinKey] = rewriteSkin(set, skin, lock);
       }
     }
     for (const field of IMAGE_FIELDS) {
@@ -112,7 +126,12 @@ function build() {
   mkdirSync(SKINS, { recursive: true });
   writeFileSync(CATALOGUE, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
   const skins = Object.values(chars).reduce((n, c) => n + Object.keys(c.skins || {}).length, 0);
-  console.log(`[skins] ${sets.length} set(s), ${Object.keys(chars).length} operator(s), ${skins} skin(s) -> skins/catalogue.json`);
+  let withClips = 0;
+  for (const c of Object.values(chars)) for (const s of Object.values(c.skins || {})) {
+    if (isObj(s.spine?.front) && isObj(s.spine.front.anims)) withClips++;
+  }
+  console.log(`[skins] ${sets.length} set(s), ${Object.keys(chars).length} operator(s), ${skins} skin(s) -> skins/catalogue.json (${withClips} with clip roles)`);
+  if (withClips < skins) console.log(`[skins] ${skins - withClips} skin(s) have no clip roles (missing plugin.lock.json entries); they will fall back to the default model`);
 }
 
 function check() {
@@ -121,21 +140,24 @@ function check() {
   try { doc = JSON.parse(readFileSync(CATALOGUE, 'utf8')); } catch (e) { fail(`${CATALOGUE}: ${e.message}`); return; }
   const chars = isObj(doc?.chars) ? doc.chars : {};
   const urls = new Set();
-  let skins = 0, wear = 0, artOnly = 0;
+  let skins = 0, wear = 0, artOnly = 0, noClips = 0;
   for (const rec of Object.values(chars)) {
     if (!isObj(rec)) continue;
     for (const field of IMAGE_FIELDS) if (str(rec[field])) urls.add(rec[field]);
     for (const skin of Object.values(isObj(rec.skins) ? rec.skins : {})) {
       if (!isObj(skin)) continue;
       skins++;
-      const hasModel = isObj(skin.spine) && isObj(skin.spine.front) && str(skin.spine.front.skel) && str(skin.spine.front.atlas);
-      if (hasModel) wear++; else artOnly++;
+      const model = isObj(skin.spine) && isObj(skin.spine.front) ? skin.spine.front : null;
+      const hasFiles = !!model && str(model.skel) && str(model.atlas);
+      // validSpine (public/js/assets.js) requires the clip roles: a model without them is not wear-able.
+      const hasClips = hasFiles && isObj(model.anims);
+      if (hasClips) wear++; else if (hasFiles) noClips++; else artOnly++;
       for (const field of IMAGE_FIELDS) if (str(skin[field])) urls.add(skin[field]);
       for (const side of ['front', 'back']) {
-        const model = isObj(skin.spine) ? skin.spine[side] : null;
-        if (!isObj(model)) continue;
-        for (const field of MODEL_FIELDS) if (str(model[field])) urls.add(model[field]);
-        for (const t of Array.isArray(model.textures) ? model.textures : []) if (str(t)) urls.add(t);
+        const m = isObj(skin.spine) ? skin.spine[side] : null;
+        if (!isObj(m)) continue;
+        for (const field of MODEL_FIELDS) if (str(m[field])) urls.add(m[field]);
+        for (const t of Array.isArray(m.textures) ? m.textures : []) if (str(t)) urls.add(t);
       }
     }
   }
@@ -149,7 +171,7 @@ function check() {
     ? readdirSync(SETS).filter((n) => { try { return statSync(join(SETS, n)).isDirectory(); } catch { return false; } })
     : [];
   const noOverlay = setDirs.filter((n) => !existsSync(join(SETS, n, 'overlay.json')));
-  console.log(`[skins] catalogue: ${sets.length} set(s) [${sets.join(', ')}], ${Object.keys(chars).length} operator(s), ${skins} skin(s) (${wear} wear-able, ${artOnly} art-only)`);
+  console.log(`[skins] catalogue: ${sets.length} set(s) [${sets.join(', ')}], ${Object.keys(chars).length} operator(s), ${skins} skin(s) (${wear} wear-able, ${artOnly} art-only${noClips ? `, ${noClips} without clip roles` : ''})`);
   console.log(`[skins] art: ${local.length} file(s) under /skins/, ${local.length - missing.length} present, ${missing.length} missing`);
   if (missing.length) {
     console.log('[skins] first missing:');
@@ -158,6 +180,11 @@ function check() {
   if (sets.length && !setDirs.length) console.log(`[skins] skins/sets/ is missing: the catalogue has ${sets.length} set(s) but no art is installed`);
   else if (sets.some((s) => !setDirs.includes(s))) console.log(`[skins] sets without a directory: ${sets.filter((s) => !setDirs.includes(s)).join(', ')}`);
   if (noOverlay.length) console.log(`[skins] directories without overlay.json: ${noOverlay.join(', ')}`);
+  if (noClips) {
+    console.log(`[skins] ${noClips} skin(s) have a model but no clip roles: plugin.lock.json is missing or has no entry for it; the client draws the default model`);
+    console.log('[skins] run `node tools/plugin.mjs pack skins/sets/<set>` (or import the old plugin folder with its lock), then `node tools/skins.mjs build`');
+    process.exitCode = 1;
+  }
   if (!skins) console.log('[skins] the catalogue has no skins: the picker shows nothing');
   if (missing.length) {
     console.log('[skins] run `node tools/skins.mjs import <plugin-dir> --id <name> --move` (or the local extractor), then `node tools/skins.mjs build`');

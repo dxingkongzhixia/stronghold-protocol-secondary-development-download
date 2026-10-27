@@ -62,6 +62,12 @@ node tools/skins.mjs build                                         # rebuild ski
 `build` merges every `skins/sets/*/overlay.json` in name order and rewrites relative paths. The generated catalogue is
 tracked; `skins/sets/` is in `.gitignore` because the official art must not be redistributed.
 
+`build` also copies each set's Spine metadata — clip roles (`anims`), durations, events, hits, bounds — out of the
+set's `plugin.lock.json` into the catalogue. That file is what the old cosmetic plugin produced with
+`node tools/plugin.mjs pack`; **without it a skin has files but no clip roles**, `validSpine`
+(`public/js/assets.js`) rejects the model, and the client silently draws the operator's default artwork. Import copies
+the whole set folder, so keep the lock next to `overlay.json`.
+
 #### Switching a live server off the old plugin
 
 A server that installed the outfits as cosmetic plugins keeps showing them in the plugin list as 非官方 mods. Move them
@@ -302,7 +308,14 @@ node tools/skins.mjs check
 # [skins] art: 2358 file(s) under /skins/, 2358 present, 0 missing
 ```
 
-`check` exits 1 and names the first missing files. The fix is data, not code:
+`check` exits 1 and names the first missing files, or reports skins that have a model but **no clip roles**:
+
+```
+[skins] 20 skin(s) have a model but no clip roles: plugin.lock.json is missing or has no entry for it; the client draws the default model
+```
+
+That second failure is silent in the game — the room looks like it "ignores the global skin setting" while every file is
+present. The fix is data, not code:
 
 ```bash
 # on the machine that has the old plugin layout / the official client
@@ -318,7 +331,15 @@ Then remove the skin sets from `plugins/config.json` (`default` / the room's plu
 still override a skin, but it is no longer the source. A room that names no visual set, or a room whose plugin set
 changed, must not change which core skins are available.
 
-If `check` reports 0 missing and a room still draws the default model, collect: the chess id and skin key, the
+The **deployed** catalogue is the one browsers read: after rebuilding, copy `skins/catalogue.json` to the server too
+(it is `no-cache`, so a reload revalidates — no hard refresh needed). 2026-10-27 diagnosis of "皮肤在房间里没有按全局设置
+显示": every art file and every `room.skins` value was correct, but the catalogue in use had been built from
+`overlay.json` alone, so no skin carried `anims`; `validSpine` rejected each model and the room drew the operators'
+default artwork. Rebuilding with `plugin.lock.json` present fixed it — in the browser, `__SP_VIEW__.raw.pieceArt(uid)`
+then reports `actor.entry.skel = /skins/sets/…` and `anims.idle = "Idle"`, where a broken catalogue reports the
+`/assets/~…` default model.
+
+If `check` reports 0 missing and 0 without clip roles and a room still draws the default model, collect: the chess id and skin key, the
 owner (your own seat or a teammate), `settings.otherSkins`, whether the room is modded, and the browser console's
 `/skins/sets/…` requests. `room.skins` is cosmetic and public: the server accepts it in every phase
 (`Match.setSkins` → `markPrivate` / `markPublic`), and `render/app.js skinOf` applies `UnitInfo.skin` and

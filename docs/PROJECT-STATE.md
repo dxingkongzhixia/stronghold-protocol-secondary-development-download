@@ -201,9 +201,17 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   `plugins/config.json` 的 `default` 是 `[]`，旧的 `local-skins*` 只在 `plugins/_replaced`（已清理）——**皮肤已是核心，不是插件**。
 - **本机已拉取**：同一套 `skins/sets`（304 MB）已从服务器取回，catalogue 换成服务器版本；`node tools/skins.mjs check`
   为 **0 missing**，本地 `/skins/catalogue.json` 与 `/skins/sets/…` 都返回 200。
-- 因此“房间里不按全局皮肤设置显示”**不是资源缺失或插件来源问题**；代码链路已核对（`room.skins` → 座位 / `PlayerState.skins`
-  → `m.public.players[].skins` + `UnitInfo.skin` → `render/app.js skinOf`）。若仍复现，需要具体：干员 / 皮肤键、自己还是队友、
-  `settings.otherSkins`、房间是否 modded、浏览器里 `/skins/sets/…` 的请求与 `m.public.players[].skins`。
+- **根因已定位并修复（2026-10-27）**：“房间里不按全局皮肤设置显示”既不是资源缺失，也不是插件来源，更不是
+  `room.skins` / `skinOf` 链路 —— 是 `tools/skins.mjs build` 只搬了 `overlay.json` 的路径，**没把旧插件
+  `plugin.lock.json` 里的动画片段（`anims` / 时长 / events / hits / bounds）写进 catalogue**。`validSpine`
+  （`public/js/assets.js`）要求 `anims`，缺了就直接回退干员默认模型，表现就是“只认默认皮肤/不认选择”。
+  本机复现：同一房间、同一条 `room.skins`，catalogue 无 clips 时 `actor.entry.skel` 指向 `/assets/~…`；
+  `node tools/skins.mjs build` 重建后指向 `/skins/sets/local-skins/…`，`anims.idle = "Idle"`，spine 正常绘制。
+  `check` 现在把“有模型但没 clips”单独计数并以退出码 1 报错。服务器已换上重建后的 catalogue（1643346 B，
+  `anims=true`，`/skins/…` 的 skel/atlas/webp 全 200）；只换了数据文件，未重启、`/healthz` 仍 200。
+- 链路本身已核对无误（`room.skins` → 座位 / `PlayerState.skins` → `m.public.players[].skins` + `UnitInfo.skin` →
+  `render/app.js skinOf`）。若再复现，需要具体：干员 / 皮肤键、自己还是队友、`settings.otherSkins`、房间是否
+  modded、浏览器里 `/skins/sets/…` 的请求与 `m.public.players[].skins`。
 - **2026-10-27 存储清理**：30 GB 盘 **21 GB → 11 GB（18 GB free，39%）**。删除旧备份（保留 `sp-backup-20261026-233231`、
   `sp-backup-admin-docs-20261023-122942`、最新的 `sp-backup-code`）、promo/录屏素材、旧素材包、`/.Recycle_bin`、旧
   `_replaced`（保留 2 份最新）、旧宝塔 panel 备份、286 MB 的 `server.log`（截断）、apt cache。活动皮肤、插件、`public/`、`var/` 未动。
