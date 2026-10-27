@@ -65,8 +65,10 @@ export class BattleEvents {
    *         feared or stunned) — display metadata (render/interp.js holds the position until then);
    *   standCut: [[id, at]] — the latest time each listed enemy's recovery was cut or ignored (_cutAttackStand), the
    *         dying ones in their death window included.
-   * ammo / wolves / neg / energy / layers / charges / bondTimers / stand / standCut are display only: no sim state reads them, and the
-   * nine-field unit tuples are unchanged.
+   *   face: [[id, ±1]] — a scripted horizontal sign (心虚设计师, mem.publishFacing): the model turns with the front
+   *         cut while it stands. Display only; the nine-field tuples and the golden canon omit it.
+   * ammo / wolves / neg / energy / layers / charges / stand / standCut / face are display only: no sim state reads
+   * them, and the nine-field unit tuples are unchanged. bondTimers is also display only (golden canon excludes it).
    */
   /** Store a script plugin's read-only battle HUD state (published as b.snap.pluginView). */
   setPluginView(pluginId, value) {
@@ -106,7 +108,7 @@ export class BattleEvents {
       (down || (down = [])).push([u.id, r2(u.respawnAt), r2(Math.max(0, u.respawnAt - u.deathAt)), this._downState(u), ...this.restTile(u)]);
     }
     if (down) snap.down = down;
-    let elem = null, ammo = null, wolves = null, neg = null, energy = null, stand = null, standCut = null;
+    let elem = null, ammo = null, wolves = null, neg = null, energy = null, stand = null, standCut = null, face = null;
     let listed = null;   // the ids in snap.units, built for the first enemy with a cut to report
     for (const u of this.units) {
       if (u.side === 'enemy' && u.atkStandCutAt >= 0) {
@@ -114,6 +116,7 @@ export class BattleEvents {
         if (cutAt <= snap.t && (listed || (listed = new Set(snap.units.map((x) => x[0])))).has(u.id)) (standCut || (standCut = [])).push([u.id, cutAt]);
       }
       if (!u.alive || !u.deployed || u.hidden) continue;
+      if (u.mem.publishFacing) (face || (face = [])).push([u.id, u.facing]);
       const until = Math.round(u.atkStandUntil * 1000) / 1000;
       if (u.side === 'enemy' && !u.s.flags.fear && !u.s.flags.stun && Number.isFinite(until) && until > snap.t) {
         (stand || (stand = [])).push([u.id, until]);
@@ -144,6 +147,7 @@ export class BattleEvents {
     if (energy) snap.energy = energy;
     if (stand) snap.stand = stand;
     if (standCut) snap.standCut = standCut;
+    if (face) snap.face = face;
     return snap;
   }
 
