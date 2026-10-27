@@ -1,55 +1,117 @@
-# Upstream `dev` Triage (2026-10-20)
+# 主线未并入清单（Upstream backlog）
 
-Source: `sganggs/Stronghold-Protocol`, `upstream/master..upstream/dev`, 26 commits.
-Baseline: upstream `master` `c9d804f47`, upstream `dev` `23dfa3d79`.
-Decision rule: do not merge the branch; port only what this fork needs, with its own tests and docs.
+> 2026-10-27 重写。前身是 2026-10-20 的 `upstream/dev` triage（那段历史见
+> [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10）；本文件现在是**唯一的主线待办台账**：哪些还没并、为什么、
+> 摘的时候要注意什么。合并日志仍写在 `UPSTREAM-MERGES.md`，永不合并清单仍是它的 §0。
 
-## Summary
+## 0. 口径与门禁
 
-| Decision | Count / scope |
+| 项 | 值 |
 |---|---|
-| Ported | `removeBuff` re-entrancy fix; Wild Mane S2 rear radial push (#782); settlement title/button/item-slot fixes (#745); bond-timer readout (#746) |
-| Not applicable to this fork | asset-download readiness count (`#725`) |
-| Candidates, later | picture-only outfits |
-| Deferred, not plugin core | external AI / bot strategies |
-| Docs / merge commits | no code by themselves |
+| 基线 | 上游 `488db49f1`（上次折入的提交，0.3.2 尾部） |
+| 上游 tip | `f07b89650`（0.3.3 hotfix 元数据，2026-10-25） |
+| 未并 | **1102 个提交**（0.3.2 1096 + 0.3.3 6）；本分支领先 942 |
+| 合并方式 | 逐条 cherry-pick + 本分支适配；**永不整支合并**，永不 `--ours/--theirs` 整文件 |
+| 门禁 | `node tools/check-upstream.mjs`（会把 §0 的 28 个文件同时标红，属预期）；每批过后跑全量 `npm test` |
+| golden | 任何移动 `test/golden/*.json` 的改动必须归因（只回退该项 → 零差异），再单独提交 |
 
-## Commit groups
+## 1. 已完成（只做索引，详情见合并日志）
 
-| Commit(s) | Feature | Decision | Why |
+| 批次 | 内容 | 记录 |
+|---|---|---|
+| 0.3.2 战斗修正**批 A 1–12** | #720 血珀 / #869 心虚设计师朝向 / #789 瑕光 S3 / #749 银灰 S3 / #839 鸭爵共享抽取 / #845 隐秘核心重抽 / #851 休整期奖励时点 / #803 淤困附着 / #846 变形同构体盟约行 / #847 探针超时提示 / #31 信仰搅拌机范围 / #861 火力电台 | [`UPSTREAM-MERGES`](UPSTREAM-MERGES.md) §14 |
+| **#576** 魔王「微尘」光环 | 纯显示，客户端自己画环绕位置 | §15 |
+| #745 / #746 | 结算页标题与按钮 / 选中单位盟约计时 | 2026-10-26 批次（`817512974` `22e18faae`） |
+| #561 / #782 / #725 相关 | 战略选人看敌人信息 / 野鬃 S2 径向推开 / 素材下载计数 | §13.10（后者**不适用**） |
+| 皮肤数据修复（非上游） | `tools/skins.mjs build` 补回 `plugin.lock.json` 的 `anims`，房间皮肤不再回退默认模型 | [`SKINS.md`](SKINS.md)、`PROJECT-STATE.md` §9 |
+
+线上口径：2026-10-27 部署 `build b8f6defd0d1b`（含批 A + #576 + 皮肤修复）。
+
+## 2. 待并：规则 / 内核
+
+| 项 | 上游 | 说明 | 注意 |
 |---|---|---|---|
-| `126f0bc03` `42c05035e` | `removeBuff` nested removal re-entrancy | **Ported** | Plugins/kits can remove a buff from an `onRemove`; the old loop lost its index. Code + upstream synthetic tests are in this fork. |
-| `ca185d064` `72bef87c0` | asset download ready count (`#725`) | **Not applicable** | This fork has no `public/js/ui/assetDownload.js`; its asset-cache UI is different. |
-| `77b91081c` `3f6c07863` | picture-only outfits (avatar/portrait, default battle model) | **Candidate** | Plugin/skin-adjacent, but a large client-wide feature. Owner decision 2026-10-20 keeps it out; an appearance plugin must ship a Spine model. |
-| `60d182c3d` `a3190a4e7` | skill-clip mappings for six operators | **Ported** (`c38adb532`) | VFX quality improvement; only the mapping and one test assertion were adapted to this fork. |
-| `84fbd1cb9` `30089aac5` | bond-timer readout on the selected unit card (`#746`) | **Ported** | Optional, off-by-default HUD backed by simulation snapshots; labels translated in all shipped packs and covered by `test/content/bond-timers.test.js`, `test/match/bond-timers.test.js` and `test/ui/bond-timers.test.js`. |
-| `ea2548c4b` `9e57431ae` `38a1eb840` | strategy pick opens enemy information (`#484`) | **Ported** (`1c55157a7`) | `ui/matchEnemies.js` is shared by the briefing, the draft dialog and match info; `test/ui/match-info.test.js` passes. |
-| `a1b6b86d1` | result-screen translated titles, CSS button fallback, item-slot bounds (#745) | **Ported (settlement only)** | Took `settle.js` / `settle.css` and the unit tests; the unrelated Python 3.8 CI and docs history were not merged. |
-| `6da62da73` | late-entry test accepts the re-entry block form | **Not needed** | Test-only adaptation for the `#746` merge; no matching code here. |
-| `4908a73b2` `ba3f86bd8` `835f2dbfd` `868cd6e07` `81fb9611d` | bot-strategy hooks, external AI, advisor mode | **Deferred / separate** | This is an AI/ops feature, not plugin compatibility. It needs a product decision, config, transports and tests. |
-| `a26ffab3f` `23dfa3d79` | Wild Mane S2 radial behind push (`#782`) | **Ported** (`1b58cdd7b`, golden `e6aafeeff`) | Gameplay accuracy; behind targets move radially away at the reduced force row, with the dedicated sim regression tests. Canonical record: `UPSTREAM-MERGES` 13.10. |
-| `20807cb5d` `35ded423b` `b1cea7417` `bf7af482e` | strategy-info merge/docs | **Deferred** | Merge/documentation commits; no plugin work. |
+| **#729** 攻击剪辑按模拟间隔（批 A 第 13 项） | `21f1a66a2` + 评审 `978ee99f2` `2a7e4ea07` `2607a35a7` `bebab7b54` | `UnitInfo` 携带真实攻击间隔（游戏秒），渲染按 tick 前瞻、不借下一 tick 的值；0.2–6 s 显示窗口为 [ASSUMED] | **会动 golden 的 rate 计数**，需要归因；不改伤害/时序 |
+| **批 A 14–16：敌方攻击回合机制** | 维护者录屏，无 PR 号（§35.19 / §35.29 / §35.52 / §35.54 / §35.55） | 昆图斯【大潮】占普攻回合、冷却自动画结束；其他首领（卢西恩、假想敌·胄/管/弦、阿利斯泰尔、萨米的意志…）、普通敌人与悬赏领袖的技能同样占回合、无目标不释放；技能动画长于攻击间隔时压制普攻 | 一条公共规则，**必须整组做**，golden 大面积变化 |
+| **结算内核 series** #798 #802 #844 #855（+ 同批 #796 #848 #850 #852 #853 #856） | `eb0c807b5`（一批合并）、`fdbdf1c75`、`43452c11c`、`58184e1f0`、`b87ac1901`、`f49473c72` | 官方分阶段伤判顺序（护盾/屏障/闪避/抵挡/脆弱/庇护）、固定穿透先于百分比穿透、结算第二部分（锡人/娜仁图亚/银灰·棘刺·仇白模组/逻各斯）、碎铳之簧有序屏障与次数护盾 | **不可拆的单体**：`fdbdf1c75` 已删掉旧的第二套内核；会重写 `server/sim/damage.js` 与大量 kit，golden 全量重算，建议单独分支 |
+| **版本系统**（第一期上/下半、第二期上半） | 0.3.2 M1 一带（`cc439d5ce` 等） | 历史版本规则核心、19 名干员的版本脚本、大厅/房间版本入口、`golden`/`botbench --version`、独立模拟计时 | 体量最大；与 UI 的版本胶囊、S.W.E.E.P. 版本门控耦合；要有 `[ASSUMED]` 记录 |
 
-## Ported change
+## 3. 待并：UI（owner 2026-10-27：**全部暂缓**）
 
-`server/sim/battle/status.js`:
+| 项 | 内容 | 上游提交 | 适配注意 |
+|---|---|---|---|
+| **#792** | 点空白关闭盟约弹层 / 操作框，战场点击仍保留商店卡与盟约详情 | `322689e8d` `c11589095` `5a7077c28` | 我们的 HUD 有自定义队伍栏 `SpecDock`，弹层要逐一接 |
+| **#678** | 盟约栏横向滚动显示全部盟约（保留观战/调和/同构/禁用提示） | `e7b9627ba` `f776fb769` | 与 #792 同一个收尾提交 `fd9b0138b`，建议两项一起摘 |
+| **#800** | 结算「下一步」按钮按原图按钮面裁切 | `bc2322872` `7b26dc590` | 纯 CSS（`settle.css`），风险最低 |
+| **#811** | 精英化图标按各版本/各形态实际阶段（精一 Lv.55/60 不再显示精二）+ 商店阶级徽章高度 + 结算阶段显示 | `6955ec609` `0e4557210` | 同批还有 #812/#813/#814/#827/#828 的卡片视图拆分（重构向） |
+| **#820** | 战斗统计「上一场战斗」，排除进行中与不属于该玩家的观战记录 | `82578cbdb` | 我们统计页是自研的，需接线 |
+| **#610** | 调配 / 自选列表点行内空白选人，快捷技能/模组/培养控件独立，保留卡片视图与皮肤区 | `7d9a06cf0` + docs `d6e4ef6d3` | 自选行与皮肤区是我们自己写的，只能手工接 |
+| **#790** | 战斗与观战自动保持屏幕常亮，全屏常亮另开且默认关 | `e076a0e92` `36a884c95` | ⚠️ `public/js/ui/settings.js` 在 §0 永不合并清单（问题反馈/DIAGNOSTICS）→ 只挑段落，不整文件取 |
+| **#595** | 半场视图仍显示另一半的入口/出口，首领场地按自身区域筛门 | `79bbd734c` `d034dfad2` | 我们已按全格渲染做过闸门方块，**先核对行为是否已等价**，可能只需补测试 |
+| **#691** | 同盟设置「观战者接替 AI」开关（默认关，房主开启后按真人多数投票交接） | `1662271d6` + `23efa51d3` | UI 是设置项、规则在 `server/match`，属「界面 + 机制」，单独一批 |
+| **#786** | 开技能转正面（背面骨架没有该技能动作时） | `12966f37a` `6d38225fc` | 已分析、暂缓 — 见 §6 |
+| **0.3.3 fix53 / fix53b** | 版本胶囊统一高度内边距字号圆角 + 书册图标；S.W.E.E.P. 切换版本时「读取中」与报告内重试；S.W.E.E.P. 不依赖透明度入场动画 | 见 §4 | 前两条依赖版本系统，只有「胶囊尺寸统一」可独立 |
 
-- snapshot the matching buffs in reverse order
-- locate each survivor again in the current list before removal
-- buffs added by callbacks wait for the next call
-- nested removals keep their own counts and callback order
+## 4. 待并：0.3.3（6 个提交，尚未 triage）
 
-Tests:
+| 项 | 内容 |
+|---|---|
+| `round53 shopequip` `c7071fc75` | 商店空装备栏：第一期升 5 级时装备栏补满、未开放时不显示「已购买」；核对四期商店表 + 回归 |
+| `round53 benchswap` `b21ff2586` | 第一期上/下半允许整备区满时与场上互换（**维护者有意偏差**，官方第一期不允许） |
+| `round53 iconcache` `1c7c16f05` | 切版本后装备沿用上一版本图标：贴图按实际图片地址缓存 |
+| `fix53` `a4618cd46` | 版本胶囊对齐 + 按所选版本门控 S.W.E.E.P. |
+| `fix53b` `e0ed73065` | 暂停动画时 S.W.E.E.P. 内容不再透明 |
+| 版本元数据 `f07b89650` | `package.json` / APP_VERSION / README 徽章 —— **不取**（我们保持 0.4.0） |
 
-- `test/sim/remove-buff.test.js`
-- `test/content/sargon-remove-buff.test.js`
+## 5. 已定不取 / 暂缓（owner 决定，勿再提）
 
-These are the upstream synthetic regression tests; no official game files are included.
+| 项 | 提交 | 原因 |
+|---|---|---|
+| 第三方 AI / 外部顾问模式 | `4908a73b2` `ba3f86bd8` `868cd6e07` 等 | 不投费用强化 AI，短期用不上 |
+| 图片时装（picture-only outfits） | `77b91081c` `3f6c07863` | 外观插件应带 Spine 模型；我们的 277 套外观全部有模型 |
+| #725 素材下载计数 | `ca185d064` `72bef87c0` | 依赖 #628 整包下载（§0），本分支没有该功能 |
+| 插件 / Forge / studio / 测试控制台 / skins(#685 #686) | 0.3.1 整块 | 依赖插件体系；本分支皮肤走核心 catalogue |
+| 多语言配音、#628 素材包、3D 战场实现、`itemPool`、`deployFoldsShop` … | §0 的 28 个文件 | 永不合并清单 |
+| 0.3.x 版本元数据 | — | 本分支版本号保持 0.4.0 |
 
-## Next candidates
+## 6. #786 专项（2026-10-27 分析完成 → 暂缓）
 
-1. **Picture-only outfits** — if skins/plugin cosmetics are the next product priority.
-2. **Skill clips** — with the VFX batch, not by itself.
-3. **Bond timer readout** — when the client UI batch is scheduled.
+**结论：可以直接摘，纯客户端表现，不改 sim / golden / 服务器；本次不并。**
 
-Do not merge `upstream/dev` wholesale: it would bring the external-AI product, bot-strategy API and unrelated UI/gameplay changes into this fork at once.
+- 上游：`12966f37a`（PR #786）+ `6d38225fc`（暂停时窗口不缩）。`public/js/render/units.js` **+70/−2**，
+  新测试 `test/render/skill-front-face.test.js` 211 行，`docs/ASSETS.md` 一句。
+- 规则：面向 **UP**，且**背面骨架的技能角色是 `via: 'attack'`**（背面没有这支技能的 clip，只借了普攻三连）、
+  **正面有真正的技能 clip** → 开技能切正面模型；flag 结束（瞬时技能等 clip 播完自身长度 + End）再切回背面。
+- 数据已就绪：`data/assets.json` 646 处、`skins/catalogue.json` 600 处 `via:"attack"`（10-27 补 `anims` 后才覆盖皮肤）。
+- 命中范围（用我们的数据实测）：**8 名干员** —— 德克萨斯（剑雨）、推进之王、蛇屠箱、初雪、艾雅法拉、年、塞雷娅、铃兰；
+  **13 套皮肤** —— 德州 `epoque#7`/`winter#1`、蛇屠箱 `wild#1`/`yun#7`、艾雅法拉 `sanrio#2`/`summer#5`、
+  塞雷娅 `boc#1`/`test#1`、推进之王 `striker#2`/`wild#2`、初雪 `snow#1`、年 `cfa#1`。
+  其余 53 个「背面 via=attack」的干员正面也是普攻三连（技能就是普攻），不触发。
+- 适配点（摘的时候逐条核对）：
+  1. `update()` 的 `_faceHold` 递减插在 `const P = this.P;` 之前（我们 `units.js` ≈1494 行；上方多一个 `_syncMotes(dt)`，无冲突）。
+  2. `_acquireSpine` 成功回调里的 `if (this.flags & UF.SKILL) this.actor.setSkill(true);`（≈832 行）**必须一起改**，
+     否则"模型晚于技能 flag 到达"仍是旧行为。
+  3. `setSkill()`（≈1285 行）加 hold + `_modelDirty`。
+  4. **暂停的坑**：上游跟进把 `animRate?.() || 1` 改成 **`?? 1`**。本仓库惯写 `|| 1`，照抄会让 `animRate() === 0`
+     （暂停动画）被当成 1，暂停时 `_faceHold` 仍倒数 —— 必须 `?? 1`。
+  5. `_modelEntry` 必须显式传 `true/false`（默认参数是 `_wantsBack()`，会自递归）。
+  6. 无需改 `spine.js` 的 `skillClipOnce`（瞬时技能播一遍自身长度的语义已有）。
+- 测试：脚手架 `test/render/fakepixi.js`、`test/render/issue25-downback.test.js` 同款；可原样移植用例（德州 → 正面；
+  德州异格/陈/灰烬/excu → 背面；瞬时技能 hold 到 clip 结束；暂停时窗口不缩；技能中死亡不残留正面）。
+- 风险 / 回退：官方行为无源码证据，标 [ASSUMED]；不满意时让 `_skillFacesFront()` 返回 `false` 即可一键回退。
+- 成本：1 个提交（代码 + 测试 + `docs/ASSETS.md` 同一句），约 1–1.5 h，`public/js` 热更新、无需重启。
+
+## 7. 建议顺序
+
+1. **#729**（观感，golden 只动 rate 计数）→ 2. **UI 小批**：#792 + #678（同一条收尾提交）、#800、#811、#820、#786
+   → 3. #610 / #790 / #595（先核对等价）→ 4. **结算内核 series**（单独分支，golden 全量重算）
+   → 5. **版本系统**（最大，单独分支）→ 6. **0.3.3 的 6 项**（量小，可紧跟）。
+
+每批完成：条目移到 §1、在 `UPSTREAM-MERGES.md` 追加一节（含上游提交 ↔ 本分支提交 ↔ 验收），
+`node tools/check-upstream.mjs` 当门禁。
+
+## 8. 过期记录（别被旧文档误导）
+
+- **#746 已并**（`22e18faae`，2026-10-26）——`UPSTREAM-MERGES` §13.10「暂缓 `84fbd1cb9` 盟约剩余时间」一条已过期。
+- 2026-10-20 的 “Next candidates”（#725 素材计数、图片时装、bond timer）已全部定论：前两项不取、第三项已并。
+- §3 的 UI 列表已包含 0.3.2 界面段里**所有**未并项；「界面」段其余条目要么已并（#576 #745 #746 #846），要么属版本系统。

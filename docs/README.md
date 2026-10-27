@@ -111,7 +111,7 @@
 | [`OUR-FEATURES.md`](OUR-FEATURES.md) | 仅本 fork 的机制（合并时不得丢失） | 关键 |
 | [`MATCHMAKING.md`](MATCHMAKING.md) | 账号 / 匹配 / 自造干员 / 社区 / 决策记录 | 历史 + 决策 |
 | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | 主线合并日志 + 永不合并清单 §0 | 历史 |
-| [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | 上游 dev 待办的当前归属与已移植状态 | 状态 |
+| [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | **主线未并入清单**（0.3.2 / 0.3.3）：待办、已定不取、逐项适配要点与建议顺序 | 状态 |
 | [`DEPLOY.md`](DEPLOY.md) | 防火墙、自启、反代、Docker | 参考 |
 | [`WINDOWS.md`](WINDOWS.md) | Windows 便携包 | 参考 |
 | [`RELAY.md`](RELAY.md) | 外部服务器目录站（非部署链路） | 参考 |
@@ -177,7 +177,7 @@
 |---|---|
 | 决策记录 §0–§49 | [`MATCHMAKING.md`](MATCHMAKING.md) |
 | 主线合并日志与跳过原因 | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
-| 上游 dev 的逐提交 triage | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) |
+| 主线还有哪些没并、为什么、摘的时候注意什么 | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) |
 | 官方数据研究（可读 + JSON） | [`research/00-INDEX.md`](research/00-INDEX.md) |
 | 游戏规则历史 | [`history/`](history/) |
 | 版本记录 | [`../CHANGELOG.md`](../CHANGELOG.md) |

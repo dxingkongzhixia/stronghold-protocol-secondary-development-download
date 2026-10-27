@@ -220,6 +220,13 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   `sp-backup-admin-docs-20261023-122942`、最新的 `sp-backup-code`）、promo/录屏素材、旧素材包、`/.Recycle_bin`、旧
   `_replaced`（保留 2 份最新）、旧宝塔 panel 备份、286 MB 的 `server.log`（截断）、apt cache。活动皮肤、插件、`public/`、`var/` 未动。
 
+- **2026-10-27 主线盘点（全部暂缓）**：`node tools/check-upstream.mjs` 基线 `488db49f1` → 上游 tip `f07b89650`（0.3.3），
+  **1102 个提交未并**（0.3.2 1096 + 0.3.3 6）。完整台账重写进 [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md)：批 A 剩
+  #729 + 敌方攻击回合（14–16）；结算内核 series #798/#802/#844/#855（`eb0c807b5` 一批，**不可拆**）；版本系统；9 个 UI 项
+  （#792 #678 #800 #811 #820 #610 #790 #595 #691）；0.3.3 的 6 项。owner 2026-10-27 决定：**UI 及其余项一律暂缓**。
+  #786（开技能转正面）已逐条分析（8 名干员 / 13 套皮肤命中、`?? 1` 暂停坑、1 个提交约 1–1.5 h），**本次不并**，
+  结论与摘法留在该文档 §6。
+
 **2026-10-25 代码健康维护（未上线，store `prts-plugin`）**
 
 - `typecheck` 从 30 个错修到 0：`jsconfig.json` 缺 `DOM` lib（`shared/origins.js` 的 `new URL()`）、`shared/plugins/*` 的 `isObj` 没有类型谓词、`PluginEntry` 少 `builtin`、`scriptLoad.js` 的默认 fetch 用展开参数。CI 的 tooling job 此前一直在红。
