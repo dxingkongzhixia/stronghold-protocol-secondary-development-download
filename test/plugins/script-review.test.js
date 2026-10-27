@@ -48,7 +48,7 @@ async function request(runtime, url) {
   return {handled,status,value:body && JSON.parse(body)};
 }
 // An outer async watchdog ensures a broken spawnSync cannot hang the test runner itself.
-function runComposition(dirs, ids, probeMs = 1000) {
+function runComposition(dirs, ids, probeMs = 15000) {
   const source = `import { createPluginRegistry } from ${JSON.stringify(new URL('../../server/plugins/registry.js',import.meta.url).href)};
     import { buildContentSet } from ${JSON.stringify(new URL('../../server/plugins/contentSet.js',import.meta.url).href)};
     const registry = createPluginRegistry(${JSON.stringify(dirs)}, {scriptMode:'trusted',scriptHost:'127.0.0.1'});

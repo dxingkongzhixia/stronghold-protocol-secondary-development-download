@@ -23,6 +23,7 @@ globalThis.fetch = async (url) => {
 const G = await import('../../public/js/ui/gameLogic.js');
 const { BondPopup } = await import('../../public/js/ui/bondStrip.js');
 const { ownerBoard } = await import('../../public/js/ui/watchBonds.js');
+const { chessAvatarUrl } = await import('../../public/js/ui/assetUrls.js');
 const { data } = await import('../../public/js/data.js');
 const { DATA } = await import('../match/harness.js');
 
@@ -84,8 +85,8 @@ describe('#846: a 自选 piece that joins a bond through 变形同构体 shows i
     const btn = grantedButton(popup({ bondId: 'victoriaShip', priv }));
     assert.ok(btn && hasClass(btn, 'is-granted') && hasClass(btn, 'is-on'));
     assert.equal(thumbOf(btn).glyph, [...KALTS_NAME][0], 'UnitThumb draws the operator from `rec`');
-    assert.notEqual(thumbOf(btn).glyph, '?', 'not the empty ???? slot');
-    assert.equal(thumbOf(btn).glyph, [...KALTS_NAME][0], 'and her glyph without a picture, not 「甄」');
+    assert.notEqual(thumbOf(btn).glyph, '甄', 'not the empty 甄选干员 slot');
+    assert.equal(thumbOf(btn).src, chessAvatarUrl(data.get('assets'), r.rec), 'and the operator\'s avatar, not the slot\'s');
     assert.ok(btn.props.title.startsWith(KALTS_NAME), btn.props.title);
     assert.equal(btn.props['data-standin'], null, 'no 补位 stand-in for a 自选 row');
   });
@@ -107,6 +108,7 @@ describe('#846: a 自选 piece that joins a bond through 变形同构体 shows i
     const calls = [];
     const btn = grantedButton(popup({ bondId: 'victoriaShip', priv: mate, owner: 'Mate', ownerId: 'p_2', onMember: (...a) => calls.push(a) }));
     assert.equal(thumbOf(btn).glyph, [...KALTS_NAME][0]);
+    assert.equal(thumbOf(btn).src, chessAvatarUrl(data.get('assets'), r.rec), 'their operator\'s avatar too');
     btn.props.onClick();
     assert.deepEqual(calls, [[T5A, [MORPH, HAMMER], null, KALTS_PICK]]);
   });
