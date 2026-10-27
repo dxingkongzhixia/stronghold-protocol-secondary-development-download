@@ -167,16 +167,16 @@ describe('asset mirror: the origin is picked by MEASURED throughput', () => {
     assert.equal(rateOf(500, 0), 0);
   });
 
-  test('pickMirror: the FIRST candidate that clears its own bar wins (relay 1.2 MB/s, mirror 0.5 MB/s)', () => {
+  test('pickMirror: the FIRST candidate that clears its own bar wins (relay 0.4 MB/s, mirror 0.8 MB/s)', () => {
     const relay = { base: RELAY, full: true };
     const gh = { base: GH, full: false };
-    assert.equal(RELAY_MIN_BPS, 1.2 * 1024 * 1024, 'the relay bar is 1.2 MB/s');
-    assert.equal(MIRROR_MIN_BPS, 0.5 * 1024 * 1024, 'a mirror bar is 0.5 MB/s');
-    // a relay that clears 1.2 MB/s keeps its first place even when a mirror is faster
-    assert.equal(pickMirror([{ ...relay, bps: 1.5 * 1024 * 1024 }, { ...gh, bps: 9 * 1024 * 1024 }]), RELAY);
-    // a SLOW relay (below 1.2 MB/s — what the owner's box measures) hands over to the GitHub mirror
-    assert.equal(pickMirror([{ ...relay, bps: 0.4 * 1024 * 1024 }, { ...gh, bps: 2 * 1024 * 1024 }]), GH);
-    // a mirror below 0.5 MB/s is not used either → the chain keeps this server
+    assert.equal(RELAY_MIN_BPS, 0.4 * 1024 * 1024, 'the relay bar is 0.4 MB/s');
+    assert.equal(MIRROR_MIN_BPS, 0.8 * 1024 * 1024, 'a mirror bar is 0.8 MB/s');
+    // a relay that clears 0.4 MB/s keeps its first place even when a mirror is faster
+    assert.equal(pickMirror([{ ...relay, bps: 0.5 * 1024 * 1024 }, { ...gh, bps: 9 * 1024 * 1024 }]), RELAY);
+    // a SLOW relay (below 0.4 MB/s — a genuinely broken link) hands over to the GitHub mirror
+    assert.equal(pickMirror([{ ...relay, bps: 0.3 * 1024 * 1024 }, { ...gh, bps: 2 * 1024 * 1024 }]), GH);
+    // a mirror below 0.8 MB/s is not used either → the chain keeps this server
     assert.equal(pickMirror([{ ...relay, bps: 100 * 1024 }, { ...gh, bps: 0.4 * 1024 * 1024 }]), '');
     // nothing measurable → this server
     assert.equal(pickMirror([{ ...relay, bps: 0 }, { ...gh, bps: 0 }]), '');
@@ -191,7 +191,7 @@ describe('asset mirror: the origin is picked by MEASURED throughput', () => {
       calls.push(url);
       if (url.endsWith(MIRRORS_URL)) return { ok: true, json: async () => cfg };
       const slow = url.startsWith(RELAY);                    // the relay crawls, gh-proxy is fast
-      await new Promise((r) => setTimeout(r, slow ? 40 : 0));
+      await new Promise((r) => setTimeout(r, slow ? 120 : 0));
       return { ok: true, body: null, arrayBuffer: async () => new ArrayBuffer(slow ? 4 * 1024 : 400 * 1024) };
     };
     const chosen = await initAssetMirror({ fetchFn, hostname: 'game.test' });

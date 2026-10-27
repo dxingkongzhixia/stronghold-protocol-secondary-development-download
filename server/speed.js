@@ -8,7 +8,7 @@
 //     vantage a player actually has.
 // The rule is deliberately the client's own (public/js/assetMirror.js): six committed portraits fetched IN PARALLEL —
 // a single small file measures round-trip latency, not bandwidth, which is what once made a fixed relay look slow —
-// then the aggregate bytes over the wall clock, compared against the same bars (relay 1.2 MB/s, mirror 1.0 MB/s).
+// then the aggregate bytes over the wall clock, compared against the same bars (relay 0.4 MB/s, mirror 0.8 MB/s).
 // test/speed.test.js re-reads that module and fails if these constants drift apart.
 //
 // Read-only: the probe only GETs third-party URLs. It never touches the lobby, the registry or the database, and the
@@ -28,9 +28,9 @@ export const SPEED_SAMPLES = Object.freeze([
   '/assets/char/portrait/char_150_snakek_1.png',
 ]);
 /** Mirrors RELAY_MIN_BPS: a FULL origin (the relay: files + the /media,/scene,/clip routes) must clear this to stay first. */
-export const RELAY_MIN_BPS = 1.2 * 1024 * 1024;
+export const RELAY_MIN_BPS = 0.4 * 1024 * 1024;
 /** Mirrors MIRROR_MIN_BPS: a plain-file mirror (gh-proxy / jsDelivr) must clear this to be used at all. */
-export const MIRROR_MIN_BPS = 0.5 * 1024 * 1024;
+export const MIRROR_MIN_BPS = 0.8 * 1024 * 1024;
 /** Mirrors SPEED_TIMEOUT_MS / SPEED_BYTE_CAP: per-source budget, and the per-file cap that ends a fast one early. */
 export const SPEED_BUDGET_MS = 2500;
 export const SPEED_BYTE_CAP = 400 * 1024;

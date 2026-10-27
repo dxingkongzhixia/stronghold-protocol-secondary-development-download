@@ -103,12 +103,10 @@ try {
 const RESTORE_GRACE_MS = 1500;
 
 /**
- * How long the boot preload may hold the title back, in ms. The preload warms the browser's cache for the small UI image
- * set; it is not a correctness gate, and with the art coming from a CDN mirror the wall clock is the mirror's per-image
- * latency (measured 2026-10-14: gh-proxy ~6 images/s, so the full 2461 images is ~6 min). Past the deadline the title
- * renders and the remaining art loads on demand. `0` = no deadline (the old "everything before the title" behaviour).
+ * How long the **background** art preload may run, in ms. It is a cache warmer, not a correctness gate: the title is
+ * rendered before it starts. Past the deadline it is cancelled and the remaining art loads on demand.
  */
-const PRELOAD_DEADLINE_MS = 60_000;
+const PRELOAD_DEADLINE_MS = 20_000;
 const JOIN_DELAY_MS = 350;
 const TICKER_KEEP = 20;
 const EMOTE_KEEP = 20;
@@ -627,9 +625,9 @@ async function acquireBootSlot() {
 }
 
 /**
- * Boot-time art preload (docs/ASSETS.md): warm the HTTP cache for the image set the UI draws, so entering a screen does
- * not pop images in. Runs while fonts load and the socket connects; skippable and capped so a slow link is never stuck.
- * Scope 'all' = every manifest image (~104 MB, ~1 min at 20 Mbps) — the user asked for a full preload before the title.
+ * Background art preload (docs/ASSETS.md): warm the HTTP cache for the image set the UI draws, so entering a screen does
+ * not pop images in. Runs **after the title is rendered**, never blocks it; skippable and capped so a slow link is never
+ * stuck. Scope 'all' = every manifest image (~104 MB) — a cache warmer, not a gate.
  */
 /**
  * Pick the CDN mirror **once**, as early as possible (js/assetMirror.js). The order is the whole point: the art
@@ -648,7 +646,8 @@ async function preloadArt() {
   const bar = document.getElementById('boot-bar');
   const fill = document.getElementById('boot-bar-fill');
   const sub = document.getElementById('boot-sub');
-  if (!bar || !fill) return;
+  // The title is already on screen when the background preload starts, so the boot progress UI may be gone: keep it
+  // optional instead of returning early (that would silently skip the cache warmer).
   // Pick the CDN mirror first (js/assetMirror.js): it lets the boot preload come from gh-proxy / jsDelivr instead of
   // this box, while a dev origin and a silent mirror leave everything on this server.
   await ensureAssetMirror();
@@ -659,7 +658,7 @@ async function preloadArt() {
   if (!manifest) { try { await data.load('assets'); } catch { /* ignore */ } manifest = data.get('assets'); }
   const urls = collectArtUrls(manifest, 'all');
   if (!urls.length) return;
-  bar.hidden = false;
+  if (bar) bar.hidden = false;
   if (sub) { sub.hidden = false; sub.textContent = t('正在加载美术资源 0 / {n}', { n: urls.length }); }
   // Local asset cache (js/assetCache.js + public/sw.js): when the player chose "缓存到本地", bring the Service Worker
   // cache up to the server's art revision — a current copy fetches nothing, otherwise only the missing / changed
@@ -670,7 +669,7 @@ async function preloadArt() {
       const index = await fetchAssetIndex();
       const localBase = localSourceEnabled() ? await probeLocalBase({ remoteRevision: index.revision }) : '';
       const r = await ensureAssets({ urls, index, onProgress: artProgressReporter({ fill, sub }), localBase });
-      if (r && r.ok) { bar.hidden = true; if (sub) sub.hidden = true; return; }
+      if (r && r.ok) { if (bar) bar.hidden = true; if (sub) sub.hidden = true; return; }
     } catch { /* fall back to the HTTP preload below */ }
     if (sub) sub.textContent = t('正在加载美术资源 0 / {n}', { n: urls.length });
   }
@@ -682,12 +681,10 @@ async function preloadArt() {
     if (sub) { sub.hidden = false; sub.textContent = t('正在申请资源下载通道…'); }
     holding = await acquireBootSlot();
   }
-  // The preload is a cache warmer, not a gate. It used to be open-ended ("the title only appears once every image is
-  // in"), which held while this box was the source — its 1.2 MB/s pace put a floor of ~2 min on the whole load either
-  // way. With the CDN mirror carrying the art (js/assetMirror.js) the wall clock is bounded by the mirror's per-image
-  // latency instead: measured 2026-10-14, gh-proxy answered ~6 images/s (the browser's 6 connections per host), so the
-  // full 2461 took ~6 min. Past the deadline the title shows and the rest warms on demand, which is what heavy art
-  // (Spine, portraits, audio) already does. PRELOAD_DEADLINE_MS = 0 restores the old "everything first" behaviour.
+  // A cache warmer, not a gate: the title has already rendered. With the CDN mirror carrying the art
+  // (js/assetMirror.js) the wall clock is the per-image latency (measured 2026-10-14, gh-proxy answered ~6 images/s,
+  // so all 2461 would take ~6 min). The deadline stops a slow link from holding a boot slot forever; the rest loads on
+  // demand. PRELOAD_DEADLINE_MS = 0 means no deadline (the background warmer runs to completion).
   const pre = preloadImages(urls, {
     concurrency: 8,
     onProgress: artProgressReporter({ fill, sub }),
@@ -703,7 +700,7 @@ async function preloadArt() {
   } finally {
     if (preloadTimer) clearTimeout(preloadTimer);
     if (holding) net.request('boot.release', {}).catch(() => {});
-    bar.hidden = true;
+    if (bar) bar.hidden = true;
     if (sub) sub.hidden = true;
   }
 }
@@ -780,11 +777,17 @@ async function boot() {
     // session for auth.*. The provisional name is a placeholder, replaced when the player enters or logs in.
     else net.setName(savedName || t('博士'));
   });
-  // the language (and its UI translations) before the first render: no Chinese flash for an English player
+  // The language (and its UI translations) before the first render: no Chinese flash for an English player.
   const langReady = initLang().catch((err) => console.warn('[app] language setup failed', err));
-  await Promise.all([waitForFonts(1200), connectWhenReady, preloadArt(), langReady]);
+  // The title must NOT wait for the full art preload (2026-10-27): that cache warmer made a cold first visit sit on
+  // the boot screen for up to a minute (measured 63.3 s to the title input). Render after fonts / socket / language,
+  // then warm the cache in the background.
+  await Promise.all([waitForFonts(1200), connectWhenReady, langReady]);
   const root = document.getElementById('app');
   render(html`<${App} />`, root);
+  setTimeout(() => {
+    void preloadArt().catch((err) => console.warn('[app] art preload failed', err));
+  }, 800);
 
   const splash = document.getElementById('boot');
   if (splash) {

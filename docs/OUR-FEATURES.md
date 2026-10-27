@@ -710,11 +710,13 @@ for ~104 MB on every cold load — the fork's answer to the VPS uplink being the
 - **The plain-HTTP chain picks the origin by MEASURED THROUGHPUT (2026-10-15)**: on the production site the Service
   Worker cannot register (plain HTTP), so `public/js/assetMirror.js` rewrites the manifests' **image** URLs to a chosen
   origin instead. It times the origins on **six committed operator portraits (~110 KB each) fetched in parallel** — the
-  way the boot preload pulls art — so the measured rate is the throughput a player actually gets, not one stream's
+  way the preload pulls art — so the measured rate is the throughput a player actually gets, not one stream's
   latency (a single small file made a fixed relay look slow). **The relay is probed first** (the healthy case costs one
   round of samples; the other sources are probed in parallel only when it misses its bar) and installs the **first**
-  source that clears its bar — the owner's relay **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **0.5 MB/s**
-  (`MIRROR_MIN_BPS`) — otherwise the URLs stay on this server. A fresh reading is reused for `SPEED_CACHE_MS` (2 min,
+  source that clears its bar — the owner's relay **0.4 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **0.8 MB/s**
+  (`MIRROR_MIN_BPS`) — otherwise the URLs stay on this server. The 2026-10-27 retune lowered the relay bar (the six
+  small samples read ~0.5–0.8 MB/s on a relay whose multi-MB files run at ~1.5–1.8 MB/s) and raised the mirror bar
+  (jsDelivr could answer the probe quickly yet crawl on real files). A fresh reading is reused for `SPEED_CACHE_MS` (2 min,
   `cacheMs: 0` re-measures every call), and the whole list stays as the per-file error fallback. Measured 2026-10-15
   (domestic vantage): the relay's egress was ~0.05-0.4 MB/s before Aliyun lifted the restriction, then **7.1 MB/s
   sustained / 21.7 MB/s at 8-way** - ~18x the game box's 1.18 MB/s at the same width, so the same rule picks it back

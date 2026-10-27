@@ -324,7 +324,7 @@ LOBBY → INFO_CHECK → BAND_DRAFT → BATTLE_CHECK
 3. **服务端兜底限速**：`server/http/files.js` 的进程级令牌桶只限速 `public/assets|fonts|vendor` 响应体，`SP_ASSET_RATE_KBPS`（默认 **1200 ≈ 1.2 MB/s**，`0` 关闭），给对局留带宽；非素材路径不限速。
 4. **可选本机源**：`public/js/assetSource.js` 探测本机 `127.0.0.1:3000` 上 `revision` 相同的服务，把 SW 指过去，线上盒子完全不被访问。
 
-首访弹窗与设置行在 `public/js/ui/assetMode.js`；boot 的 `preloadArt`（`public/js/main.js`）在 `cache` 模式走 SW 并**跳过 `bootgate`**。存储键：`sp.pref.assetMode`（`stream`/`cache`）、`sp.assetCache.revision`/`sizes`、`sp.pref.assetLocalSource`。默认预缓存 boot 的**界面美术**（~104 MB），全量索引 ~828 MB 按需或点「立即缓存」。**版本变化是增量的（只下缺失/变动，不重下全量）；SW 未命中时也按 本机源 → 镜像 → 服务器 取（连按需资源也优先走镜像）；「网页加载」标「不推荐」。**
+首访弹窗与设置行在 `public/js/ui/assetMode.js`；`preloadArt`（`public/js/main.js`）在标题页渲染**之后**于后台运行（不再阻塞首屏，20 s 上限），`cache` 模式走 SW 并**跳过 `bootgate`**。存储键：`sp.pref.assetMode`（`stream`/`cache`）、`sp.assetCache.revision`/`sizes`、`sp.pref.assetLocalSource`。默认预缓存**界面美术**（~104 MB），全量索引 ~828 MB 按需或点「立即缓存」。**版本变化是增量的（只下缺失/变动，不重下全量）；SW 未命中时也按 本机源 → 镜像 → 服务器 取（连按需资源也优先走镜像）；「网页加载」标「不推荐」。**
 **测试**：`test/ui/asset-cache.test.js`（diff / 候选链 / 回退）、`test/asset-index.test.js`（索引/版本）、`test/asset-rate-limit.test.js`（令牌桶）。
 **注意**：**Gitee / GitLab raw 无 CORS、Gitee Releases 对盗链 403** —— 都不能当浏览器下载源；Gitee 只作代码镜像与人工下载。
 

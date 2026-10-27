@@ -85,7 +85,7 @@ test('pickMirror is the client rule: the first origin that clears its own bar, e
   assert.equal(pickMirror([]), '');
   assert.equal(pickMirror([{ base: '', bps: 1e9 }]), '', 'an empty base is skipped');
   // a full origin is judged by the relay bar, a plain mirror by the mirror bar
-  assert.equal(pickMirror([{ base: 'x', full: true, bps: MIRROR_MIN_BPS }]), '', 'a full origin needs the higher bar');
+  assert.equal(pickMirror([{ base: 'x', full: true, bps: RELAY_MIN_BPS - 1 }]), '', 'a full origin must clear the relay bar');
 });
 
 test('labelOf names the configured origins the way the console shows them', () => {

@@ -664,8 +664,8 @@ matches keep their bandwidth. This is a **fork-only** feature — the merge-crit
 - **`public/js/ui/assetMode.js`** — the first-visit chooser (`AssetModePrompt`, **default 缓存到本地**; the web-load
   option is labelled **不推荐**) and the 设置 row (`AssetCacheSection`: mode / usage / 立即缓存 / 清除缓存 /
   优先使用本机资源), backed by `js/ui/settings.js`.
-- **`public/js/main.js`** `preloadArt` — in `cache` mode it syncs through the worker (and skips the boot gate); otherwise
-  the HTTP-cache warm-up is unchanged.
+- **`public/js/main.js`** `preloadArt` — runs **after the title is rendered** (a background cache warmer, capped at
+  20 s); in `cache` mode it syncs through the worker (and skips the boot gate); otherwise it warms the HTTP cache.
 
 **Behaviour matrix.**
 
@@ -748,19 +748,18 @@ register — so the HTTPS future keeps the better chain.
   first": at boot it times the origins on **six committed portraits (~110 KB each) fetched in parallel** — the way the
   boot preload pulls art — so the rate is the throughput a player gets, not one stream's latency. **The relay is probed
   first** (the healthy case costs one round of samples) and the remaining sources are probed in parallel only when it
-  misses its bar: the relay must clear **1.2 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **0.5 MB/s**
+  misses its bar: the relay must clear **0.4 MB/s** (`RELAY_MIN_BPS`), a plain-file GitHub mirror **0.8 MB/s**
   (`MIRROR_MIN_BPS`), otherwise the manifest URLs are left on this server. A fresh reading is reused for
   `SPEED_CACHE_MS` (2 min; `cacheMs: 0` re-measures every call), and the whole list stays as the per-file error
-  fallback. This is what demoted the relay when the owner's box measured ~0.05–0.4 MB/s (its plan's real egress, far
-  under the advertised 200 Mbps); after Aliyun lifted the instance's restriction (2026-10-15: **7.1 MB/s sustained on a
-  2.1 MB file, 21.7 MB/s at 8-way** — ~18× the game box's 1.18 MB/s at the same width) the same rule picks it back up
-  with no code change.
+  fallback. The 2026-10-27 change lowered the relay bar from 1.2 MB/s (the six small samples measured ~0.5–0.8 MB/s on
+  a working relay whose real 4 MB/clip downloads run at ~1.5–1.8 MB/s) and raised the mirror bar from 0.5 MB/s (the
+  jsDelivr mirrors could answer the probe quickly but crawl on real files).
 
   **Watch it from the console** (2026-10-15): the admin page's 「诊断 → 测速」 (`server/speed.js`,
   `GET /admin/api/speed`, `docs/MATCHMAKING.md` §12.2) times the same origins on the same samples and shows **two
   columns** — the game box's own view and the operator's browser, which is the vantage a player has — plus the origin
   the rule would install right now. That is the quickest way to catch a throttled relay or a dead mirror: each row has
-  a bar against the same 1.2 / 0.5 MB/s bars, and `test/speed.test.js` re-reads `assetMirror.js` and fails if the
+  a bar against the same 0.4 / 0.8 MB/s bars, and `test/speed.test.js` re-reads `assetMirror.js` and fails if the
   samples, the bars or the budgets drift apart.
 
   The console labels the relay by **position** (the first entry of `public/asset-mirrors.json`), not by the origin's
@@ -817,13 +816,13 @@ Warm visit   requests  2470  ·  fromCache  2240  ·  relay  230  ·  github 0  
 CACHE-FIRST OK: 90.7% of the warm visit is answered by the browser cache.
 ```
 
-(Those 230 are the images the cold visit did not reach — the preload stops at its 60 s deadline — so they are first
-fetches, not cache misses: nothing came from gh-proxy or the game server in either visit.)
+(Those 230 are the images the cold visit did not reach — the background preload stops at its 20 s deadline — so they are
+first fetches, not cache misses: nothing came from gh-proxy or the game server in either visit.)
 
 **When the relay suddenly slows down (the 2026-10-15 incident).** Its real egress collapsed to ~1 Mbps (0.05–0.4 MB/s
 single, 0.42 MB/s at 4-way) while the plan advertises **200 Mbps** — the 轻量 console read "峰值公网带宽 1.03 Mbps /
-200 Mbps". The site stayed usable with **no deploy**: `js/assetMirror.js` measures the origins, the relay missed its
-1.2 MB/s bar, and the manifest URLs moved to the **game box** (3–4× faster than the throttled relay). Aliyun's support
+200 Mbps". The site stayed usable with **no deploy**: `js/assetMirror.js` measures the origins, the relay missed the
+then-1.2 MB/s bar, and the manifest URLs moved to the **game box** (3–4× faster than the throttled relay). Aliyun's support
 lifted the instance's restriction the same day, and the same rule picked the relay back up (measured 2026-10-15:
 **7.1 MB/s sustained on a 2.1 MB file, 21.7 MB/s at 8-way** — ~18× the box).
 
