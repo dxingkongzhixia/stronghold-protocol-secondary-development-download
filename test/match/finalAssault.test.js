@@ -38,7 +38,7 @@ test('previous boss partners and sides persist; only orphaned survivors form a n
   assert.deepEqual(ids(pairPlayers(all.filter(p => p.seat > 1), createRng(99), previous)), [['s3', 's2']]);
 });
 
-// GitHub #845 (DESIGN §35.27, superseding §30.12's kept partners): the official R15 of BV1VCXyBjEN1 p1 pairs 1-2 / 3-4
+// GitHub #845 (GitHub #845, superseding §30.12's kept partners): the official R15 of BV1VCXyBjEN1 p1 pairs 1-2 / 3-4
 // after an R14 of 1-4 / 2-3 — the Hidden Core draws pairs and sides anew, from a stream of its own (the Final Assault's
 // draw unchanged). Each round's plan drives its prep preview, side checks and fields.
 test('boss preview and actual fields share each round\'s draw; the Hidden Core draws pairs and sides anew (#845)', () => {

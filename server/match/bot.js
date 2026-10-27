@@ -849,7 +849,7 @@ function dpsVs(rec, def, res) {
  * The record a chess fights with for range purposes: its range grid replaced by the one it is deployed with under the
  * player's loadout — a passive 攻击范围扩大 skill, a module's range or 攻击距离 (shared/loadoutRecord.js attackRangeGrid:
  * what the server's summonRange, the deploy wheel and the card use since 0.1.1) — else the record itself. 信仰搅拌机 S3
- * is the exception: the planner uses that skill's own grid and does not grow it (§35.106). Cached per player and loadout.
+ * is the exception: the planner uses that skill's own grid and does not grow it (GitHub #31). Cached per player and loadout.
  */
 export function rangeRec(ps, rec) {
   if (!rec || !rec.chessId || typeof ps.loadoutFor !== 'function') return rec;
