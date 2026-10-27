@@ -255,6 +255,13 @@ Production: `http://183.66.27.19:20522` (NAT → internal `:3000`) on a RainYun 
    **`--exclude=./.git` is required on the laptop** (single tree — [`AGENTS.md`](../AGENTS.md) §2): the checkout's
    `.git` holds the packed art (~700 MB), so without it the bundle is **705 MB instead of ~12 MB**. The desktop's dev
    tree has no `.git`, which is why the original command omitted it.
+
+   **Incremental variant (preferred once the host matches a known commit).** Build the delta from git blobs, not the
+   working tree, so the host gets exactly the commit's bytes:
+   `git diff --name-only <deployed-commit>..HEAD` → `git archive --format=tar.gz -o sp-delta.tgz HEAD -- <those paths>`
+   (a 63-file batch was 1.07 MB). Check `git diff --diff-filter=D` is empty first — extraction never deletes, so a
+   removed file has to be removed on the host by hand. Exclude `./skins/sets` from any *full* tar: that is the 300 MB
+   local art, and the host already has it.
    On the host: unpack into `/www/wwwroot/Stronghold-Protocol`, `chown -R www:www .`, dirs 755 / files 644. (Assets
    are the exception: new art/voice/Spine must be uploaded too — for a new operator, all files its manifest lists.)
    The optional **主界面音乐 pack** is `var/music/` (~580 MB, deliberately git-ignored and excluded by the tar above):

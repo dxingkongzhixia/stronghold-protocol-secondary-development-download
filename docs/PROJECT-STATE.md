@@ -47,10 +47,11 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`；**已上线进程的 build `0f7d2bf7a522`**（2026-10-26 部署后重启，`/healthz` 实测且 == 磁盘 build；备份 `/root/sp-backup-20261026-233231.tgz`）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `b8f6defd0d1b`**（2026-10-27 17:02 部署后重启，`/healthz` 实测且 == 磁盘 build；备份 `/root/sp-backup-20261027-165902.tgz`）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 2026-10-27 上线批次 | ① **核心皮肤修复**：`tools/skins.mjs build` 把 `plugin.lock.json` 的动画片段写回 catalogue（缺 `anims` 时 `validSpine` 判无效、房间回退默认模型）；② **主线 0.3.2 战斗修正批 A 12 项**（#720 / #869 / #789 / #749 / #839 / #845 / #851 / #803 / #846 / #847 / #31 / #861）+ 对应 golden；③ 魔王「微尘」环绕光环（#576，纯显示）。相对上次部署 `fce35d298` 共 **34 个提交 / 63 个文件**（增量包 1.07 MB） |
 | 2026-10-26 上线批次 | ① **插件组合上限** `4 → 12 → 128`（`plugins/config.json` 的 `limits.maxSets: 128`，策略天花板从 0–64 放到 0–128；代码默认 `DEFAULT_MAX_SETS = 32`、空闲缓存 `MAX_KEPT = 12`）—— 之前 4 个就是玩家看到的「插件已达上限」；② 房间加载插件卡顿：内容集文件校验改用浏览器原生 `crypto.subtle.digest`，纯 JS SHA-256 仅作回退；③ `server/speed.js` 的 `readOrigins` 按**位置**把第一个源标为「中继」（域名中继不再被误判为镜像）；④ 主界面模式选择三张卡改用官方纹理（`btn_single/btn_team/btn_match`）；⑤ 按键音关闭 |
 | git store | **台式机** = `_merge-scratch`（分支 `prts-plugin`，HEAD 见 `git log`），开发树 `D:\DOTK\Stronghold-Protocol` 已镜像；本轮 HEAD `fce35d298` |
-| 远程同步 | **已全部推送（2026-10-26）**：`github/master` == `gitee/master` == 中继 `master` == HEAD（`fce35d298`）。GitHub 直连会失败，本机走 Steam++ 加速器（hosts 把 github 域名指到 `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`（已写进本仓库 local config，非仓库文件） |
+| 远程同步 | **已全部推送（2026-10-27）**：`github/master` == `gitee/master` == HEAD（`d62b97ad1` + 本次部署记录）。GitHub 直连会失败，本机走 Steam++ 加速器（hosts 把 github 域名指到 `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`（已写进本仓库 local config，非仓库文件）。**资源中继这次没推**：本机 `~/.ssh/sp-deploy` 未被中继机授权（`Permission denied (publickey)`），本轮还没有美术资源变化，游戏服 `/skins/` 自行提供，不影响玩家 |
 | 全量测试 | **8510 项 / 8470 通过 / 0 失败 / 40 跳过，11.2 min**（2026-10-27 笔记本实测；0.3.2 战斗修正批 A + 魔王微尘之后）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6） |
 | 其它闸门 | **2026-10-26 台式机 store 复测**：`lint` 0 error（186 warning）✓；`typecheck` ✓；`i18n check en --strict` **1966/1966**（100%）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 **35/35** ✓；kit 覆盖 **283/283** 技能、**112/112** 棋子 ✓；`check:imports` 3 条既有 `sim-node` 边界记录 |
 | 本机环境 | Node **v24.19.0**（线上是 v26.10.0）；GitHub 经 Steam++（hosts → `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`；官方数据 CDN 需要代理 |
@@ -86,6 +87,8 @@
    ⚠️ **笔记本（单树）必须加 `--exclude=./.git`**：单树检出的 `.git` 里打包着美术资源，约 **700 MB**，
    漏掉这一项会打出 **705 MB** 的包（正常约 12 MB）。桌面机的开发树没有 `.git`，所以原命令没写它。
 3. `scp` 到 `/root/sp-full.tgz`；服务器解包 → `chown -R www:www .` → 目录 755 / 文件 644；
+   ⚠️ **2026-10-27 实测**：盒上的 `tar` 不认 `--owner=www --group=www`（解出来仍是 `root:root`、文件 664）——
+   增量解包后要按包内清单 `chown www:www "$p"`，再按 `[ -d ]` 分 755 / 644，然后才重启。
 4. 停旧进程（按 `ss -ltnp` 里 `:3000` 的 pid，`kill -TERM`）→
    `su -s /bin/bash www -c 'setsid /www/server/nodejs/vhost/scripts/server.sh'`；
 5. `curl http://127.0.0.1:3000/healthz` + 外网 `/healthz` 验证；
@@ -105,6 +108,7 @@
 
 | 时间 | 代码 | build | 更新日志 | 要点 |
 |---|---|---|---|---|
+| **2026-10-27 17:02** | `d62b97ad1` | **`b8f6defd0d1b`** | —（未发更新日志） | 皮肤修复（`build` 补回 `plugin.lock.json` 的 `anims`）+ 主线 0.3.2 战斗修正批 A 12 项 + 魔王微尘光环；相对 `fce35d298` 34 个提交 / 63 个文件，增量包 1.07 MB；先推通知（4 人）→ 备份 `/root/sp-backup-20261027-165902.tgz` → 解包 → 重启 → 再补一条完成通知（3 人）；`/healthz` 线上 == 磁盘 `b8f6defd0d1b` |
 | **2026-10-23 19:57** | `2adf3c7ee` | **`3586e9a2570f`** | **`0.4.71`** | 修复准备按钮点击与临时整备区：按钮不再使用原生 `disabled`，忙碌/过期状态不再锁死；临时整备区非空时点击准备会提示「清空并准备」（出售角色、销毁物品后继续）。**缓存策略改为 app shell / JS / CSS `no-store`**；`/assets`、`/fonts`、`/vendor` 继续长缓存。Gitee / GitHub / 中继均为 `2adf3c7ee`；备份 `/root/sp-backup-code-20261023-195733.tgz` |
 | **2026-10-23 19:34** | `42f77f6a7` | **`e70a15e1be0a`** | **`0.4.70`** | 准备按钮不再被原生 disabled 吞掉点击；新增临时整备区清空动作；同批同步 Gitee 585d 的 PRTS / 黑蛇 / FX / 大厅改动；通知 11 人，备份 `/root/sp-backup-code-20261023-194809.tgz` |
 | **2026-10-21 11:10** | `c294705f2` | **`275f096dcd2e`** | **`0.4.48`** | 手机横屏棋盘相机居中放大 20%，棋盘和干员更大；备份 `/root/sp-backup-zoom-20261021-110922.tgz` |
@@ -207,8 +211,8 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   （`public/js/assets.js`）要求 `anims`，缺了就直接回退干员默认模型，表现就是“只认默认皮肤/不认选择”。
   本机复现：同一房间、同一条 `room.skins`，catalogue 无 clips 时 `actor.entry.skel` 指向 `/assets/~…`；
   `node tools/skins.mjs build` 重建后指向 `/skins/sets/local-skins/…`，`anims.idle = "Idle"`，spine 正常绘制。
-  `check` 现在把“有模型但没 clips”单独计数并以退出码 1 报错。服务器已换上重建后的 catalogue（1643346 B，
-  `anims=true`，`/skins/…` 的 skel/atlas/webp 全 200）；只换了数据文件，未重启、`/healthz` 仍 200。
+  `check` 现在把“有模型但没 clips”单独计数并以退出码 1 报错。**2026-10-27 17:02 已随整批上线**（重启后
+  `/healthz` build `b8f6defd0d1b`），线上 catalogue 1643346 B、`anims=true`，`/skins/…` 的 skel/atlas/webp 全 200。
 - 链路本身已核对无误（`room.skins` → 座位 / `PlayerState.skins` → `m.public.players[].skins` + `UnitInfo.skin` →
   `render/app.js skinOf`）。若再复现，需要具体：干员 / 皮肤键、自己还是队友、`settings.otherSkins`、房间是否
   modded、浏览器里 `/skins/sets/…` 的请求与 `m.public.players[].skins`。
