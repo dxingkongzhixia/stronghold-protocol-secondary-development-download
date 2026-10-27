@@ -244,9 +244,9 @@
       ],
       "enemies": {"enemy_1229_darmy":[10,10,0,10487,135862],"enemy_1229_darmy_2":[7,7,0,15821,124540],"enemy_9007_acelem":[2,2,0,10778,232907]},
       "hooks": [1,10,2209,157,157,310,327,251,20,21,24,23,0,4378,481,12,19,0,1,20,4,3,0],
-      "events": {"atk":182,"deploy":10,"die":21,"dmg":327,"engage":4,"fx":36,"layer":4,"skill":47,"spawn":27,"status":198},
-      "fx": {"beam":2,"blink":1,"burst":3,"devour":4,"dilemma":2,"frostNova":18,"garrison":4,"swordStorm":2},
-      "snaps": "9058be1d 5f6b8253 e0cd35ee 34334f4c 4ccc3323 4dba07d3 7289afca ae25674a"
+      "events": {"atk":182,"deploy":10,"die":21,"dmg":327,"engage":4,"fx":38,"layer":4,"skill":47,"spawn":27,"status":198},
+      "fx": {"beam":2,"blink":1,"burst":3,"devour":4,"dilemma":2,"frostNova":18,"garrison":4,"swordStorm":2,"teleport":2},
+      "snaps": "9058be1d 5f6b8253 e0cd35ee 864c2abd e3dc9f70 0714b530 80c07db4 0f1d2b36"
     },
     "bond-emptyShip-low": {
       "about": "协防干员 low: tier 1 layers 1; chess_char_4_01_a chess_char_4_04_a chess_char_2_14_a chess_char_3_10_a chess_char_3_20_a chess_char_3_21_a chess_char_4_02_a chess_char_4_06_a",
