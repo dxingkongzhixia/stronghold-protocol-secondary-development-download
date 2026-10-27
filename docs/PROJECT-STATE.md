@@ -194,19 +194,19 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 ## 9. 已知问题 / 待办
 
-**2026-10-27 核心皮肤美术缺失（代码已核心化，待服务器迁移数据）**
+**2026-10-27 核心皮肤：服务器已迁移，本机已拉取；存储已清理**
 
-- `skins/catalogue.json` 已 tracked：3 套、175 名干员、277 套外观（257 可穿戴 / 20 仅图片）。但本机与运行树
-  `D:\stronghold-protocol-secondary-development-download` 的 `skins/sets/` **都是空的**；`node tools/skins.mjs check`
-  实测 **2358 个 `/skins/…` 文件里 0 个存在**。所有皮肤因此回退干员默认模型 —— 房间里看起来就是“没有按全局皮肤设置显示”。
-- 代码链路本身已核对：`room.skins` → 座位 / `PlayerState.skins` → `m.public.players[].skins` + `UnitInfo.skin` →
-  `render/app.js skinOf`；`skins/catalogue.json` 由 `coreSkins.installCoreSkins` 加载并 **合并在所有房间/个人插件层之下**。
-  房间只携带“选择”，美术来自核心目录；缺的只是 `skins/sets/` 的本地抽取。
-- 服务器上执行：`node tools/skins.mjs import plugins/local-skins --id local-skins --move`（`local-skins-2` 同样）→
-  `node tools/skins.mjs build` → `node tools/skins.mjs check`（应为 0 missing）→ 重启一次；再从
-  `plugins/config.json` 的 `default` 和房间插件里移除 `local-skins*`。
-- 若服务器 `check` 已是 0 missing 且房间仍显示默认，按 `docs/SKINS.md` 的排查项收集：干员 / 皮肤键、自己还是队友、
-  `settings.otherSkins`、房间是否 modded、浏览器里 `/skins/sets/…` 的请求状态。
+- **服务器已迁移**：`/www/wwwroot/Stronghold-Protocol/skins/sets/` 有 `local-skins` + `local-skins-2`（304 MB），
+  catalogue 为 **2 套 / 175 干员 / 277 套外观（257 可穿戴 / 20 仅图片）**；逐文件校验 **2358 个 `/skins/…` 文件，0 missing**。
+  `plugins/config.json` 的 `default` 是 `[]`，旧的 `local-skins*` 只在 `plugins/_replaced`（已清理）——**皮肤已是核心，不是插件**。
+- **本机已拉取**：同一套 `skins/sets`（304 MB）已从服务器取回，catalogue 换成服务器版本；`node tools/skins.mjs check`
+  为 **0 missing**，本地 `/skins/catalogue.json` 与 `/skins/sets/…` 都返回 200。
+- 因此“房间里不按全局皮肤设置显示”**不是资源缺失或插件来源问题**；代码链路已核对（`room.skins` → 座位 / `PlayerState.skins`
+  → `m.public.players[].skins` + `UnitInfo.skin` → `render/app.js skinOf`）。若仍复现，需要具体：干员 / 皮肤键、自己还是队友、
+  `settings.otherSkins`、房间是否 modded、浏览器里 `/skins/sets/…` 的请求与 `m.public.players[].skins`。
+- **2026-10-27 存储清理**：30 GB 盘 **21 GB → 11 GB（18 GB free，39%）**。删除旧备份（保留 `sp-backup-20261026-233231`、
+  `sp-backup-admin-docs-20261023-122942`、最新的 `sp-backup-code`）、promo/录屏素材、旧素材包、`/.Recycle_bin`、旧
+  `_replaced`（保留 2 份最新）、旧宝塔 panel 备份、286 MB 的 `server.log`（截断）、apt cache。活动皮肤、插件、`public/`、`var/` 未动。
 
 **2026-10-25 代码健康维护（未上线，store `prts-plugin`）**
 

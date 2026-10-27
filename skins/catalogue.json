@@ -3,8 +3,7 @@
   "source": "local-extraction",
   "sets": [
     "local-skins",
-    "local-skins-2",
-    "skins-update"
+    "local-skins-2"
   ],
   "chars": {
     "char_017_huang": {
@@ -506,22 +505,22 @@
         "char_1040_blaze2@nlc#1": {
           "name": "夜行烛火",
           "group": "国家图书馆",
-          "portrait": "/skins/sets/skins-update/media/char_1040_blaze2/char_1040_blaze2_nlc_1_portrait.webp",
-          "avatar": "/skins/sets/skins-update/media/char_1040_blaze2/char_1040_blaze2_nlc_1_avatar.webp",
-          "illust": "/skins/sets/skins-update/media/char_1040_blaze2/char_1040_blaze2_nlc_1_illust.webp",
+          "portrait": "/skins/sets/local-skins/media/char_1040_blaze2/char_1040_blaze2_nlc_1_portrait.webp",
+          "avatar": "/skins/sets/local-skins/media/char_1040_blaze2/char_1040_blaze2_nlc_1_avatar.webp",
+          "illust": "/skins/sets/local-skins/media/char_1040_blaze2/char_1040_blaze2_nlc_1_illust.webp",
           "spine": {
             "front": {
-              "skel": "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/front/char_1040_blaze2_nlc_1.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/front/char_1040_blaze2_nlc_1.atlas",
+              "skel": "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/front/char_1040_blaze2_nlc_1.skel",
+              "atlas": "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/front/char_1040_blaze2_nlc_1.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/front/char_1040_blaze2_nlc_1.webp"
+                "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/front/char_1040_blaze2_nlc_1.webp"
               ]
             },
             "back": {
-              "skel": "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/back/char_1040_blaze2_nlc_1.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/back/char_1040_blaze2_nlc_1.atlas",
+              "skel": "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/back/char_1040_blaze2_nlc_1.skel",
+              "atlas": "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/back/char_1040_blaze2_nlc_1.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/back/char_1040_blaze2_nlc_1.webp"
+                "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_nlc_1/back/char_1040_blaze2_nlc_1.webp"
               ]
             }
           }
@@ -529,22 +528,22 @@
         "char_1040_blaze2@winter#5": {
           "name": "夜归人",
           "group": "寒武纪/V",
-          "portrait": "/skins/sets/skins-update/media/char_1040_blaze2/char_1040_blaze2_winter_5_portrait.webp",
-          "avatar": "/skins/sets/skins-update/media/char_1040_blaze2/char_1040_blaze2_winter_5_avatar.webp",
-          "illust": "/skins/sets/skins-update/media/char_1040_blaze2/char_1040_blaze2_winter_5_illust.webp",
+          "portrait": "/skins/sets/local-skins/media/char_1040_blaze2/char_1040_blaze2_winter_5_portrait.webp",
+          "avatar": "/skins/sets/local-skins/media/char_1040_blaze2/char_1040_blaze2_winter_5_avatar.webp",
+          "illust": "/skins/sets/local-skins/media/char_1040_blaze2/char_1040_blaze2_winter_5_illust.webp",
           "spine": {
             "front": {
-              "skel": "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_winter_5/front/char_1040_blaze2_winter_5.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_winter_5/front/char_1040_blaze2_winter_5.atlas",
+              "skel": "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_winter_5/front/char_1040_blaze2_winter_5.skel",
+              "atlas": "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_winter_5/front/char_1040_blaze2_winter_5.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_winter_5/front/char_1040_blaze2_winter_5.webp"
+                "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_winter_5/front/char_1040_blaze2_winter_5.webp"
               ]
             },
             "back": {
-              "skel": "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_winter_5/back/char_1040_blaze2_winter_5.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_winter_5/back/char_1040_blaze2_winter_5.atlas",
+              "skel": "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_winter_5/back/char_1040_blaze2_winter_5.skel",
+              "atlas": "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_winter_5/back/char_1040_blaze2_winter_5.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_1040_blaze2/char_1040_blaze2_winter_5/back/char_1040_blaze2_winter_5.webp"
+                "/skins/sets/local-skins/spine/char_1040_blaze2/char_1040_blaze2_winter_5/back/char_1040_blaze2_winter_5.webp"
               ]
             }
           }
@@ -1232,22 +1231,22 @@
         "char_2025_shu@nian#11": {
           "name": "春日宴",
           "group": "0011制造/XI",
-          "portrait": "/skins/sets/skins-update/media/char_2025_shu/char_2025_shu_nian_11_portrait.webp",
-          "avatar": "/skins/sets/skins-update/media/char_2025_shu/char_2025_shu_nian_11_avatar.webp",
-          "illust": "/skins/sets/skins-update/media/char_2025_shu/char_2025_shu_nian_11_illust.webp",
+          "portrait": "/skins/sets/local-skins/media/char_2025_shu/char_2025_shu_nian_11_portrait.webp",
+          "avatar": "/skins/sets/local-skins/media/char_2025_shu/char_2025_shu_nian_11_avatar.webp",
+          "illust": "/skins/sets/local-skins/media/char_2025_shu/char_2025_shu_nian_11_illust.webp",
           "spine": {
             "front": {
-              "skel": "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nian_11/front/char_2025_shu_nian_11.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nian_11/front/char_2025_shu_nian_11.atlas",
+              "skel": "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nian_11/front/char_2025_shu_nian_11.skel",
+              "atlas": "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nian_11/front/char_2025_shu_nian_11.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nian_11/front/char_2025_shu_nian_11.webp"
+                "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nian_11/front/char_2025_shu_nian_11.webp"
               ]
             },
             "back": {
-              "skel": "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nian_11/back/char_2025_shu_nian_11.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nian_11/back/char_2025_shu_nian_11.atlas",
+              "skel": "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nian_11/back/char_2025_shu_nian_11.skel",
+              "atlas": "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nian_11/back/char_2025_shu_nian_11.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nian_11/back/char_2025_shu_nian_11.webp"
+                "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nian_11/back/char_2025_shu_nian_11.webp"
               ]
             }
           }
@@ -1255,22 +1254,22 @@
         "char_2025_shu@nlc#1": {
           "name": "源远流长",
           "group": "国家图书馆",
-          "portrait": "/skins/sets/skins-update/media/char_2025_shu/char_2025_shu_nlc_1_portrait.webp",
-          "avatar": "/skins/sets/skins-update/media/char_2025_shu/char_2025_shu_nlc_1_avatar.webp",
-          "illust": "/skins/sets/skins-update/media/char_2025_shu/char_2025_shu_nlc_1_illust.webp",
+          "portrait": "/skins/sets/local-skins/media/char_2025_shu/char_2025_shu_nlc_1_portrait.webp",
+          "avatar": "/skins/sets/local-skins/media/char_2025_shu/char_2025_shu_nlc_1_avatar.webp",
+          "illust": "/skins/sets/local-skins/media/char_2025_shu/char_2025_shu_nlc_1_illust.webp",
           "spine": {
             "front": {
-              "skel": "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nlc_1/front/char_2025_shu_nlc_1.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nlc_1/front/char_2025_shu_nlc_1.atlas",
+              "skel": "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nlc_1/front/char_2025_shu_nlc_1.skel",
+              "atlas": "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nlc_1/front/char_2025_shu_nlc_1.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nlc_1/front/char_2025_shu_nlc_1.webp"
+                "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nlc_1/front/char_2025_shu_nlc_1.webp"
               ]
             },
             "back": {
-              "skel": "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nlc_1/back/char_2025_shu_nlc_1.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nlc_1/back/char_2025_shu_nlc_1.atlas",
+              "skel": "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nlc_1/back/char_2025_shu_nlc_1.skel",
+              "atlas": "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nlc_1/back/char_2025_shu_nlc_1.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_2025_shu/char_2025_shu_nlc_1/back/char_2025_shu_nlc_1.webp"
+                "/skins/sets/local-skins/spine/char_2025_shu/char_2025_shu_nlc_1/back/char_2025_shu_nlc_1.webp"
               ]
             }
           }
@@ -3703,29 +3702,29 @@
         "char_1033_swire2@ambienceSynesthesia#4": {
           "name": "律动方格",
           "group": "音律联觉/IV",
-          "portrait": "/skins/sets/skins-update/media/char_1033_swire2/char_1033_swire2_ambienceSynesthesia_4_portrait.webp",
-          "avatar": "/skins/sets/skins-update/media/char_1033_swire2/char_1033_swire2_ambienceSynesthesia_4_avatar.webp",
-          "illust": "/skins/sets/skins-update/media/char_1033_swire2/char_1033_swire2_ambienceSynesthesia_4_illust.webp"
+          "portrait": "/skins/sets/local-skins-2/media/char_1033_swire2/char_1033_swire2_ambienceSynesthesia_4_portrait.webp",
+          "avatar": "/skins/sets/local-skins-2/media/char_1033_swire2/char_1033_swire2_ambienceSynesthesia_4_avatar.webp",
+          "illust": "/skins/sets/local-skins-2/media/char_1033_swire2/char_1033_swire2_ambienceSynesthesia_4_illust.webp"
         },
         "char_1033_swire2@nlc#1": {
           "name": "盛世之象",
           "group": "国家图书馆",
-          "portrait": "/skins/sets/skins-update/media/char_1033_swire2/char_1033_swire2_nlc_1_portrait.webp",
-          "avatar": "/skins/sets/skins-update/media/char_1033_swire2/char_1033_swire2_nlc_1_avatar.webp",
-          "illust": "/skins/sets/skins-update/media/char_1033_swire2/char_1033_swire2_nlc_1_illust.webp",
+          "portrait": "/skins/sets/local-skins-2/media/char_1033_swire2/char_1033_swire2_nlc_1_portrait.webp",
+          "avatar": "/skins/sets/local-skins-2/media/char_1033_swire2/char_1033_swire2_nlc_1_avatar.webp",
+          "illust": "/skins/sets/local-skins-2/media/char_1033_swire2/char_1033_swire2_nlc_1_illust.webp",
           "spine": {
             "front": {
-              "skel": "/skins/sets/skins-update/spine/char_1033_swire2/char_1033_swire2_nlc_1/front/char_1033_swire2_nlc_1.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_1033_swire2/char_1033_swire2_nlc_1/front/char_1033_swire2_nlc_1.atlas",
+              "skel": "/skins/sets/local-skins-2/spine/char_1033_swire2/char_1033_swire2_nlc_1/front/char_1033_swire2_nlc_1.skel",
+              "atlas": "/skins/sets/local-skins-2/spine/char_1033_swire2/char_1033_swire2_nlc_1/front/char_1033_swire2_nlc_1.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_1033_swire2/char_1033_swire2_nlc_1/front/char_1033_swire2_nlc_1.webp"
+                "/skins/sets/local-skins-2/spine/char_1033_swire2/char_1033_swire2_nlc_1/front/char_1033_swire2_nlc_1.webp"
               ]
             },
             "back": {
-              "skel": "/skins/sets/skins-update/spine/char_1033_swire2/char_1033_swire2_nlc_1/back/char_1033_swire2_nlc_1.skel",
-              "atlas": "/skins/sets/skins-update/spine/char_1033_swire2/char_1033_swire2_nlc_1/back/char_1033_swire2_nlc_1.atlas",
+              "skel": "/skins/sets/local-skins-2/spine/char_1033_swire2/char_1033_swire2_nlc_1/back/char_1033_swire2_nlc_1.skel",
+              "atlas": "/skins/sets/local-skins-2/spine/char_1033_swire2/char_1033_swire2_nlc_1/back/char_1033_swire2_nlc_1.atlas",
               "textures": [
-                "/skins/sets/skins-update/spine/char_1033_swire2/char_1033_swire2_nlc_1/back/char_1033_swire2_nlc_1.webp"
+                "/skins/sets/local-skins-2/spine/char_1033_swire2/char_1033_swire2_nlc_1/back/char_1033_swire2_nlc_1.webp"
               ]
             }
           }
