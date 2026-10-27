@@ -953,7 +953,7 @@ normalised by the manifest's declared settings (§3) and are part of `cs`. Refus
 | `PLUGIN_BLOCKED` | a class or scope rooms cannot take, the server owner's policy (rooms off or fixed, not in `allow`, the class off), or a set whose merged data does not validate (the builder's first problems are the detail) |
 | `PLUGIN_DEPENDENCY` / `PLUGIN_CONFLICT` | a requirement is missing, or two plugins conflict |
 | `PLUGIN_INCOMPATIBLE` | a gameplay plugin made for other game versions or another plugin API (a cosmetic one is only a warning, §9) |
-| `PLUGIN_BUSY` | one content set more than the server runs at once (`limits.maxSets`, default 32, configurable 0–128) |
+| `PLUGIN_BUSY` | one content set more than the server runs at once (`limits.maxSets`, default 32, configurable 0–128), or no match host free (6 run at once, §11) — retry after a room closes |
 
 A change of the content set (or of the mode) un-readies the other players, like a difficulty change. Switching
 everything off brings back the vanilla shape of `room.state.content` exactly.
@@ -996,9 +996,22 @@ against `cs`, installs the data (`server/data.js` `setData`) and only then impor
 never reaches another room. The lobby talks to it through a proxy whose answers are Promises; each such room handles
 its messages one at a time on a queue of its own, and a vanilla room never queues. A host that stops answering (no heartbeat for 10 s), crashes or runs
 out of memory ends that set's matches only: each room goes back to its lobby and its members read why. Each host has a
-768 MB heap; at most `maxWorkers` (4) run at once, and an idle one stops after 10 minutes [ASSUMED, all three].
+768 MB heap; at most **6** run at once (`server/index.js` `MAX_HOSTS` — *not* `limits.maxSets`, which counts data sets,
+not processes), and an idle one stops after 10 minutes [ASSUMED].
 `SP_MATCH_HOST=worker` runs a worker thread instead of a child process — not on a public server: one large allocation
 in a worker thread aborts the whole server process (measured, DESIGN §32.6; `docs/DEPLOY.md`).
+
+**Memory (server side), 2026-10-27.** A built content set is the whole patched data set as served Buffers — **≈16 MB**
+per set (`data/` is 19 MB) — plus its merged `data` object on the heap (≈5 MB). Three things used to keep more of
+them than intended: the builder cached **32** built sets per registry, `contentSets` kept **12** sets no room holds,
+and `contentSetFiles` handed out a **copy** of every body, so a set alive in both places cost twice its bytes. A box
+with 21 distinct plugin combinations in two hours (players switching 1→8 plugins) reached **1.03 GB** resident; a
+reproduction (40 distinct sets, `node --expose-gc`) went 855 MB → 520 MB after the fix: the builder keeps 8 sets and
+**drops its own copy as soon as `contentSets` adopts the set** (`releaseContentSet`), `MAX_KEPT` is 6, and
+`npm start` runs the server with `--max-old-space-size=512` so the heap is collected instead of grown. The copies
+`contentSetFiles` makes stay (a caller that mutates a body must not corrupt the cached set —
+`test/plugins/contentSet.test.js`). If a closed room's `/cs/` files are asked for after 6 newer sets existed, the
+server answers 404 for them and the page rejoins; the room itself always holds its set.
 
 **The battle's authority.** A page simulates its battle on the set it checked, and its `b.result` names that `cs`. A page
 that holds another content set, or none, for a battle of the room's set is never the authority: it sends no result and

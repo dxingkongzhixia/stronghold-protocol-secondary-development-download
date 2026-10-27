@@ -297,7 +297,7 @@ export function entryProblems(pkg, files) {
   for (const name of PLAYER_NPM_SCRIPTS) {
     const cmd = pkg?.scripts?.[name];
     if (!cmd) { out.push(`npm script "${name}" is missing`); continue; }
-    for (const m of cmd.matchAll(/\bnode\s+(?:--[\w-]+\s+)*([\w./-]+\.m?js)\b/g)) {
+    for (const m of cmd.matchAll(/\bnode\s+(?:--[\w-]+(?:=\S+)?\s+)*([\w./-]+\.m?js)\b/g)) {
       if (!shipped.has(m[1])) out.push(`npm run ${name}: ${m[1]} is not shipped`);
     }
   }
@@ -368,7 +368,7 @@ const ABSOLUTE_OR_ANCHOR = /^(?:[a-z][a-z0-9+.-]*:|#)/i;
 
 /** `node <file>` paths a script names. A bare `node --test` names none. */
 export function playerScriptTargets(cmd) {
-  return [...String(cmd ?? '').matchAll(/\bnode\s+(?:--[\w-]+\s+)*([\w./-]+\.m?js)\b/g)].map((m) => m[1]);
+  return [...String(cmd ?? '').matchAll(/\bnode\s+(?:--[\w-]+(?:=\S+)?\s+)*([\w./-]+\.m?js)\b/g)].map((m) => m[1]);
 }
 
 /**

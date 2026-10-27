@@ -36,6 +36,7 @@ function harness({ maxSets = 4 } = {}) {
   const plugins = { a: { id: 'a', content: { hash: 'h1' }, manifest: { id: 'a', version: '1.0.0' } }, b: { id: 'b', content: { hash: 'h2' }, manifest: { id: 'b', version: '1.0.0' } },
     t: { id: 't', content: { hash: 'h3' }, manifest: { id: 't', version: '1.0.0', settings: DEF } } };
   const calls = [];
+  const released = [];
   const filesBy = new WeakMap();
   const made = { a: () => fakeBuilt('a', `a:${plugins.a.content.hash}`), b: () => fakeBuilt('b', 'b'), t: () => fakeBuilt('t', 't'), bad: () => fakeBuilt('a', 'x', { broken: true }) };
   let next = null;
@@ -47,8 +48,8 @@ function harness({ maxSets = 4 } = {}) {
     return built;
   };
   const sets = createContentSets({ registry: { plugin: (id) => plugins[id] || null }, vanillaData: { config: { modes: {} } }, maxSets: () => maxSets,
-    build, filesOf: (built) => filesBy.get(built) });
-  return { sets, plugins, calls, breakNext: (on) => { next = on ? 'bad' : null; } };
+    build, filesOf: (built) => filesBy.get(built), release: (built) => released.push(built) });
+  return { sets, plugins, calls, released, breakNext: (on) => { next = on ? 'bad' : null; } };
 }
 
 test('the same plugins, in the same state, with the same settings, are not built again', () => {
@@ -113,4 +114,20 @@ test('a set whose manifest does not hash to its cs is never used; the limit; wha
   assert.equal(sets.inUse(), 1);
   sets.release(a.cs);
   assert.equal(sets.inUse(), 0);
+});
+
+test('a set this server adopted lets the builder go of its own copy (memory), and a refused one does not', () => {
+  const { sets, released, breakNext } = harness();
+  const a = sets.resolve(['a']);
+  assert.ok(a.ok, JSON.stringify(a));
+  assert.equal(released.length, 1, 'released once adopted');
+  assert.equal(released[0].cs, a.set.cs);
+  const again = sets.resolve(['a']);
+  assert.equal(released.length, 1, 'a remembered set is not released twice');
+  assert.equal(again.set, a.set);
+  // a manifest that does not hash to its cs is never adopted: nothing to free, nothing kept
+  breakNext(true);
+  const bad = sets.resolve(['b']);
+  assert.equal(bad.error, ERR.INTERNAL);
+  assert.equal(released.length, 1);
 });

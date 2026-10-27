@@ -245,9 +245,13 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const market = createPluginMarket({ root: ROOT, log, registry: packs });
   const roomSets = createRoomSets({ registry: packs, visual, contents, policy });
   // gameplay-plugin rooms simulate in a host (server/match/host, DESIGN §32.6): one per content set; a child process
-  // by default, a worker thread when SP_MATCH_HOST=worker asks for it
+  // by default, a worker thread when SP_MATCH_HOST=worker asks for it. The host count is NOT the content-set limit: a
+  // host is a whole node process (≈110–180 MB resident) while a content set is a few MB of data, so `limits.maxSets`
+  // (0–128 since 2026-10-26) must not become 128 processes on a 4 GB box. Idle hosts end after 10 min; a set needing a
+  // host beyond MAX_HOSTS reports PLUGIN_BUSY instead.
   const transport = String(process.env.SP_MATCH_HOST || '').trim().toLowerCase() === 'worker' ? 'worker' : 'process';
-  const hosts = createMatchHosts({ contents, log, options: { transport, maxWorkers: Math.max(1, policy.get().maxSets), ...(opts.matchHost || {}) } });
+  const MAX_HOSTS = 6;
+  const hosts = createMatchHosts({ contents, log, options: { transport, maxWorkers: Math.min(MAX_HOSTS, Math.max(1, policy.get().maxSets)), ...(opts.matchHost || {}) } });
   const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content, plugins: roomSets, hosts });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
   const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, skinsDir, packs, content, log, assetIndex, views, visual, contents });

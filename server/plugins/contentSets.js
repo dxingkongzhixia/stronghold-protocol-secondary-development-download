@@ -28,16 +28,20 @@
 import { ERR, DIFFICULTIES } from '../../shared/constants.js';
 import { contentHashOf, csUrlPart, isContentHash } from '../../shared/plugins/identity.js';
 import { normalizeSettings } from '../../shared/plugins/patch.js';
-import { buildContentSet, contentSetFiles } from './contentSet.js';
+import { buildContentSet, contentSetFiles, releaseContentSet } from './contentSet.js';
 
 const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
-/** Content sets kept that no room holds (their /cs/ files stay servable a while). [ASSUMED] */
-export const MAX_KEPT = 12;
+/** Content sets kept that no room holds (their /cs/ files stay servable a while). [ASSUMED]
+ *  Memory, not gameplay: one kept set holds its whole patched data set as served Buffers (≈16 MB — data/ is 19 MB),
+ *  so this is the count a server pays for every plugin combination that was ever played this session. The 2026-10-27
+ *  measurement (docs/PLUGINS.md §11) had the box at 1.03 GB after 21 distinct combinations in two hours with 12
+ *  kept; 6 halves that share and only costs a rebuild when a closed room's files are asked for again. */
+export const MAX_KEPT = 6;
 /** Concurrent content sets with gameplay plugins rooms may hold (plugins/config.json limits.maxSets).
  *  History: 4 (original) → 12 on 2026-10-26 noon → 32 the same evening: the cap counts every set a room HOLDS across the
  *  server, not per room, so a busy evening (7+ rooms, several plugin combos) hit it. A set is the patched data a room
  *  plays (a few MB — data/ is 19 MB in total), so 32 holds are far cheaper than they look; the expensive thing is a
- *  running match's worker, which this does not cap. The owner can retune it live in plugins/config.json (0–64). */
+ *  running match's worker, which this does not cap. The owner can retune it live in plugins/config.json (0–128). */
 export const DEFAULT_MAX_SETS = 32;
 /** Builds remembered by what they were built from (resolve). */
 const MEMO_MAX = 32;
@@ -73,11 +77,12 @@ export function pluginModes(modes, vanillaData) {
 /**
  * The content sets of one server.
  * @param {{ registry: { plugin: (id: string) => any, onScan?: (fn: () => void) => (() => void) }, vanillaData: Readonly<Record<string, any>>, log?: object,
- *   maxSets?: () => number, build?: typeof buildContentSet, filesOf?: typeof contentSetFiles, maxKept?: number }} opts
- *   maxSets: the limit now (the server owner's policy may change it); build / filesOf: the C1 builder (tests inject one)
+ *   maxSets?: () => number, build?: typeof buildContentSet, filesOf?: typeof contentSetFiles, release?: (set: any) => void, maxKept?: number }} opts
+ *   maxSets: the limit now (the server owner's policy may change it); build / filesOf / release: the C1 builder (tests
+ *   inject one); release frees the builder's own copy once this server holds the set's files (server/plugins/contentSet.js)
  */
 export function createContentSets({ registry, vanillaData, log = noopLog, maxSets = () => DEFAULT_MAX_SETS,
-  build = buildContentSet, filesOf = contentSetFiles, maxKept = MAX_KEPT }) {
+  build = buildContentSet, filesOf = contentSetFiles, release = releaseContentSet, maxKept = MAX_KEPT }) {
   /** @type {Map<string, ContentSet>} by cs16, most recently used last */
   const sets = new Map();
   /** @type {Map<string, number>} cs16 → rooms holding it */
@@ -183,6 +188,9 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
     const hashInput = { app: index.app, sim: index.sim, data, plugins: index.plugins || [], settings: index.settings || {}, ...(Object.keys(i18n).length ? { i18n } : {}), ...(index.rules && typeof index.rules === 'object' && !Array.isArray(index.rules) ? { rules: index.rules } : {}) };
     // what a browser and a match host recompute from the manifest must be the builder's cs (else no page could check it)
     if (contentHashOf(hashInput) !== built.cs) return null;
+    // this server holds the files now (filesOf copies them): the builder keeps no second copy, so a server whose rooms
+    // switch plugin combinations often does not grow by one whole data set per combination (server/plugins/contentSet.js)
+    release(built);
     return {
       cs: built.cs, plugins: built.plugins || [], data: built.data,
       hashInput,

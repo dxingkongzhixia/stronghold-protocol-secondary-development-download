@@ -52,10 +52,10 @@
 | 2026-10-26 上线批次 | ① **插件组合上限** `4 → 12 → 128`（`plugins/config.json` 的 `limits.maxSets: 128`，策略天花板从 0–64 放到 0–128；代码默认 `DEFAULT_MAX_SETS = 32`、空闲缓存 `MAX_KEPT = 12`）—— 之前 4 个就是玩家看到的「插件已达上限」；② 房间加载插件卡顿：内容集文件校验改用浏览器原生 `crypto.subtle.digest`，纯 JS SHA-256 仅作回退；③ `server/speed.js` 的 `readOrigins` 按**位置**把第一个源标为「中继」（域名中继不再被误判为镜像）；④ 主界面模式选择三张卡改用官方纹理（`btn_single/btn_team/btn_match`）；⑤ 按键音关闭 |
 | git store | **台式机** = `_merge-scratch`（分支 `prts-plugin`，HEAD 见 `git log`），开发树 `D:\DOTK\Stronghold-Protocol` 已镜像；本轮 HEAD `fce35d298` |
 | 远程同步 | **已全部推送（2026-10-27）**：`github/master` == `gitee/master` == HEAD（`d62b97ad1` + 本次部署记录）。GitHub 直连会失败，本机走 Steam++ 加速器（hosts 把 github 域名指到 `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`（已写进本仓库 local config，非仓库文件）。**资源中继这次没推**：本机 `~/.ssh/sp-deploy` 未被中继机授权（`Permission denied (publickey)`），本轮还没有美术资源变化，游戏服 `/skins/` 自行提供，不影响玩家 |
-| 全量测试 | **8510 项 / 8470 通过 / 0 失败 / 40 跳过，11.2 min**（2026-10-27 笔记本实测；0.3.2 战斗修正批 A + 魔王微尘之后）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6） |
+| 全量测试 | **8519 项 / 8482 通过 / 0 失败 / 37 跳过，10.0 min**（2026-10-27 台式机 store 实测；内存优化之后。笔记本同日为 8510 / 8470 / 0 / 40，11.2 min）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6）。注：`test/plugins/visualSet.test.js` 的「压缩缓存 ctime」用例在本机**偶发**失败（Windows 时间戳粒度，与代码无关；把改动 stash 后仍 4/5 失败） |
 | 其它闸门 | **2026-10-26 台式机 store 复测**：`lint` 0 error（186 warning）✓；`typecheck` ✓；`i18n check en --strict` **1966/1966**（100%）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 **35/35** ✓；kit 覆盖 **283/283** 技能、**112/112** 棋子 ✓；`check:imports` 3 条既有 `sim-node` 边界记录 |
 | 本机环境 | Node **v24.19.0**（线上是 v26.10.0）；GitHub 经 Steam++（hosts → `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`；官方数据 CDN 需要代理 |
-| 本地服务 | `node server/index.js` 于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
+| 本地服务 | `npm start`（= `node --max-old-space-size=512 server/index.js`，2026-10-27 起；直接 `node server/index.js` 不设上限）于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
 | 线上新增内容 | 插件 **12** 个（含 `prts-kaltsit:loaded`，未改 `plugins/config.json` 默认列表）；主界面音乐 **218** 条（`var/music`，351 个文件）；内置音乐 24 条；剧情背景 **54** 张；DB schema **v6**；`var/avatars` 已创建 |
 
 ## 4. 线上
@@ -197,6 +197,21 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 - **git 回退点**：tag `backup/pre-3d-scenes`、`backup-pre-groupA`，分支 `backup/ours-pre-reconcile-20261013`（见 [`docs/HANDOVER.md`](HANDOVER.md)）。
 
 ## 9. 已知问题 / 待办
+
+**2026-10-27 内存：插件内容集缓存（已改，未上线）**
+
+- **症状**：线上主进程 17 人时 **1.03 GB**（部署后约 400 MB，一路涨到 1 GB 才平稳），另有 3 个比赛 host 子进程
+  110–180 MB，整机 2.2 GB / 3.9 GB。
+- **原因**：玩家每换一次插件组合就构建一份**内容集**（整份打过补丁的数据，≈16 MB 的 Buffers + ≈5 MB 堆上对象），
+  而三处都在留：`contentSet.js` 构建器缓存 **32** 份、`contentSets.js` 的 `MAX_KEPT` **12** 份（房间不再用时仍留着
+  服务 `/cs/` 下载）、`contentSetFiles` 另外**再复制**一份 body。日志实测本次重启 2 小时里有 **21 个不同组合**
+  （一名玩家连续从 1 个插件加到 8 个），历史累计 210 个。
+- **改法**（`docs/PLUGINS.md` §11 内存段）：构建器缓存 8 份，且 `contentSets` 接管后立刻 **`releaseContentSet`**
+  丢掉构建器那份；`MAX_KEPT` 12 → **6**；`npm start` 加 `--max-old-space-size=512`；比赛 host 并发上限与
+  `limits.maxSets` 解耦，改为 **`MAX_HOSTS = 6`**（此前 128，而每个 host 是独立进程）。
+- **复现与实测**（同一套代码，40 个不同内容组合，`--expose-gc`）：RSS **855 → 520 MB**、堆 298 → 118 MB、
+  ArrayBuffer 292 → 112 MB。`contentSetFiles` 的复制保留（防调用方改坏缓存，`test/plugins/contentSet.test.js` 断言）。
+- **未做**：线上仍是旧代码，重启后才会生效（需发通知）。
 
 **2026-10-27 核心皮肤：服务器已迁移，本机已拉取；存储已清理**
 

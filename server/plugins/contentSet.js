@@ -25,7 +25,7 @@ import { composeRules } from '../../shared/plugins/rules.js';
 import { offerReferenceProblems } from './offerData.js';
 import { allowsIncompatible } from './compat.js';
 
-const bases = new WeakMap(), buffers = new WeakMap(), caches = new WeakMap();
+const bases = new WeakMap(), buffers = new WeakMap(), caches = new WeakMap(), cacheOf = new WeakMap();
 function baseFor(registry) {
   if (bases.has(registry)) return bases.get(registry);
   const dirs = registry.contentDirs ?? {};
@@ -382,10 +382,30 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
       bodies.set(`scripts/${p.id}/${rel}`, Buffer.from(p.browserSources[rel]));
   }
   bodies.set('index.json', Buffer.from(JSON.stringify(index)));
-  buffers.set(set, bodies); cache.set(cs, set);
-  // [ASSUMED] Keep 32 recently constructed sets per registry. Callers may retain a set and its files indefinitely.
-  if (cache.size > 32) cache.delete(cache.keys().next().value);
+  buffers.set(set, bodies); cache.set(cs, set); cacheOf.set(set, cache);
+  // [ASSUMED] Keep 8 recently constructed sets per registry (memory: every kept set holds the whole data set twice,
+  // its bodies and the copies contentSetFiles hands out — a server whose rooms switch plugin combinations often
+  // built dozens of them). A caller that holds a set's files itself calls releaseContentSet and is not counted.
+  if (cache.size > 8) {
+    const gone = cache.keys().next().value;
+    const old = cache.get(gone);
+    cache.delete(gone);
+    if (old) { buffers.delete(old); cacheOf.delete(old); }
+  }
   return set;
+}
+
+/**
+ * Let go of a built set's own bytes and cache slot: `contentSets` keeps the files it adopted (contentSetFiles copies
+ * them), so the builder no longer needs the originals. A later build of the same cs builds again rather than handing
+ * out a set whose `contentSetFiles` would be empty. @param {any} set the set `buildContentSet` returned
+ */
+export function releaseContentSet(set) {
+  if (!set || typeof set !== 'object') return;
+  buffers.delete(set);
+  const cache = cacheOf.get(set);
+  cache?.delete(set.cs);
+  cacheOf.delete(set);
 }
 
 /** Route adapter: Map<relative path, {body: Buffer, sha256, bytes}>. Copies protect cached immutable snapshots. */
