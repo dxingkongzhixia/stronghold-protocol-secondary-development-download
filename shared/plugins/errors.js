@@ -136,7 +136,7 @@ export const PLUGIN_ERRORS = Object.freeze({
   PLUGIN_BUSY: {
     level: 'refusal', doc: D.rooms,
     zh: '本服务器同时运行的插件组合已达上限', en: 'This server already runs as many plugin sets at once as it allows',
-    fix: { zh: '稍后再试，或者和正在用插件的房间选同样的插件；服主可以在 plugins/config.json 里调高 maxSets。', en: 'Try again later, or pick the same plugins as a room already using some; the server owner can raise maxSets in plugins/config.json.' },
+    fix: { zh: '稍后再试，或者和正在用插件的房间选同样的插件；服主可以在 plugins/config.json 里调高 maxSets（0–128，改完 1 秒生效、不用重启；默认 32）。', en: 'Try again later, or pick the same plugins as a room already using some; the server owner can raise maxSets in plugins/config.json (0–128, effective within a second without a restart; default 32).' },
   },
 
   // ---- the manifest (plugin.json) ------------------------------------------------------------------------------------
