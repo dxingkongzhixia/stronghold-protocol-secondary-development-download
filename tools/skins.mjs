@@ -9,6 +9,9 @@
 //   node tools/skins.mjs build
 //       scan skins/sets/*/overlay.json (in name order), rewrite every relative art path to /skins/sets/<name>/…, merge
 //       the chars maps and write skins/catalogue.json.
+//   node tools/skins.mjs check
+//       verify the catalogue against skins/sets/: every /skins/… URL present on disk, sets present, wear-able models.
+//       Exit 1 with the first missing files — the diagnostic for “the room shows no skins”.
 //
 // The art is NOT tracked by git (skins/sets/ is ignored): official outfits are extracted locally and must not be
 // redistributed. Only the catalogue (names / groups / paths) is tracked, so the server and the client share one schema.
@@ -112,6 +115,56 @@ function build() {
   console.log(`[skins] ${sets.length} set(s), ${Object.keys(chars).length} operator(s), ${skins} skin(s) -> skins/catalogue.json`);
 }
 
+function check() {
+  if (!existsSync(CATALOGUE)) { fail(`no ${CATALOGUE} (run build)`); return; }
+  let doc;
+  try { doc = JSON.parse(readFileSync(CATALOGUE, 'utf8')); } catch (e) { fail(`${CATALOGUE}: ${e.message}`); return; }
+  const chars = isObj(doc?.chars) ? doc.chars : {};
+  const urls = new Set();
+  let skins = 0, wear = 0, artOnly = 0;
+  for (const rec of Object.values(chars)) {
+    if (!isObj(rec)) continue;
+    for (const field of IMAGE_FIELDS) if (str(rec[field])) urls.add(rec[field]);
+    for (const skin of Object.values(isObj(rec.skins) ? rec.skins : {})) {
+      if (!isObj(skin)) continue;
+      skins++;
+      const hasModel = isObj(skin.spine) && isObj(skin.spine.front) && str(skin.spine.front.skel) && str(skin.spine.front.atlas);
+      if (hasModel) wear++; else artOnly++;
+      for (const field of IMAGE_FIELDS) if (str(skin[field])) urls.add(skin[field]);
+      for (const side of ['front', 'back']) {
+        const model = isObj(skin.spine) ? skin.spine[side] : null;
+        if (!isObj(model)) continue;
+        for (const field of MODEL_FIELDS) if (str(model[field])) urls.add(model[field]);
+        for (const t of Array.isArray(model.textures) ? model.textures : []) if (str(t)) urls.add(t);
+      }
+    }
+  }
+  const local = [...urls].filter((u) => u.startsWith('/skins/'));
+  const missing = local.filter((u) => {
+    const rel = u.slice('/skins/'.length).split(/[?#]/)[0];
+    return !existsSync(join(SKINS, decodeURIComponent(rel)));
+  });
+  const sets = Array.isArray(doc.sets) ? doc.sets : [];
+  const setDirs = existsSync(SETS)
+    ? readdirSync(SETS).filter((n) => { try { return statSync(join(SETS, n)).isDirectory(); } catch { return false; } })
+    : [];
+  const noOverlay = setDirs.filter((n) => !existsSync(join(SETS, n, 'overlay.json')));
+  console.log(`[skins] catalogue: ${sets.length} set(s) [${sets.join(', ')}], ${Object.keys(chars).length} operator(s), ${skins} skin(s) (${wear} wear-able, ${artOnly} art-only)`);
+  console.log(`[skins] art: ${local.length} file(s) under /skins/, ${local.length - missing.length} present, ${missing.length} missing`);
+  if (missing.length) {
+    console.log('[skins] first missing:');
+    for (const u of missing.slice(0, 8)) console.log(`  ${u}`);
+  }
+  if (sets.length && !setDirs.length) console.log(`[skins] skins/sets/ is missing: the catalogue has ${sets.length} set(s) but no art is installed`);
+  else if (sets.some((s) => !setDirs.includes(s))) console.log(`[skins] sets without a directory: ${sets.filter((s) => !setDirs.includes(s)).join(', ')}`);
+  if (noOverlay.length) console.log(`[skins] directories without overlay.json: ${noOverlay.join(', ')}`);
+  if (!skins) console.log('[skins] the catalogue has no skins: the picker shows nothing');
+  if (missing.length) {
+    console.log('[skins] run `node tools/skins.mjs import <plugin-dir> --id <name> --move` (or the local extractor), then `node tools/skins.mjs build`');
+    process.exitCode = 1;
+  }
+}
+
 function importSet(dirArg, { id, move }) {
   if (!dirArg) { fail('usage: node tools/skins.mjs import <plugin-dir> [--id <name>] [--move]'); return; }
   const src = resolve(dirArg);
@@ -128,11 +181,12 @@ function importSet(dirArg, { id, move }) {
 }
 
 if (command === 'build') build();
+else if (command === 'check') check();
 else if (command === 'import') {
   const dir = args[1];
   const idAt = args.indexOf('--id');
   importSet(dir, { id: idAt > 0 ? args[idAt + 1] : null, move: args.includes('--move') });
 } else {
-  console.log('usage: node tools/skins.mjs import <plugin-dir> [--id <name>] [--move] | build');
+  console.log('usage: node tools/skins.mjs import <plugin-dir> [--id <name>] [--move] | build | check');
   process.exitCode = command ? 1 : 0;
 }

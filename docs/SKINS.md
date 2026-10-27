@@ -288,6 +288,39 @@ node tools/skins.mjs build
 - **No install channel**: the server still never downloads or writes art; this is an owner-side extraction into
   `skins/sets/`, served read-only at `/skins/`.
 
+## 房间里看不到皮肤：先跑 `check`
+
+A room's `room.skins` carries only the **choice**; the art comes from the core catalogue
+(`skins/catalogue.json`) and `skins/sets/`. If the art is missing, every skin falls back to the operator's own
+model — the room looks like it "ignores the global skin setting", and so does every other screen.
+
+```bash
+node tools/skins.mjs check
+# [skins] catalogue: 3 set(s) [...], 175 operator(s), 277 skin(s) (257 wear-able, 20 art-only)
+# [skins] art: 2358 file(s) under /skins/, 2358 present, 0 missing
+```
+
+`check` exits 1 and names the first missing files. The fix is data, not code:
+
+```bash
+# on the machine that has the old plugin layout / the official client
+node tools/skins.mjs import plugins/local-skins   --id local-skins   --move
+node tools/skins.mjs import plugins/local-skins-2 --id local-skins-2 --move
+node tools/skins.mjs build
+node tools/skins.mjs check
+# restart the server once
+```
+
+Then remove the skin sets from `plugins/config.json` (`default` / the room's plugin list): a cosmetic plugin may
+still override a skin, but it is no longer the source. A room that names no visual set, or a room whose plugin set
+changed, must not change which core skins are available.
+
+If `check` reports 0 missing and a room still draws the default model, collect: the chess id and skin key, the
+owner (your own seat or a teammate), `settings.otherSkins`, whether the room is modded, and the browser console's
+`/skins/sets/…` requests. `room.skins` is cosmetic and public: the server accepts it in every phase
+(`Match.setSkins` → `markPrivate` / `markPublic`), and `render/app.js skinOf` applies `UnitInfo.skin` and
+`Match.publicView().players[].skins`.
+
 ## Known limitations
 
 - **Bots always wear the default model** (`PlayerState.setSkins` refuses a bot, as `setLoadout` does).
