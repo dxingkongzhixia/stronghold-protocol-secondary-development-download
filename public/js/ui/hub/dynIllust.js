@@ -54,6 +54,24 @@ export function pickIdle(animations) {
 }
 
 /**
+ * Scale/offset that show a skeleton's whole height in a viewport (the character must not lose its head or feet to a
+ * `cover` crop), centred horizontally; the blurred backdrop fills the sides.
+ * @returns {{ scale: number, x: number, y: number }}
+ */
+export function fitTransform(bounds, width, height, zoom = 1) {
+  const bw = Math.max(1, Number(bounds?.width) || 0);
+  const bh = Math.max(1, Number(bounds?.height) || 0);
+  const w = Math.max(1, Number(width) || 0);
+  const h = Math.max(1, Number(height) || 0);
+  const scale = (h / bh) * (Number(zoom) || 1);
+  return {
+    scale,
+    x: w / 2 - ((Number(bounds?.x) || 0) + bw / 2) * scale,
+    y: h / 2 - ((Number(bounds?.y) || 0) + bh / 2) * scale,
+  };
+}
+
+/**
  * Scale/offset that make a skeleton's local bounds cover a viewport (crop the overflow, never letterbox).
  * @returns {{ scale: number, x: number, y: number }}
  */
@@ -169,7 +187,7 @@ export function mountDynIllust(host, entry, { motion = true, onError } = {}) {
 
     const fit = () => {
       if (!app || !spine) return;
-      const { scale, x, y } = coverTransform(spine.getLocalBounds(), host.clientWidth, host.clientHeight);
+      const { scale, x, y } = fitTransform(spine.getLocalBounds(), host.clientWidth, host.clientHeight);
       spine.scale.set(scale);
       spine.position.set(x, y);
     };

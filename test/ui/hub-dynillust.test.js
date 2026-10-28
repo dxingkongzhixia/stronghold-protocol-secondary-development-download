@@ -4,7 +4,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  sanitizeDynId, dynEntryPart, validDynEntry, dynAssetUrl, pickIdle, coverTransform, loadDynIndex, resetDynIndex,
+  sanitizeDynId, dynEntryPart, validDynEntry, dynAssetUrl, pickIdle, coverTransform, fitTransform, loadDynIndex, resetDynIndex,
 } from '../../public/js/ui/hub/dynIllust.js';
 
 const ENTRY = {
@@ -83,6 +83,17 @@ describe('dynamic illustration: the ambient clip and the cover fit', () => {
     assert.ok(z.scale > scale);
   });
 
+  test('fitTransform keeps the whole height (the head/feet are never cropped) and centres it', () => {
+    const bounds = { x: -856.8, y: -1545.2, width: 1706.2, height: 1576.7 };
+    const { scale, x, y } = fitTransform(bounds, 1920, 1000);
+    assert.ok(Math.abs(scale - 1000 / bounds.height) < 1e-9, 'height fit');
+    const cy = (bounds.y + bounds.height / 2) * scale + y;
+    assert.ok(Math.abs(cy - 500) < 1e-6, 'vertically centred');
+    assert.ok(Math.abs(bounds.height * scale - 1000) < 1e-6, 'the whole height fits exactly');
+    const cx = (bounds.x + bounds.width / 2) * scale + x;
+    assert.ok(Math.abs(cx - 960) < 1e-6, 'horizontally centred');
+  });
+
   test('coverTransform tolerates empty bounds / sizes without NaN', () => {
     const t = coverTransform(null, 0, 0);
     for (const v of [t.scale, t.x, t.y]) assert.ok(Number.isFinite(v));
@@ -108,3 +119,4 @@ describe('dynamic illustration: the index loader', () => {
     resetDynIndex();
   });
 });
+
