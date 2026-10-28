@@ -927,21 +927,29 @@ primary repo with `ACAO: *`.)
     --id "char_1038_whitw2@sale#15" --char char_1038_whitw2 --name "无序的谦卑" --group "忒斯特收藏/XVII"
   ```
   输出 `public/assets/dynillust/<slug>/main/illust.skel|.atlas|page.webp` 与 `<slug>/entry.json`，并维护
-  `public/assets/dynillust/index.json`（`{version, entries}`，每个 entry 带 `id/name/group/poster/parts`；`parts[].v` 是内容
+  `public/assets/dynillust/index.json`（`{version, entries}`，每个 entry 带 `id/name/group/poster/backdrop/parts`；`parts[].v` 是内容
   hash，重抽后变化）。图集页统一改名 `page.webp`、atlas 里的页名同步改写（`#` 不能进 URL）；只取主立绘，
   `--keep-start` 才保留入场骨架。**这个目录 git-ignored**（付费时装美术，单套约 4 MB），每台机器 / 服务器自己抽；
   客户端 `public/js/ui/hub/dynIllust.js` 读 index 后用 PIXI + pixi-spine 播放 `Idle`，index 缺失就只是没有这个入口。
 
-  全部抽取（`--dynchars` 可重复，后面的目录覆盖前面的；已有条目跳过，`--force` 重抽）：
+  官方动态立绘的**房间背景是 Unity 网格/材质**，pixi-spine 画不出来（我们只拿到 Spine 主体，背景会是全黑）。
+  每个 `dynchars` 包里其实还带一张**房间场景渲染图**（2048² 左右、人物透明，名字多为 `*_bg*` / `live_*` / `l2d_*`）；
+  抽取时取「最大的非图集贴图」存成 `<slug>/backdrop.webp`（1280，q82）。没有场景图的包再回退到官方**静态立绘**
+  （`--skinpack`，时装；`--chararts`，精英二），客户端把背景模糊 18px、压暗后铺在大厅后面，Spine 主体叠在上面。
+  它也是切皮肤时的即时占位，不用等骨架下载完才有画面。
   ```
-  py -3.14 tools/local-extract/dynillust.py --all ^
-    --dynchars "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars"
+  py -3.14 tools/local-extract/dynillust.py --all --force ^
+    --dynchars "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars" ^
+    --skinpack "<client>\Arknights_Data\StreamingAssets\AB\Windows\skinpack" ^
+    --chararts "<client>\Arknights_Data\StreamingAssets\AB\Windows\chararts"
   ```
+  `--max-page 1600`（默认）会把图集页和 atlas 坐标一起等比缩小（UV 不变），单套体积从 ~4 MB 降到 ~2–3 MB；
   选择页的缩略图由 Spine 自身渲染成一张 16:9 静帧（`poster.webp`，写入 entry.poster；换机器也能重生成）：
   ```
   node tools/local-extract/dynillust-posters.mjs --force
   ```
-  选择页只下载每个缩略图（~50 KB），**点选后才加载那一套骨架**（约 4 MB），不会把全部动态皮肤一起拉下来。
+  选择页只下载每个缩略图（~50 KB），**鼠标悬停/键盘聚焦时**就用 `PIXI.Assets.backgroundLoad` 预取那一套骨架，
+  点选后才挂到大厅；不会把全部动态皮肤一起拉下来。
 
 ## Licensing and credits
 

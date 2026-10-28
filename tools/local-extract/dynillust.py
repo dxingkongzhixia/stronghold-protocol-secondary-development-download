@@ -88,7 +88,7 @@ def atlas_page_sizes(atlas_text):
     lines = atlas_text.splitlines()
     sizes = {}
     for i, ln in enumerate(lines):
-        if not ln or ln[0].isspace() or not ln.endswith('.png'):
+        if not ln or ln[0].isspace() or not ln.endswith(('.png', '.webp')):
             continue
         for nxt in lines[i + 1:i + 4]:
             s = nxt.strip()
@@ -100,6 +100,42 @@ def atlas_page_sizes(atlas_text):
                     pass
                 break
     return sizes
+
+
+def scale_atlas(atlas_text, page, ratio):
+    """Scale one page's regions after downscaling its texture, so the atlas UVs still line up."""
+    if ratio >= 1:
+        return atlas_text
+    lines = atlas_text.splitlines()
+    out = []
+    in_page = False
+    page_size_done = False
+    for ln in lines:
+        s = ln.strip()
+        if not ln:
+            out.append(ln)
+            continue
+        unindented = not ln[0].isspace()
+        if unindented and s.endswith(('.png', '.webp')):
+            in_page = s == page
+            page_size_done = False
+            out.append(ln)
+            continue
+        # page metadata (size/format/filter/repeat) is NOT indented in a Spine atlas; region fields are.
+        if in_page and s.startswith(('size:', 'xy:', 'orig:', 'offset:')):
+            is_page_size = s.startswith('size:') and not page_size_done
+            key, val = s.split(':', 1)
+            try:
+                nums = [str(max(0, round(float(p) * ratio))) if p.strip() else p.strip() for p in val.split(',')]
+            except ValueError:
+                out.append(ln)
+                continue
+            out.append(('' if unindented else '  ') + f'{key}: ' + ','.join(nums))
+            if is_page_size:
+                page_size_done = True
+            continue
+        out.append(ln)
+    return '\n'.join(out) + ('\n' if atlas_text.endswith('\n') else '')
 
 
 def atlas_pages(atlas_text):
@@ -181,7 +217,7 @@ def pick_skeletons(texts, keep_start):
     return sorted(by_stem.items(), key=lambda x: (x[0].endswith('_Start'), x[0]))
 
 
-def extract_one(bundle, skin_id, out_root, quality, keep_start, meta):
+def extract_one(bundle, skin_id, out_root, quality, keep_start, meta, max_page=1600):
     """Write one outfit's main Spine set and return its index record."""
     print(f'reading {bundle.name} ({bundle.stat().st_size} bytes)')
     texts, textures = read_bundle(bundle)
@@ -223,6 +259,10 @@ def extract_one(bundle, skin_id, out_root, quality, keep_start, meta):
                     image = canvas
             elif want and image.size != want:
                 image = image.crop((0, 0, want[0], want[1]))
+            if max_page and max(image.size) > max_page:
+                ratio = max_page / max(image.size)
+                image = image.resize((max(1, round(image.width * ratio)), max(1, round(image.height * ratio))), Image.LANCZOS)
+                atlas_text = scale_atlas(atlas_text, page, ratio)
             out_page = f'page{i}.webp' if len(pages) > 1 else 'page.webp'
             image.save(part_dir / out_page, 'WEBP', quality=quality, method=6, alpha_quality=100)
             page_files.append(out_page)
@@ -261,6 +301,133 @@ def extract_one(bundle, skin_id, out_root, quality, keep_start, meta):
     return entry
 
 
+def extract_scene_backdrops(out_root, entries, bundles, table, chars, max_edge=1280):
+    """Use the outfit's own scene render from the dynamic bundle as the room behind the Spine.
+
+    Every dynchars prefab also carries the room as textures (the largest one that is not an atlas page — e.g. the 2048²
+    bar render). Unlike the static illustration it has no character in it, so it can sit sharp-ish behind the animated
+    one; the client blurs it into the backdrop.
+    """
+    by_id = {}
+    for stem, path in bundles.items():
+        by_id.setdefault(meta_for(stem, table, chars)[0], path)
+    done = 0
+    for e in entries:
+        path = by_id.get(e['id'])
+        if not path:
+            continue
+        out = out_root / slug(e['id']) / 'backdrop.webp'
+        try:
+            env = UnityPy.load(str(path))
+            pages = set()
+            for obj in env.objects:
+                if obj.type.name != 'TextAsset':
+                    continue
+                d = obj.read()
+                if not d.m_Name.endswith('.atlas'):
+                    continue
+                raw = d.m_Script
+                raw = raw.encode('utf-8', 'surrogateescape') if isinstance(raw, str) else bytes(raw)
+                for p in atlas_pages(raw.decode('utf-8', 'surrogateescape')):
+                    pages.add(p)
+                    pages.add(p[:-4])
+            best = None
+            for obj in env.objects:
+                if obj.type.name != 'Texture2D':
+                    continue
+                d = obj.read()
+                if d.m_Width < 1024 or d.m_Name in pages or d.m_Name.startswith('build_'):
+                    continue
+                # Atlas pages / portrait pages / the [alpha] variants are the character, not the room. The room renders
+                # are named *_bg*, bg, live_*, l2d_* etc.; exclude the illustration page families outright.
+                if d.m_Name.startswith(('dyn_illust_', 'dyn_portrait_', 'dyn_')) or '[alpha]' in d.m_Name:
+                    continue
+                if best is None or d.m_Width * d.m_Height > best[1] * best[2]:
+                    best = (d, d.m_Width, d.m_Height)
+            if not best:
+                continue
+            img = best[0].image.convert('RGBA')
+            if max(img.size) > max_edge:
+                r = max_edge / max(img.size)
+                img = img.resize((max(1, round(img.width * r)), max(1, round(img.height * r))), Image.LANCZOS)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            img.save(out, 'WEBP', quality=82, method=6, alpha_quality=100)
+            e['backdrop'] = f'/assets/dynillust/{slug(e["id"])}/backdrop.webp'
+            (out.parent / 'entry.json').write_text(json.dumps(e, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
+            done += 1
+            print(f'  scene backdrop {e["id"]} <- {best[0].m_Name} {img.size}')
+        except Exception as exc:
+            print(f'  ! scene backdrop {e["id"]}: {exc}')
+    print(f'scene backdrops: {done}')
+
+
+def extract_backdrops(out_root, entries, skinpacks, max_edge=1280, chararts=None):
+    """Use each outfit's official static illustration as the blurred scene behind the L2D.
+
+    The dynamic-illustration prefab draws its room from Unity meshes, which pixi-spine cannot render; the outfit's own
+    illustration carries the same palette, props and light, so the client blurs it into the backdrop instead of black.
+    Sources: `skinpack/<charId>.ab` (outfits) and `chararts/<charId>.ab` (elite-2 art, which skinpack does not carry).
+    """
+    if not skinpacks and not chararts:
+        return
+    sources = list(skinpacks) + list(chararts or [])
+    by_char = {}
+    for e in entries:
+        if not e.get('charId'):
+            continue
+        slug_id = slug(e['id'])
+        if e.get('backdrop') and (out_root / slug_id / 'backdrop.webp').is_file():
+            continue
+        by_char.setdefault(e['charId'], []).append(e)
+    norm = lambda s: re.sub(r'[^A-Za-z0-9]+', '_', s).strip('_').lower()
+    for char_id, group in by_char.items():
+        bundles = []
+        # Amiya's outfits live under `char_1037_amiya3` / `char_1001_amiya2` even though skin_table reports
+        # `char_002_amiya` for them: try the outfit id's own prefix as well.
+        wanted_ids = {char_id} | {re.split(r'[@#]', e['id'])[0] for e in group}
+        for cid in wanted_ids:
+            for root in sources:
+                p = Path(root) / f'{cid}.ab'
+                if p.is_file():
+                    bundles.append(p)
+        if not bundles:
+            continue
+        print(f'backdrops: {char_id} ({len(group)})')
+        textures = []
+        seen = set()
+        for bundle in bundles:
+            env = UnityPy.load(str(bundle))
+            for obj in env.objects:
+                if obj.type.name != 'Texture2D':
+                    continue
+                try:
+                    d = obj.read()
+                    if d.m_Width < 512 or d.m_Name.startswith('build_'):
+                        continue
+                    key = (d.m_Name, d.m_Width)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    textures.append((d.m_Name, d.image.convert('RGBA')))
+                except Exception:
+                    continue
+        for e in group:
+            want = norm(e['id'])
+            cand = [t for t in textures if norm(t[0]) == want]
+            if not cand:
+                continue
+            name, img = max(cand, key=lambda t: t[1].width * t[1].height)
+            if max(img.size) > max_edge:
+                r = max_edge / max(img.size)
+                img = img.resize((max(1, round(img.width * r)), max(1, round(img.height * r))), Image.LANCZOS)
+            d = out_root / slug(e['id'])
+            d.mkdir(parents=True, exist_ok=True)
+            img.save(d / 'backdrop.webp', 'WEBP', quality=80, method=6, alpha_quality=100)
+            e['backdrop'] = f'/assets/dynillust/{slug(e["id"])}/backdrop.webp'
+            (d / 'entry.json').write_text(json.dumps(e, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
+            print(f'  {e["id"]} <- {name} {img.size}')
+
+
 def load_json(path, fallback):
     try:
         return json.loads(Path(path).read_text(encoding='utf-8'))
@@ -290,6 +457,12 @@ def main():
     ap.add_argument('--quality', type=int, default=92, help='WebP quality (alpha is kept)')
     ap.add_argument('--keep-start', action='store_true', help='also keep the _Start (entrance) skeleton')
     ap.add_argument('--force', action='store_true', help='re-extract outfits that are already on disk')
+    ap.add_argument('--max-page', type=int, default=1600, help='downscale atlas pages above this edge (0 = keep)')
+    ap.add_argument('--skinpack', action='append', default=[],
+                    help='skinpack folder for the blurred official background; repeatable')
+    ap.add_argument('--chararts', action='append', default=[],
+                    help='chararts folder (elite-2 illustrations); repeatable')
+    ap.add_argument('--backdrop-edge', type=int, default=1280, help='max edge of the blurred background')
     args = ap.parse_args()
 
     out_root = Path(args.out)
@@ -313,13 +486,16 @@ def main():
         for i, (stem, bundle) in enumerate(bundles.items(), 1):
             skin_id, char_id, name, group = meta_for(stem, table, chars)
             entry_file = out_root / slug(skin_id) / 'entry.json'
-            skel = out_root / slug(skin_id) / 'main' / 'illust.skel'
-            if entry_file.is_file() and skel.is_file() and not args.force:
+            main = out_root / slug(skin_id) / 'main'
+            has_skel = (main / 'illust.skel').is_file() or (main / 'illust.json').is_file()
+            if entry_file.is_file() and has_skel and not args.force:
                 entry = load_json(entry_file, {})
                 entry['name'], entry['group'] = name, group
                 # keep a generated 16:9 poster; only fall back to the local-skins illustration when there is none
                 if not (out_root / slug(skin_id) / 'poster.webp').is_file():
                     entry['poster'] = poster_for(skin_id, char_id)
+                if (out_root / slug(skin_id) / 'backdrop.webp').is_file():
+                    entry['backdrop'] = f'/assets/dynillust/{slug(skin_id)}/backdrop.webp'
                 entry_file.write_text(json.dumps(entry, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
                 entries.append(entry)
                 print(f'[{i}/{len(bundles)}] kept {skin_id}')
@@ -327,13 +503,15 @@ def main():
             print(f'[{i}/{len(bundles)}] {skin_id}  ({name} · {group})')
             try:
                 entries.append(extract_one(bundle, skin_id, out_root, args.quality, args.keep_start,
-                                           (char_id, name, group)))
+                                           (char_id, name, group), args.max_page))
             except Exception as exc:
                 failed.append((skin_id, str(exc)))
                 print(f'  ! {skin_id}: {exc}')
                 # keep a previously extracted copy of this outfit in the index
-                if entry_file.is_file() and skel.is_file():
+                if entry_file.is_file() and has_skel:
                     entries.append(load_json(entry_file, {}))
+        extract_scene_backdrops(out_root, entries, bundles, table, chars)
+        extract_backdrops(out_root, entries, args.skinpack, args.backdrop_edge, args.chararts)
         write_index(out_root, entries)
         if failed:
             print('failed:', ', '.join(f'{i} ({e})' for i, e in failed))
@@ -350,7 +528,9 @@ def main():
     char_id = args.char or mchar
     name = args.name or mname
     group = args.group or mgroup
-    entry = extract_one(bundle, skin_id, out_root, args.quality, args.keep_start, (char_id, name, group))
+    entry = extract_one(bundle, skin_id, out_root, args.quality, args.keep_start, (char_id, name, group), args.max_page)
+    extract_scene_backdrops(out_root, [entry], {bundle.stem: bundle}, table, chars)
+    extract_backdrops(out_root, [entry], args.skinpack, args.backdrop_edge, args.chararts)
     index_path = out_root / 'index.json'
     index = load_json(index_path, {'version': 1, 'entries': []})
     entries = [e for e in index.get('entries', []) if e.get('id') != entry['id']]
@@ -360,4 +540,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
 

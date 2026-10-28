@@ -77,6 +77,11 @@ export function useHubBackdrop() {
   }, []);
   useEffect(() => {
     let live = true;
+    // Warm PIXI + pixi-spine while the index is fetched (they are only needed by a dynamic backdrop, but the two
+    // requests then overlap instead of running back to back).
+    if (pref.theme === 'dyn') {
+      void import('../../render/app/pixi.js').then(({ ensurePixi }) => ensurePixi()).catch(() => {});
+    }
     loadDynIndex().then((list) => { if (live) setDynList(list); });
     return () => { live = false; };
   }, []);

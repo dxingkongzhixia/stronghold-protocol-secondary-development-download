@@ -3,7 +3,7 @@ import { html } from '../components.js';
 import { useEffect, useRef, useState } from '../../../vendor/hooks.module.js';
 import { HUB_THEMES, backdropScene } from './appearance.js';
 import { STORY_IMAGES } from './storyImages.js';
-import { mountDynIllust } from './dynIllust.js';
+import { mountDynIllust, preloadDyn } from './dynIllust.js';
 import { t } from '../../../../shared/i18n.js';
 function rng(seed) {
   let s = seed >>> 0;
@@ -124,7 +124,11 @@ export function HubBackdrop({ bg }) {
   }, [dynId, pref.motion]);
   const overlays = scene === 'photo' || scene === 'story' || scene === 'dyn' ? pref.overlay : true;
   return html`<div class="hub-bg" data-scene=${scene} data-motion=${pref.motion ? 'on' : 'off'} aria-hidden="true">
-    ${scene === 'dyn' ? html`<div class="hub-bg__sky"></div><div class="hub-bg__dyn" ref=${dynRef}></div>
+    ${scene === 'dyn' ? html`<div class="hub-bg__sky"></div><div class="hub-bg__dyn" ref=${dynRef}>
+        ${bg.dynEntry?.backdrop || bg.dynEntry?.poster
+          ? html`<div class="hub-bg__dynbg" style=${{ backgroundImage: `url("${bg.dynEntry.backdrop || bg.dynEntry.poster}")` }}></div>`
+          : null}
+      </div>
       <div class="hub-bg__shade" style=${{ opacity: pref.dim / 100 }}></div>`
       : scene === 'photo' || scene === 'story' ? html`<div class="hub-bg__photo" style=${{ backgroundImage: `url("${scene === 'story' ? bg.storyUrl : bg.imageUrl}")`, filter: `blur(${pref.blur}px)` }}></div>
       <div class="hub-bg__shade" style=${{ opacity: pref.dim / 100 }}></div>`
@@ -226,7 +230,9 @@ export function BackdropSettings({ bg }) {
       <div class="bgset__dyngrid" role="listbox" aria-label=${t('动态皮肤')}>
         ${bg.dynList.map((x) => html`<button key=${x.id} type="button" role="option"
           aria-selected=${bg.dynEntry?.id === x.id ? 'true' : 'false'}
-          class=${`bgset__dyncard${bg.dynEntry?.id === x.id ? ' is-selected' : ''}`} onClick=${() => pickDyn(x.id)}>
+          class=${`bgset__dyncard${bg.dynEntry?.id === x.id ? ' is-selected' : ''}`}
+          onPointerEnter=${() => preloadDyn(x)} onFocus=${() => preloadDyn(x)}
+          onClick=${() => pickDyn(x.id)}>
           ${x.poster ? html`<${StoryThumb} file=${x.poster} />` : html`<span class="bgset__dynthumbs" aria-hidden="true"><i>L2D</i></span>`}
           <span class="bgset__dynname">${x.name}</span>
           <span class="bgset__dyngroup">${x.group || ''}</span>

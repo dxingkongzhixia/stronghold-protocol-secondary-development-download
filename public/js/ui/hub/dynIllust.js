@@ -90,6 +90,44 @@ export function loadDynIndex({ fetchFn = globalThis.fetch } = {}) {
 /** Test seam: forget the cached index. */
 export function resetDynIndex() { indexPromise = null; }
 
+let warmed = null;
+
+/**
+ * Parse the chosen outfit's skeleton on the title screen (the player's stored `hub.backdrop.theme === 'dyn'`), so the
+ * hub shows it immediately instead of paying the Spine parse when the hub mounts. PIXI keeps the parsed asset in its
+ * cache; a later `Assets.load` of the same URL resolves without re-reading the files.
+ * @param {string} [id] the stored outfit id (the first installed one when omitted)
+ */
+export function warmDynBackdrop(id) {
+  if (warmed) return warmed;
+  warmed = (async () => {
+    const list = await loadDynIndex();
+    const entry = list.find((e) => e.id === id) || list[0];
+    const part = dynEntryPart(entry);
+    if (!part) return;
+    const { ensurePixi } = await import('../../render/app/pixi.js');
+    const PIXI = await ensurePixi();
+    await PIXI.Assets.load(dynAssetUrl(part.skel));
+  })().catch(() => { /* a failed warm-up is not fatal: the hub mounts it on demand */ });
+  return warmed;
+}
+
+/**
+ * Warm one outfit's files in the HTTP cache (a card hover / focus): skel + atlas + pages are fetched, never parsed,
+ * so a click only pays the Spine parse. Fetching (rather than `PIXI.Assets.backgroundLoad`) keeps memory flat when the
+ * pointer sweeps across many cards — the browser cache is evictable, parsed skeletons are not.
+ * @param {object} entry an index record
+ */
+export function preloadDyn(entry) {
+  const part = dynEntryPart(entry);
+  if (!part) return;
+  const urls = [part.skel, part.atlas, ...(Array.isArray(part.textures) ? part.textures : [])];
+  for (const rel of urls) {
+    if (typeof rel !== 'string' || !rel) continue;
+    fetch(dynAssetUrl(rel), { cache: 'force-cache' }).catch(() => { /* a failed warm-up only costs the click's load */ });
+  }
+}
+
 /**
  * Mount one dynamic illustration into `host` (an empty positioned element). Returns a handle at once; the skeleton
  * loads in the background and the host gains `is-ready` when it draws (or `is-failed`).
@@ -103,6 +141,8 @@ export function mountDynIllust(host, entry, { motion = true, onError } = {}) {
   const part = dynEntryPart(entry);
   const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const animate = motion && !still;
+  // Start the file fetches now; PIXI (vendor scripts) can load in parallel and then parse from the HTTP cache.
+  preloadDyn(entry);
 
   const load = async () => {
     if (!host || !part) throw new Error('no dynamic illustration part');
@@ -113,7 +153,8 @@ export function mountDynIllust(host, entry, { motion = true, onError } = {}) {
       backgroundAlpha: 0,
       antialias: true,
       autoDensity: true,
-      resolution: Math.min(2, Number(globalThis.devicePixelRatio) || 1),
+      // a full-screen backdrop: 2× on a retina phone is 3–4 MP of spine meshes; 1.5 keeps it sharp, half the fill
+      resolution: Math.min(1.5, Number(globalThis.devicePixelRatio) || 1),
     });
     host.appendChild(app.view);
     app.ticker.maxFPS = 30; // a backdrop, not a match: half the frames, half the GPU

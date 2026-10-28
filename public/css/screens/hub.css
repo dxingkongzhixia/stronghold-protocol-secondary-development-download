@@ -491,7 +491,13 @@
 /* Dynamic outfit (official L2D unpacked locally): PIXI paints a cover-sized canvas; the sky below shows until it loads. */
 .hub-bg__dyn { position: absolute; inset: 0; overflow: hidden; pointer-events: none;
   background: radial-gradient(120% 120% at 50% 30%, #2a2233 0%, #151118 55%, #0b1110 100%); }
-.hub-bg__dyn canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .5s ease; }
+/* The outfit's own illustration, blurred into the room behind the Spine: the official prefab's room is Unity meshes,
+   which pixi-spine cannot draw, and this keeps the scene's palette instead of a black screen. */
+.hub-bg__dynbg { position: absolute; inset: 0; background: center / cover no-repeat;
+  filter: blur(18px) brightness(.85) saturate(1.1); transform: scale(1.08); }
+.hub-bg__dyn::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(58% 58% at 50% 56%, rgba(255, 199, 120, .16), transparent 72%); }
+.hub-bg__dyn canvas { position: relative; z-index: 1; display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .5s ease; }
 .hub-bg__dyn.is-ready canvas { opacity: 1; }
 .hub-bg__dyn.is-failed { background: radial-gradient(120% 120% at 50% 30%, #241d2c 0%, #0b1110 100%); }
 .hub-bg__shade { position: absolute; inset: 0; background: #000; }
@@ -631,6 +637,14 @@
   background: rgba(20, 12, 30, .72); border: 1px solid rgba(183, 155, 255, .6); }
 .bgset__dynname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: max(calc(.16 * var(--utility-text, var(--t))), calc(0.1 * var(--ui-unit, 1rem))); }
 .bgset__dyngroup { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mint-400); font-size: max(calc(.12 * var(--utility-text, var(--t))), calc(0.08 * var(--ui-unit, 1rem))); }
+@media (max-width: 720px) {
+  .bgset__dyngrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bgset__dynname { font-size: max(calc(.14 * var(--utility-text, var(--t))), calc(0.1 * var(--ui-unit, 1rem))); }
+  .hub-bg__dynbg { filter: blur(16px) brightness(.78) saturate(1.2); }
+}
+@media (max-width: 460px) {
+  .bgset__dyngrid { grid-template-columns: minmax(0, 1fr); }
+}
 .bgset__storyname { font-size: max(calc(.14 * var(--utility-text, var(--t))), calc(0.1 * var(--ui-unit, 1rem))); line-height: 1.4; overflow-wrap: anywhere; }
 @media (max-width: 900px) { .bgset__storygrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .bgset__plus { font-size: calc(.34 * var(--utility-text, var(--t))); line-height: 1; color: rgba(223, 230, 226, .5); }
