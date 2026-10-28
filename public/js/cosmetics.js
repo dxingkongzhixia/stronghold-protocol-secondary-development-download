@@ -29,25 +29,44 @@ const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 export const EMPTY_MANIFEST = Object.freeze({});
 
 /**
- * Core skins (docs/SKINS.md): merge `chars[<charId>].skins` (and the operator `illust`) of skins/catalogue.json into the
- * page's own manifest. Unlike a plugin layer there is no document to compose: the catalogue already carries absolute
- * /skins/… URLs, so the merge is a shallow record merge with a skins map. The input manifest is never mutated; the same
- * object comes back when there is nothing to add (or the manifest is not loaded yet).
- * @param {any} base @param {Record<string, any>} coreChars
+ * Core skins (docs/SKINS.md): merge `chars[<charId>].skins` (and the operator `illust`) and `tokens[<tokenId>].skins`
+ * (a summon's outfits) of skins/catalogue.json into the page's own manifest. Unlike a plugin layer there is no document
+ * to compose: the catalogue already carries absolute /skins/… URLs, so the merge is a shallow record merge with a skins
+ * map. The input manifest is never mutated; the same object comes back when there is nothing to add (or the manifest is
+ * not loaded yet).
+ * @param {any} base @param {any} core the catalogue: { chars, tokens }
  */
-function mergeCoreSkins(base, coreChars) {
-  if (!isObj(base) || !isObj(base.chars) || !isObj(coreChars)) return base;
+function mergeCoreSkins(base, core) {
+  if (!isObj(base) || !isObj(core)) return base;
+  const coreChars = isObj(core.chars) ? core.chars : core;   // a bare chars map is accepted too
+  const coreTokens = isObj(core.tokens) ? core.tokens : null;
   let touched = false;
-  const chars = { ...base.chars };
-  for (const [charId, rec] of Object.entries(coreChars)) {
-    if (!isObj(rec)) continue;
-    const prev = isObj(chars[charId]) ? chars[charId] : {};
-    const next = { ...prev, ...rec };
-    if (isObj(prev.skins) || isObj(rec.skins)) next.skins = { ...(prev.skins || {}), ...(rec.skins || {}) };
-    chars[charId] = next;
-    touched = true;
+  const out = { ...base };
+  if (isObj(base.chars) && isObj(coreChars)) {
+    const chars = { ...base.chars };
+    for (const [charId, rec] of Object.entries(coreChars)) {
+      if (!isObj(rec)) continue;
+      const prev = isObj(chars[charId]) ? chars[charId] : {};
+      const next = { ...prev, ...rec };
+      if (isObj(prev.skins) || isObj(rec.skins)) next.skins = { ...(prev.skins || {}), ...(rec.skins || {}) };
+      chars[charId] = next;
+      touched = true;
+    }
+    out.chars = chars;
   }
-  return touched ? { ...base, chars } : base;
+  if (isObj(base.tokens) && coreTokens) {
+    const tokens = { ...base.tokens };
+    for (const [tokenId, rec] of Object.entries(coreTokens)) {
+      if (!isObj(rec)) continue;
+      const prev = isObj(tokens[tokenId]) ? tokens[tokenId] : {};
+      const next = { ...prev, ...rec };
+      if (isObj(prev.skins) || isObj(rec.skins)) next.skins = { ...(prev.skins || {}), ...(rec.skins || {}) };
+      tokens[tokenId] = next;
+      touched = true;
+    }
+    out.tokens = tokens;
+  }
+  return touched ? out : base;
 }
 
 /**
@@ -135,11 +154,11 @@ export function createCosmeticLayers() {
   const later = (what) => loadVisual().then(what, (err) => console.warn('[cosmetics] shared/plugins/visual.js did not load', err));
   return {
     /**
-     * Core skins: the `chars` map of skins/catalogue.json. Applied under every room/personal layer, so a plugin may
-     * still override an entry. `null` clears them.
+     * Core skins: the catalogue (skins/catalogue.json: `chars` and `tokens` with their `skins`). Applied under every
+     * room/personal layer, so a plugin may still override an entry. `null` clears them.
      */
-    setCore(chars) {
-      const next = isObj(chars) ? chars : null;
+    setCore(catalogue) {
+      const next = isObj(catalogue) ? catalogue : null;
       if (next === core) return;
       core = next;
       changed();

@@ -35,7 +35,10 @@ function unitArt(m, info) {
   const id = info?.avatar || info?.defId;
   if (!m || !id) return null;
   if (info.side === 'enemy' || String(id).startsWith('enemy_')) return enemyIconUrl(m, id);
-  if (String(id).startsWith('token_')) return tokenAvatarUrl(m, id);
+  if (String(id).startsWith('token_')) {
+    // 召唤物时装 (docs/SKINS.md): the summon's own outfit, else the token's picture
+    return tokenAvatarUrl(m, id, { skin: info.skin || null });
+  }
   const chars = m.chars || {};
   if (chars[id]?.avatar) return chars[id].avatar;
   if (String(id).endsWith('_2') && chars[id.slice(0, -2)]) return chars[id.slice(0, -2)].avatarE2 || chars[id.slice(0, -2)].avatar;

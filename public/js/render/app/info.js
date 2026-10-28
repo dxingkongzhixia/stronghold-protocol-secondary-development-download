@@ -29,6 +29,9 @@ export function renderInfo(u) {
     defId: u.defId ?? null, name: u.name ?? '', tier: u.tier ?? 1, golden: !!u.golden, spine: u.spine ?? u.defId ?? null,
     avatar: u.avatar ?? u.defId ?? null, x: Number(u.x) || 0, y: Number(u.y) || 0, facing: u.facing === -1 ? -1 : 1,
     skin: u.skin ?? null,
+    // 召唤物时装 (docs/SKINS.md): the operator that owns this summon — the key the owner's outfit is read by
+    // (render/app.js skinOf); display only, absent on a summon whose owner is unknown
+    ownerCharId: typeof u.ownerCharId === 'string' && u.ownerCharId ? u.ownerCharId : undefined,
     maxHp: Number(u.maxHp) || 1, boss: !!u.boss, motion: u.motion,
     // deploy direction of allies (UnitInfo.dir, DESIGN §3): the model (Back for UP, mirrored for LEFT) and the
     // ground wedge follow it; absent = unknown (legacy frames) → derived from `facing`, no wedge

@@ -37,6 +37,10 @@ export function unitInfo(u) {
     spine: d.spine ?? d.charId ?? u.defId,
     avatar: d.avatar ?? d.charId ?? u.defId,
     skin: u.skin ?? undefined,
+    // 召唤物时装 (docs/SKINS.md): the operator that owns this summon — the client reads its owner's current outfit by it
+    // (render/app.js skinOf); display only, absent while the owner is unknown (a summon placed before its operator)
+    ownerCharId: u.kind === 'token' && u.ownerUnit
+      ? (u.ownerUnit.def?.spine ?? u.ownerUnit.def?.charId ?? u.ownerUnit.defId) : undefined,
     x: r2(u.x),
     y: r2(u.y),
     facing: u.facing ?? 1,

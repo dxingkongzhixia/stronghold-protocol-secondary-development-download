@@ -26,7 +26,7 @@ export function installCoreSkins(opts = {}) {
       if (!res.ok) return null;
       const doc = await res.json();
       if (!doc || typeof doc !== 'object' || !doc.chars || typeof doc.chars !== 'object') return null;
-      cosmetics.setCore(doc.chars);
+      cosmetics.setCore({ chars: doc.chars, ...(doc.tokens && typeof doc.tokens === 'object' ? { tokens: doc.tokens } : {}) });
       return doc;
     } catch {
       return null;

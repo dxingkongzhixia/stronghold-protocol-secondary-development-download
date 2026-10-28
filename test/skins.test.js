@@ -23,8 +23,9 @@ import { fileURLToPath } from 'node:url';
 import { isSkinId, isCharId, isSkinSelection, checkSkinSelection, operatorCharIds, validateC2S, SKIN_LIMITS } from '../shared/protocol.js';
 import { makeMatch, DATA } from './match/harness.js';
 import { Battle } from '../server/sim/Battle.js';
+import { unitInfo } from '../server/sim/snapshot.js';
 import { makeBattle } from './helpers/battleHarness.js';
-import { avatarUrl, portraitUrl, illustUrl, spineEntry, hasBackSpine, unitPictureUrl, skinsOf, skinHasModel } from '../public/js/assets.js';
+import { avatarUrl, portraitUrl, illustUrl, spineEntry, hasBackSpine, unitPictureUrl, tokenAvatarUrl, skinsOf, skinHasModel } from '../public/js/assets.js';
 import { createStore } from '../public/js/store.js';
 import { parseStoredSkins, SKINS_KEY, SKINS_SYNC_KEY } from '../public/js/ui/skins.js';
 import { installSkinsSync } from '../public/js/ui/loadoutSync.js';
@@ -36,6 +37,9 @@ const OPERATOR = 'char_498_inside';
 const OTHER = 'char_003_kalts';
 const SKIN = 'char_498_inside@kitchen#2';
 const SKIN_OTHER = 'char_003_kalts@boc#6';
+/** A summon, and the outfit it wears while its owner wears SKIN (the official tokenSkinMap, docs/SKINS.md). */
+const TOKEN = 'token_10007_phatom_twin';
+const TOKEN_SKIN = 'token_10007_phatom_twin_sale#4';
 
 /** A composed manifest as the browser sees one: the installation's art with one cosmetic plugin's skins laid over it. */
 const MANIFEST = {
@@ -59,6 +63,22 @@ const MANIFEST = {
     },
     // an operator whose plugin writes a skin for another operator's key plus a plain `illust` and nothing else
     [OTHER]: { avatar: '/a/kalts.png', portrait: '/p/kalts_1.png', illust: '/i/kalts.png' },
+  },
+  // a summon with an outfit of its own, keyed by the skin id of the operator that owns it
+  tokens: {
+    [TOKEN]: {
+      avatar: '/a/twin.png',
+      spine: { skel: '/s/twin/front.skel', atlas: '/s/twin/front.atlas', textures: ['/s/twin/front.png'], anims: { idle: 'Idle' } },
+      skins: {
+        [SKIN]: {
+          avatar: '/a/twin_sale.png',
+          spine: {
+            front: { skel: '/s/twin_sale/front.skel', atlas: '/s/twin_sale/front.atlas', textures: ['/s/twin_sale/front.png'], anims: { idle: 'Idle' } },
+            back: { skel: '/s/twin_sale/back.skel', atlas: '/s/twin_sale/back.atlas', textures: ['/s/twin_sale/back.png'], anims: { idle: 'Idle' } },
+          },
+        },
+      },
+    },
   },
 };
 
@@ -354,6 +374,54 @@ describe('皮肤: the client resolves the appearance (assets.js)', () => {
     assert.deepEqual(skinsOf(MANIFEST, OTHER), {}, 'no skins: the picker draws no section');
     assert.equal(skinHasModel(skinsOf(MANIFEST, OPERATOR)[SKIN]), true);
     assert.equal(skinHasModel(skinsOf(MANIFEST, OPERATOR)['char_498_inside@art#9']), false);
+  });
+});
+
+describe('皮肤: a summon wears its owner\'s outfit (tokens[*].skins, docs/SKINS.md)', () => {
+  test('spineEntry: the outfit while its owner wears that skin, the summon\'s own model otherwise', () => {
+    assert.equal(spineEntry(MANIFEST, TOKEN, { skin: SKIN }).skel, '/s/twin_sale/front.skel', 'the owner\'s outfit');
+    assert.equal(spineEntry(MANIFEST, TOKEN, { skin: SKIN, back: true }).skel, '/s/twin_sale/back.skel', 'its own Back');
+    assert.equal(spineEntry(MANIFEST, TOKEN).skel, '/s/twin/front.skel', 'no choice: the summon\'s own model');
+    assert.equal(spineEntry(MANIFEST, TOKEN, { skin: SKIN_OTHER }).skel, '/s/twin/front.skel', 'an outfit the manifest has not got');
+    assert.equal(spineEntry(MANIFEST, TOKEN, { skin: 'token_' + 'x' }).skel, '/s/twin/front.skel', 'a token key is not an owner skin');
+  });
+
+  test('tokenAvatarUrl: the outfit picture, else the summon\'s own, else nothing', () => {
+    assert.equal(tokenAvatarUrl(MANIFEST, TOKEN, { skin: SKIN }), '/a/twin_sale.png');
+    assert.equal(tokenAvatarUrl(MANIFEST, TOKEN), '/a/twin.png');
+    assert.equal(tokenAvatarUrl(MANIFEST, TOKEN, { skin: SKIN_OTHER }), '/a/twin.png');
+    assert.equal(tokenAvatarUrl(MANIFEST, 'token_nope'), null);
+  });
+
+  test('hasBackSpine asks the outfit, then the summon', () => {
+    assert.equal(hasBackSpine(MANIFEST, TOKEN, SKIN), true);
+    assert.equal(hasBackSpine(MANIFEST, TOKEN), false);
+    assert.equal(hasBackSpine(MANIFEST, TOKEN, SKIN_OTHER), false);
+  });
+
+  test('unitPictureUrl hands the skin to the token avatar (the thumbnails of a summon)', () => {
+    assert.equal(unitPictureUrl(MANIFEST, TOKEN, { skin: SKIN }), '/a/twin_sale.png');
+  });
+
+  test('the shipped catalogue carries wear-able summon outfits under tokens', () => {
+    const doc = JSON.parse(readFileSync(path.join(ROOT, 'skins/catalogue.json'), 'utf8'));
+    const tokens = doc.tokens || {};
+    assert.ok(Object.keys(tokens).length, 'tokens in skins/catalogue.json');
+    const entries = Object.values(tokens).flatMap((t) => Object.values(t.skins || {}));
+    assert.ok(entries.length, 'summon outfits in the catalogue');
+    assert.ok(entries.some((s) => s.spine?.front?.anims && String(s.spine.front.skel).startsWith('/skins/sets/')),
+      'a wear-able summon outfit (clip roles + /skins/ paths)');
+  });
+
+  test('the server publishes the owner operator of a summon (UnitInfo.ownerCharId)', () => {
+    const unit = {
+      id: 42, kind: 'token', side: 'ally', ownerId: 'p_1', defId: 'token_10007_phatom_twin', name: 'twin',
+      def: {}, x: 5, y: 10, facing: 1, dir: 'RIGHT', s: { maxHp: 900 }, alive: true,
+      ownerUnit: { defId: 'chess_char_1_08_a', def: { spine: 'char_102_texas' } },
+    };
+    assert.equal(unitInfo(unit).ownerCharId, 'char_102_texas', 'the owner\'s charId, the key of its skin choice');
+    assert.equal(unitInfo({ ...unit, ownerUnit: null }).ownerCharId, undefined, 'unknown owner: no key');
+    assert.equal(unitInfo({ ...unit, kind: 'op' }).ownerCharId, undefined, 'operators carry none (their own skin is on the unit)');
   });
 });
 
