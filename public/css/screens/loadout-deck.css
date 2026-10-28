@@ -790,7 +790,7 @@
 .lo-deck.is-dragging { cursor: grabbing; user-select: none; }
 .lo-deck.is-dragging * { cursor: grabbing !important; }
 .lo-deck--empty { align-items: center; justify-content: center; }
-.lo-deck.has-drawer { padding-right: calc(var(--drawer-w) + calc(0.3 * var(--ui-unit, 1rem))); scroll-padding-right: calc(var(--drawer-w) + calc(0.2 * var(--ui-unit, 1rem))); }
+.lo-deck.has-drawer { padding-left: calc(var(--drawer-w) + calc(0.3 * var(--ui-unit, 1rem))); scroll-padding-left: calc(var(--drawer-w) + calc(0.2 * var(--ui-unit, 1rem))); }
 .lo-tgroup { flex: none; display: flex; align-items: stretch; gap: calc(0.18 * var(--ui-unit, 1rem)); }
 .lo-tmark { position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: calc(0.04 * var(--ui-unit, 1rem)); width: max(calc(0.86 * var(--ui-unit, 1rem)), calc(0.44 * var(--ui-unit, 1rem)));
   padding: calc(0.12 * var(--ui-unit, 1rem)) 0 calc(0.14 * var(--ui-unit, 1rem)); overflow: hidden; background: linear-gradient(180deg, #2a2f2d, #151918 60%, #101312);
@@ -872,9 +872,9 @@
 .lo-diy__n b { color: var(--text-hi); font-size: max(calc(.4 * var(--utility-text, var(--t))), calc(0.2 * var(--ui-unit, 1rem))); }
 
 /* ---- the detail drawer ---- */
-.lo-drawer { position: absolute; right: 0; top: 0; bottom: 0; z-index: 4; width: var(--drawer-w); display: flex; flex-direction: column;
-  background: #0e1211; border-left: 1px solid var(--line-2); box-shadow: calc(-0.1 * var(--ui-unit, 1rem)) 0 calc(0.4 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .55); animation: lo-drawer-in 200ms var(--ease-out) backwards; }
-@keyframes lo-drawer-in { from { transform: translateX(calc(0.24 * var(--ui-unit, 1rem))); opacity: 0; } }
+.lo-drawer { position: absolute; left: 0; top: 0; bottom: 0; z-index: 4; width: var(--drawer-w); display: flex; flex-direction: column;
+  background: #0e1211; border-right: 1px solid var(--line-2); box-shadow: calc(0.1 * var(--ui-unit, 1rem)) 0 calc(0.4 * var(--ui-unit, 1rem)) rgba(0, 0, 0, .55); animation: lo-drawer-in 200ms var(--ease-out) backwards; }
+@keyframes lo-drawer-in { from { transform: translateX(calc(-0.24 * var(--ui-unit, 1rem))); opacity: 0; } }
 .lo-drawer__close { flex: none; display: flex; align-items: center; gap: calc(0.06 * var(--ui-unit, 1rem)); height: max(calc(0.42 * var(--ui-unit, 1rem)), calc(0.3 * var(--ui-unit, 1rem))); padding: 0 calc(0.16 * var(--ui-unit, 1rem)); font: inherit;
   font-size: max(calc(.15 * var(--utility-text, var(--t))), calc(0.11 * var(--ui-unit, 1rem))); font-weight: 700; color: var(--text-md); background: #161b19; border: 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .lo-drawer__close:hover { color: var(--mint-400); }

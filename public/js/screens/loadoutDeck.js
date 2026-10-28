@@ -551,7 +551,7 @@ function useDragScroll() {
  * The deck: one group per tier present in `list` (a tall marker, then the cards flowing in two rows), the 甄选 card closing
  * tiers 5 / 6. A vertical wheel scrolls it sideways; `onTier` reports the tier group at the left edge (the bottom bar).
  */
-function DeckView({ m, list, getChess, st, selId, quick, onPick, onChange, onOps, onDiy, diySlots, diyPicks, deckRef, drawer, onTier, filtered }) {
+function DeckView({ m, list, getChess, st, selId, quick, onPick, onChange, onOps, onDiy, diySlots, diyPicks, deckRef, drawer, onTier, filtered, onBlank }) {
   const groups = TIERS.map((tier) => ({ tier, items: list.filter((c) => c.tier === tier) }))
     .filter((g) => g.items.length || (!filtered && diySlots.some((s) => s.tier === g.tier)));
   const raf = useRef(0);
@@ -574,7 +574,13 @@ function DeckView({ m, list, getChess, st, selId, quick, onPick, onChange, onOps
     e.preventDefault();
   };
   if (!groups.length) return html`<div class="lo-deck lo-deck--empty" ref=${deckRef}><p class="lo-empty t-dim">${t('没有符合条件的干员')}</p></div>`;
-  return html`<div class=${cx('lo-deck', drawer && 'has-drawer', quick && 'is-quick')} ref=${deckRef} onScroll=${onScroll} onWheel=${onWheel} ...${dragScroll} role="list" aria-label=${t('干员列表')}>
+  return html`<div class=${cx('lo-deck', drawer && 'has-drawer', quick && 'is-quick')} ref=${deckRef} onScroll=${onScroll} onWheel=${onWheel} ...${dragScroll} role="list" aria-label=${t('干员列表')}
+    onClick=${(e) => {
+      // The open drawer is a left overlay: a click on the deck's blank area folds it back (cards keep their own clicks).
+      if (!drawer) return;
+      if (e.target.closest?.('.lo-op, .lo-diy, button, a, input, select, textarea')) return;
+      onBlank?.();
+    }}>
     ${groups.map((g) => html`<section key=${g.tier} class=${cx('lo-tgroup', `lo-tgroup--t${g.tier}`)} data-tier=${g.tier}>
       <div class=${cx('lo-tmark', `tier--${g.tier}`)} aria-hidden="true">
         <span class="lo-tmark__no">NO.</span>
@@ -1035,9 +1041,9 @@ function LoadoutScreen({ st, leaving = false }) {
       ? html`<${OwnershipPanel} m=${m} roster=${ownRoster} notOwned=${st.notOwned} onToggle=${toggleOwned} />`
       : deck ? html`<main class="lo-deckwrap">
         <${DeckView} m=${m} list=${list} getChess=${getChess} st=${st} selId=${selId} quick=${quick} onPick=${pick} onChange=${quickChange} onOps=${setOpsOf}
-              onDiy=${() => setTab('diy')} diySlots=${diySlots} diyPicks=${diyLegal} deckRef=${deckRef} drawer=${drawer && !!base} onTier=${setActiveTier} filtered=${nFilters > 0} />
+              onDiy=${() => setTab('diy')} diySlots=${diySlots} diyPicks=${diyLegal} deckRef=${deckRef} drawer=${drawer && !!base} onTier=${setActiveTier} filtered=${nFilters > 0} onBlank=${() => setDrawer(false)} />
             ${drawer && base ? html`<div class="lo-drawer" data-testid="loadout-drawer">
-              <button type="button" class="lo-drawer__close" onClick=${() => setDrawer(false)} title=${t('收起 (Esc)')}><${Icon} name="chevronRight" />${t('收起')}</button>
+              <button type="button" class="lo-drawer__close" onClick=${() => setDrawer(false)} title=${t('收起 (Esc)')}><${Icon} name="chevronLeft" />${t('收起')}</button>
               ${loadoutDetail}
             </div>` : null}
       </main>
