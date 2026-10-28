@@ -91,6 +91,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | the generator (incl. `CUSTOM_CHESS`, the 8 custom operators) | `tools/build-data.mjs` |
 | add a **custom operator** end-to-end (中文) | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) |
 | author a **bond / strategy (band) / bounty enemy / 3D theme** | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) |
+| **玻利瓦尔国家盟约**（初设：成员 / 战功机制 / 实现清单） | [`docs/BOND-BOLIVAR.md`](BOND-BOLIVAR.md) |
 | operator kits — contract and registration | `server/sim/content/kits/README.md`, `server/sim/content/kits/index.js` |
 | 望's 棋子（相连激活 / 跟子 / S3 弹药与「不断下棋子」） | [`docs/MATCHMAKING.md`](MATCHMAKING.md) §30（§30.5 范围、§30.6 S3 每次 3 枚跟子）、`server/sim/content/kits/ops/chess_char_2027_wang-wang.js`、`server/sim/content/tokens.js`（`wangStone`）、`test/content/feedback-wang.test.js` |
 | difficulty model (official numbers, no custom tuning) | [`docs/BALANCE.md`](BALANCE.md) |

@@ -104,6 +104,7 @@
 | [`PLAYING.md`](PLAYING.md) | 玩家规则指南 | 当前 |
 | [`NEW-OPERATOR.md`](NEW-OPERATOR.md) | 新自造干员端到端配方 | 指南 |
 | [`CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | 盟约 / 策略 / 悬赏 / CODEX / 3D 主题 | 指南 |
+| [`BOND-BOLIVAR.md`](BOND-BOLIVAR.md) | 玻利瓦尔国家盟约初设：成员名单、战功机制、实现清单 | 草案 |
 
 ### 4.4 fork / 合并 / 部署
 

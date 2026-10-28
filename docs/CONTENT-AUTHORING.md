@@ -131,6 +131,9 @@
 5. **测试**：`test/content/bonds.test.js`、`test/ui/gameLogic.test.js`（成员/调和/禁用），行为变化跑 `npm run golden:update`。
 6. **资料库**：无需改动——`codexModel.js` 直接从 `bonds.json` 派生。
 
+> 自造盟约的完整草案（成员名单、机制、构建 / 运行时改动、分期与风险）见
+> [`BOND-BOLIVAR.md`](BOND-BOLIVAR.md)（玻利瓦尔，未实现）。
+
 ---
 
 ## 3. 新策略（band / 分队）
