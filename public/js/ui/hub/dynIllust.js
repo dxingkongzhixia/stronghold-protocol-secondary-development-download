@@ -96,8 +96,11 @@ export function coverTransform(bounds, width, height, zoom = 1) {
  */
 export function loadDynIndex({ fetchFn = globalThis.fetch } = {}) {
   if (!indexPromise) {
+    // Cache-busting query: /assets is served immutable (and a proxy may cache it), so a plain URL can hand back a
+    // stale list after a new extraction. The index is ~50 KB — one fresh request per hub load is the right trade.
+    const url = `${INDEX_URL}?t=${Date.now()}`;
     indexPromise = Promise.resolve()
-      .then(() => fetchFn(INDEX_URL, { cache: 'no-cache' }))
+      .then(() => fetchFn(url, { cache: 'no-store' }))
       .then((res) => (res && res.ok ? res.json() : null))
       .then((data) => (Array.isArray(data?.entries) ? data.entries.filter(validDynEntry) : []))
       .catch(() => []);
