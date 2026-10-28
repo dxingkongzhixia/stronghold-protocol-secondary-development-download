@@ -3,6 +3,7 @@ import { html } from '../components.js';
 import { useEffect, useRef, useState } from '../../../vendor/hooks.module.js';
 import { HUB_THEMES, backdropScene } from './appearance.js';
 import { STORY_IMAGES } from './storyImages.js';
+import { mountDynIllust } from './dynIllust.js';
 import { t } from '../../../../shared/i18n.js';
 function rng(seed) {
   let s = seed >>> 0;
@@ -114,11 +115,21 @@ function Scene({ theme }) {
 
 export function HubBackdrop({ bg }) {
   const scene = backdropScene(bg), { pref } = bg;
+  const dynRef = useRef(null);
+  const dynId = scene === 'dyn' ? bg.dynEntry?.id || null : null;
+  useEffect(() => {
+    if (!dynId || !dynRef.current) return undefined;
+    const handle = mountDynIllust(dynRef.current, bg.dynEntry, { motion: pref.motion });
+    return () => handle.destroy();
+  }, [dynId, pref.motion]);
+  const overlays = scene === 'photo' || scene === 'story' || scene === 'dyn' ? pref.overlay : true;
   return html`<div class="hub-bg" data-scene=${scene} data-motion=${pref.motion ? 'on' : 'off'} aria-hidden="true">
-    ${scene === 'photo' || scene === 'story' ? html`<div class="hub-bg__photo" style=${{ backgroundImage: `url("${scene === 'story' ? bg.storyUrl : bg.imageUrl}")`, filter: `blur(${pref.blur}px)` }}></div>
+    ${scene === 'dyn' ? html`<div class="hub-bg__sky"></div><div class="hub-bg__dyn" ref=${dynRef}></div>
+      <div class="hub-bg__shade" style=${{ opacity: pref.dim / 100 }}></div>`
+      : scene === 'photo' || scene === 'story' ? html`<div class="hub-bg__photo" style=${{ backgroundImage: `url("${scene === 'story' ? bg.storyUrl : bg.imageUrl}")`, filter: `blur(${pref.blur}px)` }}></div>
       <div class="hub-bg__shade" style=${{ opacity: pref.dim / 100 }}></div>`
       : scene === 'blank' ? html`<div class="hub-bg__sky"></div>` : html`<${Scene} theme=${scene} />`}
-    ${(scene !== 'photo' && scene !== 'story') || pref.overlay ? html`<div class="hub-bg__grid"></div><div class="hub-bg__dots"></div>` : null}
+    ${overlays ? html`<div class="hub-bg__grid"></div><div class="hub-bg__dots"></div>` : null}
     <div class="hub-bg__vignette"></div></div>`;
 }
 export function HubRadar({ bg }) {
@@ -163,6 +174,10 @@ function StoryThumb({ file }) {
 }
 
 function Swatch({ theme, storyUrl }) {
+  if (theme === 'dyn') {
+    return html`<span class="bgset__swatch bgset__swatch--dyn" data-hub-theme="dyn" aria-hidden="true">
+      <i class="bgset__dynpulse"></i><b class="bgset__dynmark">L2D</b></span>`;
+  }
   if (theme === 'story') {
     return html`<span class="bgset__swatch bgset__swatch--story" data-hub-theme="story"
       style=${storyUrl ? { backgroundImage: `url("${storyUrl}")` } : null} aria-hidden="true"></span>`;
@@ -181,6 +196,7 @@ export function BackdropSettings({ bg }) {
   const { pref, update, imageUrl, busy } = bg;
   const action = async (fn) => { setError(''); try { await fn(); } catch (e) { setError(e.message || t('操作失败')); } };
   const pickStory = (file) => { update({ theme: 'story', story: file }); setStoryOpen(false); };
+  const pickDyn = (id) => update({ theme: 'dyn', dyn: id });
   // 剧情背景 is one tile that opens this chooser: all 54 CGs are never listed in the main settings body.
   if (storyOpen) {
     return html`<div class="bgset bgset--storypick">
@@ -200,11 +216,14 @@ export function BackdropSettings({ bg }) {
   }
   return html`<div class="bgset">
     <div class="bgset__themes" role="group" aria-label=${t('背景主题')}>
-      ${HUB_THEMES.map((x) => html`<button key=${x.id} type="button" aria-pressed=${pref.theme === x.id}
-        title=${x.id === 'story' ? t('点击选择剧情图片') : undefined}
+      ${HUB_THEMES.map((x) => (x.id === 'dyn' && !bg.dynList?.length ? null
+        : html`<button key=${x.id} type="button" aria-pressed=${pref.theme === x.id}
+        title=${x.id === 'story' ? t('点击选择剧情图片') : x.id === 'dyn' ? t('官方动态皮肤（本机抽取）') : undefined}
         class=${`bgset__theme${pref.theme === x.id ? ' is-selected' : ''}`}
-        onClick=${() => (x.id === 'story' ? setStoryOpen(true) : update({ theme: x.id }))}>
-        <${Swatch} theme=${x.id} storyUrl=${bg.storyUrl} /><span class="bgset__name">${t(x.name)}</span><span class="bgset__en">${x.en}</span></button>`)}
+        onClick=${() => (x.id === 'story' ? setStoryOpen(true)
+          : x.id === 'dyn' ? (pref.dyn ? update({ theme: 'dyn' }) : pickDyn(bg.dynList[0].id))
+          : update({ theme: x.id }))}>
+        <${Swatch} theme=${x.id} storyUrl=${bg.storyUrl} /><span class="bgset__name">${t(x.name)}</span><span class="bgset__en">${x.en}</span></button>`))}
       <button type="button" disabled=${busy} aria-pressed=${pref.theme === 'custom'} class=${`bgset__theme${pref.theme === 'custom' ? ' is-selected' : ''}`}
         onClick=${() => imageUrl ? update({ theme: 'custom' }) : fileRef.current?.click()}>
         <span class="bgset__swatch bgset__swatch--custom" style=${imageUrl ? { backgroundImage: `url("${imageUrl}")` } : null} aria-hidden="true">
@@ -222,13 +241,21 @@ export function BackdropSettings({ bg }) {
       <button type="button" class="btn btn--secondary btn--sm" onClick=${() => setStoryOpen(true)}>${t('选择图片')}</button>
       <span class="bgset__note">${t('当前：{name}', { name: bg.storyName || t('未选择') })}</span>
     </div>` : null}
-    ${pref.theme === 'custom' || pref.theme === 'story' ? html`<div class="bgset__custom">
+    ${pref.theme === 'dyn' && bg.dynEntry ? html`<div class="bgset__story-row">
+      ${bg.dynList.length > 1 ? html`<select class="bgset__dynpick" aria-label=${t('选择动态皮肤')}
+        onChange=${(e) => pickDyn(e.currentTarget.value)} value=${bg.dynEntry.id}>
+        ${bg.dynList.map((x) => html`<option key=${x.id} value=${x.id}>${x.name}${x.group ? ` · ${x.group}` : ''}</option>`)}
+      </select>` : null}
+      <span class="bgset__note">${t('当前：{name}', { name: bg.dynEntry.name })}${bg.dynEntry.group ? ` · ${bg.dynEntry.group}` : ''}</span>
+    </div>` : null}
+    ${pref.theme === 'custom' || pref.theme === 'story' || pref.theme === 'dyn' ? html`<div class="bgset__custom">
       <label class="bgset__slider"><span>${t('暗化')}</span><input type="range" min="0" max="85" value=${pref.dim}
         onInput=${(e) => update({ dim: Number(e.currentTarget.value) })} /><b class="num">${pref.dim}%</b></label>
-      <label class="bgset__slider"><span>${t('模糊')}</span><input type="range" min="0" max="16" value=${pref.blur}
-        onInput=${(e) => update({ blur: Number(e.currentTarget.value) })} /><b class="num">${pref.blur}px</b></label>
+      ${pref.theme !== 'dyn' ? html`<label class="bgset__slider"><span>${t('模糊')}</span><input type="range" min="0" max="16" value=${pref.blur}
+        onInput=${(e) => update({ blur: Number(e.currentTarget.value) })} /><b class="num">${pref.blur}px</b></label>` : null}
       <label class="bgset__check"><input type="checkbox" checked=${pref.overlay} onChange=${(e) => update({ overlay: e.currentTarget.checked })} />${t('叠加战术网格')}</label></div>` : null}
     <label class="bgset__check"><input type="checkbox" checked=${pref.motion} onChange=${(e) => update({ motion: e.currentTarget.checked })} />${t('动态效果（云层、粒子、雷达扫描）')}</label>
+    ${pref.theme === 'dyn' ? html`<p class="bgset__note">${t('动态皮肤取自本机官方客户端，由 Spine 实时播放；关闭动态效果则停在首帧。')}</p>` : null}
     ${pref.theme === 'custom' ? html`<p class="bgset__note">${t('图片上限 30MB，自动缩放至最长边 2560px，仅保存在当前浏览器。')}</p>` : null}
     ${busy ? html`<p role="status">${t('图片处理中…')}</p>` : null}
     ${error ? html`<p class="lobby-media-error" role="alert">${t(error)}</p>` : null}

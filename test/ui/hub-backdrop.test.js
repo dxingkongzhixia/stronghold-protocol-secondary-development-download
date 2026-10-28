@@ -1,5 +1,6 @@
-// Hub backdrop themes (ui/hub/appearance.js + storyImages.js): the owner's 2026-10-25 set — 夜巡 / 剧情背景 /
-// 自定义背景, with one story tile that cycles the CG set instead of listing every image.
+// Hub backdrop themes (ui/hub/appearance.js + storyImages.js): 夜巡 / 动态皮肤 / 剧情背景 / 自定义背景 — one tile
+// each; the story tile opens a chooser instead of listing every CG, and the dynamic tile appears only when a local
+// outfit is installed.
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,14 +13,15 @@ import { STORY_IMAGES } from '../../public/js/ui/hub/storyImages.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 describe('Hub backdrop themes', () => {
-  test('the picker offers 夜巡 and 剧情背景 (custom is appended by the dialog)', () => {
-    assert.deepEqual(HUB_THEMES.map((x) => x.id), ['night', 'story']);
-    assert.deepEqual(HUB_THEMES.map((x) => x.name), ['夜巡', '剧情背景']);
+  test('the picker offers 夜巡 / 动态皮肤 / 剧情背景 (custom is appended by the dialog)', () => {
+    assert.deepEqual(HUB_THEMES.map((x) => x.id), ['night', 'dyn', 'story']);
+    assert.deepEqual(HUB_THEMES.map((x) => x.name), ['夜巡', '动态皮肤', '剧情背景']);
   });
 
-  test('old procedural themes fall back to 夜巡; story, its chosen file and custom survive', () => {
+  test('old procedural themes fall back to 夜巡; story, its chosen file, the outfit and custom survive', () => {
     for (const old of ['frost', 'ember', 'calm']) assert.equal(sanitizeBackdrop({ theme: old }).theme, 'night', old);
     assert.equal(sanitizeBackdrop({ theme: 'story' }).theme, 'story');
+    assert.equal(sanitizeBackdrop({ theme: 'dyn' }).theme, 'dyn');
     assert.equal(sanitizeBackdrop({ theme: 'custom' }).theme, 'custom');
     assert.equal(sanitizeBackdrop({ theme: 'nope' }).theme, 'night');
     const file = STORY_IMAGES[0].file;
@@ -27,6 +29,11 @@ describe('Hub backdrop themes', () => {
     assert.equal(sanitizeBackdrop({ theme: 'night', story: file }).story, file, 'switching themes keeps the chosen CG');
     assert.equal(sanitizeBackdrop({ theme: 'story', story: '/assets/ui/hub/story/nope.webp' }).story, null);
     assert.equal(sanitizeBackdrop({ theme: 'story', story: 42 }).story, null);
+    const id = 'char_1038_whitw2@sale#15';
+    assert.equal(sanitizeBackdrop({ theme: 'dyn', dyn: id }).dyn, id);
+    assert.equal(sanitizeBackdrop({ theme: 'night', dyn: id }).dyn, id, 'switching themes keeps the chosen outfit');
+    assert.equal(sanitizeBackdrop({ theme: 'dyn', dyn: 'https://evil.test/a.ab' }).dyn, null);
+    assert.equal(sanitizeBackdrop({ theme: 'dyn', dyn: 42 }).dyn, null);
   });
 
   test('a story theme renders the photo layer only with an image, else the night scene', () => {
@@ -35,6 +42,12 @@ describe('Hub backdrop themes', () => {
     assert.equal(backdropTheme({ pref: { theme: 'story' }, storyUrl: '/x.webp' }), 'story');
     assert.equal(backdropScene({ pref: { theme: 'custom' }, imageUrl: '/blob:x', ready: true }), 'photo');
     assert.equal(backdropScene({ pref: { theme: 'custom' }, imageUrl: null, ready: true }), 'night');
+  });
+
+  test('the dynamic theme renders only when an outfit resolved, else 夜巡', () => {
+    assert.equal(backdropScene({ pref: { theme: 'dyn' }, dynEntry: { id: 'x' } }), 'dyn');
+    assert.equal(backdropScene({ pref: { theme: 'dyn' }, dynEntry: null }), 'night');
+    assert.equal(backdropScene({ pref: { theme: 'dyn' } }), 'night');
   });
 
   test('the story set is one indexed tile source: unique local files, all on disk', () => {

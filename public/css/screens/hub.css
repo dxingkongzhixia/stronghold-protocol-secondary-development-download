@@ -484,9 +484,16 @@
 @media (prefers-reduced-motion: reduce) {
   .proto, .proto *, .proto::after, .lobby-hub * { animation-delay: 0ms !important; }
   .proto::after { display: none; }
+  .bgset__dynpulse { animation: none !important; }
 }
 
 .hub-bg__photo { position: absolute; inset: calc(-0.32 * var(--ui-unit, 1rem)); background: #0b1110 center / cover no-repeat; }
+/* Dynamic outfit (official L2D unpacked locally): PIXI paints a cover-sized canvas; the sky below shows until it loads. */
+.hub-bg__dyn { position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+  background: radial-gradient(120% 120% at 50% 30%, #2a2233 0%, #151118 55%, #0b1110 100%); }
+.hub-bg__dyn canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .5s ease; }
+.hub-bg__dyn.is-ready canvas { opacity: 1; }
+.hub-bg__dyn.is-failed { background: radial-gradient(120% 120% at 50% 30%, #241d2c 0%, #0b1110 100%); }
 .hub-bg__shade { position: absolute; inset: 0; background: #000; }
 .lobby-music-panel { width: min(7.2rem, 94vw); }
 .lobby-music { display: flex; flex-direction: column; gap: calc(0.22 * var(--ui-unit, 1rem)); min-width: 0; }
@@ -589,6 +596,16 @@
 .bgset__swatch .sw-beacon { fill: var(--beacon); }
 .bgset__swatch--custom { display: grid; place-items: center; background: #0b1110 center / cover no-repeat; outline: 1px dashed rgba(223, 230, 226, .2); outline-offset: -1px; }
 .bgset__swatch--story { display: block; background: #0b1110 center / cover no-repeat; }
+.bgset__swatch--dyn { background: radial-gradient(130% 130% at 72% 18%, #7c65aa 0%, #3a2d4d 45%, #0d0b12 100%); }
+.bgset__swatch--dyn .bgset__dynpulse { position: absolute; left: 23%; top: 36%; width: 15%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, #f2e6ff 0%, #b79bff 45%, transparent 70%);
+  box-shadow: 0 0 calc(.5 * var(--ui-unit, 1rem)) rgba(183, 155, 255, .8); animation: hubDynPulse 2.6s ease-in-out infinite; }
+.bgset__dynmark { position: absolute; right: .35rem; bottom: .3rem; padding: .04rem .28rem; letter-spacing: .14em;
+  font-size: max(calc(.12 * var(--ui-unit, 1rem)), 9px); color: #efe6ff; background: rgba(20, 12, 30, .72);
+  border: 1px solid rgba(183, 155, 255, .6); }
+@keyframes hubDynPulse { 0%, 100% { opacity: .45; transform: scale(.82); } 50% { opacity: 1; transform: scale(1.14); } }
+.bgset__dynpick { max-width: 100%; min-width: 0; padding: calc(.05 * var(--ui-unit, 1rem)); color: var(--text-hi);
+  background: rgba(10, 16, 15, .85); border: 1px solid rgba(223, 230, 226, .2); }
 .bgset__story-row { display: flex; align-items: center; flex-wrap: wrap; gap: calc(0.1 * var(--ui-unit, 1rem)); }
 /* 剧情背景 chooser (one tile in the settings → this grid; names are the source image names) */
 .bgset__storypick { display: flex; flex-direction: column; gap: calc(0.14 * var(--ui-unit, 1rem)); min-width: 0; }

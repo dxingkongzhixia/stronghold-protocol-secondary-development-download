@@ -3,10 +3,14 @@ import { useEffect, useState } from '../../../vendor/hooks.module.js';
 import { createStore, useStore, loadPref, savePref } from '../../store.js';
 import { createLocalMedia, mediaStorage } from './localMedia.js';
 import { STORY_IMAGES } from './storyImages.js';
+import { loadDynIndex, sanitizeDynId } from './dynIllust.js';
 import { t, N_ } from '../../../../shared/i18n.js';
 
 export const HUB_THEMES = Object.freeze([
   { id: 'night', name: N_('夜巡'), en: 'NIGHT WATCH' },
+  // An official dynamic outfit (动态皮肤): its Spine set is unpacked locally by tools/local-extract/dynillust.py.
+  // The tile is shown only when at least one is installed, so a plain checkout never offers a dead option.
+  { id: 'dyn', name: N_('动态皮肤'), en: 'DYNAMIC' },
   // One tile, many CGs: the chosen image is picked per visit and 「换一张」 cycles, so the dialog never lists the
   // whole folder (owner 2026-10-25).
   { id: 'story', name: N_('剧情背景'), en: 'STORY' },
@@ -21,6 +25,7 @@ export function sanitizeBackdrop(raw) {
   return {
     theme: r.theme === 'custom' || HUB_THEMES.some((x) => x.id === r.theme) ? r.theme : 'night',
     story,
+    dyn: sanitizeDynId(r.dyn),
     dim: num(r.dim, 45, 85), blur: num(r.blur, 0, 16), overlay: r.overlay !== false, motion: r.motion !== false,
   };
 }
@@ -64,17 +69,26 @@ preferences.subscribe((pref) => savePref(PREF_KEY, pref));
 export function useHubBackdrop() {
   const pref = useStore((s) => s, Object.is, preferences);
   const [image, setImage] = useState(images.get);
+  const [dynList, setDynList] = useState([]);
   useEffect(() => {
     const off = images.subscribe(setImage);
     setImage(images.get()); images.load();
     return off;
   }, []);
+  useEffect(() => {
+    let live = true;
+    loadDynIndex().then((list) => { if (live) setDynList(list); });
+    return () => { live = false; };
+  }, []);
   // A file import can finish after navigating away; its choice must still be available on the next visit.
   const update = (patch) => preferences.set(sanitizeBackdrop({ ...preferences.get(), ...patch }));
   // The picker stores the chosen file (`pref.story`); without a choice the first CG is the preview/effective one.
   const story = STORY_IMAGES.find((x) => x.file === pref.story) || STORY_IMAGES[0] || null;
+  // Dynamic outfits: the saved id wins, otherwise the first installed one.
+  const dynEntry = dynList.find((x) => x.id === pref.dyn) || dynList[0] || null;
   return { pref, update, imageUrl: image.url, ready: image.ready, busy: image.busy,
     storyUrl: story?.file || null, storyName: story?.name || '',
+    dynList, dynEntry,
     async setImage(file) { if (await images.change(() => prepareBackdrop(file))) update({ theme: 'custom' }); },
     async clearImage() { if (await images.change(() => null)) update({ theme: 'night', dim: 45, blur: 0 }); },
   };
@@ -82,6 +96,7 @@ export function useHubBackdrop() {
 
 export function backdropScene(bg) {
   if (bg.pref.theme === 'story') return bg.storyUrl ? 'story' : 'night';
+  if (bg.pref.theme === 'dyn') return bg.dynEntry ? 'dyn' : 'night';
   return bg.pref.theme !== 'custom' ? bg.pref.theme : bg.imageUrl ? 'photo' : bg.ready ? 'night' : 'blank';
 }
 export function backdropTheme(bg) {

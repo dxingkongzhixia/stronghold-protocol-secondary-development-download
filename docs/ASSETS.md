@@ -916,6 +916,21 @@ primary repo with `ACAO: *`.)
   ```
   2026-10-06 用它补齐了 BGM/音效。（`--asset-source` 也可用 `SP_ASSET_SOURCE` 环境变量；不带 flag 时先试原始源、失败再提示。）
 - ✅ **GitCode 镜像（yuanyan 图标库）**：`yuanyan3060/ArknightsGameResource`（干员头像/立绘、技能图标、敌人/召唤物图标）在 GitCode 有只读镜像，免登录。直连 GitHub 被墙时用 **`--asset-source=gitcode`**（等价前缀 `https://raw.gitcode.com/gh_mirrors/ar/ArknightsGameResource/raw/main/`）即可下到这批图标；其余源（fexli 脊柱 / AA2 / Ark-Models）GitCode 没有镜像，仍走直连 + jsDelivr。已验证镜像文件与 GitHub 逐字节一致（如 `avatar/char_377_gdglow.png`，58,987 B）。
+- **动态皮肤（动态立绘，2026-10-28）**：官方客户端把动态时装放在热更目录
+  `Arknights_Data\PersistentData\Bundles\arts\dynchars\<skinId>.ab`（`<skinId>` 就是 `char_1038_whitw2@sale#15` 这种
+  `excel/skin_table.json` 的 `dynIllustId` 去掉 `dyn_illust_` 前缀）。一个包里同时有：
+  `dyn_illust_<skinId>.skel|.atlas` + 页面贴图（主立绘）、`dyn_illust_<skinId>_Start.*`（入场动画）和
+  `dyn_portrait_<skinId>.*`（对话半身像）。
+  ```
+  py -3.14 tools/local-extract/dynillust.py ^
+    --bundle "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars\char_1038_whitw2_sale#15.ab" ^
+    --id "char_1038_whitw2@sale#15" --char char_1038_whitw2 --name "无序的谦卑" --group "忒斯特收藏/XVII"
+  ```
+  输出 `public/assets/dynillust/<slug>/main/illust.skel|.atlas|page.webp` 与 `<slug>/entry.json`，并维护
+  `public/assets/dynillust/index.json`（`{version, entries}`，每个 entry 带 `id/name/group/parts`；`parts[].v` 是内容
+  hash，重抽后变化）。图集页统一改名 `page.webp`、atlas 里的页名同步改写（`#` 不能进 URL）；只取主立绘，
+  `--keep-start` 才保留入场骨架。**这个目录 git-ignored**（付费时装美术，单套约 4 MB），每台机器 / 服务器自己抽；
+  客户端 `public/js/ui/hub/dynIllust.js` 读 index 后用 PIXI + pixi-spine 播放 `Idle`，index 缺失就只是没有这个入口。
 
 ## Licensing and credits
 

@@ -44,6 +44,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | browser client (screens) | `public/js/main.js`, `public/js/store.js`, `public/js/screens/` |
 | browser UI widgets | `public/js/ui/` |
 | **main interface switch (classic lobby / Hub)** | [`docs/UI-HUB.md`](UI-HUB.md) · `server/uiMode.js` · `public/js/screens/hub/` · `public/css/screens/hub.css` |
+| **hub backdrop (夜巡 / 动态皮肤 / 剧情背景 / 自定义)** | [`docs/UI-HUB.md`](UI-HUB.md) §3–4 · `public/js/ui/hub/{appearance,backdrop,dynIllust,storyImages}.js` · `public/assets/dynillust/` (git-ignored) · `tools/local-extract/dynillust.py` · [`docs/ASSETS.md`](ASSETS.md) 「动态皮肤」 |
 | plugin system review / risks / verification gaps | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) |
 | **plugin development guide (workflow, classes, testing, packaging)** | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
 | plugin content authoring (records, bonds, bands, enemies) | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md), [`docs/PLUGINS.md`](PLUGINS.md) §10 |

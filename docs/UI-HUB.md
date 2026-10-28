@@ -69,8 +69,10 @@ https://<host>/?ui=classic
 | `server/admin.js` | 后台「界面」页与保存按钮 |
 | `public/js/ui/uiMode.js` | 客户端选择：`?ui=` 预览 + 服务器默认 |
 | `public/js/screens/hub/lobby.js` | Hub 大厅、协议选择页、野排队列条 |
-| `public/js/ui/hub/backdrop.js` | 程序化要塞背景、雷达、背景设置面板（夜巡 / 剧情背景 / 自定义） |
-| `public/js/ui/hub/appearance.js` | 夜巡 + 剧情背景（随机 CG）+ 自定义图片（IndexedDB） |
+| `public/js/ui/hub/backdrop.js` | 程序化要塞背景、雷达、背景设置面板（夜巡 / 动态皮肤 / 剧情背景 / 自定义） |
+| `public/js/ui/hub/appearance.js` | 夜巡 + 动态皮肤（官方 L2D）+ 剧情背景（随机 CG）+ 自定义图片（IndexedDB） |
+| `public/js/ui/hub/dynIllust.js` | 动态皮肤：读 `/assets/dynillust/index.json`，PIXI + pixi-spine 播放官方 `Idle`（可静止 / 尊重减少动效） |
+| `tools/local-extract/dynillust.py` | 从官方客户端 `arts/dynchars/*.ab` 抽取动态立绘到 `public/assets/dynillust/`（git-ignored） |
 | `public/js/ui/hub/storyImages.js` | 剧情背景图片清单（`tools/assets/hub-story.py` 生成） |
 | `public/assets/ui/hub/story/*.webp` | 54 张剧情 CG；**不进 `data/assets.json`**，不参与启动预载 |
 | `public/js/ui/hub/localMedia.js` | 浏览器本地图片存储 |
@@ -98,7 +100,7 @@ https://<host>/?ui=classic
 | 现有功能 | Hub 位置 |
 |---|---|
 | 返回标题、ping、在线人数、公告 | 顶栏左 |
-| 大厅背景 / 主界面音乐 / 设置 / 玩法说明 | 顶栏工具（音乐芯片显示当前曲名；窄屏只留音符图标）。大厅背景只留 **夜巡 / 剧情背景 / 自定义背景** 三个入口；点「剧情背景」进入独立选择页，按图片原名列出 54 张剧情 CG，选中即保存并返回；缩略图按滚动懒加载，不一次性铺满设置页 |
+| 大厅背景 / 主界面音乐 / 设置 / 玩法说明 | 顶栏工具（音乐芯片显示当前曲名；窄屏只留音符图标）。大厅背景只留 **夜巡 / 动态皮肤 / 剧情背景 / 自定义背景** 四个入口（动态皮肤只在 `public/assets/dynillust/index.json` 有条目时出现，可切已抽取的时装、调暗化）；点「剧情背景」进入独立选择页，按图片原名列出 54 张剧情 CG，选中即保存并返回；缩略图按滚动懒加载，不一次性铺满设置页 |
 | 登录 / 注册、账号、统计 | 顶栏右 |
 | 公开房间 | 右侧「公开房间」实时面板（最多 3 个，组队中优先；正在模拟按有 AI、观战人数排序；组队中→加入、正在模拟→观战；标注 原版 / MOD；全部 → 完整目录） |
 | 更新日志 | 左侧功能砖 |
