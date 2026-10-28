@@ -79,11 +79,23 @@ python tools/local-extract/skins.py --game <AB/Windows> --out skins/sets/local-s
   --id local-skins-tokens --tokens-only
 ```
 
-It writes `tokens[<tokenId>].skins[<tokenSkinId>] = { spine: { front, back } }` (one folder per model under
-`spine/<tokenId>/<tokenSkinId>/`). 2026-10-28 on the official client: **51 summons / 72 outfits / 8.5 MB**,
-10 mappings skipped (skeleton in a bundle this install does not carry — collaboration outfits). The catalogue and the
-runtime do **not** read `tokens` yet; the mechanism is analysed in
-[`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) (#876).
+It writes `tokens[<tokenId>].skins[<owner skin id>] = { spine: { front, back } }` (one folder per model under
+`spine/<tokenId>/<tokenSkinId>/`) — the **owner's** skin id is the key, because the client looks a summon's outfit up by
+the operator skin its owner currently wears. 2026-10-28 on the official client: **51 summons / 72 outfits / 8.5 MB**,
+10 mappings skipped (skeleton in a bundle this install does not carry — collaboration outfits).
+
+`build` merges the set's `tokens` exactly like `chars` (paths rewritten to `/skins/sets/…`, clip roles from the set's
+`plugin.lock.json`). At runtime:
+
+- **server** — `server/sim/snapshot.js` publishes `ownerCharId` on a summon's `UnitInfo` (the operator that owns it);
+- **client** — `render/app.js skinOf` reads the owner's current choice for `kind: 'token'` (设置「显示其他玩家的皮肤」 still
+  hides another seat's outfit), and `assets.js` (`spineEntry` / `tokenAvatarUrl` / `hasBackSpine`) resolves
+  `tokens[<tokenId>].skins[<skin>]`, falling back to the summon's own model when the owner wears the default;
+- **prep** — a summon piece carries `skin` when the server names one (`piece.skin` → `render/app.js`), else it draws its
+  own model.
+
+The outfit art must be in `skins/sets/` (git-ignored): a catalogue whose token paths 404 draws the default model, the
+same failure mode as an operator skin without files — `check` covers both.
 
 #### Switching a live server off the old plugin
 

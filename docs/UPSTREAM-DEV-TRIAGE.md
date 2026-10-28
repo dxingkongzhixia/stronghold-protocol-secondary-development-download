@@ -75,6 +75,7 @@
 | #561 / #782 / #725 相关 | 战略选人看敌人信息 / 野鬃 S2 径向推开 / 素材下载计数 | §13.10（后者**不适用**） |
 | 皮肤数据修复（非上游） | `tools/skins.mjs build` 补回 `plugin.lock.json` 的 `anims`，房间皮肤不再回退默认模型 | [`SKINS.md`](SKINS.md)、`PROJECT-STATE.md` §9 |
 | 2026-10-28 小批 | **#800** 结算「下一步」按钮按原图按钮面裁切（`2149d90f2`）；**#786** 开技能时背面骨架没有该技能动作则转正面（`80c68c1e3`，8 名干员 / 13 套皮肤） | 本节 §3 的白名单批次 |
+| 2026-10-28 召唤物时装（#876 的**思路**，自研） | 抽取官方 `tokenSkinMap` → `tokens[*].skins[<主人皮肤>]`，catalogue/overlay/schema 打通；运行时 `UnitInfo.ownerCharId` + `skinOf` 对 token 生效。**51 召唤物 / 72 套模型 / 8.5 MB** | [`SKINS.md`](SKINS.md)「Summon outfits」 |
 
 线上口径：2026-10-27 部署 `build b8f6defd0d1b`（含批 A + #576 + 皮肤修复）。
 
