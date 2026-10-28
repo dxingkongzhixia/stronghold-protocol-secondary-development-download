@@ -193,10 +193,11 @@ function Swatch({ theme, storyUrl }) {
 export function BackdropSettings({ bg }) {
   const fileRef = useRef(null), [error, setError] = useState('');
   const [storyOpen, setStoryOpen] = useState(false);
+  const [dynOpen, setDynOpen] = useState(false);
   const { pref, update, imageUrl, busy } = bg;
   const action = async (fn) => { setError(''); try { await fn(); } catch (e) { setError(e.message || t('操作失败')); } };
   const pickStory = (file) => { update({ theme: 'story', story: file }); setStoryOpen(false); };
-  const pickDyn = (id) => update({ theme: 'dyn', dyn: id });
+  const pickDyn = (id) => { update({ theme: 'dyn', dyn: id }); setDynOpen(false); };
   // 剧情背景 is one tile that opens this chooser: all 54 CGs are never listed in the main settings body.
   if (storyOpen) {
     return html`<div class="bgset bgset--storypick">
@@ -214,15 +215,32 @@ export function BackdropSettings({ bg }) {
       </div>
     </div>`;
   }
+  // 动态皮肤: the same one-tile chooser — every locally extracted outfit, name + group, thumbnails lazy.
+  if (dynOpen) {
+    return html`<div class="bgset bgset--dynpick">
+      <div class="bgset__storypick-head">
+        <button type="button" class="btn btn--secondary btn--sm" onClick=${() => setDynOpen(false)}>${t('返回')}</button>
+        <b>${t('动态皮肤')}</b>
+        <span class="bgset__note">${t('共 {n} 套，点击切换', { n: bg.dynList.length })}</span>
+      </div>
+      <div class="bgset__dyngrid" role="listbox" aria-label=${t('动态皮肤')}>
+        ${bg.dynList.map((x) => html`<button key=${x.id} type="button" role="option"
+          aria-selected=${bg.dynEntry?.id === x.id ? 'true' : 'false'}
+          class=${`bgset__dyncard${bg.dynEntry?.id === x.id ? ' is-selected' : ''}`} onClick=${() => pickDyn(x.id)}>
+          ${x.poster ? html`<${StoryThumb} file=${x.poster} />` : html`<span class="bgset__dynthumbs" aria-hidden="true"><i>L2D</i></span>`}
+          <span class="bgset__dynname">${x.name}</span>
+          <span class="bgset__dyngroup">${x.group || ''}</span>
+        </button>`)}
+      </div>
+    </div>`;
+  }
   return html`<div class="bgset">
     <div class="bgset__themes" role="group" aria-label=${t('背景主题')}>
       ${HUB_THEMES.map((x) => (x.id === 'dyn' && !bg.dynList?.length ? null
         : html`<button key=${x.id} type="button" aria-pressed=${pref.theme === x.id}
         title=${x.id === 'story' ? t('点击选择剧情图片') : x.id === 'dyn' ? t('官方动态皮肤（本机抽取）') : undefined}
         class=${`bgset__theme${pref.theme === x.id ? ' is-selected' : ''}`}
-        onClick=${() => (x.id === 'story' ? setStoryOpen(true)
-          : x.id === 'dyn' ? (pref.dyn ? update({ theme: 'dyn' }) : pickDyn(bg.dynList[0].id))
-          : update({ theme: x.id }))}>
+        onClick=${() => (x.id === 'story' ? setStoryOpen(true) : x.id === 'dyn' ? setDynOpen(true) : update({ theme: x.id }))}>
         <${Swatch} theme=${x.id} storyUrl=${bg.storyUrl} /><span class="bgset__name">${t(x.name)}</span><span class="bgset__en">${x.en}</span></button>`))}
       <button type="button" disabled=${busy} aria-pressed=${pref.theme === 'custom'} class=${`bgset__theme${pref.theme === 'custom' ? ' is-selected' : ''}`}
         onClick=${() => imageUrl ? update({ theme: 'custom' }) : fileRef.current?.click()}>
@@ -242,10 +260,7 @@ export function BackdropSettings({ bg }) {
       <span class="bgset__note">${t('当前：{name}', { name: bg.storyName || t('未选择') })}</span>
     </div>` : null}
     ${pref.theme === 'dyn' && bg.dynEntry ? html`<div class="bgset__story-row">
-      ${bg.dynList.length > 1 ? html`<select class="bgset__dynpick" aria-label=${t('选择动态皮肤')}
-        onChange=${(e) => pickDyn(e.currentTarget.value)} value=${bg.dynEntry.id}>
-        ${bg.dynList.map((x) => html`<option key=${x.id} value=${x.id}>${x.name}${x.group ? ` · ${x.group}` : ''}</option>`)}
-      </select>` : null}
+      <button type="button" class="btn btn--secondary btn--sm" onClick=${() => setDynOpen(true)}>${t('选择动态皮肤')}</button>
       <span class="bgset__note">${t('当前：{name}', { name: bg.dynEntry.name })}${bg.dynEntry.group ? ` · ${bg.dynEntry.group}` : ''}</span>
     </div>` : null}
     ${pref.theme === 'custom' || pref.theme === 'story' || pref.theme === 'dyn' ? html`<div class="bgset__custom">

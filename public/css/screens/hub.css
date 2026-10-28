@@ -604,8 +604,6 @@
   font-size: max(calc(.12 * var(--ui-unit, 1rem)), 9px); color: #efe6ff; background: rgba(20, 12, 30, .72);
   border: 1px solid rgba(183, 155, 255, .6); }
 @keyframes hubDynPulse { 0%, 100% { opacity: .45; transform: scale(.82); } 50% { opacity: 1; transform: scale(1.14); } }
-.bgset__dynpick { max-width: 100%; min-width: 0; padding: calc(.05 * var(--ui-unit, 1rem)); color: var(--text-hi);
-  background: rgba(10, 16, 15, .85); border: 1px solid rgba(223, 230, 226, .2); }
 .bgset__story-row { display: flex; align-items: center; flex-wrap: wrap; gap: calc(0.1 * var(--ui-unit, 1rem)); }
 /* 剧情背景 chooser (one tile in the settings → this grid; names are the source image names) */
 .bgset__storypick { display: flex; flex-direction: column; gap: calc(0.14 * var(--ui-unit, 1rem)); min-width: 0; }
@@ -619,6 +617,20 @@
 .bgset__storycard.is-selected { border-color: var(--mint-400); box-shadow: inset 0 0 0 1px var(--mint-400), 0 0 calc(0.14 * var(--ui-unit, 1rem)) var(--mint-a20); }
 .bgset__storythumb { display: block; aspect-ratio: 16 / 9; overflow: hidden; background: #0b1110; }
 .bgset__storythumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* 动态皮肤 chooser: one tile in the settings → every locally extracted outfit (name + group, lazy thumbnails) */
+.bgset__dyngrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(0.12 * var(--ui-unit, 1rem));
+  max-height: min(58vh, calc(9 * var(--ui-unit, 1rem))); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; min-width: 0; }
+.bgset__dyncard { display: flex; flex-direction: column; gap: calc(0.04 * var(--ui-unit, 1rem)); min-width: 0;
+  padding: calc(0.05 * var(--ui-unit, 1rem)); color: inherit; font: inherit; text-align: left;
+  background: rgba(223, 230, 226, .04); border: 1px solid rgba(223, 230, 226, .14); cursor: pointer; }
+.bgset__dyncard:hover { border-color: var(--mint-a35); }
+.bgset__dyncard.is-selected { border-color: var(--mint-400); box-shadow: inset 0 0 0 1px var(--mint-400), 0 0 calc(0.14 * var(--ui-unit, 1rem)) var(--mint-a20); }
+.bgset__dynthumbs { position: relative; display: block; aspect-ratio: 16 / 9; background: radial-gradient(130% 130% at 72% 18%, #7c65aa 0%, #3a2d4d 45%, #0d0b12 100%); }
+.bgset__dynthumbs i { position: absolute; right: .3rem; bottom: .25rem; padding: .04rem .24rem; font-style: normal;
+  letter-spacing: .14em; font-size: max(calc(.12 * var(--ui-unit, 1rem)), 8px); color: #efe6ff;
+  background: rgba(20, 12, 30, .72); border: 1px solid rgba(183, 155, 255, .6); }
+.bgset__dynname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: max(calc(.16 * var(--utility-text, var(--t))), calc(0.1 * var(--ui-unit, 1rem))); }
+.bgset__dyngroup { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mint-400); font-size: max(calc(.12 * var(--utility-text, var(--t))), calc(0.08 * var(--ui-unit, 1rem))); }
 .bgset__storyname { font-size: max(calc(.14 * var(--utility-text, var(--t))), calc(0.1 * var(--ui-unit, 1rem))); line-height: 1.4; overflow-wrap: anywhere; }
 @media (max-width: 900px) { .bgset__storygrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .bgset__plus { font-size: calc(.34 * var(--utility-text, var(--t))); line-height: 1; color: rgba(223, 230, 226, .5); }

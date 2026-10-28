@@ -927,10 +927,21 @@ primary repo with `ACAO: *`.)
     --id "char_1038_whitw2@sale#15" --char char_1038_whitw2 --name "无序的谦卑" --group "忒斯特收藏/XVII"
   ```
   输出 `public/assets/dynillust/<slug>/main/illust.skel|.atlas|page.webp` 与 `<slug>/entry.json`，并维护
-  `public/assets/dynillust/index.json`（`{version, entries}`，每个 entry 带 `id/name/group/parts`；`parts[].v` 是内容
+  `public/assets/dynillust/index.json`（`{version, entries}`，每个 entry 带 `id/name/group/poster/parts`；`parts[].v` 是内容
   hash，重抽后变化）。图集页统一改名 `page.webp`、atlas 里的页名同步改写（`#` 不能进 URL）；只取主立绘，
   `--keep-start` 才保留入场骨架。**这个目录 git-ignored**（付费时装美术，单套约 4 MB），每台机器 / 服务器自己抽；
   客户端 `public/js/ui/hub/dynIllust.js` 读 index 后用 PIXI + pixi-spine 播放 `Idle`，index 缺失就只是没有这个入口。
+
+  全部抽取（`--dynchars` 可重复，后面的目录覆盖前面的；已有条目跳过，`--force` 重抽）：
+  ```
+  py -3.14 tools/local-extract/dynillust.py --all ^
+    --dynchars "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars"
+  ```
+  选择页的缩略图由 Spine 自身渲染成一张 16:9 静帧（`poster.webp`，写入 entry.poster；换机器也能重生成）：
+  ```
+  node tools/local-extract/dynillust-posters.mjs --force
+  ```
+  选择页只下载每个缩略图（~50 KB），**点选后才加载那一套骨架**（约 4 MB），不会把全部动态皮肤一起拉下来。
 
 ## Licensing and credits
 

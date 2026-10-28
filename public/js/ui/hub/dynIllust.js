@@ -122,7 +122,6 @@ export function mountDynIllust(host, entry, { motion = true, onError } = {}) {
     const data = res && (res.spineData || res);
     if (!data || !Array.isArray(data.animations)) throw new Error(`bad spine data: ${part.skel}`);
     spine = new PIXI.spine.Spine(data);
-    spine.autoUpdate = false; // one clock: the app ticker below (so a still frame can stop it)
     const idle = pickIdle(data.animations);
     if (idle?.name) { spine.state.setAnimation(0, idle.name, true); spine.state.update(0); }
     app.stage.addChild(spine);
@@ -135,10 +134,11 @@ export function mountDynIllust(host, entry, { motion = true, onError } = {}) {
     };
     app.renderer.resize(host.clientWidth || 1, host.clientHeight || 1);
     fit();
-    if (animate) {
-      app.ticker.add(() => { if (spine) spine.update(app.ticker.deltaMS / 1000); });
-    } else {
-      spine.update(0);
+    if (!animate) {
+      // pose once and freeze: pixi-spine's own clock is wall-time based, so a stopped ticker would never pose it
+      spine.state.update(0);
+      spine.state.apply(spine.skeleton);
+      spine.skeleton.updateWorldTransform();
       app.ticker.stop();
       app.renderer.render(app.stage);
     }
