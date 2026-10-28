@@ -503,7 +503,6 @@
         ]
       }
     },
-
     "leafRef": {
       "type": "object",
       "description": "That field of another entry of the installation's manifest: { \"ref\": \"char_112_siege\" } (no other key).",
@@ -743,7 +742,7 @@
       "additionalProperties": false
     },
     "tokenRecord": {
-      "description": "A summon: its avatar and model.",
+      "description": "A summon: its avatar, model and the outfits it wears with its owner's skins.",
       "type": "object",
       "properties": {
         "ref": {
@@ -755,6 +754,17 @@
         },
         "spine": {
           "$ref": "#/$defs/spine"
+        },
+        "skins": {
+          "type": "object",
+          "description": "The summon's outfits this plugin carries, keyed by the installation's own skin id of the operator that summons it (the official tokenSkinMap): the same kinds of picture and model an entry has, under its own key ? the game shows them while its owner wears that outfit. Up to 64 per summon; the key must be a skinKey.",
+          "maxProperties": 64,
+          "propertyNames": {
+            "$ref": "#/$defs/skinKey"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/skinRecord"
+          }
         }
       },
       "additionalProperties": false

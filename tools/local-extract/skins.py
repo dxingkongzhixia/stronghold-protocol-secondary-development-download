@@ -440,7 +440,10 @@ def write_plugin(out, plugin_id, jobs, pics, models_found, log):
             if not spine:
                 log(f'skip {job["skinId"]}: no model')
                 continue
-            tokens_map.setdefault(job['charId'], {}).setdefault('skins', {})[job['skinId']] = {'spine': spine}
+            # Keyed by the OWNER's skin id (tokenSkinMap's owner side): the client looks a summon's outfit up by the
+            # operator skin its owner currently wears (docs/SKINS.md).
+            key = job.get('ownerSkin') or job['skinId']
+            tokens_map.setdefault(job['charId'], {}).setdefault('skins', {})[key] = {'spine': spine}
             count += 1
             continue
         record = {'name': job['name']}
@@ -471,7 +474,7 @@ def write_plugin(out, plugin_id, jobs, pics, models_found, log):
         'scope': ['room', 'personal'],
         'authors': ['local extraction'],
         'license': 'Official art (c) Hypergryph / Yostar; local, non-commercial use only',
-        'permissions': ['assets.override'],
+        'permissions': ['assets.override', 'assets.add'],
         'assets': 'overlay.json',
     }
     (out / 'plugin.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
