@@ -67,6 +67,8 @@ const NOT_SCALED = [
   /\.spcard/,
   // decorative wordmarks and boot/rotate overlays whose size is the composition
   /\.title-cn/, /\.title-en/, /\.title-bg__target/, /\.brief-boss__q/, /\.boot__/, /\.rotate-hint/,
+  // the official next-button face is cut to its image (settle.css): its label is layout rem by design (#800)
+  /\.settle__next/,
   // the join code's letter-spaced field, the px-floored 本局信息 dialog, the 16 px diagnostics box (iOS zoom guard)
   /\.field--code/, /\.minfo-dlg/, /\.set-diag__text/,
   // the keyboard hints of the 快捷键 list (a shared rule with the HUD's .toolbtn kbd)
