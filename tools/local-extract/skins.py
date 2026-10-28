@@ -318,7 +318,7 @@ def models(roots, jobs, out, log, quality, lossless, illust_quality=None, illust
             try:
                 record = {}
                 # the illustration is a Sprite of this same bundle, named like the avatar
-                illust = sprites.get(job['avatarId']) or sprites.get(job['illustId'])
+                illust = sprites.get(job.get('avatarId')) or sprites.get(job.get('illustId')) if (job.get('avatarId') or job.get('illustId')) else None
                 if illust is not None:
                     rel = f'media/{safe(char_id)}/{safe(job["skinId"])}_illust.webp'
                     record['illust'] = save_image(illust.read().image, out / rel, illust_quality, lossless,
@@ -396,10 +396,53 @@ def salvage(out, jobs):
     return pics, model_data
 
 
+def plan_tokens(table, roots, only=None):
+    """Summon outfits (official `tokenSkinMap`): one job per token skin inside `skinpack/<tokenId>.ab`.
+
+    The bundle that holds a summon's default model also holds the outfit models its owning operators' skins add
+    (e.g. `skinpack/token_10007_phatom_twin.ab` carries `token_10007_phatom_twin_sale#4`), so nothing extra is
+    downloaded: the container path is `dyn/battle/prefabs/skins/character/<tokenId>/<tokenSkinId>.prefab`.
+    """
+    wanted = set(only or [])
+    jobs, seen = [], set()
+    for skin in (table.get('charSkins') or {}).values():
+        if not isinstance(skin, dict):
+            continue
+        maps = skin.get('tokenSkinMap') or []
+        if isinstance(maps, dict):
+            maps = list(maps.values())
+        for m in maps:
+            if not isinstance(m, dict):
+                continue
+            token_id, token_skin = m.get('tokenId'), m.get('tokenSkinId')
+            if not token_id or not token_skin or token_skin in seen:
+                continue
+            owner = skin.get('charId')
+            if wanted and owner not in wanted:
+                continue
+            if not SKIN_ID.match(str(token_skin)):
+                continue
+            if not first_bundle(roots, f'skinpack/{token_id}.ab'):
+                continue
+            seen.add(token_skin)
+            jobs.append({'charId': token_id, 'skinId': token_skin, 'battleId': token_skin,
+                         'name': token_skin, 'group': None, 'token': True, 'ownerSkin': skin.get('skinId')})
+    return jobs
+
+
 def write_plugin(out, plugin_id, jobs, pics, models_found, log):
     """The manifest and its overlay; `assets` points at overlay.json (the schema allows a file)."""
-    overlay, count = {'chars': {}}, 0
+    overlay, count, tokens_map = {'chars': {}}, 0, {}
     for job in jobs:
+        if job.get('token'):
+            # Summon outfits (official tokenSkinMap): tokens[<tokenId>].skins[<tokenSkinId>], a Spine model only.
+            spine = models_found.get(job['skinId'], {}).get('spine')
+            if not spine:
+                log(f'skip {job["skinId"]}: no model')
+                continue
+            tokens_map.setdefault(job['charId'], {}).setdefault('skins', {})[job['skinId']] = {'spine': spine}
+            count += 1
+            continue
         record = {'name': job['name']}
         if job['group']:
             record['group'] = job['group']
@@ -410,6 +453,8 @@ def write_plugin(out, plugin_id, jobs, pics, models_found, log):
             continue
         overlay['chars'].setdefault(job['charId'], {}).setdefault('skins', {})[job['skinId']] = record
         count += 1
+    if tokens_map:
+        overlay['tokens'] = tokens_map
     out.mkdir(parents=True, exist_ok=True)
     (out / 'overlay.json').write_text(json.dumps(overlay, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
     manifest = {
@@ -448,6 +493,8 @@ def main(argv=None):
     ap.add_argument('--illust-max', type=int, default=1024, help='largest illustration side in px (default 1024; 0 keeps the original)')
     ap.add_argument('--lossless', action='store_true', help='lossless WebP for pictures')
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--tokens-only', action='store_true',
+                    help='extract summon outfits (official tokenSkinMap) only; skip operator skins')
     args = ap.parse_args(argv)
 
     ab_root = Path(args.game)
@@ -460,11 +507,16 @@ def main(argv=None):
     roots = [*updates, ab_root]  # updates shadow the base install
     table = load_json(args.table)
     only = {c.strip() for c in args.only.split(',') if c.strip()}
-    jobs, skipped = plan(table, our_chars(), roots, only, args.limit or None)
+    jobs, skipped = plan(table, our_chars(), roots, only, args.limit or None) if not args.tokens_only else ([], {})
+    token_jobs = plan_tokens(table, roots, only)
     print(f'skins: {len(jobs)}  skipped: {", ".join(f"{k} {v}" for k, v in skipped.items() if v) or "none"}')
+    if token_jobs:
+        print(f'summon outfits: {len(token_jobs)}')
     if args.dry_run:
         for job in jobs:
             print(f'  {job["charId"]}  {job["skinId"]}  {job["name"]} / {job["group"]}')
+        for job in token_jobs:
+            print(f'  token  {job["charId"]}  {job["skinId"]}  (owner {job.get("ownerSkin")})')
         return 0
     out = Path(args.out) if args.out else ROOT / 'plugins' / args.id
     pics, model_data = salvage(out, jobs)
@@ -482,6 +534,15 @@ def main(argv=None):
         print(f'models: {len(by_char) - len(todo)} operators already done, {len(todo)} to extract')
         model_data.update(models(roots, [j for j in jobs if j['charId'] in todo], out, print,
                                  args.quality, args.lossless, args.illust_quality, args.illust_max))
+    if token_jobs:
+        _, token_done = salvage(out, token_jobs)
+        model_data.update(token_done)
+        todo_tokens = [j for j in token_jobs if not model_data.get(j['skinId'], {}).get('spine')]
+        print(f'summon outfits: {len(token_jobs) - len(todo_tokens)} done, {len(todo_tokens)} to extract')
+        if todo_tokens:
+            model_data.update(models(roots, todo_tokens, out, print,
+                                     args.quality, args.lossless, args.illust_quality, args.illust_max))
+        jobs = [*jobs, *token_jobs]
     written = write_plugin(out, args.id, jobs, pics, model_data, print)
     print(f'wrote {written} skins to {out}')
     print(f'next: node tools/plugin.mjs pack {out.as_posix()}')

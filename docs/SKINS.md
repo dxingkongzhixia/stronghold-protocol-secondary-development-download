@@ -68,6 +68,23 @@ set's `plugin.lock.json` into the catalogue. That file is what the old cosmetic 
 (`public/js/assets.js`) rejects the model, and the client silently draws the operator's default artwork. Import copies
 the whole set folder, so keep the lock next to `overlay.json`.
 
+#### Summon outfits (`tokenSkinMap`)
+
+A summon's outfit models are indexed by `skin_table.json`'s `charSkins[*].tokenSkinMap` and live **inside the summon's
+own bundle**: `skinpack/token_<tokenId>.ab`, prefab
+`dyn/battle/prefabs/skins/character/<tokenId>/<tokenSkinId>.prefab` — nothing extra is downloaded.
+
+```bash
+python tools/local-extract/skins.py --game <AB/Windows> --out skins/sets/local-skins-tokens \
+  --id local-skins-tokens --tokens-only
+```
+
+It writes `tokens[<tokenId>].skins[<tokenSkinId>] = { spine: { front, back } }` (one folder per model under
+`spine/<tokenId>/<tokenSkinId>/`). 2026-10-28 on the official client: **51 summons / 72 outfits / 8.5 MB**,
+10 mappings skipped (skeleton in a bundle this install does not carry — collaboration outfits). The catalogue and the
+runtime do **not** read `tokens` yet; the mechanism is analysed in
+[`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) (#876).
+
 #### Switching a live server off the old plugin
 
 A server that installed the outfits as cosmetic plugins keeps showing them in the plugin list as 非官方 mods. Move them
