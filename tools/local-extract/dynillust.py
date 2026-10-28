@@ -425,6 +425,7 @@ def extract_backdrops(out_root, entries, skinpacks, max_edge=1280, chararts=None
             d.mkdir(parents=True, exist_ok=True)
             img.save(d / 'backdrop.webp', 'WEBP', quality=80, method=6, alpha_quality=100)
             e['backdrop'] = f'/assets/dynillust/{slug(e["id"])}/backdrop.webp'
+            e['backdropFrom'] = f'illustration:{name}'
             (d / 'entry.json').write_text(json.dumps(e, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
             print(f'  {e["id"]} <- {name} {img.size}')
 
@@ -463,7 +464,7 @@ def main():
                     help='skinpack folder for the blurred official background; repeatable')
     ap.add_argument('--chararts', action='append', default=[],
                     help='chararts folder (elite-2 illustrations); repeatable')
-    ap.add_argument('--backdrop-edge', type=int, default=1280, help='max edge of the blurred background')
+    ap.add_argument('--backdrop-edge', type=int, default=1600, help='max edge of the static-illustration base')
     args = ap.parse_args()
 
     out_root = Path(args.out)
@@ -511,9 +512,9 @@ def main():
                 # keep a previously extracted copy of this outfit in the index
                 if entry_file.is_file() and has_skel:
                     entries.append(load_json(entry_file, {}))
-        extract_scene_backdrops(out_root, entries, bundles, table, chars)
-        # No static-illustration fallback: a blurred copy of the outfit looks like a ghost and is not a room. Outfits
-        # without a scene render keep the hub's dark base (the `hub-bg__dyn` gradient).
+        extract_backdrops(out_root, entries, args.skinpack, args.backdrop_edge, args.chararts)
+        # Official static illustration as the base for EVERY outfit (the shop-like scene), with the Spine on top.
+        # `--skinpack` / `--chararts` are required for this; without them no base is written (the hub's dark base shows).
         write_index(out_root, entries)
         if failed:
             print('failed:', ', '.join(f'{i} ({e})' for i, e in failed))
@@ -531,8 +532,8 @@ def main():
     name = args.name or mname
     group = args.group or mgroup
     entry = extract_one(bundle, skin_id, out_root, args.quality, args.keep_start, (char_id, name, group), args.max_page)
-    extract_scene_backdrops(out_root, [entry], {bundle.stem: bundle}, table, chars)
-    # no static-illustration fallback (see the --all path): outfits without a scene render keep the hub's dark base
+    extract_backdrops(out_root, [entry], args.skinpack, args.backdrop_edge, args.chararts)
+    # option 1: official static illustration as the base; the Spine character plays over it
     index_path = out_root / 'index.json'
     index = load_json(index_path, {'version': 1, 'entries': []})
     entries = [e for e in index.get('entries', []) if e.get('id') != entry['id']]

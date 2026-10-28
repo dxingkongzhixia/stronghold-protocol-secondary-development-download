@@ -71,7 +71,7 @@ https://<host>/?ui=classic
 | `public/js/screens/hub/lobby.js` | Hub 大厅、协议选择页、野排队列条 |
 | `public/js/ui/hub/backdrop.js` | 程序化要塞背景、雷达、背景设置面板（夜巡 / 动态皮肤 / 剧情背景 / 自定义） |
 | `public/js/ui/hub/appearance.js` | 夜巡 + 动态皮肤（官方 L2D）+ 剧情背景（随机 CG）+ 自定义图片（IndexedDB） |
-| `public/js/ui/hub/dynIllust.js` | 动态皮肤：读 `/assets/dynillust/index.json`，PIXI + pixi-spine 播放官方 `Idle`（可静止 / 尊重减少动效）；悬停预取、模糊官方立绘作背景 |
+| `public/js/ui/hub/dynIllust.js` | 动态皮肤：读 `/assets/dynillust/index.json`，PIXI + pixi-spine 播放官方 `Idle`（可静止 / 尊重减少动效）；悬停预取、官方静态立绘压暗作底 |
 | `tools/local-extract/dynillust.py` | 从官方客户端 `arts/dynchars/*.ab` 抽取动态立绘到 `public/assets/dynillust/`（git-ignored） |
 | `public/js/ui/hub/storyImages.js` | 剧情背景图片清单（`tools/assets/hub-story.py` 生成） |
 | `public/assets/ui/hub/story/*.webp` | 54 张剧情 CG；**不进 `data/assets.json`**，不参与启动预载 |

@@ -932,16 +932,18 @@ primary repo with `ACAO: *`.)
   `--keep-start` 才保留入场骨架。**这个目录 git-ignored**（付费时装美术，单套约 4 MB），每台机器 / 服务器自己抽；
   客户端 `public/js/ui/hub/dynIllust.js` 读 index 后用 PIXI + pixi-spine 播放 `Idle`，index 缺失就只是没有这个入口。
 
-  官方动态立绘的**房间背景是 Unity 网格/材质**，pixi-spine 画不出来（我们只拿到 Spine 主体，背景会是全黑）。
-  每个 `dynchars` 包里还带**场景渲染贴图**（人物透明，名字多为 `*_bg*` / `live_*` / `l2d_*`）；抽取时取「最大的非图集
-  贴图」存成 `<slug>/backdrop.webp`（1280，q82），并在 entry 里记下来源贴图名 `backdropFrom`。**没有场景贴图的包
-  不铺背景**（不再用静态立绘模糊——那会出现人物重影，也不是官方房间），只显示大厅的深色底。客户端把
-  `backdrop` 模糊 18px、压暗后铺在大厅后面，Spine 主体叠在上面；它也是切皮肤时的即时占位。
+  官方动态立绘的**场景（水晶舞台、房间、台阶…）是 Unity 网格/材质**，pixi-spine 画不出来（我们只拿到 Spine 主体，
+  人物、琴、发丝、粒子会动，场景会缺失）。所以「动态皮肤」背景统一用**官方静态立绘整张图**（`skinpack/<charId>.ab`
+  的时装图、`chararts/<charId>.ab` 的精英二图）做底：1600px WebP，客户端以约 50% 不透明度铺在最底层，再由
+  「暗化」滑杆压暗，Spine 人物全亮叠在上面。这样商店里的完整场景（水晶、台阶、五线谱…）都在，代价是人物背后有
+  一层很淡的同款剪影。`backdropFrom` 记录来源（`illustration:<贴图名>`）。
   ```
   py -3.14 tools/local-extract/dynillust.py --all --force ^
-    --dynchars "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars"
+    --dynchars "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars" ^
+    --skinpack "<client>\Arknights_Data\StreamingAssets\AB\Windows\skinpack" ^
+    --chararts "<client>\Arknights_Data\StreamingAssets\AB\Windows\chararts"
   ```
-  （单套时同一命令加 `--bundle` / `--id`；`--max-page 1600` 是默认值。）
+  （单套时同一命令加 `--bundle` / `--id`；`--max-page 1600`、`--backdrop-edge 1600` 是默认值。）
   `--max-page 1600`（默认）会把图集页和 atlas 坐标一起等比缩小（UV 不变），单套体积从 ~4 MB 降到 ~2–3 MB；
   选择页的缩略图由 Spine 自身渲染成一张 16:9 静帧（`poster.webp`，写入 entry.poster；换机器也能重生成）：
   ```

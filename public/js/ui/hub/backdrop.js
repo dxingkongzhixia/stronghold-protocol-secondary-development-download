@@ -128,8 +128,8 @@ export function HubBackdrop({ bg }) {
         ${bg.dynEntry?.backdrop
           ? html`<div class="hub-bg__dynbg" style=${{ backgroundImage: `url("${bg.dynEntry.backdrop}")` }}></div>`
           : null}
-      </div>
-      <div class="hub-bg__shade" style=${{ opacity: pref.dim / 100 }}></div>`
+        <div class="hub-bg__dynshade" style=${{ opacity: pref.dim / 100 }}></div>
+      </div>`
       : scene === 'photo' || scene === 'story' ? html`<div class="hub-bg__photo" style=${{ backgroundImage: `url("${scene === 'story' ? bg.storyUrl : bg.imageUrl}")`, filter: `blur(${pref.blur}px)` }}></div>
       <div class="hub-bg__shade" style=${{ opacity: pref.dim / 100 }}></div>`
       : scene === 'blank' ? html`<div class="hub-bg__sky"></div>` : html`<${Scene} theme=${scene} />`}
