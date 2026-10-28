@@ -496,6 +496,7 @@ export class UnitView {
     this.lodIdle = opts.lod === 'idle';
     this.culled = false;          // outside the viewport this frame (not animated, not drawn)
     this._offDt = 0;              // animation time skipped while culled
+    this._faceHold = 0;           // how long a cast keeps the Front model round after its flag (game s; _skillFacesFront)
     this._far = false;            // small on screen (adaptive LOD, with hysteresis)
     this.isEnemy = info.side === 'enemy';
     this.isBoss = !!info.boss;
@@ -829,7 +830,16 @@ export class UnitView {
         const at = Math.min(d, this.dieT * (this.ctx.animRate?.() || 1));
         if (at > 0) this.actor.update(at);
       } else {
-        if (this.flags & UF.SKILL) this.actor.setSkill(true);
+        // the skill stance: the flag still on, or its clip's window not yet over — an instant skill's UF.SKILL lasts a
+        // single snapshot while the Front model is only being loaded now (剑雨's clip is 2.17 s), and a model built after
+        // the flag dropped used to stand in its idle on the Front model: the turn happened, the skill animation did not
+        if (this.flags & UF.SKILL || (this._faceHold > 0 && this._skillFacesFront())) {
+          this.actor.setSkill(true);
+          // a late Front model starts the clip from its beginning: keep it on screen for the clip's own length (and its
+          // End) instead of the window the flag left
+          const d = this._skillFaceDur(false) + this._skillFaceDur(true);
+          if (d > 0) this._faceHold = Math.max(this._faceHold, d);
+        }
         this.actor.setBase(this._baseFromAnim());
         if (deployed != null) { this.actor.deploy(this._deployScale()); if (deployed > 0) this.actor.update(deployed); }
         // a stealth-driven form (STEALTH_FORMS): the pose of the clip set in force now, even under a frozen stun
@@ -1084,17 +1094,63 @@ export class UnitView {
   }
 
   /**
-   * Whether this unit should show its Back model: facing UP and a Back model exists — while it stands. A dead or
-   * knocked-out one keeps the Back model only when that skeleton has a fall of its own (4 of the 135 Back models); the
+   * Whether the model drawn while the unit stands is the Back one (facing up): true unless the unit is down, is an
+   * enemy, or has no Back skeleton — and false when the skill it casts is drawn by the Front model (_skillFacesFront).
+   * A knocked-out operator lies with the model that has a fall (GitHub issue #25): the Back model's fall is used when
    * others have no Die clip, so the Front model shows the fall and the held knocked-down pose (GitHub issue #25: the
    * Back model went on with its attack loop under the redeploy ring) [ASSUMED: no source says which model the official
    * client lies down with; a Back skeleton without a Die clip cannot show a fall].
+   * A skill cast is the same story with the skill clip: while the skill runs (or its clip is still on screen) and only
+   * the Front model has an animation for it, the Front model shows it — see _skillFacesFront.
    */
   _wantsBack() {
     const a = this.ctx.assets;
     const id = this.info.spine || this.info.defId;
     if (this.isEnemy || this.dir !== 'UP' || !id || !a || typeof a.hasBack !== 'function' || !a.hasBack(id, this.info.skin)) return false;
+    // the skill's own animation only the Front model has: turn it round for the cast (as the fall does when the Back
+    // model has no Die clip) — the Back model otherwise plays the attack triple as its skill (via:'attack')
+    if ((this.flags & UF.SKILL || this._faceHold > 0) && this._skillFacesFront()) return false;
     return this.alive || dieClipDur(typeof a.spineEntry === 'function' ? a.spineEntry(id, this.info.skin ? { back: true, skin: this.info.skin } : { back: true }) : null) > 0;
+  }
+
+  /**
+   * Whether the skill this unit casts is drawn by its Front model: the Back model's role for that skill — `anims.skill`,
+   * or `anims.skills[skillIndex]` — is borrowed from the attack triple (`via: 'attack'`: the resolver had no Skill clip
+   * to name, tools/assets/anim-roles.mjs) while the Front model's role is a clip of its own. Then the official client
+   * cannot show it on the Back model, and turns the Front round for the cast — the maintainer's report of 2026-10-18
+   * ("开技能转正面"). That is 8 of the operators in this fork's manifest (德克萨斯 S2 剑雨, 推进之王, 蛇屠箱, 初雪,
+   * 艾雅法拉, 年 S1, 塞雷娅, 铃兰 S3); a Back model with a skill clip of its own keeps playing it in place (灰烬's Back
+   * skeleton has Skill_Loop_Up / Skill_Idle_Up), and the rest have the attack triple on both sides (the skill IS the
+   * attack). [ASSUMED] no source names the model for a cast (the data only proves the Back skeleton has nothing to show).
+   */
+  _skillFacesFront() {
+    if (!this.alive || this.isEnemy || this.dir !== 'UP') return false;
+    if (!this.ctx.assets || typeof this.ctx.assets.spineEntry !== 'function') return false;
+    const role = (e) => {
+      const a = e && e.anims;
+      if (!a) return null;
+      const s = (Number.isInteger(this.skillIndex) && a.skills && a.skills[this.skillIndex]) || a.skill;
+      return s && typeof s === 'object' ? s : null;
+    };
+    const b = role(this._modelEntry(true));
+    const f = role(this._modelEntry(false));
+    return !!b && !!f && b.via === 'attack' && f.via !== 'attack' && typeof f.loop === 'string' && f.loop !== '';
+  }
+
+  /**
+   * How long the Front model stays for a cast (game seconds): the clip an instant skill shows after the flag went off
+   * (spine.js plays such a clip once for its own length), else its End clip. 0 = the skill flag alone decides.
+   */
+  _skillFaceDur(afterFlag) {
+    const front = this._modelEntry(false);
+    const a = front && front.anims;
+    if (!a) return 0;
+    const s = (Number.isInteger(this.skillIndex) && a.skills && a.skills[this.skillIndex]) || a.skill;
+    if (!s || typeof s !== 'object' || s.via === 'attack') return 0;
+    const durs = (front && front.animations) || {};
+    const dur = (n) => (typeof n === 'string' && Number.isFinite(durs[n]) ? durs[n] : 0);
+    if (!afterFlag) return !s.begin && !s.end && s.loop !== a.idle ? dur(s.loop) : 0;
+    return dur(s.end);
   }
 
   /**
@@ -1285,6 +1341,13 @@ export class UnitView {
   setSkill(on) {
     if (on) this.statuses.add('skill'); else this.statuses.delete('skill');
     if (this.actor) this.actor.setSkill(on);
+    // a cast whose animation only the Front model has: turn that model round now, the Back one after the clip (or its
+    // End) played out — _skillFacesFront / _faceHold
+    if (this._skillFacesFront()) {
+      const d = this._skillFaceDur(!on);
+      if (d > 0) this._faceHold = Math.max(this._faceHold, d);
+      this._modelDirty = true;
+    }
   }
 
   /**
@@ -1494,6 +1557,12 @@ export class UnitView {
       }
     }
     const P = this.P;
+    // the cast's clip still on screen: once it played out and the skill is off, the Back model comes back (_skillFacesFront)
+    if (this._faceHold > 0) {
+      // `?? 1`, never `|| 1`: animRate() === 0 means animations are paused, and the window must not tick then
+      this._faceHold = Math.max(0, this._faceHold - dt * (this.ctx.animRate?.() ?? 1));
+      if (!this._faceHold && !(this.flags & UF.SKILL)) this._modelDirty = true;
+    }
     // the model for the state the frame's events and snapshot left (Front ⇄ Back when it went down / stood up: die, revive)
     if (this._modelDirty) { this._modelDirty = false; this._syncModel(); }
     // a failed / timed-out model load is tried again once its wait is over (SPINE_RETRY_MS; frames only: never hidden)
