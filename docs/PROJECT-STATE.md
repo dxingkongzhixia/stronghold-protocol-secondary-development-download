@@ -47,12 +47,13 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `app 0.4.0`；**已上线进程的 build `379fd659d3ff`**（2026-10-27 22:56 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `b8f6defd0d1b`；备份 `/root/sp-backup-20261027-225328.tgz`）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `4e11d39c1e3e`**（2026-10-28 17:10 部署后重启，`/healthz` 实测且 == 磁盘 build；上一版 `379fd659d3ff`；备份 `/root/sp-backup-20261028-170837.tgz`）。以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 2026-10-28 17:10 上线批次 | ① **召唤物时装**（#876 的思路、自研）：`tokens[*].skins[<主人皮肤>]` + `UnitInfo.ownerCharId` + `skinOf`，**51 召唤物 / 72 套**（8.7 MB，`local-skins-tokens`）；② **#800** 结算「下一步」按钮按官方按钮面裁切；③ **#786** 朝上开技能、背面骨架没有该技能动作则转正面。相对 `459576478` **25 个文件**（增量包 0.41 MB）+ 新美术 4.8 MB；通知 4 人 → 备份 → 解包 → 重启 → 完成通知 3 人 |
 | 2026-10-27 22:56 上线批次 | ① **技能音效补全**：从本地 CN 客户端抽出 **331 条**技能/攻击音效（`tools/local-extract/sfx.py`），含烛煌 S3 这类 `_s` 槽位；② **71 张新干员立绘**（`illust.py`，`data/assets.json` 的 `illust` 140 → 211）；③ **攻击收尾**：`MIN_ATTACK_TAIL = 0.15 s`，攻击窗口不再出现「一帧回 idle」；④ **内存优化**：content set 采纳后释放 builder 副本（`releaseContentSet`）、`MAX_KEPT` 12 → 6、`MAX_HOSTS` 6、`npm start` 加 `--max-old-space-size=512`。相对 `d62b97ad1` 共 **6 个提交 / 423 个文件**（增量包 9.07 MB / 0 删除） |
 | 2026-10-27 17:02 上线批次 | ① **核心皮肤修复**：`tools/skins.mjs build` 把 `plugin.lock.json` 的动画片段写回 catalogue（缺 `anims` 时 `validSpine` 判无效、房间回退默认模型）；② **主线 0.3.2 战斗修正批 A 12 项**（#720 / #869 / #789 / #749 / #839 / #845 / #851 / #803 / #846 / #847 / #31 / #861）+ 对应 golden；③ 魔王「微尘」环绕光环（#576，纯显示）。相对上次部署 `fce35d298` 共 **34 个提交 / 63 个文件**（增量包 1.07 MB） |
 | 2026-10-26 上线批次 | ① **插件组合上限** `4 → 12 → 128`（`plugins/config.json` 的 `limits.maxSets: 128`，策略天花板从 0–64 放到 0–128；代码默认 `DEFAULT_MAX_SETS = 32`、空闲缓存 `MAX_KEPT = 12`）—— 之前 4 个就是玩家看到的「插件已达上限」；② 房间加载插件卡顿：内容集文件校验改用浏览器原生 `crypto.subtle.digest`，纯 JS SHA-256 仅作回退；③ `server/speed.js` 的 `readOrigins` 按**位置**把第一个源标为「中继」（域名中继不再被误判为镜像）；④ 主界面模式选择三张卡改用官方纹理（`btn_single/btn_team/btn_match`）；⑤ 按键音关闭 |
 | git store | **台式机** = `_merge-scratch`（分支 `prts-plugin`，HEAD 见 `git log`），开发树 `D:\DOTK\Stronghold-Protocol` 已镜像；本轮 HEAD `80a46958e` |
-| 远程同步 | **已全部推送（2026-10-27）**：`github/master` == `gitee/master` == HEAD（`80a46958e` + 本次部署记录）。GitHub 直连会失败，本机走 Steam++ 加速器（hosts 把 github 域名指到 `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`（已写进本仓库 local config，非仓库文件）。**资源中继 2026-10-27 22:48 已推**：`/srv/sp.git` 的 `master` = `80a46958e`，331 条新音效与 71 张新立绘实测 200（推之前是 404）；中继机用 `~/.ssh/sp-deploy`（注释 `sp-relay-deploy`）；游戏服只开 root 密码认证，密码由 owner 持有、不入库 |
+| 远程同步 | **已推送（2026-10-28）**：`github/master` == `gitee/master` == HEAD（`6570d1ade` + 本次部署记录）。GitHub 直连会失败，本机走 Steam++ 加速器（hosts 把 github 域名指到 `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`（已写进本仓库 local config，非仓库文件）。**资源中继本轮没推**：本机的 `~/.ssh/sp-deploy`（注释 `sp-relay-deploy`）在中继机上**未授权**（`Permission denied (publickey)`），中继 `master` 仍停在上次的 `80a46958e`；本轮没有 `public/assets` 变更（召唤物美术在 `skins/sets/`，由游戏服提供），对玩家无影响。要与中继对齐：把本机 `~/.ssh/sp-deploy.pub` 加到中继机 `authorized_keys`，或从台式机推一次。游戏服只开 root 密码认证，密码由 owner 持有、不入库 |
 | 全量测试 | **8527 项 / 8487 通过 / 0 失败 / 40 跳过，10.5 min**（2026-10-28 笔记本实测；召唤物时装之后。同一台机器此前 #800 + #786 后为 8521 / 8481 / 0 / 40；桌面机 2026-10-27 为 8519 / 8482 / 0 / 37，10.0 min）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6）。注：`test/plugins/visualSet.test.js` 的「压缩缓存 ctime」用例在本机**偶发**失败（Windows 时间戳粒度，与代码无关；把改动 stash 后仍 4/5 失败） |
 | 其它闸门 | **2026-10-26 台式机 store 复测**：`lint` 0 error（186 warning）✓；`typecheck` ✓；`i18n check en --strict` **1966/1966**（100%）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 **35/35** ✓；kit 覆盖 **283/283** 技能、**112/112** 棋子 ✓；`check:imports` 3 条既有 `sim-node` 边界记录 |
 | 本机环境 | Node **v24.19.0**（线上是 v26.10.0）；**系统 `python` 已是 3.12.10**（2026-10-28 升级：旧的 `C:\Program Files\python` 3.8.6 已从机器 PATH 移除、文件保留；`paramiko 5.1.0` / `UnityPy 1.25.4` 已装）；GitHub 经 Steam++（hosts → `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`；官方数据 CDN 需要代理 |
@@ -109,6 +110,7 @@
 
 | 时间 | 代码 | build | 更新日志 | 要点 |
 |---|---|---|---|---|
+| **2026-10-28 17:10** | `6570d1ade` | **`4e11d39c1e3e`** | —（未发更新日志） | 召唤物时装（51 召唤物 / 72 套，`local-skins-tokens` 8.7 MB）+ #800 结算按钮 + #786 开技能转正面；相对 `459576478` 25 文件 / 0.41 MB；通知 4 人 → 备份 `/root/sp-backup-20261028-170837.tgz` → 解包 → 重启 → 完成通知 3 人；`/healthz` 线上 == 磁盘 `4e11d39c1e3e`，catalogue 3 套 / 51 召唤物 / 72 套、2616 个 `/skins/` 文件 0 missing |
 | **2026-10-28 00:20** | `3f698f2e2` | **不变**（`379fd659d3ff`，只传静态文件、未重启） | —（纯性能修复，未发通知） | **首屏不再等全量预载**：`boot()` 渲染标题后才在后台跑 `preloadArt`（延迟 800 ms，上限 20 s，取消后按需加载）；**镜像测速阈值**改为中继 **0.4 MB/s** / 普通镜像 **0.8 MB/s**（`public/js/assetMirror.js`）；只上传 `public/js/main.js`、`public/js/assetMirror.js`（`server/speed.js` 的测速页阈值要等下次重启才对上），备份 `/root/sp-backup-static-20261028-002030/`。线上实测标题输入框 **3.2 s** 出现（原 **63.3 s**），控制台无报错，后台仍在继续拉图 |
 | **2026-10-27 22:56** | `80a46958e` | **`379fd659d3ff`** | **`0.4.75`**（23:05 完成通知写入；部署前那条**只发了通知、没勾「写入更新日志」**，所以当时日志停在 0.4.74） | 技能音效补全 331 条 + 71 张新立绘（本地 CN 客户端抽取）、攻击收尾 `MIN_ATTACK_TAIL`、内存优化（content set 释放 / `MAX_KEPT` 6 / `MAX_HOSTS` 6 / 512 MB heap）；相对 `d62b97ad1` 6 个提交 / 423 个文件，增量包 9.07 MB、0 删除；先推通知（14 人）→ 备份 `/root/sp-backup-20261027-225328.tgz` → 解包 → 重启 → 完成通知（7 人，`changelog: true` → 更新日志 **0.4.75**）；中继 `master` 同为 `80a46958e`；`/healthz` 线上 == 磁盘 `379fd659d3ff` |
 | **2026-10-27 17:02** | `d62b97ad1` | **`b8f6defd0d1b`** | —（未发更新日志） | 皮肤修复（`build` 补回 `plugin.lock.json` 的 `anims`）+ 主线 0.3.2 战斗修正批 A 12 项 + 魔王微尘光环；相对 `fce35d298` 34 个提交 / 63 个文件，增量包 1.07 MB；先推通知（4 人）→ 备份 `/root/sp-backup-20261027-165902.tgz` → 解包 → 重启 → 再补一条完成通知（3 人）；`/healthz` 线上 == 磁盘 `b8f6defd0d1b` |
@@ -235,8 +237,9 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 **2026-10-27 核心皮肤：服务器已迁移，本机已拉取；存储已清理**
 
-- **服务器已迁移**：`/www/wwwroot/Stronghold-Protocol/skins/sets/` 有 `local-skins` + `local-skins-2`（304 MB），
-  catalogue 为 **2 套 / 175 干员 / 277 套外观（257 可穿戴 / 20 仅图片）**；逐文件校验 **2358 个 `/skins/…` 文件，0 missing**。
+- **服务器已迁移**：`/www/wwwroot/Stronghold-Protocol/skins/sets/` 有 `local-skins` + `local-skins-2` + `local-skins-tokens`
+  （304 MB + 8.7 MB），catalogue 为 **3 套 / 175 干员 / 277 套干员外观 / 51 召唤物 / 72 套召唤物时装**
+  （329 可穿戴 / 20 仅图片）；逐文件校验 **2616 个 `/skins/…` 文件，0 missing**。
   `plugins/config.json` 的 `default` 是 `[]`，旧的 `local-skins*` 只在 `plugins/_replaced`（已清理）——**皮肤已是核心，不是插件**。
 - **本机已拉取**：同一套 `skins/sets`（304 MB）已从服务器取回，catalogue 换成服务器版本；`node tools/skins.mjs check`
   为 **0 missing**，本地 `/skins/catalogue.json` 与 `/skins/sets/…` 都返回 200。
