@@ -47,8 +47,6 @@ let index = null;
 
 /** @param {URL} url */
 function isCacheable(url) {
-  // The dynamic-outfit index is a live list (a new local extraction must show up), never a cached asset.
-  if (url.pathname === '/assets/dynillust/index.json') return false;
   return url.origin === self.location.origin && PREFIXES.some((p) => url.pathname.startsWith(p));
 }
 

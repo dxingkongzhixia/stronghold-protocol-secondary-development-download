@@ -75,8 +75,3 @@ server/match/botPrior.json.prev
 
 # 核心皮肤 (docs/SKINS.md): skins/catalogue.json is tracked metadata; the extracted official art under skins/sets/ is not.
 /skins/sets/
-
-# 动态皮肤 (docs/ASSETS.md "动态皮肤"): the official L2D Spine set unpacked from the local client is machine-local art
-# (several MB per outfit); only tools/local-extract/dynillust.py and the client code are tracked. index.json is generated
-# next to the art, so a checkout without it simply has no dynamic-outfit tile.
-/public/assets/dynillust/

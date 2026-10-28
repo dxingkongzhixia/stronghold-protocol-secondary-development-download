@@ -638,16 +638,11 @@ async function acquireBootSlot() {
  * @returns {Promise<string>} the installed prefix ('' when none)
  */
 let assetMirrorReady = null;
-/** The running background art preload, if any; entering the game cancels it so the hub's own art loads first. */
-let artPreload = null;
-let artPreloadStopped = false;
 function ensureAssetMirror() {
   return (assetMirrorReady ||= initAssetMirror().catch(() => ''));
 }
 
 async function preloadArt() {
-  // Never warm the title cache once the player is already in (a reload resumes straight into the hub).
-  if (artPreloadStopped || store.get().session?.entered) return;
   const bar = document.getElementById('boot-bar');
   const fill = document.getElementById('boot-bar-fill');
   const sub = document.getElementById('boot-sub');
@@ -689,15 +684,11 @@ async function preloadArt() {
   // A cache warmer, not a gate: the title has already rendered. With the CDN mirror carrying the art
   // (js/assetMirror.js) the wall clock is the per-image latency (measured 2026-10-14, gh-proxy answered ~6 images/s,
   // so all 2461 would take ~6 min). The deadline stops a slow link from holding a boot slot forever; the rest loads on
-  // demand. PRELOAD_DEADLINE_MS = 0 means no deadline (the background warmer runs to completion). Entering the lobby
-  // cancels it (`artPreloadStopped`): the hub's backdrop/art must not queue behind title images on the connections.
-  if (artPreloadStopped) return;
+  // demand. PRELOAD_DEADLINE_MS = 0 means no deadline (the background warmer runs to completion).
   const pre = preloadImages(urls, {
     concurrency: 8,
     onProgress: artProgressReporter({ fill, sub }),
   });
-  if (artPreloadStopped) { pre.cancel(); return; }
-  artPreload = pre;
   let preloadTimer = null;
   try {
     // Race the deadline against the preload rather than relying on cancel() to settle: cancel() stays pending while an
@@ -708,7 +699,6 @@ async function preloadArt() {
     await (deadline ? Promise.race([pre.promise, deadline]) : pre.promise);
   } finally {
     if (preloadTimer) clearTimeout(preloadTimer);
-    if (artPreload === pre) artPreload = null;
     if (holding) net.request('boot.release', {}).catch(() => {});
     if (bar) bar.hidden = true;
     if (sub) sub.hidden = true;
@@ -795,29 +785,9 @@ async function boot() {
   await Promise.all([waitForFonts(1200), connectWhenReady, langReady]);
   const root = document.getElementById('app');
   render(html`<${App} />`, root);
-  // Warm the next screen's cache in the background. A player who chose a dynamic outfit parses that skeleton here
-  // instead (PIXI caches it): the hub then shows it at once, and the 100 MB title art is not fetched at the same time.
-  const dynPref = loadPref('hub.backdrop', null);
-  if (dynPref && dynPref.theme === 'dyn') {
-    setTimeout(() => {
-      void import('./ui/hub/dynIllust.js')
-        .then(({ warmDynBackdrop }) => warmDynBackdrop(dynPref.dyn))
-        .catch((err) => console.warn('[app] dynamic backdrop warm-up failed', err));
-    }, 800);
-  } else {
-    setTimeout(() => {
-      void preloadArt().catch((err) => console.warn('[app] art preload failed', err));
-    }, 800);
-  }
-  // Entering the game stops the title's cache warmer: the hub's background/art (and its dynamic outfit) must not queue
-  // behind the title's image burst on the browser's six connections.
-  const stopWarm = () => {
-    artPreloadStopped = true;
-    const handle = artPreload;
-    artPreload = null;
-    handle?.cancel?.();
-  };
-  const offWarm = store.subscribe((s) => { if (s.session?.entered) { stopWarm(); offWarm(); } });
+  setTimeout(() => {
+    void preloadArt().catch((err) => console.warn('[app] art preload failed', err));
+  }, 800);
 
   const splash = document.getElementById('boot');
   if (splash) {

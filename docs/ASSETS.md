@@ -916,41 +916,6 @@ primary repo with `ACAO: *`.)
   ```
   2026-10-06 用它补齐了 BGM/音效。（`--asset-source` 也可用 `SP_ASSET_SOURCE` 环境变量；不带 flag 时先试原始源、失败再提示。）
 - ✅ **GitCode 镜像（yuanyan 图标库）**：`yuanyan3060/ArknightsGameResource`（干员头像/立绘、技能图标、敌人/召唤物图标）在 GitCode 有只读镜像，免登录。直连 GitHub 被墙时用 **`--asset-source=gitcode`**（等价前缀 `https://raw.gitcode.com/gh_mirrors/ar/ArknightsGameResource/raw/main/`）即可下到这批图标；其余源（fexli 脊柱 / AA2 / Ark-Models）GitCode 没有镜像，仍走直连 + jsDelivr。已验证镜像文件与 GitHub 逐字节一致（如 `avatar/char_377_gdglow.png`，58,987 B）。
-- **动态皮肤（动态立绘，2026-10-28）**：官方客户端把动态时装放在热更目录
-  `Arknights_Data\PersistentData\Bundles\arts\dynchars\<skinId>.ab`（`<skinId>` 就是 `char_1038_whitw2@sale#15` 这种
-  `excel/skin_table.json` 的 `dynIllustId` 去掉 `dyn_illust_` 前缀）。一个包里同时有：
-  `dyn_illust_<skinId>.skel|.atlas` + 页面贴图（主立绘）、`dyn_illust_<skinId>_Start.*`（入场动画）和
-  `dyn_portrait_<skinId>.*`（对话半身像）。
-  ```
-  py -3.14 tools/local-extract/dynillust.py ^
-    --bundle "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars\char_1038_whitw2_sale#15.ab" ^
-    --id "char_1038_whitw2@sale#15" --char char_1038_whitw2 --name "无序的谦卑" --group "忒斯特收藏/XVII"
-  ```
-  输出 `public/assets/dynillust/<slug>/main/illust.skel|.atlas|page.webp` 与 `<slug>/entry.json`，并维护
-  `public/assets/dynillust/index.json`（`{version, entries}`，每个 entry 带 `id/name/group/poster/backdrop/parts`；`parts[].v` 是内容
-  hash，重抽后变化）。图集页统一改名 `page.webp`、atlas 里的页名同步改写（`#` 不能进 URL）；只取主立绘，
-  `--keep-start` 才保留入场骨架。**这个目录 git-ignored**（付费时装美术，单套约 4 MB），每台机器 / 服务器自己抽；
-  客户端 `public/js/ui/hub/dynIllust.js` 读 index 后用 PIXI + pixi-spine 播放 `Idle`，index 缺失就只是没有这个入口。
-
-  官方动态立绘的**场景（水晶舞台、房间、台阶…）是 Unity 网格/材质**，pixi-spine 画不出来（我们只拿到 Spine 主体，
-  人物、琴、发丝、粒子会动，场景会缺失）。所以「动态皮肤」背景统一用**官方静态立绘整张图**（`skinpack/<charId>.ab`
-  的时装图、`chararts/<charId>.ab` 的精英二图）做底：1600px WebP，客户端以约 50% 不透明度铺在最底层，再由
-  「暗化」滑杆压暗，Spine 人物全亮叠在上面。这样商店里的完整场景（水晶、台阶、五线谱…）都在，代价是人物背后有
-  一层很淡的同款剪影。`backdropFrom` 记录来源（`illustration:<贴图名>`）。
-  ```
-  py -3.14 tools/local-extract/dynillust.py --all --force ^
-    --dynchars "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars" ^
-    --skinpack "<client>\Arknights_Data\StreamingAssets\AB\Windows\skinpack" ^
-    --chararts "<client>\Arknights_Data\StreamingAssets\AB\Windows\chararts"
-  ```
-  （单套时同一命令加 `--bundle` / `--id`；`--max-page 1600`、`--backdrop-edge 1600` 是默认值。）
-  `--max-page 1600`（默认）会把图集页和 atlas 坐标一起等比缩小（UV 不变），单套体积从 ~4 MB 降到 ~2–3 MB；
-  选择页的缩略图由 Spine 自身渲染成一张 16:9 静帧（`poster.webp`，写入 entry.poster；换机器也能重生成）：
-  ```
-  node tools/local-extract/dynillust-posters.mjs --force
-  ```
-  选择页只下载每个缩略图（~50 KB），**鼠标悬停/键盘聚焦时**就用 `PIXI.Assets.backgroundLoad` 预取那一套骨架，
-  点选后才挂到大厅；不会把全部动态皮肤一起拉下来。
 
 ## Licensing and credits
 

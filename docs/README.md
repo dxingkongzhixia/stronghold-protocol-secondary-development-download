@@ -86,6 +86,7 @@
 | [`DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) | 中文开发手册与配方（详细参考） | 参考 |
 | [`HANDOVER.md`](HANDOVER.md) | 详细接手 / 运维手册（历史较长，入口以 `DEVELOPER.md` 为准） | 参考 |
 | [`UI-HUB.md`](UI-HUB.md) | 主界面：经典大厅 / Hub、后台开关、`?ui=` 预览 | 当前 |
+| [`FUTURE-FEATURES.md`](FUTURE-FEATURES.md) | 后续功能：评估过但暂不实现的较大功能（含动态皮肤的 L2D 场景方案） | 规划 |
 | [`I18N.md`](I18N.md) | UI / 游戏文本 / 服务器消息 / 新语言 | 参考 |
 | [`SKINS.md`](SKINS.md) | 核心皮肤：目录、选择器、本地时装提取、渲染回退 | 当前 |
 
