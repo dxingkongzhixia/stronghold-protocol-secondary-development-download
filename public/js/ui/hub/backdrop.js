@@ -125,8 +125,8 @@ export function HubBackdrop({ bg }) {
   const overlays = scene === 'photo' || scene === 'story' || scene === 'dyn' ? pref.overlay : true;
   return html`<div class="hub-bg" data-scene=${scene} data-motion=${pref.motion ? 'on' : 'off'} aria-hidden="true">
     ${scene === 'dyn' ? html`<div class="hub-bg__sky"></div><div class="hub-bg__dyn" ref=${dynRef}>
-        ${bg.dynEntry?.backdrop || bg.dynEntry?.poster
-          ? html`<div class="hub-bg__dynbg" style=${{ backgroundImage: `url("${bg.dynEntry.backdrop || bg.dynEntry.poster}")` }}></div>`
+        ${bg.dynEntry?.backdrop
+          ? html`<div class="hub-bg__dynbg" style=${{ backgroundImage: `url("${bg.dynEntry.backdrop}")` }}></div>`
           : null}
       </div>
       <div class="hub-bg__shade" style=${{ opacity: pref.dim / 100 }}></div>`

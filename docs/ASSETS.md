@@ -933,16 +933,15 @@ primary repo with `ACAO: *`.)
   客户端 `public/js/ui/hub/dynIllust.js` 读 index 后用 PIXI + pixi-spine 播放 `Idle`，index 缺失就只是没有这个入口。
 
   官方动态立绘的**房间背景是 Unity 网格/材质**，pixi-spine 画不出来（我们只拿到 Spine 主体，背景会是全黑）。
-  每个 `dynchars` 包里其实还带一张**房间场景渲染图**（2048² 左右、人物透明，名字多为 `*_bg*` / `live_*` / `l2d_*`）；
-  抽取时取「最大的非图集贴图」存成 `<slug>/backdrop.webp`（1280，q82）。没有场景图的包再回退到官方**静态立绘**
-  （`--skinpack`，时装；`--chararts`，精英二），客户端把背景模糊 18px、压暗后铺在大厅后面，Spine 主体叠在上面。
-  它也是切皮肤时的即时占位，不用等骨架下载完才有画面。
+  每个 `dynchars` 包里还带**场景渲染贴图**（人物透明，名字多为 `*_bg*` / `live_*` / `l2d_*`）；抽取时取「最大的非图集
+  贴图」存成 `<slug>/backdrop.webp`（1280，q82），并在 entry 里记下来源贴图名 `backdropFrom`。**没有场景贴图的包
+  不铺背景**（不再用静态立绘模糊——那会出现人物重影，也不是官方房间），只显示大厅的深色底。客户端把
+  `backdrop` 模糊 18px、压暗后铺在大厅后面，Spine 主体叠在上面；它也是切皮肤时的即时占位。
   ```
   py -3.14 tools/local-extract/dynillust.py --all --force ^
-    --dynchars "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars" ^
-    --skinpack "<client>\Arknights_Data\StreamingAssets\AB\Windows\skinpack" ^
-    --chararts "<client>\Arknights_Data\StreamingAssets\AB\Windows\chararts"
+    --dynchars "<client>\Arknights_Data\PersistentData\Bundles\arts\dynchars"
   ```
+  （单套时同一命令加 `--bundle` / `--id`；`--max-page 1600` 是默认值。）
   `--max-page 1600`（默认）会把图集页和 atlas 坐标一起等比缩小（UV 不变），单套体积从 ~4 MB 降到 ~2–3 MB；
   选择页的缩略图由 Spine 自身渲染成一张 16:9 静帧（`poster.webp`，写入 entry.poster；换机器也能重生成）：
   ```

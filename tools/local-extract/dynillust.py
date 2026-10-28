@@ -353,6 +353,7 @@ def extract_scene_backdrops(out_root, entries, bundles, table, chars, max_edge=1
             out.parent.mkdir(parents=True, exist_ok=True)
             img.save(out, 'WEBP', quality=82, method=6, alpha_quality=100)
             e['backdrop'] = f'/assets/dynillust/{slug(e["id"])}/backdrop.webp'
+            e['backdropFrom'] = best[0].m_Name
             (out.parent / 'entry.json').write_text(json.dumps(e, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
             done += 1
             print(f'  scene backdrop {e["id"]} <- {best[0].m_Name} {img.size}')
@@ -511,7 +512,8 @@ def main():
                 if entry_file.is_file() and has_skel:
                     entries.append(load_json(entry_file, {}))
         extract_scene_backdrops(out_root, entries, bundles, table, chars)
-        extract_backdrops(out_root, entries, args.skinpack, args.backdrop_edge, args.chararts)
+        # No static-illustration fallback: a blurred copy of the outfit looks like a ghost and is not a room. Outfits
+        # without a scene render keep the hub's dark base (the `hub-bg__dyn` gradient).
         write_index(out_root, entries)
         if failed:
             print('failed:', ', '.join(f'{i} ({e})' for i, e in failed))
@@ -530,7 +532,7 @@ def main():
     group = args.group or mgroup
     entry = extract_one(bundle, skin_id, out_root, args.quality, args.keep_start, (char_id, name, group), args.max_page)
     extract_scene_backdrops(out_root, [entry], {bundle.stem: bundle}, table, chars)
-    extract_backdrops(out_root, [entry], args.skinpack, args.backdrop_edge, args.chararts)
+    # no static-illustration fallback (see the --all path): outfits without a scene render keep the hub's dark base
     index_path = out_root / 'index.json'
     index = load_json(index_path, {'version': 1, 'entries': []})
     entries = [e for e in index.get('entries', []) if e.get('id') != entry['id']]
