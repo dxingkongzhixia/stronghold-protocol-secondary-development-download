@@ -169,7 +169,11 @@ export default {
             // the dodge is a buff, not a heal: every ally around gets it (禁疗 / 无法被友方治疗 included); only the heal
             // selection applies the shared heal rule (Battle.healTargetable)
             if (prob > 0) for (const a of around) battle.addBuff(a, { key: 'makoto:orpheusDodge', duration: 0.6, refresh: 'replace', mods: { dodgePhys: prob, dodgeArts: prob }, tags: ['skill'] });
-            const hurt = around.filter((a) => a.hp < a.s.maxHp && battle.healTargetable(unit, a)).sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp);
+            // "范围内友方干员" includes 结城理 himself while the persona is out (owner report, 2026-10-29): he is the one
+            // blocking and taking the hits, and the official text does not say 其他友方 — without him the persona could
+            // never recover. The shared heal rule still decides whether a heal can reach him.
+            const hurt = [unit, ...around].filter((a) => a.alive && a.hp < a.s.maxHp && battle.healTargetable(unit, a))
+              .sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp);
             healAcc += 0.5;
             if (healAcc >= 1 && healScale > 0 && hurt.length) {
               healAcc = 0;

@@ -84,3 +84,38 @@ test('结城理 俄耳甫斯 (S3 second <替身>) heals the ordinary injured all
   assert.ok(free1.findBuff('makoto:orpheusDodge') && musha.findBuff('makoto:orpheusDodge') && free2.findBuff('makoto:orpheusDodge'), 'every ally around still dodges');
   done(h);
 });
+
+test('结城理 俄耳甫斯 (S3 second <替身>) heals 结城理 himself too — "范围内友方干员" includes the persona', () => {
+  // owner report: the aura healed the allies beside him but never 结城理, so a persona that is blocking and taking hits
+  // could not recover. The official text names 友方干员 without 其他, and the persona IS 结城理 on the field.
+  const h = makeBattle({
+    defs: { enemies: { enemy_d: dummy('enemy_d') } }, timeLimit: 60, autoFinish: false, seed: 3,
+    hooks: ['heal', 'attack', 'damaged'], captureNoisy: true,
+    units: [
+      { chessId: 'chess_char_4217_makoto_a', row: 10, col: 4, skillIndex: IDX('chess_char_4217_makoto_a', 'skchr_makoto_3') },
+      { chessId: YAK, row: 10, col: 5 }, { chessId: PERFUMER, row: 9, col: 5 },
+    ],
+    enemies: [{ key: 'enemy_d', pos: [10, 6] }],
+  });
+  h.step();
+  const u = h.unit('chess_char_4217_makoto_a');
+  const a1 = h.unit(2), a2 = h.unit(3);
+  u.skill.gainSp(999);
+  assert.ok(h.runUntil(() => u.skill.activations >= 1, 4), 'S3 cast');
+  h.run(1);
+  u.trait.dollNo = 2;                       // the second persona (the whole doll chain is the render test's business)
+  h.run(1);
+  assert.ok(u.findBuff('makoto:orpheus'), '俄耳甫斯 out');
+  // 结城理 himself is the lowest, then one ally; a third ally is at full HP (never a target)
+  u.hp = u.s.maxHp * 0.15;
+  a1.hp = a1.s.maxHp * 0.35;
+  a2.hp = a2.s.maxHp;
+  const before = u.hp;
+  h.run(3);
+  const heals = h.hooksOf('heal').filter((c) => c.source === u && !c.opts?.regen);
+  assert.ok(heals.some((c) => c.target === u && c.amount > 0), `结城理 is healed by his own persona: ${JSON.stringify(heals.map((c) => [c.target?.id, c.amount]))}`);
+  assert.ok(heals.some((c) => c.target === a1), 'and the injured ally is still healed');
+  assert.ok(u.hp > before, 'his HP actually went up');
+  assert.ok(!heals.some((c) => c.target === a2), 'a full-HP ally is never a heal target');
+  done(h);
+});
