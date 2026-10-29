@@ -65,7 +65,7 @@
 | 项 | 值 |
 |---|---|
 | 地址 | **https://strongholdprotocolcsym.top:10785/**（官方 HTTPS；NAT：内网 3000 → 外网 20522；旧的 `http://183.66.27.19:20522` 仍可访问，但会收到“改用官方地址”的普通通知） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `379fd659d3ff`**（2026-10-27 22:56 部署后重启，由 `/healthz` 实测且 == 磁盘 build；上一版 `b8f6defd0d1b`；备份 `/root/sp-backup-20261027-225328.tgz`；社区更新日志 **0.4.75**，2026-10-27 23:05 由完成通知写入）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `ae49791767eb`**（2026-10-28 17:53 小修后重启，由 `/healthz` 实测且 == 磁盘 build；上一版 `4e11d39c1e3e`；10-28 17:10 整批备份 `/root/sp-backup-20261028-170837.tgz`；社区更新日志 **0.4.75**，2026-10-27 23:05 由完成通知写入）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
