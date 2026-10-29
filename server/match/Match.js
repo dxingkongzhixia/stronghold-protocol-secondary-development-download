@@ -235,7 +235,7 @@ import { MatchUnite } from './match/unitePhase.js';
 import { MatchBoss } from './match/bossRounds.js';
 import { MatchSettle } from './match/settle.js';
 import { installTestTrace } from './testTrace.js';
-import { getBotStrategy } from './botStrategies.js';
+import { getBotStrategy, getBotStrategySeats } from './botStrategies.js';
 import { createExternalAI } from './llmGate.js';
 import { MatchTestCommands } from './match/testCommands.js';
 import { MatchOffers } from './match/offers.js';
@@ -332,6 +332,8 @@ export class Match {
     this.botRehearsal = Number.isInteger(opts.botRehearsal) && opts.botRehearsal >= 0 ? Math.min(opts.botRehearsal, 8) : BOT_REHEARSAL_DEFAULT;
     /** the bot strategy of every AI seat (opts.botStrategy / SP_BOT_STRATEGY / 'legacy'; server/match/botStrategies.js) */
     this.bot = getBotStrategy(opts.botStrategy ?? env('SP_BOT_STRATEGY'));
+    /** per-seat overrides (#816 P1): SP_BOT_STRATEGY_SEATS / opts.botStrategySeats, a seat not listed plays this.bot */
+    this.seatBots = getBotStrategySeats(opts.botStrategySeats ?? env('SP_BOT_STRATEGY_SEATS'));
     /** wall-clock budget of one rehearsal slice (scheduleBotPrep) */
     this.botSliceMs = Number.isFinite(opts.botSliceMs) && opts.botSliceMs > 0 ? opts.botSliceMs : this.sched.virtual ? Infinity : BOT_SLICE_MS;
     /**

@@ -83,8 +83,14 @@ test('market: compatibility says whether mainline 0.3.x / this 0.4.x build can u
   const content = await market.upload({ kind: 'ordinary', bytes: make('mainline-content', 'content', '>=0.3.0 <0.4.0') });
   assert.deepEqual(
     [content.compat.own, content.compat.mainline, content.compat.auto, content.compat.ok],
+    [false, true, true, true],
+    'a mainline 0.3.x content plugin loads without allowIncompatible (data only; script/trusted still need it)',
+  );
+  const script = await market.upload({ kind: 'ordinary', bytes: make('mainline-script', 'script', '>=0.3.0 <0.4.0') });
+  assert.deepEqual(
+    [script.compat.own, script.compat.mainline, script.compat.auto, script.compat.ok],
     [false, true, false, false],
-    'a mainline 0.3.x content plugin is strict by default',
+    'a mainline 0.3.x script plugin is strict by default: it executes code',
   );
   const current = await market.upload({ kind: 'ordinary', bytes: make('current-content', 'content', '>=0.4.0 <0.5.0') });
   assert.deepEqual([current.compat.own, current.compat.ok], [true, true]);

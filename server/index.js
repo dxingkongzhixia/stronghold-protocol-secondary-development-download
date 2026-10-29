@@ -52,6 +52,8 @@ import { StatsService } from './stats.js';
 import { TrainingStore } from './training/store.js';
 import { setTrainingSink } from './training/record.js';
 import { configurePrior, priorStatus } from './match/botPrior.js';
+import { getBotStrategy, getBotStrategySeats } from './match/botStrategies.js';
+import { noteLlmIgnored, releaseIgnoresExternalAi, validateExternalConfig } from './match/llmGate.js';
 import { ADMIN_HTML, ADMIN_CSP_HASH, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches, writePluginPolicy } from './admin.js';
 import { readUiMode, writeUiMode, uiConfigScript } from './uiMode.js';
 import { docIndex, readDoc, readDocAsset } from './docs.js';
@@ -179,6 +181,23 @@ function cookieValue(header, name) {
 export async function startServer(opts = {}) {
   const { port, host } = listenAddress(opts);
   const log = opts.log || makeLogger(!!opts.quiet);
+  // External AI (sp-ai/1, docs/EXTERNAL_AI.md): a release ignores its settings (one log line) and keeps the built-in
+  // bot; an unknown strategy id fails here, before data is loaded or the port is opened.
+  if (releaseIgnoresExternalAi()) noteLlmIgnored(log);
+  try {
+    const strategy = getBotStrategy(process.env.SP_BOT_STRATEGY);
+    log.info(`[ai] bot strategy ${strategy.id}`);
+    if (strategy.id === 'external') validateExternalConfig();
+  } catch (cause) {
+    throw new Error(`Invalid SP_BOT_STRATEGY: ${cause.message}. Unset SP_BOT_STRATEGY to use the original bot (legacy).`, { cause });
+  }
+  // per-seat overrides (#816 P1): validated before data is loaded, like the match-wide selection above
+  try {
+    const seats = getBotStrategySeats(process.env.SP_BOT_STRATEGY_SEATS);
+    if (Object.values(seats).some((s) => s.id === 'external')) validateExternalConfig();
+  } catch (cause) {
+    throw new Error(`Invalid SP_BOT_STRATEGY_SEATS: ${cause.message}. Unset SP_BOT_STRATEGY_SEATS to use SP_BOT_STRATEGY for every seat.`, { cause });
+  }
   const { publicDir, dataDir, sharedDir, packsDir, pluginsDir, skinsDir } = serveDirs(opts);
   const simDir = path.join(ROOT, 'server', 'sim');
 

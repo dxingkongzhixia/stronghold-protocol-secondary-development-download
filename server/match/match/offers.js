@@ -27,7 +27,7 @@ export class MatchOffers {
       }
       this.offerWin.push(w);
       this._offerTimers.set(w, this.later(this.scaled(offer.windowSec * 1000), () => this._offerDeadline(w)));
-      for (const ps of alive) if (ps.botControlled) this._offerDefault(ps, w);
+      for (const ps of alive) if (ps.botControlled) this._offerBot(ps, w);
       this._offerSettleIfDone(w);
     }
     this._offerProgress();
@@ -132,6 +132,18 @@ export class MatchOffers {
     else if (effect.chess && !ps.acquireChess(effect.chess, { source: reason })) return false;
     ps.dirty();
     return true;
+  }
+
+  /** An AI seat's pick: an external strategy (sp-ai/1) answers asynchronously; _offerDefault is its fallback. */
+  _offerBot(ps, w) {
+    const fallback = () => {
+      this._offerDefault(ps, w);
+      this._offerSettleIfDone(w);
+      this._offerProgress();
+    };
+    if (this.botFor(ps).decide?.(this, ps, { kind: 'offer', key: `offer:${w.seq}`, deadline: w.deadline,
+      valid: () => !w.closed && !w.picks.has(ps.playerId), complete: () => w.picks.has(ps.playerId), fallback })) return;
+    this._offerDefault(ps, w);
   }
 
   _offerDefault(ps, w) {

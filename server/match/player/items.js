@@ -5,12 +5,22 @@
 // the player state).
 
 import { ERR } from '../../../shared/constants.js';
+import { morphSlotPolicy, ruleOption } from '../../../shared/plugins/rules.js';
 import { tileKey, inField, parseDir } from '../board.js';
 import { offsetTile } from '../../sim/dir.js';
 import { itemKey } from '../gamedata.js';
 import { OK, fail } from './common.js';
 
 export class PlayerItems {
+  /**
+   * The room's equip-slot policy (shared/plugins/rules.js): official returns the shared frozen singleton, so the
+   * numbers stay today's; a gameplay plugin's `morphPairing: plus` lets a plus-morph item sit beside the two slots.
+   * The external-AI digest asks whether a carrier accepts an item before offering the shortcut.
+   */
+  _slotPolicy() {
+    return morphSlotPolicy(ruleOption(this.m?.rules, 'morphPairing'), (it) => !!this.gd.item(it?.id)?.canGiveBond);
+  }
+
   /**
    * Our fork did not take the 0.3.1 equipment debt (#624): destroying an item releases no stock it never owed.
    * The upstream effectsMeta calls this on every destroyed item, so keep the method as a no-op.

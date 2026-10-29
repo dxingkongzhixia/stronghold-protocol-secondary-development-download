@@ -84,6 +84,8 @@ export class MatchPrep {
       try {
         do {
           r = gen.next();
+          // an async generator / a hook that returned a promise: refuse instead of spinning the virtual scheduler
+          if (!r || typeof r.done !== 'boolean') throw new TypeError('Bot prep hooks must return a synchronous iterator');
           if (sliceCtl) sliceCtl.note(1);
         } while (!r.done && !(sliceCtl ? sliceCtl.wall(now() - t0, this.botSliceMs) : (bounded && now() - t0 >= this.botSliceMs))); // loop-cap: generator and the bot time slice
       } catch (e) {
@@ -103,7 +105,7 @@ export class MatchPrep {
     };
     const end = (job) => {
       let gen = null;
-      try { gen = this.bot.prepEnd(this, ps, job); } catch (e) { this.reportError(`bot ${ps.playerId}`, e); }
+      try { gen = this.botFor(ps).prepEnd(this, ps, job); } catch (e) { this.reportError(`bot ${ps.playerId}`, e); }
       if (!gen) { ready(); return; }
       drive(gen, '', ready);
     };
@@ -125,7 +127,13 @@ export class MatchPrep {
       if (bounded) this.later(0, slice);
       else slice();
     };
-    const begin = () => drive(this.bot.prepBegin(this, ps, { delegate: this.botRehearsalDelegate }), '', (job) => {
+    const begin = () => {
+      if (!valid()) return;
+      let gen;
+      // a hook that throws before creating its generator still runs the prep cleanup (prepEnd → Ready)
+      try { gen = this.botFor(ps).prepBegin(this, ps, { delegate: this.botRehearsalDelegate }); }
+      catch (e) { this.reportError(`bot ${ps.playerId}`, e); end(null); return; }
+      drive(gen, '', (job) => {
         if (!job) { end(null); return; }
         // A job is finished when it has nothing left to simulate: the server's own run over the candidates, or — with a
         // delegated one — the host's pick, which MatchRehearsal accepts as soon as it arrives, possibly while the
@@ -147,10 +155,11 @@ export class MatchPrep {
         }
         runJob(job);
       });
+    };
     this.later(this.scaled(DELAYS.BOT_ACTION + i * DELAYS.BOT_STAGGER), () => {
       if (!valid()) return;
       // an external strategy (sp-ai/1) plays this prep asynchronously; the built-in prep is its fallback
-      if (this.bot.decide?.(this, ps, { kind: 'prep', valid, complete: () => ps.ready,
+      if (this.botFor(ps).decide?.(this, ps, { kind: 'prep', valid, complete: () => ps.ready,
         fallback: () => this.later(0, begin) })) return;
       begin();
     });

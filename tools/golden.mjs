@@ -754,14 +754,12 @@ export function matchScenarios() {
   // The 满信赖 data rebuild (2026-10-15, MATCHMAKING §46) shifted the shop / deployment stream again: seed 1 (this
   // scenario's old seed) and seed 14 now fielded NO stand-in at all, so the companion seed became 26 — three distinct
   // stand-ins over 7 rounds.
-  // 2026-10-25: the built-in faction boost plugins (00cb38d02) reordered the shop / draft content pool and moved the
-  // stream again — seed 26 now fields none either, so its outcome is kept as `-standins` and the coverage moved to
-  // seed 4, which fields chess_char_6_03_a → char_610_acfend (a prototype seed 14 never fields, so the two matches
-  // together cover two of the three). Re-probed over seeds 1–20 + 25: the most any seed now fields is one distinct
-  // stand-in (2 / 3 / 13 / 14 / 16 / 18 → 3_05_a, 4 → 6_03_a, 25 → 5_02_a; 1 / 5–12 / 15 / 17 / 19 / 20 / 26 / 27 →
-  // none). Re-probe with the exported matchScenarios() + runMatch() if this moves again.
+  // 2026-10-29: the ported 0.3.3 bot stack (strategy registry + new economy/placement) moved the stream once more —
+  // seed 4 now fields none, so the coverage seed is 32, which fields chess_char_5_02_a → char_604_ccast. Re-probed over
+  // seeds 1–35 (the exported runMatch() in this file): 2 / 13 / 16 / 18 / 22 / 25 / 32 / 33 / 34 / 35 field a stand-in
+  // (16 also the elite form 3_05_b), 32 is the only one that fields 5_02_a. Re-probe the same way if this moves again.
   out.push({ id: 'coop2-NORMAL-26-standins', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 26, human: { notOwned: MATCH_NOT_OWNED } });
-  out.push({ id: 'coop2-NORMAL-4-coverage-standins', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 4, human: { notOwned: MATCH_NOT_OWNED } });
+  out.push({ id: 'coop2-NORMAL-32-coverage-standins', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 32, human: { notOwned: MATCH_NOT_OWNED } });
   out.push({ id: 'coop2-NORMAL-5-coverage-diy', mode: 'coop', difficulty: 'NORMAL', bots: 1, seed: 5, human: { diy: MATCH_DIY, shopLevel: 5 } });
   const humanAbout = (h) => (h.notOwned ? ` + 1 human seat (AI 托管) without ${h.notOwned.length} operators (补位 stand-ins)`
     : ` + 1 human seat (AI 托管) with ${Object.keys(h.diy || {}).length} 自选 picks${h.shopLevel ? ` and its 调度中心 at level ${h.shopLevel} from the first prep` : ''}`);

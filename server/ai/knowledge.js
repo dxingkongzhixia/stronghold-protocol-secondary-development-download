@@ -86,11 +86,15 @@ export function knowledgePack(data, { language = 'zh-CN', modeId, rules = {}, of
   const gameVersion = versionOfData(data);
   const payload = {
     schema: 'sp-knowledge/1', language, modeId, contentId,
-    // another official version's data (DESIGN §35.23): its registry id; the default pack (and its hash) has no key
+    // another rules set's data would name its registry id here (shared/versions.js); this fork serves one rules set,
+    // so the default pack (and its content hash) has no such key
     ...(gameVersion !== DEFAULT_VERSION ? { gameVersion } : {}),
     sources: ['docs/PLAYING.md §1–§7', 'docs/DATA.md', 'excel/activity_table.json autoChessData',
       'excel/character_table.json', 'excel/skill_table.json', 'excel/enemy_handbook_table.json'], playingHash: hash(source),
     rulesSummary: summaries[language] || summaries.en,
+    // the model reads the rule book itself before deciding: docs/PLAYING.md (§1–§7) as served to players, bounded so a
+    // request stays small. The operator's rule switches follow in roomRules.
+    rulesBrief: String(source || '').slice(0, 16000),
     // Retain the source economy table as Chinese reference, alongside localized prose and numeric rules.
     playingEconomy: source.split('## 2.')[1]?.split('## 3.')[0]?.split('\n').filter(line => line.startsWith('|')).join('\n') || '',
     roomRules: rules,

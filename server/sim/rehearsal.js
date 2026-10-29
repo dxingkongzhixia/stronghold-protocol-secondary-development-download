@@ -91,6 +91,10 @@ export class RehearsalRun {
     this.onError = onError;
     this.index = 0;
     this.ticks = 0;
+    /** ticks stepped over the whole run, and candidates finished (the prep's journaled slide and its stats) */
+    this.totalTicks = 0;
+    this.completed = 0;
+    this.spent = 0;
     /** The battle of the candidate being stepped (a factory is called once; a slice that stops mid-candidate resumes it). */
     this.current = null;
   }
@@ -102,19 +106,23 @@ export class RehearsalRun {
    *   this call is always stepped or scored before the check), so a slice never exceeds 4 ticks of stepping (plus the
    *   one build of the candidate it stops on) past its budget; the first candidate of a call always runs, so every call
    *   makes progress
+   * @param {null | { note?: (n: number) => void, stop?: () => boolean }} [control] when set (a test replay), each stepped
+   *   tick is counted for the journal and the budget test is the journal's step count, never the wall clock — so a
+   *   recorded prep replays deterministically on any machine
    * @returns {boolean} true when every candidate is done
    */
-  run(outOfBudget = null) {
+  run(outOfBudget = null, control = null) {
     // ticks stepped in THIS call: the budget is checked every 4 of them, across the candidate boundary too
     let n = 0;
     // a candidate was consumed in THIS call: the check between candidates asks once the call did anything, so a
     // candidate that never ticks (it was already finished, it could not be built, its construction threw) cannot run
     // the whole candidate list past the caller's budget either
     let worked = false;
+    const note = () => { n++; this.totalTicks++; control?.note?.(1); this.spent = n; };
     while (this.index < this.candidates.length) {
       // a candidate that ended mid-slice (finished, cap, or beaten at a 64-tick check that skipped the budget test):
       // check the budget before building and stepping the next one
-      if (outOfBudget && worked && outOfBudget()) return false;
+      if (outOfBudget && worked && outOfBudget()) { this.spent = n; return false; }
       try {
         // the candidate of this turn, built when the first slice reaches it: its construction is part of the sliced
         // work, and the battle stays in `this.current` for the slices that continue it
@@ -129,13 +137,14 @@ export class RehearsalRun {
           while (this.ticks < this.cap && !battle.finished) {
             battle.step();
             this.ticks++;
-            n++;
+            note();
             if ((this.ticks & 63) === 0 && !this.score.alive(battle)) { beaten = true; break; }
-            if (outOfBudget && (n & 3) === 0 && outOfBudget()) return false;
+            if (outOfBudget && (n & 3) === 0 && outOfBudget()) { this.spent = n; return false; }
           }
           if (!beaten) {
             if (!battle.finished) battle.forceEnd('timeout');
             this.score.note(battle, this.index);
+            if (battle.finished) this.completed++;
           }
         }
       } catch (e) {
@@ -146,6 +155,7 @@ export class RehearsalRun {
       this.index++;
       this.ticks = 0;
     }
+    this.spent = n;
     return true;
   }
 }

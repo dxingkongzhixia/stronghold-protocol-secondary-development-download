@@ -22,7 +22,9 @@ function slimView(pack) {
   const trait = op => String(Array.isArray(op.traits) ? op.traits[0] || '' : '').slice(0, 120);
   return {
     schema: pack.schema, version: pack.version, language: pack.language, modeId: pack.modeId,
-    rulesSummary: pack.rulesSummary, economy: pack.economy,
+    // The rule book itself travels first, after the summary: an outside model must read this game's rules before it
+    // decides (RULES_LEAD in llm-agent.mjs), not fall back on what it knows about other auto-chess games.
+    rulesSummary: pack.rulesSummary, rulesBrief: pack.rulesBrief, economy: pack.economy,
     bonds: (pack.bonds || []).map(b => ({ id: b.id, name: b.name, kind: b.core ? 'core' : 'class', thresholds: b.thresholds, countMode: b.countMode,
       countsGoldenOnly: b.countsGoldenOnly, effect: b.effect })),
     operators: (pack.operators || []).map(o => ({ id: o.id, name: o.name, tier: o.tier, cost: o.cost, class: o.class,

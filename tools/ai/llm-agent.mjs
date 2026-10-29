@@ -103,8 +103,14 @@ kill leaks; items and tactic cards: take what the current board and main bond us
 export const RETRY_TEXT = 'Your previous reply ran out of output tokens before the JSON. Decide now with minimal deliberation and return only the JSON object; why at most one sentence.';
 
 // The model sees this string, not the hello pack. strategyCandidates keeps the full local playbook.
+// An external model arrives with its own priors about auto-chess games: make it read this game's rule book first
+// (knowledge.rulesBrief = docs/PLAYING.md §1–§7) and treat that text as the authority.
+export const RULES_LEAD = 'Before you decide anything: read "rulesBrief" in the Knowledge below. It is this game\'s own'
+  + ' rule book (docs/PLAYING.md §1–§7). Where it disagrees with anything you know about similar games, the brief wins;'
+  + ' do not invent a rule that is absent from it.';
 export function advisorSystem(pack) {
-  const prefix = `${STRATEGY_PROMPT}\nKnowledge:\n`;
+  const lead = pack && pack.rulesBrief ? `${RULES_LEAD}\n` : '';
+  const prefix = `${STRATEGY_PROMPT}\n${lead}Knowledge:\n`;
   return prefix + JSON.stringify(slimKnowledge(pack, { maxChars: 200000 - prefix.length }));
 }
 

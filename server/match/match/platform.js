@@ -62,6 +62,17 @@ export class MatchPlatform {
   handle(playerId, msg) {
     const ps = this.players.get(playerId) || this.spectators.get(playerId);
     if (!ps || ps.isBot || ps.left) return fail(ERR.NOT_IN_ROOM);
+    return this._handleSeatIntent(ps, msg);
+  }
+
+  /**
+   * Shared human / external-AI semantic validation and dispatch (an external strategy's validated intents come here, not
+   * through the lobby): the same checks a human's frame gets, so an AI seat cannot do what a player could not.
+   * @param {object} ps
+   * @param {{ t: string }} msg validated intent
+   * @returns {{ ok: true } | { error: string, detail?: string }}
+   */
+  _handleSeatIntent(ps, msg) {
     if (msg?.t === 'g.test' && !this.test) return fail(ERR.TEST_FORBIDDEN);
     // match test mode: the host's commands go straight to the match's own primitives
     if (this.test && msg?.t === 'g.test') {

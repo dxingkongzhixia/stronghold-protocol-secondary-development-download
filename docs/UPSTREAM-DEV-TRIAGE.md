@@ -125,7 +125,7 @@
 
 | 项 | 提交 | 原因 |
 |---|---|---|
-| 第三方 AI / 外部顾问模式 | `4908a73b2` `ba3f86bd8` `868cd6e07` 等 | 不投费用强化 AI，短期用不上 |
+| 第三方 AI / 外部顾问模式 | `4908a73b2` `ba3f86bd8` `868cd6e07` 等 | **2026-10-29 已改判并落地**：owner 同意移植，sp-ai/1 + LLM 适配器已并入（默认关闭），见 [`EXTERNAL-AI.md`](EXTERNAL-AI.md)、[`BOT-STRATEGIES.md`](BOT-STRATEGIES.md)、[`AI-STRATEGY.md`](AI-STRATEGY.md)；P2P 仍在永不合并清单 |
 | 图片时装（picture-only outfits） | `77b91081c` `3f6c07863` | 外观插件应带 Spine 模型；我们的 277 套外观全部有模型 |
 | #725 素材下载计数 | `ca185d064` `72bef87c0` | 依赖 #628 整包下载（§0），本分支没有该功能 |
 | 插件 / Forge / studio / 测试控制台 / skins(#685 #686) | 0.3.1 整块 | 依赖插件体系；本分支皮肤走核心 catalogue |

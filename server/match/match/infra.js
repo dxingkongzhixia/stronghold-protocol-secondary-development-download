@@ -90,6 +90,9 @@ export class MatchInfra {
 
   nextUid() { return ++this.uidSeq; }
 
+  /** The strategy that plays a bot-controlled seat: its SP_BOT_STRATEGY_SEATS override, else the match's (#816 P1). */
+  botFor(ps) { return this.seatBots[ps.seat] ?? this.bot; }
+
   alivePlayers() { return this.order.filter((p) => p.alive); }
 
   /** Whether any chess of a bond is in this match's pool (a 驰援 card of a fully banned bond is never offered). */

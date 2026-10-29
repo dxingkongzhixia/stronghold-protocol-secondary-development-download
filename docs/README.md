@@ -105,6 +105,9 @@
 | [`NEW-OPERATOR.md`](NEW-OPERATOR.md) | 新自造干员端到端配方 | 指南 |
 | [`CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | 盟约 / 策略 / 悬赏 / CODEX / 3D 主题 | 指南 |
 | [`BOND-BOLIVAR.md`](BOND-BOLIVAR.md) | 玻利瓦尔国家盟约初设：成员名单、战功机制、实现清单 | 草案 |
+| [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) | AI 策略注册表、内置策略（legacy / ioleta / adaptive）、每座位覆盖与重放 | 当前 |
+| [`EXTERNAL-AI.md`](EXTERNAL-AI.md) | 外部 AI（sp-ai/1）与 LLM 适配器：配置、模式、安全边界、测试 | 当前 |
+| [`AI-STRATEGY.md`](AI-STRATEGY.md) | 示例顾问的打法、经济基准与证据分层（不改变游戏规则） | 参考 |
 
 ### 4.4 fork / 合并 / 部署
 

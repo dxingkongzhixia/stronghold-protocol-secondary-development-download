@@ -4,7 +4,7 @@
 //
 // Usage:
 //   node tools/botbench.mjs [--configs solo:FUNNY,solo:HARD,coop4:FUNNY,coop4:HARD] [--seeds N] [--seed S]
-//                           [--rehearsal N] [--json out.json] [--quiet]
+//                           [--rehearsal N] [--json out.json|-] [--bot ID] [--quiet]
 //   node tools/botbench.mjs --compare old.json new.json      A/B tables (markdown) of two --json runs
 //   --configs   comma list of <solo|coopN>:<FUNNY|NORMAL|HARD|ABYSS> (coopN = N bot seats, 1–4)
 //   --seeds N   matches per config (seeds S..S+N−1, default 10)
@@ -28,6 +28,7 @@
 // back to back with --jobs 1.
 
 import { performance } from 'node:perf_hooks';
+import { runMatch, strategyMetrics } from './ai/run-match.mjs';
 import { writeFileSync, readFileSync } from 'node:fs';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { Match } from '../server/match/Match.js';
@@ -68,7 +69,7 @@ const seeds = Math.max(1, Number(opt.seeds) || 10);
 const seed0 = Number(opt.seed) || 1;
 const rehearsal = opt.rehearsal != null && opt.rehearsal !== true ? Math.max(0, Math.floor(Number(opt.rehearsal) || 0)) : undefined;
 
-function runOne(cfg, seed) {
+async function runOne(cfg, seed) {
   const sched = new VirtualScheduler();
   const seats = [];
   for (let i = 0; i < cfg.players; i++) seats.push({ seat: i, playerId: `ai_${i}`, name: `AI-${i + 1}`, isBot: true, connected: true });
@@ -77,6 +78,8 @@ function runOne(cfg, seed) {
   const log = { info() {}, debug() {}, warn() {}, error: (...a) => errors.push(a.map(String).join(' ')) };
   const m = new Match({
     roomCode: 'BENCH', mode: cfg.mode, difficulty: cfg.difficulty, seats, seed, data, log, scheduler: sched, botRehearsal: rehearsal,
+    // --bot ID selects a registered strategy (server/match/botStrategies.js): legacy (default), ioleta, adaptive, ...
+    ...(opt.bot && opt.bot !== true ? { botStrategy: String(opt.bot) } : {}),
     send: () => true, broadcast: () => {}, onEnd: (s) => { summary = s; },
   });
   // --band: the only strategy on offer (botPickBand draws from gd.bandIds()) — also one built around a bond the mode
@@ -142,7 +145,8 @@ function runOne(cfg, seed) {
   let last = '';
   const t0 = performance.now();
   m.start();
-  sched.runUntil(() => {
+  // runMatch pauses the virtual clock for the external strategy's bounded real IO (tools/ai/run-match.mjs)
+  await runMatch(m, () => {
     const key = `${m.phase}:${m.round}`;
     if (key !== last) {
       last = key;
@@ -176,6 +180,7 @@ function runOne(cfg, seed) {
     }
     return summary != null;
   }, { maxSteps: 5e6 });
+  // the external strategy's IO is awaited between scheduler steps (tools/ai/run-match.mjs)
   rec.ms = performance.now() - t0;
   rec.errors = errors.length + m.errorCount;
   // Keep diagnostics in the JSON so a nonzero benchmark count is actionable.
@@ -188,6 +193,10 @@ function runOne(cfg, seed) {
   const alive = m.order.filter((p) => p.alive);
   rec.lpLeft = rec.victory && m.teamLp != null ? m.teamLp : alive.reduce((s, p) => s + Math.max(0, p.lpAtFinal ?? p.lp), 0);
   rec.players = (summary && summary.players ? summary.players : []).map((p) => ({ pid: p.playerId, band: p.bandId, rounds: p.roundsPassed, merges: p.stats.merges, spent: p.stats.gold }));
+  // per-strategy outcomes (tools/ai/run-match.mjs): the same rows matchrun prints, external-AI metrics included
+  rec.strategyMetrics = strategyMetrics(m, summary);
+  // the run's external-AI totals (hello calls, transport latency, fallbacks); absent when the bot is built-in
+  rec.external = m.externalAI?.metrics ?? null;
   m.dispose();
   return rec;
 }
@@ -196,12 +205,12 @@ const tasks = [];
 for (const cfg of configs) for (let i = 0; i < seeds; i++) tasks.push([cfg, seed0 + i]);
 const jobs = Math.max(1, Math.min(16, Number(opt.jobs) || 1));
 if (!isMainThread) {
-  for (const i of workerData.indexes) parentPort.postMessage({ i, rec: runOne(...tasks[i]) });
+  for (const i of workerData.indexes) parentPort.postMessage({ i, rec: await runOne(...tasks[i]) });
 } else {
   const all = new Array(tasks.length);
   const note = (r) => { if (!opt.quiet) process.stderr.write(`${r.config} seed ${r.seed}: ${r.victory ? 'WIN ' : 'loss'} rounds ${r.roundsPassed} lp ${r.lpLeft} · ${Math.round(r.ms)} ms\n`); };
   if (jobs === 1) {
-    tasks.forEach((t, i) => { all[i] = runOne(...t); note(all[i]); });
+    for (let i = 0; i < tasks.length; i++) { all[i] = await runOne(...tasks[i]); note(all[i]); }
   } else {
     await Promise.all(Array.from({ length: jobs }, (_, j) => new Promise((resolve, reject) => {
       const indexes = tasks.map((_, i) => i).filter((i) => i % jobs === j);
@@ -211,8 +220,12 @@ if (!isMainThread) {
       w.on('exit', resolve);
     })));
   }
-  if (opt.json) writeFileSync(opt.json, JSON.stringify(all));
-  compare([all], ['run']);
+  // `--json -` is the machine-readable mode (tools/matchrun.mjs too): records only, no tables
+  if (opt.json === '-') console.log(JSON.stringify(all));
+  else {
+    if (opt.json) writeFileSync(opt.json, JSON.stringify(all));
+    compare([all], ['run']);
+  }
 }
 
 // ---- tables ---------------------------------------------------------------------------------------------------
