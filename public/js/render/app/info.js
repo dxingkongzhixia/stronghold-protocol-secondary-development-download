@@ -33,6 +33,9 @@ export function renderInfo(u) {
     // (render/app.js skinOf); display only, absent on a summon whose owner is unknown
     ownerCharId: typeof u.ownerCharId === 'string' && u.ownerCharId ? u.ownerCharId : undefined,
     maxHp: Number(u.maxHp) || 1, boss: !!u.boss, motion: u.motion,
+    // the unit's OWN attack interval (UnitInfo.atkInterval = the sim's `s.interval`, every buff included): the view paces
+    // the attack clip over it (#729). Dropping it here would send every view back to the operator-record guess.
+    atkInterval: Number.isFinite(u.atkInterval) && u.atkInterval > 0 ? u.atkInterval : undefined,
     // deploy direction of allies (UnitInfo.dir, DESIGN §3): the model (Back for UP, mirrored for LEFT) and the
     // ground wedge follow it; absent = unknown (legacy frames) → derived from `facing`, no wedge
     dir: typeof u.dir === 'string' ? u.dir : undefined,

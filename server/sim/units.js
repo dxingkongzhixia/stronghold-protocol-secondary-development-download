@@ -193,6 +193,10 @@ export class Unit {
       flags: flags || EMPTY,
     };
     s.flags.stun = !!(flags.stun || flags.freeze || flags.sleep || flags.levitate);
+    // the renderer's pacing hint (battle/events.js _emitRateChanges): this unit's own attack interval moved, so a
+    // ['rate', id, seconds] tuple has to go out — raised here, where the interval is computed, so a tick without a
+    // stat change costs one comparison per unit (the heavy-field performance test does not move)
+    if (!this._s || Math.abs(this._s.interval - s.interval) > 1e-9) this._rateDirty = true;
     this._s = s;
     this._dirty = false;
     if (this.alive && prevMax > 0 && Math.abs(prevMax - maxHp) > 1e-9) {

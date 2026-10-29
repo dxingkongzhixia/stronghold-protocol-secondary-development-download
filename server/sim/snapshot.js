@@ -46,6 +46,10 @@ export function unitInfo(u) {
     facing: u.facing ?? 1,
     dir: u.dir ?? 'RIGHT',
     maxHp: Math.max(1, Math.round(u.s.maxHp)),
+    // the unit's OWN attack interval in game seconds (`s.interval`: base bat/aspd with every buff, skill and form
+    // applied) — the renderer paces the attack clip over it instead of guessing from the operator's record (#729).
+    // Display only; the first change after this spawn arrives as a ['rate', …] event.
+    atkInterval: Number(u.s.interval) > 0 ? Math.round(Number(u.s.interval) * 1000) / 1000 : undefined,
     motion: u.motion === 'FLY' ? 'FLY' : undefined,
     boss: u.isBoss ? true : undefined,
     // the unit's current model form (an enemy's content/enemies/helpers.js setForm, a 傀儡师's 替身 — render/units.js FORMS): a

@@ -27,6 +27,34 @@ export class BattleEvents {
     if (this._evq.length > EVENT_BUFFER_CAP) this._evq.splice(0, this._evq.length - EVENT_BUFFER_CAP / 2);
   }
 
+  /**
+   * `['rate', id, seconds]` for every unit whose OWN attack interval changed since the last tick: a skill turning on or
+   * off, an attack-speed buff or debuff landing, a form change. The renderer paces the attack clip over the sim's value
+   * instead of guessing it from the operator's record (render/attackRate.js) — display only: nothing in the sim reads
+   * these tuples, and the unit's first value already travels in its spawn `UnitInfo.atkInterval` (snapshot.js).
+   *
+   * The dirty flag is raised where the interval is computed (units.js `_recalc`), so a tick with no stat change costs
+   * one comparison per unit. The first value is not repeated (`_rateSent` seeds on the first emission), while a real
+   * change is never swallowed by that seed — the seed is the value that was actually sent.
+   */
+  _emitRateChanges() {
+    if (!this.recordEvents) return;
+    for (const u of this.units) {
+      if (!u._rateDirty) continue;
+      u._rateDirty = false;
+      if (!u.alive || !u.deployed) continue;
+      const iv = Number(u.s && u.s.interval);
+      if (!(iv > 0)) continue;
+      const r = Math.round(iv * 1000) / 1000;
+      // the spawn snapshot already carried the first value (UnitInfo.atkInterval), so the first computation is not a
+      // change: only a later difference is an event (one redundant tuple per unit is kept out)
+      if (u._rateSent === undefined) { u._rateSent = r; continue; }
+      if (u._rateSent === r) continue;
+      u._rateSent = r;
+      this._ev(['rate', u.id, r]);
+    }
+  }
+
   /** Client-facing events since the last drain (DESIGN §8.2 tuples). */
   drainEvents() {
     const ev = this._evq;

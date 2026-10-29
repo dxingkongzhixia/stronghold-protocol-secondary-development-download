@@ -107,6 +107,9 @@ export class BattleLifecycle {
           } catch (err) { this._internalError('updateAlly', err); }
         }
       });
+      // after the skill tick and the allies' attacks: a skill that starts or ends this tick has already changed
+      // `s.interval`, so the value the client gets is the one the current swing runs on (display only, #729)
+      this._phase('rate', () => this._emitRateChanges());
       this._phase('projectiles', () => this.projectiles.update(dt));
       this._phase('redeploy', () => this._checkRedeploys());
       this._phase('boss', () => this._bossSync());

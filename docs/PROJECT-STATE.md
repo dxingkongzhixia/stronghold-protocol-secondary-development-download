@@ -160,6 +160,7 @@
 - **统计数据**：`public/js/ui/stats.js` + `screens/stats.js`；**已同步服务器**（schema v5 `match_stats`），登录绑账号、游客绑本机会话身份，按 owner 隔离，可跨设备查看；统计页优先读服务器、断网回退 `localStorage`；上限取主线 **2×**（2000 局 / 最新 60 局完整 / 每 owner 1.6M 字符）。
 - **发布**：`node tools/push-gitee.mjs` 推 `HEAD` 到 `github` 主仓库 → `gitee` 国内镜像 → 分支 `master`（快进、绝不强推），再镜像回工作项目。主线仍是 `origin`。
 - **AI 策略层（0.3.3 移植，fork 适配）**：`match.bot` / `match.botFor(ps)` 走策略注册表（`legacy` / `ioleta` / `adaptive` / `ioleta-adaptive` / `external`），默认 `legacy` 与原函数逐引用一致；`SP_BOT_STRATEGY`、`SP_BOT_STRATEGY_SEATS`（每座位）、`SP_EXTERNAL_AI_*`、`SP_LLM_*` 全部**默认关闭**。外部 AI（sp-ai/1）只拿本座位可见信息，意图走与人类相同的校验入口，超时/非法回复由内置 bot 接管。见 [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) · [`EXTERNAL-AI.md`](EXTERNAL-AI.md) · [`AI-STRATEGY.md`](AI-STRATEGY.md)。
+- **攻击动画节奏（#729，2026-10-29）**：模拟器在出生信息里带 `UnitInfo.atkInterval`（`s.interval`，含 buff/技能/形态），并在它变化时发 `['rate', id, seconds]`；客户端按这个值给攻击剪辑定时。**有权威值时不再用实测间隔平滑**（fork 简化，上游保留 8%/25% 兜底），显示上限 **10 s**（上游 6 s）。纯显示：伤害、时序、经济零变化，golden 只多 `events.rate` 计数。见 [`SIM.md`](SIM.md) §9。
 
 ## 6. 环境开关 / 常量
 

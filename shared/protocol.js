@@ -714,6 +714,12 @@ export function validateC2S(msg) {
 export const EV = Object.freeze({
   SPAWN: 'spawn', ATK: 'atk', DMG: 'dmg', HEAL: 'heal', SKILL: 'skill', ENGAGE: 'engage', DIE: 'die', LEAK: 'leak',
   STATUS: 'status', FX: 'fx', LAYER: 'layer', BOUNTY: 'bounty', DEPLOY: 'deploy',
+  // ['rate', id, seconds] — the unit's OWN attack interval (`s.interval`, every buff and skill included) changed. Sent
+  // once per change: the first value travels in the spawn UnitInfo (`atkInterval`) and is not repeated, and a later
+  // change is never swallowed by that seed. Display only — the renderer paces the attack clip over it
+  // (render/attackRate.js) instead of waiting to measure two attacks, which made the first swing of a skill / buff
+  // change play in slow motion for a while (#729).
+  RATE: 'rate',
 });
 
 /**
