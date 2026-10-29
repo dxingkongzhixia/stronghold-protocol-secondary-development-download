@@ -262,9 +262,15 @@ export class MatchPlatform {
     else if (phase === PHASE.PREP) this.maybeEndPrep();
   }
 
+  /** Host-only asynchronous input for an external strategy (sp-ai/1); journalled by testTrace, never a C2S message. */
+  externalReply(id, reply, failed) {
+    this.guard(() => this.externalAI?.receive(id, reply, failed));
+  }
+
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.externalAI?.close();
     if (this.runner) { try { this.runner.stop(); } catch { /* ignore */ } }
     this._stopClientCombat();
     this._cancelRehearsal();

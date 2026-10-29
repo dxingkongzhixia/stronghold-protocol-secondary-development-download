@@ -565,7 +565,8 @@ test('bench shed: the buy loop never sells a piece that came this prep (it used 
   PlayerState.prototype.sell = function (uid) {
     const loc = this.find(uid);
     const p = loc && loc.piece;
-    if (p && p.boughtRound === this.m.round && /buyLoopSteps/.test(new Error().stack)) shed.push(`${p.id} R${this.m.round}`);
+    // the pre-emptive bench shed only: `tradeOnce` buys a layer unit to sell it on purpose (a trade, not the shed)
+    if (p && p.boughtRound === this.m.round && /(sellWeakestHand|advisorRoomStep|freeHandSlot)/.test(new Error().stack)) shed.push(`${p.id} R${this.m.round}`);
     return oSell.call(this, uid);
   };
   try {

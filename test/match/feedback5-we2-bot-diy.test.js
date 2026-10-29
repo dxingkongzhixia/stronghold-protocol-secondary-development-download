@@ -53,6 +53,8 @@ test('#13 levelUp: one round earlier for the step that opens a slotted tier (rou
   levelUp(m, p0);
   levelUp(m, p1);
   assert.equal(p0.shop.level, 5, 'p_0 (a tier-5 自选 piece) levels now');
-  assert.equal(p1.shop.level, 4, 'p_1 waits for round 10 (LEVEL_TARGET)');
+  // The 0.3.3 bot curve (server/match/bot.js levelUp, ported with the external-AI stack) reaches the level-5 target at
+  // round 9 already; the old fork curve waited for round 10.
+  assert.equal(p1.shop.level, 5, 'p_1 follows the 0.3.3 level curve (round 9)');
   m.dispose();
 });

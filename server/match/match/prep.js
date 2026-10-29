@@ -5,7 +5,6 @@
 
 import { PHASE } from '../../../shared/constants.js';
 import { readBossProtocol } from '../../../shared/plugins/bossProtocol.js';
-import { botPrepBeginSteps, botPrepEndSteps } from '../bot.js';
 import { testSlice } from '../testTrace.js';
 import { DELAYS } from './common.js';
 
@@ -104,7 +103,7 @@ export class MatchPrep {
     };
     const end = (job) => {
       let gen = null;
-      try { gen = botPrepEndSteps(this, ps, job); } catch (e) { this.reportError(`bot ${ps.playerId}`, e); }
+      try { gen = this.bot.prepEnd(this, ps, job); } catch (e) { this.reportError(`bot ${ps.playerId}`, e); }
       if (!gen) { ready(); return; }
       drive(gen, '', ready);
     };
@@ -126,9 +125,7 @@ export class MatchPrep {
       if (bounded) this.later(0, slice);
       else slice();
     };
-    this.later(this.scaled(DELAYS.BOT_ACTION + i * DELAYS.BOT_STAGGER), () => {
-      if (!valid()) return;
-      drive(botPrepBeginSteps(this, ps, { delegate: this.botRehearsalDelegate }), '', (job) => {
+    const begin = () => drive(this.bot.prepBegin(this, ps, { delegate: this.botRehearsalDelegate }), '', (job) => {
         if (!job) { end(null); return; }
         // A job is finished when it has nothing left to simulate: the server's own run over the candidates, or — with a
         // delegated one — the host's pick, which MatchRehearsal accepts as soon as it arrives, possibly while the
@@ -150,6 +147,12 @@ export class MatchPrep {
         }
         runJob(job);
       });
+    this.later(this.scaled(DELAYS.BOT_ACTION + i * DELAYS.BOT_STAGGER), () => {
+      if (!valid()) return;
+      // an external strategy (sp-ai/1) plays this prep asynchronously; the built-in prep is its fallback
+      if (this.bot.decide?.(this, ps, { kind: 'prep', valid, complete: () => ps.ready,
+        fallback: () => this.later(0, begin) })) return;
+      begin();
     });
   }
 

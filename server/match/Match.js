@@ -235,6 +235,8 @@ import { MatchUnite } from './match/unitePhase.js';
 import { MatchBoss } from './match/bossRounds.js';
 import { MatchSettle } from './match/settle.js';
 import { installTestTrace } from './testTrace.js';
+import { getBotStrategy } from './botStrategies.js';
+import { createExternalAI } from './llmGate.js';
 import { MatchTestCommands } from './match/testCommands.js';
 import { MatchOffers } from './match/offers.js';
 
@@ -328,6 +330,8 @@ export class Match {
     this.gameSpeed = Number.isFinite(opts.combatSpeed) && opts.combatSpeed > 0 ? Math.min(opts.combatSpeed, 200) : GAME_SPEED;
     /** layouts a bot rehearses per prep with the real simulation (bot.js; 0 = heuristic placement only) */
     this.botRehearsal = Number.isInteger(opts.botRehearsal) && opts.botRehearsal >= 0 ? Math.min(opts.botRehearsal, 8) : BOT_REHEARSAL_DEFAULT;
+    /** the bot strategy of every AI seat (opts.botStrategy / SP_BOT_STRATEGY / 'legacy'; server/match/botStrategies.js) */
+    this.bot = getBotStrategy(opts.botStrategy ?? env('SP_BOT_STRATEGY'));
     /** wall-clock budget of one rehearsal slice (scheduleBotPrep) */
     this.botSliceMs = Number.isFinite(opts.botSliceMs) && opts.botSliceMs > 0 ? opts.botSliceMs : this.sched.virtual ? Infinity : BOT_SLICE_MS;
     /**
@@ -516,6 +520,8 @@ export class Match {
     // [ASSUMED] A real scheduler keeps the 8 ms bot and headless slices, including a test match,
     // so one callback cannot run to HARD_CAP_SECONDS. Virtual time stays unbounded (the defaults
     // above). The input journal records the steps that callback took; replay stops there.
+    /** the external AI host (sp-ai/1; null unless the operator selected it and the dev gate allows it) */
+    this.externalAI = createExternalAI(this, opts);
     if (this.test && opts.journal !== false) installTestTrace(this, opts);
   }
 }
