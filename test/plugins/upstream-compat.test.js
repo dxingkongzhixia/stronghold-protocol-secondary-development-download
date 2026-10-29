@@ -1,6 +1,6 @@
-// Mainline 0.3.1 plugin compatibility: the fork must read Manifest 2 plugins made for
-// `>=0.3.0 <0.4.0` (the app-range warning is expected) and compose their content once the
-// server owner's `allowIncompatible` policy admits them. Fixtures: test/fixtures/plugins/upstream-0.3.1.
+// Mainline 0.3.1 plugin compatibility: the fork reads Manifest 2 plugins made for `>=0.3.0 <0.4.0` and runs their
+// content on the 0.3.2 contract (the check keeps an app-range warning to review the gameplay; `script` / `trusted`
+// still need the owner's `allowIncompatible`). Fixtures: test/fixtures/plugins/upstream-0.3.1.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -22,18 +22,19 @@ function registry() {
   }, { app: '0.4.0', log: { info() {}, warn() {} } });
 }
 
-test('mainline 0.3.1 content and offers plugins load, then compose under allowIncompatible', () => {
+test('mainline 0.3.1 content and offers plugins load and compose without an owner flag', () => {
   const reg = registry();
   for (const id of ['data-demo', 'offers-demo']) {
     const p = reg.plugin(id);
     assert.ok(p, `${id} is discovered`);
     assert.equal(p.status, 'loaded', `${id} loads`);
-    assert.equal(p.manifest.compatible, false, `${id} keeps its app-range warning`);
-    const blocked = buildContentSet({ registry: reg, ids: [id] });
-    assert.ok(blocked.problems?.length, `${id} is refused without the owner policy`);
+    assert.equal(p.manifest.compatible, true, `${id} runs on this fork's 0.3.x contract`);
+    // data only: the composition below is the proof it is understood, not just admitted
+    const built = buildContentSet({ registry: reg, ids: [id] });
+    assert.deepEqual(built.problems, [], `${id} composes with no owner policy`);
   }
 
-  const data = buildContentSet({ registry: reg, ids: ['data-demo'], allowIncompatible: ['data-demo'] });
+  const data = buildContentSet({ registry: reg, ids: ['data-demo'] });
   assert.deepEqual(data.problems, []);
   const demoId = Object.keys(data.data.chess).find((id) => id.includes('data_demo_guard'));
   assert.ok(demoId, 'the content operator is composed');
@@ -51,7 +52,7 @@ test('mainline 0.3.1 content and offers plugins load, then compose under allowIn
   h.v?.destroy?.();
   h.b?.dispose?.();
 
-  const offers = buildContentSet({ registry: reg, ids: ['offers-demo'], allowIncompatible: ['offers-demo'] });
+  const offers = buildContentSet({ registry: reg, ids: ['offers-demo'] });
   assert.deepEqual(offers.problems, []);
   assert.ok(JSON.stringify(offers.offers || []).includes('supplies'), 'the offers part reaches the content set');
 });

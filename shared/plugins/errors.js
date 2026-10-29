@@ -208,7 +208,7 @@ export const PLUGIN_ERRORS = Object.freeze({
   PLUGIN_APP_MISMATCH: {
     level: 'warning', doc: D.manifest, autofix: 'setApp',
     zh: '这个插件是给游戏 {range} 做的，本服务器是 {app}', en: 'The plugin is made for the game {range}; this server is {app}',
-    fix: { zh: '外观插件照样能用（只是提醒）。在新版本里确认没问题后，把 "app" 改成包含 {app} 的范围。', en: 'A cosmetic plugin still works (a reminder only). Once it is checked with this version, widen "app" to include {app}.' },
+    fix: { zh: '外观 / 界面 / 语言插件照常能用；内容插件的记录会按本分支重新校验，但玩法规则以本分支为准（开房间前先审一遍）。确认没问题后，把 "app" 改成包含 {app} 的范围。', en: 'Cosmetic / interface / language plugins keep working; a content plugin\'s records are validated here, but its gameplay follows this fork (review it before a room uses it). Once checked, widen "app" to include {app}.' },
   },
   PLUGIN_API: {
     level: 'problem', doc: D.manifest, autofix: 'setApi',

@@ -320,14 +320,14 @@ test('the catalogue: entries by class then id, unofficial marks, no server paths
 });
 
 
-test('0.3.x app compatibility: cosmetic/ui/lang run on the fork, content/script/trusted stay strict', () => {
+test('0.3.x app compatibility: cosmetic/ui/lang/content run on the fork, script/trusted stay strict', () => {
   const old = '>=0.3.0 <0.4.0';
   const current = '>=0.4.0 <0.5.0';
-  for (const cls of ['lang', 'cosmetic', 'ui']) {
+  for (const cls of ['lang', 'cosmetic', 'ui', 'content']) {
     assert.equal(appVersionCompatible(old, '0.4.0', cls), true, cls + ': a mainline 0.3.x range is allowed');
     assert.equal(appVersionCompatible(current, '0.4.0', cls), true, cls + ': the fork range stays allowed');
   }
-  for (const cls of ['content', 'script', 'trusted']) {
+  for (const cls of ['script', 'trusted']) {
     assert.equal(appVersionCompatible(old, '0.4.0', cls), false, cls + ': needs review on this fork');
     assert.equal(appVersionCompatible(current, '0.4.0', cls), true, cls + ': a fork-targeted range is allowed');
   }
@@ -335,11 +335,18 @@ test('0.3.x app compatibility: cosmetic/ui/lang run on the fork, content/script/
 });
 
 
-test('mainline 0.3.x templates: cosmetic loads with the compat range, content stays strict', () => {
+test('mainline 0.3.x templates: cosmetic and content load with the compat range, script stays strict', () => {
   const cosmetic = JSON.parse(readFileSync(new URL('../../plugins/_template/cosmetic/plugin.json', import.meta.url), 'utf8'));
   cosmetic.app = '>=0.3.0 <0.4.0';
   assert.equal(readPluginManifest(cosmetic, { id: 'cosmetic-template', app: '0.4.0' }).manifest.compatible, true);
   const content = JSON.parse(readFileSync(new URL('../../plugins/_template/content/plugin.json', import.meta.url), 'utf8'));
   content.app = '>=0.3.0 <0.4.0';
-  assert.equal(readPluginManifest(content, { id: 'content-template', app: '0.4.0' }).manifest.compatible, false);
+  const checked = readPluginManifest(content, { id: 'content-template', app: '0.4.0' });
+  assert.equal(checked.manifest.compatible, true, 'a mainline data plugin loads: its records are validated here');
+  assert.ok(checked.issues.some((i) => i.code === 'PLUGIN_APP_MISMATCH' && i.level === 'warning'),
+    'and the check reminds the owner to review its gameplay');
+  const script = JSON.parse(readFileSync(new URL('../../plugins/_template/script/plugin.json', import.meta.url), 'utf8'));
+  script.app = '>=0.3.0 <0.4.0';
+  assert.equal(readPluginManifest(script, { id: 'script-template', app: '0.4.0' }).manifest.compatible, false,
+    'code plugins still need review on this fork');
 });

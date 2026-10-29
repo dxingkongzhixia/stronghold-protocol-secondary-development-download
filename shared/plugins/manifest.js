@@ -284,15 +284,20 @@ export function appVersionMatches(range, version = APP_VERSION) {
 
 /**
  * Fork compatibility for mainline 0.3.x plugins. The plugin format and API are shared, but mainline templates
- * commonly declare `"app": ">=0.3.0 <0.4.0"` while this fork reports 0.4.0. Safe, presentation-only classes
- * (lang / cosmetic / ui) may run on the 0.3.x contract; content / script / trusted keep the strict app check because
- * they can change gameplay data or execute code and must be reviewed/tested on this fork.
+ * commonly declare `"app": ">=0.3.0 <0.4.0"` while this fork reports 0.4.0. Presentation-only classes (lang / cosmetic /
+ * ui) run as-is; a data plugin (content) also runs: its records go through this fork's own schema and content-set build,
+ * so the data is validated here, while its gameplay follows this fork's rules — the check reports PLUGIN_APP_MISMATCH as
+ * a reminder to review it. script / trusted keep the strict app check: they execute code and must be reviewed on this fork.
  */
 export const PLUGIN_COMPAT_APP = '0.3.2';
-export const PLUGIN_COMPAT_CLASSES = Object.freeze(new Set(['lang', 'cosmetic', 'ui']));
+export const PLUGIN_COMPAT_CLASSES = Object.freeze(new Set(['lang', 'cosmetic', 'ui', 'content']));
 export function appVersionCompatible(range, version = APP_VERSION, cls = '') {
-  return appVersionMatches(range, version)
-    || (PLUGIN_COMPAT_CLASSES.has(cls) && appVersionMatches(range, PLUGIN_COMPAT_APP));
+  if (appVersionMatches(range, version)) return true;
+  // Only the running fork's own version takes the 0.3.x contract: a plugin that excludes the version this server
+  // reports is never admitted silently (a future 0.4.1 bump asks for a fresh review, exactly like a fork plugin).
+  return version === APP_VERSION
+    && PLUGIN_COMPAT_CLASSES.has(cls)
+    && appVersionMatches(range, PLUGIN_COMPAT_APP);
 }
 
 // ---- the normalised manifest ------------------------------------------------------------------------------------------
@@ -407,7 +412,7 @@ export function readPackManifest(raw, ctx) {
   if (range && !isVersionRange(range)) list.warning('PLUGIN_APP', `"app": "${range}" is not a version range (">=0.2.0", "0.2.x" …)`, { at: ['app'], app });
   const cls = kind ? kind.class : 'lang';
   const compatible = appVersionCompatible(range, app, cls);
-  if (!compatible) list.warning('PLUGIN_APP_MISMATCH', `made for app ${range}; this is ${app}`, { at: ['app'], range, app });
+  if (range && !appVersionMatches(range, app)) list.warning('PLUGIN_APP_MISMATCH', `made for app ${range}; this is ${app}`, { at: ['app'], range, app });
   /** @type {PluginManifest} */
   const out = {
     manifest: 1, id, class: cls, type, name: str(m.name, 60), englishName: str(m.englishName, 60), version: str(m.version, 40), app: range, compatible,
@@ -635,7 +640,7 @@ export function readPluginManifest(raw, ctx) {
   if (m.app !== undefined && (typeof m.app !== 'string' || range.length > 60 || !isVersionRange(range))) list.problem('PLUGIN_APP', `"app": ${short(m.app)} is not a version range (">=0.3.0 <0.4.0", "0.3.x" …)`, { at: ['app'], app });
   else if (!range && !isLang) list.problem('PLUGIN_APP', 'no "app" (the game versions it is made for, e.g. ">=0.3.0 <0.4.0")', { at: ['app'], app });
   const compatible = appVersionCompatible(range, app, cls);
-  if (range && !compatible) list.warning('PLUGIN_APP_MISMATCH', `made for app ${range}; this is ${app}`, { at: ['app'], range, app });
+  if (range && !appVersionMatches(range, app)) list.warning('PLUGIN_APP_MISMATCH', `made for app ${range}; this is ${app}`, { at: ['app'], range, app });
   const supported = ctx.api ?? PLUGIN_API;
   const apiAt = { at: ['api'], min: supported.min, current: supported.current };
   let api = null;

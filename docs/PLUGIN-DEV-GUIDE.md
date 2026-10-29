@@ -443,8 +443,9 @@ plugins/my-ui/
 
 本分支当前版本是 `0.4.0`：
 
-- `lang` / `cosmetic` / `ui`：`app` 范围匹配 `0.3.2` 也算兼容；
-- `content` / `script` / `trusted`：默认严格要求 `0.4.0`；
+- `lang` / `cosmetic` / `ui`：`app` 范围匹配 `0.3.2` 也算兼容（原样运行）；
+- `content`：同样算兼容（**数据**会按本分支重新校验、构建内容集，但玩法以本分支为准，check 会给一条 `PLUGIN_APP_MISMATCH` 提醒审一遍）；
+- `script` / `trusted`：默认严格要求 `0.4.0`（要执行代码，必须审过）；
 - owner 可在 `plugins/config.json` 设 `"allowIncompatible": true`，或用插件 id 列表显式放行已审查的旧内容 / 脚本；仍走数据校验和脚本权限；
 - 内容插件改变房间 `cs`；外观插件只改变 `vs`，不改变对局；
 - 插件文件改动后，房间需要「重新应用」才生效。
