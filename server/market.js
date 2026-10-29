@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, verify, createPublicKey } from 'node:crypto';
-import { PLUGIN_LIMITS, PLUGIN_COMPAT_APP, PLUGIN_COMPAT_CLASSES, appVersionMatches, isPluginId, isVersionRange } from '../shared/plugins/manifest.js';
+import { PLUGIN_COMPAT_APP, PLUGIN_COMPAT_CLASSES, appVersionMatches, isPluginId, isVersionRange, PLUGIN_MAX_BYTES } from '../shared/plugins/manifest.js';
 import { pluginCategory, parsePluginCategory } from '../shared/plugins/category.js';
 import { readPluginZip, zipFiles } from './plugins/zip.js';
 import { readUntrustedZip, importForge, forgeIdToPluginId } from './plugins/forgeImport.js';
@@ -276,7 +276,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
   async function upload({ kind, bytes, filename = '', uploadedBy = null, signature = null }) {
     if (!KINDS.has(kind)) throw new Error('kind must be ordinary or forge');
     if (!Buffer.isBuffer(bytes) || !bytes.length) throw new Error('empty zip');
-    if (bytes.length > PLUGIN_LIMITS.pluginBytes) throw new Error('zip is over the plugin size limit');
+    if (bytes.length > PLUGIN_MAX_BYTES) throw new Error('zip is over the plugin size limit');
     const verifiedSignature = verifySignature(bytes, signature);
     const meta = await inspect(kind, bytes);
     if (requiredSigned.has(meta.class) && !verifiedSignature) throw new Error(`a verified signature is required for ${meta.class} plugins`);
@@ -345,7 +345,7 @@ export function createPluginMarket({ root, log = noopLog, registry = null } = {}
     fs.mkdirSync(pluginsDir, { recursive: true });
     try {
       if (kind === 'ordinary') {
-        const file = installFromFile(zip, { pluginsDir, maxBytes: PLUGIN_LIMITS.pluginBytes });
+        const file = installFromFile(zip, { pluginsDir, maxBytes: PLUGIN_MAX_BYTES });
         const plugin = readPluginFolder(path.join(pluginsDir, file.id), {
           where: `market/${file.id}/`, vanilla: readVanillaAssets(path.join(root, 'data')),
           dataDir: path.join(root, 'data'),

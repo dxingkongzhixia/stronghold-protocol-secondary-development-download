@@ -60,7 +60,7 @@ import { createSpeedProbe } from './speed.js';
 import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from './mirrors.js';
 import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX, AVATAR_MAX_BYTES, AVATAR_MIMES, AVATAR_RATE_WINDOW_MS, AVATAR_UPLOAD_LIMIT } from '../shared/constants.js';
-import { PLUGIN_LIMITS } from '../shared/plugins/manifest.js';
+import { PLUGIN_MAX_BYTES } from '../shared/plugins/manifest.js';
 import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
 import { createPluginRegistry } from './plugins/registry.js';
@@ -394,7 +394,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       const who = communityKey(req);
       if (!marketUploadAllowed(who.key)) { sendJson(req, res, 429, { error: 'too many uploads; try again later' }); return; }
       const kind = new URLSearchParams(parts.query).get('kind');
-      const bytes = await readRawBody(req, PLUGIN_LIMITS.pluginBytes + 1);
+      const bytes = await readRawBody(req, PLUGIN_MAX_BYTES + 1);
       if (bytes == null) { sendJson(req, res, 413, { error: 'zip is over the plugin size limit' }); return; }
       const signature = req.headers['x-plugin-key-id'] && req.headers['x-plugin-signature']
         ? { keyId: String(req.headers['x-plugin-key-id']).slice(0, 80), value: String(req.headers['x-plugin-signature']) }
@@ -551,7 +551,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     if (marketImport) {
       if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
       const kind = new URLSearchParams(parts.query).get('kind') || 'ordinary';
-      const bytes = await readRawBody(req, PLUGIN_LIMITS.pluginBytes + 1);
+      const bytes = await readRawBody(req, PLUGIN_MAX_BYTES + 1);
       if (bytes == null) { sendJson(req, res, 413, { error: 'zip is over the plugin size limit' }); return; }
       const signature = req.headers['x-plugin-key-id'] && req.headers['x-plugin-signature']
         ? { keyId: String(req.headers['x-plugin-key-id']).slice(0, 80), value: String(req.headers['x-plugin-signature']) }
@@ -579,7 +579,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     if (pluginInstall) {
       if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); sendJson(req, res, 405, { error: 'POST required' }); return; }
       if (!pluginsDir) { sendJson(req, res, 404, { error: 'plugins are disabled' }); return; }
-      const bytes = await readRawBody(req, PLUGIN_LIMITS.pluginBytes + 1);
+      const bytes = await readRawBody(req, PLUGIN_MAX_BYTES + 1);
       if (bytes == null) { sendJson(req, res, 413, { error: 'zip is over the plugin size limit' }); return; }
       try {
         const r = installPluginBytes(bytes, { pluginsDir, force: true });

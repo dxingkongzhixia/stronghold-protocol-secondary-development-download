@@ -10,7 +10,7 @@ import { APP_VERSION, PLUGIN_API } from '../../shared/constants.js';
 import {
   PLUGIN_CLASSES, PACK_TYPES, PERMISSIONS, PLUGIN_LIMITS, ASSET_EXT, isPluginId, isPackId, isSemver, readPluginManifest, readPackManifest,
   declaredPaths, checkPluginFiles, checkJsonLimits, classStatus, pluginIndexEntry, buildPluginIndex, appVersionCompatible,
-} from '../../shared/plugins/manifest.js';
+  PLUGIN_MAX_BYTES } from '../../shared/plugins/manifest.js';
 import { normalizeManifest, PACK_TYPES as PACK_TYPES_COMPAT, isPackPath as isPackPathCompat, appVersionMatches } from '../../shared/packs.js';
 
 const APP = '0.3.0';
@@ -271,6 +271,11 @@ test('files: types by class, documents, sizes, links, counts and the paths a man
   const crowd = Array.from({ length: PLUGIN_LIMITS.files + 1 }, (_, i) => ({ rel: `a/${i}.png`, bytes: 1 }));
   assert.match(checkPluginFiles(m, crowd).problems.join(), /5001 files, more than 5000/);
   assert.match(checkPluginFiles(m, [{ rel: 'huge.png', bytes: PLUGIN_LIMITS.pluginBytes + 1 }]).problems.join(), /MB in all, more than 200 MB/);
+  // a cosmetic pack has its own, larger ceiling (mainline #874): 512 MB, every other class keeps 200 MB
+  const cos = readPluginManifest({ manifest: 2, version: '1.0.0', app: '*', api: 1, class: 'cosmetic', permissions: ['assets.override', 'assets.add'],
+    assets: { chars: { char_102_texas: { avatar: 'art/a.png' } } } }, ctx('skin')).manifest;
+  assert.equal(checkPluginFiles(cos, [{ rel: 'art/a.png', bytes: PLUGIN_LIMITS.pluginBytes + 1 }]).problems.length, 0, 'a cosmetic pack may pass 200 MB');
+  assert.match(checkPluginFiles(cos, [{ rel: 'art/a.png', bytes: PLUGIN_MAX_BYTES + 1 }]).problems.join(), /MB in all, more than 512 MB/);
   // a ui plugin's frame files stay under its client's folder; code is a script / trusted / ui file only
   const ui = readPluginManifest({ manifest: 2, version: '1.0.0', app: '*', api: 1, class: 'ui', permissions: ['ui.frame'], entry: { client: 'ui/index.html' } }, ctx('dps')).manifest;
   assert.match(checkPluginFiles(ui, [{ rel: 'ui/index.html', bytes: 1 }, { rel: 'ui/a.js', bytes: 1 }, { rel: 'b.js', bytes: 1 }]).problems.join(), /b\.js: a frame file outside the folder of entry\.client \(ui\/\)/);
