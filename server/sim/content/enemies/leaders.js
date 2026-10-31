@@ -851,6 +851,14 @@ function kitBlackSnake() {
       // kit below — this is not a generic `blockCnt: 0` engine rule.
       e.profile.moveWhileBlocked = true;
       e.profile.attackMoves = true;
+      // The shared h07_01 boss route opens with a 999 s sentinel WAIT for the original stationary leader
+      // (enemy_9013_acstmk). This boss walks, so drop the sentinel and start on the first MOVE leg; otherwise it
+      // stands at the gate for the whole field.
+      if (e.route?.legs?.[0]?.t === 'wait' && Number(e.route.legs[0].time) >= 60) {
+        e.route.legIdx = 1;
+        e.route.waitLeft = null;
+        e.route.pts = null;
+      }
       b.every(BS_IGNITE_CD, () => {
         if (a.busy || a.inferno || !e.alive) return;
         const targets = b.allies().filter((u) => u && u.alive && !u.hidden && !u.findBuff?.(BS_BREATH)).slice(0, 2);

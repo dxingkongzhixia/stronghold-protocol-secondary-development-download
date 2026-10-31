@@ -164,3 +164,13 @@ test('black-snake: the second defeat runs the final Deathless Inferno and remove
     'the final inferno emits its generic phase effect');
   assert.equal(h.b.errors.length, 0);
 });
+
+test('black-snake: the boss walks on its wave route instead of waiting 999 s', { skip }, () => {
+  const h = makeBattle({ data: content(), waveTemplate: 'wave_x_black_snake_boss_s', timeLimit: 12, autoFinish: false });
+  h.run(1);
+  const boss = h.enemies().find((e) => e.defId === BOSS);
+  assert.ok(boss, 'the boss spawns from its own wave template');
+  const x0 = boss.x, y0 = boss.y;
+  h.run(4);
+  assert.notEqual(`${boss.x},${boss.y}`, `${x0},${y0}`, 'the boss walks instead of waiting the sentinel 999 s');
+});
