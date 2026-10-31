@@ -202,7 +202,7 @@ node --test test/ui/native-boss.e2e.test.js
 
 当前基线：
 
-- `npm test`：**8826 / 8788 / 0 / 38 skipped**
+- `npm test`：**8828 / 8790 / 0 / 38 skipped**
 - `check:keel`：**178 / 178**
 - docs gates：**35 / 35**
 - typecheck：通过
