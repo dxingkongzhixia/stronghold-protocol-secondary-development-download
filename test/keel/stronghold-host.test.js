@@ -9,8 +9,17 @@ class StubBattle {
     this.time = 0;
     this.seed = 7;
     this.units = [];
+    this.players = [{ playerId: 1, bonds: { bond_x_demo: { layers: 1, active: true, tier: 1, count: 3 } } }];
     this._hooks = {};
     this._id = 0;
+  }
+  getPlayer(pid) { return this.players.find((p) => p.playerId === pid) ?? null; }
+  addLayers(pid, bondId, n) {
+    const b = this.getPlayer(pid)?.bonds?.[bondId];
+    if (!b || !(n > 0)) return 0;
+    const added = Math.min(n, Math.max(0, 999 - b.layers));
+    b.layers += added;
+    return added;
   }
   on(name, fn, opts = {}) { (this._hooks[name] ??= []).push({ fn, owner: opts.owner }); return { name, fn }; }
   offOwner(owner) { for (const k of Object.keys(this._hooks)) this._hooks[k] = this._hooks[k].filter((h) => h.owner !== owner); }
@@ -116,4 +125,14 @@ test('the bridge maps the documented Battle events', () => {
   assert.equal(BATTLE_HOOKS.hit, 'sim.hit');
   assert.equal(BATTLE_HOOKS.battleEnd, 'sim.battleEnd');
   assert.equal(BATTLE_HOOKS.tick, 'sim.tick');
+});
+
+test('the host reads live bond state and adds layers through the battle', () => {
+  const b = new StubBattle();
+  const host = createStrongholdHost(b, { drive: false });
+  assert.equal(host.bonds.get('bond_x_demo').layers, 1);
+  assert.equal(host.bonds.addLayers('bond_x_demo', 2).layers, 3);
+  assert.equal(host.bonds.get('bond_x_demo').layers, 3);
+  assert.deepEqual(host.bonds.list().map((x) => x.id), ['bond_x_demo']);
+  assert.equal(host.bonds.get('missing'), null);
 });

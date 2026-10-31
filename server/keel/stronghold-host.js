@@ -44,6 +44,7 @@ export function unitView(u) {
 export function createStrongholdHost(battle, opts = {}) {
   if (!battle) throw new TypeError('createStrongholdHost needs a battle');
   const drive = opts.drive !== false;
+  const pid = opts.playerId ?? battle.players?.[0]?.playerId ?? null;
 
   const host = {
     get battle() { return battle; },
@@ -99,6 +100,25 @@ export function createStrongholdHost(battle, opts = {}) {
         const u = findUnit(battle, target);
         if (!u) return [];
         return (u.buffs ?? []).map((b) => ({ buff: b.key, duration: b.timeLeft ?? b.duration ?? 0, value: b.mods ? clone(b.mods) : null }));
+      },
+    },
+    bonds: {
+      get(bondId) {
+        const b = pid == null ? null : battle.getPlayer?.(pid)?.bonds?.[String(bondId)];
+        return b && typeof b === 'object' ? { id: String(bondId), ...clone(b) } : null;
+      },
+      list() {
+        const all = pid == null ? null : battle.getPlayer?.(pid)?.bonds;
+        if (!all || typeof all !== 'object') return [];
+        return Object.entries(all).map(([id, b]) => ({ id, ...clone(b ?? {}) }))
+          .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+      },
+      /** Adds live layers through the engine's own clamp (BOND_LAYER_CAP, disabled gains). */
+      addLayers(bondId, n) {
+        const id = String(bondId);
+        const added = pid != null && typeof battle.addLayers === 'function' ? battle.addLayers(pid, id, Number(n), 'keel') : 0;
+        const b = pid == null ? null : battle.getPlayer?.(pid)?.bonds?.[id];
+        return { ok: added > 0, added: Number(added) || 0, layers: Math.max(0, Number(b?.layers) || 0) };
       },
     },
     /** Enemies only in M1.5; tokens/devices need an owner PlayerState and are M2. */

@@ -58,6 +58,8 @@ export default {
 | `api.heal(spec)` | `sim.heal.write` | `{ target, amount }` |
 | `api.buffs.has/list` | `sim.read` | 只读 |
 | `api.buffs.apply/remove` | `sim.buff.write` | 写 |
+| `api.bonds.get(id)` / `api.bonds.list()` | `sim.bond.read` | 盟约的 `{ layers, active, tier, count }`（只读副本） |
+| `api.bonds.addLayers(id, n)` | `sim.bond.write` | 走 `Battle.addLayers`：`BOND_LAYER_CAP` 999 上限，`layerGains` 关闭时 no-op |
 | `api.spawn(spec)` | `sim.spawn` | 生成单位 |
 | `api.rng(name)` | `sim.rng` | 命名随机流；没有 `Math.random` |
 | `api.fx(kind, at, data)` | `sim.fx` | 表现事件 |
@@ -103,7 +105,7 @@ hook 成本是**估计值**（默认 0.01ms），不是实测；真实设备校�
 
 ```ts
 units(query) / damage(spec) / heal(spec) / buffs.{has,apply,remove,list}
-spawn(spec) / rng(stream) / fx(kind, at, data) / tick(dt) / frame / snapshot() / restore()
+bonds.{get,list,addLayers} / spawn(spec) / rng(stream) / fx(kind, at, data) / tick(dt) / frame / snapshot() / restore()
 ```
 
 真实后端 `createStrongholdHost(battle)`（`server/keel/stronghold-host.js`）把同一组方法映射到 `Battle`：
@@ -114,6 +116,8 @@ spawn(spec) / rng(stream) / fx(kind, at, data) / tick(dt) / frame / snapshot() /
 | `damage(spec)` | `battle.makeDamage` + `battle.dealDamage` |
 | `heal(spec)` | `battle.heal` |
 | `buffs.apply/remove/has/list` | `battle.addBuff` / `removeBuff` / `unit.buffs` |
+| `bonds.get/list` | `battle.getPlayer(pid).bonds`（只读副本） |
+| `bonds.addLayers` | `battle.addLayers(pid, bondId, n, 'keel')`（999 上限、`layerGains` 开关） |
 | `spawn(spec)` | `battle.spawnEnemy`（只支持敌人；token/device 尚未支持） |
 | `rng(stream)` | `deriveSeed(battle.seed, "keel:<stream>")` + `server/sim/rng.js` |
 | `fx(kind, at, data)` | `battle.fx` |
@@ -196,6 +200,7 @@ fixture 的 `sim` 模块每 10 帧打一次 30 点真实伤害，60 帧后：
 - **元数据不是 pin**：`name` / `description` / `authors` / `version` 由服务器的 `index.keel` 提供，是展示字段；`cs` pin 的是模块/内容字节（以及原生模块的 sha256），不是这些标签。改元数据不会改变代码哈希；需要“作者不可被服务器偷换”的信任模型时，应把 descriptor 也纳入 `cs` 或从已 pin 的 manifest 读取。当前明确按“服务器提供，哈希才是 pin”处理。
 - **`sim.hit/damaged/heal/kill` 已能由 Battle 自动触发**（`attach.js`），但只对 Keel-native 模块；`compat.v2Script` 仍走自己的 `setup(sp)` 扩展注册表。
 - **`spawn` 只支持敌人**：token / device 需要 owner `PlayerState`，尚未支持。
+- **盟约状态按玩家**：`bonds.*` 读的是 `battle.players[0]`（或 `attachKeel(..., { playerId })` 指定的玩家）的盟约；房间级描述符在单人/自己棋盘的对局里就是本人。
 - **ctx 写只做白名单回写**：`dmg` / `amount` / `targets` 之外不保证；没有逐字段拒绝。
 - **预算不是实测**：见 §5。
 - **没有 UI/资产运行时**：`ui` / `asset` 仍是 M0 的静态模块。

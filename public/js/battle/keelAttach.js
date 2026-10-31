@@ -43,7 +43,7 @@ export function attachBattleKeel(battle, opts) {
   }
   const manifest = opts?.manifest;
   const modules = opts?.modules ?? [];
-  const host = createBattleKeelHost(battle, { drive: false, rng: opts.rng, deriveSeed: opts.deriveSeed });
+  const host = createBattleKeelHost(battle, { drive: false, rng: opts.rng, deriveSeed: opts.deriveSeed, playerId: opts.playerId });
   const runtime = createKeelRuntime({ manifest, modules, host, seed: opts?.seed ?? battle.seed, budget: opts?.budget });
   const owner = `keel:${manifest.id}`;
   // The live runtime for diagnostics (runner.currentBattle().keel) and, later, the HUD; not part of the engine's API.

@@ -88,6 +88,11 @@ export function createKeelRuntime(opts) {
         remove(target, buff) { require('sim.buff.write'); return host.buffs.remove(target, buff); },
         list(target) { require('sim.read'); return host.buffs.list(target); },
       }),
+      bonds: Object.freeze({
+        get(bondId) { require('sim.bond.read'); return host.bonds?.get?.(bondId) ?? null; },
+        list() { require('sim.bond.read'); return host.bonds?.list?.() ?? []; },
+        addLayers(bondId, n) { require('sim.bond.write'); return host.bonds?.addLayers?.(bondId, n) ?? { ok: false, added: 0, layers: 0 }; },
+      }),
       spawn(spec) { require('sim.spawn'); return host.spawn(spec); },
       rng(stream = 'default') { require('sim.rng'); return host.rng(stream); },
       fx(kind, at = null, data = null) { require('sim.fx'); return host.fx(kind, at, data); },

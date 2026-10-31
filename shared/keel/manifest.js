@@ -49,6 +49,8 @@ export const KEEL_PERMISSIONS = Object.freeze({
   'sim.damage.write': ['sim'],
   'sim.heal.write': ['sim'],
   'sim.buff.write': ['sim'],
+  'sim.bond.read': ['sim'],
+  'sim.bond.write': ['sim'],
   'sim.spawn': ['sim'],
   'sim.rng': ['sim'],
   'sim.fx': ['sim'],

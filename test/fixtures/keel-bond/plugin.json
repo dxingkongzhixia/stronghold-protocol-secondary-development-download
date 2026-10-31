@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schemas/keel-manifest.schema.json",
+  "manifest": 3,
+  "id": "keel-bond",
+  "name": { "zh": "Keel 盟约示例", "en": "Keel bond demo" },
+  "description": {
+    "zh": "一个只含新盟约记录的 content 插件：bond_x_keel_bond_demo。",
+    "en": "A content-only plugin that adds one new bond record, bond_x_keel_bond_demo."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "content": 1 },
+  "scope": ["room"],
+  "trust": "data",
+  "modules": [
+    {
+      "kind": "content",
+      "files": ["content/bonds.json"],
+      "parts": { "data": ["content/bonds.json"] },
+      "permissions": ["content.define"],
+      "provides": ["bond:bond_x_keel_bond_demo"]
+    }
+  ]
+}

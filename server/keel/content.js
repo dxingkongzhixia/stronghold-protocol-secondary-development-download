@@ -19,6 +19,8 @@ const TABLES = Object.freeze({
   bosses: 'bosses', boss: 'bosses',
   tokens: 'tokens', token: 'tokens',
   bands: 'bands', band: 'bands',
+  bonds: 'bonds', bond: 'bonds',
+  items: 'items', item: 'items',
 });
 
 const ROLE_BY_FILE = Object.freeze({
@@ -30,15 +32,18 @@ const ROLE_BY_FILE = Object.freeze({
   boss: 'bosses', bosses: 'bosses',
   token: 'tokens', tokens: 'tokens',
   band: 'bands', bands: 'bands',
+  bond: 'bonds', bonds: 'bonds',
+  item: 'items', items: 'items',
 });
 
 /** The v2 record file a loaded table came from (the compiler reads `file`, not `table`). */
 const FILE_OF_TABLE = Object.freeze({
   enemies: 'enemies', operators: 'operators', stages: 'stages', modes: 'modes',
   waves: 'waves', bosses: 'bosses', tokens: 'tokens', bands: 'bands',
+  bonds: 'bonds', items: 'items',
 });
 
-const empty = () => ({ enemies: new Map(), operators: new Map(), stages: new Map(), modes: new Map(), waves: new Map(), bosses: new Map(), tokens: new Map(), bands: new Map(), patches: [] });
+const empty = () => ({ enemies: new Map(), operators: new Map(), stages: new Map(), modes: new Map(), waves: new Map(), bosses: new Map(), tokens: new Map(), bands: new Map(), bonds: new Map(), items: new Map(), patches: [] });
 
 /**
  * Read `content` modules of a manifest. Records are `{ file, id, value }` entries (the v2 records shape); a plain
@@ -129,6 +134,9 @@ export function mergeKeelData(data, content, opts = {}) {
       ...(r.set !== undefined ? { set: r.set } : {}),
       value: r.value,
     });
+  // A new bond must compile before the operators that name it (shared/plugins/records.js rejects an unknown bond).
+  const recordRank = (r) => (r?.file === 'bonds' ? 0 : r?.file === 'items' ? 1 : 2);
+  records.sort((a, b) => recordRank(a) - recordRank(b));
   if (records.length) {
     const expanded = expandTraitRecords(out, records, {
       pluginId: content.pluginId ?? null,

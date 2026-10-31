@@ -5,6 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadKeelPlugin } from '../../server/keel/room-source.js';
 import { mergeKeelData, overlayData } from '../../server/keel/content.js';
+import { createKeelContentSet } from '../../server/keel/content-set.js';
+import { reconcilePluginBonds } from '../../server/plugins/gameplayRecords.js';
 import { DATA, makeMatch } from '../match/harness.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -48,4 +50,37 @@ test('Match({ keel: { data } }) reads the expanded content set, including chess 
   const h = makeMatch({ keel: { data, plugins: [] }, humans: 1, seed: 1 });
   assert.equal(h.m.gd.chess('chess_x_demo')?.chessId, 'chess_x_demo');
   h.m.dispose();
+});
+
+const BOND_FIXTURE = path.join(ROOT, 'test/fixtures/keel-bond');
+
+test('a content module can add a new bond record (bond_x_*)', async () => {
+  const plugin = await loadKeelPlugin(BOND_FIXTURE);
+  assert.ok(plugin.content.records.some((r) => r.table === 'bonds' && r.id === 'bond_x_keel_bond_demo'));
+  const merged = mergeKeelData(DATA, plugin.content);
+  assert.equal(merged.bonds.bond_x_keel_bond_demo.name, '示例盟约');
+  assert.deepEqual(merged.bonds.bond_x_keel_bond_demo.thresholds, [3, 6]);
+  assert.equal(merged.bonds.bond_x_keel_bond_demo.activeCount, 3);
+  assert.ok(merged.effects.effect_x_keel_bond_demo, 'the compiler writes the bond effect shell');
+});
+
+test('bond membership comes from chess bonds (golden copies do not count)', () => {
+  const data = {
+    bonds: { bond_x_keel_bond_demo: { members: [], visibleMembers: [] } },
+    chess: {
+      chess_x_keel_bond_demo_a: { chessId: 'chess_x_keel_bond_demo_a', bonds: ['bond_x_keel_bond_demo'], visible: true, isGolden: false },
+      chess_x_keel_bond_demo_b: { chessId: 'chess_x_keel_bond_demo_b', bonds: ['bond_x_keel_bond_demo'], visible: true, isGolden: true },
+    },
+  };
+  const out = reconcilePluginBonds(data);
+  assert.deepEqual(out.bonds.bond_x_keel_bond_demo.members, ['chess_x_keel_bond_demo_a']);
+  assert.deepEqual(out.bonds.bond_x_keel_bond_demo.visibleMembers, ['chess_x_keel_bond_demo_a']);
+});
+
+test('the Keel content set carries a new bond into the room data', async () => {
+  const plugin = await loadKeelPlugin(BOND_FIXTURE);
+  const built = createKeelContentSet({ plugins: [plugin] });
+  assert.deepEqual(built.problems, []);
+  assert.ok(built.data.bonds.bond_x_keel_bond_demo, 'the bond reaches the content set');
+  assert.equal(built.data.bonds.bond_x_keel_bond_demo.members.length, 0, 'members wait for chess records');
 });

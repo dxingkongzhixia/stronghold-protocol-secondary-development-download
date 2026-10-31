@@ -61,7 +61,11 @@
 
 ## 4. 内容（content）
 
-- **记录**：enemies / bosses / waves / tokens / bands / modes / stages 等；支持新增、覆盖、补丁。
+- **记录**：enemies / bosses / waves / tokens / bands / modes / stages / **bonds** / **items** 等；支持新增、覆盖、补丁。
+- **新盟约**：在 `parts.data` 的记录文件里写 `file: "bonds"` 的 entry（id 形如 `bond_x_<plugin-id>_<suffix>`，字段 name / desc / thresholds / countMode / isCore）+ 成员干员或棋子的 `bonds`；`provides: ["bond:<id>"]`。
+  图标走 `asset` 模块的 `bonds` 覆盖。机制由 `sim` 模块用 `api.bonds.get/list/addLayers` 实现（读层数/激活/档位，写层数受 `BOND_LAYER_CAP` 约束）。
+  最小示例：`test/fixtures/keel-bond`（`bond_x_keel_bond_demo`）。
+- **新装备**：`item_x_<id>` 记录，复用现有 buff 解释器；完整装备不能自定义新的行为名。
 - **干员**：`operators` 记录；`mergeKeelData` 展开为 `data.chess`（normal/elite）与 DIY 记录。
 - **补丁**：`patch: 1` 文档；支持字段路径 set/merge/append 等。
 - **DSL**：干员 kit / 准备阶段效果；构建期校验。
@@ -171,7 +175,7 @@ node tools/keel.mjs exit
 | 检查 | 结果 |
 |---|---|
 | `npm test` | 8799 tests / 8758 pass / 0 fail / 41 skipped |
-| `npm run check:keel` | 163 / 163 |
+| `npm run check:keel` | 169 / 169 |
 | docs gates | 35 / 35 |
 | `npm run typecheck` | 通过 |
 | eslint | 0 errors |

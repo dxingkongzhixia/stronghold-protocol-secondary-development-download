@@ -46,7 +46,7 @@ export function attachKeel(battle, opts) {
   }
   const manifest = opts?.manifest;
   const modules = opts?.modules ?? [];
-  const host = createStrongholdHost(battle, { drive: false });
+  const host = createStrongholdHost(battle, { drive: false, playerId: opts?.playerId });
   const runtime = createKeelRuntime({ manifest, modules, host, seed: opts?.seed ?? battle.seed, budget: opts?.budget });
   const owner = `keel:${manifest.id}`;
 

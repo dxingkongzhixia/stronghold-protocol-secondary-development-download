@@ -104,3 +104,24 @@ test('loadKeelModules reads the fixture default export', async () => {
   assert.equal(mods[0].kind, 'sim');
   assert.equal(typeof mods[0].code.setup, 'function');
 });
+
+test('api.bonds reads and adds layers with the bond capabilities', () => {
+  const host = createFakeHost({ seed: 1, bonds: [{ id: 'bond_x_demo', layers: 2, active: true, tier: 1, count: 3 }] });
+  let seen = null;
+  const code = { hooks: { 'sim.tick'(_ctx, api) { seen = api.bonds.get('bond_x_demo'); api.bonds.addLayers('bond_x_demo', 2); } } };
+  const rt = createKeelRuntime({ manifest: manifest(), modules: modules(code, ['sim.bond.read', 'sim.bond.write']), host });
+  rt.run({ frames: 1 });
+  assert.equal(rt.errors.length, 0, JSON.stringify(rt.errors));
+  assert.equal(seen.layers, 2);
+  assert.equal(seen.active, true);
+  assert.equal(host.bonds.get('bond_x_demo').layers, 4);
+  assert.deepEqual(host.bonds.list().map((b) => b.id), ['bond_x_demo']);
+});
+
+test('api.bonds.addLayers needs sim.bond.write', () => {
+  const code = { hooks: { 'sim.tick'(_ctx, api) { api.bonds.addLayers('bond_x_demo', 1); } } };
+  const rt = createKeelRuntime({ manifest: manifest(), modules: modules(code, ['sim.bond.read']), host: createFakeHost({}) });
+  rt.run({ frames: 1 });
+  assert.equal(rt.errors[0]?.code, 'KEEL_DENIED');
+  assert.match(rt.errors[0]?.message ?? '', /sim\.bond\.write/);
+});
