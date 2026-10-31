@@ -15,7 +15,7 @@
 ```text
 plugin.json               manifest 3（content + asset + sim）
 content/bonds.json        bond_x_bolivar_pack
-content/patches.json      跃跃 / 格雷伊 / 谬因（基础+精锐）追加盟约；谬因设为可见
+content/patches.json      10 人（基础+精锐）追加盟约；8 名自造成员设为可见
 content/tokens.json       token_x_bolivar_hound
 sim/index.js              追猎 / 渴血
 assets/hound/             猎犬proto（enemy_2137_shsdgo）的 Spine

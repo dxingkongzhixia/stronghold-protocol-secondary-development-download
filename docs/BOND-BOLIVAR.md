@@ -131,7 +131,7 @@ plugins/bolivar/                  # Keel 原型（已实现）
 ├─ plugin.json                    # manifest 3
 ├─ plugin.lock.json               # pack 生成的 Spine 动画 / 文件哈希
 ├─ content/bonds.json             # bond_x_bolivar_pack
-├─ content/patches.json           # 跃跃 / 格雷伊 / 谬因（基础+精锐）追加盟约；谬因设为可见
+├─ content/patches.json           # 10 人（基础+精锐）追加盟约；8 名自造成员设为可见
 ├─ content/tokens.json            # token_x_bolivar_hound
 ├─ sim/index.js                   # 追猎 / 渴血
 └─ assets/
