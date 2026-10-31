@@ -901,6 +901,13 @@ test('干员战斗语音 (DESIGN §21.30): the manifest data, the official prior
   // download 360 files (19.3 MB, one per operator and slot) nobody hears. `--voice-all` brings the complete set back.
   const slots = ['start', 'faceEnemy', 'select', 'place', 'skill1', 'skill2', 'skill3', 'skill4', 'resultFour', 'resultThree', 'resultTwo', 'resultLose'];
   const prepOnly = ['gacha', 'squad', 'squadFirst'];
+  // a 1-skill operator (米格鲁, the mode's first 3★) has no official bank lines for the later skill slots: the client
+  // only asks for the slots its own skills use, so require skillN only up to the operator's skill count.
+  const chess = JSON.parse(readFileSync(join(ROOT, 'data', 'chess.json'), 'utf8'));
+  const skillCount = new Map();
+  for (const c of Object.values(chess)) {
+    if (c.charId && !c.isGolden && !c.isDiy && !skillCount.has(c.charId)) skillCount.set(c.charId, (c.skills || []).length);
+  }
   const lines = [];
   const walk = (x) => {
     if (typeof x === 'string') lines.push(x);
@@ -908,7 +915,11 @@ test('干员战斗语音 (DESIGN §21.30): the manifest data, the official prior
     else if (x && typeof x === 'object') Object.values(x).forEach(walk);
   };
   for (const id of charIds) {
-    for (const s of slots) assert.ok(voice[id][s], `${id}.${s}`);
+    for (const s of slots) {
+      const n = Number((/^skill(\d)$/.exec(s) || [])[1] ?? 0);
+      if (n > (skillCount.get(id) ?? 4)) continue;
+      assert.ok(voice[id][s], `${id}.${s}`);
+    }
     for (const s of prepOnly) assert.equal(voice[id][s], undefined, `${id}.${s} is not planned by default`);
     walk(voice[id]);
   }

@@ -48,6 +48,7 @@ extract.export_enemy_spines(AB, Path("<out>"), {}, print, ["enemy_2137_shsdgo"])
   - 基础与精锐两条都追加盟约；精锐上场的成员也计入。
 - 谬因 = `char_4229_aphris`（**不是**缪尔赛思）。
 - 刻俄柏 / 谬因复用官方自选 kit；其余 6 人暂走 generic kit。
+- 8 名自造成员的立绘 / Spine / 语音 / 技能图标已补齐。
 - 这仍是插件盟约（`isCore: false`），不参与调和 / 核心 ban；原型阶段接受。
 
 ## 验证
