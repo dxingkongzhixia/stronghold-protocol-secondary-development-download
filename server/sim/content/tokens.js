@@ -119,6 +119,7 @@ export const TOKEN_IDS = Object.freeze({
   champagne: 'token_10031_swire2_gdtrap',
   wangStone: 'token_10064_wang_stone1',
   anchor: 'token_10068_kalts2_mtship',
+  aphrisRelay: 'token_10070_aphris_pc',
   ulpiaMarker: 'token_10039_ulpia_block',
   goldenOath: 'token_10040_siege2_vlion',
   catShield: 'token_10041_cathy_catsld',
@@ -1775,6 +1776,8 @@ const RAW_KITS = {
   [TOKEN_IDS.champagne]: champagne,
   [TOKEN_IDS.wangStone]: wangStone,
   [TOKEN_IDS.anchor]: anchorKit,
+  // 谬因's 中继器 (talent 链路协议): a placed waypoint that bends her range — it never attacks; her kit drives it.
+  [TOKEN_IDS.aphrisRelay]: inert({ hideFromEnemies: true }),
   [TOKEN_IDS.ulpiaMarker]: ulpiaMarker,
   [TOKEN_IDS.goldenOath]: goldenOath,
   [TOKEN_IDS.catShield]: catShield,

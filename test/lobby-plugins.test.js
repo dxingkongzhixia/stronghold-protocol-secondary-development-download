@@ -65,9 +65,9 @@ describe('room.setPlugins (P1a: cosmetic plugins)', () => {
   test('/healthz and welcome count the server\'s unofficial plugins (the title screen\'s N; a server without any sends no count)', async () => {
     const c = await player('Closure');
     // texas-red, texas-blue, mine, base, top, fresh, later (cosmetic) and rules (content, planned): every class but a language,
-    // plus the project's 6 built-in 阵营加强 plugins (server/plugins/builtin.js, off by default but installed)
-    assert.deepEqual(c.welcome.content, { vanilla: srv.content.cs, plugins: 15 });
-    assert.deepEqual((await (await fetch(`${srv.url}/healthz`)).json()).content, { vanilla: srv.content.cs, sets: 0, plugins: 15 }, 'before any hello: the title screen');
+    // plus the project's 7 built-in 阵营加强 plugins (server/plugins/builtin.js, off by default but installed)
+    assert.deepEqual(c.welcome.content, { vanilla: srv.content.cs, plugins: 16 });
+    assert.deepEqual((await (await fetch(`${srv.url}/healthz`)).json()).content, { vanilla: srv.content.cs, sets: 0, plugins: 16 }, 'before any hello: the title screen');
     const lobby = new Lobby({ registry: new SessionRegistry(), content: { cs: 'ab'.repeat(32) }, plugins: { resolve: () => null, unofficial: () => 0 } });
     assert.deepEqual(lobby.welcomeInfo().content, { vanilla: 'ab'.repeat(32) }, 'none: exactly the welcome of a server without plugins');
     lobby.shutdown();
