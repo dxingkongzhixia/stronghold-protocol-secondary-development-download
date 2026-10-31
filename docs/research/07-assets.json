@@ -18222,6 +18222,454 @@
     ]
    },
    "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_primguard_icon.png"
+  },
+  "char_2013_cerber": {
+   "name": "刻俄柏",
+   "rarity": "TIER_6",
+   "profession": "CASTER",
+   "subProfessionId": "corecaster",
+   "nationId": "rhodes",
+   "chess": [
+    {
+     "chessId": "chess_char_2013_cerber_a",
+     "chessLevel": 6,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 2,
+     "evolvePhase": "PHASE_2"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_2013_cerber.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_2013_cerber_2.png"
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_2013_cerber_1.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_2013_cerber_2.png"
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skchr_cerber_1",
+     "iconId": "skchr_cerber_1",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_cerber_1.png"
+     }
+    },
+    {
+     "index": 1,
+     "skillId": "skchr_cerber_2",
+     "iconId": "skchr_cerber_2",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_cerber_2.png"
+     }
+    },
+    {
+     "index": 2,
+     "skillId": "skchr_cerber_3",
+     "iconId": "skchr_cerber_3",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_cerber_3.png"
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_2013_cerber/char_2013_cerber/Front/char_2013_cerber.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_2013_cerber/char_2013_cerber/Front/char_2013_cerber.atlas"
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_2013_cerber/char_2013_cerber/Front/char_2013_cerber.png"
+     }
+    }
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_corecaster_icon.png"
+  },
+  "char_1027_greyy2": {
+   "name": "承曦格雷伊",
+   "rarity": "TIER_5",
+   "profession": "SNIPER",
+   "subProfessionId": "bombarder",
+   "nationId": "rhodes",
+   "chess": [
+    {
+     "chessId": "chess_char_1027_greyy2_a",
+     "chessLevel": 5,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 1,
+     "evolvePhase": "PHASE_2"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_1027_greyy2.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_1027_greyy2_2.png"
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_1027_greyy2_1.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_1027_greyy2_2.png"
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skcom_quickattack[3]",
+     "iconId": "skcom_quickattack[3]",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skcom_quickattack%5B3%5D.png"
+     }
+    },
+    {
+     "index": 1,
+     "skillId": "skchr_greyy2_2",
+     "iconId": "skchr_greyy2_2",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_greyy2_2.png"
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_1027_greyy2/char_1027_greyy2/Front/char_1027_greyy2.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_1027_greyy2/char_1027_greyy2/Front/char_1027_greyy2.atlas"
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_1027_greyy2/char_1027_greyy2/Front/char_1027_greyy2.png"
+     }
+    }
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_bombarder_icon.png"
+  },
+  "char_421_crow": {
+   "name": "羽毛笔",
+   "rarity": "TIER_5",
+   "profession": "WARRIOR",
+   "subProfessionId": "reaper",
+   "nationId": "bolivar",
+   "chess": [
+    {
+     "chessId": "chess_char_421_crow_a",
+     "chessLevel": 4,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 1,
+     "evolvePhase": "PHASE_2"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_421_crow.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_421_crow_2.png"
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_421_crow_1.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_421_crow_2.png"
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skchr_crow_1",
+     "iconId": "skchr_crow_1",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_crow_1.png"
+     }
+    },
+    {
+     "index": 1,
+     "skillId": "skchr_crow_2",
+     "iconId": "skchr_crow_2",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_crow_2.png"
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_421_crow/char_421_crow/Front/char_421_crow.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_421_crow/char_421_crow/Front/char_421_crow.atlas"
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_421_crow/char_421_crow/Front/char_421_crow.png"
+     }
+    }
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_reaper_icon.png"
+  },
+  "char_486_takila": {
+   "name": "龙舌兰",
+   "rarity": "TIER_5",
+   "profession": "WARRIOR",
+   "subProfessionId": "librator",
+   "nationId": "bolivar",
+   "chess": [
+    {
+     "chessId": "chess_char_486_takila_a",
+     "chessLevel": 4,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 1,
+     "evolvePhase": "PHASE_2"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_486_takila.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_486_takila_2.png"
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_486_takila_1.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_486_takila_2.png"
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skchr_takila_1",
+     "iconId": "skchr_takila_1",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_takila_1.png"
+     }
+    },
+    {
+     "index": 1,
+     "skillId": "skchr_takila_2",
+     "iconId": "skchr_takila_2",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_takila_2.png"
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_486_takila/char_486_takila/Front/char_486_takila.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_486_takila/char_486_takila/Front/char_486_takila.atlas"
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_486_takila/char_486_takila/Front/char_486_takila.png"
+     }
+    }
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_librator_icon.png"
+  },
+  "char_4234_pedro": {
+   "name": "佩德洛",
+   "rarity": "TIER_5",
+   "profession": "SUPPORT",
+   "subProfessionId": "supportiveranger",
+   "nationId": "bolivar",
+   "chess": [
+    {
+     "chessId": "chess_char_4234_pedro_a",
+     "chessLevel": 3,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 1,
+     "evolvePhase": "PHASE_2"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_4234_pedro.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_4234_pedro_2.png"
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_4234_pedro_1.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_4234_pedro_2.png"
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skchr_pedro_1",
+     "iconId": "skchr_pedro_1",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_pedro_1.png"
+     }
+    },
+    {
+     "index": 1,
+     "skillId": "skchr_pedro_2",
+     "iconId": "skchr_pedro_2",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_pedro_2.png"
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4234_pedro/char_4234_pedro/Front/char_4234_pedro.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4234_pedro/char_4234_pedro/Front/char_4234_pedro.atlas"
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_4234_pedro/char_4234_pedro/Front/char_4234_pedro.png"
+     }
+    }
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_supportiveranger_icon.png"
+  },
+  "char_130_doberm": {
+   "name": "杜宾",
+   "rarity": "TIER_4",
+   "profession": "WARRIOR",
+   "subProfessionId": "instructor",
+   "nationId": "rhodes",
+   "chess": [
+    {
+     "chessId": "chess_char_130_doberm_a",
+     "chessLevel": 3,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 1,
+     "evolvePhase": "PHASE_2"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_130_doberm.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_130_doberm_2.png"
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_130_doberm_1.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_130_doberm_2.png"
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skchr_doberm_1",
+     "iconId": "skchr_doberm_1",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_doberm_1.png"
+     }
+    },
+    {
+     "index": 1,
+     "skillId": "skchr_doberm_2",
+     "iconId": "skchr_doberm_2",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skchr_doberm_2.png"
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_130_doberm/char_130_doberm/Front/char_130_doberm.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_130_doberm/char_130_doberm/Front/char_130_doberm.atlas"
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_130_doberm/char_130_doberm/Front/char_130_doberm.png"
+     }
+    }
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_instructor_icon.png"
+  },
+  "char_122_beagle": {
+   "name": "米格鲁",
+   "rarity": "TIER_3",
+   "profession": "TANK",
+   "subProfessionId": "protector",
+   "nationId": "rhodes",
+   "chess": [
+    {
+     "chessId": "chess_char_122_beagle_a",
+     "chessLevel": 2,
+     "chessType": "NORMAL",
+     "defaultSkillIndex": 0,
+     "evolvePhase": "PHASE_1"
+    }
+   ],
+   "avatar": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_122_beagle.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/avatar/char_122_beagle_2.png"
+    }
+   },
+   "portrait": {
+    "e0e1": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_122_beagle_1.png"
+    },
+    "e2": {
+     "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/portrait/char_122_beagle_2.png"
+    }
+   },
+   "skills": [
+    {
+     "index": 0,
+     "skillId": "skcom_def_up[1]",
+     "iconId": "skcom_def_up[1]",
+     "icon": {
+      "url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skill/skill_icon_skcom_def_up%5B1%5D.png"
+     }
+    }
+   ],
+   "battleSpine": {
+    "front": {
+     "skel": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_122_beagle/char_122_beagle/Front/char_122_beagle.skel"
+     },
+     "atlas": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_122_beagle/char_122_beagle/Front/char_122_beagle.atlas"
+     },
+     "png": {
+      "url": "https://raw.githubusercontent.com/fexli/ArknightsResource/main/spine/char_122_beagle/char_122_beagle/Front/char_122_beagle.png"
+     }
+    }
+   },
+   "subProfessionIcon": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/arts/ui/subprofessionicon/sub_protector_icon.png"
   }
  },
  "tokens": {

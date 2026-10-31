@@ -618,6 +618,8 @@ export const SUB = Object.freeze({
   fighter: P({}),
   hammer: P({ splashRadius: 1.0, splashScale: 0.5, splashOthersOnly: true }),
   instructor: P({ dmgMul: (battle, unit, target) => (target.blockedBy === unit ? 1 : (unit.profile.unblockedScale ?? 1.2)) }),
+  // 佩德洛 (支援射手): the trait only grants 触发型效果 support; the base attack is the SUPPORT default.
+  supportiveranger: P({}),
   librator: P({ noAttackUnlessSkill: true, install: installLibrator }),
   lord: P({ canHitFly: true,
     dmgMul: (battle, unit, target) => {
