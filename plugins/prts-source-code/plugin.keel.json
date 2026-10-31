@@ -1,0 +1,221 @@
+{
+  "manifest": 3,
+  "id": "prts-source-code",
+  "name": {
+    "zh": "PRTS：源代码",
+    "en": "PRTS: Source Code"
+  },
+  "englishName": "PRTS: Source Code",
+  "description": {
+    "zh": "PRTS 主题的敌人插件：新增 PRTS / 拟态机械 Boss、隐藏协议与专属波次，并把这些 Boss 加入各模式的对手池。凯尔希策略已拆到「PRTS：凯尔希」插件。",
+    "en": "A PRTS-themed enemy plugin: the PRTS / mimic bosses, the hidden protocol and their waves, added to every mode's boss pool. The Kal'tsit strategy now lives in the separate “PRTS: Kal'tsit” plugin."
+  },
+  "version": "0.1.0",
+  "app": ">=0.4.0 <0.5.0",
+  "api": {
+    "content": 1,
+    "asset": 1
+  },
+  "scope": [
+    "room"
+  ],
+  "trust": "data",
+  "modules": [
+    {
+      "kind": "content",
+      "files": [
+        "content/enemies.json",
+        "content/bosses.json",
+        "content/waves.json",
+        "content/modes.json"
+      ],
+      "parts": {
+        "data": [
+          "content/enemies.json",
+          "content/bosses.json",
+          "content/waves.json",
+          "content/modes.json"
+        ]
+      },
+      "permissions": [
+        "content.define",
+        "content.patch"
+      ],
+      "provides": [
+        "boss:boss_x_prts_source_code_prts",
+        "boss:boss_x_prts_source_code_prts_hidden",
+        "enemy:enemy_x_prts_source_code_mimic",
+        "enemy:enemy_x_prts_source_code_prts",
+        "enemy:enemy_x_prts_source_code_prts_hidden",
+        "wave:wave_x_prts_source_code_boss",
+        "wave:wave_x_prts_source_code_boss_s",
+        "wave:wave_x_prts_source_code_hidden",
+        "wave:wave_x_prts_source_code_hidden_s"
+      ]
+    },
+    {
+      "kind": "asset",
+      "files": [
+        "assets/images/enemy_x_prts_source_code_prts.png",
+        "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel",
+        "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.atlas",
+        "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.png",
+        "assets/images/enemy_x_prts_source_code_mimic.png",
+        "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.skel",
+        "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.atlas",
+        "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.png",
+        "assets/fx/index.json"
+      ],
+      "permissions": [
+        "asset.add"
+      ],
+      "assets": {
+        "enemies": {
+          "enemy_x_prts_source_code_prts": {
+            "icon": "assets/images/enemy_x_prts_source_code_prts.png",
+            "spine": {
+              "skel": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel",
+              "atlas": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.atlas",
+              "textures": [
+                "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.png"
+              ],
+              "pma": true
+            }
+          },
+          "enemy_x_prts_source_code_prts_hidden": {
+            "icon": "assets/images/enemy_x_prts_source_code_prts.png",
+            "spine": {
+              "skel": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel",
+              "atlas": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.atlas",
+              "textures": [
+                "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.png"
+              ],
+              "pma": true
+            }
+          },
+          "enemy_x_prts_source_code_mimic": {
+            "icon": "assets/images/enemy_x_prts_source_code_mimic.png",
+            "spine": {
+              "skel": "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.skel",
+              "atlas": "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.atlas",
+              "textures": [
+                "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.png"
+              ],
+              "pma": true
+            }
+          }
+        },
+        "audio": {
+          "bossBgm": {
+            "boss_x_prts_source_code_prts": {
+              "ref": "boss_8"
+            },
+            "boss_x_prts_source_code_prts_hidden": {
+              "ref": "boss_8"
+            }
+          }
+        },
+        "fx": {
+          "index": "assets/fx/index.json",
+          "official": true
+        }
+      }
+    }
+  ],
+  "requires": {},
+  "optional": {},
+  "conflicts": {},
+  "compat": {
+    "mainline": false,
+    "manifest2": false
+  },
+  "authors": [],
+  "sourceLang": "zh",
+  "category": "enemy",
+  "legacy": {
+    "class": "content",
+    "type": "data",
+    "files": {},
+    "api": 2,
+    "permissions": [
+      "data.add",
+      "data.patch",
+      "assets.add"
+    ],
+    "parts": {
+      "assets": {
+        "files": [
+          "assets/images/enemy_x_prts_source_code_prts.png",
+          "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel",
+          "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.atlas",
+          "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.png",
+          "assets/images/enemy_x_prts_source_code_mimic.png",
+          "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.skel",
+          "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.atlas",
+          "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.png",
+          "assets/fx/index.json"
+        ],
+        "inline": {
+          "enemies": {
+            "enemy_x_prts_source_code_prts": {
+              "icon": "assets/images/enemy_x_prts_source_code_prts.png",
+              "spine": {
+                "skel": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel",
+                "atlas": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.atlas",
+                "textures": [
+                  "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.png"
+                ],
+                "pma": true
+              }
+            },
+            "enemy_x_prts_source_code_prts_hidden": {
+              "icon": "assets/images/enemy_x_prts_source_code_prts.png",
+              "spine": {
+                "skel": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.skel",
+                "atlas": "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.atlas",
+                "textures": [
+                  "assets/spine/enemy/enemy_1564_mpprts/enemy_1564_mpprts.png"
+                ],
+                "pma": true
+              }
+            },
+            "enemy_x_prts_source_code_mimic": {
+              "icon": "assets/images/enemy_x_prts_source_code_mimic.png",
+              "spine": {
+                "skel": "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.skel",
+                "atlas": "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.atlas",
+                "textures": [
+                  "assets/spine/enemy/enemy_1565_mpprme/enemy_1565_mpprme.png"
+                ],
+                "pma": true
+              }
+            }
+          },
+          "audio": {
+            "bossBgm": {
+              "boss_x_prts_source_code_prts": {
+                "ref": "boss_8"
+              },
+              "boss_x_prts_source_code_prts_hidden": {
+                "ref": "boss_8"
+              }
+            }
+          },
+          "fx": {
+            "index": "assets/fx/index.json",
+            "official": true
+          }
+        }
+      },
+      "data": {
+        "files": [
+          "content/enemies.json",
+          "content/bosses.json",
+          "content/waves.json",
+          "content/modes.json"
+        ]
+      }
+    },
+    "entry": {}
+  }
+}

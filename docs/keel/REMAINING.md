@@ -70,14 +70,14 @@ Keel 已经可以用于实际插件开发和房间运行：
 
 ## 3. 外部插件迁移
 
-`plugins/*` 不随仓库提交。当前仓库里的三个真实插件已迁移：
+`plugins/*` 默认不提交。当前仓库里的三个真实插件已迁移：
 
 - `prts-kaltsit`
 - `prts-source-code`
 - `black-snake`
 
-> 迁移后的 `plugin.keel.json` 在 `.gitignore` 的 `plugins/*` 里，**不随仓库分发**。新机器需要重新
-> `node tools/keel.mjs import <id> --write`，或从原机器复制该文件（连同已有的 `plugin.lock.json`）。
+> `prts-kaltsit` / `prts-source-code` 的 `plugin.keel.json` 已随仓库强制提交（与它们的 `plugin.json`、lock 一样），
+> 新机器直接可用；`black-snake` 整个目录仍只在本机（未跟踪），需要时重新 `node tools/keel.mjs import black-snake --write`。
 
 其他机器/其他作者如果还有 manifest-2 插件：
 
