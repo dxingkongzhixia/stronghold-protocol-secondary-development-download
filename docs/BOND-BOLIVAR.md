@@ -1,8 +1,8 @@
-# 玻利瓦尔国家盟约（v0.2 / Keel N 系列）
+# 玻利瓦尔国家盟约（v0.3 / Keel N 系列）
 
-> **状态：草案 v0.2（2026-10-31），未实现。**
-> v0.1（2026-10-28）的「战功 / 核心 build-data」方案已被本版取代：**改用 Keel N 系列原生插件**
-> （manifest 3 + `content` + `sim`），主题改为**猎犬主导的「追猎 + 渴血」**。
+> **状态：原型已实现（2026-11-01）。**
+> 跑在 Keel N 系列原生插件 `plugins/bolivar` 上：manifest 3 + `content` + `asset` + `sim`。
+> v0.1（2026-10-28）的「战功 / 核心 build-data」方案已被取代；v0.2 定下猎犬、追猎、渴血。
 >
 > 本文是设计提案，不是 `DESIGN.md` 的规范章节；定稿并验收后再并入规范文档。
 
@@ -15,7 +15,7 @@
 
 - 3 / 6 名成员，国家盟约；
 - 机制主体：**追猎（标记 / 集火 / 转火）** + **渴血（吸血 / 击杀叠加）**；
-- 以 **Keel 原生插件**开发，先原型、后内置化。
+- 猎犬使用本机客户端抽取的 **「猎犬proto」**（`enemy_2137_shsdgo`）模型。
 
 ---
 
@@ -116,17 +116,22 @@ Keel 已具备本设计需要的全部能力：
 ### 4.1 插件结构
 
 ```text
-plugins/bolivar/                  # 原型（本地；验证后再决定内置/提交）
+plugins/bolivar/                  # Keel 原型（已实现）
 ├─ plugin.json                    # manifest 3
+├─ plugin.lock.json               # pack 生成的 Spine 动画 / 文件哈希
 ├─ content/bonds.json             # bond_x_bolivar_pack
 ├─ content/patches.json           # 把 bond 追加到 3 条棋子
+├─ content/tokens.json            # token_x_bolivar_hound
 ├─ sim/index.js                   # 追猎 / 渴血
-└─ assets/icon.png                # 盟约图标（可选）
+└─ assets/
+   ├─ icon.png                    # 盟约图标（logo_bolivar）
+   └─ hound/                      # 猎犬proto（enemy_2137_shsdgo）Spine
 ```
 
 - `id: bolivar`；bond id `bond_x_bolivar_pack`（命名空间 `bolivar`）。
 - `isCore: false`（插件 bond，不参与调和 / 核心 ban；原型阶段接受）。
-- 图标可用 `logo_bolivar` 的副本；没有则回退占位。
+- 猎犬素材从本机 B 站鹰角客户端抽取：
+  `enemy_2137_shsdgo`（猎犬proto），已放入 `assets/hound/`。
 
 ### 4.2 sim 状态与 hooks
 
@@ -148,37 +153,41 @@ state: {
 | `sim.tick` | 过期标记清理；猎犬重生计时 |
 | `sim.battleEnd` | 清理（可选） |
 
-### 4.3 需要的核心小改动
+> 猎犬是 `token_x_bolivar_hound`（Spine 来自 `enemy_2137_shsdgo`），由 `api.spawn` 生成；
+> 3 人 1 只、6 人 2 只，死亡 12 秒后重生（每场最多 2 次）。
 
-- `unitView` 增加 **`bonds`**（成员判定）与 **`defId`**（调试/日志）；服务端与浏览器 host 同步。
+### 4.3 核心小改动
+
+- `unitView` 增加 **`bonds`**（成员判定）与 **`defId`**（调试/日志）；服务端与浏览器 host 已同步。
 - 这是 Keel 的只读视图扩展，不改变战斗规则。
 
 ---
 
 ## 5. 分期
 
-| 阶段 | 内容 | 预估 |
+| 阶段 | 内容 | 状态 |
 |---|---|---|
-| **P1 原型** | Keel 插件 + 3 成员 + 追猎（1 猎犬/标记/增伤）+ 6 人档代码骨架 | 1 天 |
-| **P2 六人档** | 补 3 名成员（露托/羽毛笔/龙舌兰等，按素材/kit 成本）+ 渴血 + 2 猎犬 | 2–3 天 + 素材 |
-| **P3 调优** | 实战数值、图标、i18n、是否内置化 | 2–3 天 |
+| **P1 原型** | Keel 插件 + 3 成员 + 追猎（1 猎犬/标记/增伤）+ 6 人档代码骨架 | **已完成（2026-11-01）** |
+| **P2 六人档** | 补 3 名成员（露托/羽毛笔/龙舌兰等，按素材/kit 成本）+ 吸血 + 2 猎犬 | 待做（代码已写，名单不足） |
+| **P3 调优** | 实战数值、图标、i18n、是否内置化 | 待做 |
 
 ---
 
-## 6. 待确认
+## 6. 已确认 / 仍待定
 
-1. **猎犬用官方「狼群」`token_10028_vigil_wolf`，还是自定义猎犬 token + 素材？**
-2. 3 人档是否就要 1 只猎犬？还是 3 人只标记、6 人才放狗？
-3. 缪尔赛思是否纳入（6★ 双国籍，强度偏高）。
-4. 6 人档的「精英/领袖」判定：`victim.isBoss` + 精英 tag，还是按 tier？
-5. 插件原型先本地（`plugins/bolivar`），还是直接做内置插件？
+1. **猎犬模型**：已确认使用「猎犬proto」（`enemy_2137_shsdgo`），不借用狼群 token。
+2. **放狗时机**：已确认 3 人 1 只、6 人 2 只。
+3. **缪尔赛思**：原型先纳入（3 人档需要她凑数）；是否长期保留见 P2 平衡。
+4. 6 人档的「精英/领袖」判定：`victim.isBoss` + 精英 tag，还是按 tier？（目前代码用猎物标记，未单独判定精英）
+5. 是否把插件提升为内置 / 默认开启。
 
 ## 7. 验证
 
 ```bash
 node tools/keel.mjs check plugins/bolivar --strict
-node tools/keel.mjs run plugins/bolivar --frames 60 --json
+node tools/plugin.mjs check bolivar --strict
+node --test test/content/bolivar.test.js
 ```
 
-战斗侧：用 `test/helpers/battleHarness.js` 构造一场带 3 名成员的战斗，断言
-标记、增伤、猎犬生成、6 人档回血/渴血；再进真实房间验证图鉴、激活与 UI。
+- `test/content/bolivar.test.js`：3 条用例（内容集 / 3 人 1 猎犬与 +15% / 6 人 2 猎犬、吸血、渴血）。
+- 原型名单 3 人，6 人档逻辑已写但不可达；补齐成员后再做真实房间验证。

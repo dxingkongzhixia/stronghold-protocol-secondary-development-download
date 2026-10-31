@@ -53,7 +53,7 @@ export default {
 
 | API | 需要的能力 | 说明 |
 |---|---|---|
-| `api.units(query)` | `sim.read` | 返回单位副本，按 id 排序 |
+| `api.units(query)` | `sim.read` | 返回单位副本，按 id 排序（含 `bonds` / `defId` / `items` / `sp` / `blockCnt` / `rangeGrid`） |
 | `api.damage(spec)` | `sim.damage.write` | `{ target, amount, type }` |
 | `api.heal(spec)` | `sim.heal.write` | `{ target, amount }` |
 | `api.buffs.has/list` | `sim.read` | 只读 |

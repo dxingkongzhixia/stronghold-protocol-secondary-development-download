@@ -148,7 +148,7 @@ test('unitView carries items, sp and the combat primitives', () => {
   const v = unitView({
     id: 1, side: 'ally', kind: 'op', x: 1, y: 2, hp: 10, maxHp: 20, alive: true, deployed: true, dir: 'RIGHT', hidden: false,
     s: { atk: 5, def: 6, res: 7, blockCnt: 3 }, base: {}, buffs: [{ key: 'stun' }],
-    items: ['item_x_keel_item_demo'], rangeGrid: [[0, 0], [1, 0]], skill: { sp: 4, spTotal: 8, baseSpCost: 8 }, def: { tier: 2 },
+    items: ['item_x_keel_item_demo'], rangeGrid: [[0, 0], [1, 0]], skill: { sp: 4, spTotal: 8, baseSpCost: 8 }, def: { tier: 2, id: 'unit-x', bonds: ['bond_x_keel_demo'] },
   });
   assert.equal(v.sp, 4);
   assert.equal(v.spTotal, 8);
@@ -158,6 +158,8 @@ test('unitView carries items, sp and the combat primitives', () => {
   assert.deepEqual(v.rangeGrid, [[0, 0], [1, 0]]);
   assert.equal(v.dir, 'RIGHT');
   assert.equal(v.tier, 2);
+  assert.equal(v.defId, 'unit-x');
+  assert.deepEqual(v.bonds, ['bond_x_keel_demo']);
 });
 
 test('the host spawns ally tokens and devices and applies statuses', () => {

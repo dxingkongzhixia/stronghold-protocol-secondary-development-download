@@ -1,0 +1,38 @@
+{
+  "patch": 1,
+  "ops": [
+    {
+      "op": "append",
+      "file": "chess",
+      "id": "chess_char_1_09_a",
+      "path": [
+        "bonds"
+      ],
+      "value": [
+        "bond_x_bolivar_pack"
+      ]
+    },
+    {
+      "op": "append",
+      "file": "chess",
+      "id": "chess_char_1_14_a",
+      "path": [
+        "bonds"
+      ],
+      "value": [
+        "bond_x_bolivar_pack"
+      ]
+    },
+    {
+      "op": "append",
+      "file": "chess",
+      "id": "chess_char_6_11_a",
+      "path": [
+        "bonds"
+      ],
+      "value": [
+        "bond_x_bolivar_pack"
+      ]
+    }
+  ]
+}

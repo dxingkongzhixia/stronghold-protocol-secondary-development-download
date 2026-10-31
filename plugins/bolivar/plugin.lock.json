@@ -1,0 +1,96 @@
+{
+  "lock": 1,
+  "id": "bolivar",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "README.md": {
+      "sha256": "1d8f17eebec5c698cbb2ce27e5fc07b387c37028a93554d463fd9bef121dd358",
+      "bytes": 2188
+    },
+    "assets/hound/enemy_2137_shsdgo.atlas": {
+      "sha256": "4c8700bf2135a14082e7567e349ab396b7fb75aa66af0802b8605546e8874a62",
+      "bytes": 2927
+    },
+    "assets/hound/enemy_2137_shsdgo.png": {
+      "sha256": "dcdf8e85099f469abde498fa21bd97b643f9104795daaea5537fe6d3749f6b80",
+      "bytes": 115720
+    },
+    "assets/hound/enemy_2137_shsdgo.skel": {
+      "sha256": "315b2fdf20a4219d98d0619500c6c1596fad7f1d17822c722ab9b7e81209d2e1",
+      "bytes": 74144
+    },
+    "assets/icon.png": {
+      "sha256": "af6bc1e219feb4fbbbcb75b8a21e0509335e2b394bf58a28e0be972a7917776a",
+      "bytes": 24182
+    },
+    "content/bonds.json": {
+      "sha256": "13c59278cfd00c3075aa528bf9990b2747cab3a7f259c4c6645fa888a8345eb6",
+      "bytes": 783
+    },
+    "content/patches.json": {
+      "sha256": "2ef64ad5b8c4c7c66890859d580a7ff1a52359378996a2590f7a3a882834a4d4",
+      "bytes": 593
+    },
+    "content/tokens.json": {
+      "sha256": "ccfd8b94044dc749ebbf9de9c8a974a719d5095c8db1a8afaf79f95b1fe1ad9e",
+      "bytes": 1051
+    },
+    "plugin.json": {
+      "sha256": "398a2418a23f7e4b86f538fdfa02084f101f5b7d2d766abfcd2504ff16ab1f14",
+      "bytes": 1870
+    },
+    "sim/index.js": {
+      "sha256": "417f89e71f8111b3b4534a3f26f6d9927d8f8ebc63614532775bd52258cdbe94",
+      "bytes": 6208
+    }
+  },
+  "spine": {
+    "assets/hound/enemy_2137_shsdgo.skel": {
+      "sha256": "315b2fdf20a4219d98d0619500c6c1596fad7f1d17822c722ab9b7e81209d2e1",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Idle",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": "Skill_Begin",
+          "loop": "Skill_Loop",
+          "end": "Skill_End",
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": {
+          "begin": null,
+          "loop": "Move",
+          "end": null
+        },
+        "stun": null
+      },
+      "animations": {
+        "Attack": 1.4,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 1,
+        "Move": 0.933,
+        "Skill_Begin": 0.167,
+        "Skill_End": 0.333,
+        "Skill_Loop": 10
+      },
+      "events": [
+        "OnAttack"
+      ],
+      "hits": {
+        "Attack": [
+          0.667
+        ]
+      },
+      "bounds": null
+    }
+  }
+}

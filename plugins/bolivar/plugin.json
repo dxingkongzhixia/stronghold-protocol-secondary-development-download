@@ -1,0 +1,61 @@
+{
+  "$schema": "../../schemas/keel-manifest.schema.json",
+  "manifest": 3,
+  "id": "bolivar",
+  "name": { "zh": "玻利瓦尔：猎犬", "en": "Bolívar: Hounds" },
+  "description": {
+    "zh": "玻利瓦尔国家盟约原型：猎犬主导的追猎与渴血。",
+    "en": "A Bolívar nation-bond prototype: hound-led pursuit and bloodthirst."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "content": 1, "asset": 1, "sim": 1 },
+  "scope": ["room"],
+  "trust": "sandbox",
+  "modules": [
+    {
+      "kind": "content",
+      "files": ["content/bonds.json", "content/patches.json", "content/tokens.json"],
+      "parts": { "data": ["content/bonds.json", "content/patches.json", "content/tokens.json"] },
+      "permissions": ["content.define", "content.patch"],
+      "provides": ["bond:bond_x_bolivar_pack", "token:token_x_bolivar_hound"]
+    },
+    {
+      "kind": "asset",
+      "files": [
+        "assets/icon.png",
+        "assets/hound/enemy_2137_shsdgo.skel",
+        "assets/hound/enemy_2137_shsdgo.atlas",
+        "assets/hound/enemy_2137_shsdgo.png"
+      ],
+      "permissions": ["asset.add"],
+      "assets": {
+        "bonds": { "bond_x_bolivar_pack": "assets/icon.png" },
+        "tokens": {
+          "token_x_bolivar_hound": {
+            "avatar": "assets/hound/enemy_2137_shsdgo.png",
+            "spine": {
+              "skel": "assets/hound/enemy_2137_shsdgo.skel",
+              "atlas": "assets/hound/enemy_2137_shsdgo.atlas",
+              "textures": ["assets/hound/enemy_2137_shsdgo.png"],
+              "pma": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "kind": "sim",
+      "entry": "sim/index.js",
+      "permissions": [
+        "sim.read",
+        "sim.damage.write",
+        "sim.heal.write",
+        "sim.buff.write",
+        "sim.spawn",
+        "sim.rng"
+      ],
+      "state": { "version": 1 }
+    }
+  ]
+}

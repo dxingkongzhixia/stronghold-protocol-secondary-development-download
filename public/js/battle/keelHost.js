@@ -36,6 +36,8 @@ export function unitView(u) {
     dir: typeof u.dir === 'string' ? u.dir : null,
     tier: Number(u.def?.tier ?? u.tier ?? 0) || 0,
     hidden: !!u.hidden,
+    defId: u.defId ?? u.def?.id ?? null,
+    bonds: Array.isArray(u.def?.bonds) ? [...u.def.bonds] : [],
   };
 }
 

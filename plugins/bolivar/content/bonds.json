@@ -1,0 +1,22 @@
+{
+  "records": 1,
+  "entries": [
+    {
+      "file": "bonds",
+      "id": "bond_x_bolivar_pack",
+      "value": {
+        "name": "玻利瓦尔",
+        "desc": "【玻利瓦尔】干员与猎犬攻击敌人时施加「猎物」6 秒，对猎物造成的伤害 +15%；猎物死亡时标记转移到最近的敌人。\n<在场6名不同【玻利瓦尔】干员>再召唤1只猎犬；对猎物造成伤害时回复8%伤害的生命，击杀猎物获得「渴血」5秒（+20攻速/+10%攻击，最多3层）。",
+        "thresholds": [3, 6],
+        "countMode": "BOARD",
+        "isCore": false,
+        "activeType": "BATTLE",
+        "weight": 10,
+        "maxInactiveBondCount": -1,
+        "noStack": false,
+        "bondOrder": 99,
+        "identifier": 99
+      }
+    }
+  ]
+}

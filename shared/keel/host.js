@@ -46,6 +46,7 @@ export function createFakeHost(opts = {}) {
       alive: hp > 0,
       tags: Array.isArray(spec.tags) ? [...spec.tags] : spec.tag ? [String(spec.tag)] : [],
       items: Array.isArray(spec.items) ? [...spec.items] : [],
+      bonds: Array.isArray(spec.bonds) ? [...spec.bonds] : [],
       ...(spec.data !== undefined ? { data: clone(spec.data) } : {}),
     };
     units.set(id, unit);
