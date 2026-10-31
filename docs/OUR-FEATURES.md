@@ -42,7 +42,8 @@ Read this together with:
 
 ## 1. Custom operators (`CUSTOM_CHESS`)
 
-> **我们独有，非上游；合并时不得丢失** — the eight custom shop operators and their data/kit/art wiring are added by
+> **我们独有，非上游；合并时不得丢失** — the nine custom shop operators (谬因 joined on 2026-11-01) and their
+> data/kit/art wiring are added by
 > this fork and are absent from upstream `master`. Upstream has (or has had) a *different* feature: the
 > 补位/自选 (stand-in / DIY) pool. The two must not be confused (see §5).
 >
@@ -50,8 +51,8 @@ Read this together with:
 > those records (`visible: false`) and drops them from the bond member lists, and each faction's built-in content
 > plugin (`server/plugins/builtin.js`, generated `data/builtin/faction-<faction>.json`) restores them when the room's
 > host switches that faction on under 插件 → 阵营加强. Off is the default (`plugins/config.json` `default: []`). The
-> seven with an official 自选 role stay selectable there in both states (`diy.officialPool`); vanilla statistics,
-> roster, codex and random bond bans see 112 visible chess instead of 120. The kits stay in core code (the built-in
+> eight with an official 自选 role stay selectable there in both states (`diy.officialPool`); vanilla statistics,
+> roster, codex and random bond bans see 112 visible chess instead of 121. The kits stay in core code (the built-in
 > plugin adds the data, not a second kit registry).
 >
 > **2026-10-24 — seat-card 立绘, default artwork and uploaded avatars.** A room seat card shows the player's chosen

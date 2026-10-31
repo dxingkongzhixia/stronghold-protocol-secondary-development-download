@@ -298,7 +298,7 @@ test('harness battle with injected kits: non-default skill via the view uses the
 
 test('tools/kit-coverage: every visible chess and each selectable skill, defaults hand-authored', { skip }, () => {
   const rep = kitCoverage();
-  // 112 in vanilla: the 8 custom shop operators are the built-in 阵营加强 plugins' content (hidden until a room opts in)
+  // 112 in vanilla: the 9 custom shop operators are the built-in 阵营加强 plugins' content (hidden until a room opts in)
   assert.equal(rep.summary.chess, 112);
   assert.equal(rep.chess.length, 112);
   for (const r of rep.chess) {

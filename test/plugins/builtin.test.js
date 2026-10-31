@@ -1,4 +1,4 @@
-// 阵营加强 built-in plugins (owner 2026-10-24): the 8 custom shop operators are NOT in the vanilla game — the generated
+// 阵营加强 built-in plugins (owner 2026-10-24): the 9 custom shop operators are NOT in the vanilla game — the generated
 // data hides their records and drops them from bond member lists. Each faction ships a built-in content plugin
 // (server/plugins/builtin.js + data/builtin/faction-*.json) that restores its own operators when the room's host turns it
 // on; off is the default (`plugins/config.json` `default: []`). The official 自选 picks of those operators stay in the

@@ -555,6 +555,7 @@ Glyph legend (`rows`):
 | `variants[ownerChessId]` | `{"phase":2,"level":1,"stats":{…},"immunities":{…},"rangeGrid":…,"trait":{…},"dmgType":…,"skill":{full skill record},"talents":[…],"count":1,"sources":["talent","display"]}` | stats at the owner's phase/level (clamped to the token's max level) — **none of the owner's potential attribute modifiers** (a token has no potential ranks) — + golden module `tokenAttributeBlackboard` + the token's own talent additions to `deployLimit` / `deckStack` (blackboard `max_deploy_count` / `max_deck_stack_cnt` — the hidden "TOKEN数" talent of 麦哲伦's / 令's summons and 白铁's devices, 夜莺's 幻影; a module token part of the same talent replaces it: `tools/build-data.mjs tokenTalentDeckBonus`, 0.2.0 — no tokens.json summon has one; PRTS 幻影 备注 "最大可部署数量为3", the owners' "最多同时部署3个"); its `talents` / `trait` candidates are picked at the **owner's potential** (full; their `requiredPotentialRank` mirrors the owner's 「天赋效果增强」 — 夕's “小自在” 18 层, 凯尔希's Mon3tr, 望's 棋子 +1 持有 / 部署 — and the variant chains the lower ones, §2.3: `atPotential(variant, ownerPotential)`); the owner's module parts flagged `isToken` upgrade the variant's `trait` (+`moduleDesc`) and `talents` (伺夜's wolves, 缪尔赛思's 流形 `scale` 1, 浊心斯卡蒂's 海嗣 30 s, “耀阳” `atk_scale` 1.15). `sources` ⊆ `talent`/`skill`/`display`: how the owner produces it (`display` only = listed on the character but unused by its default skill/talents, e.g. 迷迭香 S2, 凛御银灰 eagle1/3). `count` = copies from a talent `cnt` or the default skill's `cnt` when that skill overrides this token; `null` ⇒ use `deployLimit` |
 | `variants[o].bySkill[i]` | `{"skill":{…},"count":1,"sources":["talent","display"]}` | owner loadout with the non-default skill index `i` (one entry per other selectable owner skill): the token skill of that slot (伺夜's wolves, 缪尔赛思's 流形, 凛御银灰's eagles…), the count and how the chess then produces it (`sources` may be `[]`: 风丸 S1 makes no 纸偶; 赫默 / 巫恋 S1 only `display` ⇒ no hand piece). The sim resolves them for an owner loadout: `simdata getToken(id, ownerChessId, loadout)` → `def.sources` / `def.count` |
 | `variants[o].byModule[m]` | `{"stats":{…},"immunities":{…},"trait":{…},"talents":[…]}` | golden owner with another module `m` or `'none'`: the token as that module makes it (module `tokenAttributeBlackboard`, `isToken` trait/talent parts) |
+| `variants["<charId>@<statusKey>"]` | same shape as `variants[ownerChessId]` | an official-DIY form of a custom shop operator (凯尔希·思衡托, 谬因…): `buildDiyTokens` builds it and `buildTokens` folds it into that chess's token record, so the pick's summon keeps its own skill / module variants (`simdata getDiyToken`; §18) |
 | `assets` | `{"avatar":"token_10028_vigil_wolf","spine":"token_10028_vigil_wolf"}` | |
 | mapChar extras | `phase`, `level`, `trait`, `talents`, `positions:[{"alias":"char_613_acmedc#2_multi_only","pos":[10,10],"dir":"RIGHT","multiOnly":true}]`, `source` | |
 | bondSummon extras | `bondId`, `motion`, `skills`, `talents`, `assets.isEnemyModel` | 炎佑 base template (600 ATK / 12000 HP); at battle start 30 % of the 炎 operators' ATK / HP sums are **added** to it (PRTS "（最终加算）", bonds.yanShip; the 9-炎 ATK ×1.5 on the whole ATK [ASSUMED]) |
@@ -642,7 +643,9 @@ Every PRESET chess is its own backup and the stand-in builder gives it back fiel
 (both forms) composes into its stand-in with an unlocked backup skill and, on the elite form, its module at that level;
 every DIY prototype pick has a form for both slot statuses and its locked skill / module there; every owned pick has
 both slot forms with its three skills, every module of the character at the elite's stage and a `tokens` variant per
-summon; derived DIY bonds exist; no 自选 summon id is a tokens.json record (`test/backups.test.js` also re-derives the
+summon; derived DIY bonds exist; an owned pick's summon is a `backups.json` record, while an official-DIY pick of a custom
+shop operator folds its per-form variants into that operator's single `tokens.json` record (no id appears in both files —
+the `officialPool` forms use the tokens.json record, §14/§18); (`test/backups.test.js` also re-derives the
 backup fields, the stand-in numbers, the owned pool and the faction ids from the raw tables).
 Chess bonds/garrisons/tokens/base/golden ids resolve; talent tokens are in `chess.tokens`; every non-DIY chess has
 `skills[]` with exactly one default equal to `skill` (and every skill token listed in `chess.tokens`); golden module
@@ -763,7 +766,10 @@ operator (自选)").
 fill one slot with different operators. A variant is the token at the owner's status for its first skill and no module,
 `bySkill[i]` the token skill / count / sources under each other skill, `byModule[id]` each module's token attributes,
 trait and talents (`tools/build-data.mjs buildDiyTokens`); simdata `getToken` merges them with the pick as the owner's
-loadout. No id is also a tokens.json record.
+loadout. An owned pick's summon is a `backups.json` record; an official-DIY pick of a custom shop operator (a chess that
+also ships in the shop) reuses that chess's single `tokens.json` record instead, and `buildTokens` folds its per-form
+variants (the same `<charId>@<statusKey>` keys) in there — simdata `getDiyToken` reads them the same way. No id is in
+both files.
 
 Not in this data: a player's ownership roster and 自选 picks (browser settings sent with `room.ownership` / `room.diy`),
 the DIY stock (per player in the match, `PlayerState.diyStock`: `config.economy.poolCopies` of the slot's tier, doubled in

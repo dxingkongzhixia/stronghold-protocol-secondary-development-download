@@ -75,8 +75,8 @@ test('numbers: every stats/bb/enemyScale object holds only finite numbers (no nu
   assert.deepEqual(bad.slice(0, 10), [], `${bad.length} bad numeric fields`);
 });
 
-test('chess: 282 records, 112 visible non-DIY (16/17/19/22/19/19 per tier)', () => {
-  assert.equal(Object.keys(chess).length, 282);
+test('chess: 284 records, 112 visible non-DIY (16/17/19/22/19/19 per tier)', () => {
+  assert.equal(Object.keys(chess).length, 284);
   assert.equal(visible.length, 112);
   const perTier = {};
   for (const c of visible) perTier[c.tier] = (perTier[c.tier] || 0) + 1;
@@ -150,7 +150,7 @@ test('bonds: 23 bonds with valid members, thresholds and effects', () => {
   assert.deepEqual(bonds.egirShip.thresholds, [3, 5]);
   assert.deepEqual(bonds.suntShip.thresholds, [2, 5]);
   assert.equal(bonds.soloShip.maxCount, 1);
-  // Every OFFERED chess's bond membership is mirrored in the bond member list. The 8 custom shop operators are hidden
+  // Every OFFERED chess's bond membership is mirrored in the bond member list. The 9 custom shop operators are hidden
   // in the vanilla data (their built-in 阵营加强 plugin adds them back when a room turns it on), so the reverse
   // direction is checked on the visible roster only.
   for (const c of normalChess) if (c.visible) for (const b of c.bonds) assert.ok(bonds[b].members.includes(c.chessId), `${c.chessId} not in ${b}.members`);
@@ -447,6 +447,9 @@ test('chess/tokens: talent tokens resolve and every token variant says where it 
   for (const t of Object.values(tokens)) {
     for (const [owner, v] of Object.entries(t.variants)) {
       assert.ok(Array.isArray(v.sources) && v.sources.length && v.sources.every((s) => allowed.has(s)), `${t.tokenId}@${owner}: sources`);
+      // the official-DIY forms of a custom shop operator carry `<charId>@<statusKey>` keys (build-data folds them in);
+      // every other owner is a chess record.
+      if (owner.includes('@')) continue;
       assert.ok(chess[owner]?.tokens.includes(t.tokenId), `${t.tokenId}: owner ${owner}`);
     }
   }
@@ -467,7 +470,7 @@ test('chess/tokens: talent tokens resolve and every token variant says where it 
     assert.equal(t.placeable, t.displayType !== 'HIDDEN' && made && !AUTO_ONLY.has(t.tokenId), `${t.tokenId} (${t.name}): placeable`);
   }
   assert.deepEqual(Object.values(tokens).filter((t) => t.placeable).map((t) => t.name).sort(),
-    ['医疗探机', '诅咒娃娃', '斯卡蒂的海嗣', '流形', '狼群', '爬行号·防护单元', '战术锚点', '棋子'].sort());
+    ['医疗探机', '诅咒娃娃', '斯卡蒂的海嗣', '流形', '狼群', '爬行号·防护单元', '战术锚点', '棋子', '中继器'].sort());
   assert.equal(tokens.enemy_9012_acloon.stats.deployLimit, tokens.enemy_9012_acloon.deployLimit);
 });
 
@@ -629,6 +632,7 @@ test('tokens: owner loadout variants (bySkill per non-default owner skill, byMod
   const allowed = new Set(['talent', 'skill', 'display']);
   for (const t of Object.values(tokens)) {
     for (const [owner, v] of Object.entries(t.variants || {})) {
+      if (owner.includes('@')) continue; // an official-DIY form (<charId>@<statusKey>), not a chess owner
       const o = chess[owner];
       const alt = o.skills.filter((s) => !s.isDefault).map((s) => String(s.index));
       assert.deepEqual(Object.keys(v.bySkill || {}), alt, `${t.tokenId}@${owner}: bySkill keys`);
@@ -649,6 +653,10 @@ test('tokens: owner loadout variants (bySkill per non-default owner skill, byMod
   assert.ok(!w.byModule.none.talents.some((x) => x.bb.damage_scale !== undefined));
   assert.deepEqual(tokens.token_10022_kazema_shadow.variants.chess_char_2_11_a.bySkill[0].sources, [], '风丸 S1 makes no 纸偶');
   assert.deepEqual(tokens.token_10057_svash2_eagle1.variants.chess_char_5_14_a.bySkill[0].sources, ['talent', 'skill', 'display'], '凛御银灰 S1: talent eagle = eagle1');
+  // 谬因 (a custom shop operator with an official 自选 role): her DIY forms' summon variants are folded into the single
+  // tokens.json record (no duplicate backups.json token).
+  const aphris = tokens.token_10070_aphris_pc.variants['char_4229_aphris@2/60/7/3'];
+  assert.ok(aphris?.byModule?.uniequip_002_aphris, '谬因@T6: the BLA-Y token variant');
 });
 
 test('enemies: rangeRadius contract (MELEE ⇒ 0) and undefined-field defaults', () => {

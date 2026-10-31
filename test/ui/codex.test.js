@@ -92,7 +92,7 @@ describe('盟约 (bonds) mapping', () => {
   test('members: bond.members and chess.json `bonds` carry the same operators (base-deduped, visible roster)', () => {
     for (const b of bonds) {
       const fromBond = baseSet(bondMembers(b, chess));
-      // the 8 custom shop operators are hidden in vanilla (their built-in 阵营加强 plugin adds them back), so compare
+      // the 9 custom shop operators are hidden in vanilla (their built-in 阵营加强 plugin adds them back), so compare
       // against every non-custom record (hidden official chess stay listed, as before)
       const fromChess = baseSet(chessCarryingBond(chess.filter((c) => !chessIsCustom(c)), b.bondId));
       assert.deepEqual([...fromBond].sort(), [...fromChess].sort(), b.bondId);
@@ -248,7 +248,7 @@ describe('干员 (operators) mapping', () => {
     assert.ok(roster.length > 0);
     assert.ok(roster.every((c) => c.visible && !c.isGolden && !c.isDiy && !c.isHidden));
     assert.equal(new Set(roster.map((c) => c.chessId)).size, roster.length, 'no duplicate operator');
-    // the 8 custom shop operators are a built-in 阵营加强 plugin: hidden in vanilla, so not in the roster until a room
+    // the 9 custom shop operators are a built-in 阵营加强 plugin: hidden in vanilla, so not in the roster until a room
     // turns their faction on (the data records still exist for the official 自选 picks)
     assert.equal(roster.filter((c) => chessIsCustom(c)).length, 0);
     const tiers = roster.map((c) => c.tier);
@@ -272,7 +272,7 @@ describe('干员 (operators) mapping', () => {
     assert.ok(t3.length > 0 && t3.every((c) => c.tier === 3));
     const prof = chessRosterFacets(chess).professions[0].id;
     assert.ok(filterChess(chess, { profession: prof }).every((c) => c.profession === prof));
-    // the 8 custom shop operators are hidden in vanilla (built-in 阵营加强 plugins), so no operator is "custom" yet
+    // the 9 custom shop operators are hidden in vanilla (built-in 阵营加强 plugins), so no operator is "custom" yet
     assert.equal(filterChess(chess, { custom: true }).length, 0);
     assert.equal(filterChess(chess, { custom: false }).length, all.length);
     const bondId = 'lateranoShip';

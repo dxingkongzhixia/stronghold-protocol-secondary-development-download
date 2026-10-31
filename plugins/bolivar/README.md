@@ -15,7 +15,7 @@
 ```text
 plugin.json               manifest 3（content + asset + sim）
 content/bonds.json        bond_x_bolivar_pack
-content/patches.json      把 bond 追加到跃跃 / 格雷伊 / 缪尔赛思
+content/patches.json      跃跃 / 格雷伊 / 谬因（基础+精锐）追加盟约；谬因设为可见
 content/tokens.json       token_x_bolivar_hound
 sim/index.js              追猎 / 渴血
 assets/hound/             猎犬proto（enemy_2137_shsdgo）的 Spine
@@ -41,8 +41,11 @@ extract.export_enemy_spines(AB, Path("<out>"), {}, print, ["enemy_2137_shsdgo"])
 
 ## 原型范围
 
-- 成员：跃跃、格雷伊、缪尔赛思（3 人，刚好激活 3 人档）。
-- 6 人档代码已写，但当前名单不可达；补齐 6 名成员后再验证。
+- 成员：跃跃、格雷伊、谬因（3 人，刚好激活 3 人档）。
+  - 谬因 = `char_4229_aphris`（**不是**缪尔赛思），商店 chess `chess_char_4229_aphris_a/_b`
+    走 `CUSTOM_CHESS`，在基础数据里属于隐藏的哥伦比亚阵营加强；本插件把它设为可见。
+  - 基础与精锐两条都追加盟约；精锐上场的成员也计入。
+- 6 人档代码已写，但当前名单不可达；按 `docs/BOND-BOLIVAR.md` §2 补齐剩余成员后再验证。
 - 这是插件盟约（`isCore: false`），不参与调和 / 核心 ban；原型阶段接受。
 
 ## 验证

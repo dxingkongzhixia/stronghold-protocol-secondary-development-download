@@ -2,7 +2,8 @@
 // server/sim/content/kits/ops/op-aphris.js) and her summon “中继器” (token_10070_aphris_pc), fielded the production way (a DIY
 // slot + its `diy` pick, simdata getDiy; the 中继器 as a token piece of hers) in every form: tiers 5 / 6, normal (E2 Lv1,
 // skill rank 4, no module) and elite (E2 Lv60, rank 7) with no module or BLA-Y “第三相态” at stage 1 (tier 5) / 3 (tier 6).
-// Every number is read back from data/backups.json (the form of that slot status, the token's variant); the fidelity
+// Every number is read back from data/backups.json (the form of that slot status) and data/tokens.json (the summon
+// variants of her official-DIY forms); the fidelity
 // checklist of kits/README.md item by item.
 // Run: node --test test/content/op_aphris.test.js
 
@@ -19,7 +20,8 @@ const BACKUPS = load('backups');
 const APHRIS = 'char_4229_aphris';
 const RELAY = 'token_10070_aphris_pc';
 const FORMS = BACKUPS.units[APHRIS].forms;
-const TOKEN = BACKUPS.tokens[RELAY];
+// a custom shop operator's official-DIY summon variants are folded into the single tokens.json record (build-data)
+const TOKEN = load('tokens')[RELAY];
 const SLOT = { 5: 'chess_char_5_diy1_a', 6: 'chess_char_6_diy1_a' };
 const BLAY = 'uniequip_002_aphris';
 const S1 = 'skchr_aphris_1', S2 = 'skchr_aphris_2', S3 = 'skchr_aphris_3';

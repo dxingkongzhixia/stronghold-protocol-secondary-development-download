@@ -71,7 +71,8 @@ export const KIT_FILES = Object.freeze([
     'chess_char_6_16-halo2.js', 'chess_char_6_17-nearl2.js', 'chess_char_6_18-whitw2.js', 'chess_char_6_19-blkkgt.js',
     'chess_char_6_20-agoat2.js',
     // custom (tools/build-data.mjs CUSTOM_CHESS)
-    'chess_char_2027_wang-wang.js', 'chess_char_4231_clemnt-clemnt.js'],
+    'chess_char_2027_wang-wang.js', 'chess_char_4231_clemnt-clemnt.js',
+    'chess_char_4229_aphris-aphris.js'],
 ].map((group) => Object.freeze(group)));
 
 /**

@@ -7,6 +7,9 @@ import { createPluginRegistry } from '../../server/plugins/registry.js';
 import { buildContentSet } from '../../server/plugins/contentSet.js';
 import { loadKeelPlugin } from '../../server/keel/room-source.js';
 import { createFakeHost, createKeelRuntime } from '../../shared/keel/index.js';
+import { DataSource, getDefaultSource } from '../../server/sim/simdata.js';
+import { makeBattle } from '../helpers/battleHarness.js';
+import { attachKeel } from '../../server/keel/attach.js';
 
 const DIR = path.resolve('plugins/bolivar');
 const BOND = 'bond_x_bolivar_pack';
@@ -49,9 +52,14 @@ test('bolivar: the content set carries the bond, members and the hound token', {
   const bond = set.data.bonds[BOND];
   assert.ok(bond, 'the bond reaches the content set');
   assert.deepEqual(bond.thresholds, [3, 6]);
-  assert.deepEqual(bond.members, ['chess_char_1_09_a', 'chess_char_1_14_a', 'chess_char_6_11_a']);
+  assert.deepEqual(bond.members, ['chess_char_1_09_a', 'chess_char_1_14_a', 'chess_char_4229_aphris_a']);
   assert.ok(set.data.tokens.token_x_bolivar_hound, 'the hound token is composed');
   assert.ok(entry.visual?.ops?.length > 0, 'the hound Spine / icon are in the visual set');
+  // 谬因 ships hidden (哥伦比亚 阵营加强): the bond plugin offers its own roster, both forms.
+  assert.equal(set.data.chess.chess_char_4229_aphris_a.visible, true);
+  assert.equal(set.data.chess.chess_char_4229_aphris_b.visible, true);
+  assert.ok(set.data.chess.chess_char_1_09_b.bonds.includes(BOND), 'the elite form counts too');
+  assert.ok(set.data.chess.chess_char_4229_aphris_b.bonds.includes(BOND));
 });
 
 test('bolivar: 3 members summon one hound, mark prey and deal +15%', { skip }, async () => {
@@ -86,4 +94,36 @@ test('bolivar: 6 members summon two hounds, heal on prey and grant bloodthirst',
   assert.ok(state().blood.m0?.stacks >= 1, 'killing prey grants bloodthirst');
   assert.ok(h.buffs.list('m0').some((b) => b.buff === 'bolivar:bloodthirst'));
   assert.deepEqual(rt.errors, []);
+});
+
+test('bolivar: a real battle fields the three roster members and summons the hound', { skip }, async () => {
+  const p = await plugin();
+  const { set } = content();
+  const data = new DataSource({
+    chess: set.data.chess, enemies: set.data.enemies, tokens: set.data.tokens,
+    stages: set.data.stages, waves: set.data.waves,
+  }, getDefaultSource());
+  const h = makeBattle({
+    data,
+    units: [
+      { chessId: 'chess_char_1_09_a', row: 10, col: 5 },
+      { chessId: 'chess_char_1_14_a', row: 10, col: 6 },
+      { chessId: 'chess_char_4229_aphris_a', row: 10, col: 7 },
+    ],
+    enemies: [{ key: 'enemy_1000_gopro', pos: [10, 10] }],
+    timeLimit: 30,
+    autoFinish: false,
+  });
+  h.b.start();
+  h.step(2);
+  const handle = attachKeel(h.b, { manifest: p.manifest, modules: p.modules });
+  try {
+    assert.deepEqual(handle.runtime.runHook('sim.battleStart').errors, []);
+    const state = handle.runtime.snapshot().state['bolivar:sim:sim/index.js'].value;
+    assert.equal(state.members, 3, '跃跃 + 格雷伊 + 谬因');
+    assert.equal(state.hounds.length, 1, '3-tier: one hound');
+    assert.ok(h.b.units.some((u) => u.defId === 'token_x_bolivar_hound'), 'the hound token is on the field');
+  } finally {
+    handle.detach();
+  }
 });

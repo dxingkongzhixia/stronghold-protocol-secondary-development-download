@@ -35,7 +35,7 @@ test('slots: two per tier (5, 6), each with its elite twin', () => {
   assert.equal(diyTokenOwner(SIEGE, chess.chess_char_6_diy1_b.status), 'char_112_siege@2/60/7/3');
 });
 
-test('diyPool: tier 5 = 15 prototypes + 65 owned + 7 official 6★; tier 6 = 9 + 65 + 7; no preset, no collab; with the kit registry only kitted operators', () => {
+test('diyPool: tier 5 = 15 prototypes + 64 owned + 8 official 6★; tier 6 = 9 + 64 + 8; no preset, no collab; with the kit registry only kitted operators', () => {
   const p5 = diyPool(5, { data: DATA }), p6 = diyPool(6, { data: DATA });
   assert.deepEqual(p5, [...RESERVES5, ...ELITES, ...ownedPool, ...officialPool]);
   assert.deepEqual(p6, [...ELITES, ...ownedPool, ...officialPool]);
@@ -45,7 +45,7 @@ test('diyPool: tier 5 = 15 prototypes + 65 owned + 7 official 6★; tier 6 = 9 +
   assert.deepEqual(diyPool(4, { data: DATA }), [], 'no 自选 slot at tier 4');
   // the kit registry: the 预备干员 run the generic kit (exact for their skills), the nine elites their stand-in kits, the
   // owned 6★ only with an operator kit file (kits/index.js OPERATOR_KIT_FILES), in pool order; the official-DIY pool of
-  // our custom shop operators is exactly the seven official op kits.
+  // our custom shop operators is exactly the eight official op kits.
   assert.deepEqual(GENERIC_KIT_CHARS.filter((id) => prototypes['5'].includes(id)), RESERVES5);
   for (const id of ELITES) assert.equal(typeof STANDIN_KITS[id], 'function', `${id}: stand-in kit`);
   const ops = [...ownedPool, ...officialPool].filter((id) => typeof OPERATOR_KITS[id] === 'function');
@@ -58,8 +58,8 @@ test('diyPool: tier 5 = 15 prototypes + 65 owned + 7 official 6★; tier 6 = 9 +
 
 test('official 0.3.1 op kits coexist with our custom shop operators: same charId, two roles', () => {
   const expected = ['char_377_gdglow', 'char_1015_aglna2', 'char_1052_kalts2', 'char_2027_wang',
-    'char_4132_ascln', 'char_4138_narant', 'char_4231_clemnt'];
-  assert.deepEqual([...officialPool].sort(), [...expected].sort(), 'the seven official-DIY picks');
+    'char_4132_ascln', 'char_4138_narant', 'char_4231_clemnt', 'char_4229_aphris'];
+  assert.deepEqual([...officialPool].sort(), [...expected].sort(), 'the eight official-DIY picks');
   for (const id of officialPool) {
     assert.ok(!ownedPool.includes(id), `${id}: not an owned-pool pick (it is a roster operator)`);
     assert.ok(Object.values(chess).some((c) => c.charId === id && c.chessType === 'NORMAL' && !c.isGolden), `${id}: custom shop chess`);

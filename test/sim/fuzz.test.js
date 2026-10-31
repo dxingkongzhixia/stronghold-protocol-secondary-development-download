@@ -53,7 +53,7 @@ test('fuzz: 200 random battles on real data run to completion with invariants', 
   assert.ok(P.waves.length >= 10, `waves ${P.waves.length}`);
   const N = Number(process.env.SIM_FUZZ_N) || 200;          // SIM_FUZZ_N=2000 for a long soak
   const CHECK_EVERY = Number(process.env.SIM_FUZZ_CHECK_EVERY) || 97;
-  // 20261024 (was 20260928): the built-in 阵营加强 plugins hide the 8 custom shop operators in the vanilla roster, so the
+  // 20261024 (was 20260928): the built-in 阵营加强 plugins hide the 9 custom shop operators in the vanilla roster, so the
   // pool the fuzz draws from changed again; the old seed's battle 80 hit a latent 泡泡 reflect ↔ actrpa chain (both
   // pre-existing; the hook-depth cap catches it, as designed). This seed's 200 battles are clean.
   const rng = createRng(Number(process.env.SIM_FUZZ_SEED) || 20261024);

@@ -54,7 +54,7 @@ fs.writeFileSync('.cache/gamedata/excel/skill_table.json', JSON.stringify(st));
   `charword_table`（若要补语音槽）按同样方式只插她的行。克莱门莎：无模组、`4-1`/`3-2` 与
   `subProfDict.primguard` 缓存已有 → 只需上面两张表。
 - **新克隆 / CI 无需此步**：缓存缺失时构建会下载**当前**上游表，已含新干员。
-- 合并后 `node tools/build-data.mjs --offline`，核对名册**恰好 +1 名干员**（`chess=282`；新增的自造干员默认在基础数据里是隐藏的，`visible` 不会因此增加）。
+- 合并后 `node tools/build-data.mjs --offline`，核对名册**恰好 +1 名干员**（`chess=284`；新增的自造干员默认在基础数据里是隐藏的，`visible` 不会因此增加）。
 
 ## 2. 在 `tools/build-data.mjs` 的 `CUSTOM_CHESS` 表里加一条
 
@@ -96,6 +96,9 @@ fs.writeFileSync('.cache/gamedata/excel/skill_table.json', JSON.stringify(st));
 - 改完**重建**：`node tools/build-data.mjs`。
 - 名册数量变了要同步**两处**：`tools/build-data.mjs` 里 `validateAll` 的 `expected N visible …`，
   以及测试里写死的计数（见 §5）。
+- 商店形态的 chess 需要自己的 kit 键（`chess_char_<charId>-<codename>.js`，见 §3）；若这位干员同时是自选池
+  6★（已有 `op-<codename>.js`），把它加进 `CUSTOM_OFFICIAL_DIY`，其召唤物的自选形态变体会由
+  `buildDiyTokens` 生成、`buildTokens` 折进同一个 `tokens.json` 记录（不重复出现在 `backups.json`）。
 
 ## 3. 战斗行为
 

@@ -3,7 +3,7 @@
 // manifest's localized name/description fields, exactly like a plugin.json — not UI msgids; the panel shows the current
 // language's entry, and the server never calls t(). docs/I18N.md.)
 //
-// The 8 self-made shop operators are not part of the vanilla game: the generated data keeps their records with
+// The 9 self-made shop operators are not part of the vanilla game: the generated data keeps their records with
 // `visible: false` and without bond membership (`tools/build-data.mjs` splitCustomShop). Each faction ships a built-in
 // plugin here — no `plugins/` folder, no install, no files of its own — whose data patch restores that faction's
 // operators when the room's host switches it on. Off (the default: `plugins/config.json` `default: []`) they only exist
@@ -31,6 +31,7 @@ export const BUILTIN_FACTIONS = Object.freeze([
   { id: 'victoria', name: { zh: '维多利亚', en: 'Victoria' }, operators: { zh: '澄闪', en: 'Goldenglow' } },
   { id: 'sargon', name: { zh: '萨尔贡', en: 'Sargon' }, operators: { zh: '娜仁图亚', en: 'Narantuya' } },
   { id: 'egir', name: { zh: '阿戈尔', en: 'Ægir' }, operators: { zh: '克莱门莎', en: 'Clementia' } },
+  { id: 'columbia', name: { zh: '哥伦比亚', en: 'Columbia' }, operators: { zh: '谬因', en: 'Aphrissa' } },
 ]);
 
 /** The built-in plugin id of a faction (`faction-rhodes`). */

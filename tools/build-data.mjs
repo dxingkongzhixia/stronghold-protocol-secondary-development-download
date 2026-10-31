@@ -636,6 +636,24 @@ const CUSTOM_CHESS = [
       ],
     },
   },
+  {
+    // 谬因 (Aphrissa, char_4229_aphris, 2026-11-01, bolivar roster): 6★ 术师·轰击术师 (blastcaster, rangeAoe). Not in the
+    // season roster, so she is declared here like 阿斯卡纶. She already ships the official owned-6★ kit
+    // (kits/ops/op-aphris.js) and her summon token_10070_aphris_pc; only the shop record was missing. 6 阶; 盟约
+    // 协防干员 (her `diy.operators` bonds — no 哥伦比亚 nation bond exists in this mode). No 特质 yet: the bond plugin
+    // (plugins/bolivar) carries her identity, so the record ships with an empty garrison list (like a 自选 slot record).
+    charId: 'char_4229_aphris',
+    baseId: 'chess_char_4229_aphris_a',
+    goldenId: 'chess_char_4229_aphris_b',
+    tier: 6,
+    identifier: 980,
+    shopLevelSortId: 92,
+    defaultSkillIndex: 2,                        // 临界瞬爆 (S3)
+    defaultUniEquipId: 'uniequip_002_aphris',    // BLA-Y「第三相态」
+    bonds: ['emptyShip'],                        // 协防干员
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+  },
 ];
 
 /** The base chess ids of CUSTOM_CHESS: always-owned — they have no official 补位 stand-in (data/backups.json). */
@@ -651,7 +669,7 @@ const CUSTOM_TOKEN_IDS = new Set(CUSTOM_CHESS.flatMap((c) => c.tokenIds || []));
  */
 const CUSTOM_OFFICIAL_DIY = new Set([
   'char_4132_ascln', 'char_377_gdglow', 'char_4138_narant', 'char_1015_aglna2',
-  'char_2027_wang', 'char_1052_kalts2', 'char_4231_clemnt',
+  'char_2027_wang', 'char_1052_kalts2', 'char_4231_clemnt', 'char_4229_aphris',
 ]);
 
 /**
@@ -672,6 +690,7 @@ const CUSTOM_FACTION_OF = new Map([
   ['char_377_gdglow', 'victoria'],
   ['char_4138_narant', 'sargon'],
   ['char_4231_clemnt', 'egir'],
+  ['char_4229_aphris', 'columbia'],
 ]);
 /** The built-in 阵营加强 plugins, in the panel's order, with the text a player reads. */
 const CUSTOM_FACTIONS = [
@@ -682,6 +701,7 @@ const CUSTOM_FACTIONS = [
   { id: 'victoria', name: { zh: '维多利亚', en: 'Victoria' } },
   { id: 'sargon', name: { zh: '萨尔贡', en: 'Sargon' } },
   { id: 'egir', name: { zh: '阿戈尔', en: 'Ægir' } },
+  { id: 'columbia', name: { zh: '哥伦比亚', en: 'Columbia' } },
 ];
 
 /**
@@ -1905,7 +1925,7 @@ function buildBackups(ctx, chess) {
     units[id] = unit;
   }
   for (const id of need.keys()) if (!units[id]) warn(`unit ${id}: needed but neither a stand-in nor an owned pick`);
-  const tokens = buildDiyTokens(ctx, units, [...ownedPool, ...officialPool], new Set(officialPool));
+  const tokens = buildDiyTokens(ctx, units, [...ownedPool, ...officialPool]);
 
   const coreBonds = Object.values(ac.bondInfoDict || {}).filter((b) => b.isPower && (b.powerIdList || []).length);
   const fallback = act.constData.fallbackBondId;
@@ -2165,7 +2185,7 @@ function summonRecord(ctx, tokenId, char, variants, produced, ownerTexts = []) {
  * @param {object} units backups `units`
  * @param {string[]} owned the owned-6★ picks (their forms are the DIY slot statuses)
  */
-function buildDiyTokens(ctx, units, owned, official = new Set()) {
+function buildDiyTokens(ctx, units, owned) {
   const { charTable, battleEquip } = ctx;
   const owners = new Map();   // tokenId → [{ key, variant, produced }]
   const makes = (list) => list.includes('talent') || list.includes('skill');
@@ -2191,9 +2211,8 @@ function buildDiyTokens(ctx, units, owned, official = new Set()) {
       };
       const [first, ...alts] = form.skills;
       for (const tokenId of form.tokens) {
-        // the official-DIY role of a custom shop operator uses the token records tokens.json already builds for that
-        // operator; adding them to backups.json would duplicate an id (integrity) and change nothing a pick needs.
-        if (official.has(charId) || CUSTOM_TOKEN_IDS.has(tokenId)) continue;
+        // 望's pieces are injected into tokens.json by applyCustomChess: no backup copy (the same id must not appear twice).
+        if (CUSTOM_TOKEN_IDS.has(tokenId)) continue;
         const tchar = charTable[tokenId];
         const label = `token ${tokenId}@${charId}@${key}`;
         const at = (o) => tokenVariant(ctx, tokenId, tchar, { phase, level, skillIndex: first.index, skillLevel, modulePhase: null, moduleTokenParts: [], label, potRank: ctx.potRank, ...o });
@@ -2234,7 +2253,7 @@ function buildDiyTokens(ctx, units, owned, official = new Set()) {
  * Build data/tokens.json: summons of chess (per-owner variants), bond summons (炎佑) and band map
  * characters (band_amedic 预备干员-医疗 / Touch). `abnormal` = TOKEN_ABNORMAL (PRTS).
  */
-function buildTokens(ctx, chess, tokenOwners, enemies) {
+function buildTokens(ctx, chess, tokenOwners, enemies, backups = null) {
   const { charTable } = ctx;
   const out = {};
   for (const tokenId of [...tokenOwners.keys()].sort(naturalCmp)) {
@@ -2327,6 +2346,22 @@ function buildTokens(ctx, chess, tokenOwners, enemies) {
       assets: { avatar: charId, spine: charId },
       source: 'band_amedic (aceffect_band_61 auto_chess_change_map)',
     };
+  }
+  // 自选 picks of the custom shop operators summon the same token ids: fold their per-form variants (built by
+  // buildDiyTokens) into the single tokens.json record and drop the backup copy — the two files must stay disjoint, and
+  // the potential annotation below then runs on the tokens.json variants of every pass.
+  if (backups?.tokens) {
+    for (const [id, rec] of Object.entries(backups.tokens)) {
+      const shop = out[id];
+      if (!shop) continue;
+      for (const [owner, variant] of Object.entries(rec.variants ?? {})) {
+        // an auto-only summon (予愿安洁莉娜's S3 object) has no source on a 自选 form: nothing to fold — keep the
+        // tokens.json chess variants only, as before.
+        if (!Array.isArray(variant.sources) || !variant.sources.length) continue;
+        shop.variants[owner] ??= variant;
+      }
+      delete backups.tokens[id];
+    }
   }
   return out;
 }
@@ -4452,7 +4487,7 @@ function validateAll(f) {
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
   if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
   if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
-  // 112: the 8 custom shop operators (CUSTOM_CHESS) are hidden in the vanilla data — a built-in 阵营加强 plugin offers
+  // 112: the 9 custom shop operators (CUSTOM_CHESS) are hidden in the vanilla data — a built-in 阵营加强 plugin offers
   // them per room (splitCustomShop); their records stay in chess.json so the official 自选 picks keep working
   if (visible.length !== 112) err(`expected 112 visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
@@ -4645,7 +4680,7 @@ async function main() {
   const items = buildItems(ctx, effects);
   const bands = buildBands(ctx, effects);
   const enemies = buildEnemies(ctx);
-  for (const p of passes) p.tokens = buildTokens(p.ctx, p.chess, p.tokenOwners, enemies);
+  for (const p of passes) p.tokens = buildTokens(p.ctx, p.chess, p.tokenOwners, enemies, p.backups);
   const tokens = passes[FULL_RANK].tokens;
   const waves = buildWaves(ctx, enemies);
   const stages = buildStages(ctx, ctx.act.modeDataDict);
@@ -4666,10 +4701,6 @@ async function main() {
   errors.push(...attachPotential(passes));
   let total = 0;
   const sizes = {};
-  // The custom shop operators' summons are already tokens.json records (CUSTOM_CHESS + applyCustomChess). Their
-  // official-DIY forms use the same token ids, so keep the single tokens.json record rather than a duplicate in
-  // backups.json (the integrity checks require the two files to be disjoint).
-  for (const id of Object.keys(backups.tokens)) if (tokens[id]) delete backups.tokens[id];
   const texts = {};
   for (const [name, obj] of Object.entries(files)) {
     texts[name] = JSON.stringify(obj);

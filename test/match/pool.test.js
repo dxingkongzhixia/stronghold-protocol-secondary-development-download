@@ -12,7 +12,7 @@ test('pool caps follow config (12/14/18/16/8/5, 缪尔赛思 4) and only visible
   const gd = gdOf();
   const pool = new SharedPool(gd, { banned: [] });
   assert.equal(pool.entries.size, gd.visibleChess.length);
-  // 112: the 8 custom shop operators are a built-in 阵营加强 plugin (hidden in the vanilla data)
+  // 112: the 9 custom shop operators are a built-in 阵营加强 plugin (hidden in the vanilla data)
   assert.equal(pool.entries.size, 112);
   for (const [id, e] of pool.entries) {
     // the mode's config copies (per-identity override first, then × the co-op multiplier: PLAYING.md 「同盟的公共干员库存是独立的两倍」)

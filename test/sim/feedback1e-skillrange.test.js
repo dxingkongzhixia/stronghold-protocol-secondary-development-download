@@ -292,7 +292,7 @@ const BY_HAND = new Map([
 function rangeSkills() {
   const out = [];
   for (const c of Object.values(C)) {
-    // the 8 custom shop operators are hidden in vanilla (built-in 阵营加强 plugins) but their kits are still audited
+    // the 9 custom shop operators are hidden in vanilla (built-in 阵营加强 plugins) but their kits are still audited
     // here: the range table must stay complete for a room that switches their faction on
     if (!(c.visible || (c.isGolden && C[c.baseId]?.visible) || (c.identifier >= 900 && !c.isDiy))) continue;
     for (const s of c.skills || []) {
