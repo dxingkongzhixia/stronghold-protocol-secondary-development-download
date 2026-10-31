@@ -1,7 +1,7 @@
 // test/keel/stronghold-host.test.js — the real-Battle host and the hook bridge, on a small Battle double.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStrongholdHost } from '../../server/keel/stronghold-host.js';
+import { createStrongholdHost, unitView } from '../../server/keel/stronghold-host.js';
 import { attachKeel, BATTLE_HOOKS } from '../../server/keel/attach.js';
 
 class StubBattle {
@@ -21,6 +21,13 @@ class StubBattle {
     b.layers += added;
     return added;
   }
+  spawnToken(_owner, tokenId, row, col) {
+    return { id: ++this._id, side: 'ally', kind: 'token', x: col, y: row, hp: 10, maxHp: 10, alive: true, deployed: true, buffs: [], defId: tokenId };
+  }
+  spawnDevice(key, row, col) {
+    return { id: ++this._id, side: 'ally', kind: 'device', x: col, y: row, hp: 100, maxHp: 100, alive: true, deployed: true, buffs: [], defId: key };
+  }
+  applyStatus() { return true; }
   on(name, fn, opts = {}) { (this._hooks[name] ??= []).push({ fn, owner: opts.owner }); return { name, fn }; }
   offOwner(owner) { for (const k of Object.keys(this._hooks)) this._hooks[k] = this._hooks[k].filter((h) => h.owner !== owner); }
   emit(name, ctx) { for (const h of this._hooks[name] ?? []) h.fn(ctx, this); }
@@ -135,4 +142,30 @@ test('the host reads live bond state and adds layers through the battle', () => 
   assert.equal(host.bonds.get('bond_x_demo').layers, 3);
   assert.deepEqual(host.bonds.list().map((x) => x.id), ['bond_x_demo']);
   assert.equal(host.bonds.get('missing'), null);
+});
+
+test('unitView carries items, sp and the combat primitives', () => {
+  const v = unitView({
+    id: 1, side: 'ally', kind: 'op', x: 1, y: 2, hp: 10, maxHp: 20, alive: true, deployed: true, dir: 'RIGHT', hidden: false,
+    s: { atk: 5, def: 6, res: 7, blockCnt: 3 }, base: {}, buffs: [{ key: 'stun' }],
+    items: ['item_x_keel_item_demo'], rangeGrid: [[0, 0], [1, 0]], skill: { sp: 4, spTotal: 8, baseSpCost: 8 }, def: { tier: 2 },
+  });
+  assert.equal(v.sp, 4);
+  assert.equal(v.spTotal, 8);
+  assert.equal(v.spCost, 8);
+  assert.equal(v.blockCnt, 3);
+  assert.deepEqual(v.items, ['item_x_keel_item_demo']);
+  assert.deepEqual(v.rangeGrid, [[0, 0], [1, 0]]);
+  assert.equal(v.dir, 'RIGHT');
+  assert.equal(v.tier, 2);
+});
+
+test('the host spawns ally tokens and devices and applies statuses', () => {
+  const b = new StubBattle();
+  const host = createStrongholdHost(b, { drive: false });
+  assert.equal(host.spawn({ kind: 'token', tokenId: 'token_x_demo', row: 1, col: 2 }).ok, true);
+  assert.equal(host.spawn({ kind: 'device', deviceKey: 'device_x_demo', row: 3, col: 4 }).ok, true);
+  const enemy = b.spawnEnemy('x', { pos: [0, 0] });
+  assert.equal(host.status.apply(enemy, 'x_keel_status', { duration: 2 }).ok, true);
+  assert.equal(host.status.remove(enemy, 'x_keel_status'), 0);
 });

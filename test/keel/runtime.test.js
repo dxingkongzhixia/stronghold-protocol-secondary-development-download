@@ -125,3 +125,37 @@ test('api.bonds.addLayers needs sim.bond.write', () => {
   assert.equal(rt.errors[0]?.code, 'KEEL_DENIED');
   assert.match(rt.errors[0]?.message ?? '', /sim\.bond\.write/);
 });
+
+test('api.spawn creates ally tokens and devices on the fake host', () => {
+  const host = createFakeHost({});
+  const code = { hooks: { 'sim.battleStart'(_ctx, api) {
+    api.spawn({ kind: 'token', tokenId: 'token_x_demo', x: 1, y: 2 });
+    api.spawn({ kind: 'device', deviceKey: 'device_x_demo', x: 3, y: 4 });
+  } } };
+  const rt = createKeelRuntime({ manifest: manifest(), modules: modules(code, ['sim.spawn']), host });
+  rt.start();
+  assert.equal(rt.errors.length, 0, JSON.stringify(rt.errors));
+  assert.deepEqual(host.units().map((u) => u.kind).sort(), ['device', 'token']);
+});
+
+test('api.status applies and removes a custom status', () => {
+  const host = createFakeHost({ units: [{ id: 'u1', side: 'enemy', hp: 10 }] });
+  let applied = null;
+  const code = { hooks: { 'sim.tick'(_ctx, api) {
+    applied = api.status.apply('u1', 'x_keel_status', { duration: 2 });
+    api.status.remove('u1', 'x_keel_status');
+  } } };
+  const rt = createKeelRuntime({ manifest: manifest(), modules: modules(code, ['sim.status.write']), host });
+  rt.run({ frames: 1 });
+  assert.equal(rt.errors.length, 0, JSON.stringify(rt.errors));
+  assert.equal(applied.ok, true);
+});
+
+test('api.status needs sim.status.write', () => {
+  const host = createFakeHost({ units: [{ id: 'u1', side: 'enemy', hp: 10 }] });
+  const code = { hooks: { 'sim.tick'(_ctx, api) { api.status.apply('u1', 'x_keel_status', { duration: 1 }); } } };
+  const rt = createKeelRuntime({ manifest: manifest(), modules: modules(code, ['sim.read']), host });
+  rt.run({ frames: 1 });
+  assert.equal(rt.errors[0]?.code, 'KEEL_DENIED');
+  assert.match(rt.errors[0]?.message ?? '', /sim\.status\.write/);
+});

@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schemas/keel-manifest.schema.json",
+  "manifest": 3,
+  "id": "keel-item",
+  "name": { "zh": "Keel 装备示例", "en": "Keel item demo" },
+  "description": {
+    "zh": "一个只含新装备记录的 content 插件：item_x_keel_item_demo（custom，由 sim 模块实现效果）。",
+    "en": "A content-only plugin that adds one custom item record, item_x_keel_item_demo, implemented by a sim module."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "content": 1 },
+  "scope": ["room"],
+  "trust": "data",
+  "modules": [
+    {
+      "kind": "content",
+      "files": ["content/items.json"],
+      "parts": { "data": ["content/items.json"] },
+      "permissions": ["content.define"],
+      "provides": ["item:item_x_keel_item_demo"]
+    }
+  ]
+}

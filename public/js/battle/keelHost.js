@@ -27,6 +27,15 @@ export function unitView(u) {
     deployed: !!u.deployed,
     tags: u.tag ? [u.tag] : [],
     buffs: (u.buffs ?? []).map((b) => b.key),
+    items: Array.isArray(u.items) ? [...u.items] : [],
+    sp: Math.max(0, Number(u.skill?.sp) || 0),
+    spTotal: Math.max(0, Number(u.skill?.spTotal) || 0),
+    spCost: Math.max(0, Number(u.skill?.baseSpCost ?? u.skill?.spCost) || 0),
+    blockCnt: Math.max(0, Number(u.s?.blockCnt ?? u.base?.blockCnt) || 0),
+    rangeGrid: Array.isArray(u.rangeGrid) ? u.rangeGrid.map((r) => (Array.isArray(r) ? [...r] : r)) : [],
+    dir: typeof u.dir === 'string' ? u.dir : null,
+    tier: Number(u.def?.tier ?? u.tier ?? 0) || 0,
+    hidden: !!u.hidden,
   };
 }
 
@@ -115,10 +124,54 @@ export function createBattleKeelHost(battle, opts = {}) {
         return { ok: added > 0, added: Number(added) || 0, layers: Math.max(0, Number(b?.layers) || 0) };
       },
     },
-    /** Enemies only in M1.5; tokens/devices need an owner PlayerState and are M2. */
+    /**
+     * Enemies plus ally tokens (`kind: 'token'`) and stage devices (`kind: 'device'`); the owner defaults to the battle's
+     * player (or `attachKeel`'s `playerId`).
+     */
     spawn(spec = {}) {
+      const row = Number.isInteger(spec.row) ? spec.row : Number(spec.y);
+      const col = Number.isInteger(spec.col) ? spec.col : Number(spec.x);
+      const owner = spec.owner && typeof spec.owner === 'object' ? findUnit(battle, spec.owner)
+        : spec.owner != null ? spec.owner : pid;
+      if (spec.kind === 'token' || spec.tokenId != null) {
+        if (typeof battle.spawnToken !== 'function') return { ok: false, reason: 'unsupported' };
+        const tokenId = spec.tokenId ?? spec.key ?? spec.id;
+        if (!tokenId) return { ok: false, reason: 'no-key' };
+        if (!Number.isInteger(row) || !Number.isInteger(col)) return { ok: false, reason: 'no-tile' };
+        const unit = battle.spawnToken(owner, String(tokenId), row, col, {
+          ...(spec.force ? { force: true } : {}),
+          ...(spec.anySource ? { anySource: true } : {}),
+          ...(spec.hp != null ? { hp: Number(spec.hp) } : {}),
+          ...(spec.duration != null ? { duration: Number(spec.duration) } : {}),
+          ...(spec.stats && typeof spec.stats === 'object' ? { stats: spec.stats } : {}),
+          ...(spec.dir ? { dir: spec.dir } : {}),
+          ...(spec.facing ? { facing: spec.facing } : {}),
+          ...(spec.untargetable ? { untargetable: true } : {}),
+          ...(spec.def && typeof spec.def === 'object' ? { def: spec.def } : {}),
+        });
+        return unit ? { ok: true, id: unit.id } : { ok: false, reason: 'refused' };
+      }
+      if (spec.kind === 'device' || spec.deviceKey != null) {
+        if (typeof battle.spawnDevice !== 'function') return { ok: false, reason: 'unsupported' };
+        const key = spec.deviceKey ?? spec.key ?? spec.id;
+        if (!key) return { ok: false, reason: 'no-key' };
+        if (!Number.isInteger(row) || !Number.isInteger(col)) return { ok: false, reason: 'no-tile' };
+        const unit = battle.spawnDevice(String(key), row, col, {
+          ...(spec.hp != null ? { hp: Number(spec.hp) } : {}),
+          ...(spec.obstacle != null ? { obstacle: !!spec.obstacle } : {}),
+          ...(spec.obstacleKind ? { obstacleKind: spec.obstacleKind } : {}),
+          ...(spec.blockCnt != null ? { blockCnt: Number(spec.blockCnt) } : {}),
+          ...(spec.name ? { name: String(spec.name) } : {}),
+          ...(spec.atk != null ? { atk: Number(spec.atk) } : {}),
+          ...(spec.def != null ? { def: Number(spec.def) } : {}),
+          ...(spec.res != null ? { res: Number(spec.res) } : {}),
+          ...(spec.bat != null ? { bat: Number(spec.bat) } : {}),
+          ...(spec.aspd != null ? { aspd: Number(spec.aspd) } : {}),
+          ...(spec.dir ? { dir: spec.dir } : {}),
+        });
+        return unit ? { ok: true, id: unit.id } : { ok: false, reason: 'refused' };
+      }
       if (typeof battle.spawnEnemy !== 'function') return { ok: false, reason: 'unsupported' };
-      if (spec.side === 'ally' || spec.token || spec.device) return { ok: false, reason: 'ally-spawn-unsupported' };
       const key = spec.enemyKey ?? spec.key ?? spec.id;
       if (!key) return { ok: false, reason: 'no-key' };
       const unit = battle.spawnEnemy(String(key), {
@@ -127,6 +180,26 @@ export function createBattleKeelHost(battle, opts = {}) {
         ...(spec.tag ? { tag: spec.tag } : {}),
       });
       return unit ? { ok: true, id: unit.id } : { ok: false, reason: 'refused' };
+    },
+    status: {
+      /** Apply any status key, including a plugin-defined one (`STATUS[key]` falls back to a flag of that name). */
+      apply(target, key, opts = {}) {
+        const u = findUnit(battle, target);
+        if (!u || typeof battle.applyStatus !== 'function') return { ok: false, reason: 'no-target' };
+        const source = opts.source != null ? findUnit(battle, opts.source) : null;
+        const ok = battle.applyStatus(u, String(key), {
+          ...(opts.duration != null ? { duration: Number(opts.duration) } : {}),
+          ...(opts.value !== undefined ? { value: opts.value } : {}),
+          ...(source ? { source } : {}),
+          ...(opts.force ? { force: true } : {}),
+        });
+        return { ok: !!ok, key: String(key) };
+      },
+      remove(target, key) {
+        const u = findUnit(battle, target);
+        if (!u || typeof battle.removeBuff !== 'function') return 0;
+        return battle.removeBuff(u, String(key));
+      },
     },
     rng(stream = 'default') {
       const r = opts.rng(opts.deriveSeed(battle.seed ?? 0, `keel:${stream}`));

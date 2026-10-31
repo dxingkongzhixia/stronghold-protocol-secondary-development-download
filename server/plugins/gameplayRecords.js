@@ -61,12 +61,20 @@ export function expandGameplayRecords(data, records, opts) {
         layerMilestones: [], effectDescParams: [], members: [], visibleMembers: [], ...v, bondId: r.id, effectId,
         activeCount: v.thresholds[0], countsHand: v.countMode === 'BOARD_AND_DECK', countsGoldenOnly: v.countMode === 'BOARD_ALL_CHESS' };
     } else {
-      // Complete items use the existing buff interpreter, never a new behavior name hidden in prose.
+      // Complete items use the existing buff interpreter, never a new behavior name hidden in prose. A plugin item that
+      // implements its own behaviour in a sim module declares `custom: true` and may carry no buffs.
       const known = new Set(Object.values(data.items).flatMap(it => (it.buffs ?? []).map(b => `${b.key}:${b.bbStr?.key ?? ''}`)));
+      const custom = v.custom === true;
+      const buffs = Array.isArray(v.buffs) ? v.buffs : null;
       if (!v.name || !['EQUIP', 'TRAP'].includes(v.itemType) || !Number.isInteger(v.tier) || v.tier < 1 || v.tier > 6
-        || !Number.isFinite(v.price) || v.price < 0 || !Array.isArray(v.buffs) || !v.buffs.length
-        || v.buffs.some(b => !known.has(`${b.key}:${b.bbStr?.key ?? ''}`))) { bad('complete item needs name, type, tier, price and supported buffs'); continue; }
-      out.items[r.id] = { ...v, id: r.id };
+        || !Number.isFinite(v.price) || v.price < 0 || !buffs || (!custom && !buffs.length)
+        || buffs.some(b => !known.has(`${b.key}:${b.bbStr?.key ?? ''}`))) { bad('complete item needs name, type, tier, price and supported buffs, or custom: true with no buffs'); continue; }
+      const effectId = v.effectId ?? r.id.replace(/^item_x_/, 'effect_x_');
+      if (!out.effects[effectId]) {
+        if (!recordId(effectId, opts.pluginId, 'effect_x')) { bad('effect outside plugin namespace', 'PLUGIN_RECORD_ID'); continue; }
+        out.effects[effectId] = { effectId, name: v.name, desc: v.desc ?? '', buffs: [], params: {} };
+      }
+      out.items[r.id] = { ...v, id: r.id, effectId };
     }
   }
   return { data: problems.length ? data : out, problems };

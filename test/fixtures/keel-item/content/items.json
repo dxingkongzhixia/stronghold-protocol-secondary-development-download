@@ -1,0 +1,20 @@
+{
+  "records": 1,
+  "entries": [
+    {
+      "file": "items",
+      "id": "item_x_keel_item_demo",
+      "value": {
+        "name": "示例装备",
+        "desc": "装备者击杀敌人时，由插件的 sim 模块记录 1 层示例计数。",
+        "itemType": "EQUIP",
+        "tier": 1,
+        "price": 1,
+        "custom": true,
+        "buffs": [],
+        "category": "STAT",
+        "kind": "passive"
+      }
+    }
+  ]
+}

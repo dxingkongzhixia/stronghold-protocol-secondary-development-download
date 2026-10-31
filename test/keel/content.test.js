@@ -84,3 +84,23 @@ test('the Keel content set carries a new bond into the room data', async () => {
   assert.ok(built.data.bonds.bond_x_keel_bond_demo, 'the bond reaches the content set');
   assert.equal(built.data.bonds.bond_x_keel_bond_demo.members.length, 0, 'members wait for chess records');
 });
+
+const ITEM_FIXTURE = path.join(ROOT, 'test/fixtures/keel-item');
+
+test('a content module can add a custom item record (item_x_*)', async () => {
+  const plugin = await loadKeelPlugin(ITEM_FIXTURE);
+  const merged = mergeKeelData(DATA, plugin.content);
+  const item = merged.items.item_x_keel_item_demo;
+  assert.ok(item);
+  assert.equal(item.custom, true);
+  assert.equal(item.effectId, 'effect_x_keel_item_demo');
+  assert.ok(merged.effects.effect_x_keel_item_demo, 'the compiler writes the item effect shell');
+});
+
+test('the Keel content set carries a custom item', async () => {
+  const plugin = await loadKeelPlugin(ITEM_FIXTURE);
+  const built = createKeelContentSet({ plugins: [plugin] });
+  assert.deepEqual(built.problems, []);
+  assert.ok(built.data.items.item_x_keel_item_demo);
+  assert.ok(built.data.effects.effect_x_keel_item_demo);
+});

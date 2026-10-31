@@ -60,7 +60,8 @@ export default {
 | `api.buffs.apply/remove` | `sim.buff.write` | 写 |
 | `api.bonds.get(id)` / `api.bonds.list()` | `sim.bond.read` | 盟约的 `{ layers, active, tier, count }`（只读副本） |
 | `api.bonds.addLayers(id, n)` | `sim.bond.write` | 走 `Battle.addLayers`：`BOND_LAYER_CAP` 999 上限，`layerGains` 关闭时 no-op |
-| `api.spawn(spec)` | `sim.spawn` | 生成单位 |
+| `api.status.apply(target, key, opts)` / `api.status.remove(target, key)` | `sim.status.write` | 走 `Battle.applyStatus` / `removeBuff`；`STATUS[key]` 不存在时按同名 flag 处理，可做插件自定义状态 |
+| `api.spawn(spec)` | `sim.spawn` | 敌人（默认）/ 己方 `token`（`kind: 'token'`）/ 装置（`kind: 'device'`） |
 | `api.rng(name)` | `sim.rng` | 命名随机流；没有 `Math.random` |
 | `api.fx(kind, at, data)` | `sim.fx` | 表现事件 |
 | `api.command(cmd)` | `match.economy.write` | 进入 command log |
@@ -118,6 +119,7 @@ bonds.{get,list,addLayers} / spawn(spec) / rng(stream) / fx(kind, at, data) / ti
 | `buffs.apply/remove/has/list` | `battle.addBuff` / `removeBuff` / `unit.buffs` |
 | `bonds.get/list` | `battle.getPlayer(pid).bonds`（只读副本） |
 | `bonds.addLayers` | `battle.addLayers(pid, bondId, n, 'keel')`（999 上限、`layerGains` 开关） |
+| `status.apply/remove` | `battle.applyStatus` / `removeBuff`（任意 key；未知 key 走同名 flag） |
 | `spawn(spec)` | `battle.spawnEnemy`（只支持敌人；token/device 尚未支持） |
 | `rng(stream)` | `deriveSeed(battle.seed, "keel:<stream>")` + `server/sim/rng.js` |
 | `fx(kind, at, data)` | `battle.fx` |
@@ -199,7 +201,8 @@ fixture 的 `sim` 模块每 10 帧打一次 30 点真实伤害，60 帧后：
 - **bot / 接管 / 无人类 boss 的 sim**（D12）：含原生 sim 的房间把这些 field 委托给在线浏览器（房主优先）；`b.start.background` 只模拟并上报，不切换玩家视图；每个浏览器最多 8 个 field（含自己的），满了由服务器跑（只用 content 数据）。**房主断线 / 离开**时，房主的 field 也先委托给剩余真实玩家；没有真实玩家时才由服务器跑 / 房间销毁。
 - **元数据不是 pin**：`name` / `description` / `authors` / `version` 由服务器的 `index.keel` 提供，是展示字段；`cs` pin 的是模块/内容字节（以及原生模块的 sha256），不是这些标签。改元数据不会改变代码哈希；需要“作者不可被服务器偷换”的信任模型时，应把 descriptor 也纳入 `cs` 或从已 pin 的 manifest 读取。当前明确按“服务器提供，哈希才是 pin”处理。
 - **`sim.hit/damaged/heal/kill` 已能由 Battle 自动触发**（`attach.js`），但只对 Keel-native 模块；`compat.v2Script` 仍走自己的 `setup(sp)` 扩展注册表。
-- **`spawn` 只支持敌人**：token / device 需要 owner `PlayerState`，尚未支持。
+- **`spawn` 支持敌人 / 己方 token / 装置**：token 的 def 来自 `tokens` 记录（或 `def`），device 是 ally 侧单位（`spawnDevice`）；都需要 owner `PlayerState`（默认本场玩家）。
+- **装备效果**：`unitView.items` 只给 id 列表；引擎自带 buff 仍由 `items/battle.js` 应用，`custom: true` 装备的效果由插件的 `sim` 模块实现（`sim.battleStart` 读 `api.units()` 即可）。
 - **盟约状态按玩家**：`bonds.*` 读的是 `battle.players[0]`（或 `attachKeel(..., { playerId })` 指定的玩家）的盟约；房间级描述符在单人/自己棋盘的对局里就是本人。
 - **ctx 写只做白名单回写**：`dmg` / `amount` / `targets` 之外不保证；没有逐字段拒绝。
 - **预算不是实测**：见 §5。

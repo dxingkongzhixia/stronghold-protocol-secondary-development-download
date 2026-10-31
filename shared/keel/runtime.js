@@ -93,6 +93,10 @@ export function createKeelRuntime(opts) {
         list() { require('sim.bond.read'); return host.bonds?.list?.() ?? []; },
         addLayers(bondId, n) { require('sim.bond.write'); return host.bonds?.addLayers?.(bondId, n) ?? { ok: false, added: 0, layers: 0 }; },
       }),
+      status: Object.freeze({
+        apply(target, key, opts) { require('sim.status.write'); return host.status?.apply?.(target, key, opts) ?? { ok: false, reason: 'unsupported' }; },
+        remove(target, key) { require('sim.status.write'); return host.status?.remove?.(target, key) ?? 0; },
+      }),
       spawn(spec) { require('sim.spawn'); return host.spawn(spec); },
       rng(stream = 'default') { require('sim.rng'); return host.rng(stream); },
       fx(kind, at = null, data = null) { require('sim.fx'); return host.fx(kind, at, data); },

@@ -107,6 +107,7 @@
 | `sim.buff.write` | sim | 加/删 buff |
 | `sim.bond.read` | sim | 读盟约状态（层数 / 激活 / 档位 / 计数） |
 | `sim.bond.write` | sim | 增加盟约层数（受 `BOND_LAYER_CAP` 与 `layerGains` 开关） |
+| `sim.status.write` | sim | 施加/移除状态（含插件自定义 key；`STATUS[key]` 缺失时按同名 flag 处理） |
 | `sim.spawn` | sim | 生成单位/装置 |
 | `sim.rng` | sim | 用命名随机流 |
 | `sim.fx` | sim | 发表现事件 |

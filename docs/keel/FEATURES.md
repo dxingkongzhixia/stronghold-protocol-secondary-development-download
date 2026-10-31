@@ -13,9 +13,9 @@
 | 领域 | 能力 | 状态 |
 |---|---|---|
 | 插件格式 | manifest 3、七类模块、能力（capability）、依赖/顺序、`provides/consumes` | 完成 |
-| 内容 | 记录、补丁、干员、敌人/Boss、波次、模式/关卡、DSL、offers、i18n | 完成 |
+| 内容 | 记录、补丁、干员、敌人/Boss、波次、模式/关卡、盟约、装备、DSL、offers、i18n | 完成 |
 | 资源 | 立绘/Spine/音频/FX/主题、视觉覆盖、UI 资源、`/vs` `/p` | 完成 |
-| 原生战斗 | `sim` 模块、hooks、状态/视图/命令/RNG、客户端 Worker | 完成 |
+| 原生战斗 | `sim` 模块、hooks、状态/视图/命令/RNG、token/装置生成、自定义状态、客户端 Worker | 完成 |
 | 比赛逻辑 | `match` 模块、服务端 meta runtime、经济/回合/结束判定 | 完成 |
 | 策略 | `policy` 模块、决策/选秀 | 完成 |
 | 界面 | `ui` 模块、槽位、postMessage、沙箱 frame | 第一版完成 |
@@ -65,7 +65,8 @@
 - **新盟约**：在 `parts.data` 的记录文件里写 `file: "bonds"` 的 entry（id 形如 `bond_x_<plugin-id>_<suffix>`，字段 name / desc / thresholds / countMode / isCore）+ 成员干员或棋子的 `bonds`；`provides: ["bond:<id>"]`。
   图标走 `asset` 模块的 `bonds` 覆盖。机制由 `sim` 模块用 `api.bonds.get/list/addLayers` 实现（读层数/激活/档位，写层数受 `BOND_LAYER_CAP` 约束）。
   最小示例：`test/fixtures/keel-bond`（`bond_x_keel_bond_demo`）。
-- **新装备**：`item_x_<id>` 记录，复用现有 buff 解释器；完整装备不能自定义新的行为名。
+- **新装备**：`item_x_<id>` 记录，复用现有 buff 解释器；行为完全自定的装备写 `custom: true` + `buffs: []`，由 `sim` 模块读 `unitView.items` 实现。
+  图标走 `asset` 模块的 `items` 覆盖。
 - **干员**：`operators` 记录；`mergeKeelData` 展开为 `data.chess`（normal/elite）与 DIY 记录。
 - **补丁**：`patch: 1` 文档；支持字段路径 set/merge/append 等。
 - **DSL**：干员 kit / 准备阶段效果；构建期校验。
@@ -90,7 +91,7 @@
 - 运行位置：**浏览器 Worker**（`WorkerSimHost`）；页面只收 `b.snap` / `b.ev`。
 - 执行前：本浏览器对 content set 的原生代码确认；未确认不 ready、不执行。
 - Hooks：`sim.setup` / `battleStart` / `deploy` / `tick` / `beforeAttack` / `hit` / `damaged` / `heal` / `kill` / `battleEnd`；另有 `enemySpawn` / `enemyLeak` / `blocked` 等。
-- API：只读单位/战场视图；白名单写回 `dmg` / `amount` / `targets`；状态 `api.state`；视图 `api.setView`；命令；RNG；预算。
+- API：只读单位/战场视图（含 `items` / `sp` / `blockCnt` / `rangeGrid`）；白名单写回 `dmg` / `amount` / `targets`；状态 `api.state`；视图 `api.setView`；命令；RNG；预算；生成敌人 / 己方 token / 装置；施加自定义状态。
 - 隔离：Worker 无 DOM / 同源存储；SES 编译；每 field 一个 Worker；心跳、按步数放大的超时、terminate。
 - 服务端：**不 import 原生 sim**；服务端自己跑的 field（bot/接管/boss 兜底）只用 content 数据。
 - 源码下发：`/cs` 的 `index.keel` + `keel/<id>/<entry>`；sha256 与 lock 固定。
@@ -174,8 +175,8 @@ node tools/keel.mjs exit
 
 | 检查 | 结果 |
 |---|---|
-| `npm test` | 8799 tests / 8758 pass / 0 fail / 41 skipped |
-| `npm run check:keel` | 169 / 169 |
+| `npm test` | 8820 tests / 8782 pass / 0 fail / 38 skipped |
+| `npm run check:keel` | 176 / 176 |
 | docs gates | 35 / 35 |
 | `npm run typecheck` | 通过 |
 | eslint | 0 errors |
@@ -199,6 +200,7 @@ node --test test/ui/native-boss.e2e.test.js
 - `trusted.server` / `trusted.page`：不支持。
 - 服务端执行原生 sim：不做；服务端只用 content 数据兜底。
 - 页面内执行插件代码：不做；原生/兼容脚本都进 Worker。
+- 新伤害类型 / 新状态机 / 新索敌规则：不做成插件 API；它们是核心引擎改动。插件可用 `sim.beforeAttack` 替换目标、`api.status` 自定义 flag、`api.spawn` 生成 token/device。
 - 低端设备 / 更多设备组合压测：暂缓。
 - 工作室模块表单深化：可继续做，不是功能阻塞。
 

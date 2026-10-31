@@ -4,7 +4,7 @@
 import { createRng } from './rng.js';
 
 /** The methods a sim host must provide. Documented in docs/keel/RUNTIME.md. */
-export const SIM_HOST_METHODS = Object.freeze(['units', 'damage', 'heal', 'buffs', 'bonds', 'spawn', 'rng', 'fx', 'frame']);
+export const SIM_HOST_METHODS = Object.freeze(['units', 'damage', 'heal', 'buffs', 'bonds', 'status', 'spawn', 'rng', 'fx', 'frame']);
 
 const isPlain = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -35,6 +35,7 @@ export function createFakeHost(opts = {}) {
     const unit = {
       id,
       side: spec.side === 'ally' ? 'ally' : 'enemy',
+      kind: spec.kind === 'token' || spec.kind === 'device' ? spec.kind : (spec.kind === 'op' ? 'op' : spec.side === 'ally' ? 'op' : 'enemy'),
       x: Number(spec.x ?? 0),
       y: Number(spec.y ?? 0),
       hp: Math.max(0, Math.min(hp, Number(spec.maxHp ?? hp))),
@@ -128,7 +129,25 @@ export function createFakeHost(opts = {}) {
         return { ok: added > 0, added, layers: cur.layers };
       },
     },
-    spawn(spec = {}) { const id = add(spec); return { ok: true, id }; },
+    spawn(spec = {}) {
+      if (spec.kind === 'token' || spec.kind === 'device' || spec.tokenId != null || spec.deviceKey != null) {
+        const id = add({ ...spec, side: 'ally', kind: spec.kind ?? (spec.tokenId != null ? 'token' : 'device') });
+        return { ok: true, id };
+      }
+      const id = add(spec);
+      return { ok: true, id };
+    },
+    status: {
+      apply(target, key, opts = {}) {
+        const t = get(target);
+        if (!t) return { ok: false, reason: 'no-target' };
+        const duration = Number(opts.duration ?? 0);
+        buffs.set(`${t.id}:status:${key}`, { target: t.id, buff: String(key), status: String(key), duration: Number.isFinite(duration) ? duration : 0, value: clone(opts.value ?? null), frame });
+        events.push({ frame, type: 'status', target: t.id, status: String(key) });
+        return { ok: true, key: String(key), duration: Number.isFinite(duration) ? duration : 0 };
+      },
+      remove(target, key) { return buffs.delete(`${get(target)?.id ?? target}:status:${key}`); },
+    },
     rng(stream = 'default') { return createRng(seed, stream); },
     fx(kind, at = null, data = null) {
       events.push({ frame, type: 'fx', kind: String(kind), at: at ? clone(at) : null, data: data === null ? null : clone(data) });
