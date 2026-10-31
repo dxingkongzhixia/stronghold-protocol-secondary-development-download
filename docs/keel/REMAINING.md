@@ -76,6 +76,9 @@ Keel 已经可以用于实际插件开发和房间运行：
 - `prts-source-code`
 - `black-snake`
 
+> 迁移后的 `plugin.keel.json` 在 `.gitignore` 的 `plugins/*` 里，**不随仓库分发**。新机器需要重新
+> `node tools/keel.mjs import <id> --write`，或从原机器复制该文件（连同已有的 `plugin.lock.json`）。
+
 其他机器/其他作者如果还有 manifest-2 插件：
 
 ```bash

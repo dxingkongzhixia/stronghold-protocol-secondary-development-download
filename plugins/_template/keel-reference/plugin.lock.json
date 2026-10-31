@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "fe1995b7fdd8649df23b6eecf0a45515a27c375a6ae2bfe596e606de87df9b44",
-      "bytes": 4682
+      "sha256": "5f7d1d49d0c1fce219dec86e87f4e0df64b14275600c66bbcb00b3c4e3714a9c",
+      "bytes": 4716
     },
     "assets/icon.png": {
       "sha256": "090965c70a6d081049f513ac8c36c7608ef2f81784fab1ae7f76f1faa1661020",
