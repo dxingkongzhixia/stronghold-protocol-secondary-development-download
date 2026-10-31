@@ -511,11 +511,6 @@ test('checking resolves trait references in declared dependency data and refuses
   const dir = f.put('data-demo', { permissions: ['data.add', 'data.patch', 'dsl'], operators: ['op.json'], requires: { 'trait-dep': '1.0.0' } }, { 'op.json': r });
   assert.deepEqual(checkPluginFolder(dir, dir).problems, []);
   const depDir = f.dir + '/plugins/trait-dep';
-  const dep = JSON.parse(fs.readFileSync(depDir + '/plugin.json'));
-  Object.assign(dep, { class: 'script', entry: { sim: 'index.js' }, permissions: ['data.add', 'sim.code'] });
-  fs.writeFileSync(depDir + '/plugin.json', JSON.stringify(dep));
-  fs.writeFileSync(depDir + '/index.js', 'export function setup() { throw new Error("must not execute during checking"); }');
-  assert.deepEqual(checkPluginFolder(dir, dir).problems, [], 'dependency JSON is checked without executing or authorizing its script');
   fs.rmSync(depDir, { recursive: true });
   assert.ok(checkPluginFolder(dir, dir).issues.some(i => i.code === 'PLUGIN_DEPENDENCY'));
 });

@@ -21,6 +21,9 @@ import { createStudio } from '../../server/studio/index.js';
 import { createPluginRegistry, readVanillaAssets } from '../../server/plugins/registry.js';
 import { createVisualSets } from '../../server/plugins/visualSet.js';
 import { buildContentSet, contentSetFiles } from '../../server/plugins/contentSet.js';
+import { loadKeelPluginMap } from '../../server/keel/room-source.js';
+import { createKeelContentSets } from '../../server/keel/content-sets.js';
+import { getData } from '../../server/data.js';
 import { PLUGIN_MAX_BYTES } from '../../shared/plugins/manifest.js';
 import { skel, atlas, png } from '../helpers/pluginFixtures.js';
 import { canonicalJson } from '../../shared/plugins/identity.js';
@@ -1151,7 +1154,7 @@ test('kits/<id>.js becomes one script plugin: SDK imports rewritten, the pack\'s
     assert.match(source, /\/\/ ---- kits\/lib\/bonus\.js ----/);
     assert.match(source, /sp\.kits\.register\("char_x_rose_kit_rose_hunter", __forgeModule1\["default"\]\);/);
     assert.equal(/from '@kit|from '\.\//.test(source), false);
-    assert.deepEqual(walk(dir).sort(), ['README.md', 'plugin.json', 'plugin.lock.json', 'sim/index.js']);
+    assert.deepEqual(walk(dir).sort(), ['README.md', 'plugin.json', 'plugin.keel.json', 'plugin.lock.json', 'sim/index.js']);
     assert.equal(opsOf(path.join(parent, 'rose-kit'))[0].kit, 'generic');
     const product = got.report.products.find((p) => p.id === 'kits-rose-kit');
     assert.deepEqual(product.rewritten, ['@kit/tier1.js { num } → sp:sdk@1 kit.num', '@sim/dir.js { dirVec } → sp:sdk@1 dir.dirVec', '@sim/dir.js { offsetTile } → sp:sdk@1 dir.offsetTile', '@sim/targeting.js { absoluteRangeKeys } → sp:sdk@1 targeting.absoluteRangeKeys']);
@@ -1163,12 +1166,11 @@ test('kits/<id>.js becomes one script plugin: SDK imports rewritten, the pack\'s
       const check = await quiet(['check', path.join(parent, id), '--strict', '--root', ROOT]);
       assert.equal(check.code, 0, `${id}\n${check.out}`);
     }
-    const registry = createPluginRegistry({ publicDir: path.join(ROOT, 'public'), packsDir: path.join(ROOT, 'packs'), pluginsDir: parent, dataDir: path.join(ROOT, 'data') },
-      { scriptMode: 'sandbox', recheckMs: 0, log: { info() {}, warn() {} } });
-    const plugin = registry.plugin('kits-rose-kit');
-    assert.equal(plugin.status, 'loaded');
-    assert.equal(plugin.script.lockValid, true);
-    assert.equal(plugin.script.sandboxable, true);
+    const map = await loadKeelPluginMap(parent, { mode: 'sandbox' });
+    const plugin = map.get('kits-rose-kit');
+    assert.ok(plugin, 'the imported script plugin is in the room map');
+    assert.equal(plugin.v2.script.lockValid, true);
+    assert.equal(plugin.v2.script.sandboxable, true);
     assert.equal(fs.existsSync(BAIT), false);
   } finally { fs.rmSync(parent, { recursive: true, force: true }); }
 });
@@ -1248,10 +1250,9 @@ test('a kit for an official id needs the pack\'s overrides; with it the script p
     assert.match(got.report.skipped.find((s) => s.path === 'kits/chess_char_1_02_a.js').en, /nor an official id the pack declares in overrides/);
     assert.ok(fs.existsSync(path.join(dir, 'IMPORT-REPORT.md')));
     // the report is in the lock (written again after it), so the sandbox still accepts the plugin
-    const registry = createPluginRegistry({ publicDir: path.join(ROOT, 'public'), packsDir: path.join(ROOT, 'packs'), pluginsDir: parent, dataDir: path.join(ROOT, 'data') },
-      { scriptMode: 'sandbox', recheckMs: 0, log: { info() {}, warn() {} } });
-    assert.equal(registry.plugin('rose-over').script.lockValid, true);
-    assert.equal(registry.plugin('rose-over').status, 'loaded');
+    const map = await loadKeelPluginMap(parent, { mode: 'sandbox' });
+    assert.equal(map.get('rose-over').v2.script.lockValid, true);
+    assert.equal(map.has('rose-over'), true);
   } finally { fs.rmSync(parent, { recursive: true, force: true }); }
 });
 
@@ -1275,17 +1276,20 @@ test('the imported script plugin runs in our own sandbox: the kit\'s talent rais
   assert.equal(h.allies()[0].s.atk, STATS_A.atk);
   setGameData(null);
   // the script plugin, through the production path: SES preflight child, the checked content set, an SES Worker
-  const registry = createPluginRegistry({ publicDir: path.join(ROOT, 'public'), packsDir: path.join(ROOT, 'packs'), pluginsDir: plugins, dataDir: path.join(ROOT, 'data') },
-    { scriptMode: 'sandbox', recheckMs: 0, log: { info() {}, warn() {} } });
-  const built = buildContentSet({ registry, ids: ['kits-rose-kit'] });
-  assert.deepEqual(built.problems, [], JSON.stringify(built.problems));
+  const map = await loadKeelPluginMap(plugins, { mode: 'sandbox' });
+  const contents = createKeelContentSets({ plugins: map, vanillaData: getData() });
+  const resolved = contents.resolve(['kits-rose-kit']);
+  assert.equal(resolved.ok, true, JSON.stringify(resolved.problems ?? resolved));
+  const built = resolved.set;
+  assert.deepEqual(resolved.problems ?? [], []);
   assert.equal(built.execution, 'sandbox');
   const { loadContentSet } = await import('../../public/js/content.js');
   const { WorkerSimHost } = await import('../../public/js/battle/simHost.js');
   const { Worker } = await import('node:worker_threads');
-  const served = contentSetFiles(built);
   const fetch = async (url) => {
-    const body = url.startsWith('/cs/') ? served.get(url.split('/').slice(3).join('/'))?.body : fs.readFileSync(path.join(ROOT, url.split('?')[0]));
+    const body = url.startsWith('/cs/')
+      ? contents.file(built.cs.slice(0, 16), url.split('/').slice(3).join('/').split('?')[0])?.body
+      : fs.readFileSync(path.join(ROOT, url.split('?')[0]));
     return { ok: !!body, arrayBuffer: async () => new Uint8Array(body).buffer };
   };
   const loaded = await loadContentSet(built.cs, { fetch, retryDelays: [] });

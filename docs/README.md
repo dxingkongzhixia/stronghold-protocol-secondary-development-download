@@ -53,8 +53,8 @@
 发生冲突时按以下顺序判断，不要用旧文档覆盖代码行为：
 
 1. **代码 + 自动化测试**（最终事实）；
-2. **规范文档**：`PLUGINS.md`、`PLUGIN-API.md`、`PLUGIN-DSL.md`、`DESIGN.md` / `design/`、`SIM.md`、`META.md`、`DATA.md`、`shared/protocol.js`；
-3. **当前状态**：`PROJECT-STATE.md`、`PLUGIN-BACKLOG.md`；
+2. **Keel 规范**：`keel/FEATURES.md`、`keel/MANIFEST-V3.md`、`keel/CONTRACTS.md`、`keel/RUNTIME.md`、`keel/COMPAT-V2.md`；**v2 兼容参考**：`PLUGINS.md`、`PLUGIN-API.md`、`PLUGIN-DSL.md`；**引擎/数据**：`DESIGN.md` / `design/`、`SIM.md`、`META.md`、`DATA.md`、`shared/protocol.js`；
+3. **当前状态**：`PROJECT-STATE.md`、`PLUGIN-BACKLOG.md`、`keel/NEXT.md`、`keel/REMAINING.md`；
 4. **历史记录**：`UPSTREAM-MERGES.md`、`UPSTREAM-DEV-TRIAGE.md`、`history/`、`CHANGELOG.md`；
 5. **草案 / 路线图**：`PLUGIN-PLATFORM-PLAN.md`、未提交的 `PLUGIN-OPTIMIZATION-*`。
 
@@ -130,10 +130,16 @@
 
 | 文档 | 面向 | 说明 |
 |---|---|---|
-| [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | **写插件的开发者** | 单一入口：选模板、manifest、类别、测试、打包、发布 |
+| [`keel/FEATURES.md`](keel/FEATURES.md) | **Keel（龙骨）插件系统** | 功能总览：模块、作者链路、运行时、兼容、安全、边界 |
+| [`keel/ARCHITECTURE.md`](keel/ARCHITECTURE.md) | **Keel 架构** | 架构图、代码分层、N1/V2 实现 |
+| [`keel/WORKFLOW.md`](keel/WORKFLOW.md) | **Keel 流程** | 开发、兼容、测试、标准试验插件 |
+| [`keel/README.md`](keel/README.md) | **Keel 入口** | 当前状态、快速命令、规格/作者/历史导航 |
+| [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | **写插件的开发者** | v2 兼容参考：选模板、manifest、类别、测试、打包、发布；新插件先看 `keel/FEATURES.md` |
 | [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | 不写代码的作者 | 工作台、模板、换图 / 模型 / 语音、试一场、打包 |
 | [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) | Forge 包作者 | `pack.json`、导入流程、导入报告 |
 | [`../plugins/AGENTS.md`](../plugins/AGENTS.md) | AI 代理 | 在 `plugins/` 内制作插件时的规则 |
+
+> **当前插件入口是 Keel：** 新插件写 manifest 3，见 [`keel/FEATURES.md`](keel/FEATURES.md) 与 [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md)。`PLUGINS.md`、`PLUGIN-API.md`、`PLUGIN-GUIDE.md`、`PLUGIN-DEV-GUIDE.md` 保留为 **v2 兼容参考**；manifest 2 先 `keel import --write` 迁移。
 
 ### 5.2 规范 / 接口
 

@@ -11,6 +11,7 @@ import { buildBattleSpec, createBattleFromSpec, resultDigest, compactResult, Loc
 import { DataSource } from '../../server/sim/simdata.js';
 import { validateClientResult, specBounds, syntheticResult } from '../../server/match/fields.js';
 import { CreditPool, SharedBossPool } from '../../server/match/finalAssault.js';
+import { MAX_FIELDS_PER_EXECUTOR } from '../../server/match/match/clientCombat.js';
 import { FakeBattle } from './fakeBattle.js';
 import { DATA as DATA_RAW, makeMatch, checkInvariants, give, chessOfTier } from './harness.js';
 import { withoutTuning } from '../../tools/balance.mjs';
@@ -727,6 +728,55 @@ test('Final Assault run on the server (nobody connected at its start): a human w
   assert.ok(last.acked[f.fieldId] > 0, 'the server run\'s own damage is acknowledged (the replica does not count it twice)');
   const dealt = m.bossPool.maxHp - last.hp;
   assert.ok(Math.abs(Object.values(last.acked).reduce((a, b) => a + b, 0) - dealt) <= 3000 * 2, 'Σ acked ≈ the pool damage');
+  m.dispose();
+});
+
+test('a browser simulates at most MAX_FIELDS_PER_EXECUTOR fields (own + delegated)', () => {
+  const keel = { plugins: [{ id: 'native-sim', manifest: {
+    manifest: 3, id: 'native-sim', name: 'Native sim', version: '1.0.0', app: '*',
+    api: { sim: 1 }, scope: ['room'], trust: 'sandbox',
+    modules: [{ kind: 'sim', entry: 'sim/index.js', permissions: ['sim.code'] }],
+  }, modules: [] }] };
+  const h = makeMatch({ mode: 'coop', difficulty: 'NORMAL', humans: 1, bots: 1, seed: 9202, clientCombat: true, instant: false, fake: true, clients: false, keel });
+  const m = h.m;
+  h.autoHumans();
+  m.start();
+  h.runToPhase(PHASE.COMBAT, 1);
+  m.hostId = 'p_0';
+  const base = m.fields.find((f) => f.fieldId === 'n:p_0');
+  assert.ok(base);
+  const delegated = Array.from({ length: MAX_FIELDS_PER_EXECUTOR - 1 }, (_, i) => ({ ...base, fieldId: `n:ai_${i}`, players: [`ai_${i}`], background: true, authority: 'p_0' }));
+  m.fields = [base, ...delegated];
+  assert.equal(m._loadFor('p_0'), MAX_FIELDS_PER_EXECUTOR);
+  const next = { ...base, fieldId: 'n:ai_9', players: ['ai_9'], background: false, authority: null };
+  assert.equal(m._executorCandidates(next, null, m.fields).length, 0, 'a full executor is not offered another field');
+  m.fields.pop();
+  assert.equal(m._loadFor('p_0'), MAX_FIELDS_PER_EXECUTOR - 1);
+  assert.equal(m._executorCandidates(next, null, m.fields).length, 1, 'one free slot remains');
+  m.dispose();
+});
+
+test('a silent native-sim field is delegated to another browser (host first) instead of the server', () => {  const keel = { plugins: [{ id: 'native-sim', manifest: {
+    manifest: 3, id: 'native-sim', name: 'Native sim', version: '1.0.0', app: '*',
+    api: { sim: 1 }, scope: ['room'], trust: 'sandbox',
+    modules: [{ kind: 'sim', entry: 'sim/index.js', permissions: ['sim.code'] }],
+  }, modules: [] }] };
+  const h = makeMatch({ mode: 'coop', difficulty: 'NORMAL', humans: 2, bots: 0, seed: 9201, clientCombat: true, instant: false, fake: true, clients: false, keel, hostId: 'p_1' });
+  const m = h.m;
+  h.autoHumans();
+  m.start();
+  h.runToPhase(PHASE.COMBAT, 1);
+  const f = m.fields.find((x) => x.fieldId === 'n:p_0');
+  assert.ok(f && f.mode === 'client' && f.authority === 'p_0');
+  f.lastProgressAt = h.sched.now() - 13_000;
+  assert.equal(m._checkFieldSilence(h.sched.now()), 1);
+  assert.equal(f.mode, 'client');
+  assert.equal(f.authority, 'p_1', 'the host (or another human) takes the field');
+  assert.equal(f.background, true);
+  const bg = h.allTo('p_1', 'b.start').find((x) => x.background === true);
+  assert.ok(bg, 'the host got a background b.start');
+  assert.equal(bg.fieldId, 'n:p_0');
+  assert.equal(bg.authoritative, true);
   m.dispose();
 });
 

@@ -1,0 +1,24 @@
+{
+  "manifest": 3,
+  "id": "keel-policy",
+  "name": { "zh": "龙骨策略模板", "en": "Keel policy template" },
+  "description": {
+    "zh": "原生 Keel policy 模块：读一条观察值，把决策写进模块自己的 state。",
+    "en": "A native Keel policy module: reads an observation and keeps its decisions in the module's own state."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "policy": 1 },
+  "scope": ["room"],
+  "trust": "sandbox",
+  "authors": ["your name"],
+  "license": "CC0-1.0",
+  "modules": [
+    {
+      "kind": "policy",
+      "entry": "policy/index.js",
+      "permissions": ["policy.observe", "policy.act"]
+    }
+  ],
+  "state": { "version": 1 }
+}

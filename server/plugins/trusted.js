@@ -9,13 +9,13 @@ import { describeIssue } from '../../shared/plugins/errors.js';
 
 export const isScriptClass = cls => cls === 'script' || cls === 'trusted';
 /** Snapshot executable entry bytes even when execution is disabled, for check/catalogue. */
-export function readScripts(dir, manifest, listed) {
+export function readScripts(dir, manifest, listed, { check = true } = {}) {
   const sources = {}, files = {}, problems = [];
   for (const rel of new Set(Object.values(manifest.entry))) {
     try {
       const bytes = fs.readFileSync(path.join(dir,rel));
       sources[rel] = bytes.toString('utf8'); files[rel] = nodeSha256(bytes);
-      if (rel === manifest.entry.sim || rel === manifest.entry.meta) problems.push(...checkScript(sources[rel]).problems.map(p => ({...p,path:rel+':'+p.path})));
+      if (check && (rel === manifest.entry.sim || rel === manifest.entry.meta)) problems.push(...checkScript(sources[rel]).problems.map(p => ({...p,path:rel+':'+p.path})));
     } catch (e) { problems.push({code:'PLUGIN_SCRIPT_CHECK',path:rel,message:e.message}); }
   }
   let lockHash = null, lockValid = false, lockedFiles = {};

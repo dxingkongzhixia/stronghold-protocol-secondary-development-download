@@ -1,5 +1,7 @@
 # Plugin API v1–v2
 
+> **Keel 现状：** `sp:sdk@1` 只作为 `compat.v2Script` 的正式兼容运行时保留；新插件优先写 manifest 3 的 `sim` / `match` / `policy` 模块。功能总览见 [`keel/FEATURES.md`](keel/FEATURES.md)。
+
 The frozen surface of plugin API v1. A plugin names the level it was written for in `api` (`plugin.json`). This build accepts a level from `PLUGIN_API.min` through `PLUGIN_API.current` (`shared/constants.js`). A plugin outside that range is refused and is not loaded.
 
 ## Version policy
@@ -335,6 +337,7 @@ replacement. No route or frozen plugin grammar member is added; the stable surfa
 | `studio.route.DELETE /studio/api/plugins/:id/files/*` | stable | 0.3.0 | `server/studio/index.js#STUDIO_ROUTES` |
 | `studio.route.POST /studio/api/plugins/:id/slot` | stable | 0.3.0 | `server/studio/index.js#STUDIO_ROUTES` |
 | `studio.route.POST /studio/api/plugins/:id/meta` | stable | 0.3.0 | `server/studio/index.js#STUDIO_ROUTES` |
+| `studio.route.POST /studio/api/plugins/:id/modules` | stable | 0.4.0 | `server/studio/index.js#STUDIO_ROUTES` |
 | `studio.route.POST /studio/api/plugins/:id/sections` | stable | 0.3.0 | `server/studio/index.js#STUDIO_ROUTES` |
 | `studio.route.POST /studio/api/plugins/:id/ref` | stable | 0.3.0 | `server/studio/index.js#STUDIO_ROUTES` |
 | `studio.route.POST /studio/api/plugins/:id/clear` | stable | 0.3.0 | `server/studio/index.js#STUDIO_ROUTES` |
@@ -379,6 +382,8 @@ replacement. No route or frozen plugin grammar member is added; the stable surfa
 | `error.PLUGIN_INCOMPATIBLE` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_BUSY` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_NO_MANIFEST` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
+| `error.PLUGIN_LEGACY_REMOVED` | stable | 0.4.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
+| `error.PLUGIN_KEEL_NATIVE` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_JSON` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_JSON_LIMIT` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_MANIFEST_SHAPE` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
@@ -446,6 +451,8 @@ replacement. No route or frozen plugin grammar member is added; the stable surfa
 | `error.PLUGIN_STUDIO_PATH` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_STUDIO_SIZE` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_STUDIO_EXISTS` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
+| `error.PLUGIN_STUDIO_KEEL_READONLY` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
+| `error.PLUGIN_STUDIO_KEEL_MANIFEST` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_STUDIO_TEMPLATE` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_STUDIO_TARGET` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |
 | `error.PLUGIN_STUDIO_FILE_KIND` | stable | 0.3.0 | `shared/plugins/errors.js#PLUGIN_ERRORS` |

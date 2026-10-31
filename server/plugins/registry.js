@@ -41,13 +41,13 @@
 
 import { nodeSha256 } from './identity.js';
 import { mergeLocalChars, readInstalledAssetOverlay } from './artReferences.js';
-import { readScripts, applyTrust, isScriptClass } from './trusted.js';
 import { operatorTraitPermissions } from './operatorTraits.js';
 import { readContentData } from './contentData.js';
 import { pluginStageWarnings } from './stageWarnings.js';
+import { readKeelPluginManifest } from './keelManifest.js';
 import { DATA_DIR } from '../data.js';
 import fs from 'node:fs';
-import { readFxAssets, readFxManifest as readPluginManifest } from './fxAssets.js';
+import { readFxAssets } from './fxAssets.js';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { APP_VERSION, PLUGIN_API } from '../../shared/constants.js';
@@ -55,7 +55,7 @@ import { builtinPlugins } from './builtin.js';
 import { PACK_TYPES, PACK_MANIFEST, PACKS_URL, normalizeManifest, packIndexEntry, buildPackIndex } from '../../shared/packs.js';
 import { SOURCE_LANG, isLangCode, countStrings } from '../../shared/i18nPacks.js';
 import {
-  PLUGIN_MANIFEST, PLUGIN_LIMITS, appVersionMatches, buildPluginIndex, checkJsonLimits, checkPluginFiles, classStatus, declaredPaths,
+  PLUGIN_MANIFEST, KEEL_MANIFEST, PLUGIN_LIMITS, appVersionMatches, buildPluginIndex, checkJsonLimits, checkPluginFiles, classStatus, declaredPaths,
 } from '../../shared/plugins/manifest.js';
 import {
   FILE_URL_DIGITS, LOCK_FILE, attachSpineMeta, modelHashOf, readPluginLock, visualHashOf, writesHashOf,
@@ -73,6 +73,10 @@ export const LANG_DIR = 'i18n';
 /** Largest manifest / UI file read (bytes): a pack file is small text. */
 const MAX_JSON_BYTES = PLUGIN_LIMITS.jsonBytes;
 const noop = () => {};
+/**
+ * The loader has one format: manifest 3. A folder that still carries manifest 2 is reported and left out (N5); the
+ * author migrates it with `node tools/keel.mjs import <id> --write`.
+ */
 
 /**
  * @typedef {{ rel: string, abs: string, url: string }} PackFile
@@ -297,6 +301,7 @@ function readVisual(dir, manifest, listed, { vanilla, hashCache }) {
   const list = issueList();
   const { problems, warnings, issues } = list;
   const out = (visual) => ({ visual, problems, warnings, issues });
+  const manifestFile = manifest.manifestFile ?? PLUGIN_MANIFEST;
   const part = manifest.parts.assets;
   let assets = {};
   let assetsFile = null;
@@ -329,7 +334,7 @@ function readVisual(dir, manifest, listed, { vanilla, hashCache }) {
   list.take(ov);
   if (problems.length) return out(null);
   // the files that shape the overlay (shared/plugins/visual.js: the `files` of its part of a vs)
-  const shaping = [...new Set([PLUGIN_MANIFEST, ...(lock ? [LOCK_FILE] : []), ...(assetsFile ? [assetsFile] : []), ...ov.files])];
+  const shaping = [...new Set([manifestFile, ...(lock ? [LOCK_FILE] : []), ...(assetsFile ? [assetsFile] : []), ...ov.files])];
   /** @type {Record<string, StatIdentity & { sha256: string }>} */
   const hashed = {};
   for (const rel of shaping) {
@@ -366,7 +371,7 @@ function readVisual(dir, manifest, listed, { vanilla, hashCache }) {
     id: manifest.id, version: manifest.version, files: Object.fromEntries(shaping.sort().map((rel) => {
       // Manifest notices and personal theme values never shape the room's art. Always canonicalize the
       // manifest, even without either field. Keep raw hashes above for files and lock/Spine verification.
-      if (rel === PLUGIN_MANIFEST) return [rel, nodeSha256(Buffer.from(manifestTextWithoutNotices(readJson(path.join(dir, rel)).json)))];
+      if (rel === manifestFile) return [rel, nodeSha256(Buffer.from(manifestTextWithoutNotices(readJson(path.join(dir, rel)).json)))];
       // [ASSUMED] Only checked Spine metadata from a lock shapes art. Its files table duplicates the actual
       // shaping hashes and includes notice/theme-sensitive manifest bytes, sizes and unrelated theme files.
       if (rel === LOCK_FILE) return [rel, nodeSha256(Buffer.from(canonicalJson({ spine: lock.spine })))];
@@ -405,7 +410,7 @@ function readUiFrame(dir, manifest, listed, { vanilla, hashCache }) {
     .map((f) => f.rel)
     .filter((rel) => FRAME_EXT.has(path.extname(rel).toLowerCase()) && rel.startsWith(clientDir));
   if (!frameRels.includes(entry)) problems.push(`${entry}: missing`);
-  const shaping = [...new Set([PLUGIN_MANIFEST, ...frameRels])].sort();
+  const shaping = [...new Set([manifest.manifestFile ?? PLUGIN_MANIFEST, ...frameRels])].sort();
   /** @type {Record<string, StatIdentity & { sha256: string }>} */
   const hashed = {};
   for (const rel of shaping) {
@@ -432,7 +437,7 @@ function readUiFrame(dir, manifest, listed, { vanilla, hashCache }) {
   const writes = createHash('sha256').update(canonicalJson({ entry, slots })).digest('hex');
   const composition = {
     id: manifest.id, version: manifest.version,
-    files: Object.fromEntries(shaping.map((rel) => [rel, rel === PLUGIN_MANIFEST
+    files: Object.fromEntries(shaping.map((rel) => [rel, rel === (manifest.manifestFile ?? PLUGIN_MANIFEST)
       ? nodeSha256(Buffer.from(manifestTextWithoutNotices(readJson(path.join(dir, rel)).json))) : hashed[rel].sha256])),
     writes,
   };
@@ -502,22 +507,36 @@ export function readPluginFolder(dir, { app = APP_VERSION, api = PLUGIN_API, whe
   const list = issueList();
   const { problems, warnings, issues } = list;
   const out = (plugin) => ({ plugin, problems, warnings, issues });
-  const man = path.join(dir, PLUGIN_MANIFEST);
+  const keelMan = path.join(dir, KEEL_MANIFEST);
+  const man = isFile(keelMan) ? keelMan : path.join(dir, PLUGIN_MANIFEST);
   if (!isFile(man)) {
     const hint = isFile(path.join(dir, PACK_MANIFEST)) ? ` (${PACK_MANIFEST} is the manifest 1 of a pack folder in packs/; a plugin has ${PLUGIN_MANIFEST}, "manifest": 2)` : '';
-    list.problem('PLUGIN_NO_MANIFEST', `no ${PLUGIN_MANIFEST}${hint}`, { file: PLUGIN_MANIFEST });
+    list.problem('PLUGIN_NO_MANIFEST', `no ${PLUGIN_MANIFEST} or ${KEEL_MANIFEST}${hint}`, { file: PLUGIN_MANIFEST });
     return out(null);
   }
+  const manifestFile = path.basename(man);
   const r = readJson(man);
-  if (r.error) { list.problem(r.code, `${PLUGIN_MANIFEST}: ${r.error}`, { file: PLUGIN_MANIFEST, detail: r.error }); return out(null); }
-  const read0 = readPluginManifest(r.json, { id, app, api });
+  if (r.error) { list.problem(r.code, `${manifestFile}: ${r.error}`, { file: manifestFile, detail: r.error }); return out(null); }
+  // A native manifest 3 is the only plugin declaration: `plugin.keel.json`, or `plugin.json` with `"manifest": 3`.
+  const isKeel = !!r.json && typeof r.json === 'object' && !Array.isArray(r.json) && r.json.manifest === 3;
+  if (!isKeel) {
+    list.problem('PLUGIN_LEGACY_REMOVED', `${manifestFile}: manifest 2 is no longer loaded; migrate this plugin to manifest 3 (node tools/keel.mjs import <id> --write)`, { file: manifestFile });
+    return out(null);
+  }
+  const read0 = readKeelPluginManifest(r.json, { id, app, api });
   list.take(read0);
   const { manifest, draft } = read0;
+  if (manifest) manifest.manifestFile = manifestFile;
+  const keelManifest = isKeel ? r.json : null;
   // the files are checked against what could be read even when the manifest has problems: one pass reports all
   const read = manifest || draft;
   if (!read) return out(null);
   const files = listPluginFiles(dir);
-  const check = checkPluginFiles(read, files);
+  // A native Keel manifest may run .js entries the manifest-2 class it projects to would not carry (a policy module).
+  const executable = keelManifest
+    ? new Set((keelManifest.modules ?? []).filter((m) => m && ['sim', 'match', 'policy'].includes(m.kind) && typeof m.entry === 'string').map((m) => m.entry))
+    : null;
+  const check = checkPluginFiles(read, files, executable ? { executable } : undefined);
   list.take(check);
   const walked = walkProblem(files);
   if (walked) list.problem('PLUGIN_FILE_SIZE', walked.text, { where: walked.where });
@@ -553,6 +572,7 @@ export function readPluginFolder(dir, { app = APP_VERSION, api = PLUGIN_API, whe
   const plugin = {
     id, type: manifest.type, class: manifest.class, status, source: 'plugins', layout: 'folder', where: at,
     supported: status === 'loaded' && manifest.class === 'lang', manifest, files: served, bytes: check.bytes, count: check.count,
+    ...(keelManifest ? { keel: keelManifest } : {}),
   };
   if ((manifest.class === 'cosmetic' || manifest.class === 'ui' || (['content','script','trusted'].includes(manifest.class) && manifest.parts.assets)) && status === 'loaded') {
     const art = typeof vanilla === 'function' ? vanilla() : vanilla;
@@ -588,19 +608,6 @@ export function readPluginFolder(dir, { app = APP_VERSION, api = PLUGIN_API, whe
     }
     const stageIssues = pluginStageWarnings(plugin, dataDir);
     list.take({ problems: [], warnings: stageIssues.map(i => i.text), issues: stageIssues });
-    if (isScriptClass(manifest.class)) {
-      plugin.script = readScripts(dir,manifest,files);
-      for (const p of plugin.script.problems) list.problem(p.code,p.message,{where:p.path,detail:p.message});
-      if (problems.length) return out(null);
-      const gameplayFiles = { ...(c.content.gameplayFiles || c.content.files), ...plugin.script.files };
-      plugin.content = { ...c.content, files: {...c.content.files,...plugin.script.files},
-        ...(c.content.gameplayFiles ? { gameplayFiles } : {}), hash: nodeSha256(Buffer.from(JSON.stringify(gameplayFiles))) };
-      plugin.script.manifestSource = fs.readFileSync(man,'utf8');
-      // Every snapshot byte must be from the pinned lock too, even if an author saves midway through the scan.
-      plugin.script.lockValid &&= Object.entries(plugin.content.files).every(([rel,hash]) => plugin.script.lockedFiles[rel]?.sha256 === hash)
-        && nodeSha256(Buffer.from(plugin.script.manifestSource)) === plugin.content.files['plugin.json'];
-      plugin.status = 'disabled';
-    }
     // PLUGIN API v2: the plugin's declared interaction windows (data only; a bad one keeps the plugin out)
     const win = readOffers(manifest, plugin.content);
     list.take(win);
@@ -940,7 +947,6 @@ export function createPluginRegistry(dirs, { log = { info: noop, warn: noop }, a
     if (state && s === sig) return state;
     const first = !state;
     const scan = scanPlugins(dirs, { app, hashCache, artCache });
-    applyTrust(scan.plugins,{ pluginsDir:dirs.pluginsDir, host:scriptHost, mode:scriptMode, log });
     // the hashes of a plugin that is gone (removed, or now skipped) are forgotten
     const kept = scan.plugins.flatMap((p) => [p.visual && p.visual.dir + path.sep, p.ui && p.ui.dir + path.sep].filter(Boolean));
     for (const abs of [...hashCache.keys()]) if (!kept.some((d) => abs.startsWith(d))) hashCache.delete(abs);
@@ -969,7 +975,6 @@ export function createPluginRegistry(dirs, { log = { info: noop, warn: noop }, a
     /** Recheck the actual listening address, and retain it across every subsequent rescan. */
     setScriptHost(host) {
       scriptHost = host;
-      if (state) applyTrust(state.plugins, { pluginsDir:dirs.pluginsDir, host:scriptHost, mode:scriptMode, log });
     },
     /** Re-read the folders now if they changed (force: even within recheckMs). */
     refresh: (force = false) => { refresh(force); },

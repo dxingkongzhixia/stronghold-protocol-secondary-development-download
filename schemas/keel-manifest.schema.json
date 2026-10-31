@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stronghold-protocol.local/schemas/keel-manifest.schema.json",
+  "title": "plugin.json — Keel manifest 3",
+  "description": "The native Keel manifest. Manifest 2 remains readable through shared/keel/adapt.js; this schema describes only manifest 3. docs/keel/MANIFEST-V3.md is the prose reference.",
+  "type": "object",
+  "required": ["manifest", "id", "name", "version", "app", "api", "trust", "modules"],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": { "type": "string" },
+    "manifest": { "const": 3 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" },
+    "name": {
+      "anyOf": [
+        { "type": "string", "minLength": 1, "maxLength": 10000 },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        }
+      ]
+    },
+    "englishName": { "type": "string", "maxLength": 10000 },
+    "description": {
+      "anyOf": [
+        { "type": "string", "maxLength": 10000 },
+        { "type": "object", "additionalProperties": { "type": "string" } }
+      ]
+    },
+    "version": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "app": { "type": "string", "maxLength": 60, "minLength": 1 },
+    "api": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "enum": ["content", "sim", "match", "policy", "ui", "asset", "lang"] },
+      "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 99 }
+    },
+    "scope": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["room", "personal", "server"] }
+    },
+    "trust": { "enum": ["data", "sandbox", "native"] },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": ["kind", "permissions"],
+        "additionalProperties": true,
+        "properties": {
+          "kind": { "enum": ["content", "sim", "match", "policy", "ui", "asset", "lang"] },
+          "entry": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 256,
+            "items": { "type": "string", "minLength": 1, "maxLength": 200 }
+          },
+          "permissions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+          },
+          "provides": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[A-Za-z0-9_*:./-]{1,160}$" }
+          },
+          "consumes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[A-Za-z0-9_*:./-]{1,160}$" }
+          },
+          "slots": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["hud.right", "result.tab", "stats.tab", "room.panel"] }
+          },
+          "state": { "type": "object" },
+          "notes": { "type": "string", "maxLength": 500 },
+          "assets": { "type": "object", "description": "The structured asset overlay of an asset module (enemies, tokens, bands, audio, fx)." },
+          "parts": {
+            "type": "object",
+            "description": "The role of each content file (data, operators, enemies, modes, stages, dsl, offers, i18n).",
+            "additionalProperties": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 200 } }
+          }
+        },
+        "anyOf": [
+          { "required": ["entry"] },
+          { "required": ["files"] }
+        ]
+      }
+    },
+    "provides": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[A-Za-z0-9_*:./-]{1,160}$" }
+    },
+    "consumes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[A-Za-z0-9_*:./-]{1,160}$" }
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "schema": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "version": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "requires": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" },
+      "additionalProperties": { "type": "string", "maxLength": 60 }
+    },
+    "optional": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" },
+      "additionalProperties": { "type": "string", "maxLength": 60 }
+    },
+    "conflicts": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" },
+      "additionalProperties": { "type": "string", "maxLength": 60 }
+    },
+    "loadAfter": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" }
+    },
+    "loadBefore": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" }
+    },
+    "priority": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+    "settings": { "type": "object", "maxProperties": 32 },
+    "compat": {
+      "type": "object",
+      "properties": {
+        "mainline": {
+          "anyOf": [
+            { "type": "string", "maxLength": 60 },
+            { "const": false }
+          ]
+        },
+        "manifest2": { "type": "boolean" },
+        "notes": { "type": "string", "maxLength": 1000 }
+      },
+      "additionalProperties": true
+    },
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "algo": { "const": "sha256" },
+        "lock": { "type": "string", "minLength": 1, "maxLength": 200 }
+      },
+      "additionalProperties": true
+    },
+    "authors": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "credits": { "type": "string", "maxLength": 10000 },
+    "license": { "type": "string", "maxLength": 10000 },
+    "homepage": { "type": "string", "pattern": "^https?://\\S+$" },
+    "sourceLang": { "type": "string", "maxLength": 16 },
+    "category": { "enum": ["appearance", "faction", "strategy", "enemy", "gameplay"] },
+    "legacy": { "type": "object" }
+  }
+}

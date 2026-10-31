@@ -60,6 +60,9 @@ export function deleteIn(obj, p, keep = 1) {
  * @param {ReturnType<typeof import('./files.js').createPluginFiles>} files @param {string} id
  */
 export function openPlugin(files, id) {
+  // A Keel plugin (plugin.keel.json / manifest 3) belongs to the native line: reading it is fine elsewhere, but every one
+  // of openPlugin's callers writes through save(), so it refuses here with the studio's own code.
+  if (files.keel?.(id)) throw new StudioError('PLUGIN_STUDIO_KEEL_READONLY', 409, { id }, `${id} is a Keel plugin: the studio does not edit it`);
   const dir = files.root(id);
   let manifest;
   // a plain file of the folder only (files.stat: never through a link put in its place)
@@ -95,10 +98,41 @@ const META_FIELDS = Object.freeze({
 });
 
 /**
- * Edit the basic fields (see META_FIELDS): `{ field: value }` — a text in `lang` for name / description (other languages
- * kept), a list of names for authors, a list of scopes the class allows.
- * @param {ReturnType<typeof openPlugin>} p @param {Record<string, unknown>} fields @param {string} [lang]
+ * Edit the basic fields of a manifest 3 (N2 studio C): `{ field: value }` — a text in `lang` for name / description
+ * (other languages kept), a list for authors, a list of scopes the manifest allows, version checked.
+ * @param {any} manifest @param {Record<string, unknown>} fields @param {string} [lang]
  */
+export function editKeelMeta(manifest, fields, lang = 'zh') {
+  const m = structuredClone(isObj(manifest) ? manifest : {});
+  const code = /^[a-z]{2}(-[A-Z]{2})?$/.test(lang) ? lang : 'zh';
+  for (const [k, v] of Object.entries(isObj(fields) ? fields : {})) {
+    if (!Object.hasOwn(META_FIELDS, k)) throw new StudioError('PLUGIN_STUDIO_REQUEST', 400, { detail: `${k} is not a field the studio edits` });
+    const kind = META_FIELDS[k];
+    const str = typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '';
+    if (k === 'scope') {
+      const list = (Array.isArray(v) ? v : []).filter((x) => ['room', 'personal', 'server'].includes(x));
+      if (!list.length) throw new StudioError('PLUGIN_SCOPE', 400, {}, 'no scope');
+      m.scope = list;
+    } else if (kind === 'version') {
+      const s = str.trim();
+      if (!isSemver(s)) throw new StudioError('PLUGIN_VERSION', 400, {}, `${s.slice(0, 40)} is not a version`);
+      m.version = s;
+    } else if (kind === 'list') {
+      const list = (Array.isArray(v) ? v : str.split(/[,，\n]/)).map((x) => (typeof x === 'string' ? x : '').trim().slice(0, 200)).filter(Boolean).slice(0, 32);
+      if (list.length) m[k] = list; else delete m[k];
+    } else if (kind === 'text' || kind === 'longtext') {
+      const text = str.trim().slice(0, kind === 'text' ? 60 : 500);
+      const cur = isObj(m[k]) ? { ...m[k] } : typeof m[k] === 'string' && m[k] ? { [m.sourceLang || 'zh']: m[k] } : {};
+      if (text) cur[code] = text; else delete cur[code];
+      if (Object.keys(cur).length) m[k] = cur; else delete m[k];
+    } else {
+      const s = str.trim().slice(0, k === 'homepage' ? 300 : k === 'credits' ? 500 : 100);
+      if (s) m[k] = s; else delete m[k];
+    }
+  }
+  return m;
+}
+
 export function editMeta(p, fields, lang = 'zh') {
   const m = p.manifest;
   const code = /^[a-z]{2}(-[A-Z]{2})?$/.test(lang) ? lang : 'zh';

@@ -3,7 +3,7 @@ import { createSimWorker, prepareScriptRuntime } from '../../public/js/battle/si
 import { loadBrowserSim } from '../../public/js/battle/simLoader.js';
 import { initializeSandbox } from '../../shared/plugins/sandbox.js';
 import { escapeCases } from './sandboxCases.js';
-import { createPluginCompartment } from '../../shared/plugins/sandbox.js';
+import { createPluginCompartment, loadKeelModule } from '../../shared/plugins/sandbox.js';
 
 export function fixtureRuntime({ base, loadSES, parse }) {
   let battle;
@@ -39,6 +39,28 @@ export function fixtureRuntime({ base, loadSES, parse }) {
         try { return { label, expected, value: c.evaluate(source) }; }
         catch { return { label, expected, value: 'throws' }; }
       });
+    }
+    if (method === 'keel') {
+      await initialize();
+      const out = {};
+      try {
+        const code = loadKeelModule(String(args?.[0] ?? ''), { parse });
+        const api = Object.freeze({
+          frame: 0,
+          state: Object.freeze({ get: () => ({}), set() {}, patch() {} }),
+          setView: (v) => { out.view = v; },
+          log: (...a) => { (out.logs ??= []).push(a.map(String)); },
+          rng: () => ({ next: () => 0, int: () => 0, pick: (a) => a?.[0] }),
+          units: () => [],
+        });
+        code.setup?.({ api });
+        code.hooks?.['sim.battleStart']?.({}, api);
+        code.hooks?.['sim.tick']?.({}, api);
+        out.keys = Object.keys(code).sort();
+        out.hooks = Object.keys(code.hooks ?? {}).sort();
+        out.hostGlobal = typeof globalThis.__keelProbe;
+      } catch (e) { out.error = { code: e?.code ?? null, message: String(e?.message ?? e) }; }
+      return out;
     }
     return dispatch(method, args);
   };

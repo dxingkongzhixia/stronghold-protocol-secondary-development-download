@@ -12,6 +12,8 @@ import { testSlice } from '../testTrace.js';
 
 /** How often the field-silence watchdog looks at the live client fields. */
 const FIELD_WATCH_MS = 4_000;
+/** The most fields one browser may simulate at once (its own field + delegated bot/takeover fields). */
+export const MAX_FIELDS_PER_EXECUTOR = 8;
 
 export class MatchClientCombat {
   /** Stop every client-combat timer and the headless pacer (phase end, finish, dispose). */
@@ -97,14 +99,14 @@ export class MatchClientCombat {
     return best ? best.playerId : null;
   }
 
-  /** b.start of a field for one recipient (`watch`: not a player of the field). */
-  _startMsg(f, pid, { watch = false } = {}) {
+  /** b.start of a field for one recipient (`watch`: not a player of the field; `background`: the executor's replay). */
+  _startMsg(f, pid, { watch = false, background = false } = {}) {
     return {
       t: 'b.start', battleId: f.battleId, fieldId: f.fieldId, kind: f.kind,
       spec: this.spectators.has(pid) ? this._spectatorSpec(f) : f.spec,
       authoritative: !!(!f.done && !f.verifyJob && f.mode === 'client' && f.authority === pid && !watch),
       startAt: f.startAt, serverNow: this.sched.now(), elapsed: Math.round(this._fieldElapsed(f) * 1000) / 1000,
-      speed: this.gameSpeed, watch: !!watch, done: !!f.done,
+      speed: this.gameSpeed, watch: !!watch, background: !!background, done: !!f.done,
     };
   }
 
@@ -114,16 +116,83 @@ export class MatchClientCombat {
     return this.sendTo(pid, this._startMsg(f, pid, opts));
   }
 
-  /** Give every field its authority (a connected human) or run it on the server. */
+  /** Fields this browser would simulate: its own / participated field plus delegated background fields. */
+  _loadFor(pid, fields = this.fields) {
+    let n = 0;
+    for (const f of fields ?? []) {
+      if (!f) continue;
+      if (Array.isArray(f.players) && f.players.includes(pid)) { n++; continue; }
+      if (f.background && f.authority === pid) n++;
+    }
+    return n;
+  }
+
+  /**
+   * Connected humans who can replay a field they are not a player of: the room host first, then by seat.
+   * Trait-layer fields stay server-run (their authority rule needs the server's own run).
+   */
+  _executorCandidates(f, exclude = null, fields = this.fields) {
+    // Only a room with native sim code needs a browser executor: its battle cannot be replayed by the server (D10).
+    // Vanilla / content-only / meta-only rooms keep the existing server fallback unchanged.
+    if (!this.simCode) return [];
+    if (requiresTraitLayerAuthority(f.spec, this.gd)) return [];
+    const skip = new Set(f.players ?? []);
+    if (exclude) skip.add(exclude);
+    const out = [];
+    for (const ps of this.players.values()) {
+      if (!ps || ps.isBot || ps.left || !ps.connected || skip.has(ps.playerId)) continue;
+      if (this._loadFor(ps.playerId, fields) >= MAX_FIELDS_PER_EXECUTOR) continue;
+      out.push(ps);
+    }
+    out.sort((a, b) => (a.playerId === this.hostId ? -1 : b.playerId === this.hostId ? 1 : (a.seat ?? 99) - (b.seat ?? 99)));
+    return out;
+  }
+
+  /** Pick an executor (host first; a human not used for another field first; reusing the host when nobody else is free). */
+  _executorFor(f, exclude = null, fields = this.fields) {
+    this._delegated ??= new Set();
+    const candidates = this._executorCandidates(f, exclude, fields);
+    const free = candidates.filter((ps) => !this._delegated.has(ps.playerId));
+    const pick = free[0] ?? candidates[0] ?? null;
+    if (pick) this._delegated.add(pick.playerId);
+    return pick ? pick.playerId : null;
+  }
+
+  /** Send the delegated fields their background b.start (after the viewers' starts, so it never steals the view). */
+  _sendExecutors(fields) {
+    for (const f of fields) {
+      if (!f.background || !f.authority) continue;
+      if (!this._sendStart(f.authority, f, { background: true })) this._runOnServer(f, 'executor-lost');
+    }
+  }
+
+  /** Hand a field to another browser (host first) instead of running it on the server; returns false after a fallback. */
+  _delegateField(f, reason) {
+    const prev = f.mode === 'client' ? f.authority : null;
+    const next = this._executorFor(f, prev);
+    if (!next) { this._runOnServer(f, reason); return false; }
+    this._assignClient(f, next, { background: true });
+    if (prev) this.sendTo(prev, { t: 'b.end', battleId: f.battleId, fieldId: f.fieldId, reason: 'takeover' });
+    if (!this._sendStart(next, f, { background: true })) { this._runOnServer(f, 'executor-lost'); return false; }
+    this.log.info?.(`[match ${this.roomCode}] ${f.fieldId} R${this.round}: delegated to ${next} (${reason})`);
+    return true;
+  }
+
+  /** Give every field its authority (a connected human) or an executor browser; only then the server. */
   _launch(fields) {
     const now = this.sched.now();
     this._armFieldWatch();
+    this._delegated = new Set();
     this.fields = fields;
     for (const f of fields) { f.startAt = now; f.lastProgressAt = now; }
     for (const f of fields) {
       const auth = this._authorityFor(f);
       if (auth) this._assignClient(f, auth);
-      else this._runOnServer(f, 'no-human');
+      else {
+        const executor = this._executorFor(f);
+        if (executor) this._assignClient(f, executor, { background: true });
+        else this._runOnServer(f, 'no-human');
+      }
     }
   }
 
@@ -157,16 +226,18 @@ export class MatchClientCombat {
       if (f.verifyJob || f.heldResult || f.result != null) continue;
       const last = Number.isFinite(f.lastProgressAt) ? f.lastProgressAt : f.startAt;
       if (now - last <= FIELD_SILENCE_MS) continue;
-      this.log.warn?.(`[match ${this.roomCode}] ${f.fieldId} R${this.round}: silent client for ${Math.round((now - last) / 1000)} s — server takeover`);
-      this._runOnServer(f, 'silent');
+      this.log.warn?.(`[match ${this.roomCode}] ${f.fieldId} R${this.round}: silent client for ${Math.round((now - last) / 1000)} s — delegating/takeover`);
+      this._delegateField(f, 'silent');
       n++;
     }
     return n;
   }
 
-  _assignClient(f, pid) {
+  _assignClient(f, pid, { background = false } = {}) {
     f.mode = 'client';
     f.authority = pid;
+    f.background = !!background;
+    f.executor = background ? pid : null;
     f.lastProgressAt = this.sched.now();
     if (f.deadlineTimer) { this.cancel(f.deadlineTimer); f.deadlineTimer = null; }
     if (f.kind === 'boss' || f.kind === 'hidden') return; // the pool / team LP / silence watchdog end those
@@ -183,7 +254,7 @@ export class MatchClientCombat {
     f.deadlineTimer = this.later(Math.max(0, at - this.sched.now()), () => {
       f.deadlineTimer = null;
       if (f.done || f.mode !== 'client') return;
-      this._runOnServer(f, 'timeout');
+      this._delegateField(f, 'timeout');
     });
   }
 
@@ -210,6 +281,8 @@ export class MatchClientCombat {
     }
     f.mode = 'server';
     f.authority = null;
+    f.background = false;
+    f.executor = null;
     if (f.deadlineTimer) { this.cancel(f.deadlineTimer); f.deadlineTimer = null; }
     // the former authority (still online after a timeout / an invalid result) stops reporting and keeps its view
     if (prev) this.sendTo(prev, { t: 'b.end', battleId: f.battleId, fieldId: f.fieldId, reason: 'takeover' });
@@ -285,7 +358,7 @@ export class MatchClientCombat {
     for (const f of this.fields) {
       if (!f.cc || f.done || f.verifyJob || f.mode !== 'client' || f.authority !== ps.playerId) continue;
       if (f.kind === 'boss' || f.kind === 'hidden') this._bossHandover(f, why);
-      else this._runOnServer(f, why);
+      else this._delegateField(f, why);
     }
   }
 }

@@ -1,0 +1,19 @@
+{
+  "manifest": 3,
+  "id": "keel-demo",
+  "name": "Keel demo",
+  "description": "A deterministic sim module used by the Keel runtime tests and `keel run`.",
+  "version": "1.0.0",
+  "app": "*",
+  "api": { "sim": 1 },
+  "scope": ["room"],
+  "trust": "sandbox",
+  "modules": [
+    {
+      "kind": "sim",
+      "entry": "sim/index.js",
+      "permissions": ["sim.read", "sim.damage.write", "sim.spawn", "sim.rng"]
+    }
+  ],
+  "state": { "version": 1 }
+}

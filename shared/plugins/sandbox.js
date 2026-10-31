@@ -38,15 +38,49 @@ export async function initializeSandbox({ loadSES, loadMath = () => import('../.
 }
 
 export function createPluginCompartment(sp) {
+  return confinedCompartment({ sp: globalThis.harden(sp), Math: safeMath });
+}
+
+/** [ASSUMED] Host powers a confined module never sees; SES already omits them, this shadows even its tamed ones. */
+const DENIED_GLOBALS = Object.freeze(['Date', 'performance', 'Intl', 'WeakRef', 'FinalizationRegistry', 'SharedArrayBuffer', 'Atomics',
+  'fetch', 'setTimeout', 'setInterval', 'queueMicrotask', 'process', 'require', 'Compartment', 'eval', 'Function', 'Promise', 'harden', 'lockdown']);
+
+/**
+ * A fresh SES compartment: only the globals passed in, never the host's.
+ * @param {Record<string, any>} globals
+ */
+function confinedCompartment(globals) {
   if (!initialized) throw denied('PLUGIN_SANDBOX_UNAVAILABLE', 'initializeSandbox first');
-  const c = new globalThis.Compartment({ sp: globalThis.harden(sp), Math: safeMath });
-  // [ASSUMED] No eval/Function/Promise: runtime source must not bypass the parsed synchronous module surface.
-  // SES already omits host powers; explicitly shadow even its tamed Date and the child-Compartment constructor.
-  for (const name of ['Date', 'performance', 'Intl', 'WeakRef', 'FinalizationRegistry', 'SharedArrayBuffer', 'Atomics',
-    'fetch', 'setTimeout', 'setInterval', 'queueMicrotask', 'process', 'require', 'Compartment', 'eval', 'Function', 'Promise', 'harden', 'lockdown']) {
+  const c = new globalThis.Compartment(globals);
+  for (const name of DENIED_GLOBALS) {
     Object.defineProperty(c.globalThis, name, { value: undefined, writable: false, configurable: false });
   }
   return c;
+}
+
+/**
+ * Compile and evaluate one Keel-native module (`export default { setup, hooks }`) in its own SES compartment.
+ * The module gets the runtime's `api` as an argument and nothing else: no page/Worker globals, no imports, no eval.
+ * The same surface the simulation Worker's scripts get (shared/plugins/sandbox.js), without an SDK.
+ * @param {string} source the checked module source (content.js verified its bytes against the content set)
+ * @param {{ parse?: (src: string, opts?: object) => any }} [opts] `parse` = acorn's
+ * @returns {any} the module's default object
+ */
+export function loadKeelModule(source, opts = {}) {
+  const parse = opts.parse;
+  if (!initialized) throw denied('PLUGIN_SANDBOX_UNAVAILABLE', 'initializeSandbox first');
+  if (typeof parse !== 'function') throw denied('PLUGIN_SANDBOX_UNAVAILABLE', 'parser missing');
+  if (typeof source !== 'string' || !source.trim()) throw denied('PLUGIN_SANDBOX_SYNTAX', 'the module source is empty');
+  const compiled = compileModule(source, parse);
+  // A Keel module is self-contained: the host functions arrive through the runtime's api, not a module graph.
+  if (compiled.deps.length) throw denied('PLUGIN_SANDBOX_IMPORT', compiled.deps[0]);
+  // Native modules run the same Math as the server's match child (not the v2 scripts' deterministic subset), so a
+  // module that uses it observes the same values on both sides.
+  const c = confinedCompartment({ Math });
+  const ns = c.evaluate(compiled.code)(globalThis.harden([]));
+  const code = ns.default;
+  if (!code || typeof code !== 'object' || Array.isArray(code)) throw denied('PLUGIN_SANDBOX_SYNTAX', 'a Keel module exports a default object');
+  return code;
 }
 
 function localPath(path) {

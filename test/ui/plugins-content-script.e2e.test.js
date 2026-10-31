@@ -54,7 +54,7 @@ async function waitContentReady(c) {
 describe('content and script plugins in the browser', { skip: !ENABLED }, () => {
   test('a room content plugin changes the cs, adds its operator, and reaches PREP', { timeout: 5 * 60 * 1000 }, async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-content-e2e-'));
-    fs.cpSync(path.join(ROOT, 'plugins/_template/content'), path.join(tmp, 'data-demo'), { recursive: true });
+    fs.cpSync(path.join(ROOT, 'plugins/_template/keel-content'), path.join(tmp, 'data-demo'), { recursive: true });
     const srv = await startRealServer({ fast: { timerScale: 1, combatSpeed: 2, startRound: 1, autoPlace: true }, pluginsDir: tmp });
     const P = (await import('puppeteer-core')).default;
     const c = new Client(P, srv.base, 'content', { prefix: 'content-plugin', w: 1600, h: 900 });
@@ -85,7 +85,7 @@ describe('content and script plugins in the browser', { skip: !ENABLED }, () => 
 
   test('a sandbox script plugin required by a room content plugin loads and reaches PREP', { timeout: 5 * 60 * 1000 }, async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-script-e2e-'));
-    fs.cpSync(path.join(ROOT, 'plugins/_template/script'), path.join(tmp, 'script-demo'), { recursive: true });
+    fs.cpSync(path.join(ROOT, 'plugins/_template/keel-script'), path.join(tmp, 'script-demo'), { recursive: true });
     assert.ok(packPlugin(path.join(tmp, 'script-demo')).wrote, 'the script plugin gets a lock file');
     writePlugin(path.join(tmp, 'script-wrapper'), {
       manifest: 2, id: 'script-wrapper', name: { zh: '脚本包装', en: 'Script wrapper' }, version: '1.0.0',
@@ -131,7 +131,7 @@ describe('content and script plugins in the browser', { skip: !ENABLED }, () => 
 
   test('a standalone sandbox script is selectable directly in the room panel', { timeout: 5 * 60 * 1000 }, async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-script-direct-'));
-    fs.cpSync(path.join(ROOT, 'plugins/_template/script'), path.join(tmp, 'script-direct'), { recursive: true });
+    fs.cpSync(path.join(ROOT, 'plugins/_template/keel-script'), path.join(tmp, 'script-direct'), { recursive: true });
     const mp = path.join(tmp, 'script-direct', 'plugin.json');
     const m = JSON.parse(fs.readFileSync(mp, 'utf8'));
     m.id = 'script-direct';
@@ -237,7 +237,7 @@ describe('content and script plugins in the browser', { skip: !ENABLED }, () => 
 
   test('a trusted plugin waits for per-seat consent before the room starts', { timeout: 6 * 60 * 1000 }, async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-trusted-e2e-'));
-    fs.cpSync(path.join(ROOT, 'plugins/_template/script'), path.join(tmp, 'trusted-demo'), { recursive: true });
+    fs.cpSync(path.join(ROOT, 'plugins/_template/keel-script'), path.join(tmp, 'trusted-demo'), { recursive: true });
     const manifestPath = path.join(tmp, 'trusted-demo', 'plugin.json');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     manifest.id = 'trusted-demo';

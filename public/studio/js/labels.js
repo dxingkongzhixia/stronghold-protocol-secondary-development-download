@@ -32,6 +32,11 @@ export const TEMPLATE_LABELS = Object.freeze({
   spine: { title: N_('换 Spine 模型'), line: N_('替换干员、召唤物或敌人在战场上的动画模型（Spine 3.8）。') },
   voice: { title: N_('换语音'), line: N_('替换干员在战斗中说的每一句话（中文和日文配音）。') },
   audio: { title: N_('换音乐 / 音效'), line: N_('替换背景音乐、界面和战斗音效，或某个单位的攻击、受击、技能声音。') },
+  'keel-content': { title: '龙骨内容插件', line: '原生 manifest 3：content 记录、parts 与 provides。' },
+  'keel-lang': { title: '龙骨语言包', line: '原生 manifest 3：一份小翻译表。' },
+  'keel-policy': { title: '龙骨策略插件', line: '原生 manifest 3：policy 决策与模块内 state。' },
+  'keel-multi-module': { title: '龙骨多模块插件', line: '原生 manifest 3：content + sim + policy + ui 同一个插件。' },
+  'keel-reference': { title: '龙骨参考插件', line: '原生 manifest 3：content + asset + sim + policy + ui 的完整参考。' },
 });
 
 /** Slot fields (a template's slots `field`). */

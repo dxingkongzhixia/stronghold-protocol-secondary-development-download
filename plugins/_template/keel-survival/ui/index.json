@@ -1,0 +1,13 @@
+{
+  "slots": [
+    {
+      "slot": "hud.right",
+      "when": "round >= 1",
+      "children": [
+        { "type": "text", "value": "plugin.keel-survival.round" },
+        { "type": "text", "value": "plugin.keel-survival.lives" },
+        { "type": "text", "value": "plugin.keel-survival.gold" }
+      ]
+    }
+  ]
+}

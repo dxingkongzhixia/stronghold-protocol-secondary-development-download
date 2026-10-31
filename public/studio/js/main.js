@@ -33,7 +33,7 @@ import { SelectTools, confirmRemoval, removePlugins, showRefused } from './remov
 import { ForgeDialog } from './forge.js';
 import { TargetPicker } from './picker.js';
 import { SlotCard } from './slots.js';
-import { InfoForm, FileList, ManifestEditor } from './info.js';
+import { InfoForm, FileList, ManifestEditor, KeelModules } from './info.js';
 import { editorOf } from './editors/index.js';
 import { createPreviewLayers } from './preview/layers.js';
 import { FieldPreview } from './preview/field.js';
@@ -178,7 +178,7 @@ function PluginView({ id, info, onListChanged, eventsAt, onGone }) {
   const name = state.names?.zh || state.names?.en || Object.values(state.names || {})[0] || id;
   const problems = state.check.problems;
   const generalIssues = state.check.issues.filter((i) => !(Array.isArray(i.at) && i.at[0] === 'assets' && sections.some((s) => s.slots.some((sl) => sl.at.every((k, n) => i.at[n + 1] === k)))));
-  const tabs = [['content', t('内容')], ['info', t('信息')], ['files', t('文件')], ['manifest', t('清单')], ...(state.class !== 'ui' ? [['trial', t('试一场')]] : [])];
+  const tabs = [['content', t('内容')], ['info', t('信息')], ['files', t('文件')], ['manifest', t('清单')], ...(state.class !== 'ui' && !state.keel ? [['trial', t('试一场')]] : [])];
   return html`<div class="st-plugin" data-plugin=${id}>
     <header class="st-plugin__head">
       <div class="st-plugin__titles">
@@ -192,6 +192,7 @@ function PluginView({ id, info, onListChanged, eventsAt, onGone }) {
         <${Button} variant="primary" onClick=${pack} loading=${busy} data-testid="pack">${t('打包并下载')}<//>
       </div>
     </header>
+    ${state.keel ? html`<div class="st-banner is-ok" data-testid="keel-readonly">${t('Keel 插件：清单 3 与模块可在「信息 / 清单」页编辑，保存前会校验；外观槽位仍只读。')}</div>` : null}
     ${packed ? html`<div class=${cx('st-banner', packed.ok ? 'is-ok' : 'is-bad')} data-testid="pack-result">
       ${packed.ok ? t('打包完成：已写入 plugin.lock.json，zip 已开始下载。') : t('还不能打包：先解决下面的问题。')}
       <${IssueList} issues=${packed.issues} onFix=${onFix} busy=${busy} compact=${true} />
@@ -211,7 +212,8 @@ function PluginView({ id, info, onListChanged, eventsAt, onGone }) {
         onAdd=${(s) => { setAddOpen(false); if (!sections.some((x) => x.template === s.template && x.target === s.target)) saveSections([...sections, s]); }} />
     </div>` : null}
     ${tab === 'trial' ? html`<${TrialBench} state=${state} draft=${draft} />` : null}
-    ${tab === 'info' ? html`<${InfoForm} state=${state} busy=${busy} onFix=${onFix} onSave=${(fields, lang) => run(() => post(pluginPath(id, 'meta'), { fields, lang }), { list: true })} />` : null}
+    ${tab === 'info' ? html`<${InfoForm} state=${state} busy=${busy} onFix=${onFix} onSave=${(fields, lang) => run(() => post(pluginPath(id, 'meta'), { fields, lang }), { list: true })} />
+      ${state.keel ? html`<${KeelModules} state=${state} busy=${busy} onSave=${(modules) => run(() => post(pluginPath(id, 'modules'), { modules }), { list: true })} />` : null}` : null}
     ${tab === 'files' ? html`<${FileList} state=${state} busy=${busy} onFix=${onFix} onRemove=${async (rel) => {
       if (await confirmDialog({ title: t('删除文件'), text: t('从插件文件夹里删除 {file}？', { file: rel }), okText: t('删除'), danger: true })) run(() => call('DELETE', pluginPath(id, `files/${rel.split('/').map(encodeURIComponent).join('/')}`)), { list: true });
     }} />` : null}
@@ -388,7 +390,7 @@ function App({ info }) {
               onClick=${() => { setPane('plugins'); setSelected(p.id); }} data-plugin=${p.id} disabled=${!!p.linked}
               title=${p.linked ? t('这个插件文件夹是符号链接：游戏照常读取它，工作台只打开真实的文件夹。') : undefined}>
             <span class="st-list__name">${p.name || p.id}</span>
-            <span class="st-list__meta"><code>${p.id}</code>${p.linked ? ` · ${t('符号链接，工作台不打开')}` : ''}${p.version ? ` · v${p.version}` : ''}${p.status === 'skipped' && !p.linked ? ` · ${t('{n} 个问题', { n: p.problems })}` : p.class !== 'cosmetic' && p.class ? ` · ${p.class}` : ''}</span>
+            <span class="st-list__meta"><code>${p.id}</code>${p.keel ? ' · Keel' : ''}${p.linked ? ` · ${t('符号链接，工作台不打开')}` : ''}${p.version ? ` · v${p.version}` : ''}${p.status === 'skipped' && !p.linked ? ` · ${t('{n} 个问题', { n: p.problems })}` : p.class !== 'cosmetic' && p.class ? ` · ${p.class}` : ''}</span>
           </button></li>`)}
           ${!list.length ? html`<li class="st-note">${t('还没有插件。点「新建插件」开始。')}</li>` : null}
         </ul>

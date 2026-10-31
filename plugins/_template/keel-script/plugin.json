@@ -1,0 +1,29 @@
+{
+  "manifest": 3,
+  "id": "keel-script",
+  "name": { "zh": "Keel v2 脚本模板", "en": "Keel v2 script template" },
+  "description": {
+    "zh": "通过 Keel compat.v2Script 运行 sp:sdk@1 脚本的示例；lock/pin/consent 仍由旧信任链负责。",
+    "en": "A sp:sdk@1 script through Keel compat.v2Script; lock/pin/consent still belong to the old trust chain."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "sim": 1 },
+  "scope": ["room"],
+  "trust": "sandbox",
+  "authors": ["your name"],
+  "license": "CC0-1.0",
+  "modules": [
+    {
+      "kind": "sim",
+      "entry": "sim/index.js",
+      "permissions": ["sim.code"]
+    }
+  ],
+  "compat": { "v2Script": true, "manifest2": true },
+  "legacy": {
+    "class": "script",
+    "permissions": ["sim.code"],
+    "entry": { "sim": "sim/index.js" }
+  }
+}

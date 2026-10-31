@@ -97,7 +97,7 @@ node server/index.js   # 启动服务器：http://localhost:3000
 ### 测试
 
 ```bash
-npm test              # 完整测试套件（约 8339 项；缺素材 / 浏览器的用例会自动跳过）
+npm test              # 完整测试套件（约 8799 项；缺素材 / 浏览器的用例会自动跳过）
 npm run golden        # 黄金结果：固定种子的整套战斗与人机对局摘要（改动玩法后按规则更新）
 ```
 
@@ -148,7 +148,8 @@ npm run golden        # 黄金结果：固定种子的整套战斗与人机对�
 
 ### 插件 / Forge / studio / 官方皮肤
 
-- 主线 0.3.1 / 0.3.2 的**插件体系**已完整并入：外观（图片 / 模型 / 音频）、数据内容集（`cs`）、沙箱脚本（SES）、界面插件，以及 **Worker 托管的对局**、Forge 工作包导入、浏览器 **插件工作台 `/studio/`** 与 `SP_TEST_MODE` 测试控制台。规范见 [`docs/PLUGINS.md`](docs/PLUGINS.md)，开发流程见 [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md)，API 表见 [`docs/PLUGIN-API.md`](docs/PLUGIN-API.md)。
+- **Keel（龙骨）插件系统**是当前插件入口：manifest 3、content / asset / sim / match / policy / ui / lang、原生 sim 在浏览器 Worker、match/policy 在服务端 meta、`compat.v2Script` 正式兼容运行时。功能总览见 [`docs/keel/FEATURES.md`](docs/keel/FEATURES.md)，入口见 [`docs/keel/README.md`](docs/keel/README.md)。
+- 主线 0.3.1 / 0.3.2 的 **v2 插件体系**保留为兼容参考：外观（图片 / 模型 / 音频）、数据内容集（`cs`）、沙箱脚本（SES）、界面插件，以及 **Worker 托管的对局**、Forge 工作包导入、浏览器 **插件工作台 `/studio/`** 与 `SP_TEST_MODE` 测试控制台。v2 规范见 [`docs/PLUGINS.md`](docs/PLUGINS.md)，开发流程见 [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md)，API 表见 [`docs/PLUGIN-API.md`](docs/PLUGIN-API.md)。
 - **官方干员皮肤**：皮肤来自外观插件的 `chars[<charId>].skins` 覆盖层；每个玩家自己选（`room.skins`），设置里的「显示其他玩家的皮肤」默认开。**仓库不保存皮肤美术**，服务器也从不自己下载；服务器主人可以用 [`docs/SKINS.md`](docs/SKINS.md) 的 `tools/local-extract/skins.py` 从本机客户端抽成 `plugins/` 下的本机外观插件（`plugins/*` 不进 git）。本线上服已抽出 **274 套 / 175 名干员**，分两个插件（单插件 200 MB 上限）并在房间默认开启。
 
 ### 我们携带的修复与决策
@@ -188,7 +189,9 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/AI-AGENT.md`](docs/AI-AGENT.md) | **AI agent 展开手册**：工作循环、任务配方、测试矩阵、常见陷阱 |
 | [`docs/DEVELOPER.md`](docs/DEVELOPER.md) | **人类开发者入口**：启动、架构、开发流程、调试、发布、文档地图 |
 | [`docs/RULES.md`](docs/RULES.md) | **游戏规则入口**：权威顺序、规则总览、规范文档地图、改规则流程 |
-| [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md) | **插件开发入口**：模板、manifest、类别、测试、打包、发布 |
+| [`docs/keel/FEATURES.md`](docs/keel/FEATURES.md) | **Keel（龙骨）插件系统功能总览**：模块、作者链路、运行时、兼容、安全、边界 |
+| [`docs/keel/README.md`](docs/keel/README.md) | **Keel 入口**：当前状态、快速命令、规格/作者/历史导航 |
+| [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md) | **v2 兼容插件开发参考**：模板、manifest、类别、测试、打包、发布 |
 | [`docs/HANDOVER.md`](docs/HANDOVER.md) | 详细接手 / 运维参考（入口以 `DEVELOPER.md` 为准） |
 | [`docs/README.md`](docs/README.md) | **文档系统总索引**：不同角色的阅读顺序、主体 / 插件 / 历史 / 运维文档的权威入口与维护规则 |
 | [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) | **问题 → 文档 → 代码文件** 查询索引 |

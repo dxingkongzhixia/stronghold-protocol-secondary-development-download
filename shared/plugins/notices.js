@@ -152,6 +152,13 @@ export function manifestTextWithoutNotices(doc) {
   const copy = { ...rec };
   delete copy.notices;
   delete copy.theme;
+  // A manifest-3 projection may keep the v2 notices/theme under `legacy`: they are presentation, not identity.
+  if (isObj(copy.legacy)) {
+    const legacy = { .../** @type {Record<string, unknown>} */ (copy.legacy) };
+    delete legacy.notices;
+    delete legacy.theme;
+    copy.legacy = legacy;
+  }
   return canonicalJson(copy);
 }
 

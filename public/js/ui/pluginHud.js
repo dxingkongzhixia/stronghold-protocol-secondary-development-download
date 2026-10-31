@@ -3,7 +3,7 @@
 // the platform accepts. It never executes plugin code and never trusts plugin URLs.
 import { html } from './components.js';
 
-export const PLUGIN_HUD_SLOTS = Object.freeze(['top', 'boss', 'overlay']);
+export const PLUGIN_HUD_SLOTS = Object.freeze(['top', 'boss', 'overlay', 'right']);
 export const PLUGIN_HUD_LIMITS = Object.freeze({ blocks: 8, items: 8, text: 120, bars: 8 });
 
 const str = (v) => (typeof v === 'string' ? v.slice(0, PLUGIN_HUD_LIMITS.text) : '');
@@ -13,7 +13,7 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
  * Normalise the `hud[slot]` arrays of every plugin in `pub.pluginView`. Unknown plugin data and
  * malformed blocks are ignored; the result is only the supported, bounded vocabulary.
  * @param {any} pub
- * @param {'top'|'boss'|'overlay'} slot
+ * @param {'top'|'boss'|'overlay'|'right'} slot
  * @returns {{ pluginId: string, type: string, label: string|null, text: string|null, value: number|null, max: number|null, items: string[] }[]}
  */
 export function pluginHudBlocks(pub, slot = 'overlay', hud = null) {

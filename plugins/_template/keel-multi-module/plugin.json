@@ -1,0 +1,42 @@
+{
+  "manifest": 3,
+  "id": "keel-multi-module",
+  "name": { "zh": "龙骨多模块模板", "en": "Keel multi-module template" },
+  "description": {
+    "zh": "一个插件同时带 content、sim、policy 和 ui：数据、战斗钩子、决策和 HUD 都来自同一份 manifest。",
+    "en": "One plugin with content, sim, policy and ui modules: data, battle hooks, decisions and a HUD from one manifest."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "content": 1, "sim": 1, "policy": 1, "ui": 1 },
+  "scope": ["room"],
+  "trust": "sandbox",
+  "authors": ["your name"],
+  "license": "CC0-1.0",
+  "modules": [
+    {
+      "kind": "content",
+      "files": ["content/enemies.json"],
+      "parts": { "data": ["content/enemies.json"] },
+      "permissions": ["content.define"],
+      "provides": ["enemy:enemy_x_keel_multi_module_demo"]
+    },
+    {
+      "kind": "sim",
+      "entry": "sim/index.js",
+      "permissions": ["sim.read", "sim.damage.write", "sim.spawn", "sim.rng"]
+    },
+    {
+      "kind": "policy",
+      "entry": "policy/index.js",
+      "permissions": ["policy.observe", "policy.act"]
+    },
+    {
+      "kind": "ui",
+      "entry": "ui/index.json",
+      "permissions": ["ui.frame"],
+      "slots": ["hud.right"]
+    }
+  ],
+  "state": { "version": 1 }
+}

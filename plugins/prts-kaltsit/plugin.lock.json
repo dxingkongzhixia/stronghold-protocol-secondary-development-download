@@ -43,6 +43,10 @@
     "plugin.json": {
       "sha256": "0aaf286c27a097618d8c8be48e5102b07d199dc0e65b60ff4bd5fb4610479949",
       "bytes": 1733
+    },
+    "plugin.keel.json": {
+      "sha256": "5670047d2a713b205ffbecfd852047fb19f584ac486794c9559c2932bd3ac212",
+      "bytes": 2802
     }
   },
   "spine": {

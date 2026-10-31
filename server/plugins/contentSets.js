@@ -308,7 +308,7 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
       const set = sets.get(cs16);
       // C1 puts only verified sim/meta/client entry bytes in this exact-path table; never reopen files on disk.
       const f = set ? set.served.get(rel) : null;
-      const type = /^scripts\/[^/]+\//.test(rel) ? 'text/javascript; charset=utf-8' : 'application/json; charset=utf-8';
+      const type = /^(?:scripts|keel)\/[^/]+\//.test(rel) ? 'text/javascript; charset=utf-8' : 'application/json; charset=utf-8';
       return f ? { body: f.body, sha256: rel === 'index.json' ? null : f.sha256, type } : null;
     },
     /**

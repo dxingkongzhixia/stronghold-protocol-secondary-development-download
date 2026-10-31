@@ -14,6 +14,7 @@ import { manifestTextWithoutNotices } from '../../shared/plugins/notices.js';
 
 export function readContentData(dir, manifest) {
   const documents = {}, files = {}, problems = [];
+  const manifestFile = manifest.manifestFile ?? 'plugin.json';
   const read = rel => {
     if (Object.hasOwn(documents, rel)) return documents[rel];
     if (!isPackPath(rel) || path.extname(rel).toLowerCase() !== '.json') throw problem('PLUGIN_CONTENT_FILE', rel, 'declared JSON path required');
@@ -33,7 +34,7 @@ export function readContentData(dir, manifest) {
   };
   try {
     // [ASSUMED] Pin manifest text and translation bytes too: one cs serves one immutable snapshot (DESIGN §32.5).
-    read('plugin.json');
+    read(manifestFile);
     for (const part of ['data', 'operators', 'enemies', 'modes', 'stages', 'dsl']) for (const rel of manifest.parts[part]?.files ?? []) {
       const doc = read(rel);
       if (part === 'dsl') {
@@ -71,11 +72,11 @@ export function readContentData(dir, manifest) {
     for (const rel of manifest.parts.operators?.files ?? []) for (const r of Array.isArray(documents[rel]) ? documents[rel] : [documents[rel]]) resolveSpec(r);
     for (const rel of manifest.parts.data?.files ?? []) for (const r of documents[rel].entries ?? []) resolveSpec(r);
     // Keep the raw file hashes; only new fx actions change the compiled data the content set serves.
-    for (const [rel, doc] of Object.entries(documents)) if (rel !== 'plugin.json' && /"kind"\s*:\s*"plugin"/.test(JSON.stringify(doc))) documents[rel] = compilePluginFxDsl(doc, manifest.id);
+    for (const [rel, doc] of Object.entries(documents)) if (rel !== manifestFile && /"kind"\s*:\s*"plugin"/.test(JSON.stringify(doc))) documents[rel] = compilePluginFxDsl(doc, manifest.id);
   } catch (e) { problems.push(e?.code?.startsWith('PLUGIN_') ? e : problem('PLUGIN_CONTENT_FILE', dir, e.message)); }
   // Keep raw files for lock verification. Room identity and stale detection always use the canonical snapshot without notices or personal themes.
-  const source = manifestTextWithoutNotices(documents['plugin.json']);
-  const gameplayFiles = source ? { ...files, 'plugin.json': nodeSha256(Buffer.from(source)) } : files;
+  const source = manifestTextWithoutNotices(documents[manifestFile]);
+  const gameplayFiles = source ? { ...files, [manifestFile]: nodeSha256(Buffer.from(source)) } : files;
   return { content: problems.length ? null : deepFreeze({ documents, files,
     ...(source ? { gameplayFiles } : {}), hash: nodeSha256(Buffer.from(JSON.stringify(gameplayFiles))) }), problems };
 }

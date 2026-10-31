@@ -71,67 +71,90 @@ function scriptGuard(pluginId, limit) {
 // C2, API v1. One registry per content realm; vanilla is empty. Setup registration is transactional.
 import { KITS } from './kits/index.js';
 
-export const EXTENSIONS = Object.create(null);
-const enemies = new Map(), content = new Map(), meta = new Map(), owners = new Map();
-let sealed = false;
-const metaOwners = new WeakMap();
-export const extensionMetaOwner = handler => metaOwners.get(handler);
-const fail = (code, message) => { throw Object.assign(new Error(message), { code }); };
 const canon = id => id.startsWith('chess_') ? id.replace(/_[ab]$/, '') : id;
 const official = new Set(Object.keys(KITS).map(canon));
+const metaOwners = new WeakMap();
+export const extensionMetaOwner = handler => metaOwners.get(handler);
 
-function reserve(kind, plugin, id) {
-  if (sealed) fail('PLUGIN_SCRIPT_CONFLICT', 'registration is closed after setup');
-  if (typeof id !== 'string' || !/^[A-Za-z0-9_:.#-]{1,128}$/.test(id)) fail('PLUGIN_SCRIPT_CONFLICT', 'invalid registration id');
-  const key = kind + ':' + (kind === 'kit' ? canon(id) : id);
-  if (owners.has(key)) fail('PLUGIN_SCRIPT_CONFLICT', `${id}: ${owners.get(key)} and ${plugin.id} both register this id`);
-  // [ASSUMED] Explicit manifest overrides authorizes replacing an official kit, never another plugin's kit.
-  if (kind === 'kit' && official.has(canon(id)) && !(plugin.overrides || []).some(x => canon(x) === canon(id)))
-    fail('PLUGIN_SCRIPT_OVERRIDE', `${plugin.id} must declare overrides for official kit ${id}`);
-  owners.set(key, plugin.id);
-}
-export function registerKit(plugin, id, builder) {
-  if (typeof builder !== 'function') fail('PLUGIN_SCRIPT_CONFLICT', 'kit builder must be a function');
-  reserve('kit',plugin,id);
-  const guard = scriptGuard(plugin.id, plugin.budget);
-  const fn = (...a) => guard.wrap(builder(...a));
-  EXTENSIONS[id] = fn;
-  if (id.startsWith('chess_')) for (const key of [canon(id),canon(id)+'_a',canon(id)+'_b']) EXTENSIONS[key] = fn;
-}
-/** Enemy builder: (def) => { install(battle, enemy) }, installed before enemySpawn's official handlers. */
-export function registerEnemy(plugin, id, builder) {
-  if (typeof builder !== 'function') fail('PLUGIN_SCRIPT_CONFLICT', 'enemy builder must be a function');
-  reserve('enemy',plugin,id); enemies.set(id,{ plugin, builder, guard: scriptGuard(plugin.id,plugin.budget) });
-}
-export function registerMeta(plugin, id, handler) {
-  if (!handler || !['object','function'].includes(typeof handler)) fail('PLUGIN_SCRIPT_CONFLICT','meta handler required');
-  reserve('meta',plugin,id);
-  const h = typeof handler === 'function' ? {run:handler} : {...handler};
-  metaOwners.set(h,plugin.id); meta.set(id,{ plugin, handler:h });
-}
-export function registerContent(plugin, module) {
-  const id = module?.id || plugin.id;
-  reserve('content',plugin,id);
-  const guard = scriptGuard(plugin.id,plugin.budget);
-  content.set(id,{ plugin, install: guard.wrap(module.install) });
-  // Resolve registration now so conflicts fail composition, not the first match.
-  module.registerMeta?.(Object.freeze({ register: (key, h) => registerMeta(plugin,key,h) }));
-}
-export function installExtensions(battle) {
-  for (const { plugin, install } of content.values()) {
-    try { install?.(battle); } catch (e) { battle._handlerError('plugin:'+plugin.id,null,e); }
+/**
+ * A registry is the setup-time surface of one content realm. A process may hold several at once (one per match/worker),
+ * so nothing in it is module-global except the official-kit set and the handler owner map.
+ */
+export function createExtensionRegistry() {
+  const EXTENSIONS = Object.create(null);
+  const enemies = new Map(), content = new Map(), meta = new Map(), owners = new Map();
+  let sealed = false;
+  const fail = (code, message) => { throw Object.assign(new Error(message), { code }); };
+
+  function reserve(kind, plugin, id) {
+    if (sealed) fail('PLUGIN_SCRIPT_CONFLICT', 'registration is closed after setup');
+    if (typeof id !== 'string' || !/^[A-Za-z0-9_:.#-]{1,128}$/.test(id)) fail('PLUGIN_SCRIPT_CONFLICT', 'invalid registration id');
+    const key = kind + ':' + (kind === 'kit' ? canon(id) : id);
+    if (owners.has(key)) fail('PLUGIN_SCRIPT_CONFLICT', `${id}: ${owners.get(key)} and ${plugin.id} both register this id`);
+    // [ASSUMED] Explicit manifest overrides authorizes replacing an official kit, never another plugin's kit.
+    if (kind === 'kit' && official.has(canon(id)) && !(plugin.overrides || []).some(x => canon(x) === canon(id)))
+      fail('PLUGIN_SCRIPT_OVERRIDE', `${plugin.id} must declare overrides for official kit ${id}`);
+    owners.set(key, plugin.id);
   }
-  if (enemies.size) battle.on('enemySpawn', ({enemy}) => {
-    const r = enemies.get(enemy.defId) || enemies.get(enemy.def?.key) || enemies.get(enemy.def?.id);
-    if (r) r.guard.invoke(() => r.guard.wrap(r.builder(enemy.def)).install?.(r.guard.view(battle),enemy), battle, enemy, null, []);
-  }, { priority: 1000 });
+
+  function registerKit(plugin, id, builder) {
+    if (typeof builder !== 'function') fail('PLUGIN_SCRIPT_CONFLICT', 'kit builder must be a function');
+    reserve('kit',plugin,id);
+    const guard = scriptGuard(plugin.id, plugin.budget);
+    const fn = (...a) => guard.wrap(builder(...a));
+    EXTENSIONS[id] = fn;
+    if (id.startsWith('chess_')) for (const key of [canon(id),canon(id)+'_a',canon(id)+'_b']) EXTENSIONS[key] = fn;
+  }
+  /** Enemy builder: (def) => { install(battle, enemy) }, installed before enemySpawn's official handlers. */
+  function registerEnemy(plugin, id, builder) {
+    if (typeof builder !== 'function') fail('PLUGIN_SCRIPT_CONFLICT', 'enemy builder must be a function');
+    reserve('enemy',plugin,id); enemies.set(id,{ plugin, builder, guard: scriptGuard(plugin.id,plugin.budget) });
+  }
+  function registerMeta(plugin, id, handler) {
+    if (!handler || !['object','function'].includes(typeof handler)) fail('PLUGIN_SCRIPT_CONFLICT','meta handler required');
+    reserve('meta',plugin,id);
+    const h = typeof handler === 'function' ? {run:handler} : {...handler};
+    metaOwners.set(h,plugin.id); meta.set(id,{ plugin, handler:h });
+  }
+  function registerContent(plugin, module) {
+    const id = module?.id || plugin.id;
+    reserve('content',plugin,id);
+    const guard = scriptGuard(plugin.id,plugin.budget);
+    content.set(id,{ plugin, install: guard.wrap(module.install) });
+    // Resolve registration now so conflicts fail composition, not the first match.
+    module.registerMeta?.(Object.freeze({ register: (key, h) => registerMeta(plugin,key,h) }));
+  }
+  function install(battle) {
+    for (const { plugin, install } of content.values()) {
+      try { install?.(battle); } catch (e) { battle._handlerError('plugin:'+plugin.id,null,e); }
+    }
+    if (enemies.size) battle.on('enemySpawn', ({enemy}) => {
+      const r = enemies.get(enemy.defId) || enemies.get(enemy.def?.key) || enemies.get(enemy.def?.id);
+      if (r) r.guard.invoke(() => r.guard.wrap(r.builder(enemy.def)).install?.(r.guard.view(battle),enemy), battle, enemy, null, []);
+    }, { priority: 1000 });
+  }
+  function registerMetaInto(registry) {
+    for (const [id, {handler}] of meta) registry.register(id,handler);
+  }
+  function reset() {
+    for (const k of Object.keys(EXTENSIONS)) delete EXTENSIONS[k];
+    enemies.clear(); content.clear(); meta.clear(); owners.clear(); sealed = false;
+  }
+  function seal() { sealed = true; }
+  function registrations() { return [...owners].map(([key,pluginId]) => ({key,pluginId})); }
+  return { EXTENSIONS, enemies, content, meta, owners, registerKit, registerEnemy, registerMeta, registerContent, install, registerMetaInto, reset, seal, registrations };
 }
-export function registerExtensionMeta(registry) {
-  for (const [id, {handler}] of meta) registry.register(id,handler);
-}
-export function resetExtensions() {
-  for (const k of Object.keys(EXTENSIONS)) delete EXTENSIONS[k];
-  enemies.clear(); content.clear(); meta.clear(); owners.clear(); sealed = false;
-}
-export function sealExtensions() { sealed = true; }
-export function extensionRegistrations() { return [...owners].map(([key,pluginId]) => ({key,pluginId})); }
+
+const defaultRegistry = createExtensionRegistry();
+
+export const EXTENSIONS = defaultRegistry.EXTENSIONS;
+export const registerKit = defaultRegistry.registerKit;
+export const registerEnemy = defaultRegistry.registerEnemy;
+export const registerMeta = defaultRegistry.registerMeta;
+export const registerContent = defaultRegistry.registerContent;
+export function installExtensions(battle, registry = defaultRegistry) { return registry.install(battle); }
+export function registerExtensionMeta(registry, extensions = defaultRegistry) { return extensions.registerMetaInto(registry); }
+export function resetExtensions() { defaultRegistry.reset(); }
+export function sealExtensions() { defaultRegistry.seal(); }
+export function extensionRegistrations() { return defaultRegistry.registrations(); }
+

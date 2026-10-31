@@ -1,0 +1,53 @@
+{
+  "manifest": 3,
+  "id": "keel-reference",
+  "name": { "zh": "龙骨参考插件", "en": "Keel reference plugin" },
+  "description": {
+    "zh": "从一个真实 content + asset 插件重写的精简参考：内容、图标、原生 sim、policy 和 HUD 都在同一个 manifest 3 里；数据/美术为合成示例。",
+    "en": "A lite rebuild of a real content + asset plugin: content, icon, native sim, policy and HUD in one manifest 3; data/art are synthetic examples."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "content": 1, "asset": 1, "sim": 1, "policy": 1, "ui": 1 },
+  "scope": ["room"],
+  "trust": "sandbox",
+  "category": "enemy",
+  "authors": ["Keel reference"],
+  "license": "CC0-1.0",
+  "modules": [
+    {
+      "kind": "content",
+      "files": ["content/enemies.json", "content/bands.json"],
+      "parts": { "data": ["content/enemies.json", "content/bands.json"] },
+      "permissions": ["content.define"],
+      "provides": ["enemy:enemy_x_keel_reference_crystal", "band:band_x_keel_reference_sigil"]
+    },
+    {
+      "kind": "asset",
+      "files": ["assets/icon.png"],
+      "permissions": ["asset.add"],
+      "assets": {
+        "bands": {
+          "band_x_keel_reference_sigil": "assets/icon.png"
+        }
+      }
+    },
+    {
+      "kind": "sim",
+      "entry": "sim/index.js",
+      "permissions": ["sim.read", "sim.damage.write", "sim.spawn", "sim.rng"]
+    },
+    {
+      "kind": "policy",
+      "entry": "policy/index.js",
+      "permissions": ["policy.observe", "policy.act"]
+    },
+    {
+      "kind": "ui",
+      "entry": "ui/index.json",
+      "permissions": ["ui.frame"],
+      "slots": ["hud.right"]
+    }
+  ],
+  "state": { "version": 1 }
+}

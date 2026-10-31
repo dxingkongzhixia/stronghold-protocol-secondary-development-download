@@ -116,7 +116,9 @@ import { packPlugin, skeletonClipData } from './pack.js';
 import { createPluginRegistry } from './registry.js';
 import { buildContentSet } from './contentSet.js';
 import { createVisualSets } from './visualSet.js';
-import { PLUGIN_LIMITS, PLUGIN_MANIFEST, PLUGIN_MAX_BYTES, extOf, isPackPath, isPluginId, checkJsonLimits } from '../../shared/plugins/manifest.js';
+import { PLUGIN_LIMITS, PLUGIN_MANIFEST, KEEL_MANIFEST, PLUGIN_MAX_BYTES, extOf, isPackPath, isPluginId, checkJsonLimits } from '../../shared/plugins/manifest.js';
+import { readPluginManifest } from '../../shared/plugins/manifest.js';
+import { adaptV2 } from '../../shared/keel/adapt.js';
 import { ASSET_CONTAINERS, getPath, isAssetKey, isSkinKey, readAssetOverlay } from '../../shared/plugins/visual.js';
 import { namespace, namespaceCollides } from '../../shared/plugins/dataUtils.js';
 import { canonicalJson } from '../../shared/plugins/identity.js';
@@ -384,7 +386,7 @@ function openValidationView({ root, dataDir, pluginsDir, stage }) {
       let st;
       try { st = fs.statSync(abs); } catch { return; }
       if (!st.isDirectory()) return;
-      if (!fs.existsSync(path.join(abs, PLUGIN_MANIFEST))) return;
+      if (!fs.existsSync(path.join(abs, PLUGIN_MANIFEST)) && !fs.existsSync(path.join(abs, KEEL_MANIFEST))) return;
       try { fs.symlinkSync(abs, dest); }
       catch (e) {
         // Windows without developer mode: a symbolic link needs a privilege this process may not have.
@@ -3161,15 +3163,21 @@ function dropUnreadableModels(dir) {
   return dropped;
 }
 
-function writeTree(dir, files, manifest) {
+function writeTree(dir, files, manifest, manifestName = PLUGIN_MANIFEST) {
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, PLUGIN_MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.writeFileSync(path.join(dir, manifestName), `${JSON.stringify(manifest, null, 2)}\n`);
   for (const [rel, body] of files) {
     if (rel.split('/').some((s) => !s || s === '.' || s === '..')) fail('PLUGIN_FORGE_ZIP', rel);
     const abs = path.join(dir, ...rel.split('/'));
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, body);
   }
+}
+
+function keelManifestOf(product) {
+  const read = readPluginManifest(product.manifest, { id: product.id });
+  if (!read.manifest) throw new Error(`${product.id}: imported manifest 2 did not validate`);
+  return adaptV2(read.manifest).manifest;
 }
 
 /**
@@ -3252,7 +3260,12 @@ export async function importForge(source, opts = {}) {
     try {
       for (const p of built.products) {
         const dir = path.join(stage, p.id);
-        writeTree(dir, p.files, p.manifest);
+        // Forge writes the manifest 3 the loader reads. The v2 copy stays beside it for tools/tests that still inspect
+        // the input shape (real mixed folders keep a leftover plugin.json too); the Keel descriptor wins.
+        const keel = opts.keel !== false;
+        const writeManifest = keel ? keelManifestOf(p) : p.manifest;
+        writeTree(dir, p.files, writeManifest, keel ? KEEL_MANIFEST : PLUGIN_MANIFEST);
+        if (keel) fs.writeFileSync(path.join(dir, PLUGIN_MANIFEST), `${JSON.stringify(p.manifest, null, 2)}\n`);
         // Clip data has to exist before the strict check. packPlugin reads each skeleton the same way
         // `node tools/plugin.mjs pack` does and writes plugin.lock.json. An unreadable skeleton is removed first.
         if (p.class === 'cosmetic') for (const row of dropUnreadableModels(dir)) planned.meta.skipped.push(row);

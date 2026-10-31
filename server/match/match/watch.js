@@ -308,6 +308,7 @@ export class MatchWatch {
       const own = fields.find((f) => f.players.includes(ps.playerId)) || null;
       const f = own || this._watchTargetField(ps, fields) || fields[0];
       if (!f) continue;
+      if (f.background && f.authority === ps.playerId) continue; // its background b.start follows
       this.watchers.set(ps.playerId, f.fieldId);
       this._sendStart(ps.playerId, f, { watch: !own });
     }

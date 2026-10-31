@@ -24,6 +24,7 @@ import { validateDsl, validatePrepSpec } from '../sim/content/dsl/validate.js';
 import { composeRules } from '../../shared/plugins/rules.js';
 import { offerReferenceProblems } from './offerData.js';
 import { allowsIncompatible } from './compat.js';
+import { PLUGIN_MANIFEST } from '../../shared/plugins/manifest.js';
 
 const bases = new WeakMap(), buffers = new WeakMap(), caches = new WeakMap(), cacheOf = new WeakMap();
 function baseFor(registry) {
@@ -321,14 +322,26 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
   // Notices and personal theme values are not gameplay. Use the same canonical snapshot whether those fields
   // are absent or present. The registry retains the raw manifest and lock for owner admission.
   const noticeFree = new Map(plugins.flatMap(p => {
-    const source = manifestTextWithoutNotices(p.content?.documents?.['plugin.json']);
-    return source ? [[p.id, { source, hash: nodeSha256(Buffer.from(source)) }]] : [];
+    const manifestKey = p.manifest.manifestFile ?? 'plugin.json';
+    const source = manifestTextWithoutNotices(p.content?.documents?.[manifestKey]);
+    return source ? [[p.id, { source, hash: nodeSha256(Buffer.from(source)), key: manifestKey }]] : [];
   }));
+  // The file table a script descriptor is verified against (shared/plugins/scriptLoad.js): the plugin's own files, the
+  // notice-free manifest under its own name, and always the v2 manifest as `plugin.json` — a Keel script's snapshot is
+  // its projection, whatever the file on disk is called.
+  const pinnedFilesOf = (p) => {
+    const out = { ...p.content.files };
+    const notice = noticeFree.get(p.id);
+    if (notice) out[notice.key] = notice.hash;
+    const source = notice?.source ?? p.script?.manifestSource;
+    if (typeof source === 'string') out[PLUGIN_MANIFEST] = nodeSha256(Buffer.from(source));
+    return out;
+  };
   const scripts = plugins.filter(p => p.script).map(p => ({ id:p.id, version:p.manifest.version, class:p.class,
     // [ASSUMED] For every script, identify the checked gameplay snapshot rather than its raw lock
     // (the latter includes the notice bytes). Owner admission still checks the complete, original lock hash.
     execution:p.script.execution || 'trusted', hash: noticeFree.has(p.id)
-      ? nodeSha256(Buffer.from(canonicalJson({ ...p.content.files, 'plugin.json': noticeFree.get(p.id).hash })))
+      ? nodeSha256(Buffer.from(canonicalJson(pinnedFilesOf(p))))
       : p.script.lockHash, permissions:p.manifest.permissions, authors:p.manifest.authors,
     manifestSource: noticeFree.get(p.id)?.source ?? p.script.manifestSource, sources:p.script.sources }));
   // [ASSUMED] Any trusted member makes the whole composition native; sandbox mode cannot enable trusted classes.
@@ -340,9 +353,24 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
     const body = Buffer.from(JSON.stringify(p));
     bodies.set(`scripts/${p.id}.json`,body); scriptHashes[p.id] = nodeSha256(body);
   }
+  // Native Keel modules (sim / match / policy) the server's trust gate allowed: their sources travel with the set, so
+  // every page runs the same code; their hashes pin them through `parts.files` and `index.keel`.
+  const keelPlugins = plugins.filter(p => p.keel && Array.isArray(p.keel.modules) && p.keel.modules.length);
+  const keelFiles = new Map();
+  for (const p of keelPlugins) {
+    const table = {};
+    for (const m of p.keel.modules) {
+      if (!m || typeof m.entry !== 'string' || typeof m.source !== 'string') continue;
+      const rel = `keel/${p.id}/${m.entry}`;
+      const body = Buffer.from(m.source);
+      bodies.set(rel, body);
+      table[rel] = nodeSha256(body);
+    }
+    keelFiles.set(p.id, table);
+  }
   if ([...bodies.values()].reduce((n, b) => n + b.length, 0) > 300 * 1024 * 1024) return { problems: [problem('PLUGIN_DATA_LIMIT', 'content', 'set exceeds 300 MB')] };
   const parts = plugins.map(p => ({ id: p.id, version: p.manifest.version,
-    files: {...p.content.files, ...(noticeFree.has(p.id) ? {'plugin.json': noticeFree.get(p.id).hash} : {}), ...(scriptHashes[p.id] ? {'@script':scriptHashes[p.id]} : {})} }));
+    files: { ...pinnedFilesOf(p), ...(keelFiles.get(p.id) ?? {}), ...(scriptHashes[p.id] ? {'@script':scriptHashes[p.id]} : {}) } }));
   const i18n = {};
   if (plugins.length) for (const [rel, body] of bodies) {
     const m = /^i18n\/([A-Za-z0-9-]+)\.json$/.exec(rel);
@@ -363,10 +391,16 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
   // The interaction windows of the set (PLUGIN API v2, docs/PLUGINS.md §10b): the registry already checked each
   // file, including transitive option sources in content.files: every offer byte participates in cs.
   const offers = plugins.flatMap(p => (p.offers || []).map(o => ({ pluginId: p.id, ...o })));
-  const index = vanilla ? base.identity.index : { ...base.identity.index, cs, vanilla: false, plugins: parts, settings, data: {}, i18n: {}, bounds: {}, ...(scripts.length ? {scripts:{}, execution} : {}), ...(rules ? { rules } : {}) };
+  const index = vanilla ? base.identity.index : { ...base.identity.index, cs, vanilla: false, plugins: parts, settings, data: {}, i18n: {}, bounds: {}, ...(scripts.length ? {scripts:{}, execution} : {}), ...(rules ? { rules } : {}),
+    ...(keelPlugins.length ? { keel: { plugins: keelPlugins.map(p => ({ id: p.id, execution: p.keel.execution ?? 'sandbox', version: p.manifest.version, state: p.manifest.state ?? null,
+      name: p.manifest.name ?? null, authors: Array.isArray(p.manifest.authors) ? p.manifest.authors : [],
+      modules: p.keel.modules.filter(m => m && typeof m.entry === 'string' && keelFiles.get(p.id)?.[`keel/${p.id}/${m.entry}`])
+        .map(m => ({ kind: m.kind, entry: m.entry, sha256: keelFiles.get(p.id)[`keel/${p.id}/${m.entry}`],
+          permissions: Array.isArray(m.permissions) ? m.permissions : [], ...(m.state ? { state: m.state } : {}) })) })) } } : {}) };
   if (!vanilla) for (const [rel, f] of Object.entries(files)) {
     const url = base.files.get(rel)?.equals(bodies.get(rel)) ? `/data/${rel.replace(/^(data\/)/, '')}?v=${f.sha256.slice(0, 8)}` : `/cs/${csUrlPart(cs)}/${rel}`;
     const [section, name] = rel.split('/');
+    if (section === 'keel') continue; // index.keel names these already
     index[section][name.slice(0, -5)] = { url, ...f };
   }
   const set = deepFreeze({ cs, vanilla, plugins: plugins.map(p => ({ id: p.id, version: p.manifest.version, hash: p.content.hash })),

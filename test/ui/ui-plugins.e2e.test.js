@@ -1,7 +1,7 @@
 // Interface-plugin browser test (DESIGN §32.8). Not part of the default run.
 //   SP_E2E=1 node --test test/ui/ui-plugins.e2e.test.js
 //
-// Copies plugins/_template/ui into a temp id `damage-meter`, turns it on in this browser
+// Copies plugins/_template/keel-ui into a temp id `damage-meter`, turns it on in this browser
 // (`sp.pref.ui-plugins`), reaches 休整期, and checks the widget is in hud.right, totals a battle
 // event, and that a match intent posted from the frame is rejected. Do not run it from the
 // sandbox; the integration pass runs it.
@@ -17,7 +17,7 @@ const ENABLED = process.env.SP_E2E === '1' && hasChrome();
 describe('an interface plugin in the prep slot', { skip: !ENABLED }, () => {
   test('the example widget mounts, totals a damage event, and a match intent is rejected', { timeout: 4 * 60 * 1000 }, async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-ui-e2e-'));
-    fs.cpSync(path.join(ROOT, 'plugins/_template/ui'), path.join(tmp, 'damage-meter'), { recursive: true });
+    fs.cpSync(path.join(ROOT, 'plugins/_template/keel-ui'), path.join(tmp, 'damage-meter'), { recursive: true });
     const srv = await startRealServer({ fast: { timerScale: 1, combatSpeed: 2, startRound: 1, autoPlace: true }, pluginsDir: tmp });
     const P = (await import('puppeteer-core')).default;
     const c = new Client(P, srv.base, 'solo', { prefix: 'ui-plugin', w: 1600, h: 900 });

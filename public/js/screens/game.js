@@ -127,6 +127,7 @@ import { ResultScreen } from './settle.js';
 import { ProtocolBoot, preloadBootArt, bootArtReady, BOOT_LEAVE_MS } from '../ui/protocolBoot.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, serverNow, isSpectating } from '../store.js';
+import { contentSet } from '../content.js';
 import { battleRunner } from '../battle/runner.js';
 import { isClientCombat, observeTarget, teammateProgress, cameraLayers, layerCamera, loneHalf, sidesOf, resumedWatch, followedScout } from '../battle/observe.js';
 import '../ui/pluginFrame.js';
@@ -243,6 +244,8 @@ function MatchScreen() {
   const tookOver = !!(mySeat && mySeat.fromAi);   // took an AI over → offer 退出夺舍 under the team panel
   // gameplay plugins (DESIGN §32.6): the HUD corner's MOD mark — re-rendered only when the room's content changes
   const modRoom = useStore((s) => (s.room?.content?.vanilla === false ? s.room : null), (a, b) => (a?.content ?? null) === (b?.content ?? null));
+  // the battle HUD's native-code mark: the room's content set carries native sim modules (D9)
+  const nativeOn = useStore((s) => (Array.isArray(s.native) && s.native.length ? 1 : 0), Object.is, contentSet) > 0;
   // the room's spectator seats for the top bar's 观战席 capsule (ui/hud.js SpectatorPill; GitHub #120): room.state keeps coming
   // during the match, the list is replaced only when a seat changes — shallowEqual keeps an unrelated push from re-rendering
   const specFacts = useStore((s) => ({
@@ -1775,9 +1778,10 @@ function MatchScreen() {
         pen=${pen} penAvail=${penAvail} onPen=${togglePen} config=${gd.config} frozenAt=${frozenAt}
         pause=${canPause || paused ? { show: canPause, paused, busy: pauseBusy, onToggle: () => togglePause(!paused) } : null}
         live=${liveLpNow} spectator=${spectator}
-        spectators=${specFacts.list} myId=${myId} isHost=${specFacts.isHost} onRemoveSpectator=${removeSpectator} room=${modRoom} />
+        spectators=${specFacts.list} myId=${myId} isHost=${specFacts.isHost} onRemoveSpectator=${removeSpectator} room=${modRoom} native=${nativeOn} />
 
       <${PluginHud} pub=${pub} hud=${hud} slot="overlay" />
+      <${PluginHud} pub=${pub} hud=${hud} slot="right" />
       <${PluginHud} pub=${pub} hud=${hud} slot="boss" />
 
       <div class="gm__bonds">

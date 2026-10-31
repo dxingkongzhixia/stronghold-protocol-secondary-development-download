@@ -465,6 +465,7 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
       const worker = await fsp.realpath(path.join(publicDir, 'js/battle/simWorker.js')).catch(() => null);
       if (real === worker) res.setHeader('Content-Security-Policy', SIM_WORKER_CSP);
     }
+    // The native Keel sandbox frame is gone (D9): native modules run only in the simulation Worker.
     await serveFile(req, res, absPath, stat, mount.name, segments, query, gzipCache, log, opts, assetLimiter);
   };
 }

@@ -33,12 +33,19 @@ export function createAuthoring({ files, dataDir, publicDir = path.join(dataDir,
     let side;
     try { side = JSON.parse(files.readSidecar(id, '.studio.json') || '{}'); } catch { side = {}; }
     if (!side.authoring) return null;
-    const revision = authorRevision(files, id), documents = snapshot(id);
-    const manifest = JSON.parse(documents['plugin.json'].toString());
-    let options = side.authoring.options;
-    if (GAMEPLAY_TEMPLATES.includes(side.authoring.template)) options = readAuthorOptions(id, side.authoring, documents, manifest, official());
-    else options = readPresentationOptions(id, side.authoring, documents, manifest, side.authoring.template === 'fx' ? official() : null);
-    return { ...side.authoring, options, revision };
+    // A Keel plugin (or a stale sidecar left by a migrated folder) has no manifest 2 draft: the wizard does not open it.
+    try {
+      const revision = authorRevision(files, id), documents = snapshot(id);
+      const manifest = JSON.parse(documents['plugin.json'].toString());
+      let options = side.authoring.options;
+      if (GAMEPLAY_TEMPLATES.includes(side.authoring.template)) options = readAuthorOptions(id, side.authoring, documents, manifest, official());
+      else options = readPresentationOptions(id, side.authoring, documents, manifest, side.authoring.template === 'fx' ? official() : null);
+      return { ...side.authoring, options, revision };
+    } catch { return null; }
+  };
+  /** The studio's wizard edits manifest 2 only: a Keel folder refuses every save with its own code. */
+  const assertWritable = id => {
+    if (files.keel(id)) throw new StudioError('PLUGIN_STUDIO_KEEL_READONLY', 409, { id }, `${id} is a Keel plugin: the studio does not edit it`);
   };
   const details = (template, target) => {
     const t = targetOf(targets().targets, target);
@@ -90,6 +97,7 @@ export function createAuthoring({ files, dataDir, publicDir = path.join(dataDir,
   const snapshot = id => snapshotDocuments(files, id);
   const prepare = (id, input, { validate = true, allowUntracked = false, validateMedia = true } = {}) => {
     // Existing trial API also previews templates in folders without a studio sidecar; only trials allow that.
+    assertWritable(id);
     const old = read(id) || (allowUntracked ? { template: input.template, target: input.target, options: {} } : null);
     if (!old || old.template === 'script' || input.template !== old.template) throw new StudioError('PLUGIN_STUDIO_REQUEST', 409, { detail: 'this plugin is not editable with this wizard' });
     if (input.revision !== undefined && input.revision !== old.revision) throw new StudioError('PLUGIN_STUDIO_CHANGED', 409);
@@ -141,6 +149,7 @@ export function createAuthoring({ files, dataDir, publicDir = path.join(dataDir,
     return result;
   };
   const save = (id, input) => {
+    assertWritable(id);
     const old = read(id);
     if (input.revision !== old?.revision) throw new StudioError('PLUGIN_STUDIO_CHANGED', 409);
     const made = prepare(id, input);
@@ -150,6 +159,7 @@ export function createAuthoring({ files, dataDir, publicDir = path.join(dataDir,
   };
   // HTTP saves/checks use a disposable checker so large media never blocks the game loop.
   const checkedCandidate = async (id, input, save) => {
+    assertWritable(id);
     const made = prepare(id, input, { validate: false, validateMedia: false }), candidate = await createCandidateAsync(files, id);
     try {
       if (input.revision !== undefined && input.revision !== candidate.revision) throw new StudioError('PLUGIN_STUDIO_CHANGED', 409);

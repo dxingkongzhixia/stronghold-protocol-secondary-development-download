@@ -55,7 +55,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { APP_VERSION, PLUGIN_API } from '../../shared/constants.js';
-import { PLUGIN_MANIFEST, PLUGIN_LIMITS, PLUGIN_IMAGE_EXTS, PLUGIN_AUDIO_EXTS, extOf, isPackPath, isPluginId, PLUGIN_MAX_BYTES } from '../../shared/plugins/manifest.js';
+import { PLUGIN_MANIFEST, KEEL_MANIFEST, PLUGIN_LIMITS, PLUGIN_IMAGE_EXTS, PLUGIN_AUDIO_EXTS, extOf, isPackPath, isPluginId, PLUGIN_MAX_BYTES } from '../../shared/plugins/manifest.js';
 import { LOCK_FILE, locateAssetPath, readPluginLock } from '../../shared/plugins/visual.js';
 import { PLUGIN_ERRORS, isPluginErrorCode, issueList } from '../../shared/plugins/errors.js';
 import { CATALOG_FETCH_MAX_BYTES, annotateCatalog, readCatalog } from '../../shared/plugins/catalog.js';
@@ -65,10 +65,11 @@ import { MIME, serveFile, CompressCache } from '../http/files.js';
 import { checkPluginFolder, packPlugin, zipPlugin } from '../plugins/pack.js';
 import { studioAllowed, isStudioChange, studioMode } from './gate.js';
 import { createPluginFiles, StudioError, STUDIO_LIMITS, WRITABLE } from './files.js';
+import { KEEL_TEMPLATES, createKeelPlugin } from './keelTemplate.js';
 import { createTargetIndex, searchTargets, targetOf, targetSpec, TARGET_KINDS } from './targets.js';
 import { TEMPLATES, templateById, createPlugin, manifestText } from './templates/index.js';
 import { keyDir } from './templates/art.js';
-import { openPlugin, editMeta, setSlot, clearSlot, filesOfOverlay, filesOfValue, atlasPages, FIXES, getIn, deleteIn } from './edit.js';
+import { openPlugin, editMeta, editKeelMeta, setSlot, clearSlot, filesOfOverlay, filesOfValue, atlasPages, FIXES, getIn, deleteIn } from './edit.js';
 import { createPreviews } from './preview.js';
 import { atlasInfo } from '../../tools/assets/atlas.mjs';
 import { STUDIO_URL, STUDIO_API, isStudioPath } from './paths.js';
@@ -78,6 +79,8 @@ import { trialOptions } from './trialOptions.js';
 import { consoleOptions, buildConsoleScenario } from './console.js';
 import { SCENARIO_BYTES } from '../../shared/studio/scenario.js';
 import { readStudioData } from './gameData.js';
+import { readKeelManifest, buildKeelGraph, classOfKeel } from '../../shared/keel/index.js';
+import { readNativeCode } from '../keel/native-code.js';
 import { editMediaDraft } from './mediaDraft.js';
 import { createAuthoring } from './authoring.js';
 import { createPluginWatcher } from './watch.js';
@@ -165,6 +168,7 @@ export const STUDIO_ROUTES = Object.freeze([
   'DELETE /studio/api/plugins/:id/files/*',
   'POST /studio/api/plugins/:id/slot',
   'POST /studio/api/plugins/:id/meta',
+  'POST /studio/api/plugins/:id/modules',
   'POST /studio/api/plugins/:id/sections',
   'POST /studio/api/plugins/:id/ref',
   'POST /studio/api/plugins/:id/clear',
@@ -430,24 +434,72 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
    * the folder's check with coded issues, the registry's view (loaded, vs), the lock.
    * @param {string} id
    */
+  /**
+   * Validate a manifest 3 the studio is about to write: the manifest rules and the module graph. Throws
+   * PLUGIN_STUDIO_KEEL_MANIFEST (400) with the findings; returns the normalized manifest otherwise.
+   * @param {string} id @param {any} manifest
+   */
+  function keelChecked(id, manifest) {
+    const checked = readKeelManifest(manifest, { id });
+    const problems = [...(checked.problems ?? [])];
+    if (checked.manifest) problems.push(...(buildKeelGraph(checked.manifest, { id }).problems ?? []));
+    if (!checked.manifest || problems.length) {
+      throw new StudioError('PLUGIN_STUDIO_KEEL_MANIFEST', 400, { id, problems: problems.slice(0, 20), issues: (checked.issues ?? []).slice(0, 40) }, `${id}: ${problems[0] ?? 'invalid manifest 3'}`);
+    }
+    const native = readNativeCode(files.root(id), checked.manifest, files.list(id));
+    if (native.parseProblems?.length) {
+      throw new StudioError('PLUGIN_STUDIO_KEEL_MANIFEST', 400, { id, problems: native.parseProblems.map((p) => `${p.entry}:${p.line ?? '?'}: ${p.message}`) }, `${id}: ${native.parseProblems[0].entry} does not parse`);
+    }
+    return checked.manifest;
+  }
+
+  /** The descriptor of a Keel plugin as a plain file (no link). @param {string} id */
+  function keelManifestOf(id) {
+    const rel = files.manifestFile(id);
+    return JSON.parse(fs.readFileSync(files.stat(id, rel).abs, 'utf8'));
+  }
+
+  /** Write a validated manifest 3 to the folder's own descriptor — never the other file. @param {string} id @param {any} manifest */
+  function saveKeelManifest(id, manifest) {
+    const rel = files.manifestFile(id);
+    files.write(id, rel, Buffer.from(manifestText(manifest)), { manifest: true });
+  }
+
   function stateOf(id, includeSource = false) {
     const dir = files.root(id);
+    const keel = files.keel(id);
+    const descriptor = keel ? files.manifestFile(id) : PLUGIN_MANIFEST;
     let text = null;
     let manifest;
     // plugin.json as a plain file of the folder only (files.stat: never through a link put in its place — the page shows
     // its text), and a folder that holds links checked for them alone (linkedCheck)
-    try { text = fs.readFileSync(files.stat(id, PLUGIN_MANIFEST).abs, 'utf8'); manifest = JSON.parse(text); } catch { manifest = null; }
+    try { text = fs.readFileSync(files.stat(id, descriptor).abs, 'utf8'); manifest = JSON.parse(text); } catch { manifest = null; }
+    // A Keel plugin: the native manifest names it, and the folder is shown read-only (V3). Its own plugin.json may not exist.
+    let keelManifest = keel && isObj(manifest) && manifest.manifest === 3 ? manifest : null;
+    if (keel && !keelManifest) {
+      for (const rel of [KEEL_MANIFEST, PLUGIN_MANIFEST]) {
+        try {
+          const m = JSON.parse(fs.readFileSync(files.stat(id, rel).abs, 'utf8'));
+          if (isObj(m) && m.manifest === 3) { keelManifest = m; break; }
+        } catch { /* the other file */ }
+      }
+    }
     const vanilla = registry.vanillaAssets();
     const links = files.list(id).filter((f) => f.link).map((f) => f.rel);
     const check = links.length ? linkedCheck(links) : checkPluginFolder(dir, `plugins/${id}/`, { vanilla, dataDir });
-    const read = isObj(manifest) ? readPluginManifest(manifest, { id }) : null;
+    const read = isObj(manifest) && manifest.manifest !== 3 ? readPluginManifest(manifest, { id }) : null;
     const draft = read?.manifest || read?.draft || null;
-    let overlay = isObj(manifest?.assets) ? manifest.assets : {};
-    if (typeof manifest?.assets === 'string' && isPackPath(manifest.assets)) {
+    const keelNames = (m) => (typeof m?.name === 'string' ? { [m.sourceLang || 'en']: m.name } : isObj(m?.name) ? m.name : {});
+    let overlay = keelManifest ? (keelManifest.modules.find((m) => m.kind === 'asset' && isObj(m.assets))?.assets ?? {}) : (isObj(manifest?.assets) ? manifest.assets : {});
+    if (!keelManifest && typeof manifest?.assets === 'string' && isPackPath(manifest.assets)) {
       try { overlay = JSON.parse(fs.readFileSync(files.resolve(id, manifest.assets), 'utf8')); } catch { overlay = {}; }
     }
     const used = filesOfOverlay(overlay);
-    const list = files.list(id).filter((f) => !f.link).map((f) => ({ rel: f.rel, bytes: f.bytes, kind: fileKind(f.rel), used: used.has(f.rel) || f.rel === PLUGIN_MANIFEST }));
+    for (const mod of keelManifest?.modules ?? []) {
+      if (typeof mod.entry === 'string') used.add(mod.entry);
+      for (const f of mod.files ?? []) used.add(f);
+    }
+    const list = files.list(id).filter((f) => !f.link).map((f) => ({ rel: f.rel, bytes: f.bytes, kind: fileKind(f.rel), used: used.has(f.rel) || f.rel === descriptor }));
     const entry = registry.plugin(id);
     let lock = { present: false, fresh: false };
     if (list.some((f) => f.rel === LOCK_FILE)) {
@@ -455,10 +507,12 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
       try { if (!readPluginLock(JSON.parse(fs.readFileSync(files.stat(id, LOCK_FILE).abs, 'utf8'))).lock) lock.fresh = false; } catch { lock.fresh = false; }
     }
     return {
-      id, manifest, text, overlay, authoring: authoring.read(id),
+      id, manifest, text, overlay, authoring: authoring.read(id), keel, manifestFile: descriptor,
       ...(includeSource && draft?.class === 'script' ? { source: authoring.source(id) } : {}),
-      ...(draft?.class === 'ui' ? { frame: registry.pluginIndex().plugins.find(p => p.id === id) || null } : {}), class: draft?.class || manifest?.class || null,
-      names: draft?.names || {}, version: draft?.version || null, files: list, sections: sectionsOf(id, overlay),
+      ...(draft?.class === 'ui' ? { frame: registry.pluginIndex().plugins.find(p => p.id === id) || null } : {}),
+      class: draft?.class || (keelManifest ? classOfKeel(keelManifest) : null) || manifest?.class || null,
+      names: draft?.names || keelNames(keelManifest), version: draft?.version || keelManifest?.version || null,
+      files: list, sections: sectionsOf(id, overlay),
       check: { ok: !check.problems.length, problems: check.problems.length, warnings: check.warnings.length, issues: check.issues },
       loaded: !!(entry && entry.source === 'plugins' && entry.status === 'loaded'), vs: entry?.visual?.vs ?? entry?.ui?.vs ?? null, lock,
       bytes: list.reduce((n, f) => n + f.bytes, 0),
@@ -481,17 +535,26 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
       let name = id;
       let version = null;
       let cls = null;
+      const keel = files.keel(id);
+      // a Keel plugin may have no plugin.json at all: its own manifest names it, and it is listed read-only
+      const rel = keel && fs.existsSync(path.join(files.root(id), KEEL_MANIFEST)) ? KEEL_MANIFEST : PLUGIN_MANIFEST;
       try {
-        const m = JSON.parse(fs.readFileSync(files.stat(id, PLUGIN_MANIFEST).abs, 'utf8'));
-        const r = readPluginManifest(m, { id });
-        const d = r.manifest || r.draft;
-        if (d) { name = d.name; version = d.version || null; cls = d.class; }
+        const m = JSON.parse(fs.readFileSync(files.stat(id, rel).abs, 'utf8'));
+        if (keel) {
+          name = typeof m.name === 'string' ? m.name : m.name?.zh || m.name?.en || id;
+          version = m.version || null;
+          cls = m.legacy?.class || null;
+        } else {
+          const r = readPluginManifest(m, { id });
+          const d = r.manifest || r.draft;
+          if (d) { name = d.name; version = d.version || null; cls = d.class; }
+        }
       } catch { /* no readable manifest: listed by its id */ }
       const entry = registry.plugin(id);
       const skipped = report.skipped.find((k) => k.where === `plugins/${id}/`);
       const loaded = !!(entry && entry.source === 'plugins');
       return {
-        id, name, version, class: cls, status: loaded ? entry.status : 'skipped',
+        id, name, version, class: cls, keel, status: loaded ? entry.status : 'skipped',
         problems: skipped ? skipped.problems.length : 0, warnings: report.warnings.filter((w) => w.where === `plugins/${id}/`).length,
         codes: skipped ? [...new Set((skipped.issues || []).map((i) => i.code))] : [],
       };
@@ -831,7 +894,7 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
         // key: whether this request carried the studio's key ('ok'), another value ('wrong') or none ('missing')
         key: keyed(req) ? 'ok' : req.headers['x-sp-studio'] ? 'wrong' : 'missing',
         app: APP_VERSION, api: PLUGIN_API, mode, watching: watcher.active, limits: { ...STUDIO_LIMITS, pluginBytes: PLUGIN_MAX_BYTES, trial: TRIAL_LIMITS, removeMax: REMOVE_MAX },
-        templates: TEMPLATES.map((t) => ({ id: t.id, class: t.class, kinds: t.kinds })), kinds: Object.keys(TARGET_KINDS),
+        templates: [...TEMPLATES.map((t) => ({ id: t.id, class: t.class, kinds: t.kinds })), ...KEEL_TEMPLATES], kinds: Object.keys(TARGET_KINDS),
       });
     }
     if ((route === 'console/options' || route === 'console/build') && method === 'POST') {
@@ -920,6 +983,14 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
     if (route === 'plugins' && method === 'POST') {
       if (!mayChange(req)) return false;
       const body = await readJson(req, 64 * 1024);
+      if (typeof body.template === 'string' && body.template.startsWith('keel-')) {
+        const id = text(body.id, 64);
+        if (!isPluginId(id)) throw new StudioError('PLUGIN_ID', 400, { id: id.slice(0, 40) });
+        const made = createKeelPlugin({ template: body.template, id, name: body.name, pluginsDir: files.base, root: path.resolve(publicDir, '..') });
+        if (!made.ok) throw new StudioError('PLUGIN_STUDIO_TEMPLATE', 400, { template: text(body.template, 40), detail: made.error }, made.error);
+        log.info?.(`[studio] new Keel plugin ${id} (${body.template})`);
+        return json(201, changed(id));
+      }
       const tpl = templateById(body.template);
       if (!tpl) throw new StudioError('PLUGIN_STUDIO_TEMPLATE', 404, { template: text(body.template, 40) });
       const id = text(body.id, 64);
@@ -988,6 +1059,8 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
       try { v = JSON.parse(body.toString('utf8')); } catch (e) { throw new StudioError('PLUGIN_JSON', 400, { file: PLUGIN_MANIFEST, detail: String(e?.message || e) }); }
       if (!isObj(v)) throw new StudioError('PLUGIN_MANIFEST_SHAPE', 400, {});
       files.root(id);
+      // a native manifest 3: validated (manifest rules + graph) and written to the folder's own descriptor only
+      if (files.keel(id)) { saveKeelManifest(id, keelChecked(id, v)); return json(200, changed(id)); }
       files.write(id, PLUGIN_MANIFEST, Buffer.from(manifestText(v)));
       return json(200, changed(id));
     }
@@ -1007,7 +1080,21 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
     if (sub === 'slot') return json(200, await putSlot(id, await readJson(req, STUDIO_LIMITS.bodyBytes)));
     const body = await readJson(req, sub === 'authoring' ? STUDIO_LIMITS.bodyBytes : 256 * 1024);
     if (sub === 'authoring') { await authoring.saveAsync(id, body); return json(200, changed(id)); }
-    if (sub === 'meta') { const p = openPlugin(files, id); editMeta(p, body.fields, typeof body.lang === 'string' ? body.lang : 'zh'); p.save(); return json(200, changed(id)); }
+    if (sub === 'meta') {
+      if (files.keel(id)) {
+        const next = editKeelMeta(keelManifestOf(id), body.fields, typeof body.lang === 'string' ? body.lang : 'zh');
+        saveKeelManifest(id, keelChecked(id, next));
+        return json(200, changed(id));
+      }
+      const p = openPlugin(files, id); editMeta(p, body.fields, typeof body.lang === 'string' ? body.lang : 'zh'); p.save(); return json(200, changed(id));
+    }
+    if (sub === 'modules') {
+      if (!files.keel(id)) throw new StudioError('PLUGIN_STUDIO_REQUEST', 400, { detail: 'modules are a manifest 3 field' });
+      if (!Array.isArray(body.modules)) throw new StudioError('PLUGIN_STUDIO_REQUEST', 400, { detail: 'modules: a list' });
+      const manifest = keelManifestOf(id);
+      saveKeelManifest(id, keelChecked(id, { ...manifest, modules: body.modules }));
+      return json(200, changed(id));
+    }
     if (sub === 'sections') { files.root(id); saveSections(id, body.sections); return json(200, stateOf(id)); }
     if (sub === 'ref') {
       const key = text(body.ref, 200);

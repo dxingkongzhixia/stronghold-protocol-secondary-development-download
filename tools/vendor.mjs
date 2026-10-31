@@ -40,6 +40,10 @@ export const VENDOR_FILES = Object.freeze([
   ['node_modules/htm/dist/htm.module.js', 'htm.module.js'],
   ['node_modules/three/build/three.core.js', 'three.core.js', true],
   ['node_modules/three/build/three.module.js', 'three.module.js', true],
+  // SES (the simulation Worker's sandbox and the page's Keel-native confinement) and the parser its module surface
+  // compiles with. docs/PLUGINS.md promises both paths from a plain `npm ci`.
+  ['node_modules/ses/dist/ses.umd.js', 'ses.umd.js'],
+  ['node_modules/acorn/dist/acorn.mjs', 'acorn.mjs'],
 ]);
 
 export function vendor({ log = console.log, warn = console.warn } = {}) {

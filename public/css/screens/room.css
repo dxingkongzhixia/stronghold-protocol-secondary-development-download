@@ -19,6 +19,15 @@
 .trusted-consent__perms { color: var(--text-lo); }
 .trusted-consent__declined { color: var(--warn, #f0bf5b); }
 .trusted-consent__actions { display: flex; justify-content: flex-end; gap: .08rem; margin-top: .06rem; }
+/* native-code consent: stronger than a trusted page script, because the code runs on this machine's simulation */
+.native-consent { border-color: #ff6a3d; background: rgba(64, 18, 10, .84); }
+.native-consent .trusted-consent__title { color: #ff8a5c; }
+.native-gate {
+  position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+  padding: .2rem; background: rgba(6, 8, 12, .62); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+}
+.native-gate .trusted-consent { margin: 0; width: min(7.4rem, 100%); max-height: 80vh; overflow: auto; }
+.plugtag__native { margin-left: .04rem; padding: 0 .05rem; font-weight: 800; color: #fff; background: #c8401f; letter-spacing: .04em; }
 
 .room-ping { display: flex; flex-direction: column; align-items: flex-start; gap: .04rem; }
 

@@ -20,7 +20,7 @@
 import os from 'node:os';
 import { isIP } from 'node:net';
 import { isLocalIp, normalizeIp } from './net.js';
-import { isUnspecifiedAddress, trustedHostAllowed } from './plugins/trusted.js';
+import { isUnspecifiedAddress, trustedHostAllowed } from './netAddress.js';
 
 const LOCAL = new Set(['1', 'true', 'yes', 'on', 'local']);
 const SILENT_OFF = new Set(['', '0', 'off', 'false', 'no']);

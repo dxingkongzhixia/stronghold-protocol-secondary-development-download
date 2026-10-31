@@ -1,0 +1,80 @@
+{
+  "records": 1,
+  "entries": [
+    {
+      "file": "enemies",
+      "id": "enemy_x_keel_content_demo",
+      "value": {
+        "key": "enemy_x_keel_content_demo",
+        "name": "内容示例敌人",
+        "level": 0,
+        "rank": "NORMAL",
+        "handbookIndex": "B1",
+        "desc": "野生的被感染生物。",
+        "descRaw": "野生的被感染生物。",
+        "applyWay": "MELEE",
+        "stats": {
+          "maxHp": 120,
+          "atk": 130,
+          "def": 20,
+          "res": 30,
+          "moveSpeed": 1,
+          "bat": 1.7,
+          "aspd": 100,
+          "rangeRadius": 0,
+          "rawRangeRadius": 0,
+          "blockCnt": 1,
+          "massLevel": 0,
+          "lpr": 1,
+          "hpRecoveryPerSec": 0,
+          "elementRes": 0,
+          "elementDmgRes": 0,
+          "hitRatePhys": 0,
+          "hitRateArts": 0,
+          "dmgType": "phys",
+          "dmgTypes": [
+            "phys"
+          ],
+          "motion": "WALK",
+          "immunities": {
+            "stun": false,
+            "silence": false,
+            "sleep": false,
+            "frozen": false,
+            "levitate": false
+          },
+          "otherImmunities": [],
+          "tauntLevel": 0
+        },
+        "abilities": [],
+        "talents": {
+          "bb": {},
+          "bbStr": {}
+        },
+        "skills": [],
+        "notCountInTotal": false,
+        "tags": [
+          "infection"
+        ],
+        "be": 1200,
+        "beFactor": 1,
+        "attrPower": 1200,
+        "isFlyEnemy": false,
+        "tokenOnly": false,
+        "acTypes": [],
+        "acType": null,
+        "templateSlot": null,
+        "summons": [],
+        "inactiveIn": [],
+        "seasonOverride": null,
+        "iconId": "enemy_1007_slime",
+        "spine": "enemy_1007_slime",
+        "attackAnim": {
+          "clip": "Attack",
+          "dur": 0.767,
+          "hit": 0.333
+        }
+      }
+    }
+  ]
+}

@@ -9,14 +9,17 @@ export const WORKER_LOAD_TIMEOUT_MS = 15000;
 const failure = (code, message) => Object.assign(new Error(message), { code });
 
 export class InPageSimHost {
-  constructor({ loadSim = loadBrowserSim } = {}) { this.loadSim = loadSim; this.remote = false; this.battle = null; }
+  constructor({ loadSim = loadBrowserSim } = {}) { this.loadSim = loadSim; this.remote = false; this.battle = null; this.extensions = null; }
   async load(cs = null, content = null) {
     this.sim = await this.loadSim(content ? { ...content, cs } : undefined);
+    this.extensions = this.sim?.extensions ?? null;
     return this;
   }
   start(spec, opts = {}) {
     this.spec = spec;
-    this.battle = this.sim.spec.createBattleFromSpec(spec, this.sim.ds, opts);
+    this.battle = this.sim.spec.createBattleFromSpec(spec, this.sim.ds, { ...(this.extensions ? { extensions: this.extensions } : {}), ...opts });
+    try { this.sim.keel?.attach?.(this.battle); } catch (err) { console.warn('[simHost] native Keel attach failed', err); this.keelError = String(err?.message || err); }
+    this.keelInfo = { hasAttach: typeof this.sim?.keel?.attach === 'function', plugins: this.sim?.keel?.plugins?.length ?? null };
     this.meter = this.sim.spec.attachLpMeter(this.battle);
     return this;
   }
@@ -61,24 +64,39 @@ export class InPageSimHost {
 /** Wire state only: no engine import or engine object, including in the dev introspection hooks. */
 export class WorkerSimHost {
   constructor({ workerFactory = () => new Worker(new URL('./simWorker.js', import.meta.url), { type: 'module' }),
-    timeoutMs = WORKER_TIMEOUT_MS, loadTimeoutMs = WORKER_LOAD_TIMEOUT_MS, onFailure = () => {}, contentFor = null } = {}) {
+    timeoutMs = WORKER_TIMEOUT_MS, loadTimeoutMs = WORKER_LOAD_TIMEOUT_MS, onFailure = () => {}, contentFor = null,
+    heartbeatMs = 5000, pingTimeoutMs = 2000 } = {}) {
     this.contentFor = contentFor;
     this.remote = true;
     this.timeoutMs = timeoutMs;
     this.loadTimeoutMs = loadTimeoutMs;
+    this.pingTimeoutMs = pingTimeoutMs;
+    this.heartbeatMs = heartbeatMs;
     this.onFailure = onFailure;
     this.worker = workerFactory();
     this.pending = new Map();
     this.seq = 0;
     this.stopped = false;
+    this.heartbeatTimer = null;
     this.events = [];
     this.statsCache = new Map();
     this.statsPending = new Set();
+    const host = this;
     this.battle = {
-      snapshot: () => this.packet?.snap,
-      drainEvents: () => this.events.splice(0),
-      fieldMeta: () => this.packet?.meta || { units: [] },
-      getPlayer: pid => this.packet?.players?.[pid],
+      snapshot: () => host.packet?.snap,
+      drainEvents: () => host.events.splice(0),
+      fieldMeta: () => host.packet?.meta || { units: [] },
+      getPlayer: pid => host.packet?.players?.[pid],
+      get allyUnits() { return host.packet?.state?.allyUnits || []; },
+      get sharedBoss() {
+        const s = host.packet?.state?.sharedBoss;
+        return s ? { cum: s.cum, byPlayer: s.byPlayer, sync: (hp, acked) => { host.syncPool(hp, acked); } } : null;
+      },
+      get keelAll() { return host.packet?.keel || []; },
+      get keel() { const all = host.packet?.keel || []; return all[all.length - 1] || null; },
+      get keelError() { return host.packet?.keelError || null; },
+      get keelInfo() { return host.packet?.keelInfo || null; },
+      forceEnd: (reason) => { host.forceEnd(reason).catch(() => {}); },
     };
     this.worker.onmessage = ({ data }) => {
       const p = this.pending.get(data?.id);
@@ -101,6 +119,16 @@ export class WorkerSimHost {
     });
   }
   fail(err) { if (this.stopped) return; this.stop(err); this.onFailure(err); }
+  /** Liveness: a ping only when no RPC is in flight (a long catch-up step is not silence). */
+  heartbeat() {
+    if (this.stopped || this.pending.size) return;
+    this.rpc('ping', [], this.pingTimeoutMs).catch(() => {});
+  }
+  startHeartbeat() {
+    if (this.heartbeatTimer || !(this.heartbeatMs > 0)) return;
+    this.heartbeatTimer = setInterval(() => this.heartbeat(), this.heartbeatMs);
+    this.heartbeatTimer.unref?.();
+  }
   async load(cs, content = null) {
     content ||= await this.contentFor?.(cs);
     if (!content || content.cs !== cs || !content.data) throw failure('PLUGIN_WORKER_FAILED', 'no checked content set');
@@ -108,17 +136,25 @@ export class WorkerSimHost {
     const traitRuntimeVerified = await checkOperatorTraitRuntime(content.data);
     const ready = await this.rpc('load', [{ ...content, cs, traitRuntimeVerified }], this.loadTimeoutMs);
     if (ready.install) await this.rpc('install');
+    this.startHeartbeat();
     return this;
   }
   accept(packet) {
     this.packet = packet;
     this.events.push(...packet.ev);
-    Object.assign(this.battle, packet.state);
+    // allyUnits / sharedBoss / keel are live getters on the facade (they need methods or packet-only fields)
+    const { allyUnits, sharedBoss, ...state } = packet.state || {};
+    Object.assign(this.battle, state);
     this.meter = packet.meter;
     return packet;
   }
+  combatMetrics() { return this.packet?.metrics || null; }
   async start(spec) { this.spec = spec; this.accept(await this.rpc('start', [spec])); return this; }
-  async step(n, opts) { return this.accept(await this.rpc('step', [n, opts])); }
+  async step(n, opts) {
+    // a catch-up slice may legitimately run hundreds of ticks: scale the RPC budget, not the plugin budget
+    const budget = this.timeoutMs * Math.max(1, Math.ceil((Number(n) || 0) / 120));
+    return this.accept(await this.rpc('step', [n, opts], budget));
+  }
   progress() { return this.packet.progress; }
   uniteLeft() { return this.packet.left; }
   compactResult() { return this.packet.result; }
@@ -135,6 +171,7 @@ export class WorkerSimHost {
   stop(err = failure('PLUGIN_WORKER_STOPPED', 'simulation worker stopped')) {
     if (this.stopped) return;
     this.stopped = true;
+    if (this.heartbeatTimer) { clearInterval(this.heartbeatTimer); this.heartbeatTimer = null; }
     this.worker.terminate();
     for (const p of this.pending.values()) { clearTimeout(p.timer); p.reject(err); }
     this.pending.clear();

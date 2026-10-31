@@ -22,7 +22,8 @@ import {
   pluginName, PERSONAL_PREF,
 } from '../../public/js/content.js';
 import { ERR } from '../../shared/constants.js';
-import { roomPluginFacts, nextChoice, sizeText, pluginTagText, pluginMicro, pluginGroups } from '../../public/js/ui/pluginPanel.js';
+import { roomPluginFacts, nextChoice, everyRoomPlugin, sizeText, pluginTagText, pluginMicro, pluginGroups } from '../../public/js/ui/pluginPanel.js';
+import { restoreChoice } from '../../public/js/ui/pluginTag.js';
 import { visualHashOf, writesHashOf, VISUAL_HASH_VERSION } from '../../shared/plugins/visual.js';
 import { sha256Hex } from '../../shared/sha256.js';
 
@@ -434,6 +435,27 @@ describe('the 插件 panel (ui/pluginPanel.js) and the room screen', () => {
     assert.equal(pluginTagText(room({ plugins: [] })), '原版');
     assert.deepEqual([sizeText(2048), sizeText(3 * 1048576), sizeText(NaN)], ['2 KB', '3.0 MB', '']);
     assert.equal(pluginMicro({ id: 'a', version: '1.0.0', artBytes: 4096 }), 'a · v1.0.0 · 4 KB');
+  });
+
+  test('a new room restores only the remembered plugins the server still offers', () => {
+    assert.deepEqual(restoreChoice({ ids: ['a', 'gone'], auto: true }, new Set(['a'])), ['a']);
+    assert.deepEqual(restoreChoice({ ids: ['a'] }, ['a', 'b']), ['a'], 'no auto field means on');
+    assert.deepEqual(restoreChoice({ ids: ['a'], auto: false }, new Set(['a'])), [], 'the host turned it off');
+    assert.deepEqual(restoreChoice(null, new Set(['a'])), [], 'nothing remembered yet');
+    assert.deepEqual(restoreChoice({ ids: ['a', 'a'] }, new Set(['a'])), ['a'], 'one id once');
+  });
+
+  test('「全部开启」 takes every offered plugin but a gameplay one made for another app version', () => {
+    const offered = [
+      { id: 'skin', class: 'cosmetic', compatible: false },
+      { id: 'mode', class: 'content' },
+      { id: 'old-mode', class: 'content', compatible: false },
+      { id: 'kit', class: 'script' },
+      { id: 'native', class: 'trusted', compatible: false },
+    ];
+    assert.deepEqual(everyRoomPlugin(offered), ['skin', 'mode', 'kit']);
+    assert.deepEqual(everyRoomPlugin([]), []);
+    assert.deepEqual(everyRoomPlugin(null), []);
   });
 
   test('the five sections: a declared category first, else the class decides', () => {

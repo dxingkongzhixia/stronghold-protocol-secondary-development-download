@@ -4,7 +4,7 @@ import {DataSource} from '../../../server/sim/simdata.js';
 export class Match {
   constructor(opts){this.opts=opts;}
   start(){
-    const b=createBattleFromSpec(this.opts.scriptSpec,new DataSource(this.opts.data));
+    const b=createBattleFromSpec(this.opts.scriptSpec,new DataSource(this.opts.data),this.opts.extensions?{extensions:this.opts.extensions}:{});
     b.start();for(let i=0;i<90;i++) b.step();
     this.opts.broadcast({t:'m.result',snapshot:b.snapshot(),digest:resultDigest(b.result()),errors:b.errors});
   }

@@ -1,11 +1,18 @@
 // Kept separate from the browser port so the same engine/packets can be verified with a Node worker.
 import { InPageSimHost } from './simHost.js';
+import { trackCombat } from './metrics.js';
 
 export function createSimWorker({ loadSim, prepareScripts = browserScripts } = {}) {
   const host = new InPageSimHost(loadSim ? { loadSim } : {});
   let loaded = false;
   let loadingStarted = false;
   let installScripts = null;
+  let extensions = null;
+  let combat = null;
+  const keelOf = () => {
+    const rts = host.battle?.keelAll ?? (host.battle?.keel ? [host.battle.keel] : []);
+    return rts.map((rt) => ({ started: rt.started, modules: rt.modules, views: rt.views, errors: rt.errors }));
+  };
   const packet = (step = null) => {
     const b = host.battle;
     const pids = (host.spec.players || []).map(p => p.playerId);
@@ -15,12 +22,19 @@ export function createSimWorker({ loadSim, prepareScripts = browserScripts } = {
         leakedCount: b.leakedCount, flags: b.flags,
         // A length marker, not enemy objects; runner's uniteLeftMark uses it.
         enemies: Array(b.enemies?.length || 0).fill(null),
-        allyUnits: (b.allyUnits || []).map(u => ({ id: u.id, uid: u.uid, ownerId: u.ownerId })),
+        allyUnits: (b.allyUnits || []).map(u => ({ id: u.id, uid: u.uid, ownerId: u.ownerId, kind: u.kind, defId: u.defId,
+          ...(u.items?.length ? { items: [...u.items] } : {}),
+          ...(u.def?.standInFor ? { standInFor: u.def.standInFor } : {}),
+          ...(u.def?.diyFor && u.def.loadout?.diy ? { diy: { ...u.def.loadout.diy } } : {}) })),
         sharedBoss: b.sharedBoss ? { cum: b.sharedBoss.cum, byPlayer: { ...b.sharedBoss.byPlayer } } : null },
       meta: b.fieldMeta(), players: Object.fromEntries(pids.map(id => [id, { bonds: b.getPlayer(id)?.bonds }])),
       ops: Object.fromEntries(pids.map(id => [id, host.ownerOps(id)])), meter: { lp: host.meter.lp },
       progress: host.progress(), left: host.spec.kind === 'unite' ? host.uniteLeft() : null,
       result: b.finished ? host.compactResult({ bossLike: ['boss', 'hidden'].includes(host.spec.kind), battleId: host.spec.battleId }) : null,
+      metrics: combat ? combat() : null,
+      keel: keelOf(),
+      ...(host.keelError ? { keelError: host.keelError } : {}),
+      ...(host.keelInfo ? { keelInfo: host.keelInfo } : {}),
     };
   };
   return async (method, args = []) => {
@@ -38,18 +52,24 @@ export function createSimWorker({ loadSim, prepareScripts = browserScripts } = {
     }
     if (method === 'install') {
       if (!installScripts || loaded) throw new Error('no pending script installation');
-      await installScripts();
+      const regs = await installScripts();
+      extensions = regs?.registry ?? null;
       installScripts = null;
       loaded = true;
       return true;
     }
     if (!loaded) throw new Error('simulation not loaded');
     switch (method) {
-      case 'start': host.start(args[0]); return packet();
+      case 'start': {
+        host.start(args[0], extensions ? { extensions } : {});
+        combat = trackCombat(host.battle);
+        return packet();
+      }
       case 'step': {
         if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 600) throw new Error('invalid step count');
         return packet(host.step(args[0], args[1] || {}));
       }
+      case 'ping': return { ok: true };
       case 'unitStats': return host.unitStats(args[0]);
       case 'ownerOps': return host.ownerOps(args[0]);
       case 'syncPool': host.syncPool(...args); return true;

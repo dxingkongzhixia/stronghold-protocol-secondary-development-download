@@ -5,7 +5,7 @@
 // leak count of normal fields (state().leaks, user playtest #3 item 2).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createBattleRunner, ticksPerFrameCap } from '../../public/js/battle/runner.js';
+import { createBattleRunner, ticksPerFrameCap, needsWorker } from '../../public/js/battle/runner.js';
 import { createStore, initialState } from '../../public/js/store.js';
 import * as specMod from '../../server/sim/spec.js';
 import { DataSource } from '../../server/sim/simdata.js';
@@ -135,6 +135,35 @@ test('authoritative battle: 2× pacing, ≤ max(8, 4·speed) ticks per frame, b.
   assert.equal(r.runner.combatMetrics({ scope: 'battle' }).rows.length, 0, 'current battle clears at prep');
   r.store.patch('match', { public: null });
   assert.equal(r.runner.combatMetrics().rows.length, 0, 'leaving the match clears totals');
+  r.runner.dispose();
+});
+
+test('a content set with native sim or sandbox scripts runs in the Worker; content/asset only stays in-page', () => {
+  assert.equal(needsWorker({ cs: 'a', scripts: [{}] }, 'a'), true, 'a sandbox script set');
+  assert.equal(needsWorker({ cs: 'a', keel: { plugins: [{}] } }, 'a'), true, 'native modules');
+  assert.equal(needsWorker({ cs: 'a', keel: { plugins: [] }, scripts: [] }, 'a'), false, 'content/asset only');
+  assert.equal(needsWorker({ cs: 'b', scripts: [{}] }, 'a'), false, 'another set is not this battle');
+  assert.equal(needsWorker(null, 'a'), false);
+});
+
+test('a background executor start does not take the view and still reports progress', async () => {
+  const own = realStart(7305);
+  const bg = { ...structuredClone(own), battleId: `${own.battleId}-bg`, fieldId: 'n:bot', background: true, watch: false, authoritative: true };
+  const r = rig();
+  r.net.emit('b.start', own);
+  await r.settle();
+  const ownId = r.runner.state().battleId;
+  const ownField = r.store.get().match.field?.fieldId;
+  const fieldsBefore = r.feed.fields.length;
+  r.net.emit('b.start', bg);
+  await r.settle();
+  assert.equal(r.runner.state().battleId, ownId, 'the own battle stays on screen');
+  assert.equal(r.store.get().match.field?.fieldId, ownField, 'the background field does not publish m.field');
+  assert.equal(r.feed.fields.length, fieldsBefore, 'no field event for the background battle');
+  assert.equal(r.runner.state().background, false);
+  r.advance(4000);
+  await r.settle();
+  assert.ok(r.net.sent.some((m) => m.t === 'b.progress' && m.battleId === bg.battleId), 'the background authority reports progress');
   r.runner.dispose();
 });
 

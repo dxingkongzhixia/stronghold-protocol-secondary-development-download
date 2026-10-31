@@ -40,6 +40,8 @@
     "check:imports": "node tools/check-imports.mjs",
     "check:trusted": "node tools/trusted-container-check.mjs",
     "check:upstream": "node tools/check-upstream.mjs",
+    "keel": "node tools/keel.mjs",
+    "check:keel": "node --test test/keel/manifest.test.js test/keel/adapt.test.js test/keel/graph.test.js test/keel/cli.test.js test/keel/cli-author.test.js test/keel/contracts.test.js test/keel/rng.test.js test/keel/state.test.js test/keel/commands.test.js test/keel/budget.test.js test/keel/runtime.test.js test/keel/stronghold-host.test.js test/keel/wiring.test.js test/keel/sandbox-host.test.js test/keel/e2e-room.test.js test/keel/tooling.test.js test/keel/v2-script.test.js test/keel/e2e.test.js test/keel/e2e-replay.test.js test/keel/demo.test.js test/keel/content.test.js test/keel/e2e-match.test.js test/keel/e2e-match-units.test.js test/keel/migration-prts-kaltsit.test.js test/keel/migration-prts.test.js test/keel/provides.test.js test/keel/keel-only.test.js test/keel/migration-golden.test.js test/keel/migration-10-rounds.test.js test/keel/migration-native-rewrite.test.js test/keel/prts-fx-keys.test.js test/keel/builtin.test.js test/keel/templates.test.js test/keel/content-extras.test.js test/keel/content-set-script.test.js test/keel/studio-keel.test.js test/keel/native-gate.test.js test/keel/native-delivery.test.js test/keel/native-browser.test.js test/keel/native-sandbox.test.js",
     "check:delivery": "node tools/check-delivery.mjs",
     "push:relay": "node tools/push-assets-relay.mjs",
     "ci": "node tools/ci.mjs",

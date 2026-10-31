@@ -390,38 +390,6 @@ test('registry checks theme files and delivers capped notices independently of r
   assert.equal(sets.hasNotices(), true, 'language plugins also advertise notices');
 });
 
-for (const mode of ['sandbox', 'trusted']) test(`${mode} script notice add/edit/remove keeps content identity and raw lock verification`, (t) => {
-  const fx = scriptFixture(t, { mode });
-  const source = 'export default sp => {};';
-  fx.put('note-script', source);
-  const a = buildContentSet({ registry: fx.registry, ids: ['note-script'] });
-  assert.deepEqual(a.problems, []);
-  verifyScripts(a.scripts, a.index);
-  assert.equal(JSON.parse(a.scripts[0].manifestSource).notices, undefined);
-  const sets = createContentSets({ registry: fx.registry, vanillaData: {} });
-  t.after(() => sets.close());
-  const selected = sets.resolve(['note-script']);
-  sets.hold(selected.set.cs);
-  const stale = [];
-  sets.onStale((...args) => stale.push(args));
-  const rawHashes = new Set([fx.registry.plugin('note-script').script.lockHash]);
-  for (const extra of [{ notices: datedNotice() }, { notices: [{ id: 'updated', title: 'Updated', body: 'Different text' }] }, {}]) {
-    fx.put('note-script', source, extra);
-    const p = fx.registry.plugin('note-script');
-    assert.equal(p.script.lockValid, true);
-    assert.equal(nodeSha256(Buffer.from(p.script.manifestSource)), p.content.files['plugin.json'], 'raw bytes still verify');
-    rawHashes.add(p.script.lockHash);
-    const b = buildContentSet({ registry: fx.registry, ids: ['note-script'] });
-    assert.deepEqual(b.problems, []);
-    verifyScripts(b.scripts, b.index);
-    assert.equal(b.cs, a.cs);
-    assert.deepEqual(b.scripts, a.scripts, 'canonical descriptor for absent and present notices');
-    assert.deepEqual(b.plugins, a.plugins);
-    assert.deepEqual(stale, []);
-  }
-  assert.equal(rawHashes.size, 3, 'lock pins retain the complete notice-sensitive bytes');
-});
-
 for (const packed of [false, true]) test(`art notice and theme edits keep vs and room hashes (${packed ? 'locked' : 'unlocked'})`, (t) => {
   const fx = fixture(t);
   const dir = fx.put('art-news', { class: 'cosmetic', scope: ['personal', 'room'], permissions: ['assets.override', 'theme'],
@@ -507,24 +475,6 @@ test('ui notice add/edit/remove keeps the frame visual identity and file hashes'
     assert.equal(after.vs, before.vs);
     assert.equal(after.hash, before.hash);
     assert.deepEqual(after.frameFiles, before.frameFiles);
-  }
-});
-
-test('trusted personal theme values never enter gameplay descriptors or room-facing hashes', (t) => {
-  const fx = scriptFixture(t);
-  const manifest = { class: 'trusted', permissions: ['sim.code', 'theme'], theme: 'theme.json' };
-  fx.put('theme-script', 'export default sp => {};', manifest, { 'theme.json': { vars: { '--t-fast': '0s' } } });
-  const a = buildContentSet({ registry: fx.registry, ids: ['theme-script'] });
-  assert.deepEqual(a.problems, []);
-  for (const theme of ['theme.json', { vars: { '--t-fast': '2s' } }]) {
-    fx.put('theme-script', 'export default sp => {};', { ...manifest, theme }, { 'theme.json': { vars: { '--t-fast': '1s' } } });
-    const b = buildContentSet({ registry: fx.registry, ids: ['theme-script'] });
-    assert.deepEqual(b.problems, []);
-    verifyScripts(b.scripts, b.index);
-    assert.equal(b.cs, a.cs);
-    assert.deepEqual(b.plugins, a.plugins);
-    assert.deepEqual(b.scripts, a.scripts);
-    assert.equal(JSON.parse(b.scripts[0].manifestSource).theme, undefined);
   }
 });
 

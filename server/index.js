@@ -70,12 +70,11 @@ import { installPluginBytes, movePluginAside } from './plugins/install.js';
 import { computeVanillaContent } from './plugins/identity.js';
 import { createVisualSets } from './plugins/visualSet.js';
 import { createPluginPolicy } from './plugins/policy.js';
-import { createContentSets } from './plugins/contentSets.js';
 import { createPluginMarket } from './market.js';
 import { createRoomSets } from './plugins/roomSets.js';
+import { loadKeelPluginMap } from './keel/room-source.js';
+import { createKeelContentSets } from './keel/content-sets.js';
 import { createMatchHosts } from './match/host/index.js';
-import { createTrustedRuntime } from './plugins/trustedRuntime.js';
-import { trustedHostAllowed } from './plugins/trusted.js';
 import { createStudio } from './studio/index.js';
 import { siteCsp } from './http/csp.js';
 import { MIME, COMPRESSIBLE, acceptsGzip, pickEncoding, parseRange } from './http/files.js';
@@ -257,12 +256,21 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const views = assetIndex ? createManifestViews({ dataDir, index: assetIndex, log }) : null;
   // the visual sets of the cosmetic plugins (DESIGN 32 P1a): what a room's host switches on, served at /vs/ and /p/
   const visual = createVisualSets({ registry: packs, log });
-  // the server owner's policy (plugins/config.json) and the content sets of the gameplay plugins (served at
-  // /cs/<cs16>/?? a room holds one while it plays it, its data patched by P1b); no match hosts here: the browser simulates
+  // the server owner's policy (plugins/config.json) and the content sets of the Keel plugins (served at
+  // /cs/<cs16>/: a room holds one while it plays it, its data patched by P1b); no match hosts here: the browser simulates
   const policy = createPluginPolicy({ pluginsDir, log });
-  const contents = createContentSets({ registry: packs, vanillaData: data, log, maxSets: () => policy.get().maxSets });
+  // The only plugin loader is Keel: a folder without manifest 3 is reported by the registry and left out.
+  const keelPlugins = pluginsDir ? await loadKeelPluginMap(pluginsDir, { host, mode: process.env.SP_PLUGIN_SCRIPTS, log }) : new Map();
+  // Built-in plugins have no folder: give them the same Keel descriptor entry the folder scan produces. A folder plugin
+  // is already in the map with its own (richer) descriptor and must not be replaced.
+  for (const p of packs.plugins()) if (p.keel && !keelPlugins.has(p.id)) {
+    keelPlugins.set(p.id, { id: p.id, manifest: p.keel, modules: [], content: p.content, ui: p.ui ?? null, assets: p.keel.modules?.find((m) => m.kind === 'asset')?.assets ?? null });
+  }
+  if (keelPlugins.size) log.info(`[keel] ${keelPlugins.size} plugin(s) loaded`);
+  const roomContents = createKeelContentSets({ plugins: keelPlugins, vanillaData: data, log, maxSets: () => policy.get().maxSets });
+  const contents = roomContents;
   const market = createPluginMarket({ root: ROOT, log, registry: packs });
-  const roomSets = createRoomSets({ registry: packs, visual, contents, policy });
+  const roomSets = createRoomSets({ registry: packs, visual, contents: roomContents, policy });
   // gameplay-plugin rooms simulate in a host (server/match/host, DESIGN §32.6): one per content set; a child process
   // by default, a worker thread when SP_MATCH_HOST=worker asks for it. The host count is NOT the content-set limit: a
   // host is a whole node process (≈110–180 MB resident) while a content set is a few MB of data, so `limits.maxSets`
@@ -270,15 +278,13 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // host beyond MAX_HOSTS reports PLUGIN_BUSY instead.
   const transport = String(process.env.SP_MATCH_HOST || '').trim().toLowerCase() === 'worker' ? 'worker' : 'process';
   const MAX_HOSTS = 6;
-  const hosts = createMatchHosts({ contents, log, options: { transport, maxWorkers: Math.min(MAX_HOSTS, Math.max(1, policy.get().maxSets)), ...(opts.matchHost || {}) } });
-  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats }, { data, log, content, plugins: roomSets, hosts });
+  const hosts = createMatchHosts({ contents: roomContents, log, options: { transport, maxWorkers: Math.min(MAX_HOSTS, Math.max(1, policy.get().maxSets)), ...(opts.matchHost || {}) } });
+  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats, keel: keelPlugins }, { data, log, content, plugins: roomSets, hosts });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
-  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, skinsDir, packs, content, log, assetIndex, views, visual, contents });
+  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, skinsDir, packs, content, log, assetIndex, views, visual, contents: roomContents });
   // the plugin studio (DESIGN §32.9): its page and API for this machine and the local network; it watches plugins/ only
   // once it is used (hot reload), and rooms whose host is the author or alone follow a plugin's changes by themselves
   const studio = opts.studio === false ? null : createStudio({ publicDir, pluginsDir, dataDir, registry: packs, lobby, sessions: registry, log, fetch: opts.fetch });
-  const trustedRuntime = await createTrustedRuntime({ registry: packs, log });
-  lobby.trustedRuntime = trustedRuntime;
   const startedAt = Date.now();
   // The tag is per process (see buildTag): read the browser runtime once, here, not on every /healthz.
   resetBuildTag();
@@ -292,8 +298,8 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // the page policy (server/http/csp.js): every response carries it unless SP_CSP=off
   const sitePolicy = process.env.SP_CSP === 'off' ? null : siteCsp(publicDir);
   const baseHandler = createRequestHandler({
-    serveStatic, studio, trustedRuntime, csp: sitePolicy,
-    health: { startedAt, network, registry, lobby, content, visual, traffic, assetIndex, views, prior: priorStatus(), trusted: trustedRuntime?.health },
+    serveStatic, studio, csp: sitePolicy,
+    health: { startedAt, network, registry, lobby, content, visual, traffic, assetIndex, views, prior: priorStatus() },
     log, trustProxy,
   });
   function communityKey(req) {
@@ -1024,15 +1030,10 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       if (testGate.warn) log.warn(`[test-mode] ${testGate.warn}`);
       else if (testGate.enabled) log.info('[test-mode] test rooms enabled');
     }
-    if (!trustedHostAllowed(scriptHost, process.env.SP_PLUGIN_SCRIPTS)) {
-      lobby.trustedRuntime = null;
-      await trustedRuntime?.close();
-    }
   } catch (e) {
     network.close(); // stop heartbeat/sweep timers of the half-built server
     assetIndex?.close();
     studio?.close();
-    await trustedRuntime?.close();
     throw e;
   }
   server.on('error', (e) => log.error('[http] server error', e));
@@ -1051,7 +1052,6 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       network.close();
       assetIndex?.close();
       studio?.close();
-      await trustedRuntime?.close();
       await new Promise((resolve) => {
         server.close(() => resolve());
         server.closeIdleConnections?.();
@@ -1064,7 +1064,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   }
 
   const adminUrl = admin ? `${url}/admin?token=${admin.token}` : null;
-  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, content, visual, contents, hosts, db, auth, stats, adminUrl, traffic, assetIndex, views, studio, trustedRuntime, close };
+  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, content, visual, contents, hosts, db, auth, stats, adminUrl, traffic, assetIndex, views, studio, close };
 }
 
 // `node server/index.js` / npm start: listen (accounts & 野排 on), print the banner, stop on SIGINT / SIGTERM

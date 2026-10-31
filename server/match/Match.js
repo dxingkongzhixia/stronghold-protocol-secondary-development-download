@@ -140,7 +140,8 @@
 //   opts.clientCombat  default true (env SP_COMBAT=server → false: the legacy server-run + snapshot streaming mode)
 //   opts.verify        'off' | 'sample' | 'all' (env SP_VERIFY, default 'off'): re-simulate accepted client results
 //                      ('sample': ~1 in 8, in later slices, mismatches logged; 'all': before accepting — the
-//                      server's result wins on a mismatch)
+//                      server's result wins on a mismatch). A room with native Keel code forces 'off' (D10): the server
+//                      does not import that code, so it cannot reproduce the battle.
 //
 // Engine-only extra options (tests / tools; the lobby never passes them):
 //   opts.scheduler     RealScheduler (default, uses opts.now) | VirtualScheduler (./scheduler.js)
@@ -206,6 +207,10 @@
 
 import { PHASE, modeIdFor } from '../../shared/constants.js';
 import { isContentHash } from '../../shared/plugins/identity.js';
+import { runV2Setups } from '../keel/v2-script.js';
+import { keelEnabled } from '../keel/attach.js';
+import { createFakeHost, createKeelRuntime } from '../../shared/keel/index.js';
+import { mergeKeelData } from '../keel/content.js';
 import { Battle } from '../sim/Battle.js';
 import { DataSource } from '../sim/simdata.js';
 import { createRng, deriveSeed } from '../sim/rng.js';
@@ -213,7 +218,8 @@ import { GameData } from './gamedata.js';
 import { RealScheduler } from './scheduler.js';
 import { SharedPool, SharedItemPool, drawDisabledBonds } from './pool.js';
 import { PlayerState } from './PlayerState.js';
-import { EffectDispatcher, getDefaultRegistry } from './effectsMeta.js';
+import { EffectDispatcher, createRegistry, getDefaultRegistry } from './effectsMeta.js';
+import { registerDslMeta } from './dslMeta.js';
 import { setupMatchWaves } from './waves.js';
 import { GAME_SPEED, HEADLESS_SLICE_MS } from './fields.js';
 import { MatchPlatform } from './match/platform.js';
@@ -283,6 +289,13 @@ export class Match {
     this.broadcastFn = opts.broadcast;
     this.onEndFn = opts.onEnd;
     this.data = opts.data && typeof opts.data === 'object' ? opts.data : {};
+    if (opts.keel?.data && typeof opts.keel.data === 'object') this.data = opts.keel.data;
+    {
+      // the host child already installed the set's data (its plugin records are merged there); the lobby's Match does not
+      // have that set and merges the descriptor's content here.
+      const content = opts.keel?.dataMerged ? [] : (opts.keel?.plugins ?? []).map((p) => p.content).filter((c) => c?.records?.length || c?.patches?.length);
+      if (content.length) this.data = content.reduce((data, c) => mergeKeelData(data, c), this.data);
+    }
     /** the room's content hash (opts.cs, DESIGN §32): every BattleSpec carries it */
     this.cs = isContentHash(opts.cs) ? opts.cs : null;
     /** the room's visual set (opts.vs, DESIGN §32.6): every BattleSpec names it */
@@ -301,7 +314,9 @@ export class Match {
      * no window code ever runs (MatchOffers.openOfferWindow returns before it touches the phase).
      * @type {object[]}
      */
-    this.offers = Array.isArray(opts.offers) ? opts.offers : [];
+    this.offers = Array.isArray(opts.offers)
+      ? opts.offers
+      : (opts.keel?.plugins ?? []).flatMap((p) => (p.offers ?? []).map((o) => ({ pluginId: p.id, ...o })));
     /** @type {any[]} the windows open right now (MatchOffers) */
     this.offerWin = [];
     /** @type {Map<object, any>} window → its deadline timer (tracked so dispose cancels it) */
@@ -317,8 +332,6 @@ export class Match {
     this.aiPicksLast = !this.isSolo && opts.aiPicksLast === true;
     this.ownsScheduler = !opts.scheduler;
     this.sched = opts.scheduler || new RealScheduler({ now: opts.now || Date.now, onError: (e) => this.reportError('timer', e) });
-    this.registry = opts.registry || getDefaultRegistry();
-    this.dispatcher = new EffectDispatcher(this, this.registry);
     /** Script plugins' JSON presentation state (m.public.pluginView); set only through ctx.setView. */
     this.pluginViews = new Map();
     /** A rules plugin's bounded custom phase (MatchPhases.enterCustomPhase); null in the core flow. */
@@ -326,6 +339,59 @@ export class Match {
     this._customPhaseTimer = null;
     this.BattleClass = typeof opts.BattleClass === 'function' ? opts.BattleClass : Battle;
     this.battleContent = opts.battleContent || 'full';
+    /** Keel room descriptor ({ plugins: [{ id, manifest, modules }] }); null = the old loader only. */
+    this.keel = opts.keel ?? null;
+    /** A content set's script registry (old loader path); null = vanilla or the Keel v2 registry below. */
+    this.extensions = opts.extensions ?? null;
+    /** v2 setup(sp) registrations, when KEEL=1 and the descriptor carries v2 plugins (KEEL_V2=0 opts out). */
+    this.keelV2 = null;
+    this.keelV2Error = null;
+    if (this.keel && keelEnabled() && process.env.KEEL_V2 !== '0') {
+      const v2 = (this.keel.plugins ?? []).filter((p) => p.v2 && !p.v2.disabled && !p.v2.preloaded).map((p) => p.v2);
+      const unconsented = v2.length && (opts.seats ?? []).some((s) => !s.isBot && s.consent === false);
+      if (unconsented) {
+        this.keelV2Error = new Error('PLUGIN_CONSENT: a human seat has not consented to this script room');
+        this.log.warn?.('[keel] v2 setup skipped: a human seat did not consent');
+      } else if (v2.length) {
+        try { this.keelV2 = runV2Setups(v2); }
+        catch (e) {
+          this.keelV2Error = e;
+          this.log.warn?.(`[keel] v2 setup failed: ${e?.message ?? e}`);
+        }
+      }
+    }
+    // The registry of a v2-script room must be its own: the extension registry is not process-global any more.
+    const extensionRegistry = this.keelV2?.registry ?? this.extensions;
+    const keelDsl = (this.keel?.plugins ?? []).flatMap((p) => (p.content?.dsl ?? []).map((entry) => ({ pluginId: p.id, spec: entry.spec ?? entry })));
+    this.registry = opts.registry
+      || (extensionRegistry || keelDsl.length ? createRegistry({ extensions: extensionRegistry }) : getDefaultRegistry());
+    this.dispatcher = new EffectDispatcher(this, this.registry);
+    /** Prep DSL grants a Keel content module declares (the same effect the legacy content set installs). */
+    this.keelDslGrants = [];
+    for (const { pluginId, spec } of keelDsl) {
+      try {
+        registerDslMeta(this.registry, spec, { pluginId });
+        const key = spec?.meta?.key;
+        if (typeof key === 'string' && !this.keelDslGrants.includes(key)) this.keelDslGrants.push(key);
+      } catch (e) { this.log.warn?.(`[keel] prep DSL ${pluginId}: ${e?.message ?? e}`); }
+    }
+    /** Match/policy Keel runtime (no sim modules) and the UI declarations. */
+    this.keelMatch = null;
+    this.keelUi = [];
+    if (this.keel && keelEnabled()) {
+      const plugins = this.keel.plugins ?? [];
+      this.keelUi = plugins.filter((p) => p.ui).map((p) => ({ id: p.id, ui: p.ui }));
+      const modules = plugins.flatMap((p) => p.modules ?? []).filter((m) => m.kind === 'match' || m.kind === 'policy');
+      if (modules.length) {
+        this.keelMatch = createKeelRuntime({
+          manifest: { id: 'keel-room', version: '1', state: {} },
+          modules,
+          host: createFakeHost({ seed: this.seed }),
+          seed: this.seed,
+        });
+        this.keelMatch.start({ battleStart: false });
+      }
+    }
     this.timerScale = Number.isFinite(opts.timerScale) && opts.timerScale >= 0 ? opts.timerScale : 1;
     this.gameSpeed = Number.isFinite(opts.combatSpeed) && opts.combatSpeed > 0 ? Math.min(opts.combatSpeed, 200) : GAME_SPEED;
     /** layouts a bot rehearses per prep with the real simulation (bot.js; 0 = heuristic placement only) */
@@ -381,6 +447,24 @@ export class Match {
     /** client-side combat (DESIGN §14) — see the header */
     this.clientCombat = opts.clientCombat != null ? !!opts.clientCombat : envClientCombat();
     this.verifyMode = parseVerify(opts.verify ?? env('SP_VERIFY'));
+    /** Keel native modules are split (D11): `sim` is client-only; `match`/`policy` run here in the server's meta runtime. */
+    const isKeelCode = (p) => !p?.v2 && !p?.manifest?.compat?.v2Script;
+    const kindsOf = (p) => new Set((p?.manifest?.modules ?? []).filter((m) => m && m.entry).map((m) => m.kind));
+    const nativePlugins = (this.keel?.plugins ?? []).filter(isKeelCode);
+    this.simCode = nativePlugins.some((p) => kindsOf(p).has('sim'));
+    this.metaCode = nativePlugins.some((p) => kindsOf(p).has('match') || kindsOf(p).has('policy'));
+    this.nativeCode = this.simCode || this.metaCode;
+    if (this.simCode) {
+      if (!this.clientCombat) {
+        // The owner chose the legacy server-run mode: the battle sim is client-only, so those fields run with the
+        // plugin's data only. The normal (client-side) mode runs it in the browser.
+        this.log.warn?.('[match] native Keel sim code is not run on the server; a server-run field uses its data only');
+      }
+      if (this.verifyMode !== 'off') {
+        this.log.warn?.('[match] client-result verification is off: native Keel sim code is not run on the server');
+        this.verifyMode = 'off';
+      }
+    }
     /** wall-clock ms per slice of a server-run normal / 联防 field (virtual time: at once) */
     this.headlessSliceMs = Number.isFinite(opts.headlessSliceMs) && opts.headlessSliceMs > 0 ? opts.headlessSliceMs : this.sched.virtual ? Infinity : HEADLESS_SLICE_MS;
     this.verifyStats = { checked: 0, mismatches: 0, rejected: 0, takeovers: 0 };
@@ -424,6 +508,13 @@ export class Match {
     }
     if (!this.players.size) throw new TypeError('Match: seats required');
     this.order = [...this.players.values()].sort((a, b) => a.seat - b.seat);
+    if (this.keelDslGrants.length) for (const ps of this.players.values()) {
+      if (!Array.isArray(ps.effects)) continue;
+      for (const key of this.keelDslGrants) {
+        if (ps.effects.some((e) => e && e.key === key)) continue;
+        ps.effects.push({ id: `dsl:${key}`, key, battle: false, hidden: true });
+      }
+    }
     /**
      * Spectator seats (opts.spectators / addSpectator): playerId → a stand-in every watch path treats like an eliminated
      * human (alive false; no PlayerState, never a field's player or authority).

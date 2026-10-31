@@ -15,8 +15,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { APP_VERSION, PLUGIN_API } from '../../shared/constants.js';
-import { readPluginManifest } from '../../shared/plugins/manifest.js';
+import { APP_VERSION } from '../../shared/constants.js';
+import { readKeelManifest } from '../../shared/keel/manifest.js';
+import { keelToV2 } from '../../shared/keel/legacy.js';
 
 /**
  * The factions, in the panel's order. `operators` is only for the description a player reads (the ids in the patch are
@@ -63,24 +64,32 @@ export function builtinPlugins({ dataDir = 'data', app = APP_VERSION, log = cons
       zh: `内置阵营加强：开启后${faction.operators.zh}以商店干员加入本房间（含专属整备与召唤物）；关闭时他们只作为自选干员，商店与随机盟约都不含他们。`,
       en: `Built-in faction boost: switch it on to add ${faction.operators.en} to this room as shop operators (with their traits and summons). Switch it off and they exist only as 自选 picks — never in the shop or a random bond ban.`,
     };
-    const raw = {
-      manifest: 2, id, version: app, app: '*', api: PLUGIN_API.current,
-      class: 'content', category: 'faction', scope: ['room'],
+    const raw3 = {
+      manifest: 3, id, version: app, app: '*',
       name, description, authors: ['Stronghold Protocol'], license: 'GPL-3.0-or-later',
-      permissions: ['data.patch'], data: [rel],
+      api: { content: 1 }, scope: ['room'], trust: 'data', category: 'faction',
+      modules: [{
+        kind: 'content', files: [rel], parts: { data: [rel] },
+        permissions: ['content.patch'],
+      }],
     };
-    const read = readPluginManifest(raw, { id, app, api: PLUGIN_API });
-    if (!read.manifest || read.problems.length) {
-      log.warn?.(`[plugins] builtin ${id}: manifest refused (${read.problems.join('; ')})`);
+    const checked = readKeelManifest(raw3, { id });
+    if (!checked.manifest || checked.problems.length) {
+      log.warn?.(`[plugins] builtin ${id}: Keel manifest refused (${checked.problems.join('; ')})`);
       continue;
     }
+    const manifest = keelToV2(checked.manifest, { id, app });
+    manifest.manifestFile = `builtin:${rel}`;
     const body = JSON.stringify(doc);
     const hash = createHash('sha256').update(body).digest('hex');
     out.push({
       id, type: 'data', class: 'content', status: 'loaded', supported: true,
       source: 'builtin', builtin: true, layout: 'builtin', where: `builtin:${id}`,
-      manifest: read.manifest, files: {}, count: 1, bytes: body.length,
-      content: { documents: { [rel]: doc }, files: { [rel]: hash }, hash },
+      manifest, keel: checked.manifest, files: {}, count: 1, bytes: body.length,
+      content: {
+        documents: { [rel]: doc }, files: { [rel]: hash }, hash,
+        records: [], patches: [{ rel, ops: doc.ops }], pluginId: id,
+      },
     });
   }
   return out;

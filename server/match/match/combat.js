@@ -5,6 +5,7 @@
 
 import { PHASE, GEO } from '../../../shared/constants.js';
 import { deriveSeed } from '../../sim/rng.js';
+import { attachKeel, keelEnabled } from '../../keel/attach.js';
 import { withBounties } from '../waves.js';
 import { planUnite } from '../unite.js';
 import { FieldRunner, DeadBattle } from '../fields.js';
@@ -14,8 +15,25 @@ export class MatchCombat {
   /** Construct a battle; a constructor failure yields a finished stand-in (clean result) and is logged. */
   newBattle(opts) {
     const full = { data: this.ds, content: this.battleContent, logger: this.log, ...opts };
+    // A v2-script room installs its own extension registry; a content set's script registry does the same.
+    const extensionRegistry = this.keelV2?.registry ?? this.extensions;
+    if (!full.extensions && extensionRegistry) full.extensions = extensionRegistry;
     try {
-      return new this.BattleClass(full);
+      const battle = new this.BattleClass(full);
+      const keel = opts.keel ?? this.keel;
+      if (keel && keelEnabled()) {
+        const plugins = (Array.isArray(keel.plugins) ? keel.plugins : [keel])
+          .map((p) => ({ ...p, modules: (p.modules ?? []).filter((m) => m && m.kind === 'sim') }))
+          .filter((p) => p.modules.length);
+        if (plugins.length) {
+          battle.keel = [];
+          for (const plugin of plugins) {
+            try { battle.keel.push(attachKeel(battle, plugin)); }
+            catch (e) { this.reportError(`battle ${opts.fieldId} keel ${plugin.manifest?.id ?? '?'}`, e); }
+          }
+        }
+      }
+      return battle;
     } catch (e) {
       this.reportError(`battle ${opts.fieldId} construct`, e);
       return new DeadBattle(full, 'forced');
@@ -108,10 +126,12 @@ export class MatchCombat {
       for (const ps of this._viewers()) {
         if (ps.alive || this.watchers.has(ps.playerId)) continue;
         const f = this._watchTargetField(ps, fields) || first;
+        if (f.background && f.authority === ps.playerId) continue; // its background b.start follows below
         this.watchers.set(ps.playerId, f.fieldId);
         this._sendStart(ps.playerId, f, { watch: true });
       }
     }
+    this._sendExecutors(fields);
     this.markPublic();
   }
 
@@ -150,6 +170,16 @@ export class MatchCombat {
         const gains = pp && pp.layerGains && typeof pp.layerGains === 'object' ? pp.layerGains : null;
         if (ps && gains && Object.keys(gains).length) { ps.pendingLayerGains = { ...gains }; ps.dirty(); }
       }
+    }
+    {
+      let kills = 0;
+      let leaks = 0;
+      for (const r of this.lastResults.values()) {
+        kills += Number(r.killed) || 0;
+        leaks += Array.isArray(r.leaked) ? r.leaked.length : 0;
+      }
+      this.keelRun('match.onRoundEnd', { round: this.round, result: { kills, leaks } });
+      this.keelRun('match.checkEnd', { round: this.round });
     }
     for (const f of this.fields) f.live = false;
     this.deadline = 0;

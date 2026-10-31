@@ -471,7 +471,7 @@ export function PauseButton({ paused, busy = false, onToggle }) {
  */
 export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, onReady, readyBusy, readyCount, playerCount, pen = false, penAvail = false, onPen = () => {},
   config = null, frozenAt = null, pause = null, live = null, spectator = false,
-  spectators = null, myId = null, isHost = false, onRemoveSpectator = null, room = null }) {
+  spectators = null, myId = null, isHost = false, onRemoveSpectator = null, room = null, native = false }) {
   const phase = pub?.phase;
   const boss = isBossPhase(phase);
   const lp = boss && Number.isFinite(pub?.teamLp) ? pub.teamLp : Number.isFinite(priv?.lp) ? priv.lp : null;
@@ -505,6 +505,7 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
         </div>
         ${pub?.difficulty ? html`<${DifficultyTag} difficulty=${pub.difficulty} size="sm" />` : null}
         <${UnofficialMark} room=${room} compact=${true} class="gtop__mod" />
+        ${native ? html`<span class="gtop__native" data-testid="native-code-mark" title=${t('本局包含原生代码插件')}>${t('原生代码')}</span>` : null}
       </div>
     </div>
 

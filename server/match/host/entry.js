@@ -35,6 +35,7 @@ import { pathToFileURL } from 'node:url';
 import { getData, setData } from '../../data.js';
 import { installOfficialBounds } from '../../../shared/plugins/officialBounds.js';
 import { contentHashOf } from '../../../shared/plugins/identity.js';
+import { loadKeelPlugin } from '../../keel/room-source.js';
 
 /** A worker thread (parentPort), else a child process (its IPC channel). */
 const viaWorker = !!parentPort;
@@ -47,6 +48,7 @@ let files = null;
 let bounds = null;
 let scripts = [];
 let sandbox = false;
+let extensionRegistry = null;
 /** PLUGIN API v2: the content set's interaction windows (docs/PLUGINS.md §10b) — data, injected into every match. */
 let offers = [];
 let options = {};
@@ -74,6 +76,7 @@ let VirtualScheduler = null;
 let dslGrants = [];
 /** @type {Map<string, any>} */
 const matches = new Map();
+const creating = new Set();
 const ERR_INTERNAL = 'INTERNAL';
 
 let started = viaWorker;
@@ -162,22 +165,57 @@ async function boot() {
       await import('../../sim/spec.js');
       const { parse } = await import('acorn');
       await sandboxModule.installSandboxScripts(scripts, { hashInput, parse, log: log.info });
-    } else await loadScripts(scripts, { hashInput, log: log.info });
+    } else {
+      const registrations = await loadScripts(scripts, { hashInput, log: log.info });
+      extensionRegistry = registrations?.registry ?? null;
+    }
   }
   // After setData, before Match: Match reads opts.registry || getDefaultRegistry(), the same singleton.
   dslGrants = await installPrepDsl(data);
   const mod = await import(typeof options.matchModule === 'string' && options.matchModule ? pathToFileURL(options.matchModule).href : '../Match.js');
   const Inner = mod.Match || mod.default;
   if (typeof Inner !== 'function') throw new Error('the match module exports no Match');
+  // Test-only fast-forward hooks of test/e2e/fastServer.mjs; they are unset in production. A modded (Keel) room runs
+  // here rather than in the lobby's MatchClass, so the native E2E can jump to the boss round and force its settlement.
+  const startAt = String(process.env.SP_START_ROUND || '').trim();
+  const finishAfter = Math.max(0, Number(process.env.SP_FINISH_AFTER) || 0);
+  const idleBots = process.env.SP_IDLE_BOTS === '1';
+  const testTimerScale = Number(process.env.SP_TIMER_SCALE) || 0;
+  const testCombatSpeed = Number(process.env.SP_COMBAT_SPEED) || 0;
   // [ASSUMED] Grant the prep EffectRefs after super(), once players exist (DESIGN §32.7).
   MatchClass = class ContentMatch extends Inner {
     constructor(opts) {
       // Rules come from the verified content identity, never the per-room create payload.
-      const bound = { ...opts, offers };
+      const bound = { ...opts, offers, ...(extensionRegistry ? { extensions: extensionRegistry } : {}) };
       delete bound.rules;
       if (hashInput.rules) bound.rules = hashInput.rules;
+      if (testTimerScale) bound.timerScale = testTimerScale;
+      if (testCombatSpeed) bound.combatSpeed = testCombatSpeed;
       super(bound);
+      this._e2eJumped = !startAt;
       grantPrepDsl(this, dslGrants);
+    }
+
+    startRound(r, afterStart = null) {
+      if (this._e2eJumped) return super.startRound(r, afterStart);
+      this._e2eJumped = true;
+      const target = startAt === 'boss' ? this.gd.bossRound : startAt === 'hidden' ? (this.gd.hiddenRound || this.gd.bossRound) : Number(startAt);
+      return super.startRound(Number.isInteger(target) && target > r ? target : r, afterStart);
+    }
+
+    scheduleBotPrep(ps, i = 0) {
+      if (!idleBots) return super.scheduleBotPrep(ps, i);
+      const round = this.round;
+      this.later(this.scaled(400 + i * 100), () => {
+        if (this.phase !== 'PREP' || this.round !== round || !ps.alive || ps.ready || !ps.botControlled) return;
+        ps.resolveTemp();
+        ps.setReady(true);
+      });
+    }
+
+    afterSettle() {
+      if (finishAfter && this.round >= finishAfter && !this.ended) { this.finish({ victory: false, reason: 'defeat' }); return; }
+      return super.afterSettle();
     }
   };
   if (options.virtualTime) ({ VirtualScheduler } = await import('../scheduler.js'));
@@ -208,6 +246,55 @@ function diag(match) {
   };
 }
 
+/** Rehydrate the serializable Keel descriptor inside the host child (module functions cannot cross IPC). The host loads
+ *  only match/policy modules: the server runs the room's meta hooks, never its battle sim (D11). */
+async function loadKeelDescriptor(opts) {
+  const plugins = opts?.keel?.plugins;
+  if (!Array.isArray(plugins) || !plugins.length) return opts;
+  const loaded = [];
+  for (const p of plugins) {
+    if (!p?.dir) { loaded.push(p); continue; }
+    try {
+      const plugin = await loadKeelPlugin(p.dir, { code: 'meta' });
+      if (plugin?.manifest && !plugin.problems.length) loaded.push(plugin);
+      else log.warn(`[host] keel ${p.id}: ${(plugin?.problems ?? ['no manifest']).join('; ')}`);
+    } catch (e) { log.warn(`[host] keel ${p.id}: ${e?.message ?? e}`); }
+  }
+  return { ...opts, keel: { ...opts.keel, plugins: loaded } };
+}
+
+/** Run Keel v2 setup inside SES when the content set is sandboxed, and hand its sealed registry to Match. */
+async function sandboxKeelV2(opts) {
+  if (!sandbox || !opts?.keel?.plugins?.length) return opts;
+  const v2 = opts.keel.plugins.filter((p) => p.v2 && !p.v2.disabled && !p.v2.preloaded);
+  if (!v2.length) return opts;
+  const { initializeSandbox, installSandboxPlugins } = await import('../../../shared/plugins/sandbox.js');
+  await initializeSandbox({ loadSES: () => import('ses') });
+  const { parse } = await import('acorn');
+  const { createSDK } = await import('../../../shared/plugins/sdk.js');
+  const { createExtensionRegistry } = await import('../../sim/content/extensions.js');
+  const registry = createExtensionRegistry();
+  const descriptors = [];
+  for (const p of v2) {
+    const entries = [...new Set(Array.isArray(p.v2.entry) ? p.v2.entry : [p.v2.entry].filter(Boolean))];
+    const script = p.v2.script;
+    if (!entries.length || !script?.sources) continue;
+    descriptors.push({
+      id: p.id, class: 'script', entries,
+      overrides: p.v2.plugin?.overrides ?? [],
+      permissions: p.v2.plugin?.permissions ?? [],
+      files: Object.fromEntries(entries.map((rel) => [rel, {
+        sha256: script.files?.[rel],
+        bytes: new TextEncoder().encode(script.sources[rel] ?? ''),
+      }])),
+    });
+  }
+  await installSandboxPlugins({ plugins: descriptors, parse, createSDK: (plugin) => createSDK(plugin, { registry }) });
+  registry.seal();
+  const plugins = opts.keel.plugins.map((p) => (v2.includes(p) ? { ...p, v2: { ...p.v2, preloaded: true } } : p));
+  return { ...opts, extensions: registry, keel: { ...opts.keel, plugins } };
+}
+
 function create(matchId, opts) {
   const sched = options.virtualTime && VirtualScheduler ? new VirtualScheduler({ start: Date.now() }) : null;
   let match;
@@ -215,6 +302,8 @@ function create(matchId, opts) {
     match = new MatchClass({
       ...(options.matchOptions || {}),
       ...opts,
+      // this host installed the set's data (plugin records already merged): do not merge the descriptor's content again
+      ...(opts.keel ? { keel: { ...opts.keel, dataMerged: true } } : {}),
       // the content set installed at boot (server/data.js getData)
       data: installed,
       // the match names itself in its lines ([match <code>] …), as in the server process (the host adds [cs:<8 hex>])
@@ -258,7 +347,15 @@ const findId = (match) => { for (const [id, m] of matches) if (m === match) retu
 
 function handle(m) {
   if (!m || typeof m !== 'object') return;
-  if (m.type === 'create') { if (!matches.has(m.matchId)) create(m.matchId, m.opts || {}); return; }
+  if (m.type === 'create') {
+    if (matches.has(m.matchId) || creating.has(m.matchId)) return;
+    creating.add(m.matchId);
+    loadKeelDescriptor(m.opts || {}).then(sandboxKeelV2).then((opts) => create(m.matchId, opts)).catch((e) => {
+      log.error(`[host] match ${m.matchId} keel descriptor failed`, e);
+      post({ type: 'failed', matchId: m.matchId, error: String(e?.message || e).slice(0, 300) });
+    }).finally(() => creating.delete(m.matchId));
+    return;
+  }
   const match = matches.get(m.matchId);
   if (m.type === 'dispose') {
     if (match) { matches.delete(m.matchId); try { match.dispose?.(); } catch (e) { log.error(`[host] match ${m.matchId} dispose threw`, e); } }

@@ -38,6 +38,7 @@ import { render } from '../vendor/preact.module.js';
 import { useErrorBoundary } from '../vendor/hooks.module.js';
 import { html, UiHosts, Button, MicroLabel, closeAllDialogs } from './ui/components.js';
 import { ConnectionBanner } from './ui/connBanner.js';
+import { NativeConsentGate } from './ui/nativeConsent.js';
 import { NoticeBanner } from './ui/notice.js';
 import { ToastHost, toast, toastError, describeError } from './ui/toasts.js';
 import { net, identity, NetError } from './net.js';
@@ -465,6 +466,7 @@ function App() {
     <div class="app-bg" aria-hidden="true"></div>
     ${error ? html`<${ScreenCrashed} error=${error} reset=${resetError} />` : html`<${Screen} key=${route} />`}
     <${ConnectionBanner} />
+    <${NativeConsentGate} />
     <${NoticeBanner} />
     <${ToastHost} />
     <${UiHosts} />

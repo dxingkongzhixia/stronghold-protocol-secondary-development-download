@@ -27,7 +27,8 @@ import { readInstalledAssetOverlay } from './artReferences.js';
 import path from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { readPluginFolder, listPluginFiles, walkProblem } from './registry.js';
-import { PLUGIN_LIMITS, PLUGIN_MANIFEST, isPluginId, checkJsonLimits, extOf, pluginByteLimit } from '../../shared/plugins/manifest.js';
+import { PLUGIN_LIMITS, PLUGIN_MANIFEST, KEEL_MANIFEST, isPluginId, checkJsonLimits, extOf, pluginByteLimit } from '../../shared/plugins/manifest.js';
+import { readKeelPluginManifest } from './keelManifest.js';
 import { LOCK_FILE, LOCK_VERSION } from '../../shared/plugins/visual.js';
 import { issueList } from '../../shared/plugins/errors.js';
 import { parseSkel } from '../../tools/assets/skel.mjs';
@@ -88,11 +89,27 @@ export const errorWords = (e) => (e instanceof SyntaxError ? e.message : e?.code
  *   not checked)
  * @returns {Findings & { where: string, plugin: import('./registry.js').Plugin | null }}
  */
+/** The manifest file a folder uses: Keel's plugin.keel.json when present, else plugin.json. */
+function manifestFileOf(dir) {
+  const keel = path.join(dir, KEEL_MANIFEST);
+  return fs.existsSync(keel) ? KEEL_MANIFEST : PLUGIN_MANIFEST;
+}
+
+function readManifestFile(dir, id) {
+  const file = manifestFileOf(dir);
+  const raw = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+  const isKeel = file === KEEL_MANIFEST || (raw && typeof raw === 'object' && !Array.isArray(raw) && raw.manifest === 3);
+  const read = isKeel
+    ? readKeelPluginManifest(raw, { id })
+    : readPluginManifest(raw, { id });
+  return { file, raw, read };
+}
+
 export function checkPluginFolder(dir, where, { vanilla, dataDir = DATA_DIR } = {}) {
   const r = readPluginFolder(dir, { where, vanilla, dataDir });
   const list = issueList();
   list.take(r);
-  if (fs.existsSync(path.join(dir, PLUGIN_MANIFEST))) {
+  if (fs.existsSync(path.join(dir, PLUGIN_MANIFEST)) || fs.existsSync(path.join(dir, KEEL_MANIFEST))) {
     for (const f of listPluginFiles(dir)) {
       if (f.link || extOf(f.rel) !== '.json' || f.bytes > PLUGIN_LIMITS.jsonBytes) continue;
       let json;
@@ -239,14 +256,15 @@ export function readOverlayOf(dir, manifest, { vanilla, has } = {}) {
 export function buildPluginLock(dir, { vanilla } = {}) {
   const list = issueList();
   const done = (lock) => ({ lock, problems: list.problems, warnings: list.warnings, issues: list.issues });
-  let raw;
-  try { raw = JSON.parse(fs.readFileSync(abs(dir, PLUGIN_MANIFEST), 'utf8')); } catch (e) {
-    if (e?.code === 'ELINK') { list.problem('PLUGIN_FILE_LINK', e.message, { file: PLUGIN_MANIFEST }); return done(null); }
+  let read;
+  try {
+    read = readManifestFile(dir, path.basename(dir)).read;
+  } catch (e) {
+    if (e?.code === 'ELINK') { list.problem('PLUGIN_FILE_LINK', e.message, { file: manifestFileOf(dir) }); return done(null); }
     const why = e instanceof SyntaxError ? `not valid JSON (${e.message})` : String(e?.code || e);
-    list.problem(e instanceof SyntaxError ? 'PLUGIN_JSON' : 'PLUGIN_NO_MANIFEST', `${PLUGIN_MANIFEST}: ${why}`, { file: PLUGIN_MANIFEST, detail: why });
+    list.problem(e instanceof SyntaxError ? 'PLUGIN_JSON' : 'PLUGIN_NO_MANIFEST', `${manifestFileOf(dir)}: ${why}`, { file: manifestFileOf(dir), detail: why });
     return done(null);
   }
-  const read = readPluginManifest(raw, { id: path.basename(dir) });
   if (!read.manifest) { list.take(read, { warningsToo: false }); return done(null); }
   const manifest = read.manifest;
   const all = listPluginFiles(dir);
@@ -306,7 +324,7 @@ export function zipPlugin(dir) {
   let version = '0.0.0';
   let cls = null;
   try {
-    const m = JSON.parse(fs.readFileSync(abs(dir, PLUGIN_MANIFEST), 'utf8'));
+    const m = JSON.parse(fs.readFileSync(path.join(dir, manifestFileOf(dir)), 'utf8'));
     if (typeof m?.version === 'string' && /^[0-9A-Za-z.+-]{1,64}$/.test(m.version)) version = m.version;
     if (typeof m?.class === 'string') cls = m.class;
   } catch { /* the folder's own check says why */ }

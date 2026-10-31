@@ -173,6 +173,9 @@ import { BootGate } from './bootgate.js';
 import { KITTED_CHARS } from './sim/content/kits/index.js';
 import { parseTestModeEnv, testModeGate, unrecognizedTestMode } from './testMode.js';
 import { isContentHash } from '../shared/plugins/identity.js';
+import { keelEnabled } from './keel/attach.js';
+import { mergeKeelData } from './keel/content.js';
+import { keelDescriptorForContent } from './keel/room-source.js';
 import { OFFICIAL_ORIGIN, isLocalOrigin, normalizeOrigin } from '../shared/origins.js';
 import { msg, wireMessage } from '../shared/i18n.js';
 
@@ -395,12 +398,14 @@ export class Lobby {
    *   plugins", "Gameplay plugins"); hosts: the match hosts a room with gameplay plugins runs its match in
    *   (server/match/host/index.js; none: such a match runs here, unit tests)
    */
-  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, content = null, plugins = null, hosts = null, options = {}, auth = null, matchmaker = null, community = null, stats = null }) {
+  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, content = null, plugins = null, hosts = null, keel = null, options = {}, auth = null, matchmaker = null, community = null, stats = null }) {
     this.registry = registry;
     /** the vanilla content set every room plays (header "Content identity"), or null */
     this.vanilla = content && isContentHash(content.cs) ? Object.freeze({ cs: content.cs, vanilla: true, plugins: Object.freeze([]) }) : null;
     /** the server's room sets — visual and content (header "The room's plugins", "Gameplay plugins"), or null */
     this.plugins = plugins;
+    /** opt-in Keel descriptors by plugin id (Map) or null; only read when KEEL=1. */
+    this.keelPlugins = keel;
     /** the match hosts (header "Gameplay plugins"), or null */
     this.hosts = hosts;
     this.log = log;
@@ -1266,6 +1271,12 @@ export class Lobby {
     };
   }
 
+  /** Keel descriptor for a room's content set, or null (KEEL=0 / no opt-in plugins). */
+  keelFor(content) {
+    if (!keelEnabled() || !this.keelPlugins) return null;
+    return keelDescriptorForContent(content, this.keelPlugins);
+  }
+
   /** A room now uses `content`: its visual set and its content set are held (released by releaseContent). */
   holdContent(content) {
     if (content?.vs) this.plugins?.hold?.(content.vs);
@@ -1532,6 +1543,15 @@ export class Lobby {
 
   dataFor(room) {
     if (room?.modded) {
+      // A Keel room's loadout checks use the same records its Match compiles, not the old content set.
+      const keel = room.keel ?? this.keelFor(room.content);
+      if (keel) {
+        try {
+          let data = this.safeData();
+          for (const p of keel.plugins ?? []) if (p.content?.records?.length || p.content?.patches?.length) data = mergeKeelData(data, p.content);
+          return data;
+        } catch (e) { this.log.error(`[lobby] ${room.code} keel data failed`, e); }
+      }
       try {
         const d = this.plugins?.dataOf?.(room.content.cs);
         if (d) return d;
@@ -1894,6 +1914,8 @@ export class Lobby {
         // 0.2.0 自选编队: the human's checked DIY picks (bots field no 自选 piece [ASSUMED])
         diy: own ? own.diy : null,
         skins: own ? own.skins : null,
+        // the seat's answer to the room's trusted/script consent; absent in rooms that declare none
+        ...(room.content?.trusted && !s.isBot ? { consent: s.consentCs === room.content.cs } : {}),
       };
     });
     // lastPublic / results: the latest m.public broadcast and the m.result frames (encoded), kept for the replay.
@@ -1901,6 +1923,9 @@ export class Lobby {
     let seed = 0;
     try { seed = this.seedFn() >>> 0; } catch { seed = randomInt(2 ** 32); }
     const modded = room.modded;
+    const keel = room.keel ?? this.keelFor(room.content);
+    // A Keel room compiles its own content on top of the vanilla tables; a v2 modded room keeps the content set's data.
+    const matchData = keel ? this.safeData() : data;
     try {
       const opts = {
         roomCode: room.code,
@@ -1924,8 +1949,9 @@ export class Lobby {
         // replay names the art), and with gameplay plugins a b.result must name the room's cs (header "Gameplay plugins")
         ...(room.content ? { cs: room.content.cs } : {}),
         ...(room.content?.vs ? { vs: room.content.vs } : {}),
+        ...(keel ? { keel } : {}),
         ...(modded ? { requireCs: true } : {}),
-        data,
+        data: matchData,
         log: this.log,
         now: this.now,
         send: (playerId, msg) => (ctx.live ? this.matchSend(room, ctx, playerId, msg) : false),

@@ -172,6 +172,8 @@ export function createBattleFromSpec(spec, dataSource, opts = {}) {
   };
   if (s.bossId != null) battleOpts.bossId = s.bossId;
   if (opts.logger) battleOpts.logger = opts.logger;
+  const extensions = opts.extensions ?? dataSource?.extensions;
+  if (extensions) battleOpts.extensions = extensions;
   if (opts.recordEvents === false) battleOpts.recordEvents = false;
   if (opts.quiet) battleOpts.quiet = true;
   const b = new BattleClass(battleOpts);

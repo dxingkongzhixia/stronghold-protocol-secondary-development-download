@@ -79,11 +79,10 @@ import { createPluginRegistry } from '../server/plugins/registry.js';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { scanPlugins, pluginIndexOf, readVanillaAssets, crossPluginFindings } from '../server/plugins/registry.js';
-import { applyTrust } from '../server/plugins/trusted.js';
 import { computeVanillaContent } from '../server/plugins/identity.js';
 import { checkPluginFolder, buildPluginLock, packPlugin, zipPlugin } from '../server/plugins/pack.js';
 import { DATA_SHIM_JS } from '../server/http/static.js';
-import { PLUGIN_CLASSES, PLUGIN_MANIFEST, isPluginId } from '../shared/plugins/manifest.js';
+import { PLUGIN_CLASSES, PLUGIN_MANIFEST, KEEL_MANIFEST, isPluginId } from '../shared/plugins/manifest.js';
 import { LOCK_FILE } from '../shared/plugins/visual.js';
 import { PLUGIN_ERRORS, TABLE_MARKERS, describeIssue, errorLang, issueLine, symptomTable } from '../shared/plugins/errors.js';
 import { TEMPLATES, templateById, createPlugin, manifestText } from '../server/studio/templates/index.js';
@@ -221,9 +220,6 @@ export async function main(argv, io = {}) {
   if (cmd === 'list') {
     if (targets.length) { console.error(`plugin: list takes no folder\n${USAGE}`); return 2; }
     const scan = scanPlugins(dirs);
-    // The same gate the server uses (registry create → applyTrust). Sandbox with a valid lock is loaded; trusted
-    // with no pin stays disabled.
-    applyTrust(scan.plugins, { pluginsDir: dirs.pluginsDir, mode: process.env.SP_PLUGIN_SCRIPTS });
     const content = vanillaOf(root);
     if (flags.has('json')) {
       console.log(JSON.stringify({ index: pluginIndexOf(scan.plugins, { vanilla: content.cs }), skipped: scan.skipped, warnings: scan.warnings }, null, 2));
@@ -254,8 +250,9 @@ export async function main(argv, io = {}) {
     for (const t of targets) {
       const asDir = path.resolve(t);
       const inPlugins = path.join(dirs.pluginsDir, t);
-      const dir = fs.existsSync(path.join(asDir, PLUGIN_MANIFEST)) ? asDir : fs.existsSync(path.join(inPlugins, PLUGIN_MANIFEST)) ? inPlugins : null;
-      if (!dir) { console.error(`plugin: ${t} is not a plugin folder (no ${PLUGIN_MANIFEST})`); return 2; }
+      const hasManifest = (d) => fs.existsSync(path.join(d, PLUGIN_MANIFEST)) || fs.existsSync(path.join(d, KEEL_MANIFEST));
+      const dir = hasManifest(asDir) ? asDir : hasManifest(inPlugins) ? inPlugins : null;
+      if (!dir) { console.error(`plugin: ${t} is not a plugin folder (no ${PLUGIN_MANIFEST} or ${KEEL_MANIFEST})`); return 2; }
       const r = packPlugin(dir, { vanilla, dataDir: dirs.dataDir, where: `${t}/` });
       for (const line of findingLines(r.build, lang)) console.log(line);
       if (!r.wrote) { console.log(`${t}: ${LOCK_FILE} not written`); failed++; continue; }
@@ -315,8 +312,6 @@ export async function main(argv, io = {}) {
       warnings += r.warnings.length;
       checks.push({ dir, where, r });
     }
-    // Same owner gate as list and the server; inspect status without executing plugin code.
-    applyTrust(loaded, { pluginsDir: dirs.pluginsDir, mode: process.env.SP_PLUGIN_SCRIPTS });
     // The same rules the registry applies across folders. Named targets arrive in argument order; the registry
     // walks plugins/ with readDirSorted (folder name, default UTF-16). Sort that way before the cross-plugin rules.
     // A folder this run keeps is not also recorded as the loser of another order. A folder checked alone can still
@@ -498,7 +493,7 @@ export async function main(argv, io = {}) {
     const result = await importForge(path.resolve(targets[0]), {
       out: values.out ? path.resolve(values.out) : undefined,
       id: values.id, dryRun: flags.has('dry-run'), root, pluginsDir: dirs.pluginsDir, dataDir: dirs.dataDir,
-      vanilla: readVanillaAssets(dirs.dataDir), scripts: !flags.has('no-scripts'),
+      vanilla: readVanillaAssets(dirs.dataDir), scripts: !flags.has('no-scripts'), keel: true,
       officialTables: { offline: flags.has('offline') || flags.has('no-network'), refresh: flags.has('refresh-index'),
         source: values['asset-source'] || process.env.SP_ASSET_SOURCE || 'direct', fetchImpl: io.fetchImpl, log: line => console.error(line) },
     });

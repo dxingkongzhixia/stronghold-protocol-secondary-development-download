@@ -65,18 +65,19 @@ export function verifyScripts(scripts, hashInput) {
 
 /** Setup runs in resolved content order, once per entry even when sim and meta share it. */
 export async function loadScripts(scripts, { hashInput = null, sdkUrl = new URL('./sdk.js',moduleUrl).href,
-  extensionsUrl = null, log = (..._args) => {}, cs = null, nativeVerified = false } = {}) {
+  extensionsUrl = null, log = (..._args) => {}, cs = null, nativeVerified = false, registry = null } = {}) {
   verifyScripts(scripts,hashInput);
   if (scriptExecution(scripts) === 'sandbox') throw new Error('sandbox scripts require SES');
   const sdk = await import(sdkUrl);
   const root = new URL('../../', sdkUrl);
   const ext = await import(extensionsUrl || new URL(root.protocol === 'file:' ? 'server/sim/content/extensions.js' : 'sim/content/extensions.js',root).href);
-  ext.resetExtensions();
+  const reg = registry || ext.createExtensionRegistry();
+  reg.reset();
   const instance = ++generation;
   try {
     for (const p of scripts) {
       const m = JSON.parse(p.manifestSource);
-      const sp = sdk.createSDK({id:p.id,overrides:m.overrides || [],permissions:m.permissions || []}, {settings:hashInput.settings[p.id] || {},log});
+      const sp = sdk.createSDK({id:p.id,overrides:m.overrides || [],permissions:m.permissions || []}, {settings:hashInput.settings[p.id] || {},log,registry:reg});
       for (const rel of new Set([m.entry?.sim,m.entry?.meta].filter(Boolean))) {
         let mod;
         if (root.protocol !== 'file:') {
@@ -90,8 +91,11 @@ export async function loadScripts(scripts, { hashInput = null, sdkUrl = new URL(
         if (result?.then) throw new Error(`${p.id}: setup must be synchronous`);
       }
     }
-    ext.sealExtensions();
-    return ext.extensionRegistrations();
-  } catch (e) { ext.resetExtensions(); throw e; }
+    reg.seal();
+    const registrations = reg.registrations();
+    // The caller that owns the battle installs this registry on it; old callers still receive the array they expect.
+    Object.defineProperty(registrations, 'registry', { value: reg, enumerable: false });
+    return registrations;
+  } catch (e) { reg.reset(); throw e; }
 }
 const pinnedHash = (input,id) => sha256Hex(JSON.stringify(input.plugins.find(p => p.id === id)));

@@ -1,0 +1,24 @@
+{
+  "manifest": 3,
+  "id": "keel-ui",
+  "name": { "zh": "Keel 界面模板", "en": "Keel UI template" },
+  "description": {
+    "zh": "原生 Keel 界面插件的示例：一个只读的伤害统计沙箱，占用 hud.right。",
+    "en": "A native Keel UI plugin: a read-only damage tally in the hud.right slot."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "ui": 1 },
+  "scope": ["personal"],
+  "trust": "sandbox",
+  "authors": ["your name"],
+  "license": "CC0-1.0",
+  "modules": [
+    {
+      "kind": "ui",
+      "entry": "ui/index.html",
+      "permissions": ["ui.frame"],
+      "slots": ["hud.right"]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "manifest": 3,
+  "id": "keel-cosmetic",
+  "name": { "zh": "Keel 外观模板", "en": "Keel cosmetic template" },
+  "description": {
+    "zh": "原生 Keel 外观插件的示例：一个头像、一个引用立绘/模型和一个短提示音。",
+    "en": "A native Keel cosmetic plugin: one avatar, referenced portrait/model and a short tone."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "asset": 1 },
+  "scope": ["room", "personal"],
+  "trust": "data",
+  "category": "appearance",
+  "authors": ["your name"],
+  "license": "CC0-1.0",
+  "modules": [
+    {
+      "kind": "asset",
+      "files": ["media/sample.png", "media/sample.ogg"],
+      "permissions": ["asset.override"],
+      "assets": {
+        "chars": {
+          "char_102_texas": {
+            "avatar": "media/sample.png",
+            "portrait": { "ref": "char_112_siege" },
+            "spine": { "ref": "char_112_siege" }
+          }
+        },
+        "audio": {
+          "voice": {
+            "char_102_texas": {
+              "select": "media/sample.ogg"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

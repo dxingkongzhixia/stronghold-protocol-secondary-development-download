@@ -41,6 +41,21 @@ export function crashMessage(reason) {
 const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
 
 /** The lobby options a worker can take (JSON-safe: no callbacks, no data, no class). */
+function wireKeelContent(content) {
+  if (!content || typeof content !== 'object') return undefined;
+  return {
+    records: Array.isArray(content.records) ? content.records : [],
+    patches: Array.isArray(content.patches) ? content.patches : [],
+    documents: content.documents && typeof content.documents === 'object' ? content.documents : {},
+    files: content.files && typeof content.files === 'object' ? content.files : {},
+    hash: typeof content.hash === 'string' ? content.hash : null,
+    pluginId: typeof content.pluginId === 'string' ? content.pluginId : null,
+    permissions: Array.isArray(content.permissions) ? content.permissions : [],
+    dsl: Array.isArray(content.dsl) ? content.dsl : [],
+    i18n: Array.isArray(content.i18n) ? content.i18n : [],
+  };
+}
+
 export function wireOptions(opts) {
   const out = {};
   for (const k of ['roomCode', 'mode', 'difficulty', 'modeId', 'aiPicksLast', 'seats', 'spectators', 'seed', 'matchNo', 'cs', 'vs', 'requireCs', 'kitted']) {
@@ -54,6 +69,12 @@ export function wireOptions(opts) {
   }
   // Rule switches ride with the content set. A room that declares none keeps today's worker payload.
   if (opts.rules && typeof opts.rules === 'object' && !Array.isArray(opts.rules)) out.rules = opts.rules;
+  // Keel descriptors carry code/functions: send only the durable identity. The host child reloads each folder itself.
+  if (opts.keel?.plugins?.length) out.keel = {
+    plugins: opts.keel.plugins.map((p) => (p.dir
+      ? { id: p.id, origin: 'folder', dir: p.dir, manifest: p.manifest }
+      : { id: p.id, origin: 'builtin', manifest: p.manifest, content: wireKeelContent(p.content) })),
+  };
   return out;
 }
 

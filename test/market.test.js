@@ -25,7 +25,7 @@ test('market: upload pending, review/test/approve, active download, duplicate an
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const log = { info() {}, warn() {}, error() {} };
   const market = createPluginMarket({ root, log });
-  const ordinary = zipDir(path.join(ROOT, 'plugins/_template/content'));
+  const ordinary = zipDir(path.join(ROOT, 'plugins/_template/keel-content'));
   const uploaded = await market.upload({ kind: 'ordinary', bytes: ordinary, filename: 'data-demo.zip', uploadedBy: 'tester' });
   assert.equal(uploaded.status, 'pending');
   assert.equal(uploaded.kind, 'ordinary');
@@ -33,28 +33,28 @@ test('market: upload pending, review/test/approve, active download, duplicate an
   assert.equal(market.list({ admin: true }).length, 1);
   const replaced = await market.upload({ kind: 'ordinary', bytes: ordinary });
   assert.equal(replaced.status, 'pending', 'a pending entry can be replaced before approval');
-  const tested = await market.review('ordinary', 'data-demo', 'test', { reviewer: 'admin' });
+  const tested = await market.review('ordinary', 'keel-content', 'test', { reviewer: 'admin' });
   assert.equal(tested.ok, true);
-  const approved = await market.review('ordinary', 'data-demo', 'approve', { reviewer: 'admin' });
+  const approved = await market.review('ordinary', 'keel-content', 'approve', { reviewer: 'admin' });
   assert.equal(approved.entry.status, 'active');
   const active = market.list({ status: 'active' });
   assert.equal(active.length, 1);
-  assert.equal(active[0].id, 'data-demo');
-  const dl = market.download('ordinary', 'data-demo');
+  assert.equal(active[0].id, 'keel-content');
+  const dl = market.download('ordinary', 'keel-content');
   assert.ok(dl && dl.bytes.length === ordinary.length);
   assert.equal(market.list({ status: 'active' })[0].downloads, 1);
-  const hidden = market.edit('ordinary', 'data-demo', { description: 'edited', author: 'owner', app: '>=0.4.0 <0.5.0', api: 2, listed: false }, { reviewer: 'admin' });
+  const hidden = market.edit('ordinary', 'keel-content', { description: 'edited', author: 'owner', app: '>=0.4.0 <0.5.0', api: 2, listed: false }, { reviewer: 'admin' });
   assert.deepEqual([hidden.description, hidden.author, hidden.app, hidden.api, hidden.listed, hidden.download], ['edited', 'owner', '>=0.4.0 <0.5.0', 2, false, null]);
   assert.equal(market.list({ status: 'active' }).length, 0, 'an unlisted entry leaves the public list');
-  assert.equal(market.download('ordinary', 'data-demo'), null);
-  const listed = market.edit('ordinary', 'data-demo', { listed: true }, { reviewer: 'admin' });
+  assert.equal(market.download('ordinary', 'keel-content'), null);
+  const listed = market.edit('ordinary', 'keel-content', { listed: true }, { reviewer: 'admin' });
   assert.equal(listed.needsReview, true, 'changing app/API asks for a new review');
   assert.equal(listed.download, null);
-  await market.review('ordinary', 'data-demo', 'test', { reviewer: 'admin' });
-  const restored = await market.review('ordinary', 'data-demo', 'approve', { reviewer: 'admin' });
-  assert.equal(restored.entry.download, '/market/api/download/ordinary/data-demo');
-  assert.equal(market.download('ordinary', 'data-demo').bytes.length, ordinary.length);
-  assert.throws(() => market.edit('ordinary', 'data-demo', { app: 'not a range' }), /version range/);
+  await market.review('ordinary', 'keel-content', 'test', { reviewer: 'admin' });
+  const restored = await market.review('ordinary', 'keel-content', 'approve', { reviewer: 'admin' });
+  assert.equal(restored.entry.download, '/market/api/download/ordinary/keel-content');
+  assert.equal(market.download('ordinary', 'keel-content').bytes.length, ordinary.length);
+  assert.throws(() => market.edit('ordinary', 'keel-content', { app: 'not a range' }), /version range/);
   assert.equal(market.download('ordinary', 'missing'), null);
   const forge = zipDir(path.join(ROOT, 'test/fixtures/forge/numbers-pack'));
   const forged = await market.upload({ kind: 'forge', bytes: forge, uploadedBy: 'tester' });
@@ -104,7 +104,7 @@ test('market: active plugins can stage a new version, approve it and roll back',
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-market-version-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const market = createPluginMarket({ root });
-  const dir = path.join(ROOT, 'plugins/_template/cosmetic');
+  const dir = path.join(ROOT, 'plugins/_template/keel-cosmetic');
   const versionZip = (version) => zipFiles(entriesOf(dir).map((e) => {
     if (e.name !== 'plugin.json') return e;
     const man = JSON.parse(Buffer.from(e.data).toString('utf8'));
@@ -160,7 +160,11 @@ test('market: required dependencies block approval until present', async (t) => 
   const market = createPluginMarket({ root });
   const make = (id, requires = {}) => zipFiles([{
     name: 'plugin.json',
-    data: Buffer.from(JSON.stringify({ manifest: 2, id, name: id, version: '1.0.0', class: 'cosmetic', app: '>=0.4.0 <0.5.0', api: 1, requires })),
+    data: Buffer.from(JSON.stringify({
+      manifest: 3, id, name: id, version: '1.0.0', app: '>=0.4.0 <0.5.0',
+      api: { asset: 1 }, scope: ['room'], trust: 'data', requires,
+      modules: [{ kind: 'asset', files: ['plugin.json'], permissions: ['asset.override'] }],
+    })),
   }]);
   const alpha = await market.upload({ kind: 'ordinary', bytes: make('alpha', { beta: '*' }) });
   assert.equal(alpha.dependencyCheck.ok, false);

@@ -1,0 +1,41 @@
+{
+  "lock": 1,
+  "id": "keel-reference",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "README.md": {
+      "sha256": "fe1995b7fdd8649df23b6eecf0a45515a27c375a6ae2bfe596e606de87df9b44",
+      "bytes": 4682
+    },
+    "assets/icon.png": {
+      "sha256": "090965c70a6d081049f513ac8c36c7608ef2f81784fab1ae7f76f1faa1661020",
+      "bytes": 132
+    },
+    "content/bands.json": {
+      "sha256": "a88ce6e90533a1895d9e5e01e4a5cfbbfa0dfc48cb0a84e540417f0787eb5fc4",
+      "bytes": 650
+    },
+    "content/enemies.json": {
+      "sha256": "27d1ed8ef79807843c5c3b673fe58ad0b3d5c4f29c43d04cc8d1ce50b5a15a15",
+      "bytes": 2044
+    },
+    "plugin.json": {
+      "sha256": "ae43212a58ceaff720eedddf46e14c44ac5d6f59411578d02b73c348a754aa09",
+      "bytes": 1693
+    },
+    "policy/index.js": {
+      "sha256": "d60f76a46d0fedb8f103e6740c4f7338dca7757c31675897c61b82e410db71f9",
+      "bytes": 629
+    },
+    "sim/index.js": {
+      "sha256": "2ce6c93e55e3714ffe75e5aede06931da90805f0e3f84923ce8e0d0d204b1086",
+      "bytes": 2254
+    },
+    "ui/index.json": {
+      "sha256": "4578180795b39e1c37b5a0956171339aef2da86a68027550a88077e20d3c9992",
+      "bytes": 246
+    }
+  },
+  "spine": {}
+}

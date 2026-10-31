@@ -1,0 +1,26 @@
+{
+  "manifest": 3,
+  "id": "keel-content",
+  "name": { "zh": "Keel 内容模板", "en": "Keel content template" },
+  "description": {
+    "zh": "原生 Keel content 插件：一个敌人记录，带 provides 和 parts。",
+    "en": "A native Keel content plugin: one enemy record with provides and parts."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "content": 1 },
+  "scope": ["room"],
+  "trust": "data",
+  "category": "enemy",
+  "authors": ["your name"],
+  "license": "CC0-1.0",
+  "modules": [
+    {
+      "kind": "content",
+      "files": ["content/enemies.json"],
+      "parts": { "data": ["content/enemies.json"] },
+      "permissions": ["content.define"],
+      "provides": ["enemy:enemy_x_keel_content_demo"]
+    }
+  ]
+}

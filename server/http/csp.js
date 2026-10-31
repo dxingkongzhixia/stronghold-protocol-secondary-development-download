@@ -10,7 +10,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 
-// SES evaluates confined code. This relaxation belongs only to the simulation Worker, never its parent document.
+// SES evaluates confined code. v2 sandbox scripts and native Keel modules run in the simulation Worker
+// (SIM_WORKER_CSP), so the game document itself never allows eval.
 export const SIM_WORKER_CSP = "default-src 'none'; script-src 'self' 'unsafe-eval'; connect-src 'none'";
 
 /**

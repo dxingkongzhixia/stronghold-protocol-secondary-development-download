@@ -84,9 +84,14 @@ import { unitStatsEntry, fxForm } from '../../../shared/protocol.js';
 import { spectateEffects } from './observe.js';
 import { recordError, setBattleSource } from '../diag.js';
 import { loadBrowserSim as loadBrowserSimImpl } from './simLoader.js';
+import { WorkerSimHost } from './simHost.js';
 import { trackCombat, combineCombat } from './metrics.js';
 
 const TICK = 1 / 30;
+/** A content set whose battle must run in the simulation Worker: native sim modules or sandbox scripts (D9). */
+export function needsWorker(content, cs) {
+  return !!(content && content.cs === cs && ((content.keel?.plugins?.length ?? 0) > 0 || (content.scripts?.length ?? 0) > 0));
+}
 /** Fast-forward budget per frame (ticks) when far behind. */
 export const CATCHUP_TICKS = 240;
 /** Silent catch-up slice (ticks) while a new battle is prepared before it is shown. */
@@ -219,7 +224,9 @@ export function createBattleRunner(deps) {
   const clearIv = deps.clearInterval || ((h) => globalThis.clearInterval(h));
   const doc = deps.doc !== undefined ? deps.doc : (typeof document !== 'undefined' ? document : null);
   // `content` (DESIGN §32.6): `{ cs, data }` of a room's content set → the sim on it; null → the original content
-  const loadSim = deps.loadSim || ((content) => (content ? loadBrowserSim({ data: content.data, cs: content.cs }) : loadBrowserSim()));
+  const loadSim = deps.loadSim || ((content) => (content ? loadBrowserSim({ ...content }) : loadBrowserSim()));
+  // a native-sim room runs the whole battle in its own Worker (D9); in-page otherwise
+  const createHost = deps.createHost || ((opts) => new WorkerSimHost(opts));
   const logger = deps.logger || SIM_LOGGER;
   // the content sets (DESIGN §32.6): the room's set the page holds (content.js) and the server's original one
   const contentFor = deps.contentFor || appContentFor;
@@ -255,6 +262,8 @@ export function createBattleRunner(deps) {
   let simCs = null;
   let startSeq = 0;            // counts the b.starts: the latest one is the view asked for
   let loading = null;          // the pending entry of the latest b.start (shown when prepared)
+  let pendingStart = null;     // the latest b.start whose simulation failed (native-code consent), for retryStart()
+  let pendingFailed = false;   // pendingStart failed to load (not merely waiting for native consent)
   let rafH = null;
   let ivH = null;
   let lastPool = null;
@@ -337,7 +346,7 @@ export function createBattleRunner(deps) {
     if (!e) return loading ? { loading: true, battleId: loading.battleId, fieldId: loading.fieldId, kind: loading.kind, leaks: leakMap(), uniteLeft: uniteLeftMap(), bondLayers: layerMap() } : null;
     return {
       battleId: e.battleId, fieldId: e.fieldId, kind: e.kind, authoritative: e.authoritative, watch: e.watch,
-      done: e.done, own: e.own, members: e.members.slice(), loading: !!loading, speed: e.speed, paused: pausedAt != null,
+      background: !!e.background, done: e.done, own: e.own, members: e.members.slice(), loading: !!loading, speed: e.speed, paused: pausedAt != null,
       leaks: leakMap(), uniteLeft: uniteLeftMap(), bondLayers: layerMap(),
     };
   }
@@ -364,7 +373,7 @@ export function createBattleRunner(deps) {
     if (mark === e.leakMark) return;
     e.leakMark = mark;
     let n = e.leaks;
-    try { n = Math.max(0, Math.trunc(Number(e.sim.spec.battleProgress(b).leaks) || 0)); } catch { /* keep the last count */ }
+    try { const p = progressOf(e); n = Math.max(0, Math.trunc(Number(p && p.leaks) || 0)); } catch { /* keep the last count */ }
     if (n !== e.leaks) { e.leaks = n; leaksDirty = true; }
   }
 
@@ -374,7 +383,7 @@ export function createBattleRunner(deps) {
     if (mark === e.leakMark) return;
     e.leakMark = mark;
     let left = e.left;
-    try { left = e.sim.spec.uniteLeft(b) || left; } catch { /* keep the last count */ }
+    try { left = uniteLeftOf(e) || left; } catch { /* keep the last count */ }
     if (JSON.stringify(left) !== JSON.stringify(e.left)) { e.left = left; leaksDirty = true; }
   }
 
@@ -419,6 +428,7 @@ export function createBattleRunner(deps) {
    * `e.slices` as { gt, ev } with that game time, for emitFrame / hold.
    */
   function stepEntry(e, n, sliced = false) {
+    if (e.host?.remote) return stepRemote(e, n, sliced);
     const b = e.battle;
     const t = now();
     let k = 0;
@@ -442,8 +452,39 @@ export function createBattleRunner(deps) {
     return dt;
   }
 
-  function frameOf(e) {
-    const snap = e.battle.snapshot();
+  /** A remote entry's step: one Worker RPC; its events and sliced batches arrive with the packet. */
+  function stepRemote(e, n, sliced) {
+    const t = now();
+    return e.host.step(n, sliced ? { slice: EV_SLICE } : {}).then((packet) => {
+      if (Array.isArray(packet?.slices) && packet.slices.length) e.slices.push(...packet.slices);
+      stats.ticks += Number(packet?.ticks) || 0;
+      const dt = now() - t;
+      stats.stepMs += dt;
+      return dt;
+    }).catch((err) => {
+      stats.errors++;
+      console.warn('[runner] worker step failed', err);
+      recordError('runner', err, 'worker step failed');
+      try { e.battle.forceEnd('timeout'); } catch { /* ignore */ }
+      return now() - t;
+    });
+  }
+
+  const remote = (e) => !!(e.host && e.host.remote);
+  const progressOf = (e) => {
+    try { return remote(e) ? e.host.progress() : e.sim.spec.battleProgress(e.battle); } catch { return null; }
+  };
+  const uniteLeftOf = (e) => {
+    try { return remote(e) ? e.host.uniteLeft() : e.sim.spec.uniteLeft(e.battle); } catch { return null; }
+  };
+  /** The final result: the Worker already compacted (and fitted) it; in-page compacts now. */
+  const resultOf = (e) => {
+    if (remote(e)) return e.host.compactResult();
+    let r = e.sim.spec.compactResult(e.battle.result());
+    return typeof e.sim.spec.fitResult === 'function' ? e.sim.spec.fitResult(r, { bossLike: bossLike(e), battleId: e.battleId }) : r;
+  };
+
+  function frameOf(e) {    const snap = e.battle.snapshot();
     const { t: gt, ...rest } = snap || {};
     return { ...rest, t: 'b.snap', fieldId: e.fieldId, gt: Number.isFinite(gt) ? gt : 0 };
   }
@@ -509,7 +550,8 @@ export function createBattleRunner(deps) {
     const every = bossLike(e) ? 250 : 1000;
     if (!force && t - e.lastProgressAt < every) return;
     e.lastProgressAt = t;
-    const p = e.sim.spec.battleProgress(e.battle);
+    const p = progressOf(e);
+    if (!p) return;
     const msg = { battleId: e.battleId, gt: Math.min(1e5, p.gt), killed: Math.min(p.killed, p.total), total: Math.min(1e5, p.total), done: !!p.done };
     // the HUD capsule's numerator of this field (shared/protocol.js b.progress `resolved`): the field's own scheduled
     // enemies knocked out or leaked. Sent only when the battle reports one (Battle.resolved) — an absent field leaves
@@ -544,9 +586,7 @@ export function createBattleRunner(deps) {
       e.resultSent = true;
       let result = null;
       try {
-        result = e.sim.spec.compactResult(e.battle.result());
-        // an oversized frame would close the socket at the very end of the battle (64 KB inbound limit)
-        if (typeof e.sim.spec.fitResult === 'function') result = e.sim.spec.fitResult(result, { bossLike: bossLike(e), battleId: e.battleId });
+        result = resultOf(e);
       } catch (err) { console.warn('[runner] result failed', err); recordError('runner', err, 'result failed'); }
       if (result) {
         e.result = result;
@@ -597,6 +637,15 @@ export function createBattleRunner(deps) {
     for (const e of entries.values()) if (e.delivery === 'undelivered') deliver(e);
   }
 
+  /** Retry the latest b.start that could not load its content (native-code consent answered after a decline). */
+  function retryStart() {
+    if (!pendingFailed) return; // still loading, or nothing failed: never start the same b.start twice
+    const msg = pendingStart;
+    pendingStart = null;
+    pendingFailed = false;
+    if (msg) onStart(msg).catch((err) => recordError('runner', err, 'retry start'));
+  }
+
   /** Solo pause (m.public.paused): freeze / resume every local battle clock. */
   function setPaused(on) {
     if (on === (pausedAt != null)) return;
@@ -621,38 +670,57 @@ export function createBattleRunner(deps) {
     const catchingUp = behind > cap * 4;
     if (catchingUp) stats.catchups++;
     const n = Math.min(behind, catchingUp ? CATCHUP_TICKS : cap);
-    const dt = stepEntry(e, n, catchingUp || !render);
-    if (dt > stats.maxFrameMs) stats.maxFrameMs = dt;
-    if (render) emitFrame(e, catchingUp);
-    else hold(e);
-    noteLeaks(e);
-    progress(e);
-    if (e.battle.finished) finished(e);
+    const after = () => {
+      if (render) emitFrame(e, catchingUp);
+      else hold(e);
+      noteLeaks(e);
+      progress(e);
+      if (e.battle.finished) finished(e);
+    };
+    const r = stepEntry(e, n, catchingUp || !render);
+    if (r && typeof r.then === 'function') return r.then((dt) => { if (dt > stats.maxFrameMs) stats.maxFrameMs = dt; after(); });
+    if (typeof r === 'number' && r > stats.maxFrameMs) stats.maxFrameMs = r;
+    after();
   }
 
   function running(e) { return !e.battle.finished && (e === cur || (e.authoritative && !e.resultSent)); }
 
+  let advancing = false;
   function frame() {
     rafH = null;
+    if (advancing) { schedule(); return; }
     stats.frames++;
     const t = clock();
-    for (const e of [...entries.values()]) if (running(e)) advance(e, t, e === cur);
-    flushLeaks();
-    schedule();
+    const ps = [];
+    for (const e of [...entries.values()]) {
+      if (!running(e)) continue;
+      const r = advance(e, t, e === cur);
+      if (r && typeof r.then === 'function') ps.push(r);
+    }
+    const done = () => { flushLeaks(); schedule(); };
+    if (ps.length) { advancing = true; Promise.allSettled(ps).finally(() => { advancing = false; done(); }); }
+    else done();
   }
 
   function pump() {
     // hidden tab: no animation frames — keep authoritative battles on their clock (no rendering)
-    if (!hidden()) return;
-    for (const e of [...entries.values()]) if (e.authoritative && running(e)) advance(e, clock(), false);
-    flushLeaks();
+    if (!hidden() || advancing) return;
+    const ps = [];
+    for (const e of [...entries.values()]) {
+      if (!e.authoritative || !running(e)) continue;
+      const r = advance(e, clock(), false);
+      if (r && typeof r.then === 'function') ps.push(r);
+    }
+    const done = () => { flushLeaks(); };
+    if (ps.length) { advancing = true; Promise.allSettled(ps).finally(() => { advancing = false; done(); }); }
+    else done();
   }
 
   function schedule() {
     // paused: nothing to step (the view keeps its last frame); resume reschedules
-    const any = pausedAt == null && [...entries.values()].some(running);
+    const any = pausedAt == null && !advancing && [...entries.values()].some(running);
     if (any && rafH == null && !hidden()) rafH = raf(frame);
-    const needPump = pausedAt == null && [...entries.values()].some((e) => e.authoritative && running(e));
+    const needPump = pausedAt == null && !advancing && [...entries.values()].some((e) => e.authoritative && running(e));
     if (needPump && ivH == null) ivH = setIv(pump, 250);
     else if (!needPump && ivH != null) { clearIv(ivH); ivH = null; }
   }
@@ -695,12 +763,18 @@ export function createBattleRunner(deps) {
 
   async function onStart(msg) {
     if (!msg || typeof msg !== 'object' || !msg.spec || typeof msg.battleId !== 'string') return;
+    const background = msg.background === true;
     const speed = Number(msg.speed) > 0 ? Number(msg.speed) : 2;
-    const seq = ++startSeq;
+    // A background executor (a bot / takeover field delegated to this browser) must not become the view: it does not
+    // advance startSeq, so the player's own battle stays on screen while this one is simulated and reported.
+    const seq = background ? startSeq : ++startSeq;
     const prep = pending.get(msg.battleId);
     const existing = entries.get(msg.battleId) || prep;
     if (existing) {
+      pendingStart = null;
+      pendingFailed = false;
       existing.seq = seq;
+      existing.background = background;
       const was = existing.authoritative;
       existing.authoritative = !!msg.authoritative && !existing.resultSent && csAccepted(existing.spec.cs, { loading: !existing.battle });
       existing.watch = !!msg.watch;
@@ -717,44 +791,43 @@ export function createBattleRunner(deps) {
       }
       if (prep) {
         // being prepared: the view asked for again, shown when ready (one Battle per battleId)
-        loading = prep;
-        publishState();
+        if (!background) { loading = prep; publishState(); }
         return prep.ready;
       }
       loading = null;
       // a resend of what is already on screen (reconnect / resync) only updates the state; switching back shows it
-      if (cur !== existing) show(existing);
+      if (!background && cur !== existing) show(existing);
       else { publishState(); schedule(); }
       return;
     }
-    loading = { battleId: msg.battleId, fieldId: msg.fieldId, kind: msg.kind };
-    publishState();
-    let sim;
-    try { sim = await ensureSim(); } catch (err) {
-      console.warn('[runner] simulation unavailable', err);
-      recordError('runner', err, 'simulation unavailable');
-      if (seq === startSeq) { loading = null; publishState(); }
-      return;
-    }
-    if (seq !== startSeq) return; // superseded by a newer b.start
-    let battle;
-    try {
-      battle = sim.spec.createBattleFromSpec(msg.spec, sim.ds, { logger });
-    } catch (err) {
-      console.warn('[runner] battle construction failed', err);
-      recordError('runner', err, 'battle construction failed');
-      loading = null;
+    if (!background) {
+      loading = { battleId: msg.battleId, fieldId: msg.fieldId, kind: msg.kind };
       publishState();
-      return;
     }
-    stats.battles++;
+    pendingStart = background ? null : msg;
+    pendingFailed = false;
+    // a room with native sim code or sandbox scripts builds its battle in the Worker (prepareRemote); nothing to preload
+    const held = msg.spec.cs ? await contentFor(msg.spec.cs).catch(() => null) : null;
+    if (!needsWorker(held, msg.spec.cs)) {
+      try { await ensureSim(); } catch (err) {
+        console.warn('[runner] simulation unavailable', err);
+        recordError('runner', err, 'simulation unavailable');
+        pendingFailed = !background;
+        if (!background && seq === startSeq) { loading = null; publishState(); }
+        return;
+      }
+      if (!background && seq !== startSeq) return; // superseded by a newer b.start
+    }
+    pendingStart = null;
+    pendingFailed = false;
     const e = {
       battleId: msg.battleId, fieldId: msg.fieldId || msg.spec.fieldId, kind: msg.kind || msg.spec.kind, spec: msg.spec,
       // built by prepare(); `seq` = its latest b.start, `elapsed` = the field clock to start from, `endReason` = the first
       // forced / timeout b.end (applied once the Battle exists), `ready` = the preparation (a promise)
       sim: null, battle: null, meter: null, seq, elapsed: Number(msg.elapsed) || 0, endReason: null, ready: null,
       // (a spec of another content than the page's: a display replica only — see the header)
-      authoritative: !!msg.authoritative && csAccepted(msg.spec.cs, { loading: true }), watch: !!msg.watch, own: !msg.watch, speed,
+      authoritative: !!msg.authoritative && csAccepted(msg.spec.cs, { loading: true }), watch: !!msg.watch, background,
+      own: !msg.watch && !background, speed,
       members: (msg.spec.players || []).map((p) => p && p.playerId).filter(Boolean),
       t0: null, lastProgressAt: -Infinity, done: false, resultSent: false,
       result: null, delivery: null,
@@ -784,9 +857,68 @@ export function createBattleRunner(deps) {
    * (or a new b.start replaced it after a clear) and when a b.start of another field superseded it — unless it is an
    * authority (it must finish and report) or the server already ended it (switching back shows the end).
    */
+  /**
+   * Build a native-sim entry in its own Worker (D9): the engine, content set and native modules run in the Worker's
+   * realm; the page receives snapshots/events. The catch-up to the field clock and the entry registration mirror
+   * prepare().
+   */
+  async function prepareRemote(e, content) {
+    const wanted = () => pending.get(e.battleId) === e && (e.seq === startSeq || e.authoritative || !!e.endReason);
+    let host;
+    try {
+      host = createHost({
+        contentFor: (cs) => contentFor(cs),
+        onFailure: (err) => {
+          stats.errors++;
+          recordError('runner', err, 'simulation worker');
+          if (entries.get(e.battleId) === e && !e.battle?.finished) { try { e.battle.forceEnd('timeout'); } catch { /* ignore */ } endBattle(e); }
+        },
+      });
+      await host.load(e.spec.cs, content);
+      if (!wanted()) { host.stop(); return; }
+      if (!csAccepted(e.spec.cs)) e.authoritative = false;
+      await host.start(e.spec);
+    } catch (err) {
+      console.warn('[runner] worker simulation unavailable', err);
+      recordError('runner', err, 'worker simulation unavailable');
+      try { host?.stop(); } catch { /* ignore */ }
+      return;
+    }
+    stats.battles++;
+    e.host = host;
+    e.battle = host.battle;
+    e.meter = host.meter;
+    e.combatMetrics = () => host.combatMetrics();
+    e.t0 = clock() - (e.elapsed / e.speed) * 1000;
+    if (lastPool && e.battle.sharedBoss) e.battle.sharedBoss.sync(lastPool.hp, lastPool.acked ? lastPool.acked[e.fieldId] : undefined);
+    if (e.endReason) endBattle(e);
+    while (!e.battle.finished && e.seq === startSeq && targetTick(e, clock()) - (e.battle.tickCount || 0) > ticksPerFrameCap(e.speed)) {
+      const n = Math.min(PREPARE_SLICE, targetTick(e, clock()) - (e.battle.tickCount || 0));
+      await stepEntry(e, n);
+      try { e.battle.drainEvents(); } catch { /* ignore */ }
+      noteLeaks(e);
+      progress(e);
+      await yieldFrame();
+      if (!wanted()) { host.stop(); return; }
+    }
+    pending.delete(e.battleId);
+    entries.set(e.battleId, e);
+    evict();
+    noteLeaks(e);
+    leaksDirty = true;
+    if (!e.background && e.seq === startSeq) { loading = null; show(e); }
+    if (e.battle.finished) finished(e);
+    flushLeaks();
+    schedule();
+  }
+
   async function prepare(e) {
     const wanted = () => pending.get(e.battleId) === e && (e.seq === startSeq || e.authoritative || !!e.endReason);
     try {
+      // a room with native sim code or sandbox scripts runs the battle in its own Worker (D9): no engine or plugin code
+      // in the page
+      const held = e.spec.cs ? await contentFor(e.spec.cs).catch(() => null) : null;
+      if (needsWorker(held, e.spec.cs)) { await prepareRemote(e, held); return; }
       let sim;
       try { sim = await ensureSim(e.spec.cs); } catch (err) {
         console.warn('[runner] simulation unavailable', err);
@@ -798,7 +930,8 @@ export function createBattleRunner(deps) {
       if (!csAccepted(e.spec.cs)) e.authoritative = false;
       let battle;
       try {
-        battle = sim.spec.createBattleFromSpec(e.spec, sim.ds, { logger });
+        battle = sim.spec.createBattleFromSpec(e.spec, sim.ds, { logger, ...(sim.extensions ? { extensions: sim.extensions } : {}) });
+        try { sim.keel?.attach?.(battle); } catch (err) { console.warn('[runner] native Keel attach failed', err); }
       } catch (err) {
         console.warn('[runner] battle construction failed', err);
         recordError('runner', err, 'battle construction failed');
@@ -830,7 +963,7 @@ export function createBattleRunner(deps) {
       evict();
       noteLeaks(e);
       leaksDirty = true; // its leak count / bond layers join the published state
-      if (e.seq === startSeq) { loading = null; show(e); }
+      if (!e.background && e.seq === startSeq) { loading = null; show(e); }
       if (battle.finished) finished(e);
       flushLeaks();
       schedule();
@@ -867,6 +1000,12 @@ export function createBattleRunner(deps) {
 
   /** End an entry's battle with its b.end reason; an authority reports it at once. */
   function endBattle(e) {
+    if (remote(e)) {
+      const done = () => { if (e === cur) emitFrame(e, false); finished(e); flushLeaks(); schedule(); };
+      if (!e.battle.finished) { e.host.forceEnd(e.endReason).then(done, done); return; }
+      done();
+      return;
+    }
     if (!e.battle.finished) {
       try { e.battle.forceEnd(e.endReason); } catch { /* ignore */ }
     }
@@ -883,14 +1022,17 @@ export function createBattleRunner(deps) {
    */
   function clear({ keepMetrics = false } = {}) {
     ++startSeq;
+    pendingStart = null;
+    pendingFailed = false;
     loading = null;
     for (const e of entries.values()) {
       // never drop an unreported authoritative result (the round already moved on: the server has its own)
       if (e.authoritative && !e.resultSent && !e.battle.finished) { try { e.battle.forceEnd('forced'); } catch { /* ignore */ } }
       rememberCombat(e);
+      try { e.host?.stop?.(); } catch { /* ignore */ }
     }
     // a battle still being prepared too: its preparation finds itself gone and stops (prepare)
-    for (const e of pending.values()) rememberCombat(e);
+    for (const e of pending.values()) { rememberCombat(e); try { e.host?.stop?.(); } catch { /* ignore */ } }
     pending.clear();
     entries.clear();
     if (!keepMetrics) combatHistory.clear();
@@ -972,13 +1114,19 @@ export function createBattleRunner(deps) {
     },
     /**
      * The battle on screen as a report attaches it (diag.js): its b.start fields and its game time; null without one.
-     * @returns {{ battleId: string, fieldId: string, kind: string, spec: object, time: number|null }|null}
+     * `keel` is the native Keel runtime's read-only diagnostics (null when the set has no native module).
+     * @returns {{ battleId: string, fieldId: string, kind: string, spec: object, time: number|null, keel: object|null }|null}
      */
     currentBattle() {
       const e = cur;
       if (!e || !e.spec) return null;
       const time = e.battle && Number.isFinite(e.battle.time) ? e.battle.time : null;
-      return { battleId: e.battleId, fieldId: e.fieldId, kind: e.kind, spec: e.spec, time };
+      const rt = e.battle?.keel;
+      const keel = rt ? { started: rt.started, modules: rt.modules, views: rt.views, errors: rt.errors } : null;
+      // every attached native plugin (a room may carry several); `keel` stays the last one for one-plugin callers
+      const rts = Array.isArray(e.battle?.keelAll) ? e.battle.keelAll : (rt ? [rt] : []);
+      const keels = rts.map((r) => ({ started: r.started, modules: r.modules, views: r.views, errors: r.errors }));
+      return { battleId: e.battleId, fieldId: e.fieldId, kind: e.kind, spec: e.spec, time, keel, keels };
     },
     state,
     stats() {
@@ -993,6 +1141,7 @@ export function createBattleRunner(deps) {
     unitStats(unitId, fieldId = null) {
       const e = cur;
       if (!e || !Number.isInteger(unitId) || (fieldId != null && e.fieldId !== fieldId)) return null;
+      if (remote(e)) return e.host.unitStats(unitId) || null;
       let u = null;
       try { u = typeof e.battle.unitById === 'function' ? e.battle.unitById(unitId) : null; } catch { u = null; }
       if (!u) return null;
@@ -1035,7 +1184,7 @@ export function createBattleRunner(deps) {
     _entries: entries,
     _frame: frame,
     _pump: pump,
-    onStart, onPool, onEnd, clear, ensureSim, redeliver, setPaused,
+    onStart, onPool, onEnd, clear, ensureSim, redeliver, retryStart, setPaused,
     dispose() { clear(); for (const off of offs) { try { off?.(); } catch { /* ignore */ } } },
   };
 }

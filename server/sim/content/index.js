@@ -114,11 +114,11 @@ function bindDefaultSkill(k, chess, d) {
 }
 
 /** C2 order: extension → DSL → JSON SkillSpec → kitRef → official → generic. */
-export function kitOf(def, reg = KITS) {
+export function kitOf(def, reg = KITS, extensions = EXTENSIONS) {
   if (!def) return undefined;
   // Explicit Battle opts.kits retain their existing precedence and lookup-only semantics.
   if (reg !== KITS) return registeredKit(def, reg);
-  const ext = registeredKit(def, EXTENSIONS) ?? (def.charId?.startsWith('char_x_') ? EXTENSIONS[def.charId] : undefined);
+  const ext = registeredKit(def, extensions) ?? (def.charId?.startsWith('char_x_') ? extensions[def.charId] : undefined);
   if (ext) return ext;
   const raw = def.raw || {};
   if (raw.dsl != null) return (bb, chess, d) => bindDefaultSkill(compileDsl(raw.dsl, { bb, chess, def: d }), chess, d);
@@ -166,7 +166,8 @@ export function setupUnitKit(battle, unit, mode = 'full') {
   if (unit.kind !== 'op') return {};
   const injected = battle.opts && battle.opts.kits;
   if (mode === 'full' || injected) {
-    const f = kitOf(def, injected) ?? (mode === 'full' ? kitOf(def, KITS) : undefined);
+    const ext = battle.opts?.extensions?.EXTENSIONS ?? EXTENSIONS;
+    const f = kitOf(def, injected, ext) ?? (mode === 'full' ? kitOf(def, KITS, ext) : undefined);
     if (typeof f === 'function') {
       try {
         const k = f(bb, raw, def);
@@ -333,7 +334,7 @@ export function installContent(battle, { mode = 'full', extra = null } = {}) {
     }
   }
   if (mode === 'full') {
-    installExtensions(battle);
+    installExtensions(battle, battle.opts?.extensions);
     for (const [name, mod] of MODULES) {
       if (typeof mod.install !== 'function') continue;
       try { mod.install(battle); } catch (e) { battle._handlerError(`content:${name}`, null, e); }

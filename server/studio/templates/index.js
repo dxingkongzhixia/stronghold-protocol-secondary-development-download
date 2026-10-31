@@ -19,7 +19,8 @@
 
 import fs from 'node:fs';
 import { APP_VERSION, PLUGIN_API } from '../../../shared/constants.js';
-import { isPluginId } from '../../../shared/plugins/manifest.js';
+import { isPluginId, readPluginManifest } from '../../../shared/plugins/manifest.js';
+import { adaptV2 } from '../../../shared/keel/adapt.js';
 import art from './art.js';
 import spine from './spine.js';
 import voice from './voice.js';
@@ -89,6 +90,13 @@ export function entryOverlay(target, value = {}) {
  *   lang?: string, options?: any, data?: any, publicDir?: string, previous?: boolean }} opts
  * @returns {{ manifest: Record<string, any>, files: Record<string, string | Uint8Array>, authoring?: any }}
  */
+/** A template's v2-shaped manifest as the manifest 3 a new folder starts with. */
+function keelOf(v2, id) {
+  const read = readPluginManifest(v2, { id });
+  if (!read.manifest) throw new StudioError(read.problems[0]?.code ?? 'PLUGIN_MANIFEST', 400, { detail: read.problems[0] ?? '' });
+  return adaptV2(read.manifest).manifest;
+}
+
 export function createPlugin(template, { id, name = '', target = null, authors = [], license = '', credits = '', lang = 'zh', options = {}, data = null, publicDir = undefined, previous = false }) {
   if (!isPluginId(id)) throw Object.assign(new Error(`${id} is not a plugin id`), { code: 'PLUGIN_ID' });
   /** A text the author gave (a string; anything else is none). @param {unknown} v @param {number} max */
@@ -129,7 +137,7 @@ export function createPlugin(template, { id, name = '', target = null, authors =
     for (const rel of made.manifest.dsl || []) check(validatePrepSpec(JSON.parse(made.files[rel]), id));
     Object.assign(manifest, made.manifest);
     const authoring = { template: template.id, target: target ? `${target.kind}:${target.key}` : '', options: made.options || options };
-    return { manifest, files: { ...made.files, 'README.md': `# ${text}\n\nPlugin: ${id} (${template.id}).\n\nOpen /studio/ to edit and try a battle.\n\nSelf-check: schema → node tools/plugin.mjs check ${id} --strict → trial / node tools/plugin.mjs test ${id} → node tools/plugin.mjs pack ${id} --zip.\n\nSee docs/PLUGIN-GUIDE.md and docs/PLUGINS.md. Official kit references follow future official kit fixes. No game art is included.\n` }, authoring };
+    return { manifest: keelOf(manifest, id), files: { ...made.files, 'README.md': `# ${text}\n\nPlugin: ${id} (${template.id}).\n\nOpen /studio/ to edit and try a battle.\n\nSelf-check: schema → node tools/plugin.mjs check ${id} --strict → trial / node tools/plugin.mjs test ${id} → node tools/plugin.mjs pack ${id} --zip.\n\nSee docs/PLUGIN-GUIDE.md and docs/PLUGINS.md. Official kit references follow future official kit fixes. No game art is included.\n` }, authoring };
   }
   manifest.permissions = ['assets.override'];
   manifest.assets = template.overlay(target);
@@ -144,11 +152,11 @@ export function createPlugin(template, { id, name = '', target = null, authors =
       let node = manifest.assets;
       for (const key of slot.at.slice(0, -1)) node = node[key] ??= {};
       node[slot.at.at(-1)] = slot.kind === 'track' ? { loop: rel } : rel;
-      files[rel] = fs.readFileSync(new URL(`../../../plugins/_template/cosmetic/media/sample.${ext}`, import.meta.url));
+      files[rel] = fs.readFileSync(new URL(`../../../plugins/_template/keel-cosmetic/media/sample.${ext}`, import.meta.url));
       files['README.md'] += '\nOriginal CC0 sample included: a 32×32 checkerboard or a 0.15-second synthesized sine tone. Replace it in the studio.\n';
     }
   }
-  return { manifest, files };
+  return { manifest: keelOf(manifest, id), files };
 }
 
 /**

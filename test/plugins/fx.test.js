@@ -21,6 +21,15 @@ import { createPluginRegistry } from '../../server/plugins/registry.js';
 import { buildContentSet } from '../../server/plugins/contentSet.js';
 import { ROOT } from '../../server/data.js';
 import { schemaValidator } from '../helpers/jsonSchema.js';
+import { keelManifestOf } from '../helpers/keelFixture.js';
+
+/** Write a v2-shaped fx fixture as the manifest 3 the loader reads. */
+function putKeel(f, id, manifest) {
+  const three = keelManifestOf(manifest, id.split('/').pop());
+  assert.ok(three, `${id}: fx fixture did not convert`);
+  f.put(`${id}/plugin.keel.json`, three);
+  f.put(`${id}/plugin.json`, manifest);
+}
 
 test('official effect format and optional expansion preserve legacy records', () => {
   for (const fx of [{ unit: 'char_112_siege', skills: { 0: 'skchr_siege_3' } }, { unit: 'char_4217_makoto' }]) assert.deepEqual(operatorFxProblems(fx), []);
@@ -97,7 +106,7 @@ test('compiled assets merge under a private namespace and all files are pinned',
   assert.equal(index.units.char_x_fx_demo_guard.modes[0].attack.cast[0].effects[0], 'spark');
   const dir = path.join(f.root, 'fx-demo');
   fs.mkdirSync(dir); fs.renameSync(path.join(f.root, 'fx'), path.join(dir, 'fx'));
-  f.put('fx-demo/plugin.json', { manifest: 2, id: 'fx-demo', name: 'FX', version: '1.0.0', app: '>=0.3.0 <0.5.0', api: 1,
+  putKeel(f, 'fx-demo', { manifest: 2, id: 'fx-demo', name: 'FX', version: '1.0.0', app: '>=0.3.0 <0.5.0', api: 1,
     class: 'cosmetic', permissions: ['assets.add'], assets: { fx: config } });
   const r = readPluginFolder(dir, { vanilla: { manifest: { version: 1, chars: {} }, sha256: 'a'.repeat(64) } });
   assert.deepEqual(r.problems, []); assert.equal(r.plugin.visual.ops[0].effects.index.version, 3);
@@ -239,12 +248,12 @@ test('DSL plugin action compiles to a normal fx event with a namespaced effect a
 test('registry, pack/check and studio findings accept fx-only cosmetics and warn for missing official keys', t => {
   const f = fxFixture(t);
   const man = { manifest: 2, id: 'fx-demo', name: 'Effects', version: '1.0.0', app: '>=0.3.0 <0.5.0', api: 1, class: 'cosmetic', scope: ['room'], permissions: ['assets.add'], assets: { fx: { silentPhases: ['quiet'] } } };
-  f.put('fx-demo/plugin.json', man);
+  putKeel(f, 'fx-demo', man);
   const vanilla = { manifest: {}, sha256: 'a'.repeat(64) };
   const loaded = readPluginFolder(path.join(f.root, 'fx-demo'), { vanilla });
   assert.deepEqual(loaded.problems, []); assert.equal(loaded.plugin.visual.ops[0].effects.config.silentPhases[0], 'quiet');
   const op = guard(); op.fx = { unit: 'char_999999_missing' };
-  f.put('data-demo/plugin.json', { ...man, id: 'data-demo', class: 'content', permissions: ['data.add'], assets: undefined, operators: ['op.json'] }); f.put('data-demo/op.json', op);
+  putKeel(f, 'data-demo', { ...man, id: 'data-demo', class: 'content', permissions: ['data.add'], assets: undefined, operators: ['op.json'] }); f.put('data-demo/op.json', op);
   const checked = checkPluginFolder(path.join(f.root, 'data-demo'), 'plugins/data-demo', { vanilla });
   assert.deepEqual(checked.problems, []); assert.ok(checked.warnings.some(s => s.includes('char_999999_missing')));
 });
@@ -253,7 +262,7 @@ test('saved content fx mapping and DSL action survive production content-set com
   const f = fxFixture(t), op = guard();
   op.fx = { unit: 'char_112_siege', skills: { 0: 'skchr_siege_3' } };
   op.kit = { dsl: { dsl: 1, talents: [{ when: 'deploy', do: [{ fx: { kind: 'plugin', id: 'flash', dur: 0.4 } }] }] } };
-  f.put('plugins/data-demo/plugin.json', { manifest: 2, id: 'data-demo', name: 'Demo', version: '1.0.0', app: '>=0.3.0 <0.5.0', api: 1,
+  putKeel(f, 'plugins/data-demo', { manifest: 2, id: 'data-demo', name: 'Demo', version: '1.0.0', app: '>=0.3.0 <0.5.0', api: 1,
     class: 'content', scope: ['room'], permissions: ['data.add', 'dsl'], operators: ['op.json'] });
   f.put('plugins/data-demo/op.json', op);
   const registry = createPluginRegistry({ publicDir: path.join(f.root, 'public'), packsDir: path.join(f.root, 'packs'), pluginsDir: path.join(f.root, 'plugins'), dataDir: path.join(ROOT, 'data') });

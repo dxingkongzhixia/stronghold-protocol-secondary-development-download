@@ -25,7 +25,7 @@ import https from 'node:https';
 import net from 'node:net';
 import dns from 'node:dns';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { PLUGIN_LIMITS, PLUGIN_MANIFEST, isPluginId, PLUGIN_MAX_BYTES } from '../../shared/plugins/manifest.js';
+import { PLUGIN_LIMITS, PLUGIN_MANIFEST, KEEL_MANIFEST, isPluginId, PLUGIN_MAX_BYTES } from '../../shared/plugins/manifest.js';
 import { CATALOG_FETCH_MAX_BYTES, isCatalogUrl } from '../../shared/plugins/catalog.js';
 import { isContentHash } from '../../shared/plugins/identity.js';
 import { checkPluginFolder } from './pack.js';
@@ -493,7 +493,8 @@ export function installedPluginVersion(pluginsDir, id) {
   if (st.isSymbolicLink()) return null;
   if (!st.isDirectory()) return undefined;
   try {
-    const m = JSON.parse(fs.readFileSync(path.join(dir, PLUGIN_MANIFEST), 'utf8'));
+    const file = fs.existsSync(path.join(dir, PLUGIN_MANIFEST)) ? PLUGIN_MANIFEST : fs.existsSync(path.join(dir, 'plugin.keel.json')) ? 'plugin.keel.json' : PLUGIN_MANIFEST;
+    const m = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
     return typeof m.version === 'string' ? m.version : null;
   } catch { return null; }
 }
@@ -531,12 +532,13 @@ function mkdirChild(parent, name) {
 function normalizeLayout(entries) {
   const files = entries.filter((e) => !e.name.endsWith('/'));
   if (!files.length) throw new InstallError('PLUGIN_INSTALL_ZIP', 'the zip has no files', {});
-  if (files.some((f) => f.name === PLUGIN_MANIFEST)) return { hint: null, files };
+  const manifests = new Set([PLUGIN_MANIFEST, KEEL_MANIFEST]);
+  if (files.some((f) => manifests.has(f.name))) return { hint: null, files };
   const tops = new Set(files.map((f) => f.name.split('/')[0]));
   if (tops.size !== 1) throw new InstallError('PLUGIN_INSTALL_ZIP', 'the zip must contain plugin.json, or one folder that contains it', {});
   const top = [...tops][0];
-  if (!isPluginId(top) || !files.some((f) => f.name === `${top}/${PLUGIN_MANIFEST}`)) {
-    throw new InstallError('PLUGIN_INSTALL_ZIP', 'the wrapping folder must be a plugin id and contain plugin.json', {});
+  if (!isPluginId(top) || !files.some((f) => manifests.has(f.name.slice(top.length + 1)))) {
+    throw new InstallError('PLUGIN_INSTALL_ZIP', 'the wrapping folder must be a plugin id and contain plugin.json or plugin.keel.json', {});
   }
   return { hint: top, files: files.map((f) => ({ name: f.name.slice(top.length + 1), data: f.data })) };
 }
@@ -545,11 +547,11 @@ function normalizeLayout(entries) {
  * @param {{ name: string, data: Buffer }[]} files @param {string | null} hint
  */
 function chooseId(files, hint) {
-  const man = files.find((f) => f.name === PLUGIN_MANIFEST);
-  if (!man) throw new InstallError('PLUGIN_INSTALL_ZIP', 'no plugin.json', {});
+  const man = files.find((f) => f.name === PLUGIN_MANIFEST) || files.find((f) => f.name === KEEL_MANIFEST);
+  if (!man) throw new InstallError('PLUGIN_INSTALL_ZIP', 'no plugin.json or plugin.keel.json', {});
   let json;
   try { json = JSON.parse(man.data.toString('utf8')); } catch {
-    throw new InstallError('PLUGIN_INSTALL_ZIP', 'plugin.json is not JSON', {});
+    throw new InstallError('PLUGIN_INSTALL_ZIP', `${man.name} is not JSON`, {});
   }
   const fromFile = json && typeof json.id === 'string' ? json.id : '';
   const id = isPluginId(hint) ? hint : (isPluginId(fromFile) ? fromFile : '');

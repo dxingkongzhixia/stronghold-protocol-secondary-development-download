@@ -64,6 +64,102 @@ export function InfoForm({ state, busy, onSave, onFix }) {
 }
 
 /**
+ * The modules of a manifest 3 (Keel, N2 studio C): kind / entry / files / permissions, add, remove, reorder. Deeper
+ * module fields (content parts, provides/consumes, slots, assets) stay in the Manifest tab's JSON, which saves through
+ * the same validation. `onSave(modules)` posts the whole list to POST /modules.
+ * @param {{ state: any, busy: boolean, onSave: (modules: any[]) => void }} props
+ */
+export function KeelModules({ state, busy, onSave }) {
+  const KINDS = ['content', 'asset', 'sim', 'match', 'policy', 'ui', 'lang'];
+  const listOf = () => (Array.isArray(state.manifest?.modules) ? state.manifest.modules : []).map((m) => ({ ...m }));
+  const [rows, setRows] = useState(listOf);
+  const [was, setWas] = useState(() => JSON.stringify(listOf()));
+  const [open, setOpen] = useState(-1);
+  const [raw, setRaw] = useState({});
+  const [err, setErr] = useState('');
+  useEffect(() => { const v = listOf(); setRows(v); setWas(JSON.stringify(v)); setOpen(-1); setRaw({}); setErr(''); }, [state.text]);
+  const change = (n, patch) => setRows(rows.map((m, i) => (i === n ? { ...m, ...patch } : m)));
+  const csv = (v) => (Array.isArray(v) ? v.join(', ') : '');
+  const list = (v) => String(v).split(/[,，\n]/).map((x) => x.trim()).filter(Boolean);
+  const move = (n, d) => {
+    const next = [...rows];
+    const [x] = next.splice(n, 1);
+    next.splice(n + d, 0, x);
+    setRows(next);
+  };
+  const jsonText = (n, key) => {
+    const k = `${n}:${key}`;
+    if (Object.hasOwn(raw, k)) return raw[k];
+    return rows[n]?.[key] === undefined ? '' : JSON.stringify(rows[n][key], null, 2);
+  };
+  const setJson = (n, key, text) => {
+    const k = `${n}:${key}`;
+    setRaw({ ...raw, [k]: text });
+    try {
+      change(n, { [key]: text.trim() ? JSON.parse(text) : undefined });
+      setErr('');
+    } catch { setErr(`${key}：不是有效 JSON`); }
+  };
+  const providers = new Map();
+  for (const [n, m] of rows.entries()) for (const ref of m.provides ?? []) providers.set(ref, n);
+  const consumers = [];
+  for (const [n, m] of rows.entries()) for (const ref of m.consumes ?? []) consumers.push({ ref, n });
+  for (const id of Object.keys(state.manifest?.requires ?? {})) consumers.push({ ref: `plugin:${id}`, n: -1 });
+  const dirty = JSON.stringify(rows) !== was;
+  const field = (label, input) => html`<label class="st-field-row"><span>${label}</span>${input}</label>`;
+  const jsonField = (n, key, label) => field(label, html`<textarea class="st-input st-code" rows="3" value=${jsonText(n, key)} disabled=${busy} onInput=${(e) => setJson(n, key, e.currentTarget.value)}></textarea>`);
+  return html`<div class="st-form" data-testid="keel-modules">
+    <h3 class="st-subhead">${t('Keel 模块')}</h3>
+    <p class="st-note">${t('清单 3 的模块：种类、入口、文件、能力；「编辑」打开该模块的字段（content parts、provides/consumes、ui slots、asset assets、state）。')}</p>
+    <table class="st-table">
+      <thead><tr><th>${t('种类')}</th><th>${t('入口')}</th><th>${t('文件')}</th><th>${t('能力')}</th><th></th></tr></thead>
+      <tbody>${rows.map((m, n) => [
+        html`<tr key=${n}>
+          <td><select class="st-input" value=${m.kind} disabled=${busy} onChange=${(e) => change(n, { kind: e.currentTarget.value })}>
+            ${KINDS.map((k) => html`<option value=${k} selected=${m.kind === k}>${k}</option>`)}</select></td>
+          <td><input class="st-input" value=${m.entry || ''} disabled=${busy} placeholder="sim/index.js" onInput=${(e) => change(n, { entry: e.currentTarget.value.trim() || undefined })} /></td>
+          <td><input class="st-input" value=${csv(m.files)} disabled=${busy} placeholder="content/a.json, content/b.json" onInput=${(e) => change(n, { files: list(e.currentTarget.value) })} /></td>
+          <td><input class="st-input" value=${csv(m.permissions)} disabled=${busy} placeholder="sim.read, sim.spawn" onInput=${(e) => change(n, { permissions: list(e.currentTarget.value) })} /></td>
+          <td class="st-inline">
+            <button type="button" class="st-link-btn" disabled=${busy} onClick=${() => setOpen(open === n ? -1 : n)}>${open === n ? t('收起') : t('编辑')}</button>
+            <button type="button" class="st-link-btn" disabled=${busy || n === 0} onClick=${() => move(n, -1)} aria-label=${t('上移')}>↑</button>
+            <button type="button" class="st-link-btn" disabled=${busy || n === rows.length - 1} onClick=${() => move(n, 1)} aria-label=${t('下移')}>↓</button>
+            <button type="button" class="st-link-btn is-danger" disabled=${busy} onClick=${() => setRows(rows.filter((_, i) => i !== n))}>${t('删除')}</button>
+          </td>
+        </tr>`,
+        open === n ? html`<tr key=${`e${n}`}><td colSpan="5">
+          <div class="st-form" data-testid="keel-module-fields">
+            ${m.kind === 'content' ? jsonField(n, 'parts', t('content parts（part → 文件列表）')) : null}
+            ${m.kind === 'asset' ? jsonField(n, 'assets', t('asset assets（覆盖对象）')) : null}
+            ${m.kind === 'sim' || m.kind === 'match' || m.kind === 'policy' ? jsonField(n, 'state', t('模块 state')) : null}
+            ${field(t('provides（逗号分隔）'), html`<input class="st-input" value=${csv(m.provides)} disabled=${busy} placeholder="enemy:enemy_x_demo" onInput=${(e) => change(n, { provides: list(e.currentTarget.value) })} />`)}
+            ${field(t('consumes（逗号分隔）'), html`<input class="st-input" value=${csv(m.consumes)} disabled=${busy} placeholder="enemy:enemy_x_other" onInput=${(e) => change(n, { consumes: list(e.currentTarget.value) })} />`)}
+            ${m.kind === 'ui' ? field(t('slots（逗号分隔）'), html`<input class="st-input" value=${csv(m.slots)} disabled=${busy} placeholder="hud.right" onInput=${(e) => change(n, { slots: list(e.currentTarget.value) })} />`) : null}
+            ${field(t('notes'), html`<input class="st-input" value=${m.notes || ''} disabled=${busy} onInput=${(e) => change(n, { notes: e.currentTarget.value || undefined })} />`)}
+          </div>
+        </td></tr>` : null,
+      ])}</tbody>
+    </table>
+    ${err ? html`<pre class="st-error">${err}</pre>` : null}
+    <div class="st-form__actions">
+      <${Button} variant="secondary" icon="plus" disabled=${busy} onClick=${() => setRows([...rows, { kind: 'content', files: [], permissions: [] }])}>${t('添加模块')}<//>
+      <${Button} variant="primary" disabled=${busy || !dirty} onClick=${() => onSave(rows)} data-testid="keel-modules-save">${t('保存模块')}<//>
+    </div>
+    <div data-testid="keel-graph">
+      <h4 class="st-subhead">${t('provides / consumes')}</h4>
+      <ul class="st-note">
+        ${[...providers.entries()].map(([ref, n]) => html`<li key=${`p:${ref}`}><code>${ref}</code> ← ${rows[n]?.kind}${t('（提供）')}</li>`)}
+        ${consumers.map((c) => {
+          const ok = providers.has(c.ref);
+          return html`<li key=${`c:${c.ref}:${c.n}`} class=${cx(!ok && 'is-bad')}><code>${c.ref}</code> ${ok ? `→ ${rows[providers.get(c.ref)]?.kind ?? ''}` : t('（没有模块提供）')}</li>`;
+        })}
+      </ul>
+    </div>
+  </div>`;
+}
+
+
+/**
  * The folder's files (see the header).
  * @param {{ state: any, busy: boolean, onRemove: (rel: string) => void, onFix: (issue: any) => void }} props
  */
@@ -74,8 +170,8 @@ export function FileList({ state, busy, onRemove, onFix }) {
       <tbody>${state.files.map((f) => html`<tr key=${f.rel} class=${cx(!f.used && 'is-unused')}>
         <td><code>${f.rel}</code><${IssueList} issues=${issuesAt(state.check.issues, { file: f.rel })} onFix=${onFix} busy=${busy} compact=${true} /></td>
         <td class="num">${sizeText(f.bytes)}</td>
-        <td>${f.rel === 'plugin.json' ? t('清单') : f.rel === 'plugin.lock.json' ? t('锁文件（打包生成）') : f.kind === 'doc' ? t('说明文档') : f.used ? t('在用') : t('没用到')}</td>
-        <td>${f.rel !== 'plugin.json' ? html`<button type="button" class="st-link-btn is-danger" disabled=${busy} onClick=${() => onRemove(f.rel)}>${t('删除')}</button>` : null}</td>
+        <td>${f.rel === 'plugin.json' || f.rel === 'plugin.keel.json' ? t('清单') : f.rel === 'plugin.lock.json' ? t('锁文件（打包生成）') : f.kind === 'doc' ? t('说明文档') : f.used ? t('在用') : t('没用到')}</td>
+        <td>${f.rel !== 'plugin.json' && f.rel !== 'plugin.keel.json' ? html`<button type="button" class="st-link-btn is-danger" disabled=${busy} onClick=${() => onRemove(f.rel)}>${t('删除')}</button>` : null}</td>
       </tr>`)}</tbody>
     </table>
     <p class="st-note">${t('一共 {n} 个文件，{size}。插件文件夹里只放插件用到的文件；不要放官方游戏的文件。', { n: state.files.length, size: sizeText(state.bytes) })}</p>
@@ -96,7 +192,7 @@ export function ManifestEditor({ state, busy, onSave }) {
     onSave(text);
   };
   return html`<div class="st-manifest" data-testid="manifest-editor">
-    <p class="st-note">${t('高级：直接编辑 plugin.json。字段说明见 docs/PLUGINS.md §3 和 §9；编辑器支持 schemas/plugin.schema.json 自动补全。')}</p>
+    <p class="st-note">${t('高级：直接编辑 {file}。字段说明见 docs/keel/MANIFEST-V3.md；保存时校验 manifest 3 与模块图。', { file: state.manifestFile || 'plugin.json' })}</p>
     <textarea class="st-input st-code" spellcheck="false" rows="22" value=${text} onInput=${(e) => setText(e.currentTarget.value)}></textarea>
     ${bad ? html`<pre class="st-error">${t('不是有效的 JSON：{why}', { why: bad })}</pre>` : null}
     <div class="st-form__actions"><${Button} variant="primary" onClick=${save} loading=${busy} disabled=${text === state.text}>${t('保存清单')}<//></div>

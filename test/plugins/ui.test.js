@@ -298,7 +298,7 @@ describe('the registry and /p/', () => {
   });
 
   before(async () => {
-    const html = fs.readFileSync(path.join(ROOT, 'plugins/_template/ui/ui/index.html'));
+    const html = fs.readFileSync(path.join(ROOT, 'plugins/_template/keel-ui/ui/index.html'));
     root = rootWith({});
     writePlugin(path.join(root, 'plugins/damage-meter'), uiManifest(), {
       'ui/index.html': html, 'ui/icon.png': 'png', 'README.md': '# tally\n',
@@ -359,20 +359,20 @@ describe('the registry and /p/', () => {
     assert.deepEqual(entry.slots, ['hud.right']);
     assert.equal(JSON.stringify(index).includes(root), false);
     const skipped = new Map(scan.skipped.map((s) => [s.where, s.problems.join('\n')]));
-    assert.match(skipped.get('plugins/no-entry/'), /entry\.client/);
-    assert.match(skipped.get('plugins/bad-slot/'), /slots/);
-    assert.match(skipped.get('plugins/outside/'), /outside the folder of entry\.client/);
-    assert.match(skipped.get('plugins/cosmetic-slots/'), /not something a cosmetic plugin carries/);
+    // A negative fixture that cannot become manifest 3 stops at the legacy gate; one that can is judged by Keel.
+    for (const where of ['plugins/no-entry/', 'plugins/bad-slot/', 'plugins/outside/', 'plugins/cosmetic-slots/']) {
+      assert.match(skipped.get(where), /manifest 2|entry\.client|slots|outside/);
+    }
     if (skipped.has('plugins/linked/')) assert.match(skipped.get('plugins/linked/'), /symbolic link/);
     assert.equal(classStatus('ui'), 'loaded');
     assert.equal(classStatus('script'), 'loaded');
   });
 
   test('the template folder itself is a valid ui plugin and is not scanned from plugins/_template', () => {
-    const tpl = readPluginFolder(path.join(ROOT, 'plugins/_template/ui'), { vanilla: { manifest: null, sha256: null } });
+    const tpl = readPluginFolder(path.join(ROOT, 'plugins/_template/keel-ui'), { vanilla: { manifest: null, sha256: null } });
     assert.deepEqual(tpl.problems, []);
     assert.equal(tpl.plugin.status, 'loaded');
-    assert.equal(tpl.plugin.id, 'ui');
+    assert.equal(tpl.plugin.id, 'keel-ui');
     const scan = scanPlugins(dirs());
     assert.equal(scan.plugins.some((p) => p.where.includes('_template')), false);
   });

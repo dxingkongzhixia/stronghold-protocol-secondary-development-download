@@ -1720,6 +1720,14 @@
   "非官方：本局使用了改变玩法的插件（{n} 个），不计入统计总览": "Unofficial: this match uses gameplay plugins ({n}) and stays out of the statistics overview",
   "本房间使用了改变玩法的插件（非官方）": "This room uses gameplay plugins (unofficial)",
   "作者": "Authors",
+  "原生代码": "Native code",
+  "本局包含原生代码插件": "This battle includes native code plugins",
+  "原生代码插件": "Native code plugins",
+  "此房间启用了原生代码插件。它会在你的浏览器里运行，能读取战斗状态并修改对局；只在你信任插件作者和服务器时继续。": "This room enables native code plugins. They run in your browser, can read the battle state and change the match; continue only if you trust the plugin authors and this server.",
+  "模块": "Modules",
+  "哈希": "Hash",
+  "我了解风险，继续": "I understand the risk, continue",
+  "已拒绝。开始模拟前仍需要你的同意。": "Declined. Your consent is still needed before the simulation starts.",
   "删除": "Delete",
   "朝向": "Facing",
   "精英化": "Promotion",
@@ -2070,5 +2078,9 @@
   "当前：{name}": "Current: {name}",
   "未选择": "Not selected",
   "检测到你正在通过 {origin} 进入游戏，请改用官方地址 {official}/ 登录；其他地址可能无法同步账号与更新。": "You opened the game via {origin}. Please sign in at the official address {official}/ instead; other addresses may not sync your account or updates.",
-  "已复制": "Copied"
+  "已复制": "Copied",
+  "全部开启": "Turn on all",
+  "全部关闭": "Turn off all",
+  "新房间自动开启上次的插件": "New rooms turn on my last selection",
+  "Keel 插件：工作台只显示它，不会写入；请用 tools/keel.mjs 修改。": "Keel plugin: the studio shows it but never writes it. Edit it with tools/keel.mjs."
 }

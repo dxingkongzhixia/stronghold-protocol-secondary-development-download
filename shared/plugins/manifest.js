@@ -62,6 +62,8 @@ import { parsePluginCategory } from './category.js';
 
 /** A plugin folder's manifest file (manifest 2). */
 export const PLUGIN_MANIFEST = 'plugin.json';
+/** A plugin's native Keel manifest (manifest 3). When present it is the source of truth; `plugin.json` is not read. */
+export const KEEL_MANIFEST = 'plugin.keel.json';
 /** A pack folder's manifest file (manifest 1, packs/<id>/). */
 export const PACK_MANIFEST = 'pack.json';
 /** The format of GET /plugins/index.json. */
@@ -816,7 +818,7 @@ export function readPluginManifest(raw, ctx) {
 /** Documents a plugin may carry next to its files: never served, never counted against its class. */
 const isDocument = (rel) => /\.(?:md|txt)$/i.test(rel) || /^(?:.*\/)?(?:README|LICEN[CS]E|COPYING|NOTICE|AUTHORS|CHANGELOG|CREDITS)$/i.test(rel);
 /** The manifest and the lock file `tools/plugin.mjs pack` writes (shared/plugins/visual.js LOCK_FILE). */
-const isOwnFile = (rel) => rel === PLUGIN_MANIFEST || rel === 'plugin.lock.json';
+const isOwnFile = (rel) => rel === PLUGIN_MANIFEST || rel === KEEL_MANIFEST || rel === 'plugin.lock.json';
 
 /**
  * Every path the manifest names, with where it is named.
@@ -839,7 +841,12 @@ export function declaredPaths(manifest) {
  * @param {{ rel: string, bytes: number, link?: boolean }[]} files every file of the folder, `rel` relative to it
  * @returns {{ problems: string[], warnings: string[], issues: import('./errors.js').PluginIssue[], bytes: number, count: number }}
  */
-export function checkPluginFiles(manifest, files) {
+/**
+ * @param {any} manifest @param {{ rel: string, bytes?: number, link?: boolean }[]} files
+ * @param {{ executable?: Set<string> }} [opts] executable: module entries a native Keel manifest may run (a policy's
+ *   `.js`, which the manifest-2 class it projects to would not carry)
+ */
+export function checkPluginFiles(manifest, files, opts = {}) {
   const list = issueList();
   const kind = PLUGIN_CLASSES[manifest.class] || PLUGIN_CLASSES.content;
   const clientDir = manifest.class === 'ui' && manifest.entry?.client ? manifest.entry.client.replace(/[^/]*$/, '') : null;
@@ -855,7 +862,7 @@ export function checkPluginFiles(manifest, files) {
     if (isOwnFile(rel) || isDocument(rel)) continue;
     count++;
     const ext = extOf(rel);
-    if (!kind.ext.includes(ext)) { list.problem('PLUGIN_FILE_TYPE', `${rel}: ${ext || 'a file without an extension'} is not a file a ${manifest.class} plugin may carry (${kind.ext.join(' ')}, documents)`, { file: rel, ext, class: manifest.class }); continue; }
+    if (!kind.ext.includes(ext) && !(opts.executable?.has(rel))) { list.problem('PLUGIN_FILE_TYPE', `${rel}: ${ext || 'a file without an extension'} is not a file a ${manifest.class} plugin may carry (${kind.ext.join(' ')}, documents)`, { file: rel, ext, class: manifest.class }); continue; }
     if (clientDir !== null && ['.html', '.js', '.css', '.png'].includes(ext) && !rel.startsWith(clientDir)) list.problem('PLUGIN_FILE_FRAME', `${rel}: a frame file outside the folder of entry.client (${clientDir || 'the plugin folder'})`, { file: rel });
     if (ext === '.json' && f.bytes > PLUGIN_LIMITS.jsonBytes) list.problem('PLUGIN_FILE_SIZE', `${rel}: ${(f.bytes / 1048576).toFixed(1)} MB, larger than the ${PLUGIN_LIMITS.jsonBytes / 1048576} MB a JSON file may be`, { file: rel });
   }

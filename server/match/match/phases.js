@@ -444,6 +444,11 @@ export class MatchPhases {
   _startRoundAfterOffers(r) {
     this.phase = PHASE.ROUND_START;
     this.round = r;
+    this.keelRun('match.onRoundStart', { round: r });
+    {
+      const ps = this.alivePlayers()[0];
+      this.keelRun('policy.decide', { round: r, observation: { round: r, gold: ps?.funds ?? 0, lives: ps?.lp ?? 0 }, legal: [] });
+    }
     this.fields = [];
     this.watchers.clear();
     this.unitePlan = null;

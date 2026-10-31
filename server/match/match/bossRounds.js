@@ -167,8 +167,9 @@ export class MatchBoss {
     this._finalEnding = null;
     this._bossStartAt = this.sched.now();
     this.watchers.clear();
-    if (!recs.some((f) => this._authorityFor(f))) {
-      // nobody to simulate on a client: the server runs every boss field (FieldRunner, no streaming)
+    const clientCapable = recs.some((f) => this._authorityFor(f) || this._executorCandidates(f, null, recs).length);
+    if (!clientCapable) {
+      // nobody can simulate it (no player authority, no executor browser): the server runs every boss field
       this.fields = recs;
       for (const f of recs) {
         f.mode = 'server';
@@ -192,6 +193,7 @@ export class MatchBoss {
     }
     this._launch(recs);
     this._watchBossFields(recs);
+    this._sendExecutors(recs);
     this.markPublic();
     this._broadcastPool(true);
     this._bossClockOn = true;
@@ -334,12 +336,14 @@ export class MatchBoss {
     const next = this._authorityFor(f, prev);
     if (next) {
       f.authority = next;
+      f.background = false;
+      f.executor = null;
       f.lastProgressAt = this.sched.now();
       if (prev) this.sendTo(prev, { t: 'b.end', battleId: f.battleId, fieldId: f.fieldId, reason: 'takeover' });
       this._sendStart(next, f);
       return;
     }
-    this._runOnServer(f, why);
+    this._delegateField(f, why);
   }
 
   _bossClockTick() {

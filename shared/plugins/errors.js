@@ -145,6 +145,16 @@ export const PLUGIN_ERRORS = Object.freeze({
     zh: '插件文件夹里没有 plugin.json', en: 'The plugin folder has no plugin.json',
     fix: { zh: '每个插件文件夹都要有一个 plugin.json（插件的清单）。在工作台点「新建插件」，或运行 node tools/plugin.mjs new，就会生成一个。旧式的 pack.json 是 packs/ 文件夹里的语言包用的。', en: 'Every plugin folder needs a plugin.json (its manifest). The studio\'s 新建插件 or node tools/plugin.mjs new writes one. The older pack.json belongs to a language pack in packs/.' },
   },
+  PLUGIN_LEGACY_REMOVED: {
+    level: 'problem', doc: D.manifest,
+    zh: '旧 loader 已删除：这个插件还是 manifest 2（plugin.json），不会再被加载', en: 'The legacy loader is gone: this plugin is still manifest 2 (plugin.json) and is no longer loaded',
+    fix: { zh: '运行 node tools/keel.mjs import <id> --write 生成 manifest 3 的 plugin.keel.json，再运行 node tools/keel.mjs check <id> --strict。', en: 'Run node tools/keel.mjs import <id> --write to create the manifest 3 plugin.keel.json, then node tools/keel.mjs check <id> --strict.' },
+  },
+  PLUGIN_KEEL_NATIVE: {
+    level: 'problem', doc: 'docs/keel/RUNTIME.md#8-已知边界',
+    zh: '「{id}」声明了 native trust（trusted 插件），Keel 不执行它', en: '“{id}” declares native trust (a trusted plugin): Keel does not execute it',
+    fix: { zh: '把原生代码写成 sim / match / policy 模块，并声明 trust: "sandbox"；Keel 不支持受信页面/服务端代码。', en: 'Write the native code as sim / match / policy modules with trust: "sandbox"; Keel does not support trusted page/server code.' },
+  },
   PLUGIN_JSON: {
     level: 'problem', doc: D.files,
     zh: '{where} 读不出来：它不是有效的 JSON，或者太大', en: '{where} cannot be read: it is not valid JSON, or too large',
@@ -491,6 +501,18 @@ export const PLUGIN_ERRORS = Object.freeze({
     level: 'studio', doc: D.studio,
     zh: '已经有一个叫「{id}」的插件了', en: 'There is a plugin “{id}” already',
     fix: { zh: '换一个 id，或者在列表里打开那个插件接着改。', en: 'Choose another id, or open that plugin from the list.' },
+  },
+  PLUGIN_STUDIO_KEEL_READONLY: {
+    level: 'studio', doc: D.studio,
+    zh: '「{id}」的这个部分仍是只读的 Keel 内容（外观槽位 / 预览），请在「清单」页编辑 manifest 3。',
+    en: '“{id}”: this part is still read-only for Keel (art slots / preview); edit the manifest 3 on the Manifest tab.',
+    fix: { zh: '在「清单」页直接编辑 manifest 3，或用 tools/keel.mjs 修改模块文件。', en: 'Edit the manifest 3 on the Manifest tab, or change module files with tools/keel.mjs.' },
+  },
+  PLUGIN_STUDIO_KEEL_MANIFEST: {
+    level: 'studio', doc: D.studio,
+    zh: '「{id}」的清单只能通过工作台的“保存清单”写入（会先校验 manifest 3 与模块图）。',
+    en: '“{id}”: the manifest is written only through the studio\'s Save manifest action (it validates manifest 3 and the module graph).',
+    fix: { zh: '在「清单」页保存，或运行 node tools/keel.mjs check <id> 查看问题。', en: 'Save on the Manifest tab, or run node tools/keel.mjs check <id> to see the findings.' },
   },
   PLUGIN_STUDIO_TEMPLATE: {
     level: 'studio', doc: D.studio,

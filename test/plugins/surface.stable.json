@@ -1052,6 +1052,10 @@
     "anchor": "server/studio/index.js#STUDIO_ROUTES"
   },
   {
+    "name": "studio.route.POST /studio/api/plugins/:id/modules",
+    "anchor": "server/studio/index.js#STUDIO_ROUTES"
+  },
+  {
     "name": "studio.route.POST /studio/api/plugins/:id/sections",
     "anchor": "server/studio/index.js#STUDIO_ROUTES"
   },
@@ -1225,6 +1229,14 @@
   },
   {
     "name": "error.PLUGIN_NO_MANIFEST",
+    "anchor": "shared/plugins/errors.js#PLUGIN_ERRORS"
+  },
+  {
+    "name": "error.PLUGIN_KEEL_ONLY",
+    "anchor": "shared/plugins/errors.js#PLUGIN_ERRORS"
+  },
+  {
+    "name": "error.PLUGIN_KEEL_NATIVE",
     "anchor": "shared/plugins/errors.js#PLUGIN_ERRORS"
   },
   {
@@ -1493,6 +1505,14 @@
   },
   {
     "name": "error.PLUGIN_STUDIO_EXISTS",
+    "anchor": "shared/plugins/errors.js#PLUGIN_ERRORS"
+  },
+  {
+    "name": "error.PLUGIN_STUDIO_KEEL_READONLY",
+    "anchor": "shared/plugins/errors.js#PLUGIN_ERRORS"
+  },
+  {
+    "name": "error.PLUGIN_STUDIO_KEEL_MANIFEST",
     "anchor": "shared/plugins/errors.js#PLUGIN_ERRORS"
   },
   {

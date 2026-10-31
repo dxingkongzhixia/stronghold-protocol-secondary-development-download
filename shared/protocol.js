@@ -679,8 +679,9 @@ export const S2C = [
   // `records` are the already-public in-game fields; no account id / email / token is ever included.
   'stats.records',
   // client-side combat (DESIGN §14): b.start { battleId, fieldId, kind, spec, authoritative, startAt, serverNow, elapsed,
-  // speed, watch? } · b.pool { hp, max, teamLp, acked: { [fieldId]: cumulative boss damage counted } } ·
-  // b.end { battleId, fieldId, reason }
+  // speed, watch?, background? } · b.pool { hp, max, teamLp, acked: { [fieldId]: cumulative boss damage counted } } ·
+  // b.end { battleId, fieldId, reason }. `background` = a bot/takeover field delegated to this browser; it is simulated
+  // and reported without becoming the view.
   'b.start', 'b.pool', 'b.end',
   // a delegated bot layout rehearsal (DESIGN §14): b.rehearsal { taskId, playerId, cap, specs } — the host's browser
   // runs the candidate BattleSpecs off the page's main thread and answers with a C2S b.rehearsalResult ·

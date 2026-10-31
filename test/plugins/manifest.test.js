@@ -340,18 +340,16 @@ test('0.3.x app compatibility: cosmetic/ui/lang/content run on the fork, script/
 });
 
 
-test('mainline 0.3.x templates: cosmetic and content load with the compat range, script stays strict', () => {
-  const cosmetic = JSON.parse(readFileSync(new URL('../../plugins/_template/cosmetic/plugin.json', import.meta.url), 'utf8'));
-  cosmetic.app = '>=0.3.0 <0.4.0';
+test('mainline 0.3.x manifests: cosmetic and content load with the compat range, script stays strict', () => {
+  const base = { manifest: 2, name: { zh: '模板' }, version: '1.0.0', app: '>=0.3.0 <0.4.0', api: 1, scope: ['room'] };
+  const cosmetic = { ...base, class: 'cosmetic', permissions: ['assets.override'], assets: { chars: { char_102_texas: { avatar: 'a.png' } } } };
   assert.equal(readPluginManifest(cosmetic, { id: 'cosmetic-template', app: '0.4.0' }).manifest.compatible, true);
-  const content = JSON.parse(readFileSync(new URL('../../plugins/_template/content/plugin.json', import.meta.url), 'utf8'));
-  content.app = '>=0.3.0 <0.4.0';
+  const content = { ...base, class: 'content', permissions: ['data.patch'], data: ['data/x.json'] };
   const checked = readPluginManifest(content, { id: 'content-template', app: '0.4.0' });
   assert.equal(checked.manifest.compatible, true, 'a mainline data plugin loads: its records are validated here');
   assert.ok(checked.issues.some((i) => i.code === 'PLUGIN_APP_MISMATCH' && i.level === 'warning'),
     'and the check reminds the owner to review its gameplay');
-  const script = JSON.parse(readFileSync(new URL('../../plugins/_template/script/plugin.json', import.meta.url), 'utf8'));
-  script.app = '>=0.3.0 <0.4.0';
+  const script = { ...base, class: 'script', permissions: ['sim.code'], entry: { sim: 'sim/index.js' } };
   assert.equal(readPluginManifest(script, { id: 'script-template', app: '0.4.0' }).manifest.compatible, false,
     'code plugins still need review on this fork');
 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fxFixture } from '../helpers/fxFixtures.js';
-import { cosmetic, png } from '../helpers/pluginFixtures.js';
+import { cosmetic, png, writePlugin } from '../helpers/pluginFixtures.js';
 import { createPluginRegistry, readVanillaAssets } from '../../server/plugins/registry.js';
 import { buildPluginLock } from '../../server/plugins/pack.js';
 
@@ -22,7 +22,7 @@ test('plugin checks see newly extracted official references; local changes inval
 test('a cosmetic reference is revalidated after extraction and disappears when that local manifest is removed', t => {
   const f = fxFixture(t);
   f.put('data/assets.json', { chars: {} });
-  f.put('plugins/borrow/plugin.json', cosmetic({ id: 'borrow', permissions: ['assets.add'], assets: { chars: { char_x_borrow_one: { ref: 'char_9001_test' } } } }));
+  writePlugin(path.join(f.root, 'plugins/borrow'), cosmetic({ id: 'borrow', permissions: ['assets.add'], assets: { chars: { char_x_borrow_one: { ref: 'char_9001_test' } } } }));
   const dirs = Object.fromEntries(['public', 'data', 'packs', 'plugins'].map(n => [n === 'public' ? 'publicDir' : n === 'data' ? 'dataDir' : n + 'Dir', path.join(f.root, n)]));
   const registry = createPluginRegistry(dirs, { recheckMs: 0 });
   assert.equal(registry.plugins().some(p => p.id === 'borrow'), false);
@@ -35,10 +35,10 @@ test('a cosmetic reference is revalidated after extraction and disappears when t
 test('optional art never turns assets.add into assets.override or changes an own-art plugin identity', t => {
   const f = fxFixture(t), id = 'char_9001_test';
   f.put('data/assets.json', { chars: { char_1_pool: { avatar: '/pool.png' } } });
-  f.put('plugins/own-art/plugin.json', cosmetic({ id: 'own-art', permissions: ['assets.add'], assets: { chars: { [id]: { avatar: 'own.png' } } } }));
+  writePlugin(path.join(f.root, 'plugins/own-art'), cosmetic({ id: 'own-art', permissions: ['assets.add'], assets: { chars: { [id]: { avatar: 'own.png' } } } }));
   f.put('plugins/own-art/own.png', png(2, 2));
   // A roster entry still requires override, even if local art also names it.
-  f.put('plugins/roster/plugin.json', cosmetic({ id: 'roster', permissions: ['assets.add'], assets: { chars: { char_1_pool: { avatar: 'own.png' } } } }));
+  writePlugin(path.join(f.root, 'plugins/roster'), cosmetic({ id: 'roster', permissions: ['assets.add'], assets: { chars: { char_1_pool: { avatar: 'own.png' } } } }));
   f.put('plugins/roster/own.png', png(2, 2));
   const dirs = Object.fromEntries(['public', 'data', 'packs', 'plugins'].map(n => [n === 'public' ? 'publicDir' : n === 'data' ? 'dataDir' : n + 'Dir', path.join(f.root, n)]));
   const registry = createPluginRegistry(dirs, { recheckMs: 0 });

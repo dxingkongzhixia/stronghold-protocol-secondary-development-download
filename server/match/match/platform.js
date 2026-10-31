@@ -31,8 +31,47 @@ export class MatchPlatform {
       if (!this.ended) {
         this.dispatchAlive('onMatchStart', { round: 0 });
         this.dispatchGameplay('onMatchStart', { round: 0 });
+        this.keelRun('match.onMatchStart', { round: 0 });
       }
     });
+  }
+
+  /** Run one Keel match/policy hook and publish its views/HUD. */
+  keelRun(name, ctx = {}) {
+    if (!this.keelMatch) return null;
+    const before = this.keelMatch.errors.length;
+    this.keelMatch.runHook(name, ctx);
+    if (this.keelMatch.errors.length > before) {
+      const e = this.keelMatch.errors[this.keelMatch.errors.length - 1];
+      this.reportError(`keel ${name}`, new Error(`${e.module}: ${e.code} ${e.message}`));
+    }
+    for (const view of Object.values(this.keelMatch.views)) this.publishKeelView(view);
+    this.markPublic();
+    if (name === 'match.checkEnd' && this.keelMatch.finished && !this.ended) {
+      const f = this.keelMatch.finished;
+      this.finish({ victory: f.winner === 'players', reason: f.reason ?? 'keel' });
+    }
+    return this.keelMatch.finished;
+  }
+
+  /** Translate a Keel view into the existing declarative pluginView HUD. */
+  publishKeelView(view) {
+    if (!view || !this.keelUi?.length) return;
+    for (const { id, ui } of this.keelUi) {
+      const bySlot = {};
+      for (const slot of ui.slots ?? []) {
+        const target = slot.slot === 'hud.right' ? 'right' : 'overlay';
+        const blocks = [];
+        for (const child of slot.children ?? []) {
+          const key = String(child.value ?? '').split('.').pop();
+          if (!(key in view)) continue;
+          if (child.type === 'text') blocks.push({ type: 'text', label: key, text: String(view[key]) });
+          if (child.type === 'bar') blocks.push({ type: 'bar', label: key, value: Number(view[key]), max: Number(child.max ?? 100) });
+        }
+        if (blocks.length) bySlot[target] = (bySlot[target] ?? []).concat(blocks);
+      }
+      if (Object.keys(bySlot).length) this.setPluginView(id, { hud: bySlot });
+    }
   }
 
   /** Run a lifecycle hook for every alive player (script plugins see it once per player). */

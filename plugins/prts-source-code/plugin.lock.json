@@ -503,6 +503,10 @@
     "plugin.json": {
       "sha256": "5c1a82de527f76ddeb3ec116b0375fbebf2d2b13c8f3e6481d98a396eb73b2d6",
       "bytes": 2595
+    },
+    "plugin.keel.json": {
+      "sha256": "621ee1dcc1b6286710bb9bd27d43574c78dbf72a1bf7c0f4e61a61e03a067f4d",
+      "bytes": 4367
     }
   },
   "spine": {

@@ -1,0 +1,21 @@
+{
+  "manifest": 3,
+  "id": "keel-lang",
+  "name": "English demo",
+  "description": "A native Keel lang module: one small UI string table.",
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "lang": 1 },
+  "scope": ["personal"],
+  "trust": "data",
+  "sourceLang": "en",
+  "authors": ["your name"],
+  "license": "CC0-1.0",
+  "modules": [
+    {
+      "kind": "lang",
+      "entry": "lang/en.json",
+      "permissions": []
+    }
+  ]
+}

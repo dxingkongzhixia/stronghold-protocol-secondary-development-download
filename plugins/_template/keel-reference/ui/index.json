@@ -1,0 +1,12 @@
+{
+  "slots": [
+    {
+      "slot": "hud.right",
+      "when": "round >= 1",
+      "children": [
+        { "type": "text", "value": "Keel reference" },
+        { "type": "text", "value": "content + asset + sim + policy + ui" }
+      ]
+    }
+  ]
+}

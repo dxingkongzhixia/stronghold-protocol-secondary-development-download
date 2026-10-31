@@ -1,0 +1,21 @@
+{
+  "lock": 1,
+  "id": "keel-cosmetic",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "media/sample.ogg": {
+      "sha256": "97858a0708a4238473c4c023d3c337592eac57eaebf9b3a72a0e1b809387b5b8",
+      "bytes": 649
+    },
+    "media/sample.png": {
+      "sha256": "090965c70a6d081049f513ac8c36c7608ef2f81784fab1ae7f76f1faa1661020",
+      "bytes": 132
+    },
+    "plugin.json": {
+      "sha256": "7ccb840ab3ddd4d79d82b715b482497ee68c95f86d6658a599c43b24c83e896b",
+      "bytes": 1094
+    }
+  },
+  "spine": {}
+}

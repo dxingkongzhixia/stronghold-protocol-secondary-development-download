@@ -186,6 +186,7 @@ export class MatchSettle {
     this.deadline = 0;
     for (const f of this.fields) f.live = false;
     this.outcome = { victory: !!victory, hiddenReached: this.hiddenReached, hiddenCleared: !!hiddenCleared, reason };
+    this.keelRun('match.onMatchEnd', { outcome: { ...this.outcome } });
     for (const ps of this.order) {
       if (ps.left) continue;
       try { this.dispatch(ps, 'onMatchEnd', { outcome: { ...this.outcome } }); }

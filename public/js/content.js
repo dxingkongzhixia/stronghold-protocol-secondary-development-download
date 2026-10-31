@@ -406,11 +406,13 @@ const CONTENT_FAILED = N_('房间的插件内容未能通过校验，请刷新�
  * `kitted` (the operators its plugins add to a 自选 slot's list — room.state.content.kittedExtra; null: none, the server's
  * list alone).
  */
-export const contentSet = createStore({ cs: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null });
+export const contentSet = createStore({ cs: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
 /** The checked set the page holds: { cs, index, values: Map<name, JSON>, bounds } (the runner's data), or null. */
 let held = null;
 /** Pages waiting for a content set (contentFor): cs → resolvers. */
 const waiting = new Map();
+/** cs -> resolvers waiting for this browser's native-code answer (contentFor). */
+const waitingNative = new Map();
 
 /**
  * One file of a content set as bytes, checked against its manifest entry (size and SHA-256 of the bytes), then decoded
@@ -420,7 +422,7 @@ const waiting = new Map();
  *   onBytes?: (n: number) => void }} opts
  * @returns {Promise<any>} the parsed JSON (rejects with the reason)
  */
-export async function fetchChecked(url, want, { fetch: doFetch, retryDelays = CONTENT_RETRY_MS, wait = sleep, timeoutMs = CONTENT_TIMEOUT_MS, onBytes = null }) {
+export async function fetchChecked(url, want, { fetch: doFetch, retryDelays = CONTENT_RETRY_MS, wait = sleep, timeoutMs = CONTENT_TIMEOUT_MS, onBytes = null, parse = 'json' }) {
   for (let attempt = 0; ; attempt++) {
     const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
     let timer = null;
@@ -440,6 +442,7 @@ export async function fetchChecked(url, want, { fetch: doFetch, retryDelays = CO
       }
       onBytes?.(bytes.length);
       // decoded after the check (a BOM is part of the bytes, not of the JSON)
+      if (parse === 'text') return new TextDecoder('utf-8').decode(bytes);
       try { return JSON.parse(new TextDecoder('utf-8').decode(bytes)); } catch { throw new Error(`${url}: not JSON`); }
     }
     const transient = !res || res.status >= 500 || res.status === 408 || res.status === 429 || (res.ok && !buf);
@@ -526,14 +529,44 @@ export async function loadContentSet(cs, { fetch: doFetch = defaultFetch, retryD
     if (scriptExecution(scripts) !== (sandbox ? 'sandbox' : 'trusted')) throw new Error('script execution mode mismatch');
     if (!sandbox) { await checkBrowserScripts(scripts,cs,doFetch); nativeVerified = true; }
   }
-  return { cs, index, values, bounds, scripts, nativeVerified, canSim: !listed(index.scripts).length || consent || sandbox };
+  // Native Keel modules (sim / match / policy): the set names each source and its hash; their bytes are fetched now,
+  // but they only execute after this browser's explicit native-code consent (simContent).
+  const keel = { plugins: [] };
+  const keelList = isObj(index.keel) && Array.isArray(index.keel.plugins) ? index.keel.plugins.filter(isObj) : [];
+  const keelTrusted = keelList.some((p) => p.execution === 'trusted');
+  const native = keelList.filter((p) => typeof p.id === 'string' && Array.isArray(p.modules)
+    && p.modules.some((m) => isObj(m) && ['sim', 'match', 'policy'].includes(m.kind))).map((p) => ({
+    id: p.id,
+    name: p.name ?? null,
+    authors: Array.isArray(p.authors) ? p.authors.filter((a) => typeof a === 'string') : [],
+    version: p.version ?? null,
+    execution: p.execution === 'trusted' ? 'trusted' : 'sandbox',
+    modules: p.modules.filter((m) => isObj(m) && ['sim', 'match', 'policy'].includes(m.kind))
+      .map((m) => ({ kind: m.kind, entry: m.entry, sha256: m.sha256 })),
+  }));
+  if (!keelTrusted || consent) for (const p of keelList) {
+    if (typeof p.id !== 'string' || !Array.isArray(p.modules)) continue;
+    const part = (index.plugins || []).find((x) => x && x.id === p.id);
+    const modules = [];
+    for (const m of p.modules) {
+      if (!isObj(m) || typeof m.entry !== 'string' || !isContentHash(m.sha256)) throw new Error('keel module is not a pinned entry');
+      const rel = `keel/${p.id}/${m.entry}`;
+      if (part?.files?.[rel] !== m.sha256) throw new Error('keel module not pinned by cs');
+      const url = `${own}${rel}`;
+      modules.push({ kind: m.kind, entry: m.entry, sha256: m.sha256, permissions: Array.isArray(m.permissions) ? m.permissions : [],
+        ...(m.state ? { state: m.state } : {}),
+        source: await fetchChecked(url, { url, sha256: m.sha256 }, { fetch: doFetch, retryDelays, wait, timeoutMs, parse: 'text' }) });
+    }
+    if (modules.length) keel.plugins.push({ id: p.id, execution: p.execution === 'trusted' ? 'trusted' : 'sandbox', version: p.version ?? null, state: p.state ?? null, modules });
+  }
+  return { cs, index, values, bounds, scripts, keel, native, nativeVerified, canSim: (!listed(index.scripts).length && !keelList.length) || consent || ((sandbox || keelList.length > 0) && !keelTrusted) };
 }
 
 /**
  * The content set the battle runner simulates on now (public/js/battle/runner.js): `{ cs, data, bounds }` of the checked
  * set the page holds, or null (the original content: the runner loads /data/ itself).
  */
-export const simContent = () => (held && held.canSim !== false ? { scripts:held.scripts || [], hashInput:held.index, nativeVerified:held.nativeVerified,
+export const simContent = () => (held && held.canSim !== false && (!held.native?.length || hasNativeConsent(held.cs)) ? { scripts:held.scripts || [], keel:held.keel || null, hashInput:held.index, nativeVerified:held.nativeVerified,
   cs: held.cs, data: Object.fromEntries(held.values), bounds: held.bounds ?? null } : null);
 
 /**
@@ -543,7 +576,14 @@ export const simContent = () => (held && held.canSim !== false ? { scripts:held.
  * @returns {Promise<{ cs: string, data: Record<string, any>, bounds: any } | null>}
  */
 export function contentFor(cs) {
-  if (held && held.cs === cs) return Promise.resolve(simContent());
+  if (held && held.cs === cs) {
+    // A native-code set this browser has not authorized yet: the runner waits for the answer instead of failing the
+    // battle; accepting resolves with the set, declining with null.
+    if (held.native?.length && !hasNativeConsent(cs)) {
+      return new Promise((resolve) => { const list = waitingNative.get(cs) || []; list.push(resolve); waitingNative.set(cs, list); });
+    }
+    return Promise.resolve(simContent());
+  }
   const s = contentSet.get();
   if (s.cs !== cs || s.status !== 'loading') return Promise.resolve(null);
   return new Promise((resolve) => { const list = waiting.get(cs) || []; list.push(resolve); waiting.set(cs, list); });
@@ -555,6 +595,15 @@ function settleWaiting(cs) {
     if (cs && key !== cs) continue;
     waiting.delete(key);
     const v = held && held.cs === key ? simContent() : null;
+    for (const r of list) r(v);
+  }
+}
+/** Resolve contentFor()'s native-consent waiters of `cs` (true: the set, false: null). */
+function settleNative(cs, accepted) {
+  for (const [key, list] of [...waitingNative]) {
+    if (cs && key !== cs) continue;
+    waitingNative.delete(key);
+    const v = accepted && held && held.cs === key ? simContent() : null;
     for (const r of list) r(v);
   }
 }
@@ -597,7 +646,8 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
     req++;
     if (held) { held = null; data.setContent(null); }
     settleWaiting(null);
-    if (contentSet.get().cs !== null || contentSet.get().status !== 'idle') contentSet.set({ cs: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null });
+    settleNative(null, false);
+    if (contentSet.get().cs !== null || contentSet.get().status !== 'idle') contentSet.set({ cs: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
   };
   const apply = (set) => {
     held = set;
@@ -606,15 +656,19 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
     const overlay = (lang) => (isObj(i18n[lang]) ? fetchChecked(i18n[lang].url, i18n[lang], { fetch: doFetch, retryDelays, wait }) : Promise.resolve(null));
     data.setContent({ id: set.cs, values: set.values, overlay, langs: Object.keys(i18n) });
     const extra = store.get()?.room?.content?.kittedExtra;
-    contentSet.set({ status: 'ready', error: null, kitted: Array.isArray(extra) ? extra.filter((x) => typeof x === 'string').slice(0, 200) : null });
+    const native = Array.isArray(set.native) ? set.native : [];
+    const nativeConsent = !native.length || hasNativeConsent(set.cs);
+    contentSet.set({ status: 'ready', error: null, native, nativeConsent, kitted: Array.isArray(extra) ? extra.filter((x) => typeof x === 'string').slice(0, 200) : null });
     settleWaiting(set.cs);
-    if (set.canSim || !store.get()?.room?.seats?.some(s => s?.playerId === store.get()?.me?.playerId)) tell(set.cs, true);
+    if ((set.canSim && nativeConsent) || !store.get()?.room?.seats?.some(s => s?.playerId === store.get()?.me?.playerId)) tell(set.cs, true);
+    // A native-code set the player has not accepted yet: keep the seat un-ready and let the room show the consent bar.
   };
   const load = (cs, consent = false) => {
     const mine = ++req;
     if (held) { held = null; data.setContent(null); }
     settleWaiting(null);
-    contentSet.set({ cs, status: 'loading', loaded: 0, total: 0, error: null, kitted: null });
+    settleNative(null, false);
+    contentSet.set({ cs, status: 'loading', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
     // A set without scripts is self-contained: its checked values can be laid again when the host switches the same
     // plugin back on. (Script sets stay on the consent/import path above.)
     const cached = checked.get(cs);
@@ -661,11 +715,21 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
     if (cur.cs !== cs || (held?.cs === cs && held.canSim === false && consent)) { load(cs,consent); return; }
     // the page holds the room's set, its seat does not show it (the room changed its set and back, a reconnect): again
     const seat = mySeat(s);
-    if (seat && cur.status === 'ready' && seat.content !== 'ready' && (!s.room.content.trusted || consent || !s.room.seats?.includes(seat))) tell(cs, true);
+    const nativeReady = !cur.native?.length || hasNativeConsent(cs);
+    if (seat && cur.status === 'ready' && nativeReady && seat.content !== 'ready' && (!s.room.content.trusted || consent || !s.room.seats?.includes(seat))) tell(cs, true);
     else if (seat && cur.status === 'failed' && seat.content !== 'failed') tell(cs, false);
   };
   const off = store.subscribe((s) => sync(s));
   sync(store.get());
+  // The room's consent bar calls these: consent is this browser's decision, remembered per content set.
+  nativeAccept = (cs) => {
+    if (held?.cs !== cs) return;
+    contentSet.set({ nativeConsent: true });
+    if (held.canSim) tell(cs, true);
+  };
+  nativeDecline = (cs) => {
+    if (held?.cs === cs) contentSet.set({ nativeConsent: false });
+  };
   if (typeof window !== 'undefined') globalThis.__SP_CONTENT__ = contentHooks();
   return () => { off(); drop(); };
 }
@@ -692,4 +756,31 @@ export function hasScriptConsent(cs, storage) {
 export function rememberScriptConsent(cs, accept, storage) {
   if (accept) pageConsent.add(cs); else pageConsent.delete(cs);
   try { storage ??= globalThis.localStorage; if (accept) storage?.setItem('sp.plugin.consent.'+cs,'yes'); else storage?.removeItem('sp.plugin.consent.'+cs); } catch { /* storage unavailable */ }
+}
+
+// Native Keel code (sim / match / policy) runs on this machine: it needs its own explicit consent, remembered per cs.
+// The server owner's SP_PLUGIN_SCRIPTS + lock/pin gate decides whether the room may offer it; this decides whether THIS
+// browser runs it. The SES sandbox frame is defense in depth, not a promise against a sandbox escape.
+const pageNativeConsent = new Set();
+/** @param {string} cs @param {{ getItem?: Function } | null} [storage] */
+export function hasNativeConsent(cs, storage) {
+  try { return pageNativeConsent.has(cs) || (storage ?? globalThis.localStorage)?.getItem('sp.plugin.native.'+cs) === 'yes'; } catch { return pageNativeConsent.has(cs); }
+}
+/** @param {string} cs @param {boolean} accept @param {{ setItem?: Function, removeItem?: Function } | null} [storage] */
+export function rememberNativeConsent(cs, accept, storage) {
+  if (accept) pageNativeConsent.add(cs); else pageNativeConsent.delete(cs);
+  try { storage ??= globalThis.localStorage; if (accept) storage?.setItem('sp.plugin.native.'+cs,'yes'); else storage?.removeItem('sp.plugin.native.'+cs); } catch { /* storage unavailable */ }
+}
+let nativeAccept = null, nativeDecline = null;
+/** Accept native code for `cs`: remember it and, when the set is already held, mark this seat ready. */
+export function acceptNativeConsent(cs) {
+  rememberNativeConsent(cs, true);
+  settleNative(cs, true);
+  if (held?.cs === cs) nativeAccept?.(cs);
+}
+/** Decline native code for `cs`: remember it and keep this seat un-ready. */
+export function declineNativeConsent(cs) {
+  rememberNativeConsent(cs, false);
+  settleNative(cs, false);
+  if (held?.cs === cs) nativeDecline?.(cs);
 }

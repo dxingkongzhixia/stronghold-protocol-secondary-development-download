@@ -1,5 +1,7 @@
 # PLUGINS.md — plugins (插件)
 
+> **Keel 现状（0.4.0）：** manifest 3 是唯一插件入口；manifest 2 先 `node tools/keel.mjs import <id> --write` 迁移。本文保留 manifest-2 / v2 插件规范作为作者参考；Keel 功能总览见 [`keel/FEATURES.md`](keel/FEATURES.md)，manifest 3 见 [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md)。
+
 A **plugin** is a folder a server owner puts into `plugins/`: a manifest, `plugins/<id>/plugin.json`, next to the files
 it names. The interface calls them 「插件」, never 「模组」 (that word is the operators' modules). The design and its
 phases are DESIGN §32 (`docs/history/0.3.0.md`); this file is the reference.
@@ -485,7 +487,12 @@ not when only the 「自动」 marks change; the heavy rate-limit bucket): the s
 references copy over 4 MB of the art manifest [ASSUMED] (`PLUGIN_UNKNOWN`, `PLUGIN_BLOCKED`, `PLUGIN_DEPENDENCY`,
 `PLUGIN_CONFLICT`, `PLUGIN_LIMIT`), sorts it (`shared/plugins/order.js`: requires / optional / loadAfter / loadBefore, then priority, then
 id) and the room's content becomes `{ cs, vanilla: true, vs, plugins: [{ id, version, class, hash, auto? }], warnings,
-bytes }` — `cs` the vanilla one. Every member's page fetches `/vs/<vs16>/overlay.json`, checks that its composition
+bytes }` — `cs` the vanilla one. The panel also has the host's 「全部开启」 (one `room.setPlugins` with every offered plugin
+the server may switch on now; a gameplay plugin made for another app version is left out) and 「全部关闭」. The host's last
+successful choice is kept in that browser (`sp.pref.roomPlugins`) and, while 「新房间自动开启上次的插件」 is on (the
+default), a room the host creates with no plugins yet switches that set on by itself — one request, once per room; a
+plugin the server no longer offers is left out, and an auto-matched room or one where the host was handed the role after
+a migration is not touched. Every member's page fetches `/vs/<vs16>/overlay.json`, checks that its composition
 hashes to the room's `vs` (`checkVisualDoc`) and composes the art itself on the manifest it loaded (`/data/assets.json`,
 its `/assets/~<hash>/…` URLs; `shared/plugins/visual.js` prepareVisualDoc / layVisualOps): every plugin URL is built
 from the composition's file table — `/p/<id>/<the first 8 hex digits of the file's SHA-256, or of its model's>/<path>` —,
@@ -1269,7 +1276,16 @@ SDK alias linked to `/shared/plugins/sdk.js`; trusted page source unchanged), se
 `/cs/<cs16>/scripts/<id>/<entry>` with JavaScript MIME. The page verifies these exact response bytes before native
 import at that same address; simulation Workers receive the checked snapshot and only perform module imports.
 Execution mode and browser source bytes are covered by `@script`. Site CSP keeps script-src self plus importmap
-hashes, without data:, blob: or unsafe-eval; only the simulation Worker permits SES eval. The browser fetches these descriptors only after
+hashes, without data:, blob: or unsafe-eval; only the simulation Worker (`SIM_WORKER_CSP`) permits SES eval, and it is
+also where native Keel modules run. Native Keel modules additionally wait for this
+browser's own confirmation per content set (`sp.plugin.native.<cs>`, `public/js/ui/nativeConsent.js`): until then the
+seat does not become ready and the simulation does not execute them. The server never imports native sim modules: it
+reads manifests/locks and serves their sources, while a native room's battle is client-simulated. Native `match`/`policy`
+modules are not sent to the page; they run only in the server's match meta runtime (D11). In a room with native sim code,
+server-run fallback fields (bots, takeover, a boss field with no human authority) are delegated to a connected browser
+(the room host first) as a background `b.start`; only when no browser can take one does the server run it with the
+plugin's data but not its sim code. Client-result verification is off for rooms with native sim code. The browser fetches
+these descriptors only after
 its own consent. An unconsenting spectator still loads data and reads server results/snapshots, but never receives a
 script execution payload or becomes battle authority [ASSUMED]. Server bot fights, takeovers and SP_VERIFY use the
 same registered extensions in the set's child; script sets always use a process even with SP_MATCH_HOST=worker.
@@ -1806,6 +1822,8 @@ lacks). The table below is generated from it (`node tools/plugin.mjs errors --wr
 | The room will not switch it on; the panel says why | `PLUGIN_INCOMPATIBLE` | That gameplay plugin is not made for this server's game version (or its plugin API) | Use a version of the plugin made for this game version (its "app" says which), or ask its author for an update. |
 | The room will not switch it on; the panel says why | `PLUGIN_BUSY` | This server already runs as many plugin sets at once as it allows | Try again later, or pick the same plugins as a room already using some; the server owner can raise maxSets in plugins/config.json (0–128, effective within a second without a restart; default 32). |
 | The plugin is not listed (skipped); the start log and check say why | `PLUGIN_NO_MANIFEST` | The plugin folder has no plugin.json | Every plugin folder needs a plugin.json (its manifest). The studio's 新建插件 or node tools/plugin.mjs new writes one. The older pack.json belongs to a language pack in packs/. |
+| The plugin is not listed (skipped); the start log and check say why | `PLUGIN_LEGACY_REMOVED` | The legacy loader is gone: this plugin is still manifest 2 (plugin.json) and is no longer loaded | Run node tools/keel.mjs import <id> --write to create the manifest 3 plugin.keel.json, then node tools/keel.mjs check <id> --strict. |
+| The plugin is not listed (skipped); the start log and check say why | `PLUGIN_KEEL_NATIVE` | “{id}” declares native trust (a trusted plugin): Keel does not execute it | Write the native code as sim / match / policy modules with trust: "sandbox"; Keel does not support trusted page/server code. |
 | The plugin is not listed (skipped); the start log and check say why | `PLUGIN_JSON` | {where} cannot be read: it is not valid JSON, or too large | Look for a missing or extra comma, quote or bracket (no comma after the last item); a JSON file may be 8 MB at most. Editing in the studio avoids typing mistakes. |
 | The plugin is not listed (skipped); the start log and check say why | `PLUGIN_JSON_LIMIT` | {where} is beyond the JSON limits (nested too deep, or a number too large) | Nest at most 64 levels; numbers must be finite and within ±1,000,000,000. |
 | The plugin is not listed (skipped); the start log and check say why | `PLUGIN_MANIFEST_SHAPE` | plugin.json is not a JSON object at the top | The whole file is one { } object of "name": value pairs. |
@@ -1873,6 +1891,8 @@ lacks). The table below is generated from it (`node tools/plugin.mjs errors --wr
 | The studio refuses the action and says why | `PLUGIN_STUDIO_PATH` | This path cannot be used: {detail} | Files stay inside the plugin's own folder: no .., no part starting with ., no special characters, no link leading out. |
 | The studio refuses the action and says why | `PLUGIN_STUDIO_SIZE` | The file is too large (at most {max}) | Compress the picture or sound first (a portrait within 1024 px as PNG / WebP is plenty). |
 | The studio refuses the action and says why | `PLUGIN_STUDIO_EXISTS` | There is a plugin “{id}” already | Choose another id, or open that plugin from the list. |
+| The studio refuses the action and says why | `PLUGIN_STUDIO_KEEL_READONLY` | “{id}”: this part is still read-only for Keel (art slots / preview); edit the manifest 3 on the Manifest tab. | Edit the manifest 3 on the Manifest tab, or change module files with tools/keel.mjs. |
+| The studio refuses the action and says why | `PLUGIN_STUDIO_KEEL_MANIFEST` | “{id}”: the manifest is written only through the studio's Save manifest action (it validates manifest 3 and the module graph). | Save on the Manifest tab, or run node tools/keel.mjs check <id> to see the findings. |
 | The studio refuses the action and says why | `PLUGIN_STUDIO_TEMPLATE` | No such template: {template} | Pick one of the studio's templates (node tools/plugin.mjs new without arguments lists them). |
 | The studio refuses the action and says why | `PLUGIN_STUDIO_TARGET` | No target “{target}” to replace | Search by its official name (e.g. 德克萨斯) and pick one of the results. |
 | The studio refuses the action and says why | `PLUGIN_STUDIO_FILE_KIND` | This place takes {kind}; the dropped file is {ext} | A picture place takes .png .jpg .webp, a sound place .mp3 .ogg, a model place its .skel, .atlas and .png together. |

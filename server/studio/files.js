@@ -24,7 +24,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { isPluginId, isPackPath, extOf, ASSET_EXT, PLUGIN_LIMITS, PLUGIN_MANIFEST, PLUGIN_MAX_BYTES } from '../../shared/plugins/manifest.js';
+import { isPluginId, isPackPath, extOf, ASSET_EXT, PLUGIN_LIMITS, PLUGIN_MANIFEST, PLUGIN_MAX_BYTES, KEEL_MANIFEST } from '../../shared/plugins/manifest.js';
 import { LOCK_FILE } from '../../shared/plugins/visual.js';
 import { listPluginFiles } from '../plugins/registry.js';
 
@@ -120,6 +120,47 @@ export function createPluginFiles(pluginsDir) {
   const writable = (rel) => WRITABLE.includes(extOf(rel)) && rel !== LOCK_FILE;
 
   /**
+   * Is the plugin a Keel one? A `plugin.keel.json`, or a `plugin.json` whose "manifest" is 3 (registry reads both as
+   * manifest 3). The studio edits its manifest through the validated endpoint and its other files like a normal folder.
+   * @param {string} id
+   */
+  function keel(id) {
+    const top = root(id);
+    const st = fs.lstatSync(path.join(top, KEEL_MANIFEST), { throwIfNoEntry: false });
+    if (st?.isFile()) return true;
+    const plain = fs.lstatSync(path.join(top, PLUGIN_MANIFEST), { throwIfNoEntry: false });
+    if (!plain?.isFile() || plain.size > STUDIO_LIMITS.manifestBytes) return false;
+    try {
+      const manifest = JSON.parse(fs.readFileSync(path.join(top, PLUGIN_MANIFEST), 'utf8'));
+      return !!manifest && typeof manifest === 'object' && !Array.isArray(manifest) && manifest.manifest === 3;
+    } catch { return false; }
+  }
+
+  /**
+   * The descriptor file of a plugin: `plugin.keel.json` when the folder has one, else `plugin.json` (a manifest-3
+   * `plugin.json` is Keel too). A plain file, never a link.
+   * @param {string} id
+   */
+  function manifestFile(id) {
+    const top = root(id);
+    const st = fs.lstatSync(path.join(top, KEEL_MANIFEST), { throwIfNoEntry: false });
+    return st?.isFile() ? KEEL_MANIFEST : PLUGIN_MANIFEST;
+  }
+
+  /**
+   * Refuse a raw write of a Keel plugin's descriptor: only the validated manifest endpoint may write it. Other files of
+   * a native plugin (module sources, content, art) are ordinary files the studio edits.
+   * @param {string} id @param {string} [rel]
+   */
+  function assertWritable(id, rel = null) {
+    if (!keel(id)) return;
+    const descriptor = manifestFile(id);
+    if (rel === descriptor || rel === PLUGIN_MANIFEST || rel === KEEL_MANIFEST) {
+      throw new StudioError('PLUGIN_STUDIO_KEEL_MANIFEST', 409, { id, file: rel }, `${id}: write the manifest through PUT /manifest (validated)`);
+    }
+  }
+
+  /**
    * Read a file of a plugin (a regular file, no link) → { abs, st }.
    * @param {string} id @param {string} rel
    */
@@ -135,9 +176,16 @@ export function createPluginFiles(pluginsDir) {
    * renamed over the target.
    * @param {string} id @param {string} rel @param {Buffer} data
    */
-  function write(id, rel, data, { generated = false, aggregate = true } = {}) {
+  function write(id, rel, data, { generated = false, aggregate = true, manifest = false } = {}) {
+    if (!manifest) assertWritable(id, rel);
+    if (manifest) {
+      if (rel !== PLUGIN_MANIFEST && rel !== KEEL_MANIFEST) throw bad(`${rel} is not a plugin manifest`, 400);
+      if (keel(id) && rel !== manifestFile(id)) throw bad(`${id}: the manifest is ${manifestFile(id)}`, 409);
+    }
+    // a Keel plugin's module sources are code files the author owns (the trust gate still decides whether they run)
+    const keelCode = keel(id) && ['.js', '.mjs', '.html', '.css'].includes(extOf(rel));
     // Internal staged saves may publish the packer's verified lock; raw API writes still cannot.
-    if (!writable(rel) && !(generated && (rel === LOCK_FILE || ['.js', '.html', '.css'].includes(extOf(rel))))) throw new StudioError('PLUGIN_FILE_TYPE', 400, { file: rel, ext: extOf(rel) || '-', class: 'cosmetic' }, `${rel}: not a file type the studio writes`);
+    if (!writable(rel) && !keelCode && !(generated && (rel === LOCK_FILE || ['.js', '.html', '.css'].includes(extOf(rel))))) throw new StudioError('PLUGIN_FILE_TYPE', 400, { file: rel, ext: extOf(rel) || '-', class: 'cosmetic' }, `${rel}: not a file type the studio writes`);
     const limit = rel === PLUGIN_MANIFEST ? STUDIO_LIMITS.manifestBytes : extOf(rel) === '.json' ? PLUGIN_LIMITS.jsonBytes : STUDIO_LIMITS.fileBytes;
     if (data.length > limit) throw new StudioError('PLUGIN_STUDIO_SIZE', 413, { max: `${Math.round(limit / 1048576)} MB`, file: rel }, `${rel}: larger than ${limit} bytes`);
     const top = root(id);
@@ -193,6 +241,7 @@ export function createPluginFiles(pluginsDir) {
    * @param {string} id @param {string} name @param {Buffer} data
    */
   function writeSidecar(id, name, data) {
+    assertWritable(id, name);
     if (!SIDECARS.includes(name)) throw bad(`${String(name).slice(0, 40)} is not a file of the studio`);
     if (data.length > PLUGIN_LIMITS.jsonBytes) throw new StudioError('PLUGIN_STUDIO_SIZE', 413, { max: `${Math.round(PLUGIN_LIMITS.jsonBytes / 1048576)} MB`, file: name });
     const top = root(id);
@@ -215,6 +264,8 @@ export function createPluginFiles(pluginsDir) {
    * @param {string} id @param {string} rel
    */
   function moveOut(id, rel) {
+    assertWritable(id, rel);
+    if (rel === PLUGIN_MANIFEST || rel === KEEL_MANIFEST) throw bad('the plugin manifest is never moved out by the studio');
     const { abs } = stat(id, rel);
     const top = realBase();
     let cur = top;
@@ -239,7 +290,8 @@ export function createPluginFiles(pluginsDir) {
    * @param {string} id @param {string} rel
    */
   function remove(id, rel) {
-    if (rel === PLUGIN_MANIFEST) throw bad('plugin.json is never removed by the studio');
+    assertWritable(id, rel);
+    if (rel === PLUGIN_MANIFEST || rel === KEEL_MANIFEST) throw bad('the plugin manifest is never removed by the studio');
     const { abs } = stat(id, rel);
     fs.unlinkSync(abs);
     const top = root(id);
@@ -268,5 +320,5 @@ export function createPluginFiles(pluginsDir) {
   /** The plugin folders that are symbolic links (listed, never opened: root), sorted. */
   const links = () => entries().links;
 
-  return { base, root, resolve, stat, write, remove, ids, links, writable, readSidecar, writeSidecar, moveOut, list: (id) => listPluginFiles(root(id)) };
+  return { base, root, resolve, stat, write, remove, ids, links, writable, keel, manifestFile, readSidecar, writeSidecar, moveOut, list: (id) => listPluginFiles(root(id)) };
 }

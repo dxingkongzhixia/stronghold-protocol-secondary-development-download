@@ -1,0 +1,17 @@
+{
+  "lock": 1,
+  "id": "keel-demo",
+  "version": "1.0.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "plugin.json": {
+      "sha256": "9e174845511253589a6215518cdd1367dc821fd916e7a4947f5fbd866fb2ab31",
+      "bytes": 451
+    },
+    "sim/index.js": {
+      "sha256": "9ef669dcfa8a6ea4d262d3a7c5909e99790ff80947dca80042158b66c9ce1286",
+      "bytes": 1011
+    }
+  },
+  "spine": {}
+}

@@ -454,7 +454,11 @@ test('POST /admin/api/plugins/install and /uninstall move a plugin folder', asyn
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const zip = zipFiles([{
     name: 'plugin.json',
-    data: Buffer.from(JSON.stringify({ manifest: 2, id: 'installed-demo', name: 'Demo', version: '1.0.0', class: 'cosmetic', app: '>=0.4.0 <0.5.0', api: 1 })),
+    data: Buffer.from(JSON.stringify({
+      manifest: 3, id: 'installed-demo', name: 'Demo', version: '1.0.0', app: '>=0.4.0 <0.5.0',
+      api: { asset: 1 }, scope: ['room'], trust: 'data',
+      modules: [{ kind: 'asset', files: ['plugin.json'], permissions: ['asset.override'] }],
+    })),
   }]);
   const srv = await startServer({ port: 0, quiet: true, pluginsDir: dir, adminToken: 'testtok', accounts: true, db: openMemoryDb() });
   try {

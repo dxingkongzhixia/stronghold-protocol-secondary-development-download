@@ -29,6 +29,7 @@ import { PluginSettings, settingsSelection } from './pluginSettings.js';
 import { toastError } from './toasts.js';
 import { net } from '../net.js';
 import { useStore } from '../store.js';
+import { loadPref, savePref } from '../store.js';
 import { catalog, contentSet, loadCatalog, cosmeticPlugins, installedCount, pluginName, pluginDescription, unofficialPlugins } from '../content.js';
 import { toggleRecommend, uiPluginEntries, uiRecommend, visibleRecommend } from './uiPlugins.js';
 import { t, tc } from '../../../shared/i18n.js';
@@ -57,6 +58,20 @@ export function nextChoice(chosen, id, on, offered = null) {
   const out = chosen.filter((x) => x !== id && (!offered || offered.has(x)));
   if (on) out.push(id);
   return out;
+}
+
+/**
+ * The ids 「全部开启」 sends: every offered plugin, except a gameplay plugin (content / script / trusted) made for another
+ * app version the server refuses (PLUGIN_INCOMPATIBLE). A cosmetic plugin of another version is still usable.
+ * @param {any[]} plugins
+ * @returns {string[]}
+ */
+export function everyRoomPlugin(plugins) {
+  return (Array.isArray(plugins) ? plugins : []).filter((p) => {
+    if (!p || typeof p.id !== 'string') return false;
+    const gameplay = p.class === 'content' || p.class === 'script' || p.class === 'trusted';
+    return !(gameplay && p.compatible === false);
+  }).map((p) => p.id);
 }
 
 /** The plugins a room may switch on: loaded cosmetic, content, script and trusted plugins of scope `room`. */
@@ -114,6 +129,9 @@ export function PluginPanel({ open, room, myId, onClose }) {
   const cat = useStore((s) => s, Object.is, catalog);
   const installed = useStore(installedCount);
   const [busy, setBusy] = useState(null);
+  // The host's last selection, kept in this browser: the next room the host creates can switch it on with one click.
+  const remembered = useRef(loadPref('roomPlugins', null));
+  const [remember, setRemember] = useState(remembered.current?.auto !== false);
   const [group, setGroup] = useState(null);
   const inFlight = useRef(false);
   const alive = useRef(true);
@@ -132,6 +150,8 @@ export function PluginPanel({ open, room, myId, onClose }) {
   const nameOf = (id) => { const p = cat.plugins.find((x) => x.id === id); return p ? pluginName(p) : String(id ?? ''); };
   const classOf = (id) => cat.plugins.find((x) => x.id === id)?.class || f.plugins.find((x) => x.id === id)?.class || 'cosmetic';
   const anyContent = f.modded || offered.some((p) => ['content', 'script', 'trusted'].includes(p.class));
+  // 「全部开启」: every offered plugin the server may switch on now (a gameplay plugin made for another app version is not).
+  const bulkIds = everyRoomPlugin(offered);
   /** room.setPlugins with these ids (one request at a time; `what`: the row — or 'reapply' — that shows it busy). */
   const send = async (ids, what, change = null) => {
     if (inFlight.current || !f.editable) return;
@@ -139,6 +159,8 @@ export function PluginPanel({ open, room, myId, onClose }) {
     setBusy(what);
     try {
       await net.request('room.setPlugins', { plugins: settingsSelection(ids, f.plugins, change) });
+      // Remember what the host asked for (the server adds what these require): a new room offers it again.
+      savePref('roomPlugins', { ids: [...new Set(ids)], auto: remember });
     } catch (err) { toastError(err); } finally {
       inFlight.current = false;
       if (alive.current) setBusy(null);
@@ -201,6 +223,15 @@ export function PluginPanel({ open, room, myId, onClose }) {
         ${t('房间的外观插件只改变画面和声音，不影响战斗；插件为非官方制作。')}
       </p>
       ${anyContent ? html`<p class="set-hint">${t('改变玩法的插件会改变本房间的数据与规则；这样的对局为非官方对局，不计入统计总览。')}</p>` : null}
+      ${f.editable && !f.inMatch && offered.length ? html`<div class="plugpanel__bulk">
+        <${Button} variant="secondary" size="sm" icon="check" data-testid="plugin-all-on" disabled=${!!busy || !bulkIds.length} onClick=${() => send(bulkIds, 'all')}>${t('全部开启')}<//>
+        <${Button} variant="secondary" size="sm" data-testid="plugin-all-off" disabled=${!!busy || !f.count} onClick=${() => send([], 'all-off')}>${t('全部关闭')}<//>
+        <label class="plugpanel__memory">
+          <input type="checkbox" checked=${remember} disabled=${!!busy} data-testid="plugin-remember"
+            onChange=${(e) => { const on = e.currentTarget.checked; setRemember(on); savePref('roomPlugins', { ...(loadPref('roomPlugins', {}) || {}), auto: on }); }} />
+          <span>${t('新房间自动开启上次的插件')}</span>
+        </label>
+      </div>` : null}
       <${ModePicker} room=${room} f=${f} busy=${busy} onPick=${pickMode} />
       ${f.inMatch ? html`<p class="set-hint">${t('模拟进行中，插件不能更改')}</p>`
         : f.editable ? null : html`<p class="set-hint">${t('由创建者设置')}</p>`}

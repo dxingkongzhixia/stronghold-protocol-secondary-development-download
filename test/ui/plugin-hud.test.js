@@ -13,9 +13,11 @@ test('plugin HUD accepts only the bounded declarative blocks', () => {
       { type: 'bar', value: 1, max: 0 },
     ] } },
     other: { hud: { boss: [{ type: 'text', text: 'BOSS' }] } },
+    right: { hud: { right: [{ type: 'text', text: 'RIGHT' }] } },
   } };
   assert.deepEqual(pluginHudBlocks(pub, 'overlay').map((b) => b.type), ['text', 'bar', 'countdown', 'list']);
   assert.deepEqual(pluginHudBlocks(pub, 'boss').map((b) => b.text), ['BOSS']);
+  assert.deepEqual(pluginHudBlocks(pub, 'right').map((b) => b.text), ['RIGHT']);
   assert.deepEqual(pluginHudBlocks(pub, 'top'), []);
   assert.deepEqual(pluginHudBlocks(null, 'overlay'), []);
   assert.deepEqual(pluginHudBlocks(pub, 'overlay', { pluginView: { demo: { hud: { overlay: [{ type: 'text', text: 'live' }] } } } }).map((b) => b.text), ['live']);

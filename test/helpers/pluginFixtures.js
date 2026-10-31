@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { keelManifestOf } from './keelFixture.js';
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -115,7 +116,16 @@ export const atlas = (pages, size = 4) => pages.map((p) => `\n${p}\nsize: ${size
  */
 export function writePlugin(dir, manifest, files = {}) {
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'plugin.json'), JSON.stringify(manifest, null, 2));
+  const id = path.basename(dir);
+  const three = manifest && typeof manifest === 'object' && !Array.isArray(manifest) ? keelManifestOf(manifest, id) : null;
+  // A valid v2 fixture becomes the manifest 3 the loader reads; the original plugin.json stays for tests that inspect
+  // tools' input (real mixed folders keep it too). A negative fixture stays manifest 2 and is refused by the legacy gate.
+  if (three) {
+    fs.writeFileSync(path.join(dir, 'plugin.keel.json'), JSON.stringify(three, null, 2));
+    fs.writeFileSync(path.join(dir, 'plugin.json'), JSON.stringify(manifest, null, 2));
+  } else {
+    fs.writeFileSync(path.join(dir, 'plugin.json'), JSON.stringify(manifest, null, 2));
+  }
   for (const [rel, body] of Object.entries(files)) {
     const abs = path.join(dir, ...rel.split('/'));
     fs.mkdirSync(path.dirname(abs), { recursive: true });

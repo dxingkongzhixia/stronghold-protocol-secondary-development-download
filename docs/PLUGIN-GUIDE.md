@@ -1,5 +1,7 @@
 # 插件新手指南：从换立绘到玩法插件
 
+> **Keel 现状：** 新插件写 manifest 3；manifest 2 需要先迁移。功能总览见 [`keel/FEATURES.md`](keel/FEATURES.md)，manifest 3 见 [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md)。本文保留旧版作者流程作为兼容参考。
+
 0.3.1 的特效接口需要编辑 JSON；步骤见文末「给插件干员加特效」。
 
 这份指南写给**不会写代码、也不想碰命令行**的玩家：用浏览器里的「插件工作台」，几分钟就能把某个干员的立绘换成你自己画的，
@@ -401,6 +403,8 @@ unequip（official／allow）；每项下面显示作用说明。选「继承」
 | 房间里开不了这个插件，面板弹出提示 | `PLUGIN_INCOMPATIBLE` | 这个玩法插件不适配本服务器的游戏版本（或插件接口版本） | 换一个适配本版本的插件版本（清单的 "app" 写着它适配的游戏版本），或者请作者更新。 |
 | 房间里开不了这个插件，面板弹出提示 | `PLUGIN_BUSY` | 本服务器同时运行的插件组合已达上限 | 稍后再试，或者和正在用插件的房间选同样的插件；服主可以在 plugins/config.json 里调高 maxSets（0–128，改完 1 秒生效、不用重启；默认 32）。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_NO_MANIFEST` | 插件文件夹里没有 plugin.json | 每个插件文件夹都要有一个 plugin.json（插件的清单）。在工作台点「新建插件」，或运行 node tools/plugin.mjs new，就会生成一个。旧式的 pack.json 是 packs/ 文件夹里的语言包用的。 |
+| 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_LEGACY_REMOVED` | 旧 loader 已删除：这个插件还是 manifest 2（plugin.json），不会再被加载 | 运行 node tools/keel.mjs import <id> --write 生成 manifest 3 的 plugin.keel.json，再运行 node tools/keel.mjs check <id> --strict。 |
+| 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_KEEL_NATIVE` | 「{id}」声明了 native trust（trusted 插件），Keel 不执行它 | 把原生代码写成 sim / match / policy 模块，并声明 trust: "sandbox"；Keel 不支持受信页面/服务端代码。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_JSON` | {where} 读不出来：它不是有效的 JSON，或者太大 | 检查有没有多写或少写逗号、引号、括号（最后一项后面不能有逗号）；单个 JSON 文件不能超过 8 MB。用工作台编辑可以避免手写出错。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_JSON_LIMIT` | {where} 超出了 JSON 的限制（嵌套太深，或数字太大） | 嵌套不要超过 64 层，数字要是正常的有限数字，绝对值不超过 10 亿。 |
 | 插件没出现在列表里（被跳过）；启动日志和 check 写着原因 | `PLUGIN_MANIFEST_SHAPE` | plugin.json 的最外层不是 { … } 对象 | 整个文件要用一对大括号 { } 包起来，里面写 "名字": 值。 |
@@ -468,6 +472,8 @@ unequip（official／allow）；每项下面显示作用说明。选「继承」
 | 工作台里的操作被拒绝，旁边显示原因 | `PLUGIN_STUDIO_PATH` | 这个路径不能用：{detail} | 文件只能放在插件自己的文件夹里；路径不能有 ..、以 . 开头的部分或特殊字符，也不能经过链接跑到外面。 |
 | 工作台里的操作被拒绝，旁边显示原因 | `PLUGIN_STUDIO_SIZE` | 文件太大了（上限 {max}） | 把图片或声音压缩一下再拖进来（立绘用 1024 像素以内的 PNG/WebP 就够了）。 |
 | 工作台里的操作被拒绝，旁边显示原因 | `PLUGIN_STUDIO_EXISTS` | 已经有一个叫「{id}」的插件了 | 换一个 id，或者在列表里打开那个插件接着改。 |
+| 工作台里的操作被拒绝，旁边显示原因 | `PLUGIN_STUDIO_KEEL_READONLY` | 「{id}」的这个部分仍是只读的 Keel 内容（外观槽位 / 预览），请在「清单」页编辑 manifest 3。 | 在「清单」页直接编辑 manifest 3，或用 tools/keel.mjs 修改模块文件。 |
+| 工作台里的操作被拒绝，旁边显示原因 | `PLUGIN_STUDIO_KEEL_MANIFEST` | 「{id}」的清单只能通过工作台的“保存清单”写入（会先校验 manifest 3 与模块图）。 | 在「清单」页保存，或运行 node tools/keel.mjs check <id> 查看问题。 |
 | 工作台里的操作被拒绝，旁边显示原因 | `PLUGIN_STUDIO_TEMPLATE` | 不认识这个模板：{template} | 从工作台的模板列表里选一个（node tools/plugin.mjs new 不带参数会列出全部模板）。 |
 | 工作台里的操作被拒绝，旁边显示原因 | `PLUGIN_STUDIO_TARGET` | 找不到要替换的目标「{target}」 | 用搜索框按官方名字找（例如「德克萨斯」），从结果里点一个。 |
 | 工作台里的操作被拒绝，旁边显示原因 | `PLUGIN_STUDIO_FILE_KIND` | 这个位置要放 {kind}，拖进来的文件是 {ext} | 图片位置放 .png .jpg .webp，声音位置放 .mp3 .ogg，模型位置一次放 .skel、.atlas 和它的 .png。 |

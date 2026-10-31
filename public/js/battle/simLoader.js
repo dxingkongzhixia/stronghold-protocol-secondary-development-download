@@ -21,7 +21,7 @@ function deepFreeze(root) {
  */
 let loadedScripts = false, loadedTraits = false, traitInstaller = null;
 export async function loadBrowserSim({ base = '/sim/', dataBase = '/data/', fetchFn = (...a) => globalThis.fetch(...a), data = null, cs = null, bounds = null,
-  scripts = [], hashInput = null, nativeVerified = false, deferScripts = false, traitRuntimeVerified = null } = {}) {
+  scripts = [], keel = null, hashInput = null, nativeVerified = false, deferScripts = false, traitRuntimeVerified = null } = {}) {
   const [spec, simdata, support] = await Promise.all([
     import(`${base}spec.js`), import(`${base}simdata.js`), import(`${base}content/support/index.js`),
   ]);
@@ -43,10 +43,12 @@ export async function loadBrowserSim({ base = '/sim/', dataBase = '/data/', fetc
   simdata.setSimData(raw);
   if (typeof support.setGameData === 'function') support.setGameData(null); // re-read through the injected data
   await installSimBounds(base, raw, data ? bounds : undefined);
+  let extensions = null;
   if (!deferScripts && scripts.length) {
     const sdkUrl = /^file:/i.test(base) ? new URL('../../shared/plugins/sdk.js',base).href : new URL('/shared/plugins/sdk.js',globalThis.location.href).href;
     const {loadScripts} = await import(new URL('scriptLoad.js',sdkUrl).href);
-    await loadScripts(scripts,{hashInput,sdkUrl,extensionsUrl:base+'content/extensions.js',cs,nativeVerified});
+    const loaded = await loadScripts(scripts,{hashInput,sdkUrl,extensionsUrl:base+'content/extensions.js',cs,nativeVerified});
+    extensions = loaded?.registry ?? null;
   } else if (loadedScripts) (await import(base+'content/extensions.js')).resetExtensions();
   if (Object.values(raw.garrisons ?? {}).some(g => g.operatorTrait) || loadedTraits) {
     if (/^file:/i.test(base)) {
@@ -69,7 +71,22 @@ export async function loadBrowserSim({ base = '/sim/', dataBase = '/data/', fetc
     loadedTraits = Object.values(raw.garrisons ?? {}).some(g => g.operatorTrait);
   }
   loadedScripts = !deferScripts && scripts.length > 0;
-  return { spec, ds: new simdata.DataSource(raw, null), cs, raw };
+  // Native Keel modules a room's content set carried (already checked against its cs by content.js): compile the exact
+  // sources in SES (keelSandbox.js), then attach the Keel runtime to each battle with the battle's own seed. No room
+  // module is imported into this page or Worker as host code.
+  let keelAttach = null;
+  if (keel?.plugins?.length) {
+    const [{ createRng, deriveSeed }, { attachBattleKeel }, { loadKeelPlugins }] = await Promise.all([
+      import(`${base}rng.js`), import('./keelAttach.js'), import('./keelSandbox.js'),
+    ]);
+    const plugins = await loadKeelPlugins(keel.plugins, { base });
+    keelAttach = (battle) => {
+      for (const p of plugins) attachBattleKeel(battle, { ...p, seed: battle.seed, rng: createRng, deriveSeed });
+    };
+  }
+  const ds = new simdata.DataSource(raw, null);
+  if (extensions) ds.extensions = extensions;
+  return { spec, ds, cs, raw, ...(extensions ? { extensions } : {}), ...(keelAttach ? { keel: { attach: keelAttach } } : {}) };
 }
 
 /**

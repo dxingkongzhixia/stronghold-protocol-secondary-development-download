@@ -45,6 +45,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | browser UI widgets | `public/js/ui/` |
 | **main interface switch (classic lobby / Hub)** | [`docs/UI-HUB.md`](UI-HUB.md) · `server/uiMode.js` · `public/js/screens/hub/` · `public/css/screens/hub.css` |
 | plugin system review / risks / verification gaps | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) |
+| **Keel（龙骨）插件系统（功能 / 架构 / 流程 / 当前状态）** | [`docs/keel/FEATURES.md`](keel/FEATURES.md) · [`docs/keel/ARCHITECTURE.md`](keel/ARCHITECTURE.md) · [`docs/keel/WORKFLOW.md`](keel/WORKFLOW.md) · [`docs/keel/README.md`](keel/README.md) · `shared/keel/` · `tools/keel.mjs` |
 | **plugin development guide (workflow, classes, testing, packaging)** | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
 | plugin content authoring (records, bonds, bands, enemies) | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md), [`docs/PLUGINS.md`](PLUGINS.md) §10 |
 | plugin DSL (skills / talents / prep) | [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) |

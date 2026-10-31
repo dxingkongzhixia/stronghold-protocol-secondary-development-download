@@ -50,26 +50,18 @@ test('page import maps hash exact bytes; no inline executable script/events; pag
   }
 });
 
-test('native script HTTP routes serve exact descriptor bytes and JavaScript MIME under site CSP',async t=>{
-  const f=scriptFixture(t);
-  f.put('native',"import {kit} from 'sp:sdk@1'; export default sp => {};",
-    {class:'trusted',permissions:['sim.code','trusted.page'],entry:{sim:'index.js',client:'page.js'}},{'page.js':'globalThis.nativeTest = true;'});
-  const contents=createContentSets({registry:f.registry,vanillaData:getData()});
-  const r=contents.resolve(['native']);assert.ok(r.ok,JSON.stringify(r));
-  const set=r.set,cs16=set.cs.slice(0,16);
-  const serveStatic=createStaticHandler({publicDir,dataDir:path.resolve('data'),sharedDir:path.resolve('shared'),contents});
-  const serve=createRequestHandler({serveStatic,csp:siteCsp(publicDir),health:{},log:console});
-  for(const rel of ['index.js','page.js']) {
-    const url=`/cs/${cs16}/scripts/native/${rel}`,a=await request(serve,url);
-    assert.equal(a.status,200);assert.match(a.headers['content-type'],/^text\/javascript/);
-    assert.equal(a.body,set.scripts[0].browserSources[rel]);assert.equal(a.headers['content-security-policy'],siteCsp(publicDir));
-    assert.equal((await request(serve,url,{'if-none-match':a.headers.etag})).status,304);
-  }
-  assert.match(set.scripts[0].browserSources['index.js'],/\/shared\/plugins\/sdk.js/);
-  assert.equal((await request(serve,`/cs/${cs16}/scripts/native/not-listed.js`)).status,404);
-  fs.writeFileSync(f.pluginsDir+'/native/page.js','globalThis.nativeTest = false;');
-  assert.equal((await request(serve,`/cs/${cs16}/scripts/native/page.js`)).body,'globalThis.nativeTest = true;','immutable held bytes');
+test('the simulation worker is the only place that allows SES eval; the old page frame is gone', async () => {
+  const strict = siteCsp(publicDir);
+  assert.ok(!strict.includes("'unsafe-eval'"));
+  assert.match(SIM_WORKER_CSP, /script-src 'self' 'unsafe-eval'/);
+  assert.match(SIM_WORKER_CSP, /connect-src 'none'/);
+  const dirs = { publicDir, dataDir: path.resolve('data'), sharedDir: path.resolve('shared') };
+  const on = createRequestHandler({ serveStatic: createStaticHandler({ ...dirs }), health: {}, log: console, csp: strict });
+  assert.equal((await request(on, '/keel-sandbox.html')).status, 404);
+  assert.equal((await request(on, '/')).headers['content-security-policy'], strict);
 });
+
+
 test('actual static responses: Worker CSP on 200/206/304 and encoded aliases, independent of site switch', async () => {
   for (const csp of [siteCsp(publicDir), null]) {
     const serve = handler(csp);
@@ -101,7 +93,7 @@ test('Pixi CSP adapter uploads matrices, samplers, arrays and scalars without co
 test('site CSP never changes the UI frame policy (200/206/304)', async t => {
   const pluginsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-p3b-frame-csp-'));
   t.after(() => fs.rmSync(pluginsDir, { recursive: true, force: true }));
-  fs.cpSync(path.resolve('plugins/_template/ui'), path.join(pluginsDir, 'damage-meter'), { recursive: true });
+  fs.cpSync(path.resolve('plugins/_template/keel-ui'), path.join(pluginsDir, 'damage-meter'), { recursive: true });
   const dirs = { publicDir, pluginsDir, sharedDir: path.resolve('shared'), dataDir: path.resolve('data'), packsDir: path.join(pluginsDir, 'packs') };
   const registry = createPluginRegistry(dirs); registry.refresh(true);
   const file = registry.plugin('damage-meter').ui.served.get('ui/index.html');

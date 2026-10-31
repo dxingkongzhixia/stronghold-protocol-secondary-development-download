@@ -1,0 +1,42 @@
+{
+  "manifest": 3,
+  "id": "keel-survival",
+  "name": { "zh": "龙骨生存示例", "en": "Keel survival example" },
+  "description": "A minimal Keel-native sim module: spawns enemies on a timer, damages them, and keeps ticks/kills in plugin state.",
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "content": 1, "sim": 1, "match": 1, "policy": 1, "ui": 1 },
+  "scope": ["room"],
+  "trust": "sandbox",
+  "modules": [
+    {
+      "kind": "content",
+      "files": ["content/enemies.json"],
+      "parts": { "data": ["content/enemies.json"] },
+      "provides": ["enemy:enemy_x_keel_survival_refractor"],
+      "permissions": ["content.define"]
+    },
+    {
+      "kind": "sim",
+      "entry": "sim/index.js",
+      "permissions": ["sim.read", "sim.damage.write", "sim.spawn", "sim.rng"]
+    },
+    {
+      "kind": "match",
+      "entry": "match/index.js",
+      "permissions": ["match.read", "match.economy.write"]
+    },
+    {
+      "kind": "policy",
+      "entry": "policy/index.js",
+      "permissions": ["policy.observe", "policy.act"]
+    },
+    {
+      "kind": "ui",
+      "entry": "ui/index.json",
+      "permissions": ["ui.frame"],
+      "slots": ["hud.right"]
+    }
+  ],
+  "state": { "version": 1 }
+}

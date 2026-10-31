@@ -38,16 +38,16 @@ export const targeting = Object.freeze({ absoluteRangeKeys: (grid, r, c, facing,
   return Object.freeze(targets.absoluteRangeKeys(grid, r, c, facing, extend));
 } });
 /** A setup-scoped SDK; settings copied/frozen; logging capped at 20 lines per setup [ASSUMED]. */
-export function createSDK(plugin, { settings = {}, log = (..._args) => {} } = {}) {
+export function createSDK(plugin, { settings = {}, log = (..._args) => {}, registry = extensions } = {}) {
   let lines = 0;
   const need = permission => {
     if (plugin.permissions && !plugin.permissions.includes(permission)) throw Object.assign(new Error(`${plugin.id}: ${permission} required`),{code:'PLUGIN_PERMISSION_MISSING'});
   };
   return Object.freeze({ kit, math, constants, dir, targeting, settings: freeze(JSON.parse(JSON.stringify(settings))),
-    kits: Object.freeze({ register: (id,fn) => {need('sim.code');return extensions.registerKit(plugin,id,fn);} }),
-    enemies: Object.freeze({ register: (id,fn) => {need('sim.code');return extensions.registerEnemy(plugin,id,fn);} }),
-    content: Object.freeze({ register: mod => {if(mod.install)need('sim.code');if(mod.registerMeta)need('meta.code');return extensions.registerContent(plugin,mod);} }),
-    meta: Object.freeze({ register: (id,h) => {need('meta.code');return extensions.registerMeta(plugin,id,h);} }),
+    kits: Object.freeze({ register: (id,fn) => {need('sim.code');return registry.registerKit(plugin,id,fn);} }),
+    enemies: Object.freeze({ register: (id,fn) => {need('sim.code');return registry.registerEnemy(plugin,id,fn);} }),
+    content: Object.freeze({ register: mod => {if(mod.install)need('sim.code');if(mod.registerMeta)need('meta.code');return registry.registerContent(plugin,mod);} }),
+    meta: Object.freeze({ register: (id,h) => {need('meta.code');return registry.registerMeta(plugin,id,h);} }),
     log: (...args) => { if (lines++ < 20) log(`[plugin:${plugin.id}]`, ...args.map(x => String(x).slice(0,500))); },
   });
 }
