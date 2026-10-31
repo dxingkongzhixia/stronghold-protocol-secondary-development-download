@@ -72,7 +72,7 @@ node tools/keel.mjs exit
 
 | 检查 | 结果 |
 |---|---|
-| `npm test` | 8822 tests / 8784 pass / 0 fail / 38 skipped |
+| `npm test` | 8823 tests / 8785 pass / 0 fail / 38 skipped |
 | `npm run check:keel` | 178 / 178 |
 | docs gates | 35 / 35 |
 | `npm run typecheck` | 通过 |

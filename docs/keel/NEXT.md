@@ -3,7 +3,7 @@
 > 状态：**第一阶段完成；可用**。功能见 [`FEATURES.md`](FEATURES.md)，剩余/边界见 [`REMAINING.md`](REMAINING.md)。
 > 代码状态：**已提交 `c3fd7dca7`**（2026-10-31，github / gitee 已同步）。`plugins/*` 不随仓库提交，
 > 迁移后的 `plugin.keel.json` 是**每台机器的本地状态**；新机器上 `node tools/keel.mjs exit` 会先列出未迁移的插件。
-> 基线：`npm test` 8822 / 8784 / 0 / 38；`check:keel` 178 / 178；docs gates 35 / 35。
+> 基线：`npm test` 8823 / 8785 / 0 / 38；`check:keel` 178 / 178；docs gates 35 / 35。
 
 ## 1. 现在是什么状态
 
