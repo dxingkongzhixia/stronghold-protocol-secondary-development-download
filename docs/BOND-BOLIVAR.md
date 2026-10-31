@@ -48,7 +48,7 @@ Keel 已具备本设计需要的全部能力：
 | 干员 | charId | 本（tier） | 星级 | 职业 · 子职业 | 当前 chess | 素材 | kit |
 |---|---|---|---|---|---|---|---|
 | 刻俄柏 | `char_2013_cerber` | 6 | 6★ | 术师 · 中坚术师 | 无 | 有（立绘/Spine） | `op-cerber` |
-| 谬因（业主写作「缪因」） | `char_4229_aphris` | 6 | 6★ | 术师 · 轰击术师 | `chess_char_4229_aphris_a` | 有（立绘/Spine、`token_10070_aphris_pc`） | `op-aphris` |
+| 谬因（业主写作「缪因」） | `char_4229_aphris` | 6 | 6★ | 术师 · 轰击术师 | `chess_char_4229_aphris_a` | 有（立绘/Spine、`token_10070_aphris_pc`） | `op-aphris`（商店形态复用：`chess_char_4229_aphris-aphris`） |
 | 承曦格雷伊 | `char_1027_greyy2` | 5 | 5★ | 狙击 · 投掷手 | 无 | 需抽取 | 需写 |
 | 羽毛笔 | `char_421_crow` | 4 | 5★ | 近卫 · 收割者 | 无 | 需抽取 | 需写 |
 | 龙舌兰 | `char_486_takila` | 4 | 5★ | 近卫 · 解放者 | 无 | 需抽取 | 需写 |
