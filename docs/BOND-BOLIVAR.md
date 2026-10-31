@@ -48,7 +48,7 @@ Keel 已具备本设计需要的全部能力：
 | 干员 | charId | 本（tier） | 星级 | 职业 · 子职业 | 当前 chess | 素材 | kit |
 |---|---|---|---|---|---|---|---|
 | 刻俄柏 | `char_2013_cerber` | 6 | 6★ | 术师 · 中坚术师 | 无 | 有（立绘/Spine） | `op-cerber` |
-| 谬因（业主写作「缪因」） | `char_4229_aphris` | 6 | 6★ | 术师 · 轰击术师 | `chess_char_4229_aphris_a` | 有（立绘/Spine、`token_10070_aphris_pc`） | `op-aphris`（商店形态复用：`chess_char_4229_aphris-aphris`） |
+| 谬因 | `char_4229_aphris` | 6 | 6★ | 术师 · 轰击术师 | `chess_char_4229_aphris_a` | 有（立绘/Spine、`token_10070_aphris_pc`） | `op-aphris`（商店形态复用：`chess_char_4229_aphris-aphris`） |
 | 承曦格雷伊 | `char_1027_greyy2` | 5 | 5★ | 狙击 · 投掷手 | 无 | 需抽取 | 需写 |
 | 羽毛笔 | `char_421_crow` | 4 | 5★ | 近卫 · 收割者 | 无 | 需抽取 | 需写 |
 | 龙舌兰 | `char_486_takila` | 4 | 5★ | 近卫 · 解放者 | 无 | 需抽取 | 需写 |
@@ -59,7 +59,8 @@ Keel 已具备本设计需要的全部能力：
 | 跃跃 | `char_4100_caper` | 1 | 4★ | 狙击 · 回环射手 | `chess_char_1_09_a` | 有 | `chess_char_1_09` |
 
 > 露托 / 特克诺 / 聆音 / 缪尔赛思 不在本次暂定名单。
-> **「缪因」= 谬因（`char_4229_aphris`），不是缪尔赛思（`char_249_mlyss`）**；官中名是「谬因」。
+> **谬因（`char_4229_aphris`）不是缪尔赛思（`char_249_mlyss`）**：业主口语写作「缪因」，游戏内中文名是「谬因」。
+> 缪尔赛思不在名单里，也不在插件里。
 > 计数仍看棋子的 `bonds` 是否含 `bond_x_bolivar_pack`，不读 `nationId`。
 > 承曦格雷伊与格雷伊是两个 chess，各算一人。
 
