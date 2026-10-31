@@ -1,4 +1,4 @@
-// test/keel/builtin.test.js — the eight built-in faction plugins also work as Keel content patches.
+// test/keel/builtin.test.js — the nine built-in faction plugins also work as Keel content patches.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { builtinPlugins } from '../../server/plugins/builtin.js';
@@ -8,7 +8,7 @@ import { Match } from '../../server/match/Match.js';
 
 test('every built-in faction has a Keel manifest and applies through mergeKeelData', () => {
   const plugins = builtinPlugins();
-  assert.equal(plugins.length, 8);
+  assert.equal(plugins.length, 9);
   const base = getData();
   for (const plugin of plugins) {
     assert.equal(plugin.keel.manifest, 3, `${plugin.id} keel manifest`);

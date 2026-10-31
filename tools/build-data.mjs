@@ -654,6 +654,103 @@ const CUSTOM_CHESS = [
     normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
     golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
   },
+  // ---- 玻利瓦尔盟约名册 (2026-11-01, owner's tier list; see docs/BOND-BOLIVAR.md §2) ----------------------------
+  // The six non-6★ members and 刻俄柏 ship as hidden shop operators of their faction (哥伦比亚 / 玻利瓦尔 / 罗德岛);
+  // the `bolivar` Keel plugin offers them in its room and patches `bond_x_bolivar_pack` onto every form. Fidelity:
+  // 刻俄柏 reuses her official 自选 kit (op-cerber); the others have no hand-authored chess kit yet and run the generic
+  // blackboard kit until one is written (their records stay hidden in vanilla, so kit-coverage does not flag them).
+  {
+    charId: 'char_2013_cerber',
+    baseId: 'chess_char_2013_cerber_a',
+    goldenId: 'chess_char_2013_cerber_b',
+    tier: 6,
+    identifier: 990,
+    shopLevelSortId: 91,
+    defaultSkillIndex: 2,                        // 很重的枪 (S3)
+    defaultUniEquipId: 'uniequip_002_cerber',    // CCR-X
+    bonds: ['emptyShip'],                        // 协防干员 (the bolivar plugin adds its own bond)
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+  },
+  {
+    charId: 'char_1027_greyy2',
+    baseId: 'chess_char_1027_greyy2_a',
+    goldenId: 'chess_char_1027_greyy2_b',
+    tier: 5,
+    identifier: 1000,
+    shopLevelSortId: 90,
+    defaultSkillIndex: 1,                        // 迅捷打击 (S2)
+    defaultUniEquipId: 'uniequip_002_greyy2',
+    bonds: ['emptyShip'],
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+  },
+  {
+    charId: 'char_421_crow',
+    baseId: 'chess_char_421_crow_a',
+    goldenId: 'chess_char_421_crow_b',
+    tier: 4,
+    identifier: 1010,
+    shopLevelSortId: 89,
+    defaultSkillIndex: 1,                        // 技能 2
+    defaultUniEquipId: 'uniequip_002_crow',
+    bonds: ['emptyShip'],
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+  },
+  {
+    charId: 'char_486_takila',
+    baseId: 'chess_char_486_takila_a',
+    goldenId: 'chess_char_486_takila_b',
+    tier: 4,
+    identifier: 1020,
+    shopLevelSortId: 88,
+    defaultSkillIndex: 1,                        // 技能 2
+    defaultUniEquipId: 'uniequip_002_takila',
+    bonds: ['emptyShip'],
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+  },
+  {
+    charId: 'char_4234_pedro',
+    baseId: 'chess_char_4234_pedro_a',
+    goldenId: 'chess_char_4234_pedro_b',
+    tier: 3,
+    identifier: 1030,
+    shopLevelSortId: 87,
+    defaultSkillIndex: 1,                        // 技能 2
+    defaultUniEquipId: null,                     // no module
+    bonds: ['emptyShip'],
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+  },
+  {
+    charId: 'char_130_doberm',
+    baseId: 'chess_char_130_doberm_a',
+    goldenId: 'chess_char_130_doberm_b',
+    tier: 3,
+    identifier: 1040,
+    shopLevelSortId: 86,
+    defaultSkillIndex: 1,                        // 技能 2
+    defaultUniEquipId: 'uniequip_002_doberm',
+    bonds: ['emptyShip'],
+    normal: { evolvePhase: 'PHASE_2', charLevel: 1, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_2', charLevel: 60, skillLevel: 7, equipLevel: 1 },
+  },
+  {
+    // 米格鲁 is the mode's first 3★: no E2, so the elite copy is the same phase/level with the higher skill rank.
+    charId: 'char_122_beagle',
+    baseId: 'chess_char_122_beagle_a',
+    goldenId: 'chess_char_122_beagle_b',
+    tier: 2,
+    identifier: 1050,
+    shopLevelSortId: 85,
+    defaultSkillIndex: 0,                        // her only skill (skcom_def_up)
+    defaultUniEquipId: null,
+    bonds: ['emptyShip'],
+    normal: { evolvePhase: 'PHASE_1', charLevel: 55, skillLevel: 4, equipLevel: 0 },
+    golden: { evolvePhase: 'PHASE_1', charLevel: 55, skillLevel: 7, equipLevel: 0 },
+  },
 ];
 
 /** The base chess ids of CUSTOM_CHESS: always-owned — they have no official 补位 stand-in (data/backups.json). */
@@ -669,7 +766,7 @@ const CUSTOM_TOKEN_IDS = new Set(CUSTOM_CHESS.flatMap((c) => c.tokenIds || []));
  */
 const CUSTOM_OFFICIAL_DIY = new Set([
   'char_4132_ascln', 'char_377_gdglow', 'char_4138_narant', 'char_1015_aglna2',
-  'char_2027_wang', 'char_1052_kalts2', 'char_4231_clemnt', 'char_4229_aphris',
+  'char_2027_wang', 'char_1052_kalts2', 'char_4231_clemnt', 'char_4229_aphris', 'char_2013_cerber',
 ]);
 
 /**
@@ -691,6 +788,13 @@ const CUSTOM_FACTION_OF = new Map([
   ['char_4138_narant', 'sargon'],
   ['char_4231_clemnt', 'egir'],
   ['char_4229_aphris', 'columbia'],
+  ['char_2013_cerber', 'rhodes'],
+  ['char_1027_greyy2', 'rhodes'],
+  ['char_130_doberm', 'rhodes'],
+  ['char_122_beagle', 'rhodes'],
+  ['char_421_crow', 'bolivar'],
+  ['char_486_takila', 'bolivar'],
+  ['char_4234_pedro', 'bolivar'],
 ]);
 /** The built-in 阵营加强 plugins, in the panel's order, with the text a player reads. */
 const CUSTOM_FACTIONS = [
@@ -702,6 +806,7 @@ const CUSTOM_FACTIONS = [
   { id: 'sargon', name: { zh: '萨尔贡', en: 'Sargon' } },
   { id: 'egir', name: { zh: '阿戈尔', en: 'Ægir' } },
   { id: 'columbia', name: { zh: '哥伦比亚', en: 'Columbia' } },
+  { id: 'bolivar', name: { zh: '玻利瓦尔', en: 'Bolívar' } },
 ];
 
 /**

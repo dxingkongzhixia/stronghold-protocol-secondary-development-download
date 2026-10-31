@@ -219,8 +219,8 @@ describe('the wire: welcome, room.state, the match, /healthz, /cs/, BattleSpec, 
     const c = await TestClient.connect(srv.url.replace('http', 'ws') + '/ws');
     clients.push(c);
     const w = await c.hello('Amiya');
-    // the 8 built-in 阵营加强 plugins are part of the installation (server/plugins/builtin.js), even with no folder
-    assert.deepEqual(w.content, { vanilla: srv.content.cs, plugins: 8 });
+    // the 9 built-in 阵营加强 plugins are part of the installation (server/plugins/builtin.js), even with no folder
+    assert.deepEqual(w.content, { vanilla: srv.content.cs, plugins: 9 });
     assert.ok(Array.isArray(w.diyKitted), 'welcome keeps diyKitted');
     const r = await c.request({ t: 'room.create', mode: 'solo', difficulty: 'FUNNY' });
     assert.equal(r.t, 'ok', JSON.stringify(r));
@@ -233,7 +233,7 @@ describe('the wire: welcome, room.state, the match, /healthz, /cs/, BattleSpec, 
 
   test('/healthz names the vanilla content; /cs/<cs16>/index.json is its manifest, cached for good, and only that one', async () => {
     const h = await (await fetch(`${srv.url}/healthz`)).json();
-    assert.deepEqual(h.content, { vanilla: srv.content.cs, sets: 0, plugins: 8 });
+    assert.deepEqual(h.content, { vanilla: srv.content.cs, sets: 0, plugins: 9 });
     const url = `${srv.url}/cs/${srv.content.cs.slice(0, 16)}/index.json`;
     const res = await fetch(url);
     assert.equal(res.status, 200);

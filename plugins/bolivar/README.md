@@ -39,14 +39,16 @@ extract.export_enemy_spines(AB, Path("<out>"), {}, print, ["enemy_2137_shsdgo"])
 输出为 `spine/enemy/enemy_2137_shsdgo/{skel,atlas,png}`；已放进 `assets/hound/`。
 `plugin.lock.json` 由 `tools/plugin.mjs pack` 写入动画数据。
 
-## 原型范围
+## 名册
 
-- 成员：跃跃、格雷伊、谬因（3 人，刚好激活 3 人档）。
-  - 谬因 = `char_4229_aphris`（**不是**缪尔赛思），商店 chess `chess_char_4229_aphris_a/_b`
-    走 `CUSTOM_CHESS`，在基础数据里属于隐藏的哥伦比亚阵营加强；本插件把它设为可见。
+- **10 人**：跃跃、格雷伊、刻俄柏、谬因、承曦格雷伊、羽毛笔、龙舌兰、佩德洛、杜宾、米格鲁。
+  - 3 人档、6 人档都可达。
+  - 8 名自造成员（刻俄柏、谬因、承曦格雷伊、羽毛笔、龙舌兰、佩德洛、杜宾、米格鲁）在基础数据里属于
+    隐藏的商店干员（各自阵营加强）；本插件把它们设为可见。
   - 基础与精锐两条都追加盟约；精锐上场的成员也计入。
-- 6 人档代码已写，但当前名单不可达；按 `docs/BOND-BOLIVAR.md` §2 补齐剩余成员后再验证。
-- 这是插件盟约（`isCore: false`），不参与调和 / 核心 ban；原型阶段接受。
+- 谬因 = `char_4229_aphris`（**不是**缪尔赛思）。
+- 刻俄柏 / 谬因复用官方自选 kit；其余 6 人暂走 generic kit。
+- 这仍是插件盟约（`isCore: false`），不参与调和 / 核心 ban；原型阶段接受。
 
 ## 验证
 

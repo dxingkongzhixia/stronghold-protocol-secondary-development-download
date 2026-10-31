@@ -3,7 +3,7 @@
 // manifest's localized name/description fields, exactly like a plugin.json — not UI msgids; the panel shows the current
 // language's entry, and the server never calls t(). docs/I18N.md.)
 //
-// The 9 self-made shop operators are not part of the vanilla game: the generated data keeps their records with
+// The 16 self-made shop operators are not part of the vanilla game: the generated data keeps their records with
 // `visible: false` and without bond membership (`tools/build-data.mjs` splitCustomShop). Each faction ships a built-in
 // plugin here — no `plugins/` folder, no install, no files of its own — whose data patch restores that faction's
 // operators when the room's host switches it on. Off (the default: `plugins/config.json` `default: []`) they only exist
@@ -24,7 +24,7 @@ import { keelToV2 } from '../../shared/keel/legacy.js';
  * the source of truth); keep the text in sync with `CUSTOM_CHESS` in tools/build-data.mjs.
  */
 export const BUILTIN_FACTIONS = Object.freeze([
-  { id: 'rhodes', name: { zh: '罗德岛', en: 'Rhodes Island' }, operators: { zh: '阿斯卡纶、凯尔希·思衡托', en: "Ascalon, Kal'tsit the Shaper" } },
+  { id: 'rhodes', name: { zh: '罗德岛', en: 'Rhodes Island' }, operators: { zh: '阿斯卡纶、凯尔希·思衡托、刻俄柏、承曦格雷伊、杜宾、米格鲁', en: "Ascalon, Kal'tsit the Shaper, Ceobe, Greyy the Lightningbearer, Dobermann, Beagle" } },
   { id: 'siracusa', name: { zh: '叙拉古', en: 'Siracusa' }, operators: { zh: '予愿安洁莉娜', en: 'Virtuosa' } },
   { id: 'laterano', name: { zh: '拉特兰', en: 'Laterano' }, operators: { zh: '结城理', en: 'Makoto Yuki' } },
   { id: 'yan', name: { zh: '炎', en: 'Yan' }, operators: { zh: '望', en: 'Wang' } },
@@ -32,6 +32,7 @@ export const BUILTIN_FACTIONS = Object.freeze([
   { id: 'sargon', name: { zh: '萨尔贡', en: 'Sargon' }, operators: { zh: '娜仁图亚', en: 'Narantuya' } },
   { id: 'egir', name: { zh: '阿戈尔', en: 'Ægir' }, operators: { zh: '克莱门莎', en: 'Clementia' } },
   { id: 'columbia', name: { zh: '哥伦比亚', en: 'Columbia' }, operators: { zh: '谬因', en: 'Aphrissa' } },
+  { id: 'bolivar', name: { zh: '玻利瓦尔', en: 'Bolívar' }, operators: { zh: '羽毛笔、龙舌兰、佩德洛', en: 'Quill, Tequila, Pedro' } },
 ]);
 
 /** The built-in plugin id of a faction (`faction-rhodes`). */

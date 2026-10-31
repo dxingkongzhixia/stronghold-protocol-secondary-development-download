@@ -52,14 +52,21 @@ test('bolivar: the content set carries the bond, members and the hound token', {
   const bond = set.data.bonds[BOND];
   assert.ok(bond, 'the bond reaches the content set');
   assert.deepEqual(bond.thresholds, [3, 6]);
-  assert.deepEqual(bond.members, ['chess_char_1_09_a', 'chess_char_1_14_a', 'chess_char_4229_aphris_a']);
+  assert.deepEqual([...bond.members].sort(), [
+    'chess_char_1_09_a', 'chess_char_1_14_a', 'chess_char_122_beagle_a', 'chess_char_130_doberm_a',
+    'chess_char_421_crow_a', 'chess_char_486_takila_a', 'chess_char_1027_greyy2_a',
+    'chess_char_2013_cerber_a', 'chess_char_4229_aphris_a', 'chess_char_4234_pedro_a',
+  ].sort(), 'the 10-person roster');
   assert.ok(set.data.tokens.token_x_bolivar_hound, 'the hound token is composed');
   assert.ok(entry.visual?.ops?.length > 0, 'the hound Spine / icon are in the visual set');
-  // 谬因 ships hidden (哥伦比亚 阵营加强): the bond plugin offers its own roster, both forms.
-  assert.equal(set.data.chess.chess_char_4229_aphris_a.visible, true);
-  assert.equal(set.data.chess.chess_char_4229_aphris_b.visible, true);
+  // the custom members ship hidden (their faction boost): the bond plugin offers its own roster, both forms.
+  for (const id of ['chess_char_4229_aphris', 'chess_char_2013_cerber', 'chess_char_1027_greyy2', 'chess_char_421_crow',
+    'chess_char_486_takila', 'chess_char_4234_pedro', 'chess_char_130_doberm', 'chess_char_122_beagle']) {
+    assert.equal(set.data.chess[`${id}_a`].visible, true, `${id}: base visible`);
+    assert.equal(set.data.chess[`${id}_b`].visible, true, `${id}: elite visible`);
+    assert.ok(set.data.chess[`${id}_b`].bonds.includes(BOND), `${id}: the elite form counts too`);
+  }
   assert.ok(set.data.chess.chess_char_1_09_b.bonds.includes(BOND), 'the elite form counts too');
-  assert.ok(set.data.chess.chess_char_4229_aphris_b.bonds.includes(BOND));
 });
 
 test('bolivar: 3 members summon one hound, mark prey and deal +15%', { skip }, async () => {
@@ -123,6 +130,40 @@ test('bolivar: a real battle fields the three roster members and summons the hou
     assert.equal(state.members, 3, '跃跃 + 格雷伊 + 谬因');
     assert.equal(state.hounds.length, 1, '3-tier: one hound');
     assert.ok(h.b.units.some((u) => u.defId === 'token_x_bolivar_hound'), 'the hound token is on the field');
+  } finally {
+    handle.detach();
+  }
+});
+
+test('bolivar: six roster members summon two hounds (the 6-tier is reachable)', { skip }, async () => {
+  const p = await plugin();
+  const { set } = content();
+  const data = new DataSource({
+    chess: set.data.chess, enemies: set.data.enemies, tokens: set.data.tokens,
+    stages: set.data.stages, waves: set.data.waves,
+  }, getDefaultSource());
+  const h = makeBattle({
+    data,
+    units: [
+      { chessId: 'chess_char_1_09_a', row: 10, col: 3 },
+      { chessId: 'chess_char_1_14_a', row: 10, col: 4 },
+      { chessId: 'chess_char_4229_aphris_a', row: 10, col: 5 },
+      { chessId: 'chess_char_2013_cerber_a', row: 10, col: 6 },
+      { chessId: 'chess_char_421_crow_a', row: 10, col: 7 },
+      { chessId: 'chess_char_122_beagle_a', row: 10, col: 8 },
+    ],
+    enemies: [{ key: 'enemy_1000_gopro', pos: [10, 10] }],
+    timeLimit: 30,
+    autoFinish: false,
+  });
+  h.b.start();
+  h.step(2);
+  const handle = attachKeel(h.b, { manifest: p.manifest, modules: p.modules });
+  try {
+    assert.deepEqual(handle.runtime.runHook('sim.battleStart').errors, []);
+    const state = handle.runtime.snapshot().state['bolivar:sim:sim/index.js'].value;
+    assert.equal(state.members, 6);
+    assert.equal(state.hounds.length, 2, '6-tier: two hounds');
   } finally {
     handle.detach();
   }

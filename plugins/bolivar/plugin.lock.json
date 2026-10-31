@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "README.md": {
-      "sha256": "1d8f17eebec5c698cbb2ce27e5fc07b387c37028a93554d463fd9bef121dd358",
-      "bytes": 2188
+      "sha256": "b58a4ceeb4091ac005368d910310614612accd1c602e2940b9ff2e25ce7c16a1",
+      "bytes": 2661
     },
     "assets/hound/enemy_2137_shsdgo.atlas": {
       "sha256": "4c8700bf2135a14082e7567e349ab396b7fb75aa66af0802b8605546e8874a62",
@@ -29,8 +29,8 @@
       "bytes": 783
     },
     "content/patches.json": {
-      "sha256": "d4f9fddd12e8b2525abf7e9b0b6575dd698f6dd7660efee86eca9f40aae8fc4c",
-      "bytes": 988
+      "sha256": "5af087692f337d3281bcf50784fc30a423a31b30409cd7b354396d1cfa614bec",
+      "bytes": 6384
     },
     "content/tokens.json": {
       "sha256": "ccfd8b94044dc749ebbf9de9c8a974a719d5095c8db1a8afaf79f95b1fe1ad9e",
