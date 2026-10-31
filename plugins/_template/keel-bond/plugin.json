@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schemas/keel-manifest.schema.json",
+  "manifest": 3,
+  "id": "keel-bond",
+  "name": { "zh": "Keel 盟约模板", "en": "Keel bond template" },
+  "description": {
+    "zh": "新盟约记录 + 击杀叠层 sim 示例：bond_x_keel_bond_demo，成员由干员/棋子的 bonds 引用。",
+    "en": "A new bond record plus a kill-stacking sim example: bond_x_keel_bond_demo; members join through an operator/chess `bonds` list."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "content": 1, "sim": 1 },
+  "scope": ["room"],
+  "trust": "sandbox",
+  "modules": [
+    {
+      "kind": "content",
+      "files": ["content/bonds.json"],
+      "parts": { "data": ["content/bonds.json"] },
+      "permissions": ["content.define"],
+      "provides": ["bond:bond_x_keel_bond_demo"]
+    },
+    {
+      "kind": "sim",
+      "entry": "sim/index.js",
+      "permissions": ["sim.read", "sim.bond.read", "sim.bond.write", "sim.rng"],
+      "state": { "version": 1 }
+    }
+  ]
+}

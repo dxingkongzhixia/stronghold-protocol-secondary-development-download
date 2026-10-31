@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schemas/keel-manifest.schema.json",
+  "manifest": 3,
+  "id": "keel-item",
+  "name": { "zh": "Keel 装备模板", "en": "Keel item template" },
+  "description": {
+    "zh": "自定义装备记录 + sim 效果示例：item_x_keel_item_demo（custom，效果由 sim 读取 unitView.items 实现）。",
+    "en": "A custom item record plus a sim effect example: item_x_keel_item_demo (custom; the sim reads unitView.items)."
+  },
+  "version": "0.1.0",
+  "app": "*",
+  "api": { "content": 1, "sim": 1 },
+  "scope": ["room"],
+  "trust": "sandbox",
+  "modules": [
+    {
+      "kind": "content",
+      "files": ["content/items.json"],
+      "parts": { "data": ["content/items.json"] },
+      "permissions": ["content.define"],
+      "provides": ["item:item_x_keel_item_demo"]
+    },
+    {
+      "kind": "sim",
+      "entry": "sim/index.js",
+      "permissions": ["sim.read", "sim.status.write", "sim.rng"],
+      "state": { "version": 1 }
+    }
+  ]
+}

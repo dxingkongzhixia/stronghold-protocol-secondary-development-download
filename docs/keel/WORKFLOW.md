@@ -202,8 +202,8 @@ node --test test/ui/native-boss.e2e.test.js
 
 当前基线：
 
-- `npm test`：**8820 / 8782 / 0 / 38 skipped**
-- `check:keel`：**176 / 176**
+- `npm test`：**8822 / 8784 / 0 / 38 skipped**
+- `check:keel`：**178 / 178**
 - docs gates：**35 / 35**
 - typecheck：通过
 - eslint：0 errors
@@ -247,6 +247,8 @@ node tools/plugin.mjs pack _template/keel-reference
 | `keel-ui` | `hud.right` 界面 |
 | `keel-script` | 原生 sim 脚本 |
 | `keel-reference` | 标准完整参考 |
+| `keel-bond` | 新盟约记录 + 击杀叠层 sim |
+| `keel-item` | 自定义装备记录 + sim 效果 |
 
 ### 4.3 CLI fixture
 

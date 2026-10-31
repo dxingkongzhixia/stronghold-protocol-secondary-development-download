@@ -157,3 +157,38 @@ test('the native Keel reference template runs content + asset + sim + policy + u
   assert.equal(runtime.snapshot().views[policyKey].last, 'save');
   assert.equal(plugin.ui.slots[0].slot, 'hud.right');
 });
+
+test('the native Keel bond template loads, merges and adds layers', async () => {
+  const dir = path.join(ROOT, 'plugins/_template/keel-bond');
+  const read = await readPluginFolder(dir);
+  assert.deepEqual(read.problems, []);
+  const plugin = await loadKeelPlugin(dir);
+  assert.deepEqual(plugin.problems, []);
+  const merged = mergeKeelData(getData(), plugin.content);
+  assert.ok(merged.bonds.bond_x_keel_bond_demo, 'the bond record reaches the data');
+  assert.deepEqual(merged.bonds.bond_x_keel_bond_demo.thresholds, [3, 6]);
+  const host = createFakeHost({ seed: 1 });
+  const runtime = createKeelRuntime({ manifest: plugin.manifest, modules: plugin.modules, host, seed: 1 });
+  runtime.start();
+  runtime.runHook('sim.kill', { killer: { id: 'u1' }, victim: { id: 'e1' } });
+  assert.deepEqual(runtime.errors, []);
+  assert.equal(host.bonds.get('bond_x_keel_bond_demo').layers, 1);
+});
+
+test('the native Keel item template loads, merges and marks its carriers', async () => {
+  const dir = path.join(ROOT, 'plugins/_template/keel-item');
+  const read = await readPluginFolder(dir);
+  assert.deepEqual(read.problems, []);
+  const plugin = await loadKeelPlugin(dir);
+  assert.deepEqual(plugin.problems, []);
+  const merged = mergeKeelData(getData(), plugin.content);
+  assert.ok(merged.items.item_x_keel_item_demo, 'the custom item reaches the data');
+  assert.equal(merged.items.item_x_keel_item_demo.custom, true);
+  assert.ok(merged.effects.effect_x_keel_item_demo, 'the effect shell exists');
+  const host = createFakeHost({ seed: 1, units: [{ id: 'u1', side: 'ally', hp: 10, items: ['item_x_keel_item_demo'] }] });
+  const runtime = createKeelRuntime({ manifest: plugin.manifest, modules: plugin.modules, host, seed: 1 });
+  runtime.start();
+  assert.deepEqual(runtime.errors, []);
+  assert.equal(runtime.snapshot().state['keel-item:sim:sim/index.js'].value.carriers, 1);
+  assert.ok(host.buffs.list('u1').some((b) => b.buff === 'x_keel_item_mark'), 'the custom status is applied');
+});

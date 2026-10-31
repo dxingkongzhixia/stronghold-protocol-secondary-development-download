@@ -142,7 +142,7 @@ node tools/keel.mjs exit
 
 - 工作室：编辑 manifest 3、基本信息、模块列表、模块字段、`provides/consumes` 图；保存前校验。
 - Forge：导入 Forge 包，默认输出 manifest 3（保留 v2 副本供工具读取）。
-- 模板：`keel-content` / `keel-lang` / `keel-policy` / `keel-multi-module` / `keel-survival` / `keel-cosmetic` / `keel-ui` / `keel-script` / `keel-reference`。
+- 模板：`keel-content` / `keel-lang` / `keel-policy` / `keel-multi-module` / `keel-survival` / `keel-cosmetic` / `keel-ui` / `keel-script` / `keel-reference` / `keel-bond` / `keel-item`。
 
 ## 11. 房间与多人运行时
 
@@ -175,8 +175,8 @@ node tools/keel.mjs exit
 
 | 检查 | 结果 |
 |---|---|
-| `npm test` | 8820 tests / 8782 pass / 0 fail / 38 skipped |
-| `npm run check:keel` | 176 / 176 |
+| `npm test` | 8822 tests / 8784 pass / 0 fail / 38 skipped |
+| `npm run check:keel` | 178 / 178 |
 | docs gates | 35 / 35 |
 | `npm run typecheck` | 通过 |
 | eslint | 0 errors |

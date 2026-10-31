@@ -1,0 +1,22 @@
+{
+  "records": 1,
+  "entries": [
+    {
+      "file": "bonds",
+      "id": "bond_x_keel_bond_demo",
+      "value": {
+        "name": "示例盟约",
+        "desc": "【示例】成员击杀敌人时获得 1 层；本模板只演示层数，具体效果由 sim 模块读取层数实现。",
+        "thresholds": [3, 6],
+        "countMode": "BOARD",
+        "isCore": false,
+        "activeType": "BATTLE",
+        "weight": 10,
+        "maxInactiveBondCount": -1,
+        "noStack": false,
+        "bondOrder": 99,
+        "identifier": 99
+      }
+    }
+  ]
+}

@@ -122,8 +122,8 @@ node --test test/ui/native-boss.e2e.test.js
 
 当前基线：
 
-- `npm test`：**8820 / 8782 / 0 / 38 skipped**
-- `npm run check:keel`：**176 / 176**
+- `npm test`：**8822 / 8784 / 0 / 38 skipped**
+- `npm run check:keel`：**178 / 178**
 - docs gates：**35 / 35**
 - typecheck：通过
 - eslint：0 errors

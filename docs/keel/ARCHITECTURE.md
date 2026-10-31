@@ -78,7 +78,7 @@ N1 的目标是“新插件只写 manifest 3，原生代码也能安全运行”
 
 ### 3.1 功能
 
-- 原生模板：`keel-content` / `keel-lang` / `keel-policy` / `keel-multi-module` / `keel-survival` / `keel-cosmetic` / `keel-ui` / `keel-script` / `keel-reference`。
+- 原生模板：`keel-content` / `keel-lang` / `keel-policy` / `keel-multi-module` / `keel-survival` / `keel-cosmetic` / `keel-ui` / `keel-script` / `keel-reference` / `keel-bond` / `keel-item`。
 - 原生 `sim`：浏览器 Worker 中运行，页面只收包。
 - 原生 `match` / `policy`：服务端 match host meta。
 - `ui` / `asset` / `lang`：加载期/构建期接入。
