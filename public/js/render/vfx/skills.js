@@ -988,12 +988,12 @@ const ACTIVE_BUFFS = /^(\w+)\._activeBuffs\b/;
 /**
  * The `targets` entries the client can place (module header): `hit` — carried by an attack ability's `_activeBuffs`, on
  * that attack's targets (the 'atk' events name them; a status loop the status wiring draws for the same key takes over);
- * `status` — another carrier, but the key is a generic status loop the status wiring draws when the sim reports it;
- * `none` — no client signal names the carrier.
+ * `status` — another carrier, but the key is a status loop the status wiring draws when the sim reports that status
+ * (index.json `generic.status`, or a name in EXTRA_STATUS_LOOPS); `none` — no client signal names the carrier.
  * @returns {{ status: any[], hit: any[], none: any[] }}
  */
 export function targetsOf(idx, plan) {
-  const generic = new Set(Object.values(isObj(idx?.generic?.status) ? idx.generic.status : {}).map(lc).filter(Boolean));
+  const generic = new Set([...Object.values(isObj(idx?.generic?.status) ? idx.generic.status : {}), ...Object.values(EXTRA_STATUS_LOOPS).flat()].map(lc).filter(Boolean));
   const out = { status: [], hit: [], none: [] };
   for (const e of plan?.targets || []) {
     const m = ACTIVE_BUFFS.exec(e.from || '');
@@ -1323,6 +1323,18 @@ export function chargeKeys(plan) {
  * AuraHitBehaviour — for the area's life), the strikes their hit effects.
  */
 const binding = (o) => Object.freeze({ ...o, ...(o.cover ? { cover: Object.freeze(o.cover) } : {}), ...(o.keys ? { keys: Object.freeze(o.keys) } : {}) });
+
+/**
+ * Status names the sim reports (b.ev ['status', id, name, on]) that stand for official loops the extracted generic table
+ * does not name: a support skill's mark is a buff on an ally, so index.json writes its aura rows as `targets` carried by
+ * EmptyAnimatedAbility._activeBuffs (no attack ability — targetsOf calls them `none`). The sim marks that buff with the
+ * status name; wiring.status plays these keys on the unit while it lasts. One status may stand for several loops.
+ */
+export const EXTRA_STATUS_LOOPS = Object.freeze({
+  // 冻河 S1 (op-tocka.js: the mark on up to two allies; its buff template tocka_s1[trigger] is the shield trigger)
+  tocka_s1_mark: Object.freeze(['tocka_skill_01_buff_01', 'tocka_skill_01_buff_02']),
+});
+
 export const FX_BINDINGS = Object.freeze({
   // Existing kit event supplies the elimination position (no invented projectile collision or ally trigger).
   skchr_yu_3: Object.freeze({ firewallBlock: binding({ owner: 'id', at: 'point', oneshot: true, keys: ['yu_skill3_annex_01'] }) }),

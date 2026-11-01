@@ -8,7 +8,11 @@ export class BattleTriggers {
   applyTrigger(source, target, data = {}, duration = 999) {
     if (!source || !target?.alive) return false;
     if (target.findBuff?.(TRIGGER_EFFECT_KEY)) return false;
-    this.addBuff(target, { key: TRIGGER_EFFECT_KEY, duration, source, data });
+    // A mark may name the status clients draw for it (`data.status`): the official buff template's aura loops follow
+    // that status while the mark lasts (render/vfx/wiring.js status, skills.js EXTRA_STATUS_LOOPS).
+    const buff = { key: TRIGGER_EFFECT_KEY, duration, source, data };
+    if (data.status) buff.status = data.status;
+    this.addBuff(target, buff);
     return true;
   }
 

@@ -58,8 +58,9 @@ Read this together with:
 > `oxi_skill_02_hit_01` on each blocked enemy. `test/render/new6-vfx-timeline.browser.test.js` (opt-in `RENDER_E2E=1`)
 > walks every skill frame by frame and screenshots 0 / 0.25 / 0.5 / 0.75 / 1 s, asserting the scheduled keys, the
 > drawn pixels, the finite prefabs' own expiry and the loops' stop after the cast. 冻河 S1's two buff-aura loops
-> (`tocka_skill_01_buff_01` / `_02`) still have no client carrier: the buff lives on an ally and the sim reports no
-> buff-placement event, so they are listed as unplaced rather than drawn.
+> (`tocka_skill_01_buff_01` / `_02`) ride the sim's mark status: the mark buff carries `status: 'tocka_s1_mark'`
+> (engine `applyTrigger` copies `data.status`), and `wiring.status` plays both loops on the marked ally
+> (`EXTRA_STATUS_LOOPS`) and stops them when the mark is consumed or the unit leaves.
 >
 > **2026-10-24 — built-in 阵营加强 plugins.** Their *shop forms* are no longer part of the vanilla game: the build hides
 > those records (`visible: false`) and drops them from the bond member lists, and each faction's built-in content

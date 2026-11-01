@@ -66,6 +66,13 @@ test('冻河 S1: placing a mark emits the official mark fx on the marked ally', 
   assert.ok(ally && ally.side === 'ally' && ally !== u, 'on another ally');
   assert.equal(ev[4].id, u.id, 'owned by 冻河');
   assert.ok(ally.findBuff('trigger:effect'), 'and the mark itself is on that ally');
+  // The mark is reported as a status: the client's status loops (EXTRA_STATUS_LOOPS) draw the official buff aura rows.
+  const on = h.eventsOf('status').find((e) => e[1] === ally.id && e[2] === 'tocka_s1_mark');
+  assert.equal(on?.[3], 1, 'the mark status goes on');
+  h.b.removeBuff(ally, 'trigger:effect');
+  h.step();
+  const off = h.eventsOf('status').find((e) => e[1] === ally.id && e[2] === 'tocka_s1_mark' && e[3] === 0);
+  assert.ok(off, 'and off when the mark is consumed');
 });
 
 test('the trigger and stance kit fx are bound to their official prefabs', () => {

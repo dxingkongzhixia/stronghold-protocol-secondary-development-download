@@ -47,7 +47,7 @@ import { TalentFx } from './talentfx.js';
 import { FunnelFx } from './funnelfx.js';
 import { YuWall, YU_WALL_SOURCE } from './yuwall.js';
 import { formModes } from './talents.js';
-import { shotOf } from './skills.js';
+import { shotOf, EXTRA_STATUS_LOOPS } from './skills.js';
 import { UF } from '../../../../shared/constants.js';
 
 /** Battle seconds a non-oneshot cast effect lasts without its end event. */
@@ -1466,8 +1466,21 @@ export class FxWiring {
     if (!on) { if (prev) { prev.stop(); this.loops.delete(slot); } return !!prev; }
     if (!this.ofx.active) return false;
     if (prev && prev.alive) return true;
-    const key = this.idx.generic?.status?.[name];
-    if (!key) return false;
+    const mapped = this.idx.generic?.status?.[name] ?? EXTRA_STATUS_LOOPS[name];
+    if (!mapped) return false;
+    // a status may stand for several official loops (a support skill's mark carries the buff template's own rows)
+    if (Array.isArray(mapped)) {
+      const hs = [];
+      for (const key of mapped) {
+        this.skills.status(v, lc(key));
+        const h = this.playOn(key, v, { follow: true, loop: true, important: true });
+        if (h) hs.push(h);
+      }
+      if (!hs.length) return false;
+      this.loops.set(slot, { alive: true, effect: hs[0].effect, stop: () => { for (const h of hs) h.stop(); } });
+      return true;
+    }
+    const key = mapped;
     this.skills.status(v, lc(key));
     const h = this.playOn(key, v, { follow: true, loop: true, important: true });
     if (h) this.loops.set(slot, h);

@@ -485,6 +485,7 @@ async function main() {
   }
   /**
    * One command of the skill demo (the tests drive it by hand): on, off, attack, energy n, deploy, die, fx kind [extra];
+ * status name [target] / statusOff name [target] (a status loop on the caster, or on the dummy with 'target');
    * an enemy's: cast slot [dur] (b.ev 'cast'), anim n (the snapshot's: ANIM.SKILL opens a single-skill enemy's window,
    * leaving it closes the window), block on|off (UF.BLOCKED: its combat), form name [fx extra] (a sim form fx: a 重生's
    * 'reborn' / 'form2', a 替身's 'doll'); talents (index v3): spawn (an enemy's or a summon's deploy talents), hp n [max]
@@ -513,6 +514,8 @@ async function main() {
       case 'fx': return wiring.simFx(a, b?.x ?? t.x, b?.y ?? t.y, { id: 1, ...(b || {}) });
       case 'cast': return wiring.enemyCast(s, a | 0, Number(b) || 0);
       case 'spawn': return wiring.spawned(s);
+      case 'status': return wiring.status(b === 'target' ? t : s, a, true);
+      case 'statusOff': return wiring.status(b === 'target' ? t : s, a, false);
       case 'hp': s.hp = Number(a); s.maxHp = Number(b) || s.maxHp || 100; return true;
       case 'flags': s.flags = a | 0; return true;
       case 'anim': s.anim = a | 0; return true;

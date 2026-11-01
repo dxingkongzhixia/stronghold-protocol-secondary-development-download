@@ -48,6 +48,9 @@ const DEFS = new Map([
   ['burn_loop', prefab('burn_loop', [pe({ _isLoop: 1, _spawnLocation: 2, _holdByOwner: 1 })], true)],
   // common_stealth: FOOT_POINT, `_holdByOwner` 0 — a status loop all the same
   ['stealth_loop', prefab('stealth_loop', [pe({ _isLoop: 1, _spawnLocation: 1, _holdByOwner: 0 })], true)],
+  // 冻河 S1's mark aura loops (EXTRA_STATUS_LOOPS): the buff template's own rows, a status on the marked ally
+  ['tocka_skill_01_buff_01', prefab('tocka_skill_01_buff_01', [pe({ _isLoop: 1, _spawnLocation: 1, _holdByOwner: 1 })], true)],
+  ['tocka_skill_01_buff_02', prefab('tocka_skill_01_buff_02', [pe({ _isLoop: 1, _spawnLocation: 2, _holdByOwner: 1 })], true)],
   // a range on the ground (GROUND_CENTER), not held by its owner
   ['range_loop', prefab('range_loop', [pe({ _isLoop: 1, _spawnLocation: 5, _holdByOwner: 0 })], true)],
   // a hit spark (HIT_POINT, not held) and an enemy's attack start (FOOT_POINT, held)
@@ -119,6 +122,24 @@ describe('held effects move with their unit (R1)', () => {
     nearV(h.effect.anchor, root0, 0, 'the root (not held) stays');
     nearV(weapon.anchor, [v.x - 10 - 0.3, 0.4, -0.2], 1e-9, 'the weapon glow rides SPECIAL_0 (its own FollowMountPoint)');
     nearV(ring.anchor, [ring0[0] - 1, ring0[1], ring0[2]], 1e-9, 'the ring walks with her (its own `_holdByOwner`)');
+  });
+});
+
+describe('a mark status (EXTRA_STATUS_LOOPS, 冻河 S1)', () => {
+  test('plays every official aura loop it names on the marked unit and stops them together', async () => {
+    const { ofx, w, v } = await setup();
+    assert.equal(w.status(v, 'tocka_s1_mark', true), true);
+    const h = w.loops.get('7|tocka_s1_mark');
+    assert.ok(h && h.alive, 'one held entry');
+    const keys = (k) => ofx.effects.filter((e) => e.def?.key === k);
+    assert.equal(keys('tocka_skill_01_buff_01').length, 1, 'the buff loop');
+    assert.equal(keys('tocka_skill_01_buff_02').length, 1, 'the second row of the same buff');
+    assert.equal(w.status(v, 'tocka_s1_mark', true), true, 'a repeat is a no-op');
+    assert.equal(keys('tocka_skill_01_buff_01').length, 1, 'not drawn twice');
+    assert.equal(w.status(v, 'tocka_s1_mark', false), true);
+    assert.ok(!w.loops.has('7|tocka_s1_mark'), 'the held entry is gone');
+    assert.equal(keys('tocka_skill_01_buff_01').filter((e) => e.state === 'play').length, 0);
+    assert.equal(keys('tocka_skill_01_buff_02').filter((e) => e.state === 'play').length, 0);
   });
 });
 

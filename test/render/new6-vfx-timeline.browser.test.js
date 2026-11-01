@@ -59,19 +59,15 @@ function skillKeys(sid) {
 }
 
 /**
- * Index rows the client cannot place (the same list the render layer documents: a buff a support skill puts on another
- * ally — its carrier `EmptyAnimatedAbility._activeBuffs` is not an attack ability, so no sim event names it). Kept here
- * so a data change that silently adds one fails this test instead of being ignored.
+ * Index rows the client cannot place are none today: a support skill's mark is a buff on an ally, so its aura rows
+ * (target-carried, carrier `EmptyAnimatedAbility._activeBuffs`) reach the client as the sim's mark status
+ * (`EXTRA_STATUS_LOOPS`, render/vfx/wiring.js) and play on the marked unit.
  */
-const UNPLACED = {
-  skchr_tocka_1: ['tocka_skill_01_buff_01', 'tocka_skill_01_buff_02'],
-};
-
 const OPS = [
   { unit: 'char_4182_oblvns', op: 'oblvns', name: '丰川祥子', s: 0, sid: 'skchr_oblvns_1', kind: 'arts' },
   { unit: 'char_4182_oblvns', op: 'oblvns', name: '丰川祥子', s: 1, sid: 'skchr_oblvns_2', kind: 'arts' },
   { unit: 'char_4182_oblvns', op: 'oblvns', name: '丰川祥子', s: 2, sid: 'skchr_oblvns_3', kind: 'arts' },
-  { unit: 'char_4244_tocka', op: 'tocka', name: '冻河', s: 0, sid: 'skchr_tocka_1', kind: 'bolt', fx: ['mark', { target: 2 }] },
+  { unit: 'char_4244_tocka', op: 'tocka', name: '冻河', s: 0, sid: 'skchr_tocka_1', kind: 'bolt', fx: ['mark', { target: 2 }], status: 'tocka_s1_mark' },
   { unit: 'char_4244_tocka', op: 'tocka', name: '冻河', s: 1, sid: 'skchr_tocka_2', kind: 'bolt' },
   { unit: 'char_4244_tocka', op: 'tocka', name: '冻河', s: 2, sid: 'skchr_tocka_3', kind: 'bolt' },
   { unit: 'char_4247_oxi', op: 'oxi', name: '塔露拉', s: 0, sid: 'skchr_oxi_1', kind: 'none' },
@@ -113,7 +109,7 @@ describe('new 6★ official prefab particle timelines in headless Chrome', { ski
    * Play one skill demo by hand: start it, settle, run the commands (on/attack), then walk MARKS frame by frame and
    * screenshot each. Returns the per-frame live keys, the decoded pictures and the on-screen anchors.
    */
-  async function timeline(unit, o, kind, fx) {
+  async function timeline(unit, o, kind, fx, status) {
     const plan = await page.evaluate(async (u, opt) => {
       const fx = window.__fx;
       fx.clear(); fx.stopDemo();
@@ -132,6 +128,7 @@ describe('new 6★ official prefab particle timelines in headless Chrome', { ski
     await settle();
     await page.evaluate((k) => { window.__fx.skillCmd('on'); window.__fx.skillCmd('attack', k); }, kind);
     if (fx) await page.evaluate((f) => window.__fx.skillCmd('fx', f[0], f[1]), fx);
+    if (status) await page.evaluate((st) => window.__fx.skillCmd('status', st, 'target'), status);
     const frames = [];
     let cur = 0;
     for (const mark of MARKS) {
@@ -158,7 +155,7 @@ describe('new 6★ official prefab particle timelines in headless Chrome', { ski
         t.diagnostic(`${c.sid}: the official bundle has no prefab rows`);
         return;
       }
-      const r = await timeline(c.unit, { s: c.s, op: c.op }, c.kind, c.fx);
+      const r = await timeline(c.unit, { s: c.s, op: c.op }, c.kind, c.fx, c.status);
       assert.equal(r.plan?.sid, c.sid, `${c.unit} slot ${c.s}`);
       const planned = r.plan?.keys || [];
       const seen = new Set(r.frames.flatMap((f) => f.keys));
@@ -166,22 +163,27 @@ describe('new 6★ official prefab particle timelines in headless Chrome', { ski
       // on the dummy (the skill attack above), the attack's own cast where the plan puts it.
       const missing = planned.filter((k) => !seen.has(k));
       assert.deepEqual(missing, [], `${c.name} S${c.s + 1} scheduled keys missing in the first second (seen: ${[...seen].join(', ')})`);
-      // The index may also name rows the client has no signal for (a buff a support skill puts on another ally: its
-      // carrier is not an attack ability). Those are documented per skill; anything else unexpected fails.
+      // Rows the plan does not schedule still play when the sim's mark status carries them (the support skill's aura on
+      // an ally): every index row must be seen.
       const unplaced = keys.filter((k) => !planned.includes(k) && !seen.has(k)).sort();
-      assert.deepEqual(unplaced, (UNPLACED[c.sid] || []).slice().sort(), `${c.name} S${c.s + 1}: rows with no client carrier`);
+      assert.deepEqual(unplaced, [], `${c.name} S${c.s + 1}: index rows never played (seen: ${[...seen].join(', ')})`);
       // The particles really draw: at least one of the sampled frames has pixels off the flat grey near the two units.
       const drawn = Math.max(...r.frames.map((f) => changed(f.img, r.src.x, r.src.y, 80) + changed(f.img, r.tgt.x, r.tgt.y, 80)));
       assert.ok(drawn > 300, `${c.name} S${c.s + 1}: particles drawn (max changed px ${drawn})`);
-      // Finite prefabs end by their own duration; looping ones stop when the skill turns off.
-      const loops = planned.filter((k) => INDEX.prefabs[k]?.looping);
+      // Finite prefabs end by their own duration; looping ones stop when the skill turns off (and the mark status ends).
+      const loops = [...new Set([...planned, ...keys])].filter((k) => seen.has(k) && INDEX.prefabs[k]?.looping);
       const finite = planned.filter((k) => !INDEX.prefabs[k]?.looping);
       const maxDur = Math.max(0, ...finite.map((k) => Number(INDEX.prefabs[k].duration) || 0));
       await page.evaluate((n) => { window.__fx.step(n, 1 / 60); window.__fx.render(); }, Math.ceil(maxDur * FPS) + 2 * FPS);
       const left = await page.evaluate(() => window.__fx.liveKeys(true));
       for (const k of finite) assert.ok(!left.includes(k), `${c.name} S${c.s + 1}: ${k} ended by ${maxDur + 2}s (${left.join(', ')})`);
       if (loops.length) {
-        await page.evaluate(() => { window.__fx.skillCmd('off'); window.__fx.step(180, 1 / 60); window.__fx.render(); });
+        await page.evaluate((st) => {
+          window.__fx.skillCmd('off');
+          if (st) window.__fx.skillCmd('statusOff', st, 'target');
+          window.__fx.step(180, 1 / 60);
+          window.__fx.render();
+        }, c.status || null);
         const after = await page.evaluate(() => window.__fx.liveKeys(true));
         for (const k of loops) assert.ok(!after.includes(k), `${c.name} S${c.s + 1}: loop ${k} stopped 3s after off (${after.join(', ')})`);
       }
