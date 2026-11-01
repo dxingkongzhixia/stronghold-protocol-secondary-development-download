@@ -39,7 +39,6 @@ export default {
             const allies = battle.alliesFor(unit).filter((a) => a !== unit && !a.findBuff(MARK)).slice(0, num(b2.max_target, 1));
             for (const a of allies) {
               battle.addBuff(a, { key: MARK, duration: 999, source: unit, data: { kind: S2 } });
-              battle.addBuff(a, { key: 'tocka:s2aspd', duration: num(b2.buff_duration, 15), mods: { aspd: num(b2.attack_speed, 35) } });
             }
           },
         },
@@ -96,12 +95,29 @@ export default {
               }, { owner: unit });
             }
           });
+          // S2: the mark triggers when the marked ally's skill becomes ready (official 技能可开启时), then grants
+          // attack_speed for buff_duration and counts as a trigger effect (T1/T2).
+          battle.every(0.2, () => {
+            for (const a of battle.alliesFor(unit)) {
+              if (!a.alive) continue;
+              const mark = a.findBuff(MARK);
+              if (!mark || mark.source !== unit || mark.data?.kind !== S2) continue;
+              if (!a.skill?.ready) continue;
+              battle.removeBuff(a, MARK);
+              battle.addBuff(a, { key: 'tocka:s2aspd', duration: num(b2.buff_duration, 15), mods: { aspd: num(b2.attack_speed, 35) } });
+              giveSp(unit, num(t1.sp, 2), 'talent');
+              const hurt = battle.alliesInGrid(unit).filter((x) => x.alive && x.hpRatio < 1).sort((x, y) => x.hpRatio - y.hpRatio)[0];
+              if (hurt) battle.heal(unit, hurt, unit.s.atk * num(t1.heal_scale, 1), { tags: ['talent'] });
+              unit.mem.tockaEmpower = true;
+            }
+          }, { owner: unit });
           // T1 + the marks' on-hit effects.
           battle.on('damaged', (ctx) => {
             const ally = ctx.target;
             if (!ally?.alive || ally.side !== 'ally') return;
             const mark = ally.findBuff(MARK);
             if (!mark || mark.source !== unit) return;
+            if (mark.data?.kind === S2) return; // S2 triggers on the skill becoming ready, not on damage
             battle.removeBuff(ally, MARK);
             const kind = mark.data?.kind;
             if (kind === S1) {
