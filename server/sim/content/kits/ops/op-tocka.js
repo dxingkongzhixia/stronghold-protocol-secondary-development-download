@@ -15,7 +15,7 @@
 // is the visual (kit emits no procedural field).
 // Kit contract: ../README.md.
 import { num, talentBb, skillRec, giveSp, onHitOn, isMainHit } from '../shared/tier1.js';
-import { TRIGGER_MARK as MARK, placeTrigger } from '../shared/triggerEffect.js';
+import { TRIGGER_MARK as MARK, placeTrigger, triggerOf } from '../shared/triggerEffect.js';
 
 const S1 = 'skchr_tocka_1', S2 = 'skchr_tocka_2', S3 = 'skchr_tocka_3';
 const bbOf = (raw, id) => skillRec(raw, id)?.bb ?? {};
@@ -56,6 +56,18 @@ export default {
             const allies = battle.alliesFor(unit).filter((a) => a !== unit).sort((a, b) => ratio(b) - ratio(a));
             const target = allies[0];
             if (target) {
+              // Official “已存在时改为将其触发”: consume the old mark and fire its effect at once, then place S3's.
+              const prev = triggerOf(target, unit);
+              if (prev) {
+                battle.removeBuff(target, MARK);
+                const kind = prev.data?.kind;
+                if (kind === S2) battle.addBuff(target, { key: 'tocka:s2aspd', duration: num(b2.buff_duration, 15), mods: { aspd: num(b2.attack_speed, 35) } });
+                else giveSp(target, 1, 'talent');
+                giveSp(unit, num(t1.sp, 2), 'talent');
+                const hurt = battle.alliesInGrid(unit).filter((x) => x.alive && x.hpRatio < 1).sort((x, y) => x.hpRatio - y.hpRatio)[0];
+                if (hurt) battle.heal(unit, hurt, unit.s.atk * num(t1.heal_scale, 1), { tags: ['talent'] });
+                unit.mem.tockaEmpower = true;
+              }
               battle.removeBuff(target, MARK);
               placeTrigger(battle, unit, target, { kind: S3 });
             }
