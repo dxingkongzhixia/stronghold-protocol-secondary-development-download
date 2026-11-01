@@ -146,7 +146,20 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     release: (vs) => visual?.release?.(vs),
     holdContent: (cs) => contents?.hold?.(cs),
     releaseContent: (cs) => contents?.release?.(cs),
-    prebuild: (...a) => contents?.prebuild?.(...a),
+    // Warm the build the next resolve() asks for, with the ids in the same load order (resolve hands the content set an
+    // ordered, auto-closed list — a different order would be a different memo key and build again on the main thread).
+    prebuild: (ids, opts = {}) => {
+      if (!contents || typeof contents.prebuild !== 'function') return Promise.resolve(null);
+      const scope = opts.scope ?? 'room';
+      const r = resolvePluginOrder(ids, (id) => {
+        const p = registry.plugin(id);
+        return p && (cosmeticUsable(p, scope) || contentUsable(p, scope)) && allowed(p) ? { id: p.id, ...p.manifest } : null;
+      });
+      if ('error' in r) return Promise.resolve(null);
+      const contentIds = r.order.map((id) => registry.plugin(id)).filter((p) => p && ['content', 'script', 'trusted'].includes(p.class)).map((p) => p.id);
+      if (!contentIds.length) return Promise.resolve(null);
+      return contents.prebuild(contentIds, { ...opts, allowIncompatible: policy?.get()?.allowIncompatible ?? false });
+    },
     onContentStale: (fn) => contents?.onStale?.(fn) || (() => {}),
     onStale: (fn) => (visual?.onStale ? visual.onStale(fn) : () => {}),
     unofficial: () => (visual?.unofficial ? visual.unofficial() : 0),

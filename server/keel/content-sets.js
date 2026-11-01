@@ -37,6 +37,18 @@ function scriptDescriptor(p, manifest) {
 }
 
 /**
+ * A Keel content snapshot carries no scan-time hash (contentData.js adds one for the legacy loader). Fingerprint its
+ * pinned files and parsed documents once, so a room's build can be memoised (server/plugins/contentSets.js memoKey:
+ * without a hash every apply would rebuild the whole set on the server's thread).
+ * @param {any} content
+ */
+function withContentHash(content) {
+  if (!content || typeof content !== 'object' || typeof content.hash === 'string') return content;
+  const fingerprint = canonicalJson({ files: content.files ?? {}, documents: content.documents ?? {} });
+  return { ...content, hash: nodeSha256(Buffer.from(fingerprint)) };
+}
+
+/**
  * @param {{ plugins: Map<string, any> | any[], legacy?: any, vanillaData: any, log?: any, maxSets?: () => number }} opts
  */
 export function createKeelContentSets({ plugins, legacy = null, vanillaData, log = { info() {}, warn() {}, error() {} }, maxSets = () => 32 } = {}) {
@@ -62,13 +74,13 @@ export function createKeelContentSets({ plugins, legacy = null, vanillaData, log
       builtin: p.builtin === true,
       manifest,
       // A script needs its entry hashes and the manifest text in the same `files` table the compiler checks against.
-      content: script
+      content: withContentHash(script
         ? {
           ...p.content,
           files: { ...(p.content.files ?? {}), ...script.files },
           documents: { ...(p.content.documents ?? {}), 'plugin.json': manifest },
         }
-        : p.content,
+        : p.content),
       offers: p.offers ?? null,
       visual: p.visual ?? null,
       ...(script ? {
@@ -96,6 +108,8 @@ export function createKeelContentSets({ plugins, legacy = null, vanillaData, log
     has: (id) => map.has(id),
     ids: () => [...map.keys()],
     resolve: (ids, opts) => contents.resolve(ids, opts),
+    /** Warm the build the room's next resolve asks for (the lobby debounces plugin changes; server/plugins/roomSets.js). */
+    prebuild: (ids, opts) => contents.prebuild?.(ids, opts) ?? Promise.resolve(null),
     get: (cs) => contents.get(cs),
     dataBytes: (cs) => contents.dataBytes(cs),
     dataOf: (cs) => contents.dataOf(cs),
