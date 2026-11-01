@@ -15,9 +15,9 @@
 // is the visual (kit emits no procedural field).
 // Kit contract: ../README.md.
 import { num, talentBb, skillRec, giveSp, onHitOn, isMainHit } from '../shared/tier1.js';
+import { TRIGGER_MARK as MARK, placeTrigger } from '../shared/triggerEffect.js';
 
 const S1 = 'skchr_tocka_1', S2 = 'skchr_tocka_2', S3 = 'skchr_tocka_3';
-const MARK = 'tocka:mark';
 const bbOf = (raw, id) => skillRec(raw, id)?.bb ?? {};
 
 export default {
@@ -30,7 +30,7 @@ export default {
           kind: 'instant',
           onStart({ battle, unit }) {
             const allies = battle.alliesInGrid(unit).filter((a) => a !== unit && !a.findBuff(MARK)).slice(0, num(b1.max_target, 2));
-            for (const a of allies) battle.addBuff(a, { key: MARK, duration: 999, source: unit, data: { kind: S1 } });
+            for (const a of allies) placeTrigger(battle, unit, a, { kind: S1 });
           },
         },
         [S2]: {
@@ -38,7 +38,7 @@ export default {
           onStart({ battle, unit }) {
             const allies = battle.alliesFor(unit).filter((a) => a !== unit && !a.findBuff(MARK)).slice(0, num(b2.max_target, 1));
             for (const a of allies) {
-              battle.addBuff(a, { key: MARK, duration: 999, source: unit, data: { kind: S2 } });
+              placeTrigger(battle, unit, a, { kind: S2 });
             }
           },
         },
@@ -57,7 +57,7 @@ export default {
             const target = allies[0];
             if (target) {
               battle.removeBuff(target, MARK);
-              battle.addBuff(target, { key: MARK, duration: 999, source: unit, data: { kind: S3 } });
+              placeTrigger(battle, unit, target, { kind: S3 });
             }
             const init = num(b3.bonus_init_atk, 0.9), dec = num(b3.bonus_atk_dec_per_sec, 0.06);
             const dur = num(b3.bonus_duration, 15);
