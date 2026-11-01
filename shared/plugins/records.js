@@ -147,9 +147,11 @@ function operator(data, r, pluginId, validateDsl) {
       delete data.chess[id].skill.isDefault;
     }
     for (const id of c.bonds) {
-      if (!data.bonds?.[id]) fail('PLUGIN_DATA_REFERENCE', id, 'unknown bond');
-      data.bonds[id].members = [...data.bonds[id].members, baseId];
-      if (c.hidden !== true) data.bonds[id].visibleMembers = [...data.bonds[id].visibleMembers, baseId];
+      const bond = data.bonds?.[id];
+      if (!bond) fail('PLUGIN_DATA_REFERENCE', id, 'unknown bond');
+      // Replace the record instead of mutating it: an unreplaced bond keeps the frozen vanilla identity.
+      data.bonds[id] = { ...bond, members: [...bond.members, baseId],
+        ...(c.hidden !== true ? { visibleMembers: [...bond.visibleMembers, baseId] } : {}) };
     }
   }
   if (r.as !== 'chess') {
@@ -231,7 +233,23 @@ export function expandRecords(data, records, { pluginId = null, validateDsl = nu
   if (!Array.isArray(records)) problems.push(problem('PLUGIN_RECORD_TYPE', 'records', 'records must be an array'));
   if (!pluginId || !/^[a-z0-9][a-z0-9-]{1,31}$/.test(pluginId)) problems.push(problem('PLUGIN_RECORD_ID', 'pluginId', 'plugin id required'));
   if (problems.length) return { data, problems };
-  const out = clone(data);
+  // Copy on write: the top-level tables (and the few nested containers these records push into) are copied, nothing
+  // else. A record that is not replaced keeps the identity of the frozen vanilla one, so the composer sees an
+  // unchanged table and skips re-serialising it. A rejected call returns `data` untouched (copies are discarded).
+  const out = {};
+  for (const [k, v] of Object.entries(data)) out[k] = Array.isArray(v) ? v.slice() : object(v) ? { ...v } : v;
+  if (object(out.backups)) {
+    const b = out.backups;
+    out.backups = { ...b, units: { ...b.units }, tokens: { ...b.tokens },
+      ...(object(b.diy) ? { diy: { ...b.diy, ownedPool: [...(b.diy.ownedPool ?? [])], operators: { ...b.diy.operators } } } : {}) };
+  }
+  if (object(out.choices)) {
+    const c = out.choices;
+    out.choices = { ...c,
+      ...(object(c.cards) ? { cards: Object.fromEntries(Object.entries(c.cards).map(([k, v]) => [k, Array.isArray(v) ? [...v] : v])) } : {}),
+      ...(object(c.schedule) ? { schedule: { ...c.schedule } } : {}) };
+  }
+  if (object(out.config)) out.config = { ...out.config, ...(object(out.config.modes) ? { modes: { ...out.config.modes } } : {}) };
   for (const [i, r] of records.entries()) {
     try {
       const metadata = operatorMetadataProblems(r, pluginId, out);

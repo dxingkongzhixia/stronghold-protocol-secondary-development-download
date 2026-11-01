@@ -36,16 +36,21 @@ export const DATA_FILES = Object.freeze([
  * @param {T} root
  * @returns {Readonly<T>}
  */
+/** Graphs this function already froze completely; a later call skips them instead of walking to their leaves again. */
+const deepFrozen = new WeakSet();
+
 export function deepFreeze(root) {
+  if (root === null || typeof root !== 'object' || deepFrozen.has(root)) return root;
   const stack = [root];
   const seen = new Set();
   while (stack.length) {
     const o = stack.pop();
-    if (o === null || typeof o !== 'object' || seen.has(o)) continue;
+    if (o === null || typeof o !== 'object' || seen.has(o) || deepFrozen.has(o)) continue;
     seen.add(o);
     for (const v of Object.values(o)) if (v !== null && typeof v === 'object') stack.push(v);
     Object.freeze(o);
   }
+  for (const o of seen) deepFrozen.add(o);
   return root;
 }
 

@@ -128,7 +128,10 @@ export function validateGameplayData(data, options = {}) {
 export function reconcilePluginTokens(data) {
   const units = Object.values(data.backups?.units ?? {}).filter(u => u.charId.startsWith('char_x_') && Object.values(u.forms ?? {}).some(f => f.tokens?.length));
   if (!units.length) return data;
-  const out = clone(data);
+  // Copy on write: only `tokens`, `backups.tokens` and the units/forms this pass rewrites are copied, so the frozen
+  // vanilla tables keep their identity (the composer skips re-serialising them).
+  const out = { ...data, tokens: { ...data.tokens }, backups: { ...data.backups, tokens: { ...data.backups.tokens }, units: { ...data.backups.units } } };
+  const unitsCopied = new Set();
   for (const u of units) for (const [status, original] of Object.entries(u.forms)) for (const id of original.tokens ?? []) {
     const token = out.tokens[id];
     if (!token) continue;
@@ -143,11 +146,17 @@ export function reconcilePluginTokens(data) {
     // Ambiguous status variants still fall back to the base rather than choosing another owner's stats.
     const variant = candidates.length === 1 ? candidates[0][1] : candidates.length === 0 ? token.variants?.[chessId] ?? token : token;
     out.backups.tokens[alias].variants[`${u.charId}@${status}`] = { ...clone(variant), tokenId: alias, sources: variant.sources ?? ['skill'] };
-    const form = out.backups.units[u.charId].forms[status];
+    if (!unitsCopied.has(u.charId)) {
+      out.backups.units[u.charId] = { ...data.backups.units[u.charId], forms: { ...data.backups.units[u.charId].forms } };
+      unitsCopied.add(u.charId);
+    }
+    const unit = out.backups.units[u.charId];
+    const form = { ...unit.forms[status] };
+    unit.forms[status] = form;
     form.tokens = form.tokens.map(t => t === id ? alias : t);
     form.displayTokens = (form.displayTokens ?? []).map(t => t === id ? alias : t);
-    for (const s of form.skills) if (s.overrideTokenKey === id) s.overrideTokenKey = alias;
-    for (const t of form.talents) if (t.tokenKey === id) t.tokenKey = alias;
+    form.skills = form.skills.map(s => s.overrideTokenKey === id ? { ...s, overrideTokenKey: alias } : s);
+    form.talents = form.talents.map(t => t.tokenKey === id ? { ...t, tokenKey: alias } : t);
   }
   return out;
 }

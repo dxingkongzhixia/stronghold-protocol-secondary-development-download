@@ -4,6 +4,44 @@ export const own = (v, k) => v != null && Object.hasOwn(v, k);
 export const forbidden = k => ['__proto__', 'prototype', 'constructor'].includes(String(k));
 export const problem = (code, path, message) => ({ code, path, message });
 export const clone = v => Array.isArray(v) ? v.map(clone) : object(v) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, clone(x)])) : v;
+/**
+ * True when two plain JSON values are equal regardless of object key order — the comparison `canonicalJson(a) ===
+ * canonicalJson(b)` makes, without building the two strings. Shared subtree references short-circuit, so after a
+ * copy-on-write patch the cost follows what changed, not the size of the data set.
+ */
+export function sameJson(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  const arr = Array.isArray(a);
+  if (arr !== Array.isArray(b)) return false;
+  if (arr) {
+    const x = /** @type {any[]} */ (a), y = /** @type {any[]} */ (b);
+    if (x.length !== y.length) return false;
+    for (let i = 0; i < x.length; i++) if (!sameJson(x[i], y[i])) return false;
+    return true;
+  }
+  const x = /** @type {Record<string, any>} */ (a), y = /** @type {Record<string, any>} */ (b), kx = Object.keys(x);
+  if (kx.length !== Object.keys(y).length) return false;
+  for (const k of kx) if (!Object.hasOwn(y, k) || !sameJson(x[k], y[k])) return false;
+  return true;
+}
+/**
+ * Copy-on-write primitive for the record expanders: `copy(v)` returns a shallow copy of `v` (an array copy for arrays)
+ * at most once, and a copy again returns itself. A build that touches three records therefore copies the tables it
+ * writes plus the path to them, and every untouched table keeps the identity of the frozen vanilla one — which is what
+ * lets the composer skip re-serialising and re-hashing the whole data set (contentSet.js).
+ * @returns {(v: any) => any}
+ */
+export function copier() {
+  const done = new Map();
+  return (v) => {
+    if (done.has(v)) return done.get(v);
+    const c = Array.isArray(v) ? v.slice() : { ...v };
+    done.set(v, c);
+    done.set(c, c);
+    return c;
+  };
+}
 export const namespace = id => String(id).replace(/-/g, '_');
 export const recordId = (id, pluginId, prefix) => typeof id === 'string' && id.length <= 64 && /^[A-Za-z0-9_-]+$/.test(id)
   && (pluginId ? id.startsWith(`${prefix}_${namespace(pluginId)}_`) : new RegExp(`^${prefix}_[a-z0-9_]+_[A-Za-z0-9_-]+$`).test(id));

@@ -11,7 +11,7 @@ import { applyPatches, normalizeSettings } from '../../shared/plugins/patch.js';
 import { expandGameplayRecords, reconcilePluginBonds, reconcilePluginTokens, validateGameplayData } from './gameplayRecords.js';
 import { expandTraitRecords, operatorTraitPatchProblems } from './operatorTraits.js';
 import { expandFxRecords } from './fxRecords.js';
-import { object, own, clone, problem, RECORD_MAPS, recordId, namespaceCollisions } from '../../shared/plugins/dataUtils.js';
+import { object, own, clone, problem, sameJson, RECORD_MAPS, recordId, namespaceCollisions } from '../../shared/plugins/dataUtils.js';
 import { buildRecordOverlay, walkOverlay, getPath, applyRecordOverlay } from '../../shared/i18nData.js';
 import { computeGroundPaths, computeDeployTiles } from '../sim/groundPaths.js';
 import { officialKit } from '../sim/content/index.js';
@@ -45,7 +45,10 @@ function baseFor(registry) {
     i18n[file.slice(0, -5)] = JSON.parse(body.toString('utf8'));
     files.set(`i18n/${file}`, body);
   }
-  const base = { identity, data: deepFreeze(data), files, i18n };
+  const base = { identity, data: deepFreeze(data), files, i18n,
+    // Lazily filled per build: the canonical form and sha256 of the immutable vanilla tables, so a build that only
+    // touches a few records never re-serialises or re-hashes the whole data set (DESIGN §32.5 unchanged).
+    canonical: new Map(), stageCanonical: new Map(), fileHashes: new Map() };
   bases.set(registry, base);
   return base;
 }
@@ -58,7 +61,8 @@ function writesAllowed(before, after, plugin, owners) {
   for (const [file, map] of Object.entries(prev)) {
     for (const key of Object.keys(map ?? {})) {
       if (!own(next[file], key) || !object(next[file][key])) problems.push(problem('PLUGIN_RECORD_DELETE', `${file}.${key}`, 'records cannot be deleted'));
-      else if (owners.get(`${file}.${key}`) && owners.get(`${file}.${key}`) !== id && canonicalJson(map[key]) !== canonicalJson(next[file][key])
+      else if (owners.get(`${file}.${key}`) && owners.get(`${file}.${key}`) !== id && map[key] !== next[file][key]
+        && !sameJson(map[key], next[file][key])
         && !own(plugin.manifest.requires, owners.get(`${file}.${key}`))) problems.push(problem('PLUGIN_DEPENDENCY', `${file}.${key}`, 'requires must declare the plugin whose record is changed'));
     }
     for (const key of Object.keys(next[file] ?? {})) if (!own(map, key)) {
@@ -140,34 +144,44 @@ function dslWriterProblems(before, after, plugin, owners) {
 }
 
 /** potDown leaves whose path writes dsl or pluginId. Unchanged official leaves are not reported. */
+const potDownCache = new WeakMap();
 function potDownSites(data) {
   const out = new Map();
-  const walk = (node, path) => {
-    if (!node || typeof node !== 'object') return;
-    if (Array.isArray(node)) {
-      for (let i = 0; i < node.length; i++) walk(node[i], `${path}[${i}]`);
-      return;
-    }
-    if (object(node.potDown)) {
-      for (const [rank, step] of Object.entries(node.potDown)) {
-        if (!object(step)) continue;
-        for (const [leaf, value] of Object.entries(step)) {
-          if (String(leaf).split('.').some((seg) => seg === 'dsl' || seg === 'pluginId')) out.set(`${path}.potDown.${rank}.${leaf}`, canonicalJson(value));
+  for (const [name, table] of Object.entries(data)) {
+    if (!table || typeof table !== 'object') continue;
+    // Per-table memo: a table the last plugin did not replace keeps its sites, so only changed tables are walked.
+    let sub = potDownCache.get(table);
+    if (!sub) {
+      sub = new Map();
+      const walk = (node, path) => {
+        if (!node || typeof node !== 'object') return;
+        if (Array.isArray(node)) {
+          for (let i = 0; i < node.length; i++) walk(node[i], `${path}[${i}]`);
+          return;
         }
-      }
+        if (object(node.potDown)) {
+          for (const [rank, step] of Object.entries(node.potDown)) {
+            if (!object(step)) continue;
+            for (const [leaf, value] of Object.entries(step)) {
+              if (String(leaf).split('.').some((seg) => seg === 'dsl' || seg === 'pluginId')) sub.set(`${path}.potDown.${rank}.${leaf}`, canonicalJson(value));
+            }
+          }
+        }
+        for (const [k, v] of Object.entries(node)) {
+          if (k === 'potDown' || !v || typeof v !== 'object') continue;
+          walk(v, path ? `${path}.${k}` : k);
+        }
+      };
+      walk(table, '');
+      potDownCache.set(table, sub);
     }
-    for (const [k, v] of Object.entries(node)) {
-      if (k === 'potDown' || !v || typeof v !== 'object') continue;
-      walk(v, path ? `${path}.${k}` : k);
-    }
-  };
-  walk(data, '');
+    for (const [path, json] of sub) out.set(path ? `${name}.${path}` : name, json);
+  }
   return out;
 }
 
-function potDownProblems(before, after, plugin) {
+function potDownDiff(prev, next, plugin) {
   const problems = [];
-  const prev = potDownSites(before), next = potDownSites(after);
   const bad = (path) => problems.push({ ...problem('PLUGIN_DSL_PLUGIN_ID', path, 'potDown cannot write dsl or pluginId'), plugin: plugin.id });
   for (const [path, json] of next) if (prev.get(path) !== json) bad(path);
   for (const path of prev.keys()) if (!next.has(path)) bad(path);
@@ -195,8 +209,9 @@ function prepSpecs(plugin) {
 
 function routesChanged(before, after) {
   if (!before || !after) return true;
-  return canonicalJson(before.routes ?? []) !== canonicalJson(after.routes ?? [])
-    || canonicalJson(before.extraRoutes ?? []) !== canonicalJson(after.extraRoutes ?? []);
+  if (before === after) return false;
+  return !sameJson(before.routes ?? [], after.routes ?? [])
+    || !sameJson(before.extraRoutes ?? [], after.extraRoutes ?? []);
 }
 
 /** Wave ids a mode can field: each round's template, plus any bossTemplates. */
@@ -214,6 +229,9 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
   if (!registry || !Array.isArray(ids)) return { problems: [problem('PLUGIN_CONTENT_FORMAT', 'ids', 'registry and plugin ids required')] };
   let base;
   try { base = baseFor(registry); } catch (e) { return { problems: [problem('PLUGIN_CONTENT_FILE', 'data', e.message)] }; }
+  // Cached once per immutable vanilla snapshot: a build compares structural equality against the base, and equality
+  // short-circuits on shared (copy-on-write) subtree references, so cost follows what changed.
+  const baseFileHash = (rel) => { if (!base.fileHashes.has(rel)) base.fileHashes.set(rel, nodeSha256(base.files.get(rel))); return base.fileHashes.get(rel); };
   const selected = ids.map(v => typeof v === 'string' ? { id: v } : v);
   const compat = (p) => p.manifest.compatible !== false || allowsIncompatible(allowIncompatible, p.id);
   const usable = id => {
@@ -232,6 +250,7 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
   // Install the vanilla snapshot before expand/validate so a DSL literal uses the real cap, not the floor.
   rememberOfficialBounds(base.data);
   const problems = [], warnings = [], writes = new Map(), prepById = new Map();
+  let potSites = plugins.length ? potDownSites(base.data) : null;
   for (const p of plugins) {
     settings[p.id] = normalizeSettings(p.manifest.settings, selected.find(v => v.id === p.id)?.settings);
     const before = data;
@@ -263,7 +282,10 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
     }
     problems.push(...writesAllowed(before, data, p, owners));
     problems.push(...dslWriterProblems(before, data, p, owners));
-    problems.push(...potDownProblems(before, data, p));
+    // Sites are walked once per plugin, not twice: the previous plugin's snapshot is this plugin's starting point.
+    const nextPot = data === before ? potSites : potDownSites(data);
+    problems.push(...potDownDiff(potSites, nextPot, p));
+    potSites = nextPot;
     const prep = prepSpecs(p);
     problems.push(...prep.problems.map(e => ({ ...e, plugin: p.id })));
     if (prep.specs.length) prepById.set(p.id, prep.specs);
@@ -293,13 +315,15 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
     data = { ...data, stages: { ...data.stages } };
     const routes = Object.values(data.waves).flatMap(w => [...(w.routes ?? []), ...(w.extraRoutes ?? [])]);
     const changedWaves = new Set();
-    for (const [id, wave] of Object.entries(data.waves)) if (routesChanged(base.data.waves[id], wave)) changedWaves.add(id);
+    for (const [id, wave] of Object.entries(data.waves)) if (wave !== base.data.waves[id] && routesChanged(base.data.waves[id], wave)) changedWaves.add(id);
     const stagesFromWaves = new Set();
     if (changedWaves.size) for (const mode of Object.values(data.config.modes ?? {})) {
       if (wavesUsedByMode(mode).some(id => changedWaves.has(id))) for (const sid of mode.stages ?? []) stagesFromWaves.add(sid);
     }
     for (const [id, stage] of Object.entries(data.stages)) {
-      const stageChanged = canonicalJson(stage) !== canonicalJson(base.data.stages[id] ?? null);
+      // An untouched stage keeps the identity of the frozen vanilla one: no canonical serialisation at all.
+      if (stage === base.data.stages[id] && !stagesFromWaves.has(id)) continue;
+      const stageChanged = stage !== base.data.stages[id] && !sameJson(stage, base.data.stages[id] ?? null);
       // A route-only change keeps the stage's own deployTiles. [ASSUMED] bots then read the new paths; deployment lists stay the stage's.
       if (stageChanged) data.stages[id] = { ...stage, ...computeGroundPaths(stage, routes), deployTiles: computeDeployTiles(stage) };
       else if (stagesFromWaves.has(id)) data.stages[id] = { ...stage, ...computeGroundPaths(stage, routes) };
@@ -312,11 +336,15 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
   const bodies = new Map(base.files), files = {}, hashes = {};
   for (const [name, rec] of Object.entries(data)) {
     const rel = `data/${name}.json`;
+    const baseBody = base.files.get(rel);
     // A new table (data/dsl.json) has no base bytes. canonicalJson(undefined) throws, so a missing key is always written.
-    if (!Object.hasOwn(base.data, name) || canonicalJson(rec) !== canonicalJson(base.data[name])) bodies.set(rel, Buffer.from(JSON.stringify(rec)));
-    const body = bodies.get(rel); hashes[name] = nodeSha256(body);
+    // An untouched table keeps the frozen base object's identity: no serialisation, no re-hash.
+    if (rec !== base.data[name] && (!Object.hasOwn(base.data, name) || !sameJson(rec, base.data[name])))
+      bodies.set(rel, Buffer.from(JSON.stringify(rec)));
+    const body = bodies.get(rel);
+    hashes[name] = baseBody && body === baseBody ? baseFileHash(rel) : nodeSha256(body);
   }
-  for (const [lang, doc] of Object.entries(tr.out)) if (canonicalJson(doc) !== canonicalJson(base.i18n[lang] ?? null)) bodies.set(`i18n/${lang}.json`, Buffer.from(JSON.stringify(doc)));
+  for (const [lang, doc] of Object.entries(tr.out)) if (!sameJson(doc, base.i18n[lang] ?? null)) bodies.set(`i18n/${lang}.json`, Buffer.from(JSON.stringify(doc)));
   const boundsSnap = exportOfficialBounds(rememberOfficialBounds(base.data));
   if (plugins.length) bodies.set('bounds/official.json', Buffer.from(canonicalJson(boundsSnap)));
   // Notices and personal theme values are not gameplay. Use the same canonical snapshot whether those fields
@@ -386,7 +414,10 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false, allowInc
     const report = preflightScripts(registry,scripts,{plugins:parts,settings});
     if (report) return {problems:[problem(report.code,'scripts',report.message)]};
   }
-  for (const [rel, body] of bodies) files[rel] = { sha256: nodeSha256(body), bytes: body.length };
+  for (const [rel, body] of bodies) {
+    const baseBody = base.files.get(rel);
+    files[rel] = { sha256: baseBody && baseBody === body ? baseFileHash(rel) : nodeSha256(body), bytes: body.length };
+  }
   const vanilla = plugins.length === 0;
   // The interaction windows of the set (PLUGIN API v2, docs/PLUGINS.md §10b): the registry already checked each
   // file, including transitive option sources in content.files: every offer byte participates in cs.
