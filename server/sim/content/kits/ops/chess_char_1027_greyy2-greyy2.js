@@ -22,7 +22,7 @@ export default {
       skills: {
         [S1]: { kind: 'duration', mods: { atkPct: num(s1.atk), aspd: num(s1.attack_speed) } },
         [S2]: {
-          kind: 'instant',
+          kind: 'instant', charges: num(s2.ct, 2),
           onStart({ battle, unit }) {
             const target = battle.enemiesInKeys(unit.rangeKeys, unit, { canHitFly: true })[0] ?? unit;
             const x = target.x, y = target.y;
