@@ -593,6 +593,7 @@ changes still get a notice first.
 | Statistics page (record v2 + the official template) | `shared/stats.js` (`STATS_VERSION = 2`, `creditedKills`, `maxima`, peak-bond retention), `public/js/screens/stats.js` + `ui/stats.js`, `public/assets/ui/statistics/` (37 files), `data/assets.json` (`ui['statistics/*']`), `tools/fetch-stats-assets.mjs`; see `docs/UPSTREAM-MERGES.md` §13.9 |
 | Field-silence watchdog (client combat) | `server/match/match/clientCombat.js` (`_armFieldWatch` / `_checkFieldSilence`, `FIELD_WATCH_MS`), `server/match/fields.js` (`FIELD_SILENCE_MS`), the `phase/round/fields` rows of `server/admin.js`; see `docs/META.md` §1.3b — a merge of upstream's client-combat code must keep the 12 s takeover |
 | 分血救援 (revive) | `shared/constants.js` `REVIVE`; `server/match/player/round.js` `down`/`revive`; `server/match/match/{settle,intents}.js`; the `downed/revive*` view fields; `test/match/revive.test.js` (see `docs/MATCHMAKING.md` §50) |
+| Content-set build cost | `shared/plugins/dataUtils.js` (`sameJson`, `copier`); the copy-on-write expanders `shared/plugins/{patch,records}.js` + `server/plugins/gameplayRecords.js`; the base caches / `potDownSites` memo in `server/plugins/contentSet.js`; `server/plugins/contentBuilderChild.js` + `prebuild` in `contentSets.js`; the `deepFreeze` memo in `server/data.js`; the immediate-apply path of `server/lobby.js` `setPlugins` (see `docs/PLUGINS.md` §11) |
 
 Honour the blacklist, run the full `node --test` in the store, and only then mirror back to the working project.
 If a merge would force a choice between our behaviour and upstream's beyond the blacklist, **stop and ask
@@ -785,3 +786,21 @@ tag-`part` spawn mods), `server/match/match/bossRounds.js` (the boss field's `fl
 `server/sim/content/bosses.js` (`summonMods` DEF / RES). Tests: `test/match/boost.test.js` (the layer itself) — every
 file that pins the OFFICIAL numbers runs on `withoutTuning(DATA)`. Measurements and the golden note:
 [`docs/BALANCE.md`](BALANCE.md) §8. **It must survive a merge**: [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0.
+
+## 12. 内容集构建：copy-on-write + 子进程（2026-11-01）
+
+主线（以及我们此前）的 C1 构建器是「整份数据」工作：每个 patch / record 深拷贝 ~7 MB 数据，每张表和每套 i18n
+用 `canonicalJson` 序列化两遍只为判断「有没有变」，所有文件重算 sha256，最后整树 `deepFreeze`。所以**加一个干员
+和重算整个数据集一样贵**，2 vCPU 的机器上还会阻塞大厅线程。我们的做法（不改变任何产物字节）：
+
+- `applyPatches` / `expandRecords` / `reconcilePluginTokens` 改为 copy-on-write（只复制写到的表与到字段的路径），
+  未变更的表保持冻结身份；
+- 身份未变的表不序列化、不重算哈希；`sameJson` 取代「两次 canonicalJson 对比」；base 缓存整表 canonical 与整文件
+  sha256；`potDownSites` 按表记忆；`deepFreeze` 记住已冻结图；
+- `SP_CONTENT_BUILDER=1` 时构建跑在子进程（开机即起，插件扫描算进启动），主线程只接收结果；
+- `room.setPlugins` 不再等固定防抖：**变化即构建、构建完即应用**，最新一次胜出，同一房间同时只跑一个构建；
+  `SP_PLUGIN_DEBOUNCE_MS` 变成可选合并窗口（0/未设 = 立即）。
+
+实测：vanilla 300→25 ms、5 插件 800→200 ms、应用阶段 0–1 ms、新组合首次 ~290 ms（子进程）、已建组合 9 ms。
+**合并主线时必须保留**：这些文件列在本文末尾的 fork-only 清单里；主线若把 `contentSet.js` / `records.js` /
+`patch.js` 重写，先按本节的实测复跑一遍再决定收哪边。详见 [`docs/PLUGINS.md`](PLUGINS.md) §11「Build cost」。

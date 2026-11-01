@@ -965,6 +965,32 @@ normalised by the manifest's declared settings (§3) and are part of `cs`. Refus
 A change of the content set (or of the mode) un-readies the other players, like a difficulty change. Switching
 everything off brings back the vanilla shape of `room.state.content` exactly.
 
+**Build cost and where the build runs (2026-11-01).** A build used to be *whole-data-set* work: every patch and every
+record expanded a deep clone of the ~7 MB data, every table and every i18n pack was serialised twice with
+`canonicalJson` just to decide whether it changed, all files were re-hashed, and the result was deep-frozen again — so
+one added operator cost the same as the whole dataset. Now:
+
+* the three expanders (`shared/plugins/patch.js` `applyPatches`, `shared/plugins/records.js` `expandRecords`,
+  `server/plugins/gameplayRecords.js` `reconcilePluginTokens`) are **copy-on-write**: they copy the tables and the path
+  to the fields they write, and every untouched table keeps the identity of the frozen vanilla one;
+* a table whose object identity is unchanged is never re-serialised or re-hashed; `sameJson` (structural compare,
+  shared subtrees short-circuit) replaces `canonicalJson(a) === canonicalJson(b)`; each vanilla table's canonical form
+  and each file's sha256 are cached on the base; `potDownSites` is memoised per table; `deepFreeze` remembers graphs it
+  already froze;
+* with `SP_CONTENT_BUILDER=1` the build runs in a **child process** (`server/plugins/contentBuilderChild.js`, started
+  at boot so its one-time plugin scan is part of startup, not the first toggle); the main thread only adopts the result
+  and registers its bodies (`registerContentSetFiles`). Off = the old synchronous build (the fallback when a build
+  fails or the flag is unset).
+* `room.setPlugins` does not wait for a fixed quiet period: the build starts at once and the set is applied as soon as
+  it is built, if it is still the host's latest choice (one build per room at a time; a newer toggle supersedes the
+  one in flight). `SP_PLUGIN_DEBOUNCE_MS` remains as an optional coalescing window — 0 or unset means "apply at once".
+  The build is memoised by manifest + content file hashes + settings, so switching back to an already built
+  combination is instant.
+
+Measured on the dev box: vanilla 300 → 25 ms, five plugins 800 → 200 ms, the apply phase 0–1 ms (memo), a new
+combination's first build ≈290 ms in the child, an already built combination 9 ms. Output bytes are unchanged — only
+the `cs` moves when `shared/**` code changes, as §6 requires.
+
 **The room's state.** With gameplay plugins `room.state.content` is `{ cs, vanilla: false, plugins: [{ id, version,
 class, hash, auto? }], warnings, bytes, dataBytes, vs?, modes?, modeId?, kittedExtra? }`: `dataBytes` is what a member
 downloads beyond the vanilla files, `modes` the modes its plugins add (`{ id, name, roomMode, difficulty }`), `modeId`
