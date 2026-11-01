@@ -167,6 +167,10 @@ export const OPERATOR_KIT_FILES = Object.freeze([
   'op-aglna2.js',
   'op-kalts2.js',
   'op-clemnt.js',
+  // 2026-11-01 banner / event 6★: the pool's new official kits
+  'op-oxi.js',
+  'op-tocka.js',
+  'op-dminon.js',
 ]);
 
 /**
