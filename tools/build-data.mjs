@@ -810,10 +810,11 @@ const CUSTOM_FACTIONS = [
 ];
 /**
  * Factions whose boost is held back from the build: 玻利瓦尔 waits for the finished `plugins/bolivar` bond plugin
- * (owner 2026-11-01 — the roster is half-done, so neither the bond nor the 阵营加强 may be offered). Their chess stay
- * hidden in the vanilla tables and no `data/builtin/faction-bolivar.json` is generated; drop the id here when done.
+ * (owner 2026-11-01 — the roster is half-done), and 哥伦比亚 exists only for 谬因 (a Bolívar-roster member whose nation
+ * is Columbia), so neither may be offered. Their chess stay hidden in the vanilla tables and no
+ * `data/builtin/faction-<id>.json` is generated; drop an id here when its feature is done.
  */
-const HELD_FACTIONS = new Set(['bolivar']);
+const HELD_FACTIONS = new Set(['bolivar', 'columbia']);
 
 /**
  * Split the custom shop operators out of the vanilla tables (see CUSTOM_FACTION_OF): hide every record, drop it from
