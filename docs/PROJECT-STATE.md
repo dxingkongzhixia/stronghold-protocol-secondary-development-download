@@ -43,7 +43,7 @@
 
 > ⚠️ store 里的 `.cache` / `public/assets` / `public/fonts` / `public/vendor` 是**指向工作项目的 junction**，约 600 MB 美术只有一份。**别单独删工作项目**，也别把 store 的 `public/assets` 当副本删掉。
 
-## 3. 当前状态（2026-10-27 23:00 · 部署后实测）
+## 3. 当前状态（2026-11-02 00:20 · 部署后实测）
 
 | 项 | 值 |
 |---|---|

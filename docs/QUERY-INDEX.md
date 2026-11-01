@@ -20,6 +20,8 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 |---|---|
 | What is this project? How do I run it? What can players do? | [`README.md`](../README.md) |
 | Which documents exist, which are authoritative, and which should I read first? | [`docs/README.md`](README.md) |
+| Two documents disagree — which one wins? Which doc owns this topic? | [`docs/README.md`](README.md) §4 (same topic, who wins) and §5 (authority order) |
+| I am adding or moving a doc — where must I register it? | [`docs/README.md`](README.md) §7.3 |
 | I just inherited this — where do I even start? | [`docs/DEVELOPER.md`](DEVELOPER.md) (human) / [`docs/AI-AGENT.md`](AI-AGENT.md) (AI) |
 | Where are the game rules, and which document wins? | [`docs/RULES.md`](RULES.md) → [`docs/DESIGN.md`](DESIGN.md) |
 | I want to develop a plugin — where do I start? | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
