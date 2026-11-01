@@ -56,7 +56,20 @@ export default {
         [S3]: {
           kind: 'duration',
           targeting: { rangeGrid: def?.skill?.rangeGrid ?? null },
-          attack: { atkScale: num(b3['attack@atk_scale'], 1.8), hits: 2 },
+          attack: {
+            atkScale: 1, hits: 1,
+            onEachHit({ battle, unit, dmg }) {
+              // 钢琴/风琴各 2 个音符：钢琴追踪法抗最高（物理），风琴追踪防御最高（法术），每个 180 %。
+              dmg.amount = 0;
+              const foes = battle.enemiesInKeys(unit.rangeKeys, unit, { canHitFly: true }).filter((e) => e.alive && e.side === 'enemy');
+              const phys = [...foes].sort((a, b) => (b.s.res ?? 0) - (a.s.res ?? 0))[0];
+              const arts = [...foes].sort((a, b) => (b.s.def ?? 0) - (a.s.def ?? 0))[0];
+              for (let n = 0; n < 2; n++) {
+                if (phys) battle.dealDamage(unit, phys, { amount: unit.s.atk * num(b3['attack@atk_scale'], 1.8), type: 'phys', isSkill: true, tags: ['skill', 'oblvns:piano'] });
+                if (arts) battle.dealDamage(unit, arts, { amount: unit.s.atk * num(b3['attack@atk_scale'], 1.8), type: 'arts', isSkill: true, tags: ['skill', 'oblvns:organ'] });
+              }
+            },
+          },
         },
       },
       talents: [{
