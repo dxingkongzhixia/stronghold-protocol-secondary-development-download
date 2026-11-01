@@ -85,24 +85,34 @@ export default {
               const interval = burning ? overload : normal;
               next = b.time + interval;
               const hit = new Set();
+              const speed = Math.max(0.1, num(b3.wave_speed, 2.3));
+              const reach = num(b3.projectile_range, 0.5);
+              const radius = num(b3.range_radius, 1.5);
               for (let k = -half; k <= half; k++) {
-                for (let d = 1; d <= exit; d++) {
-                  const rr = r0 + dr * d - dc * k, cc = c0 + dc * d + dr * k;
-                  if (!inRect(b, rr, cc)) break;
-                  const foes = b.enemies.filter((e) => e.alive && e.side === 'enemy' && !e.isFlying
-                    && Math.round(e.y) === rr && Math.round(e.x) === cc);
-                  if (!foes.length) continue;
-                  for (const e of foes) {
+                // Each lane is a projectile probe: it flies forward at wave_speed, and the first contact detonates it.
+                let dist = 0;
+                battle.every(0.1, (bb, sc) => {
+                  dist += speed * 0.1;
+                  const py = r0 + dr * dist - dc * k;
+                  const px = c0 + dc * dist + dr * k;
+                  if (dist > exit || !inRect(bb, Math.round(py), Math.round(px))) { sc.cancel(); return; }
+                  const contact = bb.enemies.some((e) => e.alive && e.side === 'enemy' && !e.isFlying
+                    && Math.abs(e.y - py) <= reach && Math.abs(e.x - px) <= reach);
+                  if (!contact) return;
+                  for (const e of bb.enemies) {
+                    if (!e.alive || e.side !== 'enemy' || e.isFlying) continue;
+                    const dx = e.x - px, dy = e.y - py;
+                    if (dx * dx + dy * dy > radius * radius) continue;
                     const mul = hit.has(e.id) ? repeat : 1;
                     hit.add(e.id);
                     const element = burning && e.findBuff('burnBurst');
-                    b.dealDamage(unit, e, {
+                    bb.dealDamage(unit, e, {
                       amount: unit.s.atk * atkScale * mul, type: element ? 'element' : 'arts',
                       ...(element ? { element: 'burn' } : {}), isSkill: true, tags: ['skill', 'oxi:wave'],
                     });
                   }
-                  break; // the first enemy row stops this lane's wave
-                }
+                  sc.cancel();
+                }, { owner: unit });
               }
             }, { owner: unit });
           },
