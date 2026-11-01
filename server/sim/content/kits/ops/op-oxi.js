@@ -51,7 +51,8 @@ export default {
             let t = 0;
             battle.every(0.1, (b, sc) => {
               t += 0.1;
-              const left = t <= hold ? 1 : Math.max(0, 1 - (t - hold) / Math.max(dur - hold, 0.1));
+              const remain = num(b2.damage_remaining_scale, 0.1);
+              const left = t <= hold ? 1 : Math.max(remain, 1 - (t - hold) / Math.max(dur - hold, 0.1));
               const res = resist * left;
               if (res > 0) b.addBuff(unit, { key: SHELTER, duration: 0.15, mods: { physTakenMul: 1 - res, artsTakenMul: 1 - res } });
               if (t >= dur) sc.cancel();
@@ -164,13 +165,13 @@ export default {
             }
             if (dealt > 0) battle.heal(unit, unit, dealt * num(b2.heal_ratio, 0.05), { self: true, tags: ['skill'] });
           }, { owner: unit });
-          // [ASSUMED] stance: one extra hit on every blocked enemy every 0.5 s.
-          battle.every(0.5, () => {
-            if (!up(unit) || !unit.findBuff(STANCE)) return;
+          // Stance: a normal attack also hits every other enemy she blocks, with the same damage (official 攻击所有阻挡).
+          onHitOn(battle, unit, ({ target, dmg }) => {
+            if (!isMainHit(dmg) || !unit.findBuff(STANCE) || !target?.alive) return;
             for (const e of battle.blockedTargets(unit, unit.profile)) {
-              if (e.alive) battle.dealDamage(unit, e, { amount: unit.s.atk * 0.5, type: 'arts', tags: ['skill', 'oxi:stance'] });
+              if (e.alive && e !== target) battle.dealDamage(unit, e, { amount: dmg.amount, type: dmg.type, isSkill: false, tags: ['skill', 'oxi:stance'] });
             }
-          }, { owner: unit });
+          });
         },
       }],
     };
