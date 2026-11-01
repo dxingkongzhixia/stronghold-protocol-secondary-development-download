@@ -7,10 +7,10 @@
 //     for 1.5 × ATK once and gains 8 s of 挑衅 -1 (the PRTS "不容易受到攻击").
 // Kit contract: ../README.md.
 import { num, talentBb, skillBbOf, toggleBuff } from '../shared/tier1.js';
+import { TRIGGER_MARK as MARK, placeTrigger } from '../shared/triggerEffect.js';
 
 const S1 = 'skchr_pedro_1';
 const S2 = 'skchr_pedro_2';
-const MARK = 'pedro:trigger';
 const GUARD = 'pedro:guard';
 
 export default {
@@ -26,8 +26,8 @@ export default {
           attack: {
             atkScale: num(s1.atk_scale, 1.1),
             maxTargets: num(s1.max_target, 2),
-            onEachHit({ battle, target }) {
-              if (target?.alive && !target.findBuff(MARK)) battle.addBuff(target, { key: MARK, duration: 60, source: null });
+            onEachHit({ battle, unit, target }) {
+              placeTrigger(battle, unit, target, { kind: 'pedro:s1' });
             },
           },
         },
