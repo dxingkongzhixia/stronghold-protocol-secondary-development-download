@@ -284,6 +284,7 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
   let builder = null;
   let buildSeq = 0;
   const waiting = new Map();
+  const inflight = new Map();
   const builderChild = () => {
     if (String(process.env.SP_CONTENT_BUILDER || '') !== '1') return null;
     if (builder) return builder;
@@ -320,11 +321,14 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
     const norm = normalized(ids, settings);
     const mk = memoKey(ids, norm, allowIncompatible);
     if (mk && memo.has(mk) && sets.has(memo.get(mk))) return Promise.resolve({ ok: true });
+    // One build per set at a time: the debounce's warm request and the apply that follows it ask for the same set, and
+    // the second must wait for the first instead of starting a duplicate build in the child.
+    if (mk && inflight.has(mk)) return inflight.get(mk);
     const limit = Math.max(0, Number(maxSets()) || 0);
     const freed = replacing && isContentHash(replacing) && held.get(csUrlPart(replacing)) === 1 ? 1 : 0;
     if (held.size - freed >= limit) return Promise.resolve(null);
     const id = ++buildSeq;
-    return new Promise((resolve) => {
+    const job = new Promise((resolve) => {
       const timer = setTimeout(() => { if (waiting.delete(id)) resolve(null); }, 30_000);
       timer.unref?.();
       waiting.set(id, { resolve: (v) => { clearTimeout(timer); resolve(v); } });
@@ -336,17 +340,20 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
       const set = adopt(built);
       if (!set) return null;
       const key = csUrlPart(set.cs);
-      if (!sets.has(key)) sets.set(key, set);
+      // `keep` also bounds the map: a host toggling many combinations warms sets no room holds yet.
+      if (!sets.has(key)) keep(key, set);
       if (mk) remember(mk, key);
       return { ok: true, set };
     });
+    if (mk) inflight.set(mk, job.then((v) => { inflight.delete(mk); return v; }, (e) => { inflight.delete(mk); throw e; }));
+    return mk ? inflight.get(mk) : job;
   }
 
   return {
     resolve,
     prebuild,
     onStale(fn) { staleListeners.add(fn); return () => staleListeners.delete(fn); },
-    close() { offScan?.(); staleListeners.clear(); if (builder) { try { builder.kill(); } catch { /* gone */ } builder = null; } },
+    close() { offScan?.(); staleListeners.clear(); inflight.clear(); if (builder) { try { builder.kill(); } catch { /* gone */ } builder = null; } },
     /** A room uses the set of `cs`: never dropped until every holder released it. @param {string} cs */
     hold(cs) { if (!isContentHash(cs)) return; const k = csUrlPart(cs); held.set(k, (held.get(k) || 0) + 1); },
     /** A room no longer uses the set of `cs`. @param {string} cs */
