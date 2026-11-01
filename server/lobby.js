@@ -1224,10 +1224,23 @@ export class Lobby {
       room.pluginSeq = (room.pluginSeq || 0) + 1;
       const token = room.pluginSeq;
       if (room.pluginTimer) clearTimeout(room.pluginTimer);
+      if (room.pluginWarm) clearTimeout(room.pluginWarm);
+      // Warm the build while the quiet period runs: a single toggle then applies as soon as the debounce ends instead of
+      // paying the build on the critical path. A newer toggle supersedes it through the same sequence token.
+      room.pluginWarm = setTimeout(() => {
+        room.pluginWarm = null;
+        if (room.pluginSeq !== token || room.match || !this.rooms.has(room.code)) return;
+        const p = room.pendingPlugins;
+        if (!p) return;
+        Promise.resolve(this.plugins.prebuild?.(p.ids, { settings: p.settings, replacing: room.content })).catch(() => {});
+      }, Math.max(50, Math.min(200, Math.floor(this.pluginDebounceMs / 4))));
+      room.pluginWarm.unref?.();
       room.pluginTimer = setTimeout(async () => {
         if (room.pluginSeq !== token || room.match || !this.rooms.has(room.code)) { room.pluginTimer = null; return; }
         const p = room.pendingPlugins;
         if (p) {
+          // Already warmed above in the normal case: this is a memo hit, or the synchronous fallback when the builder
+          // is off (SP_CONTENT_BUILDER=0).
           try { await this.plugins.prebuild?.(p.ids, { settings: p.settings, replacing: room.content }); } catch { /* sync fallback */ }
         }
         if (room.pluginSeq !== token || room.match || !this.rooms.has(room.code)) { room.pluginTimer = null; return; }
@@ -1274,6 +1287,7 @@ export class Lobby {
   _flushPlugins(room) {
     if (!room || (!room.pluginTimer && !room.pendingPlugins)) return OK;
     if (room.pluginTimer) { clearTimeout(room.pluginTimer); room.pluginTimer = null; }
+    if (room.pluginWarm) { clearTimeout(room.pluginWarm); room.pluginWarm = null; }
     room.pluginSeq = (room.pluginSeq || 0) + 1;   // a debounced build still in flight must not apply over this
     const p = room.pendingPlugins;
     room.pendingPlugins = null;
