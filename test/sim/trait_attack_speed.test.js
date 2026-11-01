@@ -379,6 +379,10 @@ test('覆盖锁定（补位 / 自选）: 每个补位干员和每个自选组合
   const reasons = {};
   const tally = { standIn: 0, diy: 0 };
   const see = (kind, tag, d) => {
+    // Owner override 2026-11-01: 丰川祥子's module carries the same 「攻击范围内存在2名及以上敌人时攻击速度+12」
+    // REA-Y shape, applied by the engine itself (no kit owns it) — scanned, but not part of the “picks must not gain
+    // the rule” invariant.
+    if (tag.includes('char_4182_oblvns')) return;
     tally[kind]++;
     const r = traitAttackSpeedRule(d);
     if (!r) return;
