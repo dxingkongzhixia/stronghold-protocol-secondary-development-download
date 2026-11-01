@@ -51,6 +51,16 @@ Read this together with:
 > DIY_EXCLUDED_TEAMS exclusion (tools/build-data.mjs DIY_FORCE_INCLUDE) and offered as a 6★ 自选 pick, with her
 > official prefab FX. This is an explicit owner decision; the other collab operators stay excluded.
 >
+> **2026-11-01 — official prefab playback, frame level.** 丰川祥子 (char_4182_oblvns), 冻河 (char_4244_tocka) and
+> 塔露拉 (char_4247_oxi) play their official skill prefabs through the client wiring (the `data/local-fx.json` index).
+> Two kit moments that no plan row can place are bound explicitly in `public/js/render/vfx/skills.js` `FX_BINDINGS`:
+> 冻河 S1's mark → `tocka_skill_01_buff_02_start_01` on the marked ally, 塔露拉 S2's stance →
+> `oxi_skill_02_hit_01` on each blocked enemy. `test/render/new6-vfx-timeline.browser.test.js` (opt-in `RENDER_E2E=1`)
+> walks every skill frame by frame and screenshots 0 / 0.25 / 0.5 / 0.75 / 1 s, asserting the scheduled keys, the
+> drawn pixels, the finite prefabs' own expiry and the loops' stop after the cast. 冻河 S1's two buff-aura loops
+> (`tocka_skill_01_buff_01` / `_02`) still have no client carrier: the buff lives on an ally and the sim reports no
+> buff-placement event, so they are listed as unplaced rather than drawn.
+>
 > **2026-10-24 — built-in 阵营加强 plugins.** Their *shop forms* are no longer part of the vanilla game: the build hides
 > those records (`visible: false`) and drops them from the bond member lists, and each faction's built-in content
 > plugin (`server/plugins/builtin.js`, generated `data/builtin/faction-<faction>.json`) restores them when the room's

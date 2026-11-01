@@ -1407,6 +1407,18 @@ export const FX_BINDINGS = Object.freeze({
     zone: binding({ owner: 'id', keys: ['sleach_skill_03_flag_01', 'sleach_skill_03_range_loop_01', 'sleach_skill_03_range_loop_02'], at: 'point', hold: 'fx', holdS: 10, during: true, cover: ['zone'] }),
     aoe: binding({ owner: 'id', keys: ['sleach_skill_03_range_start_01', 'sleach_skill_03_range_start_02'], at: 'point', holdS: 7.5, during: true }),
   }),
+  // 冻河 S1 (op-tocka.js: the 'mark' on each chosen ally, id = her, target = the ally): the official buff template
+  // tocka_s1[trigger] creates tocka_skill_01_buff_02_start_01 on the holder at ON_BUFF_START (index.json's `hit` row whose
+  // carrier, EmptyAnimatedAbility._activeBuffs, is no attack ability — so no plan row places it). The two looping rows
+  // (tocka_skill_01_buff_01 / _02) are the buff's own aura and still need a client-side buff visual.
+  skchr_tocka_1: Object.freeze({
+    mark: binding({ owner: 'id', keys: ['tocka_skill_01_buff_02_start_01'], at: 'target', target: 'target' }),
+  }),
+  // 塔露拉 S2 (op-oxi.js: the 'stance' on each blocked enemy her normal attack also hits, id = her, target = the enemy):
+  // the skill's own hit row oxi_skill_02_hit_01 (the skill record has no attack node, so no plan attack carries it)
+  skchr_oxi_2: Object.freeze({
+    stance: binding({ owner: 'id', keys: ['oxi_skill_02_hit_01'], at: 'target', target: 'target' }),
+  }),
 });
 
 /**

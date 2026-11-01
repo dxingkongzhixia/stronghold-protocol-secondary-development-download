@@ -1,9 +1,11 @@
 // Official prefab alignment for the 2026-11-01 additions: every skill of the new operators must have an index entry,
-// fx keys that resolve to extracted prefabs, and (when the local fx manifest is present) files on disk.
+// fx keys that resolve to extracted prefabs, and (when the local fx manifest is present) files on disk. Also the kit fx
+// bindings (FX_BINDINGS: a kit moment standing for an official effect no plan row places) must resolve the same way.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { bindingKeys } from '../../public/js/render/vfx/skills.js';
 
 const ROOT = path.resolve('.');
 const IDX = path.join(ROOT, 'public', 'assets', 'local', 'fx', 'index.json');
@@ -29,6 +31,19 @@ test('official prefab alignment: new operators have units, skills, effect keys a
         assert.ok(entry?.file, `${sk}: prefab index entry ${k}`);
         assert.ok(fs.existsSync(path.join(ROOT, 'public', 'assets', 'local', 'fx', entry.file)), `${sk}: prefab ${entry.file}`);
       }
+    }
+  }
+});
+
+test('kit fx bindings of the new operators resolve to their extracted prefabs', { skip }, () => {
+  const idx = JSON.parse(fs.readFileSync(IDX, 'utf8'));
+  for (const sk of ['skchr_tocka_1', 'skchr_oxi_2']) {
+    const keys = bindingKeys(idx, sk);
+    assert.ok(keys.length > 0, `${sk}: bound keys`);
+    for (const k of keys) {
+      const entry = idx.prefabs?.[k];
+      assert.ok(entry?.file, `${sk}: bound prefab ${k}`);
+      assert.ok(fs.existsSync(path.join(ROOT, 'public', 'assets', 'local', 'fx', entry.file)), `${sk}: file ${entry.file}`);
     }
   }
 });

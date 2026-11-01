@@ -127,6 +127,10 @@ export const FX_KINDS = Object.freeze({
   veenBounce: { a: 'counter', c: 0xffd27a }, veenVolley: { a: 'volley', c: 0xffd27a },
   harpoon: { a: 'beam', c: 0xd0c0a0 }, arrowRain: { a: 'volley', c: 0xfff2d0 }, mark: { a: 'reticle', c: 0xff7b8a },
   bounce: { a: 'counter', c: 0xffd9a0 }, dying: { a: 'mark', c: 0xff5a4a },
+  // 塔露拉 S2 (op-oxi.js: the 'stance' on each blocked enemy her normal attack also hits; FX_BINDINGS plays
+  // oxi_skill_02_hit_01 there, this counter flare is the fallback without the local prefabs). 冻河 S1's 'mark' reuses the
+  // reticle above (its own one-shot is bound).
+  stance: { a: 'counter', c: 0xffd27a },
   // beams
   beam: { a: 'beam', c: 0xff7a5a }, link: { a: 'beam', c: 0x9ff0dc }, lightning: { a: 'bolt', c: 0xc9a2ff }, tentacle: { a: 'beam', c: 0x5fe0ff },
   sandChains: { a: 'beam', c: 0xd8c8a0 }, sandChainsCharged: { a: 'beam', c: 0xffd45a },

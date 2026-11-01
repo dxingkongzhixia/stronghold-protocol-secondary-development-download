@@ -169,7 +169,9 @@ export default {
           onHitOn(battle, unit, ({ target, dmg }) => {
             if (!isMainHit(dmg) || !unit.findBuff(STANCE) || !target?.alive) return;
             for (const e of battle.blockedTargets(unit, unit.profile)) {
-              if (e.alive && e !== target) battle.dealDamage(unit, e, { amount: dmg.amount, type: dmg.type, isSkill: false, tags: ['skill', 'oxi:stance'] });
+              if (!e.alive || e === target) continue;
+              battle.dealDamage(unit, e, { amount: dmg.amount, type: dmg.type, isSkill: false, tags: ['skill', 'oxi:stance'] });
+              battle.fx('stance', { x: e.x, y: e.y, id: unit.id, target: e.id });
             }
           });
         },

@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeBattle, enemyRec } from '../helpers/battleHarness.js';
+import { FX_BINDINGS } from '../../public/js/render/vfx/skills.js';
 
 const picks = [
   ['char_4247_oxi', '塔露拉', 2],
@@ -44,4 +45,32 @@ test('2026-11-01 6★: each DIY pick runs its own hand-authored kit in a real ba
     h.run(15);
     assert.equal(h.b.errorCount ?? 0, 0, `${name}: ${JSON.stringify(h.b.errors?.slice(0, 3))}`);
   }
+});
+
+test('冻河 S1: placing a mark emits the official mark fx on the marked ally', () => {
+  const h = makeBattle({
+    units: [
+      { uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4244_tocka', skillIndex: 0, uniEquipId: null }, row: 10, col: 6 },
+      { uid: 2, diy: { slot: 'chess_char_6_diy2_a', charId: 'char_4182_oblvns', skillIndex: 0, uniEquipId: null }, row: 10, col: 7 },
+    ],
+    defs: { enemies: { e_walk: enemyRec({ key: 'e_walk', hp: 50000, atk: 300, speed: 0.8, bat: 1.5 }) } },
+    enemies: [{ key: 'e_walk', pos: [10, 8] }],
+    timeLimit: 25, autoFinish: false, seed: 3,
+  });
+  h.step();
+  const u = h.b.units.find((x) => x.kind === 'op' && x.def?.charId === 'char_4244_tocka');
+  u.skill.sp = u.skill.spCost;
+  assert.ok(h.runUntil(() => h.eventsOf('fx').some((e) => e[1] === 'mark'), 15), 'the mark fx fires');
+  const ev = h.eventsOf('fx').find((e) => e[1] === 'mark');
+  const ally = h.b.units.find((x) => x.id === ev[4].target);
+  assert.ok(ally && ally.side === 'ally' && ally !== u, 'on another ally');
+  assert.equal(ev[4].id, u.id, 'owned by 冻河');
+  assert.ok(ally.findBuff('trigger:effect'), 'and the mark itself is on that ally');
+});
+
+test('the trigger and stance kit fx are bound to their official prefabs', () => {
+  assert.deepEqual(FX_BINDINGS.skchr_tocka_1.mark.keys, ['tocka_skill_01_buff_02_start_01']);
+  assert.equal(FX_BINDINGS.skchr_tocka_1.mark.at, 'target');
+  assert.deepEqual(FX_BINDINGS.skchr_oxi_2.stance.keys, ['oxi_skill_02_hit_01']);
+  assert.equal(FX_BINDINGS.skchr_oxi_2.stance.at, 'target');
 });
