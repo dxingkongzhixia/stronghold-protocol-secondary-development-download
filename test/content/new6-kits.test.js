@@ -12,6 +12,22 @@ const picks = [
 ];
 const walker = () => enemyRec({ key: 'e_walk', hp: 4000, atk: 300, speed: 0.8, bat: 1.5 });
 
+test('塔露拉 S2: TAKE_DAMAGE trigger with 5 charges (official 触发方式)', () => {
+  const h = makeBattle({
+    units: [{ uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4247_oxi', skillIndex: 1, uniEquipId: null }, row: 10, col: 6 }],
+    defs: { enemies: { e_hit: enemyRec({ key: 'e_hit', hp: 50000, atk: 300, range: 1.5, bat: 1 }) } },
+    enemies: [{ key: 'e_hit', pos: [10, 7] }],
+    timeLimit: 20, autoFinish: false, seed: 3,
+  });
+  h.step();
+  const u = h.b.units.find((x) => x.kind === 'op' && x.side === 'ally');
+  assert.equal(u.skill.maxCharges, 5, 'five charges');
+  assert.equal(u.skill.rule, 'TAKE_DAMAGE', 'only a hit triggers it');
+  const before = u.skill.activations;
+  assert.ok(h.runUntil(() => u.skill.activations > before, 10), 'activates after taking a hit');
+  assert.ok(u.skill.activations <= 5, 'charges capped at five');
+});
+
 test('2026-11-01 6★: each DIY pick runs its own hand-authored kit in a real battle', () => {
   for (const [charId, name, skillIndex] of picks) {
     const h = makeBattle({

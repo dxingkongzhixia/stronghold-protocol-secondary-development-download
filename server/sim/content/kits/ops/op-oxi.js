@@ -43,7 +43,7 @@ export default {
           },
         },
         [S2]: {
-          kind: 'instant',
+          kind: 'charges', charges: num(b2.max_stack_cnt, 5), trigger: 'TAKE_DAMAGE',
           onStart({ battle, unit }) {
             const hold = num(b2.shelter_hold_duration, 0.2);
             const dur = num(b2.skill_duration, 1.3);
