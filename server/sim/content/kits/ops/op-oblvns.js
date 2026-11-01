@@ -22,10 +22,22 @@ export default {
   char_4182_oblvns: (bb, raw, def) => {
     const t1 = talentBb(raw, 0), t2 = talentBb(raw, 1);
     const b1 = bbOf(raw, S1), b2 = bbOf(raw, S2), b3 = bbOf(raw, S3);
+    const noteScales = [b1.atk_scale, b1.atk_scale_2, b1.atk_scale_3, b1.atk_scale_4, b1.atk_scale_5, b1.atk_scale_6, b1.atk_scale_7, b1.atk_scale_8]
+      .map((v) => num(v, 0)).filter((v) => v > 0);
+    const noteAttack = {
+      atkScale: num(b1.atk_scale, 0.8), hits: 8,
+      onEachHit({ unit, dmg }) {
+        const i = unit.mem.oblvnsNote ?? 0;
+        unit.mem.oblvnsNote = i + 1;
+        const scale = noteScales[Math.min(i, noteScales.length - 1)] ?? num(b1.atk_scale, 0.8);
+        dmg.amount *= scale / num(b1.atk_scale, 0.8); // official 0.80 → 0.04 falloff, other multipliers kept
+      },
+    };
+    const noteStart = ({ unit }) => { unit.mem.oblvnsNote = 0; };
     return {
-      skill: { kind: 'instant', attack: { atkScale: num(b1.atk_scale, 0.8), hits: 8 } },
+      skill: { kind: 'instant', onStart: noteStart, attack: noteAttack },
       skills: {
-        [S1]: { kind: 'instant', attack: { atkScale: num(b1.atk_scale, 0.8), hits: 8 } },
+        [S1]: { kind: 'instant', onStart: noteStart, attack: noteAttack },
         [S2]: { kind: 'toggle', mods: { atkPct: num(b2['attack@atk'], 0.75) } },
         [S3]: {
           kind: 'duration',
