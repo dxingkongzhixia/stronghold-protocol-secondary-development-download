@@ -93,6 +93,9 @@ export class SkillRuntime {
     this.baseSpCost = Math.max(0, Number.isFinite(+s.spCost) ? +s.spCost : (d.spCost ?? 0));
     this.initSp = Math.max(0, Number.isFinite(+s.initSp) ? +s.initSp : (d.initSp ?? 0));
     this.maxCharges = Math.max(1, Math.floor(s.charges ?? d.maxCharges ?? 1));
+    // hold: after the bar is ready, keep holding for `hold.time` s before the auto-cast (official 蓄力 skills).
+    this.holdTime = Math.max(0, Number(s.hold?.time) || 0);
+    this.holdAt = null;
     this.spType = s.spType ?? d.spType ?? 'time';
     const trig = typeof s.trigger === 'string' ? { rule: s.trigger } : (s.trigger || d.trigger || {});
     this.rule = String(trig.rule ?? 'DEFAULT').toUpperCase();
@@ -506,14 +509,22 @@ export class SkillRuntime {
 
   /** Called by the attack loop right before a normal attack/heal. Returns true when the skill fired. */
   onAboutToAttack() {
-    if (!this.ready || this.unit.s.flags.silence) return false;
+    if (!this.ready || this.unit.s.flags.silence) { this.holdAt = null; return false; }
     if (this.active && this.isTimed) return false;
     if (this.rule === 'TAKE_DAMAGE' || this.rule === 'NEVER' || TICK_RULES.has(this.rule)) return false;
     if (this.pending || this._opCooling()) return false;
     // Guardian charged heals supply their own attack target; no enemy is required (#406).
     if (this.triggerAllies ? !this._allyTriggerSatisfied() : !this._defaultCondition()) return false;
+    // 蓄力: hold for `hold.time` s after the bar is ready, then cast the enhanced (`reason: 'HOLD'`) version.
+    let reason = 'DEFAULT';
+    if (this.holdTime > 0) {
+      if (this.holdAt == null) this.holdAt = this.battle.time;
+      if (this.battle.time - this.holdAt + 1e-9 < this.holdTime) return false;
+      this.holdAt = null;
+      reason = 'HOLD';
+    }
     this._beforeAttack = true;   // the attack follows this cast in the same check (ai.js updateAlly): attacks pace it
-    try { return this.activate('DEFAULT'); } finally { this._beforeAttack = false; }
+    try { return this.activate(reason); } finally { this._beforeAttack = false; }
   }
 
   /** TAKE_DAMAGE trigger + INCREASE_WHEN_TAKEN_DAMAGE SP. */
