@@ -38,7 +38,21 @@ export default {
       skill: { kind: 'instant', onStart: noteStart, attack: noteAttack },
       skills: {
         [S1]: { kind: 'instant', onStart: noteStart, attack: noteAttack },
-        [S2]: { kind: 'toggle', mods: { atkPct: num(b2['attack@atk'], 0.75) } },
+        [S2]: {
+          kind: 'toggle',
+          onStart({ battle, unit }) {
+            // 钢琴 (initial) ↔ 风琴: the two official tones. 钢琴 +75 % ATK; 风琴 +110 ASPD.
+            const organ = !unit.mem.oblvnsOrgan;
+            unit.mem.oblvnsOrgan = organ;
+            battle.removeBuff(unit, 'oblvns:tone');
+            battle.addBuff(unit, {
+              key: 'oblvns:tone',
+              mods: organ ? { aspd: num(b2['attack@attack_speed'], 110) } : { atkPct: num(b2['attack@atk'], 0.75) },
+              tags: ['skill'],
+            });
+          },
+          onEnd({ battle, unit }) { battle.removeBuff(unit, 'oblvns:tone'); },
+        },
         [S3]: {
           kind: 'duration',
           targeting: { rangeGrid: def?.skill?.rangeGrid ?? null },
