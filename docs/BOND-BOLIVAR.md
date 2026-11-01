@@ -174,6 +174,17 @@ state: {
 
 ---
 
+### 4.4 特效
+
+- kit 在关键节点调用 `battle.fx(...)`：米格鲁 `shield`、杜宾 `buff`、佩德洛 `blast`/`heal`、羽毛笔 `buff`、
+  龙舌兰 `counter`、承曦格雷伊 `zone`。
+- **官方 prefab 级特效**由 `render/vfx` 读取 `/data/local-fx.json` + `public/assets/local/fx/**`；
+  本机已用 `extract.py --only fx --fx-set used` 从 B 站客户端抽出（4604 prefab / 3455 texture / 267.6 MB，
+  清单 1.2 MB）。这部分是**本机 / 部署资源，不进 git**：部署时要单独上传 `data/local-fx.json` 与
+  `public/assets/local/fx/**`。
+
+---
+
 ## 5. 分期
 
 | 阶段 | 内容 | 状态 |
