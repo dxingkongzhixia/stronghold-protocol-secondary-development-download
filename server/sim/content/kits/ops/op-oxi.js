@@ -84,35 +84,18 @@ export default {
               const half = Math.floor(num(burning ? b3.overload_half_width : b3.normal_half_width, 2));
               const interval = burning ? overload : normal;
               next = b.time + interval;
-              const hit = new Set();
               const speed = Math.max(0.1, num(b3.wave_speed, 2.3));
               const reach = num(b3.projectile_range, 0.5);
               const radius = num(b3.range_radius, 1.5);
+              const waveId = `${unit.id}:${next}`;
               for (let k = -half; k <= half; k++) {
-                // Each lane is a projectile probe: it flies forward at wave_speed, and the first contact detonates it.
-                let dist = 0;
-                battle.every(0.1, (bb, sc) => {
-                  dist += speed * 0.1;
-                  const py = r0 + dr * dist - dc * k;
-                  const px = c0 + dc * dist + dr * k;
-                  if (dist > exit || !inRect(bb, Math.round(py), Math.round(px))) { sc.cancel(); return; }
-                  const contact = bb.enemies.some((e) => e.alive && e.side === 'enemy' && !e.isFlying
-                    && Math.abs(e.y - py) <= reach && Math.abs(e.x - px) <= reach);
-                  if (!contact) return;
-                  for (const e of bb.enemies) {
-                    if (!e.alive || e.side !== 'enemy' || e.isFlying) continue;
-                    const dx = e.x - px, dy = e.y - py;
-                    if (dx * dx + dy * dy > radius * radius) continue;
-                    const mul = hit.has(e.id) ? repeat : 1;
-                    hit.add(e.id);
-                    const element = burning && e.findBuff('burnBurst');
-                    bb.dealDamage(unit, e, {
-                      amount: unit.s.atk * atkScale * mul, type: element ? 'element' : 'arts',
-                      ...(element ? { element: 'burn' } : {}), isSkill: true, tags: ['skill', 'oxi:wave'],
-                    });
-                  }
-                  sc.cancel();
-                }, { owner: unit });
+                battle.spawnWave({
+                  owner: unit, x: c0 + dr * k, y: r0 - dc * k, dr, dc,
+                  speed, distance: exit, hitWidth: reach, blastRadius: radius,
+                  damage: unit.s.atk * atkScale, type: 'arts',
+                  elementFor: (e) => (burning && e.findBuff('burnBurst') ? 'burn' : null),
+                  repeatScale: repeat, waveId, tags: ['skill', 'oxi:wave'],
+                });
               }
             }, { owner: unit });
           },
