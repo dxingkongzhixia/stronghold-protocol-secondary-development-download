@@ -300,7 +300,7 @@
 
 - 状态：`DONE`
 - 完成/已缓解：registry 用 size / mtime / inode / ctime 复用文件 hash；content set 按 manifest / 文件 hash / settings 记忆；`/admin` 显示 sets / held / builds。后续只需按压测调参，不再视为阻塞项。
-- 2026-11-01 第二轮（实测驱动）：构建器改成 **copy-on-write**（`applyPatches` / `expandRecords` / `reconcilePluginTokens` 只复制写到的表和到字段的路径），未变更的表保持冻结身份 → 不再整份 7.1 MB 深拷贝；`sameJson` 取代「两次 `canonicalJson` 再比」——其中 4 套 i18n 语言包的全量序列化是每构建 ~270 ms 的固定开销；每个 base 缓存整表 canonical 与整文件 sha256，`potDownSites` 按表记忆，`deepFreeze` 记住已冻结图。构建移到子进程（`contentBuilderChild.js`，`SP_CONTENT_BUILDER=1`，**开机即起**）；Keel 内容快照补内容指纹（此前 `memoKey` 为 null → 带 prts 类插件的房间每次应用都在主线程同步重建）；`lobby.setPlugins` **变化即构建、构建完即应用**，`SP_PLUGIN_DEBOUNCE_MS` 退化为可选合并窗口（0/未设 = 立即）。实测：vanilla 300→25 ms、5 插件 800→200 ms、应用阶段 0–1 ms、新组合首次 ~290 ms（子进程）、已建组合 9 ms。详见 `docs/PLUGINS.md` §11「Build cost」与 `docs/PROJECT-STATE.md` 同日条目。
+- 2026-11-01/02 实测驱动：构建器改为 copy-on-write（未变更的表保持冻结身份）、`sameJson` 取代双 `canonicalJson`、按表/按文件缓存、potDown 按表记忆；构建移到子进程（开机即起），`room.setPlugins` 变化即构建、构建完即应用；构建结果落盘（`.cache/content-sets`）。实测 vanilla 300→25 ms、5 插件 800→200 ms、应用阶段 0–1 ms、重启后开同一组合 9 ms。**机制、四层缓存的键、环境变量与排障步骤见 [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md)**。
 - 已有：registry 按 size / mtime / inode / ctime 复用文件 hash；content set 按 manifest / 文件 hash / settings 记忆；`/admin` 显示 sets / held / builds。
 - 仍缺：首次大插件全量扫描、下载并发 / 进度、构建排队；这些需要压测数据后再调参。
 - 现有上限：

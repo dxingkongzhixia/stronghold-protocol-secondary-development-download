@@ -24,6 +24,8 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | Where are the game rules, and which document wins? | [`docs/RULES.md`](RULES.md) → [`docs/DESIGN.md`](DESIGN.md) |
 | I want to develop a plugin — where do I start? | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
 | What is deployed right now, which switches, which backups, known issues? | [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) |
+| Why does opening a plugin room take a while / spike the CPU? How do the build caches work? | [`docs/PLUGIN-BUILD.md`](PLUGIN-BUILD.md) |
+| A plugin stopped loading after an update (manifest 2 / Keel) | [`docs/PLUGINS.md`](PLUGINS.md) §3, [`docs/PLUGIN-BUILD.md`](PLUGIN-BUILD.md) §4 |
 | Which file implements feature X? | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md), [`docs/DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) |
 | What changed in each release? | [`CHANGELOG.md`](../CHANGELOG.md) |
 | How do I contribute? | [`CONTRIBUTING.md`](../CONTRIBUTING.md) |

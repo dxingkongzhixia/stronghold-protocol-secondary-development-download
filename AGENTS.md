@@ -68,6 +68,7 @@ laptop, read every `D:\DOTK\...` path as *store ↔ this checkout*, *dev tree �
 | fork-only mechanisms | [`docs/OUR-FEATURES.md`](docs/OUR-FEATURES.md) |
 | merge log / never-merge list | [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) |
 | plugin spec / SDK / DSL | [`docs/PLUGINS.md`](docs/PLUGINS.md) · [`docs/PLUGIN-API.md`](docs/PLUGIN-API.md) · [`docs/PLUGIN-DSL.md`](docs/PLUGIN-DSL.md) |
+| content-set builds: caches, env, `why is a plugin room slow?` | [`docs/PLUGIN-BUILD.md`](docs/PLUGIN-BUILD.md) |
 
 ## 4. Run, build and verify
 

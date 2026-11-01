@@ -21,6 +21,7 @@
 | [`DEVELOPER.md`](DEVELOPER.md) | **人类开发者** | 启动、架构、开发流程、调试、发布、文档地图 |
 | [`RULES.md`](RULES.md) | **规则查阅 / 改规则** | 权威顺序、规则总览、规范文档地图、改规则流程 |
 | [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | **插件开发者** | 选模板、manifest、类别、测试、打包、发布 |
+| [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md) | **维护 / 运维（房间插件）** | 内容集构建流程、四层缓存的键、环境变量、排障步骤、2026-11 踩坑记录 |
 
 > 不写代码、只想换图 / 模型 / 语音的读者看 [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)；Forge 包作者看
 > [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md)。

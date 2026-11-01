@@ -413,3 +413,6 @@ touches a match. Retention is handled by the (P2) trainer export/prune; the file
 
 The production box runs `SP_CONTENT_BUILDER=1` with no `SP_PLUGIN_DEBOUNCE_MS`. The cache is safe to delete while
 the server is stopped (it rebuilds on demand); killing the child process is harmless (the next build forks a new one).
+
+**Diagnosis** — how the layers are keyed, why a rebuild can be silent, the traps hit on 2026-11-01/02 and the commands
+to check a live box: [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md).
