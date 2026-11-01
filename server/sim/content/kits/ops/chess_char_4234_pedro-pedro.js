@@ -34,8 +34,17 @@ export default {
         [S2]: {
           kind: 'instant',
           onStart({ battle, unit }) {
-            const allies = battle.alliesInGrid(unit).filter((a) => a !== unit && !a.findBuff(GUARD)).slice(0, num(s2.max_target, 3));
-            for (const a of allies) battle.addBuff(a, { key: GUARD, duration: 999, source: unit });
+            const allies = battle.alliesInGrid(unit).filter((a) => a !== unit).slice(0, num(s2.max_target, 3));
+            for (const a of allies) {
+              if (a.findBuff(GUARD)) {
+                // 已存在时改为将其触发 (official): heal at once + 8 s 挑衅 instead of re-marking.
+                battle.removeBuff(a, GUARD);
+                battle.heal(unit, a, unit.s.atk * num(s2.atk_scale, 1.5));
+                battle.addBuff(a, { key: 'pedro:guardTaunt', duration: num(s2.duration, 8), mods: { tauntLevel: num(s2.taunt_level, -1) } });
+              } else {
+                battle.addBuff(a, { key: GUARD, duration: 999, source: unit });
+              }
+            }
           },
         },
       },
