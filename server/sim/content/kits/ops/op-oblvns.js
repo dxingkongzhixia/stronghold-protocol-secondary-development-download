@@ -13,7 +13,7 @@
 //   S3 — range from data, two notes ×`attack@atk_scale` (physical + Arts; [ASSUMED] both hit the same target here).
 // The official prefab art (notes/tones) is wired independently by the client's fx data.
 // Kit contract: ../README.md.
-import { num, talentBb, skillRec, statBuff, installAura } from '../shared/tier1.js';
+import { num, talentBb, skillRec, statBuff, installAura, onHitOn, isMainHit } from '../shared/tier1.js';
 
 const S1 = 'skchr_oblvns_1', S2 = 'skchr_oblvns_2', S3 = 'skchr_oblvns_3';
 const bbOf = (raw, id) => skillRec(raw, id)?.bb ?? {};
@@ -93,6 +93,27 @@ export default {
           installAura(battle, unit, {
             key: 'talent:oblvns:aspd', select: (a) => a !== unit, mods: { aspd: num(t2.attack_speed, 16) }, value: 0,
           });
+          // Fever: the official env_033_fever steps by the number of Ave Mujica members on the field.
+          const isMujica = (a) => {
+            const r = a?.def?.raw;
+            return !!(r && (r.mainPower?.teamId === 'mujica' || r.teamId === 'mujica' || (r.subPower || []).some((p) => p?.teamId === 'mujica')));
+          };
+          battle.every(0.5, (b) => {
+            const n = b.alliesFor(unit).filter((a) => a.alive && isMujica(a)).length;
+            unit.mem.oblvnsFever = n >= 5 ? 'full' : n >= 1 ? 'mid' : 'stop';
+          }, { owner: unit, immediate: true });
+          // S2 during Fever: the current tone becomes a double hit.
+          onHitOn(battle, unit, ({ target, dmg }) => {
+            if (!isMainHit(dmg) || !target?.alive) return;
+            if ((unit.mem.oblvnsFever ?? 'stop') === 'stop' || !unit.findBuff('oblvns:tone')) return;
+            battle.dealDamage(unit, target, { amount: dmg.amount, type: dmg.type, isSkill: false, tags: ['talent', 'oblvns:fever'] });
+          });
+          // S3 during Fever: Ave Mujica members survive lethal damage until Fever ends.
+          battle.on('fatal', (c) => {
+            if (!c.unit || !isMujica(c.unit)) return;
+            if (unit.skill?.id !== S3 || !unit.skill.active) return;
+            if ((unit.mem.oblvnsFever ?? 'stop') !== 'stop') c.prevented = true;
+          }, { owner: unit, priority: 10 });
         },
       }],
     };
