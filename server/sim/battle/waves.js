@@ -40,7 +40,7 @@ export class BattleWaves {
           ...(el ? { element: el } : {}), isSkill: true, tags,
         });
       }
-      b.fx('wave', { x, y, dr: o.dr, dc: o.dc, id: owner?.id ?? null, waveId: o.waveId ?? null, radius });
+      b.fx('blast', { x, y, r: radius, id: owner?.id ?? null });
       sc.cancel();
     }, { owner });
   }
