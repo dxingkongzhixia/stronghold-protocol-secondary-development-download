@@ -28,7 +28,8 @@
 import { ERR, DIFFICULTIES } from '../../shared/constants.js';
 import { contentHashOf, csUrlPart, isContentHash } from '../../shared/plugins/identity.js';
 import { normalizeSettings } from '../../shared/plugins/patch.js';
-import { buildContentSet, contentSetFiles, releaseContentSet } from './contentSet.js';
+import { buildContentSet, contentSetFiles, releaseContentSet, registerContentSetFiles } from './contentSet.js';
+import { fork } from 'node:child_process';
 
 const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
 /** Content sets kept that no room holds (their /cs/ files stay servable a while). [ASSUMED]
@@ -277,10 +278,75 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
 
   const byCs = (cs) => { const s = isContentHash(cs) ? sets.get(csUrlPart(cs)) : null; return s && s.cs === cs ? s : null; };
 
+  // ---- the off-loop builder (SP_CONTENT_BUILDER=1) ----------------------------------------------------------------
+  // A child process scans the installed plugins once and builds a requested set with the same builder; the main thread
+  // only adopts the result. A burst of room-plugin changes therefore never blocks the lobby's event loop.
+  let builder = null;
+  let buildSeq = 0;
+  const waiting = new Map();
+  const builderChild = () => {
+    if (String(process.env.SP_CONTENT_BUILDER || '') !== '1') return null;
+    if (builder) return builder;
+    try {
+      builder = fork(new URL('./contentBuilderChild.js', import.meta.url), [], { serialization: 'advanced', stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
+      builder.unref?.();
+      builder.stderr?.on('data', (d) => log.warn?.(`[plugins] content builder: ${String(d).trim()}`));
+      builder.on('message', (m) => {
+        const p = m && waiting.get(m.id);
+        if (!p) return;
+        waiting.delete(m.id);
+        if (m.type !== 'built') { log.warn?.('[plugins] content builder failed', m.error); p.resolve(null); return; }
+        try { registerContentSetFiles(m.set, m.files); p.resolve(m.set); } catch (e) { log.warn?.('[plugins] content builder adopt failed', e); p.resolve(null); }
+      });
+      builder.on('exit', () => {
+        builder = null;
+        for (const p of waiting.values()) p.resolve(null);
+        waiting.clear();
+      });
+    } catch (e) {
+      log.warn?.('[plugins] content builder child failed to start', e);
+      builder = null;
+    }
+    return builder;
+  };
+  /**
+   * Build a content set off the event loop and remember it, so the following `resolve` is a memo hit (the lobby's
+   * debounced plugin change path). Returns null when the builder is off/unavailable or the set is refused — the caller
+   * then falls back to the synchronous build.
+   */
+  function prebuild(ids, { settings = {}, allowIncompatible = false, replacing = null } = {}) {
+    const child = builderChild();
+    if (!child) return Promise.resolve(null);
+    const norm = normalized(ids, settings);
+    const mk = memoKey(ids, norm, allowIncompatible);
+    if (mk && memo.has(mk) && sets.has(memo.get(mk))) return Promise.resolve({ ok: true });
+    const limit = Math.max(0, Number(maxSets()) || 0);
+    const freed = replacing && isContentHash(replacing) && held.get(csUrlPart(replacing)) === 1 ? 1 : 0;
+    if (held.size - freed >= limit) return Promise.resolve(null);
+    const id = ++buildSeq;
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => { if (waiting.delete(id)) resolve(null); }, 30_000);
+      timer.unref?.();
+      waiting.set(id, { resolve: (v) => { clearTimeout(timer); resolve(v); } });
+      try {
+        child.send({ type: 'build', id, ids: ids.map((x) => (norm[x] ? { id: x, settings: norm[x] } : x)), settings: norm, allowIncompatible });
+      } catch { waiting.delete(id); clearTimeout(timer); resolve(null); }
+    }).then((built) => {
+      if (!built || !isContentHash(built.cs)) return null;
+      const set = adopt(built);
+      if (!set) return null;
+      const key = csUrlPart(set.cs);
+      if (!sets.has(key)) sets.set(key, set);
+      if (mk) remember(mk, key);
+      return { ok: true, set };
+    });
+  }
+
   return {
     resolve,
+    prebuild,
     onStale(fn) { staleListeners.add(fn); return () => staleListeners.delete(fn); },
-    close() { offScan?.(); staleListeners.clear(); },
+    close() { offScan?.(); staleListeners.clear(); if (builder) { try { builder.kill(); } catch { /* gone */ } builder = null; } },
     /** A room uses the set of `cs`: never dropped until every holder released it. @param {string} cs */
     hold(cs) { if (!isContentHash(cs)) return; const k = csUrlPart(cs); held.set(k, (held.get(k) || 0) + 1); },
     /** A room no longer uses the set of `cs`. @param {string} cs */

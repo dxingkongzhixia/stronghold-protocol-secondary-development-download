@@ -146,6 +146,7 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     release: (vs) => visual?.release?.(vs),
     holdContent: (cs) => contents?.hold?.(cs),
     releaseContent: (cs) => contents?.release?.(cs),
+    prebuild: (...a) => contents?.prebuild?.(...a),
     onContentStale: (fn) => contents?.onStale?.(fn) || (() => {}),
     onStale: (fn) => (visual?.onStale ? visual.onStale(fn) : () => {}),
     unofficial: () => (visual?.unofficial ? visual.unofficial() : 0),

@@ -447,6 +447,18 @@ export function contentSetFiles(set) {
   return new Map([...(buffers.get(set) ?? [])].map(([rel, body]) => [rel, { body: Buffer.from(body), sha256: nodeSha256(body), bytes: body.length }]));
 }
 
+/**
+ * Adopt the files of a set built in another process (the content builder child): its own `buffers` table cannot cross
+ * the IPC boundary, so the child sends the bodies and the server registers them here before `contentSetFiles` reads them.
+ * @param {any} set the C1 set the builder returned @param {Iterable<[string, Buffer|Uint8Array|{body: Buffer|Uint8Array}>]} bodies
+ */
+export function registerContentSetFiles(set, bodies) {
+  buffers.set(set, new Map([...bodies].map(([rel, body]) => {
+    const raw = body && typeof body === 'object' && body.body ? body.body : body;
+    return [rel, Buffer.isBuffer(raw) ? raw : Buffer.from(raw)];
+  })));
+}
+
 /** C1 failures are data diagnostics, including invalid nested stage/translation input. */
 export function buildContentSet(options) {
   try { return composeContentSet(options ?? {}); }

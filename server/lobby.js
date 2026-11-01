@@ -1218,14 +1218,22 @@ export class Lobby {
     const settings = {};
     for (const p of plugins) if (p.settings) settings[p.id] = p.settings;
     if (this.pluginDebounceMs > 0) {
-      // Coalesce a burst of toggles: only the last set is built (400 ms of quiet), one full build instead of N.
+      // Coalesce a burst of toggles: only the last set is built (after the quiet period), one full build instead of N.
+      // The build itself runs in the content-builder child (SP_CONTENT_BUILDER=1), so this event loop never blocks.
       room.pendingPlugins = { ids, settings };
+      room.pluginSeq = (room.pluginSeq || 0) + 1;
+      const token = room.pluginSeq;
       if (room.pluginTimer) clearTimeout(room.pluginTimer);
-      room.pluginTimer = setTimeout(() => {
-        room.pluginTimer = null;
+      room.pluginTimer = setTimeout(async () => {
+        if (room.pluginSeq !== token || room.match || !this.rooms.has(room.code)) { room.pluginTimer = null; return; }
         const p = room.pendingPlugins;
+        if (p) {
+          try { await this.plugins.prebuild?.(p.ids, { settings: p.settings, replacing: room.content }); } catch { /* sync fallback */ }
+        }
+        if (room.pluginSeq !== token || room.match || !this.rooms.has(room.code)) { room.pluginTimer = null; return; }
+        room.pluginTimer = null;
         room.pendingPlugins = null;
-        if (!p || room.match || !this.rooms.has(room.code)) return;
+        if (!p) return;
         const r = this.applyPlugins(room, p.ids, p.settings);
         if (r && r.error) this.log.warn?.(`[lobby] ${room.code} plugin set refused: ${r.error}`);
       }, this.pluginDebounceMs);
@@ -1266,6 +1274,7 @@ export class Lobby {
   _flushPlugins(room) {
     if (!room || (!room.pluginTimer && !room.pendingPlugins)) return OK;
     if (room.pluginTimer) { clearTimeout(room.pluginTimer); room.pluginTimer = null; }
+    room.pluginSeq = (room.pluginSeq || 0) + 1;   // a debounced build still in flight must not apply over this
     const p = room.pendingPlugins;
     room.pendingPlugins = null;
     return p ? this.applyPlugins(room, p.ids, p.settings) : OK;
