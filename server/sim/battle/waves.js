@@ -19,12 +19,28 @@ export class BattleWaves {
     const repeat = Number.isFinite(o.repeatScale) ? o.repeatScale : 0.15;
     const type = o.type || 'arts';
     const tags = Array.isArray(o.tags) ? o.tags : ['skill', 'wave'];
-    const hit = new Set();
+    // Waves sharing a waveId share one hit set: further hits of the same wave on one enemy use repeatScale.
+    this._waveHits ??= new Map();
+    this._waveCount ??= new Map();
+    if (o.waveId != null) {
+      if (!this._waveHits.has(o.waveId)) { this._waveHits.set(o.waveId, new Set()); this._waveCount.set(o.waveId, 0); }
+      this._waveCount.set(o.waveId, (this._waveCount.get(o.waveId) ?? 0) + 1);
+    }
+    const hit = o.waveId != null ? this._waveHits.get(o.waveId) : new Set();
+    let ended = false;
+    const finish = () => {
+      if (ended) return;
+      ended = true;
+      if (o.waveId == null) return;
+      const n = (this._waveCount.get(o.waveId) ?? 1) - 1;
+      if (n <= 0) { this._waveCount.delete(o.waveId); this._waveHits.delete(o.waveId); }
+      else this._waveCount.set(o.waveId, n);
+    };
     let dist = 0;
     return this.every(0.1, (b, sc) => {
       dist += speed * 0.1;
       const x = o.x + o.dc * dist, y = o.y + o.dr * dist;
-      if (dist > distance || !b.grid.inRect(Math.round(y), Math.round(x))) { sc.cancel(); return; }
+      if (dist > distance || !b.grid.inRect(Math.round(y), Math.round(x))) { finish(); sc.cancel(); return; }
       const contact = b.enemies.some((e) => e.alive && e.side === 'enemy' && !e.isFlying
         && Math.abs(e.y - y) <= width && Math.abs(e.x - x) <= width);
       if (!contact) return;
@@ -41,6 +57,7 @@ export class BattleWaves {
         });
       }
       b.fx('blast', { x, y, r: radius, id: owner?.id ?? null });
+      finish();
       sc.cancel();
     }, { owner });
   }
