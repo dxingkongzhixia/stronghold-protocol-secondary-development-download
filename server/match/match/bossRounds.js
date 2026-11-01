@@ -169,6 +169,7 @@ export class MatchBoss {
     this.watchers.clear();
     const clientCapable = recs.some((f) => this._authorityFor(f) || this._executorCandidates(f, null, recs).length);
     if (!clientCapable) {
+      if (this.clientsOnly) { this.finish({ victory: false, reason: 'no-executor' }); return; }
       // nobody can simulate it (no player authority, no executor browser): the server runs every boss field
       this.fields = recs;
       for (const f of recs) {

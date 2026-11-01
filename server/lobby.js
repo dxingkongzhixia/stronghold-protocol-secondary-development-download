@@ -419,6 +419,8 @@ export class Lobby {
      * mode). A host toggling seven plugins otherwise rebuilds seven full content sets, each blocking the event loop.
      */
     this.pluginDebounceMs = Math.max(0, Number(this.opts.pluginDebounceMs ?? process.env.SP_PLUGIN_DEBOUNCE_MS) || 0);
+    /** Clients-only combat (SP_CLIENTS_ONLY=1): passed to every Match, hosted ones too (their child has no env of its own). */
+    this.clientsOnly = this.opts.clientsOnly != null ? !!this.opts.clientsOnly : String(process.env.SP_CLIENTS_ONLY || '') === '1';
     /** The public origin players should use; a page opened on another origin gets a plain reminder. */
     this.officialOrigin = normalizeOrigin(options.officialOrigin ?? process.env.SP_OFFICIAL_ORIGIN) || OFFICIAL_ORIGIN;
     const testModeOpt = options.testMode;
@@ -1978,6 +1980,7 @@ export class Lobby {
         // the room's host: the current executor of a delegated bot layout rehearsal (DESIGN §14; setHost follows a
         // migration while the match runs)
         hostId: room.hostId,
+        clientsOnly: this.clientsOnly,
         ...(room.test === true ? { test: true } : {}),
         seed,
         // the room's match number: with the seed it keeps battleIds unique across the room's matches (DESIGN §14)
