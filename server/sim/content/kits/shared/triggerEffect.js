@@ -11,7 +11,7 @@ export const TRIGGER_MARK = 'trigger:effect';
 
 /** Place a mark on `target`, unless it already holds one (the official “只选择未持有该效果的目标”). */
 export function placeTrigger(battle, source, target, data = {}, duration = 999) {
-  if (!battle || !source || !target?.alive || target.side !== 'ally') return false;
+  if (!battle || !source || !target?.alive) return false;
   if (target.findBuff?.(TRIGGER_MARK)) return false;
   battle.addBuff(target, { key: TRIGGER_MARK, duration, source, data });
   return true;
