@@ -6,7 +6,8 @@
 //   T2 雪的印痕 — after applying a mark her next normal attack is an area hit and leaves the target with
 //      `attack@t2_atk` ATK for `attack@t2_buff_duration` s and `attack@t2_magic_atk_scale` × ATK Arts per second.
 //   S1 标记射击 — mark up to max_target allies: when a marked ally is hit it gains a shield (shield_atk_scale × ATK,
-//      decaying over shield_time) and the attacker is stunned for `stun` s.
+//      decaying over shield_time) and the attacker is stunned for `stun` s. The official buff template's
+//      FilterDamageModifer(damageMask ELEMENT) + IfNot skips element gauge fills / elemental bursts (no attack).
 //   S2 交替撤离 — mark one ally; while the mark is held it gains attack_speed for buff_duration s.
 //   S3 剑走偏锋 — attack_speed, 4-target attacks ×atk_scale with a 0.5 s stun; the mark moves to the ally with the
 //      highest SP ratio; the caster and that ally gain a decaying `bonus_init_atk` ATK for `bonus_duration` s and the
@@ -42,7 +43,7 @@ export default {
           onStart({ battle, unit }) {
             const allies = battle.alliesFor(unit).filter((a) => a !== unit && !a.findBuff(MARK)).slice(0, num(b2.max_target, 1));
             for (const a of allies) {
-              placeTrigger(battle, unit, a, { kind: S2 });
+              placeTrigger(battle, unit, a, { kind: S2, status: 'tocka_s2_mark' });
             }
           },
         },
@@ -131,6 +132,9 @@ export default {
           battle.on('damaged', (ctx) => {
             const ally = ctx.target;
             if (!ally?.alive || ally.side !== 'ally') return;
+            // Official tocka_s1[trigger]: FilterDamageModifer(`_damageMask: ELEMENT`) + IfNot — element gauge fills and
+            // elemental burst damage are no attack on the ally and do not fire the shield.
+            if (ctx.type === 'element' || ctx.type === 'elemental') return;
             const mark = ally.findBuff(MARK);
             if (!mark || mark.source !== unit) return;
             if (mark.data?.kind === S2) return; // S2 triggers on the skill becoming ready, not on damage

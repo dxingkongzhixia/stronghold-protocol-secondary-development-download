@@ -1,9 +1,22 @@
 // server/sim/battle/waves.js — line / wave projectiles (official 簇火-style attacks). A wave travels from a point along
-// (dr, dc) at `speed` tiles/s, up to `distance`; when it first touches an enemy within `hitWidth` it detonates, dealing
-// `damage` to every enemy within `blastRadius`. Repeated hits of the same wave on one enemy use `repeatScale`.
+// (dr, dc) at `speed` tiles/s, up to `distance`; the first enemy whose centre comes within `hitWidth` of the travelled
+// segment detonates it there (a swept test: no tunnelling, and the reach is the perpendicular distance to the lane, so a
+// diagonal wave is no axis-aligned box), dealing `damage` to every enemy within `blastRadius` of the contact point.
+// Repeated hits of the same wave on one enemy use `repeatScale`.
 // Kits call `battle.spawnWave({...})`; the official prefab for the wave is played by the client's fx data (the engine
-// emits a `wave` fx event with position/direction).
+// emits a `blast` fx event at the contact point).
 export class BattleWaves {
+  /**
+   * The parameter t in [0, 1] of the closest point on segment a→b to p (a swept collision).
+   */
+  static _segT(ax, ay, bx, by, px, py) {
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    if (len2 <= 1e-12) return 0;
+    const t = ((px - ax) * dx + (py - ay) * dy) / len2;
+    return Math.max(0, Math.min(1, t));
+  }
+
   /**
    * @param {{ owner: any, x: number, y: number, dr: number, dc: number, speed?: number, distance?: number,
    *   hitWidth?: number, blastRadius?: number, damage?: number, type?: string, element?: string|null,
@@ -38,15 +51,25 @@ export class BattleWaves {
     };
     let dist = 0;
     return this.every(0.1, (b, sc) => {
+      // The step's segment: where the wave was and where it is now (a swept collision, so a fast wave cannot skip an
+      // enemy between two ticks).
+      const px = o.x + o.dc * dist, py = o.y + o.dr * dist;
       dist += speed * 0.1;
       const x = o.x + o.dc * dist, y = o.y + o.dr * dist;
-      if (dist > distance || !b.grid.inRect(Math.round(y), Math.round(x))) { finish(); sc.cancel(); return; }
-      const contact = b.enemies.some((e) => e.alive && e.side === 'enemy' && !e.isFlying
-        && Math.abs(e.y - y) <= width && Math.abs(e.x - x) <= width);
-      if (!contact) return;
+      const outside = dist > distance || !b.grid.inRect(Math.round(y), Math.round(x));
+      let contact = null, best = Infinity, cx = x, cy = y;
       for (const e of b.enemies) {
         if (!e.alive || e.side !== 'enemy' || e.isFlying) continue;
-        const dx = e.x - x, dy = e.y - y;
+        const t = BattleWaves._segT(px, py, x, y, e.x, e.y);
+        const qx = px + (x - px) * t, qy = py + (y - py) * t;
+        const dx = e.x - qx, dy = e.y - qy;
+        if (dx * dx + dy * dy > width * width || t >= best) continue;
+        best = t; contact = e; cx = qx; cy = qy;
+      }
+      if (!contact) { if (outside) { finish(); sc.cancel(); } return; }
+      for (const e of b.enemies) {
+        if (!e.alive || e.side !== 'enemy' || e.isFlying) continue;
+        const dx = e.x - cx, dy = e.y - cy;
         if (dx * dx + dy * dy > radius * radius) continue;
         const mul = hit.has(e.id) ? repeat : 1;
         hit.add(e.id);
@@ -56,7 +79,7 @@ export class BattleWaves {
           ...(el ? { element: el } : {}), isSkill: true, tags,
         });
       }
-      b.fx('blast', { x, y, r: radius, id: owner?.id ?? null });
+      b.fx('blast', { x: cx, y: cy, r: radius, id: owner?.id ?? null });
       finish();
       sc.cancel();
     }, { owner });

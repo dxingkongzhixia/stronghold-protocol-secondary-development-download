@@ -42,7 +42,7 @@ export default {
                 battle.heal(unit, a, unit.s.atk * num(s2.atk_scale, 1.5));
                 battle.addBuff(a, { key: 'pedro:guardTaunt', duration: num(s2.duration, 8), mods: { tauntLevel: num(s2.taunt_level, -1) } });
               } else {
-                battle.addBuff(a, { key: GUARD, duration: 999, source: unit });
+                battle.addBuff(a, { key: GUARD, duration: 999, source: unit, status: 'pedro_s2_mark' });
               }
             }
           },

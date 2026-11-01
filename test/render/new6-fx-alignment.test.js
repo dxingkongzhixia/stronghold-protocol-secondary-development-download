@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { bindingKeys } from '../../public/js/render/vfx/skills.js';
+import { bindingKeys, skillPlan, EXTRA_STATUS_LOOPS, STATUS_CARRIED } from '../../public/js/render/vfx/skills.js';
 
 const ROOT = path.resolve('.');
 const IDX = path.join(ROOT, 'public', 'assets', 'local', 'fx', 'index.json');
@@ -46,4 +46,16 @@ test('kit fx bindings of the new operators resolve to their extracted prefabs', 
       assert.ok(fs.existsSync(path.join(ROOT, 'public', 'assets', 'local', 'fx', entry.file)), `${sk}: file ${entry.file}`);
     }
   }
+});
+
+test('mark statuses drive the auras index.json carries on an ability target', { skip }, () => {
+  const idx = JSON.parse(fs.readFileSync(IDX, 'utf8'));
+  assert.deepEqual(EXTRA_STATUS_LOOPS.tocka_s1_mark, ['tocka_skill_01_buff_01', 'tocka_skill_01_buff_02']);
+  assert.deepEqual(EXTRA_STATUS_LOOPS.tocka_s2_mark, ['tocka_skill_02_buff_02']);
+  assert.deepEqual(EXTRA_STATUS_LOOPS.pedro_s2_mark, ['pedro_skill_02_buff_01']);
+  // 冻河 S2's buff aura is created on the ally: the plan must not draw it on the caster as well.
+  const plan = skillPlan(idx, 'char_4244_tocka', 'skchr_tocka_2');
+  assert.ok(!plan.loop.some((e) => e.key === 'tocka_skill_02_buff_02'), 'not a loop on 冻河');
+  assert.ok(plan.unmapped.some((e) => e.key === 'tocka_skill_02_buff_02' && e.reason === 'status'), 'carried by the mark status');
+  assert.deepEqual(STATUS_CARRIED.skchr_tocka_2, ['tocka_skill_02_buff_02']);
 });

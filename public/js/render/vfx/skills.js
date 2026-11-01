@@ -274,6 +274,7 @@ export const UNMAPPED = Object.freeze({
   'channel-hit': "a channel's damage ticks: the sim sends them without a source",
   path: 'a line / path effect: its points come from the game',
   bound: 'created on the target of the ability: a kit fx binding places it there (FX_BINDINGS `at: \'target\'`)',
+  status: 'an aura the client creates on the ability\'s target: the sim reports it as that unit\'s status (EXTRA_STATUS_LOOPS)',
   tiles: 'tile effects on tiles the client is not told',
   other: 'the extractor could not place it in time',
 });
@@ -657,6 +658,13 @@ export function skillPlan(idx, unitKey, skillId, opts = {}) {
   if (bound.size) {
     for (const role of ['start', 'loop', 'range', 'end']) {
       plan[role] = plan[role].filter((e) => !bound.has(e.key) || (plan.unmapped.push({ key: e.key, role: e.role, reason: 'bound', from: e.from }), false));
+    }
+  }
+  // an aura the client creates on the ability's target (STATUS_CARRIED): the target's status draws it, not the caster
+  const carried = new Set(STATUS_CARRIED[id] || []);
+  if (carried.size) {
+    for (const role of ['start', 'loop', 'range', 'end']) {
+      plan[role] = plan[role].filter((e) => !carried.has(e.key) || (plan.unmapped.push({ key: e.key, role: e.role, reason: 'status', from: e.from }), false));
     }
   }
   if (isObj(opts.rec)) tagCasts(plan, skill);
@@ -1333,6 +1341,19 @@ const binding = (o) => Object.freeze({ ...o, ...(o.cover ? { cover: Object.freez
 export const EXTRA_STATUS_LOOPS = Object.freeze({
   // 冻河 S1 (op-tocka.js: the mark on up to two allies; its buff template tocka_s1[trigger] is the shield trigger)
   tocka_s1_mark: Object.freeze(['tocka_skill_01_buff_01', 'tocka_skill_01_buff_02']),
+  // 冻河 S2 (the mark on one ally; the buff it creates is the attack-speed buff)
+  tocka_s2_mark: Object.freeze(['tocka_skill_02_buff_02']),
+  // 佩德洛 S2 (the 挑衅 mark on up to three operators; its buff is the heal-on-low-HP trigger)
+  pedro_s2_mark: Object.freeze(['pedro_skill_02_buff_01']),
+});
+
+/**
+ * Auras index.json writes as ordinary `loop` rows although the client creates them on the ability's target
+ * (AnimatedActionToTargetAbility.CreateBuffAllowAll / a buff template on allies): the sim reports them as the target's
+ * status instead, so the plan must not also play them on the caster. By skill id.
+ */
+export const STATUS_CARRIED = Object.freeze({
+  skchr_tocka_2: Object.freeze(['tocka_skill_02_buff_02']),
 });
 
 export const FX_BINDINGS = Object.freeze({

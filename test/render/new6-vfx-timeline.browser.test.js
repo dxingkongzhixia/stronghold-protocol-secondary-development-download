@@ -68,7 +68,7 @@ const OPS = [
   { unit: 'char_4182_oblvns', op: 'oblvns', name: '丰川祥子', s: 1, sid: 'skchr_oblvns_2', kind: 'arts' },
   { unit: 'char_4182_oblvns', op: 'oblvns', name: '丰川祥子', s: 2, sid: 'skchr_oblvns_3', kind: 'arts' },
   { unit: 'char_4244_tocka', op: 'tocka', name: '冻河', s: 0, sid: 'skchr_tocka_1', kind: 'bolt', fx: ['mark', { target: 2 }], status: 'tocka_s1_mark' },
-  { unit: 'char_4244_tocka', op: 'tocka', name: '冻河', s: 1, sid: 'skchr_tocka_2', kind: 'bolt' },
+  { unit: 'char_4244_tocka', op: 'tocka', name: '冻河', s: 1, sid: 'skchr_tocka_2', kind: 'bolt', status: 'tocka_s2_mark' },
   { unit: 'char_4244_tocka', op: 'tocka', name: '冻河', s: 2, sid: 'skchr_tocka_3', kind: 'bolt' },
   { unit: 'char_4247_oxi', op: 'oxi', name: '塔露拉', s: 0, sid: 'skchr_oxi_1', kind: 'none' },
   { unit: 'char_4247_oxi', op: 'oxi', name: '塔露拉', s: 1, sid: 'skchr_oxi_2', kind: 'none', fx: ['stance', { target: 2 }] },

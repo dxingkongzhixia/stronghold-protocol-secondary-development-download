@@ -6,7 +6,8 @@
 //   T1 颂乐音符 — each attack adds a note stack (max `max_cnt`), refreshing ~1 s: per stack she ignores
 //      `def_penetrate_ratio` DEF / `magic_resist_penetrate_ratio` RES (Ave Mujica members share it in the official
 //      text; this port applies it to herself).
-//   T2 毋畏遗忘 — allies in range get `attack_speed` ASPD. (Fever bookkeeping is not modelled in this port.)
+//   T2 毋畏遗忘 — allies in range get `attack_speed` ASPD; dealing damage adds `cnt` Fever points to her gauge
+//      (server/sim/battle/fever.js: a full gauge joins Fever for 22 s; 1–4 members → mid, 5+ → full).
 //   S1 — 8 notes for ×atk_scale... (the official 0.80 → 0.04 falloff is [ASSUMED] flattened to ×atk_scale × 8 hits).
 //   S2 — a toggle skill: piano mode gives +`attack@atk` ATK (the organ mode's +`attack@attack_speed` ASPD is the other
 //      toggle state in the official client; this port keeps the piano state).
@@ -83,6 +84,8 @@ export default {
           };
           battle.on('damaged', (ctx) => {
             if (ctx.source !== unit || ctx.target?.side !== 'enemy') return;
+            // T2: 对敌人造成伤害时使 Fever +`cnt` (a gauge fill — element gauge riders are no damage dealt).
+            if (ctx.type !== 'element') battle.addFever(unit, num(t2.cnt, 3));
             stacks = Math.min(max, stacks + 1);
             sync();
             battle.addBuff(unit, { key: 'oblvns:note', duration: 1.1, tags: ['talent'] });
@@ -93,26 +96,34 @@ export default {
           installAura(battle, unit, {
             key: 'talent:oblvns:aspd', select: (a) => a !== unit, mods: { aspd: num(t2.attack_speed, 16) }, value: 0,
           });
-          // Fever: the official env_033_fever steps by the number of Ave Mujica members on the field.
+          // Fever: the official env_033_fever steps by the members whose gauge filled (server/sim/battle/fever.js); T2 adds
+          // `cnt` points per damage dealt and a joined member lasts 22 s. When it ends while S3 runs she withdraws into the
+          // downed state (official oblvns_s_3[fever_undead] `_switchToDeadState`).
           const isMujica = (a) => {
             const r = a?.def?.raw;
             return !!(r && (r.mainPower?.teamId === 'mujica' || r.teamId === 'mujica' || (r.subPower || []).some((p) => p?.teamId === 'mujica')));
           };
+          battle.on('deploy', (c) => { if (c.unit === unit) battle.resetFever(unit); }, { owner: unit });
           battle.every(0.5, (b) => {
-            const n = b.alliesFor(unit).filter((a) => a.alive && isMujica(a)).length;
-            unit.mem.oblvnsFever = n >= 5 ? 'full' : n >= 1 ? 'mid' : 'stop';
+            const st = b.feverState();
+            const prev = unit.mem.oblvnsFever ?? 'stop';
+            unit.mem.oblvnsFever = st;
+            if (prev !== 'stop' && st === 'stop' && unit.alive && unit.skill?.id === S3 && unit.skill.active) {
+              b.retreat(unit, { reason: 'fever' });
+              b.fx('downed', { x: unit.x, y: unit.y, id: unit.id });
+            }
           }, { owner: unit, immediate: true });
           // S2 during Fever: the current tone becomes a double hit.
           onHitOn(battle, unit, ({ target, dmg }) => {
             if (!isMainHit(dmg) || !target?.alive) return;
-            if ((unit.mem.oblvnsFever ?? 'stop') === 'stop' || !unit.findBuff('oblvns:tone')) return;
+            if (!battle.inFever(unit) || !unit.findBuff('oblvns:tone')) return;
             battle.dealDamage(unit, target, { amount: dmg.amount, type: dmg.type, isSkill: false, tags: ['talent', 'oblvns:fever'] });
           });
           // S3 during Fever: Ave Mujica members survive lethal damage until Fever ends.
           battle.on('fatal', (c) => {
             if (!c.unit || !isMujica(c.unit)) return;
             if (unit.skill?.id !== S3 || !unit.skill.active) return;
-            if ((unit.mem.oblvnsFever ?? 'stop') !== 'stop') c.prevented = true;
+            if (battle.inFever(unit)) c.prevented = true;
           }, { owner: unit, priority: 10 });
         },
       }],

@@ -81,3 +81,51 @@ test('the trigger and stance kit fx are bound to their official prefabs', () => 
   assert.deepEqual(FX_BINDINGS.skchr_oxi_2.stance.keys, ['oxi_skill_02_hit_01']);
   assert.equal(FX_BINDINGS.skchr_oxi_2.stance.at, 'target');
 });
+
+test('冻河 S1: element gauge fills do not fire the mark, physical damage does (official damageMask ELEMENT)', () => {
+  const h = makeBattle({
+    units: [
+      { uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4244_tocka', skillIndex: 0, uniEquipId: null }, row: 10, col: 6 },
+      { uid: 2, diy: { slot: 'chess_char_6_diy2_a', charId: 'char_4182_oblvns', skillIndex: 0, uniEquipId: null }, row: 10, col: 7 },
+    ],
+    defs: { enemies: { e: enemyRec({ key: 'e', hp: 50000, atk: 1, speed: 0, bat: 5 }) } },
+    enemies: [{ key: 'e', pos: [10, 8] }],
+    timeLimit: 30, autoFinish: false, seed: 3,
+  });
+  h.step();
+  const u = h.b.units.find((x) => x.kind === 'op' && x.def?.charId === 'char_4244_tocka');
+  const ally = h.b.units.find((x) => x.kind === 'op' && x.def?.charId === 'char_4182_oblvns');
+  const foe = h.b.units.find((x) => x.kind === 'enemy');
+  u.skill.sp = u.skill.spCost;
+  assert.ok(h.runUntil(() => ally.findBuff('trigger:effect'), 15), 'S1 marks the ally');
+  h.b.dealDamage(foe, ally, { amount: 10, type: 'element', element: 'burn' });
+  assert.ok(ally.findBuff('trigger:effect'), 'an element gauge fill keeps the mark');
+  h.b.dealDamage(foe, ally, { amount: 10, type: 'phys' });
+  assert.ok(!ally.findBuff('trigger:effect'), 'a physical hit fires it');
+  assert.ok(ally.findBuff('tocka:shield'), 'the shield is there');
+});
+
+test('丰川祥子: damage fills the Fever gauge; a joined Fever lasts 22 s and S3 withdraws into the downed state', () => {
+  const h = makeBattle({
+    units: [{ uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4182_oblvns', skillIndex: 2, uniEquipId: null }, row: 10, col: 6 }],
+    defs: { enemies: { e: enemyRec({ key: 'e', hp: 1e9, atk: 1, speed: 0, bat: 2 }) } },
+    enemies: [{ key: 'e', pos: [10, 9] }],
+    timeLimit: 90, autoFinish: false, seed: 3,
+  });
+  h.step();
+  const u = h.b.units.find((x) => x.kind === 'op' && x.side === 'ally');
+  assert.equal(u.skill.id, 'skchr_oblvns_3', 'S3 selected');
+  assert.equal(h.b.feverState(), 'stop');
+  h.b.addFever(u, 3);
+  assert.equal(h.b.feverPoints(u), 3, 'the talent points accumulate');
+  assert.equal(h.b.addFever(u, 97), true, 'the gauge fills and she joins Fever');
+  assert.equal(h.b.inFever(u), true);
+  assert.equal(h.b.feverState(), 'mid', '1–4 members: mid');
+  u.skill.sp = u.skill.spCost;
+  assert.ok(h.runUntil(() => u.skill.active, 10), 'S3 on');
+  h.run(22.2);
+  assert.equal(h.b.inFever(u), false, 'Fever ran its 22 s');
+  assert.equal(u.alive, false, 'she withdrew');
+  assert.equal(u.removeReason, 'fever');
+  assert.ok(h.b.isDown(u), 'and lies knocked down on her tile');
+});

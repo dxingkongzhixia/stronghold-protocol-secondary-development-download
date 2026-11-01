@@ -14,8 +14,9 @@
 //   S3 — +atk ATK, stops attacking to channel for 36 s; every `normal_interval` s a wave of 5 lanes (`normal_half_width`)
 //      runs `wave_exit_distance` tiles forward and detonates for `heatwave_atk_scale` × ATK Arts (burn-burst targets take
 //      element damage instead); overload (any target in burn burst) uses `overload_interval` / `overload_half_width`;
-//      further hits of one wave on one enemy deal `same_wave_repeat_damage_scale`. [ASSUMED] lane collision is tested on
-//      tile centres; the official projectile flight art is drawn by the client's prefab.
+//      further hits of one wave on one enemy deal `same_wave_repeat_damage_scale`. Collision is a swept segment with the
+//      perpendicular reach (`projectile_range`) — no tile-centre box; the official projectile flight art is drawn by the
+//      client's prefab.
 // Kit contract: ../README.md.
 import { num, talentBb, skillRec, up, onHitOn, isMainHit } from '../shared/tier1.js';
 import { dirVec } from '../../../dir.js';

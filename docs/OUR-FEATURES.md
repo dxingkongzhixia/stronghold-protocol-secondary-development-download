@@ -60,7 +60,18 @@ Read this together with:
 > drawn pixels, the finite prefabs' own expiry and the loops' stop after the cast. 冻河 S1's two buff-aura loops
 > (`tocka_skill_01_buff_01` / `_02`) ride the sim's mark status: the mark buff carries `status: 'tocka_s1_mark'`
 > (engine `applyTrigger` copies `data.status`), and `wiring.status` plays both loops on the marked ally
-> (`EXTRA_STATUS_LOOPS`) and stops them when the mark is consumed or the unit leaves.
+> (`EXTRA_STATUS_LOOPS`) and stops them when the mark is consumed or the unit leaves. The same path carries 冻河 S2's
+> attack-speed aura and 佩德洛 S2's 挑衅 aura; `STATUS_CARRIED` drops 冻河 S2's aura from the caster's plan rows
+> (index.json writes it as an ordinary loop although the client creates it on the ally).
+>
+> **2026-11-01 — Fever and the remaining engine details.** Fever is a core engine state
+> (`server/sim/battle/fever.js`): 丰川祥子's T2 adds `cnt` points per damage dealt to her own gauge; a full gauge
+> joins Fever for 22 s (env_033_fever's `_maxPlayingTime`) and the joined members step `mid` (1–4) / `full` (5+) /
+> `stop` (0). When Fever ends while her S3 runs she 退场 into the engine's downed state (`retreat(reason: 'fever')`,
+> the official `oblvns_s_3[fever_undead]` `_switchToDeadState`). 冻河 S1's official buff graph
+> (`FilterDamageModifer(damageMask ELEMENT)` + `IfNot`) skips element gauge fills / elemental bursts. 塔露拉 S3's
+> wave collision is now a swept segment with the perpendicular reach (no tile-centre box, no tunnelling between
+> ticks) and detonates at the contact point.
 >
 > **2026-10-24 — built-in 阵营加强 plugins.** Their *shop forms* are no longer part of the vanilla game: the build hides
 > those records (`visible: false`) and drops them from the bond member lists, and each faction's built-in content
