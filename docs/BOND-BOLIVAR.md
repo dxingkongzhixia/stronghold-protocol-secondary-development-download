@@ -49,12 +49,12 @@ Keel 已具备本设计需要的全部能力：
 |---|---|---|---|---|---|---|---|
 | 刻俄柏 | `char_2013_cerber` | 6 | 6★ | 术师 · 中坚术师 | `chess_char_2013_cerber_a` | 有（立绘/Spine） | `op-cerber`（商店形态复用：`chess_char_2013_cerber-cerber`） |
 | 谬因 | `char_4229_aphris` | 6 | 6★ | 术师 · 轰击术师 | `chess_char_4229_aphris_a` | 有（立绘/Spine、`token_10070_aphris_pc`） | `op-aphris`（商店形态复用：`chess_char_4229_aphris-aphris`） |
-| 承曦格雷伊 | `char_1027_greyy2` | 5 | 5★ | 狙击 · 投掷手 | `chess_char_1027_greyy2_a` | 待补 | generic（待写） |
-| 羽毛笔 | `char_421_crow` | 4 | 5★ | 近卫 · 收割者 | `chess_char_421_crow_a` | 待补 | generic（待写） |
-| 龙舌兰 | `char_486_takila` | 4 | 5★ | 近卫 · 解放者 | `chess_char_486_takila_a` | 待补 | generic（待写） |
-| 佩德洛 | `char_4234_pedro` | 3 | 5★ | 辅助 · `supportiveranger` | `chess_char_4234_pedro_a` | 待补 | generic（待写） |
-| 杜宾 | `char_130_doberm` | 3 | 4★ | 近卫 · 教官 | `chess_char_130_doberm_a` | 待补 | generic（待写） |
-| 米格鲁 | `char_122_beagle` | 2 | 3★ | 重装 · 铁卫 | `chess_char_122_beagle_a` | 待补 | generic（待写） |
+| 承曦格雷伊 | `char_1027_greyy2` | 5 | 5★ | 狙击 · 投掷手 | `chess_char_1027_greyy2_a` | 有 | `chess_char_1027_greyy2-greyy2` |
+| 羽毛笔 | `char_421_crow` | 4 | 5★ | 近卫 · 收割者 | `chess_char_421_crow_a` | 有 | `chess_char_421_crow-crow` |
+| 龙舌兰 | `char_486_takila` | 4 | 5★ | 近卫 · 解放者 | `chess_char_486_takila_a` | 有 | `chess_char_486_takila-takila` |
+| 佩德洛 | `char_4234_pedro` | 3 | 5★ | 辅助 · `supportiveranger` | `chess_char_4234_pedro_a` | 有 | `chess_char_4234_pedro-pedro` |
+| 杜宾 | `char_130_doberm` | 3 | 4★ | 近卫 · 教官 | `chess_char_130_doberm_a` | 有 | `chess_char_130_doberm-doberm` |
+| 米格鲁 | `char_122_beagle` | 2 | 3★ | 重装 · 铁卫 | `chess_char_122_beagle_a` | 有 | `chess_char_122_beagle-beagle` |
 | 格雷伊 | `char_253_greyy` | 1 | 4★ | 术师 · 扩散术师 | `chess_char_1_14_a` | 有 | `chess_char_1_14` |
 | 跃跃 | `char_4100_caper` | 1 | 4★ | 狙击 · 回环射手 | `chess_char_1_09_a` | 有 | `chess_char_1_09` |
 
@@ -71,7 +71,7 @@ Keel 已具备本设计需要的全部能力：
 | 原生商店干员 | 跃跃、格雷伊 | 已有 chess / 素材 / kit |
 | **已补 chess（2026-11-01）** | 刻俄柏、谬因、承曦格雷伊、羽毛笔、龙舌兰、佩德洛、杜宾、米格鲁 | 全部走 `CUSTOM_CHESS`（隐藏商店干员 + 阵营加强）；`bolivar` 插件把它们设为可见并追加盟约（基础 + 精锐） |
 | kit | 刻俄柏、谬因 | 复用官方自选 kit（`chess_char_2013_cerber-cerber` / `chess_char_4229_aphris-aphris`） |
-| kit 待写 | 承曦格雷伊、羽毛笔、龙舌兰、佩德洛、杜宾、米格鲁 | 目前走 generic blackboard kit；数值/技能可玩，但不是逐技能手写 |
+| 手写 kit（2026-11-01） | 承曦格雷伊、羽毛笔、龙舌兰、佩德洛、杜宾、米格鲁 | 逐技能实现；少数简化见 §4.2 |
 | 素材 | 跃跃、格雷伊、刻俄柏、谬因 | 已有立绘 / Spine |
 | 素材待补 | 承曦格雷伊、羽毛笔、龙舌兰、佩德洛、杜宾、米格鲁 | `data/assets.json` 还没有他们的条目，UI 会走占位图 |
 
@@ -83,7 +83,7 @@ Keel 已具备本设计需要的全部能力：
     设成 `visible: true`，所以只开本插件也能买齐。
   - 基础 + 精锐两条都追加盟约，精锐上场的成员也计入。
 - 3★ 米格鲁没有精英化形态：精锐副本用同一等级、更高技能等级（`PHASE_1 / 55`）。
-- **P3**：补 6 人的手写 kit、实战数值、6 人档房间验证。
+- **P3**：实战数值、6 人档房间验证、少数技能简化收口。
 
 ---
 
@@ -181,7 +181,7 @@ state: {
 | **P1 原型** | Keel 插件 + 3 成员（跃跃/格雷伊/缪尔赛思）+ 追猎（1 猎犬/标记/增伤）+ 6 人档代码骨架 | **已完成（2026-11-01）** |
 | **P1.5 名单对齐** | 谬因补 tier-6 chess（`CUSTOM_CHESS` + 哥伦比亚阵营加强 + 插件内可见）；插件换成跃跃/格雷伊/谬因 | **已完成（2026-11-01）** |
 | **P2 六人档** | 10 人名册全部落地（刻俄柏 6 / 承曦格雷伊 5 / 羽毛笔·龙舌兰 4 / 佩德洛·杜宾 3 / 米格鲁 2）；吸血 + 2 猎犬 | **已完成（2026-11-01，6 人档可达）** |
-| **P3 调优** | 6 人的手写 kit、实战数值、图标、i18n、是否内置化 | 待做 |
+| **P3 调优** | 实战数值、图标、i18n、是否内置化 | 待做 |
 
 ---
 
@@ -194,7 +194,7 @@ state: {
 4. 6 人档的「精英/领袖」判定：`victim.isBoss` + 精英 tag，还是按 tier？（目前代码用猎物标记，未单独判定精英）
 5. **10 人的商店 chess**：全部确认走 `CUSTOM_CHESS`（2026-11-01）。会改动
    `data/chess.json` / `data/tokens.json` / `data/backups.json` 与 `data/builtin/faction-*.json`。
-   剩下的是 6 人的手写 kit 与素材，不再影响 6 人档可达性。
+   剩下的是实战调优与房间验证，不再影响 6 人档可达性。
 6. 是否把插件提升为内置 / 默认开启。
 
 ## 7. 验证

@@ -35,7 +35,9 @@ export const KIT_FILES = Object.freeze([
     'chess_char_2_05-harold.js', 'chess_char_2_06-papyrs.js', 'chess_char_2_07-ghost.js', 'chess_char_2_08-bubble.js',
     'chess_char_2_09-humus.js', 'chess_char_2_10-rockr.js', 'chess_char_2_11-kazema.js', 'chess_char_2_12-gravel.js',
     'chess_char_2_13-tippi.js', 'chess_char_2_14-flower.js', 'chess_char_2_15-akkord.js', 'chess_char_2_16-whitew.js',
-    'chess_char_2_17-branch.js', 'chess_char_2_18-ashlok.js', 'chess_char_2_19-tinman.js'],
+    'chess_char_2_17-branch.js', 'chess_char_2_18-ashlok.js', 'chess_char_2_19-tinman.js',
+    // custom (tools/build-data.mjs CUSTOM_CHESS)
+    'chess_char_122_beagle-beagle.js'],
   // tier 3
   ['chess_char_3_01-angel.js', 'chess_char_3_02-ayer.js', 'chess_char_3_03-swire.js', 'chess_char_3_04-swire2.js',
     'chess_char_3_05-skadi.js', 'chess_char_3_06-philae.js', 'chess_char_3_07-forcer.js', 'chess_char_3_08-mint.js',
@@ -45,7 +47,8 @@ export const KIT_FILES = Object.freeze([
     'chess_char_3_21-archet.js',
     // custom (tools/build-data.mjs CUSTOM_CHESS)
     'chess_char_4132_ascln-ascln.js', 'chess_char_4217_makoto-makoto.js', 'chess_char_377_gdglow-gdglow.js',
-    'chess_char_4138_narant-narant.js', 'chess_char_1015_aglna2-aglna2.js'],
+    'chess_char_4138_narant-narant.js', 'chess_char_1015_aglna2-aglna2.js',
+    'chess_char_130_doberm-doberm.js', 'chess_char_4234_pedro-pedro.js'],
   // tier 4
   ['chess_char_4_01-rmixer.js', 'chess_char_4_02-mostma.js', 'chess_char_4_03-kjera.js', 'chess_char_4_04-ines.js',
     'chess_char_4_05-beewax.js', 'chess_char_4_06-kroos2.js', 'chess_char_4_07-bpipe.js', 'chess_char_4_08-rosesa.js',
@@ -55,14 +58,16 @@ export const KIT_FILES = Object.freeze([
     'chess_char_4_21-plosis.js', 'chess_char_4_22-svrash.js', 'chess_char_4_23-gvial2.js', 'chess_char_4_24-billro.js',
     'chess_char_4_25-cetsyr.js', 'chess_char_4_26-bldsk.js',
     // custom (tools/build-data.mjs CUSTOM_CHESS)
-    'chess_char_1052_kalts2-kalts2.js'],
+    'chess_char_1052_kalts2-kalts2.js', 'chess_char_421_crow-crow.js', 'chess_char_486_takila-takila.js'],
   // tier 5
   ['chess_char_5_01-excu2.js', 'chess_char_5_02-titi.js', 'chess_char_5_03-blaze2.js', 'chess_char_5_04-bldsk.js',
     'chess_char_5_05-ulpia.js', 'chess_char_5_06-etlchi.js', 'chess_char_5_07-surtr.js', 'chess_char_5_08-horn.js',
     'chess_char_5_09-cetsyr.js', 'chess_char_5_10-lisa.js', 'chess_char_5_11-demkni.js', 'chess_char_5_12-dusk.js',
     'chess_char_5_13-ghost2.js', 'chess_char_5_14-svash2.js', 'chess_char_5_15-thorn2.js', 'chess_char_5_16-plosis.js',
     'chess_char_5_17-f12yin.js', 'chess_char_5_18-gvial2.js', 'chess_char_5_19-mlynar.js', 'chess_char_5_20-aglina.js',
-    'chess_char_5_21-sntlla.js', 'chess_char_5_22-nymph.js', 'chess_char_5_23-reckpr.js'],
+    'chess_char_5_21-sntlla.js', 'chess_char_5_22-nymph.js', 'chess_char_5_23-reckpr.js',
+    // custom (tools/build-data.mjs CUSTOM_CHESS)
+    'chess_char_1027_greyy2-greyy2.js'],
   // tier 6 (and 盟约·辅助干员 chess_char_1_15, a hidden tier-1 chess always registered with the tier-6 kits)
   ['chess_char_1_15-pithst.js', 'chess_char_6_01-lemuen.js', 'chess_char_6_02-sbell2.js', 'chess_char_6_03-yu.js',
     'chess_char_6_04-skadi2.js', 'chess_char_6_05-pasngr.js', 'chess_char_6_06-pepe.js', 'chess_char_6_07-siege2.js',
