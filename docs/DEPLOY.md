@@ -401,3 +401,15 @@ touches a match. Retention is handled by the (P2) trainer export/prune; the file
   running server picks up the new version at the next bot prep. `--auto` deliberately skips while a match is active,
   so it is not the command to use for a manual publish. The candidate priors only rank layouts for rehearsal;
   the rehearsal simulation still chooses the winner, and the heuristic first plan is always retained.
+
+## Content-set builds (room plugins)
+
+| option | meaning |
+|---|---|
+| `SP_CONTENT_BUILDER=1` | build a room's content set in a child process (`server/plugins/contentBuilderChild.js`, started at boot) instead of on the server's thread; the lobby applies the set as soon as it is built. Off = the synchronous build (also the fallback when a build fails). |
+| `SP_CONTENT_CACHE=1` | keep built sets on disk under `.cache/content-sets/` (default **on when the child builder is on**); a combination built before — including before a restart — is a file read, not a build. `0` disables it. |
+| `SP_CONTENT_CACHE_DIR=…` | where those entries live (default `<repo>/.cache/content-sets`, bounded to 48 entries / 256 MB, oldest first out). |
+| `SP_PLUGIN_DEBOUNCE_MS` | optional coalescing window for a host's plugin clicks. **Unset or 0 (recommended): the build starts at once and is applied when it finishes.** A large value is a fixed delay on every switch — the pre-2026-11 default of 5000 was removed from production on 2026-11-02. |
+
+The production box runs `SP_CONTENT_BUILDER=1` with no `SP_PLUGIN_DEBOUNCE_MS`. The cache is safe to delete while
+the server is stopped (it rebuilds on demand); killing the child process is harmless (the next build forks a new one).
