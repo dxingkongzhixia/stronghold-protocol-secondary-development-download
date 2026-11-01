@@ -22,8 +22,16 @@ export default {
         [S1]: { kind: 'duration', mods: { aspd: num(s1.attack_speed) }, attack: { atkScale: num(s1['attack@atk_scale'], 1.35) } },
         [S2]: {
           kind: 'duration',
-          targeting: { rangeGrid: def?.skill?.rangeGrid ?? null, maxTargets: num(s2['attack@plus_max_target'], 3) },
+          targeting: { rangeGrid: def?.skill?.rangeGrid ?? null, maxTargets: 2 },
           attack: { atkScale: num(s2['attack@atk_scale'], 1.7) },
+          // 蓄力：first cast 15 s / 2 targets, the charged cast 30 s / 3 targets (auto mode alternates the two).
+          onStart({ unit, skill }) {
+            const charged = unit.mem.takilaCharged === true;
+            unit.mem.takilaCharged = !charged;
+            if (skill?.spec?.targeting) skill.spec.targeting.maxTargets = charged ? 3 : 2;
+            if (charged && skill) skill.timeLeft = num(s2.enhance_duration, 30);
+          },
+          onEnd({ skill }) { if (skill?.spec?.targeting) skill.spec.targeting.maxTargets = 2; },
         },
       },
       talents: [{
