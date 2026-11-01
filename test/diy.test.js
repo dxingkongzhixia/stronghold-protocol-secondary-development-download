@@ -35,13 +35,14 @@ test('slots: two per tier (5, 6), each with its elite twin', () => {
   assert.equal(diyTokenOwner(SIEGE, chess.chess_char_6_diy1_b.status), 'char_112_siege@2/60/7/3');
 });
 
-test('diyPool: tier 5 = 15 prototypes + 66 owned + 9 official 6★; tier 6 = 9 + 66 + 9; no preset, no collab; with the kit registry only kitted operators', () => {
+test('diyPool: tier 5 = 15 prototypes + 67 owned + 9 official 6★; tier 6 = 9 + 67 + 9; no preset, no collab; with the kit registry only kitted operators', () => {
   const p5 = diyPool(5, { data: DATA }), p6 = diyPool(6, { data: DATA });
   assert.deepEqual(p5, [...RESERVES5, ...ELITES, ...ownedPool, ...officialPool]);
   assert.deepEqual(p6, [...ELITES, ...ownedPool, ...officialPool]);
-  assert.deepEqual([p5.length, p6.length], [90, 84]);
+  assert.deepEqual([p5.length, p6.length], [91, 85]);
   const roster = new Set(Object.values(chess).map((c) => c.charId).filter(Boolean));
-  for (const id of p5) assert.ok((!roster.has(id) || officialPool.includes(id)) && !COLLAB.includes(id), id);
+  // 丰川祥子 is the owner's 2026-11-01 override: a collab pick allowed into the pool.
+  for (const id of p5) assert.ok((!roster.has(id) || officialPool.includes(id)) && (id === 'char_4182_oblvns' || !COLLAB.includes(id)), id);
   assert.deepEqual(diyPool(4, { data: DATA }), [], 'no 自选 slot at tier 4');
   // the kit registry: the 预备干员 run the generic kit (exact for their skills), the nine elites their stand-in kits, the
   // owned 6★ only with an operator kit file (kits/index.js OPERATOR_KIT_FILES), in pool order; the official-DIY pool of

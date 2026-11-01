@@ -47,6 +47,10 @@ Read this together with:
 > this fork and are absent from upstream `master`. Upstream has (or has had) a *different* feature: the
 > 补位/自选 (stand-in / DIY) pool. The two must not be confused (see §5).
 >
+> **2026-11-01 — owner override: 丰川祥子.** The Ave Mujica collab operator char_4182_oblvns is taken out of the
+> DIY_EXCLUDED_TEAMS exclusion (tools/build-data.mjs DIY_FORCE_INCLUDE) and offered as a 6★ 自选 pick, with her
+> official prefab FX. This is an explicit owner decision; the other collab operators stay excluded.
+>
 > **2026-10-24 — built-in 阵营加强 plugins.** Their *shop forms* are no longer part of the vanilla game: the build hides
 > those records (`visible: false`) and drops them from the bond member lists, and each faction's built-in content
 > plugin (`server/plugins/builtin.js`, generated `data/builtin/faction-<faction>.json`) restores them when the room's

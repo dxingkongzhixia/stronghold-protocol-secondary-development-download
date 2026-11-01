@@ -8,6 +8,7 @@ const picks = [
   ['char_4247_oxi', '塔露拉', 2],
   ['char_4244_tocka', '冻河', 2],
   ['char_4246_dminon', '国度', 2],
+  ['char_4182_oblvns', '丰川祥子', 2],
 ];
 const walker = () => enemyRec({ key: 'e_walk', hp: 4000, atk: 300, speed: 0.8, bat: 1.5 });
 

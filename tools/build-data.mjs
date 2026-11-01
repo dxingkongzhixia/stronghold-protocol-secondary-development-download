@@ -1809,6 +1809,13 @@ const DIY_EXTRA_PROTOTYPES = Object.freeze({ 5: Object.freeze({ rarity: 4, exclu
  * (麒麟R夜刀), mujica (丰川祥子), sees (结城理), laios (玛露西尔). The excel does not exclude them (research 0.2.0 §2.2).
  */
 const DIY_EXCLUDED_TEAMS = Object.freeze(['rainbow', 'action4', 'mujica', 'sees', 'laios']);
+
+/**
+ * Owner overrides (2026-11-01): collab operators the owner explicitly wants in the 6★ 自选 pool. 丰川祥子
+ * (char_4182_oblvns, Ave Mujica) is excluded by `DIY_EXCLUDED_TEAMS` like every collab operator; the owner asked for
+ * her in the pool (and her official prefab FX), so she is taken out of `excluded` again and offered as an owned pick.
+ */
+const DIY_FORCE_INCLUDE = new Set(['char_4182_oblvns']);
 /**
  * …and every 6★ of a 联动寻访, by the prefix of its character_table `displayNumber` (the collab series: MH Monster Hunter —
  * 麒麟R夜刀 MH02, 焰狐龙梓兰 MH05, whose team reserve6 names no collab —, RS Rainbow Six, AM Ave Mujica, PS Persona, DD
@@ -2005,8 +2012,12 @@ function buildBackups(ctx, chess) {
       && !ch.isNotObtainable && !roster.has(id);
   }).sort(naturalCmp);
   const collabNumber = (ch) => DIY_EXCLUDED_NUMBER_PREFIXES.some((p) => new RegExp(`^${p}\\d`).test(ch.displayNumber || ''));
-  const excluded = legal6.filter((id) => teamsOf(charTable[id]).some((t) => excludedTeams.has(t)) || collabNumber(charTable[id]));
-  for (const t of DIY_EXCLUDED_TEAMS) if (!excluded.some((id) => teamsOf(charTable[id]).includes(t))) warn(`DIY_EXCLUDED_TEAMS: no owned-6★ pick of team ${t}`);
+  const excluded = legal6.filter((id) => teamsOf(charTable[id]).some((t) => excludedTeams.has(t)) || collabNumber(charTable[id]))
+    .filter((id) => !DIY_FORCE_INCLUDE.has(id));
+  for (const t of DIY_EXCLUDED_TEAMS) {
+    const forced = [...DIY_FORCE_INCLUDE].some((id) => charTable[id] && teamsOf(charTable[id]).includes(t));
+    if (!excluded.some((id) => teamsOf(charTable[id]).includes(t)) && !forced) warn(`DIY_EXCLUDED_TEAMS: no owned-6★ pick of team ${t}`);
+  }
   const ownedPool = legal6.filter((id) => !excluded.includes(id));
   // Official-version DIY picks of the custom shop operators (CUSTOM_OFFICIAL_DIY). Their charId is deliberately also a
   // roster operator: the custom chess keeps its chess_char_* kit, while a DIY pick of the same operator runs the
