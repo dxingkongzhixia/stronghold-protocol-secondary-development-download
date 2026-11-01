@@ -28,8 +28,10 @@
 import { ERR, DIFFICULTIES } from '../../shared/constants.js';
 import { contentHashOf, csUrlPart, isContentHash } from '../../shared/plugins/identity.js';
 import { normalizeSettings } from '../../shared/plugins/patch.js';
-import { buildContentSet, contentSetFiles, releaseContentSet, registerContentSetFiles } from './contentSet.js';
+import { buildContentSet, contentSetFiles, releaseContentSet, registerContentSetFiles, vanillaIdentityOf, vanillaFileBodies } from './contentSet.js';
 import { fork } from 'node:child_process';
+import { createContentSetCache } from './contentSetCache.js';
+import { ROOT } from '../data.js';
 
 const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
 /** Content sets kept that no room holds (their /cs/ files stay servable a while). [ASSUMED]
@@ -105,10 +107,34 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
 
   /** cs16 by what a set was built from (memoKey), most recent last — written once the set is kept */
   const memo = new Map();
+
+  // A built set is also kept on disk (SP_CONTENT_CACHE, on by default with the child builder): opening a room whose
+  // combination this server built before — even before a restart — loads its bytes instead of building them again.
+  const cacheEnabled = String(process.env.SP_CONTENT_CACHE ?? (String(process.env.SP_CONTENT_BUILDER || '') === '1' ? '1' : '0')) === '1';
+  const cache = cacheEnabled
+    ? createContentSetCache({ dir: process.env.SP_CONTENT_CACHE_DIR || `${ROOT}/.cache/content-sets`, log })
+    : null;
+  const cacheIdentity = () => { try { return vanillaIdentityOf(registry); } catch { return null; } };
+  /** Adopt a set the cache stored: its bodies go in through registerContentSetFiles, exactly like the child's reply. */
+  const adoptCached = (hit) => {
+    if (!hit) return null;
+    try {
+      const built = { cs: hit.cs, index: hit.index, ...hit.extra };
+      const bodies = new Map(hit.bodies);
+      // The unchanged tables are not stored (they are the server's own vanilla bytes): borrow them, so the set serves
+      // exactly what a fresh build served.
+      try { for (const [rel, body] of vanillaFileBodies(registry)) if (!bodies.has(rel)) bodies.set(rel, body); } catch { /* base unavailable: the set still serves its own files */ }
+      registerContentSetFiles(built, [...bodies]);
+      const set = adopt(built);
+      if (set) cacheHits++;
+      return set;
+    } catch { return null; }
+  };
   /** build() calls so far (stats: a burst of requests for one set builds it once) */
   let builds = 0;
   let requests = 0;
   let memoHits = 0;
+  let cacheHits = 0;
   let refused = 0;
   let lastBuildMs = 0;
   let maxBuildMs = 0;
@@ -168,6 +194,23 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
       stale.delete(k);
       free--;
     }
+  };
+
+  /** Persist a freshly built C1 set under this combination's memo key (its bodies and index). */
+  const storeCached = (mk, built, args) => {
+    if (!cache) return;
+    try {
+      cache.store(mk, cacheIdentity(), {
+        cs: built.cs,
+        index: built.index,
+        files: filesOf(built),
+        extra: {
+          plugins: built.plugins ?? [], modes: built.modes ?? [], kitted: built.kitted ?? null, warnings: built.warnings ?? [],
+          bounds: built.bounds ?? null, offers: built.offers ?? [], scripts: built.scripts ?? [], execution: built.execution ?? null,
+          rules: built.rules ?? null, ...(args ? { args } : {}),
+        },
+      });
+    } catch (e) { log.warn?.(`[plugins] content-set cache store failed: ${e?.code || e?.message || e}`); }
   };
 
   /** A built C1 set → a ContentSet (see the header); null when its manifest does not hash to its cs. */
@@ -237,36 +280,41 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
       // never the one dropped), so what is not remembered would be one set more [ASSUMED: a held set whose plugin's
       // manifest changed on disk since — same files, same cs — is refused here rather than built to find out]
       if (full) { refused++; return busy(); }
-      let built;
-      const started = Date.now();
-      try {
-        builds++;
-        built = build({ registry, ids: ids.map((id) => (norm[id] ? { id, settings: norm[id] } : id)), allowIncompatible });
-      } catch (e) {
-        refused++;
-        log.error?.('[plugins] content set failed to build', e);
-        return { error: ERR.INTERNAL, detail: 'the content set failed to build' };
-      }
-      if (!built || !isContentHash(built.cs) || (Array.isArray(built.problems) && built.problems.length)) {
-        const list = Array.isArray(built?.problems) ? built.problems : [];
-        const why = list.length ? list.slice(0, 4).map(problemText).join('; ') : 'no content set';
-        log.warn?.(`[plugins] content set of ${ids.join(', ')} refused: ${why}`);
-        // a load-order problem keeps its own code (PLUGIN_DEPENDENCY / PLUGIN_CONFLICT); any other problem of the data is
-        // a set this server cannot make
-        const code = list.find((p) => p && Object.hasOwn(ERR, p.code))?.code;
-        refused++;
-        return { error: code || ERR.PLUGIN_BLOCKED, detail: why.slice(0, 200) };
-      }
-      const k = csUrlPart(built.cs);
-      set = sets.get(k) || null;
-      if (!set || set.cs !== built.cs) set = adopt(built);
+      // A combination this server built before (even before a restart): its bytes are on disk, so nothing is built.
+      if (cache && mk) set = adoptCached(cache.load(mk, cacheIdentity()));
       if (!set) {
-        refused++;
-        log.error?.(`[plugins] content set ${built.cs.slice(0, 8)}: its manifest does not hash to its cs`);
-        return { error: ERR.INTERNAL, detail: 'the content set\'s manifest does not hash to its cs' };
+        let built;
+        const started = Date.now();
+        try {
+          builds++;
+          built = build({ registry, ids: ids.map((id) => (norm[id] ? { id, settings: norm[id] } : id)), allowIncompatible });
+        } catch (e) {
+          refused++;
+          log.error?.('[plugins] content set failed to build', e);
+          return { error: ERR.INTERNAL, detail: 'the content set failed to build' };
+        }
+        if (!built || !isContentHash(built.cs) || (Array.isArray(built.problems) && built.problems.length)) {
+          const list = Array.isArray(built?.problems) ? built.problems : [];
+          const why = list.length ? list.slice(0, 4).map(problemText).join('; ') : 'no content set';
+          log.warn?.(`[plugins] content set of ${ids.join(', ')} refused: ${why}`);
+          // a load-order problem keeps its own code (PLUGIN_DEPENDENCY / PLUGIN_CONFLICT); any other problem of the data is
+          // a set this server cannot make
+          const code = list.find((p) => p && Object.hasOwn(ERR, p.code))?.code;
+          refused++;
+          return { error: code || ERR.PLUGIN_BLOCKED, detail: why.slice(0, 200) };
+        }
+        if (cache && mk) storeCached(mk, built, { ids, settings: norm, allowIncompatible });
+        const k = csUrlPart(built.cs);
+        set = sets.get(k) || null;
+        if (!set || set.cs !== built.cs) set = adopt(built);
+        if (!set) {
+          refused++;
+          log.error?.(`[plugins] content set ${built.cs.slice(0, 8)}: its manifest does not hash to its cs`);
+          return { error: ERR.INTERNAL, detail: 'the content set\'s manifest does not hash to its cs' };
+        }
+        lastBuildMs = Date.now() - started;
+        maxBuildMs = Math.max(maxBuildMs, lastBuildMs);
       }
-      lastBuildMs = Date.now() - started;
-      maxBuildMs = Math.max(maxBuildMs, lastBuildMs);
     }
     const key = csUrlPart(set.cs);
     if (!held.has(key) && full) { refused++; return busy(); }
@@ -321,6 +369,16 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
     const norm = normalized(ids, settings);
     const mk = memoKey(ids, norm, allowIncompatible);
     if (mk && memo.has(mk) && sets.has(memo.get(mk))) return Promise.resolve({ ok: true });
+    // A combination this server built before (even before a restart): its bytes are on disk, so nothing is built.
+    if (cache && mk) {
+      const cached = adoptCached(cache.load(mk, cacheIdentity()));
+      if (cached) {
+        const key = csUrlPart(cached.cs);
+        if (!sets.has(key)) keep(key, cached);
+        remember(mk, key);
+        return Promise.resolve({ ok: true, set: cached });
+      }
+    }
     // One build per set at a time: the debounce's warm request and the apply that follows it ask for the same set, and
     // the second must wait for the first instead of starting a duplicate build in the child.
     if (mk && inflight.has(mk)) return inflight.get(mk);
@@ -337,6 +395,7 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
       } catch { waiting.delete(id); clearTimeout(timer); resolve(null); }
     }).then((built) => {
       if (!built || !isContentHash(built.cs)) return null;
+      if (mk) storeCached(mk, built, { ids, settings: norm, allowIncompatible });
       const set = adopt(built);
       if (!set) return null;
       const key = csUrlPart(set.cs);
@@ -352,6 +411,16 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
   // Start the builder at boot when it is enabled: its one-time plugin scan (~1 s) then belongs to startup, not to the
   // first room's first toggle.
   if (String(process.env.SP_CONTENT_BUILDER || '') === '1') { try { builderChild(); } catch { /* spawned again on the first build */ } }
+  // …and load the few combinations this server used last time back into memory, so opening such a room costs a read.
+  if (cache) {
+    const warm = setTimeout(() => {
+      for (const a of cache.recent(4)) {
+        if (!Array.isArray(a.ids) || !a.ids.length) continue;
+        prebuild(a.ids, { settings: a.settings ?? {}, allowIncompatible: a.allowIncompatible ?? false }).catch(() => {});
+      }
+    }, 3000);
+    warm.unref?.();
+  }
 
   return {
     resolve,
@@ -409,6 +478,6 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
     },
     /** Content sets rooms hold now (/healthz content.sets). */
     inUse: () => held.size,
-    stats: () => ({ sets: sets.size, held: held.size, builds, requests, memoHits, refused, lastBuildMs, maxBuildMs, dataBytes: [...sets.values()].reduce((n, s) => n + (Number(s.dataBytes) || 0), 0) }),
+    stats: () => ({ sets: sets.size, held: held.size, builds, requests, memoHits, cacheHits, refused, lastBuildMs, maxBuildMs, dataBytes: [...sets.values()].reduce((n, s) => n + (Number(s.dataBytes) || 0), 0) }),
   };
 }

@@ -991,6 +991,15 @@ Measured on the dev box: vanilla 300 → 25 ms, five plugins 800 → 200 ms, the
 combination's first build ≈290 ms in the child, an already built combination 9 ms. Output bytes are unchanged — only
 the `cs` moves when `shared/**` code changes, as §6 requires.
 
+**Built sets are also kept on disk** (`.cache/content-sets/`, `SP_CONTENT_CACHE=1`; on by default with the child
+builder, `SP_CONTENT_CACHE_DIR` to move it). The key is the memo key *and* the vanilla identity (app / sim code / data
+file hashes), so a data or code change never serves an old set; the entry holds only the files the set serves itself
+(the changed tables, a few MB) plus its manifest, and `load` re-checks the manifest against its cs and every body
+against the manifest before adopting it — a broken entry is dropped and the caller builds. Three seconds after boot the
+server loads the four most recent entries back into memory, so **opening a room whose combination this server built
+before costs a file read, not a build** — including after a restart. The cache is bounded (48 entries / 256 MB, oldest
+first out) and `/healthz`'s `content.sets` still counts what is *held*, not what is cached.
+
 **The room's state.** With gameplay plugins `room.state.content` is `{ cs, vanilla: false, plugins: [{ id, version,
 class, hash, auto? }], warnings, bytes, dataBytes, vs?, modes?, modeId?, kittedExtra? }`: `dataBytes` is what a member
 downloads beyond the vanilla files, `modes` the modes its plugins add (`{ id, name, roomMode, difficulty }`), `modeId`

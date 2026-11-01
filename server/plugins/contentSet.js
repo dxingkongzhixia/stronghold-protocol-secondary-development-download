@@ -490,6 +490,16 @@ export function registerContentSetFiles(set, bodies) {
   })));
 }
 
+/** The immutable identity of this registry's vanilla bytes (app version, sim+shared code, data file hashes). */
+export function vanillaIdentityOf(registry) {
+  return baseFor(registry).identity;
+}
+
+/** The vanilla data/i18n bodies this registry serves unchanged (rel → Buffer); a cached set borrows them. */
+export function vanillaFileBodies(registry) {
+  return baseFor(registry).files;
+}
+
 /** C1 failures are data diagnostics, including invalid nested stage/translation input. */
 export function buildContentSet(options) {
   try { return composeContentSet(options ?? {}); }
