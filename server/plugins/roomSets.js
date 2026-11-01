@@ -146,6 +146,8 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     release: (vs) => visual?.release?.(vs),
     holdContent: (cs) => contents?.hold?.(cs),
     releaseContent: (cs) => contents?.release?.(cs),
+    /** True when builds go to a child process: the lobby may then defer a plugin apply to a build (server/lobby.js). */
+    prebuildEnabled: () => contents?.prebuildEnabled?.() ?? false,
     // Warm the build the next resolve() asks for, with the ids in the same load order (resolve hands the content set an
     // ordered, auto-closed list — a different order would be a different memo key and build again on the main thread).
     prebuild: (ids, opts = {}) => {

@@ -312,8 +312,8 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
   };
   /**
    * Build a content set off the event loop and remember it, so the following `resolve` is a memo hit (the lobby's
-   * debounced plugin change path). Returns null when the builder is off/unavailable or the set is refused — the caller
-   * then falls back to the synchronous build.
+   * plugin change path). Returns null when the builder is off/unavailable or the set is refused — the caller then falls
+   * back to the synchronous build.
    */
   function prebuild(ids, { settings = {}, allowIncompatible = false, replacing = null } = {}) {
     const child = builderChild();
@@ -349,9 +349,15 @@ export function createContentSets({ registry, vanillaData, log = noopLog, maxSet
     return mk ? inflight.get(mk) : job;
   }
 
+  // Start the builder at boot when it is enabled: its one-time plugin scan (~1 s) then belongs to startup, not to the
+  // first room's first toggle.
+  if (String(process.env.SP_CONTENT_BUILDER || '') === '1') { try { builderChild(); } catch { /* spawned again on the first build */ } }
+
   return {
     resolve,
     prebuild,
+    /** True when builds go to the child (SP_CONTENT_BUILDER=1): the caller may then defer its apply to a build. */
+    prebuildEnabled: () => String(process.env.SP_CONTENT_BUILDER || '') === '1',
     onStale(fn) { staleListeners.add(fn); return () => staleListeners.delete(fn); },
     close() { offScan?.(); staleListeners.clear(); inflight.clear(); if (builder) { try { builder.kill(); } catch { /* gone */ } builder = null; } },
     /** A room uses the set of `cs`: never dropped until every holder released it. @param {string} cs */

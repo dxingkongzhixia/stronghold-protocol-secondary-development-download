@@ -108,8 +108,10 @@ export function createKeelContentSets({ plugins, legacy = null, vanillaData, log
     has: (id) => map.has(id),
     ids: () => [...map.keys()],
     resolve: (ids, opts) => contents.resolve(ids, opts),
-    /** Warm the build the room's next resolve asks for (the lobby debounces plugin changes; server/plugins/roomSets.js). */
+    /** Warm the build the room's next resolve asks for (the lobby applies a plugin change after it; server/plugins/roomSets.js). */
     prebuild: (ids, opts) => contents.prebuild?.(ids, opts) ?? Promise.resolve(null),
+    /** Builds go to a child process: the lobby may defer a plugin apply to a build (server/lobby.js). */
+    prebuildEnabled: () => contents.prebuildEnabled?.() ?? false,
     get: (cs) => contents.get(cs),
     dataBytes: (cs) => contents.dataBytes(cs),
     dataOf: (cs) => contents.dataOf(cs),

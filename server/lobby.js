@@ -1217,43 +1217,45 @@ export class Lobby {
     /** @type {Record<string, Record<string, unknown>>} */
     const settings = {};
     for (const p of plugins) if (p.settings) settings[p.id] = p.settings;
+    // The build runs in the content-builder child (SP_CONTENT_BUILDER=1), so this event loop never blocks on it.
+    room.pendingPlugins = { ids, settings };
+    room.pluginSeq = (room.pluginSeq || 0) + 1;
+    const token = room.pluginSeq;
+    if (room.pluginTimer) { clearTimeout(room.pluginTimer); room.pluginTimer = null; }
     if (this.pluginDebounceMs > 0) {
-      // Coalesce a burst of toggles: only the last set is built (after the quiet period), one full build instead of N.
-      // The build itself runs in the content-builder child (SP_CONTENT_BUILDER=1), so this event loop never blocks.
-      room.pendingPlugins = { ids, settings };
-      room.pluginSeq = (room.pluginSeq || 0) + 1;
-      const token = room.pluginSeq;
-      if (room.pluginTimer) clearTimeout(room.pluginTimer);
-      if (room.pluginWarm) clearTimeout(room.pluginWarm);
-      // Warm the build while the quiet period runs: a single toggle then applies as soon as the debounce ends instead of
-      // paying the build on the critical path. A newer toggle supersedes it through the same sequence token.
-      room.pluginWarm = setTimeout(() => {
-        room.pluginWarm = null;
-        if (room.pluginSeq !== token || room.match || !this.rooms.has(room.code)) return;
-        const p = room.pendingPlugins;
-        if (!p) return;
-        Promise.resolve(this.plugins.prebuild?.(p.ids, { settings: p.settings, replacing: room.content })).catch(() => {});
-      }, Math.max(50, Math.min(200, Math.floor(this.pluginDebounceMs / 4))));
-      room.pluginWarm.unref?.();
-      room.pluginTimer = setTimeout(async () => {
-        if (room.pluginSeq !== token || room.match || !this.rooms.has(room.code)) { room.pluginTimer = null; return; }
-        const p = room.pendingPlugins;
-        if (p) {
-          // Already warmed above in the normal case: this is a memo hit, or the synchronous fallback when the builder
-          // is off (SP_CONTENT_BUILDER=0).
-          try { await this.plugins.prebuild?.(p.ids, { settings: p.settings, replacing: room.content }); } catch { /* sync fallback */ }
-        }
-        if (room.pluginSeq !== token || room.match || !this.rooms.has(room.code)) { room.pluginTimer = null; return; }
-        room.pluginTimer = null;
-        room.pendingPlugins = null;
-        if (!p) return;
-        const r = this.applyPlugins(room, p.ids, p.settings);
-        if (r && r.error) this.log.warn?.(`[lobby] ${room.code} plugin set refused: ${r.error}`);
-      }, this.pluginDebounceMs);
+      // Optional coalescing window (SP_PLUGIN_DEBOUNCE_MS): wait for the host to stop clicking, then build the last set.
+      room.pluginTimer = setTimeout(() => { room.pluginTimer = null; this._buildPendingPlugins(room, token); }, this.pluginDebounceMs);
       room.pluginTimer.unref?.();
-      return OK;
+    } else if (this.plugins?.prebuildEnabled?.()) {
+      // No window: start at once. A build already in flight picks up the newest choice when it finishes, so a burst still
+      // builds only the last set that settles — the wait is the build, never an added timer.
+      this._buildPendingPlugins(room, token);
+    } else {
+      // No child builder: apply here, so a refused set still answers the request with its error (the pre-builder behaviour).
+      room.pendingPlugins = null;
+      return this.applyPlugins(room, ids, settings);
     }
-    return this.applyPlugins(room, ids, settings);
+    return OK;
+  }
+
+  /**
+   * Build the room's pending plugin set off the event loop, then apply it if it is still the host's latest choice. One
+   * build per room at a time: a toggle that arrives while a build runs is folded into the next one instead of queueing.
+   * @param {any} room @param {number} token the room's plugin sequence this build was started for
+   */
+  async _buildPendingPlugins(room, token) {
+    if (!room || room.pluginBuilding || room.match || !this.rooms.has(room.code)) return;
+    const p = room.pendingPlugins;
+    if (!p) return;
+    room.pluginBuilding = true;
+    try { await this.plugins.prebuild?.(p.ids, { settings: p.settings, replacing: room.content }); }
+    catch { /* applyPlugins' synchronous build is the fallback (builder off) */ }
+    room.pluginBuilding = false;
+    if (!this.rooms.has(room.code) || room.match) return;
+    if (room.pluginSeq !== token) { this._buildPendingPlugins(room, room.pluginSeq); return; }
+    room.pendingPlugins = null;
+    const r = this.applyPlugins(room, p.ids, p.settings);
+    if (r && r.error) this.log.warn?.(`[lobby] ${room.code} plugin set refused: ${r.error}`);
   }
 
   /** Apply a room's plugin set now (the debounced path calls it after the quiet period). */
@@ -1287,8 +1289,7 @@ export class Lobby {
   _flushPlugins(room) {
     if (!room || (!room.pluginTimer && !room.pendingPlugins)) return OK;
     if (room.pluginTimer) { clearTimeout(room.pluginTimer); room.pluginTimer = null; }
-    if (room.pluginWarm) { clearTimeout(room.pluginWarm); room.pluginWarm = null; }
-    room.pluginSeq = (room.pluginSeq || 0) + 1;   // a debounced build still in flight must not apply over this
+    room.pluginSeq = (room.pluginSeq || 0) + 1;   // a build still in flight must not apply over this
     const p = room.pendingPlugins;
     room.pendingPlugins = null;
     return p ? this.applyPlugins(room, p.ids, p.settings) : OK;
