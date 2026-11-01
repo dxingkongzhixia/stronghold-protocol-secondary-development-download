@@ -226,6 +226,7 @@ node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-path
 | 数据字段 / 生成 | `DATA.md`、`tools/build-data.mjs` |
 | 素材 / 提取 | `ASSETS.md` |
 | 插件 | `PLUGIN-DEV-GUIDE.md` / `PLUGINS.md` / `PLUGIN-API.md` / `PLUGIN-DSL.md`（按改动层级） |
+| 插件内容集构建（性能 / 缓存 / 子进程 / 构建失败） | `PLUGIN-BUILD.md`（唯一归属）、`PLUGINS.md` §11、`DEPLOY.md` 的环境变量表 |
 | 部署 / 环境变量 | `DEPLOY.md`、`PROJECT-STATE.md`、`AI-WORKFLOW.md` |
 | 当前版本 / 部署状态 | `PROJECT-STATE.md`、`CHANGELOG.md` |
 | 新文档 / 移动文档 | `docs/README.md`、`docs/QUERY-INDEX.md`、根 `README.md`、`AGENTS.md` |

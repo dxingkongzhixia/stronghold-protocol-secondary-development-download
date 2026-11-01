@@ -238,6 +238,7 @@ Root layout (both trees are identical for every tracked file; §2 explains the s
 | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | the chronological upstream-merge log + the **never-merge list (§0)** + the per-batch skip reasons. |
 | [`docs/PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) · [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | plugin tutorials: no-code studio workflow / developer workflow. |
 | [`docs/PLUGINS.md`](PLUGINS.md) · [`docs/PLUGIN-API.md`](PLUGIN-API.md) · [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) | the plugin system: cosmetic / content / script / ui classes, content sets (`cs`), the studio, Forge import, the frozen API surface and the DSL. |
+| [`docs/PLUGIN-BUILD.md`](PLUGIN-BUILD.md) | **content-set builds**: the pipeline, the four cache layers and their keys, the environment switches, the traps that make a rebuild silent, the diagnosis commands, and the 2026-11 incidents. |
 | [`docs/FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) · [`docs/FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) | Forge pack authoring and its compatibility matrix. |
 | [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) · [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) · [`docs/PLUGIN-RISKS.md`](PLUGIN-RISKS.md) · [`docs/PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md) · [`docs/PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | marketplace, architecture review, player risks, supply chain and the current plugin backlog. |
 | [`docs/SKINS.md`](SKINS.md) | operator skins: the cosmetic overlay, the picker, the other-players setting, and the local official-outfit extractor. |
