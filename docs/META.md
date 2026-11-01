@@ -232,6 +232,16 @@ watchdog, and a paused solo match is skipped (`_resume` shifts the clocks). For 
 per room, `phase`, `round`, `deadline` and `fields[{ id, kind, mode, done, authority }]` — a stuck match is visible
 without a restart.
 
+### 1.3c Clients-only combat (SP_CLIENTS_ONLY=1, 2026-11-01)
+The server can refuse to run any headless battle: every field — a human's own, an AI seat's, a departed player's — is
+simulated by a browser in the room (`b.start background`, up to `CLIENTS_ONLY_FIELDS_PER_EXECUTOR` = 4 fields per
+browser), and the server only orchestrates. The switch is `SP_CLIENTS_ONLY=1` (Match option `clientsOnly`); with it:
+trait-layer fields are client-authoritative too, client results are accepted without a server recompute (`SP_VERIFY`
+is forced off), and **a field with no free browser ends the match** (`finish { victory: false, reason: 'no-executor' }`)
+instead of falling back to a headless run. Turning the switch off restores the old server fallback and lets
+`SP_VERIFY=sample|all` run again on a stronger box. This is the 2 vCPU production policy: the server pays lobby/plugin
+orchestration only; the CPU moves to the players' browsers.
+
 ### 1.4 Watching fields
 Client-side combat (the default, DESIGN §14 Spectating; `Match._watchClient`): `g.watch` answers with the field's
 `b.start` (a display replica fast-forwarded to the field clock); an alive player may not watch another normal field

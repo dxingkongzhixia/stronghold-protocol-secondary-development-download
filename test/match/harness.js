@@ -86,6 +86,7 @@ export function makeMatch(o = {}) {
     externalReplay: o.externalReplay,
     botSliceMs: o.botSliceMs,
     clientCombat: o.clientCombat ?? false,
+    clientsOnly: o.clientsOnly,
     verify: o.verify ?? 'off',
     headlessSliceMs: o.headlessSliceMs,
     aiPicksLast: o.aiPicksLast,

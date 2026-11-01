@@ -14,6 +14,8 @@ import { testSlice } from '../testTrace.js';
 const FIELD_WATCH_MS = 4_000;
 /** The most fields one browser may simulate at once (its own field + delegated bot/takeover fields). */
 export const MAX_FIELDS_PER_EXECUTOR = 8;
+/** Clients-only mode: a host's own field plus at most three delegated fields (a 4-seat room), keeps a browser usable. */
+export const CLIENTS_ONLY_FIELDS_PER_EXECUTOR = 4;
 
 export class MatchClientCombat {
   /** Stop every client-combat timer and the headless pacer (phase end, finish, dispose). */
@@ -32,7 +34,7 @@ export class MatchClientCombat {
 
   _clearFieldTimers(f) {
     if (!f || !f.cc) return;
-    for (const k of ['deadlineTimer', 'doneTimer', 'waitTimer', 'sliceTimer', 'verifyTimer']) if (f[k]) { this.cancel(f[k]); f[k] = null; }
+    for (const k of ['deadlineTimer', 'doneTimer', 'waitTimer', 'sliceTimer', 'verifyTimer', 'holdTimer']) if (f[k]) { this.cancel(f[k]); f[k] = null; }
     f.job = null;
     f.verifyJob = null;
   }
@@ -132,16 +134,18 @@ export class MatchClientCombat {
    * Trait-layer fields stay server-run (their authority rule needs the server's own run).
    */
   _executorCandidates(f, exclude = null, fields = this.fields) {
-    // Only a room with native sim code needs a browser executor: its battle cannot be replayed by the server (D10).
-    // Vanilla / content-only / meta-only rooms keep the existing server fallback unchanged.
-    if (!this.simCode) return [];
-    if (requiresTraitLayerAuthority(f.spec, this.gd)) return [];
+    // Native sim rooms always need a browser executor (the server cannot replay them). In clients-only mode every room
+    // does: the server never runs a headless battle. Trait-layer fields are executable by a browser too in that mode
+    // (their layer accounting becomes client-authoritative, the owner's decision of 2026-11-01).
+    if (!this.simCode && !this.clientsOnly) return [];
+    if (!this.clientsOnly && requiresTraitLayerAuthority(f.spec, this.gd)) return [];
     const skip = new Set(f.players ?? []);
     if (exclude) skip.add(exclude);
     const out = [];
+    const cap = this.clientsOnly ? CLIENTS_ONLY_FIELDS_PER_EXECUTOR : MAX_FIELDS_PER_EXECUTOR;
     for (const ps of this.players.values()) {
       if (!ps || ps.isBot || ps.left || !ps.connected || skip.has(ps.playerId)) continue;
-      if (this._loadFor(ps.playerId, fields) >= MAX_FIELDS_PER_EXECUTOR) continue;
+      if (this._loadFor(ps.playerId, fields) >= cap) continue;
       out.push(ps);
     }
     out.sort((a, b) => (a.playerId === this.hostId ? -1 : b.playerId === this.hostId ? 1 : (a.seat ?? 99) - (b.seat ?? 99)));
@@ -162,18 +166,46 @@ export class MatchClientCombat {
   _sendExecutors(fields) {
     for (const f of fields) {
       if (!f.background || !f.authority) continue;
-      if (!this._sendStart(f.authority, f, { background: true })) this._runOnServer(f, 'executor-lost');
+      if (!this._sendStart(f.authority, f, { background: true })) {
+        if (this.clientsOnly) this._endNoExecutor(f, 'executor-lost');
+        else this._runOnServer(f, 'executor-lost');
+      }
     }
+  }
+
+  /**
+   * Clients-only mode has nobody to simulate a field: the match ends at once (`no-executor`) — the server never runs a
+   * headless battle and never queues a field silently. A better server can turn the mode off to restore the fallback.
+   */
+  _endNoExecutor(f, reason) {
+    const prev = f.mode === 'client' ? f.authority : null;
+    if (f.deadlineTimer) { this.cancel(f.deadlineTimer); f.deadlineTimer = null; }
+    if (f.holdTimer) { this.cancel(f.holdTimer); f.holdTimer = null; }
+    f.mode = 'hold';
+    f.authority = null;
+    f.background = false;
+    f.executor = null;
+    if (prev) this.sendTo(prev, { t: 'b.end', battleId: f.battleId, fieldId: f.fieldId, reason: 'takeover' });
+    this.log.warn?.(`[match ${this.roomCode}] ${f.fieldId} R${this.round}: no browser executor (${reason}) — ending the match`);
+    this.finish({ victory: false, reason: 'no-executor' });
   }
 
   /** Hand a field to another browser (host first) instead of running it on the server; returns false after a fallback. */
   _delegateField(f, reason) {
     const prev = f.mode === 'client' ? f.authority : null;
     const next = this._executorFor(f, prev);
-    if (!next) { this._runOnServer(f, reason); return false; }
+    if (!next) {
+      if (this.clientsOnly) { this._endNoExecutor(f, reason); return false; }
+      this._runOnServer(f, reason);
+      return false;
+    }
     this._assignClient(f, next, { background: true });
     if (prev) this.sendTo(prev, { t: 'b.end', battleId: f.battleId, fieldId: f.fieldId, reason: 'takeover' });
-    if (!this._sendStart(next, f, { background: true })) { this._runOnServer(f, 'executor-lost'); return false; }
+    if (!this._sendStart(next, f, { background: true })) {
+      if (this.clientsOnly) { this._endNoExecutor(f, 'executor-lost'); return false; }
+      this._runOnServer(f, 'executor-lost');
+      return false;
+    }
     this.log.info?.(`[match ${this.roomCode}] ${f.fieldId} R${this.round}: delegated to ${next} (${reason})`);
     return true;
   }
@@ -191,6 +223,7 @@ export class MatchClientCombat {
       else {
         const executor = this._executorFor(f);
         if (executor) this._assignClient(f, executor, { background: true });
+        else if (this.clientsOnly) this._endNoExecutor(f, 'no-human');
         else this._runOnServer(f, 'no-human');
       }
     }
@@ -234,10 +267,13 @@ export class MatchClientCombat {
   }
 
   _assignClient(f, pid, { background = false } = {}) {
+    if (f.holdTimer) { this.cancel(f.holdTimer); f.holdTimer = null; }
+    const fresh = f.mode === 'hold' || f.authority == null;
     f.mode = 'client';
     f.authority = pid;
     f.background = !!background;
     f.executor = background ? pid : null;
+    if (fresh) f.startAt = this.sched.now();   // a held field starts its clock when a browser finally takes it
     f.lastProgressAt = this.sched.now();
     if (f.deadlineTimer) { this.cancel(f.deadlineTimer); f.deadlineTimer = null; }
     if (f.kind === 'boss' || f.kind === 'hidden') return; // the pool / team LP / silence watchdog end those
@@ -283,6 +319,7 @@ export class MatchClientCombat {
     f.authority = null;
     f.background = false;
     f.executor = null;
+    if (f.holdTimer) { this.cancel(f.holdTimer); f.holdTimer = null; }
     if (f.deadlineTimer) { this.cancel(f.deadlineTimer); f.deadlineTimer = null; }
     // the former authority (still online after a timeout / an invalid result) stops reporting and keeps its view
     if (prev) this.sendTo(prev, { t: 'b.end', battleId: f.battleId, fieldId: f.fieldId, reason: 'takeover' });
@@ -362,3 +399,4 @@ export class MatchClientCombat {
     }
   }
 }
+

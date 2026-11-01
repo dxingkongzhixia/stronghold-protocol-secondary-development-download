@@ -414,6 +414,11 @@ export class Lobby {
     this.now = now;
     this.seedFn = seedFn || (() => randomInt(2 ** 32));
     this.opts = { ...LOBBY_DEFAULTS, ...options };
+    /**
+     * Room plugin changes are coalesced for this many ms (SP_PLUGIN_DEBOUNCE_MS; 0 = apply each request at once, the tests'
+     * mode). A host toggling seven plugins otherwise rebuilds seven full content sets, each blocking the event loop.
+     */
+    this.pluginDebounceMs = Math.max(0, Number(this.opts.pluginDebounceMs ?? process.env.SP_PLUGIN_DEBOUNCE_MS) || 0);
     /** The public origin players should use; a page opened on another origin gets a plain reminder. */
     this.officialOrigin = normalizeOrigin(options.officialOrigin ?? process.env.SP_OFFICIAL_ORIGIN) || OFFICIAL_ORIGIN;
     const testModeOpt = options.testMode;
@@ -1210,6 +1215,26 @@ export class Lobby {
     /** @type {Record<string, Record<string, unknown>>} */
     const settings = {};
     for (const p of plugins) if (p.settings) settings[p.id] = p.settings;
+    if (this.pluginDebounceMs > 0) {
+      // Coalesce a burst of toggles: only the last set is built (400 ms of quiet), one full build instead of N.
+      room.pendingPlugins = { ids, settings };
+      if (room.pluginTimer) clearTimeout(room.pluginTimer);
+      room.pluginTimer = setTimeout(() => {
+        room.pluginTimer = null;
+        const p = room.pendingPlugins;
+        room.pendingPlugins = null;
+        if (!p || room.match || !this.rooms.has(room.code)) return;
+        const r = this.applyPlugins(room, p.ids, p.settings);
+        if (r && r.error) this.log.warn?.(`[lobby] ${room.code} plugin set refused: ${r.error}`);
+      }, this.pluginDebounceMs);
+      room.pluginTimer.unref?.();
+      return OK;
+    }
+    return this.applyPlugins(room, ids, settings);
+  }
+
+  /** Apply a room's plugin set now (the debounced path calls it after the quiet period). */
+  applyPlugins(room, ids, settings = {}) {
     const r = this.resolveContent(room, ids, settings);
     if ('error' in r) return r;
     let content = r.content;
@@ -1217,7 +1242,7 @@ export class Lobby {
     const sameSet = (before?.vs ?? null) === (content?.vs ?? null) && (before?.cs ?? null) === (content?.cs ?? null);
     const marks = (c) => JSON.stringify((c?.plugins || []).map((p) => [p.id, !!p.auto]));
     if (sameSet && marks(before) === marks(content)) return OK;
-    this.dropReplay(room, session.playerId);
+    this.dropReplay(room, room.hostId);
     // another set: a notice still waiting for the end of a match (pluginsChanged) is moot
     if (!sameSet) room.pluginsChanged = null;
     // the plugin mode chosen stays while the set still provides it (header "Gameplay plugins")
@@ -1233,6 +1258,15 @@ export class Lobby {
     }
     this.broadcastState(room);
     return OK;
+  }
+
+  /** Apply a room's pending (debounced) plugin set before it starts, if any. */
+  _flushPlugins(room) {
+    if (!room || (!room.pluginTimer && !room.pendingPlugins)) return OK;
+    if (room.pluginTimer) { clearTimeout(room.pluginTimer); room.pluginTimer = null; }
+    const p = room.pendingPlugins;
+    room.pendingPlugins = null;
+    return p ? this.applyPlugins(room, p.ids, p.settings) : OK;
   }
 
   /**
@@ -1415,6 +1449,9 @@ export class Lobby {
     if (!room) return fail(ERR.NOT_IN_ROOM);
     if (room.hostId !== session.playerId) return fail(ERR.NOT_HOST);
     if (room.match) return fail(ERR.ROOM_STARTED);
+    // a plugin set still inside the debounce window must be applied before the content checks
+    const flushed = this._flushPlugins(room);
+    if (flushed && flushed.error) return flushed;
     const humans = room.activeHumans();
     if (room.content?.trusted && humans.some((s) => !s.isBot && s.consentCs !== room.content.cs)) return fail(ERR.PLUGIN_CONSENT);
     for (const s of humans) {
@@ -2386,6 +2423,8 @@ export class Lobby {
   disposeRoom(room, reason) {
     if (room.disposed) return;
     room.disposed = true;
+    if (room.pluginTimer) { clearTimeout(room.pluginTimer); room.pluginTimer = null; }
+    room.pendingPlugins = null;
     if (this.rooms.get(room.code) === room) this.rooms.delete(room.code);
     const ctx = room.matchCtx;
     room.match = null;

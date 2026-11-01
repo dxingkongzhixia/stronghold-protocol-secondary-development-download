@@ -23,6 +23,37 @@ const browserDs = () => new DataSource(DATA, null);
 
 function fields(h) { return h.m.fields; }
 
+test('clients-only: every field (own + AI seats) is delegated to a browser; the server runs none', () => {
+  const h = makeMatch({ mode: 'coop', difficulty: 'NORMAL', humans: 1, bots: 3, seed: 9110, captureFrames: false, clientCombat: true, clientsOnly: true });
+  h.autoHumans();
+  const background = [];
+  h.onSend.push((pid, msg) => { if (msg.t === 'b.start' && msg.background) background.push(pid); });
+  h.m.start();
+  h.run(() => h.m.phase === PHASE.COMBAT && h.m.fields.length > 0, { maxSteps: 2e6 });
+  assert.equal(h.m.fields.filter((f) => f.mode === 'server').length, 0, 'no headless field at launch');
+  assert.ok(background.length >= 3, `the three AI fields were delegated to the human (${background.length})`);
+  assert.ok(h.m.fields.every((f) => f.mode === 'client'), 'client fields only');
+  // the round runs to its end without any server-run field taking over
+  h.run(() => h.m.phase !== PHASE.COMBAT, { maxSteps: 1e7 });
+  assert.equal(h.m.fields.filter((f) => f.mode === 'server').length, 0, 'still no headless field');
+  assert.equal(h.m.errorCount, 0, JSON.stringify(h.m.errors.slice(0, 2)));
+  h.m.dispose();
+});
+
+test('clients-only: no free browser ends the match instead of running it on the server', () => {
+  const h = makeMatch({ mode: 'coop', difficulty: 'NORMAL', humans: 1, bots: 3, seed: 9111, captureFrames: false, clientCombat: true, clientsOnly: true });
+  h.autoHumans();
+  h.m.start();
+  h.run(() => h.m.phase === PHASE.COMBAT && h.m.fields.length > 0, { maxSteps: 2e6 });
+  const f = h.m.fields.find((x) => x.mode === 'client' && x.background) ?? h.m.fields[0];
+  // the only human drops: reassigning the field has no executor left
+  h.m.players.get('p_0').connected = false;
+  h.m._delegateField(f, 'test');
+  assert.equal(f.mode, 'hold', 'the field is not given to the server');
+  assert.equal(h.ended?.reason, 'no-executor', 'the match ends');
+  h.m.dispose();
+});
+
 test('spec: JSON-safe round trip; a browser-built battle and the server battle give identical results (real sim, many rounds)', () => {
   const h = makeMatch({ mode: 'coop', difficulty: 'HARD', humans: 2, bots: 2, seed: 9101, captureFrames: false, clientCombat: true });
   h.autoHumans();

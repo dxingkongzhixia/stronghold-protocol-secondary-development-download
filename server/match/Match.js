@@ -446,7 +446,19 @@ export class Match {
     this.ds = dataSourceFor(this.data);
     /** client-side combat (DESIGN §14) — see the header */
     this.clientCombat = opts.clientCombat != null ? !!opts.clientCombat : envClientCombat();
+    /**
+     * Clients-only combat (env SP_CLIENTS_ONLY=1): every field is simulated by a browser in the room — bot,
+     * departed and no-executor fields included — and the server never runs a headless battle. A field with nobody
+     * available is held and retried until a human is free (no server fallback). Off by default for the test suite.
+     */
+    this.clientsOnly = opts.clientsOnly != null ? !!opts.clientsOnly : String(env('SP_CLIENTS_ONLY') || '') === '1';
     this.verifyMode = parseVerify(opts.verify ?? env('SP_VERIFY'));
+    // Clients-only mode trusts the browsers' results: no headless recompute is possible, so verification is off. A better
+    // server turns the mode off and may set SP_VERIFY=sample|all again.
+    if (this.clientsOnly && this.verifyMode !== 'off') {
+      this.verifyMode = 'off';
+      this.log.warn?.('[match] client-result verification off: clients-only mode');
+    }
     /** Keel native modules are split (D11): `sim` is client-only; `match`/`policy` run here in the server's meta runtime. */
     const isKeelCode = (p) => !p?.v2 && !p?.manifest?.compat?.v2Script;
     const kindsOf = (p) => new Set((p?.manifest?.modules ?? []).filter((m) => m && m.entry).map((m) => m.kind));
