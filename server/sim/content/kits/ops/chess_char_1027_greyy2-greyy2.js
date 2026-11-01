@@ -7,7 +7,7 @@
 //     to enemies within 1.1 tiles, 40 % chance of a 1.4 s slow. The mode's auto-cast spends one cast at a time
 //     (the official 2 charges are not modelled by the chess record).
 // Kit contract: ../README.md.
-import { num, talentBb, skillBbOf, onHitOn, isMainHit, makeZone, RING1 } from '../shared/tier1.js';
+import { num, talentBb, skillBbOf, onHitOn, isMainHit, RING1 } from '../shared/tier1.js';
 
 const S1 = 'skcom_quickattack[3]';
 const S2 = 'skchr_greyy2_2';
@@ -29,18 +29,22 @@ export default {
             const scale = num(s2.atk_scale, 0.95);
             const prob = num(s2.prob, 0.4);
             const slow = num(s2.sluggish, 1.4);
-            makeZone(battle, unit, {
-              x, y, radius: RING1, duration: num(s2.projectile_delay_time, 8), interval: num(s2.interval, 1.5), skill: S2,
-              onPulse(b) {
-                for (const e of b.enemies) {
-                  if (!e.alive) continue;
-                  const dx = e.x - x, dy = e.y - y;
-                  if (dx * dx + dy * dy > RING1 * RING1) continue;
-                  b.dealDamage(unit, e, { amount: unit.s.atk * scale, type: 'arts', isSkill: true, tags: ['skill', 'greyy2:orb'] });
-                  if (b.rng.chance(prob)) b.applyStatus(e, 'sluggish', { duration: slow, source: unit });
-                }
-              },
-            });
+            // The official 承曦格雷伊 prefab (skill_02_start / trail / range / hit) is the only visual: the pulse below
+            // deals the damage and applies the slow, but emits no `zone` field of its own (no doubled ground layer).
+            const duration = num(s2.projectile_delay_time, 8);
+            const interval = num(s2.interval, 1.5);
+            const total = Math.max(1, Math.round(duration / interval));
+            let n = 0;
+            battle.every(interval, (b, sc) => {
+              for (const e of b.enemies) {
+                if (!e.alive) continue;
+                const dx = e.x - x, dy = e.y - y;
+                if (dx * dx + dy * dy > RING1 * RING1) continue;
+                b.dealDamage(unit, e, { amount: unit.s.atk * scale, type: 'arts', isSkill: true, tags: ['skill', 'greyy2:orb'] });
+                if (b.rng.chance(prob)) b.applyStatus(e, 'sluggish', { duration: slow, source: unit });
+              }
+              if (++n >= total) sc.cancel();
+            }, { immediate: true, owner: unit });
           },
         },
       },
