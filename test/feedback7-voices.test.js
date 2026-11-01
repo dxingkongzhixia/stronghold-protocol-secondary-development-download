@@ -68,12 +68,15 @@ test('data/assets.json: voiceJp gives every voiced operator the JP twin of each 
   const cn = m.audio.voice;
   const jp = m.audio.voiceJp;
   assert.ok(jp && typeof jp === 'object', 'the manifest carries the JP tree');
-  assert.deepEqual(Object.keys(jp), Object.keys(cn), 'the same operators');
+  // 丰川祥子 (Ave Mujica) has JP battle voice only, so JP = CN + that JP-only operator.
+  for (const id of Object.keys(cn)) assert.ok(jp[id], `${id}: the JP twin`);
+  assert.deepEqual(Object.keys(jp).filter((id) => !(id in cn)), ['char_4182_oblvns'], 'JP-only: 丰川祥子');
   assert.equal(m.stats.voiceJpChars, Object.keys(jp).length);
   assert.equal(m.stats.voiceChars, Object.keys(cn).length);
   assert.ok(Object.keys(jp).length > 190, 'the whole voiced roster, not a subset');
   // the JP tree is the Chinese one with the folder swapped: same slots, same lines in the same order, same file names
-  assert.deepEqual(JSON.parse(JSON.stringify(cn).replaceAll('/assets/audio/voice/cn/', '/assets/audio/voice/jp/')), jp);
+  const jpOfCn = Object.fromEntries(Object.entries(jp).filter(([id]) => id in cn));
+  assert.deepEqual(JSON.parse(JSON.stringify(cn).replaceAll('/assets/audio/voice/cn/', '/assets/audio/voice/jp/')), jpOfCn);
   const lines = [];
   const walk = (x) => { if (typeof x === 'string') lines.push(x); else if (Array.isArray(x)) x.forEach(walk); else if (x && typeof x === 'object') Object.values(x).forEach(walk); };
   walk(jp);
