@@ -1,7 +1,9 @@
 # 玻利瓦尔国家盟约（v0.3 / Keel N 系列）
 
-> **状态：原型已实现（2026-11-01）。**
+> **状态：原型已实现（2026-11-01），未上线。**
 > 跑在 Keel N 系列原生插件 `plugins/bolivar` 上：manifest 3 + `content` + `asset` + `sim`。
+> 生产不加载该插件；`tools/build-data.mjs` 的 `HELD_FACTIONS` 也不再生成 `data/builtin/faction-bolivar.json`，
+> 10 人名册在 vanilla 表里保持隐藏（不在商店 / 盟约中出现）。等插件完成后再移除 hold。
 > v0.1（2026-10-28）的「战功 / 核心 build-data」方案已被取代；v0.2 定下猎犬、追猎、渴血。
 >
 > 本文是设计提案，不是 `DESIGN.md` 的规范章节；定稿并验收后再并入规范文档。

@@ -808,6 +808,12 @@ const CUSTOM_FACTIONS = [
   { id: 'columbia', name: { zh: '哥伦比亚', en: 'Columbia' } },
   { id: 'bolivar', name: { zh: '玻利瓦尔', en: 'Bolívar' } },
 ];
+/**
+ * Factions whose boost is held back from the build: 玻利瓦尔 waits for the finished `plugins/bolivar` bond plugin
+ * (owner 2026-11-01 — the roster is half-done, so neither the bond nor the 阵营加强 may be offered). Their chess stay
+ * hidden in the vanilla tables and no `data/builtin/faction-bolivar.json` is generated; drop the id here when done.
+ */
+const HELD_FACTIONS = new Set(['bolivar']);
 
 /**
  * Split the custom shop operators out of the vanilla tables (see CUSTOM_FACTION_OF): hide every record, drop it from
@@ -843,10 +849,11 @@ function splitCustomShop(files) {
     }
   }
   // one patch per faction: restore the visible flag of its operators and append its ids to the bonds it belonged to
-  const byFaction = new Map(CUSTOM_FACTIONS.map((f) => [f.id, []]));
+  const byFaction = new Map(CUSTOM_FACTIONS.filter((f) => !HELD_FACTIONS.has(f.id)).map((f) => [f.id, []]));
   for (const c of CUSTOM_CHESS) {
     const faction = CUSTOM_FACTION_OF.get(c.charId);
     if (!faction || !chess[c.baseId]) { warn(`custom chess ${c.baseId}: no faction (not in a 阵营加强 plugin)`); continue; }
+    if (HELD_FACTIONS.has(faction)) continue;   // stays hidden until the feature is finished (HELD_FACTIONS)
     byFaction.get(faction).push(c);
   }
   const out = {};

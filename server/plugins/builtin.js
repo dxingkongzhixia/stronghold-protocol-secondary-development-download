@@ -32,7 +32,8 @@ export const BUILTIN_FACTIONS = Object.freeze([
   { id: 'sargon', name: { zh: '萨尔贡', en: 'Sargon' }, operators: { zh: '娜仁图亚', en: 'Narantuya' } },
   { id: 'egir', name: { zh: '阿戈尔', en: 'Ægir' }, operators: { zh: '克莱门莎', en: 'Clementia' } },
   { id: 'columbia', name: { zh: '哥伦比亚', en: 'Columbia' }, operators: { zh: '谬因', en: 'Aphrissa' } },
-  { id: 'bolivar', name: { zh: '玻利瓦尔', en: 'Bolívar' }, operators: { zh: '羽毛笔、龙舌兰、佩德洛', en: 'Quill, Tequila, Pedro' } },
+  // 玻利瓦尔 is held until the `plugins/bolivar` bond plugin is finished (owner 2026-11-01): its built-in boost is not
+  // generated (tools/build-data.mjs HELD_FACTIONS) and the roster stays hidden. Re-add it here with that file.
 ]);
 
 /** The built-in plugin id of a faction (`faction-rhodes`). */

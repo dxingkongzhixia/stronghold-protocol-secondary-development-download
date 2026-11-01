@@ -47,6 +47,12 @@ Read this together with:
 > this fork and are absent from upstream `master`. Upstream has (or has had) a *different* feature: the
 > 补位/自选 (stand-in / DIY) pool. The two must not be confused (see §5).
 >
+> **2026-11-01 — 玻利瓦尔 held (not live).** The Bolívar bond plugin (`plugins/bolivar`) is unfinished, so neither it
+> nor its built-in 阵营加强 may be offered: `tools/build-data.mjs` `HELD_FACTIONS` stops generating
+> `data/builtin/faction-bolivar.json`, `server/plugins/builtin.js` does not list the faction, and the ten roster
+> operators stay `visible: false` in the vanilla tables (no shop / bond entry). Their art and data records may ship;
+> remove the id from `HELD_FACTIONS`, re-add the `BUILTIN_FACTIONS` row and regenerate the data when the plugin is done.
+>
 > **2026-11-01 — owner override: 丰川祥子.** The Ave Mujica collab operator char_4182_oblvns is taken out of the
 > DIY_EXCLUDED_TEAMS exclusion (tools/build-data.mjs DIY_FORCE_INCLUDE) and offered as a 6★ 自选 pick, with her
 > official prefab FX. This is an explicit owner decision; the other collab operators stay excluded.
