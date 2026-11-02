@@ -107,6 +107,7 @@ function RoomBar({ room, kind, onAct }) {
         <div class="rooms-bar__meta">
           <${MicroLabel}>${running ? 'MATCH IN PROGRESS' : 'ALLIANCE LOBBY'}<//>
           <span class="rooms-bar__mode">${t('同盟模拟')}</span>
+          <span class=${`rooms-mod${room.modded ? ' is-mod' : ''}`}>${room.modded ? 'MOD' : t('原版')}</span>
           <span class="t-dim">·</span>
           <span><b class="num">${room.humans ?? 0}</b><span class="t-dim">/${MAX_SEATS}</span></span>
           ${running && room.bots ? html`<span class="rooms-bar__bots"><b class="num">+${room.bots}</b> AI</span>` : null}

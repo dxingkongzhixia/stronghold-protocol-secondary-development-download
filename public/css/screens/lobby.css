@@ -449,6 +449,9 @@
 .rooms-bar__meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: .1rem; font-size: calc(.14 * var(--t)); color: var(--text-lo); }
 .rooms-bar__meta b { color: var(--text-hi); }
 .rooms-bar__mode { color: var(--text-md); }
+/* 原版 / MOD beside the mode: MOD = the room plays a content set of its own (gameplay plugins), not cosmetics */
+.rooms-mod { padding: .01rem .09rem; font-size: calc(.12 * var(--t)); font-weight: 700; letter-spacing: .08em; color: var(--text-dim); border: 1px solid var(--line-2); border-radius: .03rem; }
+.rooms-mod.is-mod { color: var(--amber); border-color: var(--amber); background: var(--amber-a20); }
 /* the 4 seat squares: one square cell per co-op seat (MAX_SEATS), occupied = the player's initial + markers, empty = dashed */
 .rooms-seats { display: grid; grid-template-columns: repeat(4, .9rem); gap: .14rem; }
 .rooms-seat { position: relative; display: flex; flex-direction: column; align-items: center; gap: .05rem; min-width: 0; }

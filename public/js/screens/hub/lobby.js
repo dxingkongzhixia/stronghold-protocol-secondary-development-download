@@ -112,7 +112,13 @@ function PublicRoomsPanel({ onAll, onJoin, onSpectate }) {
           .map((x) => ({ ...x, state: 'playing' }));
         // 组队中 first (they can still take a player), then the 模拟中 rooms with AI, then the most watchers; three at most.
         const all = [...waiting, ...playing];
-        if (alive) { setRooms(all.slice(0, 3)); setTotal(all.length); }
+        if (alive) {
+          setRooms(all.slice(0, 3));
+          // The real totals from the server: the list above is capped (four playing rooms), so counting it under-reports
+          // while the directory lists them all (owner 2026-11-02: the badge said 4 while the directory listed 5).
+          const c = j.counts?.rooms;
+          setTotal(c ? (Number(c.open) || 0) + (Number(c.play) || 0) : all.length);
+        }
       } catch { /* keep the last list */ }
     };
     tick();

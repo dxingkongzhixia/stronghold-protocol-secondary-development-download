@@ -391,7 +391,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
   // and never a `humans: 0` entry. Bot-only rooms are already disposed when their last human leaves, so this is a
   // belt-and-braces guard on the public directory too.
   const humansOf = (r) => r.seats.filter((x) => x && !x.left && !x.isBot).length;
-  const openRooms = [...lobby.rooms.values()]
+  const openList = [...lobby.rooms.values()]
     .filter((r) => r.mode === 'coop' && r.public && !r.match && !r.auto && humansOf(r) > 0)
     .map((r) => ({
       code: r.code,
@@ -406,11 +406,10 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       modded: r.modded,
       seats: seatsOf(r),
     }))
-    .sort((a, b) => (a.full - b.full) || (b.humans - a.humans))
-    .slice(0, all ? undefined : 12);
+    .sort((a, b) => (a.full - b.full) || (b.humans - a.humans));
   // Rooms whose match is already running (the lobby's 正在模拟 row → enter as a spectator): 野排 first, then rooms with
   // an AI seat to 夺舍, then the fullest — at most 4.
-  const playRooms = [...lobby.rooms.values()]
+  const playList = [...lobby.rooms.values()]
     .filter((r) => r.mode === 'coop' && r.match && humansOf(r) > 0)
     .map((r) => ({
       code: r.code,
@@ -426,8 +425,12 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       modded: r.modded,
       seats: seatsOf(r),
     }))
-    .sort((a, b) => (b.auto - a.auto) || ((b.bots > 0) - (a.bots > 0)) || (b.humans - a.humans))
-    .slice(0, all ? undefined : 4);
+    .sort((a, b) => (b.auto - a.auto) || ((b.bots > 0) - (a.bots > 0)) || (b.humans - a.humans));
+  // The real room counts, independent of the per-section caps below: the lobby's 公开房间 badge shows these while it
+  // only draws a few rows (owner 2026-11-02: the badge said 4 while the directory listed 5).
+  counts.rooms = { open: openList.length, play: playList.length };
+  const openRooms = all ? openList : openList.slice(0, 12);
+  const playRooms = all ? playList : playList.slice(0, 4);
   return { now, counts, openRooms, playRooms, online };
 }
 
