@@ -134,6 +134,8 @@ const TAGS = has('--tags');
  * `--full-gitee` (or `SP_GITEE_FULL=1`) pushes the whole history there anyway.
  */
 const FULL_GITEE = has('--full-gitee') || String(process.env.SP_GITEE_FULL || '') === '1';
+/** `--reset-gitee`: replace gitee's branch with a fresh code-only ROOT commit (drops the old, asset-carrying history). */
+const RESET_GITEE = has('--reset-gitee');
 /** Remotes that receive the code-only snapshot instead of the full history. */
 const CODE_ONLY_REMOTES = new Set(['gitee']);
 /** What the code-only snapshot leaves out (the art; `docs/ASSETS.md`). */
@@ -306,10 +308,10 @@ function authHelp(name) {
  * @param {string} name the remote (its current branch is the parent)
  * @returns {string} the commit id to push
  */
-function codeOnlyCommit(name) {
+function codeOnlyCommit(name, { root = false } = {}) {
   // The remote's REAL tip: a stale `refs/remotes/<name>/<branch>` must not be trusted — parenting on the old
   // full-history commit would drag public/assets along with it.
-  const ls = gitOrNull(['ls-remote', name, `refs/heads/${BRANCH}`]) || '';
+  const ls = root ? '' : gitOrNull(['ls-remote', name, `refs/heads/${BRANCH}`]) || '';
   const tip = ls.split('\n').map((l) => l.split('\t')[0].trim()).find((x) => /^[0-9a-f]{40}$/.test(x)) || null;
   let parent = null;
   if (tip) {
@@ -351,18 +353,19 @@ function pushToRemote(name) {
   let pushErr = null;
   // gitee: code only (see CODE_ONLY_REMOTES); github and everything else: the full history.
   const codeOnly = CODE_ONLY_REMOTES.has(name) && !FULL_GITEE;
+  const reset = codeOnly && RESET_GITEE;
   let ref = `HEAD:refs/heads/${BRANCH}`;
   if (codeOnly) {
     try {
-      ref = `${codeOnlyCommit(name)}:refs/heads/${BRANCH}`;
-      console.log(`[push-gitee] ${name} carries the code only (public/assets stays on the primary): ${ref.slice(0, 10)}`);
+      ref = `${codeOnlyCommit(name, { root: reset })}:refs/heads/${BRANCH}`;
+      console.log(`[push-gitee] ${name} carries the code only (public/assets stays on the primary): ${ref.slice(0, 10)}${reset ? ' (reset: fresh root)' : ''}`);
     } catch (e) {
       fail(`building the code-only snapshot for ${name} failed:\n${e?.stderr || e?.message || e}`);
     }
   }
   try {
     console.log(`[push-gitee] pushing ${codeOnly ? 'the code snapshot' : 'HEAD'} → ${name}/${BRANCH}${cred.envUser ? ` (as ${cred.envUser})` : ''} ...`);
-    const out = git([...cred.args, 'push', name, ref], { stdio: ['ignore', 'pipe', 'pipe'], env: NO_PROMPT_ENV });
+    const out = git([...cred.args, 'push', ...(reset ? ['--force'] : []), name, ref], { stdio: ['ignore', 'pipe', 'pipe'], env: NO_PROMPT_ENV });
     if (out.trim()) console.log(out.trim());
   } catch (e) {
     pushErr = e;
