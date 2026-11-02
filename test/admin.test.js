@@ -102,6 +102,28 @@ test('account roles (ROLES) ride through both snapshots', () => {
 // 公开同盟 (docs/MATCHMAKING.md): /online/api `openRooms` lists joinable hand-made co-op rooms that the creator left
 // public; private / solo / 野排(auto) / started rooms stay hidden. A FULL lobby (no free seat) is listed too, flagged
 // `full: true`, sorted after the joinable ones (owner 2026-10-09: 优先显示人不满的，满的显示观战).
+test('buildPublicSnapshot counts every public room even when the per-section lists are capped', () => {
+  const seat = (playerId, name, over = {}) => ({ playerId, name, isBot: false, left: false, ...over });
+  const room = (over) => {
+    const r = {
+      mode: 'coop', public: true, match: null, auto: false, hostId: 'h', difficulty: 'NORMAL', content: null,
+      seats: [seat('h', 'Host'), seat('h2', 'Host2'), null, null], ...over,
+      get modded() { return this.content?.vanilla === false; },
+    };
+    r.seatOf = (id) => r.seats.find((s) => s && s.playerId === id) || null;
+    r.freeSeat = () => r.seats.indexOf(null);
+    return r;
+  };
+  const rooms = new Map();
+  for (let i = 0; i < 6; i += 1) rooms.set(`P${i}`, room({ code: `P${i}`, match: {}, content: { vanilla: i % 2 === 0 } }));
+  for (let i = 0; i < 3; i += 1) rooms.set(`O${i}`, room({ code: `O${i}` }));
+  const snap = buildPublicSnapshot({ registry: { all: () => [] }, lobby: { rooms }, matchmaker: null, now: 0 });
+  assert.equal(snap.playRooms.length, 4, 'the playing list stays capped at four');
+  assert.equal(snap.openRooms.length, 3, 'the lobby list stays capped at twelve');
+  assert.deepEqual(snap.counts.rooms, { open: 3, play: 6 }, 'the badge gets the real totals, not the capped list lengths');
+  assert.ok(snap.playRooms.every((r) => typeof r.modded === 'boolean'), 'each entry still carries its 原版 / MOD flag');
+});
+
 test('buildPublicSnapshot.openRooms lists public hand-made 同盟 rooms, not-full first, a full lobby flagged last', () => {
   const seat = (playerId, name, over = {}) => ({ playerId, name, isBot: false, left: false, ...over });
   const room = (over) => {

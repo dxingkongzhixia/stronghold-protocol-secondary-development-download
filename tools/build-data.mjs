@@ -788,14 +788,16 @@ const CUSTOM_FACTION_OF = new Map([
   ['char_4138_narant', 'sargon'],
   ['char_4231_clemnt', 'egir'],
   ['char_4229_aphris', 'columbia'],
-  ['char_2013_cerber', 'rhodes'],
-  ['char_1027_greyy2', 'rhodes'],
-  ['char_130_doberm', 'rhodes'],
-  ['char_122_beagle', 'rhodes'],
   ['char_421_crow', 'bolivar'],
   ['char_486_takila', 'bolivar'],
   ['char_4234_pedro', 'bolivar'],
 ]);
+/**
+ * Custom shop operators that belong to NO 阵营加强 plugin (owner 2026-11-02, 罗德岛 keeps 凯尔希·思衡托 and 阿斯卡纶
+ * only): their records stay hidden in the vanilla tables and no faction restores them — they are not offered anywhere,
+ * and the build does not warn about them.
+ */
+const CUSTOM_FACTIONLESS = new Set(['char_1027_greyy2', 'char_122_beagle', 'char_130_doberm', 'char_2013_cerber']);
 /** The built-in 阵营加强 plugins, in the panel's order, with the text a player reads. */
 const CUSTOM_FACTIONS = [
   { id: 'rhodes', name: { zh: '罗德岛', en: 'Rhodes Island' } },
@@ -853,7 +855,10 @@ function splitCustomShop(files) {
   const byFaction = new Map(CUSTOM_FACTIONS.filter((f) => !HELD_FACTIONS.has(f.id)).map((f) => [f.id, []]));
   for (const c of CUSTOM_CHESS) {
     const faction = CUSTOM_FACTION_OF.get(c.charId);
-    if (!faction || !chess[c.baseId]) { warn(`custom chess ${c.baseId}: no faction (not in a 阵营加强 plugin)`); continue; }
+    if (!faction || !chess[c.baseId]) {
+      if (!CUSTOM_FACTIONLESS.has(c.charId)) warn(`custom chess ${c.baseId}: no faction (not in a 阵营加强 plugin)`);
+      continue;
+    }
     if (HELD_FACTIONS.has(faction)) continue;   // stays hidden until the feature is finished (HELD_FACTIONS)
     byFaction.get(faction).push(c);
   }
