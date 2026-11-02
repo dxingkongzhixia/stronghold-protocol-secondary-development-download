@@ -33,6 +33,8 @@
 //   node tools/push-gitee.mjs --tags              # also push the tags (refs/tags/*) to each target remote
 //   node tools/push-gitee.mjs --dry-run           # report only: nothing staged, committed, pushed or mirrored
 //   node tools/push-gitee.mjs --no-push           # commit + mirror locally, skip the push
+//   node tools/push-gitee.mjs --full-gitee        # push the FULL history to gitee too (normally code only: its 1 GB
+//                                                 # project limit cannot hold public/assets; see docs/DEPLOY.md)
 //   node tools/push-gitee.mjs --only public/js/render/fx --only docs/ASSETS.md   # stage/commit and mirror ONLY these
 //                                                 # (the store is shared and may hold unrelated WIP; without
 //                                                 #  --only only already-staged paths are committed)
@@ -126,6 +128,16 @@ const DRY = has('--dry-run');
 const NO_PUSH = has('--no-push');
 const ALL_REMOTES = has('--all-remotes');
 const TAGS = has('--tags');
+/**
+ * gitee holds the CODE only: its free project limit is 1 GB and the art is 1.17 GB. GitHub keeps the full history (code
+ * + `public/assets`); gitee gets a linear "code snapshot" history instead (one commit per publish, no assets).
+ * `--full-gitee` (or `SP_GITEE_FULL=1`) pushes the whole history there anyway.
+ */
+const FULL_GITEE = has('--full-gitee') || String(process.env.SP_GITEE_FULL || '') === '1';
+/** Remotes that receive the code-only snapshot instead of the full history. */
+const CODE_ONLY_REMOTES = new Set(['gitee']);
+/** What the code-only snapshot leaves out (the art; `docs/ASSETS.md`). */
+const CODE_ONLY_EXCLUDE = ['public/assets'];
 // --remote <name>[,<name>…] (repeatable): restrict the push to these remotes (in the order given).
 const REMOTE_NAMES = (() => {
   const out = [];
@@ -288,6 +300,41 @@ function authHelp(name) {
     '  Do NOT commit the token into the repository.\n');
 }
 
+/**
+ * A commit holding HEAD's tree without CODE_ONLY_EXCLUDE, parented on what the remote already has (so the push stays a
+ * fast-forward). The store's own index is untouched: the tree is built in a throwaway index file.
+ * @param {string} name the remote (its current branch is the parent)
+ * @returns {string} the commit id to push
+ */
+function codeOnlyCommit(name) {
+  // The remote's REAL tip: a stale `refs/remotes/<name>/<branch>` must not be trusted — parenting on the old
+  // full-history commit would drag public/assets along with it.
+  const ls = gitOrNull(['ls-remote', name, `refs/heads/${BRANCH}`]) || '';
+  const tip = ls.split('\n').map((l) => l.split('\t')[0].trim()).find((x) => /^[0-9a-f]{40}$/.test(x)) || null;
+  let parent = null;
+  if (tip) {
+    // `git cat-file -e` prints nothing on success, so compare against null (gitOrNull returns '' then), not truthiness.
+    if (gitOrNull(['cat-file', '-e', `${tip}^{commit}`]) === null) gitOrNull(['fetch', '--quiet', name, `refs/heads/${BRANCH}`]);
+    // Only a tip that already lacks the excluded paths is a usable parent (i.e. one of our snapshots). A full-history
+    // tip means this project was never code-only: start a new root instead (the push then needs a fresh project).
+    const assets = gitOrNull(['ls-tree', '-r', '--name-only', tip, '--', ...CODE_ONLY_EXCLUDE]);
+    if (assets !== null && !assets.trim()) parent = tip;
+  }
+  const index = join(tmpdir(), `sp-code-only-${process.pid}-${Date.now().toString(36)}`);
+  const env = { ...process.env, GIT_INDEX_FILE: index };
+  try {
+    git(['read-tree', 'HEAD'], { env });
+    for (const path of CODE_ONLY_EXCLUDE) git(['rm', '-r', '--cached', '--ignore-unmatch', '--quiet', path], { env });
+    const tree = git(['write-tree'], { env }).trim();
+    const head = git(['log', '-1', '--format=%h %s', 'HEAD']).trim();
+    const args = ['commit-tree', tree, '-m', `code-only mirror: ${head}`];
+    if (parent) args.push('-p', parent);
+    return git(args, { env }).trim();
+  } finally {
+    try { rmSync(index, { force: true }); } catch { /* best effort */ }
+  }
+}
+
 /** Push the store's HEAD (fast-forward only, never forced) to one remote, then its tags when `--tags` was given. */
 function pushToRemote(name) {
   const conv = REMOTES[name];
@@ -302,15 +349,26 @@ function pushToRemote(name) {
   // GITHUB_TOKEN/GH_TOKEN. The temp file lives OUTSIDE the repo; the token is never written into the repository.
   const cred = credentialArgs(name);
   let pushErr = null;
+  // gitee: code only (see CODE_ONLY_REMOTES); github and everything else: the full history.
+  const codeOnly = CODE_ONLY_REMOTES.has(name) && !FULL_GITEE;
+  let ref = `HEAD:refs/heads/${BRANCH}`;
+  if (codeOnly) {
+    try {
+      ref = `${codeOnlyCommit(name)}:refs/heads/${BRANCH}`;
+      console.log(`[push-gitee] ${name} carries the code only (public/assets stays on the primary): ${ref.slice(0, 10)}`);
+    } catch (e) {
+      fail(`building the code-only snapshot for ${name} failed:\n${e?.stderr || e?.message || e}`);
+    }
+  }
   try {
-    console.log(`[push-gitee] pushing HEAD → ${name}/${BRANCH}${cred.envUser ? ` (as ${cred.envUser})` : ''} ...`);
-    const out = git([...cred.args, 'push', name, `HEAD:refs/heads/${BRANCH}`], { stdio: ['ignore', 'pipe', 'pipe'], env: NO_PROMPT_ENV });
+    console.log(`[push-gitee] pushing ${codeOnly ? 'the code snapshot' : 'HEAD'} → ${name}/${BRANCH}${cred.envUser ? ` (as ${cred.envUser})` : ''} ...`);
+    const out = git([...cred.args, 'push', name, ref], { stdio: ['ignore', 'pipe', 'pipe'], env: NO_PROMPT_ENV });
     if (out.trim()) console.log(out.trim());
   } catch (e) {
     pushErr = e;
   }
 
-  if (!pushErr && TAGS) {
+  if (!pushErr && TAGS && !codeOnly) {
     try {
       console.log(`[push-gitee] pushing tags → ${name} ...`);
       const out = git([...cred.args, 'push', name, 'refs/tags/*:refs/tags/*'], { stdio: ['ignore', 'pipe', 'pipe'], env: NO_PROMPT_ENV });

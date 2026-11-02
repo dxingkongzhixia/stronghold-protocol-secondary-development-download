@@ -13,12 +13,14 @@ lives, how to extend it, the tests that pin it, and the merge "must not be lost"
 > build/verify, content, upstream merges, publish/deploy, known issues). This file is the operational contract it
 > points at.
 
-> **Navigation.** (a) Handling a feature / bug request · (b) Fork / merge discipline with upstream · (c) Commit & push discipline (GitHub primary + Gitee mirror) · (d) Production deploy procedure · (e) When to ask the owner.
+> **Navigation.** (a) Handling a feature / bug request · (b) Fork / merge discipline with upstream · (c) Commit & push discipline (GitHub primary + Gitee code mirror) · (d) Production deploy procedure · (e) When to ask the owner.
 > See also [`docs/HANDOVER.md`](HANDOVER.md) (the entry point) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
 
 Companion conventions, quoted verbatim:
 
-- **之后每次有更新都提交下** — after every change, commit it and push to the remotes (GitHub primary + Gitee mirror).
+- **之后每次有更新都提交下** — after every change, commit it and push to the remotes (GitHub primary, full history;
+  Gitee 国内镜像 receives **code only** — its 1 GB project limit cannot hold `public/assets`, so the helper pushes a
+  code-snapshot history there; `--full-gitee` overrides).
 - **重启 / 上传前先推通知，署名 `d星空之下`** — before any restart or upload, push an in-game notice signed
   `d星空之下`.
 
@@ -155,7 +157,7 @@ whole upstream branch onto `ours`. Instead:
    `audio.voiceJp`, the stats page, `render/drag.js`, the 失衡 / R23 timing constants). A hunk that would drop one
    of these is a stop-and-ask item.
 7. Bump the version and write the [`CHANGELOG.md`](../CHANGELOG.md) entry (see `test/version.test.js`), then push
-   via the **one-way helper** `node tools/push-gitee.mjs` (store → remotes (GitHub primary + Gitee mirror) → dev tree;
+   via the **one-way helper** `node tools/push-gitee.mjs` (store → remotes (GitHub primary full; Gitee code-only snapshot) → dev tree;
    never the reverse without
    `--from-dev`) and **byte-verify the dev tree mirror**.
 
@@ -166,7 +168,7 @@ change → the diff must be **exactly** what you expect. Write the proof into th
 
 ---
 
-## (c) Commit & push discipline (art relay first, then GitHub primary + Gitee mirror)
+## (c) Commit & push discipline (art relay first, then GitHub primary + Gitee code mirror)
 
 > **Order matters since 2026-10-14 (owner): publish the ART RELAY first.** `node tools/push-assets-relay.mjs` pushes the
 > checkout to `123.57.150.185`, the box every client now loads assets from first — a push deploys it (its bare repo's

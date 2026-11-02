@@ -507,8 +507,9 @@ it. The merge procedure and the blacklist are in `docs/AI-WORKFLOW.md` (b).
 **What it is.** The git store `_merge-scratch` (branch `ours`) is the **single source of truth**: the history and
 the committed files. The working project `Stronghold-Protocol` has **no `.git`** and is a byte-for-byte **mirror**
 of the store. `tools/push-gitee.mjs` commits what is staged in the store, pushes the store's `HEAD` to the **GitHub
-primary** and then the **Gitee 国内下载镜像**, and then mirrors the store's **tracked** files into the working project
-(respecting `.gitignore`).
+primary** and then a **code-only snapshot** to the **Gitee 国内下载镜像** (its free project limit is 1 GB and the art is
+1.17 GB, so `public/assets` stays on GitHub and the relay), and then mirrors the store's **tracked** files into the
+working project (respecting `.gitignore`).
 
 **The direction is one-way: store → remotes → working project.** The helper **never overwrites the store with the
 working project** — a stale working project must not revert the store's newer commits. `--from-dev` is the explicit,

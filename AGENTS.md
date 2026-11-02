@@ -103,9 +103,11 @@ when current state or discoverability moved.
 - **Publish (every change)**: the **art relay first** — `node tools/push-assets-relay.mjs` deploys
   `https://relay.strongholdprotocolcsym.top:56148` (the 103.205.254.40 box: ssh `-p 57435`, NAT 56148 → 8080,
   Let's Encrypt through DNS-01), the box clients load art from first — then `node tools/push-gitee.mjs -m "what changed"`
-  commits what *you* staged → pushes to the **`github` primary** → the **`gitee` mirror** → mirrors tracked files
-  into the dev tree.
-- Remotes: `github` = primary, `gitee` = 国内镜像, `origin` = the **mainline** (`sganggs/Stronghold-Protocol`).
+  commits what *you* staged → pushes to the **`github` primary** (full history, code + `public/assets`) → the **`gitee`
+  mirror** (**code only**: a 1 GB project limit cannot hold 1.17 GB of art, so the helper pushes a code-snapshot
+  history with `public/assets` excluded; `--full-gitee` overrides) → mirrors tracked files into the dev tree.
+- Remotes: `github` = primary (code + art), `gitee` = 国内镜像 (code only), `origin` = the **mainline**
+  (`sganggs/Stronghold-Protocol`).
 - **Credentials are never in the repo.** Never commit a token, password or private key.
 - **Deploy only when the owner says so** (default: 先不上线). Notice-first runbook in
   [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) (d): signed in-game notice (`sign: d星空之下`) → backup → upload delta

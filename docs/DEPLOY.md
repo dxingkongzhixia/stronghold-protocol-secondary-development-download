@@ -45,7 +45,8 @@
    - **源码**：
      ```powershell
      git clone https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download.git C:\Stronghold-Protocol
-     # 国内访问慢时可用 Gitee 镜像：
+     # 国内访问慢时可用 Gitee 镜像（**只有代码**：Gitee 免费项目上限 1 GB，放不下约 1.17 GB 的 public/assets；
+     # 克隆后按需从 GitHub 或 setup 的素材镜像补齐，或直接用上面的 GitHub 源）：
      # git clone https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git C:\Stronghold-Protocol
      ```
 3. 双击 `C:\Stronghold-Protocol\scripts\start-windows.bat`。首次会：安装依赖（`npm ci`；整合包已含，跳过）→ 复制前端库（整合包已含，跳过）→ 下载约 550 MB 素材（完整包已含，跳过；精简包和源码在这一步下载，显示进度，中断后再次启动会续传）→ 若检测到本机的明日方舟客户端，询问是否提取官方贴图（可跳过）→ 启动服务器并打开浏览器。
@@ -55,7 +56,7 @@
 
 #### 国内镜像下载
 
-> **源码克隆**：本仓库的**主仓库在 GitHub**（`https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download.git`），**Gitee 提供国内下载镜像**（`https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`）。下面说的是**素材**的国内镜像（`gh-proxy.com`），与代码仓库是两回事。
+> **源码克隆**：本仓库的**主仓库在 GitHub**（`https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download.git`，代码 + 素材），**Gitee 提供国内代码镜像**（`https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`，**不含素材**：Gitee 免费项目上限 1 GB，而 `public/assets` 约 1.17 GB）。下面说的是**素材**的国内镜像（`gh-proxy.com`），与代码仓库是两回事。
 
 Setup 默认使用「GitHub 原始源 → jsDelivr」，不查询公网 IP，也不请求 gh-proxy.com。GitHub 下载失败时会提示如何手动开启镜像；仅添加提示，不自动切换到第三方代理。
 
