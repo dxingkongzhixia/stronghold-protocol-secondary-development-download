@@ -118,13 +118,13 @@ test('store ahead of a stale dev tree: a real --no-push never rewrites the store
   assert.equal(read(dev, 'scratch.tmp'), 'dev only\n', 'dev-only untracked files are never deleted');
 });
 
-test('a normal run pushes the store HEAD to gitee/master and mirrors the dev tree', (t) => {
+test('a normal run pushes a code-only snapshot to gitee/master and mirrors the dev tree', (t) => {
   const root = scenario(t);
   const store = join(root, 'store'), dev = join(root, 'dev'), remote = join(root, 'remote.git');
   initStore(store);
   commit(store, 'one', { '.gitignore': 'ignored.txt\n', 'a.txt': 'one\n' });
   exportToDev(store, dev);
-  commit(store, 'two', { 'a.txt': 'store-two\n', 'sub/c.txt': 'see\n' });
+  commit(store, 'two', { 'a.txt': 'store-two\n', 'sub/c.txt': 'see\n', 'public/assets/a.png': 'png\n' });
   initBare(remote);
   git(store, ['remote', 'add', 'gitee', remote]);
 
@@ -133,7 +133,13 @@ test('a normal run pushes the store HEAD to gitee/master and mirrors the dev tre
 
   assert.equal(r.status, 0, r.stderr + r.stdout);
   assert.match(r.stdout, /pushed to gitee\/master/);
-  assert.equal(git(remote, ['rev-parse', 'master']), head, 'the remote ends at the store HEAD');
+  const tip = git(remote, ['rev-parse', 'master']);
+  assert.notEqual(tip, head, 'gitee carries a snapshot commit, not the store HEAD (it cannot hold public/assets)');
+  assert.match(git(remote, ['log', '-1', '--format=%s', 'master']), /^code-only mirror: /);
+  assert.equal(git(remote, ['ls-tree', '-r', '--name-only', 'master', '--', 'public/assets']), '', 'no assets on gitee');
+  const names = git(remote, ['ls-tree', '-r', '--name-only', 'master']);
+  assert.match(names, /^a\.txt$/m, 'the code is there');
+  assert.match(names, /^sub\/c\.txt$/m, 'the whole code tree is there');
   assert.equal(read(dev, 'a.txt'), 'store-two\n', 'the dev tree mirrors the pushed state');
   assert.equal(read(dev, 'sub/c.txt'), 'see\n');
   assert.equal(git(store, ['rev-parse', 'HEAD']), head, 'publishing an in-sync store creates no commit');
@@ -159,8 +165,10 @@ test('a run pushes to every configured remote: github (primary) first, then the 
   assert.match(r.stdout, /pushed to github\/master/, 'the primary is pushed');
   assert.match(r.stdout, /pushed to gitee\/master/, 'the mirror is pushed');
   assert.ok(r.stdout.indexOf('pushed to github/master') < r.stdout.indexOf('pushed to gitee/master'), 'github (primary) goes first');
-  assert.equal(git(github, ['rev-parse', 'master']), head, 'the primary ends at the store HEAD');
-  assert.equal(git(gitee, ['rev-parse', 'master']), head, 'the mirror ends at the store HEAD');
+  assert.equal(git(github, ['rev-parse', 'master']), head, 'the primary (full history) ends at the store HEAD');
+  const mirror = git(gitee, ['rev-parse', 'master']);
+  assert.notEqual(mirror, head, 'the mirror holds a code-only snapshot');
+  assert.match(git(gitee, ['log', '-1', '--format=%s', 'master']), /^code-only mirror: /);
 });
 
 test('--remote restricts the push to the named remote (default pushes to all configured ones)', (t) => {
@@ -183,20 +191,26 @@ test('--remote restricts the push to the named remote (default pushes to all con
   assert.notEqual(githubHasMaster.status, 0, 'the primary still has no master');
 });
 
-test('--tags pushes the tags (refs/tags/*) to the target remote, never forced', (t) => {
+test('--tags pushes the tags to a full remote; the code-only mirror skips them', (t) => {
   const root = scenario(t);
   const store = join(root, 'store'), dev = join(root, 'dev');
-  const gitee = join(root, 'gitee.git');
+  const github = join(root, 'github.git'), gitee = join(root, 'gitee.git');
   initStore(store);
   commit(store, 'one', { '.gitignore': 'ignored.txt\n', 'a.txt': 'one\n' });
   exportToDev(store, dev);
   git(store, ['tag', 'backup/pre-3d-scenes']);
+  initBare(github);
   initBare(gitee);
+  git(store, ['remote', 'add', 'github', github]);
   git(store, ['remote', 'add', 'gitee', gitee]);
 
-  const r = run(['--remote', 'gitee', '--tags'], store, dev);
+  const r = run(['--remote', 'github', '--tags'], store, dev);
   assert.equal(r.status, 0, r.stderr + r.stdout);
-  assert.match(git(gitee, ['tag', '-l']), /backup\/pre-3d-scenes/, 'the tag reached the remote');
+  assert.match(git(github, ['tag', '-l']), /backup\/pre-3d-scenes/, 'the tag reached the full remote');
+
+  const r2 = run(['--remote', 'gitee', '--tags'], store, dev);
+  assert.equal(r2.status, 0, r2.stderr + r2.stdout);
+  assert.equal(git(gitee, ['tag', '-l']).trim(), '', 'a tag points at a commit that carries public/assets: never on the mirror');
 });
 
 test('--all-remotes forces both even when the store has only one configured remote', (t) => {

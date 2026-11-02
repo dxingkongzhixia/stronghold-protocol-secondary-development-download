@@ -317,10 +317,11 @@ function codeOnlyCommit(name, { root = false } = {}) {
   if (tip) {
     // `git cat-file -e` prints nothing on success, so compare against null (gitOrNull returns '' then), not truthiness.
     if (gitOrNull(['cat-file', '-e', `${tip}^{commit}`]) === null) gitOrNull(['fetch', '--quiet', name, `refs/heads/${BRANCH}`]);
-    // Only a tip that already lacks the excluded paths is a usable parent (i.e. one of our snapshots). A full-history
-    // tip means this project was never code-only: start a new root instead (the push then needs a fresh project).
+    // Only OUR snapshot is a usable parent: a tip that still carries the excluded paths, or a commit somebody else made
+    // on the mirror, is not — then a fresh root is built and the push is rejected (never forced) until a human looks.
     const assets = gitOrNull(['ls-tree', '-r', '--name-only', tip, '--', ...CODE_ONLY_EXCLUDE]);
-    if (assets !== null && !assets.trim()) parent = tip;
+    const subject = (gitOrNull(['log', '-1', '--format=%s', tip]) || '').trim();
+    if (assets !== null && !assets.trim() && subject.startsWith('code-only mirror: ')) parent = tip;
   }
   const index = join(tmpdir(), `sp-code-only-${process.pid}-${Date.now().toString(36)}`);
   const env = { ...process.env, GIT_INDEX_FILE: index };
