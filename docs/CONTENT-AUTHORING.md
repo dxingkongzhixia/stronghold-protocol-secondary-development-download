@@ -182,6 +182,43 @@
 4. **测试**：`test/content/bands.test.js`，行为变化 `npm run golden:update`。
 5. **资料库**：无需改动（`bandView` 直接派生）。
 
+
+### 3.4 策略卡图标 / 头像（「生成器风格」）
+
+策略卡（`band_*.png`）在游戏里是「圆形特写 + 青绿滤镜 + 扫描线 + 边缘渐隐 + 左上 `[R00] STRATEGY` / 左下
+`STRONGHOLD PROTOCOL`」的样子。这套视觉来自社区小工具 **卫戍协议头像生成器**：
+
+- 在线：<https://kurumiwww.github.io/stronghold-protocol-avatar/>
+- 源码：<https://github.com/KurumiWWW/stronghold-protocol-avatar>（Vue + html2canvas，输入一张方图，输出上面那张卡）
+
+线上工具要手动上传 + 在裁切框里拖选区，不适合脚本化；本仓库因此带了一份等价实现：
+
+```powershell
+# 从任意方图（原卡截图 / 立绘裁切）生成一张 360×360 的策略卡图
+powershell -File tools/card-avatar.ps1 -In <源图.png> -Out <输出.png> -Size 360
+#   -Badge  额外画右上角橙色徽章（默认不画）
+#   -Tint   额外叠青绿滤镜 + 扫描线（默认不叠：原卡截图已经带了；纯立绘才需要）
+```
+
+工具用到的三张覆盖图在 `tools/card-avatar/`（`112.png` 左上文字、`111.png` 左下文字、`av-icon.png` 徽章），
+都是生成器仓库的原件，所以离线也能复现同一风格。
+
+**几何参数**（改工具时保持一致）：画布 512 再缩到目标尺寸；圆形直径 95%、居中；边缘渐隐到 `rgb(50,50,50)`；
+`112.png` 左边 8% / 顶 12.5% / 宽 40%；`111.png` 左边 10% / 底 10% / 宽 40%；徽章 右 -6% / 顶 -6% / 宽 40%。
+
+**换插件里的卡图**（以 `prts-kaltsit` 的策略「创伤小组」为例）：
+
+```powershell
+powershell -File tools/card-avatar.ps1 -In <原图.png> -Out plugins/prts-kaltsit/assets/images/band_x_prts_kaltsit_touch.png
+node tools/keel.mjs pack prts-kaltsit          # 重写 plugin.lock.json（哈希变了，必须重打包）
+node tools/keel.mjs check prts-kaltsit --strict
+```
+
+两个注意点：
+
+- **不要把已经合成的卡再喂给工具**——它会再叠一层文字（`STRATEGY` / `STRONGHOLD PROTOCOL` 会重影）；要重做就从原图开始。
+- 线上工具的导出是屏幕截图（约 300×300），本仓库统一输出 **360×360**（现有 `band_*.png` 的尺寸）。
+
 ---
 
 ## 4. 新悬赏敌人（领袖 / 悬赏）
