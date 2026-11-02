@@ -68,6 +68,25 @@ Keel 已经可以用于实际插件开发和房间运行：
 - 保持 `keelToV2` 投影与共享 content/visual 编译器一致；
 - 新插件优先写原生模块，不强制走 v2。
 
+### 2.4 分发 / 版本锁
+
+已有：`pack --zip`、`/admin/api/plugins/install`、`tools/plugin.mjs install`、`server/market.js`。
+
+可继续做：
+
+- 公共/团队 registry（当前只有 zip / 管理端 / 市场条目）；
+- 服务器侧“插件版本 lock”与一键回滚；
+- 玩家侧自动更新策略。
+
+### 2.5 可观测性 / 调试
+
+已有：`battleRunner.stats()`（含 `workers` / `workerHeap`）、`contents.stats()`（含 `lastBuildMs` / `maxBuildMs` / 命中数）、`/admin` 插件页的「运行指标」（每插件 `scanMs`、内容集缓存、房间占用）、`GET /admin/api/plugins/stats`、逐模块 `loadMs`、Worker best-effort 堆（`workerMemory`）、4× CPU throttle 基准、`keel check/run`。
+
+可继续做：
+
+- 每 field 的细分资源（目前只有 Worker 总数与总堆）；
+- SES 错误堆栈的稳定 source map（`sourceURL` 已传入，但 SES 下 `Error.stack` 可能为空；错误对象仍带 `module: <id>:<kind>:<entry>`）。
+
 ## 3. 外部插件迁移
 
 `plugins/*` 默认不提交。当前仓库里的三个真实插件已迁移：

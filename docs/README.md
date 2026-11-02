@@ -65,7 +65,7 @@
 | [`META.md`](META.md) | 对局 / 匹配 / 回合 / 联防 / 视图 | 规范 |
 | [`DATA.md`](DATA.md) | `data/*.json` 字段与生成方式 | 规范 |
 | [`ASSETS.md`](ASSETS.md) | 素材来源、布局、manifest、特效、授权、中继 | 规范 |
-| [`keel/FEATURES.md`](keel/FEATURES.md) · [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) · [`keel/CONTRACTS.md`](keel/CONTRACTS.md) · [`keel/RUNTIME.md`](keel/RUNTIME.md) · [`keel/COMPAT-V2.md`](keel/COMPAT-V2.md) | **当前插件规范**（Keel / manifest 3）与 v2 兼容 | 规范 |
+| [`keel/FEATURES.md`](keel/FEATURES.md) · [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) · [`keel/MODULES.md`](keel/MODULES.md) · [`keel/CONTRACTS.md`](keel/CONTRACTS.md) · [`keel/RUNTIME.md`](keel/RUNTIME.md) · [`keel/COMPAT-V2.md`](keel/COMPAT-V2.md) | **当前插件规范**（Keel / manifest 3）、模块 / 权限矩阵与 v2 兼容 | 规范 |
 | [`PLUGINS.md`](PLUGINS.md) · [`PLUGIN-API.md`](PLUGIN-API.md) · [`PLUGIN-DSL.md`](PLUGIN-DSL.md) | v2 兼容参考：六类插件、content set、脚本 SDK、DSL | 兼容规范 |
 
 ### 3.2 实现层（解释代码，允许代码先行后补）
@@ -88,6 +88,9 @@
 
 | 文档 | 用途 | 状态 |
 |---|---|---|
+| [`keel/QUICKSTART.md`](keel/QUICKSTART.md) | Keel 15 分钟快速上手：从模板到真实房间 | 指南 |
+| [`keel/WORKFLOW.md`](keel/WORKFLOW.md) | Keel 开发 / 兼容 / 测试流程、标准试验插件 | 指南 |
+| [`keel/DEBUGGING.md`](keel/DEBUGGING.md) | Keel 错误分层、Worker 失败、指标、lock/pin、分发 | 指南 |
 | [`CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | 盟约 / 策略 / 悬赏敌人 / CODEX / 3D 主题 | 指南 |
 | [`NEW-OPERATOR.md`](NEW-OPERATOR.md) | 新增自造干员端到端配方 | 指南 |
 | [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | 不写代码的插件作者：工作台、模板、换图、试玩、打包 | 指南（v2 教程） |

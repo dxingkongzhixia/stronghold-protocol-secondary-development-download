@@ -81,6 +81,7 @@ export class WorkerSimHost {
     this.events = [];
     this.statsCache = new Map();
     this.statsPending = new Set();
+    this.workerMemory = null;
     const host = this;
     this.battle = {
       snapshot: () => host.packet?.snap,
@@ -103,8 +104,12 @@ export class WorkerSimHost {
       if (!p) return;
       this.pending.delete(data.id);
       clearTimeout(p.timer);
-      if (data.error) { const err = failure(data.error.code || 'PLUGIN_WORKER_FAILED', data.error.message); p.reject(err); this.fail(err); }
-      else p.resolve(data.value);
+      if (data.error) {
+        const err = failure(data.error.code || 'PLUGIN_WORKER_FAILED', data.error.message);
+        // Keep the Worker's SES stack (sourceURL `keel/<id>/<entry>`) for diagnostics; never render it as HTML.
+        if (typeof data.error.stack === 'string' && data.error.stack) err.stack = data.error.stack;
+        p.reject(err); this.fail(err);
+      } else p.resolve(data.value);
     };
     this.worker.onerror = () => this.fail(failure('PLUGIN_WORKER_FAILED', 'simulation worker failed'));
     this.worker.onmessageerror = () => this.fail(failure('PLUGIN_WORKER_FAILED', 'simulation worker message failed'));
@@ -122,7 +127,10 @@ export class WorkerSimHost {
   /** Liveness: a ping only when no RPC is in flight (a long catch-up step is not silence). */
   heartbeat() {
     if (this.stopped || this.pending.size) return;
-    this.rpc('ping', [], this.pingTimeoutMs).catch(() => {});
+    // The ping also carries the Worker's best-effort heap (simWorkerRuntime memoryOf); null where unavailable.
+    this.rpc('ping', [], this.pingTimeoutMs)
+      .then((v) => { if (v && typeof v === 'object') this.workerMemory = v.memory || null; })
+      .catch(() => {});
   }
   startHeartbeat() {
     if (this.heartbeatTimer || !(this.heartbeatMs > 0)) return;

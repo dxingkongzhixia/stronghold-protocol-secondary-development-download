@@ -2,6 +2,20 @@
 import { InPageSimHost } from './simHost.js';
 import { trackCombat } from './metrics.js';
 
+/**
+ * Best-effort Worker memory for the heartbeat reply: Chromium's `performance.memory` where a Worker exposes it,
+ * else the Node harness's `process.memoryUsage()`. Null in browsers that hide both (Firefox / Safari).
+ */
+function memoryOf() {
+  const m = globalThis.performance?.memory;
+  if (m && Number.isFinite(m.usedJSHeapSize)) {
+    return { kind: 'js-heap', used: m.usedJSHeapSize, total: m.totalJSHeapSize ?? null, limit: m.jsHeapSizeLimit ?? null };
+  }
+  const p = globalThis.process?.memoryUsage?.();
+  if (p) return { kind: 'process', used: p.heapUsed, total: p.heapTotal, rss: p.rss, external: p.external };
+  return null;
+}
+
 export function createSimWorker({ loadSim, prepareScripts = browserScripts } = {}) {
   const host = new InPageSimHost(loadSim ? { loadSim } : {});
   let loaded = false;
@@ -69,7 +83,7 @@ export function createSimWorker({ loadSim, prepareScripts = browserScripts } = {
         if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 600) throw new Error('invalid step count');
         return packet(host.step(args[0], args[1] || {}));
       }
-      case 'ping': return { ok: true };
+      case 'ping': return { ok: true, memory: memoryOf() };
       case 'unitStats': return host.unitStats(args[0]);
       case 'ownerOps': return host.ownerOps(args[0]);
       case 'syncPool': host.syncPool(...args); return true;

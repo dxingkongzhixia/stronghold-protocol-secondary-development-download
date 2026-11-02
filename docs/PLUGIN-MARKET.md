@@ -94,6 +94,25 @@ POST /admin/api/market?token=...
 
 `/admin` 的「插件与内容 → 商城插件管理」直接编辑这些字段：描述、作者、`app` 兼容范围、API level 和「上架」开关。`listed: false` 的条目即使已通过审核也不会出现在公开列表或下载接口。
 
+### 版本锁 / 回滚
+
+```http
+GET  /admin/api/plugins/lock?token=...
+POST /admin/api/plugins/lock?token=...   { "action": "lock" | "unlock" | "rollback", ... }
+```
+
+`plugins/lock.json` 记录每个本机插件的版本、逐文件 SHA-256 摘要和归档文件名；归档是 `plugins/_locked/<id>-<version>-<digest8>.zip`（`zipPlugin` 的确定性 zip）。锁定用 `buildPluginLock` 逐文件哈希后打包；内置和单文件（`layout: "file"`）插件跳过。回滚先校验归档的 zip SHA-256，再用 `installPluginBytes({ force: true })` 解压（和普通安装同一套 `checkPluginFolder`），当前文件夹移到 `plugins/_replaced/`，随后 `packs.refresh(true)`。`unlock` 只删除 pin，不删归档。只读 token 可 GET，写操作需要 owner token。`/admin` 的「插件与内容 → 版本锁」提供同样的按钮。
+
+**性能注意**：锁定 / 回滚是同步的维护操作，会占用 Node 事件循环。本机实测 `black-snake`（112 文件 / 46 MB）：`buildPluginLock` ≈ 0.44 s、`zipPlugin` ≈ 0.26 s、回滚 install ≈ 0.84 s；更大的插件会更久。建议在低峰执行，不要和开局 / 批量建房同时做。归档写入 `plugins/_locked/`，旧版本归档不会自动清理；长期多次锁定要自己检查磁盘。
+
+### 运行指标（只读）
+
+```http
+GET /admin/api/plugins/stats?token=...
+```
+
+返回 `{ ok, now, counts, plugins[], contentSets, probe, rooms[], skipped[], warnings[] }`：`counts` 是安装 / 脚本 / 信任 / 跳过 / 警告 / 房间占用 / 内容集数量与缓存命中率；`plugins[]` 带每个插件的 `scanMs`、`bytes`、版本和状态；`contentSets` 与 `contents.stats()` 一致；`rooms[]` 列出当前持有内容集的房间及 `cs` / `vs` / 插件 / 信任同意数。数据与 `/admin` 的「插件与内容 → 运行指标」相同，供外部监控脚本轮询；只读、需要 admin token。
+
 ### AI 接管接口（预留）
 
 ```http

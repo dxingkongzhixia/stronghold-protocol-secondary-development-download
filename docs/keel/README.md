@@ -21,13 +21,16 @@ manifest 3
 
 | 我想…… | 看 |
 |---|---|
+| 15 分钟跑通一个插件 | [`QUICKSTART.md`](QUICKSTART.md) |
 | 了解 Keel 现在能做什么、边界在哪 | [`FEATURES.md`](FEATURES.md) |
 | 看架构图、N1/V2 实现 | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | 走开发 / 兼容 / 测试流程 | [`WORKFLOW.md`](WORKFLOW.md) |
+| 排查错误 / 看指标 / lock | [`DEBUGGING.md`](DEBUGGING.md) |
 | 写一个新插件 | [`MANIFEST-V3.md`](MANIFEST-V3.md)、[`../PLUGIN-GUIDE.md`](../PLUGIN-GUIDE.md) |
 | 迁移 manifest-2 插件 | [`COMPAT-V2.md`](COMPAT-V2.md)、`node tools/keel.mjs import <id> --write` |
 | 看原生 sim / Worker / 委托 | [`RUNTIME.md`](RUNTIME.md) |
 | 看扩展点、能力与预算 | [`CONTRACTS.md`](CONTRACTS.md) |
+| 查所有模块 / 权限组合 | [`MODULES.md`](MODULES.md) |
 | 看当前状态、恢复命令 | [`NEXT.md`](NEXT.md) |
 | 看还剩什么、明确不做什么 | [`REMAINING.md`](REMAINING.md) |
 | 看里程碑/决策/旧文档去向 | [`HISTORY.md`](HISTORY.md) |
@@ -49,9 +52,12 @@ node tools/keel.mjs exit
 | 文件 | 内容 |
 |---|---|
 | [`FEATURES.md`](FEATURES.md) | **功能总览**：模块能力、作者链路、运行时、兼容、安全、状态 |
+| [`QUICKSTART.md`](QUICKSTART.md) | **15 分钟快速上手**：从模板到真实房间 |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | **架构与实现**：架构图、代码分层、N1/V2 链路 |
 | [`WORKFLOW.md`](WORKFLOW.md) | **流程**：开发、兼容、测试、标准试验插件 |
+| [`DEBUGGING.md`](DEBUGGING.md) | **调试**：错误分层、错误码、Worker 失败策略、指标、lock/pin、分发 |
 | [`MANIFEST-V3.md`](MANIFEST-V3.md) | manifest 3 字段、模块、能力、校验 |
+| [`MODULES.md`](MODULES.md) | **模块 / 权限参考矩阵**：七种模块、31 个能力、hooks、模板覆盖、已知差异 |
 | [`CONTRACTS.md`](CONTRACTS.md) | stable / experimental 扩展点与预算 |
 | [`RUNTIME.md`](RUNTIME.md) | 原生 sim Worker、match/policy meta、委托、边界 |
 | [`COMPAT-V2.md`](COMPAT-V2.md) | manifest 2 → 3 映射与迁移边界 |
@@ -72,8 +78,8 @@ node tools/keel.mjs exit
 
 | 检查 | 结果 |
 |---|---|
-| `npm test` | 8852 tests / 8814 pass / 0 fail / 38 skipped |
-| `npm run check:keel` | 178 / 178 |
+| `npm test` | 8854 tests / 7 个已知数据/素材失败 / 46 skipped |
+| `npm run check:keel` | 185 / 185 |
 | docs gates | 35 / 35 |
 | `npm run typecheck` | 通过 |
 | eslint | 0 errors |

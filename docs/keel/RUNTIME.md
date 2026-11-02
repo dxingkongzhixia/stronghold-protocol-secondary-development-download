@@ -64,7 +64,7 @@ export default {
 | `api.spawn(spec)` | `sim.spawn` | 敌人（默认）/ 己方 `token`（`kind: 'token'`）/ 装置（`kind: 'device'`） |
 | `api.rng(name)` | `sim.rng` | 命名随机流；没有 `Math.random` |
 | `api.fx(kind, at, data)` | `sim.fx` | 表现事件 |
-| `api.command(cmd)` | `match.economy.write` | 进入 command log |
+| `api.command(cmd)` | `match.economy.write` | 进入 command log，并由 `Match.keelApplyCommand` 应用白名单（资金 / 层数 / 棋子 / 装备 / 免费刷新 / toast） |
 | `api.state.get/set/patch` | —（由 runtime 拥有） | 只能 JSON |
 | `api.log(level, msg, data)` | — | 最多 1000 条 |
 
@@ -73,7 +73,7 @@ export default {
 ## 4. 状态、命令、快照
 
 - 每个模块一个 JSON state 切片；`get()` 返回副本，写走 `patch/set`。
-- 所有对局写操作走 `api.command`，进入 command log（`seq/frame/command`）。
+- 所有对局写操作走 `api.command`，进入 command log（`seq/frame/command`）并由 `Match.keelApplyCommand` 应用；`policy.decide` 返回的合法 `{ type, ... }` 也走同一条白名单。
 - `runtime.snapshot()`：
 
 ```json

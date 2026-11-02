@@ -63,7 +63,8 @@ function confinedCompartment(globals) {
  * The module gets the runtime's `api` as an argument and nothing else: no page/Worker globals, no imports, no eval.
  * The same surface the simulation Worker's scripts get (shared/plugins/sandbox.js), without an SDK.
  * @param {string} source the checked module source (content.js verified its bytes against the content set)
- * @param {{ parse?: (src: string, opts?: object) => any }} [opts] `parse` = acorn's
+ * @param {{ parse?: (src: string, opts?: object) => any, sourceURL?: string }} [opts] `parse` = acorn's;
+ *   `sourceURL` is the stable `keel/<id>/<entry>` name shown in SES error stacks (never part of the pinned bytes)
  * @returns {any} the module's default object
  */
 export function loadKeelModule(source, opts = {}) {
@@ -77,7 +78,8 @@ export function loadKeelModule(source, opts = {}) {
   // Native modules run the same Math as the server's match child (not the v2 scripts' deterministic subset), so a
   // module that uses it observes the same values on both sides.
   const c = confinedCompartment({ Math });
-  const ns = c.evaluate(compiled.code)(globalThis.harden([]));
+  const sourceURL = typeof opts.sourceURL === 'string' ? opts.sourceURL.replace(/[^\w./-]/g, '_').slice(0, 200) : '';
+  const ns = c.evaluate(sourceURL ? `${compiled.code}\n//# sourceURL=${sourceURL}` : compiled.code)(globalThis.harden([]));
   const code = ns.default;
   if (!code || typeof code !== 'object' || Array.isArray(code)) throw denied('PLUGIN_SANDBOX_SYNTAX', 'a Keel module exports a default object');
   return code;

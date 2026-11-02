@@ -44,7 +44,10 @@ export function fixtureRuntime({ base, loadSES, parse }) {
       await initialize();
       const out = {};
       try {
-        const code = loadKeelModule(String(args?.[0] ?? ''), { parse });
+        const code = loadKeelModule(String(args?.[0] ?? ''), {
+          parse,
+          ...(typeof args?.[1] === 'string' ? { sourceURL: args[1] } : {}),
+        });
         const api = Object.freeze({
           frame: 0,
           state: Object.freeze({ get: () => ({}), set() {}, patch() {} }),
@@ -59,7 +62,7 @@ export function fixtureRuntime({ base, loadSES, parse }) {
         out.keys = Object.keys(code).sort();
         out.hooks = Object.keys(code.hooks ?? {}).sort();
         out.hostGlobal = typeof globalThis.__keelProbe;
-      } catch (e) { out.error = { code: e?.code ?? null, message: String(e?.message ?? e) }; }
+      } catch (e) { out.error = { code: e?.code ?? null, message: String(e?.message ?? e), stack: String(e?.stack ?? '').slice(0, 2000) }; }
       return out;
     }
     return dispatch(method, args);

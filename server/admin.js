@@ -230,6 +230,7 @@ export function buildPluginSnapshot(info = {}) {
         builtin: p.builtin === true || p.source === 'builtin',
         app: meta.app ?? m.app ?? null, api: meta.api ?? m.api ?? null, scope: Array.isArray(m.scope) ? m.scope : null,
         compatible: m.compatible !== false, permissions, bytes: Number.isFinite(p.bytes) ? p.bytes : null,
+        scanMs: Number.isFinite(p.scanMs) ? Math.max(0, Math.round(p.scanMs * 10) / 10) : null,
         description: meta.description ?? null, author: meta.author ?? null, compat: meta.compat || null,
         hasContent: !!p.content, hasScript: !!p.script, trusted: p.class === 'trusted',
         forge: forgeProvenance(p),
@@ -249,6 +250,68 @@ export function buildPluginSnapshot(info = {}) {
       classes: ownerPolicy.classes || {}, maxSets: ownerPolicy.maxSets,
       allowIncompatible: ownerPolicy.allowIncompatible === true ? true : Array.isArray(ownerPolicy.allowIncompatible) ? ownerPolicy.allowIncompatible.slice(0, 64) : false,
     } : null,
+  };
+}
+
+/**
+ * Compact, token-gated operations snapshot for external monitoring: the plugin scan metrics + content-set cache
+ * counters + the rooms currently holding a set. `GET /admin/api/plugins/stats`.
+ * @param {{ registry?: any, policy?: any, contents?: any, market?: any, lobby?: any, now?: number }} [info]
+ */
+export function buildPluginStats({ registry, policy, contents, market, lobby, now = Date.now() } = {}) {
+  const snap = buildPluginSnapshot({ registry, policy, contents, market });
+  const plugins = snap.installed || [];
+  const rooms = [];
+  const roomMap = lobby && lobby.rooms;
+  if (roomMap && typeof roomMap.values === 'function') {
+    for (const r of roomMap.values()) {
+      const c = r && r.content;
+      if (!c) continue;
+      rooms.push({
+        code: r.code ?? null,
+        mode: r.mode ?? null,
+        phase: r.match?.phase ?? null,
+        round: r.match?.round ?? null,
+        cs: c.cs ?? null,
+        vanilla: c.vanilla !== false,
+        vs: c.vs ?? null,
+        modeId: c.modeId ?? null,
+        plugins: Array.isArray(c.plugins)
+          ? c.plugins.map((p) => ({ id: p.id, version: p.version || null, class: p.class || null }))
+          : [],
+        trusted: !!c.trusted,
+        consent: c.trusted && c.consent ? Object.values(c.consent).filter(Boolean).length : null,
+        consentTotal: c.trusted && c.consent ? Object.keys(c.consent).length : null,
+      });
+    }
+  }
+  const cs = snap.contentSets || null;
+  const requests = Number(cs?.requests) || 0;
+  const hits = (Number(cs?.memoHits) || 0) + (Number(cs?.cacheHits) || 0);
+  return {
+    ok: true,
+    now,
+    counts: {
+      installed: plugins.length,
+      scripts: plugins.filter((p) => p.hasScript || p.trusted).length,
+      trusted: plugins.filter((p) => p.trusted).length,
+      skipped: snap.skipped.length,
+      warnings: snap.warnings.length,
+      roomsUsing: rooms.length,
+      contentSets: Number(cs?.sets) || 0,
+      held: Number(cs?.held) || 0,
+      cacheHitRate: requests > 0 ? Math.round((hits / requests) * 1000) / 10 : null,
+    },
+    plugins: plugins.map((p) => ({
+      id: p.id, name: p.name, class: p.class, status: p.status, version: p.version,
+      bytes: p.bytes, scanMs: p.scanMs, builtin: p.builtin, compatible: p.compatible,
+      hasContent: p.hasContent, hasScript: p.hasScript, trusted: p.trusted,
+    })),
+    contentSets: cs,
+    probe: snap.probe,
+    rooms,
+    skipped: snap.skipped,
+    warnings: snap.warnings,
   };
 }
 
@@ -916,6 +979,8 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <button type="button" class="plugin-subnav__item" data-psub="installed">本机插件 <em id="installedMetaCount">0</em></button>
         <button type="button" class="plugin-subnav__item" data-psub="policy">服务策略</button>
         <button type="button" class="plugin-subnav__item" data-psub="diagnostics">诊断与内容</button>
+        <button type="button" class="plugin-subnav__item" data-psub="stats">运行指标</button>
+        <button type="button" class="plugin-subnav__item" data-psub="lock">版本锁</button>
       </div>
       <div class="plugin-cats" id="pluginCats" role="group" aria-label="插件分类" hidden></div>
       <div class="plugin-subview" data-pview="market">
@@ -994,6 +1059,36 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <section class="panel">
           <h2>房间内容与脚本</h2>
           <div class="tablewrap"><table><thead><tr><th>房间</th><th>内容集 cs</th><th>外观集 vs</th><th>模式</th><th>插件</th><th>脚本/信任</th><th>同意</th></tr></thead><tbody id="roomContentBody"></tbody></table></div>
+        </section>
+      </div>
+      <div class="plugin-subview" data-pview="stats" hidden>
+        <section class="panel">
+          <h2>运行指标</h2>
+          <p class="hint">扫描、内容集缓存与房间占用；和 <code>GET /admin/api/plugins/stats</code> 是同一份快照，供外部监控读取。</p>
+          <div class="panel__body" id="pluginStatsSummary"></div>
+        </section>
+        <section class="panel">
+          <h2>插件扫描耗时</h2>
+          <div class="tablewrap"><table><thead><tr><th>插件</th><th>类型 / 状态</th><th>版本</th><th>大小</th><th>扫描 ms</th></tr></thead><tbody id="pluginScanBody"></tbody></table></div>
+        </section>
+        <section class="panel">
+          <h2>内容集缓存</h2>
+          <div class="panel__body" id="pluginContentStats"></div>
+        </section>
+      </div>
+      <div class="plugin-subview" data-pview="lock" hidden>
+        <section class="panel">
+          <div class="plugin-admin__head">
+            <div>
+              <h2>版本锁</h2>
+              <p class="hint">锁定会把当前插件文件夹打包到 <code>plugins/_locked/</code>，版本与逐文件 SHA-256 写入 <code>plugins/lock.json</code>；回滚用该包覆盖 <code>plugins/&lt;id&gt;</code>，当前文件夹移到 <code>plugins/_replaced/</code>。内置 / 单文件插件不参与。</p>
+            </div>
+            <div class="plugin-admin__tools">
+              <button type="button" id="lockAllBtn" class="primary">锁定全部本机插件</button>
+              <span id="lockMsg" class="hint"></span>
+            </div>
+          </div>
+          <div class="tablewrap plugin-table"><table><thead><tr><th>插件</th><th>类型</th><th>当前版本</th><th>锁定版本</th><th>归档</th><th>锁定时间</th><th></th></tr></thead><tbody id="lockBody"></tbody></table></div>
         </section>
       </div>
 
@@ -1158,6 +1253,8 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   var token = new URLSearchParams(location.search).get('token') || '';
   var lastAdminData = null;
   var pluginSection = 'market';
+  var lockLoaded = false;
+  var lockBusy = false;
   var pluginDrawerItem = null;
   var pluginDrawerMode = 'market';
   var pluginCategory = '';
@@ -1224,6 +1321,12 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     return '<div class="plugin-stat"><span class="plugin-stat__icon">' + esc(icon) + '</span><b>' + esc(String(value)) + '</b><span>' + esc(label) + '</span></div>';
   }
   function int(v) { return v == null || isNaN(v) ? 0 : Number(v); }
+  function bytesText(v) {
+    var n = int(v);
+    if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+    if (n >= 1024) return Math.round(n / 1024) + ' KB';
+    return n + ' B';
+  }
 
   // ---------------- 主界面开关（server/uiMode.js / GET|POST /admin/api/ui） ----------------
   var uiLoaded = false, uiBusy = false;
@@ -1417,6 +1520,50 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       + stat('◉', d.rooms.filter(function (r) { return r.content && !r.content.vanilla; }).length, '房间正在使用')
       + stat('⚡', p.probe ? p.probe.childRuns : 0, '脚本 probe 次')
       + '</div>';
+    var cs = p.contentSets || {};
+    var csRequests = int(cs.requests);
+    var csHits = int(cs.memoHits) + int(cs.cacheHits);
+    el('pluginStatsSummary').innerHTML = '<div class="plugin-stats">'
+      + stat('▤', int(cs.sets), '内容集')
+      + stat('◉', int(cs.held), '房间占用')
+      + stat('⚙', int(cs.builds), '构建次数')
+      + stat('↺', int(cs.memoHits), 'memo 命中')
+      + stat('▣', int(cs.cacheHits), '磁盘缓存命中')
+      + stat('⚠', int(cs.refused), '拒绝')
+      + stat('⚡', int(cs.lastBuildMs), '最近构建 ms')
+      + stat('▲', int(cs.maxBuildMs), '最大构建 ms')
+      + stat('▦', bytesText(cs.dataBytes), '数据字节')
+      + '</div>'
+      + '<dl class="policy-kv">'
+      + kv('内容集请求', csRequests)
+      + kv('命中率', csRequests ? (Math.round((csHits / csRequests) * 1000) / 10) + '%' : '—')
+      + kv('脚本 probe 子进程', int(p.probe && p.probe.childRuns))
+      + kv('跳过 / 警告', skipped.length + ' / ' + warnings.length)
+      + '</dl>';
+    var scanList = list.slice().sort(function (a, b) {
+      return (b.scanMs || 0) - (a.scanMs || 0) || String(a.id).localeCompare(String(b.id));
+    });
+    el('pluginScanBody').innerHTML = scanList.map(function (x) {
+      return row([
+        cell('<div class="plugin-name"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div><b>' + esc(x.name || x.id) + '</b><small>' + esc(x.id) + '</small></div></div>'),
+        cell('<span class="pill">' + esc(CLASS_LABELS[x.class] || x.class || '未声明') + '</span> <span class="pill">' + esc(x.status || '—') + '</span>'),
+        cell(esc(x.version || '—')),
+        cell(esc(bytesText(x.bytes))),
+        cell(x.scanMs == null ? '—' : String(x.scanMs), 'mono'),
+      ]);
+    }).join('') || '<tr><td colspan="5" class="empty">没有已安装插件</td></tr>';
+    el('pluginContentStats').innerHTML = '<dl class="policy-kv">'
+      + kv('内容集', int(cs.sets))
+      + kv('房间持有', int(cs.held))
+      + kv('构建', int(cs.builds))
+      + kv('请求', csRequests)
+      + kv('memo 命中', int(cs.memoHits))
+      + kv('磁盘缓存命中', int(cs.cacheHits))
+      + kv('拒绝', int(cs.refused))
+      + kv('最近构建', int(cs.lastBuildMs) + ' ms')
+      + kv('最大构建', int(cs.maxBuildMs) + ' ms')
+      + kv('数据字节', bytesText(cs.dataBytes))
+      + '</dl>';
     el('pluginPolicy').innerHTML = p.policy ? (
       '<dl class="policy-kv">'
       + kv('房间插件', p.policy.rooms)
@@ -1492,6 +1639,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     document.querySelectorAll('[data-psub]').forEach(function (b) {
       b.classList.toggle('is-on', (b.dataset.psub || '') === pluginSection);
     });
+    if (pluginSection === 'lock') loadLock();
     var published = new Set(market.map(function (x) { return x.id; }));
     var installable = list.filter(function (x) { return x.class !== 'lang' && !x.builtin && !published.has(x.id); });
     var pubSelect = el('publishSelect');
@@ -1535,6 +1683,76 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       return '<div class="notice-item"><b>' + esc(x) + '</b></div>';
     }).join('') || '<div class="empty">没有跳过项或警告</div>';
     el('navPlugins').textContent = list.length;
+  }
+
+  function renderLock(j) {
+    var list = Array.isArray(j && j.installed) ? j.installed : [];
+    var msg = el('lockMsg');
+    if (msg) {
+      msg.textContent = j && j.error ? ('锁文件：' + j.error)
+        : (j && j.lock && j.lock.updatedAt ? '上次锁定：' + j.lock.updatedAt : '尚未锁定');
+      msg.style.color = j && j.error ? '#ff9a9a' : 'var(--dim)';
+    }
+    el('lockBody').innerHTML = list.map(function (x) {
+      var locked = x.locked;
+      var state = locked ? (x.match ? '<span class="pill yes">版本匹配</span>' : '<span class="pill no">版本不同</span>') : '<span class="pill">未锁定</span>';
+      var archive = locked ? (locked.archive ? '<span class="pill yes">有</span>' : '<span class="pill no">缺失</span>') : '—';
+      var actions = '<div class="plugin-actions">'
+        + '<button type="button" class="row-action" data-lock-action="lock" data-id="' + esc(x.id) + '">' + (locked ? '重新锁定' : '锁定') + '</button>'
+        + (locked ? '<button type="button" class="row-action" data-lock-action="rollback" data-id="' + esc(x.id) + '"' + (locked.archive ? '' : ' disabled') + '>回滚</button>' : '')
+        + (locked ? '<button type="button" class="row-action danger" data-lock-action="unlock" data-id="' + esc(x.id) + '">解锁</button>' : '')
+        + '</div>';
+      return row([
+        cell('<div class="plugin-name"><span class="plugin-avatar av-' + esc(x.class || 'unknown') + '">' + esc(classAvatar(x)) + '</span><div><b>' + esc(x.name || x.id) + '</b><small>' + esc(x.id) + '</small></div></div>'),
+        cell('<span class="pill">' + esc(CLASS_LABELS[x.class] || x.class || '未声明') + '</span>'),
+        cell(esc(x.version || '—') + ' ' + state),
+        cell(esc(locked ? locked.version : '—')),
+        cell(archive),
+        cell(esc(locked && locked.lockedAt ? locked.lockedAt : '—')),
+        cell(actions),
+      ]);
+    }).join('') || '<tr><td colspan="7" class="empty">没有可锁定的本机插件</td></tr>';
+  }
+
+  function loadLock(force) {
+    if (lockBusy || (lockLoaded && !force)) return;
+    lockBusy = true;
+    fetch('/admin/api/plugins/lock?token=' + encodeURIComponent(token), { cache: 'no-store' })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error((res.j && res.j.error) || 'HTTP');
+        renderLock(res.j);
+        lockLoaded = true;
+      })
+      .catch(function (e) { if (el('lockMsg')) el('lockMsg').textContent = '读取失败：' + e.message; })
+      .then(function () { lockBusy = false; });
+  }
+
+  function postLock(body) {
+    if (lockBusy) return;
+    var msg = el('lockMsg');
+    lockBusy = true;
+    if (msg) { msg.textContent = '处理中…'; msg.style.color = 'var(--dim)'; }
+    fetch('/admin/api/plugins/lock?token=' + encodeURIComponent(token), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error((res.j && res.j.error) || 'HTTP');
+        if (body.action === 'rollback') { if (msg) msg.textContent = '已回滚 ' + body.id; }
+        else if (body.action === 'unlock') { if (msg) msg.textContent = '已解锁 ' + (body.ids || []).join(', '); }
+        else {
+          var n = (res.j.results || []).filter(function (x) { return !x.error && !x.skipped; }).length;
+          var failed = (res.j.results || []).filter(function (x) { return x.error; }).map(function (x) { return x.id; });
+          if (msg) msg.textContent = '已锁定 ' + n + ' 个插件' + (failed.length ? '；失败：' + failed.join(', ') : '');
+        }
+        if (msg) msg.style.color = 'var(--mint)';
+        lockBusy = false;
+        lockLoaded = false;
+        loadLock(true);
+        tick();
+      })
+      .catch(function (e) { if (msg) { msg.textContent = '失败：' + e.message; msg.style.color = '#ff9a9a'; } })
+      .then(function () { lockBusy = false; });
   }
 
   function postMarket(body, msgEl) {
@@ -1896,6 +2114,19 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
 
   el('themeToggle').addEventListener('click', function () {
     applyAdminTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+  });
+
+  el('lockAllBtn').addEventListener('click', function () {
+    if (confirm('锁定全部本机插件？每个插件会打包到 plugins/_locked/，大插件可能需要几秒。')) postLock({ action: 'lock' });
+  });
+  el('lockBody').addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('button[data-lock-action]') : null;
+    if (!b) return;
+    var id = b.dataset.id;
+    var action = b.dataset.lockAction;
+    if (action === 'lock') postLock({ action: 'lock', ids: [id] });
+    else if (action === 'unlock') postLock({ action: 'unlock', ids: [id] });
+    else if (action === 'rollback' && confirm('用锁定包覆盖 plugins/' + id + '？当前文件夹会移到 plugins/_replaced/。')) postLock({ action: 'rollback', id: id });
   });
 
   el('pluginPolicySave').addEventListener('click', function () {

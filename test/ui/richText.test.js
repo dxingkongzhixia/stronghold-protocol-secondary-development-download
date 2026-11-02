@@ -97,4 +97,10 @@ describe('placeholders', () => {
     assert.equal(formatBondEffect(null, 3), '');
     assert.equal(formatBondEffect({ effectDesc: 'x{0:0}', effectDescParams: [{ index: 0, format: '0', base: 'a', perStack: 'b' }], bb: { a: 1, b: 2 } }, 'bad'), 'x1');
   });
+  test('formatBondEffect shows duration parameters in real seconds (battle runs at 2×)', () => {
+    const sira = load('bonds.json').siracusaShip;
+    // 32 + 0.4 × 295 = 150 game seconds = 75 real seconds
+    assert.match(richTextPlain(formatBondEffect(sira, 295)), /持续75秒/);
+    assert.match(richTextPlain(formatBondEffect(sira, 295, { timeScale: 1 })), /持续150秒/);
+  });
 });

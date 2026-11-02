@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { statusOf, buildSnapshot, buildPluginSnapshot, buildPublicSnapshot, tokenMatches, writePluginPolicy, ADMIN_HTML, ADMIN_CSP_HASH } from '../server/admin.js';
+import { statusOf, buildSnapshot, buildPluginSnapshot, buildPluginStats, buildPublicSnapshot, tokenMatches, writePluginPolicy, ADMIN_HTML, ADMIN_CSP_HASH } from '../server/admin.js';
 import { openMemoryDb } from '../server/db.mjs';
 import { AuthService } from '../server/auth.js';
 import { SessionRegistry } from '../server/net.js';
@@ -237,6 +237,18 @@ test('GET /admin + /admin/api/state are token-gated', async () => {
     assert.equal((await fetch(`${base}/admin/api/state?token=nope`)).status, 403);
     assert.equal((await fetch(`${base}/admin/api/speed?token=nope`)).status, 403, 'the speed probe is token-gated too');
     assert.equal((await fetch(`${base}/admin/api/origins?token=nope`)).status, 403, 'so is the origins config');
+    assert.equal((await fetch(`${base}/admin/api/plugins/stats?token=nope`)).status, 403, 'and the plugin metrics');
+    assert.equal((await fetch(`${base}/admin/api/plugins/lock?token=nope`)).status, 403, 'and the version lock');
+    const stats = await fetch(`${base}/admin/api/plugins/stats?token=testtok`);
+    assert.equal(stats.status, 200);
+    const metrics = await stats.json();
+    assert.equal(metrics.ok, true);
+    assert.ok(metrics.counts && Array.isArray(metrics.plugins) && Array.isArray(metrics.rooms));
+    const lockView = await fetch(`${base}/admin/api/plugins/lock?token=testtok`);
+    assert.equal(lockView.status, 200);
+    const lock = await lockView.json();
+    assert.equal(lock.ok, true);
+    assert.ok(lock.lock && Array.isArray(lock.installed));
     const html = await fetch(`${base}/admin?token=testtok`);
     assert.equal(html.status, 200);
     const page = await html.text();
@@ -497,7 +509,7 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
   }));
   const registry = {
     plugins: () => [{
-      id: 'demo', class: 'content', status: 'loaded', bytes: 2048, where: forgeDir,
+      id: 'demo', class: 'content', status: 'loaded', bytes: 2048, where: forgeDir, scanMs: 12.34,
       manifest: { name: 'Demo', version: '1.2.3', api: 2, app: '>=0.3.0 <0.5.0', scope: ['room'], category: 'enemy', permissions: ['data'], notices: [{ id: 'n1', title: 'Hi', body: 'Body', date: '2026-10-19' }] },
       content: {},
     }, {
@@ -512,6 +524,7 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
   assert.equal(p.installed[0].id, 'demo');
   assert.equal(p.installed[0].name, 'Demo');
   assert.equal(p.installed[0].hasContent, true);
+  assert.equal(p.installed[0].scanMs, 12.3);
   assert.deepEqual([p.installed[0].category, p.installed[0].declaredCategory, p.installed[0].builtin], ['enemy', 'enemy', false]);
   assert.deepEqual([p.installed[1].category, p.installed[1].builtin], ['faction', true], 'the built-in faction plugin is marked and grouped');
   assert.deepEqual(p.installed[0].notices, [{ id: 'n1', title: 'Hi', body: 'Body', date: '2026-10-19' }]);
@@ -528,6 +541,31 @@ test('buildPluginSnapshot: installed entries, notices, skipped diagnostics and t
   assert.deepEqual(p.contentSets, { sets: 2, held: 1, builds: 3 });
   assert.deepEqual(p.market, [{ id: 'demo', status: 'active' }]);
   assert.deepEqual(buildPluginSnapshot(null).installed, []);
+});
+
+test('buildPluginStats: compact plugin scan + content-set metrics + rooms holding a set', () => {
+  const registry = {
+    plugins: () => [{ id: 'demo', class: 'content', status: 'loaded', bytes: 4096, scanMs: 12.34, manifest: { name: 'Demo', version: '1.2.3', permissions: ['data'] } }],
+    report: () => ({ skipped: [{ where: 'plugins/bad/' }], warnings: [] }),
+  };
+  const contents = { stats: () => ({ sets: 2, held: 1, builds: 3, requests: 5, memoHits: 2, cacheHits: 1, refused: 0, lastBuildMs: 10, maxBuildMs: 20, dataBytes: 4096 }) };
+  const lobby = { rooms: new Map([['ABC123', {
+    code: 'ABC123', mode: 'solo', match: { phase: 'COMBAT', round: 3 },
+    content: { cs: 'a'.repeat(64), vanilla: false, vs: 'b'.repeat(64), modeId: 'mode_single_normal', plugins: [{ id: 'demo', version: '1.2.3', class: 'content' }] },
+  }]]) };
+  const s = buildPluginStats({ registry, contents, lobby, now: 1234 });
+  assert.equal(s.ok, true);
+  assert.equal(s.now, 1234);
+  assert.deepEqual(s.counts, {
+    installed: 1, scripts: 0, trusted: 0, skipped: 1, warnings: 0, roomsUsing: 1,
+    contentSets: 2, held: 1, cacheHitRate: 60,
+  });
+  assert.equal(s.plugins[0].scanMs, 12.3);
+  assert.equal(s.plugins[0].bytes, 4096);
+  assert.equal(s.rooms[0].code, 'ABC123');
+  assert.deepEqual(s.rooms[0].plugins, [{ id: 'demo', version: '1.2.3', class: 'content' }]);
+  assert.equal(s.contentSets.dataBytes, 4096);
+  assert.equal(buildPluginStats({}).counts.installed, 0);
 });
 
 test('writePluginPolicy: safe fields only, preserves trusted pins, records an audit line', (t) => {

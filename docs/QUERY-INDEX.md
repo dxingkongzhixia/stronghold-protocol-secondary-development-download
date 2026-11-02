@@ -49,7 +49,8 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | browser UI widgets | `public/js/ui/` |
 | **main interface switch (classic lobby / Hub)** | [`docs/UI-HUB.md`](UI-HUB.md) · `server/uiMode.js` · `public/js/screens/hub/` · `public/css/screens/hub.css` |
 | plugin system review / risks / verification gaps | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) |
-| **Keel（龙骨）插件系统（功能 / 架构 / 流程 / 当前状态）** | [`docs/keel/FEATURES.md`](keel/FEATURES.md) · [`docs/keel/ARCHITECTURE.md`](keel/ARCHITECTURE.md) · [`docs/keel/WORKFLOW.md`](keel/WORKFLOW.md) · [`docs/keel/README.md`](keel/README.md) · `shared/keel/` · `tools/keel.mjs` |
+| **Keel（龙骨）插件系统（上手 / 功能 / 架构 / 流程 / 排错 / 模块权限）** | [`docs/keel/QUICKSTART.md`](keel/QUICKSTART.md) · [`docs/keel/FEATURES.md`](keel/FEATURES.md) · [`docs/keel/ARCHITECTURE.md`](keel/ARCHITECTURE.md) · [`docs/keel/MODULES.md`](keel/MODULES.md) · [`docs/keel/WORKFLOW.md`](keel/WORKFLOW.md) · [`docs/keel/DEBUGGING.md`](keel/DEBUGGING.md) · [`docs/keel/README.md`](keel/README.md) · `shared/keel/` · `tools/keel.mjs` |
+| **which Keel module / capability should I use?** | [`docs/keel/MODULES.md`](keel/MODULES.md)（七种模块、31 个能力、hooks、模板覆盖、已知差异） · `shared/keel/manifest.js` · `shared/keel/contracts.js` |
 | **plugin development guide (workflow, classes, testing, packaging)** | [`docs/PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
 | plugin content authoring (records, bonds, bands, enemies) | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md), [`docs/PLUGINS.md`](PLUGINS.md) §10 |
 | plugin DSL (skills / talents / prep) | [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) |
@@ -184,8 +185,8 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | the art relay (address, ssh, routes, how to deploy it) | `node tools/push-assets-relay.mjs` (`npm run push:relay`), [`docs/ASSETS.md`](ASSETS.md) "The relay" |
 | change the relay / mirror addresses (no deploy, no restart) | the operations page (`/admin`) → **来源配置**, `GET/POST /admin/api/origins`, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12.3, `server/mirrors.js` |
 | is the relay throttled? which origin would a client install right now? | the operations page → **测速**, `GET /admin/api/speed`, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12.2, `server/speed.js` |
-| what the operations page (`/admin`) covers | accounts / rooms / online / notices / reports / 插件与内容 / 测速 / 来源配置; 插件与内容 has second-level 商城插件 / 本机插件 / 服务策略 / 诊断与内容, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
-| plugin marketplace / admin plugin management | `server/market.js`, `server/admin.js`, `server/index.js` (`/market/api/*`, `/admin/api/market`, `/admin/api/market/import`, `/admin/api/market/keys`, `/admin/api/plugins/ai`), `public/market/**`, `public/js/market.js`, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
+| what the operations page (`/admin`) covers | accounts / rooms / online / notices / reports / 插件与内容 / 测速 / 来源配置; 插件与内容 has second-level 商城插件 / 本机插件 / 服务策略 / 诊断与内容 / 运行指标 / 版本锁, [`docs/MATCHMAKING.md`](MATCHMAKING.md) §12, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
+| plugin marketplace / admin plugin management | `server/market.js`, `server/plugins/lock.js`, `server/admin.js`, `server/index.js` (`/market/api/*`, `/admin/api/market`, `/admin/api/market/import`, `/admin/api/market/keys`, `/admin/api/plugins/stats`, `/admin/api/plugins/lock`, `/admin/api/plugins/ai`), `public/market/**`, `public/js/market.js`, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
 | plugin downloads / relay / mirrors | `var/plugin-market/mirrors.json`, `tools/push-plugin-market.mjs`, `public/js/market.js`, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
 | plugin signatures / key registry | `var/plugin-market/keys.json`, `server/market.js` (`verifySignature`, `publicKeys`, `setSignaturePolicy`), `/admin/api/market/keys`, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
 | plugin compatibility (this fork vs mainline 0.3.x) | `shared/plugins/manifest.js` (`appVersionCompatible`, `PLUGIN_COMPAT_APP`, `PLUGIN_COMPAT_CLASSES`), [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) §7 |

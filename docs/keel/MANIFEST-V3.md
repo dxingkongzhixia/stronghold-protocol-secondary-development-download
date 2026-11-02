@@ -85,7 +85,7 @@
 - 必须有 `entry` 或 `files`；
 - 路径必须在插件目录内（`..`、绝对路径、隐藏段拒绝）；
 - 同一个 `kind + 首个路径` 不能重复；
-- `permissions` 必须来自 [`CONTRACTS.md`](CONTRACTS.md) 的能力表，并且属于该模块种类；
+- `permissions` 必须来自 `shared/keel/manifest.js` 的 `KEEL_PERMISSIONS`，并且属于该模块种类；完整矩阵见 [`MODULES.md`](MODULES.md)；
 - `ui` 模块可以有 `slots`，值来自 `hud.right / result.tab / stats.tab / room.panel`；
 - `content` 模块可以有 `parts`：`{ "data": [...], "operators": [...], ... }`，保留每个内容文件的角色；
 - `asset` 模块可以有 `assets`：与 v2 `plugin.json.assets` 相同的结构化 overlay（enemies / tokens / bands / audio / fx）；
@@ -95,12 +95,17 @@
 
 能力不是文件类型，而是「这个模块能碰什么」：
 
+**以 `KEEL_PERMISSIONS` 为准**（31 个）。下表只列能力与模块；每个能力的运行时兑现状态、已知差异和 v2 投影见 [`MODULES.md`](MODULES.md) §3 / §8。
+
 | 能力 | 允许的模块 | 含义 |
 |---|---|---|
 | `content.define` | content | 新增资源 |
-| `content.extend` | content | 在已有资源上追加/合并 |
+| `content.extend` | content | 追加/合并已有资源（与 `content.patch` 共用构建路径） |
 | `content.patch` | content | 按类型化字段改标量 |
 | `content.override` | content | 整体替换，需审计 |
+| `content.reference` | content | 引用已有资源 |
+| `content.dsl` | content | DSL kit / 准备期效果 |
+| `content.offers` | content | offers 记录 |
 | `sim.read` | sim | 读单位/状态/帧 |
 | `sim.damage.write` | sim | 造成/修改伤害 |
 | `sim.heal.write` | sim | 修改治疗 |
@@ -111,15 +116,22 @@
 | `sim.spawn` | sim | 生成单位/装置 |
 | `sim.rng` | sim | 用命名随机流 |
 | `sim.fx` | sim | 发表现事件 |
+| `sim.code` | sim | v2 脚本标记（原生模块不需要） |
 | `match.read` | match | 读比赛视图 |
-| `match.economy.write` | match | 改经济/候选 |
-| `match.rng` | match | 比赛随机流 |
+| `match.economy.write` | match | 命令日志（当前不直接改经济） |
+| `match.rng` | match | 比赛随机流（当前无 API） |
+| `match.code` | match | v2 meta 标记 |
 | `policy.observe` | policy | 读观察与合法动作 |
-| `policy.act` | policy | 返回动作 |
+| `policy.act` | policy | 返回动作（`onDraft` 未派发） |
 | `ui.frame` | ui | 在沙箱帧里渲染 |
+| `ui.theme` | ui | 主题（旧投影） |
+| `ui.native` | ui | 原生页面（未启用） |
 | `asset.add` | asset | 新增资产 |
 | `asset.override` | asset | 替换官方资产 |
-| `native.execute` | sim/match/ui | T2 原生执行，必须 `trust: native` |
+| `asset.theme` | asset | 主题资源（旧投影） |
+| `native.execute` | sim/match/ui | 原生执行，必须 `trust: native`（Keel 房间拒绝） |
+
+> `content.extend` 是 `CONTRACTS.md` 的 C2，现在已在 `KEEL_PERMISSIONS` 中；它和 `content.patch` 共用同一条构建期 patch/merge 读取路径（见 [`MODULES.md`](MODULES.md) §3）。
 
 ## 5. 校验顺序
 

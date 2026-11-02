@@ -1,6 +1,6 @@
 # Keel 开发、兼容与测试流程
 
-> 架构与 N1/V2 实现见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，功能清单见 [`FEATURES.md`](FEATURES.md)。
+> 15 分钟上手见 [`QUICKSTART.md`](QUICKSTART.md)，架构与 N1/V2 实现见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，功能清单见 [`FEATURES.md`](FEATURES.md)，排错见 [`DEBUGGING.md`](DEBUGGING.md)。
 > 标准试验插件：[`../../plugins/_template/keel-reference`](../../plugins/_template/keel-reference/README.md)。
 
 ## 1. 开发流程
@@ -236,19 +236,21 @@ node tools/plugin.mjs pack _template/keel-reference
 
 ### 4.2 其他模板
 
-| 模板 | 用途 |
-|---|---|
-| `keel-content` | 最小 content 插件 |
-| `keel-lang` | 语言覆盖 |
-| `keel-policy` | 服务端策略 |
-| `keel-multi-module` | content + sim + policy + ui 组合 |
-| `keel-survival` | 最小原生 sim 生存示例 |
-| `keel-cosmetic` | 资源/主题 |
-| `keel-ui` | `hud.right` 界面 |
-| `keel-script` | 原生 sim 脚本 |
-| `keel-reference` | 标准完整参考 |
-| `keel-bond` | 新盟约记录 + 击杀叠层 sim |
-| `keel-item` | 自定义装备记录 + sim 效果 |
+| 模板 | 模块覆盖 | 用途 |
+|---|---|---|
+| `keel-content` | content | 最小 content 插件 |
+| `keel-lang` | lang | 语言覆盖 |
+| `keel-policy` | policy | 服务端策略 |
+| `keel-multi-module` | content + sim + policy + ui | 四模块组合 |
+| `keel-survival` | content + sim + match + policy + ui | 最小原生 sim 生存示例 |
+| `keel-cosmetic` | asset | 资源/主题 |
+| `keel-ui` | ui | `hud.right` 界面 |
+| `keel-script` | sim（`compat.v2Script`） | v2 脚本兼容 |
+| `keel-reference` | content + asset + sim + policy + ui | 标准完整参考 |
+| `keel-bond` | content + sim | 新盟约记录 + 击杀叠层 sim |
+| `keel-item` | content + sim | 自定义装备记录 + sim 效果 |
+
+目前没有单个模板同时包含七类模块；`keel-survival` 覆盖 content/sim/match/policy/ui，`keel-cosmetic` 覆盖 asset，`keel-lang` 覆盖 lang。每个模板具体声明了哪些能力见 [`MODULES.md`](MODULES.md) §4；拷模板后按矩阵删掉不需要的能力。
 
 ### 4.3 CLI fixture
 

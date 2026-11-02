@@ -54,7 +54,7 @@ import { setTrainingSink } from './training/record.js';
 import { configurePrior, priorStatus } from './match/botPrior.js';
 import { getBotStrategy, getBotStrategySeats } from './match/botStrategies.js';
 import { noteLlmIgnored, releaseIgnoresExternalAi, validateExternalConfig } from './match/llmGate.js';
-import { ADMIN_HTML, ADMIN_CSP_HASH, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches, writePluginPolicy } from './admin.js';
+import { ADMIN_HTML, ADMIN_CSP_HASH, buildPluginStats, buildPublicSnapshot, buildSnapshot, loadAdminToken, tokenMatches, writePluginPolicy } from './admin.js';
 import { readUiMode, writeUiMode, uiConfigScript } from './uiMode.js';
 import { docIndex, readDoc, readDocAsset } from './docs.js';
 import { DOCS_HTML } from './adminDocs.js';
@@ -67,6 +67,7 @@ import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustP
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
 import { createPluginRegistry } from './plugins/registry.js';
 import { installPluginBytes, movePluginAside } from './plugins/install.js';
+import { lockPlugins, rollbackPlugin, unlockPlugins, versionLockView } from './plugins/lock.js';
 import { computeVanillaContent } from './plugins/identity.js';
 import { createVisualSets } from './plugins/visualSet.js';
 import { createPluginPolicy } from './plugins/policy.js';
@@ -450,6 +451,8 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     const marketKeys = parts.rawPath === '/admin/api/market/keys';
     const pluginInstall = parts.rawPath === '/admin/api/plugins/install';
     const pluginUninstall = parts.rawPath === '/admin/api/plugins/uninstall';
+    const pluginStats = parts.rawPath === '/admin/api/plugins/stats';
+    const pluginLock = parts.rawPath === '/admin/api/plugins/lock';
     const auditLog = parts.rawPath === '/admin/api/audit';
     const docsPage = parts.rawPath === '/admin/docs' || parts.rawPath === '/admin/docs/';
     const docsIndex = parts.rawPath === '/admin/api/docs';
@@ -631,6 +634,43 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       }
       return;
     }
+    if (pluginLock) {
+      if (!pluginsDir) { sendJson(req, res, 404, { error: 'plugins are disabled' }); return; }
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        sendJson(req, res, 200, versionLockView(pluginsDir, packs.plugins()));
+        return;
+      }
+      if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); sendJson(req, res, 405, { error: 'GET or POST required' }); return; }
+      const body = await readJsonBody(req);
+      try {
+        const action = String(body?.action || '');
+        if (action === 'lock') {
+          const ids = Array.isArray(body.ids) ? body.ids.map(String).filter(Boolean) : null;
+          const r = lockPlugins(pluginsDir, packs.plugins(), { ids });
+          auditAdmin('plugin-lock', { ids: r.results.map((x) => x.id), errors: r.results.filter((x) => x.error).length });
+          sendJson(req, res, 200, { ok: true, ...r });
+          return;
+        }
+        if (action === 'unlock') {
+          const ids = Array.isArray(body.ids) ? body.ids.map(String).filter(Boolean) : [];
+          const r = unlockPlugins(pluginsDir, ids);
+          auditAdmin('plugin-unlock', { ids: r.removed });
+          sendJson(req, res, 200, { ok: true, ...r });
+          return;
+        }
+        if (action === 'rollback') {
+          const r = rollbackPlugin(pluginsDir, String(body.id || ''));
+          packs.refresh(true);
+          auditAdmin('plugin-rollback', { id: r.id, version: r.version, file: r.file, replaced: r.replaced });
+          sendJson(req, res, 200, { ok: true, ...r });
+          return;
+        }
+        sendJson(req, res, 400, { error: 'action must be lock, unlock or rollback' });
+      } catch (e) {
+        sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300), code: e?.code || null });
+      }
+      return;
+    }
     if (marketKeys) {
       if (req.method === 'GET' || req.method === 'HEAD') { sendJson(req, res, 200, market.publicKeys()); return; }
       if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); sendJson(req, res, 405, { error: 'GET or POST required' }); return; }
@@ -709,6 +749,12 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       } catch (e) {
         sendJson(req, res, 400, { error: String(e?.message || e).slice(0, 300) });
       }
+      return;
+    }
+    // Read-only runtime metrics for external monitoring / the admin 运行指标 view (no writes, no plugin files).
+    if (pluginStats) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET, HEAD'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      sendJson(req, res, 200, buildPluginStats({ registry: packs, policy, contents, market, lobby }));
       return;
     }
     // Reserved AI takeover surface: the same admin-token boundary, a stable capability document today, and a 501
@@ -968,7 +1014,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     }
     if (parts.rawPath === '/admin' || parts.rawPath === '/admin/api/state' || parts.rawPath === '/admin/api/notify'
       || parts.rawPath === '/admin/api/speed' || parts.rawPath === '/admin/api/origins' || parts.rawPath === '/admin/api/plugin-policy'
-      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/market/keys' || parts.rawPath === '/admin/api/audit' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/ai' || parts.rawPath === '/admin/api/ui'
+      || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/market/keys' || parts.rawPath === '/admin/api/audit' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/stats' || parts.rawPath === '/admin/api/plugins/lock' || parts.rawPath === '/admin/api/plugins/ai' || parts.rawPath === '/admin/api/ui'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')
       || parts.rawPath === '/admin/docs' || parts.rawPath === '/admin/docs/'
       || parts.rawPath === '/admin/api/docs' || parts.rawPath === '/admin/api/docs/file' || parts.rawPath === '/admin/api/docs/asset') {

@@ -93,7 +93,7 @@
 | `countMode` / `countsHand` / `countsGoldenOnly` | 计数来源：`BOARD` = 场上；`BOARD_AND_DECK` + `countsHand` = 含整备区（投资人 远见 奇迹） |
 | `noStack` | 无层数效果（调和 协防干员 独行 绝技）：层数仍统计但不缩放，资料库显示「层数不显示」 |
 | `effectDesc` / `effectDescRaw` | **逐层**效果文本，含 `{i:fmt}` 占位 |
-| `effectDescParams` | `[{ index, format, base, perStack }]`：占位值 = `bb[base] + bb[perStack] × 层数`（`richText.js formatBondEffect`，概率类 `…prob…` 封顶 100%） |
+| `effectDescParams` | `[{ index, format, base, perStack }]`：占位值 = `bb[base] + bb[perStack] × 层数`（`richText.js formatBondEffect`，概率类 `…prob…` 封顶 100%；`*duration*` / `*time*` 类在 UI 里除以 `GAME_SPEED`，按实际秒显示） |
 | `bb` / `bbStr` / `buffs` | 黑板数值 + 官方 buff key；运行时按 `bbStr.key` 派发处理器 |
 | `baseParams` / `perStackParams` | 基础 / 每层参数名 |
 | `desc` / `descRaw` | 完整描述（阶段条件写在 `<在场6名…>` 这类标记里，资料库整段展示） |

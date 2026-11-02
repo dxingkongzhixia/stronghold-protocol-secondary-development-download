@@ -77,8 +77,8 @@ cd /www/wwwroot/Stronghold-Protocol && node -e 'import("./server/http/buildTag.j
 # 2) 子进程在不在（不在就先看日志里子进程启动错误）
 ps -eo pid,pcpu,rss,args | grep contentBuilderChild | grep -v grep
 
-# 3) 构建统计：builds / memoHits / cacheHits / lastBuildMs / sets / held
-curl -s "http://127.0.0.1:3000/admin/api/state?token=<admin-token>" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).contentSets))'
+# 3) 构建统计：builds / memoHits / cacheHits / lastBuildMs / sets / held（轻量只读接口；/admin/api/state 也带同一份）
+curl -s "http://127.0.0.1:3000/admin/api/plugins/stats?token=<admin-token>" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log(j.contentSets, j.counts.cacheHitRate)})'
 
 # 4) 落盘缓存
 ls -1 .cache/content-sets | wc -l; du -sh .cache/content-sets

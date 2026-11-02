@@ -38,6 +38,23 @@ test('the demo module runs 60 frames: ticks, hits and a kill', () => {
   assert.equal(host.units({ id: 'target' })[0].alive, false);
 });
 
+test('modules expose the loader timing when the host provides it', () => {
+  const withTiming = createKeelRuntime({ manifest: manifest(), modules: [{ ...modules()[0], loadMs: 12.345 }], host: hostWithTarget() });
+  assert.equal(withTiming.modules[0].loadMs, 12.35);
+  const plain = createKeelRuntime({ manifest: manifest(), modules: modules(), host: hostWithTarget() });
+  assert.equal(plain.modules[0].loadMs, null);
+});
+
+test('runHook returns hook values for the host (policy actions)', () => {
+  const mods = [{
+    kind: 'match', entry: 'match/index.js', permissions: ['match.read'],
+    code: { hooks: { 'match.onRoundStart'() { return { type: 'addFunds', amount: 2 }; } } },
+  }];
+  const rt = createKeelRuntime({ manifest: manifest(), modules: mods, host: hostWithTarget() });
+  const r = rt.runHook('match.onRoundStart');
+  assert.deepEqual(r.results, [{ module: 'demo:match:match/index.js', value: { type: 'addFunds', amount: 2 } }]);
+});
+
 test('the same seed and inputs give the same hash', () => {
   const ra = createKeelRuntime({ manifest: manifest(), modules: modules(), host: hostWithTarget(7) });
   const rb = createKeelRuntime({ manifest: manifest(), modules: modules(), host: hostWithTarget(7) });

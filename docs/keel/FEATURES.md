@@ -45,11 +45,13 @@
 |---|---|---|
 | `content` | 构建期 / 房间 | 数据记录、补丁、干员、敌人、波次、模式、DSL、offers、i18n |
 | `asset` | 构建期 / 客户端 | 视觉覆盖、Spine/音频/FX/主题、UI 资源 |
-| `sim` | 浏览器 Worker | 战斗 hooks、状态、视图、命令、RNG |
-| `match` | 服务端 meta | 比赛开始/回合/结束、经济与胜负 |
+| `sim` | 浏览器 Worker | 战斗 hooks、状态、视图、RNG、生成 |
+| `match` | 服务端 meta | 比赛开始/回合/结束、视图、命令日志、胜负 |
 | `policy` | 服务端 meta | 观察/决策/选秀策略 |
 | `ui` | 客户端沙箱 frame | 槽位界面、只读视图、postMessage |
 | `lang` | 构建期 / 客户端 | UI 与游戏文本覆盖 |
+
+每种模块的字段、能力、运行时兑现状态和已知差异见 [`MODULES.md`](MODULES.md)。
 
 ### 3.3 信任与能力
 
@@ -151,6 +153,8 @@ node tools/keel.mjs exit
 - 原生 sim 房间：每个 field 一个 Worker；最多 4 个 field（真实房间 4 座）。
 - bot / 接管 / 无人类 boss：委托在线浏览器（房主优先，每浏览器最多 8 个 field），没有浏览器时服务器只用 content 数据跑。
 - 房主断线 / 主动离开：剩余真人接管 host 与 field；没有真人时房间进入 server fallback / 最后一人离开销毁。
+- **clients-only 模式**（`SP_CLIENTS_ONLY=1`）：所有 field（含 bot/接管）都委托浏览器；服务器不做重算；没有可用浏览器时按 `no-executor` 结束，而不是 server fallback。每个执行者最多 4 个 field。
+- **内容集构建**：`SP_CONTENT_BUILDER=1` 在子进程构建，`SP_CONTENT_CACHE=1` 落盘缓存（`.cache/content-sets`）；预热与缓存避免把构建放在房间关键路径。细节见 [`../PLUGIN-BUILD.md`](../PLUGIN-BUILD.md)。
 - 真实浏览器已覆盖：2 真人 + 2 AI、1 真人 + 3 AI、房主断线、房主主动离开、无人类 boss 的 pool/LP/结果、最后一人离开。
 
 ## 12. 兼容线（V2）
@@ -208,8 +212,10 @@ node --test test/ui/native-boss.e2e.test.js
 
 | 我想…… | 看 |
 |---|---|
+| 15 分钟跑通 | [`QUICKSTART.md`](QUICKSTART.md) |
 | 写一个新插件 | [`MANIFEST-V3.md`](MANIFEST-V3.md)、[`../PLUGIN-GUIDE.md`](../PLUGIN-GUIDE.md) |
 | 迁移旧插件 | [`COMPAT-V2.md`](COMPAT-V2.md)、`node tools/keel.mjs import --write` |
+| 排查错误/指标 | [`DEBUGGING.md`](DEBUGGING.md) |
 | 看架构图/N1/V2 实现 | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | 看开发/兼容/测试流程 | [`WORKFLOW.md`](WORKFLOW.md) |
 | 看运行时/Worker/委托 | [`RUNTIME.md`](RUNTIME.md) |

@@ -1,7 +1,9 @@
 # Keel 扩展点契约
 
 > 本表是扩展点名称/域/能力/预算的权威版本；`shared/keel/contracts.js` 与 `node tools/keel.mjs surface --check` 必须与它一致。  
-> 运行时是否已接、当前边界见 [`FEATURES.md`](FEATURES.md)；实现细节见 [`RUNTIME.md`](RUNTIME.md)。
+> 运行时是否已接、当前边界见 [`FEATURES.md`](FEATURES.md)；模块 / 权限的完整对照（含 `content.extend` 等已知差异）见 [`MODULES.md`](MODULES.md)；实现细节见 [`RUNTIME.md`](RUNTIME.md)。
+
+> **C2 对齐**：`content.extend` 已加入 `KEEL_PERMISSIONS`，manifest 3 可以声明；它投影到 v2 `data.patch`，与 `content.patch` 共用构建期的 patch / merge 读取路径。能力矩阵见 [`MODULES.md`](MODULES.md) §3。
 
 ## 1. Content（4）
 

@@ -7,7 +7,7 @@
 import { C2S } from '../../../shared/protocol.js';
 import { PHASE, ERR } from '../../../shared/constants.js';
 import { syntheticResult } from '../fields.js';
-import { FLOW_TICKER_PRIORITY, OK, fail } from './common.js';
+import { FLOW_TICKER_PRIORITY, KEEL_COMMAND_TYPES, OK, fail } from './common.js';
 import { msg } from '../../../shared/i18n.js';
 import { ruleOption } from '../../../shared/plugins/rules.js';
 
@@ -40,7 +40,7 @@ export class MatchPlatform {
   keelRun(name, ctx = {}) {
     if (!this.keelMatch) return null;
     const before = this.keelMatch.errors.length;
-    this.keelMatch.runHook(name, ctx);
+    const hook = this.keelMatch.runHook(name, ctx);
     if (this.keelMatch.errors.length > before) {
       const e = this.keelMatch.errors[this.keelMatch.errors.length - 1];
       this.reportError(`keel ${name}`, new Error(`${e.module}: ${e.code} ${e.message}`));
@@ -51,7 +51,76 @@ export class MatchPlatform {
       const f = this.keelMatch.finished;
       this.finish({ victory: f.winner === 'players', reason: f.reason ?? 'keel' });
     }
-    return this.keelMatch.finished;
+    // `results` carries every hook return value (policy.decide / policy.onDraft); `finished` keeps the old contract.
+    return { ...hook, finished: this.keelMatch.finished };
+  }
+
+  /**
+   * Apply one command from a `match` / `policy` Keel module. The command list is deliberately small and auditable
+   * (`KEEL_COMMAND_TYPES`): funds, layers, a chess / item from the pool, a free refresh and a toast. Every command
+   * names a player (`playerId`, default the first alive player) and uses the same PlayerState methods the match
+   * itself uses. Unknown commands are refused, not ignored.
+   * @param {any} command @param {string} [moduleId]
+   */
+  keelApplyCommand(command, moduleId = 'keel') {
+    if (!command || typeof command !== 'object' || Array.isArray(command)) return { ok: false, error: 'a command is an object' };
+    const type = typeof command.type === 'string' ? command.type : '';
+    if (!KEEL_COMMAND_TYPES.includes(type)) return { ok: false, error: `unsupported command ${type || '(none)'}` };
+    const ps = command.playerId != null ? this.players.get(String(command.playerId)) : this.alivePlayers()[0];
+    if (!ps || !ps.alive || ps.left) return { ok: false, error: 'no eligible player' };
+    const reason = `keel:${String(moduleId || 'keel').slice(0, 80)}`;
+    const amount = (v, max) => {
+      const n = Math.trunc(Number(v));
+      return Number.isFinite(n) ? Math.max(-max, Math.min(max, n)) : 0;
+    };
+    switch (type) {
+      case 'addFunds': {
+        const n = amount(command.amount, 1000);
+        if (!n) return { ok: false, error: 'amount is 0' };
+        return { ok: true, type, playerId: ps.playerId, added: ps.addFunds(n, { reason }) };
+      }
+      case 'spendFunds': {
+        const n = Math.max(0, amount(command.amount, 1000));
+        if (!(n > 0) || !ps.spend(n)) return { ok: false, error: 'not enough funds' };
+        ps._afterSpend(n, reason);
+        return { ok: true, type, playerId: ps.playerId, spent: n };
+      }
+      case 'addLayers': {
+        const bond = typeof command.bond === 'string' ? command.bond : '';
+        const n = Math.max(0, amount(command.amount, 100));
+        if (!bond || !(n > 0) || !ps.gd.bond(bond)) return { ok: false, error: 'no bond / amount' };
+        const added = ps.addLayers(bond, n, { requireActive: !!command.requireActive, reason });
+        // A cap / inactive bond is a no-op, not a failed command (addLayers itself says how many landed).
+        return { ok: true, type, playerId: ps.playerId, bond, added, layers: ps.layers[bond] || 0 };
+      }
+      case 'grantChess': {
+        const id = typeof command.id === 'string' ? command.id : '';
+        if (!id || !ps.gd.chess(id)) return { ok: false, error: 'no chess' };
+        const piece = ps.acquireChess(id, { source: reason, toTemp: !!command.toTemp, fromPool: command.fromPool !== false });
+        return piece ? { ok: true, type, playerId: ps.playerId, uid: piece.uid, id: piece.id } : { ok: false, error: 'no free copy' };
+      }
+      case 'grantItem': {
+        const id = typeof command.id === 'string' ? command.id : '';
+        if (!id || !ps.gd.item(id)) return { ok: false, error: 'no item' };
+        const piece = ps.acquireItem(id, { source: reason, toTemp: !!command.toTemp, requirePool: command.requirePool !== false });
+        return piece ? { ok: true, type, playerId: ps.playerId, uid: piece.uid, id: piece.id } : { ok: false, error: 'no free copy' };
+      }
+      case 'freeRefresh': {
+        const n = Math.max(0, amount(command.amount, 10));
+        if (!(n > 0)) return { ok: false, error: 'amount is 0' };
+        ps.shop.freeRefreshes += n;
+        ps.dirty();
+        return { ok: true, type, playerId: ps.playerId, freeRefreshes: ps.shop.freeRefreshes };
+      }
+      case 'toast': {
+        const text = typeof command.text === 'string' ? command.text.slice(0, 200) : '';
+        if (!text) return { ok: false, error: 'empty text' };
+        this.toast(ps, 'info', text);
+        return { ok: true, type, playerId: ps.playerId };
+      }
+      default:
+        return { ok: false, error: 'unsupported command' };
+    }
   }
 
   /** Translate a Keel view into the existing declarative pluginView HUD. */

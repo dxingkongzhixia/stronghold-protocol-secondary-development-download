@@ -169,9 +169,11 @@ plugin.json + entry.sim/meta
 运营台 `/admin` 的「插件与内容」页使用二级导航：
 
 - **商城插件**：列表、搜索、上架开关、导入 zip、上下移动排序、关联插件绑定；描述 / 作者 / `app` / `api` / `listed` / `related` 在右侧抽屉编辑
-- **本机插件**：只改商城展示用的描述 / 作者 / 兼容范围，写入 `var/plugin-market/installed-meta.json`，不改 `plugins/` 文件
+- **本机插件**：只改商城展示用的描述 / 作者 / 兼容范围，写入 `var/plugin-market/installed-meta.json`；版本锁另见下条
 - **服务策略**：`rooms`、`allow`、`default`、`classes`、`maxSets`、`allowIncompatible`，以及统计卡片
 - **诊断与内容**：房间 `cs` / `vs` / `modeId`、插件列表、脚本 / 信任状态、trusted consent、Forge 导入和 skipped / warnings
+- **运行指标**：`GET /admin/api/plugins/stats` 与「插件与内容 → 运行指标」：每插件 `scanMs` / 大小、内容集构建 / 缓存命中、房间占用
+- **版本锁**：`plugins/lock.json` + `plugins/_locked/`；锁定打包当前插件，回滚用归档覆盖并把当前文件夹移到 `plugins/_replaced/`（`GET/POST /admin/api/plugins/lock`，owner token）
 - **浅色 / 深色模式**：只影响运营台外观，不改变服务端数据
 - **AI 接管预留接口**：`GET/POST /admin/api/plugins/ai` 与人类后台共用 admin token；GET 返回能力声明，POST 当前 501，未启用执行器
 - **版本生命周期**：已上架插件的新版本进入 `pendingUpdate`，旧版本继续服务；通过后旧版本进入 `history`，可回滚
@@ -183,7 +185,7 @@ plugin.json + entry.sim/meta
 
 后端 `buildSnapshot` 携带 `plugins` 快照（含商城条目、安装元数据和策略）；`/admin/api/state` 的 `rooms[]` 增加 `content` 字段。
 
-写操作只允许：服务器策略的安全字段、商城元数据（描述 / 作者 / `app` / `api` / `listed` / `related`）、后台导入 zip、测试 / 通过 / 拒绝、调整排序和打包本机插件。**插件文件、trusted pin、安装/卸载/更新仍只允许 owner 在本机处理，运营台不提供远程代码执行入口。**
+写操作只允许：服务器策略的安全字段、商城元数据（描述 / 作者 / `app` / `api` / `listed` / `related`）、后台导入 zip、测试 / 通过 / 拒绝、调整排序、打包本机插件，以及 owner token 下的版本锁 / 回滚。**trusted pin 和插件代码仍只由 owner 在本机处理；运营台不提供远程代码执行入口，回滚只解压已锁定的 zip 并走同一套 `checkPluginFolder`。**
 
 ## 9. 建议的下一步
 

@@ -12,9 +12,11 @@
 //   parseRichText(src)            → Seg[]  where Seg = { text, cls: string[], term: boolean } | { br: true }
 //   richTextPlain(src)            → string (markup stripped, newlines kept)
 //   rtClassName(cls)              → CSS class for an official style id ('ba.vup' → 'rt-vup')
-//   formatBondEffect(bond, layers)→ bond `effectDescRaw` with its `{i:fmt}` placeholders resolved
+//   formatBondEffect(bond, layers)→ bond `effectDescRaw` with its `{i:fmt}` placeholders resolved (durations in real s)
 //   formatPlaceholder(value, fmt) → '15%' / '3' for the official number formats ('0%', '0.0%', '0', '0.0')
 //   fillPlaceholders(src, values) → replace `{i:fmt}` / `{i}` by values[i] (unknown indexes kept)
+
+import { GAME_SPEED } from '../../../shared/constants.js';
 
 /** Official style id → our CSS modifier (css/screens/game-panels.css `.rt-*`). */
 const STYLE_CLASS = {
@@ -156,19 +158,26 @@ export function fillPlaceholders(src, values, formats = []) {
   });
 }
 
+/** `base_duration` / `duration_per_stack` / `base_time` / `…[storm].time_per_stack` (data/bonds.json). */
+const TIME_PARAM = /(?:^|[._\[])(?:duration|time)/i;
+
 /**
  * The bond's in-battle effect text with its layer-dependent numbers resolved (DATA.md §3:
- * `{i:fmt}` = `bb[base] + bb[perStack] × layers`).
+ * `{i:fmt}` = `bb[base] + bb[perStack] × layers`). Duration parameters are shown in REAL seconds: the sim ticks
+ * them in game seconds and the match runs at GAME_SPEED × (server/match/fields.js), so `32 + 0.4L` reads as
+ * `16 + 0.2L` s here — the same unit as the round countdown. `timeScale: 1` restores the game-second text.
  * @param {any} bond bonds.json record
  * @param {number} [layers]
+ * @param {{ timeScale?: number }} [opts]
  * @returns {string} rich text (markup kept)
  */
-export function formatBondEffect(bond, layers = 0) {
+export function formatBondEffect(bond, layers = 0, opts = {}) {
   if (!bond || typeof bond !== 'object') return '';
   const src = bond.effectDescRaw || bond.effectDesc || '';
   const params = Array.isArray(bond.effectDescParams) ? bond.effectDescParams : [];
   const bb = bond.bb && typeof bond.bb === 'object' ? bond.bb : {};
   const L = Number.isFinite(Number(layers)) ? Math.max(0, Number(layers)) : 0;
+  const timeScale = Number.isFinite(Number(opts?.timeScale)) ? Number(opts.timeScale) : 1 / GAME_SPEED;
   const values = [];
   const formats = [];
   for (const p of params) {
@@ -178,7 +187,8 @@ export function formatBondEffect(bond, layers = 0) {
     // a layer-scaled chance (迅捷 / 不屈 base_prob + prob_per_stack, 奇迹 baseprob + prob) stops at 100 % like the sim's
     // min(1, …) (bonds/addon procChance, meta.js 奇迹) — the card read 124 % at 266 layers (GitHub #108)
     const chance = /prob/i.test(`${p.base}|${p.perStack}`);
-    values[p.index] = chance ? Math.max(0, Math.min(1, base + per * L)) : base + per * L;
+    const v = base + per * L;
+    values[p.index] = chance ? Math.max(0, Math.min(1, v)) : (TIME_PARAM.test(`${p.base}|${p.perStack}`) ? v * timeScale : v);
     formats[p.index] = p.format || '0';
   }
   return fillPlaceholders(src, values, formats);

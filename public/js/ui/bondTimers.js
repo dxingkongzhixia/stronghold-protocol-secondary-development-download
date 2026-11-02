@@ -1,8 +1,13 @@
 // #746: selected-unit convenience readout. [ASSUMED] Labels, next-expiry summary and tenth-second precision.
 // Times arrive with simulation snapshots: deliberately no client clock or interpolation, including during pause.
+// They are simulation seconds, shown in real seconds (GAME_SPEED ×) like the round countdown and bond descriptions.
 import { BOND_TIMERS } from '../../../shared/bondTimers.js';
+import { GAME_SPEED } from '../../../shared/constants.js';
 import { t } from '../../../shared/i18n.js';
 import { html } from './components.js';
+
+/** Simulation seconds → real seconds (the battle runs at GAME_SPEED ×; the round countdown is real time). */
+const realSecs = (s) => (s / GAME_SPEED).toFixed(1);
 
 export function selectedBondTimers(snap, fieldId, unitId) {
   if (!snap || snap.fieldId !== fieldId || unitId == null || !snap.units?.some(u => u[0] === unitId && u[3] > 0)) return [];
@@ -20,8 +25,8 @@ export function BondTimers({ rows = [] }) {
     <h4 class="dsec__title">${t('盟约效果剩余时间')}</h4>
     ${active.map(({ d, r }) => html`<div class="dbond-times__row" key=${d.id} data-effect=${d.id}>
       <span>${t(d.label)}</span><span class="num">${d.stacked
-        ? t('{n} 层 · 下一层 {s} 秒', { n: r.count, s: r.remaining.toFixed(1) })
-        : t('剩余 {s} 秒', { s: r.remaining.toFixed(1) })}</span>
+        ? t('{n} 层 · 下一层 {s} 秒', { n: r.count, s: realSecs(r.remaining) })
+        : t('剩余 {s} 秒', { s: realSecs(r.remaining) })}</span>
     </div>`)}
   </section>`;
 }

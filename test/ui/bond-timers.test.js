@@ -35,7 +35,8 @@ test('selected readout is scoped to the watched field and living unit, cleared b
 
 test('card labels Sargon next stack expiry and each Siracusa effect separately; empty/unknown rows render nothing', () => {
   const s = text(BondTimers({ rows: timers }));
-  assert.match(s, /2 层 · 下一层 3.2 秒/);
+  // simulation seconds shown in real time: 3.2 game s = 1.6 real s at 2×
+  assert.match(s, /2 层 · 下一层 1.6 秒/);
   for (const d of BOND_TIMERS) assert.ok(s.includes(d.label));
   assert.equal(BondTimers({}), null);
   assert.equal(BondTimers({ rows: [{ id: 'unknown', count: 1, remaining: 5 }, { id: 'sargon', count: 0, remaining: Infinity }] }), null);

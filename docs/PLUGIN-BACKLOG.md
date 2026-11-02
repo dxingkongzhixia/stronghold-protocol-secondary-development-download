@@ -4,6 +4,8 @@
 > 代码基线：本地 `22e18faae`（0.3.2 UI / 稳定性批次后；生产未同步）
 > 状态：普通插件链路可用；最近一次本机全量 **8857 tests / 8819 pass / 0 fail / 38 skipped**（2026-11-02）；真实浏览器插件 E2E **10 / 10 pass**。
 > 本文件记录**仍未解决**的问题，不把已修项写成待办。
+>
+> **2026-11-02 增量**：已补逐插件 `scanMs`、逐模块 `loadMs`、Worker best-effort 堆（`workerHeap` / `workerMemory`）、只读指标接口 `GET /admin/api/plugins/stats` 与 `/admin` 的「运行指标」；本地版本锁 / 回滚（`plugins/lock.json` + `plugins/_locked/`、`GET|POST /admin/api/plugins/lock`、`/admin` 的「版本锁」）已完成。R-05 的 trusted pin 审批、R-07 / P2-2 的指标持久化与趋势、跨浏览器验证仍未做。
 
 ## 状态标记
 
@@ -23,9 +25,9 @@
 | R-02 | 脚本 probe 启动预热队列 | P1 | `TODO` | 后台串行预热、限速、进度状态；当前只有磁盘缓存 |
 | R-03 | 浏览器失败恢复 / 重连 | P1 | `TODO` | 内容集中断、锁失效、probe 超时、切集重连、多标签页 |
 | R-04 | 完整 `--plugin-art` 抽取 | P1 | `TODO` | 真实客户端长跑、官方干员美术 + VFX + 插件引用整链合并 |
-| R-05 | 运营台安装/卸载/更新/pin | P1 | `PARTIAL` | 安装/卸载/更新 UI、版本回滚已做；trusted pin 审批仍待做 |
+| R-05 | 运营台安装/卸载/更新/pin | P1 | `PARTIAL` | 安装/卸载/更新 UI、商城回滚和本地版本锁/回滚（`plugins/lock.json` + `_locked`）已做；trusted pin 审批仍待做 |
 | R-06 | 供应链签名 | P1 | `PARTIAL` | 商城上传层 Ed25519 + key UI + `requireSigned` 已做；安装 CLI 签名验证和自动更新仍待做 |
-| R-07 | P2-2 指标持久化 | P2 | `PARTIAL` | 下载失败率、房间重新应用次数、趋势历史、审计日志查看/轮转 |
+| R-07 | P2-2 指标持久化 | P2 | `PARTIAL` | 已有逐插件 `scanMs`、逐模块 `loadMs`、Worker 堆、`/admin/api/plugins/stats`；下载失败率、房间重新应用次数、趋势历史、审计日志查看/轮转仍待做 |
 | R-08 | 大插件/多房间性能压测 | P2 | `TODO` | 200 MB 首次扫描、并发构建、下载并发/进度、插件面板分页 |
 | R-09 | 更多真实 Forge 包 E2E | P2 | `TODO` | 不同记录类型、面板、kits、失败包和真实社区样本 |
 | R-10 | Firefox / Safari / 移动端 | P2 | `TODO` | 插件 E2E 跨浏览器；移动端 consent / 插件面板布局 |
@@ -282,14 +284,12 @@
 ### P2-2 缺少插件生命周期指标
 
 - 状态：`PARTIAL`
-- 已完成：脚本 probe 的请求 / 缓存 / 子进程 / 失败 / 超时 / 耗时；内容集缓存 sets / held / builds；`/admin` 显示。
+- 已完成：脚本 probe 的请求 / 缓存 / 子进程 / 失败 / 超时 / 耗时；内容集缓存 sets / held / builds / 命中率；逐插件 `scanMs`；逐模块 `loadMs`；Worker best-effort 堆；`/admin` 的「运行指标」与只读 `GET /admin/api/plugins/stats`。
 - 未完成：下载字节 / 失败率、房间重新应用次数、持久化历史。
 - 需要：
-  - 加载耗时
-  - 内容集构建耗时
   - 下载字节 / 失败率
-  - 脚本 probe 耗时
   - 房间重新应用次数
+  - 指标持久化 / 趋势
 - 注意：不要把插件内部数据写进统计总览，只做运营指标
 
 ---

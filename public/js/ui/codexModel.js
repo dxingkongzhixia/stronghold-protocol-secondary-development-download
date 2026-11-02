@@ -60,7 +60,7 @@ export function bondMilestones(b) {
 
 /**
  * The bond's in-battle effect text with its layer-scaled numbers resolved at `layers` (richText.js formatBondEffect:
- * `bb[base] + bb[perStack] × layers`); the official markup is kept for the UI to render.
+ * `bb[base] + bb[perStack] × layers`, durations in real seconds); the official markup is kept for the UI to render.
  */
 export function bondEffect(b, layers = 0) {
   return formatBondEffect(b, layers);

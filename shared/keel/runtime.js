@@ -10,6 +10,8 @@ import { hashJson } from './hash.js';
 import { createState } from './state.js';
 
 const CODE_KINDS = new Set(['sim', 'match', 'policy']);
+/** A hook with no return value shares this frozen empty list, so `sim.tick` does not allocate one every frame. */
+const EMPTY_RESULTS = Object.freeze([]);
 
 export class KeelRuntimeError extends Error {
   /** @param {string} code @param {string} message */
@@ -31,7 +33,7 @@ const isFn = (v) => typeof v === 'function';
 /**
  * @param {{
  *   manifest: any,
- *   modules?: { kind: string, entry?: string, permissions?: string[], state?: { version?: number }, code: any }[],
+ *   modules?: { kind: string, entry?: string, permissions?: string[], state?: { version?: number }, loadMs?: number, code: any }[],
  *   host: any,
  *   seed?: number|string,
  *   budget?: { perHook?: number, perFrame?: number, perMatch?: number },
@@ -122,7 +124,13 @@ export function createKeelRuntime(opts) {
       },
     });
 
-    runtimes.push({ id, kind: mod.kind, entry: mod.entry ?? null, code: mod.code, permissions, state, budget, commands, api, disabled: false, denied: null });
+    runtimes.push({
+      id, kind: mod.kind, entry: mod.entry ?? null, code: mod.code, permissions, state, budget, commands, api,
+      disabled: false, denied: null,
+      // Compile time measured by the Worker loader (public/js/battle/keelSandbox.js); null when a host attached code
+      // directly (server meta modules, tests).
+      loadMs: Number.isFinite(mod.loadMs) ? Math.max(0, Math.round(Number(mod.loadMs) * 100) / 100) : null,
+    });
   }
 
   const disable = (rt, hook, err) => {
@@ -137,7 +145,11 @@ export function createKeelRuntime(opts) {
     host,
     seed,
     get frame() { return host.frame; },
-    get modules() { return runtimes.map((r) => ({ id: r.id, kind: r.kind, entry: r.entry, disabled: r.disabled, capabilities: [...r.permissions] })); },
+    get modules() {
+      return runtimes.map((r) => ({
+        id: r.id, kind: r.kind, entry: r.entry, disabled: r.disabled, capabilities: [...r.permissions], loadMs: r.loadMs,
+      }));
+    },
     get errors() { return clone(errors); },
     get logs() { return clone(logs); },
     get views() { return clone(views); },
@@ -152,6 +164,8 @@ export function createKeelRuntime(opts) {
     runHook(name, ctx = {}, options = {}) {
       const cost = Number.isFinite(options.cost) ? Number(options.cost) : 0.01;
       const before = errors.length;
+      /** Hook return values, in module order (the host consumes `policy.decide` / `policy.onDraft` actions). */
+      let results = null;
       // A battle's own hook bus drives sim.tick, not runtime.tick(): start a new frame here too. Match/policy hooks are
       // not frame-driven, so give each one its own frame budget instead of letting a whole match accumulate.
       if (name === 'sim.tick' || name.startsWith('match.') || name.startsWith('policy.')) {
@@ -167,12 +181,13 @@ export function createKeelRuntime(opts) {
           continue;
         }
         try {
-          fn(ctx, rt.api);
+          const value = fn(ctx, rt.api);
+          if (value !== undefined) (results ??= []).push({ module: rt.id, value });
         } catch (err) {
           disable(rt, name, err);
         }
       }
-      return { ok: errors.length === before, errors: errors.slice(before) };
+      return { ok: errors.length === before, errors: errors.slice(before), results: results ?? EMPTY_RESULTS };
     },
     /** Call module setup() once, then sim.setup and (unless battleStart:false) sim.battleStart. */
     start(options = {}) {

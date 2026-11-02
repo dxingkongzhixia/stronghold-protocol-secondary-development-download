@@ -10,6 +10,7 @@ import { PLUGIN_CLASSES, appVersionCompatible } from '../plugins/manifest.js';
 /** Keel capability → the v2 permission the old loaders check. */
 const V2_PERMISSION_OF = Object.freeze({
   'content.define': 'data.add',
+  'content.extend': 'data.patch',
   'content.patch': 'data.patch',
   'content.override': 'data.patch',
   'content.reference': 'data.add',

@@ -804,10 +804,11 @@ export function scanPlugins({ publicDir, dataDir, packsDir, pluginsDir }, { app 
       if (!st.isDirectory()) continue;
       const where = `plugins/${id}/`;
       guard(where, () => {
+        const started = Date.now();
         const r = readPluginFolder(dir, { app, api, where, vanilla: getArt, hashCache, dataDir });
         warnIssues(where, r.issues);
         if (!r.plugin) skipped.push({ where, problems: r.problems, issues: r.issues.filter((i) => i.level === 'problem') });
-        else found.push(r.plugin);
+        else found.push(Object.assign(r.plugin, { scanMs: Date.now() - started }));
       });
     }
   }

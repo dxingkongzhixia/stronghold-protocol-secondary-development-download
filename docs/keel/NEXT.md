@@ -1,9 +1,9 @@
 # Keel 当前检查点
 
 > 状态：**第一阶段完成；可用**。功能见 [`FEATURES.md`](FEATURES.md)，剩余/边界见 [`REMAINING.md`](REMAINING.md)。
-> 代码状态：**已提交 `c3fd7dca7`**（2026-10-31，github / gitee 已同步）。`plugins/*` 不随仓库提交，
+> 代码状态：本地 HEAD `63ee1da44` + 未提交改进（运行指标 / 版本锁 / 模块矩阵）；未 push。`plugins/*` 不随仓库提交，
 > 迁移后的 `plugin.keel.json` 是**每台机器的本地状态**；新机器上 `node tools/keel.mjs exit` 会先列出未迁移的插件。
-> 基线：`npm test` 8852 / 8814 / 0 / 38；`check:keel` 178 / 178；docs gates 35 / 35。
+> 基线：本机全量 `npm test` 8854 tests / 7 个已知数据/素材失败 / 46 skipped；`check:keel` 185 / 185；docs gates 35 / 35。
 
 ## 1. 现在是什么状态
 
@@ -25,7 +25,7 @@
 - manifest 3、能力、依赖、`provides/consumes`；
 - content：记录/补丁/干员/敌人/波次/模式/DSL/offers/i18n；
 - asset：视觉覆盖、Spine/音频/FX/主题、`/vs` `/p`；
-- sim：hooks、状态、视图、命令、RNG、预算、Worker；
+- sim：hooks、状态、视图、RNG、生成、预算、Worker；
 - match / policy：服务端 meta；
 - ui：槽位 frame / postMessage；
 - lang：语言覆盖；
@@ -82,6 +82,7 @@ node tools/keel.mjs migrate <legacy-id> --write
 - [`REMAINING.md`](REMAINING.md)：剩余项/边界。
 - [`RUNTIME.md`](RUNTIME.md)：Worker、meta、委托。
 - [`MANIFEST-V3.md`](MANIFEST-V3.md)：manifest 3。
+- [`MODULES.md`](MODULES.md)：七种模块 / 31 个能力 / hooks / 模板覆盖 / 已知差异。
 - [`COMPAT-V2.md`](COMPAT-V2.md)：V2 迁移。
 - [`CONTRACTS.md`](CONTRACTS.md)：扩展点。
 - [`HISTORY.md`](HISTORY.md)：里程碑、关键决策与旧文档去向。

@@ -37,14 +37,15 @@ test('a worker that stops answering the heartbeat is terminated and reported', a
   assert.equal(failures[0]?.code, 'PLUGIN_WORKER_TIMEOUT');
 });
 
-test('a worker that answers the heartbeat stays up', async () => {
+test('a worker that answers the heartbeat stays up and reports its heap', async () => {
   let terminated = false;
-  const port = { postMessage: (m) => port.onmessage?.({ data: { id: m.id, value: { ok: true } } }), terminate: () => { terminated = true; } };
+  const port = { postMessage: (m) => port.onmessage?.({ data: { id: m.id, value: { ok: true, memory: { kind: 'test', used: 123 } } } }), terminate: () => { terminated = true; } };
   const h = new WorkerSimHost({ workerFactory: () => port, heartbeatMs: 0, pingTimeoutMs: 50 });
   h.heartbeat();
   await new Promise((r) => setTimeout(r, 100));
   assert.equal(h.stopped, false);
   assert.equal(terminated, false);
+  assert.equal(h.workerMemory?.used, 123);
   h.stop();
   assert.equal(terminated, true);
 });

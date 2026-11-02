@@ -57,6 +57,12 @@ export const PHASE_NAMES = {
   SETTLE: N_('结算'), FINAL_ASSAULT: N_('最终攻势'), HIDDEN_CORE: N_('隐秘核心'), RESULT: N_('模拟结束'),
 };
 
+/**
+ * Game seconds per real second of a battle. The match runs at a forced 2× (server/match/fields.js), so a duration
+ * the sim ticks in game seconds is half as many real seconds; UI descriptions show that real time.
+ */
+export const GAME_SPEED = 2;
+
 // Board geometry on the 19x21 stage grid (row 0 = bottom). See DESIGN §3.
 export const GEO = Object.freeze({
   ROWS: 19, COLS: 21,

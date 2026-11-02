@@ -7,6 +7,9 @@ import { sha256Hex } from '../../../shared/sha256.js';
 
 let localParse = null;
 
+/** Wall clock for the per-module load metric (Worker realm: `performance` when the host has it). */
+const nowMs = () => (typeof globalThis.performance?.now === 'function' ? globalThis.performance.now() : Date.now());
+
 function compileLocal(plugins, base) {
   if (!localParse) {
     const root = new URL(base, globalThis.location?.href ?? 'file:///');
@@ -26,9 +29,12 @@ function compileLocal(plugins, base) {
       if (typeof m.sha256 === 'string' && sha256Hex(new TextEncoder().encode(m.source)) !== m.sha256) {
         throw new Error(`${p.id}: ${m.entry} does not match its pinned hash`);
       }
+      const started = nowMs();
+      // The sourceURL is only for stacks; the bytes verified above stay exactly the content set's.
+      const code = loadKeelModule(m.source, { parse, sourceURL: `keel/${p.id}/${m.entry}` });
+      const loadMs = Math.max(0, Math.round((nowMs() - started) * 100) / 100);
       return { kind: m.kind, entry: m.entry, permissions: Array.isArray(m.permissions) ? m.permissions : [],
-        ...(m.state ? { state: m.state } : {}),
-        code: loadKeelModule(m.source, { parse }) };
+        ...(m.state ? { state: m.state } : {}), loadMs, code };
     }),
   })));
 }

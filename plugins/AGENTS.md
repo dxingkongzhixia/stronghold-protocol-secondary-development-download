@@ -15,7 +15,7 @@ manifest 3 is the only entry. Learn from the schema and checker, and loop until 
    `node tools/keel.mjs new <keel-content|keel-lang|keel-policy|keel-multi-module|keel-survival|keel-cosmetic|keel-ui|keel-script|keel-reference|keel-bond|keel-item> <id>`
    The id is the folder name: `^[a-z0-9][a-z0-9-]{1,31}$`. `keel-reference` is the standard full example.
 2. **Write manifest 3**: `plugin.keel.json`, or `plugin.json` with `"manifest": 3`.
-   - modules: `content` / `asset` / `sim` / `match` / `policy` / `ui` / `lang`;
+   - modules: `content` / `asset` / `sim` / `match` / `policy` / `ui` / `lang` (full matrix: `docs/keel/MODULES.md`);
    - every module has `entry` or `files`; permissions are capabilities, not v2 names;
    - `trust: "data"` for data-only; `trust: "sandbox"` for code; `trust: "native"` is refused.
 3. **Check, read the issues, fix, repeat:**

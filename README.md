@@ -189,8 +189,10 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/AI-AGENT.md`](docs/AI-AGENT.md) | **AI agent 展开手册**：工作循环、任务配方、测试矩阵、常见陷阱 |
 | [`docs/DEVELOPER.md`](docs/DEVELOPER.md) | **人类开发者入口**：启动、架构、开发流程、调试、发布、文档地图 |
 | [`docs/RULES.md`](docs/RULES.md) | **游戏规则入口**：权威顺序、规则总览、规范文档地图、改规则流程 |
+| [`docs/keel/QUICKSTART.md`](docs/keel/QUICKSTART.md) | **Keel 15 分钟上手**：从模板到真实房间 |
 | [`docs/keel/FEATURES.md`](docs/keel/FEATURES.md) | **Keel（龙骨）插件系统功能总览**：模块、作者链路、运行时、兼容、安全、边界 |
 | [`docs/keel/README.md`](docs/keel/README.md) | **Keel 入口**：当前状态、快速命令、规格/作者/历史导航 |
+| [`docs/keel/DEBUGGING.md`](docs/keel/DEBUGGING.md) | **Keel 调试**：错误分层、Worker 失败、指标、lock/pin、分发 |
 | [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md) | **v2 兼容插件开发参考**：模板、manifest、类别、测试、打包、发布 |
 | [`docs/HANDOVER.md`](docs/HANDOVER.md) | 详细接手 / 运维参考（入口以 `DEVELOPER.md` 为准） |
 | [`docs/README.md`](docs/README.md) | **文档系统总索引**：不同角色的阅读顺序、主体 / 插件 / 历史 / 运维文档的权威入口与维护规则 |

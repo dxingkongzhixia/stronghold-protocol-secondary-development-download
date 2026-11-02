@@ -53,6 +53,10 @@ test('trust and permissions', () => {
   assert.equal(read({ ...base(), modules: [{ kind: 'content', files: ['a.json'], permissions: ['sim.read'] }] }).manifest, null);
   assert.equal(read({ ...base(), modules: [{ kind: 'content', files: ['a.json'], permissions: ['nope'] }] }).manifest, null);
   assert.deepEqual(KEEL_PERMISSIONS['content.define'], ['content']);
+  assert.deepEqual(KEEL_PERMISSIONS['content.extend'], ['content']);
+  const extended = read({ ...base(), modules: [{ kind: 'content', files: ['a.json'], permissions: ['content.extend'] }] });
+  assert.equal(extended.problems.length, 0, extended.problems.join('\n'));
+  assert.deepEqual(extended.manifest.modules[0].permissions, ['content.extend']);
 });
 
 test('modules: entry/files, duplicate, paths and slots', () => {

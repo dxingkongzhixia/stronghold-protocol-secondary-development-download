@@ -12,6 +12,17 @@ export const BOSS_CLOCK_MS = 250;
 export const OK = Object.freeze({ ok: true });
 export const fail = (error, detail) => (detail ? { error, detail } : { error });
 
+/**
+ * The commands a `match` / `policy` Keel module may apply through `api.command` / a `policy.decide` return.
+ * Every command names a player (`playerId`, default the first alive player); the host applies it through the same
+ * PlayerState methods the match itself uses. Keep this list small and auditable.
+ */
+export const KEEL_COMMAND_TYPES = Object.freeze([
+  'addFunds', 'spendFunds', 'addLayers', 'grantChess', 'grantItem', 'freeRefresh', 'toast',
+]);
+/** The `legal` list a policy module sees: the action types it may return. */
+export const keelLegalActions = () => KEEL_COMMAND_TYPES.map((type) => ({ type }));
+
 /** Fixed presentation delays (real ms, × timerScale). */
 export const DELAYS = Object.freeze({
   ROUND_START: 2000,

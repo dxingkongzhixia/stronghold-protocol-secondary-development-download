@@ -11,7 +11,7 @@ import { createRng, deriveSeed } from '../../sim/rng.js';
 import { readBandGrants } from '../../../shared/plugins/bandGrants.js';
 import { bandSpecial, isBandGrant, bandIdOf } from '../player/special.js';
 import { tileKey } from '../board.js';
-import { OK, fail, DELAYS, BAND_TURN_SECONDS } from './common.js';
+import { OK, fail, DELAYS, BAND_TURN_SECONDS, keelLegalActions } from './common.js';
 
 export class MatchPhases {
   enterInfoCheck() {
@@ -447,7 +447,19 @@ export class MatchPhases {
     this.keelRun('match.onRoundStart', { round: r });
     {
       const ps = this.alivePlayers()[0];
-      this.keelRun('policy.decide', { round: r, observation: { round: r, gold: ps?.funds ?? 0, lives: ps?.lp ?? 0 }, legal: [] });
+      const legal = keelLegalActions();
+      const decision = this.keelRun('policy.decide', { round: r, observation: { round: r, gold: ps?.funds ?? 0, lives: ps?.lp ?? 0 }, legal });
+      this.keelPolicyDecisions = decision?.results ?? [];
+      const action = this.keelPolicyDecisions.map((x) => x.value).find((v) => v && typeof v === 'object' && !Array.isArray(v));
+      this.keelPolicyDecision = action ?? null;
+      if (action) {
+        if (!legal.some((x) => x.type === action.type)) {
+          this.reportError('keel policy.decide', new Error(`action ${String(action.type || '(none)')} is not legal`));
+        } else {
+          const applied = this.keelApplyCommand({ ...action, playerId: action.playerId ?? ps?.playerId }, 'policy');
+          if (!applied?.ok) this.reportError('keel policy.decide', new Error(applied?.error || 'action refused'));
+        }
+      }
     }
     this.fields = [];
     this.watchers.clear();

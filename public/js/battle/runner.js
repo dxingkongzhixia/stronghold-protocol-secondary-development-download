@@ -1130,7 +1130,10 @@ export function createBattleRunner(deps) {
     },
     state,
     stats() {
-      return { ...stats, avgTickMs: stats.ticks ? stats.stepMs / stats.ticks : 0, entries: entries.size, loadingSim: !!simP };
+      const workers = [...entries.values()].filter((e) => e?.host?.remote);
+      const workerHeap = workers.reduce((n, e) => n + (Number(e.host.workerMemory?.used) || 0), 0);
+      return { ...stats, avgTickMs: stats.ticks ? stats.stepMs / stats.ticks : 0, entries: entries.size,
+        workers: workers.length, workerHeap: workerHeap || null, loadingSim: !!simP };
     },
     /**
      * Live stats of unit `unitId` of the battle on screen (null: no such battle / unit, or `fieldId` names another

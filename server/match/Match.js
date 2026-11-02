@@ -378,6 +378,8 @@ export class Match {
     /** Match/policy Keel runtime (no sim modules) and the UI declarations. */
     this.keelMatch = null;
     this.keelUi = [];
+    this.keelPolicyDecision = null;
+    this.keelPolicyDecisions = [];
     if (this.keel && keelEnabled()) {
       const plugins = this.keel.plugins ?? [];
       this.keelUi = plugins.filter((p) => p.ui).map((p) => ({ id: p.id, ui: p.ui }));
@@ -388,6 +390,8 @@ export class Match {
           modules,
           host: createFakeHost({ seed: this.seed }),
           seed: this.seed,
+          // `api.command` and a policy action use the same audited command list (match/platform.js keelApplyCommand).
+          applyCommand: (command, moduleId) => this.keelApplyCommand(command, moduleId),
         });
         this.keelMatch.start({ battleStart: false });
       }

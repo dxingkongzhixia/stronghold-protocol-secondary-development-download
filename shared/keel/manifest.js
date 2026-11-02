@@ -40,6 +40,7 @@ export const KEEL_SCOPES = Object.freeze(['room', 'personal', 'server']);
  */
 export const KEEL_PERMISSIONS = Object.freeze({
   'content.define': ['content'],
+  'content.extend': ['content'],
   'content.patch': ['content'],
   'content.override': ['content'],
   'content.reference': ['content'],
