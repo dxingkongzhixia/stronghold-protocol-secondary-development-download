@@ -217,6 +217,7 @@ node tools/keel.mjs check prts-kaltsit --strict
 
 两个注意点：
 
+- **透明底立绘要先合成到深色底**：`char/portrait/*.png` 带 alpha，直接 `RGBA→RGB` 会把透明区里未初始化的颜色带出来（画面边缘出现亮横条）；先 `alpha_composite` 到 `rgb(18,18,18)` 再裁切/缩放。
 - **不要把已经合成的卡再喂给工具**——它会再叠一层文字（`STRATEGY` / `STRONGHOLD PROTOCOL` 会重影）；要重做就从原图开始。
 - 线上工具的导出是屏幕截图（约 300×300），本仓库统一输出 **360×360**（现有 `band_*.png` 的尺寸）。
 
