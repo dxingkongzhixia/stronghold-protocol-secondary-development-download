@@ -1,7 +1,7 @@
 # Keel 当前检查点
 
 > 状态：**第一阶段完成；可用**。功能见 [`FEATURES.md`](FEATURES.md)，剩余/边界见 [`REMAINING.md`](REMAINING.md)。
-> 代码状态：本地 HEAD `63ee1da44` + 未提交改进（运行指标 / 版本锁 / 模块矩阵）；未 push。`plugins/*` 不随仓库提交，
+> 代码状态：已提交 `2418560b6`（Gitee `master` 已推；GitHub 待网络恢复），2026-11-02 15:07 已上线 build `1b3b0555e9e9`。`plugins/*` 不随仓库提交，
 > 迁移后的 `plugin.keel.json` 是**每台机器的本地状态**；新机器上 `node tools/keel.mjs exit` 会先列出未迁移的插件。
 > 基线：本机全量 `npm test` 8854 tests / 7 个已知数据/素材失败 / 46 skipped；`check:keel` 185 / 185；docs gates 35 / 35。
 
