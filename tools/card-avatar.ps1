@@ -21,7 +21,8 @@ param(
   [Parameter(Mandatory = $true)][string]$Out,
   [int]$Size = 360,
   [switch]$Badge,
-  [switch]$Tint
+  [int]$Filter = 0,   # the generator's teal-filter strength 0-100 (alpha = Filter/200; 50 is the site default)
+  [switch]$Tint      # shorthand for -Filter 50
 )
 
 Add-Type -AssemblyName System.Drawing
@@ -50,12 +51,17 @@ $path.AddEllipse($disc)
 $g.SetClip($path)
 $g.DrawImage($face, $disc)
 
-if ($Tint) {
-  $tint = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(64, 48, 219, 177))
-  $g.FillRectangle($tint, $disc)
-  $line = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(38, 48, 219, 177))
-  for ($yy = $disc.Top; $yy -lt $disc.Bottom; $yy += 8) { $g.FillRectangle($line, $disc.Left, $yy, $disc.Width, 4) }
-  $tint.Dispose(); $line.Dispose()
+$alpha = if ($Tint -and $Filter -eq 0) { 64 } else { [int]([math]::Round($Filter / 200 * 255)) }
+if ($alpha -gt 0) {
+  $tintBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb($alpha, 48, 219, 177))
+  $g.FillRectangle($tintBrush, $disc)
+  $tintBrush.Dispose()
+  if ($Tint) {
+    # the generator's scanlines belong with a plain portrait; a source card already carries them
+    $line = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(38, 48, 219, 177))
+    for ($yy = $disc.Top; $yy -lt $disc.Bottom; $yy += 8) { $g.FillRectangle($line, $disc.Left, $yy, $disc.Width, 4) }
+    $line.Dispose()
+  }
 }
 $g.ResetClip()
 

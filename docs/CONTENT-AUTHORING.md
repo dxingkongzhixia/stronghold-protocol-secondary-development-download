@@ -195,9 +195,10 @@
 
 ```powershell
 # 从任意方图（原卡截图 / 立绘裁切）生成一张 360×360 的策略卡图
-powershell -File tools/card-avatar.ps1 -In <源图.png> -Out <输出.png> -Size 360
-#   -Badge  额外画右上角橙色徽章（默认不画）
-#   -Tint   额外叠青绿滤镜 + 扫描线（默认不叠：原卡截图已经带了；纯立绘才需要）
+powershell -File tools/card-avatar.ps1 -In <源图.png> -Out <输出.png> -Size 360 -Filter 10
+#   -Filter <0-100>  生成器的青绿滤镜强度（alpha = Filter/200；线上工具默认 50，0 = 不叠）
+#   -Badge           额外画右上角橙色徽章（默认不画）
+#   -Tint            等于 -Filter 50，并额外叠扫描线（原卡截图已带扫描线，纯立绘才需要）
 ```
 
 工具用到的三张覆盖图在 `tools/card-avatar/`（`112.png` 左上文字、`111.png` 左下文字、`av-icon.png` 徽章），
