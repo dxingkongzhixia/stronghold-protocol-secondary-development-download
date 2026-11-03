@@ -11,6 +11,7 @@
 //   ?wave=<waveId>      the wave template its routes / enemies come from (default act1autochess_05)
 //   ?mix=1              spawn the whole template (default: a steady stream of its walkers down her lane)
 //   ?elite=0            field the normal form (E1) instead of the elite (default elite, E2 Lv60)
+//   ?hp=<n>             the dummy enemies' max HP ×n (default 6: enough to see the 灼燃损伤 gauge fill and burst)
 //   ?speed=<1|2|4>      playback speed (default 2)
 //
 // The operator is fielded on a melee tile of a walking lane (when the stage has one), facing the enemy gate, so the lane
@@ -30,6 +31,8 @@ const SKILL = Math.max(0, Math.min(2, Number(q.get('s') ?? 2) || 0));
 const STAGE = /^[A-Za-z0-9_]+$/.test(q.get('stage') || '') ? q.get('stage') : 'act1autochess_m01';
 const WAVE = /^[A-Za-z0-9_]+$/.test(q.get('wave') || '') ? q.get('wave') : 'act1autochess_05';
 const SPEED0 = [1, 2, 4].includes(Number(q.get('speed'))) ? Number(q.get('speed')) : 2;
+// a sandbox dummy: the wave template's own enemies, but tough enough for the elemental gauge to fill and burst
+const HP_MUL = Math.max(1, Number(q.get('hp') ?? 6) || 6);
 const FIELD_ID = 'sandbox';
 // the 6★ DIY slot the 2026-11-01 additions are fielded through; `?elite=0` fields the normal form (E1) for comparison
 const SLOT = q.get('elite') === '0' ? 'chess_char_6_diy1_a' : 'chess_char_6_diy1_b';
@@ -51,7 +54,7 @@ const spawnsOf = (tpl) => (tpl?.spawns ?? []).map((s) => ({
 }));
 
 let view = null, sim = null, battle = null, playing = true, speed = SPEED0, acc = 0, last = 0;
-let casts = 0, damage = 0, endsAt = 0;
+let casts = 0, damage = 0, bursts = 0, endsAt = 0;
 
 const setText = (id, s) => { const el = $(id); if (el && el.textContent !== s) el.textContent = s; };
 const fail = (err) => { $('sbError').textContent = String(err?.stack || err?.message || err); console.error(err); };
@@ -74,11 +77,21 @@ async function start() {
     timeLimit: Number(wave.maxPlayTime) || 60,
     players: [{ playerId: 'p1', side: 'L', units: [{ uid: 1, chessId: SLOT, diy: { charId: UNIT, skillIndex: SKILL, uniEquipId: null }, row, col }] }],
     routes, spawns,
+    // tougher dummies so the 灼燃损伤 gauge can fill and burst within the battle (?hp=1 for the wave's own numbers)
+    enemyOverrides: (() => {
+      const out = {};
+      if (HP_MUL === 1) return out;
+      for (const s of spawns) {
+        const d = sim.ds.getEnemy?.(s.enemyKey);
+        if (d?.maxHp) out[s.enemyKey] = { stats: { maxHp: Math.round(d.maxHp * HP_MUL) } };
+      }
+      return out;
+    })(),
     // the battle-start operation cooldown would hold her back 3 s; the sandbox wants the skill on screen at once
     flags: { startOpCooldown: 0 },
   };
   battle = sim.spec.createBattleFromSpec(spec, sim.ds, { logger: { warn() {}, error() {}, info() {}, debug() {} } });
-  casts = 0; damage = 0; acc = 0; endsAt = 0;
+  casts = 0; damage = 0; bursts = 0; acc = 0; endsAt = 0;
   $('sbResult').textContent = '';
   const meta = battle.fieldMeta();
   const rect = meta.rect ?? GEO.NORMAL_RECT;
@@ -103,6 +116,7 @@ function feed() {
   for (const e of ev) {
     if (e[0] === 'dmg') damage += Number(e[2]) || 0;
     else if (e[0] === 'skill' && Number(e[2]) === 1) casts++;
+    else if (e[0] === 'fx' && e[1] === 'burst' && e[4]?.element === 'burn') bursts++;
   }
   const snap = battle.snapshot();
   if (ev.length) view.pushEvents({ t: 'b.ev', fieldId: FIELD_ID, gt: snap.t, ev });
@@ -115,6 +129,10 @@ function stats() {
   setText('sbCasts', String(casts));
   setText('sbDamage', Math.round(damage).toLocaleString('zh-CN'));
   setText('sbEnemies', String(foes));
+  setText('sbBursts', String(bursts));
+  // 灼燃损伤 gauge: the fullest enemy gauge right now (1000 bursts)
+  const gauge = (battle?.enemies ?? []).reduce((m, e) => Math.max(m, e.side === 'enemy' ? Math.round(e.elem?.burn ?? 0) : 0), 0);
+  setText('sbBurn', String(gauge));
   setText('sbTime', `${(battle?.time ?? 0).toFixed(1)} / ${(battle?.timeLimit ?? 0) === Infinity ? '∞' : battle?.timeLimit ?? 0} s`);
 }
 
@@ -147,6 +165,7 @@ async function main() {
   await data.loadAll('chess', 'tokens', 'items', 'enemies', 'stages', 'bonds', 'config', 'waves');
   await assets.ready();
   view = await createFieldView($('field'), { data, assets, settings: { quality: 'high', damageNumbers: true } });
+  window.__view = view; // the dev pages' hook (render-demo): the fx library / wiring are under view.debug
   sim = await loadBrowserSim();
   await start();
   document.getElementById('sbPlay').onclick = () => {

@@ -287,8 +287,9 @@ node tools/keel.mjs check prts-kaltsit --strict
 8. **实战效果**（改了 `server/sim/content/kits/**`，尤其是技能的触发 / 范围 / 波次）：开管理员页 → 侧栏「沙盒」，
    或直接 `http://localhost:3000/admin/sandbox?token=<var/admin-token.txt>`。它用**客户端同一份 `/sim`** 跑一场真战斗
    （默认塔露拉 S3：一个 6★ 自选位 + 同一兵线持续来敌），页面把模拟的快照 / 事件喂给真实战场渲染器，所以能看到
-   技能是否释放、波次打的伤害数字、以及官方特效。参数：`?unit=char_xxxx&s=0|1|2&stage=<stageId>&wave=<waveId>`
-   （`&mix=1` 用整波模板而不是单路流；`&elite=0` 用非精英形态；`&speed=1|2|4`）。**录像 / 特效演示看不出「技能没触发」**，
+   技能是否释放、波次打的伤害数字、元素损伤计量（面板的「灼燃爆发 / 最高」）以及官方特效。参数：
+   `?unit=char_xxxx&s=0|1|2&stage=<stageId>&wave=<waveId>`（`&mix=1` 用整波模板而不是单路流；`&elite=0` 用非精英形态；
+   `&hp=1` 用模板原始血量而不是 6 倍的试桩血量；`&speed=1|2|4`）。**录像 / 特效演示看不出「技能没触发」**，
    这类 bug 只有真模拟能复现。
 
 ---
