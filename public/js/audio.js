@@ -1654,7 +1654,7 @@ export class AudioManager {
           if (ex && typeof ex === 'object' && ex.id != null) {
             const uc = this.units.get(ex.id);
             const cue = uc && uc.side !== 'enemy' ? this.getManifest()?.audio?.sfx?.units?.[uc.def]?.cues?.[e[1]] : null;
-            if (typeof cue === 'string') this._playUnitUrl(cue, `${ex.id}:${e[1]}`, e[1] === 'blast' ? 0.85 : e[1] === 'burst' ? 0.7 : 0.3);
+            if (typeof cue === 'string') this._playUnitUrl(cue, `${ex.id}:${e[1]}`, e[1] === 'blast' ? 0.85 : e[1] === 'burst' ? 0.7 : 0.15);
           }
           // a summon used up by its own effect (香槟炸弹 exploding: `consumed`): its impact sound now, no death sound
           if (!ex || typeof ex !== 'object' || !ex.consumed || ex.id == null) continue;

@@ -187,6 +187,14 @@ async function main() {
     for (const x of document.querySelectorAll('[data-speed]')) x.classList.toggle('is-on', x === b);
   };
   for (const b of document.querySelectorAll('[data-speed]')) b.classList.toggle('is-on', Number(b.dataset.speed) === speed);
+  // 试听: play the operator's own official cue (a click is also the gesture the AudioContext needs)
+  for (const b of document.querySelectorAll('[data-sfx]')) b.onclick = () => {
+    audio._unlock?.();
+    const u = audio.getManifest()?.audio?.sfx?.units?.[UNIT] || {};
+    const url = b.dataset.sfx === 'blast' ? u.cues?.blast ?? u.hit : b.dataset.sfx === 'hit' ? u.hit : u.attack;
+    if (typeof url === 'string') audio._play(url, { volume: 0.9 });
+    else fail(new Error(`no ${b.dataset.sfx} sound for ${UNIT}`));
+  };
   last = performance.now();
   requestAnimationFrame(frame);
   window.__sandbox = { get battle() { return battle; }, get casts() { return casts; }, get damage() { return damage; }, start };
