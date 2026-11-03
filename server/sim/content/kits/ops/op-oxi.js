@@ -85,6 +85,12 @@ export default {
             const exit = Math.max(1, Math.floor(num(b3.wave_exit_distance, 5)));
             const atkScale = num(b3.heatwave_atk_scale, 1.75);
             const repeat = num(b3.same_wave_repeat_damage_scale, 0.15);
+            // PRTS notes: a 簇火 is summoned at the tile centre 11 tiles BEHIND her (each row independently) and flies the
+            // deployment direction until the map edge (it may run `wave_exit_distance` past it). A wave that starts at her own
+            // tile and stops 5 tiles later only ever covers the row in front of her — the field-wide fire rain never showed.
+            const behind = 11;
+            const R = battle.rect ?? { r0: 0, r1: 0, c0: 0, c1: 0 };
+            const far = Math.abs(dc) * (R.c1 - R.c0) + Math.abs(dr) * (R.r1 - R.r0) + behind + exit;
             let next = 0;
             battle.every(0.1, (b) => {
               if (!up(unit) || !(unit.skill?.id === S3 && unit.skill.active)) return;
@@ -99,15 +105,19 @@ export default {
               const radius = num(b3.range_radius, 1.5);
               const waveId = `${unit.id}:${next}`;
               for (let k = -half; k <= half; k++) {
-                // the client's cue for this lane's 簇火: its launch point (the official prefab is oxi_skill_03_trail_01,
-                // FX_BINDINGS skchr_oxi_3 'wave'); the contact point follows as the engine's own 'blast'
-                battle.fx('wave', { x: c0 + dr * k, y: r0 - dc * k, id: unit.id, dr, dc, speed, distance: exit });
+                const sx = c0 + dr * k - dc * behind;
+                const sy = r0 - dc * k - dr * behind;
+                const tag = `${unit.id}:${next}:${k}`;
+                // the client's cue for this lane's 簇火: its launch point and path (the official prefab is
+                // oxi_skill_03_trail_01, FX_BINDINGS skchr_oxi_3 'wave' — the client moves it, and stops it at the same
+                // tag's 'blast'); the contact point follows as the engine's own 'blast'
+                battle.fx('wave', { x: sx, y: sy, id: unit.id, dr, dc, speed, distance: far, wave: tag });
                 battle.spawnWave({
-                  owner: unit, x: c0 + dr * k, y: r0 - dc * k, dr, dc,
-                  speed, distance: exit, hitWidth: reach, blastRadius: radius,
+                  owner: unit, x: sx, y: sy, dr, dc,
+                  speed, distance: far, hitWidth: reach, blastRadius: radius,
                   damage: unit.s.atk * atkScale, type: 'arts',
                   elementFor: (e) => (burning && e.findBuff('burnBurst') ? 'burn' : null),
-                  repeatScale: repeat, waveId, tags: ['skill', 'oxi:wave'],
+                  repeatScale: repeat, waveId, waveTag: tag, tags: ['skill', 'oxi:wave'],
                 });
               }
             }, { owner: unit });

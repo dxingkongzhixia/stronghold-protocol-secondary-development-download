@@ -1454,11 +1454,12 @@ export const FX_BINDINGS = Object.freeze({
   }),
   // 塔露拉 S3 (op-oxi.js): the 簇火 waves. The skill record itself names only its start / loop prefabs, so the waves'
   // own effects (extracted from the local client with --fx-keys; the client's oxi.ab) are bound here:
-  //   'wave'  at a lane's launch point — oxi_skill_03_trail_01, the ember's flight trail (looping; held for the wave's
-  //           own run, distance / speed = 5 / 2.3 s ≈ 2.2 s);
+  //   'wave'  at a lane's launch point — oxi_skill_03_trail_01, the ember's flight trail (looping): the kit sends the
+  //           path (dr, dc, speed, distance = 11 tiles behind her to past the far map edge) and the client moves the effect
+  //           along it (`move`), so the fire rain sweeps the lane instead of sitting at one tile;
   //   'blast' at the contact point — oxi_skill_03_hit_01, the official impact explosion (one-shot, 10 s of particles).
   skchr_oxi_3: Object.freeze({
-    wave: binding({ owner: 'id', keys: ['oxi_skill_03_trail_01'], at: 'point', hold: 'fx', holdS: 2.2, during: true }),
+    wave: binding({ owner: 'id', keys: ['oxi_skill_03_trail_01'], at: 'point', move: true, during: true }),
     blast: binding({ owner: 'id', keys: ['oxi_skill_03_hit_01'], at: 'point', oneshot: true, during: true }),
   }),
 });

@@ -91,6 +91,7 @@ import {
   ENEMY_FX_BINDINGS, ENEMY_FX_KINDS, OWNER_NEAR, auraTargets, enemyBindingKeys, modeLoopKeys,
 } from './skills.js';
 import { fxSpec } from '../fx/kinds.js';
+import { unitPoint } from './mounts.js';
 import { UF, ANIM } from '../../../../shared/constants.js';
 
 /** Battle seconds a held (non-oneshot) row of a skill's single cast lasts (FxWiring's CAST_LOOP_S for attacks). */
@@ -865,6 +866,18 @@ export class SkillFx {
 
   /** Once per frame, after the views took the frame's sample (module header). */
   sync(views) {
+    // travelling bindings (a 簇火 in flight): advance every live one along its own path, stop it at its end
+    if (this.movers?.length) {
+      const nowT = this.w.ofx.time;
+      this.movers = this.movers.filter((m) => {
+        const el = nowT - m.t0;
+        if (el >= m.until - m.t0) { m.h.stop(); return false; }
+        const g = this._ground(m.x + m.dc * el * m.speed, m.y + m.dr * el * m.speed);
+        // the effect frame is the map origin shifted (mounts.js unitPoint: x-10, y-9, -height), not raw tiles
+        m.h.place({ pos: unitPoint(null, null, { x: g.x, y: g.y, z: g.z }) });
+        return true;
+      });
+    }
     const active = this.active();
     const tier = this.w.ofx.tier;
     if (this.tier === null) { this.tier = tier; this.wasActive = active; }   // the first frame: nothing was cleared
@@ -881,6 +894,8 @@ export class SkillFx {
       this.tloops.clear();
       for (const t of this.aloops.values()) t.h.stop();
       this.aloops.clear();
+      for (const m of this.movers || []) m.h.stop();
+      this.movers = [];
       this.tier = tier;
       this.wasActive = active;
     }
@@ -992,6 +1007,11 @@ export class SkillFx {
   simFx(kind, x, y, extra) {
     if (!this.active() || !extra || typeof extra !== 'object' || typeof kind !== 'string') return false;
     const now = this.w.ofx.time;
+    // a travelling binding's flight ended where its wave detonated (the 'blast' carries the wave's tag): stop the trail
+    // there instead of letting it fly on past the field after the ember is gone
+    if (extra.wave != null && this.movers?.length) {
+      for (const m of this.movers) if (m.wave === extra.wave) { m.h.stop(); m.until = m.t0; }
+    }
     // a skill start cast with every charge stored (the kit's `charged`: 卡涅利安) — the `[eff_cond]` state (_cond)
     if (extra.charged === true && extra.id != null) { const C = this.units.get(extra.id); if (C) C.charged = true; }
     // (0) an enemy's area: its zone's official prefabs at the fx's point, an aura tick its talent loops stand for
@@ -1074,6 +1094,25 @@ export class SkillFx {
     }
     const tv = this.w.view(extra.id);
     const at = bind.at === 'point' || !tv ? this._ground(x, y, tv) : tv;
+    // a travelling effect (the kit's 'wave': a 簇火 flying down its lane): born at (x, y), moved along (dr, dc) at
+    // `speed` tiles/s for `distance` tiles — the sim already knows the path, so the client does not have to guess it
+    if (bind.move) {
+      const dr = Number(extra.dr) || 0;
+      const dc = Number(extra.dc) || 0;
+      const speed = Number(extra.speed) > 0 ? Number(extra.speed) : 2.3;
+      const run = Number(extra.distance) > 0 ? Number(extra.distance) / speed : bind.holdS || SKILL_CAST_S;
+      const t0 = this.w.ofx.time;
+      const ox = Number(bind.offset?.[0]) || 0;
+      const oy = Number(bind.offset?.[1]) || 0;
+      let drew = false;
+      for (const k of keys) {
+        const h = this.w.playOn(k, { id: 'fx:point', x: x + ox, y: y + oy, z: at.z || 0 }, { loop: true, important: true });
+        if (!h) continue;
+        (this.movers ||= []).push({ h, x: x + ox, y: y + oy, dr, dc, speed, t0, until: t0 + run, wave: extra.wave ?? null });
+        drew = true;
+      }
+      return drew;
+    }
     if (bind.oneshot) {
       let drew = false;
       for (const k of keys) if (this.w.playOn(k, at, { important: true })) drew = true;

@@ -50,13 +50,17 @@ export class BattleWaves {
       else this._waveCount.set(o.waveId, n);
     };
     let dist = 0;
+    let entered = false;   // a wave may be born off the field (簇火 spawns 11 tiles behind its caster) and fly in
     return this.every(0.1, (b, sc) => {
       // The step's segment: where the wave was and where it is now (a swept collision, so a fast wave cannot skip an
       // enemy between two ticks).
       const px = o.x + o.dc * dist, py = o.y + o.dr * dist;
       dist += speed * 0.1;
       const x = o.x + o.dc * dist, y = o.y + o.dr * dist;
-      const outside = dist > distance || !b.grid.inRect(Math.round(y), Math.round(x));
+      const inside = b.grid.inRect(Math.round(y), Math.round(x));
+      if (inside) entered = true;
+      // before it has entered the field the edge means nothing; once it has, leaving = done (the map edge is its end)
+      const outside = dist > distance || (entered && !inside);
       let contact = null, best = Infinity, cx = x, cy = y;
       for (const e of b.enemies) {
         if (!e.alive || e.side !== 'enemy' || e.isFlying) continue;
@@ -79,7 +83,7 @@ export class BattleWaves {
           ...(el ? { element: el } : {}), isSkill: true, tags,
         });
       }
-      b.fx('blast', { x: cx, y: cy, r: radius, id: owner?.id ?? null });
+      b.fx('blast', { x: cx, y: cy, r: radius, id: owner?.id ?? null, ...(o.waveTag ? { wave: o.waveTag } : {}) });
       finish();
       sc.cancel();
     }, { owner });
