@@ -1029,6 +1029,12 @@
 .gm__loading { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; pointer-events: none; }
 .gm__hud { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .gm__hud > * { pointer-events: auto; }
+/* These two rules repeat the top of this file, but this copy comes AFTER `.gm__bonds`: equal specificity, so it handed
+   the strip's full-width box the pointer again, and the box swallowed every click in its band — the top bar's 准备就绪
+   button (community report: "准备就绪点不到，只能用空格") and the board's top row. Only the discs take the pointer. */
+.gm__bonds { pointer-events: none; }
+.gm__bonds > *, .gm__bonds .bstrip { pointer-events: none; }
+.gm__bonds .bslot, .gm__bonds .bstrip__more { pointer-events: auto; }
 .gload { align-items: center; justify-content: center; gap: .2rem; }
 
 /* Host test console (UPSTREAM-MERGES §13.10). A floating field panel. Its default left/top is the dock home
