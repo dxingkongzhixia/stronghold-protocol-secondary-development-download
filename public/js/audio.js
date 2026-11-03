@@ -1434,6 +1434,14 @@ export class AudioManager {
     // official class sounds (operator vs summon vs device). `skillActive` follows the ['skill', id, 1] / 0 events.
     this.units.set(u.id, { def: u.spine || u.defId, defId: u.defId ?? null, kind: u.kind ?? null, side: u.side, boss: !!u.boss,
       skillIndex: Number.isInteger(u.skillIndex) ? u.skillIndex : null, skillActive: !!u.skillActive });
+    // warm the unit's own sounds now: decoding the first hit on demand made that hit arrive late (a wave impact heard
+    // after its damage number). The files are small and this only touches the units on this field.
+    const entry = this.getManifest()?.audio?.sfx?.units?.[u.spine || u.defId];
+    if (entry && this.ctx) {
+      for (const url of [entry.attack, entry.hit, ...Object.values(entry.skills || {}), ...Object.values(entry.cues || {})]) {
+        if (typeof url === 'string') this._buffer(url);
+      }
+    }
     // a cast that arrived before this unit was known (handleBattleEvents): it sounds now, once
     const held = this.pendingSkill.get(u.id);
     if (held) {
@@ -1654,7 +1662,9 @@ export class AudioManager {
           if (ex && typeof ex === 'object' && ex.id != null) {
             const uc = this.units.get(ex.id);
             const cue = uc && uc.side !== 'enemy' ? this.getManifest()?.audio?.sfx?.units?.[uc.def]?.cues?.[e[1]] : null;
-            if (typeof cue === 'string') this._playUnitUrl(cue, `${ex.id}:${e[1]}`, e[1] === 'blast' ? 0.85 : e[1] === 'burst' ? 0.7 : 0.15);
+            // not through the unit limiter: its per-unit/per-URL gaps dropped most of a volley's impacts, and a dropped
+            // hit reads as "the fire hit but made no sound". The cues are short and at most one volley's worth at once.
+            if (typeof cue === 'string') this._play(cue, { volume: e[1] === 'blast' ? 0.85 : e[1] === 'burst' ? 0.7 : 0.15 });
           }
           // a summon used up by its own effect (香槟炸弹 exploding: `consumed`): its impact sound now, no death sound
           if (!ex || typeof ex !== 'object' || !ex.consumed || ex.id == null) continue;
