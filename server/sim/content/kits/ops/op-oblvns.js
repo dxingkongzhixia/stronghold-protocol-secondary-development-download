@@ -31,7 +31,10 @@ export default {
         const i = unit.mem.oblvnsNote ?? 0;
         unit.mem.oblvnsNote = i + 1;
         const scale = noteScales[Math.min(i, noteScales.length - 1)] ?? num(b1.atk_scale, 0.8);
-        dmg.amount *= scale / num(b1.atk_scale, 0.8); // official 0.80 → 0.04 falloff, other multipliers kept
+        // The engine's skill.attack.onEachHit runs AFTER the instance landed and carries no DamageInfo (`dmg` is
+        // undefined — ai.js resolveHit's `hc`), so this falloff never applied; it used to throw on every hit. Kept as a
+        // guarded no-op until a pre-damage per-hit hook exists (a kit change, not this typo fix).
+        if (dmg) dmg.amount *= scale / num(b1.atk_scale, 0.8); // official 0.80 → 0.04 falloff, other multipliers kept
       },
     };
     const noteStart = ({ unit }) => { unit.mem.oblvnsNote = 0; };
@@ -61,7 +64,9 @@ export default {
             atkScale: 1, hits: 1,
             onEachHit({ battle, unit, dmg }) {
               // 钢琴/风琴各 2 个音符：钢琴追踪法抗最高（物理），风琴追踪防御最高（法术），每个 180 %。
-              dmg.amount = 0;
+              // No DamageInfo here (the engine's skill.attack.onEachHit is post-hit; see the S1 note above): the base hit
+              // stands and the two notes follow it.
+              if (dmg) dmg.amount = 0;
               const foes = battle.enemiesInKeys(unit.rangeKeys, unit, { canHitFly: true }).filter((e) => e.alive && e.side === 'enemy');
               const phys = [...foes].sort((a, b) => (b.s.res ?? 0) - (a.s.res ?? 0))[0];
               const arts = [...foes].sort((a, b) => (b.s.def ?? 0) - (a.s.def ?? 0))[0];
