@@ -670,6 +670,15 @@ const INSTALLERS = Object.freeze({
 
 export function install(battle) {
   if (!battle || !Array.isArray(battle.players)) return;
+  // 盟约效果的持续时间 (owner's rule): 300 s of a normal round, 150 s in a boss field. Set once per battle; the standing
+  // buffs passiveBuff() hands out take what is left, and the deadline marks a recompute so anything computed drops too.
+  if (!Number.isFinite(battle.bondUntil)) {
+    const life = S.bondEffectLife(battle);
+    battle.bondUntil = (battle.time || 0) + life;
+    battle.after?.(life, () => {
+      for (const u of battle.allyUnits || []) { try { u.markDirty?.(); } catch { /* ignore */ } }
+    });
+  }
   for (const p of battle.players) {
     const pid = p.playerId;
     if (!p.bonds || typeof p.bonds !== 'object') continue;

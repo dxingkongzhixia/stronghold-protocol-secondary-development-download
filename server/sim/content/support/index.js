@@ -100,8 +100,19 @@ export function bondState(battle, pid, bondId) {
   const b = player(battle, pid)?.bonds?.[bondId];
   return b && typeof b === 'object' ? b : null;
 }
-/** Tier reached (0 when inactive). */
+/**
+ * 盟约效果的持续时间 (owner's rule, 2026-11-03): 300 s in a normal round, halved to 150 s in a boss field (the same
+ * number the boss round's overtime uses). Past it the bond's effects stop — the official bond buffs are timed.
+ */
+export const bondEffectLife = (battle) => (battle && (battle.kind === 'boss' || battle.kind === 'hidden') ? 150 : 300);
+/** Seconds of bond effect left in this battle (Infinity without a deadline). */
+export const bondEffectLeft = (battle) => {
+  const until = Number(battle?.bondUntil);
+  return Number.isFinite(until) ? Math.max(0, until - (battle.time || 0)) : Infinity;
+};
+/** Tier reached (0 when inactive, or when the bond effect's life ran out). */
 export function bondTier(battle, pid, bondId) {
+  if (!(bondEffectLeft(battle) > 0)) return 0;
   const b = bondState(battle, pid, bondId);
   return b && b.active ? Math.max(1, Math.floor(num(b.tier, 1))) : 0;
 }
@@ -298,7 +309,11 @@ export function directMods({ atk = 0, def = 0, hp = 0 } = {}, extra = null) {
 
 /** Match-long passive buff (survives death/redeploy; re-adding the same key replaces it — idempotent). */
 export function passiveBuff(battle, u, key, mods, extra = {}) {
-  return battle.addBuff(u, { key, mods, persist: true, allowDead: true, refresh: 'replace', ...extra });
+  // 盟约效果是有时限的（bondEffectLeft: 300 s 普通 / 150 s boss 关）：a standing bond buff carries it, so the bonus
+  // ends with the effect instead of lasting the whole field
+  const left = bondEffectLeft(battle);
+  const life = Number.isFinite(left) && extra.duration == null ? { duration: left } : {};
+  return battle.addBuff(u, { key, mods, persist: true, allowDead: true, refresh: 'replace', ...life, ...extra });
 }
 
 /** Client VFX anchored on a unit: `battle.fx(kind, { x, y, id, src, key, …extra })`. */
