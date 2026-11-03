@@ -173,10 +173,12 @@ async function main() {
   installAudio({ getManifest: () => data.get('assets'), settings: { bgm: 0, sfx: 0.8, voice: 0.8, muted: false } });
   await assets.ready();
   view = await createFieldView($('field'), { data, assets, settings: { quality: 'high', damageNumbers: true } });
-  window.__view = view;
-  window.__audio = audio; // dev hook: the audio manager (unlock state, manifest entry, played cues) // the dev pages' hook (render-demo): the fx library / wiring are under view.debug
+  window.__view = view; // the dev pages' hook (render-demo): the fx library / wiring are under view.debug
+  window.__audio = audio; // dev hook: unlock state, the manifest entry, the cues it played
   sim = await loadBrowserSim();
-  await start();
+  // The battle is NOT built yet: a browser creates the AudioContext only on a gesture, and the audio manager drops every
+  // event (units' spawns included) until then — starting before the click left the operator untracked and silent.
+  playing = false;
   document.getElementById('sbPlay').onclick = () => {
     playing = !playing;
     $('sbPlay').textContent = playing ? '▌▌ 暂停' : '▶ 继续';
@@ -187,13 +189,12 @@ async function main() {
     for (const x of document.querySelectorAll('[data-speed]')) x.classList.toggle('is-on', x === b);
   };
   for (const b of document.querySelectorAll('[data-speed]')) b.classList.toggle('is-on', Number(b.dataset.speed) === speed);
-  // 试听: play the operator's own official cue (a click is also the gesture the AudioContext needs)
-  for (const b of document.querySelectorAll('[data-sfx]')) b.onclick = () => {
+  const startBtn = document.getElementById('sbStartBtn');
+  if (startBtn) startBtn.onclick = () => {
     audio._unlock?.();
-    const u = audio.getManifest()?.audio?.sfx?.units?.[UNIT] || {};
-    const url = b.dataset.sfx === 'blast' ? u.cues?.blast ?? u.hit : b.dataset.sfx === 'hit' ? u.hit : u.attack;
-    if (typeof url === 'string') audio._play(url, { volume: 0.9 });
-    else fail(new Error(`no ${b.dataset.sfx} sound for ${UNIT}`));
+    document.getElementById('sbStart')?.remove();
+    start().catch(fail); // builds the battle with audio already live, so its spawns are tracked
+    setText('sbPlay', '▌▌ 暂停');
   };
   last = performance.now();
   requestAnimationFrame(frame);
