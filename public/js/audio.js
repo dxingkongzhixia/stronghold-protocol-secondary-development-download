@@ -1648,12 +1648,13 @@ export class AudioManager {
           // A boss phase may switch its track (`b.fx('bgm', { key: 'boss:<id>' })`); visual renderers ignore the event.
           if (e[1] === 'bgm' && typeof e[4]?.key === 'string') { this.playBgm(e[4].key); continue; }
           // a kit fx with a sound of its own (the manifest's per-unit `cues`): 塔露拉's 簇火 flight / impact / 过载 — the
-          // projectile banks the client has no `atk`/`dmg` pair for (the wave is the sim's own object, not an attack)
+          // projectile banks the client has no `atk`/`dmg` pair for (the wave is the sim's own object, not an attack).
+          // The launch cue is a short swing (5 lanes a volley): quiet, so the impact that follows stands out.
           const ex = e[4];
           if (ex && typeof ex === 'object' && ex.id != null) {
             const uc = this.units.get(ex.id);
             const cue = uc && uc.side !== 'enemy' ? this.getManifest()?.audio?.sfx?.units?.[uc.def]?.cues?.[e[1]] : null;
-            if (typeof cue === 'string') this._playUnitUrl(cue, `${ex.id}:${e[1]}`, 0.55);
+            if (typeof cue === 'string') this._playUnitUrl(cue, `${ex.id}:${e[1]}`, e[1] === 'blast' ? 0.85 : e[1] === 'burst' ? 0.7 : 0.3);
           }
           // a summon used up by its own effect (香槟炸弹 exploding: `consumed`): its impact sound now, no death sound
           if (!ex || typeof ex !== 'object' || !ex.consumed || ex.id == null) continue;
