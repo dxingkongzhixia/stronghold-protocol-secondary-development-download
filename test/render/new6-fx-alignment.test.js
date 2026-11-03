@@ -37,7 +37,7 @@ test('official prefab alignment: new operators have units, skills, effect keys a
 
 test('kit fx bindings of the new operators resolve to their extracted prefabs', { skip }, () => {
   const idx = JSON.parse(fs.readFileSync(IDX, 'utf8'));
-  for (const sk of ['skchr_tocka_1', 'skchr_oxi_2']) {
+  for (const sk of ['skchr_tocka_1', 'skchr_oxi_2', 'skchr_oxi_3']) {
     const keys = bindingKeys(idx, sk);
     assert.ok(keys.length > 0, `${sk}: bound keys`);
     for (const k of keys) {

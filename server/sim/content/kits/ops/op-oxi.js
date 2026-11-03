@@ -2,8 +2,10 @@
 // banner 「将雪投火」. Data: character_table / skill_table 26-11-01 (E2 Lv1 rank 4 / E2 Lv60 rank 7, no module).
 //
 // Implemented from the official blackboards:
-//   T1 绝不妥协 — Arts attacks carry `ep_damage_ratio` burn gauge; after `arcane_idle_delay` s without an attack her
-//      Arts/element damage ramps by `arcane_step` every `arcane_step_interval` up to `arcane_max`, reset by an attack.
+//   T1 绝不妥协 — EVERY damage instance she deals carries `ep_damage_ratio` of 灼燃损伤 (PRTS 备注: "于每次成功造成伤害时
+//      产生灼燃损伤"): normal attacks, the S2 retaliation, the S3 簇火 waves, the T2 footprints. After
+//      `arcane_idle_delay` s without an attack her Arts/element damage ramps by `arcane_step` every
+//      `arcane_step_interval` up to `arcane_max`, reset by a normal attack.
 //   T2 我即火焰 — a burn burst on the enemy side leaves a 4 s footprint (max 25) on its tile; every 0.3 s it deals
 //      `field_atk_scale` × ATK Arts to ground enemies on it.
 //   S1 — one attack on the target's tile (ground enemies) for ×atk_scale, fear for `fear` s.
@@ -15,10 +17,13 @@
 //      runs `wave_exit_distance` tiles forward and detonates for `heatwave_atk_scale` × ATK Arts (burn-burst targets take
 //      element damage instead); overload (any target in burn burst) uses `overload_interval` / `overload_half_width`;
 //      further hits of one wave on one enemy deal `same_wave_repeat_damage_scale`. Collision is a swept segment with the
-//      perpendicular reach (`projectile_range`) — no tile-centre box; the official projectile flight art is drawn by the
-//      client's prefab.
+//      perpendicular reach (`projectile_range`) — no tile-centre box. The 簇火's own official effects are
+//      oxi_skill_03_trail_01 (flight) and oxi_skill_03_hit_01 (impact): the engine emits a 'wave' fx at each lane's
+//      launch and a 'blast' at the contact point, which FX_BINDINGS skchr_oxi_3 draws (the prefabs come from the local
+//      client's oxi.ab with `extract.py --only fx --fx-keys`).
 // Kit contract: ../README.md.
 import { num, talentBb, skillRec, up, onHitOn, isMainHit } from '../shared/tier1.js';
+import { hasHp } from '../../../damage.js';
 import { dirVec } from '../../../dir.js';
 
 const S1 = 'skchr_oxi_1', S2 = 'skchr_oxi_2', S3 = 'skchr_oxi_3';
@@ -94,6 +99,9 @@ export default {
               const radius = num(b3.range_radius, 1.5);
               const waveId = `${unit.id}:${next}`;
               for (let k = -half; k <= half; k++) {
+                // the client's cue for this lane's 簇火: its launch point (the official prefab is oxi_skill_03_trail_01,
+                // FX_BINDINGS skchr_oxi_3 'wave'); the contact point follows as the engine's own 'blast'
+                battle.fx('wave', { x: c0 + dr * k, y: r0 - dc * k, id: unit.id, dr, dc, speed, distance: exit });
                 battle.spawnWave({
                   owner: unit, x: c0 + dr * k, y: r0 - dc * k, dr, dc,
                   speed, distance: exit, hitWidth: reach, blastRadius: radius,
@@ -131,8 +139,18 @@ export default {
             if (!isMainHit(dmg) || !target) return;
             lastAtk = battle.time;
             if (ramp) { ramp = 0; sync(); }
-            burn(target);
           });
+          // 绝不妥协: EVERY damage instance she deals carries 灼燃损伤 = ATK × ep_damage_ratio — the official note is
+          // "于每次成功造成伤害时产生灼燃损伤", so the S3 簇火 waves, the S2 retaliation and the T2 footprints carry it
+          // too, not just her normal attack (the old hook was the normal attack only: her channel added no gauge at all,
+          // so nothing ever burst, no 足迹 appeared and 过载 never switched on). The gauge, its 1000-point burst and its
+          // 10 s lock are applyElement's own: an 'element' hit fills it. Skip element hits themselves (no gauge on gauge).
+          battle.on('damaged', (ctx) => {
+            const t = ctx.target;
+            if (ctx.source !== unit || !t || t.side !== 'enemy' || !hasHp(t)) return;
+            if (ctx.type === 'element' || ctx.type === 'elemental' || !(ctx.amount > 0)) return;
+            burn(t);
+          }, { owner: unit });
           // T2 footprints: a burn burst on an enemy leaves its tile burning for field_duration s.
           const scale = num(t2.field_atk_scale, 0.15), tick = num(t2.field_interval, 0.3);
           const life = num(t2.field_duration, 4), maxCount = num(t2.max_count, 25);

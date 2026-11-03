@@ -28,6 +28,9 @@ export const FX_KINDS = Object.freeze({
   // blasts
   // [ASSUMED] Clementia's S3 uses the shared blast placeholder until her official effect is ported.
   blast: { a: 'blast', c: 0xffb35c },
+  // 塔露拉 S3's 簇火 leaving her tile (op-oxi.js; the wave's impact is the engine's own 'blast'). The official trail prefab
+  // (oxi_skill_03_trail_01) replaces this through FX_BINDINGS skchr_oxi_3; the plain ember burst is the art-less fallback.
+  wave: { a: 'blast', c: 0xff9a3c, r: 0.9 },
   // `aoe` is shared by every operator's area skill. It carries no local art any more: our custom operators (结城理's
   // 替身换位, 娜仁图亚's S3 吞日 retrieve burst) use the official battle effects (render/vfx) and fall back to this plain
   // procedural blast (owner, 2026-10-16).

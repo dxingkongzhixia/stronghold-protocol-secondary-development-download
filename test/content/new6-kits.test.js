@@ -47,8 +47,26 @@ test('塔露拉 S3: a channel starts once an enemy is on the field (not only in 
   assert.ok(h.b.enemies[0].hp < hp0, 'the waves reach the enemy down the lane');
 });
 
-test('塔露拉 S3 does not burn itself on an empty field', () => {
+// 绝不妥协: "于每次成功造成伤害时产生灼燃损伤" — the S3 簇火 waves carry the gauge too, so the enemy bursts and the
+// channel's 过载 branch can engage. The old talent hook was the normal attack only: a full channel added no gauge at all.
+test('塔露拉 S3: the waves carry 灼燃损伤 and the gauge bursts', () => {
   const h = makeBattle({
+    units: [{ uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4247_oxi', skillIndex: 2, uniEquipId: null }, row: 10, col: 6, elite: true }],
+    defs: { enemies: { e: enemyRec({ key: 'e', hp: 5e6, atk: 1, speed: 0, bat: 2 }) } },
+    enemies: [{ key: 'e', pos: [10, 12] }],
+    timeLimit: 60, autoFinish: false, seed: 3, hooks: ['elementBurst'],
+  });
+  h.step();
+  const u = h.b.units.find((x) => x.kind === 'op' && x.side === 'ally');
+  u.skill.sp = u.skill.spCost;
+  assert.ok(h.runUntil(() => u.skill.active, 10), 'S3 casts');
+  const foe = h.b.enemies.find((e) => e.side === 'enemy');
+  assert.ok(h.runUntil(() => (foe.elem?.burn ?? 0) > 0, 12), 'the 簇火 waves fill the burn gauge');
+  assert.ok(h.runUntil(() => h.hooksOf('elementBurst').some((c) => c.element === 'burn'), 40), 'the gauge bursts (灼燃损伤爆发)');
+  assert.ok(h.events.some((e) => e[0] === 'fx' && e[1] === 'wave'), 'each 簇火 announces its launch (the client FX binding)');
+});
+
+test('塔露拉 S3 does not burn itself on an empty field', () => {  const h = makeBattle({
     units: [{ uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4247_oxi', skillIndex: 2, uniEquipId: null }, row: 10, col: 6 }],
     defs: {}, enemies: [], timeLimit: 30, autoFinish: false, seed: 3,
   });

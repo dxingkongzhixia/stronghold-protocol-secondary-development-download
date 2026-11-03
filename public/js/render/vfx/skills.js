@@ -1452,6 +1452,15 @@ export const FX_BINDINGS = Object.freeze({
   skchr_oxi_2: Object.freeze({
     stance: binding({ owner: 'id', keys: ['oxi_skill_02_hit_01'], at: 'target', target: 'target' }),
   }),
+  // 塔露拉 S3 (op-oxi.js): the 簇火 waves. The skill record itself names only its start / loop prefabs, so the waves'
+  // own effects (extracted from the local client with --fx-keys; the client's oxi.ab) are bound here:
+  //   'wave'  at a lane's launch point — oxi_skill_03_trail_01, the ember's flight trail (looping; held for the wave's
+  //           own run, distance / speed = 5 / 2.3 s ≈ 2.2 s);
+  //   'blast' at the contact point — oxi_skill_03_hit_01, the official impact explosion (one-shot, 10 s of particles).
+  skchr_oxi_3: Object.freeze({
+    wave: binding({ owner: 'id', keys: ['oxi_skill_03_trail_01'], at: 'point', hold: 'fx', holdS: 2.2, during: true }),
+    blast: binding({ owner: 'id', keys: ['oxi_skill_03_hit_01'], at: 'point', oneshot: true, during: true }),
+  }),
 });
 
 /**
