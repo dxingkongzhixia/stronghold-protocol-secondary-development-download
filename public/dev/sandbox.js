@@ -135,6 +135,8 @@ function stats() {
   setText('sbDamage', Math.round(damage).toLocaleString('zh-CN'));
   setText('sbEnemies', String(foes));
   setText('sbBursts', String(bursts));
+  // the AudioContext needs a user gesture (audio.js install()): until then every cue is dropped, so say so in the panel
+  setText('sbAudio', audio.unlocked ? '已开启 🔊' : '未开启 · 点一下页面');
   // 灼燃损伤 gauge: the fullest enemy gauge right now (1000 bursts)
   const gauge = (battle?.enemies ?? []).reduce((m, e) => Math.max(m, e.side === 'enemy' ? Math.round(e.elem?.burn ?? 0) : 0), 0);
   setText('sbBurn', String(gauge));
@@ -171,7 +173,8 @@ async function main() {
   installAudio({ getManifest: () => data.get('assets'), settings: { bgm: 0, sfx: 0.8, voice: 0.8, muted: false } });
   await assets.ready();
   view = await createFieldView($('field'), { data, assets, settings: { quality: 'high', damageNumbers: true } });
-  window.__view = view; // the dev pages' hook (render-demo): the fx library / wiring are under view.debug
+  window.__view = view;
+  window.__audio = audio; // dev hook: the audio manager (unlock state, manifest entry, played cues) // the dev pages' hook (render-demo): the fx library / wiring are under view.debug
   sim = await loadBrowserSim();
   await start();
   document.getElementById('sbPlay').onclick = () => {
