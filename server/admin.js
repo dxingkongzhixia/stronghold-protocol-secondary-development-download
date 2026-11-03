@@ -900,6 +900,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       <button class="nav__item" data-view="ui"><i>◈</i>界面</button>
       <div class="nav__sect">诊断</div>
       <a class="nav__item nav__link" href="/admin/docs"><i>▤</i>文档链</a>
+      <a class="nav__item nav__link" href="/admin/sandbox"><i>⚗</i>沙盒</a>
       <button class="nav__item" data-view="speed"><i>⚡</i>测速</button>
       <button class="nav__item" data-view="origins"><i>⇄</i>来源配置</button>
     </nav>

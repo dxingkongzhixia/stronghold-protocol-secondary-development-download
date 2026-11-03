@@ -319,6 +319,28 @@ test('admin documentation viewer: token-gated index, Markdown, assets and the do
   }
 });
 
+// 沙盒 (/admin/sandbox): an admin-only redirect into the dev sandbox — a real battle from the client's own /sim, one
+// operator and one skill, so a kit fix can be watched without a live room (public/dev/sandbox.html).
+test('admin sandbox: token-gated redirect to the dev sandbox with the preset params', async () => {
+  const srv = await startServer({ port: 0, quiet: true, accounts: true, db: openMemoryDb(), adminToken: 'testtok' });
+  try {
+    const base = `http://localhost:${srv.port}`;
+    assert.equal((await fetch(`${base}/admin/sandbox`, { redirect: 'manual' })).status, 403);
+    const preset = await fetch(`${base}/admin/sandbox?token=testtok`, { redirect: 'manual' });
+    assert.equal(preset.status, 302);
+    assert.equal(preset.headers.get('location'), '/dev/sandbox.html?unit=char_4247_oxi&s=2&stage=act1autochess_m01&wave=act1autochess_05');
+    const other = await fetch(`${base}/admin/sandbox?token=testtok&unit=char_4182_oblvns&s=1&stage=act2autochess_m02&wave=act1autochess_01`, { redirect: 'manual' });
+    assert.equal(other.headers.get('location'), '/dev/sandbox.html?unit=char_4182_oblvns&s=1&stage=act2autochess_m02&wave=act1autochess_01');
+    // junk params fall back to the preset instead of reaching the page
+    const junk = await fetch(`${base}/admin/sandbox?token=testtok&unit=../etc&s=9&stage=x%20y&wave=`, { redirect: 'manual' });
+    assert.equal(junk.headers.get('location'), '/dev/sandbox.html?unit=char_4247_oxi&s=2&stage=act1autochess_m01&wave=act1autochess_05');
+    const admin = await (await fetch(`${base}/admin?token=testtok`)).text();
+    assert.match(admin, /href="\/admin\/sandbox"/);
+  } finally {
+    await srv.close();
+  }
+});
+
 // 通知 (docs/MATCHMAKING.md §28): POST /admin/api/notify pushes a sys.notice to the LIVE sessions — every logged-in
 // account by default (`scope: 'all'` reaches guests too) — and keeps the broadcast in the state's `notices` history.
 test('POST /admin/api/notify pushes sys.notice to the live sessions (scope, guards, history)', async () => {

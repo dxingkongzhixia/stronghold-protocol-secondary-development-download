@@ -222,7 +222,7 @@ content/
 | `js/render/board3d/` | three.js 3D 棋盘：`load` / `scene` / `layout` / `materials` / `atlas` / `obj` |
 | `js/battle/` | `runner.js`（浏览器内跑共享 sim）、`observe.js`（观战规则） |
 | `css/` | `theme` / `components` / `screens/*` / `emotes` / `devices` |
-| `dev/` | 本地开发：`uikit.html`、`game-mock`、`render-demo`、`recordings/*.json` |
+| `dev/` | 本地开发：`uikit.html`、`game-mock`、`render-demo`、`sandbox.html`（管理员「沙盒」：真模拟 + 真渲染）、`recordings/*.json` |
 
 ### 3.7 `data/`（生成数据，见 §4.7）
 

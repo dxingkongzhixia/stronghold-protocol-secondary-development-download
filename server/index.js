@@ -43,7 +43,7 @@
 import http from 'node:http';
 import path from 'node:path';
 import { getData, loadData } from './data.js';
-import { appendFileSync, createReadStream, readFileSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, createReadStream, existsSync, readFileSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { openDb } from './db.mjs';
 import { AuthService } from './auth.js';
@@ -502,6 +502,25 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       const body = Buffer.from(DOCS_HTML);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
       res.end(req.method === 'HEAD' ? undefined : body);
+      return;
+    }
+    // /admin/sandbox — an admin-only shortcut into the dev sandbox: a real battle (the client's own /sim) with one
+    // operator and one skill, drawn by the battlefield renderer — default 塔露拉 S3 (char_4247_oxi, skill index 2), so the
+    // fix's cast, its waves and their damage are visible without a live room. `?unit=` / `?s=` / `?stage=` / `?wave=`.
+    // The page itself lives under /dev (deploy public/dev with it).
+    if (parts.rawPath === '/admin/sandbox' || parts.rawPath === '/admin/sandbox/') {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET'); sendJson(req, res, 405, { error: 'GET required' }); return; }
+      const qs = new URLSearchParams(parts.query);
+      const unit = /^[A-Za-z0-9_]+$/.test(qs.get('unit') || '') ? qs.get('unit') : 'char_4247_oxi';
+      const skill = Math.max(0, Math.min(2, Number(qs.get('s') ?? 2) || 0));
+      const stage = /^[A-Za-z0-9_]+$/.test(qs.get('stage') || '') ? qs.get('stage') : 'act1autochess_m01';
+      const wave = /^[A-Za-z0-9_]+$/.test(qs.get('wave') || '') ? qs.get('wave') : 'act1autochess_05';
+      if (!existsSync(path.join(ROOT, 'public', 'dev', 'sandbox.html'))) {
+        sendError(req, res, 404, '沙盒未安装 · sandbox not installed', 'public/dev/sandbox.html 缺失（部署时未带 public/dev）');
+        return;
+      }
+      res.writeHead(302, { Location: `/dev/sandbox.html?unit=${unit}&s=${skill}&stage=${stage}&wave=${wave}` });
+      res.end();
       return;
     }
     if (docsIndex) {
@@ -1017,6 +1036,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
       || parts.rawPath === '/admin/api/market' || parts.rawPath === '/admin/api/market/import' || parts.rawPath === '/admin/api/market/keys' || parts.rawPath === '/admin/api/audit' || parts.rawPath === '/admin/api/plugins/install' || parts.rawPath === '/admin/api/plugins/uninstall' || parts.rawPath === '/admin/api/plugins/stats' || parts.rawPath === '/admin/api/plugins/lock' || parts.rawPath === '/admin/api/plugins/ai' || parts.rawPath === '/admin/api/ui'
       || parts.rawPath === '/admin/api/bug/status' || parts.rawPath === '/admin/api/bug/export' || parts.rawPath.startsWith('/admin/api/bug/image/')
       || parts.rawPath === '/admin/docs' || parts.rawPath === '/admin/docs/'
+      || parts.rawPath === '/admin/sandbox' || parts.rawPath === '/admin/sandbox/'
       || parts.rawPath === '/admin/api/docs' || parts.rawPath === '/admin/api/docs/file' || parts.rawPath === '/admin/api/docs/asset') {
       adminRoute(req, res, parts).catch((e) => { log.error('[admin] request failed', e); sendJson(req, res, 500, { error: 'internal error' }); });
       return true;

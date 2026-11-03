@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>沙盒 · 卫戍协议：盟约</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%230c0f0e'/%3E%3Ccircle cx='12' cy='12' r='6' fill='%23f0a35e'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #070a09; color: #c9d1cd;
+      font: 13px/1.45 "Noto Sans SC", system-ui, sans-serif; }
+    #field { position: fixed; inset: 0; width: 100%; height: 100%; }
+    .sb-panel { position: fixed; left: 14px; top: 14px; z-index: 6; width: 322px; padding: 12px 14px;
+      background: rgba(10, 14, 13, .9); border: 1px solid #2c3833; border-radius: 3px; box-shadow: 0 8px 28px rgba(0, 0, 0, .5); }
+    .sb-title { margin: 0 0 2px; font-size: 15px; font-weight: 600; color: #eef4f1; letter-spacing: .02em; }
+    .sb-sub { margin: 0 0 10px; font-size: 11.5px; color: #7d8c86; }
+    .sb-rows { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin-bottom: 10px;
+      font-variant-numeric: tabular-nums; }
+    .sb-rows dt { color: #7d8c86; }
+    .sb-rows dd { margin: 0; color: #dfe7e3; }
+    .sb-rows dd b { color: #f0a35e; font-weight: 600; }
+    .sb-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .sb-btns button { flex: 0 0 auto; padding: 5px 10px; border: 1px solid #33413b; border-radius: 2px;
+      background: #141b18; color: #cfd8d4; font: inherit; cursor: pointer; }
+    .sb-btns button:hover { border-color: #4f6459; color: #fff; }
+    .sb-btns button.is-on { border-color: #f0a35e; color: #f0a35e; }
+    .sb-note { margin: 0; font-size: 11px; color: #6b7a74; }
+    .sb-note code { color: #9faea8; }
+    .sb-result { margin-top: 8px; font-size: 12px; color: #f0a35e; }
+    .sb-result:empty { display: none; }
+    .sb-err { margin: 8px 0 0; font-size: 12px; color: #ff8f7a; white-space: pre-wrap; }
+    .sb-err:empty { display: none; }
+  </style>
+</head>
+<body>
+  <div id="field"></div>
+  <section class="sb-panel">
+    <h1 class="sb-title">沙盒 · 战术演练</h1>
+    <p class="sb-sub">真实模拟（/sim）× 真实渲染（render/app.js）· 不是录像</p>
+    <dl class="sb-rows">
+      <dt>干员</dt><dd id="sbUnit">—</dd>
+      <dt>技能</dt><dd id="sbSkill">—</dd>
+      <dt>释放</dt><dd><b id="sbCasts">0</b> 次</dd>
+      <dt>累计伤害</dt><dd><b id="sbDamage">0</b></dd>
+      <dt>场上敌人</dt><dd id="sbEnemies">0</dd>
+      <dt>战斗时间</dt><dd id="sbTime">0.0 / 0 s</dd>
+    </dl>
+    <div class="sb-btns">
+      <button type="button" id="sbPlay">▌▌ 暂停</button>
+      <button type="button" id="sbRestart">↻ 重来</button>
+      <button type="button" data-speed="1">1×</button>
+      <button type="button" data-speed="2" class="is-on">2×</button>
+      <button type="button" data-speed="4">4×</button>
+    </div>
+    <p class="sb-note">地址参数 <code>?unit=&amp;s=&amp;stage=&amp;wave=</code>；管理员入口 <code>/admin/sandbox?token=…</code>。</p>
+    <div class="sb-result" id="sbResult"></div>
+    <div class="sb-err" id="sbError"></div>
+  </section>
+  <script type="module" src="./sandbox.js"></script>
+</body>
+</html>
