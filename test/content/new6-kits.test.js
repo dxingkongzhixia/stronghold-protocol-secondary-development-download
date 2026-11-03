@@ -29,6 +29,36 @@ test('塔露拉 S2: TAKE_DAMAGE trigger with 5 charges (official 触发方式)',
   assert.ok(u.skill.activations <= 5, 'charges capped at five');
 });
 
+test('塔露拉 S3: a channel starts once an enemy is on the field (not only in her 1-tile range), and its waves hit the lane', () => {
+  const h = makeBattle({
+    units: [{ uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4247_oxi', skillIndex: 2, uniEquipId: null }, row: 10, col: 6 }],
+    defs: { enemies: { e: enemyRec({ key: 'e', hp: 5e6, atk: 1, speed: 0, bat: 2 }) } },
+    enemies: [{ key: 'e', pos: [10, 12] }],
+    timeLimit: 60, autoFinish: false, seed: 3,
+  });
+  h.step();
+  const u = h.b.units.find((x) => x.kind === 'op' && x.side === 'ally');
+  assert.equal(u.skill.id, 'skchr_oxi_3', 'S3 selected');
+  assert.equal(u.skill.rule, 'GDGLOW_SKILL_2', 'the channel does not wait for an enemy in her own range');
+  u.skill.sp = u.skill.spCost;
+  assert.ok(h.runUntil(() => u.skill.active, 10), 'casts with the enemy still out of her range');
+  const hp0 = h.b.enemies[0].hp;
+  h.run(12);
+  assert.ok(h.b.enemies[0].hp < hp0, 'the waves reach the enemy down the lane');
+});
+
+test('塔露拉 S3 does not burn itself on an empty field', () => {
+  const h = makeBattle({
+    units: [{ uid: 1, diy: { slot: 'chess_char_6_diy1_a', charId: 'char_4247_oxi', skillIndex: 2, uniEquipId: null }, row: 10, col: 6 }],
+    defs: {}, enemies: [], timeLimit: 30, autoFinish: false, seed: 3,
+  });
+  h.step();
+  const u = h.b.units.find((x) => x.kind === 'op' && x.side === 'ally');
+  u.skill.sp = u.skill.spCost;
+  h.run(5);
+  assert.equal(u.skill.active, false, 'no enemies on the field: the charge is kept');
+});
+
 test('2026-11-01 6★: each DIY pick runs its own hand-authored kit in a real battle', () => {
   for (const [charId, name, skillIndex] of picks) {
     const h = makeBattle({

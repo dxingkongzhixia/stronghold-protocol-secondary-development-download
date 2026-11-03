@@ -69,7 +69,10 @@ export default {
           },
         },
         [S3]: {
-          kind: 'duration', mods: { atkPct: num(b3.atk) }, attack: { noAttack: true },
+          // Manual in the official table (skillType MANUAL) and a 36 s channel: in this auto-played port it must not wait
+          // for an enemy in her own 1-tile range (the basic DEFAULT rule), or she would never start it while holding a
+          // lane. GDGLOW_SKILL_2 = cast once any targetable enemy is on the field (SP_FULL would burn it during an empty prep).
+          kind: 'duration', trigger: 'GDGLOW_SKILL_2', mods: { atkPct: num(b3.atk) }, attack: { noAttack: true },
           onStart({ battle, unit }) {
             const [dr, dc] = dirVec(unit.dir);
             const [r0, c0] = tileOf(unit);
