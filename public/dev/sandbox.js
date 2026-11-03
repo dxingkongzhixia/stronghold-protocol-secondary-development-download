@@ -20,6 +20,7 @@
 import { createFieldView } from '../js/render/app.js';
 import { data } from '../js/data.js';
 import { assets } from '../js/assets.js';
+import { audio, installAudio } from '../js/audio.js';
 import { GEO } from '../../shared/constants.js';
 import { TICK } from '/sim/constants.js';
 import { loadBrowserSim } from '../js/battle/runner.js';
@@ -119,7 +120,11 @@ function feed() {
     else if (e[0] === 'fx' && e[1] === 'burst' && e[4]?.element === 'burn') bursts++;
   }
   const snap = battle.snapshot();
-  if (ev.length) view.pushEvents({ t: 'b.ev', fieldId: FIELD_ID, gt: snap.t, ev });
+  if (ev.length) {
+    view.pushEvents({ t: 'b.ev', fieldId: FIELD_ID, gt: snap.t, ev });
+    // the game screen's own audio path (screens/game.js): cast / impact / death / deploy cues from the same tuples
+    audio.handleBattleEvents(ev);
+  }
   view.pushSnapshot(snap);
   return snap;
 }
@@ -162,7 +167,8 @@ function frame(now) {
 }
 
 async function main() {
-  await data.loadAll('chess', 'tokens', 'items', 'enemies', 'stages', 'bonds', 'config', 'waves');
+  await data.loadAll('chess', 'tokens', 'items', 'enemies', 'stages', 'bonds', 'config', 'waves', 'assets');
+  installAudio({ getManifest: () => data.get('assets'), settings: { bgm: 0, sfx: 0.8, voice: 0.8, muted: false } });
   await assets.ready();
   view = await createFieldView($('field'), { data, assets, settings: { quality: 'high', damageNumbers: true } });
   window.__view = view; // the dev pages' hook (render-demo): the fx library / wiring are under view.debug
