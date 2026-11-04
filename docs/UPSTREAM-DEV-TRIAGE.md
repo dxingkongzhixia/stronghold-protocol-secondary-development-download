@@ -214,7 +214,7 @@
 |---|---|---|---|
 | **B1** 不适用 11-04 | `4480d8cf1` | **测试钉死默认数据构建**（`test/helpers/defaultGamedata.js`）：默认数据版本显式固定，数据重建不再让测试漂移 | 上游有 `data/versions/` 多剖面（默认集可被上游数据更新改掉），我们没有这层：单一 `data/` + `test/data.test.js` 的「离线重建逐字节一致」已经钉住了构建漂移；读 `.cache/gamedata` 的交叉校验一律 skip-if-absent。**不改**，只记结论 |
 | **B2** ✅ 11-04（fa-items） | `6cf59ff5a` / `bfd2a9209` | **把决策价值做成可单测的纯函数**：`band-strength`（按阵容强度给乐队打分）、`fa-items`（终局后卖席换伤害道具的估值） | `faItemMods` / `faItemTarget`（`server/match/bot.js`）+ `test/match/fa-items.test.js`：按道具 blackboard 的 bbStr key 读伤害，纯函数、可回归。**`band-strength` 留到 B3**：那张表是上游 bot 的 80 局实测，我们的 bot 已分叉，照抄无意义 |
-| **B3** | `6cf59ff5a` | **终极按"这套阵容 bot 会不会玩"给乐队加权**（不是按起始 LP） | 我们 `botPickBand` 目前按起始 LP 加权；这是更合理的一层。会全量动 `matches` golden，需单独一轮（先用自己的 bot 实测出表） |
+| **B3** 暂不合（owner 2026-11-04） | `6cf59ff5a` | **终极按"这套阵容 bot 会不会玩"给乐队加权**（不是按起始 LP） | 我们 `botPickBand` 目前按起始 LP 加权。上游的强度表是它们 bot 的实测，我们 bot 已分叉，照抄无意义；要做也得先用我们自己的 bot 重跑一张表，且全量动 `matches` golden。**owner 决定暂时不合** |
 | **B4** ✅ 11-04 | `bfd2a9209` | **终局阵型后排卖备战席、按道具 blackboard 估值买伤害道具**（208 行 + 测试） | 已移植：rehearsal 记每个干员的队长伤害、卖席后刷新买伤害道具并给收益最高的干员、`坎诺特` 留利息、满手不买不刷 | `test/match/fa-items.test.js` |
 | **B5** ✅ 11-04 | `7c623743c` + `test/ui/ready-click-css.test.js` | **用 CSS 回归测试盯住点击区**：窄窗口下重复的 `gm__hud` 规则把"准备就绪"整条点击区又打开 | 已按同一套路落地：`public/css/screens/game.css` 修 `pointer-events` + `test/ui/ready-click-css.test.js`（`7c623743c`） |
 | **B6** | `b62751ddd`（#725） | **import cache 绕过 HTTP 缓存上限**：secure context 下把整包下载放进 import cache（Chrome Windows 的 HTTP 缓存只有 320 MB） | 功能本身在 §0 不取，但这个事实值得记进 `ASSETS.md`，将来做任何"离线素材包"都用得上 |
