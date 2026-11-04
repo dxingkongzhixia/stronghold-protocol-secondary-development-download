@@ -137,7 +137,7 @@ test('buildPublicSnapshot.openRooms lists public hand-made 同盟 rooms, not-ful
     return r;
   };
   const rooms = new Map(Object.entries({
-    PUB: room({ code: 'PUB' }),
+    PUB: room({ code: 'PUB', seats: [seat('h', 'Host', { avatar: 'char_1016_agoat2' }), null, null, null] }),
     BOT: room({ code: 'BOT', hostId: 'h2', seats: [seat('h2', 'H2'), seat('ai_1', 'Bot', { isBot: true }), null, null] }),
     PRIV: room({ code: 'PRIV', public: false }),
     AUTO: room({ code: 'AUTO', auto: true }),
@@ -150,7 +150,7 @@ test('buildPublicSnapshot.openRooms lists public hand-made 同盟 rooms, not-ful
   assert.deepEqual(snap.openRooms[0], {
     code: 'PUB', difficulty: 'NORMAL', difficultyName: '险境模拟', host: 'Host', hostRole: null, humans: 1,
     full: false, freeSeats: 3, modded: false,
-    seats: [{ name: 'Host', role: null, guest: true, isBot: false, isHost: true }, null, null, null],
+    seats: [{ name: 'Host', role: null, guest: true, isBot: false, isHost: true, avatar: 'char_1016_agoat2' }, null, null, null],
   });
   assert.equal(snap.openRooms[1].humans, 1, 'bots are not counted as humans');
   const full = snap.openRooms.find((x) => x.code === 'FULL');

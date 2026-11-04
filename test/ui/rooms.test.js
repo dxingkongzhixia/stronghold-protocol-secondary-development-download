@@ -12,8 +12,8 @@ test('roomSeats: exactly MAX_SEATS cells, null for empty / left, the public iden
   const room = {
     hostId: 'p_host',
     seats: [
-      { name: '房主', role: 'admin', isBot: false, isHost: true, guest: false },
-      { name: 'Guest', role: null, isBot: false, isHost: false, guest: true },
+      { name: '房主', role: 'admin', isBot: false, isHost: true, guest: false, avatar: 'char_1016_agoat2' },
+      { name: 'Guest', role: null, isBot: false, isHost: false, guest: true, avatar: '0123456789abcdef0123456789abcdef.png' },
       { name: 'AI·华法琳', role: null, isBot: true, isHost: false, guest: false },
     ],
   };
@@ -26,6 +26,9 @@ test('roomSeats: exactly MAX_SEATS cells, null for empty / left, the public iden
     null,
   ]);
   assert.equal(cells[0].role, 'admin');
+  assert.equal(cells[0].avatar, 'char_1016_agoat2', 'an operator avatar rides through');
+  assert.equal(cells[1].avatar, '0123456789abcdef0123456789abcdef.png', 'a custom uploaded picture rides through');
+  assert.equal(cells[2].avatar, null, 'no picture: the initial / robot stays');
   assert.deepEqual(roomSeats(null), [null, null, null, null], 'no room → all empty');
   assert.deepEqual(roomSeats({ seats: [null, undefined] }), [null, null, null, null], 'padded to MAX_SEATS');
 });
@@ -76,4 +79,6 @@ test('splitRooms: 组队中 is not-full first (humans desc), a full lobby sinks 
 test('the directory fetches the uncapped list (/online/api?all=1)', () => {
   const src = readFileSync(new URL('../../public/js/screens/rooms.js', import.meta.url), 'utf8');
   assert.match(src, /fetch\('\/online\/api\?all=1'/, 'the screen asks for every room');
+  // the seat cell draws the account picture (an operator avatar charId or an uploaded /avatar file), like the room does
+  assert.match(src, /avatarUrl\(seat\.avatar, dataset\.get\('assets'\)\)/, 'the seat picture goes through avatarUrl');
 });

@@ -15,7 +15,8 @@ import { useEffect, useState } from '../../vendor/hooks.module.js';
 import { html, Button, Icon, MicroLabel, DifficultyIcon, AvatarFrame, RoleTag, Spinner } from '../ui/components.js';
 import { t, tc } from '../../../shared/i18n.js';
 import { MAX_SEATS, DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, modeIdFor } from '../../../shared/constants.js';
-import { getMode } from '../data.js';
+import { getMode, data as dataset } from '../data.js';
+import { avatarUrl } from '../ui/assetUrls.js';
 
 const REFRESH_MS = 4000;
 
@@ -23,7 +24,7 @@ const REFRESH_MS = 4000;
  * A room's co-op seats normalised for the directory: always MAX_SEATS entries, null = empty (a seat the server sent as
  * null, or one whose player has left), else the public identity. Pure: the mapper the unit test exercises.
  * @param {any} room an /online/api openRooms / playRooms entry
- * @returns {(null | { name: string, initial: string, role: string|null, guest: boolean, isBot: boolean, isHost: boolean })[]}
+ * @returns {(null | { name: string, initial: string, role: string|null, guest: boolean, isBot: boolean, isHost: boolean, avatar: string|null })[]}
  */
 export function roomSeats(room) {
   const src = Array.isArray(room?.seats) ? room.seats : [];
@@ -38,6 +39,8 @@ export function roomSeats(room) {
       guest: !!s.guest,
       isBot: !!s.isBot,
       isHost: !!s.isHost,
+      // the account's picture (operator charId or uploaded file); AvatarFrame falls back to the initial when it fails
+      avatar: typeof s.avatar === 'string' && s.avatar ? s.avatar : null,
     };
   });
 }
@@ -74,7 +77,8 @@ function roundsOf(difficulty) {
   return Number.isFinite(m?.lastRound) ? m.lastRound : 14;
 }
 
-/** One seat square: the player's initial (host crown / AI tag from AvatarFrame), a guest marker, the name; empty = dashed. */
+/** One seat square: the player's picture (an operator avatar / uploaded file, else the initial; host crown / AI tag from
+ * AvatarFrame), a guest marker, the name; empty = dashed. */
 function SeatCell({ seat, index }) {
   if (!seat) {
     return html`<span class="rooms-seat is-empty" title=${t('空席位')} aria-label=${t('空席位')}>
@@ -83,7 +87,8 @@ function SeatCell({ seat, index }) {
     </span>`;
   }
   return html`<span class="rooms-seat" title=${seat.name || t('空席位')}>
-    <${AvatarFrame} size="md" seat=${index} name=${seat.name} host=${seat.isHost} bot=${seat.isBot} />
+    <${AvatarFrame} size="md" seat=${index} name=${seat.name} host=${seat.isHost} bot=${seat.isBot}
+      src=${avatarUrl(seat.avatar, dataset.get('assets'))} />
     ${seat.guest && !seat.isBot ? html`<span class="rooms-seat__guest">${t('游客')}</span>` : null}
     <span class="rooms-seat__name">${seat.name || t('博士')}${seat.role ? html`<${RoleTag} role=${seat.role} size="sm" />` : null}</span>
   </span>`;

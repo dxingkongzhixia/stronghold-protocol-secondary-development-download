@@ -369,8 +369,9 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
     if (s && s.accountId != null) accountByPlayerId.set(s.playerId, s.accountId);
   }
   // A room's MAX_SEATS co-op seats, in seat order: null for an empty seat (or one its player has left), else the
-  // public identity the directory draws in a seat cell. No playerId / accountId / addr — names and roles are already
-  // exposed in-game; `guest` is the only thing read from the account binding.
+  // public identity the directory draws in a seat cell. No playerId / accountId / addr — names, roles and the account's
+  // public picture (`avatar`, the same one the room and /online draw; an operator charId or an uploaded /avatar file)
+  // are already exposed in-game; `guest` is the only thing read from the account binding.
   const seatsOf = (r) => Array.from({ length: MAX_SEATS }, (_, i) => {
     const s = r.seats[i];
     if (!s || s.left) return null;
@@ -381,6 +382,8 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       guest: !isBot && !accountByPlayerId.has(s.playerId),
       isBot,
       isHost: s.playerId === r.hostId,
+      // the account's picture (an operator charId or a /avatar/<file> upload) — the directory draws it like the room does
+      ...(typeof s.avatar === 'string' && s.avatar ? { avatar: s.avatar } : {}),
     };
   });
   // 组队中 rooms (hand-made co-op rooms still in the lobby): a full lobby (no free seat) is kept too — the directory
