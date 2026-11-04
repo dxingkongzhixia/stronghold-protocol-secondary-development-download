@@ -98,7 +98,7 @@
 .draft-order__info .btn__icon { color: var(--mint-400); }
 .modal__box.minfo-dlg {
   width: min(max(17rem, 900px), calc(100vw - .6rem - var(--sa-l, 0px) - var(--sa-r, 0px)));
-  max-height: calc(100vh - .6rem);
+  max-height: calc(100dvh - .6rem);
   max-height: calc(100svh - .6rem);
 }
 .minfo-dlg .modal__head { padding: .16rem .3rem .02rem; }

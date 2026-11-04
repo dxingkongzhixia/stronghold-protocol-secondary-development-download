@@ -93,3 +93,38 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+  # P0 mobile matrix (docs/MOBILE-UI.md §7 M0.8): the mock page harness at public/dev/mobile-audit.html, measured at
+  # 640×360 … 1024×768 with a simulated 24/24/34/24 safe area; screenshots are kept as the P1 comparison baseline.
+  # It runs alone (the main job keeps RENDER_E2E=0) and starts its own server on port 0.
+  mobile-audit:
+    name: mobile-audit (640×360 … 1024×768)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install (npm ci → postinstall copies public/vendor)
+        run: npm ci --no-audit --no-fund
+
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          install-chromedriver: false
+
+      # setup-chrome puts the binary on PATH; tools/mobile-audit.mjs also honours $CHROME_PATH and the platform defaults
+      - name: Mobile audit
+        run: npm run check:mobile
+
+      - name: Screenshots (baseline / failure evidence)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-audit-screens
+          path: test/e2e/out/mobile
+          if-no-files-found: ignore

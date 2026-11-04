@@ -71,7 +71,7 @@
 ## 4. 怎么验收（统一口径）
 
 1. `RENDER_E2E=1 node --test test/render/*.browser.test.js`（含新矩阵）
-2. `node tools/mobile-audit.mjs`（点击区 + 横向滚动 + 安全区）
+2. `npm run check:mobile`（`tools/mobile-audit.mjs`：点击区 + 横向滚动 + 安全区；截图在 `test/e2e/out/mobile/`）
 3. 真机抽查：至少一台 iOS Safari、一台 Android Chrome（横屏）
 4. 每项完成补一条截图对比（`test/e2e/out/mobile-<page>-<viewport>.png`）
 
@@ -96,29 +96,24 @@
 
 ### P0 · 基线与自动化（先做，1–2 天）
 
-- [ ] **M0.1 矩阵常量**：新增 `test/mobile/matrix.mjs`（或 `tools/mobile-audit.mjs` 内常量）
-      `[{w:640,h:360},{740,360},{844,390},{915,412},{1024,768}]` + 名字 `se1 / android-s / iphone14 / pixel7 / tablet`。
-      *验收*：单一来源，脚本与文档都引用它。
-- [ ] **M0.2 `100vh` 收敛**：把 `public/css/**` 里 14 处 `100vh` 换成 `100dvh`（或既有 `--sp-vh`），
-      对局内沿用 `--sp-vh`。*验收*：`git grep -c '100vh' -- public/css` 为 0（白名单除外，需注释）。
-- [ ] **M0.3 审查 harness**：新增 `public/dev/mobile-audit.html`，用 mock 数据把 8 个页面骨架挂起来
-      （lobby / hub / room / result / settle / codex+guide / stats / settings；对局 HUD 用只读快照），
-      **不登录、不需要素材**。*验收*：`node server/index.js` 后逐个页面可打开，控制台无报错。
-- [ ] **M0.4 审计脚本**：新增 `tools/mobile-audit.mjs`（puppeteer-core，`CHROME_PATH` 可配）：
-      逐页 × 逐视口断言 `document.scrollWidth <= clientWidth + 1`；收集 `document.elementFromPoint` 命中盒 < 44 px 的可点元素；
-      截图到 `test/e2e/out/mobile/<page>-<w>x<h>.png`。*验收*：`node tools/mobile-audit.mjs` 退出码 0/1 可判。
-- [ ] **M0.5 安全区模拟**：审计时把 `--sa-t/r/b/l` 覆盖为 `24/24/34/24`，断言 `.gm__hud`、`.shopbar`、每页底部按钮不越界。
-      *验收*：四类元素都在视口内。
-- [ ] **M0.6 点击区白名单**：`test/mobile/tap-exceptions.json`（选择器 → 原因）；脚本对未豁免的 <44 px 元素报错。
-      *验收*：清单为空或每条都有原因。
-- [ ] **M0.7 npm 脚本**：`package.json` 加 `"check:mobile": "node tools/mobile-audit.mjs"`。
-      *验收*：本机与 CI 同一条命令。
-- [ ] **M0.8 CI job**：`.github/workflows/ci.yml` 追加 `mobile-audit`（`ubuntu-latest`、Node 24，
-      `browser-actions/setup-chrome` 设置 `CHROME_PATH`，`npm ci` → `npm run check:mobile`，
-      `actions/upload-artifact` 传 `test/e2e/out/mobile`）。主 job 的 `RENDER_E2E=0` 不变。
-      *验收*：PR 上该 job 绿；故意破坏一处（如把 `100vh` 加回去）时红。
-- [ ] **M0.9 最小尺寸写进注释**：`devices.css` 头部注明"支持横屏 ≥640×360；更小不承诺"，与本文一致。
-      *验收*：文档/注释一致。
+> **2026-11-04 P0 完成**：`npm run check:mobile` = 9 个页面 × 5 个视口（640×360 / 740×360 / 844×390 / 915×412 /
+> 1024×768），45 张截图在 `test/e2e/out/mobile/`，当前 **all clear**。安全区模拟 24/24/34/24；`.gm__hud > .shopbar`
+> 是唯一一条“故意伸进底部安全区”的豁免（原因写在 `test/mobile/tap-exceptions.json`）。点击区检查顺带补了
+> `.settle__next / .cx-chip / .chat-dock__toggle / .bstrip__more / .guide__chapter / .tips__nav / .bslot` 的 44px 命中区。
+
+- [x] **M0.1 矩阵常量**：`test/mobile/matrix.mjs`（`VIEWPORTS` + `MIN_VIEWPORT` + `SAFE_AREA`），审计脚本与文档共用。
+- [x] **M0.2 `100vh` 收敛**：`public/css/**` 14 处全部换成 `100dvh`（`git grep 100vh -- public/css` = 0）。
+- [x] **M0.3 审查 harness**：`public/dev/mobile-audit.html` + `mobile-audit.js`，9 个骨架页（lobby / hub / room /
+      result / settle / codex / stats / settings / game HUD），真实样式表 + mock 内容，不登录、不需要素材。
+- [x] **M0.4 审计脚本**：`tools/mobile-audit.mjs`（puppeteer-core，`CHROME_PATH` 可配；无 `SP_MOBILE_BASE` 时自起
+      端口 0 的服务），横向溢出 / <44 px 命中盒 / 安全区越界三类断言，退出码 0/1，截图落 `test/e2e/out/mobile/`。
+- [x] **M0.5 安全区模拟**：审计把 `--sa-*` 覆盖为 24/24/34/24 并同时设置 `--sp-vh`；`.gm__hud`、`.shopbar`、
+      底部按钮逐页检查（`.shopbar` 一条已记录豁免）。
+- [x] **M0.6 点击区白名单**：`test/mobile/tap-exceptions.json`（选择器 → 原因，另支持 `safe: true` 的越界豁免）。
+- [x] **M0.7 npm 脚本**：`package.json` `"check:mobile": "node tools/mobile-audit.mjs"`。
+- [x] **M0.8 CI job**：`.github/workflows/ci.yml` 新增 `mobile-audit`（Node 24 + `setup-chrome` + 截图 artifact），
+      主 job 的 `RENDER_E2E=0` 不变。
+- [x] **M0.9 最小尺寸写进注释**：`devices.css` 头部注明“横屏 ≥640×360；568×320 及以下不承诺”，与 §5 一致。
 
 ### P1 · 页面适配（3–5 天，按此顺序）
 

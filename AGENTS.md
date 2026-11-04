@@ -82,6 +82,7 @@ node server/index.js            # http://localhost:3000
 # verify — where .git + node_modules are (desktop: the STORE; laptop: this checkout)
 node tools/build-data.mjs --offline     # must leave data/ byte-for-byte unchanged
 npm test                                # full suite; use npm test, not bare node --test
+npm run check:mobile                    # phone matrix audit (Chrome; docs/MOBILE-UI.md §7)
 node tools/kit-coverage.mjs --missing   # every chess has a kit
 node tools/i18n.mjs check en --strict   # English UI pack complete
 node tools/doctor.mjs                   # environment diagnosis
@@ -91,6 +92,8 @@ npx eslint . && npm run typecheck && npm run check:imports
 
 - **Dev-tree caveat:** `test/docs-paths.test.js` and `test/package.test.js` shell out to `git ls-files`, so they
   **cannot pass in the git-less dev tree**. Run the full suite in the store.
+- **Mobile (P0):** `npm run check:mobile` drives `public/dev/mobile-audit.html` over the 640×360 … 1024×768 matrix
+  (Chrome via `CHROME_PATH`; screenshots in `test/e2e/out/mobile/`) — see [`docs/MOBILE-UI.md`](docs/MOBILE-UI.md) §7.
 - Browser / E2E suites are opt-in: `SP_E2E=1`, `SP_REAL_E2E=1`, `RENDER_E2E=1`, `SIM_E2E=1`.
 - **Docs gates**: `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js`.
 

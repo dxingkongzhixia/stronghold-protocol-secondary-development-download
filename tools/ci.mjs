@@ -15,6 +15,7 @@
 //   lint       eslint .                                   (npm run lint; warnings do not fail it)
 //   imports    node tools/check-imports.mjs               (npm run check:imports)
 //   typecheck  tsc --noEmit --checkJs -p jsconfig.json    (npm run typecheck)
+//   mobile     node tools/mobile-audit.mjs                (npm run check:mobile; needs Chrome — CHROME_PATH)
 // The job `test` steps get ci.yml's env (SP_E2E=0, SP_REAL_E2E=0, RENDER_E2E=0, NO_COLOR=1) unless already set.
 //
 // Not mirrored: actions/checkout and actions/setup-node (GitHub runner setup) and `npm ci` (the install — run it
@@ -41,6 +42,8 @@ export const SMOKE_PATHS = ['/healthz', '/', '/vendor/pixi.min.js'];
 export const SKIPPED_CI_STEPS = [
   { uses: 'actions/checkout', why: 'GitHub runner: the checkout is this folder' },
   { uses: 'actions/setup-node', why: 'GitHub runner: the Node.js of this machine is used' },
+  { uses: 'browser-actions/setup-chrome', why: 'GitHub runner: installs Chrome for the mobile audit' },
+  { uses: 'actions/upload-artifact', why: 'GitHub runner: keeps the mobile screenshots' },
   { name: 'Install (npm ci → postinstall copies public/vendor)', why: 'run `npm ci` yourself; it is not a check' },
 ];
 
@@ -58,6 +61,7 @@ export const STEPS = [
   { id: 'lint', ci: { job: 'tooling', name: 'Lint (warnings allowed)' }, npm: 'lint', describe: 'eslint .' },
   { id: 'imports', ci: { job: 'tooling', name: 'Import boundaries' }, npm: 'check:imports', describe: 'node tools/check-imports.mjs' },
   { id: 'typecheck', ci: { job: 'tooling', name: 'Typecheck' }, npm: 'typecheck', describe: 'tsc --noEmit --checkJs -p jsconfig.json' },
+  { id: 'mobile', ci: { job: 'mobile-audit', name: 'Mobile audit' }, npm: 'check:mobile', describe: 'node tools/mobile-audit.mjs' },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -328,6 +332,7 @@ function runStep(step, env) {
     case 'lint': return node([binPath('eslint', 'eslint'), '.'], env);
     case 'imports': return node(['tools/check-imports.mjs'], env);
     case 'typecheck': return node([binPath('typescript', 'tsc'), '--noEmit', '--checkJs', '-p', 'jsconfig.json'], env);
+    case 'mobile': return node(['tools/mobile-audit.mjs'], env);
     default: throw new Error(`no runner for step ${step.id}`);
   }
 }

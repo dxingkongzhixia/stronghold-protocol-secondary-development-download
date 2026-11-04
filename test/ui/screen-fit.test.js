@@ -64,9 +64,9 @@ test('the stylesheet: the inset box and its layout root only under [data-fit]', 
   const sec = css.slice(css.indexOf('/* ---- 5. 异形屏适配'));
   assert.ok(sec.length > 0 && sec.length < css.length);
   const root = sec.match(/html\[data-fit\] \{([^}]*)\}/)?.[1] || '';
-  assert.match(root, /font-size: clamp\(40px, min\(calc\(\(100vw - var\(--fit-l, 0px\) - var\(--fit-r, 0px\)\) \/ 19\.2\), calc\(\(100vh - var\(--fit-t, 0px\) - var\(--fit-b, 0px\)\) \/ 10\.8\)\), 240px\);/);
+  assert.match(root, /font-size: clamp\(40px, min\(calc\(\(100vw - var\(--fit-l, 0px\) - var\(--fit-r, 0px\)\) \/ 19\.2\), calc\(\(100dvh - var\(--fit-t, 0px\) - var\(--fit-b, 0px\)\) \/ 10\.8\)\), 240px\);/);
   assert.match(root, /font-size: clamp\(40px, min\(calc\(\(100vw - var\(--fit-l, 0px\) - var\(--fit-r, 0px\)\) \/ 19\.2\), calc\(\(100svh - var\(--fit-t, 0px\) - var\(--fit-b, 0px\)\) \/ 10\.8\)\), 240px\);/,
-    'theme.css\'s layout root, with the insets taken off (svh after the vh fallback)');
+    'theme.css\'s layout root, with the insets taken off (svh after the dvh fallback)');
   assert.match(sec, /html\[data-fit\] :is\(\.app-root, \.st, \.lo, \.guide\) \{\n {2}left: var\(--fit-l, 0px\); right: var\(--fit-r, 0px\); top: var\(--fit-t, 0px\); bottom: var\(--fit-b, 0px\);/);
   assert.doesNotMatch(sec, /!important/);
   assert.doesNotMatch(sec, /--t\s*:/, 'the text size setting is left alone');
@@ -105,6 +105,6 @@ test('short coarse screens scale below the desktop 40 px floor and keep valid to
   assert.match(css, /html\[data-fit\] \{\n    font-size: clamp\(24px,/,
     'the screen-fit root keeps the same low floor on a short phone');
   // the touch-target selector list must be one valid selector, not a duplicated nested fragment (the 2026-10-21 mobile fix)
-  assert.match(css, /\.set-seg button, \.set-fit__step\) \{/);
+  assert.match(css, /\.set-seg button, \.set-fit__step[^)]*\) \{/);
   assert.doesNotMatch(css, /\.set-seg button\) \{\n  \.modal__close/);
 });

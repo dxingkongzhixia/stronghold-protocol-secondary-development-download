@@ -1,7 +1,8 @@
 /* ==========================================================================================
    devices.css — multi-device layer (loaded last). Desktop Chrome / Edge / Firefox / Safari, iPad and Android tablets
-   in landscape, phones in landscape (≥ 640×360 CSS px). js/ui/device.js puts the feature classes on <html>
-   (sp-touch, sp-coarse, sp-hover / sp-no-hover, sp-fs, sp-standalone, sp-reduced-motion) — never UA sniffing.
+   in landscape, phones in landscape (≥ 640×360 CSS px; 568×320 and below are not promised — docs/MOBILE-UI.md §5).
+   js/ui/device.js puts the feature classes on <html> (sp-touch, sp-coarse, sp-hover / sp-no-hover, sp-fs, sp-standalone,
+   sp-reduced-motion) — never UA sniffing.
 
    1. no page zoom / scroll / pull-to-refresh while playing (touch-action, overscroll-behavior, callouts)
    2. safe-area insets (notches, rounded corners, home indicator): the HUD and every screen stay inside them while the
@@ -57,13 +58,15 @@ html:not(.sp-in-match) .toast-host { margin-top: var(--sa-t); }
 /* An invisible hit area of at least --tap-min around small controls on touch screens: centred, never smaller than the
    control, no layout change. Only controls that do not use ::before themselves are listed. */
 :where(.sp-coarse) :where(.tapx, .gtop__exit, .gtop__iconbtn, .enemybtn, .readybtn, .gm__gear, .fsbtn, .ewheel__btn, .ewheel__nav,
-  .toolbtn, .funds__collapse, .team__btn, .effect, .bslot .bond, .vswitch__arrow, .edrawer__close, .dpanel__close, .bpop__close,
-  .modal__close, .uf__btn, .chud__back, .tabs__tab, .btn, .pill-btn, .stephead__guide, .set-toggle, .set-seg button, .set-fit__step) {
+  .toolbtn, .funds__collapse, .team__btn, .effect, .bslot, .bslot .bond, .vswitch__arrow, .edrawer__close, .dpanel__close, .bpop__close,
+  .modal__close, .uf__btn, .chud__back, .tabs__tab, .btn, .pill-btn, .stephead__guide, .set-toggle, .set-seg button, .set-fit__step,
+  .settle__next, .cx-chip, .chat-dock__toggle, .bstrip__more, .guide__chapter, .tips__nav) {
   position: relative;
 }
 .sp-coarse :is(.tapx, .gtop__exit, .gtop__iconbtn, .enemybtn, .readybtn, .gm__gear, .fsbtn, .ewheel__btn, .ewheel__nav,
-  .toolbtn, .funds__collapse, .team__btn, .effect, .bslot .bond, .vswitch__arrow, .edrawer__close, .dpanel__close, .bpop__close,
-  .modal__close, .uf__btn, .chud__back, .tabs__tab, .btn, .pill-btn, .stephead__guide, .set-toggle, .set-seg button, .set-fit__step)::before {
+  .toolbtn, .funds__collapse, .team__btn, .effect, .bslot, .bslot .bond, .vswitch__arrow, .edrawer__close, .dpanel__close, .bpop__close,
+  .modal__close, .uf__btn, .chud__back, .tabs__tab, .btn, .pill-btn, .stephead__guide, .set-toggle, .set-seg button, .set-fit__step,
+  .settle__next, .cx-chip, .chat-dock__toggle, .bstrip__more, .guide__chapter, .tips__nav)::before {
   content: '';
   position: absolute; left: 50%; top: 50%; z-index: 0;
   width: max(100%, var(--tap-min)); height: max(100%, var(--tap-min));
@@ -165,7 +168,7 @@ html:not(.sp-in-match) .toast-host { margin-top: var(--sa-t); }
    off). Only while <html data-fit> is set: with all four at 0 nothing here applies. The bands outside show the page
    background; fixed overlays (dialogs, toasts) still use the whole screen. */
 html[data-fit] {
-  font-size: clamp(40px, min(calc((100vw - var(--fit-l, 0px) - var(--fit-r, 0px)) / 19.2), calc((100vh - var(--fit-t, 0px) - var(--fit-b, 0px)) / 10.8)), 240px);
+  font-size: clamp(40px, min(calc((100vw - var(--fit-l, 0px) - var(--fit-r, 0px)) / 19.2), calc((100dvh - var(--fit-t, 0px) - var(--fit-b, 0px)) / 10.8)), 240px);
   font-size: clamp(40px, min(calc((100vw - var(--fit-l, 0px) - var(--fit-r, 0px)) / 19.2), calc((100svh - var(--fit-t, 0px) - var(--fit-b, 0px)) / 10.8)), 240px);
 }
 /* the screens' own box (theme.css .app-root: fixed, inset 0) and the full-page panels fixed over the screens (统计数据,

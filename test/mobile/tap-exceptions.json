@@ -1,0 +1,7 @@
+[
+  {
+    "selector": ".gm__hud > .shopbar",
+    "safe": true,
+    "reason": "M1.6 follow-up: the shop bar deliberately keeps its place at the physical bottom edge (devices.css §2: raising it by --sa-b covered bench pads 2–9 on a notched phone, user playtest #4 item 1). Its own buttons stay inside the HUD; the box alone reaches into the home-indicator strip. Re-check on a real notched device before removing this entry."
+  }
+]

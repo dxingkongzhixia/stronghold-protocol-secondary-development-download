@@ -172,7 +172,7 @@ describe('文字大小: the CSS text root', () => {
   });
 
   test('the layout root 1rem is untouched — the five rem→px readers must not move', () => {
-    assert.match(theme, /html \{\n {2}font-size: clamp\(40px, min\(calc\(100vw \/ 19\.2\), calc\(100vh \/ 10\.8\)\), 240px\);/,
+    assert.match(theme, /html \{\n {2}font-size: clamp\(40px, min\(calc\(100vw \/ 19\.2\), calc\(100dvh \/ 10\.8\)\), 240px\);/,
       'the desktop clamp');
     assert.match(theme, /font-size: clamp\(40px, min\(calc\(100vw \/ 19\.2\), calc\(100svh \/ 10\.8\)\), 240px\);/,
       'the svh clamp (mobile toolbars)');

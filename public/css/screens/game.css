@@ -532,7 +532,7 @@
   --bk-c: var(--mint-500);
   position: absolute; left: 0; bottom: calc(100% + max(.1rem, 8px)); z-index: 12;
   width: min(max(5.2rem, 340px), calc(100vw - var(--sa-l, 0px) - var(--sa-r, 0px) - .48rem));
-  max-height: min(max(6.6rem, 280px), calc(100vh - var(--combat-corner-height, 110px) - max(.9rem, 48px) - .34rem - var(--sa-t, 0px) - var(--sa-b, 0px)));
+  max-height: min(max(6.6rem, 280px), calc(100dvh - var(--combat-corner-height, 110px) - max(.9rem, 48px) - .34rem - var(--sa-t, 0px) - var(--sa-b, 0px)));
   max-height: min(max(6.6rem, 280px), calc(100dvh - var(--combat-corner-height, 110px) - max(.9rem, 48px) - .34rem - var(--sa-t, 0px) - var(--sa-b, 0px)));
   display: flex; flex-direction: column; overflow: hidden;
   background: linear-gradient(180deg, rgba(28, 35, 32, .98), rgba(17, 21, 19, .98));
@@ -1046,7 +1046,7 @@
   top: calc((var(--dock-bond-bottom) + var(--dock-margin)) * 1rem);
   z-index: 20; display: flex; flex-direction: column; align-items: flex-start;
   gap: .06rem; width: auto; max-width: min(calc(var(--dock-w) * 1rem), 28vw);
-  max-height: calc(100vh - (var(--dock-hand-clear) + var(--dock-bond-bottom) + var(--dock-margin) * 2) * 1rem);
+  max-height: calc(100dvh - (var(--dock-hand-clear) + var(--dock-bond-bottom) + var(--dock-margin) * 2) * 1rem);
   pointer-events: auto; box-sizing: border-box;
 }
 .testconsole.is-open {
@@ -1060,7 +1060,7 @@
 .testconsole__body {
   width: 100%; display: grid; gap: .06rem; padding: .1rem; background: rgba(12, 14, 12, .94);
   border: 1px solid rgba(232, 184, 74, .7); color: var(--text-hi); font-size: calc(.15 * var(--t));
-  max-height: calc(100vh - (var(--dock-hand-clear) + var(--dock-bond-bottom) + var(--dock-margin) * 2) * 1rem - .4rem);
+  max-height: calc(100dvh - (var(--dock-hand-clear) + var(--dock-bond-bottom) + var(--dock-margin) * 2) * 1rem - .4rem);
   overflow: auto; box-sizing: border-box;
 }
 .testconsole.is-open .testconsole__body { flex: 1 1 auto; min-height: 0; max-height: none; }
