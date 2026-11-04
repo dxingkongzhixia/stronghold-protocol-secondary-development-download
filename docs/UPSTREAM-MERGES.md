@@ -1644,3 +1644,23 @@ docs guards 34 pass / 0 fail.
 | `ca185d064` | #725 素材下载计数 | 依赖 #628 的整包下载（§0 黑名单），本分支没有该功能 |
 
 验收：`npm test` **8231 / 8189 通过 / 0 失败 / 42 跳过**；golden 全匹配。`check-upstream.mjs` 的远端名是 `origin`（不是默认的 `upstream`），用 `node tools/check-upstream.mjs --no-fetch --upstream origin`。
+
+---
+
+## 16. dev 2026-11-04 A 批：缇缇封护 / 起手朝向 / 同 id 道具 / 移动清损伤（2026-11-04）
+
+上游 `upstream/dev` 在 `17155c3cb` → `47ffc2615` 之间新增 72 个提交，triage 见
+[`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) §9。本批取其中 A 的前四项：
+
+| 项 | 上游 | 我们的提交 | 内容 | 验收 |
+|---|---|---|---|---|
+| **A2** #906 | `8668a9cd2` | `69246801b` | 缇缇 S2「封护」同生命比例时改判给**最后部署**的干员（`b.deploySeq - a.deploySeq`，与引星棘刺 S1 同口径） | `test/content/kits_alt_t5.test.js` 62 pass |
+| **A6** #869 | `dba4d1bea` | `68db3d913` | 敌人**起手就面向目标**（`UnitView._faceAttack`, `windUp(lead, kind, target)`；纯显示） | `test/render/windup-facing.test.js` |
+| **A1** #902 | `4505fb6f0` | `18fbf37b4` | 同一干员身上**第二件同 id 道具也生效**（每份拷贝独立 `item:<id>#n`；借出的仍 `@lend`） | `test/content/items.test.js`（双源石溶剂 / 双维式重锤） |
+| **A3** #903 | `7da8ff209` | `b7c97e050` | **【移动】按真实再部署**：清空五种元素计量并移除元素爆发的锁定；其他 buff 保留（DESIGN §22.3） | `test/sim/feedback3-ulpia-move.test.js` |
+
+**golden 归因**：只回退这四项的代码 → 存档零差异（已验证）；实际变化 = `roster-038`（缇缇封护改判）
+与 `fields` 的 `boss-boss_3-solo` / `hidden-boss_9-solo`（移动清元素计量），语料单独提交 `f4b6757c1`。
+
+**同批未做**：A4（乌尔比安 S3 的【移动】就地完成）与 A5（持续施法只冻结行走、冷却从施法结束起算；
+唯一会动 golden 的一项），按 §9.4 的顺序继续。

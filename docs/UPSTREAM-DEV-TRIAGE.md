@@ -83,6 +83,7 @@
 | 2026-10-28 召唤物时装（#876 的**思路**，自研） | 抽取官方 `tokenSkinMap` → `tokens[*].skins[<主人皮肤>]`，catalogue/overlay/schema 打通；运行时 `UnitInfo.ownerCharId` + `skinOf` 对 token 生效。**51 召唤物 / 72 套模型 / 8.5 MB** | [`SKINS.md`](SKINS.md)「Summon outfits」 |
 | 2026-10-29 插件上限按类放宽（主线 dev **#874**） | 外观插件文件夹上限 **512 MB**（其余仍 200 MB）：`pluginByteLimit` / `PLUGIN_MAX_BYTES`，zip/上传/工坊/工作室/目录的**外层**按最大类校验，解压后再按插件自己的类检查 | [`PLUGINS.md`](PLUGINS.md) §5 |
 | 2026-10-29 主线 0.3.x 数据插件免开关 | `content` 类按 0.3.2 契约直接加载（记录重新校验、玩法以本分支为准，check 保留提醒）；`script` / `trusted` 仍要 owner 放行 | [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
+| **2026-11-04 dev A 批**（§9.1 的 A1 / A2 / A3 / A6） | **A2** 缇缇 S2「封护」同生命比例改判给最后部署的干员（`69246801b`，上游 #906 `8668a9cd2`）；**A6** 敌人起手就面向目标（`68db3d913`，上游 #869 `dba4d1bea`）；**A1** 同一干员第二件同 id 道具也生效（`18fbf37b4`，上游 #902 `4505fb6f0`）；**A3** 【移动】清空元素损伤与爆发锁定（`b7c97e050`，上游 #903 `7da8ff209`）；golden：`f4b6757c1`（roster-038 / fields 2 个场景） | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §16 |
 
 线上口径：2026-10-27 部署 `build b8f6defd0d1b`（含批 A + #576 + 皮肤修复）。
 
@@ -176,7 +177,7 @@
 每批完成：条目移到 §1、在 `UPSTREAM-MERGES.md` 追加一节（含上游提交 ↔ 本分支提交 ↔ 验收），
 `node tools/check-upstream.mjs` 当门禁。
 
-> **2026-11-04 之后**：先按 **§9.4** 的顺序走 A 批（A2 + A6 → A1 + A3 → A4 → A5），再做 B1 + B5；
+> **2026-11-04 之后**：**A2 + A6 + A1 + A3 已完成**（见 §1）；继续按 **§9.4**：A4 → A5，再做 B1 + B5；
 > §7 原来的 1–6 顺序仍然有效，但 #729 已完成，UI 批继续暂缓。
 
 ## 8. 过期记录（别被旧文档误导）
@@ -197,12 +198,12 @@
 
 | 编号 | 上游 | 设计是什么 | 我们的现状 | 代价 | golden |
 |---|---|---|---|---|---|
-| **A1** | `4505fb6f0`（#902） | **同一干员身上第二件同 id 道具也生效**：每份拷贝用独立 buff key（`item:<id>#n`），不再互相覆盖；借出的仍共用 `@lend` | `server/sim/content/items/battle.js:901` 仍是 `item:${itemId}` → 第二件**顶掉**第一件的数值/扣血 | ~10 行 + 1 用例 | 小概率动 roster（同件×2 的场景） |
-| **A2** | `8668a9cd2`（#906） | **缇缇 S2「封护」同比例时锁最后部署**：排序尾键从创建顺序换成 `b.deploySeq - a.deploySeq`（重新部署会刷新） | `server/sim/content/kits/ops/chess_char_5_02-titi.js:55` 正是 `\|\| a.id - b.id`；`deploySeq` 我们已有 | **1 行** + 1 用例 | 基本不动（kit 单测） |
-| **A3** | `7da8ff209`（#903） | **【移动】视作真实再部署：清元素损伤** | `server/sim/battle/tiles.js` 无此处理 | ~5 行 + 测试 | 动 fields / roster 少量 |
+| **A1** ✅ 11-04 | `4505fb6f0`（#902） | **同一干员身上第二件同 id 道具也生效**：每份拷贝用独立 buff key（`item:<id>#n`），不再互相覆盖；借出的仍共用 `@lend` | `server/sim/content/items/battle.js:901` 仍是 `item:${itemId}` → 第二件**顶掉**第一件的数值/扣血 | ~10 行 + 1 用例 | 小概率动 roster（同件×2 的场景） |
+| **A2** ✅ 11-04 | `8668a9cd2`（#906） | **缇缇 S2「封护」同比例时锁最后部署**：排序尾键从创建顺序换成 `b.deploySeq - a.deploySeq`（重新部署会刷新） | `server/sim/content/kits/ops/chess_char_5_02-titi.js:55` 正是 `\|\| a.id - b.id`；`deploySeq` 我们已有 | **1 行** + 1 用例 | 基本不动（kit 单测） |
+| **A3** ✅ 11-04 | `7da8ff209`（#903） | **【移动】视作真实再部署：清元素损伤** | `server/sim/battle/tiles.js` 无此处理 | ~5 行 + 测试 | 动 fields / roster 少量 |
 | **A4** | `fbc83fd7a`（#903） | **乌尔比安 S3 的【移动】一定发生**：锚点落自己格或落点非法时**就地**完成，而不是这次不移动 | `op-ulpia` 的 S3 仍是"可部署才移动" | kit 内 ~15 行 + 测试 | 动他的场景 |
 | **A5** | `8540e5699` + `aa471815c`（#904） | **持续施法只在施法期间站住**：用 `ab:channel` 只冻结"行走"这一段（路线 WAIT/传送/离场/恐惧照常），技能结束或被打断才重新走；**冷却从施法结束起算** | `server/sim/ai.js` 的 `standing` 没有 channel 项；我们的 `ab:channel` 只有 `disarm`（施法时仍在走），冷却从施放起算 | ai.js + element/invisible 各十几行 + 测试 | **会动**（敌人位置 → roster / diy / fields） |
-| **A6** | `dba4d1bea`（#869 后续） | **敌方"起手"就面向目标**，不是等出手帧 | `public/js/render/units.js` 只在出手时转向 | units.js / windup.js ~20 行（纯显示） | 不动 |
+| **A6** ✅ 11-04 | `dba4d1bea`（#869 后续） | **敌方"起手"就面向目标**，不是等出手帧 | `public/js/render/units.js` 只在出手时转向 | units.js / windup.js ~20 行（纯显示） | 不动 |
 
 **与本批"同源但先不做"的一项**：鸭爵 `ded5f2641`（只换下半场敌人、每人每回合一种换入类型）。我们已经有共享抽取版本（批 A `fc5ae44d1`）；这条要**先逐条对照再决定**，不放进 A 批。
 
