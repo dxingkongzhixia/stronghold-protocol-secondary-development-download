@@ -84,6 +84,7 @@
 | 2026-10-29 插件上限按类放宽（主线 dev **#874**） | 外观插件文件夹上限 **512 MB**（其余仍 200 MB）：`pluginByteLimit` / `PLUGIN_MAX_BYTES`，zip/上传/工坊/工作室/目录的**外层**按最大类校验，解压后再按插件自己的类检查 | [`PLUGINS.md`](PLUGINS.md) §5 |
 | 2026-10-29 主线 0.3.x 数据插件免开关 | `content` 类按 0.3.2 契约直接加载（记录重新校验、玩法以本分支为准，check 保留提醒）；`script` / `trusted` 仍要 owner 放行 | [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
 | **2026-11-04 dev A 批**（§9.1 的 A1–A6） | **A2** 缇缇 S2「封护」同生命比例改判给最后部署的干员（`69246801b`，上游 #906 `8668a9cd2`）；**A6** 敌人起手就面向目标（`68db3d913`，上游 #869 `dba4d1bea`）；**A1** 同一干员第二件同 id 道具也生效（`18fbf37b4`，上游 #902 `4505fb6f0`）；**A3** 【移动】清空元素损伤与爆发锁定（`b7c97e050`，上游 #903 `7da8ff209`）；**A4** 乌尔比安 S3 的【移动】必定执行、就地完成（`522503bcf`，上游 #903 `fbc83fd7a`）；**A5** 持续施法只冻结行走、冷却从施法结束起算（沿用上游 #904 的设计）；golden：`f4b6757c1`、`a115c672c` | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §16 |
+| **2026-11-04 dev B 批**（§9.2 的 B2 fa-items + B4） | 终局（Final Assault）备战：boss 排练按干员记队长伤害 → 卖备战席 → 刷新买 blackboard 估值的伤害道具 → 给“排练队长伤害 × 相对 DPS 提升”最高者；`坎诺特` 留利息、满手不买不刷；`band-strength` 待 B3 | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §17 |
 
 线上口径：2026-10-27 部署 `build b8f6defd0d1b`（含批 A + #576 + 皮肤修复）。
 
@@ -212,9 +213,9 @@
 | 编号 | 上游 | 做法 | 对我们的价值 |
 |---|---|---|---|
 | **B1** 不适用 11-04 | `4480d8cf1` | **测试钉死默认数据构建**（`test/helpers/defaultGamedata.js`）：默认数据版本显式固定，数据重建不再让测试漂移 | 上游有 `data/versions/` 多剖面（默认集可被上游数据更新改掉），我们没有这层：单一 `data/` + `test/data.test.js` 的「离线重建逐字节一致」已经钉住了构建漂移；读 `.cache/gamedata` 的交叉校验一律 skip-if-absent。**不改**，只记结论 |
-| **B2** | `6cf59ff5a` / `bfd2a9209` | **把决策价值做成可单测的纯函数**：`band-strength`（按阵容强度给乐队打分）、`fa-items`（终局后卖席换伤害道具的估值） | 我们刚移植的 bot 栈正缺这层"可解释、可回归"的决策函数 |
-| **B3** | `6cf59ff5a` | **终极按"这套阵容 bot 会不会玩"给乐队加权**（不是按起始 LP） | 我们 `botPickBand` 目前按起始 LP 加权；这是更合理的一层。会全量动 `matches` golden，需单独一轮 |
-| **B4** | `bfd2a9209` | **终局阵型后排卖备战席、按道具 blackboard 估值买伤害道具**（208 行 + 测试） | 终局收益明显；体量大 + 动 golden，适合单独一轮 |
+| **B2** ✅ 11-04（fa-items） | `6cf59ff5a` / `bfd2a9209` | **把决策价值做成可单测的纯函数**：`band-strength`（按阵容强度给乐队打分）、`fa-items`（终局后卖席换伤害道具的估值） | `faItemMods` / `faItemTarget`（`server/match/bot.js`）+ `test/match/fa-items.test.js`：按道具 blackboard 的 bbStr key 读伤害，纯函数、可回归。**`band-strength` 留到 B3**：那张表是上游 bot 的 80 局实测，我们的 bot 已分叉，照抄无意义 |
+| **B3** | `6cf59ff5a` | **终极按"这套阵容 bot 会不会玩"给乐队加权**（不是按起始 LP） | 我们 `botPickBand` 目前按起始 LP 加权；这是更合理的一层。会全量动 `matches` golden，需单独一轮（先用自己的 bot 实测出表） |
+| **B4** ✅ 11-04 | `bfd2a9209` | **终局阵型后排卖备战席、按道具 blackboard 估值买伤害道具**（208 行 + 测试） | 已移植：rehearsal 记每个干员的队长伤害、卖席后刷新买伤害道具并给收益最高的干员、`坎诺特` 留利息、满手不买不刷 | `test/match/fa-items.test.js` |
 | **B5** ✅ 11-04 | `7c623743c` + `test/ui/ready-click-css.test.js` | **用 CSS 回归测试盯住点击区**：窄窗口下重复的 `gm__hud` 规则把"准备就绪"整条点击区又打开 | 已按同一套路落地：`public/css/screens/game.css` 修 `pointer-events` + `test/ui/ready-click-css.test.js`（`7c623743c`） |
 | **B6** | `b62751ddd`（#725） | **import cache 绕过 HTTP 缓存上限**：secure context 下把整包下载放进 import cache（Chrome Windows 的 HTTP 缓存只有 320 MB） | 功能本身在 §0 不取，但这个事实值得记进 `ASSETS.md`，将来做任何"离线素材包"都用得上 |
 

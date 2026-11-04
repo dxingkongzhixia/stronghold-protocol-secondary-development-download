@@ -314,7 +314,17 @@ chance from the exposure model below for that one enemy against the own board as
 multiplier, DEF / RES, speed, route kind) — an expected-value comparison: it prefers the card with the best payout
 minus expected LP loss and takes one it is unlikely to beat only when nothing better is offered or the pay difference
 is large (in co-op 绝境 most remaining bounty leaks come from drafts with no beatable card at all); tactic cards by what
-they act on (a 盟誓 / 驰援 card on its bonds, 升华, …). Placement uses the round's enemy preview: every route is traced
+they act on (a 盟誓 / 驰援 card on its bonds, 升华, …). At the Final Assault prep (§37.67, upstream bfd2a9209) a damage
+item — equipment whose blackboards raise its carrier's hits (`faItemMods`, by the bbStr keys the battle reads: the stat
+buff's ATK % and ASPD, 有限加速器's ASPD per attack up to its stacks averaged over the boss rehearsal's length from the
+carrier's own interval, 激光发射器's RES ignored, 双模机械臂's 弱点伤害; never 源石溶剂, whose drain kills a back-line
+carrier) — waits for the rehearsed layout, and the boss rehearsal counts each own operator's leader damage (piece uid).
+After the layout the bench is sold (kept: a member of a bond that counts the hand, a piece with items, a recurring 特质)
+and the funds refresh the shop; a damage item is bought when a deployed dealer with a free slot gains and goes, like the
+held ones, to the one with the most rehearsed leader damage × its relative DPS gain against the boss field's armour (its
+own items counted; without counts the most DPS gained). 坎诺特 keeps its interest capital (`fundsReserve`), a full hand
+neither buys nor refreshes, and a seat under AI 托管 or with an advisor plan does not hunt.
+Placement uses the round's enemy preview: every route is traced
 over the own board (ground: the stage's device-aware ground paths; flyers: through their checkpoints) and weighted by
 its enemies; an exposure model (time on each tile × DPS against the round's armour of the units covering it — each
 unit's cover is the range it is deployed with under the player's loadout, `rangeRec` = `attackRangeGrid`, the grid the
