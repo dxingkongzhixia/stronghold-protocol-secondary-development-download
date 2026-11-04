@@ -373,7 +373,16 @@ and, unblocked, stand for each attack's clip — `attackStand`: data/enemies.jso
 (cooldown ≤ the strike frame, a target in range) and the rest of the clip after the strike, shortened when the attacks
 come quicker than the clip; `ATTACK_PAUSE` (0.35 s) after the strike when no clip is known; an `attackMoves`
 (「不停止移动」) enemy never stops; a stun or a displacement (失衡, 0.2.0) ends the stand; only the walking waits — a route WAIT keeps running and
-DISAPPEAR / APPEAR legs still happen, hiding ends the stand; GitHub #58 — then walk on. Any enemy whose block ends after
+DISAPPEAR / APPEAR legs still happen, hiding ends the stand; GitHub #58 — then walk on. A channel (持续施法 — 狂欢式演奏,
+死亡之眼) stands the enemy still for the whole channel, through the `ab:channel` buff rather than `noMove`: like an attack
+clip's stand it holds only the walking — a route WAIT (and a 传送门's wait) keeps running, DISAPPEAR / APPEAR legs still
+happen, the leak still counts and a 恐惧 runs at once (失衡 holds the walking under 恐惧 / 诱导 too); a running 诱导 is
+held, as under an attack clip [ASSUMED]. The buff's end — its own duration, or an interrupt: 沉默, a stun / 冻结 / 沉睡 /
+浮空 (they all set `stun`, units.js) or the locked target's fall — resumes the route, and the skill's cooldown restarts
+there (PRTS 「同一技能的冷却时间于该技能结束时开始计时」, #904), so 狂欢式演奏's 10 s follows its 10.5 s channel and 死亡之眼's
+24 s follows its 8 s one: it walks between casts. The attack-clip stand above never covered a channel (a channel has no
+normal attack), so until 0.3.4 it walked its route while casting (an in-game observation of 2026-10-29, [ASSUMED] — no table
+states the immobility, nor the 恐惧 / route-wait side of it). Any enemy whose block ends after
 its strike — its blocker stunned by that strike (流泪小子), knocked out or retreated — stands for the rest of that clip
 before it walks on (PRTS 状态机: an enemy's ATTACK / COMBAT state "攻击结束后回退到MOVE状态"; only a character's COMBAT
 drops when its blocker is gone; 0.2.0 — until then it walked on at once). Every normal attack strikes at its clip's damage frame (`attackWindup`: `attackAnim.hit`, shortened like the clip; 0 with no clip known — the strike as the swing starts): the cooldown runs down to the frame and the swing (`enemy.swing`) starts when it reaches the wind-up with a target in reach — the whole wind-up from that tick when the cooldown ran out before (it walked ready, its swing was cut); a stun / freeze / sleep / 浮空, hiding, 缴械, 恐惧, 战栗 while blocked or losing every target before the frame cuts the swing — no strike, the next one starts from its wind-up (PRTS 状态机 ATTACK / COMBAT "每帧检查异常状态", 异常效果 STUNNED / DISARMED "正在进行的普通攻击将被中断"; GitHub #187 / #170, 0.2.0) —, a strike already made stays made (its shot lands); the targets are taken at the frame [ASSUMED]; `fear`/`disarm` stop attacks; `dmgType 'none'` enemies

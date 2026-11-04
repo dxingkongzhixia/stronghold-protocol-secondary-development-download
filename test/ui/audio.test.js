@@ -838,10 +838,15 @@ describe('impact sounds (user playtest #4 item 6)', () => {
     globalThis.fetch = async (u) => { urls.push(u); return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) }; };
     const a = new AudioManager({ win: fw.win, getManifest: () => manifest });
     a.install();
+    // `urls` counts fetches, and tracking a field now preloads its units' sounds (`_track`): a play may come from the
+    // cache without a fetch. Record the plays themselves — every path goes through `_play` (a pool too).
+    const played = [];
+    const play = a._play.bind(a);
+    a._play = (url, o) => { played.push(url); return play(url, o); };
     fw.fire('pointerdown');
     a.setFieldUnits(units);
     const settle = () => new Promise((r) => setTimeout(r, 5));
-    return { a, urls, settle, restore: () => { globalThis.fetch = origFetch; } };
+    return { a, urls, played, settle, restore: () => { globalThis.fetch = origFetch; } };
   }
 
   test('an operator never plays a skill-mode file (_d / _h / _s) as its normal attack or impact; enemies keep their _h', () => {
@@ -861,7 +866,7 @@ describe('impact sounds (user playtest #4 item 6)', () => {
 
   test('a heal never makes the healer the author of the next damage on the healed ally', async () => {
     const enemyId = Object.keys(manifest.audio.sfx.units).find((k) => k.startsWith('enemy_') && manifest.audio.sfx.units[k].hit);
-    const { a, urls, settle, restore } = await rig([
+    const { a, played, settle, restore } = await rig([
       { id: 1, side: 'ally', kind: 'chess', spine: AGOAT2 }, { id: 2, side: 'ally', kind: 'chess', spine: 'char_x' },
       { id: 3, side: 'enemy', kind: 'enemy', spine: enemyId },
     ]);
@@ -872,27 +877,27 @@ describe('impact sounds (user playtest #4 item 6)', () => {
       assert.ok(ownSkill.length > 0, '前提：她的音效表里确实有 _s（技能形态）文件');
       a.handleBattleEvents([['atk', 1, 2, 'orb'], ['heal', 2, 300], ['dmg', 2, 120, 'phys'], ['dmg', 2, 80, 'arts']]);
       await settle();
-      assert.ok(asked(urls, manifest.audio.sfx.units[AGOAT2].attack), 'her cast sound');
-      assert.ok(!asked(urls, manifest.audio.sfx.units[AGOAT2].hit), 'no impact sound of hers on the ally');
-      assert.ok(!ownSkill.some((p) => asked(urls, p)), 'nothing of her S3');
+      assert.ok(asked(played, manifest.audio.sfx.units[AGOAT2].attack), 'her cast sound');
+      assert.ok(!asked(played, manifest.audio.sfx.units[AGOAT2].hit), 'no impact sound of hers on the ally');
+      assert.ok(!ownSkill.some((p) => asked(played, p)), 'nothing of her S3');
       // a hostile attack still authors its impact — once, and only for a real hit (not an element gauge fill)
       a.handleBattleEvents([['atk', 3, 2, 'none'], ['dmg', 2, 900, 'burn']]);
       await settle();
-      assert.ok(!asked(urls, manifest.audio.sfx.units[enemyId].hit), 'a gauge fill is no impact');
+      assert.ok(!asked(played, manifest.audio.sfx.units[enemyId].hit), 'a gauge fill is no impact');
       a.handleBattleEvents([['dmg', 2, 200, 'phys']]);
       await settle();
-      assert.equal(askedCount(urls, manifest.audio.sfx.units[enemyId].hit), 1, 'the impact');
+      assert.equal(askedCount(played, manifest.audio.sfx.units[enemyId].hit), 1, 'the impact');
       a.limiter.lastByUnit.clear(); a.limiter.lastByUrl.clear();
       a.handleBattleEvents([['dmg', 2, 50, 'phys']]);
       await settle();
-      assert.equal(askedCount(urls, manifest.audio.sfx.units[enemyId].hit), 1, 'a later tick is not the same attack\'s impact');
+      assert.equal(askedCount(played, manifest.audio.sfx.units[enemyId].hit), 1, 'a later tick is not the same attack\'s impact');
     } finally { restore(); }
   });
 
   test('a chain bounce plays no attack sound of the previous target; a stale attack is no impact', async () => {
     const enemyId = Object.keys(manifest.audio.sfx.units).find((k) => k.startsWith('enemy_') && manifest.audio.sfx.units[k].attack && manifest.audio.sfx.units[k].hit);
     const charId = Object.keys(manifest.audio.sfx.units).find((k) => k.startsWith('char_') && normalAttackSfx(k, manifest.audio.sfx.units[k].hit) && manifest.audio.sfx.units[k].hit);
-    const { a, urls, settle, restore } = await rig([
+    const { a, played, settle, restore } = await rig([
       { id: 1, side: 'ally', kind: 'chess', spine: charId }, { id: 5, side: 'enemy', kind: 'enemy', spine: enemyId },
       { id: 6, side: 'enemy', kind: 'enemy', spine: enemyId },
     ]);
@@ -902,12 +907,12 @@ describe('impact sounds (user playtest #4 item 6)', () => {
     try {
       a.handleBattleEvents([['atk', 5, 6, 'chain']]);
       await settle();
-      assert.ok(!asked(urls, manifest.audio.sfx.units[enemyId].attack), 'the bounce is not an enemy attack');
+      assert.ok(!asked(played, manifest.audio.sfx.units[enemyId].attack), 'the bounce is not an enemy attack');
       a.handleBattleEvents([['atk', 1, 5, 'arrow']]);
       fakeNow += 4000;
       a.handleBattleEvents([['dmg', 5, 100, 'phys']]);
       await settle();
-      assert.ok(!asked(urls, manifest.audio.sfx.units[charId].hit), '4 s later: not that attack\'s impact');
+      assert.ok(!asked(played, manifest.audio.sfx.units[charId].hit), '4 s later: not that attack\'s impact');
     } finally { globalThis.performance = perf; restore(); }
   });
 });

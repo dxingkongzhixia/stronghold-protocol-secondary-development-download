@@ -1650,7 +1650,7 @@ docs guards 34 pass / 0 fail.
 ## 16. dev 2026-11-04 A 批：缇缇封护 / 起手朝向 / 同 id 道具 / 移动清损伤（2026-11-04）
 
 上游 `upstream/dev` 在 `17155c3cb` → `47ffc2615` 之间新增 72 个提交，triage 见
-[`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) §9。本批取其中 A 的前四项：
+[`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) §9。本批取其中 A 的全部六项：
 
 | 项 | 上游 | 我们的提交 | 内容 | 验收 |
 |---|---|---|---|---|
@@ -1658,9 +1658,10 @@ docs guards 34 pass / 0 fail.
 | **A6** #869 | `dba4d1bea` | `68db3d913` | 敌人**起手就面向目标**（`UnitView._faceAttack`, `windUp(lead, kind, target)`；纯显示） | `test/render/windup-facing.test.js` |
 | **A1** #902 | `4505fb6f0` | `18fbf37b4` | 同一干员身上**第二件同 id 道具也生效**（每份拷贝独立 `item:<id>#n`；借出的仍 `@lend`） | `test/content/items.test.js`（双源石溶剂 / 双维式重锤） |
 | **A3** #903 | `7da8ff209` | `b7c97e050` | **【移动】按真实再部署**：清空五种元素计量并移除元素爆发的锁定；其他 buff 保留（DESIGN §22.3） | `test/sim/feedback3-ulpia-move.test.js` |
+| **A4** #903 | `fbc83fd7a` | `522503bcf` | 乌尔比安 S3 的**【移动】必定执行**：锚点落自身格、或落点及后一格都不可部署时就地完成（仍算一次再部署；无标记 → 无【返回】） | `test/sim/feedback3-ulpia-move.test.js`（挡怪 / 无合法落点两例） |
+| **A5** #904 | `8540e5699` + `aa471815c` | 本节 | **持续施法只冻结行走**：`ai.js` 从 `ab:channel` 读取（不是 `noMove`），路线 WAIT / 传送 / 离场 / 恐惧照常；沉默、眩晕（含冻结 / 沉睡 / 浮空）或目标倒下结束引导，**冷却从结束起算**（狂欢乐手 10 s 短于 10.5 s 引导） | `test/content/enemies_bosses.test.js` 280 pass（引导 / 打断 / 恐惧 / 两种施法者各一例） |
 
-**golden 归因**：只回退这四项的代码 → 存档零差异（已验证）；实际变化 = `roster-038`（缇缇封护改判）
-与 `fields` 的 `boss-boss_3-solo` / `hidden-boss_9-solo`（移动清元素计量），语料单独提交 `f4b6757c1`。
-
-**同批未做**：A4（乌尔比安 S3 的【移动】就地完成）与 A5（持续施法只冻结行走、冷却从施法结束起算；
-唯一会动 golden 的一项），按 §9.4 的顺序继续。
+**golden 归因**：只回退本批代码 → 存档零差异（A1/A2/A3/A6 与 A4 各验一次；A5 再单独验一次）；
+实际变化：A2/A3 → `roster-038`、`fields` 的 `boss-boss_3-solo` / `hidden-boss_9-solo`（`f4b6757c1`）；
+A4 → `roster` / `bonds` / `fields` 各若干（`a115c672c`）；A5 → `roster-010/018/023/043`、
+`bond-investShip-high`、`solo-HARD-9-boosted`、`diy-038/058/074`（本节语料提交）。
