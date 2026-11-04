@@ -302,3 +302,21 @@ test('Battle.moveRedeploy: refused like relocate (nothing changes); 气流 follo
   assert.ok(u.findBuff('terrain:airflow') && u.s.atk > 1000, 'the new tile\'s airflow starts');
   clean(h);
 });
+
+test('Battle.moveRedeploy: a 【移动】 is a redeploy — the element gauges reset and an element burst lock goes, other buffs stay (#903)', REAL, () => {
+  const op = chessRec({ id: 't_m', profession: 'WARRIOR', skill: null, stats: { atk: 1000, maxHp: 10000, def: 0 } });
+  const h = makeBattle({
+    defs: { chess: { t_m: op }, enemies: { e_dummy: dummy } },
+    units: [{ chessId: 't_m', row: 10, col: 4 }], enemies: [{ key: 'e_dummy', pos: [10, 6] }], hooks: ['deploy'], autoFinish: false, timeLimit: 60,
+  });
+  const b = h.b, u = h.unit('t_m');
+  h.step();
+  Object.assign(u.elem, { burn: 700, neural: 300, necrosis: 200, apoptosis: 100, erosion: 50 });
+  b.addBuff(u, { key: 'burnBurst', duration: 10, flags: { burstLock: true } });
+  b.addBuff(u, { key: 'test:keep', mods: { atkPct: 0.1 }, duration: 10 });
+  assert.ok(b.moveRedeploy(u, 10, 7));
+  assert.deepEqual([u.elem.burn, u.elem.neural, u.elem.necrosis, u.elem.apoptosis, u.elem.erosion], [0, 0, 0, 0, 0], 'gauges reset');
+  assert.equal(u.findBuff('burnBurst'), null, 'the burst lock goes with them');
+  assert.ok(u.findBuff('test:keep'), 'the other buffs stay (DESIGN §22.3)');
+  clean(h);
+});
