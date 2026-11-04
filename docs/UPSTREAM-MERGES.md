@@ -1665,3 +1665,21 @@ docs guards 34 pass / 0 fail.
 实际变化：A2/A3 → `roster-038`、`fields` 的 `boss-boss_3-solo` / `hidden-boss_9-solo`（`f4b6757c1`）；
 A4 → `roster` / `bonds` / `fields` 各若干（`a115c672c`）；A5 → `roster-010/018/023/043`、
 `bond-investShip-high`、`solo-HARD-9-boosted`、`diy-038/058/074`（`94a242336`）。
+
+---
+
+## 17. dev 2026-11-04 B 批：终局卖备战席换伤害道具（上游 B4 `bfd2a9209`，2026-11-04）
+
+上游在终极（Final Assault）备战做了「最后一阵」的经济收尾：排练后的阵容定下后，备战席不再战斗、留下的资金在备战结束
+时作废，于是**卖掉备战席 → 刷新买伤害道具 → 给收益最高的干员**。我们移植了它，并把估值做成纯函数（triage §9.2 的 B2）：
+
+| 项 | 上游 | 我们的提交 | 内容 | 验收 |
+|---|---|---|---|---|
+| **B2**（fa-items 部分） | `bfd2a9209` | `server/match/bot.js`（`faItemMods` / `faItemTarget`） | 从道具 buff 的 `bbStr.key` 读**战斗真正读的键**：`attr_common_global_buff` 的 atk / attack_speed、`magic_penetrate_global_buff`、双模机械臂的弱点伤害、`COUNTING` 的 attack_speed 叠到 `max_buff_cnt`（有限加速器）；条件型效果不计，`periodic_damage`（源石溶剂）直接排除 | `test/match/fa-items.test.js` |
+| **B4** | `bfd2a9209` | `feat(bot)` 提交 | boss 排练按 **piece uid** 记每个干员对领袖的伤害 → 布局落板后卖席（保留：手牌计数盟约成员 / 带道具的棋子 / 有循环特质的棋子）→ 刷新买 `faItemMods` 命中的道具，装备给「排练队长伤害 × 相对 DPS 提升」最高者；提前拿到的伤害道具等到布局后再装；`坎诺特` 留利息（`fundsReserve`）；满手不买不刷；AI 托管 / 有 advisor plan 的席位不参与 | `test/match/fa-items.test.js` 5 pass |
+
+**golden 归因**：只回退 `server/match/bot.js` 的这批改动 → 存档零差异（已验证）；实际变化 = `matches.json`
+14 个场景（`29cd7327e`）。`test/match/bosshp.test.js` 的「双方都开奥术」种子表因此顺延到加 6（商店随机流被终局刷新移动）。
+
+**未做**：B2 的 `band-strength` 一张表是上游 bot 的 80 局实测，我们的 bot 已分叉，照抄无意义；它只服务 B3（终极按
+bot 强度给乐队加权），留到 B3 时用自己的 bot 重新实测。
