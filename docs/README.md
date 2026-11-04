@@ -99,6 +99,7 @@
 | [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) | AI 策略注册表、内置策略、每座位覆盖与重放 | 当前 |
 | [`AI-STRATEGY.md`](AI-STRATEGY.md) | 示例顾问的打法、经济基准、证据分层（不改规则） | 参考 |
 | [`EXTERNAL-AI.md`](EXTERNAL-AI.md) | 外部 AI（sp-ai/1）与 LLM 适配器：配置、模式、安全边界 | 当前 |
+| [`MOBILE-UI.md`](MOBILE-UI.md) | 手机端视觉优化：现状、缺口（含证据）、P0/P1/P2 排期与验收 | 计划 |
 | [`BALANCE.md`](BALANCE.md) | 难度模型与测量（官方数值） | 参考 |
 
 ### 3.4 运维 / 状态层（描述「现在」，不覆盖规范）

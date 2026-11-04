@@ -48,6 +48,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | browser client (screens) | `public/js/main.js`, `public/js/store.js`, `public/js/screens/` |
 | browser UI widgets | `public/js/ui/` |
 | **main interface switch (classic lobby / Hub)** | [`docs/UI-HUB.md`](UI-HUB.md) · `server/uiMode.js` · `public/js/screens/hub/` · `public/css/screens/hub.css` |
+| **手机端（横屏）视觉 / 触屏 / 安全区 / 画质** | [`docs/MOBILE-UI.md`](MOBILE-UI.md) · `public/css/devices.css` · `public/js/ui/{device,screenFit}.js` · `public/js/render/app.js`（DPR/质量档） |
 | plugin system review / risks / verification gaps | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) |
 | **Keel（龙骨）插件系统（上手 / 功能 / 架构 / 流程 / 排错 / 模块权限）** | [`docs/keel/QUICKSTART.md`](keel/QUICKSTART.md) · [`docs/keel/FEATURES.md`](keel/FEATURES.md) · [`docs/keel/ARCHITECTURE.md`](keel/ARCHITECTURE.md) · [`docs/keel/MODULES.md`](keel/MODULES.md) · [`docs/keel/WORKFLOW.md`](keel/WORKFLOW.md) · [`docs/keel/DEBUGGING.md`](keel/DEBUGGING.md) · [`docs/keel/README.md`](keel/README.md) · `shared/keel/` · `tools/keel.mjs` |
 | **which Keel module / capability should I use?** | [`docs/keel/MODULES.md`](keel/MODULES.md)（七种模块、31 个能力、hooks、模板覆盖、已知差异） · `shared/keel/manifest.js` · `shared/keel/contracts.js` |
