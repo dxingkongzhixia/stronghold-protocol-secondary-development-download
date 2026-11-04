@@ -89,10 +89,16 @@ export default {
             battle.dealDamage(unit, e, { amount: unit.s.atk * num(bb.atk_scale), type: 'phys', isSkill: true, tags: ['skill', 'anchor'] });
             if (e.alive) battle.applyStatus(e, 'stun', { duration: num(bb.stun), source: unit });
           }
-          // ③ 【移动】 — only a change of tile moves him and leaves the 从不混淆的方向 ("若目标地块不为当前地块，会在原地部署"): an
-          // anchor on his own tile leaves him where he stands, no marker, nothing to return from [ASSUMED: the "tile one
-          // beyond the landing" is not tried when the landing is his own tile]
-          if (stop === 0 || !unit.alive) return;
+          // ③ 【移动】 — "必定执行" (PRTS 备注: the legality check ends on his own tile, so it always succeeds; #903): an
+          // anchor on his own tile, or no legal tile where it fell, is a 【移动】 where he stands. Only a change of tile
+          // leaves the 从不混淆的方向 ("若目标地块不为当前地块，会在原地部署").
+          if (!unit.alive) return;
+          // 【移动】"必定执行" (PRTS 备注: the legality check ends on his own tile, so it always succeeds; #903 — until then an
+          // anchor on his own tile, or no legal tile where it fell, skipped it). A 【移动】 on the spot is still a redeploy
+          // (Battle.moveRedeploy: element gauges reset, deploy effects fire again, the enemies he blocks let go and are
+          // blocked again), no marker and so no 【返回】 [ASSUMED: the marker is the return's flag]
+          const inPlace = () => { battle.moveRedeploy(unit, unit.tileR, unit.tileC); };
+          if (stop === 0) { inPlace(); return; }
           // PRTS 备注: landing tile > the tile one beyond it > his own tile (a deployable, free, unreserved melee tile).
           // "可部署" is a tile his player may deploy on: his own board (Battle.onOwnBoard) — never the other half of a 联防 or
           // boss field nor a boss field's hand / 临时整备区 rows; a teammate's half stays closed to him even where the 突袭
@@ -102,7 +108,7 @@ export default {
           // the whole skill
           const ok = ([r, c]) => (r !== unit.tileR || c !== unit.tileC) && battle.grid.inRect(r, c) && battle.onOwnBoard(unit.player, r, c) && battle.grid.canStand(r, c) && !battle.grid.isObstacle(r, c) && !battle.isReservedTile(r, c);
           const dest = [[sr, sc], frontOf(unit.tileR, unit.tileC, unit.dir, stop + 1)].find(ok);
-          if (dest == null) return;
+          if (dest == null) { inPlace(); return; }
           const home = [unit.tileR, unit.tileC];
           // the 【移动】 is a redeploy on the new tile (Battle.moveRedeploy: a new deployment, deploy effects fire again,
           // no exit) that keeps the running skill — "【移动】后仅继承下列效果：技能进度、第二天赋叠加层数"; the rest of
