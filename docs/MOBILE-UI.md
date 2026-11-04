@@ -70,6 +70,10 @@
 
 ## 4. 怎么验收（统一口径）
 
+> **2026-11-04 验证已开始**：真机模拟（640×360、DPR 2、触屏）打开真实标题页与 Hub 首屏，`document.scrollWidth == 640`
+> （无横向滚动），Hub 的公开房间 / 模拟入口 / 账号卡都在视口内；公开房间目录的座位头像代码已接上（随下次部署上线）。
+> 其余页面（房间 / 结算 / 图鉴 …）需要房间或对局状态，按 P1 逐页验。
+
 1. `RENDER_E2E=1 node --test test/render/*.browser.test.js`（含新矩阵）
 2. `npm run check:mobile`（`tools/mobile-audit.mjs`：点击区 + 横向滚动 + 安全区；截图在 `test/e2e/out/mobile/`）
 3. 真机抽查：至少一台 iOS Safari、一台 Android Chrome（横屏）
