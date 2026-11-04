@@ -960,3 +960,37 @@
 .hub-entries__row { gap: calc(0.05 * var(--ui-unit, 1rem)) !important; }
 .hub-group { padding: calc(0.06 * var(--ui-unit, 1rem)) calc(0.06 * var(--ui-unit, 1rem)) calc(0.08 * var(--ui-unit, 1rem)) !important; }
 .hub-group__cards { gap: calc(0.05 * var(--ui-unit, 1rem)) !important; }
+
+/* Phones / small tablets in LANDSCAPE (real Android, 640×360 CSS, 2026-11-05): the desktop 3-column hub gives the
+   公开房间 column only ~160 px (its title wrapped one glyph per line) and the top bar clipped its account chip. Below
+   760 CSS px the hub stacks: a compact title, the three mode cards as equal thirds, then the public rooms panel, then
+   the side tiles — the stage scrolls, so the primary actions are on the first screen. */
+@media (max-width: 760px) {
+  .lobby-hub .hub-stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; align-content: start;
+    overflow-y: auto; overscroll-behavior: contain; gap: calc(0.18 * var(--ui-unit, 1rem));
+    padding: calc(0.06 * var(--ui-unit, 1rem)) calc(0.25 * var(--ui-unit, 1rem)) calc(0.2 * var(--ui-unit, 1rem)); }
+  .lobby-hub .hub-center, .lobby-hub .hub-side, .lobby-hub .hub-right, .lobby-hub .hub-entries { grid-column: 1; grid-row: auto; }
+  .lobby-hub .hub-center { order: 0; padding: 0; }
+  .lobby-hub .hub-center__mark { display: none; }
+  .lobby-hub .hub-center__en { font-size: calc(.14 * var(--utility-text, var(--t))); letter-spacing: .2em; }
+  .lobby-hub .hub-center__title { margin-top: calc(0.03 * var(--ui-unit, 1rem)); font-size: calc(.34 * var(--utility-text, var(--t))); }
+  .lobby-hub .hub-entries { order: 1; width: 100%; margin-left: 0; padding: 0; }
+  .lobby-hub .hub-entries__row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: calc(0.18 * var(--ui-unit, 1rem)); width: 100%; }
+  .lobby-hub .hub-group, .lobby-hub .hub-group__cards { display: contents; }
+  .lobby-hub .hub-entry__group { display: none; }
+  .lobby-hub .hub-entry { width: auto; height: auto; min-height: 64px; margin: 0 !important; }
+  .lobby-hub .hub-entry__name { font-size: calc(.2 * var(--utility-text, var(--t))); padding-right: 0; }
+  .lobby-hub .hub-right { order: 2; width: 100%; justify-self: stretch; max-height: none; overflow: visible; padding-top: 0; }
+  .lobby-hub .hub-side { order: 3; width: 100%; justify-self: stretch; max-height: none; overflow: visible; padding-top: 0; }
+  .lobby-hub .hub-side .hub-tile { min-height: max(calc(0.5 * var(--ui-unit, 1rem)), 44px); }
+  .lobby-hub .hub-public__list { max-height: none; }
+  .lobby-hub .hub-topbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .lobby-hub .hub-topbar .topbar__right { gap: 0.1rem; min-width: 0; }
+  .lobby-hub .hub-topbar .hub-account { padding: 0 0.08rem; white-space: nowrap; }
+  .lobby-hub .hub-topbar .me-chip { max-width: 7rem; overflow: hidden; }
+  .lobby-hub .hub-topbar .me-chip__text { display: none; }
+  .lobby-hub .hub-topbar .me-chip { max-width: none; }
+  .lobby-hub .hub-topbar .me-chip__meta { min-width: 0; overflow: hidden; }
+  .lobby-hub .hub-topbar .me-chip__meta > * { overflow: hidden; text-overflow: ellipsis; }
+}

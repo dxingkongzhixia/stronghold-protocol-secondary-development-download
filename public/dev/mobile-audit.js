@@ -83,9 +83,11 @@ const PAGES = {
         <div class="hub-stage">
           <div class="hub-center"><b class="hub-center__title">卫戍协议</b><span class="t-dim">选择行动 · 在线 21</span></div>
           <section class="hub-entries">
-            ${[['开始行动', '单人或组队进入盟约'], ['加入房间', '输入房间码'], ['查看图鉴', '干员、道具与敌人'], ['数据统计', '历史战绩'], ['设置', '画面与操作']]
-              .map(([t, d], i) => `<button type="button" class="hub-entry${i === 0 ? ' hub-entry--amber' : ''}">
-                <b class="hub-entry__title">${t}</b><span class="hub-entry__desc">${d}</span></button>`).join('')}
+            <div class="hub-entries__row">
+              ${[['独立模拟', '独自调配'], ['同盟模拟', '组队协作'], ['同盟匹配', '快速加入']]
+                .map(([t, d], i) => `<button type="button" class="hub-entry hub-entry--${i === 0 ? 'solo hub-entry--mint' : i === 1 ? 'coop hub-entry--mint' : 'mm hub-entry--amber is-featured'}">
+                  <b class="hub-entry__title">${t}</b><span class="hub-entry__desc">${d}</span></button>`).join('')}
+            </div>
           </section>
         </div>
       </div>
