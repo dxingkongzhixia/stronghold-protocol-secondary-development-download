@@ -11,8 +11,11 @@
 //   S1 — one attack on the target's tile (ground enemies) for ×atk_scale, fear for `fear` s.
 //   S2 — a counter stance: 90 % shelter for `shelter_hold_duration` then decaying over `skill_duration`; the attacker
 //      takes `retaliate_atk_scale` × ATK Arts (radius `ability_range_radius`), 5 % of it heals her; 5 s of
-//      ATK/DEF +`atk`/`def` per stack (max 5) while she hits every blocked enemy. [ASSUMED] the stance's every-blocked
-//      attack is one extra hit every 0.5 s in this port (the skill record has no attack override outside its cast).
+//      ATK/DEF +`atk`/`def` per stack (max 5) while she hits every blocked enemy. The first hit that casts it is reduced
+//      by `damage_remaining_scale` at the injury stage, before the dodge / shelter stages (the new 庇护 cannot take part
+//      in it: PRTS 备注), and `dmg.guarded` keeps a second guard from touching the same instance.
+//      [ASSUMED] the stance's every-blocked attack is one extra hit every 0.5 s in this port (the skill record has no
+//      attack override outside its cast).
 //   S3 — +atk ATK, stops attacking to channel for 36 s; every `normal_interval` s a wave of 5 lanes (`normal_half_width`)
 //      runs `wave_exit_distance` tiles forward and detonates for `heatwave_atk_scale` × ATK Arts (burn-burst targets take
 //      element damage instead); overload (any target in burn burst) uses `overload_interval` / `overload_half_width`;
@@ -182,6 +185,21 @@ export default {
             }, { owner: unit });
             fields.push(sc);
           }, { owner: unit });
+          // S2's guard: the first damage instance she takes while S2 is ready is reduced by the skill's own
+          // `damage_remaining_scale` at the INJURY stage, before the dodge / 庇护 stages (PRTS 备注: the shield the cast
+          // grants "还不能参与本次伤害的处理"). The engine's TAKE_DAMAGE cast then opens the skill in `damaged`, so the
+          // shelter it grants covers later instances only. `dmg.guarded` keeps a second guard from reducing it again.
+          battle.on('hit', (c) => {
+            const d = c.dmg;
+            if (!d || c.target !== unit || d.cancel || d.guarded) return;
+            const sk = unit.skill;
+            if (!sk || sk.id !== S2 || sk.active || !sk.ready || !unit.canAct || unit.s.flags.silence) return;
+            if (!c.source?.alive || c.source.side !== 'enemy') return;   // 有来源, the other side
+            if (d.type !== 'phys' && d.type !== 'arts') return;           // 令该次物理/法术伤害降低
+            if ((d.tags || []).includes('terrain')) return;               // 环境伤害 is no attack
+            d.guarded = true;
+            d.mul *= num(b2.damage_remaining_scale, 0.1);
+          }, { owner: unit, priority: 1000 });
           // S2 retaliation.
           battle.on('damaged', (ctx) => {
             if (ctx.target !== unit || !unit.findBuff(COUNTER)) return;

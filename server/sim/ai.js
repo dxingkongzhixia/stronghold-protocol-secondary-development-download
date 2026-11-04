@@ -296,7 +296,7 @@ export function performAttack(b, u, prof, targets, opts = null) {
       resolveHit(b, u, prof, t, info, t.x, t.y);
     }
   }
-  if (b._hooks.attack) b.emit('attack', { attacker: u, targets, isSkill });
+  if (b._hooks.attack) b.emit('attack', { attacker: u, targets, isSkill, attackId });
   if (u.skill) u.skill.onAttackPerformed(targets, isSkill, !!(opts && opts.noAmmo));
   if (prof.afterAttack) b._safe(() => prof.afterAttack(b, u, targets), 'profile.afterAttack', u);
 }

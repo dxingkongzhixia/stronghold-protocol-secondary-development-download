@@ -58,6 +58,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | **PRTS「源代码」玩法插件（已上线：Boss/拟态/凯尔希 band，fork 独有）** | [`docs/PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) |
 | **AI 机器人训练 / 布局先验** | [`docs/DEPLOY.md`](DEPLOY.md)（Bot rehearsal / training）, `server/match/botPrior.js`, `tools/train-bot.mjs`, `server/training/` |
 | **攻击动画节奏（#729：模拟器给真实攻击间隔）** | [`docs/SIM.md`](SIM.md) §9 · `server/sim/snapshot.js` (`atkInterval`), `server/sim/battle/{events,lifecycle}.js` (`['rate', …]`), `public/js/render/attackRate.js`, `public/js/render/units.js` (`setAtkInterval` / `respawn`) |
+| **触发型效果 / 场(domain) / 施法窗口 / 离场快照 / 弹道记录 / 伤判守卫**（上游新干员的设计，自研实现） | [`docs/SIM.md`](SIM.md) §7.2.1 · `server/sim/battle/{triggers,domains}.js`, `server/sim/content/kits/shared/{triggerEffect,castWindow,leave,shotRecord}.js`, `DamageInfo.guarded`；样例 `kits/ops/op-{tocka,dminon,oxi}.js` |
 | **AI 策略注册表 / 内置策略 / 每座位覆盖** | [`docs/BOT-STRATEGIES.md`](BOT-STRATEGIES.md) · `server/match/{botStrategies,botStrategyContract,botPrep,botAdaptive,botIoleta,botIoletaPolicy}.js` · `SP_BOT_STRATEGY(_SEATS)` |
 | **外部 AI 顾问（sp-ai/1）/ LLM 适配器** | [`docs/EXTERNAL-AI.md`](EXTERNAL-AI.md) · `server/match/{externalAI,externalConfig,llmGate,llmRelease,aiDigest,aiPlan,aiEconomy}.js`, `server/ai/`, `tools/ai/` |
 | **示例顾问的打法 / 经济基准（不改变规则）** | [`docs/AI-STRATEGY.md`](AI-STRATEGY.md) · `server/ai/{playbook,strategy,strategy-community,cycles}.js` |

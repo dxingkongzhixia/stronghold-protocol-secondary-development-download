@@ -813,7 +813,7 @@ HP left is refused (damage.js `hasHp`: a lethal hit's `damaged` hook runs before
 
 `battle.dealDamage(source, target, dmg)` → HP removed. `DamageInfo = { amount, type:'phys'|'arts'|'true'|'elemental'|'element',
 element?, defIgnoreFlat, defIgnorePct, resIgnoreFlat, resIgnorePct, mul=1, canDodge (phys/arts), isSkill, isSplash,
-isAttack, isProjectile, attackId, ignoreSleep, ignoreSelect, sourceless, tags[], cancel }` (`isProjectile`: 远程途径 — an
+isAttack, isProjectile, attackId, ignoreSleep, ignoreSelect, sourceless, tags[], cancel, guarded }` (`isProjectile`: 远程途径 — an
 enemy normal attack that flew as a projectile (ai.js enemyAttack; PRTS 作战机制 "有弹道的攻击固定为10，无弹道的攻击固定为01")
 and 怒潮凛冬's 高台 splash (PRTS "被视为远程途径伤害"); every other hit is 近战途径 — what only melee-path damage triggers
 reads it: 薇薇安娜's 散华 护盾, kits/ops/op-vvana.js; `ignoreSelect`: no selection 无法选择
@@ -826,6 +826,8 @@ responsible unit should pass it as `source` with `sourceless: true` rather than 
 damage instance of one normal attack (all targets, splash, chain, projectile impacts; 0 for non-attack damage) — use it
 for "本次攻击" procs that must roll once per attack. **Dodge** from several buffs rolls independently: the unit's
 `s.dodgePhys` = 1 − Π(1 − pᵢ) (a single source keeps its exact value).
+`guarded` is a one-time injury-stage guard's flag: a content `hit` hook that reduces this instance (塔露拉 S2's
+`damage_remaining_scale`) sets it, so a second guard never touches the same hit; it is never carried between instances.
 Order: invulnerable / asleep / 对地规避? (a ground enemy's damage or element fill on an airborne 起飞 ally — flag `liftoff`,
 `targeting.js evadesGround` — is refused unless `ignoreSelect` or 无来源: it cannot select her, so its splash and area
 abilities skip her and a shot in flight when she took off lands on nothing [ASSUMED: PRTS 伤害流程 7 "取消掉隐匿/无敌状态
@@ -1083,6 +1085,9 @@ flag alters movement or 失衡.
   薇薇安娜 S3's ACTIVE_RANGE on 3-2 after its first cast; 0.2.0); fields `sp, spCost (= floor(base×spCostMul + spCostFlat)), spCostMul, charges,
   maxCharges, active, timeLeft, ammoLeft, ammoMax, activations, kind, rule, bb` (`ammoMax`: the most bullets the running ammo skill
   has held — set at activation, raised by skillStart additions and `addAmmo` above it; 0 when inactive).
+- A MANUAL skill's 3 s operation cooldown (`AUTO_OP_COOLDOWN`) is skipped while the unit holds `CAST_AUTO_BUFF`
+  (`cast:auto`, constants.js): content opens that window with `content/kits/shared/castWindow.js` (冻河 S2's 「期间技能
+  变为自动开启」); the skill's own trigger rule is unchanged, so it still waits for its target condition.
 
 ### 7.2 Kits
 
@@ -1163,6 +1168,23 @@ Element conventions of the kits (user playtest #5 #3; official term dictionary: 
   absorbed after that still carried it [ASSUMED].
 - **盟约·辅助干员 迭代元素** (kits/ops/chess_char_1_15-pithst.js `pithst`): every damage she deals (HP damage > 0; "造成伤害时") attaches `ep_damage_ratio
   × ATK` of 神经, then 灼燃, then 凋亡 (`PITHST_ELEMENTS`); the element applied first bursts, so alone she bursts 神经.
+
+### 7.2.1 Shared content primitives (trigger marks, fields, leaving, shots)
+
+- **触发型效果** (`battle/triggers.js`; kit view `kits/shared/triggerEffect.js`): `applyTrigger(source, target, { kind, status })`
+  keeps ONE mark per (caster, kind) — different kinds of one caster, and other casters' marks, coexist; `ownerTrigger`,
+  `consumeTrigger`, `transferTrigger` address a kind. `data.status` is the status the client draws for that mark.
+- **场** (`battle/domains.js`): `setDomain(source, tileKeys)` publishes a unit's field; `domainTiles()` is the union of every
+  live caster's field (国度: "所有“国度”在不同国度(干员)之间通用"); `domainHas(key)` / `unitOnDomain(u)` read it. A source's
+  field goes with it (`domainSources()` prunes a dead source lazily). What the field does — an ASPD cut, per-second damage,
+  a damage mask, `setExtraRange` — stays the kit's own hooks (op-dminon.js is the reference).
+- **Leaving** (`kits/shared/leave.js`): `onLeave(battle, unit, settle, { capture })` captures the state at the `kill` stage
+  (before the removal ends the running skill and drops its buffs: the exact ATK / field a 此身为界-style talent fires with)
+  or at `death` (a retreat), then settles at once or — for a knock-out — 0.7 s later. Its timer is not owned by the
+  leaving unit, so it survives its release.
+- **Shots** (`kits/shared/shotRecord.js`): `queueShot(unit, attackId, target, payload)` at the `attack` event (launch) and
+  `takeShot(unit, attackId, target)` at the impact hook — what a projectile does is decided at launch, not at the impact
+  (冻河 T2; the `attack` hook ctx carries `attackId`).
 
 ### 7.3 SkillSpec schema
 

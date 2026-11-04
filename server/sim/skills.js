@@ -53,7 +53,7 @@
 //   still applied (`active` is already false); they are removed right after it (unless onEnd re-activated the skill).
 
 import { absoluteRangeKeys, canTargetEnemy } from './targeting.js';
-import { AUTO_OP_COOLDOWN, COLS, ROWS } from './constants.js';
+import { AUTO_OP_COOLDOWN, CAST_AUTO_BUFF, COLS, ROWS } from './constants.js';
 
 const TICK_RULES = new Set(['SP_FULL', 'SEARCH', 'CUSTOM_RANGE', 'SKILL_RANGE', 'ACTIVE_RANGE', 'GDGLOW_SKILL_2']);
 /** True when a SkillSpec `targeting` changes the unit's range while the skill runs (Battle._refreshRange). */
@@ -417,8 +417,14 @@ export class SkillRuntime {
     }
   }
 
-  /** The automatic operations of a MANUAL skill are cooling down (AUTO_OP_COOLDOWN). */
-  _opCooling() { return this.manual && this.battle.time < this.opReadyAt - 1e-9; }
+  /**
+   * The automatic operations of a MANUAL skill are cooling down (AUTO_OP_COOLDOWN) — unless a cast window makes the
+   * skill AUTO-like for a while (CAST_AUTO_BUFF, 冻河 S2's 「期间技能变为自动开启」: the operation cooldown holds a MANUAL
+   * skill but never an AUTO one, constants.js).
+   */
+  _opCooling() {
+    return this.manual && this.battle.time < this.opReadyAt - 1e-9 && !this.unit.findBuff(CAST_AUTO_BUFF);
+  }
 
   /** Public form of the operation cooldown, for kits with their own automatic cast of a MANUAL skill. */
   get opCooling() { return this._opCooling(); }

@@ -65,6 +65,7 @@ import { BattleSummons } from './battle/summons.js';
 import { BattleTiles } from './battle/tiles.js';
 import { BattleWaves } from './battle/waves.js';
 import { BattleTriggers } from './battle/triggers.js';
+import { BattleDomains } from './battle/domains.js';
 import { BattleFever } from './battle/fever.js';
 import { BattleDisplacement } from './battle/displacement.js';
 import { BattleEconomy } from './battle/economy.js';
@@ -151,6 +152,7 @@ export class Battle {
     this._evq = [];
     this.projectiles = new ProjectileSystem(this);
     this._occ = new Array(ROWS * COLS).fill(null);
+    this._domains = new Map();   // 场: source unit → Set(absolute tile keys) (battle/domains.js)
     this._eb = new Array(ROWS * COLS);   // range buckets (colliders: queries.js _buildEnemyIndex)
     for (let i = 0; i < this._eb.length; i++) this._eb[i] = [];
     this._ebUsed = [];
@@ -226,7 +228,7 @@ export class Battle {
 }
 
 // the method modules, in this order (a name defined twice is an error, never a silent override)
-for (const part of [BattlePlayers, BattleLifecycle, BattleHooks, BattleSpawns, BattleDeploy, BattleBlocking, BattleStatus, BattleCombat, BattleQueries, BattleSummons, BattleTiles, BattleDisplacement, BattleEconomy, BattleEvents, BattleWaves, BattleTriggers, BattleFever]) {
+for (const part of [BattlePlayers, BattleLifecycle, BattleHooks, BattleSpawns, BattleDeploy, BattleBlocking, BattleStatus, BattleCombat, BattleQueries, BattleSummons, BattleTiles, BattleDisplacement, BattleEconomy, BattleEvents, BattleWaves, BattleTriggers, BattleDomains, BattleFever]) {
   for (const key of Reflect.ownKeys(part.prototype)) {
     if (key === 'constructor') continue;
     if (Object.prototype.hasOwnProperty.call(Battle.prototype, key)) throw new Error(`Battle.${String(key)} is defined twice`);

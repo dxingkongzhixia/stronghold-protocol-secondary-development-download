@@ -7,7 +7,7 @@
 //     for 1.5 × ATK once and gains 8 s of 挑衅 -1 (the PRTS "不容易受到攻击").
 // Kit contract: ../README.md.
 import { num, talentBb, skillBbOf, toggleBuff } from '../shared/tier1.js';
-import { TRIGGER_MARK as MARK, placeTrigger } from '../shared/triggerEffect.js';
+import { placeTrigger, triggerOf } from '../shared/triggerEffect.js';
 
 const S1 = 'skchr_pedro_1';
 const S2 = 'skchr_pedro_2';
@@ -57,8 +57,10 @@ export default {
           // The S1 mark: the next Arts damage the marked enemy takes adds one 1.5 × ATK Arts hit.
           battle.on('damaged', (ctx) => {
             const target = ctx.target;
-            if (!target?.alive || ctx.type !== 'arts' || !target.findBuff(MARK)) return;
-            battle.removeBuff(target, MARK);
+            if (!target?.alive || ctx.type !== 'arts') return;
+            const mark = triggerOf(target, unit, 'pedro:s1');
+            if (!mark) return;
+            battle.removeBuff(target, mark);
             battle.fx('blast', { x: target.x, y: target.y, id: unit.id });
             battle.dealDamage(unit, target, { amount: unit.s.atk * num(s1.debuff_atk_scale, 1.5), type: 'arts', isSkill: true, tags: ['skill', 'pedro:trigger'] });
           }, { owner: unit });

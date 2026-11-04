@@ -1683,3 +1683,26 @@ A4 → `roster` / `bonds` / `fields` 各若干（`a115c672c`）；A5 → `roster
 
 **未做**：B2 的 `band-strength` 一张表是上游 bot 的 80 局实测，我们的 bot 已分叉，照抄无意义；它只服务 B3（终极按
 bot 强度给乐队加权）。**owner 2026-11-04 决定 B3 暂时不合**，等以后用自己的 bot 重新实测再议。
+
+---
+
+## 18. 上游新干员的设计借鉴（2026-11-04，自研实现）
+
+不是 cherry-pick：上游 2026-11 的新干员（冻河 `4ccab83dd`、国度 `4cd22a655`、塔露拉 `b61ef3697` 及其后续修正）我们
+11-01 已有简化移植；这一轮把她们背后的**六个设计模式**抽成我们自己的引擎/内容原语，按我们的结构实现（数值与触发细节
+以我们的数据与引擎为准）：
+
+| # | 设计（上游做法） | 我们的实现 | 测试 |
+|---|---|---|---|
+| 1 | 触发型效果**一个 (来源, 种类) 一份**，不同种类/不同施法者共存，可转移 | `server/sim/battle/triggers.js`：`data.kind` 入 key，`refresh:'independent'` 允许同 key 多实例；`ownerTrigger/consumeTrigger/transferTrigger` 带 kind；佩德罗改用 `triggerOf(target, unit, 'pedro:s1')` | `test/sim/borrowed-designs.test.js` 第 1 条 |
+| 2 | **施法窗口**：目标技能“可开启”时，其 MANUAL 技能按 AUTO 处理（无 3 s 操作冷却） | `constants.CAST_AUTO_BUFF` + `skills.js _opCooling`；`kits/shared/castWindow.js`；冻河 S2 的 `canOpen`（SP 满 + 能行动 + 未沉默 + 有敌人或可治疗目标） | 同上第 3、4 条 |
+| 3 | **离场快照**：离场时缓存攻击力/场，击倒延迟 0.7 s、撤退立即结算 | `kits/shared/leave.js`（`kill` 阶段捕获，`death` 结算；计时器不归离场单位所有）；国度 T2 接入 | 同上第 6 条 |
+| 4 | **弹道记录**：出手时决定这一发做什么，命中时按记录结算 | `attack` 事件带 `attackId`；`kits/shared/shotRecord.js`；冻河 T2 改为发射时消耗强化、命中时取记录（并修掉原先 `onHitOn` 误用——它监听的是“打在她身上”而不是“她打出”） | 同上第 5、9 条 |
+| 5 | **场（domain）**：按格子的区域，多个施法者共用并集，离开即消失 | `server/sim/battle/domains.js`（`setDomain/domainTiles/domainHas/unitOnDomain`，死后惰性清理）；国度 T1/T2/S1/S2/S3 全部改为读并集 | 同上第 2 条 |
+| 6 | **伤判守卫**：触发技能的那一次伤害在闪避/庇护之前结算，当次不吃新护盾 | `DamageInfo.guarded`（一次性标记）；塔露拉 S2 的 `hit` 钩子按 `damage_remaining_scale` 降低触发实例，技能仍由 TAKE_DAMAGE 在 `damaged` 阶段开启 | 同上第 8 条 |
+
+**为何没有照抄数值/客户端**：三个干员的数值本来就在我们的 `data/`（11-01 已入库）；上游的强度表/版本化模块属于它们
+的数据体系，不适用。这一轮只借“结构”，没有引入新的美术资源。
+
+**golden 归因**：只回退这一批代码 → 存档零差异（已验证）；实际变化 = `diy` 4 个场景（冻河/国度/塔露拉的 DIY 阵容），
+语料见本节提交之后的 `chore(golden)`。

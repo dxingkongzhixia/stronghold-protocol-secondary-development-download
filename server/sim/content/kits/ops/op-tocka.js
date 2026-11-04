@@ -8,15 +8,17 @@
 //   S1 标记射击 — mark up to max_target allies: when a marked ally is hit it gains a shield (shield_atk_scale × ATK,
 //      decaying over shield_time) and the attacker is stunned for `stun` s. The official buff template's
 //      FilterDamageModifer(damageMask ELEMENT) + IfNot skips element gauge fills / elemental bursts (no attack).
-//   S2 交替撤离 — mark one ally; while the mark is held it gains attack_speed for buff_duration s.
+//   S2 交替撤离 — mark one ally; when that ally's skill can open (SP ready, able to act, and for a rule that asks no
+//      target of its own an enemy in reach) the mark fires: attack_speed for buff_duration s and a cast window that makes
+//      its MANUAL skill behave like an AUTO one (no operation cooldown). Marks of different kinds coexist on one holder.
 //   S3 剑走偏锋 — attack_speed, 4-target attacks ×atk_scale with a 0.5 s stun; the mark moves to the ally with the
 //      highest SP ratio; the caster and that ally gain a decaying `bonus_init_atk` ATK for `bonus_duration` s and the
 //      marked ally gains `bonus_sp` SP per second while the skill runs.
-// [ASSUMED] S2's "技能可开启时" is read as "when the mark is applied" in this port; the client's trigger-effect prefab
-// is the visual (kit emits no procedural field).
 // Kit contract: ../README.md.
-import { num, talentBb, skillRec, giveSp, onHitOn, isMainHit } from '../shared/tier1.js';
-import { TRIGGER_MARK as MARK, placeTrigger, triggerOf } from '../shared/triggerEffect.js';
+import { num, talentBb, skillRec, giveSp, isMainHit, enemyInRange } from '../shared/tier1.js';
+import { placeTrigger, triggerOf } from '../shared/triggerEffect.js';
+import { openCastWindow } from '../shared/castWindow.js';
+import { queueShot, takeShot } from '../shared/shotRecord.js';
 
 const S1 = 'skchr_tocka_1', S2 = 'skchr_tocka_2', S3 = 'skchr_tocka_3';
 const bbOf = (raw, id) => skillRec(raw, id)?.bb ?? {};
@@ -30,7 +32,7 @@ export default {
         [S1]: {
           kind: 'instant',
           onStart({ battle, unit }) {
-            const allies = battle.alliesInGrid(unit).filter((a) => a !== unit && !a.findBuff(MARK)).slice(0, num(b1.max_target, 2));
+            const allies = battle.alliesInGrid(unit).filter((a) => a !== unit && !triggerOf(a, unit, S1)).slice(0, num(b1.max_target, 2));
             for (const a of allies) {
               placeTrigger(battle, unit, a, { kind: S1, status: 'tocka_s1_mark' });
               // The official mark on the ally: its ON_BUFF_START one-shot (tocka_skill_01_buff_02_start_01).
@@ -41,7 +43,9 @@ export default {
         [S2]: {
           kind: 'instant',
           onStart({ battle, unit }) {
-            const allies = battle.alliesFor(unit).filter((a) => a !== unit && !a.findBuff(MARK)).slice(0, num(b2.max_target, 1));
+            const allies = battle.alliesFor(unit)
+              .filter((a) => a !== unit && !triggerOf(a, unit, S2) && a.skill && !a.skill.noSkill && a.skill.kind !== 'passive')
+              .slice(0, num(b2.max_target, 1));
             for (const a of allies) {
               placeTrigger(battle, unit, a, { kind: S2, status: 'tocka_s2_mark' });
             }
@@ -61,19 +65,20 @@ export default {
             const allies = battle.alliesFor(unit).filter((a) => a !== unit).sort((a, b) => ratio(b) - ratio(a));
             const target = allies[0];
             if (target) {
-              // Official “已存在时改为将其触发”: consume the old mark and fire its effect at once, then place S3's.
+              // Official “已存在时改为将其触发”: fire the mark this target already holds (whatever kind), then place S3's.
               const prev = triggerOf(target, unit);
               if (prev) {
-                battle.removeBuff(target, MARK);
+                battle.removeBuff(target, prev);
                 const kind = prev.data?.kind;
-                if (kind === S2) battle.addBuff(target, { key: 'tocka:s2aspd', duration: num(b2.buff_duration, 15), mods: { aspd: num(b2.attack_speed, 35) } });
-                else giveSp(target, 1, 'talent');
+                if (kind === S2) {
+                  battle.addBuff(target, { key: 'tocka:s2aspd', duration: num(b2.buff_duration, 15), mods: { aspd: num(b2.attack_speed, 35) } });
+                  openCastWindow(battle, target, num(b2.buff_duration, 15));
+                } else giveSp(target, 1, 'talent');
                 giveSp(unit, num(t1.sp, 2), 'talent');
                 const hurt = battle.alliesInGrid(unit).filter((x) => x.alive && x.hpRatio < 1).sort((x, y) => x.hpRatio - y.hpRatio)[0];
                 if (hurt) battle.heal(unit, hurt, unit.s.atk * num(t1.heal_scale, 1), { tags: ['talent'] });
                 unit.mem.tockaEmpower = true;
               }
-              battle.removeBuff(target, MARK);
               placeTrigger(battle, unit, target, { kind: S3 });
             }
             const init = num(b3.bonus_init_atk, 0.9), dec = num(b3.bonus_atk_dec_per_sec, 0.06);
@@ -95,13 +100,13 @@ export default {
       },
       talents: [{
         install(battle, unit) {
-          // T2: the next normal attack after a mark is area damage + weakness.
+          // T2: the next normal attack after a mark is area damage + weakness. What the shot does is decided at LAUNCH
+          // (「施加触发型效果后的下次普通攻击」) and applied when that arrow lands: two arrows in flight each keep their own
+          // decision (upstream bfd2a9209's shot records).
           const t2dur = num(t2['attack@t2_buff_duration'], 8);
           const t2scale = num(t2['attack@t2_magic_atk_scale'], 0.8);
           const t2atk = num(t2['attack@t2_atk'], -0.2);
-          onHitOn(battle, unit, ({ target, dmg }) => {
-            if (!isMainHit(dmg) || !unit.mem.tockaEmpower || !target?.alive) return;
-            unit.mem.tockaEmpower = false;
+          const burst = (target) => {
             for (const e of battle.foesInRadius ? battle.foesInRadius(target.x, target.y, num(t2['attack@projectile_range'], 1.5)) : [target]) {
               if (!e.alive || e.side !== 'enemy') continue;
               battle.addBuff(e, { key: 'tocka:weak', duration: t2dur, mods: { atkPct: t2atk }, source: unit });
@@ -111,17 +116,43 @@ export default {
                 if (--left <= 0) sc.cancel();
               }, { owner: unit });
             }
-          });
-          // S2: the mark triggers when the marked ally's skill becomes ready (official 技能可开启时), then grants
-          // attack_speed for buff_duration and counts as a trigger effect (T1/T2).
-          battle.every(0.2, () => {
+          };
+          // at launch: an empowered attack spends the empowerment and records one shot per target
+          battle.on('attack', (c) => {
+            if (c.attacker !== unit || !unit.mem.tockaEmpower) return;
+            unit.mem.tockaEmpower = false;
+            for (const t of c.targets || []) if (t) queueShot(unit, c.attackId, t, { t2: true });
+          }, { owner: unit });
+          // on impact: the record that belongs to this arrow (damage DEALT by her — `onHitOn` is damage TO the unit)
+          battle.on('damaged', (c) => {
+            const target = c.target, dmg = c.dmg;
+            if (c.source !== unit || !target?.alive || !isMainHit(dmg)) return;
+            const shot = takeShot(unit, dmg.attackId, target);
+            // a melee attack has no flight: the launch event fires after its damage, so fall back to the flag
+            if (!shot && !unit.mem.tockaEmpower) return;
+            if (!shot) unit.mem.tockaEmpower = false;
+            burst(target);
+          }, { owner: unit });
+          // S2: the mark triggers when the marked ally's skill can open (official 技能可开启时): SP ready, able to act, not
+          // silenced, and a legal target of its own kind — an injured ally for a heal skill, else an enemy in its attack
+          // or skill range (or one it blocks; the owner's test of 2026-11-03: 「没敌人不会放」). Then ASPD + buff_duration
+          // and a cast window: the MANUAL skill behaves like an AUTO one meanwhile (「期间技能变为自动开启」).
+          const canOpen = (b, a) => {
+            const sk = a.skill;
+            if (!sk || sk.noSkill || sk.kind === 'passive' || sk.active) return false;
+            if (!sk.ready || !a.canAct || a.s.flags.silence) return false;
+            if (sk.healSkill) return b.injuredAlliesInKeys(a.rangeKeys, a).length > 0;
+            return !!a.blockedBy || enemyInRange(b, a);
+          };
+          battle.every(0.2, (b) => {
             for (const a of battle.alliesFor(unit)) {
               if (!a.alive) continue;
-              const mark = a.findBuff(MARK);
-              if (!mark || mark.source !== unit || mark.data?.kind !== S2) continue;
-              if (!a.skill?.ready) continue;
-              battle.removeBuff(a, MARK);
+              const mark = triggerOf(a, unit, S2);
+              if (!mark) continue;
+              if (!canOpen(b, a)) continue;
+              battle.removeBuff(a, mark);
               battle.addBuff(a, { key: 'tocka:s2aspd', duration: num(b2.buff_duration, 15), mods: { aspd: num(b2.attack_speed, 35) } });
+              openCastWindow(b, a, num(b2.buff_duration, 15));
               giveSp(unit, num(t1.sp, 2), 'talent');
               const hurt = battle.alliesInGrid(unit).filter((x) => x.alive && x.hpRatio < 1).sort((x, y) => x.hpRatio - y.hpRatio)[0];
               if (hurt) battle.heal(unit, hurt, unit.s.atk * num(t1.heal_scale, 1), { tags: ['talent'] });
@@ -135,10 +166,10 @@ export default {
             // Official tocka_s1[trigger]: FilterDamageModifer(`_damageMask: ELEMENT`) + IfNot — element gauge fills and
             // elemental burst damage are no attack on the ally and do not fire the shield.
             if (ctx.type === 'element' || ctx.type === 'elemental') return;
-            const mark = ally.findBuff(MARK);
-            if (!mark || mark.source !== unit) return;
-            if (mark.data?.kind === S2) return; // S2 triggers on the skill becoming ready, not on damage
-            battle.removeBuff(ally, MARK);
+            const mark = triggerOf(ally, unit);
+            if (!mark) return;
+            if (mark.data?.kind === S2) return; // S2 triggers on the skill becoming able to open, not on damage
+            battle.removeBuff(ally, mark);
             const kind = mark.data?.kind;
             if (kind === S1) {
               const shield = unit.s.atk * num(b1.shield_atk_scale, 1.9);

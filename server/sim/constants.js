@@ -182,6 +182,11 @@ export const DP_DEFAULTS = Object.freeze({ dpInit: 10, dpPerSec: 1, dpMax: 99 })
  */
 export const AUTO_OP_COOLDOWN = 3;
 /**
+ * Buff key that makes a MANUAL skill behave like an AUTO one while it lasts (冻河 S2's 「期间技能变为自动开启」): no
+ * operation cooldown, its own trigger rule unchanged. Content adds it through `content/kits/shared/castWindow.js`.
+ */
+export const CAST_AUTO_BUFF = 'cast:auto';
+/**
  * State of a knocked-out operator waiting to redeploy on the tile it lies on (b.snap `down` entries, Battle.snapshot):
  * its respawn timer runs (COUNTING), then it waits for the player's DP to reach its cost (WAIT_DP) or for its tile to be
  * free (WAIT_TILE — a safeguard: no ally deploys on a body's tile, Battle.downOn). render/units.js mirrors these codes.

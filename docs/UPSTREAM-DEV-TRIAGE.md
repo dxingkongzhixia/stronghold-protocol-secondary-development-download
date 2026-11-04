@@ -85,6 +85,7 @@
 | 2026-10-29 主线 0.3.x 数据插件免开关 | `content` 类按 0.3.2 契约直接加载（记录重新校验、玩法以本分支为准，check 保留提醒）；`script` / `trusted` 仍要 owner 放行 | [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) |
 | **2026-11-04 dev A 批**（§9.1 的 A1–A6） | **A2** 缇缇 S2「封护」同生命比例改判给最后部署的干员（`69246801b`，上游 #906 `8668a9cd2`）；**A6** 敌人起手就面向目标（`68db3d913`，上游 #869 `dba4d1bea`）；**A1** 同一干员第二件同 id 道具也生效（`18fbf37b4`，上游 #902 `4505fb6f0`）；**A3** 【移动】清空元素损伤与爆发锁定（`b7c97e050`，上游 #903 `7da8ff209`）；**A4** 乌尔比安 S3 的【移动】必定执行、就地完成（`522503bcf`，上游 #903 `fbc83fd7a`）；**A5** 持续施法只冻结行走、冷却从施法结束起算（沿用上游 #904 的设计）；golden：`f4b6757c1`、`a115c672c` | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §16 |
 | **2026-11-04 dev B 批**（§9.2 的 B2 fa-items + B4） | 终局（Final Assault）备战：boss 排练按干员记队长伤害 → 卖备战席 → 刷新买 blackboard 估值的伤害道具 → 给“排练队长伤害 × 相对 DPS 提升”最高者；`坎诺特` 留利息、满手不买不刷；`band-strength` 待 B3 | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §17 |
+| **2026-11-04 新干员设计借鉴**（上游冻河 / 国度 / 塔露拉） | 六个结构模式自研落地：触发标记按 (来源, 种类) 共存、MANUAL 技能的施法窗口、按格子的“场”原语、离场快照（击倒 0.7 s / 撤退立即）、发射时决定的弹道记录、伤判守卫 `DamageInfo.guarded`；`diy` golden 4 个场景 | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §18 · [`SIM.md`](SIM.md) §7.2.1 |
 
 线上口径：2026-10-27 部署 `build b8f6defd0d1b`（含批 A + #576 + 皮肤修复）。
 
