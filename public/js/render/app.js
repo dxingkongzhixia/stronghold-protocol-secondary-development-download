@@ -164,7 +164,7 @@ import { pieceDirOf, pickUnitOf } from './app/pick.js';
 import { CAMERA_MS, BOARD3D_STABLE_MS, BOARD3D_RETRY_MS, PEN_CAMERA_MS, RANGE_GROUPS, LEADER_HIT_STYLE, DRAG_HOLD_TILES, CHAIN_KINDS, DROP_PENDING_MS, DEPLOY_REPLAY_MS } from './app/tune.js';
 import { boardPreference, switchableBox, bandFor, fieldRows, boardArea, viewKind, restView, flightView } from './app/view.js';
 import { renderInfo, FORCED_EXIT, showsDeathFx } from './app/info.js';
-import { resolveAssets, makeData, withTimeout, QUALITY_RES, BOARD_RES, releaseGl } from './app/host.js';
+import { resolveAssets, makeData, withTimeout, BOARD_RES, qualityResolution, loadRenderScale, releaseGl } from './app/host.js';
 import { t } from '../../../shared/i18n.js';
 
 export { ensurePixi } from './app/pixi.js';
@@ -218,7 +218,7 @@ export async function createFieldView(host, options = {}) {
   // high-quality cap at the device's own DPR so the small units (and their names) are not upscaled from a
   // 1560 px buffer to a 2048 px screen. Desktops keep the existing 2 cap (and therefore their performance).
   const coarse = (() => { try { return globalThis.matchMedia?.('(pointer: coarse)')?.matches === true; } catch { return false; } })();
-  const qualityRes = (q) => (coarse && q === 'high' ? 3 : (QUALITY_RES[q] || 2));
+  const qualityRes = (q) => qualityResolution(q, coarse, globalThis.devicePixelRatio || 1);
   const dpr = () => Math.min(globalThis.devicePixelRatio || 1, qualityRes(settings.quality) * renderScale);
   const boardDpr = () => Math.min(globalThis.devicePixelRatio || 1, (coarse && settings.quality === 'high' ? 2.5 : (BOARD_RES[settings.quality] || 2)) * renderScale);
   // Phones in landscape: the official 16:9 camera is framed for a desktop and leaves the operators tiny on a
@@ -1977,7 +1977,7 @@ export async function createFieldView(host, options = {}) {
   // Prefer a lower render resolution over a lower animation rate (1 → 0.82 → 0.68 → 0.55 at load levels 0–3): it frees
   // the GPU (fill-bound at DPR ≥ 1.5) so the frame rate recovers and the crowd never needs to animate at 10–20 Hz.
   function applyLoadScale() {
-    const s = [1, 0.82, 0.68, 0.55][loadLevel] || 1;
+    const s = loadRenderScale(loadLevel, coarse);
     if (s === renderScale) return;
     renderScale = s;
     try { resize(); } catch { /* resize is best-effort within a frame */ }

@@ -15,7 +15,7 @@
 | 手势 | `devices.css` §1：禁缩放/下拉刷新/长按菜单，棋盘 `touch-action: none` | 商店/列表仍可滚动 |
 | 触摸目标 | `devices.css` §3：小控件套 ≥44 px 的 `::before` 命中区 | 名单覆盖对局内控件 + 通用 `.btn` 等 |
 | 短屏规则 | 85 条 `@media`，含 `max-height: 520px`、`max-width: 760/767px`、`pointer: coarse` | 对局、装备、统计、成就、扫荡、表情有专门规则 |
-| 画质/分辨率 | `render/app.js`：`devicePixelRatio` 上限按质量档 + `renderScale`，3D 阴影/抗锯齿随档位 | 低端机可切「低」 |
+| 画质/分辨率 | `render/app.js`：`devicePixelRatio` 上限按质量档 + `renderScale`，3D 阴影/抗锯齿随档位；**粗指针高画质直接用设备 DPR（3–4）**，自适应降采样在手机上不低于 0.8（干员不再被放大糊） | 低端机可切「低」 |
 | 横屏提示 | `sp-rotatable` + `.rotate-hint`（竖屏时提示旋转） | **当前只支持横屏** |
 | 自定义黑边/屏幕适配 | `public/js/ui/screenFit.js`（设置里的四边内缩） | 异形屏兜底 |
 | 自动化 | `test/render/*.browser.test.js`（Puppeteer，`RENDER_E2E=1`）；`elembar.browser.test.js` 已用 **844×390 手机视口** | 矩阵还没铺开 |
@@ -136,8 +136,7 @@
 
 ### P2 · 打磨（按需）
 
-- [ ] **M2.1 字号阶梯**：统一 `clamp()`，去掉零散 `px`。
-- [ ] **M2.2 长按替代 hover**：详情/提示类交互，长按 400 ms 打开并锁定；首次触屏提示一次。
+- [ ] **M2.1 字号阶梯**：统一 `clamp()`，去掉零散 `px`。- [ ] **M2.2 长按替代 hover**：详情/提示类交互，长按 400 ms 打开并锁定；首次触屏提示一次。
 - [ ] **M2.3 低画质动效降级**：`quality=low` 时关抖动/粒子（`prefers-reduced-motion` 已有）。
 - [ ] **M2.4 触感反馈**：`navigator.vibrate`，设置里可关。
 - [ ] **M2.5 首次手势提示**：进入对局提示"拖动 = 移动棋子、点按 = 选中"。

@@ -85,6 +85,25 @@ const QUALITY_RES = { high: 2, medium: 1.5, low: 1 };
 const BOARD_RES = { high: 2, medium: 1.25, low: 1 };
 
 /**
+ * Pixel-ratio cap of the sprite canvas (render/app.js `dpr()`). A desktop keeps the quality table; a **coarse pointer**
+ * phone / tablet at high quality keeps its own DPR (3–4) so the operators are not upscaled from a 2× buffer — the
+ * "blurry operators" the owner reported. Absurd DPRs are still capped at 4.
+ */
+export function qualityResolution(quality, coarse = false, devicePixelRatio = 1) {
+  if (coarse && quality === 'high') return Math.max(3, Math.min(Math.max(1, Number(devicePixelRatio) || 1), 4));
+  return QUALITY_RES[quality] || 2;
+}
+
+/**
+ * Adaptive render-scale factor by load level (0–3). Desktops may drop to 0.55 to hold the frame rate; a coarse pointer
+ * stops at 0.8, where a phone's own DPR still leaves the units legible (0.55 × 3 = 1.65 read as blurred).
+ */
+export function loadRenderScale(level, coarse = false) {
+  const table = coarse ? [1, 0.9, 0.82, 0.8] : [1, 0.82, 0.68, 0.55];
+  return table[level] || 1;
+}
+
+/**
  * Before a renderer is destroyed: free its GL copies of every texture / buffer / geometry / framebuffer it
  * uploaded. Module-level textures (FX atlas, tier chips, backdrop, diamonds, Spine pages, PIXI.Texture.WHITE…)
  * outlive the view; PIXI 7 leaves their per-context GL entries and 'dispose' listeners pointing at the dead
