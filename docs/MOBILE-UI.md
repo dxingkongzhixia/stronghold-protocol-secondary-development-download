@@ -34,6 +34,8 @@
 
 ## 3. 计划（P0 → P1 → P2）
 
+> **执行口径以 §7 的勾选清单为准**（决策已定：横屏、最低 640×360、矩阵进 CI）。本节只说明为什么这样排。
+
 ### P0 · 正确性与基线（先做，1–2 天）
 
 1. **视口矩阵 + 基线截图**：`640×360`、`740×360`、`844×390`、`915×412`、`1024×768`（横屏），跑 `RENDER_E2E=1`，
@@ -73,14 +75,80 @@
 3. 真机抽查：至少一台 iOS Safari、一台 Android Chrome（横屏）
 4. 每项完成补一条截图对比（`test/e2e/out/mobile-<page>-<viewport>.png`）
 
-## 5. 需要 owner 拍板的三件事
+## 5. 已定决策（owner 2026-11-04）
 
-1. **竖屏**：继续"只支持横屏 + 旋转提示"，还是要做竖屏布局？（做竖屏 = 重排对局 HUD，成本另算）
-2. **最低目标机型**：是否以 `640×360`（iPhone SE 一代横屏）为下限？还是要覆盖到 `568×320`？
-3. **自动化范围**：P0 的视口矩阵是只在本地跑，还是要进 CI（需要 Chromium + 已下载素材）？
+| 项 | 决定 | 影响 |
+|---|---|---|
+| 竖屏 | **只支持横屏** + 旋转提示（维持 `sp-rotatable`） | 不做竖屏布局；所有规则以横屏为基准，竖屏只保证提示可见 |
+| 最低目标 | **640×360**（iPhone SE 一代横屏） | 640×360 必须完整可玩可点；更小的 `568×320` 不承诺 |
+| 自动化 | **矩阵进 CI** | 新增独立 job（不碰现有 `RENDER_E2E=0` 的主 job），见 §7 的 M0.8 |
 
 ## 6. 与其它待办的关系
 
 - 本清单**不改玩法**，与 `UPSTREAM-DEV-TRIAGE.md` §9 的 A/B 批互不阻塞
 - 若后续做「入场动画」（主线 #878），入场页也要进本矩阵
 - 真机矩阵落地后，`PROJECT-STATE.md` §9 的"已知问题"里与手机相关的条目可以逐条销账
+
+## 7. 执行清单（台式机，按顺序勾）
+
+> 本机（笔记本）**不改代码**，只保留这份清单；到台式机上按 ID 顺序做，每项一个提交。
+> 约定：横屏、最低 640×360、矩阵进 CI；只动 `public/css`、`public/js`（布局/样式/harness）、`tools/`、`test/`，**不碰玩法与 golden**。
+
+### P0 · 基线与自动化（先做，1–2 天）
+
+- [ ] **M0.1 矩阵常量**：新增 `test/mobile/matrix.mjs`（或 `tools/mobile-audit.mjs` 内常量）
+      `[{w:640,h:360},{740,360},{844,390},{915,412},{1024,768}]` + 名字 `se1 / android-s / iphone14 / pixel7 / tablet`。
+      *验收*：单一来源，脚本与文档都引用它。
+- [ ] **M0.2 `100vh` 收敛**：把 `public/css/**` 里 14 处 `100vh` 换成 `100dvh`（或既有 `--sp-vh`），
+      对局内沿用 `--sp-vh`。*验收*：`git grep -c '100vh' -- public/css` 为 0（白名单除外，需注释）。
+- [ ] **M0.3 审查 harness**：新增 `public/dev/mobile-audit.html`，用 mock 数据把 8 个页面骨架挂起来
+      （lobby / hub / room / result / settle / codex+guide / stats / settings；对局 HUD 用只读快照），
+      **不登录、不需要素材**。*验收*：`node server/index.js` 后逐个页面可打开，控制台无报错。
+- [ ] **M0.4 审计脚本**：新增 `tools/mobile-audit.mjs`（puppeteer-core，`CHROME_PATH` 可配）：
+      逐页 × 逐视口断言 `document.scrollWidth <= clientWidth + 1`；收集 `document.elementFromPoint` 命中盒 < 44 px 的可点元素；
+      截图到 `test/e2e/out/mobile/<page>-<w>x<h>.png`。*验收*：`node tools/mobile-audit.mjs` 退出码 0/1 可判。
+- [ ] **M0.5 安全区模拟**：审计时把 `--sa-t/r/b/l` 覆盖为 `24/24/34/24`，断言 `.gm__hud`、`.shopbar`、每页底部按钮不越界。
+      *验收*：四类元素都在视口内。
+- [ ] **M0.6 点击区白名单**：`test/mobile/tap-exceptions.json`（选择器 → 原因）；脚本对未豁免的 <44 px 元素报错。
+      *验收*：清单为空或每条都有原因。
+- [ ] **M0.7 npm 脚本**：`package.json` 加 `"check:mobile": "node tools/mobile-audit.mjs"`。
+      *验收*：本机与 CI 同一条命令。
+- [ ] **M0.8 CI job**：`.github/workflows/ci.yml` 追加 `mobile-audit`（`ubuntu-latest`、Node 24，
+      `browser-actions/setup-chrome` 设置 `CHROME_PATH`，`npm ci` → `npm run check:mobile`，
+      `actions/upload-artifact` 传 `test/e2e/out/mobile`）。主 job 的 `RENDER_E2E=0` 不变。
+      *验收*：PR 上该 job 绿；故意破坏一处（如把 `100vh` 加回去）时红。
+- [ ] **M0.9 最小尺寸写进注释**：`devices.css` 头部注明"支持横屏 ≥640×360；更小不承诺"，与本文一致。
+      *验收*：文档/注释一致。
+
+### P1 · 页面适配（3–5 天，按此顺序）
+
+- [ ] **M1.1 房间 / 备战大厅**（`public/css/screens/room.css`）：座位卡 ≥640 宽时两列、以下单列；队伍栏可横向滚动；
+      全部按钮进 44 px 名单；`overflow-y: auto`。*验收*：640×360 完成"建房 → 准备 → 开始"。
+- [ ] **M1.2 结算 / 结算页**（`result.css`、`settle.css`）：排名表放进横向滚动容器；底部按钮固定且进安全区；
+      标题按高度收缩。*验收*：5 人局 640×360 可读可点。
+- [ ] **M1.3 大厅 / Hub**（`lobby.css`、`hub.css`）：卡片两列 → 单列；首屏可见主 CTA；`100dvh`。
+      *验收*：640×360 首屏可见"开始/加入"。
+- [ ] **M1.4 图鉴 / 指南 / 统计**（`codex.css`、`guide.css`、`stats.css`）：侧栏折叠为抽屉；表格横向滚动；
+      统计页 7 处固定宽度改百分比/`clamp()`。*验收*：单手可完成"打开 → 检索 → 关闭"。
+- [ ] **M1.5 设置 / 装备抽屉**（`loadout.css`、`loadout-deck.css`、设置面板）：抽屉 ≤90vw；分段控件换行；
+      输入框聚焦时滚到可视区。*验收*：触屏无 hover 完成全部设置。
+- [ ] **M1.6 对局 HUD 补漏**（`game.css`、`game-shop.css`、`game-panels.css`）：640×360 下商店卡、羁绊条、
+      技能/道具提示的字号与间距；不遮挡可部署格。*验收*：640×360 一局完整可打。
+- [ ] **M1.7 弹层/草稿/简报**（`match-popups.css`、`draft.css`、`briefing.css`、`boss-plates.css`）：
+      短屏最大高度 + 内部滚动。*验收*：640×360 全部可关闭。
+- [ ] **M1.8 真机抽查**：iOS Safari + Android Chrome 横屏各一台，记录机型/系统版本。
+      *验收*：P0 脚本与真机截图都通过。
+
+### P2 · 打磨（按需）
+
+- [ ] **M2.1 字号阶梯**：统一 `clamp()`，去掉零散 `px`。
+- [ ] **M2.2 长按替代 hover**：详情/提示类交互，长按 400 ms 打开并锁定；首次触屏提示一次。
+- [ ] **M2.3 低画质动效降级**：`quality=low` 时关抖动/粒子（`prefers-reduced-motion` 已有）。
+- [ ] **M2.4 触感反馈**：`navigator.vibrate`，设置里可关。
+- [ ] **M2.5 首次手势提示**：进入对局提示"拖动 = 移动棋子、点按 = 选中"。
+
+### 每项完成的固定动作
+
+1. `npm run check:mobile` + `RENDER_E2E=1 node --test test/render/*.browser.test.js` 通过
+2. 截图对比图放 `test/e2e/out/mobile/`（CI artifact）
+3. 本清单勾选 + 一句"改了什么"；涉及 `PROJECT-STATE.md` §9 的条目同步销账
