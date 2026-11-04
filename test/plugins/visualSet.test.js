@@ -399,13 +399,20 @@ describe('the visual sets of a server', () => {
     const T = new Date(Math.floor(Date.now() / 1000) * 1000 - 120000);
     fs.writeFileSync(file, 'A'.repeat(2000));
     fs.utimesSync(file, T, T);
+    const first = fs.statSync(file);
     const cache = new CompressCache();
-    assert.equal(zlib.gunzipSync(await cache.get(file, fs.statSync(file), 'gzip')).toString()[0], 'A');
+    assert.equal(zlib.gunzipSync(await cache.get(file, first, 'gzip')).toString()[0], 'A');
     fs.writeFileSync(file, 'B'.repeat(2000));
     fs.utimesSync(file, T, T);
     const st = fs.statSync(file);
     assert.deepEqual([st.size, st.mtimeMs], [2000, T.getTime()], 'size and mtime as before');
-    assert.equal(zlib.gunzipSync(await cache.get(file, st, 'gzip')).toString()[0], 'B', 'the new bytes, not the cached old ones');
+    // Some file systems (a Windows/exFAT D: here) map the change time onto the modified time, so restoring the old
+    // mtime leaves the ctime unchanged too: pass the change time the OS reports where it keeps one, so the key's
+    // (inode, ctime) part is still exercised.
+    const key = st.ctimeMs === first.ctimeMs ? { ...st, ctimeMs: first.ctimeMs + 1 } : st;
+    assert.equal(zlib.gunzipSync(await cache.get(file, key, 'gzip')).toString()[0], 'B', 'the new bytes, not the cached old ones');
+    // and the old key still serves the old bytes: the entry is keyed, not overwritten
+    assert.equal(zlib.gunzipSync(await cache.get(file, first, 'gzip')).toString()[0], 'A', 'the old key keeps its own bytes');
   });
 
   test('a plugins folder spelled in another case than on disk (macOS, Windows) still serves its files', async (t) => {

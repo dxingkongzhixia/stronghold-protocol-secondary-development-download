@@ -289,11 +289,16 @@ test('field replacement cancels delayed, decoding and playing pool sounds even w
   f.enter(); f.advance(1500);
   assert.equal(f.sources.filter(s => s.heard).length, 0, 'old delayed attack stays silent');
   let resolve;
-  f.a._buffer = () => new Promise(r => { resolve = r; });
+  // one shared pending decode: `enter()` preloads the field's unit sounds through `_buffer` (`_track`), so a stub that
+  // made a fresh promise per call would leave the pool's own promise unresolved behind the last preload's
+  const pending = new Promise(r => { resolve = r; });
+  f.a._buffer = () => pending;
   f.attack(1); await flush(); f.enter();
   resolve({ duration: 0.8 }); await flush(); f.advance(1500);
   assert.equal(f.sources.filter(s => s.heard).length, 0, 'old decode stays silent');
   f.a._buffer = async () => ({ duration: 0.8 });
+  // and that preload left the pending promise in the buffer cache: drop it so the restored `_buffer` decodes again
+  f.a.buffers.clear(); f.a.bufBytes.clear();
   f.attack(1); await flush(); f.advance(601);
   assert.equal(f.a.limiter.active, 1);
   f.enter(0);
