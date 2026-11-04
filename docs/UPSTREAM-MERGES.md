@@ -1664,4 +1664,4 @@ docs guards 34 pass / 0 fail.
 **golden 归因**：只回退本批代码 → 存档零差异（A1/A2/A3/A6 与 A4 各验一次；A5 再单独验一次）；
 实际变化：A2/A3 → `roster-038`、`fields` 的 `boss-boss_3-solo` / `hidden-boss_9-solo`（`f4b6757c1`）；
 A4 → `roster` / `bonds` / `fields` 各若干（`a115c672c`）；A5 → `roster-010/018/023/043`、
-`bond-investShip-high`、`solo-HARD-9-boosted`、`diy-038/058/074`（本节语料提交）。
+`bond-investShip-high`、`solo-HARD-9-boosted`、`diy-038/058/074`（`94a242336`）。

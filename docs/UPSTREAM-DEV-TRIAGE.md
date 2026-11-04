@@ -211,11 +211,11 @@
 
 | 编号 | 上游 | 做法 | 对我们的价值 |
 |---|---|---|---|
-| **B1** | `4480d8cf1` | **测试钉死默认数据构建**（`test/helpers/defaultGamedata.js`）：默认数据版本显式固定，数据重建不再让测试漂移 | 我们的测试直接读 `data/*.json`，每次重建都会抖；加一个"钉住的默认集"helper 收益稳定 |
+| **B1** 不适用 11-04 | `4480d8cf1` | **测试钉死默认数据构建**（`test/helpers/defaultGamedata.js`）：默认数据版本显式固定，数据重建不再让测试漂移 | 上游有 `data/versions/` 多剖面（默认集可被上游数据更新改掉），我们没有这层：单一 `data/` + `test/data.test.js` 的「离线重建逐字节一致」已经钉住了构建漂移；读 `.cache/gamedata` 的交叉校验一律 skip-if-absent。**不改**，只记结论 |
 | **B2** | `6cf59ff5a` / `bfd2a9209` | **把决策价值做成可单测的纯函数**：`band-strength`（按阵容强度给乐队打分）、`fa-items`（终局后卖席换伤害道具的估值） | 我们刚移植的 bot 栈正缺这层"可解释、可回归"的决策函数 |
 | **B3** | `6cf59ff5a` | **终极按"这套阵容 bot 会不会玩"给乐队加权**（不是按起始 LP） | 我们 `botPickBand` 目前按起始 LP 加权；这是更合理的一层。会全量动 `matches` golden，需单独一轮 |
 | **B4** | `bfd2a9209` | **终局阵型后排卖备战席、按道具 blackboard 估值买伤害道具**（208 行 + 测试） | 终局收益明显；体量大 + 动 golden，适合单独一轮 |
-| **B5** | `7c623743c` + `test/ui/ready-click-css.test.js` | **用 CSS 回归测试盯住点击区**：窄窗口下重复的 `gm__hud` 规则把"准备就绪"整条点击区又打开 | 我们的房间/战斗 HUD 是自有实现，可直接借这个套路（例如 `.room-bar` 的命中区） |
+| **B5** ✅ 11-04 | `7c623743c` + `test/ui/ready-click-css.test.js` | **用 CSS 回归测试盯住点击区**：窄窗口下重复的 `gm__hud` 规则把"准备就绪"整条点击区又打开 | 已按同一套路落地：`public/css/screens/game.css` 修 `pointer-events` + `test/ui/ready-click-css.test.js`（`7c623743c`） |
 | **B6** | `b62751ddd`（#725） | **import cache 绕过 HTTP 缓存上限**：secure context 下把整包下载放进 import cache（Chrome Windows 的 HTTP 缓存只有 320 MB） | 功能本身在 §0 不取，但这个事实值得记进 `ASSETS.md`，将来做任何"离线素材包"都用得上 |
 
 ### 9.3 C：明确不跟
