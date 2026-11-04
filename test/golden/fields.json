@@ -380,7 +380,7 @@
       "hooks": [1,22,6000,348,348,643,1432,1502,20,23,81,79,19,17190,1137,3,19,0,1,101,0,2,0],
       "events": {"atk":370,"cast":18,"deploy":16,"die":23,"dmg":796,"engage":8,"fx":238,"heal":83,"rate":35,"skill":160,"spawn":36,"status":181},
       "fx": {"anchor":1,"aoe":2,"beam":6,"burst":2,"candle":3,"ember":2,"explode":137,"healAoe":35,"overload":4,"phase":14,"splash":19,"substitute":2,"summon":6,"swap":1,"telegraph":2,"teleport":2},
-      "snaps": "22b06768 dc030b14 33b867ce 38db58e8 b96466b2 6cc5c02a b32e4b1f 6c6a72e0 b4ccf1f9 2fce335c 78aa0bb9 f338e99c 5390971d 92fa3aca c23d506e 2ed0a667 f39298d6 83a6d295 ea693e12 e7bd7b50"
+      "snaps": "22b06768 dc030b14 ae0a0caf a32c8a9b af4ee668 840976d0 d1f6937c d0603ab3 e5ecea80 e10f4e8a 9de30fe2 5795105b 6773fb04 c3f3c0d3 98a92a57 a5430761 83a10b4d 9251b150 e484d324 c8d25c84"
     },
     "boss-boss_4-pair": {
       "about": "盐风主教昆图斯 pair pool 8400000: chess_char_5_19_b chess_char_4_01_b chess_char_5_14_b chess_char_5_17_b chess_char_5_15_b chess_char_5_20_b chess_char_5_21_b chess_char_5_22_b chess_char_5_23_b chess_char_4_02_b | chess_char_4_11_b chess_char_4_04_b chess_char_4_07_b chess_char_4_16_b chess_char_4_09_b chess_char_4_06_b chess_char_4_10_b chess_char_4_12_b chess_char_4_13_b chess_char_4_14_b token_10041_cathy_catsld token_10041_cathy_catsld",
@@ -1222,7 +1222,7 @@
       "hooks": [1,20,6000,843,843,3501,7990,3152,17,18,111,105,89,23974,1500,10,16,0,1,130,0,8,0],
       "events": {"atk":1396,"cast":17,"deploy":20,"die":18,"dmg":7534,"engage":10,"fx":836,"heal":415,"rate":100,"skill":216,"spawn":27,"status":338},
       "fx": {"anchor":5,"aoe":2,"beam":26,"burst":8,"candle":9,"charge":7,"dash":12,"dollEnd":3,"downed":1,"ember":1,"explode":1,"healAoe":35,"link":597,"overload":4,"palsy":3,"phase":11,"reborn":1,"revive":3,"shieldBreak":9,"splash":89,"substitute":4,"swap":1,"teleport":3,"wake":1},
-      "snaps": "a5d65819 48f11ad8 7a4e1bd4 54ee3cee 3880b86a 46887ac2 7a24432f a5d53c9f 33fe7733 6b808bd4 14765f87 59fa7cec c24a9157 0d5f5036 35cfdd22 7ba5ab44 0c5e325d eccf1959 83dda87b b7661573"
+      "snaps": "a5d65819 48f11ad8 7a4e1bd4 54ee3cee 3880b86a 46887ac2 7a24432f a5d53c9f 33fe7733 6b808bd4 14765f87 59fa7cec c24a9157 0d5f5036 35cfdd22 7ba5ab44 0c5e325d eccf1959 8223ccf0 146374e3"
     },
     "hidden-boss_10-pair": {
       "about": "假想敌：管 pair pool 15200000: chess_char_5_19_b chess_char_4_01_b chess_char_5_14_b chess_char_5_17_b chess_char_5_15_b chess_char_5_20_b chess_char_5_21_b chess_char_5_22_b chess_char_5_23_b chess_char_4_02_b | chess_char_4_11_b chess_char_4_04_b chess_char_4_07_b chess_char_4_16_b chess_char_4_09_b chess_char_4_06_b chess_char_4_10_b chess_char_4_12_b chess_char_4_13_b chess_char_4_14_b token_10041_cathy_catsld token_10041_cathy_catsld",
