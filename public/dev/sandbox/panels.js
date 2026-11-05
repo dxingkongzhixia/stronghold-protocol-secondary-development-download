@@ -22,6 +22,7 @@ export function createPanel({ root, catalogs, initial, onChange }) {
   const filter = { op: '', enemy: '' };
   let opLimit = 40;
   let enemyLimit = 40;
+  let tab = 'op';
   const opById = new Map(catalogs.operators.map((o) => [o.charId, o]));
   const enemyByKey = new Map(catalogs.enemies.map((e) => [e.key, e]));
   const stage = () => catalogs.stages.find((s) => s.id === state.stage) ?? catalogs.stages[0];
@@ -47,8 +48,8 @@ export function createPanel({ root, catalogs, initial, onChange }) {
       <button type="button" class="sb-li${o.charId === state.unit ? ' is-on' : ''}" data-op="${esc(o.charId)}" title="${esc(o.charId)}">
         <b>${esc(o.name)}</b><span class="sb-dim">${esc(o.profession || '')}${o.rarity ? ` · ${o.rarity}★` : ''} · ${o.skills.length} 技能</span>
       </button>`).join('');
-    const more = list.length > opLimit ? `<button type="button" class="sb-more" data-more="op">还有 ${list.length - opLimit} 个 …</button>` : '';
-    return `<div class="sb-count">${list.length} / ${catalogs.operators.length} 个干员</div>${rows}${more}`;
+    const more = list.length > opLimit ? `<button type="button" class="sb-more" data-more="op">展开另外 ${list.length - opLimit} 个 …</button>` : '';
+    return `${rows}${more}`;
   };
 
   const skillHtml = () => {
@@ -76,25 +77,33 @@ export function createPanel({ root, catalogs, initial, onChange }) {
     const st = stage();
     const [rows, cols] = Array.isArray(st?.size) ? st.size : [19, 21];
     const legal = legalTiles();
+    const pts = [...legal].map((k) => k.split(',').map(Number));
+    if (!pts.length) return '<p class="sb-dim">这张地图没有普通部署格</p>';
+    const minR = Math.max(0, Math.min(...pts.map((p) => p[0])) - 1);
+    const maxR = Math.min(rows - 1, Math.max(...pts.map((p) => p[0])) + 1);
+    const minC = Math.max(0, Math.min(...pts.map((p) => p[1])) - 1);
+    const maxC = Math.min(cols - 1, Math.max(...pts.map((p) => p[1])) + 1);
     const cur = state.row != null && state.col != null ? `${state.row},${state.col}` : null;
     let out = '';
-    for (let r = 0; r < rows; r++) {
+    for (let r = minR; r <= maxR; r++) {
       out += '<div class="sb-tile-row">';
-      for (let c = 0; c < cols; c++) {
+      for (let c = minC; c <= maxC; c++) {
         const k = `${r},${c}`;
         const cls = `sb-tile${legal.has(k) ? ' is-legal' : ''}${cur === k ? ' is-on' : ''}`;
         out += `<button type="button" class="${cls}" data-tile="${k}" ${legal.has(k) ? '' : 'tabindex="-1"'} title="${k}"></button>`;
       }
       out += '</div>';
     }
-    return out;
+    return `<div class="sb-tiles">${out}
+      <div class="sb-tiles__foot"><span>行 ${minR}–${maxR} · 列 ${minC}–${maxC}</span><span>${cur ? `当前 <i>${cur}</i>` : '自动选格'}</span></div>
+    </div>`;
   };
 
   const routeOptions = (sel) => {
     const w = wave();
     return (w?.routes ?? []).map((r, i) => {
       const start = Array.isArray(r?.start) ? `${r.start[0]},${r.start[1]}` : '?';
-      return `<option value="${i}"${i === sel ? ' selected' : ''}>#${i} ${esc(r?.motion || 'WALK')} 起点 ${esc(start)}</option>`;
+      return `<option value="${i}"${i === sel ? ' selected' : ''}>#${i} ${esc(r?.motion || 'WALK')} · ${esc(start)}</option>`;
     }).join('');
   };
 
@@ -107,101 +116,99 @@ export function createPanel({ root, catalogs, initial, onChange }) {
   const enemyListHtml = () => {
     const list = enemyMatches();
     const rows = list.slice(0, enemyLimit).map((e) => `
-      <button type="button" class="sb-li" data-enemy="${esc(e.key)}" title="${esc(e.key)}">
+      <button type="button" class="sb-li" data-enemy="${esc(e.key)}" title="点击添加一组：${esc(e.key)}">
         <b>${esc(e.name)}</b>
         <span class="sb-dim">${e.rank ? `${esc(e.rank)} · ` : ''}HP ${nf(e.maxHp)} · ATK ${nf(e.atk)}${e.isFly ? ' · 飞行' : ''}</span>
       </button>`).join('');
-    const more = list.length > enemyLimit ? `<button type="button" class="sb-more" data-more="enemy">还有 ${list.length - enemyLimit} 个 …</button>` : '';
-    return `<div class="sb-count">${list.length} / ${catalogs.enemies.length} 种敌人</div>${rows}${more}`;
+    const more = list.length > enemyLimit ? `<button type="button" class="sb-more" data-more="enemy">展开另外 ${list.length - enemyLimit} 个 …</button>` : '';
+    return `${rows}${more}`;
   };
   const groupsHtml = () => {
     if (!state.groups.length) return '<p class="sb-dim">默认：沿波次路线持续刷出该波次的步兵（18 个）。</p>';
     return state.groups.map((g, i) => `
       <div class="sb-group" data-g="${i}">
-        <div class="sb-group__head"><b>${esc(enemyByKey.get(g.key)?.name || g.key)}</b><button type="button" class="sb-x" data-del="${i}" title="移除">✕</button></div>
-        <label>数量 <input type="number" min="1" max="50" step="1" data-gi="count" value="${g.count}"></label>
-        <label>间隔 <input type="number" min="0" max="60" step="0.1" data-gi="interval" value="${g.interval}"></label>
-        <label>起始 <input type="number" min="0" max="600" step="0.5" data-gi="time" value="${g.time}"></label>
-        <label>路线 <select data-gi="route">${routeOptions(g.route)}</select></label>
-        <label>HP× <input type="number" min="0.1" max="100" step="0.1" data-gi="hp" value="${g.hp}"></label>
-        <label>ATK× <input type="number" min="0.1" max="100" step="0.1" data-gi="atk" value="${g.atk}"></label>
+        <div class="sb-group__head"><b>${esc(enemyByKey.get(g.key)?.name || g.key)}</b>
+          <span>${esc(g.key)}</span><button type="button" class="sb-x" data-del="${i}" title="移除">✕</button></div>
+        <label><span>数量</span><input type="number" min="1" max="50" step="1" data-gi="count" value="${g.count}"></label>
+        <label><span>间隔</span><input type="number" min="0" max="60" step="0.1" data-gi="interval" value="${g.interval}"></label>
+        <label><span>起始</span><input type="number" min="0" max="600" step="0.5" data-gi="time" value="${g.time}"></label>
+        <label><span>路线</span><select data-gi="route">${routeOptions(g.route)}</select></label>
+        <label><span>HP×</span><input type="number" min="0.1" max="100" step="0.1" data-gi="hp" value="${g.hp}"></label>
+        <label><span>ATK×</span><input type="number" min="0.1" max="100" step="0.1" data-gi="atk" value="${g.atk}"></label>
       </div>`).join('');
   };
 
-  // ---- render -------------------------------------------------------------------------------------------------
+  // ---- tabs ---------------------------------------------------------------------------------------------------
+  const blocker = (html, hint) => `<div class="sb-block">${html}${hint ? `<p class="sb-note">${hint}</p>` : ''}</div>`;
+
+  const opTab = () => `
+    ${blocker(`<div class="sb-searchrow"><h2 class="micro">干员</h2><span class="sb-count">${opMatches().length} / ${catalogs.operators.length}</span></div>
+      <div class="sb-searchrow"><input type="search" class="sb-search" data-search="op" placeholder="搜索名称 / 职业 / charId" value="${esc(filter.op)}"></div>
+      <div class="sb-list" data-list="op">${opListHtml()}</div>`)}
+    ${blocker(`<h2 class="micro">技能</h2><div class="sb-chips">${skillHtml()}</div>`)}
+    ${blocker(`<h2 class="micro">练度</h2>
+      <div class="sb-grid2">
+        <label><span>形态</span><select data-field="elite">
+          <option value="1"${state.elite ? ' selected' : ''}>精英二 E2</option>
+          <option value="0"${state.elite ? '' : ' selected'}>精英一 E1</option></select></label>
+        <label><span>潜能</span><select data-field="potential">${[1, 2, 3, 4, 5, 6].map((p) => `<option value="${p}"${p === state.potential ? ' selected' : ''}>${p}</option>`).join('')}</select></label>
+        <label><span>练度</span><select data-field="cultivate">${[0, 1, 2, 3].map((c) => `<option value="${c}"${c === state.cultivate ? ' selected' : ''}>${c}</option>`).join('')}</select></label>
+        <label><span>模组</span>${moduleHtml()}</label>
+      </div>`)}
+    ${blocker(`<h2 class="micro">部署 <span>${state.row != null ? `${state.row},${state.col}` : '自动'}</span></h2>
+      ${tileHtml()}
+      <div class="sb-grid2" style="margin-top:8px">
+        <label><span>朝向</span><select data-field="dir">${DIRS.map((d) => `<option value="${d}"${d === state.dir ? ' selected' : ''}>${d}</option>`).join('')}</select></label>
+        <button type="button" class="sb-btn" data-auto="tile">自动选格</button>
+      </div>`)}`;
+
+  const foeTab = () => `
+    ${blocker(`<label class="sb-switch"><input type="checkbox" data-field="foes"${state.foes ? ' checked' : ''}> 刷出敌人</label>
+      <div class="sb-searchrow"><h2 class="micro">敌人</h2><span class="sb-count">${enemyMatches().length} / ${catalogs.enemies.length}</span></div>
+      <div class="sb-searchrow"><input type="search" class="sb-search" data-search="enemy" placeholder="搜索名称 / key" value="${esc(filter.enemy)}"></div>
+      <div class="sb-list" data-list="enemy">${enemyListHtml()}</div>`)}
+    ${blocker(`<h2 class="micro">编组 <span>${state.groups.length} 组</span></h2>
+      <div class="sb-groups">${groupsHtml()}</div>
+      <div class="sb-rowbtns"><button type="button" class="sb-btn" data-preset="wave">载入原波次</button>
+      <button type="button" class="sb-btn" data-preset="clear">清空（默认步兵流）</button></div>`, '点上面的敌人 = 新增一组；改组内数值会立即重建战斗。')}`;
+
+  const mapTab = () => `
+    ${blocker(`<h2 class="micro">地图 / 波次</h2>
+      <label class="sb-grid2" style="display:grid"><span class="micro">地图</span>
+        <select data-field="stage">${catalogs.stages.map((s) => `<option value="${esc(s.id)}"${s.id === state.stage ? ' selected' : ''}>${esc(s.name || s.id)}</option>`).join('')}</select></label>
+      <label class="sb-grid2" style="display:grid;margin-top:8px"><span class="micro">波次</span>
+        <select data-field="wave">${catalogs.waves.map((w) => `<option value="${esc(w.id)}"${w.id === state.wave ? ' selected' : ''}>${esc(w.id)}${w.kind === 'boss' ? ' · BOSS' : ''}${w.bossId ? ` · ${esc(w.bossId)}` : ''}</option>`).join('')}</select></label>
+      <label class="sb-switch" style="margin-top:10px"><input type="checkbox" data-field="mix"${state.mix ? ' checked' : ''}> 整波刷出（?mix=1）</label>`,
+    `地图 ${esc(stage()?.name || state.stage)} · 合法部署格 ${legalTiles().size} 个 · 波次路线 ${(wave()?.routes ?? []).length} 条`)}`;
+
+  const globalTab = () => `
+    ${blocker(`<h2 class="micro">数值</h2>
+      <div class="sb-grid2">
+        <label><span>敌人 HP×</span><input type="number" min="0.1" max="100" step="0.5" data-field="hp" value="${state.hp}"></label>
+        <label><span>敌人 ATK×</span><input type="number" min="0.1" max="100" step="0.5" data-field="atk" value="${state.atk}"></label>
+        <label><span>随机种子</span><input type="number" min="1" step="1" data-field="seed" value="${state.seed}"></label>
+      </div>`)}
+    ${blocker(`<h2 class="micro">说明</h2>
+      <p class="sb-note">同一种子 + 同一场景永远得到同一次战斗；每次改参数都会从 0 秒重建。速度与单步在底部工具栏。</p>`,
+    `管理员入口 <code>/admin/sandbox?token=…</code>`)}`;
+
+  const TABS = [['op', '干员'], ['foe', '敌人'], ['map', '地图'], ['global', '全局']];
+
   function render() {
     const o = op();
+    const nowSkill = o?.skills.find((s) => s.index === state.skill);
     root.innerHTML = `
-      <h1 class="sb-title">沙盒 · 战术演练</h1>
-      <p class="sb-sub">真实模拟（/sim）× 真实渲染 · 管理员工作台</p>
-
-      <section class="sb-sec">
-        <h2>干员 <span class="sb-dim">${esc(o?.name || state.unit)}</span></h2>
-        <input type="search" class="sb-search" data-search="op" placeholder="搜索干员 / 职业 / charId" value="${esc(filter.op)}">
-        <div class="sb-list" data-list="op">${opListHtml()}</div>
-        <div class="sb-chips">${skillHtml()}</div>
-        <div class="sb-loadout">
-          <label>形态
-            <select data-field="elite">
-              <option value="1"${state.elite ? ' selected' : ''}>精英二（E2）</option>
-              <option value="0"${state.elite ? '' : ' selected'}>精英一（E1）</option>
-            </select>
-          </label>
-          <label>潜能
-            <select data-field="potential">${[1, 2, 3, 4, 5, 6].map((p) => `<option value="${p}"${p === state.potential ? ' selected' : ''}>${p}</option>`).join('')}</select>
-          </label>
-          <label>练度
-            <select data-field="cultivate">${[0, 1, 2, 3].map((c) => `<option value="${c}"${c === state.cultivate ? ' selected' : ''}>${c}</option>`).join('')}</select>
-          </label>
-          <label>模组 ${moduleHtml()}</label>
-        </div>
-      </section>
-
-      <section class="sb-sec">
-        <h2>部署 <span class="sb-dim">${state.row != null ? `${state.row},${state.col}` : '自动'}</span></h2>
-        <div class="sb-tiles">${tileHtml()}</div>
-        <div class="sb-loadout">
-          <label>朝向
-            <select data-field="dir">${DIRS.map((d) => `<option value="${d}"${d === state.dir ? ' selected' : ''}>${d}</option>`).join('')}</select>
-          </label>
-          <button type="button" class="sb-btn" data-auto="tile">自动选格</button>
-        </div>
-      </section>
-
-      <section class="sb-sec">
-        <h2>敌人${state.foes ? '' : ' <span class="sb-dim">已关闭</span>'}</h2>
-        <label class="sb-check"><input type="checkbox" data-field="foes"${state.foes ? ' checked' : ''}> 刷出敌人</label>
-        <input type="search" class="sb-search" data-search="enemy" placeholder="搜索敌人（名称 / key）" value="${esc(filter.enemy)}">
-        <div class="sb-list" data-list="enemy">${enemyListHtml()}</div>
-        <div class="sb-groups">${groupsHtml()}</div>
-        <div class="sb-rowbtns">
-          <button type="button" class="sb-btn" data-preset="wave">载入原波次</button>
-          <button type="button" class="sb-btn" data-preset="clear">清空（默认步兵流）</button>
-        </div>
-      </section>
-
-      <section class="sb-sec">
-        <h2>地图 / 波次</h2>
-        <label>地图
-          <select data-field="stage">${catalogs.stages.map((s) => `<option value="${esc(s.id)}"${s.id === state.stage ? ' selected' : ''}>${esc(s.name || s.id)}</option>`).join('')}</select>
-        </label>
-        <label>波次
-          <select data-field="wave">${catalogs.waves.map((w) => `<option value="${esc(w.id)}"${w.id === state.wave ? ' selected' : ''}>${esc(w.id)}${w.kind === 'boss' ? ' · BOSS' : ''}${w.bossId ? ` · ${esc(w.bossId)}` : ''}</option>`).join('')}</select>
-        </label>
-        <label class="sb-check"><input type="checkbox" data-field="mix"${state.mix ? ' checked' : ''}> 整波刷出（?mix=1）</label>
-      </section>
-
-      <section class="sb-sec">
-        <h2>全局</h2>
-        <div class="sb-loadout">
-          <label>敌人 HP× <input type="number" min="0.1" max="100" step="0.5" data-field="hp" value="${state.hp}"></label>
-          <label>敌人 ATK× <input type="number" min="0.1" max="100" step="0.5" data-field="atk" value="${state.atk}"></label>
-          <label>种子 <input type="number" min="1" step="1" data-field="seed" value="${state.seed}"></label>
-        </div>
-      </section>
-
-      <p class="sb-note">地址栏就是场景：改任何项都会同步；复制链接即可分享。管理员入口 <code>/admin/sandbox?token=…</code>。</p>
-      <div class="sb-err" id="sbError"></div>`;
+      <header class="sb-head">
+        <div class="sb-head__meta"><span class="micro">Tactical Workbench</span><b>·</b><span class="micro">Admin</span></div>
+        <h1>沙盒 <span>战术演练</span></h1>
+        <div class="sb-head__now"><b>${esc(o?.name || state.unit)}</b><i>${SKILL_LABEL(state.skill)}${nowSkill?.name ? ` ${esc(nowSkill.name)}` : ''}</i>
+          <em>${esc(stage()?.name || state.stage)} / ${esc(state.wave)}</em></div>
+      </header>
+      <nav class="sb-tabs">${TABS.map(([k, label]) => `<button type="button" data-tab="${k}" class="${tab === k ? 'is-on' : ''}">${label}</button>`).join('')}</nav>
+      <div class="sb-body">
+        ${tab === 'op' ? opTab() : tab === 'foe' ? foeTab() : tab === 'map' ? mapTab() : globalTab()}
+        <div class="sb-err" id="sbError"></div>
+      </div>`;
   }
 
   // ---- events -------------------------------------------------------------------------------------------------
@@ -225,10 +232,6 @@ export function createPanel({ root, catalogs, initial, onChange }) {
           : f === 'elite' ? t.value === '1' : t.value;
       const patch = { [f]: f === 'module' && v === '' ? null : v };
       if (f === 'stage') { patch.row = null; patch.col = null; }
-      if (f === 'wave') {
-        patch.route = 0;
-        for (const g of state.groups) if (g.route >= (catalogs.waves.find((w) => w.id === v)?.routes?.length ?? 0)) g.route = 0;
-      }
       commit(patch);
       return;
     }
@@ -240,13 +243,13 @@ export function createPanel({ root, catalogs, initial, onChange }) {
       const raw = t.type === 'number' || gi === 'route' ? Number(t.value) : t.value;
       const groups = state.groups.map((g, k) => (k === i ? { ...g, [gi]: raw } : g));
       commit({ groups });
-      return;
     }
   });
 
   root.addEventListener('click', (e) => {
     const t = e.target.closest('button');
     if (!t || !root.contains(t)) return;
+    if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
     if (t.dataset.op) {
       const next = opById.get(t.dataset.op);
       const idx = (next?.skills ?? []).map((sk) => sk.index);

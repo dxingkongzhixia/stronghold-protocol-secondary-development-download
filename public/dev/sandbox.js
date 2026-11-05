@@ -24,6 +24,7 @@ let view = null, sim = null, battle = null, playing = false, speed = 2, acc = 0,
 let casts = 0, damage = 0, bursts = 0, spawned = 0, endsAt = 0;
 let state = stateFromQuery(location.search);
 let panel = null;
+let catalogs = null;
 let stages = null, waves = null, enemies = null;
 
 const setText = (id, s) => { const el = $(id); if (el && el.textContent !== s) el.textContent = s; };
@@ -83,6 +84,7 @@ function stats() {
   setText('sbKills', String(Math.max(0, spawned - foes)));
   setText('sbBursts', String(bursts));
   setText('sbAudio', audio.unlocked ? '已开启 🔊' : '未开启 · 点一下页面');
+  setText('sbStateTag', battle?.finished ? 'ENDED' : playing ? 'LIVE' : battle ? 'PAUSED' : 'READY');
   const gauge = (battle?.enemies ?? []).reduce((m, e) => Math.max(m, e.side === 'enemy' ? Math.round(e.elem?.burn ?? 0) : 0), 0);
   setText('sbBurn', String(gauge));
   setText('sbTime', `${(battle?.time ?? 0).toFixed(1)} / ${(battle?.timeLimit ?? 0) === Infinity ? '∞' : battle?.timeLimit ?? 0} s`);
@@ -102,9 +104,10 @@ async function start() {
   view.setCamera('normal', { rect, side: 'L', instant: true });
   // one step so the operator is deployed, then the opening frame (the match sends b.ev before b.snap of the same drain)
   battle.step();
-  const hero = battle.units.find((u) => u.kind === 'op' && u.side === 'ally');
-  setText('sbUnit', `${hero?.name || state.unit}${hero?.name ? ` · ${state.unit}` : ''}`);
-  setText('sbSkill', `${state.skill === 0 ? 'S1' : state.skill === 1 ? 'S2' : `S${state.skill + 1}`} · ${hero?.skill?.id ?? '—'}`);
+  const opMeta = catalogs?.operators.find((o) => o.charId === state.unit);
+  const skillMeta = opMeta?.skills.find((sk) => sk.index === state.skill);
+  setText('sbUnit', opMeta?.name || state.unit);
+  setText('sbSkill', `S${state.skill + 1}${skillMeta?.name ? ` · ${skillMeta.name}` : ''}`);
   last = performance.now();
   feed();
   stats();
@@ -182,7 +185,7 @@ async function main() {
   stages = data.get('stages') || {};
   waves = data.get('waves') || {};
   enemies = data.get('enemies') || {};
-  const catalogs = buildCatalogs();
+  catalogs = buildCatalogs();
 
   // a link may name an operator / stage / wave this build no longer has: fall back instead of failing the first battle
   const opById = new Map(catalogs.operators.map((o) => [o.charId, o]));
@@ -214,6 +217,7 @@ async function main() {
     playing = !playing;
     $('sbPlay').textContent = playing ? '▌▌ 暂停' : '▶ 继续';
     last = performance.now();
+    stats();
   };
   $('sbStep').onclick = () => { playing = false; $('sbPlay').textContent = '▶ 继续'; stepSecond(); };
   $('sbRestart').onclick = () => { playing = true; $('sbPlay').textContent = '▌▌ 暂停'; start().catch(fail); };
@@ -227,9 +231,23 @@ async function main() {
     };
   }
   $('sbCopy').onclick = async () => {
-    try { await navigator.clipboard.writeText(location.href); setText('sbCopy', '✓ 已复制'); }
-    catch { setText('sbCopy', location.href); }
-    setTimeout(() => setText('sbCopy', '🔗 复制链接'), 1500);
+    const text = location.href;
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch { /* denied / no permission: fall through */ }
+    if (!ok) {
+      // the clipboard API needs a permission and a focused document; a selected textarea works without either
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      ta.remove();
+    }
+    $('sbCopy').textContent = ok ? '✓ 已复制' : '✗ 复制失败';
+    if (!ok) window.prompt('复制这个链接：', text);
+    setTimeout(() => { $('sbCopy').textContent = '🔗 复制链接'; }, 1500);
   };
   speed = state.speed;
 
