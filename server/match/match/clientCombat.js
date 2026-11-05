@@ -95,7 +95,9 @@ export class MatchClientCombat {
     for (const pid of f.players) {
       if (pid === exclude || (f.demoted && f.demoted.has(pid))) continue;
       const ps = this.players.get(pid);
-      if (!ps || ps.isBot || ps.left || !ps.connected) continue;
+      // docs/AGENT-SEATS.md: an external agent has no battle simulator — its fields are run by another browser or the
+      // server, never delegated to the agent client.
+      if (!ps || ps.isBot || ps.agent || ps.left || !ps.connected) continue;
       if (!best || ps.seat < best.seat) best = ps;
     }
     return best ? best.playerId : null;
@@ -144,7 +146,7 @@ export class MatchClientCombat {
     const out = [];
     const cap = this.clientsOnly ? CLIENTS_ONLY_FIELDS_PER_EXECUTOR : MAX_FIELDS_PER_EXECUTOR;
     for (const ps of this.players.values()) {
-      if (!ps || ps.isBot || ps.left || !ps.connected || skip.has(ps.playerId)) continue;
+      if (!ps || ps.isBot || ps.agent || ps.left || !ps.connected || skip.has(ps.playerId)) continue;
       if (this._loadFor(ps.playerId, fields) >= cap) continue;
       out.push(ps);
     }
