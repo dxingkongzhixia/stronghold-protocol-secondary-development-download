@@ -199,6 +199,8 @@ node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-path
 
 ## 6. 测试与门禁
 
+> 完整说明（目录、golden 归因、CI 三个 job、已知不稳定项、失败排查）见 [`TESTING.md`](TESTING.md)；下表是速查。
+
 | 层级 | 命令 | 何时必须 |
 |---|---|---|
 | 单测 | `node --test <file>` | 每次改动 |
@@ -225,13 +227,14 @@ node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-path
 | 服务器 / 协议 / 数据流 | `ARCHITECTURE.md`、`docs/design/network.md`、`shared/protocol.js` 注释 |
 | 数据字段 / 生成 | `DATA.md`、`tools/build-data.mjs` |
 | 素材 / 提取 | `ASSETS.md` |
+| 测试（新增套件 / golden / CI / 排红灯） | `TESTING.md`（唯一入口）、`test/**`、`.github/workflows/ci.yml` |
 | 插件 | `PLUGIN-DEV-GUIDE.md` / `PLUGINS.md` / `PLUGIN-API.md` / `PLUGIN-DSL.md`（按改动层级） |
 | 插件内容集构建（性能 / 缓存 / 子进程 / 构建失败） | `PLUGIN-BUILD.md`（唯一归属）、`PLUGINS.md` §11、`DEPLOY.md` 的环境变量表 |
 | AI 座位 / bot 策略 / 每座位覆盖 / 外部 AI 与 LLM | `BOT-STRATEGIES.md`（注册表与内置策略）、`EXTERNAL-AI.md`（sp-ai/1、传输、安全边界）、`AI-STRATEGY.md`（示例顾问打法，不改规则） |
 | 手机端 / 触屏 / 安全区 / 响应式 | `MOBILE-UI.md`（计划与验收）、`public/css/devices.css` 注释、`test/mobile/*`、`npm run check:mobile` |
 | 部署 / 环境变量 | `DEPLOY.md`、`PROJECT-STATE.md`、`AI-WORKFLOW.md` |
 | 当前版本 / 部署状态 | `PROJECT-STATE.md`、`CHANGELOG.md` |
-| 新文档 / 移动文档 | `docs/README.md` §3/§4 与 §7.3 的登记清单：`QUERY-INDEX.md`、根 `AGENTS.md` §3、`AI-AGENT.md` §7、`HANDOVER.md` 参考表 |
+| 新文档 / 移动文档 | `docs/README.md` §2/§4 与 §7.3 的登记清单：`QUERY-INDEX.md`、根 `AGENTS.md` §3、`AI-AGENT.md` §7、`HANDOVER.md` 参考表 |
 
 **权威顺序**：代码 + 测试 > 规范文档（`PLUGINS` / `DESIGN` / `SIM` / `META` / `DATA` / `PROTOCOL`）> 当前状态 > 历史 > 草案。历史文档不能覆盖当前行为。
 

@@ -195,8 +195,9 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/keel/DEBUGGING.md`](docs/keel/DEBUGGING.md) | **Keel 调试**：错误分层、Worker 失败、指标、lock/pin、分发 |
 | [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md) | **v2 兼容插件开发参考**：模板、manifest、类别、测试、打包、发布 |
 | [`docs/HANDOVER.md`](docs/HANDOVER.md) | 详细接手 / 运维参考（入口以 `DEVELOPER.md` 为准） |
-| [`docs/README.md`](docs/README.md) | **文档系统总索引**：不同角色的阅读顺序、主体 / 插件 / 历史 / 运维文档的权威入口与维护规则 |
+| [`docs/README.md`](docs/README.md) | **文档系统总索引**：真人开发者 / AI Agent 两条阅读路径、按核心能力（规则 / 引擎 / 插件 / 测试 / 上线…）分组的权威入口与维护规则 |
 | [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) | **问题 → 文档 → 代码文件** 查询索引 |
+| [`docs/TESTING.md`](docs/TESTING.md) | **测试系统**：五层目录、命令、golden 归因规则、CI 三个 job、已知不稳定项与排错 |
 | [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md) | 当前状态一页纸：线上、开关、备份、已知问题 |
 | [`docs/PLAYING.md`](docs/PLAYING.md) | 玩法指南：流程、经济、招募与晋升、摆阵、联防、盟约、最终攻势、结算称号 |
 | [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) | **我们的改动与全部决策记录**：账号 / 野排 / 观战夺舍 / 8 名自造干员（§0–§49；文件开头有目录） |

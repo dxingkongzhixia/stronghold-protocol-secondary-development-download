@@ -1,150 +1,169 @@
 # 文档系统 / Documentation System
 
-> **状态**：维护中的文档总入口（2026-11-02 整体重新梳理；2026-11-05 登记校正）。
-> 新增或移动文档时，按 §7.3 的清单登记：**本页 → [`QUERY-INDEX.md`](QUERY-INDEX.md) → [`../AGENTS.md`](../AGENTS.md)
+> **状态**：维护中的文档总入口（2026-11-05 按**读者**与**核心能力**重排；旧的分层表改为 §3 的图例）。
+> 新增或移动文档时，按 §7.3 的清单登记：**本页 §2 → [`QUERY-INDEX.md`](QUERY-INDEX.md) → [`../AGENTS.md`](../AGENTS.md)
 > → [`AI-AGENT.md`](AI-AGENT.md) §7 → [`HANDOVER.md`](HANDOVER.md) 参考表**。
 
 本页回答三个问题：
 
-1. **不同角色应该先读什么；**
-2. **哪一份文档是权威来源，哪一份只是解释、历史或草案**（同一话题有多份时，§4 直接给结论）；
-3. **修改代码后，文档应该同步改哪里。**
+1. **我是谁，该按什么顺序读**（§1）；
+2. **某个能力（规则 / 引擎 / 插件 / 测试 / 上线…）的权威文档是哪份**（§2、§4）；
+3. **改了代码，文档要同步改哪里**（§7）。
 
-找不到东西时不要翻目录，直接按问题查 [`QUERY-INDEX.md`](QUERY-INDEX.md)（14 个分区的「问题 → 文档 / 代码文件」表）。
-
----
-
-## 1. 入口层
-
-| 入口 | 面向 | 内容 |
-|---|---|---|
-| [`../AGENTS.md`](../AGENTS.md) | **AI 代理**（自动加载） | 硬规则、布局判定、命令、护栏 |
-| [`AI-AGENT.md`](AI-AGENT.md) | **AI 代理**（展开版） | 工作循环、代码地图、任务配方、测试矩阵、**文档同步矩阵 §7** |
-| [`DEVELOPER.md`](DEVELOPER.md) | **人类开发者** | 启动、架构、开发流程、调试、发布、文档地图 |
-| [`RULES.md`](RULES.md) | **规则查阅 / 改规则** | 权威顺序、规则总览、规范文档地图、改规则流程 |
-| [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | **插件开发者** | 选模板、manifest、类别、测试、打包、发布 |
-| [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md) | **维护 / 运维（房间插件）** | 内容集构建流程、四层缓存的键、环境变量、排障步骤、2026-11 踩坑记录 |
-
-> 不写代码、只想换图 / 模型 / 语音的读者看 [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)；Forge 包作者看
-> [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md)。
-
-> **目录角色先说清楚：** `D:\DOTK\Stronghold-Protocol` 是**项目本体 / 运行目录**；`D:\DOTK\_merge-scratch` 是
-> **单独的 git store**（提交历史 + 跟踪文件镜像），不是临时目录。桌面双树的同步方向是
-> **store → remotes → 项目本体**；`D:\DOTK\.git` 是空的父级仓库，不要在项目本体里直接提交。
+找不到东西时不要翻目录，直接按问题查 [`QUERY-INDEX.md`](QUERY-INDEX.md)。
 
 ---
 
-## 2. 按角色选择阅读顺序
+## 1. 两条读者路径
 
-| 角色 | 先读 | 再读 |
+### 1.1 真人开发者（Human）
+
+| 你是谁 / 要做什么 | 先读 | 再读 | 深入 |
+|---|---|---|---|
+| **第一次接手项目** | [`DEVELOPER.md`](DEVELOPER.md) | [`PROJECT-STATE.md`](PROJECT-STATE.md) → [`ARCHITECTURE.md`](ARCHITECTURE.md) | [`DEVELOPMENT.md`](DEVELOPMENT.md) · [`DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) · [`HANDOVER.md`](HANDOVER.md) |
+| **改规则 / 数值** | [`RULES.md`](RULES.md) | [`DESIGN.md`](DESIGN.md) → [`design/`](design/) | [`SIM.md`](SIM.md) / [`META.md`](META.md) / [`DATA.md`](DATA.md) · [`history/`](history/) |
+| **改引擎 / 对局流程** | [`ARCHITECTURE.md`](ARCHITECTURE.md) | [`SIM.md`](SIM.md) / [`META.md`](META.md) | [`DATA.md`](DATA.md) · [`BALANCE.md`](BALANCE.md) |
+| **做内容（干员 / 盟约 / 敌人）** | [`CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | [`NEW-OPERATOR.md`](NEW-OPERATOR.md) | [`DATA.md`](DATA.md) · [`PLAYING.md`](PLAYING.md) |
+| **做插件（不写代码）** | [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | [`keel/FEATURES.md`](keel/FEATURES.md) | [`PLUGINS.md`](PLUGINS.md)（v2 兼容参考） |
+| **做插件（写代码 / Keel）** | [`keel/QUICKSTART.md`](keel/QUICKSTART.md) | [`keel/FEATURES.md`](keel/FEATURES.md) → [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) | [`keel/MODULES.md`](keel/MODULES.md) → [`keel/CONTRACTS.md`](keel/CONTRACTS.md) → [`keel/RUNTIME.md`](keel/RUNTIME.md) |
+| **改前端 / 手机端** | [`MOBILE-UI.md`](MOBILE-UI.md) | [`UI-HUB.md`](UI-HUB.md) | `public/css/devices.css` · [`SPECIAL-UI.md`](SPECIAL-UI.md) |
+| **测试 / 修红灯** | [`TESTING.md`](TESTING.md) | [`AI-AGENT.md`](AI-AGENT.md) §6（速查） | `.github/workflows/ci.yml` · `tools/golden.mjs` |
+| **发布 / 上线 / 回滚** | [`AI-WORKFLOW.md`](AI-WORKFLOW.md)（部署顺序唯一出处） | [`DEPLOY.md`](DEPLOY.md) → [`PROJECT-STATE.md`](PROJECT-STATE.md) | [`RELAY.md`](RELAY.md) · [`WINDOWS.md`](WINDOWS.md) · [`TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) |
+| **只想玩 / 查规则** | [`PLAYING.md`](PLAYING.md) | [`RULES.md`](RULES.md) | [`DESIGN.md`](DESIGN.md) |
+
+### 1.2 AI Agent 开发者
+
+| 阶段 | 读什么 | 说明 |
 |---|---|---|
-| 第一次接手项目的维护者 | [`DEVELOPER.md`](DEVELOPER.md) | [`PROJECT-STATE.md`](PROJECT-STATE.md) → [`QUERY-INDEX.md`](QUERY-INDEX.md) → [`AI-WORKFLOW.md`](AI-WORKFLOW.md) |
-| AI 代理 | [`../AGENTS.md`](../AGENTS.md) | [`AI-AGENT.md`](AI-AGENT.md) → [`QUERY-INDEX.md`](QUERY-INDEX.md) |
-| 核心开发 / 引擎 | [`DEVELOPER.md`](DEVELOPER.md) → [`ARCHITECTURE.md`](ARCHITECTURE.md) | [`SIM.md`](SIM.md) / [`META.md`](META.md) / [`DATA.md`](DATA.md) |
-| 规则查阅 / 改规则 | [`RULES.md`](RULES.md) → [`DESIGN.md`](DESIGN.md) | [`design/`](design/) → [`SIM.md`](SIM.md) / [`META.md`](META.md) / [`DATA.md`](DATA.md) |
-| 内容作者（盟约 / 干员 / 策略） | [`CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | [`NEW-OPERATOR.md`](NEW-OPERATOR.md) → [`DATA.md`](DATA.md) |
-| 插件作者（不写代码） | [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | [`keel/FEATURES.md`](keel/FEATURES.md) → [`PLUGINS.md`](PLUGINS.md) 相关章节 |
-| 插件开发者（manifest / DSL / 脚本 / UI） | [`keel/FEATURES.md`](keel/FEATURES.md) → [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) | [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) → [`PLUGIN-API.md`](PLUGIN-API.md) / [`PLUGIN-DSL.md`](PLUGIN-DSL.md)（v2 兼容参考） |
-| 插件运维 / 排查（房间变慢、构建失败、插件不加载） | [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md) | [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) → [`PROJECT-STATE.md`](PROJECT-STATE.md) |
-| Forge 包作者 | [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) | [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) |
-| 运维 / 发布 | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) → [`DEPLOY.md`](DEPLOY.md) | [`PROJECT-STATE.md`](PROJECT-STATE.md) → [`RELAY.md`](RELAY.md) → [`WINDOWS.md`](WINDOWS.md) |
-| 前端 / 手机端 | [`MOBILE-UI.md`](MOBILE-UI.md)（清单） | `public/css/devices.css` → [`UI-HUB.md`](UI-HUB.md) → `npm run check:mobile` |
-| AI 座位 / 外部模型接入 | [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) | [`EXTERNAL-AI.md`](EXTERNAL-AI.md) → [`AI-STRATEGY.md`](AI-STRATEGY.md) |
-| 玩家 / 规则查阅 | [`PLAYING.md`](PLAYING.md) | [`RULES.md`](RULES.md) → [`DESIGN.md`](DESIGN.md) |
+| **入口（自动加载）** | [`../AGENTS.md`](../AGENTS.md) | 硬规则、双树布局、命令、护栏；**先按它判断自己在哪棵树** |
+| **展开手册** | [`AI-AGENT.md`](AI-AGENT.md) | 工作循环 §5、测试矩阵 §6、**文档同步矩阵 §7**、收尾清单 §10 |
+| **找文件 / 找话题** | [`QUERY-INDEX.md`](QUERY-INDEX.md) | 「问题 → 文档 → 代码文件」 |
+| **动手前的规则** | [`RULES.md`](RULES.md) → [`DESIGN.md`](DESIGN.md) | 规范优先于历史文档 |
+| **测试与门禁** | [`TESTING.md`](TESTING.md) | golden 归因、CI 三个 job、已知不稳定项 |
+| **不能丢 / 不能并** | [`OUR-FEATURES.md`](OUR-FEATURES.md) · [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 | fork 独有机制 + 永不合并清单 |
+| **合并上游** | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) → [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | 先看台账与 §9 清单，再逐条自研；永不整支合并 |
+| **发布 / 上线** | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) §(d) | 通知 → 备份 → 上传 → 重启 → 验证；须 owner 点头 |
+| **当前线上是什么** | [`PROJECT-STATE.md`](PROJECT-STATE.md) | build / 开关 / 备份 / 已知问题 |
+
+> 代理的默认阅读顺序：`AGENTS` → `AI-AGENT` → `QUERY-INDEX` → 本页 §2 对应能力 → 领域文档。
+> 不要用历史文档覆盖代码行为；冲突时按 §5 的权威顺序。
 
 ---
 
-## 3. 分层：每类文档的归属
+## 2. 核心能力地图
 
-状态标签见 §7.2。**同一话题出现多份时，先看 §4 再看表。**
+> 每节三列：**权威**（行为定义）/ **实现**（解释代码）/ **状态 · 历史 · 计划**。
+> 同一话题有多份时，§4 直接给"以谁为准"。
 
-### 3.1 规范层（权威定义，代码必须符合）
+### 2.1 游戏规则与设计
 
-| 文档 | 定义什么 | 状态 |
+| 权威 | 实现 | 状态 / 历史 |
 |---|---|---|
-| [`DESIGN.md`](DESIGN.md) → [`design/`](design/) | 现行游戏规则（章节索引 + 当前规则） | 规范 |
-| [`SIM.md`](SIM.md) | 战斗引擎：单位、buff、伤害、技能、职业 | 规范 |
-| [`META.md`](META.md) | 对局 / 匹配 / 回合 / 联防 / 视图 | 规范 |
-| [`DATA.md`](DATA.md) | `data/*.json` 字段与生成方式 | 规范 |
-| [`ASSETS.md`](ASSETS.md) | 素材来源、布局、manifest、特效、授权、中继 | 规范 |
-| [`keel/FEATURES.md`](keel/FEATURES.md) · [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) · [`keel/MODULES.md`](keel/MODULES.md) · [`keel/CONTRACTS.md`](keel/CONTRACTS.md) · [`keel/RUNTIME.md`](keel/RUNTIME.md) · [`keel/COMPAT-V2.md`](keel/COMPAT-V2.md) | **当前插件规范**（Keel / manifest 3）、模块 / 权限矩阵与 v2 兼容 | 规范 |
-| [`PLUGINS.md`](PLUGINS.md) · [`PLUGIN-API.md`](PLUGIN-API.md) · [`PLUGIN-DSL.md`](PLUGIN-DSL.md) | v2 兼容参考：六类插件、content set、脚本 SDK、DSL | 兼容规范 |
+| [`DESIGN.md`](DESIGN.md) → [`design/`](design/)（现行规则章节） | [`SIM.md`](SIM.md)（战斗）· [`META.md`](META.md)（对局/匹配） | [`history/`](history/)（各版本修订） |
+| [`RULES.md`](RULES.md)（规则入口 + 权威顺序 + 改规则流程） | [`DATA.md`](DATA.md)（字段与生成） | [`MATCHMAKING.md`](MATCHMAKING.md)（决策记录 §0–§49） |
+| [`PLAYING.md`](PLAYING.md)（玩家可读规则） | — | [`BOND-BOLIVAR.md`](BOND-BOLIVAR.md)（草案，未上线） |
 
-### 3.2 实现层（解释代码，允许代码先行后补）
+### 2.2 引擎、代码与平衡
 
-| 文档 | 用途 | 状态 |
-|---|---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | 代码地图、协议、数据流、安全网（**先看这页找文件**） | 参考 |
-| [`DEVELOPMENT.md`](DEVELOPMENT.md) | 仓库地图、数据 / 素材流水线、测试的详细参考 | 参考 |
-| [`DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) | 中文开发手册与配方（长文） | 参考 |
-| [`HANDOVER.md`](HANDOVER.md) | 详细接手 / 运维手册（入口仍以 `DEVELOPER.md` 为准） | 参考 |
-| [`UI-HUB.md`](UI-HUB.md) | 主界面：经典大厅 / Hub、后台开关、`?ui=` 预览 | 当前 |
-| [`SPECIAL-UI.md`](SPECIAL-UI.md) | 特殊 UI 版本（ark-proto PRTS 终端）的静态快照 | 参考 |
-| [`I18N.md`](I18N.md) | UI / 游戏文本 / 服务器消息 / 新语言 | 参考 |
-| [`SKINS.md`](SKINS.md) | 皮肤目录、选择器、本地时装提取、渲染回退 | 当前 |
-| [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) | AI 策略注册表、内置策略、每座位覆盖、重放与测试矩阵 | 当前 |
-| [`EXTERNAL-AI.md`](EXTERNAL-AI.md) | 外部 AI（sp-ai/1）与 LLM 适配器：传输、配置、安全边界、测试 | 当前 |
-| [`PACKS.md`](PACKS.md) | 内容包 / 语言包格式 | 兼容参考 |
-| [`WINDOWS.md`](WINDOWS.md) | Windows 便携包 | 参考 |
-| [`RELAY.md`](RELAY.md) | 外部服务器目录站（第三方站点，**不是**我们的美术中继；中继见 `ASSETS.md`） | 参考 |
-
-### 3.3 指南 / 配方层
-
-| 文档 | 用途 | 状态 |
-|---|---|---|
-| [`keel/QUICKSTART.md`](keel/QUICKSTART.md) | Keel 15 分钟快速上手：从模板到真实房间 | 指南 |
-| [`keel/WORKFLOW.md`](keel/WORKFLOW.md) | Keel 开发 / 兼容 / 测试流程、标准试验插件 | 指南 |
-| [`keel/DEBUGGING.md`](keel/DEBUGGING.md) | Keel 错误分层、Worker 失败、指标、lock/pin、分发 | 指南 |
-| [`CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) | 盟约 / 策略 / 悬赏敌人 / CODEX / 3D 主题 | 指南 |
-| [`NEW-OPERATOR.md`](NEW-OPERATOR.md) | 新增自造干员端到端配方 | 指南 |
-| [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | 不写代码的插件作者：工作台、模板、换图、试玩、打包 | 指南（v2 教程） |
-| [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | 写插件的开发者：结构、测试、发布 | 指南（v2 教程） |
-| [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) · [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) | Forge 包作者与兼容矩阵 | 指南 / 兼容 |
-| [`AI-STRATEGY.md`](AI-STRATEGY.md) | 示例顾问的打法、经济基准、证据分层（不改规则） | 参考 |
-| [`BALANCE.md`](BALANCE.md) | 难度模型与测量（官方数值） | 参考 |
-
-### 3.4 运维 / 状态层（描述「现在」，不覆盖规范）
-
-| 文档 | 用途 | 状态 |
-|---|---|---|
-| [`DEPLOY.md`](DEPLOY.md) | 防火墙、自启、反代、Docker、**环境变量表** | 参考 |
-| [`AI-WORKFLOW.md`](AI-WORKFLOW.md) | 研究 → 修改 → 测试 → 合并 → 发布 → 部署的操作契约 | 当前 |
-| [`PROJECT-STATE.md`](PROJECT-STATE.md) | 现在部署的 build、开关、备份、已知问题、部署日志 | 当前状态 |
-| [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md) | 内容集构建：机制、四层缓存、环境变量、排障、踩坑 | 当前状态 |
-| [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | 仍未解决的插件问题、风险、排期 | 当前状态 |
-| [`keel/NEXT.md`](keel/NEXT.md) · [`keel/REMAINING.md`](keel/REMAINING.md) | Keel 的检查点、剩余项与边界 | 当前状态 |
-| [`TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) | trusted 类插件的生产隔离方案 | 部署参考 |
-| [`MOBILE-UI.md`](MOBILE-UI.md) | 手机端（横屏 ≥640×360）现状 / 缺口 / P0–P2 执行清单与验收 | 计划 |
-
-### 3.5 历史 / 决策层（记录「为什么」，不保证仍是当前行为）
-
-| 文档 | 用途 | 状态 |
-|---|---|---|
-| [`MATCHMAKING.md`](MATCHMAKING.md) | 决策记录 §0–§49（账号、野排、自造干员、社区、§22 黑名单） | 历史 + 决策 |
-| [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | 主线合并日志 + **永不合并清单 §0** | 历史 |
-| [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | 主线未并入台账（发布线 0.3.2 / 0.3.3 + 开发线 0.3.4 §9 清单）与建议顺序 | 当前状态 |
-| [`history/`](history/) | 各版本规则修订（发布时的事实） | 历史 |
-| [`keel/HISTORY.md`](keel/HISTORY.md) | Keel 的历史与决策 | 历史 |
-| [`../CHANGELOG.md`](../CHANGELOG.md) | 发布记录 | 历史 |
-
-### 3.6 草案 / 规划层（未批准，不能当承诺）
-
-| 文档 | 用途 |
+| 内容 | 文档 |
 |---|---|
-| [`PLUGIN-PLATFORM-PLAN.md`](PLUGIN-PLATFORM-PLAN.md) | 玩法插件平台改造草案 v0.1（未实施） |
-| [`FUTURE-FEATURES.md`](FUTURE-FEATURES.md) | 评估过但暂不实现的较大功能 |
-| [`BOND-BOLIVAR.md`](BOND-BOLIVAR.md) | 玻利瓦尔国家盟约初设（已实现原型，**未上线**） |
-| **未提交**的 `PLUGIN-OPTIMIZATION-*.md` | 本地草案，只有提交后才进入文档链 |
+| 代码地图 / 协议 / 数据流 | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| 仓库地图 / 数据·素材流水线 / 测试运行 | [`DEVELOPMENT.md`](DEVELOPMENT.md) · [`DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md)（中文长文） |
+| 战斗引擎（单位 / buff / 伤害 / 技能 / 职业） | [`SIM.md`](SIM.md) |
+| 对局与匹配引擎（回合 / 联防 / 视图） | [`META.md`](META.md) |
+| 数据生成与字段 | [`DATA.md`](DATA.md) |
+| 难度模型与测量 | [`BALANCE.md`](BALANCE.md) + `data/tuning.json` |
 
-### 3.7 插件专题（旁支：评审 / 运营 / 供应链）
+### 2.3 插件系统
 
-| 文档 | 用途 | 状态 |
+| 主题 | 权威 | 实现 / 教程 | 状态 · 运维 |
+|---|---|---|---|
+| **当前规范（Keel / manifest 3）** | [`keel/FEATURES.md`](keel/FEATURES.md) · [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) · [`keel/CONTRACTS.md`](keel/CONTRACTS.md) · [`keel/RUNTIME.md`](keel/RUNTIME.md) | [`keel/ARCHITECTURE.md`](keel/ARCHITECTURE.md) · [`keel/MODULES.md`](keel/MODULES.md) | [`keel/NEXT.md`](keel/NEXT.md) · [`keel/REMAINING.md`](keel/REMAINING.md) · [`keel/HISTORY.md`](keel/HISTORY.md) |
+| **v2 兼容参考** | [`PLUGINS.md`](PLUGINS.md) · [`PLUGIN-API.md`](PLUGIN-API.md) · [`PLUGIN-DSL.md`](PLUGIN-DSL.md) | — | [`keel/COMPAT-V2.md`](keel/COMPAT-V2.md) |
+| **上手** | — | [`docs/keel/README.md`](keel/README.md) · [`keel/QUICKSTART.md`](keel/QUICKSTART.md) · [`keel/WORKFLOW.md`](keel/WORKFLOW.md) | [`keel/DEBUGGING.md`](keel/DEBUGGING.md) |
+| **教程（人）** | — | [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md)（不写代码） · [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)（写代码） | — |
+| **内容集构建（性能 / 缓存 / 子进程）** | [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md)（**唯一归属**） | [`PLUGINS.md`](PLUGINS.md) §11 | [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) |
+| **兼容 / 包格式** | [`PACKS.md`](PACKS.md) · [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) | [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) | — |
+| **运营 / 审核 / 风险** | — | — | [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md) · [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) · [`PLUGIN-RISKS.md`](PLUGIN-RISKS.md) · [`PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md) |
+| **fork 专属：PRTS「源代码」** | [`PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) | — | [`PRTS-SOURCE-CODE-REMAINING.md`](PRTS-SOURCE-CODE-REMAINING.md) |
+| **平台改造草案** | — | — | [`PLUGIN-PLATFORM-PLAN.md`](PLUGIN-PLATFORM-PLAN.md)（未实施） |
+
+> 本地未提交的 `PLUGIN-OPTIMIZATION-*.md` 属于个人草案，**不在**这条链上；提交后才按 §7.3 登记。
+
+### 2.4 测试系统
+
+| 内容 | 文档 / 入口 |
+|---|---|
+| **唯一入口：目录、命令、golden 规则、CI、已知不稳定** | [`TESTING.md`](TESTING.md) |
+| 速查表（层级 / 命令 / 何时必须） | [`AI-AGENT.md`](AI-AGENT.md) §6 |
+| CI（`test` / `tooling` / `mobile-audit`） | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) |
+| golden 语料与重算 | `test/golden/*.json` · `tools/golden.mjs` |
+| 手机矩阵 | [`MOBILE-UI.md`](MOBILE-UI.md) §7 · `npm run check:mobile` |
+
+### 2.5 上线、发布与运维
+
+| 内容 | 文档 | 地位 |
 |---|---|---|
-| [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md) | 商城、上传、审核、签名、镜像 | 运营参考 |
-| [`PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) | 插件体系架构、边界、安全与测试评审 | 评审（非规范） |
-| [`PLUGIN-RISKS.md`](PLUGIN-RISKS.md) | 玩家版风险说明 | 玩家文案 |
-| [`PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md) | 安装、更新、签名、哈希、供应链边界 | 运营参考 |
-| [`PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) · [`PRTS-SOURCE-CODE-REMAINING.md`](PRTS-SOURCE-CODE-REMAINING.md) | 「PRTS 源代码」玩法插件的开发文档与 B–E 计划 | 实现记录 |
+| **部署顺序与硬规则**（通知 → 备份 → 上传 → 重启 → 验证；须 owner 点头） | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) §(d) | **唯一出处** |
+| 防火墙 / 自启 / 反代 / Docker / 环境变量表 | [`DEPLOY.md`](DEPLOY.md) | 参考 |
+| 当前线上 build / 开关 / 备份 / 已知问题 | [`PROJECT-STATE.md`](PROJECT-STATE.md) | 当前状态 |
+| 美术中继（推即部署） | [`RELAY.md`](RELAY.md) · [`ASSETS.md`](ASSETS.md)（The relay） | 参考 |
+| Windows 便携包 | [`WINDOWS.md`](WINDOWS.md) | 参考 |
+| trusted 插件的生产隔离 | [`TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) | 部署参考 |
+| 发布记录 | [`../CHANGELOG.md`](../CHANGELOG.md) | 历史 |
+
+### 2.6 AI 座位 / 外部 AI
+
+| 内容 | 文档 |
+|---|---|
+| 策略注册表、内置策略、每座位覆盖、重放 | [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) |
+| 外部 AI（`sp-ai/1`）、LLM 适配器、安全边界 | [`EXTERNAL-AI.md`](EXTERNAL-AI.md) |
+| 示例顾问的打法 / 经济基准（不改规则） | [`AI-STRATEGY.md`](AI-STRATEGY.md) |
+| 机器人训练 / 布局先验 | [`DEPLOY.md`](DEPLOY.md)（Bot rehearsal / training）· `server/match/botPrior.js` |
+
+### 2.7 手机端与界面
+
+| 内容 | 文档 |
+|---|---|
+| 手机端（横屏 ≥640×360）现状、缺口、P0–P2 清单与验收 | [`MOBILE-UI.md`](MOBILE-UI.md) |
+| 主界面（经典大厅 / Hub）与 `?ui=` 预览 | [`UI-HUB.md`](UI-HUB.md) |
+| 特殊 UI 快照（PRTS 终端） | [`SPECIAL-UI.md`](SPECIAL-UI.md) |
+
+### 2.8 素材、皮肤、文案、内容包
+
+| 内容 | 文档 |
+|---|---|
+| 素材来源 / manifest / 特效 / 授权 / 中继 | [`ASSETS.md`](ASSETS.md) |
+| 皮肤目录、选择器、本地提取、渲染回退 | [`SKINS.md`](SKINS.md) |
+| UI / 游戏文本 / 服务器消息 / 新语言 | [`I18N.md`](I18N.md) |
+| 内容包 / 语言包格式 | [`PACKS.md`](PACKS.md) |
+
+### 2.9 协作、上游与路线图
+
+| 内容 | 文档 |
+|---|---|
+| fork 独有机制（合并时不得丢） | [`OUR-FEATURES.md`](OUR-FEATURES.md) |
+| 主线合并日志 + **永不合并清单 §0** | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
+| 主线未并入台账（发布线 + dev §9 清单） | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) |
+| 决策记录 §0–§49 | [`MATCHMAKING.md`](MATCHMAKING.md) |
+| 评估过但暂不实现 | [`FUTURE-FEATURES.md`](FUTURE-FEATURES.md) |
+
+---
+
+## 3. 分层与状态标签
+
+文档按**层**归档；同一层的文档共享一种"可信度"。
+
+| 层 | 例子 | 含义 |
+|---|---|---|
+| **规范层** | `DESIGN` / `design/`、`SIM`、`META`、`DATA`、`ASSETS`、`keel/*` | 代码必须符合 |
+| **实现层** | `ARCHITECTURE`、`DEVELOPMENT`、`UI-HUB`、`SKINS`、`BOT-STRATEGIES`、`EXTERNAL-AI` | 解释代码，允许代码先行后补 |
+| **指南 / 配方层** | `CONTENT-AUTHORING`、`NEW-OPERATOR`、`PLUGIN-GUIDE`、`keel/QUICKSTART`、`AI-STRATEGY` | 操作步骤，不定义行为 |
+| **状态 / 计划层** | `PROJECT-STATE`、`TESTING`、`PLUGIN-BUILD`、`PLUGIN-BACKLOG`、`MOBILE-UI`、`keel/NEXT` | 描述「现在」或「将要做什么」 |
+| **历史 / 决策层** | `MATCHMAKING`、`UPSTREAM-MERGES`、`UPSTREAM-DEV-TRIAGE`、`history/`、`CHANGELOG` | 记录「为什么」，不保证仍是当前行为 |
+| **草案层** | `PLUGIN-PLATFORM-PLAN`、`BOND-BOLIVAR`、`FUTURE-FEATURES` | 未批准，不能当承诺 |
+
+**状态标签**（写在每篇文档头部或表格里）：见 §7.2。
 
 ---
 
@@ -152,16 +171,20 @@
 
 | 话题 | 权威 | 解释 / 补充 | 历史 / 草案 |
 |---|---|---|---|
-| 新插件怎么写 | [`keel/FEATURES.md`](keel/FEATURES.md) · [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) · [`keel/CONTRACTS.md`](keel/CONTRACTS.md) | [`PLUGINS.md`](PLUGINS.md) / [`PLUGIN-API.md`](PLUGIN-API.md) / [`PLUGIN-DSL.md`](PLUGIN-DSL.md)（**v2 兼容参考**）· [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) / [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)（教程） | — |
-| 房间插件为什么慢 / 构建怎么工作 | [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md) | [`PLUGINS.md`](PLUGINS.md) §11、[`DEPLOY.md`](DEPLOY.md) 环境变量表 | [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) |
-| 代码在哪个文件 | [`ARCHITECTURE.md`](ARCHITECTURE.md)（地图） | [`DEVELOPMENT.md`](DEVELOPMENT.md) / [`DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md)（长文） | — |
-| 现在线上是什么 | [`PROJECT-STATE.md`](PROJECT-STATE.md) | `DEPLOY.md`（怎么做） | [`../CHANGELOG.md`](../CHANGELOG.md)（发布历史） |
-| 规则是什么 / 为什么这样 | [`DESIGN.md`](DESIGN.md) + [`design/`](design/) | [`SIM.md`](SIM.md) / [`META.md`](META.md) / [`DATA.md`](DATA.md) | [`history/`](history/) · [`MATCHMAKING.md`](MATCHMAKING.md)（决策记录） |
-| 哪些东西合并时不能丢 | [`OUR-FEATURES.md`](OUR-FEATURES.md) | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0（永不合并清单） | — |
-| 素材 / 皮肤 / 语言 / 内容包 | [`ASSETS.md`](ASSETS.md) | [`SKINS.md`](SKINS.md) · [`I18N.md`](I18N.md) · [`PACKS.md`](PACKS.md) | — |
-| AI 怎么打 | [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md)（实现） | [`AI-STRATEGY.md`](AI-STRATEGY.md)（示例打法）· [`EXTERNAL-AI.md`](EXTERNAL-AI.md)（外部 LLM） | [`MATCHMAKING.md`](MATCHMAKING.md) |
-| 手机 / 触屏 / 安全区怎么改 | [`MOBILE-UI.md`](MOBILE-UI.md)（清单与验收） | `devices.css`、`js/ui/device.js`、`test/mobile/*`（实现） | — |
-| 难度数值 | [`BALANCE.md`](BALANCE.md) + `data/tuning.json`（`OUR-FEATURES.md` §11） | — | — |
+| **规则是什么 / 为什么这样** | [`DESIGN.md`](DESIGN.md) + [`design/`](design/) | [`SIM.md`](SIM.md) / [`META.md`](META.md) / [`DATA.md`](DATA.md) | [`history/`](history/) · [`MATCHMAKING.md`](MATCHMAKING.md) |
+| **某个代码在哪个文件** | [`ARCHITECTURE.md`](ARCHITECTURE.md) | [`DEVELOPMENT.md`](DEVELOPMENT.md) / [`DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) | — |
+| **新插件怎么写** | [`keel/FEATURES.md`](keel/FEATURES.md) · [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) · [`keel/CONTRACTS.md`](keel/CONTRACTS.md) | [`PLUGINS.md`](PLUGINS.md) / [`PLUGIN-API.md`](PLUGIN-API.md) / [`PLUGIN-DSL.md`](PLUGIN-DSL.md)（v2 兼容）· 教程 | — |
+| **房间插件为什么慢 / 构建怎么工作** | [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md) | [`PLUGINS.md`](PLUGINS.md) §11 · [`DEPLOY.md`](DEPLOY.md) 环境变量表 | [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) |
+| **测试怎么跑 / golden 怎么动** | [`TESTING.md`](TESTING.md) | [`AI-AGENT.md`](AI-AGENT.md) §6 | — |
+| **上线顺序 / 回滚** | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) §(d) | [`DEPLOY.md`](DEPLOY.md) | [`PROJECT-STATE.md`](PROJECT-STATE.md) 的部署记录 |
+| **现在线上是什么** | [`PROJECT-STATE.md`](PROJECT-STATE.md) | [`DEPLOY.md`](DEPLOY.md)（怎么做） | [`../CHANGELOG.md`](../CHANGELOG.md) |
+| **哪些东西合并时不能丢** | [`OUR-FEATURES.md`](OUR-FEATURES.md) | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 | — |
+| **主线还有哪些没并** | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)（已并日志） | — |
+| **素材 / 皮肤 / 语言 / 内容包** | [`ASSETS.md`](ASSETS.md) | [`SKINS.md`](SKINS.md) · [`I18N.md`](I18N.md) · [`PACKS.md`](PACKS.md) | — |
+| **AI 怎么打** | [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md)（实现） | [`AI-STRATEGY.md`](AI-STRATEGY.md)（示例打法）· [`EXTERNAL-AI.md`](EXTERNAL-AI.md)（外部 LLM） | [`MATCHMAKING.md`](MATCHMAKING.md) |
+| **手机 / 触屏 / 安全区怎么改** | [`MOBILE-UI.md`](MOBILE-UI.md)（清单与验收） | `devices.css`、`js/ui/device.js`、`test/mobile/*` | — |
+| **难度数值** | [`BALANCE.md`](BALANCE.md) + `data/tuning.json` | — | — |
+| **文档系统本身怎么改** | 本页 | [`QUERY-INDEX.md`](QUERY-INDEX.md)（查话题） | — |
 
 ---
 
@@ -169,13 +192,13 @@
 
 发生冲突时按以下顺序判断，不要用旧文档覆盖代码行为：
 
-1. **代码 + 自动化测试**（最终事实）；
-2. **规范层**（§3.1）：Keel 规范、`DESIGN` / `design/`、`SIM`、`META`、`DATA`、`ASSETS`、`PLUGINS` / `PLUGIN-API` / `PLUGIN-DSL`、`shared/protocol.js`；
-3. **当前状态层**（§3.4）：`PROJECT-STATE`、`PLUGIN-BUILD`、`PLUGIN-BACKLOG`、`keel/NEXT`、`keel/REMAINING`；
-4. **历史 / 决策层**（§3.5）：`MATCHMAKING`、`UPSTREAM-MERGES`、`UPSTREAM-DEV-TRIAGE`、`history/`、`CHANGELOG`；
-5. **草案 / 路线图层**（§3.6）。
+1. **代码 + 自动化测试**（最终事实；测试规则见 [`TESTING.md`](TESTING.md)）；
+2. **规范层**：`keel/*`、`DESIGN` / `design/`、`SIM`、`META`、`DATA`、`ASSETS`、`PLUGINS` / `PLUGIN-API` / `PLUGIN-DSL`、`shared/protocol.js`；
+3. **当前状态层**：`PROJECT-STATE`、`PLUGIN-BUILD`、`PLUGIN-BACKLOG`、`keel/NEXT`、`keel/REMAINING`、`MOBILE-UI`；
+4. **历史 / 决策层**：`MATCHMAKING`、`UPSTREAM-MERGES`、`UPSTREAM-DEV-TRIAGE`、`history/`、`CHANGELOG`；
+5. **草案 / 路线图层**：`PLUGIN-PLATFORM-PLAN`、`BOND-BOLIVAR`、`FUTURE-FEATURES`。
 
-`history/` 记录的是**发布时的事实**，不是当前实现；当前行为请回到 §3.1 和代码。
+`history/` 记录的是**发布时的事实**，不是当前实现；当前行为请回到第 2 条与代码。
 
 ---
 
@@ -183,16 +206,16 @@
 
 | 路径 | 是什么 |
 |---|---|
-| `docs/*.md` | 顶层文档（本页的表就是清单） |
+| `docs/*.md` | 顶层文档（§2 的表就是清单） |
 | [`docs/design/`](design/) | `DESIGN.md` 的章节正文（当前规则） |
 | [`docs/history/`](history/) | 各版本的规则修订（历史事实） |
-| [`docs/keel/`](keel/) | Keel 插件系统：功能、架构、契约、运行时、manifest 3、兼容、流程、状态 |
+| [`docs/keel/`](keel/) | Keel 插件系统：功能、契约、运行时、manifest 3、兼容、流程、状态 |
 | [`docs/research/`](research/) | 官方数据研究（可读 + 机器可读 JSON） |
 | [`docs/special-ui/`](special-ui/) | 特殊 UI 的静态快照 |
 | `docs/img/`、`docs/examples/` | 文档配图与示例（不进文档索引） |
 | `plugins/README.md`、`plugins/AGENTS.md` | 在 `plugins/` 内制作插件的规则 |
 
-**机器专属或易变的东西不进 `docs/`**：`AGENTS.md` 里写明 `.cache`、`var/`、`logs/` 等由 `.gitignore` 管；部署事实放 `PROJECT-STATE.md`（它本来就会频繁变）。
+**机器专属或易变的东西不进 `docs/`**：`.cache`、`var/`、`logs/` 由 `.gitignore` 管；部署事实放 `PROJECT-STATE.md`。
 
 ---
 
@@ -200,12 +223,13 @@
 
 ### 7.1 修改代码时
 
-1. 更新**拥有该主题的规范文档**（§3.1）；
+1. 更新**拥有该主题的规范文档**（§2 的"权威"列）；
 2. 改当前状态时，更新 [`PROJECT-STATE.md`](PROJECT-STATE.md) 和/或 [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md)；
-3. 插件内容集 / 构建链路的改动：**必须**同步 [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md)（它是这一主题的唯一归属，见 `AI-AGENT.md` §7）；
-4. 新增能力时，更新 [`QUERY-INDEX.md`](QUERY-INDEX.md) 与本页表格；
-5. 改变用户可见行为、部署方式或测试门禁时，更新 `CHANGELOG.md` / `AI-WORKFLOW.md`；
-6. 合并上游后，更新 [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) 与 [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md)。
+3. 插件内容集 / 构建链路的改动：**必须**同步 [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md)；
+4. 新增能力时，更新 [`QUERY-INDEX.md`](QUERY-INDEX.md) 与本页 §2；
+5. 改变用户可见行为、部署方式或测试门禁时，更新 `CHANGELOG.md` / `AI-WORKFLOW.md` / [`TESTING.md`](TESTING.md)；
+6. 合并上游后，更新 [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) 与 [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md)；
+7. 改手机端 / 响应式时，勾 [`MOBILE-UI.md`](MOBILE-UI.md) §7 的清单。
 
 ### 7.2 状态标签
 
@@ -220,7 +244,7 @@
 
 ### 7.3 新增 / 移动文档的登记清单
 
-1. 本页 §3（放到正确的层）与 §4（如果它取代或补充了某个话题）；
+1. 本页 §2（放到正确的**能力**分组）与 §4（如果它取代或补充了某个话题）；
 2. [`QUERY-INDEX.md`](QUERY-INDEX.md)（至少一条「问题 → 文件」）；
 3. [`../AGENTS.md`](../AGENTS.md) §3 的速查表（如果是代理需要主动找到的）；
 4. [`AI-AGENT.md`](AI-AGENT.md) §7 的同步矩阵（如果它成为某类改动的必改项）；
@@ -251,13 +275,3 @@ node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-path
 ```text
 /admin/docs
 ```
-
-登录 `/admin` 后使用左侧「文档链」入口即可；它读取的是：
-
-```text
-/admin/api/docs          文档索引（标题、路径、分组、大小）
-/admin/api/docs/file     选中文档的原始 Markdown
-/admin/api/docs/asset    docs/ 内的图片
-```
-
-页面只读、需要 `/admin` 的同一个管理令牌；不会暴露 `server/`、`data/` 或 `public/` 里的代码文件。根目录只开放 `README.md`、`AGENTS.md`、`CHANGELOG.md`、`CONTRIBUTING.md`、`NOTICE.md`，另加 `plugins/README.md` 和 `plugins/AGENTS.md`，以及 `docs/` 下的 Markdown。
