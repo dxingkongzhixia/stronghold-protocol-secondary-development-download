@@ -36,7 +36,7 @@
     .sb-head__now i { padding: 0 6px; border: 1px solid rgba(240,163,94,.45); color: #f0a35e; font-style: normal; font-size: 10.5px; }
     .sb-head__now em { margin-left: auto; color: #5f6d68; font-style: normal; font-size: 10.5px; }
 
-    .sb-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid rgba(120,200,175,.14); }
+    .sb-tabs { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid rgba(120,200,175,.14); }
     .sb-tabs button { position: relative; padding: 9px 4px 8px; border: 0; background: transparent; cursor: pointer;
       font-size: 12px; letter-spacing: .08em; color: #7f8e88; }
     .sb-tabs button:hover { color: #cfd8d4; background: rgba(100,216,180,.04); }
@@ -107,6 +107,22 @@
     .sb-tiles__foot i { color: #f0a35e; font-style: normal; }
 
     /* switch */
+    .sb-field { display: grid; gap: 4px; }
+    .sb-field > select { height: 27px; padding: 0 6px; border: 1px solid #2a3a33; border-radius: 2px; background: #09110e; color: #dfe7e3; }
+    .sb-team { display: flex; flex-direction: column; gap: 6px; }
+    .sb-member { display: grid; grid-template-columns: 1fr 1fr auto auto; align-items: center; gap: 6px; }
+    .sb-member select { min-width: 0; height: 25px; padding: 0 4px; border: 1px solid #263a31; border-radius: 2px; background: #09110e; color: #dfe7e3; }
+    .sb-member .sb-dim { font-size: 10px; white-space: nowrap; }
+    .sb-routes { margin: 0; padding: 0; list-style: none; }
+    .sb-routes li { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-top: 1px solid #131d18; font-size: 11px; color: #a9b8b2; }
+    .sb-routes li:first-child { border-top: 0; }
+    .sb-routes i { color: #f0a35e; font-style: normal; width: 22px; }
+    .sb-routes span { margin-left: auto; color: #6f7d77; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .sb-boss__name { font-size: 14px; color: #eef5f1; letter-spacing: .03em; margin-bottom: 6px; }
+    .sb-boss__dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 11px; }
+    .sb-boss__dl dt { color: #7f8e88; }
+    .sb-boss__dl dd { margin: 0; text-align: right; color: #dfe7e3; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .sb-btn[disabled] { opacity: .4; cursor: default; }
     .sb-switch { display: flex; align-items: center; gap: 8px; margin: 0 0 9px; cursor: pointer; color: #a9b8b2; font-size: 11.5px; }
     .sb-switch input { appearance: none; width: 30px; height: 16px; margin: 0; border-radius: 8px; background: #1b2722;
       border: 1px solid #2f4239; position: relative; cursor: pointer; transition: background .15s; }
@@ -195,6 +211,8 @@
       <dt>场上敌人</dt><dd id="sbEnemies">0</dd>
       <dt>击杀</dt><dd id="sbKills">0</dd>
       <dt>灼燃</dt><dd><b id="sbBursts">0</b> · <span id="sbBurn">0</span>/1000</dd>
+      <dt id="sbBossPoolDt" hidden>BOSS 血池</dt><dd id="sbBossPool" hidden>—</dd>
+      <dt id="sbBossStateDt" hidden>BOSS 状态</dt><dd id="sbBossState" hidden>—</dd>
       <dt>音效</dt><dd id="sbAudio">未开启</dd>
     </dl>
     <div class="sb-result" id="sbResult"></div>
@@ -216,3 +234,4 @@
   <div id="sbStart" class="sb-start"><div><span class="sb-start__meta">Stronghold Protocol // Sandbox</span><button type="button" id="sbStartBtn">🔊 点击开始</button></div></div>
 </body>
 </html>
+

@@ -8,6 +8,7 @@
 export const SPEEDS = Object.freeze([1, 2, 4, 8]);
 export const DIRS = Object.freeze(['UP', 'RIGHT', 'DOWN', 'LEFT']);
 export const SLOTS = Object.freeze({ normal: 'chess_char_6_diy1_a', elite: 'chess_char_6_diy1_b' });
+export const DIFFICULTIES = Object.freeze(['FUNNY', 'NORMAL', 'HARD', 'ABYSS']);
 
 export const DEFAULT_STATE = Object.freeze({
   unit: 'char_4247_oxi',
@@ -23,6 +24,10 @@ export const DEFAULT_STATE = Object.freeze({
   wave: 'act1autochess_05',
   mix: false,
   groups: [],
+  boss: null,
+  bossDifficulty: 'NORMAL',
+  bossHpMul: 1,
+  team: [],
   hp: 6,
   atk: 1,
   speed: 2,
@@ -76,6 +81,37 @@ export function parseGroups(s) {
   }).slice(0, 16);
 }
 
+/** One extra team member (up to 3): the DIY pick plus an optional explicit tile. */
+export function cleanMember(m) {
+  if (!m || typeof m !== 'object') return null;
+  const unit = id(m.unit, null);
+  if (!unit) return null;
+  return {
+    unit,
+    skill: int(m.skill, 0, 9, 0),
+    row: m.row == null ? null : int(m.row, 0, 40, null),
+    col: m.col == null ? null : int(m.col, 0, 40, null),
+    dir: DIRS.includes(m.dir) ? m.dir : 'RIGHT',
+  };
+}
+
+/** `unit:skill:row:col:dir` joined by `;` — the `?team=` form (row/col may be empty). */
+export function teamToParam(team) {
+  return (Array.isArray(team) ? team : []).slice(0, 3)
+    .map((m) => { const c = cleanMember(m); return c ? `${c.unit}:${c.skill}:${c.row ?? ''}:${c.col ?? ''}:${c.dir}` : null; })
+    .filter(Boolean).join(';');
+}
+
+export function parseTeam(s) {
+  if (typeof s !== 'string' || !s) return [];
+  return s.split(';').flatMap((part) => {
+    const f = part.split(':');
+    if (f.length < 2) return [];
+    const m = cleanMember({ unit: f[0], skill: f[1], row: f[2] || null, col: f[3] || null, dir: f[4] });
+    return m ? [m] : [];
+  }).slice(0, 3);
+}
+
 /** The scenario named by a query string (`location.search`), with every value clamped to what the sim accepts. */
 export function stateFromQuery(search) {
   const q = new URLSearchParams(String(search || '').replace(/^\?/, ''));
@@ -94,6 +130,10 @@ export function stateFromQuery(search) {
     wave: id(q.get('wave'), DEFAULT_STATE.wave),
     mix: q.get('mix') === '1',
     groups: parseGroups(q.get('e')),
+    boss: q.get('boss') && ID.test(q.get('boss')) ? q.get('boss') : null,
+    bossDifficulty: DIFFICULTIES.includes(q.get('bd')) ? q.get('bd') : DEFAULT_STATE.bossDifficulty,
+    bossHpMul: num(q.get('bhp'), 0.001, 100, DEFAULT_STATE.bossHpMul),
+    team: parseTeam(q.get('team')),
     hp: num(q.get('hp'), 0.1, 100, DEFAULT_STATE.hp),
     atk: num(q.get('atk'), 0.1, 100, DEFAULT_STATE.atk),
     speed: SPEEDS.includes(Number(q.get('speed'))) ? Number(q.get('speed')) : DEFAULT_STATE.speed,
@@ -118,6 +158,12 @@ export function stateToQuery(state) {
   if (s.dir !== DEFAULT_STATE.dir) q.set('dir', s.dir);
   if (s.mix) q.set('mix', '1');
   if (s.groups.length) q.set('e', groupsToParam(s.groups));
+  if (s.boss) {
+    q.set('boss', s.boss);
+    if (s.bossDifficulty !== DEFAULT_STATE.bossDifficulty) q.set('bd', s.bossDifficulty);
+    if (s.bossHpMul !== DEFAULT_STATE.bossHpMul) q.set('bhp', String(s.bossHpMul));
+  }
+  if (s.team?.length) q.set('team', teamToParam(s.team));
   if (s.hp !== DEFAULT_STATE.hp) q.set('hp', String(s.hp));
   if (s.atk !== DEFAULT_STATE.atk) q.set('atk', String(s.atk));
   if (s.speed !== DEFAULT_STATE.speed) q.set('speed', String(s.speed));
@@ -134,6 +180,11 @@ export function waveSpawns(tpl) {
     routeIndex: Number(s.routeIndex ?? s.route) || 0,
     count: Math.max(1, Number(s.count ?? s.n) || 1),
     interval: Math.max(0, Number(s.interval ?? s.int) || 0),
+    // a boss wave tags its leader: BOSS_KITS attach by tag/defId (server/sim/content/bosses.js) and the engine routes
+    // its damage into the shared pool only for a tagged leader
+    ...(s.tag ? { tag: s.tag } : {}),
+    ...(s.mods ? { mods: s.mods } : {}),
+    ...(s.unharmful ? { unharmful: true } : {}),
   }));
 }
 
@@ -150,25 +201,59 @@ export function autoPlace(stage, routes = []) {
 /**
  * Build the BattleSpec of the scenario.
  * @param {object} state stateFromQuery's shape (any subset)
- * @param {{ stages?: Record<string, object>, waves?: Record<string, object>, enemies?: Record<string, object> }} ctx
- *   the loaded data files (data.get('stages') / ('waves') / ('enemies')); a Map is accepted too
+ * @param {{ stages?: Record<string, object>, waves?: Record<string, object>, enemies?: Record<string, object>, bosses?: Record<string, object> }} ctx
+ *   the loaded data files (data.get('stages') / ('waves') / ('enemies') / ('bosses')); Maps are accepted too
  * @returns {object} a JSON-safe spec for createBattleFromSpec
  */
-export function buildSpec(state, { stages = {}, waves = {}, enemies = {} } = {}) {
+export function buildSpec(state, { stages = {}, waves = {}, enemies = {}, bosses = {} } = {}) {
   const s = { ...DEFAULT_STATE, ...state };
   const pick = (m, k) => (m instanceof Map ? m.get(k) : m?.[k]) ?? null;
   const stage = pick(stages, s.stage);
-  const wave = pick(waves, s.wave);
+  let wave = pick(waves, s.wave);
+  const boss = s.boss ? pick(bosses, s.boss) : null;
+  if (boss && !wave) {
+    const key = `mode_multi_${String(s.bossDifficulty).toLowerCase()}`;
+    const tplId = boss.templates?.[key]?.template ?? Object.values(boss.templates ?? {})[0]?.template;
+    wave = tplId ? pick(waves, tplId) : null;
+  }
   if (!stage) throw new Error(`unknown stage ${s.stage}`);
   if (!wave) throw new Error(`unknown wave template ${s.wave}`);
   const routes = wave.routes ?? [];
   const [row, col] = s.row != null && s.col != null ? [s.row, s.col] : autoPlace(stage, routes);
-  const spawns = !s.foes ? [] : s.groups.length
+
+  // the team: the panel's operator first, then up to three extras on nearby legal tiles
+  const used = new Set([`${row},${col}`]);
+  const legal = [...new Set([...(stage?.deployTiles?.normal?.melee ?? []), ...(stage?.deployTiles?.normal?.ranged ?? [])]
+    .map(([r, c]) => `${r},${c}`))].map((k) => k.split(',').map(Number));
+  const nextTile = () => {
+    const free = legal.filter(([r, c]) => !used.has(`${r},${c}`))
+      .sort((a, b) => (Math.abs(a[0] - row) + Math.abs(a[1] - col)) - (Math.abs(b[0] - row) + Math.abs(b[1] - col)));
+    const t = free[0] ?? [row, col];
+    used.add(`${t[0]},${t[1]}`);
+    return t;
+  };
+  const unitOf = (m, uid, at) => ({
+    uid,
+    chessId: s.elite ? SLOTS.elite : SLOTS.normal,
+    diy: { charId: m.unit, skillIndex: m.skill, ...(m.module ? { uniEquipId: m.module } : {}) },
+    row: m.row ?? at[0],
+    col: m.col ?? at[1],
+    dir: m.dir || 'RIGHT',
+    potential: m.potential ?? 6,
+    cultivate: m.cultivate ?? 0,
+  });
+  const units = [unitOf({ unit: s.unit, skill: s.skill, module: s.module, row, col, dir: s.dir, potential: s.potential, cultivate: s.cultivate }, 1, [row, col])];
+  for (const m of (s.team ?? []).slice(0, 3)) {
+    const c = cleanMember(m);
+    if (c) units.push(unitOf(c, units.length + 1, nextTile()));
+  }
+
+  const baseSpawns = !s.foes ? [] : s.groups.length
     ? s.groups.map((g) => {
       const c = cleanGroup(g);
       return { enemyKey: c.key, time: c.time, routeIndex: c.route, count: c.count, interval: c.interval };
     })
-    : s.mix
+    : s.mix || boss
       ? waveSpawns(wave)
       : (() => {
         const walkers = [...new Set((wave.spawns ?? [])
@@ -179,6 +264,14 @@ export function buildSpec(state, { stages = {}, waves = {}, enemies = {} } = {})
           ? [{ enemyKey: walkers[0], time: 2, routeIndex: Math.max(0, lane), count: 18, interval: 2.4 }]
           : waveSpawns(wave);
       })();
+  // the boss leader itself is a spawn of its own enemyKey: BOSS_KITS attach by defId (server/sim/content/bosses.js).
+  // A boss wave already carries it with tag 'boss' — do not spawn a second, untagged copy.
+  const leaderInWave = (wave.spawns ?? []).some((x) => (x.enemyKey ?? x.key) === boss?.enemyKey && x.tag === 'boss');
+  const leader = boss && s.foes && !leaderInWave
+    ? [{ enemyKey: boss.enemyKey, time: 2, routeIndex: 0, count: 1, interval: 0, tag: 'boss' }]
+    : [];
+  const spawns = [...leader, ...baseSpawns];
+
   // per-enemy stat overrides: the scenario's global multipliers, then a group's own (same key twice: the first wins)
   const overrides = {};
   const seen = new Set();
@@ -196,31 +289,29 @@ export function buildSpec(state, { stages = {}, waves = {}, enemies = {} } = {})
   } else {
     for (const sp of spawns) apply(sp.enemyKey, s.hp, s.atk);
   }
+
+  // the shared boss pool: the difficulty's blood points, shrunk by the panel's multiplier (a workbench fight must be
+  // reachable in seconds, not the 675k of a real round)
+  let bossSpec = null;
+  if (boss) {
+    const base = Number(boss.bloodPoint?.[s.bossDifficulty]) || Number(Object.values(boss.bloodPoint ?? {})[0]) || 500000;
+    const poolHp = Math.max(1, Math.round(base * s.bossHpMul));
+    bossSpec = { poolHp, poolMax: poolHp };
+  }
+
   return {
     fieldId: 'sandbox',
     seed: s.seed,
-    kind: 'normal',
+    kind: boss ? 'boss' : 'normal',
     round: 1,
     stageId: s.stage,
-    waveId: s.wave,
-    timeLimit: Number(wave.maxPlayTime) || 60,
-    players: [{
-      playerId: 'p1',
-      side: 'L',
-      units: [{
-        uid: 1,
-        chessId: s.elite ? SLOTS.elite : SLOTS.normal,
-        diy: { charId: s.unit, skillIndex: s.skill, ...(s.module ? { uniEquipId: s.module } : {}) },
-        row,
-        col,
-        dir: s.dir,
-        potential: s.potential,
-        cultivate: s.cultivate,
-      }],
-    }],
+    waveId: wave.id ?? s.wave,
+    timeLimit: boss ? null : Number(wave.maxPlayTime) || 60,
+    players: [{ playerId: 'p1', side: 'L', units }],
     routes,
     spawns,
     enemyOverrides: overrides,
+    ...(boss ? { bossId: boss.bossId, boss: bossSpec } : {}),
     // the battle-start operation cooldown would hold the piece back 3 s; the sandbox wants the skill on screen at once
     flags: { startOpCooldown: 0 },
   };

@@ -5,7 +5,7 @@
 // The catalogs come from the loaded data files (public/dev/sandbox.js): operators are deduped by charId (a 自选 pick is
 // a charId + skill + module, not a chess row), enemies/stages/waves are the raw records.
 
-import { DIRS, autoPlace, cleanGroup } from './state.js';
+import { DIFFICULTIES, DIRS, autoPlace, cleanGroup } from './state.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = (v) => Number(v).toLocaleString('zh-CN');
@@ -107,6 +107,28 @@ export function createPanel({ root, catalogs, initial, onChange }) {
     }).join('');
   };
 
+  // ---- boss ----------------------------------------------------------------------------------------------------
+  const boss = () => (state.boss ? catalogs.bosses.find((b) => b.id === state.boss) ?? null : null);
+  const bossBaseHp = (b, diff) => Number(b?.bloodPoint?.[diff]) || Number(Object.values(b?.bloodPoint ?? {})[0]) || 0;
+  const bossTemplate = (b, diff) => b?.templates?.[`mode_multi_${String(diff).toLowerCase()}`]?.template
+    ?? Object.values(b?.templates ?? {})[0]?.template ?? null;
+
+  // ---- team ----------------------------------------------------------------------------------------------------
+  const skillOptions = (charId, sel) => {
+    const o = opById.get(charId);
+    return (o?.skills ?? []).map((sk) => `<option value="${sk.index}"${sk.index === sel ? ' selected' : ''}>S${sk.index + 1} ${esc(sk.name || '')}</option>`).join('');
+  };
+  const teamHtml = () => {
+    if (!state.team.length) return '<p class="sb-dim">只有一名干员。可以再添加最多 3 名队友，各自选技能。</p>';
+    return state.team.map((m, i) => `
+      <div class="sb-member" data-m="${i}">
+        <select data-tm="unit" title="队友干员">${catalogs.operators.map((o) => `<option value="${esc(o.charId)}"${o.charId === m.unit ? ' selected' : ''}>${esc(o.name)}</option>`).join('')}</select>
+        <select data-tm="skill" title="技能">${skillOptions(m.unit, m.skill)}</select>
+        <span class="sb-dim">${m.row != null ? `${m.row},${m.col}` : '自动'}</span>
+        <button type="button" class="sb-x" data-delmember="${i}" title="移除">✕</button>
+      </div>`).join('');
+  };
+
   // ---- enemies ------------------------------------------------------------------------------------------------
   const enemyMatches = () => {
     const q = filter.enemy.trim().toLowerCase();
@@ -155,6 +177,10 @@ export function createPanel({ root, catalogs, initial, onChange }) {
         <label><span>练度</span><select data-field="cultivate">${[0, 1, 2, 3].map((c) => `<option value="${c}"${c === state.cultivate ? ' selected' : ''}>${c}</option>`).join('')}</select></label>
         <label><span>模组</span>${moduleHtml()}</label>
       </div>`)}
+    ${blocker(`<h2 class="micro">队伍 <span>${state.team.length + 1} / 4</span></h2>
+      <div class="sb-team">${teamHtml()}</div>
+      <div class="sb-rowbtns" style="margin-top:7px"><button type="button" class="sb-btn" data-addmember="1"${state.team.length >= 3 ? ' disabled' : ''}>+ 添加当前干员</button></div>`,
+    '队友默认精英二、潜能 6、无模组；位置自动避开已占格。')}
     ${blocker(`<h2 class="micro">部署 <span>${state.row != null ? `${state.row},${state.col}` : '自动'}</span></h2>
       ${tileHtml()}
       <div class="sb-grid2" style="margin-top:8px">
@@ -172,14 +198,46 @@ export function createPanel({ root, catalogs, initial, onChange }) {
       <div class="sb-rowbtns"><button type="button" class="sb-btn" data-preset="wave">载入原波次</button>
       <button type="button" class="sb-btn" data-preset="clear">清空（默认步兵流）</button></div>`, '点上面的敌人 = 新增一组；改组内数值会立即重建战斗。')}`;
 
+  const bossTab = () => {
+    const b = boss();
+    const diff = state.bossDifficulty;
+    const baseHp = b ? bossBaseHp(b, diff) : 0;
+    const tpl = b ? bossTemplate(b, diff) : null;
+    return `
+      ${blocker(`<h2 class="micro">BOSS</h2>
+        <label class="sb-field"><span class="micro">目标</span>
+          <select data-field="boss"><option value="">无（普通战斗）</option>${catalogs.bosses.map((x) => `<option value="${esc(x.id)}"${x.id === state.boss ? ' selected' : ''}>${esc(x.name)} · ${esc(x.id)}</option>`).join('')}</select>
+        </label>
+        <div class="sb-grid2" style="margin-top:8px">
+          <label><span>难度</span><select data-field="bossDifficulty">${DIFFICULTIES.map((d) => `<option value="${d}"${d === diff ? ' selected' : ''}>${d}</option>`).join('')}</select></label>
+          <label><span>血池×</span><input type="number" min="0.001" max="100" step="0.01" data-field="bossHpMul" value="${state.bossHpMul}"></label>
+        </div>`)}
+      ${b ? blocker(`<div class="sb-boss">
+          <div class="sb-boss__name">${esc(b.name)}</div>
+          <dl class="sb-boss__dl">
+            <dt>敌方</dt><dd>${esc(b.enemyKey)}</dd>
+            <dt>基础血池</dt><dd>${nf(baseHp)}</dd>
+            <dt>实际血池</dt><dd>${nf(Math.round(baseHp * state.bossHpMul))}</dd>
+            <dt>波次模板</dt><dd>${esc(tpl || '—')}</dd>
+          </dl>
+          <div class="sb-rowbtns" style="margin-top:8px"><button type="button" class="sb-btn" data-boss-wave="1">载入该 BOSS 波次</button></div>
+        </div>`, '领袖按 enemyKey 刷出，护卫来自模板波次；右上角的 BOSS 血池就是这一条。') : blocker('<p class="sb-dim">选一个 BOSS 会自动带出它的模板波次与护卫。</p>')}`;
+  };
+
   const mapTab = () => `
     ${blocker(`<h2 class="micro">地图 / 波次</h2>
-      <label class="sb-grid2" style="display:grid"><span class="micro">地图</span>
+      <label class="sb-field"><span class="micro">地图</span>
         <select data-field="stage">${catalogs.stages.map((s) => `<option value="${esc(s.id)}"${s.id === state.stage ? ' selected' : ''}>${esc(s.name || s.id)}</option>`).join('')}</select></label>
-      <label class="sb-grid2" style="display:grid;margin-top:8px"><span class="micro">波次</span>
+      <label class="sb-field" style="margin-top:8px"><span class="micro">波次</span>
         <select data-field="wave">${catalogs.waves.map((w) => `<option value="${esc(w.id)}"${w.id === state.wave ? ' selected' : ''}>${esc(w.id)}${w.kind === 'boss' ? ' · BOSS' : ''}${w.bossId ? ` · ${esc(w.bossId)}` : ''}</option>`).join('')}</select></label>
-      <label class="sb-switch" style="margin-top:10px"><input type="checkbox" data-field="mix"${state.mix ? ' checked' : ''}> 整波刷出（?mix=1）</label>`,
-    `地图 ${esc(stage()?.name || state.stage)} · 合法部署格 ${legalTiles().size} 个 · 波次路线 ${(wave()?.routes ?? []).length} 条`)}`;
+      <label class="sb-switch" style="margin-top:10px"><input type="checkbox" data-field="mix"${state.mix ? ' checked' : ''}> 整波刷出（?mix=1）</label>`)}
+    ${blocker(`<h2 class="micro">路线 <span>${(wave()?.routes ?? []).length} 条</span></h2>
+      <ul class="sb-routes">${(wave()?.routes ?? []).map((r, i) => {
+        const a = Array.isArray(r?.start) ? r.start.join(',') : '?';
+        const b = Array.isArray(r?.end) ? r.end.join(',') : '?';
+        return `<li><i>#${i}</i> ${esc(r?.motion || 'WALK')}<span>${esc(a)} → ${esc(b)}</span></li>`;
+      }).join('') || '<li class="sb-dim">这个波次没有路线</li>'}</ul>`,
+    `地图 ${esc(stage()?.name || state.stage)} · 合法部署格 ${legalTiles().size} 个`)}`;
 
   const globalTab = () => `
     ${blocker(`<h2 class="micro">数值</h2>
@@ -192,7 +250,7 @@ export function createPanel({ root, catalogs, initial, onChange }) {
       <p class="sb-note">同一种子 + 同一场景永远得到同一次战斗；每次改参数都会从 0 秒重建。速度与单步在底部工具栏。</p>`,
     `管理员入口 <code>/admin/sandbox?token=…</code>`)}`;
 
-  const TABS = [['op', '干员'], ['foe', '敌人'], ['map', '地图'], ['global', '全局']];
+  const TABS = [['op', '干员'], ['foe', '敌人'], ['boss', 'BOSS'], ['map', '地图'], ['global', '全局']];
 
   function render() {
     const o = op();
@@ -206,7 +264,7 @@ export function createPanel({ root, catalogs, initial, onChange }) {
       </header>
       <nav class="sb-tabs">${TABS.map(([k, label]) => `<button type="button" data-tab="${k}" class="${tab === k ? 'is-on' : ''}">${label}</button>`).join('')}</nav>
       <div class="sb-body">
-        ${tab === 'op' ? opTab() : tab === 'foe' ? foeTab() : tab === 'map' ? mapTab() : globalTab()}
+        ${tab === 'op' ? opTab() : tab === 'foe' ? foeTab() : tab === 'boss' ? bossTab() : tab === 'map' ? mapTab() : globalTab()}
         <div class="sb-err" id="sbError"></div>
       </div>`;
   }
@@ -225,6 +283,20 @@ export function createPanel({ root, catalogs, initial, onChange }) {
 
   root.addEventListener('change', (e) => {
     const t = e.target;
+    if (t.matches('[data-tm]')) {
+      const row = t.closest('[data-m]');
+      const i = Number(row?.dataset.m);
+      const m = state.team[i];
+      if (!m) return;
+      const f = t.dataset.tm;
+      const patch = { [f]: f === 'skill' ? Number(t.value) : t.value };
+      if (f === 'unit') {
+        const idx = (opById.get(t.value)?.skills ?? []).map((s) => s.index);
+        patch.skill = idx.includes(m.skill) ? m.skill : (idx[0] ?? 0);
+      }
+      commit({ team: state.team.map((x, k) => (k === i ? { ...x, ...patch } : x)) });
+      return;
+    }
     if (t.matches('[data-field]')) {
       const f = t.dataset.field;
       const v = t.type === 'checkbox' ? t.checked
@@ -232,6 +304,15 @@ export function createPanel({ root, catalogs, initial, onChange }) {
           : f === 'elite' ? t.value === '1' : t.value;
       const patch = { [f]: f === 'module' && v === '' ? null : v };
       if (f === 'stage') { patch.row = null; patch.col = null; }
+      if (f === 'boss') {
+        const b = v ? catalogs.bosses.find((x) => x.id === v) : null;
+        const tpl = b ? bossTemplate(b, state.bossDifficulty) : null;
+        if (tpl) patch.wave = tpl;
+      }
+      if (f === 'bossDifficulty' && state.boss) {
+        const tpl = bossTemplate(boss(), v);
+        if (tpl) patch.wave = tpl;
+      }
       commit(patch);
       return;
     }
@@ -272,6 +353,21 @@ export function createPanel({ root, catalogs, initial, onChange }) {
     if (t.dataset.del != null) {
       const i = Number(t.dataset.del);
       commit({ groups: state.groups.filter((_, k) => k !== i) });
+      return;
+    }
+    if (t.dataset.addmember) {
+      if (state.team.length >= 3) return;
+      commit({ team: [...state.team, { unit: state.unit, skill: state.skill, row: null, col: null, dir: state.dir }] });
+      return;
+    }
+    if (t.dataset.delmember != null) {
+      const i = Number(t.dataset.delmember);
+      commit({ team: state.team.filter((_, k) => k !== i) });
+      return;
+    }
+    if (t.dataset.bossWave) {
+      const tpl = bossTemplate(boss(), state.bossDifficulty);
+      if (tpl) commit({ wave: tpl, mix: false });
       return;
     }
     if (t.dataset.more === 'op') { opLimit += 40; root.querySelector('[data-list="op"]').innerHTML = opListHtml(); return; }

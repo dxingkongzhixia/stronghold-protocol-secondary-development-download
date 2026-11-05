@@ -25,7 +25,8 @@ let casts = 0, damage = 0, bursts = 0, spawned = 0, endsAt = 0;
 let state = stateFromQuery(location.search);
 let panel = null;
 let catalogs = null;
-let stages = null, waves = null, enemies = null;
+let lastSnap = null;
+let stages = null, waves = null, enemies = null, bosses = null;
 
 const setText = (id, s) => { const el = $(id); if (el && el.textContent !== s) el.textContent = s; };
 const fail = (err) => { panel?.error(err); console.error(err); };
@@ -54,7 +55,10 @@ function buildCatalogs() {
   })).sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-CN'));
   const st = Object.entries(data.get('stages') || {}).map(([id, s]) => ({ id, name: s?.name || id, size: s?.size, deployTiles: s?.deployTiles })).sort((a, b) => a.id.localeCompare(b.id));
   const wv = Object.entries(data.get('waves') || {}).map(([id, w]) => ({ id, kind: w?.kind, bossId: w?.bossId ?? null, maxPlayTime: w?.maxPlayTime, routes: w?.routes })).sort((a, b) => a.id.localeCompare(b.id));
-  return { operators, enemies: en, stages: st, waves: wv };
+  const bs = Object.entries(data.get('bosses') || {}).map(([id, b]) => ({
+    id, name: b?.name || id, enemyKey: b?.enemyKey || '', bloodPoint: b?.bloodPoint || {}, templates: b?.templates || {},
+  })).sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-CN'));
+  return { operators, enemies: en, stages: st, waves: wv, bosses: bs };
 }
 
 /** One client frame: the drained events, then the snapshot they belong to (20 Hz: every 3rd tick). */
@@ -67,6 +71,7 @@ function feed() {
     else if (e[0] === 'fx' && e[1] === 'burst' && e[4]?.element === 'burn') bursts++;
   }
   const snap = battle.snapshot();
+  lastSnap = snap;
   if (ev.length) {
     view.pushEvents({ t: 'b.ev', fieldId: FIELD_ID, gt: snap.t, ev });
     // the game screen's own audio path (screens/game.js): cast / impact / death / deploy cues from the same tuples
@@ -88,11 +93,23 @@ function stats() {
   const gauge = (battle?.enemies ?? []).reduce((m, e) => Math.max(m, e.side === 'enemy' ? Math.round(e.elem?.burn ?? 0) : 0), 0);
   setText('sbBurn', String(gauge));
   setText('sbTime', `${(battle?.time ?? 0).toFixed(1)} / ${(battle?.timeLimit ?? 0) === Infinity ? '∞' : battle?.timeLimit ?? 0} s`);
+  // BOSS: the shared pool (a LocalBossPool from the spec) and the protocol HUD of the first protocol boss
+  const pool = battle?.sharedBoss;
+  const hasBoss = !!state.boss && !!pool;
+  for (const id of ['sbBossPoolDt', 'sbBossPool', 'sbBossStateDt', 'sbBossState']) { const el = $(id); if (el) el.hidden = !hasBoss; }
+  if (hasBoss) {
+    const pct = Math.max(0, Math.min(100, Math.round((pool.hp / Math.max(1, pool.maxHp)) * 100)));
+    setText('sbBossPool', `${Math.ceil(pool.hp).toLocaleString('zh-CN')} / ${pool.maxHp.toLocaleString('zh-CN')} · ${pct}%`);
+    const proto = lastSnap?.protocol;
+    setText('sbBossState', proto
+      ? `${proto.down ? 'DOWN' : 'ACTIVE'}${Number.isInteger(proto.revivesLeft) ? ` · 复活 ${proto.revivesLeft}` : ''}${proto.shield ? ` · 护盾 ${proto.shield}` : ''}`
+      : '—');
+  }
 }
 
 /** Build the battle of the current scenario and hand it to the renderer. */
 async function start() {
-  const spec = buildSpec(state, { stages, waves, enemies });
+  const spec = buildSpec(state, { stages, waves, enemies, bosses });
   const stage = stages[state.stage];
   battle = sim.spec.createBattleFromSpec(spec, sim.ds, { logger: quiet });
   casts = 0; damage = 0; bursts = 0; spawned = 0; acc = 0; endsAt = 0;
@@ -175,7 +192,7 @@ function wireBoardClick() {
 }
 
 async function main() {
-  await data.loadAll('chess', 'backups', 'tokens', 'items', 'enemies', 'stages', 'bonds', 'config', 'waves', 'assets');
+  await data.loadAll('chess', 'backups', 'tokens', 'items', 'enemies', 'stages', 'bonds', 'config', 'waves', 'bosses', 'assets');
   installAudio({ getManifest: () => data.get('assets'), settings: { bgm: 0, sfx: 0.8, voice: 0.8, muted: false } });
   await assets.ready();
   view = await createFieldView($('field'), { data, assets, settings: { quality: 'high', damageNumbers: true } });
@@ -185,6 +202,7 @@ async function main() {
   stages = data.get('stages') || {};
   waves = data.get('waves') || {};
   enemies = data.get('enemies') || {};
+  bosses = data.get('bosses') || {};
   catalogs = buildCatalogs();
 
   // a link may name an operator / stage / wave this build no longer has: fall back instead of failing the first battle
@@ -194,6 +212,12 @@ async function main() {
   const skills = (opById.get(state.unit)?.skills ?? []).map((s) => s.index);
   if (skills.length && !skills.includes(state.skill)) state = { ...state, skill: skills.filter((i) => i <= state.skill).pop() ?? skills[0] };
   if (state.module && !(opById.get(state.unit)?.modules ?? []).some((m) => m.id === state.module)) state = { ...state, module: null };
+  if (state.boss && !bosses[state.boss]) state = { ...state, boss: null };
+  const team = (state.team ?? []).filter((m) => opById.has(m.unit)).slice(0, 3).map((m) => {
+    const idx = (opById.get(m.unit)?.skills ?? []).map((s) => s.index);
+    return { ...m, skill: idx.includes(m.skill) ? m.skill : (idx[0] ?? 0) };
+  });
+  if (team.length !== (state.team ?? []).length) state = { ...state, team };
   if (!stages[state.stage]) state = { ...state, stage: catalogs.stages[0]?.id ?? state.stage };
   if (!waves[state.wave]) state = { ...state, wave: catalogs.waves[0]?.id ?? state.wave };
   writeUrl();

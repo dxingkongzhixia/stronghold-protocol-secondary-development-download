@@ -100,3 +100,47 @@ test('sandbox: an unknown stage or wave is a clear error, not a half battle', ()
 });
 
 
+
+const BOSSES = {
+  boss_1: {
+    bossId: 'boss_1', enemyKey: 'enemy_boss', name: '假想敌：胄', bloodPoint: { FUNNY: 1000, NORMAL: 2000, HARD: 4000, ABYSS: 8000 },
+    templates: { mode_multi_normal: { round: 14, template: 'wv' } }, escortsByTemplate: {},
+  },
+};
+
+test('sandbox: a boss scenario spawns the leader plus the wave escorts and carries the shared pool', () => {
+  const spec = buildSpec({ stage: 'st', wave: 'wv', boss: 'boss_1', bossDifficulty: 'NORMAL', bossHpMul: 0.5, hp: 1, atk: 1 }, { ...ctx, bosses: BOSSES });
+  assert.equal(spec.kind, 'boss');
+  assert.equal(spec.bossId, 'boss_1');
+  assert.deepEqual(spec.boss, { poolHp: 1000, poolMax: 1000 });
+  assert.equal(spec.timeLimit, null, 'a boss field ends by the pool, not the clock');
+  assert.deepEqual(spec.spawns[0], { enemyKey: 'enemy_boss', time: 2, routeIndex: 0, count: 1, interval: 0, tag: 'boss' });
+  assert.deepEqual(spec.spawns.slice(1), waveSpawns(WAVE), 'the template wave is the escort list');
+});
+
+test('sandbox: without an explicit wave a boss falls back to its own template', () => {
+  const spec = buildSpec({ stage: 'st', wave: 'missing', boss: 'boss_1' }, { ...ctx, bosses: BOSSES });
+  assert.equal(spec.waveId, 'wv');
+});
+
+test('sandbox: up to three teammates join on nearby legal tiles with their own skills', () => {
+  const spec = buildSpec({
+    stage: 'st', wave: 'wv', unit: 'char_a', skill: 2, row: 9, col: 4,
+    team: [{ unit: 'char_b', skill: 0 }, { unit: 'char_c', skill: 1, row: 10, col: 3 }],
+  }, ctx);
+  const units = spec.players[0].units;
+  assert.equal(units.length, 3);
+  assert.deepEqual(units.map((u) => [u.uid, u.diy.charId, u.diy.skillIndex]), [[1, 'char_a', 2], [2, 'char_b', 0], [3, 'char_c', 1]]);
+  assert.deepEqual([units[2].row, units[2].col], [10, 3], 'an explicit tile wins');
+  const tiles = units.map((u) => `${u.row},${u.col}`);
+  assert.equal(new Set(tiles).size, tiles.length, 'no two units on one tile');
+});
+
+test('sandbox: boss and team survive the URL round trip', () => {
+  const state = {
+    ...DEFAULT_STATE, boss: 'boss_1', bossDifficulty: 'HARD', bossHpMul: 0.25,
+    team: [{ unit: 'char_b', skill: 1, row: null, col: null, dir: 'UP' }],
+  };
+  assert.deepEqual(stateFromQuery(`?${stateToQuery(state)}`), state);
+});
+
