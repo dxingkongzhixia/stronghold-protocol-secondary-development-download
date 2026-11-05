@@ -28,6 +28,7 @@
 | **做插件（写代码 / Keel）** | [`keel/QUICKSTART.md`](keel/QUICKSTART.md) | [`keel/FEATURES.md`](keel/FEATURES.md) → [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) | [`keel/MODULES.md`](keel/MODULES.md) → [`keel/CONTRACTS.md`](keel/CONTRACTS.md) → [`keel/RUNTIME.md`](keel/RUNTIME.md) |
 | **改前端 / 手机端** | [`MOBILE-UI.md`](MOBILE-UI.md) | [`UI-HUB.md`](UI-HUB.md) | `public/css/devices.css` · [`SPECIAL-UI.md`](SPECIAL-UI.md) |
 | **测试 / 修红灯** | [`TESTING.md`](TESTING.md) | [`AI-AGENT.md`](AI-AGENT.md) §6（速查） | `.github/workflows/ci.yml` · `tools/golden.mjs` |
+| **沙盒 / 单场景演练** | [`DEV-SANDBOX.md`](DEV-SANDBOX.md) | `public/dev/sandbox.html` | `test/dev/sandbox.test.js` |
 | **发布 / 上线 / 回滚** | [`AI-WORKFLOW.md`](AI-WORKFLOW.md)（部署顺序唯一出处） | [`DEPLOY.md`](DEPLOY.md) → [`PROJECT-STATE.md`](PROJECT-STATE.md) | [`RELAY.md`](RELAY.md) · [`WINDOWS.md`](WINDOWS.md) · [`TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) |
 | **只想玩 / 查规则** | [`PLAYING.md`](PLAYING.md) | [`RULES.md`](RULES.md) | [`DESIGN.md`](DESIGN.md) |
 
