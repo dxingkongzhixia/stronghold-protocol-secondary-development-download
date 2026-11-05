@@ -185,8 +185,10 @@ export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 /** Tunables. */
 export const LOBBY_DEFAULTS = Object.freeze({
   lobbyGraceMs: 60_000,   // disconnected humans keep their lobby seat this long
-  // An agent seat (docs/AGENT-SEATS.md) is a bot seat taken by an external AI agent: a drop hands the seat back to the
-  // built-in bot after this grace, never before (the agent may reconnect within it).
+  // Agent seats (docs/AGENT-SEATS.md): off unless SP_AGENT_SEATS=on (or the startServer option says otherwise).
+  agentSeats: false,
+  // An agent seat is a bot seat taken by an external AI agent: a drop hands the seat back to the built-in bot after this
+  // grace, never before (the agent may reconnect within it).
   agentGraceMs: 30_000,
   maxRooms: 1000,
   maxRoomsPerAddr: 16,    // rooms created from one client network that may exist at once (0 = unlimited)
@@ -433,6 +435,8 @@ export class Lobby {
     this.now = now;
     this.seedFn = seedFn || (() => randomInt(2 ** 32));
     this.opts = { ...LOBBY_DEFAULTS, ...options };
+    /** docs/AGENT-SEATS.md: the global switch (SP_AGENT_SEATS; startServer option `agentSeats`). */
+    this.agentSeats = this.opts.agentSeats === true;
     /**
      * Room plugin changes are coalesced for this many ms (SP_PLUGIN_DEBOUNCE_MS; 0 = apply each request at once, the tests'
      * mode). A host toggling seven plugins otherwise rebuilds seven full content sets, each blocking the event loop.
@@ -469,6 +473,8 @@ export class Lobby {
     this.graceTimers = new Map();
     /** @type {Map<string, NodeJS.Timeout>} agent-seat grace (30 s by default, docs/AGENT-SEATS.md) */
     this.agentGraceTimers = new Map();
+    /** Agent-seat counters for /healthz and the admin page (docs/AGENT-SEATS.md P2). */
+    this.agentMetrics = { claims: 0, handbacks: 0 };
     /** @type {Map<string, NodeJS.Timeout>} deferred (coalesced) resyncs by playerId */
     this.resyncTimers = new Map();
     /**
@@ -589,7 +595,26 @@ export class Lobby {
       for (const s of r.seats) if (s && !s.left) (s.isBot ? bots++ : humans++);
       spectators += r.spectators.length;
     }
-    return { rooms: this.rooms.size, matches, humans, bots, online, spectators };
+    return { rooms: this.rooms.size, matches, humans, bots, online, spectators, agents: this.agentStats() };
+  }
+
+  /**
+   * Agent-seat counters for /healthz and the admin page (docs/AGENT-SEATS.md P2): the global switch, seats in use, live
+   * invites, and lifetime claim / hand-back counts of this process (never a token or a hash).
+   */
+  agentStats() {
+    let seated = 0;
+    let invites = 0;
+    const now = this.now();
+    for (const r of this.rooms.values()) {
+      for (const s of r.seats) if (s && s.agent && !s.left) seated++;
+      const list = r.agentInvites && typeof r.agentInvites.values === 'function' ? r.agentInvites.values() : [];
+      for (const inv of list) if (inv.expiresAt > now) invites++;
+    }
+    return {
+      enabled: !!this.agentSeats, seated, invites,
+      claims: this.agentMetrics.claims, handbacks: this.agentMetrics.handbacks,
+    };
   }
 
   // ---------------------------------------------------------------------------------------------------
@@ -1044,6 +1069,7 @@ export class Lobby {
       return OK;
     }
     if (wasHost) this.migrateHost(room);   // never leaves the host on the released (now AI) seat
+    if (session.agent) this.agentMetrics.handbacks++;
     this.clearAgentGrace(session.playerId);
     session.agent = false;
     session.agentSeat = null;
@@ -1063,6 +1089,7 @@ export class Lobby {
   inviteAgent(session, { seat, ttlSec }) {
     const room = this.roomOf(session);
     if (!room) return fail(ERR.NOT_IN_ROOM);
+    if (!this.agentSeats) return fail(ERR.BAD_TARGET, 'agent seats are disabled');
     if (room.mode === 'solo') return fail(ERR.BAD_TARGET, 'solo room');
     const inviter = room.seatOf(session.playerId);
     if (!inviter || inviter.isBot || inviter.agent) return fail(ERR.SPECTATOR, 'only a player may invite an agent');
@@ -1090,6 +1117,7 @@ export class Lobby {
    * leaves it unusable); expiry is lazy.
    */
   claimAgentSeat(session, { token }) {
+    if (!this.agentSeats) return fail(ERR.BAD_TARGET, 'agent seats are disabled');
     if (this.roomOf(session)) return fail(ERR.ALREADY, 'leave your room first');
     const hash = agentInviteHash(token);
     const now = this.now();
@@ -1140,6 +1168,7 @@ export class Lobby {
     session.notice = null;
     session.pendingResult = null;
     session.agentSeat = invite.seat;
+    this.agentMetrics.claims++;
     this.broadcastState(room);
     this.log.info(`[lobby] ${room.code} agent ${session.name} claimed seat ${invite.seat}`);
     return OK;
@@ -2667,6 +2696,7 @@ export class Lobby {
       delete seat.skins;
     }
     detach();
+    this.agentMetrics.handbacks++;
     this.broadcastState(room);
     this.log.info(`[lobby] ${room.code} agent ${name} timed out; the AI took seat ${seat.seat}`);
   }

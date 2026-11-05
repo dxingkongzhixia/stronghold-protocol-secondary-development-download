@@ -84,6 +84,29 @@ test('buildSnapshot counts accounts, guests and statuses', () => {
   assert.ok(!('pass_hash' in snap.accounts[0]), 'never expose the hash');
 });
 
+test('buildSnapshot lists agent seats and pending invites without ids or tokens', () => {
+  const registry = new SessionRegistry({ now: () => 0 });
+  const lobby = {
+    rooms: new Map([['AGNT', {
+      code: 'AGNT', mode: 'coop', difficulty: 'NORMAL', hostId: 'h', auto: false, content: null, spectators: [],
+      match: null,
+      seats: [
+        { seat: 0, playerId: 'h', name: 'Host', role: null, isBot: false, connected: true, left: false },
+        { seat: 1, playerId: 't_secret', name: 'AgentOne', role: null, isBot: false, connected: true, left: false, agent: true },
+        { seat: 2, playerId: 'ai_x', name: 'Bot', role: null, isBot: true, connected: true, left: false },
+        null,
+      ],
+      agentInvites: new Map([['hash', { seat: 2, playerId: 'ai_x', expiresAt: 5000, createdBy: 'h' }]]),
+    }]]),
+    agentStats: () => ({ enabled: true, seated: 1, invites: 1, claims: 3, handbacks: 1 }),
+  };
+  const snap = buildSnapshot({ registry, lobby, matchmaker: null, auth: null, now: 1000 });
+  assert.deepEqual(snap.agentStats, { enabled: true, seated: 1, invites: 1, claims: 3, handbacks: 1 });
+  assert.deepEqual(snap.agents.map((x) => [x.kind, x.seat]), [['seat', 1], ['invite', 2]]);
+  const json = JSON.stringify(snap.agents);
+  assert.ok(!json.includes('t_secret') && !json.includes('hash') && !json.includes('playerId'), 'no internal identity');
+});
+
 test('account roles (ROLES) ride through both snapshots', () => {
   const auth = new AuthService({ db: openMemoryDb() });
   const a = auth.register('Admin', 'secret1');
@@ -430,7 +453,7 @@ test('the admin page inline script parses', () => {
 // 后台控制台 (docs/MATCHMAKING.md §12.1, 2026-10-15): the page went from one long scrolling column to a sidebar
 // console. These pin the INTERFACE only — the snapshot API, the notify / bug routes and the read-only stance are
 // unchanged (the two tests above still cover them).
-test('the admin page is a self-contained console: ten views, hash routing, searchable tables', () => {
+test('the admin page is a self-contained console: eleven views, hash routing, searchable tables', () => {
   const html = ADMIN_HTML;
   const count = (re) => (html.match(re) || []).length;
   // still one self-contained document — no external stylesheet, script or font
@@ -439,13 +462,13 @@ test('the admin page is a self-contained console: ten views, hash routing, searc
   // the strings the route tests rely on
   assert.match(html, /服务器管理/);
   assert.match(html, /\/admin\/api\/bug\/image\//);
-  // sidebar: ten nav buttons, each with its section (界面 = the classic/Hub main-interface switch)
-  for (const v of ['overview', 'rooms', 'accounts', 'online', 'notice', 'bugs', 'plugins', 'speed', 'origins', 'ui']) {
+  // sidebar: eleven nav buttons, each with its section (界面 = the classic/Hub main-interface switch)
+  for (const v of ['overview', 'rooms', 'agents', 'accounts', 'online', 'notice', 'bugs', 'plugins', 'speed', 'origins', 'ui']) {
     assert.ok(html.includes(`id="view-${v}"`), `section #view-${v} exists`);
     assert.ok(html.includes(`data-view="${v}"`), `nav button for ${v}`);
   }
-  assert.equal(count(/<button class="nav__item" data-view="/g), 10, 'exactly ten nav buttons');
-  assert.equal(count(/class="view"/g), 10, 'exactly ten view sections');
+  assert.equal(count(/<button class="nav__item" data-view="/g), 11, 'exactly eleven nav buttons');
+  assert.equal(count(/class="view"/g), 11, 'exactly eleven view sections');
   // one view at a time, hash-routed (reload / bookmark / back land on the same view)
   assert.ok(html.includes('hashchange') && html.includes('setView(location.hash'), 'hash routing');
   assert.ok(html.includes("el('viewTitle')") && html.includes("el('viewSub')"), 'the header follows the view');

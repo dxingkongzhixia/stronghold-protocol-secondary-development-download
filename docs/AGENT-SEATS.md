@@ -1,7 +1,9 @@
 # Agent 席位（内部接入：AI 通过房间接管 bot）
 
-> **状态（2026-11-05）：P0 + 断线托管已实现**——任意真人玩家签发一次性邀请、入座、座位锁定、过期/重用拒绝、
-> 对局中接管、断线 30 秒后交还内置 bot。运维开关/面板（P2）、示例客户端（P3）、端到端（P4）尚未做。
+> **状态（2026-11-05）：P0–P4 已完成**——任意真人玩家签发一次性邀请、入座、座位锁定、过期/重用拒绝、
+> 对局中接管、断线 30 秒后交还内置 bot；运维开关/健康检查/后台面板、示例客户端、真实对局端到端回归均已完成。
+>
+> 部署前必须在环境里显式打开：`SP_AGENT_SEATS=on`（默认关闭，见 §4.1）。
 >
 > 关联：[`EXTERNAL-AI.md`](EXTERNAL-AI.md)（开发专用的出网 AI）、[`BOT-STRATEGIES.md`](BOT-STRATEGIES.md)、
 > [`MATCHMAKING.md`](MATCHMAKING.md)（观战 / 夺舍的决策记录）、[`TESTING.md`](TESTING.md)。
@@ -78,6 +80,16 @@
 | 刷屏/拖慢 | 沿用 40 msg/s 限流、阶段截止、按座位错误码 |
 | 发布包误带 | 与 `EXTERNAL-AI` 相同的门控思路（P2 接入 `llmGate` / 打包排除） |
 
+## 4.1 开关与运维（P2）
+
+| 项 | 行为 |
+|---|---|
+| `SP_AGENT_SEATS=on` | 全局开关（默认 **off**）；`on/1/true/yes` 开启。`startServer({ agentSeats })` 优先于环境 |
+| `/healthz` → `agents` | `{ enabled, seated, invites, claims, handbacks }`；不包含 token / 哈希 / playerId |
+| `/admin` → 「AI 席位」 | 当前在座席位、待兑换邀请、到期时间、是否在对局中；顶部显示接管/交还计数与开关状态 |
+| 发布包 | agent 席位是**生产路径，随发布包保留**；只有开发专用的出网外部 AI 仍在 `llmRelease` 排除列表里（`test/package.test.js` 守护） |
+| 关闭开关 | `room.agentInvite` 与 `agent.claim` 都返回 `BAD_TARGET`，其他玩法不变 |
+
 ## 5. 代码位置
 
 | 内容 | 文件 |
@@ -88,7 +100,11 @@
 | 对局中换键 / 交还 | `server/match/match/watch.js`（`Match.takeOver` / `aiTakeOver`，复用现有实现） |
 | 对局与结算里的 `agent` 字段 | `server/match/PlayerState.js`、`server/match/match/views.js`、`server/match/results.js`、`server/match/StubMatch.js` |
 | 公开房间目录 | `server/admin.js`（`buildPublicSnapshot`：`seats[].agent`、`agents` 计数） |
+| 插件意图边界 | `shared/plugins/ui.js`（`agent.*` 与 `g.*` 一样属于客户端意图，插件不能发送） |
 | 前端 AGENT 标记 | `public/js/screens/{room,rooms,bandDraft,result,settle}.js`、`public/js/ui/gameComponents.js`、`public/css/screens/{room,lobby}.css` |
+| 运维计数 / 健康检查 | `server/lobby.js`（`agentStats`）、`server/admin.js`（「AI 席位」页） |
+| 示例客户端（P3） | `tools/agent/player.mjs`（决策循环）、`tools/agent/agent.mjs`（WS CLI） |
+| 端到端（P4） | `test/e2e/agent-seat.e2e.mjs` |
 | 测试 | `test/match/agent-seat.test.js` |
 
 ## 6. 验收（当前）
@@ -104,17 +120,45 @@
 6. 座位规则（人类/空位/单人房）、1 秒 TTL 过期、`room.removeBot` 使邀请失效、同座位重签旧 token 失效。
 7. 断线超过宽限 → 座位回到内置 bot；重连收到 `agent-timeout`。
 8. 日志包含 `agent … claimed seat N` / `timed out; the AI took seat N`，**不包含**明文 token。
+9. 开关默认关闭；`/healthz.agents` 报告开关、在座、邀请与计数。
+10. `test/package.test.js`：agent 席位代码不会被 `llmRelease` 排除，`tools/agent` 不进玩家包。
 
-## 7. 后续（按优先级）
+### 6.1 P4 真实对局回归
 
-| 阶段 | 内容 | 验收 |
+```bash
+SP_AGENT_E2E=1 node --test test/e2e/agent-seat.e2e.mjs
+```
+
+真实 `Match`（`clientCombat:false`，压缩计时器）中，宿主 + agent 走完 **≥3 个 prep + 战斗**，断言服务端
+`errorCount = 0`、agent 至少部署过单位、全程使用普通 `g.*` 意图。默认不跑（对时序敏感），需要时手动开启。
+
+## 7. 使用示例（P3）
+
+```bash
+# 服务器（演示用无浏览器环境：让服务端模拟战斗）
+SP_AGENT_SEATS=on SP_COMBAT=server npm start
+
+# 自包含演示：建房 → 放 bot → 发邀请 → agent 入座 → 开局 → 用最小决策循环打一局
+node tools/agent/agent.mjs --demo
+
+# 已有房间：把房内任一真人玩家拿到的 token 交给 agent
+node tools/agent/agent.mjs --token <token> --url ws://127.0.0.1:3000/ws --name "My Agent"
+```
+
+`tools/agent/player.mjs` 只做四件事：确认信息、选一个未占用的乐队、买/部署棋子、拿奖励后 ready；
+它是协议示例与 P4 的固定动作源，**不是**竞技 bot。B′（本地 HTTP 桥）未实现。
+
+### 7.1 里程碑（全部完成）
+
+| 阶段 | 内容 | 状态 |
 |---|---|---|
-| **P1 剩余** | 连续非法意图熔断；`g.autoplay` 看门狗细化（当前断线托管已实现） | 连续失败后交还，不卡房 |
-| **P2** | `SP_AGENT_SEATS=on/off`（默认 off）、房间开关、`/healthz` 的 `agents` 计数、`/admin` 面板、发布包排除 | 后台可见邀请/入座/交还/拒绝原因；关闭开关后 `room.agentInvite` 全部拒绝 |
-| **P3** | `tools/agent/` 示例客户端（最小决策循环），可选 B′：本地 HTTP 桥（仍无 key、无出网） | 示例能从大厅入座并打完一局 |
-| **P4** | 真实 coop 对局端到端回归（≥3 个 prep + 战斗） | 零 error，全量测试绿 |
+| P0 | 邀请、入座、座位锁定、过期/重用、对局中接管 | ✅ |
+| P1 | 断线 30 秒托管、主动 `room.releaseSeat` 交还（连续失败熔断仍可后补） | ✅（熔断待补） |
+| P2 | `SP_AGENT_SEATS`、`/healthz.agents`、`/admin`「AI 席位」、发布包守护 | ✅ |
+| P3 | `tools/agent/` 示例客户端 | ✅ |
+| P4 | 真实对局 3 prep + 战斗回归 | ✅（opt-in） |
 
-### 7.1 仍需 owner 拍板的默认值
+### 7.2 已确认规则
 
 owner 已确认的规则（2026-11-05）：
 
@@ -132,3 +176,5 @@ owner 已确认的规则（2026-11-05）：
 - 不新增“AI 专用动作协议”，避免绕开人类校验。
 - 不在服务端保存模型密钥；不做出网调用（那是 `EXTERNAL-AI.md` 的开发路径）。
 - 不让 agent 获得 RNG、种子、其他玩家私有视图或数据表原文。
+- 不把 agent 计入“真人玩家”统计；它不会成为房主，也不会被当成底层 bot。
+- B′ HTTP 桥未实现（P3 的可选变体）；agent 直接使用 WebSocket。

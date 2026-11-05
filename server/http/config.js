@@ -21,7 +21,7 @@ export const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
 /** startServer() options handed on to net.js Network / lobby.js Lobby (an absent one keeps that module's default). */
 const NET_OPTION_KEYS = ['reconnectWindowMs', 'heartbeatMs', 'helloTimeoutMs', 'ratePerSec', 'rateBurst', 'maxConnections', 'abuseDropsPerSec',
   'maxConnectionsPerAddr', 'heavyPerSec', 'heavyBurst', 'trustProxy'];
-const LOBBY_OPTION_KEYS = ['lobbyGraceMs', 'agentGraceMs', 'maxRooms', 'maxRoomsPerAddr', 'maxMatchesPerAddr', 'resyncMinGapMs', 'soloReconnectWindowMs', 'chatRateLimit', 'chatRateWindowMs', 'officialOrigin', 'pluginDebounceMs', 'clientsOnly'];
+const LOBBY_OPTION_KEYS = ['lobbyGraceMs', 'agentSeats', 'agentGraceMs', 'maxRooms', 'maxRoomsPerAddr', 'maxMatchesPerAddr', 'resyncMinGapMs', 'soloReconnectWindowMs', 'chatRateLimit', 'chatRateWindowMs', 'officialOrigin', 'pluginDebounceMs', 'clientsOnly'];
 
 /**
  * Bind address used when neither the `host` option nor `HOST` says otherwise: one dual-stack socket, so the server
@@ -107,6 +107,11 @@ export function lobbyOptionsFrom(opts) {
   const lobbyOptions = {};
   for (const k of LOBBY_OPTION_KEYS) {
     if (opts[k] != null) lobbyOptions[k] = opts[k];
+  }
+  // docs/AGENT-SEATS.md: the agent-seat integration is opt-in on a deployment (default off); an explicit startServer
+  // option wins over the environment.
+  if (lobbyOptions.agentSeats == null) {
+    lobbyOptions.agentSeats = ['1', 'true', 'yes', 'on'].includes(String(process.env.SP_AGENT_SEATS ?? '').trim().toLowerCase());
   }
   return lobbyOptions;
 }

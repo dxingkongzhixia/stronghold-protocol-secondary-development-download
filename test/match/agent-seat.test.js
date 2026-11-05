@@ -21,7 +21,7 @@ async function boot(opts = {}) {
     error: (...a) => logLines.push(a.map(String).join(' ')),
     debug() {},
   };
-  const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, assetIndex: false, studio: false, log, ...opts });
+  const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, assetIndex: false, studio: false, agentSeats: true, log, ...opts });
   const url = `ws://127.0.0.1:${srv.port}/ws`;
   const open = new Set();
   const connect = async (name) => {
@@ -118,6 +118,11 @@ test('agent seat: any seated human can invite; agent claims the bot seat; reuse,
     const joined = s.logLines.join('\n');
     assert.equal(joined.includes(invite.token), false, 'plaintext token must not be logged');
     assert.match(joined, /agent AgentOne claimed seat 1/);
+    // P2 ops: /healthz exposes the switch, occupied seats and lifetime counters
+    const health = await (await fetch(`${s.srv.url}/healthz`)).json();
+    assert.equal(health.agents.enabled, true);
+    assert.equal(health.agents.seated, 1);
+    assert.equal(health.agents.claims, 1);
   } finally {
     await s.close();
   }
@@ -170,6 +175,22 @@ test('agent seat: seat rules, expiry and bot removal invalidate the invite', asy
     assert.ok(soloState);
     await err(solo, { t: 'room.agentInvite', seat: 0 }, ERR.BAD_TARGET);
     assert.equal(st.code.length, 4);
+  } finally {
+    await s.close();
+  }
+});
+
+test('agent seat: the global switch is off unless enabled', async () => {
+  const s = await boot({ agentSeats: false });
+  try {
+    const host = await s.connect('AgentOff');
+    await ok(host, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
+    await ok(host, { t: 'room.addBot' });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot);
+    await err(host, { t: 'room.agentInvite', seat: 1 }, ERR.BAD_TARGET);
+    const health = await (await fetch(`${s.srv.url}/healthz`)).json();
+    assert.equal(health.agents.enabled, false);
+    assert.equal(health.agents.seated, 0);
   } finally {
     await s.close();
   }

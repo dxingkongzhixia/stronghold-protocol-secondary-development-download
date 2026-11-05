@@ -180,7 +180,23 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
   const bugs = community && typeof community.listBugReports === 'function' ? community.listBugReports({ status: bugStatus, sort: bugSort, limit: 100 }) : [];
   const bugCounts = community && typeof community.bugReportCounts === 'function' ? community.bugReportCounts() : { new: 0, triaged: 0, fixed: 0, total: 0 };
 
-  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, origins, bugs, bugCounts, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [], plugins: buildPluginSnapshot(plugins) };
+  // Agent seats (docs/AGENT-SEATS.md P2): the switch and lifetime counters from the lobby, plus the live rows — an
+  // occupied agent seat or a pending invite. Never a token or its hash; room + seat + display name only.
+  const agentStats = typeof lobby.agentStats === 'function' ? lobby.agentStats() : { enabled: false, seated: 0, invites: 0, claims: 0, handbacks: 0 };
+  const agents = [];
+  for (const r of lobby.rooms.values()) {
+    for (const s of r.seats) {
+      if (!s || s.left || !s.agent) continue;
+      agents.push({ kind: 'seat', roomCode: r.code, seat: s.seat, name: s.name, connected: !!s.connected, inMatch: !!r.match });
+    }
+    const invites = r.agentInvites instanceof Map ? r.agentInvites.values() : [];
+    for (const inv of invites) {
+      if (!inv || inv.expiresAt <= now) continue;
+      agents.push({ kind: 'invite', roomCode: r.code, seat: inv.seat, name: null, connected: false, inMatch: !!r.match, expiresAt: inv.expiresAt });
+    }
+  }
+
+  return { now, counts, queue: mm ? mm.stats() : { queued: 0, buckets: 0 }, verify, rooms, accounts, online, origins, bugs, bugCounts, agents, agentStats, notices: Array.isArray(lobby.notices) ? lobby.notices.slice(0, 20) : [], plugins: buildPluginSnapshot(plugins) };
 }
 
 /** Read-only operations view of the plugin system: installed entries, skipped/warnings and the owner policy. */
@@ -899,6 +915,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       <button class="nav__item" data-view="overview"><i>▤</i>概览</button>
       <div class="nav__sect">运营</div>
       <button class="nav__item" data-view="rooms"><i>▣</i>房间<em id="navRooms">0</em></button>
+      <button class="nav__item" data-view="agents"><i>◈</i>AI 席位<em id="navAgents">0</em></button>
       <button class="nav__item" data-view="accounts"><i>◉</i>账号<em id="navAccounts">0</em></button>
       <button class="nav__item" data-view="online"><i>◎</i>在线<em id="navOnline">0</em></button>
       <button class="nav__item" data-view="notice"><i>✦</i>通知<em id="navNotice">0</em></button>
@@ -955,6 +972,16 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
           <span class="hint">点表头排序</span>
         </div>
         <div class="tablewrap"><table data-table="rooms"><thead id="roomsHead"></thead><tbody id="roomsBody"></tbody></table></div>
+      </section>
+    </section>
+
+    <section class="view" id="view-agents" hidden>
+      <section class="panel">
+        <h2>AI 席位<em id="agentMeta">—</em></h2>
+        <div class="tools"><span class="hint" id="agentHint">—</span></div>
+        <div class="tablewrap"><table><thead><tr>
+          <th>房间</th><th>座位</th><th>名字</th><th>状态</th><th>对局</th><th>邀请到期</th>
+        </tr></thead><tbody id="agentBody"></tbody></table></div>
       </section>
     </section>
 
@@ -1303,6 +1330,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
   var VIEWS = {
     overview: ['概览','服务器实时状态 · 每 2 秒自动刷新'],
     rooms: ['房间','当前所有房间与它们的对局状态'],
+    agents: ['AI 席位','Agent 接管、一次性邀请与托管计数 · docs/AGENT-SEATS.md'],
     accounts: ['账号','全部注册账号与其实时状态'],
     online: ['在线','当前在线会话（含游客）'],
     notice: ['通知','向在线玩家推送公告，并保留发送历史'],
@@ -1312,7 +1340,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     origins: ['来源配置','中继与镜像地址 · 改完即时生效，不用重启'],
     ui: ['界面', '玩家看到的主界面 · Hub 或经典大厅'],
   };
-  var VIEW_ORDER = ['overview','rooms','accounts','online','notice','bugs','plugins','speed','origins','ui'];
+  var VIEW_ORDER = ['overview','rooms','agents','accounts','online','notice','bugs','plugins','speed','origins','ui'];
   // 表格列：[表头, 排序键]（排序键为空 = 该列不可排序，只能搜索）
   var COLS = {
     rooms: [['房间码','code'],['模式','mode'],['难度','difficulty'],['状态',''],['类型',''],['玩家','humans'],['AI','bots']],
@@ -2161,6 +2189,20 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
       .then(function () { btn.disabled = false; });
   });
 
+  function renderAgents(rows, stats) {
+    var s = stats || {};
+    el('agentMeta').textContent = (s.enabled ? '已启用' : '未启用') + ' · 在座 ' + int(s.seated) + ' · 邀请 ' + int(s.invites);
+    el('agentHint').textContent = s.enabled
+      ? ('接管 ' + int(s.claims) + ' 次 · 交还 ' + int(s.handbacks) + ' 次 · 仅记录事件，不显示 token')
+      : '设置 SP_AGENT_SEATS=on 并重启后启用（startServer option: agentSeats）';
+    el('navAgents').textContent = int((s.seated || 0) + (s.invites || 0));
+    el('agentBody').innerHTML = (rows || []).map(function (r) {
+      return '<tr><td>' + esc(r.roomCode) + '</td><td>' + int(r.seat) + '</td><td>' + (r.name ? esc(r.name) : '—') + '</td><td>'
+        + (r.kind === 'invite' ? '待兑换' : r.connected ? '在线' : '离线') + '</td><td>' + (r.inMatch ? '进行中' : '等待') + '</td><td>'
+        + (r.expiresAt ? ts(r.expiresAt) : '—') + '</td></tr>';
+    }).join('') || '<tr><td colspan="6" class="empty">当前没有 AI 席位</td></tr>';
+  }
+
   function render(d) {
     lastAdminData = d;
     var c = d.counts || {}; c.rooms = d.rooms.length;
@@ -2212,6 +2254,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     renderBugs(d.bugs);
     renderBugToolbar(d.bugCounts);
     renderPlugins(d);
+    renderAgents(d.agents, d.agentStats);
   }
 
   var painted = false; // 首帧无论如何都要渲染一次（后台标签页也要有内容）；之后隐藏才暂停，切回来立刻补一次

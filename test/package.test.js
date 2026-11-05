@@ -14,6 +14,7 @@ import {
   FOLDER, REFUSE, RUNTIME_RESEARCH, entryProblems, isRefused, packageOutIsUnsafe, plan, playerPackageJson,
   rewritePlayerDoc, resolveSpecifier, scanFiles, selectTracked,
 } from '../tools/package.mjs';
+import { isLlmReleasePath } from '../server/match/llmRelease.js';
 
 // a fake home path, built at run time so the repository never contains one (the local push guard scans every patch)
 const FAKE_HOME = ['', 'Users', 'someone'].join('/');
@@ -34,6 +35,20 @@ test('all install and favicon assets ship independently of optional game art', (
 });
 // hermetic scans: not this machine's account name, but a planted one
 const ENV = { SP_PACKAGE_SCAN_USER: '0', SP_PACKAGE_SCAN_NAMES: 'plantedname' };
+
+test('agent seats ship in a release; only the development external-AI path is omitted', () => {
+  // docs/AGENT-SEATS.md P2: agent seats are the production integration, so no LLM-release marker may remove them.
+  for (const f of ['server/lobby.js', 'server/match/match/watch.js', 'server/match/PlayerState.js', 'server/admin.js', 'shared/protocol.js']) {
+    assert.equal(isLlmReleasePath(f), false, `${f} must ship`);
+  }
+  assert.deepEqual(selectTracked(['server/lobby.js', 'server/match/match/watch.js', 'shared/protocol.js']).keep.sort(),
+    ['server/lobby.js', 'server/match/match/watch.js', 'shared/protocol.js']);
+  // the development-only outbound advisor stays in the exclusion list
+  assert.equal(isLlmReleasePath('server/match/externalAI.js'), true);
+  assert.equal(isLlmReleasePath('tools/ai/llm-agent.mjs'), true);
+  // tools/agent is a developer demo, not a player script (like tools/ai)
+  assert.equal(selectTracked(['tools/agent/agent.mjs']).keep.length, 0);
+});
 
 test('selection: runtime files in; tests, maintainer tools, other docs, dev pages, private and config files out', () => {
   const { keep, drop } = selectTracked([
