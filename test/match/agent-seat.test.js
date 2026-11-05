@@ -1,0 +1,259 @@
+// test/match/agent-seat.test.js — agent seats (docs/AGENT-SEATS.md): a host mints a one-time invite for an AI seat, an
+// ordinary WebSocket session redeems it and plays through the same intent path as a human. No API key, no outbound call.
+//
+// Covers P0: invite delivery (host only, never in room.state), claim in the lobby and mid-match (Match.takeOver re-key),
+// one-time use / unknown / expired tokens, removal of the seat, and the seat lock that keeps another spectator out.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { setTimeout as delay } from 'node:timers/promises';
+
+import { startServer } from '../../server/index.js';
+import { Match } from '../../server/match/Match.js';
+import { TestClient } from '../helpers/wsClient.js';
+import { EMOTES, ERR } from '../../shared/constants.js';
+
+async function boot(opts = {}) {
+  const logLines = [];
+  const log = {
+    info: (...a) => logLines.push(a.map(String).join(' ')),
+    warn: (...a) => logLines.push(a.map(String).join(' ')),
+    error: (...a) => logLines.push(a.map(String).join(' ')),
+    debug() {},
+  };
+  const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, assetIndex: false, studio: false, log, ...opts });
+  const url = `ws://127.0.0.1:${srv.port}/ws`;
+  const open = new Set();
+  const connect = async (name) => {
+    const c = await TestClient.connect(url);
+    open.add(c);
+    const w = await c.hello(name);
+    c.id = w.playerId;
+    c.token = w.token;
+    return c;
+  };
+  return {
+    srv, logLines, connect, url,
+    async close() {
+      await Promise.all([...open].map((c) => c.terminate().catch(() => {})));
+      await srv.close();
+    },
+  };
+}
+
+const ok = async (c, msg) => {
+  const r = await c.request(msg);
+  assert.equal(r.t, 'ok', `${msg.t}: ${JSON.stringify(r)}`);
+  return r;
+};
+const err = async (c, msg, code) => {
+  const r = await c.request(msg);
+  assert.equal(r.t, 'error', `expected ${code} for ${msg.t}, got ${JSON.stringify(r)}`);
+  assert.equal(r.code, code, `${msg.t}: ${JSON.stringify(r)}`);
+  return r;
+};
+
+test('agent seat: any seated human can invite; agent claims the bot seat; reuse, wrong and spectator attempts are refused', async () => {
+  const s = await boot();
+  try {
+    const host = await s.connect('AgentHost');
+    await ok(host, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
+    await ok(host, { t: 'room.addBot' });
+    const before = await host.waitFor('room.state', (st) => st.seats[1] && st.seats[1].isBot);
+    const code = before.code;
+
+    // a second REAL human joins (seat 2) — invites are not host-only
+    const peer = await s.connect('AgentPeer');
+    await ok(peer, { t: 'room.join', code });
+    await peer.waitFor('room.state', (st) => st.seats.some((x) => x && x.playerId === peer.id));
+    // a spectator is not a player: it may not invite, but a seated human may
+    const watcher = await s.connect('AgentWatcher');
+    await ok(watcher, { t: 'room.spectate', code });
+    await watcher.waitFor('room.state', (st) => st.spectators.some((x) => x.playerId === watcher.id));
+    await err(watcher, { t: 'room.agentInvite', seat: 1 }, ERR.SPECTATOR);
+
+    await ok(peer, { t: 'room.agentInvite', seat: 1, ttlSec: 600 });
+    const invite = await peer.waitFor('agent.invite');
+    assert.equal(invite.seat, 1);
+    assert.equal(invite.code, code);
+    assert.ok(invite.expiresAt > Date.now());
+    assert.ok(typeof invite.token === 'string' && invite.token.length >= 32, '32-byte token');
+    // the plaintext is not broadcast: the host's state frame carries the reserved bot seat, not the token
+    const reserved = await host.waitFor('room.state', (st) => st.seats[1] && st.seats[1].isBot);
+    assert.equal(JSON.stringify(reserved).includes(invite.token), false);
+
+    // a spectator cannot take the reserved seat while the invite is live
+    await err(watcher, { t: 'room.takeOver', seat: 1 }, ERR.BAD_TARGET);
+
+    // the agent is an ordinary session: hello, then redeem
+    const agent = await s.connect('AgentOne');
+    await ok(agent, { t: 'agent.claim', token: invite.token });
+    const claimed = await host.waitFor('room.state', (st) => st.seats[1] && st.seats[1].playerId === agent.id);
+    assert.equal(claimed.seats[1].isBot, false);
+    assert.equal(claimed.seats[1].agent, true);
+    assert.equal(claimed.seats[1].fromAi, true);
+    assert.equal(claimed.seats[1].connected, true);
+    // the plaintext never appears in a state frame
+    assert.equal(JSON.stringify(claimed).includes(invite.token), false);
+    // the agent is a player, not a spectator
+    assert.equal(claimed.spectators.some((x) => x.playerId === agent.id), false);
+
+    // rule: an agent may chat like a human (ordinary room.chat, no special case)
+    await ok(agent, { t: 'room.chat', text: 'hello from the agent' });
+    const chat = await host.waitFor('m.chat', (m) => m.from === agent.id);
+    assert.equal(chat.text, 'hello from the agent');
+
+    // one-time: a fresh session reusing the token is refused
+    const late = await s.connect('AgentLate');
+    await err(late, { t: 'agent.claim', token: invite.token }, ERR.BAD_TARGET);
+    // an unknown / malformed token is refused too
+    const other = await s.connect('AgentOther');
+    const bogus = 'A'.repeat(43);
+    await err(other, { t: 'agent.claim', token: bogus }, ERR.BAD_TARGET);
+
+    // a session already in a room cannot claim another seat
+    await err(host, { t: 'agent.claim', token: bogus }, ERR.ALREADY);
+
+    // the token never reaches the log
+    const joined = s.logLines.join('\n');
+    assert.equal(joined.includes(invite.token), false, 'plaintext token must not be logged');
+    assert.match(joined, /agent AgentOne claimed seat 1/);
+  } finally {
+    await s.close();
+  }
+});
+
+test('agent seat: seat rules, expiry and bot removal invalidate the invite', async () => {
+  const s = await boot();
+  try {
+    const host = await s.connect('AgentHost2');
+    await ok(host, { t: 'room.create', mode: 'coop', difficulty: 'HARD' });
+    await ok(host, { t: 'room.addBot' });
+    const st = await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot);
+
+    // inviting a human seat or an empty seat is refused
+    await err(host, { t: 'room.agentInvite', seat: 0 }, ERR.BAD_TARGET);
+    await err(host, { t: 'room.agentInvite', seat: 2 }, ERR.BAD_TARGET);
+
+    // a short-lived invite expires (bounds allow 1 s for tests)
+    await ok(host, { t: 'room.agentInvite', seat: 1, ttlSec: 1 });
+    const short = await host.waitFor('agent.invite');
+    await delay(1100);
+    const late = await s.connect('AgentLate2');
+    await err(late, { t: 'agent.claim', token: short.token }, ERR.BAD_TARGET);
+
+    // a fresh invite, then the host removes the bot: the seat is gone, the token is dead
+    await ok(host, { t: 'room.agentInvite', seat: 1 });
+    const second = await host.waitFor('agent.invite');
+    await ok(host, { t: 'room.removeBot', seat: 1 });
+    const after = await host.waitFor('room.state', (x) => x.seats[1] === null);
+    assert.equal(after.seats[1], null);
+    await err(late, { t: 'agent.claim', token: second.token }, ERR.BAD_TARGET);
+
+    // a new invite for the same seat replaces the previous token (only the latest works)
+    await ok(host, { t: 'room.addBot' });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot);
+    await ok(host, { t: 'room.agentInvite', seat: 1 });
+    const first = await host.waitFor('agent.invite');
+    await ok(host, { t: 'room.agentInvite', seat: 1 });
+    const latest = await host.waitFor('agent.invite');
+    assert.notEqual(first.token, latest.token);
+    const agent = await s.connect('AgentOne2');
+    await err(agent, { t: 'agent.claim', token: first.token }, ERR.BAD_TARGET);
+    await ok(agent, { t: 'agent.claim', token: latest.token });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].playerId === agent.id);
+
+    // solo rooms never issue invites
+    const solo = await s.connect('AgentSolo');
+    await ok(solo, { t: 'room.create', mode: 'solo', difficulty: 'NORMAL' });
+    const soloState = await solo.waitFor('room.state', (x) => x.mode === 'solo');
+    assert.ok(soloState);
+    await err(solo, { t: 'room.agentInvite', seat: 0 }, ERR.BAD_TARGET);
+    assert.equal(st.code.length, 4);
+  } finally {
+    await s.close();
+  }
+});
+
+test('agent seat: the disconnect grace hands the seat back to the built-in bot', async () => {
+  const s = await boot({ agentGraceMs: 150 });
+  try {
+    const host = await s.connect('AgentHost4');
+    await ok(host, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
+    await ok(host, { t: 'room.addBot' });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot);
+    await ok(host, { t: 'room.agentInvite', seat: 1 });
+    const invite = await host.waitFor('agent.invite');
+    const agent = await s.connect('AgentDrop');
+    await ok(agent, { t: 'agent.claim', token: invite.token });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].playerId === agent.id);
+
+    const token = agent.token;
+    await agent.terminate();
+    // after the short grace the seat is the built-in bot again (and the token no longer leads into the room)
+    const back = await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot, 3000);
+    assert.ok(back.seats[1].playerId.startsWith('ai_'), 'a fresh AI holds the seat');
+    assert.equal(back.seats[1].agent, undefined);
+
+    const resumed = await TestClient.connect(s.url);
+    const welcome = await resumed.hello('AgentBack', token);
+    assert.equal(welcome.resumed, true);
+    const closed = await resumed.waitFor('room.closed');
+    assert.equal(closed.reason, 'agent-timeout');
+    await resumed.terminate();
+  } finally {
+    await s.close();
+  }
+});
+
+test('agent seat: mid-match claim re-keys the bot state and the agent plays through ordinary intents', async () => {
+  let captured = null;
+  class RecordingMatch extends Match {
+    constructor(opts) {
+      super({ ...opts, botRehearsal: 0, botSliceMs: 0.001 });
+      captured = this;
+    }
+  }
+  const s = await boot({ MatchClass: RecordingMatch, seedFn: () => 4242 });
+  try {
+    const host = await s.connect('AgentHost3');
+    await ok(host, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
+    await ok(host, { t: 'room.addBot' });
+    const room = await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot);
+    assert.ok(room);
+    await ok(host, { t: 'room.start' });
+    await host.waitFor('m.public', (p) => p.phase === 'INFO_CHECK');
+    assert.ok(captured, 'the match instance is live');
+    const bot = [...captured.players.values()].find((p) => p.seat === 1);
+    assert.ok(bot && bot.isBot, 'seat 1 is a bot at the start');
+    const botId = bot.playerId;
+
+    await ok(host, { t: 'room.agentInvite', seat: 1 });
+    const invite = await host.waitFor('agent.invite');
+    const agent = await s.connect('AgentMid');
+    await ok(agent, { t: 'agent.claim', token: invite.token });
+
+    // the lobby seat and the match's PlayerState are the agent's now — same object, same board/gold/loadout
+    const claimed = await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].playerId === agent.id);
+    assert.equal(claimed.inMatch, true);
+    const ps = captured.players.get(agent.id);
+    assert.ok(ps, 'the match knows the agent playerId');
+    assert.equal(ps, bot, 'the bot PlayerState was re-keyed, not recreated');
+    assert.equal(ps.isBot, false);
+    assert.equal(ps.agent, true);
+    assert.equal(ps.connected, true);
+    assert.equal(captured.players.has(botId), false);
+    // it is a player, so it gets its own private view and can act
+    const priv = await agent.waitFor('m.private', (p) => p.seat === 1);
+    assert.equal(priv.seat, 1);
+    await ok(agent, { t: 'g.infoReady' });
+    // rule: an agent plays and emotes through the ordinary intent path
+    await ok(agent, { t: 'g.emote', id: EMOTES[0] });
+    await host.waitFor('m.emote', (m) => m.playerId === agent.id);
+    await ok(host, { t: 'g.infoReady' });
+    await host.waitFor('m.public', (p) => p.phase === 'BAND_DRAFT', 15000);
+    assert.equal(captured.errorCount, 0);
+  } finally {
+    await s.close();
+  }
+});

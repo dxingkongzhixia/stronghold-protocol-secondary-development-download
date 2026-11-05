@@ -184,7 +184,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
   const art = !seat.isBot ? seatArtUrl(data.get('assets'), seat.art) : null;
   const avatar = !seat.isBot ? avatarUrl(seat.avatar, data.get('assets')) : null;
   const stateText = state === 'ready' ? t('已就绪') : state === 'offline' ? t('连接中断') : state === 'host' ? t('待命中') : t('准备中');
-  return html`<article class=${`seat brackets${isMe ? ' is-me' : ''}${isHostSeat ? ' is-host' : ''}${seat.isBot ? ' is-bot' : ''} is-${state}`}
+  return html`<article class=${`seat brackets${isMe ? ' is-me' : ''}${isHostSeat ? ' is-host' : ''}${seat.isBot ? ' is-bot' : ''}${seat.agent ? ' is-agent' : ''} is-${state}`}
       style=${`--seat-i:${index}`}>
     ${bubble ? html`<div class="seat__chat"><${ChatBubble} key=${bubble.seq} name=${bubble.name} text=${bubble.text} own=${isMe} at=${bubble.at} ttl=${CHAT_BUBBLE_MS} /></div>` : null}
     <header class="seat__head">
@@ -204,8 +204,9 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
       </div>
       <div class="seat__artshade" aria-hidden="true"></div>
       ${isHostSeat ? html`<span class="seat__host"><${Icon} name="crown" />${t('创建者')}</span>` : null}
-      ${!seat.isBot ? html`<button type="button" class="seat__artbtn" onClick=${() => onPickArt?.(index)}>
+      ${!seat.isBot && !seat.agent ? html`<button type="button" class="seat__artbtn" onClick=${() => onPickArt?.(index)}>
         <${Icon} name="edit" />${t('更换立绘')}</button>` : null}
+      ${seat.agent ? html`<span class="seat__bot-label seat__agent-label"><${Icon} name="robot" />AGENT</span>` : null}
       ${seat.isBot ? html`<span class="seat__bot-label"><${Icon} name="robot" />${t('AI 队友')}</span>` : null}
       <div class=${`seat__statebox is-${state}`}>
         <span class="seat__stateicon">${state === 'ready' ? html`<${Icon} name="check" />` : state === 'offline' ? html`<${Icon} name="wifiOff" />` : state === 'host' ? html`<${Icon} name="check" />` : html`<${Icon} name="hourglass" />`}</span>
@@ -217,7 +218,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
         <${AvatarFrame} size="sm" src=${avatar} name=${seat.name} seat=${index} bot=${seat.isBot} self=${isMe} ready=${state === 'ready'} offline=${offline} />
         <div class="seat__idtext">
           <span class="seat__name">${seat.name || t('博士')}<${RoleTag} role=${seat.role} />${isMe ? html`<span class="seat__you">${t('你')}</span>` : null}</span>
-          <${MicroLabel}>${seat.isBot ? 'AUTONOMOUS UNIT' : `DOCTOR #${doctorNo(seat.playerId)}`}<//>
+          <${MicroLabel}>${seat.isBot ? 'AUTONOMOUS UNIT' : seat.agent ? 'EXTERNAL AGENT' : `DOCTOR #${doctorNo(seat.playerId)}`}<//>
         </div>
       </div>
       <div class="seat__footact">

@@ -150,6 +150,7 @@ export class MatchViews {
         role: ps.role ?? null,
         ...(ps.avatar ? { avatar: ps.avatar } : {}),
         isBot: ps.isBot,
+        ...(ps.agent ? { agent: true } : {}),
         connected: ps.isBot || (ps.connected && !ps.left),
         alive: ps.alive,
         lp: Math.max(0, ps.lp),

@@ -379,8 +379,9 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
     return {
       name: s.name,
       role: s.role ?? null,
-      guest: !isBot && !accountByPlayerId.has(s.playerId),
+      guest: !isBot && !s.agent && !accountByPlayerId.has(s.playerId),
       isBot,
+      ...(s.agent ? { agent: true } : {}),
       isHost: s.playerId === r.hostId,
       // the account's picture (an operator charId or a /avatar/<file> upload) — the directory draws it like the room does
       ...(typeof s.avatar === 'string' && s.avatar ? { avatar: s.avatar } : {}),
@@ -393,7 +394,8 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
   // A room lives only while it seats a human PLAYER (owner rule, docs/MATCHMAKING.md §20): never list an all-AI room,
   // and never a `humans: 0` entry. Bot-only rooms are already disposed when their last human leaves, so this is a
   // belt-and-braces guard on the public directory too.
-  const humansOf = (r) => r.seats.filter((x) => x && !x.left && !x.isBot).length;
+  const humansOf = (r) => r.seats.filter((x) => x && !x.left && !x.isBot && !x.agent).length;
+  const agentsOf = (r) => r.seats.filter((x) => x && !x.left && x.agent).length;
   const openList = [...lobby.rooms.values()]
     .filter((r) => r.mode === 'coop' && r.public && !r.match && !r.auto && humansOf(r) > 0)
     .map((r) => ({
@@ -403,6 +405,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       host: (r.seatOf(r.hostId) || {}).name || null,
       hostRole: (r.seatOf(r.hostId) || {}).role ?? null,
       humans: humansOf(r),
+      agents: agentsOf(r),
       full: r.freeSeat() < 0,
       freeSeats: freeSeatsOf(r),
       // gameplay mods (a content set with its own cs), not cosmetic-only rooms: the directory's 原版 / mod badge
@@ -421,6 +424,7 @@ export function buildPublicSnapshot({ registry, lobby, matchmaker, now = Date.no
       host: (r.seatOf(r.hostId) || {}).name || null,
       hostRole: (r.seatOf(r.hostId) || {}).role ?? null,
       humans: humansOf(r),
+      agents: agentsOf(r),
       bots: r.seats.filter((x) => x && !x.left && x.isBot).length,
       // the directory's playing-room order: AI-backed rooms first, then the most watchers
       spectators: Array.isArray(r.spectators) ? r.spectators.length : 0,

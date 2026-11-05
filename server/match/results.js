@@ -118,6 +118,7 @@ export function buildResult(m, outcome) {
       role: ps.role ?? null,
       ...(ps.avatar ? { avatar: ps.avatar } : {}),
       isBot: ps.isBot,
+      ...(ps.agent ? { agent: true } : {}),
       left: ps.left,
       alive: ps.alive,
       victory: cleared,

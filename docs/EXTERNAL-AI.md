@@ -3,6 +3,10 @@
 > **状态：** 已移植主线 0.3.3 的外部 AI 策略栈与主线 dev 的 LLM 适配器，**默认关闭**。
 > 不设任何 `SP_EXTERNAL_AI_*` / `SP_LLM_*` / `SP_BOT_STRATEGY` 变量时，行为与之前完全一致（内置 bot）。
 >
+> **定位（2026-11-05）：开发专用。** 这条链路让**服务器出网**调用模型或外部进程，需要持有 provider key，不适合生产。
+> 生产接入请走 [`AGENT-SEATS.md`](AGENT-SEATS.md)：AI agent 用房内真人玩家的一次性邀请接管 bot 座位，**没有 key、没有出网**，
+> 每步都走人类同一套意图校验。
+>
 > 相关：[`BOT-STRATEGIES.md`](BOT-STRATEGIES.md)（策略注册表与内置策略）、
 > [`AI-STRATEGY.md`](AI-STRATEGY.md)（顾问的打法、经济基准与证据来源）、
 > [`QUERY-INDEX.md`](QUERY-INDEX.md)、[`PROJECT-STATE.md`](PROJECT-STATE.md)。

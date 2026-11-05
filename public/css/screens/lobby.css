@@ -461,6 +461,12 @@
   font-size: calc(.1 * var(--t)); line-height: 1.5; color: #ffd089; border: 1px solid rgba(255, 208, 137, .5);
   border-radius: .03rem; background: rgba(0, 0, 0, .6);
 }
+/* an external AI agent's seat (docs/AGENT-SEATS.md): distinct from a bot's robot tag and from a human guest */
+.rooms-seat__agent {
+  position: absolute; top: -.07rem; right: -.07rem; z-index: 2; padding: 0 .05rem;
+  font-size: calc(.1 * var(--t)); line-height: 1.5; color: var(--ice); border: 1px solid rgba(159, 212, 255, .55);
+  border-radius: .03rem; background: rgba(0, 0, 0, .6);
+}
 .rooms-bar__side { display: flex; align-items: center; gap: .2rem; }
 .rooms-tag { padding: .03rem .12rem; font-size: calc(.14 * var(--t)); font-weight: 700; line-height: 1.6; white-space: nowrap;
   border: 1px solid currentColor; border-radius: 999px; }

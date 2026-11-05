@@ -77,7 +77,7 @@ function PlayerCard({ p, myId, titles, best, solo = false }) {
     <header class="rcard__head">
       <${PlayerAvatar} player=${p} self=${p.playerId === myId} />
       <div class="rcard__who">
-        <b class="rcard__name">${p.name}<${RoleTag} role=${p.role} />${p.isBot ? html`<span class="rcard__ai">AI</span>` : null}${p.playerId === myId ? html`<span class="rcard__you">${t('你')}</span>` : null}</b>
+        <b class="rcard__name">${p.name}<${RoleTag} role=${p.role} />${p.agent ? html`<span class="rcard__ai">AGENT</span>` : p.isBot ? html`<span class="rcard__ai">AI</span>` : null}${p.playerId === myId ? html`<span class="rcard__you">${t('你')}</span>` : null}</b>
         <span class="rcard__band">${band ? html`<${BandIcon} bandId=${band.bandId} size="xs" />${band.name}` : '—'}</span>
       </div>
       <div class="rcard__mid">

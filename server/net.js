@@ -144,6 +144,10 @@ export class Session {
     this.accountToken = null;
     /** @type {string | null} account role (shared/constants.js ROLES; null = ordinary) — shown next to the name */
     this.role = null;
+    /** @type {boolean} true once this session redeemed a room's agent invite (docs/AGENT-SEATS.md) */
+    this.agent = false;
+    /** @type {number | null} the seat an agent session claimed (null = not an agent) */
+    this.agentSeat = null;
   }
 }
 

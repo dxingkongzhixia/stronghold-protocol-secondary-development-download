@@ -491,6 +491,12 @@ export const C2S = {
   'room.takeOver': { seat: (v) => isInt(v, 0, MAX_SEATS - 1) },
   // ...and hands it back: the seat becomes a fresh AI again and the human returns to a spectator seat
   'room.releaseSeat': {},
+  // Agent seat (docs/AGENT-SEATS.md): the host issues a one-time invite for an AI seat. The plaintext token is pushed
+  // back to the host alone in an `agent.invite` frame (never logged, never in room.state). `ttlSec` 1–3600, default 600.
+  'room.agentInvite': { seat: (v) => isInt(v, 0, MAX_SEATS - 1), ttlSec: (v) => v == null || isInt(v, 1, 3600), $optional: ['ttlSec'] },
+  // The agent's ordinary session says `hello`, then redeems the invite: its session takes the AI seat exactly like a
+  // spectator's room.takeOver (same Match.takeOver path, same intent validation). One use only.
+  'agent.claim': { token: (v) => isStr(v, 128) && v.length >= 32 },
   // the host removes another human before the match (server/lobby.js kick; community report #17); playerId = the one the
   // host confirmed — a seat that changed hands meanwhile is refused
   'room.kick': { seat: (v) => isInt(v, 0, MAX_SEATS - 1), playerId: isId },
@@ -658,6 +664,9 @@ export const C2S = {
 export const S2C = [
   'welcome', 'ok', 'error', 'pong',
   'room.state', 'room.closed',
+  // agent seats (docs/AGENT-SEATS.md): agent.invite { token, seat, code, expiresAt } — the one-time seat credential,
+  // pushed to the issuing host only. The token is plaintext exactly once and is never broadcast or logged.
+  'agent.invite',
   // accounts & matchmaking: auth.ok { account: { id, name, role }, token } · auth.error { code } ·
   // mm.state { queued, difficulty, waiting, need, elapsedMs, deadlineMs } (pushed ~1 Hz while queueing)
   'auth.ok', 'auth.error', 'mm.state',

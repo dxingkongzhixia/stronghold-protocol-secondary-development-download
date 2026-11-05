@@ -24,7 +24,7 @@ const REFRESH_MS = 4000;
  * A room's co-op seats normalised for the directory: always MAX_SEATS entries, null = empty (a seat the server sent as
  * null, or one whose player has left), else the public identity. Pure: the mapper the unit test exercises.
  * @param {any} room an /online/api openRooms / playRooms entry
- * @returns {(null | { name: string, initial: string, role: string|null, guest: boolean, isBot: boolean, isHost: boolean, avatar: string|null })[]}
+ * @returns {(null | { name: string, initial: string, role: string|null, guest: boolean, isBot: boolean, agent: boolean, isHost: boolean, avatar: string|null })[]}
  */
 export function roomSeats(room) {
   const src = Array.isArray(room?.seats) ? room.seats : [];
@@ -38,6 +38,7 @@ export function roomSeats(room) {
       role: typeof s.role === 'string' ? s.role : null,
       guest: !!s.guest,
       isBot: !!s.isBot,
+      agent: !!s.agent,
       isHost: !!s.isHost,
       // the account's picture (operator charId or uploaded file); AvatarFrame falls back to the initial when it fails
       avatar: typeof s.avatar === 'string' && s.avatar ? s.avatar : null,
@@ -89,7 +90,8 @@ function SeatCell({ seat, index }) {
   return html`<span class="rooms-seat" title=${seat.name || t('空席位')}>
     <${AvatarFrame} size="md" seat=${index} name=${seat.name} host=${seat.isHost} bot=${seat.isBot}
       src=${avatarUrl(seat.avatar, dataset.get('assets'))} />
-    ${seat.guest && !seat.isBot ? html`<span class="rooms-seat__guest">${t('游客')}</span>` : null}
+    ${seat.agent ? html`<span class="rooms-seat__agent">AGENT</span>` : null}
+    ${seat.guest && !seat.isBot && !seat.agent ? html`<span class="rooms-seat__guest">${t('游客')}</span>` : null}
     <span class="rooms-seat__name">${seat.name || t('博士')}${seat.role ? html`<${RoleTag} role=${seat.role} size="sm" />` : null}</span>
   </span>`;
 }

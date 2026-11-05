@@ -107,7 +107,7 @@ export class StubMatch {
       ? modeCfg.lastRound
       : (this.modeId === 'mode_single_funny' ? 9 : 14);
     this.infoCheckMs = Math.min(MAX_TIMER_MS, posNum(config.timers && config.timers.infoCheck, DEFAULT_INFO_CHECK_S) * 1000);
-    /** @type {Map<string, {seat:number, playerId:string, name:string, role?:string|null, isBot:boolean, connected:boolean, left:boolean, ready:boolean, lastEmoteAt:number}>} */
+    /** @type {Map<string, {seat:number, playerId:string, name:string, role?:string|null, isBot:boolean, agent?:boolean, connected:boolean, left:boolean, ready:boolean, lastEmoteAt:number}>} */
     this.players = new Map();
     for (const s of opts.seats) {
       this.players.set(s.playerId, { ...s, left: false, ready: !!s.isBot, lastEmoteAt: -Infinity });
@@ -185,9 +185,9 @@ export class StubMatch {
   /**
    * A spectator takes over a BOT seat (server/lobby.js `room.takeOver`): the bot's state becomes the human's, so the
    * match never has more than MAX_SEATS players.
-   * @param {string} humanId @param {number} seat @param {string} [name] @returns {boolean}
+   * @param {string} humanId @param {number} seat @param {string} [name] @param {string|null} [role] @param {boolean} [agent] @returns {boolean}
    */
-  takeOver(humanId, seat, name, role) {
+  takeOver(humanId, seat, name, role, agent = false) {
     if (this.disposed || this.ended || this.players.has(humanId)) return false;
     const p = [...this.players.values()].find((x) => x.seat === seat && x.isBot);
     if (!p) return false;
@@ -196,6 +196,7 @@ export class StubMatch {
     if (name) p.name = name;
     p.role = role ?? null;
     p.isBot = false;
+    p.agent = !!agent;
     p.connected = true;
     p.ready = true;
     this.players.set(humanId, p);
@@ -219,6 +220,7 @@ export class StubMatch {
     if (aiName) p.name = aiName;
     p.role = null;
     p.isBot = true;
+    p.agent = false;
     p.connected = true;
     p.ready = true;
     this.players.set(aiId, p);
@@ -242,6 +244,7 @@ export class StubMatch {
     if (aiName) p.name = aiName;
     p.role = null;
     p.isBot = true;
+    p.agent = false;
     p.connected = true;
     p.ready = true;
     this.players.set(aiId, p);
@@ -270,7 +273,7 @@ export class StubMatch {
     const summary = {
       stub: true, victory: false, roundsPassed: 0, modeId: this.modeId, difficulty: this.difficulty, seed: this.seed,
       reason: deadlinePassed ? 'timeout' : 'confirmed',
-      players: [...this.players.values()].map((p) => ({ playerId: p.playerId, seat: p.seat, name: p.name, role: p.role ?? null, isBot: p.isBot, lp: 0, title: null })),
+      players: [...this.players.values()].map((p) => ({ playerId: p.playerId, seat: p.seat, name: p.name, role: p.role ?? null, isBot: p.isBot, ...(p.agent ? { agent: true } : {}), lp: 0, title: null })),
     };
     if (humansLeft) {
       this.broadcastFn(this.publicView());
@@ -296,7 +299,7 @@ export class StubMatch {
       bannedChess: [],
       bossId: null,
       players: [...this.players.values()].map((p) => ({
-        playerId: p.playerId, seat: p.seat, name: p.name, role: p.role ?? null, isBot: p.isBot, connected: p.isBot || (p.connected && !p.left),
+        playerId: p.playerId, seat: p.seat, name: p.name, role: p.role ?? null, isBot: p.isBot, ...(p.agent ? { agent: true } : {}), connected: p.isBot || (p.connected && !p.left),
         alive: true, lp: 0, bandId: null, shopLevel: 1, boardCount: 0, ready: p.ready, bonds: [], fieldId: null,
         status: p.left ? 'left' : p.ready ? 'ready' : 'deciding',
       })),

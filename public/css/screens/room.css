@@ -191,6 +191,12 @@
   font-weight: 700;
 }
 .seat__bot-label .icon { width: .16rem; height: .16rem; }
+/* agent seat (docs/AGENT-SEATS.md): a player seat taken by an external AI — marked apart from the built-in AI teammates */
+.seat__agent-label {
+  color: var(--amber);
+  border-color: rgba(246, 163, 41, .55);
+  background: rgba(246, 163, 41, .12);
+}
 .seat__statebox {
   position: absolute; z-index: 4; left: .12rem; bottom: .12rem;
   display: flex; align-items: center; gap: .09rem; color: var(--text-lo);

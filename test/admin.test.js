@@ -148,7 +148,7 @@ test('buildPublicSnapshot.openRooms lists public hand-made 同盟 rooms, not-ful
   const snap = buildPublicSnapshot({ registry: { all: () => [] }, lobby: { rooms }, matchmaker: null, now: 0 });
   assert.deepEqual(snap.openRooms.map((x) => x.code), ['PUB', 'BOT', 'FULL'], 'public hand-made co-op rooms, not-full first, humans desc');
   assert.deepEqual(snap.openRooms[0], {
-    code: 'PUB', difficulty: 'NORMAL', difficultyName: '险境模拟', host: 'Host', hostRole: null, humans: 1,
+    code: 'PUB', difficulty: 'NORMAL', difficultyName: '险境模拟', host: 'Host', hostRole: null, humans: 1, agents: 0,
     full: false, freeSeats: 3, modded: false,
     seats: [{ name: 'Host', role: null, guest: true, isBot: false, isHost: true, avatar: 'char_1016_agoat2' }, null, null, null],
   });
@@ -208,7 +208,7 @@ test('buildPublicSnapshot: a full lobby leaks no playerId / accountId / token (p
 // 公开房间 seat squares (docs/MATCHMAKING.md §36): every open / running room carries its MAX_SEATS seat cells — the
 // public identity only (name, role, guest, AI, host), never the internal playerId, the account binding, an address or
 // a token.
-test('buildPublicSnapshot exposes per-seat identity (guest / AI / host) and no accountId / playerId / token', () => {
+test('buildPublicSnapshot exposes per-seat identity (guest / AI / agent / host) and no accountId / playerId / token', () => {
   const registry = new SessionRegistry({ now: () => 0 });
   const acc = registry.create('Acc'); acc.connected = true; acc.accountId = 7;
   const guest = registry.create('Guest'); guest.connected = true;
@@ -216,7 +216,8 @@ test('buildPublicSnapshot exposes per-seat identity (guest / AI / host) and no a
   const room = (over) => {
     const r = {
       code: 'SEAT', mode: 'coop', public: true, match: null, auto: false, hostId: acc.playerId, difficulty: 'HARD',
-      seats: [seat(acc), seat(guest), { seat: 2, playerId: 'ai_seat', name: 'Bot', role: null, isBot: true, left: false }, null],
+      seats: [seat(acc), seat(guest), { seat: 2, playerId: 'ai_seat', name: 'Bot', role: null, isBot: true, left: false },
+        { seat: 3, playerId: 't_agent', name: 'Agent', role: null, isBot: false, left: false, agent: true }],
       ...over,
     };
     r.seatOf = (id) => r.seats.find((s) => s && s.playerId === id) || null;
@@ -233,11 +234,13 @@ test('buildPublicSnapshot exposes per-seat identity (guest / AI / host) and no a
   const snap = buildPublicSnapshot({ registry, lobby: { rooms }, matchmaker: null, now: 0 });
   const open = snap.openRooms.find((r) => r.code === 'SEAT');
   assert.equal(open.seats.length, MAX_SEATS, 'one entry per co-op seat');
+  assert.equal(open.humans, 2, 'an agent is not a human');
+  assert.equal(open.agents, 1);
   assert.deepEqual(open.seats, [
     { name: 'Acc', role: null, guest: false, isBot: false, isHost: true },
     { name: 'Guest', role: null, guest: true, isBot: false, isHost: false },
     { name: 'Bot', role: null, guest: false, isBot: true, isHost: false },
-    null,
+    { name: 'Agent', role: null, guest: false, isBot: false, agent: true, isHost: false },
   ]);
   const run = snap.playRooms.find((r) => r.code === 'RUN');
   assert.equal(run.seats.length, MAX_SEATS);

@@ -45,9 +45,10 @@ export class MatchWatch {
    * human's — same seat, board, gold, loadout — and every structure naming the old playerId is re-keyed, so the human's
    * own later `g.*` intents (which carry their own playerId) route to that seat. A bot seat only ever trades its AI for
    * a human, so the match never has more than MAX_SEATS players.
-   * @param {string} humanId @param {number} seat @param {string} [name] @param {string|null} [role] @returns {boolean} whether it happened
+   * @param {string} humanId @param {number} seat @param {string} [name] @param {string|null} [role] @param {boolean} [agent]
+   * @returns {boolean} whether it happened
    */
-  takeOver(humanId, seat, name, role) {
+  takeOver(humanId, seat, name, role, agent = false) {
     if (this.disposed || this.ended) return false;
     if (typeof humanId !== 'string' || this.players.has(humanId)) return false;
     const ps = [...this.players.values()].find((p) => p.seat === seat && p.isBot);
@@ -59,6 +60,7 @@ export class MatchWatch {
     if (name) ps.name = name;
     ps.role = role ?? null;
     ps.isBot = false;
+    ps.agent = !!agent;
     ps.connected = true;
     ps.autoplay = false;
     ps.infoReady = true;                              // the match is already past the briefing check
@@ -128,6 +130,7 @@ export class MatchWatch {
     if (aiName) ps.name = aiName;
     ps.role = null;
     ps.isBot = true;
+    ps.agent = false;
     ps.connected = true;
     ps.autoplay = false;
     ps.infoReady = true;

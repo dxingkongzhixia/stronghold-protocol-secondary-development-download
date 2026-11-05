@@ -117,7 +117,7 @@
 | 内容 | 文档 |
 |---|---|
 | 策略注册表、内置策略、每座位覆盖、重放 | [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) |
-| 外部 AI（`sp-ai/1`）、LLM 适配器、安全边界 | [`EXTERNAL-AI.md`](EXTERNAL-AI.md) |
+| **Agent 席位：AI 通过一次性邀请接管 bot（生产接入）** | [`AGENT-SEATS.md`](AGENT-SEATS.md) || 外部 AI（`sp-ai/1`）、LLM 适配器、安全边界（**开发专用**） | [`EXTERNAL-AI.md`](EXTERNAL-AI.md) |
 | 示例顾问的打法 / 经济基准（不改规则） | [`AI-STRATEGY.md`](AI-STRATEGY.md) |
 | 机器人训练 / 布局先验 | [`DEPLOY.md`](DEPLOY.md)（Bot rehearsal / training）· `server/match/botPrior.js` |
 

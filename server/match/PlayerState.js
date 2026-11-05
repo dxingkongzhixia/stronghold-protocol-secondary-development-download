@@ -153,6 +153,8 @@ export class PlayerState {
     /** 皮肤 (docs/SKINS.md): frozen `{ [charId]: skinId }`, {} = every operator on its default model. */
     this.skins = Object.freeze({});
     this.isBot = !!seat.isBot;
+    /** docs/AGENT-SEATS.md: an external AI agent's seat (a player seat that is neither a human nor the built-in bot). */
+    this.agent = !this.isBot && !!seat.agent;
     if (!this.isBot && seat.skins) this.setSkins(seat.skins);
     this.connected = this.isBot ? true : !!seat.connected;
     this.left = false;

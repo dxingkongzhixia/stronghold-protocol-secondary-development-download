@@ -533,7 +533,7 @@ function TeamCard({ p, i, gd, self, victory, raw }) {
       <${Sprite} k=${plateArt(p, self)} class="tcard__platebg" />
       <${PlayerAvatar} player=${p} self=${self} class="tcard__ava" />
       <span class="tcard__who">
-        <b class="tcard__name"><span>${p.name}</span>${p.isBot ? html`<span class="tcard__ai">AI</span>` : null}</b>
+        <b class="tcard__name"><span>${p.name}</span>${p.agent ? html`<span class="tcard__ai">AGENT</span>` : p.isBot ? html`<span class="tcard__ai">AI</span>` : null}</b>
         ${band ? html`<span class="tcard__band"><${BandIcon} bandId=${band.bandId} size="xs" /><span>${band.name}</span></span>` : null}
       </span>
     </div>
