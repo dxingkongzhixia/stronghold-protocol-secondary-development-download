@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { GEO, EMOTES, CHAT_MAX } from '../../shared/constants.js';
 import { nextAction, FALLBACK_BANDS } from './player.mjs';
 import { claimAndPlay, demo } from './agent.mjs';
-import { AGENT_BRIEFING, searchKnowledge, renderKnowledge } from './knowledge.mjs';
+import { AGENT_BRIEFING, searchKnowledge, renderKnowledge, loadRuleIndex, renderRuleIndex } from './knowledge.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEFAULTS = { openai: 'https://api.openai.com/v1', anthropic: 'https://api.anthropic.com/v1' };
@@ -113,22 +113,23 @@ export function loadRulesBrief({ file = null, maxChars = 24000 } = {}) {
   return { text: FALLBACK_RULES, source: 'built-in', chars: FALLBACK_RULES.length, fallback: true };
 }
 
-/** The full system prompt: role/action contract + the agent briefing + the rule book + a short field glossary. */
-export function buildSystem(rules, briefing = AGENT_BRIEFING) {
-  const book = rules || '(no rule book attached: follow the action contract and the visible state only)';
-  return `${SYSTEM_CORE}
-
-${briefing}
-
-# RULE BOOK
-${book}
-
-# STATE FIELDS
+/**
+ * The system prompt: action contract + role/communication briefing + the compact rule INDEX (or, when explicitly asked,
+ * the full rule book) + a short field glossary.
+ * @param {string} rules full rule text, or '' for index-only
+ * @param {string} briefing @param {string} index rendered index (usually from renderRuleIndex)
+ */
+export function buildSystem(rules, briefing = AGENT_BRIEFING, index = '') {
+  const sections = [SYSTEM_CORE, briefing];
+  if (index) sections.push(index);
+  if (rules) sections.push(`# RULE BOOK\n${rules}`);
+  sections.push(`# STATE FIELDS
 phase: INFO_CHECK | BAND_DRAFT | PREP | COMBAT | UNITE | RESULT.
 you.funds / you.shopLevel / you.deployCap / you.deployCount / you.canReady / you.ready.
 shop[].slot is the g.buy slot; hand[].uid is the g.move/g.sell uid; board[] shows occupied cells.
 draft.turn is whose band pick it is; draft.picks are the taken bandIds.
-personalChoice / rewardOffer block Ready until answered with g.choice / g.reward.`;
+personalChoice / rewardOffer block Ready until answered with g.choice / g.reward.`);
+  return sections.join('\n\n');
 }
 
 /** Strip a JSON reply that a model wrapped in prose / fences. */
@@ -259,8 +260,8 @@ async function run() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help || args.h) {
     console.log('node tools/agent/llm.mjs --token <token> --provider openai|anthropic --model <id> [--demo]');
-    console.log('  --rules <path>            rule book to send (default docs/PLAYING.md §1–§7; "none" disables)');
-    console.log('  --rules-max-chars <n>     cap the rule excerpt (default 24000; SP_AGENT_RULES_MAX)');
+    console.log('  --rules <mode|path>       index (default) | full | none | a markdown path');
+    console.log('  --rules-max-chars <n>     cap --rules full (default 24000; SP_AGENT_RULES_MAX)');
     console.log('  --lookups <n>             knowledge lookups per run (default 12; SP_AGENT_LOOKUPS)');
     console.log('  --chat-every-ms <n>       minimum gap between chats (default 8000; SP_AGENT_CHAT_MS)');
     console.log('  --emote-every-ms <n>      minimum gap between emotes (default 4000; SP_AGENT_EMOTE_MS)');
@@ -269,15 +270,25 @@ async function run() {
   const url = args.url || process.env.SP_AGENT_URL || 'ws://127.0.0.1:3000/ws';
   const name = args.name || 'LLM Agent';
   const bands = loadBands();
-  const rulesArg = args.rules || process.env.SP_AGENT_RULES;
-  const rules = args['no-rules'] || /^(?:none|off|0)$/i.test(String(rulesArg || ''))
-    ? { text: '', source: 'off', chars: 0, fallback: false }
-    : loadRulesBrief({
-      file: rulesArg || null,
-      maxChars: Math.max(1000, Number(args['rules-max-chars'] || process.env.SP_AGENT_RULES_MAX || 24000)),
-    });
-  const system = buildSystem(rules.text);
-  log(`rules: ${rules.source} (${rules.chars} chars)${rules.fallback ? ' [built-in fallback]' : ''}`);
+  const rulesArg = args.rules || process.env.SP_AGENT_RULES || 'index';
+  const mode = String(rulesArg).trim().toLowerCase();
+  const maxChars = Math.max(1000, Number(args['rules-max-chars'] || process.env.SP_AGENT_RULES_MAX || 24000));
+  let rulesText = '';
+  let indexText = '';
+  let rulesLabel = 'off';
+  if (!(args['no-rules'] || ['none', 'off', '0'].includes(mode))) {
+    if (mode === 'index' || mode === 'brief') {
+      const index = loadRuleIndex();
+      indexText = renderRuleIndex(index);
+      rulesLabel = `index (${index.length} sections)`;
+    } else {
+      const full = loadRulesBrief({ file: mode === 'full' ? null : rulesArg, maxChars });
+      rulesText = full.text;
+      rulesLabel = `full ${full.source} (${full.chars} chars)${full.fallback ? ' [fallback]' : ''}`;
+    }
+  }
+  const system = buildSystem(rulesText, AGENT_BRIEFING, indexText);
+  log(`rules: ${rulesLabel}`);
   const client = makeClient(args);
   let calls = 0;
   let lookups = 0;

@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GEO, EMOTES, CHAT_MAX } from '../shared/constants.js';
 import { makeClient, validAction, parseReply, buildSystem, extractRules, loadRulesBrief, promptState } from '../tools/agent/llm.mjs';
-import { AGENT_BRIEFING, searchKnowledge, renderKnowledge } from '../tools/agent/knowledge.mjs';
+import { AGENT_BRIEFING, searchKnowledge, renderKnowledge, loadRuleIndex, renderRuleIndex } from '../tools/agent/knowledge.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -59,7 +59,28 @@ test('Anthropic provider: POST /messages with x-api-key and the version header',
   } finally { await srv.close(); }
 });
 
-test('the rule book is sent to the model, bounded to §1–§7 and cached as a stable prefix', () => {
+test('the default prompt carries a compact rule INDEX, not the whole book', () => {
+  const index = loadRuleIndex();
+  assert.ok(index.length >= 10, `sections (${index.length})`);
+  assert.ok(index.some((s) => s.id === 'play/1' && /流程/.test(s.title)));
+  assert.ok(index.some((s) => s.id === 'play/5' && /联防/.test(s.title)));
+  assert.ok(index.every((s) => s.summary.length > 0), 'every index row has a one-line summary');
+  const indexText = renderRuleIndex(index);
+  assert.match(indexText, /play\/5/);
+  assert.match(indexText, /RULE INDEX/);
+  const system = buildSystem('', AGENT_BRIEFING, indexText);
+  assert.match(system, /play\/5/);
+  assert.ok(system.length < 12000, `index prompt stays small (${system.length})`);
+  // an exact id resolves to that section; keywords still work
+  const exact = searchKnowledge('play/5');
+  assert.equal(exact[0].id, 'play/5');
+  assert.match(exact[0].title, /联防/);
+  const byWords = searchKnowledge('联防 漏怪');
+  assert.ok(byWords.length > 0);
+  assert.match(renderKnowledge(byWords, '联防'), /play\/\d+/);
+});
+
+test('the full rule book is still available on request (§1–§7, bounded)', () => {
   const brief = loadRulesBrief();
   assert.equal(brief.fallback, false, 'the checkout carries docs/PLAYING.md');
   assert.match(brief.text, /## 1\. /);

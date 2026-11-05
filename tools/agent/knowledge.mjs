@@ -15,6 +15,12 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const KNOWLEDGE_FILES = Object.freeze(['docs/PLAYING.md', 'docs/RULES.md', 'docs/AI-STRATEGY.md', 'docs/BOT-STRATEGIES.md']);
+const FILE_ALIAS = Object.freeze({
+  'docs/PLAYING.md': 'play',
+  'docs/RULES.md': 'rules',
+  'docs/AI-STRATEGY.md': 'strategy',
+  'docs/BOT-STRATEGIES.md': 'bots',
+});
 
 /** Role / etiquette / phase playbook. Kept short: it is sent with every system prompt. */
 export const AGENT_BRIEFING = `# YOUR ROLE
@@ -44,24 +50,38 @@ If something is not covered by the rule book, reply with {"lookup":"<short keywo
 receive the most relevant excerpts, then you must return the action. Prefer asking for game mechanics, not for hidden
 information — you have none.`;
 
-/** One markdown file split into heading-scoped chunks. */
+/** One markdown file split into level-2 sections, each with a stable lookup id (`play/5`). */
 function parseMarkdown(file, text) {
+  const alias = FILE_ALIAS[file] || path.basename(file, '.md');
   const out = [];
-  const lines = String(text).split(/\r?\n/);
   let title = path.basename(file, '.md');
   let body = [];
+  let n = 0;
   const flush = () => {
     const t = body.join('\n').trim();
-    if (t) out.push({ file, title, text: t });
+    if (t) out.push({ id: `${alias}/${n}`, file, title, text: t, summary: summarize(t) });
     body = [];
   };
-  for (const line of lines) {
-    const h = /^(#{1,4})\s+(.+)$/.exec(line);
-    if (h) { flush(); title = h[2].trim(); continue; }
+  for (const line of String(text).split(/\r?\n/)) {
+    const h = /^##\s+(.+)$/.exec(line);
+    if (h) { flush(); n++; title = h[1].trim(); continue; }
+    // the file's h1 and any content before the first `##` is the alias/0 overview
+    if (/^#\s+/.test(line) && !body.length) continue;
     body.push(line);
   }
   flush();
   return out;
+}
+
+/** First readable sentence of a section, for the index (skips table rows and tiny fragments). */
+function summarize(text) {
+  const cleaned = String(text)
+    .split(/\r?\n/)
+    .map((s) => s.replace(/^[-*|>\d.\s]+/, '').replace(/[*`|]/g, '').trim())
+    .filter((s) => s.length > 0 && !/^```/.test(s) && !/^\|/.test(s));
+  const line = cleaned.find((s) => s.length >= 12) || cleaned[0] || '';
+  const out = line.replace(/\s+/g, ' ').trim();
+  return out.length > 140 ? `${out.slice(0, 137)}…` : out;
 }
 
 /** All available knowledge chunks (cached per process). */
@@ -73,6 +93,27 @@ export function loadKnowledge({ root = ROOT } = {}) {
     try { out.push(...parseMarkdown(rel, readFileSync(file, 'utf8'))); } catch { /* skip an unreadable file */ }
   }
   return out;
+}
+
+/**
+ * The compact table the model sees first: id, title, one-line summary. It is enough to decide WHAT to look up, without
+ * shipping every rule in every prompt.
+ * @param {{ root?: string }} [opts]
+ * @returns {{ id: string, file: string, title: string, summary: string }[]}
+ */
+export function loadRuleIndex({ root = ROOT } = {}) {
+  return loadKnowledge({ root }).map(({ id, file, title, summary }) => ({ id, file, title, summary }));
+}
+
+/** Format the index as a prompt block. */
+export function renderRuleIndex(index) {
+  if (!index || !index.length) return '# RULE INDEX\n(no rule documents available; use the built-in briefing and the visible state)';
+  const lines = index.map((s) => `- ${s.id} · ${s.title}${s.summary ? ` — ${s.summary}` : ''}`);
+  return `# RULE INDEX
+Look up a section when you need its details: reply {"lookup":"<id>"} (or keywords). You then get that section and must
+return the action. Prefer ids for exact lookups; use keywords when you do not know the id.
+
+${lines.join('\n')}`;
 }
 
 const termsOf = (query) => {
@@ -94,10 +135,16 @@ const termsOf = (query) => {
  * @returns {{ file: string, title: string, text: string, score: number }[]}
  */
 export function searchKnowledge(query, { limit = 3, maxChars = 1400, root = ROOT } = {}) {
-  const terms = termsOf(query);
+  const q = String(query || '').trim();
+  if (!q) return [];
+  const all = loadKnowledge({ root });
+  // an exact id (`play/5`) is the index's primary lookup path
+  const exact = all.find((item) => item.id === q);
+  if (exact) return [{ ...exact, score: 999 }].map((item) => ({ ...item, text: item.text.slice(0, maxChars) }));
+  const terms = termsOf(q);
   if (!terms.length) return [];
   const scored = [];
-  for (const item of loadKnowledge({ root })) {
+  for (const item of all) {
     const title = item.title.toLowerCase();
     const body = item.text.toLowerCase();
     let score = 0;
@@ -118,19 +165,14 @@ export function searchKnowledge(query, { limit = 3, maxChars = 1400, root = ROOT
 /** The excerpts as a prompt block the model can use. */
 export function renderKnowledge(results, query = '') {
   if (!results || !results.length) return `No matching rule excerpt for "${query}". Act from the visible state and the rule book.`;
-  return results.map((r, i) => `### [${i + 1}] ${r.file} · ${r.title}\n${r.text}`).join('\n\n');
+  return results.map((r, i) => `### [${i + 1}] ${r.id} · ${r.file} · ${r.title}\n${r.text}`).join('\n\n');
 }
 
 const IS_ENTRY = !!process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (IS_ENTRY) {
   const args = process.argv.slice(2);
   if (args.includes('--list') || args.length === 0) {
-    const seen = new Map();
-    for (const k of loadKnowledge()) {
-      if (!seen.has(k.file)) seen.set(k.file, []);
-      seen.get(k.file).push(k.title);
-    }
-    for (const [file, titles] of seen) console.log(`${file}\n  ${titles.join('\n  ')}`);
+    for (const k of loadKnowledge()) console.log(`${k.id}\t${k.title}\t${k.summary}`);
   } else {
     const q = args.join(' ');
     const results = searchKnowledge(q);

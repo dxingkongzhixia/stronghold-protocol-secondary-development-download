@@ -129,8 +129,8 @@
 9. 日志包含 `agent … claimed seat N` / `handed back to the AI (reason)`，**不包含**明文 token。
 10. 开关默认关闭；`/healthz.agents` 报告开关、在座、邀请与计数。
 11. `test/package.test.js`：agent 席位代码不会被 `llmRelease` 排除，`tools/agent` 不进玩家包。
-12. `test/agent-llm.test.js`：OpenAI / Anthropic 两种 wire format、JSON 解析、动作白名单、规则书 §1–§7 注入与上限、
-   角色/沟通 briefing、`room.chat` / `g.emote`、规则检索与 `recentChat`。
+12. `test/agent-llm.test.js`：OpenAI / Anthropic 两种 wire format、JSON 解析、动作白名单、规则**索引**（id/摘要、
+    `play/5` 精确命中、体积上限）、可选全文 §1–§7、角色/沟通 briefing、`room.chat` / `g.emote`、`recentChat`。
 
 ### 6.1 P4 真实对局回归
 
@@ -164,7 +164,9 @@ node tools/agent/llm.mjs --token <token> --provider openai --model gpt-4.1
 
 ### 7.1 规则、角色与互动如何告诉模型
 
-`llm.mjs` 的 system prompt 由四段组成（只发一次，Anthropic 会缓存前缀）：
+默认**不把整本规则书塞进 system prompt**，而是给一份**索引**，需要细节时再查。
+
+system prompt 由四段组成（只发一次，Anthropic 会缓存前缀）：
 
 1. **动作契约**：只能返回 JSON；允许的 `g.*` / `room.chat` / `g.emote` 及参数；
 2. **`AGENT_BRIEFING`**（`tools/agent/knowledge.mjs`）：
@@ -172,21 +174,32 @@ node tools/agent/llm.mjs --token <token> --provider openai --model gpt-4.1
    - **沟通礼仪**：可以 `room.chat` 和 `g.emote`；开局问候、回应队友、短报点；不刷屏、不争论、不冒充真人；
      默认中文，单条尽量 <40 字；
    - **阶段 playbook**：INFO_CHECK 确认、BAND_DRAFT 选乐队、PREP 买/部署/领奖/ready、COMBAT 只聊天或表情；
-3. **RULE BOOK**：`docs/PLAYING.md` §1–§7（默认最多 24 000 字符）；
+3. **RULE INDEX**：每节一行 `id · 标题 — 一句话摘要`，例如：
+
+   ```
+   - play/1 · 1. 一局的流程 — 确认本局信息 → 选择策略 → 协议启动 → …
+   - play/2 · 2. 经济 — 每回合资金、刷新、出售、升级调度中心 …
+   - play/5 · 5. 联防（同盟） — 有人漏怪、又有人完美作战时触发 …
+   ```
+
+   模型需要细节时回 `{"lookup":"play/5"}`；也可以按关键词查（`{"lookup":"联防 漏怪"}`）。
 4. **状态字段说明**：每个字段怎么读。
+
+只有显式要求时才注入全文：
+
+```bash
+--rules index        # 默认：索引（42 节，约几千字）
+--rules full         # docs/PLAYING.md §1–§7 全文（最多 24 000 字符）
+--rules <path>       # 另一份规则文件
+--rules none         # 不附索引
+```
 
 每次请求的 user 消息是**该座位可见**的压缩局面（`m.public` + `m.private` 字段子集）外加 `recentChat`（最近 8 条
 房间聊天），所以模型能回应队友，而不是自说自话。
 
-**知识查询（按需）**：模型不知道某条规则时可以只回：
-
-```json
-{"lookup":"联防 漏怪"}
-```
-
-客户端在本地搜索 `docs/PLAYING.md`、`RULES.md`、`AI-STRATEGY.md`、`BOT-STRATEGIES.md` 的标题与正文，
-把最相关的 1–3 段追加到下一次请求，再要求它给出动作。每次决策最多 2 次查询，整局默认最多 12 次；
-也可以用命令行直接查：
+**知识查询**：客户端在本地搜索 `docs/PLAYING.md`、`RULES.md`、`AI-STRATEGY.md`、`BOT-STRATEGIES.md`；
+`play/5` 这样的 id 精确命中，关键词走相关度排序。每次决策最多 2 次查询，整局默认最多 12 次；
+也可以直接查：
 
 ```bash
 node tools/agent/knowledge.mjs "联防 怎么打"

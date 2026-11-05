@@ -32,7 +32,7 @@
 | 浏览器渲染 | `RENDER_E2E=1 node --test test/render/*.browser.test.js`（需 Chrome + `public/assets`） |
 | 联机 E2E | `SP_E2E=1 node --test "test/e2e/**"`（需浏览器与素材） |
 | Agent 席位 E2E | `SP_AGENT_E2E=1 node --test test/e2e/agent-seat.e2e.mjs`（真实 Match，无需浏览器；见 [`AGENT-SEATS.md`](AGENT-SEATS.md) §6.1） |
-| Agent LLM 客户端 | `node --test test/agent-llm.test.js`（OpenAI / Anthropic wire format、规则书/角色注入、聊天表情、知识检索、动作白名单；不需要真 key） |
+| Agent LLM 客户端 | `node --test test/agent-llm.test.js`（OpenAI / Anthropic wire format、规则索引/精确检索、角色 briefing、聊天表情、动作白名单；不需要真 key） |
 | Lint / 类型 / 导入 | `npx eslint .`、`npm run typecheck`、`npm run check:imports` |
 | kit 覆盖 | `node tools/kit-coverage.mjs --missing` |
 | i18n | `node tools/i18n.mjs check en --strict` |
