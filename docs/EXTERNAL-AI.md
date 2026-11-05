@@ -95,11 +95,11 @@ npm start
 | `SP_EXTERNAL_AI_MODE` | `direct` | `direct`：逐步意图；`plan`：一次交一份计划，服务器按计划执行 |
 | `SP_EXTERNAL_AI_SEATS` | 全部 | 只让这些座位（0–3，逗号分隔）走外部 AI |
 | `SP_EXTERNAL_AI_LANGUAGE` | `zh-CN` | 知识包语言：`zh-CN`/`zh-TW`/`en`/`ja`/`ko` |
-| `SP_EXTERNAL_AI_TIMEOUT_MS` | 60000 | 单次决策上限（1–300000）；同时最多占用阶段剩余时间的一半 |
+| `SP_EXTERNAL_AI_TIMEOUT_MS` | 1000 | 单次决策上限（1–300000）；同时最多占用阶段剩余时间的一半 |
 | `SP_EXTERNAL_AI_MAX_INTENTS` | 64 | 单次观察允许的意图数上限（1–256） |
-| `SP_EXTERNAL_AI_MAX_BYTES` | 524288 | 回复体积上限（1–1048576） |
-| `SP_EXTERNAL_AI_FAILURES` | 5 | 连续失败上限（1–20），超过后本座位本次对局禁用外部 AI |
-| `SP_EXTERNAL_AI_BACKOFF_MS` | 30000 | 失败后的退避（1–60000） |
+| `SP_EXTERNAL_AI_MAX_BYTES` | 65536 | 回复体积上限（1–1048576） |
+| `SP_EXTERNAL_AI_FAILURES` | 3 | 连续失败上限（1–20），超过后本座位本次对局禁用外部 AI |
+| `SP_EXTERNAL_AI_BACKOFF_MS` | 1000 | 失败后的退避（1–60000） |
 | `SP_EXTERNAL_AI_MANUAL_WAIT` | 关闭 | 开发用人工座位：只有 `direct` 模式可用，无时限窗口可无限等 |
 
 ### 3.2 LLM 适配器（`SP_LLM_*`）
@@ -111,7 +111,7 @@ npm start
 | `SP_LLM_API_KEY` | — | 密钥（仅环境变量） |
 | `SP_LLM_API_FORMAT` | `openai` | `openai` 或 `anthropic` |
 | `SP_LLM_MAX_TOKENS` | 16000 | 单次输出上限 |
-| `SP_LLM_TIMEOUT_MS` | — | 单次模型请求超时 |
+| `SP_LLM_TIMEOUT_MS` | 20000 | 单次模型请求超时 |
 | `SP_LLM_RETRIES` | — | 传输重试次数 |
 | `SP_LLM_TEMPERATURE` / `SP_LLM_TOP_P` / `SP_LLM_REASONING` | — | 采样与推理强度（按 provider 支持传入） |
 | `SP_LLM_CACHE_SYSTEM` | `1` | 请求 provider 复用 system 前缀（prompt caching） |
