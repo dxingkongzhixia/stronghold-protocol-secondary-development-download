@@ -108,7 +108,7 @@
 | 插件意图边界 | `shared/plugins/ui.js`（`agent.*` 与 `g.*` 一样属于客户端意图，插件不能发送） |
 | 前端 AGENT 标记 / 邀请入口 | `public/js/screens/{room,rooms,bandDraft,result,settle}.js`、`public/js/ui/gameComponents.js`、`public/js/main.js`（`agent.invite`）、`public/js/store.js`、`public/css/screens/{room,lobby}.css` |
 | 运维计数 / 健康检查 | `server/lobby.js`（`agentStats`）、`server/admin.js`（「AI 席位」页） |
-| 示例客户端（P3） | `tools/agent/player.mjs`（规则循环）、`tools/agent/agent.mjs`（WS CLI）、`tools/agent/llm.mjs`（OpenAI / Anthropic + 规则书注入） |
+| 示例客户端（P3） | `tools/agent/player.mjs`（规则循环）、`tools/agent/agent.mjs`（WS CLI）、`tools/agent/llm.mjs`（OpenAI / Anthropic + 规则书/角色/聊天）、`tools/agent/knowledge.mjs`（briefing + 本地规则检索） |
 | 端到端（P4） | `test/e2e/agent-seat.e2e.mjs` |
 | 测试 | `test/match/agent-seat.test.js`、`test/agent-llm.test.js` |
 
@@ -129,7 +129,8 @@
 9. 日志包含 `agent … claimed seat N` / `handed back to the AI (reason)`，**不包含**明文 token。
 10. 开关默认关闭；`/healthz.agents` 报告开关、在座、邀请与计数。
 11. `test/package.test.js`：agent 席位代码不会被 `llmRelease` 排除，`tools/agent` 不进玩家包。
-12. `test/agent-llm.test.js`：OpenAI / Anthropic 两种 wire format、JSON 解析、动作白名单、规则书 §1–§7 注入与上限。
+12. `test/agent-llm.test.js`：OpenAI / Anthropic 两种 wire format、JSON 解析、动作白名单、规则书 §1–§7 注入与上限、
+   角色/沟通 briefing、`room.chat` / `g.emote`、规则检索与 `recentChat`。
 
 ### 6.1 P4 真实对局回归
 
@@ -161,25 +162,39 @@ node tools/agent/llm.mjs --token <token> --provider openai --model gpt-4.1
 `tools/agent/player.mjs` 只做四件事：确认信息、选一个未占用的乐队、买/部署棋子、拿奖励后 ready；
 它是协议示例与 P4 的固定动作源，**不是**竞技 bot；模型不可用/超预算时 `llm.mjs` 自动回退到它。
 
-### 7.1 规则如何告诉模型
+### 7.1 规则、角色与互动如何告诉模型
 
-`llm.mjs` 启动时读取 **`docs/PLAYING.md` §1–§7**（玩家规则书，最多 24 000 字符）放进 system prompt，再附：
+`llm.mjs` 的 system prompt 由四段组成（只发一次，Anthropic 会缓存前缀）：
 
-- 每回合阶段、可用的 `g.*` 动作白名单与参数格式；
-- 局面字段说明（`phase` / `funds` / `shop` / `hand` / `board` / `deployCap` / `draft` / `personalChoice` …）；
-- 一条简短策略（买棋、部署、拿奖励、ready）。
+1. **动作契约**：只能返回 JSON；允许的 `g.*` / `room.chat` / `g.emote` 及参数；
+2. **`AGENT_BRIEFING`**（`tools/agent/knowledge.mjs`）：
+   - **角色**：匿名 AI agent、占一个玩家席位、不是内置 bot 也不是真人；不能邀请/踢人/开局/改设置；要当合作队友；
+   - **沟通礼仪**：可以 `room.chat` 和 `g.emote`；开局问候、回应队友、短报点；不刷屏、不争论、不冒充真人；
+     默认中文，单条尽量 <40 字；
+   - **阶段 playbook**：INFO_CHECK 确认、BAND_DRAFT 选乐队、PREP 买/部署/领奖/ready、COMBAT 只聊天或表情；
+3. **RULE BOOK**：`docs/PLAYING.md` §1–§7（默认最多 24 000 字符）；
+4. **状态字段说明**：每个字段怎么读。
 
-每次请求的 user 消息只有**该座位可见**的压缩局面（`m.public` + `m.private` 的字段子集），不含隐藏信息。
-规则路径与上限可调：
+每次请求的 user 消息是**该座位可见**的压缩局面（`m.public` + `m.private` 字段子集）外加 `recentChat`（最近 8 条
+房间聊天），所以模型能回应队友，而不是自说自话。
 
-```bash
---rules <path>            # 默认 docs/PLAYING.md §1–§7
---rules-max-chars 24000   # 或 SP_AGENT_RULES_MAX
---rules none              # 不发送规则书
+**知识查询（按需）**：模型不知道某条规则时可以只回：
+
+```json
+{"lookup":"联防 漏怪"}
 ```
 
-文件不存在时使用内置的简短规则摘要（远程 agent 也可以只带这一份）。
-Anthropic 会对 system 前缀加 `cache_control`；OpenAI 兼容网关是否缓存由网关决定。
+客户端在本地搜索 `docs/PLAYING.md`、`RULES.md`、`AI-STRATEGY.md`、`BOT-STRATEGIES.md` 的标题与正文，
+把最相关的 1–3 段追加到下一次请求，再要求它给出动作。每次决策最多 2 次查询，整局默认最多 12 次；
+也可以用命令行直接查：
+
+```bash
+node tools/agent/knowledge.mjs "联防 怎么打"
+node tools/agent/knowledge.mjs --list
+```
+
+**发言节奏**：客户端强制 `room.chat` 至少间隔 8 秒、`g.emote` 至少 4 秒（可调），模型想刷屏时会跳过这句话继续打牌；
+COMBAT/UNITE 只在队友真的说话后触发一次“社交回合”，不会每 150 ms 调模型。
 
 ### 7.1 里程碑（全部完成）
 

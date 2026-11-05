@@ -6,8 +6,9 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GEO } from '../shared/constants.js';
-import { makeClient, validAction, parseReply, buildSystem, extractRules, loadRulesBrief } from '../tools/agent/llm.mjs';
+import { GEO, EMOTES, CHAT_MAX } from '../shared/constants.js';
+import { makeClient, validAction, parseReply, buildSystem, extractRules, loadRulesBrief, promptState } from '../tools/agent/llm.mjs';
+import { AGENT_BRIEFING, searchKnowledge, renderKnowledge } from '../tools/agent/knowledge.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -69,6 +70,11 @@ test('the rule book is sent to the model, bounded to §1–§7 and cached as a s
   assert.ok(system.includes(brief.text), 'the rule excerpt is in the system prompt');
   assert.match(system, /g\.ready/);
   assert.match(system, /STATE FIELDS/);
+  assert.ok(system.includes(AGENT_BRIEFING), 'the role / communication briefing is in the system prompt');
+  assert.match(AGENT_BRIEFING, /room\.chat/);
+  assert.match(AGENT_BRIEFING, /g\.emote/);
+  assert.match(AGENT_BRIEFING, /Do NOT spam/);
+  assert.match(AGENT_BRIEFING, /never pretend to be human/);
   assert.equal(extractRules('## 1. A\nrule\n## 8. B\nignored'), '## 1. A\nrule');
   assert.equal(extractRules(''), '');
   const fallback = loadRulesBrief({ file: path.join(ROOT, 'does-not-exist.md') });
@@ -98,5 +104,26 @@ test('the model reply is parsed from fences/prose and only legal actions pass', 
     { t: 'g.move', uid: 7, to: { area: 'board', row: GEO.FIELD.r0, col: GEO.FIELD.c0 }, dir: 'UP' });
   assert.equal(validAction({ t: 'g.move', uid: 99, to: { area: 'board', row: GEO.FIELD.r0, col: GEO.FIELD.c0 } }, state), null, 'unknown uid');
   assert.deepEqual(validAction({ t: 'g.ready', ready: true }, state), { t: 'g.ready', ready: true });
+  assert.deepEqual(validAction({ t: 'room.chat', text: '  我来守上路  ' }, state), { t: 'room.chat', text: '我来守上路' });
+  assert.equal(validAction({ t: 'room.chat', text: 'x'.repeat(CHAT_MAX + 1) }, state), null);
+  assert.deepEqual(validAction({ t: 'g.emote', id: EMOTES[0] }, state), { t: 'g.emote', id: EMOTES[0] });
+  assert.equal(validAction({ t: 'g.emote', id: 'not-an-emote' }, state), null);
   assert.equal(validAction({ t: 'g.test', cmd: 'x' }, state), null, 'admin/test intents never pass');
+});
+
+test('knowledge lookup finds the relevant rule section and recent chat reaches the prompt', () => {
+  const results = searchKnowledge('联防 漏怪');
+  assert.ok(results.length > 0);
+  assert.match(results[0].title, /联防|作战|结算/);
+  assert.match(renderKnowledge(results, '联防'), /docs\/PLAYING\.md/);
+
+  const state = {
+    myId: 'p1', bands: ['b'],
+    pub: { phase: 'PREP', draft: null, players: [] },
+    priv: { seat: 1, funds: 0, deployCap: 0, deployCount: 0, canReady: true, shop: { slots: [] }, hand: [], board: [] },
+    chat: [{ name: '队友', text: 'AI 你在吗', at: 1 }],
+  };
+  const view = promptState({ ...state, bands: ['b'] });
+  assert.equal(view.recentChat.length, 1);
+  assert.equal(view.recentChat[0].text, 'AI 你在吗');
 });

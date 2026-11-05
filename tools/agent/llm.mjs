@@ -17,13 +17,14 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GEO } from '../../shared/constants.js';
+import { GEO, EMOTES, CHAT_MAX } from '../../shared/constants.js';
 import { nextAction, FALLBACK_BANDS } from './player.mjs';
 import { claimAndPlay, demo } from './agent.mjs';
+import { AGENT_BRIEFING, searchKnowledge, renderKnowledge } from './knowledge.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEFAULTS = { openai: 'https://api.openai.com/v1', anthropic: 'https://api.anthropic.com/v1' };
-const ALLOWED = new Set(['g.infoReady', 'g.band', 'g.buy', 'g.refresh', 'g.freeze', 'g.levelUp', 'g.sell', 'g.move', 'g.reward', 'g.choice', 'g.ready']);
+const ALLOWED = new Set(['g.infoReady', 'g.band', 'g.buy', 'g.refresh', 'g.freeze', 'g.levelUp', 'g.sell', 'g.move', 'g.reward', 'g.choice', 'g.ready', 'room.chat', 'g.emote']);
 
 function parseArgs(argv) {
   const out = {};
@@ -66,6 +67,11 @@ Allowed actions (use only ids/uid/slot values that exist in the state):
 - {"t":"g.reward","idx":<0-5>}        promotion reward
 - {"t":"g.choice","idx":<0-5>}        personal 机变 / bounty choice
 - {"t":"g.ready","ready":true}
+- {"t":"room.chat","text":"..."}      short team chat (<= ${CHAT_MAX} chars); follow the communication etiquette
+- {"t":"g.emote","id":"<emote id>"}   one official emote id
+
+Or ask for a rule excerpt first (no action yet):
+{"lookup":"short keywords"} — you then receive excerpts and must return the action.
 
 Strategy: pick a free band; spend funds on chess; deploy hand pieces into free deploy cells (deployCount < deployCap);
 take reward/choices; ready when the hand cannot be deployed or funds are spent. Do not invent ids. Prefer progress over
@@ -107,10 +113,12 @@ export function loadRulesBrief({ file = null, maxChars = 24000 } = {}) {
   return { text: FALLBACK_RULES, source: 'built-in', chars: FALLBACK_RULES.length, fallback: true };
 }
 
-/** The full system prompt: role/action contract + the rule book + a short field glossary. */
-export function buildSystem(rules) {
+/** The full system prompt: role/action contract + the agent briefing + the rule book + a short field glossary. */
+export function buildSystem(rules, briefing = AGENT_BRIEFING) {
   const book = rules || '(no rule book attached: follow the action contract and the visible state only)';
   return `${SYSTEM_CORE}
+
+${briefing}
 
 # RULE BOOK
 ${book}
@@ -159,12 +167,18 @@ export function validAction(raw, { pub, priv, myId, bands }) {
       return { t: 'g.move', uid: raw.uid, to: { area: 'board', row: to.row, col: to.col }, ...(dir ? { dir } : {}) };
     }
     case 'g.ready': return priv.canReady ? { t: 'g.ready', ready: true } : null;
+    case 'room.chat': {
+      if (typeof raw.text !== 'string') return null;
+      const text = raw.text.replace(/[\u0000-\u001f\u007f]/g, '').trim();
+      return text && text.length <= CHAT_MAX ? { t: 'room.chat', text } : null;
+    }
+    case 'g.emote': return typeof raw.id === 'string' && EMOTES.includes(raw.id) ? { t: 'g.emote', id: raw.id } : null;
     default: return null;
   }
 }
 
 /** A compact, bounded state for the prompt (never the whole public view). */
-export function promptState({ pub, priv, myId, bands }) {
+export function promptState({ pub, priv, myId, bands, chat = [] }) {
   const players = (pub.players || []).map((p) => ({ seat: p.seat, name: p.name, bandId: p.bandId || null, ready: !!p.ready, lp: p.lp, isBot: !!p.isBot, agent: !!p.agent }));
   const shop = (priv.shop?.slots || []).map((s, slot) => (s ? { slot, kind: s.kind, id: s.id, price: s.price, sold: !!s.sold } : null)).filter(Boolean);
   const hand = (priv.hand || []).map((p, slot) => (p ? { slot, uid: p.uid, id: p.id, kind: p.kind, tier: p.tier ?? null } : null)).filter(Boolean);
@@ -184,6 +198,7 @@ export function promptState({ pub, priv, myId, bands }) {
     personalChoice: choice,
     rewardOffer: reward,
     bonds: (priv.bonds || []).map((b) => ({ name: b.name, active: !!b.active, layers: b.layers || 0 })).slice(0, 12),
+    recentChat: (chat || []).slice(-8).map((c) => ({ name: c.name, text: String(c.text || '').slice(0, 120) })),
   };
 }
 
@@ -246,6 +261,9 @@ async function run() {
     console.log('node tools/agent/llm.mjs --token <token> --provider openai|anthropic --model <id> [--demo]');
     console.log('  --rules <path>            rule book to send (default docs/PLAYING.md §1–§7; "none" disables)');
     console.log('  --rules-max-chars <n>     cap the rule excerpt (default 24000; SP_AGENT_RULES_MAX)');
+    console.log('  --lookups <n>             knowledge lookups per run (default 12; SP_AGENT_LOOKUPS)');
+    console.log('  --chat-every-ms <n>       minimum gap between chats (default 8000; SP_AGENT_CHAT_MS)');
+    console.log('  --emote-every-ms <n>      minimum gap between emotes (default 4000; SP_AGENT_EMOTE_MS)');
     return;
   }
   const url = args.url || process.env.SP_AGENT_URL || 'ws://127.0.0.1:3000/ws';
@@ -262,48 +280,100 @@ async function run() {
   log(`rules: ${rules.source} (${rules.chars} chars)${rules.fallback ? ' [built-in fallback]' : ''}`);
   const client = makeClient(args);
   let calls = 0;
-  let latency = 0;
+  let lookups = 0;
   let lastStateKey = '';
   let lastActKey = '';
+  let lastChatAt = 0;
+  let lastEmoteAt = 0;
+  let lastSocialChatAt = 0;
   const blocked = new Set();
   const sig = (a) => JSON.stringify(a);
+  const maxLookups = Math.max(0, Number(args.lookups ?? process.env.SP_AGENT_LOOKUPS ?? 12));
+  const chatEveryMs = Math.max(0, Number(args['chat-every-ms'] ?? process.env.SP_AGENT_CHAT_MS ?? 8000));
+  const emoteEveryMs = Math.max(0, Number(args['emote-every-ms'] ?? process.env.SP_AGENT_EMOTE_MS ?? 4000));
+
+  const askOnce = async (user) => {
+    if (calls >= client.maxCalls) return null;
+    calls++;
+    const t0 = Date.now();
+    const reply = await client.ask(system, user);
+    const usage = reply.usage ? ` tokens ${reply.usage.input_tokens ?? reply.usage.prompt_tokens ?? '?'}/${reply.usage.output_tokens ?? reply.usage.completion_tokens ?? '?'}` : '';
+    log(`call ${calls}/${client.maxCalls} ${client.provider}/${client.model} ${Date.now() - t0}ms${usage}`);
+    return parseReply(reply.text);
+  };
+
+  /** Ask once; a {"lookup":...} reply fetches local rule excerpts and asks again (bounded). */
+  const callWithLookup = async (user) => {
+    let parsed = await askOnce(user);
+    for (let hop = 0; parsed && typeof parsed.lookup === 'string' && hop < 2 && lookups < maxLookups; hop++) {
+      const q = parsed.lookup.slice(0, 120);
+      const results = searchKnowledge(q);
+      lookups++;
+      log(`lookup "${q}" -> ${results.length} excerpt(s)`);
+      parsed = await askOnce(`${user}\n\n# KNOWLEDGE RESULTS\n${renderKnowledge(results, q)}\n\nReturn the action JSON now (or one more lookup).`);
+    }
+    return parsed;
+  };
+
+  /** Chat/emote pacing; a too-early one is dropped and the rule loop keeps playing instead. */
+  const gateSocial = (action, now) => {
+    if (!action) return null;
+    if (action.t === 'room.chat') {
+      if (now - lastChatAt < chatEveryMs) { log('chat cooldown; skipping'); return null; }
+      lastChatAt = now;
+    } else if (action.t === 'g.emote') {
+      if (now - lastEmoteAt < emoteEveryMs) { log('emote cooldown; skipping'); return null; }
+      lastEmoteAt = now;
+    }
+    return action;
+  };
 
   const decide = async (state) => {
     // trivial confirmations / waiting turns never need a model call
     if (state.pub.phase === 'INFO_CHECK') return nextAction(state);
     if (state.pub.phase === 'BAND_DRAFT' && state.pub.draft?.turn !== state.myId) return null;
-    if (!['BAND_DRAFT', 'PREP'].includes(state.pub.phase)) return nextAction(state);
-    if (calls >= client.maxCalls) return nextAction(state);
+    const social = !['BAND_DRAFT', 'PREP'].includes(state.pub.phase);
+    const now = state.now || Date.now();
+    if (social) {
+      // talk only when a teammate actually said something since the last social turn
+      const last = state.chat && state.chat[state.chat.length - 1];
+      const at = Number(last && last.at) || 0;
+      if (!last || at <= lastSocialChatAt) return null;
+      lastSocialChatAt = at;
+    }
+    if (calls >= client.maxCalls) return social ? null : nextAction(state);
     const stateKey = JSON.stringify(promptState({ ...state, bands }));
     // The previous action changed nothing → it was refused. Remember it and let the rule loop try another target
     // (a model that keeps proposing the same illegal cell would otherwise burn the call budget).
-    if (stateKey === lastStateKey && lastActKey) {
+    if (!social && stateKey === lastStateKey && lastActKey) {
       if (blocked.size < 200) blocked.add(lastActKey);
       lastActKey = '';
       log('state unchanged; rule fallback');
       return nextAction(state);
     }
-    const user = stateKey;
-    calls++;
-    const t0 = Date.now();
+    const user = social
+      ? `${stateKey}\n\n# SOCIAL TURN\nOnly room.chat or g.emote (or {"action":null}); do not buy/move/ready.`
+      : stateKey;
     try {
-      const reply = await client.ask(system, user);
-      latency = Date.now() - t0;
-      const parsed = parseReply(reply.text);
+      const parsed = await callWithLookup(user);
       const action = validAction(parsed && (parsed.action ?? parsed), state);
-      const usage = reply.usage ? ` tokens ${reply.usage.input_tokens ?? reply.usage.prompt_tokens ?? '?'}/${reply.usage.output_tokens ?? reply.usage.completion_tokens ?? '?'}` : '';
-      log(`call ${calls}/${client.maxCalls} ${client.provider}/${client.model} ${latency}ms${usage}`);
+      if (social) {
+        const said = action && (action.t === 'room.chat' || action.t === 'g.emote') ? gateSocial(action, now) : null;
+        if (said) return { msg: said, note: `model ${said.t}` };
+        return null;
+      }
       if (action && !blocked.has(sig(action))) {
-        lastStateKey = stateKey;
-        lastActKey = sig(action);
-        return { msg: action, note: `model ${action.t}` };
+        const paced = gateSocial(action, now);
+        if (!paced) return nextAction(state);       // chat/emote cooldown: keep playing
+        if (paced.t !== 'room.chat' && paced.t !== 'g.emote') { lastStateKey = stateKey; lastActKey = sig(paced); }
+        return { msg: paced, note: `model ${paced.t}` };
       }
       if (action) log('model repeated a refused action; rule fallback');
       else log('model reply had no legal action; rule fallback');
     } catch (e) {
       log(`model call failed (${e.message}); rule fallback`);
     }
-    return nextAction(state);
+    return social ? null : nextAction(state);
   };
 
   if (args.demo) {
