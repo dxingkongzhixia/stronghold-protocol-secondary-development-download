@@ -108,7 +108,7 @@
 | 插件意图边界 | `shared/plugins/ui.js`（`agent.*` 与 `g.*` 一样属于客户端意图，插件不能发送） |
 | 前端 AGENT 标记 / 邀请入口 | `public/js/screens/{room,rooms,bandDraft,result,settle}.js`、`public/js/ui/gameComponents.js`、`public/js/main.js`（`agent.invite`）、`public/js/store.js`、`public/css/screens/{room,lobby}.css` |
 | 运维计数 / 健康检查 | `server/lobby.js`（`agentStats`）、`server/admin.js`（「AI 席位」页） |
-| 示例客户端（P3） | `tools/agent/player.mjs`（规则循环）、`tools/agent/agent.mjs`（WS CLI）、`tools/agent/llm.mjs`（OpenAI / Anthropic） |
+| 示例客户端（P3） | `tools/agent/player.mjs`（规则循环）、`tools/agent/agent.mjs`（WS CLI）、`tools/agent/llm.mjs`（OpenAI / Anthropic + 规则书注入） |
 | 端到端（P4） | `test/e2e/agent-seat.e2e.mjs` |
 | 测试 | `test/match/agent-seat.test.js`、`test/agent-llm.test.js` |
 
@@ -129,7 +129,7 @@
 9. 日志包含 `agent … claimed seat N` / `handed back to the AI (reason)`，**不包含**明文 token。
 10. 开关默认关闭；`/healthz.agents` 报告开关、在座、邀请与计数。
 11. `test/package.test.js`：agent 席位代码不会被 `llmRelease` 排除，`tools/agent` 不进玩家包。
-12. `test/agent-llm.test.js`：OpenAI / Anthropic 两种 wire format、JSON 解析、动作白名单。
+12. `test/agent-llm.test.js`：OpenAI / Anthropic 两种 wire format、JSON 解析、动作白名单、规则书 §1–§7 注入与上限。
 
 ### 6.1 P4 真实对局回归
 
@@ -160,6 +160,26 @@ node tools/agent/llm.mjs --token <token> --provider openai --model gpt-4.1
 `SP_LLM_API_KEY` / `SP_LLM_BASE_URL` / `SP_LLM_MODEL` 由 agent 所在机器设置；服务器不读取任何 `SP_LLM_*`。
 `tools/agent/player.mjs` 只做四件事：确认信息、选一个未占用的乐队、买/部署棋子、拿奖励后 ready；
 它是协议示例与 P4 的固定动作源，**不是**竞技 bot；模型不可用/超预算时 `llm.mjs` 自动回退到它。
+
+### 7.1 规则如何告诉模型
+
+`llm.mjs` 启动时读取 **`docs/PLAYING.md` §1–§7**（玩家规则书，最多 24 000 字符）放进 system prompt，再附：
+
+- 每回合阶段、可用的 `g.*` 动作白名单与参数格式；
+- 局面字段说明（`phase` / `funds` / `shop` / `hand` / `board` / `deployCap` / `draft` / `personalChoice` …）；
+- 一条简短策略（买棋、部署、拿奖励、ready）。
+
+每次请求的 user 消息只有**该座位可见**的压缩局面（`m.public` + `m.private` 的字段子集），不含隐藏信息。
+规则路径与上限可调：
+
+```bash
+--rules <path>            # 默认 docs/PLAYING.md §1–§7
+--rules-max-chars 24000   # 或 SP_AGENT_RULES_MAX
+--rules none              # 不发送规则书
+```
+
+文件不存在时使用内置的简短规则摘要（远程 agent 也可以只带这一份）。
+Anthropic 会对 system 前缀加 `cache_control`；OpenAI 兼容网关是否缓存由网关决定。
 
 ### 7.1 里程碑（全部完成）
 

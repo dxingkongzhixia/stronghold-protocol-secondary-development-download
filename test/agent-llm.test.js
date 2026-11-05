@@ -4,8 +4,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { GEO } from '../shared/constants.js';
-import { makeClient, validAction, parseReply } from '../tools/agent/llm.mjs';
+import { makeClient, validAction, parseReply, buildSystem, extractRules, loadRulesBrief } from '../tools/agent/llm.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function fakeProvider(handler) {
   return new Promise((resolve) => {
@@ -52,6 +56,24 @@ test('Anthropic provider: POST /messages with x-api-key and the version header',
     assert.equal(srv.seen[0].body.system, 'system prompt');
     assert.equal(srv.seen[0].body.messages[0].role, 'user');
   } finally { await srv.close(); }
+});
+
+test('the rule book is sent to the model, bounded to §1–§7 and cached as a stable prefix', () => {
+  const brief = loadRulesBrief();
+  assert.equal(brief.fallback, false, 'the checkout carries docs/PLAYING.md');
+  assert.match(brief.text, /## 1\. /);
+  assert.match(brief.text, /## 7\. /);
+  assert.doesNotMatch(brief.text, /## 8\. /);
+  assert.ok(brief.chars <= 24000, `bounded (${brief.chars})`);
+  const system = buildSystem(brief.text);
+  assert.ok(system.includes(brief.text), 'the rule excerpt is in the system prompt');
+  assert.match(system, /g\.ready/);
+  assert.match(system, /STATE FIELDS/);
+  assert.equal(extractRules('## 1. A\nrule\n## 8. B\nignored'), '## 1. A\nrule');
+  assert.equal(extractRules(''), '');
+  const fallback = loadRulesBrief({ file: path.join(ROOT, 'does-not-exist.md') });
+  assert.equal(fallback.fallback, true);
+  assert.ok(fallback.chars > 100);
 });
 
 test('the model reply is parsed from fences/prose and only legal actions pass', () => {

@@ -50,7 +50,7 @@ function loadBands() {
 const log = (...a) => console.log('[llm-agent]', ...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const SYSTEM = `You play one seat in Stronghold Protocol: Alliance (a co-op auto-chess tower defense).
+const SYSTEM_CORE = `You play one seat in Stronghold Protocol: Alliance (a co-op auto-chess tower defense).
 You receive the public view and your own private view as JSON and must choose ONE action.
 
 Reply with JSON only, no prose:
@@ -70,6 +70,58 @@ Allowed actions (use only ids/uid/slot values that exist in the state):
 Strategy: pick a free band; spend funds on chess; deploy hand pieces into free deploy cells (deployCount < deployCap);
 take reward/choices; ready when the hand cannot be deployed or funds are spent. Do not invent ids. Prefer progress over
 perfection: if unsure, buy the cheapest chess, deploy, then ready.`;
+
+/** Shipped when docs/PLAYING.md is absent (a minimal bag the model can still follow). */
+export const FALLBACK_RULES = `One match: INFO_CHECK (confirm) -> BAND_DRAFT (pick one strategy) -> each round [draft] -> PREP
+(buy chess, deploy, equip, ready) -> auto battle -> settlement. Funds normally reset; only specific bands carry funds and
+pay interest. No EXP; shop upgrade cost drops by one each round. Three normal copies merge into an elite (exceptions
+apply) and give a promotion reward. Bonds count distinct operators. Enemy previews matter: blocking, anti-air, healing
+and leader damage. Deploy chess into the deployable cells of your own field; deployCount must stay within deployCap.`;
+
+/** docs/PLAYING.md §1–§7, bounded (the external-AI path uses a 16 000-character budget; this client defaults to 24 000). */
+export function extractRules(text, maxChars = 24000) {
+  if (typeof text !== 'string' || !text) return '';
+  const start = text.search(/^##\s*1\./m);
+  const end = text.search(/^##\s*8\./m);
+  let out = start >= 0 ? text.slice(start, end > start ? end : undefined) : text;
+  if (out.length > maxChars) {
+    out = out.slice(0, maxChars);
+    const cut = out.lastIndexOf('\n\n');
+    if (cut > maxChars * 0.7) out = out.slice(0, cut);
+  }
+  return out.trim();
+}
+
+/**
+ * Load the player-facing rules from this checkout (or `file`). An agent on another machine can pass `--rules <path>`
+ * or rely on the compact fallback when the file is absent.
+ * @param {{ file?: string | null, maxChars?: number }} [opts]
+ * @returns {{ text: string, source: string, chars: number, fallback: boolean }}
+ */
+export function loadRulesBrief({ file = null, maxChars = 24000 } = {}) {
+  const path = file || new URL('../../docs/PLAYING.md', import.meta.url);
+  try {
+    const text = extractRules(readFileSync(path, 'utf8'), maxChars);
+    if (text) return { text, source: String(file || 'docs/PLAYING.md'), chars: text.length, fallback: false };
+  } catch { /* fall through to the built-in brief */ }
+  return { text: FALLBACK_RULES, source: 'built-in', chars: FALLBACK_RULES.length, fallback: true };
+}
+
+/** The full system prompt: role/action contract + the rule book + a short field glossary. */
+export function buildSystem(rules) {
+  const book = rules || '(no rule book attached: follow the action contract and the visible state only)';
+  return `${SYSTEM_CORE}
+
+# RULE BOOK
+${book}
+
+# STATE FIELDS
+phase: INFO_CHECK | BAND_DRAFT | PREP | COMBAT | UNITE | RESULT.
+you.funds / you.shopLevel / you.deployCap / you.deployCount / you.canReady / you.ready.
+shop[].slot is the g.buy slot; hand[].uid is the g.move/g.sell uid; board[] shows occupied cells.
+draft.turn is whose band pick it is; draft.picks are the taken bandIds.
+personalChoice / rewardOffer block Ready until answered with g.choice / g.reward.`;
+}
 
 /** Strip a JSON reply that a model wrapped in prose / fences. */
 export function parseReply(text) {
@@ -154,10 +206,14 @@ export function makeClient(opts) {
     try {
       let res;
       if (provider === 'anthropic') {
+        // the rule book is a stable prefix: ask Anthropic to cache it across calls
+        const sys = typeof system === 'string' && system.length > 2000
+          ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }]
+          : system;
         res = await fetch(`${base}/messages`, {
           method: 'POST', signal: ctl.signal,
           headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model, max_tokens: maxTokens, temperature, system, messages: [{ role: 'user', content: user }] }),
+          body: JSON.stringify({ model, max_tokens: maxTokens, temperature, system: sys, messages: [{ role: 'user', content: user }] }),
         });
       } else {
         res = await fetch(`${base}/chat/completions`, {
@@ -188,11 +244,22 @@ async function run() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help || args.h) {
     console.log('node tools/agent/llm.mjs --token <token> --provider openai|anthropic --model <id> [--demo]');
+    console.log('  --rules <path>            rule book to send (default docs/PLAYING.md §1–§7; "none" disables)');
+    console.log('  --rules-max-chars <n>     cap the rule excerpt (default 24000; SP_AGENT_RULES_MAX)');
     return;
   }
   const url = args.url || process.env.SP_AGENT_URL || 'ws://127.0.0.1:3000/ws';
   const name = args.name || 'LLM Agent';
   const bands = loadBands();
+  const rulesArg = args.rules || process.env.SP_AGENT_RULES;
+  const rules = args['no-rules'] || /^(?:none|off|0)$/i.test(String(rulesArg || ''))
+    ? { text: '', source: 'off', chars: 0, fallback: false }
+    : loadRulesBrief({
+      file: rulesArg || null,
+      maxChars: Math.max(1000, Number(args['rules-max-chars'] || process.env.SP_AGENT_RULES_MAX || 24000)),
+    });
+  const system = buildSystem(rules.text);
+  log(`rules: ${rules.source} (${rules.chars} chars)${rules.fallback ? ' [built-in fallback]' : ''}`);
   const client = makeClient(args);
   let calls = 0;
   let latency = 0;
@@ -220,7 +287,7 @@ async function run() {
     calls++;
     const t0 = Date.now();
     try {
-      const reply = await client.ask(SYSTEM, user);
+      const reply = await client.ask(system, user);
       latency = Date.now() - t0;
       const parsed = parseReply(reply.text);
       const action = validAction(parsed && (parsed.action ?? parsed), state);
