@@ -48,7 +48,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | browser client (screens) | `public/js/main.js`, `public/js/store.js`, `public/js/screens/` |
 | browser UI widgets | `public/js/ui/` |
 | **main interface switch (classic lobby / Hub)** | [`docs/UI-HUB.md`](UI-HUB.md) · `server/uiMode.js` · `public/js/screens/hub/` · `public/css/screens/hub.css` |
-| **手机端（横屏）视觉 / 触屏 / 安全区 / 画质** | [`docs/MOBILE-UI.md`](MOBILE-UI.md) · `public/css/devices.css` · `public/js/ui/{device,screenFit}.js` · `public/js/render/app.js`（DPR/质量档） |
+| **手机端（横屏 ≥640×360）：视觉 / 触屏 / 安全区 / 画质 / 验收** | [`docs/MOBILE-UI.md`](MOBILE-UI.md)（清单与验收）· `public/css/devices.css` · `public/js/ui/{device,screenFit}.js` · `public/js/render/app.js`（DPR/质量档）· `npm run check:mobile`（`tools/mobile-audit.mjs`、`public/dev/mobile-audit.{html,js}`、`test/mobile/*`） |
 | plugin system review / risks / verification gaps | [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) |
 | **Keel（龙骨）插件系统（上手 / 功能 / 架构 / 流程 / 排错 / 模块权限）** | [`docs/keel/QUICKSTART.md`](keel/QUICKSTART.md) · [`docs/keel/FEATURES.md`](keel/FEATURES.md) · [`docs/keel/ARCHITECTURE.md`](keel/ARCHITECTURE.md) · [`docs/keel/MODULES.md`](keel/MODULES.md) · [`docs/keel/WORKFLOW.md`](keel/WORKFLOW.md) · [`docs/keel/DEBUGGING.md`](keel/DEBUGGING.md) · [`docs/keel/README.md`](keel/README.md) · `shared/keel/` · `tools/keel.mjs` |
 | **which Keel module / capability should I use?** | [`docs/keel/MODULES.md`](keel/MODULES.md)（七种模块、31 个能力、hooks、模板覆盖、已知差异） · `shared/keel/manifest.js` · `shared/keel/contracts.js` |
@@ -56,10 +56,11 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | plugin content authoring (records, bonds, bands, enemies) | [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md), [`docs/PLUGINS.md`](PLUGINS.md) §10 |
 | plugin DSL (skills / talents / prep) | [`docs/PLUGIN-DSL.md`](PLUGIN-DSL.md) |
 | **PRTS「源代码」玩法插件（已上线：Boss/拟态/凯尔希 band，fork 独有）** | [`docs/PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) |
+| PRTS 插件 B–E 计划（未做部分） | [`docs/PRTS-SOURCE-CODE-REMAINING.md`](PRTS-SOURCE-CODE-REMAINING.md) |
+| 评估过但暂不实现的大功能（先看这里再提新需求） | [`docs/FUTURE-FEATURES.md`](FUTURE-FEATURES.md) |
 | **AI 机器人训练 / 布局先验** | [`docs/DEPLOY.md`](DEPLOY.md)（Bot rehearsal / training）, `server/match/botPrior.js`, `tools/train-bot.mjs`, `server/training/` |
 | **攻击动画节奏（#729：模拟器给真实攻击间隔）** | [`docs/SIM.md`](SIM.md) §9 · `server/sim/snapshot.js` (`atkInterval`), `server/sim/battle/{events,lifecycle}.js` (`['rate', …]`), `public/js/render/attackRate.js`, `public/js/render/units.js` (`setAtkInterval` / `respawn`) |
 | **触发型效果 / 场(domain) / 施法窗口 / 离场快照 / 弹道记录 / 伤判守卫**（上游新干员的设计，自研实现） | [`docs/SIM.md`](SIM.md) §7.2.1 · `server/sim/battle/{triggers,domains}.js`, `server/sim/content/kits/shared/{triggerEffect,castWindow,leave,shotRecord}.js`, `DamageInfo.guarded`；样例 `kits/ops/op-{tocka,dminon,oxi}.js` |
-| **手机端验收（视口矩阵 / 点击区 / 安全区 / 基线截图）** | [`docs/MOBILE-UI.md`](MOBILE-UI.md) §7 P0 · `npm run check:mobile` · `tools/mobile-audit.mjs`, `public/dev/mobile-audit.{html,js}`, `test/mobile/matrix.mjs`, `test/mobile/tap-exceptions.json` |
 | **AI 策略注册表 / 内置策略 / 每座位覆盖** | [`docs/BOT-STRATEGIES.md`](BOT-STRATEGIES.md) · `server/match/{botStrategies,botStrategyContract,botPrep,botAdaptive,botIoleta,botIoletaPolicy}.js` · `SP_BOT_STRATEGY(_SEATS)` |
 | **外部 AI 顾问（sp-ai/1）/ LLM 适配器** | [`docs/EXTERNAL-AI.md`](EXTERNAL-AI.md) · `server/match/{externalAI,externalConfig,llmGate,llmRelease,aiDigest,aiPlan,aiEconomy}.js`, `server/ai/`, `tools/ai/` |
 | **示例顾问的打法 / 经济基准（不改变规则）** | [`docs/AI-STRATEGY.md`](AI-STRATEGY.md) · `server/ai/{playbook,strategy,strategy-community,cycles}.js` |

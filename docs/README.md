@@ -1,6 +1,6 @@
 # 文档系统 / Documentation System
 
-> **状态**：维护中的文档总入口（2026-11-02 整体重新梳理）。
+> **状态**：维护中的文档总入口（2026-11-02 整体重新梳理；2026-11-05 登记校正）。
 > 新增或移动文档时，按 §7.3 的清单登记：**本页 → [`QUERY-INDEX.md`](QUERY-INDEX.md) → [`../AGENTS.md`](../AGENTS.md)
 > → [`AI-AGENT.md`](AI-AGENT.md) §7 → [`HANDOVER.md`](HANDOVER.md) 参考表**。
 
@@ -48,6 +48,8 @@
 | 插件运维 / 排查（房间变慢、构建失败、插件不加载） | [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md) | [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) → [`PROJECT-STATE.md`](PROJECT-STATE.md) |
 | Forge 包作者 | [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) | [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) |
 | 运维 / 发布 | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) → [`DEPLOY.md`](DEPLOY.md) | [`PROJECT-STATE.md`](PROJECT-STATE.md) → [`RELAY.md`](RELAY.md) → [`WINDOWS.md`](WINDOWS.md) |
+| 前端 / 手机端 | [`MOBILE-UI.md`](MOBILE-UI.md)（清单） | `public/css/devices.css` → [`UI-HUB.md`](UI-HUB.md) → `npm run check:mobile` |
+| AI 座位 / 外部模型接入 | [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) | [`EXTERNAL-AI.md`](EXTERNAL-AI.md) → [`AI-STRATEGY.md`](AI-STRATEGY.md) |
 | 玩家 / 规则查阅 | [`PLAYING.md`](PLAYING.md) | [`RULES.md`](RULES.md) → [`DESIGN.md`](DESIGN.md) |
 
 ---
@@ -80,6 +82,8 @@
 | [`SPECIAL-UI.md`](SPECIAL-UI.md) | 特殊 UI 版本（ark-proto PRTS 终端）的静态快照 | 参考 |
 | [`I18N.md`](I18N.md) | UI / 游戏文本 / 服务器消息 / 新语言 | 参考 |
 | [`SKINS.md`](SKINS.md) | 皮肤目录、选择器、本地时装提取、渲染回退 | 当前 |
+| [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) | AI 策略注册表、内置策略、每座位覆盖、重放与测试矩阵 | 当前 |
+| [`EXTERNAL-AI.md`](EXTERNAL-AI.md) | 外部 AI（sp-ai/1）与 LLM 适配器：传输、配置、安全边界、测试 | 当前 |
 | [`PACKS.md`](PACKS.md) | 内容包 / 语言包格式 | 兼容参考 |
 | [`WINDOWS.md`](WINDOWS.md) | Windows 便携包 | 参考 |
 | [`RELAY.md`](RELAY.md) | 外部服务器目录站（第三方站点，**不是**我们的美术中继；中继见 `ASSETS.md`） | 参考 |
@@ -96,10 +100,7 @@
 | [`PLUGIN-GUIDE.md`](PLUGIN-GUIDE.md) | 不写代码的插件作者：工作台、模板、换图、试玩、打包 | 指南（v2 教程） |
 | [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md) | 写插件的开发者：结构、测试、发布 | 指南（v2 教程） |
 | [`FORGE-PLUGIN-DEV-GUIDE.md`](FORGE-PLUGIN-DEV-GUIDE.md) · [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md) | Forge 包作者与兼容矩阵 | 指南 / 兼容 |
-| [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md) | AI 策略注册表、内置策略、每座位覆盖与重放 | 当前 |
 | [`AI-STRATEGY.md`](AI-STRATEGY.md) | 示例顾问的打法、经济基准、证据分层（不改规则） | 参考 |
-| [`EXTERNAL-AI.md`](EXTERNAL-AI.md) | 外部 AI（sp-ai/1）与 LLM 适配器：配置、模式、安全边界 | 当前 |
-| [`MOBILE-UI.md`](MOBILE-UI.md) | 手机端视觉优化：现状、缺口（含证据）、P0/P1/P2 排期与验收 | 计划 |
 | [`BALANCE.md`](BALANCE.md) | 难度模型与测量（官方数值） | 参考 |
 
 ### 3.4 运维 / 状态层（描述「现在」，不覆盖规范）
@@ -113,6 +114,7 @@
 | [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | 仍未解决的插件问题、风险、排期 | 当前状态 |
 | [`keel/NEXT.md`](keel/NEXT.md) · [`keel/REMAINING.md`](keel/REMAINING.md) | Keel 的检查点、剩余项与边界 | 当前状态 |
 | [`TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) | trusted 类插件的生产隔离方案 | 部署参考 |
+| [`MOBILE-UI.md`](MOBILE-UI.md) | 手机端（横屏 ≥640×360）现状 / 缺口 / P0–P2 执行清单与验收 | 计划 |
 
 ### 3.5 历史 / 决策层（记录「为什么」，不保证仍是当前行为）
 
@@ -120,7 +122,7 @@
 |---|---|---|
 | [`MATCHMAKING.md`](MATCHMAKING.md) | 决策记录 §0–§49（账号、野排、自造干员、社区、§22 黑名单） | 历史 + 决策 |
 | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | 主线合并日志 + **永不合并清单 §0** | 历史 |
-| [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | 主线未并入清单（0.3.2 / 0.3.3）与建议顺序 | 状态 |
+| [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | 主线未并入台账（发布线 0.3.2 / 0.3.3 + 开发线 0.3.4 §9 清单）与建议顺序 | 当前状态 |
 | [`history/`](history/) | 各版本规则修订（发布时的事实） | 历史 |
 | [`keel/HISTORY.md`](keel/HISTORY.md) | Keel 的历史与决策 | 历史 |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | 发布记录 | 历史 |
@@ -158,6 +160,7 @@
 | 哪些东西合并时不能丢 | [`OUR-FEATURES.md`](OUR-FEATURES.md) | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0（永不合并清单） | — |
 | 素材 / 皮肤 / 语言 / 内容包 | [`ASSETS.md`](ASSETS.md) | [`SKINS.md`](SKINS.md) · [`I18N.md`](I18N.md) · [`PACKS.md`](PACKS.md) | — |
 | AI 怎么打 | [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md)（实现） | [`AI-STRATEGY.md`](AI-STRATEGY.md)（示例打法）· [`EXTERNAL-AI.md`](EXTERNAL-AI.md)（外部 LLM） | [`MATCHMAKING.md`](MATCHMAKING.md) |
+| 手机 / 触屏 / 安全区怎么改 | [`MOBILE-UI.md`](MOBILE-UI.md)（清单与验收） | `devices.css`、`js/ui/device.js`、`test/mobile/*`（实现） | — |
 | 难度数值 | [`BALANCE.md`](BALANCE.md) + `data/tuning.json`（`OUR-FEATURES.md` §11） | — | — |
 
 ---
@@ -210,6 +213,7 @@
 - **规范** — 字段 / 行为的权威定义；
 - **参考** — 解释实现，允许代码先行后补；
 - **指南** — 操作步骤（配方），不是行为定义；
+- **计划** — 已批准、按清单推进的工作（有验收标准，但描述的是「将要做什么」）；
 - **历史** — 发布时记录，不保证仍是当前行为；
 - **草案 / 路线图** — 未批准，不能当作承诺；
 - **当前状态** — 有意保持短、可更新，允许频繁变化。

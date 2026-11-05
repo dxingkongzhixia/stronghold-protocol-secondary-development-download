@@ -63,9 +63,9 @@
 | 2026-10-27 22:56 上线批次 | ① **技能音效补全**：从本地 CN 客户端抽出 **331 条**技能/攻击音效（`tools/local-extract/sfx.py`），含烛煌 S3 这类 `_s` 槽位；② **71 张新干员立绘**（`illust.py`，`data/assets.json` 的 `illust` 140 → 211）；③ **攻击收尾**：`MIN_ATTACK_TAIL = 0.15 s`，攻击窗口不再出现「一帧回 idle」；④ **内存优化**：content set 采纳后释放 builder 副本（`releaseContentSet`）、`MAX_KEPT` 12 → 6、`MAX_HOSTS` 6、`npm start` 加 `--max-old-space-size=512`。相对 `d62b97ad1` 共 **6 个提交 / 423 个文件**（增量包 9.07 MB / 0 删除） |
 | 2026-10-27 17:02 上线批次 | ① **核心皮肤修复**：`tools/skins.mjs build` 把 `plugin.lock.json` 的动画片段写回 catalogue（缺 `anims` 时 `validSpine` 判无效、房间回退默认模型）；② **主线 0.3.2 战斗修正批 A 12 项**（#720 / #869 / #789 / #749 / #839 / #845 / #851 / #803 / #846 / #847 / #31 / #861）+ 对应 golden；③ 魔王「微尘」环绕光环（#576，纯显示）。相对上次部署 `fce35d298` 共 **34 个提交 / 63 个文件**（增量包 1.07 MB） |
 | 2026-10-26 上线批次 | ① **插件组合上限** `4 → 12 → 128`（`plugins/config.json` 的 `limits.maxSets: 128`，策略天花板从 0–64 放到 0–128；代码默认 `DEFAULT_MAX_SETS = 32`、空闲缓存 `MAX_KEPT = 12`）—— 之前 4 个就是玩家看到的「插件已达上限」；② 房间加载插件卡顿：内容集文件校验改用浏览器原生 `crypto.subtle.digest`，纯 JS SHA-256 仅作回退；③ `server/speed.js` 的 `readOrigins` 按**位置**把第一个源标为「中继」（域名中继不再被误判为镜像）；④ 主界面模式选择三张卡改用官方纹理（`btn_single/btn_team/btn_match`）；⑤ 按键音关闭 |
-| git store | **台式机** = `_merge-scratch`（分支 `prts-plugin`，HEAD 见 `git log`），开发树 `D:\DOTK\Stronghold-Protocol` 已镜像；本轮 HEAD `80a46958e` |
-| 远程同步 | **已推送（2026-10-28）**：`github/master` == `gitee/master` == HEAD（`82d108f66` + 本次记录），**资源中继** `/srv/sp.git` 的 `master` = `82d108f66`（中继只服务 `public/`，文档提交不需要推；公网实测 relay 的 `/js/render/app.js` 200 且含 `ownerCharId`）。发布顺序照旧：中继 → github → gitee。GitHub 直连会失败，本机走 Steam++ 加速器（hosts 把 github 域名指到 `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`（已写进本仓库 local config，非仓库文件）。本机 `~/.ssh/sp-deploy.pub`（`sp-relay-deploy`）已于 2026-10-28 补进中继机 `authorized_keys`（原来只有台式机的 `sp-deploy@DESKTOP-QDB9ORN`），本机现在可直接推中继。游戏服仍只开 root 密码认证，密码由 owner 持有、不入库 |
-| 全量测试 | **8734 项 / 8694 通过 / 0 失败 / 40 跳过，约 11 min**（2026-10-29 笔记本实测；外部 AI 策略栈 + 每座位策略 + #729 攻击动画节奏并入之后。此前 2026-10-29 外部 AI 单轮 8713 / 8673 / 0 / 40；2026-10-28 为 8527 / 8487 / 0 / 40）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6）。注：`test/plugins/visualSet.test.js` 的「压缩缓存 ctime」用例在本机**偶发**失败（Windows 时间戳粒度，与代码无关；把改动 stash 后仍 4/5 失败） |
+| git store | **台式机** = `_merge-scratch`（分支 `prts-plugin`，HEAD 见 `git log`），开发树 `D:\DOTK\Stronghold-Protocol` 已镜像；以 `github/master` 的 `git log` 为准（本表不再钉死哈希） |
+| 远程同步 | **三处角色不同，别当成互为镜像**：① `github` = **完整历史**的主仓库；② `gitee` = **只推代码快照**（1 GB 上限；历史是自己生成的 `code-only mirror` 快照，**不是** master 的镜像，永不 force、也不要把它的历史并回 master）；③ **资源中继** `/srv/sp.git` 只服务 `public/`（**推即部署**），发布顺序：中继 → github（→ gitee 快照）。GitHub 直连靠 Steam++（hosts 指向 `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`（本仓库 local config）；本机 `sp-relay-deploy` 公钥已在中继机。游戏服仍只开 root 密码认证，密码由 owner 持有、不入库 |
+| 全量测试 | 以**台式机最近一次上线批次**的实测为准（见 §4 的部署记录与 `CHANGELOG.md`；本机 2026-10-29 的 8734 / 8694 / 0 / 40 已过期）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6）。注：`test/plugins/visualSet.test.js` 的「压缩缓存 ctime」用例在 Windows 上**偶发**失败（时间戳粒度，与代码无关） |
 | 其它闸门 | **2026-10-26 台式机 store 复测**：`lint` 0 error（186 warning）✓；`typecheck` ✓；`i18n check en --strict` **1966/1966**（100%）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 **35/35** ✓；kit 覆盖 **283/283** 技能、**112/112** 棋子 ✓；`check:imports` 3 条既有 `sim-node` 边界记录 |
 | 本机环境 | Node **v24.19.0**（线上是 v26.10.0）；**系统 `python` 已是 3.12.10**（2026-10-28 升级：旧的 `C:\Program Files\python` 3.8.6 已从机器 PATH 移除、文件保留；`paramiko 5.1.0` / `UnityPy 1.25.4` 已装）；GitHub 经 Steam++（hosts → `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`；官方数据 CDN 需要代理 |
 | 本地服务 | `npm start`（= `node --max-old-space-size=512 server/index.js`，2026-10-27 起；直接 `node server/index.js` 不设上限）于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
@@ -221,16 +221,14 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 
 ## 9. 已知问题 / 待办
 
-**2026-11-04 手机端视觉优化（立项，见 [`MOBILE-UI.md`](MOBILE-UI.md)）**
+**2026-11-04 手机端视觉优化（P0 已落地，见 [`MOBILE-UI.md`](MOBILE-UI.md)）**
 
 - 已具备：安全区、触屏手势、≥44 px 命中区、画质/DPR 档、横屏提示、屏幕适配；对局内媒体查询较全。
-- 待办（P0）：视口矩阵与基线截图（640×360 / 740×360 / 844×390 / 915×412 / 1024×768）；`100vh` → `dvh/--sp-vh`；
-  可点元素 <44 px 自动检查（`tools/mobile-audit.mjs`）；安全区回归（左右 24 / 底部 34）。
-- 待办（P1）：**房间 / 结算 / 大厅 / 图鉴 / 指南 / 统计 / 设置抽屉** 的手机规则（这 7 处 CSS 目前没有手机断点）；
-  对局 HUD 在 640×360 的字号与间距补漏。
-- **已定（2026-11-04）**：只支持横屏 + 旋转提示；最低 `640×360`；矩阵进 CI。
-  **执行清单见 [`MOBILE-UI.md`](MOBILE-UI.md) §7**（P0 = M0.1–M0.9，P1 = M1.1–M1.8，P2 = M2.1–M2.5）。
-  本机（笔记本）不改代码，由台式机按清单执行。
+- **P0 已完成（M0.1–M0.9）**：视口矩阵（最低 640×360）、`100vh`→`100dvh`（14 处清零）、
+  `public/dev/mobile-audit.html`、`tools/mobile-audit.mjs`、安全区模拟、点击区白名单、`npm run check:mobile`、
+  CI job `mobile-audit`；M1.3（Hub ≤760 纵向堆叠）也已落地。
+- **剩余 P1**：房间/备战、结算、图鉴/指南/统计、设置/装备抽屉、对局 HUD 640×360 补漏、弹层/草稿/简报、真机抽查。
+- 另：手机高画质改用设备 DPR、自适应降采样下限 0.8（干员不再模糊）。
 
 **2026-10-27 音效与立绘：从国服客户端补齐（已改，未上线）**
 

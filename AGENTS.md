@@ -69,6 +69,8 @@ laptop, read every `D:\DOTK\...` path as *store ↔ this checkout*, *dev tree �
 | merge log / never-merge list | [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) |
 | plugin spec / SDK / DSL | [`docs/PLUGINS.md`](docs/PLUGINS.md) · [`docs/PLUGIN-API.md`](docs/PLUGIN-API.md) · [`docs/PLUGIN-DSL.md`](docs/PLUGIN-DSL.md) |
 | content-set builds: caches, env, `why is a plugin room slow?` | [`docs/PLUGIN-BUILD.md`](docs/PLUGIN-BUILD.md) |
+| AI seat / bot strategies / external AI / LLM advisor | [`docs/BOT-STRATEGIES.md`](docs/BOT-STRATEGIES.md) · [`docs/EXTERNAL-AI.md`](docs/EXTERNAL-AI.md) · [`docs/AI-STRATEGY.md`](docs/AI-STRATEGY.md) |
+| phone / touch / safe area / responsive work | [`docs/MOBILE-UI.md`](docs/MOBILE-UI.md) |
 
 ## 4. Run, build and verify
 
