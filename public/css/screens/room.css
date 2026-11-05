@@ -205,6 +205,11 @@
   border: 1px solid var(--line2); background: rgba(0, 0, 0, .35); color: var(--ice);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: calc(.13 * var(--t));
 }
+/* developer-only block (?dev=1): the scripted client that needs a model key — players never see it */
+.agent-invite__dev { border-top: 1px dashed var(--line2); padding-top: .08rem; }
+.agent-invite__dev > summary { cursor: pointer; color: var(--text-dim); font-size: calc(.12 * var(--t)); }
+.agent-invite__dev[open] > summary { margin-bottom: .06rem; }
+.agent-invite__dev > * + * { margin-top: .08rem; }
 /* owner → agent coaching dialog */
 .coach { display: flex; flex-direction: column; gap: .1rem; }
 .coach p { margin: 0; line-height: 1.6; }

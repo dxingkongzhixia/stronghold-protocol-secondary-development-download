@@ -365,7 +365,16 @@ export function RoomScreen() {
   // rule 1 (owner 2026-11-05): any seated real player may invite an agent — never a spectator or an agent seat
   const canInviteAgent = coop && !facts.spectating && !!mySeat && !mySeat.agent;
   const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+  // Player path (docs/AGENT-SEATS.md): the one-time token IS the credential — hand it to your AI, which connects as an
+  // ordinary player. No API key is involved anywhere. The scripted LLM client is a developer tool, so its command stays
+  // behind `?dev=1` (or a loopback host) and never reads like the player's job.
+  const devTools = location.hostname === 'localhost' || location.hostname === '127.0.0.1' ||
+    new URLSearchParams(location.search).has('dev');
   const agentCommand = agentInvite ? `node tools/agent/llm.mjs --url ${wsUrl} --token ${agentInvite.token} --provider openai` : '';
+  const agentInviteMessage = agentInvite
+    ? t('请接管我的卫戍协议座位：服务器 {url}，座位 {seat} 的一次性 token：{token}。token 10 分钟内有效，只能用一次。',
+      { url: wsUrl, seat: agentInvite.seat + 1, token: agentInvite.token })
+    : '';
   const info = difficultyInfo(room.mode, room.difficulty);
 
   const run = async (kind, fn) => {
@@ -544,13 +553,18 @@ export function RoomScreen() {
       canSaveDefault=${!!auth?.account} saveDefault=${saveDefault} onSaveDefaultChange=${setSaveDefault}
       onPick=${pickArt} onClose=${() => setArtSeat(null)} busy=${busy === 'art'} />
     ${agentInvite ? html`<${Modal} open=${true} onClose=${closeAgentInvite} title=${t('邀请 AI 接入')} micro="AGENT SEAT" width="7.6rem"
-      actions=${html`<${Button} variant="primary" icon="copy" onClick=${() => copyText(agentCommand)}>${t('复制启动命令')}<//>`}>
+      actions=${html`<${Button} variant="primary" icon="copy" onClick=${() => copyText(agentInviteMessage)}>${t('复制给 AI')}<//>`}>
       <div class="agent-invite" data-testid="agent-invite">
-        <p>${t('把下面的一次性 token 交给运行 AI 客户端的设备。token 只显示这一次，10 分钟内有效。')}</p>
+        <p>${t('把这个一次性 token 发给你的 AI；它用普通的玩家连接接管座位，不需要 API key。token 只显示这一次，10 分钟内有效。')}</p>
         <code class="agent-invite__token" data-testid="agent-invite-token">${agentInvite.token}</code>
         <p class="t-dim">${t('座位 {seat} · 到期 {time}', { seat: agentInvite.seat + 1, time: new Date(agentInvite.expiresAt).toLocaleTimeString('zh-CN') })}</p>
-        <p>${t('在装有本项目的机器上运行（模型 key 只放在那台机器）：')}</p>
-        <code class="agent-invite__cmd">${agentCommand}</code>
+        ${devTools ? html`<details class="agent-invite__dev" data-testid="agent-invite-dev">
+          <summary>${t('开发者：本地 LLM 客户端（需要模型 key，仅管理员测试）')}</summary>
+          <p>${t('在装有本项目的机器上运行（模型 key 只放在那台机器）：')}</p>
+          <code class="agent-invite__cmd">${agentCommand}</code>
+          <${Button} variant="ghost" size="sm" icon="copy" onClick=${() => copyText(agentCommand)}>${t('复制启动命令')}<//>
+          <p class="t-dim">${t('普通玩家不需要这条命令，直接把上面的 token 发给 AI。')}</p>
+        </details>` : null}
         <p class="t-dim">${t('邀请者离开房间或掉线 30 秒，AI 座位会自动交还内置 bot。')}</p>
       </div>
     <//>` : null}

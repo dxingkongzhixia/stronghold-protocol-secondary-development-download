@@ -18,6 +18,11 @@ test('room screen: any seated real player can invite an agent to a bot seat', ()
   assert.match(room, /canInviteAgent = coop && !facts\.spectating && !!mySeat && !mySeat\.agent/);
   assert.match(room, /seat\.isBot && canInvite/);
   assert.match(room, /data-testid="agent-invite-token"/);
+  // Player path (owner 2026-11-05): the token is the credential — the primary action copies a message for the AI; the
+  // scripted LLM client (which wants a model key) is a developer tool, shown only under ?dev=1 / loopback.
+  assert.match(room, /copyText\(agentInviteMessage\)/);
+  assert.match(room, /const devTools = location\.hostname === 'localhost'/);
+  assert.match(room, /data-testid="agent-invite-dev"/);
   assert.match(room, /node tools\/agent\/llm\.mjs --url/);
   // the token is only in the invite frame; it must never enter the room table
   assert.doesNotMatch(room, /agentInvite.*seats/);
