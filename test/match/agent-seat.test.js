@@ -204,6 +204,24 @@ test('agent seat: the global switch is off unless enabled', async () => {
   }
 });
 
+test('agent seat: a clients-only server still accepts invites (a real browser executes the field)', async () => {
+  const s = await boot({ clientsOnly: true });
+  try {
+    const host = await s.connect('COHost');
+    await ok(host, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
+    await ok(host, { t: 'room.addBot' });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot);
+    await ok(host, { t: 'room.agentInvite', seat: 1 });
+    const invite = await host.waitFor('agent.invite');
+    const agent = await s.connect('COAgent');
+    await ok(agent, { t: 'agent.claim', token: invite.token });
+    const state = await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].agent);
+    assert.equal(state.seats[1].agent, true);
+  } finally {
+    await s.close();
+  }
+});
+
 test('agent seat: the owner may coach an offline agent; the directive is replayed on reconnect', async () => {
   const s = await boot({ agentGraceMs: 5000 });
   try {

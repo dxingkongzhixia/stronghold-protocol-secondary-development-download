@@ -1107,7 +1107,6 @@ export class Lobby {
     const room = this.roomOf(session);
     if (!room) return fail(ERR.NOT_IN_ROOM);
     if (!this.agentSeats) return fail(ERR.BAD_TARGET, 'agent seats are disabled');
-    if (this.clientsOnly) return fail(ERR.BAD_TARGET, 'clients-only server: an agent has no battle executor');
     if (room.mode === 'solo') return fail(ERR.BAD_TARGET, 'solo room');
     const inviter = room.seatOf(session.playerId);
     if (!inviter || inviter.isBot || inviter.agent) return fail(ERR.SPECTATOR, 'only a player may invite an agent');
@@ -1136,7 +1135,6 @@ export class Lobby {
    */
   claimAgentSeat(session, { token }) {
     if (!this.agentSeats) return fail(ERR.BAD_TARGET, 'agent seats are disabled');
-    if (this.clientsOnly) return fail(ERR.BAD_TARGET, 'clients-only server: an agent has no battle executor');
     if (this.roomOf(session)) return fail(ERR.ALREADY, 'leave your room first');
     const hash = agentInviteHash(token);
     const now = this.now();

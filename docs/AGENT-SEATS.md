@@ -95,7 +95,7 @@
 | `/admin` → 「AI 席位」 | 当前在座席位、待兑换邀请、到期时间、是否在对局中；顶部显示接管/交还计数与开关状态 |
 | 发布包 | agent 席位是**生产路径，随发布包保留**；只有开发专用的出网外部 AI 仍在 `llmRelease` 排除列表里（`test/package.test.js` 守护） |
 | 关闭开关 | `room.agentInvite` 与 `agent.claim` 都返回 `BAD_TARGET`，其他玩法不变 |
-| `SP_CLIENTS_ONLY=1` | 拒绝邀请：该模式要求每个战斗都有浏览器执行者，agent 客户端不模拟战斗（正常服务器会把 agent 的战场交给其他浏览器，或由服务端接管） |
+| `SP_CLIENTS_ONLY=1` | 允许，但 agent 的战斗必须由同房真人浏览器（`b.start background`）执行；没有可执行者时按该模式原有规则结束对局（`no-executor`）。agent 自己不会被选为执行者 |
 | 战斗执行 | agent 不运行战斗模拟；其战场由服务器按现有规则交给另一浏览器 / 服务端接管，因此不会把 `b.start` 当成必须由 agent 完成的职责 |
 
 ## 5. 代码位置
