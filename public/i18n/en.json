@@ -1704,6 +1704,7 @@
   "插件内容就绪": "Plugin content ready",
   "插件内容校验失败": "Plugin content check failed",
   "插件内容载入中": "Loading plugin content",
+  "由邀请者运行": "Run by the inviter's browser",
   "等待所有博士载入房间的插件内容": "Waiting for every Doctor to load the room's plugin content",
   "房间的插件内容载入并通过校验后才能准备": "You can get ready once the room's plugin content has loaded and passed its check",
   "含插件对局": "Include plugin matches",

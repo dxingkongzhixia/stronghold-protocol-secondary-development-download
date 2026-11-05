@@ -371,6 +371,10 @@ describe('statistics and the room\'s facts with gameplay plugins', () => {
     assert.equal(roomFacts(room, 'g').myContent, 'loading');
     const ready = { ...room, seats: room.seats.map((s) => (s.isBot ? s : { ...s, content: 'ready' })) };
     assert.equal(roomFacts(ready, 'h').canStart, true);
+    // an agent seat has no page: its `content` stays 'loading' and the host may still start (server/lobby.js exempts it);
+    // an older agent client that never re-readies must not hold the lobby either
+    const withAgent = { ...ready, seats: [...ready.seats, { seat: 3, playerId: 'p_ag', name: 'AIA', isBot: false, agent: true, ready: false, connected: true, content: 'loading' }] };
+    assert.deepEqual([roomFacts(withAgent, 'h').contentReady, roomFacts(withAgent, 'h').othersReady, roomFacts(withAgent, 'h').canStart], [true, true, true]);
     const f = roomPluginFacts(room, 'h');
     assert.deepEqual([f.modded, f.cs, f.modeId, f.modes.length], [true, 'cd'.repeat(32), 'mode_x_a_b', 1]);
     // the original game: no wait

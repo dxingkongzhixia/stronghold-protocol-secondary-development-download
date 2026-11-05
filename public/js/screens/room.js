@@ -69,10 +69,12 @@ export function roomFacts(room, myId) {
   // treats the host as ready — "已就绪 0/1" next to "准许进入模拟" would contradict itself.
   const isReady = (s) => !!s.ready || s.playerId === room?.hostId;
   const readyHumans = humans.filter(isReady).length;
-  const othersReady = others.every((s) => s.ready && s.connected !== false);
-  // a room with gameplay plugins (DESIGN §32.6): every player's page has loaded and checked its content (the host's too)
+  const othersReady = others.every((s) => (s.agent || s.ready) && s.connected !== false);
+  // a room with gameplay plugins (DESIGN §32.6): every player's page has loaded and checked its content (the host's too).
+  // An agent seat has no page to check (server/lobby.js start: `!s.agent && s.content !== 'ready'`) — the inviter's
+  // client, not the agent, owns the battle, so it must not hold the host's 开始 hostage.
   const modded = isModdedRoom(room);
-  const contentReady = !modded || humans.every((s) => s.content === 'ready');
+  const contentReady = !modded || humans.every((s) => s.agent || s.content === 'ready');
   return {
     seats, occupied, humans, mine, isHost, readyHumans, isReady,
     emptySeats: seats.filter((s) => !s).length,
@@ -222,8 +224,8 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, canInvite, onA
         </div>
       </div>
       <div class="seat__footact">
-        ${facts.modded && !seat.isBot ? html`<span class=${`seat__content is-${seat.content || 'loading'}`} data-testid="seat-content">
-          ${seat.content === 'ready' ? t('插件内容就绪') : seat.content === 'failed' ? t('插件内容校验失败') : t('插件内容载入中')}
+        ${facts.modded && !seat.isBot ? html`<span class=${`seat__content is-${seat.agent ? 'ready' : seat.content || 'loading'}`} data-testid="seat-content">
+          ${seat.agent ? t('由邀请者运行') : seat.content === 'ready' ? t('插件内容就绪') : seat.content === 'failed' ? t('插件内容校验失败') : t('插件内容载入中')}
         </span>` : null}
         ${seat.isBot && canInvite ? html`<${Tooltip} text=${t('邀请 AI 接入该座位（一次性 token）')}>
           <${Button} variant="ghost" size="sm" square=${true} icon="link" loading=${busy === `ai${index}`} onClick=${() => onInviteAgent(index)} aria-label=${t('邀请 AI')} />

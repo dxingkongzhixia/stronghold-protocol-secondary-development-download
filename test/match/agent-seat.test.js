@@ -394,3 +394,25 @@ test('agent seat: mid-match claim re-keys the bot state and the agent plays thro
     await s.close();
   }
 });
+
+test('agent client: the lobby keeper puts the seat back to ready after the host changes the room', async (t) => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  const { keepReady } = await import('../../tools/agent/agent.mjs');
+  const sent = [];
+  const conn = { id: 'p_ag', room: { seats: [{ playerId: 'p_ag', ready: false }] }, send: (m) => sent.push(m) };
+  try {
+    keepReady(conn);
+    t.mock.timers.tick(1000);
+    assert.deepEqual(sent, [{ t: 'room.ready', ready: true }], 'a cleared lobby flag is put back');
+    conn.room.seats[0].ready = true;
+    t.mock.timers.tick(1000);
+    assert.equal(sent.length, 1, 'already ready: silent');
+    conn.room.inMatch = true;
+    conn.room.seats[0].ready = false;
+    t.mock.timers.tick(1000);
+    assert.equal(sent.length, 1, 'a running match keeps its own g.ready');
+  } finally {
+    clearInterval(conn.readyTimer);
+    conn.readyTimer = null;
+  }
+});

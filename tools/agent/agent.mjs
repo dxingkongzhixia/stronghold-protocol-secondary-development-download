@@ -73,6 +73,8 @@ export class Conn {
     this.directives = [];
     this.result = null;
     this.closed = null;
+    this.room = null;
+    this.readyTimer = null;
     this.done = false;
     this.timer = null;
   }
@@ -94,6 +96,7 @@ export class Conn {
     try { msg = JSON.parse(data.toString()); } catch { return; }
     if (msg.t === 'm.public') this.pub = msg;
     else if (msg.t === 'm.private') this.priv = msg;
+    else if (msg.t === 'room.state') this.room = msg;
     else if (msg.t === 'm.chat') {
       this.chat.push({ name: typeof msg.name === 'string' ? msg.name : '', text: typeof msg.text === 'string' ? msg.text : '', at: msg.at });
       if (this.chat.length > 12) this.chat.shift();
@@ -159,6 +162,7 @@ export class Conn {
 
   close() {
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    if (this.readyTimer) { clearInterval(this.readyTimer); this.readyTimer = null; }
     try { this.ws?.close(); } catch { /* ignore */ }
   }
 }
@@ -194,6 +198,24 @@ export function play(conn, { bands, label = conn.label, decide = nextAction } = 
   }, 80);
 }
 
+/**
+ * The lobby has no ready button on an agent seat: when the host changes the room (plugins, difficulty, mode) the server
+ * clears every non-host seat's flag, and this client puts it back. One frame per second at most; a running match has
+ * its own `g.ready` and is left alone. Older agent clients may not do this — the server also exempts agent seats.
+ */
+export function keepReady(conn) {
+  if (conn.readyTimer) return conn.readyTimer;
+  conn.readyTimer = setInterval(() => {
+    const room = conn.room;
+    if (!conn.id || !room || room.inMatch) return;
+    const mine = (Array.isArray(room.seats) ? room.seats : []).find((s) => s && s.playerId === conn.id);
+    if (!mine || mine.ready) return;
+    conn.send({ t: 'room.ready', ready: true });
+  }, 1000);
+  conn.readyTimer.unref?.();
+  return conn.readyTimer;
+}
+
 export async function claimAndPlay({ url, name, token, bands, decide }) {
   const agent = new Conn(url, 'agent');
   await agent.open();
@@ -201,6 +223,7 @@ export async function claimAndPlay({ url, name, token, bands, decide }) {
   log(`connected as ${welcome.playerId} (seat claim pending)`);
   await agent.request({ t: 'agent.claim', token });
   log('claimed the bot seat; playing through ordinary g.* intents');
+  keepReady(agent);
   play(agent, { bands, decide });
   return agent;
 }

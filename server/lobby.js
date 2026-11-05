@@ -1691,7 +1691,9 @@ export class Lobby {
     const humans = room.activeHumans();
     if (room.content?.trusted && humans.some((s) => !s.isBot && !s.agent && s.consentCs !== room.content.cs)) return fail(ERR.PLUGIN_CONSENT);
     for (const s of humans) {
-      if (s.playerId !== room.hostId && (!s.connected || !s.ready)) return fail(ERR.NOT_READY);
+      // an agent seat has no ready button — it is ready by definition once connected (its client may still be an
+      // older build that never re-readies after the host changes plugins)
+      if (s.playerId !== room.hostId && (!s.connected || (!s.ready && !s.agent))) return fail(ERR.NOT_READY);
     }
     // a room with gameplay plugins starts once every player's page has loaded and checked its content (the host's too);
     // an agent seat has no page to check — it is run by the invite holder, not by a browser session
