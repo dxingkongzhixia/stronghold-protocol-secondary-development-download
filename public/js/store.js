@@ -93,6 +93,8 @@ export const initialState = Object.freeze({
   testMode: false,
   session: { entered: false },
   room: null,
+  // one-time agent-seat invite (S2C agent.invite): { token, seat, code, expiresAt } until the dialog is dismissed
+  agentInvite: null,
   match: emptyMatch(),
   ticker: [],
   emotes: [],

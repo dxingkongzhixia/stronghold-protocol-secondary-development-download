@@ -19,7 +19,7 @@
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, MAX_SEATS, MAX_SPECTATORS, CHAT_BUBBLE_MS } from '../../../shared/constants.js';
 import {
-  html, Button, Icon, MicroLabel, PingPill, AvatarFrame, DifficultyTag, DifficultyIcon, Tooltip, confirmDialog, doctorNo, RoleTag, useTicker,
+  html, Button, Icon, MicroLabel, PingPill, AvatarFrame, DifficultyTag, DifficultyIcon, Tooltip, confirmDialog, doctorNo, RoleTag, useTicker, Modal,
 } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { copyText } from '../ui/clipboard.js';
@@ -156,7 +156,7 @@ function TrustedConsentBar({ room, mine }) {
   </section>`;
 }
 
-function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRemoveBot, onKick, onPickArt }) {
+function SeatCard({ seat, index, room, facts, myId, busy, bubble, canInvite, onAddBot, onRemoveBot, onInviteAgent, onKick, onPickArt }) {
   useData('assets');
   const coop = room.mode !== 'solo';
   if (!seat) {
@@ -225,6 +225,9 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, onAddBot, onRe
         ${facts.modded && !seat.isBot ? html`<span class=${`seat__content is-${seat.content || 'loading'}`} data-testid="seat-content">
           ${seat.content === 'ready' ? t('插件内容就绪') : seat.content === 'failed' ? t('插件内容校验失败') : t('插件内容载入中')}
         </span>` : null}
+        ${seat.isBot && canInvite ? html`<${Tooltip} text=${t('邀请 AI 接入该座位（一次性 token）')}>
+          <${Button} variant="ghost" size="sm" square=${true} icon="link" loading=${busy === `ai${index}`} onClick=${() => onInviteAgent(index)} aria-label=${t('邀请 AI')} />
+        <//>` : null}
         ${seat.isBot && facts.isHost ? html`<${Tooltip} text=${t('移除该 AI 队友')}>
           <${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `rm${index}`} onClick=${() => onRemoveBot(index)} aria-label=${t('移除 AI 队友')} />
         <//>` : null}
@@ -343,6 +346,7 @@ export function RoomScreen() {
   const [artSeat, setArtSeat] = useState(null);
   const [saveDefault, setSaveDefault] = useState(true);
   const auth = useStore((s) => s.auth, shallowEqual);
+  const agentInvite = useStore((s) => s.agentInvite, shallowEqual);
   const alive = useRef(true);
   const inFlight = useRef(false); // synchronous guard against double clicks (state updates are async)
   useEffect(() => () => { alive.current = false; }, []);
@@ -352,6 +356,11 @@ export function RoomScreen() {
   const coop = room.mode !== 'solo';
   const facts = roomFacts(room, me.playerId);
   const myReady = !!facts.mine?.ready;
+  const mySeat = facts.seats.find((s) => s && s.playerId === me.playerId) || null;
+  // rule 1 (owner 2026-11-05): any seated real player may invite an agent — never a spectator or an agent seat
+  const canInviteAgent = coop && !facts.spectating && !!mySeat && !mySeat.agent;
+  const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+  const agentCommand = agentInvite ? `node tools/agent/llm.mjs --url ${wsUrl} --token ${agentInvite.token} --provider openai` : '';
   const info = difficultyInfo(room.mode, room.difficulty);
 
   const run = async (kind, fn) => {
@@ -368,6 +377,9 @@ export function RoomScreen() {
   const toggleReady = () => run('ready', () => net.request('room.ready', { ready: !myReady }));
   const start = () => run('start', () => net.request('room.start', {}));
   const addBot = () => run('add', () => net.request('room.addBot', {}));
+  // docs/AGENT-SEATS.md: any seated player mints a one-time token; the server pushes it back in `agent.invite`
+  const inviteAgent = (seat) => run(`ai${seat}`, () => net.request('room.agentInvite', { seat, ttlSec: 600 }));
+  const closeAgentInvite = () => store.set({ agentInvite: null });
   const removeBot = (seat) => run(`rm${seat}`, () => net.request('room.removeBot', { seat }));
   // seat-card 立绘 (owner 2026-10-24): the picker's choice rides room.setArt; a bound account may also keep it as the
   // default for every later room (server-side accounts.art, applied when a seat is created / the account binds).
@@ -409,7 +421,7 @@ export function RoomScreen() {
       if (err?.code !== 'NOT_IN_ROOM') toastError(err);
     } finally {
       // Leaving locally is always safe: the server either confirmed or no longer has us in the room.
-      store.set({ room: null, match: emptyMatch() });
+      store.set({ room: null, agentInvite: null, match: emptyMatch() });
       inFlight.current = false;
       if (alive.current) setBusy(null);
     }
@@ -461,6 +473,7 @@ export function RoomScreen() {
     <main class=${`seats${coop ? '' : ' seats--solo'}`}>
       ${facts.seats.map((s, i) => html`<${SeatCard} key=${s ? `p${s.playerId}` : `e${i}`} seat=${s} index=${i} room=${room} facts=${facts}
         myId=${me.playerId} busy=${busy} bubble=${s ? bubbles.get(s.playerId) : undefined} onAddBot=${addBot} onRemoveBot=${removeBot} onKick=${kick}
+        canInvite=${canInviteAgent} onInviteAgent=${inviteAgent}
         onPickArt=${setArtSeat} />`)}
       ${coop ? null : html`<aside class="solo-brief brackets">
         <${MicroLabel} tone="mint">BRIEFING<//>
@@ -511,5 +524,16 @@ export function RoomScreen() {
     <${ArtPicker} open=${artSeat != null} current=${artSeat != null ? (facts.seats[artSeat]?.art ?? null) : null}
       canSaveDefault=${!!auth?.account} saveDefault=${saveDefault} onSaveDefaultChange=${setSaveDefault}
       onPick=${pickArt} onClose=${() => setArtSeat(null)} busy=${busy === 'art'} />
+    ${agentInvite ? html`<${Modal} open=${true} onClose=${closeAgentInvite} title=${t('邀请 AI 接入')} micro="AGENT SEAT" width="7.6rem"
+      actions=${html`<${Button} variant="primary" icon="copy" onClick=${() => copyText(agentCommand)}>${t('复制启动命令')}<//>`}>
+      <div class="agent-invite" data-testid="agent-invite">
+        <p>${t('把下面的一次性 token 交给运行 AI 客户端的设备。token 只显示这一次，10 分钟内有效。')}</p>
+        <code class="agent-invite__token" data-testid="agent-invite-token">${agentInvite.token}</code>
+        <p class="t-dim">${t('座位 {seat} · 到期 {time}', { seat: agentInvite.seat + 1, time: new Date(agentInvite.expiresAt).toLocaleTimeString('zh-CN') })}</p>
+        <p>${t('在装有本项目的机器上运行（模型 key 只放在那台机器）：')}</p>
+        <code class="agent-invite__cmd">${agentCommand}</code>
+        <p class="t-dim">${t('邀请者离开房间或掉线 30 秒，AI 座位会自动交还内置 bot。')}</p>
+      </div>
+    <//>` : null}
   </div>`;
 }

@@ -36,9 +36,9 @@
 
 | 消息 | 方向 | 说明 |
 |---|---|---|
-| `room.agentInvite { seat, ttlSec? }` | 房内任一真人玩家 → 服务器 | 为**一个 bot 座位**签发一次性邀请；不要求房主。仅当房间真人玩家 < `MAX_SEATS`（4）时允许；`ttlSec` 1–3600，默认 600。同一座位再签会作废旧 token |
+| `room.agentInvite { seat, ttlSec? }` | 房内任一真人玩家 → 服务器 | 为**一个 bot 座位**签发一次性邀请；不要求房主。仅当房间真人玩家 < `MAX_SEATS`（4）时允许；`ttlSec` 1–3600，默认 600。同一座位再签会作废旧 token。**座位归签发者所有** |
 | `agent.invite { token, seat, code, expiresAt }` | 服务器 → 签发者 | **仅推给签发者**。明文 token 只出现这一次；不进 `room.state`、不进日志 |
-| `agent.claim { token }` | agent → 服务器 | 普通会话 `hello` 之后兑换邀请；成功后座位归该会话。一次性；失败返回 `BAD_TARGET`，已在房间内返回 `ALREADY` |
+| `agent.claim { token }` | agent → 服务器 | 普通会话 `hello` 之后兑换邀请；成功后座位归该会话。一次性；失败返回 `BAD_TARGET`，已在房间内返回 `ALREADY`；**签发者必须仍在房间且在线** |
 | `g.*` | agent → 服务器 | 全部现有游戏意图，校验与人类一致；**聊天 `room.chat` 和表情 `g.emote` 也可用** |
 | `m.public` / `m.private` / `m.field` / … | 服务器 → agent | 该座位可见的视图，不新增信息 |
 | `room.releaseSeat` | agent → 服务器 | 座位 `fromAi=true`，因此可把座位交还新 AI，自己回到观战席；断线 30 秒也会自动做 |
@@ -60,6 +60,9 @@
 | 房间销毁 | 邀请随房间一起消失 |
 | 重连 | 用现有会话 token 重连即可，不重新发邀请（与普通玩家相同） |
 | 断线 | 立即标记离线；**30 秒**（`agentGraceMs`）内重连可取回。超过 30 秒：内置 bot 接管（对局中保留棋盘/资金/装备），会话与房间解绑，重连时收到 `room.closed { reason: 'agent-timeout' }` |
+| **邀请者绑定（规则 B）** | 座位属于签发者：签发者**主动离开/被移出** → 立即交还 bot；签发者**掉线** → 30 秒宽限，期间重连保留；超时则交还 bot，agent 收到 `room.closed { reason: 'agent-owner-left' }`。签发者离开也会作废其未兑换的邀请 |
+| 邀请者离线时兑换 | 拒绝（`BAD_TARGET: inviter is offline`）；邀请保留到过期或签发者回来 |
+| 玩家入口 | 房间内任一真人在 bot 座位点「邀请 AI」→ 弹窗显示一次性 token、到期时间、启动命令，可一键复制 |
 
 ### 3.3 对局中接管
 
@@ -75,7 +78,7 @@
 | token 泄露 | 32 字节随机、只存哈希、一次性、默认 10 分钟、绑定房间+座位 |
 | token 进日志/状态 | 明文只出现在 `agent.invite` 一帧；日志只记“seat N”；`room.state` 不含 token |
 | 旁人抢座 | 有活跃邀请的座位拒绝 `room.takeOver` |
-| 伪造邀请 | 只有房内的真人玩家可签发（观战者 / agent / bot 都不行） |
+| 伪造邀请 | 只有房内的真人玩家可签发（观战者 / agent / bot 都不行）；座位绑定签发者，签发者离开即失效 |
 | 越权 | agent 只是普通玩家：`g.test`、管理帧、非本座位视图都按现有规则拒绝 |
 | 刷屏/拖慢 | 沿用 40 msg/s 限流、阶段截止、按座位错误码 |
 | 发布包误带 | 与 `EXTERNAL-AI` 相同的门控思路（P2 接入 `llmGate` / 打包排除） |
@@ -95,17 +98,17 @@
 | 内容 | 文件 |
 |---|---|
 | 协议条目（C2S / S2C） | `shared/protocol.js`（`room.agentInvite`、`agent.claim`、`agent.invite`） |
-| 邀请、兑换、座位锁定、过期、30 秒托管 | `server/lobby.js`（`inviteAgent`、`claimAgentSeat`、`agentInviteFor`、`startAgentGrace`、`handOverAgentSeat`、`Room.agentInvites`） |
+| 邀请、兑换、座位锁定、过期、30 秒托管、邀请者绑定 | `server/lobby.js`（`inviteAgent`、`claimAgentSeat`、`agentInviteFor`、`startAgentGrace`、`startAgentOwnerGrace`、`releaseAgentSeat`、`Room.agentInvites`） |
 | 会话标记 | `server/net.js`（`Session.agent` / `Session.agentSeat`） |
 | 对局中换键 / 交还 | `server/match/match/watch.js`（`Match.takeOver` / `aiTakeOver`，复用现有实现） |
 | 对局与结算里的 `agent` 字段 | `server/match/PlayerState.js`、`server/match/match/views.js`、`server/match/results.js`、`server/match/StubMatch.js` |
 | 公开房间目录 | `server/admin.js`（`buildPublicSnapshot`：`seats[].agent`、`agents` 计数） |
 | 插件意图边界 | `shared/plugins/ui.js`（`agent.*` 与 `g.*` 一样属于客户端意图，插件不能发送） |
-| 前端 AGENT 标记 | `public/js/screens/{room,rooms,bandDraft,result,settle}.js`、`public/js/ui/gameComponents.js`、`public/css/screens/{room,lobby}.css` |
+| 前端 AGENT 标记 / 邀请入口 | `public/js/screens/{room,rooms,bandDraft,result,settle}.js`、`public/js/ui/gameComponents.js`、`public/js/main.js`（`agent.invite`）、`public/js/store.js`、`public/css/screens/{room,lobby}.css` |
 | 运维计数 / 健康检查 | `server/lobby.js`（`agentStats`）、`server/admin.js`（「AI 席位」页） |
-| 示例客户端（P3） | `tools/agent/player.mjs`（决策循环）、`tools/agent/agent.mjs`（WS CLI） |
+| 示例客户端（P3） | `tools/agent/player.mjs`（规则循环）、`tools/agent/agent.mjs`（WS CLI）、`tools/agent/llm.mjs`（OpenAI / Anthropic） |
 | 端到端（P4） | `test/e2e/agent-seat.e2e.mjs` |
-| 测试 | `test/match/agent-seat.test.js` |
+| 测试 | `test/match/agent-seat.test.js`、`test/agent-llm.test.js` |
 
 ## 6. 验收（当前）
 
@@ -119,9 +122,12 @@
    `g.emote` 正常推进。
 6. 座位规则（人类/空位/单人房）、1 秒 TTL 过期、`room.removeBot` 使邀请失效、同座位重签旧 token 失效。
 7. 断线超过宽限 → 座位回到内置 bot；重连收到 `agent-timeout`。
-8. 日志包含 `agent … claimed seat N` / `timed out; the AI took seat N`，**不包含**明文 token。
-9. 开关默认关闭；`/healthz.agents` 报告开关、在座、邀请与计数。
-10. `test/package.test.js`：agent 席位代码不会被 `llmRelease` 排除，`tools/agent` 不进玩家包。
+8. **规则 B**：邀请者掉线 30 秒 → 交还 bot；期间重连保留；邀请者主动离开/被移出 → 立即交还，agent 收到
+   `agent-owner-left`；邀请者离线时不能兑换。
+9. 日志包含 `agent … claimed seat N` / `handed back to the AI (reason)`，**不包含**明文 token。
+10. 开关默认关闭；`/healthz.agents` 报告开关、在座、邀请与计数。
+11. `test/package.test.js`：agent 席位代码不会被 `llmRelease` 排除，`tools/agent` 不进玩家包。
+12. `test/agent-llm.test.js`：OpenAI / Anthropic 两种 wire format、JSON 解析、动作白名单。
 
 ### 6.1 P4 真实对局回归
 
@@ -138,15 +144,20 @@ SP_AGENT_E2E=1 node --test test/e2e/agent-seat.e2e.mjs
 # 服务器（演示用无浏览器环境：让服务端模拟战斗）
 SP_AGENT_SEATS=on SP_COMBAT=server npm start
 
-# 自包含演示：建房 → 放 bot → 发邀请 → agent 入座 → 开局 → 用最小决策循环打一局
+# 自包含演示：建房 → 放 bot → 发邀请 → agent 入座 → 开局 → 打完（规则循环）
 node tools/agent/agent.mjs --demo
 
+# 大模型驱动（key 只在本机；OpenAI 兼容或 Anthropic 二选一）
+node tools/agent/llm.mjs --demo --provider openai    --model gpt-4.1
+node tools/agent/llm.mjs --demo --provider anthropic --model claude-sonnet-4-5
 # 已有房间：把房内任一真人玩家拿到的 token 交给 agent
-node tools/agent/agent.mjs --token <token> --url ws://127.0.0.1:3000/ws --name "My Agent"
+node tools/agent/llm.mjs --token <token> --provider openai --model gpt-4.1
 ```
 
+也可以直接在房间界面操作：任一真人在 bot 座位点「邀请 AI」→ 复制弹窗里的 token 和启动命令。
+`SP_LLM_API_KEY` / `SP_LLM_BASE_URL` / `SP_LLM_MODEL` 由 agent 所在机器设置；服务器不读取任何 `SP_LLM_*`。
 `tools/agent/player.mjs` 只做四件事：确认信息、选一个未占用的乐队、买/部署棋子、拿奖励后 ready；
-它是协议示例与 P4 的固定动作源，**不是**竞技 bot。B′（本地 HTTP 桥）未实现。
+它是协议示例与 P4 的固定动作源，**不是**竞技 bot；模型不可用/超预算时 `llm.mjs` 自动回退到它。
 
 ### 7.1 里程碑（全部完成）
 
@@ -162,7 +173,8 @@ node tools/agent/agent.mjs --token <token> --url ws://127.0.0.1:3000/ws --name "
 
 owner 已确认的规则（2026-11-05）：
 
-1. **谁能发邀请**：不限制，房内任一真人玩家都可以；房间真人玩家 < 4 时才可邀请。
+1. **谁能发邀请**：不限制，房内任一真人玩家都可以；房间真人玩家 < 4 时才可邀请。**座位归邀请者（规则 B）**：
+   邀请者离开/被移出立即交还 bot；掉线 30 秒内重连保留，超时交还 bot。
 2. **agent 身份**：匿名（只凭邀请；可审计事件，但无账号）。
 3. **加入时机**：大厅与对局中都允许；agent 接管的是玩家席位，**占一个位置**，不算底层 bot。
 4. **断线宽限**：超过 **30 秒**由底层 bot 接管（`agentGraceMs`）。

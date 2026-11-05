@@ -238,7 +238,7 @@ function cleanChatText(raw) {
 
 /**
  * @typedef {{ seat: number, playerId: string, name: string, role?: string|null, isBot: boolean, ready: boolean,
- *             connected: boolean, left: boolean, agent?: boolean, fromAi?: boolean,
+ *             connected: boolean, left: boolean, agent?: boolean, fromAi?: boolean, agentOwner?: string, agentOwnerName?: string,
  *             loadout?: Record<string, { skill: number, module: string|null }> | null,
  *             ops?: Readonly<Record<string, { potential: number, cultivate: number }>> | null,
  *             notOwned?: readonly string[] | null, diy?: Readonly<Record<string, DiyLoadout>> | null,
@@ -473,6 +473,8 @@ export class Lobby {
     this.graceTimers = new Map();
     /** @type {Map<string, NodeJS.Timeout>} agent-seat grace (30 s by default, docs/AGENT-SEATS.md) */
     this.agentGraceTimers = new Map();
+    /** @type {Map<string, NodeJS.Timeout>} inviter grace: an offline inviter's agent seats go back after this */
+    this.agentOwnerTimers = new Map();
     /** Agent-seat counters for /healthz and the admin page (docs/AGENT-SEATS.md P2). */
     this.agentMetrics = { claims: 0, handbacks: 0 };
     /** @type {Map<string, NodeJS.Timeout>} deferred (coalesced) resyncs by playerId */
@@ -688,6 +690,7 @@ export class Lobby {
     const seat = room.seatOf(session.playerId) || room.spectatorOf(session.playerId);
     this.clearGrace(session.playerId);
     this.clearAgentGrace(session.playerId);
+    this.clearAgentOwnerGrace(session.playerId);
     // Only a visible change (reconnect, rename, new host) is broadcast; a plain resync (repeated hello on a
     // live socket) answers the requester alone, so hello spam cannot amplify into room-wide traffic.
     let changed = !seat.connected;
@@ -838,6 +841,8 @@ export class Lobby {
     this.startGrace(room, seat);
     // an agent seat hands back to the built-in bot after its own (shorter) grace; the agent may reconnect within it
     if (session.agent) this.startAgentGrace(session, room);
+    // rule B: a real inviter's agent seats go back after the same grace; an explicit leave releases them immediately
+    else if (player && !player.isBot) this.startAgentOwnerGrace(session, room);
     this.broadcastState(room);
   }
 
@@ -872,6 +877,8 @@ export class Lobby {
     this.graceTimers.clear();
     for (const t of this.agentGraceTimers.values()) clearTimeout(t);
     this.agentGraceTimers.clear();
+    for (const t of this.agentOwnerTimers.values()) clearTimeout(t);
+    this.agentOwnerTimers.clear();
     for (const t of this.resyncTimers.values()) clearTimeout(t);
     this.resyncTimers.clear();
   }
@@ -1023,6 +1030,9 @@ export class Lobby {
       s.connected = true;
       s.ready = true;                                 // a running match never waits on a ready flag
       s.fromAi = true;                                // room.releaseSeat may hand it back to an AI
+      delete s.agent;
+      delete s.agentOwner;
+      delete s.agentOwnerName;
     }
     session.roomCode = room.code;
     session.notice = null;
@@ -1061,6 +1071,8 @@ export class Lobby {
     seat.fromAi = false;
     delete seat.loadout;
     delete seat.agent;
+    delete seat.agentOwner;
+    delete seat.agentOwnerName;
     room.spectators.push({ playerId: session.playerId, name: session.name, role: session.role ?? null, connected: session.connected, art: session.art ?? null, avatar: session.avatar ?? null });
     session.roomCode = room.code;
     if (room.activeHumans().length === 0) {
@@ -1137,6 +1149,14 @@ export class Lobby {
       room.agentInvites.delete(hash);
       return fail(ERR.BAD_TARGET, 'seat is not available');
     }
+    // Rule B (owner 2026-11-05): the agent seat belongs to the inviter. The inviter must still be a connected real
+    // player of this room — an invite from someone who left (or is offline past the point of claiming) is dead.
+    const inviter = room.seatOf(invite.createdBy);
+    if (!inviter || inviter.left || inviter.isBot || inviter.agent) {
+      room.agentInvites.delete(hash);
+      return fail(ERR.BAD_TARGET, 'inviter left the room');
+    }
+    if (!inviter.connected) return fail(ERR.BAD_TARGET, 'inviter is offline');
     // Rule: the agent takes a seat, it is not a free extra — a room with MAX_SEATS real players cannot host one.
     if (room.realHumans().length >= MAX_SEATS) return fail(ERR.ROOM_FULL, 'the room is full');
     // Take the lobby seat BEFORE the match hook: Match.takeOver immediately resyncs the new player (m.public +
@@ -1151,6 +1171,8 @@ export class Lobby {
     target.ready = true;                                  // a running match never waits on a ready flag
     target.fromAi = true;                                 // room.releaseSeat may hand it back to an AI
     target.agent = true;                                  // docs/AGENT-SEATS.md: shown as an agent seat
+    target.agentOwner = invite.createdBy;                 // rule B: the inviter's seat, released when they leave
+    target.agentOwnerName = inviter.name;
     session.roomCode = room.code;
     session.agent = true;
     if (room.match && this.callMatch(room, 'takeOver', session.playerId, invite.seat, session.name, session.role ?? null, true) !== true) {
@@ -2510,6 +2532,8 @@ export class Lobby {
     delete seat.notOwned;
     delete seat.diy;
     delete seat.agent;
+    delete seat.agentOwner;
+    delete seat.agentOwnerName;
     this.log.info(`[lobby] ${room.code} seat ${seat.seat} handed to the AI ${bot.name}`);
     return true;
   }
@@ -2529,6 +2553,12 @@ export class Lobby {
     }
     this.clearGrace(playerId);
     this.clearAgentGrace(playerId);
+    this.clearAgentOwnerGrace(playerId);
+    // rule B: the inviter's agent seats are theirs — a permanent departure releases them now (a mere disconnect is
+    // handled by startAgentOwnerGrace, which lets the inviter reconnect inside the grace)
+    this.dropAgentInvitesOf(room, playerId);
+    this.releaseAgentSeatsOf(room, playerId, 'agent-owner-left');
+    if (room.disposed) return;
     this.clearResync(playerId); // a deferred resync must not fire later against whatever room the player joins next
     this.dropReplay(room, playerId);
     if (this.freeSpectatorSeat(room, playerId)) return;
@@ -2637,10 +2667,35 @@ export class Lobby {
       if (!seat || seat.isBot || !seat.agent || seat.connected) return;
       const live = this.registry.byId(playerId);
       if (live && live.connected) return;
-      this.handOverAgentSeat(room, seat);
+      this.releaseAgentSeat(room, seat, 'agent-timeout');
     }, this.opts.agentGraceMs);
     t.unref?.();
     this.agentGraceTimers.set(playerId, t);
+  }
+
+  /**
+   * Rule B (owner 2026-11-05): an agent seat belongs to the real player who minted its invite. An explicit leave or a
+   * kick releases it at once (removeMember); a mere DISCONNECT starts this grace, so the inviter may reconnect and keep
+   * their agent. When it lapses, every agent seat they own goes back to the built-in bot and their pending invites die.
+   * @param {import('./net.js').Session} session @param {Room} room
+   */
+  startAgentOwnerGrace(session, room) {
+    const playerId = session.playerId;
+    this.clearAgentOwnerGrace(playerId);
+    const seat = room.seatOf(playerId);
+    if (!seat || seat.isBot || seat.agent || seat.left) return;
+    const t = setTimeout(() => {
+      this.agentOwnerTimers.delete(playerId);
+      if (room.disposed) return;
+      const live = this.registry.byId(playerId);
+      if (live && live.connected) return;
+      const own = room.seatOf(playerId);
+      if (!own || own.connected) return;
+      this.dropAgentInvitesOf(room, playerId);
+      this.releaseAgentSeatsOf(room, playerId, 'agent-owner-left');
+    }, this.opts.agentGraceMs);
+    t.unref?.();
+    this.agentOwnerTimers.set(playerId, t);
   }
 
   /** @param {string} playerId */
@@ -2649,38 +2704,54 @@ export class Lobby {
     if (t) { clearTimeout(t); this.agentGraceTimers.delete(playerId); }
   }
 
+  /** @param {string} playerId */
+  clearAgentOwnerGrace(playerId) {
+    const t = this.agentOwnerTimers.get(playerId);
+    if (t) { clearTimeout(t); this.agentOwnerTimers.delete(playerId); }
+  }
+
+  /** Delete the invites an inviter minted (rule B: they die with the inviter's presence in the room). */
+  dropAgentInvitesOf(room, ownerId) {
+    for (const [hash, inv] of room.agentInvites) if (inv.createdBy === ownerId) room.agentInvites.delete(hash);
+  }
+
+  /** Hand every agent seat an inviter owns back to the built-in bot. */
+  releaseAgentSeatsOf(room, ownerId, reason) {
+    for (const seat of [...room.seats]) {
+      if (!seat || seat.isBot || !seat.agent || seat.agentOwner !== ownerId) continue;
+      this.releaseAgentSeat(room, seat, reason);
+      if (room.disposed) return;
+    }
+  }
+
   /**
-   * The agent grace elapsed: give the seat back to the built-in bot. Mid-match this keeps the whole PlayerState
-   * (Match.aiTakeOver); in a lobby it becomes a fresh bot seat. The agent session is detached (its reconnect token no
-   * longer leads into the room) and told `room.closed { reason: 'agent-timeout' }` on its next hello.
-   * @param {Room} room @param {Seat} seat
+   * Give one agent seat back to the built-in bot. Mid-match this keeps the whole PlayerState (Match.aiTakeOver); in a
+   * lobby it becomes a fresh bot seat. The agent session is detached and told `room.closed { reason }` (now when it is
+   * still connected, on its next hello when it is not). With no real human left the room is disposed instead.
+   * @param {Room} room @param {Seat} seat @param {'agent-timeout'|'agent-owner-left'} reason
    */
-  handOverAgentSeat(room, seat) {
+  releaseAgentSeat(room, seat, reason) {
     const playerId = seat.playerId;
     const name = seat.name;
     const session = this.registry.byId(playerId);
     this.clearGrace(playerId);
+    this.clearAgentGrace(playerId);
     const detach = () => {
-      if (!session) return;
+      if (!session || session.roomCode !== room.code) return;
       session.roomCode = null;
       session.agent = false;
       session.agentSeat = null;
-      session.notice = 'agent-timeout';
+      if (session.connected) sendSession(session, { t: 'room.closed', reason });
+      else session.notice = reason;
     };
-    // no other player left: never leave an agent-only room (or its all-AI match) running
-    if (room.activeHumans().length <= 1) {
+    if (room.disposed) { detach(); return; }
+    // no real human left: never leave an agent-only room (or its all-AI match) running
+    if (room.realHumans().length === 0) {
       detach();
       this.disposeRoom(room, 'empty');
       return;
     }
-    if (room.match) {
-      if (!this.handSeatToAI(room, seat)) {
-        // the match offered no takeover (ended / no hook): depart the ordinary way
-        this.removeMember(room, playerId);
-        detach();
-        return;
-      }
-    } else {
+    const toBot = () => {
       const bot = this.makeBot(room, seat.seat);
       seat.playerId = bot.playerId;
       seat.name = bot.name;
@@ -2690,15 +2761,20 @@ export class Lobby {
       seat.ready = true;
       seat.fromAi = false;
       delete seat.agent;
+      delete seat.agentOwner;
+      delete seat.agentOwnerName;
       delete seat.loadout;
       delete seat.notOwned;
       delete seat.diy;
       delete seat.skins;
-    }
+    };
+    if (room.match) {
+      if (!this.handSeatToAI(room, seat)) toBot();
+    } else toBot();
     detach();
     this.agentMetrics.handbacks++;
     this.broadcastState(room);
-    this.log.info(`[lobby] ${room.code} agent ${name} timed out; the AI took seat ${seat.seat}`);
+    this.log.info(`[lobby] ${room.code} agent ${name} handed back to the AI (${reason}), seat ${seat.seat}`);
   }
 
   /**
@@ -2719,6 +2795,7 @@ export class Lobby {
       if (!s || s.isBot) continue;
       this.clearGrace(s.playerId);
       this.clearAgentGrace(s.playerId);
+      this.clearAgentOwnerGrace(s.playerId);
       this.clearResync(s.playerId);
       const session = this.registry.byId(s.playerId);
       if (!session || session.roomCode !== room.code) continue;
@@ -2740,6 +2817,7 @@ export class Lobby {
     for (const s of room.spectators) {
       this.clearGrace(s.playerId);
       this.clearAgentGrace(s.playerId);
+      this.clearAgentOwnerGrace(s.playerId);
       const session = this.registry.byId(s.playerId);
       if (!session || session.roomCode !== room.code) continue;
       session.roomCode = null;

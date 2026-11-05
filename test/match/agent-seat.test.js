@@ -196,6 +196,66 @@ test('agent seat: the global switch is off unless enabled', async () => {
   }
 });
 
+test('agent seat: rule B — the seat follows the inviter (disconnect grace, reconnect, explicit leave)', async () => {
+  const s = await boot({ agentGraceMs: 200 });
+  try {
+    const host = await s.connect('BoundHost');
+    await ok(host, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
+    const room = await host.waitFor('room.state', (x) => x.hostId === host.id);
+    await ok(host, { t: 'room.addBot' });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot);
+    const peer = await s.connect('BoundPeer');
+    await ok(peer, { t: 'room.join', code: room.code });
+    await peer.waitFor('room.state', (x) => x.seats.some((y) => y && y.playerId === peer.id));
+    await ok(peer, { t: 'room.agentInvite', seat: 1 });
+    const invite = await peer.waitFor('agent.invite');
+    const agent = await s.connect('BoundAgent');
+    await ok(agent, { t: 'agent.claim', token: invite.token });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].playerId === agent.id && x.seats[1].agent);
+
+    // a disconnect is only a grace: the inviter reconnects inside it and keeps the agent seat
+    await peer.terminate();
+    await delay(40);
+    const back = await TestClient.connect(s.url);
+    const welcome = await back.hello('BoundPeer', peer.token);
+    assert.equal(welcome.resumed, true);
+    await delay(350);
+    const still = await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].playerId === agent.id, 2000);
+    assert.equal(still.seats[1].agent, true, 'reconnect inside the grace keeps the agent');
+
+    // an explicit leave releases the seat at once and detaches the still-connected agent
+    await ok(back, { t: 'room.leave' });
+    const handed = await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot, 2000);
+    assert.ok(handed.seats[1].playerId.startsWith('ai_'));
+    const closed = await agent.waitFor('room.closed', (m) => m.reason === 'agent-owner-left', 2000);
+    assert.equal(closed.reason, 'agent-owner-left');
+    await back.terminate();
+  } finally {
+    await s.close();
+  }
+});
+
+test('agent seat: rule B — an offline inviter cannot be used to claim a new seat', async () => {
+  const s = await boot({ agentGraceMs: 5000 });
+  try {
+    const host = await s.connect('BoundHost2');
+    await ok(host, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
+    const room = await host.waitFor('room.state', (x) => x.hostId === host.id);
+    await ok(host, { t: 'room.addBot' });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot);
+    const peer = await s.connect('BoundPeer2');
+    await ok(peer, { t: 'room.join', code: room.code });
+    await peer.waitFor('room.state', (x) => x.seats.some((y) => y && y.playerId === peer.id));
+    await ok(peer, { t: 'room.agentInvite', seat: 1 });
+    const invite = await peer.waitFor('agent.invite');
+    await peer.terminate();
+    const agent = await s.connect('BoundAgent2');
+    await err(agent, { t: 'agent.claim', token: invite.token }, ERR.BAD_TARGET);
+  } finally {
+    await s.close();
+  }
+});
+
 test('agent seat: the disconnect grace hands the seat back to the built-in bot', async () => {
   const s = await boot({ agentGraceMs: 150 });
   try {

@@ -57,7 +57,7 @@ function loadBands() {
 
 const log = (...a) => console.log('[agent]', ...a);
 
-class Conn {
+export class Conn {
   /** @param {string} url @param {string} label */
   constructor(url, label) {
     this.url = url;
@@ -158,37 +158,45 @@ class Conn {
  * One action per ~150 ms from the latest public + private views. `attempt` advances when a deploy is rejected, and
  * resets each round.
  */
-function play(conn, { bands, label = conn.label } = {}) {
-  const state = { round: -1, attempt: 0, at: 0, note: '' };
+export function play(conn, { bands, label = conn.label, decide = nextAction } = {}) {
+  const state = { round: -1, attempt: 0, at: 0, note: '', busy: false };
   conn.timer = setInterval(() => {
-    if (conn.done) return;
+    if (conn.done || state.busy) return;
     const pub = conn.pub;
     const priv = conn.priv;
     if (!pub || !priv || !conn.id) return;
     if (pub.round !== state.round) { state.round = pub.round; state.attempt = 0; }
     const now = Date.now();
     if (now - state.at < 150) return;
-    const act = nextAction({ pub, priv, myId: conn.id, bands, attempt: state.attempt });
-    if (!act) return;
-    if (act.attempt != null) state.attempt = act.attempt;
-    state.at = now;
-    conn.send(act.msg);
-    if (act.note !== state.note) { state.note = act.note; log(`[${label}] ${act.note}`); }
+    const send = (act) => {
+      if (!act) return;
+      if (act.attempt != null) state.attempt = act.attempt;
+      state.at = Date.now();
+      conn.send(act.msg);
+      if (act.note !== state.note) { state.note = act.note; log(`[${label}] ${act.note}`); }
+    };
+    let r;
+    try { r = decide({ pub, priv, myId: conn.id, bands, attempt: state.attempt }); }
+    catch (e) { log(`[${label}] decide failed: ${e.message}`); return; }
+    if (r && typeof r.then === 'function') {
+      state.busy = true;
+      r.then(send).catch((e) => log(`[${label}] decide failed: ${e.message}`)).finally(() => { state.busy = false; });
+    } else send(r);
   }, 80);
 }
 
-async function claimAndPlay({ url, name, token, bands }) {
+export async function claimAndPlay({ url, name, token, bands, decide }) {
   const agent = new Conn(url, 'agent');
   await agent.open();
   const welcome = await agent.hello(name);
   log(`connected as ${welcome.playerId} (seat claim pending)`);
   await agent.request({ t: 'agent.claim', token });
   log('claimed the bot seat; playing through ordinary g.* intents');
-  play(agent, { bands });
+  play(agent, { bands, decide });
   return agent;
 }
 
-async function demo({ url, name, hostName, seat, bands, maxMs }) {
+export async function demo({ url, name, hostName, seat, bands, maxMs, decide }) {
   const host = new Conn(url, 'host');
   await host.open();
   await host.hello(hostName);
@@ -211,7 +219,7 @@ async function demo({ url, name, hostName, seat, bands, maxMs }) {
   if (!invite) throw new Error('no agent.invite frame');
   log(`invite for seat ${target} minted (expires ${new Date(invite.expiresAt).toISOString()})`);
 
-  const agent = await claimAndPlay({ url, name, token: invite.token, bands });
+  const agent = await claimAndPlay({ url, name, token: invite.token, bands, decide });
   play(host, { bands, label: 'host' });
 
   await host.request({ t: 'room.start' });
@@ -261,4 +269,6 @@ async function main() {
   process.on('SIGINT', () => { clearInterval(wait); agent.close(); process.exit(0); });
 }
 
-main().catch((e) => { log(e.stack || e.message || String(e)); process.exit(1); });
+// The CLI entry. Importing this module (test/e2e, tools/agent/llm.mjs) must not start anything.
+const IS_ENTRY = !!process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (IS_ENTRY) main().catch((e) => { log(e.stack || e.message || String(e)); process.exit(1); });

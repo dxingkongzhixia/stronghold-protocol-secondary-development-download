@@ -254,6 +254,8 @@ function onWelcome(msg) {
 function onRoomState(msg) {
   const room = payload(msg);
   roomStateAt = Date.now();
+  const inv = store.get().agentInvite;
+  if (inv && inv.code && room.code && inv.code !== room.code) store.set({ agentInvite: null });
   // A room.state means a room/match took over: leave the 野排 queue UI (a matched group gets one at once).
   if (store.get().mm?.queued) store.patch('mm', { queued: false, difficulty: null });
   const myId = store.get().me.playerId;
@@ -363,7 +365,12 @@ function wireNet() {
     store.patch('notice', { id, text, sign, at: Number(msg.at) || Date.now(), origin: msg.origin === true });
   });
   net.on('room.state', onRoomState);
+  // agent seat (docs/AGENT-SEATS.md): the one-time invite arrives as its own frame, to the inviter only
+  net.on('agent.invite', (msg) => {
+    if (msg && typeof msg.token === 'string' && msg.token) store.set({ agentInvite: msg });
+  });
   net.on('room.closed', (msg) => {
+    store.set({ agentInvite: null });
     if (msg.reason === 'matched-end') {
       // 野排: the auto party disbands when the match ends. Drop the room but keep the result on screen — the route
       // stays on the game's settle view, whose button then reads 返回大厅 (no room).

@@ -29,7 +29,7 @@ test('agent seat plays three preps and a battle through ordinary intents', { ski
   let captured = null;
   class HeadlessMatch extends Match {
     constructor(opts) {
-      super({ ...opts, clientCombat: false, botRehearsal: 0, botSliceMs: 0.001, timerScale: 0.01 });
+      super({ ...opts, clientCombat: false, botRehearsal: 0, botSliceMs: 0.001, timerScale: 0.02 });
       captured = this;
     }
   }

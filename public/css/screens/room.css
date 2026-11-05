@@ -197,6 +197,14 @@
   border-color: rgba(246, 163, 41, .55);
   background: rgba(246, 163, 41, .12);
 }
+/* the inviter's one-time agent token dialog (docs/AGENT-SEATS.md) */
+.agent-invite { display: flex; flex-direction: column; gap: .1rem; }
+.agent-invite p { margin: 0; line-height: 1.6; }
+.agent-invite__token, .agent-invite__cmd {
+  display: block; padding: .1rem .12rem; overflow-wrap: anywhere; user-select: all;
+  border: 1px solid var(--line2); background: rgba(0, 0, 0, .35); color: var(--ice);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: calc(.13 * var(--t));
+}
 .seat__statebox {
   position: absolute; z-index: 4; left: .12rem; bottom: .12rem;
   display: flex; align-items: center; gap: .09rem; color: var(--text-lo);

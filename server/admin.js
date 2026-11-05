@@ -184,15 +184,17 @@ export function buildSnapshot({ registry, lobby, matchmaker, auth, community = n
   // occupied agent seat or a pending invite. Never a token or its hash; room + seat + display name only.
   const agentStats = typeof lobby.agentStats === 'function' ? lobby.agentStats() : { enabled: false, seated: 0, invites: 0, claims: 0, handbacks: 0 };
   const agents = [];
+  const nameByPlayerId = new Map();
+  for (const s of typeof registry.all === 'function' ? registry.all() : []) nameByPlayerId.set(s.playerId, s.name);
   for (const r of lobby.rooms.values()) {
     for (const s of r.seats) {
       if (!s || s.left || !s.agent) continue;
-      agents.push({ kind: 'seat', roomCode: r.code, seat: s.seat, name: s.name, connected: !!s.connected, inMatch: !!r.match });
+      agents.push({ kind: 'seat', roomCode: r.code, seat: s.seat, name: s.name, owner: s.agentOwnerName || nameByPlayerId.get(s.agentOwner) || null, connected: !!s.connected, inMatch: !!r.match });
     }
     const invites = r.agentInvites instanceof Map ? r.agentInvites.values() : [];
     for (const inv of invites) {
       if (!inv || inv.expiresAt <= now) continue;
-      agents.push({ kind: 'invite', roomCode: r.code, seat: inv.seat, name: null, connected: false, inMatch: !!r.match, expiresAt: inv.expiresAt });
+      agents.push({ kind: 'invite', roomCode: r.code, seat: inv.seat, name: null, owner: nameByPlayerId.get(inv.createdBy) || null, connected: false, inMatch: !!r.match, expiresAt: inv.expiresAt });
     }
   }
 
@@ -980,7 +982,7 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
         <h2>AI 席位<em id="agentMeta">—</em></h2>
         <div class="tools"><span class="hint" id="agentHint">—</span></div>
         <div class="tablewrap"><table><thead><tr>
-          <th>房间</th><th>座位</th><th>名字</th><th>状态</th><th>对局</th><th>邀请到期</th>
+          <th>房间</th><th>座位</th><th>名字</th><th>邀请者</th><th>状态</th><th>对局</th><th>邀请到期</th>
         </tr></thead><tbody id="agentBody"></tbody></table></div>
       </section>
     </section>
@@ -2198,9 +2200,10 @@ tbody tr.is-chosen td:first-child{box-shadow:inset 3px 0 0 var(--mint)}
     el('navAgents').textContent = int((s.seated || 0) + (s.invites || 0));
     el('agentBody').innerHTML = (rows || []).map(function (r) {
       return '<tr><td>' + esc(r.roomCode) + '</td><td>' + int(r.seat) + '</td><td>' + (r.name ? esc(r.name) : '—') + '</td><td>'
+        + (r.owner ? esc(r.owner) : '—') + '</td><td>'
         + (r.kind === 'invite' ? '待兑换' : r.connected ? '在线' : '离线') + '</td><td>' + (r.inMatch ? '进行中' : '等待') + '</td><td>'
         + (r.expiresAt ? ts(r.expiresAt) : '—') + '</td></tr>';
-    }).join('') || '<tr><td colspan="6" class="empty">当前没有 AI 席位</td></tr>';
+    }).join('') || '<tr><td colspan="7" class="empty">当前没有 AI 席位</td></tr>';
   }
 
   function render(d) {
