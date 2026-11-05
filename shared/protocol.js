@@ -497,6 +497,9 @@ export const C2S = {
   // The agent's ordinary session says `hello`, then redeems the invite: its session takes the AI seat exactly like a
   // spectator's room.takeOver (same Match.takeOver path, same intent validation). One use only.
   'agent.claim': { token: (v) => isStr(v, 128) && v.length >= 32 },
+  // Rule B / coaching: the inviter may send private tactical guidance to the agent seat they own. Forwarded only to
+  // that agent session (never broadcast); capped at 200 chars and rate-limited.
+  'agent.coach': { text: (v) => isStr(v, 200) && v.trim().length > 0 },
   // the host removes another human before the match (server/lobby.js kick; community report #17); playerId = the one the
   // host confirmed — a seat that changed hands meanwhile is refused
   'room.kick': { seat: (v) => isInt(v, 0, MAX_SEATS - 1), playerId: isId },
@@ -667,6 +670,8 @@ export const S2C = [
   // agent seats (docs/AGENT-SEATS.md): agent.invite { token, seat, code, expiresAt } — the one-time seat credential,
   // pushed to the issuing host only. The token is plaintext exactly once and is never broadcast or logged.
   'agent.invite',
+  // agent.directive { text, at, from } — private owner/coach guidance to the agent session (never broadcast).
+  'agent.directive',
   // accounts & matchmaking: auth.ok { account: { id, name, role }, token } · auth.error { code } ·
   // mm.state { queued, difficulty, waiting, need, elapsedMs, deadlineMs } (pushed ~1 Hz while queueing)
   'auth.ok', 'auth.error', 'mm.state',

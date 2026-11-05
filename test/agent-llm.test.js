@@ -98,6 +98,8 @@ test('the full rule book is still available on request (§1–§7, bounded)', ()
   assert.match(AGENT_BRIEFING, /never pretend to be human/);
   assert.match(AGENT_BRIEFING, /STRATEGY REFERENCE/);
   assert.match(AGENT_BRIEFING, /R1–R2/);
+  assert.match(AGENT_BRIEFING, /BOT REFERENCE/);
+  assert.match(AGENT_BRIEFING, /OWNER COACH/);
   assert.equal(extractRules('## 1. A\nrule\n## 8. B\nignored'), '## 1. A\nrule');
   assert.equal(extractRules(''), '');
   const fallback = loadRulesBrief({ file: path.join(ROOT, 'does-not-exist.md') });
@@ -151,9 +153,11 @@ test('knowledge lookup finds the relevant rule section, band choices carry metad
     },
     chat: [{ name: '队友', text: 'AI 你在吗', at: 1 }],
   };
-  const view = promptState({ ...state, bands: ['band_bldsk'] });
+  const view = promptState({ ...state, bands: ['band_bldsk'], directives: [{ from: '主人', text: '优先升级商店', at: 2 }] });
   assert.equal(view.recentChat.length, 1);
   assert.equal(view.recentChat[0].text, 'AI 你在吗');
+  assert.equal(view.ownerDirectives.length, 1);
+  assert.equal(view.ownerDirectives[0].text, '优先升级商店');
   // the model sees names / tiers / positions / bonds, not opaque ids
   assert.equal(view.shop[0].name, '隐现');
   assert.equal(view.shop[0].tier, 1);

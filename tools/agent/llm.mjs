@@ -180,7 +180,7 @@ export function validAction(raw, { pub, priv, myId, bands }) {
 }
 
 /** A compact, bounded state for the prompt (never the whole public view). */
-export function promptState({ pub, priv, myId, bands, chat = [] }) {
+export function promptState({ pub, priv, myId, bands, chat = [], directives = [] }) {
   const players = (pub.players || []).map((p) => ({
     seat: p.seat, name: p.name, bandId: p.bandId || null,
     bandName: p.bandId ? describeBand(p.bandId).name : null,
@@ -213,6 +213,7 @@ export function promptState({ pub, priv, myId, bands, chat = [] }) {
     nextEnemies: (priv.nextEnemies || []).slice(0, 8),
     bonds: (priv.bonds || []).map((b) => ({ name: b.name, active: !!b.active, layers: b.layers || 0 })).slice(0, 12),
     recentChat: (chat || []).slice(-8).map((c) => ({ name: c.name, text: String(c.text || '').slice(0, 120) })),
+    ownerDirectives: (directives || []).slice(-3).map((d) => ({ from: d.from || 'owner', text: String(d.text || '').slice(0, 200) })),
   };
 }
 
@@ -310,6 +311,7 @@ async function run() {
   let lastChatAt = 0;
   let lastEmoteAt = 0;
   let lastSocialChatAt = 0;
+  let lastDirectiveAt = 0;
   const blocked = new Set();
   const sig = (a) => JSON.stringify(a);
   const maxLookups = Math.max(0, Number(args.lookups ?? process.env.SP_AGENT_LOOKUPS ?? 12));
@@ -359,11 +361,16 @@ async function run() {
     const social = !['BAND_DRAFT', 'PREP'].includes(state.pub.phase);
     const now = state.now || Date.now();
     if (social) {
-      // talk only when a teammate actually said something since the last social turn
+      // talk only when a teammate actually said something or the owner sent a directive since the last social turn
       const last = state.chat && state.chat[state.chat.length - 1];
       const at = Number(last && last.at) || 0;
-      if (!last || at <= lastSocialChatAt) return null;
-      lastSocialChatAt = at;
+      const dir = state.directives && state.directives[state.directives.length - 1];
+      const dirAt = Number(dir && dir.at) || 0;
+      const newChat = !!last && at > lastSocialChatAt;
+      const newDir = !!dir && dirAt > lastDirectiveAt;
+      if (!newChat && !newDir) return null;
+      if (newChat) lastSocialChatAt = at;
+      if (newDir) lastDirectiveAt = dirAt;
     }
     if (calls >= client.maxCalls) return social ? null : nextAction(state);
     const stateKey = JSON.stringify(promptState({ ...state, bands }));

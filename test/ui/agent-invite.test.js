@@ -29,3 +29,10 @@ test('client net: agent.invite is stored separately and cleared with the room', 
   assert.match(main, /store\.set\(\{ agentInvite: msg \}\)/);
   assert.match(main, /store\.set\(\{ agentInvite: null \}\)/);
 });
+
+test('room screen: only the inviter can send a private coach directive to its agent', () => {
+  assert.match(room, /net\.request\('agent\.coach', \{ text \}\)/);
+  assert.match(room, /seat\.agent && seat\.agentOwner === myId/);
+  assert.match(room, /data-testid="agent-coach"/);
+  assert.match(room, /COACH_PRESETS/);
+});

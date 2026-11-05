@@ -70,6 +70,7 @@ export class Conn {
     this.pub = null;
     this.priv = null;
     this.chat = [];
+    this.directives = [];
     this.result = null;
     this.closed = null;
     this.done = false;
@@ -96,6 +97,10 @@ export class Conn {
     else if (msg.t === 'm.chat') {
       this.chat.push({ name: typeof msg.name === 'string' ? msg.name : '', text: typeof msg.text === 'string' ? msg.text : '', at: msg.at });
       if (this.chat.length > 12) this.chat.shift();
+    } else if (msg.t === 'agent.directive') {
+      this.directives.push({ from: msg.from || 'owner', text: String(msg.text || '').slice(0, 200), at: msg.at });
+      if (this.directives.length > 5) this.directives.shift();
+      log(`[${this.label}] owner directive: ${String(msg.text || '').slice(0, 120)}`);
     } else if (msg.t === 'm.result') this.result = msg;
     else if (msg.t === 'room.closed') this.closed = msg;
     else if (msg.t === 'error') log(`[${this.label}] error ${msg.code || ''} ${msg.msg || ''}`);
@@ -180,7 +185,7 @@ export function play(conn, { bands, label = conn.label, decide = nextAction } = 
       if (act.note !== state.note) { state.note = act.note; log(`[${label}] ${act.note}`); }
     };
     let r;
-    try { r = decide({ pub, priv, myId: conn.id, bands, attempt: state.attempt, chat: conn.chat, now }); }
+    try { r = decide({ pub, priv, myId: conn.id, bands, attempt: state.attempt, chat: conn.chat, directives: conn.directives, now }); }
     catch (e) { log(`[${label}] decide failed: ${e.message}`); return; }
     if (r && typeof r.then === 'function') {
       state.busy = true;

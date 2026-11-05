@@ -103,6 +103,14 @@ test('agent seat: any seated human can invite; agent claims the bot seat; reuse,
     const chat = await host.waitFor('m.chat', (m) => m.from === agent.id);
     assert.equal(chat.text, 'hello from the agent');
 
+    // owner coaching: only the inviter may send it, and it reaches the agent privately
+    await ok(peer, { t: 'agent.coach', text: '优先升级商店' });
+    const directive = await agent.waitFor('agent.directive', (m) => m.text === '优先升级商店');
+    assert.equal(directive.from, 'AgentPeer');
+    await err(host, { t: 'agent.coach', text: 'buy this' }, ERR.BAD_TARGET);
+    await err(watcher, { t: 'agent.coach', text: 'buy this' }, ERR.SPECTATOR);
+    await err(peer, { t: 'agent.coach', text: 'x'.repeat(201) }, ERR.BAD_MSG);
+
     // one-time: a fresh session reusing the token is refused
     const late = await s.connect('AgentLate');
     await err(late, { t: 'agent.claim', token: invite.token }, ERR.BAD_TARGET);
@@ -191,6 +199,36 @@ test('agent seat: the global switch is off unless enabled', async () => {
     const health = await (await fetch(`${s.srv.url}/healthz`)).json();
     assert.equal(health.agents.enabled, false);
     assert.equal(health.agents.seated, 0);
+  } finally {
+    await s.close();
+  }
+});
+
+test('agent seat: the owner may coach an offline agent; the directive is replayed on reconnect', async () => {
+  const s = await boot({ agentGraceMs: 5000 });
+  try {
+    const host = await s.connect('CoachHost');
+    await ok(host, { t: 'room.create', mode: 'coop', difficulty: 'NORMAL' });
+    const room = await host.waitFor('room.state', (x) => x.hostId === host.id);
+    await ok(host, { t: 'room.addBot' });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].isBot);
+    const peer = await s.connect('CoachPeer');
+    await ok(peer, { t: 'room.join', code: room.code });
+    await peer.waitFor('room.state', (x) => x.seats.some((y) => y && y.playerId === peer.id));
+    await ok(peer, { t: 'room.agentInvite', seat: 1 });
+    const invite = await peer.waitFor('agent.invite');
+    const agent = await s.connect('CoachAgent');
+    await ok(agent, { t: 'agent.claim', token: invite.token });
+    await host.waitFor('room.state', (x) => x.seats[1] && x.seats[1].agent && x.seats[1].agentOwner === peer.id);
+    const token = agent.token;
+    await agent.terminate();
+    // the owner is still here: the directive is stored on the seat and replayed when the agent returns
+    await ok(peer, { t: 'agent.coach', text: '下一轮先铺满棋盘' });
+    const back = await TestClient.connect(s.url);
+    await back.hello('CoachAgent', token);
+    const replayed = await back.waitFor('agent.directive', (m) => m.text === '下一轮先铺满棋盘', 2000);
+    assert.equal(replayed.text, '下一轮先铺满棋盘');
+    await back.terminate();
   } finally {
     await s.close();
   }

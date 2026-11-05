@@ -387,7 +387,7 @@ export class Room {
       public: !!this.public,
       ...(this.test ? { test: true } : {}),
       seats: this.seats.map((s) => (s
-        ? { seat: s.seat, playerId: s.playerId, name: s.name, role: s.role ?? null, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left, fromAi: !!s.fromAi, ...(s.agent ? { agent: true } : {}), ...(s.art ? { art: s.art } : {}), ...(s.avatar ? { avatar: s.avatar } : {}), ...(this.modded && !s.isBot ? { content: s.content || 'loading' } : {}) }
+        ? { seat: s.seat, playerId: s.playerId, name: s.name, role: s.role ?? null, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left, fromAi: !!s.fromAi, ...(s.agent ? { agent: true, ...(s.agentOwner ? { agentOwner: s.agentOwner } : {}) } : {}), ...(s.art ? { art: s.art } : {}), ...(s.avatar ? { avatar: s.avatar } : {}), ...(this.modded && !s.isBot ? { content: s.content || 'loading' } : {}) }
         : null)),
       spectators: this.spectators.map((s) => ({ playerId: s.playerId, name: s.name, role: s.role ?? null, connected: s.connected, ...(s.art ? { art: s.art } : {}), ...(s.avatar ? { avatar: s.avatar } : {}), ...(this.modded ? { content: s.content || 'loading' } : {}) })),
       ...(this.content ? { content: this.content.trusted ? { ...this.content, trusted: { ...this.content.trusted, consent: Object.fromEntries(this.seats.filter((s) => s && !s.isBot).map((s) => [s.seat, s.consentCs === this.content.cs])) } } : this.content } : {}),
@@ -477,7 +477,8 @@ export class Lobby {
     this.agentOwnerTimers = new Map();
     /** Agent-seat counters for /healthz and the admin page (docs/AGENT-SEATS.md P2). */
     this.agentMetrics = { claims: 0, handbacks: 0 };
-    /** @type {Map<string, NodeJS.Timeout>} deferred (coalesced) resyncs by playerId */
+    /** @type {Map<string, number>} last owner-coach message per player (1/s) */
+    this.coachAt = new Map();    /** @type {Map<string, NodeJS.Timeout>} deferred (coalesced) resyncs by playerId */
     this.resyncTimers = new Map();
     /**
      * Operator notices (the admin page's 通知 panel): the broadcast history, newest first, ≤ NOTICE_HISTORY.
@@ -691,6 +692,8 @@ export class Lobby {
     this.clearGrace(session.playerId);
     this.clearAgentGrace(session.playerId);
     this.clearAgentOwnerGrace(session.playerId);
+    // an agent that reconnects inside the grace still gets the owner's recent coaching directives
+    if (session.agent && seat && seat.agent) for (const d of seat.agentDirectives || []) sendSession(session, d);
     // Only a visible change (reconnect, rename, new host) is broadcast; a plain resync (repeated hello on a
     // live socket) answers the requester alone, so hello spam cannot amplify into room-wide traffic.
     let changed = !seat.connected;
@@ -809,6 +812,7 @@ export class Lobby {
       case 'room.releaseSeat': return this.releaseSeat(session);
       case 'room.agentInvite': return this.inviteAgent(session, msg);
       case 'agent.claim': return this.claimAgentSeat(session, msg);
+      case 'agent.coach': return this.coachAgent(session, msg);
       case 'room.setPlugins': return this.setPlugins(session, msg);
       case 'room.setMode': return this.setMode(session, msg);
       case 'room.contentReady': return this.contentReady(session, msg);
@@ -1073,6 +1077,7 @@ export class Lobby {
     delete seat.agent;
     delete seat.agentOwner;
     delete seat.agentOwnerName;
+    delete seat.agentDirectives;
     room.spectators.push({ playerId: session.playerId, name: session.name, role: session.role ?? null, connected: session.connected, art: session.art ?? null, avatar: session.avatar ?? null });
     session.roomCode = room.code;
     if (room.activeHumans().length === 0) {
@@ -1198,7 +1203,35 @@ export class Lobby {
     return OK;
   }
 
-  /** room.removeSpectator (host, any time): the spectator gets room.closed {kicked} and its seat is freed. */  removeSpectator(session, { playerId }) {
+  /**
+   * agent.coach { text } (rule B): the invited seat's owner may give private tactical guidance. Forwarded only to the
+   * agent session(s) they own — never broadcast, never in room.state. Stored on the seat (last 5) so a reconnect inside
+   * the grace still receives it. Capped at 200 chars, 1/s per owner.
+   */
+  coachAgent(session, { text }) {
+    const room = this.roomOf(session);
+    if (!room) return fail(ERR.NOT_IN_ROOM);
+    const owner = room.seatOf(session.playerId);
+    if (!owner || owner.isBot || owner.agent) return fail(ERR.SPECTATOR, 'only a seated human may coach');
+    const seats = room.seats.filter((s) => s && !s.left && s.agent && s.agentOwner === session.playerId);
+    if (!seats.length) return fail(ERR.BAD_TARGET, 'no agent seat of yours');
+    const now = this.now();
+    if (now - (this.coachAt.get(session.playerId) || 0) < 1000) return fail(ERR.RATE, 'coach too fast');
+    const clean = String(text).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!clean) return fail(ERR.BAD_MSG, 'empty directive');
+    this.coachAt.set(session.playerId, now);
+    const directive = { t: 'agent.directive', text: clean, at: now, from: session.name };
+    for (const seat of seats) {
+      seat.agentDirectives = [...(seat.agentDirectives || []), directive].slice(-5);
+      const live = this.registry.byId(seat.playerId);
+      if (live && live.connected) sendSession(live, directive);
+    }
+    this.log.info(`[lobby] ${room.code} coach directive → ${seats.length} agent seat(s)`);
+    return OK;
+  }
+
+  /** room.removeSpectator (host, any time): the spectator gets room.closed {kicked} and its seat is freed. */
+  removeSpectator(session, { playerId }) {
     const room = this.roomOf(session);
     if (!room) return fail(ERR.NOT_IN_ROOM);
     if (room.hostId !== session.playerId) return fail(ERR.NOT_HOST);
@@ -2536,6 +2569,7 @@ export class Lobby {
     delete seat.agent;
     delete seat.agentOwner;
     delete seat.agentOwnerName;
+    delete seat.agentDirectives;
     this.log.info(`[lobby] ${room.code} seat ${seat.seat} handed to the AI ${bot.name}`);
     return true;
   }
@@ -2556,6 +2590,7 @@ export class Lobby {
     this.clearGrace(playerId);
     this.clearAgentGrace(playerId);
     this.clearAgentOwnerGrace(playerId);
+    this.coachAt.delete(playerId);
     // rule B: the inviter's agent seats are theirs — a permanent departure releases them now (a mere disconnect is
     // handled by startAgentOwnerGrace, which lets the inviter reconnect inside the grace)
     this.dropAgentInvitesOf(room, playerId);
@@ -2765,6 +2800,7 @@ export class Lobby {
       delete seat.agent;
       delete seat.agentOwner;
       delete seat.agentOwnerName;
+      delete seat.agentDirectives;
       delete seat.loadout;
       delete seat.notOwned;
       delete seat.diy;

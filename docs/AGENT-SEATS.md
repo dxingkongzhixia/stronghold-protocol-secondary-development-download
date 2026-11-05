@@ -42,6 +42,8 @@
 | `g.*` | agent → 服务器 | 全部现有游戏意图，校验与人类一致；**聊天 `room.chat` 和表情 `g.emote` 也可用** |
 | `m.public` / `m.private` / `m.field` / … | 服务器 → agent | 该座位可见的视图，不新增信息 |
 | `room.releaseSeat` | agent → 服务器 | 座位 `fromAi=true`，因此可把座位交还新 AI，自己回到观战席；断线 30 秒也会自动做 |
+| `agent.coach { text }` | 邀请者 → 服务器 | 只有签发者能给自己的 agent 下私有指令；不广播、不进 `room.state`；≤200 字、1 秒 1 条 |
+| `agent.directive { text, at, from }` | 服务器 → 该 agent | 只发给签发者拥有的 agent 会话；离线时存最后 5 条，重连补发 |
 
 `room.state` 的该座位带 `agent: true`（可选字段），客户端据此显示 **AGENT** 标记（与内置 bot 的 “AI 队友 / AUTONOMOUS UNIT”
 区分）；不改变 `isBot` 语义（`isBot=false`，是一个玩家座位，占一个席位）。同样的 `agent` 字段也进入
@@ -63,6 +65,7 @@
 | **邀请者绑定（规则 B）** | 座位属于签发者：签发者**主动离开/被移出** → 立即交还 bot；签发者**掉线** → 30 秒宽限，期间重连保留；超时则交还 bot，agent 收到 `room.closed { reason: 'agent-owner-left' }`。签发者离开也会作废其未兑换的邀请 |
 | 邀请者离线时兑换 | 拒绝（`BAD_TARGET: inviter is offline`）；邀请保留到过期或签发者回来 |
 | 玩家入口 | 房间内任一真人在 bot 座位点「邀请 AI」→ 弹窗显示一次性 token、到期时间、启动命令，可一键复制 |
+| **主人教练** | 邀请者在自己的 agent 座位点「教练」→ 输入/选预设（先铺满、优先升级、凑主盟约、找对空/治疗、攒钱、先稳）→ 只有该 agent 收到；AI 把最新一条视为优先战术指令 |
 
 ### 3.3 对局中接管
 
@@ -102,13 +105,14 @@
 | 协议条目（C2S / S2C） | `shared/protocol.js`（`room.agentInvite`、`agent.claim`、`agent.invite`） |
 | 邀请、兑换、座位锁定、过期、30 秒托管、邀请者绑定 | `server/lobby.js`（`inviteAgent`、`claimAgentSeat`、`agentInviteFor`、`startAgentGrace`、`startAgentOwnerGrace`、`releaseAgentSeat`、`Room.agentInvites`） |
 | 会话标记 | `server/net.js`（`Session.agent` / `Session.agentSeat`） |
+| 教练指令 | `server/lobby.js`（`coachAgent`、`Room.toState` 的 `agentOwner`）、`shared/protocol.js`（`agent.coach` / `agent.directive`） |
 | 对局中换键 / 交还 | `server/match/match/watch.js`（`Match.takeOver` / `aiTakeOver`，复用现有实现） |
 | 对局与结算里的 `agent` 字段 | `server/match/PlayerState.js`、`server/match/match/views.js`、`server/match/results.js`、`server/match/StubMatch.js` |
 | 公开房间目录 | `server/admin.js`（`buildPublicSnapshot`：`seats[].agent`、`agents` 计数） |
 | 插件意图边界 | `shared/plugins/ui.js`（`agent.*` 与 `g.*` 一样属于客户端意图，插件不能发送） |
 | 前端 AGENT 标记 / 邀请入口 | `public/js/screens/{room,rooms,bandDraft,result,settle}.js`、`public/js/ui/gameComponents.js`、`public/js/main.js`（`agent.invite`）、`public/js/store.js`、`public/css/screens/{room,lobby}.css` |
 | 运维计数 / 健康检查 | `server/lobby.js`（`agentStats`）、`server/admin.js`（「AI 席位」页） |
-| 示例客户端（P3） | `tools/agent/player.mjs`（规则循环）、`tools/agent/agent.mjs`（WS CLI）、`tools/agent/llm.mjs`（OpenAI / Anthropic + 规则书/角色/聊天）、`tools/agent/knowledge.mjs`（briefing + 本地规则检索）、`tools/agent/gamedata.mjs`（棋子/乐队公开元数据） |
+| 示例客户端（P3） | `tools/agent/player.mjs`（规则循环）、`tools/agent/agent.mjs`（WS CLI）、`tools/agent/llm.mjs`（OpenAI / Anthropic + 规则书/角色/聊天/教练）、`tools/agent/knowledge.mjs`（briefing + 本地规则检索）、`tools/agent/gamedata.mjs`（棋子/乐队公开元数据） |
 | 端到端（P4） | `test/e2e/agent-seat.e2e.mjs` |
 | 测试 | `test/match/agent-seat.test.js`、`test/agent-llm.test.js` |
 
@@ -127,11 +131,12 @@
 8. **规则 B**：邀请者掉线 30 秒 → 交还 bot；期间重连保留；邀请者主动离开/被移出 → 立即交还，agent 收到
    `agent-owner-left`；邀请者离线时不能兑换。
 9. 日志包含 `agent … claimed seat N` / `handed back to the AI (reason)`，**不包含**明文 token。
+10. **主人教练**：只有邀请者能给自己的 agent 发指令；其他玩家/观战者拒绝；agent 离线时存最后 5 条，重连补发。
 10. 开关默认关闭；`/healthz.agents` 报告开关、在座、邀请与计数。
 11. `test/package.test.js`：agent 席位代码不会被 `llmRelease` 排除，`tools/agent` 不进玩家包。
 12. `test/agent-llm.test.js`：OpenAI / Anthropic 两种 wire format、JSON 解析、动作白名单、规则**索引**（id/摘要、
-    `play/5` 精确命中、体积上限）、可选全文 §1–§7、角色/沟通/打法 briefing、`room.chat` / `g.emote`、`recentChat`、
-    棋子名称/阶级/站位/盟约与乐队元数据。
+    `play/5` 精确命中、体积上限）、可选全文 §1–§7、角色/沟通/打法/底层 bot/主人教练 briefing、`room.chat` /
+    `g.emote`、`recentChat` / `ownerDirectives`、棋子名称/阶级/站位/盟约与乐队元数据。
 
 ### 6.1 P4 真实对局回归
 
@@ -176,6 +181,9 @@ system prompt 由四段组成（只发一次，Anthropic 会缓存前缀）：
      默认中文，单条尽量 <40 字；
    - **打法参考（STRATEGY REFERENCE）**：经济/升级节奏（R1–R2 二级、R3–R4 三级…）、一主两副的阵容、
      阻挡/输出站位、备战顺序、低血时先花钱、乐队权衡；这是基线，细节查 `strategy/3–5`；
+   - **底层 bot 参考（BOT REFERENCE）**：内置 bot 的选乐队/经济/购买优先级/阵容/站位/演练逻辑摘要，
+     并提示可查 `bots/*`；它是强基线，不是上限；
+   - **主人教练（OWNER COACH）**：邀请者的私有指令是最新优先的战术指导；非法/不可行时做最接近的合法动作；
    - **阶段 playbook**：INFO_CHECK 确认、BAND_DRAFT 选乐队、PREP 买/部署/领奖/ready、COMBAT 只聊天或表情；
 3. **RULE INDEX**：每节一行 `id · 标题 — 一句话摘要`，例如：
 
@@ -204,7 +212,8 @@ system prompt 由四段组成（只发一次，Anthropic 会缓存前缀）：
 ```
 
 每次请求的 user 消息是**该座位可见**的压缩局面（`m.public` + `m.private` 字段子集）外加 `recentChat`（最近 8 条
-房间聊天），所以模型能回应队友，而不是自说自话。
+房间聊天）和 `ownerDirectives`（邀请者最近 3 条教练指令），所以模型能回应队友，也能听主人的战术安排。
+邀请者在 agent 座位上点「教练」即可发送；指令只发给自己的 agent，离线时存最后 5 条、重连补发。
 
 **知识查询**：客户端在本地搜索 `docs/PLAYING.md`、`RULES.md`、`AI-STRATEGY.md`、`BOT-STRATEGIES.md`；
 `play/5` 这样的 id 精确命中，关键词走相关度排序。每次决策最多 2 次查询，整局默认最多 12 次；

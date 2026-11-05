@@ -156,7 +156,7 @@ function TrustedConsentBar({ room, mine }) {
   </section>`;
 }
 
-function SeatCard({ seat, index, room, facts, myId, busy, bubble, canInvite, onAddBot, onRemoveBot, onInviteAgent, onKick, onPickArt }) {
+function SeatCard({ seat, index, room, facts, myId, busy, bubble, canInvite, onAddBot, onRemoveBot, onInviteAgent, onCoach, onKick, onPickArt }) {
   useData('assets');
   const coop = room.mode !== 'solo';
   if (!seat) {
@@ -227,6 +227,9 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, canInvite, onA
         </span>` : null}
         ${seat.isBot && canInvite ? html`<${Tooltip} text=${t('邀请 AI 接入该座位（一次性 token）')}>
           <${Button} variant="ghost" size="sm" square=${true} icon="link" loading=${busy === `ai${index}`} onClick=${() => onInviteAgent(index)} aria-label=${t('邀请 AI')} />
+        <//>` : null}
+        ${seat.agent && seat.agentOwner === myId ? html`<${Tooltip} text=${t('给 AI 下达指令')}>
+          <${Button} variant="ghost" size="sm" square=${true} icon="send" loading=${busy === 'coach'} onClick=${() => onCoach(seat)} aria-label=${t('教练指令')} />
         <//>` : null}
         ${seat.isBot && facts.isHost ? html`<${Tooltip} text=${t('移除该 AI 队友')}>
           <${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `rm${index}`} onClick=${() => onRemoveBot(index)} aria-label=${t('移除 AI 队友')} />
@@ -345,6 +348,8 @@ export function RoomScreen() {
   const [busy, setBusy] = useState(null);
   const [artSeat, setArtSeat] = useState(null);
   const [saveDefault, setSaveDefault] = useState(true);
+  const [coachSeat, setCoachSeat] = useState(null);
+  const [coachText, setCoachText] = useState('');
   const auth = useStore((s) => s.auth, shallowEqual);
   const agentInvite = useStore((s) => s.agentInvite, shallowEqual);
   const alive = useRef(true);
@@ -380,6 +385,19 @@ export function RoomScreen() {
   // docs/AGENT-SEATS.md: any seated player mints a one-time token; the server pushes it back in `agent.invite`
   const inviteAgent = (seat) => run(`ai${seat}`, () => net.request('room.agentInvite', { seat, ttlSec: 600 }));
   const closeAgentInvite = () => store.set({ agentInvite: null });
+  // owner → own agent only (agent.coach): private, 1/s, 200 chars; the directive is replayed after a reconnect
+  const COACH_PRESETS = [t('先铺满棋盘'), t('优先升级商店'), t('优先凑主盟约'), t('找对空/治疗'), t('攒钱打后期'), t('这轮先稳')];
+  const openCoach = (seat) => { setCoachSeat(seat); setCoachText(''); };
+  const sendCoach = () => {
+    const text = coachText.trim();
+    if (!text) return;
+    run('coach', async () => {
+      await net.request('agent.coach', { text });
+      setCoachSeat(null);
+      setCoachText('');
+      toast(t('指令已发送'), 'info');
+    });
+  };
   const removeBot = (seat) => run(`rm${seat}`, () => net.request('room.removeBot', { seat }));
   // seat-card 立绘 (owner 2026-10-24): the picker's choice rides room.setArt; a bound account may also keep it as the
   // default for every later room (server-side accounts.art, applied when a seat is created / the account binds).
@@ -474,6 +492,7 @@ export function RoomScreen() {
       ${facts.seats.map((s, i) => html`<${SeatCard} key=${s ? `p${s.playerId}` : `e${i}`} seat=${s} index=${i} room=${room} facts=${facts}
         myId=${me.playerId} busy=${busy} bubble=${s ? bubbles.get(s.playerId) : undefined} onAddBot=${addBot} onRemoveBot=${removeBot} onKick=${kick}
         canInvite=${canInviteAgent} onInviteAgent=${inviteAgent}
+        onCoach=${openCoach}
         onPickArt=${setArtSeat} />`)}
       ${coop ? null : html`<aside class="solo-brief brackets">
         <${MicroLabel} tone="mint">BRIEFING<//>
@@ -533,6 +552,19 @@ export function RoomScreen() {
         <p>${t('在装有本项目的机器上运行（模型 key 只放在那台机器）：')}</p>
         <code class="agent-invite__cmd">${agentCommand}</code>
         <p class="t-dim">${t('邀请者离开房间或掉线 30 秒，AI 座位会自动交还内置 bot。')}</p>
+      </div>
+    <//>` : null}
+    ${coachSeat ? html`<${Modal} open=${true} onClose=${() => setCoachSeat(null)} title=${t('教练指令')} micro="OWNER DIRECTIVE" width="7.2rem"
+      actions=${html`<${Button} variant="primary" icon="send" loading=${busy === 'coach'} onClick=${sendCoach}>${t('发送指令')}<//>`}>
+      <div class="coach" data-testid="agent-coach">
+        <p>${t('只有你（邀请者）能看到这条指令；AI 在下一次决策时优先执行最新一条。')}</p>
+        <textarea class="coach__text" maxlength="200" value=${coachText}
+          onInput=${(e) => setCoachText(e.currentTarget.value)}
+          placeholder=${t('例如：先铺满棋盘 / 优先升级商店 / 找对空')}></textarea>
+        <div class="coach__presets">
+          ${COACH_PRESETS.map((p) => html`<button type="button" class="coach__preset" key=${p} onClick=${() => setCoachText(p)}>${p}</button>`)}
+        </div>
+        <p class="t-dim">${t('最多 200 字；每秒最多一条。')}</p>
       </div>
     <//>` : null}
   </div>`;
