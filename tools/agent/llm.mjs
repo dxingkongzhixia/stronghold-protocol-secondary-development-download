@@ -21,6 +21,7 @@ import { GEO, EMOTES, CHAT_MAX } from '../../shared/constants.js';
 import { nextAction, FALLBACK_BANDS } from './player.mjs';
 import { claimAndPlay, demo } from './agent.mjs';
 import { AGENT_BRIEFING, searchKnowledge, renderKnowledge, loadRuleIndex, renderRuleIndex } from './knowledge.mjs';
+import { describePiece, describeBand } from './gamedata.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEFAULTS = { openai: 'https://api.openai.com/v1', anthropic: 'https://api.anthropic.com/v1' };
@@ -180,24 +181,36 @@ export function validAction(raw, { pub, priv, myId, bands }) {
 
 /** A compact, bounded state for the prompt (never the whole public view). */
 export function promptState({ pub, priv, myId, bands, chat = [] }) {
-  const players = (pub.players || []).map((p) => ({ seat: p.seat, name: p.name, bandId: p.bandId || null, ready: !!p.ready, lp: p.lp, isBot: !!p.isBot, agent: !!p.agent }));
-  const shop = (priv.shop?.slots || []).map((s, slot) => (s ? { slot, kind: s.kind, id: s.id, price: s.price, sold: !!s.sold } : null)).filter(Boolean);
-  const hand = (priv.hand || []).map((p, slot) => (p ? { slot, uid: p.uid, id: p.id, kind: p.kind, tier: p.tier ?? null } : null)).filter(Boolean);
-  const board = (priv.board || []).map((p) => ({ uid: p.uid, id: p.id, kind: p.kind, row: p.row, col: p.col }));
+  const players = (pub.players || []).map((p) => ({
+    seat: p.seat, name: p.name, bandId: p.bandId || null,
+    bandName: p.bandId ? describeBand(p.bandId).name : null,
+    ready: !!p.ready, lp: p.lp, isBot: !!p.isBot, agent: !!p.agent,
+  }));
+  const shop = (priv.shop?.slots || [])
+    .map((s, slot) => (s ? { slot, ...describePiece({ id: s.id, kind: s.kind }), price: s.price, sold: !!s.sold } : null))
+    .filter(Boolean);
+  const hand = (priv.hand || [])
+    .map((p, slot) => (p ? { slot, uid: p.uid, ...describePiece({ id: p.id, kind: p.kind }), tier: p.tier ?? null } : null))
+    .filter(Boolean);
+  const board = (priv.board || []).map((p) => ({ uid: p.uid, row: p.row, col: p.col, dir: p.dir || null, ...describePiece({ id: p.id, kind: p.kind }) }));
   const choice = priv.personalChoice ? { round: priv.personalChoice.round, cards: (priv.personalChoice.cards || []).map((c) => c && (c.name || c.id)) } : null;
   const reward = priv.shop?.rewardOffer ? (priv.shop.rewardOffer.slots || []).map((s, idx) => (s ? { idx, kind: s.kind, id: s.id, sold: !!s.sold } : null)).filter(Boolean) : null;
+  const bandChoices = (bands || []).map((id) => describeBand(id));
   return {
-    phase: pub.phase, round: pub.round,
+    phase: pub.phase, round: pub.round, lastRound: pub.lastRound ?? null, teamLp: pub.teamLp ?? null,
     you: {
       playerId: myId, seat: priv.seat, funds: priv.funds, shopLevel: priv.shop?.level ?? null,
+      upgradePrice: priv.shop?.upgradePrice ?? null, refreshPrice: priv.shop?.refreshPrice ?? null,
+      freeRefreshes: priv.shop?.freeRefreshes ?? 0, frozen: !!priv.shop?.frozen,
       deployCap: priv.deployCap, deployCount: priv.deployCount, canReady: !!priv.canReady, ready: !!priv.ready,
       bandId: priv.bandId || null,
     },
-    draft: pub.draft ? { turn: pub.draft.turn, picks: pub.draft.picks, bandIds: bands } : null,
+    draft: pub.draft ? { turn: pub.draft.turn, picks: pub.draft.picks, bands: bandChoices } : null,
     players,
     shop, hand, board,
     personalChoice: choice,
     rewardOffer: reward,
+    nextEnemies: (priv.nextEnemies || []).slice(0, 8),
     bonds: (priv.bonds || []).map((b) => ({ name: b.name, active: !!b.active, layers: b.layers || 0 })).slice(0, 12),
     recentChat: (chat || []).slice(-8).map((c) => ({ name: c.name, text: String(c.text || '').slice(0, 120) })),
   };

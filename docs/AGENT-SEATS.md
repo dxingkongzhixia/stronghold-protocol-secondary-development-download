@@ -108,7 +108,7 @@
 | 插件意图边界 | `shared/plugins/ui.js`（`agent.*` 与 `g.*` 一样属于客户端意图，插件不能发送） |
 | 前端 AGENT 标记 / 邀请入口 | `public/js/screens/{room,rooms,bandDraft,result,settle}.js`、`public/js/ui/gameComponents.js`、`public/js/main.js`（`agent.invite`）、`public/js/store.js`、`public/css/screens/{room,lobby}.css` |
 | 运维计数 / 健康检查 | `server/lobby.js`（`agentStats`）、`server/admin.js`（「AI 席位」页） |
-| 示例客户端（P3） | `tools/agent/player.mjs`（规则循环）、`tools/agent/agent.mjs`（WS CLI）、`tools/agent/llm.mjs`（OpenAI / Anthropic + 规则书/角色/聊天）、`tools/agent/knowledge.mjs`（briefing + 本地规则检索） |
+| 示例客户端（P3） | `tools/agent/player.mjs`（规则循环）、`tools/agent/agent.mjs`（WS CLI）、`tools/agent/llm.mjs`（OpenAI / Anthropic + 规则书/角色/聊天）、`tools/agent/knowledge.mjs`（briefing + 本地规则检索）、`tools/agent/gamedata.mjs`（棋子/乐队公开元数据） |
 | 端到端（P4） | `test/e2e/agent-seat.e2e.mjs` |
 | 测试 | `test/match/agent-seat.test.js`、`test/agent-llm.test.js` |
 
@@ -130,7 +130,8 @@
 10. 开关默认关闭；`/healthz.agents` 报告开关、在座、邀请与计数。
 11. `test/package.test.js`：agent 席位代码不会被 `llmRelease` 排除，`tools/agent` 不进玩家包。
 12. `test/agent-llm.test.js`：OpenAI / Anthropic 两种 wire format、JSON 解析、动作白名单、规则**索引**（id/摘要、
-    `play/5` 精确命中、体积上限）、可选全文 §1–§7、角色/沟通 briefing、`room.chat` / `g.emote`、`recentChat`。
+    `play/5` 精确命中、体积上限）、可选全文 §1–§7、角色/沟通/打法 briefing、`room.chat` / `g.emote`、`recentChat`、
+    棋子名称/阶级/站位/盟约与乐队元数据。
 
 ### 6.1 P4 真实对局回归
 
@@ -173,6 +174,8 @@ system prompt 由四段组成（只发一次，Anthropic 会缓存前缀）：
    - **角色**：匿名 AI agent、占一个玩家席位、不是内置 bot 也不是真人；不能邀请/踢人/开局/改设置；要当合作队友；
    - **沟通礼仪**：可以 `room.chat` 和 `g.emote`；开局问候、回应队友、短报点；不刷屏、不争论、不冒充真人；
      默认中文，单条尽量 <40 字；
+   - **打法参考（STRATEGY REFERENCE）**：经济/升级节奏（R1–R2 二级、R3–R4 三级…）、一主两副的阵容、
+     阻挡/输出站位、备战顺序、低血时先花钱、乐队权衡；这是基线，细节查 `strategy/3–5`；
    - **阶段 playbook**：INFO_CHECK 确认、BAND_DRAFT 选乐队、PREP 买/部署/领奖/ready、COMBAT 只聊天或表情；
 3. **RULE INDEX**：每节一行 `id · 标题 — 一句话摘要`，例如：
 
@@ -180,10 +183,16 @@ system prompt 由四段组成（只发一次，Anthropic 会缓存前缀）：
    - play/1 · 1. 一局的流程 — 确认本局信息 → 选择策略 → 协议启动 → …
    - play/2 · 2. 经济 — 每回合资金、刷新、出售、升级调度中心 …
    - play/5 · 5. 联防（同盟） — 有人漏怪、又有人完美作战时触发 …
+   - strategy/3 · 3. 经济 — 先活下来、再滚雪球 …
    ```
 
    模型需要细节时回 `{"lookup":"play/5"}`；也可以按关键词查（`{"lookup":"联防 漏怪"}`）。
 4. **状态字段说明**：每个字段怎么读。
+
+**局面不是只有 id**：`tools/agent/gamedata.mjs` 会把商店/手牌/棋盘里的棋子补上
+`name / tier / position / profession / bonds`（和商店卡片看到的一致），商店还带
+`upgradePrice / refreshPrice / freeRefreshes`，乐队选项带 `name / totalHp / effect`，
+另外附 `teamLp`、玩家 LP 和 `nextEnemies` 预览。敌方/隐藏数据仍然不下发。
 
 只有显式要求时才注入全文：
 

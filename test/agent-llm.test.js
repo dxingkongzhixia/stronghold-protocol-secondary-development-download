@@ -96,6 +96,8 @@ test('the full rule book is still available on request (§1–§7, bounded)', ()
   assert.match(AGENT_BRIEFING, /g\.emote/);
   assert.match(AGENT_BRIEFING, /Do NOT spam/);
   assert.match(AGENT_BRIEFING, /never pretend to be human/);
+  assert.match(AGENT_BRIEFING, /STRATEGY REFERENCE/);
+  assert.match(AGENT_BRIEFING, /R1–R2/);
   assert.equal(extractRules('## 1. A\nrule\n## 8. B\nignored'), '## 1. A\nrule');
   assert.equal(extractRules(''), '');
   const fallback = loadRulesBrief({ file: path.join(ROOT, 'does-not-exist.md') });
@@ -132,19 +134,36 @@ test('the model reply is parsed from fences/prose and only legal actions pass', 
   assert.equal(validAction({ t: 'g.test', cmd: 'x' }, state), null, 'admin/test intents never pass');
 });
 
-test('knowledge lookup finds the relevant rule section and recent chat reaches the prompt', () => {
+test('knowledge lookup finds the relevant rule section, band choices carry metadata, and recent chat reaches the prompt', () => {
   const results = searchKnowledge('联防 漏怪');
   assert.ok(results.length > 0);
   assert.match(results[0].title, /联防|作战|结算/);
   assert.match(renderKnowledge(results, '联防'), /docs\/PLAYING\.md/);
 
   const state = {
-    myId: 'p1', bands: ['b'],
-    pub: { phase: 'PREP', draft: null, players: [] },
-    priv: { seat: 1, funds: 0, deployCap: 0, deployCount: 0, canReady: true, shop: { slots: [] }, hand: [], board: [] },
+    myId: 'p1', bands: ['band_bldsk'],
+    pub: { phase: 'PREP', draft: { turn: 'p1', picks: {} }, players: [] },
+    priv: {
+      seat: 1, funds: 3, deployCap: 2, deployCount: 0, canReady: false,
+      shop: { level: 2, upgradePrice: 5, refreshPrice: 1, slots: [{ kind: 'chess', id: 'chess_char_1_01_a', price: 2 }] },
+      hand: [{ uid: 7, id: 'chess_char_1_01_a', kind: 'chess' }], board: [],
+      nextEnemies: [{ name: '源石虫', count: 3 }],
+    },
     chat: [{ name: '队友', text: 'AI 你在吗', at: 1 }],
   };
-  const view = promptState({ ...state, bands: ['b'] });
+  const view = promptState({ ...state, bands: ['band_bldsk'] });
   assert.equal(view.recentChat.length, 1);
   assert.equal(view.recentChat[0].text, 'AI 你在吗');
+  // the model sees names / tiers / positions / bonds, not opaque ids
+  assert.equal(view.shop[0].name, '隐现');
+  assert.equal(view.shop[0].tier, 1);
+  assert.equal(view.shop[0].position, 'RANGED');
+  assert.ok(view.shop[0].bonds.includes('拉特兰'));
+  assert.equal(view.hand[0].name, '隐现');
+  assert.equal(view.you.upgradePrice, 5);
+  assert.equal(view.you.refreshPrice, 1);
+  assert.equal(view.draft.bands[0].name, '华法琳');
+  assert.equal(view.draft.bands[0].totalHp, 28);
+  assert.match(view.draft.bands[0].effect, /重点监护/);
+  assert.equal(view.nextEnemies[0].count, 3);
 });
