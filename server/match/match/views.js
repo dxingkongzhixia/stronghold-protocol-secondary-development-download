@@ -195,6 +195,9 @@ export class MatchViews {
       // turnSeconds: the length of a turn (the countdown gauge's total; 0 when untimed) — deadline = turnDeadline
       v.draft = {
         order: d.order.slice(), turn: this.draftTurn(), picks: { ...d.picks }, skipsLeft: { ...d.skipsLeft }, turnDeadline: d.turnDeadline || 0,
+        // the bands this room actually allows (mode + the current boss; a setup reroll can change both, and a content
+        // plugin can ship its own list) — an external client has no copy of the room's data and must not guess
+        bands: this.gd.bandIds(),
         turnSeconds: d.untimed ? 0 : this.bandTurnMs() / 1000, untimed: !!d.untimed,
       };
     }

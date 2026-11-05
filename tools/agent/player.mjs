@@ -30,15 +30,27 @@ export function deployCells() {
 export function nextAction({ pub, priv, myId, bands = FALLBACK_BANDS, attempt = 0 }) {
   if (!pub || !priv || pub.phase == null) return null;
   if (pub.phase === PHASE.INFO_CHECK) {
+    // A setup reroll needs every human's consent; an agent has no dialog, so it always agrees. While the vote is open
+    // the server refuses g.infoReady (WRONG_PHASE) — voting first is what keeps the host from waiting forever.
+    const vote = pub.rerollVote;
+    if (vote && Array.isArray(vote.voters) && vote.voters.includes(myId) && !(vote.agreed || []).includes(myId)) {
+      return { msg: { t: 'g.rerollVote', voteId: vote.id, agree: true }, note: `agree reroll ${vote.id}` };
+    }
     const me = (pub.players || []).find((p) => p && p.playerId === myId);
-    if (me && !me.ready) return { msg: { t: 'g.infoReady' }, note: 'infoReady' };
+    if (me && !me.ready) {
+      // a setup reroll bumps the revision: an infoReady without it is refused with BAD_TARGET forever
+      return { msg: { t: 'g.infoReady', setupRevision: pub.setupRevision ?? 0 }, note: 'infoReady' };
+    }
     return null;
   }
   if (pub.phase === PHASE.BAND_DRAFT) {
     const d = pub.draft;
     if (!d || d.turn !== myId || (d.picks && d.picks[myId])) return null;
     const taken = new Set(Object.values(d.picks || {}).filter(Boolean));
-    const bandId = bands.find((b) => !taken.has(b)) || bands[0];
+    // the room's own allowed list (mode + current boss + the content set) comes with the draft; the static list is
+    // only a fallback for an older server. Guessing after a setup reroll spins on BAD_TARGET for the whole turn.
+    const pool = Array.isArray(d.bands) && d.bands.length ? d.bands : bands;
+    const bandId = pool.find((b) => !taken.has(b)) || pool[0];
     return bandId ? { msg: { t: 'g.band', bandId }, note: `band ${bandId}` } : null;
   }
   if (pub.phase !== PHASE.PREP) return null;

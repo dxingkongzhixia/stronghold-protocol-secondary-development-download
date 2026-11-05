@@ -15,7 +15,10 @@ export class MatchSetupVote {
     if (!ps || ps.isBot || ps.left || !ps.connected) return fail(ERR.NOT_IN_ROOM);
     if (revision !== this.setupRevision) return fail(ERR.BAD_TARGET, 'setup revision changed');
     if (this.setupVote) return fail(ERR.WRONG_PHASE, 'setup reroll vote in progress');
-    const humans = this.humans();
+    // docs/AGENT-SEATS.md: an agent seat has no dialog, so it consents to a setup reroll by default — it is not a
+    // voter (an older agent client that never votes must not block the host), and a momentary agent disconnect does
+    // not hold the vote either.
+    const humans = this.humans().filter((p) => !p.agent);
     if (humans.some((p) => !p.connected)) return fail(ERR.NOT_READY, 'all humans must be connected to vote');
     const now = this.sched.now();
     if (now - this._lastSetupVoteAt < 300) return fail(ERR.RATE);

@@ -231,3 +231,14 @@ test('failed DIY stock preparation leaves every opening field and player stock i
   assert.equal(m.deadline - h.sched.now(), remaining);
   assert.equal(h.logs.error.length, 1, 'failure is reported once');
 });
+
+test('an agent seat consents to a setup reroll by default (not a voter, not a blocker)', (t) => {
+  const h = makeMatch({ humans: 2 }).start();
+  t.after(() => h.m.dispose());
+  const m = h.m;
+  h.ps('p_1').agent = true;
+  assert.deepEqual(m.requestSetupReroll('p_0', m.setupRevision), { ok: true });
+  assert.equal(m.setupVote, null, 'host + agent rerolls at once, without waiting for a vote');
+  assert.equal(m.setupRevision, 1);
+  assert.equal(h.ps('p_1').infoReady, false, 'the reroll still clears the agent flag; its client confirms again');
+});

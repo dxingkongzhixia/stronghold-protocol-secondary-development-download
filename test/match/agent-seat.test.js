@@ -416,3 +416,30 @@ test('agent client: the lobby keeper puts the seat back to ready after the host 
     conn.readyTimer = null;
   }
 });
+
+test('agent client: a setup reroll is agreed by default; the server no longer counts agent seats as voters', async () => {
+  const { nextAction } = await import('../../tools/agent/player.mjs');
+  const info = { phase: 'INFO_CHECK', players: [{ playerId: 'p_ag', ready: true }] };
+  const priv = {};
+  // an older server still lists the agent as a voter: agree instead of leaving the host at 1/2
+  const vote = { id: 4, voters: ['p_h', 'p_ag'], agreed: ['p_h'] };
+  assert.deepEqual(nextAction({ pub: { ...info, rerollVote: vote }, priv, myId: 'p_ag' }).msg,
+    { t: 'g.rerollVote', voteId: 4, agree: true });
+  // the current server filters agent seats out of the voters, so no vote is sent; readiness is still confirmed
+  assert.equal(nextAction({ pub: { ...info, rerollVote: { id: 4, voters: ['p_h'], agreed: [] } }, priv, myId: 'p_ag' }), null);
+  assert.deepEqual(nextAction({ pub: { ...info, rerollVote: null, players: [{ playerId: 'p_ag', ready: false }] }, priv, myId: 'p_ag' }).msg,
+    { t: 'g.infoReady', setupRevision: 0 });
+  // after a setup reroll the revision is > 0; an infoReady without it is refused (BAD_TARGET) for the whole phase
+  assert.deepEqual(nextAction({ pub: { ...info, setupRevision: 2, players: [{ playerId: 'p_ag', ready: false }] }, priv, myId: 'p_ag' }).msg,
+    { t: 'g.infoReady', setupRevision: 2 });
+});
+
+test('agent client: the band draft uses the room allowed list (mode, boss, content set), not the vanilla one', async () => {
+  const { nextAction } = await import('../../tools/agent/player.mjs');
+  const pub = { phase: 'BAND_DRAFT', draft: { turn: 'p_ag', picks: {}, bands: ['band_room_a', 'band_room_b'] } };
+  assert.deepEqual(nextAction({ pub, priv: {}, myId: 'p_ag' }).msg, { t: 'g.band', bandId: 'band_room_a' });
+  const taken = { ...pub, draft: { ...pub.draft, picks: { p_h: 'band_room_a' } } };
+  assert.deepEqual(nextAction({ pub: taken, priv: {}, myId: 'p_ag' }).msg, { t: 'g.band', bandId: 'band_room_b' });
+  const old = { phase: 'BAND_DRAFT', draft: { turn: 'p_ag', picks: {} } };
+  assert.equal(nextAction({ pub: old, priv: {}, myId: 'p_ag' }).msg.bandId, 'band_bldsk');
+});
