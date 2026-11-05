@@ -9,7 +9,13 @@ import {
   DEFAULT_STATE, buildSpec, cleanGroup, groupsToParam, parseGroups, stateFromQuery, stateToQuery, waveSpawns,
 } from '../../public/dev/sandbox/state.js';
 
-const STAGE = { id: 'st', deployTiles: { normal: { melee: [[9, 3], [9, 4], [10, 3]], ranged: [[8, 4]] } } };
+const STAGE = {
+  id: 'st',
+  deployTiles: {
+    normal: { melee: [[9, 3], [9, 4], [10, 3]], rangedOnly: [[8, 4]] },
+    bossLeft: { melee: [[2, 4], [2, 5]], rangedOnly: [] },
+  },
+};
 const WAVE = {
   id: 'wv', maxPlayTime: 90,
   routes: [{ motion: 'WALK', start: [9, 10], end: [9, 2] }, { motion: 'FLY', start: [0, 10], end: [0, 2] }],
@@ -144,3 +150,10 @@ test('sandbox: boss and team survive the URL round trip', () => {
   assert.deepEqual(stateFromQuery(`?${stateToQuery(state)}`), state);
 });
 
+
+test('sandbox: a boss field deploys on bossLeft tiles (GEO.BOSS_RECT), not the normal band', () => {
+  const spec = buildSpec({ stage: 'st', wave: 'wv', boss: 'boss_1', hp: 1, atk: 1 }, { ...ctx, bosses: BOSSES });
+  const u = spec.players[0].units[0];
+  assert.deepEqual([u.row, u.col], [2, 5], 'a bossLeft tile (rows 0-5), not a normal-band tile');
+  assert.ok(u.row <= 5, 'GEO.BOSS_RECT rows are 0-5');
+});

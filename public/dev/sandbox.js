@@ -184,8 +184,9 @@ function wireBoardClick() {
     const rect = field.getBoundingClientRect();
     const t = ground(e.clientX - rect.left, e.clientY - rect.top);
     if (!t) return;
-    const legal = new Set([...(stages[state.stage]?.deployTiles?.normal?.melee ?? []), ...(stages[state.stage]?.deployTiles?.normal?.ranged ?? [])]
-      .map(([r, c]) => `${r},${c}`));
+    const st = stages[state.stage];
+    const set = state.boss ? (st?.deployTiles?.bossLeft ?? st?.deployTiles?.normal) : st?.deployTiles?.normal;
+    const legal = new Set([...(set?.melee ?? []), ...(set?.rangedOnly ?? [])].map(([r, c]) => `${r},${c}`));
     if (!legal.has(`${t.row},${t.col}`)) return;
     panel.set({ row: t.row, col: t.col });
   });
@@ -213,6 +214,12 @@ async function main() {
   if (skills.length && !skills.includes(state.skill)) state = { ...state, skill: skills.filter((i) => i <= state.skill).pop() ?? skills[0] };
   if (state.module && !(opById.get(state.unit)?.modules ?? []).some((m) => m.id === state.module)) state = { ...state, module: null };
   if (state.boss && !bosses[state.boss]) state = { ...state, boss: null };
+  if (state.boss && state.row != null) {
+    // a shared link may carry a normal-band tile; a boss field only deploys inside GEO.BOSS_RECT
+    const set = stages[state.stage]?.deployTiles?.bossLeft ?? stages[state.stage]?.deployTiles?.normal;
+    const legal = new Set([...(set?.melee ?? []), ...(set?.rangedOnly ?? [])].map(([r, c]) => `${r},${c}`));
+    if (!legal.has(`${state.row},${state.col}`)) state = { ...state, row: null, col: null };
+  }
   const team = (state.team ?? []).filter((m) => opById.has(m.unit)).slice(0, 3).map((m) => {
     const idx = (opById.get(m.unit)?.skills ?? []).map((s) => s.index);
     return { ...m, skill: idx.includes(m.skill) ? m.skill : (idx[0] ?? 0) };

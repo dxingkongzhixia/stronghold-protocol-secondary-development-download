@@ -69,8 +69,9 @@ export function createPanel({ root, catalogs, initial, onChange }) {
   // ---- deploy tile --------------------------------------------------------------------------------------------
   const legalTiles = () => {
     const st = stage();
-    const melee = st?.deployTiles?.normal?.melee ?? [];
-    const ranged = st?.deployTiles?.normal?.ranged ?? [];
+    const set = state.boss ? (st?.deployTiles?.bossLeft ?? st?.deployTiles?.normal) : st?.deployTiles?.normal;
+    const melee = set?.melee ?? [];
+    const ranged = set?.rangedOnly ?? [];
     return new Set([...melee, ...ranged].map(([r, c]) => `${r},${c}`));
   };
   const tileHtml = () => {
@@ -308,6 +309,9 @@ export function createPanel({ root, catalogs, initial, onChange }) {
         const b = v ? catalogs.bosses.find((x) => x.id === v) : null;
         const tpl = b ? bossTemplate(b, state.bossDifficulty) : null;
         if (tpl) patch.wave = tpl;
+        // the boss field is the top band: a normal-band tile from before is outside GEO.BOSS_RECT
+        patch.row = null;
+        patch.col = null;
       }
       if (f === 'bossDifficulty' && state.boss) {
         const tpl = bossTemplate(boss(), v);
@@ -373,7 +377,7 @@ export function createPanel({ root, catalogs, initial, onChange }) {
     if (t.dataset.more === 'op') { opLimit += 40; root.querySelector('[data-list="op"]').innerHTML = opListHtml(); return; }
     if (t.dataset.more === 'enemy') { enemyLimit += 40; root.querySelector('[data-list="enemy"]').innerHTML = enemyListHtml(); return; }
     if (t.dataset.auto === 'tile') {
-      const [r, c] = autoPlace(stage(), wave()?.routes ?? []);
+      const [r, c] = autoPlace(stage(), wave()?.routes ?? [], !!state.boss);
       commit({ row: r, col: c });
       return;
     }

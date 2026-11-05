@@ -70,10 +70,21 @@
 | `public/dev/sandbox/panels.js` | 面板 DOM 与事件（搜索、表单、网格） |
 | `test/dev/sandbox.test.js` | URL 往返、旧参数、编组、spec 字段、自动选格 |
 
-`state.js` 的 `buildSpec(state, { stages, waves, enemies })` 直接产 `server/sim/spec.js` 的 spec：
-`players[].units[]` 的 `diy`、`potential`、`cultivate`、`row/col/dir`，`spawns`、`enemyOverrides`、`flags.startOpCooldown=0`。
+`state.js` 的 `buildSpec(state, { stages, waves, enemies, bosses })` 直接产 `server/sim/spec.js` 的 spec：
+`players[].units[]` 的 `diy`、`potential`、`cultivate`、`row/col/dir`，`spawns`、`enemyOverrides`、`boss/bossId`、`flags.startOpCooldown=0`。
 
-## 5. 已知限制
+## 5. BOSS 战的地图与站位
+
+BOSS 战不是把普通波次换成 BOSS 波：它使用 `GEO.BOSS_RECT`（地图顶部 0–5 行），部署格取自 `data/stages.json`
+的 `deployTiles.bossLeft`，而不是 normal 的 9–12 行。切到 BOSS 时页面会：
+
+- 把波次换成该 BOSS 的模板波次；
+- 清掉旧的普通部署位，在 bossLeft 里重新自动选格；
+- 战场点击也只接受 bossLeft 的格子。
+
+同一个 BOSS 在普通战场与 BOSS 战场上的站位不同；链接里的 `row/col` 若落在普通区会被自动丢弃。
+
+## 6. 已知限制
 
 - 队伍上限 4 人（主 + 3 名队友）；治疗/光环类的目标选择足够覆盖，更多协同留给后续
 - BOSS 的协议 HUD（复活/护盾/阶段）只对带协议的 BOSS 显示，其余显示 `—`

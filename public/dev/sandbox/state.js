@@ -188,10 +188,14 @@ export function waveSpawns(tpl) {
   }));
 }
 
-/** A legal deploy tile of the stage, or the wave's walking lane: where the DIY piece stands when the scenario has none. */
-export function autoPlace(stage, routes = []) {
+/**
+ * A legal deploy tile of the field, or the wave's walking lane: where the DIY piece stands when the scenario has none.
+ * A boss field is the top band of the map (GEO.BOSS_RECT) with its own deploy tiles (`deployTiles.bossLeft`).
+ */
+export function autoPlace(stage, routes = [], boss = false) {
+  const set = boss ? (stage?.deployTiles?.bossLeft ?? stage?.deployTiles?.normal) : stage?.deployTiles?.normal;
   const walkRows = new Set(routes.filter((r) => (r?.motion ?? 'WALK') === 'WALK').map((r) => r?.start?.[0]).filter((r) => r != null));
-  const tiles = [...(stage?.deployTiles?.normal?.melee ?? []), ...(stage?.deployTiles?.normal?.ranged ?? [])];
+  const tiles = [...(set?.melee ?? []), ...(set?.rangedOnly ?? [])];
   const lane = tiles.filter(([r]) => walkRows.has(r));
   const pool = lane.length ? lane : tiles;
   const mid = 6; // the p1 half runs cols 2..10; the gate is the right end
@@ -219,11 +223,13 @@ export function buildSpec(state, { stages = {}, waves = {}, enemies = {}, bosses
   if (!stage) throw new Error(`unknown stage ${s.stage}`);
   if (!wave) throw new Error(`unknown wave template ${s.wave}`);
   const routes = wave.routes ?? [];
-  const [row, col] = s.row != null && s.col != null ? [s.row, s.col] : autoPlace(stage, routes);
+  const [row, col] = s.row != null && s.col != null ? [s.row, s.col] : autoPlace(stage, routes, !!boss);
 
-  // the team: the panel's operator first, then up to three extras on nearby legal tiles
+  // the team: the panel's operator first, then up to three extras on nearby legal tiles. A boss field's deploy tiles are
+  // `bossLeft` (GEO.BOSS_RECT rows 0–5), not the normal band — using `normal` there puts the piece outside the field.
+  const tileSet = boss ? (stage?.deployTiles?.bossLeft ?? stage?.deployTiles?.normal) : stage?.deployTiles?.normal;
   const used = new Set([`${row},${col}`]);
-  const legal = [...new Set([...(stage?.deployTiles?.normal?.melee ?? []), ...(stage?.deployTiles?.normal?.ranged ?? [])]
+  const legal = [...new Set([...(tileSet?.melee ?? []), ...(tileSet?.rangedOnly ?? [])]
     .map(([r, c]) => `${r},${c}`))].map((k) => k.split(',').map(Number));
   const nextTile = () => {
     const free = legal.filter(([r, c]) => !used.has(`${r},${c}`))
