@@ -235,7 +235,7 @@ function SearchPanel({ difficulty, mm, color, onCancel }) {
       <span class="mm-chip"><${Icon} name="shield" />${t('标准规则')}</span>
     </div>
     <div class="mm-search__scan" aria-hidden="true">
-      <span class="mm-search__bars">${bars.map((h, i) => html`<i key=${i} style=${`--h:${h}`} />`)}</span>
+      <span class="mm-search__bars">${bars.map((h, i) => html`<i key=${i} style=${`--h:${h};--b:${i}`} />`)}</span>
       <b class="mm-search__tower"><${Icon} name="rook" /></b>
       <small>SCANNING ...</small>
     </div>
