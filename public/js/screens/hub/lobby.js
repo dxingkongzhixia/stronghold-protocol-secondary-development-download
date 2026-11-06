@@ -25,6 +25,7 @@ import { GuideButton } from '../../ui/guide.js';
 import { NoticesButton } from '../../ui/notices.js';
 import { AccountDialog } from '../../ui/account.js';
 import { avatarUrl } from '../../ui/assetUrls.js';
+import { Sprite } from '../../ui/gameComponents.js';
 import { ChangelogOverlay } from '../../ui/community.js';
 import { OnlineOverlay } from '../online.js';
 import { PublicRoomsScreen } from '../rooms.js';
@@ -472,7 +473,7 @@ export function LobbyScreen() {
 
     <main class="hub-stage screen__scroll">
       <div class="hub-center" aria-hidden="true">
-        <div class="hub-center__mark"><${HubRadar} bg=${bg} /><${Emblem} /></div>
+        <div class="hub-center__mark"><${HubRadar} bg=${bg} /><${Sprite} k="entry/season_logo" class="hub-center__logo" fallback=${html`<${Emblem} />`} /></div>
         <span class="hub-center__en">STRONGHOLD <b>PROTOCOL</b></span>
         <h1 class="hub-center__title">${t('卫戍协议：盟约')}</h1>
       </div>
