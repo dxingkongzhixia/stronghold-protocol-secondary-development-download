@@ -267,6 +267,16 @@
 @keyframes ps-blink { 50% { opacity: .2; } }
 .ps-cable { fill: none; stroke: currentColor; stroke-width: 4; stroke-opacity: .75; }
 .ps-fig { animation: ps-fig 360ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 18ms); }
+/* the little walk: a short patrol along the row (alternating direction, --wx / --wy) with a stepping bob */
+.ps-fig__walk { animation: ps-walk 4.2s ease-in-out infinite; animation-delay: calc(var(--i) * -0.53s); }
+.ps-fig__bob { animation: ps-step .78s ease-in-out infinite; animation-delay: calc(var(--i) * -0.13s); }
+@keyframes ps-walk { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(var(--wx, 0px), var(--wy, 0px)); } }
+@keyframes ps-step {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(-1.6px) rotate(-1.5deg); }
+  50% { transform: translateY(0) rotate(0); }
+  75% { transform: translateY(-1.6px) rotate(1.5deg); }
+}
 @keyframes ps-fig { from { opacity: 0; transform: translateY(calc(-0.06 * var(--ui-unit, 1rem))); } }
 .ps-fig__body, .ps-fig__head { fill: currentColor; fill-opacity: .88; stroke: rgba(0, 0, 0, .45); stroke-width: .8; }
 .ps-fig__head { fill-opacity: 1; }
@@ -340,7 +350,7 @@
   .proto-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, .8fr) minmax(0, 1.2fr); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .proto, .ps-fig, .ps-spike, .pcard.is-on .pcard__stamp { animation: none; }
+  .proto, .ps-fig, .ps-fig__walk, .ps-fig__bob, .ps-spike, .pcard.is-on .pcard__stamp { animation: none; }
   .ps-scan, .ps-beacon { animation: none; }
 }
 .proto-side--search { justify-content: stretch; background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .55) 30%); }

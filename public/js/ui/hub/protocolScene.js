@@ -56,12 +56,19 @@ function defenders(n) {
   return order.sort((a, b) => iso(a.x, a.y)[1] - iso(b.x, b.y)[1]);
 }
 
-function Figure({ x, y, i }) {
+function Figure({ x, y, i, k }) {
   const [px, py] = iso(x, y, 0);
-  return html`<g class="ps-fig" style=${`--i:${i}`}>
-    <ellipse class="ps-fig__shadow" cx=${px} cy=${py} rx="9.5" ry="4.2" />
-    <path class="ps-fig__body" d=${`M${px - 8} ${py} L${px + 8} ${py} L${px + 7} ${py - 19} Q${px} ${py - 23} ${px - 7} ${py - 19} Z`} />
-    <rect class="ps-fig__head" x=${px - 6} y=${py - 34} width="12" height="12" rx="2" />
+  // a small patrol along the figure's row, alternating direction, with a stepping bob: the little walk of the reference
+  const dir = k % 2 === 0 ? 1 : -1;
+  const wx = (dir * 14).toFixed(1), wy = (dir * -8.1).toFixed(1);
+  return html`<g class="ps-fig" style=${`--i:${i};--wx:${wx}px;--wy:${wy}px`}>
+    <g class="ps-fig__walk">
+      <ellipse class="ps-fig__shadow" cx=${px} cy=${py} rx="9.5" ry="4.2" />
+      <g class="ps-fig__bob">
+        <path class="ps-fig__body" d=${`M${px - 8} ${py} L${px + 8} ${py} L${px + 7} ${py - 19} Q${px} ${py - 23} ${px - 7} ${py - 19} Z`} />
+        <rect class="ps-fig__head" x=${px - 6} y=${py - 34} width="12" height="12" rx="2" />
+      </g>
+    </g>
   </g>`;
 }
 
@@ -98,13 +105,13 @@ export function ProtocolScene({ difficulty }) {
       <polygon points=${poly([[p.from[0], p.from[1], 0], [p.to[0], p.from[1], 0], [p.to[0], p.to[1], 0], [p.from[0], p.to[1], 0]])} />
       <polyline class="ps-pad__edge" points=${poly([[p.from[0] - 1.5, p.from[1] - 1.5, 0], [p.to[0] + 1.5, p.from[1] - 1.5, 0], [p.to[0] + 1.5, p.to[1] + 1.5, 0]])} />
     </g>`)}
-    <g class="ps-figs ps-figs--back">${defenders(n).filter((f) => f.pad === 0).map((f, i) => html`<${Figure} key=${`a${f.k}`} x=${f.x} y=${f.y} i=${i} />`)}</g>
+    <g class="ps-figs ps-figs--back">${defenders(n).filter((f) => f.pad === 0).map((f, i) => html`<${Figure} key=${`a${f.k}`} x=${f.x} y=${f.y} i=${i} k=${f.k} />`)}</g>
     <g class="ps-hull">
       ${HULL.map(([a, b], i) => box(a, b, i))}
       ${SEAMS.map(([a, b], i) => html`<line key=${`s${i}`} class="ps-seam" x1=${iso(...a)[0]} y1=${iso(...a)[1]} x2=${iso(...b)[0]} y2=${iso(...b)[1]} />`)}
       <circle class="ps-beacon" cx=${mastTop[0]} cy=${mastTop[1]} r="3.5" />
     </g>
-    <g class="ps-figs">${defenders(n).filter((f) => f.pad === 1).map((f, i) => html`<${Figure} key=${`b${f.k}`} x=${f.x} y=${f.y} i=${i} />`)}</g>
+    <g class="ps-figs">${defenders(n).filter((f) => f.pad === 1).map((f, i) => html`<${Figure} key=${`b${f.k}`} x=${f.x} y=${f.y} i=${i} k=${f.k} />`)}</g>
     <g class="ps-spikes">${spikes.map(([a, b], i) => html`<${Spike} key=${i} from=${[a[0], a[1], 0]} to=${[b[0], b[1], 0.5]} i=${i} />`)}</g>
     <g class="ps-call">
       <line x1=${iso(10, 1, 6.2)[0]} y1=${iso(10, 1, 6.2)[1]} x2=${callAt[0] + 40} y2=${callAt[1] + 70} />
