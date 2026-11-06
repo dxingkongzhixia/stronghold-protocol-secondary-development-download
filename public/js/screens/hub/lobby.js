@@ -38,6 +38,7 @@ import { Emblem } from '../title.js';
 import { HubBackdrop, HubRadar, BackdropGlyph, BackdropSettings } from '../../ui/hub/backdrop.js';
 import { useHubBackdrop, backdropTheme } from '../../ui/hub/appearance.js';
 import { ProtocolScene } from '../../ui/hub/protocolScene.js';
+import { contentSet } from '../../content.js';
 
 /** The card's own picture (the reference row carries art, not a wire icon): one drawing per mode. */
 function ModeArt({ id }) {
@@ -214,6 +215,45 @@ function ProtocolCard({ roomMode, difficulty, selected, onSelect }) {
 }
 
 /**
+ * 同盟集结: the searching state of 同盟匹配 (the official reference: big 搜寻中… with the elapsed clock, the search
+ * chips, the SCANNING chart, the pool note and the red 停止搜寻). It reads the same `mm` state the queue strip does.
+ */
+function SearchPanel({ difficulty, mm, color, onCancel }) {
+  const need = Number.isFinite(mm?.need) && mm.need > 0 ? mm.need : MAX_SEATS;
+  const waiting = Number.isFinite(mm?.waiting) ? Math.max(0, mm.waiting) : 1;
+  const elapsed = Math.max(0, Math.floor((mm?.elapsedMs || 0) / 1000));
+  const left = Math.max(0, Math.ceil(((mm?.deadlineMs || 0) - Date.now()) / 1000));
+  const clock = (s) => s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const bars = [0.3, 0.52, 0.2, 0.68, 0.42, 0.86, 0.56, 1, 0.64, 0.36, 0.78, 0.48, 0.24, 0.6, 0.38, 0.5, 0.28];
+  const leftText = left > 0 ? t('{left} 后由 AI 补位', { left: clock(left) }) : t('正在组队…');
+  return html`<div class="mm-search" role="status" aria-live="polite">
+    <div class="mm-search__brand"><i aria-hidden="true"></i>STRONGHOLD PROTOCOL</div>
+    <div class="mm-search__title"><h3>${t('搜寻中…')}</h3><span class="num">(${clock(elapsed)})</span></div>
+    <div class="mm-search__chips">
+      <span class="mm-chip is-on"><${Icon} name="signal" />${t('多人匹配')}</span>
+      <span class="mm-chip" style=${`--chip-c:${color}`}><${DifficultyIcon} difficulty=${difficulty} />${t(DIFFICULTY_NAMES[difficulty])}</span>
+      <span class="mm-chip"><${Icon} name="shield" />${t('标准规则')}</span>
+    </div>
+    <div class="mm-search__chips">
+      <span class="mm-chip"><${Icon} name="users" />${t('4 人、多人同盟')}</span>
+      <span class="mm-chip"><${Icon} name="check" />${t('标准规则')}</span>
+    </div>
+    <div class="mm-search__scan" aria-hidden="true">
+      <span class="mm-search__bars">${bars.map((h, i) => html`<i key=${i} style=${`--h:${h}`} />`)}</span>
+      <b class="mm-search__tower"><${Icon} name="rook" /></b>
+      <small>SCANNING ...</small>
+    </div>
+    <p class="mm-search__desc">${t('进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位')}</p>
+    <p class="mm-search__wait">${t('正在寻找同盟队友 {waiting}/{need} · 已等待 {elapsed} · {left}', {
+      waiting, need, elapsed: clock(elapsed), left: leftText })}</p>
+    <p class="mm-search__scope">${t('所选范围最多等待 {n} 人（含你）', { n: need })}</p>
+    <button type="button" class="mm-search__stop" onClick=${onCancel}>
+      <span class="mm-search__stopmark" aria-hidden="true"><${Icon} name="close" /></span>${t('停止搜寻')}
+    </button>
+  </div>`;
+}
+
+/**
  * 选择模拟协议: the fork's full-screen difficulty page. It never mutates the classic lobby — the caller owns the
  * create/queue actions and receives `onStart`.
  */
@@ -222,8 +262,9 @@ function ProtocolPage({ mode, difficulty, onDifficulty, onClose, online, busy, i
   const card = MODE_CARDS.find((c) => c.id === mode) || MODE_CARDS[0];
   const info = difficultyInfo(mode === 'mm' ? 'coop' : mode, difficulty);
   const color = DIFFICULTY_COLORS[difficulty];
+  const searching = !!queued && mode === 'mm';
   const startLabel = queued ? t('退出匹配')
-    : mode === 'solo' ? t('开始独立模拟') : mode === 'mm' ? t('搜寻队友（野排）') : t('创建同盟');
+    : mode === 'solo' ? t('开始独立模拟') : mode === 'mm' ? t('搜寻队友') : t('创建同盟');
   const blocked = !online || !!busy || (!queued && (!!blockedReason || (mode === 'mm' && needAccount)));
   const clock = (s) => s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   const queueHint = (() => {
@@ -245,27 +286,28 @@ function ProtocolPage({ mode, difficulty, onDifficulty, onClose, online, busy, i
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return html`<main class="screen protocol-screen" aria-label=${`${t(card.name)} · ${t('选择模拟协议')}`}>
-    <div class="proto" style=${`--d-color:${color}`}>
+    <div class=${`proto${searching ? ' is-searching' : ''}`} style=${`--d-color:${color}`}>
       <div class="proto__bg" aria-hidden="true"></div>
       <header class="proto-top">
         <button type="button" class="proto-back" onClick=${onClose} title=${t('返回大厅')} aria-label=${t('返回大厅')}>
           <${Icon} name="chevronLeft" /><span class="proto-back__home"><${Icon} name="rook" /></span>
         </button>
         <div class="proto-title">
-          <h2>${t('选择模拟协议')}</h2>
-          <span class="proto-title__mode">${t(card.name)}<i>${card.en}</i></span>
+          <h2>${searching ? t('同盟集结') : t('选择模拟协议')}</h2>
+          <span class="proto-title__mode">${searching ? t('多人匹配') : t(card.name)}<i>${searching ? 'PUBLIC MATCHMAKING' : card.en}</i></span>
         </div>
       </header>
       <div class="proto-body">
         <section class="proto-stage">
           <${ProtocolScene} key=${difficulty} difficulty=${difficulty} />
-          <div class="proto-brief">
+          ${searching ? null : html`<div class="proto-brief">
             <span class="proto-brief__code num">${info.code}</span>
             <b class="proto-brief__name">${t(DIFFICULTY_NAMES[difficulty])}</b>
             <p>${t(card.desc, card.params)}</p>
-          </div>
+          </div>`}
         </section>
-        <section class="proto-side">
+        <section class=${`proto-side${searching ? ' proto-side--search' : ''}`}>
+          ${searching ? html`<${SearchPanel} difficulty=${difficulty} mm=${mm} color=${color} onCancel=${onCancel} />` : html`
           <div class="proto-list" aria-label=${t('模拟难度')}>
             ${DIFFICULTIES.map((d) => html`<${ProtocolCard} key=${d} roomMode=${mode === 'mm' ? 'coop' : mode}
               difficulty=${d} selected=${difficulty === d} onSelect=${onDifficulty} />`)}
@@ -286,7 +328,7 @@ function ProtocolPage({ mode, difficulty, onDifficulty, onClose, online, busy, i
               <span class="proto-start__label">${busy ? html`<${Spinner} size="sm" />` : null}${startLabel}</span>
               <span class="proto-start__deco" aria-hidden="true"></span>
             </button>
-          </div>
+          </div>`}
         </section>
       </div>
     </div>
@@ -301,6 +343,11 @@ export function LobbyScreen() {
   const mm = useStore((s) => s.mm, shallowEqual);
   const testMode = useStore((s) => s.testMode === true);
   const showOnline = useStore((s) => s.ui.onlineOpen);
+  // 多人匹配只支持原版: a plugin preview set lays non-vanilla data, so the shared pool (a vanilla room) is blocked
+  // until it is off (content.js: ui.previewCs is what the page installs outside a room).
+  const previewCs = useStore((s) => s.ui?.previewCs || null);
+  const activeCs = useStore((s) => s.cs, Object.is, contentSet);
+  const mmBlocked = !!activeCs || !!previewCs;
   const bg = useHubBackdrop();
 
   const [roomMode, setRoomMode] = useState(() => {
@@ -434,7 +481,7 @@ export function LobbyScreen() {
     return html`<${ProtocolPage} mode=${protocol} difficulty=${difficulty} onDifficulty=${pickDifficulty}
       onClose=${() => setProtocol(null)} online=${online} busy=${busy} isPublic=${isPublic} onPublic=${pickPublic}
       testMode=${testMode} asTest=${asTest} onTest=${setAsTest}
-      blockedReason=${protocol === 'mm' ? '' : entryBlocked} needAccount=${protocol === 'mm' && !auth?.account}
+      blockedReason=${protocol === 'mm' ? (mmBlocked ? t('多人匹配仅支持原版内容，请先关闭插件预览') : '') : entryBlocked} needAccount=${protocol === 'mm' && !auth?.account}
       queued=${queued} mm=${mm} onCancel=${mmCancel}
       onStart=${startProtocol} />`;
   }

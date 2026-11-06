@@ -30,6 +30,7 @@ import { PublicRoomsScreen } from './rooms.js';
 import { net, identity } from '../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn, setOnlineOpen, setOnlineFilter, setOnlineStatsReturn } from '../store.js';
 import { data, getConfig, useData } from '../data.js';
+import { contentSet } from '../content.js';
 import { t, tc, N_ } from '../../../shared/i18n.js';
 
 import { MODE_CARDS, difficultyInfo, CODE_RE, normalizeCode, codeArg, remembersRoomOrigin } from './lobbyData.js';
@@ -113,6 +114,10 @@ export function LobbyScreen() {
   const auth = useStore((s) => s.auth, shallowEqual);
   const mm = useStore((s) => s.mm, shallowEqual);
   const testMode = useStore((s) => s.testMode === true);
+  // 多人匹配只支持原版: a plugin preview set (ui.previewCs / contentSet) blocks the shared pool
+  const previewCs = useStore((s) => s.ui?.previewCs || null);
+  const activeCs = useStore((s) => s.cs, Object.is, contentSet);
+  const mmBlocked = !!activeCs || !!previewCs;
   const [asTest, setAsTest] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
   // 在线玩家 overlay: store-level (not local state) so opening a player's stats can pop back to it (ui.onlineOpen).
@@ -326,9 +331,9 @@ export function LobbyScreen() {
         </div>
         ${roomMode === 'mm'
           ? (mm.queued ? null : html`<div class="mm-box">
-              <${Button} variant="primary" size="xl" block=${true} icon="search" disabled=${!online || !auth.account}
-                onClick=${mmJoin} title=${auth.account ? '' : t('需要先登录账号')}>${t('搜寻队友（野排）')}<//>
-              <div class="mm-box__hint">${auth.account ? t('进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位') : t('需先在标题页登录 / 注册账号')}</div>
+              <${Button} variant="primary" size="xl" block=${true} icon="search" disabled=${!online || !auth.account || mmBlocked}
+                onClick=${mmJoin} title=${mmBlocked ? t('多人匹配仅支持原版内容，请先关闭插件预览') : auth.account ? '' : t('需要先登录账号')}>${t('搜寻队友')}<//>
+              <div class="mm-box__hint">${mmBlocked ? t('多人匹配仅支持原版内容，请先关闭插件预览') : auth.account ? t('进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位') : t('需先在标题页登录 / 注册账号')}</div>
             </div>`)
           : html`<div class="create-box">
               ${roomMode === 'coop' ? html`<div class="create-vis">

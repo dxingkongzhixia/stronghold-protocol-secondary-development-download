@@ -344,7 +344,43 @@
   .ps-scan, .ps-beacon { animation: none; }
 }
 .proto-side--search { justify-content: stretch; background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .55) 30%); }
-.proto-side--search .mf-search { flex: 1 1 auto; }
+/* 同盟集结: the searching state of 同盟匹配 (SearchPanel in screens/hub/lobby.js), after the official reference —
+   the big 搜寻中… with its elapsed clock, the search chips, the SCANNING chart and the red 停止搜寻 */
+.proto.is-searching .proto-brief { display: none; }
+.mm-search { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: calc(0.16 * var(--ui-unit, 1rem));
+  padding: calc(0.34 * var(--ui-unit, 1rem)) calc(0.3 * var(--ui-unit, 1rem)) calc(0.24 * var(--ui-unit, 1rem)); }
+.mm-search__brand { display: flex; align-items: center; gap: calc(0.08 * var(--ui-unit, 1rem));
+  font-family: var(--font-display); font-size: max(calc(.17 * var(--utility-text, var(--t))), calc(0.1 * var(--ui-unit, 1rem)));
+  letter-spacing: .1em; color: #d6ddda; }
+.mm-search__brand i { width: calc(0.44 * var(--ui-unit, 1rem)); height: calc(0.1 * var(--ui-unit, 1rem)); background: var(--mint-400); }
+.mm-search__title { display: flex; align-items: baseline; gap: calc(0.1 * var(--ui-unit, 1rem)); }
+.mm-search__title h3 { margin: 0; font-size: max(calc(.6 * var(--utility-text, var(--t))), calc(0.3 * var(--ui-unit, 1rem))); font-weight: 900; letter-spacing: .04em; color: #f4f7f6; }
+.mm-search__title span { color: #d9e1de; font-size: max(calc(.2 * var(--utility-text, var(--t))), calc(0.11 * var(--ui-unit, 1rem))); }
+.mm-search__chips { display: flex; flex-wrap: wrap; gap: calc(0.08 * var(--ui-unit, 1rem)); }
+.mm-chip { display: inline-flex; align-items: center; gap: calc(0.05 * var(--ui-unit, 1rem)); height: max(calc(0.4 * var(--ui-unit, 1rem)), calc(0.22 * var(--ui-unit, 1rem)));
+  padding: 0 calc(0.14 * var(--ui-unit, 1rem)); border-radius: 999px; background: #2b2e2f; color: #e8ecea;
+  font-size: max(calc(.16 * var(--utility-text, var(--t))), calc(0.09 * var(--ui-unit, 1rem))); }
+.mm-chip .icon { width: calc(0.18 * var(--ui-unit, 1rem)); height: calc(0.18 * var(--ui-unit, 1rem)); color: var(--chip-c, var(--mint-400)); }
+.mm-chip.is-on { background: #3a3e3f; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.mm-search__scan { position: relative; display: grid; place-items: center; height: max(calc(1.5 * var(--ui-unit, 1rem)), calc(0.9 * var(--ui-unit, 1rem))); margin: calc(0.1 * var(--ui-unit, 1rem)) 0; }
+.mm-search__bars { display: flex; align-items: center; gap: calc(0.05 * var(--ui-unit, 1rem)); height: 70%; }
+.mm-search__bars i { width: calc(0.06 * var(--ui-unit, 1rem)); height: calc(var(--h) * 100%); background: var(--mint-500);
+  box-shadow: 0 0 calc(0.08 * var(--ui-unit, 1rem)) rgba(23, 249, 183, .55); opacity: .9; }
+.mm-search__tower { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -60%); display: grid; place-items: center;
+  width: calc(0.5 * var(--ui-unit, 1rem)); height: calc(0.5 * var(--ui-unit, 1rem)); color: var(--mint-400);
+  background: #0d1614; border: calc(0.03 * var(--ui-unit, 1rem)) solid var(--mint-500); }
+.mm-search__tower .icon { width: 70%; height: 70%; }
+.mm-search__scan small { position: absolute; bottom: 0; font-family: var(--font-num); font-size: max(calc(.1 * var(--utility-text, var(--t))), 7px); letter-spacing: .28em; color: var(--mint-400); }
+.mm-search__desc, .mm-search__wait, .mm-search__scope { margin: 0; font-size: max(calc(.16 * var(--utility-text, var(--t))), calc(0.095 * var(--ui-unit, 1rem))); line-height: 1.55; color: #b6bfbc; }
+.mm-search__wait { color: var(--mint-400); }
+.mm-search__scope { color: #8f9996; font-size: max(calc(.14 * var(--utility-text, var(--t))), calc(0.085 * var(--ui-unit, 1rem))); }
+.mm-search__stop { margin-top: auto; align-self: flex-end; display: inline-flex; align-items: center; gap: calc(0.1 * var(--ui-unit, 1rem));
+  height: max(calc(0.52 * var(--ui-unit, 1rem)), calc(0.3 * var(--ui-unit, 1rem))); padding: 0 calc(0.2 * var(--ui-unit, 1rem)) 0 calc(0.08 * var(--ui-unit, 1rem));
+  font: inherit; font-size: max(calc(.2 * var(--utility-text, var(--t))), calc(0.11 * var(--ui-unit, 1rem))); font-weight: 700; color: #ffd9d3; cursor: pointer;
+  background: rgba(60, 10, 8, .45); border: 2px solid #ff4a3a; box-shadow: 0 0 calc(0.14 * var(--ui-unit, 1rem)) rgba(255, 60, 40, .25); }
+.mm-search__stop:hover { background: rgba(120, 20, 14, .55); }
+.mm-search__stopmark { display: grid; place-items: center; width: calc(0.34 * var(--ui-unit, 1rem)); height: calc(0.34 * var(--ui-unit, 1rem)); border: 1px solid #ff6a5a; }
+.mm-search__stopmark .icon { width: 70%; height: 70%; }
 .rseat { --w: min(18vw, calc(3.4 * var(--ui-unit, 1rem)), calc((100vw - calc(1.6 * var(--ui-unit, 1rem))) / var(--n, 4) - calc(0.3 * var(--ui-unit, 1rem)))); position: relative; flex: none; width: var(--w); display: flex; flex-direction: column;
   animation: sw-in 260ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 60ms); }
 .rseat__clip { position: absolute; left: 50%; top: calc(-0.14 * var(--ui-unit, 1rem)); width: calc(0.16 * var(--ui-unit, 1rem)); height: calc(0.2 * var(--ui-unit, 1rem)); transform: translateX(-50%); background: #3a3e3d; border: 2px solid #1a1c1c; z-index: 2; }

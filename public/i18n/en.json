@@ -1730,7 +1730,7 @@
   "模块": "Modules",
   "哈希": "Hash",
   "我了解风险，继续": "I understand the risk, continue",
-  "已拒绝。开始模拟前仍需要你的同意。": "Declined. Your consent is still needed before the simulation starts.",
+  "已拒绝。开始模拟前仍需要你的同意。": "Declined. Your consent is still required before the match can start.",
   "删除": "Delete",
   "朝向": "Facing",
   "精英化": "Promotion",
@@ -1825,7 +1825,6 @@
   "受信任插件": "Trusted plugins",
   "本房间启用了受信任插件。它可以完全控制你的游戏页面。只有在你信任插件作者和服务器时才同意。": "This room has trusted plugins enabled. They can fully control your game page. Only accept if you trust the plugin authors and the server.",
   "权限": "Permissions",
-  "已拒绝。开始模拟前仍需要你的同意。": "Declined. Your consent is still required before the match can start.",
   "同意并继续": "Accept and continue",
   "沙箱脚本": "Sandbox script",
   "原生信任": "Native trusted",
@@ -2110,5 +2109,14 @@
   "全部开启": "Turn on all",
   "全部关闭": "Turn off all",
   "新房间自动开启上次的插件": "New rooms turn on my last selection",
-  "Keel 插件：工作台只显示它，不会写入；请用 tools/keel.mjs 修改。": "Keel plugin: the studio shows it but never writes it. Edit it with tools/keel.mjs."
+  "Keel 插件：工作台只显示它，不会写入；请用 tools/keel.mjs 修改。": "Keel plugin: the studio shows it but never writes it. Edit it with tools/keel.mjs.",
+  "同盟集结": "Alliance Assembly",
+  "搜寻队友": "Find Teammates",
+  "搜寻中…": "Searching…",
+  "停止搜寻": "Stop searching",
+  "多人匹配": "Public Matchmaking",
+  "标准规则": "Standard Rules",
+  "4 人、多人同盟": "4 players, co-op alliance",
+  "所选范围最多等待 {n} 人（含你）": "This search waits for up to {n} players (including you)",
+  "多人匹配仅支持原版内容，请先关闭插件预览": "Public matchmaking supports the original content only. Turn off the plugin preview first."
 }

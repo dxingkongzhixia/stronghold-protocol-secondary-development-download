@@ -93,8 +93,8 @@ describe('lobby wiring: the panel replaced the centred overlay', () => {
     assert.ok(lobby.includes("net.request('mm.cancel')"), 'mm.cancel still goes to the server');
     // the third card is part of MODE_CARDS (rendered by the mode-cards grid), and 同盟匹配 selects the mm action
     assert.ok(/roomMode === 'mm'/.test(lobby), 'the lobby branches on the matchmaking mode');
-    assert.ok(lobby.includes("title=${auth.account ? '' : t('需要先登录账号')}"), 'a 野排 action still requires an account');
-    assert.ok(lobby.includes("t('搜寻队友（野排）')"), 'the same 野排 action the old button offered');
+    assert.ok(lobby.includes("t('需要先登录账号')"), 'a matchmaking action still requires an account');
+    assert.ok(lobby.includes("t('搜寻队友')"), 'the matchmaking button (no 野排 suffix)');
   });
 });
 
