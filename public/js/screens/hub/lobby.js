@@ -216,11 +216,11 @@ function ProtocolCard({ roomMode, difficulty, selected, onSelect }) {
 
 /** The reference's little scout: it walks on the scanning wave — the legs, the hop, the eyes and the skyline all move. */
 function Scout() {
+  const sky = 'M10 70h8v-14h6v14h10v-24h6v24h12v-10h6v10h20v-18h4v-6h4v24h18v-12h6v12h10v-20h6v20h14v-8h8v8';
   return html`<svg class="mm-scout" viewBox="0 0 240 90" aria-hidden="true" focusable="false">
     <path class="mm-scout__wave" d="M0 58 C30 40 50 76 80 58 S130 40 160 58 S210 76 240 58" />
     <g class="mm-scout__sky">
-      <path d="M10 70h8v-14h6v14h10v-24h6v24h12v-10h6v10h20v-18h4v-6h4v24h18v-12h6v12h10v-20h6v20h14v-8h8v8" />
-      <path d="M130 70h8v-14h6v14h10v-24h6v24h12v-10h6v10h20v-18h4v-6h4v24h18v-12h6v12h10v-20h6v20h14v-8h8v8" />
+      ${[-120, 0, 120, 240].map((x) => html`<path key=${x} transform=${`translate(${x} 0)`} d=${sky} />`)}
     </g>
     <g class="mm-scout__bot">
       <rect x="104" y="34" width="26" height="22" rx="3" />
