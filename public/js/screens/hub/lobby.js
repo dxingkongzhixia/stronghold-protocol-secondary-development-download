@@ -224,7 +224,7 @@ function SearchPanel({ difficulty, mm, color, onCancel }) {
   const elapsed = Math.max(0, Math.floor((mm?.elapsedMs || 0) / 1000));
   const left = Math.max(0, Math.ceil(((mm?.deadlineMs || 0) - Date.now()) / 1000));
   const clock = (s) => s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  const bars = [0.3, 0.52, 0.2, 0.68, 0.42, 0.86, 0.56, 1, 0.64, 0.36, 0.78, 0.48, 0.24, 0.6, 0.38, 0.5, 0.28];
+  const bars = [0.26, 0.4, 0.58, 0.76, 0.5, 0.68, 0.9, 0.62, 0.82, 1, 0.7, 0.48, 0.9, 0.96, 0.74, 0.56, 0.86, 0.68, 0.46, 0.62, 0.38, 0.28, 0.18, 0.12];
   const leftText = left > 0 ? t('{left} 后由 AI 补位', { left: clock(left) }) : t('正在组队…');
   return html`<div class="mm-search" role="status" aria-live="polite">
     <div class="mm-search__brand"><i aria-hidden="true"></i>STRONGHOLD PROTOCOL</div>
@@ -235,8 +235,10 @@ function SearchPanel({ difficulty, mm, color, onCancel }) {
       <span class="mm-chip"><${Icon} name="shield" />${t('标准规则')}</span>
     </div>
     <div class="mm-search__scan" aria-hidden="true">
+      <i class="mm-search__plus mm-search__plus--tl"></i><i class="mm-search__plus mm-search__plus--tr"></i>
+      <i class="mm-search__plus mm-search__plus--bl"></i><i class="mm-search__plus mm-search__plus--br"></i>
       <span class="mm-search__bars">${bars.map((h, i) => html`<i key=${i} style=${`--h:${h};--b:${i}`} />`)}</span>
-      <b class="mm-search__tower"><${Icon} name="rook" /></b>
+      <b class="mm-search__walker"><${Icon} name="user" /></b>
       <small>SCANNING ...</small>
     </div>
     <p class="mm-search__desc">${t('进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位')}</p>
