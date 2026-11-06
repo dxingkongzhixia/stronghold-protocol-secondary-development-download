@@ -214,6 +214,28 @@ function ProtocolCard({ roomMode, difficulty, selected, onSelect }) {
   </button>`;
 }
 
+/** The reference's little scout: it walks on the scanning wave — the legs, the hop, the eyes and the skyline all move. */
+function Scout() {
+  return html`<svg class="mm-scout" viewBox="0 0 240 90" aria-hidden="true" focusable="false">
+    <path class="mm-scout__wave" d="M0 58 C30 40 50 76 80 58 S130 40 160 58 S210 76 240 58" />
+    <g class="mm-scout__sky">
+      <path d="M10 70h8v-14h6v14h10v-24h6v24h12v-10h6v10h20v-18h4v-6h4v24h18v-12h6v12h10v-20h6v20h14v-8h8v8" />
+      <path d="M130 70h8v-14h6v14h10v-24h6v24h12v-10h6v10h20v-18h4v-6h4v24h18v-12h6v12h10v-20h6v20h14v-8h8v8" />
+    </g>
+    <g class="mm-scout__bot">
+      <rect x="104" y="34" width="26" height="22" rx="3" />
+      <rect class="mm-scout__eye" x="110" y="41" width="4" height="5" />
+      <rect class="mm-scout__eye mm-scout__eye--r" x="120" y="41" width="4" height="5" />
+      <rect x="114" y="26" width="6" height="8" />
+      <rect x="112" y="22" width="10" height="4" />
+      <rect class="mm-scout__leg mm-scout__leg--a" x="108" y="56" width="5" height="7" />
+      <rect class="mm-scout__leg mm-scout__leg--b" x="121" y="56" width="5" height="7" />
+    </g>
+    <line class="mm-scout__ground" x1="60" y1="70" x2="180" y2="70" />
+    <text x="120" y="84" text-anchor="middle">SCANNING · · ·</text>
+  </svg>`;
+}
+
 /**
  * 同盟集结: the searching state of 同盟匹配 (the official reference: big 搜寻中… with the elapsed clock, the search
  * chips, the SCANNING chart, the pool note and the red 停止搜寻). It reads the same `mm` state the queue strip does.
@@ -224,7 +246,6 @@ function SearchPanel({ difficulty, mm, color, onCancel }) {
   const elapsed = Math.max(0, Math.floor((mm?.elapsedMs || 0) / 1000));
   const left = Math.max(0, Math.ceil(((mm?.deadlineMs || 0) - Date.now()) / 1000));
   const clock = (s) => s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  const bars = [0.26, 0.4, 0.58, 0.76, 0.5, 0.68, 0.9, 0.62, 0.82, 1, 0.7, 0.48, 0.9, 0.96, 0.74, 0.56, 0.86, 0.68, 0.46, 0.62, 0.38, 0.28, 0.18, 0.12];
   const leftText = left > 0 ? t('{left} 后由 AI 补位', { left: clock(left) }) : t('正在组队…');
   return html`<div class="mm-search" role="status" aria-live="polite">
     <div class="mm-search__brand"><i aria-hidden="true"></i>STRONGHOLD PROTOCOL</div>
@@ -234,12 +255,10 @@ function SearchPanel({ difficulty, mm, color, onCancel }) {
       <span class="mm-chip" style=${`--chip-c:${color}`}><${DifficultyIcon} difficulty=${difficulty} />${t(DIFFICULTY_NAMES[difficulty])}</span>
       <span class="mm-chip"><${Icon} name="shield" />${t('标准规则')}</span>
     </div>
-    <div class="mm-search__scan" aria-hidden="true">
-      <i class="mm-search__plus mm-search__plus--tl"></i><i class="mm-search__plus mm-search__plus--tr"></i>
-      <i class="mm-search__plus mm-search__plus--bl"></i><i class="mm-search__plus mm-search__plus--br"></i>
-      <span class="mm-search__bars">${bars.map((h, i) => html`<i key=${i} style=${`--h:${h};--b:${i}`} />`)}</span>
-      <b class="mm-search__walker"><${Icon} name="user" /></b>
-      <small>SCANNING ...</small>
+    <div class="mm-search__scene" aria-hidden="true">
+      <i class="mm-cross mm-cross--tl"></i><i class="mm-cross mm-cross--tr"></i>
+      <${Scout} />
+      <i class="mm-cross mm-cross--bl"></i><i class="mm-cross mm-cross--br"></i>
     </div>
     <p class="mm-search__desc">${t('进入共享池，最多 5 分钟凑齐 4 人，不足由 AI 补位')}</p>
     <p class="mm-search__wait">${t('正在寻找同盟队友 {waiting}/{need} · 已等待 {elapsed} · {left}', {
