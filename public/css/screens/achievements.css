@@ -20,8 +20,9 @@
 .hub-ach .hub-ach__mark .emblem__svg circle { fill: #15110c; animation: none; }
 .hub-ach .hub-ach__mark .emblem__svg circle.is-accent { fill: #2cf0b8; }
 .hub-ach .hub-ach__mark .emblem__bracket { height: calc(0.66 * var(--ui-unit, 1rem)); width: calc(0.07 * var(--ui-unit, 1rem)); border-width: 1px; border-color: rgba(20, 16, 10, .55); }
-.hub-ach__rank { position: absolute; left: calc(0.1 * var(--ui-unit, 1rem)); top: calc(0.1 * var(--ui-unit, 1rem)); z-index: 1; width: calc(0.52 * var(--ui-unit, 1rem)); display: flex; flex-direction: column; align-items: center; gap: calc(0.01 * var(--ui-unit, 1rem)); padding: calc(0.04 * var(--ui-unit, 1rem)) 0 calc(0.03 * var(--ui-unit, 1rem));
+.hub-ach__rank { position: absolute; left: calc(0.1 * var(--ui-unit, 1rem)); top: calc(0.1 * var(--ui-unit, 1rem)); z-index: 2; width: calc(0.6 * var(--ui-unit, 1rem)); display: flex; flex-direction: column; align-items: center; gap: calc(0.01 * var(--ui-unit, 1rem)); padding: calc(0.04 * var(--ui-unit, 1rem)) 0 calc(0.03 * var(--ui-unit, 1rem));
   background: rgba(14, 18, 17, .55); border: 1px solid rgba(240, 244, 243, .4); }
+.hub-ach__medal { width: calc(0.44 * var(--ui-unit, 1rem)); height: calc(0.44 * var(--ui-unit, 1rem)); object-fit: contain; }
 .hub-ach__rank > .icon { width: calc(0.3 * var(--ui-unit, 1rem)); height: calc(0.3 * var(--ui-unit, 1rem)); color: #eef3f1; }
 .hub-ach__rank small { display: inline-flex; align-items: center; gap: calc(0.02 * var(--ui-unit, 1rem)); font-size: calc(.13 * var(--utility-text, var(--t))); color: #e6ebe9; }
 .hub-ach__rank small .icon { width: calc(0.12 * var(--ui-unit, 1rem)); height: calc(0.12 * var(--ui-unit, 1rem)); }

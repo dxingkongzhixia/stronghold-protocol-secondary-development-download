@@ -18,7 +18,8 @@ import { makeLookups, BandIcon, BondGlyph, UnitThumb, Img } from './gameComponen
 import { data, useData } from '../data.js';
 import { useStore, shallowEqual } from '../store.js';
 import { avatarUrl } from './assetUrls.js';
-import { loadStats, subscribeStats, STATS_PREF_KEY } from './stats.js';
+import { loadStats, subscribeStats, STATS_PREF_KEY, trophyMedalOf } from './stats.js';
+import { levelProgress, levelOf } from '../screens/settle.js';
 import { fetchStats } from './statsSync.js';
 import { net } from '../net.js';
 import { achievementStats, bondOperators, recordBonds, HEX_TITLES, ACHIEVEMENT_GROUPS } from './achievementModel.js';
@@ -86,13 +87,22 @@ function useAchievements(hiddenLayers, withModded) {
 export function AchievementEntry({ onOpen }) {
   const [local, setLocal] = useState(loadStats);
   useEffect(() => subscribeStats(() => setLocal(loadStats())), []);
-  const s = useMemo(() => achievementStats(local.newer ? [] : local.records, { hiddenLayers: noHidden }), [local]);
+  useData('config', 'assets');
+  const records = local.newer ? [] : local.records;
+  const s = useMemo(() => achievementStats(records, { hiddenLayers: noHidden }), [local]);
+  // the card names the settle level (screens/settle.js levelProgress) and the medal of the trophy count, exactly like
+  // the upstream hub card: the plate is the medal when one is earned, the rook otherwise
+  const cfg = data.get('config');
+  const lv = levelOf(levelProgress(records, { counted: false, rewards: cfg?.rewards }).before, cfg?.rewards?.milestones).lv;
+  const medal = trophyMedalOf(s.trophies, cfg?.trophies?.medals);
+  const assets = data.get('assets');
+  const medalSrc = medal && assets ? uiUrl(assets, `medalIcon/${medal.iconId}`) : null;
   useEffect(() => { ensureStylesheet(ACHIEVEMENTS_CSS); }, []);
-  return html`<${AchievementEntryView} s=${s} onOpen=${onOpen} />`;
+  return html`<${AchievementEntryView} s=${s} lv=${lv} medalSrc=${medalSrc} onOpen=${onOpen} />`;
 }
 
 /** Hook-free entry; no game data is requested just to show it. */
-export function AchievementEntryView({ s, onOpen }) {
+export function AchievementEntryView({ s, lv = 0, medalSrc = null, onOpen }) {
   return html`<button type="button" class="hub-ach" onClick=${onOpen} title=${t('成就统计')}>
     <span class="hub-ach__scene" aria-hidden="true">
       <svg class="hub-ach__land" viewBox="0 0 320 110" preserveAspectRatio="none">
@@ -104,11 +114,14 @@ export function AchievementEntryView({ s, onOpen }) {
         <path d="M262 110V70M262 80l-9-8M262 76l8-7M262 86l10-6" stroke="#18120b" stroke-width="2.5" fill="none" />
       </svg>
       <span class="hub-ach__mark"><${Emblem} /></span>
-      <span class="hub-ach__rank"><${Icon} name="rook" /><small><${Icon} name="crown" /><b class="num">${s.trophies}</b></small></span>
+      <span class="hub-ach__rank">
+        <${Img} src=${medalSrc} class="hub-ach__medal" fallback=${html`<${Icon} name="rook" />`} />
+        <small><${Icon} name="crown" /><b class="num">${s.trophies}</b></small>
+      </span>
     </span>
     <span class="hub-ach__label">
       <svg class="hub-ach__badge" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v12l-7 6-7-6zm4 5v2h2V8zm4 0v2h2V8zm-4.5 4.2a4.5 4.5 0 0 0 7 0l-1.3-1a3 3 0 0 1-4.4 0z" fill-rule="evenodd" /></svg>
-      <span>${t('成就统计')}</span><b class="hub-ach__lv">${t('对局记录')}</b>
+      <span>${t('成就统计')}</span><b class="hub-ach__lv num">LV.${lv}</b>
     </span>
   </button>`;
 }
