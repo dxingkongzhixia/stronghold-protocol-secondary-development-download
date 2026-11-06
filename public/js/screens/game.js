@@ -485,6 +485,10 @@ function MatchScreen() {
   // overflowed): its frames are buffered like a new field's until the enter effect re-enters it — enterBattle resets
   // the view, so a 'spawn' or form fx pushed in between used to be lost (placeholder views, the old model)
   const reentryRef = useRef(null);
+  // The board on screen is a prep board (own prep, or a scouted teammate's): it must never take battle frames. Battle and
+  // prep share the fieldId `n:<playerId>`, so the tail of a round's b.ev / b.snap otherwise lands on the prep pieces —
+  // their ids are piece uids, and a 'skill' tuple then starts a skill aura on an operator standing in 修整期.
+  const prepShownRef = useRef(false);
 
   // prep rendering (own board) vs battle rendering (m.field). The field object present when prep starts is stale
   // (last round's battle): combat only enters an m.field pushed after that (a new object), and every new m.field
@@ -548,6 +552,7 @@ function MatchScreen() {
     }
     if (!view) return;
     if (showPrep) {
+      prepShownRef.current = true;
       if (field?.prep) staleFieldRef.current = field; // a prep scouting board is never a battle to enter
       if (viewModeRef.current !== 'prep') {
         audio.stopBondCue('battle');
@@ -578,10 +583,13 @@ function MatchScreen() {
     lastFieldRef.current = field.fieldId;
     reentryRef.current = null;
     viewModeRef.current = 'battle';
+    // a scouted prep board shares the battle's fieldId: never replay the round's tail onto its pieces
+    prepShownRef.current = !!field.prep;
     snapUnitsRef.current = new Map();
     bondTimerSnapRef.current = null;
-    const early = evBufRef.current.get(field.fieldId);
+    const buffered = evBufRef.current.get(field.fieldId);
     evBufRef.current.delete(field.fieldId);
+    const early = field.prep ? null : buffered;
     // Crates and turrets are absent from a start-of-battle meta and arrive once, as spawn events. Re-entering the
     // same field from a refresh that repeats that meta (the subscription below asks for one) must not drop them.
     const noted = noteDeviceUnits(new Map(), { units: field.units, events: early });
@@ -592,8 +600,9 @@ function MatchScreen() {
     const ids = new Set(units.map((u) => u?.id));
     for (const [id, info] of deviceUnitsRef.current) if (!ids.has(id)) units.push(info);
     view.enterBattle({ ...field, units });
-    const earlySnap = snapBufRef.current.get(field.fieldId);
+    const bufferedSnap = snapBufRef.current.get(field.fieldId);
     snapBufRef.current.delete(field.fieldId);
+    const earlySnap = field.prep ? null : bufferedSnap;
     // a scouted prep board frames like the own prep with the shop folded (the bench row included, app.js camRect);
     // 'prep' expands the rect's top to the hand row
     const kind = field.prep ? 'prep' : (field.kind === 'hidden' ? 'boss' : field.kind || 'normal');
@@ -667,6 +676,7 @@ function MatchScreen() {
     const flush = () => { pending = null; last = performance.now(); setHud(hudRef.current); };
     const onFieldMeta = (msg) => {
       if (!msg || typeof msg.fieldId !== 'string') return;
+      prepShownRef.current = !!msg.prep; // a prep meta (own or scouted) has no battle frames after it
       evBufRef.current.set(msg.fieldId, []);
       snapBufRef.current.delete(msg.fieldId);
       if (msg.fieldId === lastFieldRef.current) {
@@ -679,6 +689,7 @@ function MatchScreen() {
     const onSnap = (snap) => {
       const cur = shownId();
       if (!snap || typeof snap !== 'object') return;
+      if (prepShownRef.current) return; // a prep board takes no battle snapshot (shared fieldId n:<playerId>)
       if (!cur || (snap.fieldId && snap.fieldId !== cur)) {
         if (typeof snap.fieldId === 'string') snapBufRef.current.set(snap.fieldId, snap);
         return;
@@ -698,6 +709,7 @@ function MatchScreen() {
     const onEv = (msg) => {
       const cur = shownId();
       if (!msg || !Array.isArray(msg.ev)) return;
+      if (prepShownRef.current) return; // a prep board takes no battle event: its pieces reuse the battle's ids
       if (!cur || (msg.fieldId && msg.fieldId !== cur)) {
         if (typeof msg.fieldId !== 'string') return;
         const buf = evBufRef.current.get(msg.fieldId) || [];
