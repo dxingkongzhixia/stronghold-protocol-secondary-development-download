@@ -147,21 +147,23 @@ export function AwayOverlay({ onBack = () => {} }) {
  * Pre-game step header.
  * @param {{ step: number, of: number, title: string, micro: string, pub: any, total?: number|null, onExit: Function }} props
  */
-export function StepHeader({ step, of, title, micro, pub, total, onExit }) {
+export function StepHeader({ step, of, title, micro, pub, total, onExit, extra = null, status = null }) {
   const conn = useStore((s) => s.connection, shallowEqual);
   return html`<header class="stephead">
     <div class="stephead__left">
       <${Button} variant="danger" size="lg" square=${true} icon="exit" onClick=${onExit} aria-label=${t('离开')} title=${t('离开')} />
-      <div class="stephead__meta">
-        <${PingPill} ms=${conn.ping} online=${conn.status === 'online'} />
+      <div class=${`stephead__meta${extra ? ' has-extra' : ''}`}>
         ${pub?.difficulty ? html`<${DifficultyTag} difficulty=${pub.difficulty} />` : null}
+        ${extra}
       </div>
+      <${PingPill} ms=${conn.ping} online=${conn.status === 'online'} />
     </div>
     <div class="stephead__center">
       <${MicroLabel} tone="mint">${micro}</${MicroLabel}>
       <h1 class="stephead__title"><b class="num">${step}</b><span class="num stephead__of">/${of}</span>${title}</h1>
     </div>
     <div class="stephead__right">
+      ${status ? html`<div class="stephead__status">${status}</div><i class="stephead__sep" aria-hidden="true"></i>` : null}
       <${GuideButton} class="stephead__guide" variant="secondary" />
       <${Countdown} deadline=${pub?.deadline} total=${total ?? undefined} size="md" />
     </div>

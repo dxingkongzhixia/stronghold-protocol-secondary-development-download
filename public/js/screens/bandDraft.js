@@ -20,7 +20,7 @@
 
 import { useEffect, useMemo, useRef, useState } from '../../vendor/hooks.module.js';
 import { html, Button, Icon, MicroLabel, useTicker, secondsLeft, RoleTag } from '../ui/components.js';
-import { useGameData, BandIcon, RichText, PlayerAvatar, LpTower, Sprite } from '../ui/gameComponents.js';
+import { useGameData, BandIcon, RichText, PlayerAvatar, Sprite } from '../ui/gameComponents.js';
 import { StepHeader, ExitModal } from '../ui/matchChrome.js';
 import { MatchInfoDialog, matchInfoModel } from '../ui/matchInfo.js';
 import { MatchEnemies } from '../ui/matchEnemies.js';
@@ -263,7 +263,9 @@ export function BandDraftScreen() {
   return html`<div class="screen draft">
     <div class="brief__bg" aria-hidden="true"></div>
     <${StepHeader} step=${2} of=${2} title=${t('选择策略')} micro="STRATEGY // BAND CHECK" pub=${clock ? { ...pub, deadline: clock.deadline } : { ...pub, deadline: 0 }}
-      total=${clock ? clock.total : null} onExit=${() => setExit(true)} />
+      total=${clock ? clock.total : null} onExit=${() => setExit(true)}
+      extra=${html`<button type="button" class="stephead__info" data-testid="match-info-open" aria-haspopup="dialog" onClick=${() => setInfoOpen(true)}
+        title=${t('本局信息')}><${Icon} name="search" /><span>${t('本局信息')}</span></button>`} />
     <main class="draft__main">
       <aside class="draft-order">
         <h3 class="brief-h"><span>${solo ? t('独立模拟') : t('决策顺序')}</span><${MicroLabel}>${solo ? 'FREE PICK' : 'RANDOM ORDER'}</${MicroLabel}></h3>
@@ -287,8 +289,6 @@ export function BandDraftScreen() {
             </span>
           </div>`;
         })}
-        <${Button} variant="secondary" icon="search" block=${true} class="draft-order__info" data-testid="match-info-open"
-          aria-haspopup="dialog" onClick=${() => setInfoOpen(true)}>${t('本局信息')}<//>
         ${!solo ? html`<p class="draft-order__tip" data-testid="draft-tip">${draftTip({ timed, turnSeconds: turnLen, autoName: myPick ? null : autoName, selected: autoId === sel })}</p>` : null}
       </aside>
 
@@ -301,6 +301,7 @@ export function BandDraftScreen() {
               aria-disabled=${isTaken ? 'true' : 'false'} title=${isTaken ? t('队友已选') : offNames.length ? bandOffLine(offNames) : undefined}
               class=${cx('dband', sel === b.bandId && 'is-sel', myPick === b.bandId && 'is-mine', isTaken && 'is-taken', offNames.length && 'is-off')} onClick=${() => { setSel(b.bandId); audio.sfx('tab', { volume: 0.5 }); }}>
             <${BandIcon} bandId=${b.bandId} size="lg" />
+            ${sel === b.bandId ? html`<span class="dband__selmark" aria-hidden="true">SELECTED</span>` : null}
             <span class="dband__name">${b.name}</span>
             <span class="dband__lp num"><i></i>${b.totalHp}</span>
             <${BandOffTag} names=${offNames} />
@@ -312,17 +313,20 @@ export function BandDraftScreen() {
 
       <aside class="draft-detail brackets">
         ${band ? html`
-          <div class="draft-detail__art">
-            <${BandIcon} bandId=${band.bandId} size="xl" />
-          </div>
-          <div class="draft-detail__hp"><span>${t('初始生命值')}</span><${LpTower} value=${band.totalHp} size="lg" /></div>
-          <h2 class="draft-detail__name">${band.name}</h2>
-          <${BandOffNote} names=${bandOffBonds(band, offBonds).map((id) => gd.bond(id)?.name || id)} />
-          <div class="draft-detail__eff">
-            <${MicroLabel} tone="mint">EFFECT</${MicroLabel}>
-            <b>${band.effectName || ''}</b>
-            <${RichText} as="p" text=${band.descRaw || band.desc} class="draft-detail__desc" />
-          </div>` : html`<p class="t-dim">${t('选择一个策略查看详情')}</p>`}
+          <div class="draft-detail__body">
+            <div class="draft-detail__art">
+              <${BandIcon} bandId=${band.bandId} size="xl" />
+            </div>
+            <div class="draft-detail__hp"><span>${t('初始生命值')}</span><b class="num">${band.totalHp ?? '--'}</b></div>
+            <span class="draft-tag">STRATEGY</span>
+            <h2 class="draft-detail__name">${band.name}</h2>
+            <${BandOffNote} names=${bandOffBonds(band, offBonds).map((id) => gd.bond(id)?.name || id)} />
+            <span class="draft-tag">INTRO</span>
+            <div class="draft-detail__eff">
+              <b>${band.effectName || ''}</b>
+              <${RichText} as="p" text=${band.descRaw || band.desc} class="draft-detail__desc" />
+            </div>
+          </div>` : html`<div class="draft-detail__body"><p class="t-dim">${t('选择一个策略查看详情')}</p></div>`}
         <div class="draft-detail__actions">
           ${myPick ? html`<p class="draft-detail__status t-mint"><${Icon} name="check" />${t('已选择「{name}」', { name: gd.band(myPick)?.name || '' })}${!solo && !draft.done ? t('，等待其他博士') : ''}</p>`
             : selTaken ? html`<p class="draft-detail__status draft-detail__status--taken"><${Icon} name="close" />${t('队友已选，请选择其他策略')}</p>`
