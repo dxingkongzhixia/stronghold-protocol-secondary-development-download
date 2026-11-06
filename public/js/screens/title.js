@@ -32,6 +32,7 @@ import { t, N_ } from '../../../shared/i18n.js';
 import { scriptOf } from '../../../shared/i18nPacks.js';
 import { GIcon, Img } from '../ui/gameComponents.js';
 import { uiUrl } from '../ui/assetUrls.js';
+import { AllianceBackdrop, useLobbyArt } from '../ui/allianceScene.js';
 import { SettingsModal } from '../ui/settings.js';
 import { AnnounceBanner, AnnounceButton, AnnouncementsOverlay } from '../ui/announce.js';
 import { NoticesButton } from '../ui/notices.js';
@@ -261,7 +262,9 @@ export function TitleScreen() {
   const assets = data.get('assets');
   const backdrop = findUiAsset(assets, BACKDROP_KEYS);
   const ridges = findUiAsset(assets, RIDGE_KEYS);
-  // the season logo at the size the entry film leaves it; the dot emblem until the sprite has loaded
+  // the event's night / dusk lobby (ui/allianceScene.js) behind the title — the scene the entry film ends on — and its
+  // logo at the size the film leaves it; the old art / the dot emblem until those sprites have loaded
+  const alliance = useLobbyArt();
   const logo = uiUrl(assets, 'entry/season_logo');
   // Track load/fail per URL (not as booleans reset in effects: an image can load before an effect runs).
   const [bgLoadedUrl, setBgLoadedUrl] = useState(null);
@@ -293,14 +296,15 @@ export function TitleScreen() {
   const alphabetic = scriptOf(t('卫戍协议')) === 'alphabetic';
   return html`<div class="screen title-screen">
     <${AnnounceBanner} onOpen=${() => setAnnounceOpen(true)} />
-    <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} aria-hidden="true">
-      ${backdrop ? html`<img class="title-bg__art" src=${backdrop} alt="" draggable=${false}
+    <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${alliance ? ' has-alliance' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} aria-hidden="true">
+      ${alliance ? html`<${AllianceBackdrop} />` : null}
+      ${backdrop && !alliance ? html`<img class="title-bg__art" src=${backdrop} alt="" draggable=${false}
         onLoad=${() => setBgLoadedUrl(backdrop)} />` : null}
       <div class="title-bg__glow"></div>
       <div class="title-bg__radar"><div class="title-bg__sweep"></div></div>
       <div class="title-bg__target"></div>
-      ${cssRidges ? html`<${Ridges} />` : null}
-      ${ridges && !ridgesFailed ? html`<div class="title-bg__ridge-art" style=${`background-image:url("${ridges}")`}>
+      ${cssRidges && !alliance ? html`<${Ridges} />` : null}
+      ${ridges && !ridgesFailed && !alliance ? html`<div class="title-bg__ridge-art" style=${`background-image:url("${ridges}")`}>
         <img src=${ridges} alt="" hidden onLoad=${() => setRidgesLoadedUrl(ridges)} onError=${() => setRidgesFailedUrl(ridges)} />
       </div>` : null}
       <div class="title-bg__haze"></div>

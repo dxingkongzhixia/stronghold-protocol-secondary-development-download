@@ -211,10 +211,12 @@ function run(allowed, mount) {
     const sound = res[2];
     armSkip();
     try { scene = mount(el); } catch (err) { console.warn('[intro] could not start', err); finish('end'); return; }
+    // The owner's 2026-11-06 request: the same film, shorter on screen — it plays at 1.6× (2.8 s of video in ~1.75 s).
+    const SPEED = 1.6;
     const { from, fadeAt, to } = INTRO_SPAN;
     const lead = 0.04;
     const t0 = performance.now() + lead * 1000; // video second `from` is on screen at t0
-    setCycleOrigin(t0 + (3.12 - from) * 1000); // the backdrop under the opening shows the same moment of the cycle
+    setCycleOrigin(t0 + ((3.12 - from) * 1000) / SPEED); // the backdrop under the opening shows the same moment of the cycle
     if (sound && audio.ctx?.state === 'running') {
       const ctx = audio.ctx;
       if (sound.sfx && audio.sfxGain) {
@@ -222,18 +224,18 @@ function run(allowed, mount) {
           const node = ctx.createBufferSource(), gain = ctx.createGain();
           node.buffer = sound.sfx; gain.gain.value = SFX_GAIN;
           node.connect(gain); gain.connect(audio.sfxGain);
-          const when = ctx.currentTime + lead + (INTRO_AUDIO.sfxAt - from);
+          const when = ctx.currentTime + lead + (INTRO_AUDIO.sfxAt - from) / SPEED;
           node.start(when);
           src = { node, gain, when };
         } catch { /* ignore */ }
       }
       release = holdBgm();
       // audio.js starts a track 50 ms after it is asked for
-      if (release) bgmTimer = setTimeout(() => release?.(), Math.max(0, (lead + INTRO_AUDIO.bgmAt - from - 0.05) * 1000));
+      if (release) bgmTimer = setTimeout(() => release?.(), Math.max(0, (lead + (INTRO_AUDIO.bgmAt - from) / SPEED - 0.05) * 1000));
     }
     const frame = () => {
       if (done) return;
-      const T = from + (performance.now() - t0) / 1000;
+      const T = from + ((performance.now() - t0) / 1000) * SPEED;
       if (T >= to) { finish('end'); return; }
       if (T < 3.2) scene.grain();
       scene.render(Math.max(from, T));

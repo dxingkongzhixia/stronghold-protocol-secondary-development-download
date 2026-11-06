@@ -81,11 +81,9 @@ function loadSprite(name) {
     resolve(!!ok);
     notifySprites();
   };
-  // an image counts only on onload (a decode failure after that still counts); onerror is a miss
-  im.onload = () => {
-    const dec = typeof im.decode === 'function' ? im.decode() : Promise.resolve();
-    Promise.resolve(dec).then(() => settle(true), () => settle(true));
-  };
+  // an image counts on onload: a decode failure after that still counts, and `decode()` itself can hang on some
+  // Chromium builds (the promise never settles and the film would never play) — the draw decodes anyway
+  im.onload = () => settle(true);
   im.onerror = () => settle(false);
   spriteLoads.set(name, task);
   im.src = url;
