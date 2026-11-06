@@ -111,6 +111,19 @@
   background: var(--line-2);
   transition: background var(--t-med), box-shadow var(--t-med);
 }
+.seat__clip {
+  position: absolute;
+  left: 50%;
+  top: -.14rem;
+  z-index: 5;
+  width: .16rem;
+  height: .2rem;
+  transform: translateX(-50%);
+  background: #3a3e3d;
+  border: 2px solid #1a1c1c;
+}
+.seat.is-ready .seat__clip, .seat.is-host .seat__clip { background: var(--mint-500); }
+.seat.is-ready::before, .seat.is-host::before { background: transparent; box-shadow: none; }
 .seat__head {
   align-self: stretch;
   display: flex;
@@ -118,9 +131,12 @@
   gap: .08rem;
   height: .34rem;
   padding: 0 .12rem;
-  background: rgba(0, 0, 0, .38);
+  background: #2b2e2e;
   border-bottom: 1px solid var(--line);
 }
+.seat.is-ready .seat__head, .seat.is-host .seat__head { background: var(--mint-500); border-bottom-color: transparent; }
+.seat.is-ready .seat__head .seat__grip, .seat.is-host .seat__head .seat__grip { color: rgba(8, 34, 27, .6); }
+.seat.is-ready .seat__head .seat__no, .seat.is-host .seat__head .seat__no { color: #08221b; }
 .seat__grip { display: flex; gap: .03rem; color: var(--line-2); }
 .seat__grip i { display: block; width: .035rem; height: .12rem; background: currentColor; }
 .seat__no { margin-left: auto; font-size: calc(.18 * var(--t)); font-weight: 700; color: var(--text-md); line-height: 1.1; }
@@ -157,8 +173,11 @@
     linear-gradient(rgba(78, 216, 175, .04) 1px, transparent 1px) 0 0 / .3rem .3rem,
     linear-gradient(90deg, rgba(78, 216, 175, .04) 1px, transparent 1px) 0 0 / .3rem .3rem,
     #0b0e0d;
-  border: 0;
+  border: 2px solid #2b2e2e;
+  border-top: 0;
+  transition: border-color var(--t-med), box-shadow var(--t-med);
 }
+.seat.is-ready .seat__art, .seat.is-host .seat__art { border-color: var(--mint-500); box-shadow: 0 0 .2rem rgba(23, 249, 183, .35); }
 .seat__art-img { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
 .seat__artshade { position: absolute; z-index: 1; inset: 0; pointer-events: none;
   background: linear-gradient(180deg, rgba(4, 8, 7, .08) 0%, rgba(4, 8, 7, 0) 34%, rgba(4, 8, 7, .86) 100%); }

@@ -164,6 +164,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, canInvite, onA
   if (!seat) {
     const canAdd = coop && facts.isHost;
     return html`<article class="seat seat--empty" style=${`--seat-i:${index}`}>
+      <span class="seat__clip" aria-hidden="true"></span>
       <header class="seat__head"><span class="seat__grip" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="seat__no num">P${index + 1}</span></header>
       <div class="seat__art seat__art--empty">
         <span class="seat__plus" aria-hidden="true">+</span>
@@ -188,6 +189,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, bubble, canInvite, onA
   const stateText = state === 'ready' ? t('已就绪') : state === 'offline' ? t('连接中断') : state === 'host' ? t('待命中') : t('准备中');
   return html`<article class=${`seat brackets${isMe ? ' is-me' : ''}${isHostSeat ? ' is-host' : ''}${seat.isBot ? ' is-bot' : ''}${seat.agent ? ' is-agent' : ''} is-${state}`}
       style=${`--seat-i:${index}`}>
+    <span class="seat__clip" aria-hidden="true"></span>
     ${bubble ? html`<div class="seat__chat"><${ChatBubble} key=${bubble.seq} name=${bubble.name} text=${bubble.text} own=${isMe} at=${bubble.at} ttl=${CHAT_BUBBLE_MS} /></div>` : null}
     <header class="seat__head">
       <span class="seat__grip" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
