@@ -27,7 +27,7 @@ import { fmtNum, diyRecordFor, cardStandIn } from '../ui/gameLogic.js';
 import { useDocClass } from '../ui/device.js';
 import { store, createStore, useStore, selectRoute, setOnlineOpen, consumeOnlineStatsReturn, setOnlineStatsReturn } from '../store.js';
 import { uiUrl, chessAvatarUrl, chessPortraitUrl, itemIconUrl } from '../ui/assetUrls.js';
-import { TITLE_HEX_SECTORS, titleSectorClip } from '../ui/titleHexagon.js';
+import { TitleHexagon } from '../ui/titleHexagonView.js';
 import { ResultView } from './result.js';
 import { toast, toastError } from '../ui/toasts.js';
 import {
@@ -299,48 +299,6 @@ function BondAchievement({ peak, gd }) {
         <${BondGlyph} bondId=${bond.bondId} />${gd.bond(bond.bondId)?.noStack ? null : html`<b class="num">${fmtNum(bond.layers)}</b>`}
       </li>`)}</ul>
     </div>
-  </div>`;
-}
-
-/** The official statistics view fills and highlights counts at 20 awards. */
-function TitleHexagon({ titles, manifest }) {
-  const byId = new Map(titles.map((x) => [x.id, x]));
-  const mask = uiUrl(manifest, 'statistics/titleMask');
-  const glow = uiUrl(manifest, 'statistics/countGlow');
-  const [loadedArt, setLoadedArt] = useState([]);
-  useEffect(() => {
-    let active = true;
-    const images = [mask, glow].filter(Boolean).map((url) => {
-      const image = new Image();
-      image.onload = () => { if (active) setLoadedArt((loaded) => loaded.includes(url) ? loaded : [...loaded, url]); };
-      image.src = url;
-      return image;
-    });
-    return () => { active = false; for (const image of images) image.onload = null; };
-  }, [mask, glow]);
-  return html`<div class=${cx('st-titlehex', mask && loadedArt.includes(mask) && 'has-reference-mask')} role="group" aria-label=${t('称号')}
-    style=${{ '--st-title-mask': mask ? `url("${mask}")` : undefined, '--st-title-glow': glow && loadedArt.includes(glow) ? `url("${glow}")` : undefined }}>
-    <div class="st-titlehex__graphic" aria-hidden="true">
-      ${TITLE_HEX_SECTORS.map(([id, angle]) => {
-        const clip = titleSectorClip(byId.get(id)?.count || 0);
-        return html`<div key=${id} class="st-titlehex__wedge"
-          style=${{ '--sector-angle': `${angle}deg`, '--texture-angle': `${-angle}deg` }}>
-          <div class="st-titlehex__base"></div>
-          ${clip ? html`<div class="st-titlehex__active"><div class="st-titlehex__sector" style=${{ clipPath: clip }}>
-            <div class="st-titlehex__texture"></div>
-          </div></div>` : null}
-        </div>`;
-      })}
-      <${Img} src=${uiUrl(manifest, 'statistics/decoration')} class="st-titlehex__decoration" />
-    </div>
-    <ul class="st-titlehex__labels">
-      ${TITLE_HEX_SECTORS.map(([id], i) => {
-        const x = byId.get(id);
-        return x ? html`<li key=${id} class=${cx('st-titlehex__label', `st-titlehex__label--${i}`)} title=${x.text || ''}>
-          <b class=${cx('st-titlehex__count num', x.count >= 20 && 'is-bright')}>${fmtNum(x.count)}</b><span class="st-titlehex__name">${x.name}</span>
-        </li>` : null;
-      })}
-    </ul>
   </div>`;
 }
 

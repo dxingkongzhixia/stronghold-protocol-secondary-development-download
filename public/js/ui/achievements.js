@@ -23,6 +23,7 @@ import { levelProgress, levelOf } from '../screens/settle.js';
 import { fetchStats } from './statsSync.js';
 import { net } from '../net.js';
 import { achievementStats, bondOperators, recordBonds, HEX_TITLES, ACHIEVEMENT_GROUPS } from './achievementModel.js';
+import { TitleHexagon } from './titleHexagonView.js';
 import { useLeave } from './transitions.js';
 import { uiUrl } from './assetUrls.js';
 import { Emblem } from '../screens/title.js';
@@ -159,29 +160,12 @@ export function hexSegments(R = 172) {
     return { id, i, points: poly.map((p) => r1(p).join(',')).join(' '), rule: [r1(e1), r1(e2)], ticks };
   });
 }
-const HEX = hexSegments();
-const seg = ([p, q], key) => html`<line key=${key} x1=${p[0]} y1=${p[1]} x2=${q[0]} y2=${q[1]} />`;
 
 function TitleHex({ titles, gd }) {
   const recs = Array.isArray(gd.config?.titles) ? gd.config.titles : [];
-  const pt = (deg, r) => [Math.cos((deg * Math.PI) / 180) * r, Math.sin((deg * Math.PI) / 180) * r];
-  return html`<div class="ach-hex">
-    <span class="ach-hex__cap" aria-hidden="true"><i></i>STRONGHOLD PROTOCOL<small></small></span>
-    <svg class="ach-hex__svg" viewBox="-300 -240 600 480" aria-hidden="true">
-      ${HEX.map((h) => html`<g key=${h.id} class="ach-hex__seg" style=${`--i:${h.i}`}>
-        <polygon points=${h.points} />
-        <g class="ach-hex__ticks">${seg(h.rule, 'rule')}${h.ticks.map(seg)}</g>
-      </g>`)}
-      <circle class="ach-hex__hub" r="15" />
-    </svg>
-    ${HEX_TITLES.map((id, i) => {
-      const [x, y] = pt(-90 + i * 60, 222);
-      const rec = recs.find((r) => r.id === id);
-      // names / texts come from the localized game data, like the stats page's own hexagon
-      return html`<span key=${id} class="ach-hex__label" style=${`left:calc(50% + ${(x / 600) * 100}%);top:calc(50% + ${(y / 480) * 100}%);--i:${i}`} title=${rec?.text || ''}>
-        <b class="num">${titles[id] || 0}</b><span>${rec?.name || id}</span></span>`;
-    })}
-  </div>`;
+  const list = recs.map((r) => ({ ...r, count: titles[r.id] || 0 }));
+  // the same official statistics hexagon the 统计数据 overview draws (ui/titleHexagonView.js)
+  return html`<${TitleHexagon} titles=${list} manifest=${gd.m} />`;
 }
 
 /** The settlement's own trophy medal for the accumulated count (config.trophies.medals), no invented level. */

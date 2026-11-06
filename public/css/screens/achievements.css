@@ -121,23 +121,8 @@
 .ach-modded__sw i { display: block; width: calc(0.34 * var(--ui-unit, 1rem)); height: calc(0.34 * var(--ui-unit, 1rem)); margin-left: calc(0.06 * var(--ui-unit, 1rem)); background: #8a9490; transition: transform var(--t-fast, 150ms), background var(--t-fast, 150ms); }
 .ach-modded__sw.is-on { border-color: rgba(78, 216, 175, .55); background: rgba(28, 92, 80, .55); }
 .ach-modded__sw.is-on i { transform: translateX(calc(0.42 * var(--ui-unit, 1rem))); background: #4af2c4; }
-.ach-hex { position: relative; min-height: calc(4.4 * var(--ui-unit, 1rem)); }
-/* the reference's hexagon: six solid mint triangles, dark gaps, a ruler inside each outer edge, a dark hub, a soft glow */
-.ach-hex__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 calc(0.14 * var(--ui-unit, 1rem)) rgba(74, 242, 196, .3)); }
-.ach-hex__seg polygon { fill: #5cd3b2; stroke: rgba(225, 255, 246, .32); stroke-width: 1.5; stroke-linejoin: round; }
-.ach-hex__ticks line { stroke: rgba(8, 48, 38, .34); stroke-width: 2; }
-.ach-hex__hub { fill: #0b100f; stroke: rgba(8, 48, 38, .7); stroke-width: 5; }
-.ach-hex__seg { animation: ach-seg 380ms var(--ease-out) calc(60ms + var(--i) * 50ms) both; transform-origin: 0 0; }
-@keyframes ach-seg { from { opacity: 0; transform: scale(.72); } }
-.ach-hex__cap { position: absolute; left: calc(0.1 * var(--ui-unit, 1rem)); top: 0; display: grid; grid-template-columns: auto auto; column-gap: calc(0.08 * var(--ui-unit, 1rem)); align-items: center; font-family: var(--font-display);
-  font-size: calc(.16 * var(--utility-text, var(--t))); letter-spacing: .04em; color: rgba(220, 230, 226, .3); white-space: nowrap; pointer-events: none; }
-.ach-hex__cap i { width: calc(0.06 * var(--ui-unit, 1rem)); height: calc(0.06 * var(--ui-unit, 1rem)); background: var(--mint-400); }
-.ach-hex__cap small { grid-column: 2; width: calc(0.5 * var(--ui-unit, 1rem)); height: calc(0.08 * var(--ui-unit, 1rem)); margin-top: calc(0.04 * var(--ui-unit, 1rem)); background: rgba(74, 242, 196, .4); }
-.ach-hex__label { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; line-height: 1.15; white-space: nowrap; isolation: isolate;
-  animation: ach-pop 320ms var(--ease-out) calc(180ms + var(--i) * 50ms) both; }
-.ach-hex__label b { position: relative; padding: 0 calc(0.1 * var(--ui-unit, 1rem)); font-family: var(--font-display); font-size: calc(.32 * var(--utility-text, var(--t))); color: #dafff4; font-weight: 600; text-shadow: 0 0 calc(0.08 * var(--ui-unit, 1rem)) rgba(74, 242, 196, .9); }
-.ach-hex__label b::before { content: ''; position: absolute; z-index: -1; inset: 18% -4%; border-radius: calc(0.2 * var(--ui-unit, 1rem)); background: rgba(74, 242, 196, .26); filter: blur(calc(0.05 * var(--ui-unit, 1rem))); }
-.ach-hex__label span { font-size: calc(.25 * var(--utility-text, var(--t))); color: #dfe6e3; }
+/* the 统计数据 hexagon (ui/titleHexagonView.js): fill the panel's right column, as the reference does */
+.ach-top-area > .st-titlehex { width: min(100%, 560px); }
 
 /* section bars */
 .ach-bar { position: relative; display: flex; align-items: center; gap: calc(0.2 * var(--ui-unit, 1rem)); height: calc(0.66 * var(--ui-unit, 1rem)); margin: calc(0.5 * var(--ui-unit, 1rem)) 0 calc(0.3 * var(--ui-unit, 1rem)); padding: 0 calc(0.3 * var(--ui-unit, 1rem)) 0 calc(1.38 * var(--ui-unit, 1rem));
@@ -226,7 +211,7 @@
 .ach-mark__badge { position: absolute; right: calc(0.06 * var(--ui-unit, 1rem)); top: calc(0.06 * var(--ui-unit, 1rem)); width: calc(0.3 * var(--ui-unit, 1rem)); height: calc(0.3 * var(--ui-unit, 1rem)); display: grid; place-items: center; background: #1c1206; border: 2px solid #ff9a2a; color: #ffad3a; }
 .ach-mark__badge svg { width: calc(0.2 * var(--ui-unit, 1rem)); height: calc(0.2 * var(--ui-unit, 1rem)); }
 @media (prefers-reduced-motion: reduce) {
-  .ach, .ach__box, .ach-hex__seg, .ach-hex__label, .ach-top, .ach__loader i, .ach__loader b { animation: none !important; }
+  .ach, .ach__box, .ach-top, .ach__loader i, .ach__loader b { animation: none !important; }
 }
 .ach-marks--list { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(4.6 * var(--ui-unit, 1rem)), 1fr)); gap: calc(0.16 * var(--ui-unit, 1rem)) calc(0.3 * var(--ui-unit, 1rem)); padding-left: calc(0.8 * var(--ui-unit, 1rem)); }
 .ach-mark--row { flex-direction: row; align-items: center; gap: calc(0.2 * var(--ui-unit, 1rem)); }
