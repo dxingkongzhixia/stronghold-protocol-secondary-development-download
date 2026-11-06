@@ -176,7 +176,7 @@ function OnlineBadge({ onOpen }) {
 }
 
 /** The 野排 queue strip: head count, difficulty and the AI-backfill countdown. */
-function QueuePanel({ mm, onCancel }) {
+function QueuePanel({ mm, onCancel, onView }) {
   if (!mm?.queued) return null;
   const need = Number.isFinite(mm.need) && mm.need > 0 ? mm.need : MAX_SEATS;
   const waiting = Number.isFinite(mm.waiting) ? Math.max(0, mm.waiting) : 0;
@@ -191,7 +191,10 @@ function QueuePanel({ mm, onCancel }) {
       <span>${t('已等待')} <b class="num">${clock(elapsed)}</b></span>
       <span class="num">${left > 0 ? t('{left} 后由 AI 补位开局', { left: clock(left) }) : t('正在组队…')}</span>
     </div>
-    <${Button} variant="secondary" size="sm" icon="close" onClick=${onCancel}>${t('退出匹配')}<//>
+    <div class="match-queue__actions">
+      <${Button} variant="secondary" size="sm" icon="search" onClick=${onView}>${t('查看')}<//>
+      <${Button} variant="secondary" size="sm" icon="close" onClick=${onCancel}>${t('退出匹配')}<//>
+    </div>
   </div>`;
 }
 
@@ -557,7 +560,7 @@ export function LobbyScreen() {
       </aside>
 
       <section class="hub-entries" aria-label=${t('模拟方式')}>
-        ${queued ? html`<${QueuePanel} mm=${mm} onCancel=${mmCancel} />` : null}
+        ${queued ? html`<${QueuePanel} mm=${mm} onCancel=${mmCancel} onView=${() => setProtocol('mm')} />` : null}
         <div class="hub-entries__row">
           <div class="hub-group hub-group--solo">
             <span class="hub-entry__group"><${Icon} name="user" />${t('独立模拟')}</span>
