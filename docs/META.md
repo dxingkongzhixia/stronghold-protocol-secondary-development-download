@@ -114,7 +114,7 @@ band draft / 机变 / PREP deadline, and BATTLE_CHECK / ROUND_START / SETTLE run
 `m.public.overtimeAt` = when the overtime drain starts: 120 real s for all-human teams, 150 real s with an AI teammate at fight start; both on the field clock).
 
 ### 1.1 Band draft
-Co-op: random order (all seats, bots included), one pick per turn, ONE countdown: `BAND_TURN_SECONDS` 50 s per turn,
+Co-op: random order (all seats, bots included) — unless the room option 「AI 队友最后选择」 (`opts.aiPicksLast`, `room.setAiPicksLast`) is on, which puts every human seat before every AI seat, each group keeping the drawn order; a human who skips goes behind the other humans still to pick and ahead of the AI seats. One pick per turn, ONE countdown: `BAND_TURN_SECONDS` 50 s per turn,
 published as `m.public.deadline` (= `draft.turnDeadline`; `draft.turnSeconds` its length) — no step cap; AI seats pick
 at once. A turn that runs out takes the strategy the player highlights in the draft screen (`g.bandFocus {bandId?}`,
 `Match.timeoutBand`) while it is allowed and no teammate holds it, else `bandDraft.timeoutBandId` 华法琳, else the first
@@ -203,7 +203,10 @@ A `choice:<effectId>` registry handler overrides the default application (§2.4)
   (86 400 s = 24 h, lobby.js `soloResumeWindowMs`) — nothing in a solo run is timed, so it simply waits. `onReconnect`
   resends `m.public`, `m.private` and the `b.start` of the field the player is on / watching.
 * `g.autoplay { on }` ("AI 托管"): the bot plays the seat (drafts, buying, placement, an open 教鞭 choice, ready) until turned off.
-* `onLeave` (quit / reconnect window expired): 中途退出 counts as elimination (research 00-INDEX §3, 01 §9, 06 §7 /
+* **Permanent departure with another human still in the room is NOT elimination**: `lobby.js handSeatToAI` hands the seat
+  to a fresh AI (`Match.takeOver` / `aiTakeOver`), keeping its board, funds, items and loadout, and the match goes on;
+  the owner can take the seat back after reconnecting. Only the **last** human's departure runs the elimination path below.
+* `onLeave` (**the last human's quit, or an expiry with nobody else left**): 中途退出 counts as elimination (research 00-INDEX §3, 01 §9, 06 §7 /
   §10.3): every copy the seat holds returns to the shared pool at once; the seat leaves the round loop and the Final
   Assault pairing (re-planned when it quits before the boss fight) and the boss pool (bloodPoint per player alive when
   the fight starts — a departed seat no longer counts, DESIGN §25.13.4); its
@@ -215,7 +218,7 @@ A `choice:<effectId>` registry handler overrides the default application (§2.4)
 ### 1.3a Solo pause
 `g.pause { on }` (`Match.setPause`, DESIGN §14 Solo pause): solo matches only (co-op → `WRONG_PHASE`), `on: true` only
 while a battle runs (COMBAT / 最终攻势 / 隐秘核心 with a live field, not while the Final Assault is ending); `on: false`
-always. While paused (`m.public.paused`) the field clocks, the authority deadlines / release timers, the boss clock
+is always accepted **in solo** (co-op answers `WRONG_PHASE` for both values, `pause.js`). While paused (`m.public.paused`) the field clocks, the authority deadlines / release timers, the boss clock
 (overtime drain, silence watchdog) and the server pacers stand still; `_resume()` shifts `deadline`, `overtimeAt`, the
 fields' `startAt` / `lastProgressAt` and the boss start by the paused time and re-arms the timers. A disconnect or
 `onLeave` resumes; the battle phase ending clears it (`pausedMs` totals the paused time).
@@ -225,10 +228,13 @@ A normal / 联防 client field is reported by its browser (`b.progress` / `b.res
 deadline only (`startAt + timeLimit / gameSpeed + RESULT_GRACE_MS`, then a server takeover). A browser that went quiet —
 a frozen tab, a battle that never finishes, a lost `b.result` — left the phase waiting. `MatchClientCombat` now runs a
 watchdog every `FIELD_WATCH_MS` (4 s): a normal / 联防 field with no report for `FIELD_SILENCE_MS` (12 s,
-`server/match/fields.js`) is handed to the server (`_runOnServer(field, 'silent')`, logged as
-`silent client for N s — server takeover`) and settles like any other takeover. Fields whose result is already in hand
-(`verifyJob`, `heldResult`, `result != null`) are left alone, boss / hidden fields keep their own `BOSS_SILENCE_MS`
-watchdog, and a paused solo match is skipped (`_resume` shifts the clocks). For diagnosis `/admin/api/state` now lists,
+`server/match/fields.js`) is first handed to another browser (`_delegateField(field, 'silent')`, host first;
+`SP_CLIENTS_ONLY` ends it as `no-executor` when no browser is left) and only the delegate chain's last resort is the
+server (`_runOnServer`); it is logged as `silent client for N s — delegating/takeover` and settles like any other
+takeover. Fields whose result is already in hand (`verifyJob`, `heldResult`, `result != null`) are left alone, boss /
+hidden fields keep their own `BOSS_SILENCE_MS` watchdog, and a paused solo match is skipped (`_resume` shifts the clocks;
+the watchdog is not re-armed until the next field launch, so after a pause a normal field relies on its wave deadline
+again — a known gap, not a rule). For diagnosis `/admin/api/state` now lists,
 per room, `phase`, `round`, `deadline` and `fields[{ id, kind, mode, done, authority }]` — a stuck match is visible
 without a restart.
 
@@ -276,14 +282,14 @@ The rest of this section is the legacy server-run mode
 × 0.02); a band whose mechanic rides on a bond the mode switches off weighs 0 — `GameData.bandBondIds` (bands.json
 `bondIds`, built by shared/bandBonds.js: the bond names in <…> of its text, the bond ids / bond pools of its blackboards)
 ∩ `modeInactiveBonds`: 标准's 潘格尼尼, 克莱门莎, 玛恩纳 — and with every offered band excluded it takes the default band;
-one rng draw per pick (DESIGN §21.26). The strategy draft marks the same bands 本局禁用 for humans (still selectable).
+one rng draw per pick, re-drawn up to 8 times while the first result is already held by a teammate (DESIGN §21.26). The strategy draft marks the same bands 本局禁用 for humans (still selectable).
 Buys toward a full board first (the cap is 8 from R1; leftover funds are lost), completes the merges it can afford,
 then levels on a curve (L2 ≈ R3, L3 ≈ R5, L4 ≈ R7, L5 ≈ R10, L6 ≈ R12 — the competent curve of docs/BALANCE.md; free
 levels always), then spends the rest (a band that keeps its leftover funds — 坎诺特 利滚利 — holds its interest capital
 of 5 back from refreshes, full-board buys that complete nothing, items and spare level-ups). It builds around a
-**focus core bond** (owned members × 10 + members the shop can still bring at its level + banked layers + 6 for last
-round's focus, − 6 when it is a teammate's main core bond on that teammate's bond strip — humans included: the pool is
-shared) and a **second bond** (most owned members, next threshold within reach); its keepers are the deployed
+**focus core bond** (owned members × 10 + min(4, copies the shop can still bring at its level) + min(6, banked layers / 10)
++ 16 when it was last round's focus with ≥ 3 owned members (else 6 there), − 6 when it is a teammate's main core bond or
+one of a living teammate's opening band bonds — humans included: the pool is shared) and a **second bond** (most owned members, next threshold within reach); its keepers are the deployed
 operators, the focus / second members and chess of tier ≥ shop level − 1. With a full board a purchase must be merge
 progress or a lineup upgrade **and** be worth more than the refreshes its price would pay for: a refresh is worth
 Σ over the held pairs of P(the refresh shows the third copy) × the value of an elite (the shop's copy-weighted odds
@@ -306,7 +312,7 @@ deadline would; the operator a transformation gains waits on the bench and the n
 like any owned unit — AI 托管 too; the buy loop's bench shed, which sells by piece value while the bench is crowded,
 never sells a piece gained since the bot's last prep ended, `rememberOwned`), 身份牌 / 通讯机 / 寻呼模块 on a focus
 member; 画卷 copies the most
-valuable deployed operator; 教鞭 / “神秘顾客” are used after a perfect battle and otherwise kept in the hand — a bot drops
+valuable deployed operator; 教鞭 / “神秘顾客” are used after a perfect battle with ≥ 10 LP (`ps.lp < 10` keeps them) and otherwise kept in the hand — a bot drops
 a kept one only when it needs the hand slot (“神秘顾客” then pays its fund), a human's seat under AI 托管 never; 教鞭's three
 cards are scored like a 机变 bounty draft (§2.5). 机变: a
 bounty card is scored by its expected payout minus its expected leaks × the value of an LP (2 + 20 / LP), the kill
@@ -369,7 +375,8 @@ export function registerMeta(registry) {
 ### 2.1 Keys
 One handler object per key; a later `register` of the same key **replaces** the earlier one (content registers after
 the engine built-ins, so content always wins). Sugar: `registry.band(id, h)`, `.bond`, `.garrison`, `.item`,
-`.choice`, `.effect`, `.global`. A bare function registers `{ run: fn }`.
+`.choice`, `.effect`, `.global`. A bare function registers `{ run: fn }` **for the garrison and choice registries only**;
+the other classes need the hook object (a bare function there is registered but never runs).
 
 | key | runs for | source (`ctx.source`) |
 |---|---|---|
@@ -391,8 +398,8 @@ Every handler method is `(ctx, ev)`; `ev` is shared by all handlers of one dispa
 |---|---|---|
 | `onIncome` | ROUND_START, before the income is credited | `{ round, income, pending }` — write `ev.income` / `ev.pending` (e.g. 老鲤 withholds R1–R2 income until R3) |
 | onMatchStart | after the match enters INFO_CHECK (once per player) | { round: 0 } |
-| onPhase | any observed phase change (markPublic sees the new phase) | { from, to, round } |
-| `onCustomPhaseStart` | a gameplay handler entered its bounded custom phase | `{ name, data, phase }` |
+| onPhase | any observed phase change (markPublic sees the new phase) — **gameplay handlers only** (`dispatchGameplay`) | { from, to, round } |
+| `onCustomPhaseStart` | a gameplay handler entered its bounded custom phase — **gameplay handlers only** | `{ name, data, phase }` |
 | `onCustomPhaseEnd` | that custom phase ended (early or by its timer) | `{ name, data, phase, reason }` |
 | `onRoundStart` | ROUND_START, after income / shop roll | `{ round }` |
 | onRoundEnd | SETTLE, after LP/eliminations, before the next round | { round, unite? } |
@@ -416,8 +423,9 @@ Every handler method is `(ctx, ev)`; `ev` is shared by all handlers of one dispa
 | `onLayers` | bond layers were added (prep or battle gains) | `{ bondId, from, to, reason }` (milestones: 维多利亚 25, 远见 10, 奇迹 100 …); `to` ≤ 999 (`BOND_LAYER_CAP`) — a gain at the cap dispatches nothing, so the milestones stop with the count |
 | `onActiveBonds` | the set of active bonds changed: `PlayerState.recompute` (`player/round.js _reportActiveBonds`) compares the bonds it computed with the previous computed state — every path that changes what the bonds count ends there: placing / moving / swapping / withdrawing a piece in prep, buys, sells, merges, transformations, temp → hand moves, equipment (变形同构体), effects (`setBondCountBonus`, grants), evictions — any phase; never for an eliminated player | `{ activated: string[], deactivated: string[] }` (bond ids, data order; read only). A handler's own recompute (a grant's) reports only what changed after it. The layer milestones owed while a bond was off subscribe it and pay as soon as it lights up — 维多利亚's 维式重锤 (`bonds/core.js payHammers`: placing the third member in prep grants it at once, the maintainer's report of 2026-10-15), 远见 / 奇迹's funds and 远见's discount latch (`bonds/addon/meta.js`) — each milestone once (their counters), however often the bond goes off and on (DESIGN §32.14.31) |
 
-Dispatch order per player: `global` → `band` → `bond` (data order) → garrisons (board in reading order — top row first, `board.js boardOrder` —, then hand)
-→ equipped items → EffectRefs (insertion order). `onPrice` runs the priced chess's own 特质 first (购买价格为N sets the
+Dispatch order per player: `global` → `band` → `bond` (data order) → **operator traits** (`dispatchOperatorTraits`, with
+`onTraitGain` / `onTraitDeploy`; a gain runs before `onGain`) → garrisons (board in reading order — top row first,
+`board.js boardOrder` —, then hand) → equipped items → EffectRefs (insertion order). `onPrice` runs the priced chess's own 特质 first (购买价格为N sets the
 price that 远见's discount and the strategies' caps then act on). Every call is isolated with try/catch (the error is
 logged once and counted in `match.dispatcher.errors`); nested dispatches are capped at depth 6.
 The equipped-items step walks a snapshot (the owned chess and each holder's items as they stand when it begins: every
@@ -454,6 +462,10 @@ registry.garrison('SERVER_ADD_BOND_METHOD', {
 });
 ```
 
+The real handler (`server/sim/content/garrisons/meta.js` `SERVER_ADD_BOND_METHOD`) also covers
+`round_gain_char` / `same_row` / `same_bond_diff_lv`, splits `bbStr.bond` on commas, and resolves `requireActiveOf`
+(the bond names in the text) before the `requireActive` check; the snippet above is the core shape only.
+
 ### 2.4 The handler context (`ctx`)
 Reads: `playerId seat name round phase modeId difficulty isSolo isCoop data (frozen raw data) gd (GameData) rng`
 (`rng()`, `rng.int(n)`, `rng.pick(a)`, `rng.chance(p)`, `rng.shuffle(a)` — the match's meta stream, never
@@ -469,7 +481,7 @@ bought after selling one this round is a new copy and fires on its own first ref
 
 For .js content modules the context also carries pluginId and setView(value) (JSON data, at most 16 KiB): the value is published as m.public.pluginView[pluginId] at the next view flush. It is presentation state only; it does not change the battle, and preview dispatches cannot write it.
 
-A `gameplay:<id>` handler additionally has `ctx.startPhase(name, { seconds?, data? })`, `ctx.endPhase(name?, reason?)` and `ctx.customPhase`. A custom phase is server-authoritative and bounded: it keeps the current core phase suspended, clears its deadline, closes every match intent except `g.watch` / `g.leave` / `g.emote`, publishes `m.public.customPhase`, and resumes the suspended deadline with its remaining time when it ends. `seconds` is required and ends it automatically; the owner may end it earlier with `ctx.endPhase`. `onCustomPhaseStart` / `onCustomPhaseEnd` receive `{ name, data, phase }` (an end also carries `reason`). This is an interstitial phase, not a replacement for the core round/phase machine.
+A `gameplay:<id>` handler additionally has `ctx.startPhase(name, { seconds?, data? })`, `ctx.endPhase(name?, reason?)` and `ctx.customPhase`. A custom phase is server-authoritative and bounded: it keeps the current core phase suspended, clears its deadline, closes every match intent except `g.watch` / `g.leave` / `g.emote` (and `b.rehearsalResult` from the platform path), publishes `m.public.customPhase`, and resumes the suspended deadline with its remaining time when it ends. `seconds` is required and ends it automatically; the owner may end it earlier with `ctx.endPhase`. `onCustomPhaseStart` / `onCustomPhaseEnd` receive `{ name, data, phase }` (an end also carries `reason`). This is an interstitial phase, not a replacement for the core round/phase machine.
 
 Writes (validated, never throw on bad input; funds and available stock stay non-negative; authorized operator overdraw records an internal deficit):
 
@@ -478,7 +490,7 @@ Writes (validated, never throw on bad input; funds and available stock stay non-
 | `addFunds(n, reason?)` / `addPendingFunds(n)` / `spendFunds(n)` | funds now / at the next round start / pay (false when short) |
 | `addLayers(bondId, n, { requireActive })` | layer gain (`requireActive` = "使已激活的…"); returns layers added — at most the room left under `BOND_LAYER_CAP` (999, shared/constants.js `layerGainRoom`; the battle gains merged at SETTLE too); fires onLayers unless it added 0. During ROUND_START / SP_DRAFT / PREP, a positive gain also sends the owner an ephemeral `m.layer {playerId, bondId, add}` audio notification; no replay on resync or SETTLE backfill |
 | `grantChess(id, { toTemp, golden, requirePool=true, fromPool=true })` | acquire a chess (takes pool copies; with `requirePool` a pool chess with no copy left fails → `null`); merges; fires onGain. `toTemp` puts it into temp, but a free hand slot pulls it in at the next recompute (temp holds overflow only, `PlayerState._fillHandFromTemp`) |
-| `grantItem(id, { toTemp, requirePool=true })` | acquire an item (merges with an identical normal item); `toTemp` as for grantChess. `requirePool:false` bypasses stock only for fixed `SERVER_GAIN_EQUIP` gift families; every copy still counts in occupancy (§30.1). |
+| `grantItem(id, { toTemp, requirePool=true })` | acquire an item (merges with an identical normal item); `toTemp` as for grantChess. In production a grant never consults the shared stock — `requirePool` is enforced only in `SP_TEST_MODE`, where the fixed `SERVER_GAIN_EQUIP` gift families may overdraw; every granted copy still counts in occupancy (§30.1). |
 | `rollChess({ maxTier, tier, bond, filter })` / `rollItem({ pool, tier, maxTier })` | copy-weighted chess id from the shared pool / item id (choices.json pools) |
 | `grantFreeRefresh(n)` | free refreshes (stack) |
 | `modifyPrice(delta)` / `setPrice(v)` | onPrice only: edit `ev.price` |
@@ -505,7 +517,8 @@ destroyed (they never take a slot); set `ev.keep = true` to keep the item equipp
 off before `onEquip` runs and is destroyed (`onDestroy` reason `replace`) once the effect went through — the carrier keeps
 a free slot, which a kept item takes —, and goes back where it was when the effect refuses (GitHub #263). Without a
 registered handler the equip is refused (`BAD_TARGET 'effect not available'`). Arts (`MAGIC`): `g.art` needs a handler; at most `maxArtsPerRound` (2) per round;
-`ev.targets` are the pieces under the Art's `rangeGrid` at (row, col); set `ev.error` to refuse, `ev.used = false` to keep it.
+`ev.targets` are the pieces under the Art's `rangeGrid` at (row, col), rotated by `ev.dir` (the deploy wheel's facing;
+absent ⇒ RIGHT); set `ev.error` to refuse, `ev.used = false` to keep it.
 Other equipment: 2 slots; a third replaces the equipped item the player picks in the replace dialog — `g.equip
 { itemUid, targetUid, replaceUid }` (research 09 §1.2 `UseEquipUp.unloadInstId`; absent ⇒ the oldest; a `replaceUid` not
 equipped on the target ⇒ `BAD_TARGET`, nothing changes) — and the replaced item is destroyed. Equipped items are
@@ -513,11 +526,12 @@ otherwise locked (research 04 §2 / addendum: they leave the operator only on pr
 refuses them (`BAD_TARGET 'equipped items are locked'`). A second copy of an equipped normal item merges into the golden
 item in the hand. Every path that hands an item to the player (buy, reward, 机变, grants, equip, the equipment a sale,
 a promotion or `ctx.destroyPiece` returns) ends with the auto-merge (`acquireItem` / `checkItemMerges`: "已拥有2件同一初始
-装备时…自动合并"), so a player never holds two identical mergeable normal items (`test/match/feedback1b-items.test.js`), except an item gained while 休整期结束 is dispatching (`onPrepEnd`, including a grant nested under it): it is stowed (hand, else temp) and merges at the next prep's start, and nothing already equipped is taken off for the fight. Hand and temp both full still destroys it with 「整备区已满，获得的装备已销毁」. [ASSUMED] every such grant, not only 维多利亚's hammer (owner's decision 2026-10-04). A buy, an onPrepStart grant and a grant at any other time still merge at once (`test/match/feedback3-prep-end-item.test.js`).
+装备时…自动合并"), so a player never holds two identical mergeable normal items (`test/match/feedback1b-items.test.js`), except an item gained while 休整期结束 is dispatching (`onPrepEnd`, including a grant nested under it): it is stowed (hand, else temp) and merges at the next prep's start, and nothing already equipped is taken off for the fight. A full hand overflows into the expandable temp queue (the item is kept, not destroyed, since 0.3.0; only a bot's hand of nothing but items under AI 托管 may drop one). [ASSUMED] every such grant, not only 维多利亚's hammer (owner's decision 2026-10-04). A buy, an onPrepStart grant and a grant at any other time still merge at once (`test/match/feedback3-prep-end-item.test.js`).
 
 Built-ins (builtinMeta.js, overridable): 盟约之币 / 骑士储蓄罐 (random funds), 随身身份牌 (layers of the target's bonds),
 紧急调度券 (take shop chess), 精打细算玩偶 (+funds each round), 简易通讯机 (same-bond chess), 拟态物质 (with 2 copies
-owned the 3rd — nothing when the pool has none left, GitHub #207 —, else a same-bond chess), 见钱眼开玩偶
+owned the 3rd — granted with `requirePool:false`, so it still arrives when the shared pool has none left, GitHub #207 —
+else a same-bond chess), 见钱眼开玩偶
 (+funds next round), 人事部文档 (cap 9), 博士投影 (elite now / at the next round start), 寻呼模块 / 信标 (pick-one
 offers; 信标 gifts the original chess — an elite stays an elite — to the teammate with the most members of its bonds next
 round, also when the sender was eliminated meanwhile; a failed grant waits for the next round start), 商业包装方案 (every
@@ -608,7 +622,7 @@ Any `choice:` handler whose EffectRef reuses its own key must guard like this (o
   extra slots at once, empty (the cards shown stay; the empty slots fill on the next roll); `MAX_LEVEL` at 6. One freeze
   toggle freezes every unsold slot until the next round start; a manual refresh rerolls everything (new slots stay
   frozen). Unfrozen slots are cleared at combat start. Slot positions are stable (frozen slots keep their index).
-* **Pool**: copies 12/14/18/16/8/5 (缪尔赛思 4); a normal piece holds 1 copy, an elite 3; displays never reserve copies;
+* **Pool**: copies 12/14/18/16/8/5 (缪尔赛思 5); a normal piece holds 1 copy, an elite 3; displays never reserve copies;
   selling, temp resolution and elimination return exactly what a piece holds (`left + held = cap` always).
 * **自选编队 (0.2.0, `player/diy.js`; research 0.2.0 §2, the owner's decisions of 2026-10-05)**: a human's `seat.diy`
   picks (room.diy, checked again against the match's data and kits) are fixed for the match; bots field none [ASSUMED].
@@ -633,7 +647,7 @@ Any `choice:` handler whose EffectRef reuses its own key must guard like this (o
   rules, no 调度中心 gate, bonds through the player's view; 「自选干员放入后模拟中的补给池随机范围也将被相应扩大」, 0.2.0), and
   信标 never sends one to a teammate [ASSUMED]. `battleInput` carries `diy` (the pick); `m.private.diy` / `diyBanned`; `prepFieldMeta` and
   `m.result` lineups carry the pick (`diy`) so other players' cards compose the operator.
-* **Hand**: 10 slots filled right→left, 5 temp slots for passive overflow (merge results, grants, returned equipment);
+* **Hand**: 10 slots filled right→left, 5 visible temp slots plus an expandable queue behind them for passive overflow (merge results, grants, returned equipment);
   a full hand refuses every buy and reward pick — also one whose copy would complete a merge at once (PRTS
   卫戍协议/帮助 §手牌区 "例如招募/购入等通常情况下会增加手牌的操作"; GitHub #82) — and withdrawals unless the withdrawn
   summoner's own summon stack frees a slot (a deployed summon withdrawn with no stack of its own left to join is a new
@@ -658,7 +672,8 @@ Any `choice:` handler whose EffectRef reuses its own key must guard like this (o
   temp; with both full it stays on the elite, up to its 2 equip slots — any further item is destroyed); summons of
   consumed copies are removed; a reward offer of 3
   **different** free chess of tier min(level+1, 6) (copy-weighted from the shared pool, already-drawn ones excluded; a
-  short tier tops up from the tier below — user playtest #6 item 19; pick 1, expires at prep end; queued when several
+  short tier tops up from the tier below — user playtest #6 item 19; pick 1, kept until picked (an offer can survive into
+  the next prep); queued when several
   merges or special refreshes happen — `shop.rewardOffer.queued` counts the ones behind the shown offer). The same rule holds for every way a merge completes — buy, reward pick, effect / band / choice grants
   (`acquireChess`), transformations — and in every phase: a merge completed after the prep (SETTLE / Final Assault
   effects such as 突变细胞) keeps its offer for the next prep; its elite takes the deployed copy's tile at once, or goes to
@@ -738,11 +753,13 @@ Any `choice:` handler whose EffectRef reuses its own key must guard like this (o
   45 s, R3's at 62 s of 55 s); × 2 every limit ≈ last spawn + one flyer crossing. docs/BALANCE.md §2.1.
 * **SETTLE**: LP −min(counted leaks, 10) (after 联防: survivors attributed to their source, same cap); IN_BATTLE layer
   gains applied, each bond up to `BOND_LAYER_CAP` (999, `layerGainRoom`, as `PlayerState.addLayers`); kill-bounty coins (paid by the Battle to the killer — a 联防 helper included; a death no operator caused pays the card's owner, in 联防 the helper whose half it fell on: `Battle._bountyPayee`) and perfect-bounty coins
-  (own phase perfect) go to pending funds; bounty rounds decrement; LP ≤ 0 ⇒ eliminated (all copies back to the pool).
+  (own phase perfect) go to pending funds; bounty rounds decrement; LP ≤ 0 ⇒ **downed first** in co-op when a living human
+teammate can still donate (REVIVE, `_canDown`), otherwise eliminated (all copies back to the pool).
 * **Final Assault / Hidden Core**: finalAssault.js header. Boards are passed in board coordinates; the sim maps board
   rows 9–12 onto boss rows 2–5 (`BOSS_ROW_OFFSET` −7, matching every stage's boss rows) and mirrors the right side.
-  Pairing uses a separate seeded shuffle once per match, before Final Assault prep; `bossPairs` retains partners and
-  sides into Hidden Core. A departure preserves intact pairs and joins the remaining single players. The published
+  Pairing uses a separate seeded shuffle before Final Assault prep; `bossPairs` retains partners and sides into Hidden
+  Core **from the Final Assault draw**, but the Hidden Core itself draws its pairs and sides anew from its own stream
+  (GitHub #845, superseding §30.12's kept partners). A departure preserves intact pairs and joins the remaining single players. The published
   `m.public.bossPairs` follows the preparation plan; camera, placement and green team frames use it, never new draws.
   Pool (`finalAssault.js bossPoolHp` → `GameData.bossPoolShare` → `gamedata.js bossPoolShareOf`, DESIGN §20.10,
   §25.13.4): one pool shared by every boss field (official tip "最终攻势中，所有人将一起对敌方领袖造成伤害"; notice 5114's
@@ -849,7 +866,7 @@ while the 联防 runs, each leaker's `m.public players[].uniteLeft` = its enemie
 yet, alive, or through again) + its leaks that could not re-enter — what settlement would charge before the cap —
 and `pendingLp` = min(`lpCapPerRound`, uniteLeft) (`Match._uniteLeft`). Sources: the authority's `b.progress.left`
 (`{ [leakerId]: n }`, server/sim/spec.js `uniteLeft` / `battleProgress`), the server-run field's timeline samples
-(`fields.js timelineSample`: `[gt, killed, total, left]`) read on the field clock, or the streamed battle itself
+(`fields.js timelineSample`: `[gt, killed, total, resolved(, left)]`, `left` only on a 联防 field) read on the field clock, or the streamed battle itself
 (legacy mode; `_uniteTick` republishes about once a game second); exact from the field's result once it is done
 (`uniteSurvivors`). Live values are clamped to what the escaped wave sent that leaker (`fields.js uniteBillBounds`:
 `keySourceCounts` only — the same set settlement bills). It only ever falls, as the helpers strike the sent-in enemies
@@ -866,7 +883,7 @@ The client's stored loadout and `m.private.loadout` must agree after a successfu
 
 `m.public` (throttled ≤ 10/s, only sent when it changed) carries the DESIGN fields plus: `drawnDisabledBonds` (the 3+4
 drawn set; `disabledBonds` = drawn ∪ the mode's static list), `hiddenBossId`, `bossRound`, `hiddenRound`, `spRound`,
-`combatMode` (`'client'` | `'server'`), `fields[].progress { killed, total, done }` (teammates' progress UI), `paused`
+`combatMode` (`'client'` | `'server'`), `fields[].progress { killed, total, resolved, done }` (teammates' progress UI), `paused`
 (solo pause, §1.3a),
 `players[].autoplay`, `players[].uniteLeft` (UNITE, leakers only: their enemies still standing, uncapped — §4),
 `players[].bonds` = `ps.alive ? bondList(gd, ps.bondsView(), { off: offBondCounts(gd, ps) }) : []` — every bond with members, layers or an active tier,
@@ -876,13 +893,15 @@ inactive one the player has members of is marked `{ bondId, count, active: false
 and order as the player's own `m.private bonds` minus `thresholds` / `countsHand` (the client reads those from
 bonds.json; an entry whose count holds 调和's +1 carries `harmony: 1` in both lists — the bond popup's 调和 row, DESIGN
 §21.26): a teammate watching the player shows it in the bond strip (DESIGN §20.15); `[]` once the player is
-eliminated (nobody can watch them; the result screen reads `m.result`'s own bonds), and per phase: `draft { order, turn, picks, skipsLeft, turnDeadline, turnSeconds, untimed }` (BAND_DRAFT),
+eliminated (nobody can watch them; the result screen reads `m.result`'s own bonds), and per phase: `draft { order, turn, picks, skipsLeft, turnDeadline, turnSeconds, untimed, bands }` (BAND_DRAFT; `bands` = the room's allowed strategy ids),
 `sp { family, name, desc, eventId, cards:[{ idx, kind:'bounty'|'item'|'tactic', id, name, desc, tier, descRaw?, coin?,
 payout?, rounds?, enemyKey?, count?, price?, team?, tacticKind? }], order, turn, picks:{pid: idx}, taken:{idx: pid}, untimed }`
 (SP_DRAFT), `teamLp` / `bossHp {hp,max}` (Final Assault on), `overtimeAt` (最终攻势 / 隐秘核心: ms epoch when the
-overtime drain starts; `deadline` = the level's 120 s countdown), `unite { helpers, leakers }` (UNITE).
+overtime drain starts; `deadline` = the level's 120 s countdown), `unite { helpers, leakers }` (UNITE), and
+`uniteResult { through, helpers, leakers, losses }` at SETTLE after a 联防 (absent otherwise).
 `players[].status`: INFO_CHECK ready/deciding · drafts ready (picked) / deciding (their turn) / acting (waiting) ·
-PREP ready/acting · COMBAT/boss combat/done · UNITE helping/done · others done · `left` / `dead` override.
+PREP ready/acting · ROUND_START / 机变 / other transitions acting · COMBAT/boss combat/done · UNITE helping/done ·
+`left` / `dead` override.
 
 `m.private` = DESIGN §8.3 exactly (sent per player whenever it changed). `nextEnemies` = the current round's wave
 (+ the player's bounty enemies, tag `bounty`; boss rounds: the player's boss field, tag `boss` — the leader's entry with its
@@ -896,15 +915,16 @@ same counts (its input's `bonds` come from `bondsView()`, PlayerState.battleInpu
 `ps.layers` (rules, `activatedLayers`) are untouched; SETTLE clears the pending gains as it adds them to `ps.layers`
 (once); the next round start clears them too.
 
-`m.field` = `{ fieldId, kind, rect, stageId, units, live }`; during prep `g.watch 'n:<pid>'` returns that board
-with `prep: true` and sends it again when the board changes (GitHub #87).
+`m.field` = `{ fieldId, kind, rect, stageId, units, live }` for a battle field; the prep scout (`g.watch 'n:<pid>'`)
+returns the same shape with `prep: true` (no `live`), plus `effects` and `nextEnemies`, and sends it again when the board
+changes (GitHub #87).
 
 **`b.snap` / `b.ev` game time**: every frame is `{ t: '<type>', … }`, so the snapshot's game time (DESIGN `b.snap.t`)
 is sent as **`gt`** (game seconds); `b.ev` carries the same `gt`. The client reads `gt` (`render/interp.js frameTime`,
 used by `normalizeSnapshot`). Legacy server-run mode only: client-side combat sends no `b.snap` / `b.ev`.
 
 `m.result` (unicast to every human, `playerId` = the recipient) = `{ victory, roundsPassed, hiddenReached,
-hiddenCleared, reason: 'victory'|'defeat'|'eliminated'|'abandoned'|'error', teamLp (merged Final Assault LP, null before
+hiddenCleared, reason: 'victory'|'defeat'|'eliminated'|'abandoned'|'error'|'no-executor', teamLp (merged Final Assault LP, null before
 it; players[].lp are the alive players' shares), modeId, difficulty, stageId, bossId,
 hiddenBossId, seed, durationMs, players:[{ playerId, seat, name, isBot, left, alive, victory (the team won AND this
 player was still in at the end), roundsPassed,
@@ -983,7 +1003,8 @@ round was over. The official 1 s `broadcastBeginDelay` is not modelled.
   owner's decision of 2026-10-06 — a newly merged elite counts as a new 拉普兰德; until 0.2.0 it kept the highest count of
   its copies). A 拉普兰德 bought after selling one in the same round is a new copy and fires on its own first refresh
   ("获得该干员后"; each such +4 costs 3 + 1 refresh − 1 refund and needs her in the shop).
-* Chess granted by effects need a free pool copy unless `requirePool: false` (then they hold 0 copies).
+* Chess granted by effects need a free pool copy unless `requirePool: false` (then they hold 0 copies); **item** grants do
+  not consult the shared stock in production (§2.4 — `requirePool` is a test-mode check).
 * Boss-round `local` pack spawns (boss parts) all spawn; content scripts (bosses.js) decide their behaviour.
 * The Final Assault ends as a defeat when every field finished with the boss pool above 0 (boss escaped).
 * The 999 layer cap holds for every prep-side gain too (the client only shows the in-battle clamp; the scene server's
@@ -1024,11 +1045,12 @@ choices are explicitly [ASSUMED]; DESIGN §28.15–16 records the source and val
 
 `SharedItemPool` derives equipment availability from current ownership across all players: ordinary 1, upgraded 2.
 Equips, merges and returns cannot lose reservations. Consumptions/destruction release ownership [ASSUMED removal
-interpretation]. Shop/reward displays reserve nothing; rejected exhausted **item** purchases retain funds and offers.
+interpretation]. Shop/reward displays reserve nothing; an exhausted **item** purchase still succeeds (overdraw is
+bookkept, no funds or offer lost).
 整备 upgrades the purchased item only when `left` still has the golden's second copy; otherwise the item stays
 normal and the charge remains.
-`m.public.sp.cards[].soldOut` disables duplicates when a preceding choice used the final copy; timer/bot choices
-use the same availability. Non-shop effect-only equipment is unlimited.
+`m.public.sp.cards[].soldOut` is always false: a displayed card stays claimable even after a preceding pick used the
+final copy (owner 2026-10-16); later rolls filter by availability. Non-shop effect-only equipment is unlimited.
 
 Operator capacities use measured single-player exceptions and twice those counts in co-op; DIY remains private.
 `take(..., { overdraw: true })` records full occupation, including authorized acquisitions beyond capacity.
@@ -1038,5 +1060,6 @@ Negative internal balance is a deficit, never negative available stock; selling 
 
 Fixed equipment gifts from `SERVER_GAIN_EQUIP` (卡涅利安、蜜蜡、缪尔赛思、耶拉、诗怀雅) may exceed the pool,
 including the same families awarded by 变形者. They still occupy ordinary/advanced 1/2 copies and can leave availability
-at zero after a removal. Ordinary shop, reward and random grants retain their limits. `requirePool:false` is not a
+at zero after a removal. In production, ordinary shop / reward / random item grants do not consult shared stock;
+`SP_TEST_MODE` enforces the limits and lets only the fixed gift families overdraw. `requirePool:false` is not a
 universal equipment bypass. Rockrock/Flametail's measured weighted subsets remain subject to shared availability (§30.2).
