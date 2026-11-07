@@ -1,10 +1,10 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-10-26**（台式机 `_merge-scratch` + 线上实测）。插件 / Forge / studio / 控制台见
+> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-11-07**（台式机 `_merge-scratch` + 线上实测）。插件 / Forge / studio / 控制台见
 > [`docs/PLUGINS.md`](PLUGINS.md) 与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10。
 > 文档入口（2026-10-25 重新梳理）：人类 [`DEVELOPER.md`](DEVELOPER.md)、AI [`AI-AGENT.md`](AI-AGENT.md)、
 > 规则 [`RULES.md`](RULES.md)、插件 [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)。
-> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§49；**§49 = 2026-10-16 特效批次总览**）。
+> 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§50）。
 > 按问题查文档见 [`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
 
 ---
@@ -72,14 +72,14 @@
 | 其它闸门 | **2026-10-26 台式机 store 复测**：`lint` 0 error（186 warning）✓；`typecheck` ✓；`i18n check en --strict` **1966/1966**（100%）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 **35/35** ✓；kit 覆盖 **283/283** 技能、**112/112** 棋子 ✓；`check:imports` 3 条既有 `sim-node` 边界记录 |
 | 本机环境 | Node **v24.19.0**（线上是 v26.10.0）；**系统 `python` 已是 3.12.10**（2026-10-28 升级：旧的 `C:\Program Files\python` 3.8.6 已从机器 PATH 移除、文件保留；`paramiko 5.1.0` / `UnityPy 1.25.4` 已装）；GitHub 经 Steam++（hosts → `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`；官方数据 CDN 需要代理 |
 | 本地服务 | `npm start`（= `node --max-old-space-size=512 server/index.js`，2026-10-27 起；直接 `node server/index.js` 不设上限）于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
-| 线上新增内容 | 插件 **12** 个（含 `prts-kaltsit:loaded`，未改 `plugins/config.json` 默认列表）；主界面音乐 **218** 条（`var/music`，351 个文件）；内置音乐 24 条；剧情背景 **54** 张；DB schema **v6**；`var/avatars` 已创建 |
+| 线上新增内容 | 插件 **已安装 14 个 / 非官方内容插件 10 个 loaded**（2026-11-07 `/admin/api/plugins/stats`；含 `prts-kaltsit:loaded`，未改 `plugins/config.json` 默认列表）；主界面音乐 **218** 条（`var/music`，351 个文件）；内置音乐 24 条；剧情背景 **54** 张；DB schema **v6**；`var/avatars` 已创建 |
 
 ## 4. 线上
 
 | 项 | 值 |
 |---|---|
 | 地址 | **https://strongholdprotocolcsym.top:10785/**（官方 HTTPS；NAT：内网 3000 → 外网 20522；旧的 `http://183.66.27.19:20522` 仍可访问，但会收到“改用官方地址”的普通通知） |
-| 版本 | `app 0.4.0`；**已上线进程的 build `e8c7dc8230b0`**（2026-11-05 18:10 重启，由 `/healthz` 实测且 == 磁盘 build；本次备份 `/root/sp-backup-ai-20261105-180636.tgz`；Agent 席位已开启）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
+| 版本 | `app 0.4.0`；**已上线进程的 build `3820c2321f13`**（2026-11-07 12:31 重启上线，由 `/healthz` 实测且 == 磁盘 build；此后 11-07 17:33–18:45 只上传素材 / 客户端 JS，**未重启**，build 仍为该值；本次代码备份 `/root/sp-backup-code-20261107-123009.tgz`；Agent 席位已开启）；以 `/healthz` 的 `build` 为准（`BUILD_INPUTS` = `public/index.html` + `public/js` + `public/css` + `server/sim` + `shared` + `data` 的 size+mtime，**不含 `docs/`**；`build` 在进程内缓存，**只上传不重启会停在旧值** —— 两者不等就是还跑着旧代码，见 `docs/AI-WORKFLOW.md`） |
 | 主机 | RainYun Debian KVM；SSH `root@183.66.27.19 -p 45217` |
 | 面板 | 宝塔 `https://183.66.27.19:32467/rainy`（用户 `rainyun`） |
 | 项目 | `/www/wwwroot/Stronghold-Protocol`，跑在 `www` 用户，`npm run start` |
@@ -88,7 +88,7 @@
 | 管理页 | `/admin?token=<var/admin-token.txt>`（令牌 + 30 天 cookie）；公开只读 `/online/api` |
 | 进程管理 | 宝塔「Node项目」脚本 `/www/server/nodejs/vhost/scripts/server.sh`（`setsid` 启动）；日志 `/www/wwwlogs/nodejs/server.log` |
 | **域名 / 备案** | **官方 HTTPS 地址 `https://strongholdprotocolcsym.top:10785/` 已启用**（ICP **浙ICP备2026085059号-1**）；旧的 `http://183.66.27.19:20522` 仍可访问，但非官方地址会被提醒改用官方地址。域名/证书/HTTPS 的完整步骤保留在下面一行。 |
-| **HTTPS / SW 的前置** | ① 域名 A 记录指向生产机；② 签证书并在反代上启用 HTTPS；③ **中继也必须 HTTPS** —— HTTPS 页面不允许明文 `http://` 子资源（mixed content），`http://123.57.150.185` 会被浏览器拦掉、客户端静默回退到免费 CDN；给中继一个子域名（如 `relay.strongholdprotocolcsym.top`）签证书，再把 `public/asset-mirrors.json` 的第一个源改成 `https://…`；④ 之后 SW 自动注册，`设置 → 美术资源缓存` 生效，用 `node tools/check-delivery.mjs --live` 核对 |
+| **HTTPS / SW（2026-10-27 已完成）** | ① 域名 A 记录指向生产机；② 证书 + 反代 HTTPS 已启用；③ **中继也已 HTTPS**（`https://relay.strongholdprotocolcsym.top:56148`，Let's Encrypt / DNS-01），`public/asset-mirrors.json` 的第一个源就是它 —— HTTPS 页面不允许明文 `http://` 子资源（mixed content），旧的 `http://123.57.150.185` 会被浏览器拦掉；④ SW 现已在官方地址注册，`设置 → 美术资源缓存` 生效，用 `node tools/check-delivery.mjs --live` 核对 |
 | **公安联网备案（2026-10-14 放弃）** | 已在「全国互联网安全管理服务平台」提交过（主体 马赛 + 网站 我的接口，曾处于待审核），随 owner「彻底不办备案」的决定一并放弃；数据码属敏感凭据、**不进仓库**。将来若重启备案，需要：域名 + 可访问的 HTTPS 站点 + 页脚公示号 |
 | **备用 / 测试机（阿里云 ECS）** | **`121.43.140.85`**（华东1 杭州 · 2 vCPU / 2 GiB / 40 GiB **3 Mbps** · Alibaba Cloud Linux 3 + 宝塔面板）。2026-10-14 部署完成：代码 `/www/wwwroot/Stronghold-Protocol`（gitee 浅克隆，`git fetch --depth 1 origin master && git reset --hard origin/master` 更新）、Node `/www/server/nodejs/v26.10.0`、**systemd 服务 `stronghold`**（`User=www`、开机自启、崩溃自重启、日志 `/var/log/stronghold.log`）、监听 `:3000`；**本机 admin token 与旧机不同**（`var/admin-token.txt`）。**定位：备用 / 测试机，不承担生产** —— owner 2026-10-14 决定**不做域名与 HTTPS**（本地缓存 + 中继那套在纯 HTTP 下已够用），生产仍留在雨云那台（上行 20 Mbps，比本机 3 Mbps 更适合对外）。阿里云**安全组未放行 80/443/3000**，外部只能经临时隧道看（`cftunnel` 服务，quick-tunnel 地址随机、重启会变；`systemctl stop cftunnel` 即可撤）。上面的「域名与 HTTPS」步骤保留备用 |
 
