@@ -2,7 +2,24 @@
 
 > **Keel 现状（0.4.0）：** manifest 3 是唯一插件入口；manifest 2 先 `node tools/keel.mjs import <id> --write` 迁移。本文保留 manifest-2 / v2 插件规范作为作者参考；Keel 功能总览见 [`keel/FEATURES.md`](keel/FEATURES.md)，manifest 3 见 [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md)。
 
-A **plugin** is a folder a server owner puts into `plugins/`: a manifest, `plugins/<id>/plugin.json`, next to the files
+> **Audit note (2026-11-07, docs ↔ code).** The loader described below is the **v2 compatibility projection** of Keel
+> (`shared/keel/legacy.js`); a folder whose only manifest is `plugin.json` (manifest 2) is reported
+> `PLUGIN_LEGACY_REMOVED` and skipped (`server/plugins/registry.js`). Migrate it with
+> `node tools/keel.mjs import <id> --write`. Known gaps in this tree, kept explicit so this text is not read as a promise:
+>
+> - `plugins/_template/script/` and `plugins/_template/ui/` no longer exist (only `keel-script/` / `keel-ui/`), so
+>   `plugin new script|ui` and the studio's matching templates currently fail with `ENOENT`.
+> - Native trusted server entries (`entry.server`, `api.http.route`, `api.lobby.on`, `api.health.extend`) have **no
+>   runtime**: `server/plugins/trustedRuntime.js` is absent and `trust.native` is refused.
+> - Rule switches `shopBias` (`bondBias`), `morphPairing` (`plus`) and `unequip` (`allow`) are declared and validated but
+>   **not wired** into production gameplay (the shop roll ignores the bias, morph-plus slot/bond rules are missing,
+>   `g.unequip` is not a protocol message); `prepLoadout` is only partly wired.
+> - The explicit operator-fx mapping (`fx.unit` / `fx.skills`) is not resolved: `notePluginUnit` is never defined, so the
+>   client keeps the fallback chain.
+> - The studio edits Keel plugins **read-only** (`PLUGIN_STUDIO_KEEL_READONLY`); its manifest-2 editors are legacy.
+> - The Tests section below still lists v2 test files that no longer exist; the Keel suites under `test/keel/` are current.
+>
+> A **plugin** is a folder a server owner puts into `plugins/`: a manifest, `plugins/<id>/plugin.json`, next to the files
 it names. The interface calls them 「插件」, never 「模组」 (that word is the operators' modules). The design and its
 phases are DESIGN §32 (`docs/history/0.3.0.md`); this file is the reference.
 
@@ -88,7 +105,8 @@ page load — no restart. A server's own plugins are git-ignored (the folder's r
 release zips), never packed into a release and never touched by an update. One unreadable
 folder is skipped with its reason; it never stops the server.
 
-What this version does with each class:
+What this version does with each class (a **manifest-2 folder** is `PLUGIN_LEGACY_REMOVED`; this table describes the
+v2 projection Keel loads):
 
 | Class | Carries | This version |
 |---|---|---|
@@ -137,7 +155,11 @@ What rooms may use is the server owner's choice: `plugins/config.json` (optional
 choose (the default), fixes one set for every room, or keeps rooms on the original game, and limits the plugins, the
 classes and the content sets running at once — §11 and `docs/DEPLOY.md`.
 
-## 3. The manifest (manifest 2)
+## 3. The manifest (manifest 2 — migration reference)
+
+> This format is **not loaded directly** in 0.4.0: the registry skips a manifest-2 folder with
+> `PLUGIN_LEGACY_REMOVED`. It remains the shape `shared/keel/legacy.js` projects a manifest-3 plugin to, and the
+> migration source for `node tools/keel.mjs import <id> --write`.
 
 ```json
 {
@@ -193,7 +215,7 @@ patches, compact operator records, modes — are specified in §10.
 | `data.patch`, `data.add` | content, script, trusted | `data` (either); `operators`, `enemies`, `modes`, `stages` (`data.add`) |
 | `dsl` | content, script, trusted | `dsl` |
 | `offers` | content, script, trusted | `offers` (§10b; the part is data, so no code permission is needed) |
-| `sim.code`, `meta.code`, `mode.code` | script, trusted | `entry.sim`, `entry.meta` |
+| `sim.code`, `meta.code`, `mode.code` | script, trusted | `entry.sim`, `entry.meta` (`mode.code` is accepted but currently unused) |
 | `ui.frame` | ui | `entry.client` of a ui plugin |
 | `trusted.page`, `trusted.server` | trusted | `entry.client`, `entry.server` of a trusted plugin |
 
@@ -221,7 +243,7 @@ Every server names the content its rooms play with a hash, **`cs`** (`shared/plu
 ```
 cs = sha256(canonical({ v: 1, app, sim, data, plugins, settings, i18n?, rules? }))
   sim       sha256(canonical([[path, sha256], …])) of every served /sim/**.js (not nodeData.js), /shared/**.js and /data.js
-  data      { <name>: sha256 } of every data/<name>.json the match or the sim reads (not assets, local-assets, emotes, i18n/)
+  data      { <name>: sha256 } of every data/<name>.json the match or the sim reads (not assets, local-assets, local-fx, emotes, i18n/)
   plugins   [{ id, version, files }] in load order — [] for the vanilla content
   settings  { <id>: { <key>: value } } — {} for the vanilla content
   i18n      omitted for vanilla and cosmetic-only selections, so this P0 formula stays bit-identical. A content
@@ -240,7 +262,8 @@ and the second line of a diagnostic report (`content: vanilla cs=<64 hex>`, with
 with cosmetic plugins; a room with gameplay plugins will read `MODDED cs=… plugins=id@version(hash)…`).
 
 `GET /cs/<first 16 hex digits>/index.json` answers the content set's manifest — every code file's hash, every data
-file's URL (`/data/<file>?v=<8 hex>`), hash and size — cached for good; any other `cs` is 404. `GET /plugins/index.json`
+file's URL (`/data/<file>?v=<8 hex>`), hash and size — cached for good; a `cs` that is neither held by a room nor
+retained in the recent-set cache is 404. `GET /plugins/index.json`
 (never cached) is the catalogue: `{ version, app, api, content: { vanilla }, plugins: [entry …] }`, every plugin and
 pack found by class and id, with its `status` (`loaded` / `disabled` / `planned` / `unsupported`), `unofficial`, its manifest's
 public fields, size and file count — never a path on the server; a loaded cosmetic plugin that writes art adds `vs` (the visual set of
@@ -274,7 +297,8 @@ node tools/plugin.mjs check [<dir|id> …] [--strict] the folders of plugins/ (o
 node tools/plugin.mjs pack <dir|id> … [--zip]      write plugin.lock.json (every file's SHA-256 and size, each Spine model's
           [--out <file|dir>]                       clip data), then check the folder; --zip writes the folder as a zip
                                                    (default plugins/_dist/<id>-<version>.zip)
-node tools/plugin.mjs new <template> <id>          a new plugin folder from a template (art, spine, voice, audio, numbers, operator, dsl, meta, mode, ui, script, theme, notices, fx, skins)
+node tools/plugin.mjs new <template> <id>          a new plugin folder from a template (art, spine, voice, audio, numbers, operator, dsl, meta, mode, ui, script, theme, notices, fx, skins, bond, item, trait, offers, rules);
+                                                   new templates write **manifest 3** (Keel), not manifest 2
           [--target <名字|id>] [--name …] [--dir …] optional target found by its official name; --options <json-file> for wizard options
 node tools/plugin.mjs errors [--markdown] [--write] the error catalogue; --write keeps the symptom tables of the documents
 node tools/plugin.mjs import-forge <dir|zip>       a Forge workshop pack → the plugins it can become (§16);
@@ -335,10 +359,10 @@ is a number of `data/enemies.json`), so a room's `cs` is the vanilla one whateve
 |---|---|
 | `chars[charId]` | `avatar`, `avatarE2`, `portrait`, `portraitE2`, `illust` (image), `spine.front`, `spine.back` (Spine), `skins` (one key per skin, below) |
 | `enemies[key]` | `icon` (image), `spine` (Spine) |
-| `tokens[id]` | `avatar` (image), `spine` (Spine) |
+| `tokens[id]` | `avatar` (image), `spine` (Spine), `skins` (per-skin records, as `chars`) |
 | `bonds`, `items`, `bands`, `skills`, `modules`, `ui`, `prof.icon` / `large` / `battlecard` / `sub` `[key]` | an image |
 | `audio.bgm[lobby \| prep \| combat \| unite \| boss]`, `audio.bossBgm[bossId]` | a track `{ loop, intro? }` (audio), written whole — not `audio.bgm.combatAlts` (see below) |
-| `audio.voice[charId]`, `audio.voiceJp[charId]`, `audio.voiceEn[charId]`, `audio.voiceKr[charId]`, `audio.voiceNative[charId]` (the operator's own-language dub) | `<slot>`: an audio file or a list of 1–16 |
+| `audio.voice[charId]`, `audio.voiceJp[charId]`, `audio.voiceEn[charId]`, `audio.voiceKr[charId]`, `audio.voiceNative[charId]` (the operator's own-language dub) | `<slot>`: an audio file or a list of 1–16. **This tree plays only `voice` (cn) and `voiceJp`** (`public/js/voicePrefs.js` `VOICE_LANGS`); the en / kr / native tables are accepted but silent |
 | `audio.sfx.ui[key]`, `audio.sfx.battle[key]` | audio |
 | `audio.sfx.units[id]` | `attack`, `hit`, `skill`, `die`, `born` (audio), `skills` / `attacks` / `hits` `{ <index>: audio }` |
 
@@ -363,11 +387,11 @@ battle music `audio.bgm.combatAlts` (the mode's own 开战 tracks, 骑士之日 
 plugin changes: the client plays it instead of `combat` in the rounds it covers, so a plugin's `combat` is heard only
 where no such track plays. Writing an
 entry the installation has needs the permission `assets.override`, a new entry `assets.add`. `theme` is the allowlisted variables of §9.1, applied on this player's page only.
-entry the installation has needs the permission `assets.override`, a new entry `assets.add` — the decision the permission
-is: a write to a path whose entry the installation's manifest already has is an override, whatever it writes there, so an
-operator the manifest has counts as one even when the write only adds a skin under `chars[<charId>].skins` or a field the
-record did not have (`illust`); a new operator is an `assets.add`. `theme` is not applied yet
-(a warning).
+
+Writing an entry the installation has needs the permission `assets.override`, a new entry `assets.add` — the decision
+the permission is: a write to a path whose entry the installation's manifest already has is an override, whatever it
+writes there, so an operator the manifest has counts as one even when the write only adds a skin under
+`chars[<charId>].skins` or a field the record did not have (`illust`); a new operator is an `assets.add`.
 
 **立绘 and the skins of one operator.** `illust` is the full illustration (立绘), the picture a detail view shows. The
 committed `data/assets.json` of this version carries no `illust` and no `skins` yet, so a plugin that writes one adds that field to the
@@ -499,7 +523,8 @@ from the composition's file table — `/p/<id>/<the first 8 hex digits of the fi
 every reference copied out of the page's own manifest, the plugins in the composition's load order, so what it draws is
 exactly what `vs` names; a write that does not fit (a file the table lacks, of another kind than its field, a path
 outside the containers, a model out of its folder or of the lock's shape, a reference the page's manifest lacks) is left
-out and its entry keeps the installation's art. Leaving the room takes the art away again. A document that fails the
+out and its entry keeps the installation's art. Leaving the room drops the set and falls back to the welcome's
+`defaultVs` (the owner's default room set), else the vanilla art. A document that fails the
 check or will not download (an attempt is given up after 30 s [ASSUMED], two retries), or a write left out, leaves the
 original art there (one toast per page). Whenever the art changes under a page — the room's set arriving after its
 board was drawn (a reconnect, a spectator joining a match), a personal plugin switched during a match, a set taken away —
@@ -567,6 +592,8 @@ hits and skill start/loop/end use the existing official renderer (3D); no gamepl
 visuals still require that active module. A missing exact unit disables its entire skills map, including skills
 present in the global table, and keeps the old resolution chain. Missing skills also fall through. A missing unit
 produces one console note per view. Studio/check warn about locally absent units; malformed declarations refuse the plugin.
+**Status in this tree:** the explicit mapping is not resolved yet — `notePluginUnit` is never defined and the client
+keeps the ordinary fallback chain; treat `fx.unit` / `fx.skills` as declared-but-inactive until that is wired.
 
 `setup --local` now also extracts used effects. Startup/update setup discovers official character references in
 installed plugins' declared JSON (`fx.unit`, `origin.charId`, `art.ref`, `art.assets`, official-format charIds and asset
@@ -701,8 +728,14 @@ An absent key adds nothing; [ASSUMED] an empty object is treated as absent. Unkn
 non-gameplay class declaring rules fail with `PLUGIN_RULES`. [ASSUMED] script and trusted plugins may declare the
 same rules as content plugins; their existing execution gates still apply. Conflicting declared options fail
 composition with `PLUGIN_RULE_CONFLICT`, naming the switch and both plugins; repeating the same option is fine.
-Rooms display active non-default rules in words in their plugin tag, panel and match HUD. A client cannot enable one.
-The match host takes rules from the verified content set, overriding any per-match options.
+Rooms display active non-default rules in words in their plugin tag (the panel / HUD text is not wired yet). A client
+cannot enable one. The match host takes rules from the verified content set, overriding any per-match options.
+
+> **Wiring status in this tree:** the table and validation are implemented, but only part of the gameplay is wired.
+> `shopBias` (`bondBias`) is ignored by the production item roll (`economy.js _rollItemSlot` passes no bias);
+> `morphPairing` (`plus`) has no slot/bond/BattleSpec implementation; `unequip` has no `g.unequip` protocol message or
+> intent; `prepLoadout` accepts the PREP loadout but its summon-card reconciliation (`_reconcileTokensFor`) is missing.
+> Until these are finished, treat the switches as declaration/validation features, not promises.
 
 | Switch | Default | Other option and effect |
 | --- | --- | --- |
@@ -972,7 +1005,8 @@ nor re-hashed), and `SP_CONTENT_BUILDER=1` moves the build off the server's thre
 there is no fixed quiet period (`SP_PLUGIN_DEBOUNCE_MS` is an optional coalescing window; unset = apply at once).
 Built sets are memoised by manifest + content file hashes + settings and **kept on disk** under
 `.cache/content-sets/` (keyed by that memo key *and* the vanilla identity), so reopening a combination — even after a
-restart — is a file read, not a build.
+restart — is a file read, not a build. Disk retention is enabled by `SP_CONTENT_CACHE=1` (default on when
+`SP_CONTENT_BUILDER=1`); otherwise sets are memory-only (`server/plugins/contentSets.js`).
 
 **Which form each layer takes, the traps that make a rebuild silent, and the diagnosis commands live in
 [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md)** — read it before changing `shared/plugins/{patch,records}.js`,
@@ -1016,8 +1050,8 @@ against `cs`, installs the data (`server/data.js` `setData`) and only then impor
 never reaches another room. The lobby talks to it through a proxy whose answers are Promises; each such room handles
 its messages one at a time on a queue of its own, and a vanilla room never queues. A host that stops answering (no heartbeat for 10 s), crashes or runs
 out of memory ends that set's matches only: each room goes back to its lobby and its members read why. Each host has a
-768 MB heap; at most **6** run at once (`server/index.js` `MAX_HOSTS` — *not* `limits.maxSets`, which counts data sets,
-not processes), and an idle one stops after 10 minutes [ASSUMED].
+768 MB heap; at most `min(6, limits.maxSets)` run at once (at least 1 — `server/index.js` `MAX_HOSTS`, so
+`limits.maxSets` does cap processes), and an idle one stops after 10 minutes [ASSUMED].
 `SP_MATCH_HOST=worker` runs a worker thread instead of a child process — not on a public server: one large allocation
 in a worker thread aborts the whole server process (measured, DESIGN §32.6; `docs/DEPLOY.md`).
 
@@ -1057,7 +1091,7 @@ it touches), not the plugin's art. Raising it is a **live** change: edit the fil
 new value — no restart (the relay/production box runs 128 since 2026-10-26).
 
 **HTTP.** `/cs/<cs16>/index.json`, `/cs/<cs16>/data/<table>.json` and `/cs/<cs16>/i18n/<lang>.json` of a gameplay set
-are served from memory with `Cache-Control: immutable` while a room holds the set, and for the last 8 sets nobody holds
+are served from memory with `Cache-Control: immutable` while a room holds the set, and for the last 6 sets (`MAX_KEPT`) nobody holds
 [ASSUMED]; the vanilla `/cs/<vanilla cs16>/index.json` is unchanged. `/healthz` counts the content sets in use
 (`content.sets`).
 
@@ -1067,7 +1101,8 @@ are served from memory with `Cache-Control: immutable` while a room holds the se
 
 Plugin API 2 (`current: 2`, `min: 1`): PR #682 by **@DuolaCCCCat**, issue #681, completed for 0.3.1.
 The `offers` manifest part names JSON files and requires permission `offers` (`content`, `script`, `trusted`).
-No plugin scripts run to open, draw, refresh or apply a window. Old API 1 manifests without this part still load.
+No plugin scripts run to open, draw, refresh or apply a window. In 0.4.0 a manifest-2 folder (API 1 included) is
+`PLUGIN_LEGACY_REMOVED`; this section is the Keel v2 projection.
 The manifest schema checks JSON paths, allowed classes, API 2, the required permission and its corresponding part;
 the shipped example is validated against both the schema and the manifest reader.
 
@@ -1114,8 +1149,8 @@ the room content set. Discovery refuses unknown, foreign and undeclared ids with
 composition checks existence again. Unresolved DIY placeholders are refused too: a static id does not identify a
 configured operator. Each seat's slot exposes `available`; current stock and that seat's resolved chess record are
 checked again at acquisition. A failed grant returns `BAD_TARGET` without recording a pick, so the player can select
-another card or refresh the unavailable slot. Invalid amounts/cards use `PLUGIN_OFFER_SHAPE`. Arbitrary persistent `effect`
-and `shared` enemy/player pools are refused: their runtime semantics are not supported. `options.tiers` remains
+another card or refresh the unavailable slot. Invalid amounts/cards use `PLUGIN_OFFER_SHAPE`. `shared` enemy/player pools are refused; an unknown `effect` field is
+only a warning, and a card's unknown fields are ignored (their runtime semantics are not supported). `options.tiers` remains
 an explicit ignored-field warning. There is no script callback or cross-plugin grant permission.
 
 **Timing and choices.** `battleCheck` runs after the initial official check before R1 and before the start of
@@ -1126,7 +1161,8 @@ window sequence and seat. A refresh adds slot and refresh count to that seed: it
 leaves other seats untouched. It prefers unseen cards; if necessary it can duplicate another slot, but never the
 slot's current card. A one-card pool cannot refresh and consumes no allowance.
 
-Bots and autoplay seats resolve immediately with the timeout rule. A strict majority resolves unpicked seats with
+Native bots and autoplay seats resolve immediately with the timeout rule; an external-AI seat gets its asynchronous
+decision window and falls back on timeout. A strict majority resolves unpicked seats with
 the same rule; departed/eliminated seats leave the quorum. **[ASSUMED]** Auto/bot fallback tries slots in order,
 skipping unavailable or failed grants; if none succeeds, it records a skipped pick and closes without a grant. `none` stays selectable until all seats answer, its
 deadline, or the next round (then the fallback runs). Multiple windows coexist with independent timers; only
@@ -1144,7 +1180,9 @@ automatically. They never lock prep editing, and collapsed windows do not captur
 keep their phase gate. Unavailable cards are labelled and disabled for picking, while their remaining refreshes stay
 usable. Cards scroll at enlarged text sizes and on touch screens.
 Spectators see a read-only view (the first live seat's cards). Window tabs allow all concurrent windows to be answered.
-The built-in interface strings use all five supported languages; plugin card text is literal author text.
+The built-in interface strings ship in zh/en; ja / ko / zh-TW are missing the five offer-popup keys in this tree
+(`插件选择` / `刷新（剩余 {n} 次）` / `点击卡牌选中，再次点击确认` / `还有 {n} 人未选择` / `暂不可用`). Plugin card text is
+literal author text.
 `m.public.offers` is a full snapshot, including every seat's cards, current slot availability, picked status and remaining refreshes;
 reconnect restores it. `g.offer` and `g.offerRefresh` send `{ offerId, pluginId, seq, idx, cardId? }` (the native UI sends cardId to reject a stale slot after refresh), rejecting stale
 sequences and other plugins' same-named windows. `g.choice` remains the official draft/personal-choice intent.
@@ -1174,7 +1212,7 @@ cannot write `dsl` or `pluginId`. The runtime validator rejects unknown fields t
 The player sees the ordinary 战斗结束 box. A hashed set that skipped the builder still fails host boot (`boot-error`,
 room `plugin-start`, `PLUGIN_DSL_META`). The host supplies the plugin id (an author id cannot take another plugin's
 budget; omitting the author's id is allowed). Prep keys are `effect:<that id>:<local>`. DESIGN §32.7. A vanilla
-battle does not load the compiler. Direct literals use the official-bounds cap (`max(10 × official max, 64)`); an expression
+battle does not call the compiler (the module is statically imported, so it is loaded but idle). Direct literals use the official-bounds cap (`max(10 × official max, 64)`); an expression
 result is clamped to that cap. `duration`, action amounts and `rangeExtend` are not in that table [ASSUMED].
 
 <a id="13-scripts-p3a"></a>
@@ -1188,7 +1226,8 @@ the plugin design §3.4, §3.6, §5 and §7.6; DESIGN §32.10 records the implem
 
 A `script` manifest has `entry.sim` and/or `entry.meta` (one self-contained `.js` module each), their `sim.code` and
 `meta.code` permissions, and optionally the same data and art parts as a content plugin. A shared entry runs once.
-Copy `plugins/_template/script/` to `plugins/script-demo/`; its original training guard has a deployment ATK talent,
+Copy `plugins/_template/keel-script/` to `plugins/script-demo/` (the manifest-2 `_template/script/` folder is no longer
+shipped, and `plugin new script` currently fails with `ENOENT`); its original training guard has a deployment ATK talent,
 a duration skill and a harness test. Its art references the installed game; it contains no game files.
 
 ```js
@@ -1379,7 +1418,8 @@ to show it. It is unofficial. It is not a member of a room's `plugins[]` and a r
 **Manifest.** `class: "ui"`, `scope` including `personal` (that is the only scope this class has), permission
 `ui.frame`, `entry.client` an `.html` path, `slots` any of `hud.right`, `result.tab`, `stats.tab`, `room.panel`.
 `description` is the 简介. The `.html`, `.js`, `.css` and `.png` files must sit in the directory of `entry.client`.
-Start from `plugins/_template/ui/` (a damage tally). A folder whose name starts with `_` is a template: the registry
+Start from `plugins/_template/keel-ui/` (a damage tally; the manifest-2 `_template/ui/` folder is no longer shipped, and
+`plugin new ui` currently fails with `ENOENT`). A folder whose name starts with `_` is a template: the registry
 never loads it.
 
 **The frame.** The page runs in `<iframe sandbox="allow-scripts">` — no `allow-same-origin`, so its origin is the
@@ -1420,7 +1460,8 @@ after the first at most once a second (`netHz`) [ASSUMED]; one slot per
 plugin. The protocol table grants one plugin per slot at a time. When several ui plugins ask for the same slot, the
 match shows the first by name and the player switches with tabs in the slot (`PLUGIN_UI_SLOT_SHARED` is a warning, not
 a refusal). [ASSUMED] That name order is the initial tab, and a later sync does not override a tab the player already
-chose. At most 8 mounted. `hud.right` (`.gm__ui-slot`) sits above the hand, inset from the effects column, and its
+chose. At most 8 mounted. `hud.right` (`.gm__ui-slot`) sits at the right edge above the hand area
+(`public/css/components.css`: `right: .16rem; bottom: .7rem; width: 2.6rem`), and its
 height stops under the ready button, so it does not cover the shop, the hand, the ready button or funds at 1280×720
 or 1920×1080. [ASSUMED] Both viewports are 19.2×10.8rem; the hand's top is the dock clearance 4.76rem; the slot's
 bottom is 4.88rem and its right inset is 0.92rem. Engine `dmg` / `heal` tuples expose the HP at `amount` (the unit id
@@ -2327,12 +2368,15 @@ to unpack), `PLUGIN_FORGE_JSON` (parse, size, depth, a non-finite number or a nu
 `PLUGIN_FORGE_EXISTS` (the destination exists), `PLUGIN_FORGE_SCRIPT` (a script was not imported and was not run).
 
 The version written into a product is the pack's version when it is a restricted semver with no build metadata,
-otherwise `0.1.0` [ASSUMED]. `app` is `>=0.3.0 <0.4.0` and `api` is 1. A language-pack manifest omits `$schema`,
+otherwise `0.1.0` [ASSUMED]. `app` is `>=0.3.0 <0.5.0` (`server/plugins/forgeImport.js` `APP_RANGE`) and `api` is 1. A language-pack manifest omits `$schema`,
 `app`, `api` and `permissions`.
 
 ## 17. The catalogue and installing by address (目录与安装)
 
-A catalogue is a document someone else publishes. This project does not host the zips and does not run a market. The
+A catalogue is a document someone else publishes. The **catalogue** itself does not host zips; this server can still run
+its own plugin market (`server/market.js`, `/market`, `var/plugin-market/` — see [`PLUGIN-MARKET.md`](PLUGIN-MARKET.md)),
+and installing by **address** here checks only `sha256` (Ed25519 signing is a market-upload feature, not an address
+install check). The
 format is `schemas/catalog.schema.json` and `shared/plugins/catalog.js`: `{ "catalog": 1, "name", "plugins": [ { "id",
 "name", "version", "class", "description", "url", "sha256", "bytes", "homepage", "license", "authors", "app" } ] }`.
 `url` is an https address of a zip. `sha256` is the SHA-256 of that zip. `docs/plugin-catalog.example.json` is an
@@ -2392,6 +2436,12 @@ the studio and trial bench, Forge import, and catalogue/address installs. The fo
   every record kind (§16). Sandbox/SDK restrictions are in §13 and PLUGIN-API.md.
 
 ## Tests
+
+> **Audit note (2026-11-07):** this list is a **v2 inventory**; several files no longer exist
+> (`registry.test.js`, `tool.test.js`, `errors.test.js`, `schema.test.js`, `install.test.js`, `surface.test.js`,
+> `test/match/plugin-host.test.js`, the `test/studio/` folder and the old e2e names). The current Keel suites live in
+> `test/keel/` (`manifest`, `graph`, `tooling`, `cli`, `studio-keel`, `content`, …); the Forge preview is covered by
+> `test/plugins/forgeImport.test.js`. Restore or replace the missing checks before relying on this list.
 
 `test/plugins/manifest.test.js` (manifest 2 and 1, the problems and warnings, settings, permissions, files and limits,
 the catalogue), `test/plugins/registry.test.js` (the scan by class, skipped folders, duplicate ids and languages,
