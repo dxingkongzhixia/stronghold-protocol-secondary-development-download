@@ -40,7 +40,7 @@
 │    native sim / compat.v2Script -> WorkerSimHost                   │
 │                                                                    │
 │  WorkerSimHost (public/js/battle/simHost.js)                       │
-│    /worker/simWorker.js -> simWorkerRuntime                        │
+│    /js/battle/simWorker.js -> simWorkerRuntime                        │
 │    SES + engine + content set + sim modules                        │
 │    page receives b.snap / b.ev / progress / result                 │
 │                                                                    │
@@ -144,7 +144,7 @@ owner: SP_PLUGIN_SCRIPTS=sandbox (or trusted mode)
 
 - `server/match/match/clientCombat.js`：`_executorCandidates` / `_delegateField` / `_authorityLost`。
 - 房主优先，其次其他在线真人；每浏览器最多 8 field（含自己的）。
-- 没有在线浏览器：服务器只用 content 数据跑该 field。
+- 没有在线浏览器：默认模式由服务器只用 content 数据跑该 field；`SP_CLIENTS_ONLY` 下**没有 fallback**，字段上限也降为每浏览器 4 个（`CLIENTS_ONLY_FIELDS_PER_EXECUTOR`），无 executor 直接 `no-executor` 结束。
 - 房主断线/离开：先委托剩余真人；没有真人时 server fallback / 房间销毁。
 
 ## 4. V2：兼容功能与实现
@@ -186,7 +186,7 @@ server/keel/room-source.js
 
 server/keel/content-sets.js
   -> scriptDescriptor(p.v2)
-  -> content set scripts + /cs/<cs>/scripts/<id>/<entry>
+  -> sandbox: scripts/<id>.json descriptor; trusted: /cs/<cs>/scripts/<id>/<entry>
 
 browser
   runner.needsWorker(content) -> true (scripts)

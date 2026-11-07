@@ -39,7 +39,7 @@
 | v2 | v3 |
 |---|---|
 | `manifest: 2` | `manifest: 3` + `legacy.class` |
-| `app` | `app` + `compat.mainline`（命中 0.3.2 → `"0.3.x"`，否则 `false`） |
+| `app` | `app` + `compat.mainline`（命中 0.3.2 → `"0.3.x"`，否则 `false`；**`lang` 类恒为 `"0.3.x"`**） |
 | `requires/optional/conflicts` | 原样保留 |
 | `loadAfter/loadBefore/priority` | 原样保留 |
 | `settings` | 原样保留 |
@@ -49,7 +49,7 @@
 | `entry.meta` / `entry.server` | `match` 模块的 `entry` |
 | `entry.client`（ui） | `ui` 模块的 `entry` |
 | `entry.client`（trusted） | `ui` 模块的 `entry`，`ui.native` |
-| `slots` | `ui` 模块的 `slots` |
+| `slots` | **仅 `ui` 类**写入 `ui` 模块的 `slots`；`trusted` 的 slots 只留在 `legacy.slots`，需手工补 |
 | `api` / `class` / `type` | `legacy.api` / `legacy.class` / `legacy.type` |
 
 ## 4. 自动适配的边界
@@ -65,7 +65,7 @@
 | 情况 | 需要做什么 |
 |---|---|
 | 新内容要归属到插件 | 在 `content` 模块补 `provides: ["enemy:<id>", ...]` |
-| 需要 `sim`/`match` 代码 | M1 运行时接好后，补 module 的 `state.schema` 与确定性测试 |
+| 需要 `sim`/`match` 代码 | M1 运行时已完成；补 module 的 `state.schema` 与确定性测试 |
 | `trusted` | 不能自动升级；需要 review、lock pin、玩家同意 |
 | `theme` | 仍由 asset 模块承载；主题变量保留在 `legacy.themeVars` |
 | 官方素材 | 只允许引用安装内素材；不得把官方文件打进插件 |
@@ -73,10 +73,10 @@
 ## 6. 验收
 
 ```bash
-node tools/keel.mjs graph _template/content
-node tools/keel.mjs graph _template/script
-node tools/keel.mjs graph _template/ui
-node tools/keel.mjs graph _template/cosmetic
+node tools/keel.mjs graph _template/keel-content
+node tools/keel.mjs graph _template/keel-script
+node tools/keel.mjs graph _template/keel-ui
+node tools/keel.mjs graph _template/keel-cosmetic
 node tools/keel.mjs graph prts-source-code
 node tools/keel.mjs graph prts-kaltsit
 ```
@@ -85,11 +85,11 @@ node tools/keel.mjs graph prts-kaltsit
 
 ## 7. v2 `setup(sp)` 的 opt-in
 
-纯 v2 插件仍然走旧加载器。要让它在 Keel 路径里跑：
+纯 v2（manifest 2）插件**不再加载**（`PLUGIN_LEGACY_REMOVED`）。要让它在 Keel 路径里跑：
 
 1. `keel migrate <id> --write` 生成 `plugin.keel.json`；
 2. 在 `plugin.keel.json` 写 `"compat": { "v2Script": true }`，并保留 `legacy.entry` / `legacy.permissions`；
-3. 启动时 `KEEL=1`（v2 setup 默认执行；`KEEL_V2=0` 是唯一的 opt-out）；
+3. v2 setup **默认执行**；`KEEL_V2=0` 是唯一的 opt-out（`KEEL=1` 不再是开关）；
 4. `Match` 构造阶段执行 `runV2Setups`，得到该 match **自己的** extension registry；
 5. `Match.newBattle` 把它作为 `opts.extensions` 交给 `Battle`，kit / enemy / content / meta 都从这份 registry 安装。
 

@@ -34,8 +34,9 @@
 ### 3.1 manifest 3
 
 - 文件：`plugin.keel.json`，或带 `"manifest": 3` 的 `plugin.json`。
-- 必填：`id`、`name`、`version`、`app`、`api`、`scope`、`trust`、`modules`。
-- `modules` 至少一个；每个模块声明 `kind`、`entry`/`files`、`permissions`，可选 `parts`、`assets`、`slots`、`state`、`provides`、`consumes`、`notes`。
+- 必填：`name`、`version`、`app`、`api`、`trust`、`modules`；`manifest` 固定 3；`id` 缺省时用文件夹名（manifest 里的 `id` 优先）。
+- `scope` 可选，默认 `room`。
+- `modules` 至少一个；每个模块声明 `kind`、`entry`/`files`，`permissions` 缺省 `[]`（schema 目前仍把它列为 required，以 reader 行为为准）；可选 `parts`、`assets`、`slots`、`state`、`provides`、`consumes`、`notes`。
 - 读取与校验：`shared/keel/manifest.js`；图与依赖：`shared/keel/graph.js`。
 - manifest 2 旧文件夹不会被加载，返回 `PLUGIN_LEGACY_REMOVED`。
 
@@ -101,7 +102,7 @@
 ## 7. 比赛逻辑（match）与策略（policy）
 
 - `match`：`match.onMatchStart` / `onRoundStart` / `onRoundEnd` / `checkEnd`；可读比赛视图、受控经济/状态命令。
-- `policy`：`policy.decide` / `policy.onDraft`；服务端 meta，预算默认 50ms。
+- `policy`：`policy.decide` 已接入（返回值被消费）；`policy.onDraft` 尚未派发。服务端 meta，实际预算 **0.2 ms/hook、0.05 ms/frame、100 ms/match**（`shared/keel/budget.js`；不是 50 ms）。
 - 运行位置：match host child（`server/match/host`），不在浏览器；浏览器不下载 meta 代码。
 - 适用：比赛规则、回合经济、胜负条件、AI/策略选择。
 
@@ -115,7 +116,7 @@
 ## 9. 语言（lang）
 
 - `lang` 模块：一个 entry（UI JSON）或文件；支持 UI 字符串与游戏文本覆盖。
-- 语言包与插件 lang 都按 manifest 3 读取；旧 manifest 2 需要迁移。
+- **插件** `lang` 按 manifest 3 读取；`public/i18n/*.json` 与 `packs/` 的语言包仍是 manifest 1（`_meta`），不是 Keel 插件。
 - i18n 覆盖参与 content set 身份；个人语言包不影响房间 gameplay。
 
 ## 10. 作者链路
@@ -132,9 +133,14 @@ node tools/keel.mjs graph <id|dir> --json
 node tools/keel.mjs import <id|dir> --write
 node tools/keel.mjs migrate <id|dir> --write
 node tools/keel.mjs exit
+node tools/keel.mjs list
+node tools/keel.mjs explain <id|dir>
+node tools/keel.mjs run <id|dir> [--frames N]
+node tools/keel.mjs demo
+node tools/keel.mjs surface [--check]
 ```
 
-- `new`：复制原生模板并改写 id、重新生成 lock。
+- `new`：复制原生模板并改写 id；**只有含 `sim` / `match` / `policy` 代码模块时才重新生成 lock**。
 - `dev`：先 check + graph，之后监听修改。
 - `test`：check + 可执行模块 smoke run。
 - `pack`：统一写 `plugin.lock.json`，可选 zip。
@@ -179,8 +185,8 @@ node tools/keel.mjs exit
 
 | 检查 | 结果 |
 |---|---|
-| `npm test` | 8852 tests / 8814 pass / 0 fail / 38 skipped |
-| `npm run check:keel` | 178 / 178 |
+| `npm test` | 8852 / 8814 / 0 / 38 skipped（2026-11-01 记录；发布前重跑） |
+| `npm run check:keel` | **185 / 185**（2026-11-07 实测） |
 | docs gates | 35 / 35 |
 | `npm run typecheck` | 通过 |
 | eslint | 0 errors |

@@ -89,11 +89,13 @@ Keel 已经可以用于实际插件开发和房间运行：
 
 ## 3. 外部插件迁移
 
-`plugins/*` 默认不提交。当前仓库里的三个真实插件已迁移：
+`plugins/*` 默认不提交。当前仓库里**两个**真实插件已迁移（`plugin.keel.json` 已入库）：
 
 - `prts-kaltsit`
 - `prts-source-code`
-- `black-snake`
+
+`black-snake` 仍是 manifest 2（`keel exit` 报 blocker，退出码 1）；迁移用
+`node tools/keel.mjs import black-snake --write`。
 
 > `prts-kaltsit` / `prts-source-code` 的 `plugin.keel.json` 已随仓库强制提交（与它们的 `plugin.json`、lock 一样），
 > 新机器直接可用；`black-snake` 整个目录仍只在本机（未跟踪），需要时重新 `node tools/keel.mjs import black-snake --write`。
@@ -142,7 +144,7 @@ node --test test/ui/native-boss.e2e.test.js
 当前基线：
 
 - `npm test`：**8852 / 8814 / 0 / 38 skipped**
-- `npm run check:keel`：**178 / 178**
+- `npm run check:keel`：**185 / 185**（2026-11-07 实测）
 - docs gates：**35 / 35**
 - typecheck：通过
 - eslint：0 errors

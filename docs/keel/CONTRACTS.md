@@ -69,7 +69,8 @@
 2. stable 点的签名在主版本内不改；弃用至少提前一个小版本。
 3. 每个点必须有：可读、可写、能力、预算、稳定性。
 4. 能力必须来自 `KEEL_PERMISSIONS`；模块种类越权直接拒绝。
-5. `surface --check` 校验本表与常量一致；本表缺行或多行都失败。
+5. `surface --check` 校验本表的 **id 集合 / stable 数量 / 字段非空**与常量一致；它不比对 `point` / `readable` / `capability` / `budget` 的具体值。
+6. 表中的 `budget` 是契约意图；runtime 实际只强制 `perHook` / `perFrame` / `perMatch`（默认 0.2 / 0.05 / 100 ms，`shared/keel/budget.js`），尚未逐点实现 `budgetMs`。
 
 ## 9. 当前运行时状态
 
@@ -80,9 +81,11 @@
 | `sim.battleEnd` | 是 | 是 | `runtime.end()` |
 | `sim.hit` / `sim.damaged` / `sim.heal` / `sim.kill` | 是 | 是 | Battle 事件；白名单回写 `dmg` / `amount` |
 | `sim.beforeAttack` | 是 | 是 | 可过滤/替换 `targets` |
-| `sim.enemySpawn` / `sim.enemyLeak` / `sim.blocked` | 是 | 是 | 扩展 hook |
-| `match.*` | 是 | 是 | 服务端 match host meta |
-| `policy.*` | 是 | 是 | 服务端 match host meta |
+| `sim.enemySpawn` / `sim.enemyLeak` | 是 | 是 | 扩展 hook（`sim.blocked` 由 `attach.js` 派发，但**不在 stable/experimental 表里**，不要当契约依赖） |
+| `sim.deploy` | 是 | 是 | stable S3（`attach.js`） |
+| `sim.death` | 是 | 是 | experimental（`attach.js`） |
+| `match.*`（含 `match.onMatchEnd`） | 是 | 是 | 服务端 match host meta |
+| `policy.*` | 是 | 是 | `policy.decide` 已接入；`policy.onDraft` 尚未派发 |
 | `content.*` | 构建期 | — | content set 编译 |
 | `ui.*` / `asset.*` | 加载/构建期 | — | UI frame / visual set / FX |
 

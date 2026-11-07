@@ -1,9 +1,8 @@
 # Keel 当前检查点
 
 > 状态：**第一阶段完成；可用**。功能见 [`FEATURES.md`](FEATURES.md)，剩余/边界见 [`REMAINING.md`](REMAINING.md)。
-> 代码状态：已提交 `2418560b6` + 部署记录 `5196e0320`（Gitee / GitHub `master` 均已推），2026-11-02 15:07 已上线 build `1b3b0555e9e9`。`plugins/*` 不随仓库提交，
-> 迁移后的 `plugin.keel.json` 是**每台机器的本地状态**；新机器上 `node tools/keel.mjs exit` 会先列出未迁移的插件。
-> 基线：本机全量 `npm test` 8854 tests / 7 个已知数据/素材失败 / 46 skipped；`check:keel` 185 / 185；docs gates 35 / 35。
+> 代码状态：**2026-11-07 12:31 已上线 build `3820c2321f13`**（以 [`../PROJECT-STATE.md`](../PROJECT-STATE.md) §3 为准）。`plugins/*` 默认不提交，但 `prts-kaltsit` / `prts-source-code` 的 `plugin.keel.json` 已强制入库；其他迁移文件是每台机器的本地状态，新机器上 `node tools/keel.mjs exit` 会先列出未迁移的插件。
+> 基线：最近一次记录的全量 `npm test` 为 8852 / 8814 / 0 / 38 skipped（2026-11-01，发布前重跑）；`check:keel` **185 / 185**（2026-11-07 实测）；docs gates 35 / 35。
 
 ## 1. 现在是什么状态
 
@@ -38,7 +37,7 @@
 ## 3. 恢复命令
 
 ```bash
-cd D:/Git本地库/stronghold-protocol-secondary-development-download
+cd D:/DOTK/Stronghold-Protocol   # 桌面双树；笔记本上就是单树检出目录
 git status --short --untracked-files=all
 npm run check:keel
 node tools/keel.mjs exit

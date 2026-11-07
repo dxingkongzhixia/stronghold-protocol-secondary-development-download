@@ -1,7 +1,7 @@
 # Keel 历史与决策
 
 > 当前功能见 [`FEATURES.md`](FEATURES.md)。本文只保留里程碑、关键决策和“为什么现在是这样”，不再维护逐日任务流水账。
-> 已经删除的早期任务文档（M0/M1/M1.5/N1/NATIVE-TASKS/INTEGRATION-PLAN/NATIVE-REBUILD/DECISIONS/DEMO/MIGRATION-REPORT/LEGACY-COMPAT/CUTOVER/EXIT）备份在本地 `_backup_keel_n5_2026-10-31/docs`；本次改动提交后也可从 git 历史恢复。
+> 已经删除的早期任务文档（M0/M1/M1.5/N1/NATIVE-TASKS/INTEGRATION-PLAN/NATIVE-REBUILD/DECISIONS/DEMO/MIGRATION-REPORT/LEGACY-COMPAT/CUTOVER/EXIT）只存在于 git 历史；本机没有 `_backup_keel_n5_2026-10-31/` 目录。`tools/keel.mjs exit` 的提示里仍引用 `docs/keel/EXIT.md`（文件已删），按本页的历史说明理解即可。
 
 ## 1. 里程碑
 
@@ -13,7 +13,7 @@
 | N1 / N1.5 | 原生模板 + 运行时；原生 sim 客户端执行 | 完成 |
 | N2 | studio 编辑 manifest 3、模块字段、依赖图 | 第一版完成 |
 | N3 | `keel new/dev/test/pack/exit` | 完成 |
-| N4 | `keel-reference` 参考模板 + 三个真实插件 parity | 完成 |
+| N4 | `keel-reference` 参考模板 + **两个**真实插件 parity（`black-snake` 仍未迁移） | 完成（2/3） |
 | N5 | 旧 loader、trusted runtime、旧模板/fixtures 删除 | 完成 |
 | D9 | 原生 sim / v2 sandbox 战斗进 `WorkerSimHost` | 完成 |
 | D10/D11 | 服务端不跑原生 sim；match/policy 只跑服务端 meta | 完成 |

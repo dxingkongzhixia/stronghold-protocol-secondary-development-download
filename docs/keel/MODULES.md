@@ -37,7 +37,7 @@
 {
   "kind": "content",
   "files": ["content/enemies.json", "content/bonds.json"],
-  "parts": { "data": ["content/enemies.json"], "bonds": ["content/bonds.json"] },
+  "parts": { "data": ["content/enemies.json"] },
   "permissions": ["content.define", "content.patch"],
   "provides": ["enemy:enemy_x_demo", "bond:bond_x_demo"]
 }
@@ -167,7 +167,7 @@ Hook 表（`server/keel/attach.js` + `shared/keel/contracts.js`）：
 
 ### 2.5 `policy`
 
-`entry` 是 ESM；默认预算 50ms。
+`entry` 是 ESM；实际预算默认 **0.2 ms/hook、0.05 ms/frame、100 ms/match**（`shared/keel/budget.js`，不是 50 ms）。
 
 | Hook | ctx | 当前状态 |
 |---|---|---|
@@ -221,9 +221,9 @@ hud.right / result.tab / stats.tab / room.panel
 | `match.rng` | match | 比赛随机流 | 无 match 版 `api.rng` | — | — |
 | `match.code` | match | v2 meta 标记 | v2 / 兼容层 | `meta.code` | ◐ |
 | `policy.observe` | policy | 读观察 / 合法动作 | `policy.decide` | — | ✅ |
-| `policy.act` | policy | 返回动作 | `policy.onDraft` 未派发；`decide` 返回值未消费 | — | ◐ |
+| `policy.act` | policy | 返回动作 | `policy.onDraft` 未派发；`decide` 返回值**已消费**（`keelApplyCommand` 白名单） | — | ◐ |
 | `ui.frame` | ui | 沙箱 frame | UI host `/p/` | `ui.frame` | ✅ |
-| `ui.theme` | ui | 主题 | 只投影 `theme` | `theme` | ◐ |
+| `ui.theme` | ui | 主题 | **没有 `ui.theme` 投影**（未实现） | `theme` | — |
 | `ui.native` | ui | 原生页面 | 投影 `trusted.page`，未启用 | `trusted.page` | — |
 | `asset.add` | asset | 新增资产 | `/p` + `/vs` | `assets.add` | ✅ |
 | `asset.override` | asset | 替换官方资产 | `/vs` overlay | `assets.override` | ✅ |
@@ -296,7 +296,7 @@ node tools/keel.mjs surface --check
 | `policy.onDraft` | 只在契约里，`Match` 没有派发 | 不要依赖；当前只有 `policy.decide` |
 | `match.rng` | 能力存在，但没有 match 版 `api.rng` | 需要新增 API 或删掉该能力 |
 | `ui.native` / `native.execute` | 投影 `trusted.page` / `trusted.server`；Keel 房间拒绝 `trust: native` | 当前不可用；不要在新插件里声明 |
-| `ui.theme` / `asset.theme` | 只投影旧 `theme` | 没有独立主题运行时；资产用 `asset.add/override` |
+| `ui.theme` / `asset.theme` | `ui.theme` 无投影；`asset.theme` 仍走旧 `theme` | 没有独立主题运行时；资产用 `asset.add/override` |
 | `sim.code` / `match.code` | v2 兼容标记 | 原生 manifest 3 模块不需要；v2 `compat.v2Script` 才用 |
 | `lang` 契约 | `contracts.js` 没有 lang 的扩展点 | 只做静态语言包；需要新契约时再补 |
 

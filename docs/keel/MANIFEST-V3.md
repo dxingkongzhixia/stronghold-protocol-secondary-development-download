@@ -48,7 +48,7 @@
 | 字段 | 必填 | 说明 |
 |---|---|---|
 | `manifest` | 是 | 固定 `3` |
-| `id` | 是 | 2–32 位小写字母/数字/`-`；文件夹名决定 |
+| `id` | 否 | 2–32 位小写字母/数字/`-`；**manifest 里的 `id` 优先**，缺省用文件夹名（超过 32 会截断并告警） |
 | `name` | 是 | 字符串或 `{ "<lang>": "<text>" }` |
 | `version` | 是 | 语义化版本 |
 | `app` | 是 | 游戏版本范围，如 `">=0.4.0 <0.5.0"` |
@@ -118,7 +118,7 @@
 | `sim.fx` | sim | 发表现事件 |
 | `sim.code` | sim | v2 脚本标记（原生模块不需要） |
 | `match.read` | match | 读比赛视图 |
-| `match.economy.write` | match | 命令日志（当前不直接改经济） |
+| `match.economy.write` | match | 受控经济命令（`addFunds` / `spendFunds` / `grantChess` …，白名单） |
 | `match.rng` | match | 比赛随机流（当前无 API） |
 | `match.code` | match | v2 meta 标记 |
 | `policy.observe` | policy | 读观察与合法动作 |
@@ -136,12 +136,13 @@
 ## 5. 校验顺序
 
 1. 版本/必填字段；
-2. `api` 域与版本；
-3. `trust` 与模块能力：
+2. `trust` 与模块能力（代码在 `manifest.js` 里先于 `api` 检查）：
    - `trust: "data"` 不能带 sim / match / policy（代码模块），否则 `KEEL_TRUST_CODE`；
-4. 模块路径/重复/`slots`；
-5. `state` / `compat` / `integrity`；
-6. 输出 `{ manifest, problems, warnings, issues }`，有 problem 时 `manifest` 为 `null`。
+3. `api` 域与版本；
+4. 模块路径/重复/`slots`（`slots` 只对 `ui` 校验；其他 kind 带 `slots`/`parts`/`assets` 会被保留但不校验）；
+5. 依赖/顺序（`requires` / `optional` / `conflicts` / `loadAfter` / `loadBefore`；图检查在 `graph.js`，`native.execute` 也在这里校验）；
+6. `state` / `compat` / `integrity`；
+7. 输出 `{ manifest, problems, warnings, issues }`，有 problem 时 `manifest` 为 `null`。
 
 ## 6. 与 manifest 2 的关系
 

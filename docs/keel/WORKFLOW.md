@@ -13,7 +13,7 @@ node tools/keel.mjs new keel-content demo
 node tools/keel.mjs new keel-reference demo
 ```
 
-`new` 会复制模板、改写 `id` 命名空间、重新生成 lock。
+`new` 会复制模板、改写 `id` 命名空间；**只有含 `sim` / `match` / `policy` 代码模块的模板才重新生成 lock**（纯 content 模板不生成）。
 
 ### 1.2 写 manifest 3
 
@@ -40,7 +40,7 @@ node tools/keel.mjs new keel-reference demo
 - manifest 3 是唯一入口；
 - `trust: "data"` 不能带 `sim` / `match` / `policy`；
 - 需要代码用 `trust: "sandbox"`；
-- `trust: "native"` 被拒绝；
+- `trust: "native"` 在 manifest / schema 层是合法值（`KEEL_TRUST`），但 **Keel 房间加载时会拒绝**（`PLUGIN_KEEL_NATIVE`）；不要依赖它；
 - 每个模块声明 `entry` 或 `files`；
 - 权限只声明实际用到的能力。
 
@@ -123,7 +123,7 @@ node tools/plugin.mjs pack <id>
 node tools/keel.mjs exit
 ```
 
-`keel exit` 必须 0 blocker；三个本地真实插件已经是 Keel。
+`keel exit` 必须 0 blocker。当前实测：**2 / 3 已迁移**（`prts-kaltsit`、`prts-source-code`），`black-snake` 仍是 manifest 2，exit 1；先 `node tools/keel.mjs import black-snake --write`。
 
 ### 2.5 V2 脚本兼容
 
@@ -203,7 +203,7 @@ node --test test/ui/native-boss.e2e.test.js
 当前基线：
 
 - `npm test`：**8852 / 8814 / 0 / 38 skipped**
-- `check:keel`：**178 / 178**
+- `check:keel`：**185 / 185**（2026-11-07 实测）
 - docs gates：**35 / 35**
 - typecheck：通过
 - eslint：0 errors

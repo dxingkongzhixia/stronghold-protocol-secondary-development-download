@@ -82,13 +82,14 @@ export default {
   "frame": 60,
   "state": { "demo:sim:sim/index.js": { "version": 1, "value": { "ticks": 60 } } },
   "commands": { "demo:sim:sim/index.js": [] },
-  "budgets": { "demo:sim:sim/index.js": { "hook": 0.01, "frame": 0.01, "match": 0.6 } },
+  "budgets": { "demo:sim:sim/index.js": { "hook": 0.01, "frame": 0.01, "match": 0.6, "limits": { "perHook": 0.2, "perFrame": 0.05, "perMatch": 100 } } },
+  "views": {}, "finished": false,
   "disabled": []
 }
 ```
 
-- `restore(snapshot)` 恢复 state / commands / budgets / disabled；host 状态由 host 自己恢复。
-- `hash()` 只覆盖 `state + commands + disabled`，用于确定性比较。
+- `restore(snapshot)` 恢复 state / commands / budgets / disabled **以及 views / finished**；host 状态由 host 自己恢复。
+- `hash()` 覆盖 `state + commands + disabled + views + finished`，用于确定性比较。
 
 ## 5. 预算
 
@@ -106,7 +107,7 @@ hook 成本是**估计值**（默认 0.01ms），不是实测；真实设备校�
 
 ```ts
 units(query) / damage(spec) / heal(spec) / buffs.{has,apply,remove,list}
-bonds.{get,list,addLayers} / spawn(spec) / rng(stream) / fx(kind, at, data) / tick(dt) / frame / snapshot() / restore()
+bonds.{get,list,addLayers} / spawn(spec) / rng(stream) / fx(kind, at, data) / tick(dt) / frame / status / snapshot() / restore()
 ```
 
 真实后端 `createStrongholdHost(battle)`（`server/keel/stronghold-host.js`）把同一组方法映射到 `Battle`：
@@ -150,8 +151,8 @@ handle.detach();
   - `loadKeelPlugin(dir)`：读 `plugin.keel.json` 或 manifest 3 的 `plugin.json`；v2 文件夹返回 `null`；
   - `loadKeelRoom(dirs)` / `createKeelDescriptor(dirs)`：产出 `{ plugins: [{ id, manifest, modules }] }`。
 - `Match({ keel })` 把它存到 `this.keel`；
-- `newBattle` 在 `battle.start()` 前，按 `opts.keel ?? this.keel` 调用 `attachKeel`；`KEEL=0` 不 attach；
-- `server/lobby.js` 已有 `room.keel` 的透传位；**还没有地方设置 `room.keel`**。
+- `newBattle` 在 `battle.start()` 前，按 `opts.keel ?? this.keel` 调用 `attachKeel`；**有 descriptor 就 attach**（`KEEL=0` 已不是开关）；
+- `server/lobby.js` 用 `room.keel ?? keelFor(room.content)` 自动从内容集推导，并把它传给 `Match`（`room.keel` 不是必需的手动字段）。
 
 ```js
 // 目前的调用方式（测试 / 未来的 lobby）
@@ -171,8 +172,8 @@ runV2Setup({ setup: loaded.setup, plugin: { id, permissions, overrides } });
 - `runV2Setup` / `runV2Setups` 是 **pre-battle**：必须在 `new Battle` 之前调用，因为内容安装器在构造时读 registry；
 - 它 `resetExtensions()` → `setup(sp)` → `sealExtensions()`，并返回注册表；
 - 它不读取/放宽旧的 lock、pin、consent 门禁；
-- 自动接线：`plugin.keel.json` 带 `"compat": { "v2Script": true }` + `legacy.entry`，`KEEL_V2=1` 时 `Match` 构造阶段执行 `runV2Setups`；v2 脚本仍走旧加载器的信任门禁；
-- **registry 是进程全局的**：一个进程只应跑一组 v2 脚本；多组请用 match host 隔离。
+- 自动接线：`plugin.keel.json` 带 `"compat": { "v2Script": true }` + `legacy.entry`，**默认开启**（`KEEL_V2 !== '0'`）时 `Match` 构造阶段执行 `runV2Setups`；v2 脚本仍走旧加载器的信任门禁；
+- **registry 是每局独立的**（`v2-script.js` 每次新建）；不是进程全局，不需要靠 match host 隔离。
 
 `test/keel/v2-script.test.js` 用 `_template/script` 验证：kit 注册后 `EXTENSIONS` 和 `kitOf` 都能解析。
 
@@ -184,7 +185,7 @@ node tools/keel.mjs run test/fixtures/keel-demo --seed 1 --frames 60 --json
 
 fixture 的 `sim` 模块每 10 帧打一次 30 点真实伤害，60 帧后：
 
-- `ticks: 60`、`hits: 4`、`kills: 1`、`ended: true`；
+- `ticks: 60`、`frame: 60`、`hits: 4`、`kills: 1`、`ended: true`；
 - `errors: []`；
 - `hash` 稳定。
 
@@ -204,9 +205,9 @@ fixture 的 `sim` 模块每 10 帧打一次 30 点真实伤害，60 帧后：
 - **`spawn` 支持敌人 / 己方 token / 装置**：token 的 def 来自 `tokens` 记录（或 `def`），device 是 ally 侧单位（`spawnDevice`）；都需要 owner `PlayerState`（默认本场玩家）。
 - **装备效果**：`unitView.items` 只给 id 列表；引擎自带 buff 仍由 `items/battle.js` 应用，`custom: true` 装备的效果由插件的 `sim` 模块实现（`sim.battleStart` 读 `api.units()` 即可）。
 - **盟约状态按玩家**：`bonds.*` 读的是 `battle.players[0]`（或 `attachKeel(..., { playerId })` 指定的玩家）的盟约；房间级描述符在单人/自己棋盘的对局里就是本人。
-- **ctx 写只做白名单回写**：`dmg` / `amount` / `targets` 之外不保证；没有逐字段拒绝。
+- **ctx 写只做白名单回写**：`dmg.amount/type/mul/tags/cancel/isSkill/isAttack/sourceless`、`amount`、`targets` 之外不保证；没有逐字段拒绝。
 - **预算不是实测**：见 §5。
-- **没有 UI/资产运行时**：`ui` / `asset` 仍是 M0 的静态模块。
+- **UI/资产**：`asset` 仍是静态模块；`ui` 已把 `slots` 译成 `pluginView` 的 HUD 插槽，但 `ui.render` 尚未实现。
 
 ## 9. 下一步
 

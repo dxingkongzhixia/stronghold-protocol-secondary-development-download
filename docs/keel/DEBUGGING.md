@@ -7,7 +7,7 @@
 | 层 | 典型错误 | 看哪里 |
 |---|---|---|
 | manifest / 图 | `KEEL_*`、`PLUGIN_LEGACY_REMOVED` | `node tools/keel.mjs check --strict --json` |
-| 内容 / 资源 | `PLUGIN_DATA_*`、`PLUGIN_PATCH_*`、`PLUGIN_VISUAL_*` | `keel check`、`tools/plugin.mjs check` |
+| 内容 / 资源 | `PLUGIN_DATA_*`、`PLUGIN_PATCH_*`、`PLUGIN_ASSET_*`、`PLUGIN_SPINE_*` | `keel check`、`tools/plugin.mjs check` |
 | lock / 信任 | `PLUGIN_TRUST_PIN`、`PLUGIN_SCRIPTS_DISABLED`、`PLUGIN_KEEL_NATIVE` | 服务端启动日志、房间插件面板 |
 | 原生 sim | `PLUGIN_WORKER_FAILED`、`PLUGIN_WORKER_TIMEOUT`、`PLUGIN_WORKER_STOPPED` | 浏览器 console、`battleRunner.stats()`、`keel.errors` |
 | 浏览器确认 | 座位不 ready / 原生代码不执行 | 页面确认弹窗、`__SP_CONTENT__.state().nativeConsent` |
@@ -157,9 +157,9 @@ node tools/keel.mjs check plugins/<id> --strict
 
 ## 9. 标准复现顺序
 
-1. `keel check --strict --json`
-2. `keel run --frames 60 --json`
-3. `tools/plugin.mjs test`
+1. `keel check <id|dir> --strict --json`
+2. `keel run <id|dir> --frames 60 --json`
+3. `tools/plugin.mjs test <id>`
 4. `node --test test/keel/<target>.test.js`
 5. 真实浏览器：`SP_E2E=1` + `node --test test/ui/native-room.e2e.test.js`
 6. 需要服务器行为时看 `server/match/host` 日志与 `/healthz`

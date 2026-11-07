@@ -78,8 +78,8 @@ node tools/keel.mjs exit
 
 | 检查 | 结果 |
 |---|---|
-| `npm test` | 8854 tests / 7 个已知数据/素材失败 / 46 skipped |
-| `npm run check:keel` | 185 / 185 |
+| `npm test` | 8852 / 8814 / 0 / 38 skipped（2026-11-01 记录；发布前重跑，数字以当次为准） |
+| `npm run check:keel` | **185 / 185**（2026-11-07 实测） |
 | docs gates | 35 / 35 |
 | `npm run typecheck` | 通过 |
 | eslint | 0 errors |
@@ -100,4 +100,4 @@ node tools/keel.mjs exit
 |---|---|
 | [`HISTORY.md`](HISTORY.md) | 里程碑、关键决策、为什么删除旧任务文档 |
 
-早期任务文档（M0/M1/M1.5/N1/NATIVE-TASKS/INTEGRATION-PLAN/NATIVE-REBUILD/DECISIONS/DEMO/MIGRATION-REPORT/LEGACY-COMPAT/CUTOVER/EXIT）已删除；备份在本地 `_backup_keel_n5_2026-10-31/docs`。
+早期任务文档（M0/M1/M1.5/N1/NATIVE-TASKS/INTEGRATION-PLAN/NATIVE-REBUILD/DECISIONS/DEMO/MIGRATION-REPORT/LEGACY-COMPAT/CUTOVER/EXIT）已删除；它们只存在于 git 历史与 [`HISTORY.md`](HISTORY.md) 的摘要里（本机没有 `_backup_keel_n5_2026-10-31/` 目录）。

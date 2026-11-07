@@ -43,9 +43,11 @@ node tools/keel.mjs check my-first-plugin --strict
 
 ```bash
 node tools/keel.mjs graph my-first-plugin --json
+node tools/keel.mjs explain my-first-plugin
 ```
 
-确认 `content` / `asset` / `sim` / `policy` / `ui` 与 `provides` 都在。
+`graph --json` 给 kinds / modules / permissions / problems / warnings；**`provides` / `consumes` 只在 `explain` 里输出**。
+确认五类模块与 `provides` 都在。
 
 ## 4. 在 fake host 上跑 sim
 
