@@ -39,7 +39,7 @@
 | `Stronghold-Protocol\` | **工作项目 / 运行目录**：**没有 `.git`**，是 git 仓库的**逐字节镜像**（**不是**真源）。`node server/index.js` 在这里跑。 |
 | `_merge-scratch\` | **唯一的 git 仓库 / 完整历史 / 唯一真相**（桌面当前分支 `prts-plugin`）。提交、合并、推送都在这里；`node tools/push-gitee.mjs` 把 `HEAD` 推到所有远程，再把被跟踪文件镜像回工作项目。**单向：store → 远程 → 工作树**，绝不用工作树覆盖仓库（反向须显式 `--from-dev`）。 |
 | `Stronghold-Protocol-github\` | 干净主线克隆（`master`）。 |
-| `_optim-backup-*\` | 每次改动前的本地备份（名字含「日期-主题」）。 |
+| `_backup-*` / `_hotfix-*` / `_merge-*` / `_verify*` / `_groupc-wt` / `_voices-wt` … | 一次性的工作副本与本地备份（名字含日期或主题）。**`_merge-scratch` 才是真源、`_upstream-dev` 是主线参考副本，两者都不在此列、不要删**。 |
 
 > ⚠️ store 里的 `.cache` / `public/assets` / `public/fonts` / `public/vendor` 是**指向工作项目的 junction**，约 600 MB 美术只有一份。**别单独删工作项目**，也别把 store 的 `public/assets` 当副本删掉。
 
@@ -71,7 +71,7 @@
 | 全量测试 | 以**台式机最近一次上线批次**的实测为准（见 §4 的部署记录与 `CHANGELOG.md`；本机 2026-10-29 的 8734 / 8694 / 0 / 40 已过期）。`npm test` 固定 `--test-concurrency=4`（理由见 `AI-AGENT.md` §6）。注：`test/plugins/visualSet.test.js` 的「压缩缓存 ctime」用例在 Windows 上**偶发**失败（时间戳粒度，与代码无关） |
 | 其它闸门 | **2026-10-26 台式机 store 复测**：`lint` 0 error（186 warning）✓；`typecheck` ✓；`i18n check en --strict` **1966/1966**（100%）✓；`build-data --offline` 不改 `data/`（2 条既有 warning）✓；docs 守卫 **35/35** ✓；kit 覆盖 **283/283** 技能、**112/112** 棋子 ✓；`check:imports` 3 条既有 `sim-node` 边界记录 |
 | 本机环境 | Node **v24.19.0**（线上是 v26.10.0）；**系统 `python` 已是 3.12.10**（2026-10-28 升级：旧的 `C:\Program Files\python` 3.8.6 已从机器 PATH 移除、文件保留；`paramiko 5.1.0` / `UnityPy 1.25.4` 已装）；GitHub 经 Steam++（hosts → `127.0.0.1`），Git 需 `http.schannelCheckRevoke=false`；官方数据 CDN 需要代理 |
-| 本地服务 | `npm start`（= `node --max-old-space-size=512 server/index.js`，2026-10-27 起；直接 `node server/index.js` 不设上限）于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）已补齐 41 个 spine 组（棋子等本地模型恢复），`data/local-fx.json` 正常分发 |
+| 本地服务 | `npm start`（= `node --max-old-space-size=512 server/index.js`，2026-10-27 起；直接 `node server/index.js` 不设上限）于 `:3000`（`/healthz` 正常；`build` 为本地源码哈希，非线上 build）；`data/local-assets.json`（per-machine）现有 **42 个 spine 组**（2026-11-07 点数；§48 当时补回 41 个，之后又加了一组），`data/local-fx.json` 正常分发 |
 | 线上新增内容 | 插件 **已安装 14 个 / 非官方内容插件 10 个 loaded**（2026-11-07 `/admin/api/plugins/stats`；含 `prts-kaltsit:loaded`，未改 `plugins/config.json` 默认列表）；主界面音乐 **218** 条（`var/music`，351 个文件）；内置音乐 24 条；剧情背景 **54** 张；DB schema **v6**；`var/avatars` 已创建 |
 
 ## 4. 线上
