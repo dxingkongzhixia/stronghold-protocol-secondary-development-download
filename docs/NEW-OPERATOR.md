@@ -203,7 +203,7 @@ node --test
    - 一次到位的做法：`tar -czf` 时直接带上 `data server public/js public/assets/...` 需要的目录，或整树同步（`fullsync`）。
 2. **重启服务**：`server/**` 改了必须重启；只改 `public/**`（前端）不用。
 3. 校验：`curl -s /data/chess.json | grep <baseId>`、新资源各一条 HTTP 200。
-4. 提交到 `_merge-scratch` 的 `ours` 分支（工作项目无 `.git`；用 `sync-scratch.ps1` / `apply-sync.ps1` 同步），
+4. 提交到 `_merge-scratch` 的当前分支（桌面 `prts-plugin`、笔记本 `master`；工作项目无 `.git`），
    并在 `docs/MATCHMAKING.md` 记一节。
 5. 客户端 **Ctrl+Shift+R**（SPA 会缓存旧的 JS/CSS）。
 

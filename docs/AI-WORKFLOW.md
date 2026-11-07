@@ -86,9 +86,13 @@ particle-system importer + per-operator projectile mapping); do not start it wit
 
 ---
 
-## (b) Fork / merge discipline with upstream
+## (b) Upstream reference policy (historical merge discipline)
 
-The **mainline (主线项目)** is `origin` (`sganggs/Stronghold-Protocol`); our state lives in `_merge-scratch` on branch `ours`.
+> **2026-11-07 owner decision:** the mainline is **reference only**. Do **not** run a full merge, do not chase its
+> merge-base, and do not treat "upstream has new commits" as a work item. The procedure below is kept as history and
+> as the reference for an explicitly requested port; a port is a normal change in our tree (our tests, our docs).
+
+The **mainline (主线项目)** is `origin` (`sganggs/Stronghold-Protocol`); our state lives in `_merge-scratch` on branch `prts-plugin` (laptop: `master`).
 We have merged through upstream `feedback5` (`docs/MATCHMAKING.md` §33), then folded in **feedback6
 (selective)** and **feedback7 (the R22 batch + Group A + the JP voice dub + Group C/R23)** by **selective
 cherry-pick**. The chronological record of every batch — what came in, what was skipped and why, the conflicts,
@@ -189,7 +193,7 @@ change → the diff must be **exactly** what you expect. Write the proof into th
 - Push targets: the **`github`** remote (PRIMARY) →
   `https://github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download.git`, then the **`gitee`**
   remote (国内下载镜像) → `https://gitee.com/marseille1/stronghold-protocol-secondary-development-download.git`, branch
-  **`master`** (the store's branch is `ours`; `HEAD:refs/heads/master`). A normal run pushes to **every configured
+  **`master`** (the store's branch is `prts-plugin` on the desktop and `master` on the laptop; `HEAD:refs/heads/master`). A normal run pushes to **every configured
   remote**, primary first; `--remote <name>` restricts it, `--all-remotes` forces both, `--tags` also pushes
   `refs/tags/*`. Every push is fast-forward only and **never forced**. `origin` stays the GitHub upstream
   (`sganggs/Stronghold-Protocol`).

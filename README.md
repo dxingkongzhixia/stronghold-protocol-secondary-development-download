@@ -7,11 +7,11 @@
 ## 一句话（TL;DR）
 
 - **这是什么**：明日方舟「卫戍协议」的非官方同人**网页复刻**，1–4 人合作，浏览器里玩。
-- **在哪儿**：这里是二次开发版**主仓库**（GitHub），另有 **Gitee 国内镜像**；**我们是基于主线开发的分支项目**，不是主线项目本身。
+- **在哪儿**：这里是本项目的**主仓库**（GitHub），另有 **Gitee 国内镜像**；**本项目独立演进**，主线项目只作为来源致谢与参考。
 - **怎么跑**：装 Node 22/24 → `npm install` → `node server/index.js` → 打开 `http://localhost:3000`。
 - **第一次接手**：先读 [`docs/DEVELOPER.md`](docs/DEVELOPER.md)（人类开发者）或 [`AGENTS.md`](AGENTS.md)（AI 代理）；按问题查文档用 [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md)。
 
-English one-liner: the **primary repository** (GitHub) of our independently maintained secondary-development build of the browser co-op fan mode *Stronghold Protocol: Alliance*, with a **Gitee mirror for downloads from mainland China**. This is **not the mainline project** — we are a **branch project** forked from the mainline [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which is credited as the original source.
+English one-liner: the **primary repository** (GitHub) of our independently maintained build of the browser co-op fan mode *Stronghold Protocol: Alliance*, with a **Gitee mirror for downloads from mainland China**. This is **not the mainline project**: [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol) is credited as the original source and kept for reference only — our tree is maintained independently.
 
 ## 目录
 
@@ -31,9 +31,9 @@ English one-liner: the **primary repository** (GitHub) of our independently main
 ## 一、这是什么仓库
 
 - **主仓库 / 国内镜像**：**GitHub 仓库**（`dxingkongzhixia/stronghold-protocol-secondary-development-download`）是我们二次开发版的**主仓库与分发入口**；国内访问慢时改用 **Gitee 镜像**（`marseille1/stronghold-protocol-secondary-development-download`）。想直接玩、想部署到自己机器上的博士，从这里克隆或下载即可。
-- **分支项目（基于主线开发）**：**主线项目**是 `sganggs/Stronghold-Protocol`（代码基线、美术与数据来源都在那里）；本仓库在主线之上**独立维护**了一套改动：账号 / 野排匹配 / 公开同盟 / 观战与夺舍 AI、启动体验与带宽治理、**8 名自造干员**，以及一批规则修复与决策（见 [四、相对主线的差异](#四相对主线的差异) 与 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md)）。
-- **不是主线**：主线的介绍、版本与发行包以**主线仓库**为准；本仓库只描述**我们这一版**。主线会**定期合并**进来（见 §四末），但我们的改动一直保留。
-- **素材随仓库分发**：`public/assets`、`public/fonts`、`public/vendor` 在本仓库里被**跟踪**（约 590 MB），所以克隆下来**不需要再拉素材**就能运行。这些素材版权归鹰角网络 / Yostar，属社区便利分发，见 [八、致谢与许可](#八致谢与许可)。
+- **独立项目（主线仅作参考）**：本项目起源于 **主线项目** `sganggs/Stronghold-Protocol`（代码基线、美术与数据来源都在那里，已致谢），但从这里开始**由我们独立演进**。我们维护了：账号 / 野排匹配 / 公开同盟 / 观战与夺舍 AI、启动体验与带宽治理、**8 名自造干员**、Keel 插件系统，以及一批规则修复与决策（见 [四、相对主线的差异](#四相对主线的差异) 与 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md)）。
+- **不是主线**：主线的介绍、版本与发行包以**主线仓库**为准；本仓库只描述**我们这一版**。**主线不再合并进来**（owner 2026-11-07 决定：主线仅提供参考），我们的实现、测试与文档是唯一真相。
+- **素材随仓库分发**：`public/assets`、`public/fonts`、`public/vendor` 在本仓库里被**跟踪**（约 1.2 GB / 28,000+ 个文件），所以克隆下来**不需要再拉素材**就能运行。这些素材版权归鹰角网络 / Yostar，属社区便利分发，见 [八、致谢与许可](#八致谢与许可)。
 
 > [!IMPORTANT]
 > - 本项目是玩家自制的**非官方同人作品**，与上海鹰角网络科技有限公司（Hypergryph）、Yostar 及其关联方**没有任何关系**，未获其授权或认可。
@@ -45,7 +45,7 @@ English one-liner: the **primary repository** (GitHub) of our independently main
 
 这是一个**完整可运行**的项目，不只是补丁：
 
-- **运行时素材**：`public/assets`（约 570 MB / 9500+ 个文件）、`public/fonts`、`public/vendor` —— 已被 git **跟踪**，克隆即得，无需再跑素材下载。
+- **运行时素材**：`public/assets`（约 1.17 GB / 28,000+ 个文件）、`public/fonts`、`public/vendor` —— 已被 git **跟踪**，克隆即得，无需再跑素材下载。
 - **游戏数据**：`data/` —— 由官方数据表**生成**的 `data/*.json`（干员、敌人、地图、装备、盟约、策略、机变、素材清单等），连同生成脚本一起提交，可离线重建。
 - **服务器与客户端**：`server/`（Node HTTP + WebSocket + 大厅 + 对局引擎 + **战斗模拟器**）、`public/`（浏览器客户端，原生 ES 模块）、`shared/`（前后端共用常量与线协议）。
 - **测试与文档**：`test/`（`node:test`，完整一套）、`docs/`（设计、玩法、部署、调研与我们的决策记录）。
@@ -129,7 +129,7 @@ npm run golden        # 黄金结果：固定种子的整套战斗与人机对�
 
 ## 四、相对主线的差异
 
-下面是**我们这一版自己加的东西**，都保留、不会因为合并主线而丢掉。
+下面是**我们这一版自己加的东西**，都保留；主线只作参考，不再整支合并。
 
 ### 8 名自造干员
 
@@ -162,7 +162,7 @@ npm run golden        # 黄金结果：固定种子的整套战斗与人机对�
 
 ### 与主线的关系
 
-我们会**定期合并主线** [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol)：已经合并到主线 `feedback5` / **v0.2.0**（含 i18n 与一批规则修正，见 §33），合并时逐块解冲突、**保住我们的全部自定义内容**（合并黑名单与纪律见 [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) §22 与 [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md)）。
+主线 [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol) 是本项目的代码与设计来源，已致谢。历史合并记录（v0.2.0、feedback6/7、2026-10-14 整支并入 v0.2.6）保留在 [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md)；**owner 2026-11-07 决定：主线转为仅参考，不再合并**。上游有价值的改动只在需要时按本分支架构**自研移植**（写我们的测试、更新归属文档），不作为定期工作项。
 
 ## 五、更新怎么发布
 
@@ -173,7 +173,7 @@ node tools/push-assets-relay.mjs              # ① 先把资源部署到中转�
 node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动、推送 git 仓库到所有已配置的远程（GitHub 主仓库 → Gitee 镜像），再回镜像工作树
 ```
 
-- git 仓库（`_merge-scratch`，分支 `ours`）是**唯一真相**；工作项目没有 `.git`，是它的镜像。脚本**只单向** store → 远程（GitHub 主仓库 / Gitee 镜像）→ 工作树，**绝不用工作树覆盖 git 仓库**（工作树过期时不会回退仓库里更新的提交）。
+- git 仓库（`_merge-scratch`，桌面分支 `prts-plugin`、笔记本单树 `master`）是**唯一真相**；工作项目没有 `.git`，是它的镜像。脚本**只单向** store → 远程（GitHub 主仓库 / Gitee 镜像）→ 工作树，**绝不用工作树覆盖 git 仓库**（工作树过期时不会回退仓库里更新的提交）。
 - 该脚本按 `git ls-files` 只处理被跟踪的文件（`.gitignore` 生效），把仓库提交的内容镜像回工作树；工作树独有的文件不会被删除。
 - 若确实要反向同步（工作树 → 仓库），用显式开关 `--from-dev`（默认关闭）。
 - 运行时素材（`public/assets` / `public/fonts` / `public/vendor`）**连同源码一起提交**，所以克隆即得。
@@ -203,9 +203,9 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md) | **我们的改动与全部决策记录**：账号 / 野排 / 观战夺舍 / 8 名自造干员（§0–§49；文件开头有目录） |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | 仓库地图与构建 / 测试 / 素材流水线 |
 | [`docs/DEV-GUIDE-ZH.md`](docs/DEV-GUIDE-ZH.md) | 同一张地图的中文版 + 二次开发手册 |
-| [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) | 我们怎么研究 / 改动 / 测试 / 合并 / 部署，以及推送约定 |
-| [`docs/OUR-FEATURES.md`](docs/OUR-FEATURES.md) | **只属于本 fork 的机制目录**（合并时不得丢失） |
-| [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) | 主线合并逐批记录 + **永不合并清单**（§0） |
+| [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) | 我们怎么研究 / 改动 / 测试 / 发布 / 部署，以及推送约定 |
+| [`docs/OUR-FEATURES.md`](docs/OUR-FEATURES.md) | **只属于本 fork 的机制目录**（任何改动都不得丢失） |
+| [`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) | 主线合并**历史**记录 + **永不合并清单**（§0；2026-11-07 起主线仅参考） |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | 设计文档索引：现行规则在 [`docs/design/`](docs/design/)、各次修订在 [`docs/history/`](docs/history/) |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 代码地图：服务器、联机协议与前后端共用的战斗模拟 |
 | [`docs/DATA.md`](docs/DATA.md) · [`docs/SIM.md`](docs/SIM.md) · [`docs/META.md`](docs/META.md) | 生成数据 / 战斗引擎 / 对局引擎参考 |
@@ -234,7 +234,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 
 ## 八、致谢与许可
 
-- **主线项目**：[`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol) 及其所有贡献者 —— 本项目（**分支项目**）的代码基线、设计文档、数据管线与素材清单都来自主线。主线解决的问题由主线记录；本仓库只负责**我们这一版**。
+- **主线项目**：[`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol) 及其所有贡献者 —— 本项目的代码基线、设计文档、数据管线与素材清单起源于主线。主线解决的问题由主线记录；本仓库如今**独立演进**，只负责**我们这一版**。
 - **游戏数据来源**：[`Kengxxiao/ArknightsGameData`](https://github.com/Kengxxiao/ArknightsGameData)。
 - **素材来源**：[`yuanyan3060/ArknightsGameResource`](https://github.com/yuanyan3060/ArknightsGameResource)、[`fexli/ArknightsResource`](https://github.com/fexli/ArknightsResource)、[`isHarryh/Ark-Models`](https://github.com/isHarryh/Ark-Models)、[`ArknightsAssets/ArknightsAssets2`](https://github.com/ArknightsAssets/ArknightsAssets2)；字体来自 [`TimWangZi/The-font-of-Arknights`](https://github.com/TimWangZi/The-font-of-Arknights) 与 Google Fonts（Noto Sans SC）。
 - **规则核对参考**：[PRTS 明日方舟中文 Wiki](https://prts.wiki/)。
@@ -246,7 +246,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 
 ## English
 
-The **primary repository** (GitHub) of our independently maintained secondary-development build of Arknights' seasonal auto-chess tower-defense mode *Stronghold Protocol: Alliance*, played in the browser: solo, or 1–4 player co-op — with a **Gitee mirror for downloads from mainland China**. **This is not the upstream project** — the original source is [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which we credit and periodically merge. Our additions include account/matchmaking/spectate features, **eight** custom shop operators, and a set of rule decisions recorded in [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md). New here? Start with [`docs/DEVELOPER.md`](docs/DEVELOPER.md) (humans) or [`AGENTS.md`](AGENTS.md) (AI agents).
+The **primary repository** (GitHub) of our independently maintained secondary-development build of Arknights' seasonal auto-chess tower-defense mode *Stronghold Protocol: Alliance*, played in the browser: solo, or 1–4 player co-op — with a **Gitee mirror for downloads from mainland China**. **This is not the upstream project** — the original source is [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), which we credit as the origin; it is now **reference only**. Our additions include account/matchmaking/spectate features, the Keel plugin system, **eight** custom shop operators, and a set of rule decisions recorded in [`docs/MATCHMAKING.md`](docs/MATCHMAKING.md). New here? Start with [`docs/DEVELOPER.md`](docs/DEVELOPER.md) (humans) or [`AGENTS.md`](AGENTS.md) (AI agents).
 
 - **Run:** Node.js 22 or 24; `git clone` this repository (the runtime art under `public/assets`, `public/fonts` and `public/vendor` is tracked, so a clone runs without fetching art), then `npm install` and `node server/index.js` → <http://localhost:3000>. The admin panel is at `/admin?token=…` (token in `var/admin-token.txt`). Tests: `node --test` and `npm run golden`.
 - **Updates:** `node tools/push-gitee.mjs -m "…"` commits what you staged in the git store, pushes it to every configured remote (the **GitHub primary** then the **Gitee mirror**), then mirrors the store back into the working tree (one-way: store → remotes → working tree; it never overwrites the store with the working tree); see [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) for the notice-then-deploy convention.

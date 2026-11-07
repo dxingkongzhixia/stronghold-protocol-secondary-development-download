@@ -49,7 +49,7 @@ restate the upstream design — it points at it:
 
 | Tree | What it is | Has `.git`? |
 |---|---|---|
-| `D:\DOTK\_merge-scratch` | **the git store — the single source of truth** (branch `ours`): the history and the committed files, including the upstream merges. | yes |
+| `D:\DOTK\_merge-scratch` | **the git store — the single source of truth** (branch `prts-plugin` on the desktop, `master` on the laptop): the history and the committed files. | yes |
 | `D:\DOTK\Stronghold-Protocol` | **the working project — a byte-for-byte mirror of the store.** The app runs here. | no |
 
 The two are kept **byte-for-byte identical for every tracked file** (`git ls-files`). The store's `node_modules`,

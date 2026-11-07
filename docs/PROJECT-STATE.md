@@ -17,7 +17,7 @@
 两批，并于 **2026-10-14 整支合并主线 v0.2.6**（`488db49f`，190 个冲突全解、门禁全绿）——完整记录见
 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §11）。
 
-本仓库是**基于主线开发的分支项目**，在主线之上独立维护：账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、
+本仓库**独立演进**（owner 2026-11-07 决定：主线仅作参考，不再合并）：在主线基础上维护了账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、
 **大厅社区（更新日志 / bug提交 / 公开房间）**、启动体验与带宽治理、**8 名自造干员**（§4；
 `tools/build-data.mjs` 的 `CUSTOM_CHESS`）、**GitHub 主仓库 + Gitee 国内镜像**。
 
@@ -32,12 +32,12 @@
 
 **资源中转机**（`103.205.254.40`，ssh `-p 57435`）由 `tools/push-assets-relay.mjs` 部署，是**发布的第一步**。
 
-**台式机的「双树」约定**（下表以此为准；在**笔记本**上请按 *store ↔ 当前检出*、*dev tree ↔ 当前检出*、*分支 `ours` ↔ `master`* 换算）：
+**台式机的「双树」约定**（下表以此为准；在**笔记本**上请按 *store ↔ 当前检出*、*dev tree ↔ 当前检出*、*分支 `prts-plugin` ↔ `master`* 换算）：
 
 | 路径 | 说明 |
 |---|---|
 | `Stronghold-Protocol\` | **工作项目 / 运行目录**：**没有 `.git`**，是 git 仓库的**逐字节镜像**（**不是**真源）。`node server/index.js` 在这里跑。 |
-| `_merge-scratch\` | **唯一的 git 仓库 / 完整历史 / 唯一真相**（分支 `ours`）。提交、合并、推送都在这里；`node tools/push-gitee.mjs` 把 `HEAD` 推到所有远程，再把被跟踪文件镜像回工作项目。**单向：store → 远程 → 工作树**，绝不用工作树覆盖仓库（反向须显式 `--from-dev`）。 |
+| `_merge-scratch\` | **唯一的 git 仓库 / 完整历史 / 唯一真相**（桌面当前分支 `prts-plugin`）。提交、合并、推送都在这里；`node tools/push-gitee.mjs` 把 `HEAD` 推到所有远程，再把被跟踪文件镜像回工作项目。**单向：store → 远程 → 工作树**，绝不用工作树覆盖仓库（反向须显式 `--from-dev`）。 |
 | `Stronghold-Protocol-github\` | 干净主线克隆（`master`）。 |
 | `_optim-backup-*\` | 每次改动前的本地备份（名字含「日期-主题」）。 |
 
@@ -343,16 +343,12 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 - [x] **CI 已接入**：`.github/workflows/ci.yml` 在 Ubuntu / Windows × Node 22 / 24 上跑 `npm ci`、`node --test` 和服务器冒烟测试。
 - [x] **3D 战场的「高台」与配色已定案（2026-10-14）**：官方的「高台」抬升块（`theme.platforms`，用普通 `MeshStandardMaterial` 拿不到场景的烘焙光、渲染成扁平的白板）与装置台的 `slab` 材质（把 act1 各图的装置台染成沙色）**都已关闭 / 回退**，装置台统一用程序化板材质（owner 指定 act2autochess_m02 为正确样本）；另外只给 act2autochess_m03 加了主题线性增益 `theme.gain`（按官方截图校准）。见 [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §8.2 / §8.5，`test/render/board3d-scene.test.js` 钉住它。
 
-## 10. 与主线的关系 / 下次怎么合并
+## 10. 与主线的关系（仅参考）
 
-- 主线：`https://github.com/sganggs/Stronghold-Protocol`。已合并 **v0.1.3**（§15）、**feedback5 / v0.2.0**（合并提交 `e3bd9de`，§33），**选择性**并入 **feedback6** 与 **feedback7 R22 / R23**，并于 **2026-10-14 整支合并 v0.2.6**（`488db49f`，190 冲突全解、门禁全绿，见 §11）；本仓库版本 `0.4.0`。逐批完整记录（主线提交范围 / HEAD、取用的提交、跳过的提交与原因、冲突、golden 变动、本地提交）见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)；**「永不合并」清单**也在其 §0。
-- 合并方式（**选择性 cherry-pick**，不再只做大合并）：在临时 worktree 里按 `all-fb<N>.txt` 列出的主线提交逐个 triage（`OK` / `OKg` / `SKIP` + 原因），把 `OK` 的提交**保留作者与提交信息** cherry-pick 到 `ours` 并适配本分支；golden 先做**归属证明**再在专门提交里重算（[`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md)）；跑全量 `node --test` 后才推。大合并仍走 `git merge origin/master` + 逐块解冲突。
-- 冲突高发文件：`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、
-  `shared/{constants,protocol}.js`、`public/js/{main,store}.js`、`public/js/screens/*`、`public/js/render/*`、
-  `tools/build-data.mjs`（`CUSTOM_CHESS`）。
-- **本批整体检查**（快照；以最新实测为准，见 §3）：测试 **7193 项 / 7178 通过 / 0 失败 / 15 跳过**、`kit-coverage` 307/307 · 120/120、`i18n en --strict` **1511/1511**、`doctor` 退出码 0、`eslint` 0 error、`typecheck` / `check:imports` 通过、`build-data --offline` 与 `data/` 逐字节一致、工作项目相对 store HEAD 无跟踪漂移。
-  `i18n en --strict` 1455/1455、`doctor` 退出码 0、`eslint` 0 error（148 warning）、`typecheck` / `check:imports` 通过、
-  `build-data --offline` 与 `data/` 逐字节一致、工作项目相对 store HEAD 无跟踪漂移。
+- 主线：`https://github.com/sganggs/Stronghold-Protocol`，是本项目的代码与设计来源，已致谢。**owner 2026-11-07 决定：主线仅作参考，不再整支合并**；我们的代码、测试、数据与文档是唯一真相。
+- 历史：合并过 **v0.1.3**、**feedback5 / v0.2.0**、**feedback6**、**feedback7 R22 / R23**，并于 **2026-10-14 整支合并 v0.2.6**（`488db49f`）。逐批记录见 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)；**「永不合并」清单**仍是其 §0。
+- 上游有新改动时，只判断是否值得**按本分支架构自研移植**（不是 merge / cherry-pick）：写我们的测试、更新归属文档；`node tools/check-upstream.mjs` 仅作侦察参考，不是门禁。
+- 当前分支：桌面 store 为 `prts-plugin`，笔记本单树为 `master`。冲突高发文件的历史清单（`server/lobby.js`、`server/net.js`、`server/match/Match.js`、`server/sim/*`、`shared/{constants,protocol}.js`、`public/js/{main,store,screens,render}`、`tools/build-data.mjs`）保留作参考；当前测试与门禁结果以 §3 为准。
 
 ## 10.1 已完成：插件栈整套迁移 / Worker 托管（`plugin-stack-tip`，2026-10-19 合入）
 

@@ -32,6 +32,7 @@
 | 8 | 文档是改动的一部分：行为、状态、命令变了就更新归属文档。 |
 | 9 | 不把任何 token、密码、私钥写进仓库。 |
 | 10 | 中文 Markdown / JSON 用 UTF-8 **无 BOM** 写入；不要用 PowerShell `Set-Content -Encoding utf8`。 |
+| 11 | **主线仅作参考**（owner 2026-11-07）：不整支合并、不把追上游当工作项；上游改动只在需要时按本分支架构自研移植，并配我们的测试与文档。 |
 
 ---
 
@@ -129,7 +130,7 @@ npm run check:imports
 npm run typecheck
 node tools/i18n.mjs check en --strict
 node tools/doctor.mjs
-node tools/check-upstream.mjs
+node tools/check-upstream.mjs         # 上游侦察（仅参考，不是合并门禁）
 node tools/check-delivery.mjs --live
 
 # 插件
@@ -212,7 +213,7 @@ node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-path
 | i18n | `node tools/i18n.mjs check en --strict` | 碰 UI 文案 |
 | Lint / 类型 / 导入 | `npx eslint .`、`npm run typecheck`、`npm run check:imports` | 发布前 |
 | 文档 | 四个 docs 测试 | 碰文档 |
-| 上游 | `node tools/check-upstream.mjs` | 合并前 |
+| 上游参考 | `node tools/check-upstream.mjs` | 需要评估上游时（非门禁） |
 
 已知基线：`test/sim/robustness.test.js` 有性能波动。`npm test` 固定 `--test-concurrency=4`（2026-10-25）：`node --test` 默认按核数并行，16 核机器上几十个 CPU 密集的 match 模拟互相抢核，lobby / 心跳 / 限流类用例会超时（整轮也更慢：10.4 min → 7.8 min，8479 项全过）。单跑某个套件想更稳可以再加 `--test-concurrency=1`。不要为了让套件变绿而放宽断言。
 

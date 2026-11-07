@@ -1,17 +1,20 @@
 # 主线未并入清单（Upstream backlog）
 
 > 2026-10-27 重写。前身是 2026-10-20 的 `upstream/dev` triage（那段历史见
-> [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10）；本文件现在是**唯一的主线待办台账**：哪些还没并、为什么、
+> [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10）；本文件现在是**主线参考台账**：哪些还没并、为什么、
 > 摘的时候要注意什么。合并日志仍写在 `UPSTREAM-MERGES.md`，永不合并清单仍是它的 §0。
+>
+> **2026-11-07 owner 决策：** 主线转为**仅参考**，不再把「追主线 / 合并」当工作项。本台账保留为历史与灵感清单；
+> 新工作以本分支自己的需求为准，`check-upstream` 只作侦察，不是门禁。
 
 ## 0. 口径与门禁
 
 | 项 | 值 |
 |---|---|
-| 基线 | 上游 `488db49f1`（上次折入的提交，0.3.2 尾部；也是与 `HEAD` 的 merge-base） |
+| 基线 | 上游 `488db49f1`（**v0.2.6**，上次整支折入的提交；也是与 `HEAD` 的 merge-base） |
 | 上游发布线 | `upstream/master` = `f07b89650`（0.3.3 hotfix 元数据，2026-10-25，**至今未动**） |
 | 上游开发线 | `upstream/dev` = `eff7d93ab`（2026-11-06；相对上次记录的 `47ffc2615` 共 **33** 个提交，其中最后 9 个是 `e017558ac..eff7d93ab`） |
-| 未并 | 见 §0.1；本分支相对 `origin/dev` 领先 **1166** 个提交 |
+| 未并 | 见 §0.1；本分支相对 `origin/dev` 领先 **1186** 个提交（2026-11-07 实测） |
 | 合并方式 | 逐条 cherry-pick + 本分支适配；**永不整支合并**，永不 `--ours/--theirs` 整文件 |
 | 门禁 | `node tools/check-upstream.mjs`（会把 §0 的 28 个文件同时标红，属预期）；`--upstream upstream/dev` 可单独看开发线 |
 | golden | 任何移动 `test/golden/*.json` 的改动必须归因（只回退该项 → 零差异），再单独提交 |

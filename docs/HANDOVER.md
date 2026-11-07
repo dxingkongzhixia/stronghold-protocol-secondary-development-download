@@ -12,19 +12,17 @@ It is an **orientation + map**, not a duplicate. Where a topic needs detail it p
 document — the authoritative sources are, in order: [`docs/DESIGN.md`](DESIGN.md) (the design index —
 current rules in [`docs/design/`](design/), per-release revisions in [`docs/history/`](history/)),
 [`docs/MATCHMAKING.md`](MATCHMAKING.md) (the fork's decision record, §0–§49 — its first block is a 目录),
-[`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (the operational contract — research → change → merge → push →
+[`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (the operational contract — research → change → verify → push →
 deploy), [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) (the repository map) and
-[`docs/OUR-FEATURES.md`](OUR-FEATURES.md) (what is ours and must survive an upstream merge).
+[`docs/OUR-FEATURES.md`](OUR-FEATURES.md) (what is ours and must not be dropped).
 
-> **Status today (2026-10-14).** Version `0.4.0` (single source: `package.json` /
-> `shared/constants.js APP_VERSION` / `CHANGELOG.md`, pinned by `test/version.test.js`). **Everything is in
-> sync at `d5a6412c`**: the store's `ours` (in a single-tree checkout: `master`) == `github/master` ==
-> `gitee/master`, and production serves the same content (spot-checked 2026-10-14: the live
-> `/js/*`, `/shared/clip.js`, `/shared/scene.js`, `/sw.js` were byte-identical to the tree). The owner's
-> instruction is **先不上线 — do not deploy** unless the owner explicitly asks (the 2026-10-14 deploy was
-> such a request). Other agents may be working in the same repository at the same time: work on your own
-> branch/worktree, commit only your own paths, and rebase onto the latest `ours` (or `master`) before you
-> push.
+> **Status snapshot (2026-10-14; live state: [`PROJECT-STATE.md`](PROJECT-STATE.md) §3).** Version `0.4.0`
+> (single source: `package.json` / `shared/constants.js APP_VERSION` / `CHANGELOG.md`, pinned by
+> `test/version.test.js`). **Everything is in sync at `d5a6412c`**: the store's `prts-plugin` (in a single-tree
+> checkout: `master`) == `github/master` == `gitee/master`, and production serves the same content. The owner's
+> instruction is **先不上线 — do not deploy** unless the owner explicitly asks. Other agents may be working in the
+> same repository at the same time: work on your own branch/worktree, commit only your own paths, and rebase onto
+> the latest `prts-plugin` (or `master`) before you push.
 
 ---
 
@@ -106,9 +104,9 @@ server ships; the Node server only owns the lobby, the economy, the rounds and v
 host can run it.
 
 - **Mainline project (主线项目)** — [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol).
-  We are a **branch project (分支项目)** forked from the mainline: our code base, design document, data pipeline
-  and asset manifest all start there. We credit it and **periodically merge it** (selectively — §7). It is
-  **not** the same project as ours, and it is where the game's own issues are tracked.
+  Our code base, design document, data pipeline and asset manifest all started there, and we credit it. Since
+  **2026-11-07 it is reference only** (owner decision): **do not merge it as a work item**. It is **not** the same
+  project as ours, and it is where the game's own issues are tracked.
 - **This fork's own additions** (ours, absent from upstream — see [`docs/OUR-FEATURES.md`](OUR-FEATURES.md)):
   - **Eight custom shop operators** (自造干员) injected by `CUSTOM_CHESS` in `tools/build-data.mjs`:
     阿斯卡纶, 结城理, 予愿安洁莉娜, 望, 澄闪, 娜仁图亚, 凯尔希·思衡托, 克莱门莎. Their decision record is
@@ -125,9 +123,9 @@ host can run it.
   |---|---|---|
   | `github` | **PRIMARY** (main distribution) | `github.com/dxingkongzhixia/stronghold-protocol-secondary-development-download` |
   | `gitee` | **国内下载镜像** (mirror for mainland China) | `gitee.com/marseille1/stronghold-protocol-secondary-development-download` |
-  | `origin` | the **mainline** (`sganggs/Stronghold-Protocol`), not ours | `github.com/sganggs/Stronghold-Protocol` |
+  | `origin` | the **mainline** (`sganggs/Stronghold-Protocol`), not ours — **reference only** | `github.com/sganggs/Stronghold-Protocol` |
 
-  Both our remotes receive the store's branch `ours` as their `master`. `push-gitee.mjs` pushes the
+  Both our remotes receive the store's current branch (`prts-plugin` on the desktop, `master` on the laptop) as their `master`. `push-gitee.mjs` pushes the
   primary first, then the mirror (fast-forward only, never forced).
 
 ### Licence / copyright — do not get this wrong
@@ -164,8 +162,9 @@ git diff 488db49f HEAD -- server/sim/skills.js         # one file, side by side
 git log --oneline 488db49f..HEAD                       # every fork commit on top of v0.2.6
 ```
 
-When the mainline moves (`node tools/check-upstream.mjs` says so), fetch it **through the proxy** and re-point the
-worktree — `SP_UPSTREAM` overrides the URL if the mainline ever moves:
+The checkout is optional now that the mainline is reference-only. If you need a newer upstream tip for comparison,
+fetch it **through the proxy** and re-point the worktree (a read-only reference, not a merge step) — `SP_UPSTREAM`
+overrides the URL if the mainline ever moves:
 
 ```powershell
 git fetch https://github.com/sganggs/Stronghold-Protocol.git master
@@ -363,7 +362,7 @@ npx eslint .                            # correctness-only lint (npm run lint): 
 npm run check:imports                   # import boundaries (server/sim may not touch match/lobby/node builtins)
 npm run typecheck                       # the JSDoc-checked slice
 npm run ci                              # tools/ci.mjs: lint + imports + data + tests, the local CI mirror
-npm run check:upstream                  # the mainline: new commits, predicted conflicts, §0 hits (docs/UPSTREAM-MERGES.md)
+npm run check:upstream                  # upstream radar (reference only): new commits, predicted conflicts, §0 hits
 npm run check:delivery                  # the asset chain + the cache-first path (--live adds two browser visits)
 node tools/push-assets-relay.mjs --dry-run   # what publishing to the art relay would carry
 ```

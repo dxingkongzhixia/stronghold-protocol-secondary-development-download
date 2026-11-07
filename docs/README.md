@@ -42,7 +42,7 @@
 | **动手前的规则** | [`RULES.md`](RULES.md) → [`DESIGN.md`](DESIGN.md) | 规范优先于历史文档 |
 | **测试与门禁** | [`TESTING.md`](TESTING.md) | golden 归因、CI 三个 job、已知不稳定项 |
 | **不能丢 / 不能并** | [`OUR-FEATURES.md`](OUR-FEATURES.md) · [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 | fork 独有机制 + 永不合并清单 |
-| **合并上游** | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) → [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | 先看台账与 §9 清单，再逐条自研；永不整支合并 |
+| **（历史）合并上游** | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) → [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | 2026-11-07 起主线仅参考；台账保留为灵感清单，新工作以本分支需求为准 |
 | **发布 / 上线** | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) §(d) | 通知 → 备份 → 上传 → 重启 → 验证；须 owner 点头 |
 | **当前线上是什么** | [`PROJECT-STATE.md`](PROJECT-STATE.md) | build / 开关 / 备份 / 已知问题 |
 
@@ -144,8 +144,8 @@
 | 内容 | 文档 |
 |---|---|
 | fork 独有机制（合并时不得丢） | [`OUR-FEATURES.md`](OUR-FEATURES.md) |
-| 主线合并日志 + **永不合并清单 §0** | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
-| 主线未并入台账（发布线 + dev §9 清单） | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) |
+| 主线合并**历史**日志 + **永不合并清单 §0** | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
+| 主线未并入台账（参考；已冻结） | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) |
 | 决策记录 §0–§49 | [`MATCHMAKING.md`](MATCHMAKING.md) |
 | 评估过但暂不实现 | [`FUTURE-FEATURES.md`](FUTURE-FEATURES.md) |
 
@@ -180,7 +180,7 @@
 | **上线顺序 / 回滚** | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) §(d) | [`DEPLOY.md`](DEPLOY.md) | [`PROJECT-STATE.md`](PROJECT-STATE.md) 的部署记录 |
 | **现在线上是什么** | [`PROJECT-STATE.md`](PROJECT-STATE.md) | [`DEPLOY.md`](DEPLOY.md)（怎么做） | [`../CHANGELOG.md`](../CHANGELOG.md) |
 | **哪些东西合并时不能丢** | [`OUR-FEATURES.md`](OUR-FEATURES.md) | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 | — |
-| **主线还有哪些没并** | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)（已并日志） | — |
+| **主线还有哪些没并（参考）** | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)（历史日志） | — |
 | **素材 / 皮肤 / 语言 / 内容包** | [`ASSETS.md`](ASSETS.md) | [`SKINS.md`](SKINS.md) · [`I18N.md`](I18N.md) · [`PACKS.md`](PACKS.md) | — |
 | **AI 怎么打** | [`BOT-STRATEGIES.md`](BOT-STRATEGIES.md)（实现） | [`AI-STRATEGY.md`](AI-STRATEGY.md)（示例打法）· [`EXTERNAL-AI.md`](EXTERNAL-AI.md)（外部 LLM） | [`MATCHMAKING.md`](MATCHMAKING.md) |
 | **手机 / 触屏 / 安全区怎么改** | [`MOBILE-UI.md`](MOBILE-UI.md)（清单与验收） | `devices.css`、`js/ui/device.js`、`test/mobile/*` | — |

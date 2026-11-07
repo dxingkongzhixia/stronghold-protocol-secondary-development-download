@@ -5,7 +5,11 @@ Who this is for: **the next person who merges the mainline (主线项目)** and 
 what came in, what we deliberately left out, how conflicts were resolved, how the golden corpus moved, and the
 local commits it produced.
 
-> **Navigation.** The **never-merge list** is §0; the per-batch records follow chronologically (§1 …). The merge procedure itself is in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (b). See also [`docs/QUERY-INDEX.md`](QUERY-INDEX.md).
+> **Status (2026-11-07):** this log is **history**. The owner decided the mainline is **reference only** — we no
+> longer merge it as a work item; an upstream idea or fix is ported as a normal change in our tree. §0 (never-merge)
+> remains absolute for any port.
+>
+> **Navigation.** The **never-merge list** is §0; the per-batch records follow chronologically (§1 …). The historical merge procedure is in [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md) (b). See also [`docs/QUERY-INDEX.md`](QUERY-INDEX.md).
 
 Read this together with:
 
@@ -18,7 +22,7 @@ Read this together with:
 Conventions used below:
 
 - **Upstream commits** are authored `sganggs <sganggs@users.noreply.github.com>`; **our commits** are authored
-  `merge <merge@local>` (the store `_merge-scratch`, branch `ours`). The upstream object database is present in
+  `merge <merge@local>` (the store `_merge-scratch`, currently branch `prts-plugin`; historically `ours`). The upstream object database is present in
   the store even when a commit is unreachable from a ref, so an upstream hash can be inspected with
   `git show <hash>`.
 - The git store `_merge-scratch` is the single source of truth; the working project `Stronghold-Protocol` has no

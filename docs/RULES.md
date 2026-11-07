@@ -97,7 +97,7 @@
 |---|---|
 | [`history/`](history/) | 每个版本改了什么规则、证据与 QA |
 | [`research/00-INDEX.md`](research/00-INDEX.md) | 官方数据研究索引（可读 + JSON） |
-| [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | 主线合并日志、never-merge 清单 |
+| [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) | 主线合并**历史**日志、never-merge 清单（2026-11-07 起主线仅参考） |
 | [`MATCHMAKING.md`](MATCHMAKING.md) | 我们自己的机制决策记录（§0–§49） |
 | `CHANGELOG.md` | 玩家可见的版本记录 |
 

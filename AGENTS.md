@@ -12,7 +12,7 @@ mode **卫戍协议：盟约 / Stronghold Protocol: Alliance** — solo, or **1�
 - Node server (lobby, economy, rounds, validation) + browser client (native ES modules).
 - The battle is simulated **deterministically in each player's browser** from the same code the
   server ships; the server owns the lobby, economy, rounds and validation.
-- **Mainline project (主线项目)**: [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol). We are a **branch project (分支项目)** forked from the mainline and **periodically merge it selectively**.
+- **Mainline project (主线项目)**: [`sganggs/Stronghold-Protocol`](https://github.com/sganggs/Stronghold-Protocol), credited as the original source and kept as a **read-only reference**. **This repository is the source of truth** for everything we ship; **do not merge the mainline wholesale or cherry-pick its history as a work item** (owner decision, 2026-11-07). Upstream work is consulted for ideas and fixes only; any port is a normal change in our tree with our tests and docs.
 - Licence: our code is **GPL-3.0-or-later**; Arknights art/audio/text/data is © Hypergryph / Yostar and is **NOT** GPL — non-commercial fan project. See [`NOTICE.md`](NOTICE.md).
 
 ## 2. The one operational rule (get this right or lose work)
@@ -89,7 +89,7 @@ npm run check:mobile                    # phone matrix audit (Chrome; docs/MOBIL
 node tools/kit-coverage.mjs --missing   # every chess has a kit
 node tools/i18n.mjs check en --strict   # English UI pack complete
 node tools/doctor.mjs                   # environment diagnosis
-node tools/check-upstream.mjs           # new mainline work + predicted conflicts
+node tools/check-upstream.mjs           # reference radar: new upstream work (no merge obligation)
 npx eslint . && npm run typecheck && npm run check:imports
 ```
 

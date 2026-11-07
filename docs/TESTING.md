@@ -16,7 +16,7 @@
 | **浏览器 E2E（opt-in）** | `test/render/*.browser.test.js`、`test/e2e/*` | 真 Chrome：渲染、拖拽、相机、手机视口 | 碰渲染 / UI / 手机端 |
 | **CI** | `.github/workflows/ci.yml` | 上面三层的自动化（见 §6） | 推送 / PR |
 
-测试文件 **939 个**，12 个目录：`content` `e2e` `fixtures` `golden` `helpers` `keel` `match` `mobile` `plugins` `render` `sim` `ui`。
+测试文件 **946 个**，13 个目录：`content` `dev` `e2e` `fixtures` `golden` `helpers` `keel` `match` `mobile` `plugins` `render` `sim` `ui`。
 
 ## 2. 命令
 

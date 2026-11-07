@@ -505,7 +505,7 @@ it. The merge procedure and the blacklist are in `docs/AI-WORKFLOW.md` (b).
 > **我们独有，非上游；合并时不得丢失** — the two-tree mirror discipline, the push helper and the
 > notice-first deploy order are ours.
 
-**What it is.** The git store `_merge-scratch` (branch `ours`) is the **single source of truth**: the history and
+**What it is.** The git store `_merge-scratch` (branch `prts-plugin` on the desktop, `master` on the laptop) is the **single source of truth**: the history and
 the committed files. The working project `Stronghold-Protocol` has **no `.git`** and is a byte-for-byte **mirror**
 of the store. `tools/push-gitee.mjs` commits what is staged in the store, pushes the store's `HEAD` to the **GitHub
 primary** and then a **code-only snapshot** to the **Gitee 国内下载镜像** (its free project limit is 1 GB and the art is
