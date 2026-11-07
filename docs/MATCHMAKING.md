@@ -479,7 +479,7 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 上游 v0.1.3 自带的观战入口（「加入同盟」旁边的 `观战` 按钮）体验不好，按需求改掉：
 
 ### 17.1 入口：从「正在模拟」列表进入（`/online/api` → `playRooms`）
-- `server/admin.js` 的 `buildPublicSnapshot` 新增 **`playRooms`**：**正在打**（`r.match` 存在）的 coop 房间，字段 `{ code, difficultyName, host, humans, bots, auto }`；**排序 = 野排优先 → 有 AI 席位优先 → 人多优先**，**最多 4 个**。
+- `server/admin.js` 的 `buildPublicSnapshot` 新增 **`playRooms`**：**正在打**（`r.match` 存在）且**至少一名真人**（`humansOf(r) > 0`）的 coop 房间，字段 `{ code, difficulty, difficultyName, host, hostRole, humans, agents, bots, spectators, auto, modded, seats }`（初版只有 `{ code, difficultyName, host, humans, bots, auto }`，后随 Agent 席位与观战人数扩过）；**排序 = 野排优先 → 有 AI 席位优先 → 人多优先**，**最多 4 个**（`/online/api?all=1` 时不分页 —— §12 的在线目录用它）。
 - 大厅「加入同盟」面板下方两行（`public/js/screens/lobby.js` 的 `PublicAlliances`，4 s 轮询）：
   - **公开同盟**（`openRooms`）→ 点击**加入**；
   - **正在模拟**（`playRooms`）→ 点击**观战**（`room.spectate`）。
@@ -487,16 +487,16 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 - 🐞 顺带修掉一个崩溃：`screens/lobby.js` 用了 `ERR.*` 却没 import `ERR` → 点「观战」报 `ERR is not defined`。
 
 ### 17.2 观战席：紧凑下拉，不占地方
-- `public/js/screens/room.js`：原 `SpectatorBar`（一整条）改为 **`SpectatorDock`** —— 一个 `<details>` 小下拉，摘要行只写「观战席 n/2」，展开后是观战者名单（房主可 ✕ 移出）、有空位时的**入座**、以及**夺舍 AI 队友**。
-- `public/js/screens/game.js`：观战**正在进行的对局**时，右下角浮一个同样的紧凑下拉 `SpecDock`（`position: fixed`），列出其他观战者 + **夺舍 AI**。它挂在 `GameScreen`（**路由层**）而不是战斗主体上，所以**确认信息 / 选盟约 / 战斗**各个阶段都能看到并夺舍。
-- 样式在 `public/css/screens/room.css`（`.specdock*`）与 `public/css/screens/game.css`（`.specdock--ingame`）。
+- `public/js/screens/room.js`：原 `SpectatorBar`（一整条）改为 **`SpectatorDock`** —— 一个 `<details>` 小下拉，摘要行「观战席 n/**10**」（`MAX_SPECTATORS`，owner 2026-10-24 由 2 提到 10），展开后是观战者名单（掉线标记 / 聊天气泡，房主可 ✕ 移出）、有空位时的**入座**、**夺舍 AI 队友**，以及夺舍者自己的**退出夺舍**。
+- `public/js/screens/game.js`：同一个紧凑下拉 **`SpecDock`** 挂在 `GameScreen`（**路由层**）而不是战斗主体上，所以**确认信息 / 选盟约 / 战斗**各个阶段都能看到并夺舍。位置分两种：没有队伍栏的阶段（`briefing` / 选盟约 / 结算）是右下角浮层（`.specdock--ingame`，`position: fixed`）；**战斗界面**里由 `MatchScreen` 自己渲染成 `panel` 形态、落在队伍栏正下方（`.gm__teamcol`）。
+- 样式在 `public/css/screens/room.css`（`.specdock*`）与 `public/css/screens/game.css`（`.specdock--ingame`、`.gm__teamcol`）。
 
 ### 17.3 夺舍 AI（`room.takeOver`）
 - 协议：`room.takeOver { seat }`（C2S）。
-- `server/lobby.js` 的 `takeOver(session, { seat })`：只允许**观战者**夺舍**AI 席位**（空位请走 `room.join`），并保证**游玩者 ≤ MAX_SEATS**。
+- `server/lobby.js` 的 `takeOver(session, { seat })`：只允许**观战者**夺舍**AI 席位**（空位请走 `room.join`），并保证**游玩者 ≤ MAX_SEATS**；被 Agent 预约中的席位拒绝夺舍（`agentInviteFor`，见 §19 的 Agent 席位），夺舍者自己的 `session.role` 一并交给对局。
   - 房间**未开局**：直接把该 AI 席位换成本人；
   - 对局**进行中**：`Match.takeOver(humanId, seat, name)`。
-- `server/match/Match.js` 的 `takeOver`：把该 AI 的**整个 `PlayerState`** 交给人 —— 同一席位 / 棋盘 / 资金 / 调配 —— 并把**所有按 playerId 索引的结构重写**（`players`、`spectators`、`watchers`、`fields[].players`、`draft.order|picks|skipsLeft`、`sp.order|picks|taken`、`f.result.perPlayer` …），随后 `_resync(ps)` 给新玩家发 `m.public` + 他自己的 `m.private`（战斗中还补 `m.field`）。这样他之后发的 `g.*`（带自己的 playerId）会自然路由到那个席位。
+- **`server/match/match/watch.js`** 的 `takeOver(humanId, seat, name, role, agent = false)`（`Match` 的席位交接 mixin，`Match.js` 只负责挂载）：把该 AI 的**整个 `PlayerState`** 交给人 —— 同一席位 / 棋盘 / 资金 / 调配 —— 在 `players` 里换键、清掉自己的观战 / watcher 记录，再把**其余按 playerId 索引的结构重写**（`watchers`、`fields[].players`、`draft.*`、`sp.*`、`f.result.perPlayer`、`f.progress.perPlayer` …，见 §17.4 的 `_rekeyPlayer`），随后 `_resync(ps)` 给新玩家发 `m.public` + 他自己的 `m.private`（战斗中还补 `m.field`）。这样他之后发的 `g.*`（带自己的 playerId）会自然路由到那个席位。
 - `server/match/StubMatch.js` 同步实现该接口，并写进文件头的**平台契约**注释。
 - 测试：`test/lobby.test.js` 增加「spectator takes over an AI seat — in the lobby and while the match runs」。
 
@@ -505,9 +505,9 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 ### 17.4 退出夺舍（`room.releaseSeat`）
 - 协议：`room.releaseSeat {}`（C2S）。**只对"夺舍来的席位"有效**（`room.state` 的席位带 `fromAi: true`）。
 - 行为：把席位交还给一台**新的 AI**（沿用你那时的棋盘 / 资金 / 调配），本人**回到观战席**继续看 —— `room.takeOver` 的反操作。
-- `Match.releaseSeat(humanId, aiId, aiName)`：把 `PlayerState` 反向改写成 `ai_…`（`isBot = true`），再跑一遍重写，然后把本人注册成观战者并 `_resync`（发公开视图）。
-- 重写逻辑抽成 **`Match._rekeyPlayer(from, to)`**，夺舍 / 退出夺舍共用（`players`/`spectators`/`watchers`/`fields[].players`/`draft.*`/`sp.*`/`f.result.perPlayer`）。
-- 房主若退出夺舍：先 `migrateHost`（房主交给仍在玩家席位上的最低真人）。**最后一名真人玩家退出夺舍**——交还后场上只剩 AI 席位——则**立即销毁房间（含正在跑的对局）**，观战者收到 `room.closed {empty}`：真人全退 → 销毁，**观战者不续命**（与 `room.leave` 同一规则，见 §20.5）。
+- `releaseSeat(humanId, aiId, aiName)`（同在 `server/match/match/watch.js`）：把 `PlayerState` 反向改写成 `ai_…`（`isBot = true`；与 `aiTakeOver` 共用 `_seatToAI`），再跑一遍重写，然后把本人注册成观战者并 `_resync`（发公开视图）。
+- 重写逻辑抽成 **`_rekeyPlayer(from, to)`**，夺舍 / 退出夺舍共用。**`players` Map 不在它里面**（由 `takeOver` / `_seatToAI` 换键）；它管的是 `watchers`、`fields[].players`、`f.result.perPlayer`、`f.progress.perPlayer`、`draft` 与 `sp` 的 `order|picks|skipsLeft|taken|focus`，最后重算 `order` 与 `loneHuman`。
+- 房主若退出夺舍：先 `migrateHost`（交给**最低席位的已连接真人**，都掉线时取最低席位真人；Agent 永不当房主）。**最后一名真人玩家退出夺舍**——交还后场上只剩 AI 席位——则**立即销毁房间（含正在跑的对局）**，观战者收到 `room.closed {empty}`：真人全退 → 销毁，**观战者不续命**（与 `room.leave` 同一规则，见 §20.5）。
 - 客户端：`SpectatorDock`（房间屏）与 `SpecDock`（战斗界面）在「**你自己的席位 `fromAi`**」时显示 **退出夺舍（回到观战席）**；战斗界面那个下拉此时也会为"夺舍者"显示（此前只在观战时显示）。
 - `test/lobby.test.js`：夺舍用例补上「退回观战席」与「普通玩家不能退（`BAD_TARGET`）」。
 
