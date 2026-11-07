@@ -443,22 +443,37 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
       const iconId = s.iconId || s.skillId;
       if (s.icon?.url && !skills[iconId]) skills[iconId] = leaf(alt(`skill/${safeName(iconId)}.png`, s.icon.url, s.icon.bytes));
       if (s.skillId) skillsById[s.skillId] = iconId;
-      const ss = audio.skillBanks.get(s.skillId)?.get('ON_SKILL_START');
-      if (ss?.length) skillSfx[String(i)] = soundLeaf(ss);
+      // Skill SFX. `ON_SKILL_START.<skillId>` is the manual cast stinger; auto skills carry their start sound in
+      // `ON_ABILITY_START.<skillId>` instead (冻河's S1 / S2 have no ON_SKILL_START bank at all). Keep both as
+      // alternatives — the manifest build keeps the first one whose file exists (the local client may lack a
+      // `battle/b_char/*` stinger the web mirror has).
+      const ss = audio.skillBanks.get(s.skillId)?.get('ON_SKILL_START') || [];
+      const abilityStart = audio.bank(`battle.ON_ABILITY_START.${s.skillId}`);
+      const cast = [...ss, ...abilityStart.filter((p) => !ss.includes(p))];
+      if (cast.length) skillSfx[String(i)] = soundLeaf(cast);
       // [ASSUMED] Without a named activation mode, infer d/h/s from slot 1/2/3; see DESIGN §28.17.
-      const letter = skillModeLetter(ss?.[0]) ?? SLOT_MODE_LETTER[i];
-      if (letter && modeAttacks[letter]) {
-        attacks[String(i)] = soundLeaf(modeAttacks[letter]);
-        const m = audio.mixOf?.(modeAttacks[letter]);
+      const letter = skillModeLetter(ss?.[0]) ?? skillModeLetter(cast[0]) ?? SLOT_MODE_LETTER[i];
+      // The skill's own swing / impact banks are named by SKILL ID (`ON_ABILITY_ON.skchr_tocka_1` …), not by the
+      // unit's `attack` ability; prefer them, then the mode letter, then the skill's own projectile impact
+      // (`ON_PROJECTILE_HIT.projectile_<name>_s<slot>`).
+      const ownSwing = audio.bank(`battle.ON_ABILITY_ON.${s.skillId}`);
+      const swing = ownSwing.length ? ownSwing : (letter && modeAttacks[letter]) || null;
+      if (swing) {
+        attacks[String(i)] = soundLeaf(swing);
+        const m = audio.mixOf?.(swing);
         if (m) attackMix[String(i)] = m;
-        const pool = poolRef(modeAttacks[letter]);
+        const pool = poolRef(swing);
         if (pool) attackPools[String(i)] = pool;
       }
-      if (letter && modeHits[letter]) {
-        hits[String(i)] = soundLeaf(modeHits[letter]);
-        const m = audio.mixOf?.(modeHits[letter]);
+      const ownHit = audio.bank(`battle.ON_ABILITY_HIT.${s.skillId}`);
+      const projName = [`projectile_chr_${short}_s${i + 1}`, `projectile_${short}_s${i + 1}`]
+        .map((n) => audio.bank(`battle.ON_PROJECTILE_HIT.${n}`)).find((p) => p.length) || [];
+      const hit = ownHit.length ? ownHit : (letter && modeHits[letter]) || projName;
+      if (hit.length) {
+        hits[String(i)] = soundLeaf(hit);
+        const m = audio.mixOf?.(hit);
         if (m) hitMix[String(i)] = m;
-        const pool = poolRef(modeHits[letter]);
+        const pool = poolRef(hit);
         if (pool) hitPools[String(i)] = pool;
       }
     }
