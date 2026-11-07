@@ -1482,6 +1482,8 @@ docs guards 34 pass / 0 fail.
 | skins / 插件美术 | `58206c0b5` `a449310ac` | 每干员皮肤层、名单外插件干员的官方美术 | ⏳ |
 | studio / 控制台 | `ff1a6fd65` `1777936c2` `86dc30ff8` `7e50d4401` `4decf3ef9` `00faf3361` `b697a32b5` | studio 战斗沙箱、`SP_TEST_MODE` 测试控制台及其浏览器修复 | ⏳ |
 
+> **本表是 2026-10-18 的时点快照，不是现状。** 它下面的正文继续记录 W1-lite / W1 UI / U-Forge / skins / studio 的逐批并入（§0 顶部：2026-10-18 owner 解除黑名单，2026-10-19 整栈并入 `2e37b1407`）。核对当前树：`public/studio/` 与 `server/testMode.js`（`SP_TEST_MODE`）**都在**；`plugins/_locked` 与 `plugins/_replaced` 是运行 `tools/plugin.mjs lock` / 回滚时才创建的目录，默认不存在是正常的。
+
 **P0 本分支适配**：`server/index.js` 保留我们的账号 / 社区 / 统计 / 训练 / 管理页，加入 `content = computeVanillaContent(...)` 与 `createPluginRegistry`（`packs` 仍导出）；`server/lobby.js` 的房间/状态/构造器同时带 `public`/`role` 与 `content`；`shared/protocol.js` 的 `b.result` 取上游带 `cs` 的版本并保留我们的 `b.rehearsalResult`；`store.js` 增 `content`；`routes.js` 健康报告加 `content`；`static.js` 同时服务资产索引与 `/plugins` / `/cs`；`websocket.js` 的 Lobby 同时拿账号/社区/统计与 `content`；`APP_VERSION` 仍 `0.4.0`；`docs/design/network.md` **新增 §8.4 内容身份**（`PACKS.md` / `PLUGINS.md` 引用的 `DESIGN 8.4` 现在有对应章节）。
 验收：插件 P0 套件 38/38（1 skip）、`/healthz` + `/plugins/index.json` + `/cs/<cs16>/index.json` 冒烟通过；全量 **7398 / 7376**（两条心跳失败为并行负载抖动，单跑 `test/lobby.test.js` 74/74；性能基线抖动同前），golden 全匹配，文档门禁 34/34。
 
