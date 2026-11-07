@@ -1251,12 +1251,12 @@ const lungeK = this.lunge > 0 && !(this.actor && this.spineReady) ? Math.sin(thi
 
 需求（owner）：大厅社区功能「更新日志」「bug提交」「公开房间」（后二者曾同列大厅左侧；见 §36.4 的顶栏调整），数据落 SQLite；「玩家留言」不做（owner 明确放弃）。截图中列出的四个按钮里，玩家留言被删除——本仓库此前的代码里从未实现过它，因此没有可删除的实现，本次只保证不新增（`grep` 与 `git log -S` 均无记录）。
 
-### 36.1 存储（server/db.mjs，user_version 3）
+### 36.1 存储（server/db.mjs；本节落笔时 `user_version` 3，现为 **6**）
 
 - `changelog(id, version, released_at, title, body, published, created_at)` + `idx_changelog_order`；v4 追加 `summary`（默认展示的一行概要）、`source`（`release` 种子 / `notice` 通知）、`minor_seq`（通知条目的单调序号，种子为 NULL）；
 - `bug_reports(id, title, body, account_id→accounts, submitter, status, created_at, updated_at)` + `idx_bug_reports_status`（status: `new` / `triaged` / `fixed`）；
 - `bug_uploads(id, report_id→bug_reports, path, mime, bytes, account_id→accounts, created_at)` + `idx_bug_uploads_report`。
-- 迁移沿用 `PRAGMA user_version`；新的服务类 `CommunityService`（server/community.js）与 `AuthService` 同风格：单句柄、预编译语句、同步方法，测试用 `openMemoryDb()`。
+- 迁移沿用 `PRAGMA user_version`；新的服务类 `CommunityService`（server/community.js）与 `AuthService` 同风格：单句柄、预编译语句、同步方法，测试用 `openMemoryDb()`。**此后又迁了两步**：v5 加对局统计 `match_stats`（§40），v6 给 `accounts` 加 `art` / `avatar` 两列（席位卡的立绘 / 头像）；服务端迁移表一路执行到 6，本节的 3 只是落笔时的版本。
 - bug 报告**只有文字 + 图片**，不附带 seed / replay / room（owner 2026-10-09 修正）。
 
 ### 36.2 更新日志（只读 + 一次性导入 + 每次通知记一小版本）
@@ -1293,7 +1293,7 @@ owner 要求（截图 + 消息）：点「公开房间」要**跳转到独立界
 
 - **界面而非路由**：`public/js/screens/rooms.js` 的 `PublicRoomsScreen`；由 `screens/lobby.js` 在 `showCommunity === 'rooms'` 时**整体替换大厅主体**（同一个 `LobbyScreen`、同一套路由）。这样不新增 `SCREENS` / `selectRoute` 分支，房间恢复（`room.state` 仍会接管路由）与 `?room=` 深链流程完全不动；加入 / 观战仍复用大厅自己的 `join()` / `spectate()` 处理函数（点按钮先关界面、写入密钥再走原路径）。顶栏复用 `.topbar` + `Button` + `MicroLabel`，主体是 `.screen__scroll` 的 `rooms-body`（`public/css/screens/lobby.css` 的 `.rooms-*`，全部用主题令牌，无一次性颜色）。
 - **入口（顶栏，③）**：**公开房间 · 更新日志** 两个社区入口在 `screens/lobby.js` 的 `.topbar__left` 内、**紧接 `<OnlineBadge>` 之后**（`users` / `book` 图标，复用 `.online-badge` 观感，小顶栏下仍清晰），顺序为 **返回 · ping · 在线N · 公开房间 · 更新日志**，点击分别 `setShowCommunity('rooms' | 'changelog')`。**bug提交 已移入「设置」对话框**（§36.8），不再在顶栏。`ui/community.js` 不再有 `CommunityBar` / `COMMUNITY_PANELS`，大厅左侧社区列（`.lobby-tools`）已删除。公开房间界面**自己的**顶栏（返回 / PUBLIC ROOMS / 实时·刷新）保持不变。
-- **数据**（`server/admin.js buildPublicSnapshot` → `GET /online/api`）：`openRooms`（手建公开同盟 → 组队中）与 `playRooms`（进行中 → 对局中 → 「观战」）每个条目新增 `seats`：按席位顺序的 `MAX_SEATS`（=4）个元素，空席 / 已离开的席位为 `null`，否则 `{ name, role, guest, isBot, isHost }`。**隐私**：只暴露游戏内已经可见的信息（名字 / 身份 / AI / 房主），绝不带 `playerId`、`accountId`、IP 或 token；`guest` 由账号绑定推导，但不暴露绑定本身。旧字段（`code / difficulty / difficultyName / host / hostRole / humans`，及 `playRooms` 的 `bots / auto`）保持不变。
+- **数据**（`server/admin.js buildPublicSnapshot` → `GET /online/api`）：`openRooms`（手建公开同盟 → 组队中；`!r.auto` 的自动房不进目录）与 `playRooms`（进行中 → 对局中 → 「观战」）每个条目新增 `seats`：按席位顺序的 `MAX_SEATS`（=4）个元素，空席 / 已离开的席位为 `null`，否则 `{ name, role, guest, isBot, isHost }`（后加可选的 `agent` — Agent 席位 — 与 `avatar` — 账号立绘 / 头像）。**隐私**：只暴露游戏内已经可见的信息（名字 / 身份 / AI / 房主），绝不带 `playerId`、`accountId`、IP 或 token；`guest` 由账号绑定推导，但不暴露绑定本身。旧字段（`code / difficulty / difficultyName / host / hostRole / humans`，及 `playRooms` 的 `bots / auto`）保持不变。
 - **排序 / 满房显示观战（②）**：`openRooms` 现在也包含**大厅已满**（无空席）的公开同盟房，每条新增 `full: <boolean>` 与 `freeSeats`（空席数）。排序为**未满在前、已满在后**，组内保持人数降序（`(a.full - b.full) || (b.humans - a.humans)`）。
 - **公开房间列表不设上限（owner 2026-10-18）**：公开房间界面请求 **`GET /online/api?all=1`**，`openRooms` / `playRooms` **不截断**（主界面的「公开同盟 / 正在模拟」小列表仍取默认上限 12 / 4，并在 `screens/lobby.js` 自己 `slice` 成 3 / 4 条）——所以公开房间页显示**全部**公开房和全部进行中的房。`playRooms` 语义不变（已开局 → 观战，上限 4）。客户端 `screens/rooms.js` 的 `roomIsFull()` 用 `full` → `freeSeats` → 席位数判定；组队中区 `01` 的 `openRooms` 未满在前，操作按钮 **有空席＝「加入」、已满＝「观战」**；`02 对局中`（`playRooms`）恒为「观战」。大厅内联的 `PublicAlliances` 密钥 chips **跳过 `full` 房**，因此仍只显示可加入的。
 - **席位方块**：owner 的「4 squares」读作「每房 4 个合作席位各画成一个方块」——占用席位为实心方块（首次字形 = 名字首字，房主金冠、游客角标、AI 角标；用游戏自带的 `AvatarFrame`，空席位即其虚线 `is-empty` 样式），空席位为虚线方块 + 「空席位」。每方块下带截断的名字（`title` 为全名），席位区带 `席位` 无障碍标签。满房照常画出 4 个实心方块。
