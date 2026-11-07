@@ -18,7 +18,7 @@
 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §11）。
 
 本仓库**独立演进**（owner 2026-11-07 决定：主线仅作参考，不再合并）：在主线基础上维护了账号体系、野排匹配、公开同盟、在线状态与管理页、**观战 + 夺舍 AI**、
-**大厅社区（更新日志 / bug提交 / 公开房间）**、启动体验与带宽治理、**8 名自造干员**（§4；
+**大厅社区（更新日志 / bug提交 / 公开房间）**、启动体验与带宽治理、**8 名自造干员**（决策记录见 [`MATCHMAKING.md`](MATCHMAKING.md) §23–§37；
 `tools/build-data.mjs` 的 `CUSTOM_CHESS`）、**GitHub 主仓库 + Gitee 国内镜像**。
 
 ## 2. 目录与「唯一真相」
@@ -169,9 +169,9 @@
 - **观战 + 夺舍 AI**：`room.spectate` / `room.takeOver { seat }` / `room.releaseSeat`；观战席在队伍列表下方；夺舍后可接管棋盘 · 资金 · 调配，可退出回观战席；**游玩者恒 ≤ 4**。**观战者不续命**：最后一名真人玩家离开 → 房间（含对局）立即销毁（§20.5）。
 - **在线状态**：游客断线即离线；登录用户断线保留 **5 分钟**（`PRESENCE_GRACE_MS`）；大厅「在线 N」徽标 + 游戏内 `OnlineOverlay` + `/admin` 只读页。
 - **大厅社区**（§36）：同一个 SQLite（schema v4/v5）上的三块——**更新日志**（首启从 `CHANGELOG.md` 导入一次；每次推送通知自动追加一条）、**bug提交**（标题 + 描述 + ≤4 图，按字节嗅探 png/jpeg/webp，限流 + 孤儿清理，管理端可筛选 / 排序 / 导出 / 放大）、**公开房间**（独立整屏 `screens/rooms.js`）。**玩家留言刻意不做**。
-- **启动体验**：进标题前**预加载全部美术**（scope `all` ≈ 1910 张 / 104 MB，无跳过、无超时）+ 自托管背景视频（点击开声、无控件、标题出现即释放解码器）。
+- **启动体验**：标题页**先渲染**（字体 / socket / 语言就绪即出），美术预载改为**后台预热** —— 延迟 800 ms 启动、上限 `PRELOAD_DEADLINE_MS` 20 s，取消后剩余按需加载（§42/§44；2026-10-27 起，不再是「进标题前预加载全部」）。`collectArtUrls(manifest,'all')` **2026-11-07 点数 2,553 张 / 139 MB**（本节落笔时约 1910 张 / 104 MB）。另有自托管背景视频（点击开声、无控件、标题出现即释放解码器）。
 - **带宽治理**：`server/bootgate.js` **排队闸门**（同时只放一个客户端预加载；已缓存的访客不排队；断线 / 过期立即释放）。
-- **8 名自造干员**（`tools/build-data.mjs` `CUSTOM_CHESS`；kit 在 `server/sim/content/kits/ops/`；见 §8）：阿斯卡纶 `ascln`、结城理 `makoto`、予愿安洁莉娜 `aglna2`、望 `wang`、澄闪 `gdglow`、娜仁图亚 `narant`、凯尔希·思衡托 `kalts2`、克莱门莎 `clemnt`（6★ 本源近卫）。
+- **8 名自造干员**（`tools/build-data.mjs` `CUSTOM_CHESS`；kit 在 `server/sim/content/kits/ops/`；决策记录见 [`MATCHMAKING.md`](MATCHMAKING.md) §23–§37）：阿斯卡纶 `ascln`、结城理 `makoto`、予愿安洁莉娜 `aglna2`、望 `wang`、澄闪 `gdglow`、娜仁图亚 `narant`、凯尔希·思衡托 `kalts2`、克莱门莎 `clemnt`（6★ 本源近卫）。
 - **日语语音**：第二套语音树 `audio.voiceJp`；「设置 → 语音语言」切 中文 / 日本語（**默认日本語**，与界面语言无关）；选中语言逐条优先、缺则回退另一套；完整包带两套、精简包不带语音。
 - **统计数据**：`public/js/ui/stats.js` + `screens/stats.js`；**已同步服务器**（schema v5 `match_stats`），登录绑账号、游客绑本机会话身份，按 owner 隔离，可跨设备查看；统计页优先读服务器、断网回退 `localStorage`；上限取主线 **2×**（2000 局 / 最新 60 局完整 / 每 owner 1.6M 字符）。
 - **发布**：`node tools/push-gitee.mjs` 推 `HEAD` 到 `github` 主仓库 → `gitee` 国内镜像 → 分支 `master`（快进、绝不强推），再镜像回工作项目。主线仍是 `origin`。
@@ -187,7 +187,7 @@
 | `PRESENCE_GRACE_MS` | 5 分钟 | `shared/constants.js` |
 | `LOBBY_DEFAULTS.bootSlots` / `bootHoldMs` | `1` / `180000` | `server/lobby.js` |
 | `SP_VERIFY` | `sample`（**仅 Windows 启动脚本**） | `server-start.cmd` |
-| 静态缓存 | `/assets\|fonts\|vendor` 7 天；带 `?v=` 1 年 immutable | `server/index.js` |
+| 静态缓存 | `.html` / `.js` / `.mjs` / `.css` **`no-store`**（2026-10-23 起，保证部署后立刻拿到新代码）；其余静态媒体走 `LONG_CACHE` = **1 天**；带 `?v=` 或内容哈希的 URL **1 年 `immutable`** | `server/http/files.js`（`cacheControlFor`，`LONG_CACHE` / `IMMUTABLE_CACHE`） |
 | 中继静态缓存 | 同游戏机口径：带内容哈希的 URL（`~<hash>` 路径 / `?h=` 查询）1 年 `immutable`，普通路径与 `/media`、`/scene`、`/clip` 路由 7 天（随推送由 relay 的 hook 安装并 `nginx -t`） | `tools/relay/sp-relay.nginx.conf` |
 | 干员默认潜能 / 练度 | **`1` / 未精英化**（2026-10-15 owner 决定，官方对「未持有」干员的基准；数据仍在满潜构建，按 `potDown` 向下组合；可在「干员调配」里逐名调高。改动前是满潜 6 / 精英2 Lv.60） | `shared/potential.js`（`POTENTIAL_DEFAULT` / `CULTIVATE_DEFAULT`） |
 | `SP_ASSET_RATE_KBPS` | `1200`（服务器兜底素材下载限速 ≈1.2 MB/s；0 关闭） | `server/http/files.js` |
@@ -209,7 +209,7 @@ sqlite3 var/accounts.db                              # 表: accounts / sessions 
 .venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py --ffmpeg "<ffmpeg.exe>"
 node tools\fetch-assets.mjs --asset-source=mirror    # 直连被墙时用 gh-proxy 镜像
 # 发布（owner 规定顺序）：① 资源中转机 ② github 主仓 + gitee 镜像
-node tools/push-assets-relay.mjs                      # = npm run push:relay；推即部署 123.57.150.185
+node tools/push-assets-relay.mjs                      # = npm run push:relay；推即部署到 relay.strongholdprotocolcsym.top:56148（103.205.254.40，ssh -p 57435）
 node tools/push-gitee.mjs -m "本次改了什么"
 # 两个常备检查
 node tools/check-upstream.mjs                         # 主线有没有新提交 / 会冲突哪些文件 / 是否碰到 never-merge
@@ -219,7 +219,7 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 ## 8. 备份 / 回滚
 
 - **服务器**：`/root/sp-backup-*.tgz`（每次部署前打包 `server shared public docs [data]`）。回滚 = 解回项目 → 重新部署并重启。
-- **本地**：`D:\DOTK\_optim-backup-<日期>-<主题>\`。
+- **本地**：`D:\DOTK\_backup-<日期>-<主题>\` / `_hotfix-<主题>\` / `_merge-<主题>\` 等一次性副本（历史上叫过 `_optim-backup-*`；`_merge-scratch` 是真源、`_upstream-dev` 是主线参考，**都不在此列**）。
 - **git 回退点**：tag `backup/pre-3d-scenes`、`backup-pre-groupA`，分支 `backup/ours-pre-reconcile-20261013`（见 [`docs/HANDOVER.md`](HANDOVER.md)）。
 
 ## 9. 已知问题 / 待办
@@ -263,7 +263,7 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   `limits.maxSets` 解耦，改为 **`MAX_HOSTS = 6`**（此前 128，而每个 host 是独立进程）。
 - **复现与实测**（同一套代码，40 个不同内容组合，`--expose-gc`）：RSS **855 → 520 MB**、堆 298 → 118 MB、
   ArrayBuffer 292 → 112 MB。`contentSetFiles` 的复制保留（防调用方改坏缓存，`test/plugins/contentSet.test.js` 断言）。
-- **未做**：线上仍是旧代码，重启后才会生效（需发通知）。
+- **未做**：线上仍是旧代码，重启后才会生效（需发通知）。**（2026-10-27 22:56 那批重启后已生效，见 §3 的 `0.4.75` 行。）**
 
 **2026-10-27 核心皮肤：服务器已迁移，本机已拉取；存储已清理**
 
@@ -319,7 +319,7 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 - **AI 机器人训练（2026-10-23）**：`var/training.db` 共 **11,296** 行（最近采样 15:19），v2 之后新增 **2,155** 行；夜间 `04:30/05:30` 的 `--auto` 多次因有活跃对局被跳过，因此手动用 `tools/train-bot.mjs` 发布 **v3**。v3 回测：**27,727** 候选样本、1,906 回测样本、top-1 **56.45%**、平均 regret **22.59**（v2 为 55.87% / 26.88），门槛通过；旧模型备份 `/root/botPrior-v2-20261023-160015.json`，发布报告 `var/training/report-2026-10-23.json`。`botPrior.js` 在下一次机器人备战时热加载，因此发布后 `/healthz` 在热加载前仍会显示 v2；操作细节见 `docs/DEPLOY.md`。
 - **仍未修：** `public/js/screens/settle.js` 仍保留旧占位 `UnofficialMark = () => null` / `isModdedRoom = () => false`。改变玩法插件的对局在结算页不显示「非官方」，且 `levelProgress.counted` 会被当成官方对局；详见 `PLUGIN-BACKLOG.md` P2-6。
 - 充能层数已接入 `server/sim/snapshot.js` 的 `charges` / `chargeView`，不再是“只有技力、没有层数”的旧状态。
-- trusted 原生插件的生产隔离、安装 CLI 签名 / pin、跨浏览器插件 E2E、首屏素材带宽仍是既有未完成项。
+- 仍未完成：**trusted 原生插件的生产隔离**（现在只有 `server/plugins/trusted.js` 的白名单 / pin，没有容器级隔离）、**安装 CLI 的 Ed25519 校验**（CLI 目前只校验 SHA-256；签名只在商城上传侧校验，见 [`PLUGIN-SUPPLY-CHAIN.md`](PLUGIN-SUPPLY-CHAIN.md)）、**跨浏览器插件 E2E**（`test/e2e/` 下仍没有 plugin 套件）；**首屏素材带宽**见本节的待办。
 - 旧记录（2026-10-20）如下，保留作对照：
 
 **接手须知（2026-10-20 复核）**
@@ -329,14 +329,14 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   - **笔记本（`masai` 单树，2026-10-16 夜，旧记录）**：**7081 / 7060 / 3 / 18**；3 个失败均为负载抖动（限速桶计时 + 重装 boss 性能阈值），单跑全绿。
   - 曾经的第 4 个失败 `test/render/token-wang-stone.test.js:48`（望的棋子模型）**已转绿**：那是该机 `data/local-assets.json`（per-machine）缺 `spine/token/*`，补回 41 个 spine 组即可；注意**服务端清单是 committed ∪ per-machine 的并集**，所以客户端其实一直能画官方棋子模型（详见 `docs/ASSETS.md`）。
   - **需要外网的门禁**：`check-delivery --live`（中继 / 镜像）与 `build-data --refresh`；台式机 store 的 `build-data --offline` 已通过（`data/` 零漂移）。
-- **github 推送** 直连 `:443` 可能被重置，走本机代理 `127.0.0.1:31181`：`git -c http.proxy=http://127.0.0.1:31181 push --no-thin github HEAD:refs/heads/master`；gitee 与中转机不受影响。
+- **github 推送**：直连 `:443` 可能被重置；现走 Steam++（hosts → `127.0.0.1`）+ `http.schannelCheckRevoke=false`。旧的 `127.0.0.1:31181` 本机代理**已失效**（2026-11-02 推送时要显式绕过），不要再写进命令。gitee 与中转机不受影响。
 - **中转机 root 密码** 曾用于开通，建议在阿里云面板重置（已装部署密钥 `~/.ssh/sp-deploy`，日常不需要密码）。
 - **充能型技能的层数（2026-10-23 已修）**：`server/sim/snapshot.js` 的 `charges` / `chargeView` 已进入快照，客户端 `render/interp.js` 也读取；不再是“只有技力、没有层数”。
 - **冷启动页面字节**（`public/js` + `data`，约 4–6 MB）仍由游戏机提供且不限速 —— 游戏机上目前唯一的带宽大头。
 
-- [ ] **推送 / 上线今天的特效收尾**（15 个提交：官方特效的还原度修正、望 S3 每次 3 枚跟子、文档梳理）—— **等 owner 发话**（默认「先不上线」；这批没有美术文件，推送不必先走美术中继）。见 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §49。
+- [x] **特效收尾已上线**（15 个提交：官方特效还原度修正、望 S3 每次 3 枚跟子、文档梳理）：2026-10-17 00:31 重启，build `adea09d5e893`（§3 的 `0.4.31` 行）。见 [`docs/MATCHMAKING.md`](MATCHMAKING.md) §49。
 - [ ] **`SP_VERIFY` 在 Linux 上没开**（线上不抽检战斗结果）。要开：在宝塔的 `server.sh` 加 `export SP_VERIFY=sample`（面板重建脚本会覆盖，注意）。
-- [ ] **首屏带宽**：新访客仍要下 ~104 MB 美术（scope `all`）+ 12 MB 视频。可选：降到 `ui`（−30 MB）、或把 `public/assets` 迁 CDN / OSS。
+- [ ] **首屏带宽**：新访客仍要下 `scope=all` 的美术（**2026-11-07 点数 2,553 张 / 139 MB**，后台预热、不阻塞标题）+ 12 MB 视频。可选：降到 `ui` 集（同日 **2,128 张**）、或把 `public/assets` 迁 CDN / OSS。
 - [ ] **观战席可见范围**：目前房间里所有人都能看到那个下拉；可改成「仅观战者可见」。
 - [ ] **攻击前冲 / 浮空技能**（主线 v0.1.3 #61 / #23）已实现，**待实机验手感**。
 - [ ] B 站宣传视频：见 §11 产物。
@@ -362,7 +362,7 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
 ## 11. 产物
 
 - 文档：本文件、[`docs/MATCHMAKING.md`](MATCHMAKING.md)（决策记录）、[`docs/HANDOVER.md`](HANDOVER.md)（接手入口）、[`docs/QUERY-INDEX.md`](QUERY-INDEX.md)（查询索引）。
-- 宣传片：`docs/promo/`（B 站宣传视频脚本 + 成片）。
+- 宣传片：脚本 / 成片**不进仓库**（B 站用法见 [`RELAY.md`](RELAY.md) 的公告文案）；本机旧的 `docs/promo/` 已不在，服务器上的 promo 素材也已在 2026-10-27 的存储清理里删除（§9）。
 - 发布：GitHub 主仓库 + Gitee 国内镜像（见 §5 发布一条与 [`docs/AI-WORKFLOW.md`](AI-WORKFLOW.md)）。
 
 ## 12. 2026-10-20 上线记录
