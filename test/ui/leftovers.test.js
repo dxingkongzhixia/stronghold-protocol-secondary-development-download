@@ -203,11 +203,14 @@ describe('2. boss-round countdown and the overtime (DOT) warning', () => {
     assert.equal(countdownState(fa.deadline, T0 + 121_000, 120).bars, 0);
   });
 
-  test('no warning early on; pending once the level time ran out (or within 30 s); draining from overtimeAt', () => {
+  test('no warning early on; pending once within 60 s of the drain (also before the countdown ends); draining from overtimeAt', () => {
     assert.equal(overtimeState(fa, T0 + 10_000), null);
     assert.equal(overtimeState(fa, T0 + 150_000 - (OVERTIME_WARN_BEFORE + 1) * 1000), null);
+    // 60 s warning with a 120 s countdown / 150 s drain: appears 30 s BEFORE the countdown ends, not at 00:00
+    assert.deepEqual(overtimeState(fa, T0 + 91_000), { state: 'pending', secs: 59 });
+    assert.deepEqual(overtimeState(fa, T0 + 100_000), { state: 'pending', secs: 50 });
     assert.deepEqual(overtimeState(fa, T0 + 121_000), { state: 'pending', secs: 29 });
-    assert.deepEqual(overtimeState({ ...fa, deadline: 0 }, T0 + 125_000), { state: 'pending', secs: 25 }, 'no level countdown: 30 s before');
+    assert.deepEqual(overtimeState({ ...fa, deadline: 0 }, T0 + 125_000), { state: 'pending', secs: 25 }, 'no level countdown: 60 s before');
     assert.deepEqual(overtimeState(fa, T0 + 150_000), { state: 'drain', secs: 0, lost: 0, perSec: 1 });
     // server gamedata.js bossOvertimeDue: 1 LP per whole real second past overtimeAt
     assert.deepEqual(overtimeState(fa, T0 + 157_400), { state: 'drain', secs: 7, lost: 7, perSec: 1 });

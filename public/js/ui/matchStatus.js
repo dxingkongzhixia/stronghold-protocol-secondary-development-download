@@ -18,8 +18,12 @@ const PAUSE_PHASES = new Set([PHASE.COMBAT, PHASE.FINAL_ASSAULT, PHASE.HIDDEN_CO
 
 /** Level time of a boss round when the config does not say (research 01 §3: maxPlayTime 120 s). */
 export const BOSS_LEVEL_SECONDS = 120;
-/** The pending overtime warning shows this many seconds before the drain even while the level countdown still runs. */
-export const OVERTIME_WARN_BEFORE = 30;
+/**
+ * The pending overtime warning shows this many seconds before the drain, even while the level countdown still runs.
+ * It must be LARGER than the gap between the countdown and the drain (bossOvertimeAfter − levelMaxPlayTime = 30 s:
+ * 120 s vs 150 s), or the warning can only appear once the countdown already reads 00:00.
+ */
+export const OVERTIME_WARN_BEFORE = 60;
 
 /**
  * The level's countdown length (s) of a boss round — the gauge total of the 120 s countdown.
