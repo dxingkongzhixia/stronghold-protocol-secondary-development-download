@@ -807,7 +807,13 @@ export class FxWiring {
     const sk = this.skills.attackFx(src, tgt, kind, info.skillOn);
     const u = this.unitOf(src);
     const nth = this.attackN.get(src.id ?? src.info?.id) || 0;
-    const set = sk?.replace ? null : this._attackSet(u, this.mode(u, src, info.skillOn), src, tgt, kind, nth);
+    let set = sk?.replace ? null : this._attackSet(u, this.mode(u, src, info.skillOn), src, tgt, kind, nth);
+    // the same MODE_ROW_GUARD as attack(): the wind-up's cast rows come from the mode too
+    const guard = (sk && sk.drop) || (this.skills.of(src)?.plan?.dropModeKeys) || null;
+    if (set && guard) {
+      const keepRows = (rows) => (rows || []).filter((e) => !(e.effects || []).some((k) => guard.test(String(k))));
+      set = { ...set, cast: keepRows(set.cast), hit: keepRows(set.hit), groups: Array.isArray(set.groups) ? set.groups.map(keepRows) : set.groups };
+    }
     // a funnel shot's casts on its floating unit (耶拉's token) start with the owner's wind-up
     const fun = this.funnels.castStart(src, tgt, kind, info);
     if (!set && !sk) return fun;
@@ -840,7 +846,16 @@ export class FxWiring {
     const again = this.castFrame.get(id) === this.skills.frame;
     const nth = Math.max(0, (this.attackN.get(id) || 0) - (again ? 1 : 0));
     const set = this._attackSet(u, this.mode(u, src), src, tgt, kind, nth);
-    const a = sk?.replace ? null : set;
+    // index.json rows of a mode that belong to ANOTHER skill of the same operator (skills.js MODE_ROW_GUARD):
+    // dropped while that other skill is not the one running (owner report: 莫斯提马 S2 played 序时之匙's attack rows)
+    let a = sk?.replace ? null : set;
+    // the plan carries the guard even when the skill itself adds no attack rows (attackFx returns null then), so read
+    // it from the skill state
+    const guard = (sk && sk.drop) || (this.skills.of(src)?.plan?.dropModeKeys) || null;
+    if (a && guard) {
+      const keepRows = (rows) => (rows || []).filter((e) => !(e.effects || []).some((k) => guard.test(String(k))));
+      a = { ...a, cast: keepRows(a.cast), hit: keepRows(a.hit), groups: Array.isArray(a.groups) ? a.groups.map(keepRows) : a.groups };
+    }
     if (tgt) this.lastTargets.set(id, tgt);
     // the 驭械术士's floating units (render/vfx/funnelfx.js): they leave home and hit with the attack, or fly the funnel
     // shot from their point; the body shot of another target of the same attack is not flown (`skipBody`)

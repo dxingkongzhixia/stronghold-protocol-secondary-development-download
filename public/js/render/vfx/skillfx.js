@@ -747,7 +747,7 @@ export class SkillFx {
     // the projectile its ability fires (index v3: abilities[].projectileKey, a use's projectileKey), else the naming guess
     const projectile = fits && ranged ? fx.projectile || skillProjectile(this.w.idx, st.plan) : null;
     if (!replace && !fx.cast.length && !fx.hit.length && !st.U.tHit.length) return null;
-    return { U: st.U, fx, replace, projectile, shot: replace ? fx.shot : null, buffs: st.U.tHit, late: forced };
+    return { U: st.U, fx, replace, projectile, shot: replace ? fx.shot : null, buffs: st.U.tHit, late: forced, drop: st.plan.dropModeKeys || null };
   }
 
   /**

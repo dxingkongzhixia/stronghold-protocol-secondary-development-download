@@ -635,6 +635,7 @@ export function skillPlan(idx, unitKey, skillId, opts = {}) {
     attach = attachUses(unit?.modes?.[skill.mode]);
   }
   if (typeof skill.rootClass === 'string' && skill.rootClass) plan.rootClass = skill.rootClass;
+  if (MODE_ROW_GUARD[id]) plan.dropModeKeys = MODE_ROW_GUARD[id];
   const projs = isObj(idx.projectiles) ? idx.projectiles : {};
   for (const k of Array.isArray(skill.projectiles) ? skill.projectiles : []) {
     const kk = lc(k);
@@ -1354,6 +1355,16 @@ export const EXTRA_STATUS_LOOPS = Object.freeze({
  */
 export const STATUS_CARRIED = Object.freeze({
   skchr_tocka_2: Object.freeze(['tocka_skill_02_buff_02']),
+});
+
+/**
+ * Extracted MODE attack rows that belong to a DIFFERENT skill of the same operator (owner report 2026-11-07: 莫斯提马
+ * S2 荒时之锁 played 序时之匙's (S3) attack effects). index.json has one non-default mode for her, named `S2`, whose
+ * cast/hit rows are `mostma_skill_03_*`; both skills point at it, so the client drops the mismatched rows while the S3
+ * skill is not the selected one. The skill's own `roles` rows (mostma_skill_02_*) still play.
+ */
+export const MODE_ROW_GUARD = Object.freeze({
+  skchr_mostma_2: /^mostma_skill_03_/i,
 });
 
 export const FX_BINDINGS = Object.freeze({

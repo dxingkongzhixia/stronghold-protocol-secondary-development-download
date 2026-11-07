@@ -452,7 +452,11 @@ async function main() {
     ofx.clear(); wiring.clear(); demo.on = false;
     const u = index?.units?.[unitKey];
     const enemy = /^enemy_/.test(unitKey);
-    const ids = u ? Object.keys(u.skills || {}) : [];
+    // skill slots in index order where the id says it (skchr_x_3 → slot 3); a generic skcom_* first (an operator's
+    // S1 is usually the generic ATK/charge skill). The key order of `units.skills` is NOT the slot order (莫斯提马's
+    // map is skchr_mostma_2, skchr_mostma_3, skcom_atk_up), which used to shift every demo by one slot.
+    const slotOf = (id) => (/^skcom_/i.test(id) ? -1 : (Number((/_(\d+)$/.exec(id) || [])[1]) || 90));
+    const ids = u ? Object.keys(u.skills || {}).sort((a, b) => slotOf(a) - slotOf(b)) : [];
     const sid = o.sid || ids[Math.max(0, Math.min(ids.length - 1, o.s | 0))] || null;
     const left = o.left ?? state.left, dist = o.dist ?? 3;
     sk.o = { kind: o.kind || 'none', hits: Math.max(1, o.hits | 0 || 1), instant: !!o.instant, passive: !!o.passive, charge: o.charge | 0, ready: !!o.ready, manual: !!o.manual, s: o.s | 0 };
