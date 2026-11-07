@@ -14,10 +14,10 @@ import { presetCamera } from '../../public/js/render/projection.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const ASSETS = JSON.parse(readFileSync(path.join(ROOT, 'data/assets.json'), 'utf8'));
 
-let fake, UnitView, T;
+let fake, UnitView, SPINE_RETRY_MS, T;
 before(async () => {
   fake = installFakePixi();
-  ({ UnitView } = await import('../../public/js/render/units.js'));
+  ({ UnitView, SPINE_RETRY_MS } = await import('../../public/js/render/units.js'));
   T = await import('../../public/js/render/textures.js');
 });
 after(() => fake.restore());
@@ -133,6 +133,31 @@ describe('fallback portraits (avatar diamonds)', () => {
     b.update(1 / 60, cam(), 0);
     assert.equal(diamonds().length, before);
     assert.equal(a.fallback.texture, b.fallback.texture);
+  });
+
+  test('a model that goes away brings the diamond back (the fallback is never skipped)', async () => {
+    const v = view({ defId: 'char_f', avatar: 'char_f' }, {}, store({ spine: true }));
+    await tick(); await tick();
+    for (let i = 0; i < 30; i++) v.update(1 / 60, cam(), i / 60);
+    assert.equal(v.fallback.visible, false, 'the cross-fade hid it while the model showed');
+    v._dropActor(); // a reload that never delivered / a Front ⇄ Back swap that failed
+    v.update(1 / 60, cam(), 1);
+    assert.equal(v.fallback.visible, true, 'no model → the diamond must show');
+    assert.notEqual(v.fallback.texture, fake.P.Texture.EMPTY);
+  });
+
+  test('a model that keeps failing is retried for good (the last interval repeats)', async () => {
+    const entry = { skel: '/s/x.skel', atlas: '/s/x.atlas', textures: ['/s/x.png'], anims: { idle: 'Idle' }, animations: { Idle: 1 } };
+    const assets = {
+      ...store(),
+      spineEntry: () => entry,
+      spine: { acquire: async () => { throw new Error('nope'); }, release() {} },
+    };
+    const v = view({ defId: 'char_g', avatar: 'char_g' }, {}, assets);
+    v._spineTries = SPINE_RETRY_MS.length; // pretend every bounded retry was already used
+    await tick(); await tick();
+    assert.equal(v.spineReady, false);
+    assert.ok(v._retryAt > 0, 'the view keeps asking after the last bounded wait');
   });
 });
 

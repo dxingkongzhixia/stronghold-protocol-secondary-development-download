@@ -159,9 +159,10 @@ const ICE_FRAME = 0x9fe6ff;
 /** How long a view waits for its avatar before showing the image-less placeholder diamond. */
 const PIC_WAIT_MS = 400;
 /**
- * Waits (ms, real time) before a view loads its Spine model again after the load failed or timed out (assets.js, 20 s)
- * — bounded: after the last one the view keeps its diamond until `retryAssets` (a manifest that arrived late, the tab
- * shown again). Counted from the failure; a hidden tab runs no frames, so nothing is retried while hidden.
+ * Waits (ms, real time) before a view loads its Spine model again after the load failed or timed out (assets.js, 20 s).
+ * The last interval repeats for good (a model missing when the battle began still appears when the link recovers); the
+ * view keeps its fallback diamond meanwhile, and `retryAssets` (a late manifest, the tab shown again) retries at once.
+ * Counted from the failure; a hidden tab runs no frames, so nothing is retried while hidden.
  */
 export const SPINE_RETRY_MS = Object.freeze([2000, 6000, 15000, 30000]);
 /**
@@ -857,8 +858,14 @@ export class UnitView {
       this._releaseEntry(entry);
       if (this.destroyed || req !== this._spineReq) return;
       if (entry.fallback) { this._acquireSpine(entry.fallback, id, retry); return; }
-      // keep the fallback diamond (or the model already shown: a failed Front ⇄ Back swap) — and try again later
-      if (!this.actor && this._spineTries < SPINE_RETRY_MS.length) this._retryAt = nowMs() + SPINE_RETRY_MS[this._spineTries++];
+      // keep the fallback diamond (or the model already shown: a failed Front ⇄ Back swap) and try again later. The
+      // last interval repeats for good: a model that could not be loaded when the battle began (a slow link, a phone
+      // waking up, the tab backgrounded) must still appear when the network recovers, without a page reload.
+      if (!this.actor) {
+        const wait = SPINE_RETRY_MS[Math.min(this._spineTries, SPINE_RETRY_MS.length - 1)];
+        if (this._spineTries < SPINE_RETRY_MS.length) this._spineTries++;
+        this._retryAt = nowMs() + wait;
+      }
     });
   }
 
@@ -1271,6 +1278,11 @@ export class UnitView {
     const old = this.actor;
     this.actor = null;
     this.spineReady = false;
+    // nothing is drawn between this drop and the next model: put the diamond back (the next update also guards this,
+    // but a swap that completes inside the same frame must not leave a stale hidden fallback behind)
+    this.fallback.visible = true;
+    this.fallback.alpha = 1;
+    this.swapT = 0;
     if (old) { try { old.destroy(); } catch { /* ignore */ } }
     if (this._actorEntry) this._releaseEntry(this._actorEntry);
     this._actorEntry = null;
@@ -1728,8 +1740,16 @@ export class UnitView {
         this._drawDirect(sc, flip, tint, animDt, held);
       }
     }
-    // the diamond is only needed while no model shows (a cross-fade keeps whatever diamond was already up)
-    if (!spineShown) this._ensurePicture();
+    // the diamond is the floor of the draw path: while no model shows it must be up, whatever the view drew before
+    // (a model that was dropped for a reload / a failed Front↔Back swap / a load that timed out). Without this the
+    // sprite could stay hidden from the last cross-fade and the unit vanished with nothing but its HP bar (owner
+    // report 2026-11-07: “兜底都不走了”).
+    if (!spineShown) {
+      this._ensurePicture();
+      this.fallback.visible = true;
+      this.fallback.alpha = 1;
+      this.swapT = 0;
+    }
     if (!spineShown || this.swapT < 1) {
       const size = s * UNIT.diamond * (this.isBoss ? 1.5 : 1);
       const bob = this.alive ? Math.sin(t * 2.4 + this.bob) * s * 0.03 : 0;

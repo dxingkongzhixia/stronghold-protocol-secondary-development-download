@@ -256,7 +256,7 @@ describe('views re-resolve and retry (render/units.js)', () => {
     assert.equal(v._pic.state, 'img', 'and its avatar is known for the diamond');
   });
 
-  test('a failed / timed-out model is loaded again after SPINE_RETRY_MS (bounded); a success ends the retries', async () => {
+  test('a failed / timed-out model is loaded again after SPINE_RETRY_MS (the last wait repeats); a success ends the retries', async () => {
     assert.deepEqual([...SPINE_RETRY_MS], [2000, 6000, 15000, 30000]);
     let calls = 0, fail = true;
     const a = createAssets({ manifest: M, loadImage: async () => IMG, unloadSpine: () => {},
@@ -276,7 +276,7 @@ describe('views re-resolve and retry (render/units.js)', () => {
       await tick(); await tick();
     }
     assert.equal(calls, 1 + SPINE_RETRY_MS.length, 'bypassing the remembered failure (acquire { retry })');
-    assert.equal(v._retryAt, 0, 'bounded: no more retries');
+    assert.ok(v._retryAt > 0, 'past the list the last interval repeats (a model missing when the battle began still appears later)');
     for (let i = 0; i < 5; i++) v.update(1 / 60, cam(), 0);
     await tick();
     assert.equal(calls, 1 + SPINE_RETRY_MS.length);

@@ -51,6 +51,7 @@
 // caller falls back (docs/ASSETS.md "Other fallbacks").
 
 import { cosmetics, createCosmeticLayers, EMPTY_MANIFEST } from './cosmetics.js';
+import { nextMirrorCandidate } from './assetMirror.js';
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const str = (v) => (typeof v === 'string' && v ? v : null);
@@ -632,8 +633,19 @@ export function localAssetUrl(m, group, name) {
   return isObj(e) ? str(e.path) : null;
 }
 
-/** Default browser image loader. */
+/** Default browser image loader. A mirrored URL walks the rest of the chain before failing (mirror → … → this server),
+ *  the same order `installImageFallback` gives DOM `<img>` elements: an image this loader renders (a portrait, a UI
+ *  icon, a board texture) must not stay missing because the chosen mirror lacked the file. */
 export function loadImageElement(url) {
+  return loadOneImage(url).catch((err) => {
+    const next = nextMirrorCandidate(String(url));
+    if (!next || next === url) throw err;
+    return loadImageElement(next);
+  });
+}
+
+/** One attempt: the `Image` for `url` (rejects on error). */
+function loadOneImage(url) {
   return new Promise((resolve, reject) => {
     if (typeof Image === 'undefined') { reject(new Error('no Image in this environment')); return; }
     const img = new Image();

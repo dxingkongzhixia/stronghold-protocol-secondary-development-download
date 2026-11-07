@@ -10,8 +10,9 @@ import {
   avatarUrl, portraitUrl, enemyIconUrl, tokenAvatarUrl, bondIconUrl, bandIconUrl, itemIconUrl, skillIconUrl, uiUrl,
   profIconUrl, subProfIconUrl, spineEntry, hasBackSpine, unitPictureUrl, bgmEntry, sfxUrl, unitSfxUrl, baseCharId,
   validSpine, RefLru, createAssets, unloadSpineData, spinePages, spineDataWeight, SPINE_WEIGHT_MIN, SPINE_IDLE_BYTES,
-  SPINE_IDLE_GRACE_MS, SPINE_EVICT_DELAY_MS, SPINE_QUIET_DELAY_MS,
+  SPINE_IDLE_GRACE_MS, SPINE_EVICT_DELAY_MS, SPINE_QUIET_DELAY_MS, loadImageElement,
 } from '../../public/js/assets.js';
+import { setMirrorPrefix } from '../../public/js/assetMirror.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -622,5 +623,32 @@ describe('spine unload frees the atlas page images too', () => {
       pending.shift()();
       assert.equal((await p2).from, e.skel);
     } finally { f.restore(); }
+  });
+});
+
+describe('loadImageElement mirror fallback', () => {
+  test('a mirrored URL that fails walks the chain to this server before giving up', async () => {
+    const tries = [];
+    class FakeImage {
+      set src(u) {
+        tries.push(u);
+        queueMicrotask(() => {
+          if (u.startsWith('https://mirror.test/')) this.onerror?.(new Error('404'));
+          else this.onload?.();
+        });
+      }
+    }
+    const prev = globalThis.Image;
+    globalThis.Image = FakeImage;
+    setMirrorPrefix('https://mirror.test', true, ['https://mirror.test']);
+    try {
+      // the form a mirrored manifest hands out: the `~<16 hex>` segment moved into `?h=`
+      await loadImageElement('https://mirror.test/assets/char/x.png?h=0123456789abcdef');
+    } finally {
+      globalThis.Image = prev;
+      setMirrorPrefix('');
+    }
+    assert.ok(tries.length >= 2, `the loader retried: ${tries.join(', ')}`);
+    assert.ok(tries.includes('/assets/~0123456789abcdef/char/x.png'), `this server is the last tier: ${tries.join(', ')}`);
   });
 });
