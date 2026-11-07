@@ -481,6 +481,9 @@ function MatchScreen() {
   // m.field re-render): kept per fieldId and replayed on enter so no unit's 'spawn' UnitInfo is ever lost.
   const evBufRef = useRef(new Map());   // fieldId → ev tuples since that field's m.field
   const snapBufRef = useRef(new Map()); // fieldId → latest snapshot
+  // fieldId:round keys already asked for a later fieldMeta (the self-heal of a battle entered before its allies were on
+  // the field). One ask per battle: reshow sends a new m.field, whose re-entry must not ask again in a loop.
+  const healedRef = useRef(new Set());
   // a new m.field for the field already on screen (a resync, or the runner re-showing it after a hidden-tab backlog
   // overflowed): its frames are buffered like a new field's until the enter effect re-enters it — enterBattle resets
   // the view, so a 'spawn' or form fx pushed in between used to be lost (placeholder views, the old model)
@@ -646,6 +649,27 @@ function MatchScreen() {
       hudRef.current = snapHud(earlySnap);
       setHud(hudRef.current);
     }
+    // Self-heal a battle entered before its side was on the field: the meta of a round's first frame can name no
+    // deployed ally yet (the sim deploys them on its first tick), and the deploy spawns that would teach the renderer
+    // their UnitInfo can be lost to the prep→battle switch. The battle then shows enemies only while the player's own
+    // operators stay invisible until a page reload asks for a later fieldMeta. Ask for that later meta ourselves once
+    // the battle is running: reshow (local) / g.watch (server-run) sends the field + a fresh snapshot, and the view
+    // re-enters it (a new m.field object) exactly like a refresh would.
+    let heal = null;
+    const allyOnField = units.some((u) => u && u.side === 'ally' && u.kind !== 'item' && u.area !== 'hand' && u.area !== 'temp');
+    const healKey = `${field.fieldId}:${pub?.round ?? ''}`;
+    if (!field.prep && alive && !allyOnField && !healedRef.current.has(healKey)) {
+      healedRef.current.add(healKey);
+      if (healedRef.current.size > 32) healedRef.current.delete(healedRef.current.values().next().value);
+      heal = setTimeout(() => {
+        if (viewModeRef.current !== 'battle' || enteredFieldRef.current !== field) return;
+        try {
+          if (field.local) battleRunner?.reshow?.();
+          else if (combat || watchingOther) net.request('g.watch', { fieldId: field.fieldId }).catch(() => {});
+        } catch { /* the next m.field / round retries */ }
+      }, 800);
+    }
+    return () => { if (heal) clearTimeout(heal); };
   }, [view, showPrep, priv, editable, field, combat, mode, watchingOther, watching, holdSeq]);
 
   // A finished field has a cosmetic tail; a paused/stalled field retains its combat pose.
