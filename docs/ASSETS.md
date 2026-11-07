@@ -41,7 +41,7 @@ npm run assets       # = node tools/vendor.mjs && node tools/fetch-assets.mjs
 | `--dry-run` | Print the plan (file and model counts, alias notes) and exit. |
 | `--refresh-index` | Re-download the upstream indexes: `audio_data.json`, `charword_table.json` (the 干员战斗语音 slots) and `models_data.json`. |
 | `--voice-lang=cn` | The dub of `audio.voice` (the 中文 voice setting): `cn` (default) | `jp` | `en` | `kr` — the same file names under `voice_cn/`, `voice/`, `voice_en/`, `voice_kr/`. `audio.voiceJp` (the 日本語 setting) is **always** the JP dub (`voice/`): both trees are planned every run. |
-| `--voice-all` | Plan every official voice slot, including the prep-only lines no battle plays (干员报到 / 编入队伍 / 任命队长 — 360 files, one per operator and slot). Off by default: nothing requests them, so planning them only makes every run download more. |
+| `--voice-all` | Plan every official voice slot, including the prep-only lines no battle plays (干员报到 / 编入队伍 / 任命队长 — 732 files over the 200 planned operators on 2026-11-07, one per official voice line). Off by default: nothing requests them, so planning them only makes every run download more. |
 | `--prune` | Delete files under `public/assets/` that the manifest no longer references, for example after a mapping change. Without this flag they are only listed in the report. `public/assets/local/` (written by `tools/local-extract`) is never pruned. Implies `--allow-shrink`. |
 | `--allow-shrink` | Write `data/assets.json` even when it loses entries the current one has (see "The manifest never shrinks by accident" below). |
 | `--strict` | Exit 1 when a leaf was dropped for having no file on disk, instead of only reporting it (see "A dropped leaf is reported" below). The same as the environment variable `SP_ASSETS_STRICT=1` — for CI and packaging builds. |
@@ -95,9 +95,9 @@ How downloads are fetched:
 - A manifest entry with fallbacks (for example an enemy icon that falls back to its base enemy's icon) only moves on to the next alternative after a **definitive 404**. When the primary fails transiently (network error, 5xx or an invalid payload after all retries), no fallback is fetched. The path is listed under `downloadErrors` in the report, and the next run retries the primary.
 - A skeleton that fails to parse is deleted and removed from the ledger, so the next online run downloads it again.
 
-The first run downloads about **548 MiB in 10,643 files** (`stats` of `data/assets.json` in 0.2.2: 574,449,900 bytes). The two 干员战斗语音 dubs are 2,674 files each, the twelve slots a battle plays for 191 operators: the Chinese one 65.6 MiB, the Japanese one 85.2 MiB (89,388,041 bytes; adding it took 107 s at about 1 MB/s from raw.githubusercontent.com). A re-run takes about 1 s. The three prep-only slots the official client uses elsewhere (干员报到 / 编入队伍 / 任命队长, 360 more files per dub, 18.4 MiB of them Chinese) are left out unless `--voice-all` is passed.
+The committed set is **719 MiB in 11,582 files** (`stats` of `data/assets.json`, 2026-11-07; 0.2.2 was 574,449,900 bytes in 10,643 files). The two 干员战斗语音 dubs are **2,798 (CN) / 2,812 (JP) files**, the twelve slots a battle plays for **200 / 201 operators**: the committed copies are **89.1 MiB (CN)** and **130.3 MiB (JP, the larger local-client encoding; 136,605,930 bytes)**. (The 0.2.2 mirror download was 89,388,041 bytes of JP voice; the local encoding is larger.) A re-run takes about 1 s. The three prep-only slots the official client uses elsewhere (干员报到 / 编入队伍 / 任命队长, ≈730 more lines per dub on 2026-11-07) are left out unless `--voice-all` is passed.
 
-0.2.2 adds the Japanese dub beside the Chinese one (`audio.voiceJp`, settings 语音语言): the same lines from the dump's `voice/` folder into `audio/voice/jp/` — 2,702 more files. A run that fetches them from the mirror downloads about 85 MB; a machine with the local JP client can extract the compressed tree instead (`tools/local-extract/extract-voice.py --dub jp`, ~127 MiB of 96 kbps MP3s), so the committed `public/assets/audio/voice/jp/` here is that larger local encoding. The full release zip ships both dubs unless `tools/package.mjs` `FULL_ZIP_JP_VOICE` is set to `false`.
+0.2.2 adds the Japanese dub beside the Chinese one (`audio.voiceJp`, settings 语音语言): the same lines from the dump's `voice/` folder into `audio/voice/jp/` — **2,812 files today**. A machine with the local JP client can extract the compressed tree instead of downloading it (`tools/local-extract/extract-voice.py --dub jp`); the committed `public/assets/audio/voice/jp/` is that larger local encoding (130.3 MiB on 2026-11-07). The full release zip ships both dubs unless `tools/package.mjs` `FULL_ZIP_JP_VOICE` is set to `false`.
 
 Outputs:
 - `data/assets.json`: the manifest (committed).
@@ -208,8 +208,8 @@ The `stem` of a Spine model is the upstream file name. Two examples: `char_107_l
 
 ### Id scope
 
-- **Operators:** all 138 pool charIds from `activity_table` (`charShopChessDatas[*].charId ∪ backupCharId`), including hidden chess and backup operators; plus every unit of `data/backups.json` research 07 does not list — the 72 自选 owned-6★ picks (`diy.ownedPool`, DATA.md §18; the collab operators are not in the data, and 焰狐龙梓兰's entries left the manifest when she left the pool in 0.2.0) — planned from 07's URL patterns (`tools/assets/plan.mjs patternOperator`, `tools/fetch-assets.mjs dataExtras`): avatar and portrait (E0–E1 and E2), the default-skin battle Spine Front / Back, the icon and skill sound of each skill, the sub-profession icon. 209 operators in all (206 with a Back model).
-- **Tokens:** the 20 pool tokens, and the 38 summons of the 自选 picks (`data/backups.json tokens`) as extra tokens (below): their avatars; no dump carries the battle Spine of the 自选 summons (upstream has at most skin variants, which the default locations miss), so the web manifest has no model for them — 35 of them, and 4 pool summons, have the official model as an optional local-client overlay ("Token models from the local client"); 3 have no model in the game at all.
+- **Operators:** all 138 pool charIds from `activity_table` (`charShopChessDatas[*].charId ∪ backupCharId`), including hidden chess and backup operators; plus every unit of `data/backups.json` research 07 does not list — the 67 自选 owned-6★ picks (2026-11-07; 72 when this was written) (`diy.ownedPool`, DATA.md §18; the collab operators are not in the data, and 焰狐龙梓兰's entries left the manifest when she left the pool in 0.2.0) — planned from 07's URL patterns (`tools/assets/plan.mjs patternOperator`, `tools/fetch-assets.mjs dataExtras`): avatar and portrait (E0–E1 and E2), the default-skin battle Spine Front / Back, the icon and skill sound of each skill, the sub-profession icon. 221 operators in all (211 with a Back model; 2026-11-07).
+- **Tokens:** the 23 pool tokens and the 34 summons of the 自选 picks (`data/backups.json tokens`) as extra tokens today (2026-11-07; 57 distinct, 58 entries in the manifest): their avatars; no dump carries the battle Spine of the 自选 summons (upstream has at most skin variants, which the default locations miss), so the web manifest has no model for them — 40 tokens have the official model as an optional local-client overlay ("Token models from the local client"); the rest (mostly the 自选 summons) have no model in the game at all.
 - **Enemies:** 253 ids planned, 252 in the manifest (心烛 has no assets). The set is the union of:
   - the 07 enemy list;
   - every enemy in the `act1autochess_*` wave, boss and 联防 levels that act2 modes use (from `05-maps.json`; the tutorial is excluded);
@@ -220,7 +220,7 @@ The `stem` of a Spine model is the upstream file name. Two examples: `char_107_l
   - enemy units spawned by operator kits (research 03 skills/talents). For example, 隐德来希's default S3 summons 心烛 `enemy_5601_entlec` through the talent key `take_extra_enemy_key`. 心烛 has no icon and no Spine in any dump, so it has no manifest entry: it is reported as a miss, and the client must draw a glyph.
 - **Extra tokens:** any `token_*` key of `data/tokens.json` that research does not list gets the default avatar and Spine locations.
   - The non-token summons in that file (`enemy_9012_acloon` 炎佑, `char_605_cmedic`, `char_613_acmedc`) are found under `enemies` and `chars`.
-- **Skill icons:** every skill index of every planned operator (the default one first; DESIGN §16 loadouts, the 自选 picks' three skills): 522 icons.
+- **Skill icons:** every skill index of every planned operator (the default one first; DESIGN §16 loadouts, the 自选 picks' three skills): 548 icons (2026-11-07).
 - **UI:**
   - every group from `07-assets.json → autochessUi`: rarity, elite and chess-level sprites, the shop panel and cards, HUD, bond board, equip slot, round dialog, band choose, settlement, prepare backdrop;
   - `arts` (rarity stars, elite icons, the camp logos of pool nations, the loading illustrations used by the act2 modes, battle common sprites, act2 entry backdrops and season logo, item rarity frames);
@@ -311,7 +311,7 @@ All paths are URL paths relative to the site root, for example `/assets/char/ava
                            // draws one (public/js/audio.js voice); a slot whose lines are all missing on disk is left
                            // out (an operator with none has no entry), never an empty array. Only these twelve ever play (DESIGN §21.30): the
                            // prep-only slots 干员报到 / 编入队伍 / 任命队长 are left out of the plan by default —
-                           // nothing requests them and they cost 360 files (19.3 MB) per run — and `--voice-all` adds
+                           // nothing requests them and they cost ≈730 files per dub per run (2026-11-07) — and `--voice-all` adds
                            // them (audio.mjs VOICE_PREP_SLOTS) for the complete official set
     voiceJp: { [charId]: { …the same slots } },
                            // the Japanese dub (audio.voiceJp, the owner's request of 2026-10-08 「全套的日配语音」): the
@@ -447,7 +447,7 @@ Not mapped (clip names ambiguous): “自在”, “巨大的丑东西”, 主�
 is not known) keep their manifest clips.
 
 Other renderer rules from research 07 §5.4–5.5:
-- **Choosing the model:** Front when the unit faces right or down; Front mirrored when facing left; Back when facing up — while it stands: a dead or knocked-out operator falls and lies with the Front model unless its Back skeleton has a Die clip of its own (131 of the 135 have none; DESIGN §22.1, GitHub issue #25). A cast follows the same reasoning when the skill's animation exists only on the Front skeleton (the Back model's role for it is `via: 'attack'`, borrowed from the attack triple): the Front model is shown while the skill runs and until its clip ends (8 of this fork's operators, 德克萨斯 S2 剑雨 among them; GitHub issue #786; [ASSUMED] the official client's choice).
+- **Choosing the model:** Front when the unit faces right or down; Front mirrored when facing left; Back when facing up — while it stands: a dead or knocked-out operator falls and lies with the Front model unless its Back skeleton has a Die clip of its own (205 of the 211 Back skeletons today have none; 131 of 135 when this was written; DESIGN §22.1, GitHub issue #25). A cast follows the same reasoning when the skill's animation exists only on the Front skeleton (the Back model's role for it is `via: 'attack'`, borrowed from the attack triple): the Front model is shown while the skill runs and until its clip ends (8 of this fork's operators, 德克萨斯 S2 剑雨 among them; GitHub issue #786; [ASSUMED] the official client's choice).
 - **Attack speed:** set the attack `timeScale` to `duration / attackInterval`.
 - **Model size:** every skeleton is drawn at one `UNIT.modelScale` (render/style.js, 320 skeleton units per tile), which stands for the official standard. The official client also scales each enemy model in its battle prefab: the Graphic / FaceSwitcher / Spine transforms multiply to 0.27 for most enemies and for the operators' battle skins, but not for all of them. For example, 威龙 is 0.16, 妖怪 0.20 and 青铜镜 0.6. The skeletons themselves carry no such scale, because every enemy SkeletonDataAsset uses 0.01. So an enemy is drawn × data/enemies.json `modelScale` (its prefab's product ÷ 0.27, see docs/DATA.md; user playtest #6: 威龙 used to be drawn 1.35× a 妖怪 instead of 1.08×), and its HP bar sits on that model: at its setup-pose bounds' height × the same factors, or, for a skeleton without bounds, at the chibi headroom × `modelScale` (bosses 2.2 tiles). `tools/local-extract/enemy_scales.py` reads the products from a local client, and `tools/build-data.mjs MODEL_SCALES` keeps them. Two prefab quirks on top (PR #211 by @xcdoge; the owner's decision of 2026-10-06; docs/research/12 §3.1): the two 帝国炮火先兆者 are stretched vertically (`modelScaleY` 1.263: their Graphic scale is (0.19, 0.24, 0.24)) and 木制瑞印 is mirrored (`mirrorX`: a negative Graphic X scale) — `tools/local-extract/enemy_model_offsets.py` reads them, `tools/build-data.mjs MODEL_STRETCH_Y` / `MIRRORED_PREFABS` keep them.
 - **Flying units** hover `FLY_HOVER` = 1.3 tiles up (render/units.js; the client's single fly offset 0.35 in its character space, whose unit is the standard prefab scale 0.27 — docs/research/12) — an enemy flyer above the road whatever tile it crosses (a high-ground or forbidden block under it is no step, GitHub #277), an operator or summon above its tile: the body, its HP bar, damage numbers and hits ride the lift, the shadow stays on the ground tile (the block top under an enemy flyer crossing one), on the 2D and the 3D board alike (one camera drives both).
@@ -540,7 +540,7 @@ Other renderer rules from research 07 §5.4–5.5:
 
 ### Looking up `data/chess.json` asset ids
 
-`data/chess.json` stores asset **ids** in `chess[*].assets` (docs/DATA.md). They map onto this manifest as follows (checked for all 274 chess that carry `assets` — every record except the 8 DIY filler ids):
+`data/chess.json` stores asset **ids** in `chess[*].assets` (docs/DATA.md). They map onto this manifest as follows (checked for all 290 chess that carry `assets` — 298 records minus the 8 DIY filler ids, 2026-11-07; every record except the 8 DIY filler ids):
 
 | `assets` field | Example id | Manifest URL |
 |---|---|---|
@@ -560,8 +560,9 @@ each (`server/http/assetIndex.js`, `server/http/assetViews.js`):
 
 - Shortly after the start (1 s) the server hashes every file under `public/assets/` and `public/fonts/` in the
   background: SHA-256, the first 16 hex digits. The hashes are kept in `.cache/asset-hashes.json` by path + size +
-  mtime, so a restart only stats the files and reads none of the unchanged ones (12,691 files / 724 MB on the
-  maintainer's machine: 1.3 s for the first build, 0.25 s after that). A file whose size or mtime changed is hashed
+  mtime, so a restart only stats the files and reads none of the unchanged ones (28,451 files / 1,209,306,046 bytes on
+  the maintainer's machine; the rebuild that hashed 14 changed files took 2.5 s on 2026-11-07 — 12,691 files / 724 MB and
+  1.3 s / 0.25 s when this was written). A file whose size or mtime changed is hashed
   again; a re-extraction, `setup --force` or a Docker rebuild then costs the players only the files whose bytes changed.
 - `GET /data/assets.json` and `GET /data/local-assets.json` answer with every art URL carrying its file's hash as the
   first segment: `/assets/char/avatar/char_003_kalts.png` → `/assets/~398f32e2ff78d9e6/char/avatar/char_003_kalts.png`,
@@ -626,7 +627,7 @@ matches keep their bandwidth. This is a **fork-only** feature — the merge-crit
 - **`GET /asset-index.json`** (`server/assetindex.js`; route in `server/http/static.js`) →
   `{ version, app, revision, count, bytes, files, sources }`:
   - `files` — `{ url: byteSize }` for every cacheable file that `data/assets.json` (plus the committed / per-machine
-    local manifests) names under `/assets` and `/fonts` **and that exists on disk** (~14k files, ~828 MB here).
+    local manifests) names under `/assets` and `/fonts` **and that exists on disk** (15,065 files, 935,359,318 bytes here on 2026-11-07; ~14k / ~828 MB when written).
   - `revision` — a deterministic hash of `files` (`indexVersion`); an **equal revision means the client's cache already
     matches**, so nothing is downloaded. Rebuilt only when a source manifest changes (mtime-keyed cache).
   - `sources` — the fallback origins a cache miss may try, best first (`assetSources`): read straight out of
@@ -691,18 +692,19 @@ cleared by the player or the browser.
 **How the field test was run (2026-10-13).** Served the dev tree on `127.0.0.1:3100`; chose 缓存到本地; the cache filled
 to **2461 files / 138 MB**, revision matching the server; then **stopped the server** and fetched a cached asset — it
 still returned **200 / 56,617 B from the local cache**. The default pre-cache is the boot **image** set
-(`collectArtUrls(manifest, 'all')`, ~104 MB); the full index is ~828 MB and stays **on-demand** (or 立即缓存).
+(`collectArtUrls(manifest, 'all')`, ~104 MB); the full index is ~935 MB (2026-11-07) and stays **on-demand** (or 立即缓存).
 
 **Testing.** `test/asset-index.test.js` (collection / version / disk pass / mtime cache), `test/ui/asset-cache.test.js`
 (`syncPlan`, `cacheIsCurrent`, `candidatesFor`, `fetchArtFile` fallback + size check), `test/asset-rate-limit.test.js`
 (the token bucket), `test/ui/title-surfaces.test.js` (allows `public/sw.js`).
 
-### Without a Service Worker (the deployed site is plain HTTP, 2026-10-14)
+### Without a Service Worker (plain-HTTP origins, 2026-10-14; the filed site moved to HTTPS on 2026-10-27)
 
-The chain above is built on a Service Worker, which needs a **secure context**. The production box serves
-`http://<ip>:<port>`, so the worker never registers there and every byte used to come from the box (the owner's
-「此浏览器不支持本地缓存」). Three layers now cover that case, and all three stay dormant whenever the worker can
-register — so the HTTPS future keeps the better chain.
+The chain above is built on a Service Worker, which needs a **secure context**. The production box used to serve
+`http://<ip>:<port>`, so the worker never registered there and every byte used to come from the box (the owner's
+「此浏览器不支持本地缓存」). Since 2026-10-27 the filed site is `https://strongholdprotocolcsym.top:10785`, so the
+worker registers there again and the better chain applies. Three layers still cover an HTTP origin, an old link or a
+browser without Cache Storage, and all three stay dormant whenever the worker can register.
 
 - **The image manifests load from the CDN mirror** — `public/js/assetMirror.js` + the static
   `public/asset-mirrors.json` (a plain file: changing the list needs no restart). At boot it probes the mirrors with a
@@ -729,8 +731,10 @@ register — so the HTTPS future keeps the better chain.
   **Changing the encoding therefore also means bumping `assetIdb.js` `IDB_VERSION` and dropping the store on upgrade** —
   a browser that cached the old bytes would otherwise keep the bug forever, since the IDB sits under the app.
 - **The fallback chain (owner, 2026-10-14).** The order is the `sources` list of `public/asset-mirrors.json`, best
-  first: **the owner's own relay** (`http://123.57.150.185`, Aliyun Beijing, 200 Mbps, nginx over a clone of this repo's
-  `public/`; unmetered), then **GitHub and its mirrors** (gh-proxy → jsDelivr), then **this server** as the fallback.
+  first: **the owner's own relay** (`https://relay.strongholdprotocolcsym.top:56148` — the 宿迁 box, nginx over a clone
+  of this repo's `public/`; unmetered; moved there from the retired Aliyun Beijing box `123.57.150.185` on 2026-10-26),
+  then the plain-file CDN mirrors the file lists today (`cdn.jsdmirror.com`, `cdn.bring.cool`, `jsdelivr.b-cdn.net`,
+  then `gh-proxy`), then **this server** as the fallback.
   `js/assetMirror.js` installs the first origin that answers and rewrites the manifests' image URLs to it; a fetch that
   fails walks the rest of the chain — an `<img>` through the capture-phase error listener (`mirrorCandidates` /
   `nextMirrorCandidate`), the preload per image, and the audio / scene / clip routes through their own candidate lists
@@ -766,13 +770,13 @@ register — so the HTTPS future keeps the better chain.
   shape: `labelOf` recognised a relay only as a bare IP, which stopped matching when the relay moved to
   `relay.strongholdprotocolcsym.top:56148` (2026-10-26) and the TLS site needed an `https://` origin first.
 
-  > ⚠️ **An HTTPS site needs an HTTPS relay.** A page served over HTTPS may not fetch `http://…` subresources (the
-  > browser blocks them as **mixed content**, silently), so on the filed domain `strongholdprotocolcsym.top` the chain's
-  > first tier (`http://123.57.150.185`) would be dropped and every client would fall back to the CDN mirrors. Before the
-  > site moves to HTTPS, give the relay a certificate on a subdomain of the filed domain (e.g.
-  > `relay.strongholdprotocolcsym.top`) and list the `https://` origin first in `public/asset-mirrors.json` —
-  > `server/assetindex.js` `assetSources()` reads that order, so the Service Worker's chain follows it too. See
-  > `docs/DEPLOY.md` "域名与 HTTPS".
+  > ✅ **An HTTPS site needs an HTTPS relay — resolved 2026-10-27.** A page served over HTTPS may not fetch `http://…`
+  > subresources (the browser blocks them as **mixed content**, silently), so the old `http://123.57.150.185` first tier
+  > was dropped on the filed domain and every client fell back to the CDN mirrors. The relay now has a Let's Encrypt
+  > certificate on `relay.strongholdprotocolcsym.top` and `public/asset-mirrors.json` lists
+  > `https://relay.strongholdprotocolcsym.top:56148` first — `server/assetindex.js` `assetSources()` reads that order, so
+  > the Service Worker's chain follows it too. Keep it that way: an HTTP origin first would be blocked on the filed site.
+  > See `docs/DEPLOY.md` "域名与 HTTPS".
 
 ### The relay (the owner's own art origin)
 
