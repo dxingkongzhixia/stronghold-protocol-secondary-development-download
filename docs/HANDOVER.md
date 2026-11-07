@@ -503,7 +503,7 @@ Authoritative: [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 and `docs/MAT
 | **最近的同盟 (recent-alliance chips)** | our own removed feature (commit `6d27d583`). |
 | **Upstream 克莱门莎 (Clementia)** (`2e122873` / `0b0ce4fb` / `ba5b998a`) | we keep **our** `char_4231_clemnt`; upstream's is a different operator and would collide. |
 | **R21P 满潜 / R22-LOADOUT (潜能 / 练度)** | **kept since the v0.2.6 whole-branch merge (2026-10-14)**: the merge brought the per-operator potential/level loadout in and the owner chose to keep it. **The default is 潜能 1 / 未精英化 since 2026-10-15** (the owner's decision — the official baseline for an operator the player does not own; 满潜 / 精英2 Lv.60 was the default 2026-10-08 → 2026-10-15). The earlier exclusion is withdrawn — **do not revert the loadout feature back out**; [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 / §11. |
-| **设置 → 问题反馈 / DIAGNOSTICS (copy local diagnostics)** | our own 设置 dialog's bug提交 already covers it; the duplicate section was dropped. |
+| **设置 → 问题反馈 / DIAGNOSTICS (copy local diagnostics)** | **kept (owner 2026-11-07)**: copies this browser's error log / device details for a GitHub issue; complements 设置 →「bug提交」(a structured report into SQLite / the admin page). No longer a blacklist item. |
 | **Upstream's 设置-button placement** | we place 设置 in the top bar's right-hand group (lobby: before the 档案 chip; room: beside the invite key). |
 | **Upstream's item-stock gate on free `<获得时>` / strategy grants** (`6bfc08270c`, GitHub #488) | a grant is not a shop purchase; our `acquireItem` has **no** `itemPool` check. |
 | **本局禁用 bond forced inert** | the owner's rule (2026-10-11): the ban only stops a bond being **offered**; a banned bond whose members still reach its threshold **does take effect**. |

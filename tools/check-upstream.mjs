@@ -36,7 +36,6 @@ export const NEVER_MERGE_WATCH = Object.freeze([
   { match: 'server/match/bondsMeta.js', item: '本局禁用盟约被强制失效 (a 本局禁用 bond forced inert)' },
   { match: 'server/sim/content/kits/ops/op-clemnt.js', item: '上游 克莱门莎 (Clementia)' },
   { match: /^shared\/(potential|loadoutRecord)\.js$/, item: 'R21P 满潜 / R22-LOADOUT (per-operator 潜能 / 练度) — the fork KEEPS the subsystem but its DEFAULT is 潜能 1 / 未精英化 (MATCHMAKING §45): a merge must not restore a full-potential default' },
-  { match: 'public/js/ui/settings.js', item: '设置 → 问题反馈 / DIAGNOSTICS' },
   { match: /^server\/match\/(Match|gamedata)\.js$/, item: '上游道具牌库卡库存 (itemPool / 白给装备)' },
   { match: 'server/match/match/spDraft.js', item: '上游道具牌库卡库存 (itemPool / 白给装备)' },
   { match: 'data/assets.json', item: '上游的多语言配音 (audio.voiceEn / voiceKr / voiceNative) — owner 2026-10-16: 只保留日语 + 中文' },

@@ -57,7 +57,7 @@ test('parseMergeTree: a clean merge is just a tree; a conflicted one lists each 
 test('neverMergeHits flags a file we deleted and each NEVER_MERGE_WATCH row, and nothing else', () => {
   const hits = neverMergeHits(
     ['server/sim/content/kits/ops/op-clemnt.js', 'public/js/screens/game.js', 'server/match/bondsMeta.js',
-      'shared/potential.js', 'public/js/ui/settings.js', 'server/match/Match.js', 'server/community.js'],
+      'shared/potential.js', 'server/match/Match.js', 'server/community.js'],
     ['server/sim/content/kits/ops/op-clemnt.js'],
   );
   const by = Object.fromEntries(hits.map((h) => [h.path, h.item]));
@@ -65,10 +65,9 @@ test('neverMergeHits flags a file we deleted and each NEVER_MERGE_WATCH row, and
   assert.match(by['public/js/screens/game.js'], /#149/);
   assert.match(by['server/match/bondsMeta.js'], /本局禁用/);
   assert.match(by['shared/potential.js'], /R21P/);
-  assert.match(by['public/js/ui/settings.js'], /DIAGNOSTICS/);
   assert.match(by['server/match/Match.js'], /itemPool/);
   assert.equal(by['server/community.js'], undefined, 'an ordinary file is not a §0 hit');
-  assert.equal(hits.length, 6);
+  assert.equal(hits.length, 5);
   assert.deepEqual(neverMergeHits(['shared/loadoutRecord.js'], []), [{ path: 'shared/loadoutRecord.js', item: NEVER_MERGE_WATCH[3].item }]);
 });
 
