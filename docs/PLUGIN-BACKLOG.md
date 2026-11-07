@@ -52,7 +52,7 @@
 | P1-3 | 在插件快照里增加 Forge 来源、refused/partial/assumed 数量、原始包 id/hash/导入时间；`/admin` 只读展示 | M | 不把完整报告塞进 JSON，只存摘要和报告路径 |
 | P1-4 | 把兼容点做成显式矩阵 + 版本升级 checklist；新增兼容类别必须带测试和回滚说明 | S/M | 不建议现在动态猜版本；先让兼容点可见、可审查 |
 | P1-5 | 把 `allowIncompatible` 扩展为 `true | ["id", ...]` 的 per-plugin 白名单；`/admin` 显示因白名单放行的插件 | S | 保持默认 `false`；全局 `true` 可作为兼容旧配置保留，但标注为高风险 |
-| P1-6 | 逐提交筛选 upstream `dev`：必须移植 / 可选 / 不需要 / 冲突；只 cherry-pick 选中的提交 | M | 不整分支 merge；每个插件相邻提交要有对应测试 |
+| P1-6 | 逐提交筛选 upstream `dev`：必须移植 / 可选 / 不需要 / 冲突；只 cherry-pick 选中的提交 | M | **已冻结（2026-11-07：主线仅参考）**；确有需要时按本分支架构自研移植 |
 | P1-7 | 房间面板先展示 `requires` 自动项和来源；再评估是否允许受控直接选择 script（需要 owner policy + 明确警告） | M | 直接开放 script 会扩大攻击面；先做依赖链可视化更安全 |
 | P1-8 | 启动时后台预热脚本 probe；缓存成功/失败；加并发队列、超时和 `/admin` 耗时指标 | M | 不能阻塞大厅主线程；失败缓存要有 TTL |
 | P1-9 | 按风险补 E2E：trusted consent、Forge pack、多插件冲突、失败重试、重连 | M | 优先真实链路，不追求用例数量 |
@@ -187,7 +187,7 @@
   - 或在 `/admin` 显示“哪些插件因此被放行”
 
 ### P1-6 上游 `dev` 有未筛选提交
-- 状态：`DONE`（已筛选；后续批次继续移植）
+- 状态：`FROZEN`（2026-11-07 owner 决定：主线仅参考，不再逐提交跟踪；下文是冻结前的快照）
 - 快照：上游 `master` `c9d804f47`；上游 `dev` `23dfa3d79`，多 26 个提交
 - 结果：`removeBuff`、Wild Mane #782、skill clips、bond timer、结算页 #745 已移植；picture-only outfits 按 owner 2026-10-20 决定不采用；external AI / bot strategies 仍单独评估
 - 详见 [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md)
