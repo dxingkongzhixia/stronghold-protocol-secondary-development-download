@@ -269,7 +269,7 @@
 | `public/js/render/textures.js` | 缓存命中必须是**存活**纹理（被 GC 销毁的会重建） |
 | `public/js/ui/account.js` | **新增**：`AccountForm`/`AccountWho`/`AccountDialog`；`logoutAccount` 通知服务端解绑 |
 | `public/js/ui/components.js` | `TextField` 支持 `type`；新增 `eye`/`eyeOff`，「眼睛」切换明文/密文 |
-| `public/js/preload.js` | **新增**：启动预加载（`collectArtUrls` 分 scope / `preloadImages` 并发+取消）+ `BOOT_VIDEO` 启动视频配置（现为自托管 `/assets/loading/boot.mp4?v=2`）；`main.js` 在**进标题前**加载**全部美术图片**（scope `all` ≈1910 张 / 104 MB），**带进度条、无跳过、无超时**（必须全部加载完才进标题）；见 §14 |
+| `public/js/preload.js` | **新增**：启动预加载（`collectArtUrls` 分 scope / `preloadImages` 并发+取消）+ `BOOT_VIDEO` 启动视频配置（现为自托管 `/assets/loading/boot.mp4?v=2`）；0.2.x 时 `main.js` 在**进标题前**加载**全部美术图片**（scope `all` ≈1910 张 / 104 MB，必须全部加载完才进标题）；**0.4.0 起改为标题先渲染、背景预热**（`PRELOAD_DEADLINE_MS = 20 s` 到点即取消，其余按需加载；冷启动仍走 §14 的 `boot.claim` 闸门，缓存模式跳过闸门） |
 | `public/index.html` `public/css/theme.css` | `#boot` 启动页新增**进度条 + 背景视频 + 音提示**（现为自托管 `public/assets/loading/boot.mp4`，可用 `BOOT_VIDEO` 切回 Bilibili iframe）；`.boot__sound` 提示点击开声 |
 | `public/js/main.js` | **启动视频生命周期**：静音自动播 → 首次点击/按键 `unlock` 开声音；标题出现时 `stopBootVideo()` **暂停 + 清 `src` + `load()` + 移除**并摘掉手势监听。**否则**：被摘下的 `<video>` 仍占着解码器，且手势闭包把它一直留活，**启动后第一次点击会把它重新播起来（还开了声音）→ 后台持续解码 1080p → 卡顿、并盖住 BGM（"音乐老是没"）** |
 | `public/js/main.js` | **启动预加载排队**（§14）：`boot.state` 接线 + `artLikelyCached`（缓存探测）+ `acquireBootSlot`（`boot.claim` 轮询等待）+ 下完 `boot.release`；返回访客跳过排队 |
@@ -286,14 +286,14 @@
 
 ## 12. 服务器管理页 `/admin`（server/admin.js）
 
-看**已注册账号**与**实时在线状态**的只读页面：
+看**已注册账号**与**实时在线状态**的管理后台（对局 / 账号只读；通知、反馈状态、插件市场、来源配置是写操作）：
 
 - **公开在线数据** `/online/api`（**免令牌**）：返回当前在线玩家（名字 / 是否登录 / 状态 / 房间）+ **公开同盟房间 `openRooms`**（`[{ code, difficulty, difficultyName, host, humans, full, freeSeats, seats }]`，含**房主设为公开**、**手建 coop、未开局**的房间——大厅已满的也在内并标 `full:true`，**未满在前**、组内按人数降序、最多 12 条），**不含账号列表、IP、最后登录**；由大厅顶栏「在线 N」徽标的**游戏内浮层** `OnlineOverlay` 每 4s 拉取。**没有独立网页版**（数据来自 `server/admin.js` 的 `buildPublicSnapshot`）。
 - **建房可见性（公开 / 不公开）**：大厅「创建同盟」按钮上方有 `公开 / 不公开` 二选一（`public/js/screens/lobby.js`，仅同盟模式显示，选择记忆在 `lobby.public`）；创建时作为 `room.create.public` 发送（`shared/protocol.js` 的**可选**布尔字段，**缺省＝公开**）。服务端存进 `room.public`（`server/lobby.js`：**单人房恒为 `false`**；野排房 `false`；`toState().public` 下发），房间屏「同盟密钥」框据此显示 **公开 / 仅密钥** 徽标（`public/js/screens/room.js`）。**只有 `public:true` 的手建同盟房才会进 `openRooms`。**
 - **公开同盟（大厅「加入同盟」区）**：`public/js/screens/lobby.js` 的 `PublicAlliances` 同样 **4s 异步轮询** `/online/api`，把 `openRooms` 里**未满的最多 3 个**密钥显示为 `code-chip`（悬停看「难度 · 人数/4 · 房主」），**点一下即填入密钥并加入**（已满的 `full` 房跳过，不显示）；无公开房间时整行不渲染。
 - **在线 / 离线判定**（`server/net.js presenceOnline`，`/admin`、`/online/api`、`/healthz` 与大厅徽标同源）：socket 连着即在线；**游客断线立即离线**；**登录用户断线后保留"在线"5 分钟**（`PRESENCE_GRACE_MS`，覆盖刷新 / 网络抖动）再离线。
 - **管理页访问**：`http://<主机>:3000/admin?token=<令牌>`；令牌在 `var/admin-token.txt`（首次启动随机生成），启动日志会打印完整链接（`Admin: http://localhost:3000/admin?token=…`）。无 / 错令牌 → `403`。首次用 `?token=` 打开会下发一个 30 天的 HttpOnly cookie，之后裸链 `/admin` 也可访问。
-- **数据接口**：`GET /admin/api/state?token=…` → `{ now, counts, queue, verify, rooms, accounts, online }`（页面每 2 秒自取一次）；`verify` 是 `SP_VERIFY` 抽检计数（复算 / 不一致 / 拒收 / 接管）。公开在线数据另见 `/online/api`。
+- **数据接口**：`GET /admin/api/state?token=…` → `{ now, counts, queue, verify, rooms, accounts, online, origins, bugs, bugCounts, agents, agentStats, notices, plugins }`（页面每 2 秒自取一次；后几项是 AI 席位、插件与内容、界面、来源配置等视图加进来的）；`verify` 是 `SP_VERIFY` 抽检计数（复算 / 不一致 / 拒收 / 接管）。公开在线数据另见 `/online/api`。
 - **状态判定**（`statusOf`，只读，不改任何对局逻辑）：
 
   | 状态 | 含义 | 判定 |
@@ -306,19 +306,19 @@
   | 同盟游玩 | 手建同盟对局中 | 房间 `inMatch`、`mode === 'coop'`、非 auto |
   | 单人游玩 | 独立模拟对局中 | 房间 `inMatch` 且 `mode === 'solo'` |
 
-- **界面**：**后台控制台**（2026-10-15 重构，见 §12.1）：左侧栏导航六个视图（概览 / 房间 / 账号 / 在线 / 通知 / 反馈，hash 路由）+ 右侧主区。三张表（注册账号：ID / 代号 / 身份 / 状态 / 房间 / playerId / 注册时间 / 最后登录；在线会话：名字 / 账号或「游客」/ 状态 / 房间 / 地址 / 最近活动；房间：房间码 / 模式 / 难度 / 状态 / 类型「野排/手建」/ 玩家 / AI）都支持**页面内搜索**与**点表头排序**；游客没有账号，只出现在「在线会话」。状态用带圆点的彩色徽标，计数卡按「玩家 / 对局」分组，另有账号状态分布条与运行状态表；侧栏底部有「实时」指示、刷新按钮与快捷键提示，每 2 秒自动刷新。
+- **界面**：**后台控制台**（2026-10-15 重构，见 §12.1）：左侧栏导航（hash 路由）+ 右侧主区，今天是 **11 个视图 + 2 个链接**：运营组「概览 / 房间 / AI 席位 / 账号 / 在线 / 通知 / 反馈 / 插件与内容 / 界面」，诊断组「文档链（链接）/ 沙盒（链接）/ 测速 / 来源配置」。三张表（注册账号：ID / 代号 / 身份 / 状态 / 房间 / playerId / 注册时间 / 最后登录；在线会话：名字 / 账号或「游客」/ 状态 / 房间 / 地址 / 最近活动；房间：房间码 / 模式 / 难度 / 状态 / 类型「野排/手建」/ 玩家 / AI）都支持**页面内搜索**与**点表头排序**；游客没有账号，只出现在「在线会话」。状态用带圆点的彩色徽标，计数卡按「玩家 / 对局」分组，另有账号状态分布条与运行状态表；侧栏底部有「实时」指示、刷新按钮与快捷键提示，每 2 秒自动刷新。
 - **安全**：令牌鉴权；`server/admin.js` 只读取 `registry` / `lobby` / `matchmaker` / `auth`，不暴露密码哈希。若不想让局域网访问，靠防火墙 / 反代限制 `/admin`。
 
 ### 12.1 界面重构：长滚动页 → 后台控制台（2026-10-15）
 
 - **动因**：owner「管理员后台界面进行大优化，让其更像真正的后台」。原页面是**一条长滚动**：9 张计数卡平铺在最前，通知 / 玩家反馈 / 账号 / 在线 / 房间依次直排；表格没有搜索与排序，页内没有导航，信息靠滚动定位。
 - **布局**：左侧**侧栏**（品牌 + 分组导航「总览 / 运营」+ 底部实时指示、`校验 …`、刷新时间、立即刷新按钮、快捷键提示）+ 右侧主区（吸顶标题栏：视图标题 / 副标题 + 服务器时间）。窄屏（≤900px）侧栏折叠为顶部导航行，双栏区改单栏。
-- **视图与路由**：`概览 / 房间 / 账号 / 在线 / 通知 / 反馈` 六个视图一次只显示一个，用 **hash 路由**（`#rooms`、`#bugs` …）切换 —— 刷新、书签、浏览器后退都回到同一个视图；侧栏各项带实时计数（房间 / 账号 / 在线 / 通知条数），**反馈**显示的是**待处理**条数。
+- **视图与路由**：`概览 / 房间 / AI 席位 / 账号 / 在线 / 通知 / 反馈 / 插件与内容 / 界面 / 测速 / 来源配置` 等视图一次只显示一个，用 **hash 路由**（`#rooms`、`#bugs` …）切换 —— 刷新、书签、浏览器后退都回到同一个视图；侧栏各项带实时计数（房间 / 账号 / 在线 / 通知条数），**反馈**显示的是**待处理**条数。2026-10-15 重构时是六个视图（概览 / 房间 / 账号 / 在线 / 通知 / 反馈）；其后 AI 席位（§17.3 / `docs/AGENT-SEATS.md`）、插件与内容、界面、文档链、沙盒、测速（§12.2）、来源配置（§12.3）陆续加入，下面的「第 N 个视图」只是当时的编号，现以侧栏为准。
 - **概览（仪表盘）**：计数卡按「玩家 / 对局」两组呈现（新增「组队中」一格）；**账号状态分布**堆叠条 + 图例（账号口径，各状态之和 = 注册账号数，游客属会话数故单独标注）；**运行状态**表（在线会话 / 野排队列 / 战斗校验 / 待处理反馈 / 自动刷新）；**最近通知** 3 条。
 - **表格**：三张表加入**客户端搜索**（在已取回的这一页内过滤；`/` 聚焦当前视图的搜索框、`Esc` 清空）与**点表头排序**（同列再点反向，标题带 ↑/↓）。搜索词与排序是脚本状态，**每 2 秒轮询后保留**；计数标签在有筛选时变成「显示 X / 共 Y 个」。
 - **轮询**：仍是 2 秒一次；**页面隐藏时暂停**、切回时立刻补一次；**首帧无论可见与否都渲染一次**（否则在后台标签页首次打开会一直是空白 —— 自查时踩到）。
 - **键盘**：`1`–`6` 切换视图（焦点在输入框 / 文本域 / 下拉里时不生效），`/` 聚焦当前视图的搜索框，图片预览里 `Esc` 关闭、`←` `→` 翻页（原行为不变）。
-- **不变（重要）**：接口与行为原样 —— `/admin/api/state` 的 2 秒轮询与参数（`bugStatus` / `bugSort` 仍走服务端过滤）、`/admin/api/notify` 推送与「更新日志」记账、反馈的状态按钮 / 筛选 / 排序 / 导出 / 图片放大、令牌鉴权与 30 天 cookie、**只读**定位（不加任何写操作，如踢人 / 关房 / 改身份）。页面仍是**自包含单文件**（`server/admin.js` 的 `ADMIN_HTML`，零外链资源），沿用原有元素 id。
+- **不变（重要）**：接口与行为原样 —— `/admin/api/state` 的 2 秒轮询与参数（`bugStatus` / `bugSort` 仍走服务端过滤）、`/admin/api/notify` 推送与「更新日志」记账、反馈的状态按钮 / 筛选 / 排序 / 导出 / 图片放大、令牌鉴权与 30 天 cookie、**只读**定位（不改对局 / 账号，如踢人 / 关房 / 改身份；通知、反馈状态、插件市场、来源配置是明确例外）。页面仍是**自包含单文件**（`server/admin.js` 的 `ADMIN_HTML`，零外链资源），沿用原有元素 id。
 - **测试**：`test/admin.test.js` 新增结构断言（侧栏六个导航项与对应视图、hash 路由与快捷键接线、三张表的搜索 / 排序元素、仍是自包含页面且保留 `服务器管理` 与 `/admin/api/bug/image/`）；`test/community.test.js` 原有的页面断言不变。
 
 ### 12.2 测速：中继与 GitHub 镜像的实测速率（2026-10-15）
@@ -328,7 +328,7 @@
 - **判定按玩家视角**：判定与「现在会加载哪个源」取自**浏览器列**（没有浏览器数据时退回服务器列），规则照抄客户端 `pickMirror`：按配置顺序，来源要跑过**自己的**阈值才被装上 —— 中继（full 来源）**0.4 MB/s**、普通镜像 **0.8 MB/s**，都不行则回落到本服务器。页面直接写出结论（例：「按本机浏览器实测（玩家视角），现在会加载：中继（GitHub 镜像 · jsDelivr 未过阈值被跳过）」）。`test/speed.test.js` 会**重读 `public/js/assetMirror.js` 并比对样本路径、两个阈值与预算**，口径漂移即测试失败。
 - **接口**：`GET /admin/api/speed?token=…`（令牌门禁；`&force=1` 跳过冷却）。服务端探测在 `server/speed.js`（`readOrigins` / `measureOrigin` / `probeOrigins`），**只 GET 第三方 URL**，不碰大厅 / 注册表 / 数据库；来源清单只来自 `public/asset-mirrors.json`，调用方无法指定目标。
 - **成本与节制**：每次约 650 KB/来源；服务端探针有 **10 秒冷却**（冷却内沿用上次结果并标注「冷却中」），按钮可强制重测；切到「测速」视图自动测一次，页面隐藏时暂停（见 §12.1）。
-- **测试**：`test/speed.test.js`（速率换算、来源清单与 full 标记、带上限/预算的读取与永不抛错、逐源判定与回落、冷却与强制重测、**与客户端常量一致**）；`test/admin.test.js`（结构断言含第 7 个视图；`/admin/api/speed` 需令牌）。
+- **测试**：`test/speed.test.js`（速率换算、来源清单与 full 标记、带上限/预算的读取与永不抛错、逐源判定与回落、冷却与强制重测、**与客户端常量一致**）；`test/admin.test.js`（结构断言含测速视图；`/admin/api/speed` 需令牌）。
 
 ### 12.3 来源配置：在后台直接改中继 / 镜像地址（2026-10-15）
 
@@ -337,14 +337,16 @@
 - **界面**：侧栏「诊断 → 来源配置」。每行一个来源：地址可编辑、可勾「全路由」（= 也能提供 /media · /scene · /clip）、可上移 / 下移 / 删除；另有「+ 添加来源」「保存」「还原上一版」。**顺序即链路顺序**，页面脚注写明这条规则与两个阈值。
 - **校验与可逆**：`GET/POST /admin/api/origins`（令牌门禁）。保存前逐项校验（必须 http(s)、不得重复、全路由必须也在来源列表里；留空的行忽略），并把**上一版**留成 `var/asset-mirrors.backup.json`，一键还原。写入走「临时文件 + rename」，客户端不会读到写了一半的配置。
 - **立即生效、无需重启**：`/asset-index.json` 的缓存键已包含这个配置文件的 mtime（`server/assetindex.js createAssetIndex`），保存后**下一次请求**即是新配置，客户端下次加载可见。2026-10-15 实测：改 `sources` → `curl /asset-index.json` 立刻反映；点「还原」后文件 md5 与 git 完全一致。
-- **测试**：`test/mirrors.test.js`（读取永不抛错、校验规则、原子写入与备份、还原、随仓库发布的那份配置合法且中继仍排第一）、`test/asset-index.test.js`（改为断言「配置即列表、无硬编码、`SP_ASSET_REF=''` 关闭」）、`test/admin.test.js`（第 8 个视图 + `/admin/api/origins` 需令牌）。
+- **测试**：`test/mirrors.test.js`（读取永不抛错、校验规则、原子写入与备份、还原、随仓库发布的那份配置合法且中继仍排第一）、`test/asset-index.test.js`（改为断言「配置即列表、无硬编码、`SP_ASSET_REF=''` 关闭」）、`test/admin.test.js`（来源配置视图 + `/admin/api/origins` 需令牌）。
 
 ## 13. 后续可做（未实现）
 
 - 官方式的 **快速 / 精确（按等级）搜寻**（当前只按难度分桶）；奖杯 / 功勋等级；
 - 匹配确认环节（当前直接开局）；匹配中显示队友昵称；
-- 账号资料（头像、战绩、历史）；登录限流与验证码；
+- 登录限流与验证码；
 - `docs/design/*.md` / `docs/META.md` 的对应英文规则段落。
+
+（账号资料的头像 / 默认立绘 / 公开对局统计已实现：§2、§40；不再列在「未实现」。）
 
 ## 14. 启动带宽：预加载排队 + 缓存（2026-10，"33 人 455ms" 的处置）
 
@@ -352,21 +354,22 @@
 
 **实测**：`/sys/class/net/*/statistics/tx_bytes` 4 秒采样 → **23 Mbps ≈ 2853 KB/s**，正好顶满 RainYun 的 **20 Mbps 上行**；入口仅 0 Mbps。TCP 栈也已是最优（kernel 6.1、`bbr` + `fq`），不是拥塞算法的问题。
 
-**根因**：**每个客户端首次进标题前要下 141 MB** —— `preload scope 'all'` **104.1 MB / 1910 张** + 启动视频 **36.9 MB**。20 Mbps ≈ 2.5 MB/s 是**全服共享**的，于是一个访客的首次加载就要独占整条上行约 **56 秒**；两三个新访客同时进来，上行打满 → 所有人的请求排队 → 卡顿。
+**根因（当时的）**：**每个客户端首次进标题前要下 141 MB** —— `preload scope 'all'` **104.1 MB / 1910 张** + 启动视频 **36.9 MB**。20 Mbps ≈ 2.5 MB/s 是**全服共享**的，于是一个访客的首次加载就要独占整条上行约 **56 秒**；两三个新访客同时进来，上行打满 → 所有人的请求排队 → 卡顿。**0.4.0 起改为标题先渲染、美术在后台预热（20 s 上限，其余按需）**，下面的闸门只约束冷启动的 HTTP 预加载，不再是进标题的前置条件。
 
 **措施**：
 
 1. **浏览器缓存（本就有的）**：`public/assets|fonts|vendor` 一律 `Cache-Control: public, max-age=604800`（7 天，`server/index.js` 的 `LONG_CACHE`）。**同一浏览器 7 天内第二次进入，这 141 MB 全部命中本地缓存、0 下载**（`curl -I` 可核对响应头）。
-2. **预加载排队闸门**（`server/bootgate.js`，新增 `BootGate`）：**同一时刻只允许 `bootSlots`（默认 1）个客户端预加载**。
-   - 客户端 `boot.claim` 申请通道 → 服务端 push `boot.state { granted, position }` → 拿到才开下载，下完 `boot.release` 交还；等待期启动页显示「正在排队加载资源… 前方 N 位博士」。
+2. **预加载排队闸门**（`server/bootgate.js`，新增 `BootGate`）：**同一时刻只允许 `bootSlots`（默认 1）个冷启动 HTTP 预加载**。
+   - 客户端 `boot.claim` 申请通道 → 服务端 push `boot.state { granted, position }` → 拿到才开下载，下完 `boot.release` 交还；标题页底部显示「正在排队加载资源… 前方 N 位博士」（标题本身已经渲染，不等这份预热）。
    - **返回访客不排队**：`preloadArt` 先做**缓存探测**（`main.js artLikelyCached`，取 3 张图计时，< 350 ms 视为已缓存）——已缓存就直接预加载，不申请通道。
+   - **缓存模式完全跳过闸门**：玩家选了「缓存到本地」时走 Service Worker 的增量同步（`ensureAssets`），通道不算在 `bootSlots` 里（见 `docs/ASSETS.md` 的 “Local asset cache & CDN mirror download chain”）；`PRELOAD_DEADLINE_MS = 20 s` 到点即取消，剩余按需。
    - **死亡不占位**：`bootHoldMs`（默认 180 s）无释放自动回收；断线/过期由 `onDisconnect` / `onExpire` 立即释放。
    - 总传输量不变，但**任一时刻只有一条客户端在拉**，链路时延平稳，不再被 N 条并发流打满。
 3. **客户端已修**：启动视频在标题出现时 `pause + 清 src + load()`（`main.js` `stopBootVideo`），不再在后台解码 / 出声。
 
 4. **启动视频压小**（2026-10-05）：`boot.mp4` 由 **1920×1080 / 2.68 Mbps / 107.5 s（36.9 MB）** 重编码为 **1280×720 / 836 kbps / AAC 96k → 12.1 MB（−69%）**。`BOOT_VIDEO.src` 走 `?v=2`（`server/index.js cacheControlFor` 对 `?v=` 返回 `immutable` 一年），否则老访客 7 天内仍命中旧视频缓存。原件备份在服务器 `/root/boot.orig.mp4`。
 
-**仍未做（建议，按收益排序）**：`preload scope 'all'（104.1 MB）→ 'ui'（74.6 MB）` 省 ~30 MB/人（立绘改为进屏按需加载）；或把 `public/assets` 迁到对象存储 / CDN，彻底脱离这 20 Mbps 上行。
+**仍未做（建议）**：把背景预热的 scope 从 `all`（104.1 MB）降到 `ui`（74.6 MB），省 ~30 MB/人；CDN 已由 relay 承担（`docs/ASSETS.md` “The relay”），游戏服只是最后兜底，这 20 Mbps 的上行不再承担首次加载的主流量。
 
 **配置**：`LOBBY_DEFAULTS.bootSlots`（默认 1）、`bootHoldMs`（默认 180000）在 `server/lobby.js`，可由 `startServer({ options })` 覆盖。
 
