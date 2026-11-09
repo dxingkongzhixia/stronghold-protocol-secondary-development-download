@@ -1083,41 +1083,82 @@ export function statusTexture(key) {
 }
 
 // =============================================================================================================
-// Tier chips (roman numerals), backdrop
+// Tier chips (the official `chessLevelSprite/chess_level_icon_<t>` art: a square plate with the tier colour and the
+// roman numeral), backdrop
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI'];
+/** The official chip's frame colours (theme.css `--tier-1`…`--tier-6`): grey / white / mint / cyan / gold / orange. */
+const TIER_HEX = ['', '#a8a8a8', '#f2f2f2', '#34e6b2', '#34b8d8', '#f8bf00', '#f88000'];
+/** The official battle chip sprite (45×45): `ui/chessLevelSprite/chess_level_icon_<tier>`. */
+const chipIconUrl = (t) => `/assets/ui/chessLevelSprite/chess_level_icon_${t}.png`;
 let _chips = null;
+/** `{ 1..6: HTMLImageElement }` once the official chip art loaded (the canvas atlas keeps the drawn fallback until then). */
+let _chipImgs = null;
+let _chipLoadingFrom = null;
 
+/**
+ * Draw the atlas cells: the official sprite when it has loaded, else a hand-drawn stand-in (square plate, tier-coloured
+ * outline, white numeral) so a chip is never blank. Golden (精锐) = the same official plate under a gold ring, so the
+ * merge state still reads at a glance.
+ */
 function drawChips(c, w, h) {
   c.clearRect(0, 0, w * 7, h * 2);
+  const S = Math.min(w, h), ox = (w - S) / 2, oy = (h - S) / 2;
   for (let g = 0; g < 2; g++) for (let t = 1; t <= 6; t++) {
-    const x = t * w, y = g * h;
+    const x = t * w + ox, y = g * h + oy;
     c.save();
-    roundRect(c, x + 3, y + 3, w - 6, h - 6, 7);
-    const grad = c.createLinearGradient(0, y, 0, y + h);
-    if (g) { grad.addColorStop(0, '#ffe27a'); grad.addColorStop(1, '#d99a00'); }
-    else { grad.addColorStop(0, '#2c3335'); grad.addColorStop(1, '#111516'); }
-    c.fillStyle = grad; c.fill();
-    c.lineWidth = 2.5; c.strokeStyle = g ? '#fff3b8' : 'rgba(210,225,220,0.55)'; c.stroke();
-    c.fillStyle = g ? '#2a1a00' : '#f2f2f2';
-    c.font = `700 ${t >= 4 ? 24 : 27}px Bender, Oxanium, "Segoe UI", sans-serif`;
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(ROMAN[t], x + w / 2, y + h / 2 + 1.5);
+    const img = _chipImgs && _chipImgs[t];
+    if (img) {
+      c.drawImage(img, x, y, S, S);
+      if (g) { c.strokeStyle = '#ffd75e'; c.lineWidth = 3; c.strokeRect(x + 1.5, y + 1.5, S - 3, S - 3); }
+    } else if (g) {
+      const grad = c.createLinearGradient(0, y, 0, y + S);
+      grad.addColorStop(0, '#ffe27a'); grad.addColorStop(1, '#d99a00');
+      c.fillStyle = grad; c.fillRect(x, y, S, S);
+      c.lineWidth = 3; c.strokeStyle = '#fff3b8'; c.strokeRect(x + 1.5, y + 1.5, S - 3, S - 3);
+      c.fillStyle = '#2a1a00';
+      c.font = `700 ${t >= 4 ? 21 : 24}px Bender, Oxanium, "Segoe UI", sans-serif`;
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(ROMAN[t], x + S / 2, y + S / 2 + 1);
+    } else {
+      c.fillStyle = 'rgba(8,10,10,0.62)'; c.fillRect(x, y, S, S);
+      c.lineWidth = 3; c.strokeStyle = TIER_HEX[t]; c.strokeRect(x + 1.5, y + 1.5, S - 3, S - 3);
+      c.fillStyle = '#ffffff';
+      c.font = `700 ${t >= 4 ? 21 : 24}px Bender, Oxanium, "Segoe UI", sans-serif`;
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(ROMAN[t], x + S / 2, y + S / 2 + 1);
+    }
     c.restore();
   }
 }
 
-/** Tier chip texture: tier 1–6, golden → gold plate. */
-export function tierChip(tier, golden) {
+/** Load the official chip art once (through the asset store), then redraw the atlas in place so live chips update. */
+function ensureChipIcons(assets) {
+  if (_chipImgs || !assets || typeof assets.image !== 'function' || _chipLoadingFrom === assets) return;
+  _chipLoadingFrom = assets;
+  const imgs = {};
+  let left = 6;
+  const done = () => {
+    if (--left > 0) return;
+    _chipImgs = imgs;
+    if (!_chips) return;
+    try { drawChips(_chips.canvas.getContext('2d'), _chips.w, _chips.h); _chips.base.update(); } catch { /* keep the fallback */ }
+  };
+  for (let t = 1; t <= 6; t++) assets.image(chipIconUrl(t)).then((img) => { imgs[t] = img; done(); }, done);
+}
+
+/** Tier chip texture: tier 1–6; golden (精锐) wears a gold ring over the same official plate. */
+export function tierChip(tier, golden, assets) {
   if (!_chips) {
     const P = PIXI();
-    const w = 64, h = 44;
+    const w = 44, h = 44;
     const canvas = makeCanvas(w * 7, h * 2);
     const base = P.BaseTexture.from(canvas);
     _chips = { canvas, base, tex: new Map(), w, h };
     drawChips(canvas.getContext('2d'), w, h);
     base.update();
   }
+  ensureChipIcons(assets);
   const t = Math.max(1, Math.min(6, tier | 0 || 1));
   const key = `${t}:${golden ? 1 : 0}`;
   let tex = _chips.tex.get(key);

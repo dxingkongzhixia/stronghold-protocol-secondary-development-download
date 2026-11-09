@@ -942,7 +942,7 @@ export class UnitView {
     this.chip = null;
     // operators only: summon tokens have no tier (hand and field alike)
     if (!this.isEnemy && !this.isToken && this.info.kind !== 'device') {
-      this.chip = new P.Sprite(tierChip(this.tier, this.golden));
+      this.chip = new P.Sprite(tierChip(this.tier, this.golden, this.ctx?.assets));
       this.chip.anchor.set(0.5);
       h.addChild(this.chip);
     }
