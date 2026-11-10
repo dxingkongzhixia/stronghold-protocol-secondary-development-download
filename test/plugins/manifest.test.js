@@ -322,6 +322,10 @@ test('the catalogue: entries by class then id, unofficial marks, no server paths
   const oe = pluginIndexEntry({ ...plugins[0], manifest: ordered });
   assert.deepEqual([oe.loadAfter, oe.loadBefore, oe.priority], [['base'], ['late'], 3]);
   assert.deepEqual([e.loadAfter, e.loadBefore, e.priority], [undefined, undefined, undefined], 'none set: none listed');
+  // A v2 manifest carries ONE localized description string: the catalogue hands the page a language map, never the
+  // spread string's characters (the panel showed no description at all — owner report 2026-11-10)
+  const de = pluginIndexEntry({ ...plugins[0], manifest: { ...ordered, description: '阵营加强说明', sourceLang: 'zh' } });
+  assert.deepEqual(de.description, { zh: '阵营加强说明' });
 });
 
 

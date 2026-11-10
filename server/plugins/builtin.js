@@ -68,7 +68,7 @@ export function builtinPlugins({ dataDir = 'data', app = APP_VERSION, log = cons
     };
     const raw3 = {
       manifest: 3, id, version: app, app: '*',
-      name, description, authors: ['Stronghold Protocol'], license: 'GPL-3.0-or-later',
+      name, description, authors: ['d星空之下'], license: 'GPL-3.0-or-later',
       api: { content: 1 }, scope: ['room'], trust: 'data', category: 'faction',
       modules: [{
         kind: 'content', files: [rel], parts: { data: [rel] },
@@ -81,6 +81,9 @@ export function builtinPlugins({ dataDir = 'data', app = APP_VERSION, log = cons
       continue;
     }
     const manifest = keelToV2(checked.manifest, { id, app });
+    // keelToV2 flattens the localized description to the source-language string; the catalogue entry keeps both
+    // languages for these built-ins (shared/plugins/manifest.js pluginIndexEntry copies an object as-is).
+    manifest.description = description;
     manifest.manifestFile = `builtin:${rel}`;
     const body = JSON.stringify(doc);
     const hash = createHash('sha256').update(body).digest('hex');

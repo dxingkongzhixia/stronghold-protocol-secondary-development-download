@@ -946,7 +946,13 @@ export function pluginIndexEntry(p) {
   if (p.builtin) e.builtin = true;
   if (PLUGIN_CLASSES[p.class]?.unofficial) e.unofficial = true;
   if (Object.keys(m.names).length) e.names = { ...m.names };
-  if (Object.keys(m.description).length) e.description = { ...m.description };
+  // A v2 manifest carries ONE localized description string (manifest.js `localized`); the catalogue hands the page a
+  // language map. Spreading the string itself produced `{0:'内',1:'置',…}` and the panel showed no description at all.
+  if (typeof m.description === 'string') {
+    if (m.description) e.description = { [m.sourceLang || 'zh']: m.description };
+  } else if (m.description && typeof m.description === 'object' && Object.keys(m.description).length) {
+    e.description = { ...m.description };
+  }
   if (m.version) e.version = m.version;
   if (m.app) e.app = m.app;
   e.compatible = m.compatible;
