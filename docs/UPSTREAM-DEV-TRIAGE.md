@@ -254,3 +254,69 @@
 - **本地数据**：仓库里已有 `server/sim/content/kits/ops/op-oxi.js`（塔露拉），但 `data/chess.json` **没有 `4247` 记录**——本地数据没重建，属独立问题，别和这批清单混在一起。
 - **核对方式**：A 项全部用本仓库文件行号核对过；B 项只评"做法"，不承诺数值收益。
 - 清单随每次 dev 增量重写；已完成的条目移到 §1，并在 `UPSTREAM-MERGES.md` 追加一节。
+
+
+## 10. 规程并入（owner 2026-11-15：路线 A「版本共存」，已批准，未完成）
+
+把主线 `origin/dev`（目标钉在 **`e31e7bbae`**，2026-11-14）的官方第三赛季 **规程**（`act3autochess`，family
+`regulation`，序列Ⅰ = V3_1）作为**一个可选官方版本**并入：**默认仍是盟约**（`act2autochess`），规程由房间选择。
+
+### 10.1 硬前提
+
+本 fork 没有官方版本系统：`shared/versions.js` 原为桩（`VERSIONS = []`），`data/versions/`、`server/versions.js`、
+`public/js/versions.js`、`tools/versions/*` 均不存在（§2「版本系统」当年的排除决定）。规程在上游正是「第四个版本目录 +
+一个版本对局宿主」，所以主体是**补上这套基础设施**，不是挑选提交。
+
+主线现成规模：`shared/versions.js` 95 + `server/versions.js` 283 + `public/js/versions.js` 282 +
+`tools/versions/*` 11 文件 858 ≈ **1 518 行核心**；**44 个文件**引用版本 API；13 个版本测试 + fixtures。
+主线 `data/versions/` 有 4 个版本目录（64 文件）；我们只需要 默认 + 规程（三个历史目录与它们的 golden 不取）。
+
+### 10.2 规模（`eff7d93ab..e31e7bbae`，2026-11-06 → 11-14）
+
+| 维度 | 数字 |
+|---|---|
+| 提交 | 256（164 直接 + 92 合并），**122 个与规程/regulation 相关** |
+| 全窗口改动 | 597 文件，+79 202 / −3 180 |
+| 规程数据 | **16 文件 6.47 MB**（chess 310 / enemies 343 / garrisons 334 / effects 465 / items 116 / bonds 26 / waves 50 / choices 9 / bands 61 / tokens 34 / bosses 16 / stages 12） |
+| 内容代码 | 37 个新 kits（2 974 行）+ 6 个规程模块（2 954 行：regulation bosses/bonds/enemies/garrisons、lethania、commands） |
+| 引擎/对局 | `server/sim` 82 文件 +7 746；`server/match` 48 文件 +2 418 |
+| UI | `public/js` 117 文件 +8 627；`public/css` 15 文件 +1 813 |
+| 测试 | 199 文件 +37 440（`test/ui` 87；规程 golden 6 文件约 14 390 行） |
+| 工具 | 36 文件 +12 323（`tools/versions/*` + 主题提取器） |
+| 美术 | `data/assets.json` +94 敌人 / +40 干员模型（1.88 → 2.37 MiB），77 个规程敌人 Spine；素材本体走中继，不入 git |
+| golden | 上游已改为**按版本分目录**（`test/golden/<slug>/*.json`）；我们仍是单一语料 279 场景 |
+| 冲突面 | 自 `488db49f1` 起两边都改过 **271 个文件**；规程窗口**触及全部 14 个 §0 永不合并路径**（board3d、下载页、audio.js、title.js、game.js、Match/gamedata/bondsMeta/spDraft、data/assets.json） |
+
+### 10.3 阶段清单
+
+| 阶段 | 内容 | 预估（单人，含测试） | 状态 |
+|---|---|---|---|
+| **0 版本宿主** | 注册表、`server/versions.js`、`server/data.js` 版本数据、`http/config.js versionsFrom`、`http/static.js` 版本路由 + `/cs/`、buildTag、`/healthz.versions`、lobby 版本字段、`match/host` 的 `kind:'version'`（复用现有插件宿主）、每版本 bounds、插件 `versions`、页面版本选择器、`tools/versions/*` + `build-data --version`、13 个版本测试 | 5–8 人日 | 进行中（见 10.6） |
+| **1 规程数据** | `tools/versions/act3autochess-v3_1.mjs` + tables + regulation adapters/layouts + pin `6f63c14e`；离线重建 16 文件逐字节验收（不许手改 JSON） | 3–5 | 未开始 |
+| **2 规则与内容** | 6 个模块 + 37 kits；MAP09 隐匿、萨卡兹亡语、Boss 受击区/茧索敌、莱塔尼亚召唤、装备容量、升级奖励、隐蔽地形、按模式血池、指令、寻宝；对局侧 #925/#930–#937/#944 | 8–12 | 未开始 |
+| **3 UI/主题** | 规程 HUD、双栏简报、装备报告、领袖战徽章、选择自编、版本选择器、官方主题包/提取器、每版本音乐（3D 简报图与 board3d 冲突，建议降级静态图） | 8–12 | 未开始 |
+| **4 美术/音频** | 版本并集规划 + fetch/local-extract；77 敌人 Spine、37 干员模型、主题图、音乐；中继发布与首包体积 | 3–5 | 未开始 |
+| **5 golden/CI** | 按版本分目录的 golden（`test/golden/<slug>/*.json`、`tools/golden.mjs --version`）；规程 golden **必须在我们树上生成**；CI 分片重配 | 3–5 | 未开始 |
+| **6 冲突适配** | 271 文件与 14 条 §0 路径逐块重写；保留予愿安洁莉娜/`grounded`/B4 公式/65 批 VFX/插件内容集/admin/i18n/潜能默认 | 3–5 | 未开始 |
+
+合计约 **33–52 人日**；MVP（不做主题包、每版本音乐、3D 简报图）约 **22–30 人日**。
+
+### 10.4 本项目内的决定（owner 2026-11-15）
+
+- **路线 A**：版本共存；默认版本保持 `act2autochess`（盟约），`LOBBY_DEFAULT_VERSION` 也保持默认——主线把大厅预选改成
+  规程（owner 2026-11-09），我们**不跟**，直到 owner 另行决定。
+- 注册表**只登记两个版本**（默认 + `act3autochess@V3_1`）；第一期/第二期上的历史数据目录与 golden 不并入，
+  以后要加只是「一行注册 + 一份 build profile」。
+- 目标钉在 `e31e7bbae`；规程上游仍在动，之后按批跟进，不追流水。
+
+### 10.5 可以先做、不被版本系统卡住的
+
+同窗口有 14 个与版本无关的小修复（#925 #930 #931 #932 #934 #937 #938 #939 #942 #943 #944 #946 #947 + #919/#924），
+可按 A/B 档的方式各自一个提交 + golden 归因；它们与 Phase 0 互不阻塞。
+
+### 10.6 进度
+
+- **P0.1 注册表 + 数据层**：进行中（`shared/versions.js` 真表、`server/data.js` 的 `versionDataDir/getVersionData`、
+  单元测试；不改变任何现有行为）。
+- 后续：P0.2 配置/服务端（`versionsFrom`、`server/versions.js`、静态路由、healthz）、P0.3 lobby + 版本宿主、
+  P0.4 浏览器、P0.5 工具链、P1 数据构建。
