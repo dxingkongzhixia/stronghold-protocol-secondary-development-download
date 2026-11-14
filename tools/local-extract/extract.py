@@ -151,7 +151,7 @@ ENEMY_SPINES = [
     # covenant element-faction slugs (the original two)
     'enemy_1305_mhslim', 'enemy_1305_mhslim_2',
     # 规程 (act3autochess) enemies whose battle Spine the community dumps lack (extracted 2026-11-15 from the
-    # owner's client; the two the client does not carry, enemy_9029_acfnc_2 / enemy_9037_aceel_2, are left out)
+    # owner's client; a _2/_3 variant without a skeleton of its own reuses its base model, see export_enemy_spines)
 'enemy_10003_trwlpl_2', 'enemy_10077_mpbarr', 'enemy_10123_uareap', 'enemy_10146_nscola',
 'enemy_10147_nsbomb', 'enemy_10163_mnctur_2', 'enemy_10196_ubba', 'enemy_10196_ubba_2',
 'enemy_10229_agactr_2', 'enemy_1064_snsbr', 'enemy_1067_snslime_2', 'enemy_1103_wdkght_2',
@@ -176,6 +176,7 @@ ENEMY_SPINES = [
 'enemy_9029_acfnc', 'enemy_9030_acpara', 'enemy_9031_acrefd', 'enemy_9034_acblk',
 'enemy_9035_acspider', 'enemy_9035_acspider_2', 'enemy_9037_aceel', 'enemy_9038_achest',
 'enemy_9039_acrefm', 'enemy_9040_accrit',
+'enemy_9029_acfnc_2', 'enemy_9037_aceel_2',
 ]
 ENEMY_ART = 'refs/arts/enm_art_*.ab'
 ENEMY_SPINE_SUB = 'spine/enemy'
@@ -890,10 +891,19 @@ def export_scenes(ab_root, out_root, manifest, log, ids, roots):
 
 def export_enemy_spines(ab_root, out_root, manifest, log, ids=None):
     """ENEMY_SPINES (or `ids`) from the enemy art bundles (each bundle loaded on its own; stops once every model was
-    found)."""
+    found).
+
+    A `_2`/`_3` variant without a skeleton of its own reuses its base model (upstream's metadata names the base stem),
+    so the base skeleton is written under the variant's group as well.
+    """
     import aklz4  # noqa: F401  (registers the LZ4AK decoder)
     import UnityPy
     wanted, n = set(ENEMY_SPINES if ids is None else ids), 0
+    alias = {}
+    for eid in wanted:
+        base = re.sub(r'_[23]$', '', eid)
+        if base != eid:
+            alias.setdefault(base, []).append(eid)
     for f in sorted(Path(ab_root).glob(ENEMY_ART)):
         if not wanted:
             break
@@ -905,17 +915,18 @@ def export_enemy_spines(ab_root, out_root, manifest, log, ids=None):
         objects = {o.path_id: o for o in env.objects}
         for name, ref in env.container.items():
             eid = enemy_spine_id(name, wanted)
-            if not eid:
-                continue
-            try:
-                k = write_spine(objects, ref.read_typetree(), f'{ENEMY_SPINE_SUB}/{eid}', eid, out_root, manifest, log)
-            except Exception as e:
-                log(f'  warn {eid}: {e}')
-                continue
-            if k:
-                wanted.discard(eid)
-                n += k
-                log(f'{f.relative_to(ab_root).as_posix()}: {eid} -> {ENEMY_SPINE_SUB}/{eid} ({k} files)')
+            targets = [eid] if eid else alias.get(enemy_spine_id(name, set(alias)) or '', [])
+            for target in targets:
+                try:
+                    k = write_spine(objects, ref.read_typetree(), f'{ENEMY_SPINE_SUB}/{target}', eid or target,
+                                    out_root, manifest, log)
+                except Exception as e:
+                    log(f'  warn {target}: {e}')
+                    continue
+                if k:
+                    wanted.discard(target)
+                    n += k
+                    log(f'{f.relative_to(ab_root).as_posix()}: {target} -> {ENEMY_SPINE_SUB}/{target} ({k} files)')
     for eid in sorted(wanted):
         log(f'skip (not found) enemy Spine {eid}')
     return n
