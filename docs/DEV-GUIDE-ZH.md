@@ -447,6 +447,8 @@ LOBBY → INFO_CHECK → BAND_DRAFT → BATTLE_CHECK
 | 🟡 | 内容层多处过滤全 `allyUnits`（tokens/items/garrisons） | `tokens.js:339/1445/1481`、`items/battle.js:213` | 维护按 owner 的索引 |
 | 🟢 | 小工具函数（`num/fin/clamp`、“选最优地块”）在十余个模块里重复 | `support/index.js:33`、`generic.js:45`、`tokens.js:87`、`devices.js:183`… | 抽到共享 `util.mjs` / `pickBest(scoreFn)` |
 
+> 2026-11-14：`emit` 的 `list.slice()`、buff 遍历的 `u.buffs.slice()`、`_runScheduled` 每 tick 的 `filter` 已改为按嵌套层复用的缓冲（`_emitBufs` / `_buffScratch` / `_dueBufs`，`isFlying` 也按 stats 对象缓存；`test/sim/tick-scratch.test.js`）。目标排序的每候选对象与 `_pending.shift()` 仍未处理。
+
 ### 6.4 客户端 · 渲染与内存（`public/js/**`）
 | 级别 | 问题 | 证据 | 建议 |
 |---|---|---|---|

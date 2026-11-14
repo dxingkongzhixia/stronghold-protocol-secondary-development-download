@@ -61,6 +61,11 @@ export class Unit {
     this.buffs = [];
     this._dirty = true;
     this._s = null;
+    // cached isFlying (the hot loops ask it per candidate blocker / target): valid while the aggregated stats object
+    // (flags) and `motion` are the ones it was computed from
+    this._flyS = null;
+    this._flyMotion = null;
+    this._flying = false;
     this.hp = this.base.maxHp;
     this.alive = true;
     this.deployed = false;
@@ -198,6 +203,7 @@ export class Unit {
     // stat change costs one comparison per unit (the heavy-field performance test does not move)
     if (!this._s || Math.abs(this._s.interval - s.interval) > 1e-9) this._rateDirty = true;
     this._s = s;
+    this._flyS = null; // drop the cached answer's reference to the previous stats object
     this._dirty = false;
     if (this.alive && prevMax > 0 && Math.abs(prevMax - maxHp) > 1e-9) {
       this.hp = clamp(fin(this.hp * (maxHp / prevMax), maxHp), 0, maxHp);
@@ -220,16 +226,23 @@ export class Unit {
    * `motion`, never this.
    */
   get isFlying() {
-    // 缚地: a flying unit forced to the ground — our custom 予愿安洁莉娜 uses `grounded`, the official status
-    // (ba.groundbind) `groundbind`. A 浮空 still lifts an enemy back off the ground (Battle.applyStatus).
+    // Cached per stats object + motion (the hot loops ask this per candidate blocker / target). A fresh stats object
+    // means the flags were recomputed (a buff added / expired); `motion` is compared by value because content writes it
+    // directly (forms, 起飞). Our custom grounded flags (予愿安洁莉娜) keep their meaning: they force a flyer to the
+    // ground, and the official 浮空 still lifts an enemy back off the ground (Battle.applyStatus).
+    const s = this.s;
+    if (s === this._flyS && this.motion === this._flyMotion) return this._flying;
+    let v;
     if (this.side === 'enemy') {
-      const f = this.s.flags;
-      if (f.levitate) return true;
-      if (f.groundbind || f.grounded) return false;
-      return this.motion === 'FLY' || !!f.float;
+      const f = s.flags;
+      v = f.levitate ? true : (f.groundbind || f.grounded) ? false : this.motion === 'FLY' || !!f.float;
+    } else {
+      v = (s.flags.grounded || s.flags.groundbind) ? false : this.motion === 'FLY';
     }
-    if (this.s.flags.grounded || this.s.flags.groundbind) return false;
-    return this.motion === 'FLY';
+    this._flyS = s;
+    this._flyMotion = this.motion;
+    this._flying = v;
+    return v;
   }
 
   get hpRatio() { const mh = this.s.maxHp; return mh > 0 ? this.hp / mh : 0; }
