@@ -79,11 +79,22 @@
 | `pkgrps/btl_pfb_fx_enemy_17.ab` | 解码成功：2547 ParticleSystem / 129 Mesh / 52 Texture2D（规程敌人特效） |
 | 关卡 `.dat`（HGDownload，30 个） | **是 ZIP 容器**；解出内层 `level_act3autochess_*.ab` 后 UnityPy 可读：210 GameObject / 197 Mesh / 199 MeshRenderer / 1 Light / 1 Camera |
 
-**发现的缺口**（P4 的具体工作项）：
+**已落地（2026-11-15，单提交）**：
 
-- [ ] 关卡 `.dat` 需先解 zip；`scenes.py` 的 `SCENES` 表**没有 act3 条目**（当前只有 act1/act2），要加 m01–m06、m09–m12 共 10 张（每张 3 个 sub-level）
+- `tools/local-extract/import_scenes.py`：把客户端 `PersistentData/HGDownload/<version>/*.dat` 里的 bundle 解到
+  `--scenes` 目录（`--match act3autochess` 只导规程的 30 个关卡预制体）。
+- `tools/local-extract/regulation_scenes.py`：主线参考移植——规程一张图是 **3 个 piece 预制体**（sub_01/02/03），
+  按 `PIECE_SHIFT` 拼到 19×21 棋盘，处理水片、背景地面、lightmap 2×2 图集与 `HIDDEN@1/2/3` 分组。
+- `extract.py`：`--only scene/act3autochess_m01` 走 `regulation_ids` + `export_regulation`；这些组**不进**
+  `expected_local_groups`（客户端没有时仍是金属棋盘）。
+- **m01 实跑通过**：24 chunks / 105 901 顶点 / 3 张 lightmap 合成 2048²，输出 `scene.json`（version 1）、
+  `scene.bin` 4.0 MB、`lm0.png|webp`、`scene/tex/*` 共 15 文件。黑边统计（lightmap 修复前后）与 4 个分组均正常。
+
+**仍需处理**（P4）：
+
+- [x] 关卡 `.dat` 解 zip（`import_scenes.py`）；规程三段场景表（`regulation_scenes.py`，10 张图）
 - [ ] 提取任务表（`extract.py` 的 `JOBS`）没有 act3 的 activity / 主题 / skills / equips / enemy-fx 条目；`skills/equips/dynamicabilities` 是逻辑预制体（无美术），美术在 `pkgrps/btl_pfb_fx_enemy_*`
-- [ ] 两个根（`StreamingAssets/AB/Windows` 与 `PersistentData/Bundles`）内容互补，提取要合并
+- [ ] 两个根（`StreamingAssets/AB/Windows` 与 `PersistentData/Bundles`）内容互补，提取要合并（本次用基础根取材质、`--scenes` 取关卡）
 - [ ] 规程 4 首音乐仍缺（客户端未缓存）
 - [ ] 77 个规程敌人模型：本地客户端只有部分；需扩充 `ENEMY_SPINES` 列表并确认 `anon/*.bin` 的映射
 
@@ -132,8 +143,9 @@
 - [ ] 3D 简报图：与 §0 的 `board3d` 冲突，**降级为静态渲染图**（先不做实时）
 
 ### P4 素材（3–5 人日）
-- [ ] 关卡 `.dat` 先解 zip；`scenes.py` 的 `SCENES` 加 act3 的 m01–m06、m09–m12（10 张 × 3 sub-level，见 §3.1）
-- [ ] 合并两个 AB 根（基础包 + 下载目录）；`extract.py` 任务表加 act3 的 activity / 主题 / enemy-fx 条目
+- [x] 关卡 `.dat` 先解 zip；规程三段场景导出（`import_scenes.py` + `regulation_scenes.py`，m01 实跑通过；见 §3.1）
+- [ ] 合并两个 AB 根（基础包 + 下载目录）——本次以基础根取材质、`--scenes` 取关卡，仍需统一到 `--game`
+- [ ] `extract.py` 任务表加 act3 的 activity / 主题 / enemy-fx 条目
 - [ ] `tools/assets/versions.mjs` 按版本并集规划；`fetch-assets`/`local-extract` 覆盖 77 个敌人 Spine、37 个新干员、10 张地图、主题、敌人特效
 - [ ] 规程 4 首音乐：先在客户端内播放一次以缓存，再 `music.py`；缺失则用社区 dump
 - [ ] `data/assets.json` 的 `spineLocal`/模型清单更新；中继发布与手机端首包评估

@@ -70,6 +70,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scenes  # noqa: E402  (the battlefield scene table and exporter; imports UnityPy only when it runs)
+import regulation_scenes  # noqa: E402  (规程's three-piece fields → the same scene/<stageId> groups)
 import operators  # noqa: E402 (installed plugin operators' optional official art)
 import fx  # noqa: E402  (the official battle effects, DESIGN §33; imports UnityPy only when it runs)
 
@@ -789,6 +790,14 @@ def scene_ids(only):
     return spine_ids(only, scenes.SCENE_SUB, [sid for sid, _deps in scenes.SCENES])
 
 
+def regulation_ids(only):
+    """规程 stages selected like scene_ids, from regulation_scenes.REGULATION_IDS rather than scenes.SCENES.
+
+    Kept out of expected_local_groups: setup must not require them, and a missing group stays the metal board.
+    """
+    return spine_ids(only, scenes.SCENE_SUB, regulation_scenes.REGULATION_IDS)
+
+
 def expected_local_groups():
     """Group keys a full extract writes into data/local-assets.json (no --only; fx stays out — fx.py FX_GROUPS).
 
@@ -968,10 +977,11 @@ def main():
     enemy_ids = spine_ids(args.only, ENEMY_SPINE_SUB, ENEMY_SPINES)
     token_ids = spine_ids(args.only, TOKEN_SPINE_SUB, TOKEN_SPINES)
     stage_ids = scene_ids(args.only)
+    reg_ids = regulation_ids(args.only)
     fx_on = fx_selected(args.only)
     art_on = wants_sub(args.only, operators.SUB) and (bool(args.only) or args.plugin_art)
     art_ids = spine_ids(args.only, operators.SUB, operators.references(Path(args.plugin_root))) if art_on else []
-    if not jobs and not enemy_ids and not token_ids and not stage_ids and not fx_on and not art_on:
+    if not jobs and not enemy_ids and not token_ids and not stage_ids and not reg_ids and not fx_on and not art_on:
         print(f'--only {args.only}: no job matches', file=sys.stderr)
         return 2
     out_root = Path(args.out)
@@ -995,6 +1005,10 @@ def main():
                               fx_manifest=Path(args.manifest).with_name(fx.FX_MANIFEST), texture_format=args.fx_texture_format)
     if stage_ids:
         total += export_scenes(ab_root, out_root, manifest, print, stage_ids, scene_roots(ab_root, args.scenes))
+    if reg_ids:
+        total += regulation_scenes.export_regulation(
+            ab_root, out_root, manifest, print, reg_ids, scene_roots(ab_root, args.scenes),
+            material_info, dep_bundles(ab_root, {'Material'}))
     old, old_chars = {}, {}
     if Path(args.manifest).exists():
         try:
