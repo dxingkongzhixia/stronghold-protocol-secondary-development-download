@@ -57,6 +57,7 @@ import { applyThemeProperties } from './themeVars.js';
 import { sha256HexAsync } from '../../shared/sha256.js';
 import { getLang, langChain, t, N_ } from '../../shared/i18n.js';
 import { DEV_BUILD } from '../../shared/constants.js';
+import { DEFAULT_VERSION, versionById, versionSlug } from '../../shared/versions.js';
 
 /** The localStorage preference (`sp.pref.<key>`) of the personal cosmetic plugins: their ids. */
 export const PERSONAL_PREF = 'cosmetics';
@@ -399,6 +400,7 @@ export const CONTENT_TIMEOUT_MS = 60000;
 const CONTENT_PARALLEL = 4;
 /** What the page says (once) when the room's content set will not load or check. */
 const CONTENT_FAILED = N_('房间的插件内容未能通过校验，请刷新页面重试');
+const VERSION_FAILED = N_('版本数据未能通过校验，请刷新页面重试');
 
 /**
  * The room's content set as this page has it (header "The room's content set"): `cs` (null: the original content),
@@ -406,7 +408,7 @@ const CONTENT_FAILED = N_('房间的插件内容未能通过校验，请刷新�
  * `kitted` (the operators its plugins add to a 自选 slot's list — room.state.content.kittedExtra; null: none, the server's
  * list alone).
  */
-export const contentSet = createStore({ cs: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
+export const contentSet = createStore({ cs: null, kind: null, version: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
 /** The checked set the page holds: { cs, index, values: Map<name, JSON>, bounds } (the runner's data), or null. */
 let held = null;
 /** Pages waiting for a content set (contentFor): cs → resolvers. */
@@ -563,11 +565,61 @@ export async function loadContentSet(cs, { fetch: doFetch = defaultFetch, retryD
 }
 
 /**
+ * Download and check an official version's set (header "Official versions"): its manifest (`vanilla: true`, `version`
+ * the id expected, no plugins and no settings, its composition hashing to `cs`), every data file it lists — each under
+ * /data/versions/<slug>/ of that version — and its official-bounds snapshot (under /cs/<cs16>/), each by its bytes.
+ * @param {string} cs @param {string} id the version expected (a registry id, not the default)
+ * @param {{ fetch?: typeof fetch, retryDelays?: readonly number[], wait?: (ms: number) => Promise<void>, timeoutMs?: number,
+ *   onProgress?: (loaded: number, total: number) => void }} [opts]
+ * @returns {Promise<{ cs: string, kind: 'version', version: string, index: any, values: Map<string, any>, bounds: any }>}
+ *   (rejects with the reason)
+ */
+export async function loadVersionSet(cs, id, { fetch: doFetch = defaultFetch, retryDelays = CONTENT_RETRY_MS, wait = sleep, timeoutMs = CONTENT_TIMEOUT_MS, onProgress = null } = {}) {
+  if (!isContentHash(cs)) throw new Error('no content hash');
+  const entry = versionById(id);
+  if (!entry || entry.id === DEFAULT_VERSION) throw new Error(`not another official version: ${String(id)}`);
+  const own = `/cs/${csUrlPart(cs)}/`;
+  const index = await fetchChecked(`${own}index.json`, null, { fetch: doFetch, retryDelays, wait, timeoutMs });
+  if (!isObj(index) || index.cs !== cs || index.vanilla !== true || index.version !== id || !isObj(index.data)) throw new Error('the manifest is not that version\'s set');
+  if (!Array.isArray(index.plugins) || index.plugins.length || !isObj(index.settings) || Object.keys(index.settings).length) throw new Error('a version set names plugins or settings');
+  const entries = Object.entries(index.data);
+  if (!entries.length || entries.some(([, f]) => !isObj(f) || typeof f.url !== 'string' || !isContentHash(f.sha256) || !Number.isInteger(f.bytes))) throw new Error('a data entry is malformed');
+  const prefix = `/data/versions/${versionSlug(entry)}/`;
+  for (const [name, f] of entries) if (!f.url.startsWith(prefix) || f.url.includes('..')) throw new Error(`${name}: an address outside the version's data`);
+  const official = isObj(index.bounds) && isObj(index.bounds.official) ? index.bounds.official : null;
+  if (!official || typeof official.url !== 'string' || !isContentHash(official.sha256) || !official.url.startsWith(own) || official.url.includes('..')) throw new Error('bounds: missing, or an address outside this set');
+  let again;
+  try { again = contentHashOf({ app: index.app, sim: index.sim, data: Object.fromEntries(entries.map(([name, f]) => [name, f.sha256])) }); } catch { again = null; }
+  if (again !== cs) throw new Error('the manifest does not hash to the version\'s cs');
+  const total = entries.reduce((n, [, f]) => n + f.bytes, 0);
+  let loaded = 0;
+  onProgress?.(0, total);
+  const values = new Map();
+  let next = 0;
+  const worker = async () => {
+    while (next < entries.length) {
+      const [name, f] = entries[next++];
+      values.set(name, await fetchChecked(f.url, f, { fetch: doFetch, retryDelays, wait, timeoutMs, onBytes: (n) => { loaded += n; onProgress?.(loaded, total); } }));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONTENT_PARALLEL, entries.length) }, worker));
+  const bounds = await fetchChecked(official.url, official, { fetch: doFetch, retryDelays, wait, timeoutMs });
+  if (!isObj(bounds) || bounds.v !== 1) throw new Error('bounds: not an official-bounds snapshot');
+  return { cs, kind: 'version', version: id, index, values, bounds, scripts: [], native: [], canSim: true, nativeVerified: false };
+}
+
+/**
+ * The official version of the data the page shows now: the version set it holds, else the default (the server's files,
+ * or a gameplay plugin room's set — plugins play the default version only).
+ */
+export const pageVersion = () => (held && typeof held.version === 'string' ? held.version : DEFAULT_VERSION);
+
+/**
  * The content set the battle runner simulates on now (public/js/battle/runner.js): `{ cs, data, bounds }` of the checked
  * set the page holds, or null (the original content: the runner loads /data/ itself).
  */
 export const simContent = () => (held && held.canSim !== false && (!held.native?.length || hasNativeConsent(held.cs)) ? { scripts:held.scripts || [], keel:held.keel || null, hashInput:held.index, nativeVerified:held.nativeVerified,
-  cs: held.cs, data: Object.fromEntries(held.values), bounds: held.bounds ?? null } : null);
+  cs: held.cs, data: Object.fromEntries(held.values), bounds: held.bounds ?? null, ...(held.version ? { version: held.version } : {}) } : null);
 
 /**
  * The content set `cs` once this page holds it — at once when it does, when its download is done when it is the one
@@ -647,7 +699,41 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
     if (held) { held = null; data.setContent(null); }
     settleWaiting(null);
     settleNative(null, false);
-    if (contentSet.get().cs !== null || contentSet.get().status !== 'idle') contentSet.set({ cs: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
+    if (contentSet.get().cs !== null || contentSet.get().status !== 'idle' || contentSet.get().kind !== null) contentSet.set({ cs: null, kind: null, version: null, status: 'idle', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
+  };
+  /** The last two checked version sets of this page, by cs: a room passed through does not download its data again. */
+  const versionCache = new Map();
+  const toldVersion = new Set();
+  /** Show a checked version set (download or cache): its files for every screen, the battle runner on its bounds. */
+  const showVersion = (set) => {
+    held = set;
+    versionCache.delete(set.cs);
+    versionCache.set(set.cs, set);
+    while (versionCache.size > 2) versionCache.delete(versionCache.keys().next().value);
+    // a version's manifest lists no translations yet: its files take the Chinese game texts (data.js keeps the server's)
+    data.setContent({ id: set.cs, values: set.values, overlay: null, langs: [] });
+    contentSet.set({ cs: set.cs, kind: 'version', version: set.version, status: 'ready', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
+    settleWaiting(set.cs);
+  };
+  const loadVersion = (cs, version) => {
+    const mine = ++req;
+    // the set on screen stays until this one is checked
+    settleWaiting(null);
+    settleNative(null, false);
+    const cached = versionCache.get(cs);
+    if (cached && cached.version === version) { showVersion(cached); return; }
+    contentSet.set({ cs, kind: 'version', version, status: 'loading', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
+    loadVersionSet(cs, version, { fetch: doFetch, retryDelays, wait, onProgress: (loaded, total) => { if (mine === req) contentSet.set({ loaded, total }); } })
+      .then((set) => { if (mine === req) showVersion(set); })
+      .catch((err) => {
+        if (mine !== req) return;
+        console.warn(`[content] the version set ${version} ${cs.slice(0, 8)} did not load or check: ${err?.message || err}`);
+        // the server's files again (the status says it failed): another version's operators never stay on screen
+        if (held) { held = null; data.setContent(null); }
+        contentSet.set({ status: 'failed', error: String(err?.message || err).slice(0, 200) });
+        settleWaiting(cs);
+        if (!toldVersion.has(cs) && toast) { toldVersion.add(cs); toast(t(VERSION_FAILED), 'error'); }
+      });
   };
   const apply = (set) => {
     held = set;
@@ -658,7 +744,7 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
     const extra = store.get()?.room?.content?.kittedExtra;
     const native = Array.isArray(set.native) ? set.native : [];
     const nativeConsent = !native.length || hasNativeConsent(set.cs);
-    contentSet.set({ status: 'ready', error: null, native, nativeConsent, kitted: Array.isArray(extra) ? extra.filter((x) => typeof x === 'string').slice(0, 200) : null });
+    contentSet.set({ kind: 'plugins', version: null, status: 'ready', error: null, native, nativeConsent, kitted: Array.isArray(extra) ? extra.filter((x) => typeof x === 'string').slice(0, 200) : null });
     settleWaiting(set.cs);
     if ((set.canSim && nativeConsent) || !store.get()?.room?.seats?.some(s => s?.playerId === store.get()?.me?.playerId)) tell(set.cs, true);
     // A native-code set the player has not accepted yet: keep the seat un-ready and let the room show the consent bar.
@@ -668,7 +754,7 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
     if (held) { held = null; data.setContent(null); }
     settleWaiting(null);
     settleNative(null, false);
-    contentSet.set({ cs, status: 'loading', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
+    contentSet.set({ cs, kind: 'plugins', version: null, status: 'loading', loaded: 0, total: 0, error: null, kitted: null, native: [], nativeConsent: true });
     // A set without scripts is self-contained: its checked values can be laid again when the host switches the same
     // plugin back on. (Script sets stay on the consent/import path above.)
     const cached = checked.get(cs);
@@ -703,12 +789,19 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
   const sync = (s) => {
     const cs = roomCs(s);
     const cur = contentSet.get();
-    if (!cs) {
+    const vId = typeof s?.room?.version === 'string' && s.room.version ? s.room.version : DEFAULT_VERSION;
+    // another official version's room: its own set, loaded like a content set but from /data/versions/
+    const vCs = !cs && s?.room && vId !== DEFAULT_VERSION && isContentHash(s.room.content?.cs) ? s.room.content.cs : null;
+    if (!cs && !vCs) {
       // No room content. Outside a room the main interface's personal preview set (ui/previewCs, the 插件预览 dialog)
       // may be laid instead; a room — even a vanilla one — always drops it, so a match never sees preview data.
       const preview = !s?.room && typeof s?.ui?.previewCs === 'string' && isContentHash(s.ui.previewCs) ? s.ui.previewCs : null;
       if (!preview) { if (cur.cs || held) drop(); return; }
       if (cur.cs !== preview) { load(preview); return; }
+      return;
+    }
+    if (vCs) {
+      if (cur.cs !== vCs || (held?.cs === vCs && held.version !== vId)) loadVersion(vCs, vId);
       return;
     }
     const consent = !!s.room.content.trusted && hasScriptConsent(cs);

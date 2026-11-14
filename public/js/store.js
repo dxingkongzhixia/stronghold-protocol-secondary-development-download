@@ -87,6 +87,8 @@ export const initialState = Object.freeze({
   notice: null,
   // the room's content set (server/plugins/identity.js): { cs, vanilla, plugins } or null
   content: null,
+  // the official versions this server offers (welcome.versions, public/js/versions.js: null = the default alone)
+  versions: null,
   // how many unofficial plugins the server has (DESIGN §32 P1a: /healthz or welcome `content.plugins`; content.js)
   installedPlugins: 0,
   // welcome.testMode: this process allows test rooms (the server omits the key when off). The client cannot set it.

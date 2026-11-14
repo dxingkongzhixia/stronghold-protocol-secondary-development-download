@@ -77,6 +77,7 @@ import { recordError, installTrafficMeter } from './diag.js';
 import { initAssetMirror, installImageFallback, mirrorRouteUrl, mirrorCandidates } from './assetMirror.js';
 import { idbSupported, setIdbEnabled } from './assetIdb.js';
 import { installContent, installContentSet } from './content.js';
+import { sanitizeVersions } from './versions.js';
 import { initPreviewPlugins } from './ui/previewPlugins.js';
 import { installCoreSkins } from './coreSkins.js';
 
@@ -220,6 +221,8 @@ function onWelcome(msg) {
       : null,
     // how many unofficial plugins it has (P1a — absent: none; content.js fetches the catalogue only when there are some)
     installedPlugins: pluginCount(msg.content),
+    // the official versions this server offers (absent: the default version alone)
+    versions: sanitizeVersions(msg.versions),
     testMode: msg.testMode === true,
   });
   welcomeAt = Date.now();

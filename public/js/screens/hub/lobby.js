@@ -34,6 +34,7 @@ import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, cons
 import { data, useData } from '../../data.js';
 import { t } from '../../../../shared/i18n.js';
 import { MODE_CARDS, difficultyInfo, normalizeCode, codeArg, remembersRoomOrigin } from '../lobbyData.js';
+import { lobbyVersion, storedLobbyVersion, saveLobbyVersion, versionsForMode } from '../../versions.js';
 import { Emblem } from '../title.js';
 import { HubBackdrop, HubRadar, BackdropGlyph, BackdropSettings } from '../../ui/hub/backdrop.js';
 import { useHubBackdrop, backdropTheme } from '../../ui/hub/appearance.js';
@@ -278,6 +279,7 @@ function SearchPanel({ difficulty, mm, color, onCancel }) {
  * create/queue actions and receives `onStart`.
  */
 function ProtocolPage({ mode, difficulty, onDifficulty, onClose, online, busy, isPublic, onPublic, testMode, asTest, onTest,
+  versions = [], version = null, onVersion = null,
   blockedReason, needAccount, onStart, queued = false, mm = null, onCancel }) {
   const card = MODE_CARDS.find((c) => c.id === mode) || MODE_CARDS[0];
   const info = difficultyInfo(mode === 'mm' ? 'coop' : mode, difficulty);
@@ -333,6 +335,11 @@ function ProtocolPage({ mode, difficulty, onDifficulty, onClose, online, busy, i
               difficulty=${d} selected=${difficulty === d} onSelect=${onDifficulty} />`)}
           </div>
           <div class="proto-foot">
+            ${versions.length > 1 && mode !== 'mm' ? html`<div class="proto-opts">
+              <span class="t-dim">${t('版本')}</span>
+              <${Tabs} size="sm" value=${version} onChange=${onVersion}
+                items=${versions.map((v) => ({ id: v.id, label: t(v.label) }))} />
+            </div>` : null}
             ${mode === 'coop' ? html`<div class="proto-vis">
               <span class="t-dim">${t('房间可见性')}</span>
               <${Tabs} size="sm" value=${isPublic ? 'public' : 'private'} onChange=${onPublic}
@@ -382,6 +389,9 @@ export function LobbyScreen() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(null);
   const [asTest, setAsTest] = useState(false);
+  // the official versions this server offers (welcome.versions) and this browser's choice among them
+  const versionsList = useStore((s) => s.versions);
+  const [versionPref, setVersionPref] = useState(() => storedLobbyVersion());
   // a room created from 选择模拟协议 returns there on leave; any other entry starts on the main Hub
   const [protocol, setProtocol] = useState(() => (consumeProtocolReturn() && roomMode !== 'mm' ? roomMode : null));
   const [showJoin, setShowJoin] = useState(false);
@@ -404,6 +414,11 @@ export function LobbyScreen() {
 
   const pickDifficulty = (d) => { setDifficulty(d); savePref('lobby.difficulty', d); };
   const pickPublic = (v) => { const b = v === 'public'; setIsPublic(b); savePref('lobby.public', b); };
+  const pickVersion = (v) => { setVersionPref(v); saveLobbyVersion(v); };
+  // the versions the protocol page's room mode can play; none (or one) = no switch
+  const createMode = protocol || roomMode;
+  const versionChoices = createMode === 'mm' ? [] : versionsForMode(versionsList, createMode);
+  const selectedVersion = versionChoices.length ? lobbyVersion(versionChoices, versionPref) : null;
 
   const run = async (kind, fn) => {
     if (inFlight.current) return;
@@ -419,7 +434,7 @@ export function LobbyScreen() {
     if (entryBlocked) { toast(entryBlocked, 'warn'); return; }
     const mode = protocol || roomMode;
     run('create', () => net.request('room.create', {
-      mode, difficulty, public: isPublic, ...(testMode && asTest && mode !== 'mm' ? { test: true } : {}),
+      mode, difficulty, public: isPublic, ...(selectedVersion && mode !== 'mm' ? { version: selectedVersion } : {}), ...(testMode && asTest && mode !== 'mm' ? { test: true } : {}),
     }).then((r) => { setProtocolReturn(true); return r; }));
   };
   const joinRequest = (type, k) => net.request(type, { code: k }).catch((err) => {
@@ -499,6 +514,7 @@ export function LobbyScreen() {
   }
   if (protocol) {
     return html`<${ProtocolPage} mode=${protocol} difficulty=${difficulty} onDifficulty=${pickDifficulty}
+      versions=${versionChoices} version=${selectedVersion} onVersion=${pickVersion}
       onClose=${() => setProtocol(null)} online=${online} busy=${busy} isPublic=${isPublic} onPublic=${pickPublic}
       testMode=${testMode} asTest=${asTest} onTest=${setAsTest}
       blockedReason=${protocol === 'mm' ? (mmBlocked ? t('多人匹配仅支持原版内容，请先关闭插件预览') : '') : entryBlocked} needAccount=${protocol === 'mm' && !auth?.account}

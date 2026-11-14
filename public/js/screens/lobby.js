@@ -34,6 +34,7 @@ import { contentSet } from '../content.js';
 import { t, tc, N_ } from '../../../shared/i18n.js';
 
 import { MODE_CARDS, difficultyInfo, CODE_RE, normalizeCode, codeArg, remembersRoomOrigin } from './lobbyData.js';
+import { lobbyVersion, storedLobbyVersion, saveLobbyVersion, versionsForMode } from '../versions.js';
 import { OnlineOverlay } from './online.js';
 export { MODE_TEXT, STAGE_POOL, stageLabel, stageNote, MODE_CARDS, difficultyInfo, CODE_RE, normalizeCode, codeArg, remembersRoomOrigin, parseRoomParam } from './lobbyData.js';
 export { onlineStatsTarget, filterOnlinePlayers, openOnlineStats } from './online.js';
@@ -137,6 +138,9 @@ export function LobbyScreen() {
   });
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(null);
+  // the official versions this server offers (welcome.versions): this browser's lobby choice among them
+  const versionsList = useStore((s) => s.versions);
+  const [versionPref, setVersionPref] = useState(() => storedLobbyVersion());
   // 公开同盟 (lobby 03 → server /online/api `openRooms`): whether a new 同盟 room is listed publicly. Persisted.
   const [isPublic, setIsPublic] = useState(() => loadPref('lobby.public', true) !== false);
   const [sweepOpen, setSweepOpen] = useState(false);
@@ -155,6 +159,10 @@ export function LobbyScreen() {
 
   const pickMode = (m) => { setRoomMode(m); savePref('lobby.mode', m); };
   const pickDifficulty = (d) => { setDifficulty(d); savePref('lobby.difficulty', d); };
+  const pickVersion = (v) => { setVersionPref(v); saveLobbyVersion(v); };
+  // the versions this room mode can play; none (or one) = no switch
+  const versionChoices = roomMode === 'mm' ? [] : versionsForMode(versionsList, roomMode);
+  const selectedVersion = versionChoices.length ? lobbyVersion(versionChoices, versionPref) : null;
   const pickPublic = (v) => { const b = v === 'public'; setIsPublic(b); savePref('lobby.public', b); };
 
   const run = async (kind, fn) => {
@@ -170,7 +178,7 @@ export function LobbyScreen() {
   const create = () => {
     // The button is disabled while blocked, but a keyboard activation or a stale click must not slip through either.
     if (entryPolicy.blocked) { if (entryPolicy.reason) toast(entryPolicy.reason, 'warn'); return; }
-    run('create', () => net.request('room.create', { mode: roomMode, difficulty, public: isPublic, ...(testMode && asTest ? { test: true } : {}) }));
+    run('create', () => net.request('room.create', { mode: roomMode, difficulty, public: isPublic, ...(selectedVersion ? { version: selectedVersion } : {}), ...(testMode && asTest ? { test: true } : {}) }));
   };
   /** Test rooms need an explicit acknowledgement before any seat or private state is sent. */
   const joinRequest = (type, k) => net.request(type, { code: k }).catch((err) => {
@@ -325,6 +333,11 @@ export function LobbyScreen() {
       </section>
 
       <section class="lobby-right">
+        ${versionChoices.length > 1 ? html`<div class="lobby-versions">
+          <div class="section-label">${t('版本')}<${MicroLabel}>VERSION<//></div>
+          <${Tabs} size="sm" value=${selectedVersion} onChange=${pickVersion}
+            items=${versionChoices.map((v) => ({ id: v.id, label: t(v.label) }))} />
+        </div>` : null}
         <div class="section-label"><span class="section-label__idx num">02</span>${t('模拟难度')}<${MicroLabel}>DIFFICULTY<//></div>
         <div class="diff-list">
           ${DIFFICULTIES.map((d) => html`<${DifficultyCard} key=${d} roomMode=${roomMode === 'mm' ? 'coop' : roomMode} difficulty=${d} selected=${difficulty === d} onSelect=${pickDifficulty} />`)}

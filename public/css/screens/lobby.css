@@ -18,6 +18,8 @@
    screen on a short window; on a tall window nothing grows (no gap between the cards and the buttons). */
 .lobby-right .diff-list { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 .lobby-right .diff-list > * { flex: 0 0 auto; } /* scroll the cards, never squish them */
+.lobby-right .lobby-versions { flex: 0 0 auto; margin-bottom: .3rem; }
+.lobby-right .lobby-versions .tabs { width: 100%; }
 .lobby-right .create-box, .lobby-right .mm-box, .lobby-right .mm-panel { flex: 0 0 auto; }
 
 /* ---- mode cards ------------------------------------------------------------------------------------ */
