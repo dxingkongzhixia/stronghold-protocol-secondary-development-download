@@ -44,6 +44,7 @@ import { statusKey, composeUnitRecord, standInRecord, unitForm } from '../shared
 import { extendedGrid } from '../shared/loadoutRecord.js';
 import { FULL_RANK, atRank, stripPotential } from '../shared/potential.js';
 import { versionById } from '../shared/versions.js';
+import * as act3Tables from './versions/tables/act3autochess-v3_1.mjs';
 
 // ===== CLI & IO ==================================================================================
 
@@ -109,6 +110,9 @@ if (VERSION && !process.argv.some((a) => a === '--out' || a.startsWith('--out=')
   OPTS.out = join(ROOT, 'data', ...VERSION.dir.split('/').filter(Boolean));
 }
 SEASON = VERSION ? VERSION.season : SEASON;
+
+/** 规程's measured draft tables; the default season keeps its own literal below. */
+const ACT3_DRAFTS = VERSION?.id === 'act3autochess@V3_1' ? act3Tables : null;
 
 const log = (...a) => { if (!OPTS.quiet) console.log(...a); };
 const warnings = [];
@@ -3926,7 +3930,7 @@ function bountyDraftExclusion(e, main) {
 const EE = (s) => `enemyeffect_${s}`;
 const seriesIds = (n) => [1, 2, 3, 4, 5, 6].map((i) => EE(`${n}_${i}`));
 /** The R3 sets seen. */
-const BOUNTY_INITIAL_SETS = [
+const COVENANT_BOUNTY_INITIAL_SETS = [
   { cards: seriesIds(18), seen: [1, 3, 5, 9, 17] },
   { cards: seriesIds(19), seen: [2, 15, 22] },
   { cards: seriesIds(17), seen: [7, 14] },
@@ -3950,7 +3954,7 @@ const R9 = {
 /** A group from [name, hits] pairs (hits = the drafts of the group the card appeared in). */
 const r9Group = (pairs, seen) => ({ cards: pairs.map(([n]) => EE(R9[n])), hits: pairs.map(([, h]) => h), seen });
 /** The R9 groups (one per bossInitial event), picked by the matches they came in. */
-const BOUNTY_BOSS_GROUPS = [
+const COVENANT_BOUNTY_BOSS_GROUPS = [
   r9Group([['W', 11], ['碎骨', 12], ['弑君者', 11], ['大鲍勃', 11], ['源石虫', 10], ['鼠王', 4], ['杰斯顿', 12], ['自在', 7], ['陷落雪祀', 6]], [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21]),
   r9Group([['W', 3], ['碎骨', 1], ['弑君者', 1], ['大鲍勃', 3], ['庞贝', 1], ['源石虫', 2], ['喷气人', 3], ['纠缠藤蔓', 3], ['澪', 1]], [1, 5, 22]),
   r9Group([['W', 3], ['碎骨', 2], ['弑君者', 1], ['庞贝', 2], ['源石虫', 1], ['澪', 1], ['邪魔的利刃', 2], ['复仇者', 3], ['萨卡兹百夫长', 3]], [6, 20, 'bahamut-12294']),
@@ -3960,7 +3964,7 @@ const BOUNTY_BOSS_GROUPS = [
 ];
 /** The R11 groups seen: 7 cards, or 6 + `open` cards drawn by BOUNTY_HUNTER_RULE. */
 const hunterGroup = (ids, hits, seen, open = 0) => ({ cards: ids.map(EE), hits, seen, ...(open ? { open } : {}) });
-const BOUNTY_HUNTER_GROUPS = [
+const COVENANT_BOUNTY_HUNTER_GROUPS = [
   hunterGroup(['16_4', '16_10', '15_7', '12_7', '13_8', '10_7', '11_7'], [4, 4, 3, 3, 4, 3, 3], [1, 6, 21, 22]), // 温顺的武装大驮兽 …
   hunterGroup(['16_3', '15_7', '13_8', '16_9', '14_7', '11_7', '10_7'], [2, 2, 2, 1, 2, 2, 1], [3, 13]), // 狂暴宿主组长 …
   hunterGroup(['16_5', '15_8', '12_7', '14_8', '10_7', '16_11', '11_7'], [3, 3, 3, 2, 3, 3, 1], [10, 12, 16]), // 萨卡兹骸骨拷打者 …
@@ -3988,7 +3992,7 @@ const BOUNTY_HUNTER_RULE = { size: 7, onePerSeries: [10, 11, 12, 13, 14, 15], ma
  * block reading leaves open which hunter events R11 fires, see `hunter` above), so those keep the previous draw —
  * any normal shop item of tiers I–VI per card, with replacement (the same item can come twice there too) [ASSUMED].
  */
-const SHOP_DRAFT = {
+const COVENANT_SHOP_DRAFT = {
   rounds: [11],
   slots: [{ 6: 1 }, { 6: 1 }, { 5: 1 }, { coin: 1 }, { 5: 3, 4: 2, 3: 1, coin: 2 }, { 5: 3, 4: 2, 3: 1, coin: 2 }],
   coin: '盟约之币',
@@ -4010,7 +4014,7 @@ const SHOP_DRAFT = {
  * four: about 24 %) and all three about 41 % (all four: about 3 %). The pattern was spotted after the fact, so it is kept as
  * a question rather than slots [ASSUMED: independent draws]; more R11 战术决策 screenshots would settle it.
  */
-const TACTIC_DRAFT = {
+const COVENANT_TACTIC_DRAFT = {
   rounds: [11],
   kinds: ['ally'],
   seen: { 补给: 3, 列装: 3, 升华: 3, 莫斯提马的盟誓: 2, 银灰的盟誓: 2, 阿戈尔驰援: 2, 财富: 2, 谢拉格驰援: 1, 锐利: 1, 整备: 1, 玛恩纳的盟誓: 1, 斯卡蒂的盟誓: 1, 萨尔贡驰援: 1, 叙拉古驰援: 1 },
@@ -4041,6 +4045,13 @@ function choiceFamily(ev) {
  * Build data/choices.json: 机变 events, families, card pools, per-mode round schedule (research 01
  * A4 defaults, [ASSUMED] where the data is silent) and server-side reward pools.
  */
+// The season's draft structures: 规程's measured sets (tools/versions/tables) or the covenant literals above.
+const BOUNTY_INITIAL_SETS = ACT3_DRAFTS ? ACT3_DRAFTS.bountyDrafts.initialSets : COVENANT_BOUNTY_INITIAL_SETS;
+const BOUNTY_BOSS_GROUPS = ACT3_DRAFTS ? ACT3_DRAFTS.bountyDrafts.bossGroups : COVENANT_BOUNTY_BOSS_GROUPS;
+const BOUNTY_HUNTER_GROUPS = ACT3_DRAFTS ? ACT3_DRAFTS.bountyDrafts.hunterGroups : COVENANT_BOUNTY_HUNTER_GROUPS;
+const SHOP_DRAFT = ACT3_DRAFTS ? ACT3_DRAFTS.shopDraft : COVENANT_SHOP_DRAFT;
+const TACTIC_DRAFT = ACT3_DRAFTS ? ACT3_DRAFTS.tacticDraft : COVENANT_TACTIC_DRAFT;
+
 function buildChoices(ctx, effects, items, chess) {
   const { act } = ctx;
   const events = {};
@@ -4336,9 +4347,9 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
     if (!rec) throw new Error(`pool stock: missing ${name}`);
     return [rec.chessId || rec.id, count];
   }));
-  const chessStock = stockByName(chess, { 普罗旺斯: 10, 德克萨斯: 10, 跃跃: 10, 古米: 10, 格雷伊: 10,
+  const chessStock = VERSION ? {} : stockByName(chess, { 普罗旺斯: 10, 德克萨斯: 10, 跃跃: 10, 古米: 10, 格雷伊: 10,
     风丸: 8, 赫默: 12, 休谟斯: 12, 砾: 12, 蒂比: 12, 调香师: 12 });
-  const itemStock = stockByName(items, { 简易通讯机: 5, 蜂鸣器: 6, 防暴盾: 6, 浓缩嗅盐: 6,
+  const itemStock = VERSION ? {} : stockByName(items, { 简易通讯机: 5, 蜂鸣器: 6, 防暴盾: 6, 浓缩嗅盐: 6,
     寻呼模块: 7, 伪装服: 7, 拉特兰桥夹: 7, 商业包装方案: 2 });
   const addendum = ctx.research.core?._criticAddendum || {};
   const multipliers = addendum.enemyStatMultipliers || DEFAULT_ENEMY_MULTIPLIERS;
@@ -4856,7 +4867,8 @@ async function main() {
     sizes[name] = Buffer.byteLength(texts[name]);
     total += sizes[name];
   }
-  if (total > 6 * 1024 * 1024) errors.push(`total data size ${total} exceeds 6 MB`);
+  const maxBytes = (VERSION ? 7 : 6) * 1024 * 1024; // 规程's build is 6.4 MB (upstream's expect.maxMB 7)
+  if (total > maxBytes) errors.push(`total data size ${total} exceeds ${VERSION ? 7 : 6} MB`);
   // Integrity errors keep the previous (valid) output untouched unless --force.
   const write = !errors.length || OPTS.force;
   if (write) {
