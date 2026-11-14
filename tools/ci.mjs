@@ -9,7 +9,7 @@
 //
 // Steps, in the order of ci.yml (job `test`, then job `tooling`):
 //   setup      node tools/setup.mjs --check --no-local
-//   test       node --test
+//   test       node --test (locally the whole suite; CI runs one shard per job through tools/ci-shards.mjs)
 //   smoke      the server on a free port on 127.0.0.1: GET /healthz, / (must contain <html) and /vendor/pixi.min.js,
 //              then node tools/doctor.mjs (its exit code is ignored, like `|| true` in ci.yml), then the server stops
 //   lint       eslint .                                   (npm run lint; warnings do not fail it)
@@ -45,6 +45,7 @@ export const SKIPPED_CI_STEPS = [
   { uses: 'browser-actions/setup-chrome', why: 'GitHub runner: installs Chrome for the mobile audit' },
   { uses: 'actions/upload-artifact', why: 'GitHub runner: keeps the mobile screenshots' },
   { name: 'Install (npm ci → postinstall copies public/vendor)', why: 'run `npm ci` yourself; it is not a check' },
+  { name: 'Guard tests (CI wiring, docs gates, package plan)', why: 'the Node 24 lane: guards only, not the suite' },
 ];
 
 /**
@@ -55,7 +56,7 @@ export const SKIPPED_CI_STEPS = [
  */
 export const STEPS = [
   { id: 'setup', ci: { job: 'test', name: 'Setup check (no downloads)' }, describe: 'node tools/setup.mjs --check --no-local' },
-  { id: 'test', ci: { job: 'test', name: 'Unit & integration tests' }, describe: "node --test --test-concurrency=4 \"test/**/*.test.js\" \"test/e2e/coop.e2e.mjs\" \"plugins/_template/**/*.test.js\"" },
+  { id: 'test', ci: { job: 'test', name: 'Unit & integration tests' }, describe: 'node tools/ci-shards.mjs --run ${{ matrix.shard }}' },
   { id: 'smoke', ci: { job: 'test', name: 'Server smoke test (boot, /healthz, index.html, doctor)' },
     describe: `server on a free port: GET ${SMOKE_PATHS.join(', ')}; node tools/doctor.mjs` },
   { id: 'lint', ci: { job: 'tooling', name: 'Lint (warnings allowed)' }, npm: 'lint', describe: 'eslint .' },

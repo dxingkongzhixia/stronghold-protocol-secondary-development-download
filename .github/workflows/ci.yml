@@ -14,15 +14,19 @@ permissions:
 
 jobs:
   test:
-    name: test (${{ matrix.os }}, node ${{ matrix.node }})
+    name: test (${{ matrix.os }}, node ${{ matrix.node }}, shard ${{ matrix.shard }}/4)
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    # One shard is a quarter of the suite (node --test-shard): the single full run took ~10 minutes locally and ~20 on
+    # a runner, a shard stays well under it. 20 minutes keeps a margin and still fails a hung job.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        # 22 and 24 = the maintained LTS lines (24 is what `winget install OpenJS.NodeJS.LTS` installs today)
-        node: [22, 24]
+        # 22 = the LTS line the whole suite runs on, one job per shard. Node 24 has its own light lane (`node24`).
+        node: [22]
+        # node --test-shard=<n>/4: together the four shards are exactly the full `npm test`
+        shard: [1, 2, 3, 4]
     env:
       # Browser/E2E suites gate themselves on these (and on a local Chrome + downloaded game assets, which CI never
       # has): keep them off explicitly. Suites that need .cache/gamedata, public/assets or data/local-assets.json skip.
@@ -46,7 +50,7 @@ jobs:
         run: node tools/setup.mjs --check --no-local
 
       - name: Unit & integration tests
-        run: node --test --test-concurrency=4 "test/**/*.test.js" "test/e2e/coop.e2e.mjs" "plugins/_template/**/*.test.js"
+        run: node tools/ci-shards.mjs --run ${{ matrix.shard }}
 
       - name: Server smoke test (boot, /healthz, index.html, doctor)
         shell: bash
@@ -93,6 +97,26 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+  # The Node 24 lane: the other maintained LTS line gets a cheap check, not a second full suite. It runs the CI
+  # wiring guards and the docs/package gates — the tests that exercise node's own test runner, glob and file APIs.
+  node24:
+    name: node 24 (guards)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install (npm ci → postinstall copies public/vendor)
+        run: npm ci --no-audit --no-fund
+
+      - name: Guard tests (CI wiring, docs gates, package plan)
+        run: node --test test/ci.test.js test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/package.test.js
 
   # P0 mobile matrix (docs/MOBILE-UI.md §7 M0.8): the mock page harness at public/dev/mobile-audit.html, measured at
   # 640×360 … 1024×768 with a simulated 24/24/34/24 safe area; screenshots are kept as the P1 comparison baseline.
