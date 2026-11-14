@@ -320,3 +320,28 @@
   单元测试；不改变任何现有行为）。
 - 后续：P0.2 配置/服务端（`versionsFrom`、`server/versions.js`、静态路由、healthz）、P0.3 lobby + 版本宿主、
   P0.4 浏览器、P0.5 工具链、P1 数据构建。
+
+
+### 10.7 同窗口小修复的分诊结果（2026-11-15）
+
+**已移植**（各自一个提交）：
+
+| PR | 提交 | 内容 |
+|---|---|---|
+| #938 | `0f45b6408` | 装备图标显示全部并均衡换行（原来截到 2 个；4=2+2、5=3+2、6=3+3，底边固定、多行向上长） |
+| #919 + #924 | `1d657a41e` | 魔王 S3 背景绘在干员身后：owner 根容器 + `unitBack` 通道（#919 先放进 ground pass，#924 修正被 2D 高台盖住） |
+| #942 | `58a0f7334` | 常态治疗范围青蓝、攻击范围保持橙色（新增 `public/js/ui/rangeStyle.js`；实心填充 / Pixi 条纹 / SVG 条纹同色） |
+
+**不适用**（本树没有对应的数据或子系统，与 B6 同类；不是遗漏）：
+
+| PR | 原因 |
+|---|---|
+| #925 / #939 / #943 / #947 | 规程数据与内容（act3 的 choices 奖励池、MAP09 隐匿地块、莱塔尼亚/萨卡兹敌人），随版本系统（Phase 1/2）做 |
+| #930 | 本树的「人事部文档」是「装备时销毁，最大可部署人数变为 9」（`equip_destory_deployment_cnt_change`），没有 `equip_use_main_bond` 的特殊刷新语义 |
+| #931 | 本树选牌池没有伊桑（chess id 空间也不同），也没有 `SERVER_CHESS_SOLD` × `SERVER_MOST_BOND` 的兵营 |
+| #932 / #934 / #937 | 依赖 `shared/itemRules.js`、`server/match/bandCommands.js`、`showTags.js`、`shared/garrisonUpgrades.js` 等本树没有的子系统（暴躁铁皮 / 极光 / 忍冬 / 白铁也不在池内） |
+| #944 | `data/items.json` 没有任何 `canFuse` / `fuseWith` / `fuseResult` 记录（组合装备属于规程） |
+| #946 | 依赖 `public/js/ui/prefab/banners.js` 的主题 prefab 系统，属于 Phase 3 |
+
+**验证**：#938 的 `test/render/unitview.test.js`；#919+#924 的 `test/render/cetsyr-background.test.js`（render 套件 1151 通过）；
+#942 的 `test/render/tiles.test.js` + `test/ui/inspect-range.test.js`（UI 套件 1177 通过）；文档门禁与 eslint 全绿。
