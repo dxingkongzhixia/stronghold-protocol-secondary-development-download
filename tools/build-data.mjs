@@ -43,6 +43,7 @@ import { FORMS } from '../shared/forms.js';
 import { statusKey, composeUnitRecord, standInRecord, unitForm } from '../shared/standIn.js';
 import { extendedGrid } from '../shared/loadoutRecord.js';
 import { FULL_RANK, atRank, stripPotential } from '../shared/potential.js';
+import { versionById } from '../shared/versions.js';
 
 // ===== CLI & IO ==================================================================================
 
@@ -51,18 +52,18 @@ const RESEARCH_DIR = join(ROOT, 'docs', 'research');
 // Official tables come from the Kengxxiao mirror. Override the base with SP_GAMEDATA_BASE to fetch through a proxy
 // (e.g. the CN gh-proxy used for the assets: SP_GAMEDATA_BASE=https://gh-proxy.com/https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/zh_CN/gamedata/).
 const GAMEDATA_URL = process.env.SP_GAMEDATA_BASE || 'https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/zh_CN/gamedata/';
-const SEASON = 'act2autochess';
-const USAGE = 'usage: node tools/build-data.mjs [--refresh | --offline] [--out <dir>] [--cache <dir>] [--report <file>] [--quiet] [--no-research] [--force]';
+let SEASON = 'act2autochess';
+const USAGE = 'usage: node tools/build-data.mjs [--refresh | --offline] [--version <id>] [--out <dir>] [--cache <dir>] [--report <file>] [--quiet] [--no-research] [--force]';
 
 /**
  * Parse the command line strictly (unknown options and missing values are errors, so a typo can
  * never silently write data somewhere unexpected).
  * @param {string[]} argv
- * @returns {{refresh:boolean, offline:boolean, quiet:boolean, noResearch:boolean, force:boolean, out:string, cache:string, report:string}}
+ * @returns {{refresh:boolean, offline:boolean, quiet:boolean, noResearch:boolean, force:boolean, out:string, cache:string, report:string, version:string}}
  */
 function parseArgs(argv) {
   const opts = {
-    refresh: false, offline: false, quiet: false, noResearch: false, force: false,
+    refresh: false, offline: false, quiet: false, noResearch: false, force: false, version: '',
     out: join(ROOT, 'data'), cache: join(ROOT, '.cache', 'gamedata'), report: join(ROOT, '.cache', 'build-data-report.json'),
   };
   const flags = { '--refresh': 'refresh', '--offline': 'offline', '--quiet': 'quiet', '--no-research': 'noResearch', '--force': 'force' };
@@ -71,6 +72,12 @@ function parseArgs(argv) {
     const [name, inline] = argv[i].includes('=') ? [argv[i].slice(0, argv[i].indexOf('=')), argv[i].slice(argv[i].indexOf('=') + 1)] : [argv[i], null];
     if (name === '--help' || name === '-h') { console.log(USAGE); process.exit(0); }
     if (flags[name] && inline === null) { opts[flags[name]] = true; continue; }
+    if (name === '--version') {
+      const v = inline ?? argv[++i];
+      if (!v || v.startsWith('--')) throw new Error(`--version needs a registry id\n${USAGE}`);
+      opts.version = v;
+      continue;
+    }
     if (dirs[name]) {
       const v = inline ?? argv[++i];
       if (!v || v.startsWith('--')) throw new Error(`${name} needs a path argument\n${USAGE}`);
@@ -79,7 +86,7 @@ function parseArgs(argv) {
     }
     throw new Error(`unknown option ${argv[i]}\n${USAGE}`);
   }
-  if (opts.refresh && opts.offline) throw new Error(`--refresh and --offline are mutually exclusive\n${USAGE}`);
+  if (opts.refresh && opts.offline) throw new Error('--refresh and --offline are mutually exclusive\n' + USAGE);
   return opts;
 }
 
@@ -91,6 +98,17 @@ try {
   process.exit(2);
 }
 const CACHE_DIR = OPTS.cache;
+
+// An official version build (shared/versions.js): its data directory, its cache and the season's section.
+const VERSION = OPTS.version ? versionById(OPTS.version) : null;
+if (OPTS.version && !VERSION) {
+  console.error(`build-data: unknown version ${OPTS.version}`);
+  process.exit(2);
+}
+if (VERSION && !process.argv.some((a) => a === '--out' || a.startsWith('--out='))) {
+  OPTS.out = join(ROOT, 'data', ...VERSION.dir.split('/').filter(Boolean));
+}
+SEASON = VERSION ? VERSION.season : SEASON;
 
 const log = (...a) => { if (!OPTS.quiet) console.log(...a); };
 const warnings = [];
@@ -964,9 +982,11 @@ async function loadContext() {
     loadGamedata('excel/enemy_handbook_table.json'),
     loadGamedata('levels/enemydata/enemy_database.json'),
   ]);
-  const act = activity?.activity?.AUTOCHESS_SEASON?.[SEASON];
+  const act = VERSION
+    ? (VERSION.id === 'act3autochess@V3_1' ? activity?.activity?.AUTOCHESS?.act3autochess?.V3_1 : null)
+    : activity?.activity?.AUTOCHESS_SEASON?.[SEASON];
   const ac = activity?.autoChessData;
-  if (!act || !ac) throw new Error('activity_table has no act2autochess / autoChessData section');
+  if (!act || !ac) throw new Error(`activity_table has no ${VERSION ? VERSION.id : SEASON} section`);
   applyCustomChess(act, charTable);
 
   // Note: summons/traps live in character_table (token_table.json only lists 4 unrelated traps).
@@ -4900,3 +4920,4 @@ main().catch((e) => {
   console.error('build-data failed:', e && e.stack ? e.stack : e);
   process.exitCode = 1;
 });
+

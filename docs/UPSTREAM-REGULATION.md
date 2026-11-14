@@ -144,9 +144,13 @@
 - [ ] **P0.5** `tools/versions/*`（profiles/adapters/sources/layouts/runtime/tables）+ `build-data.mjs --version`；`test/data-versions` 等价物
 
 ### P1 规程数据（3–5 人日）
-- [ ] `tools/versions/act3autochess-v3_1.mjs` + `tables/act3autochess-v3_1.mjs`；`layout: 'regulation'`、`section: ['AUTOCHESS','act3autochess','V3_1']`、pin `6f63c14e`、`sources`（Kengxxiao/ArknightsAssets 两形态）
+- [x] **pin 缓存**：`.cache/gamedata@6f63c14e/`（8 张 excel 表 + 61 个 level 文件，PowerShell 从 `raw.githubusercontent.com/.../6f63c14e/` 取；Node 的 TLS 在本机被中间证书挡住，构建器下载不可用）
+- [x] **`--version` 骨架**：`tools/build-data.mjs --version act3autochess@V3_1` 从注册表取 season / 输出目录，按 `activity.AUTOCHESS.act3autochess.V3_1` 定位 section、`autoChessData` 取共享表；默认构建 `--offline` 仍逐字节不变（298 chess / 23 bonds / 361 effects，exit 0）
+- [ ] 版本专有表：`tables/act3autochess-v3_1.mjs`（bountyDrafts / shopDraft / tacticDraft，145 行，按 15 场联合录屏实测）、`stock`（上游为 null）与 `config`（hiddenCore、bans、bondDraw、equipHand）
+- [ ] **阻塞点**：`buildConfig` 的 `stockByName` 仍用盟约的商店名单（如「普罗旺斯」），act3 名单不同 → 先按版本表/空 stock 处理
+- [ ] `layout: 'regulation'`：act3 官方关卡是 5×9 的三段 piece（`level_act3autochess_01..`），要按 `layouts.mjs` 的 `PIECE_SHIFT` 拼回 19×21；`scenes.py` 的 3D 场景已按同一套拼接过
 - [ ] 隐藏输入：`data/assets.json` 的 `spineLocal` 片段、`data/tuning.json` 字节副本、`docs/research/*` 输入
-- [ ] `node tools/build-data.mjs --version act3autochess@V3_1` → 16 文件、6.4–6.5 MB；离线重建与上游逐字节一致
+- [ ] `node tools/build-data.mjs --version act3autochess@V3_1 --cache .cache/gamedata@6f63c14e --offline` → 16 文件、6.4–6.5 MB
 - [ ] 计数核对：chess 310、bonds 26、bands 61、items 116、choices 9、enemies 343、stages 12、effects 465、visibleNonDiy 141
 
 ### P2 规则与内容（8–12 人日）
