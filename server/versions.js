@@ -23,7 +23,7 @@
 //   stats()                        { enabled, default, loaded }
 
 import fs from 'node:fs';
-import { computeVanillaContent, contentIndexOf } from './plugins/identity.js';
+import { computeVanillaContent, contentIndexOf, nodeSha256 } from './plugins/identity.js';
 import { versionById, versionSlug, DEFAULT_VERSION } from '../shared/versions.js';
 import { getVersionData, versionDataDir } from './data.js';
 import { boundsOf } from '../shared/plugins/officialBounds.js';
@@ -31,18 +31,20 @@ import { DIFFICULTIES, modeIdFor } from '../shared/constants.js';
 
 /**
  * The manifest of a version's content set: the vanilla index with the version's own data URLs, its id and its bounds
- * URL (GET /cs/<cs16>/index.json).
+ * entry (GET /cs/<cs16>/index.json). The bounds hash and size are those of the snapshot body the server serves.
  * @param {import('../shared/versions.js').OfficialVersion} entry
  * @param {{ cs: string, data: Record<string, { file: string, sha256: string, bytes: number }> }} content
+ * @param {Buffer} boundsBody the official-bounds snapshot as served (JSON bytes)
  */
-export function versionIndexOf(entry, content) {
+export function versionIndexOf(entry, content, boundsBody) {
   const slug = versionSlug(entry);
   const index = contentIndexOf(content);
   const data = {};
   for (const [name, f] of Object.entries(content.data)) {
     data[name] = { url: `/data/versions/${slug}/${encodeURIComponent(f.file)}?v=${f.sha256.slice(0, 8)}`, sha256: f.sha256, bytes: f.bytes };
   }
-  return { ...index, version: entry.id, data, bounds: { official: { url: `/cs/${content.cs.slice(0, 16)}/bounds/official.json` } } };
+  return { ...index, version: entry.id, data,
+    bounds: { official: { url: `/cs/${content.cs.slice(0, 16)}/bounds/official.json`, sha256: nodeSha256(boundsBody), bytes: boundsBody.length } } };
 }
 
 /**
@@ -76,6 +78,7 @@ export function createVersionSets({ enabled = [], default: defaultId = DEFAULT_V
     }
     let bounds = null;
     let base = null;
+    let index = null;
     const set = {
       id,
       slug: versionSlug(entry),
@@ -83,7 +86,11 @@ export function createVersionSets({ enabled = [], default: defaultId = DEFAULT_V
       dir,
       cs: content.cs,
       content,
-      index: versionIndexOf(entry, content),
+      /** The manifest served at /cs/<cs16>/index.json; its bounds hash and size are built with the snapshot on first use. */
+      get index() {
+        if (!index) index = versionIndexOf(entry, content, Buffer.from(JSON.stringify(this.bounds())));
+        return index;
+      },
       /** The version's parsed data (server/data.js getVersionData), loaded once. */
       get data() { this.loaded = true; return getVersionData(id, { log }); },
       /** Read by stats(): never triggers the lazy load above. */

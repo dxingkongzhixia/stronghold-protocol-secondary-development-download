@@ -49,24 +49,26 @@ test('createVersionSets: the 规程 version gets a cs, its data directory, its i
   assert.equal(sets.list.length, 1);
   const set = sets.byId('act3autochess@V3_1');
   assert.ok(set, 'enabled');
+  assert.equal(sets.stats().loaded, 0, 'stats never triggers the lazy load');
   assert.equal(set.slug, 'act3autochess-v3_1');
   assert.match(set.cs, /^[0-9a-f]{16,64}$/);
   assert.equal(sets.byCs(set.cs), set);
   assert.equal(sets.byId(DEFAULT_VERSION), null, 'the default version is not a set');
   assert.equal(sets.available(DEFAULT_VERSION), true, 'but it is playable');
   assert.equal(sets.available('act3autochess@V3_1'), true);
-  // the index: the vanilla shape with the version's own data URLs, its id and its bounds URL
+  // the index: the vanilla shape with the version's own data URLs, its id, and the bounds body's hash and size
   assert.equal(set.index.version, 'act3autochess@V3_1');
   assert.equal(set.index.vanilla, true);
   assert.match(set.index.bounds.official.url, new RegExp(`^/cs/${set.cs.slice(0, 16)}/bounds/official\\.json$`));
+  assert.match(set.index.bounds.official.sha256, /^[0-9a-f]{64}$/);
+  assert.equal(set.index.bounds.official.bytes, Buffer.byteLength(JSON.stringify(set.bounds())));
+  assert.equal(sets.stats().loaded, 1, 'the manifest carries the bounds snapshot');
   const config = set.index.data.config;
   assert.match(config.url, /^\/data\/versions\/act3autochess-v3_1\/config\.json\?v=[0-9a-f]{8}$/);
   assert.match(config.sha256, /^[0-9a-f]{64}$/);
   // the data loads from its own directory (not the default data/)
   resetData();
-  assert.equal(sets.stats().loaded, 0, 'stats never triggers the lazy load');
   const data = set.data;
-  assert.equal(sets.stats().loaded, 1);
   assert.equal(data.config.season, 'act3autochess');
   assert.equal(data.config.version?.id, 'act3autochess@V3_1');
   assert.notEqual(data, getData({ log: quiet }));
@@ -81,8 +83,11 @@ test('the version index keeps the vanilla formula and replaces only the data URL
   const content = { cs: 'a'.repeat(64), app: 'x', vanilla: true, sim: 's', simFiles: { 'a.js': 'h' },
     data: { config: { file: 'config.json', sha256: 'b'.repeat(64), bytes: 10 } } };
   const entry = { id: 'act3autochess@V3_1', dir: 'versions/act3autochess-v3_1/', season: 'act3autochess', family: 'regulation', label: 'x', roomModes: [] };
-  const index = versionIndexOf(entry, content);
+  const body = Buffer.from(JSON.stringify({ v: 1, bb: {} }));
+  const index = versionIndexOf(entry, content, body);
   assert.deepEqual(index.data.config, { url: `/data/versions/act3autochess-v3_1/config.json?v=${'b'.repeat(8)}`, sha256: 'b'.repeat(64), bytes: 10 });
   assert.equal(index.version, 'act3autochess@V3_1');
   assert.equal(index.cs, content.cs);
+  assert.equal(index.bounds.official.bytes, body.length);
+  assert.match(index.bounds.official.sha256, /^[0-9a-f]{64}$/);
 });
