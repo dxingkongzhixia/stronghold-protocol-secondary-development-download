@@ -95,11 +95,20 @@
   22 个既有主题贴图按当前客户端重导（逐像素比对：`TX_AutochessSand_N` 完全一致，albedo 均值差 < 0.4 级，
   属解码/版本差异，非画面变化）。`scene/tex` 总计 222.9 MiB。
 
+- **统一两个 AB 根（`bundles.py`）**：`--game` 接受安装目录 / `Arknights_Data` / AB 根；按 `hot_update_list.json`
+  + `persistent_res_list.json` 把 `PersistentData/Bundles` 的下载包覆盖到打包客户端之上，在
+  `.cache/client-bundles/<打包版本>+<热更版本>/` 建一棵硬链接树（Windows 下加载中的文件无法删除，故缓存复用）。
+  本机实测：`26-10-20… + 26-11-06…；1388 downloaded, 13355 packaged, 1016 unavailable`。
+- **规程 activity / 主题任务（`EXTRA_JOBS`）**：`activity/[uc]act3autochess.ab` → `ui/activity/act3autochess`
+  （270 文件 / 14.0 MiB：入口 UI、赛季前后景、徽章、logo），`spritepack/ui_zone_home_theme_act3autochess.ab` →
+  `theme/act3autochess`（1 张 1024×858 / 0.9 MiB）。它们是 **opt-in**（只在 `--only` 点名时跑），不进
+  `expected_local_groups`。敌人特效不需要任务表条目：`fx.py` 的 `pkgrps/btl_pfb_fx_*.ab` 已经按 glob 扫描。
+
 **仍需处理**（P4）：
 
 - [x] 关卡 `.dat` 解 zip（`import_scenes.py`）；规程三段场景表（`regulation_scenes.py`，10 张图）
-- [ ] 提取任务表（`extract.py` 的 `JOBS`）没有 act3 的 activity / 主题 / skills / equips / enemy-fx 条目；`skills/equips/dynamicabilities` 是逻辑预制体（无美术），美术在 `pkgrps/btl_pfb_fx_enemy_*`
-- [ ] 两个根（`StreamingAssets/AB/Windows` 与 `PersistentData/Bundles`）内容互补，提取要合并（本次用基础根取材质、`--scenes` 取关卡）
+- [x] 统一两个 AB 根（`bundles.py` + `--game` 安装目录 + `.cache` 硬链接树）
+- [x] 规程 activity / 主题的 opt-in 任务（`EXTRA_JOBS`；enemy-fx 走 `fx.py` 的 glob，无需条目）
 - [ ] 规程 4 首音乐仍缺（客户端未缓存）
 - [ ] 77 个规程敌人模型：本地客户端只有部分；需扩充 `ENEMY_SPINES` 列表并确认 `anon/*.bin` 的映射
 
@@ -149,8 +158,8 @@
 
 ### P4 素材（3–5 人日）
 - [x] 关卡 `.dat` 先解 zip；规程三段场景导出（`import_scenes.py` + `regulation_scenes.py`，m01 实跑通过；见 §3.1）
-- [ ] 合并两个 AB 根（基础包 + 下载目录）——本次以基础根取材质、`--scenes` 取关卡，仍需统一到 `--game`
-- [ ] `extract.py` 任务表加 act3 的 activity / 主题 / enemy-fx 条目
+- [x] 合并两个 AB 根（`bundles.py`：`--game` 安装目录 + 硬链接缓存树，实测 1388 下载 / 13355 打包）
+- [x] act3 的 activity / 主题 opt-in 任务（`EXTRA_JOBS`，270 + 1 文件）；enemy-fx 已由 `fx.py` 的 glob 覆盖
 - [ ] `tools/assets/versions.mjs` 按版本并集规划；`fetch-assets`/`local-extract` 覆盖 77 个敌人 Spine、37 个新干员、10 张地图、主题、敌人特效
 - [ ] 规程 4 首音乐：先在客户端内播放一次以缓存，再 `music.py`；缺失则用社区 dump
 - [ ] `data/assets.json` 的 `spineLocal`/模型清单更新；中继发布与手机端首包评估

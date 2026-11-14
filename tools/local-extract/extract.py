@@ -73,6 +73,7 @@ import scenes  # noqa: E402  (the battlefield scene table and exporter; imports 
 import regulation_scenes  # noqa: E402  (规程's three-piece fields → the same scene/<stageId> groups)
 import operators  # noqa: E402 (installed plugin operators' optional official art)
 import fx  # noqa: E402  (the official battle effects, DESIGN §33; imports UnityPy only when it runs)
+from bundles import client_bundles  # noqa: E402 (packaged client + its downloaded hot-update bundles as one root)
 
 ROOT = Path(__file__).resolve().parents[2]
 HOME = Path.home()
@@ -126,6 +127,15 @@ JOBS = [
     ('arts/effects/[pack]map.ab', 'map/fx', {'Mesh', 'GameObject', 'Material', 'Texture2D'}),
     ('arts/maps/common/res.ab', 'map/common', {'Material', 'Texture2D'}, r'^(TX|MT)_wind_device$'),
     ('arts/maps/effect.ab', 'map/water', {'Texture2D'}, r'water_normal|Caustics|WaterNoise|noise_clouds|Water_Foam|SmoothWaves'),
+]
+
+# 规程's own downloaded bundles, opt-in like fx (a full run leaves them out and they are not in expected_local_groups:
+# an off-season client does not have them). With --only they export beside the covenant UI art.
+#   activity/[uc]act3autochess.ab      entry screen, medal / ban / logo art
+#   spritepack/ui_zone_home_theme_act3autochess.ab   the terminal (home) theme
+EXTRA_JOBS = [
+    ('activity/[uc]act3autochess.ab', 'ui/activity/act3autochess', {'Sprite', 'Texture2D'}),
+    ('spritepack/ui_zone_home_theme_act3autochess.ab', 'theme/act3autochess', {'Sprite', 'Texture2D'}),
 ]
 
 # Enemy battle Spine models that no community dump carries (isHarryh/Ark-Models lists them with an empty assetList, so
@@ -250,10 +260,15 @@ def wants_sub(only, sub):
 
 
 def select_jobs(only):
-    """The jobs whose output subdir starts with one of the `only` prefixes (all jobs when `only` is empty)."""
+    """The jobs whose output subdir starts with one of the `only` prefixes (all jobs when `only` is empty).
+
+    EXTRA_JOBS (规程's downloaded UI / theme art) runs only when `only` names it, like fx: a full run covers the
+    covenant art alone, and setup does not require groups an off-season client cannot produce.
+    """
     if not only:
         return list(JOBS)
-    return [j for j in JOBS if any(j[1] == p.rstrip('/') or j[1].startswith(p.rstrip('/') + '/') for p in only)]
+    return [j for j in [*JOBS, *EXTRA_JOBS]
+            if any(j[1] == p.rstrip('/') or j[1].startswith(p.rstrip('/') + '/') for p in only)]
 
 
 def enemy_spine_id(container, wanted):
@@ -917,6 +932,31 @@ def export_token_spines(ab_root, out_root, manifest, log, ids=None):
     return n
 
 
+def locate_client(explicit=None):
+    """The AB root for --game: an install folder, its Arknights_Data, or an AssetBundle root (Windows layout).
+
+    Accepts the shapes an owner actually has: the game folder (`…/games/Arknights`), `…/Arknights_Data`, or the AB
+    root itself (`…/Arknights_Data/StreamingAssets/AB/Windows`). None when nothing is found.
+    """
+    raw = explicit or next((str(p) for p in CANDIDATES if p.exists()), None)
+    if not raw:
+        return None
+    p = Path(os.path.abspath(os.path.expanduser(str(raw))))
+    if not p.exists():
+        return None
+    if (p / 'ui' / 'autochess').is_dir() or (p / 'arts' / 'maps' / 'map_autochess').is_dir():
+        return p
+    for data in (p / 'Arknights_Data', p, p / 'games' / 'Arknights' / 'Arknights_Data'):
+        ab = data / 'StreamingAssets' / 'AB' / 'Windows'
+        if ab.is_dir():
+            return ab
+    for parent in list(p.parents)[:3]:  # a path inside the install, e.g. …/Arknights/Arknights_Data/…
+        ab = parent / 'Arknights_Data' / 'StreamingAssets' / 'AB' / 'Windows'
+        if ab.is_dir():
+            return ab
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--game', help='AssetBundle root (…/StreamingAssets/AB/Windows or …/Documents/Bundles)')
@@ -945,9 +985,12 @@ def main():
     if args.print_jobs:
         jobs = [{'bundle': rel, 'sub': sub, 'kinds': sorted(kinds), 'keep': keep.pattern if keep else None}
                 for rel, sub, kinds, keep in map(job_parts, JOBS)]
+        extra_jobs = [{'bundle': rel, 'sub': sub, 'kinds': sorted(kinds), 'optIn': True}
+                      for rel, sub, kinds in EXTRA_JOBS]
         derived = [{'sub': sub, 'from': src, 'derive': kind, 'name': name} for sub, src, kind, name in DERIVED]
         webp = [{'sub': sub, 'name': name, 'mode': mode} for sub, name, mode in WEBP]
         print(json.dumps({'emoteThemes': [{'themeId': t, 'dir': d} for t, d in EMOTE_THEMES], 'jobs': jobs,
+                          'extraJobs': extra_jobs,
                           'derived': derived, 'webp': webp,
                           'guideWebp': {'sub': GUIDE_WEBP_SUB, 'mode': GUIDE_WEBP_MODE,
                                         'options': GUIDE_WEBP_OPTIONS[GUIDE_WEBP_MODE]},
@@ -969,10 +1012,17 @@ def main():
     if args.webp:
         return webp_only(Path(args.out), Path(args.manifest), print)
 
-    ab_root = Path(args.game) if args.game else next((p for p in CANDIDATES if p.exists()), None)
+    ab_root = locate_client(args.game)
     if not ab_root or not ab_root.exists():
-        print('No Arknights install found. Pass --game <AssetBundle root>.', file=sys.stderr)
+        print('No Arknights install found. Pass --game <install directory or AssetBundle root>.', file=sys.stderr)
         return 2
+    # One root for every job: the packaged client overlaid with its downloaded hot update (bundles.py), so a bundle
+    # shipped only in PersistentData/Bundles (规程's UI, new enemy FX) is found beside the packaged ones.
+    with client_bundles(ab_root, cache_root=ROOT / '.cache' / 'client-bundles') as active_root:
+        return run_extract(args, active_root)
+
+
+def run_extract(args, ab_root):
     jobs = select_jobs(args.only)
     enemy_ids = spine_ids(args.only, ENEMY_SPINE_SUB, ENEMY_SPINES)
     token_ids = spine_ids(args.only, TOKEN_SPINE_SUB, TOKEN_SPINES)
