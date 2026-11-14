@@ -4,6 +4,14 @@ Part of [DESIGN.md](../DESIGN.md) · lookup [QUERY-INDEX.md](../QUERY-INDEX.md) 
 
 ## 9. Client rendering contract (public/js/render)
 
+Normal healing ranges use cyan-blue battlefield highlights; damaging ranges keep orange. Placement previews and
+inspected operators / healing summons resolve the same loadout record (dmgType heal or attackKind heal).
+The solid fill, Pixi stripes and SVG stripes share that choice, preserving highlight groups and orientation.
+This does not recolour the card mini-map or infer a healing range from profession, incidental healing, regen, or skill
+text. Special skills that change the displayed ability need separate verified display metadata. Colour families follow
+[PRTS combat mechanics](https://prts.wiki/w/%E4%BD%9C%E6%88%98%E6%9C%BA%E5%88%B6#%E6%94%BB%E5%87%BB%E8%8C%83%E5%9B%B4);
+the exact RGB values are this UI's palette, not extracted official constants.
+
 Bond-layer audio (#482): live own preparation gains arrive as `m.layer`; the displayed battle's `layer` tuples
 play the same `bondUp` cue. A gain of several layers plays once, including gains to inactive bonds. The official
 `ON_ACT1AUTOCHESS_ADD_BOND` bank allows one sound and replaces the oldest; there is no added cooldown. Existing
