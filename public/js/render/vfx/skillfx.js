@@ -740,7 +740,11 @@ export class SkillFx {
     // (斩业星熊 S2: her MultiMelee mode attacks while the skill's AroundTargetRangedAttack throws on its own); in the frame
     // of an instant skill's activation its attack is the skill's whatever kind the sim made it (阿罗玛 S1's 'beam' is her
     // MeleeAttack, 夕 S1's 'bolt' her MultiMeleeAttack: their cast, aim and hits) — a heal stays a heal
-    const fits = !!fx.ability && fitsAttack(fx.ability, { heal, ranged });
+    // A ReplacementSkill's root ability IS the attack it replaces, so its rows replace whatever kind the sim made it
+    // (伊芙利特 S2: her prefab's ability is a MeleeAttack, but her attack is a 'beam' — without this the flame of the
+    // skill never played, only the mode's normal shot)
+    const repl = /^ReplacementSkill/.test(st.plan.rootClass || '') && !!st.plan.rootAbility && fx.ability === st.plan.rootAbility;
+    const fits = !!fx.ability && (fitsAttack(fx.ability, { heal, ranged }) || (repl && !heal && !/Heal/.test(fx.ability)));
     const forced = !fits && inst && !!fx.ability && /Heal/.test(fx.ability) === heal;
     const replace = fits || forced;
     if (fx.ability && !replace) { fx.cast = fx.cast.filter((e) => e.ability !== fx.ability); fx.range = []; fx.aim = []; fx.hit = st.plan.each.hit[0].length ? [st.plan.each.hit[0]] : []; }

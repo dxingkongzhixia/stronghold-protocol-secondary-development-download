@@ -23,7 +23,8 @@ const KEYS = ['foo_atk_start', 'foo_atk_hit', 'foo_s2_mode_cast', 'foo_s3_mode_c
   'foo_s2_h2', 'foo_s2_burn', 'foo_s2_trail', 'foo_s2_phit', 'foo_s3_loop', 'foo_s3_tick', 'foo_each_hit', 'bar_buff', 'bar_birth',
   'indigo_attack_charge_01_start', 'indigo_attack_charge_02', 'indigo_attack_charge_03', 'indigo_attack_charge_04', 'indigo_attack_charge_05',
   'indigo_attack_01_trail', 'indigo_attack_01_hit', 'clemnt_skill_03_mark_all_01', 'buff_stun', 'buff_burn', 'g_hit', 'g_heal', 'g_enemy', 'g_die',
-  'qux_s1_cast', 'qux_s1_trail', 'qux_mode_cast', 'once_buff', 'once_loop', 'oncep_buff', 'oncep_loop'];
+  'qux_s1_cast', 'qux_s1_trail', 'qux_mode_cast', 'once_buff', 'once_loop', 'oncep_buff', 'oncep_loop',
+  'repl_cast', 'repl_hit', 'repl_mode_cast'];
 
 const melee = (k, ev = 2) => ({ effects: [k], oneshot: 1, startEvent: ev, endEvent: 3, directionType: 0 });
 
@@ -69,6 +70,12 @@ function makeIndex() {
     ] },
     skchr_clemnt_3: { mode: 1, projectiles: ['projectile_chr_clemnt_s3'], uses: [] },
     // held loops of a skill and a passive: one prefab loops, the other is a one-shot (index.json looping false)
+    // a ReplacementSkill whose prefab ability is a MeleeAttack while the sim makes the attack ranged (伊芙利特 S2: her
+    // attack is a 'beam'): the root ability is the attack it replaces, so its rows play whatever the kind
+    skchr_repl_1: { mode: null, rootClass: 'ReplacementSkill', rootAbility: 'MeleeAttack', projectiles: [], uses: [
+      { role: 'start', keys: ['repl_cast'], from: 'UberEffectEmitter._castEffects', node: 'sk', ability: 'MeleeAttack', startEvent: 'ON_CAST_START', endEvent: 'ON_CAST_END', oneshot: true, list: 'cast' },
+      { role: 'hit', keys: ['repl_hit'], from: 'UberEffectEmitter._hitEffects', node: 'sk', ability: 'MeleeAttack', oneshot: true, list: 'hit' },
+    ] },
     skchr_once_1: { mode: null, projectiles: [], uses: [
       { role: 'loop', keys: ['once_buff'], from: 'BuffDuringSkill._buffs', node: 'sk', on: 'owner' },
       { role: 'loop', keys: ['once_loop'], from: 'BuffDuringSkill._buffs', node: 'sk', on: 'owner' },
@@ -93,6 +100,7 @@ function makeIndex() {
       char_4231_clemnt: unit([{ name: 'Default', attack: { class: 'MeleeAttack', cast: [], hit: [] } }, { name: 'S3', attack: { class: 'MeleeAttack', cast: [] } }], ['skchr_clemnt_3']),
       char_300_qux: unit([{ name: 'Default', attack: { class: 'MeleeAttack', cast: [melee('qux_mode_cast', 4)], hit: [] } }, { name: 'S2', attack: { class: 'MeleeAttack', cast: [] } }], ['skchr_qux_1']),
       char_500_once: unit([{ name: 'Default', attack: { class: 'MeleeAttack', cast: [], hit: [] } }], ['skchr_once_1']),
+      char_600_repl: unit([{ name: 'Default', attack: { class: 'MeleeAttack', cast: [melee('repl_mode_cast')], hit: [] } }], ['skchr_repl_1']),
       char_510_oncep: unit([{ name: 'Default', attack: { class: 'MeleeAttack', cast: [], hit: [] } }], ['skchr_once_2']),
       enemy_1: { kind: 'enemy', modes: [{ name: 'Default', attack: { class: 'MeleeAttack', cast: [], hit: [] } }], skills: {} },
     },
@@ -130,6 +138,7 @@ const RECS = {
   char_300_qux: { charId: 'char_300_qux', skill: { skillId: 'skchr_qux_1', index: 0, skillType: 'MANUAL', durationType: 'NONE', duration: 10, bb: {} } },
   char_500_once: { charId: 'char_500_once', skill: { skillId: 'skchr_once_1', index: 0, skillType: 'MANUAL', durationType: 'NONE', duration: 20, bb: {} } },
   char_510_oncep: { charId: 'char_510_oncep', skill: { skillId: 'skchr_once_2', index: 0, skillType: 'PASSIVE', durationType: 'NONE', duration: -1, bb: {} } },
+  char_600_repl: { charId: 'char_600_repl', skill: { skillId: 'skchr_repl_1', index: 0, skillType: 'MANUAL', durationType: 'NONE', duration: 10, bb: {} } },
 };
 
 function fakeOfx(index, { active = true } = {}) {
@@ -349,6 +358,19 @@ describe('attacks while the skill is on', () => {
     frame();
     w.attack(u, t, 'none', 2);
     assert.deepEqual(spawned.slice(2), ['qux_mode_cast'], "a melee blow is no ranged ability's: the mode's rows");
+  });
+
+  test('a ReplacementSkill\'s root ability replaces the mode\'s rows whatever kind the sim made the attack (伊芙利特 S2: MeleeAttack prefab, beam attack)', async () => {
+    const { w, spawned, view, frame } = await setup();
+    const u = view(1, 'char_600_repl', 5, { skill: 0 });
+    const t = view(2, 'enemy_1', 8);
+    frame();
+    w.skill(u, true);
+    w.attack(u, t, 'beam', 1);
+    assert.ok(spawned.includes('repl_cast'), 'the skill\'s own cast row plays on the ranged attack');
+    assert.ok(!spawned.includes('repl_mode_cast'), 'the mode\'s row does not stand in for it');
+    w.damage(t, 'phys', u, 1.1);
+    assert.ok(spawned.includes('repl_hit'), 'its hit row lands with the damage');
   });
 
   test('hit groups: the k-th damage on the target in one frame plays group k; a later frame does not replay them', async () => {

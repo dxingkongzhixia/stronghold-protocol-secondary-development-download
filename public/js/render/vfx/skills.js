@@ -497,7 +497,7 @@ function kindOf(srec, rootClass = null) {
 
 /** An empty plan (the shape skillPlan returns; render/vfx/talents.js fills one per talent node with planUses). */
 export const emptyPlan = (unitKey, skillId) => ({
-  unitKey, skillId, mode: null, modeName: null, kind: null, rootClass: null, projectiles: [],
+  unitKey, skillId, mode: null, modeName: null, kind: null, rootClass: null, rootAbility: null, projectiles: [],
   start: [], loop: [], end: [], ready: [], range: [], attacks: [], each: { cast: [], hit: [[]] }, trigger: [], targets: [],
   pulse: [], unmapped: [], cond: [],
 });
@@ -635,6 +635,7 @@ export function skillPlan(idx, unitKey, skillId, opts = {}) {
     attach = attachUses(unit?.modes?.[skill.mode]);
   }
   if (typeof skill.rootClass === 'string' && skill.rootClass) plan.rootClass = skill.rootClass;
+  if (typeof skill.rootAbility === 'string' && skill.rootAbility) plan.rootAbility = skill.rootAbility;
   if (MODE_ROW_GUARD[id]) plan.dropModeKeys = MODE_ROW_GUARD[id];
   const projs = isObj(idx.projectiles) ? idx.projectiles : {};
   for (const k of Array.isArray(skill.projectiles) ? skill.projectiles : []) {

@@ -1245,8 +1245,11 @@ index.json — version 1 and the version 2 fields (§33.12, §33.15; Phase 3c) �
   merged slots `mergeSize`'s; the cap `maxChargeTimes`; the projectiles each ability's (`projectileKey`,
   `exProjectileKey`, `mergeProjectileKey`) for its `modes`. For 深靛, 黑键 and 维伊 this gives the transcribed table
   (`CHARGE_EMITTERS`), which stays for a version 1 index.
-* **Root class**: a skill's `rootClass` is kept on the plan (`plan.rootClass`); a ReplacementSkill* is one cast (the
-  plan's kind `instant`: its single attack is the skill), a PassiveSkill without our record a passive.
+* **Root class**: a skill's `rootClass` and `rootAbility` are kept on the plan (`plan.rootClass`, `plan.rootAbility`); a
+  ReplacementSkill* is one cast (the plan's kind `instant`: its single attack is the skill), a PassiveSkill without our
+  record a passive. A ReplacementSkill's root ability IS the attack it replaces, so its rows replace the mode's whatever
+  kind the sim made the attack (`skillfx.js attackFx`): 伊芙利特 S2's prefab ability is a `MeleeAttack` while her attack
+  is a `beam` — without that rule only her normal shot played and the skill's flame never did.
 * **Enemy skills (v2)**: `units[enemy].skills` by the lower-case `prefabKey` of the enemy's data record's `skills[]`
   (the slot order). A skill's window opens on ['cast', id, slot, dur?] — since Phase 3d the sim sends it (SIM.md,
   `content/enemies/helpers.js castSlot`: a cooldown cast, an SP skill's attack before its 'atk', a kit's own moment) —
