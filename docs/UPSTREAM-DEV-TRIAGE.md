@@ -261,6 +261,9 @@
 把主线 `origin/dev`（目标钉在 **`e31e7bbae`**，2026-11-14）的官方第三赛季 **规程**（`act3autochess`，family
 `regulation`，序列Ⅰ = V3_1）作为**一个可选官方版本**并入：**默认仍是盟约**（`act2autochess`），规程由房间选择。
 
+**执行清单（官方范围、PRTS 核对、本地素材、验收标准）见
+[`UPSTREAM-REGULATION.md`](UPSTREAM-REGULATION.md)；本节只留台账与决策。**
+
 ### 10.1 硬前提
 
 本 fork 没有官方版本系统：`shared/versions.js` 原为桩（`VERSIONS = []`），`data/versions/`、`server/versions.js`、

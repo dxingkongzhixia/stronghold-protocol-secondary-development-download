@@ -206,6 +206,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | where is the project / how do I take it over | [`docs/HANDOVER.md`](HANDOVER.md) §0, [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §2 |
 | is there new upstream work, and what will it conflict with | `node tools/check-upstream.mjs` (`npm run check:upstream`), [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 |
 | which upstream work is still unmerged, why, and what to watch when porting it | [`docs/UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) |
+| how the official 规程 season is restored (scope, sources, phases, acceptance) | [`docs/UPSTREAM-REGULATION.md`](UPSTREAM-REGULATION.md) |
 | release packaging | `tools/package.mjs`, `docs/WINDOWS.md` |
 
 - **A match that does not end** (no enemies, a phase that hangs): `/admin/api/state` lists each room's `phase / round / deadline / fields[{ mode, done, authority }]`; a silent client field is taken over after `FIELD_SILENCE_MS` (12 s) — [`docs/META.md`](META.md) §1.3b, `server/match/match/clientCombat.js`.

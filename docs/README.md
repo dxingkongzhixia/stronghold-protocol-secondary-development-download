@@ -146,6 +146,7 @@
 | fork 独有机制（合并时不得丢） | [`OUR-FEATURES.md`](OUR-FEATURES.md) |
 | 主线合并**历史**日志 + **永不合并清单 §0** | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
 | 主线未并入台账（参考；已冻结） | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) |
+| **规程（卫戍协议·规程）并入清单** | [`UPSTREAM-REGULATION.md`](UPSTREAM-REGULATION.md) |
 | 决策记录 §0–§49 | [`MATCHMAKING.md`](MATCHMAKING.md) |
 | 评估过但暂不实现 | [`FUTURE-FEATURES.md`](FUTURE-FEATURES.md) |
 
@@ -161,7 +162,7 @@
 | **实现层** | `ARCHITECTURE`、`DEVELOPMENT`、`UI-HUB`、`SKINS`、`BOT-STRATEGIES`、`EXTERNAL-AI` | 解释代码，允许代码先行后补 |
 | **指南 / 配方层** | `CONTENT-AUTHORING`、`NEW-OPERATOR`、`PLUGIN-GUIDE`、`keel/QUICKSTART`、`AI-STRATEGY` | 操作步骤，不定义行为 |
 | **状态 / 计划层** | `PROJECT-STATE`、`TESTING`、`PLUGIN-BUILD`、`PLUGIN-BACKLOG`、`MOBILE-UI`、`keel/NEXT` | 描述「现在」或「将要做什么」 |
-| **历史 / 决策层** | `MATCHMAKING`、`UPSTREAM-MERGES`、`UPSTREAM-DEV-TRIAGE`、`history/`、`CHANGELOG` | 记录「为什么」，不保证仍是当前行为 |
+| **历史 / 决策层** | `MATCHMAKING`、`UPSTREAM-MERGES`、`UPSTREAM-DEV-TRIAGE`、`UPSTREAM-REGULATION`、`history/`、`CHANGELOG` | 记录「为什么」，不保证仍是当前行为 |
 | **草案层** | `PLUGIN-PLATFORM-PLAN`、`BOND-BOLIVAR`、`FUTURE-FEATURES` | 未批准，不能当承诺 |
 
 **状态标签**（写在每篇文档头部或表格里）：见 §7.2。
@@ -196,7 +197,7 @@
 1. **代码 + 自动化测试**（最终事实；测试规则见 [`TESTING.md`](TESTING.md)）；
 2. **规范层**：`keel/*`、`DESIGN` / `design/`、`SIM`、`META`、`DATA`、`ASSETS`、`PLUGINS` / `PLUGIN-API` / `PLUGIN-DSL`、`shared/protocol.js`；
 3. **当前状态层**：`PROJECT-STATE`、`PLUGIN-BUILD`、`PLUGIN-BACKLOG`、`keel/NEXT`、`keel/REMAINING`、`MOBILE-UI`；
-4. **历史 / 决策层**：`MATCHMAKING`、`UPSTREAM-MERGES`、`UPSTREAM-DEV-TRIAGE`、`history/`、`CHANGELOG`；
+4. **历史 / 决策层**：`MATCHMAKING`、`UPSTREAM-MERGES`、`UPSTREAM-DEV-TRIAGE`、`UPSTREAM-REGULATION`、`history/`、`CHANGELOG`；
 5. **草案 / 路线图层**：`PLUGIN-PLATFORM-PLAN`、`BOND-BOLIVAR`、`FUTURE-FEATURES`。
 
 `history/` 记录的是**发布时的事实**，不是当前实现；当前行为请回到第 2 条与代码。
