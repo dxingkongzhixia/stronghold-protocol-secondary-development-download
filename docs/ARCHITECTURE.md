@@ -38,7 +38,10 @@ effects), [DATA.md](DATA.md) (generated data), [ASSETS.md](ASSETS.md) (art and a
   its own battle (`public/js/battle/runner.js`) and reports progress and the result; the server checks the result
   against the spec (`server/match/fields.js` `validateClientResult`), runs the battles no connected human owns (bots, a
   dropped player, an authority that missed its deadline) and can re-simulate results (`SP_VERIFY`). `SP_COMBAT=server`
-  is the older mode in which the server runs every battle and streams snapshots. DESIGN §14.
+  is the older mode in which the server runs every battle and streams snapshots. The browser sim's data files are the
+  ones the match UI already parsed (`public/js/data.js` `getRaw`, adopted instead of fetched and parsed twice — about
+  8 MiB of heap and a 5 MB parse); a room's content set is never reused and is fetched into its own frozen copy. DESIGN
+  §14.
 - **Determinism** is what makes this work: fixed 1/30 s ticks, a seeded PRNG (`server/sim/rng.js`), no wall clock,
   no `Math.random` and only correctly rounded arithmetic in the sim, so the same spec and data give the same battle on
   every machine, bit for bit. ECMA-262 leaves `Math.hypot`, `sin`, `cos`, `atan2`, `pow` (and `**`) implementation-

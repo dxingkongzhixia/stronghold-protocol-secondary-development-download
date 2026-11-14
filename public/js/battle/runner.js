@@ -83,6 +83,7 @@ import { contentFor as appContentFor, simContent as appSimContent, contentSet as
 import { unitStatsEntry, fxForm } from '../../../shared/protocol.js';
 import { spectateEffects } from './observe.js';
 import { recordError, setBattleSource } from '../diag.js';
+import { data as gameData } from '../data.js';
 import { loadBrowserSim as loadBrowserSimImpl } from './simLoader.js';
 import { WorkerSimHost } from './simHost.js';
 import { trackCombat, combineCombat } from './metrics.js';
@@ -224,7 +225,11 @@ export function createBattleRunner(deps) {
   const clearIv = deps.clearInterval || ((h) => globalThis.clearInterval(h));
   const doc = deps.doc !== undefined ? deps.doc : (typeof document !== 'undefined' ? document : null);
   // `content` (DESIGN §32.6): `{ cs, data }` of a room's content set → the sim on it; null → the original content
-  const loadSim = deps.loadSim || ((content) => (content ? loadBrowserSim({ ...content }) : loadBrowserSim()));
+  // The original content reuses the files the page already parsed (public/js/data.js) instead of fetching and parsing
+  // them again — one object graph per page. A content set is never reused: it is not what the page's store holds, or
+  // the store changes hands mid-load (simLoader's `reuseOwner` guard falls back to fetching).
+  const loadSim = deps.loadSim || ((content) => (content ? loadBrowserSim({ ...content })
+    : loadBrowserSim({ reuse: deps.reuseSimData || ((n) => gameData.getRaw(n)), reuseOwner: deps.reuseSimOwner || (() => gameData.contentId()) })));
   // a native-sim room runs the whole battle in its own Worker (D9); in-page otherwise
   const createHost = deps.createHost || ((opts) => new WorkerSimHost(opts));
   const logger = deps.logger || SIM_LOGGER;
