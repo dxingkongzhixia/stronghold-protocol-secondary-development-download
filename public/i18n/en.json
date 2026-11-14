@@ -2117,5 +2117,10 @@
   "所选范围最多等待 {n} 人（含你）": "This search waits for up to {n} players (including you)",
   "多人匹配仅支持原版内容，请先关闭插件预览": "Public matchmaking supports the original content only. Turn off the plugin preview first.",
   "第二期下半": "Season 2 · Part 2",
-  "规程·序列Ⅰ": "Regulation · Sequence I"
+  "规程·序列Ⅰ": "Regulation · Sequence I",
+  "本服务器没有启用该版本": "This server does not offer that version",
+  "该版本不能用于当前房间（例如房间开着改变玩法的插件）": "That version cannot be used in this room (for example, while gameplay plugins are on)",
+  "本局模拟长时间无响应，已结束": "The simulation stopped responding and has ended",
+  "该版本的模拟无法启动": "This version's simulation could not start",
+  "本局模拟出错，已结束": "The simulation failed and has ended"
 }
