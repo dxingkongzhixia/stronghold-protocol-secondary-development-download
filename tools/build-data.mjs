@@ -4471,7 +4471,8 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
   const step = (t) => steps.find((x) => x.stepType === t);
   return {
     season: SEASON,
-    seasonName: '卫戍协议：盟约',
+    seasonName: VERSION?.id === 'act3autochess@V3_1' ? '卫戍协议·规程' : '卫戍协议：盟约',
+    version: VERSION ? { id: VERSION.id, season: VERSION.season, family: VERSION.family, dir: VERSION.dir } : undefined,
     modes,
     economy: {
       income: Array.from({ length: 16 }, (_, r) => (r === 0 ? 0 : Math.min(3 + r, incomeCap))),
