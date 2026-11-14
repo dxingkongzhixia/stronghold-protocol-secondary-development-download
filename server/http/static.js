@@ -135,7 +135,7 @@ const CS_FILE = /^\/cs\/([0-9a-f]{16})\/([A-Za-z0-9._\/-]{1,200})$/;
  */
 export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = path.join(ROOT, 'server', 'sim'), packsDir = path.join(ROOT, 'packs'),
   pluginsDir = path.join(path.dirname(path.resolve(packsDir)), 'plugins'), skinsDir = path.join(ROOT, 'skins'), packs = null, content = null, log = noopLog,
-  assetIndex = null, views = null, visual = null, contents = null }) {
+  assetIndex = null, views = null, visual = null, contents = null, versions = null }) {
   const registry = packs || createPluginRegistry({ publicDir, dataDir, packsDir, pluginsDir }, { log: /** @type {any} */ (log) });
   const sets = visual || (typeof registry.pluginFile === 'function' ? createVisualSets({ registry, log }) : null);
   let vanilla = content;
@@ -150,6 +150,11 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     { prefix: '/skins/', name: 'skins', dir: path.resolve(skinsDir) },
     { prefix: '/', name: 'public', dir: path.resolve(publicDir) },
   ];
+  // An enabled official version's data directory (server/versions.js): served at /data/versions/<slug>/ only while the
+  // server enables it, before the /data/ mount (the first matching prefix wins; a disabled version is a 404).
+  if (versions) {
+    for (const s of [...versions.list].reverse()) mounts.unshift({ prefix: `/data/versions/${s.slug}/`, name: 'data', dir: path.resolve(s.dir), version: true });
+  }
   // the real path of public/studio/ (the plugin studio's page — never a static file, in whatever spelling the disk folds:
   // /ſtudio/ on a case-insensitive macOS disk, /studio./ on Windows)
   let studioReal;
@@ -309,6 +314,16 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     }
     if (decoded.startsWith('/cs/')) {
       const c = vanillaContent();
+      // An enabled official version's manifest and bounds (server/versions.js); its cs names its content, so immutable.
+      // Any other path under an enabled version's cs is a 404 (a version has no patched data files).
+      const vm = /^\/cs\/([0-9a-f]{16})\/(index\.json|bounds\/official\.json)$/.exec(decoded);
+      const vset = versions && vm ? versions.byCs(vm[1]) : null;
+      if (vset) {
+        const body = Buffer.from(JSON.stringify(vm[2] === 'index.json' ? vset.index : vset.bounds()));
+        await serveBuffer(req, res, { body, hash: `cs-${vm[1]}-${vm[2] === 'index.json' ? 'index' : 'bounds'}`, type: MIME['.json'],
+          cacheControl: IMMUTABLE_JSON, key: `cs:${decoded}`, cache: gzipCache });
+        return;
+      }
       if (decoded !== `/cs/${csUrlPart(c.cs)}/index.json`) {
         // a content set with gameplay plugins (DESIGN §32.6, server/plugins/contentSets.js): its manifest and its patched
         // data files — a URL naming its content, so cached for good; 404 for a set this server does not keep
@@ -401,6 +416,12 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     }
     // Bare mount paths (e.g. "/data") → treat as the mount directory.
     const mount = mounts.find((m) => decoded.startsWith(m.prefix) || decoded === m.prefix.slice(0, -1)) || mounts[mounts.length - 1];
+    // data/versions/ is served only through an enabled version's own mount (added above): the default /data/ mount must
+    // not expose the committed version directories of versions this server does not offer.
+    if (decoded.startsWith('/data/versions/') && mount.name === 'data' && !mount.version) {
+      sendError(req, res, 404, '页面找不到 — Not found');
+      return;
+    }
     const rest = decoded.length > mount.prefix.length ? decoded.slice(mount.prefix.length) : '';
     const segments = rest.split('/').filter((s) => s.length > 0);
     if (segments.some((s) => s === '..' || s === '.')) { sendError(req, res, 403, '禁止访问 · Forbidden'); return; }

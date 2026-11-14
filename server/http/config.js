@@ -12,6 +12,7 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_VERSION, LOBBY_DEFAULT_VERSION, VERSIONS, versionById } from '../../shared/versions.js';
 
 /** Repository root. */
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -122,6 +123,31 @@ export function parseTrustProxy(v) {
   if (['1', 'true', 'yes', 'on', 'always'].includes(s)) return true;
   if (['0', 'false', 'no', 'off', 'never'].includes(s)) return false;
   return 'auto';
+}
+
+/**
+ * The official versions this server offers (shared/versions.js): the `versions` startServer option wins over the
+ * environment (`SP_VERSIONS` = `all` or a comma list, `SP_VERSION_DEFAULT`, `SP_MAX_VERSION_HOSTS`).
+ *
+ * Nothing set enables the default version alone (the switch off). The default version is always enabled; a default
+ * that is not enabled, or an unknown id, falls back (dropped ids are returned for the boot log). `maxHosts` is the
+ * number of enabled non-default versions unless named.
+ * @param {{ versions?: { enabled?: string | string[], default?: string, maxHosts?: number } }} [opts]
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function versionsFrom(opts = {}, env = process.env) {
+  const o = opts.versions || {};
+  const raw = o.enabled ?? env.SP_VERSIONS ?? '';
+  const requested = raw === 'all' ? VERSIONS.map((v) => v.id)
+    : String(raw).split(',').map((s) => s.trim()).filter(Boolean);
+  const unknown = requested.filter((id) => !versionById(id));
+  const enabled = [...new Set([DEFAULT_VERSION, ...requested.filter((id) => versionById(id))])];
+  let def = o.default ?? env.SP_VERSION_DEFAULT ?? LOBBY_DEFAULT_VERSION;
+  if (!versionById(def) || !enabled.includes(def)) def = VERSIONS.find((v) => enabled.includes(v.id))?.id ?? DEFAULT_VERSION;
+  const nonDefault = enabled.filter((id) => id !== DEFAULT_VERSION).length;
+  const rawHosts = o.maxHosts ?? env.SP_MAX_VERSION_HOSTS;
+  const maxHosts = rawHosts == null || rawHosts === '' ? nonDefault : Number(rawHosts);
+  return { enabled, default: def, maxHosts: Number.isInteger(maxHosts) && maxHosts >= 0 ? maxHosts : nonDefault, unknown };
 }
 
 /** The console logger (`quiet` → silent; debug lines only with DEBUG set). */

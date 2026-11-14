@@ -174,6 +174,15 @@ export function forgetOfficialBounds() {
   cached = null;
 }
 
+/**
+ * The official-maxima snapshot of `data`, scanned without touching the process-wide cache — an official version's own
+ * bounds (server/versions.js) must not replace the default content's.
+ * @param {object} data
+ */
+export function boundsOf(data) {
+  return exportOfficialBounds(scan(data));
+}
+
 /** True after rememberOfficialBounds or installOfficialBounds. An empty cache is not installed. */
 export function officialBoundsReady() {
   return cached != null;

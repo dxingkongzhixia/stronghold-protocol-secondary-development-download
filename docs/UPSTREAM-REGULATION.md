@@ -138,10 +138,10 @@
 
 ### P0 版本宿主（5–8 人日）
 - [x] **P0.1** 注册表 `shared/versions.js`（默认 + `act3autochess@V3_1`）、`server/data.js` 的 `versionDataDir/getVersionData/resetVersionData`、`test/versions.test.js` — `f39e2cb91`
-- [ ] **P0.2** `server/http/config.js` 的 `versionsFrom`（`SP_VERSIONS` / `SP_VERSION_DEFAULT` / `SP_MAX_VERSION_HOSTS`）；`server/versions.js`（每版本 `cs`、模式表、bounds、可用性）；`http/static.js` 的 `/data/versions/<slug>/` 与 `/cs/`；`buildTag` 只计**启用**版本；`/healthz.versions`；启动日志
-- [ ] **P0.3** `lobby` 版本字段 + `room.create/proposeVersion` + `VERSION_UNSUPPORTED`；`server/match/host/` 的 `kind:'version'`（复用现有 child/worker/ipc/proxy）；每版本 `officialBounds`
+- [x] **P0.2** `versionsFrom`（`SP_VERSIONS`/`SP_VERSION_DEFAULT`/`SP_MAX_VERSION_HOSTS`，未知 id 丢弃、默认不可用回退）；`server/versions.js` 的 `createVersionSets`（每版本 `cs`、目录、索引、bounds、可用性）；`/data/versions/<slug>/` 只在启用时提供（默认 `/data/` 明确 404）、`/cs/<cs16>/index.json` 与 `/bounds/official.json`；`/healthz.versions`（仅启用非默认版本时）；启动日志。测试：`test/version-sets.test.js`、`test/http-versions.test.js`
+- [ ] **P0.3** `lobby` 版本字段 + `room.create/proposeVersion` + `VERSION_UNSUPPORTED`；`server/match/host/` 的 `kind:'version'`（复用现有 child/worker/ipc/proxy）；每版本 `officialBounds` 安装
 - [ ] **P0.4** `public/js/versions.js` + 大厅版本选择器 + 4 语言标签；页面按版本拉取数据与 `/cs/` 清单
-- [ ] **P0.5** `tools/versions/*`（profiles/adapters/sources/layouts/runtime/tables）+ `build-data.mjs --version`；`test/data-versions` 等价物
+- [ ] **P0.5** `tools/versions/*` 的其余部分（profiles/adapters/sources/runtime）——构建已用 `--version` + `tables` + `layouts` 跑通，只差通用 profile 加载器
 
 ### P1 规程数据（3–5 人日）
 - [x] **pin 缓存**：`.cache/gamedata@6f63c14e/`（8 张 excel 表 + 61 个 level 文件，PowerShell 从 `raw.githubusercontent.com/.../6f63c14e/` 取；Node 的 TLS 在本机被中间证书挡住，构建器下载不可用）

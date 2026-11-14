@@ -63,12 +63,13 @@ import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from 
 import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX, AVATAR_MAX_BYTES, AVATAR_MIMES, AVATAR_RATE_WINDOW_MS, AVATAR_UPLOAD_LIMIT } from '../shared/constants.js';
 import { PLUGIN_MAX_BYTES } from '../shared/plugins/manifest.js';
-import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, assetIndexOptionsFrom } from './http/config.js';import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
+import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, versionsFrom, assetIndexOptionsFrom } from './http/config.js';import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
 import { createPluginRegistry } from './plugins/registry.js';
 import { installPluginBytes, movePluginAside } from './plugins/install.js';
 import { lockPlugins, rollbackPlugin, unlockPlugins, versionLockView } from './plugins/lock.js';
 import { computeVanillaContent } from './plugins/identity.js';
+import { createVersionSets } from './versions.js';
 import { createVisualSets } from './plugins/visualSet.js';
 import { createPluginPolicy } from './plugins/policy.js';
 import { createPluginMarket } from './market.js';
@@ -247,6 +248,15 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   // now - like the data the matches use and the build tag below
   const content = computeVanillaContent({ simDir, sharedDir, dataDir, shim: DATA_SHIM_JS, log });
   log.info(`[content] vanilla ${content.cs.slice(0, 16)} (${Object.keys(content.simFiles).length} code files, ${Object.keys(content.data).length} data files)`);
+  // official versions (shared/versions.js): each enabled one's cs and data directory, served at /data/versions/ and
+  // /cs/ (server/versions.js); nothing set enables the default version alone
+  const versionCfg = versionsFrom(opts);
+  for (const id of versionCfg.unknown) log.warn(`[versions] unknown version ${id}, dropped`);
+  const versionSets = createVersionSets({ enabled: versionCfg.enabled, default: versionCfg.default, maxHosts: versionCfg.maxHosts,
+    simDir, sharedDir, shim: DATA_SHIM_JS, log });
+  if (versionSets.list.length) {
+    log.info(`[versions] enabled: ${versionSets.list.map((s) => `${s.id} (${s.entry.label}, ${s.cs.slice(0, 16)})`).join(', ')}; default ${versionCfg.default}`);
+  }
   // language packs and plugins (docs/PACKS.md, docs/PLUGINS.md): scanned now - the start log names them - and again
   // whenever their folders change
   const packs = createPluginRegistry({ publicDir, dataDir, packsDir, pluginsDir }, { log, scriptHost: host, scriptMode: process.env.SP_PLUGIN_SCRIPTS });
@@ -282,7 +292,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const hosts = createMatchHosts({ contents: roomContents, log, options: { transport, maxWorkers: Math.min(MAX_HOSTS, Math.max(1, policy.get().maxSets)), ...(opts.matchHost || {}) } });
   const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats, keel: keelPlugins }, { data, log, content, plugins: roomSets, hosts });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
-  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, skinsDir, packs, content, log, assetIndex, views, visual, contents: roomContents });
+  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, skinsDir, packs, content, log, assetIndex, views, visual, contents: roomContents, versions: versionSets });
   // the plugin studio (DESIGN §32.9): its page and API for this machine and the local network; it watches plugins/ only
   // once it is used (hot reload), and rooms whose host is the author or alone follow a plugin's changes by themselves
   const studio = opts.studio === false ? null : createStudio({ publicDir, pluginsDir, dataDir, registry: packs, lobby, sessions: registry, log, fetch: opts.fetch });
@@ -300,7 +310,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const sitePolicy = process.env.SP_CSP === 'off' ? null : siteCsp(publicDir);
   const baseHandler = createRequestHandler({
     serveStatic, studio, csp: sitePolicy,
-    health: { startedAt, network, registry, lobby, content, visual, traffic, assetIndex, views, prior: priorStatus() },
+    health: { startedAt, network, registry, lobby, content, visual, traffic, assetIndex, views, versions: versionSets, prior: priorStatus() },
     log, trustProxy,
   });
   function communityKey(req) {
