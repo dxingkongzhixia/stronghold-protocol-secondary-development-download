@@ -61,10 +61,10 @@ test('grid: obstacles re-route and bump version; blocked entirely ⇒ null unles
 test('damage formulas: phys/arts/true, ignore, 5% floor', () => {
   approx(mitigate(1000, 'phys', { def: 300 }), 700);
   approx(mitigate(1000, 'phys', { def: 2000 }), 50);
-  approx(mitigate(1000, 'phys', { def: 300 }, { defIgnorePct: 0.5, defIgnoreFlat: 50 }), 900);
+  approx(mitigate(1000, 'phys', { def: 300 }, { defIgnorePct: 0.5, defIgnoreFlat: 50 }), 875); // fixed first: (300−50)×0.5
   approx(mitigate(1000, 'arts', { res: 30 }), 700);
   approx(mitigate(1000, 'arts', { res: 100 }), 50);
-  approx(mitigate(1000, 'arts', { res: 40 }, { resIgnorePct: 0.5, resIgnoreFlat: 10 }), 900);
+  approx(mitigate(1000, 'arts', { res: 40 }, { resIgnorePct: 0.5, resIgnoreFlat: 10 }), 850); // fixed first: (40−10)×0.5
   approx(mitigate(1000, 'true', { def: 9999, res: 100 }), 1000);
 });
 
