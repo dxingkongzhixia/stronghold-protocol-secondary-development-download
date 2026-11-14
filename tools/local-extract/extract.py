@@ -147,7 +147,36 @@ EXTRA_JOBS = [
 # _AlphaTex merged in as A). Output: spine/enemy/<id>/ (manifest group spine/enemy/<id>); the client draws the model
 # when the group lists every file of data/assets.json enemies[id].spineLocal (whose metadata
 # tools/assets/local-enemy-spines.json keeps: `node tools/fetch-assets.mjs --local-spines` after a game update).
-ENEMY_SPINES = ['enemy_1305_mhslim', 'enemy_1305_mhslim_2']
+ENEMY_SPINES = [
+    # covenant element-faction slugs (the original two)
+    'enemy_1305_mhslim', 'enemy_1305_mhslim_2',
+    # 规程 (act3autochess) enemies whose battle Spine the community dumps lack (extracted 2026-11-15 from the
+    # owner's client; the two the client does not carry, enemy_9029_acfnc_2 / enemy_9037_aceel_2, are left out)
+'enemy_10003_trwlpl_2', 'enemy_10077_mpbarr', 'enemy_10123_uareap', 'enemy_10146_nscola',
+'enemy_10147_nsbomb', 'enemy_10163_mnctur_2', 'enemy_10196_ubba', 'enemy_10196_ubba_2',
+'enemy_10229_agactr_2', 'enemy_1064_snsbr', 'enemy_1067_snslime_2', 'enemy_1103_wdkght_2',
+'enemy_1104_lfkght', 'enemy_1104_lfkght_3', 'enemy_1131_sbeast', 'enemy_1131_sbeast_2',
+'enemy_1132_sarchn', 'enemy_1132_sarchn_2', 'enemy_1133_harchn', 'enemy_1133_harchn_2',
+'enemy_1137_plasm', 'enemy_1138_tumor', 'enemy_1191_krgrg', 'enemy_1191_krgrg_2',
+'enemy_1213_mtrsnp', 'enemy_1216_cansld', 'enemy_1219_mtrbty', 'enemy_1220_dzoms',
+'enemy_1220_dzoms_2', 'enemy_1221_dzomg', 'enemy_1221_dzomg_2', 'enemy_1222_dpvt',
+'enemy_1222_dpvt_2', 'enemy_1223_dmech', 'enemy_1223_dmech_2', 'enemy_1224_dsuply',
+'enemy_1224_dsuply_2', 'enemy_1225_dkmage', 'enemy_1225_dkmage_2', 'enemy_1226_dklord',
+'enemy_1226_dklord_2', 'enemy_1309_mhboar_2', 'enemy_1360_dfello', 'enemy_1361_dthrow',
+'enemy_1361_dthrow_2', 'enemy_1362_dfat', 'enemy_1362_dfat_2', 'enemy_1363_spnshd_2',
+'enemy_1373_ltnhor', 'enemy_1373_ltnhor_2', 'enemy_1375_ltnclr', 'enemy_1375_ltnclr_2',
+'enemy_1376_ltndru', 'enemy_1376_ltndru_2', 'enemy_1385_winbom', 'enemy_1385_winbom_2',
+'enemy_1388_wingnt', 'enemy_1388_wingnt_2', 'enemy_1403_gunsho', 'enemy_1403_gunsho_2',
+'enemy_1405_boomer_2', 'enemy_1406_chghmr', 'enemy_1409_bdguad_2', 'enemy_1413_mmstck',
+'enemy_1424_lrboom', 'enemy_1428_lrsoul', 'enemy_1429_lrwzrd', 'enemy_1429_lrwzrd_2',
+'enemy_1431_lrmzrd', 'enemy_1431_lrmzrd_2', 'enemy_1434_dsshel', 'enemy_1435_dsflys',
+'enemy_1436_dsdivi', 'enemy_1436_dsdivi_2', 'enemy_1437_dsfull', 'enemy_1437_dsfull_2',
+'enemy_2123_dyjsww', 'enemy_2124_dyjsfg', 'enemy_2135_shkrbt', 'enemy_9024_acsgnt',
+'enemy_9025_aclts', 'enemy_9026_acltm', 'enemy_9027_acfnca', 'enemy_9028_acfncb',
+'enemy_9029_acfnc', 'enemy_9030_acpara', 'enemy_9031_acrefd', 'enemy_9034_acblk',
+'enemy_9035_acspider', 'enemy_9035_acspider_2', 'enemy_9037_aceel', 'enemy_9038_achest',
+'enemy_9039_acrefm', 'enemy_9040_accrit',
+]
 ENEMY_ART = 'refs/arts/enm_art_*.ab'
 ENEMY_SPINE_SUB = 'spine/enemy'
 
@@ -970,6 +999,8 @@ def main():
                     help='an AB root holding the battlefield scene bundles of an in-season version (repeatable; '
                          'searched after --game and before .cache/official-scenes/*)')
     ap.add_argument('--print-jobs', action='store_true', help='print the job table as JSON and exit')
+    ap.add_argument('--enemy-spines', default='', metavar='IDS', help='with --only spine/enemy: a comma list or @file '
+                    '(JSON array or one id per line) of enemy ids to extract instead of ENEMY_SPINES')
     ap.add_argument('--fx-set', choices=('sample', 'used'), default='sample',
                     help='with --only fx: the Phase 1a sample (default) or every effect the mode\'s units reference')
     ap.add_argument('--fx-keys', default='', metavar='K1,K2',
@@ -1024,7 +1055,19 @@ def main():
 
 def run_extract(args, ab_root):
     jobs = select_jobs(args.only)
-    enemy_ids = spine_ids(args.only, ENEMY_SPINE_SUB, ENEMY_SPINES)
+    enemy_list = ENEMY_SPINES
+    if args.enemy_spines:
+        raw = args.enemy_spines
+        if raw.startswith('@'):
+            text = Path(raw[1:]).read_text(encoding='utf-8').strip()
+            try:
+                parsed = json.loads(text)
+                enemy_list = parsed if isinstance(parsed, list) else [str(parsed)]
+            except ValueError:
+                enemy_list = [x.strip() for x in text.replace(',', '\n').splitlines() if x.strip()]
+        else:
+            enemy_list = [x.strip() for x in raw.split(',') if x.strip()]
+    enemy_ids = spine_ids(args.only, ENEMY_SPINE_SUB, enemy_list)
     token_ids = spine_ids(args.only, TOKEN_SPINE_SUB, TOKEN_SPINES)
     stage_ids = scene_ids(args.only)
     reg_ids = regulation_ids(args.only)

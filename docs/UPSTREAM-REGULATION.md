@@ -103,14 +103,23 @@
   （270 文件 / 14.0 MiB：入口 UI、赛季前后景、徽章、logo），`spritepack/ui_zone_home_theme_act3autochess.ab` →
   `theme/act3autochess`（1 张 1024×858 / 0.9 MiB）。它们是 **opt-in**（只在 `--only` 点名时跑），不进
   `expected_local_groups`。敌人特效不需要任务表条目：`fx.py` 的 `pkgrps/btl_pfb_fx_*.ab` 已经按 glob 扫描。
+- **规程敌人模型**：上游资产的 98 个 `spineLocal` 规程敌人里，客户端能提取 **96 个**（缺 `enemy_9029_acfnc_2`、
+  `enemy_9037_aceel_2`）→ `public/assets/local/spine/enemy/*`，**288 文件 / 14.5 MiB**。`ENEMY_SPINES` 由 2 扩到 96，
+  `expected_local_groups` 170 组；`--enemy-spines <ids|@file>` 可按需覆盖（本次用它先试跑了 98 个）。
+- **规程音乐**：客户端索引里有 `audio/sound_beta_2/music/act3autochess/{m_sys,m_boss1,m_boss2}.ab`，从 Windows CDN
+  （`https://ak.hycdn.cn/assetbundle/official/Windows/assets/<version>/`）取回后用 `music.py` 的编码链（-14 LUFS）
+  写入 `var/music`：**Kernel Overflow / Ens Inexorabile / Systematic Violation**，3 首 / 8.1 MiB，`index.json` 已写。
+  `Restore` 是 2024《卫戍协议》的关卡 BGM，当前客户端的热更索引里没有它的 bundle（需要旧版本 CDN 或社区 dump），
+  暂不收录。
 
 **仍需处理**（P4）：
 
 - [x] 关卡 `.dat` 解 zip（`import_scenes.py`）；规程三段场景表（`regulation_scenes.py`，10 张图）
 - [x] 统一两个 AB 根（`bundles.py` + `--game` 安装目录 + `.cache` 硬链接树）
 - [x] 规程 activity / 主题的 opt-in 任务（`EXTRA_JOBS`；enemy-fx 走 `fx.py` 的 glob，无需条目）
-- [ ] 规程 4 首音乐仍缺（客户端未缓存）
-- [ ] 77 个规程敌人模型：本地客户端只有部分；需扩充 `ENEMY_SPINES` 列表并确认 `anon/*.bin` 的映射
+- [x] 规程敌人模型：96/98 个已提取（`spine/enemy/*`，14.5 MiB），`ENEMY_SPINES` 扩到 96；缺的 2 个客户端没有
+- [x] 规程音乐 3 首（Kernel Overflow / Ens Inexorabile / Systematic Violation）已入 `var/music`；
+      `Restore`（2024 卫戍协议）当前索引无 bundle，待旧版 CDN / 社区 dump
 
 ## 4. 与我们的差距（概览）
 
