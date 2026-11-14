@@ -1383,6 +1383,9 @@ export const MODE_ROW_GUARD = Object.freeze({
  */
 export const ATTACK_ROW_FORCE = Object.freeze({
   skchr_thorns_2: true,
+  // 灵知 S2: its only attack ability is a `MeleeAttack` whose ON_CAST_START loop (`gnosis_skill_02_start`, held for
+  // the cast) is the ice trail of each blow, while the sim shoots `bolt`; dropping it left only the skill's range buffs.
+  skchr_gnosis_2: true,
 });
 
 /**
@@ -1398,6 +1401,9 @@ export const ATTACK_ROW_WHEN_START = Object.freeze({
   // MeleeAttack on an 'arrow' shooter): same shape — one cast of a separate ability, its rows belong to the activation.
   skchr_lionhd_2: true,
   skchr_pinecn_1: true,
+  // 乌尔比安 S1 (instantKind: an instant anchor throw at the best enemy in the skill grid): its `range` row is the
+  // throw's AoE, played once when the skill fires — not a row of his own (melee) attacks.
+  skchr_ulpia_1: true,
 });
 
 export const FX_BINDINGS = Object.freeze({

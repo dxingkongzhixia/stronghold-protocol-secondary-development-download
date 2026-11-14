@@ -1258,8 +1258,9 @@ index.json — version 1 and the version 2 fields (§33.12, §33.15; Phase 3c) �
 * **Attack rows played at the skill's start** (`ATTACK_ROW_WHEN_START`, skills.js `plan.attacks[].when = 'start'`):
   a one-ability skill whose rows are the *cast* of an ability the unit does not attack with — 德克萨斯 S2 剑雨
   (`MultiRangedAttack` on a melee unit: `texas_skill_01_start` / `_range`), 狮蝎 S2 (a `MeleeAttack` on a `bolt`
-  shooter) and 松果 S1 — plays them once on the skill's 1 (`skillfx` `_castOnce`), its hits following the frame's
-  damage, instead of losing them to the class check on every attack.
+  shooter), 松果 S1 and 乌尔比安 S1 (an instant anchor throw's `range` row) — plays them once on the skill's 1
+  (`skillfx` `_castOnce`), its hits following the frame's damage, instead of losing them to the class check on every
+  attack.
 * **Enemy skills (v2)**: `units[enemy].skills` by the lower-case `prefabKey` of the enemy's data record's `skills[]`
   (the slot order). A skill's window opens on ['cast', id, slot, dur?] — since Phase 3d the sim sends it (SIM.md,
   `content/enemies/helpers.js castSlot`: a cooldown cast, an SP skill's attack before its 'atk', a kit's own moment) —
