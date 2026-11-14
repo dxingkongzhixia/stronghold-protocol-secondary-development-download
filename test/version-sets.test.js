@@ -64,7 +64,9 @@ test('createVersionSets: the 规程 version gets a cs, its data directory, its i
   assert.match(config.sha256, /^[0-9a-f]{64}$/);
   // the data loads from its own directory (not the default data/)
   resetData();
+  assert.equal(sets.stats().loaded, 0, 'stats never triggers the lazy load');
   const data = set.data;
+  assert.equal(sets.stats().loaded, 1);
   assert.equal(data.config.season, 'act3autochess');
   assert.equal(data.config.version?.id, 'act3autochess@V3_1');
   assert.notEqual(data, getData({ log: quiet }));

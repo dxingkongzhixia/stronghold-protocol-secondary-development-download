@@ -85,7 +85,9 @@ export function createVersionSets({ enabled = [], default: defaultId = DEFAULT_V
       content,
       index: versionIndexOf(entry, content),
       /** The version's parsed data (server/data.js getVersionData), loaded once. */
-      get data() { return getVersionData(id, { log }); },
+      get data() { this.loaded = true; return getVersionData(id, { log }); },
+      /** Read by stats(): never triggers the lazy load above. */
+      loaded: false,
       /** The room content base of this version (frozen; host plugins are never allowed on a version room). */
       get base() {
         return (base ||= Object.freeze({ cs: content.cs, vanilla: true, version: id, plugins: Object.freeze([]) }));
@@ -168,7 +170,7 @@ export function createVersionSets({ enabled = [], default: defaultId = DEFAULT_V
     health() {
       return { enabled: [...ids], default: defaultId };
     },
-    stats: () => ({ enabled: [...ids], default: defaultId, loaded: [...sets.values()].filter((v) => v.data).length }),
+    stats: () => ({ enabled: [...ids], default: defaultId, loaded: [...sets.values()].filter((v) => v.loaded).length }),
     /** The set of a version id, or null. */
     byId: (id) => (typeof id === 'string' ? sets.get(id) || null : null),
     /**
