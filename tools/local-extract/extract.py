@@ -1005,6 +1005,8 @@ def main():
     ap.add_argument('--manifest', default=str(ROOT / 'data/local-assets.json'))
     ap.add_argument('--plugin-root', default=str(ROOT), help='installation whose plugin JSON and roster are scanned')
     ap.add_argument('--plugin-art', action='store_true', help='explicitly include referenced official operator art in a full run')
+    ap.add_argument('--char-art', default='', metavar='IDS', help='with --only plugin-art: a comma list or @file (JSON '
+                    'array or one id per line) of char ids to extract instead of the plugin references')
     ap.add_argument('--only', action='append', default=[], metavar='SUBDIR',
                     help='only run the jobs whose output subdir starts with this prefix (repeatable), e.g. emoticon')
     ap.add_argument('--scenes', action='append', default=[], metavar='DIR',
@@ -1087,6 +1089,18 @@ def run_extract(args, ab_root):
     fx_on = fx_selected(args.only)
     art_on = wants_sub(args.only, operators.SUB) and (bool(args.only) or args.plugin_art)
     art_ids = spine_ids(args.only, operators.SUB, operators.references(Path(args.plugin_root))) if art_on else []
+    if args.char_art:
+        raw = args.char_art
+        if raw.startswith('@'):
+            text = Path(raw[1:]).read_text(encoding='utf-8').strip()
+            try:
+                parsed = json.loads(text)
+                art_ids = parsed if isinstance(parsed, list) else [str(parsed)]
+            except ValueError:
+                art_ids = [x.strip() for x in text.replace(',', '\n').splitlines() if x.strip()]
+        else:
+            art_ids = [x.strip() for x in raw.split(',') if x.strip()]
+        art_on = bool(art_ids)
     if not jobs and not enemy_ids and not token_ids and not stage_ids and not reg_ids and not entry_on and not fx_on and not art_on:
         print(f'--only {args.only}: no job matches', file=sys.stderr)
         return 2
