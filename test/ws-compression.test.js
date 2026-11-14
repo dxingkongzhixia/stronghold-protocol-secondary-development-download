@@ -48,10 +48,10 @@ describe('WebSocket permessage-deflate', () => {
   before(async () => { srv = await fakeServer(); });
   after(async () => { await srv.close(); });
 
-  test('negotiated with no server context takeover and a small server window; a large frame is compressed', async () => {
+  test('negotiated with context takeover and an 8 KB server window; a large frame is compressed', async () => {
     const r = await receive(srv.url);
     assert.match(r.extensions, /permessage-deflate/);
-    assert.match(r.extensions, /server_no_context_takeover/);
+    assert.doesNotMatch(r.extensions, /server_no_context_takeover/, 'the window is kept between messages');
     assert.match(r.extensions, new RegExp(`server_max_window_bits=${WS_DEFLATE.serverMaxWindowBits}`));
     assert.deepEqual(r.msgs, [BIG, SMALL], 'the payloads arrive intact');
     assert.ok(BIG.length > 10000);
@@ -71,7 +71,8 @@ describe('WebSocket permessage-deflate', () => {
     assert.equal(r.extensions, '');
     assert.deepEqual(r.msgs, [BIG, SMALL]);
     assert.equal(narrowDeflateOffer('permessage-deflate; server_max_window_bits=9'), true);
-    assert.equal(narrowDeflateOffer('permessage-deflate; server_max_window_bits=12; client_max_window_bits'), false);
+    assert.equal(narrowDeflateOffer('permessage-deflate; server_max_window_bits=12; client_max_window_bits'), true, '12 < 13');
+    assert.equal(narrowDeflateOffer('permessage-deflate; server_max_window_bits=13'), false, 'our own window is acceptable');
     assert.equal(narrowDeflateOffer('permessage-deflate; server_max_window_bits=9, permessage-deflate'), false, 'another offer is acceptable');
     assert.equal(narrowDeflateOffer('permessage-deflate; client_max_window_bits'), false);
     assert.equal(narrowDeflateOffer(undefined), false);
