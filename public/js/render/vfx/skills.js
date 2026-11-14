@@ -671,6 +671,7 @@ export function skillPlan(idx, unitKey, skillId, opts = {}) {
     }
   }
   if (isObj(opts.rec)) tagCasts(plan, skill);
+  if (ATTACK_ROW_WHEN_START[id]) for (const a of plan.attacks) a.when = 'start';
   return plan;
 }
 
@@ -1382,6 +1383,21 @@ export const MODE_ROW_GUARD = Object.freeze({
  */
 export const ATTACK_ROW_FORCE = Object.freeze({
   skchr_thorns_2: true,
+});
+
+/**
+ * Skills whose attack rows are one cast at the skill's activation, not rows of its attacks: the ability's class is not
+ * the unit's own attack (德克萨斯 S2 剑雨: a `MultiRangedAttack` cast by a melee unit, its rows `texas_skill_01_start` /
+ * `_range` from ON_CAST_START / ON_SPELL_ON). The plan keeps them as an attack — `skillfx` drops it when the sim's blow
+ * is another kind (`attackFx` fitsAttack) — so tag it `when: 'start'`: skillfx `_castOnce` plays its cast and range
+ * once on the skill's 1 and its hits follow the frame's damage.
+ */
+export const ATTACK_ROW_WHEN_START = Object.freeze({
+  skchr_texas_2: true,
+  // 狮蝎 S2 (start + range of a MeleeAttack on a unit the sim shoots with: 'bolt') and 松果 S1 (two start rows of a
+  // MeleeAttack on an 'arrow' shooter): same shape — one cast of a separate ability, its rows belong to the activation.
+  skchr_lionhd_2: true,
+  skchr_pinecn_1: true,
 });
 
 export const FX_BINDINGS = Object.freeze({

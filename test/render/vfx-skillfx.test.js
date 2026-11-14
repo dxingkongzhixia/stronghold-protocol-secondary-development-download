@@ -24,7 +24,7 @@ const KEYS = ['foo_atk_start', 'foo_atk_hit', 'foo_s2_mode_cast', 'foo_s3_mode_c
   'indigo_attack_charge_01_start', 'indigo_attack_charge_02', 'indigo_attack_charge_03', 'indigo_attack_charge_04', 'indigo_attack_charge_05',
   'indigo_attack_01_trail', 'indigo_attack_01_hit', 'clemnt_skill_03_mark_all_01', 'buff_stun', 'buff_burn', 'g_hit', 'g_heal', 'g_enemy', 'g_die',
   'qux_s1_cast', 'qux_s1_trail', 'qux_mode_cast', 'once_buff', 'once_loop', 'oncep_buff', 'oncep_loop',
-  'repl_cast', 'repl_hit', 'repl_mode_cast', 'forced_cast', 'forced_mode_cast'];
+  'repl_cast', 'repl_hit', 'repl_mode_cast', 'forced_cast', 'forced_mode_cast', 'tex_start', 'tex_range'];
 
 const melee = (k, ev = 2) => ({ effects: [k], oneshot: 1, startEvent: ev, endEvent: 3, directionType: 0 });
 
@@ -81,6 +81,11 @@ function makeIndex() {
     skchr_thorns_2: { mode: null, projectiles: [], uses: [
       { role: 'start', keys: ['forced_cast'], from: 'UberEffectEmitter._castEffects', node: 'sk', ability: 'MeleeAttack', startEvent: 'ON_CAST_START', endEvent: 'ON_CAST_END', oneshot: true, list: 'cast' },
     ] },
+    // ATTACK_ROW_WHEN_START (德克萨斯 S2): its attack rows are one cast at the skill's 1, not rows of its attacks
+    skchr_texas_2: { mode: null, projectiles: [], uses: [
+      { role: 'start', keys: ['tex_start'], from: 'UberEffectEmitter._castEffects', node: 'sk', ability: 'MultiRangedAttack', startEvent: 'ON_CAST_START', endEvent: 'ON_CAST_END', oneshot: true, list: 'cast' },
+      { role: 'range', keys: ['tex_range'], from: 'UberEffectEmitter._castEffects', node: 'sk', ability: 'MultiRangedAttack', startEvent: 'ON_CAST_START', endEvent: 'ON_CAST_END', oneshot: false, list: 'cast' },
+    ] },
     skchr_once_1: { mode: null, projectiles: [], uses: [
       { role: 'loop', keys: ['once_buff'], from: 'BuffDuringSkill._buffs', node: 'sk', on: 'owner' },
       { role: 'loop', keys: ['once_loop'], from: 'BuffDuringSkill._buffs', node: 'sk', on: 'owner' },
@@ -107,6 +112,7 @@ function makeIndex() {
       char_500_once: unit([{ name: 'Default', attack: { class: 'MeleeAttack', cast: [], hit: [] } }], ['skchr_once_1']),
       char_600_repl: unit([{ name: 'Default', attack: { class: 'MeleeAttack', cast: [melee('repl_mode_cast')], hit: [] } }], ['skchr_repl_1']),
       char_610_forced: unit([{ name: 'Default', attack: { class: 'RangedAttack', cast: [melee('forced_mode_cast')], hit: [] } }], ['skchr_thorns_2']),
+      char_620_texas: unit([{ name: 'Default', attack: { class: 'MeleeAttack', cast: [], hit: [] } }], ['skchr_texas_2']),
       char_510_oncep: unit([{ name: 'Default', attack: { class: 'MeleeAttack', cast: [], hit: [] } }], ['skchr_once_2']),
       enemy_1: { kind: 'enemy', modes: [{ name: 'Default', attack: { class: 'MeleeAttack', cast: [], hit: [] } }], skills: {} },
     },
@@ -146,6 +152,7 @@ const RECS = {
   char_510_oncep: { charId: 'char_510_oncep', skill: { skillId: 'skchr_once_2', index: 0, skillType: 'PASSIVE', durationType: 'NONE', duration: -1, bb: {} } },
   char_600_repl: { charId: 'char_600_repl', skill: { skillId: 'skchr_repl_1', index: 0, skillType: 'MANUAL', durationType: 'NONE', duration: 10, bb: {} } },
   char_610_forced: { charId: 'char_610_forced', skill: { skillId: 'skchr_thorns_2', index: 0, skillType: 'MANUAL', durationType: 'NONE', duration: 10, bb: {} } },
+  char_620_texas: { charId: 'char_620_texas', skill: { skillId: 'skchr_texas_2', index: 0, skillType: 'MANUAL', durationType: 'NONE', duration: 0, bb: {} } },
 };
 
 function fakeOfx(index, { active = true } = {}) {
@@ -389,6 +396,18 @@ describe('attacks while the skill is on', () => {
     w.attack(u, t, 'arrow', 1);
     assert.ok(spawned.includes('forced_cast'), 'the MeleeAttack ability\'s cast row plays on the arrow attack');
     assert.ok(!spawned.includes('forced_mode_cast'), 'the mode\'s row does not stand in for it');
+  });
+
+  test('ATTACK_ROW_WHEN_START: the rows play once on the skill\'s 1, and the attacks do not replay them (德克萨斯 S2)', async () => {
+    const { w, spawned, view, frame } = await setup();
+    const u = view(1, 'char_620_texas', 5, { skill: 0 });
+    const t = view(2, 'enemy_1', 8);
+    frame();
+    w.skill(u, true);
+    assert.ok(spawned.includes('tex_start') && spawned.includes('tex_range'), 'the cast and range play at the skill start');
+    frame();
+    w.attack(u, t, 'none', 1);
+    assert.equal(spawned.filter((k) => k === 'tex_start').length, 1, 'not replayed by an attack');
   });
 
   test('hit groups: the k-th damage on the target in one frame plays group k; a later frame does not replay them', async () => {
