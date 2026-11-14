@@ -1397,7 +1397,7 @@ export const ATTACK_ROW_FORCE = Object.freeze({
  */
 export const ATTACK_ROW_WHEN_START = Object.freeze({
   skchr_texas_2: true,
-  // 狮蝎 S2 (start + range of a MeleeAttack on a unit the sim shoots with: 'bolt') and 松果 S1 (two start rows of a
+  // 莱恩哈特 S2 (char_373_lionhd; start + range of a MeleeAttack on a unit the sim shoots with: 'bolt') and 松果 S1 (two start rows of a
   // MeleeAttack on an 'arrow' shooter): same shape — one cast of a separate ability, its rows belong to the activation.
   skchr_lionhd_2: true,
   skchr_pinecn_1: true,

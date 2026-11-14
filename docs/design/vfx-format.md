@@ -1257,7 +1257,7 @@ index.json — version 1 and the version 2 fields (§33.12, §33.15; Phase 3c) �
   skills whose rows are a separate ranged strike, not the attack.
 * **Attack rows played at the skill's start** (`ATTACK_ROW_WHEN_START`, skills.js `plan.attacks[].when = 'start'`):
   a one-ability skill whose rows are the *cast* of an ability the unit does not attack with — 德克萨斯 S2 剑雨
-  (`MultiRangedAttack` on a melee unit: `texas_skill_01_start` / `_range`), 狮蝎 S2 (a `MeleeAttack` on a `bolt`
+  (`MultiRangedAttack` on a melee unit: `texas_skill_01_start` / `_range`), 莱恩哈特 S2 (a `MeleeAttack` on a `bolt`
   shooter), 松果 S1 and 乌尔比安 S1 (an instant anchor throw's `range` row) — plays them once on the skill's 1
   (`skillfx` `_castOnce`), its hits following the frame's damage, instead of losing them to the class check on every
   attack.
