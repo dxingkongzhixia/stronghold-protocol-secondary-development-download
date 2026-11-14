@@ -141,7 +141,7 @@
 - [x] **P0.2** `versionsFrom`（`SP_VERSIONS`/`SP_VERSION_DEFAULT`/`SP_MAX_VERSION_HOSTS`，未知 id 丢弃、默认不可用回退）；`server/versions.js` 的 `createVersionSets`（每版本 `cs`、目录、索引、bounds、可用性）；`/data/versions/<slug>/` 只在启用时提供（默认 `/data/` 明确 404）、`/cs/<cs16>/index.json` 与 `/bounds/official.json`；`/healthz.versions`（仅启用非默认版本时）；启动日志。测试：`test/version-sets.test.js`、`test/http-versions.test.js`
 - [x] **P0.3** `lobby` 版本字段（`room.version`、`room.state.version`、`welcome.versions`）；`room.create { version }` 与 `VERSION_UNKNOWN`/`VERSION_UNSUPPORTED`（未启用、数据不可用、该模式未提供、版本房开关玩法插件）；房间数据与对局走该版本（`dataFor`、`versionHosts`）；`server/match/host/` 的 `kind: 'version'`（`version-crash`/`version-hang`/`version-start`，每版本 `officialBounds` 由 host 安装）；`/healthz.versions.hosts`。测试：`test/lobby-versions.test.js`、`test/versions-host.test.js`
 - [ ] **P0.3b** `room.proposeVersion` 版本投票（已开局/多人房间的切换确认）——留到 P3 与大厅选择器一起
-- [ ] **P0.4** `public/js/versions.js` + 大厅版本选择器 + 4 语言标签；页面按版本拉取数据与 `/cs/` 清单
+- [x] **P0.4** `public/js/versions.js`（`welcome.versions` 清洗、浏览器偏好 `sp.pref.lobby.version`、服务器默认回退）；经典大厅与 Hub 协议页的版本选择（`版本` / VERSION，标签取注册表 msgid）；`room.create` 带 `version`；`content.js` 的 `loadVersionSet` 按 `/cs/<cs16>/index.json` 下载并校验该版本 15 个数据文件与 bounds，`installContentSet` 在房间内换上该版本数据、离开还原；`simContent` 带 `version`。测试：`test/ui/versions.test.js`；浏览器 smoke：Hub 协议页切到规程 → 建房 → `__SP_CONTENT__.state()` 为 ready
 - [ ] **P0.5** `tools/versions/*` 的其余部分（profiles/adapters/sources/runtime）——构建已用 `--version` + `tables` + `layouts` 跑通，只差通用 profile 加载器
 
 ### P1 规程数据（3–5 人日）
