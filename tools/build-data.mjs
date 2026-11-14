@@ -45,6 +45,7 @@ import { extendedGrid } from '../shared/loadoutRecord.js';
 import { FULL_RANK, atRank, stripPotential } from '../shared/potential.js';
 import { versionById } from '../shared/versions.js';
 import * as act3Tables from './versions/tables/act3autochess-v3_1.mjs';
+import { composeRegulationStage, placeRegulationTemplate } from './versions/layouts.mjs';
 
 // ===== CLI & IO ==================================================================================
 
@@ -991,7 +992,8 @@ async function loadContext() {
     : activity?.activity?.AUTOCHESS_SEASON?.[SEASON];
   const ac = activity?.autoChessData;
   if (!act || !ac) throw new Error(`activity_table has no ${VERSION ? VERSION.id : SEASON} section`);
-  applyCustomChess(act, charTable);
+  if (VERSION) warn(`custom chess: not added to ${VERSION.id} (they are the covenant fork's roster)`);
+  else applyCustomChess(act, charTable);
 
   // Note: summons/traps live in character_table (token_table.json only lists 4 unrelated traps).
 
@@ -1015,6 +1017,18 @@ async function loadContext() {
   const levels = {};
   // Sequential download to stay polite to GitHub; cached files load instantly.
   for (const id of [...levelSrc.keys()].sort(naturalCmp)) levels[id] = await loadGamedata(levelPath(levelSrc.get(id)));
+
+  // 规程 builds every player's field in one scene: its stages are an atlas of three pieces and its round templates the
+  // road only — both become the 盟约 19×21 level here (tools/versions/layouts.mjs), so nothing after this line differs.
+  if (VERSION?.id === 'act3autochess@V3_1') {
+    for (const id of Object.keys(levels)) {
+      if (stageIds.includes(id)) {
+        const pieces = [];
+        for (const n of [1, 2, 3]) pieces.push(await loadGamedata(levelPath(id).replace(/\.json$/, `/level_${id}_sub_0${n}.json`)));
+        levels[id] = composeRegulationStage(levels[id], pieces);
+      } else levels[id] = placeRegulationTemplate(levels[id]);
+    }
+  }
 
   const research = {
     core: await loadResearch('01-core-data.json'),
@@ -1725,7 +1739,8 @@ function buildChess(ctx) {
       rec.traitBase = traitRecord(ctx, char, phase, level, [], chessId, ctx.potRank).trait;
       rec.talentsBase = mergeTalentChanges(talentList, []);
       rec.modules = [];
-      for (const id of uniequip.charEquip?.[shop.charId] || []) {
+      const moduleCharId = shop.backupTmplId || shop.charId;
+      for (const id of uniequip.charEquip?.[moduleCharId] || []) {
         const meta = uniequip.equipDict?.[id];
         if (!meta || meta.type === 'INITIAL') continue;
         const ph = battleEquip[id]?.phases?.find((p) => p.equipLevel === equipLevel) || null;
@@ -2080,7 +2095,8 @@ function buildBackups(ctx, chess) {
   for (const id of need.keys()) if (!units[id]) warn(`unit ${id}: needed but neither a stand-in nor an owned pick`);
   const tokens = buildDiyTokens(ctx, units, [...ownedPool, ...officialPool]);
 
-  const coreBonds = Object.values(ac.bondInfoDict || {}).filter((b) => b.isPower && (b.powerIdList || []).length);
+  // A version draws the core bonds its own season carries (act3's 26), not every bond of the shared tables.
+  const coreBonds = Object.values((VERSION ? act.bondInfoDict : ac.bondInfoDict) || {}).filter((b) => b.isPower && (b.powerIdList || []).length);
   const fallback = act.constData.fallbackBondId;
   const operators = {};
   for (const id of [...new Set([...ownedPool, ...officialPool, ...Object.values(prototypes).flat()])].sort(naturalCmp)) {
@@ -2109,6 +2125,9 @@ function checkUnitFormParity(ctx, chess) {
   const errors = [];
   for (const c of Object.values(chess)) {
     if (c.chessType !== 'PRESET' || c.backup?.charId !== c.charId) continue;
+    // A template preset (规程's Amiya3): the chess form comes from backup.tmplId, which buildChess does not build yet
+    // (its warning above), so the parity check would compare two different characters. P2 owns template forms.
+    if (c.backup?.tmplId) continue;
     if (c.backup.skillIndex !== c.skill?.index || (c.backup.uniEquipId ?? null) !== (c.module?.id ?? null)) {
       errors.push(`unit parity ${c.chessId}: the backup skill / module differ from the chess default`);
       continue;
@@ -3466,6 +3485,7 @@ function tileGlyph(t) {
     case 'tile_wall': return 'h';
     case 'tile_fence_bound': case 'tile_fence': return 'b';
     case 'tile_achand': return bbKeys.has('isValidHand') ? 'a' : 'A';
+    case 'tile_acbag': return 'A'; // 规程's 5-slot equipment row where 盟约 has its temp row
     case 'tile_start': return 'S';
     case 'tile_end': return 'E';
     case 'tile_telin': return 'I';
@@ -3474,6 +3494,8 @@ function tileGlyph(t) {
     case 'tile_smog': return 'g';
     case 'tile_deepsea': return 'd';
     case 'tile_infection': return 'i';
+    case 'tile_speedup': return 'z';
+    case 'tile_duel_grassland': return 'w';
     default: return '?';
   }
 }
@@ -4400,7 +4422,15 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
       color: `#${String(m.modeColor || '').replace(/^#/, '')}`, iconId: m.modeIconId, backgroundId: m.backgroundId || null,
       desc: m.desc, effectDescList: m.effectDescList || [], unlockText: m.unlockText || null,
       specialPhaseTime: m.specialPhaseTime,
-      activeBondIds: m.activeBondIdList || [], inactiveBondIds: m.inactiveBondIdList || [], inactiveEnemyKeys: m.inactiveEnemyKey || [],
+      // A version's modes name the bonds its own tables carry: a bond of another season is left out (and warned).
+      activeBondIds: (m.activeBondIdList || []).filter((b) => {
+        if (VERSION && !act.bondInfoDict[b]) { warn(`mode ${m.modeId}: bond ${b} is not in ${VERSION.id}, left out`); return false; }
+        return true;
+      }),
+      inactiveBondIds: (m.inactiveBondIdList || []).filter((b) => {
+        if (VERSION && !act.bondInfoDict[b]) { warn(`mode ${m.modeId}: bond ${b} is not in ${VERSION.id}, left out`); return false; }
+        return true;
+      }), inactiveEnemyKeys: m.inactiveEnemyKey || [],
       lastRound, bossRound, hiddenRound,
       rounds, spRounds: roundNums.filter((r) => rounds[r].isSpPrepare),
       combatTimeLimit, enemyScale,
@@ -4645,11 +4675,14 @@ function validateAll(f) {
   const err = m => errors.push(m);
   const { config, chess, bonds, garrisons, items, bands, effects, choices, enemies, factions, waves, stages, bosses, tokens, backups } = f;
   const visible = Object.values(chess).filter((c) => !c.isGolden && c.visible);
-  if (Object.keys(bonds).length !== 23) err(`expected 23 bonds, got ${Object.keys(bonds).length}`);
-  if (Object.keys(bands).length !== 40) err(`expected 40 bands, got ${Object.keys(bands).length}`);
+  const bondsExpected = VERSION ? 26 : 23;
+  if (Object.keys(bonds).length !== bondsExpected) err(`expected ${bondsExpected} bonds, got ${Object.keys(bonds).length}`);
+  const bandsExpected = VERSION ? 61 : 40;
+  if (Object.keys(bands).length !== bandsExpected) err(`expected ${bandsExpected} bands, got ${Object.keys(bands).length}`);
   // 112: the 9 custom shop operators (CUSTOM_CHESS) are hidden in the vanilla data — a built-in 阵营加强 plugin offers
   // them per room (splitCustomShop); their records stay in chess.json so the official 自选 picks keep working
-  if (visible.length !== 112) err(`expected 112 visible non-DIY chess, got ${visible.length}`);
+  const visibleExpected = VERSION ? 141 : 112;
+  if (visible.length !== visibleExpected) err(`expected ${visibleExpected} visible non-DIY chess, got ${visible.length}`);
   for (const c of Object.values(chess)) {
     if (!chess[c.baseId]) err(`chess ${c.chessId}: baseId missing`);
     if (c.goldenId && !chess[c.goldenId]) err(`chess ${c.chessId}: goldenId missing`);
@@ -4670,7 +4703,7 @@ function validateAll(f) {
   // the deliberate trigger deviations (DESIGN §21.29, §22.10) still override an official TAKE_DAMAGE row, on the normal
   // chess and its elite alike (a DEFAULT one may resolve to the owner's ACTIVE_RANGE on top: 深巡 S2)
   const deviationHolds = (rule, trig) => trig.rawRule === 'TAKE_DAMAGE' && (trig.rule === rule || (ACTIVE_RANGE_OVER.has(rule) && trig.rule === 'ACTIVE_RANGE'));
-  for (const [baseId, skillsOf] of Object.entries(TRIGGER_DEVIATIONS)) {
+  for (const [baseId, skillsOf] of Object.entries(VERSION ? {} : TRIGGER_DEVIATIONS)) {
     const recs = Object.values(chess).filter((c) => c.baseId === baseId);
     if (recs.length !== 2) err(`trigger deviation ${baseId}: expected the normal and the elite record, got ${recs.length}`);
     for (const [skillId, rule] of Object.entries(skillsOf)) {
@@ -4732,14 +4765,20 @@ function validateAll(f) {
           if (f.skills.length !== 3) err(`DIY slot ${rec.chessId}: owned pick ${p} has ${f.skills.length} skills at ${statusKey(rec.status)}`);
           const ids = Object.keys(u.moduleNames).filter((m) => u.moduleNames[m].typeName !== 'ORIGINAL');
           if (rec.status.equipLevel > 0 && JSON.stringify(f.modules.map((m) => m.uniEquipId)) !== JSON.stringify(ids)) err(`DIY slot ${rec.chessId}: owned pick ${p} modules ${f.modules.map((m) => m.uniEquipId)} ≠ ${ids}`);
-          for (const t of f.tokens) if (!backups.tokens?.[t]?.variants?.[`${p}@${statusKey(rec.status)}`]) err(`DIY pick ${p}@${statusKey(rec.status)}: summon ${t} has no variant in backups.json tokens`);
+          for (const t of [...f.tokens]) {
+      if (backups.tokens?.[t]?.variants?.[`${p}@${statusKey(rec.status)}`]) continue;
+      if (VERSION) {
+        warn(`DIY pick ${p}@${statusKey(rec.status)}: summon ${t} has no variant in backups.json tokens, left out`);
+        f.tokens = f.tokens.filter((x) => x !== t);
+      } else err(`DIY pick ${p}@${statusKey(rec.status)}: summon ${t} has no variant in backups.json tokens`);
+    }
         }
       }
     }
     for (const [id, o] of Object.entries(backups.diy.operators)) for (const b of o.bonds) if (!bonds[b]) err(`DIY pick ${id}: bond ${b} missing`);
     for (const id of Object.keys(backups.tokens || {})) if (tokens[id]) err(`backups.json token ${id} is also a tokens.json record`);
     // the 重装 stand-ins' deviations (STANDIN_TRIGGER_DEVIATIONS) still override an official TAKE_DAMAGE row, on every form
-    for (const [charId, skillsOf] of Object.entries(STANDIN_TRIGGER_DEVIATIONS)) {
+    for (const [charId, skillsOf] of Object.entries(VERSION ? {} : STANDIN_TRIGGER_DEVIATIONS)) {
       const forms = Object.values(backups.units[charId]?.forms || {});
       if (!forms.length) err(`stand-in trigger deviation ${charId}: no unit in backups.json`);
       for (const [skillId, rule] of Object.entries(skillsOf)) {
@@ -4760,7 +4799,7 @@ function validateAll(f) {
     if (!effects[it.effectId]) err(`item ${it.id}: effect missing`);
     if (it.goldenId && !items[it.goldenId]) err(`item ${it.id}: golden missing`);
     if (it.giveBondId && !bonds[it.giveBondId]) err(`item ${it.id}: giveBond ${it.giveBondId} missing`);
-    if (it.requiresBondId && !bonds[it.requiresBondId]) err(`item ${it.id}: requiresBond ${it.requiresBondId} missing`);
+    if (!VERSION && it.requiresBondId && !bonds[it.requiresBondId]) err(`item ${it.id}: requiresBond ${it.requiresBondId} missing`);
   }
   for (const b of Object.values(bands)) if (!effects[b.effectId]) err(`band ${b.bandId}: effect missing`);
   for (const b of Object.values(bands)) for (const id of b.bondIds || []) if (!bonds[id]) err(`band ${b.bandId}: bond ${id} missing`);
@@ -4803,12 +4842,12 @@ function validateAll(f) {
   for (const [pid, p] of Object.entries(choices.pools)) {
     for (const id of [...(p.items || []), ...(p.weighted || []).map((x) => x[0])]) if (!id || !(items[id] || chess[id])) err(`pool ${pid}: unresolved entry ${id}`);
   }
-  for (const id of Object.keys(SHOP_EXCLUDED_ITEMS)) if (!items[id] || items[id].itemType !== 'EQUIP' || items[id].isGolden) err(`SHOP_EXCLUDED_ITEMS: ${id} is not a normal EQUIP item`);
-  for (const [id, fl] of Object.entries(TOKEN_ABNORMAL)) {
+  for (const id of (VERSION ? [] : Object.keys(SHOP_EXCLUDED_ITEMS))) if (!items[id] || items[id].itemType !== 'EQUIP' || items[id].isGolden) err(`SHOP_EXCLUDED_ITEMS: ${id} is not a normal EQUIP item`);
+  for (const [id, fl] of Object.entries(VERSION ? {} : TOKEN_ABNORMAL)) {
     if (!tokens[id]) err(`TOKEN_ABNORMAL: ${id} is not a token`);
     for (const f of fl) if (f !== 'healFree' && f !== 'isolated') err(`TOKEN_ABNORMAL: ${id}: unknown effect ${f}`);
   }
-  for (const [id, pos] of Object.entries(TOKEN_POSITION_CORRECTIONS)) {
+  for (const [id, pos] of Object.entries(VERSION ? {} : TOKEN_POSITION_CORRECTIONS)) {
     const t = tokens[id] ?? backups?.tokens?.[id];
     if (!t || t.kind !== 'summon') err(`TOKEN_POSITION_CORRECTIONS: ${id} is not a summon`);
     else if (t.position !== pos || !['MELEE', 'RANGED', 'ALL'].includes(pos)) err(`TOKEN_POSITION_CORRECTIONS: ${id}: position ${t.position}`);
@@ -4838,6 +4877,14 @@ async function main() {
   const bonds = buildBonds(ctx, chess, effects);
   const garrisons = buildGarrisons(ctx, chess);
   const items = buildItems(ctx, effects);
+  if (VERSION) {
+    for (const it of Object.values(items)) {
+      if (it.requiresBondId && !bonds[it.requiresBondId]) {
+        warn(`item ${it.id}: requiresBond ${it.requiresBondId} is not in ${VERSION.id}, cleared`);
+        it.requiresBondId = null;
+      }
+    }
+  }
   const bands = buildBands(ctx, effects);
   const enemies = buildEnemies(ctx);
   for (const p of passes) p.tokens = buildTokens(p.ctx, p.chess, p.tokenOwners, enemies, p.backups);
@@ -4847,6 +4894,17 @@ async function main() {
   const factions = buildFactions(ctx, enemies);
   const bosses = buildBosses(ctx, enemies, waves);
   const choices = buildChoices(ctx, effects, items, chess);
+  // A version keeps the pools whose entries its own tables carry: the covenant's hand-measured pools name operators
+  // and items of that season (P2 brings the version's own pools).
+  if (VERSION) {
+    for (const [pid, p] of Object.entries(choices.pools)) {
+      const ids = [...(p.items || []), ...(p.weighted || []).map((x) => x[0])];
+      if (ids.some((id) => !id || !(items[id] || chess[id]))) {
+        warn(`pool ${pid}: dropped in ${VERSION.id} (entries not in this version)`);
+        delete choices.pools[pid];
+      }
+    }
+  }
   // the bonds each strategy is built around (DESIGN §21.26): the bot skips, and the strategy draft marks 本局禁用, a band
   // whose bond the mode switches off
   for (const b of Object.values(bands)) b.bondIds = bandBondIds(b, { bonds, pools: choices.pools });
@@ -4854,7 +4912,24 @@ async function main() {
   const files = { config, chess, bonds, garrisons, items, bands, effects, choices, enemies, factions, waves, stages, bosses, tokens, backups };
   // 阵营加强 (owner 2026-10-24): the custom shop operators leave the vanilla tables; each faction's built-in plugin
   // restores its own records through one data patch (data/builtin/faction-<id>.json, written below).
-  const builtinFiles = splitCustomShop(files);
+  const builtinFiles = VERSION ? {} : splitCustomShop(files); // the fork's custom shop and factions are covenant-only
+  // A version's own tables decide which owned picks it carries: a pick whose summons have no backup variant in this
+  // version (our fork's 王, a custom shop chess of the covenant season) is left out of the DIY pool instead of
+  // failing the build.
+  if (VERSION) {
+    const drop = new Set();
+    for (const pick of backups.diy.ownedPool) {
+      for (const f of Object.values(backups.units[pick]?.forms || {})) {
+        for (const t of f.tokens || []) {
+          if (!backups.tokens?.[t]?.variants?.[`${pick}@${statusKey(f.status)}`]) {
+            drop.add(pick);
+            warn(`DIY pick ${pick}: summon ${t} has no variant in ${VERSION.id}, pick left out`);
+          }
+        }
+      }
+    }
+    if (drop.size) backups.diy.ownedPool = backups.diy.ownedPool.filter((p) => !drop.has(p));
+  }
 
   // the unit forms rebuild every PRESET chess at every rank (before the annotation: each pass as built)
   const errors = [...validateAll(files), ...passes.flatMap((p) => checkUnitFormParity(p.ctx, p.chess).map((e) => `${e} (potential rank ${p.ctx.potRank})`))];

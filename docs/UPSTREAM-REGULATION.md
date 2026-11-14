@@ -147,12 +147,13 @@
 - [x] **pin 缓存**：`.cache/gamedata@6f63c14e/`（8 张 excel 表 + 61 个 level 文件，PowerShell 从 `raw.githubusercontent.com/.../6f63c14e/` 取；Node 的 TLS 在本机被中间证书挡住，构建器下载不可用）
 - [x] **`--version` 骨架**：`tools/build-data.mjs --version act3autochess@V3_1` 从注册表取 season / 输出目录，按 `activity.AUTOCHESS.act3autochess.V3_1` 定位 section、`autoChessData` 取共享表；默认构建 `--offline` 仍逐字节不变（298 chess / 23 bonds / 361 effects，exit 0）
 - [x] **版本专有表**：`tools/versions/tables/act3autochess-v3_1.mjs`（bountyDrafts / shopDraft / tacticDraft，145 行，按 15 场联合录屏实测）已接入；`stock` 按上游规则在版本构建中留空（无按名库存覆盖）；版本构建的总额度上限 7 MB
-- [x] **构建通过（`--force`）**：15 文件 / **6.46 MiB**；modes 26、hiddenCore {350,1200}；计数：bonds 26、bands 61、items 116、choices 9、effects 465、bosses 16、stages 12、waves 50、factions 5、waves 50
-- [ ] `layout: 'regulation'`：act3 官方关卡是 5×9 的三段 piece（`level_act3autochess_01..`），当前 stages 仍是 36×55 的官方图集，要按 `layouts.mjs` 的 `PIECE_SHIFT` 拼回 19×21；`scenes.py` 的 3D 场景已按同一套拼接过
-- [ ] 计数差（待版本化）：chess **342**（上游 310；多了 fork 的自定义干员，需要版本构建时跳过）、enemies **341**（上游 343）、garrisons **350**（334）、tokens **38**（34）
-- [ ] `chess_char_5_26` 的 preset backup 单元一致性（stats/trait/module）——act3 的 preset/module 语义要按版本处理
+- [x] **构建干净通过**：15 文件 / **6.46 MiB**，写入 `data/versions/act3autochess-v3_1/`；`test/data-versions.test.js`（pin 缓存缺失时跳过）验证「重建逐字节相同」与计数
+- [x] **`layout: 'regulation'`**：移植 `tools/versions/layouts.mjs`，10 张 stage 由 5×9/6×21/13×21 三段 piece 拼回 **19×21**（`composeRegulationStage`）；round 模板走 `placeRegulationTemplate`
+- [x] **计数与上游一致**：chess **310**、bonds 26、bands 61、items 116、choices 9、garrisons 334、tokens 34、stages 12、effects 465、bosses 16、waves 50、factions 5、visible 141；modes 26、hiddenCore {350,1200}
+- [x] **版本化 gating**：版本构建跳过 fork 的自定义干员/阵营、版本 stock 留空、act2 专有 pool 丢弃、模式里缺失的盟约剔除、DIY 池里缺召唤变体的「王」剔除、模板预设（`backup.tmplId`，阿米娅3）的模块列表取自模板角色
+- [ ] **enemies 341 vs 上游 343**（差 2，待查：可能是 `_2` 变体键）
+- [ ] `backup.tmplId` 的完整形态（stats/trait 也取自模板角色）——目前只修了模块列表，属 P2
 - [ ] 隐藏输入：`data/assets.json` 的 `spineLocal` 片段、`data/tuning.json` 字节副本、`docs/research/*` 输入
-- [ ] 写入正式目录 `data/versions/act3autochess-v3_1/` 后跑 `test/data-versions` 等价物（当前产物在 `%TEMP%`）
 
 ### P2 规则与内容（8–12 人日）
 - [ ] 37 个 kits（batch1–4）+ 6 个模块：`regulation-bosses.js`、`bonds/regulation.js`、`bonds/lethania.js`、`enemies/regulation.js`、`garrisons/regulation.js`、`bands/commands.js`
