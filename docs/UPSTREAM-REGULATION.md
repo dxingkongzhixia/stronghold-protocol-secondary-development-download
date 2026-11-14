@@ -65,6 +65,28 @@
 > 提取只在 owner 的机器上运行，产物进 `public/assets/`（不进 git），由 `tools/push-assets-relay.mjs` 发布；
 > 客户端反作弊/加密不绕过，沿既有 `aklz4.py` 流程。
 
+### 3.1 试提取结果（2026-11-15，只写 `%TEMP%`，未动仓库）
+
+**通过**（`tools/local-extract/.venv-extract` + `aklz4.py`，本机直接读取）：
+
+| 目标 | 结果 |
+|---|---|
+| `ui/autochess/[uc]autochesscommon.ab`（下载目录，规程期） | **254 sprites / 7.4 MiB**（基础包同文件为 173 / 3.9 MiB） |
+| `[uc]autochessouter.ab`（下载目录） | **881 sprites / 20.7 MiB**（基础包 873 / 18.3 MiB） |
+| `[uc]autochessbattle.ab` | 只在**基础包**里（343 sprites / 4.1 MiB）；下载目录没有 → 提取需合并两个根 |
+| `[uc]act3autochess.ab` | 解码成功：751 MonoBehaviour / 659 GameObject / 175 Texture2D / 168 Sprite（入口 UI、徽章、logo） |
+| `spritepack/ui_zone_home_theme_act3autochess.ab` | 1 张 1024×858 Sprite，已导出预览 |
+| `pkgrps/btl_pfb_fx_enemy_17.ab` | 解码成功：2547 ParticleSystem / 129 Mesh / 52 Texture2D（规程敌人特效） |
+| 关卡 `.dat`（HGDownload，30 个） | **是 ZIP 容器**；解出内层 `level_act3autochess_*.ab` 后 UnityPy 可读：210 GameObject / 197 Mesh / 199 MeshRenderer / 1 Light / 1 Camera |
+
+**发现的缺口**（P4 的具体工作项）：
+
+- [ ] 关卡 `.dat` 需先解 zip；`scenes.py` 的 `SCENES` 表**没有 act3 条目**（当前只有 act1/act2），要加 m01–m06、m09–m12 共 10 张（每张 3 个 sub-level）
+- [ ] 提取任务表（`extract.py` 的 `JOBS`）没有 act3 的 activity / 主题 / skills / equips / enemy-fx 条目；`skills/equips/dynamicabilities` 是逻辑预制体（无美术），美术在 `pkgrps/btl_pfb_fx_enemy_*`
+- [ ] 两个根（`StreamingAssets/AB/Windows` 与 `PersistentData/Bundles`）内容互补，提取要合并
+- [ ] 规程 4 首音乐仍缺（客户端未缓存）
+- [ ] 77 个规程敌人模型：本地客户端只有部分；需扩充 `ENEMY_SPINES` 列表并确认 `anon/*.bin` 的映射
+
 ## 4. 与我们的差距（概览）
 
 | 层 | 现状 | 需要 |
@@ -110,6 +132,8 @@
 - [ ] 3D 简报图：与 §0 的 `board3d` 冲突，**降级为静态渲染图**（先不做实时）
 
 ### P4 素材（3–5 人日）
+- [ ] 关卡 `.dat` 先解 zip；`scenes.py` 的 `SCENES` 加 act3 的 m01–m06、m09–m12（10 张 × 3 sub-level，见 §3.1）
+- [ ] 合并两个 AB 根（基础包 + 下载目录）；`extract.py` 任务表加 act3 的 activity / 主题 / enemy-fx 条目
 - [ ] `tools/assets/versions.mjs` 按版本并集规划；`fetch-assets`/`local-extract` 覆盖 77 个敌人 Spine、37 个新干员、10 张地图、主题、敌人特效
 - [ ] 规程 4 首音乐：先在客户端内播放一次以缓存，再 `music.py`；缺失则用社区 dump
 - [ ] `data/assets.json` 的 `spineLocal`/模型清单更新；中继发布与手机端首包评估
