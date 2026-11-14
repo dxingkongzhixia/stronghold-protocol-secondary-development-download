@@ -139,7 +139,8 @@
 ### P0 版本宿主（5–8 人日）
 - [x] **P0.1** 注册表 `shared/versions.js`（默认 + `act3autochess@V3_1`）、`server/data.js` 的 `versionDataDir/getVersionData/resetVersionData`、`test/versions.test.js` — `f39e2cb91`
 - [x] **P0.2** `versionsFrom`（`SP_VERSIONS`/`SP_VERSION_DEFAULT`/`SP_MAX_VERSION_HOSTS`，未知 id 丢弃、默认不可用回退）；`server/versions.js` 的 `createVersionSets`（每版本 `cs`、目录、索引、bounds、可用性）；`/data/versions/<slug>/` 只在启用时提供（默认 `/data/` 明确 404）、`/cs/<cs16>/index.json` 与 `/bounds/official.json`；`/healthz.versions`（仅启用非默认版本时）；启动日志。测试：`test/version-sets.test.js`、`test/http-versions.test.js`
-- [ ] **P0.3** `lobby` 版本字段 + `room.create/proposeVersion` + `VERSION_UNSUPPORTED`；`server/match/host/` 的 `kind:'version'`（复用现有 child/worker/ipc/proxy）；每版本 `officialBounds` 安装
+- [x] **P0.3** `lobby` 版本字段（`room.version`、`room.state.version`、`welcome.versions`）；`room.create { version }` 与 `VERSION_UNKNOWN`/`VERSION_UNSUPPORTED`（未启用、数据不可用、该模式未提供、版本房开关玩法插件）；房间数据与对局走该版本（`dataFor`、`versionHosts`）；`server/match/host/` 的 `kind: 'version'`（`version-crash`/`version-hang`/`version-start`，每版本 `officialBounds` 由 host 安装）；`/healthz.versions.hosts`。测试：`test/lobby-versions.test.js`、`test/versions-host.test.js`
+- [ ] **P0.3b** `room.proposeVersion` 版本投票（已开局/多人房间的切换确认）——留到 P3 与大厅选择器一起
 - [ ] **P0.4** `public/js/versions.js` + 大厅版本选择器 + 4 语言标签；页面按版本拉取数据与 `/cs/` 清单
 - [ ] **P0.5** `tools/versions/*` 的其余部分（profiles/adapters/sources/runtime）——构建已用 `--version` + `tables` + `layouts` 跑通，只差通用 profile 加载器
 
