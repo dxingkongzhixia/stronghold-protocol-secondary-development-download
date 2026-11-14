@@ -60,7 +60,8 @@ import { loadMusicLibrary } from './ui/musicLibrary.js';
 import { GuideHost } from './ui/guide.js';
 import { CodexHost } from './ui/codex.js';
 import { BugReportHost } from './ui/community.js';
-import { installDeviceSupport } from './ui/device.js';
+import { installDeviceSupport, useScreenWakeLock } from './ui/device.js';
+import { isCombatPhase } from './ui/gameLogic/phases.js';
 import { LoadoutHost as ClassicLoadoutHost } from './screens/loadout.js';
 import { StatsHost } from './screens/stats.js';
 import { AssetModePrompt } from './ui/assetMode.js';
@@ -466,6 +467,12 @@ function ScreenCrashed({ error, reset }) {
 
 function App() {
   const route = useStore(selectRoute);
+  // Keep the SCREEN awake while a battle runs (a phone would otherwise sleep mid-fight). Feature-detected inside the
+  // hook: unsupported browsers do nothing; the lock is re-acquired on the next foreground and released when the battle
+  // leaves the combat phases.
+  const inMatch = useStore((s) => s.room?.inMatch === true);
+  const phase = useStore((s) => s.match?.public?.phase ?? null);
+  useScreenWakeLock(route === 'game' && inMatch && isCombatPhase(phase));
   useLang(); // a language switch re-renders the whole tree in place
   const [error, resetError] = useErrorBoundary((err) => console.error('[ui] screen crashed', err));
   const Screen = SCREENS[route] || LobbyScreen;

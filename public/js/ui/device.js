@@ -114,6 +114,63 @@ export function useDocClass(name, on = true) {
   }, [name, !!on]);
 }
 
+/** Hold a screen wake lock while visible; the disposer releases it. */
+export function installScreenWakeLock(win = globalThis) {
+  const doc = win.document;
+  const wakeLock = win.navigator?.wakeLock;
+  if (!doc || !wakeLock) return () => {};
+  let sentinel = null;
+  let generation = 0;
+  const release = async (lock) => { try { await lock?.release(); } catch { /* best effort */ } };
+  const cancelRetry = () => {
+    doc.removeEventListener('pointerdown', onGesture, true);
+    doc.removeEventListener('touchstart', onGesture, true);
+  };
+  const onGesture = () => {
+    cancelRetry(); // a touch can also send a pointer event
+    if (doc.visibilityState === 'visible') void acquire(generation, false);
+  };
+  const acquire = async (request, retry = true) => {
+    try {
+      const lock = await wakeLock.request('screen');
+      // A visibility change or cleanup can finish before the request.
+      if (request !== generation || doc.visibilityState !== 'visible') void release(lock);
+      else sentinel = lock;
+    } catch {
+      // No user gesture yet, or the platform refused: retry on the next touch.
+      if (retry && request === generation && doc.visibilityState === 'visible') {
+        doc.addEventListener('pointerdown', onGesture, true);
+        doc.addEventListener('touchstart', onGesture, { capture: true, passive: true });
+      }
+    }
+  };
+  const update = () => {
+    const request = ++generation;
+    cancelRetry();
+    void release(sentinel);
+    sentinel = null;
+    if (doc.visibilityState === 'visible') void acquire(request);
+  };
+  doc.addEventListener('visibilitychange', update);
+  void update();
+  return () => {
+    ++generation;
+    cancelRetry();
+    doc.removeEventListener('visibilitychange', update);
+    void release(sentinel);
+    sentinel = null;
+  };
+}
+
+/**
+ * Keep the screen awake while `active` and the page is visible (a phone would otherwise sleep mid-battle). Browsers
+ * drop the lock on backgrounding; the hook re-acquires on the next foreground, and retries after the next touch when
+ * the first request was refused for want of a gesture. Feature-detected: unsupported browsers do nothing.
+ */
+export function useScreenWakeLock(active) {
+  useEffect(() => active ? installScreenWakeLock() : undefined, [!!active]);
+}
+
 // ---- fullscreen ----------------------------------------------------------------------------------------------------
 
 export const fullscreen = {
@@ -150,18 +207,25 @@ export const fullscreen = {
   toggle(win = globalThis) { return this.active(win) ? this.exit(win) : this.enter(win); },
 };
 
-/** Fullscreen toggle (hidden where the browser has no element fullscreen, e.g. iPhone Safari). */
-export function FullscreenButton({ class: cls = '' }) {
+/** Whether the browser is in fullscreen now, kept current (fullscreenchange). */
+export function useFullscreen() {
   const [on, setOn] = useState(() => fullscreen.active());
-  const [ok] = useState(() => fullscreen.supported());
   useEffect(() => {
     const d = globalThis.document;
     if (!d) return undefined;
     const upd = () => setOn(fullscreen.active());
     d.addEventListener('fullscreenchange', upd);
     d.addEventListener('webkitfullscreenchange', upd);
+    upd();
     return () => { d.removeEventListener('fullscreenchange', upd); d.removeEventListener('webkitfullscreenchange', upd); };
   }, []);
+  return on;
+}
+
+/** Fullscreen toggle (hidden where the browser has no element fullscreen, e.g. iPhone Safari). */
+export function FullscreenButton({ class: cls = '' }) {
+  const on = useFullscreen();
+  const [ok] = useState(() => fullscreen.supported());
   if (!ok) return null;
   const label = on ? t('退出全屏') : t('全屏');
   return html`<button type="button" class=${`fsbtn tapx ${cls}`} aria-label=${label} title=${label} aria-pressed=${on ? 'true' : 'false'}

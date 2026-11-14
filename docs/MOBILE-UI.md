@@ -17,6 +17,7 @@
 | 短屏规则 | 85 条 `@media`，含 `max-height: 520px`、`max-width: 760/767px`、`pointer: coarse` | 对局、装备、统计、成就、扫荡、表情有专门规则 |
 | 画质/分辨率 | `render/app.js`：`devicePixelRatio` 上限按质量档 + `renderScale`，3D 阴影/抗锯齿随档位；**粗指针高画质直接用设备 DPR（3–4）**，自适应降采样在手机上不低于 0.8（干员不再被放大糊） | 低端机可切「低」 |
 | 横屏提示 | `sp-rotatable` + `.rotate-hint`（竖屏时提示旋转） | **当前只支持横屏** |
+| 战斗常亮（Wake Lock） | `public/js/ui/device.js` → `installScreenWakeLock` / `useScreenWakeLock`；`main.js` 的 `App` 在「对局中 + 战斗阶段」持锁 | 切后台自动释放、回前台重新申请；浏览器拒绝时下一次触摸重试；不支持的浏览器静默跳过 |
 | 自定义黑边/屏幕适配 | `public/js/ui/screenFit.js`（设置里的四边内缩） | 异形屏兜底 |
 | 自动化 | `test/render/*.browser.test.js`（Puppeteer，`RENDER_E2E=1`）；`elembar.browser.test.js` 已用 **844×390 手机视口** | 矩阵还没铺开 |
 
