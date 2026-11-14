@@ -744,7 +744,9 @@ export class SkillFx {
     // (伊芙利特 S2: her prefab's ability is a MeleeAttack, but her attack is a 'beam' — without this the flame of the
     // skill never played, only the mode's normal shot)
     const repl = /^ReplacementSkill/.test(st.plan.rootClass || '') && !!st.plan.rootAbility && fx.ability === st.plan.rootAbility;
-    const fits = !!fx.ability && (fitsAttack(fx.ability, { heal, ranged }) || (repl && !heal && !/Heal/.test(fx.ability)));
+    const forcedRows = !!st.plan.forceAttackRows;
+    const fits = !!fx.ability && (fitsAttack(fx.ability, { heal, ranged }) || (repl && !heal && !/Heal/.test(fx.ability))
+      || (forcedRows && !heal && !/Heal/.test(fx.ability)));
     const forced = !fits && inst && !!fx.ability && /Heal/.test(fx.ability) === heal;
     const replace = fits || forced;
     if (fx.ability && !replace) { fx.cast = fx.cast.filter((e) => e.ability !== fx.ability); fx.range = []; fx.aim = []; fx.hit = st.plan.each.hit[0].length ? [st.plan.each.hit[0]] : []; }

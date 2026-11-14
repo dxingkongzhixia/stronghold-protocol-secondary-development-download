@@ -637,6 +637,7 @@ export function skillPlan(idx, unitKey, skillId, opts = {}) {
   if (typeof skill.rootClass === 'string' && skill.rootClass) plan.rootClass = skill.rootClass;
   if (typeof skill.rootAbility === 'string' && skill.rootAbility) plan.rootAbility = skill.rootAbility;
   if (MODE_ROW_GUARD[id]) plan.dropModeKeys = MODE_ROW_GUARD[id];
+  if (ATTACK_ROW_FORCE[id]) plan.forceAttackRows = true;
   const projs = isObj(idx.projectiles) ? idx.projectiles : {};
   for (const k of Array.isArray(skill.projectiles) ? skill.projectiles : []) {
     const kk = lc(k);
@@ -1366,6 +1367,21 @@ export const STATUS_CARRIED = Object.freeze({
  */
 export const MODE_ROW_GUARD = Object.freeze({
   skchr_mostma_2: /^mostma_skill_03_/i,
+});
+
+/**
+ * Skills whose own attack ability must replace the mode's rows whatever kind the sim made the attack — a single
+ * ability whose class disagrees with the distance the unit attacks from, so skillfx.js's `fitsAttack` (ability class
+ * vs the sim's kind: a blow / a shot) would drop the skill's own rows and only the mode's would play.
+ *
+ * 棘刺 S2: the skill's only attack ability is a `MeleeAttack` (a sword wave) while the sim makes his blows `arrow`
+ * (he attacks at range 3); `thorns_skill_02_start` (its ON_CAST_START emitter) never played — the mode's row
+ * (`whitew_skill_02_start`, the prefab the client reuses) stood in alone. Do not generalise: 德克萨斯 S2
+ * (MultiRangedAttack on a melee unit) and 乌尔比安 S1 (RangedAttack on a melee unit) are one-ability skills whose
+ * rows are a separate ranged strike, not the attack — check the client's use row before adding an id here.
+ */
+export const ATTACK_ROW_FORCE = Object.freeze({
+  skchr_thorns_2: true,
 });
 
 export const FX_BINDINGS = Object.freeze({

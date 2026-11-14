@@ -1250,6 +1250,11 @@ index.json — version 1 and the version 2 fields (§33.12, §33.15; Phase 3c) �
   record a passive. A ReplacementSkill's root ability IS the attack it replaces, so its rows replace the mode's whatever
   kind the sim made the attack (`skillfx.js attackFx`): 伊芙利特 S2's prefab ability is a `MeleeAttack` while her attack
   is a `beam` — without that rule only her normal shot played and the skill's flame never did.
+* **Attack rows kept by name** (`ATTACK_ROW_FORCE`, skills.js `plan.forceAttackRows`): a skill whose *only* attack
+  ability's class disagrees with the sim's kind (棘刺 S2: a `MeleeAttack` ability on a unit that attacks at range,
+  `arrow`) keeps its own rows anyway — the generic class check would drop them and only the mode's row (the prefab the
+  client reuses, `whitew_skill_02_start`) would play. Not generalised: 德克萨斯 S2 and 乌尔比安 S1 are one-ability
+  skills whose rows are a separate ranged strike, not the attack.
 * **Enemy skills (v2)**: `units[enemy].skills` by the lower-case `prefabKey` of the enemy's data record's `skills[]`
   (the slot order). A skill's window opens on ['cast', id, slot, dur?] — since Phase 3d the sim sends it (SIM.md,
   `content/enemies/helpers.js castSlot`: a cooldown cast, an SP skill's attack before its 'atk', a kit's own moment) —
