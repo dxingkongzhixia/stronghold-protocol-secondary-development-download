@@ -47,12 +47,14 @@ test('createVersionSets: the 规程 version gets a cs, its data directory, its i
   const sets = createVersionSets({ ...dirs, enabled: [DEFAULT_VERSION, 'act3autochess@V3_1'], default: DEFAULT_VERSION,
     maxHosts: 1, shim: DATA_SHIM_JS, log: quiet });
   assert.equal(sets.list.length, 1);
-  const set = sets.get('act3autochess@V3_1');
+  const set = sets.byId('act3autochess@V3_1');
   assert.ok(set, 'enabled');
   assert.equal(set.slug, 'act3autochess-v3_1');
   assert.match(set.cs, /^[0-9a-f]{16,64}$/);
   assert.equal(sets.byCs(set.cs), set);
-  assert.equal(sets.available('act2autochess'), false, 'the default version is not a set');
+  assert.equal(sets.byId(DEFAULT_VERSION), null, 'the default version is not a set');
+  assert.equal(sets.available(DEFAULT_VERSION), true, 'but it is playable');
+  assert.equal(sets.available('act3autochess@V3_1'), true);
   // the index: the vanilla shape with the version's own data URLs, its id and its bounds URL
   assert.equal(set.index.version, 'act3autochess@V3_1');
   assert.equal(set.index.vanilla, true);

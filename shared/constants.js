@@ -196,6 +196,10 @@ export const ERR = Object.freeze({
   // plugins/config.json); a requirement missing or out of range, or a load-order cycle; two plugins in conflict; a set
   // over the art size limit
   PLUGIN_UNKNOWN: 'PLUGIN_UNKNOWN',
+  // Official versions (shared/versions.js): a version this server does not enable; an enabled one a room cannot play
+  // (its room mode is not offered, its data failed to load, or the room switches on gameplay plugins)
+  VERSION_UNKNOWN: 'VERSION_UNKNOWN',
+  VERSION_UNSUPPORTED: 'VERSION_UNSUPPORTED',
   PLUGIN_BLOCKED: 'PLUGIN_BLOCKED',
   PLUGIN_DEPENDENCY: 'PLUGIN_DEPENDENCY',
   PLUGIN_CONFLICT: 'PLUGIN_CONFLICT',
@@ -250,6 +254,8 @@ export const ERR_TEXT = {
   PLUGIN_SCRIPT_CONFLICT: N_('两个插件注册了同一个效果'),
   PLUGIN_SCRIPT_OVERRIDE: N_('插件未声明要替换的官方技能'),
   PLUGIN_SCRIPT_CHECK: N_('脚本未通过兼容性检查'),
+  VERSION_UNKNOWN: N_('本服务器没有启用该版本'),
+  VERSION_UNSUPPORTED: N_('该版本不能用于当前房间（例如房间开着改变玩法的插件）'),
   CONTENT_NOT_READY: N_('仍有博士未载入房间的插件内容'),
   TEST_CONFIRM: N_('这是测试房间，不计入任何记录。确认加入？'),
   TEST_DISABLED: N_('测试模式未开启'),

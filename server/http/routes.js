@@ -49,7 +49,7 @@ function contentSets(lobby) {
  *   content: the server's vanilla content (server/plugins/identity.js)
  * @param {boolean} [withTraffic]
  */
-export function healthReport({ startedAt, network, registry, lobby, content = null, traffic, assetIndex, views, versions = null, prior = null }, withTraffic = false) {
+export function healthReport({ startedAt, network, registry, lobby, content = null, traffic, assetIndex, views, versions = null, versionHosts = null, prior = null }, withTraffic = false) {
   const report = {
     ok: true, version: PROTOCOL_VERSION, app: APP_VERSION, uptimeSec: Math.round((Date.now() - startedAt) / 1000),
     // the runtime the server is serving right now (public/js/ui/buildGuard.js): a page whose own build is
@@ -63,7 +63,10 @@ export function healthReport({ startedAt, network, registry, lobby, content = nu
   };
   if (prior) report.prior = prior;   // bot-rehearsal prior: enabled/loaded/version + its usage counters (server/match/botPrior.js)
   // the official versions this server offers, only when a non-default one is enabled (server/versions.js)
-  if (versions && versions.list && versions.list.length) report.versions = versions.health();
+  if (versions && versions.list && versions.list.length) {
+    report.versions = versions.health();
+    if (versionHosts) report.versions.hosts = versionHosts.stats();
+  }
   if (withTraffic && traffic) report.traffic = traffic.snapshot();
   // content-hashed asset URLs (assetIndex.js / assetViews.js): off, building, or ready with how many files and URLs
   if (withTraffic) report.assetHashes = assetIndex ? { ...assetIndex.stats(), views: views ? views.stats() : null } : null;

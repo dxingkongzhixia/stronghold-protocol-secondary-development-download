@@ -35,6 +35,7 @@ import { pathToFileURL } from 'node:url';
 import { getData, setData } from '../../data.js';
 import { installOfficialBounds } from '../../../shared/plugins/officialBounds.js';
 import { contentHashOf } from '../../../shared/plugins/identity.js';
+import { versionOfData } from '../../../shared/versions.js';
 import { loadKeelPlugin } from '../../keel/room-source.js';
 
 /** A worker thread (parentPort), else a child process (its IPC channel). */
@@ -239,6 +240,7 @@ function plain(r) {
 function diag(match) {
   return {
     phase: match.phase ?? null, round: match.round ?? null, ended: !!match.ended, cs: match.cs ?? null, modeId: match.modeId ?? null,
+    version: versionOfData(installed),
     errorCount: match.errorCount ?? 0, errors: (match.errors || []).slice(0, 3).map((e) => String(e?.label || e?.message || e).slice(0, 200)),
     verifyStats: match.verifyStats ? { ...match.verifyStats } : null, simErrors: match.simErrors ?? 0,
     fields: Array.isArray(match.fields) ? match.fields.map((f) => ({ fieldId: f.fieldId, kind: f.kind, players: Array.isArray(f.players) ? [...f.players] : [], mode: f.mode ?? null,
@@ -296,6 +298,11 @@ async function sandboxKeelV2(opts) {
 }
 
 function create(matchId, opts) {
+  // an official version's host installs that version's data at boot: a match asking another one is refused
+  if (opts.version !== undefined && opts.version !== versionOfData(installed)) {
+    post({ type: 'failed', matchId, error: `this host plays ${versionOfData(installed)}, not ${opts.version}` });
+    return;
+  }
   const sched = options.virtualTime && VirtualScheduler ? new VirtualScheduler({ start: Date.now() }) : null;
   let match;
   try {

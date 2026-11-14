@@ -176,6 +176,7 @@ import { isContentHash } from '../shared/plugins/identity.js';
 import { keelEnabled } from './keel/attach.js';
 import { mergeKeelData } from './keel/content.js';
 import { keelDescriptorForContent } from './keel/room-source.js';
+import { DEFAULT_VERSION } from '../shared/versions.js';
 import { OFFICIAL_ORIGIN, isLocalOrigin, normalizeOrigin } from '../shared/origins.js';
 import { msg, wireMessage } from '../shared/i18n.js';
 
@@ -287,11 +288,14 @@ function freezeSkins(skins, hasOperator) {
 
 /** One room: 4 seat slots, host, difficulty, optional running match. */
 export class Room {
-  /** @param {string} code @param {'solo'|'coop'} mode @param {string} difficulty @param {number} now */
-  constructor(code, mode, difficulty, now) {
+  /** @param {string} code @param {'solo'|'coop'} mode @param {string} difficulty @param {number} now
+   *  @param {string} [version] the official version the room plays (shared/versions.js id) */
+  constructor(code, mode, difficulty, now, version = DEFAULT_VERSION) {
     this.code = code;
     this.mode = mode;
     this.difficulty = difficulty;
+    /** the official version the room plays (shared/versions.js id) */
+    this.version = version;
     /**
      * 「AI 队友最后选择」 (room.setAiPicksLast, GitHub #338; co-op only, off by default): the match's strategy and 机变 drafts
      * put every human seat before every AI seat (Match opts.aiPicksLast). Kept across the room's matches.
@@ -391,6 +395,8 @@ export class Room {
         : null)),
       spectators: this.spectators.map((s) => ({ playerId: s.playerId, name: s.name, role: s.role ?? null, connected: s.connected, ...(s.art ? { art: s.art } : {}), ...(s.avatar ? { avatar: s.avatar } : {}), ...(this.modded ? { content: s.content || 'loading' } : {}) })),
       ...(this.content ? { content: this.content.trusted ? { ...this.content, trusted: { ...this.content.trusted, consent: Object.fromEntries(this.seats.filter((s) => s && !s.isBot).map((s) => [s.seat, s.consentCs === this.content.cs])) } } : this.content } : {}),
+      // another official version than the default, omitted otherwise so a default room.state stays identical
+      ...(this.version !== DEFAULT_VERSION ? { version: this.version } : {}),
     };
   }
 }
@@ -412,14 +418,18 @@ export class Lobby {
    *     unofficial?: () => number, defaults?: () => string[], dataOf?: (cs: string) => any, kittedOf?: (cs: string) => any,
    *     contentInUse?: () => number } | null,
    *   hosts?: { create: (cs: string, opts: object) => any, stats?: () => object } | null,
+   *   versions?: ReturnType<typeof import('./versions.js').createVersionSets> | null,
+   *   versionHosts?: { create: (cs: string, opts: object) => any, stats?: () => object } | null,
    *   options?: Partial<typeof LOBBY_DEFAULTS>,
    * }} opts
    *   content: the server's vanilla content (server/plugins/identity.js; header "Content identity"); plugins: what a host
    *   chooses from — the room's sets (server/plugins/roomSets.js: visual sets and content sets; header "The room's
    *   plugins", "Gameplay plugins"); hosts: the match hosts a room with gameplay plugins runs its match in
-   *   (server/match/host/index.js; none: such a match runs here, unit tests)
+   *   (server/match/host/index.js; none: such a match runs here, unit tests); versions: the official versions this server
+   *   offers (server/versions.js; none: the default version alone); versionHosts: the match hosts of the other versions
+   *   (server/match/host/index.js, kind 'version')
    */
-  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, content = null, plugins = null, hosts = null, keel = null, options = {}, auth = null, matchmaker = null, community = null, stats = null }) {
+  constructor({ registry, log = noopLog, MatchClass = DefaultMatch, getData = defaultGetData, now = Date.now, seedFn, content = null, plugins = null, hosts = null, versions = null, versionHosts = null, keel = null, options = {}, auth = null, matchmaker = null, community = null, stats = null }) {
     this.registry = registry;
     /** the vanilla content set every room plays (header "Content identity"), or null */
     this.vanilla = content && isContentHash(content.cs) ? Object.freeze({ cs: content.cs, vanilla: true, plugins: Object.freeze([]) }) : null;
@@ -429,6 +439,9 @@ export class Lobby {
     this.keelPlugins = keel;
     /** the match hosts (header "Gameplay plugins"), or null */
     this.hosts = hosts;
+    /** the official versions this server offers and their match hosts (server/versions.js), or null */
+    this.versions = versions;
+    this.versionHosts = versionHosts;
     this.log = log;
     this.MatchClass = MatchClass;
     this.getData = getData;
@@ -908,8 +921,14 @@ export class Lobby {
     return { enabled: this.testEnabled, warn: this.testWarn };
   }
 
-  create(session, { mode, difficulty, public: isPublic, test = false }) {
+  create(session, { mode, difficulty: asked, public: isPublic, test = false, version: askedVersion }) {
     if (test === true && this.testEnabled !== true) return fail(ERR.TEST_DISABLED);
+    // the official version: left out, the server's default
+    const version = askedVersion ?? this.defaultVersion();
+    if (!this.versionEnabled(version)) return fail(ERR.VERSION_UNKNOWN);
+    if (!this.offered(version, mode).length) return fail(ERR.VERSION_UNSUPPORTED, `${version} has no ${mode} rooms`);
+    if (!this.versionAvailable(version)) return fail(ERR.VERSION_UNSUPPORTED, 'the data of this version is not available');
+    const difficulty = this.fallbackDifficulty(version, mode, asked);
     const cur = this.roomOf(session);
     if (cur && cur.match) return fail(ERR.ROOM_STARTED, 'leave your running match first');
     if (this.rooms.size >= this.opts.maxRooms) return fail(ERR.INTERNAL, 'too many rooms');
@@ -926,15 +945,16 @@ export class Lobby {
     if (!code) return fail(ERR.INTERNAL, 'no room code available');
     if (cur) this.removeMember(cur, session.playerId);
     this.mm.leave(session.playerId); // creating a room leaves the 野排 shared pool (you can't be in both)
-    const room = new Room(code, mode, difficulty, this.now());
+    const room = new Room(code, mode, difficulty, this.now(), version);
     room.test = test === true;
-    room.content = this.vanilla;
-    // the server owner's default plugins (plugins/config.json `default`; header "Gameplay plugins"): none — the original game
+    room.content = this.baseContent(version);
+    // the server owner's default plugins (plugins/config.json `default`; header "Gameplay plugins"): none — the original
+    // game. On another official version gameplay plugins are refused (resolveContent): the room starts without them.
     const defaults = this.plugins?.defaults?.() || [];
     if (defaults.length) {
       const r = this.resolveContent(room, defaults);
-      if ('error' in r) this.warnOnce(`[lobby] the default plugins (${defaults.join(', ')}) cannot be applied: ${r.error}${r.detail ? ` (${r.detail})` : ''}`);
-      else { room.content = r.content; this.holdContent(r.content); }
+      if ('error' in r) this.warnOnce(`[lobby] the default plugins (${defaults.join(', ')}) cannot be applied${version !== DEFAULT_VERSION ? ` to ${version}` : ''}: ${r.error}${r.detail ? ` (${r.detail})` : ''}`);
+      else if (r.content !== room.content) { room.content = r.content; this.holdContent(r.content); }
     }
     room.ownerKey = key;
     // 公开同盟 opt-out: only a hand-made co-op room can be listed, and only when the creator left it public.
@@ -945,7 +965,7 @@ export class Lobby {
     session.roomCode = code;
     session.notice = null;
     session.pendingResult = null;
-    this.log.info(`[lobby] ${code} created (${mode}/${difficulty}${room.test ? ', test' : ''}) by ${session.name}`);
+    this.log.info(`[lobby] ${code} created (${mode}/${difficulty}${version !== DEFAULT_VERSION ? `, ${version}` : ''}${room.test ? ', test' : ''}) by ${session.name}`);
     this.broadcastState(room);
     return OK;
   }
@@ -1516,8 +1536,10 @@ export class Lobby {
    * @returns {{ content: Room['content'] } | { error: string, detail?: string }}
    */
   resolveContent(room, ids, settings = {}) {
-    if (!ids.length) return { content: this.vanilla };
-    if (!this.vanilla || !this.plugins) return fail(ERR.PLUGIN_UNKNOWN, 'this server applies no plugins');
+    const version = room?.version ?? DEFAULT_VERSION;
+    const base = this.baseContent(version);
+    if (!ids.length) return { content: base };
+    if (!this.vanilla || !this.plugins || !base) return fail(ERR.PLUGIN_UNKNOWN, 'this server applies no plugins');
     let r;
     try { r = this.plugins.resolve(ids, { scope: 'room', settings, replacing: room?.content ?? null }); } catch (e) {
       this.log.error(`[lobby] ${room?.code ?? '----'} plugin set failed`, e);
@@ -1526,11 +1548,14 @@ export class Lobby {
     if (!r || !r.ok) return fail(r && isErrCode(r.error) ? r.error : ERR.INTERNAL, r && typeof r.detail === 'string' ? r.detail.slice(0, 200) : undefined);
     const { cs, vs, plugins: list, warnings, bytes, dataBytes, modes, trusted, execution, rules, kitted } = r.set;
     const modded = isContentHash(cs) && cs !== this.vanilla.cs;
+    // another official version plays its own rules: gameplay plugins would replace its data (cosmetic ones are fine)
+    if (modded && version !== DEFAULT_VERSION) return fail(ERR.VERSION_UNSUPPORTED, 'gameplay plugins play the default version only');
     const frozen = (a) => Object.freeze((Array.isArray(a) ? a : []).map((p) => Object.freeze({ ...p })));
     return {
       content: Object.freeze({
-        cs: modded ? cs : this.vanilla.cs,
+        cs: modded ? cs : base.cs,
         vanilla: !modded,
+        ...(base.version ? { version: base.version } : {}),
         ...(vs ? { vs } : {}),
         plugins: frozen(list),
         ...(trusted ? { trusted } : {}),
@@ -1821,6 +1846,52 @@ export class Lobby {
     return matchAnswer(this.callMatch(room, 'setSkins', session.playerId, kept));
   }
 
+  // ---------------------------------------------------------------------------------------------------
+  // Official versions (server/versions.js)
+  // ---------------------------------------------------------------------------------------------------
+
+  /** The server's default version: a room created without one plays it. */
+  defaultVersion() {
+    const v = this.versions;
+    const id = v?.defaultId ?? DEFAULT_VERSION;
+    if (!v || this.versionAvailable(id)) return id;
+    if (v.isEnabled(DEFAULT_VERSION)) return DEFAULT_VERSION;
+    return v.ids.find((x) => this.versionAvailable(x)) ?? id;
+  }
+
+  /** Does this server offer the version `id`? @param {unknown} id */
+  versionEnabled(id) { return this.versions ? this.versions.isEnabled(id) : id === DEFAULT_VERSION; }
+
+  /** Can a room play the enabled version `id` now? @param {string} id */
+  versionAvailable(id) { return id === DEFAULT_VERSION || typeof this.versions?.available !== 'function' || this.versions.available(id); }
+
+  /** A room's content base for a version: the vanilla content for the default, else the version's own. @param {string} v */
+  baseContent(v) {
+    if (v === DEFAULT_VERSION || !this.versions) return this.vanilla;
+    return this.versions.content(v) || null;
+  }
+
+  /**
+   * The difficulties a version offers a room mode (DIFFICULTIES for the default / a server without versions).
+   * @param {string} v @param {'solo' | 'coop'} mode @returns {readonly string[]}
+   */
+  offered(v, mode) {
+    if (!this.versions || v === DEFAULT_VERSION) return DIFFICULTIES;
+    return this.versions.offered(v, mode);
+  }
+
+  /**
+   * `asked`, or the difficulty the version offers instead: the highest below it, else its lowest.
+   * @param {string} v @param {'solo'|'coop'} mode @param {string} asked
+   */
+  fallbackDifficulty(v, mode, asked) {
+    const list = this.offered(v, mode);
+    if (!list.length || list.includes(asked)) return asked;
+    const i = DIFFICULTIES.indexOf(asked);
+    for (let j = i - 1; j >= 0; j--) if (list.includes(DIFFICULTIES[j])) return DIFFICULTIES[j];
+    return list[0];
+  }
+
   dataFor(room) {
     if (room?.modded) {
       // A Keel room's loadout checks use the same records its Match compiles, not the old content set.
@@ -1836,6 +1907,13 @@ export class Lobby {
         const d = this.plugins?.dataOf?.(room.content.cs);
         if (d) return d;
       } catch (e) { this.log.error(`[lobby] ${room.code} content data failed`, e); }
+    }
+    // another official version: its own tables, never the default data singleton
+    if (room && room.version !== DEFAULT_VERSION) {
+      try {
+        const d = this.versions?.data?.(room.version);
+        if (d) return d;
+      } catch (e) { this.log.error(`[lobby] ${room.code} version data failed`, e); }
     }
     return this.safeData();
   }
@@ -1905,20 +1983,29 @@ export class Lobby {
    * server's content identity (header "Content identity").
    */
   welcomeInfo() {
-    if (!this.vanilla) return { diyKitted: KITTED_CHARS };
-    let n;
-    try { n = Number(this.plugins?.unofficial?.()) || 0; } catch { n = 0; }
-    let notices = false;
-    try { notices = this.plugins?.hasNotices?.() === true; } catch { /* optional catalogue hint */ }
-    // The lobby's loadout preview uses the owner's default room art (the skin picker before a room
-    // exists); a room, when joined, still names its own vs and wins on the page.
-    let defaultVs = null;
-    try {
-      const vs = this.plugins?.defaultVisual?.();
-      if (typeof vs === 'string') defaultVs = vs;
-    } catch { /* a broken default set must not break the welcome */ }
-    return { diyKitted: KITTED_CHARS, content: { vanilla: this.vanilla.cs, ...(n > 0 ? { plugins: n } : {}), ...(notices ? { notices: true } : {}), ...(defaultVs ? { defaultVs } : {}) },
-      ...(this.testEnabled === true ? { testMode: true } : {}) };
+    let info;
+    if (!this.vanilla) info = { diyKitted: KITTED_CHARS };
+    else {
+      let n;
+      try { n = Number(this.plugins?.unofficial?.()) || 0; } catch { n = 0; }
+      let notices = false;
+      try { notices = this.plugins?.hasNotices?.() === true; } catch { /* optional catalogue hint */ }
+      // The lobby's loadout preview uses the owner's default room art (the skin picker before a room
+      // exists); a room, when joined, still names its own vs and wins on the page.
+      let defaultVs = null;
+      try {
+        const vs = this.plugins?.defaultVisual?.();
+        if (typeof vs === 'string') defaultVs = vs;
+      } catch { /* a broken default set must not break the welcome */ }
+      info = { diyKitted: KITTED_CHARS, content: { vanilla: this.vanilla.cs, ...(n > 0 ? { plugins: n } : {}), ...(notices ? { notices: true } : {}), ...(defaultVs ? { defaultVs } : {}) } };
+    }
+    // the official versions: only when the server offers more than the default, so a default-only welcome stays identical
+    let versions = null;
+    try { versions = this.versions?.welcome?.() || null; } catch (e) { this.log.error('[lobby] the versions list failed', e); }
+    if (versions) info.versions = versions;
+    // omitted when the switch is off, so a normal welcome stays identical
+    if (this.testEnabled === true) info.testMode = true;
+    return info;
   }
 
   // ---------------------------------------------------------------------------------------------------
@@ -2174,6 +2261,13 @@ export class Lobby {
   /** @param {Room} room @param {string | null} [key] per-network limit key of the starter */
   startMatch(room, key = null) {
     if (room.test && !this.testEnabled) return fail(ERR.TEST_DISABLED);
+    // another official version's match runs in that version's match host — never here, where every module singleton
+    // holds the default version's data; a test that gave its own MatchClass runs it in place
+    const versioned = room.version !== DEFAULT_VERSION;
+    if (versioned && !this.versionHosts && this.MatchClass === DefaultMatch) {
+      this.log.error(`[lobby] ${room.code} has no match host for ${room.version}`);
+      return fail(ERR.INTERNAL, 'no match host for this version');
+    }
     const host = room.seatOf(room.hostId);
     if (host) host.ready = true;
     // the room's data: its content set's in a room with gameplay plugins (header "Gameplay plugins")
@@ -2234,6 +2328,8 @@ export class Lobby {
         ...(room.content?.vs ? { vs: room.content.vs } : {}),
         ...(keel ? { keel } : {}),
         ...(modded ? { requireCs: true } : {}),
+        // another official version: its registry id; a default room's opts keep their keys
+        ...(versioned ? { version: room.version, requireCs: true } : {}),
         data: matchData,
         log: this.log,
         now: this.now,
@@ -2241,15 +2337,18 @@ export class Lobby {
         broadcast: (msg, encoded) => { if (ctx.live) this.matchBroadcast(room, ctx, msg, encoded); },
         onEnd: (summary) => this.onMatchEnd(room, ctx, summary),
       };
-      // a room with gameplay plugins plays in its content set's match host worker; every other room here, as always
-      const match = modded && this.hosts ? this.hosts.create(room.content.cs, opts) : new this.MatchClass(opts);
+      // a room with gameplay plugins plays in its content set's match host worker, a room of another official version in
+      // that version's; every other room here, as always
+      const match = modded && this.hosts ? this.hosts.create(room.content.cs, opts)
+        : versioned && this.versionHosts ? this.versionHosts.create(room.content.cs, opts)
+          : new this.MatchClass(opts);
       ctx.match = match;
       room.match = match;
       room.matchCtx = ctx;
       room.matchKey = key;
       room.replay = null;
       room.matchCount++;
-      this.log.info(`[lobby] ${room.code} match #${room.matchCount} starting (${room.mode}/${room.difficulty}, ${seats.length} seats, seed ${seed}${modded ? `, content ${room.content.cs.slice(0, 8)}${match.hosted ? ' in its match host' : ''}` : ''})`);
+      this.log.info(`[lobby] ${room.code} match #${room.matchCount} starting (${room.mode}/${room.difficulty}, ${seats.length} seats, seed ${seed}${modded ? `, content ${room.content.cs.slice(0, 8)}${match.hosted ? ' in its match host' : ''}` : ''}${versioned ? `, version ${room.version}${match.hosted ? ' in its match host' : ''}` : ''})`);
       this.broadcastState(room);
       match.start();
     } catch (e) {
@@ -2273,8 +2372,8 @@ export class Lobby {
     room.matchKey = null;
     room.replay = this.buildReplay(room, ctx);
     setImmediate(() => this.disposeMatchCtx(ctx));
-    // a match of gameplay plugins whose match host stopped (header "Gameplay plugins"; its members were told: proxy.js)
-    const why = summary && typeof summary.reason === 'string' && summary.reason.startsWith('plugin-') ? ` (${summary.reason}${summary.detail ? `: ${summary.detail}` : ''})` : '';
+    // a match of gameplay plugins or of another official version whose match host stopped (its members were told: proxy.js)
+    const why = summary && typeof summary.reason === 'string' && /^(?:plugin|version)-/.test(summary.reason) ? ` (${summary.reason}${summary.detail ? `: ${summary.detail}` : ''})` : '';
     this.log.info(`[lobby] ${room.code} match #${room.matchCount} ended${why}`);
     for (let i = 0; i < room.seats.length; i++) {
       const s = room.seats[i];

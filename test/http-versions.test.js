@@ -17,7 +17,7 @@ const quiet = { info() {}, warn() {}, error() {}, debug() {} };
 function act3Cs() {
   const sets = createVersionSets({ enabled: [DEFAULT_VERSION, 'act3autochess@V3_1'], default: DEFAULT_VERSION, maxHosts: 1,
     simDir: path.join(ROOT, 'server', 'sim'), sharedDir: path.join(ROOT, 'shared'), shim: DATA_SHIM_JS, log: quiet });
-  return sets.get('act3autochess@V3_1').cs;
+  return sets.byId('act3autochess@V3_1').cs;
 }
 
 test('an enabled version serves its data, its manifest and its bounds; the default-only server serves none', async (t) => {

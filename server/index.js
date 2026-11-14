@@ -63,7 +63,8 @@ import { readMirrors, writeMirrors, revertMirrors, backupPath, hasBackup } from 
 import { clientAddress } from './net.js';
 import { BUG_IMAGE_MAX_BYTES, BUG_IMAGES_MAX, AVATAR_MAX_BYTES, AVATAR_MIMES, AVATAR_RATE_WINDOW_MS, AVATAR_UPLOAD_LIMIT } from '../shared/constants.js';
 import { PLUGIN_MAX_BYTES } from '../shared/plugins/manifest.js';
-import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, versionsFrom, assetIndexOptionsFrom } from './http/config.js';import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
+import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustProxy, versionsFrom, assetIndexOptionsFrom } from './http/config.js';
+import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
 import { createPluginRegistry } from './plugins/registry.js';
 import { installPluginBytes, movePluginAside } from './plugins/install.js';
@@ -253,7 +254,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const versionCfg = versionsFrom(opts);
   for (const id of versionCfg.unknown) log.warn(`[versions] unknown version ${id}, dropped`);
   const versionSets = createVersionSets({ enabled: versionCfg.enabled, default: versionCfg.default, maxHosts: versionCfg.maxHosts,
-    simDir, sharedDir, shim: DATA_SHIM_JS, log });
+    simDir, sharedDir, shim: DATA_SHIM_JS, vanilla: content, log });
   if (versionSets.list.length) {
     log.info(`[versions] enabled: ${versionSets.list.map((s) => `${s.id} (${s.entry.label}, ${s.cs.slice(0, 16)})`).join(', ')}; default ${versionCfg.default}`);
   }
@@ -290,7 +291,12 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const transport = String(process.env.SP_MATCH_HOST || '').trim().toLowerCase() === 'worker' ? 'worker' : 'process';
   const MAX_HOSTS = 6;
   const hosts = createMatchHosts({ contents: roomContents, log, options: { transport, maxWorkers: Math.min(MAX_HOSTS, Math.max(1, policy.get().maxSets)), ...(opts.matchHost || {}) } });
-  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats, keel: keelPlugins }, { data, log, content, plugins: roomSets, hosts });
+  // the match hosts of the other official versions (server/match/host/index.js kind 'version'): one worker per version
+  // cs, counted apart from the plugin hosts; none when no non-default version is enabled
+  const versionHosts = versionSets.nonDefault.length
+    ? createMatchHosts({ contents: versionSets, log, options: { transport, ...(opts.matchHost || {}), kind: 'version', maxWorkers: Math.max(1, versionCfg.maxHosts) } })
+    : null;
+  const { registry, lobby, network } = createSessionStack({ ...opts, auth, community, stats, keel: keelPlugins }, { data, log, content, plugins: roomSets, hosts, versions: versionSets, versionHosts });
   lobby.network = network; // lets the lobby close a session's socket the net way (account kick, docs/MATCHMAKING.md)
   const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, skinsDir, packs, content, log, assetIndex, views, visual, contents: roomContents, versions: versionSets });
   // the plugin studio (DESIGN §32.9): its page and API for this machine and the local network; it watches plugins/ only
@@ -310,7 +316,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   const sitePolicy = process.env.SP_CSP === 'off' ? null : siteCsp(publicDir);
   const baseHandler = createRequestHandler({
     serveStatic, studio, csp: sitePolicy,
-    health: { startedAt, network, registry, lobby, content, visual, traffic, assetIndex, views, versions: versionSets, prior: priorStatus() },
+    health: { startedAt, network, registry, lobby, content, visual, traffic, assetIndex, views, versions: versionSets, versionHosts, prior: priorStatus() },
     log, trustProxy,
   });
   function communityKey(req) {
@@ -1125,6 +1131,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
     closing = (async () => {
       try { lobby.shutdown('shutdown'); } catch (e) { log.error('[shutdown] lobby', e); }
       try { hosts.close(); } catch (e) { log.error('[shutdown] match hosts', e); }
+  try { versionHosts?.close(); } catch (e) { log.error('[shutdown] version hosts', e); }
       network.close();
       assetIndex?.close();
       studio?.close();
@@ -1140,7 +1147,7 @@ const speedProbe = admin ? createSpeedProbe({ root: ROOT }) : null;
   }
 
   const adminUrl = admin ? `${url}/admin?token=${admin.token}` : null;
-  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, content, visual, contents, hosts, db, auth, stats, adminUrl, traffic, assetIndex, views, studio, close };
+  return { port: actualPort, host: boundHost, url, server, wss, lobby, network, registry, packs, content, visual, contents, hosts, versions: versionSets, versionHosts, db, auth, stats, adminUrl, traffic, assetIndex, views, studio, close };
 }
 
 // `node server/index.js` / npm start: listen (accounts & 野排 on), print the banner, stop on SIGINT / SIGTERM

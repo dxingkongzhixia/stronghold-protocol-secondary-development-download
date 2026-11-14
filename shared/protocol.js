@@ -74,6 +74,11 @@ export function checkSkinSelection(skins, hasOperator) {
 }
 const isList = (v, max, item) => Array.isArray(v) && v.length <= max && v.every(item);
 const isScalar = (v) => isStr(v, 64) || isNum(v) || isBool(v);
+/**
+ * An official version id (shared/versions.js: the activity id, `@<sub-version>` for a sub-version) — structural only;
+ * the lobby answers VERSION_UNKNOWN for one this server does not enable.
+ */
+export const isVersionId = (v) => typeof v === 'string' && v.length <= 40 && /^[a-z0-9]{1,32}(?:@[A-Za-z0-9_]{1,16})?$/.test(v);
 
 // ---- client-side combat (DESIGN §14): b.progress / b.result payloads -------------------------------------------
 
@@ -480,7 +485,7 @@ export const C2S = {
   ping: { c: (v) => typeof v === 'number' && Number.isFinite(v) },
   // public: list a hand-made 同盟 room in the lobby's 公开同盟 directory (server/admin.js buildPublicSnapshot →
   // /online/api.openRooms). Absent ⇒ public. Solo / 野排 (auto) rooms are never listed regardless.
-  'room.create': { mode: (v) => v === 'solo' || v === 'coop', difficulty: (v) => DIFFICULTIES.includes(v), public: isBool, test: (v) => v === true, $optional: ['public', 'test'] },
+  'room.create': { mode: (v) => v === 'solo' || v === 'coop', difficulty: (v) => DIFFICULTIES.includes(v), public: isBool, test: (v) => v === true, version: isVersionId, $optional: ['public', 'test', 'version'] },
   'room.join': { $optional: ['testAck'], testAck: (v) => v === true, code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v) },
   'room.leave': {},
   'room.ready': { ready: isBool },
