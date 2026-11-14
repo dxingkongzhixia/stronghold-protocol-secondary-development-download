@@ -901,3 +901,62 @@ describe('death timing (PR #380): a dying flyer drops inside the fade, a long Di
     assert.ok(!v.remove && v.alpha > 0.5, 'still on screen 5 s in');
   });
 });
+
+describe('prep equipment icons', () => {
+  test('every carried item shows, in balanced centred rows with a fixed bottom edge', () => {
+    const v = view({}, { prep: true });
+    try {
+      const camera = cam();
+      const expected = new Map([[1, [1]], [2, [2]], [3, [3]], [4, [2, 2]], [5, [3, 2]], [6, [3, 3]], [7, [3, 2, 2]]]);
+      let bottom, size;
+      // The same view, including shrink / reflow while the retained URLs are unchanged.
+      for (const n of [1, 2, 3, 4, 5, 6, 7, 4, 2]) {
+        const urls = Array.from({ length: n }, (_, i) => `equipment-${i}`);
+        v.setItems(urls);
+        v.update(1 / 60, camera, 0);
+        assert.deepEqual(v.itemPips.map((p) => p._url), urls, `all ${n} equipment icons remain visible`);
+        const rows = [];
+        for (const pip of v.itemPips) {
+          assert.ok(pip.visible);
+          let row = rows.find((r) => Math.abs(r[0].position.y - pip.position.y) < 1e-6);
+          if (!row) { row = []; rows.push(row); }
+          row.push(pip);
+          size ??= pip.width;
+          assert.equal(pip.width, size, 'adding equipment does not shrink icons');
+          assert.equal(pip.height, size);
+        }
+        rows.sort((a, b) => a[0].position.y - b[0].position.y);
+        assert.deepEqual(rows.map((r) => r.length), expected.get(n), `${n} items`);
+        for (const row of rows) {
+          const centre = row.reduce((sum, pip) => sum + pip.position.x, 0) / row.length;
+          assert.ok(Math.abs(centre - v.screen.x) < 1e-6, 'each row is centred under the carrier');
+          for (let i = 1; i < row.length; i++) {
+            assert.ok(row[i].position.x - row[i - 1].position.x > size, 'icons do not overlap');
+          }
+        }
+        const nextBottom = rows.at(-1)[0].position.y + size / 2;
+        bottom ??= nextBottom;
+        assert.ok(Math.abs(nextBottom - bottom) < 1e-6, 'extra rows expand upward');
+        if (rows.length > 1) assert.ok(rows[1][0].position.y - rows[0][0].position.y > size);
+      }
+    } finally { v.destroy(); }
+  });
+
+  test('removing multi-row equipment releases sprites and a late image load cannot restore unequipped icons', async () => {
+    let resolveImages;
+    const pending = new Promise((resolve) => { resolveImages = resolve; });
+    const v = view({}, { prep: true }, { ...store(), image: () => pending });
+    try {
+      v.setItems(Array.from({ length: 7 }, (_, i) => `equipment-${i}`));
+      const removed = v.itemPips.slice(2);
+      v.setItems(['equipment-0', 'equipment-1']);
+      assert.ok(removed.every((p) => p.destroyed));
+      resolveImages({ width: 180, height: 180 });
+      await tick();
+      assert.equal(v.itemPips.length, 2);
+      v.setItems([]);
+      v.update(1 / 60, cam(), 0);
+      assert.equal(v.itemPips.length, 0);
+    } finally { v.destroy(); }
+  });
+});

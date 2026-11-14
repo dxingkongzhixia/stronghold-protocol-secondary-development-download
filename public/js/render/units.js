@@ -961,6 +961,7 @@ export class UnitView {
     this.countText = null;
     this.ammoText = null;          // 设置「弹药数量」: the magazine's count under the ammo bar (_updateAmmoCount)
     this.itemPips = [];
+    this._itemPipRows = 0;
   }
 
   /** Show a stack count (token stacks in the hand) — BitmapText-free: a tiny canvas-less chip via Text. */
@@ -979,11 +980,21 @@ export class UnitView {
   /** Equipped item pips (prep): list of item icon URLs. */
   setItems(urls) {
     const P = this.P;
-    const list = Array.isArray(urls) ? urls.slice(0, 2) : [];
-    while (this.itemPips.length > list.length) this.itemPips.pop().destroy();
+    // Display every carried item. Icons keep their size and are laid out in centred rows of at most three:
+    // 4 → 2+2, 5 → 3+2, 6 → 3+3, 7 → 3+2+2; more items use more rows instead of being cut off (a carrier of the
+    // official equipment pools has more than two slots). The bottom edge is fixed: extra rows grow upward.
+    const list = Array.isArray(urls) ? urls : [];
+    const rows = Math.ceil(list.length / 3);
+    this._itemPipRows = rows;
+    const shortRow = rows ? Math.floor(list.length / rows) : 0, longRows = rows ? list.length % rows : 0;
+    let row = 0, col = 0;
+    while (this.itemPips.length > list.length) this.itemPips.pop().destroy(); // loop-cap: the previous carried-item count
     list.forEach((u, i) => {
       let s = this.itemPips[i];
       if (!s) { s = new P.Sprite(P.Texture.EMPTY); s.anchor.set(0.5); this.hud.addChild(s); this.itemPips[i] = s; }
+      const columns = shortRow + (row < longRows ? 1 : 0);
+      s._itemRow = row; s._itemCol = col; s._itemColumns = columns;
+      if (++col === columns) { row++; col = 0; }
       if (s._url === u) return;
       s._url = u;
       const a = this.ctx.assets;
@@ -1934,11 +1945,14 @@ export class UnitView {
       this.countText.scale.set(clamp(s / 90, 0.5, 1.2));
       this.countText.position.set(x + s * 0.32, this.screen.y - s * 0.12);
     }
+    const pipSize = clamp(s * 0.26, 12, 30);
     for (let i = 0; i < this.itemPips.length; i++) {
       const pip = this.itemPips[i];
-      const ps = clamp(s * 0.26, 12, 30);
-      pip.width = pip.height = ps;
-      pip.position.set(this.screen.x - s * 0.36 + i * (ps + 1), this.screen.y - s * 0.05);
+      pip.width = pip.height = pipSize;
+      pip.position.set(
+        this.screen.x + (pip._itemCol - (pip._itemColumns - 1) / 2) * (pipSize + 1),
+        this.screen.y - s * 0.05 - (this._itemPipRows - 1 - pip._itemRow) * (pipSize + 2),
+      );
       pip.visible = this.alive;
     }
   }
