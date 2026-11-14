@@ -71,6 +71,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scenes  # noqa: E402  (the battlefield scene table and exporter; imports UnityPy only when it runs)
 import regulation_scenes  # noqa: E402  (规程's three-piece fields → the same scene/<stageId> groups)
+import season_entry  # noqa: E402  (规程's title-screen opening; UnityPy only when it runs)
 import operators  # noqa: E402 (installed plugin operators' optional official art)
 import fx  # noqa: E402  (the official battle effects, DESIGN §33; imports UnityPy only when it runs)
 from bundles import client_bundles  # noqa: E402 (packaged client + its downloaded hot-update bundles as one root)
@@ -1082,10 +1083,11 @@ def run_extract(args, ab_root):
     token_ids = spine_ids(args.only, TOKEN_SPINE_SUB, TOKEN_SPINES)
     stage_ids = scene_ids(args.only)
     reg_ids = regulation_ids(args.only)
+    entry_on = bool(args.only) and wants_sub(args.only, season_entry.SUB)
     fx_on = fx_selected(args.only)
     art_on = wants_sub(args.only, operators.SUB) and (bool(args.only) or args.plugin_art)
     art_ids = spine_ids(args.only, operators.SUB, operators.references(Path(args.plugin_root))) if art_on else []
-    if not jobs and not enemy_ids and not token_ids and not stage_ids and not reg_ids and not fx_on and not art_on:
+    if not jobs and not enemy_ids and not token_ids and not stage_ids and not reg_ids and not entry_on and not fx_on and not art_on:
         print(f'--only {args.only}: no job matches', file=sys.stderr)
         return 2
     out_root = Path(args.out)
@@ -1113,6 +1115,8 @@ def run_extract(args, ab_root):
         total += regulation_scenes.export_regulation(
             ab_root, out_root, manifest, print, reg_ids, scene_roots(ab_root, args.scenes),
             material_info, dep_bundles(ab_root, {'Material'}))
+    if entry_on:
+        total += season_entry.export(ab_root, out_root, manifest, print, ROOT)
     old, old_chars = {}, {}
     if Path(args.manifest).exists():
         try:
