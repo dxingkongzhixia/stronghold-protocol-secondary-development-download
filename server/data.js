@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { forgetOfficialBounds, rememberOfficialBounds } from '../shared/plugins/officialBounds.js';
+import { versionById } from '../shared/versions.js';
 
 /** Repository root (…/Stronghold-Protocol). */
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -124,6 +125,51 @@ export function setData(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new TypeError('setData: a data object { <file>: record map } is required');
   singleton = deepFreeze(data);
   return singleton;
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Official versions (shared/versions.js; docs/DATA.md "Official versions")
+// ---------------------------------------------------------------------------------------------------
+
+/** The gameplay files a version directory carries — the same 16 as the default build (docs/DATA.md). */
+export const VERSION_DATA_FILES = DATA_FILES;
+
+/** @type {Map<string, Readonly<Record<string, any>>>} */
+const versionSingletons = new Map();
+
+/**
+ * Where a non-default official version's built data lives (`data/versions/<slug>`), or null for the default and for an
+ * unknown id. The registry's `dir` is repo-relative; the path is built from its segments (never a user string).
+ * @param {unknown} id
+ * @returns {string | null}
+ */
+export function versionDataDir(id) {
+  const entry = versionById(id);
+  return entry && entry.dir ? path.join(ROOT, 'data', ...entry.dir.split('/').filter(Boolean)) : null;
+}
+
+/**
+ * A version's data: loaded once, deep-frozen, never filling the official-bounds cache — a version's own snapshot is
+ * installed by its match host (server/match/host). The default (or an id this fork does not register) returns the
+ * process-wide getData() singleton, exactly as before the version system.
+ * @param {unknown} id
+ * @param {{ log?: { warn: Function, error: Function, info?: Function } }} [opts]
+ * @returns {Readonly<Record<string, any>>}
+ */
+export function getVersionData(id, { log = console } = {}) {
+  const entry = versionById(id);
+  if (!entry || !entry.dir) return getData({ log });
+  let data = versionSingletons.get(entry.id);
+  if (!data) {
+    data = loadData(versionDataDir(entry.id), { log, expected: VERSION_DATA_FILES });
+    versionSingletons.set(entry.id, data);
+  }
+  return data;
+}
+
+/** Drop every loaded version's data (tests / hot reload). The default singleton belongs to resetData(). */
+export function resetVersionData() {
+  versionSingletons.clear();
 }
 
 // ---------------------------------------------------------------------------------------------------

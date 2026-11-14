@@ -35,10 +35,11 @@ test('knowledge is immutable, cached, content-addressed, language-aware and inde
   assert.notEqual(knowledgePack(DATA, { ...opts, rules: { unequip: 'allow' } }).version, a.version);
 });
 
-test('the default rules set names no gameVersion (this fork has one rules set; the 0.3.3 version system is not merged)', () => {
+test('the default data names no gameVersion (its records carry no version id, like every match before the version system)', () => {
   const a = knowledgePack(DATA, opts);
-  // shared/versions.js is the compatibility facade: this fork serves one rules set (act2autochess), so the pack carries
-  // no version label and two packs over the same data differ only by their explicit inputs.
+  // shared/versions.js registers the official versions (2026-11-15: the default 盟约 + 规程·序列Ⅰ), but the default data
+  // set is built without a config.version.id: the pack carries no version label, and two packs over the same data differ
+  // only by their explicit inputs. A 规程 match's data names itself and the pack labels it.
   assert.equal(Object.hasOwn(a, 'gameVersion'), false);
   assert.equal(versionOfData(DATA), 'act2autochess');
   assert.notEqual(knowledgePack(DATA, { ...opts, contentId: 'other' }).version, a.version);
