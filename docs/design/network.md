@@ -37,6 +37,30 @@ S→C:
 
 `UnitInfo = { id, kind, side, ownerId, defId, name, tier, golden, spine, avatar, x, y, facing, dir, maxHp, skillIndex?, moduleId?, items?, form? }` (`dir` = the ally's deploy direction; the renderer picks the model (Back for UP, mirrored for LEFT) and the ground wedge from it; `skillIndex` = the ally's equipped skill (§16): the renderer plays that skill's Spine clip (`anims.skills[i]`) and the audio its own ON_SKILL_START sound; `moduleId` = an elite ally's equipped module (uniEquipId | 'none'); `items` = an ally operator's equipped item ids (absent without any; never on enemies or summons): the bond popup lists a 变形同构体 wearer from them and the detail card shows its 同构 chip and 装备 (§21.11); all three also on the prep-scouting `m.field` units (`Match.prepFieldMeta`, the held pieces included), so a teammate's unit shows its owner's loadout in the detail card and its equipped items as item pips on the unit (prep surfaces; user playtest #2 item 3); `form` = the unit's current model form (an enemy's mode §21.4, a 傀儡师's 替身 §22.11; a view built mid-battle starts in it)).
 
+### 8.2.1 State-delta transport (opt-in)
+
+`m.public` (and, later, `m.private`) may be compressed into per-connection deltas. **Opt-in**: a client names
+`hello.delta = STATE_DELTA_VERSION` (1). A server that does not speak it ignores the field and the client keeps the plain
+frames; a client that does not name it (or names another version) keeps receiving what it always got.
+Files: `shared/stateDelta.js` (format + browser decoder), `server/stateTransport.js` (per-connection baselines).
+
+- **Frames** (only on the negotiated channels): a full frame is
+  `{t:'m.state', kind:'m.public', seq, full:{…}}`; a delta is `{t:'m.state', kind, seq, base, patch:[op…]}` where `op`
+  is `[path, value]` (set) or `[path]` (delete an object key). Arrays patch by index only when both lengths are equal — a
+  length / type change replaces that subtree (no splice ambiguity).
+- **Bounds** (a fallback to a full frame, never a throw): 4096 ops, 64 path depth, unsafe keys (`__proto__` /
+  `prototype` / `constructor`) refused on both ends. A delta is only sent when its UTF-8 bytes are smaller than the full
+  frame it would replace.
+- **Sequencing**: every frame a connection is given — full or delta — carries a fresh `seq` from that connection's own
+  counter, so the number only moves forward (a re-sent snapshot never rewinds it). A repeated `hello` keeps the
+  baseline; a socket change re-negotiates from scratch.
+- **Gaps**: a client that cannot apply a frame (lost / reordered / older full) drops that channel and sends **one**
+  `state.resync` per `RESYNC_GAP_MS` (1 s; one request covers every channel). The server drops that connection's
+  baselines (the next frame of each channel is a full one) and runs the same resync a repeated hello runs — the match
+  resends its state, or the lobby its room state. `state.resync` is in `HEAVY_TYPES` (rate-limited like the other
+  resend-heavy intents). A failed patch never mutates the baseline or an already emitted view (copy-on-write).
+- `m.private` is not a delta channel yet: it is per player and joins only after the round trip is proven.
+
 ### 8.3 Exact view shapes (normative for match ⇄ UI)
 
 `m.private`:

@@ -473,7 +473,10 @@ export const C2S = {
   // `claimAt` are upstream's reconnect-claim fields (0.2.x) — kept alongside ours.
   hello: { name: (v) => isStr(v, NAME_MAX_LEN) && v.trim().length > 0, token: (v) => v == null || isStr(v, 64), version: (v) => v == null || isInt(v, 0, 1e6),
     accountToken: (v) => v == null || isStr(v, 128), noReplace: isBool, claimAt: (v) => isNum(v, 0, Number.MAX_SAFE_INTEGER),
-    $optional: ['token', 'version', 'accountToken', 'noReplace', 'claimAt'] },
+    // `delta`: this client decodes `m.state` frames (shared/stateDelta.js). Omitted by clients that cannot; a server
+    // that does not know the field ignores it (read only after the full validateC2S pass).
+    delta: (v) => v == null || isInt(v, 0, 1e6),
+    $optional: ['token', 'version', 'accountToken', 'noReplace', 'claimAt', 'delta'] },
   ping: { c: (v) => typeof v === 'number' && Number.isFinite(v) },
   // public: list a hand-made 同盟 room in the lobby's 公开同盟 directory (server/admin.js buildPublicSnapshot →
   // /online/api.openRooms). Absent ⇒ public. Solo / 野排 (auto) rooms are never listed regardless.
@@ -646,6 +649,10 @@ export const C2S = {
     leaksBy: (v) => isMap(v, RESULT_LIMITS.players, isId, (x) => isNum(x, 0, 1e6)),
     $optional: ['resolved', 'leaks', 'bossDmg', 'by', 'done', 'left', 'leaksBy'],
   },
+  // State-delta transport (shared/stateDelta.js): the client asks for one full frame after it missed one. The server
+  // answers with a full frame on each state channel, which restores the baseline; it is rate-limited like the other
+  // resend-heavy intents (server/net.js HEAVY_TYPES). An old client never sends it and keeps the frames it always got.
+  'state.resync': {},
   // `cs` (DESIGN §32, optional): the content hash the reporting browser ran the battle on — its spec's `cs`. In a room
   // with gameplay plugins (P1c, DESIGN §32.6) the match refuses a result without it or with another one (and runs the
   // battle itself); a vanilla room's browser sends none
