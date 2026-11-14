@@ -89,6 +89,11 @@
   `expected_local_groups`（客户端没有时仍是金属棋盘）。
 - **m01 实跑通过**：24 chunks / 105 901 顶点 / 3 张 lightmap 合成 2048²，输出 `scene.json`（version 1）、
   `scene.bin` 4.0 MB、`lm0.png|webp`、`scene/tex/*` 共 15 文件。黑边统计（lightmap 修复前后）与 4 个分组均正常。
+- **10 张全部导入（`ba97bfb67`）**：m01–m06、m09–m12 → `public/assets/local/scene/act3autochess_*`，
+  每组 4 文件（`scene.json` v1 / `scene.bin` / `lm0.png` / `lm0.webp`），共 **111.5 MiB**（m05 14.5、m10 21.2、m12 21.4 较大）；
+  chunk 数 12–24、顶点 105 901–395 490。新增共享贴图 34 个（icewild / church_tower / wild 等）；
+  22 个既有主题贴图按当前客户端重导（逐像素比对：`TX_AutochessSand_N` 完全一致，albedo 均值差 < 0.4 级，
+  属解码/版本差异，非画面变化）。`scene/tex` 总计 222.9 MiB。
 
 **仍需处理**（P4）：
 
