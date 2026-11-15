@@ -147,7 +147,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩 | 联合半数核心、自选规则、每干员装备容量/招募例外、隐秘核心阈值复核、地图规则、寻宝/top-3、对局修复 |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 规程 HUD/简报/徽章/自编（P3） |
 | 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
-| golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | UI 套件（P5） |
+| golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 无（P5 完成） |
 | 冲突面 | 未动 14 条 never-merge 路径 | 逐块适配并保留 fork 特性（P6） |
 
 ## 5. 合并清单
@@ -224,7 +224,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] 规程 golden 在**我们树**上生成：304 个场景（roster 102 = 62 干员/负载 + 40 地图矩阵 / bonds 52 / fields 34 / matches 21 / standins 13 / diy 82），0 引擎错误；`test/golden-versions.test.js` 校验文件并重算 fast 子集
 - [x] **地图矩阵**：10 张普通地图 × 4 个代表模式（等级5 / 等级20 / 险境 / 终极），每张地图跑该模式的真实第 7 回合波次（`map-<stage>-<mode>`，roster 家族内；两张联防地图在 fields 家族覆盖）；默认语料不受影响
 - [x] `ci-shards.json` 配重：新的规程 golden 测试按 23 s 计入（4 个分片 426.8 s / imbalance 1.00）
-- [ ] `test/ui` 规程套件
+- [x] `test/ui` 规程套件：`test/ui/regulation-ui.test.js` 用真实规程对局帧串起房间等级、简报核心盟约、追随者们指令、band 技能模型与装备报告，并断言默认盟约没有这些版本模型
 
 ### P6 冲突适配（3–5 人日）
 - [ ] 逐块重写 14 条 §0 路径：`public/js/screens/game.js`、`server/match/{Match,gamedata,bondsMeta}.js`、`match/spDraft.js`、`data/assets.json`、`public/js/audio.js`、`public/js/render/board3d/*`、`assetDownload/assetPack.js`、`public/js/screens/title.js`
