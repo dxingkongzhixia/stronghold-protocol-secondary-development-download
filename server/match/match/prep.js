@@ -55,6 +55,34 @@ export class MatchPrep {
 
 
   /**
+   * 规程 追随者们 (`gain_band_skill_from_pool_in_prep`): offer `n` random active instructions (band ids whose official
+   * `skill.type` is ACTIVE) to replace this prep's instruction (`g.bandSkillChoose`). The strategy itself — its passive
+   * and its LP — does not change. Bots take the first offer at once (they never use active skills, but the state stays
+   * coherent); a human's offer waits for the prep.
+   */
+  offerBandInstructions(ps, n = 2, rng = this.rngMeta) {
+    const pool = this.gd.bandIds().filter((id) => {
+      const b = this.gd.band(id);
+      return !!(b && b.skill && b.skill.type === 'ACTIVE');
+    });
+    const bag = pool.filter((id) => id !== ps.bandSkillId);
+    const candidates = [];
+    for (let k = 0; k < n && bag.length; k++) {
+      const i = rng.int(bag.length);
+      candidates.push(bag.splice(i, 1)[0]);
+    }
+    if (!candidates.length) return 0;
+    ps.bandChoice = { round: this.round, candidates, pick: null };
+    if (ps.botControlled) {
+      ps.bandSkillId = candidates[0];
+      ps.bandChoice.pick = candidates[0];
+      ps.bandSkill = { uses: 0, total: 0, round: this.round, cooldownUntil: 0 };
+    }
+    ps.dirty();
+    return candidates.length;
+  }
+
+  /**
    * The bot plays a prep in three stages, every one in slices of ≤ botSliceMs wall-clock ms (one scheduler callback
    * each, so other rooms' battles and every player's requests keep flowing): economy + the default layout
    * (bot.js botPrepBeginSteps — shop decisions and layout planning, 50–120 ms late in a 4-bot match), the layout

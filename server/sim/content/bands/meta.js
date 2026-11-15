@@ -583,6 +583,14 @@ K.skill_cost_reduce_on_buy_bond = (ps, bandId) => {
   };
 };
 
+/** 追随者们: each prep, offer `choice_event`'s count (skill_change_2 → 2) of random active instructions to swap in. */
+K.gain_band_skill_from_pool_in_prep = (ps) => {
+  const n = Math.max(1, Number((String(ps[0]?.choice_event || '').match(/(\d+)$/) || [])[1]) || 2);
+  return {
+    onPrepStart(ctx) { ctx.offerBandInstructions(n); },
+  };
+};
+
 // ---- act3 active band skills on an operator (B3) --------------------------------------------------------------
 
 /** 至纯凝结: the target becomes elite at once (a promotion; ALL_LIMIT x1). */

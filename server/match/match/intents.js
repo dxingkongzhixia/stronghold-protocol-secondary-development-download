@@ -29,6 +29,7 @@ export class MatchIntents {
       case 'g.bandFocus': return this.bandFocus(ps, msg.bandId ?? null);
       // an active strategy skill (another official version's band): target a chess / shop slot / map tile or nothing
       case 'g.bandSkill': return this.useBandSkill(ps, msg);
+      case 'g.bandSkillChoose': return this.chooseBandSkill(ps, msg.bandId);
       case 'g.buy': return ps.buy(msg.slot);
       case 'g.refresh': return ps.refresh();
       case 'g.freeze': return ps.freeze();
@@ -76,7 +77,8 @@ export class MatchIntents {
   useBandSkill(ps, msg) {
     if (this.phase !== PHASE.PREP) return fail(ERR.WRONG_PHASE);
     if (ps.ready) return fail(ERR.WRONG_PHASE, 'ready');
-    const band = this.gd.band(ps.bandId);
+    // 规程 追随者们: the instruction chosen this prep rides on the strategy (its passive and LP stay)
+    const band = this.gd.band(ps.bandSkillId || ps.bandId);
     // the stage in force now: the base record or an upgraded one (round / shop level / coins spent / bond members)
     const stage = band ? activeBandSkillStage({
       round: this.round, shopLevel: ps.shop.level, gold: ps.stats?.gold ?? 0, bonds: ps.bonds,
@@ -108,6 +110,29 @@ export class MatchIntents {
     if (sk.availType === 'COOLDOWN') st.cooldownUntil = this.round + Math.max(1, Math.round(Number(ev.cooldown) || 1));
     // bookkeeping that only a successful use does (a cost that grows / resets): after the charge, never on a failure
     this.dispatch(ps, 'onBandSkillUsed', ev);
+    ps.dirty();
+    this.markPublic();
+    return OK;
+  }
+
+  /**
+   * 规程 追随者们 (`g.bandSkillChoose`): take one of this prep's two offered instructions. The strategy and its passive do
+   * not change — only the skill the `g.bandSkill` button drives, whose uses reset with the new instruction.
+   * @param {import('../PlayerState.js').PlayerState} ps
+   * @param {string} bandId
+   */
+  chooseBandSkill(ps, bandId) {
+    if (this.phase !== PHASE.PREP) return fail(ERR.WRONG_PHASE);
+    if (ps.ready) return fail(ERR.WRONG_PHASE, 'ready');
+    const offer = ps.bandChoice;
+    if (!offer || offer.round !== this.round) return fail(ERR.BAD_TARGET, 'no instruction offer this prep');
+    if (offer.pick != null) return fail(ERR.ALREADY, 'an instruction is already picked');
+    if (typeof bandId !== 'string' || !Array.isArray(offer.candidates) || !offer.candidates.includes(bandId)) return fail(ERR.BAD_TARGET, 'not an offered instruction');
+    const band = this.gd.band(bandId);
+    if (!band || band.skill?.type !== 'ACTIVE') return fail(ERR.BAD_TARGET, 'not an active instruction');
+    ps.bandSkillId = bandId;
+    offer.pick = bandId;
+    ps.bandSkill = { uses: 0, total: 0, round: this.round, cooldownUntil: 0 };
     ps.dirty();
     this.markPublic();
     return OK;

@@ -37,7 +37,8 @@ export class PlayerViews {
    * an ACTIVE skill (all of the default 盟约 set), so the default private view does not change.
    */
   bandSkillView() {
-    const band = this.bandId ? this.gd.band(this.bandId) : null;
+    // 规程 追随者们: the chosen instruction (a separate band record) decides the skill; the strategy keeps its passive
+    const band = this.bandSkillId ? this.gd.band(this.bandSkillId) : this.bandId ? this.gd.band(this.bandId) : null;
     if (!band) return null;
     const stages = bandSkillStages(band);
     const stage = activeBandSkillStage({
@@ -60,6 +61,7 @@ export class PlayerViews {
       : sk.availType === 'COOLDOWN' || unlimited ? null
         : Math.max(0, cap - usedThisRound);
     return {
+      bandId: band.bandId,
       name: band.effectName || band.name,
       bandName: band.name,
       desc: band.desc || '',
@@ -125,6 +127,10 @@ export class PlayerViews {
       coreBond: this.m.coreBondGroups ? { groups: this.m.coreBondGroups.map((g) => g.slice()), pick: this.coreBondPick } : null,
       // 规程 active strategy skill (g.bandSkill): null for every band without one (the default 盟约 set has none)
       bandSkill: this.bandSkillView(),
+      // 规程 追随者们: this prep's two offered instructions, until one is picked (g.bandSkillChoose)
+      bandChoice: this.bandChoice && this.bandChoice.round === this.m.round
+        ? { round: this.bandChoice.round, candidates: this.bandChoice.candidates.slice(), pick: this.bandChoice.pick ?? null }
+        : null,
       canReady: this.alive && this.tempEmpty && !this.personalChoice && this.m.phase === PHASE.PREP,
       personalChoice: this.personalChoice ? {
         id: this.personalChoice.id,

@@ -210,6 +210,13 @@ export class PlayerState {
      */
     this.bandSkill = { uses: 0, total: 0, round: 0, cooldownUntil: 0 };
     /**
+     * 规程 追随者们 (band_random): the instruction (a band id whose skill is ACTIVE) chosen to ride on this strategy, and
+     * this prep's offer `{ round, candidates, pick }` — the player's own band keeps its passive; only the skill hooks of
+     * `bandSkillId` run (effectsMeta dispatch). Null everywhere else.
+     */
+    this.bandSkillId = null;
+    this.bandChoice = null;
+    /**
      * A shop-upgrade discount an effect earned for the CURRENT shop level (沙洲梦魇: `value` off the next level-up,
      * `level` the level it was granted at; one per level). Read by economy.js levelUp, cleared on the level-up.
      */

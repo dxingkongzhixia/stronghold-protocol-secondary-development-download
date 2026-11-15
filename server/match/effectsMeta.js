@@ -268,6 +268,15 @@ export class EffectDispatcher {
         const h = reg.get(key) ?? reg.get(`band:${this.m.gd.band(ps.bandId)?.effectRef}`);
         if (h) this._call(ps, key, h, hook, { kind: 'band', key, bandId: ps.bandId, band: this.m.gd.band(ps.bandId) }, ev);
       }
+      // 2b. 规程 追随者们: the instruction it took this prep (a separate band record). Only its skill hooks run — its
+      // passive hooks would be a second strategy's effects, which the swap does not grant.
+      if (ps.bandSkillId && ps.bandSkillId !== ps.bandId
+        && (hook === 'onBandSkill' || hook === 'onBandSkillPrice' || hook === 'onBandSkillUsed')) {
+        const band = this.m.gd.band(ps.bandSkillId);
+        const key = `band:${ps.bandSkillId}`;
+        const h = reg.get(key) ?? reg.get(`band:${band?.effectRef}`);
+        if (h) this._call(ps, key, h, hook, { kind: 'band', key, bandId: ps.bandSkillId, band }, ev);
+      }
       // 3. bonds
       for (const bondId of this.m.gd.bondIds) {
         const key = `bond:${bondId}`;
@@ -796,6 +805,11 @@ export function makeCtx(m, ps, source, hook, ev = null, preview = null) {
     offerChess: (ids, opts = {}) => !!ps.pushRewardOffer(opts.source || source.key || 'effect', { ids, tier: opts.tier ?? null, label: opts.label ?? offerLabel(gd, source) }),
     /** Queue a free pick-one offer of items (shop.rewardOffer with slots of kind 'item'). */
     offerItems: (ids, opts = {}) => !!ps.pushItemOffer(ids, { source: opts.source || source.key || 'effect', tier: opts.tier ?? null, label: opts.label ?? offerLabel(gd, source) }),
+    /**
+     * 规程 追随者们: offer `n` random active instructions (band ids whose skill is ACTIVE) to swap in this prep
+     * (`m.private.bandChoice`, `g.bandSkillChoose`). The strategy itself is unchanged.
+     */
+    offerBandInstructions: (n = 2) => m.offerBandInstructions(ps, n, rng),
     setShopSlot: (i, slot) => {
       if (!Number.isInteger(i) || i < 0 || i >= ps.shop.slots.length) return false;
       if (slot == null) { ps.shop.slots[i] = null; ps.dirty(); return true; }

@@ -606,6 +606,8 @@ export const C2S = {
   // an active band skill (another official version's strategy): the target is a chess uid, a shop slot or a map tile
   // (the skill record's targetType decides which); absent for NO_TARGET skills
   'g.bandSkill': { target: (v) => v == null || (isPlain(v) && isId(v.kind) && Object.keys(v).length <= 7), $optional: ['target'] },
+  // 规程 追随者们: one of the two instructions this prep offered (a strategy id from m.private.bandChoice)
+  'g.bandSkillChoose': { bandId: isId },
   'g.buy': { slot: (v) => isInt(v, 0, 15) },
   'g.refresh': {},
   'g.freeze': {},
