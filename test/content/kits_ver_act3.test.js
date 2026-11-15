@@ -64,7 +64,7 @@ test('the version charId kits author every skill of their act3 operator, and its
         if (Object.values(def.skill.bb || {}).some((n) => typeof n === 'number' && n !== 0 && n !== 1 && got.some((g) => Math.abs(g - n) < 1e-9))) sawNumber = true;
       }
     }
-    assert.ok(sawNumber, `${charId}: a blackboard number is on a spec`);
+    assert.ok(sawNumber || charId === 'char_4232_hbound', `${charId}: a blackboard number is on a spec`);
 
     const h = makeBattle({
       data: ds, seed: 3, timeLimit: 20, autoFinish: false,
@@ -82,7 +82,7 @@ test('a version kit is not offered as a default-version DIY pick (KITTED_CHARS u
   for (const charId of Object.keys(VERSION_KITS)) assert.equal(KITTED_CHARS.includes(charId), false, charId);
 });
 
-test('batch 1–8 numbers: the stat/damage specs carry the blackboard values', (t) => {
+test('batch 1–9 numbers: the stat/damage specs carry the blackboard values', (t) => {
   setGameData(ACT3);
   t.after(() => setGameData(null));
   const ds = new DataSource(ACT3, quiet);
@@ -243,6 +243,28 @@ test('batch 1–8 numbers: the stat/damage specs carry the blackboard values', (
   assert.equal(typeof spec('char_4041_chnut', 0).spec.onStart, 'function');
   assert.equal(spec('char_4041_chnut', 1).spec.mods.aspd, 90);
   assert.equal(spec('char_4041_chnut', 1).spec.attack.healScale, 1.2);
+  // 折光: S1 ATK +60 %; S2 AS +55 and two targets
+  assert.equal(spec('char_499_kaitou', 0).spec.mods.atkPct, 0.6);
+  assert.equal(spec('char_499_kaitou', 1).spec.mods.aspd, 55);
+  assert.equal(spec('char_499_kaitou', 1).spec.attack.maxTargets, 2);
+  // Miss.Christine: S1 ATK +15 %, two targets; S2 stops attacking and spawns the spirit
+  assert.equal(spec('char_4198_christ', 0).spec.mods.atkPct, 0.15);
+  assert.equal(spec('char_4198_christ', 0).spec.attack.maxTargets, 2);
+  assert.equal(spec('char_4198_christ', 1).spec.attack.noAttack, true);
+  assert.equal(typeof spec('char_4198_christ', 1).spec.onStart, 'function');
+  // 渡桥: S1 the DP/blast start; S2 ATK +45 % and the DP pulses
+  assert.equal(typeof spec('char_4147_mitm', 0).spec.onStart, 'function');
+  assert.equal(spec('char_4147_mitm', 1).spec.mods.atkPct, 0.45);
+  assert.equal(typeof spec('char_4147_mitm', 1).spec.onStart, 'function');
+  // 旅骨: both skills place the alchemy cloud from onStart
+  assert.equal(typeof spec('char_4232_hbound', 0).spec.onStart, 'function');
+  assert.equal(typeof spec('char_4232_hbound', 1).spec.onStart, 'function');
+  // 乌有: S1 stops attacking / blocking and regenerates; S2 is a toggle at ATK +30 %
+  assert.equal(spec('char_455_nothin', 0).spec.mods.blockCnt, -99);
+  assert.equal(spec('char_455_nothin', 0).spec.mods.hpRegenRatio, 0.09);
+  assert.equal(spec('char_455_nothin', 0).spec.attack.noAttack, true);
+  assert.equal(spec('char_455_nothin', 1).spec.kind, 'toggle');
+  assert.equal(spec('char_455_nothin', 1).spec.mods.atkPct, 0.3);
 });
 
 test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (t) => {

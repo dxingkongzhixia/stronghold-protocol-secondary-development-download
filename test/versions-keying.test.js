@@ -70,7 +70,8 @@ test('a version build resolves each chess to a kit written for its own charId, o
       assert.equal(keyOf('chess_char_1_02_a'), 'chess_char_1_12_a', '艾丝黛尔 under chess_char_1_02_a');
       assert.equal(keyOf('chess_char_5_26_a'), 'char_002_amiya', '阿米娅 now resolves by charId');
       assert.equal(keyOf('chess_char_1_15_a'), 'char_4041_chnut', '褐果 now resolves by charId');
-      assert.equal(keyOf('chess_char_3_05_a'), null, '旅骨 is still in PENDING_KIT_CHARS');
+      assert.equal(keyOf('chess_char_3_05_a'), 'char_4232_hbound', '旅骨 now resolves by charId');
+      assert.equal(PENDING_KIT_CHARS.length, 0, 'every act3 operator has a kit');
     }
   }
   // a listed operator that gets a kit must leave PENDING_KIT_CHARS (the list stays honest)

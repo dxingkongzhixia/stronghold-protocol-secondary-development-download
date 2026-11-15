@@ -215,6 +215,11 @@ export const VERSION_KIT_FILES = Object.freeze([
   'ver-brigid.js',
   'ver-robrta.js',
   'ver-chnut.js',
+  'ver-kaitou.js',
+  'ver-christ.js',
+  'ver-mitm.js',
+  'ver-hbound.js',
+  'ver-nothin.js',
 ]);
 
 /**
@@ -383,11 +388,6 @@ export const KIT_CHAR_IDS = Object.freeze({
  * accepts a chess without a kit only when its charId is listed here, and fails once a listed operator gets one.
  */
 export const PENDING_KIT_CHARS = Object.freeze([
-  'char_4147_mitm',
-  'char_4198_christ',
-  'char_4232_hbound',
-  'char_455_nothin',
-  'char_499_kaitou',
 ]);
 
 /** DIY picks of another version without a charId kit (none today: every listed pick borrows a tier kit). */
