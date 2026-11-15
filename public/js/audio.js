@@ -140,34 +140,52 @@ const SKILL_MODE_FILE = /_(d|h|s)\d*\.mp3$/i;
 // ---- pure helpers (unit-tested) -----------------------------------------------------------------------
 
 /**
+ * The official version's music pack ids (`var/music`, ui/musicLibrary.js): the season theme for the pre-game and the prep,
+ * the 2024 卫戍协议 stage BGM for combat, boss1 / boss2 for 最终攻势 / 隐秘核心. A missing pack falls back through
+ * `resolveBgm`'s `lobby:<id>` branch to the committed lobby track, so a checkout without `var/music` still plays.
+ */
+export const VERSION_BGM = Object.freeze({
+  'act3autochess@V3_1': Object.freeze({
+    theme: 'music_bg_act3autochess', // Kernel Overflow
+    combat: 'music_bg_act1vautochess', // Restore (the 2024 卫戍协议 stage BGM)
+    boss: 'music_bg_act3autochess_boss1', // Ens Inexorabile
+    hidden: 'music_bg_act3autochess_boss2', // Systematic Violation
+  }),
+});
+
+/**
  * BGM key for a route + match phase.
  * @param {'title'|'lobby'|'room'|'game'|string} route
- * @param {any} pub m.public (may be null)
+ * @param {any} pub m.public (may be null; its `version` selects the version music pack)
  * @param {0|1|null} [combatTrack] the round's own 开战 track index into `bgm.combatAlts` (combatTrackFor; omitted ⇒
  *   plain 'combat', i.e. the manifest's default combat track)
+ * @param {string|null} [version] m.public.version; defaults to `pub.version`
  * @returns {string|null} 'lobby' | 'prep' | 'combat' | 'combat:<i>' | 'unite' | 'boss' | 'boss:<bossId>' | null
  */
-export function bgmKeyFor(route, pub, combatTrack = null) {
+export function bgmKeyFor(route, pub, combatTrack = null, version = pub?.version ?? null) {
   if (route !== 'game') return route === 'title' || route === 'lobby' || route === 'room' ? 'lobby' : null;
   const phase = pub?.phase;
   if (!phase) return 'lobby';
+  const pack = VERSION_BGM[version] || null;
+  const packed = (id) => (pack && pack[id] ? `lobby:${pack[id]}` : null);
   switch (phase) {
-    case PHASE.INFO_CHECK: case PHASE.BAND_DRAFT: case PHASE.BATTLE_CHECK: case PHASE.RESULT: case PHASE.LOBBY:
-      return 'lobby';
+    case PHASE.INFO_CHECK: case PHASE.BAND_DRAFT: case PHASE.CUSTOM_CHECK: case PHASE.BATTLE_CHECK: case PHASE.RESULT: case PHASE.LOBBY:
+      return packed('theme') || 'lobby';
     case PHASE.UNITE:
       // 联防 has its own track: the official `escaped_single` / `escaped_multi` levels declare
       // `bgmEvent = corrosion` (level_act1autochess_escaped_*.json), so the rescue phase is not the 作战's track.
       // resolveBgm falls back to `bgm.combat` when a manifest predates it.
-      return 'unite';
+      return packed('combat') || 'unite';
     case PHASE.COMBAT:
       // 开战 BGM: the round's own track — 骑士之日 / 无畏者 are fixed per round, not drawn (combatTrackFor)
+      if (pack) return packed('combat');
       return combatTrack == null ? 'combat' : `combat:${combatTrack ? 1 : 0}`;
     case PHASE.FINAL_ASSAULT:
-      return pub.bossId ? `boss:${pub.bossId}` : 'boss';
+      return packed('boss') || (pub.bossId ? `boss:${pub.bossId}` : 'boss');
     case PHASE.HIDDEN_CORE:
-      return pub.hiddenBossId ? `boss:${pub.hiddenBossId}` : pub.bossId ? `boss:${pub.bossId}` : 'boss';
+      return packed('hidden') || (pub.hiddenBossId ? `boss:${pub.hiddenBossId}` : pub.bossId ? `boss:${pub.bossId}` : 'boss');
     default:
-      return 'prep';
+      return packed('theme') || 'prep';
   }
 }
 
@@ -1717,7 +1735,7 @@ export function installAudio(deps) {
           // and the next round moves on by the table. 联防 shares its round ⇒ same key ⇒ the loop keeps playing.
           // The Hub is the one place the player's own 主界面音乐 replaces `lobby` (audio.lobbyKey); a room's own lobby
           // phase and the title screen keep the mode's theme, so the pick never changes what a party hears.
-          audio.playBgm(route === 'lobby' ? audio.lobbyKey() : bgmKeyFor(route, pub, combatTrackFor(pub?.round)));
+          audio.playBgm(route === 'lobby' ? audio.lobbyKey() : bgmKeyFor(route, pub, combatTrackFor(pub?.round), pub?.version ?? null));
         } catch { /* ignore */ }
       };
       sync(deps.getState());

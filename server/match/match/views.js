@@ -111,6 +111,8 @@ export class MatchViews {
     const v = {
       t: 'm.public',
       phase: this.phase,
+      // the official version this match runs (null for the default 盟约 data): the HUD mark and the version's BGM pack
+      version: this.gd.config?.version?.id ?? null,
       // 规程 选择自编 (CUSTOM_CHECK): how many living players confirmed (the default 盟约 flow has no such step)
       custom: this.phase === PHASE.CUSTOM_CHECK ? {
         ready: this.alivePlayers().filter((p) => p.customReady).length,
