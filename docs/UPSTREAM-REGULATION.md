@@ -157,7 +157,9 @@
 - [ ] 隐藏输入：`data/assets.json` 的 `spineLocal` 片段、`data/tuning.json` 字节副本、`docs/research/*` 输入
 
 ### P2 规则与内容（8–12 人日）
-- [ ] 37 个 kits（batch1–4）+ 6 个模块：`regulation-bosses.js`、`bonds/regulation.js`、`bonds/lethania.js`、`enemies/regulation.js`、`garrisons/regulation.js`、`bands/commands.js`
+- [x] **跨版本套件键控**：`KIT_CHAR_IDS`（145 个 tier kit key → charId）、`TIER_KIT_KEYS_BY_CHAR`、`officialKitKey`（默认数据与插件内容集仍按 chess id；版本数据按 charId，避免复用 id 跑到别人的套件）；规程 310 个 chess 中 3 个同 id 同干员、203 个按 charId 解析，40 名新干员列入 `PENDING_KIT_CHARS`。测试 `test/versions-keying.test.js`；默认 golden 全量不变
+- [ ] **37 个 kits（batch1–4）**：按 `PENDING_KIT_CHARS` 的 40 名规程干员逐批编写；每批把已完成的 charId 从列表移除，并补该批的 kit 测试
+- [ ] **6 个模块**：`regulation-bosses.js`、`bonds/regulation.js`、`bonds/lethania.js`、`enemies/regulation.js`、`garrisons/regulation.js`、`bands/commands.js`
 - [ ] 模式 26 条：入门/标准/险境/绝境/终极/极速/规程等级 1–20（`AC-*`），14/9 回合、60 s+ 决策、特殊准备回合 `spRounds [3,9,11]`
 - [ ] 核心盟约二选一（个人）/ 禁用半数（联合）；自选 Ⅴ/Ⅵ 各 0–2；自选无特质、按阵营分盟约
 - [ ] 装备区：独立 5 格 `equipHand`、容量 `equipSlotNum`（Ironhide 4/6）、招募例外 `recruitTierExempt`
