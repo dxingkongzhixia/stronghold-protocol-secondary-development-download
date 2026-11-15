@@ -12,32 +12,54 @@
 44 个新 band：**ACTIVE 25 / PASSIVE 13 / NONE 6**；目标
 **COMMON_CHESS 11 / NO_TARGET 10 / SHOP_SLOT 2 / MAP_TILE 2 / 无目标 19**。
 
-## 引擎前置
+## 引擎前置（已实现）
 
-主动 band 技能需要一个新 intent（暂名 `g.bandSkill`）：
+主动 band 技能用一个新 intent：
 
 ```text
-{ t: 'g.bandSkill', target?: { kind: 'chess'|'slot'|'tile', uid?/idx?/row?/col? } }
+{ t: 'g.bandSkill', target?: { kind: 'chess'|'shop'|'tile', uid?/slot?/row?/col? } }
 ```
 
-- 校验 `skill.targetType` / `targetFilterType` 与 `availType`；
-- 玩家状态：`uses`（ROUND_RESET 按回合重置，ALL_LIMIT 保留）、`cooldownUntilRound`（COOLDOWN）；
-- 成功后按 buff key 调用 `bands/meta.js` / `bands/battle.js` 的 handler，再扣次数/设冷却；
+- `targetType` 决定目标（`NO_TARGET` 不带，`COMMON_CHESS` 为自己场上干员 uid，`SHOP_SLOT` 为调度中心格号，
+  `MAP_TILE` 为行列）；`availType` 决定次数：`ROUND_RESET` 每回合重置 `uses`，`ALL_LIMIT` 用整场 `total`，
+  `COOLDOWN` 用 `cooldownUntil`，`DEFAULT` 不限次；
+- 玩家状态 `PlayerState.bandSkill = { uses, total, round, cooldownUntil }`；
+- 价格钩子 `onBandSkillPrice` 先跑（只改 `ev.cost`，无副作用），再检查资金；`onBandSkill` 执行并必须设
+  `ev.done`（没做成 → 不扣费、不消耗次数），成功后扣费、记次数、按 `ev.cooldown` 设冷却，最后跑
+  `onBandSkillUsed`（只做“成功使用之后”的记账，例如指令费用成长/重置）；
+- `ctx.refreshShop()` = 免费的 `PlayerState.refresh({ free: true })`（band 技能自己的刷新）；
 - 协议、i18n、房间 UI 在 P3 接入（技能按钮、目标选择、剩余次数）。
 
 ## 已完成（本树）
 
+### B1 被动 / 触发
+
 | band | buff key | 状态 |
 |---|---|---|
-| band_smith | `prep_start_random_equip_in_round` | 已实现：第 3/6/9/12/14 回合随机装备 |
-| band_kjerag | `round_buy_bond_char_price` | 已实现：每回合首次谢拉格干员 1 费 |
-| band_siracusa | `n_round_refresh_cnt_gain_coin` | 已实现：每回合首次刷新 +1 资金 |
-| band_victoria | `buy_bond_char_cnt_gain_equip` | 已实现：每 3 名维多利亚干员 1 件随机装备 |
-| band_substitute | `sell_char_swap_shop_char` | 已实现：每回合首次出售普通干员改为随机换人（不出资金） |
-| band_takecare | `prep_finish_char_bond_add_layer` | 已有（act2） |
-| band_mech | `preparation_start_gain_chess_from_round` | 已有 |
-| band_bond | `refresh_shop_count_gain_coin_bond_char_chess` | 已有 |
-| band_weakness | `env_gbuff_new_with_verify` | battle 侧已有 |
+| band_smith | `prep_start_random_equip_in_round` | 第 3/6/9/12/14 回合随机装备 |
+| band_kjerag | `round_buy_bond_char_price` | 每回合首次谢拉格干员 1 费 |
+| band_siracusa | `n_round_refresh_cnt_gain_coin` | 每回合首次刷新 +1 资金 |
+| band_victoria | `buy_bond_char_cnt_gain_equip` | 每 3 名维多利亚干员 1 件随机装备 |
+| band_substitute | `sell_char_swap_shop_char` | 每回合首次出售普通干员改为随机换人（不出资金） |
+
+### B2 主动技能（无目标 / 经济）
+
+| band | buff key | 状态 |
+|---|---|---|
+| band_price | `skill_next_equip_buy_discount` | 下一 `times` 件装备 -`count`（最低 0），按购买消耗 |
+| band_fund | `skill_gain_gold_cd_by_gold` | 随机 1–6 资金，冷却 = 获得金额 |
+| band_support | `skill_refresh_shop_high_tier` | 免费刷新，`count` 格为商店等级 +`lv_up` 阶（≤6） |
+| band_high | `skill_refresh_shop_board_char` | 免费刷新，一格为自己场上干员的复制（整场 1 次） |
+| band_yan | `skill_refresh_shop_bond_char` | 免费刷新，`count` 格为【炎】干员 |
+| band_equipment | `skill_change_shop_equip` | 一件新装备替换随机装备格（`promote_equip_extra_award` 仍待做） |
+| band_closeout | `skill_gain_all_shop_char` + `skill_cost_round_grow_reset_on_use` | 拿走商店全部干员并清格；每次休整期结束费用 -1，用后重置 |
+| band_kazimier | `skill_gain_bond_char` + `skill_cost_round_grow_reset_on_use` | 1 名卡西米尔干员；费用每休整期 -2，用后重置 |
+| band_lethania | `skill_gain_bond_char` + `skill_cost_grow_per_use` | 1 名莱塔尼亚干员；每次使用后费用永久 +1 |
+| band_ursus | `skill_gain_bond_char` + `skill_cost_reduce_on_buy_bond` | 1 名乌萨斯干员；每买 1 名乌萨斯 -1，用后重置 |
+
+其它已有：`band_takecare` `prep_finish_char_bond_add_layer`、`band_mech`
+`preparation_start_gain_chess_from_round`、`band_bond`
+`refresh_shop_count_gain_coin_bond_char_chess`、`band_weakness` `env_gbuff_new_with_verify`（battle 侧）。
 
 ## 待实现
 
@@ -45,26 +67,18 @@
 - `band_random` `gain_band_skill_from_pool_in_prep`：每次进入休整期从 2 个随机指令二选一替换。
 - `band_bonus` `promote_char_extra_award`：每回合首次晋升额外一次晋升奖励（需 `ctx.promote`）。
 - `band_sargon` `gain_bond_cnt_shop_up_discount`：3 名萨尔贡后升级 -3，每等级一次（需升级价折扣字段）。
+- `band_equipment` `promote_equip_extra_award`：每回合首次装备合并进阶时给出 3 件装备三选一。
 - `band_egir` / `band_kjerag2` / 其余 `auto_chess_effect_replace`：按 6/9 名盟约替换效果。
 - `band_iberia`、`band_rich`、`band_protect`、`band_mess`、`band_jenga`：无 buff key，需要按 bandId 的主动/解锁逻辑。
 
-### B. ACTIVE 无目标 / 经济
-- `band_price` `skill_next_equip_buy_discount`：下一件装备 -1。
-- `band_fund` `skill_gain_gold_cd_by_gold`：随机 1–6 资金，冷却等于金额。
-- `band_support` `skill_refresh_shop_high_tier`：刷新必出高一阶。
-- `band_high` `skill_refresh_shop_board_char`：特殊刷新优先场上干员。
-- `band_equipment` `skill_change_shop_equip` + `promote_equip_extra_award`。
-- `band_yan` `skill_refresh_shop_bond_char`；`band_closeout` `skill_cost_round_grow_reset_on_use`+`skill_gain_all_shop_char`；
-- `band_kazimier` `skill_gain_bond_char`+`skill_cost_round_grow_reset_on_use`；`band_lethania` `skill_cost_grow_per_use`；`band_ursus` `skill_cost_reduce_on_buy_bond`。
-
-### C. ACTIVE 选干员
+### B. ACTIVE 选干员
 - `band_survive` / `band_evolve` / `band_shield` / `band_breakaway`：`skill_mark_char_inst_tag`（按 `eff_band12` 等 tag 区分）。
 - `band_upgrade` `skill_upgrade_char`；`band_copy` `skill_copy_char_with_equip`；
 - `band_gain` `skill_trigger_garr_event`；`band_prepfin` `skill_garr_event_extra_exec`；
 - `band_limit` `skill_layer_limit_grow_round`；`band_sell` `skill_sell_char_bond_layer`；
 - `band_yan2` `skill_remove_gain_bond_char`；`band_iberia` 选调度中心干员替换。
 
-### D. ACTIVE 地块 / 商店格
+### C. ACTIVE 地块 / 商店格
 - `band_dance` `skill_mark_pos_grow_use_cnt`（地块恐惧）。
 - `band_treasure` `skill_add_pos_effect_enemy`（模拟宝藏）。
 - `band_transfer` `skill_transform_char_same_tier`（商店格变同阶随机）。
@@ -72,8 +86,9 @@
 
 ## 批次
 
-1. **B1（本次）**：smith / kjerag / siracusa / victoria / substitute。
-2. **B2**：`g.bandSkill` intent + 玩家技能状态 + 无目标经济类（price/fund/support/high/yan/closeout）。
-3. **B3**：选干员类（mark tag / upgrade / copy / gain / prepfin / limit / sell / yan2）。
+1. ~~**B1**~~（完成，`415dde1f7`）：smith / kjerag / siracusa / victoria / substitute。
+2. ~~**B2**~~（完成）：`g.bandSkill` intent + 玩家技能状态 + 无目标经济类（price / fund / support / high / yan /
+   equipment / closeout / kazimier / lethania / ursus）；测试 `test/versions-bands-skills.test.js`。
+3. **B3（下一步）**：选干员类（mark tag / upgrade / copy / gain / prepfin / limit / sell / yan2）。
 4. **B4**：地块与商店格（dance / treasure / transfer / pudd）。
 5. **B5**：`auto_chess_effect_replace` 的 6/9 名替换与无 key band（iberia/rich/protect/mess/jenga）。
