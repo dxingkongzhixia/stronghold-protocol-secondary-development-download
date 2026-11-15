@@ -88,7 +88,8 @@ export class MatchIntents {
     if (sk.availType === 'COOLDOWN' && this.round < (st.cooldownUntil || 0)) return fail(ERR.BAD_TARGET, 'the skill is cooling down');
     const cap = Math.max(1, Number.isInteger(sk.availCount) && sk.availCount > 0 ? sk.availCount : 1);
     if (sk.availType === 'ALL_LIMIT' && (st.total || 0) >= cap) return fail(ERR.BAD_TARGET, 'the skill has no uses left');
-    if (sk.availType !== 'ALL_LIMIT' && sk.availType !== 'COOLDOWN' && (st.uses || 0) >= cap) return fail(ERR.BAD_TARGET, 'the skill has no uses left');
+    // DEFAULT ("可再次使用"): no per-round cap — the funds and the handler decide (the growing cost is the limit)
+    if (sk.availType !== 'ALL_LIMIT' && sk.availType !== 'COOLDOWN' && sk.availType !== 'DEFAULT' && (st.uses || 0) >= cap) return fail(ERR.BAD_TARGET, 'the skill has no uses left');
     const target = msg.target ?? null;
     const bad = this.bandSkillTargetError(ps, sk, target);
     if (bad) return fail(bad, 'not a valid target for this strategy');

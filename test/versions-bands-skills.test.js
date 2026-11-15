@@ -628,3 +628,13 @@ test('沙洲梦魇: every 3 萨尔贡 gained earns -3 on the current level upgra
   for (let i = 0; i < 3; i++) f.m.dispatch(f.ps, 'onGain', { piece: { kind: 'chess', id: 'base_sargon' }, kind: 'chess' });
   assert.deepEqual(f.calls.discounts, [3, 3], 'every 3 gains');
 });
+
+test('DEFAULT ("可再次使用"): no per-round cap, only the funds and the handler limit it', () => {
+  const { m, ps, calls } = fakeMatch('band_kazimier', { funds: 12 });
+  calls.chessId = 'base_kazimier';
+  assert.deepEqual(m.useBandSkill(ps, {}), OK);
+  assert.deepEqual(m.useBandSkill(ps, {}), OK, 'the same round, again');
+  assert.equal(ps.funds, 0);
+  assert.equal(ps.bandSkill.uses, 2);
+  assert.equal(m.useBandSkill(ps, {}).error, 'NO_FUNDS', 'the cost is the limit');
+});
