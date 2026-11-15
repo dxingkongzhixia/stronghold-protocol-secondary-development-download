@@ -16,6 +16,8 @@ test('规程 selects its theme; the default 盟约 data selects none', () => {
   const theme = uiThemeForVersion('act3autochess@V3_1');
   assert.equal(theme.id, 'act3autochess');
   assert.ok(existsSync(path.join(ROOT, 'public', theme.art.replace(/^\//, ''))), 'the key visual is in public/');
+  assert.ok(existsSync(path.join(ROOT, 'public', theme.entryArt.replace(/^\//, ''))), 'the briefing entry art is in public/');
+  assert.ok(existsSync(path.join(ROOT, 'public', theme.logo.replace(/^\//, ''))), 'the season emblem is in public/');
   assert.equal(uiThemeAttr('act3autochess@V3_1'), 'act3autochess');
   assert.equal(uiThemeAttr('act2autochess'), '');
   assert.equal(uiThemeAttr(null), '');

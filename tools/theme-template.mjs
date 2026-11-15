@@ -27,8 +27,10 @@ export function checkThemes(root = ROOT) {
   for (const theme of Object.values(UI_THEMES)) {
     if (!theme || typeof theme !== 'object' || typeof theme.id !== 'string') { problems.push('a theme has no id'); continue; }
     if (!versionById(theme.version)) problems.push(`${theme.id}: version ${theme.version} is not registered`);
-    const art = typeof theme.art === 'string' ? theme.art.replace(/^\//, '') : '';
-    if (!art || !existsSync(path.join(root, 'public', art))) problems.push(`${theme.id}: art ${theme.art} is missing`);
+    for (const key of ['art', 'entryArt', 'logo']) {
+      const p = typeof theme[key] === 'string' ? theme[key].replace(/^\//, '') : '';
+      if (!p || !existsSync(path.join(root, 'public', p))) problems.push(`${theme.id}: ${key} ${theme[key] ?? '(missing)'} is missing`);
+    }
     if (css && !css.includes(`html[data-ui-theme="${theme.id}"]`)) problems.push(`${theme.id}: public/css/ui-theme.css has no html[data-ui-theme="${theme.id}"] block`);
   }
   return problems;
