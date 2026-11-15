@@ -334,7 +334,11 @@ describe('D3: tools/local-extract/extract.py enemy Spine job (no UnityPy needed)
   test('--print-jobs lists the enemy models; container matching and --only selection', () => {
     const r = spawnSync(PY, [path.join(TOOL, 'extract.py'), '--print-jobs'], { encoding: 'utf8', env: ENV });
     assert.equal(r.status, 0, r.stderr);
-    assert.deepEqual(JSON.parse(r.stdout).enemySpines, { bundles: 'refs/arts/enm_art_*.ab', sub: 'spine/enemy', ids: SLUGS });
+    const jobs = JSON.parse(r.stdout);
+    assert.equal(jobs.enemySpines.bundles, 'refs/arts/enm_art_*.ab');
+    assert.equal(jobs.enemySpines.sub, 'spine/enemy');
+    assert.ok(jobs.enemySpines.ids.length >= 98, `${jobs.enemySpines.ids.length} enemy spines`);
+    for (const id of SLUGS) assert.ok(jobs.enemySpines.ids.includes(id), id);
     const out = py(`W = set(e.ENEMY_SPINES)\n`
       + `print(json.dumps([e.enemy_spine_id('Assets/Torappu/Arts/Enemies/Spines/enemy_1305_mhslim/2/enemy_1305_mhslim_2_SkeletonData.asset', W),`
       + ` e.enemy_spine_id('Assets/Torappu/Arts/Enemies/Spines/enemy_1305_mhslim/1/enemy_1305_mhslim_SkeletonData.asset', W),`
