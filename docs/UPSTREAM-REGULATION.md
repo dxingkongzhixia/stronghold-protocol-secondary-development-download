@@ -147,7 +147,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩 | 联合半数核心、自选规则、每干员装备容量/招募例外、隐秘核心阈值复核、地图规则、寻宝/top-3、对局修复 |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择已有 | 规程 HUD/简报/装备报告/徽章/自编（P3） |
 | 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
-| golden/测试 | 默认 golden 9/9、规程数据重建与内容测试 | 按版本 golden、12 地图矩阵、UI 套件、CI 配重（P5） |
+| golden/测试 | 默认 golden 6 文件全匹配；规程 golden 264 场景（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 12 地图矩阵、UI 套件、CI 配重（P5） |
 | 冲突面 | 未动 14 条 never-merge 路径 | 逐块适配并保留 fork 特性（P6） |
 
 ## 5. 合并清单
@@ -176,7 +176,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **跨版本套件键控**：`KIT_CHAR_IDS`（145 个 tier kit key → charId）、`TIER_KIT_KEYS_BY_CHAR`、`officialKitKey`（默认数据与插件内容集仍按 chess id；版本数据按 charId，避免复用 id 跑到别人的套件）；规程 310 个 chess 中 3 个同 id 同干员、203 个按 charId 解析，40 名新干员列入 `PENDING_KIT_CHARS`。测试 `test/versions-keying.test.js`；默认 golden 全量不变
 - [x] **一个可玩难度的对局验证**：把规程数据集安装为进程数据后，1 人 + 3 AI 走完 INFO 确认、选队/招募、准备、一场战斗、结算，到达第 2 回合准备；0 引擎错误、invariants 通过。测试 `test/versions-match.test.js`
 - [x] **40 名规程干员套件**：按 `PENDING_KIT_CHARS` 逐批编写并移除（现为空）。batch 1 极光 / 安哲拉 / 伊桑 / 星源（移植 mainline），batch 2–9 本树实现：慕斯、灰喉、拜松、卡达、摆渡人、夏栎、霜叶、烈夏、真理、铸铁、陨星、杰克、蓝毒、星极、海沫、吉星、复奏、奥尔加、阿米娅、青枳、芬、奥斯汀、䌷、车尔尼、暴躁铁皮、云迹、乌啾、风絮、水灯心、罗比菈塔、褐果、折光、Miss.Christine、渡桥、旅骨、乌有。测试 `test/content/kits_ver_act3.test.js`（40 套件全部技能手写 + 数值断言）、`test/versions-keying.test.js`
-- [x] **新盟约（batch 1）**：`bonds/regulation.js` 的「聚合」与「伊比利亚」——聚合按成员攻击范围每秒回血/元素并给 3 人减伤；伊比利亚每次伤害叠 10 层 10 秒法术 DoT，6 人翻倍、减速、20% 弹射 300% 攻击力。测试 `test/versions-bonds.test.js`
+- [x] **新盟约（batch 1）**：`bonds/regulation.js` 的「聚合」与「伊比利亚」——聚合按成员攻击范围每秒回血/元素并给 3 人减伤；伊比利亚每次伤害叠 10 层 10 秒法术 DoT，6 人翻倍、减速、20% 弹射 300% 攻击力。伊比利亚自己的 DoT/弹射（`bond:iberia` tag）不再触发本盟约（曾导致 6 人弹射递归到 hook 深度上限，规程 golden `coop2-HARD-4` 记录到该缺陷）。测试 `test/versions-bonds.test.js`
 - [x] **新盟约（batch 2）**：「乌萨斯」成员 ATK/HP 加成、击杀叠 2（6 人 4）层、6 人受伤按比例转 10 秒生命流失与阻挡期间每秒法术伤害；「莱塔尼亚」成员与召唤物 ATK 加成、敌人死亡召唤「小节」（6 人上限 20 + 30% 改为「乐部」并给成员攻速 +20）、我方干员死亡额外召唤。测试同 `test/versions-bonds.test.js`（4 个新盟约共 4 项）
 - [x] **boss_11–17**：`enemy_9029_acfnc` / `_2`（械：攻击召唤量变之械、20% 血召唤冲击之械）、`enemy_9035_acspider` / `_2`（蛛：每 25% 血获得 50% 双闪+迷彩、50% 血酸雨、周期缚网）、`enemy_9037_aceel` / `_2`（电：攻击附带神经损伤、未阻挡护盾、被阻挡消耗并强化下一击、离子环波）、`enemy_2124_dyjsfg`（矩兽：阻挡/停止时 35% 减伤否则 90%、2.5s 践踏、40% 血过载、死亡清场+全体物理伤害）。测试 `test/versions-bosses.test.js`；部分细节（跳跃/方向减伤/天气雷击）为近似
 - [x] **程序化敌人覆盖**：`enemies/procedural.js` 对无手写套件的版本敌人生效（仅版本数据；默认数据/插件内容集保持原查找，golden 不变）。96 个规程新增敌人：**23** 个按天赋签名复用已有套件、**40** 个由通用天赋组处理器覆盖（减伤/增攻/闪避/流血中毒/死亡爆炸/践踏/巨体/被动/暴击/首击/射击叠层/减速/束缚/召唤/过载/移速/光环/吸血）、**7** 个 boss 已单独实现；合计 **70/96**。测试 `test/versions-enemies-procedural.test.js`（全部 96 个生成+运行 0 错误，覆盖集合钉住）
@@ -219,8 +219,8 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [ ] `data/assets.json` 的 `spineLocal`/模型清单更新；中继发布与手机端首包评估
 
 ### P5 golden / 测试 / CI（3–5 人日）
-- [ ] 按版本分目录 golden（`test/golden/<slug>/*.json`）+ `tools/golden.mjs --version`；默认 6 文件不动
-- [ ] 规程 golden 在**我们树**上生成（引擎/干员/伤害公式与主线不同，不能复制）；归因 = 只回退本批 → 零 diff
+- [x] 按版本分目录 golden（`test/golden/act3autochess-v3_1/*.json`）+ `tools/golden.mjs --version <id>` + `tools/versions/runtime.mjs`；默认 6 文件不动（`npm run golden` 仍逐项匹配）
+- [x] 规程 golden 在**我们树**上生成：264 个场景（roster 62 / bonds 52 / fields 34 / matches 21 / standins 13 / diy 82），0 引擎错误；`test/golden-versions.test.js` 校验文件并重算 fast 子集
 - [ ] 12 张地图 × 模式矩阵场景；`test/ui` 规程套件；`ci-shards.json` 重新配重
 
 ### P6 冲突适配（3–5 人日）
