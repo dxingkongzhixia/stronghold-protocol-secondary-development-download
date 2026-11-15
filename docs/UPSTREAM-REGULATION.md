@@ -145,7 +145,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
 | 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游 | `backup.tmplId` 完整形态（pin 缺 `char_1037_amiya3`）、`spineLocal`/tuning 隐藏输入 |
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B6、个人核心盟约二选一 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩 | `band_random` 技能选择、联合半数核心、自选规则、每干员装备容量/招募例外、隐秘核心阈值复核、地图规则、指令 UI、寻宝/top-3、对局修复 |
-| UI | 版本下拉、加载与 20 级服务端选择已有 | 规程 HUD/简报/装备报告/徽章/自编/等级选择器 UI（P3） |
+| UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一已有 | 规程 HUD/简报/装备报告/徽章/自编（P3） |
 | 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
 | golden/测试 | 默认 golden 9/9、规程数据重建与内容测试 | 按版本 golden、12 地图矩阵、UI 套件、CI 配重（P5） |
 | 冲突面 | 未动 14 条 never-merge 路径 | 逐块适配并保留 fork 特性（P6） |
@@ -200,7 +200,8 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 ### P3 UI / 主题（8–12 人日）
 - [x] 规程等级 1–20 的**服务端选择**：`room.setMode { modeId }` 接受版本自己的模式（`config.modes`，如 `mode_single_7`），同步房间难度与 `content.modeId`；测试 `test/lobby-versions.test.js`
-- [ ] 规程 HUD 布局、双栏简报、装备报告 tab、领袖战徽章、选择自编、等级/版本选择器 UI
+- [x] 房间**等级选择器 UI**（`screens/room.js` VersionLevelPicker，含 极速模拟 + 等级1–20 / 联机四档）与简报**核心盟约二选一 UI**（`screens/briefing.js` CoreBondChoice，`g.coreBond`）；测试 `test/ui/room-levels.test.js`
+- [ ] 规程 HUD 布局、双栏简报、装备报告 tab、领袖战徽章、选择自编
 - [ ] 官方主题包 + 主题提取器（`shared/uiTheme.js`、`public/js/uiTheme.js`、`public/css/ui-theme.css`、`tools/theme-template.mjs`）
 - [ ] 每版本音乐（4 首）与结算提示
 - [ ] 3D 简报图：与 §0 的 `board3d` 冲突，**降级为静态渲染图**（先不做实时）
