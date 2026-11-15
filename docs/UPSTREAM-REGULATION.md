@@ -159,7 +159,7 @@
 ### P2 规则与内容（8–12 人日）
 - [x] **跨版本套件键控**：`KIT_CHAR_IDS`（145 个 tier kit key → charId）、`TIER_KIT_KEYS_BY_CHAR`、`officialKitKey`（默认数据与插件内容集仍按 chess id；版本数据按 charId，避免复用 id 跑到别人的套件）；规程 310 个 chess 中 3 个同 id 同干员、203 个按 charId 解析，40 名新干员列入 `PENDING_KIT_CHARS`。测试 `test/versions-keying.test.js`；默认 golden 全量不变
 - [x] **一个可玩难度的对局验证**：把规程数据集安装为进程数据后，1 人 + 3 AI 走完 INFO 确认、选队/招募、准备、一场战斗、结算，到达第 2 回合准备；0 引擎错误、invariants 通过。测试 `test/versions-match.test.js`
-- [ ] **37 个 kits（batch1–4）**：按 `PENDING_KIT_CHARS` 的规程干员逐批编写；每批把已完成的 charId 从列表移除并补测试。**已完成 16/40**：batch 1 极光 / 安哲拉 / 伊桑 / 星源（移植 mainline）、batch 2 慕斯 / 灰喉 / 拜松、batch 3 卡达 / 摆渡人 / 夏栎 / 霜叶、batch 4 烈夏 / 真理 / 铸铁 / 陨星 / 杰克；其余 24 名仍在待办
+- [ ] **37 个 kits（batch1–4）**：按 `PENDING_KIT_CHARS` 的规程干员逐批编写；每批把已完成的 charId 从列表移除并补测试。**已完成 20/40**：batch 1 极光 / 安哲拉 / 伊桑 / 星源（移植 mainline）、batch 2 慕斯 / 灰喉 / 拜松、batch 3 卡达 / 摆渡人 / 夏栎 / 霜叶、batch 4 烈夏 / 真理 / 铸铁 / 陨星 / 杰克、batch 5 蓝毒 / 星极 / 海沫 / 吉星；其余 20 名仍在待办
 - [ ] **6 个模块**：`regulation-bosses.js`、`bonds/regulation.js`、`bonds/lethania.js`、`enemies/regulation.js`、`garrisons/regulation.js`、`bands/commands.js`
 - [ ] 模式 26 条：入门/标准/险境/绝境/终极/极速/规程等级 1–20（`AC-*`），14/9 回合、60 s+ 决策、特殊准备回合 `spRounds [3,9,11]`
 - [ ] 核心盟约二选一（个人）/ 禁用半数（联合）；自选 Ⅴ/Ⅵ 各 0–2；自选无特质、按阵营分盟约
