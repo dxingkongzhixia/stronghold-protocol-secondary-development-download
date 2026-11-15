@@ -161,7 +161,7 @@
 - [x] **一个可玩难度的对局验证**：把规程数据集安装为进程数据后，1 人 + 3 AI 走完 INFO 确认、选队/招募、准备、一场战斗、结算，到达第 2 回合准备；0 引擎错误、invariants 通过。测试 `test/versions-match.test.js`
 - [x] **40 名规程干员套件**：按 `PENDING_KIT_CHARS` 逐批编写并移除（现为空）。batch 1 极光 / 安哲拉 / 伊桑 / 星源（移植 mainline），batch 2–9 本树实现：慕斯、灰喉、拜松、卡达、摆渡人、夏栎、霜叶、烈夏、真理、铸铁、陨星、杰克、蓝毒、星极、海沫、吉星、复奏、奥尔加、阿米娅、青枳、芬、奥斯汀、䌷、车尔尼、暴躁铁皮、云迹、乌啾、风絮、水灯心、罗比菈塔、褐果、折光、Miss.Christine、渡桥、旅骨、乌有。测试 `test/content/kits_ver_act3.test.js`（40 套件全部技能手写 + 数值断言）、`test/versions-keying.test.js`
 - [x] **新盟约（batch 1）**：`bonds/regulation.js` 的「聚合」与「伊比利亚」——聚合按成员攻击范围每秒回血/元素并给 3 人减伤；伊比利亚每次伤害叠 10 层 10 秒法术 DoT，6 人翻倍、减速、20% 弹射 300% 攻击力。测试 `test/versions-bonds.test.js`
-- [ ] **其余新盟约**：`ursusShip`（击杀叠层 + 6 人受伤转流失/阻挡 DoT）与 `lethaniaShip`（攻击力 + 击杀召唤小节/乐部）
+- [x] **新盟约（batch 2）**：「乌萨斯」成员 ATK/HP 加成、击杀叠 2（6 人 4）层、6 人受伤按比例转 10 秒生命流失与阻挡期间每秒法术伤害；「莱塔尼亚」成员与召唤物 ATK 加成、敌人死亡召唤「小节」（6 人上限 20 + 30% 改为「乐部」并给成员攻速 +20）、我方干员死亡额外召唤。测试同 `test/versions-bonds.test.js`（4 个新盟约共 4 项）
 - [ ] **6 个模块**：`regulation-bosses.js`（boss_11–17）、`enemies/regulation.js`（规程新增 96 个敌人）、`garrisons/regulation.js`（新增 141 个）、`bands/commands.js`（新增 54 个 band effect）。规程相对默认数据的新增面已盘点：bonds +4 / bands +54 / garrisons +141 / enemies +96 / bosses +7
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
 - [ ] 核心盟约二选一（个人）/ 禁用半数（联合）；自选 Ⅴ/Ⅵ 各 0–2；自选无特质、按阵营分盟约
