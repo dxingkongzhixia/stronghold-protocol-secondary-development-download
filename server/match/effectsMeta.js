@@ -56,7 +56,8 @@ import { deriveSeed } from '../sim/rng.js';
 export const HOOKS = Object.freeze([
   'onMatchStart', 'onRoundStart', 'onIncome', 'onPrepStart', 'onPrepEnd', 'onGain', 'onSold', 'onRefresh', 'onPrice', 'onBuy',
   'onSpend', 'onMerge', 'onLevelUp', 'onBattleStart', 'onBattleResult', 'onRoundEnd', 'onMatchEnd', 'onChoicePick', 'onEquip', 'onArt',
-  'onDestroy', 'onLayers', 'onActiveBonds', 'onPhase', 'onCustomPhaseStart', 'onCustomPhaseEnd', 'checkEnd',
+  'onDestroy', 'onLayers', 'onActiveBonds', 'onPhase', 'onCustomPhaseStart', 'onCustomPhaseEnd',
+  'onBandSkill', 'onBandSkillPrice', 'onBandSkillUsed', 'checkEnd',
 ]);
 /** Non-hook members a handler object may carry. */
 const HANDLER_EXTRAS = new Set(['run', 'garrisonHooks']);
@@ -650,6 +651,8 @@ export function makeCtx(m, ps, source, hook, ev = null, preview = null) {
     addPendingFunds: (n) => { const v = finiteInt(n); if (v > 0) { ps.pendingFunds += v; ps.dirty(); } return v > 0 ? v : 0; },
     spendFunds: (n) => { const v = finiteInt(n); if (!ps.spend(v)) return false; ps._afterSpend(v, 'effect'); return true; },
     grantFreeRefresh: (n = 1) => { const v = finiteInt(n); if (v > 0) { ps.shop.freeRefreshes += v; ps.dirty(); } return ps.shop.freeRefreshes; },
+    /** Reroll the shop now, free (a band skill's own 刷新), dispatching onRefresh like a manual refresh. */
+    refreshShop: () => ps.refresh({ free: true }).ok === true,
 
     // ---- prices (onPrice only; the same as writing ev.price)
     modifyPrice: (delta) => { if (hook === 'onPrice' && ev && Number.isFinite(delta)) ev.price = Math.max(0, (Number(ev.price) || 0) + delta); return ev ? ev.price : null; },

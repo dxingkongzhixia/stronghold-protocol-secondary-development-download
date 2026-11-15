@@ -439,6 +439,149 @@ K.sell_char_swap_shop_char = (_ps) => ({
   },
 });
 
+// ---- act3 active band skills (g.bandSkill → onBandSkill / onBandSkillPrice) ------------------------------------
+// The skill's availability, target type and base cost are the band record's official `skill` metadata (the intent
+// checks them); a handler that acted sets `ev.done`, and the one COOLDOWN skill names its cooldown in rounds
+// (`ev.cooldown`). `onBandSkillPrice` moves the price only (it must have no side effects).
+
+/** 内部货源: the next `times` equipment purchases cost `count` less (never below 0). */
+K.skill_next_equip_buy_discount = (ps) => ({
+  onBandSkill(ctx, ev) {
+    ctx.incCounter('band:price:discounts', timesOf(ps[0].times, 1));
+    ev.done = true;
+  },
+  onPrice(ctx, ev) {
+    if (ev.kind !== 'item' || ctx.counter('band:price:discounts') <= 0) return;
+    ctx.modifyPrice(-Math.max(1, int(ps[0].count, 1)));
+  },
+  // the discount is used up by a purchase, not by a price the screen only showed (priceOf dispatches onPrice too)
+  onBuy(ctx, ev) {
+    if (ev.kind === 'item' && ctx.counter('band:price:discounts') > 0) ctx.incCounter('band:price:discounts', -1);
+  },
+});
+
+/** 私募基金: `mingold`..`maxgold` funds at random; the cooldown is the amount gained. */
+K.skill_gain_gold_cd_by_gold = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const lo = Math.max(0, int(ps[0].mingold, 1));
+    const hi = Math.max(lo, int(ps[0].maxgold, 6));
+    const n = lo + ctx.rng.int(hi - lo + 1);
+    if (n > 0) ctx.addFunds(n, 'band');
+    ev.cooldown = Math.max(1, n);
+    ev.done = true;
+  },
+});
+
+/** 人才锁定: refresh, then `count` chess slots hold an operator one tier above the shop level (capped at the max level). */
+K.skill_refresh_shop_high_tier = (ps) => ({
+  onBandSkill(ctx, ev) {
+    if (!ctx.refreshShop()) return;
+    const slots = chessSlots(ctx);
+    if (!slots.length) { ev.done = true; return; }
+    const tier = Math.min(ctx.gd.maxShopLevel, Math.max(1, ctx.shopLevel()) + Math.max(1, int(ps[0].lv_up, 1)));
+    for (const i of ctx.rng.shuffle(slots.slice()).slice(0, timesOf(ps[0].count, 1))) {
+      const id = ctx.rollChess({ tier }) || ctx.rollChess({ maxTier: tier });
+      if (id) ctx.setShopSlot(i, { kind: 'chess', id });
+    }
+    ev.done = true;
+  },
+});
+
+/** 专享情报: refresh, then a slot holds a copy of one of the player's own deployed operators. */
+K.skill_refresh_shop_board_char = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    if (!ctx.refreshShop()) return;
+    const slots = chessSlots(ctx);
+    const board = [...new Set(ctx.board().filter((v) => v && v.kind === 'chess').map((v) => ctx.gd.baseIdOf(v.id)))];
+    if (slots.length && board.length) ctx.setShopSlot(ctx.rng.pick(slots), { kind: 'chess', id: ctx.rng.pick(board) });
+    ev.done = true;
+  },
+});
+
+/** 广交豪杰: refresh, then `count` chess slots hold a `bond` operator (tier ≤ shop level). */
+K.skill_refresh_shop_bond_char = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const bond = ps[0].bond;
+    if (!ctx.refreshShop()) return;
+    let slots = chessSlots(ctx);
+    for (let k = 0; k < timesOf(ps[0].count, 1) && slots.length; k++) {
+      const id = rollBond(ctx, bond);
+      if (!id) break;
+      const free = slots.filter((i) => !hasBond(ctx, ctx.shopSlots()[i].id, bond));
+      const i = ctx.rng.pick(free.length ? free : slots);
+      ctx.setShopSlot(i, { kind: 'chess', id });
+      slots = slots.filter((x) => x !== i);
+    }
+    ev.done = true;
+  },
+});
+
+/** 骑士团长 / 流动乐章 / 无惧风雪: `count` `bond` operators (tier ≤ shop level). */
+K.skill_gain_bond_char = (ps) => ({
+  onBandSkill(ctx, ev) {
+    for (let k = 0; k < timesOf(ps[0].count, 1); k++) {
+      const id = rollBond(ctx, ps[0].bond);
+      if (id && ctx.grantChess(id, { source: 'band' })) ev.done = true;
+    }
+  },
+});
+
+/** 打包速递: every operator the shop is showing, for free (its slot empties). */
+K.skill_gain_all_shop_char = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    for (const i of chessSlots(ctx)) {
+      if (!ctx.grantChess(ctx.shopSlots()[i].id, { source: 'band' })) continue;
+      ctx.setShopSlot(i, null);
+      ev.done = true;
+    }
+  },
+});
+
+/** 精巧设计: one new equipment replaces a random item slot of the shop. */
+K.skill_change_shop_equip = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    const items = ctx.shopSlots().map((s, i) => (s && s.kind === 'item' && !s.sold ? i : -1)).filter((i) => i >= 0);
+    if (!items.length) return;
+    const id = ctx.rollItem({ maxTier: Math.max(1, ctx.shopLevel()) });
+    if (!id) return;
+    ctx.setShopSlot(ctx.rng.pick(items), { kind: 'item', id });
+    ev.done = true;
+  },
+});
+
+/** 打包速递 / 骑士团长: the cost falls by `delta` at every prep end and is reset by a use ("使用后指令重置"). */
+K.skill_cost_round_grow_reset_on_use = (ps, bandId) => {
+  const key = `band:${bandId}:cost`;
+  return {
+    onBandSkillPrice(ctx, ev) { ev.cost = Math.max(0, int(ev.cost, 0) + ctx.counter(key)); },
+    onPrepEnd(ctx) { ctx.incCounter(key, -Math.max(1, int(ps[0].delta, 1))); },
+    onBandSkillUsed(ctx) { ctx.setCounter(key, 0); },
+  };
+};
+
+/** 流动乐章: the cost rises by `count` for good after every use. */
+K.skill_cost_grow_per_use = (ps, bandId) => {
+  const key = `band:${bandId}:cost`;
+  return {
+    onBandSkillPrice(ctx, ev) { ev.cost = Math.max(0, int(ev.cost, 0) + ctx.counter(key)); },
+    onBandSkillUsed(ctx) { ctx.incCounter(key, Math.max(1, int(ps[0].count, 1))); },
+  };
+};
+
+/** 无惧风雪: every `bond` purchase lowers the cost by `count`, until a use resets it. */
+K.skill_cost_reduce_on_buy_bond = (ps, bandId) => {
+  const key = `band:${bandId}:cost`;
+  return {
+    onBandSkillPrice(ctx, ev) { ev.cost = Math.max(0, int(ev.cost, 0) - ctx.counter(key)); },
+    onBuy(ctx, ev) {
+      if (ev.kind === 'chess' && hasBond(ctx, ev.slot.id, ps[0].bond)) {
+        ctx.incCounter(key, Math.max(1, int(ps[0].count, 1)));
+      }
+    },
+    onBandSkillUsed(ctx) { ctx.setCounter(key, 0); },
+  };
+};
+
 K.preparation_start_add_special_goods_every_n_round = (ps) => ({
   onPrepStart(ctx) {
     const p = ps[0];

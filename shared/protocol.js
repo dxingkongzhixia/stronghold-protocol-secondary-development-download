@@ -601,6 +601,9 @@ export const C2S = {
   // the strategy highlighted in the draft screen (user playtest #4 item 4): a turn that runs out takes it while it is
   // free (Match.timeoutBand); absent / null clears it
   'g.bandFocus': { bandId: nullable(isId), $optional: ['bandId'] },
+  // an active band skill (another official version's strategy): the target is a chess uid, a shop slot or a map tile
+  // (the skill record's targetType decides which); absent for NO_TARGET skills
+  'g.bandSkill': { target: (v) => v == null || (isPlain(v) && isId(v.kind) && Object.keys(v).length <= 7), $optional: ['target'] },
   'g.buy': { slot: (v) => isInt(v, 0, 15) },
   'g.refresh': {},
   'g.freeze': {},

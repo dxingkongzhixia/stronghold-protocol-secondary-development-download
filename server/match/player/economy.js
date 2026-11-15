@@ -201,13 +201,16 @@ export class PlayerEconomy {
     return OK;
   }
 
-  refresh() {
+  /**
+   * Reroll the shop. `free`: a band skill's own refresh — costs nothing and does not spend a stored free refresh either.
+   */
+  refresh({ free = false } = {}) {
     const g = this._gate(); if (g) return g;
-    const free = this.shop.freeRefreshes > 0;
-    const price = free ? 0 : this.gd.refreshPrice;
-    if (!free && this.funds < price) return fail(ERR.NO_FUNDS);
-    if (free) this.shop.freeRefreshes--;
-    else this.spend(price);
+    const stored = !free && this.shop.freeRefreshes > 0;
+    const price = free || stored ? 0 : this.gd.refreshPrice;
+    if (!free && !stored && this.funds < price) return fail(ERR.NO_FUNDS);
+    if (stored) this.shop.freeRefreshes--;
+    else if (!free) this.spend(price);
     this.rollShop({ keepFrozen: false });
     this.stats.refreshes++;
     this.round.refreshes++;

@@ -204,6 +204,11 @@ export class PlayerState {
     this.diyBanned = Object.freeze([]);
     if (!this.isBot && seat.diy) this.setDiy(seat.diy, { kitted: this.m.diyKitted });
     this.shop = { level: 1, upgradePrice: this.gd.upgradeBase(1) ?? 0, slots: [], frozen: false, freeRefreshes: 0 };
+    /**
+     * The active strategy's skill (another official version's band skill): how many times it was used this round / in
+     * the match, and the round its cooldown ends. `m.round` resets the per-round count lazily.
+     */
+    this.bandSkill = { uses: 0, total: 0, round: 0, cooldownUntil: 0 };
     /** reward offers queue (merge rewards, special refreshes): { tier, source, label, slots: [{ kind, id, price, sold }] } */
     this.offers = [];
     /** @type {Array<any>} */

@@ -25,6 +25,8 @@ export class MatchIntents {
       case 'g.bandSkip': return this.skipBand(ps);
       // the strategy highlighted in the draft screen (what a timed-out turn takes, timeoutBand)
       case 'g.bandFocus': return this.bandFocus(ps, msg.bandId ?? null);
+      // an active strategy skill (another official version's band): target a chess / shop slot / map tile or nothing
+      case 'g.bandSkill': return this.useBandSkill(ps, msg);
       case 'g.buy': return ps.buy(msg.slot);
       case 'g.refresh': return ps.refresh();
       case 'g.freeze': return ps.freeze();
@@ -60,6 +62,70 @@ export class MatchIntents {
       case 'b.rehearsalResult': this._onRehearsalResult(ps, msg); return OK;
       default: return fail(ERR.BAD_MSG);
     }
+  }
+
+  /**
+   * An active strategy skill (`band.skill` of another official version; `g.bandSkill`): availability, target type and
+   * cost come from the band record's official metadata; the band handler's `onBandSkill` does the work and may name a
+   * cooldown (rounds). Only in PREP.
+   * @param {import('../PlayerState.js').PlayerState} ps
+   * @param {{ target?: { kind: string, uid?: number, slot?: number, row?: number, col?: number } }} msg
+   */
+  useBandSkill(ps, msg) {
+    if (this.phase !== PHASE.PREP) return fail(ERR.WRONG_PHASE);
+    if (ps.ready) return fail(ERR.WRONG_PHASE, 'ready');
+    const band = this.gd.band(ps.bandId);
+    const sk = band && band.skill;
+    if (!sk || sk.type !== 'ACTIVE') return fail(ERR.BAD_TARGET, 'this strategy has no active skill');
+    const st = ps.bandSkill || (ps.bandSkill = { uses: 0, total: 0, round: 0, cooldownUntil: 0 });
+    if (st.round !== this.round) { st.round = this.round; st.uses = 0; }
+    if (sk.availType === 'COOLDOWN' && this.round < (st.cooldownUntil || 0)) return fail(ERR.BAD_TARGET, 'the skill is cooling down');
+    const cap = Math.max(1, Number.isInteger(sk.availCount) && sk.availCount > 0 ? sk.availCount : 1);
+    if (sk.availType === 'ALL_LIMIT' && (st.total || 0) >= cap) return fail(ERR.BAD_TARGET, 'the skill has no uses left');
+    if (sk.availType !== 'ALL_LIMIT' && sk.availType !== 'COOLDOWN' && (st.uses || 0) >= cap) return fail(ERR.BAD_TARGET, 'the skill has no uses left');
+    const target = msg.target ?? null;
+    const bad = this.bandSkillTargetError(ps, sk, target);
+    if (bad) return fail(bad, 'not a valid target for this strategy');
+    // the price can move (a skill whose cost grows with the rounds / falls with bond purchases); that hook is read-only
+    const priced = { cost: Math.max(0, Math.round(Number(sk.cost) || 0)) };
+    this.dispatch(ps, 'onBandSkillPrice', priced);
+    const cost = Math.max(0, Math.round(Number(priced.cost) || 0));
+    if (cost > 0 && ps.funds < cost) return fail(ERR.NO_FUNDS);
+    // the handler does the work and sets `ev.done` (the only sign it actually acted: an empty pool / a full hand fails)
+    const ev = { target, skill: sk, band, cost, cooldown: 0, done: false };
+    this.dispatch(ps, 'onBandSkill', ev);
+    if (!ev.done) return fail(ERR.BAD_TARGET, 'the strategy has nothing to do with that target');
+    if (cost > 0) { ps.spend(cost); ps._afterSpend(cost, 'effect'); }
+    st.uses = (st.uses || 0) + 1;
+    st.total = (st.total || 0) + 1;
+    if (sk.availType === 'COOLDOWN') st.cooldownUntil = this.round + Math.max(1, Math.round(Number(ev.cooldown) || 1));
+    // bookkeeping that only a successful use does (a cost that grows / resets): after the charge, never on a failure
+    this.dispatch(ps, 'onBandSkillUsed', ev);
+    ps.dirty();
+    this.markPublic();
+    return OK;
+  }
+
+  /** The ERR code a band skill target fails, or null. @param {import('../PlayerState.js').PlayerState} ps */
+  bandSkillTargetError(ps, sk, target) {
+    const kind = sk.targetType;
+    if (kind === 'NO_TARGET' || kind == null) return target ? ERR.BAD_TARGET : null;
+    if (!target || typeof target !== 'object') return ERR.BAD_TARGET;
+    if (kind === 'COMMON_CHESS') {
+      if (target.kind !== 'chess' || !Number.isInteger(target.uid)) return ERR.BAD_TARGET;
+      const loc = ps.find(target.uid);
+      return loc && loc.piece && loc.piece.kind === 'chess' ? null : ERR.BAD_TARGET;
+    }
+    if (kind === 'SHOP_SLOT') {
+      if (!Number.isInteger(target.slot)) return ERR.BAD_TARGET;
+      const slot = ps.shop.slots[target.slot];
+      return slot && !slot.sold ? null : ERR.BAD_TARGET;
+    }
+    if (kind === 'MAP_TILE') {
+      return Number.isInteger(target.row) && Number.isInteger(target.col)
+        && target.row >= 0 && target.row < GEO.ROWS && target.col >= 0 && target.col < GEO.COLS ? null : ERR.BAD_TARGET;
+    }
+    return ERR.BAD_TARGET;
   }
 
   /**
