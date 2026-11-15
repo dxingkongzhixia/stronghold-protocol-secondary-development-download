@@ -184,6 +184,9 @@ export const VERSION_KIT_FILES = Object.freeze([
   'ver-cuttle.js',
   'ver-ethan.js',
   'ver-halo.js',
+  'ver-frncat.js',
+  'ver-swllow.js',
+  'ver-bison.js',
 ]);
 
 /**
@@ -355,18 +358,15 @@ export const PENDING_KIT_CHARS = Object.freeze([
   'char_002_amiya',
   'char_1036_fang2',
   'char_129_bluep',
-  'char_185_frncat',
   'char_193_frostl',
   'char_194_leto',
   'char_195_glassb',
   'char_219_meteo',
   'char_274_astesi',
-  'char_325_bison',
   'char_328_cammou',
   'char_333_sidero',
   'char_346_aosta',
   'char_347_jaksel',
-  'char_367_swllow',
   'char_4031_liesel',
   'char_4041_chnut',
   'char_4047_pianst',

@@ -81,3 +81,43 @@ test('a version kit is not offered as a default-version DIY pick (KITTED_CHARS u
   const { KITTED_CHARS } = await import('../../server/sim/content/kits/index.js');
   for (const charId of Object.keys(VERSION_KITS)) assert.equal(KITTED_CHARS.includes(charId), false, charId);
 });
+
+test('batch 1–2 numbers: the stat/damage specs carry the blackboard values', (t) => {
+  setGameData(ACT3);
+  t.after(() => setGameData(null));
+  const ds = new DataSource(ACT3, quiet);
+  const spec = (charId, skillIndex) => {
+    const id = chessId(ACT3, charId, false);
+    const def = ds.getChess(id, { skillIndex });
+    const built = KITS[charId](def.skill.bb, def.raw, def);
+    return { def, spec: built.skills[def.skill.id] };
+  };
+  // 慕斯: S2 ATK / DEF +36 %
+  assert.deepEqual(spec('char_185_frncat', 1).spec.mods, { atkPct: 0.36, defPct: 0.36 });
+  // 灰喉: S1 two shots at 1.1×, S2 ATK +15 % and three shots
+  assert.deepEqual(spec('char_367_swllow', 0).spec.attack, { atkScale: 1.1, hits: 2 });
+  assert.equal(spec('char_367_swllow', 1).spec.mods.atkPct, 0.15);
+  assert.equal(spec('char_367_swllow', 1).spec.attack.hits, 3);
+  // 拜松: S1 DEF +45 %; S2 self DEF +65 %, taunt, and the ally aura is installed for that skill
+  assert.equal(spec('char_325_bison', 0).spec.mods.defPct, 0.45);
+  assert.equal(spec('char_325_bison', 1).spec.mods.defPct, 0.65);
+  assert.equal(spec('char_325_bison', 1).spec.mods.taunt, 1);
+});
+
+test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (t) => {
+  setGameData(ACT3);
+  t.after(() => setGameData(null));
+  const ds = new DataSource(ACT3, quiet);
+  const h = makeBattle({
+    data: ds, seed: 5, timeLimit: 20, autoFinish: false,
+    units: [{ uid: 1, chessId: chessId(ACT3, 'char_185_frncat', false), row: 10, col: 4, carryState: { sp: 999 } }],
+    enemies: [{ key: 'enemy_1000_gopro_2', time: 0, pos: [10, 5] }],
+  });
+  const u = h.unit(1);
+  assert.ok(h.runUntil(() => u.skill.active || u.skill.activations >= 1, 12));
+  const e = h.enemies()[0];
+  assert.ok(h.runUntil(() => (e.buffs || []).some((b) => String(b.key).startsWith('frncat:weaken')), 8));
+  const buff = e.buffs.find((b) => String(b.key).startsWith('frncat:weaken'));
+  assert.equal(buff.mods.atkPct, -0.2);
+  assert.ok(buff.duration >= 4.9 && buff.duration <= 5.1);
+});
