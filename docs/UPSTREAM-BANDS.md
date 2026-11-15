@@ -140,7 +140,7 @@
 > 工具/实现函数，不做无条件分支。详见 `docs/UPSTREAM-REGULATION.md` §0.1。
 
 ### A. 剩余
-- `band_random` `gain_band_skill_from_pool_in_prep`：每次进入休整期从 2 个随机指令二选一替换（需要技能选择 UI / 指令池，随 P3）。
+- `band_random` `gain_band_skill_from_pool_in_prep`：**已完成（B7）**。每次进入休整期从 2 个随机指令中二选一替换当前指令（`g.bandSkillChoose`，只替换指令、策略/被动不变；`m.private.bandChoice`）；测试 `test/versions-band-instructions.test.js`。
 - 规程盟约自身的 6 名效果（act3 `bondeffect_*_2`，与默认盟约的 6 名行为不同）单列，按版本数据做隔离层。
 
 ## 批次
@@ -159,4 +159,4 @@
 6. ~~**B5**~~（完成）：无 key 技能（jenga / mess / protect / rich）与准备期被动（bonus / equipment / sargon /
    pepe / mlynar）。
 7. ~~**B6**~~（完成）：7 个 `auto_chess_effect_replace`（5 个复用现有盟约 6 名实现 + 维多利亚借装备 + 阿戈尔整备区召唤）。
-8. **B7（下一步）**：`band_random` 的技能选择（随 P3 指令 UI）。
+8. ~~**B7**~~（完成）：`band_random` 的技能选择（每次休整期 2 个随机指令二选一，`g.bandSkillChoose`；界面在 `ui/bandSkill.js`）。
