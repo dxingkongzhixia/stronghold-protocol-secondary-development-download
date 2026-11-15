@@ -137,6 +137,7 @@ with tempfile.TemporaryDirectory() as tmp:
         run()
         restored = snapshot() == original
         # Exercise the CLI call used by setup, with no texture-format flag, against the same synthetic source.
+        (root / 'ui' / 'autochess').mkdir(parents=True, exist_ok=True)
         args = ['extract.py', '--game', str(root), '--only', 'fx', '--fx-set', 'used', '--fx-jobs', '1',
                 '--out', str(dest), '--manifest', str(root / 'data/local-assets.json')]
         with patch.object(sys, 'argv', args), contextlib.redirect_stdout(io.StringIO()):
