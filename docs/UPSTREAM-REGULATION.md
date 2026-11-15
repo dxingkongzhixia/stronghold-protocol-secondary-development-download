@@ -143,7 +143,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 层 | 现状 | 还差 |
 |---|---|---|
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
-| 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过 | enemies 341 vs 343、`backup.tmplId` 完整形态、`spineLocal`/tuning 隐藏输入 |
+| 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游 | `backup.tmplId` 完整形态（pin 缺 `char_1037_amiya3`）、`spineLocal`/tuning 隐藏输入 |
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B6、个人核心盟约二选一 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩 | `band_random` 技能选择、联合半数核心、自选规则、每干员装备容量/招募例外、隐秘核心阈值复核、地图规则、指令 UI、寻宝/top-3、对局修复 |
 | UI | 版本下拉与加载已有 | 规程 HUD/简报/装备报告/徽章/自编/完整版本选择（P3） |
 | 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
@@ -168,8 +168,8 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **`layout: 'regulation'`**：移植 `tools/versions/layouts.mjs`，10 张 stage 由 5×9/6×21/13×21 三段 piece 拼回 **19×21**（`composeRegulationStage`）；round 模板走 `placeRegulationTemplate`
 - [x] **计数与上游一致**：chess **310**、bonds 26、bands 61、items 116、choices 9、garrisons 334、tokens 34、stages 12、effects 465、bosses 16、waves 50、factions 5、visible 141；modes 26、hiddenCore {350,1200}
 - [x] **版本化 gating**：版本构建跳过 fork 的自定义干员/阵营、版本 stock 留空、act2 专有 pool 丢弃、模式里缺失的盟约剔除、DIY 池里缺召唤变体的「王」剔除、模板预设（`backup.tmplId`，阿米娅3）的模块列表取自模板角色
-- [ ] **enemies 341 vs 上游 343**（差 2，待查：可能是 `_2` 变体键）
-- [ ] `backup.tmplId` 的完整形态（stats/trait 也取自模板角色）——目前只修了模块列表，属 P2
+- [x] **enemies 343 = 上游**：参照 `enemy_database` 补两个没有任何 act3 表/波次引用的条目 `enemy_2017_csphts` / `enemy_2123_dyjsww`（版本表 `enemyExtras`，仅本版本；`STATS_ONLY` 数据形态）。默认数据不变；`test/versions-enemies-procedural.test.js` 覆盖 98 个新增敌人
+- [ ] `backup.tmplId` 的完整形态（stats/trait/skill/talents 取模板角色）——**阻塞**：当前 gamedata pin 没有 `char_1037_amiya3`（规程阿米娅3，医疗形态），需要更新的官方 character/skill/uniequip 表；现有 40 套件里的「阿米娅」是基础形态套件
 - [ ] 隐藏输入：`data/assets.json` 的 `spineLocal` 片段、`data/tuning.json` 字节副本、`docs/research/*` 输入
 
 ### P2 规则与内容（8–12 人日）
