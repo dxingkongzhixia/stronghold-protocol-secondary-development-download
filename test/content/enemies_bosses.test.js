@@ -61,7 +61,7 @@ test('every enemy key is authored (enemies.js / bosses.js) or listed as stats-on
     const n = (KITS[k] ? 1 : 0) + (BOSS_KITS[k] ? 1 : 0) + (STATS_ONLY[k] ? 1 : 0);
     assert.equal(n, 1, `${k} ${E[k].name}`);
   }
-  for (const k of [...Object.keys(KITS), ...Object.keys(BOSS_KITS), ...Object.keys(STATS_ONLY)]) assert.ok(E[k], `unknown key ${k}`);
+  for (const k of [...Object.keys(KITS), ...Object.keys(BOSS_KITS), ...Object.keys(STATS_ONLY)]) if (!VERSION_ONLY.has(k)) assert.ok(E[k], `unknown key ${k}`);
 });
 
 test('stats-only enemies attach no ability and fight with their data stats', () => {
@@ -78,11 +78,14 @@ test('stats-only enemies attach no ability and fight with their data stats', () 
 // says 「不可沉默」. The owner's official-play recall of 2026-10-12 (GitHub #470) is that a death while silenced
 // creates no fog. Only these two keys share that ability (docs/MATCHMAKING.md; 0.2.0's client-template reading is §25.18.2).
 const SILENCE_BY_TEMPLATE = new Set(['enemy_1267_nhpbr', 'enemy_1267_nhpbr_2']);
+/** Boss keys only an official version's data carries (act3autochess boss_11–17): test/versions-bosses.test.js covers them. */
+const VERSION_ONLY = new Set(['enemy_9029_acfnc', 'enemy_9029_acfnc_2', 'enemy_9035_acspider', 'enemy_9035_acspider_2', 'enemy_9037_aceel', 'enemy_9037_aceel_2', 'enemy_2124_dyjsfg']);
 
 test('沉默: exactly the abilities whose handbook line is SILENCE-flagged can be silenced (every authored enemy), plus 萨卡兹枯朽战士 / 组长\'s death fog', () => {
   const h = arena();
   h.step();
   for (const key of [...Object.keys(KITS), ...Object.keys(BOSS_KITS)]) {
+    if (!E[key]) continue;
     const e = put(h, key, [10, 7]);
     const data = E[key].abilities.some((a) => a.format === 'SILENCE') || SILENCE_BY_TEMPLATE.has(key);
     const kit = !!(e.mem.ab && e.mem.ab.list.some((a) => a && (a.sil || a.silAware)));

@@ -1170,6 +1170,151 @@ function kitDeer(ab, e) {
 
 // ---------------------------------------------------------------------------------------------------------------
 
+
+// ---------------------------------------------------------------------------------------------------------------
+// act3 bosses (boss_11–17; the enemy data carries their talent blackboards)
+//   enemy_9029_acfnc / _2  假想敌：械  hits summon a 量变之械 at the target; below 20 % HP a 冲击之械 appears.
+//   enemy_9035_acspider/_2 假想敌：蛛  every 25 % of HP lost: 50 % physical/arts dodge for 15 s and camouflage; below
+//                          50 %: acid rain (all allies attack speed down and true damage a second). Webbing every 18 s.
+//   enemy_9037_aceel / _2  假想敌：电  attacks add neural damage; while unblocked a shield halves physical/arts damage;
+//                          being blocked consumes it and the next attack is stronger; an ion ring every 12 s.
+//   enemy_2124_dyjsfg      矩兽  90 % damage reduction while free, 35 % while blocked or stopped; a trample every
+//                          2.5 s; below 40 % HP: ATK +50 %, block +1, speed ×2; on death every other enemy leaves and all
+//                          allies take one heavy physical hit.
+function kitFnC(_ab, e) {
+  const P = { last: -Infinity, big: false };
+  return [{
+    spawn(b) {
+      b.on('hit', (c) => {
+        if (c.source !== e || !c.target || c.target.side !== 'ally' || !c.dmg?.isAttack) return;
+        if (b.time - P.last < 2) return;
+        P.last = b.time;
+        if (b.enemies.filter((x) => x.alive && x.defId === 'enemy_9028_acfncb').length >= 4) return;
+        b.spawnEnemy('enemy_9028_acfncb', { pos: [c.target.tileR, c.target.tileC] });
+        b.fx('summon', { x: c.target.x, y: c.target.y, id: e.id });
+      }, { owner: e });
+    },
+    tick(b, e2) {
+      if (P.big || !(e2.hpRatio < 0.2)) return;
+      P.big = true;
+      b.spawnEnemy('enemy_9027_acfnca', { pos: [e2.tileR, e2.tileC] });
+      b.fx('phase', { x: e2.x, y: e2.y, id: e2.id, kind: 'acfnc' });
+    },
+  }];
+}
+
+function kitSpider(ab, e) {
+  const step = Math.max(0.05, T(ab, 'Evade.hp_ratio') ?? 0.25), prob = T(ab, 'Evade.prob') ?? 0.5, dur = T(ab, 'Evade.duration') ?? 15;
+  const P = { n: Math.floor(e.hpRatio / step), rain: false, lastWeb: -Infinity };
+  return [{
+    spawn(b) {
+      b.on('damaged', (c) => {
+        if (c.target !== e || !(c.amount > 0)) return;
+        const n = Math.floor(e.hpRatio / step);
+        if (n >= P.n) return;
+        P.n = n;
+        b.addBuff(e, { key: 'boss:spider_evade', duration: dur, visible: true, mods: { dodgePhys: prob, dodgeArts: prob } });
+        b.applyStatus(e, 'camou', { duration: dur, source: e });
+        b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'spider' });
+      }, { owner: e });
+    },
+    tick(b, e2) {
+      if (!P.rain && e2.hpRatio < 0.5) {
+        P.rain = true;
+        const aspd = -30, dmg = e2.s.atk * 0.3;
+        for (const a of b.allies()) b.addBuff(a, {
+          key: 'boss:spider_rain', duration: 10, interval: 1, visible: true, mods: { aspd },
+          onTick({ battle, unit }) { battle.dealDamage(e2, unit, { amount: dmg, type: 'true', canDodge: false, tags: ['enemyAbility'] }); },
+        });
+        b.fx('tide', { x: e2.x, y: e2.y, id: e2.id, kind: 'acidRain' });
+      }
+      if (b.time - P.lastWeb >= 18) {
+        P.lastWeb = b.time;
+        const list = b.allies().filter((a) => a.alive).sort((a, c) => c.s.maxHp - a.s.maxHp).slice(0, 3);
+        for (const a of list) b.spawnEnemy('enemy_9036_acweb', { pos: [a.tileR, a.tileC] });
+      }
+    },
+  }];
+}
+
+function kitEel(ab, e) {
+  const ep = T(ab, 'Passive.attack@ep_damage_ratio') ?? 0.4;
+  const P = { shield: true, charged: false, lastRing: -Infinity };
+  return [{
+    spawn(b) {
+      b.addBuff(e, { key: 'boss:eel_shield', visible: true, mods: { physTakenMul: 0.5, artsTakenMul: 0.5 } });
+      b.on('hit', (c) => {
+        if (c.source !== e || !c.target || c.target.side !== 'ally') return;
+        if (c.dmg && P.charged) { c.dmg.mul *= 1.5; P.charged = false; }
+        if (c.dmg?.isAttack) b.dealDamage(e, c.target, { amount: e.s.atk * ep, type: 'element', element: 'neural', tags: ['enemyAbility'] });
+      }, { owner: e });
+      b.on('damaged', (c) => {
+        if (c.target !== e || !P.shield || !(e.blocking && e.blocking.length)) return;
+        P.shield = false;
+        P.charged = true;
+        b.removeBuff(e, 'boss:eel_shield');
+      }, { owner: e });
+    },
+    tick(b, e2) {
+      if (b.time - P.lastRing < 12) return;
+      P.lastRing = b.time;
+      const r = 2;
+      const hit = b.allies().filter((a) => a.alive && hypot(a.x - e2.x, a.y - e2.y) <= r);
+      if (!hit.length) return;
+      for (const a of hit) {
+        b.dealDamage(e2, a, { amount: e2.s.atk, type: 'arts', tags: ['enemyAbility'] });
+        b.dealDamage(e2, a, { amount: e2.s.atk * ep, type: 'element', element: 'neural', tags: ['enemyAbility'] });
+      }
+      b.fx('beam', { x: e2.x, y: e2.y, id: e2.id, kind: 'ionRing' });
+    },
+  }];
+}
+
+function kitDyjsfg(ab, e) {
+  const low = T(ab, 'Huge.enemy_dyjsfg_low_damage_resistance.damage_resistance') ?? 0.35;
+  const high = T(ab, 'Huge.enemy_dyjsfg_high_damage_resistance.damage_resistance') ?? 0.9;
+  const tScale = T(ab, 'Trample.atk_scale') ?? 1, tRadius = T(ab, 'Trample.range_radius') ?? 1.6, tIv = T(ab, 'Trample.interval') ?? 2.5;
+  const oAtk = T(ab, 'Overload.atk') ?? 0.5, oSpeed = T(ab, 'Overload.move_speed') ?? 2, oBlock = T(ab, 'Overload.block_volume') ?? 1;
+  const P = { res: null, last: 0, over: false };
+  return [{
+    spawn(b) {
+      b.addBuff(e, { key: 'boss:dyj_move', persist: true, flags: { noMove: true, selfBound: true, unblockable: true } });
+    },
+    tick(b, e2, _a, dt) {
+      const stopped = e2.blocking.length > 0 || (e2.moving === false) || e2.s.moveSpeed === 0;
+      const res = stopped ? low : high;
+      if (res !== P.res) {
+        P.res = res;
+        b.addBuff(e2, { key: 'boss:dyj_res', persist: true, visible: true, mods: { physTakenMul: 1 - res, artsTakenMul: 1 - res } });
+      }
+      if (!P.over && e2.hpRatio < 0.4) {
+        P.over = true;
+        b.addBuff(e2, { key: 'boss:dyj_over', persist: true, visible: true, mods: { atkPct: oAtk, blockCnt: oBlock, moveMul: oSpeed } });
+        b.fx('phase', { x: e2.x, y: e2.y, id: e2.id, kind: 'dyj' });
+      }
+      P.last += dt;
+      if (P.last < tIv) return;
+      P.last = 0;
+      for (const a of b.allies()) {
+        if (!a.alive || hypot(a.x - e2.x, a.y - e2.y) > tRadius) continue;
+        b.dealDamage(e2, a, { amount: e2.s.atk * tScale, type: 'phys', isAttack: true, tags: ['enemyAbility'] });
+      }
+      b.fx('explode', { x: e2.x, y: e2.y, id: e2.id, r: tRadius, kind: 'trample' });
+    },
+  }, {
+    spawn(b) {
+      b.on('death', (c) => {
+        if (c.unit !== e) return;
+        for (const x of b.enemies) if (x !== e && x.alive) b.kill(x, e);
+        for (const a of b.allies()) {
+          if (a.alive) b.dealDamage(e, a, { amount: e.s.atk * 2, type: 'true', canDodge: false, ignoreSelect: true, tags: ['enemyAbility'] });
+        }
+        b.fx('explode', { x: e.x, y: e.y, id: e.id, r: 99, kind: 'dyjDeath' });
+      }, { owner: e });
+    },
+  }];
+}
+
 export const BOSS_KITS = Object.freeze({
   enemy_9013_acstmk: kitHelm,          // boss_1 假想敌：胄
   enemy_9013_acstmk_2: kitHelm,        // boss_8 假想敌：胄 (隐秘核心)
@@ -1192,6 +1337,10 @@ export const BOSS_KITS = Object.freeze({
   enemy_10028_vtswd: kitEquip,         // 未装配刀片 (inert until animated)
   enemy_10029_vtshld: kitEquip,        // 防护背心
   enemy_10030_vtwand: kitEquip,        // 冲击式施术单元
+  enemy_9029_acfnc: kitFnC, enemy_9029_acfnc_2: kitFnC, // boss_11 / boss_14
+  enemy_9035_acspider: kitSpider, enemy_9035_acspider_2: kitSpider, // boss_12 / boss_15
+  enemy_9037_aceel: kitEel, enemy_9037_aceel_2: kitEel, // boss_13 / boss_16
+  enemy_2124_dyjsfg: kitDyjsfg, // boss_17
   enemy_9033_acdeer: kitDeer,          // boss_7 “萨米的意志”
 });
 export const BOSS_KEYS = Object.freeze(Object.keys(BOSS_KITS));
