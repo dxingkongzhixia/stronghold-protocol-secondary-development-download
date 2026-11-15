@@ -40,7 +40,7 @@ export class PlayerItems {
   equip(itemUid, targetUid, replaceUid = null) {
     const g = this._gate(); if (g) return g;
     const iloc = this.find(itemUid);
-    if (!iloc || iloc.piece.kind !== 'item' || (iloc.area !== 'hand' && iloc.area !== 'temp')) return fail(ERR.BAD_TARGET);
+    if (!iloc || iloc.piece.kind !== 'item' || (iloc.area !== 'hand' && iloc.area !== 'temp' && iloc.area !== 'equip')) return fail(ERR.BAD_TARGET);
     const rec = this.gd.item(iloc.piece.id);
     if (!rec || rec.itemType !== 'EQUIP') return fail(ERR.BAD_TARGET, 'not equipment');
     const tloc = this.find(targetUid);

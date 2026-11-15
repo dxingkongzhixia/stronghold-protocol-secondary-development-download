@@ -227,6 +227,12 @@ export class PlayerState {
     this.offers = [];
     /** @type {Array<any>} */
     this.hand = new Array(HAND_SIZE).fill(null);
+    /**
+     * 规程's separate equipment area (PRTS 卫戍协议·规程: 独立 5 格装备区): items are stowed here, not in the hand.
+     * Empty in the default 盟约 data (`gd.equipHandSize` 0), where equipment keeps sharing the hand.
+     * @type {Array<any>}
+     */
+    this.equipHand = new Array(this.gd.equipHandSize).fill(null);
     /** @type {Array<any>} */
     this.temp = new Array(TEMP_SIZE).fill(null);
     /** preps of this player that ended so far (endPrep) = index of the current (or next) prep */

@@ -188,7 +188,8 @@ export class PlayerEconomy {
       // shared stock (§0 "上游道具牌库卡库存"; invariants.js allows a deficit, GitHub #488), so a card you can see is a
       // card you can buy. The shop's own rolls still exclude an empty stock (pool.js shopItemsByTier, spDraft), so it is
       // not re-offered later. No debt bookkeeping is kept: the deficit is simply not tracked.
-      if (handFull) return fail(ERR.HAND_FULL);
+      // 规程's separate equipment area: an item needs a free equipment slot (or the temp queue when full)
+      if (this.equipHand.length ? freeSlot(this.equipHand) < 0 && freeSlot(this.temp) < 0 : handFull) return fail(ERR.HAND_FULL);
       this.spend(price);
       slot.sold = true;
       piece = this.acquireItem(slot.id, { source: 'buy' });

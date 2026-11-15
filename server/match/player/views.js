@@ -98,6 +98,8 @@ export class PlayerViews {
         rewardOffer: offer ? { tier: offer.tier, source: offer.source === 'merge' ? 'merge' : 'special', label: offer.label || null, queued: this.offers.length - 1, slots: offer.slots.map((s) => ({ kind: s.kind === 'item' ? 'item' : 'chess', id: s.id, price: s.price, sold: !!s.sold })) } : null,
       },
       hand: this.hand.map((p) => (p ? this.pieceView(p) : null)),
+      // 规程: the separate equipment area (empty in the 盟约 default, where equipment shares the hand)
+      equipHand: this.equipHand.map((p) => (p ? this.pieceView(p) : null)),
       temp: this.temp.map((p) => (p ? this.pieceView(p) : null)),
       board,
       // The stage's 外勤医疗 reserve medic is present during prep, but is not a draggable board piece.

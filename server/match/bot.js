@@ -1760,7 +1760,7 @@ export function* botPrepEndSteps(m, ps, job = null) {
 export function freeHandSlot(m, ps) {
   if (economyPlan(m, ps) && advisorRoomStep(m, ps, { handOnly: true })) return true;
   if (ps.isBot && !ps.autoplay) {
-    const art = ps.hand.find((p) => p && p.kind === 'item' && isBountyArt(m.gd, p.id));
+    const art = [...ps.hand, ...ps.equipHand].find((p) => p && p.kind === 'item' && isBountyArt(m.gd, p.id));
     if (art && tryDo(() => ps.destroy(art.uid))) return true;
   }
   return sellWeakestHand(m, ps);
@@ -1799,7 +1799,7 @@ function advisorRoomStep(m, ps, { handOnly = false, below = Infinity, extra = []
       || pieceValue(m, ps, a, ctx) - pieceValue(m, ps, b, ctx) || a.uid - b.uid);
   if (candidates.length) return tryDo(() => ps.sell(candidates[0].uid));
   if (freeSlot(ps.hand) >= 0) return false;
-  const item = ps.hand.filter(p => p?.kind === 'item' && gd.item(p.id)?.price <= 2)
+  const item = [...ps.hand, ...ps.equipHand].filter(p => p?.kind === 'item' && gd.item(p.id)?.price <= 2)
     .sort((a, b) => gd.item(a.id).price - gd.item(b.id).price || a.uid - b.uid)[0];
   return !!item && tryDo(() => ps.destroy(item.uid));
 }
@@ -2528,7 +2528,7 @@ export function equipItems(m, ps) {
   const gd = ps?.gd || m.gd;
   const tried = new Set();
   for (let guard = 0; guard < 12; guard++) {
-    const item = [...ps.hand, ...ps.temp].find((p) => p && p.kind === 'item' && canUseItem(m, ps, p) && !tried.has(p.uid));
+    const item = [...ps.hand, ...ps.equipHand, ...ps.temp].find((p) => p && p.kind === 'item' && canUseItem(m, ps, p) && !tried.has(p.uid));
     if (!item) break;
     tried.add(item.uid);
     if (planContains(m, advisorPlan(m, ps)?.items?.keep, item.id)) continue;
@@ -2558,7 +2558,7 @@ function makeHandRoom(m, ps, piece = null) {
   if (room()) return true;
   if (sellWeakestHand(m, ps, { handOnly: true }) && room()) return true;
   const gd = ps?.gd || m.gd;
-  const junk = ps.isBot && !ps.autoplay ? ps.hand.filter((p) => p && p.kind === 'item' && !isMutationCell(gd, p.id))
+  const junk = ps.isBot && !ps.autoplay ? [...ps.hand, ...ps.equipHand].filter((p) => p && p.kind === 'item' && !isMutationCell(gd, p.id))
     .sort((a, b) => ((gd.item(a.id) || {}).price || 0) - ((gd.item(b.id) || {}).price || 0) || a.uid - b.uid)[0] : null;
   if (junk && tryDo(() => ps.destroy(junk.uid)) && room()) return true;
   return sellWeakestHand(m, ps, { handOnly: true, keepPairs: false }) && room();
@@ -2745,7 +2745,7 @@ function faEquipHeld(m, ps, ctx) {
   const gd = ps.gd || m.gd;
   const tried = new Set();
   for (let guard = 0; guard < 12; guard++) {
-    const item = [...ps.hand, ...ps.temp].find((p) => p && p.kind === 'item' && !tried.has(p.uid) && faItemMods(gd.item(p.id)));
+    const item = [...ps.hand, ...ps.equipHand, ...ps.temp].find((p) => p && p.kind === 'item' && !tried.has(p.uid) && faItemMods(gd.item(p.id)));
     if (!item) return;
     tried.add(item.uid);
     const t = faItemTarget(m, ps, gd.item(item.id), ctx);

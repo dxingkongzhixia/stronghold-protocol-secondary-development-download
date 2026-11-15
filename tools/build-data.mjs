@@ -4516,6 +4516,9 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
       benchSize: act.constData.maxDeckChessCnt, tempSize: 5, deployCap: act.constData.maxBattleChessCnt,
       storeCntMax: act.constData.storeCntMax,
       equipPerChess: 2, maxArtsPerRound: 2,
+      // 规程: the separate equipment area (PRTS 卫戍协议·规程: 独立 5 格装备区; official constData.maxDeckEquipmentChessCnt).
+      // Version-only: the default 盟约 config keeps its bytes (no key ⇒ 0, items stay in the hand).
+      ...(VERSION ? { equipHandSize: act.constData.maxDeckEquipmentChessCnt ?? 5 } : {}),
       poolCopies: { 1: 12, 2: 14, 3: 18, 4: 16, 5: 8, 6: 5 },
       poolCopiesOverrides: chessStock,
       coopPoolMultiplier: 2,

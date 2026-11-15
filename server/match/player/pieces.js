@@ -47,6 +47,11 @@ export class PlayerPieces {
       if (p.uid === uid) return { piece: p, area: 'hand', idx: i };
       if (p.items) for (const it of p.items) if (it.uid === uid) return { piece: it, area: 'equipped', holder: p };
     }
+    for (let i = 0; i < this.equipHand.length; i++) {
+      const p = this.equipHand[i];
+      if (!p) continue;
+      if (p.uid === uid) return { piece: p, area: 'equip', idx: i };
+    }
     for (let i = 0; i < this.temp.length; i++) {
       const p = this.temp[i];
       if (!p) continue;
@@ -82,6 +87,7 @@ export class PlayerPieces {
   _detach(loc) {
     if (!loc) return;
     if (loc.area === 'hand') this.hand[loc.idx] = null;
+    else if (loc.area === 'equip') this.equipHand[loc.idx] = null;
     else if (loc.area === 'temp') { this.temp[loc.idx] = null; this._tempDue.delete(loc.piece.uid); }
     else if (loc.area === 'board') this.board.delete(loc.key);
     else if (loc.area === 'equipped') {
@@ -96,7 +102,12 @@ export class PlayerPieces {
    * slot is free (`toTemp`) moves into the hand at the next recompute (_fillHandFromTemp).
    */
   stow(piece, { allowTemp = true, toTemp = false, preferIdx = null } = {}) {
-    if (!toTemp) {
+    const equipArea = piece.kind === 'item' && this.equipHand.length > 0;
+    if (!toTemp && equipArea) {
+      // 规程: the separate equipment area first; with all slots taken, the equipment waits in the temp queue
+      const k = freeSlot(this.equipHand);
+      if (k >= 0) { this.equipHand[k] = piece; return 'equip'; }
+    } else if (!toTemp) {
       if (Number.isInteger(preferIdx) && preferIdx >= 0 && preferIdx < this.hand.length && this.hand[preferIdx] == null) {
         this.hand[preferIdx] = piece;
         return 'hand';
@@ -105,6 +116,7 @@ export class PlayerPieces {
       if (i >= 0) { this.hand[i] = piece; return 'hand'; }
       if (!allowTemp) return null;
     }
+    if (!allowTemp) return null;
     // Five visible slots are a window, not a capacity limit. Once resources are queued, append
     // new gains behind them; recompute fills visible holes without changing an in-progress merge's indices.
     const j = this.temp.length > TEMP_SIZE ? -1 : freeSlot(this.temp);
@@ -127,11 +139,24 @@ export class PlayerPieces {
    */
   _fillHandFromTemp() {
     let moved = 0;
+    if (this.equipHand.length) {
+      // equipment overflows into the free equipment slots first; whatever does not fit stays in temp
+      for (let j = 0; j < this.temp.length; j++) {
+        const p = this.temp[j];
+        if (!p || p.kind !== 'item') continue;
+        const k = freeSlot(this.equipHand);
+        if (k < 0) break;
+        this._detach({ piece: p, area: 'temp', idx: j });
+        this.equipHand[k] = p;
+        moved++;
+      }
+    }
     const indices = Array.from({ length: TEMP_SIZE }, (_, i) => TEMP_SIZE - 1 - i)
       .concat(Array.from({ length: Math.max(0, this.temp.length - TEMP_SIZE) }, (_, i) => TEMP_SIZE + i));
     for (const j of indices) {
       const p = this.temp[j];
       if (!p) continue;
+      if (this.equipHand.length && p.kind === 'item') continue; // equipment belongs to its own area
       const i = freeSlot(this.hand);
       if (i < 0) break;
       this._detach({ piece: p, area: 'temp', idx: j });

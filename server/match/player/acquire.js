@@ -243,6 +243,7 @@ export class PlayerAcquire {
   _itemLocations(id) {
     const out = [];
     for (let i = 0; i < this.temp.length; i++) if (this.temp[i] && this.temp[i].kind === 'item' && this.temp[i].id === id) out.push({ piece: this.temp[i], area: 'temp', idx: i });
+    for (let i = 0; i < this.equipHand.length; i++) if (this.equipHand[i] && this.equipHand[i].kind === 'item' && this.equipHand[i].id === id) out.push({ piece: this.equipHand[i], area: 'equip', idx: i });
     for (let i = 0; i < this.hand.length; i++) if (this.hand[i] && this.hand[i].kind === 'item' && this.hand[i].id === id) out.push({ piece: this.hand[i], area: 'hand', idx: i });
     for (const holder of this.allChess()) for (const it of holder.items || []) if (it.id === id) out.push({ piece: it, area: 'equipped', holder });
     return out;
