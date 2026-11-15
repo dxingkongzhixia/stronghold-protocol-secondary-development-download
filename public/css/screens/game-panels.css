@@ -820,3 +820,32 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .equip__target:hover:not(:disabled) { color: var(--text-hi); border-color: var(--mint-500, #4ed8af); }
 .equip__cancel { justify-content: center; color: var(--text-lo); }
 .equip__empty { margin: .06rem 0; color: var(--text-lo); font-size: calc(.15 * var(--t)); }
+
+
+/* 规程 active strategy skill (js/ui/bandSkill.js): a prep button above the equipment drawer, with its target picker */
+.bskill { position: absolute; left: .3rem; bottom: 5.2rem; z-index: 12; display: flex; flex-direction: column; align-items: flex-start; gap: .08rem; }
+.bskill__btn { display: flex; align-items: center; gap: .08rem; max-width: 3.2rem; height: .5rem; padding: 0 .14rem; border: 1px solid var(--line-2); border-radius: .25rem; background: rgba(8, 10, 9, .82); color: var(--text-md); font: inherit; font-size: calc(.17 * var(--t)); font-weight: 700; cursor: pointer; }
+.bskill__btn img { width: .26rem; height: .26rem; object-fit: contain; }
+.bskill__btn .icon { width: .22rem; height: .22rem; }
+.bskill__btn:hover:not(:disabled) { color: var(--text-hi); border-color: var(--mint-500, #4ed8af); }
+.bskill__btn:disabled { cursor: default; opacity: .62; }
+.bskill.is-open .bskill__btn { color: var(--text-hi); border-color: var(--mint-500, #4ed8af); }
+.bskill__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bskill__cost { color: var(--gold-500, #e8b34e); }
+.bskill__uses { color: var(--text-lo); }
+.bskill__panel { width: 3.5rem; max-width: 78vw; padding: .12rem; border: 1px solid var(--line-2); border-radius: .1rem; background: rgba(8, 10, 9, .94); box-shadow: 0 .2rem .5rem rgba(0, 0, 0, .45); }
+.bskill__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .08rem; color: var(--text-hi); font-size: calc(.17 * var(--t)); }
+.bskill__x { border: 0; background: transparent; color: var(--text-lo); cursor: pointer; }
+.bskill__x .icon { width: .22rem; height: .22rem; }
+.bskill__targets { display: flex; flex-direction: column; gap: .05rem; max-height: 2.6rem; overflow: auto; }
+.bskill__target { display: flex; align-items: center; gap: .08rem; padding: .08rem .12rem; border: 1px solid var(--line); background: transparent; color: var(--text-md); font: inherit; font-size: calc(.16 * var(--t)); cursor: pointer; text-align: left; }
+.bskill__target img { width: .34rem; height: .34rem; object-fit: contain; border-radius: .04rem; }
+.bskill__target b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bskill__target:hover:not(:disabled) { color: var(--text-hi); border-color: var(--mint-500, #4ed8af); }
+.bskill__slot { flex: none; width: .28rem; height: .28rem; display: grid; place-items: center; border: 1px solid var(--line-2); border-radius: .04rem; font-size: calc(.15 * var(--t)); }
+.bskill__empty { margin: .06rem 0; color: var(--text-lo); font-size: calc(.15 * var(--t)); }
+.bskill__tile { display: flex; align-items: flex-end; gap: .08rem; }
+.bskill__tile label { display: flex; flex-direction: column; gap: .04rem; font-size: calc(.15 * var(--t)); color: var(--text-lo); }
+.bskill__sel { height: .44rem; padding: 0 .06rem; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .3); color: var(--text-hi); font: inherit; }
+.bskill__confirm { height: .44rem; padding: 0 .14rem; border: 1px solid var(--mint-500, #4ed8af); background: rgba(78, 216, 175, .12); color: var(--text-hi); font: inherit; font-weight: 700; cursor: pointer; }
+.bskill__confirm:disabled { cursor: default; opacity: .62; }

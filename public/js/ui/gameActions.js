@@ -72,6 +72,9 @@ export const actions = {
   cancelReroll: (voteId) => act('room.cancelReroll', { voteId }, { sfx: 'back' }),
   band: (bandId) => act('g.band', { bandId }),
   bandSkip: () => act('g.bandSkip'),
+  // 规程 active strategy skill (m.private.bandSkill): `target` for COMMON_CHESS { kind:'chess', uid } / SHOP_SLOT
+  // { slot } / MAP_TILE { row, col }; absent for NO_TARGET
+  bandSkill: (target) => act('g.bandSkill', target ? { target } : {}, { sfx: 'confirm' }),
   buy: (slot) => act('g.buy', { slot }),
   // a tap while the previous g.refresh is still on the wire is dropped (GitHub #501) — see onRefreshBusy above
   refresh: () => {

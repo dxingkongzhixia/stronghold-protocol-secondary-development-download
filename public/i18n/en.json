@@ -2123,5 +2123,10 @@
   "本局模拟长时间无响应，已结束": "The simulation stopped responding and has ended",
   "该版本的模拟无法启动": "This version's simulation could not start",
   "本局模拟出错，已结束": "The simulation failed and has ended",
-  "版本数据未能通过校验，请刷新页面重试": "The version's data did not pass its check — please reload the page"
+  "版本数据未能通过校验，请刷新页面重试": "The version's data did not pass its check — please reload the page",
+  "冷却": "Cooldown",
+  "选择地块": "Choose a Tile",
+  "选择目标": "Choose a Target",
+  "行": "Row",
+  "列": "Column"
 }

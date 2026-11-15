@@ -84,6 +84,7 @@ import { BondStrip, BondPopup } from '../ui/bondStrip.js';
 import { TeamPanel } from '../ui/teamPanel.js';
 import { ShopBar } from '../ui/shopBar.js';
 import { EquipArea } from '../ui/equipArea.js';
+import { BandSkill } from '../ui/bandSkill.js';
 import { selectedBondTimers } from '../ui/bondTimers.js';
 import { DetailPanel, resolveDetail } from '../ui/detailPanel.js';
 import { RewardOverlay } from '../ui/rewardOverlay.js';
@@ -1843,6 +1844,7 @@ function MatchScreen() {
       </div>` : null}
 
       ${phase === PHASE.PREP && editable && !watchingOther ? html`<${EquipArea} priv=${priv} gd=${gd} editable=${editable} />` : null}
+      ${phase === PHASE.PREP && editable && !watchingOther ? html`<${BandSkill} priv=${priv} gd=${gd} editable=${editable} />` : null}
 
       ${showShop ? html`<${ShopBar} priv=${priv} editable=${editable} collapsed=${barCollapsed} refreshBusy=${refreshBusy} onCollapse=${setCollapsed}
         barRef=${barRef} offBonds=${offBonds}
