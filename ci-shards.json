@@ -221,6 +221,7 @@
   "test/golden-diy.test.js": 2,
   "test/golden-standins.test.js": 2,
   "test/golden.test.js": 37126,
+  "test/golden-versions.test.js": 23000,
   "test/i18n-data.test.js": 182,
   "test/i18n-packs.test.js": 8943,
   "test/i18n-server.test.js": 114,
