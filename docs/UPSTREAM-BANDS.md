@@ -80,16 +80,6 @@
 `preparation_start_gain_chess_from_round`、`band_bond`
 `refresh_shop_count_gain_coin_bond_char_chess`、`band_weakness` `env_gbuff_new_with_verify`（battle 侧）。
 
-## 待实现
-
-### A. PASSIVE 准备期
-- `band_random` `gain_band_skill_from_pool_in_prep`：每次进入休整期从 2 个随机指令二选一替换。
-- `band_bonus` `promote_char_extra_award`：每回合首次晋升额外一次晋升奖励（需 `ctx.promote`）。
-- `band_sargon` `gain_bond_cnt_shop_up_discount`：3 名萨尔贡后升级 -3，每等级一次（需升级价折扣字段）。
-- `band_equipment` `promote_equip_extra_award`：每回合首次装备合并进阶时给出 3 件装备三选一。
-- `band_egir` / `band_kjerag2` / 其余 `auto_chess_effect_replace`：按 6/9 名盟约替换效果。
-- `band_iberia`、`band_rich`、`band_protect`、`band_mess`、`band_jenga`：无 buff key，需要按 bandId 的主动/解锁逻辑。
-
 ### B3b 主动技能（战斗标记 + 解锁链）
 
 | band | 官方 tag | 状态 |
@@ -104,9 +94,18 @@
 `start_dead`），标记经 `bandMarks` 进入战斗；`marks.js` 在 `battleStart` 安装。官方升级链（药枚实验 R7、
 重点监护商店 3/5 级、出航时刻 4 人）由 `shared/bandSkill.js` 逐级判定，只有当前一级的 handler 运行。
 
-其它已有：`band_takecare` `prep_finish_char_bond_add_layer`、`band_mech`
-`preparation_start_gain_chess_from_round`、`band_bond`
-`refresh_shop_count_gain_coin_bond_char_chess`、`band_weakness` `env_gbuff_new_with_verify`（battle 侧）。
+### B4 主动技能（地块 / 商店格）
+
+| band | buff key | 状态 |
+|---|---|---|
+| band_transfer | `skill_transform_char_same_tier` | 调度中心一格换成同阶随机干员（每回合 2 次） |
+| band_dance | `skill_mark_pos_grow_use_cnt` | 标记地块：战斗开始后首个经过的敌人恐惧 3 秒（官方 `eff_band19` 的 `fear`，`fear_tile` 标记）；R4/8/12 解锁 2/3/4 次 |
+| band_treasure | `skill_add_pos_effect_enemy` | 地块上部署“模拟宝藏”（`enemy_9038_achest`）；被敌人触碰即消失，战斗结束仍在则 +1 资金；冷却 3 回合 |
+| band_pudd | `skill_mark_shop_equip_tag` | 销毁选中的装备，下场战斗开始时给场上所有有空栏的干员临时装备（`lend_equip`；`consume_on_equip` 不可选） |
+
+玩家级标记（B4 新增）：`ctx.addBandGlobal(mark)` → `PlayerState.bandGlobal`（每回合清空）→
+`battleInput().bandMarks` → sim `ps.input.bandMarks`；`marks.js` 处理 `fear_tile` / `treasure` / `lend_equip`。
+宝藏用 `mem.noLeak + mem.noFinish` 做成不计、不漏、不拖住结束的中立敌人；`_anyEnemyAlive` 跳过 `noFinish`。
 
 ## 待实现
 
@@ -118,12 +117,6 @@
 - `band_egir` / `band_kjerag2` / 其余 `auto_chess_effect_replace`：按 6/9 名盟约替换效果（升级链已能选级）。
 - `band_rich`、`band_protect`、`band_mess`、`band_jenga`：无 buff key / 纯解锁链，需要按 bandId 的主动逻辑。
 
-### B. ACTIVE 地块 / 商店格
-- `band_dance` `skill_mark_pos_grow_use_cnt`（地块恐惧）。
-- `band_treasure` `skill_add_pos_effect_enemy`（模拟宝藏）。
-- `band_transfer` `skill_transform_char_same_tier`（商店格变同阶随机）。
-- `band_pudd` `skill_mark_shop_equip_tag`（装备临时给全场）。
-
 ## 批次
 
 1. ~~**B1**~~（完成，`415dde1f7`）：smith / kjerag / siracusa / victoria / substitute。
@@ -134,5 +127,6 @@
 4. ~~**B3b**~~（完成）：`skill_mark_char_inst_tag` 的 4 个战斗标记（survive / evolve / shield / breakaway，含第 7
    回合升级）、官方解锁链（`skill.stages`）与 `band_iberia`；测试 `test/content/bands_marks.test.js`、
    `test/match/band-marks.test.js`。
-5. **B4（下一步）**：地块与商店格（dance / treasure / transfer / pudd）。
-6. **B5**：`auto_chess_effect_replace` 的 6/9 名替换与无 key band（rich/protect/mess/jenga）。
+5. ~~**B4**~~（完成）：地块与商店格（dance / treasure / transfer / pudd）+ 玩家级标记
+   （`bandGlobal` → `battleInput().bandMarks`）；测试 `test/content/bands_marks.test.js`。
+6. **B5（下一步）**：`auto_chess_effect_replace` 的 6/9 名替换与无 key band（rich/protect/mess/jenga）。
