@@ -111,6 +111,12 @@ export class MatchViews {
     const v = {
       t: 'm.public',
       phase: this.phase,
+      // 规程 选择自编 (CUSTOM_CHECK): how many living players confirmed (the default 盟约 flow has no such step)
+      custom: this.phase === PHASE.CUSTOM_CHECK ? {
+        ready: this.alivePlayers().filter((p) => p.customReady).length,
+        total: this.alivePlayers().length,
+        maxPerTier: 2,
+      } : null,
       ...(this.customPhase ? { customPhase: {
         pluginId: this.customPhase.pluginId, name: this.customPhase.name, data: this.customPhase.data,
         startedAt: this.customPhase.startedAt, until: this.customPhase.until,

@@ -323,6 +323,19 @@ export class GameData {
   get equipPerChess() { return posIntOr(this.economy.equipPerChess, DEFAULTS.equipPerChess); }
 
   /**
+   * The official pre-match steps of this data (`config.timers.enterSteps`), e.g. 规程's INFO_CHECK / BAND_CHECK /
+   * CUSTOM_CHECK / BATTLE_CHECK. The default 盟约 config has three steps and no CUSTOM_CHECK; null when absent.
+   * @returns {Array<{ step: string, time: number, hint: number, title: string }>}
+   */
+  get enterSteps() { return Array.isArray(this.config?.timers?.enterSteps) ? this.config.timers.enterSteps : []; }
+
+  /** The 选择自编 step (`CUSTOM_CHECK`): `{ time, hint }` when this data has one, else null. */
+  get customStep() {
+    const s = this.enterSteps.find((x) => x && x.step === 'CUSTOM_CHECK');
+    return s ? { time: Math.max(1, Number(s.time) || 30), hint: Math.max(0, Number(s.hint) || 0) } : null;
+  }
+
+  /**
    * Equipment slots of one operator: its official per-chess `equipSlotNum` (`data/chess.json equipSlots`, written only by a
    * version build that has the field — Ironhide's 4 / 6), else the mode's `economy.equipPerChess`.
    * @param {string} chessId

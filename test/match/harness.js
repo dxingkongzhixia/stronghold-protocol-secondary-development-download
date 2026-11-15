@@ -137,7 +137,7 @@ export function makeMatch(o = {}) {
     return h;
   };
   /** drive human decisions (info, band, 机变, ready) until `pred` holds */
-  h.drive = (pred, { ready = true, band = 'band_bldsk', maxSteps = 3e6 } = {}) => {
+  h.drive = (pred, { ready = true, band = 'band_bldsk', custom = true, maxSteps = 3e6 } = {}) => {
     for (let i = 0; i < maxSteps; i++) {
       if (pred()) return true;
       if (h.ended) return !!pred();
@@ -145,6 +145,7 @@ export function makeMatch(o = {}) {
         if (ps.isBot || ps.left) continue;
         if (m.phase === 'INFO_CHECK' && !ps.infoReady) m.handle(ps.playerId, { t: 'g.infoReady' });
         if (m.phase === 'BAND_DRAFT' && m.draftTurn() === ps.playerId) m.handle(ps.playerId, { t: 'g.band', bandId: band });
+        if (custom && m.phase === 'CUSTOM_CHECK' && !ps.customReady) m.handle(ps.playerId, { t: 'g.customReady', ready: true });
         if (m.phase === 'SP_DRAFT' && m.spTurn() === ps.playerId) {
           const idx = m.sp.cards.map((c) => c.idx).find((k) => m.sp.taken[k] == null);
           if (idx != null) m.handle(ps.playerId, { t: 'g.choice', idx });

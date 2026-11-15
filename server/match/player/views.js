@@ -125,6 +125,12 @@ export class PlayerViews {
       ready: this.ready,
       // 规程 personal briefing: the core bonds split into two groups, and this player's pick
       coreBond: this.m.coreBondGroups ? { groups: this.m.coreBondGroups.map((g) => g.slice()), pick: this.coreBondPick } : null,
+      // 规程 选择自编 (CUSTOM_CHECK): the player's 自编 slots and selection, only during that step
+      custom: this.m.phase === PHASE.CUSTOM_CHECK && Array.isArray(this.customPick) ? {
+        slots: this.m.customSlotsOf(this),
+        picked: this.customPick.slice(),
+        ready: !!this.customReady,
+      } : null,
       // 规程 active strategy skill (g.bandSkill): null for every band without one (the default 盟约 set has none)
       bandSkill: this.bandSkillView(),
       // 规程 追随者们: this prep's two offered instructions, until one is picked (g.bandSkillChoose)

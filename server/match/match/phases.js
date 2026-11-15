@@ -14,6 +14,9 @@ import { bandSpecial, isBandGrant, bandIdOf } from '../player/special.js';
 import { tileKey } from '../board.js';
 import { OK, fail, DELAYS, BAND_TURN_SECONDS, keelLegalActions } from './common.js';
 
+/** 选择自编: at most this many slots of each tier (5 / 6) enter the match. */
+const CUSTOM_MAX_PER_TIER = 2;
+
 export class MatchPhases {
   enterInfoCheck() {
     this.phase = PHASE.INFO_CHECK;
@@ -471,6 +474,112 @@ export class MatchPhases {
       this.markPrivate(ps);
     }
     void timeout;
+    if (this.gd.customStep) this.enterCustomCheck();
+    else this.enterBattleCheck();
+  }
+
+  /**
+   * 选择自编 (`CUSTOM_CHECK`, official enterSteps): the player takes at most 2 tier-5 and 2 tier-6 自编 slots of the ones
+   * their 自选编队 already picked into the match. The step exists only in data whose `timers.enterSteps` names it (规程);
+   * the default 盟约 config has no such step. Players with no 自编 picks (and bots) are ready at once, so the step is
+   * invisible for them. A timeout applies the current (default) selection.
+   */
+  enterCustomCheck() {
+    if (this.phase !== PHASE.BAND_DRAFT) return;
+    this.phase = PHASE.CUSTOM_CHECK;
+    for (const ps of this.alivePlayers()) {
+      const slots = this.customSlotsOf(ps);
+      ps.customPick = this.defaultCustomPicks(slots);
+      ps.customReady = false;
+      if (ps.botControlled || !slots.length) ps.customReady = true;
+      this.markPrivate(ps);
+    }
+    const step = this.gd.customStep;
+    const secs = this.soloUntimed ? 0 : step?.time ?? 30;
+    this.setDeadline(secs, () => this.finishCustomCheck());
+    this.markPublic();
+    this.maybeFinishCustom();
+  }
+
+  /** The player's 自编 slots (their picked 自选编队, tier 5 / 6), in slot order. */
+  customSlotsOf(ps) {
+    const out = [];
+    for (const [slotId, pick] of Object.entries(ps.diy || {})) {
+      if (!pick) continue;
+      const tier = this.gd.tierOf(slotId);
+      if (tier !== 5 && tier !== 6) continue;
+      const rec = ps._diyRecords?.get(slotId) || null;
+      out.push({ slotId, tier, charId: pick.charId, name: rec?.name || pick.charId });
+    }
+    return out.sort((a, b) => a.tier - b.tier || (a.slotId < b.slotId ? -1 : a.slotId > b.slotId ? 1 : 0));
+  }
+
+  /** The default selection: the first CUSTOM_MAX_PER_TIER slots of each tier. */
+  defaultCustomPicks(slots) {
+    const per = { 5: 0, 6: 0 };
+    const out = [];
+    for (const s of slots) {
+      if (per[s.tier] >= CUSTOM_MAX_PER_TIER) continue;
+      per[s.tier]++;
+      out.push(s.slotId);
+    }
+    return out;
+  }
+
+  /** g.custom { slots }: the player's selection (slot ids of their own 自编), at most 2 per tier. */
+  setCustomPicks(ps, slots) {
+    if (this.phase !== PHASE.CUSTOM_CHECK) return fail(ERR.WRONG_PHASE);
+    if (ps.customReady) return fail(ERR.ALREADY, 'already confirmed');
+    if (!Array.isArray(slots) || slots.length > CUSTOM_MAX_PER_TIER * 2) return fail(ERR.BAD_TARGET);
+    const known = new Map(this.customSlotsOf(ps).map((s) => [s.slotId, s]));
+    const per = { 5: 0, 6: 0 };
+    const seen = new Set();
+    for (const id of slots) {
+      const s = known.get(id);
+      if (!s || seen.has(id) || ++per[s.tier] > CUSTOM_MAX_PER_TIER) return fail(ERR.BAD_TARGET, 'not an available 自编 slot');
+      seen.add(id);
+    }
+    ps.customPick = slots.slice();
+    ps.dirty();
+    this.markPublic();
+    return OK;
+  }
+
+  /** g.customReady { ready }: confirm the selection (all living players ready ends the step at once). */
+  setCustomReady(ps, ready) {
+    if (this.phase !== PHASE.CUSTOM_CHECK) return fail(ERR.WRONG_PHASE);
+    ps.customReady = !!ready;
+    ps.dirty();
+    this.markPublic();
+    if (ps.customReady) this.maybeFinishCustom();
+    return OK;
+  }
+
+  maybeFinishCustom() {
+    if (this.phase !== PHASE.CUSTOM_CHECK) return;
+    const alive = this.alivePlayers();
+    if (!alive.length || alive.every((p) => p.customReady || p.botControlled || p.left)) this.finishCustomCheck();
+  }
+
+  /** Apply the selections (`ps.setDiy` + the stock against the match's bans) and start BATTLE_CHECK. */
+  finishCustomCheck() {
+    if (this.phase !== PHASE.CUSTOM_CHECK) return;
+    this.setDeadline(0);
+    const off = new Set([...this.disabledBonds, ...this.staticInactiveBonds]);
+    for (const ps of this.alivePlayers()) {
+      const chosen = new Set(ps.customPick || []);
+      const picks = {};
+      for (const [slotId, pick] of Object.entries(ps.diy || {})) if (pick && chosen.has(slotId)) picks[slotId] = pick;
+      const before = Object.keys(ps.diy || {}).length;
+      if (Object.keys(picks).length !== before) {
+        ps.setDiy(picks, { kitted: this.diyKitted });
+        ps.initDiyStock(off);
+      }
+      ps.customReady = true;
+      ps.dirty();
+      this.markPrivate(ps);
+    }
+    this.markPublic();
     this.enterBattleCheck();
   }
 

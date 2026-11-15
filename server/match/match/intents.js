@@ -30,6 +30,8 @@ export class MatchIntents {
       // an active strategy skill (another official version's band): target a chess / shop slot / map tile or nothing
       case 'g.bandSkill': return this.useBandSkill(ps, msg);
       case 'g.bandSkillChoose': return this.chooseBandSkill(ps, msg.bandId);
+      case 'g.custom': return this.setCustomPicks(ps, msg.slots);
+      case 'g.customReady': return this.setCustomReady(ps, msg.ready);
       case 'g.buy': return ps.buy(msg.slot);
       case 'g.refresh': return ps.refresh();
       case 'g.freeze': return ps.freeze();
@@ -222,6 +224,7 @@ export class MatchIntents {
     this.offersChanged();
     if (this.phase === PHASE.INFO_CHECK && !ps.infoReady) { ps.infoReady = true; this.markPublic(); this.maybeEndInfo(); }
     else if (this.phase === PHASE.BAND_DRAFT && this.draftTurn() === ps.playerId) this.scheduleBandBot();
+    else if (this.phase === PHASE.CUSTOM_CHECK && !ps.customReady) { ps.customReady = true; this.markPublic(); this.maybeFinishCustom(); }
     else if (this.phase === PHASE.SP_DRAFT && this.spTurn() === ps.playerId) this.scheduleSpBot();
     else if (this.phase === PHASE.PREP && ps.alive && !ps.ready) this.scheduleBotPrep(ps, 0);
   }

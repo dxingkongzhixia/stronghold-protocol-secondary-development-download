@@ -608,6 +608,9 @@ export const C2S = {
   'g.bandSkill': { target: (v) => v == null || (isPlain(v) && isId(v.kind) && Object.keys(v).length <= 7), $optional: ['target'] },
   // 规程 追随者们: one of the two instructions this prep offered (a strategy id from m.private.bandChoice)
   'g.bandSkillChoose': { bandId: isId },
+  // 规程 选择自编 (CUSTOM_CHECK): the 自编 slot ids taken into the match (≤2 of each tier), then the confirmation
+  'g.custom': { slots: (v) => Array.isArray(v) && v.length <= 4 && v.every(isId) },
+  'g.customReady': { ready: isBool },
   'g.buy': { slot: (v) => isInt(v, 0, 15) },
   'g.refresh': {},
   'g.freeze': {},

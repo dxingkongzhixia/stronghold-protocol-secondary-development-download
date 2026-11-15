@@ -224,6 +224,12 @@ export class PlayerState {
     /** 规程 personal briefing: the core-bond group this player chose (0/1), null until chosen. */
     this.coreBondPick = null;
     /**
+     * 规程 选择自编 (CUSTOM_CHECK): the slot ids of this player's 自编 picks taken into the match, and whether the player
+     * confirmed them. `null` = no step (default 盟约) or not entered yet; the picks are filtered to ≤2 per tier.
+     */
+    this.customPick = null;
+    this.customReady = false;
+    /**
      * Per-piece marks an active band skill put on an operator for its next battle (piece uid → marks), cleared at the
      * next round start; battleInput() carries them, the sim applies them (`layer_cap`, …).
      */
