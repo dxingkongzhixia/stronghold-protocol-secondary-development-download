@@ -1,7 +1,9 @@
-// Asset URL resolution against data/assets.json (docs/ASSETS.md). Pure: every function takes the
-// manifest object (or null) and returns a URL string or null — callers draw their own fallback
-// (glyph, CSS shape) when null. Only URLs present in the manifest are ever returned, so the client
-// never requests files the asset pipeline did not produce (no 404 noise in the console).
+// Asset URL resolution against data/assets.json (docs/ASSETS.md). Pure-ish: every function takes the manifest object
+// (or null) and returns a URL string or null — callers draw their own fallback (glyph, CSS shape) when null. Only URLs
+// present in the manifest (or the optional local-client manifest, for enemy icons the default roster never needed) are
+// ever returned, so the client never requests files the asset pipeline did not produce (no 404 noise in the console).
+
+import { localAsset } from '../data.js';
 
 const str = (v) => (typeof v === 'string' && v ? v : null);
 const obj = (v) => (v && typeof v === 'object' ? v : null);
@@ -182,9 +184,14 @@ export function itemIconUrl(m, item) {
 export function enemyIconUrl(m, enemyKey) {
   const e = enemyKey ? obj(obj(obj(m)?.enemies)?.[enemyKey]) : null;
   if (e?.icon) return str(e.icon);
+  // an act3 enemy's icon only the local client has (`data/local-assets.json` group enemy/icon)
+  const local = enemyKey ? localAsset('enemy/icon', enemyKey) : null;
+  if (local) return local;
   // `_2` / `_3` variants fall back to their base enemy
   const base = typeof enemyKey === 'string' ? enemyKey.replace(/_\d+$/, '') : null;
-  return base && base !== enemyKey ? str(obj(obj(obj(m)?.enemies)?.[base])?.icon) : null;
+  if (!base || base === enemyKey) return null;
+  const baseIcon = str(obj(obj(obj(m)?.enemies)?.[base])?.icon);
+  return baseIcon || localAsset('enemy/icon', base);
 }
 
 /** Token avatar: its outfit's picture (`tokens[id].skins[<owner skin>]`), else its own, else its owner's (docs/SKINS.md). */

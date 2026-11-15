@@ -11,6 +11,7 @@ import {
   uiUrl, chessAvatarUrl, chessPortraitUrl, seatArtUrl, avatarUrl, skillIconUrl, profIconUrl, subProfIconUrl, bondIconUrl, bandIconUrl, itemIconUrl,
   enemyIconUrl, tokenAvatarUrl, factionIconUrl, titleIconUrl, effectIconUrl,
 } from '../../public/js/ui/assetUrls.js';
+import { data } from '../../public/js/data.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const load = (f) => JSON.parse(readFileSync(path.join(ROOT, 'data', f), 'utf8'));
@@ -95,5 +96,17 @@ describe('assetUrls', () => {
     assert.equal(avatarUrl('char_003_kalts', null), null, 'the charId form needs the manifest');
     assert.equal(avatarUrl('not-an-avatar'), null);
     assert.equal(avatarUrl(null), null);
+  });
+  test('enemy icons fall back to the local client manifest', () => {
+    data.setContent({
+      id: 'local-enemy-icon-test',
+      values: { local: { groups: { 'enemy/icon': { enemy_1064_snsbr: { path: '/assets/local/enemy/icon/enemy_1064_snsbr.png' } } } } },
+    });
+    try {
+      assert.equal(enemyIconUrl({}, 'enemy_1064_snsbr'), '/assets/local/enemy/icon/enemy_1064_snsbr.png');
+      assert.equal(enemyIconUrl({}, 'enemy_1064_snsbr_2'), '/assets/local/enemy/icon/enemy_1064_snsbr.png', 'a variant falls back to its base');
+    } finally {
+      data.setContent(null);
+    }
   });
 });
