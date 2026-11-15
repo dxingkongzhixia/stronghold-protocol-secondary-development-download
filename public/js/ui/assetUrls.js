@@ -164,20 +164,20 @@ export function subProfIconUrl(m, chess) {
 
 /** Bond glyph (white; tint in CSS). */
 export function bondIconUrl(m, bondId) {
-  return bondId ? str(obj(obj(m)?.bonds)?.[bondId]) : null;
+  return bondId ? str(obj(obj(m)?.bonds)?.[bondId]) || localAsset(`bond/${bondId}`, bondId) : null;
 }
 
 /** Band (strategy) icon. */
 export function bandIconUrl(m, bandId) {
-  return bandId ? str(obj(obj(m)?.bands)?.[bandId]) : null;
+  return bandId ? str(obj(obj(m)?.bands)?.[bandId]) || localAsset(`band/${bandId}`, bandId) : null;
 }
 
 /** Item icon for an items.json record (by trapId / iconId) or a raw trap id. */
 export function itemIconUrl(m, item) {
+  const id = typeof item === 'string' ? item : item?.iconId || item?.trapId;
   const items = obj(obj(m)?.items);
-  if (!items) return null;
-  if (typeof item === 'string') return str(items[item]);
-  return str(items[item?.iconId]) || str(items[item?.trapId]);
+  const url = items && id ? str(items[id]) : null;
+  return url || (id ? localAsset(`item/${id}`, id) : null);
 }
 
 /** Enemy icon (manifest keeps fallbacks resolved). */

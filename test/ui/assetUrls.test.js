@@ -109,4 +109,22 @@ describe('assetUrls', () => {
       data.setContent(null);
     }
   });
+  test('band / bond / item icons fall back to the local client manifest', () => {
+    data.setContent({
+      id: 'local-icon-test',
+      values: { local: { groups: {
+        'band/band_dance': { band_dance: { path: '/assets/local/band/band_dance/band_dance.png' } },
+        'bond/ursusShip': { ursusShip: { path: '/assets/local/bond/ursusShip/ursusShip.png' } },
+        'item/trap_1126_acarm126': { trap_1126_acarm126: { path: '/assets/local/item/trap_1126_acarm126/trap_1126_acarm126.png' } },
+      } } },
+    });
+    try {
+      assert.equal(bandIconUrl({}, 'band_dance'), '/assets/local/band/band_dance/band_dance.png');
+      assert.equal(bondIconUrl({}, 'ursusShip'), '/assets/local/bond/ursusShip/ursusShip.png');
+      assert.equal(itemIconUrl({}, 'trap_1126_acarm126'), '/assets/local/item/trap_1126_acarm126/trap_1126_acarm126.png');
+      assert.equal(itemIconUrl({}, { iconId: 'trap_1126_acarm126', id: 'chess_item_1_06_e_a' }), '/assets/local/item/trap_1126_acarm126/trap_1126_acarm126.png');
+    } finally {
+      data.setContent(null);
+    }
+  });
 });
