@@ -145,7 +145,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
 | 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游 | `backup.tmplId` 完整形态（pin 缺 `char_1037_amiya3`）、`spineLocal`/tuning 隐藏输入 |
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩 | 联合半数核心、自选规则、招募例外 recruitTierExempt、隐秘核心阈值复核、地图规则、寻宝/top-3、对局修复 |
-| UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 规程 HUD/简报/徽章/自编（P3） |
+| UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 规程 HUD/简报/徽章（P3） |
 | 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
 | golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 无（P5 完成） |
 | 冲突面 | 未动 14 条 never-merge 路径 | 逐块适配并保留 fork 特性（P6） |
@@ -207,7 +207,8 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **band 技能按钮与目标选择 UI**（`ui/bandSkill.js`：`m.private.bandSkill` 的名称/消耗/剩余次数/冷却，`NO_TARGET` 直发、`COMMON_CHESS`/`SHOP_SLOT` 目标列表、`MAP_TILE` 行列选择 → `g.bandSkill`；服务端视图 `views.js bandSkillView` 走官方阶段链与实时价格）；测试 `test/versions-band-skill-view.test.js`、`test/ui/band-skill.test.js`
 - [x] **指令替换 UI（追随者们）**：休整期显示本次 2 个候选指令（效果名 + 策略名），点选发 `g.bandSkillChoose`；`m.private.bandChoice` 下发候选与已选，策略与被动不变；测试 `test/versions-band-instructions.test.js`
 - [x] **装备报告 tab**：本局信息抽屉新增第三页（仅 `economy.equipHandSize > 0` 的版本），先列装备区，再按场上 → 手牌 → 临时整备区列出每名干员已装备的装备与官方效果文本；`ui/enemyDrawer.js equipmentReport`；测试 `test/ui/equipment-report.test.js`
-- [ ] 规程 HUD 布局、双栏简报、领袖战徽章、选择自编
+- [x] **选择自编（CUSTOM_CHECK）**：版本 `config.timers.enterSteps` 含该步骤时，选队后进入 30 s 的选择界面；玩家从自己的自选编队中带 **5阶/6阶各至多 2 名**（`g.custom`），确认（`g.customReady`）后应用 `setDiy` + 重建自选库存，再进入协议启动；超时按当前选择；默认盟约无此步骤。测试 `test/versions-custom.test.js`、`test/ui/custom.test.js`
+- [ ] 规程 HUD 布局、双栏简报、领袖战徽章
 - [ ] 官方主题包 + 主题提取器（`shared/uiTheme.js`、`public/js/uiTheme.js`、`public/css/ui-theme.css`、`tools/theme-template.mjs`）
 - [ ] 每版本音乐（4 首）与结算提示
 - [ ] 3D 简报图：与 §0 的 `board3d` 冲突，**降级为静态渲染图**（先不做实时）
