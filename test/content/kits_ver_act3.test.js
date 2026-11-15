@@ -172,14 +172,13 @@ test('batch 1–9 numbers: the stat/damage specs carry the blackboard values', (
   assert.deepEqual(spec('char_4245_alga', 0).spec.attack, { atkScale: 1.25, hits: 2 });
   assert.equal(spec('char_4245_alga', 1).spec.mods.atkPct, 0.4);
   assert.equal(typeof spec('char_4245_alga', 1).spec.onAttack, 'function');
-  // 阿米娅: S1 attack speed +45; S2 seven 39 % shots and the self-stun; S3 ATK +130 %, +50 % max HP, true damage
-  assert.equal(spec('char_002_amiya', 0).spec.mods.aspd, 45);
-  assert.equal(spec('char_002_amiya', 1).spec.attack.atkScale, 0.39);
-  assert.equal(spec('char_002_amiya', 1).spec.attack.hits, 7);
-  assert.equal(typeof spec('char_002_amiya', 1).spec.onEnd, 'function');
-  assert.equal(spec('char_002_amiya', 2).spec.mods.atkPct, 1.3);
-  assert.equal(spec('char_002_amiya', 2).spec.mods.hpPct, 0.5);
-  assert.equal(spec('char_002_amiya', 2).spec.attack.dmgType, 'true');
+  // 阿米娅（医疗）: S1 attack speed +45 and the on-hit heal; S2 the opening volley, true damage on two targets afterwards
+  assert.equal(spec('char_1037_amiya3', 0).spec.mods.aspd, 45);
+  assert.equal(typeof spec('char_1037_amiya3', 0).spec.attack.onHit, 'function');
+  assert.equal(spec('char_1037_amiya3', 1).spec.attack.noAttack, true);
+  assert.equal(spec('char_1037_amiya3', 1).spec.attack.dmgType, 'true');
+  assert.equal(spec('char_1037_amiya3', 1).spec.attack.maxTargets, 2);
+  assert.equal(typeof spec('char_1037_amiya3', 1).spec.onStart, 'function');
   // 青枳: S1 a DP grant; S2 ATK +10 / DEF +40 and its own start handler
   assert.equal(typeof spec('char_488_buildr', 0).spec.onStart, 'function');
   assert.equal(spec('char_488_buildr', 1).spec.mods.atkPct, 0.1);

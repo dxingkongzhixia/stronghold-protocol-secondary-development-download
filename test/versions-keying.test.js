@@ -68,7 +68,7 @@ test('a version build resolves each chess to a kit written for its own charId, o
       const keyOf = (id) => { const r = data.chess[id]; return officialKitKey({ id, baseId: id, charId: r.charId, tier: r.tier }, data); };
       assert.equal(keyOf('chess_char_1_01_a'), 'chess_char_2_17_a', '折桠 (a tier-2 kit) under chess_char_1_01_a');
       assert.equal(keyOf('chess_char_1_02_a'), 'chess_char_1_12_a', '艾丝黛尔 under chess_char_1_02_a');
-      assert.equal(keyOf('chess_char_5_26_a'), 'char_002_amiya', '阿米娅 now resolves by charId');
+      assert.equal(keyOf('chess_char_5_26_a'), 'char_1037_amiya3', '阿米娅 is templated to her 医疗 body (char_patch_table)');
       assert.equal(keyOf('chess_char_1_15_a'), 'char_4041_chnut', '褐果 now resolves by charId');
       assert.equal(keyOf('chess_char_3_05_a'), 'char_4232_hbound', '旅骨 now resolves by charId');
       assert.equal(PENDING_KIT_CHARS.length, 0, 'every act3 operator has a kit');

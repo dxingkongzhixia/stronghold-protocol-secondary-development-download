@@ -992,6 +992,24 @@ async function loadContext() {
     : activity?.activity?.AUTOCHESS_SEASON?.[SEASON];
   const ac = activity?.autoChessData;
   if (!act || !ac) throw new Error(`activity_table has no ${VERSION ? VERSION.id : SEASON} section`);
+  // A templated operator (规程's chess_char_5_26: charId char_002_amiya + tmplId char_1037_amiya3, 阿米娅's 医疗 form) is
+  // built as its template: char_patch_table's patchChars holds the template as a character record of its own (skills,
+  // phases, the uniequip_00x_amiya3 modules). Read only when a shop row names a template (盟约 has none), so the default
+  // build neither loads the table nor changes a byte. The row then names the template as its character, exactly like the
+  // official backup rule: the chess fields 阿米娅's 医疗 body, not the 术师 one.
+  const templated = Object.values(act.charShopChessDatas || {}).filter((r) => r.tmplId || r.backupTmplId);
+  if (templated.length) {
+    const patch = await loadGamedata('excel/char_patch_table.json');
+    for (const [id, rec] of Object.entries(patch.patchChars || {})) if (!charTable[id]) charTable[id] = rec;
+    for (const r of templated) {
+      for (const [idKey, tmplKey] of [['charId', 'tmplId'], ['backupCharId', 'backupTmplId']]) {
+        if (!r[tmplKey]) continue;
+        if (!charTable[r[tmplKey]]) throw new Error(`shop row ${r.chessId}: template ${r[tmplKey]} is in neither character_table nor char_patch_table`);
+        r[idKey] = r[tmplKey];
+        r[tmplKey] = null;
+      }
+    }
+  }
   if (VERSION) warn(`custom chess: not added to ${VERSION.id} (they are the covenant fork's roster)`);
   else applyCustomChess(act, charTable);
 
@@ -2017,7 +2035,6 @@ function buildBackups(ctx, chess) {
     if (c.chessType !== 'NORMAL' || !b?.charId || b.charId === c.charId) continue;
     if (!charTable[b.charId]) { warn(`chess ${c.chessId}: backup ${b.charId} missing from character_table`); continue; }
     if (b.potRank !== 0) warn(`chess ${c.chessId}: backup potential ${b.potRank} (a 补位 stand-in fights without potential: not applied)`);
-    if (b.tmplId) warn(`chess ${c.chessId}: backup template ${b.tmplId} is not built`);
     addNeed(b.charId, c.status);
     if (!c.isGolden) standsIn.set(b.charId, [...(standsIn.get(b.charId) || []), c.chessId]);
   }
@@ -2128,9 +2145,6 @@ function checkUnitFormParity(ctx, chess) {
   const errors = [];
   for (const c of Object.values(chess)) {
     if (c.chessType !== 'PRESET' || c.backup?.charId !== c.charId) continue;
-    // A template preset (规程's Amiya3): the chess form comes from backup.tmplId, which buildChess does not build yet
-    // (its warning above), so the parity check would compare two different characters. P2 owns template forms.
-    if (c.backup?.tmplId) continue;
     if (c.backup.skillIndex !== c.skill?.index || (c.backup.uniEquipId ?? null) !== (c.module?.id ?? null)) {
       errors.push(`unit parity ${c.chessId}: the backup skill / module differ from the chess default`);
       continue;

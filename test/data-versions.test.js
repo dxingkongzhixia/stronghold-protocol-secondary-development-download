@@ -12,7 +12,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PIN = path.join(ROOT, '.cache', 'gamedata@6f63c14e');
-const havePin = existsSync(path.join(PIN, 'excel', 'activity_table.json'));
+const havePin = existsSync(path.join(PIN, 'excel', 'activity_table.json'))
+  && existsSync(path.join(PIN, 'excel', 'char_patch_table.json')); // the 规程 template operator (阿米娅·医疗) lives there
 const DATA = path.join(ROOT, 'data', 'versions', 'act3autochess-v3_1');
 const json = (name) => JSON.parse(readFileSync(path.join(DATA, `${name}.json`), 'utf8'));
 

@@ -202,7 +202,7 @@ export const VERSION_KIT_FILES = Object.freeze([
   'ver-kichi.js',
   'ver-liesel.js',
   'ver-alga.js',
-  'ver-amiya.js',
+  'ver-amiya3.js',
   'ver-buildr.js',
   'ver-fang2.js',
   'ver-aosta.js',

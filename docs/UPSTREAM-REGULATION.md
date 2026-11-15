@@ -143,7 +143,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 层 | 现状 | 还差 |
 |---|---|---|
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
-| 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游 | `backup.tmplId` 完整形态（pin 缺 `char_1037_amiya3`）、`spineLocal`/tuning 隐藏输入 |
+| 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游；模板预设（阿米娅·医疗）取 `char_patch_table` 的完整形态 | `spineLocal`/tuning 隐藏输入 |
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩 | 联合半数核心、自选规则、招募例外 recruitTierExempt、隐秘核心阈值复核、地图规则、寻宝/top-3、对局修复 |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 无（P3 完成） |
 | 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
@@ -161,15 +161,15 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [ ] **P0.5** `tools/versions/*` 的其余部分（profiles/adapters/sources/runtime）——构建已用 `--version` + `tables` + `layouts` 跑通，只差通用 profile 加载器
 
 ### P1 规程数据（3–5 人日）
-- [x] **pin 缓存**：`.cache/gamedata@6f63c14e/`（8 张 excel 表 + 61 个 level 文件，PowerShell 从 `raw.githubusercontent.com/.../6f63c14e/` 取；Node 的 TLS 在本机被中间证书挡住，构建器下载不可用）
+- [x] **pin 缓存**：`.cache/gamedata@6f63c14e/`（9 张 excel 表 + 61 个 level 文件，PowerShell 从 `raw.githubusercontent.com/.../6f63c14e/` 取；Node 的 TLS 在本机被中间证书挡住，构建器下载不可用）。第 9 张是 `char_patch_table.json`：模板干员（阿米娅·医疗）的 character 记录不在 `character_table` 里
 - [x] **`--version` 骨架**：`tools/build-data.mjs --version act3autochess@V3_1` 从注册表取 season / 输出目录，按 `activity.AUTOCHESS.act3autochess.V3_1` 定位 section、`autoChessData` 取共享表；默认构建 `--offline` 仍逐字节不变（298 chess / 23 bonds / 361 effects，exit 0）
 - [x] **版本专有表**：`tools/versions/tables/act3autochess-v3_1.mjs`（bountyDrafts / shopDraft / tacticDraft，145 行，按 15 场联合录屏实测）已接入；`stock` 按上游规则在版本构建中留空（无按名库存覆盖）；版本构建的总额度上限 7 MB
 - [x] **构建干净通过**：15 文件 / **6.46 MiB**，写入 `data/versions/act3autochess-v3_1/`；`test/data-versions.test.js`（pin 缓存缺失时跳过）验证「重建逐字节相同」与计数
 - [x] **`layout: 'regulation'`**：移植 `tools/versions/layouts.mjs`，10 张 stage 由 5×9/6×21/13×21 三段 piece 拼回 **19×21**（`composeRegulationStage`）；round 模板走 `placeRegulationTemplate`
 - [x] **计数与上游一致**：chess **310**、bonds 26、bands 61、items 116、choices 9、garrisons 334、tokens 34、stages 12、effects 465、bosses 16、waves 50、factions 5、visible 141；modes 26、hiddenCore {350,1200}
-- [x] **版本化 gating**：版本构建跳过 fork 的自定义干员/阵营、版本 stock 留空、act2 专有 pool 丢弃、模式里缺失的盟约剔除、DIY 池里缺召唤变体的「王」剔除、模板预设（`backup.tmplId`，阿米娅3）的模块列表取自模板角色
+- [x] **版本化 gating**：版本构建跳过 fork 的自定义干员/阵营、版本 stock 留空、act2 专有 pool 丢弃、模式里缺失的盟约剔除、DIY 池里缺召唤变体的「王」剔除、模板预设（`backup.tmplId`，阿米娅·医疗）在构建时应用（见下条）
 - [x] **enemies 343 = 上游**：参照 `enemy_database` 补两个没有任何 act3 表/波次引用的条目 `enemy_2017_csphts` / `enemy_2123_dyjsww`（版本表 `enemyExtras`，仅本版本；`STATS_ONLY` 数据形态）。默认数据不变；`test/versions-enemies-procedural.test.js` 覆盖 98 个新增敌人
-- [ ] `backup.tmplId` 的完整形态（stats/trait/skill/talents 取模板角色）——**阻塞**：当前 gamedata pin 没有 `char_1037_amiya3`（规程阿米娅3，医疗形态），需要更新的官方 character/skill/uniequip 表；现有 40 套件里的「阿米娅」是基础形态套件
+- [x] **`backup.tmplId` 的完整形态**：官方 `charShopChessDatas` 的模板行（`chess_char_5_26`：`charId` 阿米娅 + `tmplId` char_1037_amiya3，医疗形态）在构建时应用——`char_patch_table.patchChars` 提供模板角色记录（skills / phases / `uniequip_00x_amiya3`），行的 `charId` / `backupCharId` 改为模板、`tmplId` 置空，stats / trait / skill / talents / range / 模块 / 美术全部取模板；套件随之改为 `ver-amiya3.js`（S1 哀恸共情、S2 慈悲愿景、天赋诚挚期许）。默认盟约没有模板行，因此不加载该表、数据逐字节不变。测试 `test/versions-templated.test.js`、`test/content/kits_ver_act3.test.js`；规程 golden 归因后重算（roster / bonds / fields）
 - [ ] 隐藏输入：`data/assets.json` 的 `spineLocal` 片段、`data/tuning.json` 字节副本、`docs/research/*` 输入
 
 ### P2 规则与内容（8–12 人日）
@@ -222,7 +222,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] act3 的 activity / 主题 opt-in 任务（`EXTRA_JOBS`，270 + 1 文件）；enemy-fx 已由 `fx.py` 的 glob 覆盖
 - [x] **按版本素材并集规划**：`tools/assets/versions.mjs` 读取各版本 `chess/backups/tokens/enemies/items/bands/bonds/bosses/stages`，按美术身份并集（干员 216 / 敌人 343 / 策略 61 / 盟约 26 / 装备 70 / 召唤 57 / 模块类型 133），并对照 web manifest 与本地客户端 manifest 报告缺口；`--check` / `--json` / `--junctions`。测试 `test/versions-assets-plan.test.js`
 - [x] 规程 4 首音乐：已从本地客户端 / Monster Siren 入 `var/music`（Kernel Overflow / Restore / Ens Inexorabile / Systematic Violation），客户端由 `VERSION_BGM` 使用
-- [x] **本地客户端素材补全**：从本机 B 服客户端抽取 Amiya 基础形态 avatar/portrait/Spine、**79 个规程敌人图标**、**44 个策略图标 / 4 个盟约图标 / 47 个装备图标 / 73 个技能图标**（`public/assets/local/{enemy/icon,band,bond,item,skill}`，经 `data/local-assets.committed.json` 登记；`ui/assetUrls.js` 的 enemy/band/bond/item/skill/avatar/portrait 解析回落本地）；40/40 规程套件干员、98/98 敌人 Spine、10/10 战场场景、主题均已覆盖。24 个 act3 专属 Boss/召唤在客户端无图鉴图标，UI 回落为字形。测试 `test/versions-assets.test.js`
+- [x] **本地客户端素材补全**：从本机 B 服客户端抽取 Amiya 基础形态 avatar/portrait/Spine、阿米娅·医疗的 avatar/portrait/Spine 与 `skchr_amiya3_1/_2` 技能图标、**79 个规程敌人图标**、**44 个策略图标 / 4 个盟约图标 / 47 个装备图标 / 75 个技能图标**（`public/assets/local/{enemy/icon,band,bond,item,skill}`，经 `data/local-assets.committed.json` 登记；`ui/assetUrls.js` 的 enemy/band/bond/item/skill/avatar/portrait 解析回落本地，客户端只带 E2 图的形态回落 E2）；40/40 规程套件干员、98/98 敌人 Spine、10/10 战场场景、主题均已覆盖。24 个 act3 专属 Boss/召唤在客户端无图鉴图标，UI 回落为字形。测试 `test/versions-assets.test.js`、`test/ui/assetUrls.test.js`
 - [ ] 中继发布与手机端首包评估
 
 ### P5 golden / 测试 / CI（3–5 人日）

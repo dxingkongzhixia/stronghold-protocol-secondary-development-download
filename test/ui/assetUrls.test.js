@@ -114,12 +114,15 @@ describe('assetUrls', () => {
       id: 'local-char-art-test',
       values: { local: { groups: {
         'char/avatar/char_new': { char_new: { path: '/assets/local/char/avatar/char_new/char_new.png' }, char_new_2: { path: '/assets/local/char/avatar/char_new/char_new_2.png' } },
+        // 规程's 医疗阿米娅: the client ships only her E2 avatar
+        'char/avatar/char_e2only': { char_e2only_2: { path: '/assets/local/char/avatar/char_e2only/char_e2only_2.png' } },
         'char/portrait/char_new': { char_new_1: { path: '/assets/local/char/portrait/char_new/char_new_1.png' }, char_new_2: { path: '/assets/local/char/portrait/char_new/char_new_2.png' } },
       } } },
     });
     try {
       assert.equal(chessAvatarUrl({}, { charId: 'char_new' }), '/assets/local/char/avatar/char_new/char_new.png');
       assert.equal(chessAvatarUrl({}, { charId: 'char_new', isGolden: true }), '/assets/local/char/avatar/char_new/char_new_2.png');
+      assert.equal(chessAvatarUrl({}, { charId: 'char_e2only' }), '/assets/local/char/avatar/char_e2only/char_e2only_2.png', 'a form with only E2 art uses it');
       assert.equal(chessPortraitUrl({}, { charId: 'char_new' }), '/assets/local/char/portrait/char_new/char_new_1.png');
       assert.equal(chessPortraitUrl({}, { charId: 'char_new', isGolden: true }), '/assets/local/char/portrait/char_new/char_new_2.png');
     } finally {

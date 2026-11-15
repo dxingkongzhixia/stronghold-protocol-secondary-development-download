@@ -70,7 +70,9 @@ export function chessAvatarUrl(m, chess) {
   const chars = obj(obj(m)?.chars);
   const id = str(chess?.assets?.avatar) || str(chess?.charId);
   const charId = str(chess?.charId) || (id ? id.replace(/_\d+$/, '') : null);
-  const local = charId ? localAsset(`char/avatar/${charId}`, chess?.isGolden ? `${charId}_2` : charId) || localAsset(`char/avatar/${charId}`, charId) : null;
+  // local art is the client's own (data/local-assets.committed.json); a form that only has E2 art there (规程's 医疗阿米娅,
+  // whose E1 avatar the client does not ship) falls back to it, like the portrait below
+  const local = charId ? localAsset(`char/avatar/${charId}`, chess?.isGolden ? `${charId}_2` : charId) || localAsset(`char/avatar/${charId}`, `${charId}_2`) : null;
   if (!chars || !id) return local;
   if (id.endsWith('_2') && !chars[id]) {
     const base = chars[id.slice(0, -2)];
