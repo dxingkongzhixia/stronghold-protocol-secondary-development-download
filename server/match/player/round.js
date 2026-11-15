@@ -252,6 +252,34 @@ export class PlayerRound {
     });
   }
 
+  /** The held band's bond-replacement effect record (`auto_chess_effect_replace`), or null in the default data. */
+  _bandReplacementEffect() {
+    const band = this.bandId ? this.gd.band(this.bandId) : null;
+    const rep = band && Array.isArray(band.buffs) ? band.buffs.find((b) => b && b.key === 'auto_chess_effect_replace') : null;
+    const id = rep && rep.bbStr ? Object.values(rep.bbStr).find((v) => typeof v === 'string' && v) : null;
+    return id ? this.gd.effect(id) : null;
+  }
+
+  /**
+   * 规程 阿戈尔's second direction (bondeffect_egir_2): with `power_bond_char_cnt` distinct members of the replacement's
+   * bond on the board, the first `switch_cnt_max` of them knocked down summon the hand's rightmost member of that bond.
+   * The sim gets the bench operator's battle input; the mark is player-level (`battleInput().bandMarks`).
+   */
+  _bandBenchMark() {
+    const rep = this._bandReplacementEffect();
+    const p = rep && rep.params;
+    const count = p && Number.isInteger(p.switch_cnt_max) ? p.switch_cnt_max : 0;
+    const bondId = p && typeof p.bond_id === 'string' ? p.bond_id : null;
+    if (!(count > 0) || !bondId) return null;
+    const isMember = (piece) => !!piece && piece.kind === 'chess'
+      && ((this.gd.chess(this.gd.baseIdOf(piece.id)) || {}).bonds || []).includes(bondId);
+    const distinct = new Set([...this.board.values()].filter(isMember).map((piece) => this.gd.baseIdOf(piece.id)));
+    if (distinct.size < Math.max(1, Number(p.power_bond_char_cnt) || 6)) return null;
+    const bench = this.hand.find(isMember); // rightmost first: the hand fills right-to-left
+    if (!bench) return null;
+    return { tag: 'egir_bench', bondId, count, summon: this._unitInputFor(bench) };
+  }
+
   battleInput({ side = 'L', colOffset = 0, carry = null, reached = false } = {}) {
     // a band elite gate is checked once at battle start (a preview uses the same input and reports the same stats)
     this.m?.applyBandEliteGate?.(this);
@@ -273,6 +301,10 @@ export class PlayerRound {
         units.push(u);
       }
     }
+    // player-level band marks for this battle: the skill's marks, and 规程's bench-summon second direction
+    const bandMarks = this.bandGlobal.map((m) => ({ ...m }));
+    const bench = this._bandBenchMark();
+    if (bench) bandMarks.push(bench);
     return {
       playerId: this.playerId,
       seat: this.seat,
@@ -284,8 +316,8 @@ export class PlayerRound {
       playerEffects: this.effects.filter((e) => e.battle !== false).map((e) => ({
         id: e.id, key: e.key ?? null, source: e.iconKind ?? null, params: e.params ?? null, counter: e.counter ?? null, data: e.data ?? null,
       })),
-      // player-level band-skill marks for this battle (PlayerState.bandGlobal): a fear tile, the treasure, an equip lend
-      ...(this.bandGlobal.length ? { bandMarks: this.bandGlobal.map((m) => ({ ...m })) } : {}),
+      // player-level band-skill marks for this battle (PlayerState.bandGlobal, plus 规程's bench summon)
+      ...(bandMarks.length ? { bandMarks } : {}),
       deviceOverrides: { ...this.deviceOverrides },
     };
   }

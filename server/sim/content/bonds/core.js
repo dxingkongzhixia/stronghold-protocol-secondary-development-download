@@ -249,12 +249,13 @@ function installSargon(battle, pid, bb, members) {
   });
 }
 
-function lendAround(battle, from, share, L) {
+function lendAround(battle, from, share, L, bondId = 'sargonShip') {
   if (!S.itemsOf(from).length) return;
   const lend = typeof deps.lendItemEffects === 'function' ? deps.lendItemEffects
     : typeof items.lendItemEffects === 'function' ? items.lendItemEffects : null;
   if (!lend) return;
-  const duration = num(share.base_power_time, 0) + num(share.power_time_per_stack, 0) * L;
+  const duration = Math.min(num(share.max_time, Infinity),
+    num(share.base_power_time, 0) + num(share.power_time_per_stack, 0) * L);
   if (!(duration > 0)) return;
   const maxTier = num(share.filter_item_level, 5);
   let n = 0;
@@ -263,7 +264,20 @@ function lendAround(battle, from, share, L) {
     lend(battle, from, a, { maxTier, duration });
     n++;
   }
-  if (n) S.fxOn(battle, 'bondShare', from, 'bond:sargonShip', 'narant', { n, duration });
+  if (n) S.fxOn(battle, 'bondShare', from, `bond:${bondId}`, bondId, { n, duration });
+}
+
+/**
+ * The bond effect a held band replaces (`auto_chess_effect_replace`, 规程's 6-member second directions): the band's
+ * map is { bondEffectId: replacementEffectId }, so the record is the replacement. Null for the default data (no band
+ * carries the key there), which keeps this path regulation-only.
+ */
+function bandReplacementEffect(battle, pid) {
+  const ps = S.player(battle, pid);
+  const band = ps && ps.bandId ? S.bandRecord(ps.bandId) : null;
+  const rep = band && S.buffsOf(band).find((b) => b.key === 'auto_chess_effect_replace');
+  const id = rep && rep.p ? Object.values(rep.p).find((v) => typeof v === 'string' && v) : null;
+  return id ? S.effectRecord(id) : null;
 }
 
 // =====================================================================================================================
@@ -287,6 +301,22 @@ function installVictoria(battle, pid, bb, members) {
     for (const id of ids) add += S.isGoldenId(id) ? golden : normal;
     if (add > 0) S.passiveBuff(battle, u, 'bond:victoria:atk', S.directMods({ atk: add }));
   }
+  // 规程 band_victoria's replacement (bondeffect_victoria_2): 6 distinct members → a member's skill start lends its
+  // carried equipment to the 8 neighbours for share_equip_duration_base + per_stack·L seconds (≤ max).
+  const rep = bandReplacementEffect(battle, pid);
+  const gb = rep && S.buffsOf(rep).find((b) => b.bbKey === 'act3autochess_bond_eff_victoria');
+  if (!gb || !members.length) return;
+  const memberSet = new Set(members);
+  battle.on('skillStart', ({ unit }) => {
+    if (!memberSet.has(unit) || !S.itemsOf(unit).length) return;
+    const L = S.bondLayers(battle, pid, 'victoriaShip');
+    lendAround(battle, unit, {
+      ...gb.p,
+      base_power_time: num(gb.p.share_equip_duration_base, 30),
+      power_time_per_stack: num(gb.p.share_equip_duration_per_stack, 0),
+      max_time: num(gb.p.share_equip_duration_max, Infinity),
+    }, L, 'victoriaShip');
+  });
 }
 
 // =====================================================================================================================

@@ -10,7 +10,7 @@
 //
 // Marks are read once, at the battle's start; an operator that never deploys never fires them.
 
-import { num, isOp, playerOps, fxOn } from '../support/index.js';
+import { num, isOp, playerOps, fxOn, unitBonds } from '../support/index.js';
 import { addShieldLayer, installItem, PRIO_RESPAWN, reviveNow } from '../items/battle.js';
 import { findSummonTile } from '../tokens.js';
 
@@ -47,6 +47,7 @@ function applyGlobal(battle, ps, m) {
   if (m.tag === 'fear_tile') fearTile(battle, m);
   else if (m.tag === 'treasure') treasure(battle, ps, m);
   else if (m.tag === 'lend_equip') lendEquip(battle, ps, m);
+  else if (m.tag === 'egir_bench') egirBench(battle, ps, m);
 }
 
 /** 溃心领域: the first enemy to pass the tile after the battle starts is feared (`fear` seconds). */
@@ -107,6 +108,29 @@ function lendEquip(battle, ps, m) {
     if ((u.items?.length ?? 0) >= slots) continue;
     installItem(battle, u, m.itemId, { lent: true });
   }
+}
+
+/**
+ * 规程 阿戈尔's second direction: the first `count` members of `bondId` knocked down summon the hand's rightmost
+ * member of that bond at a free tile next to where they fell (the server resolved `summon` in battleInput).
+ */
+function egirBench(battle, ps, m) {
+  let left = Math.max(0, Math.floor(num(m.count, 0)));
+  if (!(left > 0) || !m.summon || !m.summon.chessId) return;
+  const seen = new Set();
+  battle.on('death', (c) => {
+    if (left <= 0 || c.reason !== 'killed') return;
+    const u = c.unit;
+    if (!u || !isOp(u) || u.ownerId !== ps.playerId || seen.has(u)) return;
+    if (m.bondId && !unitBonds(u).includes(m.bondId)) return;
+    const tile = findSummonTile(battle, u, 'adjacent') || findSummonTile(battle, u, 'plus');
+    if (!tile) return;
+    const summoned = battle.spawnOperator(ps.playerId, m.summon, tile[0], tile[1]);
+    if (!summoned) return;
+    seen.add(u);
+    left--;
+    fxOn(battle, 'summon', summoned, markKey('egir_bench'), 'band');
+  });
 }
 
 function shieldOnAttack(battle, u, m) {
