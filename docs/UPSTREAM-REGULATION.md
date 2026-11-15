@@ -144,9 +144,9 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 |---|---|---|
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
 | 规程数据 | 16 文件 / 6.4 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游；模板预设（阿米娅·医疗）取 `char_patch_table` 的完整形态；tuning（称号规则）与 `spineLocal` 输入已显式化 | — |
-| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩 | 联合半数核心、自选规则、招募例外 recruitTierExempt、隐秘核心阈值复核、地图规则、寻宝/top-3、对局修复 |
+| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 核心优先禁用 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩、MAP09 隐匿/加速地块 | P2 剩余：地图规则 3 项（茧索敌、萨卡兹亡语、莱塔尼亚召唤）、寻宝人整体、对局侧修复、`recruitTierExempt`（pin 阻塞）、隐秘核心/领袖/联防复核 |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 无（P3 完成） |
-| 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
+| 素材 | 场景/主题/敌人特效、按版本并集规划、98 个本地敌人 Spine 已接 manifest、音乐、主题 | 手机端首包评估；版本并集干员/图标下载计划（敌人/召唤已接入） |
 | golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 无（P5 完成） |
 | 冲突面 | 未动 14 条 never-merge 路径 | 逐块适配并保留 fork 特性（P6） |
 
@@ -190,7 +190,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
 - [x] 核心盟约二选一（个人）**服务端完成**：`g.coreBond`、两组随机核心盟约、落选组进禁用并重建池/自选库存（`Match.coreBondGroups` / `phases.applyCoreBondChoice`，默认盟约无变化；选择器 UI 随 P3）
 - [x] 核心优先禁用（规程）：`GameData.bondsExclude` 按官方多人录像（BV1hmWL6fEmQ，`docs/research/regulation-core-ban-video-…`）——有核心盟约时只看核心，全部核心灰才禁用；无核心时才看附加盟约。初雪（谢拉格灰 + 协防亮）因此离场，多核心留任一、无核心随附加；`pool` / `coreBond` 重建 / 自选库存 / 具名奖励共用。默认盟约保持原「全部盟约联合」判定。测试 `test/versions-corebond.test.js`
-- [ ] 自选无特质、按阵营分盟约（Ⅴ/Ⅵ 各 0–2 已由 CUSTOM_CHECK 实现）
+- [x] 自选无特质、按阵营分盟约：`shared/diy.js` 的自选记录取槽位身份（`garrisonIds: []`）与干员的派生盟约（`backups.diy.operators[charId].bonds`），非盟约表原样复制；Ⅴ/Ⅵ 各 0–2 由 CUSTOM_CHECK 实现。测试 `test/diy.test.js`（默认数据）与 `test/versions-custom.test.js`（规程）
 - [x] 装备区（服务端）：独立 5 格 `equipHand`（`economy.equipHandSize` = 官方 `constData.maxDeckEquipmentChessCnt`），购买/获得进装备区、从装备区装备、装备区参与合并；默认盟约仍与手牌共用（`equipHandSize` 缺省 0）。测试 `test/versions-equipment.test.js`；UI 随 P3
 - [x] 每干员装备容量：版本构建写入官方 `charChessDataDict[].equipSlotNum`（非 2 时）到 `chess.json equipSlots`，`GameData.equipSlotsOf` 覆盖 `equipPerChess`（Ironhide 4 / 6，其余 2）；装备/替换、invariant、bot 与装备区 UI 均按干员容量；`shared/standIn.js IDENTITY_FIELDS` 携带该字段。测试 `test/versions-equipment.test.js`
 - [ ] 招募例外 `recruitTierExempt`：当前 gamedata pin 无该字段，待官方表更新
@@ -200,7 +200,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] 指令（主动策略）：服务端 `g.bandSkill`、客户端点击/拖放与目标选择、每回合次数/资金/冷却显示、追随者们的指令替换（B7）；变换策略仍待核对
 - [x] **领袖战 top-3 伤害统计**：`config.bossDamageStats`（官方 30/60/100 阈值）存在时，`m.public.bossHp.top` 下发共享领袖血池的前三名（玩家、伤害、占最大生命百分比），顶栏领袖胶囊显示；测试 `test/versions-boss-top.test.js`
 - [ ] 寻宝人模拟宝藏（band 侧“模拟宝藏”已做，寻宝人整体未做）；装备报告 tab 已由 P3 完成
-- [ ] 对局侧修复：#925 装备奖励池、#930 人事部记录、#932 暴躁铁皮、#934 极光/忍冬、#937 白铁、#944 组合装备、#939/#943/#947 规程战斗、#946 阶段横幅（随本阶段一并落地）
+- [ ] 对局侧修复：**待移植** #932 暴躁铁皮、#934 极光/忍冬、#937 白铁、#944 组合装备、#939/#943/#947 规程战斗、#925 装备奖励池；#946 阶段横幅依赖 `public/js/ui/prefab/banners.js`；#930 本树无 `equip_use_main_bond` 机制（N/A，见 `UPSTREAM-DEV-TRIAGE.md` §10.7）
 
 ### P3 UI / 主题（8–12 人日）
 - [x] 规程等级 1–20 的**服务端选择**：`room.setMode { modeId }` 接受版本自己的模式（`config.modes`，如 `mode_single_7`），同步房间难度与 `content.modeId`；测试 `test/lobby-versions.test.js`
@@ -224,7 +224,8 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **按版本素材并集规划**：`tools/assets/versions.mjs` 读取各版本 `chess/backups/tokens/enemies/items/bands/bonds/bosses/stages`，按美术身份并集（干员 216 / 敌人 343 / 策略 61 / 盟约 26 / 装备 70 / 召唤 57 / 模块类型 133），并对照 web manifest 与本地客户端 manifest 报告缺口；`--check` / `--json` / `--junctions`。测试 `test/versions-assets-plan.test.js`
 - [x] 规程 4 首音乐：已从本地客户端 / Monster Siren 入 `var/music`（Kernel Overflow / Restore / Ens Inexorabile / Systematic Violation），客户端由 `VERSION_BGM` 使用
 - [x] **本地客户端素材补全**：从本机 B 服客户端抽取 Amiya 基础形态 avatar/portrait/Spine、阿米娅·医疗的 avatar/portrait/Spine 与 `skchr_amiya3_1/_2` 技能图标、**79 个规程敌人图标**、**44 个策略图标 / 4 个盟约图标 / 47 个装备图标 / 75 个技能图标**（`public/assets/local/{enemy/icon,band,bond,item,skill}`，经 `data/local-assets.committed.json` 登记；`ui/assetUrls.js` 的 enemy/band/bond/item/skill/avatar/portrait 解析回落本地，客户端只带 E2 图的形态回落 E2）；40/40 规程套件干员、98/98 敌人 Spine、10/10 战场场景、主题均已覆盖。24 个 act3 专属 Boss/召唤在客户端无图鉴图标，UI 回落为字形。测试 `test/versions-assets.test.js`、`test/ui/assetUrls.test.js`
-- [ ] 中继发布与手机端首包评估
+- [x] 中继发布：`node tools/push-assets-relay.mjs` 已把含规程素材的树部署到 relay（每次发布先于 gitee/github）
+- [ ] 手机端首包评估：规程素材并入后的首包体积/下载瀑布与弱网首屏（`docs/MOBILE-UI.md` §7 的手机矩阵仍未跑规程）
 
 ### P5 golden / 测试 / CI（3–5 人日）
 - [x] 按版本分目录 golden（`test/golden/act3autochess-v3_1/*.json`）+ `tools/golden.mjs --version <id>` + `tools/versions/runtime.mjs`；默认 6 文件不动（`npm run golden` 仍逐项匹配）
