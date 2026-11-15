@@ -187,6 +187,10 @@ export const VERSION_KIT_FILES = Object.freeze([
   'ver-frncat.js',
   'ver-swllow.js',
   'ver-bison.js',
+  'ver-cammou.js',
+  'ver-varkis.js',
+  'ver-quercu.js',
+  'ver-frostl.js',
 ]);
 
 /**
@@ -358,12 +362,10 @@ export const PENDING_KIT_CHARS = Object.freeze([
   'char_002_amiya',
   'char_1036_fang2',
   'char_129_bluep',
-  'char_193_frostl',
   'char_194_leto',
   'char_195_glassb',
   'char_219_meteo',
   'char_274_astesi',
-  'char_328_cammou',
   'char_333_sidero',
   'char_346_aosta',
   'char_347_jaksel',
@@ -373,7 +375,6 @@ export const PENDING_KIT_CHARS = Object.freeze([
   'char_4066_highmo',
   'char_4147_mitm',
   'char_4165_ctrail',
-  'char_4166_varkis',
   'char_4177_brigid',
   'char_4198_christ',
   'char_4203_kichi',
@@ -385,7 +386,6 @@ export const PENDING_KIT_CHARS = Object.freeze([
   'char_455_nothin',
   'char_484_robrta',
   'char_488_buildr',
-  'char_492_quercu',
   'char_499_kaitou',
   'char_618_acrbot',
 ]);

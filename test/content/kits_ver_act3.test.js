@@ -82,7 +82,7 @@ test('a version kit is not offered as a default-version DIY pick (KITTED_CHARS u
   for (const charId of Object.keys(VERSION_KITS)) assert.equal(KITTED_CHARS.includes(charId), false, charId);
 });
 
-test('batch 1–2 numbers: the stat/damage specs carry the blackboard values', (t) => {
+test('batch 1–3 numbers: the stat/damage specs carry the blackboard values', (t) => {
   setGameData(ACT3);
   t.after(() => setGameData(null));
   const ds = new DataSource(ACT3, quiet);
@@ -102,6 +102,23 @@ test('batch 1–2 numbers: the stat/damage specs carry the blackboard values', (
   assert.equal(spec('char_325_bison', 0).spec.mods.defPct, 0.45);
   assert.equal(spec('char_325_bison', 1).spec.mods.defPct, 0.65);
   assert.equal(spec('char_325_bison', 1).spec.mods.taunt, 1);
+  // 卡达: S1 ATK +35 %; S2 ATK +49 % and an attack stun handler
+  assert.equal(spec('char_328_cammou', 0).spec.mods.atkPct, 0.35);
+  assert.equal(spec('char_328_cammou', 1).spec.mods.atkPct, 0.49);
+  assert.equal(typeof spec('char_328_cammou', 1).spec.onAttack, 'function');
+  // 摆渡人: S1 three hits at 1.1×; S2 attacks at 1.55× and heals
+  assert.deepEqual(spec('char_4166_varkis', 0).spec.attack, { atkScale: 1.1, hits: 3 });
+  assert.equal(spec('char_4166_varkis', 1).spec.kind, 'duration');
+  assert.equal(spec('char_4166_varkis', 1).spec.attack.atkScale, 1.55);
+  assert.equal(typeof spec('char_4166_varkis', 1).spec.onAttack, 'function');
+  // 夏栎: S1 is a toggle at +20 % ATK; S2 attack speed +36
+  assert.equal(spec('char_492_quercu', 0).spec.kind, 'toggle');
+  assert.equal(spec('char_492_quercu', 0).spec.mods.atkPct, 0.2);
+  assert.equal(spec('char_492_quercu', 1).spec.mods.aspd, 36);
+  // 霜叶: S1 at 1.2×; S2 attack speed +20
+  assert.equal(spec('char_193_frostl', 0).spec.attack.atkScale, 1.2);
+  assert.equal(spec('char_193_frostl', 1).spec.mods.aspd, 20);
+  assert.equal(typeof spec('char_193_frostl', 1).spec.onAttack, 'function');
 });
 
 test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (t) => {
