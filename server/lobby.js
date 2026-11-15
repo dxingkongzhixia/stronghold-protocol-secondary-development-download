@@ -176,7 +176,7 @@ import { isContentHash } from '../shared/plugins/identity.js';
 import { keelEnabled } from './keel/attach.js';
 import { mergeKeelData } from './keel/content.js';
 import { keelDescriptorForContent } from './keel/room-source.js';
-import { DEFAULT_VERSION } from '../shared/versions.js';
+import { DEFAULT_VERSION, officialModeId } from '../shared/versions.js';
 import { OFFICIAL_ORIGIN, isLocalOrigin, normalizeOrigin } from '../shared/origins.js';
 import { msg, wireMessage } from '../shared/i18n.js';
 
@@ -2307,8 +2307,11 @@ export class Lobby {
         roomCode: room.code,
         mode: room.mode,
         difficulty: room.difficulty,
-        // a plugin mode the host chose (header "Gameplay plugins"), else the official mode of the difficulty
-        modeId: room.content?.modeId || modeIdFor(room.mode, room.difficulty),
+        // a plugin mode the host chose (header "Gameplay plugins"), else the official mode of the difficulty (another
+        // official version's solo ladder: mode_single_1 … 20, shared/versions.js officialModeId)
+        modeId: room.content?.modeId || (room.version !== DEFAULT_VERSION
+          ? officialModeId(data?.config, room.mode, room.difficulty) ?? modeIdFor(room.mode, room.difficulty)
+          : modeIdFor(room.mode, room.difficulty)),
         // 「AI 队友最后选择」 (GitHub #338): fixed for the match
         aiPicksLast: room.mode !== 'solo' && room.aiPicksLast === true,
         seats,

@@ -129,8 +129,17 @@ test('the room data and a started match come from the version, and the match run
   assert.equal(hosts.created[0].cs, room.content.cs);
   assert.equal(hosts.created[0].opts.version, ACT3);
   assert.equal(hosts.created[0].opts.requireCs, true);
+  assert.equal(hosts.created[0].opts.modeId, 'mode_multi_normal', 'the version config names the co-op mode');
   assert.equal(hosts.created[0].opts.data.config.season, 'act3autochess');
   assert.equal(room.match?.hosted, undefined, 'the recorder is not a proxy: the lobby still holds the instance');
+
+  // a solo room plays the version's solo ladder (mode_single_1 at FUNNY, not the default data's mode_single_funny)
+  const solo = session(registry, 'Solo');
+  assert.deepEqual(lobby.create(solo, { mode: 'solo', difficulty: 'FUNNY', version: ACT3 }), { ok: true });
+  const sroom = lobby.roomOf(solo);
+  assert.equal(sroom.difficulty, 'FUNNY');
+  assert.deepEqual(lobby.startMatch(sroom), { ok: true });
+  assert.equal(hosts.created[1].opts.modeId, 'mode_single_1');
 });
 
 test('gameplay plugins are refused on a version room; cosmetic ones keep its base', (t) => {
