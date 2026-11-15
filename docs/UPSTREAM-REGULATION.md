@@ -138,15 +138,17 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 ## 4. 与我们的差距（概览）
 
-| 层 | 现状 | 需要 |
+> 2026-11-15 同步：按当前代码与 `UPSTREAM-BANDS.md` 的实际状态重写；下方 §5 才是逐项清单。
+
+| 层 | 现状 | 还差 |
 |---|---|---|
-| 版本系统 | 注册表 + 数据层已落地（`f39e2cb91`）；服务端托管/网页加载/对局宿主未做 | P0.2–P0.5 |
-| 规程数据 | 无 `data/versions/act3autochess-v3_1/` | P1：构建 profile + pin + 16 表 |
-| 规则/内容 | 无 37 kits、6 个规程模块、模式表、装备区、隐秘核心、指令 | P2 |
-| UI | 无规程 HUD/简报/装备报告/徽章/自选/主题 | P3 |
-| 素材 | 本机有官方 bundle；未提取、未进 manifest | P4 |
-| golden/测试 | 单一语料 279 场景，无按版本语料 | P5 |
-| 冲突面 | 14 条 never-merge 路径全部被上游规程改动触及 | P6 |
+| 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
+| 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过 | enemies 341 vs 343、`backup.tmplId` 完整形态、`spineLocal`/tuning 隐藏输入 |
+| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B5、26 个模式、一个难度端到端可玩 | 7 个 `auto_chess_effect_replace` 6 名替换、`band_random`、核心盟约二选一、装备区、隐秘核心核对、地图规则、指令 UI、寻宝/top-3、对局修复 |
+| UI | 版本下拉与加载已有 | 规程 HUD/简报/装备报告/徽章/自编/完整版本选择（P3） |
+| 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
+| golden/测试 | 默认 golden 9/9、规程数据重建与内容测试 | 按版本 golden、12 地图矩阵、UI 套件、CI 配重（P5） |
+| 冲突面 | 未动 14 条 never-merge 路径 | 逐块适配并保留 fork 特性（P6） |
 
 ## 5. 合并清单
 
@@ -182,16 +184,15 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **规程敌人 96/96 覆盖**：23 个签名复用 + 40 个通用天赋组 + 7 个 boss + 26 个官方套件；`test/versions-enemies-procedural.test.js` 的覆盖集合现为零未覆盖
 - [x] **规程 garrison（141 个）**：131 个复用现有 `SERVER_ADD_BOND` / `GAIN_BUFF` / `SERVER_GAIN_EQUIP` 等类型处理器；新增 5 类 prep handler（自身出售价 +N 上限、免费刷新升级上限、场上携带装备干员加层、战斗结束存活干员加层、临时层转换占位）并补 `piece.sellBonus` 到出售结算。测试 `test/versions-garrisons.test.js`（全覆盖 + 4 项行为）
 - [x] **规程 band 元数据**：`buildBands` 从官方 `activity_table` 的 `skillInfoDataDict` / `effectInfoDataDict` 写入 `bands.json`（44 个新 band：ACTIVE 25 / PASSIVE 13 / NONE 6；目标 COMMON_CHESS 11 / NO_TARGET 10 / SHOP_SLOT 2 / MAP_TILE 2；可用 ROUND_RESET 17 / ALL_LIMIT 3 / DEFAULT 22 / COOLDOWN 2；含 cost / unlockType / HUD）。默认数据 `bands.json` 逐字节不变。测试 `test/versions-bands.test.js`
-- [ ] **规程 band handlers**：**B1–B5 完成**。B2：`g.bandSkill` intent 与经济类 10 个；B3：选干员 7 个 + 4 个战斗标记 + 官方解锁链（`skill.stages`）+ 伊比利亚；B4：地块/商店格 4 个 + 玩家级标记；B5：无 key 技能 4 个（条文修正 / 不稳定要素 / 献身护卫 / 最佳品味）与准备期被动 5 个（二重奏 / 精巧设计 / 沙洲梦魇 / 博学多通 / 业务指标）。剩余：7 个 `auto_chess_effect_replace` 的 6 名替换与 `band_random` 技能选择，见 `docs/UPSTREAM-BANDS.md`；测试 `test/versions-bands-skills.test.js`、`test/content/bands_marks.test.js`、`test/match/band-marks.test.js`
-- [ ] **其余规程内容**：装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计
-- [ ] **其余规程内容**：141 个 garrison、54 个 band effect；装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计
+- [ ] **规程 band handlers**：**B1–B5 完成**。B1 被动 5 个；B2 `g.bandSkill` intent + 经济类 10 个；B3 选干员 7 个 + 4 个战斗标记 + 官方解锁链（`skill.stages`）+ 伊比利亚；B4 地块/商店格 4 个 + 玩家级标记；B5 无 key 技能 4 个 + 准备期被动 5 个。剩余：7 个 `auto_chess_effect_replace` 的 6 名替换与 `band_random` 技能选择，见 `docs/UPSTREAM-BANDS.md`；测试 `test/versions-bands-skills.test.js`、`test/content/bands_marks.test.js`、`test/match/band-marks.test.js`
+- [ ] **其余规程内容**：见下方 189–195 的具体条目（装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计）；141 个 garrison 与 54 个 band effect 已完成。
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
-- [ ] 核心盟约二选一（个人）/ 禁用半数（联合）；自选 Ⅴ/Ⅵ 各 0–2；自选无特质、按阵营分盟约
-- [ ] 装备区：独立 5 格 `equipHand`、容量 `equipSlotNum`（Ironhide 4/6）、招募例外 `recruitTierExempt`
-- [ ] 隐秘核心（350/1200 [ASSUMED]，待官方/录屏复核）；领袖轮合血、超时扣血；联防（不叠层）
+- [ ] 核心盟约二选一（个人）/ 禁用半数（联合）：`config.version.rules.bondDraw: 'regulation'` 尚未接线（代码零命中）；自选 Ⅴ/Ⅵ 各 0–2；自选无特质、按阵营分盟约
+- [ ] 装备区：独立 5 格 `equipHand`、容量 `equipSlotNum`（Ironhide 4/6）、招募例外 `recruitTierExempt`；`shared/itemRules.js` 尚不存在
+- [ ] 隐秘核心：配置（350/1200）与 `finalAssault` 判定已有，**端到端未验证**、数值仍 `[ASSUMED]`；领袖轮合血、超时扣血；联防（不叠层）需按规程核对
 - [ ] 地图规则：MAP09 双方隐匿地块、草丛秒数、Boss 受击区、茧隐匿索敌、萨卡兹亡语与延迟召唤、莱塔尼亚召唤与地面接敌
-- [ ] 指令（主动策略）：点击/拖放、每回合次数/资金/冷却；变换策略
-- [ ] 寻宝人模拟宝藏、领袖战 top-3 伤害统计、装备报告
+- [ ] 指令（主动策略）：服务端 `g.bandSkill` 已有；缺客户端点击/拖放、每回合次数/资金/冷却显示、变换策略
+- [ ] 寻宝人模拟宝藏、领袖战 top-3 伤害统计、装备报告（band 侧“模拟宝藏”已做，寻宝人整体未做）
 - [ ] 对局侧修复：#925 装备奖励池、#930 人事部记录、#932 暴躁铁皮、#934 极光/忍冬、#937 白铁、#944 组合装备、#939/#943/#947 规程战斗、#946 阶段横幅（随本阶段一并落地）
 
 ### P3 UI / 主题（8–12 人日）
