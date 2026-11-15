@@ -196,6 +196,10 @@ export const VERSION_KIT_FILES = Object.freeze([
   'ver-sidero.js',
   'ver-meteo.js',
   'ver-jaksel.js',
+  'ver-bluep.js',
+  'ver-astesi.js',
+  'ver-highmo.js',
+  'ver-kichi.js',
 ]);
 
 /**
@@ -366,18 +370,14 @@ export const KIT_CHAR_IDS = Object.freeze({
 export const PENDING_KIT_CHARS = Object.freeze([
   'char_002_amiya',
   'char_1036_fang2',
-  'char_129_bluep',
-  'char_274_astesi',
   'char_346_aosta',
   'char_4031_liesel',
   'char_4041_chnut',
   'char_4047_pianst',
-  'char_4066_highmo',
   'char_4147_mitm',
   'char_4165_ctrail',
   'char_4177_brigid',
   'char_4198_christ',
-  'char_4203_kichi',
   'char_4221_ju',
   'char_4222_taraxa',
   'char_4224_turdus',

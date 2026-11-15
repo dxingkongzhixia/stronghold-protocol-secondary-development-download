@@ -82,7 +82,7 @@ test('a version kit is not offered as a default-version DIY pick (KITTED_CHARS u
   for (const charId of Object.keys(VERSION_KITS)) assert.equal(KITTED_CHARS.includes(charId), false, charId);
 });
 
-test('batch 1–4 numbers: the stat/damage specs carry the blackboard values', (t) => {
+test('batch 1–5 numbers: the stat/damage specs carry the blackboard values', (t) => {
   setGameData(ACT3);
   t.after(() => setGameData(null));
   const ds = new DataSource(ACT3, quiet);
@@ -144,6 +144,24 @@ test('batch 1–4 numbers: the stat/damage specs carry the blackboard values', (
     const def = ds.getChess(id, { skillIndex: 1 });
     assert.equal(typeof KITS.char_347_jaksel(def.skill.bb, def.raw, def).install, 'function');
   }
+  // 蓝毒: S0 1.4× on two targets; S2 ATK +20 % and one extra target per attack
+  assert.deepEqual(spec('char_129_bluep', 0).spec.attack, { atkScale: 1.4, maxTargets: 2 });
+  assert.equal(spec('char_129_bluep', 1).spec.mods.atkPct, 0.2);
+  assert.equal(spec('char_129_bluep', 1).spec.attack.maxTargets, 2);
+  // 星极: S1 ATK +30 / DEF +45; S2 the same, block +1, and the all-blocked attack hook
+  assert.equal(spec('char_274_astesi', 0).spec.mods.atkPct, 0.3);
+  assert.equal(spec('char_274_astesi', 0).spec.mods.defPct, 0.45);
+  assert.equal(spec('char_274_astesi', 1).spec.mods.blockCnt, 1);
+  assert.equal(typeof KITS.char_274_astesi({}, { skills: [] }, { charId: 'char_274_astesi', skill: { id: 'skchr_astesi_2' } }).install, 'function');
+  // 海沫: S1 1.2× two hits; S2 ATK +40 %, 45 % physical dodge, death-heal hook
+  assert.deepEqual(spec('char_4066_highmo', 0).spec.attack, { atkScale: 1.2, hits: 2 });
+  assert.equal(spec('char_4066_highmo', 1).spec.mods.atkPct, 0.4);
+  assert.equal(spec('char_4066_highmo', 1).spec.mods.dodgePhys, 0.45);
+  assert.equal(typeof KITS.char_4066_highmo({}, { skills: [{ skillId: 'skchr_highmo_2', bb: {} }] }, { charId: 'char_4066_highmo', skill: { id: 'skchr_highmo_2' } }).install, 'function');
+  // 吉星: S1 a longer attack interval; S2 ATK +45 % and the cycling status handler
+  assert.ok(spec('char_4203_kichi', 0).spec.mods.batPct > 0);
+  assert.equal(spec('char_4203_kichi', 1).spec.mods.atkPct, 0.45);
+  assert.equal(typeof spec('char_4203_kichi', 1).spec.onAttack, 'function');
 });
 
 test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (t) => {
