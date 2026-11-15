@@ -189,15 +189,16 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [ ] **其余规程内容**：见下方 189–195 的具体条目（装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计）；141 个 garrison 与 54 个 band effect 已完成。
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
 - [x] 核心盟约二选一（个人）**服务端完成**：`g.coreBond`、两组随机核心盟约、落选组进禁用并重建池/自选库存（`Match.coreBondGroups` / `phases.applyCoreBondChoice`，默认盟约无变化；选择器 UI 随 P3）
-- [ ] 联合模拟禁用半数核心（规则待官方核对）；自选 Ⅴ/Ⅵ 各 0–2；自选无特质、按阵营分盟约
+- [ ] 联合模拟禁用半数核心（规则待官方核对）；自选无特质、按阵营分盟约（Ⅴ/Ⅵ 各 0–2 已由 CUSTOM_CHECK 实现）
 - [x] 装备区（服务端）：独立 5 格 `equipHand`（`economy.equipHandSize` = 官方 `constData.maxDeckEquipmentChessCnt`），购买/获得进装备区、从装备区装备、装备区参与合并；默认盟约仍与手牌共用（`equipHandSize` 缺省 0）。测试 `test/versions-equipment.test.js`；UI 随 P3
 - [x] 每干员装备容量：版本构建写入官方 `charChessDataDict[].equipSlotNum`（非 2 时）到 `chess.json equipSlots`，`GameData.equipSlotsOf` 覆盖 `equipPerChess`（Ironhide 4 / 6，其余 2）；装备/替换、invariant、bot 与装备区 UI 均按干员容量；`shared/standIn.js IDENTITY_FIELDS` 携带该字段。测试 `test/versions-equipment.test.js`
 - [ ] 招募例外 `recruitTierExempt`：当前 gamedata pin 无该字段，待官方表更新
 - [x] 隐秘核心端到端：规程 solo NORMAL+（⟨等级5⟩+）/ co-op HARD+（⟨险境⟩+），Σ 激活层数 > 350/1200 且 team LP > 1，R14 胜利后进入 R15；未通过不影响通关。测试 `test/versions-hidden-core.test.js`；阈值 350/1200 仍 `[ASSUMED]`
 - [ ] 隐秘核心阈值 350/1200 的官方/录屏复核；领袖轮合血、超时扣血；联防（不叠层）需按规程核对
 - [ ] 地图规则：MAP09 双方隐匿地块、草丛秒数、Boss 受击区、茧隐匿索敌、萨卡兹亡语与延迟召唤、莱塔尼亚召唤与地面接敌
-- [ ] 指令（主动策略）：服务端 `g.bandSkill` 已有；缺客户端点击/拖放、每回合次数/资金/冷却显示、变换策略
-- [ ] 寻宝人模拟宝藏、领袖战 top-3 伤害统计、装备报告（band 侧“模拟宝藏”已做，寻宝人整体未做）
+- [x] 指令（主动策略）：服务端 `g.bandSkill`、客户端点击/拖放与目标选择、每回合次数/资金/冷却显示、追随者们的指令替换（B7）；变换策略仍待核对
+- [x] **领袖战 top-3 伤害统计**：`config.bossDamageStats`（官方 30/60/100 阈值）存在时，`m.public.bossHp.top` 下发共享领袖血池的前三名（玩家、伤害、占最大生命百分比），顶栏领袖胶囊显示；测试 `test/versions-boss-top.test.js`
+- [ ] 寻宝人模拟宝藏（band 侧“模拟宝藏”已做，寻宝人整体未做）；装备报告 tab 已由 P3 完成
 - [ ] 对局侧修复：#925 装备奖励池、#930 人事部记录、#932 暴躁铁皮、#934 极光/忍冬、#937 白铁、#944 组合装备、#939/#943/#947 规程战斗、#946 阶段横幅（随本阶段一并落地）
 
 ### P3 UI / 主题（8–12 人日）
