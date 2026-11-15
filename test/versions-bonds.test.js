@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DataSource } from '../server/sim/simdata.js';
+import * as S from '../server/sim/content/support/index.js';
 import { setGameData } from '../server/sim/content/support/index.js';
 import { makeBattle, checkInvariants } from './helpers/battleHarness.js';
 
@@ -69,4 +70,51 @@ test('伊比利亚: every damage instance stacks a 10 s arts DoT; 6 adds the slo
     assert.ok(e.hp < hp1, 'the DoT ticks');
     checkInvariants(h.b);
   }
+});
+
+test('乌萨斯: member ATK / HP buffs, kill layers, and the 6-member bleed conversion', () => {
+  setGameData(ACT3);
+  const h = makeBattle({
+    data: ds, seed: 7, autoFinish: false,
+    units: [
+      { chessId: 'chess_char_1_16_a', row: 10, col: 4 }, // 烈夏 (ursusShip)
+      { chessId: 'chess_char_1_02_a', row: 10, col: 5, carryState: { hpPct: 0.6 } },
+    ],
+    enemies: [{ key: 'enemy_1000_gopro_2', time: 0, pos: [10, 7] }],
+    bonds: { ursusShip: bondOn(6, 0) },
+  });
+  h.step(1);
+  const m = h.allies().find((u) => u.defId === 'chess_char_1_16_a');
+  const buff = buffs(m, 'bond:ursus')[0];
+  assert.ok(buff, 'the ATK / HP buff');
+  assert.ok(buff.mods.atkPct > 0 && buff.mods.hpPct > 0, JSON.stringify(buff.mods));
+  // a member's kill adds 4 temporary layers at 6 members
+  const layers0 = S.bondLayers(h.b, 'p1', 'ursusShip');
+  const e = h.enemies()[0];
+  // 6: damage taken becomes a 10 s HP loss
+  h.b.dealDamage(e, m, { amount: 1000, type: 'phys' });
+  h.step(1);
+  assert.ok(buffs(m, `bond:ursus:bleed:${m.id}`).length > 0, 'bleed buff');
+  // a member's kill adds temporary layers
+  h.b.dealDamage(m, e, { amount: 1e9, type: 'true' });
+  h.step(2);
+  assert.ok(S.bondLayers(h.b, 'p1', 'ursusShip') > layers0, 'kill layers');
+});
+
+test('莱塔尼亚: members get ATK and an enemy death summons 小节 (6: 乐部 chance too)', () => {
+  setGameData(ACT3);
+  const h = makeBattle({
+    data: ds, seed: 9, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_19_a', row: 10, col: 4 }], // 地灵 (lethaniaShip)
+    enemies: [{ key: 'enemy_1000_gopro_2', time: 0, pos: [10, 6] }],
+    bonds: { lethaniaShip: bondOn(6, 0) },
+  });
+  h.step(1);
+  const m = h.allies()[0];
+  assert.ok(buffs(m, 'bond:lethania').length > 0, 'the ATK buff');
+  const e = h.enemies()[0];
+  h.b.dealDamage(m, e, { amount: 1e9, type: 'true' });
+  h.step(2);
+  const summoned = h.b.enemies.filter((x) => x.alive && (x.defId === 'enemy_9025_aclts' || x.defId === 'enemy_9026_acltm'));
+  assert.ok(summoned.length >= 1, 'a summon');
 });

@@ -27,6 +27,22 @@ function memberOf(u, id) {
   return !!(u.ownerUnit && S.unitBonds(u.ownerUnit).includes(id));
 }
 
+
+/** Member of the bond, or a token/summon whose owner is one. */
+function ownMember(u, id) {
+  if (!u) return false;
+  if (S.unitBonds(u).includes(id)) return true;
+  return !!(u.ownerUnit && S.unitBonds(u.ownerUnit).includes(id));
+}
+
+/** Direct ATK / HP percentages of a standing bond buff, refreshed on every layer gain. */
+function standing(battle, pid, id, apply) {
+  apply();
+  battle.on('layerGain', (c) => { if (c.playerId === pid && c.bondId === id) apply(); });
+  battle.on('deploy', () => apply());
+  battle.on('battleStart', () => apply(), { once: true });
+}
+
 function installDoc(battle, pid, bb) {
   const L = () => S.bondLayers(battle, pid, 'docShip');
   const heal = () => num(bb.heal_base) + num(bb.heal_per_stack) * L();
@@ -49,6 +65,90 @@ function installDoc(battle, pid, bb) {
           });
         }
       }
+    }
+  });
+}
+
+
+function installUrsus(battle, pid, bb) {
+  const id = 'ursusShip';
+  const L = () => S.bondLayers(battle, pid, id);
+  const atk = () => num(bb.atk_base) + num(bb.atk_per_stack) * L();
+  const hp = () => num(bb.hp_base) + num(bb.hp_per_stack) * L();
+  standing(battle, pid, id, () => {
+    for (const u of S.bondMembers(battle, pid, id)) {
+      S.passiveBuff(battle, u, 'bond:ursus', S.directMods({ atk: atk(), hp: hp() }));
+    }
+  });
+  // a member's kill adds temporary layers (2, or 4 with 6 members)
+  battle.on('kill', (c) => {
+    if (!ownMember(c.killer, id)) return;
+    const n = reached(battle, pid, id, num(bb.power_bond_char_cnt, 6)) ? num(bb['temp_bond_stack_cnt[power]'], 4) : num(bb.temp_bond_stack_cnt, 2);
+    if (n > 0) battle.addLayers(pid, id, n, 'bond:ursus');
+  });
+  if (!reached(battle, pid, id, num(bb.power_bond_char_cnt, 6))) return;
+  const bleedRatio = () => num(bb.damage_one_minus_base) + num(bb.damage_one_minus_per_stack) * L();
+  const bleedDur = num(bb.bleed_duration, 10);
+  const hitScale = () => num(bb.atk_scale_base) + num(bb.atk_scale_per_stack) * L();
+  battle.on('damaged', (c) => {
+    const u = c.target;
+    if (!u || !ownMember(u, id) || !S.onField(u) || !c.dmg) return;
+    const amount = num(c.amount);
+    if (!(amount > 0) || !(bleedRatio() > 0) || !(bleedDur > 0)) return;
+    battle.addBuff(u, {
+      key: `bond:ursus:bleed:${u.id}`, duration: bleedDur, interval: 1, refresh: 'replace', source: c.source ?? null, visible: true,
+      onTick({ battle: b, unit: t, buff }) {
+        const src = buff.source;
+        if (src && !src.alive) { b.removeBuff(t, buff.key); return; }
+        b.loseHp(t, amount * bleedRatio() / bleedDur, { source: src ?? null, tags: ['bond:ursus'] });
+      },
+    });
+  });
+  // while blocking, the enemies a member holds take arts damage each second
+  battle.every(1, () => {
+    const scale = hitScale();
+    for (const u of S.bondMembers(battle, pid, id)) {
+      if (!S.onField(u) || !(u.blocking && u.blocking.length)) continue;
+      for (const e of u.blocking) if (e?.alive) battle.dealDamage(u, e, { amount: u.s.atk * scale, type: 'arts', isSkill: true, tags: ['bond:ursus'] });
+    }
+  });
+}
+
+
+function installLethania(battle, pid, bb) {
+  const id = 'lethaniaShip';
+  const L = () => S.bondLayers(battle, pid, id);
+  const atk = () => num(bb.atk_base) + num(bb.atk_per_stack) * L();
+  const six = () => reached(battle, pid, id, num(bb.power_bond_char_cnt, 6));
+  const cap = () => Math.max(1, Math.floor(six() ? num(bb.summon_cnt_max_2, 20) : num(bb.summon_cnt_max_1, 10)));
+  const members = () => {
+    const out = [];
+    for (const u of battle.allyUnits) if (u.alive && ownMember(u, id)) out.push(u);
+    return out;
+  };
+  standing(battle, pid, id, () => {
+    for (const u of members()) S.passiveBuff(battle, u, 'bond:lethania', S.directMods({ atk: atk() }));
+  });
+  const countSummons = () => battle.enemies.filter((e) => e.alive && (e.defId === 'enemy_9025_aclts' || e.defId === 'enemy_9026_acltm')).length;
+  const summon = (x, y) => {
+    if (!six()) return;
+    if (countSummons() >= cap()) return;
+    const big = battle.rng.chance(Math.min(1, num(bb.big_prob_base) + num(bb.big_prob_per_stack) * L()));
+    const key = big ? 'enemy_9026_acltm' : 'enemy_9025_aclts';
+    battle.spawnEnemy(key, { pos: [y, x], sourcePlayerId: pid });
+  };
+  battle.on('death', (c) => {
+    const u = c.unit;
+    if (!u) return;
+    if (u.side === 'enemy' && c.reason === 'killed') summon(u.x, u.y);
+    else if (u.side === 'ally' && six() && S.unitBonds(u).includes(id)) summon(u.x, u.y);
+  });
+  // a 乐部 (enemy_9026) on the field gives the members attack speed +20
+  battle.every(0.5, () => {
+    const big = battle.enemies.some((e) => e.alive && e.defId === 'enemy_9026_acltm');
+    for (const u of members()) {
+      if (big) battle.addBuff(u, { key: 'bond:lethania:big', duration: 0.7, refresh: 'replace', visible: true, mods: { aspd: 20 } });
+      else battle.removeBuff(u, 'bond:lethania:big');
     }
   });
 }
@@ -92,7 +192,7 @@ function installIberia(battle, pid, bb) {
   });
 }
 
-const INSTALLERS = Object.freeze({ docShip: installDoc, iberiaShip: installIberia });
+const INSTALLERS = Object.freeze({ docShip: installDoc, iberiaShip: installIberia, ursusShip: installUrsus, lethaniaShip: installLethania });
 
 export function install(battle) {
   if (!battle || !Array.isArray(battle.players)) return;
