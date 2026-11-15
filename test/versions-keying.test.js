@@ -68,7 +68,8 @@ test('a version build resolves each chess to a kit written for its own charId, o
       const keyOf = (id) => { const r = data.chess[id]; return officialKitKey({ id, baseId: id, charId: r.charId, tier: r.tier }, data); };
       assert.equal(keyOf('chess_char_1_01_a'), 'chess_char_2_17_a', '折桠 (a tier-2 kit) under chess_char_1_01_a');
       assert.equal(keyOf('chess_char_1_02_a'), 'chess_char_1_12_a', '艾丝黛尔 under chess_char_1_02_a');
-      assert.equal(keyOf('chess_char_5_26_a'), null, 'an operator still waiting for its kit (PENDING_KIT_CHARS)');
+      assert.equal(keyOf('chess_char_5_26_a'), 'char_002_amiya', '阿米娅 now resolves by charId');
+      assert.equal(keyOf('chess_char_1_15_a'), null, '褐果 is still in PENDING_KIT_CHARS');
     }
   }
   // a listed operator that gets a kit must leave PENDING_KIT_CHARS (the list stays honest)

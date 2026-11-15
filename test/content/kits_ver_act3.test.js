@@ -82,7 +82,7 @@ test('a version kit is not offered as a default-version DIY pick (KITTED_CHARS u
   for (const charId of Object.keys(VERSION_KITS)) assert.equal(KITTED_CHARS.includes(charId), false, charId);
 });
 
-test('batch 1–5 numbers: the stat/damage specs carry the blackboard values', (t) => {
+test('batch 1–6 numbers: the stat/damage specs carry the blackboard values', (t) => {
   setGameData(ACT3);
   t.after(() => setGameData(null));
   const ds = new DataSource(ACT3, quiet);
@@ -162,6 +162,34 @@ test('batch 1–5 numbers: the stat/damage specs carry the blackboard values', (
   assert.ok(spec('char_4203_kichi', 0).spec.mods.batPct > 0);
   assert.equal(spec('char_4203_kichi', 1).spec.mods.atkPct, 0.45);
   assert.equal(typeof spec('char_4203_kichi', 1).spec.onAttack, 'function');
+  // 复奏: S1 1.5× splash; S2 1.3× on three targets with a burn
+  assert.equal(spec('char_4031_liesel', 0).spec.attack.atkScale, 1.5);
+  assert.equal(spec('char_4031_liesel', 0).spec.attack.splashRadius, 1.5);
+  assert.equal(spec('char_4031_liesel', 1).spec.attack.atkScale, 1.3);
+  assert.equal(spec('char_4031_liesel', 1).spec.attack.maxTargets, 3);
+  assert.equal(typeof spec('char_4031_liesel', 1).spec.onAttack, 'function');
+  // 奥尔加: S1 1.25× two hits; S2 ATK +40 % with the taunt/sluggish handler
+  assert.deepEqual(spec('char_4245_alga', 0).spec.attack, { atkScale: 1.25, hits: 2 });
+  assert.equal(spec('char_4245_alga', 1).spec.mods.atkPct, 0.4);
+  assert.equal(typeof spec('char_4245_alga', 1).spec.onAttack, 'function');
+  // 阿米娅: S1 attack speed +45; S2 seven 39 % shots and the self-stun; S3 ATK +130 %, +50 % max HP, true damage
+  assert.equal(spec('char_002_amiya', 0).spec.mods.aspd, 45);
+  assert.equal(spec('char_002_amiya', 1).spec.attack.atkScale, 0.39);
+  assert.equal(spec('char_002_amiya', 1).spec.attack.hits, 7);
+  assert.equal(typeof spec('char_002_amiya', 1).spec.onEnd, 'function');
+  assert.equal(spec('char_002_amiya', 2).spec.mods.atkPct, 1.3);
+  assert.equal(spec('char_002_amiya', 2).spec.mods.hpPct, 0.5);
+  assert.equal(spec('char_002_amiya', 2).spec.attack.dmgType, 'true');
+  // 青枳: S1 a DP grant; S2 ATK +10 / DEF +40 and its own start handler
+  assert.equal(typeof spec('char_488_buildr', 0).spec.onStart, 'function');
+  assert.equal(spec('char_488_buildr', 1).spec.mods.atkPct, 0.1);
+  assert.equal(spec('char_488_buildr', 1).spec.mods.defPct, 0.4);
+  assert.equal(typeof spec('char_488_buildr', 1).spec.onStart, 'function');
+  // 芬: S1 1.35× two hits; S2 a passive ATK +85 / DEF +25 / block +1
+  assert.deepEqual(spec('char_1036_fang2', 0).spec.attack, { atkScale: 1.35, hits: 2 });
+  assert.equal(spec('char_1036_fang2', 1).spec.kind, 'passive');
+  assert.equal(spec('char_1036_fang2', 1).spec.mods.atkPct, 0.85);
+  assert.equal(spec('char_1036_fang2', 1).spec.mods.blockCnt, 1);
 });
 
 test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (t) => {

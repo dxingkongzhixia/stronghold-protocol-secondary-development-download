@@ -200,6 +200,11 @@ export const VERSION_KIT_FILES = Object.freeze([
   'ver-astesi.js',
   'ver-highmo.js',
   'ver-kichi.js',
+  'ver-liesel.js',
+  'ver-alga.js',
+  'ver-amiya.js',
+  'ver-buildr.js',
+  'ver-fang2.js',
 ]);
 
 /**
@@ -368,10 +373,7 @@ export const KIT_CHAR_IDS = Object.freeze({
  * accepts a chess without a kit only when its charId is listed here, and fails once a listed operator gets one.
  */
 export const PENDING_KIT_CHARS = Object.freeze([
-  'char_002_amiya',
-  'char_1036_fang2',
   'char_346_aosta',
-  'char_4031_liesel',
   'char_4041_chnut',
   'char_4047_pianst',
   'char_4147_mitm',
@@ -382,10 +384,8 @@ export const PENDING_KIT_CHARS = Object.freeze([
   'char_4222_taraxa',
   'char_4224_turdus',
   'char_4232_hbound',
-  'char_4245_alga',
   'char_455_nothin',
   'char_484_robrta',
-  'char_488_buildr',
   'char_499_kaitou',
   'char_618_acrbot',
 ]);
