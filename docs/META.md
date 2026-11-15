@@ -1035,6 +1035,16 @@ requests cannot affect a new opening. See DESIGN §28.21 for cancellation and ti
 normal cooldown/whitelist rules; `SP_BOT_EMOTES=0` disables it. The cooperation score in `bot.js` and these cosmetic
 choices are explicitly [ASSUMED]; DESIGN §28.15–16 records the source and validation.
 
+## 规程 personal core-bond briefing
+
+A regulation **solo** match (`config.version.family === 'regulation'`) splits its eligible core bonds into two random
+groups at setup (`Match.coreBondGroups`, drawn from `rngSetup`). `g.coreBond {group: 0|1}` during INFO_CHECK keeps
+one: the other group's bonds join `disabledBonds`, and `bannedChess` / `pool` / the 自选 stock are rebuilt so its
+operators leave the simulation (PRTS 卫戍协议·规程: 「核心盟约将会分为两组…未选择一组的核心盟约所属干员将全部离开
+本次模拟」). One pick per player; a briefing that ends without one takes group 0 (`ensureCoreBond`), so clients without
+the selector still start. `m.private.coreBond {groups, pick}` tells the client (the selector UI is P3). The default
+盟约 match has `coreBondGroups: null`, so nothing changes there; the co-op half-ban is not applied yet.
+
 ### Community follow-up contracts (DESIGN §29)
 
 - `triggerGarrisons` includes `source.copiedFrom` for copied effects. Only Ptilopsis copying Yu/Gladiia at SERVER_PREP_START skips the three-in-row prerequisite, as confirmed by the original-game recording; Saria and other copies keep existing conditions.
