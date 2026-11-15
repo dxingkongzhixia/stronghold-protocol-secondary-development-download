@@ -15,6 +15,7 @@ export class PlayerRound {
     this.round = { refreshes: 0, buys: 0, sells: 0, spent: 0, gainedChess: 0, arts: 0 };
     // marks an active band skill gave an operator for the round's battle are spent: the next round needs a new use
     this.bandMarks = Object.create(null);
+    this.bandGlobal = [];
     // a rest end is the next round's start: a band's special operator grants its active-bond layers here; a band
     // with restEndRandomChess grants its random operators at the round starts its `rounds` names (Kal'tsit:
     // 2/4/6/8/10/12).
@@ -283,6 +284,8 @@ export class PlayerRound {
       playerEffects: this.effects.filter((e) => e.battle !== false).map((e) => ({
         id: e.id, key: e.key ?? null, source: e.iconKind ?? null, params: e.params ?? null, counter: e.counter ?? null, data: e.data ?? null,
       })),
+      // player-level band-skill marks for this battle (PlayerState.bandGlobal): a fear tile, the treasure, an equip lend
+      ...(this.bandGlobal.length ? { bandMarks: this.bandGlobal.map((m) => ({ ...m })) } : {}),
       deviceOverrides: { ...this.deviceOverrides },
     };
   }

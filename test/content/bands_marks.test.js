@@ -70,3 +70,65 @@ test('a mark without its payload does nothing', () => {
   assert.ok(!u.alive, 'still knocked down');
   assert.equal(h.allies().filter((a) => a.alive).length, 0, 'nothing summoned');
 });
+
+
+// ---- player-level marks: a tile, the treasure, an equipment lend ---------------------------------------------
+
+/** A battle with no operators, carrying player-level band marks (PlayerBattleInput.bandMarks). */
+function globalMarks(marks, opts = {}) {
+  return makeBattle({
+    defs: { chess: {}, enemies: { e_d: FOE('e_d'), ...(opts.enemyDefs || {}) } },
+    players: [{ playerId: 'p1', seat: 0, bonds: {}, bandId: null, units: opts.units ?? [], bandMarks: marks }],
+    enemies: opts.foes ?? [],
+    timeLimit: opts.timeLimit ?? 3, autoFinish: false,
+  });
+}
+
+test('溃心领域: only the first enemy through the marked tile is feared', () => {
+  const h = globalMarks([{ tag: 'fear_tile', row: 10, col: 9, fear: 3 }], {
+    foes: [{ key: 'e_d', pos: [10, 9], time: 0 }, { key: 'e_d', pos: [10, 9], time: 5 }],
+    timeLimit: 8,
+  });
+  const spawned = [];
+  h.b.on('enemySpawn', (c) => spawned.push(c.enemy));
+  h.step(2);
+  assert.ok(spawned[0] && spawned[0].s.flags.fear, 'the first enemy is feared');
+  h.run(5.2);
+  assert.equal(spawned.length, 2, 'the second enemy spawned');
+  assert.ok(!spawned[1].s.flags.fear, 'the first pass used the mark up');
+});
+
+test('宝藏探机: a surviving chest pays its coin, a touched one vanishes', () => {
+  const defs = { e_chest: FOE('e_chest', { hp: 100, speed: 0, atk: 0, lpr: 0 }) };
+  const survive = globalMarks([{ tag: 'treasure', row: 10, col: 8, enemyId: 'e_chest', coin: 1 }], { enemyDefs: defs });
+  survive.runToEnd();
+  assert.equal(survive.result().perPlayer.p1.coins, 1, 'still there at the end');
+
+  const touched = globalMarks([{ tag: 'treasure', row: 10, col: 8, enemyId: 'e_chest', coin: 1 }], {
+    enemyDefs: defs, foes: [{ key: 'e_d', pos: [10, 8], time: 0 }],
+  });
+  touched.runToEnd();
+  assert.ok(!touched.enemies().some((e) => e.alive && e.defId === 'e_chest'), 'the chest vanished on the touch');
+  assert.equal(touched.result().perPlayer.p1.coins || 0, 0, 'no coin for a touched chest');
+});
+
+test('电气化！: the lent equipment reaches every deployed operator with a free slot', () => {
+  const h = makeBattle({
+    defs: { chess: { t_op: OP('t_op'), t_full: OP('t_full') }, enemies: { e_d: FOE('e_d') } },
+    players: [{
+      playerId: 'p1', seat: 0, bonds: {}, bandId: null,
+      units: [
+        { uid: 1, kind: 'chess', chessId: 't_op', row: 10, col: 4 },
+        { uid: 2, kind: 'chess', chessId: 't_full', row: 11, col: 4, items: ['x', 'y'] },
+      ],
+      bandMarks: [{ tag: 'lend_equip', itemId: 'chess_item_1_01_e_a', slots: 2 }],
+    }],
+    enemies: [], timeLimit: 5, autoFinish: false,
+  });
+  h.step(1);
+  const lender = h.unit('t_op');
+  const full = h.unit('t_full');
+  assert.ok(lender.s.atk > 500, 'the +15 % ATK of the item reached the free operator');
+  assert.equal(full.s.atk, 500, 'no free slot, no lend');
+  assert.equal(lender.items.length, 0, 'a lend is not a carried item');
+});

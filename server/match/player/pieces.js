@@ -28,6 +28,14 @@ export class PlayerPieces {
     return true;
   }
 
+  /** A player-level mark an active band skill leaves for the next battle (tile fear, the treasure, an equipment lend). */
+  addBandGlobal(mark) {
+    if (!mark || typeof mark.tag !== 'string') return false;
+    this.bandGlobal.push({ ...mark, round: this.m.round });
+    this.dirty();
+    return true;
+  }
+
   /**
    * Locate a piece by uid. Returns { piece, area: 'board'|'hand'|'temp'|'equipped', idx?, key?, holder? } or null.
    */

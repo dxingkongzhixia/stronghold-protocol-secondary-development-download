@@ -97,7 +97,7 @@ export class MatchIntents {
     const cost = Math.max(0, Math.round(Number(priced.cost) || 0));
     if (cost > 0 && ps.funds < cost) return fail(ERR.NO_FUNDS);
     // the handler does the work and sets `ev.done` (the only sign it actually acted: an empty pool / a full hand fails)
-    const ev = { target, skill: sk, band, cost, cooldown: 0, done: false };
+    const ev = { target, skill: sk, band, cost, cooldown: sk.availType === 'COOLDOWN' ? Math.max(1, Math.round(Number(sk.availCount) || 1)) : 0, done: false };
     this.dispatch(ps, 'onBandSkill', ev);
     if (!ev.done) return fail(ERR.BAD_TARGET, 'the strategy has nothing to do with that target');
     if (cost > 0) { ps.spend(cost); ps._afterSpend(cost, 'effect'); }

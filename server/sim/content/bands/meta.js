@@ -722,6 +722,72 @@ K.skill_layer_limit_grow_round = (_ps) => ({
   },
 });
 
+// ---- act3 active band skills on a tile / a shop card (B4) ------------------------------------------------------
+
+/** 纸片替身: a card of the shop becomes another operator of its tier. */
+K.skill_transform_char_same_tier = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    const i = ev.target && Number.isInteger(ev.target.slot) ? ev.target.slot : -1;
+    const slot = i >= 0 ? ctx.shopSlots()[i] : null;
+    if (!slot || slot.kind !== 'chess' || slot.sold) return;
+    const tier = Math.max(1, ctx.gd.tierOf(slot.id));
+    // another operator when the pool has one (a redraw of the same card would be no change at all)
+    let id = null;
+    for (let k = 0; k < 6; k++) {
+      const r = ctx.rollChess({ tier });
+      if (!r) continue;
+      id = r;
+      if (r !== slot.id) break;
+    }
+    if (!id) return;
+    ctx.setShopSlot(i, { kind: 'chess', id });
+    ev.done = true;
+  },
+});
+
+/** 溃心领域: the first enemy to pass the chosen tile after the battle starts is feared for `fear` seconds. */
+K.skill_mark_pos_grow_use_cnt = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const t = ev.target;
+    if (!t || !Number.isInteger(t.row) || !Number.isInteger(t.col)) return;
+    const tag = ps[0] && ps[0].tag;
+    const rec = tag ? ctx.gd.effect(tag) : null;
+    const b = ((rec && rec.buffs) || []).find((x) => x.key === 'env_gbuff_new_with_verify');
+    const fear = Math.max(0.1, num(b && b.bb && b.bb.fear, 3));
+    if (ctx.addBandGlobal({ tag: 'fear_tile', row: t.row, col: t.col, fear })) ev.done = true;
+  },
+});
+
+/** 宝藏探机: deploy a “模拟宝藏” on the chosen tile (+`coin` when it survives the battle). */
+K.skill_add_pos_effect_enemy = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const t = ev.target;
+    const p = ps[0] || {};
+    if (!t || !Number.isInteger(t.row) || !Number.isInteger(t.col) || !p.enemy_id) return;
+    const mark = { tag: 'treasure', row: t.row, col: t.col, enemyId: p.enemy_id, coin: Math.max(1, int(p.coin, 1)) };
+    if (ctx.addBandGlobal(mark)) ev.done = true;
+  },
+});
+
+/**
+ * 电气化！: the chosen shop equipment is destroyed at once; at the next battle's start every deployed operator with a
+ * free slot holds it until the battle ends (a lent item, items/battle.js installItem). Equipment that destroys itself
+ * on equip cannot be chosen.
+ */
+K.skill_mark_shop_equip_tag = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    const i = ev.target && Number.isInteger(ev.target.slot) ? ev.target.slot : -1;
+    const slot = i >= 0 ? ctx.shopSlots()[i] : null;
+    if (!slot || slot.kind !== 'item' || slot.sold) return;
+    const rec = ctx.gd.item(slot.id);
+    if (!rec || String(rec.kind || '').startsWith('consume_on_equip')) return;
+    const mark = { tag: 'lend_equip', itemId: slot.id, slots: Math.max(1, ctx.gd.equipPerChess ?? 2) };
+    if (!ctx.addBandGlobal(mark)) return;
+    ctx.setShopSlot(i, null); // "立刻销毁"
+    ev.done = true;
+  },
+});
+
 K.preparation_start_add_special_goods_every_n_round = (ps) => ({
   onPrepStart(ctx) {
     const p = ps[0];

@@ -173,7 +173,8 @@ export class BattleLifecycle {
   /** Is any enemy still alive? (Checked every tick; a plain loop instead of a per-tick `some` closure.) */
   _anyEnemyAlive() {
     const list = this.enemies;
-    for (let i = 0; i < list.length; i++) if (list[i].alive) return true;
+    // a content-made neutral (mem.noFinish: 宝藏探机's “模拟宝藏”, which waits for a touch) never holds the field open
+    for (let i = 0; i < list.length; i++) if (list[i].alive && !list[i].mem?.noFinish) return true;
     return false;
   }
 

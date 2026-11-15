@@ -42,8 +42,9 @@ function ctxFor(ps, m, ev, calls) {
       isGolden: (id) => /^golden_/.test(String(id)),
       tierOf: (id) => (V.chess[id] && V.chess[id].tier) || 1,
       chess: (id) => ({ bonds: bondOf(id) }),
-      item: (id) => (String(id).startsWith('item') ? { id } : null),
+      item: (id) => V.items[id] ?? null,
       effect: (id) => V.effects[id] ?? null,
+      equipPerChess: 2,
     },
     // deterministic: int(n) = n-1 (the top of every range), pick = first, shuffle = identity
     rng: { int: (n) => Math.max(0, n - 1), pick: (a) => a[0], shuffle: (a) => a.slice() },
@@ -61,6 +62,7 @@ function ctxFor(ps, m, ev, calls) {
     sell: (uid) => { calls.sold.push(uid); return calls.sell !== false; },
     destroyPiece: (uid) => { calls.destroyed.push(uid); return calls.destroy !== false; },
     addBandMark: (uid, mark) => { calls.marks.push([uid, mark]); return calls.mark !== false; },
+    addBandGlobal: (mark) => { calls.globals.push(mark); return calls.global !== false; },
     triggerGarrisons: (uid, event) => { calls.garrison.push([uid, event]); return calls.garrisonRuns ?? 1; },
     garrisonsOf: () => calls.garrisons ?? [{ eventType: 'SERVER_PREP_FIN' }],
     pieceCounter: (uid, k) => (ps.pieceCounters && ps.pieceCounters[`${uid}:${k}`]) || 0,
@@ -104,7 +106,7 @@ function fakeMatch(bandId, { funds = 20, slots } = {}) {
   };
   const calls = {
     rolls: [], granted: [], items: [], slots: [], board: [], funds: 0,
-    promoted: [], sold: [], destroyed: [], marks: [], garrison: [], equipped: [], layers: [],
+    promoted: [], sold: [], destroyed: [], marks: [], garrison: [], equipped: [], layers: [], globals: [],
   };
   const m = Object.create(MatchIntents.prototype);
   m.phase = PHASE.PREP;
@@ -457,4 +459,60 @@ test('出航时刻 is locked below 4 伊比利亚 members, then replaces a shop 
   assert.equal(f.ps.funds, 19, 'cost 1');
   assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }), OK);
   assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }).error, 'BAD_TARGET', '2 a round');
+});
+
+
+// ---- B4: tile and shop-card skills ----------------------------------------------------------------------------
+
+test('纸片替身: a shop card becomes another operator of its tier', () => {
+  const f = fakeMatch('band_transfer');
+  f.calls.chessId = 'base_other';
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }), OK);
+  assert.equal(f.calls.rolls[0].tier, 1);
+  assert.deepEqual(f.calls.slots.at(-1), [0, { kind: 'chess', id: 'base_other' }]);
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }), OK, 'ROUND_RESET x2');
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }).error, 'BAD_TARGET');
+});
+
+test('溃心领域: marks the chosen tile with the official fear duration, one use until R4', () => {
+  const f = fakeMatch('band_dance');
+  f.m.round = 3;
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'tile', row: 10, col: 5 } }), OK);
+  assert.deepEqual(f.calls.globals, [{ tag: 'fear_tile', row: 10, col: 5, fear: 3 }]);
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'tile', row: 11, col: 6 } }).error, 'BAD_TARGET', 'x1 before R4');
+  f.m.round = 4;
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'tile', row: 11, col: 6 } }), OK);
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'tile', row: 11, col: 7 } }), OK, 'R4 → x2');
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'tile', row: 11, col: 8 } }).error, 'BAD_TARGET');
+});
+
+test('宝藏探机: the tile mark carries the official chest and its coin; a 3-round cooldown', () => {
+  const f = fakeMatch('band_treasure', { funds: 1 });
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'tile', row: 10, col: 6 } }), OK);
+  assert.deepEqual(f.calls.globals, [{ tag: 'treasure', row: 10, col: 6, enemyId: 'enemy_9038_achest', coin: 1 }]);
+  assert.equal(f.ps.funds, 0, 'cost 1');
+  assert.equal(f.ps.bandSkill.cooldownUntil, 3 + 3);
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'tile', row: 10, col: 7 } }).error, 'BAD_TARGET', 'cooling down');
+  f.m.round = 6;
+  f.ps.funds = 1;
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'tile', row: 10, col: 7 } }), OK);
+});
+
+test('电气化！: destroys the shop equipment and lends it to the field next battle', () => {
+  const passive = Object.values(V.items).find((x) => x.itemType === 'EQUIP' && x.kind === 'passive' && !x.isGolden);
+  assert.ok(passive, 'a plain equipment exists');
+  const f = fakeMatch('band_pudd', { funds: 1, slots: [{ kind: 'item', id: passive.id, basePrice: 2, sold: false }] });
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }), OK);
+  assert.deepEqual(f.calls.globals, [{ tag: 'lend_equip', itemId: passive.id, slots: 2 }]);
+  assert.deepEqual(f.calls.slots.at(-1), [0, null], 'destroyed at once');
+  assert.equal(f.ps.funds, 0);
+});
+
+test('电气化！ refuses equipment that destroys itself on equip', () => {
+  const consume = Object.values(V.items).find((x) => String(x.kind || '').startsWith('consume_on_equip') && x.itemType === 'EQUIP' && !x.isGolden);
+  assert.ok(consume, 'a consume-on-equip item exists');
+  const f = fakeMatch('band_pudd', { funds: 1, slots: [{ kind: 'item', id: consume.id, basePrice: 1, sold: false }] });
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }).error, 'BAD_TARGET');
+  assert.deepEqual(f.calls.globals, []);
+  assert.equal(f.ps.funds, 1, 'not charged');
 });

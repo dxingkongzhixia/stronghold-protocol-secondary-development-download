@@ -214,6 +214,8 @@ export class PlayerState {
      * next round start; battleInput() carries them, the sim applies them (`layer_cap`, …).
      */
     this.bandMarks = Object.create(null);
+    /** Player-level marks of an active band skill for the next battle (tile fear, the treasure, an equipment lend). */
+    this.bandGlobal = [];
     /** reward offers queue (merge rewards, special refreshes): { tier, source, label, slots: [{ kind, id, price, sold }] } */
     this.offers = [];
     /** @type {Array<any>} */

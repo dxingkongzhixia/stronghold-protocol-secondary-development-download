@@ -38,6 +38,15 @@ test('knockdown_summon carries the hand\'s rightmost operator', () => {
   assert.notEqual(u.marks[0].summon.uid, piece.uid);
 });
 
+test('player-level marks travel in battleInput and are spent at the next round start', () => {
+  const { h, ps } = prep();
+  ps.addBandGlobal({ tag: 'fear_tile', row: 10, col: 5, fear: 3 });
+  ps.addBandGlobal({ tag: 'treasure', row: 10, col: 6, enemyId: 'enemy_9038_achest', coin: 1 });
+  assert.deepEqual(ps.battleInput().bandMarks.map((m) => m.tag), ['fear_tile', 'treasure']);
+  h.toPrep(2);
+  assert.equal(ps.battleInput().bandMarks, undefined);
+});
+
 test('the marks are spent at the next round start', () => {
   const { h, m, ps } = prep();
   const piece = give(m, ps, 'chess_char_1_01_a', 'board', [10, 4]);
