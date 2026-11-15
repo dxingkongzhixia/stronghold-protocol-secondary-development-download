@@ -79,6 +79,12 @@ LOBBY → INFO_CHECK (co-op 25 s; solo and single-human matches untimed; all hum
 → RESULT (m.result to every human, then onEnd once)
 ```
 
+Hidden Core eligibility (`finalAssault.hiddenEligible`): the Σ activated layers recorded at the boss prep >
+`hiddenCore.single` (solo, 350) / `.multi` (co-op, 1200), team LP > `hiddenCore.minTeamLpExclusive` (1), and the mode's
+difficulty in `hiddenCore.soloDifficulties` (规程 solo NORMAL+ = ⟨规程等级5⟩+) / `multiDifficulties` (规程 co-op HARD+ =
+⟨险境模拟⟩+); the default data falls back to `difficulties`. A cleared Hidden Core is optional for the verdict
+(`hiddenReached` / `hiddenCleared`). 规程 end-to-end: `test/versions-hidden-core.test.js`.
+
 **Deploy field (user playtest #5 item 7).** From the ROUND_START of a boss round (最终攻势 / 隐秘核心) a player deploys on
 its half of the boss field (`Match.deployFieldOf` → `'bossL'`, or `'bossR'` for the second player of a drawn pair — the
 same pairing as the fields, `bossWaves` / `Match.bossGroupOf`, planned in `startRound` BEFORE the players' round start
