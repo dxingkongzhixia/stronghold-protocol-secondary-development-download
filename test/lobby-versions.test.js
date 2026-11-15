@@ -142,6 +142,32 @@ test('the room data and a started match come from the version, and the match run
   assert.equal(hosts.created[1].opts.modeId, 'mode_single_1');
 });
 
+test('room.setMode: the regulation level ladder (等级1–20) selects the version mode and its difficulty', (t) => {
+  const hosts = recordingHosts();
+  const { registry, lobby } = makeLobby({ versionHosts: hosts });
+  t.after(() => lobby.shutdown());
+  const s = session(registry, 'Host');
+  assert.deepEqual(lobby.create(s, { mode: 'solo', difficulty: 'NORMAL', version: ACT3 }), { ok: true });
+  const room = lobby.roomOf(s);
+  assert.deepEqual(lobby.setMode(s, { modeId: 'mode_single_7' }), { ok: true });
+  assert.equal(room.content.modeId, 'mode_single_7');
+  assert.equal(room.difficulty, 'NORMAL');
+  assert.equal(lobby.setMode(s, { modeId: 'mode_multi_hard' }).error, ERR.BAD_TARGET, 'a co-op mode in a solo room');
+  assert.deepEqual(lobby.startMatch(room), { ok: true });
+  assert.equal(hosts.created[0].opts.modeId, 'mode_single_7', 'the match plays the chosen level');
+});
+
+test('room.setMode: an ABYSS regulation level also sets the room difficulty', (t) => {
+  const { registry, lobby } = makeLobby();
+  t.after(() => lobby.shutdown());
+  const s = session(registry, 'Host');
+  assert.deepEqual(lobby.create(s, { mode: 'solo', difficulty: 'NORMAL', version: ACT3 }), { ok: true });
+  const room = lobby.roomOf(s);
+  assert.deepEqual(lobby.setMode(s, { modeId: 'mode_single_20' }), { ok: true });
+  assert.equal(room.content.modeId, 'mode_single_20');
+  assert.equal(room.difficulty, 'ABYSS');
+});
+
 test('gameplay plugins are refused on a version room; cosmetic ones keep its base', (t) => {
   const versions = versionSets();
   const set = versions.byId(ACT3);

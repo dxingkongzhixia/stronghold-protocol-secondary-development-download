@@ -1403,6 +1403,18 @@ export class Lobby {
     return OK;
   }
 
+  /**
+   * A mode of the room's official version (`config.modes`, the 规程 ladder 等级1–20 and the co-op difficulties), or null
+   * for the default version / an unknown id. Used by room.setMode (P3's level selector).
+   */
+  versionModeOf(version, modeId) {
+    if (!version || version === DEFAULT_VERSION) return null;
+    let data;
+    try { data = this.versions?.data?.(version); } catch { return null; }
+    const modes = data?.config?.modes;
+    return modes && typeof modes === 'object' && Object.hasOwn(modes, modeId) ? modes[modeId] : null;
+  }
+
   setDifficulty(session, { difficulty }) {
     const room = this.roomOf(session);
     if (!room) return fail(ERR.NOT_IN_ROOM);
@@ -1604,11 +1616,20 @@ export class Lobby {
       difficulty = official;
       if (content?.modeId) { const rest = { ...content }; delete rest.modeId; content = Object.freeze(rest); }
     } else {
-      const mode = Array.isArray(content?.modes) ? content.modes.find((m) => m && m.id === modeId) : null;
-      if (!mode) return fail(ERR.BAD_TARGET, 'not a mode of this room');
-      if (mode.roomMode !== room.mode) return fail(ERR.BAD_TARGET, `a mode of ${mode.roomMode} rooms`);
-      if (DIFFICULTIES.includes(mode.difficulty)) difficulty = mode.difficulty;
-      if (content.modeId !== modeId) content = Object.freeze({ ...content, modeId });
+      // another official version's own mode list (规程 等级1–20, the co-op difficulties): its record sets the difficulty
+      const versionMode = this.versionModeOf(room.version, modeId);
+      if (versionMode) {
+        const want = versionMode.type === 'SINGLE' ? 'solo' : versionMode.type === 'MULTI' ? 'coop' : null;
+        if (want && want !== room.mode) return fail(ERR.BAD_TARGET, `a mode of ${want} rooms`);
+        if (DIFFICULTIES.includes(versionMode.difficulty)) difficulty = versionMode.difficulty;
+        if (content?.modeId !== modeId) content = Object.freeze({ ...content, modeId });
+      } else {
+        const mode = Array.isArray(content?.modes) ? content.modes.find((m) => m && m.id === modeId) : null;
+        if (!mode) return fail(ERR.BAD_TARGET, 'not a mode of this room');
+        if (mode.roomMode !== room.mode) return fail(ERR.BAD_TARGET, `a mode of ${mode.roomMode} rooms`);
+        if (DIFFICULTIES.includes(mode.difficulty)) difficulty = mode.difficulty;
+        if (content.modeId !== modeId) content = Object.freeze({ ...content, modeId });
+      }
     }
     if (difficulty === room.difficulty && content === room.content) return OK;
     this.dropReplay(room, session.playerId);
