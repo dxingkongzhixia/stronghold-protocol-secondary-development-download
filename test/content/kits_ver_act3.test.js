@@ -82,7 +82,7 @@ test('a version kit is not offered as a default-version DIY pick (KITTED_CHARS u
   for (const charId of Object.keys(VERSION_KITS)) assert.equal(KITTED_CHARS.includes(charId), false, charId);
 });
 
-test('batch 1–6 numbers: the stat/damage specs carry the blackboard values', (t) => {
+test('batch 1–7 numbers: the stat/damage specs carry the blackboard values', (t) => {
   setGameData(ACT3);
   t.after(() => setGameData(null));
   const ds = new DataSource(ACT3, quiet);
@@ -190,6 +190,32 @@ test('batch 1–6 numbers: the stat/damage specs carry the blackboard values', (
   assert.equal(spec('char_1036_fang2', 1).spec.kind, 'passive');
   assert.equal(spec('char_1036_fang2', 1).spec.mods.atkPct, 0.85);
   assert.equal(spec('char_1036_fang2', 1).spec.mods.blockCnt, 1);
+  // 奥斯汀: S1 ATK +27 / AS +25; S2 ATK +35 %, a longer interval and the bind handler
+  assert.equal(spec('char_346_aosta', 0).spec.mods.atkPct, 0.27);
+  assert.equal(spec('char_346_aosta', 0).spec.mods.aspd, 25);
+  assert.equal(spec('char_346_aosta', 1).spec.mods.atkPct, 0.35);
+  assert.ok(spec('char_346_aosta', 1).spec.mods.batPct > 0);
+  assert.equal(typeof spec('char_346_aosta', 1).spec.onAttack, 'function');
+  // 䌷: S1 at 2.1×; S2 ATK +62 %, two targets and the under-half-HP extra hit
+  assert.equal(spec('char_4221_ju', 0).spec.attack.atkScale, 2.1);
+  assert.equal(spec('char_4221_ju', 1).spec.mods.atkPct, 0.62);
+  assert.equal(spec('char_4221_ju', 1).spec.attack.maxTargets, 2);
+  assert.equal(typeof spec('char_4221_ju', 1).spec.onAttack, 'function');
+  // 车尔尼: S1 ATK +35 % and RES ×1.65; S2 +50 % max HP, taunt and the end-of-skill blast
+  assert.equal(spec('char_4047_pianst', 0).spec.mods.atkPct, 0.35);
+  assert.equal(spec('char_4047_pianst', 0).spec.mods.resMul, 1.65);
+  assert.equal(spec('char_4047_pianst', 1).spec.mods.hpPct, 0.5);
+  assert.equal(spec('char_4047_pianst', 1).spec.mods.taunt, 1);
+  assert.equal(typeof spec('char_4047_pianst', 1).spec.onEnd, 'function');
+  // 暴躁铁皮: ATK +160 %, +60 % max HP, a shorter attack interval
+  assert.equal(spec('char_618_acrbot', 0).spec.mods.atkPct, 1.6);
+  assert.equal(spec('char_618_acrbot', 0).spec.mods.hpPct, 0.6);
+  assert.ok(spec('char_618_acrbot', 0).spec.mods.batPct < 0);
+  // 云迹: S1 takes off with ATK +45 % / 50 % dodge; S2 three targets
+  assert.equal(spec('char_4165_ctrail', 0).spec.mods.atkPct, 0.45);
+  assert.equal(spec('char_4165_ctrail', 0).spec.mods.dodgePhys, 0.5);
+  assert.equal(spec('char_4165_ctrail', 0).spec.flags.liftoff, true);
+  assert.equal(spec('char_4165_ctrail', 1).spec.targeting.maxTargets, 3);
 });
 
 test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (t) => {

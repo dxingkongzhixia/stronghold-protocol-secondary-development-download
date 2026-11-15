@@ -205,6 +205,11 @@ export const VERSION_KIT_FILES = Object.freeze([
   'ver-amiya.js',
   'ver-buildr.js',
   'ver-fang2.js',
+  'ver-aosta.js',
+  'ver-ju.js',
+  'ver-pianst.js',
+  'ver-acrbot.js',
+  'ver-ctrail.js',
 ]);
 
 /**
@@ -373,21 +378,16 @@ export const KIT_CHAR_IDS = Object.freeze({
  * accepts a chess without a kit only when its charId is listed here, and fails once a listed operator gets one.
  */
 export const PENDING_KIT_CHARS = Object.freeze([
-  'char_346_aosta',
   'char_4041_chnut',
-  'char_4047_pianst',
   'char_4147_mitm',
-  'char_4165_ctrail',
   'char_4177_brigid',
   'char_4198_christ',
-  'char_4221_ju',
   'char_4222_taraxa',
   'char_4224_turdus',
   'char_4232_hbound',
   'char_455_nothin',
   'char_484_robrta',
   'char_499_kaitou',
-  'char_618_acrbot',
 ]);
 
 /** DIY picks of another version without a charId kit (none today: every listed pick borrows a tier kit). */
