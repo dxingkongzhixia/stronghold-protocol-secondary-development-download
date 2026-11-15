@@ -151,3 +151,16 @@
   .brief-reroll__actions { flex-shrink: 1; }
   .brief-reroll__actions .btn { min-height: .44rem; padding-inline: .12rem; }
 }
+
+
+/* 规程 personal briefing: the two core-bond groups (js/screens/briefing.js CoreBondChoice) */
+.corepick { display: flex; flex-direction: column; gap: .08rem; padding: .12rem .14rem; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .3); border-radius: .08rem; }
+.corepick__title { margin: 0; font-size: calc(.2 * var(--t)); color: var(--text-hi); }
+.corepick__hint { margin: 0 0 .04rem; font-size: calc(.16 * var(--t)); color: var(--text-lo); }
+.corepick__opt { display: flex; align-items: center; gap: .1rem; width: 100%; text-align: left; padding: .1rem .12rem; border: 1px solid var(--line); background: transparent; color: var(--text-md); font: inherit; cursor: pointer; transition: border-color var(--t-fast), background-color var(--t-fast); }
+.corepick__opt:disabled { cursor: default; opacity: .78; }
+.corepick__opt:hover:not(:disabled) { border-color: var(--line-2); background: rgba(255, 255, 255, .03); }
+.corepick__opt.is-active { border-color: var(--mint-500, #4ed8af); background: rgba(78, 216, 175, .1); color: var(--text-hi); }
+.corepick__letter { flex: none; width: .32rem; height: .32rem; display: grid; place-items: center; border: 1px solid var(--line-2); border-radius: 50%; font-size: calc(.17 * var(--t)); color: var(--text-hi); }
+.corepick__bonds { flex: 1; min-width: 0; font-size: calc(.17 * var(--t)); }
+.corepick__on { flex: none; color: var(--mint-500, #4ed8af); font-size: calc(.15 * var(--t)); }

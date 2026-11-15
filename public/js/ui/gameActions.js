@@ -65,6 +65,8 @@ export async function act(t, fields = {}, opts = {}) {
 
 export const actions = {
   infoReady: (setupRevision = 0) => act('g.infoReady', { setupRevision }),
+  // 规程 personal briefing: the core bonds split into two groups (m.private.coreBond), the player keeps one
+  coreBond: (group) => act('g.coreBond', { group }, { sfx: 'confirm' }),
   rerollSetup: (setupRevision) => act('room.rerollSetup', { setupRevision }, { sfx: 'confirm' }),
   rerollVote: (voteId, agree) => act('g.rerollVote', { voteId, agree }, { sfx: agree ? 'confirm' : 'back' }),
   cancelReroll: (voteId) => act('room.cancelReroll', { voteId }, { sfx: 'back' }),

@@ -23,6 +23,32 @@ import { t } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
+/**
+ * 规程 personal briefing: the two core-bond groups (m.private.coreBond { groups, pick }), one keeps its bonds and the
+ * other's operators leave the simulation (g.coreBond). Shown only while the server offers a choice (regulation solo).
+ */
+function CoreBondChoice({ coreBond, gd }) {
+  const [busy, setBusy] = useState(false);
+  if (!coreBond || !Array.isArray(coreBond.groups) || coreBond.groups.length < 2) return null;
+  const picked = Number.isInteger(coreBond.pick) ? coreBond.pick : null;
+  const pick = async (group) => {
+    if (picked != null || busy) return;
+    setBusy(true);
+    await actions.coreBond(group);
+    setBusy(false);
+  };
+  return html`<section class="corepick" aria-label=${t('核心盟约')}>
+    <h3 class="corepick__title">${t('核心盟约')}<span class="num t-dim"> CORE BOND</span></h3>
+    <p class="corepick__hint">${picked == null ? t('选择一项') : t('已选择')}</p>
+    ${coreBond.groups.map((group, i) => html`<button key=${i} type="button" class=${cx('corepick__opt', picked === i && 'is-active')}
+        disabled=${picked != null || busy} onClick=${() => pick(i)}>
+      <b class="corepick__letter">${String.fromCharCode(65 + i)}</b>
+      <span class="corepick__bonds">${group.map((id) => (gd?.bond(id)?.name || id)).join(' · ')}</span>
+      ${picked === i ? html`<span class="corepick__on">${t('已选择')}</span>` : null}
+    </button>`)}
+  </section>`;
+}
+
 /** INFO_CHECK screen. */
 export function BriefingScreen() {
   const pub = useStore((s) => s.match.public);
@@ -60,6 +86,7 @@ export function BriefingScreen() {
         <${MatchEnemies} pub=${pub} gd=${gd} />
       </section>
       <section class="brief__right">
+        <${CoreBondChoice} coreBond=${priv?.coreBond} gd=${gd} />
         <${MatchInfo} model=${info} />
       </section>
     </main>
