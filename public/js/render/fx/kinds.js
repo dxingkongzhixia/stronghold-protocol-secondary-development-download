@@ -35,6 +35,10 @@ export const FX_KINDS = Object.freeze({
   // 替身换位, 娜仁图亚's S3 吞日 retrieve burst) use the official battle effects (render/vfx) and fall back to this plain
   // procedural blast (owner, 2026-10-16).
   aoe: { a: 'blast', c: 0xffb35c },
+  // 规程 kits: 旅骨's alchemy cloud (ver-hbound.js, one placement per skill) and Miss.Christine's spirit burst
+  // (ver-christ.js, at the target's position). Plain procedural fallbacks; the official VFX tier may supersede them.
+  alchemy: { a: 'zone', c: 0x7fe0b0, dur: 2 },
+  spirit: { a: 'blast', c: 0xc9b6ff },
   explode: { a: 'blast', c: 0xff7a33 }, explosion: { a: 'blast', c: 0xff7a33 },
   // `pt`: always at the event's (x, y) (its `id` is the shooter); `heavy`: debris + scorch
   bombard: { a: 'blast', c: 0xffa04a, r: 1.5, pt: true, heavy: true }, bombardShell: { a: 'shell', c: 0xff5a3a, r: 1.5, pt: true },
