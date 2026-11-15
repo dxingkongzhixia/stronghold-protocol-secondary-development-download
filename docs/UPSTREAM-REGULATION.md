@@ -220,9 +220,9 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] 关卡 `.dat` 先解 zip；规程三段场景导出（`import_scenes.py` + `regulation_scenes.py`，m01 实跑通过；见 §3.1）
 - [x] 合并两个 AB 根（`bundles.py`：`--game` 安装目录 + 硬链接缓存树，实测 1388 下载 / 13355 打包）
 - [x] act3 的 activity / 主题 opt-in 任务（`EXTRA_JOBS`，270 + 1 文件）；enemy-fx 已由 `fx.py` 的 glob 覆盖
-- [ ] `tools/assets/versions.mjs` 按版本并集规划（fetch-assets 侧仍以默认语料为准；本地客户端补全见下）
+- [x] **按版本素材并集规划**：`tools/assets/versions.mjs` 读取各版本 `chess/backups/tokens/enemies/items/bands/bonds/bosses/stages`，按美术身份并集（干员 216 / 敌人 343 / 策略 61 / 盟约 26 / 装备 70 / 召唤 57 / 模块类型 133），并对照 web manifest 与本地客户端 manifest 报告缺口；`--check` / `--json` / `--junctions`。测试 `test/versions-assets-plan.test.js`
 - [x] 规程 4 首音乐：已从本地客户端 / Monster Siren 入 `var/music`（Kernel Overflow / Restore / Ens Inexorabile / Systematic Violation），客户端由 `VERSION_BGM` 使用
-- [x] **本地客户端素材补全**：从本机 B 服客户端抽取 Amiya 基础形态的 avatar/portrait/Spine 与 **79 个规程敌人图标**（`public/assets/local/enemy/icon`，经 `data/local-assets.committed.json` 登记；`ui/assetUrls.js enemyIconUrl` 回落到本地图标）；40/40 规程套件干员、98/98 敌人 Spine、10/10 战场场景、主题均已覆盖。18 个 act3 专属 Boss/召唤在客户端无图鉴图标，UI 回落为字形。测试 `test/versions-assets.test.js`
+- [x] **本地客户端素材补全**：从本机 B 服客户端抽取 Amiya 基础形态 avatar/portrait/Spine、**79 个规程敌人图标**、**44 个策略图标 / 4 个盟约图标 / 47 个装备图标**（`public/assets/local/{enemy/icon,band,bond,item}`，经 `data/local-assets.committed.json` 登记；`ui/assetUrls.js` 的 enemy/band/bond/item 解析回落本地）；40/40 规程套件干员、98/98 敌人 Spine、10/10 战场场景、主题均已覆盖。24 个 act3 专属 Boss/召唤在客户端无图鉴图标，UI 回落为字形。测试 `test/versions-assets.test.js`
 - [ ] 中继发布与手机端首包评估
 
 ### P5 golden / 测试 / CI（3–5 人日）
