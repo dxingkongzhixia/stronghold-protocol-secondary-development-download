@@ -71,10 +71,7 @@ export class MatchPhases {
     this.disabledBonds = [...new Set([...this.disabledBonds, ...out])].sort();
     const off = new Set([...this.disabledBonds, ...this.staticInactiveBonds]);
     const banned = [];
-    for (const id of this.gd.visibleChess) {
-      const bonds = this.gd.chess(id)?.bonds;
-      if (Array.isArray(bonds) && bonds.length && bonds.every((b) => off.has(b))) banned.push(id);
-    }
+    for (const id of this.gd.visibleChess) if (this.gd.bondsExclude(this.gd.chess(id), off)) banned.push(id);
     this.bannedChess = banned;
     this.pool = new SharedPool(this.gd, { banned });
     for (const p of this.order) p.initDiyStock(off);

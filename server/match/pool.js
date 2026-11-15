@@ -39,11 +39,7 @@ export function drawDisabledBonds(gd, rng) {
   const drawn = [...sample(core, nCore, rng), ...sample(addon, nAddon, rng)].sort();
   const off = new Set([...drawn, ...staticOff]);
   const banned = [];
-  for (const id of gd.visibleChess) {
-    const c = gd.chess(id);
-    const bonds = Array.isArray(c.bonds) ? c.bonds : [];
-    if (bonds.length > 0 && bonds.every((b) => off.has(b))) banned.push(id);
-  }
+  for (const id of gd.visibleChess) if (gd.bondsExclude(gd.chess(id), off)) banned.push(id);
   return { drawn, staticOff, banned };
 }
 

@@ -189,7 +189,8 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [ ] **其余规程内容**：见下方 189–195 的具体条目（装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计）；141 个 garrison 与 54 个 band effect 已完成。
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
 - [x] 核心盟约二选一（个人）**服务端完成**：`g.coreBond`、两组随机核心盟约、落选组进禁用并重建池/自选库存（`Match.coreBondGroups` / `phases.applyCoreBondChoice`，默认盟约无变化；选择器 UI 随 P3）
-- [ ] 联合模拟禁用半数核心（规则待官方核对）；自选无特质、按阵营分盟约（Ⅴ/Ⅵ 各 0–2 已由 CUSTOM_CHECK 实现）
+- [x] 核心优先禁用（规程）：`GameData.bondsExclude` 按官方多人录像（BV1hmWL6fEmQ，`docs/research/regulation-core-ban-video-…`）——有核心盟约时只看核心，全部核心灰才禁用；无核心时才看附加盟约。初雪（谢拉格灰 + 协防亮）因此离场，多核心留任一、无核心随附加；`pool` / `coreBond` 重建 / 自选库存 / 具名奖励共用。默认盟约保持原「全部盟约联合」判定。测试 `test/versions-corebond.test.js`
+- [ ] 自选无特质、按阵营分盟约（Ⅴ/Ⅵ 各 0–2 已由 CUSTOM_CHECK 实现）
 - [x] 装备区（服务端）：独立 5 格 `equipHand`（`economy.equipHandSize` = 官方 `constData.maxDeckEquipmentChessCnt`），购买/获得进装备区、从装备区装备、装备区参与合并；默认盟约仍与手牌共用（`equipHandSize` 缺省 0）。测试 `test/versions-equipment.test.js`；UI 随 P3
 - [x] 每干员装备容量：版本构建写入官方 `charChessDataDict[].equipSlotNum`（非 2 时）到 `chess.json equipSlots`，`GameData.equipSlotsOf` 覆盖 `equipPerChess`（Ironhide 4 / 6，其余 2）；装备/替换、invariant、bot 与装备区 UI 均按干员容量；`shared/standIn.js IDENTITY_FIELDS` 携带该字段。测试 `test/versions-equipment.test.js`
 - [ ] 招募例外 `recruitTierExempt`：当前 gamedata pin 无该字段，待官方表更新

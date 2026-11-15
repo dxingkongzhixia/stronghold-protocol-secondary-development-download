@@ -608,6 +608,24 @@ export class GameData {
     if (!b || typeof b !== 'object') return { ...d };
     return { core: Number.isInteger(b.core) && b.core >= 0 ? b.core : d.core, addon: Number.isInteger(b.addon) && b.addon >= 0 ? b.addon : d.addon };
   }
+
+  /** 规程's ban rule (config.version.family): core bonds decide when the operator has any; the covenant keeps the joint rule. */
+  get regulationBondDraw() { return this.config?.version?.family === 'regulation'; }
+
+  /**
+   * Whether bond-disabled chess `rec` is excluded by the off set (the drawn bans ∪ the mode's static list).
+   * 规程 — core first (official multiplayer recording BV1hmWL6fEmQ, research regulation-core-ban-video-20261114): an
+   * operator with a core bond is excluded only when ALL its core bonds are off; one lit core keeps it, even with every
+   * add-on grey (初雪 with 谢拉格 grey and 协防 lit). With no core bond, every add-on must be off. 盟约 keeps the joint
+   * every-bond rule, so nothing of its ban lists moves.
+   */
+  bondsExclude(rec, off) {
+    const bonds = Array.isArray(rec?.bonds) ? rec.bonds : [];
+    if (!this.regulationBondDraw) return bonds.length > 0 && bonds.every((b) => off.has(b));
+    const core = bonds.filter((b) => this.bond(b)?.isCore);
+    const relevant = core.length ? core : bonds;
+    return relevant.length > 0 && relevant.every((b) => off.has(b));
+  }
   get bandDraft() {
     const b = this.config.bandDraft && typeof this.config.bandDraft === 'object' ? this.config.bandDraft : {};
     return {
