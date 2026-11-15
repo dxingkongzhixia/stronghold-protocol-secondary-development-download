@@ -1,0 +1,17 @@
+// test/ui/equip-area.test.js — 规程's equipment drawer (public/js/ui/equipArea.js): its targets are the board / hand
+// operators with a free equipment slot (g.equip), and the drawer renders nothing without m.private.equipHand.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { equipTargets } from '../../public/js/ui/equipArea.js';
+
+const op = (uid, items = 0, kind = 'chess') => ({ uid, kind, id: 'c' + uid, items: Array.from({ length: items }, (_, i) => ({ uid: uid * 10 + i, id: 'item' })) });
+
+test('targets: board and hand operators with a free slot, in board-then-hand order', () => {
+  const priv = {
+    board: [op(1, 0), op(2, 2), op(3, 1)],
+    hand: [null, op(4, 0), { uid: 5, kind: 'item', id: 'item_x' }, op(6, 2)],
+  };
+  assert.deepEqual(equipTargets(priv, 2).map((p) => p.uid), [1, 3, 4]);
+  assert.deepEqual(equipTargets(priv, 3).map((p) => p.uid), [1, 2, 3, 4, 6], 'a third slot opens every carrier');
+  assert.deepEqual(equipTargets({}, 2), []);
+});
