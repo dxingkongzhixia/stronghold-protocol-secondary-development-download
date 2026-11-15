@@ -849,3 +849,14 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .bskill__sel { height: .44rem; padding: 0 .06rem; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .3); color: var(--text-hi); font: inherit; }
 .bskill__confirm { height: .44rem; padding: 0 .14rem; border: 1px solid var(--mint-500, #4ed8af); background: rgba(78, 216, 175, .12); color: var(--text-hi); font: inherit; font-weight: 700; cursor: pointer; }
 .bskill__confirm:disabled { cursor: default; opacity: .62; }
+
+/* 规程 追随者们: the instruction offer (js/ui/bandSkill.js BandSkillChoice), shown until one is taken */
+.bskill__offer { display: flex; flex-direction: column; gap: .05rem; width: 3.2rem; max-width: 78vw; padding: .1rem; border: 1px solid var(--line-2); border-radius: .08rem; background: rgba(8, 10, 9, .88); }
+.bskill__offer-title { font-size: calc(.15 * var(--t)); font-weight: 700; color: var(--text-lo); letter-spacing: .04em; }
+.bskill__option { display: flex; align-items: center; gap: .08rem; padding: .06rem .08rem; border: 1px solid var(--line); background: transparent; color: var(--text-md); font: inherit; font-size: calc(.16 * var(--t)); cursor: pointer; text-align: left; }
+.bskill__option img { width: .3rem; height: .3rem; object-fit: contain; }
+.bskill__option .icon { width: .26rem; height: .26rem; }
+.bskill__option b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-hi); }
+.bskill__option span { font-size: calc(.14 * var(--t)); }
+.bskill__option:hover:not(:disabled) { border-color: var(--mint-500, #4ed8af); }
+.bskill__option:disabled { cursor: default; opacity: .62; }

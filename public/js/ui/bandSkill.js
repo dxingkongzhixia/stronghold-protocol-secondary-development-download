@@ -32,6 +32,25 @@ export function bandSkillUsesText(bs) {
   return bs.usesLeft == null ? '' : `×${bs.usesLeft}`;
 }
 
+/**
+ * 规程 追随者们: this prep's instruction offer (m.private.bandChoice), while unpicked. The picked instruction becomes the
+ * band skill button's skill (g.bandSkillChoose); the strategy's own passive does not change.
+ */
+function BandSkillChoice({ offer, gd, busy, onPick }) {
+  if (!offer || offer.pick != null || !Array.isArray(offer.candidates) || !offer.candidates.length) return null;
+  return html`<div class="bskill__offer" role="group" aria-label=${t('更换指令')}>
+    <span class="bskill__offer-title">${t('更换指令')}</span>
+    ${offer.candidates.map((id) => {
+      const band = gd?.band(id);
+      return html`<button key=${id} type="button" class="bskill__option" disabled=${busy} onClick=${() => onPick(id)}>
+        ${bandIconUrl(gd?.m, id) ? html`<${Img} src=${bandIconUrl(gd.m, id)} alt="" />` : html`<${Icon} name="sword" />`}
+        <b>${band?.effectName || band?.name || id}</b>
+        <span class="t-dim">${band?.name || ''}</span>
+      </button>`;
+    })}
+  </div>`;
+}
+
 /** The 规程 active strategy skill's button and target picker (prep only; `editable` = the local player's own prep). */
 export function BandSkill({ priv, gd, editable = true, busy = false }) {
   const [open, setOpen] = useState(false);
@@ -39,8 +58,9 @@ export function BandSkill({ priv, gd, editable = true, busy = false }) {
   const [row, setRow] = useState(10);
   const [col, setCol] = useState(6);
   const bs = priv?.bandSkill;
-  if (!bs || !editable) return null;
-  const blocked = busy || sending || !bs.available || (bs.cost || 0) > (priv.funds ?? 0);
+  const offer = priv?.bandChoice;
+  if (!editable || (!bs && !offer)) return null;
+  const blocked = busy || sending || !bs?.available || (bs?.cost || 0) > (priv.funds ?? 0);
   const fire = async (target) => {
     if (blocked) return;
     setSending(true);
@@ -48,7 +68,13 @@ export function BandSkill({ priv, gd, editable = true, busy = false }) {
     setSending(false);
     if (ok) setOpen(false);
   };
-  const targetType = bs.targetType;
+  const choose = async (id) => {
+    if (busy || sending) return;
+    setSending(true);
+    await actions.bandSkillChoose(id);
+    setSending(false);
+  };
+  const targetType = bs?.targetType;
   const toggle = () => {
     if (blocked) return;
     if (targetType === 'NO_TARGET' || targetType == null) fire();
@@ -57,16 +83,17 @@ export function BandSkill({ priv, gd, editable = true, busy = false }) {
   const chessTargets = targetType === 'COMMON_CHESS' ? bandSkillChessTargets(priv) : [];
   const shopTargets = targetType === 'SHOP_SLOT' ? bandSkillShopTargets(priv) : [];
   return html`<div class=${cx('bskill', open && 'is-open')}>
-    <button type="button" class="bskill__btn" disabled=${blocked} aria-expanded=${open}
+    <${BandSkillChoice} offer=${offer} gd=${gd} busy=${busy || sending} onPick=${choose} />
+    ${bs ? html`<button type="button" class="bskill__btn" disabled=${blocked} aria-expanded=${open}
         title=${bs.desc || bs.name} onClick=${toggle}>
-      ${bandIconUrl(gd?.m, priv.bandId)
-        ? html`<${Img} src=${bandIconUrl(gd.m, priv.bandId)} alt="" />`
+      ${bandIconUrl(gd?.m, bs.bandId)
+        ? html`<${Img} src=${bandIconUrl(gd.m, bs.bandId)} alt="" />`
         : html`<${Icon} name="sword" />`}
       <span class="bskill__name">${bs.name}</span>
       ${bs.cost > 0 ? html`<b class="bskill__cost num">${bs.cost}</b>` : null}
       <b class="bskill__uses num">${bandSkillUsesText(bs)}</b>
-    </button>
-    ${open ? html`<div class="bskill__panel" role="dialog" aria-label=${bs.name}>
+    </button>` : null}
+    ${open && bs ? html`<div class="bskill__panel" role="dialog" aria-label=${bs.name}>
       <div class="bskill__head">
         <b>${targetType === 'MAP_TILE' ? t('选择地块') : t('选择目标')}</b>
         <button type="button" class="bskill__x" aria-label=${t('关闭')} onClick=${() => setOpen(false)}><${Icon} name="close" /></button>
