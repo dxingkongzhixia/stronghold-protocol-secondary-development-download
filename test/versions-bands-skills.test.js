@@ -27,7 +27,7 @@ after(() => setGameData(null));
 function ctxFor(ps, m, ev, calls) {
   const bondOf = (id) => {
     const s = String(id);
-    for (const b of ['yanShip', 'ursusShip', 'kazimierzShip', 'lethaniaShip']) {
+    for (const b of ['yanShip', 'ursusShip', 'kazimierzShip', 'lethaniaShip', 'sargonShip']) {
       if (s.includes(b.replace(/Ship$/, '').toLowerCase())) return [b];
     }
     return [];
@@ -63,6 +63,17 @@ function ctxFor(ps, m, ev, calls) {
     destroyPiece: (uid) => { calls.destroyed.push(uid); return calls.destroy !== false; },
     addBandMark: (uid, mark) => { calls.marks.push([uid, mark]); return calls.mark !== false; },
     addBandGlobal: (mark) => { calls.globals.push(mark); return calls.global !== false; },
+    promotionReward: () => { calls.rewards.push(1); return calls.reward !== false; },
+    shopUpDiscount: (v) => { calls.discounts.push(v); return calls.discount !== false; },
+    transform: (uid, id) => { calls.transforms.push([uid, id]); return { id }; },
+    offerItems: (ids) => { calls.offers.push(ids); return true; },
+    pieceBonds: (uid) => (calls.pieceBonds && calls.pieceBonds[uid]) || [],
+    teammates: () => calls.teammates || [],
+    player: (id) => (calls.players && calls.players[id]) || null,
+    seat: 0,
+    lp: () => (calls.lp ?? 20),
+    maxLp: () => 30,
+    setLp: (v) => { calls.lp = v; return v; },
     triggerGarrisons: (uid, event) => { calls.garrison.push([uid, event]); return calls.garrisonRuns ?? 1; },
     garrisonsOf: () => calls.garrisons ?? [{ eventType: 'SERVER_PREP_FIN' }],
     pieceCounter: (uid, k) => (ps.pieceCounters && ps.pieceCounters[`${uid}:${k}`]) || 0,
@@ -107,6 +118,7 @@ function fakeMatch(bandId, { funds = 20, slots } = {}) {
   const calls = {
     rolls: [], granted: [], items: [], slots: [], board: [], funds: 0,
     promoted: [], sold: [], destroyed: [], marks: [], garrison: [], equipped: [], layers: [], globals: [],
+    rewards: [], discounts: [], transforms: [], offers: [],
   };
   const m = Object.create(MatchIntents.prototype);
   m.phase = PHASE.PREP;
@@ -515,4 +527,104 @@ test('电气化！ refuses equipment that destroys itself on equip', () => {
   assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }).error, 'BAD_TARGET');
   assert.deepEqual(f.calls.globals, []);
   assert.equal(f.ps.funds, 1, 'not charged');
+});
+
+
+// ---- B5: no-key skills and the remaining prep passives ---------------------------------------------------------
+
+test('条文修正: every active bond of the target gains 9 layers, cooldown 3', () => {
+  const f = fakeMatch('band_jenga');
+  f.m.round = 4;
+  f.calls.pieceBonds = { 1: ['yanShip', 'miraShip'] };
+  f.calls.bonds = { yanShip: { active: true }, miraShip: { active: false } };
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'chess', uid: 1 } }), OK);
+  assert.deepEqual(f.calls.layers, [['yanShip', 9, true]]);
+  assert.equal(f.ps.bandSkill.cooldownUntil, 4 + 3);
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'chess', uid: 1 } }).error, 'BAD_TARGET', 'cooling down');
+});
+
+test('条文修正 is locked before round 4', () => {
+  const f = fakeMatch('band_jenga');
+  f.m.round = 3;
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'chess', uid: 1 } }).error, 'BAD_TARGET');
+});
+
+test('不稳定要素: the target becomes a random operator one tier higher', () => {
+  const f = fakeMatch('band_mess');
+  f.m.round = 4;
+  f.calls.chessId = 'tier_up';
+  f.calls.pieces = { 1: { uid: 1, kind: 'chess', id: 'own_a', tier: 3, golden: false, items: [] } };
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'chess', uid: 1 } }), OK);
+  assert.equal(f.calls.rolls[0].tier, 4);
+  assert.deepEqual(f.calls.transforms, [[1, 'tier_up']]);
+});
+
+test('不稳定要素 does nothing at tier 6', () => {
+  const f = fakeMatch('band_mess');
+  f.m.round = 4;
+  f.calls.pieces = { 1: { uid: 1, kind: 'chess', id: 'own_a', tier: 6, golden: false, items: [] } };
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'chess', uid: 1 } }).error, 'BAD_TARGET');
+  assert.deepEqual(f.calls.transforms, []);
+});
+
+test('献身护卫: LP drops to the lowest player, the loss pays (cap 10), the prep end heals them', () => {
+  const f = fakeMatch('band_protect');
+  f.m.round = 4;
+  const mate = { seat: 1, lpValue: 12, lp() { return this.lpValue; }, alive: () => true, setLp(v) { this.lpValue = v; return v; } };
+  f.calls.lp = 20;
+  f.calls.teammates = [mate];
+  assert.deepEqual(f.m.useBandSkill(f.ps, {}), OK);
+  assert.equal(f.calls.lp, 12, 'own LP matched the lowest');
+  assert.equal(f.ps.funds, 28, '+8 funds (the loss)');
+  assert.equal(f.ps.counters['band:protect:seat'], 1);
+  f.m.dispatch(f.ps, 'onPrepEnd', {});
+  assert.equal(mate.lp(), 20, 'healed by the same amount');
+});
+
+test('最佳品味: takes 1 shop operator at 60 spent, 2 at 120', () => {
+  const one = fakeMatch('band_rich', { slots: [
+    { kind: 'chess', id: 'base_a', basePrice: 1, sold: false },
+    { kind: 'chess', id: 'base_b', basePrice: 1, sold: false },
+  ] });
+  one.ps.stats.gold = 60;
+  assert.deepEqual(one.m.useBandSkill(one.ps, {}), OK);
+  assert.equal(one.calls.granted.length, 1);
+  const two = fakeMatch('band_rich', { slots: [
+    { kind: 'chess', id: 'base_a', basePrice: 1, sold: false },
+    { kind: 'chess', id: 'base_b', basePrice: 1, sold: false },
+  ] });
+  two.ps.stats.gold = 120;
+  assert.deepEqual(two.m.useBandSkill(two.ps, {}), OK);
+  assert.equal(two.calls.granted.length, 2);
+  const locked = fakeMatch('band_rich');
+  locked.ps.stats.gold = 59;
+  assert.equal(locked.m.useBandSkill(locked.ps, {}).error, 'BAD_TARGET', 'locked below 60');
+});
+
+test('二重奏: the round first elite merge offers one more promotion reward', () => {
+  const f = fakeMatch('band_bonus');
+  f.m.dispatch(f.ps, 'onMerge', { kind: 'chess' });
+  f.m.dispatch(f.ps, 'onMerge', { kind: 'chess' });
+  assert.equal(f.calls.rewards.length, 1);
+  f.m.round = 4;
+  f.m.dispatch(f.ps, 'onMerge', { kind: 'chess' });
+  assert.equal(f.calls.rewards.length, 2, 'a new round offers it again');
+});
+
+test('精巧设计: the round first equipment merge offers 3 items', () => {
+  const f = fakeMatch('band_equipment');
+  f.calls.itemId = 'item_new';
+  f.m.dispatch(f.ps, 'onMerge', { kind: 'item' });
+  f.m.dispatch(f.ps, 'onMerge', { kind: 'item' });
+  const ids = f.calls.offers.flat();
+  assert.ok(ids.length >= 1 && ids.length <= 3);
+  assert.equal(f.calls.offers.length, 1, 'once a round');
+});
+
+test('沙洲梦魇: every 3 萨尔贡 gained earns -3 on the current level upgrade', () => {
+  const f = fakeMatch('band_sargon');
+  for (let i = 0; i < 3; i++) f.m.dispatch(f.ps, 'onGain', { piece: { kind: 'chess', id: 'base_sargon' }, kind: 'chess' });
+  assert.deepEqual(f.calls.discounts, [3]);
+  for (let i = 0; i < 3; i++) f.m.dispatch(f.ps, 'onGain', { piece: { kind: 'chess', id: 'base_sargon' }, kind: 'chess' });
+  assert.deepEqual(f.calls.discounts, [3, 3], 'every 3 gains');
 });

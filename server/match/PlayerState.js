@@ -210,6 +210,11 @@ export class PlayerState {
      */
     this.bandSkill = { uses: 0, total: 0, round: 0, cooldownUntil: 0 };
     /**
+     * A shop-upgrade discount an effect earned for the CURRENT shop level (沙洲梦魇: `value` off the next level-up,
+     * `level` the level it was granted at; one per level). Read by economy.js levelUp, cleared on the level-up.
+     */
+    this.shopUpDiscount = { value: 0, level: 0 };
+    /**
      * Per-piece marks an active band skill put on an operator for its next battle (piece uid → marks), cleared at the
      * next round start; battleInput() carries them, the sim applies them (`layer_cap`, …).
      */

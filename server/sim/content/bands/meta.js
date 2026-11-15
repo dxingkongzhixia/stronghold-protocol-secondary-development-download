@@ -788,6 +788,122 @@ K.skill_mark_shop_equip_tag = (_ps) => ({
   },
 });
 
+// ---- act3 no-key skills and the remaining prep passives (B5) ----------------------------------------------------
+
+/** 条文修正: every active bond the target operator counts gets +initial_count layers (`initial_count` 9). */
+K.skill_act_bond_grow_garr_cnt = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const p = ps[0] || {};
+    const n = Math.max(1, int(p.initial_count ?? p.max_count, 9));
+    let added = 0;
+    for (const b of ctx.pieceBonds(ev.target.uid)) {
+      if (!ctx.bondActive(b)) continue;
+      added += ctx.addLayers(b, n, { requireActive: true, reason: 'band' }) || 0;
+    }
+    if (added > 0) ev.done = true;
+  },
+});
+
+/** 不稳定要素: the target becomes a random operator one tier higher (never above 6). */
+K.skill_transform_char_up_tier = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    const p = ctx.piece(ev.target.uid);
+    if (!p) return;
+    const tier = Math.min(6, Math.max(1, p.tier || 1) + 1);
+    if ((p.tier || 1) >= 6) return; // already the highest tier
+    const id = ctx.rollChess({ tier });
+    if (!id || id === p.id) return;
+    if (ctx.transform(ev.target.uid, id)) ev.done = true;
+  },
+});
+
+/**
+ * 献身护卫: own 目标生命值 drops to the lowest player's, and the loss (≤ `max_count`) pays as funds; at this prep's
+ * end that player is healed by the same amount (capped at its band's totalHp).
+ */
+K.skill_drop_hp_to_low_gain_coin = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const maxCoin = Math.max(0, int(ps[0] && ps[0].max_count, 10));
+    const pool = [ctx, ...ctx.teammates().filter((t) => t.alive())];
+    const low = Math.min(...pool.map((t) => t.lp()));
+    const loss = ctx.lp() - low;
+    if (!(loss > 0)) return; // already the lowest: nothing to give
+    const lowCtx = pool.find((t) => t.lp() === low) || null;
+    const coin = Math.min(loss, maxCoin);
+    ctx.setLp(low);
+    if (coin > 0) ctx.addFunds(coin, 'band');
+    ctx.setCounter('band:protect:heal', coin);
+    ctx.setCounter('band:protect:seat', lowCtx ? lowCtx.seat : -1);
+    ev.done = true;
+  },
+  onPrepEnd(ctx) {
+    const n = ctx.counter('band:protect:heal');
+    if (!(n > 0)) return;
+    const seat = ctx.counter('band:protect:seat');
+    ctx.setCounter('band:protect:heal', 0);
+    const t = [ctx, ...ctx.teammates()].find((x) => x.seat === seat);
+    if (t) t.setLp(t.lp() + n);
+  },
+});
+
+/** 最佳品味: `count` random operators of the shop, for free (their slots empty). */
+K.skill_take_shop_char = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const n = timesOf(ps[0] && ps[0].count, 1);
+    let taken = 0;
+    for (const i of ctx.rng.shuffle(chessSlots(ctx).slice())) {
+      if (taken >= n) break;
+      if (!ctx.grantChess(ctx.shopSlots()[i].id, { source: 'band' })) continue;
+      ctx.setShopSlot(i, null);
+      taken++;
+    }
+    if (taken > 0) ev.done = true;
+  },
+});
+
+/** 二重奏: the round's first elite merge offers one more promotion reward. */
+K.promote_char_extra_award = (_ps) => ({
+  onMerge(ctx, ev) {
+    if (!ev || ev.kind !== 'chess') return;
+    if (roundCounter(ctx, 'band:bonus') > 0) return;
+    if (ctx.promotionReward()) bumpRound(ctx, 'band:bonus');
+  },
+});
+
+/** 精巧设计 (passive half): the round's first equipment merge offers `count` items (one tier above the shop possible). */
+K.promote_equip_extra_award = (ps) => ({
+  onMerge(ctx, ev) {
+    if (!ev || ev.kind !== 'item') return;
+    if (roundCounter(ctx, 'band:equipment:merge') > 0) return;
+    const want = timesOf(ps[0] && ps[0].count, 3);
+    const maxTier = Math.max(1, Math.min(6, ctx.shopLevel() + 1));
+    const ids = [];
+    for (let k = 0; k < want * 6 && ids.length < want; k++) {
+      const id = ctx.rollItem({ maxTier });
+      if (!id) break;
+      if (!ids.includes(id)) ids.push(id);
+    }
+    if (!ids.length) return;
+    ctx.offerItems(ids, { source: 'band' });
+    bumpRound(ctx, 'band:equipment:merge');
+  },
+});
+
+/** 沙洲梦魇: every `count` of the bond's operators gained earns `value` off the current level's next shop upgrade. */
+K.gain_bond_cnt_shop_up_discount = (ps) => ({
+  onGain(ctx, ev) {
+    const p = ps[0] || {};
+    if (!ev || !ev.piece || ev.piece.kind !== 'chess' || !hasBond(ctx, ev.piece.id, p.bond)) return;
+    const every = Math.max(1, int(p.count, 3));
+    if (ctx.incCounter('band:sargon:got', 1) % every !== 0) return;
+    ctx.shopUpDiscount(Math.max(1, int(p.value, 3)));
+  },
+});
+
+// The act3 records of these two act2 behaviours carry the same blackboards under the official new keys.
+K.shop_up_bond_refresh_once = K.up_shop_next_refresh_must_present_bond_char;
+K.buy_bond_char_gain_coin = K.round_start_gain_coin_by_bond_char_chess_buy;
+
 K.preparation_start_add_special_goods_every_n_round = (ps) => ({
   onPrepStart(ctx) {
     const p = ps[0];

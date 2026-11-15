@@ -232,9 +232,12 @@ export class PlayerEconomy {
     if (this.m.test === true && this._testShopNext) return fail(ERR.WRONG_PHASE);
     const g = this._gate(); if (g) return g;
     if (this.shop.level >= this.gd.maxShopLevel) return fail(ERR.MAX_LEVEL);
-    const price = Math.max(0, this.shop.upgradePrice);
+    // a strategy's earned discount for this level (沙洲梦魇): "每个等级至多生效1次"
+    const disc = this.shopUpDiscount && this.shopUpDiscount.level === this.shop.level ? Math.max(0, this.shopUpDiscount.value) : 0;
+    const price = Math.max(0, this.shop.upgradePrice - disc);
     if (this.funds < price) return fail(ERR.NO_FUNDS);
     this.spend(price);
+    this.shopUpDiscount = { value: 0, level: 0 };
     this.shop.level++;
     this.shop.upgradePrice = this.gd.upgradeBase(this.shop.level) ?? 0;
     this._openLevelSlots();

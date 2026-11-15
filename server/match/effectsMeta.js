@@ -653,6 +653,25 @@ export function makeCtx(m, ps, source, hook, ev = null, preview = null) {
     grantFreeRefresh: (n = 1) => { const v = finiteInt(n); if (v > 0) { ps.shop.freeRefreshes += v; ps.dirty(); } return ps.shop.freeRefreshes; },
     /** Reroll the shop now, free (a band skill's own 刷新), dispatching onRefresh like a manual refresh. */
     refreshShop: () => ps.refresh({ free: true }).ok === true,
+    /** One more 晋升奖励 offer (二重奏's "获得1次额外的晋升奖励"; the merge reward of pushRewardOffer). */
+    promotionReward: () => !!ps.pushRewardOffer('merge'),
+    /** A discount off the CURRENT shop level's next level-up (沙洲梦魇; one per level): false when already granted. */
+    shopUpDiscount: (v) => {
+      const n = Math.max(0, Math.trunc(Number(v) || 0));
+      if (!(n > 0) || (ps.shopUpDiscount && ps.shopUpDiscount.level === ps.shop.level)) return false;
+      ps.shopUpDiscount = { value: n, level: ps.shop.level };
+      ps.dirty();
+      return true;
+    },
+    /** 目标生命值 (LP) of the player, and that of the highest reachable value (its band's totalHp). */
+    maxLp: () => ps.gd.startLp(ps.bandId),
+    setLp: (v) => {
+      const n = Math.max(0, Math.min(ps.gd.startLp(ps.bandId), Math.trunc(Number(v) || 0)));
+      ps.lp = n;
+      ps.dirty();
+      ps.m.markPublic?.();
+      return n;
+    },
 
     // ---- prices (onPrice only; the same as writing ev.price)
     modifyPrice: (delta) => { if (hook === 'onPrice' && ev && Number.isFinite(delta)) ev.price = Math.max(0, (Number(ev.price) || 0) + delta); return ev ? ev.price : null; },

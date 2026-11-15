@@ -38,6 +38,18 @@ test('knockdown_summon carries the hand\'s rightmost operator', () => {
   assert.notEqual(u.marks[0].summon.uid, piece.uid);
 });
 
+test('a shop-upgrade discount is taken once, off the current level', () => {
+  const { ps } = prep();
+  ps.shop.level = 2;
+  ps.shop.upgradePrice = 5;
+  ps.funds = 10;
+  ps.shopUpDiscount = { value: 3, level: 2 };
+  assert.deepEqual(ps.levelUp(), { ok: true });
+  assert.equal(ps.funds, 8, '5 - 3');
+  assert.equal(ps.shopUpDiscount.value, 0, 'spent');
+  assert.equal(ps.shop.level, 3);
+});
+
 test('player-level marks travel in battleInput and are spent at the next round start', () => {
   const { h, ps } = prep();
   ps.addBandGlobal({ tag: 'fear_tile', row: 10, col: 5, fear: 3 });
