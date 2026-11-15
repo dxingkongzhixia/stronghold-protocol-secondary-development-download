@@ -234,6 +234,9 @@ describe('extracted board files (when a local client was extracted)', { skip: !m
       for (const [n, e] of Object.entries(entries)) {
         if (!/\.webp$/.test(e?.path || '')) continue;
         assert.ok(existsSync(onDisk(e.path)), `${g}/${n}`);
+        // board / guide textures keep their PNG source and a lossy/lossless copy; a webp-native sprite (the season
+        // entry's exported images) has no PNG beside it and no `webp` mode
+        if (e.webp !== 'lossy' && e.webp !== 'lossless') continue;
         assert.ok(existsSync(onDisk(pngOf(e.path))), `${g}/${n}: PNG`);
         assert.ok(e.webp === 'lossy' || e.webp === 'lossless', `${g}/${n}: mode ${e.webp}`);
       }
