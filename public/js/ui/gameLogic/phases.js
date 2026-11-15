@@ -16,18 +16,29 @@ const PREP_PHASES = new Set([PHASE.PREP, PHASE.SP_DRAFT, PHASE.ROUND_START]);
 /**
  * Which screen family a phase belongs to.
  * @param {string} phase
- * @returns {'loading'|'briefing'|'draft'|'boot'|'prep'|'combat'|'settle'|'result'}
+ * @returns {'loading'|'briefing'|'draft'|'custom'|'boot'|'prep'|'combat'|'settle'|'result'}
  */
 export function phaseMode(phase) {
   if (!phase) return 'loading';
   if (phase === PHASE.INFO_CHECK) return 'briefing';
   if (phase === PHASE.BAND_DRAFT) return 'draft';
+  if (phase === PHASE.CUSTOM_CHECK) return 'custom';
   if (phase === PHASE.BATTLE_CHECK) return 'boot';
   if (phase === PHASE.RESULT) return 'result';
   if (phase === PHASE.SETTLE) return 'settle';
   if (COMBAT_PHASES.has(phase)) return 'combat';
   if (PREP_PHASES.has(phase)) return 'prep';
   return 'prep';
+}
+
+/**
+ * The number of official pre-game steps in this data (`config.timers.enterSteps`): 规程's INFO_CHECK / BAND_CHECK /
+ * CUSTOM_CHECK / BATTLE_CHECK = 4; the default 盟约 flow has 3 (no 选择自编). The step header says `n / this`.
+ * @param {any} config
+ */
+export function preGameSteps(config) {
+  const steps = config?.timers?.enterSteps;
+  return Array.isArray(steps) && steps.length ? steps.length : 2;
 }
 
 export const isCombatPhase = (phase) => COMBAT_PHASES.has(phase);

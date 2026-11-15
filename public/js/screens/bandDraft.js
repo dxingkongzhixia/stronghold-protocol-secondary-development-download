@@ -25,7 +25,7 @@ import { StepHeader, ExitModal } from '../ui/matchChrome.js';
 import { MatchInfoDialog, matchInfoModel } from '../ui/matchInfo.js';
 import { MatchEnemies } from '../ui/matchEnemies.js';
 import { actions, act } from '../ui/gameActions.js';
-import { normalizeDraft, sortedPlayers } from '../ui/gameLogic.js';
+import { normalizeDraft, sortedPlayers, preGameSteps } from '../ui/gameLogic.js';
 import { useStore } from '../store.js';
 import { data } from '../data.js';
 import { audio } from '../audio.js';
@@ -262,7 +262,7 @@ export function BandDraftScreen() {
 
   return html`<div class="screen draft">
     <div class="brief__bg" aria-hidden="true"></div>
-    <${StepHeader} step=${2} of=${2} title=${t('选择策略')} micro="STRATEGY // BAND CHECK" pub=${clock ? { ...pub, deadline: clock.deadline } : { ...pub, deadline: 0 }}
+    <${StepHeader} step=${2} of=${preGameSteps(gd.config)} title=${t('选择策略')} micro="STRATEGY // BAND CHECK" pub=${clock ? { ...pub, deadline: clock.deadline } : { ...pub, deadline: 0 }}
       total=${clock ? clock.total : null} onExit=${() => setExit(true)}
       extra=${html`<button type="button" class="stephead__info" data-testid="match-info-open" aria-haspopup="dialog" onClick=${() => setInfoOpen(true)}
         title=${t('本局信息')}><${Icon} name="search" /><span>${t('本局信息')}</span></button>`} />

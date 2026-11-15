@@ -872,3 +872,38 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .ereport__holder { display: flex; flex-direction: column; gap: .06rem; }
 .ereport__who { display: flex; align-items: center; gap: .08rem; color: var(--text-hi); font-size: calc(.16 * var(--t)); }
 .ereport__who > :first-child { flex: none; }
+
+
+/* 选择自编 (screens/custom.js): the 规程 CUSTOM_CHECK step — the player's 自选编队 picks, at most 2 per tier */
+.custom { position: relative; display: flex; flex-direction: column; }
+.custom__bg {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .018) 0 1px, transparent 1px 4px),
+    radial-gradient(90% 70% at 20% 30%, rgba(78, 216, 175, .07), transparent 60%),
+    radial-gradient(80% 70% at 85% 60%, rgba(232, 90, 26, .06), transparent 60%);
+}
+.custom__main { position: relative; z-index: 1; flex: 1; min-height: 0; overflow: auto; padding: .26rem .5rem .2rem; display: flex; flex-direction: column; gap: .16rem; }
+.custom__hint { margin: 0; color: var(--text-lo); font-size: calc(.16 * var(--t)); }
+.custom__tier h3 { display: flex; align-items: baseline; gap: .1rem; margin: 0 0 .08rem; color: var(--text-hi); font-size: calc(.18 * var(--t)); }
+.custom__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(1.5rem, 1fr)); gap: .1rem; }
+.custom__card {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: .05rem;
+  padding: .08rem .06rem; border: 1px solid var(--line); background: rgba(0, 0, 0, .32);
+  color: var(--text-md); font: inherit; font-size: calc(.15 * var(--t)); cursor: pointer; overflow: hidden;
+}
+.custom__card img, .custom__ph { width: 100%; height: .86rem; object-fit: cover; object-position: top center; display: grid; place-items: center; color: var(--text-dim); background: rgba(255, 255, 255, .03); }
+.custom__ph .icon { width: .34rem; height: .34rem; }
+.custom__card b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.custom__card:hover:not(:disabled) { border-color: var(--line-2); color: var(--text-hi); }
+.custom__card:disabled { cursor: default; opacity: .48; }
+.custom__card.is-on { border-color: var(--mint-500, #4ed8af); opacity: 1; color: var(--text-hi); box-shadow: inset 0 0 0 1px rgba(78, 216, 175, .35); }
+.custom__check { position: absolute; top: .04rem; right: .04rem; display: grid; place-items: center; width: .24rem; height: .24rem; border-radius: 50%; background: var(--mint-500, #4ed8af); color: #04110c; }
+.custom__check .icon { width: .16rem; height: .16rem; }
+.custom__empty { margin: .3rem 0; text-align: center; color: var(--text-dim); font-size: calc(.17 * var(--t)); }
+.custom__foot {
+  position: relative; z-index: 1; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: .18rem;
+  padding: .14rem .5rem .22rem; border-top: 1px solid var(--line);
+}
+.custom__count { color: var(--text-lo); font-size: calc(.16 * var(--t)); }
+.custom__count b { color: var(--text-hi); }

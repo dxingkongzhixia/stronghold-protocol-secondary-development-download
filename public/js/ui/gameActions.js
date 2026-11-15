@@ -77,6 +77,9 @@ export const actions = {
   bandSkill: (target) => act('g.bandSkill', target ? { target } : {}, { sfx: 'confirm' }),
   // 规程 追随者们: take one of the two instructions this prep offered (m.private.bandChoice)
   bandSkillChoose: (bandId) => act('g.bandSkillChoose', { bandId }, { sfx: 'confirm' }),
+  // 规程 选择自编 (CUSTOM_CHECK): the slot ids taken in (≤2 per tier), then the confirmation
+  custom: (slots) => act('g.custom', { slots }, { sfx: 'tab' }),
+  customReady: (ready = true) => act('g.customReady', { ready }, { sfx: 'ready' }),
   buy: (slot) => act('g.buy', { slot }),
   // a tap while the previous g.refresh is still on the wire is dropped (GitHub #501) — see onRefreshBusy above
   refresh: () => {

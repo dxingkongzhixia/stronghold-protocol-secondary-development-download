@@ -16,7 +16,7 @@ import { LoadoutButton } from './loadout.js';
 import { UnofficialMark } from '../ui/pluginTag.js';
 import { SetupReroll } from '../ui/setupReroll.js';
 import { actions } from '../ui/gameActions.js';
-import { sortedPlayers, phaseTotalSeconds } from '../ui/gameLogic.js';
+import { sortedPlayers, phaseTotalSeconds, preGameSteps } from '../ui/gameLogic.js';
 import { useStore } from '../store.js';
 import { data } from '../data.js';
 import { t } from '../../../shared/i18n.js';
@@ -78,7 +78,7 @@ export function BriefingScreen() {
 
   return html`<div class="screen brief">
     <div class="brief__bg" aria-hidden="true"></div>
-    <${StepHeader} step=${1} of=${2} title=${t('确认本局信息')} micro="BRIEFING // INFO CHECK" pub=${pub}
+    <${StepHeader} step=${1} of=${preGameSteps(gd.config)} title=${t('确认本局信息')} micro="BRIEFING // INFO CHECK" pub=${pub}
       total=${phaseTotalSeconds(pub, gd.config)} onExit=${() => setExit(true)} />
     <${UnofficialMark} room=${room} class="brief__modmark" />
     <main class="brief__main">

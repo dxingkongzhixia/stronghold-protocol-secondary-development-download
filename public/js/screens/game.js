@@ -1,5 +1,6 @@
 // Game screen — every in-match screen, dispatched by m.public.phase (DESIGN §10):
 //   INFO_CHECK → Briefing (screens/briefing.js), BAND_DRAFT → Band draft (screens/bandDraft.js),
+//   CUSTOM_CHECK → 选择自编 (screens/custom.js; version data with that enterSteps step),
 //   RESULT / m.result → the settlement flow (screens/settle.js), everything else → MatchScreen below.
 //
 // MatchScreen = full-screen field view (render engine per DESIGN §9, DOM fallback when it can't load)
@@ -126,6 +127,7 @@ import {
 import { toast, toastError } from '../ui/toasts.js';
 import { BriefingScreen } from './briefing.js';
 import { BandDraftScreen } from './bandDraft.js';
+import { CustomScreen } from './custom.js';
 import { ResultScreen } from './settle.js';
 import { ProtocolBoot, preloadBootArt, bootArtReady, BOOT_LEAVE_MS } from '../ui/protocolBoot.js';
 import { net } from '../net.js';
@@ -214,10 +216,11 @@ export function GameScreen() {
   if (hasResult || mode === 'result') body = html`<${ResultScreen} />`;
   else if (mode === 'briefing') body = html`<${BriefingScreen} />`;
   else if (mode === 'draft') body = html`<${BandDraftScreen} />`;
+  else if (mode === 'custom') body = html`<${CustomScreen} />`;
   else body = html`<${MatchScreen} />`;
   // In the match view MatchScreen renders the dock itself, right under the team panel; on the briefing / 盟约 draft
   // screens (neither has a team panel) it floats bottom-right instead.
-  const matchView = !hasResult && mode !== 'result' && mode !== 'briefing' && mode !== 'draft';
+  const matchView = !hasResult && mode !== 'result' && mode !== 'briefing' && mode !== 'draft' && mode !== 'custom';
   return html`${body}
     ${!matchView && (spectator || tookOver) ? html`<${SpecDock} room=${room} pub=${pub} myId=${myId} spectator=${spectator} canRelease=${tookOver} />` : null}
     ${(away || autoplay) && !hasResult && mode !== 'result' && !ended ? html`<${AwayOverlay} />` : null}
