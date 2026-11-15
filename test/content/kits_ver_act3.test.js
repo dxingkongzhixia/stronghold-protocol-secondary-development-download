@@ -82,7 +82,7 @@ test('a version kit is not offered as a default-version DIY pick (KITTED_CHARS u
   for (const charId of Object.keys(VERSION_KITS)) assert.equal(KITTED_CHARS.includes(charId), false, charId);
 });
 
-test('batch 1–7 numbers: the stat/damage specs carry the blackboard values', (t) => {
+test('batch 1–8 numbers: the stat/damage specs carry the blackboard values', (t) => {
   setGameData(ACT3);
   t.after(() => setGameData(null));
   const ds = new DataSource(ACT3, quiet);
@@ -216,6 +216,33 @@ test('batch 1–7 numbers: the stat/damage specs carry the blackboard values', (
   assert.equal(spec('char_4165_ctrail', 0).spec.mods.dodgePhys, 0.5);
   assert.equal(spec('char_4165_ctrail', 0).spec.flags.liftoff, true);
   assert.equal(spec('char_4165_ctrail', 1).spec.targeting.maxTargets, 3);
+  // 乌啾: S1 attack speed +40; S2 an instant heal with the lose-HP start
+  assert.equal(spec('char_4224_turdus', 0).spec.mods.aspd, 40);
+  assert.equal(spec('char_4224_turdus', 1).spec.kind, 'instant');
+  assert.equal(spec('char_4224_turdus', 1).spec.heal, true);
+  assert.equal(typeof spec('char_4224_turdus', 1).spec.onStart, 'function');
+  // 风絮: S1 a much shorter interval and 45 % heal; S2 ATK +80 % and two heal targets
+  assert.ok(spec('char_4222_taraxa', 0).spec.mods.batPct < 0);
+  assert.equal(spec('char_4222_taraxa', 0).spec.attack.healScale, 0.45);
+  assert.equal(spec('char_4222_taraxa', 0).spec.flags.liftoff, true);
+  assert.equal(spec('char_4222_taraxa', 1).spec.mods.atkPct, 0.8);
+  assert.equal(spec('char_4222_taraxa', 1).spec.attack.maxTargets, 2);
+  // 水灯心: S1 1.1× two hits; S2 ATK +20 % with the sluggish handler
+  assert.deepEqual(spec('char_4177_brigid', 0).spec.attack, { atkScale: 1.1, hits: 2 });
+  assert.equal(spec('char_4177_brigid', 1).spec.mods.atkPct, 0.2);
+  assert.equal(typeof spec('char_4177_brigid', 1).spec.onAttack, 'function');
+  // 罗比菈塔: S1 ATK / DEF +22 %; S2 block +1, DEF +35 %, no attack, and a device on end
+  assert.equal(spec('char_484_robrta', 0).spec.mods.atkPct, 0.22);
+  assert.equal(spec('char_484_robrta', 0).spec.mods.defPct, 0.22);
+  assert.equal(spec('char_484_robrta', 1).spec.mods.blockCnt, 1);
+  assert.equal(spec('char_484_robrta', 1).spec.mods.defPct, 0.35);
+  assert.equal(spec('char_484_robrta', 1).spec.attack.noAttack, true);
+  assert.equal(typeof spec('char_484_robrta', 1).spec.onEnd, 'function');
+  // 褐果: S1 an instant heal; S2 attack speed +90 and 120 % heal
+  assert.equal(spec('char_4041_chnut', 0).spec.kind, 'instant');
+  assert.equal(typeof spec('char_4041_chnut', 0).spec.onStart, 'function');
+  assert.equal(spec('char_4041_chnut', 1).spec.mods.aspd, 90);
+  assert.equal(spec('char_4041_chnut', 1).spec.attack.healScale, 1.2);
 });
 
 test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (t) => {

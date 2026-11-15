@@ -210,6 +210,11 @@ export const VERSION_KIT_FILES = Object.freeze([
   'ver-pianst.js',
   'ver-acrbot.js',
   'ver-ctrail.js',
+  'ver-turdus.js',
+  'ver-taraxa.js',
+  'ver-brigid.js',
+  'ver-robrta.js',
+  'ver-chnut.js',
 ]);
 
 /**
@@ -378,15 +383,10 @@ export const KIT_CHAR_IDS = Object.freeze({
  * accepts a chess without a kit only when its charId is listed here, and fails once a listed operator gets one.
  */
 export const PENDING_KIT_CHARS = Object.freeze([
-  'char_4041_chnut',
   'char_4147_mitm',
-  'char_4177_brigid',
   'char_4198_christ',
-  'char_4222_taraxa',
-  'char_4224_turdus',
   'char_4232_hbound',
   'char_455_nothin',
-  'char_484_robrta',
   'char_499_kaitou',
 ]);
 
