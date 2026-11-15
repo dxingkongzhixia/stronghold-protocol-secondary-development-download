@@ -7,6 +7,7 @@ import { PHASE } from '../../../shared/constants.js';
 import { boardOrder, pieceDir } from '../board.js';
 import { bondList, offBondCounts } from '../bondsMeta.js';
 import { bountyText, bountyCard } from '../choices.js';
+import { activeBandSkillStage, bandSkillStages } from '../../../shared/bandSkill.js';
 
 export class PlayerViews {
   pieceView(p, rc = null) {
@@ -30,8 +31,52 @@ export class PlayerViews {
     return v;
   }
 
-  effectsView() {
-    const out = [];
+  /**
+   * 规程 active strategy skill (`m.private.bandSkill`): the band record's official `skill` walk (shared/bandSkill.js),
+   * with the uses / cooldown the intent keeps in PlayerState.bandSkill and the live price. Null for every band without
+   * an ACTIVE skill (all of the default 盟约 set), so the default private view does not change.
+   */
+  bandSkillView() {
+    const band = this.bandId ? this.gd.band(this.bandId) : null;
+    if (!band) return null;
+    const stages = bandSkillStages(band);
+    const stage = activeBandSkillStage({
+      round: this.m.round, shopLevel: this.shop.level, gold: this.stats?.gold ?? 0, bonds: this.bonds,
+    }, stages);
+    const sk = stage && stage.skill;
+    if (!sk || sk.type !== 'ACTIVE') return null;
+    const round = this.m.round;
+    const st = this.bandSkill || { uses: 0, total: 0, round: 0, cooldownUntil: 0 };
+    const usedThisRound = st.round === round ? (st.uses || 0) : 0;
+    const cap = Math.max(1, Number.isInteger(sk.availCount) && sk.availCount > 0 ? sk.availCount : 1);
+    // the price hook is read-only by contract (meta.js): a cost that grows / falls is shown as the intent would charge it
+    const priced = { cost: Math.max(0, Math.round(Number(sk.cost) || 0)) };
+    if (typeof this.m.dispatch === 'function') this.m.dispatch(this, 'onBandSkillPrice', priced);
+    const cost = Math.max(0, Math.round(Number(priced.cost) || 0));
+    const cooldown = sk.availType === 'COOLDOWN' ? Math.max(0, (st.cooldownUntil || 0) - round) : 0;
+    // DEFAULT ("可再次使用") has no per-round count: the growing cost is the limit, so the HUD shows no count
+    const unlimited = sk.availType === 'DEFAULT';
+    const usesLeft = sk.availType === 'ALL_LIMIT' ? Math.max(0, cap - (st.total || 0))
+      : sk.availType === 'COOLDOWN' || unlimited ? null
+        : Math.max(0, cap - usedThisRound);
+    return {
+      name: band.effectName || band.name,
+      bandName: band.name,
+      desc: band.desc || '',
+      targetType: sk.targetType || 'NO_TARGET',
+      cost,
+      funds: this.funds,
+      cap,
+      usesLeft,
+      cooldown,
+      stage: stages.indexOf(stage),
+      stages: stages.length,
+      available: this.m.phase === PHASE.PREP && this.alive && !this.ready
+        && (sk.availType === 'COOLDOWN' ? cooldown === 0 : unlimited || usesLeft > 0),
+    };
+  }
+
+  effectsView() {    const out = [];
     const band = this.bandId ? this.gd.band(this.bandId) : null;
     if (band) out.push({ id: band.effectId || band.bandId, name: band.effectName || band.name, desc: band.desc || '', iconKind: 'band', iconId: band.iconId || band.bandId });
     for (const e of this.effects) {
@@ -78,6 +123,8 @@ export class PlayerViews {
       ready: this.ready,
       // 规程 personal briefing: the core bonds split into two groups, and this player's pick
       coreBond: this.m.coreBondGroups ? { groups: this.m.coreBondGroups.map((g) => g.slice()), pick: this.coreBondPick } : null,
+      // 规程 active strategy skill (g.bandSkill): null for every band without one (the default 盟约 set has none)
+      bandSkill: this.bandSkillView(),
       canReady: this.alive && this.tempEmpty && !this.personalChoice && this.m.phase === PHASE.PREP,
       personalChoice: this.personalChoice ? {
         id: this.personalChoice.id,
