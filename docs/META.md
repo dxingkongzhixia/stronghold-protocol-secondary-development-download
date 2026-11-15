@@ -1035,6 +1035,15 @@ requests cannot affect a new opening. See DESIGN §28.21 for cancellation and ti
 normal cooldown/whitelist rules; `SP_BOT_EMOTES=0` disables it. The cooperation score in `bot.js` and these cosmetic
 choices are explicitly [ASSUMED]; DESIGN §28.15–16 records the source and validation.
 
+## 规程 equipment area (equipHand)
+
+A regulation version's `config.economy.equipHandSize` (official `constData.maxDeckEquipmentChessCnt`, 5) opens a
+separate equipment area: `PlayerState.equipHand` holds items instead of the hand (`stow` / `_fillHandFromTemp` /
+`_itemLocations`), `g.equip` takes an item from it, merges run across it, and `m.private.equipHand` carries it to the
+client. A full area overflows into temp; an item purchase needs a free area slot or a free temp slot. The default 盟约
+data has no `equipHandSize` (0), so equipment keeps sharing the hand there. The per-chess `equipSlotNum` override and
+the selector UI are still open.
+
 ## 规程 personal core-bond briefing
 
 A regulation **solo** match (`config.version.family === 'regulation'`) splits its eligible core bonds into two random

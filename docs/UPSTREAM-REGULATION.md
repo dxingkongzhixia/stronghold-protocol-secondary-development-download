@@ -144,7 +144,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 |---|---|---|
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
 | 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过 | enemies 341 vs 343、`backup.tmplId` 完整形态、`spineLocal`/tuning 隐藏输入 |
-| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B6、个人核心盟约二选一（服务端）、26 个模式、一个难度端到端可玩 | `band_random` 技能选择、联合半数核心、自选规则、装备区、隐秘核心核对、地图规则、指令 UI、寻宝/top-3、对局修复 |
+| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B6、个人核心盟约二选一 + 5 格装备区（服务端）、26 个模式、一个难度端到端可玩 | `band_random` 技能选择、联合半数核心、自选规则、每干员装备容量/招募例外、隐秘核心核对、地图规则、指令 UI、寻宝/top-3、对局修复 |
 | UI | 版本下拉与加载已有 | 规程 HUD/简报/装备报告/徽章/自编/完整版本选择（P3） |
 | 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
 | golden/测试 | 默认 golden 9/9、规程数据重建与内容测试 | 按版本 golden、12 地图矩阵、UI 套件、CI 配重（P5） |
@@ -189,7 +189,8 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
 - [x] 核心盟约二选一（个人）**服务端完成**：`g.coreBond`、两组随机核心盟约、落选组进禁用并重建池/自选库存（`Match.coreBondGroups` / `phases.applyCoreBondChoice`，默认盟约无变化；选择器 UI 随 P3）
 - [ ] 联合模拟禁用半数核心（规则待官方核对）；自选 Ⅴ/Ⅵ 各 0–2；自选无特质、按阵营分盟约
-- [ ] 装备区：独立 5 格 `equipHand`、容量 `equipSlotNum`（Ironhide 4/6）、招募例外 `recruitTierExempt`；`shared/itemRules.js` 尚不存在
+- [x] 装备区（服务端）：独立 5 格 `equipHand`（`economy.equipHandSize` = 官方 `constData.maxDeckEquipmentChessCnt`），购买/获得进装备区、从装备区装备、装备区参与合并；默认盟约仍与手牌共用（`equipHandSize` 缺省 0）。测试 `test/versions-equipment.test.js`；UI 随 P3
+- [ ] 每干员装备容量 `equipSlotNum` 覆盖（Ironhide 4/6）与招募例外 `recruitTierExempt`
 - [ ] 隐秘核心：配置（350/1200）与 `finalAssault` 判定已有，**端到端未验证**、数值仍 `[ASSUMED]`；领袖轮合血、超时扣血；联防（不叠层）需按规程核对
 - [ ] 地图规则：MAP09 双方隐匿地块、草丛秒数、Boss 受击区、茧隐匿索敌、萨卡兹亡语与延迟召唤、莱塔尼亚召唤与地面接敌
 - [ ] 指令（主动策略）：服务端 `g.bandSkill` 已有；缺客户端点击/拖放、每回合次数/资金/冷却显示、变换策略
