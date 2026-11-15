@@ -2129,5 +2129,8 @@
   "选择目标": "Choose a Target",
   "行": "Row",
   "列": "Column",
-  "更换指令": "Swap Command"
+  "更换指令": "Swap Command",
+  "装备报告": "Equipment Report",
+  "装备区": "Equipment Area",
+  "无装备": "No equipment"
 }

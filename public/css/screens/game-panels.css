@@ -860,3 +860,15 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .bskill__option span { font-size: calc(.14 * var(--t)); }
 .bskill__option:hover:not(:disabled) { border-color: var(--mint-500, #4ed8af); }
 .bskill__option:disabled { cursor: default; opacity: .62; }
+
+
+/* 装备报告 tab (js/ui/enemyDrawer.js EquipmentTab): the equipment area, then each operator's equipped items */
+.ereport__grid { display: flex; flex-direction: column; gap: .06rem; }
+.ereport__item { display: flex; gap: .1rem; padding: .08rem .1rem; border: 1px solid var(--line); background: rgba(255, 255, 255, .02); }
+.ereport__item > :first-child { flex: none; }
+.ereport__text { display: flex; flex-direction: column; gap: .03rem; min-width: 0; }
+.ereport__text b { color: var(--text-hi); font-size: calc(.16 * var(--t)); }
+.ereport__desc { font-size: calc(.14 * var(--t)); color: var(--text-lo); line-height: 1.35; }
+.ereport__holder { display: flex; flex-direction: column; gap: .06rem; }
+.ereport__who { display: flex; align-items: center; gap: .08rem; color: var(--text-hi); font-size: calc(.16 * var(--t)); }
+.ereport__who > :first-child { flex: none; }

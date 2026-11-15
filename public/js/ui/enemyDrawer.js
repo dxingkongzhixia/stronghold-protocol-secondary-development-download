@@ -8,7 +8,7 @@
 //              (the right 🔍▶▶ pans the camera there; tapping an enemy in the pen opens its detail card) — research 09 §6.2.
 
 import { html, Icon, Tabs, MicroLabel } from './components.js';
-import { Img, UnitThumb, BondGlyph, BandIcon, RichText, GIcon } from './gameComponents.js';
+import { Img, UnitThumb, PieceThumb, ItemIcon, BondGlyph, BandIcon, RichText, GIcon } from './gameComponents.js';
 import { groupEnemies, factionTypes, briefingBondTip } from './gameLogic.js';
 import { matchInfoModel, DiyBannedLine } from './matchInfo.js';
 import { factionIconUrl } from './assetUrls.js';
@@ -94,17 +94,64 @@ function InfoTab({ pub, priv, onChess, bandId = null, bandOwner = null }) {
 }
 
 /**
- * @param {{ tab:'enemies'|'info', onTab:(t:string)=>void, pub:any, priv:any, onClose:Function, onEnemy:(key:string, count:number)=>void, onChess:(id:string)=>void,
+ * @param {{ tab:'enemies'|'info'|'equip', onTab:(t:string)=>void, pub:any, priv:any, onClose:Function, onEnemy:(key:string, count:number)=>void, onChess:(id:string)=>void,
  *   bandId?: string|null, bandOwner?: string|null }} props
  *   bandId / bandOwner: while scouting a teammate's prep board, the watched player's 策略 (m.public players[].bandId)
  *   replaces one's own in the 本局信息 tab (game.js scoutBandId; user playtest #2 item 2)
  */
+/** The 装备报告 model: the equipment-area items and the holders with their equipped items (board, then hand, then temp). */
+export function equipmentReport(priv) {
+  const area = (Array.isArray(priv?.equipHand) ? priv.equipHand : []).filter(Boolean);
+  const holders = [...(Array.isArray(priv?.board) ? priv.board : []), ...(Array.isArray(priv?.hand) ? priv.hand : []),
+    ...(Array.isArray(priv?.temp) ? priv.temp : [])]
+    .filter((p) => p && p.kind === 'chess' && (p.items?.length || 0) > 0)
+    .map((p) => ({ piece: p, items: p.items.slice() }));
+  return { area, holders, equipped: holders.reduce((n, h) => n + h.items.length, 0) };
+}
+
+/**
+ * 装备报告 (规程, economy.equipHandSize > 0): every equipment the player owns — the separate equipment area first, then
+ * each operator's equipped items with their official effect text. The default 盟约 drawer has no such tab (equipment
+ * shares the hand there).
+ */
+function EquipmentTab({ priv }) {
+  const itemOf = (id) => data.lookup('items', id);
+  const chessOf = (id) => data.lookup('chess', id);
+  const { area, holders, equipped } = equipmentReport(priv);
+  const card = (it, key) => {
+    const rec = itemOf(it.id) || {};
+    return html`<div key=${key} class="ereport__item">
+      <${ItemIcon} itemId=${it.id} size="md" />
+      <div class="ereport__text"><b>${rec.name || it.id}</b>
+        <${RichText} text=${rec.descRaw || rec.desc || ''} class="ereport__desc" /></div>
+    </div>`;
+  };
+  return html`<div class="edrawer__body">
+    <div class="edrawer__sum"><span>${t('装备报告')}<span class="t-dim"> · ${t('装备区')} <b class="num">${area.length}</b> · ${t('已装备')} <b class="num">${equipped}</b></span></span></div>
+    ${area.length || equipped ? null : html`<p class="edrawer__empty"><${GIcon} name="shield" />${t('无装备')}</p>`}
+    ${area.length ? html`<h4 class="ihead">${t('装备区')} <small class="num">${area.length}</small></h4>
+      <div class="ereport__grid">${area.map((it) => card(it, `e${it.uid}`))}</div>` : null}
+    ${holders.length ? html`<h4 class="ihead">${t('已装备')} <small class="num">${equipped}</small></h4>
+      ${holders.map(({ piece, items }) => html`<div key=${piece.uid} class="ereport__holder">
+        <div class="ereport__who"><${PieceThumb} piece=${piece} size="sm" /><b>${chessOf(piece.id)?.name || piece.id}</b></div>
+        <div class="ereport__grid">${items.map((it) => card(it, `${piece.uid}:${it.uid}`))}</div>
+      </div>`)}` : null}
+  </div>`;
+}
+
 export function EnemyDrawer({ tab, onTab, pub, priv, onClose, onEnemy, onChess, bandId = null, bandOwner = null }) {
-  return html`<div class="edrawer brackets" role="dialog" aria-label=${tab === 'info' ? t('本局信息') : t('敌方情报')}>
+  // 规程's own equipment area (config.economy.equipHandSize, written only by the version build): the 装备报告 tab
+  const report = (data.get('config')?.economy?.equipHandSize ?? 0) > 0;
+  const tabs = [{ id: 'info', label: t('本局信息') }, { id: 'enemies', label: t('敌方情报') }];
+  if (report) tabs.push({ id: 'equip', label: t('装备报告') });
+  const title = (tabs.find((x) => x.id === tab) || tabs[0]).label;
+  return html`<div class="edrawer brackets" role="dialog" aria-label=${title}>
     <div class="edrawer__top">
-      <${Tabs} size="sm" value=${tab} onChange=${onTab} items=${[{ id: 'info', label: t('本局信息') }, { id: 'enemies', label: t('敌方情报') }]} />
+      <${Tabs} size="sm" value=${tab} onChange=${onTab} items=${tabs} />
       <button type="button" class="edrawer__close tapx" aria-label=${t('关闭')} onClick=${onClose}><${Icon} name="close" /></button>
     </div>
-    ${tab === 'info' ? html`<${InfoTab} pub=${pub} priv=${priv} onChess=${onChess} bandId=${bandId} bandOwner=${bandOwner} />` : html`<${EnemiesTab} pub=${pub} priv=${priv} onEnemy=${onEnemy} />`}
+    ${tab === 'info' ? html`<${InfoTab} pub=${pub} priv=${priv} onChess=${onChess} bandId=${bandId} bandOwner=${bandOwner} />`
+      : tab === 'equip' ? html`<${EquipmentTab} priv=${priv} />`
+        : html`<${EnemiesTab} pub=${pub} priv=${priv} onEnemy=${onEnemy} />`}
   </div>`;
 }
