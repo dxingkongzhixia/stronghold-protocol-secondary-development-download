@@ -150,15 +150,36 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 无（P5 完成） |
 | 冲突面 | 未动 14 条 never-merge 路径 | 逐块适配并保留 fork 特性（P6） |
 
+### 未做清单（2026-11-16）
+
+状态：🔴 未开始 · 🟡 部分完成 · ⛔ 阻塞 · ⏸ 等许可 · ⚪ 不适用
+
+| 阶段 | 未做项 | 状态 |
+|---|---|---|
+| P0 | `room.proposeVersion` 版本投票（已开局 / 多人房间的版本切换确认） | 🔴 未开始 |
+| P0 | `tools/versions/*` 通用 profile 加载器（profiles / adapters / sources / runtime） | 🟡 构建已用 `--version` 跑通，加载器未做 |
+| P2 | 地图规则剩余：茧隐匿索敌、萨卡兹亡语与延迟召唤、莱塔尼亚召唤与地面接敌 | 🔴 未开始（MAP09 隐匿、m12 加速、Boss 受击区已完成） |
+| P2 | 寻宝人整体（宝藏 / 寻宝人事件、奖励链） | 🔴 未开始（band 侧「宝藏探机」已完成） |
+| P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🔴 未开始（#930 本树无对应机制，N/A） |
+| P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
+| P2 | 隐秘核心阈值 350 / 1200、领袖轮合血、超时扣血、联防（不叠层）复核 | 🟡 数值与上游一致，行为待官方/录屏复核 |
+| P4 | 手机端首包评估（素材并入后的首包体积 / 下载瀑布 / 弱网首屏） | 🔴 未开始 |
+| P4 | 版本并集的干员 / 图标下载计划（`fetch-assets`） | 🟡 敌人与召唤已接入，干员头像/立绘/技能图标未接入 |
+| P6 | 14 条 §0 never-merge 路径逐块重写 | 🔴 未开始 |
+| P6 | 保留 fork 特性（自定义干员、VFX、插件内容集、admin、i18n 等） | 🔴 未开始 |
+| 部署 | 生产部署（当前仍为旧构建） | ⏸ 等 owner 许可 |
+
+以下各节以 `[ ]` 标出的条目即上表对应的未做项；`[x]` 为已完成。
+
 ## 5. 合并清单
 
 ### P0 版本宿主（5–8 人日）
 - [x] **P0.1** 注册表 `shared/versions.js`（默认 + `act3autochess@V3_1`）、`server/data.js` 的 `versionDataDir/getVersionData/resetVersionData`、`test/versions.test.js` — `f39e2cb91`
 - [x] **P0.2** `versionsFrom`（`SP_VERSIONS`/`SP_VERSION_DEFAULT`/`SP_MAX_VERSION_HOSTS`，未知 id 丢弃、默认不可用回退）；`server/versions.js` 的 `createVersionSets`（每版本 `cs`、目录、索引、bounds、可用性）；`/data/versions/<slug>/` 只在启用时提供（默认 `/data/` 明确 404）、`/cs/<cs16>/index.json` 与 `/bounds/official.json`；`/healthz.versions`（仅启用非默认版本时）；启动日志。测试：`test/version-sets.test.js`、`test/http-versions.test.js`
 - [x] **P0.3** `lobby` 版本字段（`room.version`、`room.state.version`、`welcome.versions`）；`room.create { version }` 与 `VERSION_UNKNOWN`/`VERSION_UNSUPPORTED`（未启用、数据不可用、该模式未提供、版本房开关玩法插件）；房间数据与对局走该版本（`dataFor`、`versionHosts`）；`server/match/host/` 的 `kind: 'version'`（`version-crash`/`version-hang`/`version-start`，每版本 `officialBounds` 由 host 安装）；`/healthz.versions.hosts`。测试：`test/lobby-versions.test.js`、`test/versions-host.test.js`
-- [ ] **P0.3b** `room.proposeVersion` 版本投票（已开局/多人房间的切换确认）——留到 P3 与大厅选择器一起
+- [ ] **[未做]** **P0.3b** `room.proposeVersion` 版本投票（已开局/多人房间的切换确认）——留到 P3 与大厅选择器一起
 - [x] **P0.4** `public/js/versions.js`（`welcome.versions` 清洗、浏览器偏好 `sp.pref.lobby.version`、服务器默认回退）；经典大厅与 Hub 协议页的版本选择（`版本` / VERSION，标签取注册表 msgid）；`room.create` 带 `version`；`content.js` 的 `loadVersionSet` 按 `/cs/<cs16>/index.json` 下载并校验该版本 15 个数据文件与 bounds，`installContentSet` 在房间内换上该版本数据、离开还原；`simContent` 带 `version`。测试：`test/ui/versions.test.js`；浏览器 smoke：Hub 协议页切到规程 → 建房 → `__SP_CONTENT__.state()` 为 ready
-- [ ] **P0.5** `tools/versions/*` 的其余部分（profiles/adapters/sources/runtime）——构建已用 `--version` + `tables` + `layouts` 跑通，只差通用 profile 加载器
+- [ ] **[部分]** **P0.5** `tools/versions/*` 的其余部分（profiles/adapters/sources/runtime）——构建已用 `--version` + `tables` + `layouts` 跑通，只差通用 profile 加载器
 
 ### P1 规程数据（3–5 人日）
 - [x] **pin 缓存**：`.cache/gamedata@6f63c14e/`（9 张 excel 表 + 61 个 level 文件，PowerShell 从 `raw.githubusercontent.com/.../6f63c14e/` 取；Node 的 TLS 在本机被中间证书挡住，构建器下载不可用）。第 9 张是 `char_patch_table.json`：模板干员（阿米娅·医疗）的 character 记录不在 `character_table` 里
@@ -186,21 +207,21 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **规程 band 元数据**：`buildBands` 从官方 `activity_table` 的 `skillInfoDataDict` / `effectInfoDataDict` 写入 `bands.json`（44 个新 band：ACTIVE 25 / PASSIVE 13 / NONE 6；目标 COMMON_CHESS 11 / NO_TARGET 10 / SHOP_SLOT 2 / MAP_TILE 2；可用 ROUND_RESET 17 / ALL_LIMIT 3 / DEFAULT 22 / COOLDOWN 2；含 cost / unlockType / HUD）。默认数据 `bands.json` 逐字节不变。测试 `test/versions-bands.test.js`
 - [x] **规程 band 的可用模式**（修复）：官方 act3 用 `bandDataListDict[].inactiveModeIdList`（不在哪些模式提供）而不是允许列表；版本构建曾把它写成空的 `modeTypeList`，`bandAllowed` 视为「任何模式都不可用」→ 规程选队一个策略都选不了。现版本数据写 `modeTypeList: ['SINGLE','MULTI']` + `inactiveModeIds`，`GameData.bandAllowed` 按 `modeId` 排除（极速 31 个、单机等级 60 个、联机 61 个）；默认数据无该字段。测试 `test/versions-bands.test.js`
 - [x] **规程 band handlers**：**B1–B7 完成**。B1 被动 5 个；B2 `g.bandSkill` intent + 经济类 10 个；B3 选干员 7 个 + 4 个战斗标记 + 官方解锁链（`skill.stages`）+ 伊比利亚；B4 地块/商店格 4 个 + 玩家级标记；B5 无 key 技能 4 个 + 准备期被动 5 个；B6 7 个 `auto_chess_effect_replace`（5 个复用现有盟约 6 名实现、维多利亚借装备、阿戈尔整备区召唤）；B7 `band_random` 追随者们（每次休整期 2 个随机指令二选一替换，`g.bandSkillChoose`，只替换指令不换策略/被动）。测试 `test/versions-bands-skills.test.js`、`test/content/bands_marks.test.js`、`test/content/bands_replace.test.js`、`test/versions-band-egir.test.js`、`test/versions-band-instructions.test.js`
-- [ ] **其余规程内容**：见下方 189–195 的具体条目（装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计）；141 个 garrison 与 54 个 band effect 已完成。
+- [ ] **[汇总]** **其余规程内容**：见下方 189–195 的具体条目（装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计）；141 个 garrison 与 54 个 band effect 已完成。
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
 - [x] 核心盟约二选一（个人）**服务端完成**：`g.coreBond`、两组随机核心盟约、落选组进禁用并重建池/自选库存（`Match.coreBondGroups` / `phases.applyCoreBondChoice`，默认盟约无变化；选择器 UI 随 P3）
 - [x] 核心优先禁用（规程）：`GameData.bondsExclude` 按官方多人录像（BV1hmWL6fEmQ，`docs/research/regulation-core-ban-video-…`）——有核心盟约时只看核心，全部核心灰才禁用；无核心时才看附加盟约。初雪（谢拉格灰 + 协防亮）因此离场，多核心留任一、无核心随附加；`pool` / `coreBond` 重建 / 自选库存 / 具名奖励共用。默认盟约保持原「全部盟约联合」判定。测试 `test/versions-corebond.test.js`
 - [x] 自选无特质、按阵营分盟约：`shared/diy.js` 的自选记录取槽位身份（`garrisonIds: []`）与干员的派生盟约（`backups.diy.operators[charId].bonds`），非盟约表原样复制；Ⅴ/Ⅵ 各 0–2 由 CUSTOM_CHECK 实现。测试 `test/diy.test.js`（默认数据）与 `test/versions-custom.test.js`（规程）
 - [x] 装备区（服务端）：独立 5 格 `equipHand`（`economy.equipHandSize` = 官方 `constData.maxDeckEquipmentChessCnt`），购买/获得进装备区、从装备区装备、装备区参与合并；默认盟约仍与手牌共用（`equipHandSize` 缺省 0）。测试 `test/versions-equipment.test.js`；UI 随 P3
 - [x] 每干员装备容量：版本构建写入官方 `charChessDataDict[].equipSlotNum`（非 2 时）到 `chess.json equipSlots`，`GameData.equipSlotsOf` 覆盖 `equipPerChess`（Ironhide 4 / 6，其余 2）；装备/替换、invariant、bot 与装备区 UI 均按干员容量；`shared/standIn.js IDENTITY_FIELDS` 携带该字段。测试 `test/versions-equipment.test.js`
-- [ ] 招募例外 `recruitTierExempt`：当前 gamedata pin 无该字段，待官方表更新
+- [ ] **[阻塞]** 招募例外 `recruitTierExempt`：当前 gamedata pin 无该字段，待官方表更新
 - [x] 隐秘核心端到端：规程 solo NORMAL+（⟨等级5⟩+）/ co-op HARD+（⟨险境⟩+），Σ 激活层数 > 350/1200 且 team LP > 1，R14 胜利后进入 R15；未通过不影响通关。测试 `test/versions-hidden-core.test.js`；阈值 350/1200 仍 `[ASSUMED]`
-- [ ] 隐秘核心阈值 350/1200 的官方/录屏复核；领袖轮合血、超时扣血；联防（不叠层）需按规程核对
-- [ ] 地图规则（部分完成）：[x] MAP09 双方隐匿地块（`tile_duel_grassland`：双方地面单位获得隐匿、被阻挡显形、解除阻挡立即恢复——官方 `enemyStealthRestoreSec` 0 即「草丛秒数」、离开清除；`special.duelGrass`）；[x] m12 加速地块（`tile_speedup` +25 ASPD / ×1.5 移速）；[x] Boss 受击区（7 个 act3 首领的 `hitArea` 已随数据生成）。仍欠茧隐匿索敌、萨卡兹亡语与延迟召唤、莱塔尼亚召唤与地面接敌。测试 `test/versions-map-rules.test.js`
+- [ ] **[部分]** 隐秘核心阈值 350/1200 的官方/录屏复核；领袖轮合血、超时扣血；联防（不叠层）需按规程核对
+- [ ] **[部分]** 地图规则（部分完成）：[x] MAP09 双方隐匿地块（`tile_duel_grassland`：双方地面单位获得隐匿、被阻挡显形、解除阻挡立即恢复——官方 `enemyStealthRestoreSec` 0 即「草丛秒数」、离开清除；`special.duelGrass`）；[x] m12 加速地块（`tile_speedup` +25 ASPD / ×1.5 移速）；[x] Boss 受击区（7 个 act3 首领的 `hitArea` 已随数据生成）。仍欠茧隐匿索敌、萨卡兹亡语与延迟召唤、莱塔尼亚召唤与地面接敌。测试 `test/versions-map-rules.test.js`
 - [x] 指令（主动策略）：服务端 `g.bandSkill`、客户端点击/拖放与目标选择、每回合次数/资金/冷却显示、追随者们的指令替换（B7）；变换策略仍待核对
 - [x] **领袖战 top-3 伤害统计**：`config.bossDamageStats`（官方 30/60/100 阈值）存在时，`m.public.bossHp.top` 下发共享领袖血池的前三名（玩家、伤害、占最大生命百分比），顶栏领袖胶囊显示；测试 `test/versions-boss-top.test.js`
-- [ ] 寻宝人模拟宝藏（band 侧“模拟宝藏”已做，寻宝人整体未做）；装备报告 tab 已由 P3 完成
-- [ ] 对局侧修复：**待移植** #932 暴躁铁皮、#934 极光/忍冬、#937 白铁、#944 组合装备、#939/#943/#947 规程战斗、#925 装备奖励池；#946 阶段横幅依赖 `public/js/ui/prefab/banners.js`；#930 本树无 `equip_use_main_bond` 机制（N/A，见 `UPSTREAM-DEV-TRIAGE.md` §10.7）
+- [ ] **[未做]** 寻宝人模拟宝藏（band 侧“模拟宝藏”已做，寻宝人整体未做）；装备报告 tab 已由 P3 完成
+- [ ] **[未做]** 对局侧修复：**待移植** #932 暴躁铁皮、#934 极光/忍冬、#937 白铁、#944 组合装备、#939/#943/#947 规程战斗、#925 装备奖励池；#946 阶段横幅依赖 `public/js/ui/prefab/banners.js`；#930 本树无 `equip_use_main_bond` 机制（N/A，见 `UPSTREAM-DEV-TRIAGE.md` §10.7）
 
 ### P3 UI / 主题（8–12 人日）
 - [x] 规程等级 1–20 的**服务端选择**：`room.setMode { modeId }` 接受版本自己的模式（`config.modes`，如 `mode_single_7`），同步房间难度与 `content.modeId`；测试 `test/lobby-versions.test.js`
@@ -224,8 +245,9 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **按版本素材并集规划**：`tools/assets/versions.mjs` 读取各版本 `chess/backups/tokens/enemies/items/bands/bonds/bosses/stages`，按美术身份并集（干员 216 / 敌人 343 / 策略 61 / 盟约 26 / 装备 70 / 召唤 57 / 模块类型 133），并对照 web manifest 与本地客户端 manifest 报告缺口；`--check` / `--json` / `--junctions`。测试 `test/versions-assets-plan.test.js`
 - [x] 规程 4 首音乐：已从本地客户端 / Monster Siren 入 `var/music`（Kernel Overflow / Restore / Ens Inexorabile / Systematic Violation），客户端由 `VERSION_BGM` 使用
 - [x] **本地客户端素材补全**：从本机 B 服客户端抽取 Amiya 基础形态 avatar/portrait/Spine、阿米娅·医疗的 avatar/portrait/Spine 与 `skchr_amiya3_1/_2` 技能图标、**79 个规程敌人图标**、**44 个策略图标 / 4 个盟约图标 / 47 个装备图标 / 75 个技能图标**（`public/assets/local/{enemy/icon,band,bond,item,skill}`，经 `data/local-assets.committed.json` 登记；`ui/assetUrls.js` 的 enemy/band/bond/item/skill/avatar/portrait 解析回落本地，客户端只带 E2 图的形态回落 E2）；40/40 规程套件干员、98/98 敌人 Spine、10/10 战场场景、主题均已覆盖。24 个 act3 专属 Boss/召唤在客户端无图鉴图标，UI 回落为字形。测试 `test/versions-assets.test.js`、`test/ui/assetUrls.test.js`
+- [ ] **[未做]** 版本并集的干员 / 图标下载计划：`fetch-assets` 已并入敌人与召唤（98 个本地 Spine 因此进入 manifest），干员头像/立绘/技能图标仍只按默认数据计划
 - [x] 中继发布：`node tools/push-assets-relay.mjs` 已把含规程素材的树部署到 relay（每次发布先于 gitee/github）
-- [ ] 手机端首包评估：规程素材并入后的首包体积/下载瀑布与弱网首屏（`docs/MOBILE-UI.md` §7 的手机矩阵仍未跑规程）
+- [ ] **[未做]** 手机端首包评估：规程素材并入后的首包体积/下载瀑布与弱网首屏（`docs/MOBILE-UI.md` §7 的手机矩阵仍未跑规程）
 
 ### P5 golden / 测试 / CI（3–5 人日）
 - [x] 按版本分目录 golden（`test/golden/act3autochess-v3_1/*.json`）+ `tools/golden.mjs --version <id>` + `tools/versions/runtime.mjs`；默认 6 文件不动（`npm run golden` 仍逐项匹配）
@@ -235,8 +257,8 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] `test/ui` 规程套件：`test/ui/regulation-ui.test.js` 用真实规程对局帧串起房间等级、简报核心盟约、追随者们指令、band 技能模型与装备报告，并断言默认盟约没有这些版本模型
 
 ### P6 冲突适配（3–5 人日）
-- [ ] 逐块重写 14 条 §0 路径：`public/js/screens/game.js`、`server/match/{Match,gamedata,bondsMeta}.js`、`match/spDraft.js`、`data/assets.json`、`public/js/audio.js`、`public/js/render/board3d/*`、`assetDownload/assetPack.js`、`public/js/screens/title.js`
-- [ ] 保留：予愿安洁莉娜/自定义干员、`grounded`/`groundbind`、B4 固定穿透公式、65 批 VFX、插件内容集、admin/DIAGNOSTICS、i18n 四语言、潜能/练度默认
+- [ ] **[未做]** 逐块重写 14 条 §0 路径：`public/js/screens/game.js`、`server/match/{Match,gamedata,bondsMeta}.js`、`match/spDraft.js`、`data/assets.json`、`public/js/audio.js`、`public/js/render/board3d/*`、`assetDownload/assetPack.js`、`public/js/screens/title.js`
+- [ ] **[未做]** 保留：予愿安洁莉娜/自定义干员、`grounded`/`groundbind`、B4 固定穿透公式、65 批 VFX、插件内容集、admin/DIAGNOSTICS、i18n 四语言、潜能/练度默认
 
 ## 6. 还原度验收
 
