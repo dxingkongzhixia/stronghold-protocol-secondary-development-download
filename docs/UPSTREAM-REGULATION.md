@@ -145,7 +145,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
 | 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游 | `backup.tmplId` 完整形态（pin 缺 `char_1037_amiya3`）、`spineLocal`/tuning 隐藏输入 |
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩 | 联合半数核心、自选规则、招募例外 recruitTierExempt、隐秘核心阈值复核、地图规则、寻宝/top-3、对局修复 |
-| UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 主题/3D 简报图（P3 剩余） |
+| UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 3D 简报静态图（P3 剩余） |
 | 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
 | golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 无（P5 完成） |
 | 冲突面 | 未动 14 条 never-merge 路径 | 逐块适配并保留 fork 特性（P6） |
@@ -212,7 +212,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **规程 HUD**：顶栏的版本标记（`ui/hud.js versionMarkModel`：`规程·序列Ⅰ` + 该房间的准确模式名，如「规程等级7」「绝境模拟」，默认盟约不显示）；加上既有的策略条、指令按钮、装备区抽屉与本局信息页。测试 `test/ui/hud-version.test.js`
 - [x] **双栏简报**：INFO_CHECK 已是左「敌方情报」+ 右「核心盟约二选一 / 本局信息」两栏（`screens/briefing.js` + `ui/matchInfo.js`）；规程仅追加核心盟约二选一。
 - [x] **领袖战徽章**：最终攻势 / 隐秘核心的领袖徽章与血条在顶栏（`ui/hud.js PhaseCapsule`，领袖图标 + 共享血池），结算页的领袖/隐秘核心勋章与评语在 `screens/result.js`。
-- [ ] 官方主题包 + 主题提取器（`shared/uiTheme.js`、`public/js/uiTheme.js`、`public/css/ui-theme.css`、`tools/theme-template.mjs`）
+- [x] **官方主题包 + 提取器**：`shared/uiTheme.js` 登记 `act3autochess`（官方主题图 `public/assets/local/theme/act3autochess/act3autochess.png` + 红/黑强调色），`public/js/uiTheme.js` 按 `room.version` / `m.public.version` / 大厅版本标签设置 `<html data-ui-theme>`，`public/css/ui-theme.css` 替换 mint 色板并给房间页加淡主题图；`tools/theme-template.mjs --check` 校验资产与 CSS 选择器。测试 `test/ui/ui-theme.test.js`
 - [x] **每版本音乐**：`public/js/audio.js VERSION_BGM` 把规程的 `var/music` 包映射到阶段（主题 Kernel Overflow / 作战 Restore / 领袖 Ens Inexorabile / 隐秘核心 Systematic Violation）；`m.public.version` 选择版本，缺包时按 `resolveBgm` 回落到默认大厅曲。测试 `test/ui/audio-version.test.js`
 - [ ] 3D 简报图：与 §0 的 `board3d` 冲突，**降级为静态渲染图**（先不做实时）
 
