@@ -568,11 +568,15 @@ export class GameData {
   }
   get hiddenCore() {
     const h = this.config.hiddenCore && typeof this.config.hiddenCore === 'object' ? this.config.hiddenCore : {};
+    const difficulties = Array.isArray(h.difficulties) ? h.difficulties : DEFAULTS.hiddenCore.difficulties;
     return {
       single: numOr(h.single, DEFAULTS.hiddenCore.single),
       multi: numOr(h.multi, DEFAULTS.hiddenCore.multi),
       minTeamLpExclusive: numOr(h.minTeamLpExclusive, DEFAULTS.hiddenCore.minTeamLpExclusive),
-      difficulties: Array.isArray(h.difficulties) ? h.difficulties : DEFAULTS.hiddenCore.difficulties,
+      difficulties,
+      // 规程: solo ⟨等级5⟩+ / co-op ⟨险境⟩+ (PRTS 卫戍协议·规程 §隐秘核心); absent in the default data ⇒ `difficulties`
+      soloDifficulties: Array.isArray(h.soloDifficulties) ? h.soloDifficulties : difficulties,
+      multiDifficulties: Array.isArray(h.multiDifficulties) ? h.multiDifficulties : difficulties,
     };
   }
   bans(difficulty) {

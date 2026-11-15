@@ -129,7 +129,9 @@ export class SharedBossPool {
  */
 export function hiddenEligible(gd, { layerSum, teamLp }) {
   const hc = gd.hiddenCore;
-  if (!gd.hiddenRound || !hc.difficulties.includes(gd.difficulty)) return false;
+  // 规程: solo ⟨规程等级5⟩+ / co-op ⟨险境模拟⟩+ (per-mode lists; the default data falls back to `difficulties`)
+  const allowed = gd.isSolo ? hc.soloDifficulties : hc.multiDifficulties;
+  if (!gd.hiddenRound || !allowed.includes(gd.difficulty)) return false;
   const threshold = gd.isSolo ? hc.single : hc.multi;
   return layerSum > threshold && teamLp > hc.minTeamLpExclusive;
 }
