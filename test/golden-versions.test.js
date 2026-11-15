@@ -27,6 +27,18 @@ test('the regulation corpus has its six golden files, self-labelled and free of 
   }
 });
 
+test('the regulation roster carries the map matrix (every normal stage × 4 modes)', () => {
+  const doc = JSON.parse(readFileSync(path.join(DIR, 'roster.json'), 'utf8'));
+  const stages = JSON.parse(readFileSync(path.join(ROOT, 'data', 'versions', 'act3autochess-v3_1', 'stages.json'), 'utf8'));
+  const normal = Object.values(stages).filter((s) => s.kind !== 'unite').length;
+  const maps = Object.keys(doc.scenarios).filter((id) => id.startsWith('map-'));
+  assert.equal(normal, 10, 'normal stages (the two 联防 fields are in the fields family)');
+  assert.equal(maps.length, normal * 4, 'every normal stage × 4 modes');
+  for (const mode of ['mode_single_5', 'mode_single_20', 'mode_multi_hard', 'mode_multi_abyss']) {
+    assert.equal(maps.filter((id) => id.endsWith(`-${mode}`)).length, normal, mode);
+  }
+});
+
 test('the regulation corpus recomputes to its stored digests (fast subset)', () => {
   const r = spawnSync(process.execPath,
     ['tools/golden.mjs', '--version', 'act3autochess@V3_1', '--fast', '--jobs', '4'],

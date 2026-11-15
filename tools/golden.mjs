@@ -492,6 +492,33 @@ export function rosterScenarios() {
     sc.spawns = sc.spawns.concat(extraSpawns(gdFor(sc.modeId), sc.routes, sc._extra, sc.round, 'p1'));
     delete sc._extra;
   }
+  // 规程: every map × a mode matrix (12 stages × 4 modes) — one copy of that mode's real round-7 wave on the stage's own
+  // geometry, a fixed mid-tier board. Version-only: the default 盟约 corpus above is unchanged (its stage cycle already
+  // covers its 11 stages). The battle count is `STAGES.length * 4` on top of the roster.
+  if (toolVersion !== DEFAULT_VERSION) {
+    const modes = ['mode_single_5', 'mode_single_20', 'mode_multi_hard', 'mode_multi_abyss'];
+    const pool = VISIBLE.filter((r) => !r.isGolden && r.tier >= 4).sort(byId);
+    const board = Array.from({ length: 12 }, (_, k) => pool[Math.floor((k + 1) * pool.length / 13)]).filter(Boolean);
+    for (const stageId of STAGES) {
+      for (const modeId of modes) {
+        const gd = gdFor(modeId);
+        const seed = deriveSeed(20261115, `map:${stageId}:${modeId}`);
+        const round = 7;
+        const wave = normalWave(gd, round, seed);
+        const chunk = board.map((rec) => ({ chessId: rec.chessId, elite: 0, items: [] }));
+        const { units } = layout(gd, stageId, chunk, { max: 12 });
+        if (!units.length) throw new Error(`map ${stageId} ${modeId}: nothing fits`);
+        scenarios.push({
+          id: `map-${stageId}-${modeId}`, family: 'roster', kind: 'normal', modeId, round, stageId, seed, pass: 0,
+          rect: { ...GEO.NORMAL_RECT }, timeLimit: wave.timeLimit, routes: wave.routes, waveId: wave.templateId, enemyOverrides: wave.overrides,
+          flags: { layerGainsEnabled: true, ...gd.dp },
+          players: [playerInput('p1', 0, units, { bonds: {}, bandId: null })],
+          spawns: wave.spawns.map((s) => ({ ...s, ownerPlayerId: 'p1' })),
+          about: `map ${stageId} · ${modeId} R${round}: ${units.length} operators, ${wave.spawns.length} spawns`,
+        });
+      }
+    }
+  }
   return scenarios;
 }
 

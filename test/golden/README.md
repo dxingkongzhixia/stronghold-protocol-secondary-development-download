@@ -12,9 +12,10 @@ through.
 - `test/golden/<family>.json` hold the digests (`roster`, `bonds`, `fields`, `matches`, `standins`, `diy`).
 - `test/golden.test.js` recomputes them and compares. On a mismatch it prints the scenario, the field and old → new.
 - `test/golden/<slug>/*.json` hold another official version's corpus (`--version <id>`; 规程·序列Ⅰ in
-  `test/golden/act3autochess-v3_1/`, 264 scenarios, generated on this tree by
-  `node tools/golden.mjs --version act3autochess@V3_1 --update`). `test/golden-versions.test.js` checks the stored files
-  and recomputes the fast subset; the default 盟约 files above never move because of it.
+  `test/golden/act3autochess-v3_1/`, 304 scenarios, generated on this tree by
+  `node tools/golden.mjs --version act3autochess@V3_1 --update`). Its `roster` also carries the map matrix (every normal
+  stage × 4 modes, `map-<stage>-<mode>`). `test/golden-versions.test.js` checks the stored files and recomputes the fast
+  subset; the default 盟约 files above never move because of it.
 
 ## The corpus
 
