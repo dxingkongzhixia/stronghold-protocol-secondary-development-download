@@ -912,3 +912,11 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 /* 规程 HUD mark (js/ui/hud.js versionMarkModel): the season + the room's own mode name, version data only */
 .gtop__version { display: inline-flex; align-items: center; gap: .02rem; padding: .02rem .08rem; border: 1px solid var(--line-2); color: var(--text-md); font-size: calc(.14 * var(--t)); white-space: nowrap; }
 .gtop__version b { color: var(--text-hi); font-weight: 700; }
+
+
+/* 规程 领袖战 top-3 (hud.js PhaseCapsule): the shared pool's per-player damage, largest first */
+.capsule__top { list-style: none; margin: 0 0 0 .1rem; padding: 0; display: flex; flex-direction: column; gap: .012rem; font-size: calc(.13 * var(--t)); color: var(--text-lo); }
+.capsule__top li { display: flex; align-items: baseline; gap: .06rem; min-width: 0; }
+.capsule__top b { flex: none; color: var(--text-md); }
+.capsule__top .capsule__topname { max-width: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.capsule__top li.is-first b, .capsule__top li.is-first .capsule__topname { color: var(--gold-500, #e8b34e); }

@@ -123,6 +123,11 @@ export function PhaseCapsule({ pub, hud, miss = null }) {
         <div class="bossbar__fill" style=${`width:${frac == null ? 100 : frac * 100}%`}></div>
         <span class="bossbar__txt num">${frac == null ? t('敌方领袖') : bossPctText(frac)}</span>
       </div>
+      ${Array.isArray(pub?.bossHp?.top) && pub.bossHp.top.length ? html`<ol class="capsule__top" data-testid="boss-top">
+        ${pub.bossHp.top.map((r, i) => html`<li key=${r.playerId} class=${cx(i === 0 && 'is-first')}>
+          <b class="num">${i + 1}</b><span class="capsule__topname">${r.name || r.playerId}</span>
+          <span class="num t-dim">${r.pct}%</span></li>`)}
+      </ol>` : null}
       ${!pluginBoss && prot.length ? html`<span class=${cx('capsule__protocol', p?.down && 'is-down', p?.warning && 'is-warn')} data-testid="protocol-hud">${prot.join(' · ')}</span>` : null}
     </div>`;
   }

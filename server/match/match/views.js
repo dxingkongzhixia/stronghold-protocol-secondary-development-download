@@ -16,9 +16,29 @@ import { TEST_PUBLIC_LOG } from '../../../shared/testMode.js';
 import { readBandGrants } from '../../../shared/plugins/bandGrants.js';
 import { suppressesMapCharFor } from '../player/special.js';
 
+/**
+ * The leader-damage table of a boss round (规程's 领袖战 top-3): the shared pool's per-player damage, largest first, with
+ * each player's share of the leader's max HP. Empty for a pool nobody damaged.
+ * @param {{ byPlayer?: Map<string, number>, maxHp?: number }|null} pool
+ * @param {Array<{ playerId: string, name?: string }>} order the match's seats
+ * @param {number} [n]
+ * @returns {Array<{ playerId: string, name: string|null, damage: number, pct: number }>}
+ */
+export function bossDamageTop(pool, order, n = 3) {
+  const names = new Map((Array.isArray(order) ? order : []).map((p) => [p.playerId, p.name ?? null]));
+  const max = Number(pool?.maxHp) || 0;
+  const rows = [];
+  for (const [playerId, dealt] of pool?.byPlayer || []) {
+    const damage = Math.max(0, Math.round(Number(dealt) || 0));
+    if (damage <= 0) continue;
+    rows.push({ playerId, name: names.get(playerId) ?? null, damage, pct: max > 0 ? Math.round((damage / max) * 1000) / 10 : 0 });
+  }
+  rows.sort((a, b) => b.damage - a.damage || (a.playerId < b.playerId ? -1 : a.playerId > b.playerId ? 1 : 0));
+  return rows.slice(0, Math.max(1, n));
+}
+
 /** Milliseconds since the match started. A stamp before the start, or a bad stamp, is 0. The stored log keeps the epoch. */
-function auditClock(at, startedAt) {
-  const stamp = Number(at);
+function auditClock(at, startedAt) {  const stamp = Number(at);
   const start = Number(startedAt);
   if (!Number.isFinite(stamp) || !Number.isFinite(start)) return 0;
   return Math.max(0, stamp - start);
@@ -197,7 +217,12 @@ export class MatchViews {
     if (this.teamLp != null) v.teamLp = Math.max(0, Math.round(this.teamLp));
     // 最终攻势 / 隐秘核心: when the overtime drain starts (ms epoch; `deadline` is the level's 120 s countdown)
     if ((this.phase === PHASE.FINAL_ASSAULT || this.phase === PHASE.HIDDEN_CORE) && this.overtimeAt) v.overtimeAt = this.overtimeAt;
-    if (this.bossPool) v.bossHp = { hp: Math.max(0, Math.round(this.bossPool.hp)), max: Math.round(this.bossPool.maxHp) };
+    if (this.bossPool) v.bossHp = {
+      hp: Math.max(0, Math.round(this.bossPool.hp)), max: Math.round(this.bossPool.maxHp),
+      // 规程's 领袖战 top-3 (config.bossDamageStats exists only in the version build)
+      ...(Array.isArray(this.gd.config?.bossDamageStats) && this.gd.config.bossDamageStats.length
+        ? { top: bossDamageTop(this.bossPool, this.order) } : {}),
+    };
     if (this.phase === PHASE.BAND_DRAFT && this.draft) {
       const d = this.draft;
       // turnSeconds: the length of a turn (the countdown gauge's total; 0 when untimed) — deadline = turnDeadline

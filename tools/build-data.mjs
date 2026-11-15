@@ -4557,6 +4557,12 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
     unite: { maxHelpers: 2, helperOrder: 'unitsOnField>activeBond>undownedUnits; pair: unitsOnField>activeBond>activeLayers>undownedUnits, first = right field (PRTS 帮助)', layerGainsEnabled: false, keepsHpSpPositions: true, leakedEnemyFullHp: true,
       templates: { 1: templateIdOf(act.constData.escapedBattleTemplateMapSinglePlayer), 2: templateIdOf(act.constData.escapedBattleTemplateMapMultiPlayer) } },
     finalAssault: { pairing: 'seatOrderPairs', oddPlayerAlone: true, movableBossPerAlivePlayerSide: true, layerGainsEnabled: false },
+    // 规程: the official leader-damage HUD's style thresholds (autoChessData.bossDamageStatsStyleList: 30 / 60 / 100).
+    // Version-only; its presence is what lets m.public.bossHp carry the top-3 leader-damage list.
+    ...(VERSION ? {
+      bossDamageStats: (Array.isArray(ac.bossDamageStatsStyleList) ? ac.bossDamageStatsStyleList : [])
+        .map((x) => ({ threshold: Number(x?.damageThreshold) || 0, style: String(x?.styleStatusId || '') })),
+    } : {}),
     timers: {
       infoCheck: step('INFO_CHECK')?.time ?? 25, infoCheckHint: step('INFO_CHECK')?.hintTime ?? 5,
       // bandTurn: one turn of the co-op strategy draft = its only countdown (server/match/Match.js BAND_TURN_SECONDS,
