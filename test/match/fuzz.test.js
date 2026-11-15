@@ -28,6 +28,9 @@ function randomIntent(rng, m, ps) {
     case 'g.rerollVote': return { t, voteId: m.setupVote?.id ?? 1 + rng.int(10), agree: rng() < 0.5 };
     case 'g.coreBond': return { t, group: rng.int(2) };
     case 'g.band': return { t, bandId: rng() < 0.8 ? rng.pick(BANDS) : rng.pick(['constructor', '__proto__', 'band_x', 'a'.repeat(64)]) };
+    case 'g.bandSkillChoose': return { t, bandId: rng() < 0.8 ? rng.pick(BANDS) : 'band_x' };
+    case 'g.custom': return { t, slots: rng() < 0.5 ? [] : [rng.pick(BANDS), rng.pick(BANDS)].slice(0, rng.int(3)) };
+    case 'g.customReady': return { t, ready: rng() < 0.5 };
     case 'g.buy': return { t, slot: rng.int(16) };
     case 'g.sell': case 'g.destroy': return { t, uid: uid() };
     case 'g.move': return { t, uid: uid(), to: to() };
