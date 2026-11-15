@@ -121,6 +121,8 @@ import { SPECIAL_KITS } from './enemies/special.js';
 import { LEADER_KITS, PLUGIN_KITS } from './enemies/leaders.js';
 import { protocolAbility } from './bossProtocol.js';
 import { hypot } from '../detmath.js';
+import { isVersionData } from './support/index.js';
+import { proceduralKit } from './enemies/procedural.js';
 
 export {
   EROSION, EROSION_BURST, HUSK_REBIRTH, nthOf, abOf, attach, T, silenced, canCast, unbalancedNow, elem, hurt, alliesInTiles,
@@ -175,9 +177,23 @@ export function registerMeta() {}
 
 function onSpawn(b, e) {
   const list = [];
-  const kit = PLUGIN_KITS[e.defId] ?? KITS[e.def.raw?.effectRef] ?? KITS[e.defId];
+  let kit = PLUGIN_KITS[e.defId] ?? KITS[e.def.raw?.effectRef] ?? KITS[e.defId];
+  let ab = null;
+  // no hand-written kit ON ANOTHER OFFICIAL VERSION'S DATA: reuse a kit by talent signature, else the generic group
+  // handlers (enemies/procedural.js). The default data and plugin content sets keep the exact lookup only, so their
+  // golden corpus never sees a fallback. A STATS_ONLY key is covered on purpose and stays untouched.
+  const versioned = isVersionData();
+  if (typeof kit !== 'function' && versioned && !STATS_ONLY[e.defId]) {
+    ab = abOf(b, e);
+    const recOf = (key) => (b.data?.raw?.enemies ?? b.data?.enemies ?? b.data?.rawEnemies ?? null)?.[key] ?? null;
+    const p = safe(b, e, () => proceduralKit(b, e, ab, { knownKit: (key) => PLUGIN_KITS[key] ?? KITS[key] ?? null, recordOf: recOf }));
+    if (p && typeof p.kit === 'function') {
+      kit = p.kit;
+      e.mem.procedural = { via: p.via, key: p.key ?? null, groups: p.groups };
+    }
+  }
   if (typeof kit === 'function') {
-    const ab = abOf(b, e);
+    if (!ab) ab = abOf(b, e);
     const res = safe(b, e, () => kit(ab, e, b)) || [];
     if (Array.isArray(res)) list.push(...res);
   }
@@ -185,7 +201,6 @@ function onSpawn(b, e) {
   if (proto) list.push(proto);
   if (list.length) attach(b, e, list);
 }
-
 function onHitOut(b, c) {
   const s = c.source;
   if (!s || s.side !== 'enemy' || !s.mem.ab || c.dmg.cancel) return;
