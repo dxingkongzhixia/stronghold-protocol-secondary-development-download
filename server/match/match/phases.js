@@ -6,6 +6,7 @@
 
 import { PHASE, ERR } from '../../../shared/constants.js';
 import { buildNormalWave, buildBossWave } from '../waves.js';
+import { SharedPool } from '../pool.js';
 import { pairPlayers, bossPairSalt } from '../finalAssault.js';
 import { createRng, deriveSeed } from '../../sim/rng.js';
 import { readBandGrants } from '../../../shared/plugins/bandGrants.js';
@@ -31,9 +32,56 @@ export class MatchPhases {
       this.setDeadline(0);
       this._infoAdvanceTimer = this.later(0, () => {
         this._infoAdvanceTimer = null;
-        if (this.phase === PHASE.INFO_CHECK && !this.setupVote) this.enterBandDraft();
+        if (this.phase === PHASE.INFO_CHECK && !this.setupVote) {
+          // a client that does not send g.coreBond yet still gets the briefing's default (the first group)
+          this.ensureCoreBond();
+          this.enterBandDraft();
+        }
       });
     }
+  }
+
+  /**
+   * 规程 personal briefing: keep one core-bond group (g.coreBond), the other group's bonds join the match's bans and its
+   * operators leave the simulation (they are absent from the rebuilt pool and the 自选 stock). Solo only.
+   * @param {import('../PlayerState.js').PlayerState} ps @param {number} group 0 or 1
+   */
+  applyCoreBondChoice(ps, group) {
+    if (this.phase !== PHASE.INFO_CHECK) return fail(ERR.WRONG_PHASE);
+    if (!this.coreBondGroups) return fail(ERR.BAD_TARGET, 'this match has no core-bond choice');
+    if (!Number.isInteger(group) || group < 0 || group >= this.coreBondGroups.length) return fail(ERR.BAD_TARGET);
+    if (ps.coreBondPick != null) return fail(ERR.BAD_TARGET, 'already chosen');
+    ps.coreBondPick = group;
+    if (this.coreBondPicked == null) {
+      this.coreBondPicked = group;
+      this._applyCoreBondBans();
+    }
+    ps.dirty();
+    this.markPublic();
+    return OK;
+  }
+
+  /** Add the unchosen group's bonds to the match's bans and rebuild the pool / 自选 stock (the chosen group stays). */
+  _applyCoreBondBans() {
+    if (this.coreBondPicked == null || !this.coreBondGroups) return;
+    const out = this.coreBondGroups.find((_, i) => i !== this.coreBondPicked) || [];
+    this.disabledBonds = [...new Set([...this.disabledBonds, ...out])].sort();
+    const off = new Set([...this.disabledBonds, ...this.staticInactiveBonds]);
+    const banned = [];
+    for (const id of this.gd.visibleChess) {
+      const bonds = this.gd.chess(id)?.bonds;
+      if (Array.isArray(bonds) && bonds.length && bonds.every((b) => off.has(b))) banned.push(id);
+    }
+    this.bannedChess = banned;
+    this.pool = new SharedPool(this.gd, { banned });
+    for (const p of this.order) p.initDiyStock(off);
+  }
+
+  /** The briefing's default when nobody chose (current clients): the first human's group 0. */
+  ensureCoreBond() {
+    if (!this.coreBondGroups || this.coreBondPicked != null) return;
+    const ps = this.order.find((p) => !p.isBot && p.alive) || this.order[0];
+    if (ps) this.applyCoreBondChoice(ps, 0);
   }
 
   /**

@@ -76,6 +76,8 @@ export class PlayerViews {
       funds: this.funds,
       bandId: this.bandId,
       ready: this.ready,
+      // 规程 personal briefing: the core bonds split into two groups, and this player's pick
+      coreBond: this.m.coreBondGroups ? { groups: this.m.coreBondGroups.map((g) => g.slice()), pick: this.coreBondPick } : null,
       canReady: this.alive && this.tempEmpty && !this.personalChoice && this.m.phase === PHASE.PREP,
       personalChoice: this.personalChoice ? {
         id: this.personalChoice.id,

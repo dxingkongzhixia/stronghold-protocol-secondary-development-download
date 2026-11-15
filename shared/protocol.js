@@ -595,6 +595,8 @@ export const C2S = {
 
   // match
   'g.infoReady': { setupRevision: (v) => isInt(v, 0, 2 ** 31), $optional: ['setupRevision'] },
+  // 规程 personal briefing: the core bonds are split into two groups and one is chosen (0-based group index)
+  'g.coreBond': { group: (v) => isInt(v, 0, 1) },
   'g.rerollVote': { voteId: (v) => isInt(v, 1, 2 ** 31), agree: isBool },
   'g.band': { bandId: isId },
   'g.bandSkip': {},

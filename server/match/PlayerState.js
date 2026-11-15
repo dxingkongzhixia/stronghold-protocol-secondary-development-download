@@ -214,6 +214,8 @@ export class PlayerState {
      * `level` the level it was granted at; one per level). Read by economy.js levelUp, cleared on the level-up.
      */
     this.shopUpDiscount = { value: 0, level: 0 };
+    /** 规程 personal briefing: the core-bond group this player chose (0/1), null until chosen. */
+    this.coreBondPick = null;
     /**
      * Per-piece marks an active band skill put on an operator for its next battle (piece uid → marks), cleared at the
      * next round start; battleInput() carries them, the sim applies them (`layer_cap`, …).

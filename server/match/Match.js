@@ -566,6 +566,26 @@ export class Match {
     const off = new Set([...bans.drawn, ...bans.staticOff]);
     for (const ps of this.order) ps.initDiyStock(off);
 
+    /**
+     * 规程 personal briefing (PRTS 卫戍协议·规程: 「在任务简报阶段，核心盟约将会分为两组。玩家需选择其中一组作为出战
+     * 盟约，未选择一组的核心盟约所属干员将全部离开本次模拟。」): the eligible core bonds split into two random groups at
+     * setup; `g.coreBond` keeps one (phases.applyCoreBondChoice adds the other's bonds to the match's bans). Solo only —
+     * the co-op rule is not applied yet. Null in the default data, so the 盟约 mode is untouched.
+     */
+    this.coreBondGroups = null;
+    this.coreBondPicked = null;
+    if (this.isSolo && this.gd.config.version && this.gd.config.version.family === 'regulation') {
+      const core = this.gd.bondIds.filter((b) => {
+        const r = this.gd.bond(b);
+        return r && r.isCore && Number(r.weight) > 0 && !this.gd.modeInactiveBonds.has(b);
+      });
+      if (core.length >= 2) {
+        this.rngSetup.shuffle(core);
+        const half = Math.ceil(core.length / 2);
+        this.coreBondGroups = [core.slice(0, half).sort(), core.slice(half).sort()];
+      }
+    }
+
     this.phase = PHASE.LOBBY;
     this.round = 0;
     this.deadline = 0;

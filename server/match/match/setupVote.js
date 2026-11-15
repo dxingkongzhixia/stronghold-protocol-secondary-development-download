@@ -116,6 +116,8 @@ export class MatchSetupVote {
       ps.invalidateDeployMap();
       ps.infoReady = ps.botControlled;
     }
+    // a core-bond group already chosen survives a setup reroll: the new bans keep the other group out again
+    this._applyCoreBondBans();
     this.setupRevision++;
     this.setupVote = null;
     this.enterInfoCheck();

@@ -22,6 +22,7 @@ export class MatchIntents {
         if (!ps.infoReady) { ps.infoReady = true; this.markPublic(); this.maybeEndInfo(); }
         return OK;
       case 'g.rerollVote': return this.voteSetupReroll(ps, msg.voteId, msg.agree);
+      case 'g.coreBond': return this.applyCoreBondChoice(ps, msg.group);
       case 'g.band': return this.pickBand(ps, msg.bandId);
       case 'g.bandSkip': return this.skipBand(ps);
       // the strategy highlighted in the draft screen (what a timed-out turn takes, timeoutBand)
