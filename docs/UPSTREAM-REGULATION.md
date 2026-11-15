@@ -166,7 +166,9 @@
 - [x] **程序化敌人覆盖**：`enemies/procedural.js` 对无手写套件的版本敌人生效（仅版本数据；默认数据/插件内容集保持原查找，golden 不变）。96 个规程新增敌人：**23** 个按天赋签名复用已有套件、**40** 个由通用天赋组处理器覆盖（减伤/增攻/闪避/流血中毒/死亡爆炸/践踏/巨体/被动/暴击/首击/射击叠层/减速/束缚/召唤/过载/移速/光环/吸血）、**7** 个 boss 已单独实现；合计 **70/96**。测试 `test/versions-enemies-procedural.test.js`（全部 96 个生成+运行 0 错误，覆盖集合钉住）
 - [x] **官方敌人机制（26 个）**：`enemies/regulation.js` 手写套件覆盖剩余全部 26 个（重生的锋盔学徒、死亡爆炸+寒冷的冰原卫法、三种寻路者弹药、补给车光环、乐团双姿态、投石机首击、掷弹兵轻量、推进者受阻挡强化、漂游蟹神经损伤、雪山双姿态/冻结破除、量变之械首击双倍、影役阻挡光环、丛生首击禁疗、食人花吞噬、帕拉杜利斯冲锋、搏命养家者警戒/减伤）。测试 `test/versions-enemies-official.test.js`；部分细节（吞噬/冲锋/双姿态切换节奏）为近似
 - [x] **规程敌人 96/96 覆盖**：23 个签名复用 + 40 个通用天赋组 + 7 个 boss + 26 个官方套件；`test/versions-enemies-procedural.test.js` 的覆盖集合现为零未覆盖
-- [ ] **其余规程内容**：141 个 garrison、54 个 band effect；装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计
+- [x] **规程 garrison（141 个）**：131 个复用现有 `SERVER_ADD_BOND` / `GAIN_BUFF` / `SERVER_GAIN_EQUIP` 等类型处理器；新增 5 类 prep handler（自身出售价 +N 上限、免费刷新升级上限、场上携带装备干员加层、战斗结束存活干员加层、临时层转换占位）并补 `piece.sellBonus` 到出售结算。测试 `test/versions-garrisons.test.js`（全覆盖 + 4 项行为）
+- [ ] **规程 band effect（44 个新 band / 37 个 buff key）**：多为商店/准备期操作（标记、转化、购买折扣、刷新商店、获得干员/装备等），需逐类接入 `bands/meta.js` 与 `bands/battle.js`
+- [ ] **其余规程内容**：装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计
 - [ ] **其余规程内容**：141 个 garrison、54 个 band effect；装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
 - [ ] 核心盟约二选一（个人）/ 禁用半数（联合）；自选 Ⅴ/Ⅵ 各 0–2；自选无特质、按阵营分盟约
