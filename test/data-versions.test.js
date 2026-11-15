@@ -33,6 +33,13 @@ test('the 规程 data is exactly a rebuild from the pinned gamedata', { skip: !h
   }
 });
 
+test('the 规程 data carries the tuning result-title rules, not the covenant boost', () => {
+  const tuning = json('tuning');
+  const shared = JSON.parse(readFileSync(path.join(ROOT, 'data', 'tuning.json'), 'utf8'));
+  assert.equal(tuning.boost, undefined, 'the owner\'s 盟约 difficulty layer never reaches another official version');
+  assert.deepEqual(tuning.titles, shared.titles, 'the result-title rules are the shared ones');
+});
+
 test('the 规程 data carries the season counts and 19×21 stages', () => {
   const count = (name) => Object.keys(json(name)).length;
   assert.equal(count('chess'), 310);

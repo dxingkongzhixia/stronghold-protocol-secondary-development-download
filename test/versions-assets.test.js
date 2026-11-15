@@ -53,6 +53,17 @@ test('规程 enemies: every non-boss enemy has an icon and a model; bosses have 
   assert.ok(Object.keys(local.groups?.['enemy/icon'] || {}).length >= 70, 'the local-client enemy icons are in the manifest');
 });
 
+test('规程 enemies: the models only the local client has are wired into data/assets.json as spineLocal', () => {
+  // The manifest is one file for every version; a model the seasonal tables alone name is planned by
+  // tools/fetch-assets.mjs (presentationUnion) and carries the overlay the client draws instead of the web alias.
+  const ids = Object.keys(local.groups || {})
+    .map((g) => /^spine\/enemy\/(.+)$/.exec(g)?.[1])
+    .filter(Boolean);
+  assert.ok(ids.length >= 90, `${ids.length} local enemy models`);
+  const missing = ids.filter((id) => assets.enemies?.[id]?.spineLocal?.group !== `spine/enemy/${id}`);
+  assert.deepEqual(missing, []);
+});
+
 test('规程 skill icons: every selectable skill has an icon (mirror or local client)', () => {
   const backups = loadAt(path.join(DIR, 'backups.json'));
   const ids = new Set();

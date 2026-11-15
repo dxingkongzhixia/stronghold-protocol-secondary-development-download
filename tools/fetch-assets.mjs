@@ -68,6 +68,7 @@ import { normalizeProxyPrefix } from './assets/sources.mjs';
 import { loadIndexes } from './assets/cache.mjs';
 import { indexAudio, VOICE_DIRS } from './assets/audio.mjs';
 import { buildPlan } from './assets/plan.mjs';
+import { versionAssetData, presentationUnion } from './assets/versions.mjs';
 import { convertIllust, isWebp } from './assets/illust.mjs';
 import {
   processModels, findLocalEnemyModels, findLocalTokenModels, localSpineMeta, loadLocalSpines, LOCAL_ENEMY_SPINES_FILE,
@@ -295,10 +296,17 @@ async function listFiles(dir, base = dir, out = []) {
   return out;
 }
 
-/** Remove fields that only make sense next to a resolved spine. */
+/** Remove fields that only make sense next to a resolved spine, and records left empty by that (a token whose only
+ * field was a spine variant, or an enemy whose only field was its alias: both are a missing model, not an entry). */
 function tidyManifest(m) {
-  for (const e of Object.values(m.enemies || {})) if (!e.spine) delete e.spineAliasOf;
-  for (const t of Object.values(m.tokens || {})) if (!t.spine) delete t.spineVariant;
+  for (const [id, e] of Object.entries(m.enemies || {})) {
+    if (!e.spine) delete e.spineAliasOf;
+    if (!Object.keys(e).length) delete m.enemies[id];
+  }
+  for (const [id, t] of Object.entries(m.tokens || {})) {
+    if (!t.spine) delete t.spineVariant;
+    if (!Object.keys(t).length) delete m.tokens[id];
+  }
   if (m.skillsById) {
     for (const [sid, iconId] of Object.entries(m.skillsById)) if (!m.skills?.[iconId]) delete m.skillsById[sid];
   }
@@ -400,6 +408,11 @@ async function main() {
   const [dataEnemies, dataTokens, dataBosses, dataBackups, dataChess] = await Promise.all(
     ['data/enemies.json', 'data/tokens.json', 'data/bosses.json', 'data/backups.json', 'data/chess.json'].map((f) => readJson(f).catch(() => null)));
   const extras = dataExtras(dataBackups, dataChess);
+  // Every official version's plan keeps the same single manifest: seasons reuse chess ids for other operators and the
+  // client draws one data/assets.json for all of them. The presentation union (tools/assets/versions.mjs) adds the
+  // enemies/tokens only the version tables name — which is also how the models the local client alone has get their
+  // `spineLocal` overlay (tools/assets/local-enemy-spines.json) into the manifest.
+  const versionUnion = presentationUnion(versionAssetData(ROOT));
   const extraHandbook = {};
   for (const b of Object.values(dataBosses || {})) if (b?.enemyKey && typeof b.handbookId === 'string') extraHandbook[b.enemyKey] = b.handbookId;
   const localEnemySpines = await syncLocalSpines(opts, 'enemy');
@@ -408,8 +421,8 @@ async function main() {
     assets07, ops03, enemies05, maps05, audio, modelsData, charword, voiceLang: opts.voiceLang,
     // default: only the slots a battle can play (plan.mjs VOICE_BATTLE_SLOTS); --voice-all takes the whole official set
     voiceSlots: opts.voiceAll ? null : undefined,
-    extraEnemyIds: Object.keys(dataEnemies || {}),
-    extraTokenIds: [...Object.keys(dataTokens || {}), ...extras.tokenIds],
+    extraEnemyIds: [...Object.keys(dataEnemies || {}), ...Object.keys(versionUnion.enemies)],
+    extraTokenIds: [...Object.keys(dataTokens || {}), ...extras.tokenIds, ...Object.keys(versionUnion.tokens)],
     extraHandbook,
     localEnemySpines,
     localTokenSpines,

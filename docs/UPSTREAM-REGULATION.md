@@ -143,7 +143,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 层 | 现状 | 还差 |
 |---|---|---|
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
-| 规程数据 | 15 文件 / 6.46 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游；模板预设（阿米娅·医疗）取 `char_patch_table` 的完整形态 | `spineLocal`/tuning 隐藏输入 |
+| 规程数据 | 16 文件 / 6.4 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游；模板预设（阿米娅·医疗）取 `char_patch_table` 的完整形态；tuning（称号规则）与 `spineLocal` 输入已显式化 | — |
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩 | 联合半数核心、自选规则、招募例外 recruitTierExempt、隐秘核心阈值复核、地图规则、寻宝/top-3、对局修复 |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 无（P3 完成） |
 | 素材 | 场景/主题/敌人特效提取已跑通部分 | 按版本并集、77 敌人 Spine、新干员/地图/音乐、manifest（P4） |
@@ -170,7 +170,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **版本化 gating**：版本构建跳过 fork 的自定义干员/阵营、版本 stock 留空、act2 专有 pool 丢弃、模式里缺失的盟约剔除、DIY 池里缺召唤变体的「王」剔除、模板预设（`backup.tmplId`，阿米娅·医疗）在构建时应用（见下条）
 - [x] **enemies 343 = 上游**：参照 `enemy_database` 补两个没有任何 act3 表/波次引用的条目 `enemy_2017_csphts` / `enemy_2123_dyjsww`（版本表 `enemyExtras`，仅本版本；`STATS_ONLY` 数据形态）。默认数据不变；`test/versions-enemies-procedural.test.js` 覆盖 98 个新增敌人
 - [x] **`backup.tmplId` 的完整形态**：官方 `charShopChessDatas` 的模板行（`chess_char_5_26`：`charId` 阿米娅 + `tmplId` char_1037_amiya3，医疗形态）在构建时应用——`char_patch_table.patchChars` 提供模板角色记录（skills / phases / `uniequip_00x_amiya3`），行的 `charId` / `backupCharId` 改为模板、`tmplId` 置空，stats / trait / skill / talents / range / 模块 / 美术全部取模板；套件随之改为 `ver-amiya3.js`（S1 哀恸共情、S2 慈悲愿景、天赋诚挚期许）。默认盟约没有模板行，因此不加载该表、数据逐字节不变。测试 `test/versions-templated.test.js`、`test/content/kits_ver_act3.test.js`；规程 golden 归因后重算（roster / bonds / fields）
-- [ ] 隐藏输入：`data/assets.json` 的 `spineLocal` 片段、`data/tuning.json` 字节副本、`docs/research/*` 输入
+- [x] **隐藏输入显式化**：① `data/assets.json` 的 `spineLocal` 片段——`tools/fetch-assets.mjs` 把版本并集（`tools/assets/versions.mjs presentationUnion`）的敌人/召唤 ID 并入计划，本机抽取的 98 个敌人模型因此进入共享 manifest；`tools/assets/local-enemy-spines.json` 从抽取结果重建（96 → 98，含 79 个规程敌人）；② 版本构建设 `tuning.json`（结果称号规则；**不含**盟约专用的 `boost` 层，规程数值按官方）；③ `docs/research/*` 不再静默：版本构建先找 `docs/research/versions/<slug>/`，缺失时在报告里 `[ASSUMED]` 警告。测试 `test/data-versions.test.js`、`test/versions-assets.test.js`
 
 ### P2 规则与内容（8–12 人日）
 - [x] **跨版本套件键控**：`KIT_CHAR_IDS`（145 个 tier kit key → charId）、`TIER_KIT_KEYS_BY_CHAR`、`officialKitKey`（默认数据与插件内容集仍按 chess id；版本数据按 charId，避免复用 id 跑到别人的套件）；规程 310 个 chess 中 3 个同 id 同干员、203 个按 charId 解析，40 名新干员列入 `PENDING_KIT_CHARS`。测试 `test/versions-keying.test.js`；默认 golden 全量不变

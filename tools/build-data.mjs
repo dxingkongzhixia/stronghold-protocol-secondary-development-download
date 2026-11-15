@@ -43,7 +43,7 @@ import { FORMS } from '../shared/forms.js';
 import { statusKey, composeUnitRecord, standInRecord, unitForm } from '../shared/standIn.js';
 import { extendedGrid } from '../shared/loadoutRecord.js';
 import { FULL_RANK, atRank, stripPotential } from '../shared/potential.js';
-import { versionById } from '../shared/versions.js';
+import { versionById, versionSlug } from '../shared/versions.js';
 import * as act3Tables from './versions/tables/act3autochess-v3_1.mjs';
 import { composeRegulationStage, placeRegulationTemplate } from './versions/layouts.mjs';
 
@@ -171,10 +171,18 @@ async function loadGamedata(rel) {
   return obj;
 }
 
-/** Load an optional research JSON (docs/research/<name>); returns null when absent/unreadable. */
+/** Load an optional research JSON (docs/research/<name>); returns null when absent/unreadable. A version reads its own
+ * copy from docs/research/versions/<slug>/ when it has one, else docs/research/ with a warning: the shared research is
+ * 盟约's, and a version build that leans on it must say so in its report rather than hide the input. */
 async function loadResearch(name) {
   if (OPTS.noResearch) return null;
-  const abs = join(RESEARCH_DIR, name);
+  let abs = join(RESEARCH_DIR, name);
+  if (VERSION) {
+    const slug = versionSlug(VERSION);
+    const own = join(RESEARCH_DIR, 'versions', slug, name);
+    if (existsSync(own)) abs = own;
+    else warn(`research ${name}: no ${slug} copy; using docs/research/${name} [ASSUMED]`);
+  }
   if (!existsSync(abs)) { warn(`research file ${name} not found; research-derived fields use defaults`); return null; }
   try { return JSON.parse(await readFile(abs, 'utf8')); } catch (e) { warn(`research file ${name} unreadable: ${e.message}`); return null; }
 }
@@ -4973,6 +4981,20 @@ async function main() {
   for (const b of Object.values(bands)) b.bondIds = bandBondIds(b, { bonds, pools: choices.pools });
   const config = buildConfig(ctx, waves, stages, bands, chess, items);
   const files = { config, chess, bonds, garrisons, items, bands, effects, choices, enemies, factions, waves, stages, bosses, tokens, backups };
+  // Another version carries its own copy of the hand-maintained data/tuning.json (loadData and the content hash read it
+  // with the rest of a data directory). Upstream copies the file verbatim, [ASSUMED] the same tuning for every version;
+  // OUR `boost` block is the owner's 盟约 difficulty layer (docs/BALANCE.md §8) and another official version must not
+  // inherit it (isolation: 规程 runs the official numbers), so the copy keeps the result-title rules and drops `boost`.
+  let tuningText = null;
+  if (VERSION) {
+    const tuning = JSON.parse(await readFile(join(ROOT, 'data', 'tuning.json'), 'utf8'));
+    if (tuning.boost) {
+      delete tuning.boost;
+      tuning._doc = 'A version build carries the result-title rules of data/tuning.json only. `boost` is the covenant '
+        + 'modes\' own difficulty layer (owner 2026-10-16) and stays out: another official version runs the official numbers.';
+    }
+    tuningText = JSON.stringify(tuning);
+  }
   // 阵营加强 (owner 2026-10-24): the custom shop operators leave the vanilla tables; each faction's built-in plugin
   // restores its own records through one data patch (data/builtin/faction-<id>.json, written below).
   const builtinFiles = VERSION ? {} : splitCustomShop(files); // the fork's custom shop and factions are covenant-only
@@ -5016,6 +5038,12 @@ async function main() {
       const dest = join(OPTS.out, `${name}.json`);
       const tmp = `${dest}.tmp-${process.pid}`;
       await writeFile(tmp, text);
+      await rename(tmp, dest);
+    }
+    if (tuningText !== null) {
+      const dest = join(OPTS.out, 'tuning.json');
+      const tmp = `${dest}.tmp-${process.pid}`;
+      await writeFile(tmp, tuningText);
       await rename(tmp, dest);
     }
     // the built-in 阵营加强 patches (data/builtin/<faction>.json; not served as table data — the content set serves the
