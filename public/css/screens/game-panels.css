@@ -907,3 +907,8 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 }
 .custom__count { color: var(--text-lo); font-size: calc(.16 * var(--t)); }
 .custom__count b { color: var(--text-hi); }
+
+
+/* 规程 HUD mark (js/ui/hud.js versionMarkModel): the season + the room's own mode name, version data only */
+.gtop__version { display: inline-flex; align-items: center; gap: .02rem; padding: .02rem .08rem; border: 1px solid var(--line-2); color: var(--text-md); font-size: calc(.14 * var(--t)); white-space: nowrap; }
+.gtop__version b { color: var(--text-hi); font-weight: 700; }

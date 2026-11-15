@@ -40,8 +40,24 @@ import { overtimeState, overtimeDrainPerSec, remainAt } from './matchStatus.js';
 import { hotkeyLabelOf } from './settings.js';
 import { t, tParts, N_ } from '../../../shared/i18n.js';
 import { UnofficialMark } from './pluginTag.js';
+import { versionById } from '../../../shared/versions.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
+
+/**
+ * 规程 HUD mark: the season label (规程·序列Ⅰ) and the room's mode name (规程等级7 / 险境), null for the default
+ * 盟约 data. `config.version` is written only by a version build.
+ * @param {any} config gd.config
+ * @param {any} pub m.public
+ * @returns {{ label: string, level: string|null }|null}
+ */
+export function versionMarkModel(config, pub) {
+  const v = config?.version;
+  if (!v || typeof v !== 'object' || v.family !== 'regulation') return null;
+  const entry = versionById(v.id);
+  const mode = config?.modes?.[pub?.modeId];
+  return { label: entry?.label || v.id, level: typeof mode?.name === 'string' ? mode.name : null };
+}
 
 /**
  * 观战席 capsule of the in-match top bar (GitHub #120, PR #120 by @salt-fishes; the spectator seats of community report #26):
@@ -491,6 +507,7 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
   const cap = Number(config?.lpCapPerRound) > 0 ? Number(config.lpCapPerRound) : 10;
   const frozenSecs = Number.isFinite(frozenAt) ? remainAt(pub?.deadline, frozenAt) : null;
   const btn = checkButtons({ pen, penAvail, infoOpen: !!drawer });
+  const versionMark = versionMarkModel(config, pub);
   const fx = useCapsuleFx(phase, pub?.round);
   useEffect(() => { preloadCapsuleArt(); }, []);
   const onLeft = () => (pen ? onPen(false) : onDrawer('info'));
@@ -504,6 +521,8 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
           <${SpectatorPill} spectators=${spectators} myId=${myId} isHost=${isHost} onRemove=${onRemoveSpectator} />
         </div>
         ${pub?.difficulty ? html`<${DifficultyTag} difficulty=${pub.difficulty} size="sm" />` : null}
+        ${versionMark ? html`<span class="gtop__version" data-testid="version-mark"
+          title=${versionMark.level ? `${t(versionMark.label)} · ${versionMark.level}` : t(versionMark.label)}><b>${t(versionMark.label)}</b>${versionMark.level ? html`<span class="t-dim"> · ${versionMark.level}</span>` : null}</span>` : null}
         <${UnofficialMark} room=${room} compact=${true} class="gtop__mod" />
         ${native ? html`<span class="gtop__native" data-testid="native-code-mark" title=${t('本局包含原生代码插件')}>${t('原生代码')}</span>` : null}
       </div>
