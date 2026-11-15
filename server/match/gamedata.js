@@ -605,6 +605,8 @@ export class GameData {
     if (!b) return false;
     const list = Array.isArray(b.modeTypeList) ? b.modeTypeList : null;
     if (list && !list.includes(this.isSolo ? 'SINGLE' : 'MULTI')) return false;
+    // a version's bands list the mode ids they are NOT offered in (official `inactiveModeIdList`): 极速 / one single ladder
+    if (Array.isArray(b.inactiveModeIds) && b.inactiveModeIds.includes(this.modeId)) return false;
     // A content plugin may tie a strategy to the room's selected leader (e.g. the PRTS Touch band).
     const bosses = Array.isArray(b.bossIds) ? b.bossIds.filter((id) => typeof id === 'string') : null;
     if (bosses && bosses.length && !bosses.includes(this.bossId)) return false;

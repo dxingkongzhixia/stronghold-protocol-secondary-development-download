@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { GameData } from '../server/match/gamedata.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const load = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
@@ -37,4 +38,23 @@ test('the default data bands stay without the version-only metadata', () => {
     assert.equal('skill' in b, false, `${id}: no skill key`);
     assert.equal('effect' in b, false, `${id}: no effect key`);
   }
+});
+
+test('every 规程 band is offered in its official modes (inactiveModeIdList, not an allow list)', () => {
+  const gd = (modeId) => new GameData({ bands: ACT3, config: { modes: {} } }, modeId);
+  for (const b of Object.values(ACT3)) {
+    assert.deepEqual(b.modeTypeList, ['SINGLE', 'MULTI'], `${b.bandId}: solo and co-op`);
+    assert.ok(Array.isArray(b.inactiveModeIds), `${b.bandId}: inactiveModeIds`);
+  }
+  // 极速 (mode_single_funny) withholds 29 bands; the single ladder keeps them — an empty allow list used to hide all of them
+  assert.equal(gd('mode_single_funny').bandIds().length, 31);
+  assert.equal(gd('mode_single_7').bandIds().length, 60);
+  assert.equal(gd('mode_multi_hard').bandIds().length, 61);
+  assert.ok(gd('mode_single_7').bandIds().includes('band_random'));
+  assert.ok(!gd('mode_single_funny').bandIds().includes('band_random'));
+  // 献身护卫 is a co-op-only strategy in the official table
+  assert.ok(!gd('mode_single_20').bandIds().includes('band_protect'));
+  assert.ok(gd('mode_multi_hard').bandIds().includes('band_protect'));
+  // the default 盟约 data carries no version-only field
+  for (const b of Object.values(DEF)) assert.equal('inactiveModeIds' in b, false, `${b.bandId}: no inactiveModeIds`);
 });

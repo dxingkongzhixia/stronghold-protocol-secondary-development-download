@@ -2846,7 +2846,10 @@ function buildBands(ctx, effects) {
     }
     out[bandId] = {
       bandId, sortId: b.sortId, name: meta.bandName || eff?.name || bandId, iconId: meta.bandIconId || `icon_${bandId.replace(/^band_/, '')}`,
-      modeTypeList: b.modeTypeList || [], totalHp: b.totalHp,
+      // The official act3 table names the modes a band is NOT offered in (`inactiveModeIdList`) instead of an allow list;
+      // every strategy is offered in solo and co-op except those ids. The default build keeps its own `modeTypeList`.
+      modeTypeList: b.modeTypeList || (VERSION ? ['SINGLE', 'MULTI'] : []), totalHp: b.totalHp,
+      ...(VERSION ? { inactiveModeIds: Array.isArray(b.inactiveModeIdList) ? b.inactiveModeIdList.slice() : [] } : {}),
       effectId: b.effectId, effectName: eff?.name || null, desc: dp.desc, descRaw: dp.descRaw,
       buffs: (eff?.buffs || []).map((x) => ({ key: x.key, bb: x.bb, bbStr: x.bbStr })),
       params: eff?.params || {},
