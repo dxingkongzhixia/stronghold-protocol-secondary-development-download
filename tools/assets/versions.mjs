@@ -97,6 +97,9 @@ export function versionAssetGaps(root) {
       if (!((c?.avatar && file(c.avatar)) || (c?.avatarE2 && file(c.avatarE2)) || group(`char/avatar/${id}`))) missing.push('avatar');
       if (!((c?.spine?.front?.skel && file(c.spine.front.skel)) || anyGroup(`spine/char/${id}/front`, `spine/char/${id}/back`))) missing.push('spine');
       add('operator', id, missing);
+      for (const sk of all.operators[id].skills || []) {
+        if (!((assets.skills?.[sk.iconId] && file(assets.skills[sk.iconId])) || group(`skill/${sk.iconId}`))) add('skill', sk.iconId, ['icon']);
+      }
     }
     for (const id of Object.keys(all.enemies)) {
       const e = assets.enemies?.[id];
