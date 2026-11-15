@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  uiUrl, chessAvatarUrl, chessPortraitUrl, seatArtUrl, avatarUrl, skillIconUrl, profIconUrl, subProfIconUrl, bondIconUrl, bandIconUrl, itemIconUrl,
+  uiUrl, chessAvatarUrl, chessPortraitUrl, seatArtUrl, avatarUrl, skillIconUrl, skillRecordIconUrl, profIconUrl, subProfIconUrl, bondIconUrl, bandIconUrl, itemIconUrl,
   enemyIconUrl, tokenAvatarUrl, factionIconUrl, titleIconUrl, effectIconUrl,
 } from '../../public/js/ui/assetUrls.js';
 import { data } from '../../public/js/data.js';
@@ -105,6 +105,36 @@ describe('assetUrls', () => {
     try {
       assert.equal(enemyIconUrl({}, 'enemy_1064_snsbr'), '/assets/local/enemy/icon/enemy_1064_snsbr.png');
       assert.equal(enemyIconUrl({}, 'enemy_1064_snsbr_2'), '/assets/local/enemy/icon/enemy_1064_snsbr.png', 'a variant falls back to its base');
+    } finally {
+      data.setContent(null);
+    }
+  });
+  test('operator avatars / portraits fall back to the local client manifest', () => {
+    data.setContent({
+      id: 'local-char-art-test',
+      values: { local: { groups: {
+        'char/avatar/char_new': { char_new: { path: '/assets/local/char/avatar/char_new/char_new.png' }, char_new_2: { path: '/assets/local/char/avatar/char_new/char_new_2.png' } },
+        'char/portrait/char_new': { char_new_1: { path: '/assets/local/char/portrait/char_new/char_new_1.png' }, char_new_2: { path: '/assets/local/char/portrait/char_new/char_new_2.png' } },
+      } } },
+    });
+    try {
+      assert.equal(chessAvatarUrl({}, { charId: 'char_new' }), '/assets/local/char/avatar/char_new/char_new.png');
+      assert.equal(chessAvatarUrl({}, { charId: 'char_new', isGolden: true }), '/assets/local/char/avatar/char_new/char_new_2.png');
+      assert.equal(chessPortraitUrl({}, { charId: 'char_new' }), '/assets/local/char/portrait/char_new/char_new_1.png');
+      assert.equal(chessPortraitUrl({}, { charId: 'char_new', isGolden: true }), '/assets/local/char/portrait/char_new/char_new_2.png');
+    } finally {
+      data.setContent(null);
+    }
+  });
+  test('skill icons fall back to the local client manifest', () => {
+    data.setContent({
+      id: 'local-skill-icon-test',
+      values: { local: { groups: { 'skill/skchr_new_1': { skchr_new_1: { path: '/assets/local/skill/skchr_new_1/skchr_new_1.png' } } } } },
+    });
+    try {
+      assert.equal(skillIconUrl({}, { skill: { iconId: 'skchr_new_1' } }), '/assets/local/skill/skchr_new_1/skchr_new_1.png');
+      assert.equal(skillRecordIconUrl({}, { iconId: 'skchr_new_1' }), '/assets/local/skill/skchr_new_1/skchr_new_1.png');
+      assert.equal(skillRecordIconUrl({}, { iconId: 'skchr_new_1' }, { empty: false }), '/assets/local/skill/skchr_new_1/skchr_new_1.png');
     } finally {
       data.setContent(null);
     }

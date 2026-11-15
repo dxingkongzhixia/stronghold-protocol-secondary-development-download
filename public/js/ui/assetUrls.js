@@ -69,17 +69,19 @@ export function seatArtUrl(m, art) {
 export function chessAvatarUrl(m, chess) {
   const chars = obj(obj(m)?.chars);
   const id = str(chess?.assets?.avatar) || str(chess?.charId);
-  if (!chars || !id) return null;
+  const charId = str(chess?.charId) || (id ? id.replace(/_\d+$/, '') : null);
+  const local = charId ? localAsset(`char/avatar/${charId}`, chess?.isGolden ? `${charId}_2` : charId) || localAsset(`char/avatar/${charId}`, charId) : null;
+  if (!chars || !id) return local;
   if (id.endsWith('_2') && !chars[id]) {
     const base = chars[id.slice(0, -2)];
-    return str(base?.avatarE2) || str(base?.avatar);
+    return str(base?.avatarE2) || str(base?.avatar) || local;
   }
   // A golden piece whose avatar id is the character key uses that entry's E2 art when it has one.
   // Official ids are `charId` or `charId_2` (the suffix branch above). Model and voice have no E2
   // field on the character entry: the composed `spine` / `voice` id is already the form's.
   const entry = chars[id];
   if (entry && chess?.isGolden && str(entry.avatarE2)) return str(entry.avatarE2);
-  return str(entry?.avatar) || (chess?.charId ? str(chars[chess.charId]?.avatar) : null);
+  return str(entry?.avatar) || (chess?.charId ? str(chars[chess.charId]?.avatar) : null) || local;
 }
 
 /**
@@ -90,7 +92,9 @@ export function chessAvatarUrl(m, chess) {
 export function chessPortraitUrl(m, chess, opts = null) {
   const chars = obj(obj(m)?.chars);
   const id = str(chess?.assets?.portrait);
-  if (!chars) return null;
+  const charId = str(chess?.charId) || (id ? id.replace(/_\d+$/, '') : null);
+  const local = charId ? localAsset(`char/portrait/${charId}`, chess?.isGolden ? `${charId}_2` : `${charId}_1`) || localAsset(`char/portrait/${charId}`, `${charId}_2`) : null;
+  if (!chars) return local;
   // A chosen outfit's portrait, when the composed manifest carries one; the operator's own portrait is the fallback.
   const skin = opts && typeof opts.skin === 'string' ? opts.skin : '';
   if (skin && chess?.charId) {
@@ -102,19 +106,19 @@ export function chessPortraitUrl(m, chess, opts = null) {
     // A golden piece whose portrait id is the character key uses portraitE2 when the entry has one.
     // An entry with only `portrait` (a custom golden URL included) keeps that URL. Official ids are
     // `charId_1` / `charId_2` and are not character keys, so they stay on the suffix branches below.
-    if (chars[id]) return (chess?.isGolden ? str(chars[id].portraitE2) : null) || str(chars[id].portrait);
+    if (chars[id]) return (chess?.isGolden ? str(chars[id].portraitE2) : null) || str(chars[id].portrait) || local;
     if (id.endsWith('_2')) {
       const base = chars[id.slice(0, -2)];
-      if (base) return str(base.portraitE2) || str(base.portrait);
+      if (base) return str(base.portraitE2) || str(base.portrait) || local;
     }
     if (id.endsWith('_1')) {
       const base = chars[id.slice(0, -2)];
-      if (base) return str(base.portrait);
+      if (base) return str(base.portrait) || local;
     }
   }
   const byChar = chess?.charId ? chars[chess.charId] : null;
-  if (!byChar) return null;
-  return (chess?.isGolden ? str(byChar.portraitE2) : null) || str(byChar.portrait);
+  if (!byChar) return local;
+  return (chess?.isGolden ? str(byChar.portraitE2) : null) || str(byChar.portrait) || local;
 }
 
 /** Skill icon of a chess record (manifest `skills[iconId]`, else the empty skill sprite). */
@@ -125,6 +129,7 @@ export function skillIconUrl(m, chess) {
   const byId = obj(obj(m)?.skillsById);
   const alt = byId && chess?.skill?.skillId ? byId[chess.skill.skillId] : null;
   if (skills && alt && skills[alt]) return str(skills[alt]);
+  for (const sid of [id, alt, str(chess?.skill?.skillId)]) if (sid && localAsset(`skill/${sid}`, sid)) return localAsset(`skill/${sid}`, sid);
   return uiUrl(m, 'skillIcon/empty');
 }
 
@@ -139,6 +144,7 @@ export function skillRecordIconUrl(m, skill, { empty = true } = {}) {
   const byId = obj(obj(m)?.skillsById);
   const alt = byId && skill?.skillId ? byId[skill.skillId] : null;
   if (skills && alt && skills[alt]) return str(skills[alt]);
+  for (const id of [str(skill?.iconId), str(skill?.skillId), alt]) if (id && localAsset(`skill/${id}`, id)) return localAsset(`skill/${id}`, id);
   return empty ? uiUrl(m, 'skillIcon/empty') : null;
 }
 
