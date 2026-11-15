@@ -53,6 +53,20 @@ test('规程 enemies: every non-boss enemy has an icon and a model; bosses have 
   assert.ok(Object.keys(local.groups?.['enemy/icon'] || {}).length >= 70, 'the local-client enemy icons are in the manifest');
 });
 
+test('规程 bands, bonds and items: every icon is in the manifest or the local client', () => {
+  const bands = loadAt(path.join(DIR, 'bands.json'));
+  const bonds = loadAt(path.join(DIR, 'bonds.json'));
+  const items = loadAt(path.join(DIR, 'items.json'));
+  const missing = [];
+  for (const id of Object.keys(bands)) if (!(assets.bands?.[id] && exists(assets.bands[id])) && !localGroup(`band/${id}`)) missing.push(`band ${id}`);
+  for (const id of Object.keys(bonds)) if (!(assets.bonds?.[id] && exists(assets.bonds[id])) && !localGroup(`bond/${id}`)) missing.push(`bond ${id}`);
+  for (const [id, it] of Object.entries(items)) {
+    const key = it.iconId || it.trapId || it.id || id;
+    if (!(assets.items?.[key] && exists(assets.items[key])) && !localGroup(`item/${key}`)) missing.push(`item ${id}`);
+  }
+  assert.deepEqual(missing, []);
+});
+
 test('规程 battlefields and theme: the 10 scenes and the key visual are present', () => {
   const battlefield = Object.values(stages).filter((s) => s.kind !== 'unite');
   assert.equal(battlefield.length, 10);
