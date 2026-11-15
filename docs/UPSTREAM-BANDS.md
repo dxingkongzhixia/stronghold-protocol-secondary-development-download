@@ -57,6 +57,22 @@
 | band_lethania | `skill_gain_bond_char` + `skill_cost_grow_per_use` | 1 名莱塔尼亚干员；每次使用后费用永久 +1 |
 | band_ursus | `skill_gain_bond_char` + `skill_cost_reduce_on_buy_bond` | 1 名乌萨斯干员；每买 1 名乌萨斯 -1，用后重置 |
 
+### B3a 主动技能（选干员）
+
+| band | buff key | 状态 |
+|---|---|---|
+| band_upgrade | `skill_upgrade_char` | 立即晋升目标（整场 1 次） |
+| band_copy | `skill_copy_char_with_equip` | 复制目标（精锐状态 + 携带装备；整场 1 次） |
+| band_gain | `skill_trigger_garr_event` | 立即触发目标的 `<获得时>` 特质（`event`） |
+| band_prepfin | `skill_garr_event_extra_exec` | 目标本回合休整期结束特质额外触发 `count` 次 |
+| band_sell | `skill_sell_char_bond_layer` | 出售目标，所有已激活盟约按目标等阶加层 |
+| band_yan2 | `skill_remove_gain_bond_char` | 移除目标，获得 1 名不高于其等阶的【炎】干员（先抽再移除） |
+| band_limit | `skill_layer_limit_grow_round` | 给目标 `layer_cap` 标记：下场战斗卫戍能力叠层上限 +当前回合数 |
+
+标记管线（B3a 新增）：`ctx.addBandMark(uid, mark)` → `PlayerState.bandMarks`（每回合开始时清空）→
+`battleInput()` 的 `units[].marks` → sim 单位 `u.marks`；`layer_cap` 由
+`garrisons/battle.js layerCapBonus()` 加进 `max_add_count_per_battle`。
+
 其它已有：`band_takecare` `prep_finish_char_bond_add_layer`、`band_mech`
 `preparation_start_gain_chess_from_round`、`band_bond`
 `refresh_shop_count_gain_coin_bond_char_chess`、`band_weakness` `env_gbuff_new_with_verify`（battle 侧）。
@@ -71,12 +87,13 @@
 - `band_egir` / `band_kjerag2` / 其余 `auto_chess_effect_replace`：按 6/9 名盟约替换效果。
 - `band_iberia`、`band_rich`、`band_protect`、`band_mess`、`band_jenga`：无 buff key，需要按 bandId 的主动/解锁逻辑。
 
-### B. ACTIVE 选干员
-- `band_survive` / `band_evolve` / `band_shield` / `band_breakaway`：`skill_mark_char_inst_tag`（按 `eff_band12` 等 tag 区分）。
-- `band_upgrade` `skill_upgrade_char`；`band_copy` `skill_copy_char_with_equip`；
-- `band_gain` `skill_trigger_garr_event`；`band_prepfin` `skill_garr_event_extra_exec`；
-- `band_limit` `skill_layer_limit_grow_round`；`band_sell` `skill_sell_char_bond_layer`；
-- `band_yan2` `skill_remove_gain_bond_char`；`band_iberia` 选调度中心干员替换。
+### B. ACTIVE 选干员（剩余：战斗内标记）
+- `band_survive` / `band_evolve` / `band_shield` / `band_breakaway`：`skill_mark_char_inst_tag`，按 tag 走官方
+  `effectBuffInfoDataDict` 的战斗键：`eff_band12` → `act3autochess_band12_buff`（`max_respawn_cnt` 2、`start_dead` 1）、
+  `eff_band14` → `auto_chess_battle_chess_upgrade`、`eff_band17`/`eff_band18` →
+  `act1autochess_band17_buff`（`prob` 0.2 / 0.35，第 7 回合升级）、`eff_band22` →
+  `act3autochess_band22_buff`（首次受伤击倒 + 召唤整备区最右干员）。
+- `band_iberia` 选调度中心干员替换（`band_skill_load_by_bond_act_count` 解锁，技能类型 NONE）。
 
 ### C. ACTIVE 地块 / 商店格
 - `band_dance` `skill_mark_pos_grow_use_cnt`（地块恐惧）。
@@ -89,6 +106,9 @@
 1. ~~**B1**~~（完成，`415dde1f7`）：smith / kjerag / siracusa / victoria / substitute。
 2. ~~**B2**~~（完成）：`g.bandSkill` intent + 玩家技能状态 + 无目标经济类（price / fund / support / high / yan /
    equipment / closeout / kazimier / lethania / ursus）；测试 `test/versions-bands-skills.test.js`。
-3. **B3（下一步）**：选干员类（mark tag / upgrade / copy / gain / prepfin / limit / sell / yan2）。
-4. **B4**：地块与商店格（dance / treasure / transfer / pudd）。
-5. **B5**：`auto_chess_effect_replace` 的 6/9 名替换与无 key band（iberia/rich/protect/mess/jenga）。
+3. ~~**B3a**~~（完成）：选干员类 7 个（upgrade / copy / gain / prepfin / sell / yan2 / limit）+ 标记管线
+   （`bandMarks` → `units[].marks` → `layer_cap`）。
+4. **B3b（下一步）**：`skill_mark_char_inst_tag` 的 4 个战斗标签（survive / evolve / shield / breakaway，含
+   第 7 回合升级）与 `band_iberia`。
+5. **B4**：地块与商店格（dance / treasure / transfer / pudd）。
+6. **B5**：`auto_chess_effect_replace` 的 6/9 名替换与无 key band（rich/protect/mess/jenga）。
