@@ -168,7 +168,7 @@
 - [x] **规程敌人 96/96 覆盖**：23 个签名复用 + 40 个通用天赋组 + 7 个 boss + 26 个官方套件；`test/versions-enemies-procedural.test.js` 的覆盖集合现为零未覆盖
 - [x] **规程 garrison（141 个）**：131 个复用现有 `SERVER_ADD_BOND` / `GAIN_BUFF` / `SERVER_GAIN_EQUIP` 等类型处理器；新增 5 类 prep handler（自身出售价 +N 上限、免费刷新升级上限、场上携带装备干员加层、战斗结束存活干员加层、临时层转换占位）并补 `piece.sellBonus` 到出售结算。测试 `test/versions-garrisons.test.js`（全覆盖 + 4 项行为）
 - [x] **规程 band 元数据**：`buildBands` 从官方 `activity_table` 的 `skillInfoDataDict` / `effectInfoDataDict` 写入 `bands.json`（44 个新 band：ACTIVE 25 / PASSIVE 13 / NONE 6；目标 COMMON_CHESS 11 / NO_TARGET 10 / SHOP_SLOT 2 / MAP_TILE 2；可用 ROUND_RESET 17 / ALL_LIMIT 3 / DEFAULT 22 / COOLDOWN 2；含 cost / unlockType / HUD）。默认数据 `bands.json` 逐字节不变。测试 `test/versions-bands.test.js`
-- [ ] **规程 band handlers（37 个 buff key）**：dev 无对应实现（33/37 零命中，4 个已在本树）；按官方 skill/effect 元数据与 `bands/meta.js`、`bands/battle.js` 的现有 ctx 自行实现
+- [ ] **规程 band handlers**：**B1 完成 5 个**（全力熔铸 / 雪域礼赠 / 量体裁衣 / 自发制造 / 替身娃娃）；`g.bandSkill` intent 与剩余 4 批（无目标经济、选干员、地块/商店格、6/9 名替换）见 `docs/UPSTREAM-BANDS.md`。测试 `test/versions-bands-handlers.test.js`
 - [ ] **其余规程内容**：装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计
 - [ ] **其余规程内容**：141 个 garrison、54 个 band effect；装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
