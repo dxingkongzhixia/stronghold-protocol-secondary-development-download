@@ -53,6 +53,17 @@ test('规程 enemies: every non-boss enemy has an icon and a model; bosses have 
   assert.ok(Object.keys(local.groups?.['enemy/icon'] || {}).length >= 70, 'the local-client enemy icons are in the manifest');
 });
 
+test('规程 skill icons: every selectable skill has an icon (mirror or local client)', () => {
+  const backups = loadAt(path.join(DIR, 'backups.json'));
+  const ids = new Set();
+  const add = (rec) => { for (const s of [...(rec?.skills || []), ...(rec?.skill ? [rec.skill] : [])]) if (s?.iconId) ids.add(s.iconId); };
+  for (const rec of Object.values(chess)) add(rec);
+  for (const rec of Object.values(backups.units || {})) for (const form of Object.values(rec.forms || {})) add(form);
+  assert.ok(ids.size >= 300);
+  const missing = [...ids].filter((id) => !(assets.skills?.[id] && exists(assets.skills[id])) && !localGroup(`skill/${id}`));
+  assert.deepEqual(missing, []);
+});
+
 test('规程 bands, bonds and items: every icon is in the manifest or the local client', () => {
   const bands = loadAt(path.join(DIR, 'bands.json'));
   const bonds = loadAt(path.join(DIR, 'bonds.json'));
