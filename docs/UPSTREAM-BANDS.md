@@ -121,6 +121,18 @@
 | band_pepe | `shop_up_bond_refresh_once` | 复用 act2 同名行为：升到 2/4/6 级后下次手动刷新优先生成萨尔贡 |
 | band_mlynar | `buy_bond_char_gain_coin` | 复用 act2 同名行为：每买 1 名卡西米尔，下回合 +1（每回合 ≤3） |
 
+### B6 6 名替换（复用 + 两段 band-gated 代码）
+
+| band | 官方替换 | 状态 |
+|---|---|---|
+| band_yan2 / band_kjerag2 / band_siracusa / band_kazimier / band_sargon | 炎佑 / 寒风 / 隐匿真伤 / 真伤晕眩 / 技能加攻 | **复用**本树 `bonds/core.js` 既有 6 名实现（与官方替换文本一致），不改默认盟约 |
+| band_victoria | 开技能后周围八格共享装备 | 新增 band-gated：`installVictoria` 读 `bondeffect_victoria_2` 的 `share_equip_*`，复用 `lendAround`/`lendItemEffects`（30 + 0.1·L 秒，≤200） |
+| band_egir | 前 3 名首次被击倒召唤整备区最右阿戈尔 | 新增 band-gated：`battleInput` 在“band + 6 名不同阿戈尔”时下发 `egir_bench` 标记（`switch_cnt_max` 取 `bondeffect_egir_2`），`marks.js` 复用 `spawnOperator` + `findSummonTile` |
+
+隔离：替换效果只在持有对应 band 的房间生效（`bandReplacementEffect` 在默认数据返回 null），默认盟约与 golden 不变。
+测试：`test/content/bands_replace.test.js`（维多利亚借装备、阿戈尔 3 次召唤/同一干员不重复）、`test/versions-band-egir.test.js`
+（版本对局里 6 名才下发标记）。
+
 ## 待实现
 
 > **版本隔离（基本规则，owner 2026-11-15）**：默认盟约与规程互不影响；规程行为只能由版本数据 / 该版本才有的
@@ -129,12 +141,6 @@
 
 ### A. 剩余
 - `band_random` `gain_band_skill_from_pool_in_prep`：每次进入休整期从 2 个随机指令二选一替换（需要技能选择 UI / 指令池，随 P3）。
-- `band_yan2` / `band_sargon` / `band_victoria` / `band_egir` / `band_kazimier` / `band_kjerag2` / `band_siracusa`
-  的 `auto_chess_effect_replace`：官方在“在场 6 名不同盟约干员”时把盟约的战斗效果替换为策略专属效果
-  （炎佑 / 萨尔贡技能加攻 / 维多利亚装备共享 / 阿戈尔召唤整备区 / 卡西米尔真伤 / 谢拉格寒风 / 叙拉古隐匿真伤）。
-  其中 5 个（炎佑、谢拉格、叙拉古、卡西米尔、萨尔贡）本树 `bonds/core.js` 的 6 名实现已与官方替换文本一致，
-  只作为**规程侧既有实现**记账，不改默认盟约；维多利亚（装备共享，复用 `lendAround`）与阿戈尔（整备区召唤，
-  复用 `spawnOperator`）新增代码必须 **band-gated**。
 - 规程盟约自身的 6 名效果（act3 `bondeffect_*_2`，与默认盟约的 6 名行为不同）单列，按版本数据做隔离层。
 
 ## 批次
@@ -151,4 +157,5 @@
    （`bandGlobal` → `battleInput().bandMarks`）；测试 `test/content/bands_marks.test.js`。
 6. ~~**B5**~~（完成）：无 key 技能（jenga / mess / protect / rich）与准备期被动（bonus / equipment / sargon /
    pepe / mlynar）。
-7. **B6（下一步）**：`auto_chess_effect_replace` 的 7 个 6 名替换与 `band_random` 的技能选择。
+7. ~~**B6**~~（完成）：7 个 `auto_chess_effect_replace`（5 个复用现有盟约 6 名实现 + 维多利亚借装备 + 阿戈尔整备区召唤）。
+8. **B7（下一步）**：`band_random` 的技能选择（随 P3 指令 UI）。
