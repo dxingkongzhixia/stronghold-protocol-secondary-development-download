@@ -32,6 +32,8 @@ import { compileDsl } from './dsl/compile.js';
 import { validateSkillSpec, matchesSchema, MODS_SCHEMA } from '../../../shared/plugins/skillSpec.js';
 import { withUnitLoadouts } from '../simdata.js';
 import { isPotential } from '../../../shared/potential.js';
+import { RECORD_MAPS } from '../../../shared/plugins/dataUtils.js';
+import { isVersionData } from './support/index.js';
 
 // Content files are loaded with guarded dynamic imports: a module that fails to load (syntax error, throwing
 // top-level code, missing file) is logged and replaced by an empty module instead of breaking the server.
@@ -77,6 +79,47 @@ export function isDiyDef(def) {
 /** A def whose body is another character than its chess id names (补位 stand-in, 自选 piece): its kit is keyed by charId. */
 const isOtherBody = (def) => isStandInDef(def) || isDiyDef(def);
 
+/** Tier kit key -> the charId it was written for (kits/index.js). */
+const KIT_CHAR_IDS = KIT_REGISTRY.KIT_CHAR_IDS ?? Object.freeze({});
+/** charId -> its tier kit keys, in KIT_FILES order (kits/index.js). */
+const TIER_KIT_KEYS_BY_CHAR = KIT_REGISTRY.TIER_KIT_KEYS_BY_CHAR ?? Object.freeze({});
+const tierOfKitKey = (key) => Number(/^chess_char_(\d+)_/.exec(key)?.[1]);
+/** A plugin's chess record (shared/plugins/dataUtils.js RECORD_MAPS: chess_x_ ids). */
+const isPluginChess = (id) => String(id ?? '').startsWith(`${RECORD_MAPS.chess[0]}_`);
+
+/**
+ * The official kit of operator `charId`: its tier kit of `tier`, else its first tier kit, else a kit registered under
+ * the charId itself (an op-* or stand-in kit), else null.
+ */
+function kitKeyForChar(charId, tier, kits = KITS, tierKeys = TIER_KIT_KEYS_BY_CHAR) {
+  const keys = tierKeys[charId];
+  if (keys?.length) return keys.find((k) => tierOfKitKey(k) === tier) ?? keys[0];
+  return Object.hasOwn(kits, charId) ? charId : null;
+}
+
+/**
+ * The key of `def`'s kit in KITS, or null (generic). A stand-in's and a DIY piece's: its charId (isOtherBody). Any other
+ * def: the kit of its id (baseId, the exact id, or the suffix-less id). On another official version's build (`data`
+ * carries config.version; default: the loaded data) that kit counts only when it was written for the def's charId
+ * (KIT_CHAR_IDS), else the kit is found by its charId (kitKeyForChar) — act3autochess reuses chess ids for other
+ * operators. Only an official record with a real charId takes that path: test fixtures (charId defaults to the chess
+ * id) and plugin chess (chess_x_ ids) keep the by-id lookup. The default data and plugin content sets built on it keep
+ * the by-id lookup of before versions. `registries` replaces the official registries for tests only.
+ */
+export function officialKitKey(def, data, { kits = KITS, kitCharIds = KIT_CHAR_IDS, tierKeys = TIER_KIT_KEYS_BY_CHAR } = {}) {
+  if (!def) return null;
+  if (isOtherBody(def)) return Object.hasOwn(kits, def.charId) ? def.charId : null;
+  const bare = String(def.baseId ?? def.id ?? '').replace(/_[ab]$/, '');
+  const byId = [def.baseId, def.id, bare].find((k) => k != null && Object.hasOwn(kits, k) && kits[k]) ?? null;
+  if (!isVersionData(data)) return byId;
+  const real = typeof def.charId === 'string' && def.charId.startsWith('char_') && !def.charId.startsWith('char_x_') ? def.charId : null;
+  if (!real || isPluginChess(def.baseId ?? def.id)) return byId;
+  if (byId && (kitCharIds[byId] ?? real) === real) return byId;
+  if (!byId && kitCharIds[`${bare}_a`] === real) return null;
+  return kitKeyForChar(real, def.tier, kits, tierKeys);
+}
+
+
 /**
  * The kit builder of an operator def in `reg` ({ [key]: (bb, chess, def) => Kit }), or undefined. A stand-in's and a
  * 自选 piece's kit is keyed by its charId (`char_609_acguad`, `char_112_siege`) and by nothing else: the chess id it keeps
@@ -85,6 +128,10 @@ const isOtherBody = (def) => isStandInDef(def) || isDiyDef(def);
  */
 function registeredKit(def, reg) {
   if (!def || !reg) return undefined;
+  if (reg === KITS) {
+    const key = officialKitKey(def);
+    return key == null ? undefined : KITS[key];
+  }
   if (isOtherBody(def)) return Object.prototype.hasOwnProperty.call(reg, def.charId) ? reg[def.charId] : undefined;
   const bare = String(def.baseId ?? def.id ?? '').replace(/_[ab]$/, '');
   return [def.baseId, def.id, bare].map(k => Object.hasOwn(reg, k) ? reg[k] : undefined).find(Boolean);

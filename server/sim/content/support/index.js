@@ -45,6 +45,13 @@ export function gameData() {
 /** Tests only: swap the data object (null → reload the singleton). Also drops derived caches. */
 export function setGameData(d) { DATA = d ?? null; CORE = null; }
 
+/**
+ * Whether `data` is another official version's build (shared/versions.js): its config carries `version` (the default
+ * data and plugin content sets built on it do not). Behaviour that ids are reused for across versions dispatches on this.
+ * @param {object} [data] the loaded data (default: the process singleton)
+ */
+export const isVersionData = (data = gameData()) => !!(data && typeof data === 'object' && data.config?.version);
+
 export const bondRecord = (id) => own(gameData().bonds, id);
 export const itemRecord = (id) => own(gameData().items, id);
 export const garrisonRecord = (id) => own(gameData().garrisons, id);
