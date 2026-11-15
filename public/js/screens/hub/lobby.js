@@ -35,6 +35,7 @@ import { data, useData } from '../../data.js';
 import { t } from '../../../../shared/i18n.js';
 import { MODE_CARDS, difficultyInfo, normalizeCode, codeArg, remembersRoomOrigin } from '../lobbyData.js';
 import { lobbyVersion, storedLobbyVersion, saveLobbyVersion, versionsForMode } from '../../versions.js';
+import { useUiTheme } from '../../uiTheme.js';
 import { Emblem } from '../title.js';
 import { HubBackdrop, HubRadar, BackdropGlyph, BackdropSettings } from '../../ui/hub/backdrop.js';
 import { useHubBackdrop, backdropTheme } from '../../ui/hub/appearance.js';
@@ -419,6 +420,7 @@ export function LobbyScreen() {
   const createMode = protocol || roomMode;
   const versionChoices = createMode === 'mm' ? [] : versionsForMode(versionsList, createMode);
   const selectedVersion = versionChoices.length ? lobbyVersion(versionChoices, versionPref) : null;
+  useUiTheme(selectedVersion); // the protocol page previews the chosen version's official theme
 
   const run = async (kind, fn) => {
     if (inFlight.current) return;

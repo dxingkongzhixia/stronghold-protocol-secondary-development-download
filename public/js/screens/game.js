@@ -81,6 +81,7 @@ import { useGameData, GIcon } from '../ui/gameComponents.js';
 import { useFieldView } from '../ui/fieldHost.js';
 import { TopBar, liveLp, ownLeaks, uniteRemaining, tempInfo, tempReadyReason } from '../ui/hud.js';
 import { PluginHud } from '../ui/pluginHud.js';
+import { useUiTheme } from '../uiTheme.js';
 import { BondStrip, BondPopup } from '../ui/bondStrip.js';
 import { TeamPanel } from '../ui/teamPanel.js';
 import { ShopBar } from '../ui/shopBar.js';
@@ -192,6 +193,7 @@ function SpecDock({ room, pub, myId, spectator, canRelease, panel = false, chat 
 
 export function GameScreen() {
   const pub = useStore((s) => s.match.public);
+  useUiTheme(pub?.version); // a 规程 match paints the version's theme across briefing / draft / HUD
   const hasResult = useStore((s) => !!s.match.result);
   const ended = useStore((s) => !!s.room && !s.room.inMatch && !!s.match.public);
   const away = useStore((s) => s.away, Object.is, awayStore);

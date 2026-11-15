@@ -35,6 +35,7 @@ import { t, tc, N_ } from '../../../shared/i18n.js';
 
 import { MODE_CARDS, difficultyInfo, CODE_RE, normalizeCode, codeArg, remembersRoomOrigin } from './lobbyData.js';
 import { lobbyVersion, storedLobbyVersion, saveLobbyVersion, versionsForMode } from '../versions.js';
+import { useUiTheme } from '../uiTheme.js';
 import { OnlineOverlay } from './online.js';
 export { MODE_TEXT, STAGE_POOL, stageLabel, stageNote, MODE_CARDS, difficultyInfo, CODE_RE, normalizeCode, codeArg, remembersRoomOrigin, parseRoomParam } from './lobbyData.js';
 export { onlineStatsTarget, filterOnlinePlayers, openOnlineStats } from './online.js';
@@ -163,6 +164,7 @@ export function LobbyScreen() {
   // the versions this room mode can play; none (or one) = no switch
   const versionChoices = roomMode === 'mm' ? [] : versionsForMode(versionsList, roomMode);
   const selectedVersion = versionChoices.length ? lobbyVersion(versionChoices, versionPref) : null;
+  useUiTheme(selectedVersion); // the version tab previews its official theme (规程 red); the default clears it
   const pickPublic = (v) => { const b = v === 'public'; setIsPublic(b); savePref('lobby.public', b); };
 
   const run = async (kind, fn) => {

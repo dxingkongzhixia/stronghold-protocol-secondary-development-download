@@ -1,0 +1,31 @@
+/* ==========================================================================================
+   ui-theme.css — official UI theme packs (shared/uiTheme.js, public/js/uiTheme.js).
+   Only a version build's id selects one (`<html data-ui-theme="act3autochess">`); the default
+   盟约 UI never includes this attribute, so its tokens and screens are untouched.
+
+   规程·序列Ⅰ: the key visual's red / black accent replaces the mint family, and the room screen
+   carries the key visual as a faint backdrop. Asset: public/assets/local/theme/act3autochess/
+   act3autochess.png (ui_zone_home_theme_act3autochess.ab, tools/local-extract/autochess_themes.py).
+   ========================================================================================== */
+
+html[data-ui-theme="act3autochess"] {
+  --mint-500: #cf4a40;
+  --mint-400: #e15a4f;
+  --mint-600: #b53a32;
+  --mint-glow: #ff6f61;
+  --mint-700: #8f2f29;
+  --mint-800: #5c1d19;
+  --mint-900: #2e0f0d;
+  --mint-a10: rgba(207, 74, 64, .10);
+  --mint-a20: rgba(207, 74, 64, .20);
+  --mint-a35: rgba(207, 74, 64, .35);
+  --ui-theme-art: url('/assets/local/theme/act3autochess/act3autochess.png');
+}
+
+html[data-ui-theme="act3autochess"] .room-screen { position: relative; }
+html[data-ui-theme="act3autochess"] .room-screen::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: var(--ui-theme-art) center / cover no-repeat;
+  opacity: .07; filter: grayscale(.25) contrast(1.05);
+}
+html[data-ui-theme="act3autochess"] .room-screen > * { position: relative; z-index: 1; }

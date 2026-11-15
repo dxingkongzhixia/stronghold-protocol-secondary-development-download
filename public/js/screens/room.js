@@ -32,6 +32,7 @@ import { rememberScriptConsent } from '../content.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, emptyMatch, isSpectating } from '../store.js';
 import { data, useData } from '../data.js';
+import { useUiTheme } from '../uiTheme.js';
 import { avatarUrl, seatArtUrl } from '../ui/assetUrls.js';
 import { ArtPicker } from '../ui/artPicker.js';
 import { difficultyInfo } from './lobby.js';
@@ -375,6 +376,7 @@ function AiLastToggle({ option, busy, onToggle }) {
 /** Room screen component. */
 export function RoomScreen() {
   const room = useStore((s) => s.room);
+  useUiTheme(room?.version); // a 规程 room paints the version's red/black theme; the default room clears it
   const me = useStore((s) => s.me, shallowEqual);
   const conn = useStore((s) => s.connection, shallowEqual);
   const chat = useStore((s) => s.chat);
