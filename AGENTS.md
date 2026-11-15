@@ -122,6 +122,11 @@ when current state or discoverability moved.
 ## 6. Guardrails — stop and ask the owner (d星空之下 / owner-keyed)
 
 - **Never deploy / restart production / change env, the admin token or the firewall without an explicit go-ahead.**
+- **The two official versions are isolated (owner 2026-11-15, a basic rule)**: the default 盟约 (`act2autochess`) and
+  规程 (`act3autochess`) must not affect each other. Regulation-only behaviour is triggered by the version's own data
+  or by ids that exist only there (bands, choices, operators); never change default data, default golden or the default
+  mode's bond / economy numbers for a regulation feature. Shared code may reuse helpers, but new behaviour must be
+  version- or band-gated. See [`docs/UPSTREAM-REGULATION.md`](docs/UPSTREAM-REGULATION.md) §0.1.
 - A change that would drop anything in [`docs/OUR-FEATURES.md`](docs/OUR-FEATURES.md), or re-add anything in the
   **never-merge list** ([`docs/UPSTREAM-MERGES.md`](docs/UPSTREAM-MERGES.md) §0), is a stop-and-ask item.
 - **Golden corpus**: any change that moves a stored number in `test/golden/*.json` must be **attributed**

@@ -123,12 +123,19 @@
 
 ## 待实现
 
+> **版本隔离（基本规则，owner 2026-11-15）**：默认盟约与规程互不影响；规程行为只能由版本数据 / 该版本才有的
+> band id 触发，默认数据、默认 golden、默认盟约的盟约 6 名效果与经济数值都不因规程工作而改。共享代码只复用
+> 工具/实现函数，不做无条件分支。详见 `docs/UPSTREAM-REGULATION.md` §0.1。
+
 ### A. 剩余
 - `band_random` `gain_band_skill_from_pool_in_prep`：每次进入休整期从 2 个随机指令二选一替换（需要技能选择 UI / 指令池，随 P3）。
 - `band_yan2` / `band_sargon` / `band_victoria` / `band_egir` / `band_kazimier` / `band_kjerag2` / `band_siracusa`
   的 `auto_chess_effect_replace`：官方在“在场 6 名不同盟约干员”时把盟约的战斗效果替换为策略专属效果
   （炎佑 / 萨尔贡技能加攻 / 维多利亚装备共享 / 阿戈尔召唤整备区 / 卡西米尔真伤 / 谢拉格寒风 / 叙拉古隐匿真伤）。
-  本树现有盟约代码实现的是其中一部分 6 名效果，其余需要按官方 `bondeffect_*` 对照，单列一批。
+  其中 5 个（炎佑、谢拉格、叙拉古、卡西米尔、萨尔贡）本树 `bonds/core.js` 的 6 名实现已与官方替换文本一致，
+  只作为**规程侧既有实现**记账，不改默认盟约；维多利亚（装备共享，复用 `lendAround`）与阿戈尔（整备区召唤，
+  复用 `spawnOperator`）新增代码必须 **band-gated**。
+- 规程盟约自身的 6 名效果（act3 `bondeffect_*_2`，与默认盟约的 6 名行为不同）单列，按版本数据做隔离层。
 
 ## 批次
 
