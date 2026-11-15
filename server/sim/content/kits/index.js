@@ -175,6 +175,18 @@ export const OPERATOR_KIT_FILES = Object.freeze([
 ]);
 
 /**
+ * Operator kits keyed by charId for another official version (ops/ver-<codename>.js): merged into KITS but not
+ * KITTED_CHARS (a DIY pick offers the default pool). act3autochess reuses chess ids, so its operators resolve here by
+ * charId. A new version operator kit is appended and its charId leaves PENDING_KIT_CHARS.
+ */
+export const VERSION_KIT_FILES = Object.freeze([
+  'ver-aurora.js',
+  'ver-cuttle.js',
+  'ver-ethan.js',
+  'ver-halo.js',
+]);
+
+/**
  * The 预备干员 whose every skill the generic kit covers exactly (冲锋号令, 攻击力 / 防御力 / 治疗强化, 战术咏唱, 一击即退 —
  * test/content/standin.test.js): fielded with no kit file, as 补位 stand-ins and as tier-5 自选 picks.
  */
@@ -343,12 +355,10 @@ export const PENDING_KIT_CHARS = Object.freeze([
   'char_002_amiya',
   'char_1036_fang2',
   'char_129_bluep',
-  'char_135_halo',
   'char_185_frncat',
   'char_193_frostl',
   'char_194_leto',
   'char_195_glassb',
-  'char_218_cuttle',
   'char_219_meteo',
   'char_274_astesi',
   'char_325_bison',
@@ -356,7 +366,6 @@ export const PENDING_KIT_CHARS = Object.freeze([
   'char_333_sidero',
   'char_346_aosta',
   'char_347_jaksel',
-  'char_355_ethan',
   'char_367_swllow',
   'char_4031_liesel',
   'char_4041_chnut',
@@ -368,7 +377,6 @@ export const PENDING_KIT_CHARS = Object.freeze([
   'char_4177_brigid',
   'char_4198_christ',
   'char_4203_kichi',
-  'char_422_aurora',
   'char_4221_ju',
   'char_4222_taraxa',
   'char_4224_turdus',
@@ -397,6 +405,7 @@ async function loadKitFile(file) {
 const MODULES = await Promise.all(KIT_FILES.map((group) => Promise.all(group.map(loadKitFile))));
 const STANDIN_MODULES = await Promise.all(STANDIN_KIT_FILES.map(loadKitFile));
 const OPERATOR_MODULES = await Promise.all(OPERATOR_KIT_FILES.map(loadKitFile));
+const VERSION_MODULES = await Promise.all(VERSION_KIT_FILES.map(loadKitFile));
 const registryOf = (m) => (m && m.default && typeof m.default === 'object' ? m.default : {});
 
 /** The registry of each tier group (index 0 = tier 1): baseChessId → kit builder, in KIT_FILES order. */
@@ -421,11 +430,14 @@ export const STANDIN_KITS = Object.freeze(Object.assign({}, ...STANDIN_MODULES.m
 /** The 自选 operator kits: owned-6★ charId → kit builder, in OPERATOR_KIT_FILES order. */
 export const OPERATOR_KITS = Object.freeze(Object.assign({}, ...OPERATOR_MODULES.map(registryOf)));
 
+/** Version charId kits (`ops/ver-*.js`), in VERSION_KIT_FILES order. Not part of KITTED_CHARS. */
+export const VERSION_KITS = Object.freeze(Object.assign({}, ...VERSION_MODULES.map(registryOf)));
+
 /**
  * The merged kit registry: baseChessId → (bb, chess, def) => Kit, tier 1 … tier 6, then the stand-ins' charIds, then
  * the 自选 operators' charIds.
  */
-export const KITS = Object.freeze(Object.assign({}, ...TIER_KITS, STANDIN_KITS, OPERATOR_KITS));
+export const KITS = Object.freeze(Object.assign({}, ...TIER_KITS, STANDIN_KITS, OPERATOR_KITS, VERSION_KITS));
 
 /**
  * Every character a 自选 pick may field with a faithful kit: the 预备干员 (GENERIC_KIT_CHARS), the stand-ins with a kit
