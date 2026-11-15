@@ -55,6 +55,16 @@ function garrisonIdsOf(u) {
   return Array.isArray(list) ? list : EMPTY;
 }
 
+/**
+ * Layers an active band skill's mark adds to an operator's 卫戍能力 per-battle cap (`max_add_count_per_battle`):
+ * 正直教官's 「使其在下场战斗中卫戍能力的叠层上限提升，数量等同于当前回合数」 (mark `layer_cap`, bonus = the round).
+ */
+export function layerCapBonus(u) {
+  let add = 0;
+  for (const m of u?.marks || []) if (m && m.tag === 'layer_cap') add += Math.max(0, Math.floor(S.num(m.bonus, 0)));
+  return add;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // install
 
@@ -67,7 +77,7 @@ export function install(battle) {
     if (set.has(g.garrisonId)) return null;
     set.add(g.garrisonId);
     const bb = g.bb || {};
-    const cap = S.num(bb.max_add_count_per_battle, 0) > 0 ? S.num(bb.max_add_count_per_battle) : Infinity;
+    const cap = (S.num(bb.max_add_count_per_battle, 0) > 0 ? S.num(bb.max_add_count_per_battle) : Infinity) + layerCapBonus(unit);
     const it = {
       unit, g, gid: g.garrisonId, key: g.effectKey, bb, bbStr: g.bbStr || {}, grantedBy,
       cap, capKey: `gar:${g.garrisonId}:${unit.id}`, cnt: 0, k: -1,

@@ -582,6 +582,103 @@ K.skill_cost_reduce_on_buy_bond = (ps, bandId) => {
   };
 };
 
+// ---- act3 active band skills on an operator (B3) --------------------------------------------------------------
+
+/** 至纯凝结: the target becomes elite at once (a promotion; ALL_LIMIT x1). */
+K.skill_upgrade_char = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    if (ctx.promote(ev.target.uid)) ev.done = true;
+  },
+});
+
+/** 幻画为真: a copy of the target, its elite state and its equipment included. */
+K.skill_copy_char_with_equip = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    const p = ctx.piece(ev.target.uid);
+    if (!p) return;
+    const copy = ctx.grantChess(p.id, { source: 'band' });
+    if (!copy) return;
+    ev.done = true;
+    // the equipment comes along one piece at a time (each grant can merge with a copy already in the hand)
+    for (const it of p.items || []) {
+      const item = ctx.grantItem(it.id, { source: 'band' });
+      if (item && copy.uid != null) ctx.equipDirect(item.uid, copy.uid);
+    }
+  },
+});
+
+/** 御守之力: run the target's `event` traits now (`count` times). */
+K.skill_trigger_garr_event = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const p = ps[0] || {};
+    const event = p.event || 'SERVER_GAIN';
+    let runs = 0;
+    for (let k = 0; k < timesOf(p.count, 1); k++) runs += ctx.triggerGarrisons(ev.target.uid, event);
+    if (runs > 0) ev.done = true;
+  },
+});
+
+/** 强制休整: the target's `event` traits run `count` more times at this prep's end. */
+K.skill_garr_event_extra_exec = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const p = ps[0] || {};
+    const event = p.event || 'SERVER_PREP_FIN';
+    const uid = ev.target.uid;
+    // no such trait: nothing to run twice, so the use is refused (not charged)
+    if (!ctx.garrisonsOf(uid).some((g) => g.eventType === event)) return;
+    ctx.incPieceCounter(uid, 'band:prepfin', timesOf(p.count, 1));
+    ev.done = true;
+  },
+  onPrepEnd(ctx) {
+    const event = (ps[0] && ps[0].event) || 'SERVER_PREP_FIN';
+    for (const v of [...ctx.board(), ...ctx.hand(), ...ctx.temp()]) {
+      if (!v || v.kind !== 'chess') continue;
+      const n = ctx.pieceCounter(v.uid, 'band:prepfin');
+      if (n <= 0) continue;
+      for (let k = 0; k < n; k++) ctx.triggerGarrisons(v.uid, event);
+      ctx.incPieceCounter(v.uid, 'band:prepfin', -n);
+    }
+  },
+});
+
+/** 东之极道: sell the target; every active bond gains layers equal to the operator's tier. */
+K.skill_sell_char_bond_layer = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    const p = ctx.piece(ev.target.uid);
+    if (!p) return;
+    const n = Math.max(1, p.tier || 1);
+    if (!ctx.sell(ev.target.uid)) return;
+    for (const b of Object.keys(ctx.bonds())) {
+      if (!ctx.bondActive(b)) continue;
+      ctx.addLayers(b, n, { requireActive: true, reason: 'band' });
+    }
+    ev.done = true;
+  },
+});
+
+/** 黑白相易: remove the target, then gain a `bond` operator of no higher tier. */
+K.skill_remove_gain_bond_char = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const p = ctx.piece(ev.target.uid);
+    if (!p) return;
+    const maxTier = Math.max(1, p.tier || 1);
+    // draw before the removal: an empty pool must not cost the operator
+    const id = ctx.rollChess({ bond: ps[0].bond, maxTier });
+    if (!id || !ctx.destroyPiece(ev.target.uid)) return;
+    for (let k = 0; k < timesOf(ps[0].count, 1); k++) {
+      if (ctx.grantChess(id, { source: 'band' })) ev.done = true;
+    }
+  },
+});
+
+/** 正直教官: the target's 卫戍能力 layer cap next battle rises by the round (`layer_cap` mark). */
+K.skill_layer_limit_grow_round = (_ps) => ({
+  onBandSkill(ctx, ev) {
+    const n = Math.max(1, Math.round(Number(ctx.round) || 0));
+    if (ctx.addBandMark(ev.target.uid, { tag: 'layer_cap', bonus: n })) ev.done = true;
+  },
+});
+
 K.preparation_start_add_special_goods_every_n_round = (ps) => ({
   onPrepStart(ctx) {
     const p = ps[0];

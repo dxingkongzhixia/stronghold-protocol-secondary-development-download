@@ -159,6 +159,8 @@ export class BattlePlayers {
     if (def.raw?.isDiy && !def.diyFor) { this.log(`自选 slot ${inp.chessId} without a pick`); return null; }
     const u = this._makeAlly(ps, def, 'op', r, c, { uid: inp.uid, dir, skin: inp.skin });
     u.items = [...(inp.items ?? [])];
+    // marks an active band skill put on the operator for this battle (PlayerBattleInput units[].marks)
+    if (Array.isArray(inp.marks) && inp.marks.length) u.marks = inp.marks;
     u.carry = inp.carryState ?? null;
     // 练度 (自持有, 0.2.2): the owned operator's ×ATK / ×DEF / ×max HP (units.js Πmul) — never a 补位 stand-in's nor a
     // prototype 自选 pick's (another character than the one the player owns)

@@ -15,6 +15,20 @@ export class PlayerPieces {
   }
 
   /**
+   * Mark an owned chess for its next battle (an active band skill; PlayerState.bandMarks): cleared at the next round
+   * start, carried into the battle by battleInput. `mark` = { tag, bonus?, … }; the sim reads `layer_cap` (bonus = the
+   * round) and the battle-side tags read their own keys.
+   */
+  addBandMark(uid, mark) {
+    const l = this.find(uid);
+    if (!l || l.piece.kind !== 'chess' || !mark || typeof mark.tag !== 'string') return false;
+    const list = this.bandMarks[l.piece.uid] || (this.bandMarks[l.piece.uid] = []);
+    list.push({ ...mark, round: this.m.round });
+    this.dirty();
+    return true;
+  }
+
+  /**
    * Locate a piece by uid. Returns { piece, area: 'board'|'hand'|'temp'|'equipped', idx?, key?, holder? } or null.
    */
   find(uid) {

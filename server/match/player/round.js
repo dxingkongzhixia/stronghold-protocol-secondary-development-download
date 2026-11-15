@@ -13,6 +13,8 @@ import { REVIVE } from '../../../shared/constants.js';
 export class PlayerRound {
   startRound(r) {
     this.round = { refreshes: 0, buys: 0, sells: 0, spent: 0, gainedChess: 0, arts: 0 };
+    // marks an active band skill gave an operator for the round's battle are spent: the next round needs a new use
+    this.bandMarks = Object.create(null);
     // a rest end is the next round's start: a band's special operator grants its active-bond layers here; a band
     // with restEndRandomChess grants its random operators at the round starts its `rounds` names (Kal'tsit:
     // 2/4/6/8/10/12).
@@ -190,6 +192,9 @@ export class PlayerRound {
     for (const { r, c, piece } of boardOrder(this.board)) {
       if (piece.kind === 'chess') {
         const u = { uid: piece.uid, kind: 'chess', chessId: piece.id, row: r, col: c, dir: pieceDir(piece), items: (piece.items || []).map((i) => i.id) };
+        // marks of an active band skill for this battle (PlayerState.bandMarks; the sim applies them at its start)
+        const marks = this.bandMarks[piece.uid];
+        if (marks && marks.length) u.marks = marks;
         const pick = this.diyPickOf(piece.id);
         if (pick) {
           // 0.2.0 自选编队: a slotted DIY slot fights as its pick (sim getChess(id, { diy }): the operator's body, the pick's
