@@ -379,6 +379,66 @@ K.refresh_shop_count_gain_coin_bond_char_chess = (ps) => ({
   },
 });
 
+// ---- act3 bands (official skill/effect metadata in data/versions/<slug>/bands.json) -----------------------------
+
+/** 全力熔铸: on the listed rounds' prep start, one random item of the shop level. */
+K.prep_start_random_equip_in_round = (ps) => ({
+  onPrepStart(ctx) {
+    for (const p of ps) {
+      if (ctx.round !== int(p.round, -1)) continue;
+      const id = ctx.rollItem({ maxTier: Math.max(1, ctx.shopLevel()) });
+      if (id) ctx.grantItem(id, { source: 'band' });
+    }
+  },
+});
+
+/** 雪域礼赠: the first purchase of the named bond's chess each round costs `price`. */
+K.round_buy_bond_char_price = (ps) => ({
+  onPrice(ctx, ev) {
+    const p = ps[0] || {};
+    if (!ev || ev.kind !== 'chess' || !hasBond(ctx, ev.id, p.bond)) return;
+    if (roundCounter(ctx, 'band:kjerag') > 0) return;
+    ctx.setPrice(Math.min(num(ev.price, 0), int(p.price, 1)));
+  },
+  onBuy(ctx, ev) {
+    if (ev && ev.kind === 'chess' && hasBond(ctx, ev.slot.id, ps[0].bond)) bumpRound(ctx, 'band:kjerag');
+  },
+});
+
+/** 量体裁衣: after the first `refresh_count` refreshes of a round, `coin` funds (once). */
+K.n_round_refresh_cnt_gain_coin = (ps) => ({
+  onRefresh(ctx) {
+    const p = ps[0];
+    const need = Math.max(1, int(p.refresh_count, 1));
+    if (bumpRound(ctx, 'band:siracusa') !== need) return;
+    ctx.addFunds(int(p.coin, 1), 'band');
+  },
+});
+
+/** 自发制造: every `count` purchases of the named bond's chess, one random item. */
+K.buy_bond_char_cnt_gain_equip = (ps) => ({
+  onBuy(ctx, ev) {
+    const p = ps[0];
+    if (!ev || ev.kind !== 'chess' || !hasBond(ctx, ev.slot.id, p.bond)) return;
+    const need = Math.max(1, int(p.count, 1));
+    if (ctx.incCounter('band:victoria:buys', 1) % need !== 0) return;
+    const id = ctx.rollItem({ maxTier: Math.max(1, ctx.shopLevel()) });
+    if (id) ctx.grantItem(id, { source: 'band' });
+  },
+});
+
+/** 替身娃娃: the first normal operator sold in a round is exchanged for a random shop-level operator (no funds). */
+K.sell_char_swap_shop_char = (_ps) => ({
+  onSold(ctx, ev) {
+    if (!ev || !ev.piece || ev.piece.kind !== 'chess') return;
+    if (!isNormalChess(ctx, ev.piece.id) || roundCounter(ctx, 'band:substitute') > 0) return;
+    const id = ctx.rollChess({ maxTier: Math.max(1, ctx.shopLevel()) });
+    if (!id || !ctx.grantChess(id, { source: 'band' })) return;
+    ev.gain = 0;
+    bumpRound(ctx, 'band:substitute');
+  },
+});
+
 K.preparation_start_add_special_goods_every_n_round = (ps) => ({
   onPrepStart(ctx) {
     const p = ps[0];
