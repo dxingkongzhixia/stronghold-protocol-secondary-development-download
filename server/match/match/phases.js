@@ -536,7 +536,7 @@ export class MatchPhases {
     const seen = new Set();
     for (const id of slots) {
       const s = known.get(id);
-      if (!s || seen.has(id) || ++per[s.tier] > CUSTOM_MAX_PER_TIER) return fail(ERR.BAD_TARGET, 'not an available 自编 slot');
+      if (!s || seen.has(id) || ++per[s.tier] > CUSTOM_MAX_PER_TIER) return fail(ERR.BAD_TARGET, 'not an available custom slot');
       seen.add(id);
     }
     ps.customPick = slots.slice();
