@@ -329,7 +329,7 @@ export const STATS_ONLY = Object.freeze({
   enemy_9012_acloon: '炎佑 is a bond summon (bonds.js)', enemy_10040_cnvbln: '狂欢时刻 absent', enemy_10043_sailor: 'bridges/cannons absent',
   enemy_10073_mpcar: 'plain', enemy_10124_uashld_2: 'taunt is data; 矿工游击队 absent',
   // 规程 data parity: enemy-database entries no act3 table/wave references (version-only keys; stats only)
-  enemy_2017_csphts: 'not spawned by an act3 wave (data parity)', enemy_2123_dyjsww: 'act3 boss-database entry outside the 16 mode bosses (data parity)',
+  enemy_2123_dyjsww: 'act3 boss-database entry outside the 16 mode bosses (data parity)',
 });
 
 // 圣杯 damage sharing: ground enemies near a living chalice pass `share` of the damage they take to it.

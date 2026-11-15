@@ -68,6 +68,7 @@ test('stats-only enemies attach no ability and fight with their data stats', () 
   const h = arena({ units: [{ chessId: 't_wall', row: 9, col: 5 }] });
   h.step();
   for (const k of Object.keys(STATS_ONLY)) {
+    if (!E[k]) continue; // a version-only stats record (the default build has no such enemy)
     const e = put(h, k, [10, 7]);
     assert.ok(!e.mem.ab || !e.mem.ab.list.length, k);
     assert.equal(e.s.atk, E[k].stats.atk, k);
@@ -84,7 +85,7 @@ const VERSION_ONLY = new Set([
   'enemy_1104_lfkght', 'enemy_1104_lfkght_3', 'enemy_1191_krgrg', 'enemy_1191_krgrg_2', 'enemy_1213_mtrsnp', 'enemy_1216_cansld', 'enemy_1219_mtrbty',
   'enemy_1224_dsuply', 'enemy_1224_dsuply_2', 'enemy_1373_ltnhor', 'enemy_1373_ltnhor_2', 'enemy_1376_ltndru', 'enemy_1376_ltndru_2', 'enemy_1388_wingnt',
   'enemy_1388_wingnt_2', 'enemy_1405_boomer_2', 'enemy_1406_chghmr', 'enemy_1435_dsflys', 'enemy_9024_acsgnt', 'enemy_9028_acfncb', 'enemy_9034_acblk',
-  'enemy_9040_accrit', 'enemy_10003_trwlpl_2', 'enemy_10163_mnctur_2', 'enemy_10196_ubba', 'enemy_10196_ubba_2',
+  'enemy_9040_accrit', 'enemy_10003_trwlpl_2', 'enemy_10163_mnctur_2', 'enemy_10196_ubba', 'enemy_10196_ubba_2', 'enemy_2123_dyjsww',
 ]);
 
 test('沉默: exactly the abilities whose handbook line is SILENCE-flagged can be silenced (every authored enemy), plus 萨卡兹枯朽战士 / 组长\'s death fog', () => {
