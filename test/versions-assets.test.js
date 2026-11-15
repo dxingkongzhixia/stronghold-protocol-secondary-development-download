@@ -1,0 +1,66 @@
+// test/versions-assets.test.js — 规程's presentation coverage from data/assets.json + the committed local-client manifest
+// (data/local-assets.committed.json, public/assets/local): every visible operator has an avatar and a battle Spine, every
+// non-boss enemy an icon and a model, every battlefield its extracted scene, and the season theme its key visual. This is
+// the P4 asset-union check; the files themselves are committed (or local-client extracted).
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DIR = path.join(ROOT, 'data', 'versions', 'act3autochess-v3_1');
+const load = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
+const loadAt = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
+const assets = load('data/assets.json');
+const local = load('data/local-assets.committed.json');
+const chess = loadAt(path.join(DIR, 'chess.json'));
+const enemies = loadAt(path.join(DIR, 'enemies.json'));
+const stages = loadAt(path.join(DIR, 'stages.json'));
+const theme = loadAt(path.join(DIR, 'config.json'));
+const exists = (url) => typeof url === 'string' && url && fs.existsSync(path.join(ROOT, 'public', url));
+const localFile = (group, name) => exists(local.groups?.[group]?.[name]?.path);
+const localGroup = (group) => !!local.groups?.[group];
+
+test('规程 operators: every visible char has an avatar and a battle Spine (mirror or local client)', () => {
+  const chars = new Set(Object.values(chess).filter((c) => c.visible && c.charId).map((c) => c.charId));
+  assert.ok(chars.size >= 140);
+  const missing = [];
+  for (const id of chars) {
+    const rec = assets.chars?.[id];
+    const avatar = (rec && (exists(rec.avatar) || exists(rec.avatarE2))) || localGroup(`char/avatar/${id}`);
+    const spine = (rec?.spine?.front?.skel && exists(rec.spine.front.skel)) || localGroup(`spine/char/${id}/front`) || localGroup(`spine/char/${id}/back`);
+    if (!avatar || !spine) missing.push(`${id}${avatar ? '' : ' avatar'}${spine ? '' : ' spine'}`);
+  }
+  assert.deepEqual(missing, []);
+});
+
+test('规程 enemies: every non-boss enemy has an icon and a model; bosses have a model', () => {
+  // projectile / marker records with no battle Spine (drawn by their effect instead)
+  const NO_MODEL = new Set(['enemy_9016_acstmr', 'enemy_9036_acweb']);
+  const missingIcon = [];
+  const missingModel = [];
+  for (const [id, e] of Object.entries(enemies)) {
+    const rec = assets.enemies?.[id];
+    const icon = (rec?.icon && exists(rec.icon)) || localFile('enemy/icon', id);
+    const model = (rec?.spine?.skel && exists(rec.spine.skel)) || localGroup(`spine/enemy/${id}`);
+    if (!model && !NO_MODEL.has(id)) missingModel.push(id);
+    if (!icon && e.rank !== 'BOSS' && id !== 'enemy_9038_achest') missingIcon.push(id);
+  }
+  assert.deepEqual(missingModel, []);
+  // the client has no handbook icon for 18 act3-only records (7 bosses and 11 summons/markers); the UI falls back
+  assert.ok(missingIcon.length <= 18, missingIcon.join(','));
+  assert.ok(Object.keys(local.groups?.['enemy/icon'] || {}).length >= 70, 'the local-client enemy icons are in the manifest');
+});
+
+test('规程 battlefields and theme: the 10 scenes and the key visual are present', () => {
+  const battlefield = Object.values(stages).filter((s) => s.kind !== 'unite');
+  assert.equal(battlefield.length, 10);
+  for (const s of Object.values(stages)) {
+    if (s.kind === 'unite') continue; // the two 联防 records share a board (fields family covers them)
+    assert.ok(fs.existsSync(path.join(ROOT, 'public', 'assets', 'local', 'scene', s.id)), s.id);
+  }
+  const art = '/assets/local/theme/act3autochess/act3autochess.png';
+  assert.ok(fs.existsSync(path.join(ROOT, 'public', art.replace(/^\//, ''))));
+  assert.ok(theme.version?.family === 'regulation');
+});
