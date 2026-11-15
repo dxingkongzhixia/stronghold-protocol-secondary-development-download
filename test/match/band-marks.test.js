@@ -1,0 +1,49 @@
+// test/match/band-marks.test.js — the battle input a band-skill mark changes (PlayerState.bandMarks → battleInput):
+// 全场聚焦 fields the elite form, 消解空间 resolves the hand's rightmost operator into the summon, and the marks
+// last for one round.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { makeMatch, give } from './harness.js';
+
+function prep() {
+  const h = makeMatch({ mode: 'solo', humans: 1, seed: 7, fake: true }).start();
+  h.toPrep(1);
+  const ps = h.ps('p_0');
+  ps.bandMarks = {};
+  return { h, m: h.m, ps };
+}
+
+test('battle_upgrade fields the elite form for the battle', () => {
+  const { m, ps } = prep();
+  const piece = give(m, ps, 'chess_char_1_01_a', 'board', [10, 4]);
+  const golden = m.gd.goldenIdOf(piece.id);
+  assert.ok(m.gd.chess(golden), 'the elite record exists');
+  ps.addBandMark(piece.uid, { tag: 'battle_upgrade' });
+  const u = ps.battleInput().units.find((x) => x.uid === piece.uid);
+  assert.equal(u.chessId, golden);
+  assert.equal(u.marks[0].tag, 'battle_upgrade');
+  // the owned piece is unchanged: the upgrade lasts one battle
+  assert.equal(piece.id, 'chess_char_1_01_a');
+});
+
+test('knockdown_summon carries the hand\'s rightmost operator', () => {
+  const { m, ps } = prep();
+  const piece = give(m, ps, 'chess_char_1_01_a', 'board', [10, 4]);
+  const bench = give(m, ps, 'chess_char_1_01_a', 'hand', 0);
+  ps.addBandMark(piece.uid, { tag: 'knockdown_summon' });
+  const u = ps.battleInput().units.find((x) => x.uid === piece.uid);
+  assert.equal(u.marks[0].summon.chessId, bench.id);
+  assert.ok(u.marks[0].summon.skillIndex === null || Number.isInteger(u.marks[0].summon.skillIndex)
+    || u.marks[0].summon.diy || u.marks[0].summon.standIn, 'its loadout travels along');
+  assert.notEqual(u.marks[0].summon.uid, piece.uid);
+});
+
+test('the marks are spent at the next round start', () => {
+  const { h, m, ps } = prep();
+  const piece = give(m, ps, 'chess_char_1_01_a', 'board', [10, 4]);
+  ps.addBandMark(piece.uid, { tag: 'battle_upgrade' });
+  assert.ok(ps.bandMarks[piece.uid]);
+  h.toPrep(2);
+  assert.equal(ps.bandMarks[piece.uid], undefined);
+  assert.equal(ps.battleInput().units.find((x) => x.uid === piece.uid).chessId, piece.id, 'the base form again');
+});

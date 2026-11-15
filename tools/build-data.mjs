@@ -2825,9 +2825,25 @@ function buildBands(ctx, effects) {
     const dp = textPair(b.bandDesc);
     // another official version's band skill metadata (skillInfoDataDict / effectInfoDataDict): ACTIVE vs PASSIVE,
     // target type (a chess / a shop slot / a map tile / none), availability and the HUD flag. The default build keeps
-    // its bands.json byte for byte, so this block is version-only.
+    // its bands.json byte for byte, so this block is version-only. A skill can upgrade: `unlockEffectId` names the
+    // skillInfoDataDict record that takes over once its own unlock condition holds (round, shop level, coins spent, an
+    // active bond's member count), itself upgradable — carried as `stages` (the effect's own buffs travel with it).
     const sk = VERSION ? act.skillInfoDataDict?.[b.effectId] : null;
     const ei = VERSION ? act.effectInfoDataDict?.[b.effectId] : null;
+    const stage = (s) => ({
+      effectId: s.effectId, unlockType: s.unlockType ?? null, unlockParam: s.unlockParam ?? [],
+      skill: {
+        type: s.skillType, cost: s.skillCost ?? 0, availType: s.skillAvailType, availCount: s.skillAvailCount,
+        targetType: s.targetType ?? null, targetFilterType: s.targetFilterType ?? null, targetTip: s.targetTip ?? null,
+      },
+    });
+    const stages = [];
+    for (let cur = sk, depth = 0; cur && cur.unlockEffectId && depth < 8; depth++) {
+      const nxt = act.skillInfoDataDict?.[cur.unlockEffectId];
+      if (!nxt) break;
+      stages.push(stage(nxt));
+      cur = nxt;
+    }
     out[bandId] = {
       bandId, sortId: b.sortId, name: meta.bandName || eff?.name || bandId, iconId: meta.bandIconId || `icon_${bandId.replace(/^band_/, '')}`,
       modeTypeList: b.modeTypeList || [], totalHp: b.totalHp,
@@ -2840,7 +2856,8 @@ function buildBands(ctx, effects) {
         skill: sk ? {
           type: sk.skillType, cost: sk.skillCost ?? 0, availType: sk.skillAvailType, availCount: sk.skillAvailCount,
           targetType: sk.targetType ?? null, targetFilterType: sk.targetFilterType ?? null, targetTip: sk.targetTip ?? null,
-          unlockType: sk.unlockType ?? null,
+          unlockType: sk.unlockType ?? null, unlockParam: sk.unlockParam ?? [],
+          ...(stages.length ? { stages } : {}),
         } : null,
         effect: ei ? { type: ei.effectType, displayInHUD: ei.displayInHUD === true, continuedRound: ei.continuedRound ?? null } : null,
       } : {}),

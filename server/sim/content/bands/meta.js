@@ -41,8 +41,9 @@
 
 import { GEO } from '../../../../shared/constants.js';
 import { bbCap } from '../../../../shared/plugins/officialBounds.js';
+import { bandSkillStages, activeBandSkillIndex } from '../../../../shared/bandSkill.js';
 import { createRng } from '../../rng.js';
-import { buffsOf, num, bandRecord, gameData } from '../support/index.js';
+import { buffsOf, num, bandRecord, effectRecord, gameData } from '../support/index.js';
 import { metaBonds } from '../support/meta.js';
 import * as garrisons from '../garrisons.js';
 
@@ -656,18 +657,60 @@ K.skill_sell_char_bond_layer = (_ps) => ({
   },
 });
 
-/** 黑白相易: remove the target, then gain a `bond` operator of no higher tier. */
+/** 黑白相易 / 出航时刻: remove the target (or replace a shop card, `in_shop`), then gain a `bond` operator of no higher tier. */
 K.skill_remove_gain_bond_char = (ps) => ({
   onBandSkill(ctx, ev) {
-    const p = ctx.piece(ev.target.uid);
-    if (!p) return;
-    const maxTier = Math.max(1, p.tier || 1);
+    const p = ps[0] || {};
+    if (int(p.in_shop, 0) === 1) {
+      // 出航时刻 (伊比利亚): the target is a card of the shop, replaced by a 伊比利亚 operator of no higher tier
+      const slot = ev.target && Number.isInteger(ev.target.slot) ? ctx.shopSlots()[ev.target.slot] : null;
+      if (!slot || slot.kind !== 'chess' || slot.sold) return;
+      const id = ctx.rollChess({ bond: p.bond, maxTier: Math.max(1, ctx.gd.tierOf(slot.id)) });
+      if (!id) return;
+      ctx.setShopSlot(ev.target.slot, { kind: 'chess', id });
+      ev.done = true;
+      return;
+    }
+    const target = ctx.piece(ev.target.uid);
+    if (!target) return;
+    const maxTier = Math.max(1, target.tier || 1);
     // draw before the removal: an empty pool must not cost the operator
-    const id = ctx.rollChess({ bond: ps[0].bond, maxTier });
+    const id = ctx.rollChess({ bond: p.bond, maxTier });
     if (!id || !ctx.destroyPiece(ev.target.uid)) return;
-    for (let k = 0; k < timesOf(ps[0].count, 1); k++) {
+    for (let k = 0; k < timesOf(p.count, 1); k++) {
       if (ctx.grantChess(id, { source: 'band' })) ev.done = true;
     }
+  },
+});
+
+/**
+ * The battle mark of an official inst tag (`skill_mark_char_inst_tag`'s `tag`): the tag's own effect record names the
+ * battle buff (activation_table effectBuffInfoDataDict), e.g. eff_band12 → act3autochess_band12_buff (revives),
+ * eff_band17/18 → act1autochess_band17_buff (shield on attack, 20 % → 35 %), eff_band22 → knockdown + summon.
+ * [ASSUMED] `start_dead` = the operator is knocked down and revived at battle start.
+ */
+function instTagMark(ctx, tag) {
+  const rec = ctx.gd.effect(tag);
+  for (const b of (rec && rec.buffs) || []) {
+    if (b.key === 'auto_chess_battle_chess_upgrade') return { tag: 'battle_upgrade' };
+    if (b.key !== 'env_gbuff_new_with_verify') continue;
+    const key = b.bbStr && b.bbStr.key;
+    const bb = b.bb || {};
+    if (key === 'act3autochess_band12_buff') {
+      return { tag: 'revive', count: Math.max(1, int(bb.max_respawn_cnt, 2)), startDead: int(bb.start_dead, 0) === 1 };
+    }
+    if (key === 'act1autochess_band17_buff') return { tag: 'shield_on_attack', prob: num(bb.prob, 0.2), cap: 1 };
+    if (key === 'act3autochess_band22_buff') return { tag: 'knockdown_summon' };
+  }
+  return null;
+}
+
+/** 意志鼓舞 / 全场聚焦 / 药枚实验 / 消解空间: mark the target for its next battle (see instTagMark). */
+K.skill_mark_char_inst_tag = (ps) => ({
+  onBandSkill(ctx, ev) {
+    const tag = ps[0] && ps[0].tag;
+    const mark = tag ? instTagMark(ctx, tag) : null;
+    if (mark && ctx.addBandMark(ev.target.uid, mark)) ev.done = true;
   },
 });
 
@@ -864,16 +907,41 @@ function merge(parts) {
   return out;
 }
 
-/** Hooks of one band (null when it has no prep effect). */
-export function bandMetaHandler(bandId) {
+/** Hooks of one set of buffs (null when it has no prep effect). */
+function buffHooks(buffs, bandId) {
   const groups = new Map();
-  for (const b of buffsOf(bandRecord(bandId))) {
+  for (const b of buffs) {
     if (!b.key || !K[b.key]) continue;
     if (!groups.has(b.key)) groups.set(b.key, []);
     groups.get(b.key).push(b.p);
   }
   if (!groups.size) return null;
   return merge([...groups].map(([k, ps]) => K[k](ps, bandId)));
+}
+
+/**
+ * Hooks of one band (null when it has no prep effect). An official skill's upgrade chain (`skill.stages`) gives one
+ * set of hooks per stage; only the stage in force (shared/bandSkill.js) runs on each hook, so an upgrade's numbers and
+ * its different buff keys (药枚实验's 20 % → 35 % tag) apply without stacking the base ones.
+ */
+export function bandMetaHandler(bandId) {
+  const band = bandRecord(bandId);
+  const stages = bandSkillStages(band);
+  const per = stages.map((st, i) => buffHooks(i === 0 ? buffsOf(band) : buffsOf(effectRecord(st.effectId)), bandId));
+  if (!per.some(Boolean)) return null;
+  if (per.length === 1) return per[0];
+  const names = new Set(per.flatMap((h) => (h ? Object.keys(h) : [])));
+  const out = {};
+  for (const name of names) {
+    out[name] = function staged(ctx, ev) {
+      const idx = activeBandSkillIndex({
+        round: ctx.round, shopLevel: ctx.shopLevel(), gold: ctx.stats().gold, bonds: ctx.bonds(),
+      }, stages);
+      const h = per[idx];
+      if (h && typeof h[name] === 'function') h[name](ctx, ev);
+    };
+  }
+  return out;
 }
 
 export function registerMeta(registry) {

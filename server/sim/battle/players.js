@@ -206,6 +206,21 @@ export class BattlePlayers {
     return u;
   }
 
+  /**
+   * Deploy an operator mid-battle from a battle-input entry (a band skill's bench summon, 消解空间): `input` = the
+   * fields _createAllyFromInput reads (chessId, skillIndex / moduleId / potential / cultivate / skin / diy / standIn),
+   * at a FIELD tile. Returns the unit or null.
+   */
+  spawnOperator(playerId, input, row, col) {
+    const ps = this.getPlayer(playerId);
+    if (!ps || !input || typeof input !== 'object' || !input.chessId) return null;
+    const u = this._createAllyFromInput(ps, { ...input, kind: 'chess', abs: true, row, col, dir: ps.dir });
+    if (!u) return null;
+    this._setupUnit(u);
+    if (!this._deploy(u, { initial: false })) { u.removed = true; this.offOwner(u); return null; }
+    return u;
+  }
+
   /** Resolve kit/profile/skill for a unit (called by content/index.js; safe to call again). */
   _setupUnit(u, kit = null) {
     if (!kit) {

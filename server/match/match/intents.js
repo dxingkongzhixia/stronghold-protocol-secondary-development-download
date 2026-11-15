@@ -6,6 +6,7 @@
 
 import { unitStatsEntry } from '../../../shared/protocol.js';
 import { PHASE, ERR, EMOTES, EMOTE_COOLDOWN_MS, GEO, REVIVE } from '../../../shared/constants.js';
+import { activeBandSkillStage, bandSkillStages } from '../../../shared/bandSkill.js';
 import { deriveSeed } from '../../sim/rng.js';
 import { msg } from '../../../shared/i18n.js';
 import { OK, fail, FLOW_TICKER_PRIORITY } from './common.js';
@@ -75,8 +76,12 @@ export class MatchIntents {
     if (this.phase !== PHASE.PREP) return fail(ERR.WRONG_PHASE);
     if (ps.ready) return fail(ERR.WRONG_PHASE, 'ready');
     const band = this.gd.band(ps.bandId);
-    const sk = band && band.skill;
-    if (!sk || sk.type !== 'ACTIVE') return fail(ERR.BAD_TARGET, 'this strategy has no active skill');
+    // the stage in force now: the base record or an upgraded one (round / shop level / coins spent / bond members)
+    const stage = band ? activeBandSkillStage({
+      round: this.round, shopLevel: ps.shop.level, gold: ps.stats?.gold ?? 0, bonds: ps.bonds,
+    }, bandSkillStages(band)) : null;
+    const sk = stage && stage.skill;
+    if (!sk || sk.type !== 'ACTIVE') return fail(ERR.BAD_TARGET, sk ? 'the strategy skill is locked' : 'this strategy has no active skill');
     const st = ps.bandSkill || (ps.bandSkill = { uses: 0, total: 0, round: 0, cooldownUntil: 0 });
     if (st.round !== this.round) { st.round = this.round; st.uses = 0; }
     if (sk.availType === 'COOLDOWN' && this.round < (st.cooldownUntil || 0)) return fail(ERR.BAD_TARGET, 'the skill is cooling down');

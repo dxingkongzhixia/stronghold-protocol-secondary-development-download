@@ -14,6 +14,7 @@ import { validateC2S } from '../shared/protocol.js';
 import { PHASE } from '../shared/constants.js';
 import { makeBattle } from './helpers/battleHarness.js';
 import { layerCapBonus } from '../server/sim/content/garrisons/battle.js';
+import { bandSkillStages, activeBandSkillStage } from '../shared/bandSkill.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = path.join(ROOT, 'data', 'versions', 'act3autochess-v3_1');
@@ -37,8 +38,12 @@ function ctxFor(ps, m, ev, calls) {
     gd: {
       maxShopLevel: 6,
       baseIdOf: (id) => String(id).replace(/^golden_/, ''),
+      goldenIdOf: (id) => `golden_${String(id).replace(/^golden_/, '')}`,
+      isGolden: (id) => /^golden_/.test(String(id)),
+      tierOf: (id) => (V.chess[id] && V.chess[id].tier) || 1,
       chess: (id) => ({ bonds: bondOf(id) }),
       item: (id) => (String(id).startsWith('item') ? { id } : null),
+      effect: (id) => V.effects[id] ?? null,
     },
     // deterministic: int(n) = n-1 (the top of every range), pick = first, shuffle = identity
     rng: { int: (n) => Math.max(0, n - 1), pick: (a) => a[0], shuffle: (a) => a.slice() },
@@ -67,6 +72,7 @@ function ctxFor(ps, m, ev, calls) {
     },
     bonds: () => calls.bonds || {},
     bondActive: (id) => !!(calls.bonds && calls.bonds[id] && calls.bonds[id].active),
+    stats: () => ps.stats || {},
     addLayers: (bond, n, opts = {}) => { calls.layers.push([bond, n, opts.requireActive === true]); return n; },
     setShopSlot: (i, s) => { calls.slots.push([i, s]); return true; },
     modifyPrice: (d) => { ev.price = Math.max(0, (Number(ev.price) || 0) + d); },
@@ -88,6 +94,8 @@ function fakeMatch(bandId, { funds = 20, slots } = {}) {
     bandSkill: { uses: 0, total: 0, round: 0, cooldownUntil: 0 },
     shop: { level: 4, slots: slots ?? [{ kind: 'chess', id: 'base_x', basePrice: 1, sold: false }] },
     counters: {},
+    bonds: {},
+    stats: { gold: 0 },
     board: new Map(),
     dirty() {},
     spend(n) { if (n > this.funds) return false; this.funds -= n; this.spent = (this.spent || 0) + n; return true; },
@@ -395,4 +403,58 @@ test('the layer-cap mark reaches the battle unit, and raises the garrison cap', 
   assert.deepEqual(h.allies().find((u) => u.uid === 7).marks, [{ tag: 'layer_cap', bonus: 4 }]);
   assert.equal(layerCapBonus({ marks: [{ tag: 'layer_cap', bonus: 4 }, { tag: 'layer_cap', bonus: 2 }, { tag: 'other', bonus: 9 }] }), 6);
   assert.equal(layerCapBonus({}), 0);
+});
+
+
+// ---- B3b: the battle marks of skill_mark_char_inst_tag, and the unlock chain -----------------------------------
+
+test('the chain picks the stage in force (round / shop level / bond members)', () => {
+  const shield = bandSkillStages(V.bands.band_shield);
+  assert.equal(shield.length, 2);
+  assert.equal(activeBandSkillStage({ round: 6 }, shield).effectId, 'aceffect_band_37');
+  assert.equal(activeBandSkillStage({ round: 7 }, shield).effectId, 'aceffect_band_38');
+  const iberia = bandSkillStages(V.bands.band_iberia);
+  assert.equal(activeBandSkillStage({ bonds: { iberiaShip: { count: 3 } } }, iberia).skill.type, 'NONE');
+  assert.equal(activeBandSkillStage({ bonds: { iberiaShip: { count: 4 } } }, iberia).skill.type, 'ACTIVE');
+  const takecare = bandSkillStages(V.bands.band_takecare);
+  assert.equal(takecare.length, 3);
+  assert.equal(activeBandSkillStage({ shopLevel: 2 }, takecare).skill.type, 'PASSIVE');
+  assert.equal(activeBandSkillStage({ shopLevel: 3 }, takecare).skill.type, 'PASSIVE');
+});
+
+test('the four inst-tag skills mark the target from the official effect records', () => {
+  const cases = [
+    ['band_survive', { tag: 'revive', count: 2, startDead: true }],
+    ['band_evolve', { tag: 'battle_upgrade' }],
+    ['band_breakaway', { tag: 'knockdown_summon' }],
+  ];
+  for (const [band, want] of cases) {
+    const f = fakeMatch(band);
+    assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'chess', uid: 1 } }), OK, band);
+    assert.deepEqual(f.calls.marks, [[1, want]], band);
+  }
+});
+
+test('药枚实验 upgrades at round 7 (20 % → 35 %)', () => {
+  const early = fakeMatch('band_shield');
+  early.m.round = 6;
+  assert.deepEqual(early.m.useBandSkill(early.ps, { target: { kind: 'chess', uid: 1 } }), OK);
+  assert.deepEqual(early.calls.marks, [[1, { tag: 'shield_on_attack', prob: 0.2, cap: 1 }]]);
+  const late = fakeMatch('band_shield');
+  late.m.round = 7;
+  assert.deepEqual(late.m.useBandSkill(late.ps, { target: { kind: 'chess', uid: 1 } }), OK);
+  assert.deepEqual(late.calls.marks, [[1, { tag: 'shield_on_attack', prob: 0.35, cap: 1 }]]);
+});
+
+test('出航时刻 is locked below 4 伊比利亚 members, then replaces a shop card twice a round', () => {
+  const f = fakeMatch('band_iberia');
+  f.calls.chessId = 'iberia_a';
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }).error, 'BAD_TARGET', 'locked');
+  f.ps.bonds = { iberiaShip: { count: 4, active: true } };
+  f.calls.bonds = f.ps.bonds;
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }), OK);
+  assert.deepEqual(f.calls.slots.at(-1), [0, { kind: 'chess', id: 'iberia_a' }]);
+  assert.equal(f.ps.funds, 19, 'cost 1');
+  assert.deepEqual(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }), OK);
+  assert.equal(f.m.useBandSkill(f.ps, { target: { kind: 'shop', slot: 0 } }).error, 'BAD_TARGET', '2 a round');
 });

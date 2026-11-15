@@ -182,6 +182,75 @@ export class PlayerRound {
    * like settle()) — the 联防 field (unite.js; PRTS 卫戍协议/帮助 §联防阶段 "将以其阵地当前的状态", [ASSUMED] the current
    * state includes those layers, as the strip shows them). The gains stay pending: settle() adds them once.
    */
+  /**
+   * The battle-input loadout fields of an owned chess (DESIGN §16 / docs/SIM.md §12): a 自选 pick, a 补位 stand-in, or
+   * the equipped skill / module; 0.2.2 练度 (潜能 / cultivation, never a stand-in's) and the skin.
+   */
+  _loadoutFieldsFor(piece, chessId = piece.id) {
+    const out = {};
+    const pick = this.diyPickOf(piece.id);
+    const rec = this.gd.chess(chessId);
+    if (pick) {
+      // 0.2.0 自选编队: a slotted DIY slot fights as its pick (the pick's body, skill and module — no loadout fields)
+      out.diy = { charId: pick.charId, skillIndex: pick.skillIndex, uniEquipId: pick.uniEquipId };
+    } else if (this.fieldsStandIn(piece.id)) {
+      // 0.2.0 补位: a chess this player does not own fights as its stand-in (the backup skill / module)
+      out.standIn = true;
+    } else {
+      const lo = this.loadoutFor(rec);
+      out.skillIndex = lo.skillIndex;
+      out.moduleId = lo.moduleId;
+    }
+    // 0.2.2: the potential / 练度 of an operator the player owns (the chess as itself, an owned 自选 pick — the player's
+    // 干员调配 settings, 潜能 6 / 精英2 Lv.60 by default and for bots; never a stand-in's nor a prototype pick's)
+    const cv = out.standIn ? null : this.cultivationFor(rec);
+    if (cv) { out.potential = cv.potential; out.cultivate = cv.cultivate; }
+    const skinId = this.skinFor(rec, pick ? pick.charId : null);
+    if (skinId) out.skin = skinId;
+    return out;
+  }
+
+  /**
+   * The chess id a piece is fielded as in this battle: a `battle_upgrade` mark (全场聚焦) fields the elite form
+   * ("下次战斗开始时变为精锐干员，持续至战斗结束") without changing the owned piece.
+   */
+  _battleChessId(piece) {
+    const marks = this.bandMarks[piece.uid];
+    if (marks && marks.some((m) => m && m.tag === 'battle_upgrade') && !this.gd.isGolden(piece.id)) {
+      return this.gd.goldenIdOf(piece.id) || piece.id;
+    }
+    return piece.id;
+  }
+
+  /**
+   * The next battle's unit input of an owned chess (battleInput's shape without row / col / dir) — also the bench
+   * operator a `knockdown_summon` mark summons (消解空间).
+   */
+  _unitInputFor(piece) {
+    const chessId = this._battleChessId(piece);
+    return { uid: piece.uid, kind: 'chess', chessId, items: (piece.items || []).map((i) => i.id), ...this._loadoutFieldsFor(piece, chessId) };
+  }
+
+  /** The rightmost operator of the hand (整备区; the hand fills right-to-left, so index 0). */
+  _benchRightmost() {
+    for (let i = 0; i < this.hand.length; i++) {
+      const p = this.hand[i];
+      if (p && p.kind === 'chess') return p;
+    }
+    return null;
+  }
+
+  /** The marks for a unit's next battle, with the bench summon of `knockdown_summon` resolved now. */
+  _battleMarks(piece) {
+    const marks = this.bandMarks[piece.uid];
+    if (!marks || !marks.length) return null;
+    return marks.map((m) => {
+      if (!m || m.tag !== 'knockdown_summon') return m;
+      const bench = this._benchRightmost();
+      return bench ? { ...m, summon: this._unitInputFor(bench) } : m;
+    });
+  }
+
   battleInput({ side = 'L', colOffset = 0, carry = null, reached = false } = {}) {
     // a band elite gate is checked once at battle start (a preview uses the same input and reports the same stats)
     this.m?.applyBandEliteGate?.(this);
@@ -191,31 +260,10 @@ export class PlayerRound {
     const units = [];
     for (const { r, c, piece } of boardOrder(this.board)) {
       if (piece.kind === 'chess') {
-        const u = { uid: piece.uid, kind: 'chess', chessId: piece.id, row: r, col: c, dir: pieceDir(piece), items: (piece.items || []).map((i) => i.id) };
+        const u = { uid: piece.uid, kind: 'chess', row: r, col: c, dir: pieceDir(piece), items: (piece.items || []).map((i) => i.id), ...this._unitInputFor(piece) };
         // marks of an active band skill for this battle (PlayerState.bandMarks; the sim applies them at its start)
-        const marks = this.bandMarks[piece.uid];
-        if (marks && marks.length) u.marks = marks;
-        const pick = this.diyPickOf(piece.id);
-        if (pick) {
-          // 0.2.0 自选编队: a slotted DIY slot fights as its pick (sim getChess(id, { diy }): the operator's body, the pick's
-          // skill and module — no loadout fields, docs/SIM.md §12)
-          u.diy = { charId: pick.charId, skillIndex: pick.skillIndex, uniEquipId: pick.uniEquipId };
-        } else if (this.fieldsStandIn(piece.id)) {
-          // 0.2.0 补位: a chess this player does not own fights as its stand-in (sim getChess(id, { standIn: true }): the
-          // backup skill / module — no loadout fields, docs/SIM.md §12)
-          u.standIn = true;
-        } else {
-          // DESIGN §16: the equipped skill / module (elite only) from the loadout (defaults when absent)
-          const lo = this.loadoutFor(this.gd.chess(piece.id));
-          u.skillIndex = lo.skillIndex;
-          u.moduleId = lo.moduleId;
-        }
-        // 0.2.2: the potential / 练度 of an operator the player owns (the chess as itself, an owned 自选 pick — the player's
-        // 干员调配 settings, 潜能 6 / 精英2 Lv.60 by default and for bots; never a stand-in's nor a prototype pick's)
-        const cv = u.standIn ? null : this.cultivationFor(this.gd.chess(piece.id));
-        if (cv) { u.potential = cv.potential; u.cultivate = cv.cultivate; }
-        const skinId = this.skinFor(this.gd.chess(piece.id), pick ? pick.charId : null);
-        if (skinId) u.skin = skinId;
+        const marks = this._battleMarks(piece);
+        if (marks) u.marks = marks;
         if (carry && carry.has(piece.uid)) u.carryState = carry.get(piece.uid);
         units.push(u);
       } else if (piece.kind === 'token') {

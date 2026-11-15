@@ -45,6 +45,7 @@ import {
 } from '../support/index.js';
 import { weaknessRetype, addShieldLayer, PRIO_RESPAWN, reviveNow } from '../items/battle.js';
 import { spawnMapChar } from '../tokens.js';
+import { installMarks } from './marks.js';
 import { readBandGrants } from '../../../../shared/plugins/bandGrants.js';
 
 export const AMEDIC_BAND = 'band_amedic';
@@ -308,4 +309,5 @@ export function install(battle) {
   }
   installMapChars(battle);
   installOwnerBondShare(battle);
+  installMarks(battle);
 }
