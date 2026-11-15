@@ -9,6 +9,9 @@
 - `effectBuffInfoDataDict` → buff key + 官方黑板书
 
 `tools/build-data.mjs` 已把 `skill` / `effect` 写进版本 `bands.json`（默认数据不变）。
+技能的官方升级链（`unlockEffectId`）也写进 `skill.stages`：每个 stage 带自己的
+`effectId` / `unlockType` / `unlockParam` / `skill`；`shared/bandSkill.js` 按 round / 商店等级 /
+累计消耗 / 盟约人数选“当前生效”的一级，只有这一级的 handler 运行。
 44 个新 band：**ACTIVE 25 / PASSIVE 13 / NONE 6**；目标
 **COMMON_CHESS 11 / NO_TARGET 10 / SHOP_SLOT 2 / MAP_TILE 2 / 无目标 19**。
 
@@ -87,15 +90,35 @@
 - `band_egir` / `band_kjerag2` / 其余 `auto_chess_effect_replace`：按 6/9 名盟约替换效果。
 - `band_iberia`、`band_rich`、`band_protect`、`band_mess`、`band_jenga`：无 buff key，需要按 bandId 的主动/解锁逻辑。
 
-### B. ACTIVE 选干员（剩余：战斗内标记）
-- `band_survive` / `band_evolve` / `band_shield` / `band_breakaway`：`skill_mark_char_inst_tag`，按 tag 走官方
-  `effectBuffInfoDataDict` 的战斗键：`eff_band12` → `act3autochess_band12_buff`（`max_respawn_cnt` 2、`start_dead` 1）、
-  `eff_band14` → `auto_chess_battle_chess_upgrade`、`eff_band17`/`eff_band18` →
-  `act1autochess_band17_buff`（`prob` 0.2 / 0.35，第 7 回合升级）、`eff_band22` →
-  `act3autochess_band22_buff`（首次受伤击倒 + 召唤整备区最右干员）。
-- `band_iberia` 选调度中心干员替换（`band_skill_load_by_bond_act_count` 解锁，技能类型 NONE）。
+### B3b 主动技能（战斗标记 + 解锁链）
 
-### C. ACTIVE 地块 / 商店格
+| band | 官方 tag | 状态 |
+|---|---|---|
+| band_survive | `eff_band12` | 战斗开始击倒并立即复活，之后 `max_respawn_cnt`(2) 次击倒复活（`marks.js`） |
+| band_evolve | `eff_band14` | 该场战斗以精锐形态上场（`battleInput` 换 golden id，不改变持有干员） |
+| band_shield | `eff_band17` → `eff_band18` | 每次攻击 `prob` 得 1 层护盾（上限 1）；第 7 回合升级 20 %→35 % |
+| band_breakaway | `eff_band22` | 首次受伤被击倒，并在相邻格部署整备区最右干员（`spawnOperator`） |
+| band_iberia | — | 4 名【伊比利亚】解锁；消耗 1、每回合 2 次，把调度中心一格替换为不高于原等阶的【伊比利亚】干员 |
+
+`skill_mark_char_inst_tag` 从官方 `effects.json` 的 tag 记录取战斗键与数值（`prob` / `max_respawn_cnt` /
+`start_dead`），标记经 `bandMarks` 进入战斗；`marks.js` 在 `battleStart` 安装。官方升级链（药枚实验 R7、
+重点监护商店 3/5 级、出航时刻 4 人）由 `shared/bandSkill.js` 逐级判定，只有当前一级的 handler 运行。
+
+其它已有：`band_takecare` `prep_finish_char_bond_add_layer`、`band_mech`
+`preparation_start_gain_chess_from_round`、`band_bond`
+`refresh_shop_count_gain_coin_bond_char_chess`、`band_weakness` `env_gbuff_new_with_verify`（battle 侧）。
+
+## 待实现
+
+### A. PASSIVE 准备期
+- `band_random` `gain_band_skill_from_pool_in_prep`：每次进入休整期从 2 个随机指令二选一替换。
+- `band_bonus` `promote_char_extra_award`：每回合首次晋升额外一次晋升奖励（需 `ctx.promote`）。
+- `band_sargon` `gain_bond_cnt_shop_up_discount`：3 名萨尔贡后升级 -3，每等级一次（需升级价折扣字段）。
+- `band_equipment` `promote_equip_extra_award`：每回合首次装备合并进阶时给出 3 件装备三选一。
+- `band_egir` / `band_kjerag2` / 其余 `auto_chess_effect_replace`：按 6/9 名盟约替换效果（升级链已能选级）。
+- `band_rich`、`band_protect`、`band_mess`、`band_jenga`：无 buff key / 纯解锁链，需要按 bandId 的主动逻辑。
+
+### B. ACTIVE 地块 / 商店格
 - `band_dance` `skill_mark_pos_grow_use_cnt`（地块恐惧）。
 - `band_treasure` `skill_add_pos_effect_enemy`（模拟宝藏）。
 - `band_transfer` `skill_transform_char_same_tier`（商店格变同阶随机）。
@@ -108,7 +131,8 @@
    equipment / closeout / kazimier / lethania / ursus）；测试 `test/versions-bands-skills.test.js`。
 3. ~~**B3a**~~（完成）：选干员类 7 个（upgrade / copy / gain / prepfin / sell / yan2 / limit）+ 标记管线
    （`bandMarks` → `units[].marks` → `layer_cap`）。
-4. **B3b（下一步）**：`skill_mark_char_inst_tag` 的 4 个战斗标签（survive / evolve / shield / breakaway，含
-   第 7 回合升级）与 `band_iberia`。
-5. **B4**：地块与商店格（dance / treasure / transfer / pudd）。
+4. ~~**B3b**~~（完成）：`skill_mark_char_inst_tag` 的 4 个战斗标记（survive / evolve / shield / breakaway，含第 7
+   回合升级）、官方解锁链（`skill.stages`）与 `band_iberia`；测试 `test/content/bands_marks.test.js`、
+   `test/match/band-marks.test.js`。
+5. **B4（下一步）**：地块与商店格（dance / treasure / transfer / pudd）。
 6. **B5**：`auto_chess_effect_replace` 的 6/9 名替换与无 key band（rich/protect/mess/jenga）。
