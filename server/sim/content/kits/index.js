@@ -191,6 +191,11 @@ export const VERSION_KIT_FILES = Object.freeze([
   'ver-varkis.js',
   'ver-quercu.js',
   'ver-frostl.js',
+  'ver-leto.js',
+  'ver-glassb.js',
+  'ver-sidero.js',
+  'ver-meteo.js',
+  'ver-jaksel.js',
 ]);
 
 /**
@@ -362,13 +367,8 @@ export const PENDING_KIT_CHARS = Object.freeze([
   'char_002_amiya',
   'char_1036_fang2',
   'char_129_bluep',
-  'char_194_leto',
-  'char_195_glassb',
-  'char_219_meteo',
   'char_274_astesi',
-  'char_333_sidero',
   'char_346_aosta',
-  'char_347_jaksel',
   'char_4031_liesel',
   'char_4041_chnut',
   'char_4047_pianst',

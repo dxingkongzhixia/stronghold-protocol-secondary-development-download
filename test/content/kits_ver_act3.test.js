@@ -82,7 +82,7 @@ test('a version kit is not offered as a default-version DIY pick (KITTED_CHARS u
   for (const charId of Object.keys(VERSION_KITS)) assert.equal(KITTED_CHARS.includes(charId), false, charId);
 });
 
-test('batch 1–3 numbers: the stat/damage specs carry the blackboard values', (t) => {
+test('batch 1–4 numbers: the stat/damage specs carry the blackboard values', (t) => {
   setGameData(ACT3);
   t.after(() => setGameData(null));
   const ds = new DataSource(ACT3, quiet);
@@ -119,6 +119,31 @@ test('batch 1–3 numbers: the stat/damage specs carry the blackboard values', (
   assert.equal(spec('char_193_frostl', 0).spec.attack.atkScale, 1.2);
   assert.equal(spec('char_193_frostl', 1).spec.mods.aspd, 20);
   assert.equal(typeof spec('char_193_frostl', 1).spec.onAttack, 'function');
+  // 烈夏: S1 ATK +27 % and AS +25; S2 ATK +50 % and two targets
+  assert.equal(spec('char_194_leto', 0).spec.mods.atkPct, 0.27);
+  assert.equal(spec('char_194_leto', 0).spec.mods.aspd, 25);
+  assert.equal(spec('char_194_leto', 1).spec.mods.atkPct, 0.5);
+  assert.equal(spec('char_194_leto', 1).spec.attack.maxTargets, 2);
+  // 真理: S1 a shorter attack interval; S2 ATK +25 % and three targets
+  assert.ok(spec('char_195_glassb', 0).spec.mods.batPct < 0);
+  assert.equal(spec('char_195_glassb', 1).spec.mods.atkPct, 0.25);
+  assert.equal(spec('char_195_glassb', 1).spec.attack.maxTargets, 3);
+  // 铸铁: S1 a self heal; S2 ATK +60 % and 6 % max HP regen per second
+  assert.equal(typeof spec('char_333_sidero', 0).spec.onStart, 'function');
+  assert.equal(spec('char_333_sidero', 1).spec.mods.atkPct, 0.6);
+  assert.equal(spec('char_333_sidero', 1).spec.mods.hpRegenRatio, 0.06);
+  // 陨星: S1 at 1.5×; S2 at 2.1× with a DEF-shred handler
+  assert.equal(spec('char_219_meteo', 0).spec.attack.atkScale, 1.5);
+  assert.equal(spec('char_219_meteo', 1).spec.attack.atkScale, 2.1);
+  assert.equal(typeof spec('char_219_meteo', 1).spec.onAttack, 'function');
+  // 杰克: S1 at 1.8×; S2 stops attacking and its evade/counter lives in install
+  assert.equal(spec('char_347_jaksel', 0).spec.attack.atkScale, 1.8);
+  assert.equal(spec('char_347_jaksel', 1).spec.attack.noAttack, true);
+  {
+    const id = chessId(ACT3, 'char_347_jaksel', false);
+    const def = ds.getChess(id, { skillIndex: 1 });
+    assert.equal(typeof KITS.char_347_jaksel(def.skill.bb, def.raw, def).install, 'function');
+  }
 });
 
 test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (t) => {
