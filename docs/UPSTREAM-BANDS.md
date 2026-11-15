@@ -107,15 +107,28 @@
 `battleInput().bandMarks` → sim `ps.input.bandMarks`；`marks.js` 处理 `fear_tile` / `treasure` / `lend_equip`。
 宝藏用 `mem.noLeak + mem.noFinish` 做成不计、不漏、不拖住结束的中立敌人；`_anyEnemyAlive` 跳过 `noFinish`。
 
+### B5 无 key 技能 / 准备期被动（其余）
+
+| band | buff key | 状态 |
+|---|---|---|
+| band_jenga | `skill_act_bond_grow_garr_cnt` | 目标已激活的每个盟约 +9 层；冷却 3 回合；R4 解锁 |
+| band_mess | `skill_transform_char_up_tier` | 目标变为高一阶随机干员（≤6；`ctx.transform`）；R4 解锁 |
+| band_protect | `skill_drop_hp_to_low_gain_coin` | 自己 LP 降到全场最低，损失（≤10）折资金；本回合休整期结束给该玩家回复等量 LP（`ctx.setLp` / `maxLp`） |
+| band_rich | `skill_take_shop_char` | 免费拿调度中心 1 名（消耗 60）/ 2 名（消耗 120）干员 |
+| band_bonus | `promote_char_extra_award` | 每回合首次精锐合并多给 1 次晋升奖励（`ctx.promotionReward`） |
+| band_equipment | `promote_equip_extra_award` | 每回合首次装备合并给 3 件装备三选一（可能高一阶） |
+| band_sargon | `gain_bond_cnt_shop_up_discount` | 每获得 3 名萨尔贡，当前商店等级升级 -3（每级 1 次；`PlayerState.shopUpDiscount` + `levelUp`） |
+| band_pepe | `shop_up_bond_refresh_once` | 复用 act2 同名行为：升到 2/4/6 级后下次手动刷新优先生成萨尔贡 |
+| band_mlynar | `buy_bond_char_gain_coin` | 复用 act2 同名行为：每买 1 名卡西米尔，下回合 +1（每回合 ≤3） |
+
 ## 待实现
 
-### A. PASSIVE 准备期
-- `band_random` `gain_band_skill_from_pool_in_prep`：每次进入休整期从 2 个随机指令二选一替换。
-- `band_bonus` `promote_char_extra_award`：每回合首次晋升额外一次晋升奖励（需 `ctx.promote`）。
-- `band_sargon` `gain_bond_cnt_shop_up_discount`：3 名萨尔贡后升级 -3，每等级一次（需升级价折扣字段）。
-- `band_equipment` `promote_equip_extra_award`：每回合首次装备合并进阶时给出 3 件装备三选一。
-- `band_egir` / `band_kjerag2` / 其余 `auto_chess_effect_replace`：按 6/9 名盟约替换效果（升级链已能选级）。
-- `band_rich`、`band_protect`、`band_mess`、`band_jenga`：无 buff key / 纯解锁链，需要按 bandId 的主动逻辑。
+### A. 剩余
+- `band_random` `gain_band_skill_from_pool_in_prep`：每次进入休整期从 2 个随机指令二选一替换（需要技能选择 UI / 指令池，随 P3）。
+- `band_yan2` / `band_sargon` / `band_victoria` / `band_egir` / `band_kazimier` / `band_kjerag2` / `band_siracusa`
+  的 `auto_chess_effect_replace`：官方在“在场 6 名不同盟约干员”时把盟约的战斗效果替换为策略专属效果
+  （炎佑 / 萨尔贡技能加攻 / 维多利亚装备共享 / 阿戈尔召唤整备区 / 卡西米尔真伤 / 谢拉格寒风 / 叙拉古隐匿真伤）。
+  本树现有盟约代码实现的是其中一部分 6 名效果，其余需要按官方 `bondeffect_*` 对照，单列一批。
 
 ## 批次
 
@@ -129,4 +142,6 @@
    `test/match/band-marks.test.js`。
 5. ~~**B4**~~（完成）：地块与商店格（dance / treasure / transfer / pudd）+ 玩家级标记
    （`bandGlobal` → `battleInput().bandMarks`）；测试 `test/content/bands_marks.test.js`。
-6. **B5（下一步）**：`auto_chess_effect_replace` 的 6/9 名替换与无 key band（rich/protect/mess/jenga）。
+6. ~~**B5**~~（完成）：无 key 技能（jenga / mess / protect / rich）与准备期被动（bonus / equipment / sargon /
+   pepe / mlynar）。
+7. **B6（下一步）**：`auto_chess_effect_replace` 的 7 个 6 名替换与 `band_random` 的技能选择。
