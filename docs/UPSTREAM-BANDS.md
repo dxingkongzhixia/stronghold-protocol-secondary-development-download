@@ -31,7 +31,7 @@
   `ev.done`（没做成 → 不扣费、不消耗次数），成功后扣费、记次数、按 `ev.cooldown` 设冷却，最后跑
   `onBandSkillUsed`（只做“成功使用之后”的记账，例如指令费用成长/重置）；
 - `ctx.refreshShop()` = 免费的 `PlayerState.refresh({ free: true })`（band 技能自己的刷新）；
-- 协议、i18n、房间 UI 在 P3 接入（技能按钮、目标选择、剩余次数）。
+- 协议、i18n、客户端 UI（`m.private.bandSkill` 视图 + `ui/bandSkill.js` 技能按钮/目标选择）已接入；HUD 布局待 P3 后续。
 
 ## 已完成（本树）
 
@@ -147,7 +147,8 @@
 
 1. ~~**B1**~~（完成，`415dde1f7`）：smith / kjerag / siracusa / victoria / substitute。
 2. ~~**B2**~~（完成）：`g.bandSkill` intent + 玩家技能状态 + 无目标经济类（price / fund / support / high / yan /
-   equipment / closeout / kazimier / lethania / ursus）；测试 `test/versions-bands-skills.test.js`。
+   equipment / closeout / kazimier / lethania / ursus）；测试 `test/versions-bands-skills.test.js`。`DEFAULT`（可再次使用）
+   不限每回合次数（2026-11-15 修正）；`m.private.bandSkill` 视图与 `ui/bandSkill.js` 技能按钮/目标选择已接（P3）。
 3. ~~**B3a**~~（完成）：选干员类 7 个（upgrade / copy / gain / prepfin / sell / yan2 / limit）+ 标记管线
    （`bandMarks` → `units[].marks` → `layer_cap`）。
 4. ~~**B3b**~~（完成）：`skill_mark_char_inst_tag` 的 4 个战斗标记（survive / evolve / shield / breakaway，含第 7
