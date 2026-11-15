@@ -2823,6 +2823,11 @@ function buildBands(ctx, effects) {
     const eff = effects[b.effectId];
     if (!eff) warn(`band ${bandId}: effect ${b.effectId} missing`);
     const dp = textPair(b.bandDesc);
+    // another official version's band skill metadata (skillInfoDataDict / effectInfoDataDict): ACTIVE vs PASSIVE,
+    // target type (a chess / a shop slot / a map tile / none), availability and the HUD flag. The default build keeps
+    // its bands.json byte for byte, so this block is version-only.
+    const sk = VERSION ? act.skillInfoDataDict?.[b.effectId] : null;
+    const ei = VERSION ? act.effectInfoDataDict?.[b.effectId] : null;
     out[bandId] = {
       bandId, sortId: b.sortId, name: meta.bandName || eff?.name || bandId, iconId: meta.bandIconId || `icon_${bandId.replace(/^band_/, '')}`,
       modeTypeList: b.modeTypeList || [], totalHp: b.totalHp,
@@ -2831,6 +2836,14 @@ function buildBands(ctx, effects) {
       params: eff?.params || {},
       victorCount: b.victorCount, rewardModulus: b.bandRewardModulus ?? 1,
       unlockDesc: meta.unlockDesc || null,
+      ...(VERSION ? {
+        skill: sk ? {
+          type: sk.skillType, cost: sk.skillCost ?? 0, availType: sk.skillAvailType, availCount: sk.skillAvailCount,
+          targetType: sk.targetType ?? null, targetFilterType: sk.targetFilterType ?? null, targetTip: sk.targetTip ?? null,
+          unlockType: sk.unlockType ?? null,
+        } : null,
+        effect: ei ? { type: ei.effectType, displayInHUD: ei.displayInHUD === true, continuedRound: ei.continuedRound ?? null } : null,
+      } : {}),
     };
   }
   return out;
