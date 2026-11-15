@@ -11,6 +11,13 @@
 const EE = (s) => `enemyeffect_${s}`;
 
 /**
+ * [ASSUMED] Two act3 enemy-database entries that no act3 table, wave, boss or blackboard references (our reference walk
+ * stops at 341; upstream's act3 set has 343). They keep their data stats only; no act3 wave spawns them (enemies.js
+ * STATS_ONLY). Version-only, so the default 盟约 enemy set is untouched.
+ */
+export const enemyExtras = ['enemy_2017_csphts', 'enemy_2123_dyjsww'];
+
+/**
  * R3 (enemy_initial_1..10). Seven lists seen, so three of the ten events are built by `initialRule`.
  * Series 17 / 18 and the two mixed lists are 7 cards and the screen shows 6. Series 19 is the whole catalog
  * (19_1..19_6; there is no 19_7) and the same 6 cards came in all 4 matches. Match 1 and match 13 are not a

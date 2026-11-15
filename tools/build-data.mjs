@@ -2985,6 +2985,7 @@ function collectEnemyKeys(ctx) {
     (e.attachedEliteEnemyKeys || []).forEach(add);
   }
   for (const list of Object.values(ctx.act.enemyInfoDict || {})) list.forEach(add);
+  for (const k of ACT3_DRAFTS?.enemyExtras || []) add(k);
   for (const b of Object.values(ctx.ac.bossInfoDict || {})) add(b.enemyId);
   for (const k of Object.keys(templateSlots(ctx))) add(k);
   for (const m of Object.values(ctx.act.modeDataDict)) (m.inactiveEnemyKey || []).forEach(add);
