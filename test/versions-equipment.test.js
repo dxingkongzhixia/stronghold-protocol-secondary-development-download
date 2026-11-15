@@ -57,6 +57,36 @@ test('规程: two identical items merge into the golden one inside the equipment
   assert.equal(items[0].id, GOLDEN);
 });
 
+test('规程: Ironhide carries 4 / 6 items (official equipSlotNum); other operators 2', () => {
+  const data = loadData(DIR, { log: quiet });
+  setData(data);
+  const h = makeMatch({ mode: 'solo', humans: 1, seed: 23, data });
+  h.start();
+  h.autoHumans();
+  h.toPrep(1);
+  const ps = h.ps('p_0');
+  assert.equal(h.m.gd.equipSlotsOf('chess_char_5_22_a'), 4);
+  assert.equal(h.m.gd.equipSlotsOf('chess_char_5_22_b'), 6);
+  assert.equal(h.m.gd.equipSlotsOf('chess_char_1_01_a'), 2);
+  const ids = Object.keys(data.items)
+    .filter((id) => { const it = data.items[id]; return it.itemType === 'EQUIP' && !it.isGolden && !String(it.kind || '').startsWith('consume'); })
+    .slice(0, 8);
+  const iron = give(h.m, ps, 'chess_char_5_22_a', 'hand');
+  for (const id of ids.slice(0, 4)) {
+    const it = ps.acquireItem(id);
+    assert.ok(it, `${id} acquired`);
+    assert.deepEqual(ps.equip(it.uid, iron.uid), { ok: true }, id);
+  }
+  assert.equal(iron.items.length, 4, 'the fourth item fits Ironhide');
+  const normal = give(h.m, ps, 'chess_char_1_01_a', 'hand');
+  for (const id of ids.slice(4, 7)) {
+    const it = ps.acquireItem(id);
+    assert.ok(it, `${id} acquired`);
+    ps.equip(it.uid, normal.uid);
+  }
+  assert.equal(normal.items.length, 2, 'a two-slot operator replaces the oldest');
+});
+
 test('the default 盟约 match keeps items in the hand (no equipment area)', () => {
   const h = makeMatch({ mode: 'solo', humans: 1, seed: 22, fake: true, data: DATA }).start();
   h.toPrep(1);

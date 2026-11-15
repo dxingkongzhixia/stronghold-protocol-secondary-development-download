@@ -321,6 +321,16 @@ export class GameData {
   get tempSize() { return posIntOr(this.economy.tempSize, DEFAULTS.tempSize); }
   get deployCap() { return posIntOr(this.economy.deployCap, DEFAULTS.deployCap); }
   get equipPerChess() { return posIntOr(this.economy.equipPerChess, DEFAULTS.equipPerChess); }
+
+  /**
+   * Equipment slots of one operator: its official per-chess `equipSlotNum` (`data/chess.json equipSlots`, written only by a
+   * version build that has the field — Ironhide's 4 / 6), else the mode's `economy.equipPerChess`.
+   * @param {string} chessId
+   */
+  equipSlotsOf(chessId) {
+    const n = this.chess(chessId)?.equipSlots;
+    return Number.isInteger(n) && n > 0 ? n : this.equipPerChess;
+  }
   /** The separate equipment area's capacity (规程; 0 = items share the hand, the 盟约 default). */
   get equipHandSize() { return posIntOr(this.economy.equipHandSize, 0); }
   get maxArtsPerRound() { return posIntOr(this.economy.maxArtsPerRound, DEFAULTS.maxArtsPerRound); }

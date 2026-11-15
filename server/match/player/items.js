@@ -97,7 +97,8 @@ export class PlayerItems {
    */
   _attach(target, item, replaceUid = null) {
     target.items = target.items || [];
-    while (target.items.length >= this.gd.equipPerChess) {
+    const slots = this.gd.equipSlotsOf(target.id);
+    while (target.items.length >= slots) {
       const i = replaceUid != null ? target.items.findIndex((x) => x.uid === replaceUid) : -1;
       const [old] = target.items.splice(i >= 0 ? i : 0, 1);
       replaceUid = null;
@@ -112,7 +113,7 @@ export class PlayerItems {
    */
   _takeReplaced(target, replaceUid = null) {
     target.items = target.items || [];
-    if (target.items.length < this.gd.equipPerChess) return null;
+    if (target.items.length < this.gd.equipSlotsOf(target.id)) return null;
     const i = replaceUid != null ? target.items.findIndex((x) => x.uid === replaceUid) : -1;
     const idx = i >= 0 ? i : 0;
     const [piece] = target.items.splice(idx, 1);

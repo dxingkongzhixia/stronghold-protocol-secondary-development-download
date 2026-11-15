@@ -10,10 +10,12 @@ import { t } from '../../../shared/i18n.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
-/** Board / hand operators with a free equipment slot (规程: g.equip's targets for the equipment area). */
-export function equipTargets(priv, perChess = 2) {
+/** Board / hand operators with a free equipment slot (规程: g.equip's targets for the equipment area). `slotsOf` is the
+ * slot count (a number) or a function of the piece (a per-chess `equipSlots`). */
+export function equipTargets(priv, slotsOf = 2) {
+  const cap = typeof slotsOf === 'function' ? slotsOf : () => slotsOf;
   return [...(Array.isArray(priv?.board) ? priv.board : []), ...(Array.isArray(priv?.hand) ? priv.hand : [])]
-    .filter((p) => p && p.kind === 'chess' && (p.items?.length || 0) < perChess);
+    .filter((p) => p && p.kind === 'chess' && (p.items?.length || 0) < cap(p));
 }
 
 /** The equipment area's drawer (prep only; `editable` = the local player's own prep). */
@@ -23,8 +25,8 @@ export function EquipArea({ priv, gd, editable = true, busy = false }) {
   const area = Array.isArray(priv?.equipHand) ? priv.equipHand : null;
   if (!area || !area.length) return null;
   const items = area.filter(Boolean);
-  const perChess = gd?.config?.economy?.equipPerChess ?? 2;
-  const targets = equipTargets(priv, perChess);
+  const slotsOf = (p) => gd?.equipSlotsOf?.(p.id) ?? (gd?.config?.economy?.equipPerChess ?? 2);
+  const targets = equipTargets(priv, slotsOf);
   const equip = async (target) => {
     if (!pick || busy) return;
     const ok = await actions.equip(pick.uid, target.uid);
@@ -42,7 +44,7 @@ export function EquipArea({ priv, gd, editable = true, busy = false }) {
       ${pick ? html`<div class="equip__targets">
         ${targets.length ? targets.map((p) => html`<button key=${p.uid} type="button" class="equip__target" disabled=${busy} onClick=${() => equip(p)}>
           <b>${gd?.chess(p.id)?.name || p.id}</b>
-          <span class="num t-dim">${(p.items?.length || 0)}/${perChess}</span>
+          <span class="num t-dim">${(p.items?.length || 0)}/${slotsOf(p)}</span>
         </button>`) : html`<p class="equip__empty">${t('无')}</p>`}
         <button type="button" class="equip__target equip__cancel" onClick=${() => setPick(null)}>${t('取消')}</button>
       </div>` : html`<div class="equip__slots">

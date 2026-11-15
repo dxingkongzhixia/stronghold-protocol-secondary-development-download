@@ -1632,6 +1632,9 @@ function buildChess(ctx) {
       position: null, nationId: null,
       bonds: [...(cd.bondIds || [])],
       garrisonIds: [...(cd.garrisonIds || [])],
+      // the official per-chess equipment capacity (`equipSlotNum`; 2 for all but Ironhide's 4/6). Version-only: the
+      // default build keeps its bands.json/chess.json byte for byte and reads the mode's economy.equipPerChess.
+      ...(VERSION && Number.isInteger(cd.equipSlotNum) && cd.equipSlotNum > 0 && cd.equipSlotNum !== 2 ? { equipSlots: cd.equipSlotNum } : {}),
       price: priceRow.purchasePrice ?? null,
       sellPrice: priceRow.chessSoldPrice ?? null,
       upgradeNum: cd.upgradeNum,
