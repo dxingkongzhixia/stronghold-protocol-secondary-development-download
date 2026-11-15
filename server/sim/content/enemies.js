@@ -118,6 +118,7 @@ import { DOT_KITS } from './enemies/dot.js';
 import { REFLECTION_KITS } from './enemies/reflection.js';
 import { FLY_KITS } from './enemies/fly.js';
 import { SPECIAL_KITS } from './enemies/special.js';
+import { REGULATION_KITS } from './enemies/regulation.js';
 import { LEADER_KITS, PLUGIN_KITS } from './enemies/leaders.js';
 import { protocolAbility } from './bossProtocol.js';
 import { hypot } from '../detmath.js';
@@ -301,6 +302,7 @@ function onTick(b, dt) {
 // (enemies/*.js); spread here in the original order — the same keys in the same order as before the split.
 
 export const KITS = Object.freeze({
+  ...REGULATION_KITS,
   ...INVISIBLE_KITS,
   ...TIMES_KITS,
   ...ELEMENT_KITS,

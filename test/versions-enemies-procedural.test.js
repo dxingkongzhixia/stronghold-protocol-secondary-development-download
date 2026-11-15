@@ -19,16 +19,6 @@ const ACT3 = Object.fromEntries(fs.readdirSync(DIR).filter((f) => f.endsWith('.j
 const DEF = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'enemies.json'), 'utf8'));
 const ADDED = Object.keys(ACT3.enemies).filter((k) => !DEF[k]);
 
-/** New enemies still waiting for an official hand-written kit (their talent groups have no generic handler yet). */
-const OFFICIAL = new Set([
-  'enemy_1104_lfkght', 'enemy_1104_lfkght_3', 'enemy_1191_krgrg', 'enemy_1191_krgrg_2',
-  'enemy_1213_mtrsnp', 'enemy_1216_cansld', 'enemy_1219_mtrbty', 'enemy_1224_dsuply', 'enemy_1224_dsuply_2',
-  'enemy_1373_ltnhor', 'enemy_1373_ltnhor_2', 'enemy_1376_ltndru', 'enemy_1376_ltndru_2',
-  'enemy_1388_wingnt', 'enemy_1388_wingnt_2', 'enemy_1405_boomer_2', 'enemy_1406_chghmr', 'enemy_1435_dsflys',
-  'enemy_9024_acsgnt', 'enemy_9028_acfncb', 'enemy_9034_acblk', 'enemy_9040_accrit',
-  'enemy_10003_trwlpl_2', 'enemy_10163_mnctur_2', 'enemy_10196_ubba', 'enemy_10196_ubba_2',
-]);
-
 after(() => setGameData(null));
 
 test('every new act3 enemy spawns and ticks; the procedural set is pinned', () => {
@@ -40,7 +30,6 @@ test('every new act3 enemy spawns and ticks; the procedural set is pinned', () =
   });
   h.step(2);
   const tally = { exact: 0, signature: 0, generic: 0, official: 0, boss: 0, stats: 0 };
-  const unlisted = [];
   for (const key of ADDED) {
     const e = h.b.spawnEnemy(key, { pos: [6, 8] });
     assert.ok(e, `${key}: spawned`);
@@ -50,18 +39,16 @@ test('every new act3 enemy spawns and ticks; the procedural set is pinned', () =
       tally[STATS_ONLY[key] ? 'stats' : BOSS_KEYS.includes(key) ? 'boss' : 'exact'] += 1;
     } else if (p?.via === 'signature') tally.signature += 1;
     else if (p?.via === 'generic') tally.generic += 1;
-    else {
-      tally.official += 1;
-      if (!OFFICIAL.has(key)) unlisted.push(key);
-    }
+    else tally.official += 1;
     if (e.alive) h.b.kill(e, null);
     h.b.enemies.length = 0;
   }
   assert.deepEqual(h.b.errors ?? [], [], 'no handler error');
-  assert.deepEqual(unlisted, [], 'a new uncovered enemy must be listed in OFFICIAL (or given a generic handler)');
+
   assert.ok(tally.signature >= 20, `signature reuse ${tally.signature}`);
   assert.ok(tally.generic >= 30, `generic groups ${tally.generic}`);
-  assert.equal(tally.official, OFFICIAL.size, 'the official list stays exact');
+  assert.equal(tally.official, 0, 'every new act3 enemy is covered (exact official kit, signature or generic)');
+  assert.ok(tally.exact + tally.boss >= 33, `official kits ${tally.exact + tally.boss}`);
 });
 
 test('a procedural enemy records how it was covered', () => {

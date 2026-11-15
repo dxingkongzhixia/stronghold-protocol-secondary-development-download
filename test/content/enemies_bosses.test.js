@@ -79,7 +79,13 @@ test('stats-only enemies attach no ability and fight with their data stats', () 
 // creates no fog. Only these two keys share that ability (docs/MATCHMAKING.md; 0.2.0's client-template reading is §25.18.2).
 const SILENCE_BY_TEMPLATE = new Set(['enemy_1267_nhpbr', 'enemy_1267_nhpbr_2']);
 /** Boss keys only an official version's data carries (act3autochess boss_11–17): test/versions-bosses.test.js covers them. */
-const VERSION_ONLY = new Set(['enemy_9029_acfnc', 'enemy_9029_acfnc_2', 'enemy_9035_acspider', 'enemy_9035_acspider_2', 'enemy_9037_aceel', 'enemy_9037_aceel_2', 'enemy_2124_dyjsfg']);
+const VERSION_ONLY = new Set([
+  'enemy_9029_acfnc', 'enemy_9029_acfnc_2', 'enemy_9035_acspider', 'enemy_9035_acspider_2', 'enemy_9037_aceel', 'enemy_9037_aceel_2', 'enemy_2124_dyjsfg',
+  'enemy_1104_lfkght', 'enemy_1104_lfkght_3', 'enemy_1191_krgrg', 'enemy_1191_krgrg_2', 'enemy_1213_mtrsnp', 'enemy_1216_cansld', 'enemy_1219_mtrbty',
+  'enemy_1224_dsuply', 'enemy_1224_dsuply_2', 'enemy_1373_ltnhor', 'enemy_1373_ltnhor_2', 'enemy_1376_ltndru', 'enemy_1376_ltndru_2', 'enemy_1388_wingnt',
+  'enemy_1388_wingnt_2', 'enemy_1405_boomer_2', 'enemy_1406_chghmr', 'enemy_1435_dsflys', 'enemy_9024_acsgnt', 'enemy_9028_acfncb', 'enemy_9034_acblk',
+  'enemy_9040_accrit', 'enemy_10003_trwlpl_2', 'enemy_10163_mnctur_2', 'enemy_10196_ubba', 'enemy_10196_ubba_2',
+]);
 
 test('沉默: exactly the abilities whose handbook line is SILENCE-flagged can be silenced (every authored enemy), plus 萨卡兹枯朽战士 / 组长\'s death fog', () => {
   const h = arena();
