@@ -162,7 +162,8 @@
 - [x] **40 名规程干员套件**：按 `PENDING_KIT_CHARS` 逐批编写并移除（现为空）。batch 1 极光 / 安哲拉 / 伊桑 / 星源（移植 mainline），batch 2–9 本树实现：慕斯、灰喉、拜松、卡达、摆渡人、夏栎、霜叶、烈夏、真理、铸铁、陨星、杰克、蓝毒、星极、海沫、吉星、复奏、奥尔加、阿米娅、青枳、芬、奥斯汀、䌷、车尔尼、暴躁铁皮、云迹、乌啾、风絮、水灯心、罗比菈塔、褐果、折光、Miss.Christine、渡桥、旅骨、乌有。测试 `test/content/kits_ver_act3.test.js`（40 套件全部技能手写 + 数值断言）、`test/versions-keying.test.js`
 - [x] **新盟约（batch 1）**：`bonds/regulation.js` 的「聚合」与「伊比利亚」——聚合按成员攻击范围每秒回血/元素并给 3 人减伤；伊比利亚每次伤害叠 10 层 10 秒法术 DoT，6 人翻倍、减速、20% 弹射 300% 攻击力。测试 `test/versions-bonds.test.js`
 - [x] **新盟约（batch 2）**：「乌萨斯」成员 ATK/HP 加成、击杀叠 2（6 人 4）层、6 人受伤按比例转 10 秒生命流失与阻挡期间每秒法术伤害；「莱塔尼亚」成员与召唤物 ATK 加成、敌人死亡召唤「小节」（6 人上限 20 + 30% 改为「乐部」并给成员攻速 +20）、我方干员死亡额外召唤。测试同 `test/versions-bonds.test.js`（4 个新盟约共 4 项）
-- [ ] **6 个模块**：`regulation-bosses.js`（boss_11–17）、`enemies/regulation.js`（规程新增 96 个敌人）、`garrisons/regulation.js`（新增 141 个）、`bands/commands.js`（新增 54 个 band effect）。规程相对默认数据的新增面已盘点：bonds +4 / bands +54 / garrisons +141 / enemies +96 / bosses +7
+- [x] **boss_11–17**：`enemy_9029_acfnc` / `_2`（械：攻击召唤量变之械、20% 血召唤冲击之械）、`enemy_9035_acspider` / `_2`（蛛：每 25% 血获得 50% 双闪+迷彩、50% 血酸雨、周期缚网）、`enemy_9037_aceel` / `_2`（电：攻击附带神经损伤、未阻挡护盾、被阻挡消耗并强化下一击、离子环波）、`enemy_2124_dyjsfg`（矩兽：阻挡/停止时 35% 减伤否则 90%、2.5s 践踏、40% 血过载、死亡清场+全体物理伤害）。测试 `test/versions-bosses.test.js`；部分细节（跳跃/方向减伤/天气雷击）为近似
+- [ ] **其余规程内容**：新增 96 个敌人特殊机制、141 个 garrison、54 个 band effect；装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
 - [ ] 核心盟约二选一（个人）/ 禁用半数（联合）；自选 Ⅴ/Ⅵ 各 0–2；自选无特质、按阵营分盟约
 - [ ] 装备区：独立 5 格 `equipHand`、容量 `equipSlotNum`（Ironhide 4/6）、招募例外 `recruitTierExempt`
