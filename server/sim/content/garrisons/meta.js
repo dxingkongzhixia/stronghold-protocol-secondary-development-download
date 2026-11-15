@@ -429,6 +429,60 @@ H.SERVER_FRONT_SAME_EFFECT_PREP_START = {
   run(ctx) { copyFront(ctx, 'SERVER_PREP_START', 'SERVER_FRONT_SAME_EFFECT_PREP_START'); },
 };
 
+// ---------------------------------------------------------------------------------------------------------------------
+// regulation-season garrisons (act3autochess)
+
+/** 休整期结束时: the carrying chess' sell price +count (its own cap `max`, base 1). */
+H.SERVER_SELF_SELL_PRICE_DELTA = {
+  run(ctx) {
+    const { bb, piece } = ctx.source;
+    if (!piece) return;
+    const base = 1, max = Math.max(base, num(bb.max, 4));
+    piece.sellBonus = Math.min(max - base, Math.max(0, num(piece.sellBonus) + num(bb.count, 1)));
+  },
+};
+
+/** 获得时: `delta_count` free refreshes, at most `max_count` from this trait. */
+H.SERVER_GAIN_FREE_REFRESH_UPGRADE_COUNT = {
+  run(ctx) {
+    const { bb, piece } = ctx.source;
+    if (!piece) return;
+    const per = Math.max(1, num(bb.delta_count, 1)), max = Math.max(0, num(bb.max_count, 2));
+    const used = ctx.counter(`freeRefreshUpgrade:${piece.uid}`) || 0;
+    if (used >= max) return;
+    const give = Math.min(per, max - used);
+    ctx.setCounter(`freeRefreshUpgrade:${piece.uid}`, used + give);
+    ctx.grantFreeRefresh(give);
+  },
+};
+
+/** 休整期结束时: every board chess carrying equipment adds `count` layers of the bbStr bonds. */
+H.SERVER_ADD_BOND_BOARD_EQUIP_CHAR = {
+  run(ctx) {
+    const { bb, bbStr, garrison } = ctx.source;
+    const n = ctx.board().filter((p) => p && p.kind === 'chess' && Array.isArray(p.items) && p.items.length > 0).length;
+    if (!(n > 0)) return;
+    addAll(ctx, ids(bbStr.bond), n * num(bb.count, 1), requireActiveOf(garrison));
+  },
+};
+
+/** 战斗结束时: every living operator adds `count` layers (SELF = the carrying chess' own bonds), at most `max_count`. */
+H.SERVER_ADD_ACTIVATED_BOND_BY_ALIVE_CHAR = {
+  run(ctx, ev) {
+    const { bb, bbStr, garrison, piece } = ctx.source;
+    const pp = ev && ev.result && ev.result.perPlayer && ev.result.perPlayer[ctx.playerId];
+    const alive = pp && Array.isArray(pp.unitsEnd) ? pp.unitsEnd.filter((u) => u && u.alive).length : 0;
+    if (!(alive > 0)) return;
+    const bonds = ids(bbStr.bond).flatMap((b) => (b === 'SELF' ? ctx.pieceBonds(piece && piece.uid) : [b]));
+    const n = alive * num(bb.count, 1);
+    const cap = num(bb.max_count, null);
+    for (const b of bonds) ctx.addLayers(b, n, { requireActive: requireActiveOf(garrison), cap });
+  },
+};
+
+/** 进入休整期时: convert temporary layers — the prep model keeps one layer value, so this is a no-op [ASSUMED]. */
+H.SERVER_CONVERT_TEMP_BOND = { run() {} };
+
 
 /** effectKey → handler (the registered objects). */
 export const HANDLERS = Object.freeze(H);

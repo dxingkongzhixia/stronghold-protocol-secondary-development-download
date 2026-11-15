@@ -456,6 +456,9 @@ const INSTALLERS = {
   NONE() {},
 };
 
+/** Battle-side garrison handlers by effectKey/effectType (for coverage tests and tools). */
+export const BATTLE_HANDLERS = Object.freeze(INSTALLERS);
+
 // ---------------------------------------------------------------------------------------------------------------------
 // layer readers (每叠加N层)
 

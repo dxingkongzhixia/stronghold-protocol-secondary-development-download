@@ -656,7 +656,7 @@ export function makeCtx(m, ps, source, hook, ev = null, preview = null) {
     setPrice: (v) => { if (hook === 'onPrice' && ev && Number.isFinite(v)) ev.price = Math.max(0, v); return ev ? ev.price : null; },
 
     // ---- layers
-    addLayers: (bondId, n, opts = {}) => ps.addLayers(bondId, n, { requireActive: !!opts.requireActive, reason: opts.reason || source.key || '' }),
+    addLayers: (bondId, n, opts = {}) => ps.addLayers(bondId, n, { requireActive: !!opts.requireActive, reason: opts.reason || source.key || '', cap: opts.cap ?? null }),
 
     // ---- pieces
     grantChess: (chessId, opts = {}) => {

@@ -255,7 +255,7 @@ export class PlayerEconomy {
     for (const it of piece.items || []) this.stow(it, { allowTemp: true });
     piece.items = [];
     this.returnCopies(piece);
-    const ev = { piece, gain: this.gd.sellPrice(piece.id) };
+    const ev = { piece, gain: this.gd.sellPrice(piece.id) + Math.max(0, Number(piece.sellBonus) || 0) };
     this.m.dispatch(this, 'onSold', ev);
     const gain = Number.isFinite(ev.gain) ? Math.max(0, Math.trunc(ev.gain)) : 1;
     this.addFunds(gain, { reason: 'sell' });
