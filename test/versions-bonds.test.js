@@ -72,6 +72,25 @@ test('伊比利亚: every damage instance stacks a 10 s arts DoT; 6 adds the slo
   }
 });
 
+test('伊比利亚: the bond\'s own DoT / bounce damage does not proc the bond again', () => {
+  setGameData(ACT3);
+  const h = makeBattle({
+    data: ds, seed: 5, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_08_a', row: 10, col: 4 }], // 深靛 (iberiaShip)
+    enemies: [{ key: 'enemy_1000_gopro_2', time: 0, pos: [10, 6] }],
+    bonds: { iberiaShip: bondOn(6, 0) },
+  });
+  h.step(1);
+  const m = h.allies()[0];
+  const e = h.enemies()[0];
+  const before = buffs(e, `bond:iberia:dot:${m.id}`).length;
+  // a tick of the bond's own DoT (or a bounce) is tagged bond:iberia: it must not stack the DoT or bounce again — that
+  // recursion used to reach the hook nesting guard inside a 6-member battle (act3 golden coop2-HARD-4)
+  h.b.dealDamage(m, e, { amount: 10, type: 'arts', isSkill: true, tags: ['bond:iberia'] });
+  assert.equal(buffs(e, `bond:iberia:dot:${m.id}`).length, before, 'no self-stacking from the bond\'s own damage');
+  checkInvariants(h.b);
+});
+
 test('乌萨斯: member ATK / HP buffs, kill layers, and the 6-member bleed conversion', () => {
   setGameData(ACT3);
   const h = makeBattle({

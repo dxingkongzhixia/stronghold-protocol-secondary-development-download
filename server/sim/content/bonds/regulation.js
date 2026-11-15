@@ -168,6 +168,10 @@ function installIberia(battle, pid, bb) {
     const src = c.source;
     const t = c.target;
     if (!src || !memberOf(src, id) || !t || t.side !== 'enemy' || !t.alive || !c.dmg) return;
+    // the bond's own DoT tick and bounce are damage the bond dealt, not a new instance of the member's damage: without
+    // this guard a 6-member bounce (20 % per nearby enemy) re-enters this handler from inside its own dealDamage and the
+    // DoT stacks itself every second — the hook nesting guard then drops the battle's hits (act3 golden coop2-HARD-4)
+    if (Array.isArray(c.dmg.tags) && c.dmg.tags.includes('bond:iberia')) return;
     if (!(num(c.dmg.amount) > 0) || c.type === 'element' || c.type === 'elemental') return;
     const atk = num(src.s.atk);
     const key = `bond:iberia:dot:${src.id}`;
