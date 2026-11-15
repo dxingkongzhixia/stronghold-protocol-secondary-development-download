@@ -88,6 +88,9 @@ export const DEFAULT_LEGEND = Object.freeze({
   g: { height: 'LOW', build: 'ALL', pass: 'ALL', key: 'tile_smog', terrain: 'smog' },
   d: { height: 'LOW', build: 'NONE', pass: 'ALL', key: 'tile_deepsea', terrain: 'deepsea' },
   i: { height: 'LOW', build: 'ALL', pass: 'ALL', key: 'tile_infection', terrain: 'infection' },
+  // 规程's own tiles: m09 隐匿地块 (both sides' ground units gain 隐匿) and m12 加速地块 (+25 ASPD, ×1.5 move)
+  w: { height: 'LOW', build: 'ALL', pass: 'ALL', key: 'tile_duel_grassland', terrain: 'duelGrass' },
+  z: { height: 'LOW', build: 'ALL', pass: 'ALL', key: 'tile_speedup', terrain: 'speedup' },
 });
 
 /**
@@ -99,7 +102,7 @@ export const DEFAULT_LEGEND = Object.freeze({
  */
 export const DEPLOY_REFUSED_TILES = Object.freeze(new Set(['tile_deepsea']));
 
-const TERRAIN_BY_KEY = { tile_mire: 'mire', tile_smog: 'smog', tile_deepsea: 'deepsea', tile_infection: 'infection', tile_deepwater: 'deepsea' };
+const TERRAIN_BY_KEY = { tile_mire: 'mire', tile_smog: 'smog', tile_deepsea: 'deepsea', tile_infection: 'infection', tile_deepwater: 'deepsea', tile_speedup: 'speedup', tile_duel_grassland: 'duelGrass' };
 const SPECIAL_BY_KEY = { tile_start: 'start', tile_end: 'end', tile_telin: 'telin', tile_telout: 'telout' };
 
 function normPass(v) {

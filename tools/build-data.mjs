@@ -3716,6 +3716,21 @@ function buildStages(ctx, modesById) {
     }
     if (rows.some((l) => l.includes('i'))) special.infection = { bb: glyphTiles.i?.bb || {} };
     if (rows.some((l) => l.includes('g'))) special.smog = { rule: 'operatorsNotTargetableByEnemyRanged' };
+    // 规程 tile_duel_grassland (m09): both sides' ground units gain 隐匿 on it; an enemy blocked on the tile is revealed
+    // and the official "解除阻挡后恢复" is immediate (enemyStealthRestoreSec 0, the tile's buff prefab clears on release);
+    // leaving the tile clears it (_clearBuffsWhenLeft 1). The tile carries no blackboard: the buff prefab is the rule.
+    if (rows.some((l) => l.includes('w'))) {
+      special.duelGrass = { rule: 'groundUnitsGainStealth', clearedOnLeave: true, enemyStealthRestoreSec: 0 };
+    }
+    // 规程 m12 tile_speedup: the tile's own blackboard (official 攻击速度 +25 / 移动速度 ×1.5). Other seasons have no
+    // `z` glyph, so their stages.json stay byte-identical.
+    if (rows.some((l) => l.includes('z'))) {
+      const bb = glyphTiles.z?.bb || {};
+      special.speedup = {
+        attack_speed: typeof bb.attack_speed === 'number' ? bb.attack_speed : 25,
+        move_speed: typeof bb.move_speed === 'number' ? bb.move_speed : 1.5,
+      };
+    }
     const blower = byKey('trap_013_blower');
     if (blower) special.blower = { rangeGrid: blower.rangeGrid, bb: blower.skill?.bb || {}, desc: blower.skill?.desc || null };
     const runes = (lv.runes || []).map((r) => ({ key: r.key, ...flattenBB(r.blackboard) }));
