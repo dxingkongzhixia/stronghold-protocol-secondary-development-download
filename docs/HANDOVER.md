@@ -648,6 +648,8 @@ If you are new, read in this order: this file → [`docs/PROJECT-STATE.md`](PROJ
 doc for whatever you are about to change ([`docs/SIM.md`](SIM.md) / [`docs/META.md`](META.md) /
 [`docs/DATA.md`](DATA.md) / [`docs/ASSETS.md`](ASSETS.md) / [`docs/DESIGN.md`](DESIGN.md)). For a
 topic → file lookup, use [`docs/QUERY-INDEX.md`](QUERY-INDEX.md).
+进行中的规程（act3autochess）版本工作见 [`docs/UPSTREAM-REGULATION.md`](UPSTREAM-REGULATION.md)；最近一次会话交接见
+[`docs/HANDOFF-2026-11-16.md`](HANDOFF-2026-11-16.md)。
 
 **Before you push, the minimum bar:** `node tools/build-data.mjs --offline` clean, `node --test` green
 **in the store**, `node tools/kit-coverage.mjs --missing` empty, `node tools/i18n.mjs check en --strict`
