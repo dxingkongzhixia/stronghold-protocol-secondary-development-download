@@ -46,14 +46,15 @@ import { FULL_RANK, atRank, stripPotential } from '../shared/potential.js';
 import { versionById, versionSlug } from '../shared/versions.js';
 import * as act3Tables from './versions/tables/act3autochess-v3_1.mjs';
 import { composeRegulationStage, placeRegulationTemplate } from './versions/layouts.mjs';
+import { loadProfile } from './versions/profiles.mjs';
+import { GAMEDATA_BASE } from './versions/sources.mjs';
 
 // ===== CLI & IO ==================================================================================
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RESEARCH_DIR = join(ROOT, 'docs', 'research');
-// Official tables come from the Kengxxiao mirror. Override the base with SP_GAMEDATA_BASE to fetch through a proxy
-// (e.g. the CN gh-proxy used for the assets: SP_GAMEDATA_BASE=https://gh-proxy.com/https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/zh_CN/gamedata/).
-const GAMEDATA_URL = process.env.SP_GAMEDATA_BASE || 'https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/zh_CN/gamedata/';
+// Official tables come from the Kengxxiao mirror (tools/versions/sources.mjs). Override the base with SP_GAMEDATA_BASE to
+// fetch through a proxy (e.g. the CN gh-proxy used for the assets).
 let SEASON = 'act2autochess';
 const USAGE = 'usage: node tools/build-data.mjs [--refresh | --offline] [--version <id>] [--out <dir>] [--cache <dir>] [--report <file>] [--quiet] [--no-research] [--force]';
 
@@ -113,7 +114,7 @@ if (VERSION && !process.argv.some((a) => a === '--out' || a.startsWith('--out=')
 SEASON = VERSION ? VERSION.season : SEASON;
 
 /** 规程's measured draft tables; the default season keeps its own literal below. */
-const ACT3_DRAFTS = VERSION?.id === 'act3autochess@V3_1' ? act3Tables : null;
+const ACT3_DRAFTS = VERSION?.family === 'regulation' ? act3Tables : null;
 
 const log = (...a) => { if (!OPTS.quiet) console.log(...a); };
 const warnings = [];
@@ -138,7 +139,7 @@ async function ensureGamedata(rel) {
     throw new Error(`missing cached file ${rel} (offline mode)`);
   }
   await mkdir(dirname(abs), { recursive: true });
-  const url = GAMEDATA_URL + rel;
+  const url = GAMEDATA_BASE + rel;
   let lastErr;
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
@@ -995,8 +996,10 @@ async function loadContext() {
     loadGamedata('excel/enemy_handbook_table.json'),
     loadGamedata('levels/enemydata/enemy_database.json'),
   ]);
-  const act = VERSION
-    ? (VERSION.id === 'act3autochess@V3_1' ? activity?.activity?.AUTOCHESS?.act3autochess?.V3_1 : null)
+  // the version's build profile (tools/versions/profiles.mjs): its section path and layout, not hardcoded ids
+  const PROFILE = VERSION ? (await loadProfile(VERSION.id)).profile : null;
+  const act = PROFILE?.section
+    ? PROFILE.section.reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), activity?.activity)
     : activity?.activity?.AUTOCHESS_SEASON?.[SEASON];
   const ac = activity?.autoChessData;
   if (!act || !ac) throw new Error(`activity_table has no ${VERSION ? VERSION.id : SEASON} section`);
@@ -1046,7 +1049,7 @@ async function loadContext() {
 
   // 规程 builds every player's field in one scene: its stages are an atlas of three pieces and its round templates the
   // road only — both become the 盟约 19×21 level here (tools/versions/layouts.mjs), so nothing after this line differs.
-  if (VERSION?.id === 'act3autochess@V3_1') {
+  if (PROFILE?.layout === 'regulation') {
     for (const id of Object.keys(levels)) {
       if (stageIds.includes(id)) {
         const pieces = [];
@@ -4545,7 +4548,7 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
   const step = (t) => steps.find((x) => x.stepType === t);
   return {
     season: SEASON,
-    seasonName: VERSION?.id === 'act3autochess@V3_1' ? '卫戍协议·规程' : '卫戍协议：盟约',
+    seasonName: VERSION?.family === 'regulation' ? '卫戍协议·规程' : '卫戍协议：盟约',
     version: VERSION ? { id: VERSION.id, season: VERSION.season, family: VERSION.family, dir: VERSION.dir } : undefined,
     modes,
     economy: {

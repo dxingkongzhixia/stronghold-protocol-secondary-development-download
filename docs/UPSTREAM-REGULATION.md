@@ -142,7 +142,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 | 层 | 现状 | 还差 |
 |---|---|---|
-| 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主、房间版本投票已完成（P0.1–P0.4 + P0.3b） | P0.5 通用 profile 加载器 |
+| 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主、房间版本投票、通用 profile 加载器已完成（P0 全部） | 无 |
 | 规程数据 | 16 文件 / 6.4 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游；模板预设（阿米娅·医疗）取 `char_patch_table` 的完整形态；tuning（称号规则）与 `spineLocal` 输入已显式化 | — |
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 核心优先禁用 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩、全部 act3 地图规则（MAP09 隐匿、m12 加速、Boss 受击区、茧索敌/捆绑、萨卡兹亡语/延迟召唤、莱塔尼亚友方召唤）、#932 暴躁铁皮、隐秘核心/领袖/联防复核 | P2 剩余：寻宝人机器人选格、对局侧修复其余项、`recruitTierExempt`（pin 阻塞） |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 无（P3 完成） |
@@ -156,7 +156,6 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 | 阶段 | 未做项 | 状态 |
 |---|---|---|
-| P0 | `tools/versions/*` 通用 profile 加载器（profiles / adapters / sources / runtime） | 🟡 构建已用 `--version` 跑通，加载器未做 |
 | P2 | 寻宝人整体（宝藏 / 寻宝人事件、奖励链） | 🟡 宝藏 / 放置锁 / 休整期可见 / 客户端预览 / 接触判定已做，仅机器人主动选格未做 |
 | P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🟡 #932 已移植；#934/#937 与上游等价；其余待定位（#930 N/A） |
 | P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
@@ -176,7 +175,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **P0.3** `lobby` 版本字段（`room.version`、`room.state.version`、`welcome.versions`）；`room.create { version }` 与 `VERSION_UNKNOWN`/`VERSION_UNSUPPORTED`（未启用、数据不可用、该模式未提供、版本房开关玩法插件）；房间数据与对局走该版本（`dataFor`、`versionHosts`）；`server/match/host/` 的 `kind: 'version'`（`version-crash`/`version-hang`/`version-start`，每版本 `officialBounds` 由 host 安装）；`/healthz.versions.hosts`。测试：`test/lobby-versions.test.js`、`test/versions-host.test.js`
 - [x] **P0.3b** `room.proposeVersion` 版本投票：房主提议；房间只有一名在场真人时立即切换，否则在场真人投票（同意/拒绝/房主取消），最后一人同意即切换；`room.state.versionVote` 下发目标/投票人/已同意/过期时间；拒绝或超时后 5 s 才能再次提议；切换时重解析房间的装饰插件（玩法插件只属于默认盟约，丢弃并警告）、难度回退到目标版本提供的档位、非房主取消准备并清空 loadout/自选/内容确认。协议 `room.proposeVersion` / `room.versionVote` / `room.cancelVersionVote`；客户端房间页版本切换与投票条。测试 `test/lobby-versions.test.js`
 - [x] **P0.4** `public/js/versions.js`（`welcome.versions` 清洗、浏览器偏好 `sp.pref.lobby.version`、服务器默认回退）；经典大厅与 Hub 协议页的版本选择（`版本` / VERSION，标签取注册表 msgid）；`room.create` 带 `version`；`content.js` 的 `loadVersionSet` 按 `/cs/<cs16>/index.json` 下载并校验该版本 15 个数据文件与 bounds，`installContentSet` 在房间内换上该版本数据、离开还原；`simContent` 带 `version`。测试：`test/ui/versions.test.js`；浏览器 smoke：Hub 协议页切到规程 → 建房 → `__SP_CONTENT__.state()` 为 ready
-- [ ] **[部分]** **P0.5** `tools/versions/*` 的其余部分（profiles/adapters/sources/runtime）——构建已用 `--version` + `tables` + `layouts` 跑通，只差通用 profile 加载器
+- [x] **P0.5** `tools/versions/*` 通用 profile 加载器：`profiles.mjs`（`loadProfile` / `pinGroupOf` / `pinnedShaOf`）、每个版本的 profile（`act2autochess.mjs`、`act3autochess-v3_1.mjs`）、`sources.mjs`（镜像基址）与 `adapters.mjs`（当前 pin 无需 adapter）；`tools/build-data.mjs` 的 section 路径与 `layout: 'regulation'` 改由 profile 驱动，不再按版本 id 硬编码。测试 `test/versions-profiles.test.js`
 
 ### P1 规程数据（3–5 人日）
 - [x] **pin 缓存**：`.cache/gamedata@6f63c14e/`（9 张 excel 表 + 61 个 level 文件，PowerShell 从 `raw.githubusercontent.com/.../6f63c14e/` 取；Node 的 TLS 在本机被中间证书挡住，构建器下载不可用）。第 9 张是 `char_patch_table.json`：模板干员（阿米娅·医疗）的 character 记录不在 `character_table` 里
