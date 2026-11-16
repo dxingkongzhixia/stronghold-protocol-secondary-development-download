@@ -159,7 +159,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | P2 | 寻宝人整体（宝藏 / 寻宝人事件、奖励链） | 🟡 宝藏 / 放置锁 / 休整期可见 / 客户端预览 / 接触判定已做，仅机器人主动选格未做 |
 | P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🟡 #932 已移植；#934/#937 与上游等价；其余待定位（#930 N/A） |
 | P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
-| P6 | 14 条 §0 never-merge 路径逐块重写 | 🔴 未开始 |
+| P6 | 14 条 §0 never-merge 路径逐块重写 | 🟡 守卫测试已加；逐块手工移植进行中 |
 | P6 | 保留 fork 特性（自定义干员、VFX、插件内容集、admin、i18n 等） | 🔴 未开始 |
 | 部署 | 生产部署（当前仍为旧构建） | ⏸ 等 owner 许可 |
 
@@ -251,8 +251,21 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] `test/ui` 规程套件：`test/ui/regulation-ui.test.js` 用真实规程对局帧串起房间等级、简报核心盟约、追随者们指令、band 技能模型与装备报告，并断言默认盟约没有这些版本模型
 
 ### P6 冲突适配（3–5 人日）
-- [ ] **[未做]** 逐块重写 14 条 §0 路径：`public/js/screens/game.js`、`server/match/{Match,gamedata,bondsMeta}.js`、`match/spDraft.js`、`data/assets.json`、`public/js/audio.js`、`public/js/render/board3d/*`、`assetDownload/assetPack.js`、`public/js/screens/title.js`
-- [ ] **[未做]** 保留：予愿安洁莉娜/自定义干员、`grounded`/`groundbind`、B4 固定穿透公式、65 批 VFX、插件内容集、admin/DIAGNOSTICS、i18n 四语言、潜能/练度默认
+- [x] **never-merge 守卫**：`test/versions-never-merge.test.js` 逐条锁定 §0 的 fork 面（#149 收起、本局禁用只禁“提供”、最近的同盟、下载完整素材/素材包、英/韩/本土配音、潜能 1/未精英化默认、难度 boost 层、#488 免费授予不卡库存、自造克莱门莎、board3d 主题/apron、标题页无素材包）。
+- [ ] **逐块重写 14 条 §0 路径**（上游新提交手工移植，不整块合并；每块一个提交 + 版本隔离回归）：
+  | 路径 | 本树现状 | P6 动作 |
+  |---|---|---|
+  | `public/js/screens/game.js` | 规程 UI / 等级选择器已接；#149 与 deployFold 已移除 | 跟踪上游 UI 修复，手工移植 |
+  | `server/match/Match.js` | 版本宿主、核心盟约二选一、宝藏标记 | 跟踪上游规程对局修复 |
+  | `server/match/gamedata.js` | officialBounds + boost 层 + `bondsExclude` | 保持 boost 唯一真相 |
+  | `server/match/bondsMeta.js` | 只禁“提供”，激活仍生效 | 保持自检 |
+  | `server/match/match/spDraft.js` | 版本 pools / 奖励池 | #925 复核 |
+  | `data/assets.json` | 自有素材链 + 版本并集 | 保持生成器唯一入口 |
+  | `public/js/audio.js` | 版本 BGM；仅中/日配音 | 不接英/韩/本土 |
+  | `public/js/render/board3d/*` | 本分支 own（theme/apron） | 上游新提交手工移植 |
+  | `assetDownload/assetPack.js` | 按 owner 决定不存在 | 不再引入 |
+  | `public/js/screens/title.js` | 无“下载完整素材/导入素材包” | 不再引入 |
+- [ ] 保留：予愿安洁莉娜/自定义干员、`grounded`/`groundbind`、B4 固定穿透公式、65 批 VFX、插件内容集、admin/DIAGNOSTICS、i18n 四语言、潜能/练度默认
 
 ## 6. 还原度验收
 
