@@ -7,9 +7,9 @@
 //                          (dot_atk_scale_base + per_stack·L) × ATK, up to 10 stacks; 6 members double it, slow the target
 //                          (−4 % a stack, at most −80 %) and give each instance a 20 % chance to bounce 300 % ATK arts to
 //                          the enemies around it.
-//   莱塔尼亚 lethaniaShip  members' ATK; an enemy death (or a member's) summons an allied 小节 / 乐部 as an enemy-data
-//                          token: block 1 / 2, arts attack, 10 % max-HP self loss a second; 6 members double the cap and can
-//                          summon 乐部.
+//   莱塔尼亚 lethaniaShip  members' ATK; any enemy killed summons an allied 小节 — at 6 members a chance of 乐部 instead —
+//                          and the six-member power also summons on this player's own operator death, cap 20. A token:
+//                          block 1 / 2, arts attack, 10 % max-HP self loss a second.
 //   聚合 docShip           every second, allies in a member's attack range recover (heal_base + per_stack·L) × ATK HP and
 //                          (ep_heal_base + per_stack·L) × ATK element damage; 3 members add
 //                          (damage_res_base + per_stack·L) damage reduction.
@@ -144,10 +144,14 @@ function installLethania(battle, pid, bb) {
     for (const u of battle.allyUnits) if (u.alive && ownMember(u, id)) out.push(u);
     return out;
   };
+  // The 6-member power counts only this player's living summons, notes and choruses alike.
+  const summons = () => battle.allyUnits.filter((u) => u.ownerId === pid && u.alive && u.kind === 'token'
+    && (u.defId === NOTE_ID || u.defId === CHORUS_ID));
   standing(battle, pid, id, () => {
-    for (const u of members()) S.passiveBuff(battle, u, 'bond:lethania', S.directMods({ atk: atk() }));
+    const mods = S.directMods({ atk: atk() });
+    for (const u of members()) S.passiveBuff(battle, u, 'bond:lethania', mods);
+    for (const u of summons()) S.passiveBuff(battle, u, 'bond:lethania', mods);
   });
-  const countSummons = () => battle.allyUnits.filter((u) => u.alive && u.kind === 'token' && (u.defId === NOTE_ID || u.defId === CHORUS_ID)).length;
   // The official summons are enemy-data records fielded as ALLIED units: 小节 blocks 1, 乐部 blocks 2 and shoots arts.
   // [ASSUMED] they hold the death tile instead of pursuing (the official walks them toward the nearest enemy); a token
   // carries the record's block count, attack and range, so it engages the ground enemies that reach it.
@@ -158,10 +162,16 @@ function installLethania(battle, pid, bb) {
     return out;
   };
   const summon = (x, y) => {
-    if (!six()) return;
-    if (countSummons() >= cap()) return;
-    const big = battle.rng.chance(Math.min(1, num(bb.big_prob_base) + num(bb.big_prob_per_stack) * L()));
-    const key = big ? CHORUS_ID : NOTE_ID;
+    if (summons().length >= cap()) return;
+    // summon_prob_base is 1: every killed enemy summons unless the blackboard says otherwise (a later 6-member
+    // upgrade only changes which unit); the probability is capped like the data's own max.
+    const p = Math.min(num(bb.summon_prob_max, 1), num(bb.summon_prob_base, 1) + num(bb.summon_prob_per_stack) * L());
+    if (!battle.rng.chance(p)) return;
+    let key = NOTE_ID;
+    if (six()) {
+      const big = Math.min(num(bb.big_prob_max, 1), num(bb.big_prob_base) + num(bb.big_prob_per_stack) * L());
+      if (battle.rng.chance(big)) key = CHORUS_ID;
+    }
     const raw = battle.data?.getEnemy?.(key)?.raw || null;
     const st = raw?.stats || {};
     const ranged = key === CHORUS_ID;
@@ -174,13 +184,25 @@ function installLethania(battle, pid, bb) {
       dmgType: 'arts', attackKind: ranged ? 'ranged' : 'melee', canHitFly: ranged,
       rangeGrid: ranged ? rangeCircle(Math.max(1, num(st.rangeRadius, 2.4))) : [[0, 0]], trait: '', skill: null,
     };
-    battle.spawnToken(pid, key, Math.round(y), Math.round(x), { def, anySource: true, kit: lethaniaTokenKit() });
+    const u = battle.spawnToken(pid, key, Math.round(y), Math.round(x), {
+      def, anySource: true, kit: lethaniaTokenKit(), overlap: true,
+    });
+    if (!u) return;
+    // The official summons may share a tile with an operator (including the body of the one whose death summoned
+    // them) and do not claim deployment occupancy; blocking.js scans them by coordinates.
+    u.mem.lethaniaPursuit = true;
+    battle._lethaniaPursuers = true;
+    // the record's own aura (乐部 base_attack_speed) and the bond ATK bonus apply to the summon as well
+    const aspd = num(raw?.talents?.bb?.['Aura.base_attack_speed']);
+    if (aspd) S.passiveBuff(battle, u, 'bond:lethania:aura', S.directMods({ aspd }));
+    S.passiveBuff(battle, u, 'bond:lethania', S.directMods({ atk: atk() }));
   };
   battle.on('death', (c) => {
+    if (c.reason !== 'killed') return;
     const u = c.unit;
     if (!u) return;
-    if (u.side === 'enemy' && c.reason === 'killed') summon(u.x, u.y);
-    else if (u.side === 'ally' && six() && S.unitBonds(u).includes(id)) summon(u.x, u.y);
+    if (u.side === 'enemy') summon(u.x, u.y);
+    else if (six() && u.side === 'ally' && u.kind === 'op' && u.ownerId === pid) summon(u.x, u.y);
   });
   // a 乐部 (enemy_9026) on the field gives the members attack speed +20
   battle.every(0.5, () => {

@@ -17,6 +17,8 @@ const ACT3 = Object.fromEntries(fs.readdirSync(DIR).filter((f) => f.endsWith('.j
 const ds = new DataSource(ACT3);
 const bondOn = (count, layers = 0, thresholds = [3, 6]) => ({ count, active: count >= thresholds[0], tier: thresholds.filter((t) => count >= t).length, layers });
 const buffs = (u, key) => u.buffs.filter((b) => b.key === key);
+const lethaniaSummons = (h, ownerId = 'p1') => h.allies().filter((u) => u.kind === 'token' && u.ownerId === ownerId
+  && (u.defId === 'enemy_9025_aclts' || u.defId === 'enemy_9026_acltm'));
 
 after(() => setGameData(null));
 
@@ -146,4 +148,68 @@ test('莱塔尼亚: members get ATK and an enemy death summons 小节 (6: 乐部
   const hp = token.hp;
   h.run(1.1);
   assert.ok(token.hp < hp, 'its own HP loss ticks');
+});
+
+test('莱塔尼亚: 3 members summon a 小节 on any enemy kill, at the death tile', () => {
+  setGameData(ACT3);
+  const h = makeBattle({
+    data: ds, seed: 9, autoFinish: false,
+    units: [
+      { chessId: 'chess_char_1_19_a', row: 11, col: 2 },
+      { chessId: 'chess_char_2_01_a', row: 11, col: 4 },
+      { chessId: 'chess_char_2_07_a', row: 11, col: 6 },
+    ],
+    enemies: [{ key: 'enemy_1000_gopro_2', time: 0, pos: [10, 8] }],
+    bonds: { lethaniaShip: bondOn(3, 0) },
+  });
+  h.step(1);
+  const e = h.enemies()[0];
+  const death = [Math.round(e.x), Math.round(e.y)];
+  h.b.kill(e);
+  const summons = lethaniaSummons(h);
+  assert.equal(summons.length, 1, 'a non-six-member bond still summons');
+  assert.equal(summons[0].defId, 'enemy_9025_aclts', 'never a 乐部 below six');
+  assert.equal(summons[0].ownerId, 'p1');
+  assert.deepEqual([summons[0].x, summons[0].y], death, 'the summon uses the death tile center');
+  // the bond's ATK multiplier reaches the summon too (record base 450 × 1.3 at 0 layers)
+  assert.ok(Math.abs(summons[0].s.atk - 450 * 1.3) < 1, `${summons[0].s.atk}`);
+  checkInvariants(h.b);
+});
+
+test('莱塔尼亚: own operator deaths summon only at 6 members', () => {
+  setGameData(ACT3);
+  const fight = (count) => {
+    const h = makeBattle({
+      data: ds, seed: 4, autoFinish: false,
+      units: [
+        { chessId: 'chess_char_1_19_a', row: 11, col: 2 },
+        { chessId: 'chess_char_1_02_a', row: 11, col: 4 }, // a non-Lethania guest
+      ],
+      enemies: [],
+      bonds: { lethaniaShip: bondOn(count, 0) },
+    });
+    h.step(1);
+    h.b.kill(h.allies().find((u) => u.defId === 'chess_char_1_02_a'));
+    checkInvariants(h.b);
+    return lethaniaSummons(h);
+  };
+  assert.equal(fight(3).length, 0, 'the extra operator-death summon is six-member power');
+  const six = fight(6);
+  assert.equal(six.length, 1);
+  assert.equal(six[0].defId, 'enemy_9025_aclts');
+});
+
+test('莱塔尼亚: the 10-summon cap counts only living summons', () => {
+  setGameData(ACT3);
+  const h = makeBattle({
+    data: ds, seed: 9, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_19_a', row: 11, col: 2 }],
+    enemies: [],
+    bonds: { lethaniaShip: bondOn(3, 0) },
+  });
+  h.step(1);
+  // the player's field ends at column 10: reuse a death tile; mobile summons may share it
+  for (let i = 0; i < 12; i++) h.b.kill(h.b.spawnEnemy('enemy_1000_gopro_2', { pos: [10, 2 + (i % 9)] }));
+  assert.equal(lethaniaSummons(h).length, 10);
+  checkInvariants(h.b);
 });

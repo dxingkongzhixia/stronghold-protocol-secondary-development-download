@@ -13,7 +13,9 @@ export class BattleTiles {
   /** Move an ally to another tile (keeps state); never onto a living unit or a knocked-out operator (downOn). */
   relocate(unit, r, c) {
     // only a living, deployed ally moves, and only onto an integer tile of this field (a dead unit left in _occ
-    // would later "block" from a tile it no longer stands on once it redeploys at home)
+    // would later "block" from a tile it no longer stands on once it redeploys at home). A Leithania pursuer never
+    // claims `_occ`: pushes and pulls leave it where it stands (content/bonds/regulation.js).
+    if (unit?.mem?.lethaniaPursuit) return false;
     if (!unit || unit.side !== 'ally' || !unit.alive || !unit.deployed) return false;
     if (!Number.isInteger(r) || !Number.isInteger(c) || !this.grid.inRect(r, c)) return false;
     const k = r * COLS + c;
