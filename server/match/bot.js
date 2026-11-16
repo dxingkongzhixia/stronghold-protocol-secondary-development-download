@@ -1747,8 +1747,47 @@ export function botPrepEnd(m, ps, job = null) {
   runSteps(botPrepEndSteps(m, ps, job));
 }
 
+/**
+ * 寻宝人 (band_treasure): a deployable tile that no enemy route crosses — the first by row, then column (the team's
+ * side first). Null when the board offers none.
+ * @param {any} m @param {any} ps
+ * @returns {[number, number] | null}
+ */
+export function botTreasureTile(m, ps) {
+  const routes = m.stage?.groundPaths || {};
+  const blocked = new Set();
+  for (const list of Object.values(routes)) {
+    for (const p of Array.isArray(list) ? list : []) if (Array.isArray(p) && p.length >= 2) blocked.add(`${p[0]},${p[1]}`);
+  }
+  let map;
+  try { map = ps.deployMap(); } catch { return null; }
+  if (!map || typeof map.keys !== 'function') return null;
+  const keys = [...map.keys()].filter((k) => !blocked.has(k))
+    .sort((a, b) => {
+      const [ar, ac] = a.split(',').map(Number);
+      const [br, bc] = b.split(',').map(Number);
+      return ar - br || ac - bc;
+    });
+  if (!keys.length) return null;
+  const [r, c] = keys[0].split(',').map(Number);
+  return [r, c];
+}
+
+/**
+ * Let a bot use 寻宝人's active strategy skill: place the 模拟宝藏 on a route-free deployable tile. The intent itself
+ * checks the phase, cost, cooldown and target type; this only chooses the tile.
+ */
+export function botTreasure(m, ps) {
+  if ((ps.bandSkillId || ps.bandId) !== 'band_treasure') return false;
+  const tile = botTreasureTile(m, ps);
+  if (!tile) return false;
+  return !!m.useBandSkill(ps, { target: { kind: 'tile', row: tile[0], col: tile[1] } })?.ok;
+}
+
 /** botPrepEnd as a step generator (see botPrepBeginSteps). */
 export function* botPrepEndSteps(m, ps, job = null) {
+  // 寻宝人's 宝藏探机: before Ready — the strategy skill is prep-only. Other strategies' active skills stay manual.
+  if (ps.bandId === 'band_treasure' || ps.bandSkillId === 'band_treasure') tryDo(() => botTreasure(m, ps));
   return yield* LEGACY_PREP.prepEnd(m, ps, job);
 }
 
