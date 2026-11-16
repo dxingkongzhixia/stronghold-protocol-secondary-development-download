@@ -56,9 +56,14 @@ export function seatArtUrl(m, art) {
   const at = key.indexOf('@');
   const charId = at >= 0 ? key.slice(0, at) : key;
   const entry = obj(obj(m)?.chars)?.[charId];
-  if (!entry) return null;
+  // Official-version-only operators are not in data/assets.json (the plan covers the default roster); the local-client
+  // manifest carries their full-body 立绘 and portrait (tools/local-extract/illust.py), so a seat art choice still
+  // draws the operator instead of the generic card.
+  const localIllust = localAsset(`char/illust/${charId}`, charId);
+  const localPortrait = localAsset(`char/portrait/${charId}`, `${charId}_2`) || localAsset(`char/portrait/${charId}`, `${charId}_1`);
+  if (!entry) return localIllust || localPortrait;
   const skin = at >= 0 ? obj(entry.skins)?.[key] : null;
-  return str(skin?.illust) || str(entry.illust) || str(entry.portraitE2) || str(entry.portrait) || null;
+  return str(skin?.illust) || str(entry.illust) || localIllust || str(entry.portraitE2) || str(entry.portrait) || localPortrait || null;
 }
 
 /**

@@ -35,6 +35,17 @@ test('规程 operators: every visible char has an avatar and a battle Spine (mir
   assert.deepEqual(missing, []);
 });
 
+test('规程 operators: every visible char has a seat-card illustration (web manifest or local client)', () => {
+  const chars = new Set(Object.values(chess).filter((c) => c.visible && c.charId).map((c) => c.charId));
+  const missing = [];
+  for (const id of chars) {
+    const web = assets.chars?.[id]?.illust;
+    if ((web && exists(web)) || localFile(`char/illust/${id}`, id)) continue;
+    missing.push(id);
+  }
+  assert.deepEqual(missing, []);
+});
+
 test('规程 enemies: every non-boss enemy has an icon and a model; bosses have a model', () => {
   // projectile / marker records with no battle Spine (drawn by their effect instead)
   const NO_MODEL = new Set(['enemy_9016_acstmr', 'enemy_9036_acweb']);
