@@ -134,6 +134,16 @@ test('莱塔尼亚: members get ATK and an enemy death summons 小节 (6: 乐部
   const e = h.enemies()[0];
   h.b.dealDamage(m, e, { amount: 1e9, type: 'true' });
   h.step(2);
-  const summoned = h.b.enemies.filter((x) => x.alive && (x.defId === 'enemy_9025_aclts' || x.defId === 'enemy_9026_acltm'));
-  assert.ok(summoned.length >= 1, 'a summon');
+  const summoned = h.b.allyUnits.filter((u) => u.alive && u.kind === 'token' && (u.defId === 'enemy_9025_aclts' || u.defId === 'enemy_9026_acltm'));
+  assert.ok(summoned.length >= 1, 'an allied summon');
+  assert.ok(summoned.every((u) => (u.s.blockCnt ?? 0) >= 1), 'it blocks ground enemies');
+  assert.equal(h.b.enemies.filter((e) => e.defId === 'enemy_9025_aclts' || e.defId === 'enemy_9026_acltm').length, 0, 'not an enemy-side unit');
+  // 地面接敌: a ground enemy on its tile is blocked; the summon loses 10 % of its max HP a second
+  const token = summoned[0];
+  const walker = h.b.spawnEnemy('enemy_1000_gopro_2', { pos: [token.tileR, token.tileC] });
+  h.step();
+  assert.equal(walker.blockedBy, token, 'the summon blocks the ground enemy');
+  const hp = token.hp;
+  h.run(1.1);
+  assert.ok(token.hp < hp, 'its own HP loss ticks');
 });

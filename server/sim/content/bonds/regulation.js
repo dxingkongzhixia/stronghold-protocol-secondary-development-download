@@ -1,17 +1,21 @@
 // server/sim/content/bonds/regulation.js — the regulation season's new bonds (act3autochess), battle side. The bond
 // framework (members, active bonds, layers, tiers) is support/index.js; each installer here is one bond's behaviour.
 //
-//   乌萨斯 ursusShip       (P2, not yet installed here)
+//   乌萨斯 ursusShip       member ATK / HP, kill layers; 6 members: a share of damage taken becomes a 10 s HP loss and a
+//                          blocked member deals arts damage a second.
 //   伊比利亚 iberiaShip    every damage instance a member (or its alchemy unit) deals applies a 10 s arts DoT of
 //                          (dot_atk_scale_base + per_stack·L) × ATK, up to 10 stacks; 6 members double it, slow the target
 //                          (−4 % a stack, at most −80 %) and give each instance a 20 % chance to bounce 300 % ATK arts to
 //                          the enemies around it.
-//   莱塔尼亚 lethaniaShip  (P2, not yet installed here)
+//   莱塔尼亚 lethaniaShip  members' ATK; an enemy death (or a member's) summons an allied 小节 / 乐部 as an enemy-data
+//                          token: block 1 / 2, arts attack, 10 % max-HP self loss a second; 6 members double the cap and can
+//                          summon 乐部.
 //   聚合 docShip           every second, allies in a member's attack range recover (heal_base + per_stack·L) × ATK HP and
 //                          (ep_heal_base + per_stack·L) × ATK element damage; 3 members add
 //                          (damage_res_base + per_stack·L) damage reduction.
 import * as S from '../support/index.js';
 import { reached } from './core.js';
+import { hypot } from '../../detmath.js';
 
 const num = S.num;
 
@@ -115,6 +119,20 @@ function installUrsus(battle, pid, bb) {
 }
 
 
+const NOTE_ID = 'enemy_9025_aclts';
+const CHORUS_ID = 'enemy_9026_acltm';
+
+/** 小节 / 乐部's own HP loss (their record's `Bleeding` 10 %/s, 「自身缓慢流失生命」). */
+function lethaniaTokenKit() {
+  return {
+    install(battle, unit) {
+      battle.every(1, () => {
+        if (unit.alive) battle.loseHp(unit, unit.s.maxHp * 0.1, { tags: ['enemyAbility'] });
+      }, { owner: unit });
+    },
+  };
+}
+
 function installLethania(battle, pid, bb) {
   const id = 'lethaniaShip';
   const L = () => S.bondLayers(battle, pid, id);
@@ -129,13 +147,34 @@ function installLethania(battle, pid, bb) {
   standing(battle, pid, id, () => {
     for (const u of members()) S.passiveBuff(battle, u, 'bond:lethania', S.directMods({ atk: atk() }));
   });
-  const countSummons = () => battle.enemies.filter((e) => e.alive && (e.defId === 'enemy_9025_aclts' || e.defId === 'enemy_9026_acltm')).length;
+  const countSummons = () => battle.allyUnits.filter((u) => u.alive && u.kind === 'token' && (u.defId === NOTE_ID || u.defId === CHORUS_ID)).length;
+  // The official summons are enemy-data records fielded as ALLIED units: 小节 blocks 1, 乐部 blocks 2 and shoots arts.
+  // [ASSUMED] they hold the death tile instead of pursuing (the official walks them toward the nearest enemy); a token
+  // carries the record's block count, attack and range, so it engages the ground enemies that reach it.
+  const rangeCircle = (r) => {
+    const out = [];
+    const n = Math.ceil(r);
+    for (let dr = -n; dr <= n; dr++) for (let dc = -n; dc <= n; dc++) if (hypot(dr, dc) <= r + 1e-9) out.push([dr, dc]);
+    return out;
+  };
   const summon = (x, y) => {
     if (!six()) return;
     if (countSummons() >= cap()) return;
     const big = battle.rng.chance(Math.min(1, num(bb.big_prob_base) + num(bb.big_prob_per_stack) * L()));
-    const key = big ? 'enemy_9026_acltm' : 'enemy_9025_aclts';
-    battle.spawnEnemy(key, { pos: [y, x], sourcePlayerId: pid });
+    const key = big ? CHORUS_ID : NOTE_ID;
+    const raw = battle.data?.getEnemy?.(key)?.raw || null;
+    const st = raw?.stats || {};
+    const ranged = key === CHORUS_ID;
+    const def = {
+      name: raw?.name || key, profession: ranged ? 'CASTER' : 'WARRIOR', position: ranged ? 'RANGED' : 'MELEE',
+      stats: {
+        maxHp: st.maxHp, atk: st.atk, def: st.def, res: st.res, blockCnt: st.blockCnt, bat: st.bat, aspd: st.aspd,
+        rangeRadius: st.rangeRadius, moveSpeed: 0,
+      },
+      dmgType: 'arts', attackKind: ranged ? 'ranged' : 'melee', canHitFly: ranged,
+      rangeGrid: ranged ? rangeCircle(Math.max(1, num(st.rangeRadius, 2.4))) : [[0, 0]], trait: '', skill: null,
+    };
+    battle.spawnToken(pid, key, Math.round(y), Math.round(x), { def, anySource: true, kit: lethaniaTokenKit() });
   };
   battle.on('death', (c) => {
     const u = c.unit;
@@ -145,7 +184,7 @@ function installLethania(battle, pid, bb) {
   });
   // a 乐部 (enemy_9026) on the field gives the members attack speed +20
   battle.every(0.5, () => {
-    const big = battle.enemies.some((e) => e.alive && e.defId === 'enemy_9026_acltm');
+    const big = battle.allyUnits.some((u) => u.alive && u.kind === 'token' && u.defId === CHORUS_ID);
     for (const u of members()) {
       if (big) battle.addBuff(u, { key: 'bond:lethania:big', duration: 0.7, refresh: 'replace', visible: true, mods: { aspd: 20 } });
       else battle.removeBuff(u, 'bond:lethania:big');

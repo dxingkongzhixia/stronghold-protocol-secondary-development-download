@@ -86,6 +86,7 @@ const VERSION_ONLY = new Set([
   'enemy_1224_dsuply', 'enemy_1224_dsuply_2', 'enemy_1373_ltnhor', 'enemy_1373_ltnhor_2', 'enemy_1376_ltndru', 'enemy_1376_ltndru_2', 'enemy_1388_wingnt',
   'enemy_1388_wingnt_2', 'enemy_1405_boomer_2', 'enemy_1406_chghmr', 'enemy_1435_dsflys', 'enemy_9024_acsgnt', 'enemy_9028_acfncb', 'enemy_9034_acblk',
   'enemy_9040_accrit', 'enemy_10003_trwlpl_2', 'enemy_10163_mnctur_2', 'enemy_10196_ubba', 'enemy_10196_ubba_2', 'enemy_2123_dyjsww',
+  'enemy_9030_acpara', 'enemy_10077_mpbarr', 'enemy_9036_acweb',
 ]);
 
 test('沉默: exactly the abilities whose handbook line is SILENCE-flagged can be silenced (every authored enemy), plus 萨卡兹枯朽战士 / 组长\'s death fog', () => {

@@ -248,6 +248,50 @@ function kitUbba(ab, e) {
   ];
 }
 
+/**
+ * 萨卡兹子裔寄生者: an enemy killed within `Aura.range_radius` leaves a 大君之赐 at its tile (PRTS: "周围一定范围内的敌人被
+ * 击倒时，召唤一个<大君之赐>"; a 大君之赐 killed does not trigger this again). The record's `summons` alone would make the
+ * generic Summon handler spawn it on the parasite's own death, which is not the rule.
+ */
+function kitApara(ab, e) {
+  const r = T(ab, 'Aura.range_radius') ?? 1.5;
+  const key = (ab.tS && ab.tS['Aura.enemy_key']) || 'enemy_1221_dzomg';
+  return [{
+    spawn(b) {
+      b.on('death', (c) => {
+        const u = c.unit;
+        if (!u || u === e || u.side !== 'enemy' || u.defId === key) return;
+        if (hypot(u.x - e.x, u.y - e.y) > r + 1e-9) return;
+        b.spawnEnemy(key, { pos: [u.tileR, u.tileC], countInTotal: false });
+      }, { owner: e });
+    },
+  }];
+}
+
+/**
+ * A periodic summon whose skill names it: 枯朽萃聚使徒's BornBugs (its `summons`) and 内测版自助出餐终端's Spawn
+ * (`bbStr.enemy_key`). First summon at the skill's initial cooldown, then its cooldown — not the generic Summon handler's
+ * spawn on the carrier's own death.
+ */
+function kitPeriodicSummon(ab, e) {
+  const skills = Object.values(ab.sk || {}).filter(Boolean);
+  const sk = skills.find((s) => s.bs && s.bs.enemy_key) || skills[0] || null;
+  const key = (sk && sk.bs && sk.bs.enemy_key) || (Array.isArray(e.def?.raw?.summons) ? e.def.raw.summons[0] : null);
+  const cd = Math.max(0.5, num(sk && sk.cd, 10));
+  const first = sk && sk.icd > 0 ? sk.icd : cd;
+  if (!key) return [];
+  return [{
+    spawn(b, _e, a) { a.left = first; },
+    tick(b, e2, a, dt) {
+      if (!e2.alive) return;
+      a.left = Math.max(0, num(a.left, first) - dt);
+      if (a.left > 1e-9) return;
+      a.left = cd;
+      b.spawnEnemy(key, { pos: [e2.tileR, e2.tileC], countInTotal: false });
+    },
+  }];
+}
+
 export const REGULATION_KITS = Object.freeze({
   enemy_1104_lfkght: kitLfkght, enemy_1104_lfkght_3: kitLfkght,
   enemy_1191_krgrg: kitKrgrg, enemy_1191_krgrg_2: kitKrgrg,
@@ -264,6 +308,8 @@ export const REGULATION_KITS = Object.freeze({
   enemy_9034_acblk: kitAcblk,
   enemy_9040_accrit: kitAccrit,
   enemy_10003_trwlpl_2: kitTrwlpl,
+  enemy_9030_acpara: kitApara,
+  enemy_10077_mpbarr: kitPeriodicSummon,
   enemy_10163_mnctur_2: kitMnctur,
   enemy_10196_ubba: kitUbba, enemy_10196_ubba_2: kitUbba,
 });

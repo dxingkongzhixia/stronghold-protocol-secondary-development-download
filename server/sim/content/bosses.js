@@ -68,7 +68,7 @@
 //   'sword' 'vest' 'blink' 'summon' 'grow' 'phase' 'lpLoss' (x, y + extra {id, r, tiles, kind, tx, ty …}).
 
 import { MOVE_SCALE, MAX_ALIVE_ENEMIES } from '../constants.js';
-import { aggroCmp, areaSelectable } from '../targeting.js';
+import { aggroCmp, areaSelectable, canTargetAlly } from '../targeting.js';
 import { compileRoute } from '../ai.js';
 import { normalizeRoute } from '../simdata.js';
 import {
@@ -1203,6 +1203,29 @@ function kitFnC(_ab, e) {
   }];
 }
 
+/**
+ * 淤困捕食 candidates: every TARGETABLE ally — canTargetAlly excludes 隐匿 / 迷彩 / 无法选择 / 睡眠 / a 起飞 ally of a ground
+ * boss, so such an operator neither receives a cocoon nor consumes a slot (the official Net selector keeps
+ * `_ignoreTargetFree` and `_forceIgnoreCamouflage` at 0, client 26-11-06…; the mainline's cocoon-targeting test). At most
+ * `maxTarget` per player by current HP, then the `batch` highest overall.
+ */
+function netTargets(b, e, maxTarget, batch) {
+  const by = new Map();
+  for (const a of b.allies()) {
+    if (!canTargetAlly(e, a, true)) continue;
+    const id = String(a.ownerId ?? '');
+    if (!by.has(id)) by.set(id, []);
+    by.get(id).push(a);
+  }
+  const picked = [];
+  for (const id of [...by.keys()].sort()) {
+    const list = by.get(id).sort((x, y) => y.hp - x.hp || x.id - y.id);
+    picked.push(...list.slice(0, Math.max(1, maxTarget)));
+  }
+  picked.sort((x, y) => y.hp - x.hp || x.id - y.id);
+  return picked.slice(0, Math.max(1, batch));
+}
+
 function kitSpider(ab, e) {
   const step = Math.max(0.05, T(ab, 'Evade.hp_ratio') ?? 0.25), prob = T(ab, 'Evade.prob') ?? 0.5, dur = T(ab, 'Evade.duration') ?? 15;
   const P = { n: Math.floor(e.hpRatio / step), rain: false, lastWeb: -Infinity };
@@ -1230,9 +1253,50 @@ function kitSpider(ab, e) {
       }
       if (b.time - P.lastWeb >= 18) {
         P.lastWeb = b.time;
-        const list = b.allies().filter((a) => a.alive).sort((a, c) => c.s.maxHp - a.s.maxHp).slice(0, 3);
-        for (const a of list) b.spawnEnemy('enemy_9036_acweb', { pos: [a.tileR, a.tileC] });
+        // 淤困捕食: the skill's own caps (Net max_target 2 / batch_max_target 4), only targetable operators
+        for (const a of netTargets(b, e2, 2, 4)) {
+          b.spawnEnemy('enemy_9036_acweb', {
+            pos: [a.tileR, a.tileC], countInTotal: false, ownerPlayerId: a.ownerId ?? null, sourcePlayerId: a.sourcePlayerId ?? null,
+          });
+        }
       }
+    },
+  }];
+}
+
+/**
+ * 淤困之茧 (enemy_9036_acweb): binds the operator on its tile for `Bundling.duration` s while it lives — disarmed,
+ * silenced and blocking nothing — and loses `Bundling.hp_ratio` of its max HP a second itself. 自缚 + 无法位移; the bind is
+ * cleared when the cocoon dies. Spawned by the spider's 淤困捕食. The cocoon is a tile effect once it lands, so an
+ * operator that walked into its tile is bound on the next tick (the official 捆绑所在地块的干员).
+ */
+function kitWeb(ab, _e) {
+  const dur = T(ab, 'Bundling.duration') ?? 25;
+  const ratio = T(ab, 'Bundling.hp_ratio') ?? 0.04;
+  const taunt = T(ab, 'Bundling.taunt_level') ?? 1;
+  const bindKey = (web) => `reg:bind:${web.id}`;
+  return [{
+    spawn(b, web) {
+      web.profile.noAttack = true;
+      b.addBuff(web, { key: 'reg:web', persist: true, flags: { noMove: true, noDisplace: true }, mods: { taunt } });
+    },
+    tick(b, web, a, dt) {
+      a.acc = (a.acc ?? 0) + dt;
+      if (a.acc + 1e-9 >= 1) {
+        a.acc -= 1;
+        b.loseHp(web, web.s.maxHp * ratio, { tags: ['enemyAbility'] });
+      }
+      if (!web.alive) return;
+      const bind = bindKey(web);
+      for (const u of b.allies()) {
+        if (Math.abs(u.x - web.x) < 0.5 && Math.abs(u.y - web.y) < 0.5) {
+          b.addBuff(u, { key: bind, duration: dur, refresh: 'replace', flags: { disarm: true, silence: true }, mods: { blockCnt: -99 } });
+        }
+      }
+    },
+    death(c, b, web) {
+      const bind = bindKey(web);
+      for (const u of b.allies()) b.removeBuff(u, bind);
     },
   }];
 }
@@ -1339,6 +1403,7 @@ export const BOSS_KITS = Object.freeze({
   enemy_10030_vtwand: kitEquip,        // 冲击式施术单元
   enemy_9029_acfnc: kitFnC, enemy_9029_acfnc_2: kitFnC, // boss_11 / boss_14
   enemy_9035_acspider: kitSpider, enemy_9035_acspider_2: kitSpider, // boss_12 / boss_15
+  enemy_9036_acweb: kitWeb, // 淤困之茧
   enemy_9037_aceel: kitEel, enemy_9037_aceel_2: kitEel, // boss_13 / boss_16
   enemy_2124_dyjsfg: kitDyjsfg, // boss_17
   enemy_9033_acdeer: kitDeer,          // boss_7 “萨米的意志”

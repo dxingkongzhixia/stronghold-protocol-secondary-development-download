@@ -105,3 +105,24 @@ test('搏命养家者: nearby enemies take less physical and arts damage', () =>
   assert.ok(b, 'guard aura');
   assert.equal(b.mods.physTakenMul, 0.75);
 });
+
+test('萨卡兹子裔寄生者: an enemy killed nearby leaves a 大君之赐; the gift does not trigger it again', () => {
+  const h = field();
+  h.step(1);
+  h.b.spawnEnemy('enemy_9030_acpara', { pos: [6, 8] });
+  const victim = h.b.spawnEnemy('enemy_1000_gopro_2', { pos: [6, 8] });
+  h.b.kill(victim);
+  const gifts = h.enemies().filter((e) => e.defId === 'enemy_1221_dzomg');
+  assert.equal(gifts.length, 1, 'a 大君之赐 at the dead enemy');
+  h.b.kill(gifts[0]);
+  h.step();
+  assert.equal(h.enemies().filter((e) => e.defId === 'enemy_1221_dzomg').length, 0, 'no chain from a gift');
+});
+
+test('内测版自助出餐终端 summons on its own skill cooldown', () => {
+  const h = field();
+  h.step(1);
+  h.b.spawnEnemy('enemy_10077_mpbarr', { pos: [5, 8] });
+  h.run(3.3);
+  assert.ok(h.enemies().some((e) => e.defId === 'enemy_10073_mpcar'), 'Spawn');
+});

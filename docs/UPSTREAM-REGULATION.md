@@ -144,7 +144,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 |---|---|---|
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
 | 规程数据 | 16 文件 / 6.4 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游；模板预设（阿米娅·医疗）取 `char_patch_table` 的完整形态；tuning（称号规则）与 `spineLocal` 输入已显式化 | — |
-| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 核心优先禁用 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩、MAP09 隐匿/加速地块 | P2 剩余：地图规则 3 项（茧索敌、萨卡兹亡语、莱塔尼亚召唤）、寻宝人整体、对局侧修复、`recruitTierExempt`（pin 阻塞）、隐秘核心/领袖/联防复核 |
+| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 核心优先禁用 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩、全部 act3 地图规则（MAP09 隐匿、m12 加速、Boss 受击区、茧索敌/捆绑、萨卡兹亡语/延迟召唤、莱塔尼亚友方召唤） | P2 剩余：寻宝人整体、对局侧修复、`recruitTierExempt`（pin 阻塞）、隐秘核心/领袖/联防复核 |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 无（P3 完成） |
 | 素材 | 场景/主题/敌人特效、按版本并集规划、98 个本地敌人 Spine 已接 manifest、音乐、主题 | 手机端首包评估；版本并集干员/图标下载计划（敌人/召唤已接入） |
 | golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 无（P5 完成） |
@@ -158,7 +158,6 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 |---|---|---|
 | P0 | `room.proposeVersion` 版本投票（已开局 / 多人房间的版本切换确认） | 🔴 未开始 |
 | P0 | `tools/versions/*` 通用 profile 加载器（profiles / adapters / sources / runtime） | 🟡 构建已用 `--version` 跑通，加载器未做 |
-| P2 | 地图规则剩余：茧隐匿索敌、萨卡兹亡语与延迟召唤、莱塔尼亚召唤与地面接敌 | 🔴 未开始（MAP09 隐匿、m12 加速、Boss 受击区已完成） |
 | P2 | 寻宝人整体（宝藏 / 寻宝人事件、奖励链） | 🔴 未开始（band 侧「宝藏探机」已完成） |
 | P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🔴 未开始（#930 本树无对应机制，N/A） |
 | P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
@@ -217,7 +216,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [ ] **[阻塞]** 招募例外 `recruitTierExempt`：当前 gamedata pin 无该字段，待官方表更新
 - [x] 隐秘核心端到端：规程 solo NORMAL+（⟨等级5⟩+）/ co-op HARD+（⟨险境⟩+），Σ 激活层数 > 350/1200 且 team LP > 1，R14 胜利后进入 R15；未通过不影响通关。测试 `test/versions-hidden-core.test.js`；阈值 350/1200 仍 `[ASSUMED]`
 - [ ] **[部分]** 隐秘核心阈值 350/1200 的官方/录屏复核；领袖轮合血、超时扣血；联防（不叠层）需按规程核对
-- [ ] **[部分]** 地图规则（部分完成）：[x] MAP09 双方隐匿地块（`tile_duel_grassland`：双方地面单位获得隐匿、被阻挡显形、解除阻挡立即恢复——官方 `enemyStealthRestoreSec` 0 即「草丛秒数」、离开清除；`special.duelGrass`）；[x] m12 加速地块（`tile_speedup` +25 ASPD / ×1.5 移速）；[x] Boss 受击区（7 个 act3 首领的 `hitArea` 已随数据生成）。仍欠茧隐匿索敌、萨卡兹亡语与延迟召唤、莱塔尼亚召唤与地面接敌。测试 `test/versions-map-rules.test.js`
+- [x] 地图规则：MAP09 双方隐匿地块（`tile_duel_grassland`：双方地面单位获得隐匿、被阻挡显形、解除阻挡立即恢复——官方 `enemyStealthRestoreSec` 0 即「草丛秒数」、离开清除；`special.duelGrass`）；m12 加速地块（`tile_speedup` +25 ASPD / ×1.5 移速）；Boss 受击区（7 个 act3 首领的 `hitArea` 已随数据生成）；茧隐匿索敌与「淤困之茧」捆绑（Net 只选可选中目标、茧捆绑一格并自损 4 %/s）；萨卡兹亡语（子裔寄生者周围击杀召唤大君之赐）与延迟召唤（自助出餐终端按技能 CD 召唤）；莱塔尼亚召唤改为**友方 token**（小节/乐部，可阻挡地面敌人并自损）。测试 `test/versions-map-rules.test.js`、`test/versions-cocoon.test.js`、`test/versions-enemies-official.test.js`、`test/versions-bonds.test.js`
 - [x] 指令（主动策略）：服务端 `g.bandSkill`、客户端点击/拖放与目标选择、每回合次数/资金/冷却显示、追随者们的指令替换（B7）；变换策略仍待核对
 - [x] **领袖战 top-3 伤害统计**：`config.bossDamageStats`（官方 30/60/100 阈值）存在时，`m.public.bossHp.top` 下发共享领袖血池的前三名（玩家、伤害、占最大生命百分比），顶栏领袖胶囊显示；测试 `test/versions-boss-top.test.js`
 - [ ] **[未做]** 寻宝人模拟宝藏（band 侧“模拟宝藏”已做，寻宝人整体未做）；装备报告 tab 已由 P3 完成
