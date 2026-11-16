@@ -144,7 +144,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 |---|---|---|
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主已完成（P0.1–P0.4） | P0.3b 版本投票、P0.5 通用 profile 加载器 |
 | 规程数据 | 16 文件 / 6.4 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游；模板预设（阿米娅·医疗）取 `char_patch_table` 的完整形态；tuning（称号规则）与 `spineLocal` 输入已显式化 | — |
-| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 核心优先禁用 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩、全部 act3 地图规则（MAP09 隐匿、m12 加速、Boss 受击区、茧索敌/捆绑、萨卡兹亡语/延迟召唤、莱塔尼亚友方召唤）、#932 暴躁铁皮 | P2 剩余：寻宝人机器人选格、对局侧修复其余项、`recruitTierExempt`（pin 阻塞）、隐秘核心/领袖/联防复核 |
+| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 核心优先禁用 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩、全部 act3 地图规则（MAP09 隐匿、m12 加速、Boss 受击区、茧索敌/捆绑、萨卡兹亡语/延迟召唤、莱塔尼亚友方召唤）、#932 暴躁铁皮、隐秘核心/领袖/联防复核 | P2 剩余：寻宝人机器人选格、对局侧修复其余项、`recruitTierExempt`（pin 阻塞） |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 无（P3 完成） |
 | 素材 | 场景/主题/敌人特效、按版本并集规划、98 个本地敌人 Spine 已接 manifest、音乐、主题 | 手机端首包评估；版本并集干员/图标下载计划（敌人/召唤已接入） |
 | golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 无（P5 完成） |
@@ -161,7 +161,6 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | P2 | 寻宝人整体（宝藏 / 寻宝人事件、奖励链） | 🟡 宝藏 / 放置锁 / 休整期可见 / 客户端预览 / 接触判定已做，仅机器人主动选格未做 |
 | P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🟡 #932 已移植；#934/#937 与上游等价；其余待定位（#930 N/A） |
 | P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
-| P2 | 隐秘核心阈值 350 / 1200、领袖轮合血、超时扣血、联防（不叠层）复核 | 🟡 数值与上游一致，行为待官方/录屏复核 |
 | P4 | 手机端首包评估（素材并入后的首包体积 / 下载瀑布 / 弱网首屏） | 🔴 未开始 |
 | P4 | 版本并集的干员 / 图标下载计划（`fetch-assets`） | 🟡 敌人与召唤已接入，干员头像/立绘/技能图标未接入 |
 | P6 | 14 条 §0 never-merge 路径逐块重写 | 🔴 未开始 |
@@ -215,7 +214,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] 每干员装备容量：版本构建写入官方 `charChessDataDict[].equipSlotNum`（非 2 时）到 `chess.json equipSlots`，`GameData.equipSlotsOf` 覆盖 `equipPerChess`（Ironhide 4 / 6，其余 2）；装备/替换、invariant、bot 与装备区 UI 均按干员容量；`shared/standIn.js IDENTITY_FIELDS` 携带该字段。测试 `test/versions-equipment.test.js`
 - [ ] **[阻塞]** 招募例外 `recruitTierExempt`：当前 gamedata pin 无该字段，待官方表更新
 - [x] 隐秘核心端到端：规程 solo NORMAL+（⟨等级5⟩+）/ co-op HARD+（⟨险境⟩+），Σ 激活层数 > 350/1200 且 team LP > 1，R14 胜利后进入 R15；未通过不影响通关。测试 `test/versions-hidden-core.test.js`；阈值 350/1200 仍 `[ASSUMED]`
-- [ ] **[部分]** 隐秘核心阈值 350/1200 的官方/录屏复核；领袖轮合血、超时扣血；联防（不叠层）需按规程核对
+- [x] 隐秘核心/领袖/联防复核：Hidden Core 350 / 1200、R14、solo NORMAL+ / co-op HARD+ 与上游一致；领袖共享血池（`bossHpScale.perPlayer`）与超时 150 s 后 1 LP/s；联防 `layerGainsEnabled: false`（`fields.js` 拒绝战斗内加层），HP/SP/位置继承与漏怪满血。测试 `test/versions-config-rules.test.js`，行为覆盖 `test/versions-hidden-core.test.js`、`test/versions-boss-top.test.js`、`test/match/finalAssault.test.js`
 - [x] 地图规则：MAP09 双方隐匿地块（`tile_duel_grassland`：双方地面单位获得隐匿、被阻挡显形、解除阻挡立即恢复——官方 `enemyStealthRestoreSec` 0 即「草丛秒数」、离开清除；`special.duelGrass`）；m12 加速地块（`tile_speedup` +25 ASPD / ×1.5 移速）；Boss 受击区（7 个 act3 首领的 `hitArea` 已随数据生成）；茧隐匿索敌与「淤困之茧」捆绑（Net 只选可选中目标、茧捆绑一格并自损 4 %/s）；萨卡兹亡语（子裔寄生者周围击杀召唤大君之赐）与延迟召唤（自助出餐终端按技能 CD 召唤）；莱塔尼亚召唤改为**友方 token**（小节/乐部，可阻挡地面敌人并自损）。测试 `test/versions-map-rules.test.js`、`test/versions-cocoon.test.js`、`test/versions-enemies-official.test.js`、`test/versions-bonds.test.js`
 - [x] 指令（主动策略）：服务端 `g.bandSkill`、客户端点击/拖放与目标选择、每回合次数/资金/冷却显示、追随者们的指令替换（B7）；变换策略仍待核对
 - [x] **领袖战 top-3 伤害统计**：`config.bossDamageStats`（官方 30/60/100 阈值）存在时，`m.public.bossHp.top` 下发共享领袖血池的前三名（玩家、伤害、占最大生命百分比），顶栏领袖胶囊显示；测试 `test/versions-boss-top.test.js`
