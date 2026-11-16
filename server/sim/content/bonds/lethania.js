@@ -48,11 +48,15 @@ export function lethaniaSummon(id, raw) {
     def,
     anySource: true,
     stats: { moveSpeed },
-    kit: summonKit({ ranged, radius, bleedRatio, bleedInterval }),
+    kit: summonKit({
+      ranged, radius, bleedRatio, bleedInterval,
+      // 乐部: after every three attacks, the next one strikes twice (its ability text; no blackboard key).
+      doubleEvery: id === 'enemy_9026_acltm' ? 3 : 0,
+    }),
   };
 }
 
-function summonKit({ ranged, radius, bleedRatio, bleedInterval }) {
+function summonKit({ ranged, radius, bleedRatio, bleedInterval, doubleEvery }) {
   return {
     trait: {
       attack: ranged ? 'ranged' : 'melee',
@@ -70,6 +74,20 @@ function summonKit({ ranged, radius, bleedRatio, bleedInterval }) {
       if (bleedRatio > 0 && bleedInterval > 0) {
         battle.every(bleedInterval, () => {
           if (unit.alive) battle.loseHp(unit, unit.s.maxHp * bleedRatio, { source: unit, tags: ['bond:lethania:bleed'] });
+        }, { owner: unit });
+      }
+      if (doubleEvery > 0) {
+        let attacks = 0;
+        battle.on('attack', (c) => {
+          if (c.attacker !== unit || c.isSkill) return;
+          attacks++;
+          if (attacks % (doubleEvery + 1) !== 0) return;
+          for (const target of c.targets) {
+            if (!target || !target.alive) continue;
+            battle.dealDamage(unit, target, {
+              amount: unit.s.atk * (unit.s.atkScaleMul || 1), type: 'arts', isAttack: true, tags: ['bond:lethania:double'],
+            });
+          }
         }, { owner: unit });
       }
     },

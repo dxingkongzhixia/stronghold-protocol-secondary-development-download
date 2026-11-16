@@ -10,6 +10,7 @@ import { DataSource } from '../server/sim/simdata.js';
 import * as S from '../server/sim/content/support/index.js';
 import { setGameData } from '../server/sim/content/support/index.js';
 import { makeBattle, checkInvariants } from './helpers/battleHarness.js';
+import { lethaniaSummon } from '../server/sim/content/bonds/lethania.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = path.join(ROOT, 'data', 'versions', 'act3autochess-v3_1');
@@ -242,6 +243,33 @@ test('莱塔尼亚: a 小节 keeps an enemy on its birth tile and pursues a far 
   assert.ok(Math.hypot(target.x - walker.x, target.y - walker.y) <= 0.8,
     `it reaches attack range (${walker.x},${walker.y} vs ${target.x},${target.y})`);
   checkInvariants(far.b);
+});
+
+test('莱塔尼亚: 乐部 makes its fourth attack hit twice', () => {
+  setGameData(ACT3);
+  const h = makeBattle({
+    data: ds, seed: 9, autoFinish: false,
+    units: [],
+    enemies: [{ key: 'enemy_1000_gopro_2', time: 0, pos: [10, 7], mods: { hpMul: 100, speedMul: 0 } }],
+    bonds: { lethaniaShip: bondOn(3, 0) },
+  });
+  h.step(1);
+  const raw = ds.getEnemy('enemy_9026_acltm').raw;
+  const chorus = h.b.spawnToken('p1', 'enemy_9026_acltm', 10, 5, {
+    ...lethaniaSummon('enemy_9026_acltm', raw), overlap: true,
+  });
+  assert.ok(chorus);
+  chorus.base.bat = 0.5; // shorten the test only; the double-attack cadence is unchanged
+  chorus.markDirty();
+  const enemy = h.enemies()[0];
+  let doubles = 0;
+  h.b.on('damaged', (c) => {
+    if (c.target === enemy && c.dmg?.tags?.includes('bond:lethania:double')) doubles++;
+  });
+  assert.ok(h.runUntil(() => chorus.stats.attacks >= 4, 5), 'four attacks');
+  h.run(1); // let the fourth ranged hit land
+  assert.equal(doubles, 1, 'only the fourth attack doubles');
+  checkInvariants(h.b);
 });
 
 test('莱塔尼亚: the 10-summon cap counts only living summons', () => {
