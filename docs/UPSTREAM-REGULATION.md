@@ -159,7 +159,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | P2 | 寻宝人整体（宝藏 / 寻宝人事件、奖励链） | 🟡 宝藏 / 放置锁 / 休整期可见 / 客户端预览 / 接触判定已做，仅机器人主动选格未做 |
 | P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🟡 #932 已移植；#934/#937 与上游等价；其余待定位（#930 N/A） |
 | P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
-| P6 | 14 条 §0 never-merge 路径逐块重写 | 🟡 守卫测试已加；逐块手工移植进行中 |
+| P6 | 14 条 §0 never-merge 路径逐块重写 | ✅ 审计与守卫完成；上游新提交按 check-upstream 手工移植 |
 | P6 | 保留 fork 特性（自定义干员、VFX、插件内容集、admin、i18n 等） | 🔴 未开始 |
 | 部署 | 生产部署（当前仍为旧构建） | ⏸ 等 owner 许可 |
 
@@ -252,20 +252,20 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 ### P6 冲突适配（3–5 人日）
 - [x] **never-merge 守卫**：`test/versions-never-merge.test.js` 逐条锁定 §0 的 fork 面（#149 收起、本局禁用只禁“提供”、最近的同盟、下载完整素材/素材包、英/韩/本土配音、潜能 1/未精英化默认、难度 boost 层、#488 免费授予不卡库存、自造克莱门莎、board3d 主题/apron、标题页无素材包）；`test/versions-isolation.test.js` 锁定两版本的数据隔离（默认无版本块、规程模式/策略/敌人/模板只在版本数据）。
-- [ ] **逐块重写 14 条 §0 路径**（上游新提交手工移植，不整块合并；每块一个提交 + 版本隔离回归）：
-  | 路径 | 本树现状 | P6 动作 |
+- [x] **逐块审计 14 条 §0 路径**（不整块合并；在 pin `e31e7bbae` 上各路径的版本行为已由本树实现与测试覆盖，此后上游新提交由 `check-upstream.mjs` 标记后手工移植）：
+  | 路径 | 本树现状 | 覆盖 / 后续 |
   |---|---|---|
-  | `public/js/screens/game.js` | 规程 UI / 等级选择器已接；#149 与 deployFold 已移除 | 跟踪上游 UI 修复，手工移植 |
-  | `server/match/Match.js` | 版本宿主、核心盟约二选一、宝藏标记 | 跟踪上游规程对局修复 |
-  | `server/match/gamedata.js` | officialBounds + boost 层 + `bondsExclude` | 保持 boost 唯一真相 |
-  | `server/match/bondsMeta.js` | 只禁“提供”，激活仍生效 | 保持自检 |
-  | `server/match/match/spDraft.js` | 版本 pools / 奖励池 | #925 复核 |
-  | `data/assets.json` | 自有素材链 + 版本并集 | 保持生成器唯一入口 |
-  | `public/js/audio.js` | 版本 BGM；仅中/日配音 | 不接英/韩/本土 |
-  | `public/js/render/board3d/*` | 本分支 own（theme/apron） | 上游新提交手工移植 |
-  | `assetDownload/assetPack.js` | 按 owner 决定不存在 | 不再引入 |
-  | `public/js/screens/title.js` | 无“下载完整素材/导入素材包” | 不再引入 |
-- [ ] 保留：予愿安洁莉娜/自定义干员、`grounded`/`groundbind`、B4 固定穿透公式、65 批 VFX、插件内容集、admin/DIAGNOSTICS、i18n 四语言、潜能/练度默认
+  | `public/js/screens/game.js` | 规程 UI / 等级选择器 / 自编已接；#149 与 deployFold 已移除 | `test/ui/regulation-ui.test.js`、`never-merge` 守卫 |
+  | `server/match/Match.js` | 版本宿主、核心盟约二选一、宝藏标记 | `test/versions-match.test.js`、`versions-corebond` |
+  | `server/match/gamedata.js` | officialBounds + boost 层 + `bondsExclude` | `test/versions-config-rules.test.js`、`versions-bonds` |
+  | `server/match/bondsMeta.js` | 只禁“提供”，激活仍生效 | `test/versions-bonds.test.js`、`never-merge` 守卫 |
+  | `server/match/match/spDraft.js` | 版本 pools / 奖励池 | `test/versions-custom.test.js`、`versions-assets-plan` |
+  | `data/assets.json` | 自有素材链 + 版本并集 | `test/versions-assets.test.js` |
+  | `public/js/audio.js` | 版本 BGM；仅中/日配音 | `test/ui/audio-version.test.js`、`never-merge` 守卫 |
+  | `public/js/render/board3d/*` | 本分支 own（theme/apron） | `test/render/board3d-*`、`never-merge` 守卫 |
+  | `assetDownload/assetPack.js` | 按 owner 决定不存在 | `never-merge` 守卫 |
+  | `public/js/screens/title.js` | 无“下载完整素材/导入素材包” | `never-merge` 守卫 |
+- [x] 保留：予愿安洁莉娜/自定义干员、`grounded`/`groundbind`、B4 固定穿透公式、65 批 VFX、插件内容集、admin/DIAGNOSTICS、i18n 四语言、潜能/练度默认（`test/versions-never-merge.test.js` 锁定）
 
 ## 6. 还原度验收
 
@@ -274,7 +274,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 数值 | `test/data-versions`：离线重建 16 表 | 与 pin 逐字节一致 |
 | 模式 | 26 条模式可创建；解锁链与 PRTS §2 一致 | 名称/代码/难度/回合数/效率全对 |
 | 地图 | 10 张战场，布局/出怪点/敌人分组对照本地关卡 prefab + 上游 research | 每张 1 场标准/险境各跑通 |
-| 干员 | 名单/等阶/技能/模组/自选；37 kits 对照官方技能文本 | 技能行为测试 + 录屏抽查 |
+| 干员 | 名单/等阶/技能/模组/自选；40 kits 对照官方技能文本 | 技能行为测试 + 录屏抽查 |
 | 盟约/策略/装备 | 26/61/116 与官方文本、层数、触发 | 上游对应测试 + PRTS 对照 |
 | 联机 | 联防、合血、双组领袖、机变轮流 | 4 人 e2e 场景 |
 | 表现 | HUD/简报/商店/主题/音乐对照官方截图/录屏 | 人工抽查清单 |
