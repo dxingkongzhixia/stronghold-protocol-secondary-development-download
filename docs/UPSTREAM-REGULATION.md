@@ -160,7 +160,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | P2 | `recruitTierExempt` 招募例外 | ✅ 版本档案标记 + 通讯机例外 + `SharedPool` 仅绕过 maxTier |
 | P6 | 14 条 §0 never-merge 路径逐块重写 | ✅ 审计与守卫完成；上游新提交按 check-upstream 手工移植 |
 | P6 | 保留 fork 特性（自定义干员、VFX、插件内容集、admin、i18n 等） | ✅ `test/versions-never-merge.test.js` 锁定 |
-| 部署 | 生产部署（当前仍为旧构建） | ⏸ 等 owner 许可 |
+| 部署 | 生产部署 | ✅ 2026-11-16 23:45，build `6e06ed134215`，`SP_VERSIONS=all`（默认盟约 / 规程可选） |
 
 以下各节以 `[ ]` 标出的条目即上表对应的未做项；`[x]` 为已完成。本轮会话的完整交接（环境、命令、已提交项、坑）见 [`HANDOFF-2026-11-16.md`](HANDOFF-2026-11-16.md)。
 
