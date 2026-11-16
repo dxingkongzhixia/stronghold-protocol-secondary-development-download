@@ -1696,8 +1696,8 @@
       "combat": "client",
       "boost": null,
       "setup": {"stageId":"act3autochess_m06","bossId":"boss_11","hiddenBossId":"boss_16","factions":["FLY","DOT","REBORN"]},
-      "end": {"victory":true,"roundsPassed":14,"hiddenReached":false,"hiddenCleared":false,"reason":"victory","teamLp":17,"bossPoolLeft":0,"virtualMs":118600},
-      "rng": {"setup":29,"shop":529,"waves":0,"draft":25,"bots":18010,"meta":11},
+      "end": {"victory":true,"roundsPassed":14,"hiddenReached":false,"hiddenCleared":false,"reason":"victory","teamLp":16,"bossPoolLeft":0,"virtualMs":118600},
+      "rng": {"setup":29,"shop":529,"waves":0,"draft":25,"bots":18025,"meta":11},
       "errors": {"engine":0,"logged":0,"sim":0,"dispatcher":0},
       "rounds": [
         {"round":1,"h_0":[1,27,4,0,0,1,2,"5baa2ed6",0,"soloShip 1/0",3,4,1,4],"ai_0":[1,27,4,0,0,1,2,"fb9505a5",0,"",4,4,0,4]},
@@ -1752,13 +1752,13 @@
           "victory": true,
           "roundsPassed": 14,
           "eliminatedRound": null,
-          "lp": 9,
+          "lp": 8,
           "bandId": "band_cannot",
           "title": {"id":"comment_2","name":"坚实盟约","picId":"comment_icon_1_1","text":"激活的盟约层数总和最高"},
           "trophies": 4,
           "reward": 0,
-          "stats": {"activatedLayers":109,"bossDamage":415502,"dmgDealt":2446373,"gold":140,"itemsEquipped":13,"kills":242,"leaks":20,"lpLost":18,"merges":3,"perfectRounds":8,"refreshes":26},
-          "lineup": ["5_01_a@11,6","6_12_a@11,7","1_09_b@11,8[4_11_e_a]","1_19_b@10,6[1_07_e_a+2_08_e_a]","4_01_a@10,7[4_15_e_a+3_07_e_b]","3_02_a@10,8","5_11_a@9,7[5_07_e_a+3_16_e_a]","5_06_a@9,8[3_10_e_a+4_02_e_b]"],
+          "stats": {"activatedLayers":109,"bossDamage":359659,"dmgDealt":2434212,"gold":140,"itemsEquipped":13,"kills":232,"leaks":20,"lpLost":18,"merges":3,"perfectRounds":8,"refreshes":26},
+          "lineup": ["5_01_a@12,6","1_19_b@11,8[1_07_e_a+2_08_e_a]","6_12_a@10,4","1_09_b@10,6[4_11_e_a]","4_01_a@10,7[4_15_e_a+3_07_e_b]","3_02_a@10,8","5_11_a@9,3[5_07_e_a+3_16_e_a]","5_06_a@9,4[3_10_e_a+4_02_e_b]"],
           "bonds": ["arcaneShip 1/46","lethaniaShip 2/53","maniShip 1/0","preciShip 0/8","sargonShip 1/10","soloShip 1/0","suntShip 1/0"]
         },
         "ai_0": {
@@ -1771,8 +1771,8 @@
           "title": {"id":"comment_1","name":"百花齐放","picId":"comment_icon_1_0","text":"对敌方领袖造成伤害最高（仅胜利时）"},
           "trophies": 4,
           "reward": 0,
-          "stats": {"activatedLayers":105,"bossDamage":584498,"dmgDealt":2892606,"gold":146,"itemsEquipped":16,"kills":196,"leaks":19,"lpLost":19,"merges":5,"perfectRounds":10,"refreshes":22},
-          "lineup": ["2_10_b@12,8","1_09_b@11,7","2_09_a@11,8[1_05_e_a+1_06_e_a]","6_07_a@10,6[4_02_e_b]","3_15_a@10,7[3_15_e_a+3_06_e_b]","2_01_b@10,8","4_15_a@9,8[4_13_e_a+4_07_e_a]","1_05_a@9,9[4_10_e_b+3_08_e_a]"],
+          "stats": {"activatedLayers":105,"bossDamage":640341,"dmgDealt":2830487,"gold":146,"itemsEquipped":16,"kills":198,"leaks":19,"lpLost":19,"merges":5,"perfectRounds":10,"refreshes":22},
+          "lineup": ["2_10_b@12,7","1_09_b@11,6","2_09_a@11,8[1_05_e_a+1_06_e_a]","6_07_a@10,5[4_02_e_b]","3_15_a@10,7[3_15_e_a+3_06_e_b]","2_01_b@10,8","1_05_a@9,5[4_10_e_b+3_08_e_a]","4_15_a@9,6[4_13_e_a+4_07_e_a]"],
           "bonds": ["arcaneShip 1/55","lethaniaShip 0/6","miraShip 0/21","skillfulShip 0/21","soloShip 1/0","suntShip 1/0","swiftShip 0/14","victoriaShip 2/50"]
         }
       },
