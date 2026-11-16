@@ -37,7 +37,11 @@ export function avatarUrl(avatar, m = null) {
   if (/^[0-9a-f]{32}\.(png|jpg|webp)$/.test(v)) return `/avatar/${v}`;
   if (/^char_/.test(v)) {
     const entry = obj(obj(m)?.chars)?.[v];
-    return str(entry?.avatarE2) || str(entry?.avatar) || null;
+    if (entry) return str(entry.avatarE2) || str(entry.avatar) || null;
+    // A version-only operator is absent from data/assets.json; its avatar comes from the local client.
+    const base = v.replace(/_\d+$/, '');
+    return localAsset(`char/avatar/${base}`, v) || localAsset(`char/avatar/${base}`, base)
+      || localAsset(`char/avatar/${base}`, `${base}_2`) || null;
   }
   return null;
 }

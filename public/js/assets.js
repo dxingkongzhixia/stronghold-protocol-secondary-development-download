@@ -213,7 +213,7 @@ export function spineEntry(m, id, opts) {
     }
     if (isObj(ch.spine)) {
       const sp = (opts && opts.back && isObj(ch.spine.back)) ? ch.spine.back : ch.spine.front;
-      return validSpine(sp) ? sp : null;
+      if (validSpine(sp)) return sp;
     }
   }
   const tk = get(get(m, 'tokens'), s);
@@ -243,7 +243,44 @@ export function spineEntry(m, id, opts) {
     }
     return (opts && opts.local && localSpineEntry(en.spineLocal, opts.local, web)) || web;
   }
+  // An official-version-only operator: data/assets.json's plan covers the default roster, so its `chars` entry (and web
+  // Spine) is absent. tools/local-extract extracted its Front/Back models beside the pictures — draw those.
+  if (opts && opts.local) {
+    const local = localCharSpineEntry(opts.local, baseCharId(s), opts.back ? 'back' : 'front')
+      || localCharSpineEntry(opts.local, baseCharId(s), 'front');
+    if (local) return local;
+  }
   return null;
+}
+
+const localCharSpines = new WeakMap(); // local manifest → Map(group → Spine entry)
+
+/**
+ * A version-only operator's Spine from the local-client manifest (`spine/char/<id>/front|back`: `<id>.skel`,
+ * `<id>.atlas`, page PNGs). The extractor writes no role table, so the standard clip names are offered and the
+ * renderer drops the ones the skeleton does not have; the idle clip still finds `Idle` (or the first clip).
+ * @param {any} local data/local-assets.json
+ * @param {string} charId @param {'front'|'back'} face
+ */
+export function localCharSpineEntry(local, charId, face = 'front') {
+  if (!isObj(local) || !charId) return null;
+  const group = `spine/char/${charId}/${face}`;
+  let map = localCharSpines.get(local);
+  if (!map) localCharSpines.set(local, map = new Map());
+  if (map.has(group)) return map.get(group);
+  const entries = get(get(local, 'groups'), group);
+  const names = isObj(entries) ? Object.keys(entries) : [];
+  const skel = names.find((n) => n.endsWith('.skel'));
+  const atlas = names.find((n) => n.endsWith('.atlas'));
+  const textures = names.filter((n) => n.endsWith('.png'));
+  const entry = skel && atlas && textures.length
+    ? localSpineEntry({
+      group, skel, atlas, textures, pma: true,
+      anims: { idle: 'Idle', deploy: 'Start', die: 'Die', attack: { loop: 'Attack' }, skill: { loop: 'Skill' } },
+    }, local, null)
+    : null;
+  map.set(group, entry);
+  return entry;
 }
 
 const localSpines = new WeakMap(); // spineLocal record → { local, web, entry } (one entry object per manifest pair)

@@ -23,7 +23,13 @@ const manifest = {
     'ui/battle': { img_chess_level_3: { path: '/assets/local/ui/battle/img_chess_level_3.png', w: 45, h: 45 } },
     // an official-version-only operator: not in data/assets.json, its art from the local client (illust.py)
     'char/illust/char_new': { char_new: { path: '/assets/local/char/illust/char_new/char_new.webp' } },
+    'char/avatar/char_new': { char_new_2: { path: '/assets/local/char/avatar/char_new/char_new_2.png' } },
     'char/portrait/char_new': { char_new_2: { path: '/assets/local/char/portrait/char_new/char_new_2.png' } },
+    'spine/char/char_new/front': {
+      'char_new.skel': { path: '/assets/local/spine/char/char_new/front/char_new.skel' },
+      'char_new.atlas': { path: '/assets/local/spine/char/char_new/front/char_new.atlas' },
+      'char_new.png': { path: '/assets/local/spine/char/char_new/front/char_new.png' },
+    },
   },
 };
 // what the server (server/http/static.js) serves when data/local-assets.json is absent
@@ -59,11 +65,30 @@ describe('local-client art fallbacks', () => {
     assert.equal(emoteArtUrl('autochess_battle_sad'), null, 'listed by neither manifest (no data/assets.json here): no URL, never requested');
     assert.equal(emoteArtUrl('nope'), null);
     // a seat art choice names an operator the web manifest lacks; its full-body art / portrait comes from the local client
-    const { seatArtUrl } = await import('../../public/js/ui/assetUrls.js');
+    const { seatArtUrl, avatarUrl } = await import('../../public/js/ui/assetUrls.js');
+    assert.equal(avatarUrl('char_new', { chars: {} }), '/assets/local/char/avatar/char_new/char_new_2.png',
+      'a version-only operator avatar comes from the local client');
     assert.equal(seatArtUrl({ chars: {} }, 'char_new'), '/assets/local/char/illust/char_new/char_new.webp');
     assert.equal(seatArtUrl({ chars: { char_new: {} } }, 'char_new'), '/assets/local/char/illust/char_new/char_new.webp');
     assert.equal(seatArtUrl(null, 'char_new'), '/assets/local/char/illust/char_new/char_new.webp');
     assert.equal(seatArtUrl({ chars: {} }, 'char_missing'), null);
+    // an official-version-only operator has no web Spine entry: its Front/Back models come from the local client
+    const { spineEntry, validSpine } = await import('../../public/js/assets.js');
+    const sp = spineEntry({ chars: {} }, 'char_new', { local: manifest });
+    assert.ok(validSpine(sp), 'a usable local Spine entry');
+    assert.equal(sp.skel, '/assets/local/spine/char/char_new/front/char_new.skel');
+    assert.equal(sp.atlas, '/assets/local/spine/char/char_new/front/char_new.atlas');
+    assert.deepEqual(sp.textures, ['/assets/local/spine/char/char_new/front/char_new.png']);
+    assert.ok(spineEntry({ chars: { char_new: {} } }, 'char_new', { local: manifest }), 'a chars entry without a spine also falls back');
+    assert.equal(spineEntry({ chars: {} }, 'char_new'), null, 'without the local manifest there is no model');
+    // the real committed art: a regulation-only operator's model is served from the local client
+    const realLocal = JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.committed.json'), 'utf8'));
+    const realAssets = JSON.parse(readFileSync(path.join(ROOT, 'data/assets.json'), 'utf8'));
+    for (const id of ['char_325_bison', 'char_1037_amiya3']) {
+      const real = spineEntry(realAssets, id, { local: realLocal });
+      assert.ok(validSpine(real), `${id}: a local Front model`);
+      assert.match(real.skel, new RegExp(`/assets/local/spine/char/${id}/front/`));
+    }
     const pages = guidePages();
     assert.deepEqual(pages.map((p) => p.key), ['autochess_home_1', 'autochess_home_2', 'autochess_shop_1', 'autochess_handbook_4'], 'reading order, missing pages skipped');
     assert.deepEqual(pages.map((p) => p.chapter), [0, 0, 1, 2]);
