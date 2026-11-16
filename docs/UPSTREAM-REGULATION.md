@@ -144,7 +144,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 |---|---|---|
 | 版本系统 | 注册表、版本数据托管、`/cs/`、大厅版本字段、客户端加载、`kind:'version'` 对局宿主、房间版本投票、通用 profile 加载器已完成（P0 全部） | 无 |
 | 规程数据 | 16 文件 / 6.4 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游；模板预设（阿米娅·医疗）取 `char_patch_table` 的完整形态；tuning（称号规则）与 `spineLocal` 输入已显式化 | — |
-| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 核心优先禁用 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩、全部 act3 地图规则、寻宝人（含机器人）、#932 暴躁铁皮、#925 装备池、#944 组合装备、#943 莱塔尼亚（召唤/追击/出生格索敌/乐部二连击）、装备研究按 trapId 索引、隐秘核心/领袖/联防复核 | P2 剩余：#946、`recruitTierExempt`（pin 阻塞） |
+| 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 核心优先禁用 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩、全部 act3 地图规则、寻宝人（含机器人）、#932 暴躁铁皮、#925 装备池、#944 组合装备、#943 莱塔尼亚（召唤/追击/出生格索敌/乐部二连击）、`recruitTierExempt` 通讯机例外、装备研究按 trapId 索引、隐秘核心/领袖/联防复核 | 无（P2 完成） |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 无（P3 完成） |
 | 素材 | 场景/主题/敌人特效、按版本并集规划（敌人/召唤/干员/模块类型均已接进 `fetch-assets`）、98 个本地敌人 Spine、音乐、主题；首包约 2.6 MB gzip | 无（P4 完成） |
 | golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 无（P5 完成） |
@@ -156,8 +156,8 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 | 阶段 | 未做项 | 状态 |
 |---|---|---|
-| P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🟡 #932 已移植；#934/#937 等价；#925 装备池、#944 组合装备、#939 MAP09、#947 萨卡兹死亡替换、#943 莱塔尼亚全部完成；#946 依赖缺失的横幅系统（#930 N/A） |
-| P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
+| P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | ✅ 全部完成；#946 为阶段横幅去重 + 机变单入口（#930 N/A） |
+| P2 | `recruitTierExempt` 招募例外 | ✅ 版本档案标记 + 通讯机例外 + `SharedPool` 仅绕过 maxTier |
 | P6 | 14 条 §0 never-merge 路径逐块重写 | ✅ 审计与守卫完成；上游新提交按 check-upstream 手工移植 |
 | P6 | 保留 fork 特性（自定义干员、VFX、插件内容集、admin、i18n 等） | 🔴 未开始 |
 | 部署 | 生产部署（当前仍为旧构建） | ⏸ 等 owner 许可 |
@@ -207,7 +207,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] 自选无特质、按阵营分盟约：`shared/diy.js` 的自选记录取槽位身份（`garrisonIds: []`）与干员的派生盟约（`backups.diy.operators[charId].bonds`），非盟约表原样复制；Ⅴ/Ⅵ 各 0–2 由 CUSTOM_CHECK 实现。测试 `test/diy.test.js`（默认数据）与 `test/versions-custom.test.js`（规程）
 - [x] 装备区（服务端）：独立 5 格 `equipHand`（`economy.equipHandSize` = 官方 `constData.maxDeckEquipmentChessCnt`），购买/获得进装备区、从装备区装备、装备区参与合并；默认盟约仍与手牌共用（`equipHandSize` 缺省 0）。测试 `test/versions-equipment.test.js`；UI 随 P3
 - [x] 每干员装备容量：版本构建写入官方 `charChessDataDict[].equipSlotNum`（非 2 时）到 `chess.json equipSlots`，`GameData.equipSlotsOf` 覆盖 `equipPerChess`（Ironhide 4 / 6，其余 2）；装备/替换、invariant、bot 与装备区 UI 均按干员容量；`shared/standIn.js IDENTITY_FIELDS` 携带该字段。测试 `test/versions-equipment.test.js`
-- [ ] **[阻塞]** 招募例外 `recruitTierExempt`：当前 gamedata pin 无该字段，待官方表更新
+- [x] 招募例外 `recruitTierExempt`：不是 gamedata 字段，而是版本档案标记（`tools/versions/act3autochess-v3_1.mjs` 只写 `chess_char_5_22_a`）。构建给普通/精锐两条记录写 `recruitTierExempt: true`；`effectsMeta.rollChess` 的 `tierExemptChess` 只放行「有标记、隐藏、非精锐、非自选、不在普通库存、未被禁」的那一条，`SharedPool._eligible` 只让它绕过 `maxTier`、保留真实阶级。`equip_destory_first_bond_char`（简易通讯机）已实现，寻呼模块不继承。测试 `test/match/ironhide-items.test.js`、`test/data-versions.test.js`
 - [x] 隐秘核心端到端：规程 solo NORMAL+（⟨等级5⟩+）/ co-op HARD+（⟨险境⟩+），Σ 激活层数 > 350/1200 且 team LP > 1，R14 胜利后进入 R15；未通过不影响通关。测试 `test/versions-hidden-core.test.js`；阈值 350/1200 仍 `[ASSUMED]`
 - [x] 隐秘核心/领袖/联防复核：Hidden Core 350 / 1200、R14、solo NORMAL+ / co-op HARD+ 与上游一致；领袖共享血池（`bossHpScale.perPlayer`）与超时 150 s 后 1 LP/s；联防 `layerGainsEnabled: false`（`fields.js` 拒绝战斗内加层），HP/SP/位置继承与漏怪满血。测试 `test/versions-config-rules.test.js`，行为覆盖 `test/versions-hidden-core.test.js`、`test/versions-boss-top.test.js`、`test/match/finalAssault.test.js`
 - [x] 地图规则：MAP09 双方隐匿地块（`tile_duel_grassland`：双方地面单位获得隐匿、被阻挡显形、解除阻挡立即恢复——官方 `enemyStealthRestoreSec` 0 即「草丛秒数」、离开清除；`special.duelGrass`）；m12 加速地块（`tile_speedup` +25 ASPD / ×1.5 移速）；Boss 受击区（7 个 act3 首领的 `hitArea` 已随数据生成）；茧隐匿索敌与「淤困之茧」捆绑（Net 只选可选中目标、茧捆绑一格并自损 4 %/s）；萨卡兹亡语（子裔寄生者周围击杀召唤大君之赐）与延迟召唤（自助出餐终端按技能 CD 召唤）；莱塔尼亚召唤改为**友方 token**（小节/乐部，可阻挡地面敌人并自损）。测试 `test/versions-map-rules.test.js`、`test/versions-cocoon.test.js`、`test/versions-enemies-official.test.js`、`test/versions-bonds.test.js`
@@ -217,7 +217,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **组合装备（#944）**：获得另一半即合成，包括穿在干员身上的搭档；成品未装备，回到装备区。休整期结束的发放（`deferMerge`）只收下这一半并标 `pendingFusion`，下个准备期开始 `checkItemMerges({ releaseDeferred: true })` 再合成，开战前不会卸下搭档；商店购买、奖励领取与画卷复制走同一路径。一次 `onMerge`、两个组件各一次 `onDestroy`（reason `fuse`），没有 `onEquip`。测试 `test/match/item-fusion.test.js`
 - [x] **装备研究按 `trapId` 索引**（与上游一致）：赛季复用物品 id 时不再串味——规程 5_05 是「天马之盔」而不是 act2 的「拟态物质」，5_08「佣兵名牌」不再套用突变细胞规则；商店排除与规则表改按效果 id 查找。测试 `test/data-versions.test.js`
 - [x] **#943 莱塔尼亚**：任意敌方单位被 `killed` 即按 `summon_prob_*` 召一只小节；六名不同成员时按 `big_prob_*` 改为乐部、自身干员被击倒额外召一次、上限 20（否则 10），只数该玩家自己的存活召唤。召唤物是**不占 `_occ` 的移动 token**：可以叠在干员/倒地身体上，`relocate` 直接拒绝，`blocking.js` 在出现过追击召唤物的战斗里按坐标扫描它们；`content/bonds/lethania.js` 按四向地面路径追击最近可选敌人，小节优先攻击出生格上的敌人（`birthCellTargets` / `birthLocalTargets`，局部集空后永久退出），空场时回到出生格中心；乐部每三次攻击后的下一次攻击命中两次。测试 `test/versions-bonds.test.js`
-- [ ] **[部分]** 对局侧修复（余下）：#932 暴躁铁皮已移植（S1 清除异常并免疫、攻击范围内的友方、崩裂之击 1.7 格）；#934 极光/忍冬 与 #937 白铁 核对后与上游等价；#925 装备池已完成；#939（MAP09 隐匿）与 #947（萨卡兹死亡替换）已由上面的地图/敌人条目覆盖；#946 阶段横幅依赖 `public/js/ui/prefab/banners.js`。测试 `test/content/kits_ver_act3.test.js`、`test/data-versions.test.js`、`test/versions-bonds.test.js`
+- [x] **对局侧修复**：#932 暴躁铁皮（S1 清除异常并免疫、攻击范围内的友方、崩裂之击 1.7 格）；#934 极光/忍冬 与 #937 白铁 核对后与上游等价；#925 装备池；#939 MAP09 隐匿；#947 萨卡兹死亡替换；#946 阶段横幅去重（`phaseBanner` 对休整/作战/机变返回 `null`，机变只留 `轮到你选` 圆盘，单人也提示）。测试 `test/content/kits_ver_act3.test.js`、`test/data-versions.test.js`、`test/versions-bonds.test.js`、`test/ui/gameLogic.test.js`、`test/ui/turn-popup.test.js`
 
 ### P3 UI / 主题（8–12 人日）
 - [x] 规程等级 1–20 的**服务端选择**：`room.setMode { modeId }` 接受版本自己的模式（`config.modes`，如 `mode_single_7`），同步房间难度与 `content.modeId`；测试 `test/lobby-versions.test.js`

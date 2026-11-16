@@ -1073,6 +1073,7 @@ async function loadContext() {
   return {
     act, ac, charTable, skillTable, rangeTable, uniequip, battleEquip, handbook, enemyDb,
     levels, templateIds: [...templateIds].sort(naturalCmp), stageIds, enemyDataLevelId, research,
+    profile: PROFILE,
     manifest: await loadManifest(),
   };
 }
@@ -1666,6 +1667,9 @@ function buildChess(ctx) {
       // the official per-chess equipment capacity (`equipSlotNum`; 2 for all but Ironhide's 4/6). Version-only: the
       // default build keeps its bands.json/chess.json byte for byte and reads the mode's economy.equipPerChess.
       ...(VERSION && Number.isInteger(cd.equipSlotNum) && cd.equipSlotNum > 0 && cd.equipSlotNum !== 2 ? { equipSlots: cd.equipSlotNum } : {}),
+      // 简易通讯机's tier exception (profile recruitTierExempt): only these base ids may recruit their own hidden normal
+      // form above the shop level. Both forms carry the mark, so an elite carrier gets the same exception.
+      ...(ctx.profile?.recruitTierExempt?.includes(baseId) && { recruitTierExempt: true }),
       price: priceRow.purchasePrice ?? null,
       sellPrice: priceRow.chessSoldPrice ?? null,
       upgradeNum: cd.upgradeNum,

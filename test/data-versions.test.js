@@ -63,6 +63,8 @@ test('the 规程 item research is keyed by trap id, so reused item ids keep thei
     assert.equal(rec?.shopExcluded, true, `${name} stays exclusive`);
   }
   const fusers = Object.values(items).filter((i) => i.canFuse === true);
+  const exempts = Object.values(json('chess')).filter((c) => c.recruitTierExempt).map((c) => c.chessId);
+  assert.deepEqual(exempts, ['chess_char_5_22_a', 'chess_char_5_22_b'], 'only 暴躁铁皮 carries the communicator tier exception');
   assert.equal(fusers.length, 10, 'five pairs, both components');
   for (const r of fusers) {
     const partner = items[r.fuseWith];

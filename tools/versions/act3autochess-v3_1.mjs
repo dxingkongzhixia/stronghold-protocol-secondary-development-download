@@ -10,4 +10,6 @@ export default {
   pins: { default: '6f63c14e' },
   // the season's measured draft tables (tools/versions/tables/act3autochess-v3_1.mjs)
   tables: 'act3autochess-v3_1',
+  // base chess ids whose 简易通讯机 may recruit their own normal form above the shop level (暴躁铁皮)
+  recruitTierExempt: Object.freeze(['chess_char_5_22_a']),
 };

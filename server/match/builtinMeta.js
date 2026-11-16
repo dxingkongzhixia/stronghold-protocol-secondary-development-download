@@ -118,6 +118,22 @@ const ITEM_HANDLERS = {
       if (!got) toastNothing(ctx, ev);
     },
   },
+  // 简易通讯机 (规程): FIRST bond, tier <= shop level; an explicitly marked special carrier (暴躁铁皮) may recruit its own
+  // hidden normal form through effectsMeta.rollChess's tierExemptChess.
+  equip_destory_first_bond_char: {
+    onEquip(ctx, ev) {
+      const n = Math.max(1, int(paramsOf(ctx, ev.item).count, 1));
+      const first = ctx.pieceBonds(ev.target.uid)[0];
+      let got = 0;
+      if (first) {
+        for (let k = 0; k < n; k++) {
+          const id = ctx.rollChess({ bond: first, maxTier: ctx.shopLevel(), tierExemptChess: [ctx.gd.baseIdOf(ev.target.id)] });
+          if (id && ctx.grantChess(id)) got++;
+        }
+      }
+      if (!got) toastNothing(ctx, ev);
+    },
+  },
   use_equip_gain_coin_when_next_round_start: {
     onEquip(ctx, ev) { ctx.addPendingFunds(int(paramsOf(ctx, ev.item).count, 2)); },
   },

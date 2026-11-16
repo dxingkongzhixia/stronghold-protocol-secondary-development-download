@@ -97,16 +97,18 @@ export class SharedPool {
    */
   _eligible({ maxTier = 6, tier = null, filter = null, extra = null, ignoreCounts = false } = {}) {
     const out = [];
-    const scan = (list) => {
+    // Explicit `extra` entries marked `tierExempt` (简易通讯机's marked carrier) bypass maxTier only, keeping their real
+    // tier; exact-tier draws and ordinary pool entries never bypass the gate.
+    const scan = (list, extraEntries = false) => {
       for (const [id, e] of list) {
         if (!ignoreCounts && e.left <= 0) continue;
-        if (tier != null ? e.tier !== tier : e.tier > maxTier) continue;
+        if (tier != null ? e.tier !== tier : e.tier > maxTier && !(extraEntries && e.tierExempt === true)) continue;
         if (filter && !filter(id, e)) continue;
         out.push([id, ignoreCounts ? 1 : e.left]);
       }
     };
     scan(this.entries);
-    if (extra) scan(extra);
+    if (extra) scan(extra, true);
     return out;
   }
 
