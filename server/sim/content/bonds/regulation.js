@@ -15,7 +15,7 @@
 //                          (damage_res_base + per_stack·L) damage reduction.
 import * as S from '../support/index.js';
 import { reached } from './core.js';
-import { hypot } from '../../detmath.js';
+import { captureLethaniaBirthMode, lethaniaSummon } from './lethania.js';
 
 const num = S.num;
 
@@ -122,17 +122,6 @@ function installUrsus(battle, pid, bb) {
 const NOTE_ID = 'enemy_9025_aclts';
 const CHORUS_ID = 'enemy_9026_acltm';
 
-/** 小节 / 乐部's own HP loss (their record's `Bleeding` 10 %/s, 「自身缓慢流失生命」). */
-function lethaniaTokenKit() {
-  return {
-    install(battle, unit) {
-      battle.every(1, () => {
-        if (unit.alive) battle.loseHp(unit, unit.s.maxHp * 0.1, { tags: ['enemyAbility'] });
-      }, { owner: unit });
-    },
-  };
-}
-
 function installLethania(battle, pid, bb) {
   const id = 'lethaniaShip';
   const L = () => S.bondLayers(battle, pid, id);
@@ -153,14 +142,7 @@ function installLethania(battle, pid, bb) {
     for (const u of summons()) S.passiveBuff(battle, u, 'bond:lethania', mods);
   });
   // The official summons are enemy-data records fielded as ALLIED units: 小节 blocks 1, 乐部 blocks 2 and shoots arts.
-  // [ASSUMED] they hold the death tile instead of pursuing (the official walks them toward the nearest enemy); a token
-  // carries the record's block count, attack and range, so it engages the ground enemies that reach it.
-  const rangeCircle = (r) => {
-    const out = [];
-    const n = Math.ceil(r);
-    for (let dr = -n; dr <= n; dr++) for (let dc = -n; dc <= n; dc++) if (hypot(dr, dc) <= r + 1e-9) out.push([dr, dc]);
-    return out;
-  };
+  // content/bonds/lethania.js carries their combat values, radial range, continuous ground pursuit and birth-tile focus.
   const summon = (x, y) => {
     if (summons().length >= cap()) return;
     // summon_prob_base is 1: every killed enemy summons unless the blackboard says otherwise (a later 6-member
@@ -173,25 +155,15 @@ function installLethania(battle, pid, bb) {
       if (battle.rng.chance(big)) key = CHORUS_ID;
     }
     const raw = battle.data?.getEnemy?.(key)?.raw || null;
-    const st = raw?.stats || {};
-    const ranged = key === CHORUS_ID;
-    const def = {
-      name: raw?.name || key, profession: ranged ? 'CASTER' : 'WARRIOR', position: ranged ? 'RANGED' : 'MELEE',
-      stats: {
-        maxHp: st.maxHp, atk: st.atk, def: st.def, res: st.res, blockCnt: st.blockCnt, bat: st.bat, aspd: st.aspd,
-        rangeRadius: st.rangeRadius, moveSpeed: 0,
-      },
-      dmgType: 'arts', attackKind: ranged ? 'ranged' : 'melee', canHitFly: ranged,
-      rangeGrid: ranged ? rangeCircle(Math.max(1, num(st.rangeRadius, 2.4))) : [[0, 0]], trait: '', skill: null,
-    };
     const u = battle.spawnToken(pid, key, Math.round(y), Math.round(x), {
-      def, anySource: true, kit: lethaniaTokenKit(), overlap: true,
+      ...lethaniaSummon(key, raw), overlap: true,
     });
     if (!u) return;
     // The official summons may share a tile with an operator (including the body of the one whose death summoned
     // them) and do not claim deployment occupancy; blocking.js scans them by coordinates.
     u.mem.lethaniaPursuit = true;
     battle._lethaniaPursuers = true;
+    if (key === NOTE_ID) captureLethaniaBirthMode(battle, u);
     // the record's own aura (乐部 base_attack_speed) and the bond ATK bonus apply to the summon as well
     const aspd = num(raw?.talents?.bb?.['Aura.base_attack_speed']);
     if (aspd) S.passiveBuff(battle, u, 'bond:lethania:aura', S.directMods({ aspd }));

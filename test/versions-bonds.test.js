@@ -199,6 +199,51 @@ test('莱塔尼亚: own operator deaths summon only at 6 members', () => {
   assert.equal(six[0].defId, 'enemy_9025_aclts');
 });
 
+test('莱塔尼亚: a 小节 keeps an enemy on its birth tile and pursues a far one', () => {
+  setGameData(ACT3);
+  // the birth tile: two enemies share it; killing one leaves the other as the note's first local target
+  const birth = makeBattle({
+    data: ds, seed: 9, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_19_a', row: 12, col: 6 }],
+    enemies: [
+      { key: 'enemy_1000_gopro_2', time: 0, pos: [10, 8], mods: { speedMul: 0 } },
+      { key: 'enemy_1000_gopro_2', time: 0, pos: [10, 8], mods: { speedMul: 0 } },
+    ],
+    bonds: { lethaniaShip: bondOn(3, 0) },
+  });
+  birth.step(1);
+  const survivor = birth.enemies()[1];
+  birth.b.kill(birth.enemies()[0]);
+  const [note] = lethaniaSummons(birth);
+  assert.ok(note, 'the birth tile summons');
+  assert.equal(note.blocking[0], survivor, 'it takes the enemy on its birth tile first');
+  birth.run(1);
+  assert.deepEqual([note.x, note.y], [8, 10], 'it holds the birth tile while that local target lives');
+  checkInvariants(birth.b);
+
+  // a far, still enemy: the note walks toward it
+  const far = makeBattle({
+    data: ds, seed: 9, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_19_a', row: 12, col: 6 }],
+    enemies: [
+      { key: 'enemy_1000_gopro_2', time: 0, pos: [10, 8] },
+      { key: 'enemy_1000_gopro_2', time: 0, pos: [10, 5], mods: { speedMul: 0 } },
+    ],
+    bonds: { lethaniaShip: bondOn(3, 0) },
+  });
+  far.step(1);
+  far.b.kill(far.enemies().find((e) => Math.round(e.x) === 8 && Math.round(e.y) === 10));
+  const [walker] = lethaniaSummons(far);
+  assert.ok(walker);
+  const x0 = walker.x;
+  far.run(8);
+  const target = far.enemies()[0];
+  assert.ok(walker.x < x0 - 1, `the note walks toward the far enemy (${x0} -> ${walker.x})`);
+  assert.ok(Math.hypot(target.x - walker.x, target.y - walker.y) <= 0.8,
+    `it reaches attack range (${walker.x},${walker.y} vs ${target.x},${target.y})`);
+  checkInvariants(far.b);
+});
+
 test('莱塔尼亚: the 10-summon cap counts only living summons', () => {
   setGameData(ACT3);
   const h = makeBattle({
