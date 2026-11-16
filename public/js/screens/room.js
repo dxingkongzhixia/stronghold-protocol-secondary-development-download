@@ -428,6 +428,9 @@ export function RoomScreen() {
   const bubbles = activeChatBubbles(chat, Date.now(), CHAT_BUBBLE_MS);
   useTicker(bubbles.size ? 500 : 0); // re-render only while a bubble is showing (to expire it)
   const [busy, setBusy] = useState(null);
+  // The 插件 panel is hosted at the screen root: inside the topbar it stacked under the seats and was clipped.
+  const [pluginPanel, setPluginPanel] = useState(null);
+  const [pluginsOpen, setPluginsOpen] = useState(false);
   const [artSeat, setArtSeat] = useState(null);
   const [saveDefault, setSaveDefault] = useState(true);
   const [coachSeat, setCoachSeat] = useState(null);
@@ -491,6 +494,13 @@ export function RoomScreen() {
   // docs/AGENT-SEATS.md: any seated player mints a one-time token; the server pushes it back in `agent.invite`
   const inviteAgent = (seat) => run(`ai${seat}`, () => net.request('room.agentInvite', { seat, ttlSec: 600 }));
   const closeAgentInvite = () => store.set({ agentInvite: null });
+  const openPlugins = () => {
+    setPluginsOpen(true);
+    if (pluginPanel) return;
+    import('../ui/pluginPanel.js')
+      .then((m) => { if (alive.current) setPluginPanel(() => m.PluginPanel); })
+      .catch((err) => console.warn('[plugins] the panel did not load', err));
+  };
   // owner → own agent only (agent.coach): private, 1/s, 200 chars; the directive is replayed after a reconnect
   const COACH_PRESETS = [t('先铺满棋盘'), t('优先升级商店'), t('优先凑主盟约'), t('找对空/治疗'), t('攒钱打后期'), t('这轮先稳')];
   const openCoach = (seat) => { setCoachSeat(seat); setCoachText(''); };
@@ -586,7 +596,7 @@ export function RoomScreen() {
       <div class="topbar__center">
         <${MicroLabel} tone="mint">${coop ? (room.auto ? 'ALLIANCE MATCH' : 'ALLIANCE LOBBY') : 'SOLO SIMULATION'}<//>
         <h1 class="topbar__title">${coop ? (room.auto ? t('野排模拟') : t('同盟模拟')) : t('独立模拟')}<span class="topbar__sep"></span><${DifficultyTag} difficulty=${room.difficulty} size="lg" /></h1>
-        <${PluginTag} room=${room} myId=${me.playerId} />
+        <${PluginTag} room=${room} myId=${me.playerId} onOpen=${openPlugins} />
       </div>
       <div class="topbar__right">
         <${SettingsButton} class="room-settings" variant="secondary" label=${t('设置')} />
@@ -685,5 +695,6 @@ export function RoomScreen() {
         <p class="t-dim">${t('最多 200 字；每秒最多一条。')}</p>
       </div>
     <//>` : null}
+    ${pluginsOpen && pluginPanel ? html`<${pluginPanel} open=${true} room=${room} myId=${me.playerId} onClose=${() => setPluginsOpen(false)} />` : null}
   </div>`;
 }

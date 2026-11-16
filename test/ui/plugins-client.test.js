@@ -496,7 +496,9 @@ describe('the 插件 panel (ui/pluginPanel.js) and the room screen', () => {
 
   test('the room screen shows the tag under its title; the settings show 外观插件; the texts are in every pack', () => {
     const roomSrc = readFileSync(path.join(ROOT, 'public/js/screens/room.js'), 'utf8');
-    assert.match(roomSrc, /<\$\{PluginTag\} room=\$\{room\} myId=\$\{me\.playerId\} \/>/);
+    assert.match(roomSrc, /<\$\{PluginTag\} room=\$\{room\} myId=\$\{me\.playerId\} onOpen=\$\{openPlugins\} \/>/);
+    // the panel must sit at the screen root, not inside the topbar (owner report 2026-11-16: it stacked under the seats)
+    assert.match(roomSrc, /pluginsOpen && pluginPanel \? html`<\$\{pluginPanel\}/);
     const settingsSrc = readFileSync(path.join(ROOT, 'public/js/ui/settings.js'), 'utf8');
     assert.match(settingsSrc, /<\$\{CosmeticSection\} \/>/);
     for (const lang of ['en', 'ja', 'ko', 'zh-TW']) {
