@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { versionLevelOptions } from '../../public/js/screens/room.js';
+import { versionLevelOptions, versionLevelCurrent } from '../../public/js/screens/room.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const act3 = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'versions', 'act3autochess-v3_1', 'config.json'), 'utf8'));
@@ -24,6 +24,15 @@ test('规程 solo: the 20 levels plus 极速模拟, sorted, each with its own mo
 test('规程 co-op: the four multiplayer difficulties', () => {
   const modes = versionLevelOptions(act3, 'coop').map((m) => m.modeId);
   assert.deepEqual(modes, ['mode_multi_funny', 'mode_multi_normal', 'mode_multi_hard', 'mode_multi_abyss']);
+});
+
+test('the displayed protocol mode follows the chosen mode, else the difficulty', () => {
+  const solo = versionLevelOptions(act3, 'solo');
+  assert.equal(versionLevelCurrent(solo, { difficulty: 'NORMAL' }).modeId, 'mode_single_5');
+  assert.equal(versionLevelCurrent(solo, { difficulty: 'NORMAL', content: { modeId: 'mode_single_7' } }).modeId, 'mode_single_7');
+  const coop = versionLevelOptions(act3, 'coop');
+  assert.equal(versionLevelCurrent(coop, { difficulty: 'ABYSS' }).modeId, 'mode_multi_abyss');
+  assert.equal(versionLevelCurrent(coop, { difficulty: 'ABYSS', content: { modeId: 'mode_multi_hard' } }).modeId, 'mode_multi_hard');
 });
 
 test('the default 盟约 config has no version level picker', () => {

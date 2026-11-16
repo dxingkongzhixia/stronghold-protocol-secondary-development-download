@@ -25,6 +25,7 @@ import { copyText } from '../ui/clipboard.js';
 import { AccountForm, AccountWho } from '../ui/account.js';
 import { net, identity, randomGuestName } from '../net.js';
 import { store, useStore, shallowEqual } from '../store.js';
+import { useUiTheme } from '../uiTheme.js';
 import { data, useData } from '../data.js';
 import { FullscreenButton, detectFeatures } from '../ui/device.js';
 import { LangToggle, useLang } from '../ui/lang.js';
@@ -236,6 +237,9 @@ const STATUS_TEXT = {
 
 /** Title screen component. */
 export function TitleScreen() {
+  // The title is the base screen: clear any version theme a room set before the page was reloaded (规程 used to ship
+  // one; a tab open across that change could keep `<html data-ui-theme>` on the title otherwise).
+  useUiTheme(null);
   const conn = useStore((s) => s.connection, shallowEqual);
   const pendingJoin = useStore((s) => s.ui.pendingJoin);
   const auth = useStore((s) => s.auth, shallowEqual);

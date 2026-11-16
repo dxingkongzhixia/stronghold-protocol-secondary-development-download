@@ -342,12 +342,25 @@ export function versionLevelOptions(config, roomMode) {
 }
 
 /**
+ * The protocol mode the room actually plays: the mode the host chose (`content.modeId`), else the version's mode for
+ * the room's difficulty (the 20-level ladder and the co-op difficulties map one-to-one) — selecting a difficulty tab
+ * therefore still reads as that protocol, not 默认.
+ * @param {any[]} levels @param {any} room
+ */
+export function versionLevelCurrent(levels, room) {
+  const list = Array.isArray(levels) ? levels : [];
+  return list.find((m) => m.modeId === room?.content?.modeId)
+    || list.find((m) => m.difficulty === room?.difficulty)
+    || null;
+}
+
+/**
  * 规程: the 20-level solo ladder / the co-op regulation modes (room.setMode with a mode id of the version's config).
  * `levels` is empty for the default 盟约 version and while the version's content is still loading.
  */
 function VersionLevelPicker({ room, levels, isHost, busy, onPick }) {
   if (!levels.length) return null;
-  const current = levels.find((m) => m.modeId === room.content?.modeId) || null;
+  const current = versionLevelCurrent(levels, room);
   if (!isHost) {
     return html`<div class="vlevel vlevel--ro"><span>${t('选择模拟协议')}</span><b>${current?.name || t('默认')}</b></div>`;
   }
