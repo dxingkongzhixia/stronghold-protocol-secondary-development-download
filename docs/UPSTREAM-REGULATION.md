@@ -156,7 +156,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 | 阶段 | 未做项 | 状态 |
 |---|---|---|
-| P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🟡 #932 已移植；#934/#937 等价；#925 装备池、#944 组合装备已完成；#939/#943/#947 待定位（#930 N/A） |
+| P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🟡 #932 已移植；#934/#937 等价；#925 装备池、#944 组合装备、#939 MAP09、#947 萨卡兹死亡替换已完成；#943 余召唤物追击；#946 依赖缺失的横幅系统（#930 N/A） |
 | P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
 | P6 | 14 条 §0 never-merge 路径逐块重写 | ✅ 审计与守卫完成；上游新提交按 check-upstream 手工移植 |
 | P6 | 保留 fork 特性（自定义干员、VFX、插件内容集、admin、i18n 等） | 🔴 未开始 |
@@ -216,7 +216,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] 寻宝人：band 侧「模拟宝藏」（触碰永久消失、存活给钱、所在格无法部署、休整期只读可见、客户端放置预览、身体重叠判定）与机器人使用（`botTreasureTile` 选路线外可部署格，`botPrepEndSteps` 在准备就绪前发 `g.bandSkill`）。测试 `test/versions-treasure.test.js`、`test/content/bands_marks.test.js`、`test/match/bot-treasure.test.js`；装备报告 tab 已由 P3 完成
 - [x] **组合装备（#944）**：获得另一半即合成，包括穿在干员身上的搭档；成品未装备，回到装备区。休整期结束的发放（`deferMerge`）只收下这一半并标 `pendingFusion`，下个准备期开始 `checkItemMerges({ releaseDeferred: true })` 再合成，开战前不会卸下搭档；商店购买、奖励领取与画卷复制走同一路径。一次 `onMerge`、两个组件各一次 `onDestroy`（reason `fuse`），没有 `onEquip`。测试 `test/match/item-fusion.test.js`
 - [x] **装备研究按 `trapId` 索引**（与上游一致）：赛季复用物品 id 时不再串味——规程 5_05 是「天马之盔」而不是 act2 的「拟态物质」，5_08「佣兵名牌」不再套用突变细胞规则；商店排除与规则表改按效果 id 查找。测试 `test/data-versions.test.js`
-- [ ] **[部分]** 对局侧修复（余下）：#932 暴躁铁皮已移植（S1 清除异常并免疫、攻击范围内的友方、崩裂之击 1.7 格）；#934 极光/忍冬 与 #937 白铁 核对后与上游等价；#925 装备池：凯瑟琳不再抽到 act2 专属物品、娜仁图亚取消等级上限（与上游一致）；#946 阶段横幅依赖 `public/js/ui/prefab/banners.js`；#939 / #943 / #947 待按内容定位。测试 `test/content/kits_ver_act3.test.js`、`test/data-versions.test.js`
+- [ ] **[部分]** 对局侧修复（余下）：#932 暴躁铁皮已移植（S1 清除异常并免疫、攻击范围内的友方、崩裂之击 1.7 格）；#934 极光/忍冬 与 #937 白铁 核对后与上游等价；#925 装备池已完成；#939（MAP09 隐匿）与 #947（萨卡兹死亡替换）已由上面的地图/敌人条目覆盖；#946 阶段横幅依赖 `public/js/ui/prefab/banners.js`。**#943 莱塔尼亚**：击倒召唤本体已做（敌方 `killed`、六人乐部概率、存活上限 10/20），仍欠召唤物追击（`lethaniaPursuit`）、出生格优先与 `relocate` 拒绝。测试 `test/content/kits_ver_act3.test.js`、`test/data-versions.test.js`、`test/versions-bonds.test.js`
 
 ### P3 UI / 主题（8–12 人日）
 - [x] 规程等级 1–20 的**服务端选择**：`room.setMode { modeId }` 接受版本自己的模式（`config.modes`，如 `mode_single_7`），同步房间难度与 `content.modeId`；测试 `test/lobby-versions.test.js`
