@@ -91,14 +91,17 @@ test('规程 bands, bonds and items: every icon is in the manifest or the local 
   assert.deepEqual(missing, []);
 });
 
-test('规程 battlefields and theme: the 10 scenes and the key visual are present', () => {
-  const battlefield = Object.values(stages).filter((s) => s.kind !== 'unite');
+test('规程 battlefields and theme: the 10 scenes are committed and listed, and the key visual is present', () => {
+  const battlefield = Object.values(stages).filter((s) => typeof s.id === 'string' && s.id.startsWith('act3autochess_m'));
   assert.equal(battlefield.length, 10);
-  for (const s of Object.values(stages)) {
-    if (s.kind === 'unite') continue; // the two 联防 records share a board (fields family covers them)
-    assert.ok(fs.existsSync(path.join(ROOT, 'public', 'assets', 'local', 'scene', s.id)), s.id);
+  for (const s of battlefield) {
+    const g = local.groups?.[`scene/${s.id}`];
+    assert.ok(g?.scene?.path && g?.bin?.path, `${s.id}: scene/binary listed (committed-manifest.mjs)`);
+    for (const k of ['scene', 'bin']) assert.ok(exists(g[k].path), `${s.id}/${k}`);
+    assert.equal(g.scene.path, `/assets/local/scene/${s.id}/scene.json`);
+    assert.equal(g.bin.path, `/assets/local/scene/${s.id}/scene.bin`);
   }
   const art = '/assets/local/theme/act3autochess/act3autochess.png';
-  assert.ok(fs.existsSync(path.join(ROOT, 'public', art.replace(/^\//, ''))));
+  assert.ok(exists(art));
   assert.ok(theme.version?.family === 'regulation');
 });
