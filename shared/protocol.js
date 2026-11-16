@@ -486,6 +486,12 @@ export const C2S = {
   // public: list a hand-made 同盟 room in the lobby's 公开同盟 directory (server/admin.js buildPublicSnapshot →
   // /online/api.openRooms). Absent ⇒ public. Solo / 野排 (auto) rooms are never listed regardless.
   'room.create': { mode: (v) => v === 'solo' || v === 'coop', difficulty: (v) => DIFFICULTIES.includes(v), public: isBool, test: (v) => v === true, version: isVersionId, $optional: ['public', 'test', 'version'] },
+  // Official versions (shared/versions.js; docs/UPSTREAM-REGULATION.md): the host proposes a switch, a lone active human
+  // switches at once, else the seated humans vote (`room.state.versionVote`). `voteId` is that vote's id; `agree: false`
+  // declines, the last agreement switches.
+  'room.proposeVersion': { version: isVersionId },
+  'room.versionVote': { voteId: (v) => Number.isInteger(v) && v > 0, agree: isBool },
+  'room.cancelVersionVote': { voteId: (v) => Number.isInteger(v) && v > 0 },
   'room.join': { $optional: ['testAck'], testAck: (v) => v === true, code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v) },
   'room.leave': {},
   'room.ready': { ready: isBool },

@@ -200,6 +200,9 @@ export const LOBBY_DEFAULTS = Object.freeze({
   bootHoldMs: 180_000,    // a slot is freed this long after a claim with no release (a tab that never finished)
   chatRateLimit: CHAT_RATE_LIMIT,       // room.chat (docs/MATCHMAKING.md §38): messages per session per window
   chatRateWindowMs: CHAT_RATE_WINDOW_MS, // ...the sliding window a session's chat messages are counted over
+  versionVoteMs: 60_000,  // a version-switch vote's lifetime (room.proposeVersion)
+  versionRetryMs: 5_000,  // a declined / expired vote holds the next proposal this long
+  versionProposeGapMs: 2_000, // minimum gap between two proposals in one room
   officialOrigin: OFFICIAL_ORIGIN,      // where players should log in (a foreign page origin gets a plain reminder)
 });
 
@@ -296,6 +299,16 @@ export class Room {
     this.difficulty = difficulty;
     /** the official version the room plays (shared/versions.js id) */
     this.version = version;
+    /**
+     * An open version-switch vote (room.proposeVersion): the host proposes, every active human agrees; the last
+     * agreement applies the version. Null when no vote is open.
+     * @type {{ id: number, version: string, voters: string[], agreed: Set<string>, expiresAt: number, timer: any } | null}
+     */
+    this.versionVote = null;
+    /** monotonically increasing vote id (1 … 2^31-1) */
+    this.versionVoteSeq = 0;
+    this.versionProposeAt = -Infinity;
+    this.versionRetryAt = 0;
     /**
      * 「AI 队友最后选择」 (room.setAiPicksLast, GitHub #338; co-op only, off by default): the match's strategy and 机变 drafts
      * put every human seat before every AI seat (Match opts.aiPicksLast). Kept across the room's matches.
@@ -397,6 +410,13 @@ export class Room {
       ...(this.content ? { content: this.content.trusted ? { ...this.content, trusted: { ...this.content.trusted, consent: Object.fromEntries(this.seats.filter((s) => s && !s.isBot).map((s) => [s.seat, s.consentCs === this.content.cs])) } } : this.content } : {}),
       // another official version than the default, omitted otherwise so a default room.state stays identical
       ...(this.version !== DEFAULT_VERSION ? { version: this.version } : {}),
+      // an open version-switch vote (room.proposeVersion): the target, the voters and who has agreed
+      ...(this.versionVote ? {
+        versionVote: {
+          id: this.versionVote.id, version: this.versionVote.version, voters: [...this.versionVote.voters],
+          agreed: [...this.versionVote.agreed], expiresAt: this.versionVote.expiresAt,
+        },
+      } : {}),
     };
   }
 }
@@ -828,6 +848,9 @@ export class Lobby {
       case 'agent.coach': return this.coachAgent(session, msg);
       case 'room.setPlugins': return this.setPlugins(session, msg);
       case 'room.setMode': return this.setMode(session, msg);
+      case 'room.proposeVersion': return this.proposeVersion(session, msg);
+      case 'room.versionVote': return this.versionVote(session, msg);
+      case 'room.cancelVersionVote': return this.cancelVersionVote(session, msg);
       case 'room.contentReady': return this.contentReady(session, msg);
       case 'room.consent': return this.consent(session, msg);
       // a client that missed a state-delta frame asks for a full one (shared/stateDelta.js StateReceiver;
@@ -1636,6 +1659,153 @@ export class Lobby {
     room.difficulty = difficulty;
     room.content = content;
     for (const s of room.seats) if (s && !s.isBot && s.playerId !== room.hostId) s.ready = false;
+    this.broadcastState(room);
+    return OK;
+  }
+
+  /**
+   * room.proposeVersion { version } (host, before the match): a lone active human switches at once, else the seated
+   * humans vote (`room.state.versionVote`). Refused while a vote is open, too soon after another proposal, or when a
+   * seated human is disconnected (it could not answer).
+   */
+  proposeVersion(session, { version }) {
+    const room = this.roomOf(session);
+    if (!room) return fail(ERR.NOT_IN_ROOM);
+    if (room.spectatorOf(session.playerId)) return fail(ERR.SPECTATOR);
+    if (room.hostId !== session.playerId) return fail(ERR.NOT_HOST);
+    if (room.match) return fail(ERR.ROOM_STARTED);
+    if (!this.versionEnabled(version)) return fail(ERR.VERSION_UNKNOWN);
+    if (!this.offered(version, room.mode).length) return fail(ERR.VERSION_UNSUPPORTED, `${version} has no ${room.mode} rooms`);
+    if (version === room.version) return fail(ERR.ALREADY);
+    if (room.versionVote) return fail(ERR.VERSION_VOTE);
+    const now = this.now();
+    if (now - room.versionProposeAt < this.opts.versionProposeGapMs || now < room.versionRetryAt) return fail(ERR.RATE);
+    const humans = room.activeHumans();
+    if (humans.some((s) => !s.connected)) return fail(ERR.NOT_READY);
+    if (!this.versionAvailable(version)) return fail(ERR.VERSION_UNSUPPORTED, 'the data of this version is not available');
+    room.versionProposeAt = now;
+    this.dropReplay(room, session.playerId);
+    if (humans.length === 1) return this.applyVersion(room, version, 'alone');
+    room.versionVoteSeq = room.versionVoteSeq >= 2 ** 31 ? 1 : room.versionVoteSeq + 1;
+    const id = room.versionVoteSeq;
+    const ms = Math.max(0, Number(this.opts.versionVoteMs) || 0);
+    const timer = setTimeout(() => {
+      if (!room.disposed && room.versionVote?.id === id) this.voidVersionVote(room, 'expired');
+    }, ms);
+    timer.unref?.();
+    room.versionVote = { id, version, voters: humans.map((s) => s.playerId), agreed: new Set([session.playerId]), expiresAt: now + ms, timer };
+    this.log.info(`[lobby] ${room.code} version vote #${id} → ${version} (${humans.length} voters)`);
+    this.broadcastState(room);
+    return OK;
+  }
+
+  /** room.versionVote { voteId, agree } (a voter): a decline cancels the vote, the last agreement switches. */
+  versionVote(session, { voteId, agree }) {
+    const room = this.roomOf(session);
+    if (!room) return fail(ERR.NOT_IN_ROOM);
+    if (room.spectatorOf(session.playerId)) return fail(ERR.SPECTATOR);
+    const vote = room.versionVote;
+    if (!vote) return fail(ERR.WRONG_PHASE);
+    if (vote.id !== voteId) return fail(ERR.BAD_TARGET, 'vote changed');
+    if (!vote.voters.includes(session.playerId)) return fail(ERR.BAD_TARGET, 'not a voter');
+    this.dropReplay(room, session.playerId);
+    if (!agree) {
+      this.voidVersionVote(room, 'declined', session.name);
+      return OK;
+    }
+    if (vote.agreed.has(session.playerId)) return OK;
+    vote.agreed.add(session.playerId);
+    if (vote.voters.every((id) => vote.agreed.has(id))) return this.applyVersion(room, vote.version, 'vote');
+    this.broadcastState(room);
+    return OK;
+  }
+
+  /** room.cancelVersionVote { voteId } (host): the vote ends, the room keeps its version. */
+  cancelVersionVote(session, { voteId }) {
+    const room = this.roomOf(session);
+    if (!room) return fail(ERR.NOT_IN_ROOM);
+    if (room.spectatorOf(session.playerId)) return fail(ERR.SPECTATOR);
+    if (room.hostId !== session.playerId) return fail(ERR.NOT_HOST);
+    if (!room.versionVote) return fail(ERR.WRONG_PHASE);
+    if (room.versionVote.id !== voteId) return fail(ERR.BAD_TARGET, 'vote changed');
+    this.dropReplay(room, session.playerId);
+    this.voidVersionVote(room, 'cancelled');
+    return OK;
+  }
+
+  /**
+   * End an open version vote without a switch and tell the room: `declined` (by `name`), `expired`, `cancelled` (by the
+   * host; everyone but the host), `members` (a seat/host changed, a voter dropped, the match started; every member).
+   * A declined or expired vote holds the next proposal back `versionRetryMs`.
+   * @param {Room} room @param {'declined'|'expired'|'cancelled'|'members'} reason @param {string} [name]
+   */
+  voidVersionVote(room, reason, name = '') {
+    const vote = room.versionVote;
+    if (!vote) return;
+    clearTimeout(vote.timer);
+    room.versionVote = null;
+    if (reason === 'declined' || reason === 'expired') room.versionRetryAt = this.now() + this.opts.versionRetryMs;
+    this.log.info(`[lobby] ${room.code} version vote #${vote.id} ended (${reason})`);
+    if (room.disposed) return;
+    if (reason !== 'members') this.broadcastState(room);
+    const text = reason === 'declined' ? msg('{name}拒绝了切换版本', { name })
+      : reason === 'expired' ? msg('切换版本投票已超时，房间版本未改变')
+        : reason === 'cancelled' ? msg('创建者取消了切换版本投票')
+          : msg('同盟成员有变动，切换版本投票已取消');
+    const toast = { t: 'm.toast', kind: reason === 'cancelled' ? 'info' : 'warn', ...wireMessage(text) };
+    if (reason !== 'cancelled') { this.broadcastRoom(room, toast); return; }
+    for (const s of [...room.seats, ...room.spectators]) if (s && !s.isBot && s.playerId !== room.hostId) this.sendToPlayer(room, s.playerId, toast);
+  }
+
+  /**
+   * Switch the room to `version` (`alone` = its only active human, `vote` = every voter agreed): fresh base content,
+   * the room's cosmetic plugins re-resolved where they apply (gameplay plugins only play the default version and are
+   * dropped with a warning), the difficulty falls back to one the version offers, and every non-host loses ready /
+   * loadout / content consent because they target the old data.
+   */
+  applyVersion(room, version, how) {
+    if (room.versionVote) { clearTimeout(room.versionVote.timer); room.versionVote = null; }
+    const before = room.content;
+    let next = this.baseContent(version);
+    const ids = (before?.plugins || []).filter((p) => !p.auto).map((p) => p.id);
+    if (ids.length) {
+      const temp = { ...room, version };
+      const r = this.resolveContent(temp, ids);
+      if ('content' in r) next = r.content;
+      else this.warnOnce(`[lobby] ${room.code} plugins (${ids.join(', ')}) dropped on the switch to ${version}: ${r.error}${r.detail ? ` (${r.detail})` : ''}`);
+    }
+    room.version = version;
+    room.difficulty = this.fallbackDifficulty(version, room.mode, room.difficulty);
+    room.content = next;
+    this.holdContent(next);
+    this.releaseContent(before);
+    room.replay = null;
+    for (const s of [...room.seats, ...room.spectators]) {
+      if (!s || s.isBot) continue;
+      s.content = null;
+      s.consentCs = null;
+    }
+    for (const s of room.seats) {
+      if (!s || s.isBot) continue;
+      if (s.playerId !== room.hostId) s.ready = false;
+      s.loadout = null;
+      s.ops = null;
+      s.notOwned = null;
+      s.diy = null;
+      s.loadoutCs = null;
+      s.notOwnedCs = null;
+      s.diyCs = null;
+      const sess = this.registry?.byPlayerId?.get(s.playerId);
+      if (sess) {
+        sess.loadout = null;
+        sess.notOwned = null;
+        sess.diy = null;
+        sess.loadoutCs = null;
+        sess.notOwnedCs = null;
+        sess.diyCs = null;
+      }
+    }
+    this.log.info(`[lobby] ${room.code} version → ${version} (${how})`);
     this.broadcastState(room);
     return OK;
   }

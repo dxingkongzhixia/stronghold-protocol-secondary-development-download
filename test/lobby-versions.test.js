@@ -13,6 +13,7 @@ import { DATA_SHIM_JS } from '../server/http/static.js';
 import { StubMatch } from '../server/match/StubMatch.js';
 import { DEFAULT_VERSION } from '../shared/versions.js';
 import { ERR } from '../shared/constants.js';
+import { validateC2S } from '../shared/protocol.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VANILLA_CS = 'a'.repeat(64);
@@ -187,4 +188,67 @@ test('gameplay plugins are refused on a version room; cosmetic ones keep its bas
   assert.equal(ok.content.cs, set.cs);
   assert.equal(ok.content.version, ACT3);
   assert.equal(ok.content.vs, 'v1');
+});
+
+test('room.proposeVersion: a lone human switches at once; the protocol messages are typed', (t) => {
+  const { registry, lobby } = makeLobby();
+  t.after(() => lobby.shutdown());
+  const host = session(registry, 'Host');
+  assert.deepEqual(lobby.create(host, { mode: 'solo', difficulty: 'NORMAL' }), { ok: true });
+  const room = [...lobby.rooms.values()][0];
+  assert.deepEqual(lobby.proposeVersion(host, { version: ACT3 }), { ok: true });
+  assert.equal(room.version, ACT3);
+  assert.equal(room.toState().version, ACT3);
+  assert.equal(room.toState().versionVote, undefined);
+  assert.equal(lobby.proposeVersion(host, { version: ACT3 }).error, ERR.ALREADY);
+  // protocol: version: isVersionId, voteId a positive integer, agree a boolean
+  assert.equal(validateC2S({ t: 'room.proposeVersion', version: ACT3 }), null);
+  assert.notEqual(validateC2S({ t: 'room.proposeVersion', version: '../x' }), null);
+  assert.equal(validateC2S({ t: 'room.versionVote', voteId: 1, agree: true }), null);
+  assert.notEqual(validateC2S({ t: 'room.versionVote', voteId: 0, agree: true }), null);
+  assert.notEqual(validateC2S({ t: 'room.versionVote', voteId: 1, agree: 'yes' }), null);
+  assert.equal(validateC2S({ t: 'room.cancelVersionVote', voteId: 2 }), null);
+});
+
+test('room.proposeVersion: a co-op room votes; the last agreement switches, a host proposal is required', (t) => {
+  const { registry, lobby } = makeLobby();
+  t.after(() => lobby.shutdown());
+  const host = session(registry, 'Host'), other = session(registry, 'Other');
+  lobby.create(host, { mode: 'coop', difficulty: 'NORMAL' });
+  const room = [...lobby.rooms.values()][0];
+  assert.deepEqual(lobby.join(other, { code: host.roomCode }), { ok: true });
+  assert.equal(lobby.proposeVersion(other, { version: ACT3 }).error, ERR.NOT_HOST);
+  assert.deepEqual(lobby.proposeVersion(host, { version: ACT3 }), { ok: true });
+  const vote = room.versionVote;
+  assert.ok(vote);
+  assert.deepEqual([...vote.voters].sort(), [host.playerId, other.playerId].sort());
+  assert.equal(room.toState().versionVote.id, vote.id);
+  assert.equal(room.toState().versionVote.version, ACT3);
+  assert.deepEqual(lobby.versionVote(host, { voteId: vote.id, agree: true }), { ok: true });
+  assert.equal(room.version, DEFAULT_VERSION, 'one agreement is not enough');
+  assert.equal(lobby.versionVote(other, { voteId: vote.id + 1, agree: true }).error, ERR.BAD_TARGET);
+  assert.deepEqual(lobby.versionVote(other, { voteId: vote.id, agree: true }), { ok: true });
+  assert.equal(room.version, ACT3);
+  assert.equal(room.versionVote, null, 'the vote closed on the switch');
+});
+
+test('room.proposeVersion: a decline or the host\'s cancel ends the vote without a switch', (t) => {
+  const { registry, lobby } = makeLobby();
+  t.after(() => lobby.shutdown());
+  lobby.opts.versionRetryMs = 0;
+  lobby.opts.versionProposeGapMs = 0;
+  const host = session(registry, 'Host'), other = session(registry, 'Other');
+  lobby.create(host, { mode: 'coop', difficulty: 'NORMAL' });
+  const room = [...lobby.rooms.values()][0];
+  lobby.join(other, { code: host.roomCode });
+
+  lobby.proposeVersion(host, { version: ACT3 });
+  assert.deepEqual(lobby.versionVote(other, { voteId: room.versionVote.id, agree: false }), { ok: true });
+  assert.equal(room.versionVote, null);
+  assert.equal(room.version, DEFAULT_VERSION);
+
+  assert.deepEqual(lobby.proposeVersion(host, { version: ACT3 }), { ok: true });
+  assert.deepEqual(lobby.cancelVersionVote(host, { voteId: room.versionVote.id }), { ok: true });
+  assert.equal(room.versionVote, null);
+  assert.equal(room.version, DEFAULT_VERSION);
 });

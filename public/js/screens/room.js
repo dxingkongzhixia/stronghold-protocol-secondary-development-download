@@ -38,6 +38,7 @@ import { ArtPicker } from '../ui/artPicker.js';
 import { difficultyInfo } from './lobby.js';
 import { t, tc } from '../../../shared/i18n.js';
 import { DEFAULT_VERSION } from '../../../shared/versions.js';
+import { versionsForMode } from '../versions.js';
 
 /**
  * Seats padded to the room's capacity (co-op 4, solo 1), each null or a seat record.
@@ -373,9 +374,53 @@ function AiLastToggle({ option, busy, onToggle }) {
   </div>`;
 }
 
+/**
+ * Official-version switch (P0.3b): the host picks another version for this room. A lone active human switches at once;
+ * otherwise the seated humans vote and `room.state.versionVote` shows the open vote to everyone.
+ */
+function VersionSwitch({ room, choices, isHost, busy, onPick }) {
+  if (!isHost || choices.length < 2) return null;
+  const current = room.version || DEFAULT_VERSION;
+  return html`<div class="room-version">
+    <span class="room-bar__label">${t('版本')}<${MicroLabel}>VERSION<//></span>
+    <div class="room-version__opts">
+      ${choices.map((v) => html`<${Button} key=${v.id} size="sm" active=${v.id === current}
+        variant=${v.id === current ? 'secondary' : undefined} disabled=${busy != null}
+        onClick=${() => { if (v.id !== current) onPick(v.id); }}>${t(v.label)}<//>`)}
+    </div>
+  </div>`;
+}
+
+/** The open version-switch vote: the target, the agreement count, agree / decline, and the host's cancel. */
+function VersionVoteBar({ room, me, facts, busy, onVote, onCancel }) {
+  const vote = room?.versionVote;
+  if (!vote) return null;
+  const name = versionName(vote.version);
+  const agreed = Array.isArray(vote.agreed) && vote.agreed.includes(me?.playerId);
+  return html`<div class="room-vote" role="status">
+    <span>${t('切换版本投票')}：<b>${name}</b></span>
+    <span class="t-dim num">${Array.isArray(vote.agreed) ? vote.agreed.length : 0}/${Array.isArray(vote.voters) ? vote.voters.length : 0}</span>
+    ${agreed
+      ? html`<span class="t-dim">${t('已同意，等待其他玩家')}</span>`
+      : html`<${Button} size="sm" variant="primary" loading=${busy === 'versionVote'} disabled=${busy != null}
+          onClick=${() => onVote(true)}>${t('同意')}<//>`}
+    <${Button} size="sm" variant="secondary" disabled=${busy != null} onClick=${() => onVote(false)}>${t('拒绝')}<//>
+    ${facts.isHost ? html`<${Button} size="sm" variant="secondary" disabled=${busy != null} onClick=${onCancel}>${t('取消投票')}<//>` : null}
+  </div>`;
+}
+
+/** The label of a version id from the lobby's list (its msgid), else the id itself. */
+function versionName(id) {
+  const list = store.get().versions;
+  const e = Array.isArray(list) ? list.find((v) => v && v.id === id) : null;
+  if (e && e.label) return t(e.label);
+  return id === DEFAULT_VERSION ? t('第二期下半') : String(id);
+}
+
 /** Room screen component. */
 export function RoomScreen() {
   const room = useStore((s) => s.room);
+  const versionsList = useStore((s) => s.versions);
   useUiTheme(room?.version); // a 规程 room paints the version's red/black theme; the default room clears it
   const me = useStore((s) => s.me, shallowEqual);
   const conn = useStore((s) => s.connection, shallowEqual);
@@ -431,6 +476,17 @@ export function RoomScreen() {
 
   const toggleReady = () => run('ready', () => net.request('room.ready', { ready: !myReady }));
   const start = () => run('start', () => net.request('room.start', {}));
+  // P0.3b: the host proposes a version switch; a lone human switches at once, else the seated humans vote
+  const proposeVersion = (version) => run('version', () => net.request('room.proposeVersion', { version }));
+  const voteVersion = (agree) => {
+    const v = room.versionVote;
+    if (v) run('versionVote', () => net.request('room.versionVote', { voteId: v.id, agree }));
+  };
+  const cancelVersionVote = () => {
+    const v = room.versionVote;
+    if (v) run('versionCancel', () => net.request('room.cancelVersionVote', { voteId: v.id }));
+  };
+  const versionChoices = versionsForMode(versionsList, room.mode);
   const addBot = () => run('add', () => net.request('room.addBot', {}));
   // docs/AGENT-SEATS.md: any seated player mints a one-time token; the server pushes it back in `agent.invite`
   const inviteAgent = (seat) => run(`ai${seat}`, () => net.request('room.agentInvite', { seat, ttlSec: 600 }));
@@ -541,6 +597,7 @@ export function RoomScreen() {
     </header>
 
     <${TrustedConsentBar} room=${room} mine=${facts.mine} />
+    <${VersionVoteBar} room=${room} me=${me} facts=${facts} busy=${busy} onVote=${voteVersion} onCancel=${cancelVersionVote} />
 
     <main class=${`seats${coop ? '' : ' seats--solo'}`}>
       ${facts.seats.map((s, i) => html`<${SeatCard} key=${s ? `p${s.playerId}` : `e${i}`} seat=${s} index=${i} room=${room} facts=${facts}
@@ -568,6 +625,7 @@ export function RoomScreen() {
         <div class="room-bar__opts">
           <${DifficultyPicker} room=${room} isHost=${facts.isHost} busy=${busy} onPick=${setDifficulty} />
           <${VersionLevelPicker} room=${room} levels=${levels} isHost=${facts.isHost} busy=${busy} onPick=${setLevel} />
+          <${VersionSwitch} room=${room} choices=${versionChoices} isHost=${facts.isHost} busy=${busy} onPick=${proposeVersion} />
           <${AiLastToggle} option=${aiLastOption(room, me.playerId)} busy=${busy} onToggle=${setAiLast} />
         </div>
       </div>

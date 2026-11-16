@@ -201,6 +201,7 @@ export const ERR = Object.freeze({
   // (its room mode is not offered, its data failed to load, or the room switches on gameplay plugins)
   VERSION_UNKNOWN: 'VERSION_UNKNOWN',
   VERSION_UNSUPPORTED: 'VERSION_UNSUPPORTED',
+  VERSION_VOTE: 'VERSION_VOTE',
   PLUGIN_BLOCKED: 'PLUGIN_BLOCKED',
   PLUGIN_DEPENDENCY: 'PLUGIN_DEPENDENCY',
   PLUGIN_CONFLICT: 'PLUGIN_CONFLICT',
@@ -257,6 +258,7 @@ export const ERR_TEXT = {
   PLUGIN_SCRIPT_CHECK: N_('脚本未通过兼容性检查'),
   VERSION_UNKNOWN: N_('本服务器没有启用该版本'),
   VERSION_UNSUPPORTED: N_('该版本不能用于当前房间（例如房间开着改变玩法的插件）'),
+  VERSION_VOTE: N_('切换版本投票进行中'),
   CONTENT_NOT_READY: N_('仍有博士未载入房间的插件内容'),
   TEST_CONFIRM: N_('这是测试房间，不计入任何记录。确认加入？'),
   TEST_DISABLED: N_('测试模式未开启'),
