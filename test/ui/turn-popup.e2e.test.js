@@ -2,8 +2,8 @@
 //   SP_E2E=1 CHROME_PATH=… node --test test/ui/turn-popup.e2e.test.js
 //
 // Through the dev mock's shared 机变 draft: the pick goes to p4, then back to me (p1) — the disc with the official cube
-// shows and leaves; none without the art pack, in a solo draft or with reduced motion. Static counterpart:
-// test/ui/turn-popup.test.js.
+// shows and leaves; none without the art pack or with reduced motion. Solo is cued too (decision 7 of 2026-10-22).
+// Static counterpart: test/ui/turn-popup.test.js.
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -93,11 +93,11 @@ describe('轮到你选 disc (headless Chrome)', { skip: !ENABLED && 'set SP_E2E=
     await context.close();
   });
 
-  test('a solo draft: no disc', async () => {
+  test('a solo draft: the disc too', async () => {
     const { page, problems, context } = await open({ variant: 'solo' });
     await myTurnAgain(page);
-    await sleep(500);
-    assert.equal(await page.$('[data-testid="turn-popup"]'), null);
+    await page.waitForSelector('[data-testid="turn-popup"]', { timeout: 3000 });
+    assert.ok(await page.$('[data-testid="turn-popup"]'));
     assert.deepEqual(problems, []);
     await context.close();
   });

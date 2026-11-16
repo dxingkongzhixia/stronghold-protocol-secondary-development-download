@@ -159,7 +159,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | ✅ 全部完成；#946 为阶段横幅去重 + 机变单入口（#930 N/A） |
 | P2 | `recruitTierExempt` 招募例外 | ✅ 版本档案标记 + 通讯机例外 + `SharedPool` 仅绕过 maxTier |
 | P6 | 14 条 §0 never-merge 路径逐块重写 | ✅ 审计与守卫完成；上游新提交按 check-upstream 手工移植 |
-| P6 | 保留 fork 特性（自定义干员、VFX、插件内容集、admin、i18n 等） | 🔴 未开始 |
+| P6 | 保留 fork 特性（自定义干员、VFX、插件内容集、admin、i18n 等） | ✅ `test/versions-never-merge.test.js` 锁定 |
 | 部署 | 生产部署（当前仍为旧构建） | ⏸ 等 owner 许可 |
 
 以下各节以 `[ ]` 标出的条目即上表对应的未做项；`[x]` 为已完成。本轮会话的完整交接（环境、命令、已提交项、坑）见 [`HANDOFF-2026-11-16.md`](HANDOFF-2026-11-16.md)。
@@ -200,7 +200,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **规程 band 元数据**：`buildBands` 从官方 `activity_table` 的 `skillInfoDataDict` / `effectInfoDataDict` 写入 `bands.json`（44 个新 band：ACTIVE 25 / PASSIVE 13 / NONE 6；目标 COMMON_CHESS 11 / NO_TARGET 10 / SHOP_SLOT 2 / MAP_TILE 2；可用 ROUND_RESET 17 / ALL_LIMIT 3 / DEFAULT 22 / COOLDOWN 2；含 cost / unlockType / HUD）。默认数据 `bands.json` 逐字节不变。测试 `test/versions-bands.test.js`
 - [x] **规程 band 的可用模式**（修复）：官方 act3 用 `bandDataListDict[].inactiveModeIdList`（不在哪些模式提供）而不是允许列表；版本构建曾把它写成空的 `modeTypeList`，`bandAllowed` 视为「任何模式都不可用」→ 规程选队一个策略都选不了。现版本数据写 `modeTypeList: ['SINGLE','MULTI']` + `inactiveModeIds`，`GameData.bandAllowed` 按 `modeId` 排除（极速 31 个、单机等级 60 个、联机 61 个）；默认数据无该字段。测试 `test/versions-bands.test.js`
 - [x] **规程 band handlers**：**B1–B7 完成**。B1 被动 5 个；B2 `g.bandSkill` intent + 经济类 10 个；B3 选干员 7 个 + 4 个战斗标记 + 官方解锁链（`skill.stages`）+ 伊比利亚；B4 地块/商店格 4 个 + 玩家级标记；B5 无 key 技能 4 个 + 准备期被动 5 个；B6 7 个 `auto_chess_effect_replace`（5 个复用现有盟约 6 名实现、维多利亚借装备、阿戈尔整备区召唤）；B7 `band_random` 追随者们（每次休整期 2 个随机指令二选一替换，`g.bandSkillChoose`，只替换指令不换策略/被动）。测试 `test/versions-bands-skills.test.js`、`test/content/bands_marks.test.js`、`test/content/bands_replace.test.js`、`test/versions-band-egir.test.js`、`test/versions-band-instructions.test.js`
-- [ ] **[汇总]** **其余规程内容**：见下方 189–195 的具体条目（装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计）；141 个 garrison 与 54 个 band effect 已完成。
+- [x] **[汇总]** **其余规程内容**：下方 189–195 的具体条目（装备/盟约规则、hidden core、地图/指令/寻宝与 top-3 统计）均已完成；141 个 garrison 与 54 个 band effect 已完成。
 - [x] **26 个官方模式**：`config.modes` 的 26 个模式（入门 / 极速 / 规程等级 1–20 / 四档多人）全部由数据驱动；每模式有完整回合表（模板、boss/hidden 回合、spRounds、enemyScale、stage 池），`test/versions-modes.test.js` 校验全部 26 个并用 4 个代表模式跑到 PREP。大厅把 4 个难度映射到规程等级 1 / 5 / 9 / 15（`officialModeId`）；20 级单独选择器留 P3 UI
 - [x] 核心盟约二选一（个人）**服务端完成**：`g.coreBond`、两组随机核心盟约、落选组进禁用并重建池/自选库存（`Match.coreBondGroups` / `phases.applyCoreBondChoice`，默认盟约无变化；选择器 UI 随 P3）
 - [x] 核心优先禁用（规程）：`GameData.bondsExclude` 按官方多人录像（BV1hmWL6fEmQ，`docs/research/regulation-core-ban-video-…`）——有核心盟约时只看核心，全部核心灰才禁用；无核心时才看附加盟约。初雪（谢拉格灰 + 协防亮）因此离场，多核心留任一、无核心随附加；`pool` / `coreBond` 重建 / 自选库存 / 具名奖励共用。默认盟约保持原「全部盟约联合」判定。测试 `test/versions-corebond.test.js`
