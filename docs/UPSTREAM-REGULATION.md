@@ -158,7 +158,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 |---|---|---|
 | P0 | `room.proposeVersion` 版本投票（已开局 / 多人房间的版本切换确认） | 🔴 未开始 |
 | P0 | `tools/versions/*` 通用 profile 加载器（profiles / adapters / sources / runtime） | 🟡 构建已用 `--version` 跑通，加载器未做 |
-| P2 | 寻宝人整体（宝藏 / 寻宝人事件、奖励链） | 🟡 宝藏与放置锁已做，休整期可见 / 客户端预览 / 机器人选格未做 |
+| P2 | 寻宝人整体（宝藏 / 寻宝人事件、奖励链） | 🟡 宝藏 / 放置锁 / 休整期可见 / 客户端预览 / 接触判定已做，仅机器人主动选格未做 |
 | P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🔴 未开始（#930 本树无对应机制，N/A） |
 | P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
 | P2 | 隐秘核心阈值 350 / 1200、领袖轮合血、超时扣血、联防（不叠层）复核 | 🟡 数值与上游一致，行为待官方/录屏复核 |
@@ -219,7 +219,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] 地图规则：MAP09 双方隐匿地块（`tile_duel_grassland`：双方地面单位获得隐匿、被阻挡显形、解除阻挡立即恢复——官方 `enemyStealthRestoreSec` 0 即「草丛秒数」、离开清除；`special.duelGrass`）；m12 加速地块（`tile_speedup` +25 ASPD / ×1.5 移速）；Boss 受击区（7 个 act3 首领的 `hitArea` 已随数据生成）；茧隐匿索敌与「淤困之茧」捆绑（Net 只选可选中目标、茧捆绑一格并自损 4 %/s）；萨卡兹亡语（子裔寄生者周围击杀召唤大君之赐）与延迟召唤（自助出餐终端按技能 CD 召唤）；莱塔尼亚召唤改为**友方 token**（小节/乐部，可阻挡地面敌人并自损）。测试 `test/versions-map-rules.test.js`、`test/versions-cocoon.test.js`、`test/versions-enemies-official.test.js`、`test/versions-bonds.test.js`
 - [x] 指令（主动策略）：服务端 `g.bandSkill`、客户端点击/拖放与目标选择、每回合次数/资金/冷却显示、追随者们的指令替换（B7）；变换策略仍待核对
 - [x] **领袖战 top-3 伤害统计**：`config.bossDamageStats`（官方 30/60/100 阈值）存在时，`m.public.bossHp.top` 下发共享领袖血池的前三名（玩家、伤害、占最大生命百分比），顶栏领袖胶囊显示；测试 `test/versions-boss-top.test.js`
-- [ ] **[部分]** 寻宝人：band 侧「模拟宝藏」（触碰永久消失、存活给钱、所在格无法部署）已做；**仍欠**休整期可见（只读单位 / 敌人图标）、客户端放置预览同步、机器人按路线外选格、身体接触的精确判定。测试 `test/versions-treasure.test.js`、`test/content/bands_marks.test.js`；装备报告 tab 已由 P3 完成
+- [ ] **[部分]** 寻宝人：band 侧「模拟宝藏」（触碰永久消失、存活给钱、所在格无法部署、休整期只读可见、客户端放置预览、身体重叠判定）已做；**仍欠**机器人主动使用宝藏探机（当前机器人不使用任何主动策略）。测试 `test/versions-treasure.test.js`、`test/content/bands_marks.test.js`；装备报告 tab 已由 P3 完成
 - [ ] **[未做]** 对局侧修复：**待移植** #932 暴躁铁皮、#934 极光/忍冬、#937 白铁、#944 组合装备、#939/#943/#947 规程战斗、#925 装备奖励池；#946 阶段横幅依赖 `public/js/ui/prefab/banners.js`；#930 本树无 `equip_use_main_bond` 机制（N/A，见 `UPSTREAM-DEV-TRIAGE.md` §10.7）
 
 ### P3 UI / 主题（8–12 人日）

@@ -211,7 +211,10 @@ export function placementContext({ priv, stage, editable, field = 'normal', getC
   const deploy = field === 'bossL' || field === 'bossR'
     ? deploySets(stage, field, ov)
     : deploySets(effectiveStage(stage, ov));
-  return { priv, pieces, boardAt, handAt, deploy, cap, count, field, editable: !!editable, getChess, getToken, getItem, backups };
+  // 寻宝人's 模拟宝藏 tiles (m.private.treasureTiles): not deployable while the mark exists
+  const treasureTiles = new Set((Array.isArray(priv?.treasureTiles) ? priv.treasureTiles : [])
+    .map((t) => tileKey(Math.round(Number(t.row)), Math.round(Number(t.col)))));
+  return { priv, pieces, boardAt, handAt, deploy, cap, count, field, editable: !!editable, getChess, getToken, getItem, backups, treasureTiles };
 }
 
 /**
@@ -362,6 +365,8 @@ export function canPlace(ctx, uid, target) {
     }
     // its own tile: re-orient in place through the direction wheel (research 09 §1.2)
     if (src.area === 'board' && src.row === row && src.col === col) return { ok: true, action: 'orient' };
+    // 寻宝人: the 模拟宝藏 tile is not deployable while the mark exists (server PlayerState._legal)
+    if (ctx.treasureTiles?.has(tileKey(row, col))) return no('BAD_TILE', t('无法部署在该位置'));
     if (!tileAllows(ctx, piece, row, col)) {
       const deployable = ctx.deploy.ranged.has(tileKey(row, col));
       const pos = piecePosition(ctx, piece);

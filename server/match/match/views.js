@@ -362,27 +362,50 @@ export class MatchViews {
    * battleStart, so the prep view always uses the reserve medic, regardless of the current elite count. The stage's
    * normal-board slot is transformed to the correct half of a boss field by _onBossHalf / the client prep camera. */
   prepMapChars(ps) {
-    if (!ps?.alive || this.phase !== PHASE.PREP || !this.teamMedicGranted()) return [];
+    if (!ps?.alive || this.phase !== PHASE.PREP) return [];
+    const out = [];
+    // 寻宝人: the 模拟宝藏 stands on its marked tile during prep as a read-only unit (the sim spawns the real one at
+    // battleStart); its local-client model / icon draws it, and it cannot be picked up — the placement rules refuse the tile.
+    if (Array.isArray(ps.bandGlobal)) {
+      let n = 0;
+      for (const m of ps.bandGlobal) {
+        if (!m || m.tag !== 'treasure') continue;
+        const row = Math.round(Number(m.row)), col = Math.round(Number(m.col));
+        if (!Number.isInteger(row) || !Number.isInteger(col)) continue;
+        const id = m.enemyId || 'enemy_9038_achest';
+        const rec = this.gd.enemy(id);
+        const uid = -1000 - n;
+        out.push({
+          id: uid, uid, kind: 'enemy', side: 'enemy', ownerId: ps.playerId, defId: id,
+          area: 'board', name: rec?.name || id, tier: 1, golden: false,
+          spine: rec?.spine || id, avatar: rec?.iconId || id,
+          x: col, y: row, dir: 'RIGHT', facing: 1, maxHp: 1,
+        });
+        n += 1;
+      }
+    }
+    if (!this.teamMedicGranted()) return out;
     // A Touch-style band grant replaces the reserve medic for the whole match. Do not bring it back merely because
     // the granted piece was moved off the stage slot during prep — the teammate's own band may not be the one that
     // granted it, so inspect the owned special piece itself, not only ps.bandId.
-    if (suppressesMapCharFor(ps)) return [];
+    if (suppressesMapCharFor(ps)) return out;
     const grants = readBandGrants(this.gd.band(ps.bandId)?.grants).grants;
-    if (grants?.grantUnit?.placement === 'amedicSlot') return [];
+    if (grants?.grantUnit?.placement === 'amedicSlot') return out;
     const id = 'char_605_cmedic';
     const slot = this.stage?.mapChars?.find((m) => m?.key === id && Array.isArray(m.pos) && m.pos[0] >= 9 && m.pos[0] <= 12
       && m.pos[1] >= 0 && m.pos[1] <= 10 && !/multi_only/.test(String(m.alias)));
     const rec = this.gd.token(id);
-    if (!slot || !rec) return [];
+    if (!slot || !rec) return out;
     // The PRTS Touch-style grant places Kal'tsit on this slot; never draw the reserve medic under her.
-    if (ps.board?.has(`${slot.pos[0]},${slot.pos[1]}`)) return [];
+    if (ps.board?.has(`${slot.pos[0]},${slot.pos[1]}`)) return out;
     const dir = slot.dir || 'RIGHT';
-    return [{
+    out.push({
       id: -ps.seat - 1, uid: -ps.seat - 1, kind: 'token', side: 'ally', ownerId: ps.playerId, defId: id,
       area: 'board', name: rec.name || id, tier: 1, golden: false,
       spine: rec.assets?.spine || id, avatar: rec.assets?.avatar || id,
       x: slot.pos[1], y: slot.pos[0], dir, facing: dir === 'LEFT' ? -1 : 1, maxHp: rec.stats?.maxHp || 1,
-    }];
+    });
+    return out;
   }
 
   /** UnitInfo of a player's board pieces on their (board) tiles — a prep scout's board, the boss partner's (bossMateView).

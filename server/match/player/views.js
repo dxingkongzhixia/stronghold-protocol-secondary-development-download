@@ -163,6 +163,13 @@ export class PlayerViews {
       board,
       // The stage's 外勤医疗 reserve medic is present during prep, but is not a draggable board piece.
       prepMapChars: this.m.prepMapChars(this),
+      // 寻宝人: the 模拟宝藏 tiles of this prep; absent unless a treasure mark exists (the default view is unchanged)
+      ...((this.bandGlobal || []).some((m) => m && m.tag === 'treasure')
+        ? {
+          treasureTiles: (this.bandGlobal || []).filter((m) => m && m.tag === 'treasure')
+            .map((m) => ({ row: Math.round(Number(m.row)), col: Math.round(Number(m.col)) })),
+        }
+        : {}),
       deployCap: this.deployCap,
       deployCount: this.deployCount,
       // + the mode-off bonds it has members of (`off: true`, the strip's grey 本局禁用 discs — bondsMeta.offBondCounts)

@@ -108,8 +108,22 @@ test('宝藏探机: a surviving chest pays its coin, a touched one vanishes', ()
     enemyDefs: defs, foes: [{ key: 'e_d', pos: [10, 8], time: 0 }],
   });
   touched.runToEnd();
-  assert.ok(!touched.enemies().some((e) => e.alive && e.defId === 'e_chest'), 'the chest vanished on the touch');
+  assert.ok(!touched.enemies().some((e) => e.alive && e.defId === 'enemy_e_chest'), 'the chest vanished on the touch');
   assert.equal(touched.result().perPlayer.p1.coins || 0, 0, 'no coin for a touched chest');
+});
+
+test('宝藏探机: contact is body overlap, not the tile centre', () => {
+  const defs = { e_chest: FOE('e_chest', { hp: 100, speed: 0, atk: 0, lpr: 0 }) };
+  const touched = globalMarks([{ tag: 'treasure', row: 10, col: 8, enemyId: 'e_chest', coin: 1 }], { enemyDefs: defs });
+  touched.step();
+  touched.b.spawnEnemy('e_d', { pos: [10.55, 8], mods: { speedMul: 0 } });
+  touched.step(2);
+  assert.ok(!touched.enemies().some((e) => e.alive && e.defId === 'enemy_e_chest'), '0.55 from the tile centre touches');
+  const clear = globalMarks([{ tag: 'treasure', row: 10, col: 8, enemyId: 'e_chest', coin: 1 }], { enemyDefs: defs });
+  clear.step();
+  clear.b.spawnEnemy('e_d', { pos: [10.7, 8], mods: { speedMul: 0 } });
+  clear.step(2);
+  assert.ok(clear.enemies().some((e) => e.alive && e.defId === 'enemy_e_chest'), '0.7 does not');
 });
 
 test('电气化！: the lent equipment reaches every deployed operator with a free slot', () => {

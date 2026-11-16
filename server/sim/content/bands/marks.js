@@ -13,6 +13,7 @@
 import { num, isOp, playerOps, fxOn, unitBonds } from '../support/index.js';
 import { addShieldLayer, installItem, PRIO_RESPAWN, reviveNow } from '../items/battle.js';
 import { findSummonTile } from '../tokens.js';
+import { hypot } from '../../detmath.js';
 
 /** 'death' priority of a mark's revive: with 埃芒加德's band revive, after the operator's own savers. */
 const PRIO_MARK_REVIVE = PRIO_RESPAWN - 1;
@@ -83,12 +84,21 @@ function treasure(battle, ps, m) {
   chest.mem.noFinish = true;
   battle.addBuff(chest, { key: markKey('chest'), flags: { untargetable: true }, persist: true, allowDead: true });
   let alive = true;
+  // body overlap, not "its centre stands on the tile": a normal unit's 0.1-radius collider touches the tile when its
+  // centre is within 0.5 + 0.1 of the tile centre; a huge unit's rectangle overlaps the tile. [ASSUMED] flyers count too
+  // (the text does not exclude them) and the chest does not block (its record's block count is unused: the text says
+  // touch, not block).
+  const touches = (e) => {
+    const hit = e.hitArea;
+    if (hit) return Math.abs(e.x - col) <= hit.w / 2 + 0.5 + 1e-9 && Math.abs(e.y - row) <= hit.h / 2 + 0.5 + 1e-9;
+    return hypot(e.x - col, e.y - row) <= 0.6 + 1e-9;
+  };
   battle.on('tick', () => {
     if (!alive) return;
     if (!chest.alive) { alive = false; return; }
     for (const e of battle.enemies) {
       if (e === chest || !e.alive || e.hidden) continue;
-      if (Math.abs(e.x - col) <= 0.6 && Math.abs(e.y - row) <= 0.6) {
+      if (touches(e)) {
         alive = false;
         battle._remove(chest, 'retreat', null, true); // 触碰即永久消失, no kill / death bookkeeping
         return;
