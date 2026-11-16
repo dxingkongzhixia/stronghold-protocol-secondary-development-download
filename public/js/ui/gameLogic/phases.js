@@ -67,9 +67,11 @@ export function phaseBanner(phase, pub, { alive = true, spectator = false } = {}
     // and pendingFunds): an eliminated player or a spectator seat reads 观战中, never 资金已到账 (GitHub #236, PR #237)
     case PHASE.ROUND_START: return { title: t('第 {r} 回合', { r }), micro: `ROUND ${String(r).padStart(2, '0')}`, tone: 'mint',
       sub: spectator || alive === false ? t('观战中') : t('资金已到账') };
-    case PHASE.SP_DRAFT: return { title: t('机变阶段'), micro: 'CONTINGENCY', tone: 'gold', sub: t('依次选择机变') };
-    case PHASE.PREP: return { title: t('休整期'), micro: `ROUND ${String(r).padStart(2, '0')} // REST`, tone: 'mint', sub: t('部署干员，准备迎敌') };
-    case PHASE.COMBAT: return { title: t('作战开始'), micro: 'COMBAT', tone: 'orange', sub: t('各自行动阶段') };
+    // PR #946: 休整 / 作战 / 机变 already carry their own central cue (the prep screen, the battle HUD, the 轮到你选
+    // disc for a shared draft). A phase banner here made each appear twice; the top bar keeps the phase name.
+    case PHASE.SP_DRAFT:
+    case PHASE.PREP:
+    case PHASE.COMBAT: return null;
     case PHASE.UNITE: {
       const names = new Map(sortedPlayers(pub).map((p) => [p.playerId, p.name || t('博士')]));
       const helpers = Array.isArray(pub?.unite?.helpers) ? pub.unite.helpers.map((id) => names.get(id)).filter(Boolean) : [];

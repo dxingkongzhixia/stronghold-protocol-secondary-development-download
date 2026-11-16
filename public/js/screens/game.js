@@ -984,8 +984,9 @@ function MatchScreen() {
     if ((busyPrep || myPick) && cd.remain > 0) audio.sfx('timer', { volume: 0.6 });
   });
 
-  // your turn cue in the 机变 draft, and the official 轮到你选 disc over the cards (ui/turnPopup.js) once its art is in
-  const spMine = !!sp && !solo && sp.turnPid === myId && !sp.pickOf.has(myId);
+  // your turn cue in the 机变 draft, and the official 轮到你选 disc over the cards (ui/turnPopup.js) once its art is in.
+  // Solo is cued too: decision 7 of 2026-10-22 (docs/history/0.3.2.md), kept by the owner on 2026-11-14 (PR #946 follow-up).
+  const spMine = !!sp && sp.turnPid === myId && !sp.pickOf.has(myId);
   const [turnPop, setTurnPop] = useState(0);
   useEffect(() => { preloadTurnPopupArt(); }, []);
   useEffect(() => {

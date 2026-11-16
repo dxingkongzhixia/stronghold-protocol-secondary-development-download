@@ -68,7 +68,10 @@ describe('phases', () => {
     assert.equal(phaseBanner(PHASE.UNITE, {}).title, '联防阶段');
     assert.equal(phaseBanner(PHASE.FINAL_ASSAULT, {}).title, '最终攻势');
     assert.equal(phaseBanner(PHASE.HIDDEN_CORE, {}).title, '隐秘核心');
-    assert.equal(phaseBanner(PHASE.COMBAT, {}).title, '作战开始');
+    // PR #946: rest / combat / contingency have their own central cue — no duplicate phase banner
+    assert.equal(phaseBanner(PHASE.PREP, {}), null);
+    assert.equal(phaseBanner(PHASE.COMBAT, {}), null);
+    assert.equal(phaseBanner(PHASE.SP_DRAFT, {}), null);
     assert.match(phaseBanner(PHASE.ROUND_START, { round: 7 }).title, /7/);
     assert.equal(phaseBanner(PHASE.SETTLE, {}), null);
     assert.equal(prepCapsuleLabel(PHASE.PREP), '休息一下');
@@ -90,7 +93,7 @@ describe('phases', () => {
     // the title and the other phases' copy are the same for every viewer
     for (const v of [{ alive: true }, { alive: false }, { alive: false, spectator: true }]) {
       assert.equal(round(v).title, '第 2 回合');
-      assert.equal(phaseBanner(PHASE.PREP, pub, v).sub, phaseBanner(PHASE.PREP, pub).sub);
+      assert.equal(phaseBanner(PHASE.UNITE, pub, v).sub, phaseBanner(PHASE.UNITE, pub).sub);
     }
     // the match screen hands the banner its viewer (screens/game.js `alive` folds a spectator seat in)
     const src = readFileSync(path.join(ROOT, 'public/js/screens/game.js'), 'utf8');
