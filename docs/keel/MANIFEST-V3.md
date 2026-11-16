@@ -52,6 +52,7 @@
 | `name` | 是 | 字符串或 `{ "<lang>": "<text>" }` |
 | `version` | 是 | 语义化版本 |
 | `app` | 是 | 游戏版本范围，如 `">=0.4.0 <0.5.0"` |
+| `versions` | 否 | 适用的官方玩法版本（`shared/versions.js` 的 id / season / family，如 `["act3autochess"]`）；缺省时 content / script / trusted / cosmetic 只属于默认盟约，lang / ui 版本中立 |
 | `api` | 是 | `{ "<domain>": <1–99> }`，至少一个域 |
 | `scope` | 否 | `room` / `personal` / `server`，默认 `room` |
 | `trust` | 是 | `data` / `sandbox` / `native` |

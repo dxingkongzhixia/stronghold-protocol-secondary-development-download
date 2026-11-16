@@ -1,7 +1,7 @@
 // test/keel/manifest.test.js — manifest 3 (shared/keel/manifest.js, docs/keel/MANIFEST-V3.md).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { KEEL_PERMISSIONS, KEEL_STABLE_POINTS, readKeelManifest } from '../../shared/keel/index.js';
+import { KEEL_PERMISSIONS, KEEL_STABLE_POINTS, keelToV2, readKeelManifest } from '../../shared/keel/index.js';
 
 const base = () => ({
   manifest: 3,
@@ -38,6 +38,16 @@ test('the version, required fields and unknown fields', () => {
   const unknown = read({ ...base(), somethingNew: true });
   assert.equal(unknown.problems.length, 0);
   assert.ok(unknown.warnings.some((w) => w.includes('somethingNew')));
+});
+
+test('versions names the official versions a room plugin is made for, and survives the v2 projection', () => {
+  const ok = read({ ...base(), versions: ['act3autochess@V3_1', 'act2autochess'] });
+  assert.equal(ok.problems.length, 0, ok.problems.join('\n'));
+  assert.deepEqual(ok.manifest.versions, ['act3autochess@V3_1', 'act2autochess']);
+  assert.deepEqual(keelToV2(ok.manifest, { id: 'demo' }).versions, ['act3autochess@V3_1', 'act2autochess']);
+  assert.deepEqual(keelToV2(read(base()).manifest, { id: 'demo' }).versions, []);
+  assert.ok(has(read({ ...base(), versions: ['nope'] }), 'KEEL_VERSIONS'));
+  assert.ok(has(read({ ...base(), versions: [] }), 'KEEL_VERSIONS'));
 });
 
 test('api domains and levels', () => {

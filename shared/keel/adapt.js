@@ -172,6 +172,7 @@ export function adaptV2(v2, _opts = {}) {
     app: v2.app || '*',
     api,
     scope: v2.scope ?? ['room'],
+    ...(Array.isArray(v2.versions) && v2.versions.length ? { versions: [...v2.versions] } : {}),
     trust,
     modules,
     ...(v2.provides ? { provides: v2.provides } : {}),

@@ -53,6 +53,7 @@
 // [ASSUMED — every limit].
 
 import { APP_VERSION, PLUGIN_API } from '../constants.js';
+import { DEFAULT_VERSION, VERSIONS } from '../versions.js';
 import { SOURCE_LANG, canonicalLang, isLangCode, languageName, langFields } from '../i18nPacks.js';
 import { issueList } from './errors.js';
 import { THEME_VAR_LIMIT, readThemeDeclaration } from './theme.js';
@@ -198,7 +199,7 @@ const ENTRIES = Object.freeze({
 const SETTING_TYPES = ['boolean', 'integer', 'number', 'enum'];
 /** Top-level fields of manifest 2 (anything else is warned about and ignored). */
 const V2_FIELDS = new Set(['$schema', 'manifest', 'id', 'name', 'englishName', 'description', 'version', 'app', 'api', 'class', 'scope',
-  'category', 'authors', 'credits', 'license', 'homepage', 'sourceLang', 'requires', 'optional', 'conflicts', 'loadAfter', 'loadBefore', 'priority',
+  'versions', 'category', 'authors', 'credits', 'license', 'homepage', 'sourceLang', 'requires', 'optional', 'conflicts', 'loadAfter', 'loadBefore', 'priority',
   'settings', 'permissions', 'overrides', 'rules', 'entry', 'slots', 'notices', 'files', 'lang', 'base', 'fallback', 'complete', 'machineTranslated', 'numberUnits', ...Object.keys(PARTS)]);
 /** Those fields, sorted, for the frozen API table (docs/PLUGIN-API.md). */
 export const MANIFEST_FIELDS = Object.freeze([...V2_FIELDS].sort());
@@ -315,6 +316,26 @@ export function appVersionCompatible(range, version = APP_VERSION, cls = '') {
     && appVersionMatches(range, PLUGIN_COMPAT_APP);
 }
 
+/**
+ * Whether a plugin may be used in official version `version` (shared/versions.js id). `versions` names the version ids,
+ * seasons or families it is made for; absent means the default version alone for every class that changes a room's game
+ * or art (content / script / trusted / cosmetic), while `lang` and `ui` are version-neutral. The default version accepts
+ * older plugins without a declaration (the fork's existing catalogue), so its rooms do not change.
+ */
+export function pluginSupportsVersion(manifest, version = DEFAULT_VERSION) {
+  const target = version || DEFAULT_VERSION;
+  const list = Array.isArray(manifest?.versions) ? manifest.versions : [];
+  if (!list.length) return target === DEFAULT_VERSION || manifest?.class === 'lang' || manifest?.class === 'ui';
+  const entry = VERSIONS.find((v) => v.id === target) || null;
+  return list.includes(target)
+    || (!!entry && (list.includes(entry.season) || list.includes(entry.family)));
+}
+
+/** A plugin `versions` target: an official version id, its season or family. */
+export function isVersionTarget(v) {
+  return typeof v === 'string' && VERSIONS.some((x) => v === x.id || v === x.season || v === x.family);
+}
+
 // ---- the normalised manifest ------------------------------------------------------------------------------------------
 
 /**
@@ -323,7 +344,7 @@ export function appVersionCompatible(range, version = APP_VERSION, cls = '') {
  * @typedef {{ files: string[], inline?: Record<string, any>, langs?: Record<string, string>, themeVars?: Record<string, string> }} PluginPart
  * @typedef {{ id: string, title: string, body: string, date?: string, i18n?: Record<string, { title: string, body: string }> }} PluginNotice
  * @typedef {{ manifest: number, id: string, class: string, type: string, name: string, englishName: string,
- *   names: Record<string, string>, description: Record<string, string>, version: string, app: string,
+ *   names: Record<string, string>, description: Record<string, string>, version: string, app: string, versions: string[],
  *   compatible: boolean, api: number | null, scope: string[], category?: string, authors: string[], credits: string, license: string,
  *   homepage: string, sourceLang: string, requires: Record<string, string>, optional: Record<string, string>,
  *   conflicts: Record<string, string>, loadAfter: string[], loadBefore: string[], priority: number,
@@ -345,7 +366,7 @@ export function appVersionCompatible(range, version = APP_VERSION, cls = '') {
 /** The fields of manifest 2 that manifest 1 lacks, at their defaults. */
 function v2Defaults(cls) {
   return {
-    names: {}, description: {}, api: null, scope: [...(PLUGIN_CLASSES[cls]?.defaultScope || [])], homepage: '', sourceLang: SOURCE_LANG,
+    names: {}, description: {}, api: null, scope: [...(PLUGIN_CLASSES[cls]?.defaultScope || [])], versions: [], homepage: '', sourceLang: SOURCE_LANG,
     requires: {}, optional: {}, conflicts: {}, loadAfter: [], loadBefore: [], priority: 0, settings: {}, permissions: [], parts: {}, entry: {},
     slots: [],
   };
@@ -656,6 +677,20 @@ export function readPluginManifest(raw, ctx) {
   else if (!range && !isLang) list.problem('PLUGIN_APP', 'no "app" (the game versions it is made for, e.g. ">=0.3.0 <0.4.0")', { at: ['app'], app });
   const compatible = appVersionCompatible(range, app, cls);
   if (range && !appVersionMatches(range, app)) list.warning('PLUGIN_APP_MISMATCH', `made for app ${range}; this is ${app}`, { at: ['app'], range, app });
+  // Official versions the plugin is made for (shared/versions.js ids, seasons or families). Absent: the default version
+  // alone for room classes; lang / ui remain neutral. Invalid targets are a problem (a typo would silently hide it).
+  /** @type {string[]} */
+  const versions = [];
+  if (m.versions !== undefined) {
+    if (!Array.isArray(m.versions) || !m.versions.length || m.versions.length > 8) {
+      list.problem('PLUGIN_VERSIONS', `"versions": ${short(m.versions)} — a non-empty list of at most 8 official version ids, seasons or families`, { at: ['versions'] });
+    } else {
+      for (const v of m.versions) {
+        if (!isVersionTarget(v)) { list.problem('PLUGIN_VERSIONS', `"versions": ${short(v)} is not an official version id, season or family`, { at: ['versions'] }); continue; }
+        if (!versions.includes(v)) versions.push(v);
+      }
+    }
+  }
   const supported = ctx.api ?? PLUGIN_API;
   const apiAt = { at: ['api'], min: supported.min, current: supported.current };
   let api = null;
@@ -796,6 +831,7 @@ export function readPluginManifest(raw, ctx) {
   /** @type {PluginManifest} */
   const out = {
     manifest: 2, id, class: cls, type: kind.packType, name, englishName, names, description, version, app: range, compatible, api, scope,
+    versions,
     ...(category ? { category } : {}),
     authors: authorsOf(m.authors), credits: str(m.credits, 500), license: str(m.license, 100), homepage, sourceLang: sourceLang || SOURCE_LANG,
     requires, optional, conflicts, loadAfter, loadBefore, priority, settings, permissions, parts, entry, slots, files: {},
@@ -955,6 +991,7 @@ export function pluginIndexEntry(p) {
   }
   if (m.version) e.version = m.version;
   if (m.app) e.app = m.app;
+  if (Array.isArray(m.versions) && m.versions.length) e.versions = [...m.versions];
   e.compatible = m.compatible;
   if (m.api !== null) e.api = m.api;
   e.scope = [...m.scope];

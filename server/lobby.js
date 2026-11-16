@@ -1576,7 +1576,7 @@ export class Lobby {
     if (!ids.length) return { content: base };
     if (!this.vanilla || !this.plugins || !base) return fail(ERR.PLUGIN_UNKNOWN, 'this server applies no plugins');
     let r;
-    try { r = this.plugins.resolve(ids, { scope: 'room', settings, replacing: room?.content ?? null }); } catch (e) {
+    try { r = this.plugins.resolve(ids, { scope: 'room', settings, replacing: room?.content ?? null, version }); } catch (e) {
       this.log.error(`[lobby] ${room?.code ?? '----'} plugin set failed`, e);
       return fail(ERR.INTERNAL);
     }

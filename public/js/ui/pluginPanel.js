@@ -35,6 +35,8 @@ import { toggleRecommend, uiPluginEntries, uiRecommend, visibleRecommend } from 
 import { t, tc } from '../../../shared/i18n.js';
 import { sizeText, roomPluginFacts, pluginTagText, pluginMicro } from './pluginTag.js';
 import { pluginGroups } from '../../../shared/plugins/category.js';
+import { pluginSupportsVersion } from '../../../shared/plugins/manifest.js';
+import { DEFAULT_VERSION } from '../../../shared/versions.js';
 
 // the panel's section helper lives in the shared category module (the main interface's preview panel uses it too)
 export { pluginGroups };
@@ -66,19 +68,23 @@ export function nextChoice(chosen, id, on, offered = null) {
  * @param {any[]} plugins
  * @returns {string[]}
  */
-export function everyRoomPlugin(plugins) {
+export function everyRoomPlugin(plugins, version = DEFAULT_VERSION) {
   return (Array.isArray(plugins) ? plugins : []).filter((p) => {
     if (!p || typeof p.id !== 'string') return false;
     const gameplay = p.class === 'content' || p.class === 'script' || p.class === 'trusted';
-    return !(gameplay && p.compatible === false);
+    return !(gameplay && p.compatible === false) && pluginSupportsVersion(p, version);
   }).map((p) => p.id);
 }
 
-/** The plugins a room may switch on: loaded cosmetic, content, script and trusted plugins of scope `room`. */
-export const roomPlugins = (plugins) => [
+/**
+ * The plugins a room of `version` may switch on: loaded cosmetic, content, script and trusted plugins of scope `room`
+ * that name this official version (or are version-neutral lang/ui; older plugins without `versions` are 盟约-only).
+ */
+export const roomPlugins = (plugins, version = DEFAULT_VERSION) => [
   ...cosmeticPlugins(plugins, 'room'),
   ...(Array.isArray(plugins) ? plugins : []).filter((p) => p && ['content', 'script', 'trusted'].includes(p.class) && p.status === 'loaded' && Array.isArray(p.scope) && p.scope.includes('room')),
-].sort((a, b) => (String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0));
+].filter((p) => pluginSupportsVersion(p, version))
+  .sort((a, b) => (String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0));
 
 /**
  * The panel's five sections (外观音乐 / 阵营加强 / 新增策略 / 新增敌人 / 新增玩法), in that order, each with the rows
@@ -138,7 +144,8 @@ export function PluginPanel({ open, room, myId, onClose }) {
   // the catalogue — again each time the panel opens (a plugin dropped in meanwhile shows), never on a server without any
   useEffect(() => { alive.current = true; if (installed) loadCatalog({ force: true }); return () => { alive.current = false; }; }, [installed]);
   const f = roomPluginFacts(room, myId);
-  const offered = installed ? roomPlugins(cat.plugins) : [];
+  const version = room?.version || DEFAULT_VERSION;
+  const offered = installed ? roomPlugins(cat.plugins, version) : [];
   const recIds = useStore((s) => s.ids, Object.is, uiRecommend);
   const isHost = !!(room && room.hostId != null && room.hostId === myId);
   const recommended = visibleRecommend(room, isHost, recIds);
@@ -151,7 +158,7 @@ export function PluginPanel({ open, room, myId, onClose }) {
   const classOf = (id) => cat.plugins.find((x) => x.id === id)?.class || f.plugins.find((x) => x.id === id)?.class || 'cosmetic';
   const anyContent = f.modded || offered.some((p) => ['content', 'script', 'trusted'].includes(p.class));
   // 「全部开启」: every offered plugin the server may switch on now (a gameplay plugin made for another app version is not).
-  const bulkIds = everyRoomPlugin(offered);
+  const bulkIds = everyRoomPlugin(offered, version);
   /** room.setPlugins with these ids (one request at a time; `what`: the row — or 'reapply' — that shows it busy). */
   const send = async (ids, what, change = null) => {
     if (inFlight.current || !f.editable) return;

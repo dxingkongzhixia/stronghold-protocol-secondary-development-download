@@ -114,6 +114,14 @@ test('permissions map per kind, and unknown ones are reported not thrown', () =>
   assert.deepEqual(m.unknown, ['nope']);
 });
 
+test('official versions carry from manifest 2 into manifest 3', () => {
+  const a = adapt(v2({ class: 'cosmetic', permissions: ['assets.override'], assets: { ui: { a: 'a.png' } },
+    versions: ['act3autochess'] }));
+  assert.deepEqual(a.manifest.versions, ['act3autochess']);
+  assert.equal(adapt(v2({ class: 'cosmetic', permissions: ['assets.override'], assets: { ui: { a: 'a.png' } } })).manifest.versions,
+    undefined);
+});
+
 test('compat records the mainline range', () => {
   const a = adapt(v2({ class: 'content', app: '>=0.3.0 <0.4.0', permissions: ['data.add'], data: ['a.json'] }));
   assert.equal(a.manifest.compat.manifest2, true);

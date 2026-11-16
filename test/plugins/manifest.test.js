@@ -205,6 +205,15 @@ test('manifest 2: inline assets name art, models, audio or fonts; a theme never 
   assert.deepEqual([trusted.problems, trusted.manifest.scope], [[], ['server']]);
 });
 
+test('manifest 2: versions names the official versions a room plugin is made for', () => {
+  const raw = (extra) => readPluginManifest({ manifest: 2, version: '1.0.0', app: '*', api: 1, class: 'cosmetic',
+    permissions: ['assets.override'], assets: { ui: { 'top/bar': 'ui/bar.png' } }, ...extra }, ctx('skin'));
+  assert.deepEqual(raw({}).manifest.versions, []);
+  assert.deepEqual(raw({ versions: ['act3autochess@V3_1', 'act2autochess'] }).manifest.versions, ['act3autochess@V3_1', 'act2autochess']);
+  assert.match(raw({ versions: ['not-a-version'] }).problems.join(), /is not an official version id, season or family/);
+  assert.match(raw({ versions: [] }).problems.join(), /a non-empty list/);
+});
+
 test('the classes: lang and cosmetic load (P1a), content loads (P1b), ui loads (P4), code is supported behind owner gates; manifest 1 types map onto them', () => {
   assert.deepEqual(Object.keys(PLUGIN_CLASSES), ['lang', 'cosmetic', 'content', 'script', 'ui', 'trusted']);
   assert.deepEqual(Object.keys(PLUGIN_CLASSES).map(classStatus), ['loaded', 'loaded', 'loaded', 'loaded', 'loaded', 'loaded']);

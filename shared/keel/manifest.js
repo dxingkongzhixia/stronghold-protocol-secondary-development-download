@@ -7,7 +7,7 @@
 //
 // No Node builtin: the CLI (tools/keel.mjs), the browser-side graph view and the server can share it.
 
-import { isPackPath, isPluginId, isSemver, isVersionRange, UI_SLOT_IDS } from '../plugins/manifest.js';
+import { isPackPath, isPluginId, isSemver, isVersionRange, isVersionTarget, UI_SLOT_IDS } from '../plugins/manifest.js';
 
 /** The manifest format this file reads. */
 export const KEEL_MANIFEST_VERSION = 3;
@@ -74,7 +74,7 @@ export const KEEL_PERMISSIONS = Object.freeze({
 
 /** Fields a manifest 3 may carry. Anything else is a warning. */
 const KEEL_FIELDS = new Set([
-  '$schema', 'manifest', 'id', 'name', 'englishName', 'description', 'version', 'app', 'api', 'scope', 'trust',
+  '$schema', 'manifest', 'id', 'name', 'englishName', 'description', 'version', 'app', 'api', 'scope', 'versions', 'trust',
   'modules', 'provides', 'consumes', 'state', 'requires', 'optional', 'conflicts', 'loadAfter', 'loadBefore', 'priority',
   'settings', 'compat', 'integrity', 'authors', 'credits', 'license', 'homepage', 'sourceLang', 'category', 'legacy',
 ]);
@@ -137,6 +137,20 @@ export function readKeelManifest(raw, ctx = {}) {
   if (!isSemver(version)) list.problem('KEEL_VERSION', '"version" is not a semantic version', { at: ['version'] });
   if (m.app !== undefined && !isVersionRange(str(m.app, 60))) list.problem('KEEL_APP', '"app" is not a version range', { at: ['app'] });
   if (m.app === undefined) list.problem('KEEL_APP', 'no "app" (the game versions it is made for)', { at: ['app'] });
+  // Official game versions the plugin is made for (shared/versions.js ids, seasons or families); absent: 盟约-only for
+  // room classes, neutral for lang / ui. The same field manifest 2 carries (shared/plugins/manifest.js).
+  /** @type {string[]} */
+  const versions = [];
+  if (m.versions !== undefined) {
+    if (!Array.isArray(m.versions) || !m.versions.length || m.versions.length > 8) {
+      list.problem('KEEL_VERSIONS', `"versions": ${short(m.versions)} — a non-empty list of at most 8 official version ids, seasons or families`, { at: ['versions'] });
+    } else {
+      for (const v of m.versions) {
+        if (!isVersionTarget(v)) { list.problem('KEEL_VERSIONS', `"versions": ${short(v)} is not an official version id, season or family`, { at: ['versions'] }); continue; }
+        if (!versions.includes(v)) versions.push(v);
+      }
+    }
+  }
 
   const trust = str(m.trust, 16);
   if (!KEEL_TRUST.includes(trust)) {
@@ -292,6 +306,7 @@ export function readKeelManifest(raw, ctx = {}) {
     app: str(m.app, 60) || '*',
     api: { ...api },
     scope: KEEL_SCOPES.filter((s) => scope.includes(s)),
+    ...(versions.length ? { versions } : {}),
     trust,
     modules,
     ...(Array.isArray(m.provides) ? { provides: [...new Set(m.provides)] } : {}),

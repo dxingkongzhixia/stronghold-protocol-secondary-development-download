@@ -24,6 +24,8 @@
 // visual set, so the room's `vs` names it too).
 
 import { ERR } from '../../shared/constants.js';
+import { DEFAULT_VERSION } from '../../shared/versions.js';
+import { pluginSupportsVersion } from '../../shared/plugins/manifest.js';
 import { normalizeSettings } from '../../shared/plugins/patch.js';
 import { resolvePluginOrder } from '../../shared/plugins/order.js';
 import { allowsIncompatible } from './compat.js';
@@ -43,9 +45,10 @@ export function createRoomSets({ registry, visual, contents, policy }) {
 
   /**
    * @param {string[]} ids
-   * @param {{ scope?: 'room', settings?: Record<string, Record<string, unknown>>, replacing?: { cs?: string } | null }} [opts]
+   * @param {{ scope?: 'room', settings?: Record<string, Record<string, unknown>>, replacing?: { cs?: string } | null,
+   *   version?: string }} [opts] version: the official version the room plays (default: 盟约)
    */
-  function resolve(ids, { scope = 'room', settings = {}, replacing = null } = {}) {
+  function resolve(ids, { scope = 'room', settings = {}, replacing = null, version = DEFAULT_VERSION } = {}) {
     const pol = policy?.get();
     if (pol && pol.rooms === 'off') return { error: ERR.PLUGIN_BLOCKED, detail: 'this server\'s rooms play the original game (plugins/config.json rooms: off)' };
     const compatAllowed = (p) => allowsIncompatible(pol?.allowIncompatible, p.id);
@@ -58,11 +61,12 @@ export function createRoomSets({ registry, visual, contents, policy }) {
       if (!p) return { error: ERR.PLUGIN_UNKNOWN, detail: `${String(id).slice(0, 40)} is not installed` };
       if (p.disabled) return {error:p.disabled.code,detail:`${id}: ${p.disabled.code}`};
       if (!cosmeticUsable(p, scope) && !contentUsable(p, scope)) return { error: ERR.PLUGIN_BLOCKED, detail: `${id} is not a cosmetic or content plugin of scope ${scope} this version loads` };
+      if (!pluginSupportsVersion(p.manifest, version)) return { error: ERR.PLUGIN_INCOMPATIBLE, detail: `${id} is made for ${(p.manifest.versions || [DEFAULT_VERSION]).join(', ')}, not ${version}` };
       if (!allowed(p)) return { error: ERR.PLUGIN_BLOCKED, detail: `${id} is not allowed on this server (plugins/config.json)` };
     }
     const lookup = (id) => {
       const p = registry.plugin(id);
-      return p && (cosmeticUsable(p, scope) || contentUsable(p, scope)) && allowed(p) ? { id: p.id, ...p.manifest } : null;
+      return p && (cosmeticUsable(p, scope) || contentUsable(p, scope)) && pluginSupportsVersion(p.manifest, version) && allowed(p) ? { id: p.id, ...p.manifest } : null;
     };
     const r = resolvePluginOrder(ids, lookup);
     if ('error' in r) return { error: ERR[r.error] || ERR.BAD_MSG, detail: r.detail };
@@ -71,6 +75,11 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     // visual snapshot like a cosmetic plugin's; DESIGN §32.5) — one visual set
     const cosmeticIds = entries.filter((p) => p.class === 'cosmetic' || (['content','script','trusted'].includes(p.class) && p.visual)).map((p) => p.id);
     const contentIds = entries.filter((p) => ['content','script','trusted'].includes(p.class)).map((p) => p.id);
+    // The content-set builder patches the default data today; a non-default version needs its own data and match host.
+    // Refuse clearly instead of building a covenant set into a regulation room.
+    if (version !== DEFAULT_VERSION && contentIds.length) {
+      return { error: ERR.PLUGIN_INCOMPATIBLE, detail: `gameplay plugins of ${version} need that version's content-set builder (not available yet)` };
+    }
     const warnings = [];
     for (const p of entries) {
       if (!['content','script','trusted'].includes(p.class) || p.manifest.compatible !== false) continue;

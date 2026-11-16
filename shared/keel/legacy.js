@@ -143,6 +143,7 @@ export function keelToV2(manifest, ctx = {}) {
     compatible: appVersionCompatible(app, ctx.app, cls),
     api: Number.isInteger(legacy.api) ? legacy.api : 2,
     scope: Array.isArray(manifest?.scope) ? [...manifest.scope] : ['room'],
+    versions: Array.isArray(manifest?.versions) ? [...manifest.versions] : [],
     ...(manifest?.category ? { category: manifest.category } : {}),
     authors: manifest?.authors ?? [],
     credits: manifest?.credits ?? '',

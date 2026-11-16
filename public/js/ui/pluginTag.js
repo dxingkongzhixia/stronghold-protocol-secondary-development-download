@@ -137,7 +137,7 @@ export function PluginTag({ room, myId }) {
       let panel;
       try { [panel] = await Promise.all([loadPanel(), loadCatalog()]); } catch { return; }
       if (!alive) return;
-      const offered = new Set(panel.roomPlugins(catalog.get().plugins).map((p) => p.id));
+      const offered = new Set(panel.roomPlugins(catalog.get().plugins, room?.version).map((p) => p.id));
       const ids = restoreChoice(pref, offered);
       if (!ids.length) return;
       // The room's own entry has just spent the heavy request bucket (g.watch, room.skins): a retry keeps the restore
