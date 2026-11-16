@@ -11,7 +11,7 @@ import { SessionRegistry } from '../server/net.js';
 import { createVersionSets } from '../server/versions.js';
 import { DATA_SHIM_JS } from '../server/http/static.js';
 import { StubMatch } from '../server/match/StubMatch.js';
-import { DEFAULT_VERSION } from '../shared/versions.js';
+import { DEFAULT_VERSION, officialModeId } from '../shared/versions.js';
 import { ERR } from '../shared/constants.js';
 import { validateC2S } from '../shared/protocol.js';
 
@@ -208,6 +208,26 @@ test('room.proposeVersion: a lone human switches at once; the protocol messages 
   assert.notEqual(validateC2S({ t: 'room.versionVote', voteId: 0, agree: true }), null);
   assert.notEqual(validateC2S({ t: 'room.versionVote', voteId: 1, agree: 'yes' }), null);
   assert.equal(validateC2S({ t: 'room.cancelVersionVote', voteId: 2 }), null);
+});
+
+test('room.proposeVersion: the protocol mode follows the version switch', (t) => {
+  const { registry, lobby } = makeLobby();
+  t.after(() => lobby.shutdown());
+  lobby.opts.versionProposeGapMs = 0;
+  lobby.opts.versionRetryMs = 0;
+  const host = session(registry, 'Host');
+  assert.deepEqual(lobby.versions.offered(ACT3, 'solo'), ['FUNNY', 'NORMAL', 'HARD', 'ABYSS'],
+    'the 20-level ladder covers all four difficulties');
+  assert.deepEqual(lobby.create(host, { mode: 'solo', difficulty: 'NORMAL' }), { ok: true });
+  const room = lobby.roomOf(host);
+  assert.equal(room.difficulty, 'NORMAL');
+  assert.deepEqual(lobby.setMode(host, { modeId: 'mode_single_normal' }), { ok: true });
+  assert.deepEqual(lobby.proposeVersion(host, { version: ACT3 }), { ok: true });
+  assert.equal(room.content.modeId, officialModeId(lobby.versions.data(ACT3).config, 'solo', 'NORMAL'),
+    'the regulation ladder takes the mode for the room\'s difficulty');
+  assert.deepEqual(lobby.setMode(host, { modeId: 'mode_single_7' }), { ok: true });
+  assert.deepEqual(lobby.proposeVersion(host, { version: DEFAULT_VERSION }), { ok: true });
+  assert.equal(room.content.modeId, undefined, 'the default version has no official mode id to carry');
 });
 
 test('room.proposeVersion: a co-op room votes; the last agreement switches, a host proposal is required', (t) => {

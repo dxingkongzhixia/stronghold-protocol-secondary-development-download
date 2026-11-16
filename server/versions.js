@@ -157,6 +157,11 @@ export function createVersionSets({ enabled = [], default: defaultId = DEFAULT_V
       if (id === DEFAULT_VERSION) return [...DIFFICULTIES];
       const modes = sets.get(id)?.data?.config?.modes;
       if (!modes || typeof modes !== 'object') return [...DIFFICULTIES];
+      // A ladder replaces the canonical mode ids (规程's solo mode_single_1–20 carry the four difficulties), so ask
+      // whether any mode of this room type has the difficulty — not just `mode_single_normal` / `mode_multi_normal`.
+      const type = roomMode === 'solo' ? 'SINGLE' : 'MULTI';
+      const offeredByDifficulty = Object.values(modes).some((m) => m?.type === type && typeof m.difficulty === 'string');
+      if (offeredByDifficulty) return DIFFICULTIES.filter((d) => Object.values(modes).some((m) => m?.type === type && m.difficulty === d));
       return DIFFICULTIES.filter((d) => modeIdFor(roomMode, d) in modes);
     },
     /**

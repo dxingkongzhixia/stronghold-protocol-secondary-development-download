@@ -1776,6 +1776,16 @@ export class Lobby {
     }
     room.version = version;
     room.difficulty = this.fallbackDifficulty(version, room.mode, room.difficulty);
+    // The protocol mode follows the switch: the same mode id when the new version offers it (co-op's mode_multi_* are
+    // shared), else the new version's mode for this difficulty (its solo ladder). The default version has no official
+    // mode id of its own, so returning to it clears the choice. A modded room keeps its plugin mode.
+    if (next && next.vanilla !== false) {
+      const config = this.versions?.data?.(version)?.config;
+      const carried = before?.modeId && this.versionModeOf(version, before.modeId)
+        ? before.modeId
+        : (version !== DEFAULT_VERSION ? officialModeId(config, room.mode, room.difficulty) : null);
+      if (carried && carried !== next.modeId) next = Object.freeze({ ...next, modeId: carried });
+    }
     room.content = next;
     this.holdContent(next);
     this.releaseContent(before);
