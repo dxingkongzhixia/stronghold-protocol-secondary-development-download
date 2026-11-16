@@ -2753,17 +2753,20 @@ function buildGarrisons(ctx, chess) {
  * Every other effect-granted item stays sold: the plain 维式重锤 is (user), and 变形同构体 / 骑士储蓄罐 (strategy items)
  * appear in the official 机密商店 supply (Bahamut bsn=33651 snA=12294 screenshot i.meee.com.tw/Mb2mtd9.png).
  */
+// Keyed by the NORMAL item's effectId, not its chess item id: the seasons reuse item ids for different items
+// (act3's chess_item_5_05_e_a is 天马之盔, act2's is 拟态物质), while effect ids are stable.
 const SHOP_EXCLUDED_ITEMS = Object.freeze({
-  chess_item_2_03_e_a: '维多利亚盟约每25层 / 洛洛的定制品', // 战栗维式重锤
-  chess_item_3_09_e_a: '维多利亚盟约每25层 / 洛洛的定制品', // 坚固维式重锤
-  chess_item_3_10_e_a: '维多利亚盟约每25层 / 洛洛的定制品', // 加速维式重锤
-  chess_item_4_09_e_a: '维多利亚盟约每25层 / 洛洛的定制品', // 灼燃维式重锤
-  chess_item_5_08_e_a: '策略【不稳定要素】（昆图斯）', // 突变细胞
+  eff_acarm045: '维多利亚盟约每25层 / 洛洛的定制品', // 战栗维式重锤 (chess_item_2_03_e_a)
+  eff_acarm043: '维多利亚盟约每25层 / 洛洛的定制品', // 坚固维式重锤 (chess_item_3_09_e_a act2 / chess_item_3_08_e_a act3)
+  eff_acarm044: '维多利亚盟约每25层 / 洛洛的定制品', // 加速维式重锤 (chess_item_3_10_e_a)
+  eff_acarm042: '维多利亚盟约每25层 / 洛洛的定制品', // 灼燃维式重锤 (chess_item_4_09_e_a)
+  eff_acarm072: '策略【不稳定要素】（昆图斯）', // 突变细胞 (chess_item_5_08_e_a)
 });
 
 /**
- * Rules the official item text leaves out, by normal item id (both qualities): `note` = a player-facing line shown under
- * the effect in the item card (items.json `note`), `implFormula` replaces research 04's formula.
+ * Rules the official item text leaves out, by the NORMAL item's effectId (both qualities; as SHOP_EXCLUDED_ITEMS):
+ * `note` = a player-facing line shown under the effect in the item card (items.json `note`), `implFormula` replaces
+ * research 04's formula.
  *   突变细胞 — not consumed (player feedback after 0.1.0): PRTS 卫戍协议：盟约 下半/PRTS盟约记录 备注 "生效时，原干员销毁，
  *     获得一名高一阶的随机初始干员（最高六阶）", and a destroyed operator's equipment comes off (PRTS 卫戍协议/帮助 "佩戴的
  *     装备无法手动卸除，在失去该干员（干员出售、销毁、合并等）或装备合并为进阶品质时自动卸除"); the text never says 销毁 for
@@ -2774,7 +2777,7 @@ const SHOP_EXCLUDED_ITEMS = Object.freeze({
  *     what a player gains goes to the 手牌区; pointed out in PR #2).
  */
 const ITEM_RULES = Object.freeze({
-  chess_item_5_08_e_a: {
+  eff_acarm072: { // 突变细胞 (chess_item_5_08_e_a)
     note: '生效时原干员销毁，突变细胞与其他装备退回整备区，可再次配发；随后获得一名高一阶的随机初始干员（最高6阶），进入整备区，需要重新部署',
     implFormula: 'After the battle: the carrier is destroyed wherever it stands (a board tile is freed); its equipment, the '
       + 'cell included, returns to the hand first (overflow temp; the cell is not consumed); then a random NORMAL operator '
@@ -2788,7 +2791,8 @@ const ITEM_RULES = Object.freeze({
  */
 function buildItems(ctx, effects) {
   const { act, charTable } = ctx;
-  const researchItems = new Map((ctx.research.items?.items || []).map((i) => [i.id, i]));
+  // research 04 by the item's trap (character_table) id: stable across the seasons, which reuse the item ids
+  const researchItems = new Map((ctx.research.items?.items || []).map((i) => [i.trapId, i]));
   const shopByBase = new Map();
   for (const s of Object.values(act.trapShopChessDatas)) {
     shopByBase.set(s.itemId, s);
@@ -2804,11 +2808,16 @@ function buildItems(ctx, effects) {
     if (!eff) warn(`item ${chessId}: effect ${t.effectId} missing`);
     const trap = charTable[t.charId];
     if (!trap) warn(`item ${chessId}: trap ${t.charId} missing from character_table`);
-    const ri = researchItems.get(baseId);
+    const ri = researchItems.get(t.charId);
     const isGolden = !!t.isGolden;
     const upgradeNum = t.upgradeNum;
-    const excluded = Object.hasOwn(SHOP_EXCLUDED_ITEMS, baseId) ? SHOP_EXCLUDED_ITEMS[baseId] : null;
-    const rule = Object.hasOwn(ITEM_RULES, baseId) ? ITEM_RULES[baseId] : null;
+    const normalEffect = act.trapChessDataDict[baseId]?.effectId ?? null;
+    const excluded = normalEffect && Object.hasOwn(SHOP_EXCLUDED_ITEMS, normalEffect) ? SHOP_EXCLUDED_ITEMS[normalEffect] : null;
+    const rule = normalEffect && Object.hasOwn(ITEM_RULES, normalEffect) ? ITEM_RULES[normalEffect] : null;
+    // Fusion is official trap data (canFuse / fuseWith / fuseResult). Emit it only when the trap can fuse, so a season
+    // whose traps never set canFuse stays byte-identical.
+    const fuse = t.canFuse === true && t.fuseWith && t.fuseResult
+      ? { canFuse: true, fuseWith: t.fuseWith, fuseResult: t.fuseResult } : null;
     out[chessId] = {
       id: chessId, baseId, goldenId: shop?.goldenItemId || null, isGolden,
       trapId: t.charId, iconId: t.charId, identifier: t.identifier,
@@ -2820,6 +2829,7 @@ function buildItems(ctx, effects) {
       upgradeNum, upgradeChessId: t.upgradeChessId || null,
       duration: t.trapDuration,
       giveBondId: t.giveBondId || null, givePowerId: t.givePowerId || null, canGiveBond: !!t.canGiveBond,
+      ...fuse,
       requiresBondId: ri?.requiresBond || null,
       effectId: t.effectId, effectName: eff?.name || null,
       desc: eff?.desc || null, descRaw: eff?.descRaw || null,
@@ -4934,7 +4944,10 @@ function validateAll(f) {
   for (const [pid, p] of Object.entries(choices.pools)) {
     for (const id of [...(p.items || []), ...(p.weighted || []).map((x) => x[0])]) if (!id || !(items[id] || chess[id])) err(`pool ${pid}: unresolved entry ${id}`);
   }
-  for (const id of (VERSION ? [] : Object.keys(SHOP_EXCLUDED_ITEMS))) if (!items[id] || items[id].itemType !== 'EQUIP' || items[id].isGolden) err(`SHOP_EXCLUDED_ITEMS: ${id} is not a normal EQUIP item`);
+  for (const effectId of (VERSION ? [] : Object.keys(SHOP_EXCLUDED_ITEMS))) {
+    const rec = Object.values(items).find((i) => !i.isGolden && i.effectId === effectId);
+    if (!rec || rec.itemType !== 'EQUIP') err(`SHOP_EXCLUDED_ITEMS: ${effectId} is not a normal EQUIP item effect`);
+  }
   for (const [id, fl] of Object.entries(VERSION ? {} : TOKEN_ABNORMAL)) {
     if (!tokens[id]) err(`TOKEN_ABNORMAL: ${id} is not a token`);
     for (const f of fl) if (f !== 'healFree' && f !== 'isolated') err(`TOKEN_ABNORMAL: ${id}: unknown effect ${f}`);

@@ -51,6 +51,27 @@ test('the 规程 item pools only name items of this version; 凯瑟琳 and 娜�
   }
 });
 
+test('the 规程 item research is keyed by trap id, so reused item ids keep their own item', () => {
+  const items = json('items');
+  assert.equal(items.chess_item_5_05_e_a.name, '天马之盔');
+  assert.equal(items.chess_item_5_05_e_a.kind, 'passive');
+  assert.equal(items.chess_item_5_05_e_a.shopExcluded, false);
+  assert.equal(items.chess_item_5_08_e_a.name, '佣兵名牌');
+  assert.equal(items.chess_item_5_08_e_a.shopExcluded, false, 'act2\'s 突变细胞 rule does not reach this item');
+  for (const name of ['战栗维式重锤', '坚固维式重锤', '加速维式重锤', '灼燃维式重锤']) {
+    const rec = Object.values(items).find((i) => i.name === name && !i.isGolden);
+    assert.equal(rec?.shopExcluded, true, `${name} stays exclusive`);
+  }
+  const fusers = Object.values(items).filter((i) => i.canFuse === true);
+  assert.equal(fusers.length, 10, 'five pairs, both components');
+  for (const r of fusers) {
+    const partner = items[r.fuseWith];
+    assert.equal(partner?.fuseWith, r.id);
+    assert.equal(partner?.fuseResult, r.fuseResult);
+    assert.equal(items[r.fuseResult]?.itemType, 'EQUIP');
+  }
+});
+
 test('the 规程 data carries the season counts and 19×21 stages', () => {
   const count = (name) => Object.keys(json(name)).length;
   assert.equal(count('chess'), 310);
