@@ -177,6 +177,21 @@ export function resolveProxyPrefix(source, offline = false, value = process.env.
 }
 
 /**
+ * The operators of the version union as fetch-assets `extraOperators` (charId → { name, skills }): the art identity of
+ * every version's chess and stand-in, planned like the 自选 picks where research 07 does not list it. `patternOperator`
+ * fills the community-dump URLs; local-client art still wins at render time.
+ * @param {{ operators?: Record<string, { name?: string, skills?: Array<{ index:number, skillId:string, iconId?:string }> }> }} union
+ */
+export function versionOperatorExtras(union) {
+  const out = {};
+  for (const [id, o] of Object.entries(union?.operators || {})) {
+    if (!/^char_\d+_[a-z0-9]+$/i.test(id)) continue;
+    out[id] = { name: o.name ?? id, skills: (o.skills || []).map((s) => ({ index: s.index, skillId: s.skillId, iconId: s.iconId || s.skillId })) };
+  }
+  return out;
+}
+
+/**
  * What data/backups.json and data/chess.json add to the asset plan: `extraOperators` — every unit of backups.json
  * (`{ name, subProfessionId, nationId, skills: [{ index, skillId, iconId }] }`; buildPlan plans those research 07 lacks,
  * the 自选 owned-6★ picks), `tokenIds` — the summons of the 自选 picks (backups.json `tokens`), `moduleTypes` — the type
@@ -423,11 +438,11 @@ async function main() {
     voiceSlots: opts.voiceAll ? null : undefined,
     extraEnemyIds: [...Object.keys(dataEnemies || {}), ...Object.keys(versionUnion.enemies)],
     extraTokenIds: [...Object.keys(dataTokens || {}), ...extras.tokenIds, ...Object.keys(versionUnion.tokens)],
+    extraOperators: { ...versionOperatorExtras(versionUnion), ...extras.extraOperators },
+    moduleTypes: [...new Set([...extras.moduleTypes, ...versionUnion.moduleTypes])].sort(),
     extraHandbook,
     localEnemySpines,
     localTokenSpines,
-    extraOperators: extras.extraOperators,
-    moduleTypes: extras.moduleTypes,
   });
   const leaves = collectLeaves(plan.template);
   log(`[plan] ${leaves.length} files + ${plan.models.size} Spine models ` +

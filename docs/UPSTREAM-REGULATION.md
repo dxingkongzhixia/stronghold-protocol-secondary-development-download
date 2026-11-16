@@ -146,7 +146,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | 规程数据 | 16 文件 / 6.4 MiB 已落地，`--version` 重建逐字节通过；enemies 343 = 上游；模板预设（阿米娅·医疗）取 `char_patch_table` 的完整形态；tuning（称号规则）与 `spineLocal` 输入已显式化 | — |
 | 规则/内容 | 40/40 干员套件、4/4 新盟约、96/96 敌人、141/141 garrison、band B1–B7（含指令替换）、个人核心盟约二选一 + 核心优先禁用 + 5 格装备区 + 隐秘核心端到端（服务端）、26 个模式、一个难度端到端可玩、全部 act3 地图规则（MAP09 隐匿、m12 加速、Boss 受击区、茧索敌/捆绑、萨卡兹亡语/延迟召唤、莱塔尼亚友方召唤）、#932 暴躁铁皮、隐秘核心/领袖/联防复核 | P2 剩余：寻宝人机器人选格、对局侧修复其余项、`recruitTierExempt`（pin 阻塞） |
 | UI | 版本下拉、加载、20 级服务端选择、房间等级选择器、简报核心盟约二选一、装备区抽屉、band 技能按钮/目标选择、装备报告 tab 已有 | 无（P3 完成） |
-| 素材 | 场景/主题/敌人特效、按版本并集规划、98 个本地敌人 Spine 已接 manifest、音乐、主题 | 手机端首包评估；版本并集干员/图标下载计划（敌人/召唤已接入） |
+| 素材 | 场景/主题/敌人特效、按版本并集规划（敌人/召唤/干员/模块类型均已接进 `fetch-assets`）、98 个本地敌人 Spine、音乐、主题 | 手机端首包评估 |
 | golden/测试 | 默认 golden 6 文件全匹配；规程 golden 304 场景（含 10 地图 × 4 模式矩阵）（`test/golden/act3autochess-v3_1/`）由 `--version` 在本树重建 | 无（P5 完成） |
 | 冲突面 | 未动 14 条 never-merge 路径 | 逐块适配并保留 fork 特性（P6） |
 
@@ -160,7 +160,6 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 | P2 | 对局侧修复 #925 #932 #934 #937 #939 #943 #944 #947 #946 | 🟡 #932 已移植；#934/#937 与上游等价；其余待定位（#930 N/A） |
 | P2 | `recruitTierExempt` 招募例外 | ⛔ 阻塞：当前 gamedata pin 无该字段 |
 | P4 | 手机端首包评估（素材并入后的首包体积 / 下载瀑布 / 弱网首屏） | 🔴 未开始 |
-| P4 | 版本并集的干员 / 图标下载计划（`fetch-assets`） | 🟡 敌人与召唤已接入，干员头像/立绘/技能图标未接入 |
 | P6 | 14 条 §0 never-merge 路径逐块重写 | 🔴 未开始 |
 | P6 | 保留 fork 特性（自定义干员、VFX、插件内容集、admin、i18n 等） | 🔴 未开始 |
 | 部署 | 生产部署（当前仍为旧构建） | ⏸ 等 owner 许可 |
@@ -241,7 +240,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 - [x] **按版本素材并集规划**：`tools/assets/versions.mjs` 读取各版本 `chess/backups/tokens/enemies/items/bands/bonds/bosses/stages`，按美术身份并集（干员 216 / 敌人 343 / 策略 61 / 盟约 26 / 装备 70 / 召唤 57 / 模块类型 133），并对照 web manifest 与本地客户端 manifest 报告缺口；`--check` / `--json` / `--junctions`。测试 `test/versions-assets-plan.test.js`
 - [x] 规程 4 首音乐：已从本地客户端 / Monster Siren 入 `var/music`（Kernel Overflow / Restore / Ens Inexorabile / Systematic Violation），客户端由 `VERSION_BGM` 使用
 - [x] **本地客户端素材补全**：从本机 B 服客户端抽取 Amiya 基础形态 avatar/portrait/Spine、阿米娅·医疗的 avatar/portrait/Spine 与 `skchr_amiya3_1/_2` 技能图标、**79 个规程敌人图标**、**44 个策略图标 / 4 个盟约图标 / 47 个装备图标 / 75 个技能图标**（`public/assets/local/{enemy/icon,band,bond,item,skill}`，经 `data/local-assets.committed.json` 登记；`ui/assetUrls.js` 的 enemy/band/bond/item/skill/avatar/portrait 解析回落本地，客户端只带 E2 图的形态回落 E2）；40/40 规程套件干员、98/98 敌人 Spine、10/10 战场场景、主题均已覆盖。24 个 act3 专属 Boss/召唤在客户端无图鉴图标，UI 回落为字形。测试 `test/versions-assets.test.js`、`test/ui/assetUrls.test.js`
-- [ ] **[未做]** 版本并集的干员 / 图标下载计划：`fetch-assets` 已并入敌人与召唤（98 个本地 Spine 因此进入 manifest），干员头像/立绘/技能图标仍只按默认数据计划
+- [x] **版本并集的干员 / 图标下载计划**：`tools/fetch-assets.mjs` 的 `versionOperatorExtras` 把版本并集的干员（charId、技能图标）并入 `extraOperators`，`moduleTypes` 并入模块类型；敌人与召唤此前已接入。离线运行时 39 个规程干员的 SFX 单元进入 manifest（共享音效已存在），头像/立绘/Spine 由后续在线运行按同一计划下载；本地客户端素材仍优先。测试 `test/versions-assets-plan.test.js`
 - [x] 中继发布：`node tools/push-assets-relay.mjs` 已把含规程素材的树部署到 relay（每次发布先于 gitee/github）
 - [ ] **[未做]** 手机端首包评估：规程素材并入后的首包体积/下载瀑布与弱网首屏（`docs/MOBILE-UI.md` §7 的手机矩阵仍未跑规程）
 

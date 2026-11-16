@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { versionAssetData, presentationUnion, versionAssetGaps, addManifestEntries } from '../tools/assets/versions.mjs';
+import { versionOperatorExtras } from '../tools/fetch-assets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -39,4 +40,16 @@ test('addManifestEntries is add-only and recursive', () => {
   assert.deepEqual(addManifestEntries(prev, next), {
     chars: { a: { avatar: '/a.png', portrait: '/a_1.png' }, b: null, c: { avatar: '/c.png' } }, songs: [1, 2], extra: 1,
   });
+});
+
+test('the version union feeds its operators into the fetch-assets plan', () => {
+  const union = presentationUnion(versionAssetData(ROOT));
+  const extra = versionOperatorExtras(union);
+  assert.ok(Object.keys(extra).length >= 140, `${Object.keys(extra).length} operators`);
+  // 规程's Amiya is her 医疗 body: both skills planned, like the 自选 picks
+  assert.deepEqual(extra.char_1037_amiya3.skills.map((s) => s.iconId), ['skchr_amiya3_1', 'skchr_amiya3_2']);
+  for (const [id, x] of Object.entries(extra)) {
+    assert.match(id, /^char_\d+_[a-z0-9]+$/i, id);
+    assert.ok(Array.isArray(x.skills), id);
+  }
 });
