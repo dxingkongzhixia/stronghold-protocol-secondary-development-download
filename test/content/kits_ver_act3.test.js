@@ -266,6 +266,27 @@ test('batch 1–9 numbers: the stat/damage specs carry the blackboard values', (
   assert.equal(spec('char_455_nothin', 1).spec.mods.atkPct, 0.3);
 });
 
+test('暴躁铁皮: S1 cleanses 异常 and swings at allies in range', (t) => {
+  setGameData(ACT3);
+  t.after(() => setGameData(null));
+  const ds = new DataSource(ACT3, quiet);
+  const h = makeBattle({
+    data: ds, seed: 5, timeLimit: 20, autoFinish: false,
+    units: [
+      { uid: 1, chessId: chessId(ACT3, 'char_618_acrbot', false), row: 10, col: 5, carryState: { sp: 999 } },
+      { uid: 2, chessId: 'chess_char_1_02_a', row: 10, col: 6 },
+    ],
+    enemies: [{ key: 'enemy_1000_gopro_2', time: 0, pos: [10, 8], mods: { atkMul: 0 } }],
+  });
+  const u = h.unit(1), ally = h.unit(2);
+  const startHp = ally.s.maxHp;
+  h.b.applyStatus(u, 'cold', { duration: 20, source: null });
+  assert.ok(h.runUntil(() => u.skill.active, 12), 'S1 started');
+  assert.equal(u.skill.id, 'skchr_acrbot_1');
+  assert.equal(u.buffs.some((b) => b.status === 'cold'), false, '异常 cleansed on start');
+  assert.ok(!ally.alive || ally.hp < startHp, 'she swings at the ally in range');
+});
+
 test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (t) => {
   setGameData(ACT3);
   t.after(() => setGameData(null));
