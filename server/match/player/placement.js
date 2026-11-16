@@ -103,15 +103,25 @@ export class PlayerPlacement {
     return placeClass(this, rec);
   }
 
+  /** 寻宝人's 模拟宝藏: its tile cannot be deployed on while the mark exists (`band_treasure`'s skill text
+   * 「使所在格无法部署」). Marks live on PlayerState.bandGlobal for the current prep. */
+  _treasureTile(r, c) {
+    const list = this.bandGlobal;
+    if (!Array.isArray(list)) return false;
+    return list.some((m) => m && m.tag === 'treasure'
+      && Math.round(Number(m.row)) === r && Math.round(Number(m.col)) === c);
+  }
+
   /**
    * Where piece may stand on (r, c): the deploy map of its position class (board.js canPlace) and, for a summon whose
    * text reads "只能部署在召唤者攻击范围内" (tokens.json `ownerRange`: 伺夜's 狼群, 缪尔赛思's 流形, Mon3tr's 重构体), a tile of
    * its owner's attack range (summonRange); for one marked `ownerRangeOutside` (凯尔希·思衡托's 战术锚点), a tile outside it
    * (summonExcluded). Jessica's shield instead uses the fixed four-adjacent-tile grid (shared/summonPlacement.js).
    * `owner` = the owner's position after the move being checked ({ key, piece, dir }: a summon swapped
-   * with its own owner).
+   * with its own owner). A 模拟宝藏 tile refuses every placement.
    */
   _legal(piece, r, c, owner = null) {
+    if (this._treasureTile(r, c)) return false;
     if (!canPlace(this.deployMap(), this._placementOf(piece), r, c)) return false;
     const k = tileKey(r, c);
     const range = this.summonRange(piece, owner);
