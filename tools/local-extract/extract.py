@@ -182,6 +182,20 @@ ENEMY_SPINES = [
 ENEMY_ART = 'refs/arts/enm_art_*.ab'
 ENEMY_SPINE_SUB = 'spine/enemy'
 
+# Handbook icons for the act3-only enemies (and their boss forms' enemyKey) that the packaged
+# arts/enemies/ahub_enemy_icons.ab config does not list. The hot-updated spritepack/icon_enemies_*.ab
+# bundles carry them; a full extract does not depend on this season's list, so this is opt-in like
+# --enemy-spines: `extract.py --only enemy/icon` (or pass --enemy-icons IDS).
+ENEMY_ICON_SUB = 'enemy/icon'
+ENEMY_ICON_PACKS = tuple(f'spritepack/icon_enemies_{i}.ab' for i in range(7))
+ENEMY_ICONS = [
+    'enemy_9024_acsgnt', 'enemy_9025_aclts', 'enemy_9026_acltm', 'enemy_9027_acfnca',
+    'enemy_9028_acfncb', 'enemy_9029_acfnc', 'enemy_9029_acfnc_2', 'enemy_9030_acpara',
+    'enemy_9031_acrefd', 'enemy_9034_acblk', 'enemy_9035_acspider', 'enemy_9035_acspider_2',
+    'enemy_9036_acweb', 'enemy_9037_aceel', 'enemy_9037_aceel_2', 'enemy_9038_achest',
+    'enemy_9039_acrefm', 'enemy_9040_accrit',
+]
+
 # Token (summon) battle Spine models that no community dump carries: fexli/ArknightsResource has most of the 自选
 # summons (data/backups.json `tokens`) only as skin variants or not at all, so tools/fetch-assets.mjs reports "missing
 # skel" for them and the client drew the avatar diamond. Every token of data/tokens.json and data/backups.json whose
@@ -933,6 +947,52 @@ def export_enemy_spines(ab_root, out_root, manifest, log, ids=None):
     return n
 
 
+def export_enemy_icons(ab_root, out_root, manifest, log, ids=None):
+    """Handbook icons of `ENEMY_ICONS` (or `ids`) from spritepack/icon_enemies_*.ab. Each Sprite is saved under
+    `enemy/icon/<name>.png` (the group tools/assets/versions.mjs and ui/assetUrls.js read). Opt-in: a full extract
+    does not depend on the season's missing list."""
+    import aklz4  # noqa: F401  (registers the LZ4AK decoder)
+    import UnityPy
+    wanted = set(ENEMY_ICONS if ids is None else ids)
+    out_dir = Path(out_root) / ENEMY_ICON_SUB
+    out_dir.mkdir(parents=True, exist_ok=True)
+    n = 0
+    for rel in ENEMY_ICON_PACKS:
+        src = Path(ab_root) / rel
+        if not src.exists():
+            continue
+        try:
+            env = UnityPy.load(str(src))
+        except Exception as e:
+            log(f'FAIL load {rel}: {e}')
+            continue
+        for obj in env.objects:
+            if obj.type.name != 'Sprite':
+                continue
+            try:
+                data = obj.read()
+                name = safe_name(getattr(data, 'm_Name', '') or '')
+                if not name or name not in wanted:
+                    continue
+                img = data.image
+                if img is None or img.width < 2 or img.height < 2:
+                    continue
+                img.save(out_dir / f'{name}.png')
+                manifest.setdefault(ENEMY_ICON_SUB, {})[name] = {
+                    'path': f'/assets/local/{ENEMY_ICON_SUB}/{name}.png',
+                    'w': img.width, 'h': img.height, 'kind': 'Sprite',
+                }
+                wanted.discard(name)
+                n += 1
+            except Exception as e:
+                log(f'  warn {rel}: {e}')
+        if not wanted:
+            break
+    for name in sorted(wanted):
+        log(f'skip (not found) enemy icon {name}')
+    return n
+
+
 def export_token_spines(ab_root, out_root, manifest, log, ids=None):
     """TOKEN_SPINES (or `ids`) from the battle token packs: each token's prefab → the SkeletonDataAsset its Front / only
     Spine renderer draws (pick_spine_node) → write_spine. Each pack is loaded on its own; stops once every model was
@@ -1015,6 +1075,8 @@ def main():
     ap.add_argument('--print-jobs', action='store_true', help='print the job table as JSON and exit')
     ap.add_argument('--enemy-spines', default='', metavar='IDS', help='with --only spine/enemy: a comma list or @file '
                     '(JSON array or one id per line) of enemy ids to extract instead of ENEMY_SPINES')
+    ap.add_argument('--enemy-icons', default='', metavar='IDS', help='with --only enemy/icon: a comma list or @file '
+                    '(JSON array or one id per line) of enemy ids to extract instead of ENEMY_ICONS')
     ap.add_argument('--fx-set', choices=('sample', 'used'), default='sample',
                     help='with --only fx: the Phase 1a sample (default) or every effect the mode\'s units reference')
     ap.add_argument('--fx-keys', default='', metavar='K1,K2',
@@ -1082,6 +1144,19 @@ def run_extract(args, ab_root):
         else:
             enemy_list = [x.strip() for x in raw.split(',') if x.strip()]
     enemy_ids = spine_ids(args.only, ENEMY_SPINE_SUB, enemy_list)
+    icon_list = ENEMY_ICONS
+    if args.enemy_icons:
+        raw = args.enemy_icons
+        if raw.startswith('@'):
+            text = Path(raw[1:]).read_text(encoding='utf-8').strip()
+            try:
+                parsed = json.loads(text)
+                icon_list = parsed if isinstance(parsed, list) else [str(parsed)]
+            except ValueError:
+                icon_list = [x.strip() for x in text.replace(',', '\n').splitlines() if x.strip()]
+        else:
+            icon_list = [x.strip() for x in raw.split(',') if x.strip()]
+    icon_ids = spine_ids(args.only, ENEMY_ICON_SUB, icon_list)
     token_ids = spine_ids(args.only, TOKEN_SPINE_SUB, TOKEN_SPINES)
     stage_ids = scene_ids(args.only)
     reg_ids = regulation_ids(args.only)
@@ -1101,7 +1176,7 @@ def run_extract(args, ab_root):
         else:
             art_ids = [x.strip() for x in raw.split(',') if x.strip()]
         art_on = bool(art_ids)
-    if not jobs and not enemy_ids and not token_ids and not stage_ids and not reg_ids and not entry_on and not fx_on and not art_on:
+    if not jobs and not enemy_ids and not icon_ids and not token_ids and not stage_ids and not reg_ids and not entry_on and not fx_on and not art_on:
         print(f'--only {args.only}: no job matches', file=sys.stderr)
         return 2
     out_root = Path(args.out)
@@ -1116,6 +1191,8 @@ def run_extract(args, ab_root):
         total += export_bundle(ab_root, job, out_root, manifest, print)
     if enemy_ids:
         total += export_enemy_spines(ab_root, out_root, manifest, print, enemy_ids)
+    if icon_ids:
+        total += export_enemy_icons(ab_root, out_root, manifest, print, icon_ids)
     if token_ids:
         total += export_token_spines(ab_root, out_root, manifest, print, token_ids)
     if fx_on:

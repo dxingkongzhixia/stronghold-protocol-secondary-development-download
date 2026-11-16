@@ -38,6 +38,7 @@ test('规程 operators: every visible char has an avatar and a battle Spine (mir
 test('规程 enemies: every non-boss enemy has an icon and a model; bosses have a model', () => {
   // projectile / marker records with no battle Spine (drawn by their effect instead)
   const NO_MODEL = new Set(['enemy_9016_acstmr', 'enemy_9036_acweb']);
+  const NO_ICON = new Set(['enemy_9036_acweb']);
   const missingIcon = [];
   const missingModel = [];
   for (const [id, e] of Object.entries(enemies)) {
@@ -45,12 +46,13 @@ test('规程 enemies: every non-boss enemy has an icon and a model; bosses have 
     const icon = (rec?.icon && exists(rec.icon)) || localFile('enemy/icon', id);
     const model = (rec?.spine?.skel && exists(rec.spine.skel)) || localGroup(`spine/enemy/${id}`);
     if (!model && !NO_MODEL.has(id)) missingModel.push(id);
-    if (!icon && e.rank !== 'BOSS' && id !== 'enemy_9038_achest') missingIcon.push(id);
+    if (!icon && e.rank !== 'BOSS' && id !== 'enemy_9038_achest' && !NO_ICON.has(id)) missingIcon.push(id);
   }
   assert.deepEqual(missingModel, []);
-  // the client has no handbook icon for 18 act3-only records (7 bosses and 11 summons/markers); the UI falls back
-  assert.ok(missingIcon.length <= 18, missingIcon.join(','));
-  assert.ok(Object.keys(local.groups?.['enemy/icon'] || {}).length >= 70, 'the local-client enemy icons are in the manifest');
+  // the hot-updated client's spritepack/icon_enemies_6 carries every act3 enemy/Boss icon; enemy_9036_acweb is a
+  // projectile marker with no icon by design (NO_ICON in tools/assets/versions.mjs)
+  assert.deepEqual(missingIcon, []);
+  assert.ok(Object.keys(local.groups?.['enemy/icon'] || {}).length >= 95, 'the local-client enemy icons are in the manifest');
 });
 
 test('规程 enemies: the models only the local client has are wired into data/assets.json as spineLocal', () => {

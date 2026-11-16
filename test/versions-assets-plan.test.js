@@ -22,16 +22,12 @@ test('the union covers the regulation season by art identity', () => {
   assert.ok(u.moduleTypes.length > 100);
 });
 
-test('the gap audit is clean except the optional handbook icons', () => {
+test('the gap audit is clean', () => {
   const { versions } = versionAssetGaps(ROOT);
   assert.equal(versions.length, 1);
   const v = versions[0];
   assert.equal(v.id, 'act3autochess@V3_1');
-  assert.ok(v.gaps.length <= 30, `${v.gaps.length} gaps`);
-  for (const g of v.gaps) {
-    assert.deepEqual(g.missing, ['icon'], `${g.kind} ${g.id}: ${g.missing.join(', ')}`);
-    assert.ok(['enemy', 'boss'].includes(g.kind), `${g.kind} ${g.id}`);
-  }
+  assert.deepEqual(v.gaps, []);
 });
 
 test('addManifestEntries is add-only and recursive', () => {

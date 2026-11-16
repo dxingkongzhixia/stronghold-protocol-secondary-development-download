@@ -86,6 +86,8 @@ export function versionAssetGaps(root) {
   const group = (g) => !!(local.groups?.[g] && Object.keys(local.groups[g]).length);
   const anyGroup = (...gs) => gs.some(group);
   const NO_MODEL = new Set(['enemy_9016_acstmr', 'enemy_9036_acweb']);
+  // projectile / marker records with no handbook icon of their own (the effect, not a unit, draws them)
+  const NO_ICON = new Set(['enemy_9036_acweb']);
   const versions = [];
   for (const d of versionAssetData(root)) {
     const all = presentationUnion([d]);
@@ -104,7 +106,7 @@ export function versionAssetGaps(root) {
     for (const id of Object.keys(all.enemies)) {
       const e = assets.enemies?.[id];
       const missing = [];
-      if (!((e?.icon && file(e.icon)) || group('enemy/icon') && local.groups['enemy/icon'][id])) missing.push('icon');
+      if (!((e?.icon && file(e.icon)) || group('enemy/icon') && local.groups['enemy/icon'][id]) && !NO_ICON.has(id)) missing.push('icon');
       if (!((e?.spine?.skel && file(e.spine.skel)) || group(`spine/enemy/${id}`))) missing.push('spine');
       // projectile / marker records have no battle Spine (their effect draws them)
       if (NO_MODEL.has(id)) { const at = missing.indexOf('spine'); if (at >= 0) missing.splice(at, 1); }
