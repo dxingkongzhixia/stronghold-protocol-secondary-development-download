@@ -40,6 +40,17 @@ test('the 规程 data carries the tuning result-title rules, not the covenant bo
   assert.deepEqual(tuning.titles, shared.titles, 'the result-title rules are the shared ones');
 });
 
+test('the 规程 item pools only name items of this version; 凯瑟琳 and 娜仁图亚 are uncapped', () => {
+  const choices = json('choices');
+  const items = json('items');
+  assert.equal(choices.pools.pool_equip_kathe.also, undefined, 'no act2-only 突变细胞 in a 规程 pool');
+  assert.equal(choices.pools.pool_equip_narant.maxTier, undefined, 'the blackboard names no tier cap');
+  for (const [id, p] of Object.entries(choices.pools)) {
+    if (p.kind !== 'equip') continue;
+    for (const itemId of [...(p.items || []), ...(p.also || [])]) assert.ok(items[itemId], `${id}: ${itemId} is not a 规程 item`);
+  }
+});
+
 test('the 规程 data carries the season counts and 19×21 stages', () => {
   const count = (name) => Object.keys(json(name)).length;
   assert.equal(count('chess'), 310);

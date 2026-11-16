@@ -54,7 +54,9 @@ import { GAMEDATA_BASE } from './versions/sources.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RESEARCH_DIR = join(ROOT, 'docs', 'research');
 // Official tables come from the Kengxxiao mirror (tools/versions/sources.mjs). Override the base with SP_GAMEDATA_BASE to
-// fetch through a proxy (e.g. the CN gh-proxy used for the assets).
+// fetch through a proxy (e.g. the CN gh-proxy used for the assets). `GAMEDATA_URL` is the local name the refresh test
+// injects into its extracted ensureGamedata.
+const GAMEDATA_URL = GAMEDATA_BASE;
 let SEASON = 'act2autochess';
 const USAGE = 'usage: node tools/build-data.mjs [--refresh | --offline] [--version <id>] [--out <dir>] [--cache <dir>] [--report <file>] [--quiet] [--no-research] [--force]';
 
@@ -139,7 +141,7 @@ async function ensureGamedata(rel) {
     throw new Error(`missing cached file ${rel} (offline mode)`);
   }
   await mkdir(dirname(abs), { recursive: true });
-  const url = GAMEDATA_BASE + rel;
+  const url = GAMEDATA_URL + rel;
   let lastErr;
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
@@ -4349,13 +4351,14 @@ function buildChoices(ctx, effects, items, chess) {
       pool_equip_all: { kind: 'equip', rule: 'shopEligible', assumed: true },
       pool_equip_shop_1: { kind: 'equip', rule: 'shopEligible', tiers: [1], assumed: true },
       // 凯瑟琳 定向投放 (up_shop_add_special_goods): every shop-eligible item, whatever the shop level — players' first-hand
-      // report (community, 2026-10-06): 「原版凯瑟琳1升2都能有6本装备」; the pool itself is server-side, uniform [ASSUMED]
-      // (until 0.2.0 it was capped at the shop level, so the 1 → 2 offer only ever showed tiers I–II)
-      // 凯瑟琳【定向投放】(GitHub #631, upstream 72ebd9f3): the `also` list adds 突变细胞 at a uniform weight at any
-      // 调度中心 level. The id is not in shopItemsByTier, so the shop's own item slot still never sells it
-      // (rollItemId's `withAlso` only affects this pool's draws).
-      pool_equip_kathe: { kind: 'equip', rule: 'shopEligible', also: ['chess_item_5_08_e_a'], assumed: true },
-      pool_equip_narant: { kind: 'equip', rule: 'shopEligible', maxTier: 'shopLevel', assumed: true },
+      // report (community, 2026-10-06): 「原版凯瑟琳1升2都能有6本装备」; the pool itself is server-side, uniform [ASSUMED].
+      // 规程 has no 突变细胞 (the act2 `also` id does not exist in this version's items), so the pool carries no `also`.
+      pool_equip_kathe: VERSION
+        ? { kind: 'equip', rule: 'shopEligible', assumed: true }
+        : { kind: 'equip', rule: 'shopEligible', also: ['chess_item_5_08_e_a'], assumed: true },
+      pool_equip_narant: VERSION
+        ? { kind: 'equip', rule: 'shopEligible', assumed: true }
+        : { kind: 'equip', rule: 'shopEligible', maxTier: 'shopLevel', assumed: true },
       // "获得一件带有随机特殊效果的维式重锤": the 4 hammers with a special effect (never sold, SHOP_EXCLUDED_ITEMS); the
       // weights are server-side (PRTS 11-25 note: "装备【灼燃维式重锤】的出现概率调整") — uniform [ASSUMED]
       pool_equip_vict: { kind: 'equip', items: ['灼燃维式重锤', '坚固维式重锤', '加速维式重锤', '战栗维式重锤'].map(itemByName), assumed: true },
