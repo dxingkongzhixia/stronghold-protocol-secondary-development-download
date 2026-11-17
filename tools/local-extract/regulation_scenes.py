@@ -164,15 +164,28 @@ def owner_of(board_row, board_col):
     return None
 
 
-def _outer_row(piece, y):
-    """Borrowed row a point outside the piece rectangle attaches to, or None."""
+def _nearest_delta(piece, y):
+    """The shift of the borrowed row nearest a point (a row the piece does not borrow, or a point beyond it).
+
+    Scenery outside the sim's 19 rows still belongs to the scene (the city / dunes / road sides): it moves with
+    the closest borrowed row, and `_accept` drops only the part that covers another piece's board cell.
+    """
     shifts = PIECE_SHIFT[piece]
-    lo, hi = min(shifts), max(shifts)
-    if y < lo - 0.5 and (lo - 0.5 - y) <= MARGIN:
-        return lo
-    if y > hi + 0.5 and (y - (hi + 0.5)) <= MARGIN:
-        return hi
-    return None
+    return shifts[min(shifts, key=lambda src: (abs(y - src), src))]
+
+
+# sub_01 (the player's block) carries the enemy preview pen beside the equipment row: piece rows 1–5, cols 12–18.
+# The 19×21 grid uses those cells for the 联防 partner's lane, so the owner test would drop the pen — but the pen is
+# the player's own block, not a duplicate of the lane, and the lane's deck covers it in the 联防 view. Keep it.
+SIDE_PEN = (1, 1, 5, 12, 18)  # piece, row0, row1, col0, col1 (piece-local, inclusive)
+
+
+def _in_side_pen(piece, xs, ys):
+    """Is every vertex inside sub_01's preview pen block (a little slack for its border)?."""
+    p, r0, r1, c0, c1 = SIDE_PEN
+    if piece != p:
+        return False
+    return all(c0 - 0.5 <= x <= c1 + 0.5 and r0 - 0.5 <= y <= r1 + 0.5 for x, y in zip(xs, ys))
 
 
 def regulation_delta(piece, x, y):
@@ -182,18 +195,14 @@ def regulation_delta(piece, x, y):
     """
     row, col = cell_index(y), cell_index(x)
     shifts = PIECE_SHIFT[piece]
-    inside_row = 0 <= row < PIECE_ROWS[piece]
     inside_col = 0 <= col < PIECE_COLS[piece]
     if row in shifts and inside_col:
         return _accept(piece, x, y, shifts[row])
     if row in shifts and not inside_col:
         return _accept(piece, x, y, shifts[row])
-    if inside_row:
-        return None  # the piece's own row that the sim does not borrow
-    edge = _outer_row(piece, y)
-    if edge is None:
-        return None
-    return _accept(piece, x, y, shifts[edge])
+    # A row the piece carries but the sim does not borrow, or scenery beyond the piece: keep it with the
+    # nearest borrowed row. The owner check below still drops a duplicate road that covers another piece.
+    return _accept(piece, x, y, _nearest_delta(piece, y))
 
 
 def _accept(piece, x, y, delta):
@@ -257,6 +266,8 @@ def place_triangle(piece, xs, ys):
     """
     if len(xs) != 3 or len(ys) != 3:
         raise ValueError('a triangle has three vertices')
+    if _in_side_pen(piece, xs, ys):
+        return PIECE_SHIFT[1][1], ''
     delta = regulation_delta(piece, sum(xs) / 3, sum(ys) / 3)
     if delta is None:
         return None
@@ -303,29 +314,44 @@ def floor_piece(x, y):
     return owner_of(row, 0)
 
 
+def _covers_foreign_board(piece, xs, ys, zs=None):
+    """Does this triangle sit on a board cell that belongs to another piece?
+
+    Background sheets run tens of cells past the board. Sampling their vertices and centroid
+    (not the whole bounding box) keeps the city / dunes around the board while dropping the
+    part a different piece owns. A triangle under the tile deck (`zs` below FLOOR_Z) cannot
+    poke through that piece's tiles, so it is kept: it fills the ground the hidden partner
+    half otherwise leaves black around 规程's side pen. [ASSUMED]
+    """
+    if zs is not None and max(zs) < FLOOR_Z:
+        return False
+    cx, cy = sum(xs) / 3, sum(ys) / 3
+    for x, y in list(zip(xs, ys)) + [(cx, cy)]:
+        owner = owner_of(cell_index(y), cell_index(x))
+        if owner is not None and owner != piece:
+            return True
+    return False
+
+
 def place_floor_triangle(piece, xs, ys, zs):
     """(delta, group) for a background-sheet triangle, or None.
 
-    A triangle place_triangle already keeps is unchanged. One it drops is kept only when
-    every vertex is below FLOOR_Z (under the tile deck, so it cannot poke through another
-    piece's tiles) and the shifted centroid belongs to this piece's frame (floor_piece).
-    The span cap does not apply: the outer desert is a few triangles tens of cells wide,
-    and dropping them is the black ring around the board. [ASSUMED]
+    A triangle place_triangle already keeps is unchanged. One it drops is kept when it does
+    not cover another piece's board cell — including the city / dunes that rise above the
+    tile deck; the old below-FLOOR_Z test dropped every background mesh taller than the
+    deck (m10/m12's church city), which is the empty right/bottom of those maps.
     """
     if len(xs) != 3 or len(ys) != 3 or len(zs) != 3:
         raise ValueError('a triangle has three vertices')
     kept = place_triangle(piece, xs, ys)
     if kept is not None:
         return kept
-    if max(zs) >= FLOOR_Z:
-        return None
     cx, cy = sum(xs) / 3, sum(ys) / 3
-    delta = _sheet_delta(piece, cy)
-    if delta is None:
+    delta = _nearest_delta(piece, cy)
+    bys = [y + delta for y in ys]
+    if _covers_foreign_board(piece, xs, bys, zs):
         return None
-    if floor_piece(cx, cy + delta) != piece:
-        return None
-    return delta, _group_for(xs, [y + delta for y in ys])
+    return delta, _group_for(xs, bys)
 
 
 def _shifted_y_intervals(piece, y0, y1):
