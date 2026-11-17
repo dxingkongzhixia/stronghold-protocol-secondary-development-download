@@ -541,11 +541,6 @@
 .seat__artwho[hidden] { display: none; }
 
 
-/* 规程 level picker (js/screens/room.js VersionLevelPicker): the version's own mode list */
-.vlevel { display: flex; align-items: center; gap: .1rem; font-size: calc(.17 * var(--t)); font-weight: 700; color: var(--text-md); }
-.vlevel__sel { height: .54rem; padding: 0 .12rem; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .3); color: var(--text-hi); font: inherit; }
-.vlevel--ro b { color: var(--text-hi); }
-
 /* P0.3b official-version switch: the host's buttons in the bar, the open vote above the seats */
 .room-version { display: flex; align-items: center; gap: .1rem; }
 .room-version__opts { display: flex; flex-wrap: wrap; gap: .06rem; }

@@ -329,49 +329,6 @@ function DifficultyPicker({ room, isHost, busy, onPick }) {
   </div>`;
 }
 
-/**
- * 规程: the room's selectable modes of a version config (regulation solo 等级1–20 / co-op 标准…终极), sorted. Empty for
- * the default 盟约 config and while the version's content is still loading (js/screens/room.js VersionLevelPicker).
- */
-export function versionLevelOptions(config, roomMode) {
-  if (config?.version?.family !== 'regulation') return [];
-  const type = roomMode === 'solo' ? 'SINGLE' : 'MULTI';
-  return Object.values(config.modes || {})
-    .filter((m) => m && m.type === type && typeof m.modeId === 'string')
-    .sort((a, b) => (a.sortId ?? 0) - (b.sortId ?? 0));
-}
-
-/**
- * The protocol mode the room actually plays: the mode the host chose (`content.modeId`), else the version's mode for
- * the room's difficulty (the 20-level ladder and the co-op difficulties map one-to-one) — selecting a difficulty tab
- * therefore still reads as that protocol, not 默认.
- * @param {any[]} levels @param {any} room
- */
-export function versionLevelCurrent(levels, room) {
-  const list = Array.isArray(levels) ? levels : [];
-  return list.find((m) => m.modeId === room?.content?.modeId)
-    || list.find((m) => m.difficulty === room?.difficulty)
-    || null;
-}
-
-/**
- * 规程: the 20-level solo ladder / the co-op regulation modes (room.setMode with a mode id of the version's config).
- * `levels` is empty for the default 盟约 version and while the version's content is still loading.
- */
-function VersionLevelPicker({ room, levels, isHost, busy, onPick }) {
-  if (!levels.length) return null;
-  const current = versionLevelCurrent(levels, room);
-  if (!isHost) {
-    return html`<div class="vlevel vlevel--ro"><span>${t('选择模拟协议')}</span><b>${current?.name || t('默认')}</b></div>`;
-  }
-  return html`<label class="vlevel"><span>${t('选择模拟协议')}</span>
-    <select class="vlevel__sel" disabled=${!!busy} value=${current?.modeId || ''} onChange=${(e) => onPick(e.target.value)}>
-      <option value="">${t('默认')}</option>
-      ${levels.map((m) => html`<option key=${m.modeId} value=${m.modeId}>${m.name}</option>`)}
-    </select>
-  </label>`;
-}
-
 /** The 「AI 队友最后选择」 switch (co-op): the host toggles it, everybody else sees its state. */
 function AiLastToggle({ option, busy, onToggle }) {
   if (!option) return null;
@@ -475,9 +432,6 @@ export function RoomScreen() {
       { url: wsUrl, seat: agentInvite.seat + 1, token: agentInvite.token })
     : '';
   const info = difficultyInfo(room.mode, room.difficulty);
-  // 规程's own mode list (regulation solo 等级1–20 / co-op 标准..终极): empty for the default version and while loading.
-  const versionConfig = room.version && room.version !== DEFAULT_VERSION ? data.get('config') : null;
-  const levels = versionLevelOptions(versionConfig, room.mode);
 
   const run = async (kind, fn) => {
     if (inFlight.current) return;
@@ -545,10 +499,6 @@ export function RoomScreen() {
     if (ok) run(`kick${seat}`, () => net.request('room.kick', { seat, playerId }));
   };
   const setDifficulty = (difficulty) => run('diff', () => net.request('room.setDifficulty', { difficulty }));
-  // 规程 level picker: a mode id of the version's config, else the difficulty's default (clears the chosen level)
-  const setLevel = (modeId) => run('mode', () => (modeId
-    ? net.request('room.setMode', { modeId })
-    : net.request('room.setDifficulty', { difficulty: room.difficulty })));
   // 夺舍 AI (room.takeOver): a spectator takes over a bot's seat — its board, gold and loadout become ours
   const takeOver = (seat) => run(`to${seat}`, () => net.request('room.takeOver', { seat }));
   // ...and back out of it (room.releaseSeat): the seat becomes a fresh AI, we return to the spectator seats
@@ -647,7 +597,6 @@ export function RoomScreen() {
         <span class="room-bar__label">${t('模拟难度')}<${MicroLabel}>DIFFICULTY<//></span>
         <div class="room-bar__opts">
           <${DifficultyPicker} room=${room} isHost=${facts.isHost} busy=${busy} onPick=${setDifficulty} />
-          <${VersionLevelPicker} room=${room} levels=${levels} isHost=${facts.isHost} busy=${busy} onPick=${setLevel} />
           <${VersionSwitch} room=${room} choices=${versionChoices} isHost=${facts.isHost} busy=${busy} onPick=${proposeVersion} />
           <${AiLastToggle} option=${aiLastOption(room, me.playerId)} busy=${busy} onToggle=${setAiLast} />
         </div>

@@ -231,7 +231,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 ### P3 UI / 主题（8–12 人日）
 - [x] 规程等级 1–20 的**服务端选择**：`room.setMode { modeId }` 接受版本自己的模式（`config.modes`，如 `mode_single_7`），同步房间难度与 `content.modeId`；测试 `test/lobby-versions.test.js`
-- [x] 房间**等级选择器 UI**（`screens/room.js` VersionLevelPicker，含 极速模拟 + 等级1–20 / 联机四档；未显式选等级时显示该难度映射到的协议模式 `versionLevelCurrent`）与简报**核心盟约二选一 UI**（`screens/briefing.js` CoreBondChoice，`g.coreBond`）；版本切换时协议模式跟随；测试 `test/ui/room-levels.test.js`、`test/lobby-versions.test.js`
+- [x] ~~房间**等级选择器 UI**（`screens/room.js` VersionLevelPicker，含 极速模拟 + 等级1–20 / 联机四档）~~ —— owner 2026-11-18 明确要求删除（联机四档与难度 tab 重复）：房间栏不再放「选择模拟协议」下拉，协议模式由难度档位映射（服务端 `room.setMode` 保留）。简报**核心盟约二选一 UI**（`screens/briefing.js` CoreBondChoice，`g.coreBond`）保留；测试 `test/lobby-versions.test.js`
 - [x] **装备区 5 格 UI**（`ui/equipArea.js`：`m.private.equipHand` 抽屉、点击装备 → 选有空栏的场上/手牌干员 → `g.equip`）；测试 `test/ui/equip-area.test.js`
 - [x] **band 技能按钮与目标选择 UI**（`ui/bandSkill.js`：`m.private.bandSkill` 的名称/消耗/剩余次数/冷却，`NO_TARGET` 直发、`COMMON_CHESS`/`SHOP_SLOT` 目标列表、`MAP_TILE` 行列选择 → `g.bandSkill`；服务端视图 `views.js bandSkillView` 走官方阶段链与实时价格）；测试 `test/versions-band-skill-view.test.js`、`test/ui/band-skill.test.js`
 - [x] **指令替换 UI（追随者们）**：休整期显示本次 2 个候选指令（效果名 + 策略名），点选发 `g.bandSkillChoose`；`m.private.bandChoice` 下发候选与已选，策略与被动不变；测试 `test/versions-band-instructions.test.js`
