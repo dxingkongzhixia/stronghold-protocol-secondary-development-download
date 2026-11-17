@@ -902,6 +902,7 @@ primary repo with `ACAO: *`.)
   ```
   （自动棋地图 / 自动棋 UI 切图 / 表情 / 说明页 / 投射物 / 战斗特效贴图（`fx/kalts2` 卡尔茨 S2 + 自选干员 `fx/ascln` `fx/makoto` `fx/aglna2` `fx/wang` `fx/gdglow` `fx/narant` `fx/clemnt` 克莱门莎，`EFFECT_FX_BUNDLES`）/ 若干 Spine / 3D 棋盘网格·材质·特效 / 派生 PBR / WebP / 敌人 Spine；写出到 `public/assets/local/**` 并更新 `data/local-assets.json`；随仓库提交的素材由 `committed-manifest.mjs` 汇总为 `data/local-assets.committed.json`。）
   相关：`tools/local-extract/enemy_scales.py` 读模型缩放；`node tools/setup.mjs --local` 把本地抽取一并接入。
+   **版本专属干员（规程）**：`spine/char/<charId>/front|back` 由同一命令抽出。浏览器加载这些骨架时按真实 clip 名解析 idle / attack / 各技能槽（`shared/animRoles.js` + `public/js/render/spineRoles.js`），并从 EventTimeline 的 `OnAttack` 取命中帧。攻击/技能特效用 `--only fx --fx-units <charIds>` 增量抽取：只爬这些 charpack，把引用的特效/投射物/技能合并进现有 fx 索引与 `data/local-fx.json`，不重抽其它单位（`fx.py` 的 `game_data` 会合并 `data/versions/*/` 和 `.cache/gamedata*/excel`，版本干员的技能/天赋 prefab 才能定位）。
 - **语音**：本地客户端每个干员一个包 `audio/sound_beta_2/<lang>/<干员>.ab`（`<lang>`＝客户端默认语言 `voice`，另有 `voice_cn` / `voice_en`），内含该干员所有语音片段（`CN_019`…，**编号是 CN 行号，与语言无关**）。用 `tools/local-extract/extract-voice.py` 按清单把要的片段抽出来转 mp3 写回（**无需改清单**）：
   ```
   .venv-extract\Scripts\python.exe tools\local-extract\extract-voice.py ^

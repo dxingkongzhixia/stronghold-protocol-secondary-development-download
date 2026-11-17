@@ -164,6 +164,14 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 以下各节以 `[ ]` 标出的条目即上表对应的未做项；`[x]` 为已完成。本轮会话的完整交接（环境、命令、已提交项、坑）见 [`HANDOFF-2026-11-16.md`](HANDOFF-2026-11-16.md)。
 
+### 规程的敌人预览栏 / 版本干员攻击（2026-11-17）
+
+- **预览栏**：3 期规程的敌人预览是装备行右侧的 5×7 侧栏（`sub_01` piece rows 1–5、cols 12–18，piece row 1 与装备行同一行；两个 `tile_start` 在左缘 rows 2 / 5，row 3 为 `previewNotAlloed`），换算到 19×21 棋盘是 **rows 8–12、cols 12–18**。`tools/versions/layouts.mjs` 把它写进 `options.configBlackBoard.enemy_place_rect = '((8,12),(12,18))'`；`public/js/render/pen.js` 在这块格子没有左缘 gate（它们是联防右半场）时按官方同一个 5×7 形状合成两个锚点和禁区行；pen 相机跟随这个 rect（不再写死 rows 14–18）。盟约的顶部 pen（rows 14–18）仍是 3 期 Boss 场的预览栏，二者不混用。
+- **场景**：`tools/local-extract/regulation_scenes.py` 保留 `sub_01` 的侧栏平台（原先被「别块占格」检查丢掉），并允许低于棋盘面的背景/地面三角形跨到联防右半场，填掉侧栏周围的黑洞；act1/act2 的 `scene.json` 不随 act3 抽取改写。
+- **动画**：版本专属干员的 Spine 来自本地客户端 `spine/char/<id>/<face>`，`data/assets.json` 没有它们的 charpack 角色表。`shared/animRoles.js`（原 `tools/assets/anim-roles.mjs`，纯函数，浏览器与工具共用）在骨架解析后按真实 clip 名解析 idle / attack / 每个技能槽 / die，`render/spineRoles.js` 从 EventTimeline 的 `OnAttack` 事件取命中帧；本地模型的技能攻击读 charpack mode 的 `attack.animKey`（`skillAttack.js` 的 `localModel`），空 key 按官方攻击动画器显示普通攻击。
+- **特效**：`node tools/local-extract/extract.py --only fx --fx-units <ids>` 只爬这些单位的 charpack，并把它们引用的特效/投射物/技能合并进已有 fx 索引（不动其它单位）；`fx.py game_data` 现在合并 `data/versions/<slug>/{chess,backups,enemies,tokens}.json` 与各 `.cache/gamedata*/excel`，版本干员的技能和天赋 prefab 才能被找到。40 个 3 期干员的攻击/技能特效因此进入 `public/assets/local/fx/**` 与 `data/local-fx.json`。
+- **隔离**：以上全部是版本数据或本地客户端素材的增量；默认盟约的 `data/assets.json`、golden 与 act1/act2 场景保持原样。
+
 ## 5. 合并清单
 
 ### P0 版本宿主（5–8 人日）
