@@ -7,7 +7,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +34,19 @@ const PY = [
 ].find((bin) => spawnSync(bin, ['--version']).status === 0);
 const HAS_PIL = !!PY && spawnSync(PY, ['-c', 'import PIL'], { env: ENV }).status === 0;
 const stages = JSON.parse(readFileSync(path.join(ROOT, 'data/stages.json'), 'utf8'));
+// The official versions' battlefields are extracted too, but their stage records live in their own data directory
+// (data/versions/<slug>/stages.json): the default table has none of the 规程 maps.
+const versionStages = (() => {
+  const out = {};
+  const dir = path.join(ROOT, 'data/versions');
+  if (!existsSync(dir)) return out;
+  for (const name of readdirSync(dir)) {
+    const f = path.join(dir, name, 'stages.json');
+    if (existsSync(f)) Object.assign(out, JSON.parse(readFileSync(f, 'utf8')));
+  }
+  return out;
+})();
+const stageOf = (id) => stages[id] || versionStages[id];
 const manifest = (() => { try { return JSON.parse(readFileSync(path.join(ROOT, 'data/local-assets.json'), 'utf8')); } catch { return null; } })();
 /** True when every extracted scene record is the current version and every material map it names is in the manifest. */
 const extractedScenesCurrent = (() => {
@@ -855,7 +868,7 @@ describe('extracted scenes (when scene bundles were extracted here)', { skip: !e
       const bin = readFileSync(file(groups[g].bin.path));
       const chunks = parseSceneChunks(doc, bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.length));
       const rects = sceneGroupRects(chunks);
-      const stage = stages[doc.stage];
+      const stage = stageOf(doc.stage);
       const board = new BoardScene(THREE, fakePack(), { renderer: stubRenderer() });
       board.setScenePack(doc.stage, { key: g, stage: doc.stage, doc, chunks, groups: rects, images: { tex: {}, lm: [] } });
       board.setStage(stage);

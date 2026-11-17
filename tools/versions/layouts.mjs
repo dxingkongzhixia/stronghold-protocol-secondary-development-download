@@ -33,7 +33,7 @@ export const TEMPLATE_OFFSETS = Object.freeze({
 const STAGE_ROWS = Object.freeze([
   ...[0, 1, 2, 3, 4, 5, 6].map((r) => ({ r, piece: 3, from: r })),     // boss field + benches + separator: sub_03 rows 0–6
   { r: 7, piece: 1, from: 0 },                                          // hand row: sub_01 row 0
-  { r: 8, piece: 1, from: 1, cols: 12 },                                // equipment row: sub_01 row 1, cols 0–11 (the pen beside it is not 盟约's)
+  { r: 8, piece: 1, from: 1 },                                          // equipment row + the preview pen beside it: sub_01 row 1
   ...[9, 10, 11, 12, 13].map((r) => ({ r, piece: 2, from: r - 8 })),   // the two road halves + separator: sub_02 rows 1–5
   ...[14, 15, 16, 17, 18].map((r) => ({ r, piece: 3, from: r - 7 })),  // preview pen: sub_03 rows 7–11
 ]);
@@ -127,7 +127,18 @@ export function composeRegulationStage(main, [sub1, sub2, sub3]) {
     const a = p2[k], b = p3[k];
     predefines[k] = Array.isArray(a) || Array.isArray(b) ? [...(a || []), ...(b || [])] : (a ?? b);
   }
-  return { ...main, mapData: { ...main.mapData, map, tiles }, predefines };
+  // 规程's preview pen is the one beside the equipment row (sub_01 rows 1–5, cols 12–18), not 盟约's pen over the boss
+  // field (rows 14–18): sub_01 row 1 is board row 8, so the 5×7 pen block lands on rows 8–12. Its two gates are the
+  // block's left column (rows 9 and 12); pen.js synthesizes the block's shape (row 10 is its previewNotAlloed row)
+  // because those cells are the 联防 partner's lane in the stage grid. buildStages reads options.configBlackBoard.
+  const options = {
+    ...(main.options || {}),
+    configBlackBoard: [
+      ...(Array.isArray(main.options?.configBlackBoard) ? main.options.configBlackBoard : []),
+      { key: 'enemy_place_rect', value: 0, valueStr: '((8,12),(12,18))' },
+    ],
+  };
+  return { ...main, mapData: { ...main.mapData, map, tiles }, predefines, options };
 }
 
 /**

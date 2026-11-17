@@ -460,7 +460,7 @@ export function presetCamera(kind, viewport, options) {
   const W = Math.max(1, finite(viewport?.width, 1)), H = Math.max(1, finite(viewport?.height, 1));
   const knownRect = !rect || sameRect(rect, preset.rect) || (k === 'prep' && rect.r0 >= 6 && rect.r1 <= 12 && rect.c1 <= 10)
     || (k === 'normal' && rect.r0 >= 6 && rect.r1 <= 13) || (k === 'unite' && rect.r0 >= 6 && rect.r1 <= 13)
-    || (k === 'boss' && rect.r1 <= 6) || k === 'bossPrep' || k === 'pen';
+    || (k === 'boss' && rect.r1 <= 6) || k === 'bossPrep' || (k === 'pen' && (!rect || sameRect(rect, preset.rect)));
   const useOfficial = !opts.fit && knownRect && W / H >= 4 / 3 - 1e-6;
   if (useOfficial) {
     const table = opts.half && preset.half ? preset.half : opts.shop === false && preset.officialNoShop ? preset.officialNoShop : preset.official;
@@ -483,7 +483,7 @@ export function presetCamera(kind, viewport, options) {
   }
   // a narrow rect (e.g. a solo boss half) keeps the normal optics; wide ones use the preset's wider lens
   const wide = rect.c1 - rect.c0 >= 14;
-  const base = wide ? preset : CAMERA_PRESETS[k === 'prep' || k === 'bossPrep' ? 'prep' : 'normal'];
+  const base = wide ? preset : CAMERA_PRESETS[k === 'prep' || k === 'bossPrep' || k === 'pen' ? k : 'normal'];
   return zoomCamera(fitCamera(rect, viewport, {
     tilt: finite(opts.tilt, base.tilt), dist: finite(opts.dist, base.dist),
     margin: finite(opts.margin, preset.margin), headroom: finite(opts.headroom, preset.headroom),

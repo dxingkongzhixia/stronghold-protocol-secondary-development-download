@@ -154,7 +154,7 @@ import { ImpostorAtlas } from './impostor.js';
 import { stepClipBounds } from './spine.js';
 import { loadThree, loadBoardPack, loadScenePack, webgl2Available, boardArtListed } from './board3d/load.js';
 import { BoardScene } from './board3d/scene.js';
-import { layoutPen, penSignature } from './pen.js';
+import { layoutPen, penSignature, penZones } from './pen.js';
 import { IDENTITY, bossPrepField, tilesToDisp, leaderStand } from './prepfield.js';
 import { pickOnTile, pickBattle, hitTiles } from './pick.js';
 import { promotionsOf } from './promote.js';
@@ -670,7 +670,7 @@ export async function createFieldView(host, options = {}) {
 
   function camRect() {
     const k = viewKind(camKind, camOpts);
-    if (k === 'pen') return { r0: 14, r1: 18, c0: 7, c1: 13 };
+    if (k === 'pen') return { ...penZones(stageRec).rect };
     // prep lights the bench (hand row 7 / temp row 8) with the field, like the official prep view
     if (camOpts.rect) { const r = normRect(camOpts.rect); return k === 'prep' ? { ...r, r0: Math.min(r.r0, GEO.HAND_ROW) } : r; }
     // the boss round's prep lights the whole boss field: the pair partner's half is shown with its pieces (item 51)
@@ -681,7 +681,7 @@ export async function createFieldView(host, options = {}) {
   function targetCamera(kind, o) {
     const sz = size();
     const k = kind === 'hidden' ? 'boss' : (['prep', 'normal', 'unite', 'boss', 'bossPrep', 'pen'].includes(kind) ? kind : 'normal');
-    let rect = o.rect ? normRect(o.rect) : null;
+    let rect = o.rect ? normRect(o.rect) : k === 'pen' ? camRect() : null;
     if (k === 'prep') rect = rect ? { ...rect, r0: Math.min(rect.r0, GEO.HAND_ROW) } : null;
     // official configBlackBoard framing (render/projection.js presetCamera); the padding only matters for the
     // fitted fallback (custom rects, portrait viewports); a prep camera keeps the bench and the field clear of the HUD
@@ -2223,7 +2223,8 @@ export async function createFieldView(host, options = {}) {
       let v = views.get('p:' + uid);
       if (!v) for (const x of views.values()) if (x.uid === uid || x.info?.uid === uid || x.id === uid) { v = x; break; }
       if (!v || v.destroyed) return null;
-      return { picture: v._pic?.url ?? null, pictureState: v._pic?.state ?? null, model: v._resolved?.skel ?? null, shown: v._actorEntry?.skel ?? null };
+      return { picture: v._pic?.url ?? null, pictureState: v._pic?.state ?? null, model: v._resolved?.skel ?? null, shown: v._actorEntry?.skel ?? null,
+        clip: v.actor?.current ?? null, mode: v.actor?.mode ?? null };
     },
     /**
      * Screen geometry of a BOARD-space tile (in the Final Assault prep: where that board tile is drawn on the boss
