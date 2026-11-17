@@ -400,3 +400,8 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   - 全量 `npm test`：9382 项 / 9344 通过 / 0 失败 / 38 跳过
 - 中继与 Gitee 已推送；GitHub 推送因本机 `:443` 连接重置暂未完成（稍后重试）。
 - 上线时间：2026-11-17 23:30（CST）
+- **2026-11-18 补丁（已上线，build `defe04adcdc7`）**：按 owner 要求删除房间栏的「选择模拟协议」下拉
+  （`screens/room.js` VersionLevelPicker + 其 CSS/文案/测试；服务端 `room.setMode` 保留）。单人 规程等级 1–20 的
+  精确选择随之取消（按难度档位映射）；如需要，放到大厅「选择模拟协议」页做等级列表。
+- **未完成（正在处理，见 [`HANDOFF-2026-11-18.md`](HANDOFF-2026-11-18.md)）**：3 期规程地图仍与主线不一致
+  （row 8 多 7 格、rows 14–18 预览栏被清空、自造 `enemy_place_rect`），装备区买了不显示（自造悬浮层缺陷）。
