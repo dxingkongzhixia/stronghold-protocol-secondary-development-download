@@ -384,3 +384,19 @@ node tools/check-delivery.mjs --live                  # 加载链顺序 + 缓存
   - `/market/` 200，`/market/api/list` 200
   - 管理员通知已推送（6 人在线收到）
 - 上线时间：2026-10-20 13:00（CST）
+
+## 13. 2026-11-17 上线记录（规程 3 期地图 / 预览栏 / 装备区 / 画质）
+
+- 代码：`6397dbaa1`（含 `82a3ee4e3` 地图按官方图重做、`93645f980` 装备区与 prep 相机、`6397dbaa1` 移除顶部 Boss 预览栏）
+- 生产：`/www/wwwroot/Stronghold-Protocol`
+- 备份：`/root/sp-backup-code-20261117-232722.tgz`（6.6 MB）
+- 增量包：`/root/sp-delta-final.tgz`（42 MB / 38 文件：`data/versions/`、`public/js`、`public/css`、`public/assets/local/scene/act3autochess_m01..m12`）
+- 重启后 build：`3af651a08162`（== 磁盘 `computeBuildTag()`）
+- 验证：
+  - 内网 `http://127.0.0.1:3000/healthz` OK；外网 `http://183.66.27.19:20522/healthz` 与 `https://strongholdprotocolcsym.top:10785/healthz` 同 build
+  - `act3autochess_m09`：`config.enemy_place_rect = ((8,21),(12,27))`、row 8 装备行 `####AAAAA###fffffff##`、row 14 全 `#`
+  - 线上 `view.js` 含 `fullField`、`theme.js` 含 `icewild` / `church`、`equipArea.js` 含 `equipRowRect`、CSS 含 `equip--onrow`
+  - `scene/tex` 清单 71 项且含 `TX_icewild_A` / `TX_church_tower_D`；`m09/lm0.webp` 2.4 MB（lossless）
+  - 全量 `npm test`：9382 项 / 9344 通过 / 0 失败 / 38 跳过
+- 中继与 Gitee 已推送；GitHub 推送因本机 `:443` 连接重置暂未完成（稍后重试）。
+- 上线时间：2026-11-17 23:30（CST）
