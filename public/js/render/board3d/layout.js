@@ -453,6 +453,14 @@ export function buildBoard(stage, opts = {}) {
     }
   }
 
+  // 规程's preview pen lies outside the 19×21 grid; its two gates sit on the rect's left edge (pen.js penZones). Add
+  // them to the red start-gate meshes (the 3D scene's _buildGates reads `gates`).
+  const pen = parsePenRect(stage?.config?.enemy_place_rect);
+  if (pen && pen.c0 >= COLS) {
+    gates.push({ r: pen.r0 + 1, c: pen.c0, kind: 'start', z: 0 });
+    gates.push({ r: pen.r1, c: pen.c0, kind: 'start', z: 0 });
+  }
+
   return {
     grid, gates, devices, terrain, edges,
     buckets: { board: board.finish(), decal: decal.finish(), pipe: pipe.finish(), glass: glass.finish(), raised: raised.finish(), raisedDecal: raisedDecal.finish() },

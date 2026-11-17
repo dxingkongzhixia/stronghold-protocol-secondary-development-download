@@ -178,6 +178,12 @@ def _nearest_delta(piece, y):
 # The 19×21 grid uses those cells for the 联防 partner's lane, so the owner test would drop the pen — but the pen is
 # the player's own block, not a duplicate of the lane, and the lane's deck covers it in the 联防 view. Keep it.
 SIDE_PEN = (1, 1, 5, 12, 18)  # piece, row0, row1, col0, col1 (piece-local, inclusive)
+# The 19×21 grid's cols 12–18 are the 联防 right lane, so the pen is drawn outside the board (cols 21–27): the stage's
+# enemy_place_rect is ((8,21),(12,27)) and the platform's x moves by this many columns.
+SIDE_PEN_DX = 9
+# Board-space rect of that outside pen (rows, cols): background / scenery triangles overlapping it are dropped so the
+# shifted platform is not buried under the outworld ice (the pen camera frames it).
+SIDE_PEN_RECT = (8, 12, 21, 27)
 
 
 def _in_side_pen(piece, xs, ys):
@@ -258,6 +264,12 @@ def _group_for(xs, ys):
     return ''
 
 
+def _overlaps_pen(xs, ys):
+    """Does a board-space triangle overlap the outside preview pen (SIDE_PEN_RECT)?"""
+    r0, r1, c0, c1 = SIDE_PEN_RECT
+    return max(xs) >= c0 - 0.5 and min(xs) <= c1 + 0.5 and max(ys) >= r0 - 0.5 and min(ys) <= r1 + 0.5
+
+
 def place_triangle(piece, xs, ys):
     """(delta, group) for one piece-local triangle, or None to drop it.
 
@@ -272,6 +284,10 @@ def place_triangle(piece, xs, ys):
     if delta is None:
         return None
     bys = [y + delta for y in ys]
+    # the outworld scenery overlapping the outside pen is cut away: the shifted pen platform is there and must show
+    # (the pen camera frames that area; a buried platform is the blank/rocky right side the owner reported)
+    if _overlaps_pen(xs, bys):
+        return None
     if _overlaps_foreign(piece, xs, bys):
         return None
     return delta, _group_for(xs, bys)
@@ -349,6 +365,8 @@ def place_floor_triangle(piece, xs, ys, zs):
     cx, cy = sum(xs) / 3, sum(ys) / 3
     delta = _nearest_delta(piece, cy)
     bys = [y + delta for y in ys]
+    if _overlaps_pen(xs, bys):
+        return None
     if _covers_foreign_board(piece, xs, bys, zs):
         return None
     return delta, _group_for(xs, bys)
@@ -858,13 +876,14 @@ def _chunks_of_piece(piece, objects, log, stage_id, material_info):
                 if surface:
                     stats['water_strict'] += 1
                 delta, group = placed
+                dx = SIDE_PEN_DX if _in_side_pen(piece, xs, ys) else 0
                 stats['kept'] += 1
                 key = (name, index, group)
                 chunk = chunks.setdefault(key, {'pos': [], 'uv': [], 'uv1': [], 'nrm': [], 'col': [], 'idx': []})
                 base = len(chunk['pos'])
                 for i in range(3):
                     x, y, z = pts[i]
-                    chunk['pos'].append((x, y + delta, z))
+                    chunk['pos'].append((x + dx, y + delta, z))
                     chunk['uv'].append(uvs[i])
                     chunk['uv1'].append(lms[i])
                     chunk['nrm'].append(nrms[i])
@@ -926,7 +945,9 @@ def _write(stage_id, chunks, materials, mat_tex, light, images, out_root, manife
     lightmaps = 0
     for index, image in enumerate(images):
         try:
-            entry = scenes.save_image(image, out_dir, f'lm{index}', sub)
+            # A lightmap is a data map (RGBM indirect + shadow mask): lossy WebP's 4:2:0 chroma softens the baked
+            # shadow edges, so the pages are saved lossless (scenes.LOSSLESS_MAPS applies to the albedo/normal maps).
+            entry = scenes.save_image(image, out_dir, f'lm{index}', sub, lossless=True)
         except Exception as e:
             log(f'  warn {stage_id}: lightmap {index}: {e}')
             continue

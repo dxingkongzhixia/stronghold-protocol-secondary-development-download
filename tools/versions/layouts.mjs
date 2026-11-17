@@ -128,14 +128,15 @@ export function composeRegulationStage(main, [sub1, sub2, sub3]) {
     predefines[k] = Array.isArray(a) || Array.isArray(b) ? [...(a || []), ...(b || [])] : (a ?? b);
   }
   // 规程's preview pen is the one beside the equipment row (sub_01 rows 1–5, cols 12–18), not 盟约's pen over the boss
-  // field (rows 14–18): sub_01 row 1 is board row 8, so the 5×7 pen block lands on rows 8–12. Its two gates are the
-  // block's left column (rows 9 and 12); pen.js synthesizes the block's shape (row 10 is its previewNotAlloed row)
-  // because those cells are the 联防 partner's lane in the stage grid. buildStages reads options.configBlackBoard.
+  // field (rows 14–18): sub_01 row 1 is board row 8. It is kept OUTSIDE the 19×21 grid (cols 21–27) because the cells
+  // beside the equipment row are the 联防 right lane in that grid; the pen has its own camera and the stage builds both
+  // halves. The block is the official 5×7 shape (gates on its left column, row 3 not allowed); pen.js synthesizes it
+  // from the rect because those cells carry no gates. buildStages reads options.configBlackBoard.
   const options = {
     ...(main.options || {}),
     configBlackBoard: [
       ...(Array.isArray(main.options?.configBlackBoard) ? main.options.configBlackBoard : []),
-      { key: 'enemy_place_rect', value: 0, valueStr: '((8,12),(12,18))' },
+      { key: 'enemy_place_rect', value: 0, valueStr: '((8,21),(12,27))' },
     ],
   };
   return { ...main, mapData: { ...main.mapData, map, tiles }, predefines, options };

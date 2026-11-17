@@ -58,6 +58,11 @@ export const SCENE_THEMES = Object.freeze({
   // this theme, so act2autochess_m03 is the only battlefield it can change.
   kxmr: Object.freeze({ exposure: 2.0, ambient: 0.13, tint: Object.freeze([0.98, 1.0, 1.03]), saturate: 0.94, sun: 2.4, gain: 1.95 }),
   lmz: Object.freeze({ exposure: 2.0, ambient: 0.13, tint: Object.freeze([0.98, 1.0, 1.03]), saturate: 0.94, sun: 2.4, gain: 1.95 }),
+  // act3autochess m09 / m11 (icewild): the official is a bright, cold snowfield with crisp blue shadows; the default
+  // grade washed it out. A cool tint, low ambient (deeper shadow) and a strong sun keep the snow/ice contrast.
+  icewild: Object.freeze({ exposure: 2.4, ambient: 0.07, tint: Object.freeze([0.97, 1.0, 1.06]), saturate: 1.02, sun: 3.4 }),
+  // act3autochess m10 / m12 (church tower, ltny2): a warm, bright church interior; golds stay warm, shadows crisp.
+  church: Object.freeze({ exposure: 2.4, ambient: 0.11, tint: Object.freeze([1.03, 1.0, 0.95]), saturate: 0.98, sun: 3.1 }),
 });
 
 // Albedo-texture marker → theme. The scene doc's material list is the official data: a battlefield's theme is the
@@ -67,6 +72,8 @@ export const THEME_MARKERS = Object.freeze([
   ['Syracuse', 'city'],
   ['KXMR', 'kxmr'],
   ['LMZ', 'lmz'],
+  ['icewild', 'icewild'],
+  ['church_tower', 'church'],
 ]);
 
 /**

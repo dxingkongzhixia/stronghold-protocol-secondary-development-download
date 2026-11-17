@@ -2,6 +2,7 @@
 
 import { AREAS, areaFor, unionAreas } from '../board3d/layout.js';
 import { normRect } from '../projection.js';
+import { parsePenRect } from '../pen.js';
 
 const VIEW_KINDS = new Set(['prep', 'normal', 'unite', 'boss', 'bossPrep', 'pen']);
 
@@ -22,6 +23,18 @@ const AREA_NO_PEN = Object.freeze({
   normal: Object.freeze(AREAS.normal.filter((a) => a.r1 <= 13)),
   unite: Object.freeze(AREAS.unite.filter((a) => a.r1 <= 13)),
 });
+
+/**
+ * 规程's board is one battlefield with both halves (the 联防 right lane is the same board, not a teammate's field) and
+ * its preview pen lies outside the 19×21 grid (enemy_place_rect cols 21–27). A stage that does so builds the right half
+ * with its own field: preview / normal views show rows 6–13 across col 20, like the official map.
+ */
+const FULL_NORMAL = Object.freeze([...AREAS.normal, Object.freeze({ r0: 6, r1: 13, c0: 11, c1: 20 })]);
+const fullField = (stage) => {
+  const rect = parsePenRect(stage?.config?.enemy_place_rect);
+  return !!rect && rect.c0 > 20;
+};
+export { fullField };
 
 /**
  * The view kinds that show the enemy preview pen — its 3D block, its 2D rows, its two red gates and its figures: the pen
@@ -45,9 +58,10 @@ export const showsPen = (vk) => PEN_VIEWS.has(vk);
  * devices blow into the field: act2 m01's blowers, user playtest #5 item 6; the boss field's row-6 devices are drawn
  * with the boss field only — board3d/layout.js stageDevices); the boss kinds build the boss field.
  */
-export function boardArea(vk) {
-  if (vk === 'pen' || vk === 'prep') return AREAS.normal;
-  if (vk === 'normal') return AREA_NO_PEN.normal.length ? AREA_NO_PEN.normal : AREAS.normal;
+export function boardArea(vk, stage = null) {
+  const full = fullField(stage);
+  if (vk === 'pen' || vk === 'prep') return full ? FULL_NORMAL : AREAS.normal;
+  if (vk === 'normal') return full ? FULL_NORMAL.filter((a) => a.r1 <= 13) : AREA_NO_PEN.normal.length ? AREA_NO_PEN.normal : AREAS.normal;
   if (vk === 'unite') return AREA_NO_PEN.unite.length ? AREA_NO_PEN.unite : AREAS.unite;
   return areaFor(vk);
 }
@@ -88,8 +102,8 @@ export const leaderShown = (vk, prevVk = null) => vk === 'bossPrep' || prevVk ==
  * board's active field rows (`field`), and whether the pen's figures (`pen`) and the boss-prep leader (`leader`) show.
  * @param {string} vk
  */
-export function restView(vk) {
-  return { area: boardArea(vk), band: bandFor(vk), field: fieldRows(vk), pen: showsPen(vk), leader: leaderShown(vk) };
+export function restView(vk, stage = null) {
+  return { area: boardArea(vk, stage), band: bandFor(vk), field: fieldRows(vk), pen: showsPen(vk), leader: leaderShown(vk) };
 }
 
 /**
@@ -99,9 +113,9 @@ export function restView(vk) {
  * @param {string} prevVk
  * @param {string} vk
  */
-export function flightView(prevVk, vk) {
+export function flightView(prevVk, vk, stage = null) {
   const pen = penShown(vk, prevVk);
-  const from = restView(prevVk), to = restView(vk);
+  const from = restView(prevVk, stage), to = restView(vk, stage);
   const noPen = (r) => [r[0], Math.min(r[1], 13)];
   const fromArea = pen ? from.area : from.area.filter((a) => a.r1 <= 13);
   const fb = pen ? from.band : noPen(from.band), ff = pen ? from.field : noPen(from.field);

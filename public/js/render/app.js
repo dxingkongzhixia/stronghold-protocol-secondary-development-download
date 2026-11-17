@@ -162,7 +162,7 @@ import { ensurePixi } from './app/pixi.js';
 import { advanceEffectClock } from './app/playback.js';
 import { pieceDirOf, pickUnitOf } from './app/pick.js';
 import { CAMERA_MS, BOARD3D_STABLE_MS, BOARD3D_RETRY_MS, PEN_CAMERA_MS, RANGE_GROUPS, LEADER_HIT_STYLE, DRAG_HOLD_TILES, CHAIN_KINDS, DROP_PENDING_MS, DEPLOY_REPLAY_MS } from './app/tune.js';
-import { boardPreference, switchableBox, bandFor, fieldRows, boardArea, viewKind, restView, flightView } from './app/view.js';
+import { boardPreference, switchableBox, bandFor, fieldRows, boardArea, viewKind, restView, flightView, fullField } from './app/view.js';
 import { renderInfo, FORCED_EXIT, showsDeathFx } from './app/info.js';
 import { resolveAssets, makeData, withTimeout, BOARD_RES, qualityResolution, loadRenderScale, releaseGl } from './app/host.js';
 import { t } from '../../../shared/i18n.js';
@@ -551,7 +551,7 @@ export async function createFieldView(host, options = {}) {
       board3d = b;
       tiles.setExternal(true);
       backdrop.visible = false;
-      b.setArea(boardArea(viewKind(camKind, camOpts)));
+      b.setArea(boardArea(viewKind(camKind, camOpts), stageRec));
       if (stageRec) { b.setStage(stageRec); useOfficialScene(stageRec); }
       b.setFocus(camRect());
       b.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null);
@@ -670,7 +670,12 @@ export async function createFieldView(host, options = {}) {
 
   function camRect() {
     const k = viewKind(camKind, camOpts);
+    const full = fullField(stageRec);
     if (k === 'pen') return { ...penZones(stageRec).rect };
+    // 规程's field is one board with both halves (the right lane is not a teammate's) and its pen outside the grid:
+    // frame the whole battlefield + pen in prep (the official screen), the two halves in battle. The game asks for the
+    // 盟约 GEO.NORMAL_RECT; the full stage overrides it.
+    if (full && (k === 'prep' || k === 'normal')) return { r0: k === 'prep' ? 7 : 9, r1: 12, c0: 0, c1: k === 'prep' ? 27 : 20 };
     // prep lights the bench (hand row 7 / temp row 8) with the field, like the official prep view
     if (camOpts.rect) { const r = normRect(camOpts.rect); return k === 'prep' ? { ...r, r0: Math.min(r.r0, GEO.HAND_ROW) } : r; }
     // the boss round's prep lights the whole boss field: the pair partner's half is shown with its pieces (item 51)
@@ -681,15 +686,17 @@ export async function createFieldView(host, options = {}) {
   function targetCamera(kind, o) {
     const sz = size();
     const k = kind === 'hidden' ? 'boss' : (['prep', 'normal', 'unite', 'boss', 'bossPrep', 'pen'].includes(kind) ? kind : 'normal');
-    let rect = o.rect ? normRect(o.rect) : k === 'pen' ? camRect() : null;
+    const full = fullField(stageRec);
+    let rect = (full && (k === 'prep' || k === 'normal')) ? camRect() : o.rect ? normRect(o.rect) : k === 'pen' ? camRect() : null;
     if (k === 'prep') rect = rect ? { ...rect, r0: Math.min(rect.r0, GEO.HAND_ROW) } : null;
+    const fitFull = full && (k === 'prep' || k === 'normal');
     // official configBlackBoard framing (render/projection.js presetCamera); the padding only matters for the
     // fitted fallback (custom rects, portrait viewports); a prep camera keeps the bench and the field clear of the HUD
     // — `shop: false` (the folded shop, public issue #5) = the official shop-collapsed camera, clear of the folded
     // shop's HUD band (re-evaluated on resize: camOpts keep the flag)
     const vk = viewKind(kind, o); // (a 'prep' camera on the boss rows = the Final Assault prep)
     return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || defaultPadding(k, sz) }, {
-      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit, config: stageRec?.config || null,
+      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit || fitFull, config: stageRec?.config || null,
       hud: hudBands(vk, sz, { shop: o.shop !== false }), zoom: o.zoom ?? mobileZoom(),
     });
   }
@@ -717,7 +724,7 @@ export async function createFieldView(host, options = {}) {
     if (vk === 'prep') setPrepField(IDENTITY);
     else if (vk === 'bossPrep') setPrepField(bossPrepField(camOpts.side === 'R' ? 'R' : 'L'));
     const target = targetCamera(camKind, camOpts);
-    const rest = restView(vk);
+    const rest = restView(vk, stageRec);
     const focus = camRect();
     board3d?.setFocus(focus);
     camMs = Number.isFinite(o.ms) && o.ms >= 0 ? o.ms : (vk === 'pen' || prevView === 'pen' ? PEN_CAMERA_MS : CAMERA_MS);
@@ -734,7 +741,7 @@ export async function createFieldView(host, options = {}) {
       camT0 = performance.now();
       // keep both fields drawn (and lit) while the camera flies between them; the pen as flightView says (a flight from
       // the prep camera into a battle drops it at once)
-      const fly = flightView(prevView, vk);
+      const fly = flightView(prevView, vk, stageRec);
       tiles.setView(fly.band, focus, fly.field);
       board3d?.setArea(fly.area);
       setPenHidden(!fly.pen);
