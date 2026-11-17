@@ -1849,7 +1849,7 @@ function MatchScreen() {
         ${spectator ? null : html`<${Button} size="sm" variant="primary" icon="back" onClick=${() => watchPlayer({ playerId: myId })}>${t('返回自己')}<//>`}
       </div>` : null}
 
-      ${phase === PHASE.PREP && editable && !watchingOther ? html`<${EquipArea} priv=${priv} gd=${gd} editable=${editable} />` : null}
+      ${phase === PHASE.PREP && editable && !watchingOther ? html`<${EquipArea} priv=${priv} gd=${gd} editable=${editable} view=${view} stage=${ownStage} />` : null}
       ${phase === PHASE.PREP && editable && !watchingOther ? html`<${BandSkill} priv=${priv} gd=${gd} editable=${editable} />` : null}
 
       ${showShop ? html`<${ShopBar} priv=${priv} editable=${editable} collapsed=${barCollapsed} refreshBusy=${refreshBusy} onCollapse=${setCollapsed}

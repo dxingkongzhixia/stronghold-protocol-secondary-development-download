@@ -821,6 +821,14 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .equip__cancel { justify-content: center; color: var(--text-lo); }
 .equip__empty { margin: .06rem 0; color: var(--text-lo); font-size: calc(.15 * var(--t)); }
 
+/* the five slots ON the map's equipment row (equipArea.js equipRowRect): the official 规程 lay-out beside the hand row */
+.equip.equip--onrow { gap: 0; align-items: stretch; }
+.equip__row { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; height: 100%; }
+.equip--onrow .equip__slot { width: 100%; height: 100%; aspect-ratio: auto; border: 1px solid transparent; border-radius: .02rem; background: transparent; }
+.equip--onrow .equip__slot.has-item { border-color: var(--line-2); background: rgba(0, 0, 0, .42); }
+.equip--onrow .equip__slot:hover:not(:disabled) { border-color: var(--mint-500, #4ed8af); }
+.equip__panel--pick { position: absolute; left: 0; bottom: calc(100% + .08rem); width: 100%; }
+
 
 /* 规程 active strategy skill (js/ui/bandSkill.js): a prep button above the equipment drawer, with its target picker */
 .bskill { position: absolute; left: .3rem; bottom: 5.2rem; z-index: 12; display: flex; flex-direction: column; align-items: flex-start; gap: .08rem; }
