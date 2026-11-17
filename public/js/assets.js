@@ -257,8 +257,9 @@ const localCharSpines = new WeakMap(); // local manifest → Map(group → Spine
 
 /**
  * A version-only operator's Spine from the local-client manifest (`spine/char/<id>/front|back`: `<id>.skel`,
- * `<id>.atlas`, page PNGs). The extractor writes no role table, so the standard clip names are offered and the
- * renderer drops the ones the skeleton does not have; the idle clip still finds `Idle` (or the first clip).
+ * `<id>.atlas`, page PNGs). The extractor writes no role table; render/spineRoles.js resolves the roles from the parsed
+ * skeleton's own clip names and its OnAttack events when the model loads (spine.js), so the entry only carries the
+ * generic names for an immediate idle before that.
  * @param {any} local data/local-assets.json
  * @param {string} charId @param {'front'|'back'} face
  */

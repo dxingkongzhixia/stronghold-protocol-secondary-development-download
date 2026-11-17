@@ -2,7 +2,8 @@
 //
 // SpineActor owns one PIXI.spine.Spine built from cached skeleton data (assets.spine LRU; the instance never
 // owns the atlas, so destroying it never frees shared textures). Animation roles come from the manifest
-// (`anims`: idle, deploy, attack{begin,loop,end}, attackDown, skill{begin,loop,end,idle}, die, move, stun).
+// (`anims`: idle, deploy, attack{begin,loop,end}, attackDown, skill{begin,loop,end,idle}, die, move, stun); a model the
+// local client supplied for a version-only operator is resolved from its skeleton when it loads (spineRoles.js).
 //
 // Driving (units.js calls these; the sim is authoritative, the actor only visualises):
 //   setBase('idle'|'move'|'stun')        the resting state from the snapshot anim code
@@ -45,6 +46,8 @@
 // Each attack plays its clip once, then the end clip (if any) and base — except the attacks of a skill
 // with its own idle clip, which go straight back to that idle: the skill's end clip closes the skill, not each spell of
 // attacks while it runs.
+
+import { localSpineRoles } from './spineRoles.js';
 
 const clampN = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
@@ -423,6 +426,13 @@ export class SpineActor {
    */
   constructor(spineData, entry) {
     const P = globalThis.PIXI;
+    // A local-client *operator* model (spine/char/<id>, a version-only character) carries only generic clip names in its
+    // entry (assets.js localCharSpineEntry); the skeleton is parsed now, so resolve its real roles and OnAttack times
+    // before anything plays (spineRoles.js). Enemies / tokens from the client already have their table.
+    if (entry && entry.local && !entry.animations) {
+      const local = localSpineRoles(spineData);
+      if (local) entry = { ...entry, anims: local.anims, animations: local.animations, hits: local.hits };
+    }
     this.entry = entry;
     this.roles = entry.anims || {};
     this.durations = entry.animations || {};

@@ -784,13 +784,16 @@ export class UnitView {
       let actor = null;
       try {
         actor = new SpineActor(data, entry);
+        // a local-client operator's entry was resolved from the skeleton (spineRoles.js): the view reads the same
+        // roles / clip durations (the deploy Start length, dieClipDur) from here
+        if (actor.entry && actor.entry !== entry) this.entry = actor.entry;
         actor.setSkillIndex(this.skillIndex ?? undefined);
         // Query at attack time: late index loads, skill slots and facing changes need no new model or request.
         actor.skillAttackMode = () => {
           // [ASSUMED] §34.31's cast heuristic is for operators; enemy abilities and token controllers keep their roles.
           if (this.info.kind !== 'op') return { preserve: true };
           const mode = skillAttackMode(this.ctx.skillAttackIndex?.(), {
-            info: this.info, rec: this.ctx.lookupDef?.(this.info), skillIndex: this.skillIndex,
+            info: this.info, rec: this.ctx.lookupDef?.(this.info), skillIndex: this.skillIndex, localModel: !!entry.local,
           });
           return mode ? { ...mode, down: this.dir === 'DOWN' } : null;
         };

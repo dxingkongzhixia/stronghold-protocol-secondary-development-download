@@ -3043,44 +3043,60 @@ def _export_worker(args, keys_all=None):
 def game_data(root):
     """Operator ids (chess.json + backups.json units), the skill prefab ids per operator (its chess records' and its
     backups.json forms'), enemy keys, token ids and the skill ids of each token (token_skill_ids of its tokens.json /
-    backups.json record)."""
+    backups.json record).
+
+    The official versions' data directories (data/versions/<slug>/) are merged in: a version-only operator (规程's 37)
+    has no record in the default tables, and its charpack is the one whose attacks/skills need extracting.
+    """
     data = Path(root) / 'data'
-    def load(n):
+    def load(n, base=None):
         try:
-            return json.loads((data / n).read_text(encoding='utf-8'))
+            return json.loads(((base or data) / n).read_text(encoding='utf-8'))
         except (OSError, ValueError):
             return {}
-    chess, backups, enemies, tokens = load('chess.json'), load('backups.json'), load('enemies.json'), load('tokens.json')
-    chars, skills = [], {}
-    for v in chess.values():
-        cid = v.get('charId')
-        if not cid:
-            continue
-        if cid not in chars:
-            chars.append(cid)
-        for s in [v.get('skill')] + list(v.get('skills') or []):
-            if isinstance(s, dict) and (s.get('prefabId') or s.get('skillId')):
-                skills.setdefault(cid, set()).add(s.get('prefabId') or s.get('skillId'))
-    for cid, u in (backups.get('units') or {}).items():
-        if cid not in chars:
-            chars.append(cid)
-        for form in ((u or {}).get('forms') or {}).values():     # the 补位 / 自选 forms' skills (skcom_* among them)
-            for s in (form or {}).get('skills') or []:
+    vdir = data / 'versions'
+    bases = [data] + (sorted(p for p in vdir.iterdir() if p.is_dir()) if vdir.is_dir() else [])
+    docs = [{'chess': load('chess.json', b), 'backups': load('backups.json', b),
+             'enemies': load('enemies.json', b), 'tokens': load('tokens.json', b)} for b in bases]
+    chars, skills, enemies = [], {}, {}
+    for doc in docs:
+        for v in doc['chess'].values():
+            cid = v.get('charId')
+            if not cid:
+                continue
+            if cid not in chars:
+                chars.append(cid)
+            for s in [v.get('skill')] + list(v.get('skills') or []):
                 if isinstance(s, dict) and (s.get('prefabId') or s.get('skillId')):
                     skills.setdefault(cid, set()).add(s.get('prefabId') or s.get('skillId'))
-    toks = sorted(set(tokens) | set(backups.get('tokens') or {}))
+        enemies.update(doc['enemies'])
+    for doc in docs:
+        for cid, u in (doc['backups'].get('units') or {}).items():
+            if cid not in chars:
+                chars.append(cid)
+            for form in ((u or {}).get('forms') or {}).values():     # the 补位 / 自选 forms' skills (skcom_* among them)
+                for s in (form or {}).get('skills') or []:
+                    if isinstance(s, dict) and (s.get('prefabId') or s.get('skillId')):
+                        skills.setdefault(cid, set()).add(s.get('prefabId') or s.get('skillId'))
+    toks = sorted({t for doc in docs for t in doc['tokens']} | {t for doc in docs for t in (doc['backups'].get('tokens') or {})})
     token_skills = {}
-    for src in (backups.get('tokens') or {}, tokens):
-        for tid, rec in src.items():
-            ids = token_skill_ids(rec)
-            if ids:
-                token_skills[tid] = sorted(set(token_skills.get(tid, [])) | set(ids))
-    excel = Path(root) / '.cache' / 'gamedata' / 'excel'
+    for doc in docs:
+        for src in (doc['backups'].get('tokens') or {}, doc['tokens']):
+            for tid, rec in src.items():
+                ids = token_skill_ids(rec)
+                if ids:
+                    token_skills[tid] = sorted(set(token_skills.get(tid, [])) | set(ids))
+    cache = Path(root) / '.cache'
     def load_excel(n):
-        try:
-            return json.loads((excel / n).read_text(encoding='utf-8'))
-        except (OSError, ValueError):
-            return {}
+        out = {}
+        # Every cached gamedata (the default season, the pinned version caches): a character's talent table entry is
+        # looked up by its unique id, so merging is safe and a version-only operator gets its talent prefab keys.
+        for d in sorted(cache.glob('gamedata*/excel')):
+            try:
+                out.update(json.loads((d / n).read_text(encoding='utf-8')))
+            except (OSError, ValueError):
+                continue
+        return out
     return {'chars': chars, 'skills': {k: sorted(v) for k, v in skills.items()}, 'enemies': sorted(enemies), 'tokens': toks,
             'tokenSkills': token_skills,
             'talentKeys': talent_keys(chars + toks, load_excel('character_table.json'),
@@ -3155,7 +3171,7 @@ def _read_json(path):
 
 
 def export_fx(ab_root, out_root, manifest, log, selection='sample', keys=None, jobs=None, root=None, fx_manifest=None,
-              texture_format='webp'):
+              texture_format='webp', units=None):
     """The fx run (extract.py --only fx): writes <out_root>/fx/** and `fx_manifest` (default <root>/data/local-fx.json:
     the groups FX_GROUPS, every file); returns the number of files written. `manifest` (the groups of
     data/local-assets.json) gets nothing: extract.py drops the fx groups an earlier run left there (ran_groups). A
@@ -3180,6 +3196,8 @@ def export_fx(ab_root, out_root, manifest, log, selection='sample', keys=None, j
     gd = game_data(root)
     if keys:
         unit_ids = []
+    elif units:
+        unit_ids = list(units)
     elif selection == 'sample':
         unit_ids = list(FX_SAMPLE_UNITS)
     else:
@@ -3195,6 +3213,8 @@ def export_fx(ab_root, out_root, manifest, log, selection='sample', keys=None, j
     generic |= {k for k, rel in eff.items() if rel in FX_GENERIC_BUNDLES}
     if keys:
         wanted = set(keys)
+    elif units:                   # only what these units reference: the rest of the extracted set stays as it was
+        wanted = set(referenced)
     else:                         # the used set holds the sample too (a full run never drops a key a sample has)
         wanted = set(FX_SAMPLE_KEYS) | set(FX_COVERAGE_KEYS) | referenced | generic
     missing = sorted(k for k in wanted if k not in eff)
@@ -3239,11 +3259,14 @@ def export_fx(ab_root, out_root, manifest, log, selection='sample', keys=None, j
                        **({'half': url(v['half'])} if v.get('half') else {})} for k, v in textures.items()},
         'fx/mesh': {k: {'path': url(v['file']), 'kind': 'FxMesh', 'verts': v['verts']} for k, v in meshes.items()},
     }
-    tex_all, set_name = dict(textures), 'keys' if keys else selection
-    prev = _read_json(out / 'index.json') if keys else None
+    tex_all, set_name = dict(textures), 'keys' if keys else 'units' if units else selection
+    prev = _read_json(out / 'index.json') if (keys or units) else None
     if isinstance(prev, dict) and prev.get('format') == 'fx-index' and prev.get('version') == INDEX_VERSION:
-        # a --fx-keys run: these prefabs replace their earlier copies; the earlier set's units, skills, prefabs stay
-        units, projectiles, skills, skins = (prev.get(x) or {} for x in ('units', 'projectiles', 'skills', 'skins'))
+        # a --fx-keys / --fx-units run: these prefabs (and units) replace their earlier copies; the earlier set's
+        # other units, skills, prefabs stay
+        units, projectiles, skills, skins = ({**(prev.get(x) or {}), **(v or {})}
+                                             for x, v in (('units', units), ('projectiles', projectiles),
+                                                          ('skills', skills), ('skins', skins)))
         summaries = {**(prev.get('prefabs') or {}), **summaries}
         tex_all = {**((_read_json(out / 'textures.json') or {}).get('textures') or {}), **textures}
         old_groups = (_read_json(fx_manifest) or {}).get('groups') or {}
@@ -3268,7 +3291,7 @@ def export_fx(ab_root, out_root, manifest, log, selection='sample', keys=None, j
                                           'client': client_version(ab_root), 'set': set_name, 'count': count,
                                           'groups': groups}, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
     total = 3 + len(entries) + len(meshes) + sum(1 + (1 if v.get('half') else 0) for v in textures.values())
-    if not keys:                                              # a full set: drop files an earlier run left behind
+    if not keys and not units:                                 # a full set: drop files an earlier run left behind
         keep = {out / 'index.json', out / 'textures.json'} | {out / v['file'] for v in entries.values()}
         keep |= {out / v['file'] for v in meshes.values()} | {out / v['file'] for v in textures.values()}
         keep |= {out / v['half'] for v in textures.values() if v.get('half')}

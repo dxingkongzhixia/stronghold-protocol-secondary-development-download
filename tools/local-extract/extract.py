@@ -54,7 +54,7 @@ Usage:
                                                           pages, from the PNGs already extracted — e.g. the local art
                                                           copied from a release bundle; needs Pillow)
   .venv/bin/python tools/local-extract/extract.py --only scene [--scenes <dir of in-season bundles>]
-  .venv/bin/python tools/local-extract/extract.py --only fx [--fx-set sample|used] [--fx-keys k1,k2] [--fx-jobs N]
+  .venv/bin/python tools/local-extract/extract.py --only fx [--fx-set sample|used] [--fx-keys k1,k2] [--fx-units id1,id2] [--fx-jobs N]
 
 Writes <out>/**.png|.webp|.skel|.atlas and data/local-assets.json (manifest of what was extracted). With --only, just
 the jobs whose output subdir starts with one of the prefixes run, and their groups replace those of the existing
@@ -1081,6 +1081,9 @@ def main():
                     help='with --only fx: the Phase 1a sample (default) or every effect the mode\'s units reference')
     ap.add_argument('--fx-keys', default='', metavar='K1,K2',
                     help='with --only fx: export only these effect prefabs (comma-separated keys)')
+    ap.add_argument('--fx-units', default='', metavar='ID1,ID2',
+                    help='with --only fx: crawl only these units (char / enemy / token ids) and merge their effects into '
+                         'the extracted set (the version-only operators)')
     ap.add_argument('--fx-jobs', type=int, default=0, metavar='N', help='with --only fx: worker processes (default up to 8)')
     ap.add_argument('--fx-texture-format', choices=('webp', 'png'), default='webp',
                     help='with --only fx: WebP quality 90 textures (default) or lossless PNG')
@@ -1197,9 +1200,11 @@ def run_extract(args, ab_root):
         total += export_token_spines(ab_root, out_root, manifest, print, token_ids)
     if fx_on:
         keys = [k.strip().lower() for k in args.fx_keys.split(',') if k.strip()]
+        units = [u.strip() for u in args.fx_units.split(',') if u.strip()]
         total += fx.export_fx(ab_root, out_root, manifest, print, selection=args.fx_set, keys=keys or None,
                               jobs=args.fx_jobs or None, root=ROOT,
-                              fx_manifest=Path(args.manifest).with_name(fx.FX_MANIFEST), texture_format=args.fx_texture_format)
+                              fx_manifest=Path(args.manifest).with_name(fx.FX_MANIFEST), texture_format=args.fx_texture_format,
+                              units=units or None)
     if stage_ids:
         total += export_scenes(ab_root, out_root, manifest, print, stage_ids, scene_roots(ab_root, args.scenes))
     if reg_ids:

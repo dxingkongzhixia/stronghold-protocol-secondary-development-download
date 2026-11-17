@@ -31,7 +31,7 @@ const NORMAL_ATTACK_SKILLS = {
  * This function does no I/O; a missing index also uses the verified S2 mapping, since her cast DOES have
  * OnAttack (manifest hits.Skill_2 = [0.5]) and cannot be distinguished by the no-event heuristic.
  */
-export function skillAttackMode(index, { info = null, rec = null, skillIndex } = {}) {
+export function skillAttackMode(index, { info = null, rec = null, skillIndex, localModel = false } = {}) {
   const charId = info?.diy?.charId || info?.spine || rec?.charId;
   if (!charId || info?.form) return null;
   const slot = Number.isInteger(skillIndex) ? skillIndex
@@ -49,6 +49,16 @@ export function skillAttackMode(index, { info = null, rec = null, skillIndex } =
   }
   const unit = index?.units?.[charId];
   const resolved = unit ? resolveSkill(index, { info, rec, unitKey: charId, skillIndex: slot }) : null;
+  // A model the local client supplied (a version-only operator: 规程's roster) has no legacy role to preserve, and its
+  // charpack mode table is the official one: play the skill mode's own attack role. An empty animKey = the official
+  // attack animator, which shows the model's normal attack (the same reading NORMAL_ATTACK_SKILLS uses for Texas).
+  if (localModel && resolved?.skill && unit) {
+    const modes = unit.modes || [];
+    const mode = Number.isInteger(resolved.skill.mode) ? modes[resolved.skill.mode]
+      : modes.find((m) => m.name === 'Default');
+    const animKey = mode?.attack?.animKey;
+    return { animKey: typeof animKey === 'string' && animKey ? animKey : 'Attack' };
+  }
   // A known skill with unverified animation mappings keeps the pre-§34.31 roles. There is no generic
   // no-OnAttack heuristic: cast/strike semantics must be verified even without a unit/skill index entry.
   if (charId !== 'char_423_blemsh') return resolved?.skill ? { preserve: true } : null;

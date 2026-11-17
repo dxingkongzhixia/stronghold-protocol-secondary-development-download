@@ -38,11 +38,28 @@ const demo = { ready: false, errors: [], log: logLines };
 window.__demo = demo;
 
 let demoHover = null;
-const STAGE_IDS = ['act2autochess_m01', 'act2autochess_m02', 'act2autochess_m03', 'act2autochess_m04', 'act1autochess_m01', 'act1autochess_m02', 'act1autochess_m03', 'act1autochess_m04'];
+const STAGE_IDS = ['act2autochess_m01', 'act2autochess_m02', 'act2autochess_m03', 'act2autochess_m04', 'act1autochess_m01', 'act1autochess_m02', 'act1autochess_m03', 'act1autochess_m04',
+  'act3autochess_m01', 'act3autochess_m02', 'act3autochess_m03', 'act3autochess_m04', 'act3autochess_m05', 'act3autochess_m06',
+  'act3autochess_m09', 'act3autochess_m10', 'act3autochess_m11', 'act3autochess_m12'];
 
 async function main() {
   if (q.get('panel') === '0') $('panel').classList.add('is-hidden');
   await data.loadAll('chess', 'tokens', 'items', 'enemies', 'stages', 'bonds', 'config');
+  // ?version=<data/versions slug> swaps the stage table for an official version's data (规程's maps).
+  const versionSlug = q.get('version');
+  if (versionSlug) {
+    const stages = await fetch(`/data/versions/${encodeURIComponent(versionSlug)}/stages.json`)
+      .then((r) => (r.ok ? r.json() : null), () => null);
+    const values = new Map();
+    if (stages) values.set('stages', stages);
+    // &vc=1 also loads the version's own chess table (its operators, for a stress / fx scene of the 规程 roster).
+    if (q.get('vc') === '1') {
+      const chess = await fetch(`/data/versions/${encodeURIComponent(versionSlug)}/chess.json`)
+        .then((r) => (r.ok ? r.json() : null), () => null);
+      if (chess) values.set('chess', chess);
+    }
+    if (values.size) data.setContent({ id: `dev-${versionSlug}`, values });
+  }
   await assets.ready();
   const index = await fetch('/dev/recordings/index.json').then((r) => (r.ok ? r.json() : []), () => []);
   const view = await createFieldView($('field'), {
