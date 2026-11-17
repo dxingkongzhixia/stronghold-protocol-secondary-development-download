@@ -181,9 +181,11 @@ SIDE_PEN = (1, 1, 5, 12, 18)  # piece, row0, row1, col0, col1 (piece-local, incl
 # The 19×21 grid's cols 12–18 are the 联防 right lane, so the pen is drawn outside the board (cols 21–27): the stage's
 # enemy_place_rect is ((8,21),(12,27)) and the platform's x moves by this many columns.
 SIDE_PEN_DX = 9
-# Board-space rect of that outside pen (rows, cols): background / scenery triangles overlapping it are dropped so the
-# shifted platform is not buried under the outworld ice (the pen camera frames it).
+# Board-space rect of that outside pen (rows, cols): tall scenery overlapping it is dropped so the shifted platform is
+# not buried under the outworld ice; the ground below FLOOR_Z stays (it fills the gap around the platform).
 SIDE_PEN_RECT = (8, 12, 21, 27)
+# The shifted platform sits just above that ground (the ice ground's floor is at ~0.002).
+SIDE_PEN_DZ = 0.02
 
 
 def _in_side_pen(piece, xs, ys):
@@ -270,7 +272,12 @@ def _overlaps_pen(xs, ys):
     return max(xs) >= c0 - 0.5 and min(xs) <= c1 + 0.5 and max(ys) >= r0 - 0.5 and min(ys) <= r1 + 0.5
 
 
-def place_triangle(piece, xs, ys):
+def _boss_pen_row(piece, y):
+    """sub_03 rows 7–11 are the boss field's own pen; 3 期's preview is the side pen, so that block is not built."""
+    return piece == 3 and 7 <= cell_index(y) <= 11
+
+
+def place_triangle(piece, xs, ys, zs=None):
     """(delta, group) for one piece-local triangle, or None to drop it.
 
     `xs` and `ys` are the three vertices. The shift is chosen from the centroid; the whole triangle is
@@ -280,13 +287,15 @@ def place_triangle(piece, xs, ys):
         raise ValueError('a triangle has three vertices')
     if _in_side_pen(piece, xs, ys):
         return PIECE_SHIFT[1][1], ''
+    if _boss_pen_row(piece, sum(ys) / 3):
+        return None
     delta = regulation_delta(piece, sum(xs) / 3, sum(ys) / 3)
     if delta is None:
         return None
     bys = [y + delta for y in ys]
-    # the outworld scenery overlapping the outside pen is cut away: the shifted pen platform is there and must show
-    # (the pen camera frames that area; a buried platform is the blank/rocky right side the owner reported)
-    if _overlaps_pen(xs, bys):
+    # the tall outworld scenery overlapping the outside pen is cut away: the shifted pen platform is there and must show
+    # (the pen camera frames that area); the ground under FLOOR_Z stays so the platform is not an island in the black
+    if _overlaps_pen(xs, bys) and (zs is None or max(zs) >= FLOOR_Z):
         return None
     if _overlaps_foreign(piece, xs, bys):
         return None
@@ -359,13 +368,15 @@ def place_floor_triangle(piece, xs, ys, zs):
     """
     if len(xs) != 3 or len(ys) != 3 or len(zs) != 3:
         raise ValueError('a triangle has three vertices')
-    kept = place_triangle(piece, xs, ys)
+    kept = place_triangle(piece, xs, ys, zs)
     if kept is not None:
         return kept
     cx, cy = sum(xs) / 3, sum(ys) / 3
+    if _boss_pen_row(piece, cy):
+        return None
     delta = _nearest_delta(piece, cy)
     bys = [y + delta for y in ys]
-    if _overlaps_pen(xs, bys):
+    if _overlaps_pen(xs, bys) and max(zs) >= FLOOR_Z:
         return None
     if _covers_foreign_board(piece, xs, bys, zs):
         return None
@@ -840,7 +851,7 @@ def _chunks_of_piece(piece, objects, log, stage_id, material_info):
                 # themselves are not copied: stacked transparent quads would add their alpha.
                 strict = 0
                 for pts, _uvs, _lms, _nrms, _cols in prepared:
-                    if place_triangle(piece, [p[0] for p in pts], [p[1] for p in pts]) is not None:
+                    if place_triangle(piece, [p[0] for p in pts], [p[1] for p in pts], [p[2] for p in pts]) is not None:
                         strict += 1
                 stats['water_tris'] += len(prepared)
                 stats['water_strict'] += strict
@@ -863,27 +874,28 @@ def _chunks_of_piece(piece, objects, log, stage_id, material_info):
                 xs = [p[0] for p in pts]
                 ys = [p[1] for p in pts]
                 if floor:
-                    strict = place_triangle(piece, xs, ys)
+                    strict = place_triangle(piece, xs, ys, [p[2] for p in pts])
                     placed = place_floor_triangle(piece, xs, ys, [p[2] for p in pts])
                     if strict is not None:
                         stats['floor_strict'] += 1
                     elif placed is not None:
                         stats['floor_fill'] += 1
                 else:
-                    placed = place_triangle(piece, xs, ys)
+                    placed = place_triangle(piece, xs, ys, [p[2] for p in pts])
                 if placed is None:
                     continue
                 if surface:
                     stats['water_strict'] += 1
                 delta, group = placed
                 dx = SIDE_PEN_DX if _in_side_pen(piece, xs, ys) else 0
+                dz = SIDE_PEN_DZ if _in_side_pen(piece, xs, ys) else 0
                 stats['kept'] += 1
                 key = (name, index, group)
                 chunk = chunks.setdefault(key, {'pos': [], 'uv': [], 'uv1': [], 'nrm': [], 'col': [], 'idx': []})
                 base = len(chunk['pos'])
                 for i in range(3):
                     x, y, z = pts[i]
-                    chunk['pos'].append((x + dx, y + delta, z))
+                    chunk['pos'].append((x + dx, y + delta, z + dz))
                     chunk['uv'].append(uvs[i])
                     chunk['uv1'].append(lms[i])
                     chunk['nrm'].append(nrms[i])

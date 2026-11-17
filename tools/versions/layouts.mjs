@@ -35,7 +35,9 @@ const STAGE_ROWS = Object.freeze([
   { r: 7, piece: 1, from: 0 },                                          // hand row: sub_01 row 0
   { r: 8, piece: 1, from: 1 },                                          // equipment row + the preview pen beside it: sub_01 row 1
   ...[9, 10, 11, 12, 13].map((r) => ({ r, piece: 2, from: r - 8 })),   // the two road halves + separator: sub_02 rows 1–5
-  ...[14, 15, 16, 17, 18].map((r) => ({ r, piece: 3, from: r - 7 })),  // preview pen: sub_03 rows 7–11
+  // 3 期's preview is the side pen outside the grid; the boss field's own pen (sub_03 rows 7–11) is not part of the
+  // player's prep view, so these rows stay void (盟约 keeps its rows 14–18 pen here).
+  ...[14, 15, 16, 17, 18].map((r) => ({ r, piece: 3, from: r - 7, cols: 0 })),
 ]);
 
 const sizeOf = (lv) => `${lv.mapData.map.length}x${lv.mapData.map[0]?.length ?? 0}`;
@@ -121,7 +123,9 @@ export function composeRegulationStage(main, [sub1, sub2, sub3]) {
     return out;
   };
   const p2 = moved(sub2, (r) => (r >= 1 && r <= 5 ? r + 8 : null));
-  const p3 = moved(sub3, (r) => (r <= 6 ? r : r <= 11 ? r + 7 : null));
+  // sub_03 rows 7–11 are the boss field's own pen (not the player's preview; dropped from the stage rows), so only
+  // the boss field's rows 0–6 carry predefines.
+  const p3 = moved(sub3, (r) => (r <= 6 ? r : null));
   const predefines = {};
   for (const k of new Set([...Object.keys(p2), ...Object.keys(p3)])) {
     const a = p2[k], b = p3[k];

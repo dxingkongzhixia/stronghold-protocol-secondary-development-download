@@ -25,11 +25,11 @@ const AREA_NO_PEN = Object.freeze({
 });
 
 /**
- * 规程's board is one battlefield with both halves (the 联防 right lane is the same board, not a teammate's field) and
- * its preview pen lies outside the 19×21 grid (enemy_place_rect cols 21–27). A stage that does so builds the right half
- * with its own field: preview / normal views show rows 6–13 across col 20, like the official map.
+ * 规程's board is one battlefield with both halves (the 联防 right lane is the same board, not a teammate's field). Its
+ * preview pen lies outside the 19×21 grid (enemy_place_rect cols 21–27), and the boss field's own pen (rows 14–18) is
+ * not part of the player's prep view, so the full area has no pen block: rows 6–13 across col 20 only.
  */
-const FULL_NORMAL = Object.freeze([...AREAS.normal, Object.freeze({ r0: 6, r1: 13, c0: 11, c1: 20 })]);
+const FULL_NORMAL = Object.freeze([AREAS.normal[0], Object.freeze({ r0: 6, r1: 13, c0: 11, c1: 20 })]);
 const fullField = (stage) => {
   const rect = parsePenRect(stage?.config?.enemy_place_rect);
   return !!rect && rect.c0 > 20;
@@ -103,7 +103,12 @@ export const leaderShown = (vk, prevVk = null) => vk === 'bossPrep' || prevVk ==
  * @param {string} vk
  */
 export function restView(vk, stage = null) {
-  return { area: boardArea(vk, stage), band: bandFor(vk), field: fieldRows(vk), pen: showsPen(vk), leader: leaderShown(vk) };
+  const full = fullField(stage);
+  // 规程 has no boss-field pen in the prep/pen view: the band stops at the field's separator row 13, and the side pen
+  // outside the grid is framed by its own camera.
+  const band = full && (vk === 'prep' || vk === 'pen') ? [6, 12] : bandFor(vk);
+  const field = full && (vk === 'prep' || vk === 'pen') ? [6, 12] : fieldRows(vk);
+  return { area: boardArea(vk, stage), band, field, pen: showsPen(vk), leader: leaderShown(vk) };
 }
 
 /**
