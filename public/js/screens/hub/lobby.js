@@ -37,6 +37,9 @@ import { MODE_CARDS, difficultyInfo, normalizeCode, codeArg, remembersRoomOrigin
 import { Emblem } from '../title.js';
 import { HubBackdrop, HubRadar, BackdropGlyph, BackdropSettings } from '../../ui/hub/backdrop.js';
 import { useHubBackdrop, backdropTheme } from '../../ui/hub/appearance.js';
+import { RegulationBackdrop, seasonOf, REGULATION } from '../../ui/regulationBackdrop.js';
+import { VersionChip } from '../../ui/versionChip.js';
+import { hubVersion } from '../../versions.js';
 import { ProtocolScene } from '../../ui/hub/protocolScene.js';
 import { contentSet } from '../../content.js';
 
@@ -506,8 +509,10 @@ export function LobbyScreen() {
       onStart=${startProtocol} />`;
   }
 
-  return html`<div class="screen lobby-screen lobby-hub" data-hub-theme=${backdropTheme(bg)}>
+  const season = seasonOf(hubVersion(useStore((s) => s.versions)));
+  return html`<div class="screen lobby-screen lobby-hub" data-season=${season} data-hub-theme=${backdropTheme(bg)}>
     <${HubBackdrop} bg=${bg} />
+    ${season === REGULATION ? html`<${RegulationBackdrop} />` : null}
     <header class="topbar hub-topbar">
       <div class="topbar__left">
         <${Button} variant="ghost" size="sm" icon="chevronLeft" onClick=${backToTitle} title=${t('返回标题')}>${t('返回')}<//>
@@ -525,6 +530,7 @@ export function LobbyScreen() {
         </div>
       </div>
       <div class="topbar__right">
+        <${VersionChip} />
         ${html`<${Button} variant="secondary" size="sm" icon="user" class="hub-account"
           onClick=${() => setShowAccount(true)}>${auth?.account ? t('账号') : t('登录 / 注册')}<//>`}
         <button type="button" class="me-chip me-chip--btn" onClick=${openStats} title=${t('统计数据')} aria-label=${t('统计数据')}>
@@ -542,7 +548,7 @@ export function LobbyScreen() {
       <div class="hub-center" aria-hidden="true">
         <div class="hub-center__mark"><${HubRadar} bg=${bg} /><${Sprite} k="entry/season_logo" class="hub-center__logo" fallback=${html`<${Emblem} />`} /></div>
         <span class="hub-center__en">STRONGHOLD <b>PROTOCOL</b></span>
-        <h1 class="hub-center__title">${t('卫戍协议：盟约')}</h1>
+        <h1 class="hub-center__title">${season === REGULATION ? t('卫戍协议：规程') : t('卫戍协议：盟约')}</h1>
       </div>
 
       <aside class="hub-side">

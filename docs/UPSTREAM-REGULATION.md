@@ -292,6 +292,23 @@ blackboard 后，先处理了这几类：
   在里面根本不会触发，只能在 sim（沙盒 / 真实对局）里验；渲染侧的绑定由 `test/render/vfx-regulation.test.js` 钉住。
   冻河 S2 的 `allyMark` 改了 sim 的事件流，golden 已归因（只动 `events.fx` 与 `fx.allyMark` 两个字段）后重算。
 
+### 大厅的版本切换与规程季界面（2026-11-18）
+
+- **切换器**：`public/js/ui/versionChip.js`，放在大厅（hub）顶栏 `.topbar__right` 的第一位（登录/注册左边）。它只列出
+  `welcome.versions`（`store.versions`，服务器 `SP_VERSIONS=all` 才有两项）；当前项 = 本机偏好
+  （`sp.pref.lobby.version`）→ 服务器默认。选中即写入偏好并 `location.reload()` —— `versions.js` 的 `hubVersion()`
+  在启动时决定大厅的数据集与季外观（与主线 `ui/versionPicker.js` 的 chip 同一职责；主线是热切，本树走重载，保持一条加载路径）。
+  只启用一个版本时显示为静态标签。
+- **规程的季外观**：`public/js/ui/regulationBackdrop.js` —— `.lobby-hub[data-season="act3autochess"]` 下用官方赛季背景
+  （`ui/season/act3autochess/entry/sprites/bkg_season_on` / `bg_season_on` / `bg_front_season_on`，本机客户端已抽出）
+  叠加绘制的放射光（120 s 旋转，`prefers-reduced-motion` 下静止）与扫描线，中央标题改为「卫戍协议：规程」。
+  背景层来自主线 `ui/regulationBackdrop.js`；它的开场影片（`ui/regulationFilm.js` + `RegulationStill`）**暂未移植**，
+  所以标题页仍用这套图层而不是影片最后一帧。
+- **专属音乐**：`audio.js` 的 `hubLobbyKey(track, version)` —— 玩家自己选的大厅音乐优先，否则用大厅版本的季主题曲
+  （`VERSION_BGM['act3autochess@V3_1'].theme = music_bg_act3autochess`，Kernel Overflow）；音乐包缺失时
+  `resolveBgm` 回退到提交的 `lobby` 轨，未开音乐包的部署也能播。
+- 样式在 `public/css/screens/hub.css`（`.hub-reg*`、`.ver-chip*`、`.ver-pick*`；字号走 `--ui-unit` 约定）。
+
 
 **镜波修正**：主线把「被击倒后使周围法抗最低的**敌人**法抗 +10」理解为对**敌方单位**生效（`reg:res`），
 本仓库此前误加到我方干员身上，现改用主线实现；镜眼（受到法术伤害使来源攻速 -50）同样改用主线版本。

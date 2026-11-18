@@ -1049,3 +1049,69 @@
   .lobby-hub .hub-topbar .me-chip__meta { min-width: 0; overflow: hidden; }
   .lobby-hub .hub-topbar .me-chip__meta > * { overflow: hidden; text-overflow: ellipsis; }
 }
+/* ---- 规程's hub season (ui/regulationBackdrop.js; data-season on .lobby-hub) ------------------------------- */
+.hub-reg { position: absolute; inset: 0; overflow: hidden; background: radial-gradient(120% 95% at 52% 38%, #45160f 0%, #1b0907 52%, #0b0705 100%); }
+.hub-reg__ground { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .42; mix-blend-mode: screen; }
+/* the constructivist sun behind the emblem (drawn); still under 减少动态效果 */
+.hub-reg__rays {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 170vmax;
+  height: 170vmax;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(from 0deg, rgba(226, 65, 44, .15) 0deg 6deg, transparent 6deg 15deg);
+  -webkit-mask: radial-gradient(closest-side, #000 12%, transparent 62%);
+  mask: radial-gradient(closest-side, #000 12%, transparent 62%);
+  animation: hub-reg-rays 120s linear infinite;
+}
+@keyframes hub-reg-rays { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.hub-reg__pic {
+  position: absolute;
+  right: -2%;
+  top: 2%;
+  height: 94%;
+  width: auto;
+  max-width: 72%;
+  object-fit: contain;
+  object-position: right center;
+  opacity: .5;
+  -webkit-mask: linear-gradient(90deg, transparent 0, #000 34%, #000 82%, transparent 100%);
+  mask: linear-gradient(90deg, transparent 0, #000 34%, #000 82%, transparent 100%);
+}
+.hub-reg__skyline { position: absolute; left: 50%; bottom: -1%; width: max(104%, 15rem); height: auto; transform: translateX(-50%); opacity: .92; }
+.hub-reg__scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(180deg, rgba(0, 0, 0, .2) 0 1px, transparent 1px 3px), radial-gradient(130% 100% at 50% 45%, transparent 55%, rgba(0, 0, 0, .7) 100%); }
+.lobby-hub[data-season="act3autochess"] .topbar { background: linear-gradient(180deg, rgba(13, 11, 10, .9), transparent); }
+.lobby-hub[data-season="act3autochess"] .hub-radar svg { stroke: rgba(232, 223, 196, .16); }
+.lobby-hub[data-season="act3autochess"] .hub-radar__sweep { filter: hue-rotate(185deg) saturate(1.4); }
+@media (prefers-reduced-motion: reduce) { .hub-reg__rays { animation: none; } }
+
+/* ---- official version chip (ui/versionChip.js) ------------------------------------------------------------ */
+.ver-chip { position: relative; display: inline-flex; align-items: center; }
+.ver-chip__btn {
+  display: inline-flex; align-items: center; gap: .5em; padding: .28rem .5rem; cursor: pointer;
+  border: 1px solid rgba(126, 232, 197, .28); background: rgba(6, 18, 16, .55); color: var(--text-hi, #eaf7f3);
+  font: inherit; line-height: 1; border-radius: .18rem; transition: border-color .15s, background .15s;
+}
+.ver-chip__btn:hover:not(:disabled) { border-color: var(--mint-400, #58e0b0); background: rgba(10, 34, 29, .7); }
+.ver-chip__btn:disabled { cursor: default; opacity: .85; }
+.ver-chip[data-season="act3autochess"] .ver-chip__btn { border-color: rgba(226, 65, 44, .45); background: rgba(24, 8, 6, .6); }
+.ver-chip[data-season="act3autochess"] .ver-chip__btn:hover:not(:disabled) { border-color: #e2412c; background: rgba(40, 12, 9, .72); }
+.ver-chip__name { font-size: calc(.82 * var(--utility-text, var(--t))); font-weight: 700; letter-spacing: .02em; }
+.ver-chip__glyph { width: .7rem; height: .7rem; opacity: .7; }
+.ver-chip__btn.is-static .ver-chip__glyph { display: none; }
+.ver-chip__hint { position: absolute; top: calc(100% + .3rem); right: 0; white-space: nowrap; }
+
+.ver-pick { display: flex; flex-direction: column; gap: .4rem; min-width: 19rem; }
+.ver-pick__row {
+  display: flex; align-items: center; gap: .6rem; padding: .55rem .65rem; text-align: left; cursor: pointer;
+  border: 1px solid rgba(126, 232, 197, .18); background: rgba(6, 18, 16, .5); color: inherit; font: inherit;
+  border-radius: .16rem; transition: border-color .15s, background .15s;
+}
+.ver-pick__row:hover { border-color: var(--mint-400, #58e0b0); background: rgba(10, 34, 29, .7); }
+.ver-pick__row.is-on { border-color: var(--mint-400, #58e0b0); background: rgba(16, 46, 39, .75); }
+.ver-pick__tag { font: 700 .62rem/1 ui-monospace, Consolas, monospace; letter-spacing: .14em; opacity: .7; }
+.ver-pick__text { display: flex; flex-direction: column; gap: .15rem; flex: 1 1 auto; }
+.ver-pick__name { font-size: calc(.92 * var(--utility-text, var(--t))); }
+.ver-pick__meta { font-size: calc(.7 * var(--utility-text, var(--t))); font-style: normal; opacity: .65; }
+.ver-pick__on { font-size: calc(.7 * var(--utility-text, var(--t))); opacity: .8; }

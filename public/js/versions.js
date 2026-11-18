@@ -7,7 +7,7 @@
 //     that version's own data set when the room names one; leaving the room restores the server's files.
 //   * Texts go through t() where they are shown: a version's `label` is a msgid (shared/versions.js).
 
-import { DEFAULT_VERSION, VERSIONS, versionById, versionSlug } from '../../shared/versions.js';
+import { DEFAULT_VERSION, LOBBY_DEFAULT_VERSION, VERSIONS, versionById, versionSlug } from '../../shared/versions.js';
 import { loadPref, savePref } from './store.js';
 
 export { DEFAULT_VERSION, versionById, versionSlug };
@@ -67,6 +67,22 @@ export function lobbyVersion(list, pref) {
 
 /** A room's version (room.state.version; absent = the default). @param {any} room */
 export const roomVersion = (room) => (typeof room?.version === 'string' && room.version ? room.version : DEFAULT_VERSION);
+
+/**
+ * The version the hub / title wears and boots its data for: this browser's stored choice when the server offers it,
+ * else the server's default, else the code default (`LOBBY_DEFAULT_VERSION`) — the page's lobby version.
+ * @param {Array<{ id: string, default?: true }> | null} list welcome.versions (sanitizeVersions)
+ */
+export function hubVersion(list) {
+  const pref = storedLobbyVersion();
+  if (pref && (!Array.isArray(list) || !list.length || list.some((v) => v.id === pref))) return pref;
+  return Array.isArray(list) && list.length ? serverDefaultVersion(list) : LOBBY_DEFAULT_VERSION;
+}
+
+/** Keep the hub's version choice (the switch's pick; the page reloads into it). @param {string} id */
+export function setLobbyVersion(id) {
+  saveLobbyVersion(id);
+}
 
 /** The versions the lobby offers for a room mode (all when the server sent none). @param {any[] | null} list @param {'solo'|'coop'} mode */
 export function versionsForMode(list, mode) {

@@ -81,6 +81,7 @@
 // which follows the store).
 
 import { sanitizeVoiceOverrides, voiceLangFor } from './voicePrefs.js';
+import { hubVersion } from './versions.js';
 import { PHASE } from '../../shared/constants.js';
 import { mediaUrl } from './media.js';
 import { mirrorRouteUrl, mirrorCandidates } from './assetMirror.js';
@@ -152,6 +153,19 @@ export const VERSION_BGM = Object.freeze({
     hidden: 'music_bg_act3autochess_boss2', // Systematic Violation
   }),
 });
+
+/**
+ * The Hub's track: the player's own 大厅音乐 when one is chosen, else the lobby version's own season theme (规程's
+ * Kernel Overflow: VERSION_BGM['act3autochess@V3_1'].theme), else the committed `lobby` track. A missing music pack
+ * falls back through `resolveBgm`'s `lobby:<id>` branch, so a checkout without `var/music` still plays.
+ * @param {string} track the settings' lobbyMusic id ('' = none chosen)
+ * @param {string} version the lobby version (public/js/versions.js hubVersion)
+ */
+export function hubLobbyKey(track, version) {
+  if (track) return `lobby:${track}`;
+  const pack = VERSION_BGM[version] || null;
+  return pack?.theme ? `lobby:${pack.theme}` : 'lobby';
+}
 
 /**
  * BGM key for a route + match phase.
@@ -1735,7 +1749,8 @@ export function installAudio(deps) {
           // and the next round moves on by the table. 联防 shares its round ⇒ same key ⇒ the loop keeps playing.
           // The Hub is the one place the player's own 主界面音乐 replaces `lobby` (audio.lobbyKey); a room's own lobby
           // phase and the title screen keep the mode's theme, so the pick never changes what a party hears.
-          audio.playBgm(route === 'lobby' ? audio.lobbyKey() : bgmKeyFor(route, pub, combatTrackFor(pub?.round), pub?.version ?? null));
+          audio.playBgm(route === 'lobby' ? hubLobbyKey(audio.lobbyTrack, hubVersion(s.versions))
+            : bgmKeyFor(route, pub, combatTrackFor(pub?.round), pub?.version ?? null));
         } catch { /* ignore */ }
       };
       sync(deps.getState());
