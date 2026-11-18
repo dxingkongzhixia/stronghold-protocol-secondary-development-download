@@ -1,4 +1,4 @@
-// regulationFilm.js — 规程's opening before the hub: the client's own season entry (DESIGN §37.147 in the mainline).
+// regulationFilm.js — 规程's opening before the hub: the client's own season entry (the mainline's opening chapter; this tree has no such section number).
 //
 // A 规程 start plays the activity's panel_act3autochess_on_entry with its legacy clip autochess_entry_season_on
 // (3.17 s: a black cover lifts off a red "loading" screen — four ID cards, the map with its lines, the percent counter,
