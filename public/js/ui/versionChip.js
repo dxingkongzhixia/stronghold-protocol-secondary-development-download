@@ -12,7 +12,7 @@ import { useState, useEffect } from '../../vendor/hooks.module.js';
 import { html, Modal, MicroLabel } from './components.js';
 import { useStore } from '../store.js';
 import { t } from '../../../shared/i18n.js';
-import { hubVersion, setLobbyVersion, versionById } from '../versions.js';
+import { hubVersion, setLobbyVersion, storedLobbyVersion, versionById } from '../versions.js';
 import { REGULATION } from './regulationBackdrop.js';
 
 /** The registry label of a version id (a msgid), else the id. */
@@ -56,7 +56,7 @@ export function VersionChip() {
             <span class="ver-pick__tag">${seasonTag(v)}</span>
             <span class="ver-pick__text">
               <b class="ver-pick__name">${labelOf(v.id)}</b>
-              <em class="ver-pick__meta">${v.default ? t('服务器默认') : t('本机选择')}</em>
+              <em class="ver-pick__meta">${v.default ? t('服务器默认') : (v.id === storedLobbyVersion() ? t('本机选择') : '')}</em>
             </span>
             ${on ? html`<span class="ver-pick__on">${t('当前')}</span>` : null}
           </button>`;
