@@ -258,7 +258,8 @@ blackboard 后，先处理了这几类：
   其余 10 名逐条对照官方黑框与 kit 数值/机制，一致：瑰盐 T0/S2、星源 T0/S1/S2、安哲拉 T0/S1/S2（含 `lowestDef` 索敌）、凯瑟琳 T0/S1/S2（装置 6%/s 在 `tokens.js`）、盟约·辅助 T0/S1、风丸 T0/S1/S2、至简 T0/S1/S2、青枳 T0/S1/S2、焰尾 T0/S1/S2/S3、阿米娅 T0/S1/S2。
 
 - 规程 golden 已归因后重算：默认 golden 只有 `diy` 变（冻河 S3 的目标范围）；规程为 `roster` / `bonds` / `fields` / `matches`。
-- [ ] 官方特效映射表：`public/js/render/fx/official.js` 补 械 / 冲击之械 / 后兽 / 茧 / 鳍 / 链术师 / 轰击者 / 新增干员 的事件表（资产与 `local-fx.json` 已就位）
+- [x] 官方 prefab 列表（2026-11-18）：本机 `public/assets/local/fx/index.json` 已与上游官方索引合并（本树 5111 + 主线 453 = **5564** 个 prefab，与 `fx/prefabs/` 文件一一对应）；`data/local-fx.json`（gitignore，本机）由合并后的索引重建（11011 项：5564 prefab / 3950 贴图 / 1495 网格），`test/local-extract-fx.test.js` 34/34。主线索引里 `enemy_9027_acfnca` 的 `HitPoint` 在脚底（y=-0.78，不符合本树“相对脚底”不变量），只去掉该点，其余锚点保留。
+- [ ] 官方特效映射表：`public/js/render/fx/official.js` 补 械 / 冲击之械 / 后兽 / 茧 / 鳍 / 链术师 / 轰击者 / 新增干员 的事件表（prefab 列表已就位，见上条）
 
 
 **镜波修正**：主线把「被击倒后使周围法抗最低的**敌人**法抗 +10」理解为对**敌方单位**生效（`reg:res`），
