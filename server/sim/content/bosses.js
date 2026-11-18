@@ -1191,10 +1191,13 @@ function openTileNear(b, r, c) {
 function kitFnC(ab, e) {
   const threshold = T(ab, 'Armor.hp_ratio') ?? 0.5;    // 生命值低于一半 → 护甲形态
   const reduce = T(ab, 'Armor.damage_scale') ?? 0.5;    // 护甲形态：横坐标不同的伤害 -50%
-  const P = { armor: false, tide: 0 };
+  const P = { armor: false, tide: 0, atk: 0 };
   const alive = (b, key) => b.enemies.filter((x) => x.alive && x.defId === key).length;
   return [{
     spawn(b) {
+      // 普通攻击可以攻击全场范围内的我方单位 (PRTS 假想敌：械): attacks are scripted below, the engine's melee swing would
+      // never reach anyone (rangeRadius 0)
+      e.profile.noAttack = true;
       // 攻击命中时，在目标格及周围八格最近的可通行地块召唤一个量变之械 (PRTS 假想敌：械)
       b.on('hit', (c) => {
         if (c.source !== e || !c.target || c.target.side !== 'ally' || !c.dmg?.isAttack) return;
@@ -1206,6 +1209,15 @@ function kitFnC(ab, e) {
       }, { owner: e });
     },
     tick(b, e2, _a, dt) {
+      // 普通攻击：全场一名我方单位，攻击力 100% 物理 (PRTS)
+      P.atk -= dt;
+      if (P.atk <= 0) {
+        const list = byPriority(e2, b.allies().filter((a) => a.alive && canTargetAlly(e2, a, true)));
+        if (list.length) {
+          P.atk = Math.max(0.5, e2.s.interval);
+          b.dealDamage(e2, list[0], { amount: e2.s.atk, type: e2.s.dmgType || 'phys', isAttack: true, tags: ['enemyAbility'] });
+        }
+      }
       // 生命值首次低于 50%: 击倒所有冲击之械，左右各召唤一个，进入护甲形态
       if (!P.armor && e2.hpRatio < threshold) {
         P.armor = true;
@@ -1264,9 +1276,12 @@ function kitSpider(ab, e) {
   const netCd = Math.max(1, net?.cd ?? 25);
   // 【悲惨之雨】is the 隐秘核心 variant only (enemy_9035_acspider_2): acid rain over a field
   const hiddenCore = /_2$/.test(String(e?.defId ?? ''));
-  const P = { n: Math.floor(e.hpRatio / step), webAt: Math.max(0, net?.icd ?? 15), rain: false };
+  const P = { n: Math.floor(e.hpRatio / step), webAt: Math.max(0, net?.icd ?? 15), rain: false, atk: 0 };
   return [{
     spawn(b) {
+      // 普通攻击同时攻击左右两块场地上的我方单位 (PRTS 假想敌：茧): scripted below, the engine's swing only reaches a
+      // blocker at range 0
+      e.profile.noAttack = true;
       b.on('damaged', (c) => {
         if (c.target !== e || !(c.amount > 0)) return;
         const n = Math.floor(e.hpRatio / step);
@@ -1278,6 +1293,21 @@ function kitSpider(ab, e) {
       }, { owner: e });
     },
     tick(b, e2, _a, dt) {
+      // 普通攻击：左右两块场地各至多 3 个我方单位（按当前生命值从高到低），一次最多 6 个 (PRTS 假想敌：茧)
+      P.atk -= dt;
+      if (P.atk <= 0) {
+        const per = Math.max(1, Math.floor(T(ab, 'Passive.attack@max_target') ?? 3));
+        const batch = Math.max(1, Math.floor(T(ab, 'Passive.attack@batch_max_target') ?? 6));
+        const side = (lo, hi) => b.allies()
+          .filter((a) => a.alive && canTargetAlly(e2, a, true) && a.x >= lo && a.x < hi)
+          .sort((x, y) => y.hp - x.hp || x.id - y.id)
+          .slice(0, per);
+        const list = [...side(-Infinity, 10.5), ...side(10.5, Infinity)].slice(0, batch);
+        if (list.length) {
+          P.atk = Math.max(0.5, e2.s.interval);
+          for (const t of list) b.dealDamage(e2, t, { amount: e2.s.atk, type: e2.s.dmgType || 'phys', isAttack: true, tags: ['enemyAbility'] });
+        }
+      }
       // 【悲惨之雨】隐秘核心 variant: acid rain on the field below half HP
       if (hiddenCore && !P.rain && e2.hpRatio < 0.5) {
         P.rain = true;

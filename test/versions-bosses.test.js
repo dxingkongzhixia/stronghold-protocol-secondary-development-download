@@ -127,3 +127,34 @@ test('假想敌：镜波 gives the lowest-RES operator +10 RES on death; 镜眼 
   h.step(1);
   assert.ok(ally.s.aspd < aspd0, `ASPD ${aspd0} → ${ally.s.aspd} (镜眼 -50)`);
 });
+
+test('假想敌：械 attacks the whole field (PRTS)', () => {
+  const h = makeBattle({
+    data: ds, seed: 11, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_02_a', row: 10, col: 3 }],
+    enemies: [{ key: 'enemy_9029_acfnc', time: 0, pos: [12, 20] }],
+  });
+  setGameData(ACT3);
+  h.step(1);
+  const ally = h.allies()[0];
+  const hp0 = ally.hp;
+  h.run(3);
+  assert.ok(ally.hp < hp0, 'a far operator is hit (rangeRadius 0 in data, the field-wide attack is scripted)');
+});
+
+test('假想敌：茧 hits up to three operators per side in one attack (PRTS)', () => {
+  const units = [
+    { chessId: 'chess_char_1_02_a', row: 9, col: 0 },
+    { chessId: 'chess_char_1_02_a', row: 10, col: 1 },
+    { chessId: 'chess_char_1_02_a', row: 11, col: 2 },
+    { chessId: 'chess_char_1_02_a', row: 12, col: 3 },
+    { chessId: 'chess_char_1_02_a', row: 9, col: 6 },
+  ];
+  const h = makeBattle({ data: ds, seed: 11, autoFinish: false, units, enemies: [{ key: 'enemy_9035_acspider', time: 0, pos: [12, 13] }] });
+  setGameData(ACT3);
+  h.step(1);
+  const before = new Map(h.allies().map((a) => [a.id, a.hp]));
+  h.run(2.6);
+  const hit = h.allies().filter((a) => a.hp < (before.get(a.id) ?? a.hp));
+  assert.ok(hit.length >= 3, `several operators struck by one attack (hit ${hit.length})`);
+});
