@@ -429,7 +429,7 @@
         "enemy_1387_winshd": [15,3,8,14883,257299]
       },
       "hooks": [1,30,5700,1235,1235,2412,2545,1347,40,78,22,24,0,15504,2528,44,65,38,1,40,1,0,13],
-      "events": {"atk":1395,"bounty":2,"deploy":27,"die":40,"dmg":2528,"engage":11,"fx":84,"heal":113,"layer":1,"leak":38,"rate":48,"skill":56,"spawn":80,"status":288},
+      "events": {"atk":1395,"bounty":2,"deploy":27,"die":40,"dmg":2528,"engage":11,"fx":84,"heal":113,"layer":1,"leak":38,"rate":48,"skill":56,"spawn":80,"status":287},
       "fx": {"aoe":39,"displace":8,"dodge":17,"explode":5,"garrison":1,"revive":2,"spGain":12},
       "snaps": "30041861 a0e28f29 eb6ff7fb 7a6816ea c71ef1e1 b1c69e93 98419da5 a8d11d99 d3254a8d 0e0c2bc0 c7d00645 15daf3db a0859913 d1583559 0ccf7d85 eae2bb69 be869206 083d9207 ea6164ed"
     },
