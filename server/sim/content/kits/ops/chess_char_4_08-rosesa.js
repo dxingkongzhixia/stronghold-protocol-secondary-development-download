@@ -14,6 +14,14 @@ export default withDefaults({
     return {
       skill: { kind: 'duration', heal: true, mods: { batPct: batFlat(def, bb.base_attack_time) },
         onStart({ battle, unit }) { battle.fx('saltWard', { x: unit.x, y: unit.y, id: unit.id }); } },
+      // S1 上佳的应急药呀: the next heal restores 150 % ATK. The act3 records select S2; authored so a loadout that
+      // picks S1 never falls back to the generic approximation.
+      skills: {
+        skchr_rosesa_1: (() => {
+          const b = (chess?.skills || []).find((s) => s.skillId === 'skchr_rosesa_1')?.bb ?? {};
+          return { kind: 'instant', heal: true, attack: { healScale: num(b.heal_scale, 1.5) } };
+        })(),
+      },
       talents: [{ install(battle, unit) { // 最好的草药医生: own ATK −5 %, operators in range receive +15 % healing
         battle.addBuff(unit, { key: 'rosesa:t1', mods: { atkPct: num(t0.atk, -0.05) }, persist: true, allowDead: true });
         whileDeployed(battle, unit, AURA, () => {

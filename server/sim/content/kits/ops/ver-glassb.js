@@ -12,6 +12,8 @@ function glassb(_bb, chess, def) {
       kind: 'duration', duration: rec?.duration,
       mods: { atkPct: num(sbb.atk) },
       attack: { maxTargets: Math.max(1, Math.floor(num(sbb['attack@max_target'], 3))) },
+      // 文学风暴 "攻击范围扩大": the skill's own range (the data grid), not her normal one
+      ...(Array.isArray(rec?.rangeGrid) && rec.rangeGrid.length ? { targeting: { rangeGrid: rec.rangeGrid.map((p) => [p[0], p[1]]) } } : {}),
     };
     return { kind: 'duration', duration: rec?.duration, mods: { batPct: batMod(num(sbb.base_attack_time), chess) } };
   });

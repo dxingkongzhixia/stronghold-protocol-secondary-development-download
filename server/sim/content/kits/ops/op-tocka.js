@@ -62,7 +62,10 @@ export default {
           },
           onStart({ battle, unit }) {
             const ratio = (a) => (a.skill?.spTotal ? (a.skill.sp ?? 0) / a.skill.spTotal : 0);
-            const allies = battle.alliesFor(unit).filter((a) => a !== unit).sort((a, b) => ratio(b) - ratio(a));
+            // "冻河攻击范围内技力比例最高的另一名干员": an operator inside her range, not the whole field
+            const allies = battle.alliesInGrid(unit)
+              .filter((a) => a !== unit && a.kind === 'op')
+              .sort((a, b) => ratio(b) - ratio(a));
             const target = allies[0];
             if (target) {
               // Official “已存在时改为将其触发”: fire the mark this target already holds (whatever kind), then place S3's.

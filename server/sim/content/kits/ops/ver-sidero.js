@@ -11,6 +11,8 @@ function sidero(_bb, chess, def) {
     if (id === S2) return {
       kind: 'duration', duration: rec?.duration,
       mods: { atkPct: num(sbb.atk), hpRegenRatio: num(sbb.hp_recovery_per_sec_by_max_hp_ratio) },
+      // 破浪回神 "攻击距离缩短": her skill range shrinks to the data grid ([[0,0]])
+      ...(Array.isArray(rec?.rangeGrid) && rec.rangeGrid.length ? { targeting: { rangeGrid: rec.rangeGrid.map((p) => [p[0], p[1]]) } } : {}),
     };
     return {
       kind: 'instant',

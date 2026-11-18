@@ -109,8 +109,8 @@ export default withDefaults({
             battle.fx('riposte', { x: unit.x, y: unit.y, id: unit.id });
           }, { owner: unit });
         } },
-        { install(battle, unit) { // 红松骑士团团长: 卡西米尔 operators +22 % physical dodge
-          whileDeployed(battle, unit, AURA, () => { for (const a of battle.allies(unit.ownerId)) if (nationOf(a) === 'kazimierz') pulse(battle, a, 'flamtl:dodge', { dodgePhys: num(t1.prob, 0.22) }); });
+        { install(battle, unit) { // 红松骑士团团长: 卡西米尔 operators +25 % physical dodge
+          whileDeployed(battle, unit, AURA, () => { for (const a of battle.allies(unit.ownerId)) if (nationOf(a) === 'kazimierz') pulse(battle, a, 'flamtl:dodge', { dodgePhys: num(t1.prob, 0.25) }); });
         } },
       ],
     };

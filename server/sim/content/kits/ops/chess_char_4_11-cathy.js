@@ -10,7 +10,7 @@ export default withDefaults({
   //       turns towards an operator (user playtest #6, PRTS 卫戍协议/帮助 §战斗部署); they deploy with the board and the
   //       token kit (tokens.js catShield) gives the shields — S2 overwrite_ratio per second while this skill runs — so
   //       this kit places nothing (none placed ⇒ no device).
-  //       S1 岁月锻打 (passive: she and every other operator holding a device shield ATK/DEF +8 %/+11 %); module CRA-X
+  //       S1 岁月锻打 (passive: she and every other operator holding a device shield ATK/DEF +8 %/+8 %); module CRA-X
   //       carries one more device (talent cnt, data — a spare the hand never shows)
   chess_char_4_11_a: (bb, chess, def) => ({
     skills: alt(def, {

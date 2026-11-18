@@ -16,7 +16,7 @@ const ICICLE_ROWS = [1, -1, 0];
 export default {
   // ---------------------------------------------------------------------------------------------------------------
   // 寒檀 — S2 “女巫之泪” (15 s): skill range, BAT −2.4 s; attacks become icicles on random tiles of the range (cycling left
-  // row → right row → own row): 65/75 % ATK arts + 1 s cold to every enemy within 1.5 of the impact. T1 生于冰寒: after 20 s on the field ATK +15 % and 抵抗 (negative
+  // row → right row → own row): 65/75 % ATK arts + 1 s cold to every enemy within 1.5 of the impact. T1 生于冰寒: after 20 s on the field ATK +18 % and 抵抗 (negative
   // statuses on her last half as long).
   chess_char_5_21_a: (bb, chess, def) => {
     const t0 = talent(chess, 0);
