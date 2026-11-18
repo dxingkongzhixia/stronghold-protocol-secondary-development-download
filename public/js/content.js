@@ -58,6 +58,7 @@ import { sha256HexAsync } from '../../shared/sha256.js';
 import { getLang, langChain, t, N_ } from '../../shared/i18n.js';
 import { DEV_BUILD } from '../../shared/constants.js';
 import { DEFAULT_VERSION, versionById, versionSlug } from '../../shared/versions.js';
+import { hubVersion } from './versions.js';
 
 /** The localStorage preference (`sp.pref.<key>`) of the personal cosmetic plugins: their ids. */
 export const PERSONAL_PREF = 'cosmetics';
@@ -789,15 +790,25 @@ export function installContentSet({ store = appStore, data = dataStore, net = ap
   const sync = (s) => {
     const cs = roomCs(s);
     const cur = contentSet.get();
-    const vId = typeof s?.room?.version === 'string' && s.room.version ? s.room.version : DEFAULT_VERSION;
-    // another official version's room: its own set, loaded like a content set but from /data/versions/
-    const vCs = !cs && s?.room && vId !== DEFAULT_VERSION && isContentHash(s.room.content?.cs) ? s.room.content.cs : null;
+    const inRoom = !!s?.room;
+    // The lobby's own version (public/js/versions.js hubVersion): its data set is laid for every screen outside a room,
+    // so 干员调配 / 报告 / 图鉴 read the version the hub wears. A room's version wins inside one, as before.
+    const vId = inRoom
+      ? (typeof s?.room?.version === 'string' && s.room.version ? s.room.version : DEFAULT_VERSION)
+      : hubVersion(s?.versions);
+    const vEntry = !inRoom && Array.isArray(s?.versions) ? s.versions.find((v) => v && v.id === vId) : null;
+    // another official version's set, loaded like a content set but from /data/versions/
+    const vCs = !cs && vId !== DEFAULT_VERSION
+      ? (inRoom
+        ? (isContentHash(s.room.content?.cs) ? s.room.content.cs : null)
+        : (vEntry && isContentHash(vEntry.cs) ? vEntry.cs : null))
+      : null;
+    // A plugin preview (the 插件预览 dialog) is this page's own choice outside a room: it is laid over either data set
+    // and dropped when it closes (a room always drops it, so a match never sees preview data).
+    const preview = !inRoom && typeof s?.ui?.previewCs === 'string' && isContentHash(s.ui.previewCs) ? s.ui.previewCs : null;
+    if (!cs && preview) { if (cur.cs !== preview) load(preview); return; }
     if (!cs && !vCs) {
-      // No room content. Outside a room the main interface's personal preview set (ui/previewCs, the 插件预览 dialog)
-      // may be laid instead; a room — even a vanilla one — always drops it, so a match never sees preview data.
-      const preview = !s?.room && typeof s?.ui?.previewCs === 'string' && isContentHash(s.ui.previewCs) ? s.ui.previewCs : null;
-      if (!preview) { if (cur.cs || held) drop(); return; }
-      if (cur.cs !== preview) { load(preview); return; }
+      if (cur.cs || held) drop();
       return;
     }
     if (vCs) {

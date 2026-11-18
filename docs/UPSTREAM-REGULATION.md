@@ -314,6 +314,10 @@ blackboard 后，先处理了这几类：
   而不是搬主线的 prefab 引擎（`ui/prefab/{layout,anim,player,view}.js` 本 fork 没有）：RectTransform 的
   anchors/pivot/sizeDelta/anchoredPosition、Unity AnimationCurve（三次 Hermite，无限斜率按住左键值）、图片用 CSS 背景。
   不支持 layout group / 文本 / 九宫格（这套开场不靠它们）。rAF 驱动，所以**标签页必须在前台**才会播。
+- **内容跟着版本走**：`content.js` 的 `sync()` 在大厅（没有房间时）用 `hubVersion()` 取大厅版本，把该版本的**数据整集**
+  铺到 `data`（`loadVersionSet` + `data.setContent`，服务端 `welcome.versions[].cs`），所以干员调配 / S.W.E.E.P. 报告 /
+  图鉴读到的就是规程的名册与数值（规程 310 条 chess，含冻河等版本干员；默认盟约 298 条）。房间里仍以**房间版本**为准；
+  插件预览集（`ui.previewCs`）在大厅优先于版本集，和以前一样。
 
 
 **镜波修正**：主线把「被击倒后使周围法抗最低的**敌人**法抗 +10」理解为对**敌方单位**生效（`reg:res`），
