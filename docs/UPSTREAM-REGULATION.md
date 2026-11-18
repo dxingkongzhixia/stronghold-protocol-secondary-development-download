@@ -308,6 +308,12 @@ blackboard 后，先处理了这几类：
   （`VERSION_BGM['act3autochess@V3_1'].theme = music_bg_act3autochess`，Kernel Overflow）；音乐包缺失时
   `resolveBgm` 回退到提交的 `lobby` 轨，未开音乐包的部署也能播。
 - 样式在 `public/css/screens/hub.css`（`.hub-reg*`、`.ver-chip*`、`.ver-pick*`；字号走 `--ui-unit` 约定）。
+- **开场动画**：`public/js/ui/regulationFilm.js` —— 规程的大厅第一次出现时播客户端的赛季入场
+  （`panel_act3autochess_on_entry` + `autochess_entry_season_on` 3.17 s，卡片闪烁用 `autochess_season_on_entry_loop`），
+  播完淡出到大厅；每会话一次（`sessionStorage`）。属主线 `ui/regulationFilm.js` 的移植，但**自带一个小播放器**
+  而不是搬主线的 prefab 引擎（`ui/prefab/{layout,anim,player,view}.js` 本 fork 没有）：RectTransform 的
+  anchors/pivot/sizeDelta/anchoredPosition、Unity AnimationCurve（三次 Hermite，无限斜率按住左键值）、图片用 CSS 背景。
+  不支持 layout group / 文本 / 九宫格（这套开场不靠它们）。rAF 驱动，所以**标签页必须在前台**才会播。
 
 
 **镜波修正**：主线把「被击倒后使周围法抗最低的**敌人**法抗 +10」理解为对**敌方单位**生效（`reg:res`），
