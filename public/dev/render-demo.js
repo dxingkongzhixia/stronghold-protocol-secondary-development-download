@@ -201,12 +201,13 @@ async function prepScene(view, stageId, index = []) {
   const c1 = pick('角峰'), c2 = pick('格雷伊');
   if (c1) state.temp[0] = P(c1);
   if (c2) state.temp[1] = P(c2);
-  // ?equip=1: a 规程 equipment area (m.private.equipHand) on row 8's five pads
+  // ?equip=1: a 规程 equipment area (m.private.equipHand) on row 8's five pads (ids whose icons only the local client
+  // has, to exercise the board's local-icon fallback)
   if (q.get('equip')) {
     state.equipHand = Array(5).fill(null);
-    for (const [slot, k] of [[1, 5], [3, 9]]) {
-      const it = items[k];
-      if (it) state.equipHand[slot] = { uid: uid++, kind: 'item', id: it.id, golden: false, tier: it.tier };
+    for (const [slot, id, golden] of [[1, 'chess_item_1_06_e_a', false], [3, 'chess_item_3_11_e_a', false], [4, 'chess_item_1_06_e_b', true]]) {
+      const it = data.lookup('items', id);
+      if (it) state.equipHand[slot] = { uid: uid++, kind: 'item', id: it.id, golden, tier: it.tier };
     }
   }
 

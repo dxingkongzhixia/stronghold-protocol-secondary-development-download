@@ -185,6 +185,11 @@ export function indexPieces(priv) {
   (Array.isArray(priv?.temp) ? priv.temp : []).forEach((p, idx) => {
     if (isObj(p) && Number.isInteger(p.uid)) map.set(p.uid, { piece: p, area: 'temp', idx });
   });
+  // 规程's separate equipment area shares row 8's pads with the temp row: indexed as a temp slot so an item can be
+  // dragged onto an operator (g.equip) exactly like a 盟约 bench item
+  (Array.isArray(priv?.equipHand) ? priv.equipHand : []).forEach((p, idx) => {
+    if (isObj(p) && Number.isInteger(p.uid) && !map.has(p.uid)) map.set(p.uid, { piece: p, area: 'temp', idx });
+  });
   return map;
 }
 

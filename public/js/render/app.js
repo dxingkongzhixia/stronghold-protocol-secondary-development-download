@@ -136,6 +136,7 @@
 
 import { GEO, ANIM } from '../../../shared/constants.js';
 import { fxForm } from '../../../shared/protocol.js';
+import { localAsset } from '../data.js';
 import { Camera, presetCamera, lerpCamera, easeInOutCubic, pickTile, normRect } from './projection.js';
 import { SnapshotBuffer, frameTime } from './interp.js';
 import { BattlePresentation } from './battlePresentation.js';
@@ -843,7 +844,11 @@ export async function createFieldView(host, options = {}) {
     if (kind === 'item') {
       const rec = data.item(piece.id);
       const tier = rec?.tier || piece.tier || 1;
-      const url = assets.itemIcon ? assets.itemIcon(rec ? { trapId: rec.trapId, iconId: rec.iconId } : piece.id) : null;
+      const iconId = rec?.iconId || rec?.trapId || piece.id;
+      // the manifest's own icon, else the local client's (`data/local-assets.json` group `item/<iconId>`): an act3-only
+      // item has no manifest entry (public/js/ui/assetUrls.js does the same for its DOM icons)
+      const url = (assets.itemIcon ? assets.itemIcon({ trapId: rec?.trapId, iconId: rec?.iconId }) : null)
+        || (typeof iconId === 'string' ? localAsset(`item/${iconId}`, iconId) : null);
       return { kind: 'item', defId: piece.id, icon: url, color: (piece.golden || rec?.isGolden) ? 0xffc600 : TIER_COLORS[tier] || TIER_COLORS[1] };
     }
     if (kind === 'token') {
