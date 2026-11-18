@@ -5287,8 +5287,8 @@
       ],
       "enemies": {"enemy_1005_yokai_2":[12,12,0,319,3760],"enemy_1005_yokai_3":[12,6,3,36715,549919],"enemy_9009_acfort":[12,7,5,29279,549133]},
       "hooks": [1,24,6900,497,497,1115,1193,43,49,57,51,51,0,17914,115,0,36,8,1,38,0,15,0],
-      "events": {"atk":537,"deploy":24,"die":49,"dmg":1164,"engage":10,"fx":310,"heal":37,"leak":8,"rate":15,"skill":102,"spawn":48,"status":325},
-      "fx": {"beam":38,"burst":15,"mark":12,"wave":245},
+      "events": {"atk":537,"deploy":24,"die":49,"dmg":1164,"engage":10,"fx":320,"heal":37,"leak":8,"rate":15,"skill":102,"spawn":48,"status":325},
+      "fx": {"allyMark":10,"beam":38,"burst":15,"mark":12,"wave":245},
       "snaps": "ebc6c8f9 7e7f927a 0571715a e3b10bfe 20f3b072 64740e27 3d0d6cab c0cc9caf cbea7c82 ba189fda 29470d56 83599f29 c23ffac5 f9e886eb 1b4e095c 3f9e8509 cd20fe81 809d8e60 b8b0e43e 2caed593 579a7d98 4156a16d 127784d5"
     },
     "diy-124": {
@@ -5329,8 +5329,8 @@
       ],
       "enemies": {"enemy_1010_demon_2":[36,0,36,7690,1272932],"enemy_1071_dftman":[51,39,12,0,1201629],"enemy_1072_dlancer":[60,10,50,3154,1321843]},
       "hooks": [1,16,6260,930,930,15860,15860,14,51,149,109,109,0,51272,843,3,147,98,1,52,0,0,0],
-      "events": {"atk":2931,"deploy":13,"die":51,"dmg":15858,"engage":12,"fx":8,"heal":14,"leak":98,"rate":195,"skill":218,"spawn":162,"status":1271},
-      "fx": {"mark":8},
+      "events": {"atk":2931,"deploy":13,"die":51,"dmg":15858,"engage":12,"fx":71,"heal":14,"leak":98,"rate":195,"skill":218,"spawn":162,"status":1271},
+      "fx": {"allyMark":63,"mark":8},
       "snaps": "8428ae1c 560c1142 29335985 8ca4a35b 657c0907 6697413b 75612c34 1b60c2a6 d0115aa9 24025373 4b4e441a 94191c99 643b9797 19bc282c 31f72abb 244c217f 7e2f2728 46ad692f 3bd7083b e46c75a5 d09bc5c1"
     },
     "diy-125": {

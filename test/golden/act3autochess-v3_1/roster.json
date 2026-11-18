@@ -3546,8 +3546,8 @@
         "enemy_9034_acblk": [1,1,0,3325,12000]
       },
       "hooks": [1,25,3600,185,185,307,378,2573,13,21,24,22,10,19035,44,11,10,0,1,15,0,2,0],
-      "events": {"atk":221,"bounty":5,"deploy":23,"die":21,"dmg":378,"engage":10,"fx":47,"rate":61,"skill":46,"spawn":28,"status":120},
-      "fx": {"aoe":5,"beam":2,"burst":2,"disappear":2,"logosLexicon":13,"lure":2,"mantraGate":2,"meltdown":1,"revive":1,"sp":5,"summon":4,"talent":3,"telegraph":2,"zone":3},
+      "events": {"atk":221,"bounty":5,"deploy":23,"die":21,"dmg":378,"engage":10,"fx":58,"rate":61,"skill":46,"spawn":28,"status":120},
+      "fx": {"allyMark":11,"aoe":5,"beam":2,"burst":2,"disappear":2,"logosLexicon":13,"lure":2,"mantraGate":2,"meltdown":1,"revive":1,"sp":5,"summon":4,"talent":3,"telegraph":2,"zone":3},
       "snaps": "ed2bd893 47a97d34 e83cdb17 b6315707 be162978 e590854c b17dfcb7 370cb775 f4b70c8b 26d19d49 7fa8866c 87947774"
     },
     "roster-058": {
