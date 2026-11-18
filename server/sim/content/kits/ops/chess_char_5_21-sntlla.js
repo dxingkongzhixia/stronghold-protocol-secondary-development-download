@@ -9,11 +9,13 @@ import { num, talent, skillGrid, batPct, mods, lazySkills, whileOn } from '../sh
 /** 寒檀 S2 icicle splash radius (PRTS 备注 "冰凌溅射半径1.5"). */
 const ICICLE_RADIUS = 1.5;
 /**
- * 寒檀 S2 icicle fall time (s) between the attack and the impact. The client's start prefab (sntlla_skill_02_start_01,
- * 8 s) is the ice field, not the icicle; no extracted prefab or clip names the flight, so this remains a visual
- * [ASSUMED] (the only one of the operator audit's four left).
+ * 寒檀 S2 icicle fall time (s) between the attack and the impact: the client's projectile `projectile_chr_sntlla_s2`
+ * (`battle/prefabs/[uc]skills.ab`) is an AttachToTarget with `_delayAfterReached` 1 and `_delayTime` **0.6**
+ * (`_forceReachedWhenTimeup` 1, `_lifeTime` 1), and its `EffectBehaviour` fires `_effectsWhenReached`
+ * `sntlla_skill_02_start_01` (the 8 s ice field) plus `_effectsWhenHit` `sntlla_attack_hit_02` — so the icicle lands
+ * 0.6 s after the attack. (The start prefab is the ice field, not the flight: that was the earlier 0.3 [ASSUMED].)
  */
-const ICICLE_DELAY = 0.3;
+const ICICLE_DELAY = 0.6;
 /** 寒檀 S2 icicle lines, lateral offsets in her facing-RIGHT frame: ① the line on her left, ② on her right, ③ her own, then ①. */
 const ICICLE_ROWS = [1, -1, 0];
 
