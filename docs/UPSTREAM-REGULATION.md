@@ -283,6 +283,9 @@ blackboard 后，先处理了这几类：
      → kit 的 `iceSpike` 落点；冻河 S1 的两个标记 loop `tocka_skill_01_buff_02` / `_buff_01`
      （`EmptyAnimatedAbility._activeBuffs on: targets`）→ kit 的 `mark`；冻河 S2 的 `tocka_skill_02_hit_01`（投射物命中）
      + `tocka_skill_02_buff_02`（`CreateBuffAllowAll` 的 loop）→ kit 新增的 `allyMark`（S2 落在友军身上的那个标记）。
+     另修了 **后兽 4 个键的大小写**：索引里键是小写（`enemy_dyjsww_c1_*`），但单位计划里抄的是节点原名
+     `enemy_dyjsww_C1_*`，查表必然 miss、这几条永远不会播 —— 已在 `index.json` 改成小写，并加守卫测试
+     （`vfx-regulation`：规程单位的引用不允许「只差大小写」）。提取器重抽仍会写出原名，记在待办里。
   3. **仍按设计不播**（记录在案，不硬绑）：至简 S2 的 `malist_skill_2_buff` / `_buff_weapon` 是 `eff_cond` 条件 buff，
      奥尔佳 S1 的 `start_02` / `start_03` 是 `MultiHitUberEffectEmitter` 的多段施放（计划只放第一段）。
 - **fx-viewer 只跑渲染侧**：kit 自己 `battle.fx(...)` 的（`iceSpike` / `saltWard` / `overclock` / `mark` / `allyMark` …）

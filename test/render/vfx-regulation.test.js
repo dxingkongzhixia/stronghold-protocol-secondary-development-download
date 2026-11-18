@@ -87,3 +87,21 @@ test('kit cues whose official effect is a target-side loop or a projectile impac
   assert.deepEqual(sntlla.keys, ['sntlla_skill_02_start_01']);
   assert.ok(INDEX.prefabs.sntlla_skill_02_start_01);
 });
+
+test('the regulation units name only prefab keys the index has (a case-only miss is a key that never plays)', () => {
+  const keys = new Set(Object.keys(INDEX.prefabs));
+  const lower = new Map([...keys].map((k) => [k.toLowerCase(), k]));
+  const bad = [];
+  const visit = (v, at) => {
+    if (typeof v === 'string') {
+      if (keys.has(v) || !lower.has(v.toLowerCase())) return;
+      bad.push(`${at}: ${v} (index has ${lower.get(v.toLowerCase())})`);
+    } else if (Array.isArray(v)) v.forEach((x, i) => visit(x, `${at}[${i}]`));
+    else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) visit(x, `${at}/${k}`);
+  };
+  for (const id of REGULATION_FX_OPERATORS) visit(INDEX.units[id], id);
+  for (const id of ['enemy_2123_dyjsww', 'enemy_9027_acfnca', 'enemy_9029_acfnc', 'enemy_9035_acspider', 'enemy_9037_aceel']) {
+    visit(INDEX.units[id], id);
+  }
+  assert.deepEqual(bad, []);
+});
