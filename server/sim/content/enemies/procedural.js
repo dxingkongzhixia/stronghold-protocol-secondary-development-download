@@ -33,8 +33,9 @@ function genericParts(ab, e, groups) {
   const bleedRatio = T(ab, 'Bleeding.hp_ratio', 'unbalanced_bleed.hp_ratio');
   const poisonDmg = T(ab, 'Poison.attack@damage');
   const poisonDur = T(ab, 'Poison.attack@duration');
-  const boomScale = T(ab, 'Boom.atk_scale', 'deathrattle.atk_scale');
-  const boomR = T(ab, 'Boom.range_radius', 'deathrattle.range_radius');
+  const boomScale = T(ab, 'Boom.atk_scale', 'deathrattle.atk_scale', 'boom.atk_scale');
+  const boomR = T(ab, 'Boom.range_radius', 'deathrattle.range_radius', 'boom.range_radius');
+  const boomFreeze = T(ab, 'boom.freeze', 'Boom.freeze');
   const trampleScale = T(ab, 'Trample.atk_scale'), trampleR = T(ab, 'Trample.range_radius'), trampleIv = T(ab, 'Trample.interval');
   const critProb = T(ab, 'CriticalHit.prob'), critScale = T(ab, 'CriticalHit.atk_scale');
   const firstScale = T(ab, 'FirstAttack.atk_scale', 'FirstAtkDouble.atk_scale');
@@ -106,8 +107,12 @@ function genericParts(ab, e, groups) {
   if (boomScale > 0) parts.push({ spawn(b) {
     b.on('death', (c) => {
       if (c.unit !== e) return;
-      const r = boomR ?? 1.5;
-      for (const a of b.allies()) if (a.alive && dist(a, e) <= r) b.dealDamage(e, a, { amount: e.s.atk * boomScale, type: 'phys', tags: ['enemyAbility'] });
+      // 冰爆源石虫·α (PRTS): 爆炸半径 0.65、100 % 物理并施加寒冷；其它 boom/deathrattle 仍是 1.5
+      const r = boomR ?? (has('boom') ? 0.65 : 1.5);
+      for (const a of b.allies()) if (a.alive && dist(a, e) <= r) {
+        b.dealDamage(e, a, { amount: e.s.atk * boomScale, type: 'phys', tags: ['enemyAbility'] });
+        if (boomFreeze > 0) b.applyStatus(a, 'cold', { duration: boomFreeze, source: e });
+      }
       b.fx('explode', { x: e.x, y: e.y, id: e.id, r, kind: 'procDeath' });
     }, { owner: e });
   } });
@@ -147,8 +152,12 @@ function genericParts(ab, e, groups) {
  * @returns {{ kit: Function|null, via: 'signature'|'generic'|null, key?: string, groups: string[] }}
  */
 export function proceduralKit(battle, e, ab, { knownKit, recordOf }) {
-  const groups = groupsOf(e.def?.raw ?? e.def);
+  const rawRec = e.def?.raw ?? e.def;
+  const groups = groupsOf(rawRec);
   const sig = groups.join('|');
+  // The signature is the talent groups AND their blackboard keys: two enemies of one group (e.g. `boom`) may carry
+  // different keys (冰爆源石虫·α: boom.atk_scale / boom.freeze), and its generic handler would miss them
+  const keys = Object.keys((rawRec?.talents && rawRec.talents.bb) || ab?.t || {}).sort().join(',');
   const data = battle?.data;
   const raw = data?.raw?.enemies ?? data?.enemies ?? data?.rawEnemies ?? null;
   if (raw && knownKit && recordOf) {
@@ -156,11 +165,13 @@ export function proceduralKit(battle, e, ab, { knownKit, recordOf }) {
       if (key === e.defId) continue;
       const kit = knownKit(key);
       if (!kit) continue;
-      if (groupsOf(rec).join('|') === sig) return { kit, via: 'signature', key, groups };
+      if (groupsOf(rec).join('|') !== sig) continue;
+      const recKeys = Object.keys((rec?.talents && rec.talents.bb) || {}).sort().join(',');
+      if (recKeys === keys) return { kit, via: 'signature', key, groups };
     }
   }
   const parts = genericParts(ab, e, groups);
   return { kit: parts.length ? () => parts : null, via: parts.length ? 'generic' : null, groups };
 }
 
-export const GENERIC_GROUPS = Object.freeze(['dmg_res', 'DmgResist', 'DamageUp', 'DmgUp', 'atkup', 'atkboostCore', 'enhance', 'Evade', 'Bleeding', 'Poison', 'Boom', 'deathrattle', 'Trample', 'Huge', 'Passive', 'CriticalHit', 'FirstAttack', 'FirstAtkDouble', 'shotbuff', 'atkSpeedDown', 'buff_to_blocker', 'Bundling', 'BlockMcreep', 'Summon', 'Overload', 'OutOfControll', 'MoveSpeed', 'Rush', 'aura', 'Aura', 'AuraAttributeUp', 'vampire', 'unbalanced_bleed']);
+export const GENERIC_GROUPS = Object.freeze(['dmg_res', 'DmgResist', 'DamageUp', 'DmgUp', 'atkup', 'atkboostCore', 'enhance', 'Evade', 'Bleeding', 'Poison', 'Boom', 'boom', 'deathrattle', 'Trample', 'Huge', 'Passive', 'CriticalHit', 'FirstAttack', 'FirstAtkDouble', 'shotbuff', 'atkSpeedDown', 'buff_to_blocker', 'Bundling', 'BlockMcreep', 'Summon', 'Overload', 'OutOfControll', 'MoveSpeed', 'Rush', 'aura', 'Aura', 'AuraAttributeUp', 'vampire', 'unbalanced_bleed']);

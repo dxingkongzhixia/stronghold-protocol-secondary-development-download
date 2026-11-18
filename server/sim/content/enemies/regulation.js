@@ -292,7 +292,45 @@ function kitPeriodicSummon(ab, e) {
   }];
 }
 
+/**
+ * 开天汽水瓶 (PRTS: 【飞行单位】逐渐流失生命并加速) — `Passive.enemy_nscola[speed]` (interval 0.5 s, +0.3 move speed,
+ * max 25 s) and a fixed HP loss per interval.
+ */
+function kitNscola(ab) {
+  const iv = Math.max(0.1, T(ab, 'Passive.enemy_nscola[speed].interval') ?? 0.5);
+  const step = T(ab, 'Passive.enemy_nscola[speed].move_speed') ?? 0.3;
+  const maxT = Math.max(1, T(ab, 'Passive.enemy_nscola[speed].max_time') ?? 25);
+  const loss = T(ab, 'Passive.fixed_value_damage') ?? 120;
+  return [{ tick(b, e, a, dt) {
+    a.t = (a.t ?? 0) + dt;
+    if (a.t + 1e-9 < iv) return;
+    a.t = 0;
+    a.n = (a.n ?? 0) + 1;
+    b.loseHp(e, loss, { tags: ['enemyAbility'] });
+    if (a.n * iv <= maxT) b.addBuff(e, { key: 'reg:nscola_speed', persist: true, refresh: 'replace', visible: true, mods: { moveMul: 1 + step * a.n } });
+  } }];
+}
+
+/** 遮天面包机 (PRTS: 【飞行单位】未被阻挡时持续对周围我方单位造成溅射伤害). */
+function kitNsbomb(ab) {
+  const iv = Math.max(0.2, T(ab, 'Passive.interval') ?? 2.5);
+  const r = T(ab, 'Passive.range_radius') ?? 1;
+  const scale = T(ab, 'Passive.atk_scale') ?? 2;
+  return [{ tick(b, e, a, dt) {
+    if (e.blocking?.length) return;
+    a.t = (a.t ?? 0) + dt;
+    if (a.t + 1e-9 < iv) return;
+    a.t = 0;
+    for (const u of b.alliesInRadius(e.x, e.y, r)) {
+      if (u.alive) b.dealDamage(e, u, { amount: e.s.atk * scale, type: 'phys', tags: ['enemyAbility'] });
+    }
+    b.fx('explode', { x: e.x, y: e.y, id: e.id, r, kind: 'nsbomb' });
+  } }];
+}
+
 export const REGULATION_KITS = Object.freeze({
+  enemy_10146_nscola: kitNscola, // 开天汽水瓶
+  enemy_10147_nsbomb: kitNsbomb, // 遮天面包机
   enemy_1104_lfkght: kitLfkght, enemy_1104_lfkght_3: kitLfkght,
   enemy_1191_krgrg: kitKrgrg, enemy_1191_krgrg_2: kitKrgrg,
   enemy_1213_mtrsnp: kitShotbuff, enemy_1216_cansld: kitShotbuff, enemy_1219_mtrbty: kitShotbuff,
