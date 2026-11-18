@@ -2403,6 +2403,13 @@ def skin_points(env, rel, prefab, graphic, container=None):
         gd = env.tt(go)
         name = gd.get('m_Name', '')
         trs = None if go is root else go_transform(env, go)
+        if trs is not None and graphic is None and name == 'Graphic' and abs(trs[0][1] + 0.2) > 0.5:
+            # a unit prefab (enemy / token — no `graphic`: the node is walked here): the renderer takes the Graphic's
+            # tilt only (mounts.js graphicRotation, never the node's translation), so the client's usual placement
+            # (0, −0.2, −0.06) is the frame the points live in. A prefab authored elsewhere — enemy_9027_acfnca's slam
+            # state puts the node at y = −1.2 — would otherwise carry every anchor of that unit a tile below the model
+            # we draw: the displacement is taken out (the node's own rotation and scale stay).
+            trs = ([0.0, -0.2, -0.06], trs[1], trs[2])
         m2 = m if trs is None else mat_mul(m, trs_matrix(*trs))
         f2 = 'front' if name == 'Front' else 'back' if name == 'Back' else facing
         bone, follow_rot = None, True
