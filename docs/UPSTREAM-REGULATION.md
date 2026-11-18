@@ -273,11 +273,25 @@ blackboard 后，先处理了这几类：
 
 ### 待办（后续做）
 
-- [x] 后兽 `SummonBranchEnemy`（分支增援）：`kitTail` 已接（CD 170 / 初始 5 / 仅第二形态），按关卡 `branches[branch_id]` 生成；act3 数据没有 `dyjsww_summon` 分支，所以当前施放后不生成敌人（补关卡 `branches` 即生效）。
+已完成的机制（保留记录）：
+
+- [x] 后兽 `SummonBranchEnemy`（分支增援）**机制**：`kitTail` 已接（CD 170 / 初始 5 / 仅第二形态），按关卡 `branches[branch_id]` 生成。
 - [x] act3 boss 官方特效映射：`public/js/render/vfx/regulation-fx.js`（械 / 冲击之械 / 后兽 / 茧 / 鳍 等；见 §4 的映射表条目）。
 - [x] 茧【淤困捕食】改为每侧随机 2 个（普通 2/4，隐秘核心 3/6，按技能黑框；普通攻击仍每侧血最高 3 个）。
 
-回归：`node --test test/versions-bosses.test.js test/versions-cocoon.test.js test/content/enemies_bosses.test.js`（含新增的 50% 阈值、护甲形态、影役光环、镜波/镜眼用例）。
+仍未处理（2026-11-18 记录）：
+
+- [ ] **后兽【返璞】的分支内容**：`dyjsww_summon` 是 ISW-DF 末狩关卡的 `branches`，本机 `.cache/gamedata` 只有 act3 关卡（`level_autochess_enemy_data.json` 的 branches 只有 `dragon`），没有 ISW-DF 关卡。拿到关卡 JSON 后放进 `stages.json` 的 `branches` 即可生效。
+- [ ] **恶尘源石虫 `DetectStorm` 的可测内容**：十四章的 `活性源石风暴`（特殊敌人）与 `源石污染区` 的隐藏控制器装置不在 act3 数据里；补这两个单位/装置后才能验证「靠近立刻死亡 + 风暴 +1 增幅」和污染区的 50/100/200 真实伤害。
+- [ ] **寒檀 S2 冰锥下落时间**：仍是 0.3 s 视觉值（唯一剩下的 `[ASSUMED]`，见 §4 新增干员核对）；需要从客户端 `[uc]skills.ab` / 投射物动画里抽，或看实战录像确认。
+- [ ] **冲击之械的砸地与 falldown 官方特效**：prefab `enemy_acfnca_skill_02_start_01` / `enemy_acfnca_move_01` 在索引里，但 `kitArmor` 的砸地/落地是直接结算伤害，没有 `castSlot`/`fx` 事件；需要给 kit 加事件并接 `ENEMY_FX_BINDINGS`。
+- [ ] **械的 `WithArmor` 形态**：`talents.js formModes` 对该单位返回空，客户端不会切 mode；攻击行与 Default 相同，视觉差异小，但严格说没对齐。
+- [ ] **`enemy_9027_acfnca` 的 `HitPoint` 正确值**：上游索引里的点在脚底（`0,-0.779,-0.303`），当前只删掉了这个坏点；正确值需重新抽取或查客户端。
+- [ ] **`tools/local-extract/fx.py` 重抽**：提交的索引是合并后的 5564 个 prefab（本树 5111 + 主线 453），当前提取器只产出 5111；以后重抽会把 453 个上游 prefab 丢掉，需要改提取器或固化合并步骤。
+- [ ] **push**：本地 `master` 尚未推到 `origin` / `gitee`（需要凭据与明确授权）。
+- [ ] **清理**：主线 `localhost:3001` 服务仍在跑；之前拷进 `D:\DOTK\Stronghold-Protocol\public\dev\` 的对比文件未删；本机 `data/local-fx.json` 按设计不入库（换机器需重新生成）。
+
+回归：`node --test test/versions-bosses.test.js test/versions-cocoon.test.js test/content/enemies_bosses.test.js test/versions-enemies-official.test.js test/versions-enemies-procedural.test.js test/render/vfx-regulation.test.js`（含新增的 50% 阈值、护甲形态、影役光环、镜波/镜眼、狂暴凶豕兽、恶尘源石虫用例）。
 
 ## 5. 合并清单
 
