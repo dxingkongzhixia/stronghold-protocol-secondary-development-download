@@ -168,10 +168,15 @@ test('batch 1–9 numbers: the stat/damage specs carry the blackboard values', (
   assert.equal(spec('char_4031_liesel', 1).spec.attack.atkScale, 1.3);
   assert.equal(spec('char_4031_liesel', 1).spec.attack.maxTargets, 3);
   assert.equal(typeof spec('char_4031_liesel', 1).spec.onAttack, 'function');
-  // 奥尔加: S1 1.25× two hits; S2 ATK +40 % with the taunt/sluggish handler
+  // 奥尔加: S1 1.25× two hits; S2 ATK +40 % with the taunt/sluggish handler and its extended range
   assert.deepEqual(spec('char_4245_alga', 0).spec.attack, { atkScale: 1.25, hits: 2 });
   assert.equal(spec('char_4245_alga', 1).spec.mods.atkPct, 0.4);
   assert.equal(typeof spec('char_4245_alga', 1).spec.onAttack, 'function');
+  assert.equal(spec('char_4245_alga', 1).spec.targeting.rangeGrid.length, 4);
+  // 真理: S2 "攻击范围扩大" (the skill grid, 21 tiles)
+  assert.equal(spec('char_195_glassb', 1).spec.targeting.rangeGrid.length, 21);
+  // 铸铁: S2 "攻击距离缩短" (her own tile)
+  assert.deepEqual(spec('char_333_sidero', 1).spec.targeting.rangeGrid, [[0, 0]]);
   // 阿米娅（医疗）: S1 attack speed +45 and the on-hit heal; S2 the opening volley, true damage on two targets afterwards
   assert.equal(spec('char_1037_amiya3', 0).spec.mods.aspd, 45);
   assert.equal(typeof spec('char_1037_amiya3', 0).spec.attack.onHit, 'function');
@@ -303,4 +308,29 @@ test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (
   const buff = e.buffs.find((b) => String(b.key).startsWith('frncat:weaken'));
   assert.equal(buff.mods.atkPct, -0.2);
   assert.ok(buff.duration >= 4.9 && buff.duration <= 5.1);
+});
+
+test('冻河 S3 marks an operator inside her range, never the whole field', (t) => {
+  setGameData(ACT3);
+  t.after(() => setGameData(null));
+  const ds = new DataSource(ACT3, quiet);
+  const h = makeBattle({
+    data: ds, seed: 3, timeLimit: 20, autoFinish: false,
+    units: [
+      { uid: 1, chessId: chessId(ACT3, 'char_4244_tocka', false), row: 10, col: 4, carryState: { sp: 999 } },
+      { uid: 2, chessId: chessId(ACT3, 'char_488_buildr', false), row: 10, col: 5 },
+      { uid: 3, chessId: chessId(ACT3, 'char_488_buildr', false), row: 10, col: 9 },
+    ],
+    enemies: [],
+  });
+  h.step(2);
+  const u = h.unit(1);
+  u.skill.sp = u.skill.spCost;
+  assert.equal(u.skill.activate('test'), true);
+  assert.equal(u.skill.id, 'skchr_tocka_3');
+  const near = h.battle.allyUnits.find((a) => a.uid === 2);
+  const far = h.battle.allyUnits.find((a) => a.uid === 3);
+  const marked = (a) => (a.buffs || []).some((b) => b.key === 'trigger:effect' && b.data?.kind === 'skchr_tocka_3');
+  assert.equal(marked(near), true, 'the in-range operator holds the S3 mark');
+  assert.equal(marked(far), false, 'an operator outside her range does not');
 });
