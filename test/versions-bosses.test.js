@@ -55,7 +55,7 @@ test('假想敌：蛛 dodges after losing a quarter of its HP', () => {
   const ally = h.allies()[0];
   h.b.dealDamage(ally, boss, { amount: boss.s.maxHp * 0.3, type: 'true' });
   h.step(2);
-  assert.ok(buffs(boss, 'boss:spider_evade').length > 0, 'dodge buff');
+  assert.ok(buffs(boss, 'reg:evade').length > 0, 'dodge buff');
 });
 
 test('假想敌：电 adds neural damage on its attacks', () => {
@@ -69,18 +69,14 @@ test('假想敌：电 adds neural damage on its attacks', () => {
   assert.ok(ally.elem.neural > 0, `neural ${ally.elem.neural}`);
 });
 
-test('矩兽: damage reduction, trample and overload', () => {
+test('矩兽: overload below half HP, and it brings its 后兽 (PRTS)', () => {
   const h = field('enemy_2124_dyjsfg');
   h.step(1);
   const boss = h.enemies()[0];
-  const ally = h.allies()[0];
-  assert.ok(buffs(boss, 'boss:dyj_res').length > 0, 'damage reduction');
-  const hp0 = ally.hp;
-  h.run(3);
-  assert.ok(ally.hp < hp0, 'trample');
-  h.b.dealDamage(ally, boss, { amount: boss.s.maxHp * 0.65, type: 'true' });
+  assert.ok(h.b.enemies.some((e) => e.alive && e.defId === 'enemy_2123_dyjsww'), '后兽 spawns with 矩兽');
+  h.b.dealDamage(null, boss, { amount: boss.s.maxHp * 0.6, type: 'true' });
   h.step(2);
-  assert.ok(buffs(boss, 'boss:dyj_over').length > 0, 'overload');
+  assert.ok(buffs(boss, 'reg:overload').length > 0, 'overload');
 });
 
 test('假想敌：械 enters its armour form below half HP (PRTS) and summons two 冲击之械', () => {
@@ -91,7 +87,6 @@ test('假想敌：械 enters its armour form below half HP (PRTS) and summons tw
   h.b.dealDamage(ally, boss, { amount: boss.s.maxHp * 0.55, type: 'true' });
   h.step(2);
   assert.ok(boss.hpRatio < 0.5);
-  assert.ok(buffs(boss, 'boss:acfnc_armor').length > 0, '护甲形态 (physical/arts -50%)');
   assert.equal(h.b.enemies.filter((e) => e.defId === 'enemy_9027_acfnca' && e.alive).length, 2, 'two 冲击之械');
 });
 

@@ -84,8 +84,8 @@ test('规程 悲惨之雨: the area effect still reaches an 隐匿 operator', (t
   const hidden = h.unit(1), hp = hidden.hp;
   const spider = put(h, 'enemy_9035_acspider_2', [10, 10]);
   spider.hp = spider.s.maxHp * 0.4;
-  h.run(1.2);
+  h.run(26); // AcidRain: 初始冷却 25 s (PRTS 隐秘核心 假想敌：茧)
   assert.ok(hidden.s.flags.stealth, 'still hidden');
-  assert.ok(hidden.findBuff('boss:spider_rain'), 'the rain debuff lands on it');
+  assert.ok(hidden.findBuff('reg:acid'), 'the rain debuff lands on it');
   assert.ok(hp - hidden.hp > 0, 'and its true damage ticks');
 });
