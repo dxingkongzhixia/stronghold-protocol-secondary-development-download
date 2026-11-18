@@ -275,13 +275,19 @@ blackboard 后，先处理了这几类：
 - **官方特效本来就接线了**：15 名干员的 **30 个技能位**逐个在 `dev/fx-viewer.html?skilldemo=<charId>&sid=<skillId>` 里跑
   （`liveKeys()` 采样 4.6 s），**每一个都播出了官方 prefab**，例如 寒檀 S2 → `sntlla_skill_02_buff_01` / `_buff_02_right`、
   冻河 S3 → 7 个 `tocka_skill_03_*`、焰尾 S2 → `flamtl_skill_02_start_01/02` + `_range_01` + `_hit_01`。
-- **17 个技能位**有「索引里有、demo 里没看到」的 key，分三类：(a) 条件行（`uses:ready` / `trigger`、只在命中时播的
-  attack 行）——demo 的循环不触发；(b) 投射物的 trail / hit（星源 S1、至简 S2、冻河 S2）——我们的 kit 直接结算伤害，
-  没有真投射物；(c) 技能 loop（奥尔佳 S1、冻河 S1 的 buff loop）——要按 kit 的事件补 `REGULATION_SKILL_BINDINGS`。
-  注意 **fx-viewer 只跑渲染侧**，kit 自己 `battle.fx(...)` 的那些（`iceSpike` / `saltWard` / `overclock` …）在它里面根本不会触发，
-  只能在 sim（沙盒 / 真实对局）里验。
-- 已补一条绑定：**寒檀 S2 的官方冰场** `sntlla_skill_02_start_01`（客户端 `projectile_chr_sntlla_s2` 的
-  `_effectsWhenReached`，8 s）绑到 kit 的 `iceSpike`（落点 0.6 s），`plannedRoot` 之外不再缺这一段。
+- **「索引里有、demo 里没看到」的 key 全部复核过**，三类结论：
+  1. **demo 参数问题，不是缺**：星源 S1、至简 S2 的投射物 key（`halo_skill_01_hit/_trail`、`malist_skill_hit/_hit_2/_trail`）
+     只是 `skilldemo` 默认按近战（`kind=none`）跑；带 `&kind=bolt` 后全部播出。奥尔佳 S1 的 `hit_2` 同样要 `&hits=2`
+     （`MultiHitUberEffectEmitter` 的第二个命中组）。
+  2. **已补绑定**：寒檀 S2 的官方冰场 `sntlla_skill_02_start_01`（`projectile_chr_sntlla_s2` 的 `_effectsWhenReached`）
+     → kit 的 `iceSpike` 落点；冻河 S1 的两个标记 loop `tocka_skill_01_buff_02` / `_buff_01`
+     （`EmptyAnimatedAbility._activeBuffs on: targets`）→ kit 的 `mark`；冻河 S2 的 `tocka_skill_02_hit_01`（投射物命中）
+     + `tocka_skill_02_buff_02`（`CreateBuffAllowAll` 的 loop）→ kit 新增的 `allyMark`（S2 落在友军身上的那个标记）。
+  3. **仍按设计不播**（记录在案，不硬绑）：至简 S2 的 `malist_skill_2_buff` / `_buff_weapon` 是 `eff_cond` 条件 buff，
+     奥尔佳 S1 的 `start_02` / `start_03` 是 `MultiHitUberEffectEmitter` 的多段施放（计划只放第一段）。
+- **fx-viewer 只跑渲染侧**：kit 自己 `battle.fx(...)` 的（`iceSpike` / `saltWard` / `overclock` / `mark` / `allyMark` …）
+  在里面根本不会触发，只能在 sim（沙盒 / 真实对局）里验；渲染侧的绑定由 `test/render/vfx-regulation.test.js` 钉住。
+  冻河 S2 的 `allyMark` 改了 sim 的事件流，golden 已归因（只动 `events.fx` 与 `fx.allyMark` 两个字段）后重算。
 
 
 **镜波修正**：主线把「被击倒后使周围法抗最低的**敌人**法抗 +10」理解为对**敌方单位**生效（`reg:res`），

@@ -65,3 +65,25 @@ test('the covered operator kit fx name the official skill loops the plans play',
   }
   assert.deepEqual(REGULATION_FX_COVER.skchr_flamtl_2, ['aoe', 'dp']);
 });
+
+test('kit cues whose official effect is a target-side loop or a projectile impact are bound', () => {
+  // 冻河 S1: the mark the kit places on an ally → the two official mark loops (on: targets).
+  const tocka = FX_BINDINGS.skchr_tocka_1?.mark;
+  assert.ok(tocka, 'skchr_tocka_1 mark binding');
+  assert.equal(REGULATION_SKILL_BINDINGS.skchr_tocka_1.mark, tocka);
+  assert.equal(tocka.at, 'target');
+  assert.deepEqual(tocka.keys, ['tocka_skill_01_buff_02', 'tocka_skill_01_buff_01']);
+  for (const k of tocka.keys) assert.ok(INDEX.prefabs[k], k);
+  // 冻河 S2: the link the kit places on one ally → the projectile's impact and the action's buff loop.
+  const tocka2 = FX_BINDINGS.skchr_tocka_2?.allyMark;
+  assert.ok(tocka2, 'skchr_tocka_2 allyMark binding');
+  assert.equal(tocka2.at, 'target');
+  assert.deepEqual(tocka2.keys, ['tocka_skill_02_hit_01', 'tocka_skill_02_buff_02']);
+  for (const k of tocka2.keys) assert.ok(INDEX.prefabs[k], k);
+  // 寒檀 S2: the icicle's reached effect (the 8 s ice field) on the impact tile.
+  const sntlla = FX_BINDINGS.skchr_sntlla_2?.iceSpike;
+  assert.ok(sntlla, 'skchr_sntlla_2 iceSpike binding');
+  assert.equal(sntlla.at, 'point');
+  assert.deepEqual(sntlla.keys, ['sntlla_skill_02_start_01']);
+  assert.ok(INDEX.prefabs.sntlla_skill_02_start_01);
+});

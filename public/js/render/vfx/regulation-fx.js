@@ -129,6 +129,23 @@ export const REGULATION_SKILL_BINDINGS = Object.freeze({
   skchr_sntlla_2: Object.freeze({
     iceSpike: Object.freeze({ owner: 'id', keys: Object.freeze(['sntlla_skill_02_start_01']), at: 'point', holdS: 8 }),
   }),
+  // 冻河 S1: the official mark on the ally is a pair of loops — EmptyAnimatedAbility._activeBuffs `on: targets`
+  // (tocka_skill_01_buff_02) and the tocka_s1[trigger] template's loop (tocka_skill_01_buff_01). The kit places
+  // 'tocka_s1_mark' on up to two allies and emits its 'mark' cue on each; the loops are bound to that cue, held while
+  // the mark lives.
+  skchr_tocka_1: Object.freeze({
+    mark: Object.freeze({
+      owner: 'id', keys: Object.freeze(['tocka_skill_01_buff_02', 'tocka_skill_01_buff_01']), at: 'target', holdS: 30,
+    }),
+  }),
+  // 冻河 S2: the official link on the ally — projectile_chr_tocka_s2's hit effect (tocka_skill_02_hit_01, the impact)
+  // and the action's buff loop (tocka_skill_02_buff_02, `AnimatedActionToTargetAbility._actions CreateBuffAllowAll`).
+  // The kit places its 'tocka_s2_mark' on one ally and cues 'allyMark' there.
+  skchr_tocka_2: Object.freeze({
+    allyMark: Object.freeze({
+      owner: 'id', keys: Object.freeze(['tocka_skill_02_hit_01', 'tocka_skill_02_buff_02']), at: 'target', holdS: 30,
+    }),
+  }),
 });
 
 /**

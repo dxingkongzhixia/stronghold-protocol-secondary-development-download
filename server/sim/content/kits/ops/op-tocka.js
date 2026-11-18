@@ -48,6 +48,9 @@ export default {
               .slice(0, num(b2.max_target, 1));
             for (const a of allies) {
               placeTrigger(battle, unit, a, { kind: S2, status: 'tocka_s2_mark' });
+              // The official link on the ally: projectile_chr_tocka_s2's hit (tocka_skill_02_hit_01) and the action's
+              // buff loop (tocka_skill_02_buff_02) — the kit's cue is what render/vfx/regulation-fx.js binds them to.
+              battle.fx('allyMark', { x: a.x, y: a.y, id: unit.id, target: a.id });
             }
           },
         },
