@@ -800,34 +800,19 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .dbond-times__row > span { min-width: 0; overflow-wrap: anywhere; }
 
 
-/* 规程 equipment area (js/ui/equipArea.js): a prep drawer with the five slots and the equip target picker */
-.equip { position: absolute; left: .3rem; bottom: 4.6rem; z-index: 12; display: flex; flex-direction: column; align-items: flex-start; gap: .08rem; }
-.equip__toggle { display: flex; align-items: center; gap: .08rem; height: .5rem; padding: 0 .16rem; border: 1px solid var(--line-2); border-radius: .25rem; background: rgba(8, 10, 9, .82); color: var(--text-md); font: inherit; font-size: calc(.17 * var(--t)); font-weight: 700; cursor: pointer; }
-.equip__toggle:hover { color: var(--text-hi); border-color: var(--mint-500, #4ed8af); }
-.equip__toggle .icon { width: .22rem; height: .22rem; }
-.equip.is-open .equip__toggle { color: var(--text-hi); border-color: var(--mint-500, #4ed8af); }
-.equip__panel { width: 3.5rem; max-width: 78vw; padding: .12rem; border: 1px solid var(--line-2); border-radius: .1rem; background: rgba(8, 10, 9, .94); box-shadow: 0 .2rem .5rem rgba(0, 0, 0, .45); }
-.equip__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .08rem; color: var(--text-hi); font-size: calc(.17 * var(--t)); }
-.equip__x { border: 0; background: transparent; color: var(--text-lo); cursor: pointer; }
-.equip__x .icon { width: .22rem; height: .22rem; }
-.equip__slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: .06rem; }
-.equip__slot { aspect-ratio: 1; display: grid; place-items: center; border: 1px dashed var(--line-2); border-radius: .06rem; background: rgba(0, 0, 0, .35); color: var(--text-lo); cursor: pointer; overflow: hidden; }
-.equip__slot.has-item { border-style: solid; background: rgba(255, 255, 255, .04); }
-.equip__slot:disabled { cursor: default; }
-.equip__slot img { width: 100%; height: 100%; object-fit: contain; }
-.equip__targets { display: flex; flex-direction: column; gap: .05rem; max-height: 2.4rem; overflow: auto; }
-.equip__target { display: flex; align-items: center; justify-content: space-between; gap: .1rem; padding: .08rem .12rem; border: 1px solid var(--line); background: transparent; color: var(--text-md); font: inherit; font-size: calc(.16 * var(--t)); cursor: pointer; text-align: left; }
-.equip__target:hover:not(:disabled) { color: var(--text-hi); border-color: var(--mint-500, #4ed8af); }
-.equip__cancel { justify-content: center; color: var(--text-lo); }
-.equip__empty { margin: .06rem 0; color: var(--text-lo); font-size: calc(.15 * var(--t)); }
+/* 规程 equipment area (js/ui/equipRow.js): the five equipment pads are the board's row-8 tile_acbag tiles — these frames
+   sit over them (view.tileScreen, so they follow the camera) so an empty area is still visible; the items themselves are
+   board pieces (render/app.js setPrep `equip`). */
+.eqrow { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.eqrow__slot { position: absolute; transform: translate(-50%, -50%); border: 1px dashed rgba(120, 200, 175, .38); border-radius: .04rem; background: radial-gradient(circle at 50% 45%, rgba(10, 18, 16, .22), rgba(10, 18, 16, 0) 70%); }
+.eqrow__slot.is-filled { border-style: solid; border-color: rgba(150, 230, 200, .55); }
 
-/* the five slots ON the map's equipment row (equipArea.js equipRowRect): the official 规程 lay-out beside the hand row */
-.equip.equip--onrow { gap: 0; align-items: stretch; }
-.equip__row { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; height: 100%; }
-.equip--onrow .equip__slot { width: 100%; height: 100%; aspect-ratio: auto; border: 1px solid transparent; border-radius: .02rem; background: transparent; }
-.equip--onrow .equip__slot.has-item { border-color: var(--line-2); background: rgba(0, 0, 0, .42); }
-.equip--onrow .equip__slot:hover:not(:disabled) { border-color: var(--mint-500, #4ed8af); }
-.equip__panel--pick { position: absolute; left: 0; bottom: calc(100% + .08rem); width: 100%; }
+/* the operator picker a tap on an equipment item opens (g.equip) */
+.eqpick__list { display: flex; flex-direction: column; gap: .06rem; max-height: 3.2rem; overflow: auto; }
+.eqpick__target { display: flex; align-items: center; justify-content: space-between; gap: .1rem; padding: .1rem .12rem; border: 1px solid var(--line); background: transparent; color: var(--text-md); font: inherit; font-size: calc(.17 * var(--t)); cursor: pointer; text-align: left; }
+.eqpick__target:hover:not(:disabled) { color: var(--text-hi); border-color: var(--mint-500, #4ed8af); }
+.eqpick__target:disabled { cursor: default; opacity: .62; }
+.eqpick__empty { margin: .06rem 0; color: var(--text-lo); font-size: calc(.16 * var(--t)); }
 
 
 /* 规程 active strategy skill (js/ui/bandSkill.js): a prep button above the equipment drawer, with its target picker */

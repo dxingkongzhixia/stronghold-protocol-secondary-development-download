@@ -7,7 +7,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadData, setData, resetData } from '../../server/data.js';
 import { makeMatch, DATA } from '../match/harness.js';
-import { versionLevelOptions } from '../../public/js/screens/room.js';
 import { matchInfoModel } from '../../public/js/ui/matchInfo.js';
 import { equipmentReport } from '../../public/js/ui/enemyDrawer.js';
 import { bandSkillChessTargets, bandSkillShopTargets, bandSkillUsesText } from '../../public/js/ui/bandSkill.js';
@@ -22,13 +21,6 @@ const act3 = () => {
   setData(data);
   return data;
 };
-
-test('规程 rooms offer the 20-level ladder + 极速 and the four co-op modes; the default offers none', () => {
-  const data = act3();
-  assert.equal(versionLevelOptions(data.config, 'solo').length, 21);
-  assert.equal(versionLevelOptions(data.config, 'coop').length, 4);
-  assert.equal(versionLevelOptions(DATA.config, 'solo').length, 0);
-});
 
 test('a 规程 match feeds the version models: core bonds, instruction offer, band skill, equipment report', () => {
   const data = act3();

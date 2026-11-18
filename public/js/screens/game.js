@@ -85,7 +85,7 @@ import { useUiTheme } from '../uiTheme.js';
 import { BondStrip, BondPopup } from '../ui/bondStrip.js';
 import { TeamPanel } from '../ui/teamPanel.js';
 import { ShopBar } from '../ui/shopBar.js';
-import { EquipArea } from '../ui/equipArea.js';
+import { EquipRow, EquipPicker, equipItemOf } from '../ui/equipRow.js';
 import { BandSkill } from '../ui/bandSkill.js';
 import { selectedBondTimers } from '../ui/bondTimers.js';
 import { DetailPanel, resolveDetail } from '../ui/detailPanel.js';
@@ -289,6 +289,8 @@ function MatchScreen() {
   const [drag, setDrag] = useState(null);                // { uid, kind, id } while dragging a piece
   const [facing, setFacing] = useState(null);            // direction step: { uid, piece, row, col, grid, name }
   const [sel, setSel] = useState(null);                  // tapped own piece: { uid }
+  const [equipPick, setEquipPick] = useState(null);      // 规程: uid of the equipment item whose operator picker is open
+  const [equipBusy, setEquipBusy] = useState(false);
   const [selBusy, setSelBusy] = useState(false);
   const pieceActionBusy = useRef(false);
   const buyPending = useRef(new Set());
@@ -580,7 +582,12 @@ function MatchScreen() {
         setHud(null);
       }
       if (priv) {
-        view.setPrep(priv, { editable, canPlace: (uid, target) => canPlace(live.current.placeCtx, uid, target).ok });
+        view.setPrep(priv, {
+          editable,
+          canPlace: (uid, target) => canPlace(live.current.placeCtx, uid, target).ok,
+          // 规程's equipment is its own 5-slot area, drawn on row 8's equipment pads; 盟约 (equipHandSize 0) passes null
+          equip: (gd.config?.economy?.equipHandSize ?? 0) > 0 ? priv.equipHand : null,
+        });
         // stored facings (m.private board `dir`); the piece in the direction step shows the wheel's preview instead
         syncPieceDirs(view, priv, live.current.facing?.uid ?? null);
       }
@@ -1305,6 +1312,14 @@ function MatchScreen() {
         // a tap selects an own piece (underframe + range); right-click / long-press only opens its detail card. A tap on
         // the piece that was selected when the press started deselects it.
         const L = live.current;
+        // 规程: tapping an item of the equipment row asks which operator gets it (g.equip); dragging the item onto an
+        // operator keeps working through pieceDrop, and a right-click / long-press still opens its detail card
+        if (!e.detail && e.button !== 2 && L.editable && equipItemOf(L.priv, e.uid)) {
+          setEquipPick(e.uid);
+          setSel(null);
+          setDetail(null);
+          return;
+        }
         if (e.detail || e.button === 2 || !L.editable || L.facing) return;
         const wasSel = pressSel.current === e.uid;
         pressSel.current = null;
@@ -1368,6 +1383,17 @@ function MatchScreen() {
     if (!still) closeReplace(null);
   }, [replace, placeCtx, editable]);
   useEffect(() => () => { const cur = replaceRef.current; replaceRef.current = null; try { cur?.resolve(null); } catch { /* ignore */ } }, []);
+
+  // ---- 规程 equipment picker (ui/equipRow.js): the item stayed in the area while its picker is open --------------------
+  useEffect(() => { if (equipPick != null && !equipItemOf(priv, equipPick)) setEquipPick(null); }, [priv, equipPick]);
+  const equipTo = useCallback(async (target) => {
+    if (!equipPick || !target || equipBusy) return;
+    setEquipBusy(true);
+    const ok = await actions.equip(equipPick, target.uid);
+    setEquipBusy(false);
+    if (ok) setEquipPick(null);
+    else audio.sfx('error', { volume: 0.5 });
+  }, [equipPick, equipBusy]);
 
   // ---- solo pause (g.pause; m.public.paused) ---------------------------------------------------------------------------
   const togglePause = useCallback(async (on) => {
@@ -1741,6 +1767,10 @@ function MatchScreen() {
   // the temp overflow row holds pieces (user playtest #3 item 3): framed and labelled on the own prep board
   const temp = tempInfo(priv);
   const tempNotice = temp.count > 0 && !!view && viewKind !== 'loading' && showPrep && alive && !pen && !sp;
+  // 规程's equipment area (row 8's five tile_acbag pads): its slot frames stay visible even when it is empty, so the
+  // area can be found; the items themselves are board pieces (render/app.js setPrep `equip`)
+  const equipArea = (gd.config?.economy?.equipHandSize ?? 0) > 0 && Array.isArray(priv?.equipHand) ? priv.equipHand : null;
+  const equipShown = !!equipArea && !!view && viewKind !== 'loading' && showPrep && alive && !pen && !sp && editable && !watchingOther;
   // the ready button shows why it is refused under it (ui/hud.js ReadyToggle): the effects column moves down a line
   const readyWhy = phase === PHASE.PREP && alive && !priv?.ready && (hasPersonalChoice || temp.count > 0);
   // the frame the panels are laid out in: the HUD layer (client px; inside the safe-area insets of a notched phone),
@@ -1849,7 +1879,7 @@ function MatchScreen() {
         ${spectator ? null : html`<${Button} size="sm" variant="primary" icon="back" onClick=${() => watchPlayer({ playerId: myId })}>${t('返回自己')}<//>`}
       </div>` : null}
 
-      ${phase === PHASE.PREP && editable && !watchingOther ? html`<${EquipArea} priv=${priv} gd=${gd} editable=${editable} view=${view} stage=${ownStage} />` : null}
+      ${equipShown ? html`<${EquipRow} view=${view} area=${equipArea} />` : null}
       ${phase === PHASE.PREP && editable && !watchingOther ? html`<${BandSkill} priv=${priv} gd=${gd} editable=${editable} />` : null}
 
       ${showShop ? html`<${ShopBar} priv=${priv} editable=${editable} collapsed=${barCollapsed} refreshBusy=${refreshBusy} onCollapse=${setCollapsed}
@@ -1949,6 +1979,9 @@ function MatchScreen() {
       grid=${facing.grid} healing=${facing.healing} name=${facing.name} onPreview=${previewFacing} onCommit=${commitFacing} onCancel=${cancelFacing} />` : null}
 
     ${paused ? html`<${PausedOverlay} canResume=${solo} busy=${pauseBusy} onResume=${() => togglePause(false)} onExit=${() => setExitOpen(true)} />` : null}
+
+    ${equipPick != null ? html`<${EquipPicker} open=${true} itemUid=${equipPick} priv=${priv} gd=${gd} busy=${equipBusy}
+      onPick=${equipTo} onClose=${() => setEquipPick(null)} />` : null}
 
     ${replace ? html`<${EquipReplaceDialog} request=${replace.request} getItem=${gd.item}
       onConfirm=${(uid) => closeReplace(uid)} onCancel=${() => closeReplace(null)} />` : null}

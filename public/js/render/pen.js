@@ -84,9 +84,7 @@ export function penZones(stage) {
       const def = g ? legend[g] : null;
       if (rows) {
         if (!def) continue;
-        // the pen's gates are on the rect's left edge: 盟约's (15,7) / (18,7), 规程's (9,12) / (12,12). A start tile
-        // elsewhere in the rect is the 联防 lane's gate, not the pen's.
-        if (def.tileKey === 'tile_start') { if (c === rect.c0) anchors.push([r, c]); continue; }
+        if (def.tileKey === 'tile_start') { anchors.push([r, c]); continue; }
         if (def.bb && def.bb.previewNotAlloed) continue;
         if (def.passable && def.passable !== 'ALL') continue;
         cand.push([r, c]);
@@ -98,20 +96,7 @@ export function penZones(stage) {
       }
     }
   }
-  if (!anchors.length) {
-    // A custom rect whose cells carry no gates — 规程's pen beside the equipment row. It is the same 5×7 block as
-    // 盟约's pen: gates on the left edge of the second and last rows, the third row not allowed. Those cells are the
-    // 联防 partner's lane in the stage grid, so the block's shape comes from the rect, not from the stage's glyphs.
-    anchors.push([rect.r0 + 1, rect.c0], [rect.r1, rect.c0]);
-    cand.length = 0;
-    for (let r = rect.r0; r <= rect.r1; r++) {
-      for (let c = rect.c0; c <= rect.c1; c++) {
-        if (c === rect.c0 && (r === rect.r0 + 1 || r === rect.r1)) continue;
-        if (r === rect.r0 + 2) continue;
-        cand.push([r, c]);
-      }
-    }
-  }
+  if (!anchors.length) anchors.push([rect.r0 + 1, rect.c0], [rect.r1, rect.c0]);
   anchors.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const zones = anchors.map((a) => ({ anchor: a, tiles: [] }));
   const dist = (a, t) => Math.abs(a[0] - t[0]) + Math.abs(a[1] - t[1]);

@@ -1,18 +1,27 @@
-// test/ui/equip-area.test.js — 规程's equipment drawer (public/js/ui/equipArea.js): its targets are the board / hand
-// operators with a free equipment slot (g.equip), and the drawer renders nothing without m.private.equipHand.
+// test/ui/equip-area.test.js — 规程's equipment area: it is drawn on row 8's five tile_acbag tiles (the pads 盟约 uses
+// for its temp row), so its pads are GEO.TEMP_*; the picker's targets are the board / hand operators with a free slot
+// (g.equip).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { equipTargets, equipRowRect } from '../../public/js/ui/equipArea.js';
+import { equipTargets, equipItemOf, EQUIP_SLOT_COLS } from '../../public/js/ui/equipRow.js';
+import { GEO } from '../../shared/constants.js';
 
 const op = (uid, items = 0, kind = 'chess') => ({ uid, kind, id: 'c' + uid, items: Array.from({ length: items }, (_, i) => ({ uid: uid * 10 + i, id: 'item' })) });
 
-test('the equipment row rect: the five tile_acbag tiles, in the view’s client space', () => {
-  const rows = Array.from({ length: 19 }, (_, r) => (r === 8 ? '####AAAAA###fffffff##' : '#'.repeat(21)));
-  const stage = { rows, tiles: { A: { tileKey: 'tile_acbag' }, '#': { tileKey: 'tile_forbidden' }, f: { tileKey: 'tile_floor' } } };
-  const view = { tileScreen: (r, c) => ({ x: 100 + c * 10, y: 200 + r * 10, s: 10 }) };
-  assert.deepEqual(equipRowRect(stage, view), { left: 135, top: 275, width: 50, height: 10, row: 8, c0: 4, c1: 8 });
-  assert.equal(equipRowRect(stage, null), null, 'no view: the fallback drawer keeps its old place');
-  assert.equal(equipRowRect({ rows, tiles: { A: { tileKey: 'tile_road' } } }, view), null, 'no equipment tiles');
+test('the five equipment pads are row 8, cols 4–8 (the temp row geometry)', () => {
+  assert.equal(GEO.TEMP_ROW, 8);
+  assert.deepEqual([...EQUIP_SLOT_COLS], [4, 5, 6, 7, 8]);
+  assert.equal(EQUIP_SLOT_COLS[0], GEO.TEMP_C0);
+  assert.equal(EQUIP_SLOT_COLS.length, GEO.TEMP_SIZE);
+});
+
+test('the equipment item of a uid (规程 only; 盟约 has an empty area)', () => {
+  const priv = { equipHand: [null, { uid: 7, kind: 'item', id: 'item_x' }, null, null, null] };
+  assert.equal(equipItemOf(priv, 7)?.uid, 7);
+  assert.equal(equipItemOf(priv, 8), null);
+  assert.equal(equipItemOf(priv, '7'), null);
+  assert.equal(equipItemOf({}, 7), null);
+  assert.equal(equipItemOf(null, 7), null);
 });
 
 test('targets: board and hand operators with a free slot, in board-then-hand order', () => {

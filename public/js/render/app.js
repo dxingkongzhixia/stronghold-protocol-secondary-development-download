@@ -162,7 +162,7 @@ import { ensurePixi } from './app/pixi.js';
 import { advanceEffectClock } from './app/playback.js';
 import { pieceDirOf, pickUnitOf } from './app/pick.js';
 import { CAMERA_MS, BOARD3D_STABLE_MS, BOARD3D_RETRY_MS, PEN_CAMERA_MS, RANGE_GROUPS, LEADER_HIT_STYLE, DRAG_HOLD_TILES, CHAIN_KINDS, DROP_PENDING_MS, DEPLOY_REPLAY_MS } from './app/tune.js';
-import { boardPreference, switchableBox, bandFor, fieldRows, boardArea, viewKind, restView, flightView, fullField } from './app/view.js';
+import { boardPreference, switchableBox, bandFor, fieldRows, boardArea, viewKind, restView, flightView } from './app/view.js';
 import { renderInfo, FORCED_EXIT, showsDeathFx } from './app/info.js';
 import { resolveAssets, makeData, withTimeout, BOARD_RES, qualityResolution, loadRenderScale, releaseGl } from './app/host.js';
 import { t } from '../../../shared/i18n.js';
@@ -193,6 +193,10 @@ export async function createFieldView(host, options = {}) {
   signal?.throwIfAborted();
   const assets = resolveAssets(opts.assets);
   const data = makeData(opts.data);
+  // 规程 (act3autochess): one battlefield of both halves plus the official preview pen inside the grid (rows 14–18);
+  // 盟约 keeps its own half + the pen behind the upper gate. Read from the stage on screen (its id carries the version)
+  // or the explicit option.
+  const isRegulation = (st) => !!opts.regulation || /^act3autochess_/.test(st?.id || '');
   const settings = { damageNumbers: true, officialDamageNumbers: false, ammoCount: false, quality: 'high', ...(opts.settings || {}) };
   // the 3D board (three.js + the official art) loads in parallel with everything else
   const boardPref = boardPreference(opts.board);
@@ -551,7 +555,7 @@ export async function createFieldView(host, options = {}) {
       board3d = b;
       tiles.setExternal(true);
       backdrop.visible = false;
-      b.setArea(boardArea(viewKind(camKind, camOpts), stageRec));
+      b.setArea(boardArea(viewKind(camKind, camOpts), isRegulation(stageRec)));
       if (stageRec) { b.setStage(stageRec); useOfficialScene(stageRec); }
       b.setFocus(camRect());
       b.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null);
@@ -670,12 +674,11 @@ export async function createFieldView(host, options = {}) {
 
   function camRect() {
     const k = viewKind(camKind, camOpts);
-    const full = fullField(stageRec);
     if (k === 'pen') return { ...penZones(stageRec).rect };
-    // 规程's field is one board with both halves (the right lane is not a teammate's) and its pen outside the grid:
-    // frame the whole battlefield + pen in prep (the official screen), the two halves in battle. The game asks for the
-    // 盟约 GEO.NORMAL_RECT; the full stage overrides it.
-    if (full && (k === 'prep' || k === 'normal')) return { r0: k === 'prep' ? 7 : 9, r1: 12, c0: 0, c1: k === 'prep' ? 27 : 20 };
+    // 规程: prep frames the whole battlefield (both halves) and the preview pen above it; a battle frames both halves.
+    // (盟约 keeps its own half + the pen behind the upper gate.)
+    if (isRegulation(stageRec) && k === 'prep') return { r0: 6, r1: 18, c0: 0, c1: 20 };
+    if (isRegulation(stageRec) && k === 'normal') return { r0: 9, r1: 12, c0: 0, c1: 20 };
     // prep lights the bench (hand row 7 / temp row 8) with the field, like the official prep view
     if (camOpts.rect) { const r = normRect(camOpts.rect); return k === 'prep' ? { ...r, r0: Math.min(r.r0, GEO.HAND_ROW) } : r; }
     // the boss round's prep lights the whole boss field: the pair partner's half is shown with its pieces (item 51)
@@ -686,17 +689,16 @@ export async function createFieldView(host, options = {}) {
   function targetCamera(kind, o) {
     const sz = size();
     const k = kind === 'hidden' ? 'boss' : (['prep', 'normal', 'unite', 'boss', 'bossPrep', 'pen'].includes(kind) ? kind : 'normal');
-    const full = fullField(stageRec);
-    let rect = (full && (k === 'prep' || k === 'normal')) ? camRect() : o.rect ? normRect(o.rect) : k === 'pen' ? camRect() : null;
+    const full = isRegulation(stageRec) && (k === 'prep' || k === 'normal');
+    let rect = full ? camRect() : o.rect ? normRect(o.rect) : k === 'pen' ? camRect() : null;
     if (k === 'prep') rect = rect ? { ...rect, r0: Math.min(rect.r0, GEO.HAND_ROW) } : null;
-    const fitFull = full && (k === 'prep' || k === 'normal');
     // official configBlackBoard framing (render/projection.js presetCamera); the padding only matters for the
     // fitted fallback (custom rects, portrait viewports); a prep camera keeps the bench and the field clear of the HUD
     // — `shop: false` (the folded shop, public issue #5) = the official shop-collapsed camera, clear of the folded
     // shop's HUD band (re-evaluated on resize: camOpts keep the flag)
     const vk = viewKind(kind, o); // (a 'prep' camera on the boss rows = the Final Assault prep)
     return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || defaultPadding(k, sz) }, {
-      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit || fitFull, config: stageRec?.config || null,
+      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit || full, config: stageRec?.config || null,
       hud: hudBands(vk, sz, { shop: o.shop !== false }), zoom: o.zoom ?? mobileZoom(),
     });
   }
@@ -724,7 +726,7 @@ export async function createFieldView(host, options = {}) {
     if (vk === 'prep') setPrepField(IDENTITY);
     else if (vk === 'bossPrep') setPrepField(bossPrepField(camOpts.side === 'R' ? 'R' : 'L'));
     const target = targetCamera(camKind, camOpts);
-    const rest = restView(vk, stageRec);
+    const rest = restView(vk, isRegulation(stageRec));
     const focus = camRect();
     board3d?.setFocus(focus);
     camMs = Number.isFinite(o.ms) && o.ms >= 0 ? o.ms : (vk === 'pen' || prevView === 'pen' ? PEN_CAMERA_MS : CAMERA_MS);
@@ -741,7 +743,7 @@ export async function createFieldView(host, options = {}) {
       camT0 = performance.now();
       // keep both fields drawn (and lit) while the camera flies between them; the pen as flightView says (a flight from
       // the prep camera into a battle drops it at once)
-      const fly = flightView(prevView, vk, stageRec);
+      const fly = flightView(prevView, vk, isRegulation(stageRec));
       tiles.setView(fly.band, focus, fly.field);
       board3d?.setArea(fly.area);
       setPenHidden(!fly.pen);
@@ -911,10 +913,11 @@ export async function createFieldView(host, options = {}) {
     drag.setCanPlace(canPlaceFn ? adaptCanPlace(canPlaceFn) : null);
     drag.setEditable(editable);
     const list = [];
-    const addList = (arr, area) => {
+    const addList = (arr, area, skip = null) => {
       if (!Array.isArray(arr)) return;
       arr.forEach((pc, i) => {
         if (area === 'temp' && i >= GEO.TEMP_SIZE) return; // Hidden overflow waits for a visible slot.
+        if (skip && skip.has(i)) return;
         if (!pc || typeof pc !== 'object' || !Number.isInteger(pc.uid)) return;
         if (area === 'board') {
           if (!Number.isInteger(pc.row) || !Number.isInteger(pc.col)) return;
@@ -928,7 +931,17 @@ export async function createFieldView(host, options = {}) {
     ownPen = Array.isArray(src.nextEnemies) ? src.nextEnemies : null;
     setPenList(ownPen);
     addList(src.hand, 'hand');
-    addList(src.temp, 'temp');
+    // 规程 keeps equipment in its own 5-slot area (m.private.equipHand) and the official equipment tiles are row 8's
+    // five tile_acbag pads (cols 4–8), the same pads 盟约 uses for its temp row; so the equipment is drawn by the board
+    // there (`opts.equip`, passed only when the version has the area). A piece that overflows into the temp row takes
+    // the pads the equipment leaves free; 盟约 passes no `equip` and keeps its temp row unchanged.
+    const equip = Array.isArray(o.equip) ? o.equip : null;
+    if (equip) {
+      const used = new Set();
+      addList(equip, 'temp');
+      equip.forEach((pc, i) => { if (pc) used.add(i); });
+      addList(src.temp, 'temp', used);
+    } else addList(src.temp, 'temp');
     addList(src.board, 'board');
     const seen = new Set();
     const prevBoard = new Set(prepPieces.filter((p) => p.area === 'board').map((p) => p.uid));

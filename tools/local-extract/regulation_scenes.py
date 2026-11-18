@@ -174,28 +174,6 @@ def _nearest_delta(piece, y):
     return shifts[min(shifts, key=lambda src: (abs(y - src), src))]
 
 
-# sub_01 (the player's block) carries the enemy preview pen beside the equipment row: piece rows 1–5, cols 12–18.
-# The 19×21 grid uses those cells for the 联防 partner's lane, so the owner test would drop the pen — but the pen is
-# the player's own block, not a duplicate of the lane, and the lane's deck covers it in the 联防 view. Keep it.
-SIDE_PEN = (1, 1, 5, 12, 18)  # piece, row0, row1, col0, col1 (piece-local, inclusive)
-# The 19×21 grid's cols 12–18 are the 联防 right lane, so the pen is drawn outside the board (cols 21–27): the stage's
-# enemy_place_rect is ((8,21),(12,27)) and the platform's x moves by this many columns.
-SIDE_PEN_DX = 9
-# Board-space rect of that outside pen (rows, cols): tall scenery overlapping it is dropped so the shifted platform is
-# not buried under the outworld ice; the ground below FLOOR_Z stays (it fills the gap around the platform).
-SIDE_PEN_RECT = (8, 12, 21, 27)
-# The shifted platform sits just above that ground (the ice ground's floor is at ~0.002).
-SIDE_PEN_DZ = 0.02
-
-
-def _in_side_pen(piece, xs, ys):
-    """Is every vertex inside sub_01's preview pen block (a little slack for its border)?."""
-    p, r0, r1, c0, c1 = SIDE_PEN
-    if piece != p:
-        return False
-    return all(c0 - 0.5 <= x <= c1 + 0.5 and r0 - 0.5 <= y <= r1 + 0.5 for x, y in zip(xs, ys))
-
-
 def regulation_delta(piece, x, y):
     """Board-y shift for a piece-local point, or None when that point is not drawn.
 
@@ -266,17 +244,6 @@ def _group_for(xs, ys):
     return ''
 
 
-def _overlaps_pen(xs, ys):
-    """Does a board-space triangle overlap the outside preview pen (SIDE_PEN_RECT)?"""
-    r0, r1, c0, c1 = SIDE_PEN_RECT
-    return max(xs) >= c0 - 0.5 and min(xs) <= c1 + 0.5 and max(ys) >= r0 - 0.5 and min(ys) <= r1 + 0.5
-
-
-def _boss_pen_row(piece, y):
-    """sub_03 rows 7–11 are the boss field's own pen; 3 期's preview is the side pen, so that block is not built."""
-    return piece == 3 and 7 <= cell_index(y) <= 11
-
-
 def place_triangle(piece, xs, ys, zs=None):
     """(delta, group) for one piece-local triangle, or None to drop it.
 
@@ -285,18 +252,10 @@ def place_triangle(piece, xs, ys, zs=None):
     """
     if len(xs) != 3 or len(ys) != 3:
         raise ValueError('a triangle has three vertices')
-    if _in_side_pen(piece, xs, ys):
-        return PIECE_SHIFT[1][1], ''
-    if _boss_pen_row(piece, sum(ys) / 3):
-        return None
     delta = regulation_delta(piece, sum(xs) / 3, sum(ys) / 3)
     if delta is None:
         return None
     bys = [y + delta for y in ys]
-    # the tall outworld scenery overlapping the outside pen is cut away: the shifted pen platform is there and must show
-    # (the pen camera frames that area); the ground under FLOOR_Z stays so the platform is not an island in the black
-    if _overlaps_pen(xs, bys) and (zs is None or max(zs) >= FLOOR_Z):
-        return None
     if _overlaps_foreign(piece, xs, bys):
         return None
     return delta, _group_for(xs, bys)
@@ -372,12 +331,8 @@ def place_floor_triangle(piece, xs, ys, zs):
     if kept is not None:
         return kept
     cx, cy = sum(xs) / 3, sum(ys) / 3
-    if _boss_pen_row(piece, cy):
-        return None
     delta = _nearest_delta(piece, cy)
     bys = [y + delta for y in ys]
-    if _overlaps_pen(xs, bys) and max(zs) >= FLOOR_Z:
-        return None
     if _covers_foreign_board(piece, xs, bys, zs):
         return None
     return delta, _group_for(xs, bys)
@@ -887,15 +842,13 @@ def _chunks_of_piece(piece, objects, log, stage_id, material_info):
                 if surface:
                     stats['water_strict'] += 1
                 delta, group = placed
-                dx = SIDE_PEN_DX if _in_side_pen(piece, xs, ys) else 0
-                dz = SIDE_PEN_DZ if _in_side_pen(piece, xs, ys) else 0
                 stats['kept'] += 1
                 key = (name, index, group)
                 chunk = chunks.setdefault(key, {'pos': [], 'uv': [], 'uv1': [], 'nrm': [], 'col': [], 'idx': []})
                 base = len(chunk['pos'])
                 for i in range(3):
                     x, y, z = pts[i]
-                    chunk['pos'].append((x + dx, y + delta, z + dz))
+                    chunk['pos'].append((x, y + delta, z))
                     chunk['uv'].append(uvs[i])
                     chunk['uv1'].append(lms[i])
                     chunk['nrm'].append(nrms[i])
