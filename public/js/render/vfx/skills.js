@@ -234,6 +234,10 @@
 // in index.json); hit groups beyond the last repeat the last; passive skills' loops follow the deploy.
 
 /** Torappu.Battle.AbilityStandard/Event (DESIGN §33.12): index.json's skill uses write the names, units' Emit rows the numbers. */
+// 规程 (act3autochess) fork-only additions: the mainline has no act3 roster. The roster's generated plans already play its
+// official prefabs; these two tables add the kit fx a plan does not place, and hide the procedural cue where one does.
+import { REGULATION_FX_BINDINGS, REGULATION_FX_COVER, REGULATION_SKILL_BINDINGS } from './regulation-fx.js';
+
 export const ABILITY_EVENTS = Object.freeze({
   ON_ATTACHED: 0, ON_DETACHED: 1, ON_CAST_START: 2, ON_CAST_END: 3, ON_SPELL_ON: 4, ON_SPELL_END: 5, ON_ATTACK_FINISH: 6,
   ON_ATTACK_CHECK_POINT: 7, ON_OVERLOAD: 8,
@@ -1512,6 +1516,8 @@ export const FX_BINDINGS = Object.freeze({
     wave: binding({ owner: 'id', keys: ['oxi_skill_03_trail_01'], at: 'point', move: true, during: true }),
     blast: binding({ owner: 'id', keys: ['oxi_skill_03_hit_01'], at: 'point', oneshot: true, during: true }),
   }),
+  // 规程 operators (public/js/render/vfx/regulation-fx.js)
+  ...REGULATION_SKILL_BINDINGS,
 });
 
 /**
@@ -1597,6 +1603,8 @@ export const FX_COVER = Object.freeze({
   // slime there; the client shows no area at her (0.3.1)
   skchr_chen2_2: Object.freeze(['zone']),
   skchr_chen2_3: Object.freeze(['zone']),
+  // 规程 operators (public/js/render/vfx/regulation-fx.js)
+  ...REGULATION_FX_COVER,
 });
 
 /** Whether a skill's official effects stand for a kit fx kind (FX_COVER). */
@@ -1697,6 +1705,8 @@ export const ENEMY_FX_BINDINGS = Object.freeze({
     telegraph: ebind({ xkind: 'spin', owner: 'id', modeLoops: 'RotateEffect', bbKey: 'EndRotate.rotate_duration', holdS: 60 }),
     phase: ebind({ xkind: 'spinStop', owner: 'id', endMode: true }),
   }),
+  // 规程 leaders / special enemies (public/js/render/vfx/regulation-fx.js)
+  ...REGULATION_FX_BINDINGS,
 });
 
 /**

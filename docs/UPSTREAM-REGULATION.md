@@ -259,7 +259,12 @@ blackboard 后，先处理了这几类：
 
 - 规程 golden 已归因后重算：默认 golden 只有 `diy` 变（冻河 S3 的目标范围）；规程为 `roster` / `bonds` / `fields` / `matches`。
 - [x] 官方 prefab 列表（2026-11-18）：本机 `public/assets/local/fx/index.json` 已与上游官方索引合并（本树 5111 + 主线 453 = **5564** 个 prefab，与 `fx/prefabs/` 文件一一对应）；`data/local-fx.json`（gitignore，本机）由合并后的索引重建（11011 项：5564 prefab / 3950 贴图 / 1495 网格），`test/local-extract-fx.test.js` 34/34。主线索引里 `enemy_9027_acfnca` 的 `HitPoint` 在脚底（y=-0.78，不符合本树“相对脚底”不变量），只去掉该点，其余锚点保留。
-- [ ] 官方特效映射表：`public/js/render/fx/official.js` 补 械 / 冲击之械 / 后兽 / 茧 / 鳍 / 链术师 / 轰击者 / 新增干员 的事件表（prefab 列表已就位，见上条）
+- [x] **官方特效映射表**（2026-11-18）：新增 `public/js/render/vfx/regulation-fx.js`，与 `render/vfx/skills.js` 的 `FX_BINDINGS` / `FX_COVER` / `ENEMY_FX_BINDINGS` 合并。覆盖 械 / 冲击之械 / 后兽 / 茧 / 鳍 / 链术师 / 轰击者 / 15 名新增干员：
+  - `REGULATION_FX_ROSTER`：这 8 类敌人（含 `_2`）在官方索引里实际使用的 prefab 键（普通攻击 / 技能 / 天赋 / 投射物），由 `test/render/vfx-regulation.test.js` 对着提交的 `fx/index.json` 钉住；
+  - `REGULATION_FX_BINDINGS`：后兽的 `phase[form2]` 计时器切形态不是 `castSlot`，绑到官方切换片段 `enemy_dyjsww_die_01`；
+  - `REGULATION_SKILL_BINDINGS`：风丸 S2 召唤 `<替身>` 绑到 `kazema_skill_02_start`（token 没有 `startEffect`，技能计划也没有 start 行）；
+  - `REGULATION_FX_COVER`：瑰盐 S2 `saltWard`、凯瑟琳 S2 `overclock`、焰尾 S1/S2 `dp`、S2 `aoe`、S3 `flame` —— 这些技能的计划已经播放官方 loop / start，程序化提示不再重复。
+  - 其余单位（械 / 冲击之械 / 茧 / 鳍 / 链术师 / 轰击者 / 大多数新增干员）的普通攻击、技能、天赋已经由索引计划自动播放，不需要额外表项。
 
 
 **镜波修正**：主线把「被击倒后使周围法抗最低的**敌人**法抗 +10」理解为对**敌方单位**生效（`reg:res`），
@@ -269,8 +274,7 @@ blackboard 后，先处理了这几类：
 ### 待办（后续做）
 
 - [ ] 后兽 `SummonBranchEnemy`（分支增援）：主线 `kitTail` 也没有实现，需按 `enemy_2123_dyjsww` 的技能数据补。
-- [ ] act3 boss 官方特效映射：`public/js/render/fx/official.js` 补 械 / 冲击之械 / 后兽 / 茧 / 鳍 的事件表
-      （资产与 `local-fx.json` 已就位；主线没有对应实现可抄）。
+- [x] act3 boss 官方特效映射：`public/js/render/vfx/regulation-fx.js`（械 / 冲击之械 / 后兽 / 茧 / 鳍 等；见 §4 的映射表条目）。
 - [ ] 茧【淤困捕食】改为每侧随机 2 个（目前是每侧血最高，且总数 4）。
 
 回归：`node --test test/versions-bosses.test.js test/versions-cocoon.test.js test/content/enemies_bosses.test.js`（含新增的 50% 阈值、护甲形态、影役光环、镜波/镜眼用例）。
