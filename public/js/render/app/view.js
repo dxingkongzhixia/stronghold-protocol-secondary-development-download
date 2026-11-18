@@ -40,29 +40,12 @@ const BATTLE_VIEWS = new Set(['normal', 'unite', 'boss']);
 export const showsPen = (vk) => PEN_VIEWS.has(vk);
 
 /**
- * 规程 (act3autochess) builds one battlefield per player: both halves in every round (the right lane is the player's
- * own 联防 lane, not a teammate's field) plus the official preview pen at rows 14–18, cols 7–13 — the 5×7 block the
- * level's sub_03 piece carries (rows 7–11), not a side pen outside the grid.
- */
-const REG_PREP_AREA = Object.freeze([
-  Object.freeze({ r0: 6, r1: 13, c0: 0, c1: 20 }),
-  Object.freeze({ r0: 13, r1: 18, c0: 6, c1: 14 }),
-]);
-const REG_FIELD_AREA = Object.freeze([Object.freeze({ r0: 6, r1: 13, c0: 0, c1: 20 })]);
-
-/**
  * 3D area built for a view kind (viewKind): the prep and pen cameras build the field with the enemy preview pen block
  * (rows 13–18, `showsPen`); the battle and 联防 cameras the field alone, with its separator rows 6 and 13 (the row-13
  * devices blow into the field: act2 m01's blowers, user playtest #5 item 6; the boss field's row-6 devices are drawn
  * with the boss field only — board3d/layout.js stageDevices); the boss kinds build the boss field.
- * 规程 (`regulation`) builds both halves, and the pen with the prep / pen cameras.
  */
-export function boardArea(vk, regulation = false) {
-  if (regulation) {
-    if (vk === 'pen' || vk === 'prep') return REG_PREP_AREA;
-    if (vk === 'normal' || vk === 'unite') return REG_FIELD_AREA;
-    return areaFor(vk);
-  }
+export function boardArea(vk) {
   if (vk === 'pen' || vk === 'prep') return AREAS.normal;
   if (vk === 'normal') return AREA_NO_PEN.normal.length ? AREA_NO_PEN.normal : AREAS.normal;
   if (vk === 'unite') return AREA_NO_PEN.unite.length ? AREA_NO_PEN.unite : AREAS.unite;
@@ -105,8 +88,8 @@ export const leaderShown = (vk, prevVk = null) => vk === 'bossPrep' || prevVk ==
  * board's active field rows (`field`), and whether the pen's figures (`pen`) and the boss-prep leader (`leader`) show.
  * @param {string} vk
  */
-export function restView(vk, regulation = false) {
-  return { area: boardArea(vk, regulation), band: bandFor(vk), field: fieldRows(vk), pen: showsPen(vk), leader: leaderShown(vk) };
+export function restView(vk) {
+  return { area: boardArea(vk), band: bandFor(vk), field: fieldRows(vk), pen: showsPen(vk), leader: leaderShown(vk) };
 }
 
 /**
@@ -116,9 +99,9 @@ export function restView(vk, regulation = false) {
  * @param {string} prevVk
  * @param {string} vk
  */
-export function flightView(prevVk, vk, regulation = false) {
+export function flightView(prevVk, vk) {
   const pen = penShown(vk, prevVk);
-  const from = restView(prevVk, regulation), to = restView(vk, regulation);
+  const from = restView(prevVk), to = restView(vk);
   const noPen = (r) => [r[0], Math.min(r[1], 13)];
   const fromArea = pen ? from.area : from.area.filter((a) => a.r1 <= 13);
   const fb = pen ? from.band : noPen(from.band), ff = pen ? from.field : noPen(from.field);

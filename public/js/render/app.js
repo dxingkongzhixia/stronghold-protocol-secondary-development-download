@@ -193,10 +193,6 @@ export async function createFieldView(host, options = {}) {
   signal?.throwIfAborted();
   const assets = resolveAssets(opts.assets);
   const data = makeData(opts.data);
-  // 规程 (act3autochess): one battlefield of both halves plus the official preview pen inside the grid (rows 14–18);
-  // 盟约 keeps its own half + the pen behind the upper gate. Read from the stage on screen (its id carries the version)
-  // or the explicit option.
-  const isRegulation = (st) => !!opts.regulation || /^act3autochess_/.test(st?.id || '');
   const settings = { damageNumbers: true, officialDamageNumbers: false, ammoCount: false, quality: 'high', ...(opts.settings || {}) };
   // the 3D board (three.js + the official art) loads in parallel with everything else
   const boardPref = boardPreference(opts.board);
@@ -555,7 +551,7 @@ export async function createFieldView(host, options = {}) {
       board3d = b;
       tiles.setExternal(true);
       backdrop.visible = false;
-      b.setArea(boardArea(viewKind(camKind, camOpts), isRegulation(stageRec)));
+      b.setArea(boardArea(viewKind(camKind, camOpts)));
       if (stageRec) { b.setStage(stageRec); useOfficialScene(stageRec); }
       b.setFocus(camRect());
       b.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null);
@@ -675,10 +671,6 @@ export async function createFieldView(host, options = {}) {
   function camRect() {
     const k = viewKind(camKind, camOpts);
     if (k === 'pen') return { ...penZones(stageRec).rect };
-    // 规程: prep frames the whole battlefield (both halves) and the preview pen above it; a battle frames both halves.
-    // (盟约 keeps its own half + the pen behind the upper gate.)
-    if (isRegulation(stageRec) && k === 'prep') return { r0: 6, r1: 18, c0: 0, c1: 20 };
-    if (isRegulation(stageRec) && k === 'normal') return { r0: 9, r1: 12, c0: 0, c1: 20 };
     // prep lights the bench (hand row 7 / temp row 8) with the field, like the official prep view
     if (camOpts.rect) { const r = normRect(camOpts.rect); return k === 'prep' ? { ...r, r0: Math.min(r.r0, GEO.HAND_ROW) } : r; }
     // the boss round's prep lights the whole boss field: the pair partner's half is shown with its pieces (item 51)
@@ -689,8 +681,7 @@ export async function createFieldView(host, options = {}) {
   function targetCamera(kind, o) {
     const sz = size();
     const k = kind === 'hidden' ? 'boss' : (['prep', 'normal', 'unite', 'boss', 'bossPrep', 'pen'].includes(kind) ? kind : 'normal');
-    const full = isRegulation(stageRec) && (k === 'prep' || k === 'normal');
-    let rect = full ? camRect() : o.rect ? normRect(o.rect) : k === 'pen' ? camRect() : null;
+    let rect = o.rect ? normRect(o.rect) : k === 'pen' ? camRect() : null;
     if (k === 'prep') rect = rect ? { ...rect, r0: Math.min(rect.r0, GEO.HAND_ROW) } : null;
     // official configBlackBoard framing (render/projection.js presetCamera); the padding only matters for the
     // fitted fallback (custom rects, portrait viewports); a prep camera keeps the bench and the field clear of the HUD
@@ -698,7 +689,7 @@ export async function createFieldView(host, options = {}) {
     // shop's HUD band (re-evaluated on resize: camOpts keep the flag)
     const vk = viewKind(kind, o); // (a 'prep' camera on the boss rows = the Final Assault prep)
     return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || defaultPadding(k, sz) }, {
-      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit || full, config: stageRec?.config || null,
+      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit, config: stageRec?.config || null,
       hud: hudBands(vk, sz, { shop: o.shop !== false }), zoom: o.zoom ?? mobileZoom(),
     });
   }
@@ -726,7 +717,7 @@ export async function createFieldView(host, options = {}) {
     if (vk === 'prep') setPrepField(IDENTITY);
     else if (vk === 'bossPrep') setPrepField(bossPrepField(camOpts.side === 'R' ? 'R' : 'L'));
     const target = targetCamera(camKind, camOpts);
-    const rest = restView(vk, isRegulation(stageRec));
+    const rest = restView(vk);
     const focus = camRect();
     board3d?.setFocus(focus);
     camMs = Number.isFinite(o.ms) && o.ms >= 0 ? o.ms : (vk === 'pen' || prevView === 'pen' ? PEN_CAMERA_MS : CAMERA_MS);
@@ -743,7 +734,7 @@ export async function createFieldView(host, options = {}) {
       camT0 = performance.now();
       // keep both fields drawn (and lit) while the camera flies between them; the pen as flightView says (a flight from
       // the prep camera into a battle drops it at once)
-      const fly = flightView(prevView, vk, isRegulation(stageRec));
+      const fly = flightView(prevView, vk);
       tiles.setView(fly.band, focus, fly.field);
       board3d?.setArea(fly.area);
       setPenHidden(!fly.pen);
