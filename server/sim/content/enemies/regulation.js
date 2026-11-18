@@ -4,7 +4,7 @@
 // nthAttackPower) are the same ones the default enemies use.
 import { hypot } from '../../detmath.js';
 import { T } from './helpers.js';
-import { deathBoom, unbalanced, reborn, enemyAura, nthAttackPower, stealth } from './archetypes.js';
+import { deathBoom, unbalanced, reborn, enemyAura, allyAura, nthAttackPower, stealth } from './archetypes.js';
 
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const buffOf = (u, key) => u?.findBuff?.(key) ?? null;
@@ -186,9 +186,9 @@ function kitAcfncb(ab) {
   return [nthAttackPower(1, T(ab, 'FirstAtkDouble.damage_scale') ?? 2)];
 }
 
-/** 假想敌：影役: hidden; enemies within 1.8 lose one block. */
+/** 假想敌：影役: hidden; 周围 1.8 内所有干员阻挡数 -1（光环，不可叠加）. */
 function kitAcblk(ab) {
-  return [stealth(), enemyAura(T(ab, 'Aura.range_radius') ?? 1.8, 'ab:acblk', { blockCnt: T(ab, 'Aura.block_cnt') ?? -1 }, true, 0.5)];
+  return [stealth(), allyAura(T(ab, 'Aura.range_radius') ?? 1.8, 'ab:acblk', { blockCnt: -1 }, true, 0.5)];
 }
 
 /** 假想敌：丛生: the first hit on each target is ×2 and blocks healing for 5 s. */

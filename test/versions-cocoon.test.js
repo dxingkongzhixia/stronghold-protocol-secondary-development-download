@@ -52,7 +52,7 @@ test('规程 淤困捕食: an 隐匿 operator gets no cocoon; the visible one do
   assert.ok(h.unit(1).s.flags.stealth);
   const hidden = h.unit(1), visible = h.unit(2);
   put(h, 'enemy_9035_acspider', [10, 10]);
-  h.run(0.2);
+  h.run(15.5); // 淤困捕食: initial cooldown 15 s (PRTS)
   const list = webs(h);
   assert.equal(list.length, 1, 'one cocoon (the only targetable operator)');
   assert.deepEqual([list[0].x, list[0].y], [visible.x, visible.y]);

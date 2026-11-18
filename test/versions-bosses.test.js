@@ -82,3 +82,48 @@ test('矩兽: damage reduction, trample and overload', () => {
   h.step(2);
   assert.ok(buffs(boss, 'boss:dyj_over').length > 0, 'overload');
 });
+
+test('假想敌：械 enters its armour form below half HP (PRTS) and summons two 冲击之械', () => {
+  const h = field('enemy_9029_acfnc');
+  h.step(1);
+  const boss = h.enemies()[0];
+  const ally = h.allies()[0];
+  h.b.dealDamage(ally, boss, { amount: boss.s.maxHp * 0.55, type: 'true' });
+  h.step(2);
+  assert.ok(boss.hpRatio < 0.5);
+  assert.ok(buffs(boss, 'boss:acfnc_armor').length > 0, '护甲形态 (physical/arts -50%)');
+  assert.equal(h.b.enemies.filter((e) => e.defId === 'enemy_9027_acfnca' && e.alive).length, 2, 'two 冲击之械');
+});
+
+test('假想敌：影役 lowers the block count of operators around it (not other enemies)', () => {
+  const h = makeBattle({
+    data: ds, seed: 11, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_02_a', row: 9, col: 6 }],
+    enemies: [{ key: 'enemy_9034_acblk', time: 0, pos: [9, 5] }],
+  });
+  setGameData(ACT3);
+  h.run(1.5);
+  const a = h.allies()[0];
+  assert.ok(buffs(a, 'ab:acblk').length > 0, 'ab:acblk on the operator');
+  assert.equal(a.s.blockCnt, Math.max(0, a.base.blockCnt - 1), 'the operator loses one block');
+});
+
+test('假想敌：镜波 gives the lowest-RES operator +10 RES on death; 镜眼 slows the caster of arts damage', () => {
+  const h = makeBattle({
+    data: ds, seed: 11, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_02_a', row: 9, col: 6 }],
+    enemies: [{ key: 'enemy_9031_acrefd', time: 0, pos: [9, 7] }, { key: 'enemy_9039_acrefm', time: 0, pos: [10, 5] }],
+  });
+  setGameData(ACT3);
+  h.step(1);
+  const [refd, refm] = h.enemies();
+  const ally = h.allies()[0];
+  const res0 = ally.s.res;
+  h.b.kill(refd, ally);
+  h.step(1);
+  assert.ok(ally.s.res > res0, `RES ${res0} → ${ally.s.res} (镜波 +10)`);
+  const aspd0 = ally.s.aspd;
+  h.b.dealDamage(ally, refm, { amount: 20, type: 'arts', isAttack: true });
+  h.step(1);
+  assert.ok(ally.s.aspd < aspd0, `ASPD ${aspd0} → ${ally.s.aspd} (镜眼 -50)`);
+});

@@ -1181,24 +1181,55 @@ function kitDeer(ab, e) {
 //   enemy_2124_dyjsfg      矩兽  90 % damage reduction while free, 35 % while blocked or stopped; a trample every
 //                          2.5 s; below 40 % HP: ATK +50 %, block +1, speed ×2; on death every other enemy leaves and all
 //                          allies take one heavy physical hit.
-function kitFnC(_ab, e) {
-  const P = { last: -Infinity, big: false };
+/** The nearest ground-passable tile to (r, c) within its 3×3 (the tile itself first), or null. */
+function openTileNear(b, r, c) {
+  const cand = [[r, c]];
+  for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) cand.push([r + dr, c + dc]);
+  return cand.find(([y, x]) => Number.isInteger(y) && Number.isInteger(x) && b.grid?.groundPassable?.(y, x)) ?? null;
+}
+
+function kitFnC(ab, e) {
+  const threshold = T(ab, 'Armor.hp_ratio') ?? 0.5;    // 生命值低于一半 → 护甲形态
+  const reduce = T(ab, 'Armor.damage_scale') ?? 0.5;    // 护甲形态：横坐标不同的伤害 -50%
+  const P = { armor: false, tide: 0 };
+  const alive = (b, key) => b.enemies.filter((x) => x.alive && x.defId === key).length;
   return [{
     spawn(b) {
+      // 攻击命中时，在目标格及周围八格最近的可通行地块召唤一个量变之械 (PRTS 假想敌：械)
       b.on('hit', (c) => {
         if (c.source !== e || !c.target || c.target.side !== 'ally' || !c.dmg?.isAttack) return;
-        if (b.time - P.last < 2) return;
-        P.last = b.time;
-        if (b.enemies.filter((x) => x.alive && x.defId === 'enemy_9028_acfncb').length >= 4) return;
-        b.spawnEnemy('enemy_9028_acfncb', { pos: [c.target.tileR, c.target.tileC] });
+        if (alive(b, 'enemy_9028_acfncb') >= 10) return;
+        const tile = openTileNear(b, c.target.tileR, c.target.tileC);
+        if (!tile) return;
+        b.spawnEnemy('enemy_9028_acfncb', { pos: tile });
         b.fx('summon', { x: c.target.x, y: c.target.y, id: e.id });
       }, { owner: e });
     },
-    tick(b, e2) {
-      if (P.big || !(e2.hpRatio < 0.2)) return;
-      P.big = true;
-      b.spawnEnemy('enemy_9027_acfnca', { pos: [e2.tileR, e2.tileC] });
-      b.fx('phase', { x: e2.x, y: e2.y, id: e2.id, kind: 'acfnc' });
+    tick(b, e2, _a, dt) {
+      // 生命值首次低于 50%: 击倒所有冲击之械，左右各召唤一个，进入护甲形态
+      if (!P.armor && e2.hpRatio < threshold) {
+        P.armor = true;
+        for (const x of b.enemies) if (x.alive && x.defId === 'enemy_9027_acfnca') b.kill(x, e2);
+        for (const dc of [-1, 2]) {
+          const tile = openTileNear(b, e2.tileR, e2.tileC + dc) ?? [e2.tileR, e2.tileC];
+          b.spawnEnemy('enemy_9027_acfnca', { pos: tile });
+        }
+        b.addBuff(e2, { key: 'boss:acfnc_armor', persist: true, visible: true, mods: { physTakenMul: 1 - reduce, artsTakenMul: 1 - reduce } });
+        b.fx('phase', { x: e2.x, y: e2.y, id: e2.id, kind: 'acfnc' });
+      }
+      // 【洪流攻势】技力 0/25, 1.0 SP/s: 左右两个场地上各选阻挡数最高的干员，在其四周四格召唤量变之械
+      P.tide += dt;
+      if (P.tide < 25) return;
+      P.tide = 0;
+      for (const side of ['L', 'R']) {
+        const list = b.allies().filter((u) => u.alive && (side === 'L' ? u.x < 10.5 : u.x >= 10.5));
+        const t = list.sort((x, y) => y.s.blockCnt - x.s.blockCnt || y.hp - x.hp)[0];
+        if (!t) continue;
+        for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+          const tile = openTileNear(b, t.tileR + dr, t.tileC + dc);
+          if (tile) b.spawnEnemy('enemy_9028_acfncb', { pos: tile, countInTotal: false });
+        }
+      }
     },
   }];
 }
@@ -1228,7 +1259,12 @@ function netTargets(b, e, maxTarget, batch) {
 
 function kitSpider(ab, e) {
   const step = Math.max(0.05, T(ab, 'Evade.hp_ratio') ?? 0.25), prob = T(ab, 'Evade.prob') ?? 0.5, dur = T(ab, 'Evade.duration') ?? 15;
-  const P = { n: Math.floor(e.hpRatio / step), rain: false, lastWeb: -Infinity };
+  // 【淤困捕食】cd 25 / 初始 15 (PRTS 假想敌：茧)
+  const net = e?.mem?.ab?.sk?.Net ?? null;
+  const netCd = Math.max(1, net?.cd ?? 25);
+  // 【悲惨之雨】is the 隐秘核心 variant only (enemy_9035_acspider_2): acid rain over a field
+  const hiddenCore = /_2$/.test(String(e?.defId ?? ''));
+  const P = { n: Math.floor(e.hpRatio / step), webAt: Math.max(0, net?.icd ?? 15), rain: false };
   return [{
     spawn(b) {
       b.on('damaged', (c) => {
@@ -1241,8 +1277,9 @@ function kitSpider(ab, e) {
         b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'spider' });
       }, { owner: e });
     },
-    tick(b, e2) {
-      if (!P.rain && e2.hpRatio < 0.5) {
+    tick(b, e2, _a, dt) {
+      // 【悲惨之雨】隐秘核心 variant: acid rain on the field below half HP
+      if (hiddenCore && !P.rain && e2.hpRatio < 0.5) {
         P.rain = true;
         const aspd = -30, dmg = e2.s.atk * 0.3;
         for (const a of b.allies()) b.addBuff(a, {
@@ -1251,14 +1288,13 @@ function kitSpider(ab, e) {
         });
         b.fx('tide', { x: e2.x, y: e2.y, id: e2.id, kind: 'acidRain' });
       }
-      if (b.time - P.lastWeb >= 18) {
-        P.lastWeb = b.time;
-        // 淤困捕食: the skill's own caps (Net max_target 2 / batch_max_target 4), only targetable operators
-        for (const a of netTargets(b, e2, 2, 4)) {
-          b.spawnEnemy('enemy_9036_acweb', {
-            pos: [a.tileR, a.tileC], countInTotal: false, ownerPlayerId: a.ownerId ?? null, sourcePlayerId: a.sourcePlayerId ?? null,
-          });
-        }
+      if (b.time < P.webAt) return;
+      P.webAt = b.time + netCd;
+      // 淤困捕食: the skill's own caps (Net max_target 2 / batch_max_target 4), only targetable operators
+      for (const a of netTargets(b, e2, 2, 4)) {
+        b.spawnEnemy('enemy_9036_acweb', {
+          pos: [a.tileR, a.tileC], countInTotal: false, ownerPlayerId: a.ownerId ?? null, sourcePlayerId: a.sourcePlayerId ?? null,
+        });
       }
     },
   }];
@@ -1303,30 +1339,37 @@ function kitWeb(ab, _e) {
 
 function kitEel(ab, e) {
   const ep = T(ab, 'Passive.attack@ep_damage_ratio') ?? 0.4;
-  const P = { shield: true, charged: false, lastRing: -Infinity };
+  // 鳍盾: 未被阻挡时物理/法术伤害 -40%; 被阻挡时转为鳍刺 (下一次攻击 ×150%) — PRTS 假想敌：鳍
+  const res = T(ab, 'ShieldGen.damage_resistance') ?? 0.4;
+  const boost = T(ab, 'ShieldGen.damage_scale') ?? 1.5;
+  // 离子环波: cd 24 / 初始 24, 半径 1.5, 攻击力 125% 法术 + 40% 神经损伤
+  const dis = e?.mem?.ab?.sk?.Discharge ?? null;
+  const ringCd = Math.max(1, dis?.cd ?? 24);
+  const ringScale = dis?.bb?.atk_scale ?? 1.25, ringR = dis?.bb?.range_radius ?? 1.5;
+  const P = { shield: true, charged: false, ringAt: Math.max(0, dis?.icd ?? 24) };
   return [{
     spawn(b) {
-      b.addBuff(e, { key: 'boss:eel_shield', visible: true, mods: { physTakenMul: 0.5, artsTakenMul: 0.5 } });
+      b.addBuff(e, { key: 'boss:eel_shield', visible: true, mods: { physTakenMul: 1 - res, artsTakenMul: 1 - res } });
       b.on('hit', (c) => {
         if (c.source !== e || !c.target || c.target.side !== 'ally') return;
-        if (c.dmg && P.charged) { c.dmg.mul *= 1.5; P.charged = false; }
+        if (c.dmg && P.charged) { c.dmg.mul *= boost; P.charged = false; }
         if (c.dmg?.isAttack) b.dealDamage(e, c.target, { amount: e.s.atk * ep, type: 'element', element: 'neural', tags: ['enemyAbility'] });
       }, { owner: e });
-      b.on('damaged', (c) => {
-        if (c.target !== e || !P.shield || !(e.blocking && e.blocking.length)) return;
-        P.shield = false;
-        P.charged = true;
-        b.removeBuff(e, 'boss:eel_shield');
-      }, { owner: e });
+    },
+    // 被阻挡: 鳍盾 → 鳍刺
+    blocked(b, e2) {
+      if (!P.shield) return;
+      P.shield = false;
+      P.charged = true;
+      b.removeBuff(e2, 'boss:eel_shield');
     },
     tick(b, e2) {
-      if (b.time - P.lastRing < 12) return;
-      P.lastRing = b.time;
-      const r = 2;
-      const hit = b.allies().filter((a) => a.alive && hypot(a.x - e2.x, a.y - e2.y) <= r);
+      if (b.time < P.ringAt) return;
+      P.ringAt = b.time + ringCd;
+      const hit = b.allies().filter((a) => a.alive && hypot(a.x - e2.x, a.y - e2.y) <= ringR);
       if (!hit.length) return;
       for (const a of hit) {
-        b.dealDamage(e2, a, { amount: e2.s.atk, type: 'arts', tags: ['enemyAbility'] });
+        b.dealDamage(e2, a, { amount: e2.s.atk * ringScale, type: 'arts', tags: ['enemyAbility'] });
         b.dealDamage(e2, a, { amount: e2.s.atk * ep, type: 'element', element: 'neural', tags: ['enemyAbility'] });
       }
       b.fx('beam', { x: e2.x, y: e2.y, id: e2.id, kind: 'ionRing' });
@@ -1351,7 +1394,7 @@ function kitDyjsfg(ab, e) {
         P.res = res;
         b.addBuff(e2, { key: 'boss:dyj_res', persist: true, visible: true, mods: { physTakenMul: 1 - res, artsTakenMul: 1 - res } });
       }
-      if (!P.over && e2.hpRatio < 0.4) {
+      if (!P.over && e2.hpRatio < 0.5) {
         P.over = true;
         b.addBuff(e2, { key: 'boss:dyj_over', persist: true, visible: true, mods: { atkPct: oAtk, blockCnt: oBlock, moveMul: oSpeed } });
         b.fx('phase', { x: e2.x, y: e2.y, id: e2.id, kind: 'dyj' });
@@ -1369,9 +1412,10 @@ function kitDyjsfg(ab, e) {
     spawn(b) {
       b.on('death', (c) => {
         if (c.unit !== e) return;
-        for (const x of b.enemies) if (x !== e && x.alive) b.kill(x, e);
+        // 【兼爱】击倒场上所有敌人 (后兽除外)，并对所有我方单位造成攻击力 100% 的物理伤害
+        for (const x of b.enemies) if (x !== e && x.alive && x.defId !== 'enemy_2123_dyjsww') b.kill(x, e);
         for (const a of b.allies()) {
-          if (a.alive) b.dealDamage(e, a, { amount: e.s.atk * 2, type: 'true', canDodge: false, ignoreSelect: true, tags: ['enemyAbility'] });
+          if (a.alive) b.dealDamage(e, a, { amount: e.s.atk, type: 'phys', canDodge: false, ignoreSelect: true, tags: ['enemyAbility'] });
         }
         b.fx('explode', { x: e.x, y: e.y, id: e.id, r: 99, kind: 'dyjDeath' });
       }, { owner: e });

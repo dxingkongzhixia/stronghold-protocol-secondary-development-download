@@ -3,6 +3,7 @@
 
 import { T, auraAllies, auraBuff } from './helpers.js';
 import { refraction, statue, kitRefraction } from './archetypes.js';
+import { hypot } from '../../detmath.js';
 
 // ---------------------------------------------------------------------------------------------------------------
 // kits
@@ -34,6 +35,41 @@ function kitHolyGuard(ab) {
   }];
 }
 
+/**
+ * 假想敌：镜波 (enemy_9031_acrefd): 折射; 被击倒时向半径 1.2 内法抗最低的一名干员发射弹道，使其法抗 +10（可无限叠加，
+ * 持续时间无限）— PRTS 假想敌：镜波.
+ */
+function kitAcRefd(ab, e) {
+  const r = T(ab, 'refracting.range_radius') ?? 1.2;
+  const gain = T(ab, 'refracting.acrefd[magic-resistance].magic_resistance') ?? 10;
+  return [...kitRefraction(ab), {
+    spawn(b) {
+      b.on('death', (c) => {
+        if (c.unit !== e) return;
+        const near = b.allies().filter((u) => u.alive && hypot(u.x - e.x, u.y - e.y) <= r);
+        if (!near.length) return;
+        const t = near.sort((x, y) => (x.s.res - y.s.res) || (hypot(x.x - e.x, x.y - e.y) - hypot(y.x - e.x, y.y - e.y)))[0];
+        b.addBuff(t, { key: `reg:acrefd:${e.id}`, persist: true, visible: true, source: e, mods: { resFlat: gain } });
+        b.fx('beam', { x: t.x, y: t.y, id: e.id, kind: 'acrefd' });
+      }, { owner: e });
+    },
+  }];
+}
+
+/**
+ * 假想敌：镜眼 (enemy_9039_acrefm): 折射; 拥有折射时受到法术伤害，使伤害来源攻击速度 -50，持续 3 秒 — PRTS 假想敌：镜眼.
+ */
+function kitAcRefm(ab, e) {
+  const aspd = T(ab, 'refracting.attack_speed') ?? -50;
+  const dur = T(ab, 'refracting.duration') ?? 3;
+  return [...kitRefraction(ab), {
+    taken(c, b) {
+      if (!c.dmg || c.dmg.type !== 'arts' || !c.source) return;
+      b.addBuff(c.source, { key: `reg:acrefm:${e.id}`, duration: dur, refresh: 'replace', visible: true, source: e, mods: { aspd } });
+    },
+  }];
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // this family's part of KITS (content/enemies.js spreads the parts in this order)
 
@@ -54,4 +90,6 @@ export const REFLECTION_KITS = Object.freeze({
   enemy_1174_duholy: kitHolyGuard,                                   // 深池伙友卫队 · refraction; ASPD-down field next to 影刃 (taunt from data)
   enemy_1174_duholy_2: kitHolyGuard,                                 // 深池伙友卫队精英 · same
   enemy_9011_acrefr: (ab) => [refraction(T(ab, 'Refracting.magic_resistance') ?? 0, T(ab, 'Refracting.max_hp') ?? 0)], // 假想敌：镜膜 · refraction + max HP until first silence
+  enemy_9031_acrefd: kitAcRefd,                                       // 假想敌：镜波 · refraction; 死亡时法抗最低的干员 RES +10 (stackable)
+  enemy_9039_acrefm: kitAcRefm,                                       // 假想敌：镜眼 · refraction; 受到法术伤害时攻击者 ASPD -50 持续 3 秒
 });
