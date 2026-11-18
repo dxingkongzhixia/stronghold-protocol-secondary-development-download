@@ -119,6 +119,7 @@ import { REFLECTION_KITS } from './enemies/reflection.js';
 import { FLY_KITS } from './enemies/fly.js';
 import { SPECIAL_KITS } from './enemies/special.js';
 import { REGULATION_KITS } from './enemies/regulation.js';
+import { REGULATION_EXTRA_KITS } from './enemies/regulation-extra.js';
 import { LEADER_KITS, PLUGIN_KITS } from './enemies/leaders.js';
 import { protocolAbility } from './bossProtocol.js';
 import { hypot } from '../detmath.js';
@@ -303,6 +304,7 @@ function onTick(b, dt) {
 
 export const KITS = Object.freeze({
   ...REGULATION_KITS,
+  ...REGULATION_EXTRA_KITS,
   ...INVISIBLE_KITS,
   ...TIMES_KITS,
   ...ELEMENT_KITS,

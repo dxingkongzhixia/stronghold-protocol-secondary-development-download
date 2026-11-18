@@ -1,353 +1,567 @@
-// server/sim/content/enemies/regulation.js — hand-written kits for the act3 enemies that the generic handlers cannot cover
-// (server/sim/content/enemies/procedural.js OFFICIAL list). Keys are enemy records of another official version; numbers
-// come from the flattened talent book (ab.t). The archetype helpers (reborn / deathBoom / unbalanced / enemyAura /
-// nthAttackPower) are the same ones the default enemies use.
-import { hypot } from '../../detmath.js';
-import { T } from './helpers.js';
-import { deathBoom, unbalanced, reborn, enemyAura, allyAura, nthAttackPower, stealth } from './archetypes.js';
+// server/sim/content/enemies/regulation.js — 规程·序列Ⅰ special enemies (CRITIC / REBORN and the new draws).
+//
+// Kept off KITS: test/content/enemies_bosses.test.js requires every KITS key in the default enemies.json.
+// enemies.js onSpawn falls back to REGULATION_KITS. This module does not import enemies.js.
+//
+// Official numbers are read from the enemy record. Points with no blackboard are marked [ASSUMED].
 
-const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
-const buffOf = (u, key) => u?.findBuff?.(key) ?? null;
+import { hypot, sin, cos } from '../../detmath.js';
+import {
+  hurt, elem, areaAllies, auraAllies, remainingRoute, stayRoute, spawnChildren, nthOf, canCast, BOOM_RADIUS, auraBuff, watchDeaths,
+  unbalancedNow,
+} from './helpers.js';
+import { skill, stealth, ep, refraction, reborn } from './archetypes.js';
 
-/** 锋盔骑士团学徒 / _3: reborn after 5 s and a periodic ATK debuff on the strongest ally. */
-function kitLfkght(ab) {
-  const dur = T(ab, 'reborn.duration') ?? 5;
+const num = (v, d) => {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(+v)) return +v;
+  return d;
+};
+const tv = (ab, key, d) => num(ab && ab.t ? ab.t[key] : undefined, d);
+const sv = (map, key) => {
+  const v = map && map[key];
+  return typeof v === 'string' && v ? v : '';
+};
+const bb = (sk, key, d) => num(sk && sk.bb ? sk.bb[key] : undefined, d);
+
+function spEvery(sk, fire, sil = false) {
+  if (!sk || !(sk.sp > 0)) return null;
+  return {
+    sk, sil,
+    tick(b, e, a, dt) {
+      if (!canCast(e, sil, b)) return;
+      a.acc = (a.acc ?? 0) + dt;
+      if (a.acc + 1e-9 < sk.sp) return;
+      a.acc = 0;
+      fire(b, e, a);
+    },
+  };
+}
+
+function timed(sk, fire, extra = {}) {
+  if (!sk || !fire) return null;
+  if (sk.sp > 0 && !(sk.cd > 0)) return spEvery(sk, fire, !!extra.sil);
+  if (sk.cd > 0) return skill(sk, fire, extra);
+  return null;
+}
+
+function replaceLater(b, e, key, delay, n = 1) {
+  if (!key || !(n > 0)) return;
+  const pos = [e.y, e.x];
+  const route = remainingRoute(e);
+  const spawn = () => spawnChildren(b, e, key, n, { countInTotal: false, pos, route });
+  if (!(delay > 0)) { spawn(); return; }
+  // Keep an otherwise empty field alive until its replacement arrives; ordinary visual timers must not do so.
+  b.after(delay, spawn, { holdsBattle: true });
+}
+
+function nearestAlly(b, src, from, range, seen) {
+  let best = null;
+  let bd = range;
+  for (const u of areaAllies(b, src, from.x, from.y, range)) {
+    if (!u || seen.has(u.id)) continue;
+    const d = hypot(u.x - from.x, u.y - from.y);
+    if (d > range + 1e-9) continue;
+    if (!best || d < bd - 1e-9 || (Math.abs(d - bd) <= 1e-9 && u.id < best.id)) { best = u; bd = d; }
+  }
+  return best;
+}
+
+// --- CRITIC ----------------------------------------------------------------------------------------------
+
+/** 战线推进者: the first attack after each block is ×sheltr ×(1+atk). PowerHit is not a cooldown. */
+function kitChghmr(ab) {
+  const sheltr = tv(ab, 'DmgUp.sheltr_atk_scale', 2.5);
+  const atk = bb(ab.sk.PowerHit, 'atk', 0.8);
+  return [{
+    sil: true,
+    blocked(c, b, e, a) { a.armed = true; },
+    hitOut(c, b, e, a) {
+      if (!a.armed || !c.dmg || !c.dmg.isAttack) return;
+      a.armed = false;
+      c.dmg.mul *= sheltr * (1 + atk);
+    },
+  }];
+}
+
+/** 管乐家: +atk per second while unblocked; the next attack spends the stacks and stuns.
+ *  switchMode (沉郁 / 热情) has no field-wide variation signal — left unused. */
+function kitLtnclr(ab) {
+  const flat = tv(ab, 'atkboostCore.atk', 30);
+  const cap = tv(ab, 'atkboostCore.max_stack_count', 30);
+  const stun = tv(ab, 'atkboostCore.attack@stun_duration', 10);
+  return [{
+    tick(b, e, a, dt) {
+      if (e.blockedBy) return;
+      a.acc = (a.acc ?? 0) + dt;
+      if (a.acc + 1e-9 < 1) return;
+      a.acc -= 1;
+      a.stacks = Math.min(cap, (a.stacks ?? 0) + 1);
+      b.addBuff(e, { key: 'reg:boost', persist: true, refresh: 'replace', mods: { atkFlat: flat * a.stacks } });
+    },
+    dealt(c, b, e, a) {
+      if (!(a.stacks > 0)) return;
+      if (stun > 0 && c.target && c.target.alive) b.applyStatus(c.target, 'stun', { duration: stun, source: e });
+      a.stacks = 0;
+      b.removeBuff(e, 'reg:boost');
+    },
+  }];
+}
+
+/** “投石机”: the first attack is ×scale, then it only melee-attacks. The handbook cross has no radius. */
+function kitWingnt(ab) {
+  const scale = tv(ab, 'FirstAttack.attack@first_atk_scale', 1.5);
+  return [{
+    hitOut(c, b, e, a) {
+      if (a.used || !c.dmg || !c.dmg.isAttack) return;
+      a.used = true;
+      c.dmg.mul *= scale;
+      e.profile.melee = true;
+    },
+  }];
+}
+
+/** 冰原卫法者: silenced death boom (cold and freeze); unbalanced self HP loss is not silenced. */
+function kitKrgrg(ab) {
+  const scale = tv(ab, 'boom.atk_scale', 1);
+  const cold = tv(ab, 'boom.cold', 0);
+  const freeze = tv(ab, 'boom.freeze', 0);
+  const bleed = tv(ab, 'unbalanced_bleed.damage', 0);
+  const iv = tv(ab, 'unbalanced_bleed.interval', 0.066);
   return [
-    reborn({ dur, hpRatio: 1 }),
+    {
+      sil: true,
+      death(c, b, e) {
+        if (c.reason !== 'killed') return;
+        for (const u of areaAllies(b, e, e.x, e.y, BOOM_RADIUS)) {
+          if (scale > 0) hurt(b, e, u, e.s.atk * scale, 'arts');
+          if (!u.alive) continue;
+          if (cold > 0) b.applyStatus(u, 'cold', { duration: cold, source: e });
+          if (freeze > 0 && u.alive) b.applyStatus(u, 'freeze', { duration: freeze, source: e });
+        }
+      },
+    },
     {
       tick(b, e, a, dt) {
-        a.acc = num(a.acc) + dt;
-        if (a.acc < 10) return;
-        a.acc = 0;
-        const t = b.allies().filter((u) => u.alive).sort((x, y) => y.s.atk - x.s.atk)[0];
-        if (t) b.addBuff(t, { key: 'ab:lfkght_weak', duration: 10, visible: true, source: e, mods: { atkPct: -0.5 } });
+        if (!(bleed > 0) || !(iv > 0) || !unbalancedNow(b, e)) return;
+        a.acc = (a.acc ?? 0) + dt;
+        for (let n = 0; n < 4 && a.acc + 1e-9 >= iv && e.alive; n++) {
+          a.acc -= iv;
+          b.loseHp(e, bleed, { tags: ['enemyAbility'] });
+        }
       },
     },
   ];
 }
 
-/** 冰原卫法 / _2: death explosion (arts + cold) and HP loss while unbalanced (pushed/pulled). */
-function kitKrgrg(ab, _e) {
-  const freeze = T(ab, 'boom.freeze') ?? T(ab, 'boom.cold') ?? 5;
-  const dmg = T(ab, 'unbalanced_bleed.damage') ?? 80, iv = Math.max(0.05, T(ab, 'unbalanced_bleed.interval') ?? 0.066);
+/** 寻路者信使: one headshot (handbook ammo cap; no ammo key), then melee. */
+function kitMtrbty(ab) {
+  const scale = tv(ab, 'shotbuff.attack@headshot_atk_scale', 1.5);
+  const disarm = tv(ab, 'shotbuff.attack@headshot_disarmed_duration', 15);
+  const sp = tv(ab, 'shotbuff.attack@headshot_sp', -1);
+  const trap = tv(ab, 'shotbuff.attack@headshot_trapdamage', 5000);
+  return [{
+    hitOut(c, b, e, a) {
+      if (a.spent || !c.dmg || !c.dmg.isAttack) return;
+      a.spent = true;
+      c.dmg.mul *= scale;
+      e.profile.melee = true;
+    },
+    dealt(c, b, e, a) {
+      if (a.paid || !c.target) return;
+      a.paid = true;
+      const u = c.target;
+      if (disarm > 0 && u.alive) b.applyStatus(u, 'disarm', { duration: disarm, source: e });
+      if (u.skill && sp !== 0) u.skill.sp = Math.max(0, (u.skill.sp ?? 0) + sp);
+      if (trap > 0 && u.kind === 'device' && u.alive) hurt(b, e, u, trap, 'arts');
+    },
+  }];
+}
+
+/** 马特奥的近卫: two phys shots down a shared row or column. Unblocked damage resistance. */
+function kitBdguad(ab) {
+  const sk = ab.sk.CrossBomb;
+  const dr = tv(ab, 'DmgResist.damage_resistance', 0.4);
   return [
-    deathBoom({ scale: T(ab, 'boom.atk_scale') ?? 1.3, type: 'arts', status: { key: 'cold', dur: freeze } }),
-    unbalanced((b, e2, a, tiles) => {
-      const ticks = Math.max(1, Math.floor(tiles / 0.1));
-      b.loseHp(e2, dmg * ticks * iv, { source: null, tags: ['unbalanced'] });
+    sk && skill(sk, (b, e) => {
+      const range = bb(sk, 'projectile_range', 1.1);
+      const times = Math.max(1, Math.min(4, bb(sk, 'times', 2)));
+      const scale = bb(sk, 'atk_scale', 0.5);
+      let best = null;
+      let bd = Infinity;
+      for (const u of b.allies()) {
+        if (!u.alive) continue;
+        const line = Math.abs(u.y - e.y) < 0.5 || Math.abs(u.x - e.x) < 0.5;
+        if (!line) continue;
+        const d = hypot(u.x - e.x, u.y - e.y);
+        if (d > range + 1e-9) continue;
+        if (!best || d < bd || (d === bd && u.id < best.id)) { best = u; bd = d; }
+      }
+      if (!best) return;
+      const shot = () => { if (best.alive) hurt(b, e, best, e.s.atk * scale, 'phys'); };
+      shot();
+      for (let i = 1; i < times; i++) b.after(0.3 * i, shot);
+    }, {
+      sil: true,
+      cond: (b, e) => {
+        const range = bb(sk, 'projectile_range', 1.1);
+        for (const u of b.allies()) {
+          if (!u.alive) continue;
+          const line = Math.abs(u.y - e.y) < 0.5 || Math.abs(u.x - e.x) < 0.5;
+          if (line && hypot(u.x - e.x, u.y - e.y) <= range + 1e-9) return true;
+        }
+        return false;
+      },
+    }),
+    {
+      hitIn(c, b, e) {
+        if (e.blockedBy) return;
+        const ty = c.dmg && c.dmg.type;
+        if (ty !== 'phys' && ty !== 'arts') return;
+        c.dmg.mul *= Math.max(0, 1 - dr);
+      },
+    },
+  ];
+}
+
+/** 魂灵法骸: the cooldown stands in for one orbiting fragment (no stage-prop pickup). [ASSUMED] */
+function kitLrmzrd(ab) {
+  const sk = ab.sk.summonFireball;
+  const scale = bb(sk, 'atk_scale', 1);
+  const maxN = bb(sk, 'max_projectile_count', 3);
+  return [
+    {
+      tick(b, e, a, dt) {
+        const list = e.mem.regFrags;
+        if (!list || !list.length) return;
+        const next = [];
+        for (let i = 0; i < list.length; i++) {
+          const f = list[i];
+          f.ang += 2 * dt;
+          const x = e.x + cos(f.ang) * 1;
+          const y = e.y + sin(f.ang) * 1;
+          let spent = false;
+          for (const u of areaAllies(b, e, x, y, 0.4)) {
+            hurt(b, e, u, e.s.atk * f.scale, 'arts');
+            spent = true;
+            break;
+          }
+          if (!spent) next.push(f);
+        }
+        e.mem.regFrags = next;
+      },
+    },
+    timed(sk, (b, e) => {
+      const list = e.mem.regFrags || (e.mem.regFrags = []);
+      if (list.length >= maxN) return;
+      list.push({ ang: list.length * 2.094, scale });
     }),
   ];
 }
 
-/** 寻路者狙击手 / 阵地破坏者 / 信使: ammo attack scale; the messenger disarms, the breaker splashes. */
-function kitShotbuff(ab, e) {
-  const scale = T(ab, 'shotbuff.attack@headshot_atk_scale') ?? 1;
-  const disarm = T(ab, 'shotbuff.attack@headshot_disarmed_duration');
-  const splash = T(ab, 'shotbuff.attack@headshot_trapdamage');
-  const parts = [e.defId.includes('cansld') ? nthAttackPower(1, scale) : { dealt(c) { if (c.dmg?.isAttack && c.dmg) c.dmg.mul *= scale; } }];
-  if (disarm > 0) parts.push({ dealt(c, b) { if (c.dmg?.isAttack && c.target) b.addBuff(c.target, { key: 'ab:disarm', duration: disarm, visible: true, source: e, flags: { noAttack: true, noHeal: true } }); } });
-  if (splash > 0) parts.push({ dealt(c, b) { if (!c.dmg?.isAttack || !c.target) return; for (const u of b.allies()) if (u.alive && u !== c.target && hypot(u.x - c.target.x, u.y - c.target.y) <= 1.4) b.dealDamage(e, u, { amount: splash, type: 'arts', tags: ['enemyAbility'] }); } });
-  return parts;
-}
-
-/** 萨卡兹子裔补给车: nearby enemies +10 % ATK (5 stacks) and their attacks add apoptosis damage. */
-function kitDsuply(ab, _e) {
-  const atk = T(ab, 'aura.enemy_dsuply_t[attr_buff].atk') ?? 0.1;
-  const max = Math.max(1, Math.floor(T(ab, 'aura.enemy_dsuply_t[attr_buff].max_valid_stack_cnt') ?? 5));
-  const ep = T(ab, 'aura.ep_damage_ratio') ?? 0.1;
-  return [
-    { tick(b, e2, a, dt) {
-      a.acc = num(a.acc) + dt;
-      if (a.acc < 1) return;
-      a.acc = 0;
-      for (const x of b.enemies) {
-        if (!x.alive || x === e2 || hypot(x.x - e2.x, x.y - e2.y) > 4) continue;
-        const n = (x.mem.dsuplyStacks ?? 0) + 1;
-        if (n > max) continue;
-        x.mem.dsuplyStacks = n;
-        b.addBuff(x, { key: 'ab:dsuply', duration: 1.6, refresh: 'replace', visible: true, source: e2, mods: { atkPct: atk * n } });
-      }
-    } },
-    { dealt(c, b) {
-      if (!c.dmg?.isAttack || !c.target || !buffOf(c.source, 'ab:dsuply')) return;
-      b.dealDamage(c.source, c.target, { amount: c.source.s.atk * ep, type: 'element', element: 'apoptosis', tags: ['enemyAbility'] });
-    } },
-  ];
-}
-
-/** 残党乐团圆号手 / 鼓手: two stances alternate every 3rd attack (激昂 / 消沉). */
-function kitSwitchMode(ab, e) {
-  const P = { n: 0, mode: 'enthu' };
-  const apply = (b2, x) => {
-    const pre = `switchMode.enemy_act29side[buff_${x === 'enthu' ? 'enthu' : 'depressed'}].`;
-    b2.addBuff(e, {
-      key: 'ab:switchmode', refresh: 'replace', visible: true,
-      mods: {
-        aspd: T(ab, pre + 'attack_speed') ?? 0,
-        atkPct: T(ab, pre + 'atk') ?? 0,
-        defPct: T(ab, pre + 'def') ?? 0,
-        moveMul: 1 + (T(ab, pre + 'move_speed') ?? 0),
-      },
-    });
-  };
+/** 假想敌：丛生: the first damage to each target is doubled, then that target cannot be healed. */
+function kitAccrit(ab) {
+  const scale = tv(ab, 'CriticalHit.damage_scale', 2);
+  const dur = tv(ab, 'CriticalHit.duration', 5);
   return [{
-    spawn(b2) { apply(b2, P.mode); },
-    attack(_c, b2) {
-      P.n += 1;
-      if (P.n % 3 !== 0) return;
-      P.mode = P.mode === 'enthu' ? 'depressed' : 'enthu';
-      apply(b2, P.mode);
-    },
-  }];
-}
-
-/** “投石机”: the first attack is ×first_atk_scale. */
-function kitWingnt(ab) {
-  return [nthAttackPower(1, T(ab, 'FirstAttack.attack@first_atk_scale') ?? 1.5)];
-}
-
-/** 无畏掷弹兵: the first unblocked damage hit fires four bombs, then it is lighter and faster. */
-function kitBoomer(ab, e) {
-  const P = { fired: false };
-  const ms = T(ab, 'Light.move_speed') ?? 0.7, mass = T(ab, 'Light.mass_level') ?? -2;
-  return [{
-    spawn(b) {
-      b.on('damaged', (c) => {
-        if (c.target !== e || P.fired || e.blocking?.length) return;
-        P.fired = true;
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          for (const u of b.allies()) {
-            if (u.alive && hypot(u.x - (e.x + dx), u.y - (e.y + dy)) <= 1) b.dealDamage(e, u, { amount: e.s.atk, type: 'arts', tags: ['enemyAbility'] });
-          }
-        }
-        b.addBuff(e, { key: 'ab:boomer_light', persist: true, visible: true, mods: { moveMul: 1 + ms, massFlat: mass } });
-        b.fx('explode', { x: e.x, y: e.y, r: 1.5, kind: 'boomer' });
-      }, { owner: e });
-    },
-  }];
-}
-
-/** 战线推进者: after being blocked, the first attack is ×sheltr_atk_scale. */
-function kitChghmr(ab, _e) {
-  const scale = T(ab, 'DmgUp.sheltr_atk_scale') ?? 2.5;
-  const P = { blocked: false, charged: false };
-  return [{
-    tick(b, e2) {
-      const blocked = e2.blocking?.length > 0;
-      if (blocked && !P.blocked) P.charged = true;
-      P.blocked = blocked;
-    },
-    dealt(c) {
-      if (!c.dmg?.isAttack || !P.charged) return;
-      P.charged = false;
+    spawn(b, e, a) { a.seen = {}; },
+    hitOut(c, b, e, a) {
+      const t = c.target;
+      if (!t || !c.dmg || a.seen[t.id]) return;
+      a.seen[t.id] = true;
       c.dmg.mul *= scale;
+      if (dur > 0) b.addBuff(t, { key: 'reg:crit', duration: dur, flags: { healFree: true, noHeal: true } });
     },
   }];
 }
 
-/** 纤核漂游蟹: attacks add neural damage (the `0.` group). */
-function kitDsflys(ab, e) {
-  const ep = T(ab, '0.attack@ep_damage_ratio') ?? 0.15;
-  return [{ dealt(c, b) { if (c.dmg?.isAttack && c.target) b.dealDamage(e, c.target, { amount: e.s.atk * ep, type: 'element', element: 'neural', tags: ['enemyAbility'] }); } }];
+// --- REBORN (death replacement — not the reborn() archetype, except 1104_3) ----------------------------
+
+/** Child soldiers / mechanics: their unsilenceable deathrattle uses the pinned key and delay. */
+function kitDeathrattle(ab) {
+  const key = sv(ab.tS, 'deathrattle.enemy_key');
+  const delay = tv(ab, 'deathrattle.delay', 1);
+  return [{ death(c, b, e) { if (c.reason === 'killed') replaceLater(b, e, key, delay); } }];
 }
 
-/** “不眠雪山”: two stances, 3 blocks, frozen targets take ×FrozenBreak.atk_scale. */
-function kitAcsgnt(ab, e) {
-  const P = { sit: false, acc: 0 };
-  const atk0 = T(ab, 'BondBuff.base_atk') ?? 0.5, per = T(ab, 'BondBuff.attack_per_stack') ?? 0.01;
-  const step = Math.max(1, Math.floor(T(ab, 'BondBuff.stackStep') ?? 3));
-  const frozenScale = T(ab, 'FrozenBreak.atk_scale') ?? 3.5;
-  const interval = T(ab, 'SwitchMode.interval') ?? 5;
+/** Bombardiers use Attack's child key and delay for their death replacement (PRTS talent). */
+function kitDthrowDeath(ab) {
+  const key = sv(ab.tS, 'Attack.enemy_key');
+  const delay = tv(ab, 'Attack.delay', 1);
+  return [{ death(c, b, e) { if (c.reason === 'killed') replaceLater(b, e, key, delay); } }];
+}
+
+/** Bone defender: reuse the stationary Blood Amber path already used by the bone torturer. */
+function kitSpnshdDeath(ab) {
+  const key = sv(ab.tS, 'Summon.enemy_key');
+  const count = tv(ab, 'Summon.cnt', 0);
   return [{
-    spawn(b) {
-      b.addBuff(e, { key: 'ab:acsgnt_bond', persist: true, visible: true, mods: { atkPct: atk0, hpPct: per * step } });
-      b.addBuff(e, { key: 'ab:acsgnt_sit', persist: true, visible: true, flags: { noMove: true }, mods: { blockCnt: T(ab, 'BlockEnemy.block_cnt') ?? 3 } });
+    death(c, b, e) {
+      if (c.reason !== 'killed' || !key || !(count > 0)) return;
+      spawnChildren(b, e, key, count, { route: stayRoute(e), countInTotal: false, mods: null });
     },
-    tick(b, e2, a, dt) {
-      P.acc += dt;
-      if (P.acc < interval) return;
-      P.acc = 0;
-      P.sit = !P.sit;
-      if (P.sit) b.addBuff(e2, { key: 'ab:acsgnt_sit', persist: true, visible: true, flags: { noMove: true }, mods: { blockCnt: T(ab, 'BlockEnemy.block_cnt') ?? 3 } });
-      else b.removeBuff(e2, 'ab:acsgnt_sit');
+  }];
+}
+
+function auraOf(b, e, ab) {
+  const key = sv(ab.tS, 'deathrattle.enemy_key');
+  const step = tv(ab, 'aura.atk', 0);
+  const cap = tv(ab, 'aura.max_valid_stack_cnt', 6);
+  if (!key || !(step > 0)) return;
+  let n = 0;
+  for (const o of b.aliveEnemies()) if (o.defId === key) n++;
+  n = Math.min(cap, n);
+  if (n > 0) b.addBuff(e, { key: 'reg:lord', duration: 0.35, refresh: 'replace', mods: { atkPct: step * n } });
+  else b.removeBuff(e, 'reg:lord');
+}
+
+function kitDklord(ab) {
+  const key = sv(ab.tS, 'deathrattle.enemy_key');
+  const delay = tv(ab, 'deathrattle.delay', 1);
+  return [{
+    tick(b, e) { auraOf(b, e, ab); },
+    death(c, b, e) { if (c.reason === 'killed') replaceLater(b, e, key, delay, 1); },
+  }];
+}
+
+/** 责罚者: spCost 3 reads as the 4th attack (nthOf). Splash stun. Attack.enemy_key replaces it on death (PRTS: no delay). */
+function kitDfat(ab) {
+  const sk = ab.sk.StunAttack;
+  const n = nthOf(sk);
+  const dur = bb(sk, 'stun', 4);
+  const key = sv(ab.tS, 'Attack.enemy_key');
+  return [
+    {
+      sil: true,
+      attack(c, b, e, a) {
+        a.n = (a.n ?? 0) + 1;
+        if (a.n % n) return;
+        if (!(dur > 0)) return;
+        for (const u of areaAllies(b, e, e.x, e.y, BOOM_RADIUS)) b.applyStatus(u, 'stun', { duration: dur, source: e });
+      },
     },
-    dealt(c, b) {
-      if (!c.dmg?.isAttack || !c.target) return;
-      if (c.target.s?.flags?.freeze) {
-        c.dmg.mul *= frozenScale;
-        b.removeBuff(c.target, 'freeze');
+    { death(c, b, e) { if (c.reason === 'killed') replaceLater(b, e, key, 0, 1); } },
+  ];
+}
+
+function kitDkmage(ab) {
+  const ratio = tv(ab, 'epdamage.attack@ep_damage_ratio', 0);
+  const jumps = Math.max(0, tv(ab, 'epdamage.attack@max_target', 4) - 1);
+  const scale = tv(ab, 'epdamage.attack@chain.atk_scale', 0.85);
+  const range = tv(ab, 'epdamage.attack@projectile_range', 1.6);
+  const key = sv(ab.tS, 'deathrattle.enemy_key');
+  const delay = tv(ab, 'deathrattle.delay', 1);
+  return [
+    ratio > 0 ? ep('apoptosis', ratio) : null,
+    {
+      dealt(c, b, e) {
+        if (!(jumps > 0) || !c.target) return;
+        let from = c.target;
+        const seen = new Set([from.id]);
+        let mul = scale;
+        for (let i = 0; i < jumps && i < 8; i++) {
+          const nxt = nearestAlly(b, e, from, range, seen);
+          if (!nxt) break;
+          seen.add(nxt.id);
+          hurt(b, e, nxt, e.s.atk * mul, 'arts');
+          if (ratio > 0) elem(b, e, nxt, 'apoptosis', e.s.atk * ratio * mul);
+          mul *= scale;
+          from = nxt;
+        }
+      },
+    },
+    { death(c, b, e) { if (c.reason === 'killed') replaceLater(b, e, key, delay, 1); } },
+  ];
+}
+
+/** 饲育者: weighted death spawn. move_speed 2 is a move multiplier [ASSUMED]. */
+function kitDsfull(ab) {
+  const p1 = tv(ab, '0.prob1', 0.2);
+  const p2 = tv(ab, '0.prob2', 0.5);
+  const mul = tv(ab, '0.move_speed', 2);
+  const cnt = tv(ab, '0.cnt', 1);
+  return [{
+    death(c, b, e) {
+      if (c.reason !== 'killed') return;
+      const r = b.rng();
+      let key = sv(ab.tS, '0.enemy_3');
+      if (r < p1) key = sv(ab.tS, '0.enemy_1');
+      else if (r < p1 + p2) key = sv(ab.tS, '0.enemy_2');
+      if (!key) return;
+      const pos = [e.y, e.x];
+      const route = remainingRoute(e);
+      const kids = spawnChildren(b, e, key, cnt, { countInTotal: false, pos, route });
+      for (let i = 0; i < kids.length; i++) {
+        b.addBuff(kids[i], { key: 'reg:fast', persist: true, mods: { moveMul: mul } });
       }
     },
   }];
 }
 
-/** 量变之械: the first attack is ×2 (FirstAtkDouble.damage_scale). */
-function kitAcfncb(ab) {
-  return [nthAttackPower(1, T(ab, 'FirstAtkDouble.damage_scale') ?? 2)];
-}
-
-/** 假想敌：影役: hidden; 周围 1.8 内所有干员阻挡数 -1（光环，不可叠加）. */
-function kitAcblk(ab) {
-  return [stealth(), allyAura(T(ab, 'Aura.range_radius') ?? 1.8, 'ab:acblk', { blockCnt: -1 }, true, 0.5)];
-}
-
-/** 假想敌：丛生: the first hit on each target is ×2 and blocks healing for 5 s. */
-function kitAccrit(ab, e) {
-  const scale = T(ab, 'CriticalHit.damage_scale') ?? 2, dur = T(ab, 'CriticalHit.duration') ?? 5;
-  return [{ dealt(c, b) {
-    if (!c.dmg?.isAttack || !c.target?.alive) return;
-    const seen = e.mem.accrit ??= new Set();
-    if (seen.has(c.target.id)) return;
-    seen.add(c.target.id);
-    c.dmg.mul *= scale;
-    b.addBuff(c.target, { key: 'ab:accrit_noheal', duration: dur, visible: true, source: e, flags: { noHeal: true } });
-  } }];
-}
-
-/** 暴走食人花 / _2: twice per fight it stuns the nearest ally and digests (both unable to act for 5 s). */
-function kitTrwlpl(ab, _e) {
-  const cnt = Math.max(0, Math.floor(T(ab, 'InitEat.cnt') ?? 2));
-  const P = { left: cnt, acc: 0 };
-  return [{ tick(b, e2, a, dt) {
-    if (P.left <= 0) return;
-    P.acc += dt;
-    if (P.acc < 12) return;
-    P.acc = 0;
-    const t = b.allies().filter((u) => u.alive && hypot(u.x - e2.x, u.y - e2.y) <= 2).sort((x, y) => x.hp - y.hp)[0];
-    if (!t) return;
-    P.left--;
-    b.applyStatus(t, 'stun', { duration: 5, source: e2 });
-    b.applyStatus(e2, 'stun', { duration: 5, source: e2 });
-    b.fx('explode', { x: t.x, y: t.y, r: 0.5, kind: 'eat' });
-  } }];
-}
-
-/** 神勇的帕拉杜利斯 / _2: charges an ally in front for ×2 physical damage. */
-function kitMnctur(ab, _e) {
-  const scale = T(ab, 'CollideChar.atk_scale_collide') ?? 2;
-  const P = { acc: 0 };
-  return [{ tick(b, e2, a, dt) {
-    P.acc += dt;
-    if (P.acc < 5) return;
-    P.acc = 0;
-    const front = b.allies().filter((u) => u.alive && Math.abs(u.y - e2.y) < 1 && u.x > e2.x && u.x - e2.x <= 3).sort((x, y) => x.x - y.x)[0];
-    if (!front) return;
-    b.dealDamage(e2, front, { amount: e2.s.atk * scale, type: 'phys', isAttack: true, tags: ['enemyAbility'] });
-    b.fx('charge', { x: front.x, y: front.y, id: e2.id });
-  } }];
-}
-
-/** 搏命养家者: +0.5 move speed on warning; nearby enemies take 25 % less physical/arts damage. */
-function kitUbba(ab, e) {
-  const ms = T(ab, 'WarningTalent.move_speed') ?? 0.5, res = T(ab, 'Talent1.damage_resistance') ?? 0.25;
+/** “左手”泰特斯: reborn() plus a silenced ATK cut on the highest-ATK ally. */
+function kitLfkght(ab) {
+  const sk = ab.sk.AtkDesWeaken;
   return [
-    { spawn(b) {
-      b.on('damaged', (c) => { if (c.target === e && e.hpRatio < 0.5) b.addBuff(e, { key: 'ab:ubba_warn', persist: true, visible: true, mods: { moveMul: 1 + ms } }); }, { owner: e });
-    } },
-    enemyAura(2.5, 'ab:ubba_guard', { physTakenMul: 1 - res, artsTakenMul: 1 - res }, true, 0.5),
+    reborn({ dur: tv(ab, 'reborn.duration', 5) }),
+    timed(sk, (b) => {
+      let best = null;
+      for (const u of b.allies()) {
+        if (!u.alive) continue;
+        if (!best || u.s.atk > best.s.atk || (u.s.atk === best.s.atk && u.id < best.id)) best = u;
+      }
+      if (!best) return;
+      b.addBuff(best, { key: 'reg:weaken', duration: bb(sk, 'duration', 25), mods: { atkPct: bb(sk, 'atk', -0.5) } });
+    }, { sil: true }),
   ];
 }
 
-/**
- * 萨卡兹子裔寄生者: an enemy killed within `Aura.range_radius` leaves a 大君之赐 at its tile (PRTS: "周围一定范围内的敌人被
- * 击倒时，召唤一个<大君之赐>"; a 大君之赐 killed does not trigger this again). The record's `summons` alone would make the
- * generic Summon handler spawn it on the parasite's own death, which is not the rule.
- */
-function kitApara(ab, e) {
-  const r = T(ab, 'Aura.range_radius') ?? 1.5;
-  const key = (ab.tS && ab.tS['Aura.enemy_key']) || 'enemy_1221_dzomg';
+function kitHarchn(ab) {
+  const key = sv(ab.tS, 'deathrattle.enemy_key');
+  const cnt = tv(ab, 'deathrattle.cnt', 4);
+  const delay = tv(ab, 'deathrattle.delay', 0.2);
+  const sk = ab.sk.SummonToken;
+  return [
+    {
+      sil: true,
+      death(c, b, e) { if (c.reason === 'killed') replaceLater(b, e, key, delay, cnt); },
+    },
+    timed(sk, (b, e) => {
+      const k = sv(sk.bs, 'enemy_key') || key;
+      const n = bb(sk, 'cnt', 1);
+      const pos = [e.y, e.x];
+      const route = remainingRoute(e);
+      spawnChildren(b, e, k, n, { countInTotal: false, pos, route });
+    }, { sil: true }),
+  ];
+}
+
+/** 寄生者: a nearby enemy's knock-down summons 大君之赐. Not its own death.
+ *  被击倒 is reason 'killed' (a leak is not a knock-down). The summoned gift's own
+ *  knock-down does not count: each parasite in range would replace one dead gift
+ *  with another, and two of them grow without bound [ASSUMED]. */
+function kitAcpara(ab) {
+  const key = sv(ab.tS, 'Aura.enemy_key');
+  const radius = tv(ab, 'Aura.range_radius', 1.5);
   return [{
-    spawn(b) {
-      b.on('death', (c) => {
-        const u = c.unit;
-        if (!u || u === e || u.side !== 'enemy' || u.defId === key) return;
-        if (hypot(u.x - e.x, u.y - e.y) > r + 1e-9) return;
-        b.spawnEnemy(key, { pos: [u.tileR, u.tileC], countInTotal: false });
-      }, { owner: e });
+    sil: true,
+    spawn(b, e) { watchDeaths(b, e); },
+    otherDeath(c, b, e) {
+      const v = c.unit;
+      if (c.reason !== 'killed' || !v || v === e || v.side !== 'enemy' || !key) return;
+      if (v.defId === key) return;
+      if (hypot(v.x - e.x, v.y - e.y) > radius + 1e-9) return;
+      spawnChildren(b, e, key, 1, { countInTotal: false, pos: [v.y, v.x], route: remainingRoute(e) });
     },
   }];
 }
 
-/**
- * A periodic summon whose skill names it: 枯朽萃聚使徒's BornBugs (its `summons`) and 内测版自助出餐终端's Spawn
- * (`bbStr.enemy_key`). First summon at the skill's initial cooldown, then its cooldown — not the generic Summon handler's
- * spawn on the carrier's own death.
- */
-function kitPeriodicSummon(ab, e) {
-  const skills = Object.values(ab.sk || {}).filter(Boolean);
-  const sk = skills.find((s) => s.bs && s.bs.enemy_key) || skills[0] || null;
-  const key = (sk && sk.bs && sk.bs.enemy_key) || (Array.isArray(e.def?.raw?.summons) ? e.def.raw.summons[0] : null);
-  const cd = Math.max(0.5, num(sk && sk.cd, 10));
-  const first = sk && sk.icd > 0 ? sk.icd : cd;
-  if (!key) return [];
+// --- the other new draws --------------------------------------------------------------------------------
+
+/** 假想敌：影役: stealth, and block count −1 on allies in range (one shared buff, so it does not stack). */
+function kitAcblk(ab) {
+  const radius = tv(ab, 'Aura.range_radius', 1.8);
+  const block = tv(ab, 'Aura.block_cnt', -1);
+  return [
+    stealth(),
+    {
+      tick(b, e) {
+        for (const u of auraAllies(b, e, e.x, e.y, radius)) {
+          if (u.kind !== 'op') continue;
+          auraBuff(b, u, 'reg:blockdown', 0.25, { blockCnt: block }, null, true);
+        }
+      },
+    },
+  ];
+}
+
+/** 假想敌：镜眼: refraction, and a silenced ASPD cut on the source of arts damage. */
+function kitAcrefm(ab) {
+  const res = tv(ab, 'refracting.magic_resistance', 70);
+  const aspd = tv(ab, 'refracting.attack_speed', -50);
+  const dur = tv(ab, 'refracting.duration', 3);
+  return [
+    refraction(res),
+    {
+      sil: true,
+      taken(c, b) {
+        if (!c.dmg || c.dmg.type !== 'arts' || !c.source || !c.source.alive) return;
+        if (!(dur > 0)) return;
+        b.addBuff(c.source, { key: 'reg:refslow', duration: dur, refresh: 'replace', mods: { aspd } });
+      },
+    },
+  ];
+}
+
+/** 假想敌：镜波: refraction, and on death the lowest-RES enemy nearby gains RES. */
+function kitAcrefd(ab) {
+  const res = tv(ab, 'refracting.magic_resistance', 70);
+  const radius = tv(ab, 'refracting.range_radius', 1.2);
+  const bonus = tv(ab, 'refracting.acrefd[magic-resistance].magic_resistance', 10);
+  return [
+    refraction(res),
+    {
+      sil: true,
+      death(c, b, e) {
+        if (c.reason !== 'killed' || !(bonus > 0)) return;
+        let best = null;
+        for (const o of b.enemiesInRadius(e.x, e.y, radius)) {
+          if (!o.alive || o === e) continue;
+          if (!best || o.s.res < best.s.res || (o.s.res === best.s.res && o.id < best.id)) best = o;
+        }
+        if (best) b.addBuff(best, { key: 'reg:res', persist: true, mods: { resFlat: bonus } });
+      },
+    },
+  ];
+}
+
+/** “模拟宝藏”: a hostage when the enemy record itself is spawned. It does not attack (applyWay NONE)
+ *  and does not move. The command deploys an ally device instead (content/bands/commands.js): enemy
+ *  contact and the survival coin live there, so this kit is not the payoff. */
+function kitAchest() {
   return [{
-    spawn(b, _e, a) { a.left = first; },
-    tick(b, e2, a, dt) {
-      if (!e2.alive) return;
-      a.left = Math.max(0, num(a.left, first) - dt);
-      if (a.left > 1e-9) return;
-      a.left = cd;
-      b.spawnEnemy(key, { pos: [e2.tileR, e2.tileC], countInTotal: false });
+    spawn(b, e) {
+      e.profile.noAttack = true;
+      b.addBuff(e, { key: 'reg:hostage', persist: true, flags: { noMove: true } });
     },
   }];
 }
 
-/**
- * 开天汽水瓶 (PRTS: 【飞行单位】逐渐流失生命并加速) — `Passive.enemy_nscola[speed]` (interval 0.5 s, +0.3 move speed,
- * max 25 s) and a fixed HP loss per interval.
- */
-function kitNscola(ab) {
-  const iv = Math.max(0.1, T(ab, 'Passive.enemy_nscola[speed].interval') ?? 0.5);
-  const step = T(ab, 'Passive.enemy_nscola[speed].move_speed') ?? 0.3;
-  const maxT = Math.max(1, T(ab, 'Passive.enemy_nscola[speed].max_time') ?? 25);
-  const loss = T(ab, 'Passive.fixed_value_damage') ?? 120;
-  return [{ tick(b, e, a, dt) {
-    a.t = (a.t ?? 0) + dt;
-    if (a.t + 1e-9 < iv) return;
-    a.t = 0;
-    a.n = (a.n ?? 0) + 1;
-    b.loseHp(e, loss, { tags: ['enemyAbility'] });
-    if (a.n * iv <= maxT) b.addBuff(e, { key: 'reg:nscola_speed', persist: true, refresh: 'replace', visible: true, mods: { moveMul: 1 + step * a.n } });
-  } }];
-}
-
-/** 遮天面包机 (PRTS: 【飞行单位】未被阻挡时持续对周围我方单位造成溅射伤害). */
-function kitNsbomb(ab) {
-  const iv = Math.max(0.2, T(ab, 'Passive.interval') ?? 2.5);
-  const r = T(ab, 'Passive.range_radius') ?? 1;
-  const scale = T(ab, 'Passive.atk_scale') ?? 2;
-  return [{ tick(b, e, a, dt) {
-    if (e.blocking?.length) return;
-    a.t = (a.t ?? 0) + dt;
-    if (a.t + 1e-9 < iv) return;
-    a.t = 0;
-    for (const u of b.alliesInRadius(e.x, e.y, r)) {
-      if (u.alive) b.dealDamage(e, u, { amount: e.s.atk * scale, type: 'phys', tags: ['enemyAbility'] });
-    }
-    b.fx('explode', { x: e.x, y: e.y, id: e.id, r, kind: 'nsbomb' });
-  } }];
-}
+const same = (kit) => kit;
 
 export const REGULATION_KITS = Object.freeze({
-  enemy_10146_nscola: kitNscola, // 开天汽水瓶
-  enemy_10147_nsbomb: kitNsbomb, // 遮天面包机
-  enemy_1104_lfkght: kitLfkght, enemy_1104_lfkght_3: kitLfkght,
-  enemy_1191_krgrg: kitKrgrg, enemy_1191_krgrg_2: kitKrgrg,
-  enemy_1213_mtrsnp: kitShotbuff, enemy_1216_cansld: kitShotbuff, enemy_1219_mtrbty: kitShotbuff,
-  enemy_1224_dsuply: kitDsuply, enemy_1224_dsuply_2: kitDsuply,
-  enemy_1373_ltnhor: kitSwitchMode, enemy_1373_ltnhor_2: kitSwitchMode,
-  enemy_1376_ltndru: kitSwitchMode, enemy_1376_ltndru_2: kitSwitchMode,
-  enemy_1388_wingnt: kitWingnt, enemy_1388_wingnt_2: kitWingnt,
-  enemy_1405_boomer_2: kitBoomer,
   enemy_1406_chghmr: kitChghmr,
-  enemy_1435_dsflys: kitDsflys,
-  enemy_9024_acsgnt: kitAcsgnt,
-  enemy_9028_acfncb: kitAcfncb,
-  enemy_9034_acblk: kitAcblk,
+  enemy_1375_ltnclr: kitLtnclr,
+  enemy_1375_ltnclr_2: same(kitLtnclr),
+  enemy_1388_wingnt: kitWingnt,
+  enemy_1388_wingnt_2: same(kitWingnt),
+  enemy_1191_krgrg: kitKrgrg,
+  enemy_1191_krgrg_2: same(kitKrgrg),
+  enemy_1219_mtrbty: kitMtrbty,
+  enemy_1409_bdguad_2: kitBdguad,
+  enemy_1431_lrmzrd: kitLrmzrd,
+  enemy_1431_lrmzrd_2: same(kitLrmzrd),
   enemy_9040_accrit: kitAccrit,
-  enemy_10003_trwlpl_2: kitTrwlpl,
-  enemy_9030_acpara: kitApara,
-  enemy_10077_mpbarr: kitPeriodicSummon,
-  enemy_10163_mnctur_2: kitMnctur,
-  enemy_10196_ubba: kitUbba, enemy_10196_ubba_2: kitUbba,
+  enemy_1222_dpvt: kitDeathrattle,
+  enemy_1222_dpvt_2: same(kitDeathrattle),
+  enemy_1223_dmech: kitDeathrattle,
+  enemy_1223_dmech_2: same(kitDeathrattle),
+  enemy_1361_dthrow: kitDthrowDeath,
+  enemy_1361_dthrow_2: same(kitDthrowDeath),
+  enemy_1363_spnshd_2: kitSpnshdDeath,
+  enemy_1226_dklord: kitDklord,
+  enemy_1226_dklord_2: same(kitDklord),
+  enemy_1362_dfat: kitDfat,
+  enemy_1362_dfat_2: same(kitDfat),
+  enemy_1225_dkmage: kitDkmage,
+  enemy_1225_dkmage_2: same(kitDkmage),
+  enemy_1437_dsfull: kitDsfull,
+  enemy_1437_dsfull_2: same(kitDsfull),
+  enemy_1104_lfkght_3: kitLfkght,
+  enemy_1133_harchn: kitHarchn,
+  enemy_1133_harchn_2: same(kitHarchn),
+  enemy_9030_acpara: kitAcpara,
+  enemy_9034_acblk: kitAcblk,
+  enemy_9039_acrefm: kitAcrefm,
+  enemy_9031_acrefd: kitAcrefd,
+  enemy_9038_achest: kitAchest,
 });

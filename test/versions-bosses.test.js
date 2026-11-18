@@ -99,24 +99,28 @@ test('假想敌：影役 lowers the block count of operators around it (not othe
   setGameData(ACT3);
   h.run(1.5);
   const a = h.allies()[0];
-  assert.ok(buffs(a, 'ab:acblk').length > 0, 'ab:acblk on the operator');
+  assert.ok(buffs(a, 'reg:blockdown').length > 0, 'reg:blockdown on the operator');
   assert.equal(a.s.blockCnt, Math.max(0, a.base.blockCnt - 1), 'the operator loses one block');
 });
 
-test('假想敌：镜波 gives the lowest-RES operator +10 RES on death; 镜眼 slows the caster of arts damage', () => {
+test('假想敌：镜波 gives the lowest-RES enemy +10 RES on death; 镜眼 slows the caster of arts damage', () => {
   const h = makeBattle({
     data: ds, seed: 11, autoFinish: false,
     units: [{ chessId: 'chess_char_1_02_a', row: 9, col: 6 }],
-    enemies: [{ key: 'enemy_9031_acrefd', time: 0, pos: [9, 7] }, { key: 'enemy_9039_acrefm', time: 0, pos: [10, 5] }],
+    enemies: [
+      { key: 'enemy_9031_acrefd', time: 0, pos: [9, 7] },
+      { key: 'enemy_1067_snslime_2', time: 0, pos: [9, 8] },
+      { key: 'enemy_9039_acrefm', time: 0, pos: [10, 5] },
+    ],
   });
   setGameData(ACT3);
   h.step(1);
-  const [refd, refm] = h.enemies();
+  const [refd, low, refm] = h.enemies();
   const ally = h.allies()[0];
-  const res0 = ally.s.res;
+  const res0 = low.s.res;
   h.b.kill(refd, ally);
   h.step(1);
-  assert.ok(ally.s.res > res0, `RES ${res0} → ${ally.s.res} (镜波 +10)`);
+  assert.ok(low.s.res > res0, `RES ${res0} → ${low.s.res} (镜波 +10 on a nearby enemy)`);
   const aspd0 = ally.s.aspd;
   h.b.dealDamage(ally, refm, { amount: 20, type: 'arts', isAttack: true });
   h.step(1);

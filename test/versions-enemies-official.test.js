@@ -10,6 +10,7 @@ import { DataSource } from '../server/sim/simdata.js';
 import { setGameData } from '../server/sim/content/support/index.js';
 import { KITS } from '../server/sim/content/enemies.js';
 import { REGULATION_KITS } from '../server/sim/content/enemies/regulation.js';
+import { REGULATION_EXTRA_KITS } from '../server/sim/content/enemies/regulation-extra.js';
 import { makeBattle } from './helpers/battleHarness.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -31,7 +32,8 @@ function field(extra = {}) {
 }
 
 test('every official kit is registered and its key is in KITS', () => {
-  for (const key of Object.keys(REGULATION_KITS)) assert.equal(KITS[key], REGULATION_KITS[key], key);
+  // 规程's kits live in two modules (the mainline port + this fork's own additions); a shared key may be provided by either
+  for (const key of Object.keys(REGULATION_KITS)) assert.equal(KITS[key], REGULATION_EXTRA_KITS[key] ?? REGULATION_KITS[key], key);
 });
 
 test('锋盔骑士团学徒: reborn after five seconds', () => {

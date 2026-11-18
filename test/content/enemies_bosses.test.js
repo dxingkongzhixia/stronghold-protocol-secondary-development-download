@@ -88,6 +88,11 @@ const VERSION_ONLY = new Set([
   'enemy_9040_accrit', 'enemy_10003_trwlpl_2', 'enemy_10163_mnctur_2', 'enemy_10196_ubba', 'enemy_10196_ubba_2', 'enemy_2123_dyjsww',
   'enemy_9030_acpara', 'enemy_10077_mpbarr', 'enemy_9036_acweb', 'enemy_9031_acrefd', 'enemy_9039_acrefm', 'enemy_9027_acfnca',
   'enemy_10146_nscola', 'enemy_10147_nsbomb',
+  'enemy_1375_ltnclr', 'enemy_1375_ltnclr_2', 'enemy_1409_bdguad_2', 'enemy_1431_lrmzrd', 'enemy_1431_lrmzrd_2',
+  'enemy_1222_dpvt', 'enemy_1222_dpvt_2', 'enemy_1223_dmech', 'enemy_1223_dmech_2', 'enemy_1361_dthrow', 'enemy_1361_dthrow_2',
+  'enemy_1363_spnshd_2', 'enemy_1226_dklord', 'enemy_1226_dklord_2', 'enemy_1362_dfat', 'enemy_1362_dfat_2',
+  'enemy_1225_dkmage', 'enemy_1225_dkmage_2', 'enemy_1437_dsfull', 'enemy_1437_dsfull_2', 'enemy_1133_harchn', 'enemy_1133_harchn_2',
+  'enemy_9038_achest',
 ]);
 
 test('沉默: exactly the abilities whose handbook line is SILENCE-flagged can be silenced (every authored enemy), plus 萨卡兹枯朽战士 / 组长\'s death fog', () => {
