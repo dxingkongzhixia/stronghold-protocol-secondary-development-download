@@ -3,8 +3,8 @@
 // come from the flattened talent book (ab.t). The archetype helpers (reborn / deathBoom / unbalanced / enemyAura /
 // nthAttackPower) are the same ones the default enemies use.
 import { hypot } from '../../detmath.js';
-import { T } from './helpers.js';
-import { deathBoom, unbalanced, reborn, enemyAura, allyAura, nthAttackPower, stealth } from './archetypes.js';
+import { T, hurt } from './helpers.js';
+import { deathBoom, unbalanced, reborn, enemyAura, allyAura, nthAttackPower, stealth, pollution } from './archetypes.js';
 
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const buffOf = (u, key) => u?.findBuff?.(key) ?? null;
@@ -328,9 +328,131 @@ function kitNsbomb(ab) {
   } }];
 }
 
+/**
+ * 狂暴凶豕兽 (`enemy_1309_mhboar_2`; PRTS "落叶逐火" 精英):
+ *   占用 2 阻挡数 (`blockWeight` 2 — a blocker with blockCnt 1 can never take it);
+ *   冲撞: 每 0.1 s 检测 — 晕眩/冻结/浮空/束缚 → 停止；否则未被阻挡且未冲撞 → 开始冲撞；
+ *   碰撞光环半径 0.5，只选低地我方单位，每次冲撞每个单位只受一次 当前移速×800 途径物理伤害；
+ *   加速: 开始 3 s 后每 0.333 s +33.3% 移速，最多 35 层，停止时解除；
+ *   第一次普通攻击追加 当前移速×600 途径物理伤害，造成后停止冲撞。
+ * The generic procedure would read `FirstAttack.atk_scale` 600 as a ×600 damage multiplier — hence this kit.
+ */
+function kitMhboar(ab) {
+  const R = 0.5;
+  const CRASH = T(ab, 'Crash.atk_scale') ?? 800;
+  const FIRST = T(ab, 'FirstAttack.atk_scale') ?? 600;
+  const STEP = T(ab, 'Rush.mhboar_t[trigger].interval') ?? 0.333;
+  const PER = T(ab, 'Rush.mhboar_t[trigger].move_speed') ?? 0.333;
+  const MAX = T(ab, 'Rush.mhboar_t[trigger].trig_cnt') ?? 35;
+  const DELAY = T(ab, 'Rush.mhboar_t_predelay.predelay') ?? 3;
+  const KEY = 'reg:mhboar_rush';
+  const stop = (b, e) => {
+    const r = e.mem.mhboar;
+    if (!r?.rush) return;
+    r.rush = false;
+    r.t = 0;
+    r.next = DELAY;
+    r.stacks = 0;
+    r.hit = null;
+    b.removeBuff(e, KEY);
+  };
+  return [{
+    spawn(b, e) {
+      e.blockWeight = 2;
+      e.mem.mhboar = { rush: false, t: 0, next: DELAY, stacks: 0, hit: null };
+      b.on('attack', (c) => {
+        if (c.attacker !== e || !e.mem.mhboar?.rush) return;
+        const amount = e.s.moveSpeed * FIRST;
+        for (const t of c.targets || []) if (t?.alive) hurt(b, e, t, amount, 'phys', { tags: ['crash'] });
+        stop(b, e);
+      }, { owner: e });
+    },
+    tick(b, e, a, dt) {
+      const r = e.mem.mhboar;
+      if (!r) return;
+      a.check = (a.check ?? 0) + dt;
+      if (a.check + 1e-9 < 0.1) return;
+      a.check = 0;
+      // PRTS: 受晕眩/冻结/浮空/束缚 → 停止冲撞 (the acceleration resets with it)
+      if (e.s.flags.stun || e.s.flags.bind || e.findBuff('bind')) { stop(b, e); return; }
+      if (!r.rush) {
+        if (e.blockedBy) return;
+        r.rush = true;
+        r.t = 0;
+        r.next = DELAY;
+        r.stacks = 0;
+        r.hit = new Set();
+        return;
+      }
+      r.t += 0.1;
+      for (const u of b.allies()) {
+        if (!u.alive || !u.ground || r.hit.has(u.id)) continue;
+        if (hypot(u.x - e.x, u.y - e.y) > R) continue;
+        r.hit.add(u.id);
+        hurt(b, e, u, e.s.moveSpeed * CRASH, 'phys', { tags: ['crash'] });
+      }
+      while (r.rush && r.t + 1e-9 >= r.next && r.stacks < MAX) {
+        r.stacks++;
+        r.next += STEP;
+        b.addBuff(e, { key: KEY, persist: true, visible: true, refresh: 'replace', mods: { moveMul: 1 + PER * r.stacks } });
+      }
+    },
+  }];
+}
+
+/** The active originium storm of chapter 14 (a device/unit of another season; act3 carries none). */
+function findStorm(b, e) {
+  for (const u of b.units) {
+    if (!u || u === e || !u.alive) continue;
+    if (u.mem?.storm) return u;
+    const id = String(u.defId || u.alias || '');
+    if (/storm/i.test(id) || String(u.def?.raw?.name ?? '').includes('活性源石风暴')) return u;
+  }
+  return null;
+}
+
+/**
+ * 恶尘源石虫 (`enemy_1424_lrboom`; PRTS 14章):
+ *   死亡爆炸: 半径 1.3, 延迟 1 s, 攻击力 350% 物理溅射, 来源无效 (sourceless);
+ *   与活性源石风暴距离 ≤ 其影响半径 + 0.3 → 立刻死亡，并使风暴 +1 层增幅 (可沉默);
+ *   其他情况死亡时生成源石污染区 (可沉默). The zone's damage comes from the chapter's hidden controller (50/100/200
+ *   true/s at level 1/2/3) — act3 has no such controller, so the zone is a marker here (0 damage) [ASSUMED].
+ */
+function kitLrboom(ab) {
+  const R = 1.3;
+  const SCALE = T(ab, 'Boom.atk_scale') ?? 3.5;
+  const STORM = T(ab, 'DetectStorm.range_radius') ?? 0.3;
+  return [{
+    tick(b, e) {
+      const storm = findStorm(b, e);
+      if (!storm) return;
+      const rad = Math.max(0, storm.mem.stormRadius ?? 0.8);
+      if (hypot(storm.x - e.x, storm.y - e.y) > rad + STORM) return;
+      e.mem.stormKill = true;
+      if (!e.s.flags.silence) storm.mem.stormAmp = (storm.mem.stormAmp ?? 0) + 1;
+      b.kill(e, null);
+    },
+    death(c, b, e) {
+      if (c.reason !== 'killed') return;
+      const x = e.x, y = e.y, atk = e.s.atk;
+      b.fx('telegraph', { x, y, r: R, dur: 1, kind: 'lrboom' });
+      b.after(1, (bb) => {
+        for (const u of bb.allies()) {
+          if (!u.alive || hypot(u.x - x, u.y - y) > R) continue;
+          bb.dealDamage(e, u, { amount: atk * SCALE, type: 'phys', sourceless: true, canDodge: false, tags: ['enemyAbility', 'lrboom'] });
+        }
+        bb.fx('explode', { x, y, r: R, kind: 'lrboom' });
+      }, { owner: e });
+      if (!e.s.flags.silence && !e.mem.stormKill) pollution(b, e, x, y, R, 30, 0, 0);
+    },
+  }];
+}
+
 export const REGULATION_EXTRA_KITS = Object.freeze({
   enemy_10146_nscola: kitNscola, // 开天汽水瓶
   enemy_10147_nsbomb: kitNsbomb, // 遮天面包机
+  enemy_1309_mhboar_2: kitMhboar, // 狂暴凶豕兽
+  enemy_1424_lrboom: kitLrboom, // 恶尘源石虫
   enemy_1104_lfkght: kitLfkght,
   enemy_1213_mtrsnp: kitShotbuff, enemy_1216_cansld: kitShotbuff,
   enemy_1224_dsuply: kitDsuply, enemy_1224_dsuply_2: kitDsuply,

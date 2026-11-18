@@ -6,7 +6,7 @@ import { num, talentBb, traitBb, up, cheb, freeTileAround } from '../shared/tier
 export default {
   // ---------------------------------------------------------------------------------------------------------------
   // 2_11 风丸 纸艺·双影: lose hp_ratio of current HP, ATK +atk, summon the <替身> (overrideTokenKey) on a free melee tile
-  // around her for the skill's duration [ASSUMED lifetime]. 折纸生花: whenever a <替身> appears (the summon, and the
+  // around her; the doll lives for the skill's duration (the data's 20 s — onEnd retreats it). 折纸生花: whenever a <替身> appears (the summon, and the
   // dollkeeper substitution) enemies on the 8 surrounding tiles take damage_scale × its ATK arts — air units too [ASSUMED:
   // no 对空 note on PRTS; the <替身> itself "可对空"].
   // Trait substitution: she fights with the <替身>'s stats (the engine already swaps in its HP; the kit swaps ATK/DEF

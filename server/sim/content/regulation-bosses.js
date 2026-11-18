@@ -359,6 +359,28 @@ function pickByHp(b, enemy, maxTarget, batch) {
   return picked;
 }
 
+/**
+ * 【淤困捕食】 (PRTS: "在左侧玩家场地和右侧玩家场地上，各随机选择2个我方单位"): `perSide` random units per half
+ * (our 19×21 field is the two player halves), each side's picks from the eligible targets only, the total capped at
+ * `batch` (the Hidden Core form raises both counts). The normal attack keeps pickByHp (PRTS: 每侧生命值最高的3个).
+ */
+function pickRandomBySide(b, enemy, perSide, batch) {
+  const by = new Map();
+  for (const u of allTargets(b, enemy)) {
+    const id = u.x < 10.5 ? 'L' : 'R';
+    let list = by.get(id);
+    if (!list) { list = []; by.set(id, list); }
+    list.push(u);
+  }
+  const picked = [];
+  for (const id of [...by.keys()].sort()) {
+    const list = b.rng.shuffle(by.get(id).slice());
+    const n = Math.min(list.length, perSide);
+    for (let k = 0; k < n; k++) picked.push(list[k]);
+  }
+  return picked.slice(0, Math.max(0, batch));
+}
+
 function refreshEvade(b, e, ab) {
   const ratio = tv(ab, 'Evade.hp_ratio', 0.25);
   const prob = tv(ab, 'Evade.prob', 0);
@@ -409,7 +431,8 @@ function kitSpider(ab) {
       const n = bb(net, 'max_target', 2);
       const cap = bb(net, 'batch_max_target', 4);
       const key = sv(net.bs, 'enemy_key') || WEB;
-      const targets = pickByHp(b, e, n, cap);
+      // 【淤困捕食】 picks at random per side; the normal attack above stays highest-HP per side.
+      const targets = pickRandomBySide(b, e, n, cap);
       for (let i = 0; i < targets.length; i++) {
         const u = targets[i];
         b.spawnEnemy(key, {
@@ -686,6 +709,26 @@ function enterForm2(b, e) {
   b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'form2', form: 'form2' });
 }
 
+/**
+ * 后兽 【返璞】 (PRTS 第二形态, "按预设路径召唤一批敌人"; the skill's blackboard names the branch `dyjsww_summon`,
+ * cooldown 170 / initial 5). The branch's composition is the LEVEL's `branches[branch_id]` — the 后兽 is not in any
+ * act3 stage, so this build carries no such branch: the skill spends its cooldown and spawns nothing. A stage that
+ * supplies `branches[id]` as `[{ key, count?, pos?, route?, interval? }]` (or `{ spawns: [...] }`) is spawned here.
+ */
+function summonBranch(b, e, sk) {
+  const id = sv(sk.bs, 'branch_id');
+  if (!id) return;
+  const branch = b.stage?.branches?.[id] ?? b.data?.stage?.branches?.[id] ?? null;
+  const spawns = Array.isArray(branch) ? branch : Array.isArray(branch?.spawns) ? branch.spawns : null;
+  if (!spawns) return;
+  for (const s of spawns) {
+    if (!s || typeof s.key !== 'string') continue;
+    const pos = Array.isArray(s.pos) ? s.pos : [e.y, e.x];
+    const route = s.route ?? toEnd(b, pos[0], pos[1]);
+    b.spawnEnemy(s.key, { pos, route, count: s.count ?? 1, interval: s.interval ?? 0, ...partOpts(e, pos, s.route ?? null) });
+  }
+}
+
 function kitTail(ab) {
   const radius = tv(ab, 'ReturnToDust.range_radius', 1.5);
   const atkStep = tv(ab, 'ReturnToDust.atk', 0.2);
@@ -696,6 +739,7 @@ function kitTail(ab) {
   const blink = ab.sk.Blink;
   const punish = ab.sk.Punishment;
   const doom = ab.sk.GlobalDoom;
+  const branch = ab.sk.SummonBranchEnemy;
   return [
     {
       spawn(b, e) {
@@ -737,6 +781,8 @@ function kitTail(ab) {
       e.inTotal = false;
       b.kill(e, null);
     }),
+    // 【返璞】 only in the second form (PRTS "第一形态 / 第二形态" tables).
+    timed(branch, (b, e) => summonBranch(b, e, branch), { cond: (b, e) => !!e.mem.regForm2 }),
   ];
 }
 

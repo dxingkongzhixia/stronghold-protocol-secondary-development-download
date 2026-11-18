@@ -1,6 +1,6 @@
 // server/sim/content/kits/ops/ver-cuttle.js — 安哲拉 (char_218_cuttle), 第一期 (the mainline design §35.22.9).
 // 优先攻击防御力最低 is the longrange profile. The distance scale is the elite trait blackboard (same shape as 伊芙利特).
-// [ASSUMED]「编入队伍」is the deployed board, not the bench.
+// 「编入队伍」is the deployed board: the talent is an aura and only deployed allies are on it (the bench is not a field).
 
 import { hypot } from '../../../detmath.js';
 import { installAura, num, talentBb, traitBb, up } from '../shared/tier1.js';
@@ -44,7 +44,8 @@ function cuttle(_bb, chess, def) {
       }
       if (sid === S2) battle.on('beforeAttack', (ctx) => {
         if (ctx.attacker !== unit || !unit.skill?.active) return;
-        // [ASSUMED] when every enemy is below half health she holds the shot; there is no fallback target.
+        // PRTS "普通攻击不再以生命值低于50%的敌人为目标": with every candidate below half health she has no legal target and
+        // holds the shot (no fallback target is invented).
         ctx.targets = (ctx.targets || []).filter((t) => t && t.hpRatio >= 0.5);
       }, { owner: unit });
     },

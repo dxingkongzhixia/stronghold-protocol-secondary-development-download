@@ -128,3 +128,33 @@ test('内测版自助出餐终端 summons on its own skill cooldown', () => {
   h.run(3.3);
   assert.ok(h.enemies().some((e) => e.defId === 'enemy_10073_mpcar'), 'Spawn');
 });
+
+test('狂暴凶豕兽: block weight 2, rush acceleration, and the first attack is 移速×600 (never ×600)', () => {
+  const h = field();
+  h.step(1);
+  const e = h.b.spawnEnemy('enemy_1309_mhboar_2', { pos: [10, 8] });
+  assert.equal(e.blockWeight, 2, '占用 2 阻挡数');
+  h.run(4.2); // 3 s predelay + a few 0.333 s stacks
+  assert.ok(e.findBuff('reg:mhboar_rush'), 'rush acceleration buff');
+  assert.ok(e.s.moveSpeed > 0.4 + 1e-6, `move speed ${e.s.moveSpeed}`);
+  const ally = h.allies().find((a) => a.tileC === 6) ?? h.allies()[0];
+  const hp = ally.hp;
+  assert.ok(h.runUntil(() => ally.hp < hp, 12), 'the ally is hit');
+  assert.ok(hp - ally.hp < 5000, `one hit is 移速×600, not ×600 ATK (${Math.round(hp - ally.hp)})`);
+});
+
+test('恶尘源石虫: the death explosion is delayed 1 s and deals 350 % ATK', () => {
+  const h = field();
+  h.step(1);
+  const e = h.b.spawnEnemy('enemy_1424_lrboom', { pos: [10, 7] });
+  const ally = h.allies().find((a) => a.tileC === 6) ?? h.allies()[0];
+  const hp = ally.hp;
+  h.b.dealDamage(null, e, { amount: e.s.maxHp * 2, type: 'true' });
+  assert.equal(e.alive, false, 'dead');
+  h.run(0.5);
+  assert.ok(hp - ally.hp < 1, 'no explosion inside the 1 s fuse');
+  h.run(0.8);
+  const dealt = hp - ally.hp;
+  // 350 % × 300 ATK, less the ally's DEF (physical); nowhere near the 池's 1 s delay being skipped
+  assert.ok(dealt > 0, `explosion damage ${dealt}`);
+});

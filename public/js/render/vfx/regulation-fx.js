@@ -79,6 +79,14 @@ export const REGULATION_FX_ROSTER = Object.freeze({
   enemy_1361_dthrow: Object.freeze([
     'enemy_dthrow_attack_fire_ground', 'enemy_dthrow_attack_hit', 'enemy_dthrow_die',
   ]),
+  // 狂暴凶豕兽 — the crash aura (Crash talent loop) and its attack
+  enemy_1309_mhboar_2: Object.freeze([
+    'enemy_mhboar_attack', 'enemy_mhboar_hit_01', 'enemy_mhboar_hit_02',
+  ]),
+  // 恶尘源石虫 — the death cloud / explosion (projectile_lrboom's toTargetOnStart) and its attack
+  enemy_1424_lrboom: Object.freeze([
+    'enemy_lrboom_attack_hit_01', 'enemy_lrboom_attack_start_01', 'enemy_lrboom_die',
+  ]),
 });
 
 /** The 15 act3-only operators (their index unit keys are the charIds). */
@@ -96,6 +104,11 @@ export const REGULATION_FX_OPERATORS = Object.freeze([
 export const REGULATION_FX_BINDINGS = Object.freeze({
   enemy_2123_dyjsww: Object.freeze({
     phase: Object.freeze({ xkind: 'form2', owner: 'id', keys: Object.freeze(['enemy_dyjsww_die_01']), once: true }),
+  }),
+  // 恶尘源石虫's 1 s death fuse: the kit's telegraph is the client's looping enemy_lrboom_die (projectile_lrboom's
+  // toTargetOnStart / _effectsToTargetWhenStart), held for the telegraph's own time.
+  enemy_1424_lrboom: Object.freeze({
+    telegraph: Object.freeze({ xkind: 'lrboom', owner: 'id', keys: Object.freeze(['enemy_lrboom_die']), hold: 'fx' }),
   }),
 });
 

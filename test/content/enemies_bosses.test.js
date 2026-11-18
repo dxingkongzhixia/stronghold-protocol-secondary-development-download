@@ -93,6 +93,8 @@ const VERSION_ONLY = new Set([
   'enemy_1363_spnshd_2', 'enemy_1226_dklord', 'enemy_1226_dklord_2', 'enemy_1362_dfat', 'enemy_1362_dfat_2',
   'enemy_1225_dkmage', 'enemy_1225_dkmage_2', 'enemy_1437_dsfull', 'enemy_1437_dsfull_2', 'enemy_1133_harchn', 'enemy_1133_harchn_2',
   'enemy_9038_achest',
+  // 2026-11-18 hand kits (enemies/regulation-extra.js): 狂暴凶豕兽 / 恶尘源石虫, act3-only records
+  'enemy_1309_mhboar_2', 'enemy_1424_lrboom',
 ]);
 
 test('沉默: exactly the abilities whose handbook line is SILENCE-flagged can be silenced (every authored enemy), plus 萨卡兹枯朽战士 / 组长\'s death fog', () => {

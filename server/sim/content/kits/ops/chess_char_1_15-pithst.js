@@ -19,7 +19,8 @@ export const PITHST_ELEMENTS = Object.freeze(['neural', 'burn', 'apoptosis']);
  *     playtest #5 #3: the kit used to pick one element "not bursting" — but a burst's 爆发冷却 locks every gauge of the
  *     unit, so it only ever filled 神经). PRTS 元素: when one unit applies several elements that would each fill their
  *     gauge, the element applied first bursts — from her alone 神经 bursts (the "（优先）"), while her 灼燃 / 凋亡 add to
- *     the gauges the team builds (余, 塑心 …). [ASSUMED: simultaneous application — the reading of the official text]
+ *     the gauges the team builds (余, 塑心 …). The official text "攻击同时附带18%攻击力的神经损伤（优先）、灼燃损伤、
+ *     凋亡损伤" attaches all three to each damage instance (PRTS: 同时).
  *   * elite module RIT-X "对精英和领袖敌人造成的元素损伤提升18%" = ep_damage_ratio_boss (0.2124) vs ELITE / BOSS enemies:
  *     a talent ratio, not an "元素损伤提升" (PRTS 备注), so it changes nothing else she deals (e.g. a 灼燃维式重锤).
  * The target pick prefers enemies not in a burst (`priority: 'notBurst'`).
