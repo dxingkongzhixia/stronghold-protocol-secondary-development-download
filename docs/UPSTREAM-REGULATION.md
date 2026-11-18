@@ -200,6 +200,18 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 > `server/sim/content/regulation-bosses.js`（原样拷贝 + 三处本地适配：`loseHp`、护甲/减伤只作用于物理与法术、
 > 兼爱伤害按 PRTS 100%），本仓库只在其上补了“械全场普攻”“茧按左右半场分组”两个 PRTS 差异。
 
+**素材**：这些 boss 的 Spine 模型两仓库本来就有；官方特效 prefab / 贴图 / 网格原本缺失，2026-11-18 已从主线
+`public/assets/local/fx/**` 拷贝全部缺项（1301 个文件，约 20 MB），并把主线 `data/local-fx.json` 作为本机特效索引
+（该文件按设计不进 git）。特效能否播放还取决于本仓库 `public/js/render/fx/official.js` 的「sim 事件 → prefab」
+映射表，见下方待办。
+
+### 待办（后续做）
+
+- [ ] 后兽 `SummonBranchEnemy`（分支增援）：主线 `kitTail` 也没有实现，需按 `enemy_2123_dyjsww` 的技能数据补。
+- [ ] act3 boss 官方特效映射：`public/js/render/fx/official.js` 补 械 / 冲击之械 / 后兽 / 茧 / 鳍 的事件表
+      （资产与 `local-fx.json` 已就位；主线没有对应实现可抄）。
+- [ ] 茧【淤困捕食】改为每侧随机 2 个（目前是每侧血最高，且总数 4）。
+
 回归：`node --test test/versions-bosses.test.js test/versions-cocoon.test.js test/content/enemies_bosses.test.js`（含新增的 50% 阈值、护甲形态、影役光环、镜波/镜眼用例）。
 
 ## 5. 合并清单
