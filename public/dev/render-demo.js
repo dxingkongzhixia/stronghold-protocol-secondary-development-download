@@ -201,6 +201,14 @@ async function prepScene(view, stageId, index = []) {
   const c1 = pick('角峰'), c2 = pick('格雷伊');
   if (c1) state.temp[0] = P(c1);
   if (c2) state.temp[1] = P(c2);
+  // ?equip=1: a 规程 equipment area (m.private.equipHand) on row 8's five pads
+  if (q.get('equip')) {
+    state.equipHand = Array(5).fill(null);
+    for (const [slot, k] of [[1, 5], [3, 9]]) {
+      const it = items[k];
+      if (it) state.equipHand[slot] = { uid: uid++, kind: 'item', id: it.id, golden: false, tier: it.tier };
+    }
+  }
 
   let editable = true;
   const find = (u) => {
@@ -259,7 +267,7 @@ async function prepScene(view, stageId, index = []) {
     else if (t.area === 'temp') state.temp[t.idx] = rest;
     else state.board.push({ ...rest, row: t.row, col: t.col });
   };
-  const push = () => view.setPrep(JSON.parse(JSON.stringify(state)), { editable, canPlace });
+  const push = () => view.setPrep(JSON.parse(JSON.stringify(state)), { editable, canPlace, equip: state.equipHand || null });
   push();
   const offs = [
     view.on('pieceDrop', (e) => {

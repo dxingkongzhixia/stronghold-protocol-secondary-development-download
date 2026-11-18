@@ -926,7 +926,8 @@ export async function createFieldView(host, options = {}) {
     // five tile_acbag pads (cols 4–8), the same pads 盟约 uses for its temp row; so the equipment is drawn by the board
     // there (`opts.equip`, passed only when the version has the area). A piece that overflows into the temp row takes
     // the pads the equipment leaves free; 盟约 passes no `equip` and keeps its temp row unchanged.
-    const equip = Array.isArray(o.equip) ? o.equip : null;
+    const equip = Array.isArray(o.equip) ? o.equip
+      : (Array.isArray(src.equipHand) && src.equipHand.length ? src.equipHand : null);
     if (equip) {
       const used = new Set();
       addList(equip, 'temp');

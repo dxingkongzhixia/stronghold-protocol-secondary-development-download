@@ -585,8 +585,8 @@ function MatchScreen() {
         view.setPrep(priv, {
           editable,
           canPlace: (uid, target) => canPlace(live.current.placeCtx, uid, target).ok,
-          // 规程's equipment is its own 5-slot area, drawn on row 8's equipment pads; 盟约 (equipHandSize 0) passes null
-          equip: (gd.config?.economy?.equipHandSize ?? 0) > 0 ? priv.equipHand : null,
+          // 规程's equipment is its own 5-slot area, drawn on row 8's equipment pads; 盟约 sends an empty array
+          equip: Array.isArray(priv.equipHand) && priv.equipHand.length ? priv.equipHand : null,
         });
         // stored facings (m.private board `dir`); the piece in the direction step shows the wheel's preview instead
         syncPieceDirs(view, priv, live.current.facing?.uid ?? null);
@@ -1769,7 +1769,7 @@ function MatchScreen() {
   const tempNotice = temp.count > 0 && !!view && viewKind !== 'loading' && showPrep && alive && !pen && !sp;
   // 规程's equipment area (row 8's five tile_acbag pads): its slot frames stay visible even when it is empty, so the
   // area can be found; the items themselves are board pieces (render/app.js setPrep `equip`)
-  const equipArea = (gd.config?.economy?.equipHandSize ?? 0) > 0 && Array.isArray(priv?.equipHand) ? priv.equipHand : null;
+  const equipArea = Array.isArray(priv?.equipHand) && priv.equipHand.length ? priv.equipHand : null;
   const equipShown = !!equipArea && !!view && viewKind !== 'loading' && showPrep && alive && !pen && !sp && editable && !watchingOther;
   // the ready button shows why it is refused under it (ui/hud.js ReadyToggle): the effects column moves down a line
   const readyWhy = phase === PHASE.PREP && alive && !priv?.ready && (hasPersonalChoice || temp.count > 0);
