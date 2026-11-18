@@ -266,6 +266,23 @@ blackboard 后，先处理了这几类：
   - `REGULATION_FX_COVER`：瑰盐 S2 `saltWard`、凯瑟琳 S2 `overclock`、焰尾 S1/S2 `dp`、S2 `aoe`、S3 `flame` —— 这些技能的计划已经播放官方 loop / start，程序化提示不再重复。
   - 其余单位（械 / 冲击之械 / 茧 / 鳍 / 链术师 / 轰击者 / 大多数新增干员）的普通攻击、技能、天赋已经由索引计划自动播放，不需要额外表项。
 
+### 新增干员素材与官方特效核对（2026-11-18 晚）
+
+- **8 名版本干员在本机根本没有模型 / 头像 / 立绘**：瑰盐、凯瑟琳、盟约·辅助干员、风丸、至简、寒檀、焰尾、冻河。它们的 charpack 只在 11-13 的热更包里（安装包是 10-20），`data/assets.json` 又没有版本干员的 charpack 表，所以画面里是回退形态。用
+  `extract.py --only plugin-art --char-art <ids>` 从 `.cache/client-bundles/26-10-20…+26-11-13…` 抽出
+  `spine/char/<id>/{front,back}`（各 3 个文件）+ `char/avatar/<id>` + `char/portrait/<id>`。fx-viewer 里
+  `modelInfo()` 为 `loaded: true, bones: true`，瑰盐截图正常；另 7 名同批抽出。
+- **官方特效本来就接线了**：15 名干员的 **30 个技能位**逐个在 `dev/fx-viewer.html?skilldemo=<charId>&sid=<skillId>` 里跑
+  （`liveKeys()` 采样 4.6 s），**每一个都播出了官方 prefab**，例如 寒檀 S2 → `sntlla_skill_02_buff_01` / `_buff_02_right`、
+  冻河 S3 → 7 个 `tocka_skill_03_*`、焰尾 S2 → `flamtl_skill_02_start_01/02` + `_range_01` + `_hit_01`。
+- **17 个技能位**有「索引里有、demo 里没看到」的 key，分三类：(a) 条件行（`uses:ready` / `trigger`、只在命中时播的
+  attack 行）——demo 的循环不触发；(b) 投射物的 trail / hit（星源 S1、至简 S2、冻河 S2）——我们的 kit 直接结算伤害，
+  没有真投射物；(c) 技能 loop（奥尔佳 S1、冻河 S1 的 buff loop）——要按 kit 的事件补 `REGULATION_SKILL_BINDINGS`。
+  注意 **fx-viewer 只跑渲染侧**，kit 自己 `battle.fx(...)` 的那些（`iceSpike` / `saltWard` / `overclock` …）在它里面根本不会触发，
+  只能在 sim（沙盒 / 真实对局）里验。
+- 已补一条绑定：**寒檀 S2 的官方冰场** `sntlla_skill_02_start_01`（客户端 `projectile_chr_sntlla_s2` 的
+  `_effectsWhenReached`，8 s）绑到 kit 的 `iceSpike`（落点 0.6 s），`plannedRoot` 之外不再缺这一段。
+
 
 **镜波修正**：主线把「被击倒后使周围法抗最低的**敌人**法抗 +10」理解为对**敌方单位**生效（`reg:res`），
 本仓库此前误加到我方干员身上，现改用主线实现；镜眼（受到法术伤害使来源攻速 -50）同样改用主线版本。

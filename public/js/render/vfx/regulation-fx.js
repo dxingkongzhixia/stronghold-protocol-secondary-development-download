@@ -122,6 +122,13 @@ export const REGULATION_SKILL_BINDINGS = Object.freeze({
   skchr_kazema_2: Object.freeze({
     summon: Object.freeze({ owner: 'skill', keys: Object.freeze(['kazema_skill_02_start']), at: 'point', holdS: 1 }),
   }),
+  // 寒檀 S2: the official icicle is projectile_chr_sntlla_s2 (AttachToTarget, _delayTime 0.6) whose reached effect is
+  // sntlla_skill_02_start_01 — the 8 s ice field. The kit applies the splash 0.6 s after the attack (ICICLE_DELAY) and
+  // draws its 'iceSpike' cue on that tile; the field is bound to that cue, so the official ground ice plays under the
+  // procedural spike.
+  skchr_sntlla_2: Object.freeze({
+    iceSpike: Object.freeze({ owner: 'id', keys: Object.freeze(['sntlla_skill_02_start_01']), at: 'point', holdS: 8 }),
+  }),
 });
 
 /**
