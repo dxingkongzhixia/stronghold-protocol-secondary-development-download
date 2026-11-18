@@ -1604,6 +1604,24 @@ export const FX_COVER = Object.freeze({
   skchr_chen2_2: Object.freeze(['zone']),
   skchr_chen2_3: Object.freeze(['zone']),
   // 规程 operators (public/js/render/vfx/regulation-fx.js)
+  // -- the roster's generic blast cues (2026-11-18 audit): each of these skills' plans already places its own blast at
+  //    the same moment, so the kit's drawn 'aoe' / 'harpoon' was a second shape on top of the official effect. Kinds
+  //    that carry information the official effect does not — 'zone', 'mark', 'shield', 'undying', 'buff' — stay.
+  skchr_huang_3: Object.freeze(['aoe']),        // huang_skill_03_begin / _begin_02 / _buff / _buff_02 / _end
+  skchr_leizi2_1: Object.freeze(['aoe']),       // leizi2_skill_01_buff_01..03
+  skchr_poca_3: Object.freeze(['harpoon']),     // poca_skill_03_start / _start_02 / _start_03 / _buff / _weapon_buff
+  skchr_siege_2: Object.freeze(['aoe']),        // siege_skill_02_start / _attack
+  skchr_ifrit_2: Object.freeze(['aoe']),        // ifrit_skill_02_start / _range / _trail
+  skchr_crosly_2: Object.freeze(['aoe']),       // crosly_skill_02_birth_start / _buff
+  skchr_chyue_2: Object.freeze(['aoe']),        // chyue_skill_02_start_01 / _start_02 / _range / _range_02 / _hit_01
+  skchr_irene_3: Object.freeze(['aoe']),        // irene_skill_03_start_01 / _start_02 / _range_01..04
+  skchr_saga_2: Object.freeze(['aoe']),         // saga_skill_02_start_b / _range_b / _range_r / _hit / _hit_02
+  skchr_judge_2: Object.freeze(['aoe']),        // judge_skill_02_buff_01 / _hit_01 / _range_01 / _weapon_01 / _weapon_hit_01
+  skchr_lin_3: Object.freeze(['aoe']),          // lin_skill_03_buff_01
+  skchr_zuole_3: Object.freeze(['aoe']),        // zuole_skill_03_hit_01 / _hit_02 / _range_01_{up,down,left,right}_01
+  skchr_necras_3: Object.freeze(['aoe']),       // necras_skill_03_buff_01 / _buff_02
+  skchr_sleach_3: Object.freeze(['aoe']),       // sleach_skill_03_buff_01 / _buff_02 / _trail_01
+  skchr_accast_3: Object.freeze(['aoe']),       // accast_skill_hit / accast_skill_02_buff_2
   ...REGULATION_FX_COVER,
 });
 
