@@ -1611,7 +1611,7 @@ export const FX_COVER = Object.freeze({
   skchr_leizi2_1: Object.freeze(['aoe']),       // leizi2_skill_01_buff_01..03
   skchr_poca_3: Object.freeze(['harpoon']),     // poca_skill_03_start / _start_02 / _start_03 / _buff / _weapon_buff
   skchr_siege_2: Object.freeze(['aoe']),        // siege_skill_02_start / _attack
-  skchr_ifrit_2: Object.freeze(['aoe']),        // ifrit_skill_02_start / _range / _trail
+  skchr_ifrit_2: Object.freeze(['aoe', 'flame']),  // ifrit_skill_02_start / _range / _trail; buff_burn, common_firemagic_hit_01
   skchr_crosly_2: Object.freeze(['aoe']),       // crosly_skill_02_birth_start / _buff
   skchr_chyue_2: Object.freeze(['aoe']),        // chyue_skill_02_start_01 / _start_02 / _range / _range_02 / _hit_01
   skchr_irene_3: Object.freeze(['aoe']),        // irene_skill_03_start_01 / _start_02 / _range_01..04
@@ -1622,6 +1622,34 @@ export const FX_COVER = Object.freeze({
   skchr_necras_3: Object.freeze(['aoe']),       // necras_skill_03_buff_01 / _buff_02
   skchr_sleach_3: Object.freeze(['aoe']),       // sleach_skill_03_buff_01 / _buff_02 / _trail_01
   skchr_accast_3: Object.freeze(['aoe']),       // accast_skill_hit / accast_skill_02_buff_2
+  // -- roster audit, second batch (2026-11-18): the kit's drawn shape is the same moment the skill's own plan
+  //    already draws — each entry names the official key its kind matched. Only kinds whose official keys name the
+  //    same visual (range / hit / fly / tornado …) are covered; a cue whose official keys name something else (a buff
+  //    loop, a weapon glow) stays, because covering it would leave the moment without any shape.
+  skchr_aglna2_2: Object.freeze(['takeoff']),  // aglna2_skill_02_fly_end_01, aglna2_skill_02_fly_end_02
+  skchr_ascln_1: Object.freeze(['aoe']),  // ascln_skill_01_hit_01, ascln_skill_01_hit_02
+  skchr_ascln_2: Object.freeze(['aoe']),  // ascln_skill_02_range_01
+  skchr_blaze2_3: Object.freeze(['aoe']),  // blaze2_skill_03_range
+  skchr_chyue_1: Object.freeze(['aoe']),  // chyue_skill_01_hit_01, chyue_skill_01_hit_02
+  skchr_chyue_3: Object.freeze(['aoe']),  // chyue_skill_03_range
+  skchr_cqbw_3: Object.freeze(['aoe']),  // cqbw_skill_03_range
+  skchr_haruka_2: Object.freeze(['aoe']),  // haruka_skill_02_hit_range
+  skchr_haruka_3: Object.freeze(['aoe']),  // haruka_skill_03_range
+  skchr_headb2_3: Object.freeze(['aoe']),  // headb2_highground_hit, headb2_skill_01_hit
+  skchr_huang_1: Object.freeze(['aoe']),  // huang_skill_01_hit
+  skchr_ifrit_3: Object.freeze(['aoe']),  // ifrit_skill_03_range
+  skchr_irene_1: Object.freeze(['aoe']),  // irene_skill_01_type1_hit_01, irene_skill_01_type2_hit_01
+  skchr_irene_2: Object.freeze(['aoe']),  // irene_skill_02_hit_01, irene_skill_02_range_01
+  skchr_judge_1: Object.freeze(['aoe']),  // judge_skill_01_hit_01, judge_skill_01_hit_02
+  skchr_mitm_1: Object.freeze(['aoe']),  // mitm_skill_01_hit_01
+  skchr_necras_2: Object.freeze(['aoe']),  // necras_skill_02_hit_01
+  skchr_nymph_3: Object.freeze(['aoe']),  // nymph_skill_03_range
+  skchr_phatm2_1: Object.freeze(['aoe']),  // phatm2_skill_01_hit_01, phatm2_skill_01_hit_02
+  skchr_phatom_3: Object.freeze(['aoe']),  // phatom_attack_01_hit, phatom_skill_03_range_01
+  skchr_phenxi_2: Object.freeze(['aoe']),  // phenxi_skill_02_range
+  skchr_pianst_2: Object.freeze(['aoe']),  // pianst_skill_02_end_hit, pianst_skill_02_end_range
+  skchr_wisdel_1: Object.freeze(['aoe']),  // wisdel_bomb_01_hit
+  skchr_zuole_1: Object.freeze(['aoe']),  // zuole_skill_01_hit_01
   ...REGULATION_FX_COVER,
 });
 
