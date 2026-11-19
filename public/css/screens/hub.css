@@ -1079,7 +1079,15 @@
   -webkit-mask: linear-gradient(90deg, transparent 0, #000 34%, #000 82%, transparent 100%);
   mask: linear-gradient(90deg, transparent 0, #000 34%, #000 82%, transparent 100%);
 }
-.hub-reg__skyline { position: absolute; left: 50%; bottom: -1%; width: max(104%, 15rem); height: auto; transform: translateX(-50%); opacity: .92; }
+/* the official front sheet carries an opaque black ground under the silhouette: shown whole it reads as a black band
+   across the bottom of the hub (worse the wider the window — 190 px at 1920×1080), so its lower third dissolves into the
+   ground gradient instead of ending at the screen edge. */
+.hub-reg__skyline {
+  position: absolute; left: 50%; bottom: -1%; width: max(104%, 15rem); height: auto;
+  transform: translateX(-50%); opacity: .92;
+  -webkit-mask-image: linear-gradient(180deg, #000 62%, rgba(0, 0, 0, .62) 82%, transparent 96%);
+  mask-image: linear-gradient(180deg, #000 62%, rgba(0, 0, 0, .62) 82%, transparent 96%);
+}
 .hub-reg__scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(180deg, rgba(0, 0, 0, .2) 0 1px, transparent 1px 3px), radial-gradient(150% 120% at 50% 42%, transparent 68%, rgba(0, 0, 0, .42) 100%); }
 .lobby-hub[data-season="act3autochess"] .topbar { background: linear-gradient(180deg, rgba(13, 11, 10, .9), transparent); }
 .lobby-hub[data-season="act3autochess"] .hub-radar svg { stroke: rgba(232, 223, 196, .16); }
