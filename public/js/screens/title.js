@@ -35,7 +35,6 @@ import { GIcon, Img } from '../ui/gameComponents.js';
 import { uiUrl } from '../ui/assetUrls.js';
 import { AllianceBackdrop, useLobbyArt } from '../ui/allianceScene.js';
 import { RegulationBackdrop, seasonOf, REGULATION } from '../ui/regulationBackdrop.js';
-import { RegulationFilm, loadRegulationPack } from '../ui/regulationFilm.js';
 import { hubVersion } from '../versions.js';
 import { SettingsModal } from '../ui/settings.js';
 import { AnnounceBanner, AnnounceButton, AnnouncementsOverlay } from '../ui/announce.js';
@@ -274,22 +273,6 @@ export function TitleScreen() {
   // the start-up version's season (versions.js hubVersion): 规程 wears its own ground and wordmark, 盟约 the hub's
   const season = seasonOf(hubVersion(useStore((s) => s.versions)));
   const reg = season === REGULATION;
-  // 规程's opening (ui/regulationFilm.js): once per session, when the title wears 规程
-  const [film, setFilm] = useState(null);
-  const [filmOn, setFilmOn] = useState(() => {
-    if (!reg) return false;
-    try { return !sessionStorage.getItem('sp.entry.film.act3autochess'); } catch { return false; }
-  });
-  useEffect(() => {
-    if (!filmOn) return undefined;
-    let live = true;
-    loadRegulationPack().then((p) => { if (live && p) setFilm(p); }, () => { if (live) setFilmOn(false); });
-    return () => { live = false; };
-  }, [filmOn]);
-  const filmDone = () => {
-    try { sessionStorage.setItem('sp.entry.film.act3autochess', '1'); } catch { /* ignore */ }
-    setFilmOn(false);
-  };
   const alliance = useLobbyArt();
   const logo = uiUrl(assets, 'entry/season_logo');
   // Track load/fail per URL (not as booleans reset in effects: an image can load before an effect runs).
@@ -321,7 +304,6 @@ export function TitleScreen() {
   // hides; a CJK / kana / Hangul title keeps the Chinese layout (shared/i18nPacks.js scriptOf — a pack needs no flag)
   const alphabetic = scriptOf(t('卫戍协议')) === 'alphabetic';
   return html`<div class="screen title-screen">
-    ${filmOn ? html`<${RegulationFilm} pack=${film} onDone=${filmDone} />` : null}
     <${AnnounceBanner} onOpen=${() => setAnnounceOpen(true)} />
     <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${alliance && !reg ? ' has-alliance' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} data-season=${season} aria-hidden="true">
       ${reg ? html`<${RegulationBackdrop} />` : alliance ? html`<${AllianceBackdrop} />` : null}

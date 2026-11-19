@@ -820,7 +820,12 @@ async function boot() {
   globalThis.__SP__ = { store, net, data, version: 1 };
   // The event's entry animation before the title screen (ui/entryFilm.js); never over a restored match. A 规程 start
   // skips the 盟约 film: the title screen itself plays 规程's season entry (ui/regulationFilm.js), the client's own.
-  if (seasonOf(hubVersion(store.get().versions)) !== REGULATION) {
+  if (seasonOf(hubVersion(store.get().versions)) === REGULATION) {
+    // 规程's client entry (ui/regulationFilm.js, the mainline's prefab-pack scene) — plays over any restored route
+    import('./ui/regulationFilm.js')
+      .then((m) => m.playRegulationFilm({ skip: () => selectRoute(store.get()) === 'game' }))
+      .catch((err) => console.warn('[app] regulation film unavailable', err));
+  } else {
     import('./ui/entryFilm.js')
       .then((m) => m.playEntryFilm({ skip: () => selectRoute(store.get()) === 'game' }))
       .catch((err) => console.warn('[app] entry film unavailable', err));

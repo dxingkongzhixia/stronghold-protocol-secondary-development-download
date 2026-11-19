@@ -197,3 +197,38 @@ export function RegulationFilm({ pack, onDone }) {
   }, [pack, onDone]);
   return html`<div class="reg-film" ref=${host} aria-hidden="true"></div>`;
 }
+
+/**
+ * Play the opening as the page's entry film (main.js boot, whatever route the page restores): an overlay over the body,
+ * the mainline's scene, fade out at REG_SPAN.to, then removed. Resolves false when the group is not extracted.
+ * @param {{ skip?: () => boolean }} [opts]
+ */
+export async function playRegulationFilm({ skip } = {}) {
+  if (skip?.()) return false;
+  const pack = await loadRegulationPack();
+  if (!pack) return false;
+  const host = document.createElement('div');
+  host.className = 'reg-film';
+  document.body.appendChild(host);
+  let scene = null;
+  try { scene = mountRegulationIntro(host, pack); } catch (err) { console.warn('[regulation] film failed', err); host.remove(); return false; }
+  const start = performance.now();
+  await new Promise((done) => {
+    const tick = (now) => {
+      if (skip?.()) { done(); return; }
+      const t = (now - start) / 1000;
+      try { scene.render(Math.min(t, REG_END + 0.4)); } catch { done(); return; }
+      if (t < REG_SPAN.fadeAt) { requestAnimationFrame(tick); return; }
+      if (t < REG_SPAN.to) {
+        host.style.opacity = String(Math.max(0, 1 - (t - REG_SPAN.fadeAt) / (REG_SPAN.to - REG_SPAN.fadeAt)));
+        requestAnimationFrame(tick);
+        return;
+      }
+      done();
+    };
+    requestAnimationFrame(tick);
+  });
+  try { scene.destroy(); } catch { /* gone */ }
+  host.remove();
+  return true;
+}
