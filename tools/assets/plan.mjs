@@ -557,7 +557,7 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
   };
   const baseIdOf = (eid) => { const m = /^(enemy_\d+_[a-z0-9]+?)_\d+$/i.exec(eid); return m ? m[1] : null; };
   const enemyIdSet = new Set(collectEnemyIds({ assets07, enemies05, maps05, ops03 }));
-  for (const id of extraEnemyIds) if (typeof id === 'string' && /^enemy_\d+_[a-z0-9_]+$/i.test(id)) enemyIdSet.add(id);
+  for (const id of extraEnemyIds) if (typeof id === 'string' && /^(?:enemy|trap)_\d+_[a-z0-9_]+$/i.test(id)) enemyIdSet.add(id);
   // Boss handbook ids (their own icon/model ids) are addressable too.
   for (const hb of handbookOf.values()) if (/^enemy_\d+_[a-z0-9_]+$/i.test(hb)) enemyIdSet.add(hb);
   const enemyIds = [...enemyIdSet].sort();

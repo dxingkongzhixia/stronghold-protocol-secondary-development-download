@@ -172,7 +172,7 @@ ENEMY_SPINES = [
 'enemy_1424_lrboom', 'enemy_1428_lrsoul', 'enemy_1429_lrwzrd', 'enemy_1429_lrwzrd_2',
 'enemy_1431_lrmzrd', 'enemy_1431_lrmzrd_2', 'enemy_1434_dsshel', 'enemy_1435_dsflys',
 'enemy_1436_dsdivi', 'enemy_1436_dsdivi_2', 'enemy_1437_dsfull', 'enemy_1437_dsfull_2',
-'enemy_2123_dyjsww', 'enemy_2124_dyjsfg', 'enemy_2135_shkrbt', 'enemy_9024_acsgnt',
+'enemy_2123_dyjsww', 'enemy_2124_dyjsfg', 'enemy_1303_mhshep_2', 'enemy_2135_shkrbt', 'enemy_9024_acsgnt',
 'enemy_9025_aclts', 'enemy_9026_acltm', 'enemy_9027_acfnca', 'enemy_9028_acfncb',
 'enemy_9029_acfnc', 'enemy_9030_acpara', 'enemy_9031_acrefd', 'enemy_9034_acblk',
 'enemy_9035_acspider', 'enemy_9035_acspider_2', 'enemy_9037_aceel', 'enemy_9038_achest',
@@ -211,6 +211,7 @@ ENEMY_ICONS = [
 # or an effect only, and no avatar in either install's asset index) — 乌尔比安's 从不混淆的方向, 圣聆初雪's frozen
 # protection point, 酒神's 迷狂牢笼, 贝洛内's 牵绊, 予愿安洁莉娜's “一会儿见！” (token_10039 / 10058 / 10055 / 10065 / 10071).
 TOKEN_SPINES = [
+    'trap_258_rgcssm',
     'token_10002_kalts_mon3tr', 'token_10003_cgbird_bird', 'token_10005_mgllan_drone1', 'token_10005_mgllan_drone2',
     'token_10005_mgllan_drone3', 'token_10007_phatom_twin', 'token_10008_cqbw_box', 'token_10009_weedy_cannon',
     'token_10020_ling_soul1', 'token_10020_ling_soul2', 'token_10020_ling_soul3', 'token_10024_ebnhlz_rcube',

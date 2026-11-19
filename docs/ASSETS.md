@@ -505,6 +505,13 @@ Other renderer rules from research 07 §5.4–5.5:
     round. A 2026-10-03 audit of every enemy of `data/enemies.json` (249) against the client's battle prefabs (the
     skeleton each prefab's Spine renderer draws) found no other enemy drawn with another enemy's model; 伊利昂的木驮兽
     (`enemy_10159_mntrjn`) starts on its `Full` skin (five passengers) in the game and is drawn with the `default` one.
+- **Inline-def units** (2026-11-20): 后兽's 古雕伥 (`trap_258_rgcssm`, a trap whose battle Spine lives in the
+  token packs) and the 亢角兽 it spits (`enemy_1303_mhshep_2`, an ISW-DF enemy) are spawned with inline defs
+  (`server/sim/content/traps.js`) and named by no data file. Their client models are extracted like the others
+  (`ENEMY_SPINES` / `TOKEN_SPINES` with `--only spine/enemy` / `spine/token`); the trap is written under
+  `spine/enemy/trap_258_rgcssm/` (the enemy model finder accepts `trap_*`) so `data/assets.json
+  enemies[trap_258_rgcssm].spineLocal` resolves, and `tools/fetch-assets.mjs` plans both as `INLINE_DEF_UNITS`.
+  Their extraction is also what added `enemy_1303_mhshep_2`'s SFX pool to the manifest.
 - **Token models from the local client** (0.2.0): no dump carries the battle Spine of most 自选 summons (fetch-assets:
   "missing skel"), nor of 凯瑟琳's 爬行号·防护单元 and 凛御银灰's 风雪之眼, so they were drawn as the avatar diamond. The
   local client has them in its battle token packs (`pkgrps/btl_pfb_tokens_*.ab`, the Windows build carries all of them;

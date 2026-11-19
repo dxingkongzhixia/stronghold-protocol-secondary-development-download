@@ -85,6 +85,11 @@ const CACHE = join(ROOT, '.cache');
 const MANIFEST = join(ROOT, 'data', 'assets.json');
 const REPORT = join(CACHE, 'assets-report.json');
 /**
+ * Units the sim spawns with inline defs (server/sim/content/traps.js): no data file names them, but their local-client
+ * Spine models must be planned so data/assets.json carries enemies[id].spineLocal.
+ */
+const INLINE_DEF_UNITS = ['enemy_1303_mhshep_2', 'trap_258_rgcssm'];
+/**
  * The local-client model overlays (spineLocal): the committed metadata file, where extract.py writes the models (under
  * public/assets), how to find them, and the file's `about` line.
  */
@@ -436,7 +441,7 @@ async function main() {
     assets07, ops03, enemies05, maps05, audio, modelsData, charword, voiceLang: opts.voiceLang,
     // default: only the slots a battle can play (plan.mjs VOICE_BATTLE_SLOTS); --voice-all takes the whole official set
     voiceSlots: opts.voiceAll ? null : undefined,
-    extraEnemyIds: [...Object.keys(dataEnemies || {}), ...Object.keys(versionUnion.enemies)],
+    extraEnemyIds: [...Object.keys(dataEnemies || {}), ...Object.keys(versionUnion.enemies), ...INLINE_DEF_UNITS],
     extraTokenIds: [...Object.keys(dataTokens || {}), ...extras.tokenIds, ...Object.keys(versionUnion.tokens)],
     extraOperators: { ...versionOperatorExtras(versionUnion), ...extras.extraOperators },
     moduleTypes: [...new Set([...extras.moduleTypes, ...versionUnion.moduleTypes])].sort(),

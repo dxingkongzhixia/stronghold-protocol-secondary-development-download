@@ -209,6 +209,7 @@ owner 2026-11-15 明确：这不是“尽量兼容”，而是本 fork 的基本
 
 - [x] **古雕伥 / 亢角兽（2026-11-19 接上）**：`trap_258_rgcssm` 是客户端 `character_table.json` 的**装置**（40 000 HP / 200 DEF / 30 RES / 嘲讽 -1 / 阻挡 0），不在 act3 的 `enemies.json` 里；按 `server/sim/content/traps.js` 用内联 def 生成（不写进版本表，避免污染 343 个敌人的计数）。已接：四格光环（外部物理/法术 -75%、内部 +50 攻速 / +50% 移速 / 【无视雕伥减伤】）、后兽【并济】在目标 8 格随机可通行地块部署 1 级古雕伥、【无为】进入第二形态时激活全场古雕伥、激活后每 **20 s** 吐一只 **亢角兽**（`enemy_1303_mhshep_2`，内联 def，休憩→受击临战）。伤害管线的「古雕伥交叉区」判定在 `sim/damage.js`，用 `battle.trapZones` 的格子集合，不叠加。
 - [x] **古雕伥闭嘴（2026-11-19 接上）**：玩家的反制——战斗 HUD 在场上存在**已激活**古雕伥、且 DP ≥ 20 时显示「古雕伥 · 闭嘴 20」按钮；点击走 `Battle.closeTrap`（`server/sim/battle/traps.js` → `content/traps.js`），扣 20 DP、闭嘴 150 s（期间不吐怪），结束时**立刻吐一只**再恢复 20 s 循环；每场每座限一次（技能 SP 不自然回复）。快照 `snap.traps` 带 `[id, active, closed, used]`，`snapHud` 转给 HUD；仅本地战场可操作（观战/队友战场不显示按钮）。20 / 150 / 一次都取自客户端 `sktok_rgcssm` 黑框。
+- [x] **古雕伥 / 亢角兽 模型（2026-11-20）**：从本地客户端抽出并接上——`trap_258_rgcssm` 在 `pkgrps/btl_pfb_tokens_4.ab`（装置 Spine，3 文件），写到 `public/assets/local/spine/enemy/trap_258_rgcssm/`；`enemy_1303_mhshep_2` 在 `refs/arts/enm_art_12.ab`（3 文件 + 图标），写到 `public/assets/local/spine/enemy/enemy_1303_mhshep_2/`。`data/assets.json` 的 `enemies[...].spineLocal` 已生成，`fetch-assets.mjs` 的 `INLINE_DEF_UNITS` 保证以后重生成时不会丢；两者的 Spine 解析由 `test/local-spine-roles` / `versions-assets` 覆盖。
 - 说明：古雕伥天赋 `TriggerSummon` 的黑框写 `interval: 15`，闭嘴技能黑框写 `talent@interval: 20`；按 PRTS 描述与技能黑框取 **20 s**（15 视为未使用的默认值）。
 
 > 规程 boss 主体（械 / 冲击之械 / 量变之械 / 茧 / 淤困之茧 / 鳍 / 矩兽 / 后兽）已改为移植主线
