@@ -25,11 +25,23 @@ function committed() {
   return lib && typeof lib === 'object' ? lib : {};
 }
 
-/** Every known track, the pack's entry winning for the same id. @returns {Record<string, any>} */
+/**
+ * The two seasons' own themes (第三期 规程's Kernel Overflow, 第二期 盟约's Restore) and 规程's two boss tracks: the
+ * picker lists them right after the default row, so both seasons are visible without scrolling the 200-track pack.
+ */
+export const SEASON_MUSIC = Object.freeze([
+  "music_bg_act3autochess", "music_bg_act1vautochess",
+  "music_bg_act3autochess_boss1", "music_bg_act3autochess_boss2",
+]);
+
+/** Every known track, the pack's entry winning for the same id; the season tracks first. @returns {Record<string, any>} */
 export function musicEntries() {
   const base = committed();
-  if (!pack) return base;
-  return { ...base, ...pack };
+  const all = pack ? { ...base, ...pack } : { ...base };
+  const out = {};
+  for (const id of SEASON_MUSIC) if (all[id]) out[id] = all[id];
+  for (const [id, e] of Object.entries(all)) if (!out[id]) out[id] = e;
+  return out;
 }
 
 /** One track (pack first), or null. @param {string} id @returns {{intro?: string, loop: string}|null} */
