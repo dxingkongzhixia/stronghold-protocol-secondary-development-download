@@ -80,6 +80,7 @@ function ClientHud({ hud, myDone, spectating, spectator = false, client }) {
       ${trap ? html`<button type="button" class="chud__trap" disabled=${!canPay || !client.onCloseTrap}
           aria-label=${`${t('古雕伥')} · ${t('闭嘴')} 20`} title=${`${t('古雕伥')} · ${t('闭嘴')} 20`}
           onClick=${() => { if (client.onCloseTrap) client.onCloseTrap(trap.id); }}>
+        <img class="chud__trap__icon" src="/assets/enemy/icon/trap_258_rgcssm.png" alt="" />
         <span class="chud__trap__name">${t('古雕伥')}</span><b class="num">20</b><span>${t('闭嘴')}</span>
       </button>` : null}
       ${myDone && !observing ? html`<div class="chud__msg chud__wait" role="status"><${Icon} name="hourglass" /><span>${t('作战结束，等待队友完成作战')}</span></div>

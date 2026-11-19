@@ -745,6 +745,7 @@
 .chud__trap:disabled { opacity: .45; cursor: default; }
 .chud__trap .num { color: var(--gold); font-size: calc(.2 * var(--t)); font-weight: 700; }
 .chud__trap__name { letter-spacing: .04em; }
+.chud__trap__icon { width: calc(.24 * var(--t)); height: calc(.24 * var(--t)); border-radius: .04rem; flex: none; object-fit: contain; }
 .vswitch { display: flex; align-items: center; gap: .1rem; height: .5rem; padding: 0 .06rem; background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2); }
 .vswitch__arrow { width: .4rem; height: .4rem; display: grid; place-items: center; background: none; border: 0; color: var(--mint-500); }
 .vswitch__arrow .icon { width: .3rem; height: .3rem; }

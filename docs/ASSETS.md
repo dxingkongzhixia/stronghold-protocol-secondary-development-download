@@ -512,6 +512,11 @@ Other renderer rules from research 07 §5.4–5.5:
   `spine/enemy/trap_258_rgcssm/` (the enemy model finder accepts `trap_*`) so `data/assets.json
   enemies[trap_258_rgcssm].spineLocal` resolves, and `tools/fetch-assets.mjs` plans both as `INLINE_DEF_UNITS`.
   Their extraction is also what added `enemy_1303_mhshep_2`'s SFX pool to the manifest.
+  The trap has **no unit avatar / portrait / device icon** in the client packs (its `character_table` record is TRAP;
+  `arts/charavatars`, `charportraits`, `ahub_enemy_icons`, the item packs and all 307 `arts/ui` bundles carry none). Its
+  only UI art is the close-mouth skill icon `skill_icon_sktok_rgcssm` (`spritepack/skill_icons_3.ab`), committed as
+  `public/assets/enemy/icon/trap_258_rgcssm.png` and emitted as `enemies.trap_258_rgcssm.icon` (a literal in
+  `tools/assets/plan.mjs` `LITERAL_ENEMY_ICONS`), so the trap's detail card and the HUD close button have a picture.
 - **Token models from the local client** (0.2.0): no dump carries the battle Spine of most 自选 summons (fetch-assets:
   "missing skel"), nor of 凯瑟琳's 爬行号·防护单元 and 凛御银灰's 风雪之眼, so they were drawn as the avatar diamond. The
   local client has them in its battle token packs (`pkgrps/btl_pfb_tokens_*.ab`, the Windows build carries all of them;

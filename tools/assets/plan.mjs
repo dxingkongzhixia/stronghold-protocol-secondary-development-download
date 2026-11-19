@@ -562,12 +562,14 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
   for (const hb of handbookOf.values()) if (/^enemy_\d+_[a-z0-9_]+$/i.test(hb)) enemyIdSet.add(hb);
   const enemyIds = [...enemyIdSet].sort();
   const enemies = {};
+  /** Units without a handbook/enemy record whose only UI art is one file (see INLINE_DEF_UNITS in fetch-assets.mjs). */
+  const LITERAL_ENEMY_ICONS = { trap_258_rgcssm: '/assets/enemy/icon/trap_258_rgcssm.png' };
   for (const id of enemyIds) {
     const e = {};
     const icon07 = assets07?.enemies?.[id]?.icon;
     const iconAlts = [alt(`enemy/icon/${id}.png`, `${RAW.yuanyan}enemy/${id}.png`, bytesOf(icon07, `${RAW.yuanyan}enemy/${id}.png`))];
     for (const other of [handbookOf.get(id), baseIdOf(id)]) if (other) iconAlts.push(alt(`enemy/icon/${id}.png`, `${RAW.yuanyan}enemy/${other}.png`));
-    e.icon = leaf(iconAlts);
+    e.icon = LITERAL_ENEMY_ICONS[id] ? literal(LITERAL_ENEMY_ICONS[id]) : leaf(iconAlts);
     // Spine: own model, else alias chain (research 07 §5.6).
     let spine = arkModel(id);
     if (!spine) {
