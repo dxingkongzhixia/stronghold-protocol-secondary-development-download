@@ -70,9 +70,18 @@ function ClientHud({ hud, myDone, spectating, spectator = false, client }) {
   };
   const observing = client.observing;
   const halves = layers.length > 0;
+  // 古雕伥 close-mouth skill (content/traps.js): a player counter, 20 DP / 150 s / once per battle. Only the own
+  // local field gets the callback (a watched teammate field cannot be acted on).
+  const trap = Array.isArray(hud?.traps) ? hud.traps.find((x) => x && x.active && !x.closed && !x.used) : null;
+  const canPay = (hud?.dp ?? 0) >= 20;
   return html`<div class="chud">
     <${DpCounter} dp=${hud?.dp} />
     <div class="chud__bottom">
+      ${trap ? html`<button type="button" class="chud__trap" disabled=${!canPay || !client.onCloseTrap}
+          aria-label=${`${t('古雕伥')} · ${t('闭嘴')} 20`} title=${`${t('古雕伥')} · ${t('闭嘴')} 20`}
+          onClick=${() => { if (client.onCloseTrap) client.onCloseTrap(trap.id); }}>
+        <span class="chud__trap__name">${t('古雕伥')}</span><b class="num">20</b><span>${t('闭嘴')}</span>
+      </button>` : null}
       ${myDone && !observing ? html`<div class="chud__msg chud__wait" role="status"><${Icon} name="hourglass" /><span>${t('作战结束，等待队友完成作战')}</span></div>
         <${ProgressList} list=${client.progress} />` : null}
       ${spectating && !observing ? (spectator ? html`<div class="chud__msg" role="status"><${GIcon} name="eye" /><span>${t('观战中，可点击左侧成员头像前往查看')}</span></div>`

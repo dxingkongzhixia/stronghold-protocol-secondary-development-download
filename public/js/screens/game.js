@@ -1896,7 +1896,8 @@ function MatchScreen() {
 
       ${combat || mode === 'settle' ? html`<${CombatHud} pub=${pub} myId=${myId} watching=${watchingNow} hud=${hud} myDone=${!!myDone && alive}
         spectating=${!alive} spectator=${spectator} onWatch=${watchField}
-        client=${cc ? { progress, observing: observingName ? { name: observingName } : null, onBack: alive ? backHome : null, layers, layer, onLayer: setLayer } : null} />` : null}
+        client=${cc ? { progress, observing: observingName ? { name: observingName } : null, onBack: alive ? backHome : null, layers, layer, onLayer: setLayer,
+          onCloseTrap: field?.local && alive && battleRunner ? (id) => { battleRunner.closeTrap(id, field.fieldId); } : null } : null} />` : null}
 
       ${priv?.downed ? html`<div class="gm__dead gm__dead--downed" role="status">
         <${Icon} name="warn" /><span>${t('你已被击倒 · 队友可分血救援')}</span>

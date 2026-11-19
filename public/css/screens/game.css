@@ -735,6 +735,16 @@
 .chud__msg .icon { width: .22rem; height: .22rem; color: var(--gold); }
 .chud__msg--dead { border-color: rgba(255, 84, 84, .5); color: var(--red-premium); }
 .chud__msg--dead .icon { color: var(--red-premium); }
+/* 古雕伥 close-mouth (规程 后兽): a small pill above the bottom pills */
+.chud__trap {
+  display: flex; align-items: center; gap: .08rem; padding: .07rem .22rem; font: inherit;
+  font-size: calc(.18 * var(--t)); color: var(--text-hi); white-space: nowrap; cursor: pointer;
+  background: rgba(8, 11, 10, .9); border: 1px solid var(--mint-500); border-radius: .3rem;
+}
+.chud__trap:hover:not(:disabled) { background: var(--mint-a10); }
+.chud__trap:disabled { opacity: .45; cursor: default; }
+.chud__trap .num { color: var(--gold); font-size: calc(.2 * var(--t)); font-weight: 700; }
+.chud__trap__name { letter-spacing: .04em; }
 .vswitch { display: flex; align-items: center; gap: .1rem; height: .5rem; padding: 0 .06rem; background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2); }
 .vswitch__arrow { width: .4rem; height: .4rem; display: grid; place-items: center; background: none; border: 0; color: var(--mint-500); }
 .vswitch__arrow .icon { width: .3rem; height: .3rem; }

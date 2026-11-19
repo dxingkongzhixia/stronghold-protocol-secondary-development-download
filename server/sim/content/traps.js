@@ -59,6 +59,8 @@ export const HORN_DEF = Object.freeze({
 
 /** 张嘴后的召唤间隔 (s) — skill blackboard `talent@interval`, PRTS 20. */
 const SUMMON_INTERVAL = 20;
+/** 闭嘴 skill: cost / duration (client `sktok_rgcssm`: `cost` 20, `duration` 150; one use per battle). */
+export const TRAP_CLOSE_COST = 20, TRAP_CLOSE_SECONDS = 150;
 /** 亢角兽 wakes when one of its kind is hit: the same group within this range (tiles) [ASSUMED]. */
 const HORN_WAKE_RANGE = 2;
 /** Aura refresh cadence and buff life (s). */
@@ -112,12 +114,37 @@ export function activateTraps(b) {
 }
 
 export function activateTrap(b, e) {
-  const ab = e.mem && e.mem.ab;
-  const a = ab && ab.list.find((x) => x && x.zone);
+  const a = trapState(e);
   if (!a || a.active) return;
   a.active = true;
   a.acc = 0;
   b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'trap_open' });
+}
+
+/** The trap kit's state object (the list entry carrying `zone`), or null. */
+export function trapState(u) {
+  const ab = u && u.mem && u.mem.ab;
+  return (ab && ab.list.find((x) => x && x.zone)) || null;
+}
+
+/**
+ * 古雕伥's own skill (`sktok_rgcssm`): the player spends 20 DP to make it close its mouth for 150 s; it stops
+ * spitting, summons once the moment it reopens, and can be used only once per battle (its SP never refills).
+ * Called by Battle.closeTrap (server/sim/battle/traps.js) from the battle HUD / E2E.
+ */
+export function closeTrap(b, u) {
+  if (!u || !u.alive || !u.mem || !u.mem.trap) return false;
+  const a = trapState(u);
+  if (!a || !a.active || a.closed || a.used) return false;
+  const ps = (u.ownerId != null && typeof b.getPlayer === 'function' ? b.getPlayer(u.ownerId) : null) || b.players?.[0] || null;
+  if (!ps || !(ps.dp + 1e-9 >= TRAP_CLOSE_COST)) return false;
+  ps.dp = Math.max(0, ps.dp - TRAP_CLOSE_COST);
+  a.closed = true;
+  a.used = true;
+  a.closedUntil = b.time + TRAP_CLOSE_SECONDS;
+  a.acc = 0;
+  b.fx('phase', { x: u.x, y: u.y, id: u.id, kind: 'trap_close' });
+  return true;
 }
 
 /** Spawn one 亢角兽 at the trap, on the tile's preset path (auto-generated when the level has none). */
@@ -161,6 +188,9 @@ export function kitTrap() {
       a.active = false;
       a.acc = 0;
       a.aura = 0;
+      a.closed = false;
+      a.used = false;
+      e.mem.trap = true;                             // the battle's closeTrap / snapshot find it without the key
     },
     tick(b, e, a, dt) {
       // Aura (always on, activated or not): enemies in the 4-neighbourhood gain +50 ASPD / +50 % move, allies inside
@@ -175,6 +205,15 @@ export function kitTrap() {
         for (const u of b.allies()) {
           if (inZone(a.zone, u)) b.addBuff(u, { key: 'reg:trapPierce', duration: AURA_LIFE, refresh: 'replace', visible: true });
         }
+      }
+      if (a.closed) {
+        if (b.time + 1e-9 < a.closedUntil) return;
+        // "技能结束时会立刻召唤一次敌人，随后重新张嘴" (PRTS 古雕伥 技能1)
+        a.closed = false;
+        a.acc = 0;
+        b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'trap_open' });
+        spitHorn(b, e);
+        return;
       }
       if (!a.active) return;
       a.acc += dt;

@@ -49,6 +49,11 @@ export function snapHud(snap) {
   const out = { killed, resolved: n(snap.resolved) ?? killed, total: n(snap.total), dp: n(snap.dp), boss };
   if (protocol) out.protocol = protocol;
   if (isObj(snap.pluginView)) out.pluginView = snap.pluginView;
+  if (Array.isArray(snap.traps) && snap.traps.length) {
+    out.traps = snap.traps
+      .map((t) => (Array.isArray(t) ? { id: t[0], active: !!t[1], closed: !!t[2], used: !!t[3] } : t))
+      .filter((t) => t && Number.isInteger(t.id));
+  }
   return out;
 }
 

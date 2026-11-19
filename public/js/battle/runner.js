@@ -1186,6 +1186,19 @@ export function createBattleRunner(deps) {
           return { ...o, ...(si ? { standInFor: si } : {}), ...(diy ? { diy: { ...diy } } : {}) };
         });
     },
+    /**
+     * 古雕伥 close-mouth skill on the battle on screen (content/traps.js via Battle.closeTrap): 20 DP, 150 s, once.
+     * Only a locally simulated field can be acted on. Returns whether it was applied (false: wrong field, remote
+     * host, no DP, already used).
+     * @param {number} unitId @param {string|null} [fieldId]
+     */
+    closeTrap(unitId, fieldId = null) {
+      const e = cur;
+      if (!e || !Number.isInteger(unitId) || (fieldId != null && e.fieldId !== fieldId) || remote(e)) return false;
+      try { if (e.battle.closeTrap(unitId) !== true) return false; } catch { return false; }
+      try { emitFrame(e, false); } catch { /* ignore */ }
+      return true;
+    },
     /** Re-show the current battle (the game screen remounted). */
     reshow() { if (cur) show(cur); },
     /** Test / debug hooks. */

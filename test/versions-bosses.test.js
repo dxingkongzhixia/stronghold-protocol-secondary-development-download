@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { DataSource } from '../server/sim/simdata.js';
 import { setGameData } from '../server/sim/content/support/index.js';
 import { BOSS_KEYS } from '../server/sim/content/bosses.js';
-import { TRAP_KEY, HORN_KEY, HORN_DEF, spawnTrap } from '../server/sim/content/traps.js';
+import { TRAP_KEY, HORN_KEY, HORN_DEF, spawnTrap, activateTrap } from '../server/sim/content/traps.js';
 import { makeBattle } from './helpers/battleHarness.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -268,4 +268,33 @@ test('亢角兽 rests until attacked, then joins the fight (PRTS)', () => {
   h.b.dealDamage(h.allies()[0], horn, { amount: 100, type: 'phys' });
   h.step(1);
   assert.ok(buffs(horn, 'reg:hornRest').length === 0, 'awake after a hit');
+});
+
+test('古雕伥 close-mouth: 20 DP, 150 s, no summon meanwhile, summons once on reopen, once per battle (PRTS 技能)', () => {
+  const h = makeBattle({ data: ds, seed: 11, autoFinish: false, units: [], enemies: [] });
+  setGameData(ACT3);
+  h.step(1);
+  const trap = spawnTrap(h.b, null, [9, 8]);
+  assert.ok(trap);
+  h.b.players[0].dp = 50;
+  assert.equal(h.b.closeTrap(trap.id), false, 'inactive trap cannot be closed');
+  activateTrap(h.b, trap);
+  assert.equal(h.b.closeTrap(trap.id), true);
+  assert.equal(h.b.players[0].dp, 30, '20 DP spent');
+  assert.equal(h.b.trapState(trap.id).closed, true);
+  const snap = h.b.snapshot();
+  assert.ok(Array.isArray(snap.traps) && snap.traps.some((t) => t[0] === trap.id && t[2] === 1), 'snapshot carries the trap');
+  // no spitting while closed: skip the 20 s timer
+  const a = trap.mem.ab.list.find((x) => x && x.zone);
+  h.run(21);
+  assert.ok(!h.enemies().some((e) => e.defId === HORN_KEY), 'silent while closed');
+  a.closedUntil = h.b.time - 1;                 // the 150 s are over
+  h.step(1);
+  assert.equal(h.b.trapState(trap.id).closed, false, 'reopened');
+  assert.ok(h.enemies().some((e) => e.defId === HORN_KEY), 'summons once immediately on reopen');
+  assert.equal(h.b.closeTrap(trap.id), false, 'one use per battle');
+  const second = spawnTrap(h.b, null, [9, 10]);
+  activateTrap(h.b, second);
+  h.b.players[0].dp = 5;
+  assert.equal(h.b.closeTrap(second.id), false, 'not enough DP');
 });

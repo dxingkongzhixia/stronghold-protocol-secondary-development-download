@@ -138,6 +138,15 @@ export class BattleEvents {
       (down || (down = [])).push([u.id, r2(u.respawnAt), r2(Math.max(0, u.respawnAt - u.deathAt)), this._downState(u), ...this.restTile(u)]);
     }
     if (down) snap.down = down;
+    // 古雕伥 (content/traps.js): compact [id, active, closed, used] for the HUD's close-mouth button
+    let traps = null;
+    for (const u of this.enemies) {
+      if (!u.alive || !u.mem || !u.mem.trap) continue;
+      const a = u.mem.ab && u.mem.ab.list.find((x) => x && x.zone);
+      if (!a) continue;
+      (traps || (traps = [])).push([u.id, a.active ? 1 : 0, a.closed ? 1 : 0, a.used ? 1 : 0]);
+    }
+    if (traps) snap.traps = traps;
     let elem = null, ammo = null, wolves = null, neg = null, motes = null, energy = null, stand = null, standCut = null, face = null;
     let listed = null;   // the ids in snap.units, built for the first enemy with a cut to report
     for (const u of this.units) {
