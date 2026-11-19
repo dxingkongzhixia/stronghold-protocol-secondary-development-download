@@ -19,3 +19,29 @@ export function uiThemeForVersion(version) {
   for (const theme of Object.values(UI_THEMES)) if (theme.version === version) return theme;
   return null;
 }
+
+
+// ---- helpers the mainline's prefab-pack renderer reads (ui/prefab/view.js) ------------------------------------------
+// Our fork has no theme-pack registry: a pack is always the local-client season entry, looked up in
+// data/local-assets.json's group, and nothing is imported from a user file.
+
+/** A pack file's URL: only a path inside the group's own folder is followed. */
+export function officialAssetUrl(group, entry) {
+  const path = entry && typeof entry.path === 'string' ? entry.path : '';
+  if (!path || !group) return '';
+  const base = `/assets/local/${group}/`;
+  return path.startsWith(base) ? path : '';
+}
+
+/** An imported theme-pack document (a user file): none in this fork. */
+export function importedPrefabDoc() { return null; }
+
+/** A registered official theme's record: none in this fork (the season entry passes its own group). */
+export function officialThemeById() { return null; }
+
+/** A theme character's Spine key: no theme characters here. */
+export function themeCharacterKey() { return null; }
+
+/** The clip names of a theme character (ui/themeCharacter.js): unused here. */
+export function characterAnimName() { return null; }
+export function characterIdleName() { return null; }
