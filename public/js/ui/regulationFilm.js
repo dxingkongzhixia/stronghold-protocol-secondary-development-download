@@ -213,7 +213,10 @@ export async function playRegulationFilm({ skip } = {}) {
   let scene = null;
   try { scene = mountRegulationIntro(host, pack); } catch (err) { console.warn('[regulation] film failed', err); host.remove(); return false; }
   const start = performance.now();
+  // A background tab pauses rAF: the overlay would stay black for good. The hard stop removes it anyway.
+  let stop = null;
   await new Promise((done) => {
+    stop = setTimeout(done, (REG_SPAN.to + 1) * 1000);
     const tick = (now) => {
       if (skip?.()) { done(); return; }
       const t = (now - start) / 1000;
@@ -228,6 +231,7 @@ export async function playRegulationFilm({ skip } = {}) {
     };
     requestAnimationFrame(tick);
   });
+  if (stop) clearTimeout(stop);
   try { scene.destroy(); } catch { /* gone */ }
   host.remove();
   return true;
