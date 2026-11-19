@@ -137,8 +137,42 @@ test('假想敌：械 attacks the whole field (PRTS)', () => {
   h.step(1);
   const ally = h.allies()[0];
   const hp0 = ally.hp;
-  h.run(3);
+  h.run(11);
   assert.ok(ally.hp < hp0, 'a far operator is hit (rangeRadius 0 in data, the field-wide attack is scripted)');
+});
+
+test('假想敌：械 洪流攻势 summons 量变之械 on the four tiles around the highest-block operator of each side (PRTS)', () => {
+  const units = [
+    { chessId: 'chess_char_1_02_a', row: 9, col: 6 },
+    { chessId: 'chess_char_1_02_a', row: 9, col: 14 },
+  ];
+  const h = makeBattle({ data: ds, seed: 11, autoFinish: false, units, enemies: [{ key: 'enemy_9029_acfnc', time: 0, pos: [6, 10] }] });
+  setGameData(ACT3);
+  h.step(1);
+  h.run(26);
+  const gears = h.b.enemies.filter((e) => e.alive && e.defId === 'enemy_9028_acfncb');
+  const around = (a) => gears.filter((g) => Math.abs(g.spawnY - a.tileR) + Math.abs(g.spawnX - a.tileC) === 1);
+  assert.ok(h.allies().some((a) => around(a).length >= 3),
+    `four tiles around a high-block operator (${JSON.stringify(h.allies().map((a) => [a.y, a.x, around(a).length]))} / ${JSON.stringify(gears.map((g) => [g.spawnY, g.spawnX]))})`);
+});
+
+test('假想敌：铳 dies → every other 铳 / 碎铳之簧 is killed (PRTS 天赋)', () => {
+  const h = makeBattle({
+    data: ds, seed: 11, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_02_a', row: 9, col: 6 }],
+    enemies: [
+      { key: 'enemy_9017_achunt_2', time: 0, pos: [6, 6] },
+      { key: 'enemy_9018_actrpa', time: 0, pos: [6, 8] },
+    ],
+  });
+  setGameData(ACT3);
+  h.step(1);
+  const gun = h.enemies().find((e) => e.defId === 'enemy_9017_achunt_2');
+  const spring = h.enemies().find((e) => e.defId === 'enemy_9018_actrpa');
+  assert.ok(gun && spring);
+  h.b.kill(gun, null);
+  h.step(1);
+  assert.ok(!spring.alive, 'the spring leaves with the 铳');
 });
 
 test('假想敌：茧 hits up to three operators per side in one attack (PRTS)', () => {

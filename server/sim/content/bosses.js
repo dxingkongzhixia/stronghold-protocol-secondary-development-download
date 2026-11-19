@@ -36,11 +36,14 @@
 //                            shot) / 5-hit shield (every (spCost+1)-th attack a ten-hit combo); unblockable while shielded;
 //                            shield back 25 s after breaking; every damage taken costs 铳 as much (PART_TRANSFER, 无来源)
 //                            and, split, the other springs.
-//   boss_3/10 假想敌：管     summons 余音 (dark) every 40 s (20 s < 50 %); normal attacks strike dark 余音 (their pulse hurts
-//                            operators); 裂管之奏 3 strikes on every dark 余音 (AoE arts + apoptosis). boss_10 + 假想敌：弦
-//                            (invulnerable, gold 余音, 断弦之奏 AoE + flips them dark; leaves with 管).
-//   余音                     10-hit unit, block ≥ 2 only; gold (ASPD +50) / dark (ATK +50 %, slower) forms that swap after
-//                            10 strikes; pulses on every hit taken; 合奏 every 5 s.
+//   boss_3/10 假想敌：管     summons 余音 (dark) every 40 s (20 s < 50 %); <50 % 10 % phys/arts dodge; normal attack =
+//                            3 hits of 100 % ATK arts around the targeted 余音 (radius 1.8, whole field); 裂管之奏 3 strikes
+//                            on every dark 余音 (1.8 arts + 25 % apoptosis, 0.8 apoptosis splash). boss_10 + 假想敌：弦
+//                            (invulnerable, gold 余音, normal attack 100 % arts around its target, radius 3.0; 断弦之奏 AoE
+//                            + flips them dark; leaves with 管).
+//   余音                     10-hit unit, block ≥ 2 only; gold (ASPD +50) / dark (ATK +50 %, move +20 %) forms that swap after
+//                            10 strikes; pulses on every hit taken; 合奏 charged by hits (12 SP) — when one bar fills every
+//                            余音 on the field performs it, then all bars reset.
 //   boss_4 盐风主教昆图斯     2 highest-DEF targets (+ neural); 3 growth stages (33 % HP lost or 75 s / 200 s): 大潮 global
 //                            arts + neural, 崩坍 delayed strikes on 2/4/8 highest-DEF units, 断裂生殖 tentacles (stun),
 //                            物种爆发 LP loss (stage 3).
@@ -127,6 +130,13 @@ const LUCIEN_AOE_RADIUS = 2;
 /** 余音 on-hit pulse radius (PRTS 1.6) and 合奏 radii per form (PRTS gold 0.8 / dark 1.6). */
 const ECHO_PULSE_RADIUS = 1.6;
 const ECHO_ENSEMBLE_RADIUS = Object.freeze({ gold: 0.8, dark: 1.6 });
+/** 合奏 costs the echo's whole SP bar (data `Skill`: 12, 受击回复). */
+const ECHO_SP_MAX = 12;
+/** 管 / 弦 普通攻击: 管 3 hits, 弦 1 hit, each centred on the attacked 余音 (PRTS 1.8 / 3.0), 100 % ATK arts. */
+const PIPE_ATK = Object.freeze({ radius: 1.8, hits: 3 });
+const STRING_ATK = Object.freeze({ radius: 3, hits: 1 });
+/** 裂管之奏: 主范围 1.8 (PRTS), bb `range_radius` 0.8 is the extra apoptosis splash. */
+const PIPE_SKILL_RADIUS = 1.8, PIPE_SKILL_SPLASH = 0.8;
 /** "只能被阻挡数大于等于2的单位阻挡". */
 const ECHO_BLOCK_WEIGHT = 2;
 /** 裂管之奏 strike spacing (s). */
@@ -598,21 +608,24 @@ function kitGun(ab, e, b) {
       before(c, b2, e2) { const l = targetsNear(b2, e2, range()); if (l.length) c.targets = [l.sort((p, q) => q.s.def - p.s.def || aggroCmp(p, q))[0]]; }, // 优先攻击防御力最高的单位
       attack(c, b2) {
         const t = c.targets[0];
-        if (t === P.last) P.n = Math.min(maxN, P.n + 1); else { P.last = t; P.n = 0; }
+        // 每次成功攻击前判定: same target → one more stack; a new target starts at 1 (PRTS "至少生效1层增益").
+        if (t === P.last) P.n = Math.min(maxN, P.n + 1); else { P.last = t; P.n = maxN > 0 ? 1 : 0; }
         setAspd(b2);
       },
       dealt(c, b2, e2) { elem(b2, e2, c.target, 'erosion', e2.s.atk * (T(ab, '1.ep_damage_ratio') ?? 0)); }, // 攻击时附带侵蚀损伤
       tick(b2, e2, a, dt) {
         const ch = P.charge;
         if (!ch || unbalancedNow(b2, e2)) return;                              // (失衡: no scripted move meanwhile)
-        const t = ch.target;
+        // “目标退场后不再追踪目标，且不视为到达目标所在位置”: the chase just ends (no arrival hit, no stop counted).
+        const u = ch.unit;
+        if (!u || !u.alive) { P.charge = null; b2.removeBuff(e2, 'boss:charge'); if (e2.route) e2.route.pts = null; return; }
         const sp = (e2.s.moveSpeed + (T(ab, '3.move_speed') ?? 0)) * MOVE_SCALE * dt;
         const nx = e2.x, ny = e2.y;
-        const arrived = stepToward(e2, t.x, t.y, sp);
+        const arrived = stepToward(e2, u.x, u.y, sp);                          // 持续追踪目标移动
         if (!b2.grid.groundPassable(Math.round(e2.y), Math.round(e2.x))) { e2.x = nx; e2.y = ny; }
         // "对进入自身0.35半径范围内的我方单位（包括飞行单位）造成一次…": an area selection (areaAllies)
-        for (const u of areaAllies(b2, e2, e2.x, e2.y, CHARGE_RADIUS)) if (!ch.hit.has(u)) { ch.hit.add(u); hurt(b2, e2, u, e2.s.atk * (T(ab, '3.atk_scale') ?? 1), 'phys'); }
-        if (arrived || b2.time >= ch.until || (e2.x === nx && e2.y === ny)) {
+        for (const w of areaAllies(b2, e2, e2.x, e2.y, CHARGE_RADIUS)) if (!ch.hit.has(w)) { ch.hit.add(w); hurt(b2, e2, w, e2.s.atk * (T(ab, '3.atk_scale') ?? 1), 'phys'); }
+        if (arrived || b2.time >= ch.until) {
           P.charge = null;
           b2.removeBuff(e2, 'boss:charge');
           if (e2.route) e2.route.pts = null;
@@ -625,7 +638,7 @@ function kitGun(ab, e, b) {
         const t = groundTargets(b2).sort((p, q) => q.s.def - p.s.def || aggroCmp(p, q))[0];
         if (!t) return;
         const dur = T(ab, '3.duration') ?? 0;
-        P.charge = { target: { x: t.x, y: t.y }, until: b2.time + dur, hit: new Set() };
+        P.charge = { unit: t, until: b2.time + dur, hit: new Set() };
         b2.addBuff(e2, { key: 'boss:charge', duration: dur, visible: true, flags: { noMove: true, disarm: true } });
         b2.fx('charge', { x: e2.x, y: e2.y, id: e2.id, tx: t.x, ty: t.y, kind: 'finalPenance' });
       },
@@ -645,10 +658,15 @@ function kitGun(ab, e, b) {
     if (s3) list.push({
       iv: s3.bb.interval ?? 1,
       tick(b2, e2) { // 【盲信之誓】 links: phys per second on operators standing on a line ("无视无法选择、迷彩": 起飞 too)
+        const hit = new Set();   // PRTS "多条锁链的伤害不叠加": one tick per operator however many lines cross it
         for (const sp of b2.enemies) {
           if (!sp.alive || !isSpring(sp)) continue;
           b2.fx('link', { x: e2.x, y: e2.y, from: e2.id, to: sp.id, kind: 'faithLink', dur: s3.bb.interval ?? 1 });
-          for (const u of b2.allies()) if (segDist(u.x, u.y, e2.x, e2.y, sp.x, sp.y) <= LINK_WIDTH) hurt(b2, e2, u, s3.bb.value ?? 0, 'phys', { ignoreSelect: true, tags: ['faithLink'] });
+          for (const u of b2.allies()) {
+            if (hit.has(u.id) || segDist(u.x, u.y, e2.x, e2.y, sp.x, sp.y) > LINK_WIDTH) continue;
+            hit.add(u.id);
+            hurt(b2, e2, u, s3.bb.value ?? 0, 'phys', { ignoreSelect: true, tags: ['faithLink'] });
+          }
         }
       },
     });
@@ -668,6 +686,8 @@ function kitGun(ab, e, b) {
       },
     });
   }
+  // PRTS 假想敌：铳 天赋 "死亡时强制击杀全场的其他假想敌：铳 / “碎铳之簧”" (the hidden pair field relies on it).
+  list.push({ death(c, b2) { for (const o of b2.aliveEnemies()) if (o !== e && (isGun(o) || isSpring(o))) b2.kill(o, null); } });
   return list;
 }
 
@@ -780,13 +800,29 @@ export function setEchoForm(b, echo, form) {
   if (!ab) return;
   ab.form = form;
   ab.strikes = 0;
-  const mods = form === 'gold' ? { aspd: T(ab, '1.attack_speed') ?? 0 } : { atkPct: T(ab, '2.atk') ?? 0, moveMul: 1 - (T(ab, '2.move_speed') ?? 0) };
+  // 【金黄的悲号】 ASPD +50; 【暗色的喟叹】 ATK +50 %, move speed +20 % (PRTS 能力修正 原因 6: the in-game text's 下降 is wrong).
+  const mods = form === 'gold' ? { aspd: T(ab, '1.attack_speed') ?? 0 } : { atkPct: T(ab, '2.atk') ?? 0, moveMul: 1 + (T(ab, '2.move_speed') ?? 0) };
   b.addBuff(echo, { key: 'boss:echoForm', persist: true, visible: true, mods });
   b.fx('phase', { x: echo.x, y: echo.y, id: echo.id, kind: `echo_${form}` });
 }
 
+/** 合奏: 100 % ATK arts + 30 % (gold) / 50 % (dark) apoptosis around this echo (PRTS). */
+function echoEnsemble(b, echo) {
+  const ab = echo.mem.ab;
+  const gold = ab.form === 'gold';
+  const r = gold ? ECHO_ENSEMBLE_RADIUS.gold : ECHO_ENSEMBLE_RADIUS.dark;
+  const ratio = gold ? T(ab, '4.ep_damage_ratio_passion') ?? 0 : T(ab, '4.ep_damage_ratio_depassion') ?? 0;
+  const sk = ab.sk.Skill;
+  if (sk) castSlot(b, echo, sk);
+  b.fx('explode', { x: echo.x, y: echo.y, r, kind: gold ? 'ensembleGold' : 'ensembleDark' });
+  for (const u of areaAllies(b, echo, echo.x, echo.y, r)) {
+    hurt(b, echo, u, echo.s.atk, 'arts');
+    elem(b, echo, u, 'apoptosis', echo.s.atk * ratio);
+  }
+}
+
 /** An echo takes a strike/hit: pulse around it (PRTS “余音” "受到伤害时对半径1.6范围内的我方单位造成…": an area selection of the
- *  echo — no unblocking 隐匿 operator) and count towards the form switch. */
+ *  echo — no unblocking 隐匿 operator), count towards the form switch and charge its 合奏 SP (受击回复). */
 export function echoHit(b, echo) {
   const ab = echo.mem.ab;
   if (!ab || !echo.alive) return;
@@ -807,33 +843,33 @@ export function echoHit(b, echo) {
       const need = ab.form === 'gold' ? T(ab, '1.hit_times_to_switch') : T(ab, '2.hit_times_to_switch');
       ab.strikes = (ab.strikes ?? 0) + 1;
       if (echo.alive && need > 0 && ab.strikes >= need) setEchoForm(b, echo, ab.form === 'gold' ? 'dark' : 'gold');
+      // 受击回复: one SP per hit; a full bar makes EVERY “余音” on the field perform 合奏, then all bars reset (PRTS 余音).
+      ab.sp = (ab.sp ?? 0) + 1;
+      if (ab.sp >= ECHO_SP_MAX) {
+        const all = b.aliveEnemies().filter((o) => o.defId === ECHO_KEY && o.mem.ab);
+        for (const o of all) { echoEnsemble(b, o); o.mem.ab.sp = 0; }
+      }
     }
   } finally { ab.pulses.length = 0; ab.pulsing = false; }
 }
 
-function kitEcho(ab, e) {
-  const s = ab.sk.Skill;
+function kitEcho() {
   return [
     {
-      spawn(b, e2) { setHits(e2, e2.base.maxHp); hitCount(b, e2, true); e2.blockWeight = ECHO_BLOCK_WEIGHT; setEchoForm(b, e2, 'dark'); }, // hits × the round's HP (summonMods)
+      spawn(b, e2) {
+        setHits(e2, e2.base.maxHp); hitCount(b, e2, true); e2.blockWeight = ECHO_BLOCK_WEIGHT;
+        e2.mem.ab.sp = 0;
+        setEchoForm(b, e2, 'dark');
+      }, // hits × the round's HP (summonMods)
       taken(c, b, e2) { const s = c.source || c.credit; if (s && s.side === 'ally') echoHit(b, e2); }, // 受到伤害时以自身为中心造成一次范围伤害 (a 无来源 burst too)
-    },
-    s && {
-      cd: s.cd, icd: s.icd, sk: s,
-      fire(b, e2) { // 合奏
-        const gold = e2.mem.ab.form === 'gold';
-        const r = gold ? ECHO_ENSEMBLE_RADIUS.gold : ECHO_ENSEMBLE_RADIUS.dark;
-        const ratio = gold ? T(ab, '4.ep_damage_ratio_passion') ?? 0 : T(ab, '4.ep_damage_ratio_depassion') ?? 0;
-        b.fx('explode', { x: e2.x, y: e2.y, r, kind: gold ? 'ensembleGold' : 'ensembleDark' });
-        for (const u of areaAllies(b, e2, e2.x, e2.y, r)) { hurt(b, e2, u, e2.s.atk, 'arts'); elem(b, e2, u, 'apoptosis', e2.s.atk * ratio); }
-      },
     },
   ];
 }
 
-/** 管 / 弦 core: summon loop, strikes on its own form of 余音, skill. */
-function pipeCore(ab, e, b, tpl, { form, prefix }) {
+/** 管 / 弦 core: summon loop, its whole-field attack around the targeted 余音, skill. */
+function pipeCore(ab, e, b, tpl, { form, prefix, atk }) {
   const hi = T(ab, `1.${prefix}_t_1[high_hp].interval`) ?? 40, lo = T(ab, `1.${prefix}_t_1[low_hp].interval`) ?? hi, thr = T(ab, '1.hp_ratio') ?? 0;
+  const prob = T(ab, '1.prob') ?? 0;
   const key = ab.tS['1.enemy_key'] ?? ECHO_KEY;
   const P = { acc: 0, atk: Infinity };   // first strike as soon as an echo of its form exists (engine attack rule)
   const summon = (b2, e2) => {
@@ -846,16 +882,26 @@ function pipeCore(ab, e, b, tpl, { form, prefix }) {
     tick(b2, e2, a, dt) {
       P.acc += dt;
       if (P.acc >= (e2.hpRatio < thr ? lo : hi)) { P.acc = 0; summon(b2, e2); }
+      // < 50 %: 10 % physical/arts dodge (PRTS 天赋 `1.prob`), one persistent buff.
+      if (!P.dodge && prob > 0 && e2.hpRatio < thr) {
+        P.dodge = true;
+        b2.addBuff(e2, { key: 'reg:pipeDodge', persist: true, mods: { dodgePhys: prob, dodgeArts: prob } });
+      }
       if (!canCast(e2, false, b2)) return;
       P.atk += dt;
       if (P.atk < e2.s.interval) return;
-      const t = b2.rng.pick(echoesOf(b2, form));                 // 优先攻击…形态余音
+      // 优先攻击…形态余音; with none on the field the whole-field attack takes any operator (PRTS "攻击范围扩大至全场").
+      const t = b2.rng.pick(echoesOf(b2, form)) || b2.rng.pick(allTargets(b2, e2));
       if (!t) return;
       P.atk = 0;
       e2.lastAttackAt = b2.time;
       e2.stats.attacks++;
       b2.fx('beam', { x: e2.x, y: e2.y, from: e2.id, to: t.id, kind: `${prefix}Strike` });
-      echoHit(b2, t);
+      // 普通攻击: `atk.hits` hits, each 100 % ATK arts on everything within `atk.radius` of the target (PRTS 管 3×1.8,
+      // 弦 1×3.0, "范围伤害无视迷彩" — areaAllies). The 余音 is the anchor, not a victim.
+      for (let i = 0; i < atk.hits; i++) {
+        for (const u of areaAllies(b2, e2, t.x, t.y, atk.radius)) hurt(b2, e2, u, e2.s.atk, 'arts');
+      }
     },
   };
 }
@@ -863,19 +909,24 @@ function pipeCore(ab, e, b, tpl, { form, prefix }) {
 function kitPipe(ab, e, b, tpl) {
   const s = ab.sk['1'];
   return [
-    pipeCore(ab, e, b, tpl, { form: 'dark', prefix: 'acduml' }),
+    pipeCore(ab, e, b, tpl, { form: 'dark', prefix: 'acduml', atk: PIPE_ATK }),
     {
       death(c, b2) { for (const o of b2.aliveEnemies()) if (o.defId === 'enemy_9022_acdumm') b2.kill(o, null); }, // 弦 leaves with 管
     },
     s && {
       cd: s.cd, icd: s.icd, sk: s, cond: (b2) => echoesOf(b2, 'dark').length > 0,
-      fire(b2, e2) { // 【裂管之奏】 three strikes on every dark echo
-        const r = s.bb.range_radius ?? 0, ep = s.bb.ep_damage_ratio ?? 0;
+      fire(b2, e2) { // 【裂管之奏】 three strikes on every dark echo (PRTS: 1.8 AoE, 0.8 apoptosis splash)
+        const ep = s.bb.ep_damage_ratio ?? 0;
         for (const echo of echoesOf(b2, 'dark')) for (let k = 0; k < 3; k++) b2.after(k * PIPE_STRIKE_GAP, () => {
           if (!e2.alive || !echo.alive) return;
-          b2.fx('explode', { x: echo.x, y: echo.y, r, kind: 'pipeStrike' });
-          for (const u of areaAllies(b2, e2, echo.x, echo.y, r)) { hurt(b2, e2, u, e2.s.atk, 'arts'); elem(b2, e2, u, 'apoptosis', e2.s.atk * ep); }
-          echoHit(b2, echo);
+          b2.fx('explode', { x: echo.x, y: echo.y, r: PIPE_SKILL_RADIUS, kind: 'pipeStrike' });
+          const hit = areaAllies(b2, e2, echo.x, echo.y, PIPE_SKILL_RADIUS);
+          for (const u of hit) {
+            hurt(b2, e2, u, e2.s.atk, 'arts');
+            elem(b2, e2, u, 'apoptosis', e2.s.atk * ep);
+            // 每个受影响单位半径 0.8 内再受到一次凋亡损伤（无视其可选性、可叠加）
+            for (const o of areaAllies(b2, e2, u.x, u.y, PIPE_SKILL_SPLASH)) elem(b2, e2, o, 'apoptosis', e2.s.atk * ep, { ignoreSelect: true });
+          }
         }, { owner: e2 });
       },
     },
@@ -885,15 +936,15 @@ function kitPipe(ab, e, b, tpl) {
 function kitString(ab, e, b, tpl) {
   const s = ab.sk['1'];
   return [
-    pipeCore(ab, e, b, tpl, { form: 'gold', prefix: 'acdumm' }),
+    pipeCore(ab, e, b, tpl, { form: 'gold', prefix: 'acdumm', atk: STRING_ATK }),
     { spawn(b2, e2) { b2.addBuff(e2, { key: 'boss:eternal', persist: true, flags: { invulnerable: true, untargetable: true } }); } }, // 永久无敌
     s && {
       cd: s.cd, icd: s.icd, sk: s, cond: (b2) => echoesOf(b2, 'gold').length > 0,
-      fire(b2, e2) { // 【断弦之奏】 AoE on every gold echo, which then turns dark
-        const r = s.bb.range_radius ?? 0, ep = s.bb.ep_damage_ratio ?? 0;
+      fire(b2, e2) { // 【断弦之奏】 3.0 AoE on every gold echo, which then turns dark
+        const ep = s.bb.ep_damage_ratio ?? 0;
         for (const echo of echoesOf(b2, 'gold')) {
-          b2.fx('explode', { x: echo.x, y: echo.y, r, kind: 'stringStrike' });
-          for (const u of areaAllies(b2, e2, echo.x, echo.y, r)) { hurt(b2, e2, u, e2.s.atk, 'arts'); elem(b2, e2, u, 'apoptosis', e2.s.atk * ep); }
+          b2.fx('explode', { x: echo.x, y: echo.y, r: STRING_ATK.radius, kind: 'stringStrike' });
+          for (const u of areaAllies(b2, e2, echo.x, echo.y, STRING_ATK.radius)) { hurt(b2, e2, u, e2.s.atk, 'arts'); elem(b2, e2, u, 'apoptosis', e2.s.atk * ep); }
           setEchoForm(b2, echo, 'dark');
         }
       },

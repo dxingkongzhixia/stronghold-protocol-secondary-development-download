@@ -2955,7 +2955,7 @@ test('假想敌：铳: unblockable, targets the highest DEF in range, ASPD ramps
   h.runUntil(() => e.stats.attacks >= 3, 120);
   assert.equal(h.unit('t_wall').stats.taken, 0);
   assert.ok(h.unit('t_wall2').stats.taken > 0);
-  assert.equal(e.s.aspd, 2 * tb('enemy_9017_achunt', '2.attack_speed'));
+  assert.equal(e.s.aspd, 3 * tb('enemy_9017_achunt', '2.attack_speed'));   // 每次成功攻击前判定，至少生效1层 (PRTS)
   assert.ok(h.unit('t_wall2').elem[EROSION] > 0);
 });
 
@@ -3096,20 +3096,38 @@ test('“碎铳之簧”: damage taken costs 假想敌：铳 as much (等量, �
   assert.ok(h.result().perPlayer.p1.bossDamage >= dealt - 1e-6, 'the per-player pool tally');
 });
 
-test('假想敌：管: strikes dark 余音 (their pulse hurts operators); 裂管之奏 at 40 s; summons 余音 every 40 s', () => {
-  const h = bossArena({ units: [{ chessId: 't_wall', row: 10, col: 6 }], setup: setTpl('act1autochess_h07_03') });
+test('假想敌：管: normal attack = 3×100 % arts around the targeted 余音 (1.8, no apoptosis); 裂管之奏 at 40 s; summons every 40 s', () => {
+  const h = bossArena({ units: [{ chessId: 't_wall', row: 10, col: 9 }, { chessId: 't_wall2', row: 7, col: 8 }], setup: setTpl('act1autochess_h07_03') });
   h.step();
   const e = put(h, 'enemy_9021_acduml', [3, 10], { tag: 'boss' });
-  const echo = put(h, 'enemy_9023_acdums', [3, 6], { tag: 'part' });
+  const echo = put(h, 'enemy_9023_acdums', [3, 8], {
+    tag: 'part',
+    route: { motion: 'WALK', start: [3, 8], end: [3, 8], steps: [{ t: 'wait', s: 99999 }] },
+  });
   assert.equal(echo.mem.ab.form, 'dark');
   assert.equal(e.s.interval, E.enemy_9021_acduml.stats.bat * 100 / 20);
   h.run(e.s.interval + 0.2);
   assert.ok(h.eventsOf('fx').some((f) => f[1] === 'beam' && f[4].kind === 'acdumlStrike'));
-  assert.ok(h.unit('t_wall').stats.taken > 0 && h.unit('t_wall').elem.apoptosis > 0);
+  const taken = h.unit('t_wall').stats.taken;
+  assert.ok(taken > 0, 'three hits around the echo');
+  assert.equal(h.unit('t_wall').elem.apoptosis, 0, 'the normal attack carries no apoptosis');
+  assert.equal(h.unit('t_wall2').stats.taken, 0, 'outside the 1.8 radius');
   h.run(skb('enemy_9021_acduml', '1').initCooldown - h.b.time + 1.2);
   const strikes = h.eventsOf('fx').filter((f) => f[1] === 'explode' && f[4].kind === 'pipeStrike').length;
   assert.ok(strikes >= 3 && strikes % 3 === 0, `three strikes per dark echo (${strikes})`);
+  assert.ok(h.unit('t_wall').elem.apoptosis > 0, '裂管之奏 apoptosis');
   assert.ok(alive(h, 'enemy_9023_acdums').length >= 2, 'summoned');
+});
+
+test('假想敌：管 gains 10 % physical/arts dodge below half HP (PRTS 天赋)', () => {
+  const h = bossArena({ units: [{ chessId: 't_wall', row: 10, col: 9 }] });
+  h.step();
+  const e = put(h, 'enemy_9021_acduml', [3, 10], { tag: 'boss' });
+  h.run(0.6);
+  assert.equal(e.buffs.filter((b) => b.key === 'reg:pipeDodge').length, 0);
+  h.b.sharedBoss.hp = h.b.sharedBoss.maxHp * 0.4;
+  h.run(0.6);
+  assert.equal(e.buffs.filter((b) => b.key === 'reg:pipeDodge').length, 1);
 });
 
 test('假想敌：管 (隐秘核心) + 假想敌：弦: 弦 is invulnerable, 断弦之奏 flips gold 余音 dark; 弦 leaves when 管 falls', () => {
@@ -3127,25 +3145,30 @@ test('假想敌：管 (隐秘核心) + 假想敌：弦: 弦 is invulnerable, 断
   assert.ok(!str.alive);
 });
 
-test('“余音”: 10-hit unit held only by block ≥2; pulses when hit; forms swap after 10 strikes; 合奏 every 5 s', () => {
-  const h = bossArena({ units: [{ chessId: 't_wall', row: 10, col: 6 }, { chessId: 't_blade', row: 11, col: 6 }], kits: { t_blade: NOATK } });
+test('“余音”: 10-hit unit held only by block ≥2; pulses when hit; forms swap after 10 strikes; 合奏 charged by hits, all echoes, bars reset', () => {
+  const h = bossArena({ units: [{ chessId: 't_wall', row: 4, col: 7 }, { chessId: 't_blade', row: 11, col: 6 }], kits: { t_blade: NOATK } });
   h.step();
   const e = put(h, 'enemy_9023_acdums', [3, 6], { tag: 'part' });
   assert.equal(e.s.maxHp, E.enemy_9023_acdums.stats.maxHp);
   assert.equal(e.blockWeight, 2);
   assert.equal(e.mem.ab.form, 'dark');
   approx(e.s.atk, E.enemy_9023_acdums.stats.atk * (1 + tb('enemy_9023_acdums', '2.atk')));
-  h.b.dealDamage(h.unit('t_blade'), e, { amount: 1e6, type: 'phys' });
+  const formBuff = e.buffs.find((b) => b.key === 'boss:echoForm');
+  assert.ok(formBuff && Math.abs(formBuff.mods.moveMul - (1 + tb('enemy_9023_acdums', '2.move_speed'))) < 1e-9, '暗色的喟叹 移速 +20 %');
+  h.b.dealDamage(h.unit('t_wall'), e, { amount: 1e6, type: 'phys' });
   assert.equal(e.hp, e.s.maxHp - 1, 'one hit = 1');
   assert.ok(h.unit('t_wall').stats.taken > 0, 'pulse when hit');
   for (let i = 1; i < tb('enemy_9023_acdums', '2.hit_times_to_switch'); i++) bossesMod.echoHit(h.b, e);
   assert.equal(e.mem.ab.form, 'gold');
   assert.equal(e.s.aspd, 100 + tb('enemy_9023_acdums', '1.attack_speed'));
-  const e2 = put(h, 'enemy_9023_acdums', [4, 7], { tag: 'part' });
+  const e2 = put(h, 'enemy_9023_acdums', [3, 7], { tag: 'part' });
   const t0 = h.unit('t_wall').stats.taken;
-  h.run(skb('enemy_9023_acdums', 'Skill').initCooldown + 0.1);
+  e2.mem.ab.sp = 11;                                   // one more hit fills its bar: every 余音 performs 合奏
+  bossesMod.echoHit(h.b, e2);
   assert.ok(h.eventsOf('fx').some((f) => f[1] === 'explode' && /ensemble/.test(f[4].kind)));
   assert.ok(h.unit('t_wall').stats.taken > t0 && e2.alive);
+  assert.equal(e2.mem.ab.sp, 0, 'bars reset');
+  assert.equal(e.mem.ab.sp, 0, 'every echo resets');
   for (let i = 0; i < E.enemy_9023_acdums.stats.maxHp - 1; i++) h.b.dealDamage(h.unit('t_blade'), e, { amount: 1, type: 'phys' });
   assert.ok(!e.alive, 'the 10th hit knocks it out');
 });
@@ -3523,3 +3546,4 @@ test(`${nm('enemy_10122_uacann_2')}: its 燃烧区域 (不可对空) spares a fl
   assert.ok(!burns.some((c) => c.target === y), 'the dragon does not');
   assert.ok(!h.hooksOf('damaged').some((c) => c.source === e && c.target === y), 'nor is it shot or splashed');
 });
+

@@ -33,8 +33,8 @@ const ARMOR_HIT = 0.7;
 const SLAM_RADIUS = 0.9;
 /** [ASSUMED] 后兽 blink distance (the skill blackboard has no distance). */
 const BLINK_DIST = 2;
-/** [ASSUMED] 并济 splash around the locked operator. */
-const PUNISH_RADIUS = 1.25;
+/** [ASSUMED] 并济 splash around the locked operator (PRTS: 半径 1.5). */
+const PUNISH_RADIUS = 1.5;
 
 const num = (v, d) => {
   if (typeof v === 'number' && Number.isFinite(v)) return v;
@@ -109,12 +109,31 @@ function nearestAlly(b, src, from, range, seen) {
   return best;
 }
 
-function highestBlock(b) {
-  let best = null;
+/** 【洪流攻势】 picks one highest-block operator on each player field (PRTS: 左侧/右侧玩家场地各一个). */
+function highestBlockPerSide(b) {
+  const out = [null, null];
   for (const u of b.allies()) {
     if (!u.alive) continue;
+    const i = u.x < 10.5 ? 0 : 1;
+    const cur = out[i];
     const blk = u.s.blockCnt;
-    if (!best || blk > best.s.blockCnt || (blk === best.s.blockCnt && u.id < best.id)) best = u;
+    if (!cur || blk > cur.s.blockCnt || (blk === cur.s.blockCnt && u.id < cur.id)) out[i] = u;
+  }
+  return out.filter(Boolean);
+}
+
+/** The nearest empty ground tile in the target's 3×3 (PRTS 械: "距离伤害目标最近的一处…可通行且没有障碍物的地面地块"). */
+function summonTile(b, t) {
+  const y = t.tileR ?? Math.round(t.y), x = t.tileC ?? Math.round(t.x);
+  let best = null;
+  let bd = Infinity;
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const r = y + dr, c = x + dc;
+      if (!b.grid.inRect(r, c) || !b.grid.groundPassable(r, c) || b.unitAt(r, c)) continue;
+      const d = hypot(dr, dc);
+      if (d < bd - 1e-9) { bd = d; best = [r, c]; }
+    }
   }
   return best;
 }
@@ -267,7 +286,8 @@ function kitMech(ab) {
   const jumps = tv(ab, 'Summon.attack@hit_times', 0);
   const chainScale = tv(ab, 'Summon.attack@chain.atk_scale', 0.8);
   const squad = ab.sk.SommonSquad;
-  const squadN = squad ? Math.min(bb(squad, 'cnt', 4), bb(squad, 'batch_max_target', 2)) : 0;
+  const squadTiles = squad ? Math.max(1, Math.min(4, bb(squad, 'cnt', 4))) : 0;
+  const SQUAD_DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // 上 / 右 / 下 / 左 (PRTS)
   return [
     {
       spawn(b, e) {
@@ -288,17 +308,25 @@ function kitMech(ab) {
         a.armed = true;
         spawnArmorPair(b, e);
       },
-      hitIn(c, b, e) {
-        if (!(cut > 0) || cut >= 1 || !c.source) return;
+      hitIn(c, b, e, a) {
+        if (!(cut > 0) || cut >= 1) return;
+        // 护甲形态下: 无来源伤害 ×0.5, and damage from a source on the other side of the mech (armour on that side) ×0.5.
+        if (!c.source) {
+          if (a && a.armed) c.dmg.mul *= cut;
+          return;
+        }
         const side = Math.sign(c.source.x - e.x);
         if (side === 0) return;
-        for (const a of livingOf(b, ARMOR, e.id)) {
-          if (Math.sign(a.x - e.x) === side) { c.dmg.mul *= cut; return; }
+        for (const arm of livingOf(b, ARMOR, e.id)) {
+          if (Math.sign(arm.x - e.x) === side) { c.dmg.mul *= cut; return; }
         }
       },
       dealt(c, b, e) {
         const t = c.target;
-        if (t) spawnGear(b, e, t, gearKey);
+        if (t) {
+          const spot = summonTile(b, t);
+          if (spot) spawnGear(b, e, { y: spot[0], x: spot[1] }, gearKey);
+        }
         if (!(jumps > 0) || !t) return;
         let from = t;
         const seen = new Set([t.id]);
@@ -321,11 +349,19 @@ function kitMech(ab) {
       spawnArmorPair(b, e);
     }),
     timed(squad, (b, e) => {
-      const ally = highestBlock(b);
-      if (!ally || !(squadN > 0)) return;
       const key = sv(squad.bs, 'enemy_key') || gearKey;
-      for (let i = 0; i < squadN; i++) spawnGear(b, e, ally, key);
-    }, { cond: (b) => !!highestBlock(b) }),
+      const sides = highestBlockPerSide(b);
+      if (!sides.length) return;
+      // "在每个所选单位上、右、下、左侧的四个地块上分别召唤1个量变之械（对应地块不可通行时取消该地块的召唤）"
+      for (const ally of sides) {
+        for (let i = 0; i < squadTiles; i++) {
+          const [dr, dc] = SQUAD_DIRS[i];
+          const r = ally.tileR + dr, c = ally.tileC + dc;
+          if (!b.grid.inRect(r, c) || !b.grid.groundPassable(r, c) || b.unitAt(r, c)) continue;
+          spawnGear(b, e, { y: r, x: c }, key);
+        }
+      }
+    }, { cond: (b) => highestBlockPerSide(b).length > 0 }),
   ];
 }
 
@@ -775,11 +811,18 @@ function kitTail(ab) {
     timed(blink, (b, e) => tailBlink(b, e, blink)),
     timed(punish, (b, e) => tailPunish(b, e, punish)),
     timed(doom, (b, e) => {
+      // 【不争】 "扣除50目标生命值，强制撤退全场干员（不判定其阵营和可选性）；技能结束0.2秒后强制击杀自身，
+      // 期间无法攻击/被阻挡；技能期间持有无敌" (PRTS 后兽 技能4).
+      b.addBuff(e, { key: 'reg:doom', persist: true, flags: { invulnerable: true } });
       const loss = Math.abs(bb(doom, 'value', -50));
       if (loss > 0) lpLoss(b, loss, 'globalDoom', e);
-      e.counted = false;
-      e.inTotal = false;
-      b.kill(e, null);
+      for (const u of b.allies().slice()) if (u.alive) b.retreat(u, { reason: 'globalDoom' });
+      b.after(0.2, () => {
+        if (!e.alive) return;
+        e.counted = false;
+        e.inTotal = false;
+        b.kill(e, null);
+      }, { owner: e });
     }),
     // 【返璞】 only in the second form (PRTS "第一形态 / 第二形态" tables).
     timed(branch, (b, e) => summonBranch(b, e, branch), { cond: (b, e) => !!e.mem.regForm2 }),
@@ -808,16 +851,20 @@ function tailBlink(b, e, sk) {
     const L = R && R.legs && R.legs[R.legIdx];
     const sign = L && L.c != null ? Math.sign(L.c - o.x) : 0;
     if (sign === dx) {
-      b.addBuff(o, { key: 'enemy_dyjsww_blink_buff[enemy]', duration: enemyDur, mods: { moveMul: enemyMove } });
+      // PRTS 时移 "使场上所有其他移动方向与时移方向相同的敌方单位在30秒内移动速度+200%": ×3, not ×2.
+      b.addBuff(o, { key: 'enemy_dyjsww_blink_buff[enemy]', duration: enemyDur, mods: { moveMul: 1 + enemyMove } });
     }
   }
 }
 
 function tailPunish(b, e, sk) {
+  // 【并济】 "仅自身占据的3行中存在我方单位时可触发…选择距离自身最近的1名我方单位…对目标及目标半径1.5范围内的
+  // 所有其他我方单位…造成攻击力100%的远程途径法术普通伤害" (PRTS 后兽 技能2). The 古雕伥 it would deploy is not
+  // in the act3 data (ISW-DF unit), so only the damage is dealt.
   let best = null;
   let bd = Infinity;
   for (const u of b.allies()) {
-    if (!u.alive || Math.abs(u.y - e.y) >= 0.5) continue;
+    if (!u.alive || Math.abs(u.y - e.y) > 1.5) continue;
     const d = Math.abs(u.x - e.x);
     if (!best || d < bd || (d === bd && u.id < best.id)) { best = u; bd = d; }
   }
