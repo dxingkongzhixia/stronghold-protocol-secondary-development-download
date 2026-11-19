@@ -74,6 +74,7 @@ import { MOVE_SCALE, MAX_ALIVE_ENEMIES } from '../constants.js';
 import { aggroCmp, areaSelectable, canTargetAlly } from '../targeting.js';
 import { compileRoute } from '../ai.js';
 import { REGULATION_BOSS_KITS } from './regulation-bosses.js';
+import { TRAP_KITS } from './traps.js';
 import { normalizeRoute } from '../simdata.js';
 import {
   ensureInstalled, abOf, attach, T, elem, hurt, targetsNear, allTargets, byPriority, areaAllies, areaAlliesInTiles, fieldAllies,
@@ -291,7 +292,7 @@ export function install(battle) {
 export function registerMeta() {}
 
 function onSpawn(b, e) {
-  const kit = BOSS_KITS[e.defId];
+  const kit = BOSS_KITS[e.defId] ?? TRAP_KITS[e.defId];
   if (typeof kit !== 'function') return;
   if (SELF_BOUND.includes(e.defId)) b.addBuff(e, { key: 'boss:selfBound', persist: true, flags: { noMove: true, selfBound: true, unblockable: true } });
   const tpl = templateOf(b);

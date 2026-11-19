@@ -153,6 +153,8 @@ export class Battle {
     this.projectiles = new ProjectileSystem(this);
     this._occ = new Array(ROWS * COLS).fill(null);
     this._domains = new Map();   // 场: source unit → Set(absolute tile keys) (battle/domains.js)
+    /** 古雕伥 zones ({ tiles: Set<'r,c'>, … }) — phys/arts from outside the cross is ×0.25 (content/traps.js). */
+    this.trapZones = [];
     this._eb = new Array(ROWS * COLS);   // range buckets (colliders: queries.js _buildEnemyIndex)
     for (let i = 0; i < this._eb.length; i++) this._eb[i] = [];
     this._ebUsed = [];

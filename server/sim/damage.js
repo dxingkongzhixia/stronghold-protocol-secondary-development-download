@@ -343,6 +343,16 @@ export function dealDamage(battle, source, target, dmgIn) {
     if (ts.flags.invulnerable || sleepBlocks(target, hs, dmg)) return 0;
   }
   const type = dmg.type;
+  // 古雕伥: physical/arts damage to an enemy inside the trap's cross is cut to 25 % when the source stands outside
+  // that cross (PRTS 古雕伥 天赋; the 5-tile zone is registered by content/traps.js). Multiple traps never stack.
+  if ((type === 'phys' || type === 'arts') && source && !dmg.sourceless && source.side === 'ally' && target.side === 'enemy'
+    && battle.trapZones && battle.trapZones.length) {
+    const tk = `${target.tileR},${target.tileC}`;
+    const sk = `${source.tileR},${source.tileC}`;
+    for (const z of battle.trapZones) {
+      if (z.tiles.has(tk) && !z.tiles.has(sk)) { dmg.mul *= 0.25; break; }
+    }
+  }
   // dodge. The yellow MISS (PRTS: a hit that would have been red, dodged) is classified after the existing roll
   // and does not roll again. Source stats are peeked so a dirty attacker is not refreshed just to label the dodge.
   if (dmg.canDodge && (type === 'phys' || type === 'arts')) {

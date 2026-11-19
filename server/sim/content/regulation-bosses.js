@@ -13,6 +13,7 @@ import {
   hurt, elem, areaAllies, allTargets, remainingRoute, lpLoss, canCast, castSlot, watchDeaths,
 } from './enemies/helpers.js';
 import { skill, blinkForward } from './enemies/archetypes.js';
+import { activateTraps, spawnTrap, trapSpot, TRAP_KEY } from './traps.js';
 
 const MECH = 'enemy_9029_acfnc';
 const MECH_2 = 'enemy_9029_acfnc_2';
@@ -740,8 +741,9 @@ function enterForm2(b, e) {
   const others = b.aliveEnemies();
   for (let i = 0; i < others.length; i++) {
     const o = others[i];
-    if (o !== e) aimAt(o, e.y, e.x);
+    if (o !== e && o.defId !== TRAP_KEY) aimAt(o, e.y, e.x);   // devices (古雕伥) hold their tile
   }
+  activateTraps(b);            // 【无为】 "…进入第二形态并激活场上所有的古雕伥"
   b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'form2', form: 'form2' });
 }
 
@@ -780,6 +782,8 @@ function kitTail(ab) {
     {
       spawn(b, e) {
         e.profile.noAttack = true;
+        // 自缚 (PRTS 后兽: "自缚；被阻挡时进行普通攻击…"): it holds its tile.
+        b.addBuff(e, { key: 'reg:selfBound', persist: true, flags: { noMove: true } });
         b.addBuff(e, { key: 'reg:untarget', persist: true, flags: { untargetable: true } });
         watchDeaths(b, e);
       },
@@ -874,6 +878,11 @@ function tailPunish(b, e, sk) {
   const hit = areaAllies(b, e, best.x, best.y, PUNISH_RADIUS);
   const list = best.alive ? [best, ...hit.filter((u) => u !== best)] : hit;
   for (let i = 0; i < list.length; i++) hurt(b, e, list[i], amount, 'arts');
+  // "…且若自身依旧处于第一形态，则在目标周围8格内的1个随机可通行地块上部署1个1级的古雕伥"
+  if (!e.mem.regForm2) {
+    const spot = trapSpot(b, best);
+    if (spot) spawnTrap(b, e, spot);
+  }
 }
 
 export const REGULATION_BOSS_KITS = Object.freeze({

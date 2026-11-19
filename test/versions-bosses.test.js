@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { DataSource } from '../server/sim/simdata.js';
 import { setGameData } from '../server/sim/content/support/index.js';
 import { BOSS_KEYS } from '../server/sim/content/bosses.js';
+import { TRAP_KEY, HORN_KEY, HORN_DEF, spawnTrap } from '../server/sim/content/traps.js';
 import { makeBattle } from './helpers/battleHarness.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -176,6 +177,7 @@ test('假想敌：铳 dies → every other 铳 / 碎铳之簧 is killed (PRTS �
 });
 
 test('假想敌：茧 hits up to three operators per side in one attack (PRTS)', () => {
+
   const units = [
     { chessId: 'chess_char_1_02_a', row: 9, col: 0 },
     { chessId: 'chess_char_1_02_a', row: 10, col: 1 },
@@ -190,4 +192,80 @@ test('假想敌：茧 hits up to three operators per side in one attack (PRTS)',
   h.run(2.6);
   const hit = h.allies().filter((a) => a.hp < (before.get(a.id) ?? a.hp));
   assert.ok(hit.length >= 3, `several operators struck by one attack (hit ${hit.length})`);
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// 后兽's 古雕伥 (trap_258_rgcssm) and the 亢角兽 it spits — server/sim/content/traps.js
+
+test('后兽【并济】deploys a 古雕伥 in the target 8-neighbourhood (PRTS)', () => {
+  const h = makeBattle({
+    data: ds, seed: 11, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_02_a', row: 9, col: 6 }],
+    enemies: [{ key: 'enemy_2123_dyjsww', time: 0, pos: [9, 10] }],
+  });
+  setGameData(ACT3);
+  h.step(1);
+  assert.equal(h.enemies().filter((e) => e.defId === TRAP_KEY).length, 0);
+  h.run(31);
+  const trap = h.enemies().find((e) => e.defId === TRAP_KEY && e.alive);
+  assert.ok(trap, '古雕伥 deployed');
+  const ally = h.allies()[0];
+  assert.ok(Math.max(Math.abs(trap.tileR - ally.tileR), Math.abs(trap.tileC - ally.tileC)) <= 1, 'within 8 tiles');
+  assert.equal(trap.blockWeight, 0, 'block 0');
+  assert.equal(trap.base.tauntLevel, -1, 'taunt -1');
+});
+
+test('古雕伥 aura: phys/arts from outside the cross is cut to 25 % (PRTS)', () => {
+  const h = makeBattle({
+    data: ds, seed: 11, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_02_a', row: 9, col: 9 }, { chessId: 'chess_char_1_02_a', row: 12, col: 9 }],
+    enemies: [],
+  });
+  setGameData(ACT3);
+  h.step(1);
+  const trap = spawnTrap(h.b, null, [9, 8]);
+  assert.ok(trap);
+  h.run(0.3);                                    // one aura tick
+  const [inside, outside] = h.allies();
+  const a = h.b.dealDamage(inside, trap, { amount: 10000, type: 'phys', canDodge: false });
+  const b = h.b.dealDamage(outside, trap, { amount: 10000, type: 'phys', canDodge: false });
+  assert.ok(a > 0 && Math.abs(b / a - 0.25) < 1e-9, `inside ${a}, outside ${b}`);
+  assert.ok(buffs(trap, 'reg:trapHaste').length > 0, 'enemies inside get the haste buff');
+});
+
+test('后兽【无为】activates 古雕伥 on the second form; an active trap spits a 亢角兽 every 20 s (PRTS)', () => {
+  const h = makeBattle({
+    data: ds, seed: 11, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_02_a', row: 9, col: 6 }],
+    enemies: [{ key: 'enemy_2123_dyjsww', time: 0, pos: [9, 10] }],
+  });
+  setGameData(ACT3);
+  h.step(1);
+  const tail = h.enemies().find((e) => e.defId === 'enemy_2123_dyjsww');
+  const trap = spawnTrap(h.b, null, [9, 8]);
+  const state = (t) => t.mem.ab.list.find((x) => x && x.zone);
+  assert.equal(state(trap).active, false);
+  // 【无为】 (data LevelUp.interval 500): the tick ability carries the form timer.
+  tail.mem.ab.list.find((x) => x && x.level != null).level = 500;
+  h.run(0.3);
+  assert.equal(tail.mem.regForm2, true);
+  assert.equal(state(trap).active, true, 'activated');
+  h.run(21);
+  assert.ok(h.enemies().some((e) => e.defId === HORN_KEY && e.alive), '亢角兽 summoned');
+});
+
+test('亢角兽 rests until attacked, then joins the fight (PRTS)', () => {
+  const h = makeBattle({ data: ds, seed: 11, autoFinish: false, units: [{ chessId: 'chess_char_1_02_a', row: 12, col: 3 }], enemies: [] });
+  setGameData(ACT3);
+  h.step(1);
+  const horn = h.b.spawnEnemy(HORN_KEY, {
+    def: HORN_DEF, pos: [9, 6],
+    route: { motion: 'WALK', start: [9, 6], end: [9, 6], steps: [{ t: 'wait', s: 99999 }] },
+  });
+  assert.ok(horn);
+  h.step(1);
+  assert.ok(buffs(horn, 'reg:hornRest').length > 0, 'resting');
+  h.b.dealDamage(h.allies()[0], horn, { amount: 100, type: 'phys' });
+  h.step(1);
+  assert.ok(buffs(horn, 'reg:hornRest').length === 0, 'awake after a hit');
 });
