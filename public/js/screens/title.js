@@ -34,6 +34,9 @@ import { scriptOf } from '../../../shared/i18nPacks.js';
 import { GIcon, Img } from '../ui/gameComponents.js';
 import { uiUrl } from '../ui/assetUrls.js';
 import { AllianceBackdrop, useLobbyArt } from '../ui/allianceScene.js';
+import { RegulationBackdrop, seasonOf, REGULATION } from '../ui/regulationBackdrop.js';
+import { RegulationFilm, loadRegulationPack } from '../ui/regulationFilm.js';
+import { hubVersion } from '../versions.js';
 import { SettingsModal } from '../ui/settings.js';
 import { AnnounceBanner, AnnounceButton, AnnouncementsOverlay } from '../ui/announce.js';
 import { NoticesButton } from '../ui/notices.js';
@@ -268,6 +271,23 @@ export function TitleScreen() {
   const ridges = findUiAsset(assets, RIDGE_KEYS);
   // the event's night / dusk lobby (ui/allianceScene.js) behind the title — the scene the entry film ends on — and its
   // logo at the size the film leaves it; the old art / the dot emblem until those sprites have loaded
+  // the start-up version's season (versions.js hubVersion): 规程 wears its own ground and wordmark, 盟约 the hub's
+  const season = seasonOf(hubVersion(useStore((s) => s.versions)));
+  const reg = season === REGULATION;
+  // 规程's opening (ui/regulationFilm.js): once per session, when the title wears 规程
+  const [film, setFilm] = useState(null);
+  useEffect(() => {
+    if (!reg) return undefined;
+    const key = 'sp.entry.film.act3autochess';
+    try { if (sessionStorage.getItem(key)) return undefined; } catch { return undefined; }
+    let live = true;
+    loadRegulationPack().then((p) => { if (live && p) setFilm(p); }, () => {});
+    return () => { live = false; };
+  }, [reg]);
+  const filmDone = () => {
+    try { sessionStorage.setItem('sp.entry.film.act3autochess', '1'); } catch { /* ignore */ }
+    setFilm(null);
+  };
   const alliance = useLobbyArt();
   const logo = uiUrl(assets, 'entry/season_logo');
   // Track load/fail per URL (not as booleans reset in effects: an image can load before an effect runs).
@@ -299,16 +319,17 @@ export function TitleScreen() {
   // hides; a CJK / kana / Hangul title keeps the Chinese layout (shared/i18nPacks.js scriptOf — a pack needs no flag)
   const alphabetic = scriptOf(t('卫戍协议')) === 'alphabetic';
   return html`<div class="screen title-screen">
+    ${film ? html`<${RegulationFilm} pack=${film} onDone=${filmDone} />` : null}
     <${AnnounceBanner} onOpen=${() => setAnnounceOpen(true)} />
-    <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${alliance ? ' has-alliance' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} aria-hidden="true">
-      ${alliance ? html`<${AllianceBackdrop} />` : null}
-      ${backdrop && !alliance ? html`<img class="title-bg__art" src=${backdrop} alt="" draggable=${false}
+    <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${alliance && !reg ? ' has-alliance' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} data-season=${season} aria-hidden="true">
+      ${reg ? html`<${RegulationBackdrop} />` : alliance ? html`<${AllianceBackdrop} />` : null}
+      ${backdrop && !alliance && !reg ? html`<img class="title-bg__art" src=${backdrop} alt="" draggable=${false}
         onLoad=${() => setBgLoadedUrl(backdrop)} />` : null}
       <div class="title-bg__glow"></div>
       <div class="title-bg__radar"><div class="title-bg__sweep"></div></div>
       <div class="title-bg__target"></div>
-      ${cssRidges && !alliance ? html`<${Ridges} />` : null}
-      ${ridges && !ridgesFailed && !alliance ? html`<div class="title-bg__ridge-art" style=${`background-image:url("${ridges}")`}>
+      ${cssRidges && !alliance && !reg ? html`<${Ridges} />` : null}
+      ${ridges && !ridgesFailed && !alliance && !reg ? html`<div class="title-bg__ridge-art" style=${`background-image:url("${ridges}")`}>
         <img src=${ridges} alt="" hidden onLoad=${() => setRidgesLoadedUrl(ridges)} onError=${() => setRidgesFailedUrl(ridges)} />
       </div>` : null}
       <div class="title-bg__haze"></div>
@@ -338,9 +359,9 @@ export function TitleScreen() {
       ${logo ? html`<${FilmLogo} src=${logo} />` : html`<${Emblem} />`}
       ${alphabetic ? null : html`<div class="title-en">
         <span class="title-en__a">STRONGHOLD PROTOCOL</span>
-        <span class="title-en__b">ALLIANCE</span>
+        <span class="title-en__b">${reg ? 'REGULATION' : 'ALLIANCE'}</span>
       </div>`}
-      <h1 class=${`title-cn${alphabetic ? ' title-cn--latin' : ''}`}>${t('卫戍协议')}<span class="title-cn__colon">${alphabetic ? ': ' : '：'}</span><em>${t('盟约')}</em></h1>
+      <h1 class=${`title-cn${alphabetic ? ' title-cn--latin' : ''}`}>${t('卫戍协议')}<span class="title-cn__colon">${alphabetic ? ': ' : '：'}</span><em>${reg ? t('规程') : t('盟约')}</em></h1>
       <p class="title-tag">${t('调配资金与干员，与同伴协同布防，抵御多波次进攻，直至击败敌方领袖。')}</p>
 
       <div class="title-login">

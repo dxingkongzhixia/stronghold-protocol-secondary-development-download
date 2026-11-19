@@ -38,7 +38,6 @@ import { Emblem } from '../title.js';
 import { HubBackdrop, HubRadar, BackdropGlyph, BackdropSettings } from '../../ui/hub/backdrop.js';
 import { useHubBackdrop, backdropTheme } from '../../ui/hub/appearance.js';
 import { RegulationBackdrop, seasonOf, REGULATION } from '../../ui/regulationBackdrop.js';
-import { RegulationFilm, loadRegulationPack } from '../../ui/regulationFilm.js';
 import { VersionChip } from '../../ui/versionChip.js';
 import { hubVersion } from '../../versions.js';
 import { ProtocolScene } from '../../ui/hub/protocolScene.js';
@@ -511,24 +510,9 @@ export function LobbyScreen() {
   }
 
   const season = seasonOf(hubVersion(useStore((s) => s.versions)));
-  // 规程's opening (ui/regulationFilm.js): once per session, the first time the hub wears 规程
-  const [film, setFilm] = useState(null);
-  useEffect(() => {
-    if (season !== REGULATION) return undefined;
-    const key = 'sp.entry.film.act3autochess';
-    try { if (sessionStorage.getItem(key)) return undefined; } catch { return undefined; }
-    let live = true;
-    loadRegulationPack().then((p) => { if (live && p) setFilm(p); }, () => {});
-    return () => { live = false; };
-  }, [season]);
-  const filmDone = () => {
-    try { sessionStorage.setItem('sp.entry.film.act3autochess', '1'); } catch { /* ignore */ }
-    setFilm(null);
-  };
   return html`<div class="screen lobby-screen lobby-hub" data-season=${season} data-hub-theme=${backdropTheme(bg)}>
     <${HubBackdrop} bg=${bg} />
     ${season === REGULATION ? html`<${RegulationBackdrop} />` : null}
-    ${film ? html`<${RegulationFilm} pack=${film} onDone=${filmDone} />` : null}
     <header class="topbar hub-topbar">
       <div class="topbar__left">
         <${Button} variant="ghost" size="sm" icon="chevronLeft" onClick=${backToTitle} title=${t('返回标题')}>${t('返回')}<//>
