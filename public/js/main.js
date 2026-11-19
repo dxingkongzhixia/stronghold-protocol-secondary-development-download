@@ -43,6 +43,8 @@ import { NoticeBanner } from './ui/notice.js';
 import { ToastHost, toast, toastError, describeError } from './ui/toasts.js';
 import { net, identity, NetError } from './net.js';
 import { store, useStore, emptyMatch, selectRoute, sessionResetNotice, loadPref, savePref, isSpectating } from './store.js';
+import { hubVersion } from './versions.js';
+import { seasonOf, REGULATION } from './ui/regulationBackdrop.js';
 import { BOOT_VIDEO, collectArtUrls, preloadImages, artProgressReporter } from './preload.js';
 import { effectiveAssetMode, assetCacheSupported, fetchAssetIndex, ensureAssets } from './assetCache.js';
 import { localSourceEnabled, probeLocalBase } from './assetSource.js';
@@ -816,10 +818,13 @@ async function boot() {
     stopBootVideo();
   }
   globalThis.__SP__ = { store, net, data, version: 1 };
-  // the event's entry animation before the title screen (ui/entryFilm.js); never over a restored match
-  import('./ui/entryFilm.js')
-    .then((m) => m.playEntryFilm({ skip: () => selectRoute(store.get()) === 'game' }))
-    .catch((err) => console.warn('[app] entry film unavailable', err));
+  // The event's entry animation before the title screen (ui/entryFilm.js); never over a restored match. A 规程 start
+  // skips the 盟约 film: the title screen itself plays 规程's season entry (ui/regulationFilm.js), the client's own.
+  if (seasonOf(hubVersion(store.get().versions)) !== REGULATION) {
+    import('./ui/entryFilm.js')
+      .then((m) => m.playEntryFilm({ skip: () => selectRoute(store.get()) === 'game' }))
+      .catch((err) => console.warn('[app] entry film unavailable', err));
+  }
   // A page keeps the modules it imported at load time for its whole lifetime, so a deploy cannot reach an open tab
   // (ui/buildGuard.js): watch `/healthz.build`. Outside a match the page reloads itself; during a match the guard says
   // so instead (the connection banner offers 刷新页面) and reloads once the match — settlement screen included — is over,

@@ -276,17 +276,19 @@ export function TitleScreen() {
   const reg = season === REGULATION;
   // 规程's opening (ui/regulationFilm.js): once per session, when the title wears 规程
   const [film, setFilm] = useState(null);
+  const [filmOn, setFilmOn] = useState(() => {
+    if (!reg) return false;
+    try { return !sessionStorage.getItem('sp.entry.film.act3autochess'); } catch { return false; }
+  });
   useEffect(() => {
-    if (!reg) return undefined;
-    const key = 'sp.entry.film.act3autochess';
-    try { if (sessionStorage.getItem(key)) return undefined; } catch { return undefined; }
+    if (!filmOn) return undefined;
     let live = true;
-    loadRegulationPack().then((p) => { if (live && p) setFilm(p); }, () => {});
+    loadRegulationPack().then((p) => { if (live && p) setFilm(p); }, () => { if (live) setFilmOn(false); });
     return () => { live = false; };
-  }, [reg]);
+  }, [filmOn]);
   const filmDone = () => {
     try { sessionStorage.setItem('sp.entry.film.act3autochess', '1'); } catch { /* ignore */ }
-    setFilm(null);
+    setFilmOn(false);
   };
   const alliance = useLobbyArt();
   const logo = uiUrl(assets, 'entry/season_logo');
@@ -319,7 +321,7 @@ export function TitleScreen() {
   // hides; a CJK / kana / Hangul title keeps the Chinese layout (shared/i18nPacks.js scriptOf — a pack needs no flag)
   const alphabetic = scriptOf(t('卫戍协议')) === 'alphabetic';
   return html`<div class="screen title-screen">
-    ${film ? html`<${RegulationFilm} pack=${film} onDone=${filmDone} />` : null}
+    ${filmOn ? html`<${RegulationFilm} pack=${film} onDone=${filmDone} />` : null}
     <${AnnounceBanner} onOpen=${() => setAnnounceOpen(true)} />
     <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${alliance && !reg ? ' has-alliance' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} data-season=${season} aria-hidden="true">
       ${reg ? html`<${RegulationBackdrop} />` : alliance ? html`<${AllianceBackdrop} />` : null}
