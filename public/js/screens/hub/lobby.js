@@ -31,13 +31,13 @@ import { OnlineOverlay } from '../online.js';
 import { PublicRoomsScreen } from '../rooms.js';
 import { net, identity } from '../../net.js';
 import { store, useStore, shallowEqual, loadPref, savePref, setRoomsReturn, consumeRoomsReturn, setProtocolReturn, consumeProtocolReturn, setOnlineOpen, setOnlineFilter, setOnlineStatsReturn } from '../../store.js';
-import { data, useData } from '../../data.js';
+import { data, useData, localAsset } from '../../data.js';
 import { t } from '../../../../shared/i18n.js';
 import { MODE_CARDS, difficultyInfo, normalizeCode, codeArg, remembersRoomOrigin } from '../lobbyData.js';
 import { Emblem } from '../title.js';
 import { HubBackdrop, HubRadar, BackdropGlyph, BackdropSettings } from '../../ui/hub/backdrop.js';
 import { useHubBackdrop, backdropTheme } from '../../ui/hub/appearance.js';
-import { RegulationBackdrop, seasonOf, REGULATION } from '../../ui/regulationBackdrop.js';
+import { RegulationBackdrop, seasonOf, REGULATION, REGULATION_ART } from '../../ui/regulationBackdrop.js';
 import { VersionChip } from '../../ui/versionChip.js';
 import { hubVersion } from '../../versions.js';
 import { ProtocolScene } from '../../ui/hub/protocolScene.js';
@@ -510,6 +510,8 @@ export function LobbyScreen() {
   }
 
   const season = seasonOf(hubVersion(useStore((s) => s.versions)));
+  // 规程's season mark is the official fist (the entry's own sprite); 盟约 keeps the dotted emblem
+  const regLogo = season === REGULATION ? localAsset(REGULATION_ART, 'sprites/entry_anim_season_logo.webp') : null;
   return html`<div class="screen lobby-screen lobby-hub" data-season=${season} data-hub-theme=${backdropTheme(bg)}>
     <${HubBackdrop} bg=${bg} />
     ${season === REGULATION ? html`<${RegulationBackdrop} />` : null}
@@ -546,7 +548,9 @@ export function LobbyScreen() {
 
     <main class="hub-stage screen__scroll">
       <div class="hub-center" aria-hidden="true">
-        <div class="hub-center__mark"><${HubRadar} bg=${bg} /><${Sprite} k="entry/season_logo" class="hub-center__logo" fallback=${html`<${Emblem} />`} /></div>
+        <div class="hub-center__mark"><${HubRadar} bg=${bg} />${regLogo
+          ? html`<img class="hub-center__logo hub-center__logo--reg" src=${regLogo} alt="" />`
+          : html`<${Sprite} k="entry/season_logo" class="hub-center__logo" fallback=${html`<${Emblem} />`} />`}</div>
         <span class="hub-center__en">STRONGHOLD <b>PROTOCOL</b></span>
         <h1 class="hub-center__title">${season === REGULATION ? t('卫戍协议：规程') : t('卫戍协议：盟约')}</h1>
       </div>

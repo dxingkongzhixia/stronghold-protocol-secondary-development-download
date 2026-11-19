@@ -19,12 +19,11 @@ export const REGULATION = 'act3autochess';
  */
 export function RegulationBackdrop() {
   const art = (name) => localAsset(REGULATION_ART, `sprites/${name}.webp`);
-  const [ground, pic, skyline] = [art('bkg_season_on'), art('bg_season_on'), art('bg_front_season_on')];
+  const [ground, skyline] = [art('bkg_season_on'), art('bg_front_season_on')];   // the key art (bg_season_on) is not drawn: its grey sky read as a block
   return html`<span class="hub-reg" aria-hidden="true">
     ${ground ? html`<img class="hub-reg__ground" src=${ground} alt="" />` : null}
     <span class="hub-reg__rays"></span>
-    ${pic ? html`<img class="hub-reg__pic" src=${pic} alt="" />` : null}
-    ${skyline ? html`<img class="hub-reg__skyline" src=${skyline} alt="" />` : null}
+      ${skyline ? html`<img class="hub-reg__skyline" src=${skyline} alt="" />` : null}
     <span class="hub-reg__scan"></span>
   </span>`;
 }

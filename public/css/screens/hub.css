@@ -1130,3 +1130,6 @@
 /* the season entry (ui/regulationFilm.js mountRegulationIntro): the frame fills the overlay, the stage carries the scale */
 .rf, .spa-stage.rf { position: absolute; inset: 0; width: 100%; height: 100%; transform: none; overflow: hidden; background: #000; }
 .rf--still { background: transparent; }
+
+/* 规程's season mark in the hub radar (the entry's fist sprite, ui/regulationBackdrop.js REGULATION_ART) */
+.hub-center__logo--reg { width: calc(1.15 * var(--ui-unit, 1rem)); height: auto; image-rendering: auto; filter: drop-shadow(0 0 calc(.14 * var(--ui-unit, 1rem)) rgba(255, 91, 65, .45)); }
