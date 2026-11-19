@@ -29,10 +29,11 @@ function committed() {
  * The two seasons' own themes (第三期 规程's Kernel Overflow, 第二期 盟约's Restore) and 规程's two boss tracks: the
  * picker lists them right after the default row, so both seasons are visible without scrolling the 200-track pack.
  */
-export const SEASON_MUSIC = Object.freeze([
-  "music_bg_act3autochess", "music_bg_act1vautochess",
-  "music_bg_act3autochess_boss1", "music_bg_act3autochess_boss2",
-]);
+export const SEASON_MUSIC = Object.freeze(["music_bg_act3autochess"]);
+/** Pack tracks the picker does not list (in-game only: the 2024 stage track and 规程's two boss tracks). */
+const PICKER_HIDDEN = Object.freeze(new Set([
+  "music_bg_act1vautochess", "music_bg_act3autochess_boss1", "music_bg_act3autochess_boss2",
+]));
 
 /** Every known track, the pack's entry winning for the same id; the season tracks first. @returns {Record<string, any>} */
 export function musicEntries() {
@@ -40,7 +41,7 @@ export function musicEntries() {
   const all = pack ? { ...base, ...pack } : { ...base };
   const out = {};
   for (const id of SEASON_MUSIC) if (all[id]) out[id] = all[id];
-  for (const [id, e] of Object.entries(all)) if (!out[id]) out[id] = e;
+  for (const [id, e] of Object.entries(all)) if (!out[id] && !PICKER_HIDDEN.has(id)) out[id] = e;
   return out;
 }
 
