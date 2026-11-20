@@ -43,7 +43,7 @@ import { openBugReport } from './community.js';
 import { AssetCacheSection } from './assetMode.js';
 import { ScreenFitSection } from './screenFit.js';
 import { pluginMicro } from './pluginTag.js';
-import { activateThemePack, activeThemePackId, installThemePack, listThemePacks, removeThemePack } from '../themePacks.js';
+import { activateThemePack, activeThemePackId, installThemePack, installThemeZip, listThemePacks, removeThemePack } from '../themePacks.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
@@ -369,6 +369,25 @@ function ThemePackSection() {
       event.target.value = '';
     }
   };
+  const pickZip = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    setBusy(true);
+    setNote('');
+    try {
+      const r = await installThemeZip(file);
+      if (!r.ok) {
+        const first = r.errors?.[0];
+        setNote(first ? t('主题包没有导入：{path} {message}', { path: first.path || '', message: first.message }) : t('主题包没有导入'));
+      } else {
+        setNote(t('已导入主题包「{name}」', { name: r.pack.name }));
+        await reload();
+      }
+    } finally {
+      setBusy(false);
+      event.target.value = '';
+    }
+  };
   const toggle = async (id, on) => {
     const r = await activateThemePack(on ? id : '');
     if (!r.ok) setNote(t('主题包没有找到，可能已被删除'));
@@ -396,8 +415,12 @@ function ThemePackSection() {
     }) : html`<p class="set-hint">${t('还没有主题包')}</p>`}
     <div class="set-row">
       <span class="set-row__label">${t('导入主题包（选择包含 theme.json 的文件夹）')}</span>
-      <input type="file" accept=".json,image/png,image/jpeg,image/webp" multiple webkitdirectory directory disabled=${busy}
+      <input type="file" accept=".json,image/png,image/jpeg,image/webp,.skel,.atlas,.ogg,.mp3" multiple webkitdirectory directory disabled=${busy}
         data-testid="theme-pack-input" onChange=${pick} />
+    </div>
+    <div class="set-row">
+      <span class="set-row__label">${t('导入主题包（.zip）')}</span>
+      <input type="file" accept=".zip,application/zip" disabled=${busy} data-testid="theme-pack-zip" onChange=${pickZip} />
     </div>
     ${note ? html`<p class="set-hint is-warn" role="status">${note}</p>` : null}
   </section>`;

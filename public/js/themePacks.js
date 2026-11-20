@@ -8,9 +8,10 @@
 
 import { loadPref, savePref } from './store.js';
 import {
-  acceptAudioPath, acceptDataPath, acceptPackPath, THEME_PACK_LIMITS, themePackVariables, validateThemePack,
+  acceptAudioPath, acceptDataPath, acceptPackPath, THEME_PACK_LIMITS, themePackVariables, validateThemePack, VOICE_TRIGGERS,
 } from '../../shared/themePack.js';
 import { mountThemeCharacter, unmountThemeCharacter } from './ui/themeCharacter.js';
+import { readZip } from './zip.js';
 
 const DB_NAME = 'sp-theme-packs';
 const DB_STORE = 'packs';
@@ -121,6 +122,7 @@ export async function readThemePack(files) {
   const wanted = [
     ...Object.values(pack.images),
     ...(pack.voice ? [pack.voice] : []),
+    ...Object.values(pack.voices || {}),
     ...(pack.character ? [pack.character.skel, pack.character.atlas].filter(Boolean) : []),
     // the atlas's page pictures and any other file of the folder (a Spine model names its pages in the atlas text)
     ...filesInPack,
@@ -138,6 +140,23 @@ export async function readThemePack(files) {
     blobs[p] = { blob: f, mime: MIME[extOf(p)] || 'application/octet-stream' };
   }
   return { ok: true, pack, blobs, errors: [], warnings: check.warnings };
+}
+
+/** Install a .zip: unzip into the folder-input shape, then install. */
+export async function installThemeZip(file) {
+  try {
+    const map = await readZip(await file.arrayBuffer());
+    const files = [];
+    for (const [path, bytes] of map) {
+      const ext = extOf(path);
+      const f = new File([bytes], path.split('/').pop(), { type: MIME[ext] || 'application/octet-stream' });
+      Object.defineProperty(f, 'webkitRelativePath', { value: path });
+      files.push(f);
+    }
+    return await installThemePack(files);
+  } catch (err) {
+    return { ok: false, errors: [{ code: 'THEME_ZIP', path: file.name || 'zip', message: err.message }], warnings: [] };
+  }
 }
 
 /** Install a folder: validate, store, and make it the active pack. */
@@ -179,6 +198,28 @@ function armVoice(url) {
   } catch { voice = null; voiceHandler = null; }
 }
 
+let voiceClips = new Map();
+const voiceCd = new Map();
+
+/**
+ * Play the active pack's line for a trigger (`AUTOCHESS_…`, shared/themePack.js VOICE_TRIGGERS). Probability and the
+ * trigger's cooldown are applied here; a trigger without a line does nothing.
+ * @param {string} trigger
+ * @returns {boolean} whether a line started
+ */
+export function playThemeVoice(trigger) {
+  const meta = VOICE_TRIGGERS[trigger];
+  const clip = voiceClips.get(trigger);
+  if (!meta || !clip) return false;
+  const now = Date.now() / 1000;
+  if (now - (voiceCd.get(trigger) || 0) < meta.cd) return false;
+  if (meta.probability < 1 && Math.random() > meta.probability) return false;
+  try { clip.currentTime = 0; } catch { /* ignore */ }
+  try { clip.play().catch(() => {}); } catch { return false; }
+  voiceCd.set(trigger, now);
+  return true;
+}
+
 function clearVars() {
   const root = document.documentElement;
   for (const name of written) root.style.removeProperty(name);
@@ -197,6 +238,7 @@ export async function activateThemePack(id) {
   stopVoice();
   unmountThemeCharacter();
   revokeUrls();
+  voiceClips = new Map();
   active = null;
   if (!id) {
     clearVars();
@@ -224,6 +266,16 @@ export async function activateThemePack(id) {
   for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value);
   root.dataset.themePack = rec.pack.id;
   active = rec.pack;
+  for (const [trig, path] of Object.entries(rec.pack.voices || {})) {
+    const url = urls.get(path);
+    if (!url) continue;
+    try {
+      const a = new Audio(url);
+      a.preload = 'auto';
+      a.volume = 0.7;
+      voiceClips.set(trig, a);
+    } catch { /* a bad clip drops its trigger alone */ }
+  }
   if (rec.pack.voice) armVoice(urls.get(rec.pack.voice));
   if (rec.pack.character) {
     const slotImages = new Set(Object.values(rec.pack.images || {}));

@@ -2156,5 +2156,6 @@
   "界面主题包": "Theme packs",
   "只改变这个浏览器里的界面；主题包是本地的，不会上传，也不影响其他博士。": "Changes this browser’s interface only; packs are local, never uploaded, and other players are unaffected.",
   "还没有主题包": "No theme packs yet",
-  "导入主题包（选择包含 theme.json 的文件夹）": "Import a theme pack (choose the folder with theme.json)"
+  "导入主题包（选择包含 theme.json 的文件夹）": "Import a theme pack (choose the folder with theme.json)",
+  "导入主题包（.zip）": "Import a theme pack (.zip)"
 }

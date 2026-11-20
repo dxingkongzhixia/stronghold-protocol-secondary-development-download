@@ -53,6 +53,51 @@ export const THEME_PACK_SLOTS = Object.freeze({
   'character.image': { css: '--tp-character', screens: 'title-character' },
 });
 
+/** The client's voice triggers (same names as the official skin table; probability / cooldown in seconds / priority). */
+export const VOICE_TRIGGERS = Object.freeze({
+  AUTOCHESS_GAME_START: { probability: 1, cd: 0, priority: 1 },
+  AUTOCHESS_REST_NO_HP_LOSS: { probability: 0.8, cd: 200, priority: 5 },
+  AUTOCHESS_REST_HP_LOSS: { probability: 0.8, cd: 200, priority: 8 },
+  AUTOCHESS_REST_BOSS: { probability: 1, cd: 0, priority: 2 },
+  AUTOCHESS_REST_HIDDEN_BOSS: { probability: 1, cd: 0, priority: 6 },
+  AUTOCHESS_SAME_OPERATOR: { probability: 0.3, cd: 10, priority: 10 },
+  AUTOCHESS_BUY_OPERATOR_LOW: { probability: 0.2, cd: 10, priority: 12 },
+  AUTOCHESS_BUY_OPERATOR_HIGH: { probability: 0.3, cd: 10, priority: 11 },
+  AUTOCHESS_SHOP_UPGRADE: { probability: 1, cd: 10, priority: 4 },
+  AUTOCHESS_COUNTDOWN: { probability: 0.5, cd: 0, priority: 7 },
+  AUTOCHESS_MERGE_TRIPLE: { probability: 0.4, cd: 5, priority: 9 },
+  AUTOCHESS_ALLIANCE_LEVEL: { probability: 1, cd: 0, priority: 3 },
+  AUTOCHESS_FREEZE: { probability: 0.5, cd: 15, priority: 13 },
+});
+
+/**
+ * The mainline's official theme packs use prefab slot names; our UI has no prefab HUD, so map the ones that name a
+ * surface we do have (the rest stay warnings). This lets `tools/local-extract/autochess_themes.py` output be imported.
+ */
+export const THEME_IMAGE_ALIASES = Object.freeze({
+  shop_main: 'shop.bg',
+  shop_background: 'shop.bg',
+  shop_card: 'shop.card',
+  chess_frame_normal: 'shop.card',
+  chess_frame_level_five: 'shop.card',
+  chess_frame_level_six: 'shop.card',
+  battle_background: 'brief.bg',
+  background: 'brief.bg',
+  title: 'title.bg',
+  title_background: 'title.bg',
+  lobby: 'lobby.bg',
+  lobby_background: 'lobby.bg',
+  character: 'character.image',
+  char: 'character.image',
+  avatar: 'character.image',
+});
+
+/** mainline token names → our colour keys (best effort; unknown tokens are warnings). */
+const COLOR_ALIASES = Object.freeze({
+  skinDarkColor: 'bg0', skinLightColor: 'text', bondColor: 'accent', bondIconColor: 'accentSoft',
+  chessNameColor: 'text', saleColor1: 'accentBright', destroyColor1: 'line',
+});
+
 const ID_RE = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 const IMAGE_RE = /\.(png|jpe?g|webp)$/i;
 const AUDIO_RE = /\.(ogg|mp3)$/i;
@@ -102,7 +147,7 @@ export function validateThemePack(doc, files = null) {
     err('THEME_SHAPE', 'theme.json', 'theme.json must be a JSON object');
     return { ok: false, pack: null, errors, warnings };
   }
-  if (doc.format !== THEME_PACK_FORMAT) err('THEME_FORMAT', 'format', `format must be "${THEME_PACK_FORMAT}"`);
+  if (doc.format !== THEME_PACK_FORMAT && Number(doc.spTheme) !== 1) err('THEME_FORMAT', 'format', `format must be "${THEME_PACK_FORMAT}" or spTheme: 1`);
   const id = str(doc.id, THEME_PACK_LIMITS.id);
   if (!ID_RE.test(id)) err('THEME_ID', 'id', 'id: 1–32 lowercase letters, digits, - or _');
   const name = str(doc.name, THEME_PACK_LIMITS.name);
@@ -114,10 +159,11 @@ export function validateThemePack(doc, files = null) {
   const colors = {};
   if (doc.colors != null && !isObj(doc.colors)) err('THEME_COLORS_SHAPE', 'colors', 'colors must be an object');
   else {
-    for (const [key, raw] of Object.entries(doc.colors || {})) {
-      if (!(key in THEME_PACK_COLORS)) { warn('THEME_COLOR_UNKNOWN', `colors.${key}`, `unknown colour key ${key}`); continue; }
+    for (const [rawKey, raw] of Object.entries(doc.colors || {})) {
+      const key = COLOR_ALIASES[rawKey] || rawKey;
+      if (!(key in THEME_PACK_COLORS)) { warn('THEME_COLOR_UNKNOWN', `colors.${rawKey}`, `unknown colour key ${rawKey}`); continue; }
       const v = acceptColour(raw);
-      if (!v) { err('THEME_COLOR_VALUE', `colors.${key}`, 'a colour literal (hex / rgb / hsl)'); continue; }
+      if (!v) { err('THEME_COLOR_VALUE', `colors.${rawKey}`, 'a colour literal (hex / rgb / hsl)'); continue; }
       colors[key] = v;
     }
   }
@@ -125,12 +171,12 @@ export function validateThemePack(doc, files = null) {
   const images = {};
   if (doc.images != null && !isObj(doc.images)) err('THEME_IMAGES_SHAPE', 'images', 'images must be an object');
   else {
-    for (const [key, raw] of Object.entries(doc.images || {})) {
-      const slot = THEME_PACK_SLOTS[key];
-      if (!slot) { warn('THEME_SLOT_UNKNOWN', `images.${key}`, `unknown image slot ${key}`); continue; }
+    for (const [rawKey, raw] of Object.entries(doc.images || {})) {
+      const key = rawKey in THEME_PACK_SLOTS ? rawKey : THEME_IMAGE_ALIASES[rawKey];
+      if (!key || !(key in THEME_PACK_SLOTS)) { warn('THEME_SLOT_UNKNOWN', `images.${rawKey}`, `no surface for image slot ${rawKey}`); continue; }
       const p = acceptPackPath(raw);
-      if (!p) { err('THEME_IMAGE_PATH', `images.${key}`, 'a relative .png / .jpg / .webp path inside the pack'); continue; }
-      if (files && !files.has(p)) { err('THEME_IMAGE_MISSING', `images.${key}`, `${p} is not in the pack`); continue; }
+      if (!p) { err('THEME_IMAGE_PATH', `images.${rawKey}`, 'a relative .png / .jpg / .webp path inside the pack'); continue; }
+      if (files && !files.has(p)) { err('THEME_IMAGE_MISSING', `images.${rawKey}`, `${p} is not in the pack`); continue; }
       images[key] = p;
     }
   }
@@ -154,13 +200,38 @@ export function validateThemePack(doc, files = null) {
   if (character && (!character.skel || !character.atlas)) warn('THEME_CHARACTER_SHAPE', 'character', 'skel + atlas are required');
 
   let voice = null;
-  if (doc.voice != null) {
+  const voices = {};
+  // mainline packs write `voice` as a trigger → path object; ours accepts a single string as the game-start alias
+  if (isObj(doc.voice)) {
+    for (const [key, raw] of Object.entries(doc.voice)) {
+      if (!(key in VOICE_TRIGGERS)) { warn('THEME_VOICE_TRIGGER', `voice.${key}`, `unknown voice trigger ${key}`); continue; }
+      const p = acceptAudioPath(raw);
+      if (!p) { err('THEME_VOICE_PATH', `voice.${key}`, 'a relative .ogg / .mp3 path inside the pack'); continue; }
+      if (files && !files.has(p)) { err('THEME_VOICE_MISSING', `voice.${key}`, `${p} is not in the pack`); continue; }
+      voices[key] = p;
+    }
+  } else if (doc.voice != null) {
     voice = acceptAudioPath(doc.voice);
     if (!voice) err('THEME_VOICE_PATH', 'voice', 'a relative .ogg / .mp3 path inside the pack');
     else if (files && !files.has(voice)) err('THEME_VOICE_MISSING', 'voice', `${voice} is not in the pack`);
   }
 
-  const pack = { format: THEME_PACK_FORMAT, id, name, author, description, version, colors, images, slices, character, voice };
+  if (doc.voices != null && !isObj(doc.voices)) err('THEME_VOICES_SHAPE', 'voices', 'voices must be an object');
+  else {
+    for (const [key, raw] of Object.entries(doc.voices || {})) {
+      if (!(key in VOICE_TRIGGERS)) { warn('THEME_VOICE_TRIGGER', `voices.${key}`, `unknown voice trigger ${key}`); continue; }
+      const p = acceptAudioPath(raw);
+      if (!p) { err('THEME_VOICE_PATH', `voices.${key}`, 'a relative .ogg / .mp3 path inside the pack'); continue; }
+      if (files && !files.has(p)) { err('THEME_VOICE_MISSING', `voices.${key}`, `${p} is not in the pack`); continue; }
+      voices[key] = p;
+    }
+    if (Object.keys(voices).length > 13) err('THEME_VOICES_LIMIT', 'voices', 'at most 13 trigger lines');
+  }
+  if (voice && !voices.AUTOCHESS_GAME_START) voices.AUTOCHESS_GAME_START = voice;
+
+  const pack = {
+    format: THEME_PACK_FORMAT, id, name, author, description, version, colors, images, slices, character, voice, voices,
+  };
   return { ok: errors.length === 0, pack: errors.length ? null : pack, errors, warnings };
 }
 

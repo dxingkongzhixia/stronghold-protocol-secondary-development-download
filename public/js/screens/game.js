@@ -79,6 +79,7 @@ import { PHASE, GEO, CHAT_BUBBLE_MS } from '../../../shared/constants.js';
 import { html, Spinner, PhaseBanner, ResultDialog, Icon, Button, confirmDialog, closeAllDialogs, useTicker, RoleTag } from '../ui/components.js';
 import { useGameData, GIcon } from '../ui/gameComponents.js';
 import { useFieldView } from '../ui/fieldHost.js';
+import { playThemeVoice } from '../themePacks.js';
 import { TopBar, liveLp, ownLeaks, uniteRemaining, tempInfo, tempReadyReason } from '../ui/hud.js';
 import { PluginHud } from '../ui/pluginHud.js';
 import { useUiTheme } from '../uiTheme.js';
@@ -237,6 +238,8 @@ const inBattleCard = (d) => d?.kind === 'unit' || (d?.kind === 'device' && d.dev
 function MatchScreen() {
   useDocClass('sp-in-match');
   useEffect(() => { preloadPopupArt(); }, []);
+  // the active theme pack's game-start line (once per match screen mount; probability/cooldown live in themePacks)
+  useEffect(() => { playThemeVoice('AUTOCHESS_GAME_START'); }, []);
   const playerSettings = useSettings();
   const pub = useStore((s) => s.match.public);
   const priv = useStore((s) => s.match.private);

@@ -42,6 +42,23 @@
 - P3b：`character` 写 Spine 的 `skel` / `atlas` / `idle`，同目录放 atlas 引用的页图（例如 `model.png`）。导入后标题画面会用
   `pixi-spine` 挂载并循环播放 `idle`；加载失败时自动保留 `character.image` 静态立绘。
 
+## ZIP 与官方主题
+
+- **ZIP**：设置 → 界面主题包 → 「导入主题包（.zip）」。读取器只接受存储/标准 deflate 条目，拒绝 `..`、绝对路径和超过 16 MB 的单个条目；整包仍受 32 MB 限制。
+- **官方主题**：`tools/local-extract/autochess_themes.py`（本树已带）可从本地客户端导出 `themes/ac_n_initial`、`themes/ac_n_iron`、`themes/ac_s_closur` 三个 spTheme 包。把其中一个目录压成 zip 后可直接导入。
+  - 我们的界面不是 prefab HUD：官方包里的 prefab 槽位会按别名映射（`shop_main` → 商店背景、`chess_frame_*` → 商店卡框、`battle_background` → 简报背景、`title`/`lobby` → 标题/大厅，`character`/`avatar` → 标题立绘），其余槽位给出提示并忽略；颜色/语音/Spine 角色照常生效。
+  - 官方 prefab HUD 的**布局本身**（乌萨斯齐心团的 prefab 控件、可露希尔的电视等）不会复刻，因为我们的 HUD 是 `hud.js` / `shopBar.js` 的自绘 DOM。
+
+## 语音触发
+
+`voice` 可以是单文件（等同 `AUTOCHESS_GAME_START`），也可以写 `voices` 对象。触发器沿用官方表：
+
+`AUTOCHESS_GAME_START`、`AUTOCHESS_REST_NO_HP_LOSS`、`AUTOCHESS_REST_HP_LOSS`、`AUTOCHESS_REST_BOSS`、
+`AUTOCHESS_REST_HIDDEN_BOSS`、`AUTOCHESS_SAME_OPERATOR`、`AUTOCHESS_BUY_OPERATOR_LOW`、`AUTOCHESS_BUY_OPERATOR_HIGH`、
+`AUTOCHESS_SHOP_UPGRADE`、`AUTOCHESS_COUNTDOWN`、`AUTOCHESS_MERGE_TRIPLE`、`AUTOCHESS_ALLIANCE_LEVEL`、`AUTOCHESS_FREEZE`。
+
+概率 / 冷却（秒）与官方一致；当前已接 `AUTOCHESS_GAME_START`，其余由后续界面事件调用 `playThemeVoice(trigger)`。
+
 ## 图片槽位
 
 | 键 | 位置 |
