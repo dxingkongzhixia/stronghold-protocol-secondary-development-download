@@ -1,0 +1,21 @@
+{
+  "format": "spTheme/1",
+  "id": "example-theme",
+  "name": "示例主题",
+  "author": "Stronghold Protocol",
+  "description": "A minimal theme pack: colours only, no pictures. Copy this folder, change the id/name/colours, then import it in 设置 → 界面主题包.",
+  "version": 1,
+  "colors": {
+    "accent": "#cf4a40",
+    "accentSoft": "#8f2f29",
+    "accentBright": "#e15a4f",
+    "glow": "#ff6f61",
+    "bg0": "#120d0c",
+    "bg1": "#1a1210",
+    "bg2": "#241815",
+    "line": "#3a2622",
+    "line2": "#4b302b",
+    "text": "#f6efed",
+    "textDim": "#b9a7a3"
+  }
+}

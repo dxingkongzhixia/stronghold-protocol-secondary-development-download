@@ -46,6 +46,10 @@ import { store, useStore, emptyMatch, selectRoute, sessionResetNotice, loadPref,
 import { hubVersion } from './versions.js';
 import { seasonOf, REGULATION } from './ui/regulationBackdrop.js';
 import { BOOT_VIDEO, collectArtUrls, preloadImages, artProgressReporter } from './preload.js';
+import { restoreThemePack } from './themePacks.js';
+
+// the saved local theme pack (if any) applies before the first screen paints
+restoreThemePack();
 import { effectiveAssetMode, assetCacheSupported, fetchAssetIndex, ensureAssets } from './assetCache.js';
 import { localSourceEnabled, probeLocalBase } from './assetSource.js';
 import { data } from './data.js';

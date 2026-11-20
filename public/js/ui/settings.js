@@ -43,6 +43,7 @@ import { openBugReport } from './community.js';
 import { AssetCacheSection } from './assetMode.js';
 import { ScreenFitSection } from './screenFit.js';
 import { pluginMicro } from './pluginTag.js';
+import { activateThemePack, activeThemePackId, installThemePack, listThemePacks, removeThemePack } from '../themePacks.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
@@ -336,6 +337,73 @@ function CosmeticSection() {
 }
 
 /**
+ * 界面主题包 (spTheme/1, shared/themePack.js): a local folder with theme.json + pictures. Imported in this browser,
+ * stored in IndexedDB, applied here only — never uploaded, never seen by another player. One pack is active at a time.
+ */
+function ThemePackSection() {
+  const [packs, setPacks] = useState([]);
+  const [active, setActive] = useState(() => activeThemePackId());
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const reload = async () => {
+    setPacks(await listThemePacks());
+    setActive(activeThemePackId());
+  };
+  useEffect(() => { reload(); }, []);
+  const pick = async (event) => {
+    const files = event.target.files;
+    if (!files || !files.length) return;
+    setBusy(true);
+    setNote('');
+    try {
+      const r = await installThemePack(files);
+      if (!r.ok) {
+        const first = r.errors?.[0];
+        setNote(first ? t('主题包没有导入：{path} {message}', { path: first.path || '', message: first.message }) : t('主题包没有导入'));
+      } else {
+        setNote(r.warnings?.length ? t('已导入 {n} 个主题包，另有 {w} 条提示', { n: 1, w: r.warnings.length }) : t('已导入主题包「{name}」', { name: r.pack.name }));
+        await reload();
+      }
+    } finally {
+      setBusy(false);
+      event.target.value = '';
+    }
+  };
+  const toggle = async (id, on) => {
+    const r = await activateThemePack(on ? id : '');
+    if (!r.ok) setNote(t('主题包没有找到，可能已被删除'));
+    await reload();
+  };
+  const remove = async (id) => {
+    await removeThemePack(id);
+    await reload();
+  };
+  return html`<section class="set-plugins" aria-labelledby="set-theme-packs-title" data-testid="theme-packs">
+    <div class="set-keys__head">
+      <span class="set-row__label" id="set-theme-packs-title">${t('界面主题包')}<${MicroLabel}>THEME PACKS<//></span>
+    </div>
+    <p class="set-hint">${t('只改变这个浏览器里的界面；主题包是本地的，不会上传，也不影响其他博士。')}</p>
+    ${packs.length ? packs.map((p) => {
+      const on = p.id === active;
+      return html`<div key=${p.id} class="set-row" data-theme-pack=${p.id}>
+        <span class="set-row__label">${p.name}<${MicroLabel}>${p.author || p.id}<//></span>
+        <span class="set-row__label" style="display:flex;gap:.06rem">
+          <button type="button" class=${`set-toggle${on ? ' is-on' : ''}`} role="switch" aria-checked=${on ? 'true' : 'false'}
+            aria-label=${p.name} onClick=${() => toggle(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
+          <button type="button" class="set-key" onClick=${() => remove(p.id)}>${t('删除')}</button>
+        </span>
+      </div>`;
+    }) : html`<p class="set-hint">${t('还没有主题包')}</p>`}
+    <div class="set-row">
+      <span class="set-row__label">${t('导入主题包（选择包含 theme.json 的文件夹）')}</span>
+      <input type="file" accept=".json,image/png,image/jpeg,image/webp" multiple webkitdirectory directory disabled=${busy}
+        data-testid="theme-pack-input" onChange=${pick} />
+    </div>
+    ${note ? html`<p class="set-hint is-warn" role="status">${note}</p>` : null}
+  </section>`;
+}
+
+/**
  * 界面插件 (DESIGN §32.8): each loaded ui plugin of scope `personal`, switched on in this browser only
  * (`sp.pref.ui-plugins`). It cannot play the match and it does not change what anyone else sees.
  */
@@ -455,6 +523,7 @@ export function SettingsModal({ open, onClose }) {
       <${Toggle} label=${t('显示其他玩家的皮肤')} micro="OTHER PLAYERS' SKINS" value=${s.otherSkins !== false} onChange=${(v) => updateSettings({ otherSkins: v })} />
       <p class="set-hint">${t('关闭后，其他博士的干员会显示默认外观；你的干员仍显示你选择的皮肤。')}</p>
       <${CosmeticSection} />
+      <${ThemePackSection} />
       <${UiPluginSection} />
       <${DiagSection} />
       <p class="set-hint">${touchUi ? t('触屏操作：点击单位选中（撤退 / 出售）· 长按单位或卡牌查看详情 · 拖动部署后滑动选择朝向') : t('右键查看详情')}</p>

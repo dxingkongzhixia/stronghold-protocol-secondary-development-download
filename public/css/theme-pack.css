@@ -1,0 +1,72 @@
+/* ==========================================================================================
+   theme-pack.css — the image slots of a local theme pack (shared/themePack.js,
+   public/js/themePacks.js). With no active pack <html> has no data-theme-pack attribute and
+   nothing here matches, so the default UI is untouched. Colours are written inline on <html>
+   as the usual design tokens; this file only places pictures.
+
+   P1 slots: title / lobby / room / brief / shop / shop.card / banner. A missing picture leaves
+   the screen's own look (the var() fallback is none). Slices (P2) use border-image with the
+   pack's inset; a pack without one keeps the 12-unit default. Character (P3) is mounted by JS.
+   ========================================================================================== */
+
+html[data-theme-pack] .title-bg {
+  background-image: var(--tp-title-bg, none);
+  background-position: center 30%;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+html[data-theme-pack] .title-bg.has-art .title-bg__art { opacity: 0; }
+
+html[data-theme-pack] .lobby-hub {
+  background-image: var(--tp-lobby-bg, none);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+html[data-theme-pack] .room-screen { position: relative; }
+html[data-theme-pack] .room-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--tp-room-bg, none) center / cover no-repeat;
+  opacity: .14;
+  filter: grayscale(.2) contrast(1.03);
+}
+html[data-theme-pack] .room-screen > * { position: relative; z-index: 1; }
+
+html[data-theme-pack] .brief__bg {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .018) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, rgba(8, 10, 9, .72), rgba(8, 10, 9, .9)),
+    var(--tp-brief-bg, none),
+    radial-gradient(90% 70% at 20% 30%, rgba(232, 90, 26, .07), transparent 60%),
+    radial-gradient(80% 70% at 85% 60%, rgba(78, 216, 175, .07), transparent 60%);
+  background-size: auto, auto, cover, auto, auto;
+  background-position: center, center, center, center, center;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+}
+
+html[data-theme-pack] .shopbar {
+  background-image: var(--tp-shop-bg, none);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border-radius: .02rem;
+}
+
+html[data-theme-pack] .scard {
+  border-image-source: var(--tp-shop-card, none);
+  border-image-slice: var(--tp-shop-card-slice, 12) fill;
+  border-image-width: 1;
+  border-image-repeat: stretch;
+}
+
+html[data-theme-pack] .pbanner__band {
+  background-image: var(--tp-banner, none);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
