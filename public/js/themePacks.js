@@ -10,6 +10,7 @@ import { loadPref, savePref } from './store.js';
 import {
   acceptAudioPath, acceptDataPath, acceptPackPath, THEME_PACK_LIMITS, themePackVariables, validateThemePack,
 } from '../../shared/themePack.js';
+import { mountThemeCharacter, unmountThemeCharacter } from './ui/themeCharacter.js';
 
 const DB_NAME = 'sp-theme-packs';
 const DB_STORE = 'packs';
@@ -94,7 +95,7 @@ export async function readThemePack(files) {
   let packPath = null;
   for (const f of list) {
     const rel = String(f.webkitRelativePath || f.name || '').replace(/\\/g, '/');
-    if (!rel || !acceptPackPath(rel) && !/\.json$/i.test(rel)) continue;
+    if (!rel || !(acceptPackPath(rel) || acceptAudioPath(rel) || acceptDataPath(rel))) continue;
     if (rel.split('/').some((x) => x === '..' || x === '')) continue;
     const base = rel.split('/').pop();
     if (base === 'theme.json' && (!packPath || rel.length < packPath.length)) packPath = rel;
@@ -121,8 +122,10 @@ export async function readThemePack(files) {
     ...Object.values(pack.images),
     ...(pack.voice ? [pack.voice] : []),
     ...(pack.character ? [pack.character.skel, pack.character.atlas].filter(Boolean) : []),
+    // the atlas's page pictures and any other file of the folder (a Spine model names its pages in the atlas text)
+    ...filesInPack,
   ];
-  for (const p of wanted) {
+  for (const p of new Set(wanted)) {
     const f = byPath.get(root + p);
     const audio = AUDIO_RE.test(p);
     const image = /\.(png|jpe?g|webp)$/i.test(p);
@@ -192,6 +195,7 @@ function revokeUrls() {
 export async function activateThemePack(id) {
   const root = document.documentElement;
   stopVoice();
+  unmountThemeCharacter();
   revokeUrls();
   active = null;
   if (!id) {
@@ -221,6 +225,18 @@ export async function activateThemePack(id) {
   root.dataset.themePack = rec.pack.id;
   active = rec.pack;
   if (rec.pack.voice) armVoice(urls.get(rec.pack.voice));
+  if (rec.pack.character) {
+    const slotImages = new Set(Object.values(rec.pack.images || {}));
+    const pages = Object.keys(rec.blobs || {})
+      .filter((p) => /\.(png|jpe?g|webp)$/i.test(p) && !slotImages.has(p))
+      .map((p) => ({ name: p.split('/').pop(), url: urls.get(p) }));
+    void mountThemeCharacter({
+      skel: urls.get(rec.pack.character.skel),
+      atlas: urls.get(rec.pack.character.atlas),
+      idle: rec.pack.character.idle,
+      pages,
+    });
+  }
   savePref(PREF, rec.pack.id);
   return { ok: true, pack: rec.pack };
 }

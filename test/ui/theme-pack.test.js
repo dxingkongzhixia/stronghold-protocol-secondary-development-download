@@ -80,6 +80,27 @@ test('themePackVariables: colours map to design tokens, pictures (character too)
   assert.equal(vars['--tp-shop-card-slice'], '20');
 });
 
+test('readThemePack: a Spine character and its atlas page are kept beside the pictures', async () => {
+  const doc = JSON.stringify(base({
+    character: { skel: 'char/model.skel', atlas: 'char/model.atlas', idle: 'Idle' },
+    voice: 'voice/hello.ogg',
+  }));
+  const mk = (path, body, type) => {
+    const f = new File([body], path.split('/').pop(), { type });
+    Object.defineProperty(f, 'webkitRelativePath', { value: path });
+    return f;
+  };
+  const r = await readThemePack([
+    mk('pack/theme.json', doc, 'application/json'),
+    mk('pack/char/model.skel', new Uint8Array([1, 2, 3]), 'application/octet-stream'),
+    mk('pack/char/model.atlas', 'model.png\nsize: 4,4\n', 'text/plain'),
+    mk('pack/char/model.png', new Uint8Array([1]), 'image/png'),
+    mk('pack/voice/hello.ogg', new Uint8Array([1]), 'audio/ogg'),
+  ]);
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+  for (const p of ['char/model.skel', 'char/model.atlas', 'char/model.png', 'voice/hello.ogg']) assert.ok(r.blobs[p], p);
+});
+
 test('a voice line is an audio path inside the pack', () => {
   assert.equal(validateThemePack(base({ voice: 'voice/hello.ogg' }), new Set(['voice/hello.ogg'])).ok, true);
   assert.equal(validateThemePack(base({ voice: 'voice/hello.mp3' })).ok, true);

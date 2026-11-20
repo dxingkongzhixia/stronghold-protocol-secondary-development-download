@@ -27,7 +27,9 @@
     "shop.card": "shop/card.png",
     "banner": "banner.webp"
   },
-  "slices": { "shop.card": { "inset": 12 } }
+  "slices": { "shop.card": { "inset": 12 } },
+  "character": { "skel": "char/model.skel", "atlas": "char/model.atlas", "idle": "Idle" },
+  "voice": "voice/hello.ogg"
 }
 ```
 
@@ -37,7 +39,8 @@
 - `slices.<slot>.inset`：该图片作为 9-slice 边框时的切片宽度（0–128），当前用于 `shop.card`。
 - 未知键会给出提示并忽略；写错一个槽位只丢那个槽位，不影响整个包。
 - P3a：`character.image` 是标题画面右侧的静态立绘；`voice` 是第一次点击时播放的一句语音（`.ogg` / `.mp3`，≤ 4 MB）。
-- P3b 预留 `character`（Spine 的 `skel`/`atlas`/`idle`）；Spine 运行时挂载尚未接入，先不写这个字段。
+- P3b：`character` 写 Spine 的 `skel` / `atlas` / `idle`，同目录放 atlas 引用的页图（例如 `model.png`）。导入后标题画面会用
+  `pixi-spine` 挂载并循环播放 `idle`；加载失败时自动保留 `character.image` 静态立绘。
 
 ## 图片槽位
 

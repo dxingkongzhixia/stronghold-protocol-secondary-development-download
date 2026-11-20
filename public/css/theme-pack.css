@@ -17,6 +17,7 @@ html[data-theme-pack] .title-bg {
 }
 html[data-theme-pack] .title-bg.has-art .title-bg__art { opacity: 0; }
 /* P3a: a static character picture at the title's right edge (Spine runtime is a later slot). */
+html[data-theme-character="spine"] .title-bg::after { display: none; }
 html[data-theme-pack] .title-bg::after {
   content: '';
   position: absolute;
