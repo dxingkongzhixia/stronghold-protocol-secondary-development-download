@@ -22,6 +22,7 @@
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
 import { html, Icon, MicroLabel, Spinner, TierChip, roman, Fragment, Tabs, DifficultyIcon } from './components.js';
 import { BondGlyph, BandIcon, RichText, UnitThumb, ItemIcon } from './gameComponents.js';
+import { garrisonText } from './showTags.js';
 import { createStore, useStore } from '../store.js';
 import { data, useData } from '../data.js';
 import { ensureStylesheet } from './ensureStylesheet.js';
@@ -386,7 +387,7 @@ function OperatorDetail({ v, onOpenBond, onOpenBand, onOpenItem }) {
 
     ${(v.trait || v.garrisons.length) ? html`<${Section} title=${t('特质与整备')} micro="TRAIT / GARRISON">
       ${v.trait ? html`<div class="cx-trait"><${MicroLabel}>${t('特质')}<//><p><${RichText} text=${v.trait} /></p></div>` : null}
-      ${v.garrisons.map((g) => html`<div key=${g.id} class="cx-trait"><${MicroLabel} tone="mint">${g.eventTypeDesc || t('整备能力')}<//><p><${RichText} text=${g.desc} /></p></div>`)}
+      ${v.garrisons.map((g) => html`<div key=${g.id} class="cx-trait"><${MicroLabel} tone="mint">${g.eventTypeDesc || t('整备能力')}<//><p><${RichText} text=${garrisonText(g)} /></p></div>`)}
     <//>` : null}
 
     ${v.talents.length ? html`<${Section} title=${t('天赋')} micro="TALENTS">
