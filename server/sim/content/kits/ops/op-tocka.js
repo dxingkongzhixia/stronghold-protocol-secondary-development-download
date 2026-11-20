@@ -179,7 +179,13 @@ export default {
             const kind = mark.data?.kind;
             if (kind === S1) {
               const shield = unit.s.atk * num(b1.shield_atk_scale, 1.9);
-              battle.addBuff(ally, { key: 'tocka:shield', shield, duration: num(b1.shield_time, 10), visible: true, tags: ['skill'] });
+              const life = num(b1.shield_time, 10);
+              // PRTS: "获得相当于冻河160%攻击力的屏障（在10秒内衰减）" — linear decay, 10 % of the initial value a second.
+              battle.addBuff(ally, {
+                key: 'tocka:shield', shield, duration: life, visible: true, tags: ['skill'],
+                interval: 1,
+                onTick: ({ unit: u, buff }) => { if (life > 0) { buff.shield = Math.max(0, (buff.shield || 0) - shield / life); u.markDirty(); } },
+              });
               if (ctx.source?.alive && ctx.source.side === 'enemy') battle.applyStatus(ctx.source, 'stun', { duration: num(b1.stun, 3), source: unit });
             }
             giveSp(unit, num(t1.sp, 2), 'talent');

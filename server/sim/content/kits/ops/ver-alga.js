@@ -3,6 +3,7 @@
 // and sluggish for attack@debuff_duration s. Talent: allies on the 8 surrounding tiles get ATK +5 %, +7 % more while an
 // elite or boss enemy stands in her attack range.
 import { bodyInRange } from '../../../body.js';
+import { canTargetEnemy } from '../../../targeting.js';
 import { cheb, num, up } from '../shared/tier1.js';
 import { isElite } from '../shared/tier6.js';
 import { kitSkills } from '../shared/version.js';
@@ -36,16 +37,20 @@ function alga(_bb, chess, def) {
     skills, skill,
     install(battle, unit) {
       if (!(baseAtk > 0)) return;
-      // 先声夺人: "自身攻击范围内存在精英及领袖敌人时 … 自身优先攻击攻击力最高的精英及领袖敌人". The blocked enemy
-      // keeps the first slot (PRTS 索敌 阻挡 → 特殊优先级); otherwise the highest-ATK elite / boss in range takes it.
+      // 先声夺人: "自身攻击范围内存在精英及领袖敌人时 … 自身优先攻击攻击力最高的精英及领袖敌人".
+      // PRTS 备注: this priority is ABOVE "优先攻击自身阻挡的单位", and it also applies when no elite stands in her
+      // attack range (e.g. the elite she currently blocks, even outside range / flying). So the best target is the
+      // highest-ATK ELITE/BOSS among (a) her legal targets in range and (b) the enemies she blocks.
       battle.on('beforeAttack', (c) => {
         if (c.attacker !== unit) return;
         const cur = (c.targets || []).filter((e) => e && e.alive);
-        if (!cur.length || cur.some((e) => e.blockedBy === unit)) return;
+        if (!cur.length) return;
         let best = null;
-        for (const e of battle.enemiesInKeys(unit.rangeKeys, unit, c.profile)) {
-          if (!isElite(e)) continue;
-          if (!best || e.s.atk > best.s.atk) best = e;
+        for (const e of battle.enemies) {
+          if (!e || !e.alive || e.side !== 'enemy' || e.hidden || !isElite(e)) continue;
+          const legal = e.blockedBy === unit || (bodyInRange(e, unit.rangeKeys) && canTargetEnemy(unit, e, c.profile));
+          if (!legal) continue;
+          if (!best || e.s.atk > best.s.atk || (e.s.atk === best.s.atk && e.id < best.id)) best = e;
         }
         if (!best || cur[0] === best) return;
         // keep the attack's target count: the best elite replaces the lowest-priority pick
@@ -58,7 +63,8 @@ function alga(_bb, chess, def) {
         const scale = unit.skill?.active && unit.skill.id === S2 ? talentScale : 1;
         const atkPct = (baseAtk + (elite ? eliteAtk : 0)) * scale;
         for (const a of battle.allyUnits) {
-          if (!a.alive || a.side !== 'ally' || cheb(unit, a) > 1) continue;
+          // "周围8格内所有干员" is the eight tiles around her — the centre tile is not one of them.
+          if (a === unit || !a.alive || a.side !== 'ally' || cheb(unit, a) > 1) continue;
           battle.addBuff(a, { key: `alga:aura:${unit.id}`, duration: 0.6, refresh: 'replace', source: unit, visible: true, mods: { atkPct } });
         }
       }, { owner: unit });

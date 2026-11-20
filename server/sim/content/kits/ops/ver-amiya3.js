@@ -7,7 +7,7 @@
 // 2.5 % max-HP regen each second. The incantation trait (heal the lowest-HP ally for a share of the damage) is the
 // profession (server/sim/professions.js installIncantation), not this kit.
 import { textCount } from '../../../../../shared/plugins/textNumber.js';
-import { alliesInGridOf, installAura, num, skillBbOf, talentBb } from '../shared/tier1.js';
+import { installAura, num, skillBbOf, talentBb } from '../shared/tier1.js';
 import { descOf, kitSkills, posDur } from '../shared/version.js';
 
 const S1 = 'skchr_amiya3_1';
@@ -19,14 +19,15 @@ function amiya3(_bb, chess, def) {
     if (id === S1) return {
       kind: 'duration', duration: posDur(rec),
       mods: { aspd: num(sbb.attack_speed) },
-      // The extra heal is ATK × heal_scale (the text says 相当于攻击力) to every ally on the skill's own grid, which is
-      // not her attack range. The profession trait heal still happens on its own.
+      // PRTS 哀恸共情 备注: "作用范围为周围十二格（碰撞判定）" — the 12 tiles around her (3×3 without the corners plus
+      // the four tiles two steps orthogonally), not her attack range and not the skill's range grid. The profession
+      // trait heal still happens on its own.
       attack: {
         onHit({ battle, unit }) {
           const scale = num(sbb.heal_scale);
           if (!(scale > 0)) return;
           const amount = unit.s.atk * scale;
-          for (const a of alliesInGridOf(battle, unit, rec.rangeGrid)) battle.heal(unit, a, amount, { tags: ['amiya3:s1'] });
+          for (const a of battle.alliesInRadius(unit.x, unit.y, 2)) battle.heal(unit, a, amount, { tags: ['amiya3:s1'] });
         },
       },
     };

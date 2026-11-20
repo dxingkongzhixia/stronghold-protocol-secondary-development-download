@@ -310,6 +310,73 @@ test('慕斯\'s next attack weakens the target it hits (ATK −20 % for 5 s)', (
   assert.ok(buff.duration >= 4.9 && buff.duration <= 5.1);
 });
 
+test('奥尔佳: the highest-ATK elite priority beats the blocked-first rule (PRTS note)', (t) => {
+  setGameData(ACT3);
+  t.after(() => setGameData(null));
+  const ds = new DataSource(ACT3, quiet);
+  const h = makeBattle({
+    data: ds, seed: 3, timeLimit: 20, autoFinish: false,
+    units: [{ uid: 1, chessId: chessId(ACT3, 'char_4245_alga', false), row: 10, col: 5 }],
+    enemies: [{ key: 'enemy_1406_chghmr', time: 0, pos: [10, 4] }, { key: 'enemy_1406_chghmr', time: 0, pos: [10, 6] }],
+  });
+  h.step(1);
+  const u = h.unit(1);
+  const [outside, inRange] = h.enemies().sort((a, b) => a.tileC - b.tileC);
+  // she blocks the one outside her range; the other stands in her range
+  outside.blockedBy = u;
+  u.blocking = [outside];
+  h.b.addBuff(inRange, { key: 'test:atk', mods: { atkFlat: 1000 }, persist: true });
+  const ctx = { attacker: u, targets: [outside], profile: {} };
+  h.b.emit('beforeAttack', ctx);
+  assert.equal(ctx.targets[0], inRange, 'the higher-ATK elite wins over the blocker');
+  assert.equal(ctx.targets.length, 1, 'the attack keeps its target count');
+});
+
+test('奥尔佳: the +ATK aura covers the eight surrounding tiles, not her own tile', (t) => {
+  setGameData(ACT3);
+  t.after(() => setGameData(null));
+  const ds = new DataSource(ACT3, quiet);
+  const h = makeBattle({
+    data: ds, seed: 3, timeLimit: 20, autoFinish: false,
+    units: [
+      { uid: 1, chessId: chessId(ACT3, 'char_4245_alga', false), row: 10, col: 5 },
+      { uid: 2, chessId: chessId(ACT3, 'char_488_buildr', false), row: 10, col: 6 },
+      { uid: 3, chessId: chessId(ACT3, 'char_488_buildr', false), row: 10, col: 9 },
+    ],
+    enemies: [],
+  });
+  h.run(1);
+  const u = h.unit(1), near = h.unit(2), far = h.unit(3);
+  const aura = (a) => (a.buffs || []).some((b) => b.key === `alga:aura:${u.id}`);
+  assert.equal(aura(near), true, 'the adjacent operator');
+  assert.equal(aura(far), false, 'an operator outside the 8 tiles');
+  assert.equal(aura(u), false, 'not the centre tile');
+});
+
+test('阿米娅（医疗） S1 heals the 12 surrounding tiles, not her attack range', (t) => {
+  setGameData(ACT3);
+  t.after(() => setGameData(null));
+  const ds = new DataSource(ACT3, quiet);
+  const h = makeBattle({
+    data: ds, seed: 3, timeLimit: 20, autoFinish: false,
+    units: [
+      { uid: 1, chessId: chessId(ACT3, 'char_1037_amiya3', false), row: 10, col: 5, carryState: { sp: 999 } },
+      { uid: 2, chessId: chessId(ACT3, 'char_488_buildr', false), row: 10, col: 7 },
+      { uid: 3, chessId: chessId(ACT3, 'char_488_buildr', false), row: 10, col: 8 },
+    ],
+    enemies: [],
+  });
+  h.step(1);
+  const u = h.unit(1), near = h.unit(2), far = h.unit(3);
+  const def = ds.getChess(chessId(ACT3, 'char_1037_amiya3', false), { skillIndex: 0 });
+  const spec = KITS['char_1037_amiya3'](def.skill.bb, def.raw, def).skills[def.skill.id];
+  near.hp = 1;
+  far.hp = 1;
+  spec.attack.onHit({ battle: h.b, unit: u });
+  assert.ok(near.hp > 1, 'a tile two steps away is inside 周围十二格');
+  assert.equal(far.hp, 1, 'four tiles away is not');
+});
+
 test('冻河 S3 marks an operator inside her range, never the whole field', (t) => {
   setGameData(ACT3);
   t.after(() => setGameData(null));
