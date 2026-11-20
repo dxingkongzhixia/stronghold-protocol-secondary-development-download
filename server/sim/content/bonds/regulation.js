@@ -229,7 +229,62 @@ function installIberia(battle, pid, bb) {
   });
 }
 
-const INSTALLERS = Object.freeze({ docShip: installDoc, iberiaShip: installIberia, ursusShip: installUrsus, lethaniaShip: installLethania });
+/** 雪山巨人 (谢拉格 6 名不同干员): the summon record's own `BondBuff` scales ATK / HP by layers. */
+const GIANT_ID = 'enemy_9024_acsgnt';
+
+/** Nearest standable, empty tile within Chebyshev `radius` of (fromR, fromC). */
+function nearestOpen(battle, fromR, fromC, radius) {
+  const R = battle.rect;
+  let best = null, bestD = Infinity;
+  for (let r = R.r0; r <= R.r1; r++) {
+    for (let c = R.c0; c <= R.c1; c++) {
+      if (radius != null && Math.max(Math.abs(r - fromR), Math.abs(c - fromC)) > radius) continue;
+      if (!battle.grid.canStand(r, c)) continue;
+      if (battle.unitAt(r, c) || battle.downOn(r, c)) continue;
+      const d = Math.abs(r - fromR) + Math.abs(c - fromC);
+      if (d < bestD) { bestD = d; best = [r, c]; }
+    }
+  }
+  return best;
+}
+
+/**
+ * 谢拉格: PRTS "在场 6 名不同【谢拉格】干员时，战斗开始时召唤可自主行动的雪山巨人（攻击力和生命值受层数影响）".
+ * The official summon is a controller trap on mode change; this remake has no controller, so one allied token at
+ * battle start is [ASSUMED] (the same reading as the mainline). `SwitchMode` / `FrozenBreak` stay on the record.
+ */
+function installKjeragGiant(battle, pid, bb) {
+  const id = 'kjeragShip';
+  if (!reached(battle, pid, id, num(bb.power_bond_char_cnt, 6))) return;
+  battle.on('battleStart', () => {
+    const members = S.bondMembers(battle, pid, id);
+    const anchor = members.find((u) => S.onField(u) || u.tileR != null);
+    if (!anchor) return;
+    const tile = nearestOpen(battle, anchor.tileR, anchor.tileC, 5);
+    if (!tile) return;
+    const raw = battle.data?.getEnemy?.(GIANT_ID)?.raw ?? null;
+    if (!raw) return;
+    const tb = raw.talents?.bb ?? {};
+    const step = num(tb['BondBuff.stackStep'], 0);
+    const steps = step > 0 ? Math.floor(S.bondLayers(battle, pid, id) / step) : 0;
+    const atkMul = 1 + num(tb['BondBuff.base_atk']) + num(tb['BondBuff.attack_per_stack']) * steps;
+    const hpMul = 1 + num(tb['BondBuff.base_max_hp']) + num(tb['BondBuff.max_hp_per_stack']) * steps;
+    const st = raw.stats ?? {};
+    battle.spawnToken(anchor, GIANT_ID, tile[0], tile[1], {
+      def: raw, anySource: true,
+      stats: {
+        atk: num(st.atk) * atkMul,
+        maxHp: num(st.maxHp) * hpMul,
+        blockCnt: num(tb['BlockEnemy.block_cnt'], st.blockCnt),
+      },
+    });
+  }, { once: true });
+}
+
+const INSTALLERS = Object.freeze({
+  docShip: installDoc, iberiaShip: installIberia, ursusShip: installUrsus, lethaniaShip: installLethania,
+  kjeragShip: installKjeragGiant,
+});
 
 export function install(battle) {
   if (!battle || !Array.isArray(battle.players)) return;

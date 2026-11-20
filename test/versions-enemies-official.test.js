@@ -276,6 +276,22 @@ test('暴走食人花: it swallows one ally and spits it out when killed during 
   assert.equal(ally.alive, true, 'spat out, no redeploy time');
 });
 
+test('谢拉格 6 人: battle start summons the 雪山巨人 as an allied token (PRTS bond)', () => {
+  setGameData(ACT3);
+  const ids = ['chess_char_1_06_a', 'chess_char_2_05_a', 'chess_char_2_10_a', 'chess_char_3_07_a', 'chess_char_3_08_a', 'chess_char_3_09_a'];
+  const h = makeBattle({
+    data: ds, seed: 3, autoFinish: false,
+    units: ids.map((chessId, i) => ({ chessId, row: 10, col: 3 + i })),
+    bonds: { kjeragShip: { count: 6, active: true, tier: 2, layers: 40 } },
+  });
+  h.step(1);
+  const giant = h.b.allyUnits.find((u) => u.defId === 'enemy_9024_acsgnt');
+  assert.ok(giant, '雪山巨人 summoned');
+  assert.equal(giant.side, 'ally', 'on the player side');
+  assert.equal(giant.s.blockCnt, 3, 'blocks 3 (record BlockEnemy.block_cnt)');
+  assert.ok(giant.s.atk > 920, `BondBuff ATK (${giant.s.atk})`);
+});
+
 test('开天汽水瓶: 120 true damage a second (12 every 0.1 s), not 240', () => {
   const h = field();
   h.step(1);

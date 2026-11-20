@@ -376,7 +376,7 @@ function kitTrwlpl(ab, _e) {
       if (a.acc < 10) return;
       a.acc = 0;
       const t = b.allies()
-        .filter((u) => u.alive && u.kind === 'op' && !u.hidden && hypot(u.x - e2.x, u.y - e2.y) <= 1.0)
+        .filter((u) => u.alive && u.kind === 'op' && !u.hidden && !u.s.flags.swallowImmune && hypot(u.x - e2.x, u.y - e2.y) <= 1.0)
         .sort((x, y) => x.id - y.id)[0];
       if (!t) return;
       a.left--;
@@ -428,6 +428,22 @@ function kitMnctur(ab, _e) {
       }
       if (!front) return;
       a.left = cd;
+      // 入戏(敌方): the charge passes allies, runs into the terrain, then 1000 % ATK true damage on itself + 15 s stun;
+      // 20 s before it may charge again. No act3 table grants 入戏, so this branch is dormant (future content).
+      if (e2.s.flags.inPlay) {
+        let x = e2.x, y = e2.y;
+        for (let i = 0; i < 80; i++) {
+          const nx = x + dx * 0.25, ny = y + dy * 0.25;
+          if (!b.grid.groundPassable(Math.round(ny), Math.round(nx))) break;
+          x = nx; y = ny;
+        }
+        e2.x = x; e2.y = y;
+        b.dealDamage(null, e2, { amount: e2.s.atk * 10, type: 'true', sourceless: true, tags: ['enemyAbility'] });
+        b.applyStatus(e2, 'stun', { duration: 15, source: e2 });
+        a.left = cd + 20;
+        b.fx('charge', { x, y, id: e2.id });
+        return;
+      }
       b.dealDamage(e2, front, { amount: e2.s.atk * scale, type: 'phys', isAttack: true, tags: ['enemyAbility'] });
       b.fx('charge', { x: front.x, y: front.y, id: e2.id });
     },
