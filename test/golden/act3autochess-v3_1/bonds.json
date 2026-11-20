@@ -769,11 +769,12 @@
         ["p1",5,"op","chess_char_2_10_b",1,"uniequip_002_harold",1558,1,2,0,0,0,0,0,0],
         ["p1",6,"op","chess_char_3_08_b",1,"uniequip_002_kjera",1450,1,6,0,0,0,0,0,0],
         ["p1",7,"op","chess_char_3_09_b",1,"uniequip_002_slbell",1615,1,3,0,0,0,0,0,0],
-        ["p1",8,"op","chess_char_5_15_b",1,"uniequip_002_rosmon",1962,1,7,0,0,0,0,0,0]
+        ["p1",8,"op","chess_char_5_15_b",1,"uniequip_002_rosmon",1962,1,7,0,0,0,0,0,0],
+        ["p1","~1","token","enemy_9024_acsgnt",null,null,160860,1,9,0,0,0,0,0,null]
       ],
       "enemies": {},
-      "hooks": [1,8,1,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,1,0,0,0,0],
-      "events": {"deploy":8,"fx":1,"spawn":8},
+      "hooks": [1,9,1,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,1,0,0,0,0],
+      "events": {"deploy":9,"fx":1,"spawn":9},
       "fx": {"link":1},
       "snaps": ""
     },
