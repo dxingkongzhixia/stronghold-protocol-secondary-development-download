@@ -3,24 +3,42 @@
 // come from the flattened talent book (ab.t). The archetype helpers (reborn / deathBoom / unbalanced / enemyAura /
 // nthAttackPower) are the same ones the default enemies use.
 import { hypot } from '../../detmath.js';
-import { T, hurt } from './helpers.js';
-import { deathBoom, unbalanced, reborn, enemyAura, allyAura, nthAttackPower, stealth, pollution } from './archetypes.js';
+import { T, hurt, auraBuff, remainingRoute, alliesInTiles } from './helpers.js';
+import { deathBoom, unbalanced, reborn, enemyAura, allyAura, nthAttackPower, stealth, pollution, noAirTargets } from './archetypes.js';
+import { reviveNow } from '../items/battle.js';
 
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const buffOf = (u, key) => u?.findBuff?.(key) ?? null;
 
-/** 锋盔骑士团学徒 / _3: reborn after 5 s and a periodic ATK debuff on the strongest ally. */
+/**
+ * 锋盔骑士团学徒 / _3: reborn after 5 s and 【削弱斗志】 — PRTS: cooldown 25 / initial 25 (学徒) or 10 / 10 (泰特斯),
+ * only when an ally not already carrying 【锋盔削弱】 exists; the highest ATK (taunt, then id as tie-breaks) takes
+ * ATK → 50 % for 25 s (same name does not stack).
+ */
 function kitLfkght(ab) {
   const dur = T(ab, 'reborn.duration') ?? 5;
+  const sk = ab.sk && ab.sk.AtkDesWeaken;
+  const cd = Math.max(0.5, num(sk && sk.cd, 25));
+  const first = sk && sk.icd > 0 ? sk.icd : cd;
+  const buffDur = num(sk && sk.bb && sk.bb.duration, 25);
+  const atk = num(sk && sk.bb && sk.bb.atk, -0.5);
+  const ready = (u) => u.findBuff && u.findBuff('ab:lfkght_weak');
   return [
     reborn({ dur, hpRatio: 1 }),
     {
+      spawn(b, e, a) { a.left = first; },
       tick(b, e, a, dt) {
-        a.acc = num(a.acc) + dt;
-        if (a.acc < 10) return;
-        a.acc = 0;
-        const t = b.allies().filter((u) => u.alive).sort((x, y) => y.s.atk - x.s.atk)[0];
-        if (t) b.addBuff(t, { key: 'ab:lfkght_weak', duration: 10, visible: true, source: e, mods: { atkPct: -0.5 } });
+        a.left = Math.max(0, num(a.left, first) - dt);
+        if (a.left > 1e-9) return;
+        let t = null;
+        for (const u of b.allies()) {
+          if (!u.alive || u.hidden || ready(u)) continue;
+          if (!t || u.s.atk > t.s.atk || (u.s.atk === t.s.atk && (u.s.taunt || 0) > (t.s.taunt || 0))
+            || (u.s.atk === t.s.atk && (u.s.taunt || 0) === (t.s.taunt || 0) && u.id < t.id)) t = u;
+        }
+        if (!t) return;
+        a.left = cd;
+        b.addBuff(t, { key: 'ab:lfkght_weak', duration: buffDur, visible: true, source: e, mods: { atkPct: atk } });
       },
     },
   ];
@@ -39,116 +57,243 @@ function kitKrgrg(ab, _e) {
   ];
 }
 
-/** 寻路者狙击手 / 阵地破坏者 / 信使: ammo attack scale; the messenger disarms, the breaker splashes. */
+/**
+ * 寻路者狙击手 / 阵地破坏者 / 信使 — PRTS ammo mode:
+ *   · 狙击手: 1 round, the shot is ×2 ATK; then melee only.
+ *   · 阵地破坏者: 2 rounds, each shot is 100 % ATK physical to the target AND all allies in the 8 tiles around it
+ *     (splash may hit air, ignores camouflage); then melee only.
+ *   · 信使: 1 round, the shot is ×1.5 ATK, consumes ammo and applies 【无法攻击或治疗】 = 缴械 + 沉默 for 15 s
+ *     (it prefers targets that do not carry it); then melee only. `headshot_sp` is the ammo counter, not an SP drain.
+ * None of them attacks air (PRTS "不会攻击飞行单位").
+ */
 function kitShotbuff(ab, e) {
   const scale = T(ab, 'shotbuff.attack@headshot_atk_scale') ?? 1;
-  const disarm = T(ab, 'shotbuff.attack@headshot_disarmed_duration');
-  const splash = T(ab, 'shotbuff.attack@headshot_trapdamage');
-  const parts = [e.defId.includes('cansld') ? nthAttackPower(1, scale) : { dealt(c) { if (c.dmg?.isAttack && c.dmg) c.dmg.mul *= scale; } }];
-  if (disarm > 0) parts.push({ dealt(c, b) { if (c.dmg?.isAttack && c.target) b.addBuff(c.target, { key: 'ab:disarm', duration: disarm, visible: true, source: e, flags: { noAttack: true, noHeal: true } }); } });
-  if (splash > 0) parts.push({ dealt(c, b) { if (!c.dmg?.isAttack || !c.target) return; for (const u of b.allies()) if (u.alive && u !== c.target && hypot(u.x - c.target.x, u.y - c.target.y) <= 1.4) b.dealDamage(e, u, { amount: splash, type: 'arts', tags: ['enemyAbility'] }); } });
+  const disarm = T(ab, 'shotbuff.attack@headshot_disarmed_duration') ?? 0;
+  const breaker = e.defId.includes('cansld');
+  const ammo = breaker ? 2 : 1;
+  const parts = [noAirTargets()];
+  if (disarm > 0) {
+    // 优先攻击未持有【无法攻击或治疗】的我方单位 (PRTS 信使).
+    parts.push({ spawn(b, e2) { e2.profile.sortTargets = (u) => (u.s.flags.disarm ? 1 : 0); } });
+  }
+  parts.push({
+    spawn(b, e2, a) { a.left = ammo; },
+    hitOut(c, b, e2, a) {
+      if (!(a.left > 0) || !c.dmg || !c.dmg.isAttack) return;
+      c.dmg.mul *= scale;
+    },
+    attack(c, b, e2, a) {
+      if (!(a.left > 0)) return;
+      a.left--;
+      const ts = (c.targets || []).filter((t) => t && t.alive && (!c.targetDeployments || c.targetDeployments.get(t) === t.deploySeq));
+      for (const t of ts) {
+        if (disarm > 0) {
+          b.applyStatus(t, 'disarm', { duration: disarm, source: e2 });
+          b.applyStatus(t, 'silence', { duration: disarm, source: e2 });
+        }
+        if (breaker) {
+          for (const u of alliesInTiles(b, t.tileR, t.tileC, 'box', 1)) {
+            if (u === t || !u.alive) continue;
+            b.dealDamage(e2, u, { amount: e2.s.atk, type: 'phys', ignoreSelect: true, tags: ['enemyAbility'] });
+          }
+        }
+      }
+      if (!(a.left > 0)) { e2.profile.melee = true; e2.profile.maxTargets = 1; }
+    },
+  });
   return parts;
 }
 
-/** 萨卡兹子裔补给车: nearby enemies +10 % ATK (5 stacks) and their attacks add apoptosis damage. */
-function kitDsuply(ab, _e) {
+/** 重生造物 (the 大君 summons; PRTS 萨卡兹子裔补给车 / 集恨者 count these). */
+const REBORN_CREATURES = new Set(['enemy_1220_dzoms', 'enemy_1220_dzoms_2', 'enemy_1221_dzomg', 'enemy_1221_dzomg_2']);
+
+/**
+ * 萨卡兹子裔补给车 — PRTS: "在场时，场上所有重生造物攻击力提升 10%（最多叠加 5 层），且攻击时附加各自攻击力
+ * 10% 的凋亡损伤（可被沉默）".  The stacks are one per supply truck on the field (not per second); there is no radius.
+ * It does not attack air.
+ */
+function kitDsuply(ab, e) {
   const atk = T(ab, 'aura.enemy_dsuply_t[attr_buff].atk') ?? 0.1;
   const max = Math.max(1, Math.floor(T(ab, 'aura.enemy_dsuply_t[attr_buff].max_valid_stack_cnt') ?? 5));
   const ep = T(ab, 'aura.ep_damage_ratio') ?? 0.1;
+  const TRUCK = new Set(['enemy_1224_dsuply', 'enemy_1224_dsuply_2']);
   return [
-    { tick(b, e2, a, dt) {
-      a.acc = num(a.acc) + dt;
-      if (a.acc < 1) return;
-      a.acc = 0;
-      for (const x of b.enemies) {
-        if (!x.alive || x === e2 || hypot(x.x - e2.x, x.y - e2.y) > 4) continue;
-        const n = (x.mem.dsuplyStacks ?? 0) + 1;
-        if (n > max) continue;
-        x.mem.dsuplyStacks = n;
-        b.addBuff(x, { key: 'ab:dsuply', duration: 1.6, refresh: 'replace', visible: true, source: e2, mods: { atkPct: atk * n } });
-      }
-    } },
-    { dealt(c, b) {
-      if (!c.dmg?.isAttack || !c.target || !buffOf(c.source, 'ab:dsuply')) return;
-      b.dealDamage(c.source, c.target, { amount: c.source.s.atk * ep, type: 'element', element: 'apoptosis', tags: ['enemyAbility'] });
-    } },
+    noAirTargets(),
+    {
+      tick(b, e2) {
+        let n = 0;
+        for (const o of b.aliveEnemies()) if (TRUCK.has(o.defId)) n++;
+        n = Math.min(max, n);
+        for (const o of b.aliveEnemies()) if (REBORN_CREATURES.has(o.defId)) auraBuff(b, o, 'ab:dsuply', 0.6, { atkPct: atk * n }, null, true);
+      },
+    },
+    {
+      // The apoptosis line only: an attack of a 重生造物 carrying the aura adds 10 % of its ATK (silence turns it off).
+      dealt(c, b) {
+        if (!c.dmg?.isAttack || !c.target || c.source.s.flags.silence) return;
+        if (!REBORN_CREATURES.has(c.source.defId) || !buffOf(c.source, 'ab:dsuply')) return;
+        b.dealDamage(c.source, c.target, { amount: c.source.s.atk * ep, type: 'element', element: 'apoptosis', tags: ['enemyAbility'] });
+      },
+    },
   ];
 }
 
-/** 残党乐团圆号手 / 鼓手: two stances alternate every 3rd attack (激昂 / 消沉). */
+/**
+ * 残党乐团圆号手 / 鼓手 — PRTS 崔林特尔梅之金.  Stances (the fork alternates them every 3rd attack [ASSUMED]; the
+ * client data only carries the two sets of numbers):
+ *   沉郁: ATK +20 %, ASPD −50, move speed FINAL 50 %;  激昂: ASPD +50, move speed FINAL 200 %, DEF −50 %.
+ *   · 圆号手: 每次普通攻击回复 1 SP (0/2); the next attack (the 3rd) also hits ONE other ally within 1.5 of the
+ *     target for 100 % ATK — physical, or arts while 激昂; its normal attack is arts while 激昂.
+ *   · 鼓手: 0/2 attack recovery; the 3rd attack splashes every ally within 2.0 (3.0 while 激昂) for 100 % ATK arts.
+ */
 function kitSwitchMode(ab, e) {
   const P = { n: 0, mode: 'enthu' };
+  const horn = e.defId.includes('ltnhor');
+  const pre = (x) => `switchMode.enemy_act29side[buff_${x === 'enthu' ? 'enthu' : 'depressed'}].`;
   const apply = (b2, x) => {
-    const pre = `switchMode.enemy_act29side[buff_${x === 'enthu' ? 'enthu' : 'depressed'}].`;
+    const p = pre(x);
     b2.addBuff(e, {
       key: 'ab:switchmode', refresh: 'replace', visible: true,
       mods: {
-        aspd: T(ab, pre + 'attack_speed') ?? 0,
-        atkPct: T(ab, pre + 'atk') ?? 0,
-        defPct: T(ab, pre + 'def') ?? 0,
-        moveMul: 1 + (T(ab, pre + 'move_speed') ?? 0),
+        aspd: T(ab, p + 'attack_speed') ?? 0,
+        atkPct: T(ab, p + 'atk') ?? 0,
+        defPct: T(ab, p + 'def') ?? 0,
+        // PRTS says "移动速度最终降低至 50%" / "最终提升至 200%": the blackboard value is the final multiplier.
+        moveMul: T(ab, p + 'move_speed') ?? 1,
       },
     });
+    if (horn) e.profile.dmgType = x === 'enthu' ? 'arts' : 'phys';
   };
   return [{
     spawn(b2) { apply(b2, P.mode); },
-    attack(_c, b2) {
+    attack(c, b2) {
       P.n += 1;
       if (P.n % 3 !== 0) return;
+      const ent = P.mode === 'enthu';
+      const type = horn ? (ent ? 'arts' : 'phys') : 'arts';
+      const ts = (c.targets || []).filter((t) => t && t.alive);
+      if (horn) {
+        for (const t of ts) {
+          // "对目标及目标半径1.5范围内的1名其他我方单位造成攻击力100%的…伤害"
+          let pick = null;
+          for (const u of b2.allies()) {
+            if (!u.alive || u === t || u.hidden || hypot(u.x - t.x, u.y - t.y) > 1.5) continue;
+            if (!pick || u.id < pick.id) pick = u;
+          }
+          if (pick) b2.dealDamage(e, pick, { amount: e.s.atk, type, isAttack: true, tags: ['enemyAbility'] });
+        }
+      } else {
+        const r = ent ? 3 : 2;
+        for (const u of b2.allies()) {
+          if (!u.alive || u.hidden || hypot(u.x - e.x, u.y - e.y) > r) continue;
+          b2.dealDamage(e, u, { amount: e.s.atk, type: 'arts', tags: ['enemyAbility'] });
+        }
+      }
       P.mode = P.mode === 'enthu' ? 'depressed' : 'enthu';
       apply(b2, P.mode);
     },
   }];
 }
 
-/** “投石机”: the first attack is ×first_atk_scale. */
-function kitWingnt(ab) {
-  return [nthAttackPower(1, T(ab, 'FirstAttack.attack@first_atk_scale') ?? 1.5)];
+/**
+ * “投石机” — PRTS: "首次攻击对目标及其周围4格造成攻击力150%的法术伤害，此后仅进行近战攻击，造成物理伤害."
+ * (The first shot is ARTS for the target and its four orthogonal neighbours; the enemy then fights in melee, physical.)
+ */
+function kitWingnt(ab, e) {
+  const scale = T(ab, 'FirstAttack.attack@first_atk_scale') ?? 1.5;
+  return [{
+    hitOut(c, b, e2, a) {
+      if (a.used || !c.dmg || !c.dmg.isAttack) return;
+      a.used = true;
+      c.dmg.type = 'arts';
+      c.dmg.mul *= scale;
+      e2.profile.melee = true;
+      e2.profile.dmgType = 'phys';
+    },
+    dealt(c, b, e2, a) {
+      if (a.splash || !a.used || !c.dmg || !c.dmg.isAttack || !c.target) return;
+      a.splash = true;
+      for (const u of alliesInTiles(b, c.target.tileR, c.target.tileC, 'plus', 1)) {
+        if (u === c.target || !u.alive) continue;
+        b.dealDamage(e2, u, { amount: e2.s.atk * scale, type: 'arts', tags: ['enemyAbility'] });
+      }
+      b.fx('explode', { x: c.target.x, y: c.target.y, r: 1.1, kind: 'wingnt' });
+    },
+  }];
 }
 
-/** 无畏掷弹兵: the first unblocked damage hit fires four bombs, then it is lighter and faster. */
+/**
+ * 无畏掷弹兵 — PRTS 投弹: once, while not silenced and not blocked, taking damage fires a bomb in each of the four
+ * directions; each bomb is a direct projectile that explodes on the first ally it meets (radius 1.1) for 200 % ATK
+ * PHYSICAL damage. Afterwards: move speed +0.7, weight −2.
+ */
 function kitBoomer(ab, e) {
   const P = { fired: false };
   const ms = T(ab, 'Light.move_speed') ?? 0.7, mass = T(ab, 'Light.mass_level') ?? -2;
+  const scale = T(ab, 'Bomb.atk_scale') ?? 2;
   return [{
     spawn(b) {
       b.on('damaged', (c) => {
-        if (c.target !== e || P.fired || e.blocking?.length) return;
+        if (c.target !== e || P.fired || e.blockedBy || e.s.flags.silence) return;
         P.fired = true;
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+          // The first ally in this direction (small corridor) is where the bomb goes off; otherwise it flies on.
+          let impact = null, bd = Infinity;
           for (const u of b.allies()) {
-            if (u.alive && hypot(u.x - (e.x + dx), u.y - (e.y + dy)) <= 1) b.dealDamage(e, u, { amount: e.s.atk, type: 'arts', tags: ['enemyAbility'] });
+            if (!u.alive || u.hidden) continue;
+            const rx = u.x - e.x, ry = u.y - e.y;
+            const along = rx * dx + ry * dy;
+            if (along <= 0) continue;
+            if (Math.abs(rx * dy - ry * dx) > 0.5) continue;
+            if (along < bd) { bd = along; impact = u; }
           }
+          const ix = impact ? impact.x : e.x + dx * 2, iy = impact ? impact.y : e.y + dy * 2;
+          for (const u of b.allies()) {
+            if (u.alive && hypot(u.x - ix, u.y - iy) <= 1.1) {
+              b.dealDamage(e, u, { amount: e.s.atk * scale, type: 'phys', ignoreSelect: true, tags: ['enemyAbility'] });
+            }
+          }
+          b.fx('explode', { x: ix, y: iy, r: 1.1, kind: 'boomer' });
         }
         b.addBuff(e, { key: 'ab:boomer_light', persist: true, visible: true, mods: { moveMul: 1 + ms, massFlat: mass } });
-        b.fx('explode', { x: e.x, y: e.y, r: 1.5, kind: 'boomer' });
       }, { owner: e });
     },
   }];
 }
 
-/** 战线推进者: after being blocked, the first attack is ×sheltr_atk_scale. */
+/**
+ * 战线推进者 — PRTS 天赋: "入场后/每次解除阻挡时获得强击标记（不可叠加）"; 强击: "技能期间攻击力+80%，对目标造成攻击力
+ * 100% 的物理伤害，技能成功进行攻击前清除强击标记" — so the next attack after spawn / after being unblocked is ×1.8
+ * (the 250 % `DmgUp.sheltr_atk_scale` is only against 封阻物/掩体, which this mode has no unit for).
+ */
 function kitChghmr(ab, _e) {
-  const scale = T(ab, 'DmgUp.sheltr_atk_scale') ?? 2.5;
-  const P = { blocked: false, charged: false };
+  const atk = (ab.sk && ab.sk.PowerHit && ab.sk.PowerHit.bb && ab.sk.PowerHit.bb.atk) ?? 0.8;
+  const P = { mark: true };
   return [{
-    tick(b, e2) {
-      const blocked = e2.blocking?.length > 0;
-      if (blocked && !P.blocked) P.charged = true;
-      P.blocked = blocked;
-    },
-    dealt(c) {
-      if (!c.dmg?.isAttack || !P.charged) return;
-      P.charged = false;
-      c.dmg.mul *= scale;
+    tick(b, e2) { if (!e2.blockedBy) P.mark = true; },
+    hitOut(c) {
+      if (!P.mark || !c.dmg?.isAttack) return;
+      P.mark = false;
+      c.dmg.mul *= 1 + atk;
     },
   }];
 }
 
-/** 纤核漂游蟹: attacks add neural damage (the `0.` group). */
+/**
+ * 纤核漂游者 — PRTS: 失衡免疫, "普通攻击优先攻击部署于高台上的我方单位", 每次攻击附加 15 % ATK 神经损伤.
+ * The high-ground preference is the opt-in `profile.sortTargets` hook (server/sim/targeting.js sortAllyTargets).
+ */
 function kitDsflys(ab, e) {
   const ep = T(ab, '0.attack@ep_damage_ratio') ?? 0.15;
-  return [{ dealt(c, b) { if (c.dmg?.isAttack && c.target) b.dealDamage(e, c.target, { amount: e.s.atk * ep, type: 'element', element: 'neural', tags: ['enemyAbility'] }); } }];
+  return [
+    {
+      spawn(b, e2) {
+        b.addBuff(e2, { key: 'ab:dsflys_anchor', persist: true, flags: { noDisplace: true } });
+        e2.profile.sortTargets = (u) => (u.tileR != null && !b.grid.isLow(u.tileR, u.tileC) ? 0 : 1);
+      },
+    },
+    { dealt(c, b) { if (c.dmg?.isAttack && c.target) b.dealDamage(e, c.target, { amount: e.s.atk * ep, type: 'element', element: 'neural', tags: ['enemyAbility'] }); } },
+  ];
 }
 
 /** “不眠雪山”: two stances, 3 blocks, frozen targets take ×FrozenBreak.atk_scale. */
@@ -191,50 +336,102 @@ function kitAcblk(ab) {
   return [stealth(), allyAura(T(ab, 'Aura.range_radius') ?? 1.8, 'ab:acblk', { blockCnt: -1 }, true, 0.5)];
 }
 
-/** 假想敌：丛生: the first hit on each target is ×2 and blocks healing for 5 s. */
+/**
+ * 假想敌：丛生 — PRTS: "输出伤害时，若目标不持有来源于自己的【丛生标记】，本次伤害提升至 200%，并额外施加 5 秒禁疗
+ * 效果和持续时间无限的【丛生标记】".  Any damage (not only a normal attack), hence `hitOut`.
+ */
 function kitAccrit(ab, e) {
   const scale = T(ab, 'CriticalHit.damage_scale') ?? 2, dur = T(ab, 'CriticalHit.duration') ?? 5;
-  return [{ dealt(c, b) {
-    if (!c.dmg?.isAttack || !c.target?.alive) return;
-    const seen = e.mem.accrit ??= new Set();
-    if (seen.has(c.target.id)) return;
-    seen.add(c.target.id);
-    c.dmg.mul *= scale;
-    b.addBuff(c.target, { key: 'ab:accrit_noheal', duration: dur, visible: true, source: e, flags: { noHeal: true } });
-  } }];
+  return [{
+    hitOut(c, b, e2) {
+      const t = c.target;
+      if (!t?.alive || !c.dmg || c.dmg.cancel) return;
+      const seen = e2.mem.accrit ??= new Set();
+      if (seen.has(t.id)) return;
+      seen.add(t.id);
+      c.dmg.mul *= scale;
+      b.addBuff(t, { key: 'ab:accrit_noheal', duration: dur, visible: true, source: e2, flags: { noHeal: true } });
+    },
+  }];
 }
 
-/** 暴走食人花 / _2: twice per fight it stuns the nearest ally and digests (both unable to act for 5 s). */
+/**
+ * 暴走食人花 / _2 — PRTS: 普通攻击索敌不受阻挡影响, 可吞食半径 1.0 内一个我方单位 (不造成伤害而是强制击倒); 命中后进入
+ * 消化模式 for 20 s (自缚 + 失衡/晕眩/冻结/浮空/恐惧/沉睡免疫); 被击倒于消化期间时吐出被吞的干员 (不进入再部署).
+ * The client's `InitEat.cnt` (2) limits the number of swallows; the initial 登场消化 (40 s) has no data marker here.
+ */
 function kitTrwlpl(ab, _e) {
   const cnt = Math.max(0, Math.floor(T(ab, 'InitEat.cnt') ?? 2));
-  const P = { left: cnt, acc: 0 };
-  return [{ tick(b, e2, a, dt) {
-    if (P.left <= 0) return;
-    P.acc += dt;
-    if (P.acc < 12) return;
-    P.acc = 0;
-    const t = b.allies().filter((u) => u.alive && hypot(u.x - e2.x, u.y - e2.y) <= 2).sort((x, y) => x.hp - y.hp)[0];
-    if (!t) return;
-    P.left--;
-    b.applyStatus(t, 'stun', { duration: 5, source: e2 });
-    b.applyStatus(e2, 'stun', { duration: 5, source: e2 });
-    b.fx('explode', { x: t.x, y: t.y, r: 0.5, kind: 'eat' });
-  } }];
+  const EAT_SECONDS = 20;
+  return [{
+    spawn(b, e2, a) { a.left = cnt; a.eat = null; a.digest = 0; a.acc = 6; },
+    tick(b, e2, a, dt) {
+      if (a.digest > 0) {
+        a.digest -= dt;
+        if (a.digest <= 0) { a.digest = 0; a.eat = null; }
+        return;
+      }
+      if (!(a.left > 0)) return;
+      a.acc += dt;
+      if (a.acc < 10) return;
+      a.acc = 0;
+      const t = b.allies()
+        .filter((u) => u.alive && u.kind === 'op' && !u.hidden && hypot(u.x - e2.x, u.y - e2.y) <= 1.0)
+        .sort((x, y) => x.id - y.id)[0];
+      if (!t) return;
+      a.left--;
+      a.eat = t;
+      a.digest = EAT_SECONDS;
+      b.addBuff(e2, { key: 'ab:trwlpl_eat', duration: EAT_SECONDS, visible: true, flags: { noMove: true, selfBound: true } });
+      b.fx('explode', { x: t.x, y: t.y, r: 0.5, kind: 'eat' });
+      b.kill(t, e2);
+    },
+    death(c, b, e2, a) {
+      if (c.reason !== 'killed' || !a.eat || a.eat.alive) return;
+      // Spat out: back on the field at once, no redeploy time.
+      if (reviveNow(b, { unit: a.eat, reason: 'killed' }, 'trwlpl')) b.fx('revive', { x: e2.x, y: e2.y, id: e2.id, form: 'eat' });
+      a.eat = null;
+      a.digest = 0;
+    },
+  }];
 }
 
-/** 神勇的帕拉杜利斯 / _2: charges an ally in front for ×2 physical damage. */
+/**
+ * 神勇的帕拉杜利斯 / _2 — PRTS 冲锋: 仅未被阻挡、且移动方向同一行/列的前方存在非飞行我方单位时可触发; 冲锋模式无法
+ * 攻击/被阻挡, 对进入半径 0.45 的我方单位造成 200 % ATK 物理伤害 (一次). 入戏状态的撞墙分支 is not implemented here
+ * (no act3 source applies 入戏 [ASSUMED]).  A dash is modelled as one hit on the nearest ally ahead.
+ */
 function kitMnctur(ab, _e) {
   const scale = T(ab, 'CollideChar.atk_scale_collide') ?? 2;
-  const P = { acc: 0 };
-  return [{ tick(b, e2, a, dt) {
-    P.acc += dt;
-    if (P.acc < 5) return;
-    P.acc = 0;
-    const front = b.allies().filter((u) => u.alive && Math.abs(u.y - e2.y) < 1 && u.x > e2.x && u.x - e2.x <= 3).sort((x, y) => x.x - y.x)[0];
-    if (!front) return;
-    b.dealDamage(e2, front, { amount: e2.s.atk * scale, type: 'phys', isAttack: true, tags: ['enemyAbility'] });
-    b.fx('charge', { x: front.x, y: front.y, id: e2.id });
-  } }];
+  const sk = ab.sk && ab.sk.rush;
+  const cd = Math.max(0.5, num(sk && sk.cd, 10));
+  const first = sk && sk.icd > 0 ? sk.icd : cd;
+  return [{
+    spawn(b, e2, a) { a.left = first; },
+    tick(b, e2, a, dt) {
+      a.left = Math.max(0, num(a.left, first) - dt);
+      if (a.left > 1e-9 || e2.blockedBy) return;
+      // The current leg's direction (the way it is walking).
+      const R = e2.route;
+      const L = R && R.legs && R.legs[R.legIdx];
+      let dx = 0, dy = 0;
+      if (L && L.c != null) { dx = Math.sign(L.c - e2.x); dy = Math.sign(L.r - e2.y); }
+      if (!dx && !dy) return;
+      let front = null, bd = Infinity;
+      for (const u of b.allies()) {
+        if (!u.alive || u.isFlying || u.hidden) continue;
+        const rx = u.x - e2.x, ry = u.y - e2.y;
+        const along = rx * dx + ry * dy;
+        const perp = Math.abs(rx * dy - ry * dx);
+        if (along <= 0 || along > 4 || perp > 0.6) continue;
+        if (along < bd) { bd = along; front = u; }
+      }
+      if (!front) return;
+      a.left = cd;
+      b.dealDamage(e2, front, { amount: e2.s.atk * scale, type: 'phys', isAttack: true, tags: ['enemyAbility'] });
+      b.fx('charge', { x: front.x, y: front.y, id: e2.id });
+    },
+  }];
 }
 
 /** 搏命养家者: +0.5 move speed on warning; nearby enemies take 25 % less physical/arts damage. */
@@ -244,7 +441,8 @@ function kitUbba(ab, e) {
     { spawn(b) {
       b.on('damaged', (c) => { if (c.target === e && e.hpRatio < 0.5) b.addBuff(e, { key: 'ab:ubba_warn', persist: true, visible: true, mods: { moveMul: 1 + ms } }); }, { owner: e });
     } },
-    enemyAura(2.5, 'ab:ubba_guard', { physTakenMul: 1 - res, artsTakenMul: 1 - res }, true, 0.5),
+    // PRTS: 半径 1.7 范围内的所有敌方单位受到的物理/法术伤害降低至 75%（可乘算叠加）.
+    enemyAura(1.7, 'ab:ubba_guard', { physTakenMul: 1 - res, artsTakenMul: 1 - res }, true, 0.5),
   ];
 }
 
@@ -257,12 +455,14 @@ function kitApara(ab, e) {
   const r = T(ab, 'Aura.range_radius') ?? 1.5;
   const key = (ab.tS && ab.tS['Aura.enemy_key']) || 'enemy_1221_dzomg';
   return [{
+    sil: true,
     spawn(b) {
+      // PRTS: 半径 1.5 内的敌方单位被【击倒】时（一个漏怪不是击倒），在其位置上沿其路径召唤一个大君之赐; 被沉默时失效.
       b.on('death', (c) => {
         const u = c.unit;
-        if (!u || u === e || u.side !== 'enemy' || u.defId === key) return;
+        if (c.reason !== 'killed' || e.s.flags.silence || !u || u === e || u.side !== 'enemy' || u.defId === key) return;
         if (hypot(u.x - e.x, u.y - e.y) > r + 1e-9) return;
-        b.spawnEnemy(key, { pos: [u.tileR, u.tileC], countInTotal: false });
+        b.spawnEnemy(key, { pos: [u.tileR, u.tileC], route: remainingRoute(u), countInTotal: false });
       }, { owner: e });
     },
   }];
@@ -300,32 +500,52 @@ function kitNscola(ab) {
   const iv = Math.max(0.1, T(ab, 'Passive.enemy_nscola[speed].interval') ?? 0.5);
   const step = T(ab, 'Passive.enemy_nscola[speed].move_speed') ?? 0.3;
   const maxT = Math.max(1, T(ab, 'Passive.enemy_nscola[speed].max_time') ?? 25);
-  const loss = T(ab, 'Passive.fixed_value_damage') ?? 120;
+  const perSec = T(ab, 'Passive.fixed_value_damage') ?? 120;
+  const DPS_IV = 0.1;
   return [{ tick(b, e, a, dt) {
-    a.t = (a.t ?? 0) + dt;
-    if (a.t + 1e-9 < iv) return;
-    a.t = 0;
-    a.n = (a.n ?? 0) + 1;
-    b.loseHp(e, loss, { tags: ['enemyAbility'] });
+    // PRTS: 每 0.1 s 受到 12 无来源真实伤害 (120/s).
+    a.dmg = (a.dmg ?? 0) + dt;
+    while (a.dmg + 1e-9 >= DPS_IV && e.alive) {
+      a.dmg -= DPS_IV;
+      b.loseHp(e, perSec * DPS_IV, { tags: ['enemyAbility'] });
+    }
+    // PRTS: 每 0.5 s — 未受晕眩/束缚且未被阻挡则 +1 层（最高 25），否则层数归零; 移动速度 +(30%×层数).
+    a.spd = (a.spd ?? 0) + dt;
+    if (a.spd + 1e-9 < iv) return;
+    a.spd = 0;
+    const bound = e.s.flags.stun || e.s.flags.bind || e.findBuff('bind') || e.blockedBy;
+    if (bound) { a.n = 0; b.removeBuff(e, 'reg:nscola_speed'); return; }
+    a.n = Math.min(25, (a.n ?? 0) + 1);
     if (a.n * iv <= maxT) b.addBuff(e, { key: 'reg:nscola_speed', persist: true, refresh: 'replace', visible: true, mods: { moveMul: 1 + step * a.n } });
   } }];
 }
 
-/** 遮天面包机 (PRTS: 【飞行单位】未被阻挡时持续对周围我方单位造成溅射伤害). */
+/**
+ * 遮天面包机 — PRTS: 静态刚体; 每 2.5 s 若未被阻挡，发射面包弹道，0.5 s 后到达，对半径 1.0 的我方单位造成 200 % ATK
+ * 物理溅射伤害（不可对空，无视迷彩）.
+ */
 function kitNsbomb(ab) {
   const iv = Math.max(0.2, T(ab, 'Passive.interval') ?? 2.5);
   const r = T(ab, 'Passive.range_radius') ?? 1;
   const scale = T(ab, 'Passive.atk_scale') ?? 2;
-  return [{ tick(b, e, a, dt) {
-    if (e.blocking?.length) return;
-    a.t = (a.t ?? 0) + dt;
-    if (a.t + 1e-9 < iv) return;
-    a.t = 0;
-    for (const u of b.alliesInRadius(e.x, e.y, r)) {
-      if (u.alive) b.dealDamage(e, u, { amount: e.s.atk * scale, type: 'phys', tags: ['enemyAbility'] });
-    }
-    b.fx('explode', { x: e.x, y: e.y, id: e.id, r, kind: 'nsbomb' });
-  } }];
+  return [{
+    spawn(b, e) { b.addBuff(e, { key: 'ab:nsbomb_static', persist: true, flags: { noDisplace: true } }); },
+    tick(b, e, a, dt) {
+      if (e.blockedBy) return;
+      a.t = (a.t ?? 0) + dt;
+      if (a.t + 1e-9 < iv) return;
+      a.t = 0;
+      const x = e.x, y = e.y;
+      b.fx('telegraph', { x, y, r, dur: 0.5, kind: 'nsbomb' });
+      b.after(0.5, (bb) => {
+        for (const u of bb.alliesInRadius(x, y, r)) {
+          if (!u.alive || u.isFlying) continue;
+          bb.dealDamage(e, u, { amount: e.s.atk * scale, type: 'phys', ignoreSelect: true, tags: ['enemyAbility'] });
+        }
+        bb.fx('explode', { x, y, id: e.id, r, kind: 'nsbomb' });
+      }, { owner: e });
+    },
+  }];
 }
 
 /**

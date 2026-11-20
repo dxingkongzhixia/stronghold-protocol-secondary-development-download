@@ -256,9 +256,11 @@ export function sortEnemyTargets(battle, attacker, cands, priority) {
 export function sortAllyTargets(enemy, cands) {
   if (cands.length <= 1) return cands;
   const bl = enemy.profile && enemy.profile.blockFree ? null : enemy.blockedBy;   // 索敌不受阻挡影响: no blocker first
+  // A content special priority ("优先攻击高台单位" — 纤核漂游者, PRTS): lower key first, before 仇恨值.
+  const pref = enemy.profile && typeof enemy.profile.sortTargets === 'function' ? enemy.profile.sortTargets : null;
   cands.sort((a, b) => {
     const ba = bl === a ? 0 : 1, bb = bl === b ? 0 : 1;
-    return ba - bb || aggroCmp(a, b);
+    return ba - bb || (pref ? pref(a) - pref(b) : 0) || aggroCmp(a, b);
   });
   return cands;
 }
