@@ -118,7 +118,10 @@ function highestBlockPerSide(b) {
     const i = u.x < 10.5 ? 0 : 1;
     const cur = out[i];
     const blk = u.s.blockCnt;
-    if (!cur || blk > cur.s.blockCnt || (blk === cur.s.blockCnt && u.id < cur.id)) out[i] = u;
+    // PRTS 洪流攻势: the highest block count per side, ties to the highest taunt (仇恨值), then the lower id.
+    const taunt = u.s.taunt ?? 0, curTaunt = cur ? (cur.s.taunt ?? 0) : 0;
+    if (!cur || blk > cur.s.blockCnt
+      || (blk === cur.s.blockCnt && (taunt > curTaunt || (taunt === curTaunt && u.id < cur.id)))) out[i] = u;
   }
   return out.filter(Boolean);
 }
@@ -141,15 +144,21 @@ function summonTile(b, t) {
 
 function spawnGear(b, boss, at, key) {
   if (!key || !at) return null;
-  return b.spawnEnemy(key, partOpts(boss, [at.y, at.x], toEnd(b, at.y, at.x, 'WALK')));
+  // PRTS 械: a summoned 量变之械 walks to the portal on its spawn side (left of the mech -> left portal, else
+  // right), with its spawn tile as the first waypoint.
+  const ends = b.grid.specialTiles('end') || [];
+  const left = at.x < boss.x;
+  const end = ends.find(([, c]) => (left ? c < boss.x : c >= boss.x)) ?? ends[0] ?? [Math.round(at.y), Math.round(at.x)];
+  return b.spawnEnemy(key, partOpts(boss, [at.y, at.x], { motion: 'WALK', start: [at.y, at.x], end, checkpoints: [] }));
 }
 
 function spawnArmorPair(b, boss) {
   const out = [];
   for (let i = 0; i < 2; i++) {
     const dir = i === 0 ? -1 : 1;
-    const y = boss.y;
-    const x = boss.x + dir;
+    // PRTS 械: 左侧 2 格上方 1 格 / 右侧 2 格上方 1 格 (up = one row less).
+    const y = boss.y - 1;
+    const x = boss.x + dir * 2;
     const u = b.spawnEnemy(ARMOR, partOpts(boss, [y, x], waitAt(y, x, 'FLY')));
     if (!u) continue;
     u.mem.regDir = dir;
@@ -295,6 +304,8 @@ function kitMech(ab) {
         // 普通攻击可以攻击全场范围内的我方单位 (PRTS 假想敌：械): the engine's swing only reaches a blocker at range 0,
         // so the normal attack is scripted in tick (100 % ATK physical, engine priority order)
         e.profile.noAttack = true;
+        // 隐秘核心：登场时召唤冲击之械 (PRTS 假想敌：械 · 隐秘核心).
+        if (e.defId === MECH_2) spawnArmorPair(b, e);
       },
       tick(b, e, a, dt) {
         a.atk = (a.atk ?? 0) - dt;
@@ -307,6 +318,8 @@ function kitMech(ab) {
         }
         if (!halfRatio || a.armed || !(e.hpRatio < halfRatio)) return;
         a.armed = true;
+        // PRTS: 首次低于 50% 时强制击倒场上所有冲击之械，随后在两侧上方各召唤一个，进入护甲形态.
+        killArmors(b, e.id);
         spawnArmorPair(b, e);
       },
       hitIn(c, b, e, a) {
@@ -664,6 +677,8 @@ function kitBeast(ab) {
     {
       spawn(b, e) {
         e.profile.noAttack = true;
+        // PRTS 矩兽: 占用 3 个阻挡数 (the def normaliser starts at the record's blockCnt 1).
+        e.blockWeight = 3;
         const v = -(tv(ab, 'Huge.one_minus_status_resistance', -0.8));
         b.applyStatus(e, 'resist', { source: e, value: v > 0 ? Math.min(1, v) : 0.5 });
         if (!b.aliveEnemies().some((o) => o !== e && o.defId === TAIL)) {
@@ -680,7 +695,8 @@ function kitBeast(ab) {
             key: 'reg:overload', persist: true, visible: true,
             mods: { moveMul: tv(ab, 'Overload.move_speed', 2), atkPct: tv(ab, 'Overload.atk', 0.5) },
           });
-          e.blockWeight = tv(ab, 'Overload.block_volume', 1);
+          // 【非命】占用阻挡数 +1 (3 -> 4); Overload.block_volume is the increment, not the absolute weight.
+          e.blockWeight = 3 + tv(ab, 'Overload.block_volume', 1);
           b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: 'overload' });
         }
         a.tram = (a.tram ?? 0) + dt;
@@ -699,24 +715,28 @@ function kitBeast(ab) {
         const allies = b.allies().slice();
         for (let i = 0; i < allies.length; i++) {
           const u = allies[i];
-          // 【兼爱】攻击力 100% 物理 (PRTS), 后兽除外 (below)
-          if (u.alive) hurt(b, e, u, e.s.atk, 'phys', { ignoreSelect: true });
+          // 【兼爱】PRTS 矩兽: "对场上所有非无职业的我方干员/召唤物造成攻击力 200% 的预计算无来源无途径物理伤害".
+          if (u.alive) b.dealDamage(e, u, { amount: e.s.atk * 2, type: 'phys', sourceless: true, canDodge: false, ignoreSelect: true, tags: ['enemyAbility'] });
         }
         const others = b.aliveEnemies().slice();
         for (let i = 0; i < others.length; i++) {
           const o = others[i];
-          if (!o.alive || o === e || o.defId === TAIL) continue;
+          // PRTS: 不会对后兽、召唤物/装置生效.
+          if (!o.alive || o === e || o.defId === TAIL || o.notCountInTotal || o.kind === 'device' || o.tag === 'trap') continue;
           o.counted = false;
           o.inTotal = false;
           b.kill(o, null);
         }
       },
     },
-    timed(combat, (b, e) => {
-      const r = bb(combat, 'range_radius', 1.6);
-      const scale = bb(combat, 'combat_atk_scale', 2);
-      for (const u of areaAllies(b, e, e.x, e.y, r)) hurt(b, e, u, e.s.atk * scale, 'phys');
-    }, { cond: (b, e) => !!e.blockedBy }),
+    // PRTS 尚同(被阻挡): 每次被阻挡时强制触发一次 200% 攻击力、半径 1.6 的物理伤害 (not a 2 s cooldown while blocked).
+    {
+      blocked(c, b, e) {
+        const r = bb(combat, 'range_radius', 1.6);
+        const scale = bb(combat, 'combat_atk_scale', 2);
+        for (const u of areaAllies(b, e, e.x, e.y, r)) hurt(b, e, u, e.s.atk * scale, 'phys', { tags: ['splash'] });
+      },
+    },
   ];
 }
 
@@ -788,6 +808,15 @@ function kitTail(ab) {
         watchDeaths(b, e);
       },
       tick(b, e, a, dt) {
+        // PRTS 后兽: "自缚；被阻挡时进行普通攻击，造成攻击力 100% 的近战途径物理伤害".
+        // (profile.noAttack stays on so the engine never fires its own ranged/skill attack.)
+        if (e.blockedBy) {
+          a.atk = (a.atk ?? 0) - dt;
+          if (a.atk <= 0) {
+            a.atk = Math.max(0.5, e.s.interval);
+            b.dealDamage(e, e.blockedBy, { amount: e.s.atk, type: 'phys', isAttack: true, tags: ['enemyAbility'] });
+          }
+        }
         a.level = (a.level ?? 0) + dt;
         if (!e.mem.regForm2 && a.level + 1e-9 >= levelIv) enterForm2(b, e);
         const touched = a.touched || (a.touched = {});

@@ -74,10 +74,12 @@ test('矩兽: overload below half HP, and it brings its 后兽 (PRTS)', () => {
   const h = field('enemy_2124_dyjsfg');
   h.step(1);
   const boss = h.enemies()[0];
+  assert.equal(boss.blockWeight, 3, '占用 3 阻挡数');
   assert.ok(h.b.enemies.some((e) => e.alive && e.defId === 'enemy_2123_dyjsww'), '后兽 spawns with 矩兽');
   h.b.dealDamage(null, boss, { amount: boss.s.maxHp * 0.6, type: 'true' });
   h.step(2);
   assert.ok(buffs(boss, 'reg:overload').length > 0, 'overload');
+  assert.equal(boss.blockWeight, 4, '【非命】block +1');
 });
 
 test('假想敌：械 enters its armour form below half HP (PRTS) and summons two 冲击之械', () => {
@@ -88,7 +90,11 @@ test('假想敌：械 enters its armour form below half HP (PRTS) and summons tw
   h.b.dealDamage(ally, boss, { amount: boss.s.maxHp * 0.55, type: 'true' });
   h.step(2);
   assert.ok(boss.hpRatio < 0.5);
-  assert.equal(h.b.enemies.filter((e) => e.defId === 'enemy_9027_acfnca' && e.alive).length, 2, 'two 冲击之械');
+  const armors = h.b.enemies.filter((e) => e.defId === 'enemy_9027_acfnca' && e.alive);
+  assert.equal(armors.length, 2, 'two 冲击之械');
+  const xs = armors.map((a) => a.spawnX).sort((a, c) => a - c);
+  assert.equal(xs[1] - xs[0], 4, '2 tiles to each side (4 apart)');
+  assert.equal(armors[0].spawnY, armors[1].spawnY, 'one row, 1 tile up from the mech');
 });
 
 test('假想敌：影役 lowers the block count of operators around it (not other enemies)', () => {
@@ -230,7 +236,9 @@ test('古雕伥 aura: phys/arts from outside the cross is cut to 25 % (PRTS)', (
   const a = h.b.dealDamage(inside, trap, { amount: 10000, type: 'phys', canDodge: false });
   const b = h.b.dealDamage(outside, trap, { amount: 10000, type: 'phys', canDodge: false });
   assert.ok(a > 0 && Math.abs(b / a - 0.25) < 1e-9, `inside ${a}, outside ${b}`);
-  assert.ok(buffs(trap, 'reg:trapHaste').length > 0, 'enemies inside get the haste buff');
+  const haste = buffs(trap, 'reg:trapHaste')[0];
+  assert.ok(haste, 'enemies inside get the haste buff');
+  assert.equal(haste.duration, 15, '雕伥加速 15 s (PRTS)');
 });
 
 test('后兽【无为】activates 古雕伥 on the second form; an active trap spits a 亢角兽 every 20 s (PRTS)', () => {
@@ -265,9 +273,31 @@ test('亢角兽 rests until attacked, then joins the fight (PRTS)', () => {
   assert.ok(horn);
   h.step(1);
   assert.ok(buffs(horn, 'reg:hornRest').length > 0, 'resting');
+  const bound = buffs(horn, 'reg:hornBound')[0];
+  assert.ok(bound, '自缚');
+  assert.equal(bound.duration, 150, '自缚 150 s (PRTS)');
   h.b.dealDamage(h.allies()[0], horn, { amount: 100, type: 'phys' });
   h.step(1);
   assert.ok(buffs(horn, 'reg:hornRest').length === 0, 'awake after a hit');
+  const ready = buffs(horn, 'reg:hornReady')[0];
+  assert.ok(ready, '临战');
+  assert.equal(ready.mods.moveMul, 3, '临战移动速度 +200 % (×3)');
+});
+
+test('后兽: blocked, it makes its 100 % physical melee attack (PRTS)', () => {
+  const h = makeBattle({
+    data: ds, seed: 11, autoFinish: false,
+    units: [{ chessId: 'chess_char_1_02_a', row: 9, col: 6 }],
+    enemies: [{ key: 'enemy_2123_dyjsww', time: 0, pos: [9, 6.4] }],
+  });
+  setGameData(ACT3);
+  h.step(1);
+  const tail = h.enemies().find((e) => e.defId === 'enemy_2123_dyjsww');
+  const ally = h.allies()[0];
+  assert.equal(tail.blockedBy, ally, 'blocked by the operator');
+  const hp = ally.hp;
+  h.run(7); // its attack interval is 6 s
+  assert.ok(ally.hp < hp, 'the blocked 后兽 attacks');
 });
 
 test('古雕伥 close-mouth: 20 DP, 150 s, no summon meanwhile, summons once on reopen, once per battle (PRTS 技能)', () => {

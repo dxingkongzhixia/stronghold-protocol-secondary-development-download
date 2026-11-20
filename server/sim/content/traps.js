@@ -14,6 +14,8 @@
 //     自动生成一条 (the talent's own `interval` 15 is the unused default; PRTS and the skill both say 20)
 //   · 亢角兽 初始休憩, 受击后与周围其他亢角兽一同进入临战 (`enemy_1303_mhshep_2` description)
 
+import { hypot } from '../detmath.js';
+
 export const TRAP_KEY = 'trap_258_rgcssm';
 export const HORN_KEY = 'enemy_1303_mhshep_2';
 
@@ -61,10 +63,12 @@ export const HORN_DEF = Object.freeze({
 const SUMMON_INTERVAL = 20;
 /** 闭嘴 skill: cost / duration (client `sktok_rgcssm`: `cost` 20, `duration` 150; one use per battle). */
 export const TRAP_CLOSE_COST = 20, TRAP_CLOSE_SECONDS = 150;
-/** 亢角兽 wakes when one of its kind is hit: the same group within this range (tiles) [ASSUMED]. */
-const HORN_WAKE_RANGE = 2;
-/** Aura refresh cadence and buff life (s). */
-const AURA_REFRESH = 0.25, AURA_LIFE = 0.6;
+/** 亢角兽 wakes when one of its kind is hit: the same group within radius 1.1 (PRTS 亢角兽). */
+const HORN_WAKE_RANGE = 1.1;
+/** 亢角兽 休憩 自缚 time (s, PRTS 亢角兽 "默认为150秒"). */
+const HORN_REST_SECONDS = 150;
+/** Aura refresh cadence (s); the 雕伥加速 is 15 s (PRTS), the 无视雕伥减伤 marker dies at once on leaving (0.3 s). */
+const AURA_REFRESH = 0.25, HASTE_LIFE = 15, PIERCE_LIFE = 0.3;
 
 const tileKey = (r, c) => `${Math.round(r)},${Math.round(c)}`;
 
@@ -158,18 +162,21 @@ function spitHorn(b, trap) {
   return u;
 }
 
-/** Wake a resting 亢角兽 (and, from a `hit`, its group). */
+/** Wake a resting 亢角兽 (and, from a `hit`, its group): 【临战】移动速度 +200 % (×3, PRTS). */
 function wakeHorn(b, e, a) {
   if (!a.resting) return;
   a.resting = false;
   b.removeBuff(e, 'reg:hornRest');
+  b.removeBuff(e, 'reg:hornBound');
+  b.addBuff(e, { key: 'reg:hornReady', persist: true, visible: true, mods: { moveMul: 3 } });
 }
 
 function wakeGroup(b, src, a) {
   wakeHorn(b, src, a);
   for (const o of b.aliveEnemies()) {
     if (o === src || o.defId !== HORN_KEY || !o.mem.ab) continue;
-    if (Math.abs(o.x - src.x) <= HORN_WAKE_RANGE && Math.abs(o.y - src.y) <= HORN_WAKE_RANGE) wakeHorn(b, o, o.mem.ab);
+    // PRTS: 半径 1.1 范围内的其它角兽/亢角兽.
+    if (hypot(o.x - src.x, o.y - src.y) <= HORN_WAKE_RANGE) wakeHorn(b, o, o.mem.ab);
   }
 }
 
@@ -200,10 +207,10 @@ export function kitTrap() {
         a.aura = 0;
         for (const o of b.aliveEnemies()) {
           if (!inZone(a.zone, o)) continue;
-          b.addBuff(o, { key: 'reg:trapHaste', duration: AURA_LIFE, refresh: 'replace', mods: { aspd: 50, moveMul: 1.5 } });
+          b.addBuff(o, { key: 'reg:trapHaste', duration: HASTE_LIFE, refresh: 'replace', mods: { aspd: 50, moveMul: 1.5 } });
         }
         for (const u of b.allies()) {
-          if (inZone(a.zone, u)) b.addBuff(u, { key: 'reg:trapPierce', duration: AURA_LIFE, refresh: 'replace', visible: true });
+          if (inZone(a.zone, u)) b.addBuff(u, { key: 'reg:trapPierce', duration: PIERCE_LIFE, refresh: 'replace', visible: true });
         }
       }
       if (a.closed) {
@@ -236,7 +243,9 @@ export function kitHorn() {
   return [{
     spawn(b, e, a) {
       a.resting = true;
-      b.addBuff(e, { key: 'reg:hornRest', persist: true, visible: true, flags: { noMove: true, disarm: true } });
+      // PRTS 亢角兽: 休憩 = no attack; 自缚 lasts 150 s (it may walk after that, but still does not attack until 临战).
+      b.addBuff(e, { key: 'reg:hornRest', persist: true, visible: true, flags: { disarm: true } });
+      b.addBuff(e, { key: 'reg:hornBound', duration: HORN_REST_SECONDS, visible: true, flags: { noMove: true } });
     },
     taken(c, b, e, a) {
       if (a.resting) wakeGroup(b, e, a);
