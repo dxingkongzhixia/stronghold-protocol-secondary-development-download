@@ -169,6 +169,12 @@ describe('board geometry (layout.js)', () => {
     assert.ok(buildBoard(stages.act2autochess_m02).terrain.mire.length > 0);
     assert.ok(buildBoard(stages.act2autochess_m03).terrain.smog.length > 0);
     assert.ok(buildBoard(stages.act1autochess_m04).terrain.infection.length > 0);
+    // 规程 MAP09 隐匿地块: 'w' (tile_duel_grassland) is terrain.duelGrass, played by render/app.js syncGrassFx
+    {
+      const rows = Array.from({ length: ROWS }, (_, r) => (r === 10 ? 'w'.repeat(COLS) : '#'.repeat(COLS)));
+      assert.equal(classifyStage({ rows })[10][5].glyph, 'w');
+      assert.equal(buildBoard({ id: 'grass', rows, tiles: {} }).terrain.duelGrass.length, COLS);
+    }
     // blowers are active devices of act2 m01; inactive crates of act1 m02 are not built
     assert.ok(buildBoard(stages.act2autochess_m01).devices.some((d) => d.kind === 'blower' && d.dir === 'DOWN'));
     assert.ok(!buildBoard(stages.act1autochess_m02).devices.some((d) => d.kind === 'crate'));

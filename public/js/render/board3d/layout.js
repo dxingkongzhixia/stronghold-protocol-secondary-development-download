@@ -327,7 +327,7 @@ export function buildBoard(stage, opts = {}) {
   const topZ = (t) => (t.glyph === 'd' ? -BASIN : t.h);
   const board = new Geom(), decal = new Geom(), pipe = new Geom(), glass = new Geom();
   const raised = new Geom(), raisedDecal = new Geom();
-  const gates = [], terrain = { water: [], mire: [], smog: [], infection: [] };
+  const gates = [], terrain = { water: [], mire: [], smog: [], infection: [], duelGrass: [] };
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
@@ -385,6 +385,7 @@ export function buildBoard(stage, opts = {}) {
       case 'm': terrain.mire.push([r, c]); break;
       case 'g': terrain.smog.push([r, c]); break;
       case 'i': terrain.infection.push([r, c]); break;
+      case 'w': terrain.duelGrass.push([r, c]); break;
       default: break;
     }
   }
