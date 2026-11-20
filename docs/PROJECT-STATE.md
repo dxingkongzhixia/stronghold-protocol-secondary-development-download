@@ -1,11 +1,24 @@
 # 项目现状一览（PROJECT-STATE）
 
-> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-11-14**（台式机 `_merge-scratch` + 线上实测）。插件 / Forge / studio / 控制台见
-> [`docs/PLUGINS.md`](PLUGINS.md) 与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10。
+> 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-11-20**（本仓库单树 clone；线上记录保留为历史）。
+> 插件 / Forge / studio / 控制台见 [`docs/PLUGINS.md`](PLUGINS.md) 与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10。
 > 文档入口（2026-10-25 重新梳理）：人类 [`DEVELOPER.md`](DEVELOPER.md)、AI [`AI-AGENT.md`](AI-AGENT.md)、
 > 规则 [`RULES.md`](RULES.md)、插件 [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)。
 > 功能细节与每次改动的来龙去脉见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)（§1–§50）。
 > 按问题查文档见 [`docs/QUERY-INDEX.md`](QUERY-INDEX.md)。
+
+## 0. 2026-11-20 当前状态（本机 clone，未部署）
+
+| 项 | 值 |
+|---|---|
+| HEAD | `47a021851`（`master` 与 `origin/master` 同；工作树干净） |
+| 版本 | `0.4.0` |
+| 本轮主题 | 规程 boss / 小怪 / 15 名干员核对；MAP09 隐匿地块官方 FX；`{showtag_value_N}`；本地主题包 P1–P3（zip / 多语音 / 官方包兼容 / Spine） |
+| 生产 / 中继 | 仍是 `d15f852d2b2b` / `7fdbb63fd`，**11-20 的改动未部署** |
+| 测试 | 全量 `9408 / 9323 通过 / 10 失败 / 75 跳过`（10 个既有失败）；主题包 11/11；文档 35/35 |
+| 交接 | 当前待办与延后项以 [`HANDOFF-2026-11-19.md`](HANDOFF-2026-11-19.md) 为准（§0、§7.6） |
+
+> 下面的 §1–§3 是项目长期结构；§3 起的大表是**历史部署记录**，不代表当前线上版本。
 
 ---
 

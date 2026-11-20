@@ -130,6 +130,9 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | 成就统计 (achievements: card + panel, seven groups, 战果纪录, 盟约 / 策略 records) | `public/js/ui/achievements.js`, `public/js/ui/achievementModel.js`, `public/css/screens/achievements.css`; entries in `public/js/screens/lobby.js` and `screens/hub/lobby.js`; records from `ui/stats.js` + `ui/statsSync.js` (`stats.list`) |
 | official statistics template art (37 files + fonts) | `public/assets/ui/statistics/`, `tools/fetch-stats-assets.mjs`, `tools/assets/stats-template.mjs`, `data/assets.json` (`ui['statistics/*']`) |
 | 特殊 UI 版本（ark-proto 访问终端 / PRTS gate 静态快照） | [`docs/SPECIAL-UI.md`](SPECIAL-UI.md), `docs/special-ui/ark-proto-gate/` |
+| local interface theme packs (spTheme/1: colours, image slots, 9-slice, character/voice, Spine, zip) | [`docs/examples/theme-pack/README.md`](examples/theme-pack/README.md); `shared/themePack.js`, `public/js/themePacks.js`, `public/js/zip.js`, `public/js/ui/themeCharacter.js`, `public/css/theme-pack.css`; settings `public/js/ui/settings.js`; official pack extractor `tools/local-extract/autochess_themes.py` |
+| official `{showtag_value_N}` live numbers | `server/match/showTags.js`, `shared/garrisonUpgrades.js`, `public/js/ui/showTags.js`, `server/match/player/views.js` (pieceView), `public/js/ui/gameComponents.js` (RichText) |
+| MAP09 隐匿地块官方地块特效 | `public/js/render/app.js` (`syncGrassFx`), `public/js/render/board3d/layout.js` (`terrain.duelGrass`), `public/js/render/style.js` (`w`), `tools/local-extract/fx.py` (`tile.duelGrass`) |
 | per-character voice overrides (语音语言) | `public/js/voicePrefs.js` |
 | 文字大小 (text-size) and 弹药数量 (ammo count) settings | `public/js/ui/gameLogic/settings.js`, `public/css/theme.css` (`--t`), `public/js/render/app.js` (`ammoCount`) |
 | device slabs on official scenes (#569) | `public/js/render/board3d/scene.js` (`M.raised`) |
