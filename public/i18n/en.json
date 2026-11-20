@@ -2157,5 +2157,13 @@
   "只改变这个浏览器里的界面；主题包是本地的，不会上传，也不影响其他博士。": "Changes this browser’s interface only; packs are local, never uploaded, and other players are unaffected.",
   "还没有主题包": "No theme packs yet",
   "导入主题包（选择包含 theme.json 的文件夹）": "Import a theme pack (choose the folder with theme.json)",
-  "导入主题包（.zip）": "Import a theme pack (.zip)"
+  "导入主题包（.zip）": "Import a theme pack (.zip)",
+  "卫戍协议：规程": "Stronghold Protocol: Regulation",
+  "规程": "Regulation",
+  "古雕伥": "Ancient Statuegeist",
+  "本服务器只启用了一个官方版本": "This server offers only one official version",
+  "切换官方版本": "Switch official version",
+  "服务器默认": "Server default",
+  "本机选择": "Chosen on this device",
+  "当前": "Current"
 }

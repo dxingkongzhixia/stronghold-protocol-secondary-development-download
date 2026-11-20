@@ -53,9 +53,10 @@ test('mark statuses drive the auras index.json carries on an ability target', { 
   assert.deepEqual(EXTRA_STATUS_LOOPS.tocka_s1_mark, ['tocka_skill_01_buff_01', 'tocka_skill_01_buff_02']);
   assert.deepEqual(EXTRA_STATUS_LOOPS.tocka_s2_mark, ['tocka_skill_02_buff_02']);
   assert.deepEqual(EXTRA_STATUS_LOOPS.pedro_s2_mark, ['pedro_skill_02_buff_01']);
-  // 冻河 S2's buff aura is created on the ally: the plan must not draw it on the caster as well.
+  // 冻河 S2's buff aura is created on the ally: the plan must not draw it on the caster as well. The kit's allyMark
+  // binding claims the key first (`at: 'target'` → the 'bound' row), so the caster never plays it.
   const plan = skillPlan(idx, 'char_4244_tocka', 'skchr_tocka_2');
   assert.ok(!plan.loop.some((e) => e.key === 'tocka_skill_02_buff_02'), 'not a loop on 冻河');
-  assert.ok(plan.unmapped.some((e) => e.key === 'tocka_skill_02_buff_02' && e.reason === 'status'), 'carried by the mark status');
+  assert.ok(plan.unmapped.some((e) => e.key === 'tocka_skill_02_buff_02' && e.reason === 'bound'), 'carried by the mark status');
   assert.deepEqual(STATUS_CARRIED.skchr_tocka_2, ['tocka_skill_02_buff_02']);
 });

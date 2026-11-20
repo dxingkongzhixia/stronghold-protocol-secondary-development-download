@@ -358,6 +358,11 @@ test('余 S2 on the real leader rounds: 假想敌：铳 teleported onto 余 walk
     assert.deepEqual([e.y, e.x], [yu.tileR, yu.tileC], 'teleported onto 余');
     assert.equal(e.route.pts, null, 'its path is re-planned from there');
     if (key === 'enemy_9017_achunt') {
+      // A ranged 铳 (range 2) with 余 under it stops and shoots him — since the PRTS ASPD rule a new target starts at
+      // 1 stack, so it fires every ~1.1 s and holds its ground. Take 余 off the field: the leader must then walk on
+      // (the point of the teleport is that it re-plans instead of freezing on the tile).
+      h.b.retreat(yu, { reason: 'test' });
+      h.step();
       assert.ok(h.runUntil(() => e.route.legIdx !== leg0, 25), '不可阻挡: walks on to its next patrol checkpoint');
     } else {
       h.step(1);

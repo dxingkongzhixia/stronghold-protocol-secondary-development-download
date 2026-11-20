@@ -121,21 +121,31 @@ test('隐秘核心铳: the other gun\'s call during a chase retargets every spri
   assert.equal(h.b.errorCount, 0);
 });
 
-test('隐秘核心铳: with no gun left on the field the spring holds still, invulnerable and disarmed, until the gain ends', () => {
+test('隐秘核心铳: a 铳 death takes every other 铳 and 碎铳之簧 with it (PRTS 死亡时强制击杀)', () => {
+  // 假想敌：铳 talent "死亡时强制击杀全场的其他假想敌：铳 / “碎铳之簧”" (UPSTREAM-REGULATION 2026-11-19). The
+  // springs' 追逐 mode has no arrival clause, but the talent means an orphaned spring cannot outlive the last gun:
+  // the tick's "no gun left: hold still" branch is only defensive.
   const h = arena({ solo: true, manual: true, cooldown: 45 });
   h.step();
   const gun = h.spawn(GUN, { pos: [3, 5], tag: 'boss', mods: { speedMul: 0 } });
   const spring = h.spawn(SPRING, { pos: [3, 1], tag: 'part' });
   h.step(2);
-  const d = spring.mem.ab.dash;
-  assert.ok(d, 'chasing');
+  assert.ok(spring.mem.ab.dash, 'chasing');
   h.b.kill(gun, null);
   h.step();
-  const at = [spring.x, spring.y];
-  h.run(1);
-  assert.deepEqual([spring.x, spring.y], at, 'no gun to follow: it stands');
-  assert.equal(spring.mem.ab.dash, d, 'the chase is not over');
-  assert.ok(spring.s.flags.invulnerable && spring.s.flags.disarm);
+  assert.ok(!gun.alive, 'the gun is down');
+  assert.ok(!spring.alive, 'the spring dies with the last gun');
+  assert.equal(h.b.errorCount, 0);
+});
+
+test('隐秘核心铳: the chase holds for the whole 5 s gain, then the dash and its flags clear', () => {
+  const h = arena({ solo: true, manual: true, cooldown: 45 });
+  h.step();
+  h.spawn(GUN, { pos: [3, 5], tag: 'boss', mods: { speedMul: 0 } });
+  const spring = h.spawn(SPRING, { pos: [3, 1], tag: 'part' });
+  h.step(2);
+  const d = spring.mem.ab.dash;
+  assert.ok(d, 'chasing');
   h.run(d.until - h.b.time + h.TICK * 2);
   assert.equal(spring.mem.ab.dash, null);
   assert.ok(!spring.s.flags.invulnerable);

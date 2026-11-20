@@ -211,7 +211,6 @@ ENEMY_ICONS = [
 # or an effect only, and no avatar in either install's asset index) — 乌尔比安's 从不混淆的方向, 圣聆初雪's frozen
 # protection point, 酒神's 迷狂牢笼, 贝洛内's 牵绊, 予愿安洁莉娜's “一会儿见！” (token_10039 / 10058 / 10055 / 10065 / 10071).
 TOKEN_SPINES = [
-    'trap_258_rgcssm',
     'token_10002_kalts_mon3tr', 'token_10003_cgbird_bird', 'token_10005_mgllan_drone1', 'token_10005_mgllan_drone2',
     'token_10005_mgllan_drone3', 'token_10007_phatom_twin', 'token_10008_cqbw_box', 'token_10009_weedy_cannon',
     'token_10020_ling_soul1', 'token_10020_ling_soul2', 'token_10020_ling_soul3', 'token_10024_ebnhlz_rcube',
@@ -225,6 +224,11 @@ TOKEN_SPINES = [
 ]
 TOKEN_PACKS = 'pkgrps/btl_pfb_tokens_*.ab'
 TOKEN_SPINE_SUB = 'spine/token'
+
+# Models from the token packs whose manifest entry is an ENEMY: 后兽's 古雕伥 (trap_258_rgcssm) is a character_table
+# TRAP whose battle Spine lives in btl_pfb_tokens_4.ab, but the client finds it through
+# data/assets.json enemies[id].spineLocal, so it is written under spine/enemy/<id> (enemy_spine_id accepts trap_*).
+TOKEN_ENEMY_SPINES = ['trap_258_rgcssm']
 
 # Derived three.js maps: (output subdir, source texture, kind, output name). 'normal_rg' rebuilds Z of a two-channel
 # (BC5 or DXT5nm) normal map into an RGB tangent-space map; 'rough_from_gloss' turns Unity's metallic/gloss map
@@ -869,6 +873,7 @@ def expected_local_groups():
     """
     keys = [job[1] for job in JOBS]
     keys += [f'{ENEMY_SPINE_SUB}/{i}' for i in ENEMY_SPINES]
+    keys += [f'{ENEMY_SPINE_SUB}/{i}' for i in TOKEN_ENEMY_SPINES]
     keys += [f'{TOKEN_SPINE_SUB}/{i}' for i in TOKEN_SPINES]
     keys += [f'{scenes.SCENE_SUB}/{sid}' for sid, _deps in scenes.SCENES]
     keys.append(scenes.TEX_SUB)
@@ -1000,7 +1005,7 @@ def export_token_spines(ab_root, out_root, manifest, log, ids=None):
     found."""
     import aklz4  # noqa: F401  (registers the LZ4AK decoder)
     import UnityPy
-    wanted, n = set(TOKEN_SPINES if ids is None else ids), 0
+    wanted, n = set((TOKEN_SPINES + TOKEN_ENEMY_SPINES) if ids is None else ids), 0
     for f in sorted(Path(ab_root).glob(TOKEN_PACKS)):
         if not wanted:
             break
@@ -1014,7 +1019,7 @@ def export_token_spines(ab_root, out_root, manifest, log, ids=None):
             tid = token_prefab_id(name, wanted)
             if not tid:
                 continue
-            sub = f'{TOKEN_SPINE_SUB}/{tid}'
+            sub = f'{ENEMY_SPINE_SUB}/{tid}' if tid in TOKEN_ENEMY_SPINES else f'{TOKEN_SPINE_SUB}/{tid}'
             try:
                 node = pick_spine_node(prefab_spine_nodes(ref.read_typetree(), objects))
                 sda = objects.get(node[2]['m_PathID']) if node and not node[2].get('m_FileID') else None
@@ -1107,6 +1112,7 @@ def main():
                                         'options': GUIDE_WEBP_OPTIONS[GUIDE_WEBP_MODE]},
                           'enemySpines': {'bundles': ENEMY_ART, 'sub': ENEMY_SPINE_SUB, 'ids': ENEMY_SPINES},
                           'tokenSpines': {'bundles': TOKEN_PACKS, 'sub': TOKEN_SPINE_SUB, 'ids': TOKEN_SPINES},
+                          'tokenEnemySpines': {'bundles': TOKEN_PACKS, 'sub': ENEMY_SPINE_SUB, 'ids': TOKEN_ENEMY_SPINES},
                           'expectedGroups': expected_local_groups(),
                           'fx': {'sub': fx.FX_SUB, 'groups': list(fx.FX_GROUPS), 'version': fx.FORMAT_VERSION,
                                  'indexVersion': fx.INDEX_VERSION, 'meshVersion': fx.MESH_VERSION,
@@ -1161,7 +1167,7 @@ def run_extract(args, ab_root):
         else:
             icon_list = [x.strip() for x in raw.split(',') if x.strip()]
     icon_ids = spine_ids(args.only, ENEMY_ICON_SUB, icon_list)
-    token_ids = spine_ids(args.only, TOKEN_SPINE_SUB, TOKEN_SPINES)
+    token_ids = spine_ids(args.only, TOKEN_SPINE_SUB, TOKEN_SPINES) + spine_ids(args.only, ENEMY_SPINE_SUB, TOKEN_ENEMY_SPINES)
     stage_ids = scene_ids(args.only)
     reg_ids = regulation_ids(args.only)
     entry_on = bool(args.only) and wants_sub(args.only, season_entry.SUB)

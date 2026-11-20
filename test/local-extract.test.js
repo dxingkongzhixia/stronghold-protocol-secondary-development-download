@@ -56,10 +56,15 @@ describe('extract.py helpers (no UnityPy needed)', { skip: !PY && 'no python3' }
   test('job table: the token Spine models (TOKEN_SPINES) come from the battle token packs into spine/token/<id>; no plain job writes under spine/', () => {
     const r = spawnSync(PY, [path.join(TOOL, 'extract.py'), '--print-jobs'], { encoding: 'utf8', env: ENV });
     assert.equal(r.status, 0, r.stderr);
-    const { jobs, tokenSpines, enemySpines } = JSON.parse(r.stdout);
+    const { jobs, tokenSpines, enemySpines, tokenEnemySpines } = JSON.parse(r.stdout);
     assert.equal(tokenSpines.bundles, 'pkgrps/btl_pfb_tokens_*.ab');
     assert.equal(tokenSpines.sub, 'spine/token');
     assert.equal(enemySpines.sub, 'spine/enemy');
+    // the trap's Spine lives in the token packs but the client resolves it as an enemy (enemies[id].spineLocal):
+    // it is its own list, written under spine/enemy/, never one of the 40 token overlays
+    assert.equal(tokenEnemySpines.sub, 'spine/enemy');
+    assert.deepEqual(tokenEnemySpines.ids, ['trap_258_rgcssm']);
+    assert.ok(!tokenSpines.ids.includes('trap_258_rgcssm'), 'not a spine/token model');
     // every listed id is a token of the game data without a web model (data/assets.json tokens[id].spine), sorted, unique
     const ids = tokenSpines.ids;
     assert.equal(ids.length, 40);

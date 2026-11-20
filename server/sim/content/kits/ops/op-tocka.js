@@ -35,7 +35,8 @@ export default {
             const allies = battle.alliesInGrid(unit).filter((a) => a !== unit && !triggerOf(a, unit, S1)).slice(0, num(b1.max_target, 2));
             for (const a of allies) {
               placeTrigger(battle, unit, a, { kind: S1, status: 'tocka_s1_mark' });
-              // The official mark on the ally: its ON_BUFF_START one-shot (tocka_skill_01_buff_02_start_01).
+              // The official mark on the ally: its buff loops tocka_skill_01_buff_02 / _01, bound to this cue by
+              // render/vfx/regulation-fx.js (the _start_01 one-shot is the mark's arrival and is not bound).
               battle.fx('mark', { x: a.x, y: a.y, id: unit.id, target: a.id });
             }
           },

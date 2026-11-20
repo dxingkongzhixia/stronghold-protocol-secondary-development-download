@@ -508,7 +508,8 @@ Other renderer rules from research 07 §5.4–5.5:
 - **Inline-def units** (2026-11-20): 后兽's 古雕伥 (`trap_258_rgcssm`, a trap whose battle Spine lives in the
   token packs) and the 亢角兽 it spits (`enemy_1303_mhshep_2`, an ISW-DF enemy) are spawned with inline defs
   (`server/sim/content/traps.js`) and named by no data file. Their client models are extracted like the others
-  (`ENEMY_SPINES` / `TOKEN_SPINES` with `--only spine/enemy` / `spine/token`); the trap is written under
+  (`ENEMY_SPINES` / `TOKEN_SPINES` with `--only spine/enemy` / `spine/token`); the trap is read from the token packs
+  but listed in `TOKEN_ENEMY_SPINES`, so it is written under
   `spine/enemy/trap_258_rgcssm/` (the enemy model finder accepts `trap_*`) so `data/assets.json
   enemies[trap_258_rgcssm].spineLocal` resolves, and `tools/fetch-assets.mjs` plans both as `INLINE_DEF_UNITS`.
   Their extraction is also what added `enemy_1303_mhshep_2`'s SFX pool to the manifest.

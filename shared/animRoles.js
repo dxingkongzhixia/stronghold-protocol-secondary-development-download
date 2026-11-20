@@ -66,7 +66,12 @@ function clip(begin, loop, end, via) {
 const isDown = (n) => /down/i.test(n);
 const isEdge = (n) => /_(begin|start|end)$/i.test(n);
 
-/** First name (sorted) matching `re` and passing `ok`. */
+/**
+ * First name (sorted) matching `re` and passing `ok`.
+ * @param {string[]} names
+ * @param {RegExp} re
+ * @param {(name: string) => boolean} [ok]
+ */
 function firstLike(names, re, ok = () => true) {
   return names.filter((n) => re.test(n) && ok(n)).sort()[0] ?? null;
 }

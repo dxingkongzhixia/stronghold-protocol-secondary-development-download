@@ -124,7 +124,10 @@ test('冻河 S1: placing a mark emits the official mark fx on the marked ally', 
 });
 
 test('the trigger and stance kit fx are bound to their official prefabs', () => {
-  assert.deepEqual(FX_BINDINGS.skchr_tocka_1.mark.keys, ['tocka_skill_01_buff_02_start_01']);
+  // 冻河 S1's mark is a pair of official loops on the ally (tocka_s1[trigger]'s tocka_skill_01_buff_01 and
+  // EmptyAnimatedAbility._activeBuffs' tocka_skill_01_buff_02), bound to the kit's 'mark' cue; S1's one-shot
+  // buff_02_start_01 is the mark's arrival, not the loop that stays on the ally.
+  assert.deepEqual(FX_BINDINGS.skchr_tocka_1.mark.keys, ['tocka_skill_01_buff_02', 'tocka_skill_01_buff_01']);
   assert.equal(FX_BINDINGS.skchr_tocka_1.mark.at, 'target');
   assert.deepEqual(FX_BINDINGS.skchr_oxi_2.stance.keys, ['oxi_skill_02_hit_01']);
   assert.equal(FX_BINDINGS.skchr_oxi_2.stance.at, 'target');
