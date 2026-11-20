@@ -139,18 +139,37 @@ function kitDsuply(ab, e) {
 }
 
 /**
- * 残党乐团圆号手 / 鼓手 — PRTS 崔林特尔梅之金.  Stances (the fork alternates them every 3rd attack [ASSUMED]; the
- * client data only carries the two sets of numbers):
+ * 残党乐团圆号手 / 鼓手 — PRTS 崔林特尔梅之金.
  *   沉郁: ATK +20 %, ASPD −50, move speed FINAL 50 %;  激昂: ASPD +50, move speed FINAL 200 %, DEF −50 %.
+ * The client data carries only the two sets of numbers and no 变奏 source; act3's tables apply none (mainline leaves
+ * `switchMode` unused as well). So: NO stance numbers by default — a stance is applied only when the enemy itself
+ * receives a 变奏 signal (buff/flag `enthu` / `depressed` or a `buff_enthu` / `buff_depressed` key).
  *   · 圆号手: 每次普通攻击回复 1 SP (0/2); the next attack (the 3rd) also hits ONE other ally within 1.5 of the
  *     target for 100 % ATK — physical, or arts while 激昂; its normal attack is arts while 激昂.
  *   · 鼓手: 0/2 attack recovery; the 3rd attack splashes every ally within 2.0 (3.0 while 激昂) for 100 % ATK arts.
  */
 function kitSwitchMode(ab, e) {
-  const P = { n: 0, mode: 'enthu' };
+  const P = { n: 0, mode: null, acc: 0 };
   const horn = e.defId.includes('ltnhor');
   const pre = (x) => `switchMode.enemy_act29side[buff_${x === 'enthu' ? 'enthu' : 'depressed'}].`;
+  /** The 变奏 this enemy currently carries, from its aggregated flags first, then a named buff. */
+  const stanceOf = () => {
+    if (e.s.flags.enthu) return 'enthu';
+    if (e.s.flags.depressed) return 'depressed';
+    for (const bf of e.buffs || []) {
+      const k = String(bf && bf.key || '');
+      if (k.includes('buff_enthu') || k.endsWith(':enthu')) return 'enthu';
+      if (k.includes('buff_depressed') || k.endsWith(':depressed')) return 'depressed';
+    }
+    return null;
+  };
   const apply = (b2, x) => {
+    if (!x) {
+      b2.removeBuff(e, 'ab:switchmode');
+      if (horn) e.profile.dmgType = 'phys';
+      P.mode = null;
+      return;
+    }
     const p = pre(x);
     b2.addBuff(e, {
       key: 'ab:switchmode', refresh: 'replace', visible: true,
@@ -163,9 +182,17 @@ function kitSwitchMode(ab, e) {
       },
     });
     if (horn) e.profile.dmgType = x === 'enthu' ? 'arts' : 'phys';
+    P.mode = x;
   };
   return [{
-    spawn(b2) { apply(b2, P.mode); },
+    spawn(b2) { apply(b2, stanceOf()); },
+    tick(b2, e2, a, dt) {
+      a.acc = num(a.acc) + dt;
+      if (a.acc < 0.25) return;
+      a.acc = 0;
+      const s = stanceOf();
+      if (s !== P.mode) apply(b2, s);
+    },
     attack(c, b2) {
       P.n += 1;
       if (P.n % 3 !== 0) return;
@@ -189,8 +216,6 @@ function kitSwitchMode(ab, e) {
           b2.dealDamage(e, u, { amount: e.s.atk, type: 'arts', tags: ['enemyAbility'] });
         }
       }
-      P.mode = P.mode === 'enthu' ? 'depressed' : 'enthu';
-      apply(b2, P.mode);
     },
   }];
 }

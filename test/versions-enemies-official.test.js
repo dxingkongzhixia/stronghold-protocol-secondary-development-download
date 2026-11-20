@@ -80,12 +80,12 @@ test('不眠雪山: the two stances and the bond buff are installed', () => {
   assert.ok(buffs(e, 'ab:acsgnt_sit').length > 0, 'sit stance');
 });
 
-test('残党乐团圆号手: a switch-mode buff is installed', () => {
+test('残党乐团圆号手: no stance buff without a 变奏 source (option A)', () => {
   const h = field();
   h.step(1);
   const e = h.b.spawnEnemy('enemy_1373_ltnhor', { pos: [6, 8] });
   h.step(1);
-  assert.ok(buffs(e, 'ab:switchmode').length > 0, 'switch mode');
+  assert.equal(buffs(e, 'ab:switchmode').length, 0, 'no stance by default');
 });
 
 test('萨卡兹子裔补给车: only the 重生造物 on the field get the +10 % ATK / apoptosis aura', () => {
@@ -236,17 +236,22 @@ test('萨卡兹子裔集恨者: it counts every 重生造物 on the field', () =
   assert.ok(Math.abs(lord.mods.atkPct - 0.3) < 1e-9, `2 × 15 % (${lord.mods.atkPct})`);
 });
 
-test('残党乐团: the stance move speed is the FINAL multiplier (激昂 200 %, 沉郁 50 %)', () => {
+test('残党乐团: no 变奏 source means no stance numbers; a 变奏 signal applies the final multipliers', () => {
   const h = field();
   h.step(1);
   const e = h.b.spawnEnemy('enemy_1373_ltnhor_2', { pos: [6, 8] });
-  const target = h.allies()[0];
-  h.step(0.1);
+  h.run(0.3);
+  assert.equal(buffs(e, 'ab:switchmode').length, 0, 'no stance by default');
+  assert.equal(e.profile.dmgType, 'phys', 'no arts conversion without 激昂');
+  h.b.addBuff(e, { key: 'test:enthu', persist: true, flags: { enthu: true } });
+  h.run(0.3);
   assert.equal(buffs(e, 'ab:switchmode')[0].mods.moveMul, 2, '激昂: 最终 200 %');
-  const fire = () => h.b.emit('attack', { attacker: e, targets: [target], targetDeployments: new Map([[target, target.deploySeq]]), isSkill: false });
-  fire(); fire(); fire();
-  h.step(0.1);
+  assert.equal(e.profile.dmgType, 'arts', '激昂: normal attack arts');
+  h.b.removeBuff(e, 'test:enthu');
+  h.b.addBuff(e, { key: 'test:depressed', persist: true, flags: { depressed: true } });
+  h.run(0.3);
   assert.equal(buffs(e, 'ab:switchmode')[0].mods.moveMul, 0.5, '沉郁: 最终 50 %');
+  assert.equal(e.profile.dmgType, 'phys', '沉郁: physical');
 });
 
 test('战线推进者: the 强击 marker is ×1.8, not the 250 % 封阻物 multiplier', () => {
