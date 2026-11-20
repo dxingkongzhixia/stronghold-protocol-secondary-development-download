@@ -97,6 +97,23 @@ test('假想敌：械 enters its armour form below half HP (PRTS) and summons tw
   assert.equal(armors[0].spawnY, armors[1].spawnY, 'one row, 1 tile up from the mech');
 });
 
+test('械护甲形态: an off-side hit is still cut while one 冲击之械 lives (PRTS)', () => {
+  const h = field('enemy_9029_acfnc', { units: [{ chessId: 'chess_char_1_02_a', row: 9, col: 4 }] });
+  h.step(1);
+  const boss = h.enemies()[0];
+  const ally = h.allies()[0];
+  h.b.dealDamage(ally, boss, { amount: boss.s.maxHp * 0.55, type: 'true' });
+  h.step(2);
+  const armors = h.b.enemies.filter((e) => e.defId === 'enemy_9027_acfnca' && e.alive);
+  assert.equal(armors.length, 2);
+  const left = armors.find((a) => a.x < boss.x);
+  assert.ok(left, 'a left 冲击之械');
+  h.b.kill(left, null);                       // the source's side no longer has an armour
+  const dealt = h.b.dealDamage(ally, boss, { amount: 4000, type: 'phys', canDodge: false });
+  // 4000 × 0.5 - 600 DEF ≈ 1400; without the cut it would be ≈ 3400.
+  assert.ok(dealt < 2500, `off-side hit cut (${dealt})`);
+});
+
 test('假想敌：影役 lowers the block count of operators around it (not other enemies)', () => {
   const h = makeBattle({
     data: ds, seed: 11, autoFinish: false,

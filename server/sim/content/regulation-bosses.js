@@ -7,7 +7,6 @@
 // Official numbers come from the built enemy record (talents / skills). Points with no blackboard are marked [ASSUMED].
 
 import { COLS } from '../constants.js';
-import { DIR_VEC } from '../dir.js';
 import { hypot } from '../detmath.js';
 import {
   hurt, elem, areaAllies, allTargets, remainingRoute, lpLoss, canCast, castSlot, watchDeaths,
@@ -34,6 +33,8 @@ const ARMOR_HIT = 0.7;
 const SLAM_RADIUS = 0.9;
 /** [ASSUMED] 后兽 blink distance (the skill blackboard has no distance). */
 const BLINK_DIST = 2;
+/** Operator deploy direction in world (dx, dy): UP is toward row 0, RIGHT +x. */
+const FACING = Object.freeze({ UP: Object.freeze([0, -1]), DOWN: Object.freeze([0, 1]), LEFT: Object.freeze([-1, 0]), RIGHT: Object.freeze([1, 0]) });
 /** [ASSUMED] 并济 splash around the locked operator (PRTS: 半径 1.5). */
 const PUNISH_RADIUS = 1.5;
 
@@ -272,17 +273,18 @@ function applyBound(b, e, aspd) {
   }
   if (launched.length < 2) return;
   let low = launched[0];
-  let minX = launched[0].x;
-  let maxX = launched[0].x;
-  for (let i = 1; i < launched.length; i++) {
-    const u = launched[i];
-    if (u.id < low.id) low = u;
-    if (u.x < minX) minX = u.x;
-    if (u.x > maxX) maxX = u.x;
-  }
+  for (let i = 1; i < launched.length; i++) if (launched[i].id < low.id) low = launched[i];
   if (low !== e) return;
+  // PRTS 减速力场: the line between the two 冲击之械, width 2.9 — allies inside the 1.45 half-width band lose 100 ASPD.
+  const a0 = launched[0], a1 = launched[1];
+  const vx = a1.x - a0.x, vy = a1.y - a0.y;
+  const len2 = vx * vx + vy * vy;
+  const HALF_WIDTH = 2.9 / 2;
   for (const ally of b.allies()) {
-    if (ally.x > minX && ally.x < maxX) {
+    let t = 0;
+    if (len2 > 1e-12) t = Math.max(0, Math.min(1, ((ally.x - a0.x) * vx + (ally.y - a0.y) * vy) / len2));
+    const px = a0.x + t * vx, py = a0.y + t * vy;
+    if (hypot(ally.x - px, ally.y - py) <= HALF_WIDTH) {
       b.addBuff(ally, { key: 'reg:bound', duration: 0.35, refresh: 'replace', mods: { aspd } });
     }
   }
@@ -324,16 +326,16 @@ function kitMech(ab) {
       },
       hitIn(c, b, e, a) {
         if (!(cut > 0) || cut >= 1) return;
-        // 护甲形态下: 无来源伤害 ×0.5, and damage from a source on the other side of the mech (armour on that side) ×0.5.
+        // 护甲形态: sourceless damage and any source whose x differs from the mech's are cut to 50 % — while at
+        // least one 冲击之械 is on the field (PRTS 械 "横坐标与自身不同" + 冲击之械 "在场时…对应方向").
+        const armors = livingOf(b, ARMOR, e.id);
+        if (!armors.length) return;
         if (!c.source) {
           if (a && a.armed) c.dmg.mul *= cut;
           return;
         }
         const side = Math.sign(c.source.x - e.x);
-        if (side === 0) return;
-        for (const arm of livingOf(b, ARMOR, e.id)) {
-          if (Math.sign(arm.x - e.x) === side) { c.dmg.mul *= cut; return; }
-        }
+        if (side !== 0 && a && a.armed) c.dmg.mul *= cut;
       },
       dealt(c, b, e) {
         const t = c.target;
@@ -863,18 +865,23 @@ function kitTail(ab) {
 }
 
 function tailBlink(b, e, sk) {
-  const fromX = e.x;
   const from = blinkForward(b, e, BLINK_DIST);
   if (!from) return;
-  const dx = Math.sign(e.x - fromX);
+  // PRTS 时移: overwrite the direction with this blink's movement (initial 上 = row -1); horizontal and vertical.
+  let dx = e.x - from.x, dy = e.y - from.y;
+  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) {
+    const prev = e.mem.regShift ?? { x: 0, y: -1 };
+    dx = prev.x; dy = prev.y;
+  } else {
+    e.mem.regShift = { x: dx, y: dy };
+  }
   const allyDur = bb(sk, 'enemy_dyjsww_blink_buff[ally].duration', 30);
   const enemyDur = bb(sk, 'enemy_dyjsww_blink_buff[enemy].duration', 30);
   const allyAspd = bb(sk, 'enemy_dyjsww_blink_buff[ally].attack_speed', -50);
   const enemyMove = bb(sk, 'enemy_dyjsww_blink_buff[enemy].move_speed', 2);
-  if (dx === 0) return;
   for (const u of b.allies()) {
-    const hv = DIR_VEC[u.dir] ? DIR_VEC[u.dir][1] : 0;
-    if (hv !== 0 && Math.sign(hv) === -dx) {
+    const f = FACING[u.dir];
+    if (f && f[0] * dx + f[1] * dy < 0) {
       b.addBuff(u, { key: 'enemy_dyjsww_blink_buff[ally]', duration: allyDur, mods: { aspd: allyAspd } });
     }
   }
@@ -882,8 +889,9 @@ function tailBlink(b, e, sk) {
     if (o === e || o.defId === BEAST) continue;
     const R = o.route;
     const L = R && R.legs && R.legs[R.legIdx];
-    const sign = L && L.c != null ? Math.sign(L.c - o.x) : 0;
-    if (sign === dx) {
+    if (!L) continue;
+    const mx = L.c != null ? L.c - o.x : 0, my = L.r != null ? L.r - o.y : 0;
+    if (mx * dx + my * dy > 0) {
       // PRTS 时移 "使场上所有其他移动方向与时移方向相同的敌方单位在30秒内移动速度+200%": ×3, not ×2.
       b.addBuff(o, { key: 'enemy_dyjsww_blink_buff[enemy]', duration: enemyDur, mods: { moveMul: 1 + enemyMove } });
     }
