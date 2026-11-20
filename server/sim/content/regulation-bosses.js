@@ -9,7 +9,7 @@
 import { COLS } from '../constants.js';
 import { hypot } from '../detmath.js';
 import {
-  hurt, elem, areaAllies, allTargets, remainingRoute, lpLoss, canCast, castSlot, watchDeaths,
+  hurt, elem, areaAllies, allTargets, alliesInTiles, zone, remainingRoute, lpLoss, canCast, castSlot, watchDeaths,
 } from './enemies/helpers.js';
 import { skill, blinkForward } from './enemies/archetypes.js';
 import { activateTraps, spawnTrap, trapSpot, TRAP_KEY } from './traps.js';
@@ -498,31 +498,40 @@ function kitSpider(ab) {
 }
 
 function acidRain(b, e, sk) {
-  const boards = new Map();
-  for (const u of b.allies()) {
-    if (!u.alive || u.kind !== 'op') continue;
-    const id = String(u.ownerId ?? '');
-    boards.set(id, (boards.get(id) ?? 0) + 1);
-  }
-  let best = null;
-  let bn = 0;
-  for (const [id, n] of boards) {
-    if (best == null || n > bn || (n === bn && id < best)) { best = id; bn = n; }
-  }
-  if (best == null || !(bn > 0)) return;
   const dur = bb(sk, 'duration', 25);
   const iv = Math.max(0.05, bb(sk, 'interval', 0.5));
   const dmg = bb(sk, 'damage', 75);
   const aspd = bb(sk, 'attack_speed', -50);
-  const handle = b.every(iv, () => {
-    if (!e.alive) { handle.cancel(); return; }
-    for (const u of b.allies()) {
-      if (!u.alive || String(u.ownerId ?? '') !== best) continue;
-      b.addBuff(u, { key: 'reg:acid', duration: iv + 0.15, refresh: 'replace', mods: { aspd } });
-      hurt(b, e, u, dmg, 'true');
+  // PRTS 悲惨之雨: a TILE effect on each player field (the count is "？"; one per side, the tile with the most
+  // surrounding deployed allies), 25 s: allies AND enemies on the tile lose 50 ASPD and take 75 true per 0.5 s.
+  for (const side of [0, 1]) {
+    const own = b.allies().filter((u) => u.alive && (side === 0 ? u.x < 10.5 : u.x >= 10.5));
+    if (!own.length) continue;
+    let tile = null, bestN = -1;
+    for (const u of own) {
+      const n = own.filter((o) => Math.abs(o.tileR - u.tileR) <= 1 && Math.abs(o.tileC - u.tileC) <= 1).length;
+      const key = u.tileR * COLS + u.tileC;
+      if (n > bestN || (n === bestN && tile && key < tile.r * COLS + tile.c)) { bestN = n; tile = { r: u.tileR, c: u.tileC }; }
     }
-  }, { owner: e });
-  b.after(dur, () => handle.cancel(), { owner: e });
+    if (!tile) continue;
+    zone(b, {
+      x: tile.c, y: tile.r, r: 0.5, life: dur, iv, kind: 'acidRain', id: e.id,
+      pick: () => {
+        const out = [];
+        for (const a of b.allies()) if (a.alive && a.tileR === tile.r && a.tileC === tile.c) out.push(a);
+        for (const o of b.aliveEnemies()) if (o.alive && o.tileR === tile.r && o.tileC === tile.c) out.push(o);
+        return out;
+      },
+      tick: (units) => {
+        for (const u of units) {
+          if (!u.alive) continue;
+          b.addBuff(u, { key: 'reg:acid', duration: iv + 0.15, refresh: 'replace', mods: { aspd } });
+          if (u.side === 'ally') hurt(b, e, u, dmg, 'true');
+          else b.dealDamage(null, u, { amount: dmg, type: 'true', sourceless: true, canDodge: false, ignoreSelect: true, tags: ['acidRain'] });
+        }
+      },
+    });
+  }
 }
 
 function kitWeb(ab) {
@@ -640,28 +649,27 @@ function kitEel(ab) {
   ];
 }
 
-/** A tile is struck only when at least two allies stand on it [ASSUMED]. */
+/**
+ * PRTS 鳍（隐秘核心）雷暴: every 30 s one tile per player field — the one with the most surrounding deployed allies —
+ * gets a cross-shaped 落雷 (the tile and its four orthogonal neighbours): 100 % ATK arts + 40 % ATK neural.
+ */
 function strikeCrowd(b, e, ab) {
-  const tiles = new Map();
-  for (const u of b.allies()) {
-    if (!u.alive) continue;
-    const k = `${u.tileR},${u.tileC}`;
-    let list = tiles.get(k);
-    if (!list) { list = []; tiles.set(k, list); }
-    list.push(u);
-  }
-  let best = null;
-  for (const list of tiles.values()) {
-    if (list.length < 2) continue;
-    if (!best || list.length > best.length || (list.length === best.length && list[0].id < best[0].id)) best = list;
-  }
-  if (!best) return;
   const scale = tv(ab, 'Weather.atk_scale', 1);
   const ep = tv(ab, 'Weather.ep_damage_ratio', 0.4);
-  for (let i = 0; i < best.length; i++) {
-    const u = best[i];
-    hurt(b, e, u, e.s.atk * scale, 'arts');
-    if (ep > 0) elem(b, e, u, 'neural', e.s.atk * ep);
+  for (const side of [0, 1]) {
+    const own = b.allies().filter((u) => u.alive && (side === 0 ? u.x < 10.5 : u.x >= 10.5));
+    if (!own.length) continue;
+    let tile = null, bestN = -1;
+    for (const u of own) {
+      const n = own.filter((o) => Math.abs(o.tileR - u.tileR) <= 1 && Math.abs(o.tileC - u.tileC) <= 1).length;
+      const key = u.tileR * COLS + u.tileC;
+      if (n > bestN || (n === bestN && tile && key < tile.r * COLS + tile.c)) { bestN = n; tile = { r: u.tileR, c: u.tileC }; }
+    }
+    if (!tile) continue;
+    for (const u of alliesInTiles(b, tile.r, tile.c, 'plus', 1)) {
+      hurt(b, e, u, e.s.atk * scale, 'arts');
+      if (ep > 0) elem(b, e, u, 'neural', e.s.atk * ep);
+    }
   }
 }
 
