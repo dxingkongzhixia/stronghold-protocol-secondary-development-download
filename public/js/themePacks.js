@@ -7,12 +7,20 @@
 // Settings uses listThemePacks / installThemePack / activateThemePack / removeThemePack; main.js calls restoreThemePack.
 
 import { loadPref, savePref } from './store.js';
-import { acceptPackPath, THEME_PACK_LIMITS, themePackVariables, validateThemePack } from '../../shared/themePack.js';
+import {
+  acceptAudioPath, acceptDataPath, acceptPackPath, THEME_PACK_LIMITS, themePackVariables, validateThemePack,
+} from '../../shared/themePack.js';
 
 const DB_NAME = 'sp-theme-packs';
 const DB_STORE = 'packs';
 const PREF = 'theme-pack';
-const MIME = Object.freeze({ png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' });
+const MIME = Object.freeze({
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp',
+  ogg: 'audio/ogg', mp3: 'audio/mpeg', skel: 'application/octet-stream', atlas: 'text/plain', json: 'application/json',
+});
+const AUDIO_RE = /\.(ogg|mp3)$/i;
+const AUDIO_MAX = 4 * 1024 * 1024;
+const DATA_MAX = 8 * 1024 * 1024;
 
 const extOf = (p) => {
   const dot = p.lastIndexOf('.');
@@ -102,23 +110,31 @@ export async function readThemePack(files) {
     if (!root || !rel.startsWith(root)) continue;
     const p = rel.slice(root.length);
     if (!p || p === 'theme.json') continue;
-    if (!acceptPackPath(p)) continue;
-    filesInPack.add(p);
+    if (acceptPackPath(p) || acceptAudioPath(p) || acceptDataPath(p)) filesInPack.add(p);
   }
   const check = validateThemePack(doc, filesInPack);
   if (!check.ok) return { ok: false, pack: null, errors: check.errors, warnings: check.warnings };
+  const pack = check.pack;
   let total = 0;
   const blobs = {};
-  for (const p of Object.values(check.pack.images)) {
+  const wanted = [
+    ...Object.values(pack.images),
+    ...(pack.voice ? [pack.voice] : []),
+    ...(pack.character ? [pack.character.skel, pack.character.atlas].filter(Boolean) : []),
+  ];
+  for (const p of wanted) {
     const f = byPath.get(root + p);
-    if (!f || f.size > THEME_PACK_LIMITS.image) {
-      return { ok: false, errors: [{ code: 'THEME_IMAGE_SIZE', path: p, message: 'missing or larger than 8 MB' }], warnings: check.warnings };
+    const audio = AUDIO_RE.test(p);
+    const image = /\.(png|jpe?g|webp)$/i.test(p);
+    const cap = image ? THEME_PACK_LIMITS.image : audio ? AUDIO_MAX : DATA_MAX;
+    if (!f || f.size > cap) {
+      return { ok: false, errors: [{ code: 'THEME_FILE_SIZE', path: p, message: `missing or larger than ${Math.round(cap / 1048576)} MB` }], warnings: check.warnings };
     }
     total += f.size;
     if (total > THEME_PACK_LIMITS.pack) return { ok: false, errors: [{ code: 'THEME_PACK_SIZE', path: p, message: 'pack larger than 32 MB' }], warnings: check.warnings };
     blobs[p] = { blob: f, mime: MIME[extOf(p)] || 'application/octet-stream' };
   }
-  return { ok: true, pack: check.pack, blobs, errors: [], warnings: check.warnings };
+  return { ok: true, pack, blobs, errors: [], warnings: check.warnings };
 }
 
 /** Install a folder: validate, store, and make it the active pack. */
@@ -135,6 +151,30 @@ export async function installThemePack(files) {
 let active = null;
 let activeUrls = [];
 let written = [];
+let voice = null;
+let voiceHandler = null;
+
+/** Stop the pack's voice line (if any) and drop its pending first-tap handler. */
+function stopVoice() {
+  if (voiceHandler) document.removeEventListener('pointerdown', voiceHandler);
+  voiceHandler = null;
+  if (voice) { try { voice.pause(); } catch { /* ignore */ } }
+  voice = null;
+}
+
+/** Play the pack's voice once on the first pointer interaction (browser autoplay rules). */
+function armVoice(url) {
+  stopVoice();
+  if (!url) return;
+  try {
+    const a = new Audio(url);
+    a.preload = 'auto';
+    a.volume = 0.7;
+    voice = a;
+    voiceHandler = () => { try { a.play().catch(() => {}); } catch { /* ignore */ } };
+    document.addEventListener('pointerdown', voiceHandler, { once: true });
+  } catch { voice = null; voiceHandler = null; }
+}
 
 function clearVars() {
   const root = document.documentElement;
@@ -151,6 +191,7 @@ function revokeUrls() {
 /** Make `id` the active pack on this page (`''` clears it). Unknown id clears. */
 export async function activateThemePack(id) {
   const root = document.documentElement;
+  stopVoice();
   revokeUrls();
   active = null;
   if (!id) {
@@ -179,6 +220,7 @@ export async function activateThemePack(id) {
   for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value);
   root.dataset.themePack = rec.pack.id;
   active = rec.pack;
+  if (rec.pack.voice) armVoice(urls.get(rec.pack.voice));
   savePref(PREF, rec.pack.id);
   return { ok: true, pack: rec.pack };
 }

@@ -36,7 +36,8 @@
 - `images`：相对路径，只能 `.png` / `.jpg` / `.jpeg` / `.webp`，不能是 URL、不能含 `..`；单张 ≤ 8 MB，整包 ≤ 32 MB。
 - `slices.<slot>.inset`：该图片作为 9-slice 边框时的切片宽度（0–128），当前用于 `shop.card`。
 - 未知键会给出提示并忽略；写错一个槽位只丢那个槽位，不影响整个包。
-- P3 预留 `character`（Spine 的 `skel`/`atlas`/`idle`）；当前版本先不做角色挂载。
+- P3a：`character.image` 是标题画面右侧的静态立绘；`voice` 是第一次点击时播放的一句语音（`.ogg` / `.mp3`，≤ 4 MB）。
+- P3b 预留 `character`（Spine 的 `skel`/`atlas`/`idle`）；Spine 运行时挂载尚未接入，先不写这个字段。
 
 ## 图片槽位
 
@@ -49,5 +50,6 @@
 | `shop.bg` | 商店底板 |
 | `shop.card` | 商店卡框（可 9-slice） |
 | `banner` | 阶段横幅底板 |
+| `character.image` | 标题画面右侧立绘 |
 
 动画 WebP / APNG 直接作为背景图即可循环播放；静态图按 `cover` 铺满。

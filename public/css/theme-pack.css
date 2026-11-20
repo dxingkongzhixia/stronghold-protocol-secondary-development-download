@@ -16,6 +16,18 @@ html[data-theme-pack] .title-bg {
   background-repeat: no-repeat;
 }
 html[data-theme-pack] .title-bg.has-art .title-bg__art { opacity: 0; }
+/* P3a: a static character picture at the title's right edge (Spine runtime is a later slot). */
+html[data-theme-pack] .title-bg::after {
+  content: '';
+  position: absolute;
+  right: 3%;
+  bottom: 0;
+  width: min(38%, 5.2rem);
+  height: 86%;
+  pointer-events: none;
+  background: var(--tp-character, none) center bottom / contain no-repeat;
+  opacity: .96;
+}
 
 html[data-theme-pack] .lobby-hub {
   background-image: var(--tp-lobby-bg, none);

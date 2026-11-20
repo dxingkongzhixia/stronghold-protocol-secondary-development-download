@@ -11,9 +11,10 @@ test('a valid pack: colours, image slots, slices, optional author/description', 
   const r = validateThemePack(base({
     author: 'me', description: 'hello', version: 2,
     colors: { accent: '#ff8800', bg0: 'rgb(10, 12, 11)', text: 'hsl(120 20% 90%)' },
-    images: { 'title.bg': 'bg/title.webp', 'shop.card': 'shop/card.png' },
+    images: { 'title.bg': 'bg/title.webp', 'shop.card': 'shop/card.png', 'character.image': 'char/portrait.webp' },
+    voice: 'voice/hello.ogg',
     slices: { 'shop.card': { inset: 18 } },
-  }), new Set(['bg/title.webp', 'shop/card.png']));
+  }), new Set(['bg/title.webp', 'shop/card.png', 'char/portrait.webp', 'voice/hello.ogg']));
   assert.equal(r.ok, true, JSON.stringify(r.errors));
   assert.equal(r.pack.id, 'my-theme');
   assert.equal(r.pack.colors.accent, '#ff8800');
@@ -65,15 +66,24 @@ test('readThemePack: a folder input strips its root and finds theme.json at any 
   assert.deepEqual(Object.keys(r.blobs), ['bg/title.png']);
 });
 
-test('themePackVariables: colours map to design tokens, pictures to blob URLs, slice to its variable', () => {
+test('themePackVariables: colours map to design tokens, pictures (character too) to blob URLs, slice to its variable', () => {
   const pack = validateThemePack(base({
     colors: { accent: '#ff8800', text: '#ffffff' },
-    images: { 'title.bg': 'bg/title.webp' },
+    images: { 'title.bg': 'bg/title.webp', 'character.image': 'char/portrait.webp' },
     slices: { 'shop.card': { inset: 20 } },
-  }), new Set(['bg/title.webp'])).pack;
+  }), new Set(['bg/title.webp', 'char/portrait.webp'])).pack;
   const vars = themePackVariables(pack, (p) => `blob:${p}`);
   assert.equal(vars['--mint-500'], '#ff8800');
   assert.equal(vars['--text-hi'], '#ffffff');
   assert.equal(vars['--tp-title-bg'], 'url("blob:bg/title.webp")');
+  assert.equal(vars['--tp-character'], 'url("blob:char/portrait.webp")');
   assert.equal(vars['--tp-shop-card-slice'], '20');
+});
+
+test('a voice line is an audio path inside the pack', () => {
+  assert.equal(validateThemePack(base({ voice: 'voice/hello.ogg' }), new Set(['voice/hello.ogg'])).ok, true);
+  assert.equal(validateThemePack(base({ voice: 'voice/hello.mp3' })).ok, true);
+  assert.equal(validateThemePack(base({ voice: 'https://x/a.ogg' })).ok, false);
+  assert.equal(validateThemePack(base({ voice: 'voice/hello.wav' })).ok, false);
+  assert.equal(validateThemePack(base({ voice: 'voice/hello.ogg' }), new Set()).ok, false);
 });

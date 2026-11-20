@@ -50,10 +50,13 @@ export const THEME_PACK_SLOTS = Object.freeze({
   'shop.bg': { css: '--tp-shop-bg', screens: 'shop' },
   'shop.card': { css: '--tp-shop-card', screens: 'shop-card' },
   banner: { css: '--tp-banner', screens: 'banner' },
+  'character.image': { css: '--tp-character', screens: 'title-character' },
 });
 
 const ID_RE = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 const IMAGE_RE = /\.(png|jpe?g|webp)$/i;
+const AUDIO_RE = /\.(ogg|mp3)$/i;
+const DATA_RE = /\.(skel|json|atlas)$/i;
 const PATH_BAD = /(^\/|^\\|:\/\/|(^|[\\/])\.\.([\\/]|$)|[\0-\x1f])/;
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -63,6 +66,22 @@ export function acceptPackPath(v) {
   if (typeof v !== 'string') return null;
   const p = v.trim().replace(/\\/g, '/');
   if (!p || p.length > 160 || PATH_BAD.test(p) || !IMAGE_RE.test(p)) return null;
+  return p;
+}
+
+/** An audio path inside the pack folder (.ogg / .mp3), or null. */
+export function acceptAudioPath(v) {
+  if (typeof v !== 'string') return null;
+  const p = v.trim().replace(/\\/g, '/');
+  if (!p || p.length > 160 || PATH_BAD.test(p) || !AUDIO_RE.test(p)) return null;
+  return p;
+}
+
+/** A Spine data path inside the pack folder (.skel / .json / .atlas), or null. */
+export function acceptDataPath(v) {
+  if (typeof v !== 'string') return null;
+  const p = v.trim().replace(/\\/g, '/');
+  if (!p || p.length > 160 || PATH_BAD.test(p) || !DATA_RE.test(p)) return null;
   return p;
 }
 
@@ -128,13 +147,20 @@ export function validateThemePack(doc, files = null) {
   }
 
   const character = isObj(doc.character) ? {
-    skel: acceptPackPath(doc.character.skel),
-    atlas: acceptPackPath(doc.character.atlas),
+    skel: acceptDataPath(doc.character.skel),
+    atlas: acceptDataPath(doc.character.atlas),
     idle: str(doc.character.idle, 64) || 'Idle',
   } : null;
   if (character && (!character.skel || !character.atlas)) warn('THEME_CHARACTER_SHAPE', 'character', 'skel + atlas are required');
 
-  const pack = { format: THEME_PACK_FORMAT, id, name, author, description, version, colors, images, slices, character };
+  let voice = null;
+  if (doc.voice != null) {
+    voice = acceptAudioPath(doc.voice);
+    if (!voice) err('THEME_VOICE_PATH', 'voice', 'a relative .ogg / .mp3 path inside the pack');
+    else if (files && !files.has(voice)) err('THEME_VOICE_MISSING', 'voice', `${voice} is not in the pack`);
+  }
+
+  const pack = { format: THEME_PACK_FORMAT, id, name, author, description, version, colors, images, slices, character, voice };
   return { ok: errors.length === 0, pack: errors.length ? null : pack, errors, warnings };
 }
 
