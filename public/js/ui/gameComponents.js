@@ -5,6 +5,7 @@ import { useState, useMemo } from '../../vendor/hooks.module.js';
 import { html, Icon, TierChip, Tooltip } from './components.js';
 import { data, useData, localAsset } from '../data.js';
 import { parseRichText, rtClassName } from './richText.js';
+import { fillShowTags } from './showTags.js';
 import { t as tr } from '../../../shared/i18n.js';
 import {
   uiUrl, avatarUrl, chessAvatarUrl, itemIconUrl, tokenAvatarUrl, enemyIconUrl, bondIconUrl, bandIconUrl,
@@ -87,7 +88,8 @@ export function LocalSprite({ group = 'ui/battle', name, class: cls, fallback = 
  * @param {{ text: any, class?: string, as?: string }} props
  */
 export function RichText({ text, class: cls, as = 'span' }) {
-  const segs = useMemo(() => parseRichText(text), [text]);
+  // official {showtag_value_N} texts: never show the raw placeholder; a caller with the piece's live values fills first
+  const segs = useMemo(() => parseRichText(fillShowTags(text)), [text]);
   const Tag = as;
   return html`<${Tag} class=${cx('rt', cls)}>${segs.map((s, i) => (s.br
     ? html`<br key=${i} />`

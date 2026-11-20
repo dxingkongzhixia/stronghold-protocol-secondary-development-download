@@ -6,6 +6,7 @@
 import { PHASE } from '../../../shared/constants.js';
 import { boardOrder, pieceDir } from '../board.js';
 import { bondList, offBondCounts } from '../bondsMeta.js';
+import { itemShowTags, garrisonShowTags } from '../showTags.js';
 import { bountyText, bountyCard } from '../choices.js';
 import { activeBandSkillStage, bandSkillStages } from '../../../shared/bandSkill.js';
 
@@ -18,10 +19,23 @@ export class PlayerViews {
       id: p.id,
       golden: !!(rec && rec.isGolden),
       tier: rec && Number.isInteger(rec.tier) ? rec.tier : null,
-      items: p.kind === 'chess' ? (p.items || []).map((it) => ({ uid: it.uid, id: it.id })) : [],
+      items: p.kind === 'chess'
+        ? (p.items || []).map((it) => {
+          const tags = itemShowTags(this, it);
+          return { uid: it.uid, id: it.id, ...(tags ? { showTag: tags } : {}) };
+        })
+        : [],
       count: p.kind === 'token' ? (p.count || 1) : 1,
       ownerUid: p.kind === 'token' ? p.ownerUid ?? null : null,
     };
+    // the live numbers of the record's {showtag_value_N} texts (§37.201, showTags.js) — only 规程 records carry them
+    if (p.kind === 'item') {
+      const tags = itemShowTags(this, p);
+      if (tags) v.showTag = tags;
+    } else if (p.kind === 'chess') {
+      const tags = garrisonShowTags(this, p);
+      if (tags) v.garrisonTags = tags;
+    }
     if (p.kind === 'chess') {
       const diy = typeof this.diyPickOf === 'function' ? this.diyPickOf(p.id) : null;
       const skinId = this.skinFor(rec, diy ? diy.charId : null);
