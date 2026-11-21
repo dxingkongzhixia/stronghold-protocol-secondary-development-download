@@ -102,7 +102,7 @@ test('arguments: --keep-going, --only (comma list, repeated, = form) in workflow
   assert.equal(selectSteps(null).length, STEPS.length);
   assert.equal(parseArgs(['--list']).list, true);
   assert.equal(parseArgs(['-h']).help, true);
-  assert.throws(() => parseArgs(['--only', 'golden']), /unknown step "golden"/);
+  assert.throws(() => parseArgs(['--only', 'nope']), /unknown step "nope"/);
   assert.throws(() => parseArgs(['--only']), /needs step names/);
   assert.throws(() => parseArgs(['--fast']), /unknown option --fast/);
 });

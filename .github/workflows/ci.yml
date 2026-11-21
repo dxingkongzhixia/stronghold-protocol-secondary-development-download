@@ -89,7 +89,7 @@ jobs:
       - name: Install (npm ci → postinstall copies public/vendor)
         run: npm ci --no-audit --no-fund
 
-      - name: Lint (warnings allowed)
+      - name: Lint (warning budget 203)
         run: npm run lint
 
       - name: Import boundaries
@@ -117,6 +117,29 @@ jobs:
 
       - name: Guard tests (CI wiring, docs gates, package plan)
         run: node --test test/ci.test.js test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/package.test.js
+
+  # The full golden corpus — not the `fast: true` subset the test job checks. A sim change merged without its golden
+  # recompute leaves npm test green but this job red (the default diy drift of 2026-11-20 is the case that motivated it).
+  golden:
+    name: golden (full corpus)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (npm ci → postinstall copies public/vendor)
+        run: npm ci --no-audit --no-fund
+
+      - name: Golden — default data
+        run: npm run golden
+
+      - name: Golden — 规程 (act3autochess@V3_1)
+        run: node tools/golden.mjs --version act3autochess@V3_1
 
   # P0 mobile matrix (docs/MOBILE-UI.md §7 M0.8): the mock page harness at public/dev/mobile-audit.html, measured at
   # 640×360 … 1024×768 with a simulated 24/24/34/24 safe area; screenshots are kept as the P1 comparison baseline.

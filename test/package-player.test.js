@@ -30,7 +30,7 @@ test('the packaged package.json keeps only scripts whose node files ship', () =>
   assert.deepEqual(Object.keys(next), Object.keys(pkg));
   assert.deepEqual(playerPackageProblems(pkg, shipped), []);
   assert.match(pkg.scripts.test, /^node --test\b/, 'the repository package.json still runs the suite');
-  assert.equal(pkg.scripts.lint, 'eslint .');
+  assert.equal(pkg.scripts.lint, 'eslint . --max-warnings 203', 'warnings are budgeted (no growth)');
   const keys = Object.keys(next);
   assert.deepEqual(keys.filter((k) => k !== 'scripts'), Object.keys(pkg).filter((k) => k !== 'scripts'));
 });

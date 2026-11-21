@@ -1,0 +1,19 @@
+# test/fast.list — the local fast gate (tools/test-fast.mjs). Curated: pure logic, docs, i18n, economy, version data
+# and the golden fast subset. Keep it under ~2 minutes; the full corpus is `npm test` (CI shards) and `npm run golden`.
+test/docs-links.test.js
+test/docs-consistency.test.js
+test/docs-paths.test.js
+test/docs-mojibake.test.js
+test/ci.test.js
+test/package.test.js
+test/i18n.test.js
+test/content/atk-scale-before-def.test.js
+test/match/economy.test.js
+test/match/summon-move-qol.test.js
+test/sim/regulation-escort.test.js
+test/ui/facing.test.js
+test/ui/settings-search.test.js
+test/versions-bonds.test.js
+test/versions-enemies-official.test.js
+test/versions-bosses.test.js
+test/golden.test.js

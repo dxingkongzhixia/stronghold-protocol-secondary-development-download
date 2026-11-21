@@ -12,7 +12,7 @@
 //   test       node --test (locally the whole suite; CI runs one shard per job through tools/ci-shards.mjs)
 //   smoke      the server on a free port on 127.0.0.1: GET /healthz, / (must contain <html) and /vendor/pixi.min.js,
 //              then node tools/doctor.mjs (its exit code is ignored, like `|| true` in ci.yml), then the server stops
-//   lint       eslint .                                   (npm run lint; warnings do not fail it)
+//   lint       eslint . --max-warnings 200             (npm run lint; the warning count may not grow)
 //   imports    node tools/check-imports.mjs               (npm run check:imports)
 //   typecheck  tsc --noEmit --checkJs -p jsconfig.json    (npm run typecheck)
 //   mobile     node tools/mobile-audit.mjs                (npm run check:mobile; needs Chrome — CHROME_PATH)
@@ -59,9 +59,11 @@ export const STEPS = [
   { id: 'test', ci: { job: 'test', name: 'Unit & integration tests' }, describe: 'node tools/ci-shards.mjs --run ${{ matrix.shard }}' },
   { id: 'smoke', ci: { job: 'test', name: 'Server smoke test (boot, /healthz, index.html, doctor)' },
     describe: `server on a free port: GET ${SMOKE_PATHS.join(', ')}; node tools/doctor.mjs` },
-  { id: 'lint', ci: { job: 'tooling', name: 'Lint (warnings allowed)' }, npm: 'lint', describe: 'eslint .' },
+  { id: 'lint', ci: { job: 'tooling', name: 'Lint (warning budget 203)' }, npm: 'lint', describe: 'eslint . --max-warnings 203' },
   { id: 'imports', ci: { job: 'tooling', name: 'Import boundaries' }, npm: 'check:imports', describe: 'node tools/check-imports.mjs' },
   { id: 'typecheck', ci: { job: 'tooling', name: 'Typecheck' }, npm: 'typecheck', describe: 'tsc --noEmit --checkJs -p jsconfig.json' },
+  { id: 'golden', ci: { job: 'golden', name: 'Golden — default data' }, npm: 'golden', describe: 'node tools/golden.mjs' },
+  { id: 'golden-versions', ci: { job: 'golden', name: 'Golden — 规程 (act3autochess@V3_1)' }, describe: 'node tools/golden.mjs --version act3autochess@V3_1' },
   { id: 'mobile', ci: { job: 'mobile-audit', name: 'Mobile audit' }, npm: 'check:mobile', describe: 'node tools/mobile-audit.mjs' },
 ];
 
@@ -330,9 +332,11 @@ function runStep(step, env) {
     case 'setup': return node(['tools/setup.mjs', '--check', '--no-local'], env);
     case 'test': return node(['--test', 'test/**/*.test.js', 'test/e2e/coop.e2e.mjs', 'plugins/_template/**/*.test.js'], env);
     case 'smoke': return smoke(env);
-    case 'lint': return node([binPath('eslint', 'eslint'), '.'], env);
+    case 'lint': return node([binPath('eslint', 'eslint'), '.', '--max-warnings', '203'], env);
     case 'imports': return node(['tools/check-imports.mjs'], env);
     case 'typecheck': return node([binPath('typescript', 'tsc'), '--noEmit', '--checkJs', '-p', 'jsconfig.json'], env);
+    case 'golden': return node(['tools/golden.mjs'], env);
+    case 'golden-versions': return node(['tools/golden.mjs', '--version', 'act3autochess@V3_1'], env);
     case 'mobile': return node(['tools/mobile-audit.mjs'], env);
     default: throw new Error(`no runner for step ${step.id}`);
   }

@@ -16,13 +16,15 @@
 | **浏览器 E2E（opt-in）** | `test/render/*.browser.test.js`、`test/e2e/*` | 真 Chrome：渲染、拖拽、相机、手机视口 | 碰渲染 / UI / 手机端 |
 | **CI** | `.github/workflows/ci.yml` | 上面三层的自动化（见 §6） | 推送 / PR |
 
-测试文件 **946 个**，13 个目录：`content` `dev` `e2e` `fixtures` `golden` `helpers` `keel` `match` `mobile` `plugins` `render` `sim` `ui`。
+测试文件按 **13 个目录**组织：`content` `dev` `e2e` `fixtures` `golden` `helpers` `keel` `match` `mobile` `plugins` `render` `sim` `ui`（具体文件数不写死，`node tools/ci-shards.mjs --list` 是准数）。
 
 ## 2. 命令
 
 | 目的 | 命令 |
 |---|---|
 | 全量（推荐；并发固定 4） | `npm test` |
+| **快速档（本地循环，≤2 分钟）** | `npm run test:fast`（`tools/test-fast.mjs` + `test/fast.list`：文档、i18n、经济、版本数据、golden fast 子集） |
+| **单个 CI 分片（本地复现）** | `npm run test:shard -- 2`（1..4，与 CI 同一张权重表 `ci-shards.json`） |
 | 某个套件 | `node --test test/match/bot.test.js` |
 | 某个领域 | `node --test --test-concurrency=2 test/plugins/*.test.js` |
 | 单条用例 | `node --test --test-name-pattern="bench shed" test/match/bot-smarter.test.js` |
@@ -33,7 +35,7 @@
 | 联机 E2E | `SP_E2E=1 node --test "test/e2e/**"`（需浏览器与素材） |
 | Agent 席位 E2E | `SP_AGENT_E2E=1 node --test test/e2e/agent-seat.e2e.mjs`（真实 Match，无需浏览器；见 [`AGENT-SEATS.md`](AGENT-SEATS.md) §6.1） |
 | Agent LLM 客户端 | `node --test test/agent-llm.test.js`（OpenAI / Anthropic wire format、规则索引/精确检索、角色 briefing、聊天表情、动作白名单；不需要真 key） |
-| Lint / 类型 / 导入 | `npx eslint .`、`npm run typecheck`、`npm run check:imports` |
+| Lint / 类型 / 导入 | `npm run lint`（**0 error，warning 预算 200，只降不升**）、`npm run typecheck`、`npm run check:imports` |
 | kit 覆盖 | `node tools/kit-coverage.mjs --missing` |
 | i18n | `node tools/i18n.mjs check en --strict` |
 | 数据重建（必须零 diff） | `node tools/build-data.mjs --offline` |
@@ -70,6 +72,7 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 |---|---|---|
 | `test/plugins/visualSet.test.js` 的「压缩缓存 ctime」 | Windows 文件时间戳粒度 | 复跑；与代码无关 |
 | `test/sim/robustness.test.js` 偶发超时 | 性能基线受机器负载影响 | 单跑确认（35/35） |
+| 「bad port」的 `fetch` 失败（曾见 `test/i18n-packs.test.js`） | 临时端口撞上 undici 禁用端口（`port: 0` 随机分配） | 新用例用 `test/helpers/localFetch.js`（`node:http`，无端口黑名单）；旧用例出现即迁移 |
 | 浏览器套件 skipped | 无 Chrome / 无 `public/assets` | 设 `RENDER_E2E=1` 并准备素材 |
 | CI 上 `test/**` 大面积 skip | CI 明确 `SP_E2E=0` / `RENDER_E2E=0` | 预期行为，见 §6 |
 
@@ -77,8 +80,10 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 
 | job | 跑什么 | 说明 |
 |---|---|---|
-| `test`（ubuntu + windows × node 22 / 24） | `node --test --test-concurrency=4 "test/**/*.test.js" "test/e2e/coop.e2e.mjs" "plugins/_template/**/*.test.js"` + 服务器冒烟（boot / `/healthz` / 首页 / doctor） | 显式 `CI=1`、`SP_E2E=0`、`RENDER_E2E=0`（无 Chrome / 无素材） |
-| `tooling` | `eslint` + `check:imports` + `typecheck` | 不跑游戏 |
+| `test`（ubuntu + windows × node 22 / 24） | `node --test --test-concurrency=4 "test/**/*.test.js" "test/e2e/coop.e2e.mjs" "plugins/_template/**/*.test.js"`（按 `ci-shards.json` 分 4 片）+ 服务器冒烟（boot / `/healthz` / 首页 / doctor） | 显式 `CI=1`、`SP_E2E=0`、`RENDER_E2E=0`（无 Chrome / 无素材）；`npm test` 的 golden 只是 **fast 子集** |
+| `golden` | `npm run golden` + `node tools/golden.mjs --version act3autochess@V3_1` | **完整语料**（默认 + 规程）；漏重算 golden 会在这里红，而不是等到手动跑 |
+| `tooling` | `eslint`（warning 预算 200）+ `check:imports` + `typecheck` | 不跑游戏 |
+| `node 24 (guards)` | CI 布线守卫 + 文档/打包门禁 | node 24 的轻量通道 |
 | `mobile-audit` | `npm run check:mobile`（640×360 … 1024×768） | 截图作 artifact；破坏布局会红 |
 
 推送 / PR 都触发；`concurrency` 按 ref 取消旧任务。

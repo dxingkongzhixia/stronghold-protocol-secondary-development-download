@@ -15,6 +15,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import http from 'node:http';
+import { localFetch } from './helpers/localFetch.js';
 import { fileURLToPath } from 'node:url';
 import { APP_VERSION } from '../shared/constants.js';
 import {
@@ -123,7 +124,7 @@ test('the server: GET /packs/index.json lists the packs live, GET /packs/<id>/<f
   const { startServer } = await import('../server/index.js');
   const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, publicDir: path.join(root, 'public'), packsDir: path.join(root, 'packs') });
   try {
-    const get = (u) => fetch(srv.url + u);
+    const get = (u) => localFetch(srv.url + u);
     const res = await get('/packs/index.json');
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('cache-control'), 'no-store');
