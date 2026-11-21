@@ -1,5 +1,7 @@
 # Third-party notices（第三方组件声明）
 
+<!-- doc: role=reference status=reference -->
+
 Stronghold Protocol's own code is licensed under **GPL-3.0-or-later** (see [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md)).
 The components below are **not** part of that grant: each stays under its own licence, reproduced at the end of this
 file. Nothing here is committed to the repository except `tools/local-extract/aklz4.py`; the client libraries are

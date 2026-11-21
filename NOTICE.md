@@ -1,5 +1,7 @@
 # 版权与使用声明（NOTICE）
 
+<!-- doc: role=reference status=reference -->
+
 **卫戍协议：盟约 · Stronghold Protocol** 是《明日方舟》限时玩法「卫戍协议：盟约」的**非官方同人复刻**，与上海鹰角网络科技有限公司（Hypergryph）、Yostar 及其关联方**没有任何关联**，也未获得其授权或认可。
 
 ## 1. 代码许可证：GPL-3.0-or-later

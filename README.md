@@ -1,5 +1,7 @@
 # 卫戍协议：盟约 · Stronghold Protocol: Alliance
 
+<!-- doc: role=entry status=current -->
+
 ![version](https://img.shields.io/badge/version-0.4.0-2ea44f)
 ![license](https://img.shields.io/badge/code%20license-GPL--3.0--or--later-blue)
 ![node](https://img.shields.io/badge/node-22%20%7C%2024-339933)
