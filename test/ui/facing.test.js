@@ -298,6 +298,15 @@ describe('wheel stripes go under the units on the 3D board (review regression)',
     // tile (9,2): corners (±0.5) projected, + canvas offset (10,20), − host offset (10,20)
     assert.equal(polys[0].pts, '15.0,5.0 25.0,5.0 25.0,15.0 15.0,15.0');
   });
+
+  test('tileScreen: a projection that returns null is clipped, not replaced by the debug camera', async () => {
+    const { tileScreen, RangeStripes } = await import('../../public/js/ui/facingWheel.js');
+    const canvas = { getBoundingClientRect: () => ({ left: 0, top: 0 }) };
+    const cam = { project: () => ({ x: 5, y: 5, s: 10 }) };
+    const clipped = { raw: { tileScreen: () => null, debug: { app: { view: canvas }, cam, tiles: { heightAt: () => 0 } } } };
+    assert.equal(tileScreen(clipped, 9, 2), null, 'a clipped tile draws nothing');
+    assert.equal(typeof RangeStripes, 'function', 'the detail card shares the deployment stripes');
+  });
 });
 
 describe('wheel on the mirrored Final Assault half (research 09 §1.2: RIGHT ↔ LEFT for the right-hand player)', () => {

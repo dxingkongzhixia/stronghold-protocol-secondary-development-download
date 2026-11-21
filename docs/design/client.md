@@ -64,6 +64,10 @@ Screens: **Title** (season art backdrop, 开始 → nickname), **Lobby** (独立
 
 盟约栏支持「收起／展开盟约」（GitHub #142）：收起时隐藏完整列表并关闭由列表打开的浮层，让原图标区域的指针事件到达棋盘，只保留至少 44×44 CSS px 的恢复按钮。折叠状态在本局阶段变化、观看队友时保留；展开后仍按当前观看对象显示最新盟约。按钮支持 Enter / Space，聚焦按钮时 Space 不触发准备或暂停。
 
+选中干员与部署朝向共用 `ui/facingWheel.js` 的 `RangeStripes`：3D 斜纹位于棋盘与干员画布之间，覆盖 Boss 受击区时仍然可见；范围沿 BOARD 坐标投影，裁剪整备／暂存行，投影返回 `null`（棋盘外）时不回退调试相机、不画幻影格；详情关闭、重选或开始拖动时释放，2D／DOM 板沿用原生底色。
+
+设置对话框按 **音频 / 显示 / 操作 / 外观与内容 / 诊断** 分组，顶部搜索框按行文本跨组过滤（判定在 `ui/settingsSearch.js`；空查询显示全部，组内无匹配时隐藏该组标题）。
+
 A bond the mode does not offer (标准: official `inactiveBondIdList`) reads 本局禁用 on shop / reward cards (struck through), detail chips and the popup while it is NOT active — no 在场 count, no 当前效果 (§21.7); once its members reach its threshold it is active and reads like any bond (the ban never makes an active bond inert — the owner's rule of 2026-10-11, MATCHMAKING §41). A strategy built around one carries a 本局禁用 tag and note in the strategy draft and stays selectable (bands.json `bondIds`, §21.26).
 
 Bond durations in the popup / codex are **real seconds**: the record and the sim use game seconds and the battle runs at `GAME_SPEED` 2×, so `richText.js formatBondEffect` divides `*duration*` / `*time*` placeholders by it (the same unit as the round countdown; 叙拉古 `32 + 0.4L` reads `16 + 0.2L`). The 「当前效果」 block still evaluates the **current layers**, while a deployed member's buff keeps the layers it had at deployment — a later deployment gets the newer value, an already-running one does not (docs/history/0.2.5.md §30.15).

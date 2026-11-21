@@ -48,8 +48,10 @@ export function tileScreen(view, row, col) {
   if (!raw || !Number.isInteger(row) || !Number.isInteger(col)) return null;
   try {
     if (typeof raw.tileScreen === 'function') {
+      // An implemented projection returning null means this tile is clipped (e.g. outside the boss field): do not
+      // fall back to the debug camera, which would bypass its board transform and draw a phantom range tile.
       const r = raw.tileScreen(row, col);
-      if (r && Number.isFinite(r.x) && Number.isFinite(r.y)) return r;
+      return r && Number.isFinite(r.x) && Number.isFinite(r.y) ? r : null;
     }
     const dbg = raw.debug;
     const cam = dbg && dbg.cam;
@@ -270,7 +272,7 @@ export function FacingWheel({ view, row, col, grid, healing = false, name = '', 
   return html`<div ref=${rootRef} tabIndex="-1" class=${cx('fwheel', drag && 'is-pressed', dir && `is-${dir.toLowerCase()}`)} role="dialog" aria-label=${name ? t('选择「{name}」的朝向', { name }) : t('选择朝向')}
       onPointerDown=${onDown} onPointerMove=${onMove} onPointerUp=${onUp} onPointerCancel=${onPointerCancel}
       onContextMenu=${(e) => { e.preventDefault(); onCancel(); }}>
-    ${g ? html`<${Stripes} healing=${healing} tiles=${tiles} view=${view} row=${row} col=${col} />` : null}
+    ${g ? html`<${RangeStripes} healing=${healing} tiles=${tiles} view=${view} row=${row} col=${col} />` : null}
     ${g ? html`<div class="fwheel__dia" style=${`left:${g.x}px;top:${g.y}px;width:${box}px;height:${box}px`}>
       <svg class="fwheel__svg" viewBox="-110 -110 220 220" aria-hidden="true">
         <path class="fwheel__outer" d="M0 -100 L100 0 L0 100 L-100 0 Z" />
@@ -333,8 +335,10 @@ export function stripePolys(view, tiles, ox = 0, oy = 0) {
 /**
  * Striped attack / healing range tiles, re-projected every frame (the camera may still move). The solid
  * coloured fill is the render view's highlight group under the units; these are the light stripes on top of it.
+ * Shared by the deployment wheel and the selected operator's detail card (`underOnly`: inspected ranges already have
+ * native stripes on the 2D / DOM boards, so only the 3D under-canvas layer is drawn).
  */
-function Stripes({ tiles, view, row, col, healing = false }) {
+export function RangeStripes({ tiles, view, row, col, healing = false, underOnly = false }) {
   const stripe = healing ? 'rgba(138,229,255,.5)' : 'rgba(255,178,70,.5)';
   const stroke = healing ? 'rgba(51,207,255,.9)' : 'rgba(255,176,70,.9)';
   const [, setN] = useState(0);
@@ -342,7 +346,9 @@ function Stripes({ tiles, view, row, col, healing = false }) {
   const key = tiles.map((t) => t.join(',')).join(';');
   // under the units (3D board): an imperatively managed <svg> between the two canvases
   useEffect(() => {
-    if (!mount || !tiles.length) return undefined;
+    // Keep watching the 3D mount while the detail card is open: a board-mode switch or a context recovery must not
+    // leave stale or missing stripes (underOnly = no 2D overlay: the 2D / DOM boards draw the inspected range natively).
+    if ((!mount && !underOnly) || !tiles.length) return undefined;
     const id = `fwheel-stripe-u${++stripeSeq}`;
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('class', 'fwheel__stripes fwheel__stripes--under');
@@ -355,7 +361,15 @@ function Stripes({ tiles, view, row, col, healing = false }) {
     let raf = 0;
     let last = '';
     const tick = () => {
-      const hr = mount.host.getBoundingClientRect();
+      const target = stripeMount(view);
+      if (!target) {
+        svg.remove();
+        last = '';
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      if (svg.parentNode !== target.host || svg.nextSibling !== target.before) target.host.insertBefore(svg, target.before);
+      const hr = target.host.getBoundingClientRect();
       const polys = stripePolys(view, tiles, hr.left, hr.top);
       const sig = polys.map((p) => p.pts).join('|');
       if (sig !== last) {
@@ -375,7 +389,7 @@ function Stripes({ tiles, view, row, col, healing = false }) {
     return () => { cancelAnimationFrame(raf); svg.remove(); };
   }, [key, view, !!mount, healing]);
   // overlay (2D board / fallback): never over the piece's own tile, so the unit being placed stays visible
-  const over = mount ? [] : tiles.filter(([r, c]) => r !== row || c !== col);
+  const over = mount || underOnly ? [] : tiles.filter(([r, c]) => r !== row || c !== col);
   const overKey = over.map((t) => t.join(',')).join(';');
   useEffect(() => {
     if (!over.length) return undefined;

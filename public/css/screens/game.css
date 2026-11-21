@@ -783,6 +783,19 @@
 .settings-btn.btn--square .btn__label { display: contents; }
 .settings-btn.btn--square .btn__icon { width: 62%; height: 62%; } /* the gear glyph is drawn smaller in its box than the book */
 .set-list { display: flex; flex-direction: column; gap: .16rem; padding-top: .06rem; }
+/* settings categories + cross-category search (batch C) */
+.set-search { position: sticky; top: 0; z-index: 3; padding: .04rem 0 .1rem; background: var(--panel, #0f1419); }
+.set-search__input {
+  width: 100%; height: .38rem; padding: 0 .12rem; color: var(--text-hi); font-size: calc(.14 * var(--t));
+  background: #0b0f13; border: 1px solid var(--line-2); border-radius: 2px; outline: none;
+}
+.set-search__input:focus { border-color: var(--accent, #ffb347); }
+.set-cat {
+  margin: .1rem 0 0; padding: 0 0 .06rem; color: var(--text-lo);
+  font-size: calc(.12 * var(--t)); font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+.set-cat:first-of-type { margin-top: 0; }
 .set-row { display: grid; grid-template-columns: minmax(0, 3.3rem) minmax(0, 1fr) auto; align-items: center; gap: .18rem; min-height: .44rem; }
 /* The label column may shrink (the label wraps) instead of pushing its control out of the modal: at 设置 →「文字大小」
    大 / 特大 a phone's label (a Chinese name plus its Latin micro label) is wider than 3.3rem at 1rem = 40 px. */

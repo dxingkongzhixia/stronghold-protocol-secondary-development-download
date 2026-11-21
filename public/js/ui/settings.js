@@ -38,6 +38,7 @@ import { setUiPlugin, uiPluginEntries, uiPlugins } from './uiPlugins.js';
 import { UI_LIMITS } from '../../../shared/plugins/ui.js';
 import { toast, describeError } from './toasts.js';
 import { fxAvailable } from '../render/vfx/available.js';
+import { settingMatches } from './settingsSearch.js';
 import { resolveOfficialFx } from '../render/vfx/tier.js';
 import { openBugReport } from './community.js';
 import { AssetCacheSection } from './assetMode.js';
@@ -466,6 +467,29 @@ function UiPluginSection() {
  */
 export function SettingsModal({ open, onClose }) {
   const s = useSettings();
+  const [q, setQ] = useState('');
+  const listRef = useRef(null);
+  // Cross-category search: every top-level row / section matches by its own text; a category heading stays only while
+  // one of its rows is visible (the rows are the existing markup — nothing is rebuilt).
+  useLayoutEffect(() => {
+    const root = listRef.current;
+    if (!root) return;
+    const kids = [...root.children];
+    for (const el of kids) {
+      if (el.classList.contains('set-search') || el.classList.contains('set-cat')) continue;
+      el.hidden = !settingMatches(el.textContent, q);
+    }
+    for (let i = 0; i < kids.length; i++) {
+      const el = kids[i];
+      if (!el.classList.contains('set-cat')) continue;
+      let any = false;
+      for (let j = i + 1; j < kids.length && !kids[j].classList.contains('set-cat'); j++) {
+        if (kids[j].classList.contains('set-search')) continue;
+        if (!kids[j].hidden) { any = true; break; }
+      }
+      el.hidden = !any;
+    }
+  }, [q, open]);
   const [tested, setTested] = useState(false);
   const [touchUi] = useState(() => detectFeatures().coarse && !detectFeatures().fine);
   const mtNote = machineTranslationNote(); // a pack marked as machine translation says so under the switch
@@ -485,7 +509,12 @@ export function SettingsModal({ open, onClose }) {
   return html`<${Modal} open=${open} onClose=${onClose} title=${t('设置')} micro="SETTINGS" width="7.4rem"
     actions=${html`<${Button} variant="secondary" icon="edit" class="set-bug" onClick=${openBugReport}>${t('bug提交')}<//>
       <${Button} variant="primary" icon="check" onClick=${onClose}>${t('完成')}<//>`}>
-    <div class="set-list">
+    <div class="set-list" ref=${listRef}>
+      <div class="set-search">
+        <input type="search" class="set-search__input" placeholder=${t('搜索设置')} aria-label=${t('搜索设置')}
+          value=${q} onInput=${(e) => setQ(e.currentTarget.value)} />
+      </div>
+      <div class="set-cat" data-cat>${t('音频')}</div>
       <div class="set-row">
         <span class="set-row__label">${t('语言')}<${MicroLabel}>LANGUAGE<//></span>
         <${LangToggle} class="set-lang" />
@@ -503,6 +532,7 @@ export function SettingsModal({ open, onClose }) {
       <${Slider} label=${t('音效')} micro="SFX" icon="signal" value=${s.sfx}
                  onInput=${(v) => { updateSettings({ sfx: v }); if (!tested) { setTested(true); setTimeout(() => setTested(false), 400); audio.sfx('click'); } }} />
       <${Toggle} label=${t('静音')} micro="MUTE" value=${s.muted} onChange=${(v) => updateSettings({ muted: v })} />
+      <div class="set-cat" data-cat>${t('显示')}</div>
       <div class="set-row">
         <span class="set-row__label">${t('显示伤害数字')}<${MicroLabel}>DAMAGE NUMBERS<//></span>
         <div class="set-seg" role="radiogroup" aria-label=${t('显示伤害数字')} data-testid="damage-mode">
@@ -541,13 +571,16 @@ export function SettingsModal({ open, onClose }) {
       </div>
       <p class="set-hint set-textsize-note">${t('调整界面文字大小，棋盘保持原比例。')}</p>
       ${touchUi ? html`<${ScreenFitSection} />` : null}
+      <div class="set-cat" data-cat>${t('操作')}</div>
       <${HotkeySection} keys=${s.keys} touchUi=${touchUi} />
+      <div class="set-cat" data-cat>${t('外观与内容')}</div>
       <${AssetCacheSection} />
       <${Toggle} label=${t('显示其他玩家的皮肤')} micro="OTHER PLAYERS' SKINS" value=${s.otherSkins !== false} onChange=${(v) => updateSettings({ otherSkins: v })} />
       <p class="set-hint">${t('关闭后，其他博士的干员会显示默认外观；你的干员仍显示你选择的皮肤。')}</p>
       <${CosmeticSection} />
       <${ThemePackSection} />
       <${UiPluginSection} />
+      <div class="set-cat" data-cat>${t('诊断')}</div>
       <${DiagSection} />
       <p class="set-hint">${touchUi ? t('触屏操作：点击单位选中（撤退 / 出售）· 长按单位或卡牌查看详情 · 拖动部署后滑动选择朝向') : t('右键查看详情')}</p>
     </div>
