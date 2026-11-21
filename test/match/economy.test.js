@@ -1,9 +1,15 @@
 // Income, upgrade price math, shop slots, buy/sell, refresh, freeze, ready gating (research 00-INDEX §3, 01 A1).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ERR, PHASE } from '../../shared/constants.js';
 import { GameData } from '../../server/match/gamedata.js';
+import { loadData } from '../../server/data.js';
 import { DATA, makeMatch, give, giveItem, checkInvariants, chessOfTier } from './harness.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const REG = loadData(path.join(ROOT, 'data/versions/act3autochess-v3_1'), { log: { warn() {}, error() {}, info() {} } });
 
 /** Fill every free hand slot with distinct plain equipment (nothing merges), so a piece put into temp stays there. */
 function fillHand(ps) {
@@ -34,6 +40,16 @@ test('income = min(3 + r, 12) in every mode; funds are lost at prep end (band_ca
   h2.drive(() => h2.m.phase === PHASE.PREP && h2.m.round === 2);
   assert.equal(p2.funds, 3 + 5, '坎诺特 carries leftovers (the +1 interest is band content)');
   h2.m.dispose();
+});
+
+test('规程 income: min(3 + r, 11), 极速模拟 min(5 + r, 11) (official recordings); 下半 unchanged', () => {
+  for (const modeId of ['mode_single_1', 'mode_multi_normal', 'mode_multi_abyss']) {
+    const gd = new GameData(REG, modeId);
+    for (let r = 1; r <= 15; r++) assert.equal(gd.income(r), Math.min(3 + r, 11), `${modeId} R${r}`);
+  }
+  const fast = new GameData(REG, 'mode_single_funny');
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8, 9].map((r) => fast.income(r)), [6, 7, 8, 9, 10, 11, 11, 11, 11], '规程 极速模拟');
+  assert.equal(new GameData(DATA, 'mode_multi_normal').income(9), 12, 'the default data keeps its own curve');
 });
 
 test('upgrade price: base per mode, −1 per round start (floor 0), resets to the next base after a level-up; MAX_LEVEL', () => {

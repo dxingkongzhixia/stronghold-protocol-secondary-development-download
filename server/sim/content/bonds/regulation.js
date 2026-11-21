@@ -47,22 +47,53 @@ function standing(battle, pid, id, apply) {
   battle.on('battleStart', () => apply(), { once: true });
 }
 
+// 聚合 (docShip) HP recovery is 生命回复速度, not a heal (official template act3autochess_bond_eff_doc writes
+// HP_RECOVERY_PER_SEC from the member's current ATK). PRTS 禁疗: changing 生命回复速度 is not a healing ability, so
+// 武器 (noHeal) / 收割者 / 不屈者 do not stop it (upstream round 84, GitHub #983). The ability prefab is not in the
+// tables, so the aura reuses the bard rhythm [ASSUMED]: short enough to follow ATK, layers and the live range, and
+// gone within half a second of leaving it. One buff per member, so overlapping members add.
+const DOC_REGEN_IV = 0.25;
+const DOC_REGEN_DUR = 0.5;
+
+/** 「我方单位」for 聚合 recovery: this player's operators and summons. */
+function docRecoverTarget(u, pid) {
+  return !!u && u.alive && !u.removed && u.deployed && u.ownerId === pid && u.side === 'ally'
+    && (u.kind === 'op' || u.kind === 'token');
+}
+
 function installDoc(battle, pid, bb) {
   const L = () => S.bondLayers(battle, pid, 'docShip');
   const heal = () => num(bb.heal_base) + num(bb.heal_per_stack) * L();
   const ep = () => num(bb.ep_heal_base) + num(bb.ep_heal_per_stack) * L();
   const res = () => num(bb.damage_res_base) + num(bb.damage_res_per_stack) * L();
   const shield = () => reached(battle, pid, 'docShip', num(bb.power_bond_char_cnt, 3));
+  // HP: the 生命回复速度 aura over each member's current attack range (skill-widened grids included).
+  battle.every(DOC_REGEN_IV, () => {
+    const hr = heal();
+    if (!(hr > 0)) return;
+    for (const m of S.bondMembers(battle, pid, 'docShip')) {
+      if (!S.onField(m)) continue;
+      const v = hr * num(m.s.atk);
+      if (!(v > 0)) continue;
+      const key = `bond:doc:regen:${m.id}`;
+      for (const a of battle.allyUnits) {
+        if (!docRecoverTarget(a, pid) || !S.inRange(m, a)) continue;
+        battle.addBuff(a, { key, duration: DOC_REGEN_DUR, source: m, mods: { hpRegen: v } });
+      }
+    }
+  });
   battle.every(1, () => {
-    const hr = heal(), er = ep();
+    const er = ep();
     for (const m of S.bondMembers(battle, pid, 'docShip')) {
       if (!S.onField(m)) continue;
       const atk = num(m.s.atk);
       for (const a of battle.allyUnits) {
         if (!a.alive || a.side !== 'ally' || !S.inRange(m, a)) continue;
-        if (hr > 0) battle.heal(m, a, atk * hr, { tags: ['bond:doc'] });
-        if (er > 0) battle.reduceElement(a, atk * er);
-        if (shield() && res() > 0) {
+        // The engine has no EP_RECOVERY_PER_SEC (element gauges do not tick down by themselves): [ASSUMED] keep a
+        // 1 s element recovery of the same ratio, on the same 「我方单位」as the HP aura.
+        if (er > 0 && docRecoverTarget(a, pid)) battle.reduceElement(a, atk * er);
+        // 庇护 stays 「所有干员」only, strongest of overlapping members, not summed (§37.272).
+        if (shield() && res() > 0 && S.isOp(a)) {
           battle.addBuff(a, {
             key: `bond:doc:res:${m.id}`, duration: 1.2, refresh: 'replace', source: m, visible: true,
             mods: { dmgTakenMul: Math.max(0, 1 - res()) },

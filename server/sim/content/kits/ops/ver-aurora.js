@@ -62,7 +62,7 @@ function aurora(_bb, chess, def) {
         if (!t?.s?.flags?.freeze) return;
         const sb = skillBbOf(chess, S2);
         const atk = num(sb.atk), scale = num(sb.atk_scale, 1), denom = 1 + atk;
-        if (denom > 1e-6) c.dmg.mul *= scale / denom;
+        if (denom > 1e-6) c.dmg.amount *= scale / denom; // atk_scale × base ATK instead of the skilled ATK, before DEF
       }, { owner: unit });
     },
   };

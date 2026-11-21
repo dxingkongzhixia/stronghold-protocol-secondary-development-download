@@ -31,7 +31,7 @@ export default withDefaults({
         const crits = new WeakSet();
         battle.on('hit', (c) => {
           if (c.source !== unit || !c.dmg.isAttack || c.target.side !== 'enemy') return;
-          if (battle.rng.chance(num(t0.prob, 0.2))) { c.dmg.mul *= num(t0.atk_scale, 1.5); crits.add(c.dmg); }
+          if (battle.rng.chance(num(t0.prob, 0.2))) { c.dmg.amount *= num(t0.atk_scale, 1.5); crits.add(c.dmg); } // 中的: atk_scale is this attack's ATK, before DEF
         }, { owner: unit });
         battle.on('damaged', (c) => {
           if (c.source !== unit || !c.dmg || !c.dmg.isAttack || c.target.side !== 'enemy') return;

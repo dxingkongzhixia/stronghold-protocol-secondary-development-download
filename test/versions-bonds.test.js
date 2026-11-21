@@ -23,7 +23,7 @@ const lethaniaSummons = (h, ownerId = 'p1') => h.allies().filter((u) => u.kind =
 
 after(() => setGameData(null));
 
-test('聚合 3: allies in a member range recover HP and element every second and gain damage reduction', () => {
+test('聚合 3: allies in a member range recover HP (生命回复速度, not a heal) and element every second and gain damage reduction', () => {
   setGameData(ACT3);
   const h = makeBattle({
     data: ds, seed: 3, autoFinish: false,
@@ -41,10 +41,13 @@ test('聚合 3: allies in a member range recover HP and element every second and
   const m2 = h.allies().find((u) => u.defId === 'chess_char_3_06_a');
   assert.ok(ally && m1 && m2, 'the units are deployed');
   ally.elem.neural = 100;
+  h.run(0.6);                                  // let the 0.25 s aura establish
   const hp0 = ally.hp;
+  // 禁疗 must not stop it: the recovery is 生命回复速度, not a heal (PRTS 禁疗 / round 84, GitHub #983).
+  h.b.addBuff(ally, { key: 'test:healFree', flags: { healFree: true } });
   h.run(1.05);
-  const heal = (m1.s.atk + m2.s.atk) * 0.16;
-  assert.ok(Math.abs((ally.hp - hp0) - heal) <= Math.max(1, heal * 0.02), `heal ${ally.hp - hp0} vs ${heal}`);
+  const heal = (m1.s.atk + m2.s.atk) * 0.16 * 1.05; // continuous aura over the window
+  assert.ok(Math.abs((ally.hp - hp0) - heal) <= Math.max(2, heal * 0.05), `regen ${ally.hp - hp0} vs ${heal}`);
   assert.ok(ally.elem.neural < 100, `element recovered (${ally.elem.neural})`);
   assert.ok(buffs(ally, `bond:doc:res:${m1.id}`).length > 0 || buffs(ally, `bond:doc:res:${m2.id}`).length > 0, 'damage reduction');
   checkInvariants(h.b);

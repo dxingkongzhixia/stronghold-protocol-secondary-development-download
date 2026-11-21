@@ -81,7 +81,7 @@ function kitChghmr(ab) {
     hitOut(c, b, e, a) {
       if (!a.mark || !c.dmg || !c.dmg.isAttack) return;
       a.mark = false;
-      c.dmg.mul *= 1 + atk;
+      c.dmg.amount *= 1 + atk; // 攻击力提升至 atk, before DEF (PRTS 战线推进者)
     },
   }];
 }

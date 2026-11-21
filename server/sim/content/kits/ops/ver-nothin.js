@@ -50,7 +50,7 @@ function nothin(_bb, chess, def) {
         if (!dmg?.isAttack || !target?.alive || !up(unit)) return;
         const last = unit.mem.nothinLastAttack ?? -Infinity;
         if (battle.time - last + 1e-9 < idle) return;
-        dmg.mul *= heavyScale;
+        dmg.amount *= heavyScale; // 攻击力提升至 atk_scale, before DEF
         if (heavyStun > 0) battle.applyStatus(target, 'stun', { duration: heavyStun, source: unit });
       });
     },

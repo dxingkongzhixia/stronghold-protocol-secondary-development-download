@@ -619,7 +619,7 @@ Any `choice:` handler whose EffectRef reuses its own key must guard like this (o
 
 ## 3. Rules implemented (summary; details in each module header)
 
-* **Economy**: income `config.economy.income[r]` (= min(3+r, 12)); bounty coins / pending funds credited at the next
+* **Economy**: income `config.economy.income[r]` (= min(3+r, 12); 规程 min(3+r, 11) and its 极速模拟 min(5+r, 11), both measured off official recordings, written by the version profile's `economy`); bounty coins / pending funds credited at the next
   round start; leftover funds lost at prep end except `leftoverFundsKeptByBands`. Chess price by tier (2/3/3/3/4/4),
   items by `price`, refresh 1 (free refreshes first), sell +1 (elite too; items cannot be sold, only destroyed).
 * **Shop**: `shopSlots[level]` chess slots + item slot(s), copy-weighted rolls over remaining pool copies of unbanned,

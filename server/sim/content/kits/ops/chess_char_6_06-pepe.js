@@ -109,7 +109,7 @@ function pepe(bb, chess, def) {
           const r = num(ctx.profile?.splashRadius, 1);
           unit.mem.pepeBoost = !!t && battle.foesInRadius(t.x, t.y, r).length >= cnt;
         }, { owner: unit });
-        battle.on('hit', (ctx) => { if (ctx.source === unit && ctx.dmg.isAttack && unit.mem.pepeBoost) ctx.dmg.mul *= sc; }, { owner: unit });
+        battle.on('hit', (ctx) => { if (ctx.source === unit && ctx.dmg.isAttack && unit.mem.pepeBoost) ctx.dmg.amount *= sc; }, { owner: unit }); // module: this attack's ATK × atk_scale_e, before DEF
         battle.on('attack', (ctx) => { if (ctx.attacker === unit) unit.mem.pepeBoost = false; }, { owner: unit, priority: -100 });
       } },
     ],

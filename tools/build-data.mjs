@@ -4470,7 +4470,13 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
   const addendum = ctx.research.core?._criticAddendum || {};
   const multipliers = addendum.enemyStatMultipliers || DEFAULT_ENEMY_MULTIPLIERS;
   if (!addendum.enemyStatMultipliers) warn('config: using built-in enemy multiplier table (research 01 _criticAddendum missing)');
-  const incomeCap = addendum.incomePerRound?.CAP ?? 12;
+  // A measured income curve from the version profile (规程, read off official recordings in round 84):
+  // min(incomeBase + round, incomeCap), with per-mode overrides (规程 极速模拟 uses min(5 + round, 11)).
+  // Omitted = the 下半 [ASSUMED] min(3 + round, 12).
+  const measuredIncome = ctx.profile?.economy ?? null;
+  const incomeBase = measuredIncome?.incomeBase ?? 3;
+  const incomeCap = measuredIncome?.incomeCap ?? addendum.incomePerRound?.CAP ?? 12;
+  const incomeCurve = (base, cap) => Array.from({ length: 16 }, (_, r) => (r === 0 ? 0 : Math.min(base + r, cap)));
   const DIFF_KEYS = { FUNNY: 'bloodPoint', NORMAL: 'bloodPointNormal', HARD: 'bloodPointHard', ABYSS: 'bloodPointAbyss' };
 
   const modes = {};
@@ -4560,6 +4566,15 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
     comment_5: { stat: 'itemsEquipped', rule: 'max', text: '装备配发数量最多' },
     comment_6: { stat: 'fundsSpent', rule: 'max', text: '消耗资金最多' },
   };
+  // A mode's own measured income (规程 极速模拟): written on modes[modeId].economy and merged over the season's
+  // economy by GameData (only its fields are replaced).
+  const modeIncome = measuredIncome?.modeIncome;
+  if (modeIncome) {
+    for (const [mid, e] of Object.entries(modeIncome)) {
+      if (!modes[mid]) throw new Error(`income: unknown mode ${mid}`);
+      modes[mid].economy = { income: incomeCurve(e.base, e.cap), incomeFormula: `min(${e.base} + round, ${e.cap})` };
+    }
+  }
   const trophies = ctx.research.core?.trophiesPerClear;
   const steps = Array.isArray(ac.enterStepList) ? ac.enterStepList : Object.values(ac.enterStepList || {});
   const step = (t) => steps.find((x) => x.stepType === t);
@@ -4569,8 +4584,10 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
     version: VERSION ? { id: VERSION.id, season: VERSION.season, family: VERSION.family, dir: VERSION.dir } : undefined,
     modes,
     economy: {
-      income: Array.from({ length: 16 }, (_, r) => (r === 0 ? 0 : Math.min(3 + r, incomeCap))),
-      incomeFormula: `min(3 + round, ${incomeCap})`, incomeCap, incomeCapAlternative: 10, incomeAssumedAfterRound: 3,
+      income: incomeCurve(incomeBase, incomeCap),
+      incomeFormula: `min(${incomeBase} + round, ${incomeCap})`, incomeCap,
+      incomeCapAlternative: measuredIncome ? null : 10,
+      incomeAssumedAfterRound: measuredIncome ? null : 3,
       leftoverFundsLost: true, leftoverFundsKeptByBands: ac.constData?.noMoneyTipsBand || ['band_cannot'],
       chessPrice, chessSell, chessStatus,
       refreshPrice: act.constData.shopRefreshPrice,

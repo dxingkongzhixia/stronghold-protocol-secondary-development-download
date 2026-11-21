@@ -178,7 +178,7 @@ export default {
       }, { owner: unit, priority: -100 });
       battle.on('hit', (ctx) => {
         const g = ctx.source?.mem?.vigilGiftOn;
-        if (g && ctx.dmg.isAttack && ctx.source === wolfOf(unit)) ctx.dmg.mul *= g.scale;
+        if (g && ctx.dmg.isAttack && ctx.source === wolfOf(unit)) ctx.dmg.amount *= g.scale; // atk_scale on the ATK, before DEF
       }, { owner: unit });
       battle.on('kill', (ctx) => {
         const g = ctx.killer?.mem?.vigilGiftOn;
