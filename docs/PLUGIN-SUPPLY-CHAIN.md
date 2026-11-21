@@ -1,5 +1,7 @@
 # 插件安装与更新供应链
 
+<!-- doc: role=spec status=current -->
+
 本页说明本分支现有的安装/更新安全边界和推荐流程。商城上传已经支持可选的 Ed25519 签名（`var/plugin-market/keys.json`）；安装 CLI 仍只校验 SHA-256，签名验证目前是商城上传层的能力。
 
 ## 1. 安装入口

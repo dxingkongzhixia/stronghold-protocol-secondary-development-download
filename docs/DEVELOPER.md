@@ -1,5 +1,7 @@
 # 开发者手册
 
+<!-- doc: role=guide status=current -->
+
 > **适用对象**：人类开发者、新接手的维护者。AI 代理请先读根目录 [`../AGENTS.md`](../AGENTS.md) 与 [`AI-AGENT.md`](AI-AGENT.md)。
 > **最后核对**：2026-10-25。命令与路径以仓库当前状态为准；发现过期直接改本文件。
 

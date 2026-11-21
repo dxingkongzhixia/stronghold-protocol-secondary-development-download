@@ -1,5 +1,7 @@
 # Keel（龙骨）功能总览
 
+<!-- doc: role=spec status=current -->
+
 > 状态：**可用 / 第一阶段完成**。Keel 是当前唯一的插件 loader；manifest 2 不再直接加载，主线插件通过 `keel import --write` 迁移到 manifest 3。
 > 兼容线：**manifest 3 + `compat.v2Script` 运行时**是正式支持，不是遗留缺陷；`trusted.server/page` 明确不支持。
 > 本文按“功能”组织，回答“Keel 现在能做什么、边界在哪”。字段细节见 [`MANIFEST-V3.md`](MANIFEST-V3.md)，运行时细节见 [`RUNTIME.md`](RUNTIME.md)，扩展点见 [`CONTRACTS.md`](CONTRACTS.md)。

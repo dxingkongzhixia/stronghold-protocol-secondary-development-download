@@ -1,5 +1,7 @@
 # Keel 运行时
 
+<!-- doc: role=spec status=current -->
+
 > 状态：**已接入实时对局**。原生 `sim` 在浏览器 Worker；`match` / `policy` 在服务端 match host meta；普通 content/asset 房间仍在页面内模拟。
 > 代码：`shared/keel/runtime.js`、`state.js`、`commands.js`、`rng.js`、`budget.js`、`host.js`、`loader.js`；浏览器侧 `public/js/battle/simWorkerRuntime.js`、`simHost.js`；服务端侧 `server/match/host/`。
 > 功能总览：[`FEATURES.md`](FEATURES.md)。

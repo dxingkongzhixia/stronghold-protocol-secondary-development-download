@@ -1,5 +1,7 @@
 # 新增干员流程（自造干员）
 
+<!-- doc: role=reference status=current -->
+
 > 本季的干员名册来自官方数据：`tools/build-data.mjs` 读 Kengxxiao 官方表生成 `data/*.json`。
 > **不在官方赛季名册里的干员**（例如阿斯卡纶）走**自造干员**通道 —— 下面这套流程就是给「加一名干员」用的。
 > 参考实现：阿斯卡纶（`docs/MATCHMAKING.md` §23），每一步都能照抄。

@@ -1,5 +1,7 @@
 # 内容集构建：机制、缓存与排障 / Content-set builds: mechanics, caches, diagnosis
 
+<!-- doc: role=spec status=current -->
+
 > 状态：维护中（2026-11-02）。**本页是「房间插件内容集构建」这一主题的唯一位——机制、缓存键、环境变量、排障
 > 步骤和踩过的坑都在这里。** 规格在 [`PLUGINS.md`](PLUGINS.md) §11，部署与变量速查在 [`DEPLOY.md`](DEPLOY.md)，
 > 当前线上状态在 [`PROJECT-STATE.md`](PROJECT-STATE.md)。

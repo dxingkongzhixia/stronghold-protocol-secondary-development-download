@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { docsFiles, readMarker, renderIndex, ROLES, STATUSES } from '../tools/docs-index.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
@@ -78,4 +79,16 @@ test('every file in test/fast.list exists', () => {
     .split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
   assert.ok(list.length >= 10, 'the fast tier has its curated files');
   assert.deepEqual(list.filter((f) => !fs.existsSync(path.join(ROOT, f))), []);
+});
+
+test('every maintained doc has a valid front-matter marker and docs/INDEX.md is fresh', () => {
+  const bad = [];
+  for (const rel of docsFiles()) {
+    const marker = readMarker(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+    if (!marker) bad.push(`${rel}: missing <!-- doc: role=… status=… -->`);
+    else if (!ROLES.has(marker[0]) || !STATUSES.has(marker[1])) bad.push(`${rel}: invalid ${marker.join('/')}`);
+  }
+  assert.deepEqual(bad, []);
+  assert.equal(fs.readFileSync(path.join(ROOT, 'docs/INDEX.md'), 'utf8'), renderIndex(),
+    'docs/INDEX.md is stale — run npm run docs:index');
 });

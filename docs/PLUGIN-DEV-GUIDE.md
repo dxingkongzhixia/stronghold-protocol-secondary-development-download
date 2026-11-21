@@ -1,5 +1,7 @@
 # 插件开发指南
 
+<!-- doc: role=spec status=current -->
+
 > **Keel 现状：** 新插件写 manifest 3；manifest 2 先 `node tools/keel.mjs import <id> --write` 迁移。功能总览见 [`keel/FEATURES.md`](keel/FEATURES.md)，manifest 3 规格见 [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md)。本文保留 v2 作者流程作为兼容参考。
 
 > **这是插件开发的单一入口。** 写给**写插件的人**：从选模板、写 manifest、调试、测试到打包发布。

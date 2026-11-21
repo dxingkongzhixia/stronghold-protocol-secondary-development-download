@@ -1,5 +1,7 @@
 # Plugin API v1–v2
 
+<!-- doc: role=spec status=current -->
+
 > **Keel 现状：** `sp:sdk@1` 只作为 `compat.v2Script` 的正式兼容运行时保留；新插件优先写 manifest 3 的 `sim` / `match` / `policy` 模块。功能总览见 [`keel/FEATURES.md`](keel/FEATURES.md)。
 
 The frozen surface of plugin API v1. A plugin names the level it was written for in `api` (`plugin.json`). This build accepts a level from `PLUGIN_API.min` through `PLUGIN_API.current` (`shared/constants.js`). A plugin outside that range is refused and is not loaded.

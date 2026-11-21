@@ -1,5 +1,7 @@
 # HANDOVER — 已归档（archived）
 
+<!-- doc: role=archive status=archive -->
+
 > **这篇长文是 2026-10-14 的接手快照，已归档，不再维护。**
 > 归档全文：[`HANDOVER-2026-10.md`](HANDOVER-2026-10.md)。
 

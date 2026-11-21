@@ -1,5 +1,7 @@
 # BALANCE.md — difficulty model and measurement (official numbers, no custom tuning)
 
+<!-- doc: role=reference status=current -->
+
 Owner: match / balance. Tools: `tools/balance.mjs` (competent-board model — now a **measuring** tool only),
 `tools/matchrun.mjs` (bot matches). Tests: `test/match/balance.test.js`, `test/match/waves-official.test.js`,
 `test/match/waves.test.js`, `test/sim/pathing.test.js`.

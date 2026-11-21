@@ -1,5 +1,7 @@
 # 界面主题包（spTheme/1）
 
+<!-- doc: role=reference status=current -->
+
 一个主题包就是一个文件夹：`theme.json` 加若干图片。**只在本浏览器生效**：不会上传，不会被其他玩家看到，也不会进入对局逻辑。
 
 ## 使用

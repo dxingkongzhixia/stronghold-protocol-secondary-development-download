@@ -1,5 +1,7 @@
 # Development guide (detailed code map)
 
+<!-- doc: role=reference status=current -->
+
 > **Maintained entry:** start with [`DEVELOPER.md`](DEVELOPER.md). This file is the detailed code-map / pipeline
 > reference behind it; AI agents should start with [`../AGENTS.md`](../AGENTS.md) + [`AI-AGENT.md`](AI-AGENT.md).
 

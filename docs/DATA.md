@@ -1,5 +1,7 @@
 # DATA.md — generated game data (`data/*.json`)
 
+<!-- doc: role=reference status=current -->
+
 All files in `data/` except `data/assets.json` and `data/i18n/` are produced by **`node tools/build-data.mjs`** (task F1) from the
 official zh_CN client data ([Kengxxiao/ArknightsGameData](https://github.com/Kengxxiao/ArknightsGameData)) joined
 with `docs/research/*.json`. Do not edit them by hand — change the build script and rebuild.

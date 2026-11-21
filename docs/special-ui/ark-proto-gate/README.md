@@ -1,5 +1,7 @@
 # ark-proto 特殊 UI 快照（PRTS 访问终端）
 
+<!-- doc: role=reference status=current -->
+
 > 来源：`https://ark-proto.stardust.matce.cn/entry?next=/`
 > 抓取：**2026-10-31**；门禁 build `ae-12`；站点的 `/healthz` 报告 app **0.3.3**、build `b85985a86b2c`。
 > 用途：**UI 研究 / 视觉参考**。不参与本仓库构建，不被游戏加载；页面代码与文案来自原站。

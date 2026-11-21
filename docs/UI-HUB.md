@@ -1,5 +1,7 @@
 # 主界面：经典大厅与 Hub / Main interface: classic lobby and Hub
 
+<!-- doc: role=reference status=current -->
+
 > **当前状态（2026-10-23）**：默认 `hub`（新大厅）；管理后台「界面」页可切回 `classic`。切换只影响大厅，房间 / 备战 / 战斗 / 结算 / HUD 的代码完全不变。上线前默认值、部署与通知仍按 [`AI-WORKFLOW.md`](AI-WORKFLOW.md) 的发布流程执行。
 
 ## 1. 两套界面

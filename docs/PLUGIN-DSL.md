@@ -1,5 +1,7 @@
 # 插件 DSL（P2）
 
+<!-- doc: role=spec status=current -->
+
 给插件作者。这里只描述数据，不执行任何插件代码。编译器是 `server/sim/content/dsl/compile.js` 的 `compileDsl(spec, { bb, chess, def })`，返回的东西和官方 kit 函数返回的 Kit 相同。备战效果走 `server/match/dslMeta.js`。词表的机器可读副本是 `schemas/dsl.schema.json`。设计记录在 DESIGN §32.7。
 
 原版对局不读这些文件。`kitOf` 何时根据干员数据里的 `dsl` 字段调用编译器，由数据插件那一部分接入；在那之前，测试把编译结果放进 `makeBattle({ kits })`。

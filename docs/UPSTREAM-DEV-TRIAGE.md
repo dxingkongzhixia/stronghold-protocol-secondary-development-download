@@ -1,5 +1,7 @@
 # 主线未并入清单（Upstream backlog）
 
+<!-- doc: role=history status=history -->
+
 > 2026-10-27 重写。前身是 2026-10-20 的 `upstream/dev` triage（那段历史见
 > [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10）；本文件现在是**主线参考台账**：哪些还没并、为什么、
 > 摘的时候要注意什么。合并日志仍写在 `UPSTREAM-MERGES.md`，永不合并清单仍是它的 §0。

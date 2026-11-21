@@ -1,5 +1,7 @@
 # 插件商城（Plugin Market）
 
+<!-- doc: role=spec status=current -->
+
 插件商城是一个独立的玩家页面，不是游戏内的插件面板：
 
 - `/market/`：浏览、搜索、下载

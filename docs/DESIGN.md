@@ -1,5 +1,7 @@
 # 卫戍协议：盟约 — Web Remake · Architecture & Contracts (DESIGN.md)
 
+<!-- doc: role=rules status=current -->
+
 > **Reading order:** start with [`RULES.md`](RULES.md) for the rules entry and authority order. This file is the
 > **permanent section registry** (§0–§49) and points to the current rules in [`design/`](design/) and the per-release
 > evidence in [`history/`](history/). Section numbers never change.

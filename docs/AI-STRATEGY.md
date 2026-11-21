@@ -1,5 +1,7 @@
 # AI 打法与顾问策略（AI-STRATEGY）
 
+<!-- doc: role=reference status=current -->
+
 > 本文是**示例顾问**（外部 AI / LLM 适配器）的策略说明，也是 `tools/ai/playbook.mjs` 的证据来源之一
 > （生成 `sp-playbook/1` 时会对本文取哈希，写进知识包的 `sources`）。
 >

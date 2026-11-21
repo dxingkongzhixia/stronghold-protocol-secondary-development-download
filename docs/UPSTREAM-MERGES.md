@@ -1,5 +1,7 @@
 # Upstream merge log (`UPSTREAM-MERGES`)
 
+<!-- doc: role=history status=history -->
+
 Who this is for: **the next person who merges the mainline (主线项目)** and **anyone auditing what we took from
 `sganggs/Stronghold-Protocol`**. This is the chronological record of every upstream batch folded into our fork:
 what came in, what we deliberately left out, how conflicts were resolved, how the golden corpus moved, and the

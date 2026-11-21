@@ -1,5 +1,7 @@
 # 插件新手指南：从换立绘到玩法插件
 
+<!-- doc: role=spec status=current -->
+
 > **Keel 现状：** 新插件写 manifest 3；manifest 2 需要先迁移。功能总览见 [`keel/FEATURES.md`](keel/FEATURES.md)，manifest 3 见 [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md)。本文保留旧版作者流程作为兼容参考。
 
 0.3.1 的特效接口需要编辑 JSON；步骤见文末「给插件干员加特效」。

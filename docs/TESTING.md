@@ -1,5 +1,7 @@
 # 测试系统（TESTING）
 
+<!-- doc: role=ops status=current -->
+
 > **唯一入口**。测试的目录、命令、门禁、golden 规则、CI 与常见不稳定项都在这里；
 > 其它文档只做指针（`AI-AGENT.md` §6 是速查，`README.md` §2.4 是索引）。
 >
@@ -31,7 +33,7 @@
 | 单条用例 | `node --test --test-name-pattern="bench shed" test/match/bot-smarter.test.js` |
 | golden 校验 / 重算 | `node tools/golden.mjs` / `node tools/golden.mjs --update`（先归因，见 §4） |
 | golden 归因 | `npm run golden:attrib -- --paths server/sim`（自动：存下重算 diff → 只回退你的改动 → 基线必须匹配 → 恢复 → 必须失配） |
-| 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js` |
+| 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/docs-facts.test.js`；front-matter / 索引：`npm run docs:check`（重建 `docs/INDEX.md`：`npm run docs:index`） |
 | 手机矩阵 | `npm run check:mobile`（`tools/mobile-audit.mjs`；需 Chrome，`CHROME_PATH` 可配） |
 | 浏览器渲染 | `RENDER_E2E=1 node --test test/render/*.browser.test.js`（需 Chrome + `public/assets`） |
 | 联机 E2E | `SP_E2E=1 node --test "test/e2e/**"`（需浏览器与素材） |

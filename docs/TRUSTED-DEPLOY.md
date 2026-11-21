@@ -1,5 +1,7 @@
 # Trusted 插件生产部署基线
 
+<!-- doc: role=reference status=current -->
+
 本文是 `trusted` / `trusted-force` 插件的**部署基线**，不是“绝对安全”的承诺。trusted 代码仍可能完全控制页面或服务进程；容器、权限和网络限制只是缩小爆炸半径。
 
 默认建议：

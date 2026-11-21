@@ -1,5 +1,7 @@
 # AI workflow — how we change, merge, commit and deploy this fork
 
+<!-- doc: role=ops status=current -->
+
 Audience: the AI agent(s) working on this fork with the owner (`d星空之下`). This is the operational contract:
 how a request is handled, how the upstream is merged, how commits and the GitHub/Gitee push work, how production is
 deployed, and **when to stop and ask the owner**. Start with [`AI-AGENT.md`](AI-AGENT.md) for the current workflow;

@@ -1,5 +1,7 @@
 # Keel 扩展点契约
 
+<!-- doc: role=spec status=current -->
+
 > 本表是扩展点名称/域/能力/预算的权威版本；`shared/keel/contracts.js` 与 `node tools/keel.mjs surface --check` 必须与它一致。  
 > 运行时是否已接、当前边界见 [`FEATURES.md`](FEATURES.md)；模块 / 权限的完整对照（含 `content.extend` 等已知差异）见 [`MODULES.md`](MODULES.md)；实现细节见 [`RUNTIME.md`](RUNTIME.md)。
 

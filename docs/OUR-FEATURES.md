@@ -1,5 +1,7 @@
 # Our fork-only mechanisms (merge-critical)
 
+<!-- doc: role=decision status=current -->
+
 Who this is for: **a future upstream merge** and **a newcomer maintaining this fork**. Everything below is
 **ours — not upstream**. It exists so that (a) a merge knows these mechanisms are here and must be preserved, and
 (b) a maintainer can change them without re-deriving them from the code.

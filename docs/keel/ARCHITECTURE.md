@@ -1,5 +1,7 @@
 # Keel 架构与实现
 
+<!-- doc: role=spec status=current -->
+
 > 本文回答“系统怎么组成、N1/V2 怎么实现”。开发/兼容/测试流程见 [`WORKFLOW.md`](WORKFLOW.md)，功能清单见 [`FEATURES.md`](FEATURES.md)。
 > 代码路径以仓库根目录为准。
 

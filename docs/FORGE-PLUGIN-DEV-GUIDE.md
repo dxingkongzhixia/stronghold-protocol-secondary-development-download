@@ -1,5 +1,7 @@
 # Forge 导入包开发指南
 
+<!-- doc: role=reference status=current -->
+
 本文写给**做 Forge 工坊包、并希望它能干净导入本分支的人**。它讲怎样组织 `pack.json`、哪些 Forge 写法能转换、哪些会拒绝、怎样读导入报告、导入后怎样验证。
 
 完整字段级兼容矩阵在 [`FORGE-COMPATIBILITY.md`](FORGE-COMPATIBILITY.md)。普通插件开发见 [`PLUGIN-DEV-GUIDE.md`](PLUGIN-DEV-GUIDE.md)，完整规范见 [`PLUGINS.md`](PLUGINS.md) §16。

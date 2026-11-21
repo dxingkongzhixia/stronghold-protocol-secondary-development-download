@@ -1,5 +1,7 @@
 # Keel 剩余项与边界
 
+<!-- doc: role=spec status=current -->
+
 > 状态：**第一阶段完成**。主链路、V2 兼容运行时、作者链路、真实房间边界验证都已完成。
 > 本文只列“还没做 / 明确不做 / 需要长期维护”的内容；完整功能见 [`FEATURES.md`](FEATURES.md)，当前检查点见 [`NEXT.md`](NEXT.md)。
 > 已完成任务的历史记录见 [`HISTORY.md`](HISTORY.md)。

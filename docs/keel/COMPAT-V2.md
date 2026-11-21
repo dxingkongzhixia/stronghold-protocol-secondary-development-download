@@ -1,5 +1,7 @@
 # manifest 2 → Keel 兼容
 
+<!-- doc: role=spec status=current -->
+
 > 适配器：`shared/keel/adapt.js`；CLI：`node tools/keel.mjs migrate <id> --json`。  
 > 原则：**旧插件零改动迁移**（N5 后仅用于 `keel import/migrate` 与 Forge/studio 生成 manifest 3，loader 不再读取 manifest 2）；适配器只读，不执行、不重写、不改 `plugin.json`。
 

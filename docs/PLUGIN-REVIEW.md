@@ -1,5 +1,7 @@
 # 插件系统评审（2026-10-19）
 
+<!-- doc: role=spec status=current -->
+
 本文是对当前合并后的插件 / Forge 体系的工程评审：架构、能力边界、安全模型、测试质量、已知风险和后续建议。
 它不是规范；规范仍是 [`PLUGINS.md`](PLUGINS.md)、[`PLUGIN-API.md`](PLUGIN-API.md) 和 [`PLUGIN-DSL.md`](PLUGIN-DSL.md)。
 

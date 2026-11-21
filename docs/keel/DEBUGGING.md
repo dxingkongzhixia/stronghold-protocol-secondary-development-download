@@ -1,5 +1,7 @@
 # Keel 调试、错误与指标
 
+<!-- doc: role=spec status=current -->
+
 > 面向“插件不工作 / 报错 / 想量性能”的排查。功能见 [`FEATURES.md`](FEATURES.md)，架构见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，流程见 [`WORKFLOW.md`](WORKFLOW.md)。
 
 ## 1. 先分清错误发生在哪一层

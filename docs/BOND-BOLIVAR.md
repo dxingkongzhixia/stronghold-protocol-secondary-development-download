@@ -1,5 +1,7 @@
 # 玻利瓦尔国家盟约（v0.3 / Keel N 系列）
 
+<!-- doc: role=reference status=current -->
+
 > **状态：原型已实现（2026-11-01），未上线。**
 > 跑在 Keel N 系列原生插件 `plugins/bolivar` 上：manifest 3 + `content` + `asset` + `sim`。
 > 生产不加载该插件；`tools/build-data.mjs` 的 `HELD_FACTIONS` 也不再生成 `data/builtin/faction-bolivar.json`

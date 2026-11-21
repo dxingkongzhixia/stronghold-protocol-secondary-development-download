@@ -1,5 +1,7 @@
 # QUERY-INDEX — where to find what
 
+<!-- doc: role=entry status=current -->
+
 A **lookup table** for an agent or a newcomer: start from the question you have, land on the owning
 document or code file. The authoritative docs are still the ones linked here; this file only points.
 

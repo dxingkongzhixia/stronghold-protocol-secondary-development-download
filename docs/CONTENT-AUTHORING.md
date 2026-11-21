@@ -1,5 +1,7 @@
 # 内容制作手册：盟约 / 策略 / 悬赏敌人 / 干员
 
+<!-- doc: role=reference status=current -->
+
 > 这份文档把「加一条内容」的**端到端**链路写清楚：数据从哪来、运行时谁读它、要补哪些文件、跑哪些校验。
 > 现有文档是它的入口：新增**干员**的完整配方在 [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md)（本文 §1 是补充与交叉引用）；
 > 数据格式见 [`docs/DATA.md`](DATA.md)、战斗引擎见 [`docs/SIM.md`](SIM.md)、对局/匹配见 [`docs/MATCHMAKING.md`](MATCHMAKING.md)、

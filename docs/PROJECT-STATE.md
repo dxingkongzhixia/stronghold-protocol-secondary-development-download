@@ -1,5 +1,7 @@
 # 项目现状一览（PROJECT-STATE）
 
+<!-- doc: role=ops status=current -->
+
 > 给「新会话 / 新接手的人」看的一页纸。**最后核对：2026-11-21**（台式机 `_merge-scratch` + 线上实测；单树 clone 记录保留为历史）。
 > 插件 / Forge / studio / 控制台见 [`docs/PLUGINS.md`](PLUGINS.md) 与 [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §13.10。
 > 文档入口（2026-10-25 重新梳理）：人类 [`DEVELOPER.md`](DEVELOPER.md)、AI [`AI-AGENT.md`](AI-AGENT.md)、

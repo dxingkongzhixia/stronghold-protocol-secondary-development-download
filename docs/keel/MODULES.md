@@ -1,5 +1,7 @@
 # Keel 模块 / 权限参考矩阵
 
+<!-- doc: role=spec status=current -->
+
 > 代码基线：2026-11-02。**代码是唯一事实来源**：
 > `shared/keel/manifest.js`（`KEEL_MODULE_KINDS` / `KEEL_PERMISSIONS`）、`shared/keel/contracts.js`（stable / experimental 扩展点）、
 > `shared/keel/runtime.js`（API 与 hook 调度）、`server/keel/attach.js`（Battle → hook）、`server/match/match/`（match / policy 触发点）。

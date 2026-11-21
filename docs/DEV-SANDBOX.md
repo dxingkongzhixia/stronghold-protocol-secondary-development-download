@@ -1,5 +1,7 @@
 # 沙盒（管理员）— 单场景战术演练
 
+<!-- doc: role=reference status=current -->
+
 > 入口：`/admin/sandbox?token=…`（管理员 token）→ 302 到 `/dev/sandbox.html`。纯静态页面，不改服务端；不重启即可更新。
 > 页面用**客户端自己的模拟**（`public/js/battle/runner.js` → `/sim`）跑一场真实战斗，再用**真实渲染**（`render/app.js`）
 > 画出来，不是录像。

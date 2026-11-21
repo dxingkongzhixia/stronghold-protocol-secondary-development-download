@@ -1,5 +1,7 @@
 # 规程（卫戍协议·规程 序列Ⅰ）还原清单 / Regulation port plan
 
+<!-- doc: role=decision status=current -->
+
 > 目标版本：官方 **卫戍协议·规程【序列Ⅰ】**（`act3autochess` `V3_1`，2026-11-08 开放）。
 > owner 决定（2026-11-15）：**路线 A 版本共存**——默认仍是盟约（`act2autochess`），规程作为一个可选官方版本。
 > 本文件是执行清单；进度与状态以 §6 的勾选与提交号为准。相关：`UPSTREAM-DEV-TRIAGE.md` §10（总台账）、

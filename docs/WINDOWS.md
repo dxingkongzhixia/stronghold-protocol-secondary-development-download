@@ -1,5 +1,7 @@
 # Windows 便携包（零安装方案）
 
+<!-- doc: role=reference status=current -->
+
 本文说明怎么打一份「目标机器什么都不用装」的 Windows 便携包，包里放了什么、没放什么，以及发出去之前要确认的授权。
 相关代码：`scripts/make-windows-bundle.mjs`（打包）、`scripts/launch.mjs`（准备 + 起服务器 + 打开浏览器）。
 

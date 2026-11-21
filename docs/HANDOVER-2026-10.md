@@ -1,5 +1,7 @@
 # HANDOVER — detailed handover & operations reference
 
+<!-- doc: role=archive status=archive -->
+
 > **Maintained entry:** humans start with [`DEVELOPER.md`](DEVELOPER.md); AI agents start with [`../AGENTS.md`](../AGENTS.md)
 > + [`AI-AGENT.md`](AI-AGENT.md). This file remains the long-form handover and operations reference.
 

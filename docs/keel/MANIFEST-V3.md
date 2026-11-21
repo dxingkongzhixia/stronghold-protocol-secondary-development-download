@@ -1,5 +1,7 @@
 # Keel manifest 3
 
+<!-- doc: role=spec status=current -->
+
 > 读取与校验：`shared/keel/manifest.js`；JSON Schema：`schemas/keel-manifest.schema.json`。  
 > **manifest 3 是唯一插件入口**；manifest 2 先由 [`adapt.js`](../../shared/keel/adapt.js) 迁移，不再由 loader 直接读取。
 

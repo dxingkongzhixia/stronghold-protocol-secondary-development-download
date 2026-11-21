@@ -1,5 +1,7 @@
 # ARCHITECTURE.md — a map of the code
 
+<!-- doc: role=reference status=current -->
+
 For a newcomer who wants to find their way before changing something. This file only maps the code. The contracts are
 in the design document — [DESIGN.md](DESIGN.md) is its index, the current rules are in `docs/design/` (§5 the battle
 engine: [design/engine.md](design/engine.md); §6 the match: [design/match.md](design/match.md); §8 the protocol and §14

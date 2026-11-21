@@ -1,5 +1,7 @@
 # Bot 策略（注册表、内置策略、每座位覆盖）
 
+<!-- doc: role=reference status=current -->
+
 > 代码：`server/match/botStrategies.js`（注册表）、`botStrategyContract.js`（契约）、
 > `bot.js`（内置 `legacy` 实现 + 备战生成器）、`botPrep.js`、`botFormationCandidates.js`、
 > `botAdaptive.js`、`botIoleta.js`、`botIoletaPolicy.js`。

@@ -1,5 +1,7 @@
 # PRTS「源代码」玩法插件 — 开发文档（评审稿）
 
+<!-- doc: role=reference status=current -->
+
 > 状态：**A1/A2 + B–D 主体已实现并上线**（2026-10-23）；E 的实战验收项见[剩余开发计划](PRTS-SOURCE-CODE-REMAINING.md)。
 > 2026-10-23 线上修复：team grant 覆盖 AI 队友；队友把凯尔希移出预备医疗格后不再恢复 Touch 的预备医疗；策略效果/图鉴图标改用插件自带的凯尔希图标。
 > 性质：**本 fork 独有**的内容插件 + fork 引擎能力，不承诺主线可用。

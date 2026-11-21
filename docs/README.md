@@ -1,5 +1,7 @@
 # 文档系统 / Documentation System
 
+<!-- doc: role=entry status=current -->
+
 > **状态**：维护中的文档总入口（2026-11-05 按**读者**与**核心能力**重排；旧的分层表改为 §3 的图例）。
 > 新增或移动文档时，按 §7.3 的清单登记：**本页 §2 → [`QUERY-INDEX.md`](QUERY-INDEX.md) → [`../AGENTS.md`](../AGENTS.md)
 > → [`AI-AGENT.md`](AI-AGENT.md) §7 → [`HANDOVER-2026-10.md`](HANDOVER-2026-10.md)（归档参考）**。
@@ -150,6 +152,7 @@
 | 规程 band（策略）实现计划 | [`UPSTREAM-BANDS.md`](UPSTREAM-BANDS.md) |
 | 决策记录 §0–§49 | [`MATCHMAKING.md`](MATCHMAKING.md) |
 | 评估过但暂不实现 | [`FUTURE-FEATURES.md`](FUTURE-FEATURES.md) |
+| 全部维护中文档（自动生成） | [`INDEX.md`](INDEX.md)（`npm run docs:index`；`npm run docs:check` 校验） |
 | 部署日志（只追加） | [`DEPLOYS.md`](DEPLOYS.md) |
 | 已归档（不再维护） | [`HANDOVER-2026-10.md`](HANDOVER-2026-10.md) · [`HANDOFF-2026-11-18.md`](HANDOFF-2026-11-18.md) |
 
@@ -249,12 +252,13 @@
 
 ### 7.3 新增 / 移动文档的登记清单
 
-1. 本页 §2（放到正确的**能力**分组）与 §4（如果它取代或补充了某个话题）；
-2. [`QUERY-INDEX.md`](QUERY-INDEX.md)（至少一条「问题 → 文件」）；
-3. [`../AGENTS.md`](../AGENTS.md) §3 的速查表（如果是代理需要主动找到的）；
-4. [`AI-AGENT.md`](AI-AGENT.md) §7 的同步矩阵（如果它成为某类改动的必改项）；
-5. 若涉及历史细节：[`HANDOVER-2026-10.md`](HANDOVER-2026-10.md)（归档；不再维护）；
-6. 运行 `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js`。
+1. 在标题下加标记：`<!-- doc: role=… status=… -->`（role/status 取值见 `tools/docs-index.mjs`），然后 `npm run docs:index`；
+2. 本页 §2（放到正确的**能力**分组）与 §4（如果它取代或补充了某个话题）；
+3. [`QUERY-INDEX.md`](QUERY-INDEX.md)（至少一条「问题 → 文件」）；
+4. [`../AGENTS.md`](../AGENTS.md) §3 的速查表（如果是代理需要主动找到的）；
+5. [`AI-AGENT.md`](AI-AGENT.md) §7 的同步矩阵（如果它成为某类改动的必改项）；
+6. 若涉及历史细节：[`HANDOVER-2026-10.md`](HANDOVER-2026-10.md)（归档；不再维护）；
+7. 运行 `npm run docs:check` 与 `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js`。
 
 ### 7.4 文档门禁
 
@@ -262,8 +266,9 @@
 |---|---|
 | `test/docs-links.test.js` | 每个 `.md` 的每个相对链接都必须存在 |
 | `test/docs-consistency.test.js` | 钉住的文档（`DESIGN` / `design/` / `history/` / `SIM` / `META` / `DATA` / 根 `README` / `DEPLOY` / `PLAYING`）的措辞与代码一致 |
-| `test/docs-paths.test.js` | `ARCHITECTURE.md` / `CONTRIBUTING.md` 里的路径 |
+| `test/docs-paths.test.js` | 5 个入口文档里的路径（`ARCHITECTURE` / `CONTRIBUTING` / `QUERY-INDEX` / `PROJECT-STATE` / `TESTING` / `DEVELOPER` / `AI-AGENT`） |
 | `test/docs-mojibake.test.js` | 每个 `.md` 的编码 |
+| `test/docs-facts.test.js` | 命令 / 工具路径 / 版本一致 / 无孤儿 / `test/fast.list` / front-matter 与 `INDEX.md` 同步 |
 
 ```bash
 node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js

@@ -1,5 +1,7 @@
 # PLUGINS.md — plugins (插件)
 
+<!-- doc: role=spec status=current -->
+
 > **Keel 现状（0.4.0）：** manifest 3 是唯一插件入口；manifest 2 先 `node tools/keel.mjs import <id> --write` 迁移。本文保留 manifest-2 / v2 插件规范作为作者参考；Keel 功能总览见 [`keel/FEATURES.md`](keel/FEATURES.md)，manifest 3 见 [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md)。
 
 > **Audit note (2026-11-07, docs ↔ code).** The loader described below is the **v2 compatibility projection** of Keel

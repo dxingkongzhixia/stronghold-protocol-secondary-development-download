@@ -1,5 +1,7 @@
 # Keel 15 分钟快速上手
 
+<!-- doc: role=spec status=current -->
+
 目标：从零生成一个原生 Keel 插件，在本地检查和运行，然后在真实房间里看到它的效果。
 
 > 使用标准参考插件 `keel-reference`：content + asset + sim + policy + ui 五个模块，覆盖最常见的作者链路。

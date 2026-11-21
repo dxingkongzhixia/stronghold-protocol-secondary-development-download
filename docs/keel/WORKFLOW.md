@@ -1,5 +1,7 @@
 # Keel 开发、兼容与测试流程
 
+<!-- doc: role=spec status=current -->
+
 > 15 分钟上手见 [`QUICKSTART.md`](QUICKSTART.md)，架构与 N1/V2 实现见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，功能清单见 [`FEATURES.md`](FEATURES.md)，排错见 [`DEBUGGING.md`](DEBUGGING.md)。
 > 标准试验插件：[`../../plugins/_template/keel-reference`](../../plugins/_template/keel-reference/README.md)。
 

@@ -1,5 +1,7 @@
 # 规程 band 实现计划（act3autochess）
 
+<!-- doc: role=plan status=plan -->
+
 来源：官方 `activity_table.json`（pin `6f63c14e`）的
 `activity.AUTOCHESS.act3autochess.V3_1`：
 

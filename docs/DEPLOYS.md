@@ -1,5 +1,7 @@
 # 部署日志（倒序）
 
+<!-- doc: role=history status=history -->
+
 > 迁移自 `docs/PROJECT-STATE.md`（2026-11-21，文档重构）。**当前状态**见 [PROJECT-STATE](PROJECT-STATE.md)。
 > 每次上线遵循：站内通知（`sign: d星空之下`）→ 备份 → 上传增量 → 重启（仅当 `server/**`、`shared/**` 变化）→ 校验 `/healthz` build。
 > 没有 owner 明确许可，**不上线**（默认「先不上线」）。

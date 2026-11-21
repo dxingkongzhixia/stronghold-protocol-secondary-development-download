@@ -1,5 +1,7 @@
 # 外部 AI 顾问（sp-ai/1）与 LLM 适配器
 
+<!-- doc: role=reference status=current -->
+
 > **状态：** 已移植主线 0.3.3 的外部 AI 策略栈与主线 dev 的 LLM 适配器，**默认关闭**。
 > 不设任何 `SP_EXTERNAL_AI_*` / `SP_LLM_*` / `SP_BOT_STRATEGY` 变量时，行为与之前完全一致（内置 bot）。
 >

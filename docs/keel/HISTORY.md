@@ -1,5 +1,7 @@
 # Keel 历史与决策
 
+<!-- doc: role=spec status=current -->
+
 > 当前功能见 [`FEATURES.md`](FEATURES.md)。本文只保留里程碑、关键决策和“为什么现在是这样”，不再维护逐日任务流水账。
 > 已经删除的早期任务文档（M0/M1/M1.5/N1/NATIVE-TASKS/INTEGRATION-PLAN/NATIVE-REBUILD/DECISIONS/DEMO/MIGRATION-REPORT/LEGACY-COMPAT/CUTOVER/EXIT）只存在于 git 历史；本机没有 `_backup_keel_n5_2026-10-31/` 目录。`tools/keel.mjs exit` 的提示里仍引用 `docs/keel/EXIT.md`（文件已删），按本页的历史说明理解即可。
 

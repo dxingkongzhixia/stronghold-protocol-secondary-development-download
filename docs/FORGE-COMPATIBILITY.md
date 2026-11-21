@@ -1,5 +1,7 @@
 # Forge 兼容矩阵与不支持清单
 
+<!-- doc: role=reference status=current -->
+
 本文说明 `node tools/plugin.mjs import-forge` 能把 Forge 工坊包转换成什么、哪些部分会被明确拒绝或丢弃，以及导入报告怎么读。它对应本分支 `0.4.0`，不承诺 Forge 运行时 100% 等价。
 
 ## 1. 先看结论

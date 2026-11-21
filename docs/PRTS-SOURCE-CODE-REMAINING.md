@@ -1,5 +1,7 @@
 # PRTS「源代码」B–E 开发计划
 
+<!-- doc: role=reference status=current -->
+
 > 状态（2026-10-23）：**B–D 主体已实现并上线**；本文保留为验收 / 回归底稿，下方未勾选项不再等同于“尚未开始”。当前实现与决策见 [`PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md)、插件 [`README.md`](../plugins/prts-source-code/README.md) 和 [`PROJECT-STATE.md`](PROJECT-STATE.md)。
 > **2026-10-23 线上修复**：C2 的 team grant 现在覆盖 AI 队友；队友把凯尔希移出预备医疗格后不再恢复 Touch 预备医疗。回归见 `test/match/prts-engine.test.js`。
 > 本文只覆盖阶段 **B / C / D / E**，不改变 [`PRTS-SOURCE-CODE.md`](PRTS-SOURCE-CODE.md) 的已批准决策。

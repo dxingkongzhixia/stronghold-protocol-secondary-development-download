@@ -1,5 +1,7 @@
 # 干员皮肤 (Operator skins)
 
+<!-- doc: role=reference status=current -->
+
 An operator's Spine model and its pictures can be replaced by one of its official alternative outfits (时装). This
 document is the normative reference for that feature. The skin system is a **core feature of this project**, not a
 plugin: the catalogue is tracked, the local art sets are served by the server, and every player can choose an outfit

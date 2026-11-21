@@ -1,5 +1,7 @@
 # Keel（龙骨）插件系统
 
+<!-- doc: role=spec status=current -->
+
 > **状态：可用 / 第一阶段完成。** Keel 是当前唯一的插件 loader；新插件只写 manifest 3。
 > 主线 manifest-2 插件通过 `keel import --write` 迁移后，用 `compat.v2Script` 运行时兼容。
 > **功能总览：**[`FEATURES.md`](FEATURES.md)。当前检查点：[`NEXT.md`](NEXT.md)。剩余项：[`REMAINING.md`](REMAINING.md)。

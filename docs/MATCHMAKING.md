@@ -1,5 +1,7 @@
 # 野排（搜寻队友）— 设计、实现与改动记录
 
+<!-- doc: role=decision status=current -->
+
 > 面向二次开发的中文说明。计划与本次实际落地的改动都记在这里，便于回溯。
 > 关键文件：`server/db.mjs`、`server/auth.js`、`server/matchmaker.js`、`server/lobby.js`、`server/net.js`、
 > `server/index.js`、`server/admin.js`、`shared/protocol.js`、`shared/constants.js`；客户端 `public/js/net.js`、

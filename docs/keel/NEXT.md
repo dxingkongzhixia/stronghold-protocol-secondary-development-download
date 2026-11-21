@@ -1,5 +1,7 @@
 # Keel 当前检查点
 
+<!-- doc: role=spec status=current -->
+
 > 状态：**第一阶段完成；可用**。功能见 [`FEATURES.md`](FEATURES.md)，剩余/边界见 [`REMAINING.md`](REMAINING.md)。
 > 代码状态：**2026-11-07 12:31 已上线 build `3820c2321f13`**（以 [`../PROJECT-STATE.md`](../PROJECT-STATE.md) §3 为准）。`plugins/*` 默认不提交，但 `prts-kaltsit` / `prts-source-code` 的 `plugin.keel.json` 已强制入库；其他迁移文件是每台机器的本地状态，新机器上 `node tools/keel.mjs exit` 会先列出未迁移的插件。
 > 基线：最近一次记录的全量 `npm test` 为 8852 / 8814 / 0 / 38 skipped（2026-11-01，发布前重跑）；`check:keel` **185 / 185**（2026-11-07 实测）；docs gates 35 / 35。

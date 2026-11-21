@@ -1,5 +1,7 @@
 # Assets: sources, layout, manifest, credits
 
+<!-- doc: role=reference status=current -->
+
 Owner: `tools/fetch-assets.mjs` and `tools/assets/*`. Research background: `docs/research/07-assets.md`.
 
 All art, Spine models and audio are **committed to this (public) repository** (GitHub primary + Gitee mirror) as of 2026-10-08, so a plain clone runs
