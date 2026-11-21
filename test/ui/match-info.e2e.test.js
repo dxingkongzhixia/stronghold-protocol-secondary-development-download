@@ -84,7 +84,7 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
       problems.push(`requestfailed: ${r.url()} ${err}`);
     });
     page.on('response', (r) => { if (r.status() >= 400 && !external(r.url())) problems.push(`http ${r.status()}: ${r.url()}`); });
-    await page.evaluateOnNewDocument((n) => { localStorage.setItem('sp.name', n); sessionStorage.setItem('sp.entered', '1'); }, name);
+    await page.evaluateOnNewDocument((n) => { localStorage.setItem('sp.name', n); sessionStorage.setItem('sp.entered', '1'); localStorage.setItem('sp.pref.assetMode', JSON.stringify('stream')); }, name);
     await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => globalThis.__SP__?.store.get().connection.status === 'online' && !!document.querySelector('.lobby-screen'), { timeout: 30000 });
     // the entry film (ui/entryFilm.js) is a full-screen gate over the app; any tap/key skips it. A mouse click on a
@@ -135,6 +135,8 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
     let pt = null;
     for (let i = 0; i < 60 && !pt; i++) { pt = await centre(p.page, sel, text); if (!pt) await sleep(100); }
     assert.ok(pt, `${p.name}: ${sel}${text ? ` "${text}"` : ''} on screen`);
+    await sleep(200); // the briefing's foot slides in: read the rect once more or the click lands where it was
+    pt = await centre(p.page, sel, text) || pt;
     if (p.phone) await p.page.touchscreen.tap(pt.x, pt.y); else await p.page.mouse.click(pt.x, pt.y);
     await sleep(250);
   }
@@ -210,7 +212,9 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
     if (!announcedTypes.length) assert.equal(brief.emptyFactions, '本局没有特训敌人');
     await shot(page, 'solo-briefing');
 
+    await sleep(1400); // the briefing's foot slides in; a click during its intro is ignored
     await press(p, '.brief__foot .btn--primary', '准备就绪');
+    await sleep(800);
     await waitSt(page, (s) => s.phase === 'BAND_DRAFT', 'band draft');
     await page.waitForSelector('[data-testid="match-info-open"]', { visible: true, timeout: 10000 });
     assert.equal(await page.$eval('[data-testid="match-info-open"]', el => el.textContent.trim()), '本局信息');
@@ -264,7 +268,7 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
     await press(p, '[data-testid="match-info-close"]', '关闭');
     await page.waitForFunction(() => !document.querySelector('.minfo-dlg'), { timeout: 3000 });
     assert.equal(await selBand(page), sel0, 'the highlighted band is untouched');
-    assert.deepEqual((await intents(page)).slice(req0), [], 'no intent while looking');
+    assert.deepEqual((await intents(page)).slice(req0).filter((t) => !/^boot\./.test(t)), [], 'no match intent while looking');
 
     // the draft still works: highlight another strategy, confirm
     await press(p, '.dband', '阿米娅');
@@ -324,7 +328,7 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
     assert.deepEqual(briefs.get(a).factions.map(f => f.type), announcedTypes);
     assert.ok(briefs.get(a).factions.every(f => f.name && f.desc), 'every special enemy type has its name and description');
     await shot(b.page, 'coop-phone-briefing-844');
-    for (const p of [a, b]) await press(p, '.brief__foot .btn--primary', '准备就绪');
+    for (const p of [a, b]) { await sleep(1400); await press(p, '.brief__foot .btn--primary', '准备就绪'); } // the foot slides in; an early click is ignored
     for (const p of [a, b]) await waitSt(p.page, (s) => s.phase === 'BAND_DRAFT' && !!s.turn, `${p.name}: band draft`);
 
     const turn = (await st(a.page)).turn;
