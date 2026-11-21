@@ -180,3 +180,32 @@ jobs:
           name: mobile-audit-screens
           path: test/e2e/out/mobile
           if-no-files-found: ignore
+
+  # The browser smoke: two mock-harness suites that need no game assets (public/assets is 720 MB, and the main job
+  # keeps SP_E2E=0). test/ui has 48 e2e files in the same position; this job pins the two that are green today so a
+  # broken client module import, CSP change or pre-game screen regression is caught here instead of by hand.
+  browser-smoke:
+    name: browser smoke (mock harness)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (npm ci → postinstall copies public/vendor)
+        run: npm ci --no-audit --no-fund
+
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          install-chromedriver: false
+
+      # tools/browser-smoke.mjs sets SP_E2E=1 and resolves Chrome (CHROME_PATH here, platform defaults locally)
+      - name: Browser smoke (pre-game screens + one in-match interaction)
+        run: npm run test:browser:smoke
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}

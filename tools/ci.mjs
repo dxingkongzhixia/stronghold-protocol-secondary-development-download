@@ -16,6 +16,7 @@
 //   imports    node tools/check-imports.mjs               (npm run check:imports)
 //   typecheck  tsc --noEmit --checkJs -p jsconfig.json    (npm run typecheck)
 //   mobile     node tools/mobile-audit.mjs                (npm run check:mobile; needs Chrome — CHROME_PATH)
+//   browser-smoke  node tools/browser-smoke.mjs           (npm run test:browser:smoke; mock pages, needs Chrome)
 // The job `test` steps get ci.yml's env (SP_E2E=0, SP_REAL_E2E=0, RENDER_E2E=0, NO_COLOR=1) unless already set.
 //
 // Not mirrored: actions/checkout and actions/setup-node (GitHub runner setup) and `npm ci` (the install — run it
@@ -66,6 +67,7 @@ export const STEPS = [
   { id: 'golden', ci: { job: 'golden', name: 'Golden — default data' }, npm: 'golden', describe: 'node tools/golden.mjs' },
   { id: 'golden-versions', ci: { job: 'golden', name: 'Golden — 规程 (act3autochess@V3_1)' }, describe: 'node tools/golden.mjs --version act3autochess@V3_1' },
   { id: 'mobile', ci: { job: 'mobile-audit', name: 'Mobile audit' }, npm: 'check:mobile', describe: 'node tools/mobile-audit.mjs' },
+  { id: 'browser-smoke', ci: { job: 'browser-smoke', name: 'Browser smoke (pre-game screens + one in-match interaction)' }, npm: 'test:browser:smoke', describe: 'node tools/browser-smoke.mjs' },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -340,6 +342,7 @@ function runStep(step, env) {
     case 'golden-tests': return node(['--test', 'test/golden.test.js', 'test/golden-versions.test.js', 'test/golden-diy.test.js', 'test/golden-standins.test.js'], env);
     case 'golden-versions': return node(['tools/golden.mjs', '--version', 'act3autochess@V3_1'], env);
     case 'mobile': return node(['tools/mobile-audit.mjs'], env);
+  case 'browser-smoke': return node(['tools/browser-smoke.mjs'], env);
     default: throw new Error(`no runner for step ${step.id}`);
   }
 }

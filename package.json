@@ -27,6 +27,7 @@
     "dev": "node --watch server/index.js",
     "test": "node tools/run-tests.mjs",
     "test:golden": "node --test test/golden.test.js test/golden-versions.test.js test/golden-diy.test.js test/golden-standins.test.js",
+    "test:browser:smoke": "node tools/browser-smoke.mjs",
     "test:fast": "node tools/test-fast.mjs",
     "test:shard": "node tools/ci-shards.mjs --run",
     "golden": "node tools/golden.mjs",

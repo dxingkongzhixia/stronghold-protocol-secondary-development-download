@@ -88,6 +88,7 @@ node server/index.js            # http://localhost:3000
 node tools/build-data.mjs --offline     # must leave data/ byte-for-byte unchanged
 npm test                                # full suite except the golden corpus checks (npm run test:golden); never bare node --test
 npm run check:mobile                    # phone matrix audit (Chrome; docs/MOBILE-UI.md §7)
+npm run test:browser:smoke              # browser smoke: pre-game screens + one mock in-match run (no assets; Chrome)
 node tools/kit-coverage.mjs --missing   # every chess has a kit
 node tools/i18n.mjs check en --strict   # English UI pack complete
 node tools/doctor.mjs                   # environment diagnosis

@@ -35,6 +35,7 @@
 | golden 归因 | `npm run golden:attrib -- --paths server/sim`（自动：存下重算 diff → 只回退你的改动 → 基线必须匹配 → 恢复 → 必须失配） |
 | 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/docs-facts.test.js`；front-matter / 索引：`npm run docs:check`（重建 `docs/INDEX.md`：`npm run docs:index`） |
 | 手机矩阵 | `npm run check:mobile`（`tools/mobile-audit.mjs`；需 Chrome，`CHROME_PATH` 可配） |
+| 浏览器 smoke | `npm run test:browser:smoke`（`tools/browser-smoke.mjs`：协议启动 + 一局 mock 交互；**不需要素材**，Chrome 自动找/`CHROME_PATH`） |
 | 浏览器渲染 | `RENDER_E2E=1 node --test test/render/*.browser.test.js`（需 Chrome + `public/assets`） |
 | 联机 E2E | `SP_E2E=1 node --test "test/e2e/**"`（需浏览器与素材） |
 | Agent 席位 E2E | `SP_AGENT_E2E=1 node --test test/e2e/agent-seat.e2e.mjs`（真实 Match，无需浏览器；见 [`AGENT-SEATS.md`](AGENT-SEATS.md) §6.1） |
@@ -78,7 +79,7 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 | `test/plugins/visualSet.test.js` 的「压缩缓存 ctime」 | Windows 文件时间戳粒度 | 复跑；与代码无关 |
 | `test/sim/robustness.test.js` 偶发超时 | 性能基线受机器负载影响 | 单跑确认（35/35） |
 | 「bad port」的 `fetch` 失败（曾见 `test/i18n-packs.test.js`） | 临时端口撞上 undici 禁用端口（`port: 0` 随机分配） | 新用例用 `test/helpers/localFetch.js`（`node:http`，无端口黑名单）；旧用例出现即迁移 |
-| 浏览器套件 skipped | 无 Chrome / 无 `public/assets` | 设 `RENDER_E2E=1` 并准备素材 |
+| 浏览器套件 skipped | 无 Chrome / 无 `public/assets` | 设 `RENDER_E2E=1` 并准备素材；`npm run test:browser:smoke` 是常开的无素材子集（缺 Chrome 会报错） |
 | CI 上 `test/**` 大面积 skip | CI 明确 `SP_E2E=0` / `RENDER_E2E=0` | 预期行为，见 §6 |
 
 ## 6. CI（`.github/workflows/ci.yml`）
@@ -90,6 +91,7 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 | `tooling` | `eslint`（warning 预算 200）+ `check:imports` + `typecheck` | 不跑游戏 |
 | `node 24 (guards)` | CI 布线守卫 + 文档/打包门禁 | node 24 的轻量通道 |
 | `mobile-audit` | `npm run check:mobile`（640×360 … 1024×768） | 截图作 artifact；破坏布局会红 |
+| `browser-smoke` | `npm run test:browser:smoke`（协议启动 / 请选择策略 + 一局 mock 交互） | 只用 mock 页面，**不需要 `public/assets`**；`setup-chrome` 提供 Chrome，漏 Chrome 直接报错而不是静默 skip |
 
 推送 / PR 都触发；`concurrency` 按 ref 取消旧任务。
 

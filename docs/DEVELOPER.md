@@ -198,6 +198,7 @@ node tools/plugin.mjs pack <id> --zip
 | `npx eslint .` | Lint |
 | `npm run typecheck` | 类型检查 |
 | `npm run check:imports` | 导入边界 |
+| `npm run test:browser:smoke` | 浏览器 smoke（协议启动 + 一局 mock 交互；无需素材） |
 | `node tools/doctor.mjs` | 环境诊断 |
 | `node tools/check-upstream.mjs` | 上游新改动与冲突预测 |
 | `node tools/check-delivery.mjs --live` | 线上素材链 |
