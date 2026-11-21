@@ -40,9 +40,9 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
   const browsers = [];
 
   before(async () => {
-    const { startServer } = await import('../../server/index.js');
+    const { startBrowserServer } = await import('../helpers/browserServer.mjs');
     puppeteer = (await import('puppeteer-core')).default;
-    srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
+    srv = await startBrowserServer();
     base = `http://127.0.0.1:${srv.port}`;
     mkdirSync(OUT, { recursive: true });
   });
@@ -67,7 +67,7 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
     else await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
     const problems = [];
     // the optional Google Fonts stylesheet (index.html: never render-blocking, system fallbacks) is the only external request
-    const external = (url) => /fonts\.(googleapis|gstatic)\.com/.test(url || '');
+    const external = (url) => /^https?:\/\/fonts\./.test(url || '');
     page.on('console', (m) => {
       if (m.type() !== 'error') return;
       const url = m.location()?.url || '';
@@ -79,12 +79,18 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
       const err = r.failure()?.errorText || '';
       if (external(r.url())) return;
       if (err === 'net::ERR_ABORTED' && /\.(mp3|ogg|wav|m4a)(\?|$)/.test(r.url())) return; // media element swaps
+      // the boot clip is preloaded then dropped when the match screen takes the audio over
+      if (err === 'net::ERR_ABORTED' && /^https?:\/\/[^/]+\/clip\//.test(r.url())) return;
       problems.push(`requestfailed: ${r.url()} ${err}`);
     });
-    page.on('response', (r) => { if (r.status() >= 400) problems.push(`http ${r.status()}: ${r.url()}`); });
+    page.on('response', (r) => { if (r.status() >= 400 && !external(r.url())) problems.push(`http ${r.status()}: ${r.url()}`); });
     await page.evaluateOnNewDocument((n) => { localStorage.setItem('sp.name', n); sessionStorage.setItem('sp.entered', '1'); }, name);
     await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => globalThis.__SP__?.store.get().connection.status === 'online' && !!document.querySelector('.lobby-screen'), { timeout: 30000 });
+    // the entry film (ui/entryFilm.js) is a full-screen gate over the app; any tap/key skips it. A mouse click on a
+    // button underneath would land on the gate instead.
+    await page.evaluate(() => document.querySelector('.spa-entry')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+    await page.waitForFunction(() => !document.querySelector('.spa-entry'), { timeout: 5000 }).catch(() => {});
     // record every intent the UI sends (gameActions looks net.request up per call)
     await page.evaluate(() => {
       const n = globalThis.__SP__.net;
@@ -109,7 +115,11 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
     while (Date.now() - t0 < timeout) { last = await st(page); if (pred(last)) return last; await sleep(150); }
     throw new Error(`timed out waiting for ${what}: ${JSON.stringify(last)}`);
   }
-  const shot = (page, name) => page.screenshot({ path: path.join(OUT, `match-info-${name}.png`) });
+  const shot = async (page, name) => {
+    await page.screenshot({ path: path.join(OUT, `match-info-${name}.png`) });
+    // a full-page capture can leave the layout mid-restore for a frame; the next mouse click must not use a stale rect
+    await sleep(150);
+  };
   const intents = (page) => page.evaluate(() => (globalThis.__req || []).slice());
   /** Centre of the first visible match (client px), or null. */
   const centre = (page, sel, text = null) => page.evaluate((sel, text) => {

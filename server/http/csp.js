@@ -50,5 +50,5 @@ export function siteCsp(publicDir) {
   }
   const mirrors = artOrigins(publicDir);
   const art = mirrors.length ? ' ' + mirrors.join(' ') : '';
-  return `default-src 'self'; script-src 'self'${hashes.size ? ' ' + [...hashes].join(' ') : ''}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.gstatic.cn; img-src 'self' data: blob:${art}; connect-src 'self'${art}; media-src 'self'${art}; worker-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'none'`;
+  return `default-src 'self'; script-src 'self'${hashes.size ? ' ' + [...hashes].join(' ') : ''}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.gstatic.cn https://fonts.gstatic.font.im; img-src 'self' data: blob:${art}; connect-src 'self'${art}; media-src 'self'${art}; worker-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'none'`;
 }

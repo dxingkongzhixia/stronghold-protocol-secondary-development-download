@@ -39,9 +39,9 @@ describe('client leftovers — mock harness', { skip: !ENABLED && 'set SP_E2E=1 
   let browser;
   let base;
   before(async () => {
-    const { startServer } = await import('../../server/index.js');
+    const { startBrowserServer } = await import('../helpers/browserServer.mjs');
     const puppeteer = (await import('puppeteer-core')).default;
-    srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
+    srv = await startBrowserServer();
     base = `http://127.0.0.1:${srv.port}`;
     browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--force-device-scale-factor=1'] });
     mkdirSync(OUT, { recursive: true });
