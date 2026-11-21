@@ -144,7 +144,7 @@ describe('facing wheel keyboard (mock match, headless Chrome)', { skip: !ENABLED
 
   test('a HUD button focused before the drop does not swallow the confirming Enter', async (t) => {
     const h = await setup(t);
-    await h.page.focus('.gm__gear');
+    await h.page.focus('.gm__gear[aria-label="设置"]');
     await h.open();
     assert.equal((await h.active()).wheel, true);
     await h.preview('ArrowDown');

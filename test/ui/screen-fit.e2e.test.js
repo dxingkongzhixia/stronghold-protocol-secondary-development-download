@@ -81,8 +81,9 @@ describe('异形屏适配 (headless Chrome)', { skip: !ENABLED && 'set SP_E2E=1 
   });
 
   test('the settings section: + moves an edge live, 重置 returns the unmoved page', async () => {
-    // the earlier pages stored offsets in this browser: start from none
-    const { page, problems } = await open('phase=PREP&variant=settings', { width: 1280, height: 720 }, { l: 0, r: 0, t: 0, b: 0 });
+    // the earlier pages stored offsets in this browser: start from none. A touch viewport: 异形屏适配 is a touch-only
+    // section (SettingsModal renders ScreenFitSection when detectFeatures().coarse && !fine).
+    const { page, problems } = await open('phase=PREP&variant=settings', { width: 1280, height: 720, hasTouch: true }, { l: 0, r: 0, t: 0, b: 0 });
     await page.waitForSelector('[data-testid="screen-fit"]', { timeout: 10000 });
     const vals = () => page.$$eval('.set-fit__row .set-row__val', (els) => els.map((e) => e.textContent));
     assert.deepEqual(await vals(), ['50', '50', '50', '50']);

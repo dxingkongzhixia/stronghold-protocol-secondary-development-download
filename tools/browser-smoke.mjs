@@ -9,10 +9,13 @@
 // checked). A missing Chrome is an error here, never a silent skip — the browser suites themselves skip when
 // `SP_E2E` is not 1 and the hardcoded macOS path does not exist, which is how a Windows machine ran none of them.
 //
-// The two runs:
+// The runs:
 //   1. test/ui/protocol-boot.e2e.test.js — the pre-game screens (协议启动！/ 请选择策略) through public/dev/game-mock.html,
 //      including the no-art and reduced-motion variants: the client modules load, the CSP allows them, the screens render.
-//   2. one interaction test of test/ui/mock.e2e.test.js (in-match mock): buy / ready / emote / exit through a mocked
+//   2. test/ui/hotkeys.e2e.test.js — the in-match settings panel and its key rebinding (the mock's gear must be the
+//      settings one: `.gm__gear` matches four buttons there).
+//   3. test/ui/settings-entry.e2e.test.js — the lobby (hub) and room settings entries, the modal and bug提交.
+//   4. one interaction test of test/ui/mock.e2e.test.js (in-match mock): buy / ready / emote / exit through a mocked
 //      match — the cheapest check that the in-match UI still boots and responds.
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -45,6 +48,8 @@ export function resolveChrome(env = process.env, platform = process.platform) {
 
 const RUNS = [
   ['test/ui/protocol-boot.e2e.test.js'],
+  ['test/ui/hotkeys.e2e.test.js'],
+  ['test/ui/settings-entry.e2e.test.js'],
   ['--test-name-pattern=emote, exit', 'test/ui/mock.e2e.test.js'],
 ];
 

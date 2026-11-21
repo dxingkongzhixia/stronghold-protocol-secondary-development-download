@@ -2,8 +2,9 @@
 // screen and a running match; opt-in, ~15 s):
 //   SP_E2E=1 CHROME_PATH=… node --test test/ui/settings-entry.e2e.test.js
 //
-// After 开始 the lobby's top bar carries a 设置 button in its right-hand group, immediately before the 档案 account chip
-// (ui/settings.js SettingsButton), and the room's after 创建同盟 (its top bar's right group, beside the invite key);
+// After 开始 the lobby's top bar carries a 设置 button (ui/settings.js SettingsButton) — since the hub layout, in the
+// left tools group beside 玩法说明, the 档案 chip on the right — and the room's after 创建同盟 (its top bar's right group,
+// beside the invite key);
 // each opens the very settings modal of the title screen (language, sound, 快捷键 …) and closes
 // with Esc or 完成, leaving the screen as it was. No console / page errors. The modal itself and its contents are covered
 // by the title screen's tests; this file is about the entry. Not in the modal, deliberately: background music in a
@@ -38,26 +39,39 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     await srv?.close();
   });
 
-  /** Is the 设置 button in `screen`'s top-bar right group — and, when the screen carries a 档案 chip, right before it? */
-  const settingsByAccount = (page, screen) => page.evaluate((s) => {
+  /**
+   * Is the 设置 button in `screen`'s top bar? The lobby is the hub layout since 0.4.0 (the button sits in
+   * `.topbar__tools`, beside the guide; the 档案 chip is in the right group), the room keeps the right group. Either
+   * position counts — the entry is what this file is about, not the group.
+   */
+  const settingsInTopbar = (page, screen) => page.evaluate((s) => {
     const btn = document.querySelector(`${s} [data-testid="settings-btn"]`);
-    const right = document.querySelector(`${s} .topbar__right`);
-    const chip = document.querySelector(`${s} .me-chip`);
-    return !!btn && !!right && right.contains(btn)
-      && (!chip || btn.nextElementSibling === chip)
-      && /设置/.test(btn.textContent) && btn.querySelector('svg.btn__icon') != null;
+    if (!btn) return false;
+    const bar = btn.closest('.topbar');
+    const inTools = !!btn.closest('.topbar__tools');
+    const inRight = !!btn.closest('.topbar__right');
+    const label = `${btn.getAttribute('aria-label') || ''} ${btn.getAttribute('title') || ''} ${btn.textContent || ''}`;
+    return !!bar && (inTools || inRight) && /设置/.test(label) && btn.querySelector('svg.btn__icon') != null;
   }, screen);
   const modalText = (page) => page.evaluate(() => document.querySelector('.modal')?.textContent.replace(/\s+/g, ' ').trim() ?? null);
-  /** The community buttons still on `screen`'s top bar: 公开房间 / 更新日志 stay, 玩法说明 / bug提交 must be gone. */
-  const topbarCommunity = (page, screen) => page.evaluate((s) => {
+  /**
+   * The community entries of `screen`: 玩法说明 / bug提交 must not be top-bar buttons (2026-10-12: the guide lives
+   * in-match, bug提交 in settings); 公开房间 / 更新日志 stay — since the hub layout they are the lobby body's own badges
+   * (`.lobby-rooms`), not top-bar buttons.
+   */
+  const communityEntries = (page, screen) => page.evaluate((s) => {
     const bar = document.querySelector(`${s} .topbar`);
-    const has = (re) => [...(bar?.querySelectorAll('button') || [])].some((b) => re.test(b.textContent));
-    return { guide: !!document.querySelector(`${s} .lobby-guide, ${s} .room-guide`), bug: has(/bug提交/), rooms: has(/公开房间/), changelog: has(/更新日志/) };
+    const all = document.querySelector(s);
+    const inBar = (re) => [...(bar?.querySelectorAll('button') || [])].some((b) => re.test(b.textContent));
+    const text = all?.textContent || '';
+    return { guide: inBar(/玩法说明/) || !!document.querySelector(`${s} .lobby-guide, ${s} .room-guide`), bug: inBar(/bug提交/), rooms: /公开房间/.test(text), changelog: /更新日志/.test(text) };
   }, screen);
 
-  test('the lobby: 设置 beside the 档案 chip opens the settings modal; Esc closes it; the room has the same entry', async () => {
+  test('the lobby: 设置 in the hub top bar opens the settings modal; Esc closes it; the room has the same entry', async () => {
     const page = await browser.newPage();
     await page.setViewport({ width: 1600, height: 900 });
+    // the first-run 美术资源 prompt (ui/assetMode.js) would be the only modal; this file is about the settings entry
+    await page.evaluateOnNewDocument(() => { try { localStorage.setItem('sp.pref.assetMode', JSON.stringify('stream')); } catch { /* ignore */ } });
     const problems = [];
     page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
@@ -68,12 +82,12 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     await page.waitForSelector('.lobby-screen', { timeout: 15000 });
     await sleep(500);
 
-    assert.ok(await settingsByAccount(page, '.lobby-screen'), '设置 sits in the lobby top bar\'s right group, right before the 档案 chip');
-    const topbar = await topbarCommunity(page, '.lobby-screen');
+    assert.ok(await settingsInTopbar(page, '.lobby-screen'), '设置 sits in the hub top bar (tools group)');
+    const topbar = await communityEntries(page, '.lobby-screen');
     assert.equal(topbar.guide, false, '玩法说明 is not a lobby top-bar button (removed 2026-10-12 — the in-match guide stays)');
     assert.equal(topbar.bug, false, 'bug提交 is no longer a lobby top-bar button (it lives in settings)');
-    assert.equal(topbar.rooms, true, '公开房间 stays on the lobby top bar');
-    assert.equal(topbar.changelog, true, '更新日志 stays on the lobby top bar');
+    assert.equal(topbar.rooms, true, '公开房间 is still reachable on the lobby (the hub badge)');
+    assert.equal(topbar.changelog, true, '更新日志 is still reachable on the lobby (the hub badge)');
     assert.equal(await modalText(page), null, 'closed until asked');
     await page.click('.lobby-screen [data-testid="settings-btn"]');
     await page.waitForSelector('.modal', { timeout: 5000 });
@@ -81,7 +95,7 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     assert.match(text, /设置/);
     assert.match(text, /背景音乐/);
     assert.match(text, /快捷键/);
-    assert.doesNotMatch(text, /棋盘/, 'no board-style option (declined)');
+    assert.doesNotMatch(text, /棋盘样式|棋盘风格|棋盘皮肤/, 'no board-style option (declined)');
     assert.doesNotMatch(text, /后台/, 'no background-music option (declined)');
 
     // the action row carries bug提交 only (玩法说明 / 资料库 were removed on 2026-10-12)
@@ -110,12 +124,14 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     assert.equal(await modalText(page), null, 'Esc closes it');
     assert.ok(await page.$('.lobby-screen'), 'the lobby is still there');
 
-    // the room: 创建同盟 → the same button, closed with 完成
-    await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /创建同盟/.test(b.textContent))?.click());
+    // the room: 同盟模拟 → a protocol (标准模拟 is on) → 创建同盟; the same 设置 button, closed with 完成
+    await page.evaluate(() => document.querySelector('.hub-entry--coop')?.click());
+    await page.waitForSelector('.proto-start', { timeout: 15000 });
+    await page.click('.proto-start');
     await page.waitForSelector('.room-screen', { timeout: 15000 });
     await sleep(500);
-    assert.ok(await settingsByAccount(page, '.room-screen'), '设置 sits in the room top bar\'s right group');
-    const roomTopbar = await topbarCommunity(page, '.room-screen');
+    assert.ok(await settingsInTopbar(page, '.room-screen'), '设置 sits in the room top bar\'s right group');
+    const roomTopbar = await communityEntries(page, '.room-screen');
     assert.equal(roomTopbar.guide, false, '玩法说明 is not a room top-bar button (removed 2026-10-12 — the in-match guide stays)');
     await page.click('.room-screen [data-testid="settings-btn"]');
     await page.waitForSelector('.modal', { timeout: 5000 });

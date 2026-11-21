@@ -17,8 +17,8 @@
 | 版本 | `0.4.0`（`package.json` / README 徽章 / `APP_VERSION` 一致；`test/docs-facts.test.js` 把关） |
 | 生产 | build **`9095519f82f1`**（2026-11-21 12:31 重启；`/healthz` == 磁盘 `computeBuildTag()`） |
 | 中继 / GitHub / Gitee | 中继与 GitHub `master` 同源；Gitee 是 code-only 快照 |
-| 测试 | `npm test` 全量绿（数量见输出，不写死）；`npm run test:fast` ≤2 分钟；CI 会跑**完整** golden |
-| 本轮主题 | 规程 boss / 护卫敌人 PRTS 修正、主题包、showtag、选中范围斜纹、设置分类与搜索、测试系统（golden 全量 CI / 快速档 / lint 预算 203） |
+| 测试 | `npm test` 全量绿（数量见输出，不写死）；`npm run test:fast` ≤2 分钟；`npm run test:browser:smoke` 无需素材常开；CI 会跑**完整** golden |
+| 本轮主题 | 规程 boss / 护卫敌人 PRTS 修正、主题包、showtag、选中范围斜纹、设置分类与搜索、测试系统（golden 全量 CI / 快速档 / lint 预算 203）；随后：bosshp 86 s 用例改为确定性构造（1.8 s）、CI browser smoke job、`test/studio/` 安全与上传校验单测 |
 | 交接 | 待办与延后项见 [`HANDOFF-2026-11-19.md`](HANDOFF-2026-11-19.md)（§0、§7.6）；部署日志见 [`DEPLOYS.md`](DEPLOYS.md) |
 
 > §1–§3 是项目长期结构；当前线上版本只看本表，历史部署细节在 [`DEPLOYS.md`](DEPLOYS.md)。
