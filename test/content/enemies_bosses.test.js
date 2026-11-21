@@ -92,6 +92,8 @@ const VERSION_ONLY = new Set([
   'enemy_1222_dpvt', 'enemy_1222_dpvt_2', 'enemy_1223_dmech', 'enemy_1223_dmech_2', 'enemy_1361_dthrow', 'enemy_1361_dthrow_2',
   'enemy_1363_spnshd_2', 'enemy_1226_dklord', 'enemy_1226_dklord_2', 'enemy_1362_dfat', 'enemy_1362_dfat_2',
   'enemy_1225_dkmage', 'enemy_1225_dkmage_2', 'enemy_1437_dsfull', 'enemy_1437_dsfull_2', 'enemy_1133_harchn', 'enemy_1133_harchn_2',
+  'enemy_1360_dfello', 'enemy_1403_gunsho', 'enemy_1403_gunsho_2', 'enemy_1309_mhboar_2', 'enemy_1436_dsdivi', 'enemy_1436_dsdivi_2',
+  'enemy_1220_dzoms', 'enemy_1220_dzoms_2', 'enemy_1221_dzomg', 'enemy_1221_dzomg_2',
   'enemy_9038_achest',
   // 2026-11-18 hand kits (enemies/regulation-extra.js): 狂暴凶豕兽 / 恶尘源石虫, act3-only records
   'enemy_1309_mhboar_2', 'enemy_1424_lrboom',

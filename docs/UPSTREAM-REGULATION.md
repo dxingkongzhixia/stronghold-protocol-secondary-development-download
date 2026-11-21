@@ -362,6 +362,7 @@ blackboard 后，先处理了这几类：
 - [x] **`enemy_9027_acfnca` 的 `HitPoint` 正确值**（2026-11-18 查清，客户端重抽）：上游的 `0,-0.779112,-0.303` **不是坏点**，是从客户端抽出来的真值——该 prefab 的根 `HitPoint` 局部仍是标准 `(0, 1.8, 0)`，差别全在它的 `Graphic` 节点被摆在 `y = -1.2`（其余敌人都是 `-0.2`）。本树渲染只取 `Graphic` 的 −30° 倾角、从不取它的位移（`render/vfx/mounts.js` 的 `graphicRotation`），所以按 prefab 原样合成会让该单位所有锚点比我们画出来的模型低一格。`fx.py` 的 `skin_points` 现在会把「比常规摆放低半格以上」的 `Graphic` 位移扣掉（位移换成 `(0,-0.2,-0.06)`，旋转与缩放保留），重抽后该单位的三点 = `HitPoint (0, 0.220888, -0.303)`、`HeadPoint (0, 0.735307, -0.6)`、`SpecialPoint0 (0, 1, 0)`；`index.json` 只改了这一处（其余 5563 个 prefab、679 个 skin、685 个 unit 逐键比对不变），`test/local-extract-fx.test.js` 34/34、`test/render/vfx-{regulation,origins,orient,skillfx}.test.js` 68/68。
 
 - [x] **碎铳之簧的再生沉默**（2026-11-21 移植，上游 round 84）：9019 / 9020 的 `regenerate_duration` 期间带 `silence`（`boss:springRegen`，`flags.silence`），护盾重新升起时清掉攻击叠层与旧沉默；9018（法术屏障）两者皆无。`server/sim/content/bosses.js` `kitSpring`，`test/content/hidden-gun-pursuit.test.js`。
+- [x] **护卫敌人能力**（2026-11-21 移植，上游 round 84 `79159319b`）：`enemy/regulation.js` 新增 `kitDthrow`（4 s 延迟引爆高爆弹）、`kitSpnshd`（受击给来源 −40 攻速 5 s）、`kitDfello`（按目标阻挡数提升攻击倍率 + 220 % 治疗）、`kitDsuply`（补给车光环）、`kitGunsho`（三连直击弹）、`kitBoomer`（仅一次四向炸弹）、`kitMhboar`（冲撞额外伤害）、`kitMnctur`、`kitDsdivi`（沿路线召唤），以及 `kitRebornCreation`（重生造物标记 + 补给车光环的凋亡附伤）；`test/sim/regulation-escort.test.js` 与 `enemies_bosses` 的版本专属清单同步。补给车的光环在本树由数据技能 `ab:dsuply` 提供，凋亡附伤读该车的 `aura.ep_damage_ratio`。
 
 仍未处理（2026-11-18 记录）：
 
