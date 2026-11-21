@@ -48,8 +48,9 @@ test('every new act3 enemy spawns and ticks; the procedural set is pinned', () =
   // 2026-11-18: the signature also matches the blackboard key set (two `boom` enemies may carry different keys), so
   // fewer act3 records reuse a hand kit and more run their own generic groups. The same day 狂暴凶豕兽 and 恶尘源石虫
   // got hand kits (enemies/regulation-extra.js), moving two from `generic` to `exact`.
-  assert.ok(tally.signature >= 14, `signature reuse ${tally.signature}`);
-  assert.ok(tally.generic >= 16, `generic groups ${tally.generic}`);
+  // 2026-11-21: the escort batch (regulation.js kitGunsho … kitDsdivi, 13 keys) moved them from `signature` to `exact`.
+  assert.ok(tally.signature >= 12, `signature reuse ${tally.signature}`);
+  assert.ok(tally.generic >= 9, `generic groups ${tally.generic}`);
   assert.equal(tally.official, 0, 'every new act3 enemy is covered (exact official kit, signature or generic)');
   assert.ok(tally.exact + tally.boss >= 35, `official kits ${tally.exact + tally.boss}`);
 });

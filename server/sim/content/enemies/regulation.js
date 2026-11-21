@@ -753,7 +753,8 @@ const axisTo = (e, t) => {
  * 速射轻弩手 / 速射劲弩手 直击 (`CrossAttack`, cooldown 5, initCooldown 2; PRTS 速射轻弩手 「与我方处于同一直线上时进行直击：向目标
  * 方向发射3支弩箭，每支弩箭对击中的首个目标造成攻击力100%的物理伤害」). The official ability is a MultiRangedAttack (fx index
  * units.enemy_1403_gunsho.skills.crossattack: 1 + `additionalTimes` 2 shots, `triggerDelta` 0.1 s apart, animKey Skill =
- * GUNSHO_CLIP in data/assets.json; projectile_enemy_gunsho at `_speed` 5), so it takes the attack's turn (DESIGN §35.52):
+ * GUNSHO_CLIP in data/assets.json; projectile_enemy_gunsho at `_speed` 5), so it takes the attack's turn (an
+ * attack-class skill, not a separate cast slot):
  * its trigger is its own line check (`own`), its cooldown counts from the clip's end, it stands through the clip. The
  * nearest ally it can target (canTargetAlly: a ranged pick) in its row or column sets the direction; each bolt flies at
  * the first such ally in that direction then. [ASSUMED] the reach (GUNSHO_REACH, as 重弩突袭者's 直击), the first bolt at
