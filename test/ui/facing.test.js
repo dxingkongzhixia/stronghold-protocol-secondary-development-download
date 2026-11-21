@@ -299,6 +299,15 @@ describe('wheel stripes go under the units on the 3D board (review regression)',
     assert.equal(polys[0].pts, '15.0,5.0 25.0,5.0 25.0,15.0 15.0,15.0');
   });
 
+  test('underStripesActive: no 3D mount → nothing to draw (a board-mode switch used to throw on mount.host)', async () => {
+    const { underStripesActive } = await import('../../public/js/ui/facingWheel.js');
+    const host = { insertBefore() {} };
+    assert.equal(underStripesActive({ host, before: {} }, [[9, 2]]), true, 'a 3D mount and tiles: draw under the units');
+    assert.equal(underStripesActive(null, [[9, 2]]), false, 'no mount = nothing to insert into');
+    assert.equal(underStripesActive({ host, before: {} }, []), false, 'no tiles = nothing to draw');
+    assert.equal(underStripesActive(null, []), false);
+  });
+
   test('tileScreen: a projection that returns null is clipped, not replaced by the debug camera', async () => {
     const { tileScreen, RangeStripes } = await import('../../public/js/ui/facingWheel.js');
     const canvas = { getBoundingClientRect: () => ({ left: 0, top: 0 }) };

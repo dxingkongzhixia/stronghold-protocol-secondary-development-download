@@ -308,8 +308,7 @@ function useRangeHighlight(view, grid, row, col, dir, healing) {
  * own tile. Returns null for the overlay case.
  * @returns {{ host: HTMLElement, before: HTMLElement } | null}
  */
-export function stripeMount(view) {
-  const raw = rawOf(view);
+export function stripeMount(view) {  const raw = rawOf(view);
   try {
     const dbg = raw && raw.debug;
     const canvas = dbg && dbg.app && dbg.app.view;
@@ -318,6 +317,14 @@ export function stripeMount(view) {
     return { host, before: canvas };
   } catch { return null; }
 }
+
+/**
+ * Does the under-canvas stripe layer have anything to do? Only with a 3D mount (between the two canvases) and some
+ * tiles; without a mount the 2D board / DOM fallback draws the inspected range natively (`RangeStripes`' overlay)
+ * or nothing at all. Reading `mount.host` with a null mount was a page error during a board-mode switch.
+ * @param {{ host: Element, before: Element } | null} mount @param {[number, number][]} tiles
+ */
+export const underStripesActive = (mount, tiles) => !!mount && tiles.length > 0;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 let stripeSeq = 0;
@@ -348,7 +355,7 @@ export function RangeStripes({ tiles, view, row, col, healing = false, underOnly
   useEffect(() => {
     // Keep watching the 3D mount while the detail card is open: a board-mode switch or a context recovery must not
     // leave stale or missing stripes (underOnly = no 2D overlay: the 2D / DOM boards draw the inspected range natively).
-    if ((!mount && !underOnly) || !tiles.length) return undefined;
+    if (!underStripesActive(mount, tiles)) return undefined;
     const id = `fwheel-stripe-u${++stripeSeq}`;
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('class', 'fwheel__stripes fwheel__stripes--under');
