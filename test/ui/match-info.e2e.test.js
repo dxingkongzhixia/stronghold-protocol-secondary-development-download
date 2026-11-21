@@ -85,7 +85,7 @@ describe('GitHub #8 and #484: 本局信息 in the strategy draft (real server, h
     });
     page.on('response', (r) => { if (r.status() >= 400 && !external(r.url())) problems.push(`http ${r.status()}: ${r.url()}`); });
     await page.evaluateOnNewDocument((n) => { localStorage.setItem('sp.name', n); sessionStorage.setItem('sp.entered', '1'); localStorage.setItem('sp.pref.assetMode', JSON.stringify('stream')); }, name);
-    await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${base}/?e2e=1`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => globalThis.__SP__?.store.get().connection.status === 'online' && !!document.querySelector('.lobby-screen'), { timeout: 30000 });
     // the entry film (ui/entryFilm.js) is a full-screen gate over the app; any tap/key skips it. A mouse click on a
     // button underneath would land on the gate instead.

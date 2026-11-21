@@ -42,7 +42,7 @@ describe('the title screen 公告 / 关于本服务器 / 添加到桌面 surface
     page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) problems.push(`console: ${m.text()} @ ${m.location()?.url ?? ''}`); });
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
     page.on('requestfailed', (r) => { if (!external(r.url()) && r.failure()?.errorText !== 'net::ERR_ABORTED') problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText ?? ''}`); });
-    await page.goto(`${base}/`, { waitUntil: 'networkidle0', timeout: 60000 });
+    await page.goto(`${base}/?e2e=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForSelector('.title-screen', { timeout: 15000 });
 
     // the two entries under the login console

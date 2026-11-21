@@ -36,6 +36,7 @@
 | 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/docs-facts.test.js`；front-matter / 索引：`npm run docs:check`（重建 `docs/INDEX.md`：`npm run docs:index`） |
 | 手机矩阵 | `npm run check:mobile`（`tools/mobile-audit.mjs`；需 Chrome，`CHROME_PATH` 可配） |
 | 浏览器 smoke | `npm run test:browser:smoke`（`tools/browser-smoke.mjs`：协议启动 + 快捷键/设置入口 + 异形屏适配 + 标题页/安装 + 一局 mock 交互；约 2.5 分钟；**不需要素材**，Chrome 自动找/`CHROME_PATH`） |
+| 浏览器用例开局 | `?e2e=1`（关掉入口动画与首个美术弹窗）+ `test/helpers/appBoot.mjs`（`openApp` / `createRoom` / `openSettings`）；端口用 `test/helpers/browserServer.mjs` 的 `startBrowserServer()` |
 | 浏览器渲染 | `RENDER_E2E=1 node --test test/render/*.browser.test.js`（需 Chrome + `public/assets`） |
 | 联机 E2E | `SP_E2E=1 node --test "test/e2e/**"`（需浏览器与素材） |
 | Agent 席位 E2E | `SP_AGENT_E2E=1 node --test test/e2e/agent-seat.e2e.mjs`（真实 Match，无需浏览器；见 [`AGENT-SEATS.md`](AGENT-SEATS.md) §6.1） |
@@ -83,6 +84,7 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 | 浏览器用例并发抢 Chrome | 多个 headless 页面同时跑（`turn-popup` / `resultbox` 在 `--test-concurrency=4` 下会红，单跑绿） | 浏览器套件用 `--test-concurrency=1`，或按文件顺序跑；smoke job 就是顺序跑 |
 | 首个 美术资源 弹窗遮住页面 | 新 profile 没有 `sp.pref.assetMode`，`AssetModePrompt`（`ui/assetMode.js`）挡在标题/大厅上 | 浏览器用例 `evaluateOnNewDocument` 写入 `localStorage.setItem('sp.pref.assetMode', JSON.stringify('stream'))` |
 | Chrome 拒绝端口（`ERR_UNSAFE_PORT`） | `startServer({ port: 0 })` 偶尔分配到 5060/5061、6000、6665–6669 等 Chrome 黑名单端口，页面根本不加载 | 浏览器用例用 `test/helpers/browserServer.mjs` 的 `startBrowserServer()`（撞上就换一个端口） |
+| 浏览器用例被全屏层挡点击 | 入口动画（`ui/entryFilm.js`）和首个 `美术资源` 弹窗（`ui/assetMode.js`）盖住整页，点击落在遮罩上 | 页面 URL 加 `?e2e=1`（`public/js/e2eMode.js` 关掉这两层）；开局用 `test/helpers/appBoot.mjs` 的 `openApp` / `createRoom` / `openSettings`，不要再逐文件写 seed |
 | CI 上 `test/**` 大面积 skip | CI 明确 `SP_E2E=0` / `RENDER_E2E=0` | 预期行为，见 §6 |
 
 ## 6. CI（`.github/workflows/ci.yml`）

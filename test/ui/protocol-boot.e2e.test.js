@@ -50,7 +50,7 @@ describe('协议启动！ screen (headless Chrome)', { skip: !ENABLED && 'set SP
       await page.setRequestInterception(true);
       page.on('request', (r) => (/\/assets\/ui\//.test(r.url()) ? r.abort() : r.continue()));
     }
-    await page.goto(`${base}/dev/game-mock.html?shot=1&render=fallback&phase=${phase}${variant ? `&variant=${variant}` : ''}`, { waitUntil: 'networkidle0', timeout: 60000 });
+    await page.goto(`${base}/dev/game-mock.html?shot=1&render=fallback&phase=${phase}${variant ? `&variant=${variant}` : ''}&e2e=1`, { waitUntil: 'networkidle0', timeout: 60000 });
     await page.waitForSelector(phase === 'BAND_DRAFT' ? '.screen.draft' : '.gm__hud', { timeout: 30000 });
     if (!noart) await page.waitForFunction(() => performance.getEntriesByType('resource').filter((e) => /battleReady\/|settle\/common_logo/.test(e.name)).length >= 6, { timeout: 15000 });
     await sleep(300);

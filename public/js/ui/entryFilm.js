@@ -12,6 +12,7 @@
 // waits or the film runs takes the overlay down at once, silences the cue and hands the music back to that screen.
 // main.js calls playEntryFilm once at boot.
 import { store, selectRoute } from '../store.js';
+import { e2eMode } from '../e2eMode.js';
 import { audio, resolveBgm } from '../audio.js';
 import { data } from '../data.js';
 import { reducedMotion } from './device.js';
@@ -258,6 +259,7 @@ function run(allowed, mount) {
  */
 export async function playEntryFilm(opts = {}) {
   const { skip = () => false, mount = mountAllianceIntro } = opts;
+  if (e2eMode()) return; // ?e2e=1: a full-screen <dialog> would swallow the test's clicks
   if (reducedMotion()) return;
   // once, as the title is entered — a later rotation does not get a second look
   if (touchDevice() && !phoneReady()) return;

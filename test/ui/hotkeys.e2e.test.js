@@ -35,7 +35,7 @@ describe('rebindable shortcuts (设置 → 快捷键)', { skip: !ENABLED && 'set
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
     page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
     await page.setViewport({ width, height, isMobile: touch, hasTouch: touch });
-    await page.goto(`${srv.url}/dev/game-mock.html?shot=1&render=fallback&phase=PREP`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${srv.url}/dev/game-mock.html?shot=1&render=fallback&phase=PREP&e2e=1`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.ff-piece');
     return problems;
   }

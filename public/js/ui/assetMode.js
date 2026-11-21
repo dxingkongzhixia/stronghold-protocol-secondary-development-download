@@ -15,6 +15,7 @@ import {
   assetCacheUsage, clearAssetCache, fetchAssetIndex, ensureAssets,
 } from '../assetCache.js';
 import { localSourceEnabled, setLocalSourceEnabled, probeLocalBase } from '../assetSource.js';
+import { E2E } from '../e2eMode.js';
 
 /** Human bytes for the settings row (GB / MB / KB). */
 export function formatBytes(n) {
@@ -64,7 +65,7 @@ export async function syncAssetCache() {
  * chosen (assetCacheSupported + no stored mode). Choosing 缓存到本地 also starts the pre-cache.
  */
 export function AssetModePrompt() {
-  const [open, setOpen] = useState(() => assetCacheSupported() && getAssetMode() == null);
+  const [open, setOpen] = useState(() => !E2E && assetCacheSupported() && getAssetMode() == null); // ?e2e=1: no first-run gate
   const [mode, setModeChoice] = useState('cache');
   if (!open) return null;
   const choose = () => {

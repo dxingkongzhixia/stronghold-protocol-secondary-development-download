@@ -75,7 +75,7 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     const problems = [];
     page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
-    await page.goto(`${base}/`, { waitUntil: 'networkidle0', timeout: 60000 });
+    await page.goto(`${base}/?e2e=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForSelector('input', { timeout: 15000 });
     await page.type('input', '测试博士');
     await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /进入作战|游客进入/.test(b.textContent))?.click());

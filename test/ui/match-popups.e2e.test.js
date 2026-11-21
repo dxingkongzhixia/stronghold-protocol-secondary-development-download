@@ -38,7 +38,7 @@ describe('round / phase plates (headless Chrome)', { skip: !ENABLED && 'set SP_E
     const problems = [];
     page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
-    await page.goto(`${base}/dev/game-mock.html?shot=1&render=fallback&phase=SETTLE${variant ? `&variant=${variant}` : ''}`, { waitUntil: 'networkidle0', timeout: 60000 });
+    await page.goto(`${base}/dev/game-mock.html?shot=1&render=fallback&phase=SETTLE${variant ? `&variant=${variant}` : ''}&e2e=1`, { waitUntil: 'networkidle0', timeout: 60000 });
     await page.waitForSelector('.gm__hud', { timeout: 30000 }); // the match screen is up (its phase effect sees the changes)
     return { page, problems };
   }
