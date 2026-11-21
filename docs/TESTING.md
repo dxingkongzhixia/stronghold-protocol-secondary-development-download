@@ -82,6 +82,7 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 | 浏览器套件 skipped | 无 Chrome / 无 `public/assets` | 设 `RENDER_E2E=1` 并准备素材；`npm run test:browser:smoke` 是常开的无素材子集（缺 Chrome 会报错） |
 | 浏览器用例并发抢 Chrome | 多个 headless 页面同时跑（`turn-popup` / `resultbox` 在 `--test-concurrency=4` 下会红，单跑绿） | 浏览器套件用 `--test-concurrency=1`，或按文件顺序跑；smoke job 就是顺序跑 |
 | 首个 美术资源 弹窗遮住页面 | 新 profile 没有 `sp.pref.assetMode`，`AssetModePrompt`（`ui/assetMode.js`）挡在标题/大厅上 | 浏览器用例 `evaluateOnNewDocument` 写入 `localStorage.setItem('sp.pref.assetMode', JSON.stringify('stream'))` |
+| Chrome 拒绝端口（`ERR_UNSAFE_PORT`） | `startServer({ port: 0 })` 偶尔分配到 5060/5061、6000、6665–6669 等 Chrome 黑名单端口，页面根本不加载 | 浏览器用例用 `test/helpers/browserServer.mjs` 的 `startBrowserServer()`（撞上就换一个端口） |
 | CI 上 `test/**` 大面积 skip | CI 明确 `SP_E2E=0` / `RENDER_E2E=0` | 预期行为，见 §6 |
 
 ## 6. CI（`.github/workflows/ci.yml`）

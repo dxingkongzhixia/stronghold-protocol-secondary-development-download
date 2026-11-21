@@ -1,6 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const ENABLED = process.env.SP_E2E === '1' && existsSync(CHROME);
@@ -21,8 +22,11 @@ describe('settlement return control under enlarged text (#458)', { skip: !ENABLE
       const page = await browser.newPage();
       try {
         await page.setViewport({ width, height });
-        await page.evaluateOnNewDocument(ts => localStorage.setItem('sp.pref.settings', JSON.stringify({ textSize: ts })), textSize);
+        await page.evaluateOnNewDocument(ts => { localStorage.setItem('sp.pref.settings', JSON.stringify({ textSize: ts })); localStorage.setItem('sp.pref.assetMode', JSON.stringify('stream')); }, textSize);
         await page.goto(`http://127.0.0.1:${srv.port}/`, { waitUntil: 'networkidle0' });
+        // the entry film (ui/entryFilm.js) is a full-screen gate over the title; any tap/key skips it
+        await page.evaluate(() => document.querySelector('.spa-entry')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+        await page.waitForFunction(() => !document.querySelector('.spa-entry'), { timeout: 5000 }).catch(() => {});
         // Use the production ResultView with a captured real match result; no CSS or geometry is changed by the fixture.
         await page.evaluate(async res => {
           const { render, h } = await import('/vendor/preact.module.js');
@@ -31,14 +35,16 @@ describe('settlement return control under enlarged text (#458)', { skip: !ENABLE
           await document.fonts.ready;
         }, results['coop4-hard']);
         await page.waitForSelector('.result__foot button');
-        await page.screenshot({ path: new URL(`../e2e/out/result-text-${width}-${textSize}.png`, import.meta.url).pathname });
         const bounds = await page.$eval('.result__foot button', b => {
           const r = b.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-          return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, reachable: !!hit && (hit === b || b.contains(hit)) };
+          const top = hit ? `${hit.tagName}.${String(hit.className).slice(0, 60)}` : null;
+          return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, reachable: !!hit && (hit === b || b.contains(hit)), top };
         });
         assert.ok(bounds.x >= 0 && bounds.y >= 0 && bounds.right <= width && bounds.bottom <= height, JSON.stringify(bounds));
-        assert.equal(bounds.reachable, true);
+        assert.equal(bounds.reachable, true, JSON.stringify(bounds));
         await page.click('.result__foot button'); assert.equal(await page.evaluate(() => window.__returned), true);
+        // evidence last: a screenshot captures beyond the viewport and can perturb the next layout read
+        await page.screenshot({ path: fileURLToPath(new URL(`../e2e/out/result-text-${width}-${textSize}.png`, import.meta.url)) });
       } finally { await page.close(); }
     });
   }

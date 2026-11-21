@@ -19,9 +19,9 @@ describe('the title screen 公告 / 关于本服务器 / 添加到桌面 surface
   let browser;
   let base;
   before(async () => {
-    const { startServer } = await import('../../server/index.js');
+    const { startBrowserServer } = await import('../helpers/browserServer.mjs');
     const puppeteer = (await import('puppeteer-core')).default;
-    srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, accounts: true });
+    srv = await startBrowserServer({ accounts: true });
     base = `http://127.0.0.1:${srv.port}`;
     browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--force-device-scale-factor=1'] });
   });

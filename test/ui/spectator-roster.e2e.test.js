@@ -23,9 +23,9 @@ describe('the 观战席 capsule of the match top bar', { skip: !ENABLED && 'set 
   let browser;
   let base;
   before(async () => {
-    const { startServer } = await import('../../server/index.js');
+    const { startBrowserServer } = await import('../helpers/browserServer.mjs');
     const puppeteer = (await import('puppeteer-core')).default;
-    srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
+    srv = await startBrowserServer();
     base = `http://127.0.0.1:${srv.port}`;
     browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--force-device-scale-factor=1'] });
   });

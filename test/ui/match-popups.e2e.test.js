@@ -3,8 +3,8 @@
 //
 // Through the dev mock: SETTLE → 回合开始 shows the round plate — 回合 NN and 获得 +N (the income) for a player, and for an
 // eliminated player 观战中 under it and no 获得 (GitHub #236 / #237); the 剩余 N 回合 strip near the final assault; the
-// 联防 plate; the plate leaves by itself inside 回合开始 and the 休整期 banner follows. Static counterpart:
-// test/ui/match-popups.test.js.
+// 联防 plate; the plate leaves by itself inside 回合开始, and 休整期 has NO phase banner (PR #946: the prep screen is the
+// cue, a banner made it appear twice). Static counterpart: test/ui/match-popups.test.js.
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -43,14 +43,18 @@ describe('round / phase plates (headless Chrome)', { skip: !ENABLED && 'set SP_E
     return { page, problems };
   }
 
-  /** SETTLE of round r−1 with `funds`, then 回合开始 of round r paying `gain`. */
+  /**
+   * PREP of round r−1 with `funds`, then 回合开始 of round r paying `gain`. Mutating the phase/round (not
+   * `__MOCK__.setPhase`, which rebuilds the state and would reset the round the plate reads) keeps the plate's
+   * `剩余 N 回合` strip and its round number in step with the mock.
+   */
   const roundStart = (page, r, funds, gain) => page.evaluate(async (r, funds, gain) => {
     const M = globalThis.__MOCK__;
-    M.mutate((s) => { s.pub.round = r - 1; s.priv.funds = funds; });
+    const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+    M.mutate((s) => { s.pub.phase = 'PREP'; s.pub.round = r - 1; s.priv.funds = funds; });
     M.pushPublic();
-    await new Promise((res) => setTimeout(res, 300));
-    M.setPhase('ROUND_START');
-    M.mutate((s) => { s.pub.round = r; s.priv.funds = funds + gain; });
+    await sleep(400);
+    M.mutate((s) => { s.pub.phase = 'ROUND_START'; s.pub.round = r; s.priv.funds = funds + gain; });
     M.pushPublic();
   }, r, funds, gain);
 
@@ -73,8 +77,9 @@ describe('round / phase plates (headless Chrome)', { skip: !ENABLED && 'set SP_E
     await sleep(200);
     assert.deepEqual(await plate(page), { round: '05', gain: '获得+8', sub: null, left: null, banner: false });
     await page.waitForFunction(() => !document.querySelector('[data-testid="round-popup"]'), { timeout: 4000 });
-    await page.evaluate(() => globalThis.__MOCK__.setPhase('PREP'));
-    await page.waitForSelector('.pbanner', { timeout: 3000 });
+    await page.evaluate(() => { const M = globalThis.__MOCK__; M.mutate((s) => { s.pub.phase = 'PREP'; }); M.pushPublic(); });
+    await sleep(300);
+    assert.equal(await page.$('.pbanner'), null, 'no phase banner for 休整期 (PR #946: the prep screen is the cue)');
     assert.deepEqual(problems, []);
     await page.close();
   });

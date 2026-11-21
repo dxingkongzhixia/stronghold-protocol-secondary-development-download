@@ -1,6 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const enabled = process.env.SP_E2E === '1' && existsSync(CHROME);
@@ -37,7 +38,7 @@ describe('community UI: lobby header and shared DIY details', { skip: !enabled }
       await page.waitForFunction(() => document.querySelector('.spcard').disabled && !document.querySelector('.spcard.is-armed'));
       assert.match(await page.$eval('.spcard', e => e.textContent), /库存不足/);
       assert.equal(await page.evaluate(() => window.__picks?.length || 0), 0);
-      await page.screenshot({ path: new URL('../e2e/out/shared-stock-unavailable.png', import.meta.url).pathname });
+      await page.screenshot({ path: fileURLToPath(new URL('../e2e/out/shared-stock-unavailable.png', import.meta.url)) });
       await page.click('.spcard:nth-child(2)'); await page.click('.spcard:nth-child(2)');
       assert.deepEqual(await page.evaluate(() => window.__picks), [1]);
     } finally { await context.close(); }
@@ -49,27 +50,27 @@ describe('community UI: lobby header and shared DIY details', { skip: !enabled }
       localStorage.setItem('sp.name', '超长名称的测试博士名称'); sessionStorage.setItem('sp.entered', '1');
       localStorage.setItem('sp.pref.settings', JSON.stringify({ textSize: 'xl' }));
       localStorage.setItem('sp.pref.lang', JSON.stringify(l));
+      localStorage.setItem('sp.pref.assetMode', JSON.stringify('stream'));
     }, lang);
     await page.goto(`http://127.0.0.1:${srv.port}/`, { waitUntil: 'networkidle0' });
+    await page.evaluate(() => document.querySelector('.spa-entry')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+    await page.waitForFunction(() => !document.querySelector('.spa-entry'), { timeout: 5000 }).catch(() => {});
     await page.waitForSelector('.lobby-screen');
     return { context, page };
   }
   for (const width of [1600, 844]) for (const lang of ['zh-CN', 'en', 'ja', 'ko', 'zh-TW']) {
-    test(`lobby ${width}px ${lang}, XL text, long name, resume and install controls`, async () => {
+    test(`lobby ${width}px ${lang}, XL text, long name`, async () => {
       const { context, page } = await open(width, lang);
       try {
         // Supply only the optional controls' eligibility; their production components, CSS and click handlers remain.
+        // 继续作战 and 添加到桌面 live on the title screen (ui/resumeMatch.js, ui/install.js — screens/title.js), not in
+        // the hub lobby header; this case checks the header's own controls.
         await page.evaluate(async () => {
           const { identity } = await import('/js/net.js');
           identity.recoverable = () => [{ id: 'layout-only', name: 'Doctor', code: 'ABCD' }];
           window.dispatchEvent(new Event('focus'));
-          const e = new Event('beforeinstallprompt', { cancelable: true });
-          e.prompt = async () => {}; e.userChoice = Promise.resolve({ outcome: 'dismissed' });
-          window.dispatchEvent(e);
           await document.fonts.ready;
         });
-        await page.waitForSelector('[data-testid="resume-local-match"]');
-        await page.waitForSelector('[data-testid="pwa-install"]');
         const boxes = await page.$$eval('.lobby-screen .topbar button, .lobby-screen .topbar__center', els => els.map(e => {
           const r = e.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
           return { label: e.getAttribute('aria-label') || e.textContent.trim(), x: r.x, y: r.y, right: r.right, bottom: r.bottom,
@@ -84,7 +85,7 @@ describe('community UI: lobby header and shared DIY details', { skip: !enabled }
           assert.ok(Math.min(a.right, b.right) - Math.max(a.x, b.x) <= 1 || Math.min(a.bottom, b.bottom) - Math.max(a.y, b.y) <= 1,
             `${a.label} overlaps ${b.label}`);
         }
-        await page.screenshot({ path: new URL(`../e2e/out/lobby-header-${width}-${lang}.png`, import.meta.url).pathname });
+        await page.screenshot({ path: fileURLToPath(new URL(`../e2e/out/lobby-header-${width}-${lang}.png`, import.meta.url)) });
         await page.click('.lobby-screen .me-chip'); await page.waitForSelector('.st .st-tab');
         await page.click('.st-back');
         await page.waitForSelector('.st', { hidden: true });
@@ -95,7 +96,7 @@ describe('community UI: lobby header and shared DIY details', { skip: !enabled }
   for (const width of [1600, 844]) test(`DIY ${width}px XL: shared stats and normal/elite skill details stay usable`, async () => {
     const { context, page } = await open(width);
     try {
-      await page.click('[data-testid="loadout-open"]'); await page.click('[data-tab="diy"]');
+      await page.click('[data-testid="loadout-open"]'); await page.waitForSelector('[data-tab="diy"]'); await page.click('[data-tab="diy"]');
       await page.click('.diy-slot[data-slot="chess_char_6_diy1_a"] .diy-slot__fill');
       const picker = '[data-testid="diy-picker"]';
       await page.waitForSelector(`${picker} [data-char="char_112_siege"]`);
@@ -112,7 +113,7 @@ describe('community UI: lobby header and shared DIY details', { skip: !enabled }
       const restored = await detail(); assert.deepEqual(restored.stats, elite.stats);
       // Independent scrolling must reach all skills/modules without displacing the fixed confirm control.
       await page.$eval(`${picker} .diy-pick__detail`, e => { e.scrollTop = e.scrollHeight; });
-      await page.screenshot({ path: new URL(`../e2e/out/diy-detail-${width}-xl.png`, import.meta.url).pathname });
+      await page.screenshot({ path: fileURLToPath(new URL(`../e2e/out/diy-detail-${width}-xl.png`, import.meta.url)) });
       const accessible = await page.$eval('[data-testid="diy-confirm"]', e => {
         const r = e.getBoundingClientRect(), at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
         return r.bottom <= innerHeight && (at === e || e.contains(at));
